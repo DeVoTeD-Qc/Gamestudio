@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 189.981,
+ "duration": 159.2,
  "scenes": [
   {
    "id": "title",
@@ -200,81 +200,15 @@
   {
    "id": "game",
    "start": 135.5,
-   "end": 184.481,
+   "end": 153.7,
    "view": "game",
    "title": null,
-   "captions": [
-    {
-     "t": 135.5,
-     "until": 137.466,
-     "text": "The real web build of Killstreak, running in Chromium"
-    },
-    {
-     "t": 137.466,
-     "until": 140.21200000000002,
-     "text": "Playtest consent, three quick survey questions, then the Title"
-    },
-    {
-     "t": 140.212,
-     "until": 143.706,
-     "text": "New run: three killstreaks picked, the run map, DEPLOY"
-    },
-    {
-     "t": 143.706,
-     "until": 148.75099999999998,
-     "text": "Round 1: keep the hand, tap the Operator and a zone, deploy a unit"
-    },
-    {
-     "t": 148.751,
-     "until": 153.613,
-     "text": "Simultaneous reveal. FIRST SHOT resolves before MAIN; eliminated units are stamped"
-    },
-    {
-     "t": 153.613,
-     "until": 157.413,
-     "text": "Long-press any card to read its full rules"
-    },
-    {
-     "t": 157.413,
-     "until": 159.81300000000002,
-     "text": "Frag Grenade: tap a zone near your Operator to throw it"
-    },
-    {
-     "t": 159.813,
-     "until": 165.68099999999998,
-     "text": "Streak 2 earned: call in the Recon Drone, throw a Frag, deploy"
-    },
-    {
-     "t": 165.68099999999998,
-     "until": 169.481,
-     "text": "Killstreak call-in: the full-screen takeover"
-    },
-    {
-     "t": 169.481,
-     "until": 173.081,
-     "text": "The Frag lands, FIRST SHOT fires before MAIN, an enemy is ELIMINATED"
-    },
-    {
-     "t": 173.081,
-     "until": 177.081,
-     "text": "Enemy First Shot units fire back: OPERATOR DOWN, and the killfeed logs it"
-    },
-    {
-     "t": 177.081,
-     "until": 180.68099999999998,
-     "text": "The streak reached 3 (Mortar ready), but the Operator went down: STREAK LOST"
-    },
-    {
-     "t": 180.68099999999998,
-     "until": 184.481,
-     "text": "Match result. The enemy squad won this one, 7 to 4"
-    }
-   ]
+   "captions": []
   },
   {
    "id": "end",
-   "start": 184.481,
-   "end": 189.981,
+   "start": 153.7,
+   "end": 159.2,
    "view": "end",
    "title": null,
    "captions": []
@@ -3503,136 +3437,292 @@
   "you": "You"
  },
  "game": {
-  "clips": [
+  "clips": [],
+  "shots": [
    {
-    "src": [
-     0.0,
-     2.556
-    ],
-    "rate": 1.3,
-    "dur": 1.966,
-    "caption": "The real web build of Killstreak, running in Chromium",
+    "type": "card",
+    "text": "DEPLOY.",
+    "dur": 0.9,
+    "kicker": "KILLSTREAK",
+    "color": "amber",
     "at": 135.5
    },
    {
+    "type": "clip",
     "src": [
-     2.556,
-     10.794
+     23.128,
+     26.73
     ],
-    "rate": 3.0,
-    "dur": 2.746,
-    "caption": "Playtest consent, three quick survey questions, then the Title",
-    "at": 137.466
+    "dur": 1.2,
+    "zoom": [
+     700,
+     300,
+     1.05,
+     1.2
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": "fast",
+    "glitch": false,
+    "label": "deploy",
+    "at": 136.4
    },
    {
+    "type": "clip",
     "src": [
-     10.794,
-     21.277
+     27.93,
+     28.93
     ],
-    "rate": 3.0,
-    "dur": 3.494,
-    "caption": "New run: three killstreaks picked, the run map, DEPLOY",
-    "at": 140.212
+    "dur": 1.0,
+    "zoom": [
+     560,
+     240,
+     1.15,
+     1.4
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "first shot",
+    "at": 137.6
    },
    {
+    "type": "clip",
     "src": [
-     21.277,
-     27.33
+     30.63,
+     31.53
     ],
-    "rate": 1.2,
-    "dur": 5.045,
-    "caption": "Round 1: keep the hand, tap the Operator and a zone, deploy a unit",
-    "at": 143.706
+    "dur": 0.9,
+    "zoom": [
+     486,
+     215,
+     1.35,
+     1.55
+    ],
+    "shake": 1.0,
+    "flash": "amber",
+    "ramp": null,
+    "glitch": false,
+    "label": "eliminated",
+    "at": 138.6
    },
    {
+    "type": "clip",
     "src": [
-     27.33,
-     32.192
+     34.538,
+     35.438
     ],
-    "rate": 1.0,
-    "dur": 4.862,
-    "caption": "Simultaneous reveal. FIRST SHOT resolves before MAIN; eliminated units are stamped",
-    "at": 148.751
+    "dur": 0.8,
+    "zoom": [
+     560,
+     340,
+     1.0,
+     1.15
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "card",
+    "at": 139.5
    },
    {
-    "src": [
-     32.638,
-     36.438
-    ],
-    "rate": 1.0,
-    "dur": 3.8,
-    "caption": "Long-press any card to read its full rules",
-    "at": 153.613
+    "type": "card",
+    "text": "CALL IN.",
+    "dur": 0.9,
+    "kicker": "STREAK 2",
+    "color": "cyan",
+    "at": 140.3
    },
    {
+    "type": "clip",
     "src": [
-     37.679,
-     40.079
+     88.728,
+     90.528
     ],
-    "rate": 1.0,
-    "dur": 2.4,
-    "caption": "Frag Grenade: tap a zone near your Operator to throw it",
-    "at": 157.413
+    "dur": 1.4,
+    "zoom": [
+     640,
+     360,
+     1.0,
+     1.25
+    ],
+    "shake": 0.6,
+    "flash": "white",
+    "ramp": "slow",
+    "glitch": true,
+    "label": "recon drone takeover",
+    "at": 141.2
    },
    {
+    "type": "clip",
     "src": [
-     82.36,
-     88.228
+     91.928,
+     92.828
     ],
-    "rate": 1.0,
-    "dur": 5.868,
-    "caption": "Streak 2 earned: call in the Recon Drone, throw a Frag, deploy",
-    "at": 159.813
+    "dur": 0.9,
+    "zoom": [
+     560,
+     240,
+     1.2,
+     1.45
+    ],
+    "shake": 1.0,
+    "flash": "amber",
+    "ramp": null,
+    "glitch": false,
+    "label": "frag lands",
+    "at": 142.6
    },
    {
+    "type": "clip",
     "src": [
-     88.228,
-     92.028
+     92.828,
+     93.628
     ],
-    "rate": 1.0,
-    "dur": 3.8,
-    "caption": "Killstreak call-in: the full-screen takeover",
-    "at": 165.681
+    "dur": 0.8,
+    "zoom": [
+     260,
+     260,
+     1.3,
+     1.5
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "first shot",
+    "at": 143.5
    },
    {
+    "type": "clip",
     "src": [
-     92.028,
-     95.628
+     94.328,
+     95.228
     ],
-    "rate": 1.0,
+    "dur": 0.8,
+    "zoom": [
+     200,
+     230,
+     1.4,
+     1.6
+    ],
+    "shake": 1.0,
+    "flash": "amber",
+    "ramp": null,
+    "glitch": false,
+    "label": "eliminated",
+    "at": 144.3
+   },
+   {
+    "type": "clip",
+    "src": [
+     95.928,
+     96.828
+    ],
+    "dur": 0.9,
+    "zoom": [
+     640,
+     260,
+     1.2,
+     1.45
+    ],
+    "shake": 0.5,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "tracers",
+    "at": 145.1
+   },
+   {
+    "type": "clip",
+    "src": [
+     96.928,
+     97.828
+    ],
+    "dur": 0.9,
+    "zoom": [
+     500,
+     330,
+     1.3,
+     1.5
+    ],
+    "shake": 1.2,
+    "flash": "red",
+    "ramp": null,
+    "glitch": false,
+    "label": "operator down",
+    "at": 146.0
+   },
+   {
+    "type": "clip",
+    "src": [
+     98.028,
+     98.828
+    ],
+    "dur": 0.8,
+    "zoom": [
+     1040,
+     35,
+     1.6,
+     1.8
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "killfeed",
+    "dy": 110,
+    "at": 146.9
+   },
+   {
+    "type": "card",
+    "text": "KILLSTREAK.",
+    "dur": 1.0,
+    "kicker": "STREAK 3",
+    "color": "amber",
+    "at": 147.7
+   },
+   {
+    "type": "clip",
+    "src": [
+     102.128,
+     104.028
+    ],
+    "dur": 1.4,
+    "zoom": [
+     150,
+     460,
+     1.25,
+     1.5
+    ],
+    "shake": 0.8,
+    "flash": "red",
+    "ramp": null,
+    "glitch": true,
+    "label": "streak lost",
+    "at": 148.7
+   },
+   {
+    "type": "clip",
+    "src": [
+     6.694,
+     7.994
+    ],
     "dur": 3.6,
-    "caption": "The Frag lands, FIRST SHOT fires before MAIN, an enemy is ELIMINATED",
-    "at": 169.481
-   },
-   {
-    "src": [
-     95.628,
-     99.628
+    "zoom": [
+     1180,
+     500,
+     1.6,
+     1.0
     ],
-    "rate": 1.0,
-    "dur": 4.0,
-    "caption": "Enemy First Shot units fire back: OPERATOR DOWN, and the killfeed logs it",
-    "at": 173.081
-   },
-   {
-    "src": [
-     99.628,
-     103.228
-    ],
-    "rate": 1.0,
-    "dur": 3.6,
-    "caption": "The streak reached 3 (Mortar ready), but the Operator went down: STREAK LOST",
-    "at": 177.081
-   },
-   {
-    "src": [
-     105.45,
-     109.25
-    ],
-    "rate": 1.0,
-    "dur": 3.8,
-    "caption": "Match result. The enemy squad won this one, 7 to 4",
-    "at": 180.681
+    "shake": 0,
+    "flash": "white",
+    "ramp": "hero",
+    "glitch": false,
+    "label": "hero",
+    "at": 150.1
    }
   ],
   "frames": "game/frames.json"

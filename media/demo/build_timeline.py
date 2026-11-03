@@ -408,14 +408,18 @@ T += 7
 
 # 12. The real game
 GAME_DUR = 0
-game_clips = []
-if GAME and os.path.exists(os.path.join(GAME, 'clips.json')):
+game_clips, game_shots = [], []
+if GAME and os.path.exists(os.path.join(GAME, 'trailer.json')):
+    # trailer-style teaser (trailer_cut.py): fast real-footage cuts + kinetic title cards, no captions
+    game_shots = json.load(open(os.path.join(GAME, 'trailer.json')))['shots']
+    GAME_DUR = sum(c['dur'] for c in game_shots)
+elif GAME and os.path.exists(os.path.join(GAME, 'clips.json')):
     game = json.load(open(os.path.join(GAME, 'clips.json')))
     game_clips = game['clips']
     GAME_DUR = sum(c['dur'] for c in game_clips)
 S = scene('game', T, max(GAME_DUR, 1), 'game', captions=[])
 tt = 0
-for c in game_clips:
+for c in game_clips + game_shots:
     c['at'] = round(S + tt, 3)
     if c.get('caption'):
         scenes[-1]['captions'].append({'t': S + tt, 'until': S + tt + c['dur'], 'text': c['caption']})
@@ -429,7 +433,7 @@ T += 5.5
 out = {'fps': 30, 'width': 1920, 'height': 1080, 'duration': round(T, 3), 'scenes': scenes,
        'events': sorted(events, key=lambda e: e['t']), 'clock': sorted(clock, key=lambda c: c['t']),
        'agents': [{'id': k, 'name': v} for k, v in AGENT_NAMES.items() if k not in ('lead', 'you')],
-       'names': AGENT_NAMES, 'game': {'clips': game_clips, 'frames': 'game/frames.json'},
+       'names': AGENT_NAMES, 'game': {'clips': game_clips, 'shots': game_shots, 'frames': 'game/frames.json'},
        'docs': {'design-review': open(os.path.join(HERE, '..', '..', 'projects', 'killstreak', 'documentation', 'DESIGN_REVIEW.md')).read()},
        'questions': {k: TASKS[k]['questions'] for k in ('t15', 't16q')},
        'commitTimes': [sod(c['at']) for c in COMMITS],

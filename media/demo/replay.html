@@ -186,6 +186,29 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 #gameImg{position:absolute;left:144px;top:0;width:1632px;height:918px}
 #gameTag{position:absolute;left:24px;top:22px;font:700 18px var(--f-mono);color:var(--ok);writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.12em}
 
+
+/* ---------- trailer (game teaser) ---------- */
+@font-face{font-family:'Barlow Condensed';font-weight:600;src:url(../../projects/killstreak/source/project-killstreak/assets/fonts/BarlowCondensed-SemiBold.ttf) format('truetype')}
+@font-face{font-family:'Share Tech Mono';font-weight:400;src:url(../../projects/killstreak/source/project-killstreak/assets/fonts/ShareTechMono-Regular.ttf) format('truetype')}
+#trailer{position:absolute;inset:0;overflow:hidden;background:#000;display:none}
+#tWrap{position:absolute;inset:0;will-change:transform}
+#tImg,#tImg2{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#tImg2{opacity:0;mix-blend-mode:screen}
+.lb{position:absolute;left:0;right:0;height:96px;background:#000;z-index:3}
+#lbTop{top:0} #lbBot{bottom:0}
+#tTag{position:absolute;left:36px;top:34px;z-index:4;font:400 20px 'Share Tech Mono',monospace;letter-spacing:.14em;color:#5f7182}
+#tFlash{position:absolute;inset:0;z-index:5;opacity:0}
+#tCard{position:absolute;inset:0;z-index:2;display:none;place-content:center;text-align:center;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 2px,transparent 2px 5px),radial-gradient(900px 500px at 50% 50%,#1a2230 0%,#07090c 75%)}
+#tCard .k{font:400 36px 'Share Tech Mono',monospace;letter-spacing:.3em;color:#4fd8f0;margin-bottom:6px}
+#tCard .w{font:600 290px/0.9 'Barlow Condensed',sans-serif;color:#f5b230;text-shadow:0 0 40px rgba(245,178,48,.35)}
+#tCard .w.cyan{color:#4fd8f0;text-shadow:0 0 40px rgba(79,216,240,.35)}
+#tCard .bar{height:8px;background:#f5b230;margin:26px auto 0;transform-origin:left}
+#tHero{position:absolute;left:0;right:0;bottom:96px;padding:120px 0 26px;z-index:4;text-align:center;opacity:0;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8) 55%)}
+#tHero .k{font:400 28px 'Share Tech Mono',monospace;letter-spacing:.3em;color:#4fd8f0}
+#tHero .h{font:600 64px/1.1 'Barlow Condensed',sans-serif;color:#fff;text-shadow:0 3px 18px rgba(0,0,0,.9);margin-top:6px}
+#tHero .h b{color:#f5b230;font-weight:600}
+
 /* ---------- overlays ---------- */
 #toast{position:absolute;left:50%;top:826px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:14px 24px;border-radius:10px;font:600 23px var(--f-body);opacity:0;white-space:nowrap}
 #limit{position:absolute;left:50%;top:420px;transform:translate(-50%,-50%);width:1100px;padding:34px 40px;border-radius:18px;background:#2a1f10;border:2px solid var(--warn);color:var(--ink);text-align:center;opacity:0;box-shadow:0 30px 80px rgba(0,0,0,.6)}
@@ -236,7 +259,12 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 
   <div class="view" id="v-stats"><div class="stats-h">Killstreak, start to playable</div><div class="sgrid" id="sgrid"></div></div>
 
-  <div class="view" id="v-game"><img id="gameImg" alt=""><div id="gameTag">REAL GAMEPLAY · WEB BUILD · GODOT 4.4.1</div></div>
+  <div class="view" id="v-game"><img id="gameImg" alt=""><div id="gameTag">REAL GAMEPLAY · WEB BUILD · GODOT 4.4.1</div>
+    <div id="trailer"><div id="tWrap"><img id="tImg" alt=""><img id="tImg2" alt=""></div>
+      <div id="tCard"><div class="k" id="tCardK"></div><div class="w" id="tCardW"></div><div class="bar" id="tCardBar"></div></div>
+      <div id="tHero"><div class="k">PLAYABLE WEB PROTOTYPE</div><div class="h">Built by an AI studio of <b>13 Claude agents</b> · Godot 4.4.1</div></div>
+      <div class="lb" id="lbTop"></div><div class="lb" id="lbBot"></div>
+      <div id="tTag">REAL FOOTAGE · KILLSTREAK WEB BUILD</div><div id="tFlash"></div></div></div>
 
   <div class="view" id="v-end"><div class="card-center">
     <div class="eyebrow">Killstreak · an original game</div>
@@ -580,6 +608,7 @@ function renderStats(s) {
 }
 let gameFrames = null;
 function renderGame(t) {
+  if (TL.game.shots && TL.game.shots.length) return renderTrailer(t);
   const clips = TL.game.clips; if (!clips.length) return;
   let c = clips[0]; for (const x of clips) if (x.at <= t) c = x;
   const gt = c.src[0] + (t - c.at) * (c.rate || 1);
@@ -587,6 +616,58 @@ function renderGame(t) {
   while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= gt) lo = m; else hi = m - 1; }
   if (F[lo]) { const src = TL.gameDir + "/" + F[lo].file; if ($("gameImg").getAttribute("src") !== src) $("gameImg").setAttribute("src", src); }
 }
+
+function frameAt(gt) {
+  const F = window.GAME_FRAMES || []; let lo = 0, hi = F.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m].t <= gt) lo = m; else hi = m - 1; }
+  return F[lo] ? TL.gameDir + "/" + F[lo].file : null;
+}
+function setSrc(el, src) { if (src && el.getAttribute("src") !== src) el.setAttribute("src", src); }
+const hash = n => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+function renderTrailer(t) {
+  const shots = TL.game.shots; let sh = shots[0]; for (const x of shots) if (x.at <= t) sh = x;
+  const u = Math.max(0, t - sh.at), p = clamp(u / sh.dur);
+  $("trailer").style.display = "block"; $("gameImg").style.display = "none"; $("gameTag").style.display = "none";
+  const fl = $("tFlash"); let flash = 0, fcol = "#fff";
+  if (sh.type === "card") {
+    $("tCard").style.display = "grid"; $("tHero").style.opacity = 0;
+    $("tCardW").textContent = sh.text; $("tCardW").className = "w" + (sh.color === "cyan" ? " cyan" : "");
+    $("tCardK").textContent = sh.kicker || "";
+    const land = ease(u / 0.14);
+    const sc = 1.7 - 0.7 * land, ls = 0.35 * (1 - ease(u / 0.3));
+    const kick = u > 0.12 && u < 0.35 ? 10 * Math.exp(-(u - 0.12) / 0.07) : 0;
+    $("tCardW").style.transform = `translate(${kick * Math.sin(u * 160)}px,${kick * Math.cos(u * 130)}px) scale(${sc + 0.04 * p})`;
+    $("tCardW").style.letterSpacing = ls + "em"; $("tCardW").style.opacity = land;
+    $("tCardK").style.opacity = ease((u - 0.15) / 0.2);
+    $("tCardBar").style.width = "640px"; $("tCardBar").style.transform = `scaleX(${ease((u - 0.1) / 0.35)})`;
+    $("tCardBar").style.background = sh.color === "cyan" ? "#4fd8f0" : "#f5b230";
+    if (u < 0.1) { flash = 0.9 * (1 - u / 0.1); }
+    $("tWrap").style.opacity = 0;
+  } else {
+    $("tCard").style.display = "none"; $("tWrap").style.opacity = 1;
+    let q = p;
+    if (sh.ramp === "slow") q = 1 - Math.pow(1 - p, 2);
+    const gt = sh.src[0] + (sh.src[1] - sh.src[0]) * q;
+    const src = frameAt(gt); setSrc($("tImg"), src); setSrc($("tImg2"), src);
+    const [zx, zy, z0, z1] = sh.zoom;
+    const zk = sh.ramp === "hero" ? ease(p) : 1 - Math.pow(1 - p, 3);
+    const sc = z0 + (z1 - z0) * zk;
+    const A = (sh.shake || 0) * 16 * Math.exp(-u / 0.16);
+    const dx = A * Math.sin(u * 95), dy = A * Math.cos(u * 81);
+    $("tWrap").style.transformOrigin = `${zx * 1.5}px ${zy * 1.5}px`;
+    $("tWrap").style.transform = `translate(${dx}px,${dy + (sh.dy || 0)}px) scale(${sc})`;
+    // short RGB-split glitch on the first frames of a glitch shot
+    const g = sh.glitch && u < 0.26 && Math.floor(u * 30) % 2 === 0;
+    $("tImg").style.filter = g ? "drop-shadow(10px 0 0 rgba(255,40,80,.55)) drop-shadow(-10px 0 0 rgba(40,220,255,.55))" : "none";
+    if (g) { const y0 = 15 + hash(Math.floor(t * 30)) * 60; $("tImg2").style.opacity = .85; $("tImg2").style.clipPath = `inset(${y0}% 0 ${100 - y0 - 9}% 0)`; $("tImg2").style.transform = `translateX(${(hash(Math.floor(t * 30) + 7) - .5) * 70}px)`; $("tImg2").style.filter = "hue-rotate(160deg) saturate(2)"; }
+    else $("tImg2").style.opacity = 0;
+    if (sh.flash && u < 0.14) { flash = (sh.flash === "white" ? 0.85 : 0.55) * (1 - u / 0.14); fcol = {white:"#ffffff", amber:"#f5b230", red:"#ff3b3b"}[sh.flash]; }
+    $("tHero").style.opacity = sh.label === "hero" ? ease((u - 1.0) / 0.6) : 0;
+    $("tHero").style.transform = `translateY(${(1 - ease((u - 1.0) / 0.6)) * 30}px)`;
+  }
+  fl.style.background = fcol; fl.style.opacity = flash;
+}
+
 /* ---------- cursor ---------- */
 const tapPos = {};
 function renderCursor(t) {
@@ -648,7 +729,8 @@ function render(t) {
   window.__t = t;
 }
 window.render = render;
-window.__ready = document.fonts.ready.then(() => { render(0); return true; });
+window.__ready = Promise.all([document.fonts.load("600 40px 'Barlow Condensed'"), document.fonts.load("400 20px 'Share Tech Mono'")])
+  .then(() => document.fonts.ready).then(() => { render(0); return true; });
 </script>
 </body>
 </html>
