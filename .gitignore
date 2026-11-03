@@ -9,8 +9,11 @@ venv/
 ENV/
 .venv
 
-# Projects (user-created, not part of repo)
-projects/*/
+# Projects are tracked; ignore Godot caches and exports
+projects/*/source/**/.godot/
+projects/*/source/**/.import/
+projects/*/builds/**/*.pck
+projects/*/builds/**/*.wasm
 
 # IDE
 .vscode/
