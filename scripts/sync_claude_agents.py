@@ -64,6 +64,7 @@ def main():
                 f"  `ArtifactData` action `set`, url `{dashboard}`, collection `progress`, doc_id `{name}-<unix-ms>`, data "
                 f"`{{\"agent\": \"{name}\", \"task\": \"<task id from your brief, if any>\", \"status\": \"working\", "
                 "\"text\": \"<one short plain sentence: what you are doing now>\", \"pct\": <0-100 estimate>, \"at\": \"<ISO-8601 UTC now>\"}`.\n"
+                "- Get the real time for `at` and the doc id by running `date -u +%Y-%m-%dT%H:%M:%SZ` and `date +%s%3N` each time; never guess or round times.\n"
                 "- Final report: `status` `done` (or `blocked` with the reason in `text`) and `pct` 100 when done.\n"
                 "- Only create new documents; never edit or delete others. No secrets or file contents, just a sentence.\n\n"
             )

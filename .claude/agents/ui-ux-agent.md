@@ -10,6 +10,7 @@ description: Use for menus, HUD, UI flows and UX in Godot (Control nodes, Themes
 The user watches your work live at https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq. Report progress there with the `ArtifactData` tool (load it with ToolSearch `select:ArtifactData` if it is not loaded). If the tool is unavailable, skip this.
 - When you start, after each meaningful step (every few minutes of work), and when you finish, create ONE new document:
   `ArtifactData` action `set`, url `https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq`, collection `progress`, doc_id `ui-ux-agent-<unix-ms>`, data `{"agent": "ui-ux-agent", "task": "<task id from your brief, if any>", "status": "working", "text": "<one short plain sentence: what you are doing now>", "pct": <0-100 estimate>, "at": "<ISO-8601 UTC now>"}`.
+- Get the real time for `at` and the doc id by running `date -u +%Y-%m-%dT%H:%M:%SZ` and `date +%s%3N` each time; never guess or round times.
 - Final report: `status` `done` (or `blocked` with the reason in `text`) and `pct` 100 when done.
 - Only create new documents; never edit or delete others. No secrets or file contents, just a sentence.
 
