@@ -16,7 +16,7 @@
     "phase": "prototype",
     "order": 21,
     "status": "todo",
-    "note": "Typed .tres Resources for cards, loadout items, squads and run config, loaded by a CardDB autoload. Done when every field in core-rules §3–5 is covered and bad data fails loudly.",
+    "note": "Typed .tres Resources for cards, loadout items, squads and run config, loaded by a CardDB autoload. Done when every field in core-rules \u00a73\u20135 is covered and bad data fails loudly.",
     "depends": [
       "p01"
     ]
@@ -40,7 +40,7 @@
     "phase": "prototype",
     "order": 23,
     "status": "todo",
-    "note": "Deterministic, node-free rules engine for Briefing → Score with initiative, line order and all 7 keywords. Done when 40+ headless tests pass, including every edge case in core-rules §9.",
+    "note": "Deterministic, node-free rules engine for Briefing \u2192 Score with initiative, line order and all 7 keywords. Done when 40+ headless tests pass, including every edge case in core-rules \u00a79.",
     "depends": [
       "p02"
     ]
@@ -64,7 +64,7 @@
     "phase": "prototype",
     "order": 25,
     "status": "todo",
-    "note": "Both win conditions with the round-8 cap, overtime and draw rules, driven by data. Done when both modes finish in ≤ 8 rounds in tests.",
+    "note": "Both win conditions with the round-8 cap, overtime and draw rules, driven by data. Done when both modes finish in \u2264 8 rounds in tests.",
     "depends": [
       "p04"
     ]
@@ -90,7 +90,7 @@
     "phase": "prototype",
     "order": 27,
     "status": "todo",
-    "note": "Three lanes, minimap red dots, score bar, Supply, READY and Operator panel, built with anchors and containers. Done when it reads well at 1280×720 and on a phone in landscape (844×390).",
+    "note": "Three lanes, minimap red dots, score bar, Supply, READY and Operator panel, built with anchors and containers. Done when it reads well at 1280\u00d7720 and on a phone in landscape (844\u00d7390).",
     "depends": [
       "p01"
     ]
@@ -110,12 +110,12 @@
   },
   {
     "id": "p10",
-    "title": "Run flow (7 matches, 3 tickets)",
+    "title": "Run flow (5 matches, 3 tickets)",
     "agent": "mechanics-developer",
     "phase": "prototype",
     "order": 29,
     "status": "todo",
-    "note": "RunState drives 7 matches, tickets, rewards, weapon levels and Perk offers, and survives a browser reload. Done when a run can be won and lost end to end.",
+    "note": "RunState drives 5 matches, tickets, rewards, weapon levels and Perk offers, and survives a browser reload. Done when a run can be won and lost end to end.",
     "depends": [
       "p06",
       "p03"
@@ -180,7 +180,7 @@
     "phase": "prototype",
     "order": 34,
     "status": "todo",
-    "note": "Scripted first match teaching deploy, firefight, streak and the Recon Drone call-in; skippable. Done when a new tester finishes it in ≤ 5 minutes.",
+    "note": "Scripted first match teaching deploy, firefight, streak and the Recon Drone call-in; skippable. Done when a new tester finishes it in \u2264 5 minutes.",
     "depends": [
       "p03",
       "p07",
@@ -220,7 +220,7 @@
     "phase": "qa",
     "order": 37,
     "status": "todo",
-    "note": "Rules and edge-case pass, device matrix (desktop browsers, Android Chrome, iOS Safari), mouse-only and touch-only passes, IP name checklist. Done at 0 critical and ≤ 10 minor bugs.",
+    "note": "Rules and edge-case pass, device matrix (desktop browsers, Android Chrome, iOS Safari), mouse-only and touch-only passes, IP name checklist. Done at 0 critical and \u2264 10 minor bugs.",
     "depends": [
       "p04",
       "p05",
@@ -243,7 +243,7 @@
     "phase": "qa",
     "order": 38,
     "status": "todo",
-    "note": "10+ logged internal matches per mode; tune toward the target win rates and ≤ 1 unspent Supply. Done when changes are recorded in balance-log.md and run length is 30–45 min.",
+    "note": "10+ logged internal matches per mode; tune toward the target win rates and \u2264 1 unspent Supply. Done when changes are recorded in balance-log.md and run length is 30\u201345 min.",
     "depends": [
       "p07",
       "p10",
@@ -257,7 +257,7 @@
     "phase": "qa",
     "order": 39,
     "status": "todo",
-    "note": "3–5 internal sessions, KPI sheet from the logs, and a short readout with the tester brief. Done when there is a go/no-go for external playtest round 1.",
+    "note": "3\u20135 internal sessions, KPI sheet from the logs, and a short readout with the tester brief. Done when there is a go/no-go for external playtest round 1.",
     "depends": [
       "p18",
       "p19"

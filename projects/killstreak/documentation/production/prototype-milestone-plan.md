@@ -1,5 +1,8 @@
 # Killstreak — Web Prototype Milestone Plan
 
+> **Update 2026-11-03 (user decision):** the prototype run is **5 matches (~20–30 min, 3 tickets)**, not 7. This is a data-only change in `run_config.tres`; where this plan says 7 matches, read 5 (Bracket 1 ×2, Bracket 2 ×2, Rival). Trademark: the user will get a professional check. Hosting: private itch.io page approved; the user will recruit 8–15 testers. Devices: a real iPhone and Android phone are available. Content picks and cut order: approved.
+
+
 *Author: Producer Agent · 2026-11-03 · Board task t16 · Inputs: `../DESIGN_REVIEW.md` (Decisions approved 2026-11-03), `../design/core-rules.md`, `../design/vision.md`, `producer-scope-review.md`, `../art/style-guides/art-direction.md`, `playtest-metrics-plan.md`*
 *Engine: Godot 4.4.1, GDScript, HTML5 export. IP: original setting only. No Call of Duty names, characters, maps, modes, HUD or logos. Working title "Killstreak"; user's preferred candidate "Deckstreak" (pending trademark check, no renames).*
 *Task list for the board: `prototype-tasks.json` (p01–p20).*
