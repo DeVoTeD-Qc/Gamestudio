@@ -75,7 +75,7 @@ static func build() -> Theme:
 
 	# Panels
 	_panel(t, &"HudPanelDark", _box(GUNMETAL, Color.TRANSPARENT, 0, 6, 10))
-	_panel(t, &"LanePanel", _box(Color("#1A2026"), Color("#3A444E"), 2, 6, 6))
+	_panel(t, &"LanePanel", _box(Color("#1A2026"), Color("#3A444E"), 2, 6, 4))
 	_panel(t, &"ZoneFriend", _box(TEAL.darkened(0.55), TEAL, 2, 4, 6))
 	_panel(t, &"ZoneEnemy", _box(RED.darkened(0.6), RED, 2, 4, 6))
 	# Contested: neutral fill with thick side bars (shape cue, not color alone).
@@ -169,7 +169,8 @@ static func _button(t: Theme, variation: StringName, bg: Color, fg: Color, size:
 	for key: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color",
 			&"font_hover_pressed_color", &"font_focus_color"]:
 		t.set_color(key, variation, fg)
-	t.set_color(&"font_disabled_color", variation, Color(fg, 0.45))
+	# Locked killstreaks still carry info ("AT 3"), so keep disabled text readable.
+	t.set_color(&"font_disabled_color", variation, Color(fg, 0.75))
 	t.set_font_size(&"font_size", variation, size)
 
 

@@ -23,7 +23,7 @@ clip_text = true
 
 [node name="NameLabel" type="Label" parent="Column"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 autowrap_mode = 3

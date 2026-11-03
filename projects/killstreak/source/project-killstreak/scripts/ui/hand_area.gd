@@ -83,7 +83,8 @@ func _make_card(card: Dictionary) -> Control:
 
 	var text: Label = _label(String(card.get("text", "")), 15)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.max_lines_visible = 2
+	text.clip_text = true
+	text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(text)
 
