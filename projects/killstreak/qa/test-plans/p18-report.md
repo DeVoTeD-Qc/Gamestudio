@@ -64,7 +64,7 @@ red dots = the AI's committed unit deployments, no refused AI intent, and the ma
 | 20 whole runs through `RunProgress` (random killstreak picks, random reward choices, 15% skips) | 84 | 6.2 / 10 | 50 / 31 / 3 | 0 |
 
 Before the p18-001 fix, the whole-run sweep found 1 refused intent. Overtime and the round-10 draw were both reached. No script errors.
-Run outcomes (5 victories in 20) are reported for p19, not asserted.
+Run outcomes (5 victories in 20) are reported for p19, not asserted. Final re-run after p19's data changes (`run_config.tres`, `squad_rusher.tres`, `squad_black_meridian.tres`): per-slot 150 matches (enemy 86 / player 62 / draw 2), whole runs 88 matches with 2 victories in 20, **0 violations**, and the full suite passes.
 
 **Test counts:** full suite **301 passed, 0 failed** (it was 287). New: `test_rules_soak.gd` (2 tests) and `test_p18_regressions.gd` (12 tests).
 The headless runner prints only the expected errors from the data-validation tests, plus Godot's usual "ObjectDB instances leaked at exit"
@@ -80,7 +80,7 @@ banner → After-Action → every reward → Run End → end survey (5 + open) �
 
 | Profile | Input | Matches | Rewards taken | Killstreaks used | Console errors / warnings | Log download |
 |---|---|---|---|---|---|---|
-| iPhone 844×390 @3x | touch only | 3 (0 W, run lost on tickets) | attachment, Perk | none earned | 0 / 0 | 19.7 KB `.jsonl`, 157 lines, valid JSON |
+| iPhone 844×390 @3x | touch only | 3 (0 W, run lost on tickets) | attachment, Perk | none earned | 0 / 0 | 19.7 KB `.jsonl`, 160 lines, valid JSON |
 | Desktop 1280×720 | mouse only | 3 (0 W) | attachment, Perk | none earned | 0 / 0 | 22.3 KB |
 | Desktop 1280×720, second run (smarter tap policy) | mouse only | 4 (1 W) | **Supply Drop**, attachment, Perk | Recon Drone, Mortar, Sentry | 0 / 0 | 36.9 KB |
 | iPad 1024×768 @2x | touch only | 4 (1 W) | attachment, **Supply Drop**, Perk | Recon Drone, Mortar, Sentry | 0 / 0 | 32.0 KB |
