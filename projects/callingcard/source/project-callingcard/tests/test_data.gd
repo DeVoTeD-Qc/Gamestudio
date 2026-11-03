@@ -47,6 +47,13 @@ func test_sample_cards_match_spec() -> void:
 		assert_true(ct.is_store, "store flag")
 		assert_eq(ct.clearance, 1, "store card is Clearance 1")
 		assert_eq(ct.card_trait(), DataEnums.CardTrait.NONE, "store card has no trait")
+	if nr != null:
+		var ui: Dictionary = nr.to_ui_dict()
+		assert_eq([ui["id"], ui["set"], ui["origin"], ui["trait"], ui["clearance"]],
+				[&"neon_rain", &"night_shift", &"mastery", &"veteran", 2], "UI dictionary (cc07 shape)")
+		assert_eq([ui["top"], ui["side"], ui["bottom"], ui["name"]], [4, 6, 5, "Neon Rain"], "UI values")
+	if ct != null:
+		assert_eq(ct.to_ui_dict()["trait"], &"none", "store card UI trait")
 	assert_eq(db.cards_in_set(&"night_shift").map(func(c: CardData) -> StringName: return c.id),
 			[&"graveyard_shift", &"neon_rain"], "set members in album order")
 
@@ -382,10 +389,10 @@ func test_issue_report_shape() -> void:
 ## A complete, valid data set (spec §6 values). Keys are "<folder>/<file>" (saved as <key>.tres).
 func _valid_set() -> Dictionary:
 	var d: Dictionary = {}
-	var night: SetData = _set(&"night_shift", 1, DataEnums.SetKind.STANDARD, "Night Owl")
-	var white: SetData = _set(&"whiteout", 2, DataEnums.SetKind.STANDARD, "Snowblind")
-	var cipher: SetData = _set(&"cipher", 5, DataEnums.SetKind.CIPHER, "")
-	var show: SetData = _set(&"showcase", 6, DataEnums.SetKind.SHOWCASE, "")
+	var night: SetData = _make_set(&"night_shift", 1, DataEnums.SetKind.STANDARD, "Night Owl")
+	var white: SetData = _make_set(&"whiteout", 2, DataEnums.SetKind.STANDARD, "Snowblind")
+	var cipher: SetData = _make_set(&"cipher", 5, DataEnums.SetKind.CIPHER, "")
+	var show: SetData = _make_set(&"showcase", 6, DataEnums.SetKind.SHOWCASE, "")
 	for s: SetData in [night, white, cipher, show]:
 		d["sets/" + String(s.id)] = s
 
@@ -458,7 +465,7 @@ func _valid_set() -> Dictionary:
 	return d
 
 
-func _set(id: StringName, number: int, kind: DataEnums.SetKind, title: String) -> SetData:
+func _make_set(id: StringName, number: int, kind: DataEnums.SetKind, title: String) -> SetData:
 	var s: SetData = SetData.new()
 	s.id = id
 	s.display_name = String(id).capitalize()

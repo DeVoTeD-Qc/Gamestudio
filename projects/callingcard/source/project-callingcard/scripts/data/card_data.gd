@@ -75,6 +75,19 @@ func trait_text() -> String:
 	return DataEnums.TRAIT_TEXT[card_trait()]
 
 
+## The card as the UI's card Dictionary (cc07 mock_duel_data.gd shape, plus art and album fields).
+## origin / trait are lowercase StringNames (&"mastery", &"veteran", &"none").
+func to_ui_dict() -> Dictionary:
+	return {
+		"id": id, "name": display_name, "set": card_set.id if card_set != null else &"",
+		"origin": StringName(DataEnums.key_of(DataEnums.Origin, origin).to_lower()),
+		"trait": StringName(DataEnums.key_of(DataEnums.CardTrait, card_trait()).to_lower()),
+		"clearance": clearance, "top": top, "side": side, "bottom": bottom,
+		"earned": how_earned, "art_key": art_key, "art_seed": art_seed, "glyph": cipher_glyph,
+		"is_store": is_store, "signature_eligible": signature_eligible,
+	}
+
+
 func validate(v: DataValidator) -> void:
 	v.require_id(id)
 	v.require_text("display_name", display_name)
