@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/night_shift.tres" id="1_1vcr1"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_4s2xo"]
+
+[resource]
+script = ExtResource("2_4s2xo")
+id = &"neon_rain"
+display_name = "Neon Rain"
+card_set = ExtResource("1_1vcr1")
+album_order = 2
+top = 4
+side = 6
+bottom = 5
+clearance = 2
+origin = 1
+is_store = false
+signature_eligible = true
+how_earned = "Reach tier 2 mastery on any SMG"
+art_key = &"neon_rain"
+art_seed = 10334
+art_brief = "Rain streaks over magenta/cyan signage, wet asphalt"
+cipher_glyph = 0
+starts_owned = true

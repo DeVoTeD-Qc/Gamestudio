@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/showcase.tres" id="1_v3lvx"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_fclte"]
+
+[resource]
+script = ExtResource("2_fclte")
+id = &"chrome_tiger"
+display_name = "Chrome Tiger"
+card_set = ExtResource("1_v3lvx")
+album_order = 1
+top = 5
+side = 4
+bottom = 4
+clearance = 1
+origin = 6
+is_store = true
+signature_eligible = true
+how_earned = "Store bundle (simulated, free in demo)"
+art_key = &"chrome_tiger"
+art_seed = 17693
+art_brief = "Chrome tiger head, animated reflections"
+cipher_glyph = 0
+starts_owned = true

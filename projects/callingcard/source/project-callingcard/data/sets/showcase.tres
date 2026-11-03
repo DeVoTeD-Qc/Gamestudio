@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SetData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/set_data.gd" id="1_hvahu"]
+
+[resource]
+script = ExtResource("1_hvahu")
+id = &"showcase"
+display_name = "Showcase"
+kind = 2
+number = 6
+palette_key = &"showcase"
+tagline = "Store bundles: premium frames, Clearance 1, no trait."
+completion_title = ""

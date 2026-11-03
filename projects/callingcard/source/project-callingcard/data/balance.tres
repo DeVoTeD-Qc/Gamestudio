@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="BalanceConfig" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_jhw8h"]
+[ext_resource type="Script" path="res://scripts/data/balance_config.gd" id="2_e7bv1"]
+
+[resource]
+script = ExtResource("2_e7bv1")
+id = &"balance"
+wall_rows = PackedInt32Array(3, 4, 3)
+lineup_size = 5
+clearance_cap = 12
+max_legends = 1
+stat_budgets = PackedInt32Array(13, 15, 17, 19)
+stat_min = 1
+stat_max = 9
+set_size_min = 2
+set_size_max = 6
+set_link_bonus = 1
+clutch_bonus = 2
+ambush_spring_bonus = 1
+signature_value = 2
+triptych_bonus = 1
+tie_winner = 0
+chain_captures = false
+cipher_code = PackedInt32Array(1, 2, 3, 4)
+loaner_lineup = Array[ExtResource("1_jhw8h")]([])
+lobby_wait_min_s = 60
+lobby_wait_max_s = 150

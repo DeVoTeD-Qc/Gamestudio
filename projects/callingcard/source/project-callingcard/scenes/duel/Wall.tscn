@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/wall_view.gd" id="1_wall"]
+[ext_resource type="Script" path="res://scripts/ui/wall_layout.gd" id="2_layout"]
+[ext_resource type="PackedScene" path="res://scenes/duel/Slot.tscn" id="3_slot"]
+
+[node name="Wall" type="PanelContainer"]
+offset_right = 1100.0
+offset_bottom = 240.0
+theme_type_variation = &"WallPanel"
+script = ExtResource("1_wall")
+
+[node name="WallLayout" type="Container" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_layout")
+
+[node name="a1" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"a1"
+
+[node name="a2" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"a2"
+
+[node name="a3" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"a3"
+
+[node name="b1" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"b1"
+
+[node name="b2" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"b2"
+
+[node name="b3" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"b3"
+
+[node name="b4" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"b4"
+
+[node name="c1" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"c1"
+
+[node name="c2" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"c2"
+
+[node name="c3" parent="WallLayout" instance=ExtResource("3_slot")]
+layout_mode = 2
+slot_id = &"c3"

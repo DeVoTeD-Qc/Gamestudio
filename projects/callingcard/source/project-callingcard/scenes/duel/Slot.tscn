@@ -1,0 +1,37 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/wall_slot.gd" id="1_slot"]
+[ext_resource type="PackedScene" path="res://scenes/duel/CardView.tscn" id="2_card"]
+
+[node name="Slot" type="Button" groups=["tap_target"]]
+custom_minimum_size = Vector2(256, 64)
+offset_right = 256.0
+offset_bottom = 64.0
+theme_type_variation = &"WallSlot"
+script = ExtResource("1_slot")
+
+[node name="SlotIdLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"SlotId"
+text = "A1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardView" parent="." instance=ExtResource("2_card")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
