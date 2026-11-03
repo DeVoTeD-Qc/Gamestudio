@@ -15,6 +15,9 @@ extends "res://scripts/survey/survey_screen.gd"
 
 
 func _ready() -> void:
+	# Marker line for the web load-time check on a first launch, where Boot opens this screen
+	# instead of the Title (qa/performance-logs/web-load.md, p18 bug 002).
+	print("Consent: ready")
 	_yes_button.pressed.connect(_on_answer.bind(true))
 	_no_button.pressed.connect(_on_answer.bind(false))
 	var plog: Node = playtest_log()

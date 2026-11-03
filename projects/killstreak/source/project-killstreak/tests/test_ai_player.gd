@@ -324,12 +324,13 @@ func test_frag_and_sidearm_finish_weak_enemies_near_the_operator() -> void:
 
 
 func test_killstreak_from_tray_hits_the_crowded_zone() -> void:
-	var m: MatchState = _staged("squad_rusher")
+	# The Rival carries Mortar Barrage (p19 moved the Rusher to Recon Drone + Sentry Turret).
+	var m: MatchState = _staged("squad_black_meridian")
 	F.place_operator(m, E, 0)
 	for i: int in 3:
 		F.place(m, P, load("res://data/cards/rifleman.tres"), 2)
 	StreakTracker.grant(m, E, &"mortar_barrage")
-	var ai: AiPlayer = AiPlayer.for_squad(_squad("squad_rusher"))
+	var ai: AiPlayer = AiPlayer.for_squad(_squad("squad_black_meridian"))
 	ai.take_turn(m, E)
 	var mortar: Array[Dictionary] = _used(ai, &"mortar_barrage")
 	assert_eq(mortar.size(), 1, "Mortar used: %s" % str(ai.last_intents))
@@ -342,7 +343,7 @@ func test_killstreak_from_tray_hits_the_crowded_zone() -> void:
 
 func test_personalities_keep_their_positions() -> void:
 	var counts: Dictionary = {}
-	for slot_index: int in [1, 2]:  # Firefight slots: Anchor (1), Rusher (2)
+	for slot_index: int in [1, 2]:  # Anchor (slot 1, Zone Control since p19), Rusher (slot 2, Firefight)
 		var slot: RunMatchData = _slot(slot_index)
 		var zones: Array[int] = [0, 0, 0]
 		var op_zones: Array[int] = [0, 0, 0]

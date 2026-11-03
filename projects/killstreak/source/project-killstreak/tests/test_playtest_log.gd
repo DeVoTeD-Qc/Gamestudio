@@ -71,7 +71,7 @@ func _play_sample(bus: Node) -> void:
 	var offered: Array[StringName] = [&"medic", &"sniper", &"smg"]
 	bus.reward_offered.emit(&"supply_drop", offered)
 	bus.reward_picked.emit(&"supply_drop", &"sniper")
-	var perks: Array[StringName] = [&"scavenger", &"ghost"]
+	var perks: Array[StringName] = [&"field_salvage", &"grit"]
 	bus.reward_offered.emit(&"perk", perks)
 	bus.reward_picked.emit(&"perk", &"")
 	bus.next_match_requested.emit()

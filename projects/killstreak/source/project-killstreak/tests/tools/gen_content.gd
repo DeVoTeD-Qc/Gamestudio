@@ -212,7 +212,7 @@ func _gen() -> void:
 	var rusher := squad("squad_rusher", "SandViper_07", "DSRT", DataEnums.Personality.RUSHER,
 		cards_list([[point_man, 3], [breacher, 3], [flanker, 2], [rifleman, 2], [shieldman, 1], [medic, 1],
 			[callout, 1], [flank_route, 2], [bac, 1], [ammo, 1], [tripwire, 1]]),
-		wasp, [ext_mag], sidearm, frag, flash, [], [recon, mortar],
+		wasp, [ext_mag], sidearm, frag, flash, [], [recon, sentry_ks],  # p19: Mortar -> Sentry (balance-log B2)
 		[1.5, 0.5, 2.0, 3.0], 0.15, [DataEnums.RangeTag.CLOSE])
 	var anchor := squad("squad_anchor", "Bulwark_Nine", "QUAY", DataEnums.Personality.ANCHOR,
 		cards_list([[gunner, 3], [shieldman, 2], [rifleman, 3], [medic, 2], [demo, 2], [marksman, 1],
@@ -222,7 +222,7 @@ func _gen() -> void:
 	var rival := squad("squad_black_meridian", "Meridian_Six", "BKMRD", DataEnums.Personality.ANCHOR,
 		cards_list([[anvil, 1], [wren, 1], [gunner, 2], [shieldman, 2], [marksman, 2], [breacher, 1], [medic, 2],
 			[demo, 1], [rifleman, 2], [hold, 1], [supp_fire, 1], [bac, 1], [comms, 1], [callout, 1], [ammo, 1]]),
-		kestrel, [foregrip, ceramic], sidearm, frag, flash, [p_grit, p_obj], [recon, mortar, sentry_ks],
+		kestrel, [foregrip, ceramic, ext_mag], sidearm, frag, flash, [p_grit, p_obj], [recon, mortar, sentry_ks],  # p19: + Extended Mag (B4)
 		[1.2, 1.2, 2.5, 3.0], 0.05, [])
 	squad("squad_tutorial", "TrainingBot_01", "DRILL", DataEnums.Personality.RUSHER,
 		cards_list([[rifleman, 8], [point_man, 3], [marksman, 2], [medic, 2]]),
@@ -232,8 +232,9 @@ func _gen() -> void:
 	# --- Run config ------------------------------------------------------------
 	var run := RunConfig.new()
 	run.id = &"run_default"; run.display_name = "Prototype Run"
-	var plan: Array = [[1, false, rusher, DataEnums.GameMode.ZONE_CONTROL], [1, false, anchor, DataEnums.GameMode.FIREFIGHT],
-		[2, false, rusher, DataEnums.GameMode.FIREFIGHT], [2, false, anchor, DataEnums.GameMode.ZONE_CONTROL],
+	# p19 (balance-log B3): the Anchor plays Zone Control in Bracket 1 and Firefight in Bracket 2.
+	var plan: Array = [[1, false, rusher, DataEnums.GameMode.ZONE_CONTROL], [1, false, anchor, DataEnums.GameMode.ZONE_CONTROL],
+		[2, false, rusher, DataEnums.GameMode.FIREFIGHT], [2, false, anchor, DataEnums.GameMode.FIREFIGHT],
 		[2, true, rival, DataEnums.GameMode.ZONE_CONTROL]]
 	var ms: Array[RunMatchData] = []
 	for p: Array in plan:
@@ -249,8 +250,9 @@ func _gen() -> void:
 	run.attachment_choices = 2
 	run.perk_offer_after_matches = PackedInt32Array([2, 4])
 	run.perk_choices = 2
-	run.starter_deck = cards_list([[rifleman, 3], [point_man, 2], [marksman, 2], [medic, 2], [callout, 2], [breacher, 1],
-		[gunner, 1], [shieldman, 1], [recon_spec, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1]])
+	# p19 (balance-log B1): Recon Specialist -> a second Breacher.
+	run.starter_deck = cards_list([[rifleman, 3], [point_man, 2], [marksman, 2], [medic, 2], [callout, 2], [breacher, 2],
+		[gunner, 1], [shieldman, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1]])
 	run.starter_primary = kestrel
 	run.starter_secondary = sidearm
 	run.starter_lethal = frag

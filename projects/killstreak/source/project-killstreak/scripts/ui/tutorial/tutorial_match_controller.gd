@@ -40,6 +40,9 @@ static func build_state(script: TutorialScript) -> MatchState:
 	config.overtime_draw_round = script.round_cap
 	config.zone_control_target = script.score_target
 	config.firefight_target = script.score_target
+	# The score target only keeps the drill from ending early; the score bar shows the round
+	# count instead of "FIRST TO 20" (MatchSnapshot reads this meta; p18 bug 003).
+	config.set_meta(&"goal_text", "%d-ROUND DRILL" % script.round_cap)
 	var player: SideSetup = SideSetup.new()
 	player.display_name = "You"
 	player.deck.assign(script.player_deck)

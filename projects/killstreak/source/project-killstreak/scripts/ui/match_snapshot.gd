@@ -52,7 +52,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
 	var snap: Dictionary = {
 		"mode": String(mode_rules.mode_name).replace("_", " ").to_upper() if mode_rules != null else "SANDBOX",
-		"goal": "FIRST TO %d" % mode_rules.target if mode_rules != null else "",
+		"goal": String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") \
+				else ("FIRST TO %d" % mode_rules.target if mode_rules != null else ""),
 		"round": state.round_number,
 		"round_cap": mode_rules.round_cap if mode_rules != null else state.config.round_cap,
 		"phase": String(MatchState.PHASE_NAMES[state.phase]).to_upper(),

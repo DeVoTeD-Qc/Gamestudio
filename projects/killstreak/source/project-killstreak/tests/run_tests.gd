@@ -51,9 +51,14 @@ func _run() -> void:
 
 func _find_test_files() -> PackedStringArray:
 	var result: PackedStringArray = []
+	# Optional filter: godot ... -s res://tests/run_tests.gd -- --only=<substring>
+	var only: String = ""
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--only="):
+			only = arg.trim_prefix("--only=")
 	for file: String in DirAccess.get_files_at(TEST_DIR):
 		# Exported builds list .gd files as .gd.remap; tests only run from source.
-		if file.begins_with("test_") and file.ends_with(".gd"):
+		if file.begins_with("test_") and file.ends_with(".gd") and (only == "" or only in file):
 			result.append(TEST_DIR.path_join(file))
 	result.sort()
 	return result

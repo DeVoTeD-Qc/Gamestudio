@@ -62,3 +62,22 @@ Without throttling, the same machine reaches the title in 2.2 s with the downloa
 - `qa/screenshots/p17-portrait-rotate.png`: rotate prompt on a portrait phone (390×844 @3x, touch).
 - `qa/screenshots/p17-landscape-phone.png`: the same page at 844×390. The prompt is hidden there.
 - `qa/screenshots/p17-error-no-webgl.png`: error notice when WebGL2 is disabled.
+
+## Re-measure (p18, 2026-11-03)
+Same tool and throttle (20 Mbps, 40 ms, cold, cache off, SwiftShader). The build was exported from a scratch copy of the
+project with Boot as the main scene. The pck is now 912 KB (fonts, theme and scripts added since p17); the wasm is unchanged.
+**Change:** since p16, a cold load in a fresh browser profile is a first launch, so Boot opens the playtest **Consent**
+screen and never the Title. The p17 check waited for `Title: ready` forever (bug p18-002). `consent_screen.gd` now prints
+`Consent: ready`, and `measure.js` accepts either marker.
+
+| Run | First progress | Download done | First screen (Consent) |
+|---|---:|---:|---:|
+| 1* | 0.19 s | 6.08 s | 8.07 s |
+| 2 | 0.18 s | 4.72 s | 6.70 s |
+| 3 | 0.22 s | 4.78 s | 6.90 s |
+| 4 | 0.21 s | 5.32 s | 8.05 s |
+| **Median** | **0.20 s** | **5.05 s** | **7.47 s** |
+
+\*Run 1 also takes the mid-load screenshot. **Bytes per cold load: 10.23 MB** (it was 9.68 MB). **Passed** (< 10 s), but the
+headroom shrank by about 1.5 s. Engine start after the download is now about 2.0 s on this CPU, so a phone estimate of
+9–11 s is **at risk**. The real iPhone measurement is step 2 of `qa/test-plans/device-checklist.md`.

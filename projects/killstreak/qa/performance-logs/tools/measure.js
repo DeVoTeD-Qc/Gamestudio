@@ -1,6 +1,6 @@
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
-const URL = 'http://127.0.0.1:8060/index.html';
-const SHOTS = '/home/user/Gamestudio/projects/killstreak/qa/screenshots/';
+const URL = process.env.URL || 'http://127.0.0.1:8060/index.html';
+const SHOTS = process.env.SHOTS || '/home/user/Gamestudio/projects/killstreak/qa/screenshots/';
 const RUNS = parseInt(process.env.RUNS || '3');
 const GL = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
@@ -23,9 +23,11 @@ async function coldLoad(i, shot) {
   const page = await ctx.newPage();
   const getBytes = await throttle(page);
   const errors = [];
-  let titleAt = null, t0;
+  let titleAt = null, t0, firstScreen = null;
   page.on('console', m => {
-    if (m.text().includes('Title: ready') && titleAt === null) titleAt = Date.now() - t0;
+    // First playable screen: the Title, or on a first launch (fresh browser profile) the
+    // playtest consent screen that Boot opens instead (p18 bug 002).
+    if (/Title: ready|Consent: ready/.test(m.text()) && titleAt === null) { titleAt = Date.now() - t0; firstScreen = m.text(); }
     if (m.type() === 'error') errors.push(m.text());
   });
   page.on('pageerror', e => errors.push(String(e)));
@@ -42,7 +44,7 @@ async function coldLoad(i, shot) {
   while (titleAt === null && Date.now() < deadline) await page.waitForTimeout(50);
   const times = await page.evaluate(() => window.ksLoadTimes);
   if (shot) { await page.waitForTimeout(600); await page.screenshot({ path: SHOTS + 'p17-title-after-load.png' }); }
-  const res = { run: i, titleMs: titleAt, shell: times, transferredBytes: getBytes(), errors };
+  const res = { run: i, titleMs: titleAt, firstScreen, shell: times, transferredBytes: getBytes(), errors };
   await browser.close();
   return res;
 }

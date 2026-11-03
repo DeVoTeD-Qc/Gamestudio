@@ -343,7 +343,9 @@ func _effect_candidates(p: Plan, owner: Resource, effects: Array[EffectData]) ->
 	if move:
 		for z: int in 3:
 			for rec: Dictionary in p.lines[ME][z]:
-				if rec["new"] or rec["is_op"] or int(rec["armor"]) <= 0:
+				# A unit moves at most once per Deploy: the engine checks a move against the
+				# unit's board zone, so a second Flank Route on it would be refused (p18 bug 001).
+				if rec["new"] or rec["is_op"] or int(rec["armor"]) <= 0 or rec.get("moved", false):
 					continue
 				for dest: int in [z - 1, z + 1]:
 					if dest >= 0 and dest < 3 and _occupancy(p, dest) < _view.zone_capacity:
@@ -606,6 +608,7 @@ func _apply_effect(p: Plan, e: EffectData, z: int, amount: int, foes: Array, tar
 				if int(line[i]["uid"]) == target_uid:
 					var rec: Dictionary = line[i]
 					line.remove_at(i)
+					rec["moved"] = true
 					p.moved_out[from] += 1
 					var fp_shift: int = int(_view.range_bonus[_class_of(rec)][dest_zone]) - int(_view.range_bonus[_class_of(rec)][from])
 					rec["fp"] = maxi(0, int(rec["fp"]) + fp_shift)
