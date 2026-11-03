@@ -20,8 +20,8 @@ extends Resource
 @export_range(1, 10) var tickets: int = 3
 ## Supply Drop after each won match: pick 1 of this many cards.
 @export_range(1, 5) var supply_drop_choices: int = 3
-## Weapon levels up after these match numbers (1-based); choose 1 of attachment_choices.
-@export var weapon_level_after_matches: PackedInt32Array = PackedInt32Array([1, 3, 5])
+## Weapon levels up after these match numbers (1-based; core-rules Ruling 1); choose 1 of attachment_choices.
+@export var weapon_level_after_matches: PackedInt32Array = PackedInt32Array([1, 3, 4])
 @export_range(1, 4) var attachment_choices: int = 2
 ## A Perk offer comes after these match numbers (1-based); choose 1 of perk_choices.
 @export var perk_offer_after_matches: PackedInt32Array = PackedInt32Array([2, 4])
