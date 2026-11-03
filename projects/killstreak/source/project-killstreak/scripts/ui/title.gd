@@ -8,6 +8,8 @@ extends Control
 
 
 func _ready() -> void:
+	# Marker line for the web load-time check (qa/performance-logs/web-load.md).
+	print("Title: ready")
 	_start_button.pressed.connect(_on_start_pressed)
 	_start_button.grab_focus()
 
