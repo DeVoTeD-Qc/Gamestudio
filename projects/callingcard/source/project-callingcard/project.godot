@@ -1,0 +1,9 @@
+[application]
+
+config/name="CallingCard"
+config/features=PackedStringArray("4.4", "Forward Plus")
+config/icon="res://icon.svg"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
