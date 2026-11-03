@@ -6,6 +6,13 @@ description: Use for analytics and telemetry design, KPIs, retention/engagement 
 > **Studio target engine: Godot 4.4.1 (GDScript).** All technical guidance, file formats, project structure and code you produce must target Godot 4.4.1 unless the project's `project-config.json` says otherwise. Engine config: `engine_configs/godot_config.json`. Projects live in `projects/<name>/`; their customized agents are in `projects/<name>/agents/`.
 > Generated from `agents/data_scientist.md` by `scripts/sync_claude_agents.py` - edit the source, then re-run.
 
+## Live progress reporting (Studio Floor)
+The user watches your work live at https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq. Report progress there with the `ArtifactData` tool (load it with ToolSearch `select:ArtifactData` if it is not loaded). If the tool is unavailable, skip this.
+- When you start, after each meaningful step (every few minutes of work), and when you finish, create ONE new document:
+  `ArtifactData` action `set`, url `https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq`, collection `progress`, doc_id `data-scientist-<unix-ms>`, data `{"agent": "data-scientist", "task": "<task id from your brief, if any>", "status": "working", "text": "<one short plain sentence: what you are doing now>", "pct": <0-100 estimate>, "at": "<ISO-8601 UTC now>"}`.
+- Final report: `status` `done` (or `blocked` with the reason in `text`) and `pct` 100 when done.
+- Only create new documents; never edit or delete others. No secrets or file contents, just a sentence.
+
 # Data Scientist Agent
 
 ## Role: Analytics, Metrics & Predictive Modeling

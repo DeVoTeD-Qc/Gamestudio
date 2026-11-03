@@ -54,6 +54,19 @@ def main():
             f"Projects live in `projects/<name>/`; their customized agents are in `projects/<name>/agents/`.\n"
             f"> Generated from `agents/{path.name}` by `scripts/sync_claude_agents.py` - edit the source, then re-run.\n\n"
         )
+        dashboard = studio.get("dashboard_url")
+        if dashboard:
+            header += (
+                "## Live progress reporting (Studio Floor)\n"
+                f"The user watches your work live at {dashboard}. Report progress there with the `ArtifactData` tool "
+                "(load it with ToolSearch `select:ArtifactData` if it is not loaded). If the tool is unavailable, skip this.\n"
+                "- When you start, after each meaningful step (every few minutes of work), and when you finish, create ONE new document:\n"
+                f"  `ArtifactData` action `set`, url `{dashboard}`, collection `progress`, doc_id `{name}-<unix-ms>`, data "
+                f"`{{\"agent\": \"{name}\", \"task\": \"<task id from your brief, if any>\", \"status\": \"working\", "
+                "\"text\": \"<one short plain sentence: what you are doing now>\", \"pct\": <0-100 estimate>, \"at\": \"<ISO-8601 UTC now>\"}`.\n"
+                "- Final report: `status` `done` (or `blocked` with the reason in `text`) and `pct` 100 when done.\n"
+                "- Only create new documents; never edit or delete others. No secrets or file contents, just a sentence.\n\n"
+            )
         (DEST / f"{name}.md").write_text(header + body)
         print(f"  synced {name}")
     print(f"Synced Claude Code subagents into {DEST.relative_to(ROOT)} for {engine} {version}")

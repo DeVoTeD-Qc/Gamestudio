@@ -36,6 +36,9 @@ Keep it current with the ArtifactData tool whenever work starts or finishes:
 - `tasks/<id>` — `{title, agent, status: todo|doing|review|done, phase, order, note}`;
   agent is a `.claude/agents` name, `lead` (main session) or `you` (the user)
 - `agents/<agent-id>` — optional `{status: working|idle|blocked, note}` override
+- `progress/<agent>-<unix-ms>` — `{agent, task, status: working|done|blocked, text, pct, at}`: live
+  step reports. Subagents write these themselves (see the section the sync script adds to each agent);
+  the newest entry per agent drives its card. When delegating, give the subagent the board's task id.
 - `activity/<id>` — `{agent, text, at (ISO time)}`, newest shown first
 - `docs/<id>` — `{title, path, md}`: a deliverable's markdown, shown in the task drawer. Re-upload it
   whenever the file in the repo changes, and list its id in the task's `docs` array.
