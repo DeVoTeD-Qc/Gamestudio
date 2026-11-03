@@ -47,11 +47,13 @@ static func chip(uid: int, card: CardData) -> Dictionary:
 	return d
 
 
-## "Shotgun" for units (class word, or "Unit"), "Tactic" / "Equipment" otherwise.
+## "Shotgun" for units (class word, or "Unit"), "Tactic" / "Equip" otherwise.
 static func type_line(card: CardData) -> String:
 	if card.is_unit():
 		var word: String = CLASS_WORDS.get(card.weapon_class, "")
 		return word if word != "" else "Unit"
+	if card.card_type == DataEnums.CardType.EQUIPMENT:
+		return "Equip"  # "EQUIPMENT" does not fit the phone chip's type line
 	return String(TYPE_WORDS.get(card.card_type, "card")).capitalize()
 
 

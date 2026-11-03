@@ -19,6 +19,7 @@ const MARGIN: float = 24.0
 const INFO_WIDTH: float = 440.0
 const INFO_WIDTH_COMPACT: float = 400.0
 
+@onready var _center: Control = $Center
 @onready var _holder: Control = %CardHolder
 @onready var _card: Control = %Card
 @onready var _info_panel: PanelContainer = %InfoPanel
@@ -62,6 +63,15 @@ func open(info: Dictionary) -> void:
 	_close.grab_focus.call_deferred()
 
 
+## Keeps the card and text clear of notches / the home indicator (set by match_screen.gd).
+func set_safe_margins(left_top: Vector2, right_bottom: Vector2) -> void:
+	_center.offset_left = left_top.x
+	_center.offset_top = left_top.y
+	_center.offset_right = -right_bottom.x
+	_center.offset_bottom = -right_bottom.y
+	_fit()
+
+
 func close() -> void:
 	if not visible:
 		return
@@ -90,11 +100,12 @@ func get_important_labels() -> Array[Label]:
 func _fit() -> void:
 	if not visible or size.y <= 0.0:
 		return
+	var room: Vector2 = size - Vector2(_center.offset_left - _center.offset_right, _center.offset_top - _center.offset_bottom)
 	var compact: bool = size.y < 640.0
 	var info_w: float = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
 	_info_panel.custom_minimum_size.x = info_w
-	var by_height: float = (size.y - 2.0 * MARGIN) / CardView.BASE_SIZE.y
-	var by_width: float = (size.x - 2.0 * MARGIN - info_w - 24.0) / CardView.BASE_SIZE.x
+	var by_height: float = (room.y - 2.0 * MARGIN) / CardView.BASE_SIZE.y
+	var by_width: float = (room.x - 2.0 * MARGIN - info_w - 24.0) / CardView.BASE_SIZE.x
 	var s: float = clampf(minf(by_height, by_width), MIN_SCALE, MAX_SCALE)
 	_card.pivot_offset = Vector2.ZERO
 	_card.position = Vector2.ZERO

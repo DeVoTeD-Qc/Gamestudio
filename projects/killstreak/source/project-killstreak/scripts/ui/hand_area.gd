@@ -88,8 +88,7 @@ func set_selected(uid: int) -> void:
 ## Hides the chip being dragged (-1 shows all again).
 func set_dragging(uid: int) -> void:
 	dragging_uid = uid
-	for chip: Node in _row.get_children():
-		(chip as Control).modulate.a = 0.35 if int(chip.get_meta(&"uid", -1)) == uid else 1.0
+	_apply_styles()
 
 
 func _apply_styles() -> void:
@@ -100,6 +99,9 @@ func _apply_styles() -> void:
 		if uid == selected_uid and uid >= 0:
 			variation = &"HandCardSelected"
 		(chip as Control).theme_type_variation = variation
+		# Unaffordable chips fade so the playable ones stand out; the dragged one fades more.
+		var alpha: float = 1.0 if playable or uid == selected_uid else 0.55
+		(chip as Control).modulate.a = 0.35 if uid == dragging_uid and uid >= 0 else alpha
 
 
 func _wire(chip: Control, uid: int) -> void:

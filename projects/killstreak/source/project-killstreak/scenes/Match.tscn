@@ -137,7 +137,13 @@ custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="UndoButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel" groups=["tap_target"]]
+[node name="Buttons" type="VBoxContainer" parent="SafeArea/Layout/BottomBar/ActionPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="UndoButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel/Buttons" groups=["tap_target"]]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 64)
 layout_mode = 2
@@ -147,7 +153,7 @@ text = "UNDO"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="ReadyButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel" groups=["tap_target"]]
+[node name="ReadyButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel/Buttons" groups=["tap_target"]]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 96)
 layout_mode = 2

@@ -1,0 +1,92 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/survey/consent_screen.gd" id="1_s"]
+
+[node name="Consent" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_s")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0705882, 0.0862745, 0.101961, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(880, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "Help us test Killstreak"
+
+[node name="Body" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+text = "If you say yes, the game keeps an anonymous log of how you play: matches, cards, killstreaks, rewards you pick, how long you play, your device type and screen size, and your survey answers."
+autowrap_mode = 3
+
+[node name="Never" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+text = "No name, email, account, location or contacts. The log stays on this device until you press Download log and send it to us."
+autowrap_mode = 3
+
+[node name="SessionLabel" type="Label" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Anonymous session"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="NoButton" type="Button" parent="Center/Panel/Margin/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "No thanks"
+
+[node name="YesButton" type="Button" parent="Center/Panel/Margin/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "Yes, log my play"
+
+[node name="Later" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Saying no changes nothing in the game. You can stop logging and delete the log on the end screen."
+autowrap_mode = 3

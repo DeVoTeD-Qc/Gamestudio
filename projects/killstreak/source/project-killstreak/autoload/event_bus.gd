@@ -26,6 +26,9 @@ signal round_started(round_number: int)
 signal phase_changed(phase: StringName)
 signal round_ended(round_number: int, player_score: int, enemy_score: int)
 signal score_changed(player_score: int, enemy_score: int)
+## The player's end-of-round numbers for the playtest log (p16). Emit it just before
+## round_ended so the log can put them on the same round_end line.
+signal round_summary(round_number: int, supply_unspent: int, hand_size: int)
 ## Which side acts first this round.
 signal initiative_changed(side: StringName)
 
@@ -58,3 +61,8 @@ signal reward_picked(kind: StringName, chosen_id: StringName)
 # --- UI / meta --------------------------------------------------------------
 signal preview_toggled(enabled: bool)
 signal tutorial_step(step: int)
+## The player asked for the next match on the after-action screen (p16: "one more match" KPI).
+signal next_match_requested
+## A screen or overlay became the one the player sees, e.g. &"reward_pick" (p16: quit(screen)).
+## Full scene changes are also picked up from SceneRouter.scene_change_finished.
+signal screen_shown(screen: StringName)

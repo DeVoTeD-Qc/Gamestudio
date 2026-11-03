@@ -51,6 +51,7 @@ const TOAST_SECONDS: float = 2.2
 @onready var _bottom_bar: HBoxContainer = %BottomBar
 @onready var _action_panel: VBoxContainer = %ActionPanel
 @onready var _undo_button: Button = %UndoButton
+@onready var _action_buttons: VBoxContainer = %Buttons
 @onready var _toast: PanelContainer = %Toast
 @onready var _toast_label: Label = %ToastLabel
 @onready var _drag_layer: Control = %DragLayer
@@ -166,7 +167,8 @@ func _set_actions(snapshot: Dictionary) -> void:
 		_ready_button.text = "READY" if open else "WAIT"
 	_undo_button.disabled = not bool(snapshot.get("can_undo", false))
 	var label: String = String(snapshot.get("undo_label", ""))
-	_undo_button.text = "UNDO" if _undo_button.disabled or label.is_empty() else "UNDO\n%s" % label
+	# The phone's UNDO is too narrow for the play's name (the toast names it after undoing).
+	_undo_button.text = "UNDO" if compact or _undo_button.disabled or label.is_empty() else "UNDO\n%s" % label
 
 
 ## The controls that must stay on screen and never overlap (used by tests and QA).
@@ -207,7 +209,7 @@ func _update_profile() -> void:
 	_bottom_bar.custom_minimum_size.y = 0 if compact else 212
 	_action_panel.custom_minimum_size.x = 140 if compact else 200
 	_ready_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 96)
-	_undo_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 64)
+	_place_undo_button()
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)
@@ -216,6 +218,21 @@ func _update_profile() -> void:
 	for pip: Node in _supply_pips.get_children():
 		(pip as Control).custom_minimum_size = _pip_size()
 	_apply_safe_area()
+
+
+## Desktop: UNDO sits above READY. Phone: there is no height for it there (the bottom bar would
+## push the board below 540 px) and no width beside READY (a 7-card hand would overlap below
+## 44 pt), so it moves to the top bar next to MENU, where the killfeed column has spare width.
+func _place_undo_button() -> void:
+	var parent: Node = _menu_button.get_parent() if compact else _action_buttons
+	if _undo_button.get_parent() != parent:
+		_undo_button.reparent(parent, false)
+	if compact:
+		parent.move_child(_undo_button, _menu_button.get_index())
+		_undo_button.custom_minimum_size = Vector2(88, 64)
+	else:
+		parent.move_child(_undo_button, 0)
+		_undo_button.custom_minimum_size = Vector2(200, 64)
 
 
 ## Supply pips: narrower on the phone so a 10-Supply bar fits the 140 px action column.
@@ -271,3 +288,4 @@ func _apply_safe_area() -> void:
 	_safe_area.add_theme_constant_override(&"margin_top", int(margin_lt.y))
 	_safe_area.add_theme_constant_override(&"margin_right", int(margin_rb.x))
 	_safe_area.add_theme_constant_override(&"margin_bottom", int(margin_rb.y))
+	_inspector.set_safe_margins(margin_lt, margin_rb)

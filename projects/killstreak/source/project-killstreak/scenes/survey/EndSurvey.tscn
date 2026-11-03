@@ -1,0 +1,283 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/survey/end_survey.gd" id="1_s"]
+
+[node name="EndSurvey" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_s")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0705882, 0.0862745, 0.101961, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(880, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="StatementPage" type="VBoxContainer" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Progress" type="Label" parent="Center/Panel/Margin/Body/StatementPage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Question 1 of 6"
+
+[node name="Statement" type="Label" parent="Center/Panel/Margin/Body/StatementPage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "Statement"
+autowrap_mode = 3
+custom_minimum_size = Vector2(0, 90)
+
+[node name="ScaleBox" type="VBoxContainer" parent="Center/Panel/Margin/Body/StatementPage"]
+layout_mode = 2
+theme_override_constants/separation = 8
+size_flags_horizontal = 4
+
+[node name="Scale" type="HBoxContainer" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Agree1" type="Button" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Scale"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "1"
+toggle_mode = true
+
+[node name="Agree2" type="Button" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Scale"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "2"
+toggle_mode = true
+
+[node name="Agree3" type="Button" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Scale"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "3"
+toggle_mode = true
+
+[node name="Agree4" type="Button" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Scale"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "4"
+toggle_mode = true
+
+[node name="Agree5" type="Button" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Scale"]
+custom_minimum_size = Vector2(120, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "5"
+toggle_mode = true
+
+[node name="Ends" type="HBoxContainer" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Disagree" type="Label" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Ends"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Strongly disagree"
+size_flags_horizontal = 3
+
+[node name="Agree" type="Label" parent="Center/Panel/Margin/Body/StatementPage/ScaleBox/Ends"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Strongly agree"
+horizontal_alignment = 2
+size_flags_horizontal = 3
+
+[node name="Nav" type="HBoxContainer" parent="Center/Panel/Margin/Body/StatementPage"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="Center/Panel/Margin/Body/StatementPage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Back"
+
+[node name="Gap" type="Control" parent="Center/Panel/Margin/Body/StatementPage/Nav"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SkipButton" type="Button" parent="Center/Panel/Margin/Body/StatementPage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Skip"
+
+[node name="OpenPage" type="VBoxContainer" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+visible = false
+
+[node name="OpenProgress" type="Label" parent="Center/Panel/Margin/Body/OpenPage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Question 6 of 6"
+
+[node name="OpenQuestion" type="Label" parent="Center/Panel/Margin/Body/OpenPage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "Open question"
+autowrap_mode = 3
+
+[node name="OpenAnswer" type="LineEdit" parent="Center/Panel/Margin/Body/OpenPage"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+placeholder_text = "Type here (optional)"
+max_length = 500
+clear_button_enabled = true
+
+[node name="OpenHint" type="Label" parent="Center/Panel/Margin/Body/OpenPage"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Please leave out names, contact details or anything else personal."
+autowrap_mode = 3
+
+[node name="Nav" type="HBoxContainer" parent="Center/Panel/Margin/Body/OpenPage"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="OpenBackButton" type="Button" parent="Center/Panel/Margin/Body/OpenPage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Back"
+
+[node name="Gap" type="Control" parent="Center/Panel/Margin/Body/OpenPage/Nav"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SubmitButton" type="Button" parent="Center/Panel/Margin/Body/OpenPage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "Submit"
+
+[node name="DonePage" type="VBoxContainer" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+visible = false
+
+[node name="DoneTitle" type="Label" parent="Center/Panel/Margin/Body/DonePage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "Thanks for playing!"
+
+[node name="DoneText" type="Label" parent="Center/Panel/Margin/Body/DonePage"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Last step: press Download log and send the file to the playtest organiser."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Center/Panel/Margin/Body/DonePage"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DownloadButton" type="Button" parent="Center/Panel/Margin/Body/DonePage/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "Download log"
+
+[node name="CopyButton" type="Button" parent="Center/Panel/Margin/Body/DonePage/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Copy summary"
+
+[node name="FolderButton" type="Button" parent="Center/Panel/Margin/Body/DonePage/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Open folder"
+
+[node name="Status" type="Label" parent="Center/Panel/Margin/Body/DonePage"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudAccent"
+text = ""
+autowrap_mode = 3
+
+[node name="SummaryText" type="TextEdit" parent="Center/Panel/Margin/Body/DonePage"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+editable = false
+wrap_mode = 1
+
+[node name="Nav" type="HBoxContainer" parent="Center/Panel/Margin/Body/DonePage"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DeleteButton" type="Button" parent="Center/Panel/Margin/Body/DonePage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Stop logging & delete"
+
+[node name="Gap" type="Control" parent="Center/Panel/Margin/Body/DonePage/Nav"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DoneButton" type="Button" parent="Center/Panel/Margin/Body/DonePage/Nav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Done"

@@ -10,6 +10,9 @@
 #     every tap target (Buttons + group "tap_target") >= 44 pt; on desktop also >= 64 px,
 #   - important labels (names, scores, stats, costs) show their whole text (no clip/ellipsis),
 #   - the project theme (hud_theme.tres) defines every style the match scenes use.
+#   p09: the p08 cases run on the mock snapshot; the live cases run the real engine match that
+#   MatchController starts (with a card selected, so lane badges show), and the inspector cases
+#   check the long-press card inspector (CardView >= 0.8x, text >= 11 pt, CLOSE >= 44 pt).
 # Headless note: the headless root window is 64x64, which makes the 1280x720 canvas_items
 #   stretch set a tiny font oversampling and roughly doubles every font's line height.
 #   _spawn() sizes the root to the base resolution while a test runs (and restores it), so
@@ -19,6 +22,7 @@ extends "res://tests/test_case.gd"
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
+const CardInfoScript: GDScript = preload("res://scripts/ui/card_info.gd")
 const MATCH_SCENE: String = "res://scenes/Match.tscn"
 const HUD_THEME: String = "res://assets/ui/hud_theme.tres"
 const CARD_THEME: String = "res://assets/ui/card_theme.tres"
@@ -35,6 +39,9 @@ const MATCH_VARIATIONS: Array[String] = [
 	"KillstreakButton", "HudBig", "FriendlyLabel", "EnemyLabel", "HudPanelDark", "ZoneFriend",
 	"ZoneEnemy", "ZoneContested", "ZoneNeutral", "ReadyButton", "HudSubtle", "HudHeader",
 	"HudNumber", "KillfeedFriend", "KillfeedEnemy", "RangeBadge", "StreakLabel", "UnitName", "HudTag",
+	"HandCardSelected", "HandCardDim", "SlotPending", "SlotTarget", "LaneTargetValid", "LaneTargetHover",
+	"LaneTargetInvalid", "TargetBadge", "TargetBadgeBad", "TargetText", "ToastPanel", "Scrim",
+	"KeywordName", "OperatorSelected",
 ]
 
 ## Screens: size in points, pixel ratio, safe-area insets in points (left, top, right, bottom).
@@ -112,19 +119,45 @@ func test_theme_fonts_have_base_font() -> void:
 
 
 func test_layout_desktop_1280x720() -> void:
-	await _check_layout(DESKTOP)
+	await _check_layout(DESKTOP, MockMatchData.round_3_sample())
 
 
 func test_layout_phone_844x390() -> void:
-	await _check_layout(PHONE)
+	await _check_layout(PHONE, MockMatchData.round_3_sample())
 
 
 func test_layout_phone_844x390_with_notch_insets() -> void:
-	await _check_layout(PHONE_NOTCH)
+	await _check_layout(PHONE_NOTCH, MockMatchData.round_3_sample())
 
 
 func test_layout_tablet_1024x768() -> void:
-	await _check_layout(TABLET)
+	await _check_layout(TABLET, MockMatchData.round_3_sample())
+
+
+## p09: the live engine match (Round 1 Deploy) with a hand card selected, so every lane shows
+## its target badge, plus the Operator selected.
+func test_layout_live_match_desktop_card_selected() -> void:
+	await _check_layout(DESKTOP, {}, &"card")
+
+
+func test_layout_live_match_phone_card_selected() -> void:
+	await _check_layout(PHONE_NOTCH, {}, &"card")
+
+
+func test_layout_live_match_phone_operator_selected() -> void:
+	await _check_layout(PHONE, {}, &"operator")
+
+
+func test_inspector_desktop() -> void:
+	await _check_inspector(DESKTOP)
+
+
+func test_inspector_phone() -> void:
+	await _check_inspector(PHONE)
+
+
+func test_inspector_phone_with_notch_insets() -> void:
+	await _check_inspector(PHONE_NOTCH)
 
 
 ## Worst case: four units in every line (long names, damaged armor), a full 7-card hand and
@@ -152,6 +185,7 @@ func _full_board() -> Dictionary:
 				line.append({"name": names[i], "cls": ["LMG", "SNIPER", "SHOTGUN", "AR"][i], "fp": 4, "armor": 3, "armor_max": 6})
 			lane[key] = line
 		lane["incoming"] = 0
+	snap["lanes"][1]["friendly"][3]["pending"] = true  # a queued arrival's PLAN tag must fit too
 	var hand: Array = snap["hand"].duplicate()
 	hand.append({"name": "Suppressing Fire", "type": "Tactic", "cost": 2, "text": "Enemy units here: -1 FP"})
 	hand.append({"name": "Demolitions Expert", "type": "LMG", "cost": 4, "fp": 2, "armor": 4, "text": "On down"})
@@ -162,7 +196,7 @@ func _full_board() -> Dictionary:
 
 
 func test_mock_content_shown() -> void:
-	var setup: Array = await _spawn(DESKTOP)
+	var setup: Array = await _spawn(DESKTOP, MockMatchData.round_3_sample())
 	var viewport: SubViewport = setup[0]
 	var match_node: Control = setup[1]
 	var lanes: Array[Node] = match_node.get_board().get_lanes()
@@ -227,11 +261,28 @@ func _despawn(viewport: SubViewport) -> void:
 	tree.root.size = _saved_root_size
 
 
-func _check_layout(screen: Dictionary, snapshot: Dictionary = {}) -> void:
+## snapshot empty = the live match MatchController started. select: &"card" / &"operator" selects
+## the first hand card / the Operator first (lane badges and the selected styles must fit too).
+func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: StringName = &"") -> void:
 	var setup: Array = await _spawn(screen, snapshot)
 	var viewport: SubViewport = setup[0]
 	var match_node: Control = setup[1]
 	var label: String = screen["name"]
+	if snapshot.is_empty():
+		var controller: Node = match_node.get_node("%MatchController")
+		assert_not_null(controller.state, "%s live match started" % label)
+		label += " (live)"
+		if select == &"card" and controller.state != null:
+			controller.select_card(controller.state.sides[0].hand[0].uid)
+		elif select == &"operator":
+			controller.select_operator()
+		if select != &"":
+			label += " selected %s" % select
+			await tree.process_frame
+			var badges: int = 0
+			for lane: Node in match_node.get_board().get_lanes():
+				badges += 1 if lane.target_state != &"none" else 0
+			assert_eq(badges, 3, "%s every lane shows a target state" % label)
 	var k: float = points_per_px(screen)
 	var is_desktop_profile: bool = viewport.size.y >= ScreenProfile.COMPACT_HEIGHT
 	var screen_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(viewport.size)).grow(EPS)
@@ -332,6 +383,61 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}) -> void:
 		assert_true(op_rect.encloses((b as Control).get_global_rect()), "%s operator button spills" % label)
 	print("     [%s] canvas %s, %.3f pt/px: smallest text %.1f pt, smallest key number %.1f pt, smallest tap target %.1f pt" % [
 			label, viewport.size, k, min_body, min_number, min_tap * k])
+	_despawn(viewport)
+
+
+## Long-press inspector on the live match: CardView at >= 0.8x, inside the screen (and safe
+## area), not overlapping the text panel; every visible text >= 11 pt; CLOSE >= 44 pt.
+func _check_inspector(screen: Dictionary) -> void:
+	var setup: Array = await _spawn(screen)
+	var viewport: SubViewport = setup[0]
+	var match_node: Control = setup[1]
+	var label: String = screen["name"] + " inspector"
+	var k: float = points_per_px(screen)
+	var controller: Node = match_node.get_node("%MatchController")
+	assert_not_null(controller.state, "%s live match" % label)
+	if controller.state == null:
+		_despawn(viewport)
+		return
+	# The card with the most keyword lines makes the tallest text panel.
+	var best: RulesCard = controller.state.sides[0].hand[0]
+	for rc: RulesCard in controller.state.sides[0].hand:
+		if CardInfoScript.keywords(rc.card).size() > CardInfoScript.keywords(best.card).size():
+			best = rc
+	controller._on_card_inspected(best.uid)
+	for i: int in 3:
+		await tree.process_frame
+	var inspector: Control = match_node.get_inspector()
+	assert_true(inspector.is_open(), "%s opens" % label)
+	assert_true(inspector.get_card_scale() >= 0.8 - 0.001, "%s card scale %.2f (< 0.8)" % [label, inspector.get_card_scale()])
+	var screen_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(viewport.size)).grow(EPS)
+	var card_view: Control = inspector.get_card_view()
+	var card_rect: Rect2 = card_view.get_global_rect()
+	var info_rect: Rect2 = inspector.get_node("%InfoPanel").get_global_rect()
+	assert_true(screen_rect.encloses(card_rect), "%s card off screen %s" % [label, card_rect])
+	assert_true(screen_rect.encloses(info_rect), "%s text panel off screen %s" % [label, info_rect])
+	assert_false(card_rect.grow(-EPS).intersects(info_rect.grow(-EPS)), "%s card overlaps text panel" % label)
+	if screen.has("insets"):
+		var safe: Rect2 = match_node.safe_area_override.grow(EPS)
+		assert_true(safe.encloses(card_rect) and safe.encloses(info_rect), "%s inside safe area" % label)
+	var card_name_pt: float = card_view.get_min_effective_font_size(PackedStringArray(["NameLabel", "CostLabel", "FirepowerLabel", "ArmorLabel"])) * k
+	assert_true(card_name_pt >= MIN_BODY_PT - 0.01, "%s card name / stats %.1f pt (< %d pt)" % [label, card_name_pt, MIN_BODY_PT])
+	assert_true(card_view.get_overflowing_labels().is_empty(), "%s card text overflows: %s" % [label, card_view.get_overflowing_labels()])
+	var min_text: float = INF
+	for n: Node in inspector.get_node("%InfoPanel").find_children("*", "Control", true, false):
+		if not (n is Label or n is Button) or not (n as Control).is_visible_in_tree() or String(n.text).strip_edges().is_empty():
+			continue
+		var pt: float = (n as Control).get_theme_font_size(&"font_size") * k
+		min_text = minf(min_text, pt)
+		assert_true(pt >= MIN_BODY_PT - 0.01, "%s text '%s' %.1f pt" % [label, n.text, pt])
+	for l: Label in inspector.get_important_labels():
+		assert_true(_clipped(l).is_empty(), "%s '%s' is cut: %s" % [label, l.text, _clipped(l)])
+	var close: Control = inspector.get_node("%CloseButton")
+	var close_pt: float = minf(close.size.x, close.size.y) * k
+	assert_true(close_pt >= MIN_TAP_PT - 0.01, "%s CLOSE is %.1f pt" % [label, close_pt])
+	assert_true(screen_rect.encloses(close.get_global_rect()), "%s CLOSE off screen" % label)
+	print("     [%s] card %.2fx, card name/stats %.1f pt, smallest text %.1f pt, CLOSE %.1f pt" % [
+			label, inspector.get_card_scale(), card_name_pt, min_text, close_pt])
 	_despawn(viewport)
 
 

@@ -2,7 +2,7 @@
 # Purpose: One position in a lane's line (up to 4 per side). Shows a unit token,
 #   the Operator, an incoming red-dot contact, or an empty spot. Display only: the Lane handles
 #   taps / long-press for its slots (p09) and asks slot_uid / kind which unit was hit.
-#   p09: a queued arrival (this Deploy) shows as QUEUED (SlotPending); set_target(true) frames
+#   p09: a queued arrival (this Deploy) is tagged PLAN (SlotPending); set_target(true) frames
 #   a unit that can be picked as a card's target (SlotTarget).
 #   Layout: [class icon | POINT] / name (<= 2 lines) / class word / FP and AR.
 #   Compact (phone) profile hides the class word (the icon stays) and drops the
@@ -62,7 +62,7 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 		_set_variation(&"SlotOperator")
 	else:
 		_set_variation(&"SlotFriendly" if side == &"player" else &"SlotEnemy")
-	_tag.text = "QUEUED" if pending else ("POINT" if is_point else " ")
+	_tag.text = "PLAN" if pending else ("POINT" if is_point else " ")
 	# Title case keeps names on 1-2 lines in a narrow slot ("Marksman", "Kestrel AR-7").
 	_name.text = String(unit.get("name", "?"))
 	var cls: String = "OPERATOR" if is_operator else String(unit.get("cls", "")).to_upper()

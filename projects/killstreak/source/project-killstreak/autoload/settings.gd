@@ -14,6 +14,9 @@ signal settings_changed
 
 ## Shorten non-essential animations (killfeed, call-in takeover).
 var fast_animations: bool = false
+## No screen shake, hit-stop or travelling effects (scripts/fx/fx_timing.gd, p14). On the web it
+## starts from the browser's prefers-reduced-motion setting.
+var reduced_motion: bool = false
 ## Extra UI scale (0.8 - 1.5): raises the minimum on-screen size of one logical px.
 var ui_scale: float = 1.0
 ## Master volume, linear 0.0 - 1.0.
@@ -23,6 +26,7 @@ var show_outcome_preview: bool = true
 
 
 func _ready() -> void:
+	reduced_motion = _system_prefers_reduced_motion()
 	# Headless runs (tests, exports) have no real screen; tests check ScreenProfile directly.
 	if DisplayServer.get_name() == "headless":
 		return
@@ -34,6 +38,15 @@ func _ready() -> void:
 	print("Screen profile: window %s px, screen scale %.2f, base %s, %.3f pt per px" % [
 			DisplayServer.window_get_size(), ScreenProfile.screen_scale(), base,
 			ScreenProfile.points_per_px(Vector2(DisplayServer.window_get_size()), ScreenProfile.screen_scale(), ui_scale)])
+
+
+## Browser prefers-reduced-motion (web builds only; false elsewhere).
+func _system_prefers_reduced_motion() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var matches: Variant = JavaScriptBridge.eval(
+			"window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches", true)
+	return matches == true
 
 
 func _apply_screen_profile() -> void:

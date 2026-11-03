@@ -2,7 +2,7 @@
 # Purpose: Builds the match screen's view snapshot (the Dictionary shape documented in
 #   mock_match_data.gd) from a live MatchState, as seen by one side. Read-only: it never
 #   changes the state. Additions to the p08 shape (all optional for the scenes):
-#   - unit entries: uid, pending (true for this Deploy's queued arrivals, shown as QUEUED)
+#   - unit entries: uid, pending (true for this Deploy's queued arrivals, tagged PLAN)
 #   - hand entries: uid, id, playable (cost <= Supply)
 #   - can_undo, undo_label (name of the last play), deploy_open (Deploy and not READY yet),
 #     result (&"" while running; &"player" / &"enemy" / &"draw" at the end)
@@ -179,7 +179,8 @@ static func _ids(items: Array[LoadoutItem]) -> Array:
 	return out
 
 
-## First word, upper case, at most 7 letters ("Recon Drone" -> "RECON").
+## First word, upper case, for the 64 px loadout buttons ("Recon Drone" -> "RECON");
+## words over 7 letters keep their first 5 ("Flashbang" -> "FLASH").
 static func _short(display_name: String) -> String:
 	var word: String = display_name.split(" ", false)[0] if not display_name.is_empty() else "?"
-	return word.to_upper().left(7)
+	return word.to_upper() if word.length() <= 7 else word.to_upper().left(5)
