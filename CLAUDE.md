@@ -32,14 +32,21 @@ in `projects/<name>/agents/`. Follow `DEVELOPMENT_RULES.md` and the project's de
 ## Studio Floor dashboard
 Live view: https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq (private to the owner).
 Keep it current with the ArtifactData tool whenever work starts or finishes:
-- `studio/state` — `{phase, project}`; phase is one of setup, concept, design, plan, prototype, qa, play
-- `tasks/<id>` — `{title, agent, status: todo|doing|review|done, phase, order, note}`;
+- `studio/state` — `{activeProject, ...}`: the project the studio is working on. The user switches it
+  from the page's project switcher (which also messages Claude); always work on the active project.
+- `projects/<id>` — `{name, concept, engine, platform, mode, timeline, phase, status, created, path,
+  playUrl?, playNote?}`; phase is one of setup, concept, design, plan, prototype, qa, play; status is
+  requested | active | archived. A project created from the page arrives with `status: "requested"`
+  plus a chat message: run `scripts/init_project.py` with those answers (id = the doc id), set
+  `status: "active"` and `path`, then start the master-orchestrator on its first step.
+- `tasks/<id>` — `{title, project, agent, status: todo|doing|review|done, phase, order, note, depends?}`;
+  `project` is the project id (missing means `killstreak`);
   agent is a `.claude/agents` name, `lead` (main session) or `you` (the user)
 - `agents/<agent-id>` — optional `{status: working|idle|blocked, note}` override
 - `progress/<agent>-<unix-ms>` — `{agent, task, status: working|done|blocked, text, pct, at}`: live
   step reports. Subagents write these themselves (see the section the sync script adds to each agent);
   the newest entry per agent drives its card. When delegating, give the subagent the board's task id.
-- `activity/<id>` — `{agent, text, at (ISO time)}`, newest shown first
+- `activity/<id>` — `{agent, project, text, at (ISO time)}`, newest shown first
 - `docs/<id>` — `{title, path, md}`: a deliverable's markdown, shown in the task drawer. Re-upload it
   whenever the file in the repo changes, and list its id in the task's `docs` array. Images (e.g. QA
   screenshots) go to the artifact's asset store (Artifact publish with `asset: true`); reference the
