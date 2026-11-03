@@ -41,6 +41,33 @@ the 11 pt / 44 pt phone floors.
 Budget: under 1.5 MB of added assets. The art ships as SVG text inside scripts, which is a few
 tens of KB, so the web load stays near its 10 s budget.
 
-## 3. Results
+## 3. Results (what shipped)
 
-See section 4 (filled in after the pass).
+| | Change | Files |
+|---|---|---|
+| a | **32 original illustrations**: the 13 units, 6 tactics and 2 equipment cards, 5 killstreaks, 3 gear items and 3 Operator weapons. Class and type fallbacks are aliases. CardView rasterises each one at its on-screen scale (crisp in the 1.4x inspector on a 3x phone, about 2 ms per card). Board units show a faint class silhouette tinted with their side colour, and enemy silhouettes are mirrored. | `tests/tools/gen_card_art.py` → `scripts/ui/art/card_art_data.gd`, `scripts/ui/art/card_art.gd`, `card_view.gd`, `card_info.gd` (adds `id`), `unit_slot.gd`, `UnitSlot.tscn` |
+| b | **Port Vasel lanes**: container stacks, a crane yard with rails, and loading offices with roller doors and windows, all at low contrast. Empty slots are see-through with HUD corner brackets, and the backdrop dims under an invalid-target scrim. | `lane.gd`, `Lane.tscn`, `unit_slot.gd` `_draw`, theme `SlotEmpty` / `slot_bracket` |
+| c | **Title key art**: a dusk port skyline, gantry cranes, coloured stacks, floodlights, water reflections and a rim-lit squad. The menu moved to a left column over a scrim, with a big condensed wordmark (84 px desktop, 64 px phone) and a sand "////" tagline. Run map cards get a mode illustration (Zone Control, Firefight, and the gunship for the Rival), dimmed once played. Every screen gets the `tactical_backdrop` shader (gradient, grid, sodium glow, vignette, grain). | `Title.tscn`, `title.gd`, `run_map.gd`, `assets/shaders/tactical_backdrop.gdshader`, `assets/ui/backdrop_material.tres` (on every Background ColorRect) |
+| d | **Depth**: buttons, panels, hand chips and unit tokens have a 3 px dark lip. Pressed states sink 2 px with no lip. Hover states get a brighter edge. READY and the primary buttons glow amber (stronger on hover), killstreak buttons glow cyan, and the selected hand chip, the hovered lane and the next run node glow too. | `tests/tools/build_themes.gd` → `hud_theme.tres` |
+| e | **p18-005 fixed**: on the phone the killfeed is a 3-line overlay over the hand during resolution, about 500 px wide, and it shows full names ("WASP-9 ▸ SHIELDMAN MID"). `killfeed_entry._fit()` now restores full names before shortening. New test `test_board_layout.gd::test_killfeed_lines_fit_on_phone`. | `match_screen.gd`, `Match.tscn` (`KillfeedOverlay`), `killfeed_entry.gd` |
+
+**Sizes.** Added source is 385 KB: 329 KB of generated SVG data, a 4.5 KB rasteriser, a 1.8 KB shader and the 50 KB
+generator, which is not exported. The web `index.pck` went from 912,256 to 951,600 bytes (+39 KB; GDScript export
+compresses the strings) and from 706 KB to 738 KB gzipped. The whole web build went from 44.99 MB to 45.03 MB.
+No bitmaps were added.
+
+**Checks.** Tests: 302/302 pass, including the new killfeed test. Import is clean and the export has no errors. Phone floors are
+unchanged: 11 pt text and 44 pt taps, with the Title still fitting 540 px including the replace-run confirmation.
+
+Before and after screenshots at 844×390 @3x (`qa/screenshots/`): `v01-{before,after}-1-title`, `-2-loadout`, `-3-runmap`,
+`-6-match-midround`, `-7-inspector-hand`, `-8-inspector-elite`, `-9-firefight-r3` (killfeed), `-10-supply-drop`.
+
+## 4. Left for a later pass
+- Hand chips still have no art. They are text-dense at phone size, so a thin art strip would need a layout change.
+- Loadout, AfterAction and RunEnd only get the backdrop and depth. Pick tiles could show killstreak and perk art.
+- The lane art is deliberately faint. Check it on a real iPhone at full brightness and in sunlight, and tune the `lane_*` colours.
+- Unit token silhouettes are generic per class. Per-card poses (medic, demolitions, recon pack) exist in the card art and could
+  feed the tokens.
+- The art is runtime-rasterised SVG. Measure first-open cost on an older iPhone (expected under 5 ms per card, about 40 ms
+  for the Title key art at 2x).
+- Desktop killfeed names still shorten to 10 characters in the top-bar slot (existing behaviour).

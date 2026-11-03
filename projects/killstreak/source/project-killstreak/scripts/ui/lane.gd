@@ -7,7 +7,9 @@
 #   slot was hit (side + unit uid) so the presenter can pick targets or open the inspector.
 #   set_target() shows whether the selected card can go here: a framed lane with a badge
 #   ("DEPLOY HERE") or a dimmed lane with the reason ("ZONE FULL", "NEED 3 SUPPLY").
-# Dependencies: unit_slot.gd, press_gesture.gd.
+#   v01: a low-contrast Port Vasel backdrop per zone (container stacks, crane yard, loading
+#   offices; card_art.gd) sits behind the slots, which are see-through bracket frames when empty.
+# Dependencies: unit_slot.gd, press_gesture.gd, card_art.gd.
 # Author: UI/UX Agent
 extends PanelContainer
 
@@ -46,6 +48,10 @@ var target_state: StringName = TARGET_NONE
 var target_text: String = ""
 var _gesture: RefCounted = null
 
+var _backdrop_key: StringName = &""
+var _backdrop_scale: float = 0.0
+
+@onready var _backdrop: TextureRect = %Backdrop
 @onready var _column: VBoxContainer = %Column
 @onready var _header: PanelContainer = %Header
 @onready var _name: Label = %NameLabel
@@ -80,11 +86,29 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		_update_backdrop.call_deferred()
+
+
+## Rasterises the zone backdrop for the lane's on-screen size (bucketed and cached in CardArt).
+func _update_backdrop() -> void:
+	if _backdrop_key == &"" or _backdrop == null or not is_inside_tree():
+		return
+	var lane_px: float = CardArt.screen_scale(self) * maxf(size.x / CardArt.Data.LANE_SIZE.x, size.y / CardArt.Data.LANE_SIZE.y)
+	var s: float = CardArt.bucket(minf(lane_px, 2.0))  # soft background: 2x is plenty
+	if is_equal_approx(s, _backdrop_scale):
+		return
+	_backdrop_scale = s
+	_backdrop.texture = CardArt.lane_texture(_backdrop_key, s)
+
+
 ## Shows whether the selected card / Operator can go here (TARGET_*), with a short badge text.
 func set_target(state: StringName, text: String = "") -> void:
 	target_state = state
 	target_text = text
 	theme_type_variation = TARGET_VARIATION.get(state, &"LanePanel")
+	_backdrop.modulate.a = 0.35 if state == TARGET_INVALID else 1.0
 	_badge.visible = state != TARGET_NONE and not text.is_empty()
 	_badge.theme_type_variation = &"TargetBadgeBad" if state == TARGET_INVALID else &"TargetBadge"
 	_badge_text.text = text
@@ -116,6 +140,11 @@ func _slot_hit(global_pos: Vector2) -> Array:
 func set_lane(lane: Dictionary) -> void:
 	zone_id = lane.get("id", &"")
 	_name.text = String(lane.get("name", "")).to_upper()
+	var key: StringName = CardArt.lane_key(_name.text, zone_id)
+	if key != _backdrop_key:
+		_backdrop_key = key
+		_backdrop_scale = 0.0
+		_update_backdrop()
 	_range.text = String(lane.get("range", "")).to_upper()
 	var control: StringName = lane.get("control", &"empty")
 	_control.text = CONTROL_TEXT.get(control, "OPEN")

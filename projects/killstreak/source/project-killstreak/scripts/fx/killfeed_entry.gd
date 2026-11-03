@@ -140,6 +140,11 @@ func _fit() -> void:
 	if _row == null or size.x <= 0.0:
 		return
 	var room: float = size.x - 12.0
+	# Start from the full names each time: a line laid out narrow first (before its slot got its
+	# final width) must grow back (bug p18-005).
+	for child: Node in _row.get_children():
+		if child is Label and child != _zone_tag and child.has_meta(&"full"):
+			(child as Label).text = String(child.get_meta(&"full"))
 	if _zone_tag != null:
 		_zone_tag.visible = true
 		if _row.get_combined_minimum_size().x > room:

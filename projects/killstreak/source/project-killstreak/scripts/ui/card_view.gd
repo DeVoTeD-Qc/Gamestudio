@@ -15,8 +15,11 @@
 #   card.set_card_data({"name": "Breacher", "type": "unit", "weapon_class": "shotgun", "cost": 3,
 #       "firepower": 3, "armor": 4, "keywords": [{"id": "first_shot"}], "side": "friend"})
 #   card.set_card(card_resource)  # reads the same field names from a Resource (see _from_resource)
-# Dependencies: assets/ui/card_theme.tres, scripts/ui/icon_sheet.gd, assets/shaders/scanlines.gdshader
-# Author: Technical Artist Agent (p13)
+#   v01: the art window shows an original vector illustration per card (scripts/ui/art/card_art.gd),
+#   rasterised at the card's on-screen scale; the icon silhouette stays as the fallback.
+# Dependencies: assets/ui/card_theme.tres, scripts/ui/icon_sheet.gd, assets/shaders/scanlines.gdshader,
+#   scripts/ui/art/card_art.gd
+# Author: Technical Artist Agent (p13); illustrations: Sr Game Artist Agent (v01)
 class_name CardView
 extends Control
 
@@ -59,6 +62,8 @@ const PLACEHOLDER: Dictionary = {
 		queue_redraw()
 
 var data: Dictionary = {}
+var _art_key: StringName = &""
+var _art_scale: float = 0.0
 
 @onready var _cost_label: Label = %CostLabel
 @onready var _elite_icon: TextureRect = %EliteIcon
@@ -86,7 +91,13 @@ func _ready() -> void:
 	_elite_icon.texture = IconSheet.get_icon(&"elite")
 	if data.is_empty():
 		data = PLACEHOLDER.duplicate(true)
+	set_notify_transform(true)
 	_refresh()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSFORM_CHANGED or what == NOTIFICATION_ENTER_TREE:
+		_update_art_texture()
 
 
 ## Shows a card from a plain Dictionary. Keys: name, type (unit|tactic|equipment|killstreak|operator),
@@ -194,10 +205,18 @@ func _refresh() -> void:
 	chip.position.x = name_left + 20
 	chip.size = Vector2.ZERO  # shrink the chip back to its text
 	# Art window silhouette: killstreak/class/type icon.
-	var art: StringName = StringName(String(data.get("art_icon", "")))
-	if art == &"" or not IconSheet.has_icon(art):
-		art = StringName("class_" + String(weapon)) if weapon != &"" else StringName("type_" + type_name)
-	_art_icon.texture = IconSheet.get_icon(art)
+	_art_key = CardArt.card_key(data)
+	_art_scale = 0.0
+	if not CardArt.has_card(_art_key):
+		var art: StringName = StringName(String(data.get("art_icon", "")))
+		if art == &"" or not IconSheet.has_icon(art):
+			art = StringName("class_" + String(weapon)) if weapon != &"" else StringName("type_" + type_name)
+		_art_key = &""
+		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_art_icon.texture = IconSheet.get_icon(art)
+	else:
+		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_update_art_texture()
 	_scanlines.visible = type_name == "killstreak"
 	# Keywords.
 	_rebuild_keywords()
@@ -220,6 +239,17 @@ func _refresh() -> void:
 	_fit_all()
 	queue_redraw()
 	card_changed.emit()
+
+
+## Rasterises the illustration for the scale the card is shown at (bucketed, cached).
+func _update_art_texture() -> void:
+	if _art_key == &"" or _art_icon == null:
+		return
+	var s: float = CardArt.bucket(CardArt.screen_scale(_art_icon))
+	if is_equal_approx(s, _art_scale):
+		return
+	_art_scale = s
+	_art_icon.texture = CardArt.card_texture(_art_key, s)
 
 
 func _rebuild_keywords() -> void:
@@ -277,7 +307,7 @@ func _best_band(weapon: StringName) -> int:
 func _tint_icons() -> void:
 	var text_dim: Color = get_theme_color(&"text_dim", &"Card")
 	var art_tint: Color = get_theme_color(&"special", &"Card") if _card_type() == "killstreak" else get_theme_color(&"concrete", &"Card")
-	_art_icon.modulate = Color(art_tint, 0.55)
+	_art_icon.modulate = Color.WHITE if _art_key != &"" else Color(art_tint, 0.55)
 	_type_icon.modulate = get_theme_color(&"text", &"Card")
 	_range_icon.modulate = text_dim
 	_fp_icon.modulate = get_theme_color(&"text", &"Card")

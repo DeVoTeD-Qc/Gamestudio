@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/survey/pre_survey.gd" id="1_s"]
+[ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
 
 [node name="PreSurvey" type="Control"]
 layout_mode = 3
@@ -12,6 +13,7 @@ grow_vertical = 2
 script = ExtResource("1_s")
 
 [node name="Background" type="ColorRect" parent="."]
+material = ExtResource("v01_bg")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

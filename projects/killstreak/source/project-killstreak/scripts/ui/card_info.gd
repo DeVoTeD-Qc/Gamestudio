@@ -78,7 +78,7 @@ static func view_dict(card: CardData, side: String = "friend") -> Dictionary:
 		elif k["id"] in [&"cover", &"patch"]:
 			kw.append({"id": String(k["id"]), "value": k["value"]})
 	return {
-		"name": card.display_name, "type": TYPE_WORDS.get(card.card_type, "unit"),
+		"id": String(card.id), "name": card.display_name, "type": TYPE_WORDS.get(card.card_type, "unit"),
 		"weapon_class": String(CLASS_WORDS.get(card.weapon_class, "")).to_lower(),
 		"cost": card.cost, "firepower": card.firepower, "armor": card.armor, "keywords": kw,
 		"text": card.text, "side": side, "elite": card.is_elite,

@@ -61,6 +61,7 @@ const TOAST_SECONDS: float = 2.2
 @onready var _inspector: Control = %Inspector
 @onready var _fx: Control = %FeedbackDirector
 @onready var _killfeed_fx: Control = %Killfeed
+@onready var _killfeed_overlay: PanelContainer = %KillfeedOverlay
 @onready var _mulligan: Control = %MulliganPanel
 @onready var _preview_button: Button = %PreviewButton
 @onready var _preview: Control = %OutcomePreview
@@ -85,6 +86,7 @@ func _ready() -> void:
 	_fx.locator.anchors[&"streak"] = _operator_panel
 	_fx.killfeed = _killfeed_fx
 	_fx.streak_arc = _operator_panel.get_streak_arc()
+	_hand.resized.connect(_layout_killfeed_overlay)
 	_update_profile()
 	resized.connect(_update_profile)
 	get_viewport().size_changed.connect(_apply_safe_area)
@@ -263,6 +265,7 @@ func _update_profile() -> void:
 	_action_panel.custom_minimum_size.x = 140 if compact else 200
 	_ready_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 96)
 	_place_undo_button()
+	_place_killfeed()
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)
@@ -289,6 +292,46 @@ func _place_undo_button() -> void:
 	else:
 		parent.move_child(_undo_button, 0)
 		_undo_button.custom_minimum_size = Vector2(200, 64)
+
+
+## Bug p18-005: the phone's top bar leaves the killfeed ~180 pt, which cut lines to
+## "BREACH ▸ KES". On the phone the killfeed lives in an overlay over the hand (it can't be
+## played while the round resolves, which is when eliminations happen), as wide as the hand,
+## shown only while it has lines. Desktop keeps it in the top bar.
+const KILLFEED_OVERLAY_LINES: int = 3
+
+
+func _place_killfeed() -> void:
+	var parent: Node = _killfeed_overlay if compact else _killfeed
+	if _killfeed_fx.get_parent() != parent:
+		_killfeed_fx.reparent(parent, false)
+	_killfeed_fx.custom_minimum_size = Vector2(0, KILLFEED_OVERLAY_LINES * 22.0) if compact else Vector2.ZERO
+	_layout_killfeed_overlay()
+
+
+func _layout_killfeed_overlay() -> void:
+	if not compact:
+		_killfeed_overlay.visible = false
+		return
+	var hand: Rect2 = _hand.get_global_rect()
+	var root: Transform2D = get_global_transform().affine_inverse()
+	var top_left: Vector2 = root * hand.position
+	var h: float = _killfeed_overlay.get_combined_minimum_size().y
+	_killfeed_overlay.position = top_left + Vector2(0, maxf(0.0, (hand.size.y - h) * 0.5))
+	_killfeed_overlay.size = Vector2(hand.size.x, h)
+
+
+## The rect the killfeed lines get (tests: p18-005 lines must fit it at 844x390).
+func get_killfeed() -> Control:
+	return _killfeed_fx
+
+
+func _process(_delta: float) -> void:
+	if compact:
+		var show: bool = not _killfeed_fx.get_entries().is_empty()
+		if show and not _killfeed_overlay.visible:
+			_layout_killfeed_overlay()
+		_killfeed_overlay.visible = show
 
 
 ## Supply pips: narrower on the phone so a 10-Supply bar fits the 140 px action column.

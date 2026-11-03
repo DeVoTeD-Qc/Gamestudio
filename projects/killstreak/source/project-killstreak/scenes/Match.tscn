@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://scenes/match/OutcomePreview.tscn" id="12_prev"]
 [ext_resource type="PackedScene" path="res://scenes/match/MatchEndBanner.tscn" id="13_end"]
 [ext_resource type="PackedScene" path="res://scenes/match/PauseMenu.tscn" id="14_pause"]
+[ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -25,6 +26,7 @@ grow_vertical = 2
 script = ExtResource("1_match")
 
 [node name="Background" type="ColorRect" parent="."]
+material = ExtResource("v01_bg")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -188,6 +190,13 @@ layout_mode = 1
 [node name="MulliganPanel" parent="." instance=ExtResource("11_mull")]
 unique_name_in_owner = true
 layout_mode = 1
+
+[node name="KillfeedOverlay" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+mouse_filter = 2
+theme_type_variation = &"KillfeedOverlay"
 
 [node name="Toast" type="PanelContainer" parent="."]
 unique_name_in_owner = true

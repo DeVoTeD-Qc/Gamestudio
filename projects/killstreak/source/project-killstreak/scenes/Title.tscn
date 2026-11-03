@@ -1,6 +1,17 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/title.gd" id="1_title"]
+[ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
+
+[sub_resource type="Gradient" id="Gradient_scrim"]
+offsets = PackedFloat32Array(0, 0.42, 0.78)
+colors = PackedColorArray(0.0705882, 0.0862745, 0.101961, 0.94, 0.0705882, 0.0862745, 0.101961, 0.7, 0.0705882, 0.0862745, 0.101961, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_scrim"]
+gradient = SubResource("Gradient_scrim")
+width = 256
+height = 4
+fill_to = Vector2(1, 0)
 
 [node name="Title" type="Control"]
 layout_mode = 3
@@ -12,6 +23,7 @@ grow_vertical = 2
 script = ExtResource("1_title")
 
 [node name="Background" type="ColorRect" parent="."]
+material = ExtResource("v01_bg")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,6 +32,29 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.07, 0.086, 0.102, 1)
+
+[node name="KeyArt" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Scrim" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_scrim")
+expand_mode = 1
 
 [node name="SafeArea" type="MarginContainer" parent="."]
 unique_name_in_owner = true
@@ -30,26 +65,31 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Center" type="CenterContainer" parent="SafeArea"]
+[node name="Center" type="HBoxContainer" parent="SafeArea"]
 layout_mode = 2
+
+[node name="LeftGap" type="Control" parent="SafeArea/Center"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Column" type="VBoxContainer" parent="SafeArea/Center"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
+size_flags_vertical = 4
 theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"RunTitle"
+theme_type_variation = &"TitleWordmark"
 text = "KILLSTREAK"
-horizontal_alignment = 1
 
 [node name="SubtitleLabel" type="Label" parent="SafeArea/Center/Column"]
 layout_mode = 2
-theme_type_variation = &"HudSubtle"
-text = "Tactical card roguelite · prototype"
-horizontal_alignment = 1
+theme_type_variation = &"TitleTagline"
+text = "//// TACTICAL CARD ROGUELITE · PROTOTYPE"
 
 [node name="Gap" type="Control" parent="SafeArea/Center/Column"]
 custom_minimum_size = Vector2(0, 8)

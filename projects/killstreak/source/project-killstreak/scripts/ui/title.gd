@@ -6,14 +6,19 @@
 #   TUTORIAL opens the p15 drill (scenes/tutorial/Tutorial.tscn). First launch (the drill was
 #   never completed or skipped, and no run is saved) also shows "New here? Play the 3-minute
 #   drill." with PLAY DRILL / NOT NOW; NOT NOW records a skip so it is not offered again.
-# Dependencies: run_screen.gd, RunState, SceneRouter (via RunFlow), tutorial_progress.gd.
+#   v01: Port Vasel key art (card_art.gd) behind a left-hand menu column, with a dark scrim.
+# Dependencies: run_screen.gd, RunState, SceneRouter (via RunFlow), tutorial_progress.gd, card_art.gd.
 # Author: Mechanics Developer Agent (placeholder); run flow: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
 
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
 
+var _key_art_scale: float = 0.0
+
+@onready var _key_art: TextureRect = %KeyArt
 @onready var _column: VBoxContainer = %Column
+@onready var _wordmark: Label = %TitleLabel
 @onready var _continue_button: Button = %ContinueButton
 @onready var _start_button: Button = %StartButton
 @onready var _confirm_panel: PanelContainer = %ConfirmPanel
@@ -41,7 +46,19 @@ func _build() -> void:
 	_tutorial_button.pressed.connect(open_tutorial)
 	_play_drill_button.pressed.connect(open_tutorial)
 	_not_now_button.pressed.connect(_on_not_now_pressed)
+	resized.connect(_update_key_art)
+	_update_key_art()
 	refresh()
+
+
+## Rasterises the key art for the screen size (capped at 2x the 1280x720 source).
+func _update_key_art() -> void:
+	var cover: float = maxf(size.x / CardArt.Data.KEY_ART_SIZE.x, size.y / CardArt.Data.KEY_ART_SIZE.y)
+	var s: float = CardArt.bucket(minf(CardArt.screen_scale(self) * cover, 2.0))
+	if is_equal_approx(s, _key_art_scale):
+		return
+	_key_art_scale = s
+	_key_art.texture = CardArt.key_art_texture(s)
 
 
 ## Re-reads the save state (tests call it after changing the save).
@@ -65,6 +82,7 @@ func _apply_compact() -> void:
 	_start_button.custom_minimum_size.y = h
 	_tutorial_button.custom_minimum_size.y = h
 	_column.add_theme_constant_override(&"separation", 10 if compact else 14)
+	_wordmark.add_theme_font_size_override(&"font_size", 64 if compact else 84)
 
 
 func _on_continue_pressed() -> void:

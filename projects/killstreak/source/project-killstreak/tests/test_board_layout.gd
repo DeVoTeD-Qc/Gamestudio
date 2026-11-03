@@ -198,6 +198,49 @@ func _full_board() -> Dictionary:
 	return snap
 
 
+## Bug p18-005: on the phone the killfeed lines were cut to "BREACH ▸ KES". On the phone each line
+## must show both full names (up to the 14-character cap) inside its rect, with text >= 11 pt.
+func test_killfeed_lines_fit_on_phone() -> void:
+	for screen: Dictionary in [PHONE, PHONE_NOTCH, DESKTOP]:
+		var setup: Array = await _spawn(screen, MockMatchData.round_3_sample())
+		var viewport: SubViewport = setup[0]
+		var match_node: Control = setup[1]
+		var feed: Control = match_node.get_killfeed()
+		for pair: Array in [["Demolitions Expert", "Kestrel AR-7"], ["Recon Specialist", "Combat Medic"],
+				["Breacher", "Point Man"]]:
+			feed.push({"attacker": pair[0], "attacker_side": &"player", "victim": pair[1],
+					"victim_side": &"enemy", "icon": &"class_lmg", "zone": &"mid"})
+		for i: int in 3:
+			await tree.process_frame
+		var label: String = screen["name"]
+		var lines: Array = feed.get_entries()
+		assert_eq(lines.size(), 3, "%s: 3 killfeed lines shown" % label)
+		var screen_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(viewport.size)).grow(EPS)
+		assert_true(feed.is_visible_in_tree(), "%s: killfeed visible while it has lines" % label)
+		assert_true(screen_rect.encloses(feed.get_global_rect()), "%s: killfeed on screen" % label)
+		var k: float = points_per_px(screen)
+		for line: Control in lines:
+			var names: Array[String] = []
+			for l: Node in line.find_children("*", "Label", true, false):
+				var lb: Label = l
+				if lb.theme_type_variation in [&"KillfeedFriend", &"KillfeedEnemy"]:
+					names.append(lb.text)
+					assert_true(lb.get_theme_font_size(&"font_size") * k >= MIN_BODY_PT - 0.01, "%s: killfeed text >= 11 pt" % label)
+			var row: Control = line.get_child(0)
+			assert_true(row.get_combined_minimum_size().x <= line.size.x + EPS,
+					"%s: killfeed line %s fits (%s > %s)" % [label, names, row.get_combined_minimum_size().x, line.size.x])
+			var full: Dictionary = line.entry
+			var want: Array[String] = [String(full["attacker"]).to_upper().left(14), String(full["victim"]).to_upper().left(14)]
+			if match_node.compact:
+				assert_eq(names, want, "%s: killfeed names not shortened" % label)
+			else:
+				# Desktop keeps its top-bar slot (3 lines): names may drop to 10 characters there.
+				for i: int in names.size():
+					assert_true(names[i] == want[i] or names[i].length() >= 10, "%s: killfeed name %s readable" % [label, names[i]])
+		_despawn(viewport)
+		await tree.process_frame
+
+
 func test_mock_content_shown() -> void:
 	var setup: Array = await _spawn(DESKTOP, MockMatchData.round_3_sample())
 	var viewport: SubViewport = setup[0]

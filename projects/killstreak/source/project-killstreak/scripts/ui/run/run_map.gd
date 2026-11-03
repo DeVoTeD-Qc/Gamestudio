@@ -126,6 +126,18 @@ func _refresh_text(r: RunProgress) -> void:
 			r.deck.size(), primary, RunFlow.names_of(r, r.perks), RunFlow.names_of(r, r.killstreaks)]
 
 
+## Illustration per match card: the mode's tactic art; the Rival gets the gunship.
+func _mode_art(md: RunMatchData, rival: bool) -> StringName:
+	if rival:
+		return &"gunship"
+	match md.mode:
+		DataEnums.GameMode.FIREFIGHT:
+			return &"suppressing_fire"
+		DataEnums.GameMode.DETONATOR:
+			return &"tripwire_charge"
+	return &"hold_the_line"
+
+
 func _match_node(r: RunProgress, i: int) -> PanelContainer:
 	var md: RunMatchData = r.config.matches[i]
 	var is_last: bool = i == r.config.matches.size() - 1
@@ -158,9 +170,17 @@ func _match_node(r: RunProgress, i: int) -> PanelContainer:
 	col.add_child(make_label(RunFlow.mode_goal(r.config, md.mode), &"HudSubtle", true))
 	col.add_child(make_label(md.map.display_name if md.map != null else "", &"HudSubtle", true))
 	col.add_child(make_label(RunFlow.bonus_word(md), &"HudSubtle", true))
-	var spacer: Control = Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	col.add_child(spacer)
+	# v01: a mission-brief illustration for the mode fills the card's free space (no minimum
+	# size, so it never pushes the layout; it shrinks away on short screens).
+	var art := TextureRect.new()
+	art.name = "Art"
+	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.texture = CardArt.card_texture(_mode_art(md, rival), 2.0)
+	art.modulate = Color(1, 1, 1, 0.45 if not played.is_empty() else (1.0 if is_next else 0.75))
+	col.add_child(art)
 	var status: Label = make_label("", &"HudHeader", true)
 	status.name = "Status"
 	if not played.is_empty():

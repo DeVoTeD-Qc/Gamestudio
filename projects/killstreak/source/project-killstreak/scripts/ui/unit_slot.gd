@@ -7,7 +7,9 @@
 #   Layout: [class icon | POINT] / name (<= 2 lines) / class word / FP and AR.
 #   Compact (phone) profile hides the class word (the icon stays) and drops the
 #   desktop minimum height so the board fits a 540 px tall canvas.
-# Dependencies: hud_theme.tres variations (SlotFriendly, SlotEnemy, UnitName...), icon_sheet.gd.
+#   v01: a unit shows a faint class silhouette (card_art.gd token) behind its text, tinted with its
+#   side colour; enemy figures face the other way.
+# Dependencies: hud_theme.tres variations (SlotFriendly, SlotEnemy, UnitName...), icon_sheet.gd, card_art.gd.
 # Author: UI/UX Agent
 extends PanelContainer
 
@@ -33,6 +35,16 @@ var is_target: bool = false
 var revealed: String = ""
 var _base_variation: StringName = &"SlotEmpty"
 
+## Token silhouette tint (alpha keeps it behind the text).
+const FIGURE_FRIEND: Color = Color(0.18, 0.77, 0.71, 0.26)
+const FIGURE_ENEMY: Color = Color(0.9, 0.22, 0.23, 0.26)
+const FIGURE_OPERATOR: Color = Color(0.79, 0.64, 0.15, 0.36)
+const FIGURE_PENDING: Color = Color(1.0, 0.69, 0.13, 0.24)
+
+var _figure_key: StringName = &""
+var _figure_scale: float = 0.0
+
+@onready var _figure: TextureRect = %Figure
 @onready var _icon: TextureRect = %ClassIcon
 @onready var _tag: Label = %TagLabel
 @onready var _name: Label = %NameLabel
@@ -72,6 +84,9 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	_class.text = cls
 	_icon.texture = IconSheet.get_icon(CLASS_ICONS[cls]) if CLASS_ICONS.has(cls) else null
 	_icon.tooltip_text = cls
+	_show_figure(CardArt.TOKEN_FOR_CLASS.get(cls, &"shield"), is_operator)
+	if String(unit.get("name", "")).to_lower().begins_with("sentry"):
+		_show_figure(&"sentry", false)
 	_fp.text = str(unit.get("fp", 0))
 	var armor: int = unit.get("armor", 0)
 	var armor_max: int = unit.get("armor_max", armor)
@@ -92,6 +107,7 @@ func show_incoming(revealed_name: String = "") -> void:
 	_name.text = revealed_name
 	_class.text = ""
 	_icon.texture = null
+	_hide_figure()
 	_set_parts(false, true)
 
 
@@ -106,18 +122,71 @@ func show_empty(slot_side: StringName) -> void:
 	_name.text = ""
 	_class.text = ""
 	_icon.texture = null
+	_hide_figure()
 	_set_parts(false, false)
+
+
+func _show_figure(key: StringName, is_operator: bool) -> void:
+	_figure_key = key
+	_figure.flip_h = side == &"enemy"
+	if pending:
+		_figure.modulate = FIGURE_PENDING
+	elif is_operator:
+		_figure.modulate = FIGURE_OPERATOR
+	else:
+		_figure.modulate = FIGURE_FRIEND if side == &"player" else FIGURE_ENEMY
+	_figure.visible = true
+	_figure_scale = 0.0
+	_update_figure_texture()
+
+
+func _hide_figure() -> void:
+	_figure_key = &""
+	_figure.visible = false
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_ENTER_TREE:
+		_update_figure_texture.call_deferred()
+
+
+## Rasterises the silhouette at the slot's on-screen scale (bucketed and cached in CardArt).
+func _update_figure_texture() -> void:
+	if _figure_key == &"" or _figure == null or not is_inside_tree():
+		return
+	var s: float = CardArt.bucket(CardArt.screen_scale(self) * maxf(size.y, 1.0) / 110.0)
+	if is_equal_approx(s, _figure_scale):
+		return
+	_figure_scale = s
+	_figure.texture = CardArt.token_texture(_figure_key, s)
 
 
 ## Frames the slot as a pickable target (Flank Route) while a card is selected.
 func set_target(value: bool) -> void:
 	is_target = value
 	theme_type_variation = &"SlotTarget" if is_target else _base_variation
+	queue_redraw()
 
 
 func _set_variation(variation: StringName) -> void:
 	_base_variation = variation
 	theme_type_variation = &"SlotTarget" if is_target else variation
+	queue_redraw()
+
+
+## Empty slot: HUD corner brackets (theme colour Hud/slot_bracket) over a see-through fill.
+func _draw() -> void:
+	if kind != Kind.EMPTY or is_target:
+		return
+	var c: Color = get_theme_color(&"slot_bracket", &"Hud")
+	var r: Rect2 = Rect2(Vector2(2, 2), size - Vector2(4, 4))
+	var l: float = minf(12.0, minf(r.size.x, r.size.y) * 0.25)
+	var w: float = 2.0
+	for corner: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+		var sx: float = 1.0 if corner.x == r.position.x else -1.0
+		var sy: float = 1.0 if corner.y == r.position.y else -1.0
+		draw_polyline(PackedVector2Array([corner + Vector2(0, sy * l), corner, corner + Vector2(sx * l, 0)]), c, w)
+	draw_circle(r.get_center(), 1.5, Color(c, 0.6))
 
 
 ## Labels whose whole text must stay visible (checked by tests/test_board_layout.gd).
