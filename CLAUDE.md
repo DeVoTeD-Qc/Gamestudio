@@ -28,3 +28,12 @@ npm test                            # run the studio self-tests
 ```
 Each project gets its own Godot project under `projects/<name>/` plus engine-customized agents
 in `projects/<name>/agents/`. Follow `DEVELOPMENT_RULES.md` and the project's development rules.
+
+## Studio Floor dashboard
+Live view: https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq (private to the owner).
+Keep it current with the ArtifactData tool whenever work starts or finishes:
+- `studio/state` — `{phase, project}`; phase is one of setup, concept, design, plan, prototype, qa, play
+- `tasks/<id>` — `{title, agent, status: todo|doing|review|done, phase, order, note}`;
+  agent is a `.claude/agents` name, `lead` (main session) or `you` (the user)
+- `agents/<agent-id>` — optional `{status: working|idle|blocked, note}` override
+- `activity/<id>` — `{agent, text, at (ISO time)}`, newest shown first
