@@ -37,3 +37,9 @@ Keep it current with the ArtifactData tool whenever work starts or finishes:
   agent is a `.claude/agents` name, `lead` (main session) or `you` (the user)
 - `agents/<agent-id>` — optional `{status: working|idle|blocked, note}` override
 - `activity/<id>` — `{agent, text, at (ISO time)}`, newest shown first
+- `docs/<id>` — `{title, path, md}`: a deliverable's markdown, shown in the task drawer. Re-upload it
+  whenever the file in the repo changes, and list its id in the task's `docs` array.
+- The user reviews on the page: a task in `review` gets Approve / Request changes, which writes
+  `review: {decision: approved|changes, comment, at}` and moves it to `done` or back to `todo`.
+  Tasks with `questions: [{id, q, options}]` collect `answers: {<id>: {choice, note}}`.
+  Before starting new work, read `tasks` for reviews and answers and act on them.
