@@ -689,7 +689,7 @@ func _input(event: InputEvent) -> void:
 		return
 	var counts: Dictionary = stats["inputs"]
 	counts[kind] = int(counts.get(kind, 0)) + 1
-	if not _inputs_seen.has(kind):
+	if enabled and not _inputs_seen.has(kind):
 		_inputs_seen[kind] = true
 		_write("input_type", {"kind": kind})
 
@@ -781,7 +781,7 @@ func _device_info() -> Dictionary:
 		"embedded": page.get("embedded", false),
 		"mobile": mobile,
 		"touchscreen": DisplayServer.is_touchscreen_available(),
-		"device_class": _device_class(screen, mobile),
+		"device_class": _device_class(screen, mobile, DisplayServer.is_touchscreen_available()),
 		"engine": Engine.get_version_info().get("string", ""),
 		"build": String(ProjectSettings.get_setting("application/config/version", "")),
 		"screen": screen,
@@ -819,10 +819,12 @@ func _os_family() -> String:
 	return OS.get_name().to_lower()
 
 
-static func _device_class(screen: Dictionary, mobile: bool) -> String:
+## phone / tablet / desktop from the OS tags, touch support and the short side in points
+## (a touch screen under 500 pt is a phone even when the browser reports a desktop OS).
+static func _device_class(screen: Dictionary, mobile: bool, touch: bool = false) -> String:
 	var pts: Array = screen.get("points", [0, 0])
 	var short_side: int = mini(int(pts[0]), int(pts[1]))
-	if mobile and short_side > 0 and short_side < 500:
+	if (mobile or touch) and short_side > 0 and short_side < 500:
 		return "phone"
 	if mobile:
 		return "tablet"
@@ -834,12 +836,14 @@ func _screen_text(screen: Dictionary) -> String:
 	return "%dx%d pt @%sx" % [int(pts[0]), int(pts[1]), str(screen.get("pixel_ratio", 1.0))]
 
 
+## The pointer kind used most (touch / mouse / gamepad); keyboard only when nothing else was used,
+## since typing the open answer would otherwise outvote the taps.
 func _primary_input() -> String:
 	var counts: Dictionary = stats["inputs"]
-	var best: String = "none"
+	var best: String = "keyboard" if counts.has("keyboard") else "none"
 	var most: int = 0
 	for kind: String in counts:
-		if int(counts[kind]) > most:
+		if kind != "keyboard" and int(counts[kind]) > most:
 			most = int(counts[kind])
 			best = kind
 	return best

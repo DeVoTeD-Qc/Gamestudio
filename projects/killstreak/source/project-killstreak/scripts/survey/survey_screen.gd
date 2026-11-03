@@ -31,6 +31,13 @@ func announce(screen: StringName) -> void:
 		bus.screen_shown.emit(screen)
 
 
+## Marks a choice button as picked. The HudButton pressed style is too close to normal to read
+## on a phone, so a picked answer switches to the filled ReadyButton look (theme variations only).
+static func mark_selected(button: Button, selected: bool) -> void:
+	button.set_pressed_no_signal(selected)
+	button.theme_type_variation = &"ReadyButton" if selected else &"HudButton"
+
+
 func finish(scene: String = next_scene) -> void:
 	finished.emit()
 	if scene == "" or not is_inside_tree():

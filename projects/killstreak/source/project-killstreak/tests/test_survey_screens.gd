@@ -156,6 +156,8 @@ func test_pre_survey_taps_record_segment() -> void:
 	(rows.get_child(2).get_node("Yes") as Button).pressed.emit()
 	assert_false(cont.disabled, "all three answered")
 	assert_true((rows.get_child(1).get_node("Yes") as Button).button_pressed, "tapped answer shows as pressed")
+	assert_eq((rows.get_child(1).get_node("Yes") as Button).theme_type_variation, &"ReadyButton", "picked answer is filled")
+	assert_eq((rows.get_child(1).get_node("No") as Button).theme_type_variation, &"HudButton", "other answer is plain")
 	cont.pressed.emit()
 	assert_eq(plog.segment(), "card", "segment from taps")
 	var lines: Array = plog.read_entries().filter(func(e: Dictionary) -> bool: return e["event"] == "pre_survey")
@@ -174,6 +176,7 @@ func test_end_survey_flow_records_answers() -> void:
 	(scale.get_child(3) as Button).pressed.emit()  # q2 = 4
 	(node.get_node("%BackButton") as Button).pressed.emit()  # back to q2
 	assert_true((scale.get_child(3) as Button).button_pressed, "previous answer shown on back")
+	assert_eq((scale.get_child(3) as Button).theme_type_variation, &"ReadyButton", "previous answer is filled")
 	(scale.get_child(1) as Button).pressed.emit()  # q2 = 2 (changed)
 	(node.get_node("%SkipButton") as Button).pressed.emit()  # q3 skipped
 	(scale.get_child(2) as Button).pressed.emit()  # q4 = 3

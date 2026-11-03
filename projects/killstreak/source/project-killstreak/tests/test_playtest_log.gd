@@ -312,3 +312,27 @@ func test_empty_export_reports_error() -> void:
 	assert_false(result["ok"], "nothing to export")
 	assert_true(String(result["error"]) != "", "error text")
 	_restore(plog)
+
+
+func test_device_class() -> void:
+	var phone: Dictionary = {"points": [844, 390]}
+	var ipad: Dictionary = {"points": [1024, 768]}
+	assert_eq(PlaytestLogScript._device_class(phone, true), "phone", "mobile OS, short side 390")
+	assert_eq(PlaytestLogScript._device_class(phone, false, true), "phone", "touch screen, short side 390")
+	assert_eq(PlaytestLogScript._device_class(ipad, true, true), "tablet", "iPad")
+	assert_eq(PlaytestLogScript._device_class(ipad, false, true), "desktop", "touch laptop")
+	assert_eq(PlaytestLogScript._device_class(phone, false, false), "desktop", "small desktop window")
+
+
+func test_input_type_only_logged_after_consent() -> void:
+	var plog: Node = _plog()
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.pressed = true
+	plog._input(touch)
+	plog.set_consent(true)
+	plog._input(touch)
+	plog._input(touch)
+	var lines: Array[Dictionary] = _by_event(plog.read_entries(), "input_type")
+	assert_eq(lines.size(), 1, "first touch after consent logged once")
+	assert_eq(int(plog.stats["inputs"]["touch"]), 3, "all touches counted for the summary")
+	_restore(plog)

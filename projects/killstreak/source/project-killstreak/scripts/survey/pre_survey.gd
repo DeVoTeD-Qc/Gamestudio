@@ -33,8 +33,8 @@ func _ready() -> void:
 func answer(key: String, value: bool) -> void:
 	answers[key] = value
 	var row: Node = _rows.get_child(KEYS.find(key))
-	(row.get_node("Yes") as Button).set_pressed_no_signal(value)
-	(row.get_node("No") as Button).set_pressed_no_signal(not value)
+	mark_selected(row.get_node("Yes"), value)
+	mark_selected(row.get_node("No"), not value)
 	_refresh()
 
 

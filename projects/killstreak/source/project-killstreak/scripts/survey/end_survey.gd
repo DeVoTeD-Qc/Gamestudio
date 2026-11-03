@@ -137,7 +137,7 @@ func _show_statement(i: int) -> void:
 	_progress.text = "Question %d of %d" % [i + 1, _statement_count() + 1]
 	var current: int = int(answers.get("q%d" % (i + 1), 0))
 	for b: int in _scale_buttons.size():
-		_scale_buttons[b].set_pressed_no_signal(b + 1 == current)
+		mark_selected(_scale_buttons[b], b + 1 == current)
 	_back_button.disabled = i == 0
 	_set_page(_statement_page)
 	announce(StringName("end_survey_q%d" % (i + 1)))
