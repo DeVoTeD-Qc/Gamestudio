@@ -1,0 +1,8 @@
+{
+  "studio": "Gamestudio (based on pamirtuna/gamestudio-subagents)",
+  "target_engine": "Godot",
+  "engine_version": "4.4.1",
+  "scripting_language": "GDScript",
+  "allow_engine_override": false,
+  "notes": "All new projects created with scripts/init_project.py target this engine. Set allow_engine_override to true to be asked for an engine during setup."
+}
