@@ -13,7 +13,7 @@
     "unique_selling_point": "The first card game that truly plays like a modern multiplayer shooter: loadouts, killstreaks and fast rounds translated into cards.",
     "version": "1.0.0",
     "created": "2026-11-03T02:10:49.793011",
-    "phase": "Design",
+    "phase": "Planning",
     "status": "active"
   },
   "development_rules": [
@@ -64,7 +64,7 @@
   "metrics": {
     "velocity_target": "10 tasks/week",
     "bug_threshold": "5 critical, 20 minor",
-    "performance_target": "60 FPS, < 3s load"
+    "performance_target": "60 FPS desktop / 30+ FPS phone, < 10 s web load with a loading screen"
   },
   "risks": [
     {

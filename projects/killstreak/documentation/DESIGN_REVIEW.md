@@ -1,6 +1,6 @@
 # Killstreak — Design Review (for approval)
 
-*Master Orchestrator · 2026-11-03 · Phase: Design · Mode: design only, no code until you approve*
+*Master Orchestrator · 2026-11-03 · Phase: Design → Planning · Status: **approved by the user 2026-11-03** (see Decisions below)*
 *All content is original. No Call of Duty names, characters, maps, factions, logos or trademarked mode/feature names; only generic genre terms.*
 
 ## One-line pitch
@@ -37,16 +37,32 @@
 - **Card veterans:** simultaneous-reveal reads, deployment-order and keyword sequencing, range positioning, streak risk management, Perk engines, deck thinning and attachment builds, Threat Levels 1–10, and deterministic firefights (no dice).
 
 ## Market verdict
-**Conditional GO** for a web prototype of the roguelite. **NO-GO** on a live-service PvP CCG as the first product. The gap: no well-known card game speaks *modern multiplayer shooter* (KARDS covers WW2 history, not the shooter match). Balatro proves familiar rules plus a deep modifier layer can reach far beyond card players. Web is ideal for prototype/demo distribution; Steam is the realistic commercial home later. Risks: IP/trademark (strict originality plus a title search), and a "niche military" perception, so market the match feel rather than war.
+**Conditional GO** for a web prototype of the roguelite. **NO-GO** on a live-service PvP CCG as the first product. The gap: no well-known card game speaks *modern multiplayer shooter* (KARDS covers WW2 history, not the shooter match). Balatro proves familiar rules plus a deep modifier layer can reach far beyond card players. Web is ideal for prototype/demo distribution; Steam is the realistic commercial home later, with mobile planned as well (decision 9). Risks: IP/trademark (strict originality plus a title search), and a "niche military" perception, so market the match feel rather than war.
 
 ## Art direction
 "Tactical HUD meets field kit": the game looks like a soldier's tactical tablet between firefights. Dark slate UI, signal-amber for anything interactive, teal for friends, red for enemies (with shape cues for colorblind players), and cyan for killstreaks. Cards look like laminated ID badges with stylized duotone painted art (operators always in gear, so no likeness issues). Killstreaks appear as glowing tablet cards and Perks as embroidered morale patches. The board is a top-down lane map with a minimap intel strip, a killfeed and a segmented streak arc that shatters when you go down. The look is gritty, not gory, and light enough for web.
 
 ## What the web prototype would contain (~5–7 days after approval)
-1 map (Port Vasel) · 2 modes (Zone Control, Firefight) · the full round loop with streaks and Operator respawn · 20 starter + 6 reward cards · 1 Primary with 4 attachments, Frag, Flashbang, 4 Perks, 4 Killstreaks · 2 AI personalities / 3 enemy squads · a 5-match mini-run · scripted tutorial · outcome preview, killfeed, hit markers · playtest log + survey · placeholder art · Godot 4.4.1 single-threaded web build on a private itch.io link.
+1 map (Port Vasel) · 2 modes (Zone Control, Firefight) · the full round loop with streaks and Operator respawn · 20 starter + 6 reward cards · 1 Primary with 4 attachments, Frag, Flashbang, 4 Perks, 4 Killstreaks · 2 AI personalities / 3 enemy squads · a 7-match run (~30–45 min, 3 tickets) · scripted tutorial · outcome preview, killfeed, hit markers · playtest log + survey · placeholder art · Godot 4.4.1 single-threaded web build on a private itch.io link.
 **Not included:** Detonator, extra weapons, shop, meta-progression, second map, final art and voice, any PvP.
 
-## Decisions you need to make before prototyping
+## Decisions (approved 2026-11-03)
+All design deliverables were approved and the 10 open questions below are **closed**. These answers are binding for the prototype plan (`production/prototype-milestone-plan.md`).
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Format | **Roguelite-first hybrid** (single-player runs now; symmetric rules keep async/live PvP possible later). No PvP in the prototype. |
+| 2 | Core hook | Streak resets **only when your Operator goes down**. Squad losses never reset it. |
+| 3 | Match structure | **Simultaneous reveal, 3 lanes.** |
+| 4 | Setting & tone | Keep the near-future contractor setting (Kharzan Corridor, HALBERD vs BLACK MERIDIAN). |
+| 5 | Title | "Killstreak" stays the internal/project name. The user's **preferred working-title candidate is "Deckstreak"**, pending a trademark check before any public build. Files and folders are not renamed. |
+| 6 | Prototype modes | **Zone Control + Firefight.** Detonator stays out. |
+| 7 | Run length | **30–45 min with 3 tickets** (no short 15-min web variant). |
+| 8 | Prototype art | **Placeholder layout only** (no painted-art style test). |
+| 9 | Long-term platform | Plan for **Steam and mobile later**. The web prototype's UI must work with mouse and touch and scale down to phone-size landscape screens (no hover-only information, large tap targets). |
+| 10 | Load target | **Under 10 s with a loading screen** for the Godot web build (replaces "< 3 s"). |
+
+### Original questions (closed, kept for reference)
 1. **Format:** approve the roguelite-first hybrid? Or do you want PvP (even hot-seat) in the first prototype?
 2. **Core hook:** is "streak resets only when *your Operator* goes down" the right shooter feel, or should streaks reset on any unit loss (harsher, more hardcore)?
 3. **Match structure:** are simultaneous reveal + 3 lanes OK, or do you prefer Hearthstone-style alternating turns?

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "p01",
+    "title": "Set up the Godot web project",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 20,
+    "status": "todo",
+    "note": "Compatibility renderer, folders, autoload stubs and a single-threaded Web export preset. Done when an empty build loads on the private itch.io page in desktop and phone browsers.",
+    "depends": []
+  },
+  {
+    "id": "p02",
+    "title": "Card and loadout data format",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 21,
+    "status": "todo",
+    "note": "Typed .tres Resources for cards, loadout items, squads and run config, loaded by a CardDB autoload. Done when every field in core-rules §3–5 is covered and bad data fails loudly.",
+    "depends": [
+      "p01"
+    ]
+  },
+  {
+    "id": "p03",
+    "title": "Write card, loadout and squad data",
+    "agent": "mid-game-designer",
+    "phase": "prototype",
+    "order": 22,
+    "status": "todo",
+    "note": "Author all 26 cards, loadout items, 4 Perks, 4 killstreaks, 3 enemy squads, run config and the tutorial script. Done when values match core-rules or a logged change.",
+    "depends": [
+      "p02"
+    ]
+  },
+  {
+    "id": "p04",
+    "title": "Round loop and firefight rules",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 23,
+    "status": "todo",
+    "note": "Deterministic, node-free rules engine for Briefing → Score with initiative, line order and all 7 keywords. Done when 40+ headless tests pass, including every edge case in core-rules §9.",
+    "depends": [
+      "p02"
+    ]
+  },
+  {
+    "id": "p05",
+    "title": "Streaks, killstreaks and respawn",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 24,
+    "status": "todo",
+    "note": "Streak meter, 4 killstreaks, 4 Perks, Sidearm, Frag, Flashbang and Operator respawn. Done when tests prove the streak resets only when your Operator goes down, after that round's eliminations count.",
+    "depends": [
+      "p04"
+    ]
+  },
+  {
+    "id": "p06",
+    "title": "Zone Control and Firefight modes",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 25,
+    "status": "todo",
+    "note": "Both win conditions with the round-8 cap, overtime and draw rules, driven by data. Done when both modes finish in ≤ 8 rounds in tests.",
+    "depends": [
+      "p04"
+    ]
+  },
+  {
+    "id": "p07",
+    "title": "Enemy AI and red-dot intel",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 26,
+    "status": "todo",
+    "note": "Rusher and Anchor AI that commits its plan first and never peeks at your cards. Done when red dots match AI deployments 100% and an AI turn takes < 200 ms on a phone.",
+    "depends": [
+      "p05",
+      "p06",
+      "p03"
+    ]
+  },
+  {
+    "id": "p08",
+    "title": "Board and HUD layout",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 27,
+    "status": "todo",
+    "note": "Three lanes, minimap red dots, score bar, Supply, READY and Operator panel, built with anchors and containers. Done when it reads well at 1280×720 and on a phone in landscape (844×390).",
+    "depends": [
+      "p01"
+    ]
+  },
+  {
+    "id": "p09",
+    "title": "Hand, card inspector and deploying",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 28,
+    "status": "todo",
+    "note": "Deploy by drag or tap-card-then-tap-lane; long-press or right-click opens the card inspector. Done when a full round is playable with mouse only and with touch only, nothing hover-only.",
+    "depends": [
+      "p08",
+      "p04"
+    ]
+  },
+  {
+    "id": "p10",
+    "title": "Run flow (7 matches, 3 tickets)",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 29,
+    "status": "todo",
+    "note": "RunState drives 7 matches, tickets, rewards, weapon levels and Perk offers, and survives a browser reload. Done when a run can be won and lost end to end.",
+    "depends": [
+      "p06",
+      "p03"
+    ]
+  },
+  {
+    "id": "p11",
+    "title": "Run and reward screens",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 30,
+    "status": "todo",
+    "note": "Loadout pick, run map, Supply Drop, attachment and Perk choices, After-Action and run end. Done when every choice is one tap and works on a phone.",
+    "depends": [
+      "p10",
+      "p09"
+    ]
+  },
+  {
+    "id": "p12",
+    "title": "Outcome preview overlay",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 31,
+    "status": "todo",
+    "note": "Toggleable per-lane prediction of damage, eliminations and control using the real rules engine. Done when it matches actual results in QA's scripted cases.",
+    "depends": [
+      "p04",
+      "p09"
+    ]
+  },
+  {
+    "id": "p13",
+    "title": "Placeholder art kit and themes",
+    "agent": "technical-artist",
+    "phase": "prototype",
+    "order": 32,
+    "status": "todo",
+    "note": "HUD and card themes, OFL fonts, one original icon sheet and flat card frames with friend/enemy shape cues. Done when cards read at 50% scale and nothing resembles a franchise HUD or logo.",
+    "depends": [
+      "p01"
+    ]
+  },
+  {
+    "id": "p14",
+    "title": "Combat feedback and streak effects",
+    "agent": "game-feel-developer",
+    "phase": "prototype",
+    "order": 33,
+    "status": "todo",
+    "note": "Tracers, hit markers, killfeed, streak arc with shatter, killstreak takeover and XP pop-ups, all Tweens. Done when it holds 60 FPS on desktop and 30+ on a phone, with a fast-animations toggle.",
+    "depends": [
+      "p05",
+      "p08",
+      "p13"
+    ]
+  },
+  {
+    "id": "p15",
+    "title": "Tutorial match",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 34,
+    "status": "todo",
+    "note": "Scripted first match teaching deploy, firefight, streak and the Recon Drone call-in; skippable. Done when a new tester finishes it in ≤ 5 minutes.",
+    "depends": [
+      "p03",
+      "p07",
+      "p09"
+    ]
+  },
+  {
+    "id": "p16",
+    "title": "Playtest logger and surveys",
+    "agent": "data-scientist",
+    "phase": "prototype",
+    "order": 35,
+    "status": "todo",
+    "note": "PlaytestLog autoload records all planned events from EventBus, plus consent, pre-survey and end survey. Done when Download log works in desktop and phone browsers.",
+    "depends": [
+      "p01",
+      "p10"
+    ]
+  },
+  {
+    "id": "p17",
+    "title": "Loading screen and size budget",
+    "agent": "technical-artist",
+    "phase": "prototype",
+    "order": 36,
+    "status": "todo",
+    "note": "Loading screen with progress; assets under 5 MB. Done when a cold load measures under 10 s at 20 Mbps and is recorded in qa/performance-logs.",
+    "depends": [
+      "p01",
+      "p13"
+    ]
+  },
+  {
+    "id": "p18",
+    "title": "QA: rules, devices and release check",
+    "agent": "qa-agent",
+    "phase": "qa",
+    "order": 37,
+    "status": "todo",
+    "note": "Rules and edge-case pass, device matrix (desktop browsers, Android Chrome, iOS Safari), mouse-only and touch-only passes, IP name checklist. Done at 0 critical and ≤ 10 minor bugs.",
+    "depends": [
+      "p04",
+      "p05",
+      "p06",
+      "p07",
+      "p09",
+      "p10",
+      "p11",
+      "p12",
+      "p14",
+      "p15",
+      "p16",
+      "p17"
+    ]
+  },
+  {
+    "id": "p19",
+    "title": "Balance pass",
+    "agent": "mid-game-designer",
+    "phase": "qa",
+    "order": 38,
+    "status": "todo",
+    "note": "10+ logged internal matches per mode; tune toward the target win rates and ≤ 1 unspent Supply. Done when changes are recorded in balance-log.md and run length is 30–45 min.",
+    "depends": [
+      "p07",
+      "p10",
+      "p16"
+    ]
+  },
+  {
+    "id": "p20",
+    "title": "Internal playtest and go/no-go",
+    "agent": "data-scientist",
+    "phase": "qa",
+    "order": 39,
+    "status": "todo",
+    "note": "3–5 internal sessions, KPI sheet from the logs, and a short readout with the tester brief. Done when there is a go/no-go for external playtest round 1.",
+    "depends": [
+      "p18",
+      "p19"
+    ]
+  }
+]

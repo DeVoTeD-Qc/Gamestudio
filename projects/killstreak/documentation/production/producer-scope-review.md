@@ -9,7 +9,7 @@ Market verdict: **conditional GO** for a single-player roguelite (PvP deferred).
 | Milestone | Date | Status |
 |---|---|---|
 | Concept Complete (concept, pillars, audience) | 2026-11-05 | ✅ Delivered early (vision.md, market-analysis.md) |
-| Design Documentation (GDD, art guide, technical assessment) | 2026-11-08 | ✅ Draft delivered; awaiting user approval (DESIGN_REVIEW.md) |
+| Design Documentation (GDD, art guide, technical assessment) | 2026-11-08 | ✅ Approved by the user 2026-11-03 (DESIGN_REVIEW.md, Decisions) |
 
 ## Proposed web prototype scope (starts only after approval)
 **IN (vertical slice, ~5–7 working days for one dev pipeline):**
@@ -17,12 +17,15 @@ Market verdict: **conditional GO** for a single-player roguelite (PvP deferred).
 - Full round loop: Briefing / Deploy / Reveal / Firefight / Score, plus the streak meter and Operator down/respawn
 - 20 starter cards + 6 reward cards; 1 Primary (Kestrel AR-7) with 4 attachments; Sidearm; Frag + Flashbang; 4 Perks; 4 Killstreaks
 - AI with 2 personalities (Rusher, Anchor); 3 enemy squads
-- Mini-run: 5 matches (4 + Rival), 3 tickets, Supply Drop rewards, weapon level-ups. No Armory shop.
+- Run: 7 matches (Bracket 1 ×3, Bracket 2 ×3, Rival), 3 tickets, ~30–45 min (decision 7), Supply Drop rewards, weapon level-ups. No Armory shop.
 - Scripted tutorial match, outcome-preview overlay, killfeed, hit markers, XP pop-ups
 - Playtest event log + download button; placeholder art in the final layout
 - Godot 4.4.1 web export, single-threaded, Compatibility renderer, hosted on itch.io (private link)
 
-**OUT (post-prototype):** Detonator mode, extra Primaries, the Armory shop, meta-progression/Player Rank, Threat Levels, second map, final art, voice audio, async "Mirror Squad" PvP, mobile-browser polish.
+- **Mouse + touch input and a layout that scales to phone-size landscape screens** (decision 9: Steam and mobile later)
+- Loading screen; load target < 10 s (decision 10)
+
+**OUT (post-prototype):** Detonator mode, extra Primaries, the Armory shop, meta-progression/Player Rank, Threat Levels, second map, final art, voice audio, async "Mirror Squad" PvP, portrait layout, native mobile/Steam builds and store integration.
 
 ## Rough build plan (post-approval)
 | Day | Work |
@@ -40,8 +43,8 @@ Market verdict: **conditional GO** for a single-player roguelite (PvP deferred).
 | Scope creep (more modes/cards) | High | High | Feature freeze = the IN list above |
 | Firefight rules are confusing | Med | High | Outcome preview + tutorial; test with the Shooter segment first |
 | AI too weak or too strong | Med | Med | Tunable weights; scripted squads for bracket 1 |
-| Web build size/load time (config target "<3 s" is unrealistic) | High | Low | Re-target to <10 s with a loading screen; keep assets <5 MB |
-| IP/trademark | Med | High | Name review checklist before any public build; trademark search on the title |
+| Web build size/load time | High | Low | Target approved: < 10 s with a loading screen (decision 10); keep assets < 5 MB |
+| IP/trademark | Med | High | Name review checklist before any public build; trademark search on "Killstreak" and the preferred candidate "Deckstreak" |
 
-## Open questions for the user
-See the numbered list in `../DESIGN_REVIEW.md` (single source of truth).
+## Decisions
+All 10 questions were answered on 2026-11-03; see "Decisions (approved 2026-11-03)" in `../DESIGN_REVIEW.md`. The detailed build plan is `prototype-milestone-plan.md`.

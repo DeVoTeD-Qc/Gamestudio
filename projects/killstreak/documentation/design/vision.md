@@ -1,6 +1,7 @@
 # Killstreak — Game Vision & Format Decision
 
-*Author: Sr Game Designer Agent · 2026-11-03 · Status: proposed, awaiting user approval · Mode: DESIGN ONLY*
+*Author: Sr Game Designer Agent · 2026-11-03 · Status: **approved 2026-11-03** (format C, see `../DESIGN_REVIEW.md` Decisions) · Mode: DESIGN ONLY*
+*Working title: "Killstreak". User's preferred title candidate: **"Deckstreak"**, pending a trademark check (no renames until cleared).*
 *IP: Original setting. No Call of Duty names, characters, maps, factions, logos or trademarked mode/feature names. Generic genre terms (loadout, perk, killstreak, recon) only.*
 
 ## Core concept
@@ -80,6 +81,9 @@ Near-future private-military conflict in the fictional **Kharzan Corridor**: por
 - **Perk engines** (Balatro-style): e.g., *Field Salvage* (draw on elimination) + *Streak Discipline* (thresholds −1) + a cheap Pick deck = a streak machine.
 - **Run economy**: deck thinning in the Armory, attachment builds, choosing which brackets to push.
 - **Threat Levels 1–10** add enemy modifiers ("enemy squads start with Cover", "streaks reset when ANY unit is lost").
+
+## Platforms
+Web (HTML5) for the prototype and demo; **Steam and mobile planned later** (approved 2026-11-03). UI is designed once for mouse and touch: every hover action has a tap/long-press equivalent, tap targets are large, and the layout scales from a 1280×720 desktop canvas down to phone-size landscape screens.
 
 ## Player experience goals
 - **Target emotions:** the "clutch" (winning a 1v3 lane), the streak spike (calling in the Gunship), and the "one more match" itch.

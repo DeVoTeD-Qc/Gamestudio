@@ -1,6 +1,6 @@
 # Killstreak — Core Rules Specification (v0.1)
 
-*Author: Mid Game Designer Agent · 2026-11-03 · Based on: `vision.md` (Hybrid → roguelite-first, symmetric rules) · Status: draft for approval · DESIGN ONLY (no code)*
+*Author: Mid Game Designer Agent · 2026-11-03 · Based on: `vision.md` (Hybrid → roguelite-first, symmetric rules) · Status: **approved 2026-11-03** (see `../DESIGN_REVIEW.md` Decisions) · DESIGN ONLY (no code)*
 *All names below are original. No franchise names, characters, maps, factions or trademarked mode/feature names.*
 
 ## 1. Match components
