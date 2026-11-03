@@ -39,7 +39,7 @@ Firepower can never go below 0.
 Triggers (not keywords): **On Deploy:** (when revealed) and **On Down:** (when eliminated).
 
 ## 2. Round structure (both sides follow identical rules)
-1. **Briefing.** Gain Supply, draw 2 (Round 1: draw your 4-card opening hand plus 1; one free mulligan of any number of cards). Lethal/Tactical cooldowns tick down. **Intel:** the enemy's planned unit deployments appear on the minimap as **red dots per zone** (count only). (Against the AI, it commits its plan first. In future PvP, both sides plan blind and red dots come only from Recon.)
+1. **Briefing.** Gain Supply, draw 2 (Round 1: draw your 4-card opening hand plus 1, then one free mulligan of any number of those 5 cards). Lethal/Tactical cooldowns tick down (an item used in round N is ready again in round N+3). **Intel:** the enemy's planned unit deployments (unit cards and Operator placement/Rotation; never Tactics, Equipment or killstreaks) appear on the minimap as **red dots per zone** (count only). (Against the AI, it commits its plan first. In future PvP, both sides plan blind and red dots come only from Recon.)
 2. **Deploy.** In any order: play cards face-down (units go to the back of a zone's line), use Secondary/Lethal/Tactical, activate earned killstreaks, and **Rotate** your Operator once to an adjacent zone (it moves to the back of the line). Cards marked *"Resolves immediately"* (intel/draw) resolve now. Press **READY**.
 3. **Reveal.** Both sides' plays flip. **Initiative:** the side that is behind on the scoreboard resolves first (ties → the player). Resolution order:
    a. Units arrive; *On Deploy* triggers.
@@ -67,14 +67,14 @@ When your Operator is eliminated: the enemy gets +1 elimination, your streak res
 | Wasp-9 | SMG | 2 / 6 | First Shot; may Rotate twice per round |
 | Longreach .338 | Sniper | 3 / 5 | Pick |
 
-**Weapon XP → attachments** (in a run: weapon levels after matches 1, 3, 5, 7; choose 1 of 2 each time). Examples for the Kestrel AR-7: *Extended Mag* (+1 FP), *Foregrip* (Cover 1), *Holo Sight* (First Shot in Mid zones), *Suppressor* (Operator never appears as a red dot), *Underbarrel Launcher* (once per match: 2 damage to each enemy in Operator's zone), *Ceramic Lining* (+2 Armor).
+**Weapon XP → attachments** (5-match prototype run: weapon levels after matches 1, 3 and 4; choose 1 of 2 each time. Prototype pool: Extended Mag, Foregrip, Holo Sight, Ceramic Lining). Examples for the Kestrel AR-7: *Extended Mag* (+1 FP), *Foregrip* (Cover 1), *Holo Sight* (First Shot in Mid zones), *Suppressor* (Operator never appears as a red dot), *Underbarrel Launcher* (post-prototype; once per match, 0 Supply, use in Deploy, resolves at Reveal: 2 damage to each enemy in Operator's zone), *Ceramic Lining* (+2 Armor).
 
 **Secondary:** *P-12 Sidearm*: 1 Supply, 1 damage to an enemy in your Operator's zone. Once per round.
 
-**Lethal** (choose 1): *Frag Grenade*: 0 Supply, 2 damage to the point man and 1 to the next enemy, in your Operator's zone or an adjacent zone. Cooldown 3 rounds. · *Breaching Charge*: destroy an enemy Equipment card and deal 1 damage to each enemy in that zone. Cooldown 3.
-**Tactical** (choose 1): *Flashbang*: enemy units in your Operator's zone or an adjacent zone get −2 FP and lose First Shot this round. Cooldown 3. · *Smoke Canister*: your units in a zone have Cover 1 and can't be targeted by Pick or Flank this round. Cooldown 3.
+**Lethal** (choose 1): *Frag Grenade*: 0 Supply, 2 damage to the point man and 1 to the next enemy, in your Operator's zone or an adjacent zone. Cooldown 3 rounds. · *Breaching Charge* (post-prototype): destroy an enemy Equipment card and deal 1 damage to each enemy in that zone. Cooldown 3.
+**Tactical** (choose 1): *Flashbang*: enemy units in your Operator's zone or an adjacent zone get −2 FP and lose First Shot this round. Cooldown 3. · *Smoke Canister* (post-prototype): your units in a zone have Cover 1 and can't be targeted by Pick or Flank this round. Cooldown 3.
 
-**Perks** (3 slots; earned during the run, 0 at start):
+**Perks** (3 slots; earned during the run, 0 at start; a Perk offer shows 2 Perks you don't own. Prototype pool: Streak Discipline, Field Salvage, Grit, Objective Focus; the other 3 are post-prototype):
 | Perk | Effect |
 |---|---|
 | Streak Discipline | Your killstreak thresholds −1 (min 1). |
@@ -85,13 +85,13 @@ When your Operator is eliminated: the enemy gets +1 elimination, your streak res
 | Quick Hands | Lethal & Tactical cooldowns −1. |
 | Overwatch Training | Your Sniper units have First Shot in Long zones. |
 
-**Killstreaks** (choose 3; cost 0 Supply; activate during Deploy):
+**Killstreaks** (choose 3; cost 0 Supply; activate during Deploy. Prototype pool: Recon Drone, Mortar Barrage, Sentry Turret, Attack Helo; Gunship is post-prototype):
 | Killstreak | Threshold | Effect |
 |---|---|---|
 | Recon Drone | 2 | This round and next: enemy deployments are shown face-up during Deploy, and enemy units lose Cover. |
 | Mortar Barrage | 3 | 2 damage to each enemy unit in one zone. |
-| Sentry Turret | 4 | Place a Sentry (FP 2 / Armor 4, Cover 1) in a zone. It doesn't count for control, and enemies get no elimination credit for destroying it. |
-| Attack Helo | 5 | At the start of the next 2 firefights, deal 2 damage to the enemy point man in every zone. |
+| Sentry Turret | 4 | Place a Sentry (FP 2 / Armor 4, Cover 1) at the back of a zone's line; it uses 1 of the 4 slots and stays until destroyed. It is ignored for control (neither gives nor blocks it), and enemies get no elimination credit for destroying it. |
+| Attack Helo | 5 | At the start of this round's and next round's firefights, deal 2 damage to the enemy point man in every zone. |
 | Gunship | 7 | 3 damage to every enemy unit in all zones. |
 
 *Starter loadout:* Kestrel AR-7, P-12 Sidearm, Frag Grenade, Flashbang, no Perks, Killstreaks = Recon Drone / Mortar Barrage / Attack Helo.
@@ -99,9 +99,9 @@ When your Operator is eliminated: the enemy gets +1 elimination, your streak res
 ## 4. Game modes (win conditions)
 | Mode | Genre analog | Win condition | Round cap |
 |---|---|---|---|
-| **Zone Control** | domination-style | End of each round: +1 point per controlled zone. First to **6** wins. | Round 8 → most points; tie → Overtime (the next point wins). |
-| **Firefight** | team-deathmatch-style | First to **7 eliminations** (Operator downs count). | Round 8 → most eliminations; tie → Overtime. |
-| **Detonator** *(Rival/elite matches; stretch goal for the prototype)* | search-and-destroy-style | Attacker starts with a 0-cost *Charge* in hand and must place it in their Operator's zone, then have ≥1 unit in that zone at the end of 2 rounds → detonation. Defender wins by clearing that zone of attackers while the Charge is armed, or by reaching round 8. **No Operator respawn.** | 8 |
+| **Zone Control** | domination-style | End of each round: +1 point per controlled zone. First to **6** wins. | Round 8 → most points; tie → Overtime (rounds 9–10; first round-end with a leader wins; still tied after round 10 → draw). |
+| **Firefight** | team-deathmatch-style | First to **7 eliminations** (Operator downs count). | Round 8 → most eliminations; tie → Overtime (rounds 9–10, same rule). |
+| **Detonator** *(Rival/elite matches; post-prototype, out of the prototype)* | search-and-destroy-style | Attacker starts with a 0-cost *Charge* in hand and must place it in their Operator's zone, then have ≥1 unit in that zone at the end of 2 rounds → detonation. Defender wins by clearing that zone of attackers while the Charge is armed, or by reaching round 8. **No Operator respawn.** | 8 |
 
 ## 5. Starter card set (20 designs)
 FP = Firepower, AR = Armor. One line of text maximum.
@@ -115,12 +115,12 @@ FP = Firepower, AR = Armor. One line of text maximum.
 | 5 | Breacher | Unit | Shotgun | 3 | 3/4 | First Shot |
 | 6 | Marksman | Unit | Sniper | 3 | 2/2 | Pick |
 | 7 | Flanker | Unit | SMG | 3 | 2/3 | Flank |
-| 8 | Shieldman | Unit | — | 3 | 1/5 | Cover 1. Always arrives at the front of the line. |
+| 8 | Shieldman | Unit | — | 3 | 1/5 | Cover 1. Arrives at the front of the line, ahead of units already there. |
 | 9 | Gunner | Unit | LMG | 4 | 2/6 | Suppress |
 | 10 | Demolitions Expert | Unit | LMG | 4 | 2/4 | On Down: 3 damage to the enemy point man here. |
 | 11 | Sgt. Okafor "Anvil" ★ | Unit (Elite) | AR | 5 | 3/6 | Holder. Your other units here get +1 FP. |
 | 12 | Lt. Halek "Wren" ★ | Unit (Elite) | Sniper | 5 | 4/3 | Pick. Her eliminations give +1 extra streak. |
-| 13 | Callout | Tactic | — | 0 | — | Resolves immediately: reveal red dots in a zone; your next unit there gets +1 FP this round. |
+| 13 | Callout | Tactic | — | 0 | — | Resolves immediately: reveal red dots in a zone; your first unit to arrive there this Reveal gets +1 FP this round. |
 | 14 | Ammo Resupply | Tactic | — | 1 | — | Resolves immediately: draw 2. |
 | 15 | Flank Route | Tactic | — | 1 | — | Move a friendly unit to an adjacent zone; it gains First Shot this round. |
 | 16 | Suppressing Fire | Tactic | — | 2 | — | Enemy units in a zone get −1 FP this round. |
@@ -130,7 +130,7 @@ FP = Firepower, AR = Armor. One line of text maximum.
 | 20 | Comms Relay | Equipment | — | 2 | — | While you control this zone: streak +1 at end of round. |
 
 **Starter deck (20):** Rifleman ×3, Point Man ×2, Marksman ×2, Combat Medic ×2, Callout ×2, Breacher, Gunner, Shieldman, Recon Specialist, Ammo Resupply, Flank Route, Suppressing Fire, Hold the Line, Tripwire Charge.
-**Reward pool (Supply Drops):** Flanker, Demolitions Expert, Breach and Clear, Comms Relay, Anvil ★, Wren ★, plus extra copies of starter cards. Card upgrades in the Armory give +1 FP or −1 Cost.
+**Reward pool (Supply Drops):** Flanker, Demolitions Expert, Breach and Clear, Comms Relay, Anvil ★, Wren ★, plus extra copies of starter cards. Card upgrades in the Armory give +1 FP or −1 Cost (post-prototype; no Armory in the prototype).
 
 **Prototype map: Port Vasel.** Left Flank "Container Stacks" (Close) · Mid "Crane Yard" (Long) · Right Flank "Loading Offices" (Mid).
 **Second map (post-prototype): Cinder Refinery.** Left "Pipe Run" (Long) · Mid "Control Room" (Close) · Right "Tank Farm" (Mid).
@@ -183,3 +183,20 @@ Radio: *"Two down on Containers. Mortar's ready, call it in."*
 
 ## 10. Balancing parameters (tunable)
 Supply curve (N+1, cap 7) · draws per round (2) · hand cap (7) · zone capacity (4) · Zone Control target (6) · Firefight target (7) · round cap (8) · killstreak thresholds (2/3/4/5/7) · Lethal/Tactical cooldown (3) · Operator stats per Primary · range bonuses table · AI weights (2×, 3×) · Threat Level modifiers.
+
+## Rulings (2026-11-03)
+*Sr Game Designer · resolves the 13 ambiguities raised in p02 · binding for p03 (data) and p04 (rules engine). Lines above that conflicted have been updated to match.*
+
+1. **Weapon levels:** in the 5-match run the weapon levels after matches **1, 3 and 4** (`weapon_level_after_matches = [1, 3, 4]`), so the third attachment lands right before the Rival; each level offers 2 of the prototype's 4 attachments you don't yet own.
+2. **Content counts:** the prototype ships **4 Perks** (Streak Discipline, Field Salvage, Grit, Objective Focus) and **4 killstreaks** (Recon Drone, Mortar Barrage, Sentry Turret, Attack Helo); Low Profile, Quick Hands, Overwatch Training and Gunship are post-prototype. A Perk offer (after matches 2 and 4) shows **2** Perks you don't own (`perk_choices = 2`).
+3. **Round 1 draw:** draw the 4-card opening hand plus the 1 extra card first, **then** take the one free mulligan on all 5 (put back any number, shuffle them in, redraw that many).
+4. **Cooldowns:** "Cooldown 3" means a Lethal/Tactical used in round N is ready again in round **N+3** (it ticks 3→2→1→0 at the Briefings of N+1, N+2, N+3).
+5. **Sentry:** it **takes 1 of the zone's 4 slots** (joins the back of the line) and is **ignored for control**: it neither gives you control nor blocks the enemy from controlling the zone. It stays until destroyed (or the match ends).
+6. **Shieldman:** it arrives in front of **units already in the zone** and becomes the new point man; if two arrive in the same Reveal, they arrive in play order, so the later one ends up in front.
+7. **Callout:** the bonus goes to **your first unit card to arrive in that zone at this round's Reveal** (whether played before or after the Callout; the Operator doesn't count); if none arrives, it's wasted.
+8. **Attack Helo:** yes, **it includes this round's firefight** (this round and next, like Recon Drone); it hits before the First Shot step, and its eliminations give no streak.
+9. **Underbarrel Launcher:** confirmed: use during Deploy, resolves at Reveal in play order, **0 Supply, once per match**, 2 damage to each enemy in the Operator's zone at that moment; its eliminations count for the streak. It is **not** in the prototype's attachment pool.
+10. **Breaching Charge / Smoke Canister:** confirmed **out of the prototype**; targeting will be ruled when they are scheduled.
+11. **Bracket 2 / Armory / Detonator:** Bracket 1 is +0/+0; **Bracket 2 and the Rival give every enemy unit and the enemy Operator +1 Armor and +0 Firepower** (`enemy_armor_bonus = 1`, `enemy_firepower_bonus = 0`; the Rival's extra threat comes from its elites). Card upgrades / Armory are **out**; the Detonator *Charge* card is **out** (Detonator mode is out).
+12. **Overtime:** confirmed: if tied at the end of round 8, play **rounds 9–10**; the match ends at the first round-end where one side leads; still tied after **round 10 → draw** (no ticket lost, no Supply Drop, the run goes on to the next match). Supply stays capped at 7.
+13. **Red dots:** **only unit deployments**: unit cards played to a zone, plus the Operator's placement or Rotation into a zone. Tactics, Equipment (including the hidden Tripwire), Secondary/Lethal/Tactical uses and killstreaks (including the Sentry) never show as red dots.
