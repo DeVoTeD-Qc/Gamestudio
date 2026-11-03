@@ -12,6 +12,7 @@ never reaches a playtest unnoticed.
 | `squads/` | `SquadData` (`squad_data.gd`) | enemy squad |
 | `maps/` | `MapData` (`map_data.gd`) | map |
 | `run_config.tres` | `RunConfig` (`run_config.gd`), id `run_default` | the run and all tunable numbers |
+| `tutorial/` | `TutorialScript` (`tutorial_script.gd`), id `tutorial_basic` | the scripted first match (p15) |
 
 Samples: `cards/rifleman.tres` (unit), `cards/breach_and_clear.tres` (tactic with a Close bonus),
 `loadout/mortar_barrage.tres` (killstreak). Copy them as a starting point.
@@ -102,3 +103,35 @@ AI weights `weight_damage_dealt` / `weight_damage_taken` / `weight_zone_control`
 `load_failed` (file broken or points at a missing file) · `unknown_type` (not one of the classes above) ·
 `duplicate_id` · `missing_field` · `out_of_range` · `invalid_value` (field doesn't fit the type/slot, bad id format, bad enum) ·
 `broken_reference` (points outside `data/` or empty slot) · `wrong_type` (wrong kind of resource or slot).
+
+## TutorialScript (the tutorial match, p15)
+`tutorial/tutorial_script.tres` scripts the first match that `scenes/tutorial/Tutorial.tscn` plays.
+The steps and enemy plays are sub-resources inside the file (`TutorialStep`, `TutorialEnemyPlay`).
+
+| Field | Meaning |
+|---|---|
+| `squad`, `map`, `mode` | The opponent (`squad_tutorial`), the map and the mode. |
+| `round_cap` | The match always ends at the end of this round (no overtime; a tie is a draw). |
+| `score_target` | Early-win score. Keep it high (20) so the drill runs to `round_cap`. |
+| `seed_value` | Match seed (draws are stacked, so it only matters for reshuffles). |
+| `player_deck` | 8-40 cards, **drawn in list order** (no shuffle): Round 1 draws the first 5, then 2 per round. |
+| `player_killstreaks` | Empty = the run config's starter killstreaks. Primary, Secondary, Lethal, Tactical are always the starter ones. |
+| `enemy_deck` | Stacked enemy draws (empty = the squad's deck in list order). |
+| `enemy_plays` | `TutorialEnemyPlay`: `round_number`, `card` (a unit; empty = place the enemy Operator), `zone` 0 Left / 1 Mid / 2 Right. Committed at the start of that round's Deploy, before the player acts. A card not drawn yet is pulled from the deck. |
+| `steps` | `TutorialStep` list, in order (below). The last step must advance on `match_end`. |
+
+**TutorialStep**
+| Field | Meaning |
+|---|---|
+| `index` | 1, 2, 3... in list order. Sent as `EventBus.tutorial_step(index)` when the step starts (playtest log). |
+| `round_number` | The round it belongs to (steps must be in round order). |
+| `title` | Caption in capitals, max 16 characters. |
+| `text` | Max 120 characters: it has to read at a glance on a phone. `{intel}` is replaced by the enemy cards the Recon Drone revealed ("Combat Medic and Rifleman to Mid"). |
+| `advance_on` | `next` (NEXT button), `place_operator` (in `zone`), `play_card` (`card_id` to `zone`), `use_item` (`item_id`), `ready`, `round_end` (the round has finished playing), `match_end`. |
+| `highlight` | What gets the amber frame: `auto` (from `advance_on`: Operator or hand card, then the lane; the item button; READY), `none`, `operator`, `hand_card`, `lane`, `enemy_row`, `ready`, `streak`, `killstreak`, `minimap`, `score`. `lane` / `enemy_row` use `zone`, `killstreak` uses `item_id`. |
+| `lock_input` | On: the screen around the highlight is dimmed, taps elsewhere are blocked and any other play, READY or UNDO is refused. Off: free play, the frame is only a hint. |
+| `grant_killstreak` | Forced earn: puts this killstreak in the Streak Tray when the step starts, if the scripted firefight hasn't already earned it. |
+
+Changing the script: keep the enemy plays and the player's stacked draws in step with the steps (the
+`test_tutorial.gd` engine test checks that Round 1 and 2 each give an elimination and that the Recon Drone
+is earned by Round 2). Run the tests after any change.
