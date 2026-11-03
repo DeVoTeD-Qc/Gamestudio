@@ -193,7 +193,7 @@ func test_recon_drone_shows_deployments_and_strips_cover_this_round_and_next() -
 	m.score()
 	m.begin_round()
 	assert_eq([m.cover_of(dug_in), m.cover_of(late)], [1, 2], "then Cover is back")
-	assert_eq(m.sides[E].cover_of(late) if false else m.cover_of(shield), 1, "Shieldman Cover back")
+	assert_eq(m.cover_of(shield), 1, "Shieldman Cover back")
 
 
 func test_mortar_barrage_two_damage_to_each_enemy_in_one_zone() -> void:
@@ -205,10 +205,10 @@ func test_mortar_barrage_two_damage_to_each_enemy_in_one_zone() -> void:
 	m.begin_round()
 	var a: RulesUnit = F.place(m, E, F.rifleman(), F.RIGHT)
 	var b: RulesUnit = F.place(m, E, F.gunner(), F.RIGHT)
-	var other: RulesUnit = F.place(m, E, F.unit("other", 0, 5), F.LEFT)
+	var other: RulesUnit = F.place(m, E, F.unit("other", 0, 4), F.LEFT)
 	assert_true(m.submit(P, RulesIntent.use_item(&"mortar_barrage", F.RIGHT))["ok"], "call in on Right")
 	m.reveal()
-	assert_eq([a.is_alive(), b.armor, other.armor], [false, 4, 5], "2 to each enemy there only")
+	assert_eq([a.is_alive(), b.armor, other.armor], [false, 4, 4], "2 to each enemy there only")
 	m.firefight()
 	m.score()
 	assert_eq(m.sides[P].streak, 3 + 1, "only the Operator's firefight kill in Left adds streak")
@@ -284,17 +284,16 @@ func test_field_salvage_draws_on_the_first_elimination_each_round() -> void:
 	assert_eq(m.sides[P].hand.size(), hand + 1, "2 kills, 1 draw")
 	assert_eq(F.events_of(m, RulesEvent.PERK_TRIGGERED).size(), 1, "logged once")
 	m.begin_round()
-	hand = m.sides[P].hand.size()
 	_kills(m, 1, F.MID)
 	m.resolve_round()
-	assert_eq(m.sides[P].hand.size(), hand + 1, "again next round")
+	assert_eq(F.events_of(m, RulesEvent.PERK_TRIGGERED).size(), 2, "again next round")
 	m.begin_round()
-	hand = m.sides[P].hand.size()
 	StreakTracker.grant(m, P, &"mortar_barrage")
-	F.place(m, E, F.unit("mortared", 0, 1), F.MID)
-	m.submit(P, RulesIntent.use_item(&"mortar_barrage", F.MID))
+	F.place(m, E, F.unit("mortared", 0, 1), F.RIGHT)
+	m.submit(P, RulesIntent.use_item(&"mortar_barrage", F.RIGHT))
 	m.resolve_round()
-	assert_eq(m.sides[P].hand.size(), hand, "a killstreak kill doesn't draw")
+	assert_eq(m.sides[P].eliminations, 4, "the Mortar kill happened")
+	assert_eq(F.events_of(m, RulesEvent.PERK_TRIGGERED).size(), 2, "a killstreak kill doesn't draw")
 
 
 func test_grit_survives_lethal_once_per_match() -> void:
