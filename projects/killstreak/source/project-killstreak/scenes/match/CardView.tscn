@@ -1,0 +1,210 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/card_view.gd" id="1_script"]
+[ext_resource type="Theme" path="res://assets/ui/card_theme.tres" id="2_theme"]
+[ext_resource type="Shader" path="res://assets/shaders/scanlines.gdshader" id="3_scan"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_scan"]
+shader = ExtResource("3_scan")
+shader_parameter/line_color = Color(0.357, 0.753, 0.922, 0.18)
+shader_parameter/line_count = 46.0
+shader_parameter/scroll_speed = 0.25
+
+[node name="CardView" type="Control"]
+custom_minimum_size = Vector2(250, 350)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 250.0
+offset_bottom = 350.0
+pivot_offset = Vector2(125, 175)
+mouse_filter = 1
+texture_filter = 5
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="CostLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 62.0
+offset_bottom = 56.0
+theme_type_variation = &"CardCost"
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EliteIcon" type="TextureRect" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_left = 52.0
+offset_top = 4.0
+offset_right = 70.0
+offset_bottom = 22.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="NameLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 70.0
+offset_top = 12.0
+offset_right = 238.0
+offset_bottom = 38.0
+theme_type_variation = &"CardName"
+text = "Breacher"
+vertical_alignment = 1
+uppercase = true
+
+[node name="TypeIcon" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 70.0
+offset_top = 39.0
+offset_right = 86.0
+offset_bottom = 55.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TypeChip" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 90.0
+offset_top = 38.0
+offset_right = 160.0
+offset_bottom = 56.0
+theme_type_variation = &"CardChip"
+
+[node name="TypeLabel" type="Label" parent="TypeChip"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardTag"
+text = "UNIT · SHOTGUN"
+vertical_alignment = 1
+uppercase = true
+
+[node name="ArtPanel" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 62.0
+offset_right = 238.0
+offset_bottom = 198.0
+mouse_filter = 2
+theme_type_variation = &"CardArt"
+
+[node name="ArtIcon" type="TextureRect" parent="ArtPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Scanlines" type="ColorRect" parent="ArtPanel"]
+unique_name_in_owner = true
+visible = false
+material = SubResource("ShaderMaterial_scan")
+layout_mode = 2
+mouse_filter = 2
+
+[node name="KeywordRow" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 202.0
+offset_right = 238.0
+offset_bottom = 226.0
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="BodyLabel" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 228.0
+offset_right = 238.0
+offset_bottom = 274.0
+theme_type_variation = &"CardBody"
+autowrap_mode = 3
+
+[node name="RangeRow" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 276.0
+offset_right = 238.0
+offset_bottom = 294.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="RangeIcon" type="TextureRect" parent="RangeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RangeLabel" type="Label" parent="RangeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CardRange"
+text = "CLOSE +2 · LONG −1"
+vertical_alignment = 1
+
+[node name="FirepowerBadge" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 296.0
+offset_right = 90.0
+offset_bottom = 332.0
+mouse_filter = 2
+
+[node name="FirepowerIcon" type="TextureRect" parent="FirepowerBadge"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 30.0
+offset_bottom = 30.0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FirepowerLabel" type="Label" parent="FirepowerBadge"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 32.0
+offset_right = 72.0
+offset_bottom = 36.0
+theme_type_variation = &"CardStat"
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ArmorBadge" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 162.0
+offset_top = 296.0
+offset_right = 236.0
+offset_bottom = 332.0
+mouse_filter = 2
+
+[node name="ArmorLabel" type="Label" parent="ArmorBadge"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 2.0
+offset_right = 42.0
+offset_bottom = 36.0
+theme_type_variation = &"CardStat"
+text = "4"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ArmorIcon" type="TextureRect" parent="ArmorBadge"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 44.0
+offset_top = 6.0
+offset_right = 68.0
+offset_bottom = 30.0
+expand_mode = 1
+stretch_mode = 5

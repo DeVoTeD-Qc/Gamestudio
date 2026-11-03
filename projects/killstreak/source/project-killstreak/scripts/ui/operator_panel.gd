@@ -1,0 +1,102 @@
+# operator_panel.gd
+# Purpose: Operator panel (bottom-left): Operator name, zone, Firepower/Armor,
+#   a segmented streak meter (placeholder for the StreakArc of p14; taller
+#   segments mark killstreak thresholds), 3 Perk slots, and two rows of tap buttons:
+#   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
+#   threshold printed on the button so nothing is hover-only).
+#   Buttons only emit signals; what they do arrives with p05/p09.
+# Dependencies: hud_placeholder_style.gd variation names.
+# Author: UI/UX Agent
+extends PanelContainer
+
+signal ability_pressed(ability_id: StringName)
+signal killstreak_pressed(killstreak_id: StringName)
+
+const BUTTON_SIZE: Vector2 = Vector2(76, 72)
+const PERK_SIZE: float = 26.0
+
+@onready var _caption: Label = %CaptionLabel
+@onready var _name: Label = %NameLabel
+@onready var _stats: Label = %StatsLabel
+@onready var _streak_value: Label = %StreakValue
+@onready var _segments: HBoxContainer = %StreakSegments
+@onready var _perk_row: HBoxContainer = %PerkRow
+@onready var _buttons: GridContainer = %Buttons
+
+
+func set_operator(snapshot: Dictionary) -> void:
+	var op: Dictionary = snapshot.get("operator", {})
+	_caption.text = "OPERATOR · %s" % op.get("zone", "OFF BOARD")
+	_name.text = String(op.get("name", ""))
+	_stats.text = "FP %d   AR %d/%d" % [op.get("fp", 0), op.get("armor", 0), op.get("armor_max", 0)]
+	var streak: int = snapshot.get("streak", 0)
+	_streak_value.text = str(streak)
+	var thresholds: Array[int] = []
+	for ks: Dictionary in snapshot.get("killstreaks", []):
+		thresholds.append(int(ks.get("threshold", 0)))
+	_build_segments(streak, int(snapshot.get("streak_max", 5)), thresholds)
+	_build_perks(snapshot.get("perks", []), int(snapshot.get("perk_slots", 3)))
+	_build_buttons(snapshot.get("abilities", []), snapshot.get("killstreaks", []))
+
+
+func get_buttons() -> Array[Node]:
+	return _buttons.get_children()
+
+
+func _build_segments(streak: int, count: int, thresholds: Array[int]) -> void:
+	_clear(_segments)
+	for i: int in range(1, count + 1):
+		var seg: Panel = Panel.new()
+		seg.theme_type_variation = &"StreakSegmentLit" if i <= streak else &"StreakSegment"
+		seg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		seg.size_flags_vertical = Control.SIZE_SHRINK_END
+		seg.custom_minimum_size = Vector2(0, 18 if i in thresholds else 10)
+		_segments.add_child(seg)
+
+
+func _build_perks(perks: Array, slots: int) -> void:
+	for child: Node in _perk_row.get_children():
+		if child is Panel:
+			_perk_row.remove_child(child)
+			child.queue_free()
+	for i: int in slots:
+		var slot: Panel = Panel.new()
+		slot.theme_type_variation = &"PerkSlot"
+		slot.custom_minimum_size = Vector2(PERK_SIZE, PERK_SIZE)
+		# Earned perks get an icon (p13) and tap-to-inspect (p09); empty slots stay outlined.
+		slot.set_meta(&"perk", perks[i] if i < perks.size() else &"")
+		_perk_row.add_child(slot)
+
+
+func _build_buttons(abilities: Array, killstreaks: Array) -> void:
+	_clear(_buttons)
+	for ability: Dictionary in abilities:
+		var b: Button = _make_button("%s\n%s" % [ability.get("name", ""), ability.get("state", "")], &"HudButton")
+		var ability_id: StringName = ability.get("id", &"")
+		b.pressed.connect(func() -> void: ability_pressed.emit(ability_id))
+		_buttons.add_child(b)
+	for ks: Dictionary in killstreaks:
+		var earned: bool = ks.get("earned", false)
+		var b: Button = _make_button("%s\n%s" % [ks.get("name", ""),
+				"CALL IN" if earned else "AT %d" % int(ks.get("threshold", 0))], &"KillstreakButton")
+		b.disabled = not earned
+		var ks_id: StringName = ks.get("id", &"")
+		b.pressed.connect(func() -> void: killstreak_pressed.emit(ks_id))
+		_buttons.add_child(b)
+
+
+func _make_button(text: String, variation: StringName) -> Button:
+	var b: Button = Button.new()
+	b.text = text
+	b.theme_type_variation = variation
+	b.custom_minimum_size = BUTTON_SIZE
+	b.add_theme_font_size_override(&"font_size", 17)
+	b.add_to_group(&"tap_target")
+	b.focus_mode = Control.FOCUS_ALL
+	return b
+
+
+func _clear(node: Node) -> void:
+	for child: Node in node.get_children():
+		node.remove_child(child)
+		child.queue_free()

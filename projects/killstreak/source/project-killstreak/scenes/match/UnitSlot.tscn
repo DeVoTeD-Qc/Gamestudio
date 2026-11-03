@@ -1,0 +1,100 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/unit_slot.gd" id="1_slot"]
+
+[node name="UnitSlot" type="PanelContainer" groups=["tap_target"]]
+custom_minimum_size = Vector2(80, 128)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_type_variation = &"SlotEmpty"
+script = ExtResource("1_slot")
+
+[node name="Column" type="VBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="TagLabel" type="Label" parent="Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = " "
+clip_text = true
+
+[node name="NameLabel" type="Label" parent="Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+text_overrun_behavior = 3
+max_lines_visible = 2
+
+[node name="ClassLabel" type="Label" parent="Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+clip_text = true
+
+[node name="Spacer" type="Control" parent="Column"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Stats" type="HBoxContainer" parent="Column"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Fp" type="VBoxContainer" parent="Column/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -4
+
+[node name="FpCaption" type="Label" parent="Column/Stats/Fp"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "FP"
+
+[node name="FpValue" type="Label" parent="Column/Stats/Fp"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudNumber"
+
+[node name="Gap" type="Control" parent="Column/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="RedDot" type="Panel" parent="Column/Stats"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"RedDot"
+
+[node name="Gap2" type="Control" parent="Column/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Ar" type="VBoxContainer" parent="Column/Stats"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -4
+
+[node name="ArCaption" type="Label" parent="Column/Stats/Ar"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "AR"
+horizontal_alignment = 2
+
+[node name="ArValue" type="Label" parent="Column/Stats/Ar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudNumber"
+horizontal_alignment = 2

@@ -1,0 +1,144 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
+[ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
+[ext_resource type="PackedScene" path="res://scenes/match/Minimap.tscn" id="3_minimap"]
+[ext_resource type="PackedScene" path="res://scenes/match/Board.tscn" id="4_board"]
+[ext_resource type="PackedScene" path="res://scenes/match/OperatorPanel.tscn" id="5_op"]
+[ext_resource type="PackedScene" path="res://scenes/match/HandArea.tscn" id="6_hand"]
+
+[node name="Match" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_match")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0705882, 0.0862745, 0.101961, 1)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Layout" type="VBoxContainer" parent="SafeArea"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="TopBar" type="HBoxContainer" parent="SafeArea/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ScoreBar" parent="SafeArea/Layout/TopBar" instance=ExtResource("2_score")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Minimap" parent="SafeArea/Layout/TopBar" instance=ExtResource("3_minimap")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RightGroup" type="HBoxContainer" parent="SafeArea/Layout/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="KillfeedSlot" type="VBoxContainer" parent="SafeArea/Layout/TopBar/RightGroup"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="MenuButton" type="Button" parent="SafeArea/Layout/TopBar/RightGroup" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "MENU"
+
+[node name="Board" parent="SafeArea/Layout" instance=ExtResource("4_board")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BottomBar" type="HBoxContainer" parent="SafeArea/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 212)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OperatorPanel" parent="SafeArea/Layout/BottomBar" instance=ExtResource("5_op")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HandArea" parent="SafeArea/Layout/BottomBar" instance=ExtResource("6_hand")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ActionPanel" type="VBoxContainer" parent="SafeArea/Layout/BottomBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SupplyCounter" type="PanelContainer" parent="SafeArea/Layout/BottomBar/ActionPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudPanelDark"
+
+[node name="Column" type="VBoxContainer" parent="SafeArea/Layout/BottomBar/ActionPanel/SupplyCounter"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Top" type="HBoxContainer" parent="SafeArea/Layout/BottomBar/ActionPanel/SupplyCounter/Column"]
+layout_mode = 2
+
+[node name="Caption" type="Label" parent="SafeArea/Layout/BottomBar/ActionPanel/SupplyCounter/Column/Top"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudSubtle"
+text = "SUPPLY"
+vertical_alignment = 1
+
+[node name="SupplyValue" type="Label" parent="SafeArea/Layout/BottomBar/ActionPanel/SupplyCounter/Column/Top"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudNumber"
+text = "0/0"
+
+[node name="SupplyPips" type="HBoxContainer" parent="SafeArea/Layout/BottomBar/ActionPanel/SupplyCounter/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ReadyButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 96)
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"ReadyButton"
+text = "READY"
