@@ -41,7 +41,8 @@ var sturdy_bonus: float = 0.0
 var card_keep_cost: float = 0.35
 ## Value of keeping a ready Lethal / Tactical for a better moment.
 var cooldown_keep_cost: float = 0.6
-## Value of keeping an earned killstreak in the tray.
+## Value of keeping an earned killstreak in the tray at the start of a match; it falls
+## to 0 by the round cap (an unused killstreak is worth nothing once the match ends).
 var killstreak_keep_cost: float = 0.8
 
 
@@ -66,14 +67,14 @@ static func for_kind(p_kind: int) -> AiPersonality:
 	match p_kind:
 		DataEnums.Personality.RUSHER:
 			p.preferred_ranges = [DataEnums.RangeTag.CLOSE]
-			p.preferred_zone_bonus = 0.7
-			p.push_bonus = 0.5
+			p.preferred_zone_bonus = 1.2
+			p.push_bonus = 0.6
 			p.operator_home_bonus = 0.3
 			p.card_keep_cost = 0.25
 		DataEnums.Personality.ANCHOR:
-			p.preferred_zone_bonus = 0.6
-			p.preferred_control_mult = 1.5
-			p.operator_home_bonus = 0.8
+			p.preferred_zone_bonus = 1.0
+			p.preferred_control_mult = 1.8
+			p.operator_home_bonus = 1.5
 			p.sturdy_bonus = 0.1
 			p.card_keep_cost = 0.4
 		DataEnums.Personality.SNIPER_NEST:
