@@ -16,7 +16,7 @@ signal killstreak_pressed(killstreak_id: StringName)
 const BUTTON_SIZE: Vector2 = Vector2(76, 72)
 const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
 const INFO_WIDTH: float = 170.0
-const INFO_WIDTH_COMPACT: float = 150.0
+const INFO_WIDTH_COMPACT: float = 140.0
 const PERK_SIZE: float = 26.0
 
 var compact: bool = false
@@ -34,6 +34,9 @@ var compact: bool = false
 func set_compact(value: bool) -> void:
 	compact = value
 	_info.custom_minimum_size.x = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
+	_info.get_parent().add_theme_constant_override(&"separation", 8 if compact else 12)
+	# Key number floor is 20 px (14.4 pt on the phone); 20 keeps "FP 3  AR 5/7" in 140 px.
+	_stats.add_theme_font_size_override(&"font_size", 20 if compact else 22)
 	for b: Node in _buttons.get_children():
 		(b as Control).custom_minimum_size = _button_size()
 

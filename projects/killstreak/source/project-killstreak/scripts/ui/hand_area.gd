@@ -112,7 +112,7 @@ func _make_card(card: Dictionary) -> Control:
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cost.add_to_group(&"key_number")
 	badge.add_child(cost)
-	var type_label: Label = _label(String(card.get("type", "")).to_upper(), &"HudSubtle", false)
+	var type_label: Label = _label(String(card.get("type", "")).to_upper(), &"HudTag", true)
 	type_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	type_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	type_label.clip_text = true

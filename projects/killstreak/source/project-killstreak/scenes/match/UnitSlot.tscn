@@ -66,7 +66,7 @@ theme_override_constants/separation = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = -8
+theme_override_constants/separation = -4
 
 [node name="FpCaption" type="Label" parent="Column/Stats/Fp"]
 layout_mode = 2
@@ -101,7 +101,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = -8
+theme_override_constants/separation = -4
 
 [node name="ArCaption" type="Label" parent="Column/Stats/Ar"]
 layout_mode = 2

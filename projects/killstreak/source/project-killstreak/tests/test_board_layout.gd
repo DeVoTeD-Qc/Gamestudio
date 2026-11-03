@@ -34,7 +34,7 @@ const MATCH_VARIATIONS: Array[String] = [
 	"SupplyPipSpent", "StreakSegment", "StreakSegmentLit", "PerkSlot", "HudButton",
 	"KillstreakButton", "HudBig", "FriendlyLabel", "EnemyLabel", "HudPanelDark", "ZoneFriend",
 	"ZoneEnemy", "ZoneContested", "ZoneNeutral", "ReadyButton", "HudSubtle", "HudHeader",
-	"HudNumber", "KillfeedFriend", "KillfeedEnemy", "RangeBadge", "StreakLabel", "UnitName",
+	"HudNumber", "KillfeedFriend", "KillfeedEnemy", "RangeBadge", "StreakLabel", "UnitName", "HudTag",
 ]
 
 ## Screens: size in points, pixel ratio, safe-area insets in points (left, top, right, bottom).
