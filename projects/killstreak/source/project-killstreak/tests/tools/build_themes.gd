@@ -206,7 +206,30 @@ func _hud_theme(f: Dictionary) -> Theme:
 	t.set_constant("separation", "HSeparator", 8)
 	_match_styles(t, f)
 	_run_styles(t, f)
+	_preview_styles(t, f)
 	return t
+
+
+## Outcome preview (p12: scenes/match/OutcomePreview.tscn, PREVIEW toggle in the top bar).
+## Cyan = intel / forecast (the red dots' counterpart); every state is also spelled out in words.
+func _preview_styles(t: Theme, f: Dictionary) -> void:
+	_panel_var(t, "PreviewCard", _box(Color("#0E1A21"), CYAN, 2, 6, true, Vector4(8, 2, 8, 3)))
+	_label_var(t, "PreviewText", f["heading"], 18, FOG)
+	_label_var(t, "PreviewUnknown", f["heading"], 18, Color("#FF6B6E"))
+	_label_var(t, "PreviewQuiet", f["heading"], 18, FOG_DIM)
+	_label_var(t, "PreviewFriend", f["heading"], 18, TEAL)
+	_label_var(t, "PreviewEnemy", f["heading"], 18, Color("#FF6B6E"))
+	_label_var(t, "PreviewContested", f["heading"], 18, AMBER)
+	for n: String in ["PreviewText", "PreviewUnknown", "PreviewQuiet", "PreviewFriend", "PreviewEnemy", "PreviewContested"]:
+		t.set_constant("line_spacing", n, 0)
+	# Toggle: off = cyan outline, on = filled cyan frame (the label also reads ON / OFF).
+	_button_var(t, "PreviewToggle", Color("#152A35"), CYAN, CYAN, f)
+	var m := Vector4(6, 4, 6, 4)
+	var on := _box(Color("#1F4A5E"), Color("#9FDCF5"), 4, 6, true, m)
+	t.set_stylebox("pressed", "PreviewToggle", on)
+	t.set_stylebox("hover_pressed", "PreviewToggle", on)
+	t.set_color("font_pressed_color", "PreviewToggle", FOG)
+	t.set_color("font_hover_pressed_color", "PreviewToggle", FOG)
 
 
 ## Styles for the match screen (scenes/Match.tscn and scenes/match/*, p08). The scenes only set

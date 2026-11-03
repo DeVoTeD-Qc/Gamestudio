@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://scenes/fx/Killfeed.tscn" id="9_feed"]
 [ext_resource type="PackedScene" path="res://scenes/fx/FeedbackDirector.tscn" id="10_fx"]
 [ext_resource type="PackedScene" path="res://scenes/match/MulliganPanel.tscn" id="11_mull"]
+[ext_resource type="PackedScene" path="res://scenes/match/OutcomePreview.tscn" id="12_prev"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -81,6 +82,16 @@ alignment = 1
 [node name="Killfeed" parent="SafeArea/Layout/TopBar/RightGroup/KillfeedSlot" instance=ExtResource("9_feed")]
 unique_name_in_owner = true
 layout_mode = 2
+
+[node name="PreviewButton" type="Button" parent="SafeArea/Layout/TopBar/RightGroup" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 72)
+layout_mode = 2
+tooltip_text = "Forecast each zone from what you can see (P)"
+theme_type_variation = &"PreviewToggle"
+toggle_mode = true
+text = "PREVIEW
+OFF"
 
 [node name="MenuButton" type="Button" parent="SafeArea/Layout/TopBar/RightGroup" groups=["tap_target"]]
 unique_name_in_owner = true
@@ -167,6 +178,10 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"ReadyButton"
 text = "READY"
+
+[node name="OutcomePreview" parent="." instance=ExtResource("12_prev")]
+unique_name_in_owner = true
+layout_mode = 1
 
 [node name="MulliganPanel" parent="." instance=ExtResource("11_mull")]
 unique_name_in_owner = true

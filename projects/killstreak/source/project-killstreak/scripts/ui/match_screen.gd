@@ -13,7 +13,7 @@
 #
 # Layout (canvas_items + expand; the base is 1280x720 on desktop and drops to 960x540 on
 #   phones, see scripts/ui/screen_profile.gd, so an 844x390 phone gets a 1168x540 canvas):
-#   [SCORE BAR]        [INTEL MINIMAP]        [KILLFEED][MENU]
+#   [SCORE BAR]        [INTEL MINIMAP]   [KILLFEED][PREVIEW][MENU]
 #   [ LEFT lane       ][ MID lane       ][ RIGHT lane      ]
 #   [OPERATOR PANEL][        HAND        ][SUPPLY / READY]
 #   Below COMPACT_HEIGHT (640) logical px the compact profile tightens bars, slots and buttons.
@@ -24,6 +24,8 @@ extends Control
 signal ready_pressed
 signal menu_pressed
 signal undo_pressed
+## After every show_snapshot() (p12: the outcome preview recomputes on it).
+signal snapshot_shown(snapshot: Dictionary)
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
@@ -60,6 +62,8 @@ const TOAST_SECONDS: float = 2.2
 @onready var _fx: Control = %FeedbackDirector
 @onready var _killfeed_fx: Control = %Killfeed
 @onready var _mulligan: Control = %MulliganPanel
+@onready var _preview_button: Button = %PreviewButton
+@onready var _preview: Control = %OutcomePreview
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
@@ -99,6 +103,7 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
 	_set_killfeed(snapshot.get("killfeed", []))
 	_set_actions(snapshot)
+	snapshot_shown.emit(snapshot)
 
 
 func get_hand() -> Control:
@@ -121,6 +126,15 @@ func get_fx() -> Control:
 ## f02 Round 1 mulligan panel.
 func get_mulligan_panel() -> Control:
 	return _mulligan
+
+
+## p12 outcome preview overlay (scenes/match/OutcomePreview.tscn) and its top-bar toggle.
+func get_preview() -> Control:
+	return _preview
+
+
+func get_preview_button() -> Button:
+	return _preview_button
 
 
 func get_undo_button() -> Button:
@@ -198,6 +212,7 @@ func get_key_controls() -> Dictionary:
 		"menu": _menu_button, "score_bar": _score_bar, "minimap": _minimap,
 		"killfeed": _killfeed, "board": _board, "operator_panel": _operator_panel,
 		"hand": _hand, "supply": %SupplyCounter, "undo": _undo_button, "ready": _ready_button,
+		"preview": _preview_button,
 	}
 
 
@@ -227,6 +242,7 @@ func _update_profile() -> void:
 	_layout.add_theme_constant_override(&"separation", 6 if compact else 8)
 	_top_bar.custom_minimum_size.y = 64 if compact else 72
 	_menu_button.custom_minimum_size = Vector2(80, 64) if compact else Vector2(80, 72)
+	_preview_button.custom_minimum_size = Vector2(88, 64) if compact else Vector2(96, 72)
 	_bottom_bar.custom_minimum_size.y = 0 if compact else 212
 	_action_panel.custom_minimum_size.x = 140 if compact else 200
 	_ready_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 96)

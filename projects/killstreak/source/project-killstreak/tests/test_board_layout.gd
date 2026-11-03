@@ -42,6 +42,9 @@ const MATCH_VARIATIONS: Array[String] = [
 	"HandCardSelected", "HandCardDim", "SlotPending", "SlotTarget", "LaneTargetValid", "LaneTargetHover",
 	"LaneTargetInvalid", "TargetBadge", "TargetBadgeBad", "TargetText", "ToastPanel", "Scrim",
 	"KeywordName", "OperatorSelected",
+	# p12 outcome preview
+	"PreviewCard", "PreviewText", "PreviewUnknown", "PreviewQuiet", "PreviewFriend", "PreviewEnemy",
+	"PreviewContested", "PreviewToggle",
 ]
 
 ## Screens: size in points, pixel ratio, safe-area insets in points (left, top, right, bottom).
