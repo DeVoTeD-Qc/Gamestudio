@@ -327,7 +327,7 @@ for e in TL['events']:
         if e.get('who') == 'you':
             for j in range(len(e['text'])):
                 if e['text'][j] != ' ' or rng.random() < .5:
-                    place(sfx, t + j / 55 + rng.uniform(0, .006), tick(), pan=rng.uniform(-.2, .2), gain=.05 + .03 * rng.random())
+                    place(sfx, t + j / 55 + rng.uniform(0, .006), tick(), pan=rng.uniform(-.2, .2), gain=.03 + .02 * rng.random())
         else:
             place(sfx, t, blip(900), gain=.06)
     elif k == 'termnote':
@@ -335,7 +335,7 @@ for e in TL['events']:
     elif k == 'drawer' and e.get('kind'):
         place(sfx, t, whoosh(.35), gain=.05)
     elif k == 'limit':
-        place(sfx, t, alert() if e['on'] else blip(1100), gain=.12 if e['on'] else .08)
+        place(sfx, t, alert() if e['on'] else blip(1100), gain=.07 if e['on'] else .06)
     elif k == 'spot':
         place(sfx, t, blip(1700), gain=.07)
         place(sfx, t + .05, tick(), gain=.08)
@@ -373,7 +373,10 @@ envs = np.abs(sfx).max(1)
 w = int(.06 * SR)
 sm = np.convolve(envs, np.ones(w) / w, mode='same')
 duck = 1 - .45 * np.clip(sm / .05, 0, 1)
-mix = music * duck[:, None] + sfx
+# section balance: the replay bed sits well under the trailer (about -8 dB), rising into the riser
+tsec = np.arange(N) / SR
+bed = np.interp(tsec, [0, GAME0 - 3.2, GAME0 - 0.2, GAME1, END0 + 1, DUR + 1], [.42, .5, 1, 1, .7, .7])
+mix = music * (duck * bed)[:, None] + sfx * np.interp(tsec, [0, GAME0 - .5, GAME0, DUR + 1], [.75, .75, 1, 1])[:, None]
 # fades
 fi, fo = int(1.2 * SR), int(3.0 * SR)
 mix[:fi] *= np.linspace(0, 1, fi)[:, None]

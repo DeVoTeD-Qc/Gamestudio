@@ -194,6 +194,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 #tWrap{position:absolute;inset:0;will-change:transform}
 #tImg,#tImg2{position:absolute;left:0;top:0;width:1920px;height:1080px}
 #tImg2{opacity:0;mix-blend-mode:screen}
+#tInset{position:absolute;z-index:1;overflow:hidden;display:none;border:3px solid #f5b230;border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+#tInsetImg{position:absolute;max-width:none}
 .lb{position:absolute;left:0;right:0;height:96px;background:#000;z-index:3}
 #lbTop{top:0} #lbBot{bottom:0}
 #tTag{position:absolute;left:36px;top:34px;z-index:4;font:400 20px 'Share Tech Mono',monospace;letter-spacing:.14em;color:#5f7182}
@@ -261,6 +263,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 
   <div class="view" id="v-game"><img id="gameImg" alt=""><div id="gameTag">REAL GAMEPLAY · WEB BUILD · GODOT 4.4.1</div>
     <div id="trailer"><div id="tWrap"><img id="tImg" alt=""><img id="tImg2" alt=""></div>
+      <div id="tInset"><img id="tInsetImg" alt=""></div>
       <div id="tCard"><div class="k" id="tCardK"></div><div class="w" id="tCardW"></div><div class="bar" id="tCardBar"></div></div>
       <div id="tHero"><div class="k">PLAYABLE WEB PROTOTYPE</div><div class="h">Built by an AI studio of <b>13 Claude agents</b> · Godot 4.4.1</div></div>
       <div class="lb" id="lbTop"></div><div class="lb" id="lbBot"></div>
@@ -630,7 +633,7 @@ function renderTrailer(t) {
   $("trailer").style.display = "block"; $("gameImg").style.display = "none"; $("gameTag").style.display = "none";
   const fl = $("tFlash"); let flash = 0, fcol = "#fff";
   if (sh.type === "card") {
-    $("tCard").style.display = "grid"; $("tHero").style.opacity = 0;
+    $("tCard").style.display = "grid"; $("tHero").style.opacity = 0; $("tInset").style.display = "none";
     $("tCardW").textContent = sh.text; $("tCardW").className = "w" + (sh.color === "cyan" ? " cyan" : "");
     $("tCardK").textContent = sh.kicker || "";
     const land = ease(u / 0.14);
@@ -641,7 +644,7 @@ function renderTrailer(t) {
     $("tCardK").style.opacity = ease((u - 0.15) / 0.2);
     $("tCardBar").style.width = "640px"; $("tCardBar").style.transform = `scaleX(${ease((u - 0.1) / 0.35)})`;
     $("tCardBar").style.background = sh.color === "cyan" ? "#4fd8f0" : "#f5b230";
-    if (u < 0.1) { flash = 0.9 * (1 - u / 0.1); }
+    if (u < 0.08) { flash = 0.28 * (1 - u / 0.08); }
     $("tWrap").style.opacity = 0;
   } else {
     $("tCard").style.display = "none"; $("tWrap").style.opacity = 1;
@@ -649,19 +652,45 @@ function renderTrailer(t) {
     if (sh.ramp === "slow") q = 1 - Math.pow(1 - p, 2);
     const gt = sh.src[0] + (sh.src[1] - sh.src[0]) * q;
     const src = frameAt(gt); setSrc($("tImg"), src); setSrc($("tImg2"), src);
+    // camera: the focus point (tracked from zoom[0..1] to focus2, in the recording's 1280x720 CSS px)
+    // is brought to the frame centre, then clamped so the scaled frame always covers the screen
     const [zx, zy, z0, z1] = sh.zoom;
     const zk = sh.ramp === "hero" ? ease(p) : 1 - Math.pow(1 - p, 3);
     const sc = z0 + (z1 - z0) * zk;
-    const A = (sh.shake || 0) * 16 * Math.exp(-u / 0.16);
+    const f2 = sh.focus2 || [zx, zy];
+    const fx = (zx + (f2[0] - zx) * ease(p)) * 1.5, fy = (zy + (f2[1] - zy) * ease(p)) * 1.5;
+    const A = (sh.shake || 0) * 14 * Math.exp(-u / 0.16);
     const dx = A * Math.sin(u * 95), dy = A * Math.cos(u * 81);
-    $("tWrap").style.transformOrigin = `${zx * 1.5}px ${zy * 1.5}px`;
-    $("tWrap").style.transform = `translate(${dx}px,${dy + (sh.dy || 0)}px) scale(${sc})`;
+    const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const inset = sh.inset;
+    if (inset) {
+      // picture-in-picture for subjects at the screen edge: the real frame dimmed behind, the
+      // subject's rectangle enlarged in the centre (still the same live frame)
+      $("tWrap").style.transformOrigin = "0 0";
+      $("tWrap").style.transform = `translate(${-0.03 * 1920}px,${-0.03 * 1080}px) scale(1.06)`;
+      $("tImg").style.filter = "blur(5px) brightness(.32)";
+      const [x0, y0, x1, y1] = inset, w = x1 - x0, h = y1 - y0;
+      const k = Math.min(1400 / w, 640 / h) * (sh.insetZoom ? sh.insetZoom[0] + (sh.insetZoom[1] - sh.insetZoom[0]) * zk : 1);
+      const box = $("tInset"); box.style.display = "block";
+      box.style.width = w * k + "px"; box.style.height = h * k + "px";
+      box.style.left = 960 - w * k / 2 + dx + "px"; box.style.top = 540 - h * k / 2 + dy + "px";
+      setSrc($("tInsetImg"), src);
+      $("tInsetImg").style.width = 1280 * k + "px"; $("tInsetImg").style.height = 720 * k + "px";
+      $("tInsetImg").style.left = -x0 * k + "px"; $("tInsetImg").style.top = -y0 * k + "px";
+    } else {
+      $("tInset").style.display = "none";
+      let tx = 960 - fx * sc + dx, ty = 540 - fy * sc + dy;
+      tx = cl(tx, 1920 - 1920 * sc, 0); ty = cl(ty, 1080 - 1080 * sc, 0);
+      $("tWrap").style.transformOrigin = "0 0";
+      $("tWrap").style.transform = `translate(${tx}px,${ty}px) scale(${sc})`;
+    }
     // short RGB-split glitch on the first frames of a glitch shot
     const g = sh.glitch && u < 0.26 && Math.floor(u * 30) % 2 === 0;
-    $("tImg").style.filter = g ? "drop-shadow(10px 0 0 rgba(255,40,80,.55)) drop-shadow(-10px 0 0 rgba(40,220,255,.55))" : "none";
+    if (!inset) $("tImg").style.filter = g ? "drop-shadow(10px 0 0 rgba(255,40,80,.55)) drop-shadow(-10px 0 0 rgba(40,220,255,.55))" : "none";
+    else if (g) $("tInsetImg").style.filter = "drop-shadow(8px 0 0 rgba(255,40,80,.55)) drop-shadow(-8px 0 0 rgba(40,220,255,.55))"; else $("tInsetImg").style.filter = "none";
     if (g) { const y0 = 15 + hash(Math.floor(t * 30)) * 60; $("tImg2").style.opacity = .85; $("tImg2").style.clipPath = `inset(${y0}% 0 ${100 - y0 - 9}% 0)`; $("tImg2").style.transform = `translateX(${(hash(Math.floor(t * 30) + 7) - .5) * 70}px)`; $("tImg2").style.filter = "hue-rotate(160deg) saturate(2)"; }
     else $("tImg2").style.opacity = 0;
-    if (sh.flash && u < 0.14) { flash = (sh.flash === "white" ? 0.85 : 0.55) * (1 - u / 0.14); fcol = {white:"#ffffff", amber:"#f5b230", red:"#ff3b3b"}[sh.flash]; }
+    if (sh.flash && u < 0.09) { flash = ({white: 0.28, amber: 0.22, red: 0.13}[sh.flash]) * (1 - u / 0.09); fcol = {white:"#ffffff", amber:"#f5b230", red:"#ff3b3b"}[sh.flash]; }
     $("tHero").style.opacity = sh.label === "hero" ? ease((u - 1.0) / 0.6) : 0;
     $("tHero").style.transform = `translateY(${(1 - ease((u - 1.0) / 0.6)) * 30}px)`;
   }

@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 159.2,
+ "duration": 159.3,
  "scenes": [
   {
    "id": "title",
@@ -200,15 +200,15 @@
   {
    "id": "game",
    "start": 135.5,
-   "end": 153.7,
+   "end": 153.8,
    "view": "game",
    "title": null,
    "captions": []
   },
   {
    "id": "end",
-   "start": 153.7,
-   "end": 159.2,
+   "start": 153.8,
+   "end": 159.3,
    "view": "end",
    "title": null,
    "captions": []
@@ -3455,10 +3455,10 @@
     ],
     "dur": 1.2,
     "zoom": [
-     700,
-     300,
-     1.05,
-     1.2
+     540,
+     330,
+     1.15,
+     1.3
     ],
     "shake": 0,
     "flash": "white",
@@ -3475,16 +3475,20 @@
     ],
     "dur": 1.0,
     "zoom": [
-     560,
-     240,
-     1.15,
-     1.4
+     500,
+     250,
+     1.4,
+     1.6
     ],
     "shake": 0,
     "flash": "white",
     "ramp": null,
     "glitch": false,
     "label": "first shot",
+    "focus2": [
+     560,
+     320
+    ],
     "at": 137.6
    },
    {
@@ -3495,10 +3499,10 @@
     ],
     "dur": 0.9,
     "zoom": [
-     486,
-     215,
-     1.35,
-     1.55
+     500,
+     200,
+     1.5,
+     1.7
     ],
     "shake": 1.0,
     "flash": "amber",
@@ -3515,9 +3519,9 @@
     ],
     "dur": 0.8,
     "zoom": [
-     560,
-     340,
-     1.0,
+     635,
+     360,
+     1.05,
      1.15
     ],
     "shake": 0,
@@ -3546,7 +3550,7 @@
      640,
      360,
      1.0,
-     1.25
+     1.2
     ],
     "shake": 0.6,
     "flash": "white",
@@ -3563,10 +3567,10 @@
     ],
     "dur": 0.9,
     "zoom": [
-     560,
-     240,
-     1.2,
-     1.45
+     640,
+     225,
+     1.45,
+     1.65
     ],
     "shake": 1.0,
     "flash": "amber",
@@ -3583,16 +3587,26 @@
     ],
     "dur": 0.8,
     "zoom": [
-     260,
-     260,
-     1.3,
-     1.5
+     220,
+     270,
+     1,
+     1
     ],
     "shake": 0,
     "flash": "white",
     "ramp": null,
     "glitch": false,
     "label": "first shot",
+    "inset": [
+     10,
+     100,
+     430,
+     458
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
     "at": 143.5
    },
    {
@@ -3601,18 +3615,28 @@
      94.328,
      95.228
     ],
-    "dur": 0.8,
+    "dur": 0.9,
     "zoom": [
-     200,
-     230,
-     1.4,
-     1.6
+     70,
+     210,
+     1,
+     1
     ],
     "shake": 1.0,
     "flash": "amber",
     "ramp": null,
     "glitch": false,
     "label": "eliminated",
+    "inset": [
+     0,
+     105,
+     300,
+     300
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
     "at": 144.3
    },
    {
@@ -3623,17 +3647,21 @@
     ],
     "dur": 0.9,
     "zoom": [
-     640,
-     260,
-     1.2,
-     1.45
+     630,
+     285,
+     1.45,
+     1.6
     ],
     "shake": 0.5,
     "flash": "white",
     "ramp": null,
     "glitch": false,
     "label": "tracers",
-    "at": 145.1
+    "focus2": [
+     700,
+     330
+    ],
+    "at": 145.2
    },
    {
     "type": "clip",
@@ -3643,17 +3671,17 @@
     ],
     "dur": 0.9,
     "zoom": [
-     500,
-     330,
-     1.3,
-     1.5
+     520,
+     375,
+     1.55,
+     1.7
     ],
     "shake": 1.2,
     "flash": "red",
     "ramp": null,
     "glitch": false,
     "label": "operator down",
-    "at": 146.0
+    "at": 146.1
    },
    {
     "type": "clip",
@@ -3663,18 +3691,27 @@
     ],
     "dur": 0.8,
     "zoom": [
-     1040,
-     35,
-     1.6,
-     1.8
+     950,
+     45,
+     1,
+     1
     ],
     "shake": 0,
     "flash": "white",
     "ramp": null,
     "glitch": false,
     "label": "killfeed",
-    "dy": 110,
-    "at": 146.9
+    "inset": [
+     820,
+     8,
+     1085,
+     86
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
+    "at": 147.0
    },
    {
     "type": "card",
@@ -3682,7 +3719,7 @@
     "dur": 1.0,
     "kicker": "STREAK 3",
     "color": "amber",
-    "at": 147.7
+    "at": 147.8
    },
    {
     "type": "clip",
@@ -3693,16 +3730,26 @@
     "dur": 1.4,
     "zoom": [
      150,
-     460,
-     1.25,
-     1.5
+     480,
+     1,
+     1
     ],
     "shake": 0.8,
     "flash": "red",
     "ramp": null,
     "glitch": true,
     "label": "streak lost",
-    "at": 148.7
+    "inset": [
+     10,
+     405,
+     300,
+     610
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
+    "at": 148.8
    },
    {
     "type": "clip",
@@ -3712,9 +3759,9 @@
     ],
     "dur": 3.6,
     "zoom": [
-     1180,
-     500,
-     1.6,
+     640,
+     360,
+     1.12,
      1.0
     ],
     "shake": 0,
@@ -3722,7 +3769,7 @@
     "ramp": "hero",
     "glitch": false,
     "label": "hero",
-    "at": 150.1
+    "at": 150.2
    }
   ],
   "frames": "game/frames.json"

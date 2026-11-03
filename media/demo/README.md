@@ -8,7 +8,7 @@ Everything in the replay comes from real records. `build_timeline.py` reads an e
 Floor database and the git log. It takes task titles and owners, who created each task and from
 what, dependencies, progress texts, test counts, commit subjects and times, and the chat lines. Time
 is compressed, and the clock in the corner shows the real UTC time with the speed-up. The gameplay
-was recorded by tapping through the real game, nothing staged. The teaser adds zooms, shake, flashes, letterbox bars and title cards, but every shot is real footage.
+was recorded by tapping through the real game, nothing staged. The teaser adds zooms, shake, light flashes, letterbox bars and title cards, but every shot is real footage. Each zoom centres on the action, at a focus point measured on the recorded frames, and is clamped to the frame. Subjects at the screen edge (killfeed, left lane, streak panel) are shown as an enlarged picture-in-picture of the same frame instead.
 
 ## Files
 
@@ -22,6 +22,7 @@ was recorded by tapping through the real game, nothing staged. The teaser adds z
 | `trailer_cut.py` | Cuts the recording into the ~18 s teaser (shots anchored to the recording's marks, plus zoom/shake/flash/glitch settings and the title cards). Writes `trailer.json`; `replay.html` applies the effects at render time |
 | `pick_clips.py` | Older, longer captioned gameplay cut (`clips.json`). Used only when there is no `trailer.json` |
 | `game-capture/` | `tap_probe.gd` (a passive autoload that reports positions and slows the game clock for capture) and `build_probe_web.sh` |
+| `audio/make_audio.py` | Synthesizes the soundtrack from `timeline.json` with numpy (seeded): music bed plus SFX on the real events. No samples or downloaded audio |
 | `fonts.css`, `fonts/` | The Studio Floor fonts (Bricolage Grotesque, IBM Plex Sans, JetBrains Mono), stored locally |
 
 ## Re-render
@@ -46,10 +47,36 @@ python3 media/demo/trailer_cut.py $W/rec           # writes $W/rec/trailer.json 
 # 4. Timeline, frames, encode
 python3 media/demo/build_timeline.py $W/data $W/rec
 NODE_PATH=$(npm root -g) node media/demo/record.js $W/frames 0 '' $W/rec
-ffmpeg -framerate 30 -i $W/frames/%06d.jpg -f lavfi -i anullsrc=r=48000:cl=stereo -shortest \
-  -c:v libx264 -preset slow -crf 26 -pix_fmt yuv420p -tune animation -c:a aac -b:a 16k \
+ffmpeg -framerate 30 -i $W/frames/%06d.jpg -c:v libx264 -preset slow -crf 26 -pix_fmt yuv420p \
+  -tune animation -movflags +faststart $W/video_only.mp4
+
+# 5. Soundtrack: synthesize, limit (true-peak safe), loudnorm two-pass (linear) to -16 LUFS, mux
+python3 media/demo/audio/make_audio.py $W/raw.wav
+ffmpeg -i $W/raw.wav -af "volume=15.5dB,alimiter=limit=0.6:attack=5:release=80:level=disabled,aresample=192000,alimiter=limit=0.66:attack=2:release=50:level=disabled,aresample=48000" -c:a pcm_s24le $W/lim.wav
+ffmpeg -i $W/lim.wav -af loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json -f null -     # pass 1: note the input_* values
+ffmpeg -i $W/lim.wav -af loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=..:measured_TP=..:measured_LRA=..:measured_thresh=..:linear=true \
+  -ar 48000 -c:a pcm_s24le $W/final.wav
+ffmpeg -i $W/video_only.mp4 -i $W/final.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 128k -shortest \
   -movflags +faststart media/demo/killstreak-studio-demo.mp4
 ```
+
+## Soundtrack
+
+All of it is synthesized in `audio/make_audio.py`. There are no samples, loops or downloaded sounds.
+
+- **Music:** A minor, 96 BPM, Am–F–C–G. A detuned additive pad runs throughout. A plucked arpeggio
+  comes in at the design phase. Bass pulses and light hats build through the parallel-work section,
+  and everything but the pad drops out while the usage-limit banner is up. A noise/sine riser leads
+  into the trailer, where the bed lifts: kick grid, sub ostinato, hits on the cuts. The end card has
+  a soft add9 outro.
+- **SFX, placed on the timeline's real events:** blips when cards appear, ticks when tasks start,
+  chimes for Review and approvals, clicks on taps, typing ticks under the terminal, pops on chat
+  bubbles, whooshes on scene and drawer changes, and a two-tone alert for the usage limit. In the
+  trailer: booms on shakes and stamps, whoosh plus bass drop on the title cards, a generic
+  static/uplink sweep on the call-in, glitch blips on RGB-split shots, and a big low hit on the hero
+  reveal.
+- **Mix:** the music is ducked under the SFX. The replay sits around -18 to -20 LUFS short-term, the
+  trailer around -10. Integrated loudness is -16 LUFS, true peak about -2 dBFS.
 
 To check a few stills without rendering everything, run `record.js <dir> <from> <to> <game-dir>`
 with a short range.
