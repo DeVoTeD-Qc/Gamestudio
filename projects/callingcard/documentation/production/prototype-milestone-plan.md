@@ -187,3 +187,7 @@ tools/package_artifact_build.sh  (at projects/callingcard/tools/, adapted from K
 
 **Logged events** (`user://playtest_log.jsonl`):
 `session_start(load_ms, input_type, viewport, browser)`, `entry_point(lobby|menu)`, `album_open(page)`, `card_inspect(card_id, owned)`, `lineup_saved(card_ids, clearance, signature_id, loaner)`, `duel_start(source: lobby|rival|dossier, rival, first_player)`, `placement(card_id, slot, captures, preview_shown)`, `carded(by)`, `triptych_scored(id, first_time)`, `duel_end(result, score_p, score_ai, turns, duration_s)`, `lobby_wait_start(wait_s)`, `lobby_match_found(duel_state, choice: keep|save)`, `duel_resumed(age_s)`, `unlock(card_id|title|frame)`, `set_complete(set_id)`, `cipher_attempt(correct)`, `dossier_start(id)`, `dossier_clear(id, attempts, duration_s)`, `survey(answers)`, `quit(screen)`.
+
+## Planning decisions (approved 2026-11-03, 21:44 UTC)
+1. Lobby Duel uses the same rules as Banner Wall, with save and resume (no shorter 6-slot variant).
+2. CallingCard starts building now, in parallel with Killstreak's playtest preparation.
