@@ -8,7 +8,7 @@
 extends PanelContainer
 
 const CELL_WIDTH: float = 92.0
-const DOT_SIZE: float = 16.0
+const DOT_SIZE: float = 20.0
 
 @onready var _cells: HBoxContainer = %Cells
 
