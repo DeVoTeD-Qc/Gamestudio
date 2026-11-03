@@ -39,7 +39,8 @@ Keep it current with the ArtifactData tool whenever work starts or finishes:
   requested | active | archived. A project created from the page arrives with `status: "requested"`
   plus a chat message: run `scripts/init_project.py` with those answers (id = the doc id), set
   `status: "active"` and `path`, then start the master-orchestrator on its first step.
-- `tasks/<id>` — `{title, project, agent, status: todo|doing|review|done, phase, order, note, depends?}`;
+- `tasks/<id>` — `{title, project, agent, status: todo|doing|review|done, phase, order, note, depends?,
+  createdBy, createdFrom?, createdAt?}`; createdBy is who asked for the task (an agent id, `lead` or `you`);
   `project` is the project id (missing means `killstreak`);
   agent is a `.claude/agents` name, `lead` (main session) or `you` (the user)
 - `agents/<agent-id>` — optional `{status: working|idle|blocked, note}` override
