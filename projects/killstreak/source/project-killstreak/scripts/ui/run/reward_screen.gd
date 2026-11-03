@@ -59,6 +59,7 @@ func _build() -> void:
 	_options.name = "Options"
 	_options.add_theme_constant_override(&"separation", 16)
 	center.add_child(_options)
+	_header.resized.connect(_fit_cards)
 	_inspector = INSPECTOR_SCENE.instantiate()
 	add_child(_inspector)
 	resized.connect(_fit_cards)
@@ -181,6 +182,7 @@ func _card_tile(card: CardData) -> PickTile:
 		rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
 	var label: Label = tile.add_line(rules)
 	label.name = "RulesLabel"
+	label.set_meta(&"full_text", rules)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 8)
 	tile.content.add_child(row)
@@ -238,7 +240,7 @@ func _fit_cards() -> void:
 	var room: Vector2 = size - Vector2(
 			_safe_area.get_theme_constant(&"margin_left") + _safe_area.get_theme_constant(&"margin_right"),
 			_safe_area.get_theme_constant(&"margin_top") + _safe_area.get_theme_constant(&"margin_bottom")
-			+ _header.get_combined_minimum_size().y + %Layout.get_theme_constant(&"separation"))
+			+ maxf(_header.size.y, button_height()) + %Layout.get_theme_constant(&"separation"))
 	var max_lines: int = 3
 	var by_h: float = (room.y - (28.0 + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
 	if by_h < MIN_CARD_SCALE:
@@ -254,10 +256,35 @@ func _fit_cards() -> void:
 		view.position = Vector2.ZERO
 		_card_holders[i].custom_minimum_size = CardView.BASE_SIZE * s
 		_rules_labels[i].custom_minimum_size.x = CardView.BASE_SIZE.x * s
-		_rules_labels[i].max_lines_visible = max_lines
+		_fit_rules(_rules_labels[i], CardView.BASE_SIZE.x * s, max_lines)
+		# Same height for every rules block, so the TAKE / DETAILS rows line up.
+		_rules_labels[i].custom_minimum_size.y = ceilf(line_h * max_lines)
 		detail_buttons[i].custom_minimum_size.y = row_h
 	for tile: PickTile in tiles:
 		tile.custom_minimum_size.x = CardView.BASE_SIZE.x * s + 28.0
+
+
+## Cuts the rules line to max_lines at this width, ending a cut text in "..." (DETAILS has it all).
+## Label's own ellipsis can't be used: with autowrap it shrinks the label to one line's height.
+func _fit_rules(label: Label, width: float, max_lines: int) -> void:
+	var full: String = label.get_meta(&"full_text", label.text)
+	var font: Font = label.get_theme_font(&"font")
+	var font_size: int = label.get_theme_font_size(&"font_size")
+	var words: PackedStringArray = full.split(" ")
+	var text: String = full
+	while words.size() > 1 and _line_count(text, font, font_size, width) > max_lines:
+		words.remove_at(words.size() - 1)
+		text = " ".join(words).trim_suffix(",").trim_suffix(";").trim_suffix(":") + "..."
+	label.text = text
+	label.max_lines_visible = max_lines
+
+
+static func _line_count(text: String, font: Font, font_size: int, width: float) -> int:
+	var para: TextParagraph = TextParagraph.new()
+	para.add_string(text, font, font_size)
+	para.width = width
+	para.break_flags = TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND | TextServer.BREAK_ADAPTIVE
+	return para.get_line_count()
 
 
 ## Card scale in use (tests).

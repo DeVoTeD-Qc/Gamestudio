@@ -357,6 +357,9 @@ func _full_run(screen: Dictionary) -> void:
 					assert_true(rules.size.y >= 20.0 and not card_rect.intersects(rules.get_global_rect().grow(-1.0)),
 							"%s: rules line %d below the card (%s vs %s)" % [label, t, rules.get_global_rect(), card_rect])
 					assert_true(reward.detail_buttons[t].get_global_rect().position.y >= card_rect.end.y - EPS, "%s: DETAILS below card %d" % [label, t])
+					assert_true(rules.get_line_count() <= rules.max_lines_visible, "%s: rules line %d cut to fit (%d lines)" % [label, t, rules.get_line_count()])
+					if screen == DESKTOP:
+						assert_true(reward.get_card_scale() > 1.0, "desktop cards above 1x (%.2f)" % reward.get_card_scale())
 				for v: Control in reward.card_views:
 					var pt: float = v.get_min_effective_font_size(PackedStringArray(["NameLabel", "CostLabel", "FirepowerLabel", "ArmorLabel"])) * _k(screen)
 					assert_true(pt >= MIN_TEXT_PT, "%s: card face %.1f pt" % [label, pt])

@@ -2,7 +2,8 @@
 # Purpose: CardDB autoload. Loads every data Resource under res://data/ (recursively),
 #   indexes it by id and validates it. Invalid data fails loudly: every issue is
 #   push_error'd and kept in a validation report (get_report()) that tests read.
-#   Data classes: CardData, LoadoutItem, SquadData, MapData, RunConfig (scripts/data/).
+#   Data classes: CardData, LoadoutItem, SquadData, MapData, RunConfig, TutorialScript (p15)
+#   (scripts/data/).
 # Dependencies: scripts/data/* (class_name Resources), DataValidator.
 # Author: Mechanics Developer Agent
 extends Node
@@ -22,6 +23,7 @@ var _loadout: Dictionary = {}      # StringName id -> LoadoutItem
 var _squads: Dictionary = {}       # StringName id -> SquadData
 var _maps: Dictionary = {}         # StringName id -> MapData
 var _run_configs: Dictionary = {}  # StringName id -> RunConfig
+var _tutorials: Dictionary = {}    # StringName id -> TutorialScript (p15)
 var _files: Dictionary = {}        # Resource -> file path it was loaded from
 var _issues: Array[Dictionary] = []
 var _root: String = DATA_ROOT
@@ -48,7 +50,7 @@ func load_all(root: String = DATA_ROOT) -> bool:
 			continue
 		_files_loaded += 1
 		if not _is_data_class(res):
-			v.add(DataValidator.UNKNOWN_TYPE, "", "not a data resource (%s); expected CardData, LoadoutItem, SquadData, MapData or RunConfig" % res.get_class())
+			v.add(DataValidator.UNKNOWN_TYPE, "", "not a data resource (%s); expected CardData, LoadoutItem, SquadData, MapData, RunConfig or TutorialScript" % res.get_class())
 			continue
 		var id: String = String(res.get("id"))
 		v.begin(path, id)
@@ -120,6 +122,11 @@ func get_map(id: StringName) -> MapData:
 ## The run config with this id (run_default when omitted), or null.
 func get_run_config(id: StringName = DEFAULT_RUN_ID) -> RunConfig:
 	return _run_configs.get(id)
+
+
+## The tutorial match script with this id (p15), or null.
+func get_tutorial_script(id: StringName = &"tutorial_basic") -> TutorialScript:
+	return _tutorials.get(id)
 
 
 ## Any loaded data resource by id.
@@ -198,7 +205,7 @@ func get_report() -> Dictionary:
 		"warnings": _issues.size() - error_count,
 		"counts": {
 			"cards": _cards.size(), "loadout": _loadout.size(), "squads": _squads.size(),
-			"maps": _maps.size(), "run_configs": _run_configs.size(),
+			"maps": _maps.size(), "run_configs": _run_configs.size(), "tutorials": _tutorials.size(),
 		},
 		"issues": _issues.duplicate(),
 	}
@@ -206,14 +213,15 @@ func get_report() -> Dictionary:
 # --- Internals ----------------------------------------------------------------------
 
 func _clear() -> void:
-	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _files]:
+	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _tutorials, _files]:
 		d.clear()
 	_issues = []
 	_files_loaded = 0
 
 
 func _is_data_class(res: Resource) -> bool:
-	return res is CardData or res is LoadoutItem or res is SquadData or res is MapData or res is RunConfig
+	return res is CardData or res is LoadoutItem or res is SquadData or res is MapData or res is RunConfig \
+			or res is TutorialScript
 
 
 func _bucket_for(res: Resource) -> Dictionary:
@@ -227,6 +235,8 @@ func _bucket_for(res: Resource) -> Dictionary:
 		return _maps
 	if res is RunConfig:
 		return _run_configs
+	if res is TutorialScript:
+		return _tutorials
 	return {}
 
 
