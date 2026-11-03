@@ -92,7 +92,7 @@ AI weights `weight_damage_dealt` / `weight_damage_taken` / `weight_zone_control`
 `zone_names` and `zone_ranges`, exactly 3 each, in order Left, Mid, Right. Port Vasel: Container Stacks CLOSE, Crane Yard LONG, Loading Offices MID.
 
 ## RunConfig (`run_config.tres`)
-- **Run:** `matches` (in order; each a RunMatchData: `bracket`, `is_rival`, `squad`, `mode` ZONE_CONTROL/FIREFIGHT/DETONATOR, `map`, `enemy_firepower_bonus`, `enemy_armor_bonus`), `tickets` (3), `supply_drop_choices` (3), `weapon_level_after_matches` ([1, 3, 4] per core-rules Ruling 1; the script default is still [1, 3, 5]), `attachment_choices` (2), `perk_offer_after_matches` ([2, 4]), `perk_choices` (2).
+- **Run:** `matches` (in order; each a RunMatchData: `bracket`, `is_rival`, `squad`, `mode` ZONE_CONTROL/FIREFIGHT/DETONATOR, `map`, `enemy_firepower_bonus`, `enemy_armor_bonus`), `tickets` (3), `supply_drop_choices` (3), `weapon_level_after_matches` ([1, 3, 4] per core-rules Ruling 1; the script default is also [1, 3, 4]), `attachment_choices` (2), `perk_offer_after_matches` ([2, 4]), `perk_choices` (2).
 - **Starter kit:** `starter_deck` (exactly `deck_size` = 20 entries), `starter_primary/secondary/lethal/tactical`, `starter_killstreaks` (exactly `killstreak_slots`, all in `killstreak_pool`).
 - **Pools:** `reward_pool`, `killstreak_pool`, `perk_pool`.
 - **Match rules (core-rules §10):** `deck_size`, `opening_hand` 4, `round1_extra_draw` 1, `free_mulligans` 1, `draws_per_round` 2, `hand_cap` 7, `supply_round_offset` 1 + `supply_cap` 7 (Round N gives N+1, max 7), `zone_capacity` 4, `default_cooldown` 3, `zone_control_target` 6, `firefight_target` 7, `round_cap` 8, `overtime_draw_round` 10, `detonator_arm_rounds` 2, `perk_slots` 3, `killstreak_slots` 3.

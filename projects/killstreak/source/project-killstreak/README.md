@@ -16,7 +16,7 @@ Plan and structure: `../../documentation/production/prototype-milestone-plan.md`
 project.godot        Compatibility renderer, 1280x720 base, canvas_items / expand, input actions
 export_presets.cfg   "Web" preset (single-threaded, VRAM compression desktop + mobile)
 autoload/            EventBus, Settings, CardDB, RunState, PlaytestLog, SceneRouter
-scripts/data|rules|ai|ui/
+scripts/data|rules|run|ai|ui/   (run/ = run flow logic behind the RunState autoload, p10)
 scenes/  scenes/match/
 data/cards|loadout|squads/
 assets/fonts|ui|sprites|audio/

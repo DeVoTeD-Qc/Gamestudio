@@ -201,7 +201,7 @@ func enemy_setup() -> SideSetup:
 func create_match(hooks: MatchHooks = null) -> MatchState:
 	var md: RunMatchData = current_match()
 	if phase != PHASE_MATCH or md == null:
-		push_error("RunProgress: no match to play (phase %s)" % phase)
+		push_warning("RunProgress: no match to play (phase %s)" % phase)
 		return null
 	var h: MatchHooks = hooks if hooks != null else MatchHooks.new()
 	h.mode_rules = ModeRules.create(md.mode, config)
