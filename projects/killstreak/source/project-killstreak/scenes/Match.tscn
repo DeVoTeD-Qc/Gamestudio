@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
@@ -12,6 +12,8 @@
 [ext_resource type="PackedScene" path="res://scenes/fx/FeedbackDirector.tscn" id="10_fx"]
 [ext_resource type="PackedScene" path="res://scenes/match/MulliganPanel.tscn" id="11_mull"]
 [ext_resource type="PackedScene" path="res://scenes/match/OutcomePreview.tscn" id="12_prev"]
+[ext_resource type="PackedScene" path="res://scenes/match/MatchEndBanner.tscn" id="13_end"]
+[ext_resource type="PackedScene" path="res://scenes/match/PauseMenu.tscn" id="14_pause"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -230,4 +232,14 @@ script = ExtResource("8_ctrl")
 
 [node name="FeedbackDirector" parent="." instance=ExtResource("10_fx")]
 unique_name_in_owner = true
+layout_mode = 1
+
+[node name="MatchEndBanner" parent="." instance=ExtResource("13_end")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="PauseMenu" parent="." instance=ExtResource("14_pause")]
+unique_name_in_owner = true
+visible = false
 layout_mode = 1

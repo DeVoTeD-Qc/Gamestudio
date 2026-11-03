@@ -28,6 +28,19 @@
 #   plugged in as `enemy_planner`; it commits before the player's Deploy.
 #   p16: gameplay signals go to EventBus (match / round start and end, round_summary,
 #   card_deployed, killstreak_earned / _used, ability_used, eliminations, Operator downs).
+#
+#   f03, the run match (SceneRouter "Run match hand-off", p11): on load the controller asks
+#   SceneRouter.take_pending_match(). A MatchState there (made by RunState.create_match() for
+#   RunMap's DEPLOY) is played instead of the local test match: map = the run slot's map, the
+#   AI plays the slot's squad, match_index = the run's. When the match ends the result banner
+#   (MatchEndBanner: VICTORY / DEFEAT / DRAW, score, reason) waits for CONTINUE, which calls
+#   SceneRouter.finish_run_match(state) once (it records the result and opens AfterAction).
+#   A local match's banner offers BACK TO TITLE instead. MENU opens the pause sheet
+#   (PauseMenu): RESUME, FAST ANIMATIONS (Settings), FORFEIT MATCH (asks first; the match ends
+#   as a loss with reason &"forfeit" and goes through the same banner / finish path) and
+#   QUIT TO TITLE (the run stays saved; Continue opens RunMap and DEPLOY replays this match
+#   from the same seed). The tutorial (p15, `tutorial` set on the subclass) keeps its own
+#   end card and gets neither the run match nor the banner / pause sheet.
 # Dependencies: MatchState, RulesIntent, RulesEvent, SideSetup, MatchHooks, ModeRules, AiPlayer,
 #   CardDB, EventBus, match_snapshot.gd, play_text.gd, card_info.gd, match_screen.gd (parent).
 # Author: UI/UX Agent (p09), Mechanics Developer Agent (f02)
@@ -51,6 +64,9 @@ const ENEMY: int = MatchState.ENEMY
 const ZONE_WORDS: PackedStringArray = ["Left", "Mid", "Right"]
 const RANGE_WORDS: PackedStringArray = ["Close", "Mid", "Long"]
 const KILLFEED_KEEP: int = 6
+const SCENE_TITLE: String = "res://scenes/Title.tscn"
+## outcome.reason of a forfeited match (MatchEndBanner / AfterAction wording).
+const REASON_FORFEIT: StringName = &"forfeit"
 
 ## Start a local test match when the scene loads (off: the screen shows its mock snapshot).
 @export var autostart: bool = true
@@ -88,6 +104,13 @@ var _dragging: bool = false
 var _busy: bool = false
 var _default_planner: bool = false
 var _match_started_ms: int = 0
+## f03: true while playing the run match handed over by SceneRouter.take_pending_match().
+var is_run_match: bool = false
+## The player forfeited this match (pause sheet).
+var forfeited: bool = false
+## The result banner was shown for this match / its button was acted on (finish called once).
+var _end_shown: bool = false
+var _finished: bool = false
 
 
 func _ready() -> void:
@@ -126,12 +149,34 @@ func _on_screen_ready() -> void:
 	_screen.undo_pressed.connect(undo, d)
 	if _screen.has_method(&"get_mulligan_panel"):
 		_screen.get_mulligan_panel().confirmed.connect(_on_mulligan_confirmed, d)
+	if not _is_tutorial():
+		_screen.menu_pressed.connect(open_pause_menu, d)
+		var banner: Control = _end_banner()
+		if banner != null:
+			banner.continue_pressed.connect(continue_after_match, d)
+		var pause: Control = _pause_menu()
+		if pause != null:
+			pause.resume_pressed.connect(close_pause_menu, d)
+			pause.fast_animations_toggled.connect(_on_fast_animations_toggled, d)
+			pause.forfeit_confirmed.connect(forfeit, d)
+			pause.quit_pressed.connect(quit_to_title, d)
 	if autostart:
-		start_local_match(seed_value)
+		var run_match: MatchState = _take_run_match()
+		if run_match != null:
+			start_run_match(run_match)
+		else:
+			start_local_match(seed_value)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if state == null:
+		return
+	if is_pause_menu_open():
+		if event.is_action_pressed(&"cancel"):
+			get_viewport().set_input_as_handled()
+			_pause_menu().back()
+		return
+	if is_end_banner_open():
 		return
 	if _busy:
 		# While the round plays: F, or any tap / click, fast-forwards it.
@@ -174,11 +219,36 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	var enemy: SideSetup = SideSetup.from_squad(squad)
 	var hooks: MatchHooks = MatchHooks.new()
 	hooks.mode_rules = ModeRules.create(DataEnums.GameMode.ZONE_CONTROL, config)
-	state = MatchState.new(config, map, player, enemy, p_seed, hooks)
+	is_run_match = false
+	_play(MatchState.new(config, map, player, enemy, p_seed, hooks), squad)
+	return true
+
+
+## f03: plays the run match m (from SceneRouter.take_pending_match(), not started yet) on the
+## run slot's map against its squad. False if m is null.
+func start_run_match(m: MatchState) -> bool:
+	if m == null:
+		return false
+	var slot: RunMatchData = null
+	var rs: Node = get_node_or_null(^"/root/RunState")
+	if rs != null and rs.run != null:
+		match_index = rs.run.match_index
+		var cfg: RunConfig = rs.run.config
+		if cfg != null and match_index >= 0 and match_index < cfg.matches.size():
+			slot = cfg.matches[match_index]
+	map = slot.map if slot != null and slot.map != null else CardDB.get_map(m.map_id)
+	is_run_match = true
+	_play(m, slot.squad if slot != null else null)
+	return true
+
+
+## Wires the screen to m (not started), starts it and opens the first Deploy.
+func _play(m: MatchState, squad: SquadData) -> void:
+	state = m
 	# The enemy AI (p07): deterministic, its only randomness is seeded from the match seed.
 	if enemy_ai and (_default_planner or not enemy_planner.is_valid()):
-		enemy_ai_player = AiPlayer.for_squad(squad)
-		enemy_planner = _ai_turn
+		enemy_ai_player = AiPlayer.for_squad(squad) if squad != null else null
+		enemy_planner = _ai_turn if enemy_ai_player != null else Callable()
 		_default_planner = true
 	_cursor = 0
 	killfeed.clear()
@@ -186,10 +256,12 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	selection.clear()
 	target_uid = -1
 	_busy = false
+	forfeited = false
+	_end_shown = false
+	_finished = false
 	_match_started_ms = Time.get_ticks_msec()
 	state.start_match()
 	_begin_deploy()
-	return true
 
 
 func _ai_turn(st: MatchState) -> void:
@@ -254,8 +326,11 @@ func press_ready() -> void:
 		_busy = false
 	if state.phase == MatchState.Phase.ENDED:
 		refresh()
-		var result: String = {&"player": "You win the match.", &"enemy": "You lose the match."}.get(state.result, "Draw.")
-		_screen.show_toast(result)
+		if _is_tutorial():
+			var result: String = {&"player": "You win the match.", &"enemy": "You lose the match."}.get(state.result, "Draw.")
+			_screen.show_toast(result)
+		else:
+			_show_match_end()
 		round_presented.emit()
 		return
 	state.begin_round()
@@ -337,6 +412,187 @@ func _unit_names() -> Dictionary:
 			if p["kind"] == &"unit":
 				out[(p["card"] as RulesCard).uid] = (p["card"] as RulesCard).card.display_name
 	return out
+
+
+# =============================================================================
+# f03: run match, result banner, pause sheet
+# =============================================================================
+
+func _is_tutorial() -> bool:
+	return get(&"tutorial") != null
+
+
+func _router() -> Node:
+	return get_node_or_null(^"/root/SceneRouter")
+
+
+## The run's pending match, taken once (null: none, or this is the tutorial).
+func _take_run_match() -> MatchState:
+	var router: Node = _router()
+	if router == null or _is_tutorial():
+		return null
+	return router.take_pending_match()
+
+
+func _end_banner() -> Control:
+	return _screen.get_end_banner() if _screen != null and _screen.has_method(&"get_end_banner") else null
+
+
+func _pause_menu() -> Control:
+	return _screen.get_pause_menu() if _screen != null and _screen.has_method(&"get_pause_menu") else null
+
+
+func is_end_banner_open() -> bool:
+	var b: Control = _end_banner()
+	return b != null and b.is_open()
+
+
+func is_pause_menu_open() -> bool:
+	var p: Control = _pause_menu()
+	return p != null and p.is_open()
+
+
+## "MATCH 2 OF 5" for a run match, "" for a local one.
+func _match_context() -> String:
+	var rs: Node = get_node_or_null(^"/root/RunState")
+	if not is_run_match or rs == null or rs.run == null:
+		return ""
+	return "MATCH %d OF %d" % [match_index + 1, rs.run.match_count()]
+
+
+## The result banner (once per match). Run match: CONTINUE -> finish_run_match; local: title.
+func _show_match_end() -> void:
+	if _end_shown or state == null or state.phase != MatchState.Phase.ENDED:
+		return
+	_end_shown = true
+	close_pause_menu()
+	var banner: Control = _end_banner()
+	if banner == null:
+		return
+	var outcome: Dictionary = state.hooks.mode_rules.outcome if state.hooks != null and state.hooks.mode_rules != null else {}
+	banner.open({
+		"result": state.result,
+		"player_score": int(outcome.get("player_score", state.sides[PLAYER].score)),
+		"enemy_score": int(outcome.get("enemy_score", state.sides[ENEMY].score)),
+		"reason": outcome.get("reason", &""),
+		"rounds": int(outcome.get("rounds", state.round_number)),
+		"context": _match_context(),
+		"button": "CONTINUE" if _is_routed_run_match() else "BACK TO TITLE",
+	})
+	if emit_to_event_bus:
+		EventBus.screen_shown.emit(&"match_end")
+
+
+func _is_routed_run_match() -> bool:
+	var router: Node = _router()
+	return is_run_match and router != null and router.is_run_match(state)
+
+
+## CONTINUE on the result banner: a run match is handed back to the run once
+## (SceneRouter.finish_run_match records it and opens AfterAction); a local match goes to the title.
+func continue_after_match() -> Dictionary:
+	if _finished or state == null or state.phase != MatchState.Phase.ENDED:
+		return {"ok": false, "reason": "match not over" if not _finished else "already finished"}
+	_finished = true
+	var router: Node = _router()
+	if router == null:
+		return {"ok": false, "reason": "no SceneRouter"}
+	if _is_routed_run_match():
+		var report: Dictionary = router.finish_run_match(state)
+		if not report.get("ok", false):
+			push_warning("MatchController: finish_run_match failed: %s" % report.get("reason", ""))
+		return report
+	router.goto_scene(SCENE_TITLE)
+	return {"ok": true, "reason": "local match"}
+
+
+## MENU: the pause sheet (not during the mulligan or after the match has ended).
+func open_pause_menu() -> void:
+	var pause: Control = _pause_menu()
+	if pause == null or state == null or is_end_banner_open() or is_mulligan_open():
+		return
+	clear_selection()
+	if _screen.get_inspector().is_open():
+		_screen.get_inspector().close()
+	var run_words: bool = _is_routed_run_match()
+	var ctx: String = _match_context()
+	ctx = "%s · ROUND %d" % [ctx, state.round_number] if ctx != "" else "ROUND %d" % state.round_number
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	pause.open({
+		"context": ctx,
+		"hint": "Your run is saved. Quitting replays this match from the start next time." if run_words \
+				else "Local test match: quitting ends it.",
+		"can_forfeit": state.phase != MatchState.Phase.ENDED,
+		"forfeit_hint": "Forfeit this match? It counts as a loss (-1 ticket)." if run_words \
+				else "Forfeit this match? It counts as a loss.",
+		"fast_animations": settings != null and bool(settings.get(&"fast_animations")),
+	})
+	if emit_to_event_bus:
+		EventBus.screen_shown.emit(&"pause")
+
+
+func close_pause_menu() -> void:
+	var pause: Control = _pause_menu()
+	if pause != null and pause.is_open():
+		pause.close()
+
+
+func _on_fast_animations_toggled(on: bool) -> void:
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	if settings != null:
+		settings.set_value(&"fast_animations", on)
+
+
+## Ends the match now as a loss (pause sheet FORFEIT). The engine has no forfeit intent, so the
+## controller closes the MatchState the way MatchState.score() does at a match end: result,
+## ModeRules outcome (reason &"forfeit"), phase ENDED and a MATCH_ENDED event (EventBus
+## match_ended "loss"). Then the normal result banner / finish path follows.
+func forfeit() -> bool:
+	if state == null or state.phase == MatchState.Phase.ENDED or _finished:
+		return false
+	skip_feedback()
+	var mr: ModeRules = state.hooks.mode_rules if state.hooks != null else null
+	var me: RulesSide = state.sides[PLAYER]
+	var foe: RulesSide = state.sides[ENEMY]
+	var outcome: Dictionary = {
+		"result": ModeRules.RESULT_ENEMY, "winner": ModeRules.RESULT_ENEMY, "is_draw": false,
+		"reason": REASON_FORFEIT, "mode": mr.mode_name if mr != null else &"",
+		"rounds": int(state.round_number), "overtime": mr.is_overtime(state.round_number) if mr != null else false,
+		"player_score": int(me.score), "enemy_score": int(foe.score), "target": mr.target if mr != null else 0,
+		"player_eliminations": int(me.eliminations), "enemy_eliminations": int(foe.eliminations),
+	}
+	if mr != null:
+		mr.outcome = outcome
+	state.result = ModeRules.RESULT_ENEMY
+	state.phase = MatchState.Phase.ENDED
+	var details: Dictionary = outcome.duplicate()
+	details["forfeit"] = true
+	state.emit_event(RulesEvent.PHASE_CHANGED, {"phase": "ended"})
+	state.emit_event(RulesEvent.MATCH_ENDED, details)
+	forfeited = true
+	close_pause_menu()
+	_flush_events()
+	if not _busy:
+		refresh()
+		_show_match_end()
+	# While a round is still playing, press_ready() shows the banner once it has finished.
+	return true
+
+
+## QUIT TO TITLE: leaves the match unrecorded. A run stays saved in its match phase, so
+## Continue opens RunMap and DEPLOY replays this match from the same seed (p10).
+func quit_to_title() -> void:
+	if _finished:
+		return
+	_finished = true
+	close_pause_menu()
+	skip_feedback()
+	var router: Node = _router()
+	if router == null:
+		return
+	if _is_routed_run_match():
+		router.active_match = null
+	router.goto_scene(SCENE_TITLE)
 
 
 # =============================================================================

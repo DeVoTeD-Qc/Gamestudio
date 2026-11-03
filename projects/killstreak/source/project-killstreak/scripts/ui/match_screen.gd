@@ -64,6 +64,8 @@ const TOAST_SECONDS: float = 2.2
 @onready var _mulligan: Control = %MulliganPanel
 @onready var _preview_button: Button = %PreviewButton
 @onready var _preview: Control = %OutcomePreview
+@onready var _end_banner: Control = %MatchEndBanner
+@onready var _pause_menu: Control = %PauseMenu
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
@@ -135,6 +137,20 @@ func get_preview() -> Control:
 
 func get_preview_button() -> Button:
 	return _preview_button
+
+
+## f03 match result banner (scenes/match/MatchEndBanner.tscn).
+func get_end_banner() -> Control:
+	return _end_banner
+
+
+## f03 pause sheet opened by MENU (scenes/match/PauseMenu.tscn).
+func get_pause_menu() -> Control:
+	return _pause_menu
+
+
+func get_menu_button() -> Button:
+	return _menu_button
 
 
 func get_undo_button() -> Button:
@@ -252,6 +268,8 @@ func _update_profile() -> void:
 	_hand.set_compact(compact)
 	_minimap.set_compact(compact)
 	_mulligan.set_compact(compact)
+	_end_banner.set_compact(compact)
+	_pause_menu.set_compact(compact)
 	_supply_pips.add_theme_constant_override(&"separation", 2 if compact else 4)
 	for pip: Node in _supply_pips.get_children():
 		(pip as Control).custom_minimum_size = _pip_size()
