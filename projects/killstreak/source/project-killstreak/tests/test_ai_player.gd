@@ -22,7 +22,7 @@ func _squad(id: String) -> SquadData:
 	return load("res://data/squads/%s.tres" % id) as SquadData
 
 
-## Run-config slot `index` (0 Rusher ZC, 1 Anchor FF, 2 Rusher FF, 3 Anchor ZC).
+## Run-config slot `index` (0 Rusher ZC, 1 Anchor ZC, 2 Rusher FF, 3 Anchor FF; modes since p19).
 func _slot(index: int) -> RunMatchData:
 	return _config().matches[index]
 
