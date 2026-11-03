@@ -82,23 +82,28 @@ static func scope_zones(state, e: EffectData, ctx: Dictionary) -> Array[int]:
 	var chosen: int = ctx["zone"]
 	var op: RulesUnit = state.sides[side].operator_unit
 	var op_zone: int = op.zone if op != null else -1
+	var out: Array[int] = []
 	match e.zone_scope:
 		Z.THIS_ZONE:
 			var u: RulesUnit = ctx.get("source_unit")
 			if u != null and u.is_on_board():
-				return [u.zone]
-			return [chosen] if state.is_zone(chosen) else []
+				out.append(u.zone)
+			elif state.is_zone(chosen):
+				out.append(chosen)
 		Z.CHOSEN_ZONE:
-			return [chosen] if state.is_zone(chosen) else []
+			if state.is_zone(chosen):
+				out.append(chosen)
 		Z.OPERATOR_ZONE:
-			return [op_zone] if state.is_zone(op_zone) else []
+			if state.is_zone(op_zone):
+				out.append(op_zone)
 		Z.OPERATOR_OR_ADJACENT:
 			if state.is_zone(op_zone) and state.is_zone(chosen) and absi(chosen - op_zone) <= 1:
-				return [chosen]
-			return []
+				out.append(chosen)
 		Z.ALL_ZONES:
-			return [0, 1, 2]
-	return [-1]  # ANY, ADJACENT_ZONE (destination comes from ctx.dest_zone)
+			out.assign([0, 1, 2])
+		_:
+			out.append(-1)  # ANY, ADJACENT_ZONE (destination comes from ctx.dest_zone)
+	return out
 
 
 static func condition_holds(state, c: int, side: int, z: int) -> bool:

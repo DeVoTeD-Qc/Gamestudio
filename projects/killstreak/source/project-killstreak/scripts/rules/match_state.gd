@@ -232,7 +232,7 @@ func undo_last(side: int) -> Dictionary:
 		&"place":
 			pass
 		&"item":
-			pass
+			hooks.on_item_undone(self, side, play["item"])
 		_:
 			s.hand.append(play["card"])
 	emit_event(RulesEvent.PLAY_UNDONE, {"side": side_name(side), "order": play["order"], "private_to": side_name(side)})

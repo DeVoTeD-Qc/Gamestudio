@@ -38,6 +38,11 @@ func on_item_used(_state, _side: int, _item: LoadoutItem) -> void:
 	pass
 
 
+## A queued loadout item was taken back with undo_last (p05: refund cooldown / tray).
+func on_item_undone(_state, _side: int, _item: LoadoutItem) -> void:
+	pass
+
+
 ## A loadout item's ON_PLAY effects resolved at Reveal.
 func on_item_resolved(_state, _side: int, _item: LoadoutItem) -> void:
 	pass
