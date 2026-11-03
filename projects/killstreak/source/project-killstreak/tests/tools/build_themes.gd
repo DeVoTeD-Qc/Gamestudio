@@ -243,6 +243,31 @@ func _match_styles(t: Theme, f: Dictionary) -> void:
 	# Hand card chips (the full CardView is for the inspector, see README "Phone readability").
 	_panel_var(t, "HandCard", _box(Color("#2A323A"), Color("#59636C"), 2, 6, true, Vector4(6, 4, 6, 4)))
 	_panel_var(t, "CostBadge", _box(AMBER, Color.TRANSPARENT, 0, 3, true, Vector4(5, 0, 5, 0)))
+	# p09 deploy input. Selected chip: amber, thicker edge. Unaffordable chip: dim edge and fill.
+	_panel_var(t, "HandCardSelected", _box(Color("#3A3422"), AMBER, 4, 6, true, Vector4(6, 4, 6, 4)))
+	_panel_var(t, "HandCardDim", _box(Color("#20262C"), Color("#3A444D"), 2, 6, true, Vector4(6, 4, 6, 4)))
+	# Queued arrival (this Deploy, not revealed yet): friend shape, amber edge, see-through fill.
+	var pending := _box(Color(AMBER, 0.08), Color(AMBER, 0.75), 2, 0, false, m)
+	pending.corner_radius_top_left = 10
+	pending.corner_radius_top_right = 10
+	pending.corner_detail = 1
+	_panel_var(t, "SlotPending", pending)
+	# A unit that can be picked as a target (Flank Route): heavy amber frame.
+	_panel_var(t, "SlotTarget", _box(Color("#3A3422"), AMBER, 4, 4, false, m))
+	# Lane target states while a card is selected or dragged. Valid: amber frame. Hover: filled.
+	# Invalid: dark scrim with a thin red edge plus a text reason, so it never relies on colour only.
+	_panel_var(t, "LaneTargetValid", _box(Color("#22261F"), AMBER, 3, 6, true, Vector4(4, 4, 4, 4)))
+	_panel_var(t, "LaneTargetHover", _box(Color(AMBER, 0.22), Color("#FFD27A"), 5, 6, true, Vector4(4, 4, 4, 4)))
+	_panel_var(t, "LaneTargetInvalid", _box(Color("#101316"), Color(RED, 0.55), 1, 6, true, Vector4(4, 4, 4, 4)))
+	_panel_var(t, "TargetBadge", _box(Color(SLATE, 0.92), AMBER, 2, 4, true, Vector4(10, 4, 10, 4)))
+	_panel_var(t, "TargetBadgeBad", _box(Color(SLATE, 0.92), Color(RED, 0.8), 2, 4, true, Vector4(10, 4, 10, 4)))
+	_label_var(t, "TargetText", f["heading"], 18, FOG)
+	# Short refusal / hint line over the board, and the inspector's backdrop.
+	_panel_var(t, "ToastPanel", _box(Color(SLATE, 0.96), AMBER, 2, 6, true, Vector4(16, 8, 16, 8)))
+	_shape_var(t, "Scrim", _box(Color(SLATE, 0.82), Color.TRANSPARENT, 0, 0, false, Vector4.ZERO))
+	_label_var(t, "KeywordName", f["heading"], 18, AMBER)
+	# Operator panel while the Operator is selected for placement / Rotation (HudPanelDark margins).
+	_panel_var(t, "OperatorSelected", _box(Color("#2A2618"), AMBER, 3, 6, true, Vector4(10, 8, 10, 8)))
 	_panel_var(t, "MinimapCell", _box(SLATE, edge, 1, 4, true, Vector4(6, 2, 6, 3)))
 	# Small shapes (Panel variations).
 	_shape_var(t, "RedDot", _box(RED, RED.lightened(0.3), 2, 10, false, Vector4.ZERO))

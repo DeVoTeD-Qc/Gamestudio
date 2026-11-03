@@ -5,6 +5,9 @@
 #   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
 #   threshold printed on the button so nothing is hover-only).
 #   Buttons only emit signals; what they do arrives with p05/p09.
+#   p09: the panel itself is the Operator's handle: tap = select it (place it in Round 1 or after
+#   a respawn, or Rotate it), drag = drag it to a lane, long-press / right-click = inspect.
+#   The buttons keep their own taps.
 #   Compact (phone) profile: narrower info column and 64x64 buttons.
 # Dependencies: hud_theme.tres variations (HudButton, KillstreakButton, StreakSegment...).
 # Author: UI/UX Agent
@@ -12,6 +15,13 @@ extends PanelContainer
 
 signal ability_pressed(ability_id: StringName)
 signal killstreak_pressed(killstreak_id: StringName)
+signal operator_tapped
+signal operator_inspected
+signal operator_drag_started(pos: Vector2)
+signal operator_drag_moved(pos: Vector2)
+signal operator_drag_ended(pos: Vector2)
+
+const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 
 const BUTTON_SIZE: Vector2 = Vector2(76, 72)
 const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
@@ -20,6 +30,8 @@ const INFO_WIDTH_COMPACT: float = 140.0
 const PERK_SIZE: float = 26.0
 
 var compact: bool = false
+var selected: bool = false
+var _gesture: RefCounted = null
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _name: Label = %NameLabel
@@ -29,6 +41,35 @@ var compact: bool = false
 @onready var _perk_row: HBoxContainer = %PerkRow
 @onready var _buttons: GridContainer = %Buttons
 @onready var _info: VBoxContainer = %Info
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	add_to_group(&"tap_target")
+	_gesture = PressGesture.new(self)
+	_gesture.tapped.connect(func(_p: Vector2) -> void: operator_tapped.emit())
+	_gesture.long_pressed.connect(func(_p: Vector2) -> void: operator_inspected.emit())
+	_gesture.drag_started.connect(func(p: Vector2) -> void: operator_drag_started.emit(p))
+	_gesture.drag_moved.connect(func(p: Vector2) -> void: operator_drag_moved.emit(p))
+	_gesture.drag_ended.connect(func(p: Vector2) -> void: operator_drag_ended.emit(p))
+	_pass_through()
+
+
+## Everything but the buttons passes taps up to the panel (the Operator handle).
+func _pass_through() -> void:
+	for n: Node in find_children("*", "Control", true, false):
+		if not n is BaseButton and (n as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+			(n as Control).mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _gui_input(event: InputEvent) -> void:
+	if _gesture.handle(event):
+		accept_event()
+
+
+func set_selected(value: bool) -> void:
+	selected = value
+	theme_type_variation = &"OperatorSelected" if selected else &"HudPanelDark"
 
 
 func set_compact(value: bool) -> void:
@@ -59,6 +100,7 @@ func set_operator(snapshot: Dictionary) -> void:
 	_build_segments(streak, int(snapshot.get("streak_max", 5)), thresholds)
 	_build_perks(snapshot.get("perks", []), int(snapshot.get("perk_slots", 3)))
 	_build_buttons(snapshot.get("abilities", []), snapshot.get("killstreaks", []))
+	_pass_through()
 
 
 func get_buttons() -> Array[Node]:

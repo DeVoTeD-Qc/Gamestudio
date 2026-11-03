@@ -2,11 +2,30 @@
 # Purpose: One board zone (lane): header with zone name, range badge and control
 #   state, the enemy line on top and the player's line below (4 slots each,
 #   core-rules.md section 1 zone capacity). Line order runs left to right; the
-#   first unit is the point man. Display only; deploying into it arrives with p09
-#   (FriendlyRow is the tap/drop target and is already >= 64 px).
-# Dependencies: unit_slot.gd.
+#   first unit is the point man. Display plus input (p09): the whole lane is the tap / drop
+#   target for deploying (FriendlyRow stays >= 64 px); a tap or long-press reports which
+#   slot was hit (side + unit uid) so the presenter can pick targets or open the inspector.
+#   set_target() shows whether the selected card can go here: a framed lane with a badge
+#   ("DEPLOY HERE") or a dimmed lane with the reason ("ZONE FULL", "NEED 3 SUPPLY").
+# Dependencies: unit_slot.gd, press_gesture.gd.
 # Author: UI/UX Agent
 extends PanelContainer
+
+## Tap / long-press anywhere in the lane. slot_side is &"player" / &"enemy" when a slot with a
+## unit was hit (uid = its rules uid), else &"" and -1.
+signal tapped(zone_id: StringName, slot_side: StringName, uid: int)
+signal long_pressed(zone_id: StringName, slot_side: StringName, uid: int)
+
+const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+## Target states (set_target).
+const TARGET_NONE: StringName = &"none"
+const TARGET_VALID: StringName = &"valid"
+const TARGET_HOVER: StringName = &"hover"
+const TARGET_INVALID: StringName = &"invalid"
+const TARGET_VARIATION: Dictionary = {
+	TARGET_NONE: &"LanePanel", TARGET_VALID: &"LaneTargetValid",
+	TARGET_HOVER: &"LaneTargetHover", TARGET_INVALID: &"LaneTargetInvalid",
+}
 
 const CONTROL_TEXT: Dictionary = {
 	&"player": "YOURS",
@@ -23,6 +42,9 @@ const HEADER_VARIATION: Dictionary = {
 
 ## &"left", &"mid" or &"right" (EventBus convention).
 var zone_id: StringName = &""
+var target_state: StringName = TARGET_NONE
+var target_text: String = ""
+var _gesture: RefCounted = null
 
 @onready var _column: VBoxContainer = %Column
 @onready var _header: PanelContainer = %Header
@@ -31,6 +53,63 @@ var zone_id: StringName = &""
 @onready var _control: Label = %ControlLabel
 @onready var _enemy_slots: HBoxContainer = %EnemyRow.get_node("Slots")
 @onready var _friendly_slots: HBoxContainer = %FriendlyRow.get_node("Slots")
+@onready var _badge: PanelContainer = %TargetBadge
+@onready var _badge_text: Label = %TargetText
+
+
+func _ready() -> void:
+	# Children pass taps up to the lane, which works out the slot from the position.
+	for n: Node in find_children("*", "Control", true, false):
+		var c: Control = n
+		if c is Label or c is TextureRect or c == _badge:
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		elif c.mouse_filter == Control.MOUSE_FILTER_STOP:
+			c.mouse_filter = Control.MOUSE_FILTER_PASS
+	_gesture = PressGesture.new(self)
+	_gesture.drag_enabled = false
+	_gesture.tapped.connect(func(pos: Vector2) -> void:
+		var hit: Array = _slot_hit(pos)
+		tapped.emit(zone_id, hit[0], hit[1]))
+	_gesture.long_pressed.connect(func(pos: Vector2) -> void:
+		var hit: Array = _slot_hit(pos)
+		long_pressed.emit(zone_id, hit[0], hit[1]))
+
+
+func _gui_input(event: InputEvent) -> void:
+	if _gesture != null and _gesture.handle(event):
+		accept_event()
+
+
+## Shows whether the selected card / Operator can go here (TARGET_*), with a short badge text.
+func set_target(state: StringName, text: String = "") -> void:
+	target_state = state
+	target_text = text
+	theme_type_variation = TARGET_VARIATION.get(state, &"LanePanel")
+	_badge.visible = state != TARGET_NONE and not text.is_empty()
+	_badge.theme_type_variation = &"TargetBadgeBad" if state == TARGET_INVALID else &"TargetBadge"
+	_badge_text.text = text
+
+
+## Frames the units whose uid is in `uids` as pickable targets (empty clears).
+func set_unit_targets(uids: Array) -> void:
+	for slot: Node in get_enemy_slots() + get_friendly_slots():
+		slot.set_target(slot.kind == slot.Kind.UNIT and uids.has(slot.slot_uid))
+
+
+## The unit slot (friendly or enemy) under a canvas position, or null.
+func slot_at(global_pos: Vector2) -> Node:
+	for slot: Node in get_enemy_slots() + get_friendly_slots():
+		if (slot as Control).get_global_rect().has_point(global_pos):
+			return slot
+	return null
+
+
+## [side, uid] of the unit under a canvas position, or [&"", -1].
+func _slot_hit(global_pos: Vector2) -> Array:
+	var slot: Node = slot_at(global_pos)
+	if slot != null and slot.kind == slot.Kind.UNIT:
+		return [slot.side, slot.slot_uid]
+	return [&"", -1]
 
 
 ## lane: see mock_match_data.gd for the shape.
@@ -54,7 +133,7 @@ func set_compact(compact: bool) -> void:
 
 ## Labels whose whole text must stay visible (zone name, range, control, unit names and stats).
 func get_important_labels() -> Array[Label]:
-	var out: Array[Label] = [_name, _range, _control]
+	var out: Array[Label] = [_name, _range, _control, _badge_text]
 	for slot: Node in get_enemy_slots() + get_friendly_slots():
 		out.append_array(slot.get_important_labels())
 	return out

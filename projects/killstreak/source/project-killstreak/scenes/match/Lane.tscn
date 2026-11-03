@@ -88,3 +88,19 @@ layout_mode = 2
 
 [node name="Slot4" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
 layout_mode = 2
+
+[node name="TargetBadge" type="PanelContainer" parent="Column/FriendlyRow"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"TargetBadge"
+
+[node name="TargetText" type="Label" parent="Column/FriendlyRow/TargetBadge"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TargetText"
+text = "DEPLOY HERE"
+horizontal_alignment = 1

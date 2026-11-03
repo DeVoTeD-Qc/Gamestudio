@@ -2,8 +2,11 @@
 # Purpose: Match screen (p08 layout). Composes the score bar, minimap intel strip,
 #   killfeed area, board (3 lanes), Operator panel, hand area, Supply counter and
 #   READY button with containers only (no hard-coded positions), and fills them
-#   from a snapshot Dictionary. No game rules here: until p04 lands, it shows
-#   mock_match_data.gd. Buttons only emit signals.
+#   from a snapshot Dictionary. No game rules here: match_controller.gd (child node
+#   MatchController, p09) owns the MatchState, turns input into intents and calls
+#   show_snapshot(); with autostart off (tests) the screen shows mock_match_data.gd.
+#   Buttons only emit signals. p09 view helpers: lane target states, the selected card /
+#   Operator, a drag ghost, a short toast for refusals and hints, and the card inspector.
 #
 # Look: the project theme (assets/ui/hud_theme.tres, set in project.godot gui/theme/custom)
 #   styles every theme_type_variation used here; nothing is styled in code.
@@ -20,12 +23,14 @@ extends Control
 
 signal ready_pressed
 signal menu_pressed
+signal undo_pressed
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const BASE_MARGIN: Vector2 = Vector2(16, 12)
 const BASE_MARGIN_COMPACT: Vector2 = Vector2(12, 8)
 const KILLFEED_LINES: int = 3
+const TOAST_SECONDS: float = 2.2
 
 ## Fill the screen with the mock snapshot on _ready (off once p04 drives the match).
 @export var use_mock_data: bool = true
@@ -45,6 +50,11 @@ const KILLFEED_LINES: int = 3
 @onready var _top_bar: HBoxContainer = %TopBar
 @onready var _bottom_bar: HBoxContainer = %BottomBar
 @onready var _action_panel: VBoxContainer = %ActionPanel
+@onready var _undo_button: Button = %UndoButton
+@onready var _toast: PanelContainer = %Toast
+@onready var _toast_label: Label = %ToastLabel
+@onready var _drag_layer: Control = %DragLayer
+@onready var _inspector: Control = %Inspector
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
@@ -52,6 +62,8 @@ var compact: bool = false
 ## phone. Empty = read DisplayServer.get_display_safe_area() on mobile.
 var safe_area_override: Rect2 = Rect2()
 var _profile_set: bool = false
+var _ghost: Control = null
+var _toast_id: int = 0
 
 
 func _ready() -> void:
@@ -60,6 +72,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_apply_safe_area)
 	_ready_button.pressed.connect(func() -> void: ready_pressed.emit())
 	_menu_button.pressed.connect(func() -> void: menu_pressed.emit())
+	_undo_button.pressed.connect(func() -> void: undo_pressed.emit())
 	if use_mock_data:
 		show_snapshot(MockMatchData.round_3_sample())
 
@@ -73,6 +86,87 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_hand.set_hand(snapshot.get("hand", []))
 	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
 	_set_killfeed(snapshot.get("killfeed", []))
+	_set_actions(snapshot)
+
+
+func get_hand() -> Control:
+	return _hand
+
+
+func get_operator_panel() -> Control:
+	return _operator_panel
+
+
+func get_inspector() -> Control:
+	return _inspector
+
+
+func get_undo_button() -> Button:
+	return _undo_button
+
+
+func get_ready_button() -> Button:
+	return _ready_button
+
+
+## Short message over the board (refusal reasons, hints). Hides itself after TOAST_SECONDS.
+func show_toast(text: String) -> void:
+	_toast_id += 1
+	var my_id: int = _toast_id
+	_toast_label.text = text
+	_toast.show()
+	_toast.reset_size()
+	_toast.position.x = (size.x - _toast.size.x) * 0.5
+	get_tree().create_timer(TOAST_SECONDS).timeout.connect(func() -> void:
+		if my_id == _toast_id:
+			_toast.hide())
+
+
+func get_toast_text() -> String:
+	return _toast_label.text if _toast.visible else ""
+
+
+## A copy of `source` (a hand chip, or the Operator panel's name) that follows the pointer.
+func begin_drag_ghost(source: Control, pos: Vector2) -> void:
+	end_drag_ghost()
+	var ghost: Control = source.duplicate(0) as Control
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for n: Node in ghost.find_children("*", "Control", true, false):
+		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.modulate = Color(1, 1, 1, 0.9)
+	ghost.size = source.size
+	_drag_layer.add_child(ghost)
+	_ghost = ghost
+	move_drag_ghost(pos)
+
+
+func move_drag_ghost(pos: Vector2) -> void:
+	if _ghost != null:
+		# Centred on the finger, a little above it so the finger doesn't hide the card.
+		_ghost.position = pos - Vector2(_ghost.size.x * 0.5, _ghost.size.y * 0.8)
+
+
+func end_drag_ghost() -> void:
+	if _ghost != null:
+		_ghost.queue_free()
+		_ghost = null
+
+
+func has_drag_ghost() -> bool:
+	return _ghost != null
+
+
+func _set_actions(snapshot: Dictionary) -> void:
+	var open: bool = bool(snapshot.get("deploy_open", true))
+	_ready_button.disabled = not open
+	var result: StringName = snapshot.get("result", &"")
+	if result != &"":
+		_ready_button.text = {&"player": "WON", &"enemy": "LOST"}.get(result, "DRAW")
+	else:
+		_ready_button.text = "READY" if open else "WAIT"
+	_undo_button.disabled = not bool(snapshot.get("can_undo", false))
+	var label: String = String(snapshot.get("undo_label", ""))
+	_undo_button.text = "UNDO" if _undo_button.disabled or label.is_empty() else "UNDO\n%s" % label
 
 
 ## The controls that must stay on screen and never overlap (used by tests and QA).
@@ -80,7 +174,7 @@ func get_key_controls() -> Dictionary:
 	return {
 		"menu": _menu_button, "score_bar": _score_bar, "minimap": _minimap,
 		"killfeed": _killfeed, "board": _board, "operator_panel": _operator_panel,
-		"hand": _hand, "supply": %SupplyCounter, "ready": _ready_button,
+		"hand": _hand, "supply": %SupplyCounter, "undo": _undo_button, "ready": _ready_button,
 	}
 
 
@@ -113,6 +207,7 @@ func _update_profile() -> void:
 	_bottom_bar.custom_minimum_size.y = 0 if compact else 212
 	_action_panel.custom_minimum_size.x = 140 if compact else 200
 	_ready_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 96)
+	_undo_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 64)
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)

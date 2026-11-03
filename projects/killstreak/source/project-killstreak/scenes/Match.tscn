@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" path="res://scenes/match/Board.tscn" id="4_board"]
 [ext_resource type="PackedScene" path="res://scenes/match/OperatorPanel.tscn" id="5_op"]
 [ext_resource type="PackedScene" path="res://scenes/match/HandArea.tscn" id="6_hand"]
+[ext_resource type="PackedScene" path="res://scenes/match/CardInspector.tscn" id="7_insp"]
+[ext_resource type="Script" path="res://scripts/ui/match_controller.gd" id="8_ctrl"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -135,6 +137,16 @@ custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 theme_override_constants/separation = 4
 
+[node name="UndoButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+disabled = true
+text = "UNDO"
+clip_text = true
+text_overrun_behavior = 3
+
 [node name="ReadyButton" type="Button" parent="SafeArea/Layout/BottomBar/ActionPanel" groups=["tap_target"]]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 96)
@@ -142,3 +154,44 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"ReadyButton"
 text = "READY"
+
+[node name="Toast" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_top = -60.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"ToastPanel"
+
+[node name="ToastLabel" type="Label" parent="Toast"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Not enough Supply"
+horizontal_alignment = 1
+
+[node name="DragLayer" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Inspector" parent="." instance=ExtResource("7_insp")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="MatchController" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("8_ctrl")

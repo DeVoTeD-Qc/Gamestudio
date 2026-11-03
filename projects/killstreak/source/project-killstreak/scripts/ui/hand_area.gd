@@ -3,13 +3,26 @@
 #   type, name, one rules line, FP/AR. The full CardView (p13) is NOT used here: at the
 #   ~0.4x scale a hand slot allows, its name/cost text would be 7-10 pt on a phone
 #   (see README "Phone readability"). CardView belongs in the long-press inspector (p09),
-#   at >= 0.8x. Drag / tap-to-deploy arrive with p09; keep CardRow as the container.
+#   at >= 0.8x.
+#   Input (p09): each chip runs a PressGesture: tap = select, drag = drag to a lane,
+#   long-press / right-click = inspect. The hand only reports gestures with the card's rules
+#   uid; match_controller.gd decides what they mean. set_selected() marks the chosen card;
+#   chips the player can't afford (playable = false) use the dim style.
 #   Up to 7 cards (hand cap): CardRow is a plain Control and _fit_cards() places the
 #   cards, centred, overlapping them when they don't fit (so the hand never widens the
 #   bottom bar). Compact (phone) profile: smaller chips, no "HAND n/7" caption.
-# Dependencies: hud_theme.tres variations (HandCard, CostBadge, UnitName, HudNumber, HudSubtle).
+# Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, CostBadge,
+#   UnitName, HudNumber, HudSubtle), press_gesture.gd.
 # Author: UI/UX Agent
 extends PanelContainer
+
+signal card_tapped(uid: int)
+signal card_inspected(uid: int)
+signal card_drag_started(uid: int, pos: Vector2)
+signal card_drag_moved(uid: int, pos: Vector2)
+signal card_drag_ended(uid: int, pos: Vector2)
+
+const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 
 ## Desktop chip size (about 45% of the 250x350 card frame); compact chip for the phone profile.
 const CARD_SIZE: Vector2 = Vector2(112, 156)
@@ -19,6 +32,10 @@ const HAND_CAP: int = 7
 
 var compact: bool = false
 var _cards_data: Array = []
+## Rules uid of the selected card, -1 = none.
+var selected_uid: int = -1
+## uid of the card being dragged (its chip is hidden while the ghost follows the pointer).
+var dragging_uid: int = -1
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _row: Control = %CardRow
@@ -43,13 +60,61 @@ func set_hand(cards: Array) -> void:
 		_row.remove_child(child)
 		child.queue_free()
 	for card: Dictionary in cards:
-		_row.add_child(_make_card(card))
+		var chip: Control = _make_card(card)
+		_wire(chip, int(card.get("uid", -1)))
+		_row.add_child(chip)
+	_apply_styles()
 	_caption.text = "HAND %d/%d" % [cards.size(), HAND_CAP]
 	_fit_cards.call_deferred()
 
 
 func get_cards() -> Array[Node]:
 	return _row.get_children()
+
+
+## The chip showing the card with this rules uid, or null.
+func get_card(uid: int) -> Control:
+	for chip: Node in _row.get_children():
+		if int(chip.get_meta(&"uid", -1)) == uid:
+			return chip
+	return null
+
+
+func set_selected(uid: int) -> void:
+	selected_uid = uid
+	_apply_styles()
+
+
+## Hides the chip being dragged (-1 shows all again).
+func set_dragging(uid: int) -> void:
+	dragging_uid = uid
+	for chip: Node in _row.get_children():
+		(chip as Control).modulate.a = 0.35 if int(chip.get_meta(&"uid", -1)) == uid else 1.0
+
+
+func _apply_styles() -> void:
+	for chip: Node in _row.get_children():
+		var uid: int = int(chip.get_meta(&"uid", -1))
+		var playable: bool = bool(chip.get_meta(&"playable", true))
+		var variation: StringName = &"HandCard" if playable else &"HandCardDim"
+		if uid == selected_uid and uid >= 0:
+			variation = &"HandCardSelected"
+		(chip as Control).theme_type_variation = variation
+
+
+func _wire(chip: Control, uid: int) -> void:
+	chip.set_meta(&"uid", uid)
+	var g: RefCounted = PressGesture.new(chip)
+	chip.set_meta(&"gesture", g)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(e: InputEvent) -> void:
+		if g.handle(e):
+			chip.accept_event())
+	g.tapped.connect(func(_p: Vector2) -> void: card_tapped.emit(uid))
+	g.long_pressed.connect(func(_p: Vector2) -> void: card_inspected.emit(uid))
+	g.drag_started.connect(func(p: Vector2) -> void: card_drag_started.emit(uid, p))
+	g.drag_moved.connect(func(p: Vector2) -> void: card_drag_moved.emit(uid, p))
+	g.drag_ended.connect(func(p: Vector2) -> void: card_drag_ended.emit(uid, p))
 
 
 ## Labels whose whole text must stay visible (cost, name, stats; the rules line may trim).
@@ -92,6 +157,7 @@ func _make_card(card: Dictionary) -> Control:
 	panel.theme_type_variation = &"HandCard"
 	panel.custom_minimum_size = _card_size()
 	panel.add_to_group(&"tap_target")
+	panel.set_meta(&"playable", bool(card.get("playable", true)))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 0)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE

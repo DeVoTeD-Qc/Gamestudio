@@ -1,7 +1,9 @@
 # unit_slot.gd
 # Purpose: One position in a lane's line (up to 4 per side). Shows a unit token,
-#   the Operator, an incoming red-dot contact, or an empty spot. Display only:
-#   tapping/inspecting arrives with p09 (the slot already stops mouse/touch input).
+#   the Operator, an incoming red-dot contact, or an empty spot. Display only: the Lane handles
+#   taps / long-press for its slots (p09) and asks slot_uid / kind which unit was hit.
+#   p09: a queued arrival (this Deploy) shows as QUEUED (SlotPending); set_target(true) frames
+#   a unit that can be picked as a card's target (SlotTarget).
 #   Layout: [class icon | POINT] / name (<= 2 lines) / class word / FP and AR.
 #   Compact (phone) profile hides the class word (the icon stays) and drops the
 #   desktop minimum height so the board fits a 540 px tall canvas.
@@ -23,6 +25,11 @@ const CLASS_ICONS: Dictionary = {
 var side: StringName = &"player"
 var kind: Kind = Kind.EMPTY
 var compact: bool = false
+## Rules uid of the unit shown (-1 when empty / incoming). Queued arrivals carry their card uid.
+var slot_uid: int = -1
+var pending: bool = false
+var is_target: bool = false
+var _base_variation: StringName = &"SlotEmpty"
 
 @onready var _icon: TextureRect = %ClassIcon
 @onready var _tag: Label = %TagLabel
@@ -47,11 +54,15 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	side = unit_side
 	kind = Kind.UNIT
 	var is_operator: bool = unit.get("operator", false)
-	if is_operator:
-		theme_type_variation = &"SlotOperator"
+	slot_uid = int(unit.get("uid", -1))
+	pending = bool(unit.get("pending", false))
+	if pending:
+		_set_variation(&"SlotPending")
+	elif is_operator:
+		_set_variation(&"SlotOperator")
 	else:
-		theme_type_variation = &"SlotFriendly" if side == &"player" else &"SlotEnemy"
-	_tag.text = "POINT" if is_point else " "
+		_set_variation(&"SlotFriendly" if side == &"player" else &"SlotEnemy")
+	_tag.text = "QUEUED" if pending else ("POINT" if is_point else " ")
 	# Title case keeps names on 1-2 lines in a narrow slot ("Marksman", "Kestrel AR-7").
 	_name.text = String(unit.get("name", "?"))
 	var cls: String = "OPERATOR" if is_operator else String(unit.get("cls", "")).to_upper()
@@ -69,7 +80,9 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 func show_incoming() -> void:
 	side = &"enemy"
 	kind = Kind.INCOMING
-	theme_type_variation = &"SlotIncoming"
+	slot_uid = -1
+	pending = false
+	_set_variation(&"SlotIncoming")
 	_tag.text = "INCOMING"
 	_name.text = ""
 	_class.text = ""
@@ -80,12 +93,25 @@ func show_incoming() -> void:
 func show_empty(slot_side: StringName) -> void:
 	side = slot_side
 	kind = Kind.EMPTY
-	theme_type_variation = &"SlotEmpty"
+	slot_uid = -1
+	pending = false
+	_set_variation(&"SlotEmpty")
 	_tag.text = " "
 	_name.text = ""
 	_class.text = ""
 	_icon.texture = null
 	_set_parts(false, false)
+
+
+## Frames the slot as a pickable target (Flank Route) while a card is selected.
+func set_target(value: bool) -> void:
+	is_target = value
+	theme_type_variation = &"SlotTarget" if is_target else _base_variation
+
+
+func _set_variation(variation: StringName) -> void:
+	_base_variation = variation
+	theme_type_variation = &"SlotTarget" if is_target else variation
 
 
 ## Labels whose whole text must stay visible (checked by tests/test_board_layout.gd).

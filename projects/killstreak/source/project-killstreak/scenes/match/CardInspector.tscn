@@ -1,0 +1,105 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="1_insp"]
+[ext_resource type="PackedScene" path="res://scenes/match/CardView.tscn" id="2_card"]
+
+[node name="CardInspector" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_insp")
+
+[node name="Scrim" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"Scrim"
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Row" type="HBoxContainer" parent="Center"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+
+[node name="CardHolder" type="Control" parent="Center/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 350)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="Card" parent="Center/Row/CardHolder" instance=ExtResource("2_card")]
+unique_name_in_owner = true
+layout_mode = 0
+pivot_offset = Vector2(0, 0)
+mouse_filter = 2
+
+[node name="InfoPanel" type="PanelContainer" parent="Center/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudPanelDark"
+
+[node name="Info" type="VBoxContainer" parent="Center/Row/InfoPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Card"
+autowrap_mode = 3
+
+[node name="TypeLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "UNIT"
+autowrap_mode = 3
+
+[node name="RulesLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Rules text"
+autowrap_mode = 3
+
+[node name="KeywordList" type="VBoxContainer" parent="Center/Row/InfoPanel/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="StatusLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudAccent"
+text = "Status"
+autowrap_mode = 3
+
+[node name="CloseButton" type="Button" parent="Center/Row/InfoPanel/Info" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 64)
+layout_mode = 2
+size_flags_horizontal = 8
+theme_type_variation = &"HudButton"
+text = "CLOSE"
