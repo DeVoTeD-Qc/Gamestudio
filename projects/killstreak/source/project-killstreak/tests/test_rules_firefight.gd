@@ -307,6 +307,7 @@ func test_attack_helo_hits_point_men_before_first_shot_this_and_next_round() -> 
 	var p: SideSetup = F.setup()
 	p.killstreaks.assign([F.attack_helo()])
 	var m: MatchState = F.new_match(p)
+	StreakTracker.grant(m, P, &"attack_helo")  # p05: killstreaks come from the Streak Tray
 	var fs_enemy: RulesUnit = F.place(m, E, F.unit("fs", 5, 2, F.W.NONE, {"first_shot": true}), F.LEFT)
 	var mine: RulesUnit = F.place(m, P, F.unit("mine", 1, 3), F.LEFT)
 	var far: RulesUnit = F.place(m, E, F.unit("far", 0, 6), F.RIGHT)
@@ -330,6 +331,7 @@ func test_sentry_takes_a_slot_ignored_for_control_no_credit() -> void:
 	var p: SideSetup = F.setup([F.rifleman()])
 	p.killstreaks.assign([F.sentry_turret()])
 	var m: MatchState = F.new_match(p)
+	StreakTracker.grant(m, P, &"sentry_turret")
 	for i: int in 3:
 		F.place(m, P, F.unit("u%d" % i, 0, 9), F.LEFT)
 	assert_true(m.submit(P, RulesIntent.use_item(&"sentry_turret", F.MID))["ok"], "Sentry called in on Mid")

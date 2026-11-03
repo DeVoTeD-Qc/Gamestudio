@@ -306,22 +306,20 @@ func test_flank_route_moves_unit_and_grants_first_shot() -> void:
 
 
 func test_tripwire_hits_next_enemy_arrival_and_is_consumed() -> void:
+	# Rulings part 2 #2 (overrule): Equipment is armed before step a, so the Tripwire
+	# catches the first enemy unit arriving in the same Reveal, and only that one.
 	var p: SideSetup = F.setup([F.tripwire()])
-	var e: SideSetup = F.setup([F.unit("first", 0, 5), F.unit("second", 0, 5), F.unit("same_round", 0, 5)])
+	var e: SideSetup = F.setup([F.unit("first", 0, 5), F.unit("second", 0, 5)])
 	var m: MatchState = F.new_match(p, e)
 	m.sides[E].supply = 5
 	m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "tripwire_charge"), F.MID))
-	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "same_round"), F.MID))
-	m.resolve_round()
-	var placed: Dictionary = F.events_of(m, RulesEvent.EQUIPMENT_PLACED)[0]
-	assert_eq(placed.get("private_to", &""), &"player", "Tripwire stays hidden from the enemy")
-	assert_eq(m.sides[E].line(F.MID)[0].armor, 5, "units arriving in the same Reveal arrive before it is placed")
-	m.begin_round()
 	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "first"), F.MID))
 	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "second"), F.MID))
 	m.reveal()
+	var placed: Dictionary = F.events_of(m, RulesEvent.EQUIPMENT_PLACED)[0]
+	assert_eq(placed.get("private_to", &""), &"player", "Tripwire stays hidden from the enemy")
 	var line: Array = m.sides[E].line(F.MID)
-	assert_eq([line[1].armor, line[2].armor], [2, 5], "only the next arrival takes 3")
+	assert_eq([line[0].armor, line[1].armor], [2, 5], "the first arrival this Reveal takes 3, the next none")
 	assert_eq(m.sides[P].equipment[F.MID].size(), 0, "consumed")
 	assert_eq(m.sides[P].discard[0].card.id, &"tripwire_charge", "to the discard pile")
 
@@ -341,6 +339,7 @@ func test_mortar_eliminations_flagged_killstreak() -> void:
 	var p: SideSetup = F.setup()
 	p.killstreaks.assign([F.mortar()])
 	var m: MatchState = F.new_match(p)
+	StreakTracker.grant(m, P, &"mortar_barrage")  # p05: killstreaks come from the Streak Tray
 	F.place(m, E, F.rifleman(), F.RIGHT)
 	var gunner: RulesUnit = F.place(m, E, F.gunner(), F.RIGHT)
 	m.submit(P, RulesIntent.use_item(&"mortar_barrage", F.RIGHT))
