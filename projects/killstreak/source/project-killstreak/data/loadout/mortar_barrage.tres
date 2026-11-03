@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_wtcuj"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_dtuv5"]
+
+[sub_resource type="Resource" id="Resource_u8r8r"]
+script = ExtResource("1_wtcuj")
+trigger = 0
+kind = 1
+target = 7
+zone_scope = 1
+target_class = 0
+amount = 2
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_dtuv5")
+id = &"mortar_barrage"
+display_name = "Mortar Barrage"
+slot = 6
+text = "2 damage to each enemy unit in one zone."
+weapon_class = 0
+operator_firepower = 0
+operator_armor = 0
+rotations_per_round = 1
+attachments = Array[Resource]([])
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+cooldown_rounds = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 3
+effects = Array[ExtResource("1_wtcuj")]([SubResource("Resource_u8r8r")])
