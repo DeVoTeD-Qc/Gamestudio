@@ -80,7 +80,7 @@ alignment = 2
 
 [node name="SkipButton" type="Button" parent="CoachOverlay/CoachCard/Column/Buttons" groups=["tap_target"]]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 64)
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 theme_type_variation = &"HudButton"
 text = "SKIP TUTORIAL"

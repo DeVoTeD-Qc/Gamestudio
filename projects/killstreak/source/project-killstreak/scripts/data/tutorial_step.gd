@@ -21,8 +21,8 @@ const ADVANCE_ON: Array[StringName] = [
 ## What the coach frames. &"auto" picks it from advance_on (Operator / hand card, then the lane;
 ## the item button; READY).
 const HIGHLIGHTS: Array[StringName] = [
-	&"auto", &"none", &"operator", &"hand_card", &"lane", &"ready", &"streak", &"killstreak",
-	&"minimap", &"score",
+	&"auto", &"none", &"operator", &"hand_card", &"lane", &"enemy_row", &"ready", &"streak",
+	&"killstreak", &"minimap", &"score",
 ]
 ## Coach text must stay short enough to read on a phone at a glance.
 const MAX_TEXT: int = 120
@@ -84,7 +84,7 @@ func validate(v: DataValidator, prefix: String) -> void:
 		v.missing(prefix + ".card_id", "needs the card id to play / highlight")
 	if (advance_on == &"use_item" or resolved_highlight() == &"killstreak") and item_id == &"":
 		v.missing(prefix + ".item_id", "needs the item id to use / highlight")
-	if resolved_highlight() == &"lane" and zone < 0:
+	if resolved_highlight() in [&"lane", &"enemy_row"] and zone < 0:
 		v.missing(prefix + ".zone", "a lane highlight needs a zone")
 	if card_id != &"" and not v.index.has(String(card_id)):
 		v.broken_reference(prefix + ".card_id", "'%s' is not a loaded card" % card_id)

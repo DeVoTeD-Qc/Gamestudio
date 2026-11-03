@@ -24,7 +24,7 @@ signal done_pressed
 ## A tap landed outside the holes of a locked step.
 signal blocked_tap(pos: Vector2)
 
-const DIM: Color = Color(0.071, 0.086, 0.102, 0.62)
+const DIM: Color = Color(0.071, 0.086, 0.102, 0.72)
 const FRAME_PAD: float = 6.0
 const FRAME_WIDTH: float = 4.0
 const CARD_GAP: float = 12.0
@@ -199,8 +199,10 @@ func _on_skip_pressed() -> void:
 	_skip.text = "TAP AGAIN TO SKIP"
 
 
-## Puts the coach card beside the first frame (below, above, right, left), never on it; no
-## frame: bottom centre (over the hand, which is idle while a round plays).
+## Puts the coach card beside the first frame (above, below, right, left) where it covers no
+## frame and no tappable hole; failing that, anywhere along the screen edges that is clear;
+## failing that, beside the frame. No frame: bottom centre (over the hand, which is idle while
+## a round plays).
 func _place_card() -> void:
 	if not _card.visible:
 		return
@@ -210,18 +212,29 @@ func _place_card() -> void:
 	if frames.is_empty():
 		_card.position = Vector2((size.x - cs.x) * 0.5, bounds.end.y - cs.y)
 		return
+	var avoid: Array[Rect2] = []
+	for r: Rect2 in frames + holes:
+		avoid.append(r.grow(FRAME_PAD))
 	var f: Rect2 = frames[0].grow(FRAME_PAD + CARD_GAP)
 	var cx: float = clampf(f.get_center().x - cs.x * 0.5, bounds.position.x, bounds.end.x - cs.x)
 	var cy: float = clampf(f.get_center().y - cs.y * 0.5, bounds.position.y, bounds.end.y - cs.y)
-	var candidates: Array[Vector2] = [
+	var beside: Array[Vector2] = [
 		Vector2(cx, f.position.y - cs.y),   # above
 		Vector2(cx, f.end.y),               # below
 		Vector2(f.end.x, cy),               # right
 		Vector2(f.position.x - cs.x, cy),   # left
 	]
-	for p: Vector2 in candidates:
+	var edges: Array[Vector2] = []
+	for y: float in [bounds.position.y, (size.y - cs.y) * 0.5, bounds.end.y - cs.y]:
+		for x: float in [(size.x - cs.x) * 0.5, bounds.position.x, bounds.end.x - cs.x]:
+			edges.append(Vector2(x, y))
+	for p: Vector2 in beside + edges:
 		var r: Rect2 = Rect2(p, cs)
-		if bounds.encloses(r):
+		if bounds.encloses(r) and not avoid.any(func(a: Rect2) -> bool: return a.intersects(r)):
+			_card.position = p
+			return
+	for p: Vector2 in beside:
+		if bounds.encloses(Rect2(p, cs)) and not Rect2(p, cs).intersects(f):
 			_card.position = p
 			return
 	# Nothing fits beside it: the side of the screen away from the frame.

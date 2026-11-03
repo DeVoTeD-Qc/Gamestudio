@@ -191,7 +191,7 @@ func _text_for(st: TutorialStep) -> String:
 	return st.text.replace("{intel}", intel_text())
 
 
-## "Mid: Combat Medic, Rifleman" from the zones the player sees face-up (Recon Drone).
+## "Combat Medic and Rifleman to Mid" from the zones the player sees face-up (Recon Drone).
 func intel_text() -> String:
 	var parts: PackedStringArray = []
 	for z: int in MatchState.ZONE_COUNT:
@@ -200,7 +200,8 @@ func intel_text() -> String:
 			var card: CardData = CardDB.get_card(id)
 			names.append(card.display_name if card != null else "their Operator")
 		if not names.is_empty():
-			parts.append("%s: %s" % [ZONE_WORDS[z], ", ".join(names)])
+			var who: String = names[0] if names.size() == 1 else "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[names.size() - 1]]
+			parts.append("%s to %s" % [who, ZONE_WORDS[z]])
 	return "; ".join(parts) if not parts.is_empty() else "no enemy cards seen yet"
 
 
@@ -283,6 +284,11 @@ func spotlight_rects() -> Array:
 			if st.zone >= 0:
 				frames.append(lane_rect)
 				holes.append(lane_rect)
+		&"enemy_row":
+			if st.zone >= 0:
+				var row: Control = match_screen.get_board().get_lanes()[st.zone].get_node("%EnemyRow")
+				frames.append(row.get_global_rect())
+				holes.append(row.get_global_rect())
 		&"ready":
 			var r: Rect2 = match_screen.get_ready_button().get_global_rect()
 			frames.append(r)
