@@ -41,7 +41,9 @@ Keep it current with the ArtifactData tool whenever work starts or finishes:
   the newest entry per agent drives its card. When delegating, give the subagent the board's task id.
 - `activity/<id>` — `{agent, text, at (ISO time)}`, newest shown first
 - `docs/<id>` — `{title, path, md}`: a deliverable's markdown, shown in the task drawer. Re-upload it
-  whenever the file in the repo changes, and list its id in the task's `docs` array.
+  whenever the file in the repo changes, and list its id in the task's `docs` array. Images (e.g. QA
+  screenshots) go to the artifact's asset store (Artifact publish with `asset: true`); reference the
+  returned `/_blob/<id>` url in the doc's markdown. Never embed base64 images (256 KB doc limit).
 - The user reviews on the page: a task in `review` gets Approve / Request changes, which writes
   `review: {decision: approved|changes, comment, at}` and moves it to `done` or back to `todo`.
   Tasks with `questions: [{id, q, options}]` collect `answers: {<id>: {choice, note}}`.
