@@ -23,7 +23,7 @@ const MIN_BASE_HEIGHT: float = 540.0
 ## then never drops below 0.72 * 16 = 11.5 pt on any screen 405 pt tall or more, and 64 px tap
 ## targets stay >= 46 pt. Shorter screens hit the 540 floor and scale a little lower.
 const MIN_POINTS_PER_PX: float = 0.75
-## Below this logical height screens use its compact (phone) layout.
+## Below this logical height screens use their compact (phone) layout.
 const COMPACT_HEIGHT: float = 640.0
 
 
