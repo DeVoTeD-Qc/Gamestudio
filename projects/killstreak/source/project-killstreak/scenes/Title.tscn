@@ -18,9 +18,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.07, 0.08, 0.09, 1)
+mouse_filter = 2
+color = Color(0.07, 0.086, 0.102, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,20 +30,91 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Column" type="VBoxContainer" parent="Center"]
+[node name="Center" type="CenterContainer" parent="SafeArea"]
 layout_mode = 2
-theme_override_constants/separation = 32
 
-[node name="TitleLabel" type="Label" parent="Center/Column"]
+[node name="Column" type="VBoxContainer" parent="SafeArea/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 56
-text = "Killstreak — prototype"
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="SafeArea/Center/Column"]
+layout_mode = 2
+theme_type_variation = &"RunTitle"
+text = "KILLSTREAK"
 horizontal_alignment = 1
 
-[node name="StartButton" type="Button" parent="Center/Column"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 72)
+[node name="SubtitleLabel" type="Label" parent="SafeArea/Center/Column"]
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_font_sizes/font_size = 32
-text = "Start"
+theme_type_variation = &"HudSubtle"
+text = "Tactical card roguelite · prototype"
+horizontal_alignment = 1
+
+[node name="Gap" type="Control" parent="SafeArea/Center/Column"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="ContinueButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "CONTINUE RUN"
+
+[node name="StartButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "START NEW RUN"
+
+[node name="ConfirmPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="ConfirmColumn" type="VBoxContainer" parent="SafeArea/Center/Column/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ConfirmLabel" type="Label" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "Start over? Your saved run will be replaced."
+autowrap_mode = 3
+
+[node name="ConfirmRow" type="HBoxContainer" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ReplaceButton" type="Button" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn/ConfirmRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "REPLACE"
+
+[node name="KeepButton" type="Button" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn/ConfirmRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "KEEP IT"
+
+[node name="WarningPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="WarningLabel" type="Label" parent="SafeArea/Center/Column/WarningPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = ""
+autowrap_mode = 3

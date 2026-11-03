@@ -205,6 +205,7 @@ func _hud_theme(f: Dictionary) -> Theme:
 	t.set_stylebox("separator", "HSeparator", _box(Color("#3A444D"), Color.TRANSPARENT, 0, 0, false, Vector4(0, 1, 0, 1)))
 	t.set_constant("separation", "HSeparator", 8)
 	_match_styles(t, f)
+	_run_styles(t, f)
 	return t
 
 
@@ -287,6 +288,44 @@ func _match_styles(t: Theme, f: Dictionary) -> void:
 	_label_var(t, "HudTag", f["heading"], 16, FOG_DIM)  # condensed caption (card type in the hand)
 	t.set_constant("line_spacing", "UnitName", 0)  # two-line names stay compact
 	t.set_stylebox("normal", "RangeBadge", _box(Color("#4F555B"), CONCRETE, 1, 3, true, Vector4(5, 0, 5, 0)))
+
+
+## Run screens (scenes/run/*, Title, p11). Shape and words carry every state, colour only adds.
+func _run_styles(t: Theme, f: Dictionary) -> void:
+	var tile_m := Vector4(14, 10, 14, 10)
+	# Pick tiles (one-tap choices: killstreaks, attachments, perks, Supply Drop cards).
+	_tile_var(t, "PickTile", _box(Color("#20272E"), Color("#59636C"), 2, 6, true, tile_m),
+			_box(GUNMETAL_HI, AMBER, 2, 6, true, tile_m), _box(Color("#3A3422"), AMBER, 3, 6, true, tile_m))
+	# Picked: heavy amber frame and warm fill (the tile also says PICKED).
+	var picked := _box(Color("#3A3422"), AMBER, 4, 6, true, tile_m)
+	_tile_var(t, "PickTileSelected", picked, picked, picked)
+	# Run map match cards. Next: amber, heavy. Done: dim. Rival: heavy red top edge.
+	_panel_var(t, "RunNode", _box(GUNMETAL, Color("#3A444D"), 1, 6, true, Vector4(10, 8, 10, 8)))
+	_panel_var(t, "RunNodeNext", _box(Color("#2A2618"), AMBER, 4, 6, true, Vector4(10, 8, 10, 8)))
+	_panel_var(t, "RunNodeDone", _box(Color(SLATE, 0.8), Color("#2C343B"), 1, 6, true, Vector4(10, 8, 10, 8)))
+	var rival := _box(Color("#2D1D20"), RED, 2, 6, true, Vector4(10, 8, 10, 8))
+	rival.border_width_top = 6
+	_panel_var(t, "RunNodeRival", rival)
+	# Notices (save could not be loaded, replace-run confirmation).
+	_panel_var(t, "NoticePanel", _box(Color("#2D1D20"), RED, 2, 6, true, Vector4(14, 8, 14, 8)))
+	# Reinforcement tickets: filled tag = left, hollow = spent.
+	_shape_var(t, "TicketPip", _box(AMBER, Color("#FFD27A"), 1, 3, true, Vector4.ZERO))
+	_shape_var(t, "TicketPipSpent", _box(Color.TRANSPARENT, FOG_DIM, 2, 3, true, Vector4.ZERO))
+	_label_var(t, "RunTitle", f["heading"], 40, FOG)
+	_label_var(t, "ResultWin", f["heading"], 44, TEAL)
+	_label_var(t, "ResultLoss", f["heading"], 44, RED)
+	_label_var(t, "ResultDraw", f["heading"], 44, FOG)
+	_label_var(t, "TileName", f["heading"], 22, FOG)
+	_label_var(t, "StatValue", f["numeric"], 28, FOG)
+
+
+func _tile_var(t: Theme, name: String, normal: StyleBox, hover: StyleBox, pressed: StyleBox) -> void:
+	t.set_type_variation(name, "Button")
+	t.set_stylebox("normal", name, normal)
+	t.set_stylebox("hover", name, hover)
+	t.set_stylebox("pressed", name, pressed)
+	t.set_stylebox("hover_pressed", name, pressed)
+	t.set_stylebox("disabled", name, _box(Color(SLATE, 0.6), Color("#3A444D"), 1, 6, true, Vector4(14, 10, 14, 10)))
 
 
 func _panel_var(t: Theme, name: String, sb: StyleBox) -> void:
