@@ -2,10 +2,16 @@
 # Purpose: Plays the rules engine's event log as combat feedback, in order (p14). It takes the
 #   plain RulesEvent dictionaries (scripts/rules/rules_event.gd) the match controller already
 #   has, and for each one starts the matching effect, waits its beat, then moves on:
-#     SHOT_FIRED        tracer shooter -> target (staggered 60 ms)
+#     FIREFIGHT_STEP    "FIRST SHOT" / "MAIN" label at the zone (b01: shows which shots are
+#                       simultaneous and which come after the First Shot eliminations)
+#     SHOT_FIRED        tracer shooter -> target (staggered 60 ms); an other-side unit firing in
+#                       the First Shot step also gets a "FIRST SHOT" tag (b01: why it hit you)
 #     DAMAGE_DEALT      lock-bracket hit marker + damage number when the tracer lands
 #     UNIT_ELIMINATED   ELIMINATED / DOWN stamp, hit-stop, small screen shake, killfeed line,
-#                       "+100 ELIMINATION" pop-up for the viewer's credited eliminations
+#                       "+100 ELIMINATION" pop-up for the viewer's credited eliminations,
+#                       and a dark veil over the victim's slot until the sequence ends (b01: the
+#                       board keeps showing the pre-resolve snapshot, so without it a dead unit
+#                       still looks like it is in the fight while the next unit shoots)
 #     STREAK_CHANGED    StreakArc fills; on reset it shatters
 #     KILLSTREAK_EARNED "<NAME> READY" pop-up at the arc (the notch glows)
 #     ITEM_REVEALED     killstreak: full-screen call-in takeover; other items: name tag
@@ -30,6 +36,9 @@
 #   CardDB autoload (display names, item slots; optional), Settings autoload (optional).
 # Author: Game Feel Engineer Agent (p14)
 extends Control
+
+## Labels of the firefight steps (FirefightResolver.STEP_*).
+const STEP_LABELS: Dictionary = {&"first_shot": "FIRST SHOT", &"main": "MAIN"}
 
 ## A sequence started (count = events queued).
 signal sequence_started(count: int)
@@ -97,6 +106,38 @@ var _current_zone: StringName = &""
 var _current_type: StringName = &""
 var _hit_count: Dictionary = {}   # uid -> damage numbers shown this sequence (stacking offset)
 var _hitstop_on: bool = false
+var _step: StringName = &""       # current firefight step (FIREFIGHT_STEP.step)
+var _tagged_first_shot: Dictionary = {}  # uid -> true: "FIRST SHOT" tag already shown
+var _veils: Dictionary = {}       # victim uid -> DownVeil over its slot (this sequence)
+
+
+## Dark cover over an eliminated unit's slot. Not transient: it stays until the sequence ends
+## (the board is refreshed then) and follows the slot each frame; hidden when the slot is gone
+## (e.g. the board switched to the post-Reveal snapshot that no longer has the unit).
+class DownVeil:
+	extends Control
+	var uid: int = -1
+	var director: Control = null
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(_delta: float) -> void:
+		follow()
+
+	func follow() -> void:
+		var r: Rect2 = director._veil_rect(uid) if director != null else Rect2()
+		visible = r.has_area()
+		if visible:
+			position = r.position
+			size = r.size
+		queue_redraw()
+
+	func _draw() -> void:
+		var r: Rect2 = Rect2(Vector2.ZERO, size)
+		draw_rect(r, Color(FxStyle.SLATE, 0.62))
+		draw_line(r.position + Vector2(6, 6), r.end - Vector2(6, 6), Color(FxStyle.FOG_DIM, 0.5), 2.0)
+		draw_line(Vector2(r.end.x - 6, r.position.y + 6), Vector2(r.position.x + 6, r.end.y - 6), Color(FxStyle.FOG_DIM, 0.5), 2.0)
 
 
 func _ready() -> void:
@@ -137,6 +178,8 @@ func play(events: Array) -> void:
 	_skipping = false
 	_timing = _make_timing()
 	_hit_count.clear()
+	_tagged_first_shot.clear()
+	_step = &""
 	sequence_started.emit(_queue.size())
 	while not _queue.is_empty():
 		var ev: Dictionary = _queue.pop_front()
@@ -152,6 +195,7 @@ func play(events: Array) -> void:
 			await _wait(beat)
 	_playing = false
 	_skipping = false
+	clear_veils()
 	sequence_finished.emit()
 
 
@@ -214,9 +258,12 @@ func _handle(ev: Dictionary) -> float:
 				unit_names[int(ev.get("uid", -1))] = _display_name(card_id)
 			_zone_of[int(ev.get("uid", -1))] = ev.get("zone", &"")
 			return 0.0
-		RulesEvent.FIREFIGHT_STARTED, RulesEvent.FIREFIGHT_STEP:
+		RulesEvent.FIREFIGHT_STARTED:
 			_current_zone = ev.get("zone", &"")
+			_step = &""
 			return t.get_value(&"step_pause")
+		RulesEvent.FIREFIGHT_STEP:
+			return _on_step(ev, t)
 		RulesEvent.SHOT_FIRED:
 			return _on_shot(ev, t)
 		RulesEvent.DAMAGE_DEALT:
@@ -294,7 +341,26 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 		if target >= 0:
 			_zone_of[target] = zone
 			_arrival[target] = maxf(float(_arrival.get(target, 0.0)), _clock + fx.arrival_time())
+	# b01: an other-side unit firing in the First Shot step had First Shot too, so its hit lands
+	# at the same time as yours. Say so on the shooter, once per sequence.
+	if ev.get("step", _step) == &"first_shot" and side != viewer_side and not _tagged_first_shot.has(shooter):
+		_tagged_first_shot[shooter] = true
+		_popup_at(_unit_point(shooter, side, zone) + Vector2(0, -22.0), "FIRST SHOT", &"heading", 16,
+				FxStyle.side_color(side), ev, &"tag")
 	return t.get_value(&"shot_stagger")
+
+
+## b01: names the step so a trade in the First Shot step and the next unit's return fire in
+## the Main step read as two separate moments.
+func _on_step(ev: Dictionary, t: RefCounted) -> float:
+	_current_zone = ev.get("zone", _current_zone)
+	_step = ev.get("step", &"")
+	var text: String = String(STEP_LABELS.get(_step, ""))
+	var r: Rect2 = _zone_rect(_current_zone)
+	if text == "" or not r.has_area() or _skipping:
+		return t.get_value(&"step_pause")
+	_popup_at(_to_local(r.get_center()), text, &"heading", 20, FxStyle.FOG, ev, &"step")
+	return t.get_value(&"step_pause") + t.get_value(&"popup_beat")
 
 
 func _on_damage(ev: Dictionary, t: RefCounted) -> float:
@@ -344,6 +410,7 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	stamp.color = FxStyle.side_color(victim_side)
 	stamp.hazard = victim_side != viewer_side
 	stamp.font_size = 20 if rect.size.x < 90.0 else 22
+	_veil(victim)
 	_start(stamp, &"stamp", ev)
 	if by_side == viewer_side and bool(ev.get("credit", true)) and int(score_popups.get(&"elimination", 0)) > 0:
 		_popup_at(rect.get_center() + Vector2(0, -rect.size.y * 0.5 - 6.0),
@@ -427,6 +494,41 @@ func _popup_at(point: Vector2, text: String, font: StringName, font_size: int, c
 	fx.rise_key = &"popup_rise" if kind == &"popup" else &"damage_rise"
 	fx.duration_key = &"popup"
 	_start(fx, kind, ev)
+
+
+## Veils the victim's slot (see DownVeil) for the rest of the sequence. Logged as &"veil".
+func _veil(uid: int) -> void:
+	if uid < 0 or _veils.has(uid) or locator == null:
+		return
+	var v: DownVeil = DownVeil.new()
+	v.uid = uid
+	v.director = self
+	add_child(v)
+	# Below the transient effects (the stamp goes on top of it).
+	move_child(v, 0)
+	v.follow()
+	_veils[uid] = v
+	_log(&"veil", v, 0.0, {"type": RulesEvent.UNIT_ELIMINATED})
+
+
+## Uids veiled in the current sequence (tests).
+func veiled_uids() -> Array:
+	return _veils.keys()
+
+
+func clear_veils() -> void:
+	for v: Variant in _veils.values():
+		if is_instance_valid(v):
+			(v as Node).queue_free()
+	_veils.clear()
+
+
+## Overlay-local rect of a unit's slot, Rect2() when the board does not show it.
+func _veil_rect(uid: int) -> Rect2:
+	if locator == null:
+		return Rect2()
+	var r: Rect2 = locator.unit_rect(uid)
+	return Rect2(_to_local(r.position), r.size) if r.has_area() else Rect2()
 
 
 func _wait(sec: float) -> void:
