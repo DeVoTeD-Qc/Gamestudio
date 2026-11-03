@@ -1,17 +1,23 @@
 # hand_area.gd
-# Purpose: Hand area PLACEHOLDER (bottom-center). Shows the hand as simple card
-#   rectangles so the layout reads with real content. The real hand (CardView,
-#   drag / tap-to-deploy, long-press inspector) replaces the card building in
-#   _make_card() with p09; keep CardRow as the container.
+# Purpose: Hand area (bottom-center). Shows the hand as compact HandCard chips: cost, card
+#   type, name, one rules line, FP/AR. The full CardView (p13) is NOT used here: at the
+#   ~0.4x scale a hand slot allows, its name/cost text would be 7-10 pt on a phone
+#   (see README "Phone readability"). CardView belongs in the long-press inspector (p09),
+#   at >= 0.8x. Drag / tap-to-deploy arrive with p09; keep CardRow as the container.
 #   Up to 7 cards (hand cap): when they don't fit, the row overlaps them.
-# Dependencies: hud_placeholder_style.gd variation names (HandCard, CostBadge).
+#   Compact (phone) profile: smaller chips sized to the 540 px canvas.
+# Dependencies: hud_theme.tres variations (HandCard, CostBadge, UnitName, HudNumber, HudSubtle).
 # Author: UI/UX Agent
 extends PanelContainer
 
-## Card size at 50% of the 250x350 card frame (art-direction.md), slightly trimmed to fit.
+## Desktop chip size (about 45% of the 250x350 card frame); compact chip for the phone profile.
 const CARD_SIZE: Vector2 = Vector2(112, 156)
+const CARD_SIZE_COMPACT: Vector2 = Vector2(104, 108)
 const CARD_GAP: int = 8
 const HAND_CAP: int = 7
+
+var compact: bool = false
+var _cards_data: Array = []
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _row: HBoxContainer = %CardRow
@@ -21,8 +27,16 @@ func _ready() -> void:
 	_row.resized.connect(_fit_cards)
 
 
+func set_compact(value: bool) -> void:
+	if value == compact:
+		return
+	compact = value
+	set_hand(_cards_data)
+
+
 ## cards: Array of {name, type, cost, fp?, armor?, text}.
 func set_hand(cards: Array) -> void:
+	_cards_data = cards
 	for child: Node in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
@@ -36,18 +50,32 @@ func get_cards() -> Array[Node]:
 	return _row.get_children()
 
 
+## Labels whose whole text must stay visible (cost, name, stats; the rules line may trim).
+func get_important_labels() -> Array[Label]:
+	var out: Array[Label] = []
+	for card: Node in get_cards():
+		for label: Node in card.find_children("*", "Label", true, false):
+			if label.has_meta(&"important"):
+				out.append(label)
+	return out
+
+
+func _card_size() -> Vector2:
+	return CARD_SIZE_COMPACT if compact else CARD_SIZE
+
+
 func _fit_cards() -> void:
 	var n: int = _row.get_child_count()
 	if n < 2:
 		return
-	var spare: float = _row.size.x - n * CARD_SIZE.x
+	var spare: float = _row.size.x - n * _card_size().x
 	_row.add_theme_constant_override(&"separation", mini(CARD_GAP, floori(spare / (n - 1))))
 
 
 func _make_card(card: Dictionary) -> Control:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.theme_type_variation = &"HandCard"
-	panel.custom_minimum_size = CARD_SIZE
+	panel.custom_minimum_size = _card_size()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	panel.add_to_group(&"tap_target")
 	var column: VBoxContainer = VBoxContainer.new()
@@ -64,39 +92,59 @@ func _make_card(card: Dictionary) -> Control:
 	badge.theme_type_variation = &"CostBadge"
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(badge)
-	var cost: Label = _label(str(card.get("cost", 0)), 20)
+	var cost: Label = _label(str(card.get("cost", 0)), &"HudNumber", true)
 	cost.add_theme_color_override(&"font_color", Color("#12161A"))
-	cost.custom_minimum_size = Vector2(16, 0)
+	cost.custom_minimum_size = Vector2(14, 0)
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cost.add_to_group(&"key_number")
 	badge.add_child(cost)
-	var type_label: Label = _label(String(card.get("type", "")), 14)
-	type_label.theme_type_variation = &"HudSubtle"
+	var type_label: Label = _label(String(card.get("type", "")).to_upper(), &"HudSubtle", false)
 	type_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	type_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	type_label.clip_text = true
+	type_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(type_label)
 
-	var title: Label = _label(String(card.get("name", "")), 17)
+	var title: Label = _label(String(card.get("name", "")), &"UnitName", true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.max_lines_visible = 2
 	column.add_child(title)
 
-	var text: Label = _label(String(card.get("text", "")), 15)
+	# The rules line takes what is left and trims; the full text is in the inspector (p09).
+	var text: Label = _label(String(card.get("text", "")), &"HudSubtle", false)
+	text.add_theme_color_override(&"font_color", Color("#D8DEE3"))
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.clip_text = true
 	text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text.custom_minimum_size = Vector2(0, 20)
 	column.add_child(text)
 
 	if card.has("fp"):
-		var stats: Label = _label("FP %d   AR %d" % [card.get("fp", 0), card.get("armor", 0)], 18)
+		var stats: HBoxContainer = HBoxContainer.new()
+		stats.add_theme_constant_override(&"separation", 3)
+		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		column.add_child(stats)
+		for pair: Array in [["FP", card.get("fp", 0)], ["AR", card.get("armor", 0)]]:
+			var caption: Label = _label(pair[0], &"HudSubtle", false)
+			caption.size_flags_vertical = Control.SIZE_SHRINK_END
+			stats.add_child(caption)
+			var value: Label = _label(str(pair[1]), &"HudNumber", true)
+			value.add_to_group(&"key_number")
+			stats.add_child(value)
+			if pair[0] == "FP":
+				var gap: Control = Control.new()
+				gap.custom_minimum_size = Vector2(6, 0)
+				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				stats.add_child(gap)
 	return panel
 
 
-func _label(text: String, size: int) -> Label:
+func _label(text: String, variation: StringName, important: bool) -> Label:
 	var label: Label = Label.new()
 	label.text = text
-	label.add_theme_font_size_override(&"font_size", size)
+	label.theme_type_variation = variation
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if important:
+		label.set_meta(&"important", true)
 	return label

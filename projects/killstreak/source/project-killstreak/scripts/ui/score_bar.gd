@@ -11,6 +11,11 @@ extends PanelContainer
 @onready var _mode: Label = %ModeLabel
 
 
+## Labels whose whole text must stay visible.
+func get_important_labels() -> Array[Label]:
+	return [_player, _enemy, _round]
+
+
 func set_score(snapshot: Dictionary) -> void:
 	_player.text = str(snapshot.get("score_player", 0))
 	_enemy.text = str(snapshot.get("score_enemy", 0))

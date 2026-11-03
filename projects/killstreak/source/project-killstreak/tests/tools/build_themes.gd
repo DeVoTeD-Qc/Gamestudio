@@ -1,7 +1,10 @@
 # Generates assets/ui/hud_theme.tres and assets/ui/card_theme.tres (p13). Run:
 #   godot --headless --path . -s res://tests/tools/build_themes.gd
 # Edit the palette/sizes here, re-run, and commit the regenerated .tres files.
-# Author: Technical Artist Agent (p13)
+# Author: Technical Artist Agent (p13); match-screen styles and bundled fonts: UI/UX Agent (f01)
+# hud_theme.tres is the project theme (project.godot gui/theme/custom). Text sizes are logical px;
+# on the smallest supported screen one logical px is ~0.72 pt (scripts/ui/screen_profile.gd), so
+# body text is >= 16 px (11.5 pt) and key numbers >= 20 px (14.4 pt).
 extends SceneTree
 
 const SLATE := Color("#12161A")
@@ -27,19 +30,31 @@ func _initialize() -> void:
 	quit()
 
 
-## Built-in default font only (no downloads). Weight/width come from FontVariation.
+## Bundled OFL fonts from the art direction (assets/fonts/, licences next to them). Every
+## FontVariation gets an explicit base_font: a variation without one resolves its base from
+## whatever theme is global at the time (engine default in the editor, this theme itself once it
+## is the project theme), so its line height and glyphs changed between editor, tests and builds.
+## Body uses Barlow Medium instead of Regular: thin strokes break up at 11-12 pt on a phone.
+const FONT_BODY: String = "res://assets/fonts/Barlow-Medium.ttf"
+const FONT_HEADING: String = "res://assets/fonts/BarlowCondensed-SemiBold.ttf"
+const FONT_NUMERIC: String = "res://assets/fonts/ShareTechMono-Regular.ttf"
+
+
 func _fonts() -> Dictionary:
+	var body_file: Font = load(FONT_BODY)
 	var body := FontVariation.new()
 	body.resource_name = "body"
+	body.base_font = body_file
 	var heading := FontVariation.new()
 	heading.resource_name = "heading_condensed"
-	heading.variation_embolden = 0.7
-	heading.variation_transform = Transform2D(Vector2(0.88, 0), Vector2(0, 1), Vector2.ZERO)
+	heading.base_font = load(FONT_HEADING)
+	heading.fallbacks = [body_file]
 	heading.spacing_glyph = 1
 	var numeric := FontVariation.new()
-	numeric.resource_name = "numeric_bold"
-	numeric.variation_embolden = 0.9
-	numeric.opentype_features = {TextServerManager.get_primary_interface().name_to_tag("tnum"): 1}
+	numeric.resource_name = "numeric"
+	numeric.base_font = load(FONT_NUMERIC)
+	numeric.fallbacks = [body_file]  # Share Tech Mono lacks some symbols (·, −).
+	numeric.variation_embolden = 0.3
 	return {"body": body, "heading": heading, "numeric": numeric}
 
 
@@ -168,18 +183,18 @@ func _hud_theme(f: Dictionary) -> Theme:
 	t.set_color("font_disabled_color", "ReadyButton", FOG_DIM)
 	# Labels by role.
 	_label_var(t, "HudHeader", f["heading"], 20, FOG)
-	_label_var(t, "HudSubtle", f["body"], 14, FOG_DIM)
+	_label_var(t, "HudSubtle", f["body"], 16, FOG_DIM)
 	_label_var(t, "HudNumber", f["numeric"], 22, FOG)
 	_label_var(t, "HudAccent", f["heading"], 18, AMBER)
-	_label_var(t, "RangeBadge", f["heading"], 14, FOG)
-	_label_var(t, "KillfeedFriend", f["numeric"], 15, TEAL, 4)
-	_label_var(t, "KillfeedEnemy", f["numeric"], 15, RED, 4)
+	_label_var(t, "RangeBadge", f["heading"], 16, FOG)
+	_label_var(t, "KillfeedFriend", f["numeric"], 16, TEAL, 4)
+	_label_var(t, "KillfeedEnemy", f["numeric"], 16, RED, 4)
 	_label_var(t, "XpPopup", f["heading"], 22, AMBER, 6)
 	_label_var(t, "StreakLabel", f["numeric"], 20, CYAN, 4)
 	# Tooltips (keyword tooltips on long-press).
 	t.set_stylebox("panel", "TooltipPanel", _box(Color(SLATE, 0.96), AMBER, 1, 4, true, Vector4(10, 6, 10, 6)))
 	t.set_color("font_color", "TooltipLabel", FOG)
-	t.set_font_size("font_size", "TooltipLabel", 15)
+	t.set_font_size("font_size", "TooltipLabel", 16)
 	# Bars and sliders (supply pips, settings).
 	t.set_stylebox("background", "ProgressBar", _box(SLATE, Color("#3A444D"), 1, 3, true, Vector4.ZERO))
 	t.set_stylebox("fill", "ProgressBar", _box(AMBER, Color.TRANSPARENT, 0, 3, true, Vector4.ZERO))
@@ -189,4 +204,85 @@ func _hud_theme(f: Dictionary) -> Theme:
 	t.set_stylebox("grabber_area_highlight", "HSlider", _box(Color("#FFC24D"), Color.TRANSPARENT, 0, 3, false, Vector4(0, 3, 0, 3)))
 	t.set_stylebox("separator", "HSeparator", _box(Color("#3A444D"), Color.TRANSPARENT, 0, 0, false, Vector4(0, 1, 0, 1)))
 	t.set_constant("separation", "HSeparator", 8)
+	_match_styles(t, f)
 	return t
+
+
+## Styles for the match screen (scenes/Match.tscn and scenes/match/*, p08). The scenes only set
+## theme_type_variation; tests/test_board_layout.gd checks every name used there exists here.
+func _match_styles(t: Theme, f: Dictionary) -> void:
+	var edge := Color("#3A444D")
+	_panel_var(t, "LanePanel", _box(Color("#191F25"), edge, 1, 6, true, Vector4(4, 4, 4, 4)))
+	_panel_var(t, "LaneRowFriendly", _box(Color(TEAL, 0.06), Color.TRANSPARENT, 0, 4, false, Vector4(3, 3, 3, 3)))
+	_panel_var(t, "LaneRowEnemy", _box(Color(RED, 0.06), Color.TRANSPARENT, 0, 4, false, Vector4(3, 3, 3, 3)))
+	# Zone headers are compact; the zone state colours/borders come from Zone* above.
+	for zone: String in ["ZoneFriend", "ZoneEnemy", "ZoneContested", "ZoneNeutral"]:
+		var sb: StyleBoxFlat = (t.get_stylebox("panel", zone) as StyleBoxFlat).duplicate()
+		sb.content_margin_top = 3
+		sb.content_margin_bottom = 3
+		t.set_stylebox("panel", zone, sb)
+	# Unit tokens. Friend: chamfered top corners + teal edge. Operator: brass, double weight.
+	# Enemy: square corners with a heavy top edge (hazard-stripe stand-in). Shape, not colour only.
+	var m := Vector4(4, 3, 4, 3)
+	var friendly := _box(Color("#1D2B2E"), TEAL, 2, 0, false, m)
+	friendly.corner_radius_top_left = 10
+	friendly.corner_radius_top_right = 10
+	friendly.corner_detail = 1
+	_panel_var(t, "SlotFriendly", friendly)
+	var operator: StyleBoxFlat = friendly.duplicate()
+	operator.bg_color = Color("#2A2A22")
+	operator.border_color = BRASS
+	operator.border_width_top = 4
+	operator.border_width_bottom = 4
+	_panel_var(t, "SlotOperator", operator)
+	var enemy := _box(Color("#2D1D20"), RED, 2, 0, false, m)
+	enemy.border_width_top = 6
+	_panel_var(t, "SlotEnemy", enemy)
+	_panel_var(t, "SlotEmpty", _box(Color(SLATE, 0.6), Color("#2C343B"), 1, 4, false, m))
+	_panel_var(t, "SlotIncoming", _box(Color(RED, 0.08), Color(RED, 0.6), 1, 4, false, m))
+	# Hand card chips (the full CardView is for the inspector, see README "Phone readability").
+	_panel_var(t, "HandCard", _box(Color("#2A323A"), Color("#59636C"), 2, 6, true, Vector4(6, 4, 6, 4)))
+	_panel_var(t, "CostBadge", _box(AMBER, Color.TRANSPARENT, 0, 3, true, Vector4(5, 0, 5, 0)))
+	_panel_var(t, "MinimapCell", _box(SLATE, edge, 1, 4, true, Vector4(6, 2, 6, 3)))
+	# Small shapes (Panel variations).
+	_shape_var(t, "RedDot", _box(RED, RED.lightened(0.3), 2, 10, false, Vector4.ZERO))
+	_shape_var(t, "SupplyPip", _box(FOG, Color.TRANSPARENT, 0, 2, true, Vector4.ZERO))
+	_shape_var(t, "SupplyPipSpent", _box(Color.TRANSPARENT, FOG_DIM, 2, 2, true, Vector4.ZERO))
+	_shape_var(t, "StreakSegment", _box(Color("#2E363E"), Color.TRANSPARENT, 0, 2, false, Vector4.ZERO))
+	_shape_var(t, "StreakSegmentLit", _box(CYAN, Color.TRANSPARENT, 0, 2, false, Vector4.ZERO))
+	_shape_var(t, "PerkSlot", _box(Color.TRANSPARENT, FOG_DIM, 2, 13, false, Vector4.ZERO))
+	# Buttons: HudButton = small amber-edged button; KillstreakButton = cyan (special).
+	_button_var(t, "HudButton", GUNMETAL, AMBER, FOG, f)
+	_button_var(t, "KillstreakButton", Color("#152A35"), CYAN, CYAN, f)
+	# Labels.
+	_label_var(t, "HudBig", f["numeric"], 34, FOG)
+	_label_var(t, "FriendlyLabel", f["heading"], 20, TEAL)
+	_label_var(t, "EnemyLabel", f["heading"], 20, RED)
+	_label_var(t, "UnitName", f["heading"], 17, FOG)
+	t.set_stylebox("normal", "RangeBadge", _box(Color("#4F555B"), CONCRETE, 1, 3, true, Vector4(5, 0, 5, 0)))
+
+
+func _panel_var(t: Theme, name: String, sb: StyleBox) -> void:
+	t.set_type_variation(name, "PanelContainer")
+	t.set_stylebox("panel", name, sb)
+
+
+func _shape_var(t: Theme, name: String, sb: StyleBox) -> void:
+	t.set_type_variation(name, "Panel")
+	t.set_stylebox("panel", name, sb)
+
+
+func _button_var(t: Theme, name: String, bg: Color, edge: Color, fg: Color, f: Dictionary) -> void:
+	var m := Vector4(6, 4, 6, 4)
+	t.set_type_variation(name, "Button")
+	t.set_stylebox("normal", name, _box(bg, edge, 2, 6, true, m))
+	t.set_stylebox("hover", name, _box(bg.lightened(0.08), edge, 2, 6, true, m))
+	t.set_stylebox("pressed", name, _box(bg.darkened(0.25), edge, 2, 6, true, m))
+	t.set_stylebox("hover_pressed", name, _box(bg.darkened(0.25), edge, 2, 6, true, m))
+	# Locked killstreaks still carry info ("AT 3"), so disabled text stays readable.
+	t.set_stylebox("disabled", name, _box(Color(bg, 0.5), Color(edge, 0.35), 2, 6, true, m))
+	t.set_font("font", name, f["heading"])
+	t.set_font_size("font_size", name, 18)
+	for c: String in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		t.set_color(c, name, fg)
+	t.set_color("font_disabled_color", name, Color(fg, 0.75))

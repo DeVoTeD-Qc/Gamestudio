@@ -11,6 +11,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Info" type="VBoxContainer" parent="Row"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 theme_override_constants/separation = 2
@@ -28,31 +29,33 @@ theme_type_variation = &"HudHeader"
 text = "OPERATOR"
 clip_text = true
 
-[node name="StatsLabel" type="Label" parent="Row/Info"]
+[node name="StatsLabel" type="Label" parent="Row/Info" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "FP 0   AR 0/0"
+theme_type_variation = &"HudNumber"
+text = "FP 0  AR 0/0"
 
 [node name="StreakRow" type="HBoxContainer" parent="Row/Info"]
 layout_mode = 2
+theme_override_constants/separation = 6
 
 [node name="StreakCaption" type="Label" parent="Row/Info/StreakRow"]
 layout_mode = 2
-size_flags_horizontal = 3
 theme_type_variation = &"HudSubtle"
 text = "STREAK"
 
-[node name="StreakValue" type="Label" parent="Row/Info/StreakRow"]
+[node name="StreakValue" type="Label" parent="Row/Info/StreakRow" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"StreakLabel"
 text = "0"
 
-[node name="StreakSegments" type="HBoxContainer" parent="Row/Info"]
+[node name="StreakSegments" type="HBoxContainer" parent="Row/Info/StreakRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 18)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_constants/separation = 3
 
 [node name="PerkRow" type="HBoxContainer" parent="Row/Info"]

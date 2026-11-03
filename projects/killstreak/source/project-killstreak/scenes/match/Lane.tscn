@@ -10,6 +10,7 @@ theme_type_variation = &"LanePanel"
 script = ExtResource("1_lane")
 
 [node name="Column" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
 
@@ -27,7 +28,6 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"HudHeader"
-theme_override_font_sizes/font_size = 20
 text = "ZONE"
 clip_text = true
 text_overrun_behavior = 3
@@ -53,7 +53,7 @@ theme_type_variation = &"LaneRowEnemy"
 
 [node name="Slots" type="HBoxContainer" parent="Column/EnemyRow"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Slot1" parent="Column/EnemyRow/Slots" instance=ExtResource("2_slot")]
 layout_mode = 2
@@ -75,7 +75,7 @@ theme_type_variation = &"LaneRowFriendly"
 
 [node name="Slots" type="HBoxContainer" parent="Column/FriendlyRow"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Slot1" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
 layout_mode = 2

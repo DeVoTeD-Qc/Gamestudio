@@ -1,11 +1,12 @@
 # operator_panel.gd
 # Purpose: Operator panel (bottom-left): Operator name, zone, Firepower/Armor,
-#   a segmented streak meter (placeholder for the StreakArc of p14; taller
+#   a segmented streak meter next to the streak number (placeholder for the StreakArc of p14; taller
 #   segments mark killstreak thresholds), 3 Perk slots, and two rows of tap buttons:
 #   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
 #   threshold printed on the button so nothing is hover-only).
 #   Buttons only emit signals; what they do arrives with p05/p09.
-# Dependencies: hud_placeholder_style.gd variation names.
+#   Compact (phone) profile: narrower info column and 72x64 buttons.
+# Dependencies: hud_theme.tres variations (HudButton, KillstreakButton, StreakSegment...).
 # Author: UI/UX Agent
 extends PanelContainer
 
@@ -13,7 +14,12 @@ signal ability_pressed(ability_id: StringName)
 signal killstreak_pressed(killstreak_id: StringName)
 
 const BUTTON_SIZE: Vector2 = Vector2(76, 72)
+const BUTTON_SIZE_COMPACT: Vector2 = Vector2(72, 64)
+const INFO_WIDTH: float = 170.0
+const INFO_WIDTH_COMPACT: float = 150.0
 const PERK_SIZE: float = 26.0
+
+var compact: bool = false
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _name: Label = %NameLabel
@@ -22,13 +28,26 @@ const PERK_SIZE: float = 26.0
 @onready var _segments: HBoxContainer = %StreakSegments
 @onready var _perk_row: HBoxContainer = %PerkRow
 @onready var _buttons: GridContainer = %Buttons
+@onready var _info: VBoxContainer = %Info
+
+
+func set_compact(value: bool) -> void:
+	compact = value
+	_info.custom_minimum_size.x = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
+	for b: Node in _buttons.get_children():
+		(b as Control).custom_minimum_size = _button_size()
+
+
+## Labels whose whole text must stay visible.
+func get_important_labels() -> Array[Label]:
+	return [_caption, _name, _stats, _streak_value]
 
 
 func set_operator(snapshot: Dictionary) -> void:
 	var op: Dictionary = snapshot.get("operator", {})
 	_caption.text = "OPERATOR · %s" % op.get("zone", "OFF BOARD")
 	_name.text = String(op.get("name", ""))
-	_stats.text = "FP %d   AR %d/%d" % [op.get("fp", 0), op.get("armor", 0), op.get("armor_max", 0)]
+	_stats.text = "FP %d  AR %d/%d" % [op.get("fp", 0), op.get("armor", 0), op.get("armor_max", 0)]
 	var streak: int = snapshot.get("streak", 0)
 	_streak_value.text = str(streak)
 	var thresholds: Array[int] = []
@@ -89,11 +108,14 @@ func _make_button(text: String, variation: StringName) -> Button:
 	var b: Button = Button.new()
 	b.text = text
 	b.theme_type_variation = variation
-	b.custom_minimum_size = BUTTON_SIZE
-	b.add_theme_font_size_override(&"font_size", 17)
+	b.custom_minimum_size = _button_size()
 	b.add_to_group(&"tap_target")
 	b.focus_mode = Control.FOCUS_ALL
 	return b
+
+
+func _button_size() -> Vector2:
+	return BUTTON_SIZE_COMPACT if compact else BUTTON_SIZE
 
 
 func _clear(node: Node) -> void:

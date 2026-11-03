@@ -24,6 +24,7 @@ const HEADER_VARIATION: Dictionary = {
 ## &"left", &"mid" or &"right" (EventBus convention).
 var zone_id: StringName = &""
 
+@onready var _column: VBoxContainer = %Column
 @onready var _header: PanelContainer = %Header
 @onready var _name: Label = %NameLabel
 @onready var _range: Label = %RangeLabel
@@ -42,6 +43,21 @@ func set_lane(lane: Dictionary) -> void:
 	_header.theme_type_variation = HEADER_VARIATION.get(control, &"ZoneNeutral")
 	_fill_line(_enemy_slots, lane.get("enemy", []), &"enemy", int(lane.get("incoming", 0)))
 	_fill_line(_friendly_slots, lane.get("friendly", []), &"player", 0)
+
+
+## Phone layout: tighter spacing, compact slots (see screen_profile.gd).
+func set_compact(compact: bool) -> void:
+	_column.add_theme_constant_override(&"separation", 2 if compact else 4)
+	for slot: Node in get_enemy_slots() + get_friendly_slots():
+		slot.set_compact(compact)
+
+
+## Labels whose whole text must stay visible (zone name, range, control, unit names and stats).
+func get_important_labels() -> Array[Label]:
+	var out: Array[Label] = [_name, _range, _control]
+	for slot: Node in get_enemy_slots() + get_friendly_slots():
+		out.append_array(slot.get_important_labels())
+	return out
 
 
 func get_enemy_slots() -> Array[Node]:

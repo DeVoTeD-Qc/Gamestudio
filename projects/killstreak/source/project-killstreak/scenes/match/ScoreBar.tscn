@@ -16,7 +16,7 @@ layout_mode = 2
 theme_type_variation = &"FriendlyLabel"
 text = "YOU"
 
-[node name="PlayerScore" type="Label" parent="Row"]
+[node name="PlayerScore" type="Label" parent="Row" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudBig"
@@ -27,7 +27,7 @@ layout_mode = 2
 theme_type_variation = &"HudSubtle"
 text = "-"
 
-[node name="EnemyScore" type="Label" parent="Row"]
+[node name="EnemyScore" type="Label" parent="Row" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudBig"
@@ -48,7 +48,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_constants/separation = 0
 
-[node name="RoundLabel" type="Label" parent="Row/Info"]
+[node name="RoundLabel" type="Label" parent="Row/Info" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudHeader"
@@ -59,7 +59,6 @@ clip_text = true
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudSubtle"
-theme_override_font_sizes/font_size = 15
 text = "MODE"
 clip_text = true
 text_overrun_behavior = 3
