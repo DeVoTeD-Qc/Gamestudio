@@ -1,0 +1,3862 @@
+{
+ "fps": 30,
+ "width": 1920,
+ "height": 1080,
+ "duration": 189.981,
+ "scenes": [
+  {
+   "id": "title",
+   "start": 0.0,
+   "end": 4.5,
+   "view": "title",
+   "title": null,
+   "captions": []
+  },
+  {
+   "id": "prompt",
+   "start": 4.5,
+   "end": 13.5,
+   "view": "terminal",
+   "title": null,
+   "captions": [
+    {
+     "t": 4.8,
+     "until": 13.5,
+     "text": "It starts with a plain request to one Claude Code session. No game code, no art."
+    }
+   ]
+  },
+  {
+   "id": "design",
+   "start": 13.5,
+   "end": 23.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 13.7,
+     "until": 23.5,
+     "text": "The Master Orchestrator splits the design phase into 7 tasks for specialist subagents."
+    }
+   ]
+  },
+  {
+   "id": "review",
+   "start": 23.5,
+   "end": 39.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 23.5,
+     "until": 31.3,
+     "text": "Design deliverables wait for the studio head, who reviews them on the Studio Floor page."
+    },
+    {
+     "t": 31.3,
+     "until": 39.5,
+     "text": "10 open design questions, answered with quick picks. Title note: \u201cDeckstreak\u201d."
+    }
+   ]
+  },
+  {
+   "id": "plan",
+   "start": 39.5,
+   "end": 50.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 39.5,
+     "until": 46.9,
+     "text": "The Producer turns the design into a 20-task prototype plan, with dependencies."
+    },
+    {
+     "t": 46.9,
+     "until": 50.5,
+     "text": "It needs 5 more answers first. The head picks a shorter, 5-match run."
+    }
+   ]
+  },
+  {
+   "id": "gate",
+   "start": 50.5,
+   "end": 59.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 50.5,
+     "until": 55.1,
+     "text": "A safety check blocked downloading Godot. The agents stopped and asked instead of working around it."
+    },
+    {
+     "t": 55.1,
+     "until": 59.5,
+     "text": "Then one word, \u201cgo\u201d: from here the lead dispatches every Ready task automatically."
+    }
+   ]
+  },
+  {
+   "id": "parallel",
+   "start": 59.5,
+   "end": 86.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 59.5,
+     "until": 68.5,
+     "text": "Ready tasks start in parallel, each with its own subagent. Replayed from the real commit log."
+    },
+    {
+     "t": 68.5,
+     "until": 77.5,
+     "text": "Finished work is checked, committed and moved to Review. Dependent tasks flip to Ready."
+    },
+    {
+     "t": 77.5,
+     "until": 86.5,
+     "text": "The test suite grows with every task: 8 tests after p01, 287 when a whole run is playable."
+    }
+   ]
+  },
+  {
+   "id": "created",
+   "start": 86.5,
+   "end": 99.5,
+   "view": "spotlight",
+   "title": null,
+   "captions": [
+    {
+     "t": 86.5,
+     "until": 99.5,
+     "text": "Work no plan foresaw: what agents found during their tasks became new board tasks."
+    }
+   ]
+  },
+  {
+   "id": "qa",
+   "start": 99.5,
+   "end": 109.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 99.5,
+     "until": 103.1,
+     "text": "QA and balance start in parallel..."
+    },
+    {
+     "t": 103.1,
+     "until": 105.7,
+     "text": "...and the account hits its 5-hour usage limit. Work is saved; the agents resume after the reset."
+    },
+    {
+     "t": 105.7,
+     "until": 109.5,
+     "text": "QA: 0 critical, 0 major bugs. Balance: a 150-match AI soak, and one change that needs the head\u2019s sign-off."
+    }
+   ]
+  },
+  {
+   "id": "feedback",
+   "start": 109.5,
+   "end": 128.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 109.5,
+     "until": 118.1,
+     "text": "The head plays it and asks for better looks. The Sr Game Artist runs a visual polish pass."
+    },
+    {
+     "t": 118.1,
+     "until": 123.1,
+     "text": "A bug report from play: \u201cfirst strike doesn\u2019t work\u201d. The Mechanics Developer reproduces it..."
+    },
+    {
+     "t": 123.1,
+     "until": 128.5,
+     "text": "...the rules were right; the replay was misleading. It now labels FIRST SHOT and MAIN steps."
+    }
+   ]
+  },
+  {
+   "id": "stats",
+   "start": 128.5,
+   "end": 135.5,
+   "view": "stats",
+   "title": null,
+   "captions": [
+    {
+     "t": 128.5,
+     "until": 135.5,
+     "text": "About 11.5 hours end to end. Several of them were spent paused at the usage limit."
+    }
+   ]
+  },
+  {
+   "id": "game",
+   "start": 135.5,
+   "end": 184.481,
+   "view": "game",
+   "title": null,
+   "captions": [
+    {
+     "t": 135.5,
+     "until": 137.466,
+     "text": "The real web build of Killstreak, running in Chromium"
+    },
+    {
+     "t": 137.466,
+     "until": 140.21200000000002,
+     "text": "Playtest consent, three quick survey questions, then the Title"
+    },
+    {
+     "t": 140.212,
+     "until": 143.706,
+     "text": "New run: three killstreaks picked, the run map, DEPLOY"
+    },
+    {
+     "t": 143.706,
+     "until": 148.75099999999998,
+     "text": "Round 1: keep the hand, tap the Operator and a zone, deploy a unit"
+    },
+    {
+     "t": 148.751,
+     "until": 153.613,
+     "text": "Simultaneous reveal. FIRST SHOT resolves before MAIN; eliminated units are stamped"
+    },
+    {
+     "t": 153.613,
+     "until": 157.413,
+     "text": "Long-press any card to read its full rules"
+    },
+    {
+     "t": 157.413,
+     "until": 159.81300000000002,
+     "text": "Frag Grenade: tap a zone near your Operator to throw it"
+    },
+    {
+     "t": 159.813,
+     "until": 165.68099999999998,
+     "text": "Streak 2 earned: call in the Recon Drone, throw a Frag, deploy"
+    },
+    {
+     "t": 165.68099999999998,
+     "until": 169.481,
+     "text": "Killstreak call-in: the full-screen takeover"
+    },
+    {
+     "t": 169.481,
+     "until": 173.081,
+     "text": "The Frag lands, FIRST SHOT fires before MAIN, an enemy is ELIMINATED"
+    },
+    {
+     "t": 173.081,
+     "until": 177.081,
+     "text": "Enemy First Shot units fire back: OPERATOR DOWN, and the killfeed logs it"
+    },
+    {
+     "t": 177.081,
+     "until": 180.68099999999998,
+     "text": "The streak reached 3 (Mortar ready), but the Operator went down: STREAK LOST"
+    },
+    {
+     "t": 180.68099999999998,
+     "until": 184.481,
+     "text": "Match result. The enemy squad won this one, 7 to 4"
+    }
+   ]
+  },
+  {
+   "id": "end",
+   "start": 184.481,
+   "end": 189.981,
+   "view": "end",
+   "title": null,
+   "captions": []
+  }
+ ],
+ "events": [
+  {
+   "who": "you",
+   "text": "Setup this AI game studio on my own repo and set it to Godot as the target engine.",
+   "t": 4.9,
+   "k": "term"
+  },
+  {
+   "who": "claude",
+   "text": "Imported gamestudio-subagents, locked it to Godot 4.4.1, registered 12 subagents, pushed to GitHub.",
+   "t": 7.1,
+   "k": "term"
+  },
+  {
+   "who": "you",
+   "text": "Start a new game project with the orchestrator.",
+   "t": 8.5,
+   "k": "term"
+  },
+  {
+   "who": "you",
+   "text": "Concept: a card game with a shooter vibe. Simple for shooter players, deep for card players. Web first, design first.",
+   "note": "paraphrased",
+   "t": 9.5,
+   "k": "term"
+  },
+  {
+   "text": "The studio kept every franchise name out: an original near-future setting (Port Vasel, HALBERD vs BLACK MERIDIAN).",
+   "t": 11.1,
+   "k": "termnote"
+  },
+  {
+   "who": "claude",
+   "text": "Master Orchestrator created the Killstreak project (web, design mode).",
+   "t": 11.7,
+   "k": "term"
+  },
+  {
+   "phase": "design",
+   "t": 13.5,
+   "k": "phase"
+  },
+  {
+   "name": "Killstreak",
+   "sub": "Design \u00b7 Web \u00b7 Godot 4.4.1",
+   "t": 13.5,
+   "k": "project"
+  },
+  {
+   "id": "master-orchestrator",
+   "status": "working",
+   "task": "t7",
+   "text": "Setting up Killstreak and planning the design phase",
+   "pct": null,
+   "t": 13.8,
+   "k": "agent"
+  },
+  {
+   "task": {
+    "id": "t8",
+    "title": "Market analysis and go/no-go",
+    "agent": "market-analyst",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 14.3,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t9",
+    "title": "Vision, pillars and format decision",
+    "agent": "sr-game-designer",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 14.65,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t10",
+    "title": "Core rules + 20 starter cards",
+    "agent": "mid-game-designer",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 15.0,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t11",
+    "title": "Art direction and card layout",
+    "agent": "sr-game-artist",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 15.35,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t12",
+    "title": "Playtest metrics plan",
+    "agent": "data-scientist",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 15.7,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t13",
+    "title": "Scope review and prototype estimate",
+    "agent": "producer-agent",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 16.05,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "t14",
+    "title": "DESIGN_REVIEW.md big-picture summary",
+    "agent": "master-orchestrator",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design phase",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 16.4,
+   "k": "add"
+  },
+  {
+   "id": "t8",
+   "status": "doing",
+   "t": 16.9,
+   "k": "status"
+  },
+  {
+   "id": "market-analyst",
+   "status": "working",
+   "task": "t8",
+   "text": null,
+   "pct": null,
+   "t": 16.9,
+   "k": "agent"
+  },
+  {
+   "id": "t9",
+   "status": "doing",
+   "t": 17.65,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "working",
+   "task": "t9",
+   "text": null,
+   "pct": null,
+   "t": 17.65,
+   "k": "agent"
+  },
+  {
+   "id": "t8",
+   "status": "review",
+   "t": 18.3,
+   "k": "status"
+  },
+  {
+   "id": "market-analyst",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 18.3,
+   "k": "agent"
+  },
+  {
+   "id": "t10",
+   "status": "doing",
+   "t": 18.4,
+   "k": "status"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "t10",
+   "text": null,
+   "pct": null,
+   "t": 18.4,
+   "k": "agent"
+  },
+  {
+   "id": "t9",
+   "status": "review",
+   "t": 19.05,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 19.05,
+   "k": "agent"
+  },
+  {
+   "id": "t11",
+   "status": "doing",
+   "t": 19.15,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "t11",
+   "text": null,
+   "pct": null,
+   "t": 19.15,
+   "k": "agent"
+  },
+  {
+   "id": "t10",
+   "status": "review",
+   "t": 19.8,
+   "k": "status"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 19.8,
+   "k": "agent"
+  },
+  {
+   "id": "t12",
+   "status": "doing",
+   "t": 19.9,
+   "k": "status"
+  },
+  {
+   "id": "data-scientist",
+   "status": "working",
+   "task": "t12",
+   "text": null,
+   "pct": null,
+   "t": 19.9,
+   "k": "agent"
+  },
+  {
+   "id": "t11",
+   "status": "review",
+   "t": 20.55,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 20.55,
+   "k": "agent"
+  },
+  {
+   "id": "t13",
+   "status": "doing",
+   "t": 20.65,
+   "k": "status"
+  },
+  {
+   "id": "producer-agent",
+   "status": "working",
+   "task": "t13",
+   "text": null,
+   "pct": null,
+   "t": 20.65,
+   "k": "agent"
+  },
+  {
+   "id": "t12",
+   "status": "review",
+   "t": 21.3,
+   "k": "status"
+  },
+  {
+   "id": "data-scientist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 21.3,
+   "k": "agent"
+  },
+  {
+   "id": "t14",
+   "status": "doing",
+   "t": 21.4,
+   "k": "status"
+  },
+  {
+   "id": "t13",
+   "status": "review",
+   "t": 22.05,
+   "k": "status"
+  },
+  {
+   "id": "producer-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 22.05,
+   "k": "agent"
+  },
+  {
+   "id": "t14",
+   "status": "review",
+   "t": 22.8,
+   "k": "status"
+  },
+  {
+   "hash": "0d895d6",
+   "subject": "Killstreak: complete design phase docs",
+   "t": 22.8,
+   "k": "commit"
+  },
+  {
+   "id": "master-orchestrator",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 22.9,
+   "k": "agent"
+  },
+  {
+   "task": {
+    "id": "t15",
+    "title": "Answer the 10 open design questions and approve",
+    "agent": "you",
+    "createdBy": "master-orchestrator",
+    "createdFrom": "design review",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 23.6,
+   "k": "add"
+  },
+  {
+   "sel": "#needsBtn",
+   "t": 23.7,
+   "k": "pulse"
+  },
+  {
+   "sel": "[data-card=\"t14\"]",
+   "t": 24.4,
+   "k": "tap"
+  },
+  {
+   "kind": "doc",
+   "task": "t14",
+   "doc": "design-review",
+   "t": 24.7,
+   "k": "drawer"
+  },
+  {
+   "id": "t8",
+   "status": "done",
+   "review": "approved",
+   "t": 25.1,
+   "k": "status"
+  },
+  {
+   "id": "t9",
+   "status": "done",
+   "review": "approved",
+   "t": 25.5,
+   "k": "status"
+  },
+  {
+   "id": "t10",
+   "status": "done",
+   "review": "approved",
+   "t": 25.9,
+   "k": "status"
+  },
+  {
+   "id": "t11",
+   "status": "done",
+   "review": "approved",
+   "t": 26.3,
+   "k": "status"
+  },
+  {
+   "id": "t12",
+   "status": "done",
+   "review": "approved",
+   "t": 26.7,
+   "k": "status"
+  },
+  {
+   "sel": "#drawer .doc",
+   "to": 380,
+   "dur": 1.6,
+   "t": 27.1,
+   "k": "scroll"
+  },
+  {
+   "id": "t13",
+   "status": "done",
+   "review": "approved",
+   "t": 27.1,
+   "k": "status"
+  },
+  {
+   "sel": "#approveBtn",
+   "t": 29.1,
+   "k": "tap"
+  },
+  {
+   "id": "t14",
+   "status": "done",
+   "review": "approved",
+   "t": 29.3,
+   "k": "status"
+  },
+  {
+   "text": "Approved: 7 of 7 design deliverables",
+   "t": 29.3,
+   "k": "toast"
+  },
+  {
+   "kind": null,
+   "t": 29.9,
+   "k": "drawer"
+  },
+  {
+   "sel": "[data-card=\"t15\"]",
+   "t": 30.5,
+   "k": "tap"
+  },
+  {
+   "kind": "questions",
+   "task": "t15",
+   "t": 30.8,
+   "k": "drawer"
+  },
+  {
+   "i": 0,
+   "t": 31.2,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q1|0\"]",
+   "t": 31.5,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q1",
+   "choice": "Roguelite-first hybrid (recommended)",
+   "t": 31.62,
+   "k": "answer"
+  },
+  {
+   "i": 1,
+   "t": 31.88,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q2|0\"]",
+   "t": 32.18,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q2",
+   "choice": "Only when the Operator goes down (recommended)",
+   "t": 32.3,
+   "k": "answer"
+  },
+  {
+   "i": 2,
+   "t": 32.56,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q3|0\"]",
+   "t": 32.86,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q3",
+   "choice": "Simultaneous reveal, 3 lanes (recommended)",
+   "t": 32.98,
+   "k": "answer"
+  },
+  {
+   "i": 3,
+   "t": 33.24,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q4|0\"]",
+   "t": 33.54,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q4",
+   "choice": "Near-future contractors (recommended)",
+   "t": 33.66,
+   "k": "answer"
+  },
+  {
+   "i": 4,
+   "t": 33.92,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-note=\"q5\"]",
+   "t": 34.22,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q5",
+   "note": "Deckstreak",
+   "t": 34.34,
+   "k": "answer"
+  },
+  {
+   "i": 5,
+   "t": 34.6,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q6|0\"]",
+   "t": 34.9,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q6",
+   "choice": "Zone Control + Firefight (recommended)",
+   "t": 35.02,
+   "k": "answer"
+  },
+  {
+   "i": 6,
+   "t": 35.28,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q7|0\"]",
+   "t": 35.58,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q7",
+   "choice": "30\u201345 min, 3 tickets",
+   "t": 35.7,
+   "k": "answer"
+  },
+  {
+   "i": 7,
+   "t": 35.96,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q8|0\"]",
+   "t": 36.26,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q8",
+   "choice": "Placeholder layout (recommended)",
+   "t": 36.38,
+   "k": "answer"
+  },
+  {
+   "i": 8,
+   "t": 36.64,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q9|3\"]",
+   "t": 36.94,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q9",
+   "choice": "Plan for Steam and mobile",
+   "t": 37.06,
+   "k": "answer"
+  },
+  {
+   "i": 9,
+   "t": 37.32,
+   "k": "scrollq"
+  },
+  {
+   "sel": "[data-opt=\"q10|0\"]",
+   "t": 37.62,
+   "k": "tap"
+  },
+  {
+   "task": "t15",
+   "q": "q10",
+   "choice": "Accept under 10 s with loading screen",
+   "t": 37.74,
+   "k": "answer"
+  },
+  {
+   "kind": null,
+   "t": 38.5,
+   "k": "drawer"
+  },
+  {
+   "id": "t15",
+   "status": "done",
+   "t": 38.6,
+   "k": "status"
+  },
+  {
+   "phase": "plan",
+   "t": 39.5,
+   "k": "phase"
+  },
+  {
+   "name": "Killstreak",
+   "sub": "Milestones \u00b7 Web \u00b7 Godot 4.4.1",
+   "t": 39.5,
+   "k": "project"
+  },
+  {
+   "ids": [
+    "t8",
+    "t9",
+    "t10",
+    "t11",
+    "t12",
+    "t13",
+    "t14",
+    "t15"
+   ],
+   "t": 39.5,
+   "k": "clearDone"
+  },
+  {
+   "task": {
+    "id": "t16",
+    "title": "Plan the prototype milestone",
+    "agent": "producer-agent",
+    "createdBy": "lead",
+    "createdFrom": null,
+    "depends": []
+   },
+   "status": "doing",
+   "t": 39.6,
+   "k": "add"
+  },
+  {
+   "id": "producer-agent",
+   "status": "working",
+   "task": "t16",
+   "text": "Reading the Killstreak design docs before planning the prototype milestone.",
+   "pct": 5,
+   "t": 39.8,
+   "k": "agent"
+  },
+  {
+   "id": "producer-agent",
+   "status": "working",
+   "task": "t16",
+   "text": "Docs read; recording the 10 approved decisions in the design review and related docs.",
+   "pct": 20,
+   "t": 40.7,
+   "k": "agent"
+  },
+  {
+   "id": "producer-agent",
+   "status": "working",
+   "task": "t16",
+   "text": "Decisions recorded; writing the prototype milestone plan (7 working days, 20 tasks).",
+   "pct": 40,
+   "t": 41.6,
+   "k": "agent"
+  },
+  {
+   "task": {
+    "id": "p01",
+    "title": "Set up the Godot web project",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 41.7,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p02",
+    "title": "Card and loadout data format",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p01"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 41.81,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p03",
+    "title": "Write card, loadout and squad data",
+    "agent": "mid-game-designer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p02"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 41.92,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p04",
+    "title": "Round loop and firefight rules",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p02"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.03,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p05",
+    "title": "Streaks, killstreaks and respawn",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p04"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.14,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p06",
+    "title": "Zone Control and Firefight modes",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p04"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.25,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p07",
+    "title": "Enemy AI and red-dot intel",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p05",
+     "p06",
+     "p03"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.36,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p08",
+    "title": "Board and HUD layout",
+    "agent": "ui-ux-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p01"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.47,
+   "k": "add"
+  },
+  {
+   "id": "producer-agent",
+   "status": "working",
+   "task": "t16",
+   "text": "Milestone plan written; creating the 20 board tasks and setting the project phase to Planning.",
+   "pct": 75,
+   "t": 42.5,
+   "k": "agent"
+  },
+  {
+   "task": {
+    "id": "p09",
+    "title": "Hand, card inspector and deploying",
+    "agent": "ui-ux-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p08",
+     "p04"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.58,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p10",
+    "title": "Run flow (5 matches, 3 tickets)",
+    "agent": "mechanics-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p06",
+     "p03"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.69,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p11",
+    "title": "Run and reward screens",
+    "agent": "ui-ux-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p10",
+     "p09"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.8,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p12",
+    "title": "Outcome preview overlay",
+    "agent": "ui-ux-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p04",
+     "p09"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 42.91,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p13",
+    "title": "Placeholder art kit and themes",
+    "agent": "technical-artist",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p01"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.02,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p14",
+    "title": "Combat feedback and streak effects",
+    "agent": "game-feel-developer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p05",
+     "p08",
+     "p13"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.13,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p15",
+    "title": "Tutorial match",
+    "agent": "ui-ux-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p03",
+     "p07",
+     "p09"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.24,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p16",
+    "title": "Playtest logger and surveys",
+    "agent": "data-scientist",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p01",
+     "p10"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.35,
+   "k": "add"
+  },
+  {
+   "id": "producer-agent",
+   "status": "idle",
+   "task": "t16",
+   "text": "Prototype milestone planned: decisions recorded, 7-day plan and 20 board tasks written, phase set to Planning.",
+   "pct": 100,
+   "t": 43.4,
+   "k": "agent"
+  },
+  {
+   "task": {
+    "id": "p17",
+    "title": "Loading screen and size budget",
+    "agent": "technical-artist",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p01",
+     "p13"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.46,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p18",
+    "title": "QA: rules, devices and release check",
+    "agent": "qa-agent",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p04",
+     "p05",
+     "p06",
+     "p07",
+     "p09",
+     "p10",
+     "p11",
+     "p12",
+     "p14",
+     "p15",
+     "p16",
+     "p17"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.57,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p19",
+    "title": "Balance pass",
+    "agent": "mid-game-designer",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p07",
+     "p10",
+     "p16"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.68,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "p20",
+    "title": "Internal playtest and go/no-go",
+    "agent": "data-scientist",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [
+     "p18",
+     "p19"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 43.79,
+   "k": "add"
+  },
+  {
+   "id": "t16",
+   "status": "review",
+   "t": 44.0,
+   "k": "status"
+  },
+  {
+   "task": {
+    "id": "t16q",
+    "title": "Answer 5 planning questions",
+    "agent": "you",
+    "createdBy": "producer-agent",
+    "createdFrom": "prototype plan",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 44.1,
+   "k": "add"
+  },
+  {
+   "sel": "[data-card=\"t16q\"]",
+   "t": 46.7,
+   "k": "tap"
+  },
+  {
+   "kind": "questions",
+   "task": "t16q",
+   "t": 46.9,
+   "k": "drawer"
+  },
+  {
+   "sel": "[data-opt=\"q1|1\"]",
+   "t": 47.4,
+   "k": "tap"
+  },
+  {
+   "task": "t16q",
+   "q": "q1",
+   "choice": "5 matches, 20\u201330 min",
+   "t": 47.5,
+   "k": "answer"
+  },
+  {
+   "sel": "[data-opt=\"q2|1\"]",
+   "t": 47.92,
+   "k": "tap"
+  },
+  {
+   "task": "t16q",
+   "q": "q2",
+   "choice": "I'll get a professional check",
+   "t": 48.02,
+   "k": "answer"
+  },
+  {
+   "sel": "[data-opt=\"q3|0\"]",
+   "t": 48.44,
+   "k": "tap"
+  },
+  {
+   "task": "t16q",
+   "q": "q3",
+   "choice": "Yes to both",
+   "t": 48.54,
+   "k": "answer"
+  },
+  {
+   "sel": "[data-opt=\"q4|0\"]",
+   "t": 48.96,
+   "k": "tap"
+  },
+  {
+   "task": "t16q",
+   "q": "q4",
+   "choice": "Both",
+   "t": 49.06,
+   "k": "answer"
+  },
+  {
+   "sel": "[data-opt=\"q5|0\"]",
+   "t": 49.48,
+   "k": "tap"
+  },
+  {
+   "task": "t16q",
+   "q": "q5",
+   "choice": "Approve picks and cut order",
+   "t": 49.58,
+   "k": "answer"
+  },
+  {
+   "kind": null,
+   "t": 50.2,
+   "k": "drawer"
+  },
+  {
+   "id": "t16q",
+   "status": "done",
+   "t": 50.25,
+   "k": "status"
+  },
+  {
+   "id": "t16",
+   "status": "done",
+   "review": "approved",
+   "t": 50.25,
+   "k": "status"
+  },
+  {
+   "kind": "chat",
+   "t": 50.6,
+   "k": "drawer"
+  },
+  {
+   "who": "claude",
+   "text": "I tried to start p01. It was blocked for safety, because it meant downloading the Godot 4.4.1 program from GitHub and running it here. I didn\u2019t work around that. Choose one:\nA) Allow the Godot download and run, so the agents can build and test the game for real.\nB) The agents write the project files without running Godot.",
+   "t": 50.9,
+   "k": "chat"
+  },
+  {
+   "who": "you",
+   "text": "Let\u2019s go with A",
+   "t": 53.1,
+   "k": "chat"
+  },
+  {
+   "who": "claude",
+   "text": "Going with A. Godot 4.4.1 is installed. It\u2019s the official build, checked against Godot\u2019s published checksum.",
+   "t": 54.1,
+   "k": "chat"
+  },
+  {
+   "who": "you",
+   "text": "go",
+   "t": 55.5,
+   "k": "chat"
+  },
+  {
+   "who": "claude",
+   "text": "Got it, I\u2019m dispatching automatically from now on. Each time a task finishes, I check it, commit it, and start every task that just became Ready.",
+   "t": 56.5,
+   "k": "chat"
+  },
+  {
+   "kind": null,
+   "t": 59.1,
+   "k": "drawer"
+  },
+  {
+   "phase": "prototype",
+   "t": 59.5,
+   "k": "phase"
+  },
+  {
+   "name": "Killstreak",
+   "sub": "Prototype \u00b7 Web \u00b7 Godot 4.4.1",
+   "t": 59.5,
+   "k": "project"
+  },
+  {
+   "ids": [
+    "t16",
+    "t16q"
+   ],
+   "t": 59.5,
+   "k": "clearDone"
+  },
+  {
+   "id": "p01",
+   "status": "doing",
+   "t": 59.9,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p01",
+   "text": "Reading the milestone plan and the project stub.",
+   "pct": 5,
+   "t": 59.9,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p01",
+   "text": "Project, autoloads, Boot/Title scenes and test runner done; 7 smoke tests pass. Now the Web export.",
+   "pct": 65,
+   "t": 60.226,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 60.625,
+   "k": "agent"
+  },
+  {
+   "id": "p01",
+   "status": "done",
+   "review": "approved",
+   "t": 60.625,
+   "k": "status"
+  },
+  {
+   "hash": "8c21a24",
+   "subject": "p01: Godot 4.4.1 web project setup for Killstreak",
+   "t": 60.625,
+   "k": "commit"
+  },
+  {
+   "n": 8,
+   "t": 60.625,
+   "k": "tests"
+  },
+  {
+   "id": "p02",
+   "status": "doing",
+   "t": 60.694,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p02",
+   "text": "Reading core rules and project setup to design the card and loadout data format.",
+   "pct": 5,
+   "t": 60.694,
+   "k": "agent"
+  },
+  {
+   "id": "p08",
+   "status": "doing",
+   "t": 60.694,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p08",
+   "text": "Reading the rules, art direction and phone layout plan before building the match screen.",
+   "pct": 5,
+   "t": 60.694,
+   "k": "agent"
+  },
+  {
+   "id": "p13",
+   "status": "doing",
+   "t": 60.694,
+   "k": "status"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "p13",
+   "text": "Reading art direction and card rules for the placeholder art kit.",
+   "pct": 5,
+   "t": 60.694,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p08",
+   "text": "Layout planned (top bar, three lanes, operator/hand/READY bottom bar); writing the scenes and placeholder style now.",
+   "pct": 20,
+   "t": 61.727,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p02",
+   "text": "Data classes, CardDB validation and 11 data tests pass; writing the designer README.",
+   "pct": 80,
+   "t": 61.782,
+   "k": "agent"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "p13",
+   "text": "Themes, icon sheet and CardView built; art kit tests pass. Rendering web screenshots next.",
+   "pct": 65,
+   "t": 61.948,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p08",
+   "text": "Match screen built and layout tests pass at 1280x720, 844x390 and 1024x768; exporting a web build for screenshots.",
+   "pct": 60,
+   "t": 62.759,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 63.111,
+   "k": "agent"
+  },
+  {
+   "id": "p02",
+   "status": "done",
+   "review": "approved",
+   "t": 63.111,
+   "k": "status"
+  },
+  {
+   "hash": "249ea27",
+   "subject": "p02: typed card, loadout, squad and run data with validating CardDB",
+   "t": 63.111,
+   "k": "commit"
+  },
+  {
+   "n": 30,
+   "t": 63.111,
+   "k": "tests"
+  },
+  {
+   "task": {
+    "id": "rulings",
+    "title": "Rule on 13 rules questions from p02",
+    "agent": "sr-game-designer",
+    "createdBy": "lead",
+    "createdFrom": "questions raised in p02",
+    "depends": [
+     "p02"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 63.161,
+   "k": "add"
+  },
+  {
+   "id": "rulings",
+   "status": "doing",
+   "t": 63.18,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "working",
+   "task": "rulings",
+   "text": "Reading core rules, milestone plan and design review to rule on 13 ambiguities.",
+   "pct": 10,
+   "t": 63.18,
+   "k": "agent"
+  },
+  {
+   "id": "technical-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 63.481,
+   "k": "agent"
+  },
+  {
+   "id": "p13",
+   "status": "review",
+   "review": null,
+   "t": 63.481,
+   "k": "status"
+  },
+  {
+   "hash": "43438f5",
+   "subject": "p13: placeholder art kit, HUD and card themes, CardView",
+   "t": 63.481,
+   "k": "commit"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 63.555,
+   "k": "agent"
+  },
+  {
+   "id": "rulings",
+   "status": "review",
+   "review": null,
+   "t": 63.555,
+   "k": "status"
+  },
+  {
+   "hash": "7a48d05",
+   "subject": "Killstreak: Sr Game Designer rulings on 13 rules questions from p02",
+   "t": 63.555,
+   "k": "commit"
+  },
+  {
+   "id": "p03",
+   "status": "doing",
+   "t": 63.624,
+   "k": "status"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p03",
+   "text": "Reading the data format, core rules and milestone plan.",
+   "pct": 5,
+   "t": 63.624,
+   "k": "agent"
+  },
+  {
+   "id": "p04",
+   "status": "doing",
+   "t": 63.624,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p04",
+   "text": "Reading core rules, rulings and data classes before building the rules engine.",
+   "pct": 5,
+   "t": 63.624,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p03",
+   "text": "Writing a generator that authors all cards, loadout, squads, map and run config as .tres.",
+   "pct": 30,
+   "t": 63.954,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 64.137,
+   "k": "agent"
+  },
+  {
+   "id": "p08",
+   "status": "review",
+   "review": null,
+   "t": 64.137,
+   "k": "status"
+  },
+  {
+   "hash": "1ef1a5b",
+   "subject": "p08: match screen board and HUD layout",
+   "t": 64.137,
+   "k": "commit"
+  },
+  {
+   "task": {
+    "id": "f01",
+    "title": "Phone readability and apply the HUD theme",
+    "agent": "ui-ux-agent",
+    "createdBy": "lead",
+    "createdFrom": "p08 phone screenshots",
+    "depends": [
+     "p08",
+     "p13"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 64.187,
+   "k": "add"
+  },
+  {
+   "id": "f01",
+   "status": "doing",
+   "t": 64.206,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f01",
+   "text": "Reading the match screen, HUD theme and theme builder to plan phone scaling.",
+   "pct": 5,
+   "t": 64.206,
+   "k": "agent"
+  },
+  {
+   "id": "p17",
+   "status": "doing",
+   "t": 64.206,
+   "k": "status"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "p17",
+   "text": "Custom web shell written; exporting the web build and checking its size.",
+   "pct": 35,
+   "t": 64.206,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p03",
+   "text": "All 45 data files load with 0 errors and 0 warnings; writing the content log.",
+   "pct": 80,
+   "t": 64.284,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p04",
+   "text": "Rules read; writing the node-free rules engine classes in scripts/rules/.",
+   "pct": 20,
+   "t": 64.528,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 64.724,
+   "k": "agent"
+  },
+  {
+   "id": "p03",
+   "status": "review",
+   "review": null,
+   "t": 64.724,
+   "k": "status"
+  },
+  {
+   "hash": "8eb475d",
+   "subject": "p03: prototype content data for Killstreak",
+   "t": 64.724,
+   "k": "commit"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f01",
+   "text": "Chose a screen-size based UI scale (540-720 px base) plus a compact match layout; embedding the art-direction fonts and building the theme.",
+   "pct": 25,
+   "t": 65.292,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p04",
+   "text": "Rules engine and 61 new tests in place; full suite passes. Checking for leaks and edge cases.",
+   "pct": 80,
+   "t": 65.432,
+   "k": "agent"
+  },
+  {
+   "id": "technical-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 65.504,
+   "k": "agent"
+  },
+  {
+   "id": "p17",
+   "status": "review",
+   "review": null,
+   "t": 65.504,
+   "k": "status"
+  },
+  {
+   "hash": "e721697",
+   "subject": "p17: branded web loading screen and load-time budget",
+   "t": 65.504,
+   "k": "commit"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f01",
+   "text": "Phone profile, theme and compact layout done; 97 tests pass. Now exporting a web build and taking phone/desktop screenshots.",
+   "pct": 70,
+   "t": 66.379,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 66.637,
+   "k": "agent"
+  },
+  {
+   "id": "p04",
+   "status": "review",
+   "review": null,
+   "t": 66.637,
+   "k": "status"
+  },
+  {
+   "hash": "19b5b4a",
+   "subject": "p04: deterministic round loop and firefight rules engine",
+   "t": 66.637,
+   "k": "commit"
+  },
+  {
+   "n": 91,
+   "t": 66.637,
+   "k": "tests"
+  },
+  {
+   "task": {
+    "id": "rulings2",
+    "title": "Check 13 rules calls made in the engine",
+    "agent": "sr-game-designer",
+    "createdBy": "lead",
+    "createdFrom": "calls made in p04",
+    "depends": [
+     "p04"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 66.687,
+   "k": "add"
+  },
+  {
+   "id": "rulings2",
+   "status": "doing",
+   "t": 66.706,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "working",
+   "task": "rulings2",
+   "text": "Reviewing the 13 rules calls in the engine against the core rules.",
+   "pct": 20,
+   "t": 66.706,
+   "k": "agent"
+  },
+  {
+   "id": "p05",
+   "status": "doing",
+   "t": 66.706,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p05",
+   "text": "Reading the p04 rules engine and design rules for streaks, killstreaks, perks and equipment.",
+   "pct": 5,
+   "t": 66.706,
+   "k": "agent"
+  },
+  {
+   "id": "p06",
+   "status": "doing",
+   "t": 66.706,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p06",
+   "text": "Reading the rules engine and core-rules modes section for Zone Control and Firefight.",
+   "pct": 5,
+   "t": 66.706,
+   "k": "agent"
+  },
+  {
+   "id": "sr-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 66.926,
+   "k": "agent"
+  },
+  {
+   "id": "rulings2",
+   "status": "review",
+   "review": null,
+   "t": 66.926,
+   "k": "status"
+  },
+  {
+   "hash": "c8e4651",
+   "subject": "Killstreak: rulings part 2 on the rules engine's interpretations",
+   "t": 66.926,
+   "k": "commit"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p06",
+   "text": "Writing mode_rules.gd: data-driven Zone Control and Firefight scoring, round cap, overtime and draw.",
+   "pct": 25,
+   "t": 67.065,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p06",
+   "text": "Mode rules wired into the hooks; simulated matches end within 8 rounds in 96-99% of cases. Writing the mode tests now.",
+   "pct": 55,
+   "t": 67.425,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p05",
+   "text": "Writing the streak tracker and loadout rules (Streak Tray, cooldowns, perks), plus the Rulings part 2 Tripwire and full-zone changes.",
+   "pct": 25,
+   "t": 67.535,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 67.827,
+   "k": "agent"
+  },
+  {
+   "id": "f01",
+   "status": "review",
+   "review": null,
+   "t": 67.827,
+   "k": "status"
+  },
+  {
+   "hash": "aceea86",
+   "subject": "f01: phone readability and HUD theme on the match screen",
+   "t": 67.827,
+   "k": "commit"
+  },
+  {
+   "n": 120,
+   "t": 67.827,
+   "k": "tests"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 67.905,
+   "k": "agent"
+  },
+  {
+   "id": "p06",
+   "status": "review",
+   "review": null,
+   "t": 67.905,
+   "k": "status"
+  },
+  {
+   "hash": "77e18ce",
+   "subject": "p06: Zone Control and Firefight modes",
+   "t": 67.905,
+   "k": "commit"
+  },
+  {
+   "n": 120,
+   "t": 67.905,
+   "k": "tests"
+  },
+  {
+   "id": "p09",
+   "status": "doing",
+   "t": 67.974,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p09",
+   "text": "Read the engine API and match scenes; now writing the match presenter, gesture input and card inspector.",
+   "pct": 15,
+   "t": 67.974,
+   "k": "agent"
+  },
+  {
+   "id": "p10",
+   "status": "doing",
+   "t": 67.974,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p10",
+   "text": "Reading run config, RunState stub, rules API and design docs for the run flow.",
+   "pct": 5,
+   "t": 67.974,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 68.55,
+   "k": "agent"
+  },
+  {
+   "id": "p05",
+   "status": "review",
+   "review": null,
+   "t": 68.55,
+   "k": "status"
+  },
+  {
+   "hash": "50208f1",
+   "subject": "p05: streaks, killstreaks, perks, equipment and respawn",
+   "t": 68.55,
+   "k": "commit"
+  },
+  {
+   "n": 156,
+   "t": 68.55,
+   "k": "tests"
+  },
+  {
+   "id": "p07",
+   "status": "doing",
+   "t": 68.619,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p07",
+   "text": "Reading the rules engine, squad data and AI design notes for enemy AI.",
+   "pct": 5,
+   "t": 68.619,
+   "k": "agent"
+  },
+  {
+   "id": "p14",
+   "status": "doing",
+   "t": 68.619,
+   "k": "status"
+  },
+  {
+   "id": "game-feel-developer",
+   "status": "working",
+   "task": "p14",
+   "text": "Reading the art direction, rules events and match scenes for combat feedback.",
+   "pct": 5,
+   "t": 68.619,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p10",
+   "text": "RunProgress, RewardOffers, RunSave and the RunState owner are written; now writing the run-flow tests.",
+   "pct": 55,
+   "t": 68.652,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 69.481,
+   "k": "agent"
+  },
+  {
+   "id": "p10",
+   "status": "review",
+   "review": null,
+   "t": 69.481,
+   "k": "status"
+  },
+  {
+   "hash": "7435dcc",
+   "subject": "p10: 5-match run flow with tickets, rewards and saves",
+   "t": 69.481,
+   "k": "commit"
+  },
+  {
+   "n": 179,
+   "t": 69.481,
+   "k": "tests"
+  },
+  {
+   "id": "p16",
+   "status": "doing",
+   "t": 69.55,
+   "k": "status"
+  },
+  {
+   "id": "data-scientist",
+   "status": "working",
+   "task": "p16",
+   "text": "Reading the metrics plan, EventBus and the PlaytestLog stub.",
+   "pct": 5,
+   "t": 69.55,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p07",
+   "text": "Designed the AI: a public-only view, a zone-local firefight estimator and a greedy plan search. Writing the scripts now.",
+   "pct": 20,
+   "t": 69.644,
+   "k": "agent"
+  },
+  {
+   "id": "game-feel-developer",
+   "status": "working",
+   "task": "p14",
+   "text": "Design settled; writing the FX components (tracers, hit markers, killfeed, streak arc, call-in takeover) in scripts/fx.",
+   "pct": 20,
+   "t": 70.184,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p09",
+   "text": "Hand plays against the real engine (tap-tap, drag, inspector, undo, READY); full suite passes. Now doing the web export and phone screenshots.",
+   "pct": 70,
+   "t": 70.488,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "p07",
+   "text": "AI plays full matches, fairness and red-dot tests pass. Now writing the win-rate and timing simulation.",
+   "pct": 70,
+   "t": 70.669,
+   "k": "agent"
+  },
+  {
+   "id": "data-scientist",
+   "status": "working",
+   "task": "p16",
+   "text": "Logger, consent and survey screens done with 16 new tests passing; now checking the web download in a browser.",
+   "pct": 65,
+   "t": 71.514,
+   "k": "agent"
+  },
+  {
+   "id": "game-feel-developer",
+   "status": "working",
+   "task": "p14",
+   "text": "FX components, FeedbackDirector and 9 tests pass; exporting the preview scene for web screenshots.",
+   "pct": 65,
+   "t": 71.749,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 72.036,
+   "k": "agent"
+  },
+  {
+   "id": "p07",
+   "status": "review",
+   "review": null,
+   "t": 72.036,
+   "k": "status"
+  },
+  {
+   "hash": "a57afa3",
+   "subject": "p07: enemy AI with fair public-information view and red-dot intel",
+   "t": 72.036,
+   "k": "commit"
+  },
+  {
+   "n": 233,
+   "t": 72.036,
+   "k": "tests"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 73.561,
+   "k": "agent"
+  },
+  {
+   "id": "p09",
+   "status": "review",
+   "review": null,
+   "t": 73.561,
+   "k": "status"
+  },
+  {
+   "hash": "71a021a",
+   "subject": "p09: playable hand, card inspector and deploying",
+   "t": 73.561,
+   "k": "commit"
+  },
+  {
+   "n": 235,
+   "t": 73.561,
+   "k": "tests"
+  },
+  {
+   "task": {
+    "id": "f02",
+    "title": "Engine play-check API, enemy AI and item buttons in the match",
+    "agent": "mechanics-developer",
+    "createdBy": "lead",
+    "createdFrom": "gaps found in p09",
+    "depends": [
+     "p09",
+     "p07"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 73.611,
+   "k": "add"
+  },
+  {
+   "id": "f02",
+   "status": "doing",
+   "t": 73.63,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "f02",
+   "text": "Reading the rules engine, AI and match controller to plan the play-check API.",
+   "pct": 5,
+   "t": 73.63,
+   "k": "agent"
+  },
+  {
+   "id": "p11",
+   "status": "doing",
+   "t": 73.63,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p11",
+   "text": "Reading the run API, router, title screen and design docs for the run and reward screens.",
+   "pct": 3,
+   "t": 73.63,
+   "k": "agent"
+  },
+  {
+   "id": "game-feel-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 73.836,
+   "k": "agent"
+  },
+  {
+   "id": "p14",
+   "status": "review",
+   "review": null,
+   "t": 73.836,
+   "k": "status"
+  },
+  {
+   "hash": "4a6f84a",
+   "subject": "p14: combat feedback and streak effects (standalone components)",
+   "t": 73.836,
+   "k": "commit"
+  },
+  {
+   "id": "data-scientist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 73.914,
+   "k": "agent"
+  },
+  {
+   "id": "p16",
+   "status": "review",
+   "review": null,
+   "t": 73.914,
+   "k": "status"
+  },
+  {
+   "hash": "1cffadc",
+   "subject": "p16: playtest logger, consent and surveys",
+   "t": 73.914,
+   "k": "commit"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "f02",
+   "text": "Engine can_submit / legal_targets with stable reason codes is in and the suite passes; writing tests for each code.",
+   "pct": 25,
+   "t": 75.427,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p11",
+   "text": "Planned the screens and the Match hand-off; writing the router hand-off, run flow helpers and theme styles.",
+   "pct": 15,
+   "t": 76.406,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "f02",
+   "text": "Match now uses engine checks, the AI plays, item buttons target, mulligan panel and p14 feedback are wired; adding tests for items, killstreaks, mulligan and an AI round.",
+   "pct": 55,
+   "t": 77.225,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p11",
+   "text": "All six run screens and the flow test pass headless at desktop and phone sizes; running the full suite, then web screenshots.",
+   "pct": 60,
+   "t": 79.183,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 79.622,
+   "k": "agent"
+  },
+  {
+   "id": "f02",
+   "status": "review",
+   "review": null,
+   "t": 79.622,
+   "k": "status"
+  },
+  {
+   "hash": "8262179",
+   "subject": "f02: engine play-check API, enemy AI, items, mulligan, FX and log wiring",
+   "t": 79.622,
+   "k": "commit"
+  },
+  {
+   "n": 262,
+   "t": 79.622,
+   "k": "tests"
+  },
+  {
+   "id": "p12",
+   "status": "doing",
+   "t": 79.691,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p12",
+   "text": "Reading rules engine, AI estimator and match UI to plan the outcome preview overlay.",
+   "pct": 5,
+   "t": 79.691,
+   "k": "agent"
+  },
+  {
+   "id": "p15",
+   "status": "doing",
+   "t": 79.691,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p15",
+   "text": "Read the match code; designing the TutorialScript data and the tutorial director.",
+   "pct": 12,
+   "t": 79.691,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p12",
+   "text": "MatchClone + OutcomeForecast run the real resolver on a copy; 8 tests match real rounds exactly. Building the lane overlay and toggle next.",
+   "pct": 40,
+   "t": 80.889,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p15",
+   "text": "Tutorial plays end to end by simulated taps (phone and desktop) and the skip path works; taking phone screenshots next.",
+   "pct": 60,
+   "t": 80.918,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "p15",
+   "text": "Screenshots checked and docs written; running the full test suite.",
+   "pct": 85,
+   "t": 82.145,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 82.354,
+   "k": "agent"
+  },
+  {
+   "id": "p12",
+   "status": "review",
+   "review": null,
+   "t": 82.354,
+   "k": "status"
+  },
+  {
+   "hash": "6a60bbf",
+   "subject": "p12: outcome preview overlay",
+   "t": 82.354,
+   "k": "commit"
+  },
+  {
+   "n": 282,
+   "t": 82.354,
+   "k": "tests"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 82.886,
+   "k": "agent"
+  },
+  {
+   "id": "p11",
+   "status": "review",
+   "review": null,
+   "t": 82.886,
+   "k": "status"
+  },
+  {
+   "hash": "25b9a42",
+   "subject": "p11: run and reward screens; fix run_end win/loss counts in playtest log",
+   "t": 82.886,
+   "k": "commit"
+  },
+  {
+   "task": {
+    "id": "f03",
+    "title": "Play a whole run: connect the match to the run screens",
+    "agent": "mechanics-developer",
+    "createdBy": "lead",
+    "createdFrom": "p11 hand-off",
+    "depends": [
+     "p11",
+     "f02"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 82.936,
+   "k": "add"
+  },
+  {
+   "id": "f03",
+   "status": "doing",
+   "t": 82.955,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "f03",
+   "text": "Building the match result banner and pause menu, then wiring the run match into MatchController.",
+   "pct": 20,
+   "t": 82.955,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 83.782,
+   "k": "agent"
+  },
+  {
+   "id": "p15",
+   "status": "review",
+   "review": null,
+   "t": 83.782,
+   "k": "status"
+  },
+  {
+   "hash": "efca008",
+   "subject": "p15: scripted, skippable tutorial match",
+   "t": 83.782,
+   "k": "commit"
+  },
+  {
+   "n": 282,
+   "t": 83.782,
+   "k": "tests"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "f03",
+   "text": "Run match, result banner, pause menu, Title tutorial button and spotted red dots done; new headless run test passes. Running the full suite.",
+   "pct": 60,
+   "t": 84.149,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 85.609,
+   "k": "agent"
+  },
+  {
+   "id": "f03",
+   "status": "review",
+   "review": null,
+   "t": 85.609,
+   "k": "status"
+  },
+  {
+   "hash": "d26dbde",
+   "subject": "f03: play a whole run through the real match screen",
+   "t": 85.609,
+   "k": "commit"
+  },
+  {
+   "n": 287,
+   "t": 85.609,
+   "k": "tests"
+  },
+  {
+   "items": [
+    {
+     "task": {
+      "id": "rulings",
+      "title": "Rule on 13 rules questions from p02",
+      "agent": "sr-game-designer",
+      "createdBy": "lead",
+      "createdFrom": "questions raised in p02",
+      "depends": [
+       "p02"
+      ]
+     },
+     "text": "p02 asked 13 rules questions. The Sr Game Designer ruled on all 13 before p03 and p04 started."
+    },
+    {
+     "task": {
+      "id": "f01",
+      "title": "Phone readability and apply the HUD theme",
+      "agent": "ui-ux-agent",
+      "createdBy": "lead",
+      "createdFrom": "p08 phone screenshots",
+      "depends": [
+       "p08",
+       "p13"
+      ]
+     },
+     "text": "p08\u2019s phone screenshots showed ~8 pt text and 35 pt buttons on iPhone. Fixed to 11.6 pt text, 46 pt taps."
+    },
+    {
+     "task": {
+      "id": "rulings2",
+      "title": "Check 13 rules calls made in the engine",
+      "agent": "sr-game-designer",
+      "createdBy": "lead",
+      "createdFrom": "calls made in p04",
+      "depends": [
+       "p04"
+      ]
+     },
+     "text": "Checked 13 calls the rules engine made: 12 confirmed, Tripwire timing overruled."
+    },
+    {
+     "task": {
+      "id": "f02",
+      "title": "Engine play-check API, enemy AI and item buttons in the match",
+      "agent": "mechanics-developer",
+      "createdBy": "lead",
+      "createdFrom": "gaps found in p09",
+      "depends": [
+       "p09",
+       "p07"
+      ]
+     },
+     "text": "p09 left the enemy AI and item buttons unplugged. f02 wired them in: a real match works end to end."
+    },
+    {
+     "task": {
+      "id": "f03",
+      "title": "Play a whole run: connect the match to the run screens",
+      "agent": "mechanics-developer",
+      "createdBy": "lead",
+      "createdFrom": "p11 hand-off",
+      "depends": [
+       "p11",
+       "f02"
+      ]
+     },
+     "text": "p11 handed off the last link: connect the match to the run. After f03 a whole run is playable."
+    }
+   ],
+   "t": 86.5,
+   "k": "spots"
+  },
+  {
+   "i": 0,
+   "t": 86.9,
+   "k": "spot"
+  },
+  {
+   "i": 1,
+   "t": 89.3,
+   "k": "spot"
+  },
+  {
+   "i": 2,
+   "t": 91.7,
+   "k": "spot"
+  },
+  {
+   "i": 3,
+   "t": 94.1,
+   "k": "spot"
+  },
+  {
+   "i": 4,
+   "t": 96.5,
+   "k": "spot"
+  },
+  {
+   "phase": "qa",
+   "t": 99.5,
+   "k": "phase"
+  },
+  {
+   "name": "Killstreak",
+   "sub": "Test \u00b7 Web \u00b7 Godot 4.4.1",
+   "t": 99.5,
+   "k": "project"
+  },
+  {
+   "id": "p18",
+   "status": "doing",
+   "t": 99.9,
+   "k": "status"
+  },
+  {
+   "id": "p19",
+   "status": "doing",
+   "t": 99.9,
+   "k": "status"
+  },
+  {
+   "id": "qa-agent",
+   "status": "working",
+   "task": "p18",
+   "text": "Starting the release QA pass: reading the project, rules and test suite.",
+   "pct": 2,
+   "t": 100.0,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p19",
+   "text": "Reading the metrics plan, rules, data and AI to plan the balance harness.",
+   "pct": 3,
+   "t": 100.0,
+   "k": "agent"
+  },
+  {
+   "id": "qa-agent",
+   "status": "working",
+   "task": "p18",
+   "text": "Rules pass done: 234 AI-vs-AI matches clean, 1 AI bug found and fixed, 10 edge-case tests added. Building the web export for browser passes.",
+   "pct": 30,
+   "t": 101.5,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p19",
+   "text": "Writing the headless balance harness (competent, casual and greedy player proxies).",
+   "pct": 12,
+   "t": 101.5,
+   "k": "agent"
+  },
+  {
+   "on": true,
+   "t": 103.1,
+   "k": "limit"
+  },
+  {
+   "id": "qa-agent",
+   "status": "blocked",
+   "task": "p18",
+   "text": "Paused: account usage limit. Work kept, saved in fcab2ea after the reset.",
+   "pct": 55,
+   "t": 103.2,
+   "k": "agent"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "blocked",
+   "task": "p19",
+   "text": "Paused: account usage limit. Work kept, saved in fcab2ea after the reset.",
+   "pct": 70,
+   "t": 103.2,
+   "k": "agent"
+  },
+  {
+   "on": false,
+   "t": 105.1,
+   "k": "limit"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "working",
+   "task": "p19",
+   "text": "Resumed after the limit: data and generator changes are in place; reading the final sims, then writing the balance log.",
+   "pct": 80,
+   "t": 105.2,
+   "k": "agent"
+  },
+  {
+   "id": "qa-agent",
+   "status": "working",
+   "task": "p18",
+   "text": "Web build cold load measured (~7.5 s to first screen). Running full browser playthroughs on phone and desktop; 4 minor bugs fixed so far.",
+   "pct": 55,
+   "t": 105.2,
+   "k": "agent"
+  },
+  {
+   "hash": "fcab2ea",
+   "subject": "WIP p18/p19: QA and balance pass (paused at usage limit)",
+   "t": 105.2,
+   "k": "commit"
+  },
+  {
+   "id": "p18",
+   "status": "review",
+   "note": "0 critical, 0 major, 5 minor (4 fixed). 150 AI-vs-AI matches + 20 runs, no rule violations.",
+   "t": 105.9,
+   "k": "status"
+  },
+  {
+   "id": "qa-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 105.9,
+   "k": "agent"
+  },
+  {
+   "hash": "a450e50",
+   "subject": "p18: QA pass - rules soak, browser passes, IP check, 4 minor fixes",
+   "t": 105.9,
+   "k": "commit"
+  },
+  {
+   "n": 301,
+   "t": 105.9,
+   "k": "tests"
+  },
+  {
+   "id": "p19",
+   "status": "review",
+   "note": "Bracket 1 69% / Bracket 2 49% / Rival 45% wins. Anchor mode swap needs your sign-off.",
+   "t": 106.5,
+   "k": "status"
+  },
+  {
+   "id": "mid-game-designer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 106.5,
+   "k": "agent"
+  },
+  {
+   "hash": "af05749",
+   "subject": "p19: balance pass with simulation harness",
+   "t": 106.5,
+   "k": "commit"
+  },
+  {
+   "text": "Playable web build published (loads in ~4 s in Chromium)",
+   "t": 107.5,
+   "k": "toast"
+  },
+  {
+   "ids": [
+    "p01",
+    "p02"
+   ],
+   "t": 109.5,
+   "k": "clearDone"
+  },
+  {
+   "kind": "chat",
+   "clear": true,
+   "t": 109.6,
+   "k": "drawer"
+  },
+  {
+   "who": "you",
+   "text": "Could the game artist make the game look better now?",
+   "t": 109.8,
+   "k": "chat"
+  },
+  {
+   "task": {
+    "id": "v01",
+    "title": "Visual polish pass",
+    "agent": "sr-game-artist",
+    "createdBy": "you",
+    "createdFrom": "your chat request",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 110.5,
+   "k": "add"
+  },
+  {
+   "who": "claude",
+   "text": "Yes. The Sr Game Artist has started a visual polish pass (v01). Watch its card on the board.",
+   "t": 110.7,
+   "k": "chat"
+  },
+  {
+   "kind": null,
+   "t": 111.7,
+   "k": "drawer"
+  },
+  {
+   "id": "v01",
+   "status": "doing",
+   "t": 111.9,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "v01",
+   "text": "Starting the visual polish pass: reviewing current screenshots and art direction.",
+   "pct": 3,
+   "t": 112.0,
+   "k": "agent"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "v01",
+   "text": "Before screenshots captured at 844x390 @3x; writing the art audit and planning card art, board backdrop and title key art.",
+   "pct": 12,
+   "t": 112.5,
+   "k": "agent"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "v01",
+   "text": "Audit written (documentation/art/visual-polish-v01.md). Now drawing the original vector card illustrations (runtime-rasterised SVG).",
+   "pct": 20,
+   "t": 113.0,
+   "k": "agent"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "v01",
+   "text": "Card art, lane backdrops, title key art, button depth and the killfeed fix are in; 302/302 tests pass. Building the web export for after screenshots.",
+   "pct": 60,
+   "t": 113.5,
+   "k": "agent"
+  },
+  {
+   "id": "v01",
+   "status": "review",
+   "t": 114.1,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 114.1,
+   "k": "agent"
+  },
+  {
+   "hash": "0ad3afc",
+   "subject": "v01: visual polish pass",
+   "t": 114.1,
+   "k": "commit"
+  },
+  {
+   "n": 302,
+   "t": 114.1,
+   "k": "tests"
+  },
+  {
+   "kind": "wipe",
+   "before": "v01-before-1-title-844x390@3x.png",
+   "after": "v01-after-1-title-844x390@3x.png",
+   "label": "v01 \u00b7 Title screen, before \u2192 after (real QA screenshots)",
+   "t": 114.3,
+   "k": "drawer"
+  },
+  {
+   "kind": null,
+   "t": 117.9,
+   "k": "drawer"
+  },
+  {
+   "kind": "chat",
+   "clear": true,
+   "t": 118.1,
+   "k": "drawer"
+  },
+  {
+   "who": "you",
+   "text": "The action feed is nice but it shouldn\u2019t overlap the hand. Also make sure we use the icons on cards when they are small in hand\u2026 Also it feels like first strike doesn\u2019t work: when I have a first strike unit with enough attack to eliminate target, they still get shot.",
+   "t": 118.3,
+   "k": "chat"
+  },
+  {
+   "task": {
+    "id": "f04",
+    "title": "Kill feed off the hand; icons on hand cards",
+    "agent": "ui-ux-agent",
+    "createdBy": "you",
+    "createdFrom": "your chat request",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 119.9,
+   "k": "add"
+  },
+  {
+   "task": {
+    "id": "b01",
+    "title": "Bug: First Shot unit still gets shot",
+    "agent": "mechanics-developer",
+    "createdBy": "you",
+    "createdFrom": "your chat request",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 120.1,
+   "k": "add"
+  },
+  {
+   "kind": null,
+   "t": 121.1,
+   "k": "drawer"
+  },
+  {
+   "id": "b01",
+   "status": "doing",
+   "t": 121.3,
+   "k": "status"
+  },
+  {
+   "id": "f04",
+   "status": "doing",
+   "t": 121.4,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "b01",
+   "text": "Reading the First Shot rules and the firefight resolver to reproduce the report.",
+   "pct": 5,
+   "t": 121.4,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f04",
+   "text": "Reading the match layout, killfeed and hand chip code.",
+   "pct": 5,
+   "t": 121.5,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "b01",
+   "text": "Rules engine reads correctly so far; writing scripted First Shot boards to reproduce the report.",
+   "pct": 25,
+   "t": 122.0,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f04",
+   "text": "Plan set: phone killfeed moves into the top bar over the intel strip; hand chips and unit slots get the card icon set. Implementing now.",
+   "pct": 20,
+   "t": 122.4,
+   "k": "agent"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "working",
+   "task": "b01",
+   "text": "Engine is correct in all 11 scripted boards; the playback hides which step each shot is in. Adding step labels, enemy First Shot tags and a veil over eliminated units.",
+   "pct": 55,
+   "t": 122.6,
+   "k": "agent"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f04",
+   "text": "Killfeed moved to the phone top bar, hand chips and unit slots use card icons; full suite passes (317/317). Exporting web build for screenshots.",
+   "pct": 55,
+   "t": 123.3,
+   "k": "agent"
+  },
+  {
+   "id": "b01",
+   "status": "review",
+   "note": "Rules were right; the replay was misleading.",
+   "t": 123.3,
+   "k": "status"
+  },
+  {
+   "id": "mechanics-developer",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 123.3,
+   "k": "agent"
+  },
+  {
+   "hash": "20ecdac",
+   "subject": "b01: make First Shot readable in the fight replay",
+   "t": 123.3,
+   "k": "commit"
+  },
+  {
+   "text": "b01: 11 scripted boards confirm a lethal First Shot means the target never fires.",
+   "t": 123.5,
+   "k": "toast"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "working",
+   "task": "f04",
+   "text": "Iterated once after the first screenshots (feed lines centred, keyword word carries its value); taking final phone and desktop screenshots.",
+   "pct": 85,
+   "t": 124.2,
+   "k": "agent"
+  },
+  {
+   "id": "f04",
+   "status": "review",
+   "t": 125.7,
+   "k": "status"
+  },
+  {
+   "id": "ui-ux-agent",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 125.7,
+   "k": "agent"
+  },
+  {
+   "hash": "a24076c",
+   "subject": "f04: killfeed off the hand; card icons on hand chips and board slots",
+   "t": 125.7,
+   "k": "commit"
+  },
+  {
+   "n": 317,
+   "t": 125.7,
+   "k": "tests"
+  },
+  {
+   "wall": "11h 36m",
+   "from": "02:05",
+   "to": "13:42",
+   "gap": "05:50-11:13",
+   "agents": 12,
+   "tasks": 48,
+   "commits": 62,
+   "commits_nonwip": 41,
+   "tests": 317,
+   "screens": 120,
+   "created_by": {
+    "lead": 16,
+    "master-orchestrator": 8,
+    "producer-agent": 21,
+    "you": 3
+   },
+   "t": 128.5,
+   "k": "stats"
+  }
+ ],
+ "clock": [
+  {
+   "t": 0,
+   "utc": 7500
+  },
+  {
+   "t": 6.9,
+   "utc": 7531
+  },
+  {
+   "t": 11.7,
+   "utc": 8011
+  },
+  {
+   "t": 13.5,
+   "utc": 8011
+  },
+  {
+   "t": 22.9,
+   "utc": 8540
+  },
+  {
+   "t": 25.1,
+   "utc": 9011
+  },
+  {
+   "t": 29.3,
+   "utc": 9403
+  },
+  {
+   "t": 38.5,
+   "utc": 9506
+  },
+  {
+   "t": 39.8,
+   "utc": 9999
+  },
+  {
+   "t": 44.0,
+   "utc": 10400
+  },
+  {
+   "t": 50.2,
+   "utc": 11224
+  },
+  {
+   "t": 50.9,
+   "utc": 10500
+  },
+  {
+   "t": 53.1,
+   "utc": 11591
+  },
+  {
+   "t": 55.5,
+   "utc": 11694
+  },
+  {
+   "t": 59.9,
+   "utc": 11670
+  },
+  {
+   "t": 85.7,
+   "utc": 21030
+  },
+  {
+   "t": 99.9,
+   "utc": 21049
+  },
+  {
+   "t": 105.1,
+   "utc": 40435
+  },
+  {
+   "t": 107.5,
+   "utc": 41100
+  },
+  {
+   "t": 109.8,
+   "utc": 41861
+  },
+  {
+   "t": 114.1,
+   "utc": 44218
+  },
+  {
+   "t": 118.3,
+   "utc": 44740
+  },
+  {
+   "t": 123.3,
+   "utc": 45350
+  },
+  {
+   "t": 125.7,
+   "utc": 46356
+  }
+ ],
+ "agents": [
+  {
+   "id": "master-orchestrator",
+   "name": "Master Orchestrator"
+  },
+  {
+   "id": "producer-agent",
+   "name": "Producer"
+  },
+  {
+   "id": "market-analyst",
+   "name": "Market Analyst"
+  },
+  {
+   "id": "data-scientist",
+   "name": "Data Scientist"
+  },
+  {
+   "id": "sr-game-designer",
+   "name": "Sr Game Designer"
+  },
+  {
+   "id": "mid-game-designer",
+   "name": "Mid Game Designer"
+  },
+  {
+   "id": "mechanics-developer",
+   "name": "Mechanics Developer"
+  },
+  {
+   "id": "game-feel-developer",
+   "name": "Game Feel Developer"
+  },
+  {
+   "id": "sr-game-artist",
+   "name": "Sr Game Artist"
+  },
+  {
+   "id": "technical-artist",
+   "name": "Technical Artist"
+  },
+  {
+   "id": "ui-ux-agent",
+   "name": "UI/UX Designer"
+  },
+  {
+   "id": "qa-agent",
+   "name": "QA"
+  }
+ ],
+ "names": {
+  "master-orchestrator": "Master Orchestrator",
+  "producer-agent": "Producer",
+  "market-analyst": "Market Analyst",
+  "data-scientist": "Data Scientist",
+  "sr-game-designer": "Sr Game Designer",
+  "mid-game-designer": "Mid Game Designer",
+  "mechanics-developer": "Mechanics Developer",
+  "game-feel-developer": "Game Feel Developer",
+  "sr-game-artist": "Sr Game Artist",
+  "technical-artist": "Technical Artist",
+  "ui-ux-agent": "UI/UX Designer",
+  "qa-agent": "QA",
+  "lead": "Lead (main session)",
+  "you": "You"
+ },
+ "game": {
+  "clips": [
+   {
+    "src": [
+     0.0,
+     2.556
+    ],
+    "rate": 1.3,
+    "dur": 1.966,
+    "caption": "The real web build of Killstreak, running in Chromium",
+    "at": 135.5
+   },
+   {
+    "src": [
+     2.556,
+     10.794
+    ],
+    "rate": 3.0,
+    "dur": 2.746,
+    "caption": "Playtest consent, three quick survey questions, then the Title",
+    "at": 137.466
+   },
+   {
+    "src": [
+     10.794,
+     21.277
+    ],
+    "rate": 3.0,
+    "dur": 3.494,
+    "caption": "New run: three killstreaks picked, the run map, DEPLOY",
+    "at": 140.212
+   },
+   {
+    "src": [
+     21.277,
+     27.33
+    ],
+    "rate": 1.2,
+    "dur": 5.045,
+    "caption": "Round 1: keep the hand, tap the Operator and a zone, deploy a unit",
+    "at": 143.706
+   },
+   {
+    "src": [
+     27.33,
+     32.192
+    ],
+    "rate": 1.0,
+    "dur": 4.862,
+    "caption": "Simultaneous reveal. FIRST SHOT resolves before MAIN; eliminated units are stamped",
+    "at": 148.751
+   },
+   {
+    "src": [
+     32.638,
+     36.438
+    ],
+    "rate": 1.0,
+    "dur": 3.8,
+    "caption": "Long-press any card to read its full rules",
+    "at": 153.613
+   },
+   {
+    "src": [
+     37.679,
+     40.079
+    ],
+    "rate": 1.0,
+    "dur": 2.4,
+    "caption": "Frag Grenade: tap a zone near your Operator to throw it",
+    "at": 157.413
+   },
+   {
+    "src": [
+     82.36,
+     88.228
+    ],
+    "rate": 1.0,
+    "dur": 5.868,
+    "caption": "Streak 2 earned: call in the Recon Drone, throw a Frag, deploy",
+    "at": 159.813
+   },
+   {
+    "src": [
+     88.228,
+     92.028
+    ],
+    "rate": 1.0,
+    "dur": 3.8,
+    "caption": "Killstreak call-in: the full-screen takeover",
+    "at": 165.681
+   },
+   {
+    "src": [
+     92.028,
+     95.628
+    ],
+    "rate": 1.0,
+    "dur": 3.6,
+    "caption": "The Frag lands, FIRST SHOT fires before MAIN, an enemy is ELIMINATED",
+    "at": 169.481
+   },
+   {
+    "src": [
+     95.628,
+     99.628
+    ],
+    "rate": 1.0,
+    "dur": 4.0,
+    "caption": "Enemy First Shot units fire back: OPERATOR DOWN, and the killfeed logs it",
+    "at": 173.081
+   },
+   {
+    "src": [
+     99.628,
+     103.228
+    ],
+    "rate": 1.0,
+    "dur": 3.6,
+    "caption": "The streak reached 3 (Mortar ready), but the Operator went down: STREAK LOST",
+    "at": 177.081
+   },
+   {
+    "src": [
+     105.45,
+     109.25
+    ],
+    "rate": 1.0,
+    "dur": 3.8,
+    "caption": "Match result. The enemy squad won this one, 7 to 4",
+    "at": 180.681
+   }
+  ],
+  "frames": "game/frames.json"
+ },
+ "docs": {
+  "design-review": "# Killstreak \u2014 Design Review (for approval)\n\n*Master Orchestrator \u00b7 2026-11-03 \u00b7 Phase: Design \u2192 Planning \u00b7 Status: **approved by the user 2026-11-03** (see Decisions below)*\n*All content is original. No Call of Duty names, characters, maps, factions, logos or trademarked mode/feature names; only generic genre terms.*\n\n## One-line pitch\n**\"Your loadout is your deck. Your streak is your power spike.\"** A fast card game where every battle plays like a multiplayer shooter match: three lanes, short rounds, and killstreaks you earn by staying alive.\n\n## Recommended format: hybrid, built as a single-player roguelite first\n- **What it is:** a Slay the Spire / Balatro-style roguelite (a run of short matches against AI enemy squads, drafting cards and leveling your weapon between matches). Each match plays like a **Marvel Snap-style 3-zone game with simultaneous reveal**.\n- **Why:** it's the only format that is buildable and playtestable in the browser in about a week. It's the friendliest for newcomers (no collection, no losing to veterans), and it has the lowest market risk (PvP card games need large audiences and live ops; Gwent's development ended and LoR pivoted to PvE). Because **both sides follow identical rules**, PvP can be added later without a redesign: first async \"Mirror Squads\" (fight other players' saved builds), then live PvP.\n- **Alternatives:** *PvP constructed (Hearthstone/Snap)* has the strongest \"multiplayer\" feel, but it fails the timeline and is a high-risk business. *Pure roguelite* is what we build first; the hybrid label just keeps the PvP door open.\n\n## Core loop\n**Round (30 s):** read the minimap red dots (enemy contacts per lane) \u2192 spend Supply to deploy units, throw a Frag/Flashbang, rotate your Operator \u2192 reveal \u2192 firefights in all 3 zones \u2192 killfeed + streak \u2192 call in killstreaks.\n**Match (3\u20135 min):** a game mode sets the win condition \u2192 After-Action XP and weapon level-up.\n**Run (30\u201345 min):** 3 brackets + a Rival squad; pick 1 of 3 card rewards, attachments, Armory; 3 tickets.\n**Meta:** Player Rank unlocks, challenges, Threat Levels 1\u201310.\n\n## Shooter \u2192 card mapping\n| Shooter | Card mechanic |\n|---|---|\n| Custom class loadout | Loadout Builder: Primary, Secondary, Lethal, Tactical, 3 Perks, 3 Killstreaks; the deck = your squad & kit |\n| You, the soldier | **Operator** hero unit on the board: fights, rotates lanes, goes down, respawns next round |\n| Primary weapon / class | Sets the Operator's Firepower/Armor and trait (AR steady, SMG First Shot, Sniper Pick) |\n| Weapon XP & attachments | Weapon levels during a run \u2192 choose 1 of 2 attachments that upgrade the Operator |\n| Lethal & Tactical | Cooldown abilities (Frag, Flashbang, Smoke), usable near your Operator |\n| Perks | 3 passive rule-changers, the Balatro-Joker-style depth layer |\n| **Killstreaks** | Streak +1 per elimination; **resets when your Operator goes down**; thresholds unlock Recon Drone (2), Mortar Barrage (3), Sentry Turret (4), Attack Helo (5), Gunship (7) |\n| UAV-style recon / minimap | Red dots show enemy deployments per lane; recon reveals the actual cards |\n| 3-lane maps & weapon range | 3 zones tagged Close/Mid/Long; SMG/Shotgun better up close, Sniper at long range, AR in mid |\n| Game modes | Zone Control (domination-style), Firefight (TDM-style), Detonator (S&D-style, elite matches) |\n| Killfeed, hit markers, XP pop-ups, callouts | The feedback/UI layer and radio barks |\n\n## Serving both audiences\n- **Shooter players:** a preset loadout and no deck building before the first match; three numbers per unit; one line of text; shooter vocabulary everywhere; a scripted tutorial; 3\u20135 minute matches; XP pop-ups and streak payoffs.\n- **Card veterans:** simultaneous-reveal reads, deployment-order and keyword sequencing, range positioning, streak risk management, Perk engines, deck thinning and attachment builds, Threat Levels 1\u201310, and deterministic firefights (no dice).\n\n## Market verdict\n**Conditional GO** for a web prototype of the roguelite. **NO-GO** on a live-service PvP CCG as the first product. The gap: no well-known card game speaks *modern multiplayer shooter* (KARDS covers WW2 history, not the shooter match). Balatro proves familiar rules plus a deep modifier layer can reach far beyond card players. Web is ideal for prototype/demo distribution; Steam is the realistic commercial home later, with mobile planned as well (decision 9). Risks: IP/trademark (strict originality plus a title search), and a \"niche military\" perception, so market the match feel rather than war.\n\n## Art direction\n\"Tactical HUD meets field kit\": the game looks like a soldier's tactical tablet between firefights. Dark slate UI, signal-amber for anything interactive, teal for friends, red for enemies (with shape cues for colorblind players), and cyan for killstreaks. Cards look like laminated ID badges with stylized duotone painted art (operators always in gear, so no likeness issues). Killstreaks appear as glowing tablet cards and Perks as embroidered morale patches. The board is a top-down lane map with a minimap intel strip, a killfeed and a segmented streak arc that shatters when you go down. The look is gritty, not gory, and light enough for web.\n\n## What the web prototype would contain (~5\u20137 days after approval)\n1 map (Port Vasel) \u00b7 2 modes (Zone Control, Firefight) \u00b7 the full round loop with streaks and Operator respawn \u00b7 20 starter + 6 reward cards \u00b7 1 Primary with 4 attachments, Frag, Flashbang, 4 Perks, 4 Killstreaks \u00b7 2 AI personalities / 3 enemy squads \u00b7 a 5-match run (~20\u201330 min, 3 tickets; changed from 7 on 2026-11-03) \u00b7 scripted tutorial \u00b7 outcome preview, killfeed, hit markers \u00b7 playtest log + survey \u00b7 placeholder art \u00b7 Godot 4.4.1 single-threaded web build on a private itch.io link.\n**Not included:** Detonator, extra weapons, shop, meta-progression, second map, final art and voice, any PvP.\n\n## Decisions (approved 2026-11-03)\nAll design deliverables were approved and the 10 open questions below are **closed**. These answers are binding for the prototype plan (`production/prototype-milestone-plan.md`).\n\n| # | Topic | Decision |\n|---|---|---|\n| 1 | Format | **Roguelite-first hybrid** (single-player runs now; symmetric rules keep async/live PvP possible later). No PvP in the prototype. |\n| 2 | Core hook | Streak resets **only when your Operator goes down**. Squad losses never reset it. |\n| 3 | Match structure | **Simultaneous reveal, 3 lanes.** |\n| 4 | Setting & tone | Keep the near-future contractor setting (Kharzan Corridor, HALBERD vs BLACK MERIDIAN). |\n| 5 | Title | \"Killstreak\" stays the internal/project name. The user's **preferred working-title candidate is \"Deckstreak\"**, pending a trademark check before any public build. Files and folders are not renamed. |\n| 6 | Prototype modes | **Zone Control + Firefight.** Detonator stays out. |\n| 7 | Run length | **30\u201345 min with 3 tickets** (no short 15-min web variant). |\n| 8 | Prototype art | **Placeholder layout only** (no painted-art style test). |\n| 9 | Long-term platform | Plan for **Steam and mobile later**. The web prototype's UI must work with mouse and touch and scale down to phone-size landscape screens (no hover-only information, large tap targets). |\n| 10 | Load target | **Under 10 s with a loading screen** for the Godot web build (replaces \"< 3 s\"). |\n\n### Original questions (closed, kept for reference)\n1. **Format:** approve the roguelite-first hybrid? Or do you want PvP (even hot-seat) in the first prototype?\n2. **Core hook:** is \"streak resets only when *your Operator* goes down\" the right shooter feel, or should streaks reset on any unit loss (harsher, more hardcore)?\n3. **Match structure:** are simultaneous reveal + 3 lanes OK, or do you prefer Hearthstone-style alternating turns?\n4. **Setting & tone:** keep the near-future contractor setting (Kharzan Corridor, HALBERD vs BLACK MERIDIAN), or prefer present-day or fully abstract \"multiplayer lobby\" framing with no story?\n5. **Title:** keep \"Killstreak\" as the working title, pending a trademark search? Any alternatives you'd like checked?\n6. **Prototype modes:** Zone Control + Firefight, or swap one for Detonator (S&D-style, no respawn)?\n7. **Run length:** is 30\u201345 minutes with 3 tickets right, or do you want shorter runs (about 15 minutes) for web/portal play?\n8. **Art for the prototype:** placeholder layout only (recommended), or a small painted-art style test of 3 cards?\n9. **Long-term platform:** web only, or should design assume a later Steam/mobile release (this affects UI scale and monetization planning)?\n10. **Load-time target:** accept re-targeting from \"< 3 s\" to \"< 10 s with a loading screen\" for the Godot web build?\n\n**Detailed docs:** `design/gdd.md` \u00b7 `design/vision.md` \u00b7 `design/core-rules.md` \u00b7 `art/style-guides/art-direction.md` \u00b7 `production/producer-scope-review.md` \u00b7 `production/playtest-metrics-plan.md` \u00b7 `production/timeline.md` \u00b7 `../resources/market-research/market-analysis.md` (+ overview & 5 competitor files)\n"
+ },
+ "questions": {
+  "t15": [
+   {
+    "id": "q1",
+    "options": [
+     "Roguelite-first hybrid (recommended)",
+     "PvP in the first prototype",
+     "Hot-seat PvP in the first prototype"
+    ],
+    "q": "Format: approve the roguelite-first hybrid, or do you want PvP (even hot-seat) in the first prototype?"
+   },
+   {
+    "id": "q2",
+    "options": [
+     "Only when the Operator goes down (recommended)",
+     "On any unit loss"
+    ],
+    "q": "Core hook: does the streak reset only when your Operator goes down, or on any unit loss (harsher, more hardcore)?"
+   },
+   {
+    "id": "q3",
+    "options": [
+     "Simultaneous reveal, 3 lanes (recommended)",
+     "Alternating turns"
+    ],
+    "q": "Match structure: simultaneous reveal on 3 lanes, or Hearthstone-style alternating turns?"
+   },
+   {
+    "id": "q4",
+    "options": [
+     "Near-future contractors (recommended)",
+     "Present day",
+     "Abstract lobby, no story"
+    ],
+    "q": "Setting and tone: near-future contractors (Kharzan Corridor, HALBERD vs BLACK MERIDIAN), present day, or an abstract multiplayer lobby with no story?"
+   },
+   {
+    "id": "q5",
+    "options": [
+     "Keep Killstreak",
+     "Check alternatives"
+    ],
+    "q": "Title: keep Killstreak as the working title, pending a trademark search? Add any alternatives you want checked in the note."
+   },
+   {
+    "id": "q6",
+    "options": [
+     "Zone Control + Firefight (recommended)",
+     "Zone Control + Detonator",
+     "Firefight + Detonator"
+    ],
+    "q": "Prototype modes: Zone Control + Firefight, or swap one for Detonator (bomb mode, no respawn)?"
+   },
+   {
+    "id": "q7",
+    "options": [
+     "30\u201345 min, 3 tickets",
+     "About 15 min"
+    ],
+    "q": "Run length: 30\u201345 minutes with 3 tickets, or shorter runs of about 15 minutes for web play?"
+   },
+   {
+    "id": "q8",
+    "options": [
+     "Placeholder layout (recommended)",
+     "3-card painted style test"
+    ],
+    "q": "Art for the prototype: placeholder layout only, or a small painted style test of 3 cards?"
+   },
+   {
+    "id": "q9",
+    "options": [
+     "Web only",
+     "Plan for Steam later",
+     "Plan for mobile later",
+     "Plan for Steam and mobile"
+    ],
+    "q": "Long-term platform: web only, or should the design plan for a later Steam or mobile release?"
+   },
+   {
+    "id": "q10",
+    "options": [
+     "Accept under 10 s with loading screen",
+     "Keep under 3 s"
+    ],
+    "q": "Load-time target: accept under 10 s with a loading screen instead of under 3 s for the Godot web build?"
+   }
+  ],
+  "t16q": [
+   {
+    "id": "q1",
+    "options": [
+     "7 matches, 30\u201345 min (planned)",
+     "5 matches, 20\u201330 min"
+    ],
+    "q": "Run length: your 30\u201345 min choice needs about 7 matches (two brackets of 3, then a rival). The earlier mini-run was 5 matches (about 20\u201330 min). Which for the prototype?"
+   },
+   {
+    "id": "q2",
+    "options": [
+     "Studio does a preliminary search",
+     "I'll get a professional check",
+     "Both"
+    ],
+    "q": "Trademark check on Deckstreak and Killstreak: should the studio do a preliminary web and trademark-database search, or will you get a professional check? No public link until it's done."
+   },
+   {
+    "id": "q3",
+    "options": [
+     "Yes to both",
+     "itch.io yes, fewer testers",
+     "Different hosting"
+    ],
+    "q": "Hosting and testers: is a private, password-protected itch.io page OK, and can you find 8\u201315 outside testers (at least 4 shooter players, 4 card players, 3 on phones) for Nov 13\u201318?"
+   },
+   {
+    "id": "q4",
+    "options": [
+     "Both",
+     "iPhone only",
+     "Android only",
+     "Neither"
+    ],
+    "q": "Devices: will a real iPhone and a real Android phone be available for testing by day 4? Emulators miss iOS Safari audio and memory problems."
+   },
+   {
+    "id": "q5",
+    "options": [
+     "Approve picks and cut order",
+     "Change something (see note)"
+    ],
+    "q": "Content and cut order: perks Streak Discipline, Field Salvage, Grit, Objective Focus; killstreaks Recon Drone, Mortar Barrage, Sentry Turret, Attack Helo (Gunship cut); attachments Extended Mag, Foregrip, Holo Sight, Ceramic Lining. If the schedule slips, cut perk offers first, then Sentry, Attack Helo, Bracket 2 scaling, and finally simplify the tutorial. Approve?"
+   }
+  ]
+ },
+ "commitTimes": [
+  7531,
+  8011,
+  8540,
+  8626,
+  8896,
+  9687,
+  9839,
+  10400,
+  11346,
+  11704,
+  11737,
+  11933,
+  12835,
+  12878,
+  12969,
+  12996,
+  13039,
+  13207,
+  13247,
+  13258,
+  13420,
+  13442,
+  13703,
+  13725,
+  14114,
+  14166,
+  14219,
+  14236,
+  14546,
+  14574,
+  14613,
+  14808,
+  14827,
+  15146,
+  15160,
+  16073,
+  16092,
+  16626,
+  16726,
+  16754,
+  18825,
+  18884,
+  19816,
+  19838,
+  20009,
+  20047,
+  20334,
+  20356,
+  20997,
+  40435,
+  40464,
+  40616,
+  40661,
+  40772,
+  42432,
+  42450,
+  44218,
+  45350,
+  45374,
+  46356,
+  48783,
+  49324
+ ],
+ "stats": {
+  "wall": "11h 36m",
+  "from": "02:05",
+  "to": "13:42",
+  "gap": "05:50-11:13",
+  "agents": 12,
+  "tasks": 48,
+  "commits": 62,
+  "commits_nonwip": 41,
+  "tests": 317,
+  "screens": 120,
+  "created_by": {
+   "lead": 16,
+   "master-orchestrator": 8,
+   "producer-agent": 21,
+   "you": 3
+  }
+ },
+ "shots": "../../projects/killstreak/qa/screenshots",
+ "gameDir": "game"
+}
