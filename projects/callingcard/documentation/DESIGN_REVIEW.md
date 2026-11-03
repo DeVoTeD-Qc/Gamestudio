@@ -1,7 +1,25 @@
 # CallingCard: Design Review (for approval)
 
-*Master Orchestrator · 2026-11-03 · Phase: Design · Status: **awaiting the head's decisions** (see the questions at the end)*
+*Master Orchestrator · 2026-11-03 · Phase: Planning · Status: **approved 2026-11-03** (decisions below; prototype plan in `production/prototype-milestone-plan.md`)*
 *Unofficial design pitch about a feature of Call of Duty (Activision). We describe CoD's calling cards only as context. All card names, art direction and mock-ups are original. A prototype would be a **standalone concept demo with original placeholder art**, not a mod or recreation of Call of Duty.*
+
+## Decisions (approved 2026-11-03)
+The studio head approved the design and answered all 10 questions. They are **closed** and binding for the prototype plan (`production/prototype-milestone-plan.md`, tasks in `production/prototype-tasks.json`).
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Concept | **Banner Wall (A) with the album slice of B**, as recommended. |
+| 2 | Core bet | **Harder-earned cards are stronger** (Clearance from how a card was earned). |
+| 3 | Store cards | Store and bundle cards are **always the lowest tier (Clearance 1) with no trait, but get premium frames**. |
+| 4 | Where it lives | **Both:** a short mini-game during **matchmaking** and a **separate menu mode**. The demo presents both entry points: a *Lobby Duel* (quick duel during a simulated matchmaking wait, can be saved and resumed) and the full *Banner Wall* menu (album, lineup, rivals, Dossiers). |
+| 5 | Rewards | **Cosmetics only** (titles, frames, mode-exclusive cards). No shooter XP or shooter-usable rewards. |
+| 6 | Shooter-side features | **Signature Trio (C) and Bounty (D) go to the backlog** for now. The pitch stays on the side mode. |
+| 7 | Starting rules | **Approved as starting values:** 10-slot 3-4-3 wall, 5 cards each, Clearance cap 12, Signatures count double. |
+| 8 | Puzzles | **Include the Cipher Lock** alongside the 5 Dossiers. |
+| 9 | Audience | **Internal only for now.** The one-page summary and the demo capture video go to the backlog. |
+| 10 | Load target | **Under 10 s with a loading screen** for the Godot web build (replaces "< 3 s"). |
+
+**IP framing (unchanged):** unofficial pitch; original placeholder art only; the demo is a standalone concept, with no Activision assets or names in the game UI beyond generic terms (e.g. "calling card", "matchmaking", "prestige").
 
 ## The problem
 CoD players unlock calling cards constantly, from challenges, camo mastery, events, prestige, ranked play, battle passes and bundles (est. several hundred per title). Each card is a wide banner, you can equip **one**, and it's seen briefly in lobbies and killcams. Hard-won cards and filler cards feel the same, and the collection itself does nothing.
@@ -38,7 +56,7 @@ Collections gain value through **(1) multi-slot showcases** (Apex badges, Valora
 ## Prototype scope (est. ~7 days after approval)
 Godot 4.4.1 single-threaded web build: the full duel rules with all traits, 20 original cards (4 sets + Cipher + Showcase), a lineup builder, 3 AI rivals, an album with unlock goals, 3 Triptychs and a Cipher Lock, 5 Dossiers, procedural placeholder art, a capture preview, and a playtest survey with a local telemetry log. **Not included:** PvP, shooter gameplay, store, accounts, concepts C/D/E. The demo answers one question: *does "harder earned = stronger piece" make players want to collect?*
 
-## Questions for the head
+## Original questions (closed, kept for reference)
 1. **Concept:** approve **Banner Wall** (A, with the album slice of B) as the concept to prototype? Or would you rather go cheaper (B + C only: album, sets and a 3-slot showcase, no new mode)?
 2. **Core bet:** should earn difficulty make a card **stronger** in Banner Wall (recommended, since that's what gives grinding value)? Or should all cards be equal in power, with only traits differing (fairer, but weaker collector pull)?
 3. **Store cards:** accept "store and bundle cards are always the lowest tier with no trait, but get premium frames"? Or should store cards be unusable in the mode?

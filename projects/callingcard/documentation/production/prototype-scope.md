@@ -2,6 +2,8 @@
 
 *Producer (performed by the Master Orchestrator in role) · 2026-11-03 · Phase: Design*
 
+> **Update 2026-11-03 (head's decisions, see `../DESIGN_REVIEW.md`):** approved. Additions: both entry points (a *Lobby Duel* during a simulated matchmaking wait, plus the full menu mode); rewards are cosmetic only; Cipher Lock stays in; load target under 10 s with a loading screen; internal audience only. Signature Trio, Bounty, the one-page summary and the demo video are backlog. The detailed plan that supersedes sections 3 and 7 is `prototype-milestone-plan.md`.
+
 > **What this prototype is:** a **standalone concept demo** of the "Banner Wall" idea. It uses original cards, names and placeholder art. It is **not** a mod, a fan recreation, or a use of any Call of Duty assets. Its job is to let the studio head (and possibly a pitch audience) *feel* how calling cards gain value.
 
 ## 1. Market review check
@@ -24,10 +26,11 @@ The success metrics are in `design/vision.md` §8 (intent-to-collect at least 70
 | 8 | Placeholder art: procedural duotone cards, frames, icons | 0.5 |
 | 9 | In-demo survey link plus local telemetry log (duel length, album opens, lineup choices), exportable as JSON | 0.25 |
 | 10 | Godot 4.4.1 web export (GL Compatibility, single-threaded), private link | 0.25 |
-| | **Total** | **~6.75 days** |
+| 11 | Two entry points: Banner Wall menu hub and Lobby Duel (simulated matchmaking wait, save and resume) | 0.75 |
+| | **Total** | **~7.5 days** of build work (single-builder view; the milestone plan's ≈ 15.75 agent-days also counts tests, QA, art, game feel and the playtest, run in parallel over 7 working days) |
 
 ## 4. Out of scope
-PvP (live or async), any shooter gameplay, accounts, store or monetization, a real stat formula over real CoD cards, more than 20 cards, painted art, audio beyond placeholder stings, concepts C/D/E (Signature Trio, Bounty, Contracts), and localization.
+PvP (live or async), any shooter gameplay, accounts, store or monetization, a real stat formula over real CoD cards, more than 20 cards, painted art, audio beyond placeholder stings, concepts C/D/E (Signature Trio and Bounty are in the backlog; Contracts is out), external pitch material (one-page summary, demo video: backlog), and localization.
 
 ## 5. Technical notes
 - Godot 4.4.1, GDScript, GL Compatibility renderer, single-threaded web export (no SharedArrayBuffer headers needed).
@@ -52,4 +55,4 @@ PvP (live or async), any shooter gameplay, accounts, store or monetization, a re
 - **Day 6–7:** web build, QA pass, 5 or more playtesters, report.
 
 ## 8. Open questions for the head
-See the numbered list in `documentation/DESIGN_REVIEW.md`.
+Closed on 2026-11-03. See the Decisions table in `documentation/DESIGN_REVIEW.md`.

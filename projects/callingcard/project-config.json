@@ -13,7 +13,7 @@
     "unique_selling_point": "Collecting calling cards unlocks real play: a mode, puzzles and light tactical uses, so every card has a reason to chase it.",
     "version": "1.0.0",
     "created": "2026-11-03T21:12:06.596259",
-    "phase": "Design",
+    "phase": "Planning",
     "status": "active"
   },
   "development_rules": [
@@ -28,7 +28,12 @@
       "data_scientist",
       "sr_game_designer",
       "mid_game_designer",
-      "sr_game_artist"
+      "sr_game_artist",
+      "mechanics_developer",
+      "ui_ux_agent",
+      "technical_artist",
+      "game_feel_developer",
+      "qa_agent"
     ],
     "lead_agent": "producer_agent",
     "orchestrator": "master_orchestrator"
@@ -77,7 +82,7 @@
   "metrics": {
     "velocity_target": "10 tasks/week",
     "bug_threshold": "5 critical, 20 minor",
-    "performance_target": "60 FPS, < 3s load"
+    "performance_target": "60 FPS, < 10s load with a loading screen"
   },
   "risks": [
     {

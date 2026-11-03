@@ -1,0 +1,269 @@
+[
+  {
+    "id": "cc01",
+    "title": "Set up the Godot web project from Killstreak",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 10,
+    "status": "todo",
+    "note": "Copy and adapt Killstreak's project settings, test runner, screen profile, scene router, web shell, Web preset and artifact packaging script; switch to the Compatibility renderer. Done when the headless tests run and an empty build loads as a private artifact on desktop and phone.",
+    "depends": []
+  },
+  {
+    "id": "cc02",
+    "title": "Card data format and CardDB",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 11,
+    "status": "todo",
+    "note": "Typed .tres Resources for cards, sets, rivals, Triptychs, Dossiers, unlock goals and balance, loaded by CardDB. Done when bad data fails loudly, including a stat total that misses its Clearance budget or a store card above Clearance 1.",
+    "depends": [
+      "cc01"
+    ]
+  },
+  {
+    "id": "cc03",
+    "title": "Write cards, rivals, Triptychs and Dossiers",
+    "agent": "mid-game-designer",
+    "phase": "prototype",
+    "order": 12,
+    "status": "todo",
+    "note": "Author the 20 cards, 6 sets, 3 rival lineups, 3 Triptychs, 5 Dossiers, 7 unlock goals, the Cipher code and balance defaults. Done when every value matches the Banner Wall spec or a logged change.",
+    "depends": [
+      "cc02"
+    ]
+  },
+  {
+    "id": "cc04",
+    "title": "Rules test cases (test-first)",
+    "agent": "qa-agent",
+    "phase": "prototype",
+    "order": 13,
+    "status": "todo",
+    "note": "Write 45+ numbered rule cases with board, placement and expected result, covering adjacency, every trait, Set Link, scoring, the tie flag and all spec edge cases. Done when the Mid Designer has reviewed them, before rules coding starts.",
+    "depends": []
+  },
+  {
+    "id": "cc05",
+    "title": "Banner Wall rules engine",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 14,
+    "status": "todo",
+    "note": "Node-free wall rules with captures, 6 traits, Set Link, Signature, Triptych scoring and a capture preview that uses the same code. Done when all cc04 cases pass headless, including the spec's worked example.",
+    "depends": [
+      "cc02",
+      "cc04"
+    ]
+  },
+  {
+    "id": "cc06",
+    "title": "AI rivals and balance simulation",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 15,
+    "status": "todo",
+    "note": "Quartermaster (easy), Archivist (greedy) and Warden (2-ply). Done when a Warden move takes under 200 ms on a phone and 1,000 simulated duels show a first-player win rate of 45-55%, logged in the balance log.",
+    "depends": [
+      "cc05",
+      "cc03"
+    ]
+  },
+  {
+    "id": "cc07",
+    "title": "Wall board, hand and card inspector layout",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 16,
+    "status": "todo",
+    "note": "Brick wall, score counters, hand strip and tap/long-press card inspector, built with anchors and containers on mock data. Done when it reads well at 1280x720 and on a phone in landscape (844x390), with nothing hover-only.",
+    "depends": [
+      "cc01"
+    ]
+  },
+  {
+    "id": "cc08",
+    "title": "Duel flow and capture preview",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 17,
+    "status": "todo",
+    "note": "Coin flip, turns, tap card then tap slot, preview arrows on cards that would flip, confirm, end screen with cosmetic rewards. Done when a full duel vs each rival plays with mouse only and with touch only.",
+    "depends": [
+      "cc05",
+      "cc07"
+    ]
+  },
+  {
+    "id": "cc09",
+    "title": "Collection, unlocks and save",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 18,
+    "status": "todo",
+    "note": "Collection autoload for owned cards, titles, frames, unlock progress, set completion, the saved lineup and a saved Lobby Duel. Done when progress survives a browser reload and rewards are cosmetic only.",
+    "depends": [
+      "cc03"
+    ]
+  },
+  {
+    "id": "cc10",
+    "title": "Lineup builder",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 19,
+    "status": "todo",
+    "note": "Pick 5 cards with a live Clearance meter, Legend limit, Signature toggle and loaner lineup. Done when invalid lineups explain why in words and every action is one tap on a phone.",
+    "depends": [
+      "cc07",
+      "cc09"
+    ]
+  },
+  {
+    "id": "cc11",
+    "title": "Album, Triptychs and Cipher Lock",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 20,
+    "status": "todo",
+    "note": "Set pages with silhouettes that show unlock goal, Clearance and trait; Triptych hints and panorama reveal; the 4-dial Cipher Lock. Done when the right code unlocks Key Fragment and store cards read as premium frame, Clearance 1, no trait.",
+    "depends": [
+      "cc09",
+      "cc14"
+    ]
+  },
+  {
+    "id": "cc12",
+    "title": "Dossier puzzles",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 21,
+    "status": "todo",
+    "note": "Five fixed-hand puzzles from the spec with goal checks, retry and hint. Done when each Dossier has a passing solution test and pays out its reward.",
+    "depends": [
+      "cc08",
+      "cc03"
+    ]
+  },
+  {
+    "id": "cc13",
+    "title": "Banner Wall hub and Lobby Duel",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 22,
+    "status": "todo",
+    "note": "Both entry points: the menu hub and a quick duel during a simulated matchmaking wait with Keep playing / Save & leave when the match is found. Done when a saved Lobby Duel resumes from the hub after a reload, with generic wording only.",
+    "depends": [
+      "cc08",
+      "cc09",
+      "cc10"
+    ]
+  },
+  {
+    "id": "cc14",
+    "title": "Placeholder art kit",
+    "agent": "technical-artist",
+    "phase": "prototype",
+    "order": 23,
+    "status": "todo",
+    "note": "Procedural duotone card art per set, frames per Clearance plus Showcase and set-complete, trait icons, cipher glyphs, OFL fonts and the wall theme. Done when all art is original and imported assets stay under 5 MB.",
+    "depends": [
+      "cc01"
+    ]
+  },
+  {
+    "id": "cc15",
+    "title": "Placement feedback and the Carded! moment",
+    "agent": "game-feel-developer",
+    "phase": "prototype",
+    "order": 24,
+    "status": "todo",
+    "note": "Card drop, capture color wipe, Ambush flip, Set Link light, skippable Carded! stamp and Triptych merge, driven by EventBus with a fast-animations toggle. Done when it holds 60 FPS on desktop and 30+ on a phone.",
+    "depends": [
+      "cc08",
+      "cc14"
+    ]
+  },
+  {
+    "id": "cc16",
+    "title": "Playtest logger and survey",
+    "agent": "data-scientist",
+    "phase": "prototype",
+    "order": 25,
+    "status": "todo",
+    "note": "Adapt Killstreak's PlaytestLog: consent, all plan section 8 events, the 4 vision survey questions plus one open, and Download log. Done when the schema test passes and the log downloads on desktop and phone.",
+    "depends": [
+      "cc01",
+      "cc13"
+    ]
+  },
+  {
+    "id": "cc17",
+    "title": "Rules, device and release check",
+    "agent": "qa-agent",
+    "phase": "qa",
+    "order": 26,
+    "status": "todo",
+    "note": "Rules, device matrix, mouse-only and touch-only passes, load time under 10 s, all unlocks reachable, IP and disclaimer checklist. Done at 0 critical and at most 10 minor bugs.",
+    "depends": [
+      "cc06",
+      "cc11",
+      "cc12",
+      "cc13",
+      "cc15",
+      "cc16"
+    ]
+  },
+  {
+    "id": "cc18",
+    "title": "Internal playtest and go/no-go report",
+    "agent": "data-scientist",
+    "phase": "play",
+    "order": 27,
+    "status": "todo",
+    "note": "3-5 internal sessions across both entry points, KPI sheet from the logs and a short report with a recommendation. Done when the report is in documentation/production/reports/.",
+    "depends": [
+      "cc17"
+    ]
+  },
+  {
+    "id": "ccb1",
+    "title": "Signature Trio concept (3 card slots)",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 40,
+    "status": "todo",
+    "note": "Backlog (decision 6): spec the banner, killcam stamp and squad card slots as a phase-2 pitch feature. Not in the prototype.",
+    "depends": []
+  },
+  {
+    "id": "ccb2",
+    "title": "Bounty mode concept",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 41,
+    "status": "todo",
+    "note": "Backlog (decision 6): spec the limited-time tag mode where dropped tags are calling cards. Not in the prototype.",
+    "depends": []
+  },
+  {
+    "id": "ccb3",
+    "title": "One-page pitch summary",
+    "agent": "producer-agent",
+    "phase": "backlog",
+    "order": 42,
+    "status": "todo",
+    "note": "Backlog (decision 9): external one-pager once the head opens the pitch beyond internal use.",
+    "depends": []
+  },
+  {
+    "id": "ccb4",
+    "title": "Demo capture video",
+    "agent": "technical-artist",
+    "phase": "backlog",
+    "order": 43,
+    "status": "todo",
+    "note": "Backlog (decision 9): short capture of the demo for an external pitch, after the internal playtest.",
+    "depends": []
+  }
+]

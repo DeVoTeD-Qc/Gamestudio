@@ -1,6 +1,6 @@
 # CallingCard: Game Design Document
 
-*Version 0.1 (Design phase) · 2026-11-03 · Owner: Sr Game Designer · Status: awaiting the head's review*
+*Version 0.1 (Design phase) · 2026-11-03 · Owner: Sr Game Designer · Status: approved 2026-11-03 (see `../DESIGN_REVIEW.md` Decisions)*
 *Unofficial design pitch about Call of Duty calling cards. All names, cards and art are original. A prototype would be a standalone concept demo, not a mod or recreation of Call of Duty.*
 
 ## Overview
@@ -41,7 +41,7 @@ The demo has 20 original cards: Night Shift (4), Whiteout (4), Signal Fire (4), 
 ## Technical Requirements
 **Engine:** Godot v4.4.1 (GDScript, GL Compatibility, single-threaded web export)
 **Architecture:** pure-logic rules module (`wall_rules.gd`) with unit tests; `Collection` and `Telemetry` autoloads; card and balance data as `.tres`.
-**Performance targets:** 60 FPS; load under 10 s with a loading screen (proposed; replaces the default "< 3 s" for a Godot web build); art under 5 MB.
+**Performance targets:** 60 FPS; load under 10 s with a loading screen (approved 2026-11-03; replaces the default "< 3 s" for a Godot web build); art under 5 MB.
 
 ## Art Direction
 "Museum of the Grind": cards as framed exhibits on a night-gallery brick wall. Duotone poster art inside the cards. Frame material scales with Clearance (graphite → steel → brass → black-and-gold enamel). Showcase store cards get the flashiest chrome or gold frames but no power. Teal = you, coral = rival, amber = interactive, plus shape cues for colorblind players. See `../art/style-guides/art-direction.md`.

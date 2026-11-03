@@ -1,6 +1,6 @@
 # Feature Specification: Banner Wall
 
-*Mid Game Designer (performed by the Master Orchestrator in role) · 2026-11-03 · Phase: Design · Status: draft for approval*
+*Mid Game Designer (performed by the Master Orchestrator in role) · 2026-11-03 · Phase: Design · Status: **approved 2026-11-03** (starting values in §4 and §9 confirmed for playtesting; Cipher Lock in; rewards cosmetic only; see `../../DESIGN_REVIEW.md` Decisions)*
 *Recommended concept A from `../vision.md`, with a slice of concept B (album, sets, Triptychs). All card names and art briefs are original. The prototype is a standalone concept demo, not a mod or recreation of Call of Duty.*
 
 ## 1. Overview

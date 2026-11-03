@@ -61,6 +61,7 @@ Why A:
 - It's the only concept we can genuinely prove in a browser in a week.
 
 **Suggested long-term roll-out (for the pitch):** Phase 1: A + B. Phase 2: C (cheap and visible). Phase 3: E, then D as a seasonal limited-time mode.
+*Decision 2026-11-03: the head approved A + B. C (Signature Trio) and D (Bounty) are in the backlog for now; the pitch stays on the side mode. Banner Wall lives both in matchmaking and as a separate menu mode, and pays out cosmetics only.*
 
 ## 8. Success metrics (for the demo, and what a live version would track)
 - **Intent to collect:** at least 70% of playtesters agree with "I'd go after specific cards to use them in Banner Wall" (survey, 1 to 5 scale, 4+ counts).
