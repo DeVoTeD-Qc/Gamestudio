@@ -53,11 +53,19 @@ static func grain_material() -> ShaderMaterial:
 
 ## Takes a card Dictionary or Resource (fields: id or art_key, set or set_id, art_seed, glyph).
 func configure(card: Variant) -> void:
+	card = as_dict(card)
 	art_key = StringName(str(_field(card, ["art_key", "art", "id"], "")))
 	set_id = StringName(str(_field(card, ["set", "set_id"], "night_shift")))
 	art_seed = int(_field(card, ["art_seed", "seed"], 0))
 	var g: Variant = _field(card, ["glyph", "cipher_glyph"], 0)
 	glyph = int(g) if (g is int or g is float) else (1 if g == true else 0)
+
+
+## CardData (cc02) and anything else with to_ui_dict() become the UI Dictionary shape.
+static func as_dict(card: Variant) -> Variant:
+	if card is Object and (card as Object).has_method("to_ui_dict"):
+		return card.to_ui_dict()
+	return card
 
 
 static func _field(card: Variant, keys: Array, fallback: Variant) -> Variant:

@@ -1,0 +1,187 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="1_insp"]
+[ext_resource type="PackedScene" path="res://scenes/duel/CardView.tscn" id="2_card"]
+
+[node name="CardInspector" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_insp")
+
+[node name="Scrim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.035, 0.045, 0.82)
+
+[node name="SafeMargin" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Center" type="CenterContainer" parent="SafeMargin"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="InspectorPanel" type="PanelContainer" parent="SafeMargin/Center"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorPanel"
+
+[node name="Column" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="InspectorCard" parent="SafeMargin/Center/InspectorPanel/Column" instance=ExtResource("2_card")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(720, 180)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Info" type="HBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="LeftColumn" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="InspectorNameLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorName"
+text = "Card name"
+
+[node name="SetOriginLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorBody"
+text = "Set · Origin"
+
+[node name="ClearanceLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorBody"
+text = "Clearance 1 · Issue"
+
+[node name="OwnerLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"SubtleText"
+text = "Yours"
+
+[node name="Values" type="HBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="Top" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Top"]
+layout_mode = 2
+theme_type_variation = &"ValueCaption"
+text = "TOP (up)"
+horizontal_alignment = 1
+
+[node name="TopValue" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Top" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorValue"
+text = "5"
+horizontal_alignment = 1
+
+[node name="Side" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Side"]
+layout_mode = 2
+theme_type_variation = &"ValueCaption"
+text = "SIDE (both)"
+horizontal_alignment = 1
+
+[node name="SideValue" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Side" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorValue"
+text = "4"
+horizontal_alignment = 1
+
+[node name="Bottom" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Bottom"]
+layout_mode = 2
+theme_type_variation = &"ValueCaption"
+text = "BOTTOM (down)"
+horizontal_alignment = 1
+
+[node name="BottomValue" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Bottom" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorValue"
+text = "4"
+horizontal_alignment = 1
+
+[node name="RightColumn" type="VBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="TraitHeading" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorHeading"
+text = "TRAIT"
+
+[node name="TraitRule" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorBody"
+text = "Rule"
+autowrap_mode = 3
+
+[node name="EarnedHeading" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/RightColumn"]
+layout_mode = 2
+theme_type_variation = &"InspectorHeading"
+text = "HOW IT'S EARNED"
+
+[node name="EarnedLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InspectorBody"
+text = "Earned"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column"]
+layout_mode = 2
+alignment = 2
+
+[node name="CloseButton" type="Button" parent="SafeMargin/Center/InspectorPanel/Column/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"ActionButton"
+text = "CLOSE"

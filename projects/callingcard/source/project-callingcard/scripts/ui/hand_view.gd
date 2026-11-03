@@ -1,0 +1,118 @@
+# hand_view.gd
+# Purpose: The player's hand (up to 5 cards). Cards are the same size as a brick, centered in
+#   rows (5 in one row when they fit, else 3 + 2), so every card stays visible and tappable.
+#   Strip mode (strip = true): one row in a horizontal ScrollContainer, for screens too short
+#   for two rows (DuelScreen decides; at 1280x720 and 844x390 two rows fit, see the cc07 notes).
+#   Tap a card -> pick it (amber outline, `card_picked`); tap it again -> unpick.
+#   Hold 400 ms / right-click / "inspect" key -> `card_inspect_requested`.
+# Dependencies: tap_hold_button.gd, scenes/duel/CardView.tscn.
+# Author: UI/UX Agent (cc07)
+extends VBoxContainer
+
+signal card_picked(card_id: StringName)
+signal card_unpicked
+signal card_inspect_requested(card_id: StringName)
+
+const TapHoldButton: GDScript = preload("res://scripts/ui/tap_hold_button.gd")
+const CardViewScene: PackedScene = preload("res://scenes/duel/CardView.tscn")
+const CARD_GAP: int = 10
+
+var card_size: Vector2 = Vector2(256, 64)
+var strip: bool = false
+var compact: bool = false
+var picked_id: StringName = &""
+
+var _cards: Array[Dictionary] = []
+var _signature_id: StringName = &""
+
+@onready var _title: Label = %HandTitle
+@onready var _hint: Label = %HandHint
+@onready var _scroll: ScrollContainer = %HandScroll
+@onready var _flow: HFlowContainer = %HandCards
+
+
+func _ready() -> void:
+	_flow.add_theme_constant_override(&"h_separation", CARD_GAP)
+	_flow.add_theme_constant_override(&"v_separation", CARD_GAP)
+
+
+## cards: UI card Dictionaries in hand order. signature_id draws the ribbon on that card.
+func show_hand(cards: Array, signature_id: StringName = &"") -> void:
+	_cards.clear()
+	for c: Dictionary in cards:
+		_cards.append(c)
+	_signature_id = signature_id
+	if picked_id != &"" and not _cards.any(func(c: Dictionary) -> bool: return c.get("id") == picked_id):
+		picked_id = &""
+	_rebuild()
+
+
+func set_layout(size_px: Vector2, is_strip: bool, is_compact: bool) -> void:
+	card_size = size_px
+	strip = is_strip
+	compact = is_compact
+	_rebuild()
+
+
+func rows_for(width: float, count: int) -> int:
+	if count <= 0:
+		return 1
+	var per_row: int = maxi(1, int(floor((width + CARD_GAP) / (card_size.x + CARD_GAP))))
+	return int(ceil(float(count) / per_row))
+
+
+func get_card_buttons() -> Array[Node]:
+	return _flow.get_children()
+
+
+func get_scroll() -> ScrollContainer:
+	return _scroll
+
+
+func pick(card_id: StringName) -> void:
+	picked_id = card_id
+	_refresh_picked()
+	card_picked.emit(card_id)
+
+
+func unpick() -> void:
+	picked_id = &""
+	_refresh_picked()
+	card_unpicked.emit()
+
+
+func _rebuild() -> void:
+	if not is_node_ready():
+		return
+	for child: Node in _flow.get_children():
+		_flow.remove_child(child)
+		child.queue_free()
+	_title.text = "YOUR HAND · %d" % _cards.size()
+	_hint.text = "Tap to pick · hold for details" if compact else "Tap to pick · hold or right-click for details"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if strip else ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if strip else ScrollContainer.SCROLL_MODE_AUTO
+	var n: int = _cards.size()
+	_flow.custom_minimum_size.x = (card_size.x * n + CARD_GAP * maxi(n - 1, 0)) if strip else card_size.x
+	for c: Dictionary in _cards:
+		var b: Button = TapHoldButton.new()
+		b.name = "Card_%s" % c.get("id", "")
+		b.custom_minimum_size = card_size
+		b.theme_type_variation = &"HandCard"
+		b.add_to_group(&"tap_target")
+		var view: Control = CardViewScene.instantiate()
+		view.custom_minimum_size = Vector2.ZERO
+		view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.add_child(view)
+		view.compact = compact
+		view.show_card(c, &"player", c.get("id") == _signature_id)
+		var id: StringName = c.get("id", &"")
+		b.tapped.connect(func() -> void: unpick() if picked_id == id else pick(id))
+		b.inspect_requested.connect(func() -> void: card_inspect_requested.emit(id))
+		b.set_meta(&"card_id", id)
+		_flow.add_child(b)
+	_refresh_picked()
+
+
+func _refresh_picked() -> void:
+	for b: Node in _flow.get_children():
+		(b as Button).theme_type_variation = &"HandCardSelected" if b.get_meta(&"card_id") == picked_id else &"HandCard"

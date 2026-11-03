@@ -1,0 +1,66 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/score_counter.gd" id="1_counter"]
+
+[node name="ScoreCounter" type="PanelContainer"]
+offset_right = 380.0
+offset_bottom = 64.0
+theme_type_variation = &"CounterPlayer"
+script = ExtResource("1_counter")
+
+[node name="Row" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Tab" type="Control" parent="Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Info" type="VBoxContainer" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="Row/Info"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CounterName"
+text = "YOU · 5 in hand"
+
+[node name="RibbonRow" type="HBoxContainer" parent="Row/Info"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Ribbon" type="Control" parent="Row/Info/RibbonRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(12, 18)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="SignatureLabel" type="Label" parent="Row/Info/RibbonRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"RibbonText"
+text = "Signature"
+
+[node name="SignatureState" type="Label" parent="Row/Info/RibbonRow"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"CounterName"
+text = "CARDED"
+
+[node name="ScoreLabel" type="Label" parent="Row" groups=["key_number"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+theme_type_variation = &"CounterScore"
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
