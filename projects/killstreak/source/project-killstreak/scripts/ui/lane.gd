@@ -120,7 +120,7 @@ func set_lane(lane: Dictionary) -> void:
 	var control: StringName = lane.get("control", &"empty")
 	_control.text = CONTROL_TEXT.get(control, "OPEN")
 	_header.theme_type_variation = HEADER_VARIATION.get(control, &"ZoneNeutral")
-	_fill_line(_enemy_slots, lane.get("enemy", []), &"enemy", int(lane.get("incoming", 0)))
+	_fill_line(_enemy_slots, lane.get("enemy", []), &"enemy", int(lane.get("incoming", 0)), lane.get("revealed", []))
 	_fill_line(_friendly_slots, lane.get("friendly", []), &"player", 0)
 
 
@@ -147,13 +147,15 @@ func get_friendly_slots() -> Array[Node]:
 	return _friendly_slots.get_children()
 
 
-func _fill_line(row: HBoxContainer, units: Array, side: StringName, incoming: int) -> void:
+## revealed (f03): names behind the red dots (Recon Drone / Callout), one per incoming slot.
+func _fill_line(row: HBoxContainer, units: Array, side: StringName, incoming: int, revealed: Array = []) -> void:
 	var slots: Array[Node] = row.get_children()
 	for i: int in slots.size():
 		var slot: Node = slots[i]
 		if i < units.size():
 			slot.show_unit(units[i], side, i == 0)
 		elif i < units.size() + incoming:
-			slot.show_incoming()
+			var k: int = i - units.size()
+			slot.show_incoming(String(revealed[k]) if k < revealed.size() else "")
 		else:
 			slot.show_empty(side)

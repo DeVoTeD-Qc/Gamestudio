@@ -14,6 +14,7 @@ const REASON_WORDS: Dictionary = {
 	"round_cap": "Most points after the last round.",
 	"overtime": "Decided in overtime.",
 	"overtime_draw": "Still tied after overtime.",
+	"forfeit": "You forfeited the match.",
 }
 const OFFER_WORDS: Dictionary = {
 	RewardOffers.KIND_SUPPLY_DROP: "SUPPLY DROP",

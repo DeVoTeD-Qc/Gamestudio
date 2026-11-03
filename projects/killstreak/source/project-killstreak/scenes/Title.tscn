@@ -69,6 +69,50 @@ layout_mode = 2
 theme_type_variation = &"HudButton"
 text = "START NEW RUN"
 
+[node name="TutorialButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "TUTORIAL"
+
+[node name="OfferPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="OfferColumn" type="VBoxContainer" parent="SafeArea/Center/Column/OfferPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OfferLabel" type="Label" parent="SafeArea/Center/Column/OfferPanel/OfferColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "New here? Play the 3-minute drill."
+autowrap_mode = 3
+
+[node name="OfferRow" type="HBoxContainer" parent="SafeArea/Center/Column/OfferPanel/OfferColumn"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayDrillButton" type="Button" parent="SafeArea/Center/Column/OfferPanel/OfferColumn/OfferRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"ReadyButton"
+text = "PLAY DRILL"
+
+[node name="NotNowButton" type="Button" parent="SafeArea/Center/Column/OfferPanel/OfferColumn/OfferRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "NOT NOW"
+
 [node name="ConfirmPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
 unique_name_in_owner = true
 visible = false

@@ -40,6 +40,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 			"range": RANGE_LABELS[state.zone_ranges[z]],
 			"control": _control_id(state.control_of(z), viewer),
 			"incoming": dots[z] if z < dots.size() else 0,
+			"revealed": revealed_names(state, viewer, z),
 			"friendly": friendly, "enemy": enemy,
 		})
 	var hand: Array = []
@@ -104,6 +105,21 @@ static func unit_name(u: RulesUnit, side: RulesSide) -> String:
 	if u.is_operator and side.setup.primary != null:
 		return side.setup.primary.display_name
 	return String(u.source_id).capitalize()
+
+
+## f03: names of the enemy cards behind this zone's red dots when `viewer` revealed them
+## (Callout / Recon Specialist for the zone, Recon Drone for all): MatchState.revealed_red_dots
+## worded for the board. In play order, one per dot; empty while unrevealed.
+static func revealed_names(state: MatchState, viewer: int, zone: int) -> Array:
+	var out: Array = []
+	var foe: RulesSide = state.sides[1 - viewer]
+	for id: StringName in state.revealed_red_dots(viewer, zone):
+		if foe.operator_unit != null and id == foe.operator_unit.source_id:
+			out.append(unit_name(foe.operator_unit, foe))
+			continue
+		var card: CardData = CardDB.get_card(id) if CardDB != null else null
+		out.append(card.display_name if card != null else String(id).capitalize())
+	return out
 
 
 ## Short display name of a queued play (for the UNDO button).

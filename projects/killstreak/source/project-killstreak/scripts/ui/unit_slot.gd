@@ -29,6 +29,8 @@ var compact: bool = false
 var slot_uid: int = -1
 var pending: bool = false
 var is_target: bool = false
+## INCOMING slot: name of the revealed card behind the red dot ("" = not revealed, f03).
+var revealed: String = ""
 var _base_variation: StringName = &"SlotEmpty"
 
 @onready var _icon: TextureRect = %ClassIcon
@@ -53,6 +55,7 @@ func set_compact(value: bool) -> void:
 func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	side = unit_side
 	kind = Kind.UNIT
+	revealed = ""
 	var is_operator: bool = unit.get("operator", false)
 	slot_uid = int(unit.get("uid", -1))
 	pending = bool(unit.get("pending", false))
@@ -76,15 +79,17 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	_set_parts(true, false)
 
 
-## A committed but hidden enemy unit (red-dot intel, core-rules.md section 2.1).
-func show_incoming() -> void:
+## A committed but hidden enemy unit (red-dot intel, core-rules.md section 2.1). f03: with
+## revealed_name (Recon Drone / Callout showed the card) the slot names it and tags it SPOTTED.
+func show_incoming(revealed_name: String = "") -> void:
 	side = &"enemy"
 	kind = Kind.INCOMING
 	slot_uid = -1
 	pending = false
 	_set_variation(&"SlotIncoming")
-	_tag.text = "INCOMING"
-	_name.text = ""
+	revealed = revealed_name
+	_tag.text = "SPOTTED" if revealed_name != "" else "INCOMING"
+	_name.text = revealed_name
 	_class.text = ""
 	_icon.texture = null
 	_set_parts(false, true)
@@ -93,6 +98,7 @@ func show_incoming() -> void:
 func show_empty(slot_side: StringName) -> void:
 	side = slot_side
 	kind = Kind.EMPTY
+	revealed = ""
 	slot_uid = -1
 	pending = false
 	_set_variation(&"SlotEmpty")

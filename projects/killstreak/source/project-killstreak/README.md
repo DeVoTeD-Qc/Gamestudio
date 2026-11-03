@@ -87,6 +87,19 @@ Set `autostart` off to get the p08 mock board instead.
 - **UNDO** takes back the last play of this Deploy (above READY on desktop, next to MENU on the phone).
   **READY** (or R) resolves the round. Esc / right mouse clears the selection.
 - Tests: `tests/test_hand_input.gd` drives all of this with InputEvents at 1280x720 and 844x390 @3x.
+- **Run match (f03):** opened from RunMap's DEPLOY, `MatchController` plays the MatchState from
+  `SceneRouter.take_pending_match()` (the run slot's map and squad, AI, mulligan, FX, preview) instead of
+  the local test match. When it ends, a **result banner** (VICTORY / DEFEAT / DRAW, score, why, round)
+  waits for **CONTINUE**, which calls `SceneRouter.finish_run_match()` once and opens AfterAction. The
+  local test match's banner offers **BACK TO TITLE**.
+- **MENU** opens the pause sheet: RESUME, FAST ANIMATIONS (Settings), FORFEIT MATCH (asks first; ends the
+  match as a loss with reason `forfeit` through the same banner / finish path) and QUIT TO TITLE (the run
+  stays saved; Continue opens RunMap and DEPLOY replays the match from the same seed). Esc closes it.
+- **Spotted red dots:** when Recon Drone / Callout / Recon Specialist reveal enemy deployments
+  (`MatchState.revealed_red_dots`), the INCOMING slots show the card names (tag SPOTTED) and the minimap
+  cell lists them in place of the dots.
+- Tests: `tests/test_match_run_flow.gd` plays a run through the real match screen by taps (match played
+  to the end, forfeit, quit and continue), plus the Title drill offer and spotted red dots.
 
 ## Outcome preview (p12)
 **PREVIEW** (top bar, next to MENU) or **P** (`toggle_preview`) puts a cyan forecast card over each
@@ -114,7 +127,9 @@ Boot → (Consent → PreSurvey, once, p16) → **Title** → **Loadout** → **
 Scenes are in `scenes/run/` (Title stays `scenes/Title.tscn`), scripts in `scripts/ui/run/`:
 `run_screen.gd` (shared base: compact profile, notch-safe margins, builders), `run_flow.gd` (which screen
 comes next from the run's phase, After-Action report, run words), `pick_tile.gd` (one-tap choice tile).
-- **Title:** CONTINUE RUN only when a save exists; it opens the screen for the save's phase. A save that
+- **Title:** TUTORIAL opens the p15 drill; on first launch (drill never completed or skipped, no saved
+  run) "New here? Play the 3-minute drill." offers PLAY DRILL / NOT NOW (NOT NOW records a skip).
+  CONTINUE RUN only when a save exists; it opens the screen for the save's phase. A save that
   can't be loaded shows `RunState.last_load_warning`. START NEW RUN asks before replacing a saved run.
 - **Loadout:** starter kit plus the killstreak pool; tap to pick or drop, BEGIN RUN needs exactly
   `killstreak_slots`.

@@ -19,6 +19,7 @@ const SCENE_MATCH: String = "res://scenes/Match.tscn"
 const SCENE_AFTER_ACTION: String = "res://scenes/run/AfterAction.tscn"
 const SCENE_REWARD: String = "res://scenes/run/Reward.tscn"
 const SCENE_RUN_END: String = "res://scenes/run/RunEnd.tscn"
+const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
 
 var current_path: String = ""
 ## Tests: goto_scene only records the path and emits scene_change_started (no scene change).
