@@ -17,6 +17,8 @@
 #   [ LEFT lane       ][ MID lane       ][ RIGHT lane      ]
 #   [OPERATOR PANEL][        HAND        ][SUPPLY / READY]
 #   Below COMPACT_HEIGHT (640) logical px the compact profile tightens bars, slots and buttons.
+#   f04: on the phone the killfeed shows in the top bar over INTEL + the free slot (2 lines,
+#   only while it has lines); it never covers the hand, the lanes or a button.
 # Dependencies: scenes in scenes/match/, screen_profile.gd, mock_match_data.gd.
 # Author: UI/UX Agent
 extends Control

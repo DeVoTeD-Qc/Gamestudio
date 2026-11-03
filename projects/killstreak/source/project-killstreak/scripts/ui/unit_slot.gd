@@ -253,11 +253,12 @@ func _place_keywords() -> void:
 	var layer_origin: Vector2 = to_local * _keywords.get_parent().get_global_rect().position
 	var fp: Rect2 = Rect2(to_local * _fp_box.global_position, _fp_box.size)
 	var ar: Rect2 = Rect2(to_local * _ar_box.global_position, _ar_box.size)
-	var gap: float = ar.position.x - fp.end.x - 4.0
+	# Keep 4 px clear on each side, so an icon never touches "3/4" (checked in f04 screenshots).
+	var gap: float = ar.position.x - fp.end.x - 8.0
 	var pos: Vector2
 	if want.x <= gap:
 		var value: Rect2 = Rect2(to_local * _ar.global_position, _ar.size)
-		pos = Vector2(fp.end.x + 2.0 + (gap - want.x) * 0.5, value.position.y + (value.size.y - want.y) * 0.5)
+		pos = Vector2(fp.end.x + 4.0 + (gap - want.x) * 0.5, value.position.y + (value.size.y - want.y) * 0.5)
 	else:
 		pos = Vector2(ar.end.x - want.x, ar.position.y - want.y)
 	_keywords.position = (pos - layer_origin).round()

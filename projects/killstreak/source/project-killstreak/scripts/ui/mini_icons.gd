@@ -79,8 +79,10 @@ static func keyword_row(keywords: Array, px: float, tint: Color, with_words: boo
 		var ic: TextureRect = icon(IconSheet.KEYWORD_ICONS[id], px, tint)
 		ic.tooltip_text = String(KEYWORD_WORDS.get(id, String(id)))
 		row.add_child(ic)
+		var text: String = String(KEYWORD_WORDS.get(id, String(id).to_upper()))
 		if with_words:
-			row.add_child(word(String(KEYWORD_WORDS.get(id, String(id).to_upper()))))
+			# The word carries the value ("PATCH 2"); the bare number shows only without words.
+			row.add_child(word(text + (" %d" % value if value > 0 else "")))
 		if value > 0:
 			var v: Label = Label.new()
 			v.text = str(value)
@@ -89,6 +91,7 @@ static func keyword_row(keywords: Array, px: float, tint: Color, with_words: boo
 			v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			v.set_meta(&"important", true)
+			v.set_meta(&"value", with_words)
 			row.add_child(v)
 	return row
 
@@ -102,6 +105,7 @@ static func fit_words(row: BoxContainer) -> void:
 	var need: float = 0.0
 	var count: int = 0
 	var words: Array[Label] = []
+	var values: Array[Label] = []
 	for child: Node in row.get_children():
 		var c: Control = child as Control
 		if c == null:
@@ -110,7 +114,9 @@ static func fit_words(row: BoxContainer) -> void:
 			words.append(c as Label)
 			need += text_width(c as Label)
 			count += 1
-		elif c.visible:
+		elif bool(c.get_meta(&"value", false)):
+			values.append(c as Label)  # replaced by its word ("PATCH 2") when words show
+		else:
 			need += c.get_combined_minimum_size().x
 			count += 1
 	need += sep * maxi(0, count - 1)
@@ -118,6 +124,8 @@ static func fit_words(row: BoxContainer) -> void:
 	for l: Label in words:
 		l.visible = show
 		l.custom_minimum_size.x = ceilf(text_width(l)) if show else 0.0
+	for l: Label in values:
+		l.visible = not show
 
 
 static func text_width(l: Label) -> float:

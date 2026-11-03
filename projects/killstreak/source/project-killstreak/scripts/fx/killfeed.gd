@@ -77,11 +77,12 @@ func _on_expired(line: Control) -> void:
 	_layout(true)
 
 
-## Newest line sits on the bottom row; rows are vertically centred in the rect.
+## Oldest line on top, newest below it; the lines shown are vertically centred in the rect
+## (f04: a single line no longer sits at the bottom of an empty box).
 func _row_position(index: int) -> Vector2:
-	var rows: int = max_lines()
-	var top: float = (size.y - rows * KillfeedEntry.ROW_HEIGHT) * 0.5
-	var row: int = rows - (_entries.size() - index)
+	var shown: int = mini(_entries.size(), max_lines())
+	var top: float = (size.y - shown * KillfeedEntry.ROW_HEIGHT) * 0.5
+	var row: int = index - (_entries.size() - shown)
 	return Vector2(0, top + row * KillfeedEntry.ROW_HEIGHT)
 
 

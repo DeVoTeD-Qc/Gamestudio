@@ -61,6 +61,17 @@ Effective sizes at 844x390, checked by `tests/test_board_layout.gd`:
 Notes:
 - In Safari with its toolbars showing, the page is shorter than 390 pt, so the canvas stays at
   540 px tall and scales a little lower. A home-screen web app or Xogot runs at full height.
+- Killfeed (f04): on desktop it sits in its top-bar slot (3 lines). On the phone it shows in the
+  top bar over the INTEL strip and the free slot beside it (2 lines, ~450 px, lines live 0.75x as
+  long), only while it has lines: eliminations happen in the firefight, after the red-dot intel
+  is spent. It never covers the hand, the lanes or any button
+  (`test_killfeed_never_covers_hand_or_tap_targets`).
+- Hand chips and board slots use CardView's icon language (f04, `scripts/ui/mini_icons.gd`):
+  amber cost hex (`cost_hex.gd`), card-type and weapon-class icons, amber keyword icons with
+  their Cover / Patch value, FP / Armor icons beside the numbers. Words (type word, keyword
+  names) show only when the whole row fits; otherwise the icons stay and the words go.
+  Unit slots float their keyword icons between FP and Armor (or above Armor), so they never
+  add height to the phone board.
 - The hand uses compact HandCard chips, not CardView. A CardView at the ~0.4x a hand slot allows
   would show its name at about 7 pt on the phone. CardView belongs in the long-press inspector (p09)
   at 0.8x or larger.
