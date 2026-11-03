@@ -94,12 +94,13 @@ func setup(data: Dictionary) -> void:
 	resized.connect(_fit)
 
 
-## Starts enter + life + fade. timing: FxTiming (null = Settings).
-func start(timing: RefCounted = null) -> void:
+## Starts enter + life + fade. timing: FxTiming (null = Settings). life_scale shortens the life
+## (phone layout, f04).
+func start(timing: RefCounted = null, life_scale: float = 1.0) -> void:
 	if timing == null:
 		timing = FxTiming.from_settings()
 	var enter: float = maxf(0.01, timing.get_value(&"feed_enter"))
-	life = timing.get_value(&"feed_life")
+	life = timing.get_value(&"feed_life") * life_scale
 	var fade: float = maxf(0.01, timing.get_value(&"feed_fade"))
 	modulate.a = 0.0
 	_enter = create_tween().set_parallel(true)

@@ -194,6 +194,7 @@ layout_mode = 1
 [node name="KillfeedOverlay" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 visible = false
+modulate = Color(1, 1, 1, 0)
 layout_mode = 0
 mouse_filter = 2
 theme_type_variation = &"KillfeedOverlay"

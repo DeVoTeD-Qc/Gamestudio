@@ -35,16 +35,36 @@ const KEYWORD_RULES: Dictionary = {
 }
 
 
-## Hand chip (hand_area.gd): {uid, id, name, type, cost, fp?, armor?, text}.
+## Keyword / trigger ids that have an icon in IconSheet (the full CardView shows these).
+const ICON_KEYWORDS: Array[StringName] = [
+	&"first_shot", &"pick", &"flank", &"cover", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down",
+]
+
+
+## Hand chip (hand_area.gd): {uid, id, name, type, card_type, weapon_class, keywords, cost, fp?,
+## armor?, text, elite}. f04: card_type / weapon_class / keywords drive the chip's icons (the same
+## icon language as CardView); keywords = icon_keywords().
 static func chip(uid: int, card: CardData) -> Dictionary:
 	var d: Dictionary = {
 		"uid": uid, "id": card.id, "name": card.display_name, "cost": card.cost,
 		"type": type_line(card), "text": short_text(card),
+		"card_type": TYPE_WORDS.get(card.card_type, "unit"),
+		"weapon_class": String(CLASS_WORDS.get(card.weapon_class, "")).to_lower(),
+		"keywords": icon_keywords(keywords(card)), "elite": card.is_elite,
 	}
 	if card.is_unit():
 		d["fp"] = card.firepower
 		d["armor"] = card.armor
 	return d
+
+
+## The entries of keywords() / operator_keywords() that have an icon, as [{id, value, name}].
+static func icon_keywords(entries: Array[Dictionary]) -> Array:
+	var out: Array = []
+	for k: Dictionary in entries:
+		if k["id"] in ICON_KEYWORDS:
+			out.append({"id": k["id"], "value": k["value"], "name": k["name"]})
+	return out
 
 
 ## "Shotgun" for units (class word, or "Unit"), "Tactic" / "Equip" otherwise.
@@ -146,6 +166,16 @@ static func operator_keywords(op: RulesUnit) -> Array[Dictionary]:
 		out.append(_entry(&"patch", op.patch))
 	if op.holder:
 		out.append(_entry(&"holder"))
+	return out
+
+
+## A unit on the board (live keyword fields, plus its card's On Deploy / On Down triggers).
+static func unit_keywords(u: RulesUnit) -> Array[Dictionary]:
+	var out: Array[Dictionary] = operator_keywords(u)
+	if u.card != null:
+		for k: Dictionary in keywords(u.card):
+			if k["id"] in [&"on_deploy", &"on_down"]:
+				out.append(k)
 	return out
 
 

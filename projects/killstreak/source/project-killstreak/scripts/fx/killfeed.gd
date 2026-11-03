@@ -2,7 +2,7 @@
 # Purpose: The killfeed (top-right of the match screen, art direction "Board & HUD"). A stack
 #   of KillfeedEntry lines, newest at the bottom, each fading after its life (4 s, 2 s with
 #   fast animations). It fits as many 22 px lines as its height allows (3 in the 72 px desktop
-#   top bar, 2 in the 64 px compact one; at most MAX_LINES); a push beyond that drops the oldest
+#   top bar, 2 in the phone's top-bar overlay; at most MAX_LINES); a push beyond that drops the oldest
 #   and the others slide up one row. Its minimum size is 0, so it never grows the HUD bar
 #   it sits in; it clips to its rect.
 #   Display only: FeedbackDirector (or anything else) calls push() with names already resolved.
@@ -16,6 +16,8 @@ const FxTiming: GDScript = preload("res://scripts/fx/fx_timing.gd")
 const MAX_LINES: int = 3
 const SHIFT_TIME: float = 0.12
 
+## Multiplies each line's life (feed_life); the phone layout shortens it (match_screen.gd, f04).
+var life_scale: float = 1.0
 var _entries: Array[Control] = []
 var _reduced: bool = false
 
@@ -43,7 +45,7 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 	line.size = Vector2(size.x, KillfeedEntry.ROW_HEIGHT)
 	line.position = _row_position(_entries.size() - 1)
 	_layout(true)
-	line.start(timing)
+	line.start(timing, life_scale)
 	return line
 
 

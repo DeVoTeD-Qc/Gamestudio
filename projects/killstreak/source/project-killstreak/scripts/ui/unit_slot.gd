@@ -5,6 +5,10 @@
 #   p09: a queued arrival (this Deploy) is tagged PLAN (SlotPending); set_target(true) frames
 #   a unit that can be picked as a card's target (SlotTarget).
 #   Layout: [class icon | POINT] / name (<= 2 lines) / class word / FP and AR.
+#   f04: FP and Armor carry CardView's stat icons (not "FP" / "AR" words), and the unit's keyword
+#   icons (amber, as on CardView, with Cover / Patch values) sit between FP and AR, or just above
+#   the Armor number when that gap is too narrow. They float on KeywordLayer, so they never grow
+#   the slot (the phone board has no spare height).
 #   Compact (phone) profile hides the class word (the icon stays) and drops the
 #   desktop minimum height so the board fits a 540 px tall canvas.
 #   v01: a unit shows a faint class silhouette (card_art.gd token) behind its text, tinted with its
@@ -54,6 +58,24 @@ var _figure_scale: float = 0.0
 @onready var _ar_box: Control = %Ar
 @onready var _fp: Label = %FpValue
 @onready var _ar: Label = %ArValue
+@onready var _fp_icon: TextureRect = %FpIcon
+@onready var _ar_icon: TextureRect = %ArIcon
+@onready var _keywords: HBoxContainer = %KeywordIcons
+
+const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
+const KEYWORD_PX: float = 18.0
+const KEYWORD_PX_COMPACT: float = 16.0
+
+
+func _ready() -> void:
+	var tint: Color = get_theme_color(&"text", &"Hud")
+	_fp_icon.texture = IconSheet.get_icon(&"stat_firepower")
+	_ar_icon.texture = IconSheet.get_icon(&"stat_armor")
+	_fp_icon.modulate = tint
+	_ar_icon.modulate = tint
+	_fp_icon.tooltip_text = "Firepower"
+	_ar_icon.tooltip_text = "Armor"
+	%Stats.resized.connect(_place_keywords)
 
 
 ## Phone layout: no class word, no tall minimum (see screen_profile.gd).
@@ -92,6 +114,7 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	var armor_max: int = unit.get("armor_max", armor)
 	_ar.text = str(armor) if armor == armor_max else "%d/%d" % [armor, armor_max]
 	_set_parts(true, false)
+	_set_keywords(unit.get("keywords", []))
 
 
 ## A committed but hidden enemy unit (red-dot intel, core-rules.md section 2.1). f03: with
@@ -109,6 +132,7 @@ func show_incoming(revealed_name: String = "") -> void:
 	_icon.texture = null
 	_hide_figure()
 	_set_parts(false, true)
+	_set_keywords([])
 
 
 func show_empty(slot_side: StringName) -> void:
@@ -124,6 +148,7 @@ func show_empty(slot_side: StringName) -> void:
 	_icon.texture = null
 	_hide_figure()
 	_set_parts(false, false)
+	_set_keywords([])
 
 
 func _show_figure(key: StringName, is_operator: bool) -> void:
@@ -201,3 +226,38 @@ func _set_parts(stats_visible: bool, dot_visible: bool) -> void:
 	_dot.visible = dot_visible
 	_icon.visible = _icon.texture != null
 	_class.visible = not compact and kind == Kind.UNIT
+
+
+## Keyword icons of the unit shown ([{id, value}] from match_snapshot.gd), empty to clear.
+func _set_keywords(keywords: Array) -> void:
+	for child: Node in _keywords.get_children():
+		_keywords.remove_child(child)
+		child.queue_free()
+	var px: float = KEYWORD_PX_COMPACT if compact else KEYWORD_PX
+	var row: HBoxContainer = MiniIcons.keyword_row(keywords, px, get_theme_color(&"accent", &"Hud"), false)
+	for child: Node in row.get_children():
+		row.remove_child(child)
+		_keywords.add_child(child)
+	row.free()
+	_keywords.visible = _keywords.get_child_count() > 0
+	_place_keywords.call_deferred()
+
+
+## Between the FP and Armor numbers when the gap is wide enough, else just above the Armor number.
+func _place_keywords() -> void:
+	if _keywords == null or not _keywords.visible or not is_inside_tree():
+		return
+	var want: Vector2 = _keywords.get_combined_minimum_size()
+	_keywords.size = want
+	var to_local: Transform2D = get_global_transform().affine_inverse()
+	var layer_origin: Vector2 = to_local * _keywords.get_parent().get_global_rect().position
+	var fp: Rect2 = Rect2(to_local * _fp_box.global_position, _fp_box.size)
+	var ar: Rect2 = Rect2(to_local * _ar_box.global_position, _ar_box.size)
+	var gap: float = ar.position.x - fp.end.x - 4.0
+	var pos: Vector2
+	if want.x <= gap:
+		var value: Rect2 = Rect2(to_local * _ar.global_position, _ar.size)
+		pos = Vector2(fp.end.x + 2.0 + (gap - want.x) * 0.5, value.position.y + (value.size.y - want.y) * 0.5)
+	else:
+		pos = Vector2(ar.end.x - want.x, ar.position.y - want.y)
+	_keywords.position = (pos - layer_origin).round()

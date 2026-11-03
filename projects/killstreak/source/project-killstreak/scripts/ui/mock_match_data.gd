@@ -61,10 +61,13 @@ static func round_3_sample() -> Dictionary:
 			{"id": &"attack_helo", "name": "HELO", "threshold": 5, "earned": false},
 		],
 		"hand": [
-			{"name": "Marksman", "type": "Sniper", "cost": 3, "fp": 2, "armor": 2, "text": "Pick"},
-			{"name": "Combat Medic", "type": "AR", "cost": 2, "fp": 1, "armor": 3, "text": "Patch 2"},
+			{"name": "Marksman", "type": "Sniper", "cost": 3, "fp": 2, "armor": 2, "text": "Pick",
+					"keywords": [{"id": &"pick"}]},
+			{"name": "Combat Medic", "type": "AR", "cost": 2, "fp": 1, "armor": 3, "text": "Patch 2",
+					"keywords": [{"id": &"patch", "value": 2}]},
 			{"name": "Callout", "type": "Tactic", "cost": 0, "text": "Reveal red dots in a zone"},
-			{"name": "Breacher", "type": "Shotgun", "cost": 3, "fp": 3, "armor": 4, "text": "First Shot"},
+			{"name": "Breacher", "type": "Shotgun", "cost": 3, "fp": 3, "armor": 4, "text": "First Shot",
+					"keywords": [{"id": &"first_shot"}]},
 			{"name": "Hold the Line", "type": "Tactic", "cost": 2, "text": "Your units here: Cover 1"},
 		],
 		"killfeed": [

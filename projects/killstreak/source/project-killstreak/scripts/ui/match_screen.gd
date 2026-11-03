@@ -86,7 +86,8 @@ func _ready() -> void:
 	_fx.locator.anchors[&"streak"] = _operator_panel
 	_fx.killfeed = _killfeed_fx
 	_fx.streak_arc = _operator_panel.get_streak_arc()
-	_hand.resized.connect(_layout_killfeed_overlay)
+	_top_bar.resized.connect(_layout_killfeed_overlay)
+	_minimap.resized.connect(_layout_killfeed_overlay)
 	_update_profile()
 	resized.connect(_update_profile)
 	get_viewport().size_changed.connect(_apply_safe_area)
@@ -294,44 +295,63 @@ func _place_undo_button() -> void:
 		_undo_button.custom_minimum_size = Vector2(200, 64)
 
 
-## Bug p18-005: the phone's top bar leaves the killfeed ~180 pt, which cut lines to
-## "BREACH ▸ KES". On the phone the killfeed lives in an overlay over the hand (it can't be
-## played while the round resolves, which is when eliminations happen), as wide as the hand,
-## shown only while it has lines. Desktop keeps it in the top bar.
-const KILLFEED_OVERLAY_LINES: int = 3
+## Bug p18-005 / f04: the phone's top bar leaves the killfeed slot only ~130 px, which cut lines
+## to "BREACH ▸ KES"; v01 then moved it over the hand, which players still read as covering it.
+## Now, on the phone, the killfeed shows in the top bar over the INTEL strip plus the free slot
+## beside it (~450 px, 2 lines): eliminations happen in the firefight, after Reveal, when the
+## red-dot counts are spent, and it hides again as soon as its last line fades (lines live
+## COMPACT_FEED_LIFE of the usual time). It never covers the hand, the lanes or any button.
+## Desktop keeps it in its top-bar slot (3 lines).
+const COMPACT_FEED_LIFE: float = 0.75
 
 
 func _place_killfeed() -> void:
 	var parent: Node = _killfeed_overlay if compact else _killfeed
 	if _killfeed_fx.get_parent() != parent:
 		_killfeed_fx.reparent(parent, false)
-	_killfeed_fx.custom_minimum_size = Vector2(0, KILLFEED_OVERLAY_LINES * 22.0) if compact else Vector2.ZERO
+	_killfeed_fx.custom_minimum_size = Vector2.ZERO
+	_killfeed_fx.life_scale = COMPACT_FEED_LIFE if compact else 1.0
 	_layout_killfeed_overlay()
 
 
+## Phone: the overlay spans from the INTEL strip's left edge to the killfeed slot's right edge
+## (the PREVIEW button's left), top bar height.
 func _layout_killfeed_overlay() -> void:
+	_killfeed_overlay.visible = compact
 	if not compact:
-		_killfeed_overlay.visible = false
 		return
-	var hand: Rect2 = _hand.get_global_rect()
 	var root: Transform2D = get_global_transform().affine_inverse()
-	var top_left: Vector2 = root * hand.position
-	var h: float = _killfeed_overlay.get_combined_minimum_size().y
-	_killfeed_overlay.position = top_left + Vector2(0, maxf(0.0, (hand.size.y - h) * 0.5))
-	_killfeed_overlay.size = Vector2(hand.size.x, h)
+	var a: Rect2 = _minimap.get_global_rect()
+	var b: Rect2 = _killfeed.get_global_rect()
+	var bar: Rect2 = _top_bar.get_global_rect()
+	var top_left: Vector2 = root * Vector2(a.position.x, bar.position.y)
+	var bottom_right: Vector2 = root * Vector2(b.end.x, bar.end.y)
+	_killfeed_overlay.position = top_left
+	_killfeed_overlay.size = bottom_right - top_left
 
 
-## The rect the killfeed lines get (tests: p18-005 lines must fit it at 844x390).
+## The killfeed lines' node (tests: p18-005 lines must fit it at 844x390).
 func get_killfeed() -> Control:
 	return _killfeed_fx
 
 
+## Where the killfeed draws, in global (canvas) coordinates: the phone overlay or the desktop
+## top-bar slot. Empty while the phone overlay is hidden (tests: f04 must never meet the hand
+## or a tap target).
+func get_killfeed_rect() -> Rect2:
+	if compact:
+		return _killfeed_overlay.get_global_rect() if _killfeed_overlay.modulate.a > 0.0 else Rect2()
+	return _killfeed_fx.get_global_rect()
+
+
+## Phone: the overlay stays laid out (so the feed knows its 2-line height before the first push)
+## and is only see-through while it has no lines.
 func _process(_delta: float) -> void:
 	if compact:
 		var show: bool = not _killfeed_fx.get_entries().is_empty()
-		if show and not _killfeed_overlay.visible:
+		if show:
 			_layout_killfeed_overlay()
-		_killfeed_overlay.visible = show
+		_killfeed_overlay.modulate.a = 1.0 if show else 0.0
 
 
 ## Supply pips: narrower on the phone so a 10-Supply bar fits the 140 px action column.

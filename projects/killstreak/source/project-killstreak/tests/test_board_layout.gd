@@ -214,7 +214,8 @@ func test_killfeed_lines_fit_on_phone() -> void:
 			await tree.process_frame
 		var label: String = screen["name"]
 		var lines: Array = feed.get_entries()
-		assert_eq(lines.size(), 3, "%s: 3 killfeed lines shown" % label)
+		# Phone: 2 lines in the top bar (f04); desktop: 3 in its top-bar slot.
+		assert_eq(lines.size(), 2 if match_node.compact else 3, "%s: killfeed lines shown" % label)
 		var screen_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(viewport.size)).grow(EPS)
 		assert_true(feed.is_visible_in_tree(), "%s: killfeed visible while it has lines" % label)
 		assert_true(screen_rect.encloses(feed.get_global_rect()), "%s: killfeed on screen" % label)
@@ -237,8 +238,50 @@ func test_killfeed_lines_fit_on_phone() -> void:
 				# Desktop keeps its top-bar slot (3 lines): names may drop to 10 characters there.
 				for i: int in names.size():
 					assert_true(names[i] == want[i] or names[i].length() >= 10, "%s: killfeed name %s readable" % [label, names[i]])
+		_assert_killfeed_clear(match_node, label)
 		_despawn(viewport)
 		await tree.process_frame
+
+
+## f04 (iPhone feedback "the action feed shouldn't overlap the hand"): while the killfeed shows
+## lines it must not meet the hand area, any hand chip, the lanes' tap areas or any other tap
+## target, on the phone (with and without notch insets) and on desktop, on the live match too.
+func test_killfeed_never_covers_hand_or_tap_targets() -> void:
+	for screen: Dictionary in [PHONE, PHONE_NOTCH, DESKTOP]:
+		for live: bool in [false, true]:
+			var setup: Array = await _spawn(screen, {} if live else _full_board())
+			var viewport: SubViewport = setup[0]
+			var match_node: Control = setup[1]
+			var feed: Control = match_node.get_killfeed()
+			for i: int in 3:
+				feed.push({"attacker": "Demolitions Expert", "attacker_side": &"enemy", "victim": "Kestrel AR-7",
+						"victim_side": &"player", "icon": &"class_lmg", "zone": &"left"})
+			for i: int in 3:
+				await tree.process_frame
+			var label: String = "%s%s" % [screen["name"], " (live)" if live else ""]
+			_assert_killfeed_clear(match_node, label)
+			_despawn(viewport)
+			await tree.process_frame
+
+
+func _assert_killfeed_clear(match_node: Control, label: String) -> void:
+	var feed_rect: Rect2 = match_node.get_killfeed_rect()
+	assert_true(feed_rect.has_area(), "%s: killfeed shows while it has lines" % label)
+	var inner: Rect2 = feed_rect.grow(-EPS)
+	var hand: Control = match_node.get_hand()
+	assert_false(inner.intersects(hand.get_global_rect()), "%s: killfeed %s covers the hand %s" % [label, feed_rect, hand.get_global_rect()])
+	for lane: Node in match_node.get_board().get_lanes():
+		assert_false(inner.intersects((lane as Control).get_global_rect()), "%s: killfeed covers lane %s" % [label, lane.name])
+	var checked: int = 0
+	for n: Node in match_node.find_children("*", "Control", true, false):
+		var c: Control = n
+		if not c.is_visible_in_tree() or not (c is BaseButton or c.is_in_group(&"tap_target")):
+			continue
+		checked += 1
+		assert_false(inner.intersects(c.get_global_rect()), "%s: killfeed covers tap target %s %s" % [label, match_node.get_path_to(c), c.get_global_rect()])
+	assert_true(checked >= 20, "%s: checked %d tap targets" % [label, checked])
+	var screen_rect: Rect2 = match_node.get_viewport_rect().grow(EPS)
+	assert_true(screen_rect.encloses(feed_rect), "%s: killfeed on screen" % label)
 
 
 func test_mock_content_shown() -> void:

@@ -1,6 +1,9 @@
 # hand_area.gd
-# Purpose: Hand area (bottom-center). Shows the hand as compact HandCard chips: cost, card
-#   type, name, one rules line, FP/AR. The full CardView (p13) is NOT used here: at the
+# Purpose: Hand area (bottom-center). Shows the hand as compact HandCard chips, a mini version
+#   of the card in CardView's icon language (f04): cost hex, card-type and weapon-class icons
+#   (+ type word when it fits), name, keyword icons in amber (words when they fit; cards with no
+#   keyword icon show one rules line instead), FP / Armor icons with their numbers.
+#   The full CardView (p13) is NOT used here: at the
 #   ~0.4x scale a hand slot allows, its name/cost text would be 7-10 pt on a phone
 #   (see README "Phone readability"). CardView belongs in the long-press inspector (p09),
 #   at >= 0.8x.
@@ -11,8 +14,8 @@
 #   Up to 7 cards (hand cap): CardRow is a plain Control and _fit_cards() places the
 #   cards, centred, overlapping them when they don't fit (so the hand never widens the
 #   bottom bar). Compact (phone) profile: smaller chips, no "HAND n/7" caption.
-# Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, CostBadge,
-#   UnitName, HudNumber, HudSubtle), press_gesture.gd.
+# Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
+#   HudNumber, HudSubtle, HudTag), press_gesture.gd, mini_icons.gd, cost_hex.gd, icon_sheet.gd.
 # Author: UI/UX Agent
 extends PanelContainer
 
@@ -23,11 +26,18 @@ signal card_drag_moved(uid: int, pos: Vector2)
 signal card_drag_ended(uid: int, pos: Vector2)
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
+const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
 
 ## Desktop chip size (about 45% of the 250x350 card frame); compact chip for the phone profile.
 const CARD_SIZE: Vector2 = Vector2(112, 156)
 const CARD_SIZE_COMPACT: Vector2 = Vector2(104, 108)
 const CARD_GAP: int = 8
+## f04 icon sizes and cost hex (pointy-top, as on CardView).
+const ICON_PX: float = 20.0
+const ICON_PX_COMPACT: float = 18.0
+const HEX_SIZE: Vector2 = Vector2(28, 32)
+const HEX_SIZE_COMPACT: Vector2 = Vector2(24, 28)
 const HAND_CAP: int = 7
 
 var compact: bool = false
@@ -53,7 +63,8 @@ func set_compact(value: bool) -> void:
 	set_hand(_cards_data)
 
 
-## cards: Array of {name, type, cost, fp?, armor?, text}.
+## cards: Array of {name, type, cost, fp?, armor?, text, card_type?, weapon_class?, keywords?, elite?}
+## (card_info.gd chip()).
 func set_hand(cards: Array) -> void:
 	_cards_data = cards
 	for child: Node in _row.get_children():
@@ -161,64 +172,80 @@ func _make_card(card: Dictionary) -> Control:
 	panel.add_to_group(&"tap_target")
 	panel.set_meta(&"playable", bool(card.get("playable", true)))
 	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 0)
+	column.add_theme_constant_override(&"separation", 0 if compact else 2)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(column)
+	var ctype: String = MiniIcons.card_type(card)
+	var weapon: String = MiniIcons.weapon_class(card)
+	var text_color: Color = get_theme_color(&"text", &"Hud")
+	var icon_px: float = ICON_PX_COMPACT if compact else ICON_PX
 
-	# Row 1: cost badge + type. Row 2: name across the full card width.
+	# Row 1 (as on CardView): cost hex, card-type icon, weapon-class icon, elite mark, then the
+	# type word if it still fits (words go before icons).
 	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override(&"separation", 4)
+	top.add_theme_constant_override(&"separation", 3)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(top)
-	var badge: PanelContainer = PanelContainer.new()
-	badge.theme_type_variation = &"CostBadge"
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var badge: Control = CostHex.new()
+	badge.custom_minimum_size = HEX_SIZE_COMPACT if compact else HEX_SIZE
+	badge.set_text(str(card.get("cost", 0)))
+	badge.label.set_meta(&"important", true)
+	badge.label.add_to_group(&"key_number")
 	top.add_child(badge)
-	var cost: Label = _label(str(card.get("cost", 0)), &"HudNumber", true)
-	cost.add_theme_color_override(&"font_color", Color("#12161A"))
-	cost.custom_minimum_size = Vector2(14, 0)
-	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cost.add_to_group(&"key_number")
-	badge.add_child(cost)
-	var type_label: Label = _label(String(card.get("type", "")).to_upper(), &"HudTag", true)
-	type_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	type_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	type_label.clip_text = true
-	type_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	top.add_child(type_label)
+	var type_icon: TextureRect = MiniIcons.icon(StringName("type_" + ctype), icon_px, text_color)
+	type_icon.tooltip_text = ctype.to_upper()
+	top.add_child(type_icon)
+	if weapon != "":
+		top.add_child(MiniIcons.icon(StringName("class_" + weapon), icon_px, text_color))
+	if bool(card.get("elite", false)):
+		top.add_child(MiniIcons.icon(&"elite", icon_px, get_theme_color(&"elite", &"Hud")))
+	var type_word: Label = MiniIcons.word(String(card.get("type", "")).to_upper())
+	type_word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(type_word)
+	top.resized.connect(MiniIcons.fit_words.bind(top))
 
 	var title: Label = _label(String(card.get("name", "")), &"UnitName", true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.max_lines_visible = 2
 	column.add_child(title)
 
-	# The rules line takes what is left and trims; the full text is in the inspector (p09).
-	var text: Label = _label(String(card.get("text", "")), &"HudSubtle", false)
-	text.add_theme_color_override(&"font_color", Color("#D8DEE3"))
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.clip_text = true
-	text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	text.custom_minimum_size = Vector2(0, 20)
-	column.add_child(text)
+	# Keyword icons (amber, words only when they fit); cards without keyword icons keep their
+	# rules line, which trims (the full text is in the inspector, p09).
+	var keywords: Array = card.get("keywords", [])
+	if not keywords.is_empty():
+		var kw: HBoxContainer = MiniIcons.keyword_row(keywords, icon_px, get_theme_color(&"accent", &"Hud"))
+		column.add_child(kw)
+		kw.resized.connect(MiniIcons.fit_words.bind(kw))
+		var spacer: Control = Control.new()
+		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		column.add_child(spacer)
+	else:
+		var text: Label = _label(String(card.get("text", "")), &"HudSubtle", false)
+		text.add_theme_color_override(&"font_color", text_color)
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.clip_text = true
+		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		text.custom_minimum_size = Vector2(0, 20)
+		column.add_child(text)
 
+	# FP bottom-left, Armor bottom-right, each with its CardView icon.
 	if card.has("fp"):
 		var stats: HBoxContainer = HBoxContainer.new()
-		stats.add_theme_constant_override(&"separation", 3)
+		stats.add_theme_constant_override(&"separation", 2)
 		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		column.add_child(stats)
-		for pair: Array in [["FP", card.get("fp", 0)], ["AR", card.get("armor", 0)]]:
-			var caption: Label = _label(pair[0], &"HudSubtle", false)
-			caption.size_flags_vertical = Control.SIZE_SHRINK_END
-			stats.add_child(caption)
+		for pair: Array in [[&"stat_firepower", card.get("fp", 0)], [&"stat_armor", card.get("armor", 0)]]:
+			if pair[0] == &"stat_armor":
+				var gap: Control = Control.new()
+				gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				stats.add_child(gap)
+			stats.add_child(MiniIcons.icon(pair[0], icon_px, text_color))
 			var value: Label = _label(str(pair[1]), &"HudNumber", true)
 			value.add_to_group(&"key_number")
 			stats.add_child(value)
-			if pair[0] == "FP":
-				var gap: Control = Control.new()
-				gap.custom_minimum_size = Vector2(6, 0)
-				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				stats.add_child(gap)
 	return panel
 
 

@@ -96,7 +96,7 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 		"uid": u.uid, "name": unit_name(u, side),
 		"cls": "OPERATOR" if u.is_operator else String(CardInfo.CLASS_WORDS.get(u.weapon_class, "")).to_upper(),
 		"fp": state.firepower_of(u), "armor": u.armor, "armor_max": u.max_armor(state.round_number),
-		"operator": u.is_operator,
+		"operator": u.is_operator, "keywords": CardInfo.icon_keywords(CardInfo.unit_keywords(u)),
 	}
 
 
@@ -148,12 +148,14 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 				var rc: RulesCard = p["card"]
 				entry = {"uid": rc.uid, "name": rc.card.display_name,
 						"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
-						"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor}
+						"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor,
+						"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card))}
 			&"place", &"rotate":
 				var op: RulesUnit = side.operator_unit
 				entry = {"uid": op.uid, "name": unit_name(op, side), "cls": "OPERATOR", "operator": true,
 						"fp": op.base_firepower, "armor": op.armor if p["kind"] == &"rotate" else op.base_max_armor,
-						"armor_max": op.max_armor(state.round_number)}
+						"armor_max": op.max_armor(state.round_number),
+						"keywords": CardInfo.icon_keywords(CardInfo.operator_keywords(op))}
 		if not entry.is_empty():
 			entry["pending"] = true
 			out.append(entry)
