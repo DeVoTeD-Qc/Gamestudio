@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_f3d1y"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_i2pv5"]
+
+[sub_resource type="Resource" id="Resource_xxv6h"]
+script = ExtResource("1_f3d1y")
+trigger = 0
+kind = 13
+target = 4
+zone_scope = 4
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_q2bg2"]
+script = ExtResource("1_f3d1y")
+trigger = 0
+kind = 6
+target = 4
+zone_scope = 6
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 1
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_i2pv5")
+id = &"flank_route"
+display_name = "Flank Route"
+card_type = 1
+is_elite = false
+text = "Move a friendly unit to an adjacent zone; it gains First Shot this round."
+cost = 1
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_f3d1y")]([SubResource("Resource_xxv6h"), SubResource("Resource_q2bg2")])

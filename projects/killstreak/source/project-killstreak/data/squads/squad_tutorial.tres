@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="SquadData" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_ggx52"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_4er18"]
+[ext_resource type="Resource" path="res://data/cards/rifleman.tres" id="3_24hy6"]
+[ext_resource type="Resource" path="res://data/cards/point_man.tres" id="4_olrcr"]
+[ext_resource type="Resource" path="res://data/cards/marksman.tres" id="5_d0nb6"]
+[ext_resource type="Resource" path="res://data/cards/combat_medic.tres" id="6_05ver"]
+[ext_resource type="Resource" path="res://data/loadout/frag_grenade.tres" id="7_afasd"]
+[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="8_ppiym"]
+[ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="9_yibs8"]
+[ext_resource type="Resource" path="res://data/loadout/p12_sidearm.tres" id="10_0veto"]
+[ext_resource type="Resource" path="res://data/loadout/flashbang.tres" id="11_8m2i6"]
+
+[resource]
+script = ExtResource("9_yibs8")
+id = &"squad_tutorial"
+display_name = "TrainingBot_01"
+clan_tag = "DRILL"
+personality = 0
+deck = Array[ExtResource("2_4er18")]([ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("3_24hy6"), ExtResource("4_olrcr"), ExtResource("4_olrcr"), ExtResource("4_olrcr"), ExtResource("5_d0nb6"), ExtResource("5_d0nb6"), ExtResource("6_05ver"), ExtResource("6_05ver")])
+primary = ExtResource("8_ppiym")
+attachments = Array[ExtResource("1_ggx52")]([])
+secondary = ExtResource("10_0veto")
+lethal = ExtResource("7_afasd")
+tactical = ExtResource("11_8m2i6")
+perks = Array[ExtResource("1_ggx52")]([])
+killstreaks = Array[ExtResource("1_ggx52")]([])
+weight_damage_dealt = 1.0
+weight_damage_taken = 1.0
+weight_zone_control = 2.0
+weight_deny_streak = 3.0
+second_best_chance = 0.0
+preferred_ranges = Array[int]([])
