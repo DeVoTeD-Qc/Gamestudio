@@ -5,7 +5,7 @@
 #   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
 #   threshold printed on the button so nothing is hover-only).
 #   Buttons only emit signals; what they do arrives with p05/p09.
-#   Compact (phone) profile: narrower info column and 72x64 buttons.
+#   Compact (phone) profile: narrower info column and 64x64 buttons.
 # Dependencies: hud_theme.tres variations (HudButton, KillstreakButton, StreakSegment...).
 # Author: UI/UX Agent
 extends PanelContainer
@@ -14,7 +14,7 @@ signal ability_pressed(ability_id: StringName)
 signal killstreak_pressed(killstreak_id: StringName)
 
 const BUTTON_SIZE: Vector2 = Vector2(76, 72)
-const BUTTON_SIZE_COMPACT: Vector2 = Vector2(72, 64)
+const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
 const INFO_WIDTH: float = 170.0
 const INFO_WIDTH_COMPACT: float = 150.0
 const PERK_SIZE: float = 26.0

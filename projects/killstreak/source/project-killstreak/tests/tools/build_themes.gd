@@ -259,6 +259,7 @@ func _match_styles(t: Theme, f: Dictionary) -> void:
 	_label_var(t, "FriendlyLabel", f["heading"], 20, TEAL)
 	_label_var(t, "EnemyLabel", f["heading"], 20, RED)
 	_label_var(t, "UnitName", f["heading"], 17, FOG)
+	t.set_constant("line_spacing", "UnitName", 0)  # two-line names stay compact
 	t.set_stylebox("normal", "RangeBadge", _box(Color("#4F555B"), CONCRETE, 1, 3, true, Vector4(5, 0, 5, 0)))
 
 

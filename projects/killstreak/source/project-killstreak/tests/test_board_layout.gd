@@ -127,15 +127,29 @@ func test_layout_tablet_1024x768() -> void:
 	await _check_layout(TABLET)
 
 
-## Worst case on the phone: four units in every line (long names, damaged armor), full hand.
+## Worst case: four units in every line (long names, damaged armor), a full 7-card hand and
+## 10 Supply, on the phone (with and without notch insets) and on desktop.
 func test_layout_phone_full_board() -> void:
+	await _check_layout(PHONE, _full_board())
+
+
+func test_layout_phone_full_board_with_notch_insets() -> void:
+	await _check_layout(PHONE_NOTCH, _full_board())
+
+
+func test_layout_desktop_full_board() -> void:
+	await _check_layout(DESKTOP, _full_board())
+
+
+func _full_board() -> Dictionary:
 	var snap: Dictionary = MockMatchData.round_3_sample()
 	var names: Array[String] = ["Demolitions Expert", "Combat Medic", "Kestrel AR-7", "Shieldman"]
 	for lane: Dictionary in snap["lanes"]:
 		for key: String in ["friendly", "enemy"]:
 			var line: Array = []
 			for i: int in 4:
-				line.append({"name": names[i], "cls": ["LMG", "SNIPER", "SHOTGUN", "AR"][i], "fp": 10 + i, "armor": 5, "armor_max": 12})
+				# Largest real stats (Elite FP 4, Gunner armor 6), damaged so AR reads "3/6".
+				line.append({"name": names[i], "cls": ["LMG", "SNIPER", "SHOTGUN", "AR"][i], "fp": 4, "armor": 3, "armor_max": 6})
 			lane[key] = line
 		lane["incoming"] = 0
 	var hand: Array = snap["hand"].duplicate()
@@ -144,7 +158,7 @@ func test_layout_phone_full_board() -> void:
 	snap["hand"] = hand
 	snap["supply_max"] = 10
 	snap["supply"] = 7
-	await _check_layout(PHONE, snap)
+	return snap
 
 
 func test_mock_content_shown() -> void:
@@ -304,8 +318,15 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}) -> void:
 
 	# Contents stay inside their panels (no spill into neighbours).
 	var hand_rect: Rect2 = match_node.get_node("%HandArea").get_global_rect().grow(EPS)
-	for card: Node in match_node.get_node("%HandArea").get_cards():
-		assert_true(hand_rect.encloses((card as Control).get_global_rect()), "%s hand card spills" % label)
+	var cards: Array[Node] = match_node.get_node("%HandArea").get_cards()
+	for i: int in cards.size():
+		var card_rect: Rect2 = (cards[i] as Control).get_global_rect()
+		assert_true(hand_rect.encloses(card_rect), "%s hand card spills" % label)
+		# Overlapped cards: the uncovered strip of each card is still a full tap target.
+		if i + 1 < cards.size():
+			var strip: float = (cards[i + 1] as Control).get_global_rect().position.x - card_rect.position.x
+			min_tap = minf(min_tap, strip)
+			assert_true(strip * k >= MIN_TAP_PT - 0.01, "%s hand card %d shows only %.0f px = %.1f pt" % [label, i, strip, strip * k])
 	var op_rect: Rect2 = match_node.get_node("%OperatorPanel").get_global_rect().grow(EPS)
 	for b: Node in match_node.get_node("%OperatorPanel").get_buttons():
 		assert_true(op_rect.encloses((b as Control).get_global_rect()), "%s operator button spills" % label)

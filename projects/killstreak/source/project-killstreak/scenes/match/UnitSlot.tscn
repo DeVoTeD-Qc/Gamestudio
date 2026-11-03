@@ -60,12 +60,13 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 2
 
 [node name="Fp" type="VBoxContainer" parent="Column/Stats"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = -6
+theme_override_constants/separation = -8
 
 [node name="FpCaption" type="Label" parent="Column/Stats/Fp"]
 layout_mode = 2
@@ -100,7 +101,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = -6
+theme_override_constants/separation = -8
 
 [node name="ArCaption" type="Label" parent="Column/Stats/Ar"]
 layout_mode = 2

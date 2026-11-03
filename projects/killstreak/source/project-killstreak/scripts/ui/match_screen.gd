@@ -111,13 +111,21 @@ func _update_profile() -> void:
 	_top_bar.custom_minimum_size.y = 64 if compact else 72
 	_menu_button.custom_minimum_size = Vector2(80, 64) if compact else Vector2(80, 72)
 	_bottom_bar.custom_minimum_size.y = 0 if compact else 212
-	_action_panel.custom_minimum_size.x = 168 if compact else 200
-	_ready_button.custom_minimum_size = Vector2(168, 64) if compact else Vector2(200, 96)
+	_action_panel.custom_minimum_size.x = 150 if compact else 200
+	_ready_button.custom_minimum_size = Vector2(150, 64) if compact else Vector2(200, 96)
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)
 	_minimap.set_compact(compact)
+	_supply_pips.add_theme_constant_override(&"separation", 3 if compact else 4)
+	for pip: Node in _supply_pips.get_children():
+		(pip as Control).custom_minimum_size = _pip_size()
 	_apply_safe_area()
+
+
+## Supply pips: narrower on the phone so a 10-Supply bar fits the 150 px action column.
+func _pip_size() -> Vector2:
+	return Vector2(12, 16) if compact else Vector2(18, 20)
 
 
 func _set_supply(supply: int, supply_max: int) -> void:
@@ -128,7 +136,7 @@ func _set_supply(supply: int, supply_max: int) -> void:
 	for i: int in supply_max:
 		var pip: Panel = Panel.new()
 		pip.theme_type_variation = &"SupplyPip" if i < supply else &"SupplyPipSpent"
-		pip.custom_minimum_size = Vector2(18, 16 if compact else 20)
+		pip.custom_minimum_size = _pip_size()
 		_supply_pips.add_child(pip)
 
 
