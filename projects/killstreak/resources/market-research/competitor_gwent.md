@@ -1,54 +1,34 @@
 # Competitor Analysis: Gwent
 
-## Overview
-**Game Name**: Gwent
-**Analysis Date**: 2026-11-03
-**Analyst**: Market Analyst Agent
+*Market Analyst Agent · 2026-11-03 · Figures are estimates from public coverage (confidence ~60%). Named for analysis only; no IP is reused.*
 
 ## Market Position
-- **Platform**: [To be researched]
-- **Genre**: [To be researched]
-- **Release Date**: [To be researched]
-- **Developer/Publisher**: [To be researched]
-- **Business Model**: [Premium/F2P/Subscription]
+- **Platform**: PC, mobile (formerly console)
+- **Genre**: PvP card game, rows, best-of-3 rounds
+- **Release Date**: 2018 (standalone)
+- **Developer/Publisher**: CD Projekt Red
+- **Business Model**: F2P (active development ended 2023; community-run balance afterwards)
 
-## Performance Metrics
-- **Downloads/Sales**: [To be researched]
-- **Revenue**: [To be researched]
-- **User Rating**: [To be researched]
-- **Active Players**: [To be researched]
+## Performance (estimate)
+Good reviews, but the player base wasn't large enough to justify continued development (estimate).
 
 ## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
+1. Best-of-3 round structure
+2. Passing as a strategic resource
+3. Row positioning
+4. Strong art and lore
 
 ## Strengths
-- [Strength 1]
-- [Strength 2]
-- [Strength 3]
+- Deep, skill-based play
+- Round structure creates comebacks
+- Premium presentation
 
 ## Weaknesses
-- [Weakness 1]
-- [Weakness 2]
-- [Weakness 3]
+- Hard onboarding
+- Couldn't sustain a PvP player base
+- Rebranding churn
 
-## Monetization Strategy
-- **Model**: [Description]
-- **Price Points**: [Details]
-- **Success Factors**: [What works]
-
-## Target Audience
-- **Demographics**: [Age, gender, location]
-- **Psychographics**: [Interests, behaviors]
-- **Player Motivations**: [Why they play]
-
-## Key Takeaways
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Opportunities for Our Game
-- [Opportunity 1]
-- [Opportunity 2]
-- [Opportunity 3]
+## Lessons for Killstreak
+- **Emulate**: Round structure as 'match rounds'; positional depth.
+- **Avoid**: Launching as live-service PvP without a large existing audience.
+- **Differentiate**: Single-player first; PvP later via async.

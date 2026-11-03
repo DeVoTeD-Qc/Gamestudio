@@ -1,54 +1,34 @@
 # Competitor Analysis: Marvel Snap
 
-## Overview
-**Game Name**: Marvel Snap
-**Analysis Date**: 2026-11-03
-**Analyst**: Market Analyst Agent
+*Market Analyst Agent · 2026-11-03 · Figures are estimates from public coverage (confidence ~60%). Named for analysis only; no IP is reused.*
 
 ## Market Position
-- **Platform**: [To be researched]
-- **Genre**: [To be researched]
-- **Release Date**: [To be researched]
-- **Developer/Publisher**: [To be researched]
-- **Business Model**: [Premium/F2P/Subscription]
+- **Platform**: Mobile, PC
+- **Genre**: PvP card game, 3 locations, simultaneous reveal
+- **Release Date**: 2022
+- **Developer/Publisher**: Second Dinner (publishing moved from Nuverse to self-publishing in 2025)
+- **Business Model**: F2P (season pass, cosmetics, currency)
 
-## Performance Metrics
-- **Downloads/Sales**: [To be researched]
-- **Revenue**: [To be researched]
-- **User Rating**: [To be researched]
-- **Active Players**: [To be researched]
+## Performance (estimate)
+Strong launch (estimated $100M+ first year); stable afterwards. Briefly unavailable in the US in Jan 2025 because of its publisher.
 
 ## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
+1. ~3-minute matches, 6 turns
+2. 3 random locations with rule modifiers
+3. Simultaneous turns and reveal
+4. 'Snap' stake-raising / retreat bluff
 
 ## Strengths
-- [Strength 1]
-- [Strength 2]
-- [Strength 3]
+- Fastest match length in the genre
+- Locations make every game different
+- Great on mobile and web-sized screens
 
 ## Weaknesses
-- [Weakness 1]
-- [Weakness 2]
-- [Weakness 3]
+- Monetization criticism
+- Randomness from locations frustrates some players
+- Platform/publisher risk
 
-## Monetization Strategy
-- **Model**: [Description]
-- **Price Points**: [Details]
-- **Success Factors**: [What works]
-
-## Target Audience
-- **Demographics**: [Age, gender, location]
-- **Psychographics**: [Interests, behaviors]
-- **Player Motivations**: [Why they play]
-
-## Key Takeaways
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Opportunities for Our Game
-- [Opportunity 1]
-- [Opportunity 2]
-- [Opportunity 3]
+## Lessons for Killstreak
+- **Emulate**: 3 zones (our map lanes) + simultaneous reveal + 6–8 turn matches. Location modifiers → our map zone range tags (Close/Mid/Long).
+- **Avoid**: Collection-driven paywalls; huge outcome swings from location effects.
+- **Differentiate**: Zones persist as a *map* with range tags tied to weapon classes; units fight each other every round (firefights), not just add up power.

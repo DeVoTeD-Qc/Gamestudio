@@ -1,54 +1,34 @@
 # Competitor Analysis: Hearthstone
 
-## Overview
-**Game Name**: Hearthstone
-**Analysis Date**: 2026-11-03
-**Analyst**: Market Analyst Agent
+*Market Analyst Agent · 2026-11-03 · Figures are estimates from public coverage (confidence ~60%). Named for analysis only; no IP is reused.*
 
 ## Market Position
-- **Platform**: [To be researched]
-- **Genre**: [To be researched]
-- **Release Date**: [To be researched]
-- **Developer/Publisher**: [To be researched]
-- **Business Model**: [Premium/F2P/Subscription]
+- **Platform**: PC, mobile
+- **Genre**: PvP collectible card game (constructed + Battlegrounds auto-battler)
+- **Release Date**: 2014
+- **Developer/Publisher**: Blizzard Entertainment
+- **Business Model**: F2P (card packs, battle pass, cosmetics)
 
-## Performance Metrics
-- **Downloads/Sales**: [To be researched]
-- **Revenue**: [To be researched]
-- **User Rating**: [To be researched]
-- **Active Players**: [To be researched]
+## Performance (estimate)
+Tens of millions of lifetime players; peak revenue in the hundreds of millions per year, declining since about 2018 (estimate).
 
 ## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
+1. Hero with a signature Hero Power
+2. Mana ramp 1→10, minions with Attack/Health
+3. Very juicy feedback and board readability
+4. Battlegrounds: auto-battler mode that brought back lapsed players
 
 ## Strengths
-- [Strength 1]
-- [Strength 2]
-- [Strength 3]
+- Best-in-class readability and feel
+- Huge brand and card pool
+- Multiple modes for different audiences
 
 ## Weaknesses
-- [Weakness 1]
-- [Weakness 2]
-- [Weakness 3]
+- Aging meta and high cost to collect
+- Long turns compared with newer games
+- Heavy content treadmill
 
-## Monetization Strategy
-- **Model**: [Description]
-- **Price Points**: [Details]
-- **Success Factors**: [What works]
-
-## Target Audience
-- **Demographics**: [Age, gender, location]
-- **Psychographics**: [Interests, behaviors]
-- **Player Motivations**: [Why they play]
-
-## Key Takeaways
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Opportunities for Our Game
-- [Opportunity 1]
-- [Opportunity 2]
-- [Opportunity 3]
+## Lessons for Killstreak
+- **Emulate**: The hero-identity idea → our Operator card + Primary weapon ability. Clear 2-number unit stats. Juice on every hit.
+- **Avoid**: Pack-based F2P economy; long text boxes; 10-mana-length matches.
+- **Differentiate**: Our matches are shorter and play out at the same time for both sides; our 'hero' levels up mid-run like a weapon.

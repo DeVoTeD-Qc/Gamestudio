@@ -18,7 +18,7 @@
 ## Project-Specific Workflow
 
 ### Current Phase
-**Phase**: Market Analysis
+**Phase**: Design (awaiting user approval of DESIGN_REVIEW.md)
 
 ### Next Steps
 1. Run market analysis with Market Analyst

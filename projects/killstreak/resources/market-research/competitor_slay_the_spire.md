@@ -1,54 +1,35 @@
 # Competitor Analysis: Slay the Spire
 
-## Overview
-**Game Name**: Slay the Spire
-**Analysis Date**: 2026-11-03
-**Analyst**: Market Analyst Agent
+*Market Analyst Agent · 2026-11-03 · Figures are estimates from public coverage (confidence ~60%). Named for analysis only; no IP is reused.*
 
 ## Market Position
-- **Platform**: [To be researched]
-- **Genre**: [To be researched]
-- **Release Date**: [To be researched]
-- **Developer/Publisher**: [To be researched]
-- **Business Model**: [Premium/F2P/Subscription]
+- **Platform**: PC, console, mobile
+- **Genre**: Single-player roguelite deckbuilder
+- **Release Date**: 2017 EA / 2019 full
+- **Developer/Publisher**: Mega Crit
+- **Business Model**: Premium (~$25)
 
-## Performance Metrics
-- **Downloads/Sales**: [To be researched]
-- **Revenue**: [To be researched]
-- **User Rating**: [To be researched]
-- **Active Players**: [To be researched]
+## Performance (estimate)
+Millions of copies; created the modern deckbuilder genre. The sequel (StS2) keeps the genre visible.
 
 ## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
+1. Visible enemy intents
+2. Choose-1-of-3 card rewards
+3. Map with branching paths, elites, shops, events
+4. Relics (passive modifiers)
+5. Ascension difficulty ladder
 
 ## Strengths
-- [Strength 1]
-- [Strength 2]
-- [Strength 3]
+- Fair, readable, deep
+- Very replayable
+- Simple core actions
 
 ## Weaknesses
-- [Weakness 1]
-- [Weakness 2]
-- [Weakness 3]
+- Slow start for action-oriented players
+- Fantasy theme
+- Runs of 1+ hours
 
-## Monetization Strategy
-- **Model**: [Description]
-- **Price Points**: [Details]
-- **Success Factors**: [What works]
-
-## Target Audience
-- **Demographics**: [Age, gender, location]
-- **Psychographics**: [Interests, behaviors]
-- **Player Motivations**: [Why they play]
-
-## Key Takeaways
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Opportunities for Our Game
-- [Opportunity 1]
-- [Opportunity 2]
-- [Opportunity 3]
+## Lessons for Killstreak
+- **Emulate**: Intents (our minimap red dots), reward drafting, elites/bosses, Ascension → our Threat Levels.
+- **Avoid**: Long runs; slow single-target combat.
+- **Differentiate**: Fights take place on a 3-zone map with units firing at each other; runs are shorter; shooter progression (weapon XP → attachments).

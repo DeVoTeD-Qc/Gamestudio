@@ -1,54 +1,34 @@
 # Competitor Analysis: Balatro
 
-## Overview
-**Game Name**: Balatro
-**Analysis Date**: 2026-11-03
-**Analyst**: Market Analyst Agent
+*Market Analyst Agent · 2026-11-03 · Figures are estimates from public coverage (confidence ~60%). Named for analysis only; no IP is reused.*
 
 ## Market Position
-- **Platform**: [To be researched]
-- **Genre**: [To be researched]
-- **Release Date**: [To be researched]
-- **Developer/Publisher**: [To be researched]
-- **Business Model**: [Premium/F2P/Subscription]
+- **Platform**: PC, console, mobile (incl. Apple Arcade)
+- **Genre**: Single-player roguelite (poker-hand deckbuilder)
+- **Release Date**: 2024
+- **Developer/Publisher**: LocalThunk / Playstack
+- **Business Model**: Premium (~$15)
 
-## Performance Metrics
-- **Downloads/Sales**: [To be researched]
-- **Revenue**: [To be researched]
-- **User Rating**: [To be researched]
-- **Active Players**: [To be researched]
+## Performance (estimate)
+Reported 5M+ copies within about a year; very broad crossover beyond card-game players (estimate).
 
 ## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
+1. Familiar base rules (poker hands)
+2. Jokers: passive modifiers that create wild combos
+3. Short decisions, big score spikes
+4. Antes / increasing blinds as pacing
 
 ## Strengths
-- [Strength 1]
-- [Strength 2]
-- [Strength 3]
+- Anyone can start playing
+- Enormous build depth
+- Satisfying number spikes
 
 ## Weaknesses
-- [Weakness 1]
-- [Weakness 2]
-- [Weakness 3]
+- Abstract theme
+- RNG-heavy
+- Little interaction with opponents
 
-## Monetization Strategy
-- **Model**: [Description]
-- **Price Points**: [Details]
-- **Success Factors**: [What works]
-
-## Target Audience
-- **Demographics**: [Age, gender, location]
-- **Psychographics**: [Interests, behaviors]
-- **Player Motivations**: [Why they play]
-
-## Key Takeaways
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Opportunities for Our Game
-- [Opportunity 1]
-- [Opportunity 2]
-- [Opportunity 3]
+## Lessons for Killstreak
+- **Emulate**: **Familiar rules + crazy passive modifiers.** Shooter vocabulary is our 'poker'; Perks are our 'Jokers'. Number spikes → killstreak payoffs.
+- **Avoid**: Making things so abstract that the shooter feel is lost.
+- **Differentiate**: Enemy squads with intents and board interaction; a strong theme.
