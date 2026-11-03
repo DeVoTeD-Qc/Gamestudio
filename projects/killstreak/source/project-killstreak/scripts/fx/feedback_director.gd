@@ -256,7 +256,7 @@ func _handle(ev: Dictionary) -> float:
 			if ev.get("owner") == viewer_side and int(score_popups.get(&"zone", 0)) > 0:
 				var r: Rect2 = _zone_rect(ev.get("zone", &""))
 				if r.has_area():
-					_popup_at(_to_local(Vector2(r.get_center().x, r.position.y + 40.0)),
+					_popup_at(_to_local(r.get_center()),
 							"+%d ZONE SECURED" % int(score_popups[&"zone"]), &"heading", 22, FxStyle.AMBER, ev)
 					return t.get_value(&"popup_beat")
 			return 0.0
@@ -264,7 +264,7 @@ func _handle(ev: Dictionary) -> float:
 			var gained: int = int(ev.get("player_gained" if viewer_side == &"player" else "enemy_gained", 0))
 			var anchor: Rect2 = _anchor_rect(&"score")
 			if gained > 0 and anchor.has_area():
-				_popup_at(_to_local(anchor.get_center() + Vector2(0, anchor.size.y * 0.5 + 20.0)),
+				_popup_at(_to_local(Vector2(anchor.get_center().x, anchor.end.y - 10.0)),
 						"+%d %s" % [gained, "POINT" if gained == 1 else "POINTS"], &"heading", 22, FxStyle.AMBER, ev)
 				return t.get_value(&"popup_beat")
 			return 0.0
@@ -281,9 +281,13 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 	var from: Vector2 = _unit_point(shooter, side, zone)
 	var to: Vector2 = _unit_point(target, foe, zone) if target >= 0 else _zone_point(zone, foe)
 	if not _skipping:
+		# Start at the shooter's edge facing the target, and keep the two sides' tracers on
+		# parallel lanes so a trade shows both streaks.
+		var dir: Vector2 = (to - from).normalized() if to != from else Vector2.UP
+		var lane_off: Vector2 = dir.orthogonal() * (5.0 if side == viewer_side else -5.0)
 		var fx: Control = TracerFx.new()
-		fx.from = from
-		fx.to = to
+		fx.from = from + dir * 18.0 + lane_off
+		fx.to = to - dir * 6.0 + lane_off
 		fx.color = FxStyle.side_color(side)
 		fx.wasted = target < 0
 		_start(fx, &"tracer", ev)
@@ -524,8 +528,15 @@ func _anchor_rect(anchor: StringName) -> Rect2:
 	return locator.anchor_rect(anchor)
 
 
-## Just above the StreakArc (y_dir -1) or the bottom-left area when there is no arc.
+## Where streak pop-ups go: just above the locator's &"streak" anchor (the Operator panel)
+## so they never cover its numbers, else just above the StreakArc, else bottom-left.
 func _arc_point(y_dir: float) -> Vector2:
+	var anchor: Rect2 = _anchor_rect(&"streak")
+	if anchor.has_area():
+		var x: float = anchor.position.x + anchor.size.x * 0.5
+		if streak_arc != null and streak_arc is Control and (streak_arc as Control).is_inside_tree():
+			x = (streak_arc as Control).get_global_rect().get_center().x
+		return _to_local(Vector2(x, anchor.position.y - 22.0))
 	if streak_arc != null and streak_arc is Control and (streak_arc as Control).is_inside_tree():
 		var r: Rect2 = (streak_arc as Control).get_global_rect()
 		return _to_local(r.get_center() + Vector2(0, y_dir * (r.size.y * 0.5 + 18.0)))

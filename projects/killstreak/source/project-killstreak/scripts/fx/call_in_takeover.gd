@@ -138,7 +138,7 @@ func _on_done() -> void:
 
 
 func _zone_label(zone: StringName) -> String:
-	return String(zone).to_upper() if zone != &"" else "the line"
+	return String(zone).capitalize() if zone != &"" else "the line"
 
 
 func _build() -> void:

@@ -18,8 +18,10 @@ signal shattered
 const FxStyle: GDScript = preload("res://scripts/fx/fx_style.gd")
 const FxTiming: GDScript = preload("res://scripts/fx/fx_timing.gd")
 const SEG_GAP_RAD: float = 0.045
-const BAND: float = 7.0
-const BAND_NOTCH: float = 11.0
+const BAND: float = 8.0
+const BAND_NOTCH: float = 12.0
+## Arc height (sagitta) as a share of its width: shallow, so segments stay wide.
+const CURVE: float = 0.16
 const SHARDS_PER_SEGMENT: int = 3
 
 ## Number of segments (the highest threshold, or more).
@@ -173,7 +175,7 @@ func _set_shatter(v: float) -> void:
 ## Arc geometry for the current rect: {center, radius, a0, a1}.
 func _geometry() -> Dictionary:
 	var w: float = maxf(20.0, size.x - 12.0)
-	var h: float = clampf(size.y - BAND_NOTCH - 4.0, 4.0, w * 0.45)
+	var h: float = clampf(size.y - BAND_NOTCH - 4.0, 4.0, w * CURVE)
 	var r: float = (w * w * 0.25 + h * h) / (2.0 * h)
 	var top: float = BAND_NOTCH * 0.5 + 2.0
 	var c: Vector2 = Vector2(size.x * 0.5, top + r)

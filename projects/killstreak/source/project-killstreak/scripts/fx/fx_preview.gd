@@ -70,6 +70,7 @@ func _wire() -> void:
 
 	var locator: RefCounted = BoardFxLocator.new(_match.get_node(^"%Board"))
 	locator.anchors[&"score"] = _match.get_node(^"%ScoreBar")
+	locator.anchors[&"streak"] = panel
 	# Mock snapshot (mock_match_data.gd round_3_sample) slots -> uids.
 	locator.set_unit(1, &"player", &"left", 0)    # Point Man
 	locator.set_unit(21, &"enemy", &"left", 0)    # incoming red dot, revealed as a Breacher

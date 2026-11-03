@@ -27,6 +27,7 @@ var _row: HBoxContainer = null
 var _enter: Tween = null
 var _life_tween: Tween = null
 var _gone: bool = false
+var _zone_tag: Label = null
 
 
 class SideMarker:
@@ -89,6 +90,8 @@ func setup(data: Dictionary) -> void:
 		tag.text = zone
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_row.add_child(tag)
+		_zone_tag = tag
+	resized.connect(_fit)
 
 
 ## Starts enter + life + fade. timing: FxTiming (null = Settings).
@@ -129,6 +132,27 @@ func _expire() -> void:
 	_gone = true
 	expired.emit()
 	queue_free()
+
+
+## Narrow slots (phone killfeed): drop the zone tag first, then shorten the names, so the
+## line never runs off its rect.
+func _fit() -> void:
+	if _row == null or size.x <= 0.0:
+		return
+	var room: float = size.x - 12.0
+	if _zone_tag != null:
+		_zone_tag.visible = true
+		if _row.get_combined_minimum_size().x > room:
+			_zone_tag.visible = false
+	for limit: int in [MAX_NAME, 10, 8, 6]:
+		if _row.get_combined_minimum_size().x <= room:
+			break
+		for child: Node in _row.get_children():
+			if child is Label and child != _zone_tag:
+				var full: String = String(child.get_meta(&"full", (child as Label).text))
+				child.set_meta(&"full", full)
+				(child as Label).text = full.left(limit)
+	queue_redraw()
 
 
 func _name_label(text: String, side: StringName) -> Label:
