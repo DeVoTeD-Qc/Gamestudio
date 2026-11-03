@@ -50,4 +50,25 @@ The output goes to `projects/killstreak/builds/web/`, which git ignores. The bui
 so it needs no cross-origin isolation headers and works on itch.io and iOS Safari. `tests/` is
 excluded from the export. To try it locally, serve the folder over HTTP
 (`python3 -m http.server -d ../../builds/web 8000`), because opening `index.html` as a file does not work.
-For itch.io, zip the contents of `builds/web/` with `index.html` at the zip root.
+To test with gzip and the correct wasm MIME type, as itch.io serves it, use
+`python3 ../../qa/performance-logs/tools/serve_gz.py ../../builds/web 8060` instead.
+
+The loading screen is the custom HTML shell in `web/shell.html`, which the Web preset uses through
+`html/custom_html_shell`. It shows a progress bar driven by Godot's `onProgress`, a status line, an
+error notice when WebGL2 or WebAssembly is missing, and a "rotate to landscape" prompt on portrait phones.
+It uses no external fonts or CDNs. Edit it like any HTML file, but keep the `$GODOT_*` placeholders.
+The export filter excludes `tests/`, `qa/` and `web/` from the pck. Load-time results are in
+`../../qa/performance-logs/web-load.md`. `scripts/ui/title.gd` prints `Title: ready`, which is the
+marker the load-time check waits for.
+
+### Package for itch.io
+1. Export as shown above into `builds/web/`.
+2. Zip the **contents** of the folder, so that `index.html` sits at the zip root and not inside a subfolder:
+   `cd ../../builds/web && zip -r ../killstreak-web.zip . -x '*.import'`.
+   The zip is about 9.8 MB, which is far under itch.io's 500 MB limit for HTML games.
+3. On itch.io: Kind of project → **HTML**, upload the zip, tick **This file will be played in the browser**.
+   Set the viewport to 1280×720 and turn on **Mobile friendly** with landscape orientation, plus the **Fullscreen button**.
+   Leave **SharedArrayBuffer support** off. This build is single-threaded (`variant/thread_support=false`),
+   so it needs no cross-origin isolation (COOP/COEP) headers. Leaving the option off also avoids the
+   iOS Safari and third-party embed problems that it causes.
+4. Keep the page private or restricted (draft or password) for playtests.
