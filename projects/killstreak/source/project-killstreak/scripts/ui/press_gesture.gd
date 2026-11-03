@@ -33,6 +33,7 @@ var _owner: Control = null
 var _start: Vector2 = Vector2.ZERO
 var _press_id: int = 0
 var _long_fired: bool = false
+var _press_ms: int = 0
 
 
 func _init(owner: Control) -> void:
@@ -79,6 +80,7 @@ func _begin(pos: Vector2) -> void:
 	dragging = false
 	_long_fired = false
 	_start = pos
+	_press_ms = Time.get_ticks_msec()
 	_press_id += 1
 	var my_id: int = _press_id
 	if _owner != null and _owner.is_inside_tree():
@@ -97,7 +99,12 @@ func _release(pos: Vector2) -> void:
 		dragging = false
 		drag_ended.emit(pos)
 	elif not _long_fired:
-		tapped.emit(pos)
+		# The timer only runs on frames; if frames stalled while the finger was down (a frame
+		# hitch, or a browser pausing rendering during a touch), the hold time still counts.
+		if Time.get_ticks_msec() - _press_ms >= int(LONG_PRESS_S * 1000.0):
+			long_pressed.emit(_start)
+		else:
+			tapped.emit(pos)
 
 
 func _to_canvas(local: Vector2) -> Vector2:

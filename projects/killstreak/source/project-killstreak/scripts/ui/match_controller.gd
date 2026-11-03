@@ -610,9 +610,15 @@ func open_card_inspector(card: CardData, side: String, status: String) -> void:
 	if card.is_unit():
 		type_text += " · FP %d · Armor %d" % [card.firepower, card.armor]
 	type_text += " · cost %d" % card.cost
+	var keywords: Array[Dictionary] = CardInfo.keywords(card)
+	# Units whose rules text only lists their keywords ("Pick") get the keyword lines instead.
+	var names: PackedStringArray = []
+	for k: Dictionary in keywords:
+		names.append(String(k["name"]).to_lower())
+	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else card.text
 	_screen.get_inspector().open({
 		"view": CardInfo.view_dict(card, side), "title": card.display_name, "type": type_text,
-		"text": card.text, "keywords": CardInfo.keywords(card), "status": status,
+		"text": text, "keywords": keywords, "status": status,
 	})
 
 

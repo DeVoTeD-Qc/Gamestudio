@@ -193,7 +193,9 @@ func _long_press_inspector(screen: Dictionary) -> void:
 	assert_true(inspector.get_card_scale() >= 0.8, "%s CardView at %.2fx (>= 0.8x)" % [label, inspector.get_card_scale()])
 	assert_eq(inspector.get_node("%TitleLabel").text, rc.card.display_name, "%s inspects the pressed card" % label)
 	assert_eq(inspector.get_card_view().data.get("name"), rc.card.display_name, "%s CardView shows it" % label)
-	assert_eq(inspector.get_node("%RulesLabel").text, rc.card.text, "%s full rules text" % label)
+	var rules_text: String = inspector.get_node("%RulesLabel").text
+	assert_true(rules_text == rc.card.text or (rules_text == "" and CardInfoKeywords.keywords(rc.card).size() > 0),
+			"%s full rules text (or keyword lines for keyword-only text): '%s'" % [label, rules_text])
 	var expected: int = CardInfoKeywords.keywords(rc.card).size()
 	assert_eq(inspector.get_node("%KeywordList").get_child_count(), expected * 2, "%s keyword lines" % label)
 	assert_true(String(inspector.get_node("%StatusLabel").text).contains("Supply"), "%s cost / Supply status" % label)
