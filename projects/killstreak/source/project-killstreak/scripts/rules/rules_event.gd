@@ -18,7 +18,8 @@ const ROUND_STARTED: StringName = &"round_started"            ## round
 const PHASE_CHANGED: StringName = &"phase_changed"            ## phase
 const INITIATIVE: StringName = &"initiative"                  ## side
 const ROUND_ENDED: StringName = &"round_ended"                ## player_score, enemy_score
-const MATCH_ENDED: StringName = &"match_ended"                ## result
+const MATCH_ENDED: StringName = &"match_ended"                ## result, winner, is_draw, reason, mode, rounds, overtime, player_score, enemy_score, target, player_eliminations, enemy_eliminations (ModeRules outcome)
+const OVERTIME_STARTED: StringName = &"overtime_started"      ## player_score, enemy_score, last_round (round cap ended tied)
 
 # --- Cards / deck ----------------------------------------------------------------
 const SUPPLY_GAINED: StringName = &"supply_gained"            ## side, supply
@@ -58,7 +59,14 @@ const PATCHED: StringName = &"patched"                        ## side, uid (medi
 
 # --- Score -----------------------------------------------------------------------
 const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"player" / &"enemy" / &"contested" / &"empty")
-const STREAK_CHANGED: StringName = &"streak_changed"          ## side, streak, gained, reset
+const MODE_SCORED: StringName = &"mode_scored"                ## mode, player_gained, enemy_gained, player_score, enemy_score, target
+const STREAK_CHANGED: StringName = &"streak_changed"          ## side, streak, before, gained, reset, earned
+const KILLSTREAK_EARNED: StringName = &"killstreak_earned"    ## side, item_id, streak, threshold (into the Streak Tray)
+
+# --- Loadout (p05) -------------------------------------------------------------------
+const ITEM_READY: StringName = &"item_ready"                  ## side, item_id: cooldown reached 0 at Briefing
+const PERK_TRIGGERED: StringName = &"perk_triggered"          ## side, item_id (Field Salvage ...)
+const CARD_RETURNED: StringName = &"card_returned"            ## side, card_uid, card_id, zone, reason: zone still full at Reveal
 
 
 static func make(type: StringName, round_number: int, fields: Dictionary = {}) -> Dictionary:

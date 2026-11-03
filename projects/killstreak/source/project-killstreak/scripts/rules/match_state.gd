@@ -46,6 +46,8 @@ const SRC_LETHAL: StringName = &"lethal"
 const SRC_TACTICAL: StringName = &"tactical"
 const SRC_KILLSTREAK: StringName = &"killstreak"
 const SRC_PERK: StringName = &"perk"
+## On Down triggers (Demolitions Expert); counts for the streak (StreakTracker rule).
+const SRC_ON_DOWN: StringName = &"on_down"
 
 var config: RunConfig = null
 var zone_ranges: Array[int] = [DataEnums.RangeTag.CLOSE, DataEnums.RangeTag.MID, DataEnums.RangeTag.LONG]
@@ -423,6 +425,12 @@ func reveal() -> void:
 				if e != null and e.trigger == DataEnums.Trigger.ON_PLAY and e.target == DataEnums.Target.NEXT_FRIENDLY_ARRIVING:
 					var src: Array = _play_source(play)
 					EffectResolver.resolve_effect(self, e, make_ctx(si, src[0], src[1], src[2], play["zone"], -1, -1))
+	# Rulings part 2 #2: Equipment played this Deploy is placed and armed before step a
+	# (initiative side first), so a Tripwire catches units arriving this Reveal.
+	for si: int in order:
+		for play: Dictionary in sides[si].plays:
+			if play["kind"] == &"equipment":
+				_reveal_equipment(si, play)
 	# a. Units (and Operator placements / Rotations) arrive in play order.
 	for si: int in order:
 		var waiting: Array[Dictionary] = []
@@ -433,14 +441,12 @@ func reveal() -> void:
 		for play: Dictionary in waiting:  # a slot freed later in play order
 			if not _arrive(si, play):
 				_waste_arrival(si, play)
-	# b. Tactics, Equipment and loadout items in play order.
+	# b. Tactics and loadout items in play order (Equipment was placed before step a).
 	for si: int in order:
 		for play: Dictionary in sides[si].plays:
 			match play["kind"]:
 				&"tactic":
 					_reveal_tactic(si, play)
-				&"equipment":
-					_reveal_equipment(si, play)
 				&"item":
 					_reveal_item(si, play)
 	for s: RulesSide in sides:
@@ -499,11 +505,20 @@ func _arrive(si: int, play: Dictionary) -> bool:
 	return true
 
 
+## Rulings part 2 #9: a unit card whose zone is still full after the retry returns to
+## hand (Supply is not refunded); with a full hand it is discarded instead.
 func _waste_arrival(si: int, play: Dictionary) -> void:
 	if play["kind"] == &"unit":
 		var rc: RulesCard = play["card"]
-		sides[si].discard.append(rc)
-		emit_event(RulesEvent.CARD_DISCARDED, {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id})
+		var s: RulesSide = sides[si]
+		var fields: Dictionary = {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id,
+				"zone": zone_name(play["zone"]), "reason": "zone full"}
+		if s.hand.size() < config.hand_cap:
+			s.hand.append(rc)
+			emit_event(RulesEvent.CARD_RETURNED, fields)
+		else:
+			s.discard.append(rc)
+			emit_event(RulesEvent.CARD_DISCARDED, fields)
 	emit_event(RulesEvent.EFFECT_WASTED, {"side": side_name(si), "source_id": play["kind"], "kind": "ARRIVE", "reason": "zone full or Operator gone"})
 
 
@@ -622,7 +637,9 @@ func score() -> void:
 	if outcome != &"":
 		result = outcome
 		_set_phase(Phase.ENDED)
-		emit_event(RulesEvent.MATCH_ENDED, {"result": outcome})
+		var details: Dictionary = hooks.match_end_details(self)
+		details["result"] = outcome
+		emit_event(RulesEvent.MATCH_ENDED, details)
 
 
 ## Removes every unit at 0 Armor (initiative side first, zone and line order),
@@ -649,7 +666,7 @@ func process_eliminations() -> void:
 			follow_ups.append({"unit": u, "zone": zone, "rec": rec})
 		for f: Dictionary in follow_ups:
 			var u: RulesUnit = f["unit"]
-			var ctx: Dictionary = make_ctx(u.side, SRC_OPERATOR if u.is_operator else SRC_UNIT, u.source_id, u.uid, f["zone"], -1, -1)
+			var ctx: Dictionary = make_ctx(u.side, SRC_ON_DOWN, u.source_id, u.uid, f["zone"], -1, -1)
 			ctx["source_unit"] = u
 			EffectResolver.resolve_triggered(self, u.effects, DataEnums.Trigger.ON_DOWN, ctx)
 			var rec: Dictionary = f["rec"]
@@ -841,7 +858,8 @@ func firepower_of(u: RulesUnit) -> int:
 
 
 func cover_of(u: RulesUnit) -> int:
-	if u.has_mod(DataEnums.EffectKind.REMOVE_COVER, round_number) or passive_has(u, DataEnums.EffectKind.REMOVE_COVER):
+	if u.has_mod(DataEnums.EffectKind.REMOVE_COVER, round_number) or passive_has(u, DataEnums.EffectKind.REMOVE_COVER) \
+			or sides[1 - u.side].has_flag(DataEnums.EffectKind.REMOVE_COVER, round_number):  # Recon Drone (p05)
 		return 0
 	return maxi(0, u.cover + u.mod_total(DataEnums.EffectKind.GRANT_COVER, round_number)
 			+ passive_total(u, DataEnums.EffectKind.GRANT_COVER))
@@ -937,11 +955,11 @@ func red_dots(viewer: int) -> PackedInt32Array:
 
 
 ## Card ids behind the red dots of `zone`, if `viewer` revealed that zone this round
-## (Callout, Recon Specialist); otherwise empty.
+## (Callout, Recon Specialist) or sees all enemy deployments (Recon Drone); otherwise empty.
 func revealed_red_dots(viewer: int, zone: int) -> Array[StringName]:
 	var out: Array[StringName] = []
 	var zones: Array = sides[viewer].intel_reveals.get(round_number, [])
-	if zone not in zones:
+	if zone not in zones and not sides[viewer].has_flag(DataEnums.EffectKind.REVEAL_DEPLOYMENTS, round_number):
 		return out
 	var foe: RulesSide = sides[1 - viewer]
 	for play: Dictionary in foe.plays:

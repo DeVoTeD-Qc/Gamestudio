@@ -5,42 +5,51 @@
 #   - p05 streaks / killstreaks / abilities / respawn: on_briefing (cooldown ticks),
 #     can_use_item / on_item_resolved, on_elimination, on_operator_down,
 #     operator_can_deploy (respawn rules), apply_streak (trays, once-per-life).
-#   - p06 modes: score_round (Zone Control points / Firefight eliminations) and
-#     check_match_end (targets, round cap, overtime, draw).
+#   - p06 modes: set `mode_rules` (ModeRules.create(mode, config)); the default
+#     initiative_side / score_round / check_match_end / match_end_details delegate
+#     to it, so a p05 subclass keeps mode rules as long as it doesn't override those.
+#     Without mode_rules the match never ends (p04 sandbox, used by engine tests).
 #   Hooks receive the MatchState as `state` (untyped to keep scripts acyclic).
-# Dependencies: none at parse time (MatchState passed in).
+#   p05 is implemented in the defaults below by delegating to StreakTracker and
+#   LoadoutRules, so a p06 subclass keeps streaks / loadout rules automatically.
+# Dependencies: ModeRules (optional), StreakTracker, LoadoutRules; MatchState passed in.
 # Author: Mechanics Developer Agent
 class_name MatchHooks
 extends RefCounted
+
+## Mode scoring / match end (p06). Null = no mode: no points, never ends.
+var mode_rules: ModeRules = null
 
 
 ## Which side resolves first at Reveal. Default (core-rules §2.3): the side behind
 ## on the scoreboard; ties -> the player.
 func initiative_side(state) -> int:
+	if mode_rules != null:
+		return mode_rules.initiative_side(state)
 	var p: int = state.sides[0].score
 	var e: int = state.sides[1].score
 	return 1 if e < p else 0
 
 
-## Briefing, after Supply and draws (p05: Lethal/Tactical cooldowns tick here).
-func on_briefing(_state, _side: int) -> void:
-	pass
+## Briefing, after Supply and draws: cooldowns tick, per-round uses reset, Grit arms (p05).
+func on_briefing(state, side: int) -> void:
+	LoadoutRules.on_briefing(state, side)
 
 
 ## Can `side` use a loadout item this Deploy? Return "" if yes, else the reason.
-## Supply is checked by MatchState. p05 adds cooldowns, uses per round/match and the Streak Tray.
-func can_use_item(_state, _side: int, _item: LoadoutItem) -> String:
-	return ""
+## Supply is checked by MatchState. p05: cooldowns, uses per round/match, the Streak Tray.
+func can_use_item(state, side: int, item: LoadoutItem) -> String:
+	return LoadoutRules.can_use_item(state, side, item)
 
 
-## A loadout item was accepted in Deploy (p05: start cooldown, take from tray).
-func on_item_used(_state, _side: int, _item: LoadoutItem) -> void:
-	pass
+## A loadout item was accepted in Deploy (p05: start cooldown, count the use, take from tray).
+func on_item_used(state, side: int, item: LoadoutItem) -> void:
+	LoadoutRules.on_item_used(state, side, item)
 
 
-## A queued loadout item was taken back with undo_last (p05: refund cooldown / tray).
-func on_item_undone(_state, _side: int, _item: LoadoutItem) -> void:
-	pass
+## A queued loadout item was taken back with undo_last (p05: refund cooldown / uses / tray).
+func on_item_undone(state, side: int, item: LoadoutItem) -> void:
+	LoadoutRules.on_item_undone(state, side, item)
 
 
 ## A loadout item's ON_PLAY effects resolved at Reveal.
@@ -48,9 +57,10 @@ func on_item_resolved(_state, _side: int, _item: LoadoutItem) -> void:
 	pass
 
 
-## Called for every elimination (record = the UNIT_ELIMINATED event).
-func on_elimination(_state, _record: Dictionary) -> void:
-	pass
+## Called for every elimination (record = the UNIT_ELIMINATED event). p05: perk
+## On Eliminate (Field Salvage).
+func on_elimination(state, record: Dictionary) -> void:
+	LoadoutRules.on_elimination(state, record)
 
 
 func on_operator_down(_state, _side: int) -> void:
@@ -63,32 +73,27 @@ func operator_can_deploy(state, _side: int) -> bool:
 	return state.round_number == 1 or state.respawn_enabled
 
 
-## Score & Streak step, streak part (core-rules §2.5). Default: +1 per credited
-## elimination this round not made by a killstreak, plus effect bonuses; then, if the
-## Operator went down this round, reset to 0. p05 replaces this to fill Streak Trays.
+## Score & Streak step, streak part (core-rules §2.5, Rulings part 2 #12): kills and
+## bonuses, then thresholds / Streak Tray, then the reset if the Operator went down (p05).
 func apply_streak(state, side: int) -> void:
-	var s = state.sides[side]
-	var gained: int = s.streak_bonus_this_round
-	for rec: Dictionary in state.round_eliminations:
-		if rec["by_side"] == state.side_name(side) and rec["credit"] and not rec["by_killstreak"]:
-			gained += 1
-	var before: int = s.streak
-	s.streak += gained
-	var reset: bool = s.operator_down_this_round
-	if reset:
-		s.streak = 0
-	if gained != 0 or reset:
-		state.emit_event(RulesEvent.STREAK_CHANGED, {
-			"side": state.side_name(side), "streak": s.streak, "before": before,
-			"gained": gained, "reset": reset,
-		})
+	StreakTracker.apply_streak(state, side)
 
 
-## Mode scoring at the end of the round (p06). Default: none (scores stay as set).
-func score_round(_state, _control: Array) -> void:
-	pass
+## Mode scoring at the end of the round (p06: ModeRules). No mode: scores stay as set.
+func score_round(state, control: Array) -> void:
+	if mode_rules != null:
+		mode_rules.score_round(state, control)
 
 
-## p06: return &"player", &"enemy" or &"draw" to end the match, &"" to go on.
-func check_match_end(_state) -> StringName:
+## Return &"player", &"enemy" or &"draw" to end the match, &"" to go on (p06: ModeRules).
+func check_match_end(state) -> StringName:
+	if mode_rules != null:
+		return mode_rules.check_match_end(state)
 	return &""
+
+
+## Extra fields for the MATCH_ENDED event (winner, reason, final score...; see ModeRules).
+func match_end_details(state) -> Dictionary:
+	if mode_rules != null:
+		return mode_rules.match_end_details(state)
+	return {}
