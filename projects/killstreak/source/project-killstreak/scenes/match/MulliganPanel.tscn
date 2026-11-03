@@ -1,0 +1,82 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/mulligan_panel.gd" id="1_mull"]
+
+[node name="MulliganPanel" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mull")
+
+[node name="Scrim" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Scrim"
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Box" type="PanelContainer" parent="Center"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudPanelDark"
+
+[node name="Column" type="VBoxContainer" parent="Center/Box"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Center/Box/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "ROUND 1 · MULLIGAN"
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="Center/Box/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Tap the cards to put back. You draw as many new ones. Free, once."
+horizontal_alignment = 1
+
+[node name="Cards" type="GridContainer" parent="Center/Box/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 7
+
+[node name="Actions" type="HBoxContainer" parent="Center/Box/Column"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="KeepButton" type="Button" parent="Center/Box/Column/Actions" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "KEEP HAND"
+
+[node name="ConfirmButton" type="Button" parent="Center/Box/Column/Actions" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 64)
+layout_mode = 2
+theme_type_variation = &"KillstreakButton"
+disabled = true
+text = "REDRAW 0"

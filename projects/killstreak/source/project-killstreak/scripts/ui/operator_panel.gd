@@ -4,7 +4,11 @@
 #   segments mark killstreak thresholds), 3 Perk slots, and two rows of tap buttons:
 #   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
 #   threshold printed on the button so nothing is hover-only).
-#   Buttons only emit signals; what they do arrives with p05/p09.
+#   Buttons only emit signals. f02: the entries come from the engine (match_snapshot.item_entry):
+#   the second line shows the state (1 SUP, CD 2, USED, NO OP, AT 3, CALL IN), a blocked item's
+#   button is disabled and a tap on it still emits its signal so the controller can say why;
+#   the item being targeted stays pressed (set_selected_item). p14: StreakArc replaces the
+#   segment row (configure() on every snapshot; FeedbackDirector animates it during Reveal).
 #   p09: the panel itself is the Operator's handle: tap = select it (place it in Round 1 or after
 #   a respawn, or Rotate it), drag = drag it to a lane, long-press / right-click = inspect.
 #   The buttons keep their own taps.
@@ -28,16 +32,20 @@ const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
 const INFO_WIDTH: float = 170.0
 const INFO_WIDTH_COMPACT: float = 140.0
 const PERK_SIZE: float = 26.0
+## Text on a selected (filled) item button: the HUD's background ink.
+const SELECTED_TEXT: Color = Color(0.0705882, 0.0862745, 0.101961, 1)
 
 var compact: bool = false
 var selected: bool = false
 var _gesture: RefCounted = null
+## Item id whose button shows as pressed (being targeted), &"" = none.
+var selected_item: StringName = &""
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _name: Label = %NameLabel
 @onready var _stats: Label = %StatsLabel
 @onready var _streak_value: Label = %StreakValue
-@onready var _segments: HBoxContainer = %StreakSegments
+@onready var _arc: Control = %StreakArc
 @onready var _perk_row: HBoxContainer = %PerkRow
 @onready var _buttons: GridContainer = %Buttons
 @onready var _info: VBoxContainer = %Info
@@ -97,7 +105,7 @@ func set_operator(snapshot: Dictionary) -> void:
 	var thresholds: Array[int] = []
 	for ks: Dictionary in snapshot.get("killstreaks", []):
 		thresholds.append(int(ks.get("threshold", 0)))
-	_build_segments(streak, int(snapshot.get("streak_max", 5)), thresholds)
+	_arc.configure(int(snapshot.get("streak_max", 5)), thresholds, streak)
 	_build_perks(snapshot.get("perks", []), int(snapshot.get("perk_slots", 3)))
 	_build_buttons(snapshot.get("abilities", []), snapshot.get("killstreaks", []))
 	_pass_through()
@@ -107,15 +115,49 @@ func get_buttons() -> Array[Node]:
 	return _buttons.get_children()
 
 
-func _build_segments(streak: int, count: int, thresholds: Array[int]) -> void:
-	_clear(_segments)
-	for i: int in range(1, count + 1):
-		var seg: Panel = Panel.new()
-		seg.theme_type_variation = &"StreakSegmentLit" if i <= streak else &"StreakSegment"
-		seg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		seg.size_flags_vertical = Control.SIZE_SHRINK_END
-		seg.custom_minimum_size = Vector2(0, 18 if i in thresholds else 10)
-		_segments.add_child(seg)
+## The StreakArc (p14) that FeedbackDirector animates.
+func get_streak_arc() -> Control:
+	return _arc
+
+
+## Shows the item being targeted as pressed (&"" = none).
+func set_selected_item(item_id: StringName) -> void:
+	selected_item = item_id
+	for b: Node in _buttons.get_children():
+		var button: Button = b as Button
+		var on: bool = item_id != &"" and b.get_meta(&"item_id", &"") == item_id
+		button.set_pressed_no_signal(on)
+		_mark_selected(button, on)
+
+
+## The theme's pressed style is only a shade darker than normal, so the item being targeted is
+## filled with its own border colour (amber / cyan) and dark text. Same margins and font as the
+## theme style, so the button keeps its size.
+func _mark_selected(button: Button, on: bool) -> void:
+	for st: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed"]:
+		button.remove_theme_stylebox_override(st)
+	for c: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color"]:
+		button.remove_theme_color_override(c)
+	if not on:
+		return
+	var base: StyleBox = button.get_theme_stylebox(&"pressed")
+	if not base is StyleBoxFlat:
+		return
+	var fill: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
+	fill.bg_color = fill.border_color
+	for st: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed"]:
+		button.add_theme_stylebox_override(st, fill)
+	var dark: Color = SELECTED_TEXT
+	for c: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color", &"font_hover_pressed_color"]:
+		button.add_theme_color_override(c, dark)
+
+
+## The button of an item id, or null.
+func get_item_button(item_id: StringName) -> Button:
+	for b: Node in _buttons.get_children():
+		if b.get_meta(&"item_id", &"") == item_id:
+			return b as Button
+	return null
 
 
 func _build_perks(perks: Array, slots: int) -> void:
@@ -135,18 +177,33 @@ func _build_perks(perks: Array, slots: int) -> void:
 func _build_buttons(abilities: Array, killstreaks: Array) -> void:
 	_clear(_buttons)
 	for ability: Dictionary in abilities:
-		var b: Button = _make_button("%s\n%s" % [ability.get("name", ""), ability.get("state", "")], &"HudButton")
 		var ability_id: StringName = ability.get("id", &"")
-		b.pressed.connect(func() -> void: ability_pressed.emit(ability_id))
+		var b: Button = _make_button("%s\n%s" % [ability.get("name", ""), ability.get("state", "")], &"HudButton")
+		_wire(b, ability_id, not bool(ability.get("ready", true)), String(ability.get("reason", "")),
+				func() -> void: ability_pressed.emit(ability_id))
 		_buttons.add_child(b)
 	for ks: Dictionary in killstreaks:
 		var earned: bool = ks.get("earned", false)
-		var b: Button = _make_button("%s\n%s" % [ks.get("name", ""),
-				"CALL IN" if earned else "AT %d" % int(ks.get("threshold", 0))], &"KillstreakButton")
-		b.disabled = not earned
 		var ks_id: StringName = ks.get("id", &"")
-		b.pressed.connect(func() -> void: killstreak_pressed.emit(ks_id))
+		var state_text: String = String(ks.get("state", "CALL IN" if earned else "AT %d" % int(ks.get("threshold", 0))))
+		var b: Button = _make_button("%s\n%s" % [ks.get("name", ""), state_text], &"KillstreakButton")
+		_wire(b, ks_id, not bool(ks.get("ready", earned)), String(ks.get("reason", "")),
+				func() -> void: killstreak_pressed.emit(ks_id))
 		_buttons.add_child(b)
+	set_selected_item(selected_item)
+
+
+## Tap -> emit. A disabled button still reports a tap (so the controller can toast the reason).
+func _wire(b: Button, item_id: StringName, blocked: bool, reason: String, emit: Callable) -> void:
+	b.set_meta(&"item_id", item_id)
+	b.toggle_mode = true
+	b.disabled = blocked
+	b.tooltip_text = reason
+	b.pressed.connect(emit)
+	b.gui_input.connect(func(e: InputEvent) -> void:
+		if b.disabled and e is InputEventMouseButton and not e.pressed \
+				and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			emit.call())
 
 
 func _make_button(text: String, variation: StringName) -> Button:

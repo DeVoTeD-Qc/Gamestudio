@@ -42,6 +42,20 @@ func can_use_item(state, side: int, item: LoadoutItem) -> String:
 	return LoadoutRules.can_use_item(state, side, item)
 
 
+## Same check with a stable reason code, as MatchState.submit() / can_submit() use it:
+## {} if the item may be used, else {code, reason, data} (codes: LoadoutRules.check_item).
+## Goes through can_use_item(), so a subclass that overrides only that keeps working
+## (its own refusals get code &"item_blocked").
+func check_item(state, side: int, item: LoadoutItem) -> Dictionary:
+	var why: String = can_use_item(state, side, item)
+	if why == "":
+		return {}
+	var known: Dictionary = LoadoutRules.check_item(state, side, item)
+	if String(known.get("reason", "")) == why:
+		return known
+	return {"code": &"item_blocked", "reason": why, "data": {}}
+
+
 ## A loadout item was accepted in Deploy (p05: start cooldown, count the use, take from tray).
 func on_item_used(state, side: int, item: LoadoutItem) -> void:
 	LoadoutRules.on_item_used(state, side, item)

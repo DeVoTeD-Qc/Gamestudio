@@ -1,5 +1,5 @@
 # match_controller.gd
-# Purpose: Thin presenter for the match screen (p09). Child node "MatchController" of
+# Purpose: Thin presenter for the match screen (p09, f02). Child node "MatchController" of
 #   scenes/Match.tscn. It owns the MatchState of a local test match (starter deck from
 #   CardDB's run config vs squad_rusher on Port Vasel, Zone Control), turns the player's
 #   gestures into RulesIntent submits, and redraws the existing p08 scenes from
@@ -12,25 +12,39 @@
 #     can't take it (NEED 3 SUPPLY, ZONE FULL, WAIT ...); a refused play shows a toast with
 #     the reason and changes nothing
 #   - Flank Route style cards (CHOSEN_FRIENDLY): tap / drop on one of your units, then a lane
+#   - f02 loadout: tap Sidearm / Frag / Flashbang or a killstreak in the tray, then tap what it
+#     needs (an enemy unit for the Sidearm, a lane for Frag / Flashbang / Mortar / Sentry);
+#     items that need nothing (Recon Drone, Attack Helo) are queued at once. Blocked buttons
+#     are disabled and a tap on them toasts why (cooldown, used, not earned, no Operator)
 #   - long-press (touch) or right-click (mouse) a hand card, a unit or the Operator: inspector
-#   - UNDO takes back the last play of this Deploy; READY submits (the enemy passes until the
-#     p07 AI plugs in through `enemy_planner`), resolves the round and starts the next one
+#   - UNDO takes back the last play of this Deploy; READY locks the plan in, the round resolves
+#     and FeedbackDirector (p14) plays it over the pre-resolve board (taps / F fast-forward)
+#   - Round 1 starts with the mulligan panel (choose cards to put back, then confirm)
 #   - Esc / right mouse (cancel) clears the selection; R (end_turn) is READY
 #
-#   The engine stays the authority: check_play() mirrors MatchState.submit()'s checks so the
-#   lanes can show reasons before a play, and whatever submit() refuses is shown as is.
-# Dependencies: MatchState, RulesIntent, RulesEvent, SideSetup, MatchHooks, ModeRules, CardDB,
-#   EventBus, match_snapshot.gd, card_info.gd, match_screen.gd (parent).
-# Author: UI/UX Agent (p09)
+#   The engine is the authority (f02): lanes, buttons and refusals come from
+#   MatchState.can_submit() / check_use() / legal_targets() and their reason codes, worded by
+#   play_text.gd. The enemy is the p07 AI (AiPlayer for the squad, seeded by the match seed),
+#   plugged in as `enemy_planner`; it commits before the player's Deploy.
+#   p16: gameplay signals go to EventBus (match / round start and end, round_summary,
+#   card_deployed, killstreak_earned / _used, ability_used, eliminations, Operator downs).
+# Dependencies: MatchState, RulesIntent, RulesEvent, SideSetup, MatchHooks, ModeRules, AiPlayer,
+#   CardDB, EventBus, match_snapshot.gd, play_text.gd, card_info.gd, match_screen.gd (parent).
+# Author: UI/UX Agent (p09), Mechanics Developer Agent (f02)
 extends Node
 
-## A play was sent to the engine: intent (RulesIntent Dictionary) and its {ok, reason}.
+## A play was sent to the engine: intent (RulesIntent Dictionary) and its {ok, code, reason, data}.
 signal intent_submitted(intent: Dictionary, result: Dictionary)
 ## The round was resolved after READY (events of Reveal / Firefight / Score).
 signal round_resolved(events: Array)
+## The resolved round finished playing (feedback done) and the next Deploy is up (or the match ended).
+signal round_presented
+## The Round 1 mulligan was decided (put_back empty = kept).
+signal mulligan_done(put_back: Array)
 
 const MatchSnapshot: GDScript = preload("res://scripts/ui/match_snapshot.gd")
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
+const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
@@ -44,16 +58,24 @@ const KILLFEED_KEEP: int = 6
 @export var enemy_squad_id: StringName = &"squad_rusher"
 @export var map_id: StringName = &"port_vasel"
 @export var emit_to_event_bus: bool = true
+## The enemy is played by the p07 AI (AiPlayer for the squad). Off: it passes.
+@export var enemy_ai: bool = true
+## Round 1 opens the mulligan panel.
+@export var offer_mulligan: bool = true
+## Index sent with EventBus.match_started (the run flow sets it).
+@export var match_index: int = 0
 
-## Called as enemy_planner.call(state) at the start of every Deploy, before the player acts
-## (p07 AI: submit the enemy's plays here). Unset = the enemy passes.
+## Called as enemy_planner.call(state) at the start of every Deploy, before the player acts.
+## Default (enemy_ai on): AiPlayer.for_squad(squad).take_turn(state, ENEMY). Set your own to replace it.
 var enemy_planner: Callable = Callable()
+## The default AI driver (null when enemy_planner was set from outside or enemy_ai is off).
+var enemy_ai_player: AiPlayer = null
 
 var state: MatchState = null
 var map: MapData = null
-## {kind: &"card", uid} or {kind: &"operator"}; empty = nothing selected.
+## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
 var selection: Dictionary = {}
-## Unit picked for a card that needs one (Flank Route), -1 = none yet.
+## Unit picked for a play that needs one (Flank Route, Sidearm), -1 = none yet.
 var target_uid: int = -1
 var killfeed: Array = []
 ## Every intent sent to the engine with its result (tests, playtest log).
@@ -63,6 +85,9 @@ var _screen: Control = null
 var _cursor: int = 0
 var _hover_zone: int = -1
 var _dragging: bool = false
+var _busy: bool = false
+var _default_planner: bool = false
+var _match_started_ms: int = 0
 
 
 func _ready() -> void:
@@ -92,17 +117,30 @@ func _on_screen_ready() -> void:
 	op.operator_drag_started.connect(_on_operator_drag_started, d)
 	op.operator_drag_moved.connect(func(pos: Vector2) -> void: _on_drag_moved(-1, pos), d)
 	op.operator_drag_ended.connect(_on_drag_ended, d)
+	op.ability_pressed.connect(_on_item_pressed, d)
+	op.killstreak_pressed.connect(_on_item_pressed, d)
 	var board: Control = _screen.get_board()
 	board.lane_tapped.connect(_on_lane_tapped, d)
 	board.lane_long_pressed.connect(_on_lane_long_pressed, d)
 	_screen.ready_pressed.connect(press_ready, d)
 	_screen.undo_pressed.connect(undo, d)
+	if _screen.has_method(&"get_mulligan_panel"):
+		_screen.get_mulligan_panel().confirmed.connect(_on_mulligan_confirmed, d)
 	if autostart:
 		start_local_match(seed_value)
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if state == null or _screen.get_inspector().is_open():
+	if state == null:
+		return
+	if _busy:
+		# While the round plays: F, or any tap / click, fast-forwards it.
+		if event.is_action_pressed(&"fast_forward") or event.is_action_pressed(&"confirm") \
+				or (event is InputEventMouseButton and (event as InputEventMouseButton).pressed):
+			get_viewport().set_input_as_handled()
+			skip_feedback()
+		return
+	if _screen.get_inspector().is_open():
 		return
 	if event.is_action_pressed(&"cancel") and not selection.is_empty():
 		get_viewport().set_input_as_handled()
@@ -137,40 +175,101 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	var hooks: MatchHooks = MatchHooks.new()
 	hooks.mode_rules = ModeRules.create(DataEnums.GameMode.ZONE_CONTROL, config)
 	state = MatchState.new(config, map, player, enemy, p_seed, hooks)
+	# The enemy AI (p07): deterministic, its only randomness is seeded from the match seed.
+	if enemy_ai and (_default_planner or not enemy_planner.is_valid()):
+		enemy_ai_player = AiPlayer.for_squad(squad)
+		enemy_planner = _ai_turn
+		_default_planner = true
 	_cursor = 0
 	killfeed.clear()
 	intent_log.clear()
 	selection.clear()
 	target_uid = -1
+	_busy = false
+	_match_started_ms = Time.get_ticks_msec()
 	state.start_match()
 	_begin_deploy()
 	return true
 
 
-## READY: the player's plan is locked in, the round resolves and the next Deploy starts.
+func _ai_turn(st: MatchState) -> void:
+	enemy_ai_player.take_turn(st, ENEMY)
+
+
+## True while FeedbackDirector plays a resolved round (input only fast-forwards it).
+func is_busy() -> bool:
+	return _busy
+
+
+## Fast-forwards the round's feedback (F key, or a tap while it plays).
+func skip_feedback() -> void:
+	var fx: Control = _fx()
+	if fx != null and fx.is_playing():
+		fx.skip()
+
+
+## READY: the player's plan is locked in, the round resolves, FeedbackDirector plays it over the
+## pre-resolve board (switching to the post-Reveal board when the firefight starts), then the
+## next Deploy starts. Returns after the feedback has played.
 func press_ready() -> void:
-	if state == null or state.phase != MatchState.Phase.DEPLOY or state.sides[PLAYER].ready:
+	if state == null or _busy or state.phase != MatchState.Phase.DEPLOY or state.sides[PLAYER].ready \
+			or is_mulligan_open():
 		return
 	clear_selection()
+	var me: RulesSide = state.sides[PLAYER]
+	var supply_unspent: int = me.supply
+	var hand_size: int = me.hand.size()
 	state.set_ready(PLAYER)
 	if not state.sides[ENEMY].ready:
 		state.set_ready(ENEMY)  # the enemy passes (or already planned in enemy_planner)
-	var resolved: Array[Dictionary] = state.resolve_round()
+	# The pre-resolve board (deploy closed) stays up while the Reveal plays.
+	var before: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)
+	before["phase"] = "REVEAL"
+	_screen.show_snapshot(before)
+	_show_selection()
+	var fx: Control = _fx()
+	if fx != null and fx.locator != null:
+		fx.unit_names = _unit_names()
+	# MatchState.resolve_round(), split so the board can show the units that arrived at Reveal
+	# when the firefight starts.
+	var start: int = state.events.size()
+	state.reveal()
+	var after_reveal: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)
+	after_reveal["phase"] = "FIREFIGHT"
+	state.firefight()
+	state.score()
+	var resolved: Array[Dictionary] = state.events_since(start)
+	if emit_to_event_bus:
+		EventBus.round_summary.emit(state.round_number, supply_unspent, hand_size)
 	_flush_events()
 	round_resolved.emit(resolved)
+	if fx != null:
+		_busy = true
+		var on_event: Callable = func(ev: Dictionary) -> void:
+			if ev.get("type") == RulesEvent.PHASE_CHANGED and StringName(ev.get("phase", "")) == &"firefight":
+				_screen.show_snapshot(after_reveal)
+		fx.event_started.connect(on_event)
+		await fx.play(resolved)
+		fx.event_started.disconnect(on_event)
+		_busy = false
 	if state.phase == MatchState.Phase.ENDED:
 		refresh()
 		var result: String = {&"player": "You win the match.", &"enemy": "You lose the match."}.get(state.result, "Draw.")
 		_screen.show_toast(result)
+		round_presented.emit()
 		return
 	state.begin_round()
 	_begin_deploy()
+	round_presented.emit()
 
 
 ## Takes back the last play of this Deploy.
 func undo() -> Dictionary:
 	if state == null:
-		return {"ok": false, "reason": "no match"}
+		return {"ok": false, "code": &"no_match", "reason": "no match", "data": {}}
+	if _busy:
+		skip_feedback()
+		return {"ok": false, "code": &"wrong_phase", "reason": "busy", "data": {}}
 	var s: RulesSide = state.sides[PLAYER]
 	var label: String = MatchSnapshot.play_name(state, s, s.plays.back()) if not s.plays.is_empty() else ""
 	var res: Dictionary = state.undo_last(PLAYER)
@@ -179,7 +278,7 @@ func undo() -> Dictionary:
 		_after_change()
 		_screen.show_toast("Undid %s." % label)
 	else:
-		_screen.show_toast(_sentence(res["reason"]))
+		_screen.show_toast(PlayText.describe(res)["reason"])
 	return res
 
 
@@ -192,6 +291,13 @@ func _begin_deploy() -> void:
 		for z: int in dots.size():
 			EventBus.intel_updated.emit(MapData.ZONE_IDS[z], dots[z])
 	refresh()
+	if offer_mulligan and state.round_number == 1 and state.can_mulligan(PLAYER)["ok"] and _mulligan_panel() != null:
+		open_mulligan()
+		return
+	_deploy_hint()
+
+
+func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[PLAYER]
 	if s.operator_can_deploy:
 		_screen.show_toast("Round %d: tap your Operator, then a zone." % state.round_number)
@@ -211,6 +317,82 @@ func _after_change() -> void:
 	refresh()
 
 
+func _fx() -> Control:
+	return _screen.get_fx() if _screen != null and _screen.has_method(&"get_fx") else null
+
+
+func _mulligan_panel() -> Control:
+	return _screen.get_mulligan_panel() if _screen != null and _screen.has_method(&"get_mulligan_panel") else null
+
+
+## uid -> display name of every unit / Operator on the board or queued (killfeed lines).
+func _unit_names() -> Dictionary:
+	var out: Dictionary = {}
+	for s: RulesSide in state.sides:
+		if s.operator_unit != null:
+			out[s.operator_unit.uid] = MatchSnapshot.unit_name(s.operator_unit, s)
+		for u: RulesUnit in s.units_on_board():
+			out[u.uid] = MatchSnapshot.unit_name(u, s)
+		for p: Dictionary in s.plays:
+			if p["kind"] == &"unit":
+				out[(p["card"] as RulesCard).uid] = (p["card"] as RulesCard).card.display_name
+	return out
+
+
+# =============================================================================
+# Mulligan (Round 1)
+# =============================================================================
+
+func is_mulligan_open() -> bool:
+	var panel: Control = _mulligan_panel()
+	return panel != null and panel.is_open()
+
+
+func open_mulligan() -> void:
+	var entries: Array = []
+	for rc: RulesCard in state.sides[PLAYER].hand:
+		entries.append({"uid": rc.uid, "name": rc.card.display_name, "cost": rc.card.cost,
+				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
+	clear_selection()
+	_mulligan_panel().open(entries)
+	if EventBus != null and emit_to_event_bus:
+		EventBus.screen_shown.emit(&"mulligan")
+
+
+## Keeps the opening hand (closes the panel without a mulligan).
+func keep_hand() -> void:
+	var none: Array[int] = []
+	_apply_mulligan(none)
+
+
+## Puts these cards back and redraws (closes the panel). Returns the engine's result.
+func mulligan_cards(put_back: Array[int]) -> Dictionary:
+	return _apply_mulligan(put_back)
+
+
+func _on_mulligan_confirmed(put_back: Array[int]) -> void:
+	_apply_mulligan(put_back)
+
+
+func _apply_mulligan(put_back: Array[int]) -> Dictionary:
+	var panel: Control = _mulligan_panel()
+	if panel != null and panel.is_open():
+		panel.close()
+	var res: Dictionary = {"ok": true, "code": &"ok", "reason": "", "data": {}}
+	if not put_back.is_empty():
+		res = state.mulligan(PLAYER, put_back)
+		_after_change()
+		if res["ok"]:
+			_screen.show_toast("Put back %d card%s and drew %d. Round 1: tap your Operator, then a zone."
+					% [put_back.size(), "" if put_back.size() == 1 else "s", put_back.size()])
+		else:
+			_screen.show_toast(PlayText.describe(res)["reason"])
+	else:
+		_deploy_hint()
+	mulligan_done.emit(put_back)
+	return res
+
+
 # =============================================================================
 # Selection and plays
 # =============================================================================
@@ -223,7 +405,8 @@ func select_card(uid: int) -> void:
 	if rc == null:
 		return
 	if rc.card.cost > state.sides[PLAYER].supply:
-		_screen.show_toast(_supply_reason(rc.card))
+		_screen.show_toast(PlayText.describe(state.can_submit(PLAYER, RulesIntent.play_card(uid, 0)),
+				{"name": rc.card.display_name})["reason"])
 	elif _unit_target_kind() == &"friendly":
 		_screen.show_toast("Pick one of your units to move.")
 	elif _unit_target_kind() == &"enemy":
@@ -236,6 +419,34 @@ func select_operator() -> void:
 	_show_selection()
 
 
+## Sidearm / Lethal / Tactical / killstreak button: select it for targeting, or queue it at
+## once when it needs no choice. A blocked item only toasts why. Returns the engine's check.
+func select_item(item_id: StringName) -> Dictionary:
+	if state == null:
+		return {"ok": false, "code": &"no_match", "reason": "", "data": {}}
+	var item: LoadoutItem = state.find_item(PLAYER, item_id)
+	var check: Dictionary = state.check_use(PLAYER, item_id)
+	if item == null or not check["ok"]:
+		clear_selection()
+		_screen.show_toast(PlayText.describe(check, _item_ctx(item))["reason"])
+		return check
+	var targets: Array[Dictionary] = state.legal_targets(PLAYER, item_id)
+	var kind: StringName = state.needs_unit_target(PLAYER, item_id)
+	var no_choice: bool = kind == &"" and targets.any(func(t: Dictionary) -> bool: return t["zone"] == MatchState.NO_ZONE)
+	if no_choice:
+		clear_selection()
+		return _submit(RulesIntent.use_item(item_id))
+	selection = {"kind": &"item", "id": item_id}
+	target_uid = -1
+	_show_selection()
+	var verb: String = "call in" if item.slot == DataEnums.LoadoutSlot.KILLSTREAK else "use"
+	if kind == &"enemy":
+		_screen.show_toast("%s: tap an enemy in your Operator's zone." % item.display_name)
+	else:
+		_screen.show_toast("%s: tap a zone to %s it." % [item.display_name, verb])
+	return check
+
+
 func clear_selection() -> void:
 	selection = {}
 	target_uid = -1
@@ -243,174 +454,152 @@ func clear_selection() -> void:
 	_show_selection()
 
 
-## Tries the selected card / Operator in zone z. Returns the engine's {ok, reason} (or the
-## presenter's refusal, which never reaches the engine).
+## Tries the selection in zone z. Returns the engine's {ok, code, reason, data} (or the
+## presenter's refusal from check_play, which never reaches the engine).
 func play_at(zone: int) -> Dictionary:
 	var check: Dictionary = check_play(zone)
 	if not check["ok"]:
 		_screen.show_toast(check["reason"])
 		_show_selection()
 		return check
-	var intent: Dictionary = _intent_for(zone)
+	return _submit(_intent_for(zone))
+
+
+func _submit(intent: Dictionary) -> Dictionary:
 	var res: Dictionary = state.submit(PLAYER, intent)
 	intent_log.append({"intent": intent, "result": res})
 	intent_submitted.emit(intent, res)
 	if res["ok"]:
 		clear_selection()
 		_after_change()
+		if intent["type"] == RulesIntent.USE_ITEM:
+			var item: LoadoutItem = state.find_item(PLAYER, intent["item_id"])
+			var what: String = item.display_name if item != null else "Item"
+			var zone: int = int(intent.get("zone", -1))
+			_screen.show_toast("%s queued%s. It resolves at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
 	else:
-		_screen.show_toast(_sentence(res["reason"]))
+		_screen.show_toast(PlayText.describe(res, _ctx())["reason"])
 		_show_selection()
 	return res
 
 
 ## Can the current selection go to zone z? {ok, badge (short, for the lane), reason (sentence)}.
-## Mirrors MatchState.submit() (Supply, zone capacity, phase, Operator rules, targets).
+## Asks the engine (MatchState.can_submit) and words its reason code (play_text.gd).
 func check_play(zone: int) -> Dictionary:
 	if state == null:
 		return _no("", "No match is running.")
-	var s: RulesSide = state.sides[PLAYER]
-	if state.phase != MatchState.Phase.DEPLOY:
-		return _no("WAIT", "Wrong phase: you can only play cards during Deploy.")
-	if s.ready:
-		return _no("READY", "You already pressed READY.")
+	if selection.is_empty():
+		return _no("", "Select a card first.")
 	if not state.is_zone(zone):
+		var phase_check: Dictionary = state.can_submit(PLAYER, {"type": &"probe"})
+		if phase_check["code"] in [&"wrong_phase", &"already_ready"]:
+			return PlayText.describe(phase_check)
 		return _no("", "Drop it on a zone.")
-	match selection.get("kind", &""):
-		&"card":
-			return _check_card(zone)
-		&"operator":
-			return _check_operator(zone)
-	return _no("", "Select a card first.")
-
-
-func _check_card(zone: int) -> Dictionary:
-	var s: RulesSide = state.sides[PLAYER]
-	var rc: RulesCard = s.find_in_hand(int(selection["uid"]))
-	if rc == null:
+	if selection.get("kind") == &"card" and state.sides[PLAYER].find_in_hand(int(selection["uid"])) == null:
 		return _no("", "That card is not in your hand any more.")
-	var card: CardData = rc.card
-	if card.cost > s.supply:
-		return _no("NEED %d SUPPLY" % card.cost, _supply_reason(card))
+	var r: Dictionary = state.can_submit(PLAYER, _intent_for(zone))
+	if not r["ok"]:
+		return PlayText.describe(r, _ctx())
+	var kind: StringName = _unit_target_kind()
+	if &"dest_full" in r["data"].get("warnings", []):
+		return PlayText.describe({"code": &"zone_full", "data": {"zone": zone, "capacity": state.config.zone_capacity}})
+	if kind == &"enemy":
+		return _yes("TARGET") if _enemy_zone(target_uid) == zone else _no("", "Pick an enemy unit.")
+	return _yes(_badge(kind))
+
+
+func _badge(kind: StringName) -> String:
+	match selection.get("kind"):
+		&"operator":
+			var s: RulesSide = state.sides[PLAYER]
+			return "PLACE HERE" if s.operator_can_deploy and not _has_play(&"place") else "ROTATE HERE"
+		&"item":
+			var item: LoadoutItem = state.find_item(PLAYER, selection["id"])
+			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
+				return "CALL IN HERE"
+			return "THROW HERE" if item != null and item.slot == DataEnums.LoadoutSlot.LETHAL else "TARGET ZONE"
+	var card: CardData = state.sides[PLAYER].find_in_hand(int(selection["uid"])).card
 	match card.card_type:
 		DataEnums.CardType.UNIT:
-			if state.projected_occupancy(PLAYER, zone) >= state.config.zone_capacity:
-				return _no("ZONE FULL", "Zone full: %s already has %d units." % [ZONE_WORDS[zone], state.config.zone_capacity])
-			return _yes("DEPLOY HERE")
+			return "DEPLOY HERE"
 		DataEnums.CardType.EQUIPMENT:
-			return _yes("PLACE HERE")
-	var kind: StringName = _unit_target_kind()
+			return "PLACE HERE"
 	if kind == &"friendly":
-		if target_uid < 0:
-			return _no("PICK A UNIT", "Pick one of your units first.")
-		var from: int = _friendly_zone(target_uid)
-		if from == zone:
-			return _no("ALREADY HERE", "That unit is already in this zone.")
-		if not state.are_adjacent(from, zone):
-			return _no("NOT ADJACENT", "Move only to an adjacent zone.")
-		if state.projected_occupancy(PLAYER, zone) >= state.config.zone_capacity:
-			return _no("ZONE FULL", "Zone full: %s already has %d units." % [ZONE_WORDS[zone], state.config.zone_capacity])
-		return _yes("MOVE HERE")
-	if kind == &"enemy":
-		if target_uid < 0:
-			return _no("PICK AN ENEMY", "Pick an enemy unit first.")
-		return _yes("TARGET") if _enemy_zone(target_uid) == zone else _no("", "Pick an enemy unit.")
-	var op_zone: int = state.projected_operator_zone(PLAYER)
-	for e: EffectData in card.effects:
-		if e == null:
-			continue
-		match e.zone_scope:
-			DataEnums.ZoneScope.OPERATOR_OR_ADJACENT:
-				if op_zone == MatchState.NO_ZONE:
-					return _no("NO OPERATOR", "Your Operator is not on the board.")
-				if absi(zone - op_zone) > 1:
-					return _no("TOO FAR", "Pick your Operator's zone or one next to it.")
-			DataEnums.ZoneScope.OPERATOR_ZONE:
-				if op_zone == MatchState.NO_ZONE:
-					return _no("NO OPERATOR", "Your Operator is not on the board.")
-	return _yes("TARGET ZONE" if card.requires_zone_choice() else "PLAY")
+		return "MOVE HERE"
+	return "TARGET ZONE" if card.requires_zone_choice() else "PLAY"
 
 
-func _check_operator(zone: int) -> Dictionary:
-	var s: RulesSide = state.sides[PLAYER]
-	if s.operator_unit == null:
-		return _no("", "You have no Operator.")
-	var full: bool = state.projected_occupancy(PLAYER, zone) >= state.config.zone_capacity
-	if s.operator_can_deploy and not _has_play(&"place"):
-		if full:
-			return _no("ZONE FULL", "Zone full: %s already has %d units." % [ZONE_WORDS[zone], state.config.zone_capacity])
-		return _yes("PLACE HERE")
-	var from: int = state.projected_operator_zone(PLAYER)
-	if from == MatchState.NO_ZONE:
-		return _no("", "Your Operator can't be placed now.")
-	var allowed: int = s.setup.primary.rotations_per_round if s.setup.primary != null else 1
-	if s.rotations_used >= allowed:
-		return _no("NO ROTATION", "No Rotations left this round.")
-	if zone == from:
-		return _no("HERE NOW", "Your Operator is already here.")
-	if not state.are_adjacent(from, zone):
-		return _no("NOT ADJACENT", "Rotate only to an adjacent zone.")
-	if full:
-		return _no("ZONE FULL", "Zone full: %s already has %d units." % [ZONE_WORDS[zone], state.config.zone_capacity])
-	return _yes("ROTATE HERE")
+## Name / kind of the selection, for play_text.describe().
+func _ctx() -> Dictionary:
+	match selection.get("kind"):
+		&"operator":
+			return {"name": "Your Operator", "kind": &"operator"}
+		&"item":
+			return _item_ctx(state.find_item(PLAYER, selection["id"]))
+		&"card":
+			var rc: RulesCard = state.sides[PLAYER].find_in_hand(int(selection["uid"]))
+			if rc != null:
+				return {"name": rc.card.display_name, "kind": &"move" if _unit_target_kind() == &"friendly" else &"card"}
+	return {}
+
+
+func _item_ctx(item: LoadoutItem) -> Dictionary:
+	if item == null:
+		return {"name": "That item", "kind": &"item"}
+	var t: int = StreakTracker.threshold_for(state, PLAYER, item) if item.slot == DataEnums.LoadoutSlot.KILLSTREAK else 0
+	return {"name": item.display_name, "kind": &"item", "threshold": t}
 
 
 func _intent_for(zone: int) -> Dictionary:
-	if selection.get("kind") == &"operator":
-		var s: RulesSide = state.sides[PLAYER]
-		if s.operator_can_deploy and not _has_play(&"place"):
-			return RulesIntent.place_operator(zone)
-		return RulesIntent.rotate(zone)
+	match selection.get("kind"):
+		&"operator":
+			var s: RulesSide = state.sides[PLAYER]
+			if s.operator_can_deploy and not _has_play(&"place"):
+				return RulesIntent.place_operator(zone)
+			return RulesIntent.rotate(zone)
+		&"item":
+			if _unit_target_kind() == &"enemy":
+				return RulesIntent.use_item(selection["id"], -1, target_uid)
+			return RulesIntent.use_item(selection["id"], zone)
 	var uid: int = int(selection["uid"])
-	var card: CardData = state.sides[PLAYER].find_in_hand(uid).card
+	var rc: RulesCard = state.sides[PLAYER].find_in_hand(uid)
 	match _unit_target_kind():
 		&"friendly":
 			return RulesIntent.play_card(uid, zone, target_uid, zone)
 		&"enemy":
 			return RulesIntent.play_card(uid, zone, target_uid)
-	if card.card_type != DataEnums.CardType.TACTIC or card.requires_zone_choice():
+	if rc == null or rc.card.card_type != DataEnums.CardType.TACTIC or rc.card.requires_zone_choice():
 		return RulesIntent.play_card(uid, zone)
 	return RulesIntent.play_card(uid)
 
 
-## &"friendly" / &"enemy" when the selected card needs a chosen unit, else &"".
+## What the selection is, in MatchState.legal_targets() terms (card uid / item id / &"operator").
+func _what() -> Variant:
+	match selection.get("kind"):
+		&"card":
+			return int(selection["uid"])
+		&"item":
+			return StringName(selection["id"])
+		&"operator":
+			return &"operator"
+	return null
+
+
+## &"friendly" / &"enemy" when the selection needs a chosen unit (engine: needs_unit_target).
 func _unit_target_kind() -> StringName:
-	if state == null or selection.get("kind") != &"card":
+	if state == null or selection.is_empty() or selection.get("kind") == &"operator":
 		return &""
-	var rc: RulesCard = state.sides[PLAYER].find_in_hand(int(selection["uid"]))
-	if rc == null:
-		return &""
-	for e: EffectData in rc.card.effects:
-		if e == null:
-			continue
-		if e.target == DataEnums.Target.CHOSEN_FRIENDLY:
-			return &"friendly"
-		if e.target == DataEnums.Target.CHOSEN_ENEMY:
-			return &"enemy"
-	return &""
+	return state.needs_unit_target(PLAYER, _what())
 
 
-## Units that can be picked for the selected card (board units + this Deploy's queued arrivals).
-func _target_candidates(kind: StringName) -> Array:
+## Units that can be picked for the selection: the engine's legal targets.
+func _target_candidates(_kind: StringName = &"") -> Array:
 	var out: Array = []
-	var side: RulesSide = state.sides[PLAYER if kind == &"friendly" else ENEMY]
-	for u: RulesUnit in side.units_on_board():
-		out.append(u.uid)
-	if kind == &"friendly":
-		for p: Dictionary in side.plays:
-			if p["kind"] == &"unit":
-				out.append((p["card"] as RulesCard).uid)
+	for t: Dictionary in state.legal_targets(PLAYER, _what()):
+		var uid: int = int(t["target_uid"])
+		if uid >= 0 and uid not in out:
+			out.append(uid)
 	return out
-
-
-func _friendly_zone(uid: int) -> int:
-	var u: RulesUnit = state.sides[PLAYER].find_unit(uid)
-	if u != null:
-		return u.zone
-	for p: Dictionary in state.sides[PLAYER].plays:
-		if p["kind"] == &"unit" and (p["card"] as RulesCard).uid == uid:
-			return int(p["zone"])
-	return MatchState.NO_ZONE
 
 
 func _enemy_zone(uid: int) -> int:
@@ -425,13 +614,14 @@ func _has_play(kind: StringName) -> bool:
 	return false
 
 
-## Lane frames / badges, the selected chip and the pickable units for the current selection.
+## Lane frames / badges, the selected chip / item and the pickable units for the selection.
 func _show_selection() -> void:
 	if _screen == null or not _screen.is_node_ready():
 		return
 	var board: Control = _screen.get_board()
 	_screen.get_hand().set_selected(int(selection.get("uid", -1)) if selection.get("kind") == &"card" else -1)
 	_screen.get_operator_panel().set_selected(selection.get("kind") == &"operator")
+	_screen.get_operator_panel().set_selected_item(StringName(selection.get("id", &"")) if selection.get("kind") == &"item" else &"")
 	if selection.is_empty() or state == null:
 		board.show_targets([])
 		board.set_unit_targets([])
@@ -457,7 +647,7 @@ func _show_selection() -> void:
 # =============================================================================
 
 func _on_card_tapped(uid: int) -> void:
-	if state == null:
+	if state == null or _swallow_tap():
 		return
 	if selection.get("kind") == &"card" and int(selection["uid"]) == uid:
 		clear_selection()
@@ -466,7 +656,7 @@ func _on_card_tapped(uid: int) -> void:
 
 
 func _on_operator_tapped() -> void:
-	if state == null:
+	if state == null or _swallow_tap():
 		return
 	if selection.get("kind") == &"operator":
 		clear_selection()
@@ -475,9 +665,27 @@ func _on_operator_tapped() -> void:
 
 
 func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
-	if state == null or selection.is_empty():
+	if state == null or _swallow_tap() or selection.is_empty():
 		return
 	_pick_or_play(zone, slot_side, uid)
+
+
+## A loadout / killstreak button: tap again to deselect.
+func _on_item_pressed(item_id: StringName) -> void:
+	if state == null or _swallow_tap():
+		return
+	if selection.get("kind") == &"item" and StringName(selection.get("id", &"")) == item_id:
+		clear_selection()
+	else:
+		select_item(item_id)
+
+
+## While the round plays a tap only fast-forwards it (true = swallowed).
+func _swallow_tap() -> bool:
+	if _busy:
+		skip_feedback()
+		return true
+	return is_mulligan_open()
 
 
 ## A tap or drop on lane `zone` (on the unit uid of slot_side, if any).
@@ -501,7 +709,7 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 
 
 func _on_card_drag_started(uid: int, pos: Vector2) -> void:
-	if state == null:
+	if state == null or _swallow_tap():
 		return
 	if not (selection.get("kind") == &"card" and int(selection["uid"]) == uid):
 		select_card(uid)
@@ -514,7 +722,7 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 
 
 func _on_operator_drag_started(pos: Vector2) -> void:
-	if state == null or state.sides[PLAYER].operator_unit == null:
+	if state == null or _swallow_tap() or state.sides[PLAYER].operator_unit == null:
 		return
 	select_operator()
 	_dragging = true
@@ -706,7 +914,7 @@ func _emit(e: Dictionary) -> void:
 	match t:
 		RulesEvent.MATCH_STARTED:
 			var mode: StringName = state.hooks.mode_rules.mode_name if state.hooks.mode_rules != null else &""
-			EventBus.match_started.emit(mode, state.map_id, 0)
+			EventBus.match_started.emit(mode, state.map_id, match_index)
 		RulesEvent.ROUND_STARTED:
 			EventBus.round_started.emit(r)
 		RulesEvent.PHASE_CHANGED:
@@ -717,10 +925,22 @@ func _emit(e: Dictionary) -> void:
 			EventBus.initiative_changed.emit(StringName(e.get("side", &"")))
 		RulesEvent.CARD_DRAWN:
 			EventBus.card_drawn.emit(StringName(e.get("card_id", &"")))
-		RulesEvent.CARD_PLAYED:
-			EventBus.card_deployed.emit(StringName(e.get("side", &"")), StringName(e.get("card_id", &"")), StringName(e.get("zone", &"")))
 		RulesEvent.CARD_REVEALED:
+			# p16: a card counts as deployed once it is committed and revealed (UNDO can't take
+			# it back any more); both sides, the enemy's hidden Equipment stays private.
+			EventBus.card_deployed.emit(StringName(e.get("side", &"")), StringName(e.get("card_id", &"")), StringName(e.get("zone", &"")))
 			EventBus.card_revealed.emit(StringName(e.get("side", &"")), StringName(e.get("card_id", &"")), StringName(e.get("zone", &"")))
+		RulesEvent.ITEM_REVEALED:
+			if e.get("side", &"") == MatchState.SIDE_NAMES[PLAYER]:
+				var item_id: StringName = StringName(e.get("item_id", &""))
+				var item: LoadoutItem = state.find_item(PLAYER, item_id)
+				if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
+					EventBus.killstreak_used.emit(item_id, r)
+				else:
+					EventBus.ability_used.emit(item_id, StringName(e.get("zone", &"")))
+		RulesEvent.OPERATOR_PLACED:
+			if r > 1:
+				EventBus.operator_respawned.emit(StringName(e.get("side", &"")))
 		RulesEvent.SHOT_FIRED:
 			EventBus.shot_fired.emit(int(e.get("shooter_uid", -1)), int(e.get("target_uid", -1)), StringName(e.get("zone", &"")))
 		RulesEvent.DAMAGE_DEALT:
@@ -742,16 +962,12 @@ func _emit(e: Dictionary) -> void:
 			EventBus.round_ended.emit(r, int(e.get("player_score", 0)), int(e.get("enemy_score", 0)))
 		RulesEvent.MATCH_ENDED:
 			var result: StringName = {&"player": &"win", &"enemy": &"loss"}.get(state.result, &"draw")
-			EventBus.match_ended.emit(result, state.round_number, 0.0)
+			EventBus.match_ended.emit(result, state.round_number, (Time.get_ticks_msec() - _match_started_ms) / 1000.0)
 
 
 # =============================================================================
 # Helpers
 # =============================================================================
-
-func _supply_reason(card: CardData) -> String:
-	return "Not enough Supply: %s costs %d, you have %d." % [card.display_name, card.cost, state.sides[PLAYER].supply]
-
 
 static func _yes(badge: String) -> Dictionary:
 	return {"ok": true, "badge": badge, "reason": ""}
@@ -759,13 +975,6 @@ static func _yes(badge: String) -> Dictionary:
 
 static func _no(badge: String, reason: String) -> Dictionary:
 	return {"ok": false, "badge": badge, "reason": reason}
-
-
-static func _sentence(reason: String) -> String:
-	if reason.is_empty():
-		return reason
-	var out: String = reason.left(1).to_upper() + reason.substr(1)
-	return out if out.ends_with(".") else out + "."
 
 
 static func _join(a: String, b: String) -> String:

@@ -26,6 +26,7 @@ signal menu_pressed
 signal undo_pressed
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
+const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const BASE_MARGIN: Vector2 = Vector2(16, 12)
 const BASE_MARGIN_COMPACT: Vector2 = Vector2(12, 8)
@@ -56,6 +57,9 @@ const TOAST_SECONDS: float = 2.2
 @onready var _toast_label: Label = %ToastLabel
 @onready var _drag_layer: Control = %DragLayer
 @onready var _inspector: Control = %Inspector
+@onready var _fx: Control = %FeedbackDirector
+@onready var _killfeed_fx: Control = %Killfeed
+@onready var _mulligan: Control = %MulliganPanel
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
@@ -68,6 +72,13 @@ var _toast_id: int = 0
 
 
 func _ready() -> void:
+	# p14 combat feedback (documentation/production/p14-fx-wiring.md): the director finds unit
+	# slots by uid on the board, the killfeed and the streak arc live in the HUD.
+	_fx.locator = BoardFxLocator.new(_board)
+	_fx.locator.anchors[&"score"] = _score_bar
+	_fx.locator.anchors[&"streak"] = _operator_panel
+	_fx.killfeed = _killfeed_fx
+	_fx.streak_arc = _operator_panel.get_streak_arc()
 	_update_profile()
 	resized.connect(_update_profile)
 	get_viewport().size_changed.connect(_apply_safe_area)
@@ -100,6 +111,16 @@ func get_operator_panel() -> Control:
 
 func get_inspector() -> Control:
 	return _inspector
+
+
+## p14 FeedbackDirector (plays the engine's events after READY).
+func get_fx() -> Control:
+	return _fx
+
+
+## f02 Round 1 mulligan panel.
+func get_mulligan_panel() -> Control:
+	return _mulligan
 
 
 func get_undo_button() -> Button:
@@ -214,6 +235,7 @@ func _update_profile() -> void:
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)
 	_minimap.set_compact(compact)
+	_mulligan.set_compact(compact)
 	_supply_pips.add_theme_constant_override(&"separation", 2 if compact else 4)
 	for pip: Node in _supply_pips.get_children():
 		(pip as Control).custom_minimum_size = _pip_size()
@@ -252,21 +274,10 @@ func _set_supply(supply: int, supply_max: int) -> void:
 		_supply_pips.add_child(pip)
 
 
-## Placeholder lines; the real Killfeed.tscn (p14) is added as a child of KillfeedSlot.
-func _set_killfeed(lines: Array) -> void:
-	for child: Node in _killfeed.get_children():
-		_killfeed.remove_child(child)
-		child.queue_free()
-	for i: int in mini(lines.size(), KILLFEED_LINES):
-		var entry: Dictionary = lines[i]
-		var label: Label = Label.new()
-		var friendly: bool = entry.get("side", &"player") == &"player"
-		label.theme_type_variation = &"KillfeedFriend" if friendly else &"KillfeedEnemy"
-		label.text = String(entry.get("text", ""))
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		label.clip_text = true
-		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		_killfeed.add_child(label)
+## p14: the Killfeed (scenes/fx/Killfeed.tscn in %KillfeedSlot) is fed by FeedbackDirector as
+## eliminations play, so the snapshot's killfeed list is no longer drawn here.
+func _set_killfeed(_lines: Array) -> void:
+	pass
 
 
 ## Keeps the HUD clear of phone notches / home indicator (Xogot on iPhone, mobile web).

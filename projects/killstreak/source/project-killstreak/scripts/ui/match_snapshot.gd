@@ -6,6 +6,9 @@
 #   - hand entries: uid, id, playable (cost <= Supply)
 #   - can_undo, undo_label (name of the last play), deploy_open (Deploy and not READY yet),
 #     result (&"" while running; &"player" / &"enemy" / &"draw" at the end)
+#   f02: abilities / killstreaks entries carry {id, name, state, ready, reason, code, slot,
+#     cooldown, uses_left, in_tray, needs_target} from the engine (MatchState.check_use,
+#     LoadoutRules, StreakTracker); `ready` false = the button is disabled and `reason` says why.
 #   Enemy face-down plays never leak: the enemy only shows units on the board plus red-dot counts.
 # Dependencies: MatchState, RulesSide, RulesUnit, RulesCard, MapData, StreakTracker, LoadoutRules,
 #   card_info.gd.
@@ -13,6 +16,7 @@
 extends RefCounted
 
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
+const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const ZONE_LABELS: PackedStringArray = ["LEFT", "MID", "RIGHT"]
 const RANGE_LABELS: PackedStringArray = ["CLOSE", "MID", "LONG"]
 
@@ -69,10 +73,16 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var ks: Array = []
 	var top: int = 0
 	for item: LoadoutItem in me.setup.killstreaks:
+		if item == null:
+			continue
 		var t: int = StreakTracker.threshold_for(state, viewer, item)
 		top = maxi(top, t)
-		ks.append({"id": item.id, "name": _short(item.display_name), "threshold": t,
-				"earned": me.streak_tray.has(item.id)})
+		var entry: Dictionary = item_entry(state, viewer, item, {"threshold": t})
+		entry["threshold"] = t
+		entry["earned"] = me.streak_tray.has(item.id)
+		if entry["code"] == &"not_in_tray":
+			entry["state"] = "AT %d" % t
+		ks.append(entry)
 	snap["killstreaks"] = ks
 	snap["streak_max"] = maxi(top, 5)
 	return snap
@@ -153,14 +163,31 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 
 static func _abilities(state: MatchState, side: RulesSide) -> Array:
 	var out: Array = []
-	for pair: Array in [[&"secondary", side.setup.secondary], [&"lethal", side.setup.lethal], [&"tactical", side.setup.tactical]]:
-		var item: LoadoutItem = pair[1]
-		if item == null:
-			continue
-		var cd: int = LoadoutRules.cooldown_left(state, side.index, item)
-		var status: String = "CD %d" % cd if cd > 0 else ("%d SUP" % item.supply_cost if item.supply_cost > 0 else "READY")
-		out.append({"id": item.id, "name": _short(item.display_name), "state": status})
+	for item: LoadoutItem in [side.setup.secondary, side.setup.lethal, side.setup.tactical]:
+		if item != null:
+			out.append(item_entry(state, side.index, item))
 	return out
+
+
+## Button entry for one activated loadout item, straight from the engine's checks.
+static func item_entry(state: MatchState, viewer: int, item: LoadoutItem, ctx: Dictionary = {}) -> Dictionary:
+	var check: Dictionary = state.check_use(viewer, item.id)
+	var uses_left: int = LoadoutRules.uses_left_this_round(state, viewer, item)
+	var match_left: int = LoadoutRules.uses_left_this_match(state, viewer, item)
+	if match_left >= 0:
+		uses_left = match_left if uses_left < 0 else mini(uses_left, match_left)
+	var text_ctx: Dictionary = ctx.duplicate()
+	text_ctx["name"] = item.display_name
+	text_ctx["kind"] = &"item"
+	return {
+		"id": item.id, "name": _short(item.display_name), "full_name": item.display_name,
+		"slot": item.slot, "ready": bool(check["ok"]), "code": check["code"],
+		"state": PlayText.button_state(check, item, uses_left),
+		"reason": "" if check["ok"] else String(PlayText.describe(check, text_ctx)["reason"]),
+		"cooldown": LoadoutRules.cooldown_left(state, viewer, item), "uses_left": uses_left,
+		"in_tray": state.sides[viewer].streak_tray.has(item.id),
+		"needs_target": state.needs_unit_target(viewer, item.id),
+	}
 
 
 static func _control_id(control: int, viewer: int) -> StringName:

@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/operator_panel.gd" id="1_op"]
+[ext_resource type="PackedScene" path="res://scenes/fx/StreakArc.tscn" id="2_arc"]
 
 [node name="OperatorPanel" type="PanelContainer"]
 theme_type_variation = &"HudPanelDark"
@@ -50,13 +51,12 @@ layout_mode = 2
 theme_type_variation = &"StreakLabel"
 text = "0"
 
-[node name="StreakSegments" type="HBoxContainer" parent="Row/Info/StreakRow"]
+[node name="StreakArc" parent="Row/Info/StreakRow" instance=ExtResource("2_arc")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 18)
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-theme_override_constants/separation = 3
 
 [node name="PerkRow" type="HBoxContainer" parent="Row/Info"]
 unique_name_in_owner = true

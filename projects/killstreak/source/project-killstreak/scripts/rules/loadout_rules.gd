@@ -74,17 +74,31 @@ static func cooldown_for(state, side: int, item: LoadoutItem) -> int:
 
 ## "" if the side may use the item now, else the reason (Supply is checked by MatchState).
 static func can_use_item(state, side: int, item: LoadoutItem) -> String:
+	return String(check_item(state, side, item).get("reason", ""))
+
+
+## {} if the side may use the item now, else {code, reason, data} with a stable code:
+## not_in_tray (killstreak not earned yet), on_cooldown {rounds}, no_uses_left {per: round|match}.
+static func check_item(state, side: int, item: LoadoutItem) -> Dictionary:
 	var s: RulesSide = state.sides[side]
 	if item.slot == S.KILLSTREAK and item.id not in s.streak_tray:
-		return "killstreak not earned"
+		return {"code": &"not_in_tray", "reason": "killstreak not earned", "data": {}}
 	var left: int = cooldown_left(state, side, item)
 	if left > 0:
-		return "on cooldown (ready in %d round%s)" % [left, "" if left == 1 else "s"]
+		return {"code": &"on_cooldown", "reason": "on cooldown (ready in %d round%s)" % [left, "" if left == 1 else "s"],
+				"data": {"rounds": left}}
 	if item.uses_per_round > 0 and int(s.uses_this_round.get(item.id, 0)) >= item.uses_per_round:
-		return "already used this round"
+		return {"code": &"no_uses_left", "reason": "already used this round", "data": {"per": &"round"}}
 	if item.uses_per_match > 0 and int(s.uses_this_match.get(item.id, 0)) >= item.uses_per_match:
-		return "already used this match"
-	return ""
+		return {"code": &"no_uses_left", "reason": "already used this match", "data": {"per": &"match"}}
+	return {}
+
+
+## Uses left this round of an item (-1 = unlimited), for the UI.
+static func uses_left_this_round(state, side: int, item: LoadoutItem) -> int:
+	if item.uses_per_round <= 0:
+		return -1
+	return maxi(0, item.uses_per_round - int(state.sides[side].uses_this_round.get(item.id, 0)))
 
 
 ## The item was accepted in Deploy: start its cooldown, count the use, take it from the tray.

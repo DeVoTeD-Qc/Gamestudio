@@ -175,17 +175,15 @@ func both_ready() -> bool:
 # =============================================================================
 
 ## Round 1 only, before any play: put back `card_uids`, shuffle them in, redraw that many.
+## Returns {ok, code, reason, data} like submit() (codes: see can_mulligan()).
 func mulligan(side: int, card_uids: Array) -> Dictionary:
+	var check: Dictionary = can_mulligan(side, card_uids)
+	if not check["ok"]:
+		return check
 	var s: RulesSide = sides[side]
-	if phase != Phase.DEPLOY or s.mulligans_left <= 0:
-		return _fail("no mulligan available")
-	if not s.plays.is_empty():
-		return _fail("mulligan only before playing cards")
 	var back: Array[RulesCard] = []
 	for uid: Variant in card_uids:
 		var c: RulesCard = s.find_in_hand(int(uid))
-		if c == null:
-			return _fail("card %d is not in hand" % int(uid))
 		if c not in back:
 			back.append(c)
 	for c: RulesCard in back:
@@ -198,34 +196,120 @@ func mulligan(side: int, card_uids: Array) -> Dictionary:
 	return _ok()
 
 
-## Validates an intent (RulesIntent) and queues it face-down. "Resolves immediately"
-## effects resolve now. Returns {ok: bool, reason: String}.
-func submit(side: int, intent: Dictionary) -> Dictionary:
+## Could `side` mulligan these cards now? Never changes the state.
+## Codes: bad_side, wrong_phase, no_mulligan, already_played, not_in_hand.
+func can_mulligan(side: int, card_uids: Array = []) -> Dictionary:
+	if side != PLAYER and side != ENEMY:
+		return _fail("no such side", &"bad_side")
 	var s: RulesSide = sides[side]
 	if phase != Phase.DEPLOY:
-		return _fail("not in Deploy")
-	if s.ready:
-		return _fail("already READY")
-	match intent.get("type", &""):
-		RulesIntent.PLAY_CARD:
-			return _submit_card(side, intent)
-		RulesIntent.PLACE_OPERATOR:
-			return _submit_place(side, int(intent.get("zone", NO_ZONE)))
-		RulesIntent.ROTATE:
-			return _submit_rotate(side, int(intent.get("zone", NO_ZONE)))
-		RulesIntent.USE_ITEM:
-			return _submit_item(side, intent)
-	return _fail("unknown intent")
+		return _fail("no mulligan available", &"wrong_phase")
+	if s.mulligans_left <= 0:
+		return _fail("no mulligan available", &"no_mulligan")
+	if not s.plays.is_empty():
+		return _fail("mulligan only before playing cards", &"already_played")
+	for uid: Variant in card_uids:
+		if s.find_in_hand(int(uid)) == null:
+			return _fail("card %d is not in hand" % int(uid), &"not_in_hand", {"card_uid": int(uid)})
+	return _ok()
+
+
+## Validates an intent (RulesIntent) and queues it face-down. "Resolves immediately"
+## effects resolve now. Runs exactly the checks of can_submit() first and returns the same
+## {ok, code, reason, data} when it refuses; {ok: true, code: &"ok", ...} when accepted.
+func submit(side: int, intent: Dictionary) -> Dictionary:
+	var check: Dictionary = _check_intent(side, intent)
+	if not check["ok"]:
+		return _public(check)
+	var play: Dictionary = check["play"]
+	_play_counter += 1
+	play["order"] = _play_counter
+	match play["kind"]:
+		&"place":
+			_commit_place(side, play)
+		&"rotate":
+			_commit_rotate(side, play)
+		&"item":
+			_commit_item(side, play)
+		_:
+			_commit_card(side, play)
+	return _ok()
+
+
+## Would submit(side, intent) accept this intent right now? Runs the same checks and never
+## changes the state. Returns {ok: bool, code: StringName, reason: String, data: Dictionary}.
+## `code` is stable (UI text, AI, logs key off it; `reason` is a short English fallback):
+##   ok
+##   bad_side, wrong_phase, already_ready, unknown_intent        (any intent)
+##   not_in_hand, not_enough_supply {cost, supply}               (cards / items)
+##   no_zone, zone_full {zone, capacity}                         (where it goes)
+##   operator_not_placed, out_of_range {operator_zone}           (Operator-zone effects)
+##   no_target {want: &"enemy"|&"friendly"}, target_out_of_range {operator_zone}
+##   same_zone, not_adjacent {from_zone}                         (moves, Rotations)
+##   not_in_loadout, not_in_tray, on_cooldown {rounds},
+##   no_uses_left {per: &"round"|&"match"}                       (loadout items)
+##   no_operator, cant_place, already_placed, no_rotations_left {allowed}   (Operator)
+##   item_blocked (a MatchHooks subclass refused the item with its own reason)
+## An accepted intent may carry data.warnings: [&"dest_full"] = a move into a zone that is
+## full right now (it fizzles at Reveal unless a slot frees up).
+func can_submit(side: int, intent: Dictionary) -> Dictionary:
+	return _public(_check_intent(side, intent))
+
+
+## Every choice that makes `what` legal right now, as [{zone, target_uid}] (zone -1 = no zone
+## needed, target_uid -1 = no unit needed). `what` = a hand card uid (int), a loadout item id
+## (StringName / String) or &"operator" (placement or Rotation, whichever applies).
+## Built by running can_submit() on every candidate, so it can never disagree with submit().
+func legal_targets(side: int, what: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for cand: Dictionary in _candidates(side, what):
+		if _check_intent(side, cand["intent"])["ok"]:
+			out.append({"zone": cand["zone"], "target_uid": cand["target_uid"]})
+	return out
+
+
+## Can `what` (as in legal_targets) be used at all right now? {ok, code, reason, data}: ok when
+## some target is legal; otherwise the refusal every candidate shares (e.g. on_cooldown,
+## not_enough_supply, operator_not_placed), else &"no_legal_target". For buttons / hand dimming.
+func check_use(side: int, what: Variant) -> Dictionary:
+	var codes: Dictionary = {}  # code -> first result with it
+	for cand: Dictionary in _candidates(side, what):
+		var r: Dictionary = _public(_check_intent(side, cand["intent"]))
+		if r["ok"]:
+			return r
+		if not codes.has(r["code"]):
+			codes[r["code"]] = r
+	if codes.is_empty():
+		return _fail("nothing to use", &"unknown_intent")
+	# "Choose something" refusals only matter when nothing else went wrong.
+	var telling: Array = codes.keys().filter(func(c: StringName) -> bool: return c not in [&"no_zone", &"no_target"])
+	if telling.size() == 1:
+		return codes[telling[0]]
+	if telling.is_empty() and codes.size() == 1:
+		return codes.values()[0]
+	return _fail("no legal target", &"no_legal_target")
+
+
+## &"enemy" / &"friendly" when `what` (as in legal_targets) needs a chosen unit, else &"".
+func needs_unit_target(side: int, what: Variant) -> StringName:
+	for e: EffectData in _effects_of(side, what):
+		if e == null:
+			continue
+		if e.target == DataEnums.Target.CHOSEN_FRIENDLY:
+			return &"friendly"
+		if e.target == DataEnums.Target.CHOSEN_ENEMY:
+			return &"enemy"
+	return &""
 
 
 ## Undo the last play of this Deploy (not possible once it resolved something immediately).
 func undo_last(side: int) -> Dictionary:
 	var s: RulesSide = sides[side]
 	if phase != Phase.DEPLOY or s.ready or s.plays.is_empty():
-		return _fail("nothing to undo")
+		return _fail("nothing to undo", &"nothing_to_undo")
 	var play: Dictionary = s.plays.back()
 	if play["immediate_done"]:
-		return _fail("it already resolved")
+		return _fail("it already resolved", &"already_resolved")
 	s.plays.pop_back()
 	s.supply += int(play["cost"])
 	match play["kind"]:
@@ -241,119 +325,123 @@ func undo_last(side: int) -> Dictionary:
 	return _ok()
 
 
-func _submit_card(side: int, intent: Dictionary) -> Dictionary:
+# --- Checks (no state changes) ------------------------------------------------------------
+
+## The single validator behind submit() / can_submit(). On success "play" holds the draft
+## play (no order yet) that submit() commits.
+func _check_intent(side: int, intent: Dictionary) -> Dictionary:
+	if side != PLAYER and side != ENEMY:
+		return _fail("no such side", &"bad_side")
+	var s: RulesSide = sides[side]
+	if phase != Phase.DEPLOY:
+		return _fail("not in Deploy", &"wrong_phase")
+	if s.ready:
+		return _fail("already READY", &"already_ready")
+	match intent.get("type", &""):
+		RulesIntent.PLAY_CARD:
+			return _check_card(side, intent)
+		RulesIntent.PLACE_OPERATOR:
+			return _check_place(side, int(intent.get("zone", NO_ZONE)))
+		RulesIntent.ROTATE:
+			return _check_rotate(side, int(intent.get("zone", NO_ZONE)))
+		RulesIntent.USE_ITEM:
+			return _check_item(side, intent)
+	return _fail("unknown intent", &"unknown_intent")
+
+
+func _check_card(side: int, intent: Dictionary) -> Dictionary:
 	var s: RulesSide = sides[side]
 	var rc: RulesCard = s.find_in_hand(int(intent.get("card_uid", -1)))
 	if rc == null:
-		return _fail("card not in hand")
+		return _fail("card not in hand", &"not_in_hand")
 	var card: CardData = rc.card
 	if card.cost > s.supply:
-		return _fail("not enough Supply")
+		return _fail("not enough Supply", &"not_enough_supply", {"cost": card.cost, "supply": s.supply})
 	var zone: int = int(intent.get("zone", NO_ZONE))
 	var kind: StringName = &"unit"
 	match card.card_type:
 		DataEnums.CardType.UNIT:
 			if not is_zone(zone):
-				return _fail("pick a zone")
+				return _fail("pick a zone", &"no_zone")
 			if projected_occupancy(side, zone) >= config.zone_capacity:
-				return _fail("zone full")
+				return _zone_full(zone)
 		DataEnums.CardType.EQUIPMENT:
 			kind = &"equipment"
 			if not is_zone(zone):
-				return _fail("pick a zone")
+				return _fail("pick a zone", &"no_zone")
 		DataEnums.CardType.TACTIC:
 			kind = &"tactic"
-	var play: Dictionary = _new_play(kind, zone, intent)
+	var play: Dictionary = _draft_play(kind, zone, intent)
 	play["card"] = rc
 	play["cost"] = card.cost
-	var why: String = _check_targets(side, card.effects, play, card.card_type == DataEnums.CardType.TACTIC)
-	if why != "":
-		return _fail(why)
-	s.hand.erase(rc)
-	s.supply -= card.cost
-	s.plays.append(play)
-	emit_event(RulesEvent.CARD_PLAYED, {
-		"side": side_name(side), "card_uid": rc.uid, "card_id": card.id,
-		"zone": zone_name(zone), "private_to": side_name(side),
-	})
-	_resolve_immediate(side, card.effects, play, _source_kind_for_card(card), card.id, rc.uid)
-	return _ok()
+	var why: Dictionary = _check_targets(side, card.effects, play, card.card_type == DataEnums.CardType.TACTIC)
+	if not why.is_empty():
+		return why
+	return _ok_play(play)
 
 
-func _submit_item(side: int, intent: Dictionary) -> Dictionary:
+func _check_item(side: int, intent: Dictionary) -> Dictionary:
 	var s: RulesSide = sides[side]
-	var item: LoadoutItem = find_item(side, intent.get("item_id", &""))
+	var item: LoadoutItem = find_item(side, StringName(intent.get("item_id", &"")))
 	if item == null:
-		return _fail("item not in loadout")
+		return _fail("item not in loadout", &"not_in_loadout")
 	if item.supply_cost > s.supply:
-		return _fail("not enough Supply")
-	var why: String = hooks.can_use_item(self, side, item)
-	if why != "":
-		return _fail(why)
-	var play: Dictionary = _new_play(&"item", int(intent.get("zone", NO_ZONE)), intent)
+		return _fail("not enough Supply", &"not_enough_supply", {"cost": item.supply_cost, "supply": s.supply})
+	var blocked: Dictionary = hooks.check_item(self, side, item)
+	if not blocked.is_empty():
+		return _fail(String(blocked.get("reason", "")), StringName(blocked.get("code", &"item_blocked")), blocked.get("data", {}))
+	var play: Dictionary = _draft_play(&"item", int(intent.get("zone", NO_ZONE)), intent)
 	play["item"] = item
 	play["cost"] = item.supply_cost
-	why = _check_targets(side, item.effects, play, true)
-	if why != "":
-		return _fail(why)
-	s.supply -= item.supply_cost
-	s.plays.append(play)
-	hooks.on_item_used(self, side, item)
-	emit_event(RulesEvent.ITEM_USED, {
-		"side": side_name(side), "item_id": item.id, "zone": zone_name(play["zone"]),
-		"private_to": side_name(side),
-	})
-	_resolve_immediate(side, item.effects, play, source_kind_for_item(item), item.id, -1)
-	return _ok()
+	var why: Dictionary = _check_targets(side, item.effects, play, true)
+	if not why.is_empty():
+		return why
+	return _ok_play(play)
 
 
-func _submit_place(side: int, zone: int) -> Dictionary:
-	var s: RulesSide = sides[side]
-	if s.operator_unit == null or not s.operator_can_deploy or _has_play(side, &"place"):
-		return _fail("Operator can't be placed now")
-	if not is_zone(zone):
-		return _fail("pick a zone")
-	if projected_occupancy(side, zone) >= config.zone_capacity:
-		return _fail("zone full")
-	s.plays.append(_new_play(&"place", zone, {}))
-	emit_event(RulesEvent.CARD_PLAYED, {"side": side_name(side), "card_uid": s.operator_unit.uid,
-			"card_id": s.operator_unit.source_id, "zone": zone_name(zone), "private_to": side_name(side)})
-	return _ok()
-
-
-func _submit_rotate(side: int, zone: int) -> Dictionary:
+func _check_place(side: int, zone: int) -> Dictionary:
 	var s: RulesSide = sides[side]
 	if s.operator_unit == null:
-		return _fail("no Operator")
+		return _fail("Operator can't be placed now", &"no_operator")
+	if _has_play(side, &"place"):
+		return _fail("Operator can't be placed now", &"already_placed")
+	if not s.operator_can_deploy:
+		return _fail("Operator can't be placed now", &"cant_place")
+	if not is_zone(zone):
+		return _fail("pick a zone", &"no_zone")
+	if projected_occupancy(side, zone) >= config.zone_capacity:
+		return _zone_full(zone)
+	return _ok_play(_draft_play(&"place", zone, {}))
+
+
+func _check_rotate(side: int, zone: int) -> Dictionary:
+	var s: RulesSide = sides[side]
+	if s.operator_unit == null:
+		return _fail("no Operator", &"no_operator")
 	var from: int = projected_operator_zone(side)
 	if from == NO_ZONE:
-		return _fail("Operator is not on the board")
+		return _fail("Operator is not on the board", &"operator_not_placed")
 	var allowed: int = s.setup.primary.rotations_per_round if s.setup.primary != null else 1
 	if s.rotations_used >= allowed:
-		return _fail("no Rotations left this round")
+		return _fail("no Rotations left this round", &"no_rotations_left", {"allowed": allowed})
+	if zone == from:
+		return _fail("Rotate only to an adjacent zone", &"same_zone", {"from_zone": from})
 	if not is_zone(zone) or not are_adjacent(from, zone):
-		return _fail("Rotate only to an adjacent zone")
+		return _fail("Rotate only to an adjacent zone", &"not_adjacent", {"from_zone": from})
 	if projected_occupancy(side, zone) >= config.zone_capacity:
-		return _fail("zone full")
-	var play: Dictionary = _new_play(&"rotate", zone, {})
+		return _zone_full(zone)
+	var play: Dictionary = _draft_play(&"rotate", zone, {})
 	play["from_zone"] = from
-	s.rotations_used += 1
-	s.plays.append(play)
-	return _ok()
+	return _ok_play(play)
 
 
-func _new_play(kind: StringName, zone: int, intent: Dictionary) -> Dictionary:
-	_play_counter += 1
-	return {
-		"order": _play_counter, "kind": kind, "card": null, "item": null, "zone": zone,
-		"from_zone": NO_ZONE, "target_uid": int(intent.get("target_uid", -1)),
-		"dest_zone": int(intent.get("dest_zone", -1)), "cost": 0, "immediate_done": false,
-	}
-
-
-## Checks zone / target choices the effects need. Returns "" when fine.
-func _check_targets(side: int, effects: Array[EffectData], play: Dictionary, zone_from_effects: bool) -> String:
+## Checks zone / target choices the effects need. Returns {} when fine, else a refusal.
+## May fill play["dest_zone"] (MOVE_UNIT without an explicit destination: the chosen zone).
+## Non-blocking findings go to play["warnings"] (dest_full: a move into a full zone fizzles).
+func _check_targets(side: int, effects: Array[EffectData], play: Dictionary, zone_from_effects: bool) -> Dictionary:
 	var zone: int = play["zone"]
+	var warnings: Array[StringName] = []
+	play["warnings"] = warnings
 	for e: EffectData in effects:
 		if e == null:
 			continue
@@ -361,31 +449,44 @@ func _check_targets(side: int, effects: Array[EffectData], play: Dictionary, zon
 			match e.zone_scope:
 				DataEnums.ZoneScope.CHOSEN_ZONE:
 					if not is_zone(zone):
-						return "pick a zone"
+						return _fail("pick a zone", &"no_zone")
 				DataEnums.ZoneScope.OPERATOR_OR_ADJACENT:
 					var op_zone: int = projected_operator_zone(side)
 					if op_zone == NO_ZONE:
-						return "Operator is not on the board"
-					if not is_zone(zone) or absi(zone - op_zone) > 1:
-						return "pick your Operator's zone or an adjacent one"
+						return _fail("Operator is not on the board", &"operator_not_placed")
+					if not is_zone(zone):
+						return _fail("pick a zone", &"no_zone")
+					if absi(zone - op_zone) > 1:
+						return _fail("pick your Operator's zone or an adjacent one", &"out_of_range", {"operator_zone": op_zone})
 				DataEnums.ZoneScope.OPERATOR_ZONE:
 					if projected_operator_zone(side) == NO_ZONE:
-						return "Operator is not on the board"
+						return _fail("Operator is not on the board", &"operator_not_placed")
 		var target_uid: int = play["target_uid"]
 		match e.target:
 			DataEnums.Target.CHOSEN_ENEMY:
-				if sides[1 - side].find_unit(target_uid) == null:
-					return "pick an enemy unit"
+				var foe_unit: RulesUnit = sides[1 - side].find_unit(target_uid)
+				if foe_unit == null:
+					return _fail("pick an enemy unit", &"no_target", {"want": &"enemy"})
+				# Sidearm: the shot only lands on an enemy in the Operator's zone.
+				if zone_from_effects and e.zone_scope == DataEnums.ZoneScope.OPERATOR_ZONE \
+						and foe_unit.zone != projected_operator_zone(side):
+					return _fail("pick an enemy in your Operator's zone", &"target_out_of_range",
+							{"operator_zone": projected_operator_zone(side)})
 			DataEnums.Target.CHOSEN_FRIENDLY:
 				var friendly_zone: int = _friendly_zone_for_uid(side, target_uid)
 				if friendly_zone == NO_ZONE:
-					return "pick one of your units"
+					return _fail("pick one of your units", &"no_target", {"want": &"friendly"})
 				if e.kind == DataEnums.EffectKind.MOVE_UNIT:
 					var dest: int = play["dest_zone"] if is_zone(play["dest_zone"]) else zone
+					if dest == friendly_zone:
+						return _fail("move only to an adjacent zone", &"same_zone", {"from_zone": friendly_zone})
 					if not is_zone(dest) or not are_adjacent(friendly_zone, dest):
-						return "move only to an adjacent zone"
+						return _fail("move only to an adjacent zone", &"not_adjacent", {"from_zone": friendly_zone})
 					play["dest_zone"] = dest
-	return ""
+					# Legal, but it fizzles at Reveal if the zone is still full (Rulings): flag it.
+					if projected_occupancy(side, dest) >= config.zone_capacity:
+						warnings.append(&"dest_full")
+	return {}
 
 
 ## Zone of a friendly unit on the board, or of a unit card played earlier this Deploy.
@@ -398,6 +499,105 @@ func _friendly_zone_for_uid(side: int, uid: int) -> int:
 			return p["zone"]
 	return NO_ZONE
 
+
+## Intents to try for legal_targets() / check_use(): [{intent, zone, target_uid}].
+func _candidates(side: int, what: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if side != PLAYER and side != ENEMY:
+		return out
+	var unit_kind: StringName = needs_unit_target(side, what)
+	var uids: Array[int] = [-1]
+	if unit_kind == &"enemy":
+		uids.assign(sides[1 - side].units_on_board().map(func(u: RulesUnit) -> int: return u.uid))
+	elif unit_kind == &"friendly":
+		uids.assign(sides[side].units_on_board().map(func(u: RulesUnit) -> int: return u.uid))
+		for p: Dictionary in sides[side].plays:
+			if p["kind"] == &"unit":
+				uids.append((p["card"] as RulesCard).uid)
+	if uids.is_empty():
+		uids = [-1]  # nothing to pick: the -1 candidate reports no_target
+	for zone: int in [NO_ZONE, 0, 1, 2]:
+		for uid: int in uids:
+			var intent: Dictionary = {}
+			if typeof(what) == TYPE_INT:
+				intent = RulesIntent.play_card(int(what), zone, uid, zone if unit_kind == &"friendly" else -1)
+			elif StringName(what) == &"operator":
+				var s: RulesSide = sides[side]
+				var placing: bool = s.operator_unit != null and s.operator_can_deploy and not _has_play(side, &"place")
+				intent = RulesIntent.place_operator(zone) if placing else RulesIntent.rotate(zone)
+			else:
+				intent = RulesIntent.use_item(StringName(what), zone, uid)
+			out.append({"intent": intent, "zone": zone, "target_uid": uid})
+	return out
+
+
+func _effects_of(side: int, what: Variant) -> Array[EffectData]:
+	if side != PLAYER and side != ENEMY:
+		return []
+	if typeof(what) == TYPE_INT:
+		var rc: RulesCard = sides[side].find_in_hand(int(what))
+		if rc != null:
+			return rc.card.effects
+	elif StringName(what) != &"operator":
+		var item: LoadoutItem = find_item(side, StringName(what))
+		if item != null:
+			return item.effects
+	var none: Array[EffectData] = []
+	return none
+
+
+func _draft_play(kind: StringName, zone: int, intent: Dictionary) -> Dictionary:
+	return {
+		"order": 0, "kind": kind, "card": null, "item": null, "zone": zone,
+		"from_zone": NO_ZONE, "target_uid": int(intent.get("target_uid", -1)),
+		"dest_zone": int(intent.get("dest_zone", -1)), "cost": 0, "immediate_done": false,
+	}
+
+
+func _zone_full(zone: int) -> Dictionary:
+	return _fail("zone full", &"zone_full", {"zone": zone, "capacity": config.zone_capacity})
+
+
+# --- Commits (submit() after a passed check) -------------------------------------------------
+
+func _commit_card(side: int, play: Dictionary) -> void:
+	var s: RulesSide = sides[side]
+	var rc: RulesCard = play["card"]
+	var card: CardData = rc.card
+	s.hand.erase(rc)
+	s.supply -= card.cost
+	s.plays.append(play)
+	emit_event(RulesEvent.CARD_PLAYED, {
+		"side": side_name(side), "card_uid": rc.uid, "card_id": card.id,
+		"zone": zone_name(play["zone"]), "private_to": side_name(side),
+	})
+	_resolve_immediate(side, card.effects, play, _source_kind_for_card(card), card.id, rc.uid)
+
+
+func _commit_item(side: int, play: Dictionary) -> void:
+	var s: RulesSide = sides[side]
+	var item: LoadoutItem = play["item"]
+	s.supply -= item.supply_cost
+	s.plays.append(play)
+	hooks.on_item_used(self, side, item)
+	emit_event(RulesEvent.ITEM_USED, {
+		"side": side_name(side), "item_id": item.id, "zone": zone_name(play["zone"]),
+		"private_to": side_name(side),
+	})
+	_resolve_immediate(side, item.effects, play, source_kind_for_item(item), item.id, -1)
+
+
+func _commit_place(side: int, play: Dictionary) -> void:
+	var s: RulesSide = sides[side]
+	s.plays.append(play)
+	emit_event(RulesEvent.CARD_PLAYED, {"side": side_name(side), "card_uid": s.operator_unit.uid,
+			"card_id": s.operator_unit.source_id, "zone": zone_name(play["zone"]), "private_to": side_name(side)})
+
+
+func _commit_rotate(side: int, play: Dictionary) -> void:
+	var s: RulesSide = sides[side]
+	s.rotations_used += 1
+	s.plays.append(play)
 
 func _resolve_immediate(side: int, effects: Array[EffectData], play: Dictionary,
 		source_kind: StringName, source_id: StringName, source_uid: int) -> void:
@@ -1130,8 +1330,21 @@ func _set_phase(p: Phase) -> void:
 
 
 func _ok() -> Dictionary:
-	return {"ok": true, "reason": ""}
+	return {"ok": true, "code": &"ok", "reason": "", "data": {}}
 
 
-func _fail(reason: String) -> Dictionary:
-	return {"ok": false, "reason": reason}
+func _ok_play(play: Dictionary) -> Dictionary:
+	var data: Dictionary = {}
+	if not play.get("warnings", []).is_empty():
+		data["warnings"] = play["warnings"]
+	play.erase("warnings")
+	return {"ok": true, "code": &"ok", "reason": "", "data": data, "play": play}
+
+
+func _fail(reason: String, code: StringName = &"refused", data: Dictionary = {}) -> Dictionary:
+	return {"ok": false, "code": code, "reason": reason, "data": data}
+
+
+## A check result without the internal draft play.
+func _public(check: Dictionary) -> Dictionary:
+	return {"ok": check["ok"], "code": check["code"], "reason": check["reason"], "data": check["data"]}

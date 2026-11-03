@@ -68,9 +68,13 @@ Notes:
 `scenes/Match.tscn` runs a local test match against the real rules engine: its `MatchController`
 child (`scripts/ui/match_controller.gd`) owns a `MatchState` (starter deck from the run config vs
 `squad_rusher` on Port Vasel, Zone Control), turns gestures into `RulesIntent` submits, redraws the
-scenes from `scripts/ui/match_snapshot.gd` and forwards engine events to `EventBus`. The enemy passes
-until the AI plugs in through `MatchController.enemy_planner` (p07). Set `autostart` off to get the
-p08 mock board instead.
+scenes from `scripts/ui/match_snapshot.gd` and forwards engine events to `EventBus`. The enemy is
+played by the AI (`AiPlayer`, p07) through `MatchController.enemy_planner`; it commits its plan before
+you deploy (set `enemy_ai = false` to make it pass). Plays are validated by the engine's `can_submit` /
+`legal_targets` (reason codes mapped to text in `scripts/ui/play_text.gd`). Round 1 opens a mulligan
+panel. Item and killstreak buttons: tap the button, then a lane or enemy (Recon Drone and Attack Helo
+queue on one tap). READY plays the round with the p14 combat feedback; tap or press F to fast-forward.
+Set `autostart` off to get the p08 mock board instead.
 - **Deploy:** tap a hand card, then tap a lane, or drag the card onto a lane. The Operator panel works
   the same way (place it in Round 1 or after a respawn, or Rotate it). Flank Route: tap one of your
   units, then a lane.
