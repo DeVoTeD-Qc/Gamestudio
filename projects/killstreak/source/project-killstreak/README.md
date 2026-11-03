@@ -9,7 +9,8 @@ Plan and structure: `../../documentation/production/prototype-milestone-plan.md`
 - **Desktop Godot 4.4.1:** Project Manager → Import → select this folder's `project.godot`.
 - **Xogot (iPhone/iPad):** copy or sync this folder (`project-killstreak/`) into Xogot's projects
   location, for example through the Files app or iCloud Drive, then open it in Xogot. Play in landscape.
-- Main scene: `res://scenes/Boot.tscn`. It shows "Loading..." and routes to `Title.tscn` through `SceneRouter`.
+- Main scene: `res://scenes/Boot.tscn`. It shows "Loading..." and routes to `Title.tscn` through `SceneRouter`
+  (to the playtest consent screen first while it is unanswered, except in headless runs).
 
 ## Layout
 ```
@@ -106,6 +107,35 @@ mulligan panel, and every toggle emits `EventBus.preview_toggled(enabled)`. The 
 mouse, so taps reach the lanes underneath. Tests: `tests/test_outcome_forecast.gd` (the forecast equals
 the real `resolve_round()` exactly when the enemy has no hidden plays; purity; fairness) and
 `tests/test_outcome_preview.gd` (toggle, live updates, 13 pt text and a 46 pt toggle at 844x390 @3x).
+
+## Run flow screens (p11)
+Boot → (Consent → PreSurvey, once, p16) → **Title** → **Loadout** → **RunMap** → Match → **AfterAction** →
+**Reward** ×N → RunMap … → after the Rival or at 0 tickets → AfterAction → **RunEnd** → (EndSurvey) → Title.
+Scenes are in `scenes/run/` (Title stays `scenes/Title.tscn`), scripts in `scripts/ui/run/`:
+`run_screen.gd` (shared base: compact profile, notch-safe margins, builders), `run_flow.gd` (which screen
+comes next from the run's phase, After-Action report, run words), `pick_tile.gd` (one-tap choice tile).
+- **Title:** CONTINUE RUN only when a save exists; it opens the screen for the save's phase. A save that
+  can't be loaded shows `RunState.last_load_warning`. START NEW RUN asks before replacing a saved run.
+- **Loadout:** starter kit plus the killstreak pool; tap to pick or drop, BEGIN RUN needs exactly
+  `killstreak_slots`.
+- **RunMap:** the 5 matches with squad, mode and goal, map, bracket bonus and WON / LOST / DRAW / NEXT;
+  tickets as tags plus "2/3". DEPLOY emits `EventBus.next_match_requested` and starts the match.
+- **AfterAction:** result, reason, rounds, score vs target, eliminations, best streak, ticket change.
+- **Reward:** Supply Drop (CardView 0.8-1.3x with a readable rules line; tap the card to take it,
+  DETAILS opens the inspector), weapon level (attachments) and Perk offer, each one tap; SKIP declines.
+- **RunEnd:** victory or defeat with the reason, record, loadout and one row per match.
+- Every screen announces `EventBus.screen_shown` (reward screens per offer: `reward_supply_drop` …).
+
+**Match hand-off** (`autoload/scene_router.gd`): RunMap calls `SceneRouter.start_run_match()`, which makes
+the MatchState with `RunState.create_match()` and opens `Match.tscn`. Match.tscn calls
+`SceneRouter.take_pending_match()` on load (null = no run match: play the local test match), starts that
+match, and once it has ended calls `SceneRouter.finish_run_match(m)`, which records it on the run and
+opens AfterAction. `finish_run_match_forced(result, outcome, stats)` does the same without a match
+(debug, tests). `SceneRouter.dry_run` makes routes record-only for tests.
+
+Tests: `tests/test_run_screens.gd` taps through the whole run (every offer type, continue from a save,
+corrupt save, defeat, survey routing) at 1280x720 and 844x390 @3x with notch insets, checking text
+≥ 11 pt and taps ≥ 44 pt. Screenshots: `../../qa/screenshots/p11-*.png`.
 
 ## Theme and fonts
 `assets/ui/hud_theme.tres` is the project theme (`gui/theme/custom`). It styles every

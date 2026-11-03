@@ -508,8 +508,8 @@ func _on_run_ended(result: StringName, matches_played: int, duration_s: float) -
 	var losses: int = 0
 	var draws: int = 0
 	if run != null and run.has_method("count_results"):
-		wins = run.count_results(&"win")
-		losses = run.count_results(&"loss")
+		wins = run.count_results(&"player")
+		losses = run.count_results(&"enemy")
 		draws = run.count_results(&"draw")
 	stats["runs"] += 1
 	stats["run_result"] = "%s after %d matches (%d min)" % [result, matches_played, int(duration_s / 60.0)]
