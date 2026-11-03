@@ -33,6 +33,12 @@ def load(coll):
 
 
 TASKS, CHAT, PROG, ACT = load('tasks'), load('chat'), load('progress'), load('activity')
+
+# Usage-limit pause window. Source: the p18/p19 subagent transcripts (measured by the lead session):
+# both agents stopped on the account's 5-hour usage limit at 06:57:01 UTC and resumed at 11:14:10 UTC.
+# There was no other limit wait before the last commit (13:42). Board progress times can't be used for
+# this: several were guessed by the agents.
+LIMIT_PAUSE = ('06:57:01', '11:14:10')
 COMMITS = []
 for line in open(os.path.join(DATA, 'gitlog.txt')):
     iso, h, subj = line.rstrip('\n').split('|', 2)
@@ -338,7 +344,8 @@ status(S + 7.0, 'p19', 'review', note='Bracket 1 69% / Bracket 2 49% / Rival 45%
 agent(S + 7.0, 'mid-game-designer', 'idle')
 ev(S + 7.0, 'commit', hash='af05749', subject='p19: balance pass with simulation harness')
 ev(S + 8.0, 'toast', text='Playable web build published (loads in ~4 s in Chromium)')
-clock += [{'t': S + 0.4, 'utc': sod('05:50:49')}, {'t': S + 5.6, 'utc': sod('11:13:55')}, {'t': S + 8.0, 'utc': sod('11:25:00')}]
+clock += [{'t': S + 0.4, 'utc': sod('05:50:49')}, {'t': S + 3.6, 'utc': sod(LIMIT_PAUSE[0])},
+          {'t': S + 5.6, 'utc': sod(LIMIT_PAUSE[1])}, {'t': S + 8.0, 'utc': sod('11:25:00')}]
 T += 10
 
 # 10. Human feedback loop
@@ -388,21 +395,22 @@ T += 19
 # 11. Stats card (computed)
 first, last = COMMITS[0], COMMITS[-1]
 span = sod(last['at']) - sod(first['at'])
-# The exact moment the limit hit is unknown (several progress times were guessed); what is certain
-# is the gap in the commit log while p18/p19 ran: last commit before it -> first commit after it.
-gap_from, gap_to = sod('05:49:57'), sod('11:13:55')
+paused = sod(LIMIT_PAUSE[1]) - sod(LIMIT_PAUSE[0])
+active = span - paused
+hm = lambda x: '%dh %02dm' % (x // 3600, x % 3600 // 60)
 shots = len(glob.glob(os.path.join(HERE, '..', '..', 'projects', 'killstreak', 'qa', 'screenshots', '*.png')))
 agents_n = len(glob.glob(os.path.join(HERE, '..', '..', '.claude', 'agents', '*.md')))
 stats = {
     'wall': '%dh %02dm' % (span // 3600, span % 3600 // 60), 'from': first['at'][11:16], 'to': last['at'][11:16],
-    'gap': '%s-%s' % ('05:50', '11:13'),
+    'active': hm(active), 'paused': hm(paused), 'pause_from': LIMIT_PAUSE[0][:5], 'pause_to': LIMIT_PAUSE[1][:5],
     'agents': agents_n, 'tasks': len(TASKS), 'commits': len(COMMITS),
     'commits_nonwip': sum(1 for c in COMMITS if not c['wip']),
     'tests': 317, 'screens': shots,
     'created_by': {k: sum(1 for t in TASKS.values() if t.get('createdBy') == k) for k in
                    ['lead', 'master-orchestrator', 'producer-agent', 'you']},
 }
-S = scene('stats', T, 7, 'stats', captions=[(0.0, 7, 'About 11.5 hours end to end. Several of them were spent paused at the usage limit.')])
+S = scene('stats', T, 7, 'stats', captions=[(0.0, 7, 'About %d hours %d minutes of active work. Another %d h %d min was spent waiting at the usage limit.' % (
+    active // 3600, round(active % 3600 / 60), paused // 3600, paused % 3600 // 60))])
 ev(S, 'stats', **stats)
 T += 7
 

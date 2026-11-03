@@ -602,7 +602,7 @@ function renderStats(s) {
   const x = s.stats, cb = x.created_by;
   const box = (n, l, d) => `<div class="sbox"><span class="n">${n}</span><span class="l">${l}</span><span class="d">${d}</span></div>`;
   $("sgrid").innerHTML =
-    box(x.wall, "wall clock", `${x.from} → ${x.to} UTC, first to last commit. No commits ${x.gap.replace("-", "→")} while paused at the usage limit.`) +
+    box(x.active, "active build time", `${x.wall} wall clock (${x.from}→${x.to} UTC) minus ${x.paused} paused at the usage limit.`) +
     box("1", "prompt to start", "Then reviews, 15 quick-pick answers, and a handful of chat messages.") +
     box(x.agents, "specialist subagents", "Plus 1 lead Claude session that dispatched them, checked and committed their work.") +
     box(x.tasks, "board tasks", `Created by the Producer (${cb["producer-agent"]}), the lead (${cb.lead}), the Orchestrator (${cb["master-orchestrator"]}) and you (${cb.you}).`) +
@@ -744,7 +744,7 @@ function render(t) {
   const lm = s.limit; let la = 0;
   if (lm && lm.on) la = clamp((t - lm.t) / 0.3); else if (lm) la = clamp(1 - (t - lm.t) / 0.3);
   $("limit").style.opacity = la;
-  if (la > 0) { const c = clockAt(t); $("limitClock").textContent = `${hhmm(c.utc)} UTC · no commits from 05:50 until the reset, then work resumes at 11:13`; }
+  if (la > 0) { const c = clockAt(t); $("limitClock").textContent = `${hhmm(c.utc)} UTC · paused at ${TL.stats.pause_from}, work resumes at ${TL.stats.pause_to} UTC`; }
   // caption
   let cap = null; for (const c of sc.captions) if (t >= c.t && t < c.until) cap = c;
   const nextScene = TL.scenes[i + 1];

@@ -87,6 +87,7 @@ with a short range.
   progress bars. The Studio Floor page also went live at 02:23, after the design tasks were done, so
   that part of the replay rebuilds them from the task records.
 - The user's concept message is paraphrased. The lead's chat replies are trimmed.
-- Nobody knows exactly when the usage limit hit, because some agents guessed their report times. The
-  video shows only what is certain: QA and balance started at 05:50, and the next commit came after
-  the reset at 11:13.
+- The usage-limit pause comes from the p18/p19 subagent transcripts, not from the board, where some
+  agents guessed their report times: the agents stopped at 06:57:01 UTC and resumed at 11:14:10 UTC
+  (`LIMIT_PAUSE` in `build_timeline.py`). The stats card shows active build time: 11h 36m wall clock
+  (02:05→13:42 UTC) minus 4h 17m paused, so 7h 19m. There was no other limit wait.

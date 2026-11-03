@@ -193,7 +193,7 @@
     {
      "t": 128.5,
      "until": 135.5,
-     "text": "About 11.5 hours end to end. Several of them were spent paused at the usage limit."
+     "text": "About 7 hours 19 minutes of active work. Another 4 h 17 min was spent waiting at the usage limit."
     }
    ]
   },
@@ -3255,7 +3255,10 @@
    "wall": "11h 36m",
    "from": "02:05",
    "to": "13:42",
-   "gap": "05:50-11:13",
+   "active": "7h 19m",
+   "paused": "4h 17m",
+   "pause_from": "06:57",
+   "pause_to": "11:14",
    "agents": 12,
    "tasks": 48,
    "commits": 62,
@@ -3342,8 +3345,12 @@
    "utc": 21049
   },
   {
+   "t": 103.1,
+   "utc": 25021
+  },
+  {
    "t": 105.1,
-   "utc": 40435
+   "utc": 40450
   },
   {
    "t": 107.5,
@@ -3980,7 +3987,10 @@
   "wall": "11h 36m",
   "from": "02:05",
   "to": "13:42",
-  "gap": "05:50-11:13",
+  "active": "7h 19m",
+  "paused": "4h 17m",
+  "pause_from": "06:57",
+  "pause_to": "11:14",
   "agents": 12,
   "tasks": 48,
   "commits": 62,
