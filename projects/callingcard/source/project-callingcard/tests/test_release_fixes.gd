@@ -116,6 +116,44 @@ func test_bug02_touch_drag_scrolls_lineup_grid_without_adding() -> void:
 		await _hold(lf.viewport, c2.get_global_rect().get_center(), 0.55)
 		assert_true(builder.get_inspector().is_open(), "%s: a hold inspects" % s["name"])
 		assert_eq(builder.get_lineup_ids().size(), n, "%s: the hold adds nothing" % s["name"])
+		builder.get_inspector().close()
+		await lf.frames(2)
+		# A slow frame (SwiftShader, a hitch): the hold timer runs out before the swipe's first move
+		# is processed. The swipe still wins: no inspector, no card.
+		scroll.scroll_vertical = 0
+		await lf.frames(2)
+		var c3: Button = builder.get_collection_buttons()[2]
+		var p3: Vector2 = c3.get_global_rect().get_center()
+		var was_touch: bool = Input.emulate_touch_from_mouse
+		Input.emulate_touch_from_mouse = true
+		var down := InputEventMouseButton.new()
+		down.button_index = MOUSE_BUTTON_LEFT
+		down.pressed = true
+		down.button_mask = MOUSE_BUTTON_MASK_LEFT
+		down.position = p3
+		down.global_position = p3
+		lf.viewport.push_input(down, true)
+		await tree.process_frame
+		OS.delay_msec(450)
+		await tree.process_frame  # the hold timer fires in this frame; its inspect waits one more
+		var pos: Vector2 = p3
+		for i: int in 6:  # the swipe's moves, all queued during the slow frame
+			var mm := InputEventMouseMotion.new()
+			mm.button_mask = MOUSE_BUTTON_MASK_LEFT
+			mm.relative = Vector2(0, -20)
+			pos += mm.relative
+			mm.position = pos
+			mm.global_position = pos
+			lf.viewport.push_input(mm, true)
+		var up := InputEventMouseButton.new()
+		up.button_index = MOUSE_BUTTON_LEFT
+		up.position = pos
+		up.global_position = pos
+		lf.viewport.push_input(up, true)
+		await lf.frames(3)
+		Input.emulate_touch_from_mouse = was_touch
+		assert_false(builder.get_inspector().is_open(), "%s: a swipe after a slow frame opens no inspector" % s["name"])
+		assert_eq(builder.get_lineup_ids().size(), n, "%s: and adds nothing" % s["name"])
 		lf.finish()
 		await tree.process_frame
 
