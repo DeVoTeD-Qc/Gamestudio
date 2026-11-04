@@ -22,6 +22,7 @@ const HOLD_SLOP: float = 18.0
 var _hold_timer: Timer
 var _held: bool = false
 var _dragged: bool = false
+var _pressing: bool = false  # own flag: a parent scroll may take the press over from BaseButton
 var _press_pos: Vector2 = Vector2.ZERO
 
 
@@ -50,14 +51,16 @@ func _gui_input(event: InputEvent) -> void:
 			if mb.pressed:
 				_held = false
 				_dragged = false
+				_pressing = true
 				_press_pos = mb.global_position
 				_hold_timer.start()
 			else:
+				_pressing = false
 				_hold_timer.stop()
 	elif event is InputEventMouseMotion:
 		# Global position: while a ScrollContainer follows the finger the local one barely moves.
 		var mm: InputEventMouseMotion = event
-		if is_pressed() and mm.global_position.distance_to(_press_pos) > HOLD_SLOP:
+		if _pressing and mm.global_position.distance_to(_press_pos) > HOLD_SLOP:
 			_cancel_as_drag()
 	elif event.is_action_pressed(&"inspect", false, true):
 		inspect_requested.emit()
@@ -66,7 +69,7 @@ func _gui_input(event: InputEvent) -> void:
 
 func _notification(what: int) -> void:
 	# A parent ScrollContainer began a touch-drag scroll with this press in progress.
-	if what == NOTIFICATION_SCROLL_BEGIN and is_pressed():
+	if what == NOTIFICATION_SCROLL_BEGIN and (_pressing or is_pressed()):
 		_cancel_as_drag()
 
 

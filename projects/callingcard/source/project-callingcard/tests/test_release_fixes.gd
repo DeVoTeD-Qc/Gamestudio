@@ -10,7 +10,8 @@
 #     BUG-08 the Match found banner leaves both scores, the wall, hand, PLACE and MENU visible,
 #     BUG-09 phones: the album tab strip shows arrows that reach every tab,
 #     BUG-10 Dossiers have no Tempo bonus (no tag, not counted) and all 5 solutions still clear,
-#   plus the neutral how_earned wording and the web shell's loading bar and disclaimer.
+#   plus the web shell's loading bar and disclaimer. (The how_earned wording stays as is: studio
+#   head decision, cc19.)
 # Author: UI/UX Agent (cc19)
 extends "res://tests/test_case.gd"
 
@@ -463,14 +464,7 @@ func test_bug10_dossier_has_no_tempo() -> void:
 	cfx.finish()
 
 
-# --- Wording and web shell -----------------------------------------------------------------------------
-
-func test_how_earned_wording_is_neutral() -> void:
-	assert_eq((load("res://data/cards/city_never_sleeps.tres") as CardData).how_earned, "Reach rank 30", "City Never Sleeps")
-	assert_eq((load("res://data/cards/honor_roll.tres") as CardData).how_earned, "Reach rank 10", "Honor Roll")
-	for c: CardData in tree.root.get_node("CardDB").all_cards():
-		assert_false(c.how_earned.to_lower().contains("prestige"), "%s how_earned avoids 'prestige'" % c.id)
-
+# --- Web shell -----------------------------------------------------------------------------
 
 func test_web_shell_has_progress_bar_and_disclaimer() -> void:
 	var html: String = FileAccess.get_file_as_string("res://web/shell.html")
