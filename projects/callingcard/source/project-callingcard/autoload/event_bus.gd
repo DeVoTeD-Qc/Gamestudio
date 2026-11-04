@@ -24,6 +24,10 @@ signal card_placed(side: StringName, card_id: StringName, slot: StringName, capt
 signal card_captured(by_side: StringName, card_id: StringName, slot: StringName)
 ## An Ambush card was revealed.
 signal ambush_sprung(side: StringName, card_id: StringName, slot: StringName)
+## A card went back to its own lineup's player through Reclaim (engine event "reclaimed": slot,
+## player, card_id). by_side is the Reclaim player. Emitted once per card, after card_placed.
+## Not a capture: Collection's capture count ignores it.
+signal card_reclaimed(by_side: StringName, card_id: StringName, slot: StringName)
 ## A Signature card was captured ("Carded!"). by_side is the captor.
 signal carded(by_side: StringName, card_id: StringName)
 signal triptych_scored(side: StringName, triptych_id: StringName, first_time: bool)
@@ -41,6 +45,9 @@ signal set_completed(set_id: StringName)
 signal cipher_attempted(correct: bool)
 signal dossier_started(dossier_id: StringName)
 signal dossier_cleared(dossier_id: StringName, attempts: int, duration_s: float)
+## A Dossier's goal was met (cc12). Same effect as dossier_cleared for Collection; emit either one
+## (or call Collection.complete_dossier()); a second report of the same clear grants nothing twice.
+signal dossier_completed(dossier_id: StringName)
 
 # --- Lobby Duel ----------------------------------------------------------------
 signal lobby_wait_started(wait_s: float)

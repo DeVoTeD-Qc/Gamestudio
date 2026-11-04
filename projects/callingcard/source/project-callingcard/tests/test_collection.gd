@@ -257,3 +257,38 @@ func _reference_duel(db: Node) -> Dictionary:
 		var m: Dictionary = moves[rng.randi_range(0, moves.size() - 1)]
 		log.append(WallRules.place(s, s.to_move, m["card"], m["slot"], m["copy_from"]).to_dict())
 	return {"log": log, "result": WallRules.final_result(s)}
+
+
+func test_autoload_never_uses_the_player_save_under_tests() -> void:
+	var auto: Node = tree.root.get_node("Collection")
+	assert_eq(auto.save_path, auto.TEST_SAVE_PATH, "autoload save path under the test runner")
+	assert_true(auto.is_test_run(), "test run detected")
+	var fx: RefCounted = Fx.new(tree)
+	var c: Node = fx.make("own_path")
+	assert_eq(c.save_path, Fx.path_for("own_path"), "an explicit save path is kept")
+	fx.finish()
+
+
+func test_dossier_completed_signal_and_api() -> void:
+	var fx: RefCounted = Fx.new(tree)
+	var c: Node = fx.make("dossier_completed")
+	fx.bus().dossier_completed.emit(&"dossier_carded")
+	assert_true(c.is_dossier_cleared(&"dossier_carded"), "dossier_completed records the clear")
+	assert_true(c.owns(&"null_glyph"), "and pays the reward")
+	fx.bus().dossier_cleared.emit(&"dossier_carded", 2, 30.0)
+	c.complete_dossier(&"dossier_carded")
+	assert_eq(fx.unlocked_cards(), [&"null_glyph"], "reported three ways, rewarded once")
+	c.complete_dossier(&"dossier_clean_copy", 4, 12.0)
+	assert_eq(c.dossier_record(&"dossier_clean_copy"), {"attempts": 4, "best_s": 12.0}, "API records attempts and time")
+	fx.finish()
+
+
+func test_reclaim_is_not_a_capture() -> void:
+	var fx: RefCounted = Fx.new(tree)
+	var c: Node = fx.make("reclaim")
+	assert_true(fx.bus().has_signal("card_reclaimed"), "EventBus.card_reclaimed")
+	fx.start_duel(&"rival", &"archivist", fx.loaner_ids())
+	fx.bus().card_reclaimed.emit(&"player", &"mayday", &"b2")
+	fx.end_duel(&"loss")
+	assert_eq(c.stats()["captures"], 0, "Reclaim doesn't count toward captures")
+	fx.finish()

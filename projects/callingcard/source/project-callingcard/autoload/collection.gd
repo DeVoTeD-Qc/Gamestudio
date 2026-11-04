@@ -4,12 +4,13 @@
 #   completion, revealed Triptychs, Dossier clears, the Cipher Lock, the saved lineup + Signature
 #   and one saved in-progress Lobby Duel (planning decision 1: save and resume).
 #   Progress comes from EventBus (duel_started, duel_lineup_locked, card_captured, carded,
-#   triptych_scored, duel_ended, dossier_cleared); celebrations go out on EventBus
+#   triptych_scored, duel_ended, dossier_cleared / dossier_completed); celebrations go out on EventBus
 #   (card_unlocked, unlocked, title_earned, frame_earned, set_completed, unlock_progress,
 #   unlock_goal_completed, triptych_revealed, cipher_attempted, cipher_solved, collection_changed).
 #   Rewards are cosmetic or ownership only: nothing here touches CardData, BalanceConfig or the
 #   rules (tests/test_collection.gd checks it).
-#   Saves to user://collection.json (IndexedDB on the web) after every change. The file carries
+#   Saves to user://collection.json (IndexedDB on the web) after every change; under the test
+#   runner the autoload uses TEST_SAVE_PATH instead, so tests never touch the player's save. The file carries
 #   SCHEMA_VERSION; a corrupt file is kept as collection.corrupt.json and the demo starts fresh,
 #   an older one is migrated, a newer one is backed up and read field by field.
 #   Keep it registered in project.godot in this order:
@@ -20,6 +21,9 @@ extends Node
 
 const SCHEMA_VERSION: int = 1
 const DEFAULT_SAVE_PATH: String = "user://collection.json"
+## Save used when the headless test runner (res://tests/...) is the main loop, so no test, even one
+## that plays a duel through EventBus, ever touches the player's save. Wiped at each test run start.
+const TEST_SAVE_PATH: String = "user://test_collection/autoload_collection.json"
 const PLAYER: StringName = &"player"
 const SOURCE_DOSSIER: StringName = &"dossier"
 const SOURCE_LOBBY: StringName = &"lobby"
@@ -59,8 +63,19 @@ var _last_progress: Dictionary = {}  # goal id -> last announced current value
 
 
 func _ready() -> void:
+	if is_test_run() and save_path == DEFAULT_SAVE_PATH:
+		save_path = TEST_SAVE_PATH
+		DirAccess.make_dir_recursive_absolute(TEST_SAVE_PATH.get_base_dir())
+		SaveFile.remove(TEST_SAVE_PATH)
 	_connect_bus()
 	load_save()
+
+
+## True when the main loop is the headless test runner (a script under res://tests/).
+static func is_test_run() -> bool:
+	var loop: MainLoop = Engine.get_main_loop()
+	var script: Script = loop.get_script() if loop != null else null
+	return script != null and script.resource_path.begins_with("res://tests/")
 
 # --- Cards ---------------------------------------------------------------------------
 
@@ -243,6 +258,10 @@ func record_dossier_clear(dossier_id: StringName, attempts: int = 1, duration_s:
 	_grant_frame(d.reward_frame)
 	_evaluate_goals()
 	_commit()
+
+## Dossier-completion API for cc12 (same as record_dossier_clear). Safe to call more than once.
+func complete_dossier(dossier_id: StringName, attempts: int = 1, duration_s: float = 0.0) -> void:
+	record_dossier_clear(dossier_id, attempts, duration_s)
 
 # --- Cipher Lock -------------------------------------------------------------------------
 
@@ -514,6 +533,7 @@ func _connect_bus() -> void:
 	EventBus.triptych_scored.connect(_on_triptych_scored)
 	EventBus.duel_ended.connect(_on_duel_ended)
 	EventBus.dossier_cleared.connect(_on_dossier_cleared)
+	EventBus.dossier_completed.connect(_on_dossier_completed)
 
 
 func _on_duel_started(source: StringName, rival_id: StringName, _first_player: StringName) -> void:
@@ -574,6 +594,11 @@ func _on_dossier_cleared(dossier_id: StringName, attempts: int, duration_s: floa
 	if not listening:
 		return
 	record_dossier_clear(dossier_id, attempts, duration_s)
+
+func _on_dossier_completed(dossier_id: StringName) -> void:
+	if not listening:
+		return
+	complete_dossier(dossier_id)
 
 # --- Progress ----------------------------------------------------------------------------------
 
