@@ -49,11 +49,16 @@ var shake_target: Control = null
 ## Recent effects, newest last: {kind, slot, duration} (tests, benchmark).
 var history: Array[Dictionary] = []
 
+## True while an effect that holds the replay runs: a timed hold, a tracked tween, or a moment.
 var busy: bool:
 	get:
-		return Time.get_ticks_msec() < _busy_until_ms
+		if _moment != null or Time.get_ticks_msec() < _busy_until_ms:
+			return true
+		_tweens = _tweens.filter(func(t: Tween) -> bool: return t.is_valid() and t.is_running())
+		return not _tweens.is_empty()
 
 var _busy_until_ms: int = 0
+var _tweens: Array[Tween] = []
 var _screen: Control = null
 var _sfx: Node = null
 var _dust: Array[CPUParticles2D] = []
@@ -134,6 +139,7 @@ func skip() -> void:
 	_tri_queue.clear()
 	_end_moment(true)
 	_busy_until_ms = Time.get_ticks_msec()
+	_tweens.clear()
 
 
 func is_moment_active() -> bool:
@@ -168,6 +174,7 @@ func _on_card_placed(_side: StringName, _card_id: StringName, slot: StringName, 
 	_reset_card(card)
 	var tw: Tween = card.create_tween()
 	card.set_meta(&"fx_tween", tw)
+	_tweens.append(tw)
 	if px <= 0.0:
 		card.modulate.a = 0.35
 		tw.tween_property(card, "modulate:a", 1.0, fall + settle)
@@ -209,6 +216,7 @@ func _on_ambush_sprung(_side: StringName, _card_id: StringName, slot: StringName
 		card.pivot_offset = card.size * 0.5
 		var tw: Tween = card.create_tween()
 		card.set_meta(&"fx_tween", tw)
+		_tweens.append(tw)
 		tw.tween_property(card, "scale:x", 0.0, half).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_callback(func() -> void:
 			card.face_down = false
@@ -311,7 +319,9 @@ func _wipe(slot: StringName, by_side: StringName, kind: StringName) -> void:
 	var dur: float = FxTiming.from_settings().get_value(&"wipe")
 	if stage_changes:
 		card.side = &"rival" if by_side == &"player" else &"player"
-	card.capture_to(by_side, dur)
+	var wipe: Tween = card.capture_to(by_side, dur)
+	if wipe != null:
+		_tweens.append(wipe)
 	_sfx.play(&"thunk", 1.0 if kind == &"capture" else 1.3)
 	_started(kind, slot, dur)
 
