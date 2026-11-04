@@ -46,7 +46,8 @@ func open(kind: StringName, title: String, body: String, buttons: Array) -> void
 		_buttons.add_child(b)
 	show()
 	if _buttons.get_child_count() > 0:
-		(_buttons.get_child(_buttons.get_child_count() - 1) as Button).grab_focus.call_deferred()
+		var last: Button = _buttons.get_child(_buttons.get_child_count() - 1)
+		(func() -> void: if is_instance_valid(last) and last.is_inside_tree(): last.grab_focus()).call_deferred()
 
 
 func close() -> void:

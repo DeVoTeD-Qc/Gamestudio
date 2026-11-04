@@ -382,7 +382,7 @@ func _spawn(screen: Dictionary, state: Dictionary) -> Array:
 	viewport.disable_3d = true
 	tree.root.add_child(viewport)
 	# Layout checks run on the cc07 mock states: no duel controller (cc08 has its own tests).
-	DuelControllerScript.autostart = false
+	DuelControllerScript.set_autostart(false)
 	var duel: Control = (load(DUEL_SCENE) as PackedScene).instantiate()
 	if screen.has("insets"):
 		var k: float = points_per_px(screen)
@@ -391,7 +391,7 @@ func _spawn(screen: Dictionary, state: Dictionary) -> Array:
 		var rb: Vector2 = insets.size / k  # Rect2 size holds (right, bottom) insets here
 		duel.safe_area_override = Rect2(lt, logical - lt - rb)
 	viewport.add_child(duel)
-	DuelControllerScript.autostart = true
+	DuelControllerScript.set_autostart(true)
 	duel.show_state(state)
 	for i: int in 4:
 		await tree.process_frame

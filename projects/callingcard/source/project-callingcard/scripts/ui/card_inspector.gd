@@ -83,7 +83,7 @@ func open_card(c: Dictionary, context: Dictionary = {}) -> void:
 		_earned.text = CardText.earned_line(c)
 	_owner.text = _owner_line(owner, context)
 	show()
-	_close.grab_focus.call_deferred()
+	(func() -> void: if is_instance_valid(_close) and _close.is_inside_tree(): _close.grab_focus()).call_deferred()
 
 
 func close() -> void:

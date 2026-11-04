@@ -36,6 +36,7 @@ func count_optional() -> bool:
 	return kind in [DataEnums.UnlockKind.BEAT_RIVAL, DataEnums.UnlockKind.BEAT_RIVAL_NO_LEGEND]
 
 
+## How many qualifying events complete the goal (always >= 1). Collection reads this.
 func required_count() -> int:
 	return maxi(target_count, 1)
 

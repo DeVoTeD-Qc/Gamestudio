@@ -40,6 +40,16 @@ static var next_player_lineup: Array = []
 ## cc06: func(rival: RivalData, seed: int) -> brain with choose_move(state, player). Null = random.
 static var brain_factory: Callable = Callable()
 
+## Static setters (a const script reference can't assign static vars directly).
+static func set_autostart(v: bool) -> void:
+	autostart = v
+
+
+static func set_next_duel(rival_id: StringName, lineup: Array = []) -> void:
+	next_rival_id = rival_id
+	next_player_lineup = lineup.duplicate()
+
+
 ## 0 = random seed per duel. Same seed = same coin flip and rival moves.
 @export var seed_value: int = 0
 ## Pause between replayed events and before a rival move (seconds). Tests set 0.
