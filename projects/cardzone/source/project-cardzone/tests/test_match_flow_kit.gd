@@ -36,6 +36,8 @@ var _saved_scale_mode: int = 0
 var brace_policy: String = "all"
 ## cz12: taps used on each human Brace ([] per Brace: the number of taps from prompt to BRACE).
 var brace_taps: Array[int] = []
+## cz12: how each Brace was made ("suggested", "adjust", "cards"), same order as brace_taps.
+var brace_vias: Array[String] = []
 ## cz12: Braces where the suggestion was used / adjusted.
 var brace_used: int = 0
 var brace_adjusted: int = 0
@@ -122,6 +124,7 @@ func _brace_by_touch(m: Control, a: Dictionary) -> void:
 	await _touch_brace(m, &"brace")
 	taps += 1
 	brace_taps.append(taps)
+	brace_vias.append(via)
 
 
 func _touch_brace(m: Control, key: StringName) -> void:

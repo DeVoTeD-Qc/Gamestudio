@@ -149,7 +149,7 @@ func test_controller_exposes_the_suggestion_for_the_logger() -> void:
 		else:
 			await _touch_card(m, &"next", 1)  # Duck: an adjusted choice
 		await _touch_brace(m, &"brace")
-		assert_eq(ctrl.phase, &"opponent" if ctrl.busy else ctrl.phase, "braced")
+		assert_true(ctrl.phase != &"brace", "braced (phase %s)" % ctrl.phase)
 		_despawn(m)
 		await tree.process_frame
 	plog.flush()
