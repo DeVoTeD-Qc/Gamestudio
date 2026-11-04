@@ -53,7 +53,8 @@ Every key is switchable without code, covered by a test (cz04/cz07), and reachab
 | `held_cards_public` | **false** | true / false | Q3 (spec v0.2 had them public) |
 | `hits_on_top_public` | true | true / false | Q3 (Down must be known to the shooter) |
 | `loadout_count_public` | true | true / false | Q3 |
-| `supply_drop_cost` / `crate_cost` / `crate_free_picks` | 3 / 1 / 1 | 3–4 / 0–1 / 0–1 | spec §12 |
+| `supply_drop_cost` / `crate_cost` / `crate_free_picks` | **4** / 1 / 1 | 3–4 / 0–1 / 0–1 | spec §12; drop cost 3 → 4 per cz02 sweep, spec §16.4a |
+| `supply_drop_ready_delay` | 0 | 0, 1 | cz02 alternative, spec §16.4a (switch, off) |
 | `ditch_per_turn` / `min_loadout` | 1 / 6 | 1–unlimited / 6 | spec §5, §12 |
 | `pile_size_outer` / `pile_size_core` | 3 / 2 | 2–4 | spec §3 (2 players) |
 | `ai_think_budget_ms` | 300 | 100–1000 | plan DoD 5 |

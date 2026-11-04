@@ -119,3 +119,10 @@ for r in 'ABC':
 2. **Hold limit: 2** (keep the spec default). The sim can't separate 2 from 1: the limit binds in under 10% of bot packs, and the differences between rows are cascade effects. Hold 2 is what the spec's "hold a Plate Vest, keep your guard up" decision is built on. Keep 1 as a switch, and decide from playtest pack telemetry.
 3. **Proposed change, needs Sr Game Designer approval before cz06 uses it: `supply_drop_cost` 3 → 4.** At hand 5 with the current cost, routes B and C give the first player 83–89% (78–89% with hold 1) because of the round-3 LMG drop. With cost 4 every route is 50–58%. If the Sr Designer prefers to keep cost 3, the alternatives to test next are: make drops lootable only from the round after they land, or move the B/C round-3 drop to an area neither player can reach first by turn order alone. Until one is approved, **route A is the only fair route at hand 5** in these sims; the cut-order note "keep A" (plan §3) already covers that case.
 4. **Rerun** this entry after cz01 (hand-5 Standard pack) and cz09 (Veteran sweep), and log any change here.
+
+### Decision (Sr Game Designer, cz01, 2026-11-04)
+- **Approved: `supply_drop_cost` 3 → 4** as the prototype default (spec §16.4a, scope §4). cz06 uses 4.
+- **Alternative kept as a switch:** `supply_drop_ready_delay` (0/1, default 0) means a drop can't be looted in the round it lands. In a scratch run (hand 5, hold 2, cost 3, 36 pairs × A/B/C), the first player won 20 / 19 / 21 (55%), with both out 6/108, medians 9.5 / 9 / 9, and **earliest elimination round 4**. That breaks the round-6 gate, so it stays off.
+- **Rejected:** moving the B/C round-3 drop. It treats one card, not the turn-order race.
+- **Hand-5 Standard pack:** confirmed as the hand-4 order (spec §16.4), so the numbers in this entry stand. A scratch re-run of three other splits at cost 4 gave 47%/8 both-out, 67%/17 both-out with a round-5 elimination, and 40%/18 both-out. None beat the Standard order.
+- **Hand 4 caveat:** at hand 4 keep cost 3 (cost 4 gives 38% double knockouts). The dev panel (cz13) should switch both together.
