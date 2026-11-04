@@ -178,6 +178,13 @@ func slot_center(slot_id: StringName) -> Vector2:
 	return s.position + s.size * 0.5 if s != null else Vector2.ZERO
 
 
+## cc08: one card changes controller without an EventBus signal (Reclaim).
+func set_slot_owner(slot_id: StringName, side: StringName) -> void:
+	if _state.get("wall", {}).has(slot_id):
+		_state["wall"][slot_id]["owner"] = side
+		_render_wall()
+
+
 ## Short non-blocking message under the score bar ("Pick a card first").
 func show_toast(text: String, seconds: float = 2.2) -> void:
 	_toast_label.text = text

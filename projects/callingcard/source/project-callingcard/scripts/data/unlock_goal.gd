@@ -16,14 +16,28 @@ extends Resource
 @export var description: String = ""
 
 @export_group("Target")
-## WIN_STREAK / CAPTURES_TOTAL / WINS_TOTAL: how many. Others: leave 0.
+## WIN_STREAK / CAPTURES_TOTAL / WINS_TOTAL: how many (>= 1).
+## BEAT_RIVAL / BEAT_RIVAL_NO_LEGEND: how many qualifying wins against the rival (0 or 1 = once).
+## DOSSIER_CLEAR / CIPHER_LOCK: leave 0.
 @export_range(0, 999) var target_count: int = 0
 ## BEAT_RIVAL / BEAT_RIVAL_NO_LEGEND: a RivalData id. DOSSIER_CLEAR: a DossierData id. Others: empty.
 @export var target_id: StringName = &""
 
 
+## Kinds that read target_count. For the rival kinds a count of 0 or 1 means a single win
+## (cc09: Long Watch needs 2 Warden wins without a Legend), so older data stays valid.
 func needs_count() -> bool:
-	return kind in [DataEnums.UnlockKind.WIN_STREAK, DataEnums.UnlockKind.CAPTURES_TOTAL, DataEnums.UnlockKind.WINS_TOTAL]
+	return kind in [DataEnums.UnlockKind.WIN_STREAK, DataEnums.UnlockKind.CAPTURES_TOTAL, DataEnums.UnlockKind.WINS_TOTAL,
+			DataEnums.UnlockKind.BEAT_RIVAL, DataEnums.UnlockKind.BEAT_RIVAL_NO_LEGEND]
+
+
+## Rival kinds: the count is optional (0 = once).
+func count_optional() -> bool:
+	return kind in [DataEnums.UnlockKind.BEAT_RIVAL, DataEnums.UnlockKind.BEAT_RIVAL_NO_LEGEND]
+
+
+func required_count() -> int:
+	return maxi(target_count, 1)
 
 
 func validate(v: DataValidator) -> void:
@@ -33,9 +47,9 @@ func validate(v: DataValidator) -> void:
 	if not v.check_enum("kind", kind, DataEnums.UnlockKind):
 		return
 	if needs_count():
-		v.check_range("target_count", target_count, 1, 999)
+		v.check_range("target_count", target_count, 0 if count_optional() else 1, 999)
 	elif target_count != 0:
-		v.invalid("target_count", "only WIN_STREAK, CAPTURES_TOTAL and WINS_TOTAL use a count")
+		v.invalid("target_count", "only WIN_STREAK, CAPTURES_TOTAL, WINS_TOTAL, BEAT_RIVAL and BEAT_RIVAL_NO_LEGEND use a count")
 	match kind:
 		DataEnums.UnlockKind.BEAT_RIVAL, DataEnums.UnlockKind.BEAT_RIVAL_NO_LEGEND:
 			v.check_id_ref("target_id", target_id, RivalData)

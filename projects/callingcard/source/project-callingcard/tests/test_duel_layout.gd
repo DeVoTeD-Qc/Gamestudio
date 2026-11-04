@@ -21,6 +21,7 @@ const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const MockDuelData: GDScript = preload("res://scripts/ui/mock_duel_data.gd")
 const DuelTheme: GDScript = preload("res://scripts/ui/duel_theme.gd")
 const DuelScreenScript: GDScript = preload("res://scripts/ui/duel_screen.gd")
+const DuelControllerScript: GDScript = preload("res://scripts/duel/duel_controller.gd")
 const DUEL_SCENE: String = "res://scenes/Duel.tscn"
 const MIN_TAP_PT: float = 44.0
 const MIN_TAP_PX: float = 64.0
@@ -58,7 +59,7 @@ func test_duel_scene_instantiates() -> void:
 	if scene == null:
 		return
 	var node: Node = scene.instantiate()
-	for unique: String in ["%SafeArea", "%MenuButton", "%PlayerCounter", "%RivalCounter", "%TurnPanel",
+	for unique: String in ["%DuelController", "%DuelOverlay", "%Toast", "%SafeArea", "%MenuButton", "%PlayerCounter", "%RivalCounter", "%TurnPanel",
 			"%Wall", "%Hand", "%InfoButton", "%PlaceButton", "%CardInspector"]:
 		assert_not_null(node.get_node_or_null(unique), "Duel lacks %s" % unique)
 	node.free()
@@ -380,6 +381,8 @@ func _spawn(screen: Dictionary, state: Dictionary) -> Array:
 	viewport.size = Vector2i(logical)
 	viewport.disable_3d = true
 	tree.root.add_child(viewport)
+	# Layout checks run on the cc07 mock states: no duel controller (cc08 has its own tests).
+	DuelControllerScript.autostart = false
 	var duel: Control = (load(DUEL_SCENE) as PackedScene).instantiate()
 	if screen.has("insets"):
 		var k: float = points_per_px(screen)
@@ -388,6 +391,7 @@ func _spawn(screen: Dictionary, state: Dictionary) -> Array:
 		var rb: Vector2 = insets.size / k  # Rect2 size holds (right, bottom) insets here
 		duel.safe_area_override = Rect2(lt, logical - lt - rb)
 	viewport.add_child(duel)
+	DuelControllerScript.autostart = true
 	duel.show_state(state)
 	for i: int in 4:
 		await tree.process_frame

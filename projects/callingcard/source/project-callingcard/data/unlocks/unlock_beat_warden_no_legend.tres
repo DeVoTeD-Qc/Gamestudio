@@ -7,5 +7,5 @@ script = ExtResource("1_unlock_goal")
 id = &"unlock_beat_warden_no_legend"
 kind = 4
 description = "Beat the Warden twice with no Legend in your lineup"
-target_count = 0
+target_count = 2
 target_id = &"warden"
