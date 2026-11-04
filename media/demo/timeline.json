@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 179.0,
+ "duration": 194.0,
  "scenes": [
   {
    "id": "title",
@@ -219,58 +219,58 @@
   {
    "id": "upload",
    "start": 147.5,
-   "end": 157.5,
+   "end": 155.5,
    "view": "floor",
    "title": null,
    "captions": [
     {
      "t": 147.5,
-     "until": 153.1,
-     "text": "The head generates the images on the phone and uploads them: 6 zip parts, 47 of the 48 images."
+     "until": 152.1,
+     "text": "The head generates the images in ChatGPT on the phone and uploads them with the chat\u2019s new + Images button."
     },
     {
-     "t": 153.1,
-     "until": 157.5,
-     "text": "The generator refused one, the call-in tablet. A softer re-prompt got it, uploaded as batch 2."
+     "t": 152.1,
+     "until": 155.5,
+     "text": "All 48 images arrive, ready for the Technical Artist."
     }
    ]
   },
   {
    "id": "artin",
-   "start": 157.5,
-   "end": 172.5,
+   "start": 155.5,
+   "end": 170.5,
    "view": "floor",
    "title": null,
    "captions": [
     {
-     "t": 157.5,
-     "until": 160.4,
+     "t": 155.5,
+     "until": 158.4,
      "text": "The Technical Artist checks every image against the reject checklist and wires it into the game."
     },
     {
-     "t": 160.4,
-     "until": 168.1,
+     "t": 158.4,
+     "until": 166.1,
      "text": "k-art3: Title key art, run map, Supply Drop, perk patches, lanes. Real phone screenshots, before \u2192 after."
     },
     {
-     "t": 168.1,
-     "until": 172.5,
+     "t": 166.1,
+     "until": 170.5,
      "text": "k-art4: the painted art moves onto the hand cards and the units deployed on the board."
     }
    ]
   },
   {
    "id": "game",
-   "start": 172.5,
-   "end": 173.5,
+   "start": 170.5,
+   "end": 188.5,
    "view": "game",
    "title": null,
    "captions": []
   },
   {
    "id": "end",
-   "start": 173.5,
-   "end": 179.0,
+   "start": 188.5,
+   "end": 194.0,
    "view": "end",
    "title": null,
    "captions": []
@@ -3518,27 +3518,24 @@
   {
    "kind": "upload",
    "task": "k-art2",
-   "zips": 6,
-   "refused": "fx_callin_tablet",
    "t": 150.3,
    "k": "drawer"
   },
   {
-   "hash": "a8c307e",
-   "subject": "Killstreak: incoming generated art batch 1 (47 of 48 game-ready WebP from the k-art1 prompt pack)",
-   "t": 153.5,
-   "k": "commit"
-  },
-  {
    "id": "k-art2",
    "status": "done",
-   "t": 153.5,
+   "t": 152.9,
    "k": "status"
   },
   {
-   "what": "refused",
-   "t": 153.6,
+   "what": "done",
+   "t": 152.9,
    "k": "upmark"
+  },
+  {
+   "kind": null,
+   "t": 155.1,
+   "k": "drawer"
   },
   {
    "task": {
@@ -3552,62 +3549,38 @@
     ],
     "fresh": true
    },
-   "status": "doing",
-   "t": 153.8,
+   "status": "todo",
+   "t": 155.6,
    "k": "add"
   },
   {
-   "id": "technical-artist",
-   "status": "working",
-   "task": "k-art3",
-   "text": "Starting the batch1 art import: reading the prompt pack and the 47 incoming images.",
-   "pct": 3,
-   "t": 153.8,
-   "k": "agent"
+   "id": "k-art3",
+   "status": "doing",
+   "t": 155.8,
+   "k": "status"
   },
   {
    "id": "technical-artist",
    "status": "working",
    "task": "k-art3",
-   "text": "Reviewed all 47 images (none rejected so far) and took the before phone shots; now testing import settings.",
+   "text": "Took the before phone shots; now testing import settings.",
    "pct": 25,
-   "t": 154.5,
+   "t": 155.8,
    "k": "agent"
-  },
-  {
-   "what": "reprompt",
-   "t": 154.5,
-   "k": "upmark"
-  },
-  {
-   "hash": "1c59bcf",
-   "subject": "Killstreak: incoming art batch 2 (fx_callin_tablet, cropped to 1536x864 WebP)",
-   "t": 155.3,
-   "k": "commit"
-  },
-  {
-   "what": "batch2",
-   "t": 155.3,
-   "k": "upmark"
-  },
-  {
-   "kind": null,
-   "t": 157.1,
-   "k": "drawer"
   },
   {
    "id": "technical-artist",
    "status": "working",
    "task": "k-art3",
-   "text": "All 48 images are wired in, including the batch2 call-in tablet. After shots look good; now running the fallback test with deleted files and measuring load time.",
+   "text": "After shots look good; now running the fallback test with deleted files and measuring load time.",
    "pct": 70,
-   "t": 157.9,
+   "t": 156.8,
    "k": "agent"
   },
   {
    "id": "k-art3",
    "status": "review",
-   "t": 160.0,
+   "t": 158.0,
    "k": "status"
   },
   {
@@ -3616,18 +3589,18 @@
    "task": null,
    "text": null,
    "pct": null,
-   "t": 160.0,
+   "t": 158.0,
    "k": "agent"
   },
   {
    "hash": "508d350",
    "subject": "k-art3: Killstreak uses the 48 generated images (cards, lanes, title, run/supply backdrops, run map, card back, perks, call-in) with procedural fallback",
-   "t": 160.1,
+   "t": 158.1,
    "k": "commit"
   },
   {
    "n": 323,
-   "t": 160.1,
+   "t": 158.1,
    "k": "tests"
   },
   {
@@ -3664,7 +3637,7 @@
      "label": "Match: lanes, card back on INCOMING, perk rings"
     }
    ],
-   "t": 160.3,
+   "t": 158.3,
    "k": "drawer"
   },
   {
@@ -3680,13 +3653,13 @@
     "fresh": true
    },
    "status": "todo",
-   "t": 167.8,
+   "t": 165.8,
    "k": "add"
   },
   {
    "id": "k-art4",
    "status": "doing",
-   "t": 168.0,
+   "t": 166.0,
    "k": "status"
   },
   {
@@ -3695,7 +3668,7 @@
    "task": "k-art4",
    "text": "Starting k-art4: reading the hand card and unit slot layouts to add painted art to hand cards and deployed units.",
    "pct": 3,
-   "t": 168.0,
+   "t": 166.0,
    "k": "agent"
   },
   {
@@ -3710,7 +3683,7 @@
      "chip": "323 \u2192 329 tests passing"
     }
    ],
-   "t": 168.1,
+   "t": 166.1,
    "k": "drawer"
   },
   {
@@ -3719,13 +3692,13 @@
    "task": "k-art4",
    "text": "Hand chips, board units and mulligan cards now show painted art, and all 329 tests pass; now taking final screenshots, measuring frame time and building.",
    "pct": 70,
-   "t": 169.1,
+   "t": 167.1,
    "k": "agent"
   },
   {
    "id": "k-art4",
    "status": "review",
-   "t": 170.1,
+   "t": 168.1,
    "k": "status"
   },
   {
@@ -3734,23 +3707,23 @@
    "task": null,
    "text": null,
    "pct": null,
-   "t": 170.1,
+   "t": 168.1,
    "k": "agent"
   },
   {
    "hash": "2778cf5",
    "subject": "k-art4: Killstreak painted art on hand chips, deployed units, mulligan and loadout tiles (procedural fallback, kill switch)",
-   "t": 170.2,
+   "t": 168.2,
    "k": "commit"
   },
   {
    "n": 329,
-   "t": 170.2,
+   "t": 168.2,
    "k": "tests"
   },
   {
    "kind": null,
-   "t": 172.1,
+   "t": 170.1,
    "k": "drawer"
   }
  ],
@@ -3880,51 +3853,43 @@
    "utc": 136350
   },
   {
-   "t": 153.5,
+   "t": 152.9,
    "utc": 153622
   },
   {
-   "t": 153.8,
-   "utc": 153653
+   "t": 155.5,
+   "utc": 153647
   },
   {
-   "t": 154.5,
+   "t": 155.8,
    "utc": 154172
   },
   {
-   "t": 155.3,
-   "utc": 154612
-  },
-  {
-   "t": 157.5,
-   "utc": 154662
-  },
-  {
-   "t": 157.9,
+   "t": 156.8,
    "utc": 154947
   },
   {
-   "t": 160.0,
+   "t": 158.0,
    "utc": 155789
   },
   {
-   "t": 160.1,
+   "t": 158.1,
    "utc": 155829
   },
   {
-   "t": 168.0,
+   "t": 166.0,
    "utc": 156377
   },
   {
-   "t": 170.1,
+   "t": 168.1,
    "utc": 160359
   },
   {
-   "t": 170.2,
+   "t": 168.2,
    "utc": 160393
   },
   {
-   "t": 172.5,
+   "t": 170.5,
    "utc": 160423
   }
  ],
@@ -3996,7 +3961,320 @@
  },
  "game": {
   "clips": [],
-  "shots": [],
+  "shots": [
+   {
+    "type": "card",
+    "text": "DEPLOY.",
+    "dur": 0.9,
+    "kicker": "KILLSTREAK",
+    "color": "amber",
+    "at": 170.5
+   },
+   {
+    "type": "clip",
+    "src": [
+     15.735,
+     16.935
+    ],
+    "dur": 1.1,
+    "zoom": [
+     640,
+     290,
+     1.0,
+     1.12
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": "fast",
+    "glitch": false,
+    "label": "run map",
+    "at": 171.4
+   },
+   {
+    "type": "clip",
+    "src": [
+     87.815,
+     89.615
+    ],
+    "dur": 1.2,
+    "zoom": [
+     600,
+     290,
+     1.3,
+     1.45
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "deploy",
+    "at": 172.5
+   },
+   {
+    "type": "clip",
+    "src": [
+     90.215,
+     91.015
+    ],
+    "dur": 0.9,
+    "zoom": [
+     760,
+     600,
+     1.6,
+     1.75
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "hand",
+    "at": 173.7
+   },
+   {
+    "type": "clip",
+    "src": [
+     29.562,
+     30.462
+    ],
+    "dur": 0.9,
+    "zoom": [
+     635,
+     360,
+     1.05,
+     1.15
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "card",
+    "at": 174.6
+   },
+   {
+    "type": "card",
+    "text": "CALL IN.",
+    "dur": 0.9,
+    "kicker": "STREAK 2",
+    "color": "cyan",
+    "at": 175.5
+   },
+   {
+    "type": "clip",
+    "src": [
+     105.201,
+     106.801
+    ],
+    "dur": 1.4,
+    "zoom": [
+     640,
+     360,
+     1.0,
+     1.15
+    ],
+    "shake": 0.6,
+    "flash": "white",
+    "ramp": "slow",
+    "glitch": true,
+    "label": "recon drone takeover",
+    "at": 176.4
+   },
+   {
+    "type": "clip",
+    "src": [
+     107.701,
+     108.601
+    ],
+    "dur": 0.8,
+    "zoom": [
+     640,
+     360,
+     1.08,
+     1.18
+    ],
+    "shake": 0,
+    "flash": "red",
+    "ramp": null,
+    "glitch": false,
+    "label": "hostile takeover",
+    "at": 177.8
+   },
+   {
+    "type": "clip",
+    "src": [
+     81.712,
+     82.412
+    ],
+    "dur": 0.8,
+    "zoom": [
+     540,
+     260,
+     1.45,
+     1.6
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "tracers",
+    "focus2": [
+     640,
+     340
+    ],
+    "at": 178.6
+   },
+   {
+    "type": "clip",
+    "src": [
+     82.612,
+     83.312
+    ],
+    "dur": 0.8,
+    "zoom": [
+     500,
+     360,
+     1.55,
+     1.7
+    ],
+    "shake": 1.2,
+    "flash": "red",
+    "ramp": null,
+    "glitch": false,
+    "label": "operator down",
+    "at": 179.4
+   },
+   {
+    "type": "clip",
+    "src": [
+     83.412,
+     84.112
+    ],
+    "dur": 0.9,
+    "zoom": [
+     580,
+     185,
+     1.5,
+     1.7
+    ],
+    "shake": 1.0,
+    "flash": "amber",
+    "ramp": null,
+    "glitch": false,
+    "label": "eliminated",
+    "at": 180.2
+   },
+   {
+    "type": "card",
+    "text": "KILLSTREAK.",
+    "dur": 1.0,
+    "kicker": "PORT VASEL",
+    "color": "amber",
+    "at": 181.1
+   },
+   {
+    "type": "clip",
+    "src": [
+     110.601,
+     111.401
+    ],
+    "dur": 0.8,
+    "zoom": [
+     135,
+     345,
+     1,
+     1
+    ],
+    "shake": 1.0,
+    "flash": "amber",
+    "ramp": null,
+    "glitch": false,
+    "label": "down",
+    "inset": [
+     0,
+     230,
+     270,
+     460
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
+    "at": 182.1
+   },
+   {
+    "type": "clip",
+    "src": [
+     111.801,
+     112.501
+    ],
+    "dur": 0.8,
+    "zoom": [
+     520,
+     280,
+     1.4,
+     1.55
+    ],
+    "shake": 0.5,
+    "flash": "white",
+    "ramp": null,
+    "glitch": false,
+    "label": "tracers",
+    "focus2": [
+     610,
+     345
+    ],
+    "at": 182.9
+   },
+   {
+    "type": "clip",
+    "src": [
+     83.912,
+     85.012
+    ],
+    "dur": 1.2,
+    "zoom": [
+     150,
+     500,
+     1,
+     1
+    ],
+    "shake": 0.8,
+    "flash": "red",
+    "ramp": null,
+    "glitch": true,
+    "label": "streak lost",
+    "inset": [
+     0,
+     400,
+     360,
+     600
+    ],
+    "insetZoom": [
+     1.0,
+     1.06
+    ],
+    "at": 183.7
+   },
+   {
+    "type": "clip",
+    "src": [
+     6.55,
+     7.85
+    ],
+    "dur": 3.6,
+    "zoom": [
+     640,
+     360,
+     1.12,
+     1.0
+    ],
+    "shake": 0,
+    "flash": "white",
+    "ramp": "hero",
+    "glitch": false,
+    "label": "hero",
+    "at": 184.9
+   }
+  ],
   "frames": "game/frames.json"
  },
  "docs": {

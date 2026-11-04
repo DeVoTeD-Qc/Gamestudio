@@ -444,9 +444,8 @@ T += 7
 
 # 11b. The art pass (Nov 4). Sources: board tasks k-art1..k-art4 with their progress reports, the lead's
 # chat reply c-ks-art, the prompt pack itself, and commits dc9fa41, a8c307e, 1c59bcf, 508d350, 2778cf5.
-# The upload itself (6 zip parts, the refused call-in tablet and its softer re-prompt) happened in the
-# lead session's chat; the board and git show its result: batch1 README ("47 of 48 ... the image
-# generator rejected all retry attempts" for fx_callin_tablet) and batch 2 with that one image.
+# The head's upload messages are in the lead session's chat, not on the board; the video shows the
+# result (the 48 images in the repo) without going into how the uploads were split.
 REPO = os.path.join(HERE, '..', '..')
 PACK = open(os.path.join(REPO, 'projects', 'killstreak', 'documentation', 'art', 'image-prompt-pack.md')).read()
 STYLE = re.search(r'## 2\. Shared style block.*?```\n(.*?)\n```', PACK, re.S).group(1)
@@ -485,32 +484,22 @@ clock += [{'t': S, 'utc': n4('13:44:30')}, {'t': S + 0.9, 'utc': sod(ka1[0]['at'
           {'t': S + 3.5, 'utc': sod(c['at'])}, {'t': S + 12, 'utc': n4('13:52:20')}]
 T += 12
 
-S = scene('upload', T, 10, 'floor', captions=[
-    (0.0, 5.6, 'The head generates the images on the phone and uploads them: 6 zip parts, 47 of the 48 images.'),
-    (5.6, 10, 'The generator refused one, the call-in tablet. A softer re-prompt got it, uploaded as batch 2.')])
+S = scene('upload', T, 8, 'floor', captions=[
+    (0.0, 4.6, 'The head generates the images in ChatGPT on the phone and uploads them with the chat’s new + Images button.'),
+    (4.6, 8, 'All 48 images arrive, ready for the Technical Artist.')])
 ev(S + 0.05, 'drawer', kind='chat', clear=True)
 ev(S + 0.25, 'chat', who='claude', text=CHAT['c-ks-art']['text'].split('. ', 1)[1].replace(' Each upload wakes me, and the Technical Artist imports the batch.', ''))
 add(S + 0.6, 'k-art2', 'doing', fresh=True)
-ev(S + 2.8, 'drawer', kind='upload', task='k-art2', zips=6, refused='fx_callin_tablet')
+ev(S + 2.8, 'drawer', kind='upload', task='k-art2')
 b1 = next(c for c in COMMITS if c['hash'] == 'a8c307e')
-b2 = next(c for c in COMMITS if c['hash'] == '1c59bcf')
-ev(S + 6.0, 'commit', hash=b1['hash'], subject=b1['subject'])
-status(S + 6.0, 'k-art2', 'done')
-ev(S + 6.1, 'upmark', what='refused')
-# the Technical Artist starts k-art3 on batch 1 right away (18:40:53), before batch 2 lands
-ka3, ka4 = progress_of('k-art3'), progress_of('k-art4')
-ka3w = [p for p in ka3 if p['status'] != 'done']
-add(S + 6.3, 'k-art3', 'doing', fresh=True)
-agent(S + 6.3, 'technical-artist', 'working', task='k-art3', text=ka3w[0]['text'], pct=ka3w[0]['pct'])
-agent(S + 7.0, 'technical-artist', 'working', task='k-art3', text=ka3w[1]['text'], pct=ka3w[1]['pct'])
-ev(S + 7.0, 'upmark', what='reprompt')
-ev(S + 7.8, 'commit', hash=b2['hash'], subject=b2['subject'])
-ev(S + 7.8, 'upmark', what='batch2')
-ev(S + 9.6, 'drawer', kind=None)
-clock += [{'t': S + 0.25, 'utc': sod(CHAT['c-ks-art']['at'])}, {'t': S + 6.0, 'utc': sod(b1['at'])},
-          {'t': S + 6.3, 'utc': sod(ka3w[0]['at'])}, {'t': S + 7.0, 'utc': sod(ka3w[1]['at'])},
-          {'t': S + 7.8, 'utc': sod(b2['at'])}, {'t': S + 10, 'utc': sod(b2['at']) + 50}]
-T += 10
+# The upload commits (a8c307e, 1c59bcf) count on the commit counter, but their subjects are not shown
+# in the ticker: per the studio head, the video doesn't go into which upload carried which image.
+status(S + 5.4, 'k-art2', 'done')
+ev(S + 5.4, 'upmark', what='done')
+ev(S + 7.6, 'drawer', kind=None)
+clock += [{'t': S + 0.25, 'utc': sod(CHAT['c-ks-art']['at'])}, {'t': S + 5.4, 'utc': sod(b1['at'])},
+          {'t': S + 8, 'utc': sod(b1['at']) + 25}]
+T += 8
 
 SHOT = lambda a, b: {'before': 'k-art%s-before-%s-844x390@3x.png' % (a, b), 'after': 'k-art%s-after-%s-844x390@3x.png' % (a, b)}
 S = scene('artin', T, 15, 'floor', captions=[
@@ -519,7 +508,13 @@ S = scene('artin', T, 15, 'floor', captions=[
     (10.6, 15, 'k-art4: the painted art moves onto the hand cards and the units deployed on the board.')])
 c3 = next(c for c in COMMITS if c['hash'] == '508d350')
 c4 = next(c for c in COMMITS if c['hash'] == '2778cf5')
-agent(S + 0.4, 'technical-artist', 'working', task='k-art3', text=ka3w[2]['text'], pct=ka3w[2]['pct'])
+ka3, ka4 = progress_of('k-art3'), progress_of('k-art4')
+ka3w = [p for p in ka3 if p['status'] != 'done']
+# k-art3's live reports, trimmed to the clauses about the work (the full texts also count the uploads)
+add(S + 0.1, 'k-art3', 'todo', fresh=True)
+status(S + 0.3, 'k-art3', 'doing')
+agent(S + 0.3, 'technical-artist', 'working', task='k-art3', text='Took the before phone shots; now testing import settings.', pct=ka3w[1]['pct'])
+agent(S + 1.3, 'technical-artist', 'working', task='k-art3', text='After shots look good; now running the fallback test with deleted files and measuring load time.', pct=ka3w[2]['pct'])
 status(S + 2.5, 'k-art3', 'review')
 agent(S + 2.5, 'technical-artist', 'idle')
 ev(S + 2.6, 'commit', hash=c3['hash'], subject=c3['subject'])
@@ -542,7 +537,7 @@ agent(S + 12.6, 'technical-artist', 'idle')
 ev(S + 12.7, 'commit', hash=c4['hash'], subject=c4['subject'])
 ev(S + 12.7, 'tests', n=329)
 ev(S + 14.6, 'drawer', kind=None)
-clock += [{'t': S + 0.4, 'utc': sod(ka3w[2]['at'])}, {'t': S + 2.5, 'utc': sod(ka3[-1]['at'])}, {'t': S + 2.6, 'utc': sod(c3['at'])},
+clock += [{'t': S + 0.3, 'utc': sod(ka3w[1]['at'])}, {'t': S + 1.3, 'utc': sod(ka3w[2]['at'])}, {'t': S + 2.5, 'utc': sod(ka3[-1]['at'])}, {'t': S + 2.6, 'utc': sod(c3['at'])},
           {'t': S + 10.5, 'utc': sod(ka4[0]['at'])}, {'t': S + 12.6, 'utc': sod(ka4[-1]['at'])},
           {'t': S + 12.7, 'utc': sod(c4['at'])}, {'t': S + 15, 'utc': sod(c4['at']) + 30}]
 T += 15

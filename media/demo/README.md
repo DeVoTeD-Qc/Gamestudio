@@ -56,7 +56,7 @@ ffmpeg -framerate 30 -i $W/frames/%06d.jpg -c:v libx264 -preset slow -crf 26 -pi
 
 # 5. Soundtrack: synthesize, limit (true-peak safe), loudnorm two-pass (linear) to -16 LUFS, mux
 python3 media/demo/audio/make_audio.py $W/raw.wav
-ffmpeg -i $W/raw.wav -af "volume=15.5dB,alimiter=limit=0.6:attack=5:release=80:level=disabled,aresample=192000,alimiter=limit=0.66:attack=2:release=50:level=disabled,aresample=48000" -c:a pcm_s24le $W/lim.wav
+ffmpeg -i $W/raw.wav -af "volume=15.5dB,alimiter=limit=0.5:attack=5:release=80:level=disabled,aresample=192000,alimiter=limit=0.54:attack=2:release=50:level=disabled,aresample=48000" -c:a pcm_s24le $W/lim.wav
 ffmpeg -i $W/lim.wav -af loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json -f null -     # pass 1: note the input_* values
 ffmpeg -i $W/lim.wav -af loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=..:measured_TP=..:measured_LRA=..:measured_thresh=..:linear=true \
   -ar 48000 -c:a pcm_s24le $W/final.wav
@@ -80,10 +80,10 @@ ffmpeg -i $W/video_only.mp4 -i $W/final.wav -map 0:v -map 1:a -c:v copy -c:a aac
 | 1:49 | feedback | Visual polish (v01), the First Shot bug report, f04 |
 | 2:08 | stats | Start to playable: 7h 19m active build time |
 | 2:15 | artpack | Nov 4: the Sr Game Artist writes the 48-slot image prompt pack (k-art1, dc9fa41); the style block and the card_rifleman prompt type out, with the image it became |
-| 2:27 | upload | The head's upload: 6 zip parts, 47 of 48 images (a8c307e); the refused call-in tablet, the softer re-prompt, batch 2 (1c59bcf) |
-| 2:37 | artin | The Technical Artist's before/after wipes: k-art3 Title, run map, Supply Drop, perk offer, match (508d350); k-art4 hand cards and units (2778cf5), 323 → 329 tests |
-| 2:52 | game | Trailer cut from new gameplay on the new-art build |
-| 3:11 | end | End card |
+| 2:27 | upload | The head generates the images and uploads them from the phone with the chat's + Images button: 48 of 48 |
+| 2:35 | artin | The Technical Artist's before/after wipes: k-art3 Title, run map, Supply Drop, perk offer, match (508d350); k-art4 hand cards and units (2778cf5), 323 → 329 tests |
+| 2:50 | game | 18 s trailer re-recorded on the new-art build: run map mode art, painted units and hand, the card inspector, the Recon Drone call-in over the painted tablet and the hostile one, tracers, OPERATOR DOWN, ELIMINATED, DOWN, STREAK LOST, the Title key art |
+| 3:08 | end | End card (video ends at 3:14) |
 
 The art pass is shown on Nov 4's real clock (13:44 → 20:33 UTC). It is not added to the stats card,
 which covers the build from the first commit to the playable build (02:05 → 13:42 UTC, Nov 3). The
@@ -105,9 +105,9 @@ All of it is synthesized in `audio/make_audio.py`. There are no samples, loops o
   bubbles, whooshes on scene and drawer changes, and a two-tone alert for the usage limit. In the
   trailer: booms on shakes and stamps, whoosh plus bass drop on the title cards, a generic
   static/uplink sweep on the call-in, glitch blips on RGB-split shots, and a big low hit on the hero
-  reveal. In the art pass: a paste snap and typing ticks for the prompt, pops for the 6 zip parts,
-  blips as the thumbnails fill in, a soft two-tone for the refused image, typing for the re-prompt,
-  chimes for batch 2 and for each before/after caption, whooshes on the wipes.
+  reveal. In the art pass: a paste snap and typing ticks for the prompt, a pop as the upload opens,
+  blips as the thumbnails fill in,
+  a chime when all 48 are in and for each before/after caption, whooshes on the wipes.
 - **Mix:** the music is ducked under the SFX. The replay sits around -18 to -20 LUFS short-term, the
   trailer around -10. Integrated loudness is -16 LUFS, true peak about -2 dBFS.
 
@@ -126,10 +126,10 @@ with a short range.
   (02:05→13:42 UTC) minus 4h 17m paused, so 7h 19m. There was no other limit wait in that span.
 - The art pass (Nov 4, 13:45 → 20:33 UTC) had no usage-limit wait. The Nov 4 limit pauses hit the
   CallingCard agents (d428b0d at 07:11, fbead69 at 11:38) and had ended by about 12:10.
-- The upload details (6 zip parts, the refusal of `fx_callin_tablet` and the softer re-prompt that
-  produced it) come from the lead session's chat with the head, not from the board. The repo confirms
-  them only in part: the batch1 README ("47 of 48", "the image generator rejected all retry attempts",
-  "Each ZIP is independent") and batch 2 with the single tablet image. The head's own upload messages
-  and the re-prompt text are not on the board, so the video shows them as labels, not as chat bubbles.
+- The head's upload messages are in the lead session's chat, not on the board, so the upload is
+  shown as the 48 images arriving (the files in the repo), not as chat bubbles. At the studio head's
+  request the video doesn't go into how the uploads were split: the two upload commits (a8c307e,
+  1c59bcf) count on the commit counter but their subjects are not shown in the ticker, and k-art3's
+  live reports are trimmed to the clauses about the import work.
 - The Sr Game Artist's prompt pack was asked for in the lead session's chat, so the request text is
   not shown either; the card says "Created by You · from chat", as on the board.

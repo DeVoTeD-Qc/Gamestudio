@@ -347,15 +347,9 @@ for e in TL['events']:
         place(sfx, t + .05, tick(), gain=.08)
     elif k == 'stats':
         place(sfx, t, whoosh(.5), gain=.08)
-    elif k == 'upmark':
-        if e['what'] == 'refused':          # soft low two-tone: the generator said no
-            place(sfx, t, alert(), gain=.05)
-        elif e['what'] == 'reprompt':       # a quick burst of typing for the re-prompt
-            for j in range(14):
-                place(sfx, t + j * .045 + rng.uniform(0, .01), tick(), pan=rng.uniform(-.2, .2), gain=.04)
-        else:                               # batch 2 lands: 48 of 48
-            place(sfx, t, chime(1318.5), gain=.06)
-            place(sfx, t + .1, chime(1975.5), gain=.05)
+    elif k == 'upmark':                     # all 48 images in
+        place(sfx, t, chime(1318.5), gain=.06)
+        place(sfx, t + .1, chime(1975.5), gain=.05)
     if k == 'drawer' and e.get('kind') == 'prompt':
         # style block pasted, then the card's own lines typed at 130 chars/s (as replay.html types them)
         place(sfx, t + .5, snap(), gain=.12)
@@ -363,10 +357,9 @@ for e in TL['events']:
             place(sfx, t + 1.4 + j / 130 + rng.uniform(0, .006), tick(), pan=rng.uniform(-.2, .2), gain=.025 + .015 * rng.random())
         place(sfx, t + 1.6 + len(e['prompt']) / 130 + .3, chime(1567.98), gain=.05)
     elif k == 'drawer' and e.get('kind') == 'upload':
-        for j in range(e['zips']):         # zip parts arrive
-            place(sfx, t + .2 + j * .18, pop(), pan=-.3 + .12 * j, gain=.08)
+        place(sfx, t + .1, pop(), gain=.08)
         for j in range(0, 48, 3):          # thumbnails fill in (every third one ticks)
-            place(sfx, t + 1.0 + j * .045, blip(1600 + 20 * j), pan=-.4 + j / 60, gain=.035)
+            place(sfx, t + .4 + j * .045, blip(1600 + 20 * j), pan=-.4 + j / 60, gain=.035)
     elif k == 'drawer' and e.get('kind') == 'wipes':
         for j, pr in enumerate(e['pairs']):
             a = t + .3 + j * e['step']

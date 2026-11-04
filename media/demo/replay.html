@@ -173,14 +173,9 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 .prow{display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start}
 .result{display:grid;gap:8px;font:500 16px/1.35 var(--f-mono);color:var(--muted)}
 .result img{width:330px;height:202px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
-.zips{display:flex;gap:10px}
-.zip{font:600 17px var(--f-mono);padding:9px 14px;border-radius:9px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink)}
 .agrid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
 .slot{position:relative;aspect-ratio:1.63;border-radius:6px;overflow:hidden;background:var(--soft);border:1px solid var(--line)}
 .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.slot.ref{border:2px solid var(--bad)}
-.slot .rt{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font:700 12.5px/1.25 var(--f-mono);color:var(--bad);background:rgba(20,8,8,.75)}
-.slot.ok2{border:2px solid var(--ok)}
 .upnote{display:flex;gap:14px;align-items:center;font:500 22px/1.35 var(--f-body)}
 .upnote b{font:700 15px var(--f-mono);letter-spacing:.08em;border:2px solid currentColor;border-radius:6px;padding:4px 8px;flex:none}
 .wipes .wipe{width:1100px;height:508px}
@@ -568,15 +563,8 @@ function renderDrawer(s, t) {
       h += `<div class="prow"><div class="pbox"><span class="lab">PROMPT ${esc(shown.file)} · READY TO PASTE</span><span class="sty" id="pSty"></span><span class="own" id="pOwn"></span></div>`
         + `<div class="result" id="pRes"><img src="${esc(shown.result)}"><span>The result, as uploaded later that day:<br><b style="color:var(--ink)">card_rifleman</b> 888×544, in the game.</span></div></div>`;
     } else if (shown.kind === "upload") {
-      const up = s.up || {};
-      h += `<div class="zips" id="zips">${Array.from({length: shown.zips}, (_, i) => `<span class="zip">ZIP part ${i + 1}/${shown.zips}</span>`).join("")}</div>`;
-      h += `<div class="agrid" id="agrid">` + TL.art.map((a, i) => {
-        if (a.name === shown.refused) {
-          const got = up.batch2 != null;
-          return `<div class="slot ${got ? "ok2" : "ref"}" data-i="${i}">${got ? `<img src="${esc(a.src)}">` : ""}${got ? "" : `<div class="rt">${up.reprompt != null ? "SOFTER<br>RE-PROMPT…" : "REFUSED BY<br>THE GENERATOR"}</div>`}</div>`;
-        }
-        return `<div class="slot" data-i="${i}"><img src="${esc(a.src)}"></div>`;
-      }).join("") + `</div>`;
+      h += `<div class="upnote" style="color:var(--accent)"><b>+ IMAGES</b><span style="color:var(--ink)">Studio chat, from the head’s iPhone: images made with the k-art1 prompts.</span></div>`;
+      h += `<div class="agrid" id="agrid">` + TL.art.map((a, i) => `<div class="slot" data-i="${i}"><img src="${esc(a.src)}"></div>`).join("") + `</div>`;
       h += `<div class="upnote" id="upnote"></div>`;
     } else if (shown.kind === "wipes") {
       const pr = shown.pairs[wi], chips = shown.pairs.slice(0, wi + 1).filter(p => p.chip).map(p => p.chip);
@@ -616,14 +604,11 @@ function renderDrawer(s, t) {
     $("pRes").style.opacity = ra; $("pRes").style.transform = `translateY(${(1 - ra) * 20}px)`;
   } else if (shown.kind === "upload") {
     const u = t - shown.t, up = s.up || {};
-    document.querySelectorAll("#zips .zip").forEach((el, i) => { const a = ease((u - 0.2 - i * 0.18) / 0.25); el.style.opacity = a; el.style.transform = `translateY(${(1 - a) * -14}px)`; });
-    document.querySelectorAll("#agrid .slot").forEach(el => { const i = +el.dataset.i; const a = ease((u - 1.0 - i * 0.045) / 0.3); el.style.opacity = a; el.style.transform = `scale(${0.85 + 0.15 * a})`; });
-    const note = up.batch2 != null ? ['var(--ok)', 'BATCH 2', 'fx_callin_tablet arrives as batch 2 (1c59bcf): 48 of 48 images.']
-      : up.reprompt != null ? ['var(--warn)', 'RE-PROMPT', 'fx_callin_tablet: the head tries a softer prompt for the refused image.']
-      : up.refused != null ? ['var(--bad)', 'REFUSED', 'Batch 1 committed (a8c307e): 47 of 48. The generator refused fx_callin_tablet.']
-      : u > 1.0 ? ['var(--accent)', 'UPLOAD', 'Studio chat › + Images: 6 zip parts from the phone, 47 images.'] : null;
-    $("upnote").style.color = note ? note[0] : "transparent";
-    $("upnote").innerHTML = note ? `<b>${note[1]}</b><span style="color:var(--ink)">${esc(note[2])}</span>` : "";
+    document.querySelectorAll("#agrid .slot").forEach(el => { const i = +el.dataset.i; const a = ease((u - 0.4 - i * 0.045) / 0.3); el.style.opacity = a; el.style.transform = `scale(${0.85 + 0.15 * a})`; });
+    const n = Math.max(0, Math.min(48, Math.floor((u - 0.4) / 0.045) + 1));
+    const done = up.done != null;
+    $("upnote").style.color = done ? "var(--ok)" : "var(--muted)";
+    $("upnote").innerHTML = u > 0.4 ? `<b>${done ? "✓ ALL IN" : "UPLOADING"}</b><span style="color:var(--ink)">${n} of 48 images${done ? ": 32 cards, 3 lanes, Title key art, run map, backdrops, card back, perk patches, call-in tablet." : ""}</span>` : "";
   } else if (shown.kind === "wipes") {
     const u = t - shown.t - 0.3 - wi * shown.step;
     const w = ease((u - 0.15) / Math.min(1.0, shown.step * 0.55)) * 100;
