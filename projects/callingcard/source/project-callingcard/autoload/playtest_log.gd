@@ -610,8 +610,7 @@ func _on_duel_started(source: StringName, rival_id: StringName, first_player: St
 			"carded_p": 0, "carded_ai": 0, "triptychs_p": 0, "over": false}
 	if source == &"dossier":
 		stats["dossier_attempts"] += 1
-		if _dossier.get("id", "") != String(rival_id):
-			_dossier = {"id": String(rival_id), "started_ms": Time.get_ticks_msec(), "attempts": 0, "cleared_attempt": -1}
+		_ensure_dossier(String(rival_id), 0)
 		_dossier["attempts"] = int(_dossier["attempts"]) + 1
 	_write("duel_start", {"source": source, "rival": rival_id, "first_player": first_player,
 			"duel": _duel_index, "play_again": play_again})
@@ -752,20 +751,23 @@ func _on_dossier_started(dossier_id: StringName) -> void:
 ## clear is logged from the winning duel_ended; these two signals are logged only when they arrive
 ## for an attempt that was not logged yet.
 func _on_dossier_cleared(dossier_id: StringName, attempts: int, duration_s: float) -> void:
-	if _dossier.get("id", "") != String(dossier_id):
-		_dossier = {"id": String(dossier_id), "started_ms": Time.get_ticks_msec(), "attempts": attempts, "cleared_attempt": -1}
+	_ensure_dossier(String(dossier_id), attempts)
 	_log_dossier_clear(String(dossier_id), duration_s, "dossier_cleared")
 
 
 func _on_dossier_completed(dossier_id: StringName) -> void:
-	if _dossier.get("id", "") != String(dossier_id):
-		_dossier = {"id": String(dossier_id), "started_ms": Time.get_ticks_msec(), "attempts": 1, "cleared_attempt": -1}
+	_ensure_dossier(String(dossier_id), 1)
 	_log_dossier_clear(String(dossier_id), float(_duel.get("duration_s", 0.0)), "dossier_completed")
 
 
+## Starts tracking dossier_id unless it is the one already tracked.
+func _ensure_dossier(dossier_id: String, attempts: int) -> void:
+	if _dossier.is_empty() or str(_dossier.get("id", "")) != dossier_id:
+		_dossier = {"id": dossier_id, "started_ms": Time.get_ticks_msec(), "attempts": attempts, "cleared_attempt": -1}
+
+
 func _log_dossier_clear(dossier_id: String, duration_s: float, via: String) -> void:
-	if _dossier.get("id", "") != dossier_id:
-		_dossier = {"id": dossier_id, "started_ms": Time.get_ticks_msec(), "attempts": 1, "cleared_attempt": -1}
+	_ensure_dossier(dossier_id, 1)
 	var attempt: int = maxi(int(_dossier.get("attempts", 1)), 1)
 	if int(_dossier.get("cleared_attempt", -1)) == attempt:
 		return
