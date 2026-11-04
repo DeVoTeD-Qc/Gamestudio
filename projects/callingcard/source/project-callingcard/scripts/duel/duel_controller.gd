@@ -429,7 +429,8 @@ func _on_menu() -> void:
 func _fill_setup() -> void:
 	var box: VBoxContainer = _overlay.get_content()
 	for c: Node in box.get_children():
-		box.remove_child(c)
+		c.name = "%s_old" % c.name
+		(c as CanvasItem).hide()
 		c.queue_free()
 	box.add_child(_label("RIVAL", &"InspectorHeading"))
 	var row: HBoxContainer = HBoxContainer.new()

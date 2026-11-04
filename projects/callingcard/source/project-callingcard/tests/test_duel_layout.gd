@@ -59,7 +59,7 @@ func test_duel_scene_instantiates() -> void:
 	if scene == null:
 		return
 	var node: Node = scene.instantiate()
-	for unique: String in ["%DuelController", "%DuelOverlay", "%Toast", "%SafeArea", "%MenuButton", "%PlayerCounter", "%RivalCounter", "%TurnPanel",
+	for unique: String in ["%DuelController", "%DuelOverlay", "%SafeArea", "%MenuButton", "%PlayerCounter", "%RivalCounter", "%TurnPanel",
 			"%Wall", "%Hand", "%InfoButton", "%PlaceButton", "%CardInspector"]:
 		assert_not_null(node.get_node_or_null(unique), "Duel lacks %s" % unique)
 	node.free()

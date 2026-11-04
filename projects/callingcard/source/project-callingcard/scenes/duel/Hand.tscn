@@ -25,6 +25,8 @@ size_flags_horizontal = 3
 theme_type_variation = &"Caption"
 text = "Tap to pick · hold or right-click for details"
 horizontal_alignment = 2
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="HandScroll" type="ScrollContainer" parent="."]
 unique_name_in_owner = true

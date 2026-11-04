@@ -29,12 +29,11 @@ func open(kind: StringName, title: String, body: String, buttons: Array) -> void
 	_title.text = title
 	_body.text = body
 	_body.visible = body != ""
-	for c: Node in _content.get_children():
-		_content.remove_child(c)
+	# Old nodes leave at the end of the frame: the button being pressed may be one of them.
+	for c: Node in _content.get_children() + _buttons.get_children():
+		c.name = "%s_old" % c.name
+		(c as CanvasItem).hide()
 		c.queue_free()
-	for b: Node in _buttons.get_children():
-		_buttons.remove_child(b)
-		b.queue_free()
 	for spec: Dictionary in buttons:
 		var b: Button = Button.new()
 		b.name = "Button_%s" % spec["id"]

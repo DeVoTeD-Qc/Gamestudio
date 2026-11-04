@@ -6,7 +6,7 @@
 #   Each card is a TapHoldButton (tap target, focus, input) holding a cc14 BannerCard that ignores
 #   the mouse. Tap a card -> pick it (BannerCard amber highlight, `card_picked`); tap again -> unpick.
 #   Hold 400 ms / right-click / "inspect" key -> `card_inspect_requested`.
-# Dependencies: tap_hold_button.gd, scenes/card/BannerCard.tscn (cc14).
+# Dependencies: tap_hold_button.gd, scenes/card/BannerCard.tscn and ArtKit (cc14).
 # Author: UI/UX Agent (cc07)
 extends VBoxContainer
 
@@ -25,6 +25,7 @@ var picked_id: StringName = &""
 
 var _cards: Array[Dictionary] = []
 var _signature_id: StringName = &""
+var _status: String = ""
 
 @onready var _title: Label = %HandTitle
 @onready var _hint: Label = %HandHint
@@ -39,6 +40,14 @@ func _ready() -> void:
 
 ## cards: UI card Dictionaries in hand order. signature_id draws the ribbon on that card.
 func show_hand(cards: Array, signature_id: StringName = &"") -> void:
+	# Same cards as shown: keep the buttons (focus and an in-flight press survive a re-render).
+	var same: bool = cards.size() == _cards.size() and signature_id == _signature_id \
+			and _flow != null and _flow.get_child_count() == cards.size()
+	for i: int in mini(cards.size(), _cards.size()):
+		same = same and (cards[i] as Dictionary).get("id") == _cards[i].get("id")
+	if same:
+		_refresh_picked()
+		return
 	_cards.clear()
 	for c: Dictionary in cards:
 		_cards.append(c)
@@ -53,6 +62,28 @@ func set_layout(size_px: Vector2, is_strip: bool, is_compact: bool) -> void:
 	strip = is_strip
 	compact = is_compact
 	_rebuild()
+
+
+## A short status in the hand header instead of the tap hint (prompts, preview summary,
+## refusals). It sits in the player's eye line and never covers the wall.
+func show_status(text: String) -> void:
+	_status = text
+	_hint.text = text
+	_hint.add_theme_color_override(&"font_color", ArtKit.AMBER)
+
+
+func clear_status() -> void:
+	_status = ""
+	_hint.remove_theme_color_override(&"font_color")
+	_hint.text = _hint_text()
+
+
+func get_status() -> String:
+	return _status
+
+
+func _hint_text() -> String:
+	return "Tap to pick · hold for details" if compact else "Tap to pick · hold or right-click for details"
 
 
 func rows_for(width: float, count: int) -> int:
@@ -89,7 +120,8 @@ func _rebuild() -> void:
 		_flow.remove_child(child)
 		child.queue_free()
 	_title.text = "YOUR HAND · %d" % _cards.size()
-	_hint.text = "Tap to pick · hold for details" if compact else "Tap to pick · hold or right-click for details"
+	if _status == "":
+		_hint.text = _hint_text()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if strip else ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED if strip else ScrollContainer.SCROLL_MODE_AUTO
 	var n: int = _cards.size()

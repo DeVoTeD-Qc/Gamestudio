@@ -165,7 +165,7 @@ func _report(per_pair: Array, total: Dictionary, warden_us: Array[int], warden_n
 			sum += u
 		var nodes_sorted: Array[int] = warden_nodes.duplicate()
 		nodes_sorted.sort()
-		print("WARDEN_MOVE_MS moves=%d mean=%.2f p50=%.2f p95=%.2f max=%.2f nodes_p95=%d nodes_max=%d" % [sorted.size(),
-				sum / 1000.0 / sorted.size(), sorted[sorted.size() / 2] / 1000.0,
-				sorted[int(sorted.size() * 0.95)] / 1000.0, sorted[-1] / 1000.0,
+		print("WARDEN_MOVE_MS moves=%d mean=%.2f p50=%.2f p95=%.2f p99=%.2f max=%.2f nodes_p95=%d nodes_max=%d" % [
+				sorted.size(), sum / 1000.0 / sorted.size(), sorted[sorted.size() / 2] / 1000.0,
+				sorted[int(sorted.size() * 0.95)] / 1000.0, sorted[int(sorted.size() * 0.99)] / 1000.0, sorted[-1] / 1000.0,
 				nodes_sorted[int(nodes_sorted.size() * 0.95)], nodes_sorted[-1]])

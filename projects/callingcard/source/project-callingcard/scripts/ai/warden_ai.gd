@@ -2,8 +2,8 @@
 # Purpose: Hard rival brain (spec §7 Warden): 2-ply minimax. For each of its moves it assumes the
 #   opponent's best reply (in the belief world) and plays the move whose worst case is best.
 #   The evaluation adds signature_safety_weight x RivalAI.signature_risk (its Signature captured
-#   or open to capture). Alpha-beta: root moves are searched in greedy order and a move's replies
-#   stop as soon as it can't beat the best so far. A node cap (placements simulated) bounds the
+#   or open to capture). Alpha-beta: root moves are searched in greedy order (equal ones in
+#   seeded random order) and a move's replies stop as soon as it can't beat the best so far. A node cap (placements simulated) bounds the
 #   time on a full wall; at the cap the remaining (greedily worse) root moves are skipped.
 #   Deterministic: no clocks, ties broken with the seeded RNG.
 # Dependencies: RivalAI, WallRules.
@@ -11,9 +11,11 @@
 class_name WardenAI
 extends RivalAI
 
-## Placements simulated per move at most (root + replies). The opening move needs ~250-600
-## with pruning; the cap only bites in odd positions. See balance-log.md for timings.
-var max_nodes: int = 1500
+## Placements simulated per move at most (root moves + replies; half when a Triptych can score,
+## since every score then checks it). Only the first two or three moves of a duel reach it.
+## 250 keeps the slowest move under ~35 ms on the dev machine (target: 200 ms on a phone with
+## 4x headroom). See documentation/design/balance/balance-log.md for timings.
+var max_nodes: int = 250
 
 
 func brain_name() -> StringName:
@@ -29,16 +31,22 @@ func _pick(world: WallState, me: int, moves: Array[Dictionary]) -> int:
 		last_nodes += 1
 		after.append(w)
 		greedy.append(evaluate(w, me) if w != null else -INF)
+	# Greedy order; equal greedy values in a seeded random order (that is the tie-break, since
+	# a later root move must be strictly better to replace the best).
+	var tiebreak: Array[float] = []
+	for i: int in moves.size():
+		tiebreak.append(_rng.randf())
 	var order: Array = range(moves.size())
 	order.sort_custom(func(a: int, b: int) -> bool:
-		return greedy[a] > greedy[b] or (greedy[a] == greedy[b] and a < b))
+		return greedy[a] > greedy[b] or (greedy[a] == greedy[b] and tiebreak[a] < tiebreak[b]))
+	var cap: int = max_nodes if world.triptychs.is_empty() else max_nodes / 2
 	var best_val: float = -INF
-	var best: Array[int] = []
+	var best: int = -1
 	for i: int in order:
 		var w1: WallState = after[i]
 		if w1 == null:
 			continue
-		if last_nodes >= max_nodes and not best.is_empty():
+		if last_nodes >= cap and best >= 0:
 			break
 		var v: float
 		if w1.is_game_over() or w1.to_move != opp:
@@ -47,14 +55,12 @@ func _pick(world: WallState, me: int, moves: Array[Dictionary]) -> int:
 			v = _worst_reply(w1, me, opp, best_val)
 		if v > best_val + 0.0001:
 			best_val = v
-			best = [i]
-		elif absf(v - best_val) <= 0.0001:
-			best.append(i)
-	return pick_one(best) if not best.is_empty() else pick_one(best_indices(greedy))
+			best = i
+	return best if best >= 0 else pick_one(best_indices(greedy))
 
 
-## The opponent's best reply value (lowest evaluation for `me`). Stops early once it is below
-## `alpha` (this move can't beat or tie the best root move found so far).
+## The opponent's best reply value (lowest evaluation for `me`). Stops early once it is at or
+## below `alpha` (this move can't beat the best root move found so far).
 func _worst_reply(w1: WallState, me: int, opp: int, alpha: float) -> float:
 	var replies: Array[Dictionary] = WallRules.legal_moves(w1)
 	if replies.is_empty():
@@ -67,7 +73,7 @@ func _worst_reply(w1: WallState, me: int, opp: int, alpha: float) -> float:
 		if w2 == null:
 			continue
 		v = minf(v, evaluate(w2, me))
-		if v < alpha - 0.0001:
+		if v <= alpha + 0.0001:
 			break
 	return v
 

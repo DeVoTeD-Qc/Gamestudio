@@ -175,6 +175,9 @@ func test_illegal_moves_are_rejected_in_words() -> void:
 	_tap_hand(duel, second, &"press")
 	assert_true(duel.get_toast_text().contains("is playing"), "picking on the rival's turn is refused: %s" % duel.get_toast_text())
 	assert_eq(duel.get_picked(), &"", "pick dropped")
+	var hint: Label = duel.get_hand().get_node("%HandHint")
+	var need: float = hint.get_theme_font(&"font").get_string_size(hint.text, HORIZONTAL_ALIGNMENT_LEFT, -1, hint.get_theme_font_size(&"font_size")).x
+	assert_true(need <= hint.size.x + 0.5, "longest status fits the phone hand header (%.0f / %.0f px)" % [need, hint.size.x])
 	assert_eq(WallRules.check_place(ctrl.state, WallState.P1, ctrl.state.hands[0][0], &"a1"), WallRules.ERR_NOT_YOUR_TURN, "engine agrees")
 	# Occupied slot through the controller (the screen would inspect it instead).
 	ctrl._set_phase(&"player")

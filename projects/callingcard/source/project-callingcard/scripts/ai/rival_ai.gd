@@ -103,6 +103,7 @@ static func belief_world(state: WallState, viewer: int, rng: RandomNumberGenerat
 		var pc: PlacedCard = w.get_card(slot)
 		if pc != null and is_hidden_from(pc, viewer):
 			hidden.append(slot)
+	w.triptychs = reachable_triptychs(state)
 	if w.hand_of(opp) == null:
 		# Fixture with an unrestricted hand: no lineup to sample from; keep the board as dealt.
 		return w
@@ -131,6 +132,24 @@ static func belief_world(state: WallState, viewer: int, rng: RandomNumberGenerat
 		pc.signature = w.is_signature_card(opp, pick)
 	w.hands[opp] = opp_hand
 	return w
+
+
+## Triptychs whose three cards are all in this duel (both public lineups, or on the wall when a
+## hand is unrestricted). The others can never score, so the search world drops them: an exact
+## speed-up, since the engine checks every Triptych on every score.
+static func reachable_triptychs(state: WallState) -> Array[TriptychData]:
+	var ids: Dictionary = {}
+	var unrestricted: bool = false
+	for p: int in [WallState.P1, WallState.P2]:
+		if state.hand_of(p) == null:
+			unrestricted = true
+		for c: CardData in public_lineup(state, p):
+			ids[c.id] = true
+	var out: Array[TriptychData] = []
+	for t: TriptychData in state.triptychs:
+		if unrestricted or t.cards.all(func(c: CardData) -> bool: return c != null and ids.has(c.id)):
+			out.append(t)
+	return out
 
 
 ## The opponent's lineup as public information: its remaining hand plus its cards on the wall, in

@@ -73,8 +73,6 @@ var place_ready: bool = false
 @onready var _info: Button = %InfoButton
 @onready var _place: Button = %PlaceButton
 @onready var _inspector: Control = %CardInspector
-@onready var _toast: PanelContainer = %Toast
-@onready var _toast_label: Label = %ToastLabel
 var _toast_serial: int = 0
 
 
@@ -185,20 +183,20 @@ func set_slot_owner(slot_id: StringName, side: StringName) -> void:
 		_render_wall()
 
 
-## Short non-blocking message under the score bar ("Pick a card first").
-func show_toast(text: String, seconds: float = 2.2) -> void:
-	_toast_label.text = text
-	_toast.show()
+## Short message in the hand header ("Pick a card first", the preview summary). It replaces the
+## tap hint for `seconds` (0 = until the next message) and never covers the wall.
+func show_toast(text: String, seconds: float = 2.6) -> void:
+	_hand.show_status(text)
 	_toast_serial += 1
 	var serial: int = _toast_serial
 	if is_inside_tree() and seconds > 0.0:
 		await get_tree().create_timer(seconds).timeout
-		if serial == _toast_serial and is_instance_valid(_toast):
-			_toast.hide()
+		if serial == _toast_serial and is_instance_valid(_hand):
+			_hand.clear_status()
 
 
 func get_toast_text() -> String:
-	return _toast_label.text if _toast.visible else ""
+	return _hand.get_status()
 
 
 func get_overlay() -> Control:
