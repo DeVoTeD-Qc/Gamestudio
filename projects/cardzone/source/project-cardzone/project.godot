@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 EventBus="*res://autoload/event_bus.gd"
 Settings="*res://autoload/settings.gd"
 CardDB="*res://autoload/card_db.gd"
+MatchStore="*res://autoload/match_store.gd"
 SceneRouter="*res://autoload/scene_router.gd"
 
 [display]
