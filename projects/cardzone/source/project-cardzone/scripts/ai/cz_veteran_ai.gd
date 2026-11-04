@@ -444,10 +444,8 @@ static func _best_loot(w: MatchState, me: int, dest: StringName) -> Dictionary:
 	var best: Dictionary = {}
 	var best_key: Vector2i = Vector2i(0, 0)
 	var facts: Dictionary = {}
-	for opt: Dictionary in CzSim.loot_options(w, me, st.area):
+	for opt: Dictionary in CzSim.loot_options(w, me, st.area, st.search + spare):
 		var cost: int = int(opt["cost"])
-		if cost > st.search + spare:
-			continue
 		var oc: CardData = w.data.card(opt["id"])
 		if facts.is_empty() and oc != null and (oc.is_weapon() or oc.is_attachment()):
 			facts = CzAI.owned_facts(w, me)

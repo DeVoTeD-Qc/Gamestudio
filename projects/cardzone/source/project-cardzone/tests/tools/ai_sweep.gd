@@ -9,6 +9,7 @@
 #                            the pairing spec §16.4a asks the dev panel to switch together)
 #     --wv=key:val,...       Veteran evaluation weights to try (CzVeteranAI.WEIGHTS keys)
 #     --cap=N                Veteran node cap to try (CzVeteranAI.NODE_CAP)
+#     --set=key:val,...      other balance overrides (BalanceConfig keys, ints or true/false)
 #     --out=/abs/rows.json   also write every game as JSON (one array)
 #     --merge=/a.json,/b.json  print the tables for earlier --out files instead of playing
 #     --retime=10            re-time the N slowest turns 5 times each (median), since one timing
@@ -23,7 +24,7 @@ const LABEL: Dictionary = {"docks": "Docks", "farmstead": "Farmstead", "quarry":
 		"radio_hill": "Radio Hill", "motel": "Motel", "rail_yard": "Rail Yard"}
 
 var _opts: Dictionary = {"p1": "veteran", "p2": "veteran", "hands": "4,5", "routes": "A,B,C",
-		"cost4": "3", "cost5": "4", "out": "", "merge": "", "wv": "", "cap": "", "retime": "0"}
+		"cost4": "3", "cost5": "4", "out": "", "merge": "", "wv": "", "cap": "", "set": "", "retime": "0"}
 
 
 func _initialize() -> void:
@@ -56,8 +57,12 @@ func _run() -> void:
 		for hand_text: String in String(_opts["hands"]).split(","):
 			var hand: int = int(hand_text)
 			var errors: Array = []
-			var content: RulesData = base.with_balance({"hand_size": hand,
-					"supply_drop_cost": int(_opts["cost%d" % hand])}, errors)
+			var overrides: Dictionary = {"hand_size": hand, "supply_drop_cost": int(_opts["cost%d" % hand])}
+			if String(_opts["set"]) != "":
+				for kv: String in String(_opts["set"]).split(","):
+					var parts: PackedStringArray = kv.split(":")
+					overrides[parts[0]] = (parts[1] == "true") if parts[1] in ["true", "false"] else int(parts[1])
+			var content: RulesData = base.with_balance(overrides, errors)
 			if not errors.is_empty():
 				printerr(errors)
 				quit(1)
@@ -131,7 +136,20 @@ func _game(content: RulesData, hand: int, route_text: String, route: int, a: Str
 	var how: String = String(r["cause"])
 	if both:
 		how = "both_out"
+	# Who looted the round-3 supply drop (the Twin-Drum LMG), and in which round.
+	var lmg: int = -1
+	var lmg_round: int = 0
+	var replay: MatchState = MatchState.new()
+	replay.data = st.data
+	replay.load_dict(st.origin)
+	for act: Dictionary in st.actions:
+		if String(act["type"]) == "loot" and act.has("card") and \
+				replay.card_id(int(act["card"])) == &"twin_drum_lmg" and lmg < 0:
+			lmg = int(act["seat"])
+			lmg_round = replay.round_number
+		LoadoutRules.apply(replay, act)
 	return {"hand": hand, "route": route_text, "a": a, "b": b, "p1": _opts["p1"], "p2": _opts["p2"],
+			"lmg": lmg, "lmg_round": lmg_round,
 			"result": r["result"], "winner": r["winner"], "how": how, "rounds": r["rounds"],
 			"hp": r["health"], "illegal": r["illegal"], "max_turn_ms": r["max_turn_ms"],
 			"brace_ms_max": r["brace_ms_max"], "turn_ms": r["turn_ms"], "turn_start": r["turn_start"],
@@ -162,6 +180,26 @@ func _report(rows: Array) -> void:
 	for hand: int in hands:
 		var sub: Array = rows.filter(func(g: Dictionary) -> bool: return int(g["hand"]) == hand)
 		print(_row("%d | **all**" % hand, sub))
+	# The round-3 drop (Twin-Drum LMG): who took it, and how often the taker won.
+	print("\n| Hand | Route | P1 takes the LMG | P2 takes it | Nobody | LMG taker wins |")
+	print("|---|---|---|---|---|---|")
+	for hand: int in hands:
+		for route: String in routes:
+			var sub: Array = rows.filter(func(g: Dictionary) -> bool: return int(g["hand"]) == hand and String(g["route"]) == route)
+			if sub.is_empty() or not sub[0].has("lmg"):
+				continue
+			var t1: int = 0
+			var t2: int = 0
+			var tw: int = 0
+			for g: Dictionary in sub:
+				var who: int = int(g["lmg"])
+				if who == 0:
+					t1 += 1
+				elif who == 1:
+					t2 += 1
+				if who >= 0 and int(g["winner"]) == who:
+					tw += 1
+			print("| %d | %s | %d | %d | %d | %d of %d |" % [hand, route, t1, t2, sub.size() - t1 - t2, tw, t1 + t2])
 	# Timings.
 	var all_ms: Array = []
 	var illegal: int = 0

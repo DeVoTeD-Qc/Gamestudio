@@ -196,26 +196,34 @@ static func step_toward(data: RulesData, from: StringName, to: StringName) -> St
 	return from
 
 
-## Search needed to loot a source in `area` and its card id: [{key: {pile|card}, id, cost}].
-## Respects gas (nothing to loot) and the supply-drop ready delay.
-static func loot_options(state: MatchState, seat: int, area: StringName) -> Array[Dictionary]:
+## Search needed to loot a source in `area` and its card id: [{pile|card, id, cost}], only the
+## ones costing at most `max_cost` (-1: all). Respects gas (nothing to loot) and the supply-drop
+## ready delay.
+static func loot_options(state: MatchState, seat: int, area: StringName, max_cost: int = -1) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if state.gas.has(area):
 		return out
 	var b: BalanceConfig = state.data.balance
+	var cap: int = max_cost if max_cost >= 0 else 1 << 20
 	var here: Dictionary = state.piles.get(area, {})
 	for cid: Variant in here.keys():
-		if not (here[cid] as Array).is_empty():
-			out.append({"pile": String(cid), "id": StringName(cid), "cost": state.data.card(StringName(cid)).cost})
-	for inst: Variant in state.drops.get(area, []):
-		var landed: int = int(state.drop_round.get(int(inst), 0))
-		if state.round_number >= landed + b.supply_drop_ready_delay:
-			out.append({"card": int(inst), "id": state.card_id(int(inst)), "cost": b.supply_drop_cost})
+		if (here[cid] as Array).is_empty():
+			continue
+		var cost: int = state.data.card(StringName(cid)).cost
+		if cost <= cap:
+			out.append({"pile": String(cid), "id": StringName(cid), "cost": cost})
+	if b.supply_drop_cost <= cap:
+		for inst: Variant in state.drops.get(area, []):
+			var landed: int = int(state.drop_round.get(int(inst), 0))
+			if state.round_number >= landed + b.supply_drop_ready_delay:
+				out.append({"card": int(inst), "id": state.card_id(int(inst)), "cost": b.supply_drop_cost})
 	for crate: Dictionary in state.crates:
 		if crate["area"] == area:
 			var free: bool = int(crate["free_picks"]) > 0 and int(crate["picker"]) == seat
-			for inst: Variant in crate["cards"]:
-				out.append({"card": int(inst), "id": state.card_id(int(inst)), "cost": 0 if free else b.crate_cost})
+			var ccost: int = 0 if free else b.crate_cost
+			if ccost <= cap:
+				for inst: Variant in crate["cards"]:
+					out.append({"card": int(inst), "id": state.card_id(int(inst)), "cost": ccost})
 	return out
 
 
