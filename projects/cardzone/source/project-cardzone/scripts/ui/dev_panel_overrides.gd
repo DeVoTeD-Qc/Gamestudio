@@ -16,7 +16,8 @@ const SetupPrefs: GDScript = preload("res://scripts/ui/setup_prefs.gd")
 const SECTION: String = "dev"
 
 ## Panel rows in order: [group label, [keys]]. hand_size and F1-F8, the visibility switches,
-## and the two supply-drop switches (§16.4a couples supply_drop_cost to hand_size).
+## the two supply-drop switches (§16.4a couples supply_drop_cost to hand_size), and the two
+## cz07b balance switches (BalanceConfig.SWITCHES).
 const GROUPS: Array = [
 	["HAND", [&"hand_size"]],
 	["F1 PACKING", [&"packing_rule", &"hold_limit"]],
@@ -29,7 +30,16 @@ const GROUPS: Array = [
 	["F8 HOLD LOOTED", [&"hold_looted"]],
 	["VISIBILITY", [&"held_cards_public", &"hits_on_top_public", &"loadout_count_public"]],
 	["SUPPLY DROPS", [&"supply_drop_cost", &"supply_drop_ready_delay"]],
+	# cz19b BUG-03: the cz07b first-player balance switches (BalanceConfig.SWITCHES, off by default),
+	# so the playtest can try them without a rebuild (decision cz-q2).
+	["FIRST-PLAYER SWITCHES (CZ07B)", [&"no_shooting_round1", &"p2_start_health_bonus"]],
 ]
+
+## Row labels that read better than the key ("no_shooting_round1" -> "No shooting in round 1").
+const KEY_TEXT: Dictionary = {
+	&"no_shooting_round1": "No shooting in round 1",
+	&"p2_start_health_bonus": "P2 extra start health",
+}
 
 ## final_circle_hits is a list tunable (any list): the panel offers these presets, all allowed.
 const FINAL_CIRCLE_PRESETS: Array = [[1, 2, 3], [1, 1, 1], [2, 2, 2], [1, 2]]
@@ -107,6 +117,8 @@ static func value_text(key: StringName, v: Variant) -> String:
 			return "MOVE ONLY" if int(v) == DataEnums.AdrenalineMode.MOVE_ONLY else "MOVE OR SEARCH"
 		&"adrenaline_cap_per_turn":
 			return "NO CAP" if int(v) == 0 else str(v)
+		&"p2_start_health_bonus":
+			return "OFF" if int(v) == 0 else "+%d" % int(v)
 		&"final_circle_hits":
 			return "·".join((v as Array).map(func(n: Variant) -> String: return str(n)))
 	if v is bool:
@@ -116,6 +128,8 @@ static func value_text(key: StringName, v: Variant) -> String:
 
 ## Row label for a key ("hand_size" -> "Hand size").
 static func key_text(key: StringName) -> String:
+	if KEY_TEXT.has(key):
+		return KEY_TEXT[key]
 	return String(key).replace("_", " ").capitalize()
 
 

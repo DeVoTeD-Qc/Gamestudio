@@ -5,7 +5,8 @@
 #   button or PlaytestLog.open_survey()). Pages:
 #   OFF       logging is off: what the log holds, TURN ON LOGGING (opt-in), TITLE.
 #   QUESTION  the 5 plan section 8 statements, one per page, 1-5 (a tap answers and moves on;
-#             SKIP leaves it blank),
+#             SKIP leaves it blank); after a hot-seat-only session "The AI played fair." is left
+#             out (logged as null, cz19b),
 #   OPEN      the optional open question,
 #   DONE      thanks, DOWNLOAD LOG (browser download on the web, a file under user:// elsewhere),
 #             ANSWER AGAIN, STOP LOGGING & DELETE (two taps), TITLE.
@@ -245,12 +246,21 @@ func _on_delete_pressed() -> void:
 	_status.text = "Logging stopped and the log was deleted."
 
 
+## The statements asked this time: PlaytestLog.survey_questions() leaves out "The AI played
+## fair." after a hot-seat-only session (cz19b BUG-08).
+func _questions() -> Array:
+	if plog == null:
+		return []
+	return plog.survey_questions() if plog.has_method("survey_questions") else plog.SURVEY_QUESTIONS
+
+
 func _question(i: int) -> Dictionary:
-	return plog.SURVEY_QUESTIONS[i] if plog != null else {"id": "q%d" % (i + 1), "text": ""}
+	var qs: Array = _questions()
+	return qs[i] if i < qs.size() else {"id": "q%d" % (i + 1), "text": ""}
 
 
 func _question_count() -> int:
-	return plog.SURVEY_QUESTIONS.size() if plog != null else 5
+	return _questions().size() if plog != null else 5
 
 
 # --- Layout -------------------------------------------------------------------------------------

@@ -97,31 +97,41 @@ static func summary(view: Dictionary, stats: Dictionary) -> Dictionary:
 	var title: String = "DRAW" if draw else ("YOU WIN" if won else "THE RIVAL WINS")
 	if not draw and bool(stats.get("hotseat", false)):  # hot-seat: name the seat, not "you"
 		title = "PLAYER %d WINS" % (int(r.get("winner", 0)) + 1)
+	# Hot-seat (cz19b BUG-06): the phone is passed around, so every line names the seat.
+	var hot: bool = bool(stats.get("hotseat", false))
+	var me_name: String = "Player %d" % (me + 1) if hot else "you"
+	var opp_name: String = "Player %d" % (2 - me) if hot else "the rival"
+	var me_short: String = "P%d" % (me + 1) if hot else "you"
+	var opp_short: String = "P%d" % (2 - me) if hot else "rival"
+	var both: String = "You both" if not hot else "Both players"
+	var winner_name: String = me_name if won else opp_name
+	var loser_name: String = opp_name if won else me_name
 	var detail: String = ""
 	match cause:
 		"shot", "frag":
 			var how: String = "a shot" if cause == "shot" else "a Frag"
 			if draw:
-				detail = "You both went out to %s at the same time." % how
+				detail = "%s went out to %s at the same time." % [both, how]
 			else:
-				detail = ("You eliminated the rival with %s." if won else "The rival eliminated you with %s.") % how
+				detail = _cap("%s eliminated %s with %s." % [winner_name, loser_name, how])
 		"gas":
 			if draw:
-				detail = "The gas took you both out."
+				detail = "The gas took %s out." % ("you both" if not hot else "both players")
 			else:
-				detail = "The rival was caught in the gas." if won else "You were caught in the gas."
+				detail = _cap("%s %s caught in the gas." % [loser_name, "were" if loser_name == "you" else "was"])
 		"final_circle":
 			if draw:
-				detail = "The final circle took you both out."
+				detail = "The final circle took %s out." % ("you both" if not hot else "both players")
 			else:
-				detail = "The rival didn't survive the final circle." if won else "You didn't survive the final circle."
+				detail = _cap("%s didn't survive the final circle." % loser_name)
 		"hard_end":
 			if draw:
 				detail = "The Zone ran out with the scores level: a draw."
 			else:
-				detail = "The Zone ran out. %s more health, so %s." % ["You had" if won else "The rival had", "you win" if won else "the rival wins"]
+				var wins: String = "you win" if winner_name == "you" else "%s wins" % winner_name
+				detail = "The Zone ran out. %s more health, so %s." % [_cap(winner_name) + " had", wins]
 		"concede":
-			detail = "The rival conceded." if won else "You conceded."
+			detail = _cap("%s conceded." % loser_name)
 		_:
 			detail = "The match is over."
 	var me_v: Dictionary = view.get("me", {})
@@ -129,12 +139,17 @@ static func summary(view: Dictionary, stats: Dictionary) -> Dictionary:
 	var parts: PackedStringArray = []
 	parts.append("Round %d" % int(view.get("round", stats.get("rounds", 0))))
 	parts.append("%d turns" % int(stats.get("turns", 0)))
-	parts.append("health: you %d, rival %d" % [int(me_v.get("health", 0)), int(opp_v.get("health", 0))])
-	parts.append("Hits landed: on the rival %d, on you %d" % [int(stats.get("hits_on_rival", 0)), int(stats.get("hits_on_me", 0))])
+	parts.append("health: %s %d, %s %d" % [me_short, int(me_v.get("health", 0)), opp_short, int(opp_v.get("health", 0))])
+	parts.append("Hits landed: on %s %d, on %s %d" % [opp_short if hot else "the rival", int(stats.get("hits_on_rival", 0)),
+			me_short, int(stats.get("hits_on_me", 0))])
 	var secs: int = int(stats.get("seconds", 0.0))
 	parts.append("%d:%02d" % [secs / 60, secs % 60])
 	return {"title": title, "tag": CAUSE_TAG.get(cause, cause.to_upper()), "detail": detail,
 			"stats": " · ".join(parts), "cause": cause, "won": won}
+
+
+static func _cap(text: String) -> String:
+	return text.left(1).to_upper() + text.substr(1)
 
 
 func get_button(key: StringName) -> Button:

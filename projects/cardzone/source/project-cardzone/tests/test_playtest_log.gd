@@ -532,6 +532,39 @@ func test_survey_saves_answers() -> void:
 	_teardown()
 
 
+
+## cz19b BUG-08: after hot-seat only, "The AI played fair." is not asked and q5 is logged as null;
+## the consent text counts the optional question.
+func test_survey_skips_ai_fair_after_hotseat_only() -> void:
+	var plog: Node = _setup("survey_hotseat")
+	assert_true("5 quick questions (plus one optional)" in load("res://scripts/survey/consent_prompt.gd").BODY_TEXT,
+			"consent counts the optional question")
+	plog.set_consent(true)
+	plog.stats["hotseat_matches"] = 1
+	var setup: Array = await _spawn_survey(plog, PHONE)
+	var screen: Control = setup[1]
+	assert_eq(screen.get_page_name(), "QUESTION", "first statement")
+	assert_eq(screen._progress.text, "Question 1 of 5", "4 statements + the open question")
+	var seen: Array[String] = []
+	while screen.get_page_name() == "QUESTION" and seen.size() < 10:
+		seen.append(screen._statement.text)
+		screen.get_scale_button(4).pressed.emit()
+	assert_false(seen.has("The AI played fair."), "no AI statement after hot-seat only: %s" % [seen])
+	assert_eq(seen.size(), 4, "four statements")
+	assert_eq(screen.get_page_name(), "OPEN", "then the open question")
+	screen.get_button("SubmitButton").pressed.emit()
+	var surveys: Array = plog.read_entries().filter(func(e: Dictionary) -> bool: return e["event"] == "survey")
+	assert_eq(surveys.size(), 1, "one survey line")
+	if surveys.size() == 1:
+		assert_eq(surveys[0]["q5"], null, "q5 logged as null (skipped)")
+		assert_eq(surveys[0]["answered"], 4.0, "4 answered")
+		assert_eq(Array(plog.validate_entry(surveys[0])), [], "survey line matches SCHEMA")
+	(setup[0] as Node).queue_free()
+	# Any AI match this session: the AI statement is asked again.
+	plog.stats["ai_matches"] = 1
+	assert_eq(plog.survey_questions().size(), 5, "AI statement back after an AI match")
+	_teardown()
+
 func test_survey_layout_phone_and_desktop() -> void:
 	var plog: Node = _setup("survey_layout")
 	plog.set_consent(true, false)

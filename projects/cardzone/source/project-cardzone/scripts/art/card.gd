@@ -690,11 +690,22 @@ func _draw_inspector_footer(lay: Dictionary, k: float) -> void:
 	if boxes.has("attach_strip"):
 		var ar: Rect2 = boxes["attach_strip"]
 		var type: StringName = info.get("type", &"item")
-		var text: String = str(info.get("attach_text", "")) if type == &"attachment" else "ATTACH ▼"
-		if text == "":
-			text = "ATTACH ▼"
+		var text: String = str(info.get("attach_text", "")) if type == &"attachment" else ""
 		CzArtKit.draw_tag(self, ar, 3.0 * k, CzArtKit.BRACE_STEEL if type == &"attachment" else Color(0, 0, 0, 0), Color(CzArtKit.INK, 0.6), maxf(1.0, 1.0 * k), type != &"attachment", 3.0 * k)
-		_text_centred(CzArtKit.font_display(), text.to_upper(), lay["texts"]["attach_strip"], ar.get_center(), CzArtKit.INK)
+		var px: int = lay["texts"]["attach_strip"]
+		if text != "":
+			_text_centred(CzArtKit.font_display(), text.to_upper(), px, ar.get_center(), CzArtKit.INK)
+		else:
+			# "ATTACH" + a drawn down triangle (cz19b: the fonts have no U+25BC "▼").
+			var disp: Font = CzArtKit.font_display()
+			var tri: float = float(px) * 0.55
+			var gap: float = float(px) * 0.3
+			var w: float = disp.get_string_size("ATTACH", HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+			var x0: float = ar.get_center().x - (w + gap + tri) * 0.5
+			draw_string(disp, Vector2(x0, ar.get_center().y + float(px) * 0.36), "ATTACH", HORIZONTAL_ALIGNMENT_LEFT, -1, px, CzArtKit.INK)
+			var tx: float = x0 + w + gap
+			var ty: float = ar.get_center().y - tri * 0.3
+			draw_colored_polygon(PackedVector2Array([Vector2(tx, ty), Vector2(tx + tri, ty), Vector2(tx + tri * 0.5, ty + tri * 0.6)]), CzArtKit.INK)
 
 
 ## Hit (hit_red band, broken shield, HIT, Adrenaline) and Bounty (ink band, target tag).

@@ -36,6 +36,8 @@ const PHONE: Dictionary = {"name": "iPhone 844x390 @3x", "pt": Vector2(844, 390)
 const PHONE_NOTCH: Dictionary = {"name": "iPhone 844x390 @3x + notch insets", "pt": Vector2(844, 390),
 		"ratio": 3.0, "insets": Rect2(47, 0, 47, 21)}
 const PHONE_SMALL: Dictionary = {"name": "iPhone SE 667x375 @2x", "pt": Vector2(667, 375), "ratio": 2.0}
+## cz19b BUG-09: iPad landscape (1280x890 logical, the tablet layout).
+const TABLET: Dictionary = {"name": "iPad 1180x820 @2x", "pt": Vector2(1180, 820), "ratio": 2.0}
 const SCREENS: Array[Dictionary] = [DESKTOP, PHONE, PHONE_NOTCH, PHONE_SMALL]
 
 var _saved_root_size: Vector2i
@@ -148,6 +150,36 @@ func test_layout_phone_with_notch_insets() -> void:
 func test_layout_small_phone() -> void:
 	for st: Dictionary in states():
 		await _check_layout(PHONE_SMALL, st)
+
+
+## cz19b BUG-09: on the iPad the map, cards and line grow into the extra height (all the usual checks
+## hold too), and no big empty band is left above or below the map.
+func test_layout_tablet_uses_the_room() -> void:
+	assert_eq(logical_size(TABLET), Vector2(1280, 889), "iPad logical")
+	for st: Dictionary in states():
+		await _check_layout(TABLET, st)
+	var desk: Array = await _spawn(DESKTOP, MockMatchData.mid_state())
+	var d_card: Vector2 = desk[1].card_px
+	var d_map: float = (desk[1].get_map() as CzMap).px_per_pt()
+	assert_false(desk[1].tablet, "a 16:9 desktop is not a tablet")
+	_despawn(desk[0])
+	var setup: Array = await _spawn(TABLET, MockMatchData.mid_state())
+	var m: Control = setup[1]
+	assert_true(m.tablet, "iPad uses the tablet layout")
+	assert_true(m.card_px.y >= d_card.y * 1.1, "iPad cards %s are above the desktop's %s" % [m.card_px, d_card])
+	var map: CzMap = m.get_map()
+	assert_true(map.px_per_pt() >= d_map * 1.08, "iPad map scale %.2f vs desktop %.2f" % [map.px_per_pt(), d_map])
+	# Empty band in the left column: the map's unused height (drawn centred) plus any slack.
+	var drawn_h: float = CzMap.DESIGN_PT.y * map.px_per_pt()
+	var left: Control = m.get_node("%LeftColumn")
+	var used: float = drawn_h
+	for c: Control in [m.get_node("%LineHeader"), m.get_line_scroll()]:
+		used += c.size.y
+	var empty: float = left.size.y - used
+	assert_true(empty <= left.size.y * 0.2, "left column leaves %.0f of %.0f px empty" % [empty, left.size.y])
+	print("     [iPad] cards %s px (desktop %s), map %.2f px/pt (desktop %.2f), left column empty %.0f px" % [
+			m.card_px, d_card, map.px_per_pt(), d_map, empty])
+	_despawn(setup[0])
 
 
 func test_map_tiles_gas_and_pawns() -> void:

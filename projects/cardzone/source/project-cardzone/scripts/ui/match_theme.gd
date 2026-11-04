@@ -33,6 +33,9 @@ const RARITY: Dictionary = {
 
 # --- Font sizes (logical px; ScreenProfile keeps 1 px >= 0.69 pt) -----------------
 const FONT_BODY: int = 16      # >= 11 pt on every supported screen
+## "becomes" in UI text ("HEALTH 5 -> 3"). The bundled fonts have no U+2192 arrow (cz19b BUG-04),
+## so it is spelled with ASCII; tests/test_ui_glyphs.gd checks every UI string against the fonts.
+const ARROW: String = "->"
 const FONT_NUMBER: int = 24    # key numbers (cost, Brace, health): >= 24 px
 const FONT_TITLE: int = 24
 

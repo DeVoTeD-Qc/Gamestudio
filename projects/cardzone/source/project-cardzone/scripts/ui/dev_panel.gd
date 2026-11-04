@@ -3,7 +3,7 @@
 #   One row per tunable the playtest switches: hand size, F1-F8 and the visibility switches (plus
 #   the two supply-drop switches that §16.4a ties to hand size). Each row offers exactly
 #   BalanceConfig's allowed values (dev_panel_overrides.gd; the final-circle list offers allowed
-#   presets). The current value is a light plate with a check mark; a changed value is marked
+#   presets). The current value is a light plate with a check-mark icon; a changed value is marked
 #   "≠ shipped". Setting hand size 4 also sets supply drop cost 3 (§16.4a) and says so.
 #   Changes apply to NEW matches only; the panel says that, and the Title shows a
 #   "DEV SETTINGS ACTIVE" tag while any override is on. RESET ALL returns to the shipped values.

@@ -183,8 +183,8 @@ func test_two_taps_accept_the_suggestion() -> void:
 	var t: Dictionary = panel.get_texts()
 	assert_eq(t["title"], "INCOMING · HUNTING RIFLE FROM DOCKS", "title")
 	assert_eq(t["sum"], "DMG 2 − Cover 0 − Down 0 = 2 damage", "sum")
-	assert_eq(t["result"], "YOU TAKE 2 HITS · HEALTH 4 → 2", "result before choosing")
-	assert_true(t["line"].begins_with("SUGGESTED: Plate Vest (2) → 0 Hits."), "suggestion line: %s" % t["line"])
+	assert_eq(t["result"], "YOU TAKE 2 HITS · HEALTH 4 -> 2", "result before choosing")
+	assert_true(t["line"].begins_with("SUGGESTED: Plate Vest (2) -> 0 Hits."), "suggestion line: %s" % t["line"])
 	assert_eq(panel.get_keys(), [&"brace_suggested", &"brace"], "USE SUGGESTED, then confirm")
 	assert_eq(m.get_brace_button(&"brace").text, "TAKE 2 HITS", "confirm says what happens")
 	# SUGGESTED tag under the Vest (strip index 2).
@@ -218,7 +218,7 @@ func test_adjust_clear_and_lethal_warning() -> void:
 	await _touch_card(m, &"next", 1)  # Duck only
 	var t: Dictionary = panel.get_texts()
 	assert_eq(t["result"], "YOU TAKE 2 HITS · YOU'RE OUT", "still out with Duck alone")
-	assert_true(t["line"].begins_with("Your choice: Duck (1) (Brace 1). Suggested: Duck (1) + Plate Vest (2) → 0 Hits."), "choice vs suggestion: %s" % t["line"])
+	assert_true(t["line"].begins_with("Your choice: Duck (1) (Brace 1). Suggested: Duck (1) + Plate Vest (2) -> 0 Hits."), "choice vs suggestion: %s" % t["line"])
 	await _touch_brace(m, &"brace_suggested")
 	assert_eq(panel.get_texts()["result"], "0 HITS · HEALTH 1", "the suggestion saves you")
 	assert_true("Suggested brace chosen." in panel.get_texts()["line"], "says it")
@@ -254,3 +254,74 @@ func test_nothing_to_brace_with_one_tap_and_fits_the_phone() -> void:
 	await _touch_brace(m, &"brace")
 	assert_eq(int(m.get_controller().view()["me"]["health"]), 3, "2 Hits landed")
 	_despawn(m)
+
+
+## cz19b BUG-05 / BUG-09: the panel's key lines show whole on every screen (iPhone SE and a small
+## Android phone included): the source, the damage sum and the result with the health after the
+## Brace; text stays >= the 16 px body floor; buttons are >= 64 px and inside the panel; the panel
+## fits the safe area. On the iPad the panel's text is larger than on the desktop.
+const BRACE_SCREENS: Array[Dictionary] = [
+	{"name": "iPhone SE 667x375 @2x", "pt": Vector2(667, 375), "ratio": 2.0},
+	{"name": "Android 640x360 @2x", "pt": Vector2(640, 360), "ratio": 2.0},
+	PHONE,
+	{"name": "desktop 1280x720", "pt": Vector2(1280, 720), "ratio": 1.0},
+	{"name": "iPad 1180x820 @2x", "pt": Vector2(1180, 820), "ratio": 2.0},
+]
+
+
+func test_brace_panel_key_lines_fit_every_screen() -> void:
+	var result_px: Dictionary = {}
+	for screen: Dictionary in BRACE_SCREENS:
+		# The cz19 case: a Pump Shotgun in Radio Hill, Duck suggested, 3 damage at health 5.
+		var m: Control = await _spawn(_shot_fixture("pump_shotgun", "radio_hill", "radio_hill",
+				["duck", "dash", "scavenge", "dash", "scavenge", "dash"], 5), Shooter.new(), screen)
+		var label: String = screen["name"]
+		var panel: PanelContainer = m.get_brace_panel()
+		assert_true(panel.visible, "%s Brace panel up" % label)
+		for i: int in 3:
+			await tree.process_frame
+		var t: Dictionary = panel.get_texts()
+		assert_eq(t["title"], "INCOMING · PUMP SHOTGUN FROM RADIO HILL", "%s title" % label)
+		assert_eq(t["result"], "YOU TAKE 3 HITS · HEALTH 5 -> 2", "%s result" % label)
+		var pr: Rect2 = panel.get_global_rect()
+		var safe: Rect2 = m.safe_area_override.grow(EPS) if m.safe_area_override.has_area() \
+				else Rect2(Vector2.ZERO, m.get_viewport_rect().size).grow(EPS)
+		assert_true(safe.encloses(pr), "%s panel %s inside the safe area %s" % [label, pr, safe])
+		var labels: Array[Label] = panel.get_labels()
+		for l: Label in labels:
+			var why: String = _cut(l, pr)
+			if l.name == "BraceLine":
+				assert_true(l.get_visible_line_count() >= 1 and pr.grow(EPS).encloses(l.get_global_rect()), "%s suggestion line shows" % label)
+				continue
+			assert_true(why.is_empty(), "%s %s '%s' is cut: %s" % [label, l.name, l.text, why])
+			assert_true(l.get_theme_font_size(&"font_size") >= 16, "%s %s text >= 16 px" % [label, l.name])
+		var shown: String = panel.get_result_shown()
+		assert_true("HEALTH 5 -> 2" in shown.replace("\n", " "), "%s health after the Brace shows: '%s'" % [label, shown])
+		for key: StringName in panel.get_keys():
+			var br: Rect2 = m.get_brace_button(key).get_global_rect()
+			assert_true(minf(br.size.x, br.size.y) >= 64.0 - EPS and pr.grow(EPS).encloses(br), "%s %s 64 px button inside the panel %s" % [label, key, br])
+			var b: Button = m.get_brace_button(key)
+			assert_true(b.get_minimum_size().x <= br.size.x + EPS, "%s button '%s' fits its words" % [label, b.text])
+		result_px[label] = (labels[2] as Label).get_theme_font_size(&"font_size")
+		print("     [%s] panel %s, result '%s' at %d px" % [label, pr.size, shown.replace("\n", " / "), result_px[label]])
+		_despawn(m)
+		await tree.process_frame
+	assert_true(int(result_px["iPad 1180x820 @2x"]) > int(result_px["desktop 1280x720"]), "iPad text larger than desktop: %s" % [result_px])
+
+
+## Why a panel label does not show whole ("" when it does).
+func _cut(l: Label, panel_rect: Rect2) -> String:
+	if not panel_rect.grow(EPS).encloses(l.get_global_rect()):
+		return "outside the panel (%s)" % l.get_global_rect()
+	if l.autowrap_mode != TextServer.AUTOWRAP_OFF:
+		if l.get_visible_line_count() < l.get_line_count():
+			return "%d of %d lines visible" % [l.get_visible_line_count(), l.get_line_count()]
+		return ""
+	var font: Font = l.get_theme_font(&"font")
+	var px: int = l.get_theme_font_size(&"font_size")
+	var need: float = 0.0
+	for line: String in l.text.split("\n"):
+		need = maxf(need, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x)
+	if need > l.size.x + EPS:
+		return "needs %.0f px, has %.0f" % [need, l.size.x]
+	return ""

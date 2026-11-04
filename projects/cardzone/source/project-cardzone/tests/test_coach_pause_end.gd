@@ -151,7 +151,7 @@ func test_pause_menu_rules_settings_and_concede_to_end_screen() -> void:
 	await touch(pm.get_button(&"speed_fast"))
 	assert_eq(PauseSettings.event_speed(), "fast", "event speed saved")
 	assert_eq(ctrl.event_delay, 0.2, "fast applied to the running match")
-	assert_true(pm.get_button(&"speed_fast").text.begins_with("✓"), "chosen speed marked")
+	assert_true(SetupUI.is_checked(pm.get_button(&"speed_fast")), "chosen speed marked with a check")
 	await touch(pm.get_button(&"motion_on"))
 	assert_true(Settings.reduced_motion, "reduced motion on")
 	await touch(pm.get_button(&"motion_off"))
@@ -199,6 +199,34 @@ func test_end_screen_words_for_every_cause() -> void:
 		assert_eq([s["title"], s["tag"], s["detail"]], [c[1], c[2], c[3]], "end words for %s" % [c[0]])
 	assert_eq(EndScreen.summary(v, st)["stats"], "Round 9 · 17 turns · health: you 2, rival 0 · Hits landed: on the rival 5, on you 3 · 6:12", "stats line")
 
+
+
+## cz19b BUG-06: hot-seat end screens name the seats in every line, never "you" / "rival".
+func test_end_screen_hotseat_names_the_seats() -> void:
+	var st: Dictionary = {"turns": 17, "seconds": 372.0, "hits_on_me": 3, "hits_on_rival": 5, "hotseat": true}
+	# The final view belongs to Player 1 (seat 0) here; Player 1 died in the gas.
+	var v: Dictionary = {"seat": 0, "round": 9, "me": {"health": 0}, "opponent": {"health": 2},
+			"match_end": {"result": "win", "winner": 1, "cause": "gas"}}
+	var s: Dictionary = EndScreen.summary(v, st)
+	assert_eq(s["title"], "PLAYER 2 WINS", "hot-seat title")
+	assert_eq(s["detail"], "Player 1 was caught in the gas.", "hot-seat detail")
+	assert_eq(s["stats"], "Round 9 · 17 turns · health: P1 0, P2 2 · Hits landed: on P2 5, on P1 3 · 6:12", "hot-seat stats")
+	var cases: Array = [
+		[1, {"result": "win", "winner": 1, "cause": "shot"}, "Player 2 eliminated Player 1 with a shot."],
+		[1, {"result": "win", "winner": 0, "cause": "frag"}, "Player 1 eliminated Player 2 with a Frag."],
+		[0, {"result": "win", "winner": 1, "cause": "final_circle"}, "Player 1 didn't survive the final circle."],
+		[1, {"result": "win", "winner": 1, "cause": "hard_end"}, "The Zone ran out. Player 2 had more health, so Player 2 wins."],
+		[0, {"result": "win", "winner": 1, "cause": "concede"}, "Player 1 conceded."],
+		[0, {"result": "draw", "cause": "gas"}, "The gas took both players out."],
+		[0, {"result": "draw", "cause": "shot"}, "Both players went out to a shot at the same time."],
+	]
+	for c: Array in cases:
+		v["seat"] = c[0]
+		v["match_end"] = c[1]
+		s = EndScreen.summary(v, st)
+		assert_eq(s["detail"], c[2], "hot-seat words for %s" % [c[1]])
+		for word: String in ["you", "You", "rival"]:
+			assert_false(word in s["detail"] or word in s["stats"], "no '%s' in hot-seat lines: %s / %s" % [word, s["detail"], s["stats"]])
 
 # --- Helpers ----------------------------------------------------------------------------
 

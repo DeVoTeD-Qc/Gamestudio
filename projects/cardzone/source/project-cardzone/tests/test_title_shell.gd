@@ -106,6 +106,20 @@ func test_dev_panel_long_press_values_coupling_and_new_matches_only() -> void:
 	await tree.process_frame
 	await touch(dp.get_option_button(&"held_cards_public", 1))
 	assert_eq(DevOverrides.value(&"held_cards_public"), true, "visibility switch by touch")
+	# cz19b BUG-03: the cz07b switches are on the panel with exactly SWITCHES' allowed values.
+	for key: StringName in BalanceConfig.switch_keys():
+		assert_true(DevOverrides.keys().has(key), "panel has the cz07b switch %s" % key)
+		assert_eq(DevOverrides.options(key), BalanceConfig.SWITCHES[key]["allowed"], "%s offers SWITCHES' allowed values" % key)
+		assert_eq(DevOverrides.shipped(key), BalanceConfig.SWITCHES[key]["default"], "%s ships off" % key)
+	dp.reveal(&"no_shooting_round1")
+	await tree.process_frame
+	await touch(dp.get_option_button(&"no_shooting_round1", 1))
+	assert_eq(DevOverrides.value(&"no_shooting_round1"), true, "no shooting in round 1 by touch")
+	dp.reveal(&"p2_start_health_bonus")
+	await tree.process_frame
+	await touch(dp.get_option_button(&"p2_start_health_bonus", 1))
+	assert_eq(DevOverrides.value(&"p2_start_health_bonus"), 1, "P2 extra start health by touch")
+	assert_true("p2 extra start health +1" in DevOverrides.summary(), "the tag names it: %s" % DevOverrides.summary())
 	await touch(dp.get_button(&"close"))
 	assert_true((t.get_node("%DevTag") as Label).is_visible_in_tree(), "DEV SETTINGS ACTIVE on the title")
 	t.queue_free()
@@ -114,6 +128,8 @@ func test_dev_panel_long_press_values_coupling_and_new_matches_only() -> void:
 	var m: Control = await spawn(MATCH)
 	var b: BalanceConfig = m.get_controller().state.data.balance
 	assert_eq([b.hand_size, b.supply_drop_cost, b.held_cards_public], [4, 3, true], "the new match plays the dev values")
+	assert_eq([b.no_shooting_round1, b.p2_start_health_bonus], [true, 1], "the new match plays the cz07b switches")
+	assert_false(CardDB.get_balance().no_shooting_round1, "the shipped switches stay off")
 	assert_eq(CardDB.get_balance().hand_size, 5, "the shipped config is untouched")
 	await touch(m.get_area_touch(&"motel"))
 	await touch(m.get_dock_button(&"drop"))
@@ -130,3 +146,14 @@ func test_dev_panel_long_press_values_coupling_and_new_matches_only() -> void:
 	b = m.get_controller().state.data.balance
 	assert_eq([b.hand_size, b.supply_drop_cost], [4, 3], "CONTINUE keeps the saved match's rules")
 	await phone_end(m)
+
+
+## cz19b: the Title's version line takes a build label only from the packaged build_info.gd.
+func test_version_line_build_label() -> void:
+	var TitleScript: GDScript = load("res://scripts/ui/title.gd")
+	var text: String = TitleScript.version_text()
+	if ResourceLoader.exists(TitleScript.BUILD_INFO):
+		assert_true(text.begins_with("Prototype · build "), "packaged build shows its label: %s" % text)
+	else:
+		assert_true(text.begins_with("Prototype · Godot 4."), "no build label outside a package: %s" % text)
+	assert_true("Godot 4." in text, "names the engine: %s" % text)

@@ -256,19 +256,19 @@ func _fixture(players: Dictionary) -> MatchState:
 	return s
 
 
-func _spawn(state: MatchState, opponent: Object = null) -> Control:
+func _spawn(state: MatchState, opponent: Object = null, screen: Dictionary = PHONE) -> Control:
 	_saved_root_size = tree.root.size
 	_saved_scale_mode = tree.root.content_scale_mode
-	var px: Vector2 = PHONE["pt"] * PHONE["ratio"]
-	var logical: Vector2 = ScreenProfile.logical_size(px, ScreenProfile.base_size(px, PHONE["ratio"]))
+	var px: Vector2 = screen["pt"] * screen["ratio"]
+	var logical: Vector2 = ScreenProfile.logical_size(px, ScreenProfile.base_size(px, screen["ratio"]))
 	tree.root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	tree.root.size = Vector2i(logical)
 	await tree.process_frame
 	MatchStore.clear()
 	var m: Control = (load(MATCH_SCENE) as PackedScene).instantiate()
 	m.auto_start = false
-	var k: float = ScreenProfile.points_per_px(px, PHONE["ratio"])
-	var insets: Rect2 = PHONE["insets"]
+	var k: float = ScreenProfile.points_per_px(px, screen["ratio"])
+	var insets: Rect2 = screen.get("insets", Rect2())
 	m.points_per_px_override = k
 	m.safe_area_override = Rect2(insets.position / k, logical - insets.position / k - insets.size / k)
 	var ctrl: Node = m.get_node("%MatchController")

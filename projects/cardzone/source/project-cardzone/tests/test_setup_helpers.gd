@@ -15,6 +15,7 @@ const SetupPrefs: GDScript = preload("res://scripts/ui/setup_prefs.gd")
 const SetupLaunch: GDScript = preload("res://scripts/ui/setup_launch.gd")
 const DevOverrides: GDScript = preload("res://scripts/ui/dev_panel_overrides.gd")
 const CoachTips: GDScript = preload("res://scripts/ui/coach_tips.gd")
+const SetupUI: GDScript = preload("res://scripts/ui/setup_ui.gd")
 const PHONE: Dictionary = {"pt": Vector2(844, 390), "ratio": 3.0, "insets": Rect2(47, 0, 47, 21)}
 
 var _saved_root_size: Vector2i

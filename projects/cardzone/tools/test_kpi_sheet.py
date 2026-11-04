@@ -340,6 +340,20 @@ class KpiSheetTest(unittest.TestCase):
         self.assertEqual(st["Replay intent"], "PASS", "2 of 3 testers started a 2nd match")
         self.assertIn("3 tester(s)", md)
 
+    def test_survey_q5_null_after_hotseat_only(self) -> None:
+        # cz19b BUG-08: a hot-seat-only tester is not asked "The AI played fair.", so q5 is null.
+        paths = []
+        for i, q5 in enumerate([None, 4, 4, 2]):
+            log = Log(f"{i:012d}")
+            log.start()
+            log.match(packs=[5000])
+            log.add("survey", q1=5, q2=4, q3=4, q4=4, q5=q5, open="", answered=4 if q5 is None else 5)
+            paths.append(log.write(self.tmp / f"h{i}.json"))
+        md = self.sheet(*paths)
+        st = statuses(md)
+        self.assertEqual(st["Survey: play another"], "PASS", "4/4")
+        self.assertEqual(st["Survey: AI fair"], "PASS", "2 of the 3 who answered = 67%: the null is left out (2/4 would fail)")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -5,6 +5,8 @@
 #   Sizes: buttons >= 64 logical px tall (46 pt on the 844x390 phone, >= 44 pt everywhere the
 #   screen profile allows), text >= 16 px (>= 11 pt). Selected choices are a light plate AND carry
 #   a check mark, so the choice never depends on colour alone. Hover never carries information.
+#   The check mark is the art kit's "confirm" icon (cz19b BUG-04: the bundled fonts have no U+2713,
+#   so a "✓" character drew as an empty box on the web).
 # Dependencies: match_theme.gd, CzArtKit (fonts, TAP_PT), screen_profile.gd.
 # Author: UI/UX Agent (cz13)
 extends RefCounted
@@ -14,7 +16,8 @@ const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
 const TAP_PX: float = 64.0
 const MARGIN: Vector2 = Vector2(32, 18)
 const MARGIN_COMPACT: Vector2 = Vector2(16, 10)
-const CHECK: String = "✓ "
+## The check mark on a selected choice: the "confirm" icon (CzIcons), drawn at the body text size.
+const CHECK_ICON: StringName = &"confirm"
 
 ## Shell variations on top of MatchTheme (tests check each is styled).
 const USED: Dictionary = {
@@ -87,14 +90,25 @@ static func apply_margins(box: MarginContainer, logical: Vector2, override: Rect
 	box.add_theme_constant_override(&"margin_bottom", int(m[1].y))
 
 
-## Marks a segmented button on/off (variation and check mark). Keeps its base text in meta.
+## Marks a segmented button on/off (variation and check-mark icon). Keeps its base text in meta.
 static func set_seg(b: Button, on: bool, available: bool = true) -> void:
 	if not b.has_meta(&"base_text"):
 		b.set_meta(&"base_text", b.text)
-	var base: String = b.get_meta(&"base_text")
-	b.text = (CHECK + base) if on else base
+	b.text = b.get_meta(&"base_text")
 	b.theme_type_variation = &"SegNo" if not available else (&"SegOn" if on else &"SegOff")
+	# Ink on the light SegOn plate, paper on the dark SegNo plate (the only-allowed-value case).
+	b.icon = check_icon(MatchTheme.INK if available else MatchTheme.PAPER) if on else null
 	b.set_meta(&"on", on)
+
+
+## True when a segmented button shows as chosen (light plate + check mark).
+static func is_checked(b: Button) -> bool:
+	return bool(b.get_meta(&"on", false)) and b.icon != null
+
+
+## The check-mark icon in a colour, at the body text size.
+static func check_icon(color: Color) -> Texture2D:
+	return CzIcons.get_icon(CHECK_ICON, float(MatchTheme.FONT_BODY), {"#FFFFFF": "#" + color.to_html(false).to_upper()})
 
 
 ## A full-screen dim layer that swallows taps (modal overlays).

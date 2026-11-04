@@ -25,6 +25,8 @@ const DevOverrides: GDScript = preload("res://scripts/ui/dev_panel_overrides.gd"
 
 const GAME_TITLE: String = "CardZone"
 const SUBTITLE: String = "Prototype build"
+## Written by tools/package_artifact_build.sh into the packaged copy only (cz19b): const LABEL.
+const BUILD_INFO: String = "res://scripts/ui/build_info.gd"
 ## Seconds the logo must be held to open the dev panel.
 const LONG_PRESS_S: float = 2.0
 
@@ -51,7 +53,7 @@ func _ready() -> void:
 	theme = SetupUI.build_theme()
 	_title.text = GAME_TITLE
 	_subtitle.text = SUBTITLE
-	_version.text = "Prototype · Godot %s" % Engine.get_version_info().get("string", "4")
+	_version.text = version_text()
 	PauseSettings.apply_to_settings()
 	SetupLaunch.clear_pending()
 	_continue.pressed.connect(_on_continue)
@@ -65,6 +67,19 @@ func _ready() -> void:
 	refresh()
 	EventBus.screen_shown.emit(&"title")
 	print("Title: ready")
+
+
+## "Prototype · build 1a2b3c4 2026-11-04 · Godot 4.4.1-stable (official)". The build part comes
+## from res://scripts/ui/build_info.gd, which only tools/package_artifact_build.sh writes (into its
+## temporary copy, never the repo); without it (editor, tests) the label has no build part.
+static func version_text() -> String:
+	var godot: String = "Godot %s" % Engine.get_version_info().get("string", "4")
+	var build: String = ""
+	if ResourceLoader.exists(BUILD_INFO):
+		var info: GDScript = load(BUILD_INFO) as GDScript
+		if info != null:
+			build = String(info.get_script_constant_map().get("LABEL", ""))
+	return "Prototype · %s" % (("build %s · %s" % [build, godot]) if build != "" else godot)
 
 
 ## Re-reads the saved match and the dev overrides.

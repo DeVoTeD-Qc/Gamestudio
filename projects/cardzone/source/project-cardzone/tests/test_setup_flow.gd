@@ -32,7 +32,8 @@ func test_touch_only_title_setup_full_match_end_new_match_and_continue() -> void
 	await touch(setup.get_choice_button("first", "me"))
 	await touch(setup.get_choice_button("route", "B"))
 	assert_eq(setup.choices, {"opponent": "rookie", "first": "me", "route": "B"}, "choices by touch")
-	assert_true(setup.get_choice_button("route", "B").text.begins_with("✓"), "chosen route marked with a check")
+	assert_true(SetupUI.is_checked(setup.get_choice_button("route", "B")), "chosen route marked with a check")
+	assert_false(SetupUI.is_checked(setup.get_choice_button("route", "A")), "other routes unmarked")
 	assert_true("route B" in setup.get_next_text() and "you take the first turn" in setup.get_next_text(),
 			"next-match line: %s" % setup.get_next_text())
 	await touch(setup.get_button(&"start"))

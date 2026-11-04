@@ -23,7 +23,7 @@ If you have to stop, or your phone locks in the middle of a match, just come bac
 
 ## 3. Survey (at the end, about 2 minutes)
 When you're done, go back to the title screen and tap **PLAYTEST** (top right).
-- Rate five statements from 1 (strongly disagree) to 5 (strongly agree).
+- Rate five statements from 1 (strongly disagree) to 5 (strongly agree). If you only played hot-seat, the statement about the AI is left out.
 - Then answer one optional question.
 - Skip anything you'd rather not answer. Please leave names and personal details out of the written answer.
 
@@ -54,5 +54,7 @@ Do mention anything that stops you or looks broken.
   - Don't explain the rules beyond the in-game coach.
   - Don't explain the survey statements.
   - Don't prompt a second match more than once. Note whether you had to ask.
+- **Dev panel (organiser only, not for testers):** on the title screen, **press and hold the "CardZone" logo for 2 seconds** (a shorter hold does nothing). It switches hand size, F1–F8, the visibility and supply-drop settings and the two first-player switches (no shooting in round 1, P2 extra start health) for **new matches only**; a saved match keeps its rules. While anything differs from the shipped values, the title and setup show **DEV SETTINGS ACTIVE**. **RESET ALL** goes back. (The plan said "5 taps on the version"; the build uses the long press.)
+- The title's small grey line names the build (`Prototype · build <git hash> <date> · Godot …`); note it with each session.
 - Collect the files in `playtest-logs/` and run `python3 tools/kpi_sheet.py playtest-logs/` (see `playtest-logs/README.md`).
 - With this few testers, every number is directional.

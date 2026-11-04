@@ -19,6 +19,8 @@
 #   full width (cz11, from the cz10 review: names were cut in the fan).
 #   Pattern adapted from CallingCard scripts/ui/duel_screen.gd (cc07): safe-area margins from
 #   DisplayServer (or safe_area_override in tests / previews), compact flag below 640 px height,
+#   tablet flag from 800 px height (cz19b BUG-09: iPad 1180x820 is 1280x889 logical; the map, cards,
+#   line and Brace panel grow into the extra height instead of leaving it empty),
 #   get_key_controls() / get_important_labels() for the layout tests, the inspector as an overlay.
 # Modes: show_state(mock) before the screen enters the tree = the cz10 mock layout (no engine).
 #   Otherwise the screen is LIVE: %MatchController (scripts/match/match_controller.gd) runs a real
@@ -81,6 +83,15 @@ const MAX_CARD_H: float = 210.0
 const MIN_MAP_W: float = 416.0
 const LINE_COLUMNS: int = 3
 const LINE_ROWS: int = 2
+## Tablet (logical height >= TABLET_HEIGHT): larger cards, a wider map, a 3-row line and a larger
+## Brace panel text (cz19b BUG-09).
+const TABLET_HEIGHT: float = 800.0
+## Cards stay about 5 across without a deep fan: the iPad is no wider than the desktop (1280 px).
+const TABLET_MAX_CARD_H: float = 240.0
+const TABLET_MAP_SHARE: float = 0.42
+const TABLET_MAX_MAP_W: float = 640.0
+const TABLET_LINE_ROWS: int = 3
+const TABLET_CHIP_H: float = 90.0
 ## Room above the strip for cz16's HOLD tag (drawn above a held card's top edge), in card pt.
 const HOLD_TAG_PT: float = 10.0
 const HAND_CAPACITY: int = 7
@@ -107,6 +118,8 @@ var mock_interactions: bool = true
 var auto_start: bool = true
 var card_lookup: Callable = func(id: StringName) -> CardData: return CardDB.get_card(id)
 var compact: bool = false
+## cz19b: tall screens (tablets) use the extra height.
+var tablet: bool = false
 var points_per_px: float = 1.0
 var card_px: Vector2 = Vector2(117, 164)
 
@@ -470,14 +483,14 @@ func _render_line(entries: Array) -> void:
 		chip.setup(card_lookup.call(e["card"]), att, i)
 		if e.has("id") and int(fired.get(int(e["id"]), 0)) > 0:
 			chip.text += " · FIRED"
-		chip.custom_minimum_size = Vector2(0, MIN_TAP_PX)
+		chip.custom_minimum_size = Vector2(0, _chip_h())
 		chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		chip.mouse_filter = Control.MOUSE_FILTER_PASS  # a drag scrolls the line (> 6 cards)
 		chip.tapped.connect(func() -> void: _on_card_tapped(chip, &"line", chip.index, chip.card_id), CONNECT_DEFERRED)
 		chip.inspect_requested.connect(func() -> void: _inspect_line_chip(chip))
 		_line.add_child(chip)
 	var who: String = "RIVAL'S LINE" if _line_is_rival else "LINE"
-	var more: int = entries.size() - LINE_COLUMNS * LINE_ROWS
+	var more: int = entries.size() - LINE_COLUMNS * _line_rows()
 	if entries.is_empty():
 		_line_header.text = "RIVAL'S LINE · NOTHING PLAYED YET" if _line_is_rival else "LINE · NOTHING PLAYED YET"
 	elif more > 0:
@@ -486,6 +499,19 @@ func _render_line(entries: Array) -> void:
 		_line_header.text = ("%s · %d THIS TURN" if _line_is_rival else "%s · %d PLAYED THIS TURN") % [who, entries.size()]
 	if more > 0 and is_inside_tree():
 		_scroll_line_to_end.call_deferred()
+
+
+func _chip_h() -> float:
+	return TABLET_CHIP_H if tablet else MIN_TAP_PX
+
+
+func _line_rows() -> int:
+	return TABLET_LINE_ROWS if tablet else LINE_ROWS
+
+
+## Brace panel text scale: 1 on phones and 16:9 desktops, up to 1.25 on tablets.
+func _panel_scale() -> float:
+	return clampf(get_viewport_rect().size.y / ScreenProfile.DESIGN_SIZE.y, 1.0, 1.25) if tablet else 1.0
 
 
 func _scroll_line_to_end() -> void:
@@ -523,6 +549,7 @@ func _refresh_buttons() -> void:
 func _relayout() -> void:
 	var logical: Vector2 = get_viewport_rect().size
 	compact = logical.y < ScreenProfile.COMPACT_HEIGHT
+	tablet = logical.y >= TABLET_HEIGHT
 	points_per_px = points_per_px_override
 	if points_per_px <= 0.0:
 		var window: Vector2 = Vector2(DisplayServer.window_get_size())
@@ -557,11 +584,14 @@ func _relayout() -> void:
 	# Left: map (scaled to its width) + line chips. Right: strip + hand at the art card size.
 	var body_h: float = inner.y - top_h - _sep
 	var map_w: float = clampf(floorf(inner.x * 0.38), MIN_MAP_W, 560.0)
+	if tablet:
+		map_w = clampf(floorf(inner.x * TABLET_MAP_SHARE), MIN_MAP_W, TABLET_MAX_MAP_W)
 	var map_h: float = floorf(map_w * CzMap.DESIGN_PT.y / CzMap.DESIGN_PT.x)
 	_left.custom_minimum_size = Vector2(map_w, 0)
 	_map.custom_minimum_size = Vector2(map_w, map_h)
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_line_scroll.custom_minimum_size = Vector2(map_w, LINE_ROWS * MIN_TAP_PX + (LINE_ROWS - 1) * _sep)
+	var rows: int = _line_rows()
+	_line_scroll.custom_minimum_size = Vector2(map_w, rows * _chip_h() + (rows - 1) * _sep)
 	var art: Vector2 = CzArtKit.compact_px(points_per_px).ceil()
 	var header_h: float = _strip_header.get_combined_minimum_size().y
 	# Height: two rows plus the header and the HOLD tag room (10 pt of a card of height h).
@@ -569,7 +599,7 @@ func _relayout() -> void:
 	# Width: the right column must hold a full hand fanned at the minimum exposed strip.
 	var right_w: float = inner.x - map_w - _sep
 	var fit_w_h: float = floorf((right_w - (HAND_CAPACITY - 1) * tap) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
-	var h: float = clampf(minf(fit_h, fit_w_h), art.y, maxf(art.y, MAX_CARD_H))
+	var h: float = clampf(minf(fit_h, fit_w_h), art.y, maxf(art.y, TABLET_MAX_CARD_H if tablet else MAX_CARD_H))
 	var hold_room: float = ceilf(HOLD_TAG_PT * h / CzArtKit.COMPACT_PT.y)
 	card_px = Vector2(ceilf(h * CzArtKit.COMPACT_PT.x / CzArtKit.COMPACT_PT.y), h)
 	for row: Container in [_strip, _hand]:
@@ -783,6 +813,8 @@ func _place_overlays() -> void:
 	for p: Control in [_brace_panel, _playback]:
 		p.position = Vector2(_right.global_position.x - global_position.x, top)
 		p.size = Vector2(_right.size.x, maxf(0.0, right_end - top))
+	# cz19b BUG-09: the Brace panel is only as tall as its content (no big empty plate on tablets).
+	_brace_panel.set_area(Rect2(_brace_panel.position, _brace_panel.size))
 	_playback.set_tap(tap)
 	_place_tags()
 
@@ -1062,19 +1094,19 @@ func _refresh_brace() -> void:
 	elif hits == 0:
 		result = "0 HITS · HEALTH %d" % int(pv.get("health", 0))
 	else:
-		result = "YOU TAKE %d HIT%s · HEALTH %d → %d" % [hits, "" if hits == 1 else "S", int(pv.get("health", 0)), int(pv.get("health_after", 0))]
+		result = "YOU TAKE %d HIT%s · HEALTH %d %s %d" % [hits, "" if hits == 1 else "S", int(pv.get("health", 0)), MatchTheme.ARROW, int(pv.get("health_after", 0))]
 	var line: String = ""
 	var chosen_is_suggested: bool = not brace_set.is_empty() and _same_set(brace_set, suggested)
 	var comes: String = _comes_up_text(pv.get("comes_up", []))
 	if eligible.is_empty():
 		line = String(sug.get("reason", ""))
 	elif brace_set.is_empty():
-		line = "SUGGESTED: %s → %s. %s" % [_names(suggested), _hits_word(int(sug.get("hits", 0))), String(sug.get("reason", ""))]
+		line = "SUGGESTED: %s %s %s. %s" % [_names(suggested), MatchTheme.ARROW, _hits_word(int(sug.get("hits", 0))), String(sug.get("reason", ""))]
 	elif chosen_is_suggested:
 		line = "Suggested brace chosen. " + comes
 	else:
-		line = "Your choice: %s (Brace %d). Suggested: %s → %s. %s" % [_names(brace_set), int(pv.get("total", 0)),
-				_names(suggested), _hits_word(int(sug.get("hits", 0))), comes]
+		line = "Your choice: %s (Brace %d). Suggested: %s %s %s. %s" % [_names(brace_set), int(pv.get("total", 0)),
+				_names(suggested), MatchTheme.ARROW, _hits_word(int(sug.get("hits", 0))), comes]
 	var buttons: Array = []
 	if not eligible.is_empty():
 		if chosen_is_suggested:
@@ -1086,7 +1118,7 @@ func _refresh_brace() -> void:
 	buttons.append({"key": &"brace", "label": confirm})
 	var tap: float = maxf(MIN_TAP_PX, ceilf(CzArtKit.TAP_PT / points_per_px))
 	_brace_panel.show_prompt({"title": title, "sum": sum, "result": result, "line": line.strip_edges(),
-			"buttons": buttons, "tap": tap})
+			"buttons": buttons, "tap": tap, "scale": _panel_scale()})
 	_place_tags.call_deferred()
 
 

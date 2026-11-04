@@ -235,7 +235,7 @@ func new_session() -> void:
 	_view = {}
 	_shots = []
 	stats = {"matches": 0, "wins": 0, "losses": 0, "draws": 0, "resumes": 0, "packs": 0,
-			"holds": 0, "shots": 0, "braces": 0, "inputs": {}}
+			"holds": 0, "shots": 0, "braces": 0, "inputs": {}, "ai_matches": 0, "hotseat_matches": 0}
 
 
 func _now() -> int:
@@ -313,6 +313,16 @@ func show_consent_prompt() -> Node:
 	_prompt = scene.instantiate()
 	add_child(_prompt)
 	return _prompt
+
+
+## The survey statements for this session (cz19b BUG-08): "The AI played fair." (q5, kpi
+## ai_fair) is left out when this session only played hot-seat, so q5 is logged as null
+## (skipped), which the schema and tools/kpi_sheet.py already allow.
+func survey_questions() -> Array[Dictionary]:
+	var hot_only: bool = int(stats.get("hotseat_matches", 0)) > 0 and int(stats.get("ai_matches", 0)) == 0
+	if not hot_only:
+		return SURVEY_QUESTIONS
+	return SURVEY_QUESTIONS.filter(func(q: Dictionary) -> bool: return q["kpi"] != "ai_fair")
 
 
 ## Opens the PLAYTEST screen (survey + Download log). For the title button and cz13's end screen.
@@ -643,6 +653,9 @@ func _on_match_context(info: Dictionary) -> void:
 			"play_again": not _title_since_end, "match": _match_index, "health_known": false}
 	if (_m["mode"] as String) not in ["ai", "hotseat"]:
 		_m["mode"] = "ai"
+	# cz19b: matches played or resumed this session, by mode (the survey skips "The AI played
+	# fair." after hot-seat only).
+	stats["hotseat_matches" if _hotseat() else "ai_matches"] += 1
 	_title_since_end = false
 	if _m["resumed"]:
 		stats["resumes"] += 1

@@ -12,7 +12,7 @@ const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
 const SurveyUi: GDScript = preload("res://scripts/survey/survey_ui.gd")
 
 const TITLE_TEXT: String = "HELP US TEST CARDZONE?"
-const BODY_TEXT: String = "With your OK, this prototype keeps an anonymous log of how you play: screens, matches, the cards you play and hold, shots, Brace choices and timings, plus your survey answers. It never records the AI's hidden cards. The log stays on this device: no names, accounts or location, and nothing is sent. At the end, open PLAYTEST on the title screen, answer 5 quick questions and press DOWNLOAD LOG to send us the file yourself. You can stop and delete the log there at any time."
+const BODY_TEXT: String = "With your OK, this prototype keeps an anonymous log of how you play: screens, matches, the cards you play and hold, shots, Brace choices and timings, plus your survey answers. It never records the AI's hidden cards. The log stays on this device: no names, accounts or location, and nothing is sent. At the end, open PLAYTEST on the title screen, answer 5 quick questions (plus one optional) and press DOWNLOAD LOG to send us the file yourself. You can stop and delete the log there at any time."
 
 ## Emitted once with the tester's answer, right before the prompt frees itself.
 signal answered(given: bool)
