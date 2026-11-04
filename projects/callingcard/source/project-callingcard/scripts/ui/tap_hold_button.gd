@@ -81,11 +81,19 @@ func _cancel_as_drag() -> void:
 
 ## Test hook: what a completed long press does.
 func simulate_hold() -> void:
-	_on_hold()
+	_held = true
+	inspect_requested.emit()
 
 
+## The hold timer ran out. The release no longer taps; the inspect waits one frame so input that
+## arrived during a long frame (slow device, first-frame hitch) is seen first: if it turns out to
+## be a swipe, nothing opens (cc19 BUG-02).
 func _on_hold() -> void:
 	_held = true
+	if is_inside_tree():
+		await get_tree().process_frame
+	if _dragged or not is_inside_tree():
+		return
 	inspect_requested.emit()
 
 
