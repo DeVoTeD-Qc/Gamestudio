@@ -158,6 +158,8 @@ func reload() -> void:
 	_signature = null
 	_loaner = false
 	_notice = ""
+	_status_peak = 0.0
+	_hint_dropped = false
 	if col != null and col.has_saved_lineup():
 		var saved: Dictionary = col.get_saved_lineup_ids()
 		_set_lineup_internal(saved.get("cards", []), StringName(str(saved.get("signature", ""))), bool(saved.get("loaner", false)))
@@ -172,6 +174,7 @@ func tap_collection_card(card_id: StringName) -> void:
 	var c: CardData = _card(card_id)
 	if c == null:
 		return
+	_notice = ""
 	if not _owned.has(c.id) and not _in_lineup(c):
 		_notice = "You don't own %s yet.%s" % [c.display_name, _how_to_earn(c)]
 		_refresh()
@@ -541,7 +544,7 @@ func _refresh() -> void:
 	for i: int in _rows.size():
 		var c: CardData = _cards[i] if i < _cards.size() else null
 		_rows[i].show_card(c, c != null and c == _signature)
-	# Grid: in-lineup cards are outlined, dimmed and tagged IN LINEUP.
+	# Grid: in-lineup cards are outlined, dimmed and named "IN LINEUP · ...".
 	for id: StringName in _grid_buttons:
 		var b: Button = _grid_buttons[id]
 		var c: CardData = _card(id)
@@ -550,7 +553,14 @@ func _refresh() -> void:
 		cv.highlighted = inside
 		cv.modulate = Color(1, 1, 1, 0.55) if inside else Color.WHITE
 		cv.signature = c == _signature
-		(b.get_node("Tag") as Control).visible = inside
+		# The name line says IN LINEUP (words, not just the outline), so the art and pips stay clear.
+		var nl: Label = b.get_node("Name")
+		nl.text = ("IN LINEUP · %s" % c.display_name) if inside \
+				else (c.display_name if _owned.has(c.id) else "%s · locked" % c.display_name)
+		if inside:
+			nl.add_theme_color_override(&"font_color", ArtKit.AMBER)
+		else:
+			nl.remove_theme_color_override(&"font_color")
 
 
 func _build_grid() -> void:
@@ -590,26 +600,15 @@ func _build_grid() -> void:
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(name_label)
-		var tag: PanelContainer = PanelContainer.new()
-		tag.name = "Tag"
-		tag.theme_type_variation = &"SignatureRibbon"
-		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var tl: Label = Label.new()
-		tl.text = "IN LINEUP"
-		tl.add_theme_font_size_override(&"font_size", 16)
-		tl.add_theme_color_override(&"font_color", ArtKit.WALL)
-		tag.add_child(tl)
-		b.add_child(tag)
-		tag.visible = false
 		var id: StringName = c.id
 		b.tapped.connect(func() -> void: tap_collection_card(id))
 		b.inspect_requested.connect(func() -> void: inspect_card(_card(id)))
 		_grid.add_child(b)
 		_grid_buttons[id] = b
-	_place_tags()
+	_place_card_parts()
 
 
-func _place_tags() -> void:
+func _place_card_parts() -> void:
 	for b: Node in _grid.get_children():
 		var cv: Control = b.get_node("Card")
 		cv.position = Vector2.ZERO
@@ -617,14 +616,15 @@ func _place_tags() -> void:
 		var nl: Control = b.get_node("Name")
 		nl.position = Vector2(0, grid_card_size.y)
 		nl.size = Vector2(grid_card_size.x, NAME_H)
-		var tag: Control = b.get_node("Tag")
-		# Left of centre, clear of the Side pip (left end) and the Top / Bottom pips (centre).
-		tag.position = Vector2(grid_card_size.y * 0.62, grid_card_size.y * 0.5 - 13.0)
 
 
 # --- Layout -----------------------------------------------------------------------------------
 
 var _fit_queued: bool = false
+## Tallest the status text has been on this screen: the panel never shrinks back, so the
+## collection grid below it doesn't jump under the player's finger between taps.
+var _status_peak: float = 0.0
+var _hint_dropped: bool = false
 
 
 func _queue_fit_status() -> void:
@@ -640,17 +640,34 @@ func _fit_status() -> void:
 	_fit_queued = false
 	if not is_inside_tree():
 		return
-	var need: float = _status_column.get_combined_minimum_size().y
+	# Autowrap labels report their height for their current width: wait until the column has its
+	# final width, or a one-frame narrow layout would read as a tall panel (and stick, see peak).
+	var vbar: VScrollBar = _status_scroll.get_v_scroll_bar()
+	var want_w: float = _status_scroll.size.x - (vbar.size.x if vbar.visible else 0.0)
+	var settled: bool = _status_scroll.size.x >= 32.0 and absf(_status_column.size.x - want_w) <= 1.0
+	for ch: Node in _status_column.get_children():
+		if (ch as Control).visible and absf((ch as Control).size.x - _status_column.size.x) > 1.0:
+			settled = false  # a label just shown is still 1 px wide (one word per line)
+	if not settled:
+		_fit_queued = true
+		get_tree().process_frame.connect(_fit_status, CONNECT_ONE_SHOT)
+		return
+	var font_h: float = _reasons_label.get_theme_font(&"font").get_height(_reasons_label.get_theme_font_size(&"font_size"))
+	var baseline: float = _headline.get_combined_minimum_size().y + 3.0 * font_h \
+			+ _status_column.get_theme_constant(&"separation")
+	var need: float = maxf(_status_column.get_combined_minimum_size().y, maxf(baseline, _status_peak))
 	var sep: float = float(_left.get_theme_constant(&"separation"))
 	var panel_pad: float = _panel.get_theme_stylebox(&"panel").get_minimum_size().y
 	var header_h: float = (%Header as Control).get_combined_minimum_size().y
 	var hint_h: float = _hint.get_combined_minimum_size().y + sep
 	var room: float = _left.size.y - header_h - sep - panel_pad - sep - grid_card_size.y - NAME_H - 2.0
-	var show_hint: bool = need <= room - hint_h
+	var show_hint: bool = not _hint_dropped and need <= room - hint_h
+	_hint_dropped = not show_hint
 	_hint.visible = show_hint
 	if show_hint:
 		room -= hint_h
 	var h: float = minf(need, maxf(room, 0.0))
+	_status_peak = maxf(_status_peak, h)
 	if not is_equal_approx(_status_scroll.custom_minimum_size.y, h):
 		_status_scroll.custom_minimum_size.y = h
 
@@ -658,6 +675,11 @@ func _fit_status() -> void:
 ## True when the status text needs scrolling to be read in full (tests).
 func status_scrolls() -> bool:
 	return _status_column.get_combined_minimum_size().y > _status_scroll.custom_minimum_size.y + 0.5
+
+
+## Top of the collection view in this control's coordinates (tests: the grid must not jump).
+func collection_top() -> float:
+	return _scroll.get_global_rect().position.y
 
 
 func _relayout() -> void:
@@ -707,7 +729,7 @@ func _relayout() -> void:
 	_grid.columns = cols
 	for b: Node in _grid.get_children():
 		(b as Control).custom_minimum_size = grid_card_size + Vector2(0, NAME_H)
-	_place_tags()
+	_place_card_parts()
 	_queue_fit_status()
 	_hint.text = "YOUR CARDS · tap to add or take out · hold for details" if not compact \
 			else "YOUR CARDS · tap to add · hold for details"

@@ -219,6 +219,7 @@ func _stop(log: Array) -> void:
 		if e[0] == "__conns":
 			for c: Array in e[1]:
 				EventBus.disconnect(c[0], c[1])
+	log.clear()  # the callables hold the log: break the cycle so the test object is freed
 
 
 func _count(log: Array, sig: String) -> int:

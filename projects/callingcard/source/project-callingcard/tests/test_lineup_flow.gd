@@ -32,9 +32,15 @@ func test_valid_save_one_tap_per_action() -> void:
 	assert_eq(b.get_headline_text(), "PICK 5 CARDS", "empty lineup headline")
 	assert_true((b.get_node("%SaveButton") as Button).disabled, "SAVE off while empty")
 	var expected_clearance: Array[int] = [1, 4, 6, 8, 10]
+	var grid_top: float = -1.0
 	for i: int in Fx.VALID_IDS.size():
 		var before: int = f.taps
 		await f.tap_card(Fx.VALID_IDS[i])
+		await f.frames(2)
+		if i == 0:
+			grid_top = b.collection_top()
+		else:
+			assert_eq(b.collection_top(), grid_top, "collection grid stays put after tap %d (no jump under the finger)" % (i + 1))
 		assert_eq(f.taps - before, 1, "one tap adds %s" % Fx.VALID_IDS[i])
 		assert_eq(b.get_lineup_ids().size(), i + 1, "tap %d added a card" % (i + 1))
 		assert_eq(b.get_clearance(), expected_clearance[i], "live Clearance after %d cards" % (i + 1))
@@ -276,12 +282,12 @@ func test_one_tap_actions_and_hold_inspect() -> void:
 	# Grid tap toggles: add, then take out.
 	await f.tap_card(&"glacier")
 	assert_eq(b.get_lineup_ids(), f.ids([&"glacier"]), "tap adds")
-	var tag: Control = b.get_collection_button(&"glacier").get_node("Tag")
-	assert_true(tag.visible, "IN LINEUP tag on the grid card")
+	var tag: Label = b.get_collection_button(&"glacier").get_node("Name")
+	assert_eq(tag.text, "IN LINEUP · Glacier", "grid card says IN LINEUP")
 	await f.tap_card(&"glacier")
 	assert_eq(b.get_lineup_ids().size(), 0, "tap again takes it out")
 	assert_true(b.get_notice_text().begins_with("Took Glacier out."), "says so: %s" % b.get_notice_text())
-	assert_false(tag.visible, "tag gone")
+	assert_eq(tag.text, "Glacier", "back to the plain name")
 	# Empty slot tap explains.
 	await f.tap_row(2)
 	assert_eq(b.get_notice_text(), "This slot is empty. Tap one of your cards on the left to add it.", "empty slot words")

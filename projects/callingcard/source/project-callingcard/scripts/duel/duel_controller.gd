@@ -12,8 +12,8 @@
 #   Player = WallState.P1, rival = WallState.P2. Scores shown during play are the PUBLIC score
 #   (a face-down card counts 1, no Triptychs); the end screen uses the full score.
 # Hooks: autostart (tests of the bare layout turn it off), next_rival_id / next_player_lineup
-#   (hub cc13 / lineup builder cc10 set them before routing here), brain_factory (cc06 AI:
-#   func(rival: RivalData, seed: int) -> object with choose_move(state, player) -> Dictionary).
+#   (hub cc13 / lineup builder cc10 set them before routing here), brain_factory (override;
+#   default RivalAI.for_rival(rival_data, seed) from cc06, random_rival.gd as the fallback).
 #   cc15 game feel: each replay pause also awaits the FX layer (%FX, DuelFx.wait_idle()) so the
 #   "Carded!" stamp and Triptych merge finish before play moves on (only when event_delay > 0);
 #   emits set_linked (Set Link light) and card_reclaimed, plus duel_lineup_locked for cc09.
@@ -40,7 +40,8 @@ static var autostart: bool = true
 static var next_rival_id: StringName = &""
 ## Set by the lineup builder (CardData or ids); empty = loaner lineup.
 static var next_player_lineup: Array = []
-## cc06: func(rival: RivalData, seed: int) -> brain with choose_move(state, player). Null = random.
+## Override for the rival brain: func(rival: RivalData, seed: int) -> brain with
+## choose_move(state, player). Invalid (default) = RivalAI.for_rival (cc06), random without RivalData.
 static var brain_factory: Callable = Callable()
 
 ## Static setters (a const script reference can't assign static vars directly).
@@ -155,10 +156,13 @@ func start_duel() -> void:
 	rl.assign(rival["lineup"])
 	state = WallState.new_match(player_lineup, player_signature, rl, rival["signature"], first,
 			DuelSetup.balance(), null, DuelSetup.triptychs())
+	brain = null
 	if brain_factory.is_valid():
 		brain = brain_factory.call(rival.get("data"), _seed)
+	elif rival.get("data") != null:
+		brain = RivalAI.for_rival(rival["data"], _seed)  # cc06 AI is the default
 	if brain == null:
-		brain = RandomRival.new(_seed)
+		brain = RandomRival.new(_seed)  # fallback: mock rivals without RivalData
 	_started_ms = Time.get_ticks_msec()
 	_set_phase(&"coin")
 	_screen.show_state(ui_state())

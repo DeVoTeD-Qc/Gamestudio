@@ -233,6 +233,34 @@ func test_wait_idle_is_instant_when_idle_and_capped() -> void:
 	_despawn(setup[0])
 
 
+## Perf smoke: the FX handlers' own CPU cost per event (headless, screen handlers excluded).
+func test_fx_handler_cost() -> void:
+	var setup: Array = await _spawn(MockDuelData.mid_state())
+	var fx: DuelFx = setup[1].get_node("%FX")
+	var cost: Dictionary = {}
+	var calls: Dictionary = {
+		&"drop": func() -> void: fx._on_card_placed(&"player", &"graveyard_shift", &"a1", []),
+		&"capture": func() -> void: fx._on_card_captured(&"player", &"frostbite", &"c2"),
+		&"flip": func() -> void: fx._on_ambush_sprung(&"rival", &"flare_up", &"b3"),
+		&"link": func() -> void: fx._on_set_linked(&"player", &"c1", [&"c2"]),
+		&"carded": func() -> void:
+			fx._on_carded(&"player", &"brass_tacks")
+			fx.skip(),
+		&"triptych": func() -> void:
+			fx._on_triptych_scored(&"player", &"midnight_run", true)
+			fx.skip(),
+	}
+	for k: StringName in calls:
+		var t0: int = Time.get_ticks_usec()
+		for i: int in 20:
+			(calls[k] as Callable).call()
+		cost[k] = (Time.get_ticks_usec() - t0) / 20.0
+		assert_true(cost[k] < 4000.0, "%s handler %.0f us" % [k, cost[k]])
+	print("     FX handler cost (us/event): %s" % str(cost))
+	await tree.process_frame
+	_despawn(setup[0])
+
+
 func test_sfx_streams_are_generated() -> void:
 	var sfx: GDScript = preload("res://scripts/fx/fx_sfx.gd")
 	for id: StringName in sfx.IDS:

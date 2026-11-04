@@ -81,9 +81,24 @@ func _ready() -> void:
 	for i: int in DUST_POOL:
 		_dust.append(_make_dust())
 	set_process(false)
+	_prewarm.call_deferred()
 	# Deferred: the screen's own EventBus handlers (connected in its _ready, after ours) must run
 	# first, so the cards already show the new state when an effect starts.
 	_connect_bus.call_deferred()
+
+
+## Draws an invisible stamp for two frames so the big display glyphs are rasterised before the
+## first "Carded!" (no hitch on the slam frame).
+func _prewarm() -> void:
+	if not is_inside_tree() or DisplayServer.get_name() == "headless":
+		return
+	var warm: Control = _build_stamp(&"player", "Card")
+	warm.name = "Prewarm"
+	warm.modulate.a = 0.01
+	for i: int in 2:
+		await get_tree().process_frame
+	if is_instance_valid(warm):
+		warm.queue_free()
 
 
 func _connect_bus() -> void:
@@ -578,7 +593,7 @@ func _triptych_rects(side: StringName, card_ids: Array) -> Array[Rect2]:
 			slots = rows[row]
 	if slots.size() < 3:
 		slots = [&"b2", &"b3", &"b4"] if wall.size() > 0 else []
-	slots.sort()
+	slots.sort_custom(func(x: Variant, y: Variant) -> bool: return String(x) < String(y))  # StringName sorts by pointer
 	var out: Array[Rect2] = []
 	for s: StringName in slots.slice(0, 3):
 		var c: Control = _slot(s)
