@@ -16,32 +16,7 @@
 #   - the selected fan card opens to full width; a line over 6 cards scrolls,
 #   - one full match to the end by touch only.
 # Author: UI/UX Agent (cz11)
-extends "res://tests/test_case.gd"
-
-const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
-const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
-const MATCH_SCENE: String = "res://scenes/match/Match.tscn"
-const PHONE: Dictionary = {"name": "iPhone 844x390 @3x + notch", "pt": Vector2(844, 390), "ratio": 3.0, "insets": Rect2(47, 0, 47, 21)}
-const EPS: float = 0.5
-
-
-## A scripted rival: fires every legal shot first, braces with nothing, else the first legal action.
-class Shooter extends RefCounted:
-	var kind: String = "Shooter"
-
-	func choose_action(state: MatchState, seat: int) -> Dictionary:
-		var legal: Array[Dictionary] = LoadoutRules.legal_actions(state)
-		for a: Dictionary in legal:
-			if a["type"] == "shoot" and int(a["seat"]) == seat:
-				return a
-		for a: Dictionary in legal:
-			if int(a["seat"]) == seat:
-				return a
-		return {}
-
-
-var _saved_root_size: Vector2i
-var _saved_scale_mode: int = 0
+extends "res://tests/test_match_flow_kit.gd"
 
 
 # --- Turn 1 of a new match ---------------------------------------------------------------
@@ -265,7 +240,9 @@ func test_brace_prompt_choose_and_confirm() -> void:
 	assert_eq(m.mode, &"brace", "brace mode")
 	var dmg: int = int(ctrl.view()["brace_prompt"]["damage"])
 	assert_eq(dmg, 2, "Hunting Rifle DMG 2 into Rail Yard (no Cover); the shotgun (range 0) can't reach")
-	assert_true(m.get_dock_title() == "BRACE · %d DAMAGE INCOMING" % dmg, "brace dock %s" % m.get_dock_title())
+	var texts: Dictionary = m.get_brace_panel().get_texts()
+	assert_eq(texts["title"], "INCOMING · HUNTING RIFLE FROM DOCKS", "cz12 Brace panel names the shot")
+	assert_eq(texts["sum"], "DMG 2 − Cover 0 − Down 0 = %d damage" % dmg, "the damage sum")
 	# Scavenge (top of the strip) has no Brace value.
 	await _touch_card(m, &"next", 0)
 	assert_true("no Brace value" in m.last_notice, "Scavenge refused: '%s'" % m.last_notice)
@@ -274,8 +251,8 @@ func test_brace_prompt_choose_and_confirm() -> void:
 	await _touch_card(m, &"next", 1)  # Duck, Brace 1
 	await _touch_card(m, &"next", 2)  # Plate Vest, Brace 2
 	assert_eq(m.brace_set.size(), 2, "two brace cards chosen")
-	assert_true("0 Hits land" in m.get_dock_text(), "dock sums the Brace: '%s'" % m.get_dock_text())
-	await _touch_dock(m, &"brace")
+	assert_true(m.get_brace_panel().get_texts()["result"].begins_with("0 HITS"), "panel sums the Brace: '%s'" % m.get_brace_panel().get_texts())
+	await _touch_brace(m, &"brace")
 	var log: String = "\n".join(ctrl.log_lines)
 	assert_true("You braced with Duck, Plate Vest (Brace 3): 0 Hits." in log, "brace announced:\n%s" % log)
 	assert_eq(int(ctrl.view()["me"]["health"]), 5, "no Hit landed")
@@ -338,7 +315,9 @@ func test_rival_turn_taps_explain_and_events_are_paced() -> void:
 	ctrl.event_delay = 0.05
 	ctrl.opponent_delay = 0.05
 	var shown: Array = []
-	ctrl.event_shown.connect(func(text: String, e: Dictionary) -> void: shown.append([Time.get_ticks_msec(), text, e]))
+	ctrl.event_shown.connect(func(text: String, e: Dictionary) -> void: shown.append([Engine.get_process_frames(), text, e, Time.get_ticks_usec()]))
+	var steps: Array = []
+	ctrl.playback_step.connect(func(step: Dictionary) -> void: steps.append(step))
 	# Hold a Hit? No: hold limit and Hit rules via the controller.
 	await _touch(m.get_corner_buttons()[&"end_turn"])
 	await _touch_card(m, &"hand", 0)
@@ -357,15 +336,20 @@ func test_rival_turn_taps_explain_and_events_are_paced() -> void:
 		await tree.process_frame
 	assert_false(ctrl.busy, "the rival's turn finishes")
 	assert_true(shown.size() >= 5, "events shown (%d)" % shown.size())
+	# cz12 (was flaky on wall-clock gaps under load): count frames per step, and check the whole
+	# run against the steps' own durations. The controller waits on wall-clock time from the step,
+	# so a loaded machine can only make the run longer, never shorter.
 	var gaps: Array = []
 	for i: int in range(1, shown.size()):
 		gaps.append(int(shown[i][0]) - int(shown[i - 1][0]))
-	# SceneTreeTimer counts frame deltas, so one gap can be short; the whole run can't.
-	var total: int = 0
-	for g: int in gaps:
-		total += g
-	assert_true(gaps.all(func(g: int) -> bool: return g >= 15) and total >= int(0.8 * 50.0 * gaps.size()),
-			"events paced about the delay apart: %s %s" % [gaps, shown.map(func(x: Array) -> String: return x[1])])
+	assert_true(gaps.all(func(g: int) -> bool: return g >= 1),
+			"every step on a later frame than the one before: %s %s" % [gaps, shown.map(func(x: Array) -> String: return x[1])])
+	assert_eq(steps.size(), shown.size(), "one playback step per shown event")
+	var want_us: float = 0.0
+	for i: int in range(0, steps.size() - 1):
+		want_us += float(steps[i]["duration"]) * 1000000.0
+	var got_us: int = int(shown.back()[3]) - int(shown[0][3])
+	assert_true(want_us > 0.0 and float(got_us) >= want_us, "the run takes at least its steps' time: %d us >= %d us" % [got_us, int(want_us)])
 	# Order: the shown events are exactly the engine's, filtered, in order.
 	var types: Array = shown.map(func(x: Array) -> String: return String(x[2]["type"]))
 	assert_true(types.find("packed") < types.find("turn_started"), "packed before the rival's turn_started: %s" % [types])
@@ -468,205 +452,3 @@ func test_full_match_touch_only() -> void:
 	print("     full match: %d decisions, kinds %s, %s" % [guard, seen.keys(), ActionText.result_text(ctrl.view()["match_end"], 0)])
 	assert_false(MatchStore.has_saved_match(), "the end clears the save")
 	_despawn(m)
-
-
-## Touch policy for the full match: shoot, loot the best affordable pile, play, move toward the
-## rival, then end the turn (holding what may be held).
-func _pick(ctrl: Node, legal: Array[Dictionary], n: int) -> Dictionary:
-	var by: Dictionary = {}
-	for a: Dictionary in legal:
-		if not by.has(a["type"]):
-			by[a["type"]] = []
-		by[a["type"]].append(a)
-	for t: String in ["drop", "brace", "shoot", "loot", "attach", "play"]:
-		if by.has(t) and (n < 14 or t == "brace" or t == "drop"):
-			if t == "brace":
-				return by[t].back()  # every eligible card
-			return by[t][0]
-	if by.has("move") and n < 14:
-		var me: Dictionary = ctrl.view()["me"]
-		if int(me["search"]) == 0:
-			return by["move"][0]
-	var ends: Array = by.get("end_turn", [])
-	return ends.back() if not ends.is_empty() else legal[0]
-
-
-func _do_by_touch(m: Control, a: Dictionary) -> void:
-	var ctrl: Node = m.get_controller()
-	match String(a["type"]):
-		"drop":
-			await _touch_area(m, StringName(a["area"]))
-			await _touch_dock(m, &"drop")
-		"brace":
-			var ids: Array = m.get_state()["you"]["next_ids"]
-			for inst: Variant in a["cards"]:
-				await _touch_card(m, &"next", ids.find(int(inst)))
-			await _touch_dock(m, &"brace")
-		"play":
-			var i: int = (m.get_state()["you"]["hand_ids"] as Array).find(int(a["card"]))
-			await _touch_card(m, &"hand", i)
-			var key: StringName = &"play"
-			if a.has("adrenaline"):
-				key = &"adrenaline_move" if a["adrenaline"] == "move" else &"adrenaline_search"
-			await _touch_dock(m, key)
-		"move":
-			await _touch_area(m, StringName(a["to"]))
-			await _touch_dock(m, &"move")
-		"loot":
-			await _touch_area(m, StringName(ctrl.view()["me"]["area"]))
-			await _touch_dock(m, &"loot")
-			var key: StringName = StringName("loot_" + str(a["pile"])) if a.has("pile") else &""
-			if key == &"":
-				for b: Button in m.get_sheet_buttons():
-					if String(b.get_meta(&"key")).ends_with("_%d" % int(a["card"])):
-						key = b.get_meta(&"key")
-			await _touch(m.get_sheet_button(key))
-		"shoot":
-			var line: Array = m.get_state()["you"]["line"]
-			var idx: int = -1
-			for i: int in line.size():
-				if int(line[i]["id"]) == int(a["weapon"]):
-					idx = i
-			m.get_line_scroll().ensure_control_visible(m.get_cards(&"line")[idx])
-			await tree.process_frame
-			await _touch_card(m, &"line", idx)
-			await _touch_dock(m, &"fire")
-		"attach":
-			var att: int = int(a["attachment"])
-			var hi: int = (m.get_state()["you"]["hand_ids"] as Array).find(att)
-			if hi >= 0:
-				await _touch_card(m, &"hand", hi)
-			else:
-				var line: Array = m.get_state()["you"]["line"]
-				for i: int in line.size():
-					if int(line[i]["id"]) == att:
-						m.get_line_scroll().ensure_control_visible(m.get_cards(&"line")[i])
-						await tree.process_frame
-						await _touch_card(m, &"line", i)
-			await _touch_dock(m, &"attach")
-			if m.is_sheet_open():
-				await _touch(m.get_sheet_button(StringName("attach_%d" % int(a["weapon"]))))
-		"end_turn":
-			await _touch(m.get_corner_buttons()[&"end_turn"])
-			var ids: Array = m.get_state()["you"]["hand_ids"]
-			for inst: Variant in a.get("hold", []):
-				await _touch_card(m, &"hand", ids.find(int(inst)))
-			await _touch_dock(m, &"end_turn")
-		_:
-			failures.append("no touch path for %s" % a)
-
-
-# --- Helpers ----------------------------------------------------------------------------
-
-func _fixture(players: Dictionary) -> MatchState:
-	var setup: Dictionary = {"round": 3, "zone_card": 3, "route": "A", "active": players.get("active", "P1"),
-			"piles": {"rail_yard": {"crowbar": 3, "red_dot_sight": 3}, "old_town": {"assault_rifle": 2}},
-			"players": {"P1": players["P1"], "P2": players["P2"]}}
-	var errors: Array = []
-	var s: MatchState = MatchState.from_fixture(setup, RulesData.from_card_db(CardDB), {}, errors)
-	if not errors.is_empty():
-		failures.append("fixture errors: %s" % [errors])
-	return s
-
-
-func _spawn(state: MatchState, opponent: Object = null) -> Control:
-	_saved_root_size = tree.root.size
-	_saved_scale_mode = tree.root.content_scale_mode
-	var px: Vector2 = PHONE["pt"] * PHONE["ratio"]
-	var logical: Vector2 = ScreenProfile.logical_size(px, ScreenProfile.base_size(px, PHONE["ratio"]))
-	tree.root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
-	tree.root.size = Vector2i(logical)
-	await tree.process_frame
-	MatchStore.clear()
-	var m: Control = (load(MATCH_SCENE) as PackedScene).instantiate()
-	m.auto_start = false
-	var k: float = ScreenProfile.points_per_px(px, PHONE["ratio"])
-	var insets: Rect2 = PHONE["insets"]
-	m.points_per_px_override = k
-	m.safe_area_override = Rect2(insets.position / k, logical - insets.position / k - insets.size / k)
-	var ctrl: Node = m.get_node("%MatchController")
-	ctrl.event_delay = 0.0
-	ctrl.opponent_delay = 0.0
-	if opponent != null:
-		ctrl.opponent = opponent
-	tree.root.add_child(m)
-	for i: int in 3:
-		await tree.process_frame
-	m.start_live(state)
-	for i: int in 3:
-		await tree.process_frame
-	return m
-
-
-func _despawn(m: Control) -> void:
-	MatchStore.clear()
-	m.queue_free()
-	tree.root.size = _saved_root_size
-	tree.root.content_scale_mode = _saved_scale_mode
-
-
-func _saved_step() -> int:
-	var info: Dictionary = MatchStore.saved_info()
-	return int(info.get("step", -1)) if info.get("has_match", false) else -1
-
-
-## A real touch (press + release) at a point inside the control that no later sibling covers.
-func _touch(c: Control) -> void:
-	if c == null or not c.is_visible_in_tree():
-		failures.append("touch on a missing or hidden control (%s)" % c)
-		return
-	await _touch_at(_exposed_point(c))
-
-
-func _touch_at(pos: Vector2) -> void:
-	for pressed: bool in [true, false]:
-		var t: InputEventScreenTouch = InputEventScreenTouch.new()
-		t.index = 0
-		t.pressed = pressed
-		t.position = pos
-		Input.parse_input_event(t)
-		Input.flush_buffered_events()
-	await tree.process_frame
-
-
-func _exposed_point(c: Control) -> Vector2:
-	var r: Rect2 = c.get_global_rect()
-	var parent: Node = c.get_parent()
-	if c is CzCard and parent != null:
-		var i: int = c.get_index()
-		if i + 1 < parent.get_child_count():
-			var nxt: Control = parent.get_child(i + 1)
-			var right: float = minf(r.end.x, nxt.get_global_rect().position.x)
-			return Vector2((r.position.x + right) * 0.5, r.get_center().y)
-	return r.get_center()
-
-
-func _touch_card(m: Control, zone: StringName, index: int) -> void:
-	var cards: Array[Control] = m.get_cards(zone)
-	if index < 0 or index >= cards.size():
-		failures.append("no %s card %d (have %d)" % [zone, index, cards.size()])
-		return
-	await _touch(cards[index])
-
-
-func _touch_area(m: Control, area: StringName) -> void:
-	await _touch(m.get_area_touch(area))
-
-
-func _touch_dock(m: Control, key: StringName) -> void:
-	var b: Button = m.get_dock_button(key)
-	if b == null:
-		failures.append("dock has no %s (keys %s, title '%s', notice '%s')" % [key, m.get_dock_keys(), m.get_dock_title(), m.last_notice])
-		return
-	await _touch(b)
-
-
-func _names(m: Control, zone: StringName) -> Array:
-	var out: Array = []
-	for c: Control in m.get_cards(zone):
-		out.append(CardDB.get_card(c.get_meta(&"card_id")).display_name)
-	return out
-
-
-func _index_of(m: Control, zone: StringName, card_name: String) -> int:
-	return _names(m, zone).find(card_name)

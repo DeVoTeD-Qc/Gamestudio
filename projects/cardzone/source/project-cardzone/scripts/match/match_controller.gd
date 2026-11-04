@@ -23,9 +23,26 @@
 #   notice(text) for a refused request, phase_changed(phase), settled() when input is open again.
 #   cz18 (playtest log): also EventBus.match_context(info) once per start / resume and
 #   EventBus.match_view_changed(view) with every view_changed (additive emits only).
+# cz12 Brace prompt: view() adds to the human's brace_prompt (additive, the rules view is untouched):
+#   hand_size, dmg (printed damage + attachments, public), source {card, area, kind}, suggested
+#   (inst ids of the suggested Brace, brace_advisor.gd) and suggestion ({cards, card_ids, total,
+#   hits, blocked, health_after, eliminated, comes_up, reason}). The same view goes out through
+#   EventBus.match_view_changed, so PlaytestLog's brace.suggested_used reads `suggested` (cz18).
+#   brace_preview(cards) is the live result of any choice; brace_suggested(suggestion) fires when
+#   the human's Brace step opens.
+# cz12 playback: events play out one step at a time while the rival is involved (its drop, turn,
+#   Brace); the human's own actions answer at once. A step is an event with words; its time is
+#   event_delay x the step's weight (shots 1.5, minor steps 0.6) x the speed (fast_forward() 0.4x,
+#   skip_playback() 0: the rest of this playback at once). FAST / SKIP reset when input opens.
+#   Hooks for game feel (cz17): playback_step(step) per step, before its wait (step: {index, type,
+#   kind, seat, rival, text, event, from, to, duration}); hold_playback() / release_playback()
+#   keep the loop on a step until the effect is done (SKIP ignores holds); busy_changed(busy) and
+#   settled (await it: input open again); playback_finished(summary, steps, skipped) after a
+#   rival's turn (the screen shows the one-line summary when it was skipped or instant).
+#   Steps come from events_for(human): the rival's private cards are never in them.
 # Dependencies: LoadoutRules, MatchState, RulesData, MatchView, CardDB, EventBus, MatchStore,
-#   action_text.gd, opponent_placeholder.gd.
-# Author: UI/UX Agent (cz11)
+#   action_text.gd, opponent_placeholder.gd, brace_advisor.gd.
+# Author: UI/UX Agent (cz11, cz12)
 extends Node
 
 signal view_changed(view: Dictionary)
@@ -33,9 +50,24 @@ signal event_shown(text: String, event: Dictionary)
 signal notice(text: String)
 signal phase_changed(phase: StringName)
 signal settled
+## cz12: true when a run starts playing out, false when input opens again.
+signal busy_changed(is_busy: bool)
+## cz12: one playback step (see the header). Emitted before the step's wait.
+signal playback_step(step: Dictionary)
+## cz12: after a run that included rival steps: a one-line summary of the rival's turn.
+signal playback_finished(summary: String, steps: Array, skipped: bool)
+## cz12: the human's Brace step opened with this suggestion (brace_advisor.gd).
+signal brace_suggested(suggestion: Dictionary)
 
 const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
 const OpponentPlaceholder: GDScript = preload("res://scripts/match/opponent_placeholder.gd")
+const BraceAdvisor: GDScript = preload("res://scripts/match/brace_advisor.gd")
+
+## cz12: speed factor of FAST (x the current Event speed delays).
+const FAST_FACTOR: float = 0.4
+## cz12: how long each kind of step stays up, x event_delay.
+const STEP_WEIGHT: Dictionary = {&"shot": 1.5, &"brace": 1.3, &"hits": 1.3, &"out": 1.5, &"move": 1.0,
+		&"loot": 1.0, &"play": 0.8, &"pack": 1.0, &"turn": 0.6, &"draw": 0.6, &"round": 0.8, &"zone": 0.9, &"other": 0.7}
 
 const PHASE_IDLE: StringName = &"idle"
 const PHASE_DROP: StringName = &"drop"
@@ -75,6 +107,17 @@ var _started_ms: int = 0
 var _turn_index: int = 0
 ## cz18: set by start_resumed for the next match_context ({age_s}); {} = a new match.
 var _resume_info: Dictionary = {}
+## cz12 playback state: FAST / SKIP for the current playback, game-feel holds, steps.
+var playback_fast: bool = false
+var playback_skip: bool = false
+var _holds: int = 0
+var _step_index: int = 0
+var _rival_steps: Array = []
+var _skipped_any: bool = false
+var _in_rival_turn: bool = false
+## cz12: cached suggestion for the current Brace step, keyed by the action count.
+var _suggestion: Dictionary = {}
+var _suggestion_key: String = ""
 
 
 func _init() -> void:
@@ -113,6 +156,8 @@ func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 	undo_count = 0
 	_turn_index = 0
 	hits_landed = [0, 0]
+	_rival_steps.clear()
+	_in_rival_turn = s.phase != MatchState.PHASE_DROP and s.active == rival_seat()
 	_started_ms = Time.get_ticks_msec()
 	EventBus.match_started.emit(StringName(opponent_kind().to_lower()), MatchState.P1)
 	_emit_context()
@@ -142,7 +187,89 @@ func rival_seat() -> int:
 # --- What the human sees and may do --------------------------------------------------------
 
 func view() -> Dictionary:
-	return LoadoutRules.view(state, human) if state != null else {}
+	if state == null:
+		return {}
+	var v: Dictionary = LoadoutRules.view(state, human)
+	if v.has("brace_prompt"):
+		_add_brace_advice(v)
+	return v
+
+
+# --- Brace prompt (cz12) -----------------------------------------------------------------
+
+## The suggested Brace for the human's open Brace step ({} when none): see brace_advisor.gd.
+func brace_suggestion() -> Dictionary:
+	var v: Dictionary = view()
+	return v.get("brace_prompt", {}).get("suggestion", {})
+
+
+## The live result of bracing with `cards` now: {total, hits, blocked, health_after, eliminated,
+## comes_up, ...} (brace_advisor.preview). {} when there is no Brace step.
+func brace_preview(cards: Array) -> Dictionary:
+	if state == null or state.pending_brace_seat() != human:
+		return {}
+	var v: Dictionary = LoadoutRules.view(state, human)
+	v["brace_prompt"]["hand_size"] = state.data.balance.hand_size
+	return BraceAdvisor.preview(v, cards, _lookup())
+
+
+func _add_brace_advice(v: Dictionary) -> void:
+	var bp: Dictionary = v["brace_prompt"]
+	bp["hand_size"] = state.data.balance.hand_size
+	var shot: Dictionary = v.get("last_shot", {})
+	var kind: String = String(shot.get("kind", bp.get("kind", "shot")))
+	var src: Dictionary = (shot.get("card", {}) if kind == "frag" else shot.get("weapon", {})) as Dictionary
+	var dmg: int = 0
+	var c: CardData = CardDB.get_card(StringName(str(src.get("card", ""))))
+	if c != null:
+		dmg = c.blast_dmg if kind == "frag" else c.dmg
+		for a: Variant in src.get("attachments", []):
+			var ac: CardData = CardDB.get_card(StringName(str(a)))
+			dmg += ac.attach_dmg if ac != null else 0
+	bp["dmg"] = dmg
+	bp["source"] = {"card": StringName(str(src.get("card", ""))), "kind": kind,
+			"from": StringName(str(v["opponent"].get("area", ""))), "area": StringName(str(shot.get("area", "")))}
+	var key: String = "%d/%d/%d" % [state.actions.size(), state.round_number, int(bp["damage"])]
+	if key != _suggestion_key:
+		_suggestion_key = key
+		_suggestion = BraceAdvisor.suggest(v, _lookup())
+	bp["suggestion"] = _suggestion.duplicate(true)
+	bp["suggested"] = (_suggestion.get("cards", []) as Array).duplicate()
+
+
+func _lookup() -> Callable:
+	return func(id: StringName) -> CardData: return CardDB.get_card(id)
+
+
+# --- Playback controls (cz12) --------------------------------------------------------------
+
+## FAST: the rest of this playback at FAST_FACTOR x the Event speed.
+func fast_forward() -> void:
+	if busy:
+		playback_fast = true
+
+
+## SKIP: the rest of this playback at once (until the human must decide again).
+func skip_playback() -> void:
+	if busy:
+		playback_skip = true
+		_skipped_any = true
+
+
+## Game feel (cz17): keep the loop on the current step until release_playback().
+func hold_playback() -> void:
+	_holds += 1
+
+
+func release_playback() -> void:
+	_holds = maxi(0, _holds - 1)
+
+
+## Seconds a step of this kind stays up at the current speed (0 = no wait).
+func step_duration(kind: StringName) -> float:
+	if playback_skip or event_delay <= 0.0:
+		return 0.0
+	return event_delay * float(STEP_WEIGHT.get(kind, 0.7)) * (FAST_FACTOR if playback_fast else 1.0)
 
 
 ## True when the human must decide now (drop, turn or Brace) and nothing is playing out.
@@ -380,20 +507,24 @@ func _attach_option(att: int) -> Dictionary:
 func _run(first: ActionResult) -> void:
 	_run_id += 1
 	var id: int = _run_id
-	busy = true
+	if not busy:
+		busy = true
+		busy_changed.emit(true)
 	var r: ActionResult = first
 	while true:
 		if r != null:
 			_after_apply(r)
 			_store_save()
+			# Pace the steps while the rival is involved (its action, or the human's last one before
+			# the rival decides); the human's own actions answer at once.
+			var paced: bool = r != first or (not state.is_over() and state.deciding_seat() != human)
 			if not state.is_over() and state.deciding_seat() != human:
 				_set_phase(PHASE_OPPONENT)  # the rival's part starts with these events
 			_emit_view()
 			for e: Dictionary in r.events_for(human):
-				_announce(e)
-				if event_delay > 0.0 and is_inside_tree():
-					await get_tree().create_timer(event_delay).timeout
-					if id != _run_id or not is_inside_tree():
+				var step: Dictionary = _announce(e, paced)
+				if paced and not step.is_empty() and is_inside_tree():
+					if not await _play_step(step, id):
 						return
 				if paused and not await _wait_unpaused(id):
 					return
@@ -404,9 +535,9 @@ func _run(first: ActionResult) -> void:
 		if d == human:
 			break
 		_set_phase(PHASE_OPPONENT)
-		if opponent_delay > 0.0 and is_inside_tree():
-			await get_tree().create_timer(opponent_delay).timeout
-			if id != _run_id or not is_inside_tree():
+		var think: float = 0.0 if playback_skip else opponent_delay * (FAST_FACTOR if playback_fast else 1.0)
+		if think > 0.0 and is_inside_tree():
+			if not await _wait_for(think, id):
 				return
 		if paused and not await _wait_unpaused(id):
 			return
@@ -423,9 +554,84 @@ func _run(first: ActionResult) -> void:
 				break
 			r = LoadoutRules.apply(state, options[0])
 	busy = false
+	var skipped: bool = playback_skip or _skipped_any
+	playback_fast = false
+	playback_skip = false
+	_skipped_any = false
 	_set_phase(_phase_now())
 	_emit_view()
+	if not _rival_steps.is_empty():
+		var steps: Array = _rival_steps.duplicate()
+		_rival_steps.clear()
+		playback_finished.emit(summary_of(steps), steps, skipped or event_delay <= 0.0)
+	if phase == PHASE_BRACE:
+		brace_suggested.emit(brace_suggestion())
+	busy_changed.emit(false)
 	settled.emit()
+
+
+## Waits one step's time (and any game-feel holds). False when the run was replaced.
+func _play_step(step: Dictionary, id: int) -> bool:
+	if float(step["duration"]) > 0.0 and not await _wait_for(float(step["duration"]), id):
+		return false
+	while _holds > 0 and not playback_skip and is_inside_tree():
+		await get_tree().process_frame
+		if id != _run_id:
+			return false
+	return id == _run_id and is_inside_tree()
+
+
+## Waits `seconds` of wall-clock time (at least one frame), sped up live by FAST and cut short by
+## SKIP. False when the run was replaced or the screen left the tree.
+func _wait_for(seconds: float, id: int) -> bool:
+	var left_us: float = seconds * 1000000.0
+	var last: int = Time.get_ticks_usec()
+	while true:
+		await get_tree().process_frame
+		if id != _run_id or not is_inside_tree():
+			return false
+		var now: int = Time.get_ticks_usec()
+		left_us -= float(now - last) / (FAST_FACTOR if playback_fast else 1.0)
+		last = now
+		if left_us <= 0.0 or playback_skip:
+			return true
+		while paused and is_inside_tree():
+			await get_tree().process_frame
+			if id != _run_id:
+				return false
+			last = Time.get_ticks_usec()
+	return true
+
+
+## "Rival's turn: moved to Quarry, looted Crowbar, fired Hunting Rifle (2 damage), packed (1 held)."
+func summary_of(steps: Array) -> String:
+	var parts: PackedStringArray = []
+	var plays: int = 0
+	for s: Dictionary in steps:
+		var e: Dictionary = s["event"]
+		match StringName(s["kind"]):
+			&"move":
+				parts.append("moved to %s" % ActionText.area_name(e.get("to", "")))
+			&"loot":
+				parts.append("looted %s" % ActionText.card_name(e.get("card_id", "")))
+			&"play":
+				plays += 1
+			&"shot":
+				if e["type"] == "frag_thrown":
+					parts.append("threw a Frag into %s" % ActionText.area_name(e.get("area", "")))
+				else:
+					parts.append("fired %s (%d damage)" % [ActionText.card_name(e.get("weapon_id", "")), int(e.get("damage", 0))])
+			&"brace":
+				if int(e.get("seat", -1)) == rival_seat():
+					parts.append("braced %d" % int(e.get("total", 0)))
+			&"pack":
+				if int(e.get("seat", -1)) == rival_seat():
+					parts.append("packed (%d held)" % int(e.get("held_count", 0)))
+	if plays > 0:
+		parts.insert(0, "played %d card%s" % [plays, "" if plays == 1 else "s"])
+	if parts.is_empty():
+		return ""
+	return "Rival's turn: %s." % ", ".join(parts)
 
 
 ## cz13: waits while `paused`. False when this run was replaced or the screen left the tree.
@@ -473,10 +679,16 @@ func _after_apply(r: ActionResult) -> void:
 				_turn_index += 1
 
 
-func _announce(e: Dictionary) -> void:
+## Announces one event; returns its playback step ({} for an event without words).
+func _announce(e: Dictionary, paced: bool = false) -> Dictionary:
 	var text: String = ActionText.describe(e, human)
+	var step: Dictionary = {}
 	if text != "":
 		log_lines.append(text)
+		step = _step_for(e, text, paced)
+		if bool(step["rival"]):
+			_rival_steps.append(step)
+		playback_step.emit(step)
 		event_shown.emit(text, e)
 	EventBus.rules_event.emit(e)
 	match String(e["type"]):
@@ -496,6 +708,49 @@ func _announce(e: Dictionary) -> void:
 		"match_ended":
 			EventBus.match_ended.emit(int(e.get("winner", -1)), StringName(str(e.get("cause", ""))),
 					state.round_number, (Time.get_ticks_msec() - _started_ms) / 1000.0)
+	return step
+
+
+const _STEP_KIND: Dictionary = {"moved": &"move", "dropped": &"move", "looted": &"loot", "played": &"play",
+		"adrenaline": &"play", "attached": &"play", "patched_up": &"play", "ditched": &"play", "healed": &"play",
+		"spent": &"play", "pulled": &"play", "shot_declared": &"shot", "frag_thrown": &"shot",
+		"brace_requested": &"brace", "braced": &"brace", "hits_landed": &"hits", "gas_hit": &"hits",
+		"bounty_claimed": &"hits", "packed": &"pack", "turn_started": &"turn", "drew": &"draw",
+		"round_started": &"round", "bounty_changed": &"round", "zone_flipped": &"zone", "gas_closed": &"zone",
+		"drop_landed": &"zone", "final_circle": &"zone", "crate_formed": &"zone", "eliminated": &"out",
+		"match_ended": &"out", "conceded": &"out"}
+
+
+## One playback step: {index, type, kind, seat, rival, text, event, from, to, duration (seconds the
+## loop will wait on it; 0 = it answers at once)}. Areas are
+## public (both seats' areas are in the view); the event is already filtered for the human.
+func _step_for(e: Dictionary, text: String, paced: bool) -> Dictionary:
+	_step_index += 1
+	var t: String = String(e.get("type", ""))
+	var kind: StringName = _STEP_KIND.get(t, &"other")
+	var seat: int = int(e.get("seat", -1))
+	var from: StringName = &""
+	var to: StringName = &""
+	match t:
+		"moved":
+			from = StringName(str(e.get("from", "")))
+			to = StringName(str(e.get("to", "")))
+		"dropped", "looted":
+			to = StringName(str(e.get("area", "")))
+		"shot_declared":
+			from = state.seats[seat].area
+			to = state.seats[int(e.get("target", 1 - seat))].area
+		"frag_thrown":
+			from = state.seats[seat].area
+			to = StringName(str(e.get("area", "")))
+	if t == "turn_started":
+		_in_rival_turn = seat == rival_seat()
+	var rival: bool = _in_rival_turn or (seat == rival_seat() and state.phase == MatchState.PHASE_DROP)
+	if t == "match_ended":
+		_in_rival_turn = false
+	return {"index": _step_index, "type": t, "kind": kind, "seat": seat, "rival": rival, "text": text,
+			"event": e, "from": from, "to": to,
+			"duration": step_duration(kind) if paced and is_inside_tree() else 0.0}
 
 
 # --- Playtest log hooks (cz18, additive: EventBus emits only, no behaviour change) -----------

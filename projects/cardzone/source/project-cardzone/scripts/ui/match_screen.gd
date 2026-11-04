@@ -30,6 +30,13 @@
 #   MOVE HERE, or LOOT… in your own area (a sheet of piles, drops, crate cards); UNDO; END TURN ->
 #   Pack (tap hand cards to Hold, END TURN again); Brace -> tap armour cards in the strip, BRACE;
 #   MENU -> RESUME / CONCEDE / LEAVE.
+#   cz12: the Brace prompt and the rival's playback use the hand area (your hand is empty then):
+#   BRACE PANEL (brace_panel.gd: the damage sum, live Hits, the suggested brace and why;
+#   USE SUGGESTED + BRACE = 2 taps, or tap next-hand cards to adjust, then BRACE; the suggested
+#   cards carry a SUGGESTED tag under them) and PLAYBACK PANEL (playback_panel.gd: the rival's
+#   steps one at a time, FAST and SKIP); shots / moves / loots are marked on the map
+#   (tracer_layer.gd, a placeholder for cz17). After a skipped or instant rival turn the toast
+#   sums it up in one line.
 #   cz13: when the match comes from the Title / Match setup (a SetupLaunch request), `shell`
 #   (pause_match_shell.gd) starts it and replaces the MENU and end sheets with the pause menu and
 #   the end screen, and runs the first-match coach.
@@ -38,7 +45,7 @@
 # Dependencies: EventBus, SceneRouter, CardDB, Settings, screen_profile.gd, match_theme.gd,
 #   mock_match_data.gd, fan_row.gd, line_chip.gd, zone_track.gd, player_panel.gd, card_inspector.gd,
 #   cz16 CzCard / CzMap / CzAreaTile, scripts/match (controller, view adapter, action text).
-# Author: UI/UX Agent (cz10, cz11)
+# Author: UI/UX Agent (cz10, cz11, cz12)
 extends Control
 
 signal card_tapped(zone: StringName, index: int, card_id: StringName)
@@ -57,6 +64,9 @@ const ViewAdapter: GDScript = preload("res://scripts/match/view_adapter.gd")
 const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
 const SetupLaunch: GDScript = preload("res://scripts/ui/setup_launch.gd")
 const MatchShell: GDScript = preload("res://scripts/ui/pause_match_shell.gd")
+const BracePanel: GDScript = preload("res://scripts/ui/brace_panel.gd")
+const PlaybackPanel: GDScript = preload("res://scripts/ui/playback_panel.gd")
+const TracerLayer: GDScript = preload("res://scripts/ui/tracer_layer.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
@@ -79,6 +89,10 @@ const CORNER_BL: Rect2 = Rect2(0, 156, 78, 92)
 const CORNER_BR: Rect2 = Rect2(338, 156, 78, 92)
 ## Seconds a toast stays up after the last event.
 const TOAST_TIME: float = 2.6
+## Seconds the one-line summary of a skipped / instant rival turn stays up.
+const SUMMARY_TIME: float = 5.0
+## Height of the SUGGESTED tag under a strip card (logical px).
+const TAG_H: float = 24.0
 
 ## Safe area in logical px (tests / previews). Empty = read DisplayServer on phones.
 var safe_area_override: Rect2 = Rect2()
@@ -137,6 +151,11 @@ var _pools: Label
 var _log_button: Button
 var _undo_button: Button
 var _end_button: Button
+# cz12 overlays.
+var _brace_panel: PanelContainer
+var _playback: PanelContainer
+var _tracer: Control
+var _tags: Control
 
 @onready var _safe_area: MarginContainer = %SafeArea
 @onready var _column: VBoxContainer = %Column
@@ -207,6 +226,8 @@ func start_live(state: MatchState = null) -> void:
 		_controller.phase_changed.connect(_on_phase_changed)
 		_controller.event_shown.connect(_on_event_shown)
 		_controller.notice.connect(show_notice)
+		_controller.playback_step.connect(_on_playback_step)
+		_controller.playback_finished.connect(_on_playback_finished)
 	_clear_input()
 	mode = &"act"
 	if state == null:
@@ -303,7 +324,7 @@ func _render() -> void:
 	_zone.setup(int(_state["zone_index"]), int(_state["route"]), int(_state["round"]))
 	_zone.set_short_title(compact)
 	_render_map()
-	_line_is_rival = live and mode == &"opponent"
+	_line_is_rival = live and (mode == &"opponent" or (mode == &"brace" and int(_state.get("active", 0)) != int(_state.get("me", 0))))
 	_render_line(rival.get("line", []) if _line_is_rival else you["line"])
 	# Strip: top of the loadout = next hand (armour). Held cards are the first non-Hit cards.
 	var held: Array = you["held"]
@@ -355,6 +376,8 @@ func _render_map() -> void:
 		if st.get("gas", false):
 			gassed.append(a.id)
 	_map.configure(areas)
+	if _tracer != null and _tracer.get_parent() == _map:
+		_map.move_child(_tracer, -1)  # over the tiles
 	var pawns: Dictionary = {}
 	var y_area: StringName = _state["you"]["area"]
 	var r_area: StringName = _state["rival"]["area"]
@@ -634,8 +657,21 @@ func _build_overlays() -> void:
 	_sheet_close.custom_minimum_size = Vector2(0, MIN_TAP_PX)
 	_sheet_close.pressed.connect(close_sheet)
 	scol.add_child(_sheet_close)
+	# cz12: Brace prompt and rival playback over the hand area, SUGGESTED tags, map tracers.
+	_brace_panel = BracePanel.new()
+	_brace_panel.option.connect(_on_brace_option)
+	add_child(_brace_panel)
+	_playback = PlaybackPanel.new()
+	_playback.option.connect(_on_playback_option)
+	add_child(_playback)
+	_tags = Control.new()
+	_tags.name = "BraceTags"
+	_tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_tags)
+	_tracer = TracerLayer.new()
+	_map.add_child(_tracer)
 	# The inspector stays on top of every overlay.
-	for n: Node in [_dock, _toast, _sheet]:
+	for n: Node in [_dock, _brace_panel, _playback, _tags, _toast, _sheet]:
 		move_child(n, _inspector.get_index())
 
 
@@ -686,15 +722,23 @@ func _place_overlays() -> void:
 	_toast.size = Vector2(_right.size.x, maxf(_strip_header.size.y, _toast.get_combined_minimum_size().y))
 	_sheet_panel.custom_minimum_size.x = minf(620.0, size.x - 48.0)
 	_sheet_scroll.custom_minimum_size.y = minf(5.0 * (tap + 6.0), size.y - 260.0)
+	# cz12: Brace / playback panels over the hand area, below the SUGGESTED tags.
+	var top: float = (_hand.global_position.y - global_position.y) + TAG_H + 2.0
+	var right_end: float = (_right.global_position.y - global_position.y) + _right.size.y
+	for p: Control in [_brace_panel, _playback]:
+		p.position = Vector2(_right.global_position.x - global_position.x, top)
+		p.size = Vector2(_right.size.x, maxf(0.0, right_end - top))
+	_playback.set_tap(tap)
+	_place_tags()
 
 
-func _show_toast(text: String) -> void:
+func _show_toast(text: String, seconds: float = TOAST_TIME) -> void:
 	if _toast == null:
 		return
 	_toast_label.text = text
 	_toast.visible = true
 	if is_inside_tree():
-		_toast_timer.start(TOAST_TIME)
+		_toast_timer.start(seconds)
 
 
 func get_toast_text() -> String:
@@ -710,6 +754,8 @@ func _refresh_live() -> void:
 	_pools.text = "MOVE %d\nSEARCH %d" % [int(you.get("move", 0)), int(you.get("search", 0))]
 	_end_button.text = "END\nTURN"
 	_refresh_dock()
+	_refresh_brace()
+	_refresh_playback()
 
 
 func _refresh_dock() -> void:
@@ -732,25 +778,7 @@ func _refresh_dock() -> void:
 				opts = _controller.area_options(StringName(sel["id"]))
 				close_label = "CLOSE"
 		&"brace":
-			var bp: Dictionary = _state.get("brace_prompt", {})
-			var dmg: int = int(bp.get("damage", 0))
-			var total: int = 0
-			var names: PackedStringArray = []
-			for inst: int in brace_set:
-				var c: CardData = _controller.card(inst)
-				total += c.brace
-				names.append(c.display_name)
-			var hits: int = maxi(0, dmg - total)
-			title = "BRACE · %d DAMAGE INCOMING" % dmg
-			if (bp.get("eligible", []) as Array).is_empty():
-				text = "No card in your next hand can brace. %d Hit%s will land." % [hits, "" if hits == 1 else "s"]
-			elif names.is_empty():
-				text = "Tap armour cards in your next hand (top row) to brace. Braced cards go to the bottom of your loadout."
-			else:
-				text = "Bracing with %s (Brace %d): %d Hit%s land." % [", ".join(names), total, hits, "" if hits == 1 else "s"]
-			var label: String = "BRACE" if not brace_set.is_empty() else "TAKE %d" % hits
-			opts = [{"key": &"brace", "label": label, "action": {"type": "brace", "cards": brace_set.duplicate()}, "reason": ""}]
-			close_label = ""
+			show = false  # cz12: the Brace panel over the hand area
 		&"pack":
 			var limit: int = _controller.hold_limit()
 			var names: PackedStringArray = []
@@ -947,6 +975,190 @@ func _gas_areas() -> Array:
 	return out
 
 
+# --- Live: Brace prompt (cz12) ------------------------------------------------------------
+
+func _refresh_brace() -> void:
+	if _brace_panel == null:
+		return
+	var on: bool = live and mode == &"brace" and _state.has("brace_prompt") and _controller != null
+	if not on:
+		_brace_panel.visible = false
+		_place_tags.call_deferred()
+		return
+	var bp: Dictionary = _state["brace_prompt"]
+	var sug: Dictionary = bp.get("suggestion", {})
+	var suggested: Array = bp.get("suggested", [])
+	var eligible: Array = bp.get("eligible", [])
+	var pv: Dictionary = _controller.brace_preview(brace_set)
+	var src: Dictionary = bp.get("source", {})
+	var dmg: int = int(bp.get("damage", 0))
+	var title: String = ""
+	if String(src.get("kind", "shot")) == "frag":
+		title = "INCOMING · FRAG IN %s" % ActionText.area_name(src.get("area", "")).to_upper()
+	else:
+		title = "INCOMING · %s FROM %s" % [ActionText.card_name(src.get("card", "")).to_upper(),
+				ActionText.area_name(src.get("from", "")).to_upper()]
+	var sum: String = "DMG %d − Cover %d − Down %d = %d damage" % [int(bp.get("dmg", dmg)), int(bp.get("cover", 0)),
+			int(bp.get("down", 0)), dmg]
+	var hits: int = int(pv.get("hits", dmg))
+	var result: String = ""
+	if bool(pv.get("eliminated", false)):
+		result = "YOU TAKE %d HIT%s · YOU'RE OUT" % [hits, "" if hits == 1 else "S"]
+	elif hits == 0:
+		result = "0 HITS · HEALTH %d" % int(pv.get("health", 0))
+	else:
+		result = "YOU TAKE %d HIT%s · HEALTH %d → %d" % [hits, "" if hits == 1 else "S", int(pv.get("health", 0)), int(pv.get("health_after", 0))]
+	var line: String = ""
+	var chosen_is_suggested: bool = not brace_set.is_empty() and _same_set(brace_set, suggested)
+	var comes: String = _comes_up_text(pv.get("comes_up", []))
+	if eligible.is_empty():
+		line = String(sug.get("reason", ""))
+	elif brace_set.is_empty():
+		line = "SUGGESTED: %s → %s. %s" % [_names(suggested), _hits_word(int(sug.get("hits", 0))), String(sug.get("reason", ""))]
+	elif chosen_is_suggested:
+		line = "Suggested brace chosen. " + comes
+	else:
+		line = "Your choice: %s (Brace %d). Suggested: %s → %s. %s" % [_names(brace_set), int(pv.get("total", 0)),
+				_names(suggested), _hits_word(int(sug.get("hits", 0))), comes]
+	var buttons: Array = []
+	if not eligible.is_empty():
+		if chosen_is_suggested:
+			buttons.append({"key": &"brace_clear", "label": "CLEAR"})
+		else:
+			buttons.append({"key": &"brace_suggested", "label": "USE SUGGESTED", "off": suggested.is_empty()})
+	var confirm: String = "TAKE %d HIT%s" % [hits, "" if hits == 1 else "S"] if brace_set.is_empty() else \
+			"BRACE · %d HIT%s" % [hits, "" if hits == 1 else "S"]
+	buttons.append({"key": &"brace", "label": confirm})
+	var tap: float = maxf(MIN_TAP_PX, ceilf(CzArtKit.TAP_PT / points_per_px))
+	_brace_panel.show_prompt({"title": title, "sum": sum, "result": result, "line": line.strip_edges(),
+			"buttons": buttons, "tap": tap})
+	_place_tags.call_deferred()
+
+
+func _on_brace_option(key: StringName) -> void:
+	option_pressed.emit(key)
+	if mode != &"brace":
+		return
+	match key:
+		&"brace_suggested":
+			var suggested: Array = _state.get("brace_prompt", {}).get("suggested", [])
+			brace_set.clear()
+			for x: Variant in suggested:
+				brace_set.append(int(x))
+			_apply_marks()
+			_refresh_brace()
+		&"brace_clear":
+			brace_set.clear()
+			_apply_marks()
+			_refresh_brace()
+		&"brace":
+			_submit({"type": "brace", "cards": brace_set.duplicate()})
+
+
+## SUGGESTED tags under the suggested next-hand cards while the Brace prompt is open.
+func _place_tags() -> void:
+	if _tags == null or not is_inside_tree():
+		return
+	for c: Node in _tags.get_children():
+		_tags.remove_child(c)
+		c.queue_free()
+	if not (live and mode == &"brace" and _brace_panel.visible):
+		return
+	var suggested: Array = _state.get("brace_prompt", {}).get("suggested", [])
+	var cards: Array[Control] = get_cards(&"next")
+	for i: int in cards.size():
+		if not suggested.has(_inst_for(&"next", i)):
+			continue
+		var r: Rect2 = cards[i].get_global_rect()
+		var w: float = r.size.x
+		if i + 1 < cards.size():
+			w = minf(w, cards[i + 1].get_global_rect().position.x - r.position.x - 2.0)
+		var l: Label = Label.new()
+		l.name = "Suggested_%d" % i
+		l.text = "SUGGESTED"
+		l.theme_type_variation = &"TagChipNow"
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		l.clip_text = true
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.position = Vector2(r.position.x, r.end.y + 2.0) - global_position
+		l.size = Vector2(w, TAG_H)
+		_tags.add_child(l)
+
+
+func _same_set(a: Array, b: Array) -> bool:
+	if a.size() != b.size():
+		return false
+	for x: Variant in a:
+		if not b.has(x):
+			return false
+	return true
+
+
+func _names(insts: Array) -> String:
+	if insts.is_empty():
+		return "no brace"
+	var out: PackedStringArray = []
+	for x: Variant in insts:
+		var c: CardData = _controller.card(int(x))
+		out.append("%s (%d)" % [c.display_name, c.brace] if c != null else "?")
+	return " + ".join(out)
+
+
+func _hits_word(n: int) -> String:
+	return "%d Hit%s" % [n, "" if n == 1 else "s"]
+
+
+func _comes_up_text(ids: Array) -> String:
+	if ids.is_empty():
+		return ""
+	var out: PackedStringArray = []
+	for id: Variant in ids:
+		out.append(ActionText.card_name(id))
+	return "%s come%s up into your next hand instead." % [", ".join(out), "s" if ids.size() == 1 else ""]
+
+
+# --- Live: rival playback (cz12) -----------------------------------------------------------
+
+func _refresh_playback() -> void:
+	if _playback == null:
+		return
+	var you: Dictionary = _state.get("you", {})
+	var on: bool = live and mode == &"opponent" and (you.get("hand", []) as Array).is_empty()
+	_playback.visible = on
+	if on and _controller != null:
+		_playback.set_fast(bool(_controller.playback_fast))
+		_playback.set_title("RIVAL · %s · STEP %d" % [_controller.opponent_kind().to_upper(), maxi(1, int(_playback.step_count))])
+
+
+func _on_playback_step(step: Dictionary) -> void:
+	if _tracer != null and StringName(step.get("to", &"")) != &"":
+		_tracer.show_step(step, maxf(float(step.get("duration", 0.0)), 0.6))
+	if not bool(step.get("rival", false)) or _playback == null:
+		return
+	if step["type"] == "turn_started" or (step["type"] == "dropped" and _playback.step_count == 0):
+		_playback.begin("")
+	_playback.add_step(String(step["text"]))
+	_refresh_playback()
+
+
+func _on_playback_finished(summary: String, _steps: Array, skipped: bool) -> void:
+	if skipped and summary != "" and mode != &"brace":  # a Brace step has its own panel
+		_show_toast(summary, SUMMARY_TIME)
+
+
+func _on_playback_option(key: StringName) -> void:
+	option_pressed.emit(key)
+	if _controller == null:
+		return
+	match key:
+		&"fast":
+			_controller.fast_forward()
+			_playback.set_fast(bool(_controller.playback_fast))
+		&"skip":
+			_controller.skip_playback()
+
+
 # --- Live: sheet ----------------------------------------------------------------------
 
 ## A modal list of options (each a 64 px row). Illegal options say why when tapped.
@@ -1138,7 +1350,7 @@ func _toggle_brace(inst: int) -> void:
 			show_notice("%s isn't in your next hand." % c.display_name)
 		return
 	_apply_marks()
-	_refresh_dock()
+	_refresh_brace()
 
 
 ## Card marks for the live modes: selection (with the fan opened at it), Hold, Brace, dimming.
@@ -1300,6 +1512,36 @@ func get_dock_keys() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for o: Dictionary in _dock_options:
 		out.append(o["key"])
+	return out
+
+
+## cz12: the Brace prompt / playback panels and their buttons (null when hidden).
+func get_brace_panel() -> PanelContainer:
+	return _brace_panel
+
+
+func get_brace_button(key: StringName) -> Button:
+	return _brace_panel.get_button(key) if _brace_panel != null else null
+
+
+func get_playback_panel() -> PanelContainer:
+	return _playback
+
+
+func get_playback_button(key: StringName) -> Button:
+	return _playback.get_button(key) if _playback != null else null
+
+
+func get_tracer() -> Control:
+	return _tracer
+
+
+func get_brace_tags() -> Array[Label]:
+	var out: Array[Label] = []
+	if _tags != null:
+		for c: Node in _tags.get_children():
+			if not c.is_queued_for_deletion():
+				out.append(c)
 	return out
 
 
