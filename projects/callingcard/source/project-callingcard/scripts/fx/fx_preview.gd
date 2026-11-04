@@ -4,6 +4,9 @@
 #   drop -> Set Link light -> capture wipe -> "Carded!" -> Ambush flip -> Triptych merge, then reset.
 #   Prints "FXPREVIEW <effect>" as each one starts (QA screenshots key off it).
 #   Keys: F = toggle fast animations, R = toggle reduced motion (printed).
+#   Screenshots: on the web, ?freeze=<effect>&at=<seconds> freezes the game (Engine.time_scale 0)
+#   that long after the effect starts and prints "FXPREVIEW frozen", so a slow headless browser
+#   still captures the exact mid-animation frame. Native: -- --freeze=carded --at=0.3.
 # Dependencies: scenes/Duel.tscn, DuelFx, MockDuelData, EventBus, Settings.
 # Author: Game Feel Engineer Agent (cc15)
 extends Node
@@ -13,9 +16,12 @@ const MockDuelData: GDScript = preload("res://scripts/ui/mock_duel_data.gd")
 const DuelControllerScript: GDScript = preload("res://scripts/duel/duel_controller.gd")
 
 var _duel: Control = null
+var _freeze: String = ""
+var _freeze_at: float = 0.3
 
 
 func _ready() -> void:
+	_read_freeze()
 	DuelControllerScript.set_autostart(false)
 	_duel = (load(DUEL_SCENE) as PackedScene).instantiate()
 	add_child(_duel)
@@ -69,6 +75,25 @@ func _loop() -> void:
 func _fire(label: String, f: Callable) -> void:
 	print("FXPREVIEW %s" % label)
 	f.call()
+	if label == _freeze:
+		_freeze = ""
+		await _wait(_freeze_at)
+		Engine.time_scale = 0.0
+		print("FXPREVIEW frozen")
+
+
+func _read_freeze() -> void:
+	var args: Array = []
+	if OS.has_feature("web"):
+		var q: Variant = JavaScriptBridge.eval("window.location.search", true)
+		args = String(q if q != null else "").trim_prefix("?").split("&")
+	else:
+		args = Array(OS.get_cmdline_user_args()).map(func(a: String) -> String: return a.trim_prefix("--"))
+	for a: String in args:
+		if a.begins_with("freeze="):
+			_freeze = a.trim_prefix("freeze=")
+		elif a.begins_with("at="):
+			_freeze_at = a.trim_prefix("at=").to_float()
 
 
 func _wait(s: float) -> void:

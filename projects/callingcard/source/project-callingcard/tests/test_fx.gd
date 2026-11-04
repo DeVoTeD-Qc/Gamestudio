@@ -314,6 +314,22 @@ func test_controller_emits_lineup_reclaim_and_set_link() -> void:
 	_despawn(setup[0])
 
 
+## Coordinator follow-up (in duel_controller.gd): the cc06 AI is the default brain for every rival.
+func test_default_brain_is_rival_ai() -> void:
+	for r: Dictionary in DuelSetup.rivals():
+		var setup: Array = await _spawn_duel(55, 0.0)
+		var duel: Control = setup[1]
+		var ctrl: Node = duel.get_node("%DuelController")
+		ctrl.select_rival(r["id"])
+		duel.get_overlay().get_button(&"start").pressed.emit()
+		if r.get("data") != null:
+			assert_true(ctrl.brain is RivalAI, "%s plays with RivalAI (%s)" % [r["name"], ctrl.brain.brain_name() if ctrl.brain is RivalAI else "?"])
+		else:
+			assert_not_null(ctrl.brain, "%s falls back to the random brain" % r["name"])
+		_despawn(setup[0])
+		await tree.process_frame
+
+
 func test_paced_duel_awaits_fx_and_finishes() -> void:
 	_set_settings(true, false)
 	var setup: Array = await _spawn_duel(2024, 0.03)

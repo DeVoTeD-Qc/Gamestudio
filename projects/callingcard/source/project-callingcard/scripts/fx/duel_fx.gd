@@ -237,7 +237,7 @@ func _on_set_linked(_side: StringName, slot: StringName, linked: Array) -> void:
 		if other == null:
 			continue
 		_links.append({"from": a, "to": _local_rect(other).get_center(), "color": col,
-				"start": Time.get_ticks_msec(), "dur": maxf(dur, 0.05), "run": not t.reduced_motion})
+				"t": 0.0, "dur": maxf(dur, 0.05), "run": not t.reduced_motion})
 		var oc: BannerCard = _card(StringName(str(s)))
 		if oc != null:
 			oc.pulse()
@@ -635,20 +635,22 @@ func _end_moment(skipped: bool) -> void:
 		_play_triptych(next[0], next[1])
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Game time (scaled), so the light follows Engine.time_scale like the tweens do.
+	var keep: Array[Dictionary] = []
+	for l: Dictionary in _links:
+		l["t"] = float(l["t"]) + delta
+		if float(l["t"]) < float(l["dur"]):
+			keep.append(l)
+	_links = keep
 	queue_redraw()
 	if _links.is_empty():
 		set_process(false)
 
 
 func _draw() -> void:
-	var now: int = Time.get_ticks_msec()
-	var keep: Array[Dictionary] = []
 	for l: Dictionary in _links:
-		var p: float = clampf(float(now - int(l["start"])) / (float(l["dur"]) * 1000.0), 0.0, 1.0)
-		if p >= 1.0:
-			continue
-		keep.append(l)
+		var p: float = clampf(float(l["t"]) / float(l["dur"]), 0.0, 1.0)
 		var a: Vector2 = l["from"]
 		var b: Vector2 = l["to"]
 		var col: Color = l["color"]
@@ -664,7 +666,6 @@ func _draw() -> void:
 			var k: float = sin(p * PI)
 			draw_line(a, b, Color(col, 0.25 * k), 8.0, true)
 			draw_line(a, b, Color(col.lightened(0.4), k), 2.5, true)
-	_links = keep
 
 
 # --- Helpers ------------------------------------------------------------------------------------
