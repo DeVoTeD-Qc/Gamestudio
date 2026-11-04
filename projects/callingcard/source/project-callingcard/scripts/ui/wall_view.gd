@@ -3,7 +3,7 @@
 #   Re-emits slot taps / inspect requests with the slot id; shows a wall Dictionary
 #   {slot_id: {card, owner, face_down, signature, pending}}.
 # Dependencies: wall_layout.gd, wall_slot.gd (scenes/duel/Slot.tscn). BannerCards (cc14) show the
-#   board-size detail (values, Clearance, trait icon) below 96 px tall, so names live in the inspector.
+#   board-size detail (values, Clearance, trait icon) below 112 px tall, so names live in the inspector.
 # Author: UI/UX Agent (cc07)
 extends PanelContainer
 

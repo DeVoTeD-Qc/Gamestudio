@@ -5,7 +5,7 @@
 #   and its rule text, "how it's earned", and whose card it is (with the Signature rule).
 #   A rival's face-down Ambush card shows only what the rules reveal.
 #   Closes with CLOSE, a tap on the dimmed backdrop, Esc / right-click ("cancel").
-# Dependencies: card_text.gd, scenes/card/BannerCard.tscn (cc14; full detail at >= 96 px tall).
+# Dependencies: card_text.gd, scenes/card/BannerCard.tscn (cc14; full detail at >= 112 px tall).
 # Author: UI/UX Agent (cc07)
 extends Control
 
