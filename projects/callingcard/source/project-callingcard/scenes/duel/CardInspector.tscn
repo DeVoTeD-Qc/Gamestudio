@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="1_insp"]
-[ext_resource type="PackedScene" path="res://scenes/duel/CardView.tscn" id="2_card"]
+[ext_resource type="PackedScene" path="res://scenes/card/BannerCard.tscn" id="2_card"]
 
 [node name="CardInspector" type="Control"]
 layout_mode = 3
@@ -86,7 +86,7 @@ text = "Clearance 1 · Issue"
 [node name="OwnerLabel" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"SubtleText"
+theme_type_variation = &"Caption"
 text = "Yours"
 
 [node name="Values" type="HBoxContainer" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn"]
@@ -99,7 +99,7 @@ theme_override_constants/separation = 0
 
 [node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Top"]
 layout_mode = 2
-theme_type_variation = &"ValueCaption"
+theme_type_variation = &"Caption"
 text = "TOP (up)"
 horizontal_alignment = 1
 
@@ -116,7 +116,7 @@ theme_override_constants/separation = 0
 
 [node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Side"]
 layout_mode = 2
-theme_type_variation = &"ValueCaption"
+theme_type_variation = &"Caption"
 text = "SIDE (both)"
 horizontal_alignment = 1
 
@@ -133,7 +133,7 @@ theme_override_constants/separation = 0
 
 [node name="Caption" type="Label" parent="SafeMargin/Center/InspectorPanel/Column/Info/LeftColumn/Values/Bottom"]
 layout_mode = 2
-theme_type_variation = &"ValueCaption"
+theme_type_variation = &"Caption"
 text = "BOTTOM (down)"
 horizontal_alignment = 1
 

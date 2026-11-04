@@ -1,8 +1,9 @@
 # wall_view.gd
 # Purpose: The duel board: a dark brick-wall panel holding the 10 WallSlots (wall_layout.gd).
 #   Re-emits slot taps / inspect requests with the slot id; shows a wall Dictionary
-#   {slot_id: {card, owner, face_down, signature}}.
-# Dependencies: wall_layout.gd, wall_slot.gd (scenes/duel/Slot.tscn).
+#   {slot_id: {card, owner, face_down, signature, pending}}.
+# Dependencies: wall_layout.gd, wall_slot.gd (scenes/duel/Slot.tscn). BannerCards (cc14) show the
+#   board-size detail (values, Clearance, trait icon) below 96 px tall, so names live in the inspector.
 # Author: UI/UX Agent (cc07)
 extends PanelContainer
 
@@ -33,11 +34,6 @@ func set_brick_size(brick: Vector2, gap: Vector2) -> void:
 
 func get_brick_size() -> Vector2:
 	return _layout.brick_size
-
-
-func set_compact(v: bool) -> void:
-	for s: Node in get_slots():
-		s.set_compact(v)
 
 
 ## entries: {slot_id: {card: Dictionary, owner, face_down, signature}}; missing slots are emptied.

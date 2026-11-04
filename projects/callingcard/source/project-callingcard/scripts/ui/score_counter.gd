@@ -2,11 +2,10 @@
 # Purpose: One lacquer score counter (art direction §5): owner tab (solid = you, notched = rival),
 #   name and cards left in hand, the Signature ribbon with that card's name (and "CARDED" once it
 #   is captured), and the score as a key number. side = &"rival" mirrors it (score on the left).
-# Dependencies: wall_palette.gd.
+# Dependencies: ArtKit (cc14 palette); theme variations ScorePlayerPanel/ScoreRivalPanel, ScorePlayer/ScoreRival.
 # Author: UI/UX Agent (cc07)
 extends PanelContainer
 
-const Palette: GDScript = preload("res://scripts/ui/wall_palette.gd")
 
 @export var side: StringName = &"player"
 
@@ -21,7 +20,8 @@ const Palette: GDScript = preload("res://scripts/ui/wall_palette.gd")
 
 
 func _ready() -> void:
-	theme_type_variation = &"CounterPlayer" if side == &"player" else &"CounterRival"
+	theme_type_variation = &"ScorePlayerPanel" if side == &"player" else &"ScoreRivalPanel"
+	_score.theme_type_variation = &"ScorePlayer" if side == &"player" else &"ScoreRival"
 	_tab.draw.connect(_draw_tab)
 	_ribbon.draw.connect(_draw_ribbon)
 	if side == &"rival":
@@ -44,7 +44,7 @@ func show_counter(data: Dictionary) -> void:
 	var carded_by: StringName = data.get("signature_carded_by", &"")
 	_sig_state.visible = carded_by != &""
 	_sig_state.text = "CARDED"
-	_sig_state.add_theme_color_override(&"font_color", Palette.owner_color(carded_by))
+	_sig_state.add_theme_color_override(&"font_color", ArtKit.side_color(carded_by))
 	_ribbon.queue_redraw()
 
 
@@ -59,7 +59,7 @@ func get_important_labels() -> Array[Label]:
 func _draw_tab() -> void:
 	var s: Vector2 = _tab.size
 	var w: float = s.x
-	var col: Color = Palette.owner_color(side)
+	var col: Color = ArtKit.side_color(side)
 	if side == &"player":
 		_tab.draw_rect(Rect2(Vector2(0, (s.y - w) * 0.5), Vector2(w, w)), col)
 	else:
@@ -71,4 +71,4 @@ func _draw_tab() -> void:
 func _draw_ribbon() -> void:
 	var s: Vector2 = _ribbon.size
 	_ribbon.draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(s.x, 0), Vector2(s.x, s.y),
-			Vector2(s.x * 0.5, s.y * 0.7), Vector2(0, s.y)]), Palette.SIGNATURE)
+			Vector2(s.x * 0.5, s.y * 0.7), Vector2(0, s.y)]), ArtKit.SIGNATURE)

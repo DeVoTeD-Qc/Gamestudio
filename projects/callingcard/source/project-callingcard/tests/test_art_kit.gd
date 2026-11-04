@@ -1,8 +1,9 @@
 # test_art_kit.gd
 # Purpose: cc14 art kit checks. wall_theme.tres loads with fonts, palette and styles; every icon
 #   (6 traits, 4 cipher glyphs, 6 sets, utility) exists as SVG and rasterises; BannerCard
-#   instantiates for every demo card and state; text fits at board, hand and album size with
-#   phone-safe minimums (text >= 16 px, key numbers >= 24 px); Triptych panoramas draw;
+#   instantiates for every demo card and state; Top/Bottom pips centred, Sides on the short ends;
+#   nothing on the card overlaps from 256x64 to 1024x256; text fits with phone-safe minimums
+#   (text >= 16 px, key numbers >= 24 px); Triptych panoramas draw;
 #   capture wash changes owner; the art budget stays small; no franchise names in the art data.
 # Author: Technical Artist Agent (cc14)
 extends "res://tests/test_case.gd"
@@ -11,7 +12,7 @@ const Samples: GDScript = preload("res://tests/tools/art_samples.gd")
 const CARD_SCENE: String = "res://scenes/card/BannerCard.tscn"
 const THEME_PATH: String = "res://assets/themes/wall_theme.tres"
 ## Board, hand / inspector, album sizes (4:1).
-const SIZES: Array[Vector2] = [Vector2(256, 64), Vector2(384, 96), Vector2(512, 128), Vector2(1024, 256)]
+const SIZES: Array[Vector2] = [Vector2(256, 64), Vector2(384, 96), Vector2(448, 112), Vector2(512, 128), Vector2(1024, 256)]
 ## Plan cc14: imported assets < 5 MB; brief: keep the kit < 1.5 MB.
 const BUDGET_BYTES: int = 1_500_000
 const ART_DIRS: Array[String] = ["res://assets/fonts", "res://assets/icons", "res://assets/shaders",
@@ -131,6 +132,18 @@ func test_frames_differ_per_tier() -> void:
 	assert_eq(float(ArtKit.FRAMES[1]["glint"]), 0.0, "Issue frame is flat")
 
 
+## Sizes between board and album, including odd ones (every 32 px of height).
+func _all_sizes() -> Array[Vector2]:
+	var out: Array[Vector2] = SIZES.duplicate()
+	var h: float = 64.0
+	while h <= 256.0:
+		out.append(Vector2(h * 4.0, h))
+		h += 32.0
+	out.append(Vector2(288, 72))  # cc07 desktop brick
+	out.append(Vector2(270, 68))  # cc07 phone brick
+	return out
+
+
 func test_text_fits_at_board_hand_and_album_size() -> void:
 	var previous: float = _real_font_metrics()
 	var card: BannerCard = (load(CARD_SCENE) as PackedScene).instantiate()
@@ -141,24 +154,85 @@ func test_text_fits_at_board_hand_and_album_size() -> void:
 			card.configure(d)
 			var lay: Dictionary = card.layout_report()
 			assert_true(int(lay["numeral_px"]) >= 24, "%s @%s numerals %d px" % [d["id"], s, lay["numeral_px"]])
-			# Four value pips must fit inside the card and not overlap each other.
-			var r: float = lay["r"]
-			var pips: Array = [lay["top"], lay["s_left"], lay["s_right"], lay["bottom"]]
-			for a: int in pips.size():
-				var p: Vector2 = pips[a]
-				assert_true(Rect2(Vector2.ZERO, s).grow(-1.0).has_point(p - Vector2(r, r)) and Rect2(Vector2.ZERO, s).grow(0.5).has_point(p + Vector2(r, r)),
-						"%s @%s pip %d inside" % [d["id"], s, a])
-				for b: int in range(a + 1, pips.size()):
-					assert_true((pips[b] as Vector2).distance_to(p) >= r * 2.0 - 0.5, "%s @%s pips %d/%d apart" % [d["id"], s, a, b])
 			if card.is_full_detail():
 				assert_true(bool(lay["name_fits"]), "%s @%s name fits (%s px, %.0f avail)" % [d["id"], s, lay["name_px"], lay["name_avail"]])
 				assert_true(int(lay["name_px"]) >= BannerCard.MIN_TEXT_PX, "%s @%s name >= 16 px" % [d["id"], s])
 				if int(lay["trait_word_px"]) > 0:
 					assert_true(int(lay["trait_word_px"]) >= BannerCard.MIN_TEXT_PX, "%s @%s trait word >= 16 px" % [d["id"], s])
-					assert_true(float(lay["name_left"]) + 1.0 < float(lay["trait_left"]), "%s @%s name and trait don't collide" % [d["id"], s])
+				if d["trait"] != &"none":
+					assert_true(int(lay["trait_word_px"]) > 0, "%s @%s trait word shown at full detail" % [d["id"], s])
 	card.queue_free()
 	await tree.process_frame
 	_restore_font_metrics(previous)
+
+
+## Top pip at top-centre, Bottom at bottom-centre, Sides on the short ends (studio head's layout).
+func test_value_pips_centred() -> void:
+	var card: BannerCard = (load(CARD_SCENE) as PackedScene).instantiate()
+	tree.root.add_child(card)
+	card.configure(Samples.CARDS[1])
+	for s: Vector2 in _all_sizes():
+		card.size = s
+		var lay: Dictionary = card.layout_report()
+		assert_true(is_equal_approx((lay["top"] as Vector2).x, s.x * 0.5), "@%s Top pip centred" % s)
+		assert_true(is_equal_approx((lay["bottom"] as Vector2).x, s.x * 0.5), "@%s Bottom pip centred" % s)
+		assert_true((lay["top"] as Vector2).y < s.y * 0.5 and (lay["bottom"] as Vector2).y > s.y * 0.5, "@%s Top above, Bottom below" % s)
+		assert_true(is_equal_approx((lay["s_left"] as Vector2).y, s.y * 0.5) and is_equal_approx((lay["s_right"] as Vector2).y, s.y * 0.5),
+				"@%s Side pips vertically centred" % s)
+		assert_true((lay["s_left"] as Vector2).x < s.x * 0.15 and (lay["s_right"] as Vector2).x > s.x * 0.85, "@%s Side pips on the short ends" % s)
+	card.queue_free()
+	await tree.process_frame
+
+
+## Nothing overlaps at any size 256x64 - 1024x256, with every element on (Signature, preview,
+## trait word, name): pips, trait disc, Clearance pips, ribbon, preview badge, owner tab, name.
+func test_card_elements_never_overlap() -> void:
+	var previous: float = _real_font_metrics()
+	var card: BannerCard = (load(CARD_SCENE) as PackedScene).instantiate()
+	tree.root.add_child(card)
+	card.side = &"rival"
+	card.signature = true
+	card.preview_flip = true
+	for s: Vector2 in _all_sizes():
+		card.size = s
+		var bounds := Rect2(Vector2.ZERO, s).grow(0.01)
+		for d: Dictionary in Samples.CARDS:
+			card.configure(d)
+			var lay: Dictionary = card.layout_report()
+			var tag: String = "%s @%s" % [d["id"], s]
+			var circles: Dictionary = (lay["circles"] as Dictionary).duplicate()
+			circles["preview"] = [lay["preview_center"], lay["preview_r"]]
+			var boxes: Dictionary = (lay["boxes"] as Dictionary).duplicate()
+			boxes["ribbon"] = lay["ribbon"]
+			for cn: String in circles:
+				var c: Vector2 = circles[cn][0]
+				var r: float = circles[cn][1]
+				assert_true(bounds.encloses(Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)), "%s %s inside the card" % [tag, cn])
+				# Owner tab: triangle x + y <= tab_l in the top-left corner.
+				var t: float = lay["tab_l"]
+				assert_true((c.x + c.y - t) / sqrt(2.0) >= r, "%s %s clear of the owner tab" % [tag, cn])
+				for cn2: String in circles:
+					if cn2 > cn:
+						var c2: Vector2 = circles[cn2][0]
+						assert_true(c.distance_to(c2) >= r + float(circles[cn2][1]), "%s %s / %s overlap" % [tag, cn, cn2])
+				for bn: String in boxes:
+					assert_false(_circle_hits_rect(c, r, boxes[bn]), "%s %s / %s overlap" % [tag, cn, bn])
+			for bn: String in boxes:
+				var b: Rect2 = boxes[bn]
+				assert_true(bounds.encloses(b), "%s %s inside the card" % [tag, bn])
+				assert_true(b.position.x + b.position.y >= float(lay["tab_l"]) or b.position.x >= float(lay["tab_l"]) or b.position.y >= float(lay["tab_l"]),
+						"%s %s clear of the owner tab" % [tag, bn])
+				for bn2: String in boxes:
+					if bn2 > bn:
+						assert_false(b.intersects(boxes[bn2]), "%s %s / %s overlap" % [tag, bn, bn2])
+	card.queue_free()
+	await tree.process_frame
+	_restore_font_metrics(previous)
+
+
+static func _circle_hits_rect(c: Vector2, r: float, rect: Rect2) -> bool:
+	var nearest := Vector2(clampf(c.x, rect.position.x, rect.end.x), clampf(c.y, rect.position.y, rect.end.y))
+	return nearest.distance_to(c) < r - 0.01
 
 
 func test_phone_scale_keeps_key_numbers_readable() -> void:

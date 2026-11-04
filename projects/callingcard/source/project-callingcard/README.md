@@ -19,7 +19,7 @@ web/shell.html       loading screen: progress bar, error notice, rotate-to-lands
 autoload/            EventBus, Settings, CardDB*, Collection*, PlaytestLog*, SceneRouter  (*stubs: cc02, cc09, cc16)
 scripts/ui/          screen_profile.gd (phone readability), boot.gd, title.gd
 scripts/data|rules|ai|art/   (cc02, cc05, cc06, cc14)
-scenes/              Boot.tscn, Title.tscn (placeholder); duel/, album/
+scenes/              Boot.tscn, Title.tscn (placeholder), Duel.tscn (cc07 layout on mock data); duel/, album/
 data/                cards, sets, rivals, triptychs, dossiers (cc02/cc03)
 tests/               run_tests.gd (runner), test_case.gd (asserts), test_*.gd
 ```

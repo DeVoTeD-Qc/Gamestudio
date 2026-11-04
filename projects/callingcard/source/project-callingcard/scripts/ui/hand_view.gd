@@ -3,9 +3,10 @@
 #   rows (5 in one row when they fit, else 3 + 2), so every card stays visible and tappable.
 #   Strip mode (strip = true): one row in a horizontal ScrollContainer, for screens too short
 #   for two rows (DuelScreen decides; at 1280x720 and 844x390 two rows fit, see the cc07 notes).
-#   Tap a card -> pick it (amber outline, `card_picked`); tap it again -> unpick.
+#   Each card is a TapHoldButton (tap target, focus, input) holding a cc14 BannerCard that ignores
+#   the mouse. Tap a card -> pick it (BannerCard amber highlight, `card_picked`); tap again -> unpick.
 #   Hold 400 ms / right-click / "inspect" key -> `card_inspect_requested`.
-# Dependencies: tap_hold_button.gd, scenes/duel/CardView.tscn.
+# Dependencies: tap_hold_button.gd, scenes/card/BannerCard.tscn (cc14).
 # Author: UI/UX Agent (cc07)
 extends VBoxContainer
 
@@ -14,7 +15,7 @@ signal card_unpicked
 signal card_inspect_requested(card_id: StringName)
 
 const TapHoldButton: GDScript = preload("res://scripts/ui/tap_hold_button.gd")
-const CardViewScene: PackedScene = preload("res://scenes/duel/CardView.tscn")
+const BannerCardScene: PackedScene = preload("res://scenes/card/BannerCard.tscn")
 const CARD_GAP: int = 10
 
 var card_size: Vector2 = Vector2(256, 64)
@@ -99,12 +100,15 @@ func _rebuild() -> void:
 		b.custom_minimum_size = card_size
 		b.theme_type_variation = &"HandCard"
 		b.add_to_group(&"tap_target")
-		var view: Control = CardViewScene.instantiate()
-		view.custom_minimum_size = Vector2.ZERO
-		view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		b.add_child(view)
-		view.compact = compact
-		view.show_card(c, &"player", c.get("id") == _signature_id)
+		var card: BannerCard = BannerCardScene.instantiate()
+		card.name = "Card"
+		card.custom_minimum_size = Vector2.ZERO
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(card)
+		card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		card.configure(c)
+		card.side = &"player"
+		card.signature = c.get("id") == _signature_id
 		var id: StringName = c.get("id", &"")
 		b.tapped.connect(func() -> void: unpick() if picked_id == id else pick(id))
 		b.inspect_requested.connect(func() -> void: card_inspect_requested.emit(id))
@@ -115,4 +119,4 @@ func _rebuild() -> void:
 
 func _refresh_picked() -> void:
 	for b: Node in _flow.get_children():
-		(b as Button).theme_type_variation = &"HandCardSelected" if b.get_meta(&"card_id") == picked_id else &"HandCard"
+		(b.get_node("Card") as BannerCard).highlighted = b.get_meta(&"card_id") == picked_id

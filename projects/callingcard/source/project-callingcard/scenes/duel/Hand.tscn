@@ -22,7 +22,7 @@ text = "YOUR HAND · 5"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_type_variation = &"HandHint"
+theme_type_variation = &"Caption"
 text = "Tap to pick · hold or right-click for details"
 horizontal_alignment = 2
 

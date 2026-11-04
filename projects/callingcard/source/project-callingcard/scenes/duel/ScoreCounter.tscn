@@ -5,7 +5,7 @@
 [node name="ScoreCounter" type="PanelContainer"]
 offset_right = 380.0
 offset_bottom = 64.0
-theme_type_variation = &"CounterPlayer"
+theme_type_variation = &"ScorePlayerPanel"
 script = ExtResource("1_counter")
 
 [node name="Row" type="HBoxContainer" parent="."]
@@ -60,7 +60,7 @@ text = "CARDED"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(56, 0)
 layout_mode = 2
-theme_type_variation = &"CounterScore"
+theme_type_variation = &"ScorePlayer"
 text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1

@@ -5,7 +5,7 @@
 #   the screen has and applies notch-safe margins.
 #   Sizes (logical px; ScreenProfile keeps 1 px >= 0.72 pt):
 #     1280x720 desktop   -> bricks 288x72, hand 3 + 2 rows.
-#     1168x540 phone     -> bricks ~270x68 (253x64 with notch insets), hand 3 + 2, compact cards.
+#     1168x540 phone     -> bricks 270x68 (246x64 with notch insets), hand 3 + 2.
 #   Every tap target >= 64 px; text >= 16 px; values and scores >= 24 px.
 # State: show_state(Dictionary) with the shape documented in mock_duel_data.gd. The screen also
 #   listens to EventBus (card_placed, card_captured, ambush_sprung, carded, score_changed,
@@ -15,10 +15,10 @@
 #   show_state(). card_lookup turns a card id into a UI card Dictionary (default: mock table;
 #   cc08 swaps in CardDB). With mock_interactions = true (no controller yet) PLACE emits
 #   EventBus.card_placed / turn_started itself with no captures (no rules here).
-# Hooks for cc14 (art kit): theme = DuelPlaceholderTheme.WALL_THEME_PATH when that file defines
-#   every variation in DuelPlaceholderTheme.VARIATIONS; CardView.art_factory / icon_factory.
+# Art (cc14): cards are BannerCard (scenes/card/BannerCard.tscn) inside the slot / hand buttons;
+#   theme = assets/themes/wall_theme.tres + duel-only variations (duel_theme.gd).
 # Dependencies: EventBus, SceneRouter (mock MENU only), wall/hand/counter/inspector scenes,
-#   screen_profile.gd, duel_placeholder_theme.gd, mock_duel_data.gd, card_text.gd.
+#   screen_profile.gd, duel_theme.gd, mock_duel_data.gd, BannerCard (cc14).
 # Author: UI/UX Agent (cc07)
 extends Control
 
@@ -28,7 +28,7 @@ signal place_confirmed(card_id: StringName, slot_id: StringName)
 signal menu_requested
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
-const PlaceholderTheme: GDScript = preload("res://scripts/ui/duel_placeholder_theme.gd")
+const DuelTheme: GDScript = preload("res://scripts/ui/duel_theme.gd")
 const MockDuelData: GDScript = preload("res://scripts/ui/mock_duel_data.gd")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
@@ -90,19 +90,9 @@ func _ready() -> void:
 	EventBus.screen_shown.emit(&"duel")
 
 
-## cc14's wall theme when it is complete, else the placeholder (see duel_placeholder_theme.gd).
+## cc14's wall_theme.tres plus the duel-only variations (scripts/ui/duel_theme.gd).
 static func pick_theme() -> Theme:
-	if ResourceLoader.exists(PlaceholderTheme.WALL_THEME_PATH):
-		var t: Theme = load(PlaceholderTheme.WALL_THEME_PATH) as Theme
-		if t != null:
-			var missing: Array[String] = []
-			for v: StringName in PlaceholderTheme.VARIATIONS:
-				if t.get_type_variation_base(v) == &"":
-					missing.append(String(v))
-			if missing.is_empty():
-				return t
-			push_warning("DuelScreen: %s lacks %s; using the placeholder theme" % [PlaceholderTheme.WALL_THEME_PATH, ", ".join(missing)])
-	return PlaceholderTheme.build()
+	return DuelTheme.build()
 
 
 ## Brick size for a wall that may use avail_w logical px (inside the wall panel).
@@ -172,7 +162,7 @@ func _render_wall() -> void:
 				"face_down": e.get("face_down", false), "signature": sigs.has(e.get("card_id", &""))}
 	if _pending_slot != &"" and _picked != &"" and not wall.has(_pending_slot):
 		entries[_pending_slot] = {"card": card_lookup.call(_picked), "owner": &"player", "face_down": false,
-				"signature": sigs.has(_picked)}
+				"signature": sigs.has(_picked), "pending": true}
 	_wall.show_wall(entries)
 
 
@@ -223,7 +213,6 @@ func _relayout() -> void:
 	var chrome: Vector2 = _wall.get_theme_stylebox(&"panel").get_minimum_size()
 	var brick: Vector2 = brick_size_for(inner_w - chrome.x)
 	_wall.set_brick_size(brick, WALL_GAP)
-	_wall.set_compact(compact)
 
 	# Hand: rows for a full lineup (5) so the wall does not jump as the hand empties.
 	var hand_w: float = inner_w - _info.custom_minimum_size.x - _place.custom_minimum_size.x - 2.0 * sep

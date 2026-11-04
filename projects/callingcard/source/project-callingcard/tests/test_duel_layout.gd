@@ -1,6 +1,6 @@
 # test_duel_layout.gd
 # Purpose: Layout, readability and touch checks for the duel screen (cc07: scenes/Duel.tscn with
-#   Wall, Slot, CardView, Hand, ScoreCounter and CardInspector). Approach from Killstreak
+#   Wall, Slot, Hand, ScoreCounter and CardInspector; cards are cc14 BannerCards). Approach from Killstreak
 #   tests/test_board_layout.gd: each case is a real screen (size in points + pixel ratio + optional
 #   notch insets); ScreenProfile gives the logical canvas; the screen is laid out in a SubViewport
 #   of that size, then:
@@ -19,7 +19,7 @@ extends "res://tests/test_case.gd"
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const MockDuelData: GDScript = preload("res://scripts/ui/mock_duel_data.gd")
-const PlaceholderTheme: GDScript = preload("res://scripts/ui/duel_placeholder_theme.gd")
+const DuelTheme: GDScript = preload("res://scripts/ui/duel_theme.gd")
 const DuelScreenScript: GDScript = preload("res://scripts/ui/duel_screen.gd")
 const DUEL_SCENE: String = "res://scenes/Duel.tscn"
 const MIN_TAP_PT: float = 44.0
@@ -86,23 +86,28 @@ func test_brick_size_rule() -> void:
 func test_theme_defines_every_variation() -> void:
 	var t: Theme = DuelScreenScript.pick_theme()
 	assert_not_null(t, "theme")
+	var wall: Theme = load(DuelTheme.WALL_THEME_PATH) as Theme
+	assert_not_null(wall, "cc14 wall_theme.tres loads")
+	if wall != null:
+		assert_eq(t.default_font, wall.default_font, "duel theme keeps cc14's default font")
 	var used: Array[StringName] = []
 	var re: RegEx = RegEx.create_from_string('theme_type_variation = &"(\\w+)"')
 	for path: String in _scene_files():
 		for m: RegExMatch in re.search_all(FileAccess.get_file_as_string(path)):
 			used.append(StringName(m.get_string(1)))
-	for path: String in ["res://scripts/ui/card_view.gd", "res://scripts/ui/wall_slot.gd", "res://scripts/ui/hand_view.gd",
-			"res://scripts/ui/score_counter.gd"]:
-		var re2: RegEx = RegEx.create_from_string('&"((?:CardFrame|WallSlot|HandCard|Counter)\\w*)"')
+	for path: String in ["res://scripts/ui/wall_slot.gd", "res://scripts/ui/hand_view.gd", "res://scripts/ui/score_counter.gd"]:
+		var re2: RegEx = RegEx.create_from_string('theme_type_variation = &"(\\w+)"')
 		for m: RegExMatch in re2.search_all(FileAccess.get_file_as_string(path)):
 			used.append(StringName(m.get_string(1)))
-	assert_true(used.size() > 20, "found the variations the scenes use (%d)" % used.size())
+	for path: String in ["res://scripts/ui/wall_slot.gd", "res://scripts/ui/score_counter.gd"]:
+		var re3: RegEx = RegEx.create_from_string('else &"(\\w+)"')
+		for m: RegExMatch in re3.search_all(FileAccess.get_file_as_string(path)):
+			used.append(StringName(m.get_string(1)))
+	assert_true(used.size() > 15, "found the variations the scenes use (%d)" % used.size())
 	for v: StringName in used:
-		if String(v).begins_with("CardFrameC") and not v in PlaceholderTheme.VARIATIONS:
-			continue  # "CardFrameC%d" format string
-		assert_true(PlaceholderTheme.VARIATIONS.has(v), "VARIATIONS lists %s" % v)
-	for v: StringName in PlaceholderTheme.VARIATIONS:
-		assert_eq(t.get_type_variation_base(v), PlaceholderTheme.VARIATIONS[v], "theme variation %s" % v)
+		assert_true(DuelTheme.USED.has(v), "DuelTheme.USED lists %s" % v)
+	for v: StringName in DuelTheme.USED:
+		assert_eq(t.get_type_variation_base(v), DuelTheme.USED[v], "theme variation %s" % v)
 		var styled: bool = not t.get_stylebox_list(v).is_empty() or not t.get_font_size_list(v).is_empty() \
 				or not t.get_color_list(v).is_empty()
 		assert_true(styled, "theme variation %s has a style" % v)
@@ -182,8 +187,12 @@ func test_inspector_every_card_every_screen() -> void:
 				assert_true(inspector.is_open(), "%s opens" % label)
 				var panel: Rect2 = inspector.get_panel().get_global_rect()
 				assert_true(safe.encloses(panel), "%s panel %s inside safe area %s" % [label, panel, safe])
-				var card_rect: Rect2 = inspector.get_card_view().get_global_rect()
+				var big: BannerCard = inspector.get_card_view()
+				var card_rect: Rect2 = big.get_global_rect()
 				assert_true(card_rect.size.x >= 520.0 and card_rect.size.y >= 130.0, "%s big card %s" % [label, card_rect.size])
+				assert_true(big.is_full_detail(), "%s big card shows name and trait word" % label)
+				var lay: Dictionary = big.layout_report()
+				assert_true(lay["name_fits"], "%s card name fits on the big card" % label)
 				for l: Label in inspector.get_important_labels():
 					assert_true(_clipped(l).is_empty(), "%s '%s' is cut: %s" % [label, l.text, _clipped(l)])
 				for n: Node in inspector.find_children("*", "Control", true, false):
@@ -228,9 +237,9 @@ func test_nothing_is_hover_only() -> void:
 		if (n as Control).tooltip_text != "":
 			tips.append(String(duel.get_path_to(n)))
 	assert_true(tips.is_empty(), "no tooltips (hover-only info): %s" % [tips])
-	# Hover styles equal normal styles: hover never carries information.
+	# Card and slot buttons: hover style == normal style (hover never carries information).
 	var t: Theme = duel.theme
-	for v: StringName in [&"WallSlot", &"WallSlotValid", &"HandCard", &"ActionButton", &"PrimaryButton"]:
+	for v: StringName in [&"SlotButton", &"SlotButtonValid", &"HandCard"]:
 		assert_eq(t.get_stylebox(&"hover", v), t.get_stylebox(&"normal", v), "%s hover == normal" % v)
 	_despawn(setup[0])
 
@@ -332,9 +341,9 @@ func test_event_bus_drives_view() -> void:
 	await tree.process_frame
 	var b2: Node = duel.get_wall().get_slot(&"b2")
 	assert_eq(b2.content["owner"], &"player", "capture flips the brick")
-	assert_eq(b2.get_card_view().owner_side, &"player", "card view shows new owner")
-	assert_true(b2.get_card_view().is_signature, "Signature ribbon on the card")
-	assert_false(duel.get_wall().get_slot(&"b3").get_card_view().face_down, "Ambush flipped face-up")
+	assert_eq(b2.get_card().side, &"player", "card shows new owner")
+	assert_true(b2.get_card().signature, "Signature ribbon on the card")
+	assert_false(duel.get_wall().get_slot(&"b3").get_card().face_down, "Ambush flipped face-up")
 	var counters: Array[Control] = duel.get_counters()
 	assert_eq(String(counters[0].get_score_label().text), "6", "player score")
 	assert_eq(String(counters[1].get_score_label().text), "1", "rival score")
@@ -350,13 +359,13 @@ func test_ownership_not_by_color_alone() -> void:
 	var duel: Control = setup[1]
 	var owners: Dictionary = {}
 	for s: Node in duel.get_wall().get_slots():
-		owners[s.get_card_view().owner_side] = true
+		owners[s.get_card().side] = true
 	assert_true(owners.has(&"player") and owners.has(&"rival"), "both owners on the full wall")
 	# The tab shape is drawn from owner_side (solid vs notched); the counters carry the same tabs.
 	for c: Control in duel.get_counters():
 		assert_true(c.side in [&"player", &"rival"], "counter side")
-	assert_true(duel.get_wall().get_slot(&"a3").get_card_view().is_signature, "own Signature marked")
-	assert_true(duel.get_wall().get_slot(&"b2").get_card_view().is_signature, "captured rival Signature marked")
+	assert_true(duel.get_wall().get_slot(&"a3").get_card().signature, "own Signature marked")
+	assert_true(duel.get_wall().get_slot(&"b2").get_card().signature, "captured rival Signature marked")
 	_despawn(setup[0])
 
 
@@ -481,27 +490,26 @@ func _check_layout(screen: Dictionary, state: Dictionary) -> void:
 			min_number = minf(min_number, px * k)
 			assert_true(px >= MIN_NUMBER_PX and px * k >= MIN_NUMBER_PT - 0.01, "%s number '%s' (%s) is %d px = %.1f pt" % [label, c.text, duel.get_path_to(c), px, px * k])
 
-	# Whole text shows: counters, turn banner, every value pip on wall and hand cards.
-	var important: Array[Label] = duel.get_important_labels()
-	for s: Node in wall.get_slots():
-		if not s.is_empty():
-			important.append_array(s.get_card_view().get_important_labels())
-	for b: Node in duel.get_hand().get_card_buttons():
-		important.append_array((b.get_child(0) as Control).get_important_labels())
-	for l: Label in important:
+	# Whole text shows: counters and turn banner.
+	for l: Label in duel.get_important_labels():
 		if not l.is_visible_in_tree() or l.text.strip_edges().is_empty():
 			continue
 		var why: String = _clipped(l)
 		assert_true(why.is_empty(), "%s '%s' (%s) is cut: %s" % [label, l.text, duel.get_path_to(l), why])
-	# Card internals fit the card (the pips' rows are not squeezed out of a 64 px brick).
+	# Cards (BannerCard draws its own text): values >= 24 px, filling the brick / hand button.
+	var cards: Array[BannerCard] = []
 	for s: Node in wall.get_slots():
-		if s.is_empty():
-			continue
-		var cv: Control = s.get_card_view()
-		var frame: Control = cv.get_node("%Frame")
-		assert_true(frame.get_combined_minimum_size().y <= cv.size.y + EPS and frame.get_combined_minimum_size().x <= cv.size.x + EPS,
-				"%s card %s needs %s, has %s" % [label, s.slot_id, frame.get_combined_minimum_size(), cv.size])
-		assert_eq(cv.get_name_label().visible, not duel.compact, "%s card name only on desktop" % label)
+		if not s.is_empty():
+			cards.append(s.get_card())
+	for b: Node in duel.get_hand().get_card_buttons():
+		cards.append(b.get_node("Card"))
+	for cv: BannerCard in cards:
+		var lay: Dictionary = cv.layout_report()
+		assert_true(int(lay["numeral_px"]) >= MIN_NUMBER_PX and lay["numeral_px"] * k >= MIN_NUMBER_PT - 0.01,
+				"%s card %s values %d px = %.1f pt" % [label, cv.card_id, lay["numeral_px"], lay["numeral_px"] * k])
+		assert_true(cv.size.is_equal_approx(brick), "%s card %s is %s, brick %s" % [label, cv.card_id, cv.size, brick])
+		assert_eq(cv.mouse_filter, Control.MOUSE_FILTER_IGNORE, "%s card %s leaves input to its button" % [label, cv.card_id])
+		min_number = minf(min_number, lay["numeral_px"] * k)
 
 	# Hand: every card inside the hand, same size as a brick, 5 cards in at most 2 rows.
 	var hand_rect: Rect2 = duel.get_hand().get_global_rect().grow(EPS)

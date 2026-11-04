@@ -298,7 +298,7 @@ func _graveyard_shift() -> void:  # empty bus stop under a flickering sign
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _mid().darkened(0.55))
 	_skyline(0, CARD_W, 92, 18, 52, _deep().lightened(0.06), _hi(0.35), 0.12)
 	_rect(Rect2(0, 92, CARD_W, 36), _deep().darkened(0.3))
-	var x: float = 250.0 + _rng.randf_range(-20, 20)
+	var x: float = 84.0 + _rng.randf_range(-6, 6)
 	_glow(Vector2(x + 110, 34), 70, _mid(), 0.7)
 	_rect(Rect2(x, 46, 130, 8), _hi())  # shelter roof
 	_rect(Rect2(x + 6, 54, 5, 46), _hi(0.9))
@@ -326,7 +326,7 @@ func _neon_rain() -> void:  # rain over magenta / cyan signage, wet asphalt
 
 func _last_train() -> void:  # subway car lights receding into a tunnel
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _deep().darkened(0.4))
-	var vp := Vector2(330 + _rng.randf_range(-30, 30), 66)
+	var vp := Vector2(330 + _rng.randf_range(-10, 10), 58)
 	for i: int in 7:
 		var t: float = float(i) / 7.0
 		var r := Rect2(lerpf(-40, vp.x - 14, t), lerpf(-30, vp.y - 10, t), 0, 0)
@@ -356,14 +356,14 @@ func _frostbite() -> void:  # ice crystals creeping over a glove
 	_poly([Vector2(gx + 50, 70), Vector2(gx + 86, 52), Vector2(gx + 96, 64), Vector2(gx + 58, 92)], _deep().darkened(0.2))
 	for i: int in 9:
 		_hex_star(Vector2(gx + _rng.randf_range(-50, 70), _rng.randf_range(30, 110)), _rng.randf_range(5, 11), _hi(0.8), 1.5)
-	_hex_star(Vector2(360 + _rng.randf_range(-30, 30), 64), 46, _hi(), 4.0)
+	_hex_star(Vector2(350 + _rng.randf_range(-15, 15), 40), 34, _hi(), 4.0)
 	_hex_star(Vector2(460, 28), 16, _hi(0.6), 2.0)
 
 
 func _snow_blind() -> void:  # white field, one silhouette, flare glow
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _hi(), _hi().darkened(0.06))
 	_rect(Rect2(0, 84, CARD_W, 1.5), _mid(0.25))
-	var x: float = 300.0 + _rng.randf_range(-60, 60)
+	var x: float = 140.0 + _rng.randf_range(-20, 20)
 	_glow(Vector2(x + 40, 44), 46, Color("#F2705A"), 0.35)
 	_circle(Vector2(x + 40, 44), 3.5, Color("#F2705A", 0.9))
 	_figure(x, 92, 34, _deep())
@@ -396,7 +396,7 @@ func _glacier() -> void:  # cracked blue ice wall, vertical strata
 		_vgrad(Rect2(x, 0, w, DESIGN_H), (_hi() if flip else _mid()).lightened(0.05), (_mid() if flip else _deep()))
 		flip = not flip
 		x += w
-	var pts: Array = [Vector2(260 + _rng.randf_range(-40, 40), 0)]
+	var pts: Array = [Vector2(150 + _rng.randf_range(-30, 30), 0)]
 	for i: int in 6:
 		pts.append(pts[-1] + Vector2(_rng.randf_range(-22, 22), 22))
 	_polyline(pts, _deep().darkened(0.4), 4.0)
@@ -411,7 +411,7 @@ func _mayday() -> void:  # distress flare arcing over dark water
 		_line(Vector2(_rng.randf_range(0, 200), y), Vector2(_rng.randf_range(260, 512), y), _hi(0.12 + i * 0.02), 1.2)
 	var pts: Array = []
 	var x0: float = 60.0 + _rng.randf_range(0, 40)
-	var apex := Vector2(330 + _rng.randf_range(-30, 30), 26)
+	var apex := Vector2(345 + _rng.randf_range(-15, 15), 26)
 	for i: int in 17:
 		var t: float = float(i) / 16.0
 		pts.append(Vector2(lerpf(x0, apex.x, t), lerpf(96, apex.y, 1.0 - pow(1.0 - t, 2.0))))
@@ -438,24 +438,24 @@ func _dead_air() -> void:  # old radio, needle at silence, static bands
 	for i: int in 16:
 		var y: float = _rng.randf_range(0, DESIGN_H)
 		_rect(Rect2(0, y, CARD_W, _rng.randf_range(1, 3)), _hi(_rng.randf_range(0.05, 0.18)))
-	var body := Rect2(180, 22, 220, 92)
+	var body := Rect2(80, 22, 142, 92)
 	draw_rect(body, _c(_deep()))
 	draw_rect(body, _c(_hi(0.8)), false, 3.0)
-	var dial := Rect2(196, 34, 120, 34)
+	var dial := Rect2(88, 32, 84, 30)
 	_rect(dial, _hi(0.85))
 	for i: int in 11:
-		_rect(Rect2(dial.position.x + 8 + i * 10.4, dial.position.y + 4, 1.5, 8 if i % 2 == 0 else 5), _deep())
-	_rect(Rect2(dial.position.x + 14, dial.position.y + 4, 3, 28), _deep())  # needle parked at silence
+		_rect(Rect2(dial.position.x + 6 + i * 7.2, dial.position.y + 4, 1.5, 8 if i % 2 == 0 else 5), _deep())
+	_rect(Rect2(dial.position.x + 10, dial.position.y + 4, 3, 24), _deep())  # needle parked at silence
 	for gx: int in 4:
 		for gy: int in 4:
-			_circle(Vector2(338 + gx * 13, 40 + gy * 12), 3.0, _hi(0.6))
-	_circle(Vector2(236, 92), 10, _hi(0.7))
-	_circle(Vector2(276, 92), 10, _hi(0.7))
+			_circle(Vector2(182 + gx * 10, 38 + gy * 10), 2.6, _hi(0.6))
+	_circle(Vector2(108, 90), 10, _hi(0.7))
+	_circle(Vector2(144, 90), 10, _hi(0.7))
 
 
 func _open_channel() -> void:  # antenna tower with pulsing rings
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _mid())
-	var top := Vector2(300 + _rng.randf_range(-40, 40), 18)
+	var top := Vector2(150 + _rng.randf_range(-15, 15), 18)
 	for i: int in 5:
 		_ring(top, 22.0 + i * 24.0, 3.0, _hi(0.75 - i * 0.13), -PI * 0.95, -PI * 0.05)
 	_line(top, Vector2(top.x - 26, 128), _hi(), 3.0)
@@ -490,11 +490,11 @@ func _service_ribbon() -> void:  # striped ribbon bar on felt
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _mid(), _deep())
 	for i: int in 40:
 		_line(Vector2(i * 14, 0), Vector2(i * 14 - 30, 128), _deep(0.25), 1.0)
-	var bar := Rect2(150 + _rng.randf_range(-20, 20), 40, 220, 48)
+	var bar := Rect2(84 + _rng.randf_range(-4, 4), 40, 136, 48)
 	_rect(bar.grow(4), _deep().darkened(0.5))
 	var stripes: Array = [_hi(), _mid(), _hi().lightened(0.35), _deep(), _hi(), _mid().lightened(0.2), _hi()]
 	var sx: float = bar.position.x
-	var widths: Array = [30, 26, 22, 64, 22, 26, 30]
+	var widths: Array = [18.5, 16, 13.5, 40, 13.5, 16, 18.5]
 	for i: int in stripes.size():
 		_rect(Rect2(sx, bar.position.y, widths[i], bar.size.y), stripes[i])
 		sx += widths[i]
@@ -530,7 +530,7 @@ func _null_glyph() -> void:  # black field, one glowing unknown symbol
 	_rect(Rect2(0, 0, CARD_W, DESIGN_H), _deep())
 	for i: int in 24:
 		_rect(Rect2(i * 22, 0, 1, DESIGN_H), _hi(0.04))
-	var c := Vector2(256 + _rng.randf_range(-60, 60), 64)
+	var c := Vector2(150 + _rng.randf_range(-15, 15), 64)
 	_glow(c, 60, _hi(), 0.7)
 	_ring(c, 26, 3.5, _hi())
 	_line(c + Vector2(-14, -18), c + Vector2(14, 18), _hi(), 4.0)
@@ -541,7 +541,7 @@ func _null_glyph() -> void:  # black field, one glowing unknown symbol
 func _key_fragment() -> void:  # broken key, edges glowing teal, glyph etched
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _mid())
 	var y: float = 64.0
-	var x0: float = 120.0 + _rng.randf_range(-20, 20)
+	var x0: float = 110.0 + _rng.randf_range(-10, 10)
 	_glow(Vector2(x0 + 150, y), 70, _hi(), 0.35)
 	_ring(Vector2(x0, y), 26, 10, _hi(0.9))
 	_rect(Rect2(x0 + 24, y - 6, 120, 12), _hi(0.9))
@@ -556,7 +556,7 @@ func _chrome_tiger() -> void:  # low-poly chrome tiger head
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _mid().darkened(0.4))
 	for i: int in 9:
 		_line(Vector2(i * 64 - 40, 128), Vector2(i * 64 + 40, 0), _hi(0.08), 10.0)
-	var c := Vector2(256 + _rng.randf_range(-40, 40), 66)
+	var c := Vector2(150 + _rng.randf_range(-10, 10), 66)
 	var tones: Array = [_hi(), _hi().darkened(0.15), _mid().lightened(0.3), _mid(), _hi().darkened(0.3)]
 	var head: Array = [Vector2(-46, -40), Vector2(-20, -50), Vector2(20, -50), Vector2(46, -40), Vector2(58, -6),
 			Vector2(40, 34), Vector2(0, 52), Vector2(-40, 34), Vector2(-58, -6)]
@@ -602,8 +602,8 @@ func _draw_glyph() -> void:
 	var tex: Texture2D = ArtIcons.cipher_glyph(glyph, px * maxf(_k.y, 0.5) * 2.0)
 	if tex == null:
 		return
-	# Hidden in plain sight: upper middle of the art, between the T pip and the Clearance pips.
-	var pos := Vector2(232 + _rng.randf_range(-30, 30), 10)
+	# Hidden in plain sight: upper-left of the art, between the owner tab and the Top pip.
+	var pos := Vector2(100 + _rng.randf_range(0, 40), 8)
 	draw_texture_rect(tex, Rect2(pos, Vector2(px, px)), false, _c(Color(_pal["hi"].lightened(0.2), 0.55)))
 
 

@@ -81,7 +81,7 @@ horizontal_alignment = 1
 [node name="TurnSub" type="Label" parent="SafeArea/Column/TopBar/TurnPanel/TurnColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"SubtleText"
+theme_type_variation = &"Caption"
 text = "Turn 1 of 10"
 horizontal_alignment = 1
 

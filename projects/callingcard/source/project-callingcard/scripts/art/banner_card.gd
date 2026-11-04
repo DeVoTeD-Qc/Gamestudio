@@ -30,7 +30,7 @@ signal inspect_requested(card: BannerCard)
 const GLINT_SHADER: String = "res://assets/shaders/frame_glint.gdshader"
 const LONG_PRESS_S: float = 0.45
 ## Below this height the card shows values, trait icon and Clearance only (board size).
-const FULL_DETAIL_HEIGHT: float = 96.0
+const FULL_DETAIL_HEIGHT: float = 112.0
 ## Smallest text the card ever draws (README phone rule: text >= 16 logical px).
 const MIN_TEXT_PX: int = 16
 
@@ -262,7 +262,14 @@ func _reduced_motion() -> bool:
 	return s != null and bool(s.get("reduced_motion"))
 
 
-## Pip, font and text measures for the current size, in logical px.
+## Every measure and box of the card for the current size, in logical px (drawing, tests).
+## Layout (studio head, cc14 rework): Top pip at top-centre and Bottom pip at bottom-centre, both
+## sitting over the frame edge like medallions; Side pips on the short ends, vertically centred.
+## The quadrants around them hold the rest:
+##   top-left: owner tab        top-right: Signature ribbon (0.7 w), Clearance pips (corner)
+##   left-centre: preview badge (0.3 w)
+##   bottom-left: set glyph + name (full detail)     bottom-right: trait word + trait icon
+## Key "boxes" (Rect2) and "circles" ([centre, radius]) let tests check that nothing overlaps.
 func _compute_layout() -> Dictionary:
 	var h: float = size.y
 	var w: float = size.x
@@ -276,40 +283,89 @@ func _compute_layout() -> Dictionary:
 		"numeral_px": _numeral_px(r),
 		"s_left": Vector2(m + r, h * 0.5),
 		"s_right": Vector2(w - m - r, h * 0.5),
-		"top": Vector2(m + 3.0 * r + gap, m + r),
-		"bottom": Vector2(w - m - 3.0 * r - gap, h - m - r),
+		"top": Vector2(w * 0.5, r + 1.0),
+		"bottom": Vector2(w * 0.5, h - r - 1.0),
 		"dot_r": maxf(2.5, h * 0.035),
 	}
+	# Trait icon: bottom-right, left of the right Side pip and clear of it.
 	var trait_px: float = r * 1.5
+	var disc: float = trait_px * 0.62
 	lay["trait_px"] = trait_px
-	lay["trait_center"] = lay["bottom"] - Vector2(r + gap + trait_px * 0.5, 0)
+	lay["trait_disc"] = disc
+	lay["trait_center"] = Vector2(w - m - 2.0 * r - gap - disc, h - m - disc)
+	# Clearance pips: top-right corner, right-aligned.
+	var dr: float = lay["dot_r"]
+	var dots_right: float = w - m - dr * 1.5
+	lay["dots_right"] = dots_right
+	lay["dots_y"] = m + dr * 1.6
+	# Signature ribbon hangs from the top edge between the Top pip and the Clearance pips.
+	var rw: float = maxf(14.0, h * 0.2)
+	var rh: float = rw * 1.35
+	lay["ribbon"] = Rect2(w * 0.7 - rh * 0.5, 0.0, rh, rh)
+	# Owner tab (triangle with legs tab_l) in the top-left corner.
+	lay["tab_l"] = maxf(18.0, h * 0.32)
+	# Capture-preview badge: left-centre, between the left Side pip and the Top / Bottom pips.
+	lay["preview_center"] = Vector2(w * 0.3, h * 0.4)
+	lay["preview_r"] = maxf(16.0, h * 0.2)
 	lay["name_px"] = 0
 	lay["name_fits"] = true
 	lay["name_text"] = ""
 	lay["trait_word_px"] = 0
+	lay["trait_word_w"] = 0.0
+	var boxes: Dictionary = {
+		"clearance": Rect2(dots_right - 3.0 * dr * 2.8 - dr - 1.0, float(lay["dots_y"]) - dr - 1.0, 3.0 * dr * 2.8 + 2.0 * dr + 2.0, 2.0 * dr + 2.0),
+	}
+	var circles: Dictionary = {
+		"top": [lay["top"], r], "bottom": [lay["bottom"], r], "s_left": [lay["s_left"], r], "s_right": [lay["s_right"], r],
+		"trait": [lay["trait_center"], disc],
+	}
 	if full:
 		var font: Font = ArtKit.font_display()
+		var tc: Vector2 = lay["trait_center"]
 		var trait_word: String = ArtKit.trait_name(trait_id).to_upper() if not face_down else ""
 		var word_px: int = maxi(MIN_TEXT_PX, int(roundf(h * 0.085)))
 		var word_w: float = font.get_string_size(trait_word, HORIZONTAL_ALIGNMENT_LEFT, -1, word_px).x if trait_word != "" else 0.0
-		lay["trait_word_px"] = word_px if trait_word != "" else 0
+		# The word sits left of the icon and must stay right of the Bottom pip; drop it if it can't.
+		var word_right: float = tc.x - disc - gap
+		var bottom_right_edge: float = w * 0.5 + r + gap
+		if word_w > 0.0 and word_right - word_w < bottom_right_edge:
+			word_w = 0.0
+		lay["trait_word_px"] = word_px if word_w > 0.0 else 0
 		lay["trait_word_w"] = word_w
-		var trait_left: float = (lay["trait_center"] as Vector2).x - trait_px * 0.5 - (word_w + gap if word_w > 0.0 else 0.0)
+		if word_w > 0.0:
+			var wy: float = tc.y + (font.get_ascent(word_px) - font.get_descent(word_px)) * 0.5
+			lay["trait_word_baseline"] = wy
+			boxes["trait_word"] = Rect2(word_right - word_w, wy - font.get_ascent(word_px), word_w, font.get_ascent(word_px) + font.get_descent(word_px))
+		# Name: bottom-left, from after the set glyph to just left of the Bottom pip.
 		var glyph_px: float = maxf(16.0, h * 0.12)
-		var name_left: float = m + gap + glyph_px + gap
-		var avail: float = trait_left - gap * 2.0 - name_left
 		var name_text: String = "HIDDEN" if face_down else card_name.to_upper()
 		var px: int = maxi(MIN_TEXT_PX, int(roundf(h * 0.15)))
+		# On short cards the name line would reach up into the left Side pip: start it after the pip.
+		var line_top: float = h - m - gap - font.get_descent(px) - font.get_ascent(px)
+		var glyph_x: float = m + gap
+		if minf(line_top, h - m - gap - glyph_px) < h * 0.5 + r:
+			glyph_x = m + 2.0 * r + gap
+		var name_left: float = glyph_x + glyph_px + gap
+		var avail: float = w * 0.5 - r - gap * 1.5 - name_left
 		while px > MIN_TEXT_PX and font.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > avail:
 			px -= 1
 		var fits: bool = font.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x <= avail
+		var baseline: float = h - m - gap - font.get_descent(px)
+		var shown: String = name_text if fits else _ellipsize(font, name_text, px, avail)
+		var name_w: float = font.get_string_size(shown, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 		lay["name_px"] = px
 		lay["name_fits"] = fits
 		lay["name_avail"] = avail
 		lay["name_left"] = name_left
+		lay["name_baseline"] = baseline
 		lay["glyph_px"] = glyph_px
-		lay["trait_left"] = trait_left
-		lay["name_text"] = name_text if fits else _ellipsize(font, name_text, px, avail)
+		lay["name_text"] = shown
+		var gy: float = baseline - font.get_ascent(px) * 0.5 - glyph_px * 0.5 - px * 0.08
+		lay["glyph_pos"] = Vector2(glyph_x, gy)
+		boxes["name"] = Rect2(name_left, baseline - font.get_ascent(px), name_w, font.get_ascent(px) + font.get_descent(px))
+		boxes["set_glyph"] = Rect2(lay["glyph_pos"], Vector2(glyph_px, glyph_px))
+	lay["boxes"] = boxes
+	lay["circles"] = circles
 	_last_layout = lay
 	return lay
 
@@ -399,9 +455,9 @@ func _draw_overlay() -> void:
 		_draw_name(o, lay)
 	if signature:
 		_draw_signature(o, lay)
-	_draw_owner_tab(o)
+	_draw_owner_tab(o, lay)
 	if preview_flip:
-		_draw_preview(o)
+		_draw_preview(o, lay)
 
 
 func _draw_back(o: Control, art_rect: Rect2) -> void:
@@ -453,7 +509,7 @@ func _draw_trait(o: Control, lay: Dictionary) -> void:
 		return
 	var px: float = lay["trait_px"]
 	var c: Vector2 = lay["trait_center"]
-	o.draw_circle(c, px * 0.62, Color(ArtKit.ENAMEL, 0.82))
+	o.draw_circle(c, float(lay["trait_disc"]), Color(ArtKit.ENAMEL, 0.82))
 	var tex: Texture2D = ArtIcons.trait_icon(trait_id, px * _screen_scale())
 	if tex != null:
 		var ip: float = px * 0.8
@@ -462,16 +518,15 @@ func _draw_trait(o: Control, lay: Dictionary) -> void:
 		var font: Font = ArtKit.font_display()
 		var wp: int = lay["trait_word_px"]
 		var word: String = ArtKit.trait_name(trait_id).to_upper()
-		var x: float = c.x - px * 0.62 - float(lay["gap"]) - float(lay["trait_word_w"])
-		o.draw_string(font, Vector2(x, c.y + (font.get_ascent(wp) - font.get_descent(wp)) * 0.5), word,
+		var x: float = c.x - float(lay["trait_disc"]) - float(lay["gap"]) - float(lay["trait_word_w"])
+		o.draw_string(font, Vector2(x, float(lay["trait_word_baseline"])), word,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, wp, ArtKit.TEXT)
 
 
 func _draw_clearance(o: Control, lay: Dictionary) -> void:
 	var dr: float = lay["dot_r"]
-	var m: float = lay["m"]
-	var right: float = size.x - m - dr * 1.5
-	var y: float = m + dr * 1.6
+	var right: float = lay["dots_right"]
+	var y: float = lay["dots_y"]
 	var spec: Dictionary = ArtKit.frame_spec(clearance)
 	var fill: Color = spec["base"]
 	if clearance == 4:
@@ -490,32 +545,30 @@ func _draw_name(o: Control, lay: Dictionary) -> void:
 	var font: Font = ArtKit.font_display()
 	var px: int = lay["name_px"]
 	var gp: float = lay["glyph_px"]
-	var baseline: float = size.y - float(lay["m"]) - float(lay["gap"]) - font.get_descent(px)
+	var baseline: float = lay["name_baseline"]
 	var gtex: Texture2D = ArtIcons.set_icon(set_id, gp * _screen_scale())
 	if gtex != null:
-		var gy: float = baseline - font.get_ascent(px) * 0.5 - gp * 0.5 - px * 0.08
-		o.draw_texture_rect(gtex, Rect2(Vector2(float(lay["m"]) + float(lay["gap"]), gy), Vector2(gp, gp)), false,
+		o.draw_texture_rect(gtex, Rect2(lay["glyph_pos"], Vector2(gp, gp)), false,
 				Color(ArtKit.set_palette(set_id)["edge"]).lerp(ArtKit.TEXT, 0.35))
 	o.draw_string(font, Vector2(lay["name_left"], baseline), lay["name_text"], HORIZONTAL_ALIGNMENT_LEFT, -1, px,
 			ArtKit.TEXT if not locked else ArtKit.TEXT_DIM)
 
 
 func _draw_signature(o: Control, lay: Dictionary) -> void:
-	var h: float = size.y
-	var rw: float = maxf(14.0, h * 0.2)
-	var rh: float = rw * 1.35
-	var x: float = size.x * 0.6
-	var tex: Texture2D = ArtIcons.get_icon(&"signature", rh * _screen_scale())
-	o.draw_rect(Rect2(x - rw * 0.5 + 2, 2, rw, rh), Color(0, 0, 0, 0.4))
+	var box: Rect2 = lay["ribbon"]
+	var tex: Texture2D = ArtIcons.get_icon(&"signature", box.size.y * _screen_scale())
+	# Shadow matches the ribbon body (icon spans 10-38 of 48 across, 4-44 down).
+	o.draw_rect(Rect2(box.position + Vector2(box.size.x * 10.0 / 48.0 + 2.0, box.size.y * 4.0 / 48.0 + 2.0),
+			Vector2(box.size.x * 28.0 / 48.0, box.size.y * 34.0 / 48.0)), Color(0, 0, 0, 0.4))
 	if tex != null:
-		o.draw_texture_rect(tex, Rect2(x - rh * 0.5, 0, rh, rh), false, ArtKit.SIGNATURE)
+		o.draw_texture_rect(tex, box, false, ArtKit.SIGNATURE)
 
 
 ## Ownership shape cue (art-direction section 4): player = solid corner tab, rival = notched tab.
-func _draw_owner_tab(o: Control) -> void:
+func _draw_owner_tab(o: Control, lay: Dictionary) -> void:
 	if side == &"":
 		return
-	var l: float = maxf(18.0, size.y * 0.32)
+	var l: float = lay["tab_l"]
 	var col: Color = ArtKit.side_color(side)
 	var pts: PackedVector2Array
 	if side == &"rival":
@@ -530,9 +583,9 @@ func _draw_owner_tab(o: Control) -> void:
 	o.draw_colored_polygon(pts, col)
 
 
-func _draw_preview(o: Control) -> void:
-	var r: float = maxf(16.0, size.y * 0.26)
-	var c: Vector2 = size * 0.5
+func _draw_preview(o: Control, lay: Dictionary) -> void:
+	var r: float = lay["preview_r"]
+	var c: Vector2 = lay["preview_center"]
 	o.draw_circle(c, r + 2.0, Color(0, 0, 0, 0.55))
 	o.draw_circle(c, r, ArtKit.AMBER)
 	var tex: Texture2D = ArtIcons.get_icon(&"capture_arrow", r * 1.4 * _screen_scale())

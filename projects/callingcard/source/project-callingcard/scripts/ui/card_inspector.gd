@@ -5,7 +5,7 @@
 #   and its rule text, "how it's earned", and whose card it is (with the Signature rule).
 #   A rival's face-down Ambush card shows only what the rules reveal.
 #   Closes with CLOSE, a tap on the dimmed backdrop, Esc / right-click ("cancel").
-# Dependencies: card_text.gd, scenes/duel/CardView.tscn.
+# Dependencies: card_text.gd, scenes/card/BannerCard.tscn (cc14; full detail at >= 96 px tall).
 # Author: UI/UX Agent (cc07)
 extends Control
 
@@ -20,7 +20,7 @@ var card: Dictionary = {}
 
 @onready var _scrim: ColorRect = %Scrim
 @onready var _margin: MarginContainer = %SafeMargin
-@onready var _card_view: Control = %InspectorCard
+@onready var _card_view: BannerCard = %InspectorCard
 @onready var _name: Label = %InspectorNameLabel
 @onready var _set_origin: Label = %SetOriginLabel
 @onready var _clearance: Label = %ClearanceLabel
@@ -37,6 +37,7 @@ var card: Dictionary = {}
 
 func _ready() -> void:
 	hide()
+	_card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_close.pressed.connect(close)
 	_scrim.gui_input.connect(_on_scrim_input)
 
@@ -54,9 +55,10 @@ func open_card(c: Dictionary, context: Dictionary = {}) -> void:
 	var hidden: bool = context.get("face_down", false) and owner == &"rival"
 	var size_px: Vector2 = CARD_COMPACT if compact else CARD_WIDE
 	_card_view.custom_minimum_size = size_px
-	_card_view.compact = false
-	_card_view.show_card(c, owner, context.get("signature", false), context.get("face_down", false) and hidden)
-	_card_view.set_text_scale(clampf(size_px.y / 64.0 * 0.7, 1.0, 2.0))
+	_card_view.configure(c)
+	_card_view.side = owner
+	_card_view.signature = context.get("signature", false)
+	_card_view.face_down = hidden
 	_right.custom_minimum_size.x = 380 if compact else 360
 	%Column.add_theme_constant_override(&"separation", 8 if compact else 12)
 	if hidden:
@@ -103,7 +105,7 @@ func set_safe_margins(lt: Vector2, rb: Vector2) -> void:
 	_margin.add_theme_constant_override(&"margin_bottom", int(rb.y))
 
 
-func get_card_view() -> Control:
+func get_card_view() -> BannerCard:
 	return _card_view
 
 
