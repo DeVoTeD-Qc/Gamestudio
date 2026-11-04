@@ -2,6 +2,8 @@
 # Purpose: One lacquer score counter (art direction §5): owner tab (solid = you, notched = rival),
 #   name and cards left in hand, the Signature ribbon with that card's name (and "CARDED" once it
 #   is captured), and the score as a key number. side = &"rival" mirrors it (score on the left).
+#   cc06 Tempo: data.tempo_bonus > 0 shows a "TEMPO +N" tag on the first player's ribbon row; the
+#   score number already includes it (WallRules.score), the tag says why.
 # Dependencies: ArtKit (cc14 palette); theme variations ScorePlayerPanel/ScoreRivalPanel, ScorePlayer/ScoreRival.
 # Author: UI/UX Agent (cc07)
 extends PanelContainer
@@ -17,6 +19,8 @@ extends PanelContainer
 @onready var _sig_state: Label = %SignatureState
 @onready var _score: Label = %ScoreLabel
 @onready var _info: VBoxContainer = %Info
+## "TEMPO +2" tag (built in code so the shared scene stays untouched).
+var _tempo: Label
 
 
 func _ready() -> void:
@@ -24,6 +28,12 @@ func _ready() -> void:
 	_score.theme_type_variation = &"ScorePlayer" if side == &"player" else &"ScoreRival"
 	_tab.draw.connect(_draw_tab)
 	_ribbon.draw.connect(_draw_ribbon)
+	_tempo = Label.new()
+	_tempo.name = "TempoTag"
+	_tempo.theme_type_variation = &"CounterName"
+	_tempo.visible = false
+	_tempo.mouse_filter = Control.MOUSE_FILTER_PASS
+	_sig_state.get_parent().add_child(_tempo)
 	if side == &"rival":
 		# Mirror: [score][info][tab], text right-aligned.
 		_row.move_child(_score, 0)
@@ -35,8 +45,11 @@ func _ready() -> void:
 		ribbon_row.move_child(_ribbon, -1)
 
 
-## data: {name, score, hand_count, signature_name, signature_carded_by}
+## data: {name, score, hand_count, signature_name, signature_carded_by, tempo_bonus?}
 func show_counter(data: Dictionary) -> void:
+	var tempo: int = int(data.get("tempo_bonus", 0))
+	_tempo.visible = tempo > 0
+	_tempo.text = "TEMPO +%d" % tempo
 	var hand_count: int = int(data.get("hand_count", 0))
 	_name.text = "%s · %d in hand" % [String(data.get("name", "")).to_upper(), hand_count]
 	_score.text = str(int(data.get("score", 0)))
@@ -53,7 +66,12 @@ func get_score_label() -> Label:
 
 
 func get_important_labels() -> Array[Label]:
-	return [_name, _sig, _sig_state, _score]
+	return [_name, _sig, _sig_state, _tempo, _score]
+
+
+## The Tempo tag (tests).
+func get_tempo_label() -> Label:
+	return _tempo
 
 
 func _draw_tab() -> void:

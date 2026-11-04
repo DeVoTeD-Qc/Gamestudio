@@ -208,8 +208,8 @@ func _render() -> void:
 		return
 	var p: Dictionary = _state.get("player", {})
 	var r: Dictionary = _state.get("rival", {})
-	_player_counter.show_counter(_counter_data(p))
-	_rival_counter.show_counter(_counter_data(r))
+	_player_counter.show_counter(_counter_data(p, &"player"))
+	_rival_counter.show_counter(_counter_data(r, &"rival"))
 	var wall: Dictionary = _state.get("wall", {})
 	if wall.size() >= MockDuelData.SLOTS.size():
 		_turn_title.text = "WALL FULL"
@@ -247,10 +247,21 @@ func _render_wall() -> void:
 	_apply_reserved()
 
 
-func _counter_data(side: Dictionary) -> Dictionary:
+func _counter_data(side: Dictionary, side_name: StringName) -> Dictionary:
 	var sig: Dictionary = card_lookup.call(side.get("signature_id", &""))
 	return {"name": side.get("name", ""), "score": side.get("score", 0), "hand_count": (side.get("hand", []) as Array).size(),
-			"signature_name": sig.get("name", ""), "signature_carded_by": side.get("signature_carded_by", &"")}
+			"signature_name": sig.get("name", ""), "signature_carded_by": side.get("signature_carded_by", &""),
+			"tempo_bonus": _tempo_bonus() if _state.get("first_player", &"") == side_name else 0}
+
+
+## cc06 Tempo: the first player's head start, shown as a tag on their counter (the score already
+## includes it). state["first_player_bonus"] if the controller sends it, else the balance data.
+func _tempo_bonus() -> int:
+	if _state.has("first_player_bonus"):
+		return int(_state["first_player_bonus"])
+	var db: Node = get_node_or_null(^"/root/CardDB")
+	var b: BalanceConfig = db.get_balance() if db != null else null
+	return b.first_player_bonus if b != null else 0
 
 
 func _refresh_buttons() -> void:

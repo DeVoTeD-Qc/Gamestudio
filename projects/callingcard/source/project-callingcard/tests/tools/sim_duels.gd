@@ -6,6 +6,8 @@
 #     --duels=1000         duels in total, split evenly over the pairings
 #     --seed=1             base seed (duel i uses seed + i for the coin flip and both brains)
 #     --tie=first|draw     tie rule override (default: data/balance.tres)
+#     Tempo: data first_player_bonus is part of WallRules.score, so the AIs play for it; override
+#     it with --knobs=first_player_bonus:0 to get the pre-Tempo rules (with --tie=first).
 #     --second_bonus=N     knob test: +N points to the second player at the end (sim only)
 #     --first_bonus=N      knob test: +N points to the first player at the end (sim only)
 #     --first_sig_bonus=N  knob test: +N to the first player if they control their own Signature
@@ -111,8 +113,8 @@ func _run() -> void:
 				_add(bk, res, first, pairs[p])
 		per_pair.append(bucket)
 	var secs: float = (Time.get_ticks_msec() - t0) / 1000.0
-	var knobs: String = "tie rule %s, first-player bonus %d, second-player bonus %d, first-player Signature bonus %d%s" % [
-			"first player" if balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER else "draw", first_bonus,
+	var knobs: String = "tie rule %s, Tempo (data first_player_bonus) %d, sim-only: first-player bonus %d, second-player bonus %d, first-player Signature bonus %d%s" % [
+			"first player" if balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER else "draw", balance.first_player_bonus, first_bonus,
 			second_bonus, first_sig_bonus, ", Signature tie-break" if sig_tiebreak else ""]
 	_report(per_pair, total, warden_us, warden_nodes_seen, knobs, base_seed, secs)
 	quit(0)
