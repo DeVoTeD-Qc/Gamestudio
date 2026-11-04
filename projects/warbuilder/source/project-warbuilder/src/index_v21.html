@@ -1,0 +1,1786 @@
+<title>Warzone Deckbuilder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: iPad-landscape console with no page scroll. Top bar → full-width battlefield strip (the circle) → three columns: operators + log | hand | weapons + actions. Portrait/phones fall back to a scrolling stack. */
+:root {
+  --bg:#E2E4D6; --surface:#F3F4EB; --surface2:#E9EBDF; --ink:#1C2017; --muted:#5B6152; --line:#C2C5B0;
+  --olive:#475827; --signal:#C2531A; --danger:#AE2A20; --gas:#8E9C1C; --gasbg:#E3E7B6; --good:#2F7A45;
+  --c-move:#2D69AE; --c-prec:#C2531A; --c-intel:#1C7C76; --c-ammo:#9A7116; --c-def:#475827; --c-eva:#6A57A3;
+  --f-display:'Saira Stencil One', Impact, 'Arial Black', sans-serif;
+  --f-body:'Barlow Semi Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --r:6px; --gap: 8px; --top: 44px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#13170F; --surface:#1D2318; --surface2:#262D20; --ink:#E2E5D4; --muted:#9AA18A; --line:#373F2D;
+  --olive:#A4B66A; --signal:#EE8438; --danger:#E5574B; --gas:#C3D34C; --gasbg:#2A3114; --good:#6CC287;
+  --c-move:#6CA4E8; --c-prec:#EE8438; --c-intel:#4EC0B8; --c-ammo:#D8AD48; --c-def:#A4B66A; --c-eva:#A894E0;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg:#13170F; --surface:#1D2318; --surface2:#262D20; --ink:#E2E5D4; --muted:#9AA18A; --line:#373F2D;
+  --olive:#A4B66A; --signal:#EE8438; --danger:#E5574B; --gas:#C3D34C; --gasbg:#2A3114; --good:#6CC287;
+  --c-move:#6CA4E8; --c-prec:#EE8438; --c-intel:#4EC0B8; --c-ammo:#D8AD48; --c-def:#A4B66A; --c-eva:#A894E0;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.3; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; touch-action: manipulation; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.lbl { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+svg.i { width: 14px; height: 14px; flex: none; vertical-align: -2px; }
+.c-move { color: var(--c-move); } .c-prec { color: var(--c-prec); } .c-intel { color: var(--c-intel); } .c-ammo { color: var(--c-ammo); } .c-def { color: var(--c-def); } .c-eva { color: var(--c-eva); }
+.game, .start, .layer-ui { -webkit-touch-callout: none; }
+.game { -webkit-user-select: none; user-select: none; }
+
+/* ===== game grid (landscape) ===== */
+.game { height: 100%; max-height: 100dvh; display: grid; gap: var(--gap); padding: 6px max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  grid-template-columns: clamp(250px, 24vw, 310px) minmax(0, 1fr) clamp(270px, 27vw, 340px);
+  grid-template-rows: var(--top) clamp(170px, 30vh, 250px) minmax(0, 1fr);
+  grid-template-areas: "top top top" "field field field" "left hand right"; overflow: hidden; }
+.top { grid-area: top; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fieldwrap { grid-area: field; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+.left { grid-area: left; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); }
+.handzone { grid-area: hand; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 10px; }
+.right { grid-area: right; min-height: 0; display: flex; flex-direction: column; gap: var(--gap); overflow: hidden; }
+.left { overflow: hidden; }
+
+/* top bar */
+.brand { font-family: var(--f-display); font-size: 18px; letter-spacing: .02em; white-space: nowrap; }
+.brand small { font-family: var(--f-mono); font-size: 10px; color: var(--muted); margin-left: 4px; }
+.turnpill { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--line); white-space: nowrap; }
+.turnpill.mine { background: var(--signal); color: var(--surface); border-color: var(--signal); }
+.hint { font-size: 13.5px; color: var(--muted); min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hint b { color: var(--ink); }
+.roundinfo { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.roundinfo b { color: var(--ink); font-family: var(--f-mono); }
+.iconbtn { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; cursor: pointer; min-height: 34px; }
+.iconbtn:hover { border-color: var(--muted); }
+
+/* battlefield strip */
+.field-head { display: flex; align-items: baseline; gap: 10px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.field-head b { color: var(--ink); }
+.field-head .distchip { margin-left: auto; font-weight: 700; color: var(--ink); }
+.field { flex: 1; min-height: 0; display: flex; gap: 5px; }
+.env { flex: 1 1 0; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-direction: column; position: relative; overflow: hidden; transition: flex .35s ease, background .2s, border-color .2s; }
+.env.gas { flex: 0 0 26px; background: var(--gasbg); border-color: var(--gas); cursor: default; }
+.env.gas .env-body, .env.gas .env-state { display: none; }
+.env.gas::after { content: "GAS"; position: absolute; inset: 0; display: grid; place-items: center; writing-mode: vertical-rl; font-weight: 700; font-size: 10px; letter-spacing: .3em; color: var(--gas); }
+.env.gas.occupied::after { content: "IN GAS"; color: var(--danger); }
+.env.gas.occupied { border-color: var(--danger); }
+.env-state { font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; background: var(--surface2); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.env.warn .env-state { background: repeating-linear-gradient(135deg, var(--gas) 0 6px, var(--gasbg) 6px 12px); color: var(--ink); }
+.env.drop .env-state { background: var(--c-intel); color: var(--surface); }
+.env-body { padding: 4px 6px 6px; display: flex; flex-direction: column; gap: 3px; flex: 1; min-height: 0; }
+.env-name { font-weight: 700; font-size: 13px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.env-stats { font-size: 11px; color: var(--muted); display: flex; gap: 5px; flex-wrap: wrap; line-height: 1.2; }
+.cover-hard { color: var(--ink); font-weight: 700; }
+.tokens { display: flex; gap: 3px; min-height: 18px; flex-wrap: wrap; }
+.tok { font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 2px 5px; border-radius: 3px; text-transform: uppercase; }
+.tok.me { background: var(--signal); color: var(--surface); }
+.tok.them { background: var(--danger); color: var(--surface); }
+.loot { display: flex; flex-direction: column; gap: 3px; margin-top: auto; min-height: 0; overflow: hidden; }
+.loot-it { text-align: left; font-size: 11.5px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; gap: 4px; line-height: 1.15; min-width: 0; }
+.loot-it > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.loot-it.hidden { color: var(--muted); font-style: italic; cursor: default; background: repeating-linear-gradient(45deg, var(--surface2) 0 4px, var(--surface) 4px 8px); }
+.loot-it .k { font-family: var(--f-mono); font-size: 11px; color: var(--c-intel); white-space: nowrap; }
+.loot-it.weapon { border-left: 3px solid var(--signal); }
+.loot-it.att { border-left: 3px solid var(--c-ammo); }
+.loot-more { font-size: 10.5px; color: var(--muted); }
+.env.reach { border-color: var(--signal); box-shadow: 0 0 0 2px var(--signal) inset; cursor: pointer; }
+.env.reach:hover { background: color-mix(in srgb, var(--surface) 85%, var(--signal) 15%); }
+.env.noreach { opacity: .45; }
+.env.here { border-color: var(--ink); }
+.movego { font-size: 11px; font-weight: 700; background: var(--signal); color: var(--surface); border-radius: 4px; padding: 3px; text-align: center; }
+
+/* panels */
+.op { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 10px; display: grid; gap: 5px; min-width: 0; }
+.op > * { min-width: 0; }
+.op-head { display: flex; align-items: baseline; gap: 6px; }
+.op-name { font-family: var(--f-display); font-size: 16px; white-space: nowrap; }
+.op-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; margin-left: auto; white-space: nowrap; }
+.op-meta b { color: var(--ink); }
+.hp { display: flex; align-items: center; gap: 6px; }
+.hpbar { flex: 1; height: 10px; background: var(--surface2); border: 1px solid var(--line); border-radius: 2px; position: relative; overflow: hidden; min-width: 60px; }
+.hpbar i { position: absolute; inset: 0 auto 0 0; background: var(--olive); transition: width .3s; }
+.hpbar.low i { background: var(--danger); }
+.hpbar::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(4% - 1px), var(--surface) calc(4% - 1px) 4%); opacity: .55; }
+.hp .mono { font-size: 13px; min-width: 42px; text-align: right; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface2); white-space: nowrap; }
+.chip.warn { border-color: var(--signal); color: var(--signal); }
+.opp-weps { display: flex; gap: 5px; flex-wrap: wrap; font-size: 12px; }
+.mini-wep { display: flex; align-items: center; gap: 5px; padding: 3px 6px; background: var(--surface2); border-radius: 4px; border: 1px solid var(--line); cursor: pointer; }
+.ready { font-size: 9.5px; font-weight: 700; letter-spacing: .06em; padding: 1px 4px; border-radius: 3px; text-transform: uppercase; }
+.ready.on { background: var(--good); color: var(--surface); }
+.ready.off { background: transparent; color: var(--muted); border: 1px dashed var(--muted); }
+.res { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.res > div { background: var(--surface2); border: 1px solid var(--line); border-radius: 4px; padding: 3px 4px; display: flex; flex-direction: column; align-items: center; }
+.res b { font-family: var(--f-mono); font-size: 18px; line-height: 1.1; }
+.res span { font-size: 9.5px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.res > div.zero { opacity: .5; }
+.statusline { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* log */
+.logbox { flex: 1 1 0; min-height: 60px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-direction: column; overflow: hidden; }
+.logbox .lh { padding: 5px 10px 3px; }
+.logbox ol { margin: 0; padding: 0 10px 8px; list-style: none; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; overflow-y: auto; flex: 1; min-height: 0; }
+.logbox li { padding-left: 7px; border-left: 2px solid var(--line); }
+.logbox li.hit { border-color: var(--good); } .logbox li.miss { border-color: var(--muted); color: var(--muted); }
+.logbox li.gas { border-color: var(--gas); } .logbox li.round { border-color: var(--ink); font-weight: 700; margin-top: 3px; }
+.logbox li.fx { border-color: var(--c-intel); } .logbox li.win { border-color: var(--signal); font-weight: 700; }
+.logbox li.sys { color: var(--muted); font-size: 11.5px; }
+
+/* hand */
+.hand-head { display: flex; align-items: baseline; gap: 8px; }
+.hand-head .note { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hand { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px; align-content: stretch; }
+.hand.many { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.inplay { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--arch, var(--muted)); border-radius: var(--r); display: flex; flex-direction: column; text-align: left; padding: 0; cursor: pointer; min-width: 0; min-height: 0; overflow: hidden; transition: transform .12s, box-shadow .12s; }
+.tc:hover:not(:disabled):not(div) { transform: translateY(-2px); box-shadow: 0 4px 0 color-mix(in srgb, var(--ink) 18%, transparent); }
+.tc:active:not(:disabled):not(div) { transform: scale(.97); }
+.hand .tc { max-height: 210px; }
+.tc.sel { box-shadow: 0 0 0 2px var(--signal); }
+.tc.elig { box-shadow: 0 0 0 2px var(--good); }
+.tc.inel { opacity: .4; }
+.tc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; padding: 5px 7px 2px; }
+.tc-name { font-weight: 700; font-size: 13.5px; line-height: 1.1; }
+.hm { display: flex; gap: 1px; color: var(--ink); flex: none; }
+.hm svg { width: 13px; height: 13px; }
+.hm.z { color: var(--line); }
+.tc-main { padding: 1px 7px 4px; font-size: 12.5px; line-height: 1.25; }
+.tc-boost { margin: 0 5px; padding: 4px 5px; background: var(--surface2); border-radius: 4px; font-size: 11.5px; line-height: 1.2; display: grid; gap: 2px; min-height: 0; overflow: hidden; }
+.tc-foot { display: flex; justify-content: space-between; align-items: center; padding: 4px 7px 5px; font-size: 10.5px; color: var(--muted); gap: 4px; margin-top: auto; white-space: nowrap; overflow: hidden; }
+.cost { font-family: var(--f-mono); color: var(--c-intel); font-weight: 600; white-space: nowrap; }
+.a-starter { --arch: var(--muted); } .a-rungun { --arch: var(--c-move); } .a-entrenched { --arch: var(--c-ammo); } .a-deadeye { --arch: var(--c-prec); } .a-scavenger { --arch: var(--c-intel); }
+.tagc { color: var(--arch); }
+.req { font-family: var(--f-mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--ink); color: var(--surface); white-space: nowrap; display: inline-flex; align-items: center; vertical-align: 1px; }
+.reqin { display: inline-flex; align-items: center; gap: 1px; letter-spacing: .06em; }
+.reqin svg.i { width: 11px; height: 11px; vertical-align: 0; }
+.reqin svg.i:first-of-type { margin-left: 3px; }
+.reqin b { font-weight: 700; margin-left: 1px; }
+.ri { display: inline-flex; vertical-align: -2px; margin: 0 1px; }
+.ri svg.i { width: 13px; height: 13px; }
+.tc-boost .req { justify-self: start; }
+.empty-hand { color: var(--muted); font-size: 13px; padding: 10px 2px; grid-column: 1 / -1; }
+
+/* weapons */
+.weps { display: flex; flex-direction: column; gap: 4px; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.wcard.back .w-body { gap: 3px; padding: 4px 8px 5px; }
+.wcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.wcard.active { border-color: var(--ink); }
+.wsn { display: none; text-transform: none; letter-spacing: .02em; }
+.w-slot { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 8px; background: var(--ink); color: var(--surface); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.wcard.back .w-slot { background: var(--surface2); color: var(--muted); }
+.w-body { padding: 5px 8px 7px; display: grid; gap: 4px; }
+.w-name { font-family: var(--f-display); font-size: 16px; line-height: 1.05; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.w-name .cost { font-size: 11px; }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.stats > div { display: flex; flex-direction: column; align-items: center; background: var(--surface2); border-radius: 3px; padding: 1px 0; }
+.stats b { font-family: var(--f-mono); font-size: 13.5px; }
+.stats span { font-size: 9px; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 2px; }
+.stats svg.i { width: 10px; height: 10px; }
+.stats b.mod { color: var(--signal); }
+.ammo { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.ammo i { width: 6px; height: 13px; border-radius: 3px 3px 1px 1px; background: var(--c-ammo); }
+.ammo i.e { background: transparent; border: 1px dashed var(--line); }
+.ammo .mono { font-size: 11px; margin-left: 4px; color: var(--muted); }
+.tact { font-size: 12px; line-height: 1.25; }
+.tact .req { margin-right: 4px; }
+.tact .t2 { color: var(--muted); display: block; margin-top: 1px; }
+.wempty { padding: 5px 8px; color: var(--muted); font-size: 12px; }
+.wbtns { display: flex; gap: 6px; align-items: center; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--surface); padding: 7px 12px; border-radius: var(--r); font-weight: 700; letter-spacing: .03em; cursor: pointer; min-height: 34px; transition: transform .08s, filter .12s; }
+.btn:hover:not(:disabled) { filter: brightness(1.1); }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn.alt { background: transparent; color: var(--ink); }
+.btn.sig { background: var(--signal); border-color: var(--signal); color: var(--surface); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.wide { flex: 1; }
+.btn.sm { padding: 4px 9px; min-height: 28px; font-size: 12.5px; }
+.switchbtn { border: 1.5px dashed var(--olive); color: var(--olive); background: transparent; border-radius: 99px; padding: 3px 10px; font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap; align-self: center; }
+.switchbtn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* actions */
+.abar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 8px; display: grid; gap: 6px; flex: 0 0 auto; }
+.abar-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ink); }
+.pips i.f { background: var(--ink); }
+.abtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.abtn { position: relative; border: 1px solid var(--line); background: var(--surface2); border-radius: var(--r); padding: 5px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; font-weight: 700; letter-spacing: .03em; cursor: pointer; min-height: 44px; transition: transform .08s, border-color .12s; }
+.abtn:hover:not(:disabled) { border-color: var(--muted); }
+.abtn:active:not(:disabled) { transform: scale(.96); }
+.abtn svg { width: 17px; height: 17px; }
+.abtn small { font-family: var(--f-mono); font-size: 10px; font-weight: 600; color: var(--muted); }
+.abtn:disabled { opacity: .38; cursor: not-allowed; }
+.abtn.on { border-color: var(--signal); background: var(--signal); color: var(--surface); }
+.abtn.on small { color: var(--surface); }
+.abtn.go { border-color: var(--good); }
+.abtn .bad { position: absolute; top: -6px; right: -3px; background: var(--good); color: var(--surface); font-family: var(--f-mono); font-size: 10px; padding: 0 4px; border-radius: 99px; }
+
+/* sheets: centered dialogs that fit the screen */
+.scrim { position: fixed; inset: 0; z-index: 20; background: color-mix(in srgb, var(--ink) 45%, transparent); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.sheet { background: var(--bg); width: 100%; max-width: 760px; max-height: calc(100dvh - 24px); overflow-y: auto; border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; border-top: 3px solid var(--ink); }
+.sheet.wide { max-width: 980px; }
+.sheet h2 { font-family: var(--f-display); font-weight: 400; font-size: 21px; margin: 0; text-wrap: balance; }
+.sheet h3 { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.sheet-head { display: flex; align-items: center; gap: 8px; }
+.sheet-head .x { margin-left: auto; }
+.cols { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 14px; align-items: start; }
+.cols > * { min-width: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.picker .tc { min-height: 120px; }
+.picker .tc .tc-boost, .picker .tc .tc-foot { display: none; }
+.preview { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 10px; font-size: 13px; display: grid; gap: 3px; }
+.preview .lbl { margin-right: 6px; }
+.big .tc { width: 240px; min-height: 240px; cursor: default; }
+.big .tc-name { font-size: 17px; } .big .tc-main { font-size: 14px; } .big .tc-boost { font-size: 13px; }
+.big .hm svg { width: 18px; height: 18px; }
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--ink); background: var(--surface); font-weight: 700; font-size: 18px; cursor: pointer; }
+.stepper b { font-family: var(--f-mono); font-size: 20px; min-width: 28px; text-align: center; }
+.brk { width: 100%; border-collapse: collapse; font-size: 13px; }
+.brk td { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.brk td:last-child { text-align: right; font-family: var(--f-mono); }
+.brk tr.tot td { border-bottom: 0; font-weight: 700; font-size: 15px; }
+.odds { font-family: var(--f-mono); font-size: 28px; }
+.reveal { display: flex; gap: 6px; flex-wrap: wrap; }
+.rv { border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 5px 8px; font-size: 12.5px; display: flex; gap: 6px; align-items: center; animation: flip .35s ease both; }
+.rv:nth-child(2) { animation-delay: .12s } .rv:nth-child(3) { animation-delay: .24s } .rv:nth-child(4) { animation-delay: .36s } .rv:nth-child(5) { animation-delay: .48s } .rv:nth-child(n+6) { animation-delay: .6s }
+@keyframes flip { from { transform: rotateY(80deg); opacity: .2 } to { transform: none; opacity: 1 } }
+.verdict { font-family: var(--f-display); font-size: 34px; line-height: 1; }
+.verdict.hit { color: var(--good); } .verdict.miss { color: var(--muted); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs button { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 11px; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.tabs button.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.grid-cards .tc { cursor: default; min-height: 190px; }
+.rules { font-size: 14px; columns: 2 300px; column-gap: 24px; }
+.rules h4 { margin: 8px 0 2px; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; break-after: avoid; }
+.rules ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; break-inside: avoid; }
+.lootlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.lootpick { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 8px 10px; display: grid; gap: 3px; cursor: pointer; font-size: 12.5px; }
+.lootpick.on { border-color: var(--signal); box-shadow: 0 0 0 2px var(--signal); }
+.lootpick:disabled { opacity: .45; cursor: not-allowed; }
+.lootpick .ln { font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; gap: 6px; }
+.lootpick .lk { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; z-index: 30; background: var(--ink); color: var(--surface); padding: 9px 14px; border-radius: var(--r); font-size: 14px; max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.tip-pop { position: fixed; z-index: 50; max-width: min(320px, calc(100vw - 24px)); background: var(--ink); color: var(--surface); border-radius: 6px; padding: 8px 10px; font-size: 13px; line-height: 1.35; box-shadow: 0 8px 24px rgba(0,0,0,.35); pointer-events: none; }
+.tip-pop b { font-weight: 700; }
+.holding { outline: 2px solid var(--signal); outline-offset: 1px; }
+
+/* start */
+.start { height: 100%; overflow-y: auto; display: grid; place-items: center; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px)); }
+.start-in { max-width: 820px; display: grid; gap: 16px; }
+.start h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(38px, 8vh, 64px); line-height: .92; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.start h1 span { color: var(--signal); }
+.start p { margin: 0; font-size: 15.5px; max-width: 62ch; color: var(--muted); }
+.start .ver { font-family: var(--f-mono); font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.archs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.archs div { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--arch); border-radius: 4px; padding: 7px 9px; font-size: 12.5px; }
+.archs b { display: block; font-size: 14px; }
+.hand-off { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: grid; place-items: center; text-align: center; padding: 24px; }
+.hand-off h2 { font-family: var(--f-display); font-weight: 400; font-size: 34px; margin: 0 0 8px; }
+
+/* small landscape heights: tighten */
+@media (orientation: landscape) and (max-height: 780px) {
+  .game { grid-template-rows: 40px clamp(165px, 30vh, 215px) minmax(0, 1fr); --top: 40px; }
+  .tc-boost { font-size: 11px; }
+  .op { padding: 5px 9px; gap: 4px; }
+  .tact .t2 { display: none; }
+  .wsn { display: inline; }
+  .wcard .w-name { display: none; }
+  .wcard .w-body { gap: 3px; padding: 4px 8px 5px; }
+  .abtn { min-height: 40px; padding: 3px 2px; }
+}
+
+/* portrait & phones: scrolling stack */
+@media (orientation: portrait), (max-width: 860px) {
+  html, body { height: auto; }
+  .game { height: auto; overflow: visible; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "top" "field" "left" "hand" "right"; }
+  .top { flex-wrap: wrap; }
+  .hint { white-space: normal; flex-basis: 100%; order: 5; }
+  .field { overflow-x: auto; min-height: 190px; }
+  .env { flex: 0 0 120px; }
+  .env.gas { flex: 0 0 26px; }
+  .hand { grid-template-rows: none; grid-auto-rows: auto; }
+  .hand .tc { min-height: 170px; max-height: none; }
+  .logbox { max-height: 260px; }
+  .cols { grid-template-columns: 1fr; }
+  .archs { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* inside / outside slots */
+.env-body[data-act] { cursor: pointer; }
+.slot-in, .slot-out { border-radius: 4px; padding: 2px 4px 3px; display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden; }
+.slot-in { border: 1px dashed var(--line); background: var(--surface2); flex: 1 1 auto; }
+.slot-in.held { border-style: solid; border-color: var(--ink); }
+.slot-in.none { flex: 0 0 auto; background: transparent; }
+.slot-out { border-top: 1px solid var(--line); border-radius: 0; flex: 0 0 auto; padding-top: 3px; }
+.sl { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl .ri svg.i { width: 10px; height: 10px; }
+.cache { align-self: flex-start; font-family: var(--f-mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; border: 1px dashed var(--c-intel); color: var(--c-intel); white-space: nowrap; }
+.cache.crate { border-style: solid; background: var(--c-intel); color: var(--surface); }
+.mvopts { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
+.mvopt { border: 1px solid var(--signal); background: var(--surface); color: var(--signal); border-radius: 4px; padding: 5px 4px; font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.mvopt.in { background: var(--signal); color: var(--surface); }
+.mvopt.breach { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+.mvopt:active { transform: scale(.96); }
+.env-stats svg.i { width: 11px; height: 11px; }
+.abtn.search { background: var(--c-intel); border-color: var(--c-intel); }
+
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="M4 6l6 6-6 6M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-prec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></symbol>
+  <symbol id="i-intel" viewBox="0 0 24 24"><path d="M12 3l8 9-8 9-8-9z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></symbol>
+  <symbol id="i-ammo" viewBox="0 0 24 24"><path d="M9 21V10c0-3 1.5-6 3-7 1.5 1 3 4 3 7v11z" fill="currentColor"/><path d="M8 18h8" stroke="var(--surface)" stroke-width="1.5"/></symbol>
+  <symbol id="i-def" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" fill="currentColor"/></symbol>
+  <symbol id="i-eva" viewBox="0 0 24 24"><path d="M3 15c5 0 7-7 12-7h6M3 19c6 0 9-5 13-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-hm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></symbol>
+  <symbol id="i-dmg" viewBox="0 0 24 24"><path d="M12 2l2.5 6.5L21 7l-4 5.5 4 5.5-6.5-1.5L12 23l-2.5-6.5L3 18l4-5.5L3 7l6.5 1.5z" fill="currentColor"/></symbol>
+  <symbol id="i-rng" viewBox="0 0 24 24"><path d="M3 12h18M6 8l-3 4 3 4M18 8l3 4-3 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-mob" viewBox="0 0 24 24"><path d="M4 20h16M7 16l3-9 4 3 3-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-diff" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9 12h6" stroke="currentColor" stroke-width="2.2"/></symbol>
+  <symbol id="i-rcl" viewBox="0 0 24 24"><path d="M5 19l14-14M5 19v-6M5 19h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-loot" viewBox="0 0 24 24"><path d="M4 9h16v11H4zM2 5h20v4H2zM12 5v15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-end" viewBox="0 0 24 24"><path d="M6 4v16M6 5h11l-2.5 4L17 13H6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-hm0" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+</svg>
+
+<div id="app"></div>
+<div id="layer" class="layer-ui"></div>
+
+<script>/* WARZONE DECKBUILDER v2.1 — authoritative rules engine (pure data + functions).
+   All mutations go through the exported operations; each validates before mutating. */
+(function (root) {
+'use strict';
+
+const RES = ['move', 'prec', 'intel', 'ammo'];
+const HM = { ammo: 0, aim: 2 };
+const TUNE = { zones: 11, startA: 3, startB: 7, gasDmg: 2, dropItems: 2, distDiv: 2, finalBase: 2, cardDiscount: 1, bankIntel: true, breachExtra: 1, crate: [6, 3] };
+const RES_LABEL = { move: 'Movement', prec: 'Precision', intel: 'Intel', ammo: 'Ammo', def: 'Defense', eva: 'Evasion' };
+const BONUS_TYPES = ['move', 'fire', 'loot', 'reload'];
+const ARCH = { starter: 'Starter', rungun: 'Run & Gun', entrenched: 'Entrenched', deadeye: 'Deadeye', scavenger: 'Scavenger' };
+const ARCH_TAG = { starter: 'Starter', rungun: 'Movement Engine', entrenched: 'Ammo Engine', deadeye: 'Deadeye', scavenger: 'Scavenger' };
+const COND_LABEL = { notMoved: "haven't moved", movedToward: 'moved toward enemy', shareOrAdjacent: 'same or adjacent space', oppDist3: 'enemy at Distance 3+' };
+
+// ---------- effect builders ----------
+const gain = (res, n) => ({ op: 'gain', res, n });
+const convert = (from, to, max) => ({ op: 'convert', from, to, max });
+const draw = n => ({ op: 'draw', n });
+const bonus = (type, n = 1) => ({ op: 'bonus', type, n });
+const nextFire = o => Object.assign({ op: 'nextFire' }, o);
+const cond = (iff, then) => ({ op: 'cond', if: iff, then });
+const register = (on, label, then) => ({ op: 'register', on, label, then });
+
+// ---------- TACTICAL CARDS (prototype values: tune freely) ----------
+const CARDS = {};
+function TC(id, name, archetype, hm, cost, copies, main, mainText, req, boost, boostText, hybrid) {
+  CARDS[id] = {
+    id, name, archetype, hit_markers: hm, intel_cost: cost, copies,
+    main_effects: main, main_text: mainText,
+    boost_requirement_type: req === 0 ? 'any' : 'min', boost_min_hit_markers: req,
+    boost_effects: boost, boost_text: boostText,
+    rarity_or_tier: cost >= 4 ? 'Elite' : cost === 3 ? 'Advanced' : cost === 2 ? 'Standard' : 'Starter',
+    art_reference: 'placeholder/' + id,
+    tags: [ARCH_TAG[archetype]].concat(hybrid ? ['Hybrid'] : []),
+  };
+}
+// Starter deck (confirmed)
+TC('T001', 'Basic Sprint', 'starter', 0, 0, 3, [gain('move', 2)], 'Gain 2 Movement.', 0, [gain('move', 1)], 'Gain 1 additional Movement.');
+TC('T002', 'Basic Recon', 'starter', 0, 0, 2, [gain('intel', 2)], 'Gain 2 Intel.', 0, [gain('intel', 1)], 'Gain 1 additional Intel.');
+TC('T003', 'Basic Ammo', 'starter', HM.ammo, 0, 2, [gain('ammo', 2)], 'Gain 2 Ammo.', 0, [gain('ammo', 1)], 'Gain 1 additional Ammo.');
+TC('T004', 'Steady Aim', 'starter', HM.aim, 0, 2, [gain('prec', 2)], 'Gain 2 Precision.', 0, [gain('prec', 2)], 'Gain 2 additional Precision.');
+TC('T005', 'Field Training', 'starter', 1, 0, 1, [gain('prec', 1), gain('def', 1)], 'Gain 1 Precision and 1 Defense.', 1, [gain('def', 1)], 'Gain 1 additional Defense.');
+// Run & Gun
+TC('T101', 'Tactical Slide', 'rungun', 1, 2, 3, [gain('move', 3)], 'Gain 3 Movement.', 0, [gain('eva', 1)], 'Gain 1 Evasion.');
+TC('T102', 'Rapid Advance', 'rungun', 1, 2, 3, [gain('move', 2)], 'Gain 2 Movement.', 1, [cond('movedToward', [gain('prec', 2)])], "Gain 2 Precision if you've moved toward the enemy this round.");
+TC('T103', 'Flanking Route', 'rungun', 2, 3, 2, [gain('move', 2), draw(1)], 'Gain 2 Movement. Draw 1 card.', 1, [bonus('move')], 'Gain 1 bonus Move action.');
+TC('T104', 'Close Pursuit', 'rungun', 1, 3, 2, [gain('move', 1), gain('prec', 2)], 'Gain 1 Movement and 2 Precision.', 2, [cond('shareOrAdjacent', [bonus('fire')])], 'Gain 1 bonus Fire action if operators share a space or are adjacent.', true);
+TC('T105', 'Combat Roll', 'rungun', 2, 3, 2, [gain('move', 2), gain('eva', 1)], 'Gain 2 Movement and 1 Evasion.', 0, [gain('move', 1), gain('eva', 1)], 'Gain 1 additional Movement and 1 additional Evasion.');
+TC('T106', 'Adrenaline Rush', 'rungun', 1, 3, 2, [gain('move', 3)], 'Gain 3 Movement.', 1, [register('moveToward', 'next Move toward enemy: +2 Precision', [gain('prec', 2)])], 'Your next Move toward the opponent grants 2 Precision after it resolves.');
+// Entrenched
+TC('T201', 'Ammo Crate', 'entrenched', 1, 2, 3, [gain('ammo', 3)], 'Gain 3 Ammo.', 0, [gain('def', 2)], 'Gain 2 Defense.');
+TC('T202', 'Brace Position', 'entrenched', 1, 2, 3, [gain('def', 2)], 'Gain 2 Defense.', 1, [nextFire({ recoilIgnore: 1 })], 'Your next Fire ignores 1 Recoil.');
+TC('T203', 'Combat Supply', 'entrenched', 2, 3, 2, [gain('ammo', 2), gain('prec', 1)], 'Gain 2 Ammo and 1 Precision.', 1, [bonus('reload')], 'Gain 1 bonus Reload action.', true);
+TC('T204', 'Heavy Suppression', 'entrenched', 1, 3, 2, [gain('prec', 3)], 'Gain 3 Precision.', 2, [register('fireHits', 'next Fire hits: enemy next Fire +2 required', [{ op: 'suppress', n: 2 }])], "If your next Fire hits, the opponent's next Fire requires 2 additional Hit Markers.");
+TC('T205', 'Fortified Position', 'entrenched', 2, 3, 2, [gain('def', 3)], 'Gain 3 Defense.', 0, [gain('ammo', 2)], 'Gain 2 Ammo.');
+TC('T206', 'Recoil Management', 'entrenched', 2, 3, 2, [gain('prec', 2)], 'Gain 2 Precision.', 1, [nextFire({ recoilIgnore: 2 })], 'Reduce your Active weapon’s recoil penalty by 2 on its next Fire this round (min 0).');
+// Deadeye
+TC('T301', 'Hold Breath', 'deadeye', 2, 3, 2, [gain('prec', 3)], 'Gain 3 Precision.', 0, [nextFire({ recoilIgnore: 1 })], 'Your next Fire ignores 1 Recoil.');
+TC('T302', 'Target Lock', 'deadeye', 2, 3, 2, [gain('prec', 2)], 'Gain 2 Precision.', 1, [nextFire({ reqMod: 1 })], 'Your next Fire requires 1 fewer Hit Marker (min 1).');
+TC('T303', 'Patient Hunter', 'deadeye', 3, 4, 1, [gain('prec', 2)], 'Gain 2 Precision.', 2, [cond('notMoved', [draw(1)])], "Draw 1 card if you haven't moved this round.");
+TC('T304', 'Steady Trigger', 'deadeye', 2, 4, 1, [gain('prec', 3)], 'Gain 3 Precision.', 2, [nextFire({ reqMod: 2 })], 'Your next Fire requires 2 fewer Hit Markers (min 1).');
+TC('T305', 'Sharpshooter Training', 'deadeye', 3, 4, 1, [gain('prec', 1), gain('def', 1)], 'Gain 1 Precision and 1 Defense.', 1, [gain('prec', 2)], 'Gain 2 additional Precision.');
+TC('T306', 'Combat Focus', 'deadeye', 2, 4, 1, [gain('prec', 2), draw(1)], 'Gain 2 Precision. Draw 1 card.', 2, [cond('oppDist3', [gain('prec', 2)])], 'Gain 2 additional Precision if the enemy is at Distance 3 or greater.');
+// Scavenger
+TC('T401', 'Quick Search', 'scavenger', 1, 2, 3, [gain('intel', 3)], 'Gain 3 Intel.', 0, [gain('move', 1)], 'Gain 1 Movement.');
+TC('T402', 'Supply Route', 'scavenger', 1, 3, 2, [gain('intel', 2), gain('move', 2)], 'Gain 2 Intel and 2 Movement.', 1, [bonus('loot')], 'Gain 1 bonus Loot action.');
+TC('T403', 'Combat Salvage', 'scavenger', 2, 3, 2, [gain('intel', 2)], 'Gain 2 Intel.', 1, [{ op: 'salvageDiscard' }], 'Permanently remove one other tactical card from your discard pile.');
+TC('T404', 'Black Market', 'scavenger', 2, 4, 1, [gain('intel', 2), draw(1)], 'Gain 2 Intel. Draw 1 card.', 2, [{ op: 'lootDiscount', n: 1 }], 'Your next Loot this round costs 1 less Intel (min 0).');
+TC('T405', 'Resourceful Operator', 'scavenger', 1, 2, 3, [gain('move', 1), gain('ammo', 1), gain('intel', 1)], 'Gain 1 Movement, 1 Ammo and 1 Intel.', 0, [gain('prec', 1)], 'Gain 1 Precision.', true);
+TC('T406', 'Tactical Recycling', 'scavenger', 2, 3, 2, [draw(1)], 'Draw 1 tactical card.', 1, [{ op: 'salvageHand', then: [gain('intel', 2)] }], 'Permanently remove one other card from your hand, then gain 2 Intel.');
+
+// ---------- WEAPONS ----------
+const WEAPONS = {};
+function WD(id, name, archetype, damage, range, mobility, mag, diff, recoil, cost, main, mainText, req, boost, boostText, gather, gatherText, hybrid, cls) {
+  WEAPONS[id] = {
+    id, name, archetype, cls, damage, max_range: range, mobility, magazine_capacity: mag, starting_ammo: mag,
+    hit_difficulty: diff, recoil, intel_cost: cost,
+    tactical_main_effects: main, main_text: mainText,
+    tactical_boost_requirement: req === 0 ? 'any' : 'min', tactical_boost_min_hit_markers: req,
+    tactical_boost_effects: boost, boost_text: boostText,
+    on_gather_effects: gather, gather_text: gatherText,
+    art_reference: 'placeholder/' + id, tags: [ARCH_TAG[archetype]].concat(hybrid ? ['Hybrid'] : []),
+  };
+}
+WD('W001', 'Viper SMG', 'rungun', 3, 4, 6, 5, 0, 1, 2, [gain('move', 1)], 'Gain 1 Movement.', 0, [convert('move', 'prec', 3)], 'Spend up to 3 Movement to gain that much Precision.', [gain('move', 2)], 'Gain 2 Movement.', false, 'SMG');
+WD('W002', 'Breacher Shotgun', 'rungun', 5, 2, 4, 3, 1, 1, 2, [gain('move', 1), gain('eva', 1)], 'Gain 1 Movement and 1 Evasion.', 1, [register('enterEnemy', "enter enemy's space: bonus Fire", [bonus('fire')])], "If you then enter the enemy’s environment this round, gain 1 bonus Fire action.", [gain('def', 2)], 'Gain 2 Defense.', false, 'Shotgun');
+WD('W003', 'Bastion LMG', 'entrenched', 5, 6, 2, 5, 1, 2, 3, [gain('ammo', 2)], 'Gain 2 Ammo.', 0, [convert('ammo', 'def', 3)], 'Spend up to 3 Ammo to gain that much Defense.', [gain('ammo', 2)], 'Gain 2 Ammo.', false, 'LMG');
+WD('W004', 'Sentinel AR', 'entrenched', 4, 6, 5, 4, 1, 1, 2, [gain('prec', 1), gain('def', 1)], 'Gain 1 Precision and 1 Defense.', 1, [nextFire({ recoilIgnore: 1 })], 'Your next Fire this round ignores 1 Recoil.', [draw(1)], 'Draw 1 tactical card.', true, 'Assault Rifle');
+WD('W005', 'Longbow Sniper', 'deadeye', 7, 9, 2, 2, 1, 2, 4, [gain('prec', 2)], 'Gain 2 Precision.', 2, [cond('notMoved', [nextFire({ bonusPrec: 3 })])], "If you haven't moved this round, your next Fire gets 3 extra Precision.", [gain('prec', 2)], 'Gain 2 Precision.', false, 'Sniper');
+WD('W006', 'Ranger DMR', 'deadeye', 5, 7, 3, 3, 1, 1, 3, [gain('prec', 1)], 'Gain 1 Precision.', 1, [nextFire({ reqMod: 2 })], 'Your next Fire this round requires 2 fewer Hit Markers (min 1).', [gain('prec', 1), gain('def', 1)], 'Gain 1 Precision and 1 Defense.', false, 'Marksman Rifle');
+WD('W007', 'Scavenger Pistol', 'scavenger', 2, 3, 7, 5, 0, 0, 2, [gain('intel', 1)], 'Gain 1 Intel.', 0, [convert('intel', 'prec', 2)], 'Spend up to 2 Intel to gain that much Precision.', [gain('intel', 1)], 'Gain 1 Intel.', false, 'Pistol');
+WD('W008', 'Pathfinder Carbine', 'scavenger', 3, 5, 5, 4, 0, 1, 2, [gain('move', 1), gain('intel', 1)], 'Gain 1 Movement and 1 Intel.', 1, [draw(1)], 'Draw 1 tactical card.', [gain('move', 1), gain('intel', 1)], 'Gain 1 Movement and 1 Intel.', true, 'Carbine');
+const WEAPON_COPIES = { W001: 2, W002: 2, W003: 1, W004: 2, W005: 1, W006: 1, W007: 2, W008: 2 };
+
+// ---------- ATTACHMENTS ----------
+const ATTS = {
+  A001: { id: 'A001', name: 'Red Dot Sight', intel_cost: 2, mod: { hit_difficulty: -1 }, text: 'Weapon Difficulty −1 (min 0).' },
+  A002: { id: 'A002', name: 'Compensator', intel_cost: 2, mod: { recoil: -1 }, text: 'Recoil −1 (min 0).' },
+  A003: { id: 'A003', name: 'Extended Magazine', intel_cost: 2, mod: { magazine_capacity: 2 }, text: 'Magazine capacity +2.' },
+  A004: { id: 'A004', name: 'Lightweight Stock', intel_cost: 2, mod: { mobility: 2 }, text: 'Mobility +2.' },
+  A005: { id: 'A005', name: 'Heavy Barrel', intel_cost: 2, mod: { max_range: 2 }, text: 'Maximum Range +2.' },
+  A006: { id: 'A006', name: 'Reinforced Receiver', intel_cost: 3, mod: { damage: 1 }, text: 'Damage +1.' },
+  A007: { id: 'A007', name: 'Tactical Grip', intel_cost: 3, mod: {}, special: 'grip', text: 'This weapon’s first Fire each round requires 1 fewer Hit Marker.' },
+  A008: { id: 'A008', name: 'Utility Rail', intel_cost: 2, mod: {}, special: 'rail', text: 'Gain 1 extra Movement when activating this weapon’s Tactical Effect.' },
+};
+
+// ---------- ENVIRONMENTS ----------
+const ENVS = {
+  E01: { id: 'E01', name: 'Open Road', entry: null, cover: 0, hard: false, search: [3, 2], text: 'No building: nothing to enter. Its cache can be searched from outside.' },
+  E02: { id: 'E02', name: 'Small Shed', entry: 1, cover: 1, hard: false, search: [3, 1], text: 'Inside: soft cover −1.' },
+  E03: { id: 'E03', name: 'House', entry: 2, cover: 1, hard: false, search: [4, 2], bonus: { draw: 1 }, bonusText: 'Draw 1 card', text: 'Inside: soft cover −1. Entering: draw 1 card.' },
+  E04: { id: 'E04', name: 'Supply Depot', entry: 1, cover: 0, hard: false, search: [5, 3], bonus: { intel: 1 }, bonusText: '+1 Intel', text: 'Inside: no cover. Entering: +1 Intel. Big cache.' },
+  E05: { id: 'E05', name: 'Concrete Barrier', entry: 1, cover: 2, hard: true, search: [2, 1], text: 'In position: hard cover −2. Blocks shots passing through.' },
+  E06: { id: 'E06', name: 'Military Bunker', entry: 2, cover: 2, hard: true, search: [3, 2], bonus: { def: 2 }, bonusText: '+2 Defense', text: 'Inside: hard cover −2. Entering: +2 Defense. Blocks shots passing through.' },
+  E07: { id: 'E07', name: 'Recon Tower', entry: 2, cover: 1, hard: false, search: [2, 1], bonus: { prec: 2 }, bonusText: '+2 Precision', text: 'Inside: soft cover −1. Entering: +2 Precision.' },
+  E08: { id: 'E08', name: 'Workbench', entry: 1, cover: 0, hard: false, search: [3, 2], special: 'bench', bonusText: 'Attachments −1 Intel', text: 'Inside: attachments cost 1 less Intel.' },
+};
+for (const k in ENVS) ENVS[k].cost = ENVS[k].entry || 0;
+
+// ---------- helpers ----------
+function rng(s) {
+  s.seed = (s.seed + 0x6D2B79F5) | 0;
+  let t = s.seed;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function shuffle(s, a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng(s) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const fail = err => ({ ok: false, err });
+const P = (s, i) => s.players[i];
+const envAt = (s, w) => s.envs.find(e => e.w === w);
+const dist = s => Math.abs(s.players[0].pos - s.players[1].pos);
+function log(s, msg, cls) { s.log.push({ r: s.round, msg, cls: cls || '' }); if (s.log.length > 400) s.log.shift(); }
+const cardDef = (s, iid) => CARDS[s.cards[iid].def];
+const hmOf = (s, iid) => cardDef(s, iid).hit_markers;
+function addRes(pl, res, n) { if (RES.includes(res)) pl.res[res] += n; else pl[res] += n; }
+function getRes(pl, res) { return RES.includes(res) ? pl.res[res] : pl[res]; }
+function capWord(t) { return t[0].toUpperCase() + t.slice(1); }
+
+function itemDef(s, item) {
+  if (item.kind === 'card') return CARDS[s.cards[item.iid].def];
+  if (item.kind === 'weapon') return WEAPONS[s.weapons[item.iid].def];
+  return ATTS[s.atts[item.iid].def];
+}
+
+function eff(s, wiid) {
+  const W = s.weapons[wiid]; const d = WEAPONS[W.def];
+  const e = { damage: d.damage, max_range: d.max_range, mobility: d.mobility, magazine_capacity: d.magazine_capacity, hit_difficulty: d.hit_difficulty, recoil: d.recoil, special: null };
+  if (W.att) { const a = ATTS[s.atts[W.att].def]; for (const k in a.mod) e[k] = Math.max(0, e[k] + a.mod[k]); e.special = a.special || null; }
+  return e;
+}
+
+function mkPlayer(idx, name) {
+  return {
+    idx, name, hp: 25, pos: 0, res: { move: 0, prec: 0, intel: 0, ammo: 0 }, def: 0, eva: 0,
+    deck: [], discard: [], hand: [], play: [], removed: [],
+    active: null, back: null, freeSwitch: true, actions: 3,
+    bonus: { move: 0, fire: 0, loot: 0, reload: 0 }, bonusPending: { move: 0, fire: 0, loot: 0, reload: 0 },
+    inside: false, bonusTaken: [], pendingSearch: null, moved: false, movedToward: false, nextFire: { reqMod: 0, recoilIgnore: 0, bonusPrec: 0 },
+    suppress: null, triggers: [], lootDiscount: 0, finished: false, activated: [],
+    stats: { weaponAcq: 0, weaponReplace: 0, activations: 0, roundsWithActivation: 0, bothActivated: 0, boosts: 0, cardsPlayed: 0, conversions: 0, cardsAcquired: 0, shots: 0, hits: 0, onGather: 0, damageDealt: 0, shotsBy: {}, hitsBy: {} },
+  };
+}
+
+function newCard(s, def) { const iid = 'c' + (s.nid++); s.cards[iid] = { iid, def }; return iid; }
+function newWeapon(s, def) { const iid = 'w' + (s.nid++); s.weapons[iid] = { iid, def, ammo: WEAPONS[def].starting_ammo, shots: 0, used: false, att: null, loc: null }; return iid; }
+function newAtt(s, def) { const iid = 'a' + (s.nid++); s.atts[iid] = { iid, def, on: null }; return iid; }
+
+function addEnv(s, w, state) {
+  if (!s.envBag.length) s.envBag = shuffle(s, Object.keys(ENVS).concat(Object.keys(ENVS)));
+  let pick = s.envBag.pop();
+  const nb = s.envs.find(e => e.w === w + 1) || s.envs.find(e => e.w === w - 1);
+  if (nb && nb.def === pick && s.envBag.length) { const alt = s.envBag.pop(); s.envBag.unshift(pick); pick = alt; }
+  const env = { w, def: pick, state, loot: [], cache: { reveal: ENVS[pick].search[0], keep: ENVS[pick].search[1], searched: false }, crate: null };
+  s.envs.push(env); s.envs.sort((a, b) => a.w - b.w);
+  return env;
+}
+function reveal() { return 0; }
+const hasInside = env => env.state === 'safe' && ENVS[env.def].entry != null;
+const occupantInside = (s, w, notP) => s.players.find((q, i) => i !== notP && q.pos === w && q.inside);
+function canReach(s, p, it) { const pl = P(s, p); return !!it && (it.out || pl.inside); }
+
+function drawCards(s, p, n) {
+  const pl = P(s, p); let d = 0;
+  for (let i = 0; i < n; i++) {
+    if (!pl.deck.length) {
+      if (!pl.discard.length) break;
+      pl.deck = shuffle(s, pl.discard); pl.discard = [];
+      log(s, `${pl.name} shuffles their discard into a new draw pile.`, 'sys');
+    }
+    pl.hand.push(pl.deck.pop()); d++;
+  }
+  return d;
+}
+
+// ---------- game setup ----------
+function newGame(opts = {}) {
+  const s = {
+    v: '2.1', seed: (opts.seed ?? (Date.now() & 0x7fffffff)) | 0, round: 1, first: 0, turn: 0, over: false, winner: null,
+    log: [], nid: 1, cards: {}, weapons: {}, atts: {}, envs: [], lootDeck: [], envBag: [], players: [], mode: opts.mode || 'ai', lastFire: null,
+  };
+  s.players = [mkPlayer(0, (opts.names && opts.names[0]) || 'You'), mkPlayer(1, (opts.names && opts.names[1]) || 'Rival')];
+  for (const pl of s.players) {
+    for (const id of ['T001', 'T002', 'T003', 'T004', 'T005']) for (let c = 0; c < CARDS[id].copies; c++) pl.deck.push(newCard(s, id));
+    shuffle(s, pl.deck);
+  }
+  for (const id in CARDS) if (CARDS[id].archetype !== 'starter') for (let c = 0; c < CARDS[id].copies; c++) s.lootDeck.push({ kind: 'card', iid: newCard(s, id) });
+  for (const id in WEAPONS) for (let c = 0; c < WEAPON_COPIES[id]; c++) { const iid = newWeapon(s, id); s.weapons[iid].loc = { deck: true }; s.lootDeck.push({ kind: 'weapon', iid }); }
+  for (const id in ATTS) s.lootDeck.push({ kind: 'att', iid: newAtt(s, id) });
+  shuffle(s, s.lootDeck);
+  for (let w = 0; w < TUNE.zones; w++) addEnv(s, w, 'safe');
+  s.closeSide = 'right'; s.finalDmg = 0;
+  s.players[0].pos = TUNE.startB; s.players[1].pos = TUNE.startA;
+  if (rng(s) < 0.5) { s.players[0].pos = TUNE.startA; s.players[1].pos = TUNE.startB; }
+  s.first = rng(s) < 0.5 ? 0 : 1; s.turn = s.first;
+  s.closeSide = s.players[s.first].pos === TUNE.startB ? 'right' : 'left'; // the first player's side closes first
+  // guarantee an accessible starting firearm at each operator's location
+  for (const pl of s.players) {
+    const idx = s.lootDeck.findIndex(it => it.kind === 'weapon' && WEAPONS[s.weapons[it.iid].def].intel_cost === 2);
+    if (idx >= 0) { const it = s.lootDeck.splice(idx, 1)[0]; envAt(s, pl.pos).loot.push(Object.assign(it, { revealed: true, out: true })); s.weapons[it.iid].loc = { env: pl.pos }; }
+  }
+  for (const e of s.envs) for (const it of e.loot) if (it.kind === 'weapon') s.weapons[it.iid].loc = { env: e.w };
+  drawCards(s, 0, 5); drawCards(s, 1, 5);
+  log(s, `Round 1 begins. ${s.players[s.first].name} acts first.`, 'round');
+  return s;
+}
+function safeBounds(s) { const w = s.envs.filter(e => e.state === 'safe').map(e => e.w); return { lo: Math.min(...w), hi: Math.max(...w), n: w.length }; }
+function nextEdge(s) { const b = safeBounds(s); if (b.n <= 1) return null; return s.closeSide === 'right' ? b.hi : b.lo; }
+function maxSafe(s) { return nextEdge(s); }
+function inSafe(s, w) { const e = envAt(s, w); return !!e && e.state === 'safe'; }
+
+// ---------- effects ----------
+function checkCond(s, p, c) {
+  const pl = P(s, p);
+  if (c === 'notMoved') return !pl.moved;
+  if (c === 'movedToward') return pl.movedToward;
+  if (c === 'shareOrAdjacent') return dist(s) <= 1;
+  if (c === 'oppDist3') return dist(s) >= 3;
+  return false;
+}
+function salvageScore(s, iid) { const d = cardDef(s, iid); return d.hit_markers * 10 + (d.archetype === 'starter' ? 0 : 5) + (d.id === 'T004' || d.id === 'T005' ? 2 : 0); }
+function autoPick(s, cands) { if (!cands.length) return null; return cands.slice().sort((a, b) => salvageScore(s, a) - salvageScore(s, b))[0]; }
+
+function runEffects(s, p, effs, ch, ctx) { for (const e of effs) runEffect(s, p, e, ch, ctx); }
+function runEffect(s, p, e, ch, ctx) {
+  const pl = P(s, p);
+  switch (e.op) {
+    case 'gain': addRes(pl, e.res, e.n); ctx.out.push(`+${e.n} ${RES_LABEL[e.res]}`); break;
+    case 'convert': {
+      const want = ch && ch.convert != null ? ch.convert : e.max;
+      const n = Math.max(0, Math.min(e.max, want | 0, getRes(pl, e.from)));
+      if (n > 0) { addRes(pl, e.from, -n); addRes(pl, e.to, n); pl.stats.conversions++; ctx.out.push(`${n} ${RES_LABEL[e.from]} → ${n} ${RES_LABEL[e.to]}`); }
+      else ctx.out.push(`No ${RES_LABEL[e.from]} converted`);
+      break;
+    }
+    case 'draw': { const d = drawCards(s, p, e.n); ctx.out.push(`Draw ${d}`); break; }
+    case 'bonus': pl.bonusPending[e.type] += e.n; ctx.out.push(`+${e.n} bonus ${capWord(e.type)} (from next turn)`); break;
+    case 'nextFire': {
+      for (const k of ['reqMod', 'recoilIgnore', 'bonusPrec']) if (e[k]) pl.nextFire[k] += e[k];
+      if (e.reqMod) ctx.out.push(`Next Fire −${e.reqMod} required`);
+      if (e.recoilIgnore) ctx.out.push(`Next Fire ignores ${e.recoilIgnore} Recoil`);
+      if (e.bonusPrec) ctx.out.push(`Next Fire +${e.bonusPrec} Precision`);
+      break;
+    }
+    case 'cond':
+      if (checkCond(s, p, e.if)) runEffects(s, p, e.then, ch, ctx);
+      else ctx.out.push(`Condition not met (${COND_LABEL[e.if]})`);
+      break;
+    case 'register': pl.triggers.push({ on: e.on, then: e.then, src: ctx.src, label: e.label }); ctx.out.push(`Armed: ${e.label}`); break;
+    case 'suppress': { const o = P(s, 1 - p); o.suppress = { n: e.n, until: s.round + 1 }; ctx.out.push(`${o.name} suppressed (+${e.n} on next Fire)`); break; }
+    case 'salvageDiscard': {
+      const cands = pl.discard.filter(x => !ctx.exclude.includes(x));
+      let t = ch && ch.salvage; if (!t || !cands.includes(t)) t = autoPick(s, cands);
+      if (t) { pl.discard.splice(pl.discard.indexOf(t), 1); pl.removed.push(t); ctx.out.push(`Salvaged ${cardDef(s, t).name}`); }
+      else ctx.out.push('Nothing to salvage in discard');
+      break;
+    }
+    case 'salvageHand': {
+      const cands = pl.hand.filter(x => !ctx.exclude.includes(x));
+      let t = ch && ch.salvage; if (!t || !cands.includes(t)) t = autoPick(s, cands);
+      if (t) { pl.hand.splice(pl.hand.indexOf(t), 1); pl.removed.push(t); ctx.out.push(`Salvaged ${cardDef(s, t).name}`); runEffects(s, p, e.then, ch, ctx); }
+      else ctx.out.push('No other card in hand to salvage');
+      break;
+    }
+    case 'lootDiscount': pl.lootDiscount += e.n; ctx.out.push(`Next Loot −${e.n} Intel`); break;
+  }
+}
+function fireTrigger(s, p, on) {
+  const pl = P(s, p); const hits = pl.triggers.filter(t => t.on === on);
+  if (!hits.length) return;
+  pl.triggers = pl.triggers.filter(t => t.on !== on);
+  for (const t of hits) { const ctx = { out: [], exclude: [], src: t.src }; runEffects(s, p, t.then, null, ctx); log(s, `${pl.name}: ${t.src} triggers — ${ctx.out.join(', ')}.`, 'fx'); }
+}
+
+// ---------- validation ----------
+function prepCheck(s, p) {
+  if (s.over) return fail('The match is over.');
+  if (s.turn !== p) return fail("It isn't your turn.");
+  if (P(s, p).finished) return fail('You have finished this round.');
+  if (P(s, p).pendingSearch) return fail('Finish your search first: choose what stays here.');
+  return null;
+}
+function boostOk(s, p, reqType, min, boostIid, mainIid) {
+  const pl = P(s, p);
+  if (!pl.hand.includes(boostIid)) return 'Boost card must come from your hand.';
+  if (boostIid === mainIid) return 'A card cannot Boost itself.';
+  if (reqType === 'min' && hmOf(s, boostIid) < min) return `Boost needs one card with ${min}+ Hit Markers.`;
+  return null;
+}
+function eligibleBoosts(s, p, reqType, min, mainIid) { return P(s, p).hand.filter(i => !boostOk(s, p, reqType, min, i, mainIid)); }
+
+// ---------- prep operations (no Tactical Action) ----------
+function playCard(s, p, iid, boostIid, ch) {
+  const pl = P(s, p); const e = prepCheck(s, p); if (e) return e;
+  if (!pl.hand.includes(iid)) return fail('That card is not in your hand.');
+  const def = cardDef(s, iid);
+  if (boostIid) { const b = boostOk(s, p, def.boost_requirement_type, def.boost_min_hit_markers, boostIid, iid); if (b) return fail(b); }
+  pl.hand.splice(pl.hand.indexOf(iid), 1); pl.play.push(iid);
+  if (boostIid) { pl.hand.splice(pl.hand.indexOf(boostIid), 1); pl.play.push(boostIid); }
+  const ctx = { out: [], exclude: [iid, boostIid].filter(Boolean), src: def.name };
+  runEffects(s, p, def.main_effects, ch, ctx);
+  if (boostIid) { runEffects(s, p, def.boost_effects, ch, ctx); pl.stats.boosts++; }
+  pl.stats.cardsPlayed++;
+  log(s, `${pl.name} plays ${def.name}${boostIid ? ` (Boosted with ${cardDef(s, boostIid).name})` : ''}: ${ctx.out.join(', ')}.`, 'play');
+  return { ok: true, out: ctx.out };
+}
+
+function activateWeapon(s, p, boostIid, ch) {
+  const pl = P(s, p); const e = prepCheck(s, p); if (e) return e;
+  if (!pl.active) return fail('No Active weapon to activate.');
+  const W = s.weapons[pl.active]; const def = WEAPONS[W.def];
+  if (W.used) return fail(`${def.name}’s Tactical Effect is already used this round.`);
+  if (boostIid) { const b = boostOk(s, p, def.tactical_boost_requirement, def.tactical_boost_min_hit_markers, boostIid, null); if (b) return fail(b); }
+  W.used = true;
+  if (boostIid) { pl.hand.splice(pl.hand.indexOf(boostIid), 1); pl.play.push(boostIid); }
+  const ctx = { out: [], exclude: [boostIid].filter(Boolean), src: def.name };
+  runEffects(s, p, def.tactical_main_effects, ch, ctx);
+  if (eff(s, pl.active).special === 'rail') { pl.res.move += 1; ctx.out.push('+1 Movement (Utility Rail)'); }
+  if (boostIid) { runEffects(s, p, def.tactical_boost_effects, ch, ctx); pl.stats.boosts++; }
+  pl.stats.activations++;
+  if (!pl.activated.includes(W.iid)) pl.activated.push(W.iid);
+  log(s, `${pl.name} activates ${def.name}${boostIid ? ` (Boosted with ${cardDef(s, boostIid).name})` : ''}: ${ctx.out.join(', ')}.`, 'play');
+  return { ok: true, out: ctx.out };
+}
+
+function switchWeapons(s, p) {
+  const pl = P(s, p); const e = prepCheck(s, p); if (e) return e;
+  if (!pl.freeSwitch) return fail('Free switch already used this round.');
+  if (!pl.active && !pl.back) return fail('No weapons to switch.');
+  [pl.active, pl.back] = [pl.back, pl.active]; pl.freeSwitch = false;
+  if (pl.active) s.weapons[pl.active].loc = { owner: p, slot: 'active' };
+  if (pl.back) s.weapons[pl.back].loc = { owner: p, slot: 'back' };
+  log(s, `${pl.name} switches weapons (free). Active: ${pl.active ? WEAPONS[s.weapons[pl.active].def].name : 'none'}.`, 'play');
+  return { ok: true };
+}
+
+// ---------- Tactical Actions ----------
+function hasActionType(pl, type) { return (type !== 'wait' && pl.bonus[type] > 0) || pl.actions > 0; }
+function spendAction(pl, type) { if (type !== 'wait' && pl.bonus[type] > 0) { pl.bonus[type]--; return 'bonus'; } pl.actions--; return 'base'; }
+function actionCheck(s, p, type) {
+  const e = prepCheck(s, p); if (e) return e;
+  if (!hasActionType(P(s, p), type)) return fail(`No ${capWord(type)} action available.`);
+  return null;
+}
+function mobilityCap(s, p) { const pl = P(s, p); return pl.active ? eff(s, pl.active).mobility : Infinity; }
+function entryCost(s, p, w) {
+  const env = envAt(s, w); if (!env || !hasInside(env) || safeBounds(s).n <= 1) return null;
+  const occ = occupantInside(s, w, p);
+  return { cost: ENVS[env.def].entry + (occ ? TUNE.breachExtra : 0), breach: !!occ };
+}
+function moveCost(s, p, tw, inside) {
+  const pl = P(s, p); const env = envAt(s, tw); if (!env) return null;
+  if (tw === pl.pos) { if (!inside || pl.inside) return null; const en = entryCost(s, p, tw); return en ? en.cost : null; }
+  let cost = Math.abs(tw - pl.pos);
+  if (inside) { const en = entryCost(s, p, tw); if (!en) return null; cost += en.cost; }
+  return cost;
+}
+function reachable(s, p) {
+  const pl = P(s, p); const budget = Math.min(pl.res.move, mobilityCap(s, p)); const out = [];
+  for (const e of s.envs) for (const inside of [false, true]) {
+    const c = moveCost(s, p, e.w, inside); if (c == null || c > budget) continue;
+    const en = inside ? entryCost(s, p, e.w) : null;
+    out.push({ w: e.w, cost: c, inside, breach: !!(en && en.breach) });
+  }
+  return out;
+}
+function enterBonus(s, p, env) {
+  const pl = P(s, p); const d = ENVS[env.def]; if (!d.bonus || pl.bonusTaken.includes(env.w)) return '';
+  pl.bonusTaken.push(env.w); const b = d.bonus; const out = [];
+  if (b.draw) { drawCards(s, p, b.draw); out.push(`draws ${b.draw}`); }
+  if (b.intel) { pl.res.intel += b.intel; out.push(`+${b.intel} Intel`); }
+  if (b.def) { pl.def += b.def; out.push(`+${b.def} Defense`); }
+  if (b.prec) { pl.res.prec += b.prec; out.push(`+${b.prec} Precision`); }
+  return out.length ? ` ${d.name} bonus: ${out.join(', ')}.` : '';
+}
+function actMove(s, p, tw, o = {}) {
+  const pl = P(s, p); const e = actionCheck(s, p, 'move'); if (e) return e;
+  const env = envAt(s, tw); if (!env) return fail('No such environment.');
+  const inside = !!o.inside;
+  const cost = moveCost(s, p, tw, inside); if (cost == null) return fail(inside ? 'You can’t go inside there.' : 'Choose a different location.');
+  if (cost > pl.res.move) return fail(`Needs ${cost} Movement (you have ${pl.res.move}).`);
+  const cap = mobilityCap(s, p); if (cost > cap) return fail(`Your Active weapon limits each Move to ${cap} Movement.`);
+  const en = inside ? entryCost(s, p, tw) : null;
+  const how = spendAction(pl, 'move');
+  pl.res.move -= cost; const before = dist(s); const from = pl.pos;
+  pl.pos = tw; pl.inside = inside; if (tw !== from) pl.moved = true;
+  let extra = '';
+  if (inside && en.breach) { extra = ` BREACH! ${P(s, 1 - p).name} is inside too: close quarters, no cover for either.`; }
+  if (inside) extra += enterBonus(s, p, env);
+  const where = tw === from ? `goes inside ${ENVS[env.def].name}` : `moves to ${ENVS[env.def].name}${inside ? ' and goes inside' : ' (outside)'}`;
+  log(s, `${pl.name} ${where} (−${cost} Movement${how === 'bonus' ? ', bonus action' : ''}).${extra}`, inside && en.breach ? 'hit' : 'act');
+  if (dist(s) < before) { pl.movedToward = true; fireTrigger(s, p, 'moveToward'); }
+  if (pl.pos === P(s, 1 - p).pos && tw !== from) fireTrigger(s, p, 'enterEnemy');
+  endOpportunity(s, p);
+  return { ok: true };
+}
+
+/* ---------- search (loot draft) ---------- */
+function searchable(s, p) {
+  const pl = P(s, p); const env = envAt(s, pl.pos); if (!env || env.state !== 'safe') return null;
+  if (env.crate && !env.crate.searched) return 'crate';
+  if (env.cache && !env.cache.searched && (pl.inside || ENVS[env.def].entry == null)) return 'cache';
+  return null;
+}
+function searchStart(s, p) {
+  const pl = P(s, p);
+  if (s.over) return fail('The match is over.'); if (s.turn !== p) return fail("It isn't your turn.");
+  if (pl.pendingSearch) return { ok: true, pending: pl.pendingSearch };
+  const which = searchable(s, p); if (!which) return fail(pl.inside ? 'Nothing left to search here.' : 'Go inside to search this location.');
+  const env = envAt(s, pl.pos); const items = [];
+  if (which === 'crate') {
+    const [n, keep] = TUNE.crate; env.crate.searched = true;
+    for (let i = 0; i < 2; i++) { const j = s.lootDeck.findIndex(it => it.kind === 'weapon'); if (j >= 0) items.push(s.lootDeck.splice(j, 1)[0]); }
+    while (items.length < n) { const j = s.lootDeck.findIndex(it => it.kind !== 'weapon'); if (j < 0) break; items.push(s.lootDeck.splice(j, 1)[0]); }
+    pl.pendingSearch = { w: env.w, which, items, keep: Math.min(keep, items.length), out: true };
+  } else {
+    env.cache.searched = true;
+    for (let i = 0; i < env.cache.reveal && s.lootDeck.length; i++) items.push(s.lootDeck.pop());
+    pl.pendingSearch = { w: env.w, which, items, keep: Math.min(env.cache.keep, items.length), out: ENVS[env.def].entry == null };
+  }
+  log(s, `${pl.name} searches ${which === 'crate' ? 'the supply crate' : ENVS[env.def].name}: ${items.length} item${items.length === 1 ? '' : 's'} revealed.`, 'fx');
+  if (!items.length) { pl.pendingSearch = null; return { ok: true, empty: true }; }
+  return { ok: true, pending: pl.pendingSearch };
+}
+function searchKeep(s, p, iids) {
+  const pl = P(s, p); const ps = pl.pendingSearch; if (!ps) return fail('No search in progress.');
+  const keep = (iids || []).filter((x, i, a) => a.indexOf(x) === i && ps.items.some(it => it.iid === x));
+  if (keep.length !== ps.keep) return fail(`Choose exactly ${ps.keep} to leave here.`);
+  const env = envAt(s, ps.w);
+  for (const it of ps.items) {
+    if (keep.includes(it.iid)) { env.loot.push(Object.assign(it, { revealed: true, out: ps.out })); if (it.kind === 'weapon') s.weapons[it.iid].loc = { env: env.w }; }
+    else s.lootDeck.unshift(it);
+  }
+  pl.pendingSearch = null;
+  log(s, `${pl.name} leaves ${keep.map(id => itemDef(s, ps.items.find(it => it.iid === id)).name).join(', ')} at ${ENVS[env.def].name}${ps.out ? '' : ' (inside)'}.`, 'fx');
+  return { ok: true };
+}
+
+function blockedBetween(s) {
+  const a = Math.min(s.players[0].pos, s.players[1].pos), b = Math.max(s.players[0].pos, s.players[1].pos);
+  for (let w = a + 1; w < b; w++) { const e = envAt(s, w); if (e && e.state === 'safe' && ENVS[e.def].hard) return e; }
+  return null;
+}
+function shootCheck(s, p) {
+  const pl = P(s, p);
+  if (!pl.active) return fail('No Active firearm. You can still use Fists in the same space.');
+  const W = s.weapons[pl.active]; const E = eff(s, pl.active);
+  if (W.ammo < 1) return fail('Active weapon is empty. Reload first.');
+  if (dist(s) > E.max_range) return fail(`Target at Distance ${dist(s)} is beyond Range ${E.max_range}.`);
+  const blk = blockedBetween(s); if (blk) return fail(`${ENVS[blk.def].name} blocks the shot.`);
+  return { ok: true };
+}
+function requiredBreakdown(s, p) {
+  const pl = P(s, p), o = P(s, 1 - p); if (!pl.active) return null;
+  const W = s.weapons[pl.active]; const E = eff(s, pl.active); const here = envAt(s, pl.pos);
+  const recoil = Math.max(0, W.shots * E.recoil - pl.nextFire.recoilIgnore);
+  const acc = pl.nextFire.reqMod + (E.special === 'grip' && W.shots === 0 ? 1 : 0);
+  const sup = pl.suppress ? pl.suppress.n : 0;
+  const dpen = Math.floor(dist(s) / TUNE.distDiv);
+  const raw = E.hit_difficulty + dpen + recoil + o.eva + sup - acc;
+  return { difficulty: E.hit_difficulty, distance: dpen, rawDistance: dist(s), recoil, evasion: o.eva, suppression: sup, accuracy: acc, total: Math.max(1, raw), bonusPrec: pl.nextFire.bonusPrec };
+}
+function applyDamage(s, ti, dmg, firearm) {
+  const t = P(s, ti); const env = envAt(s, t.pos); let notes = [];
+  const shooter = P(s, 1 - ti);
+  if (firearm && env.state === 'safe' && ENVS[env.def].cover && t.inside && !(shooter.pos === t.pos && shooter.inside)) { const c = ENVS[env.def].cover; const nd = Math.max(1, dmg - c); if (nd < dmg) notes.push(`cover −${dmg - nd}`); dmg = nd; }
+  const ab = Math.min(t.def, dmg); if (ab) { t.def -= ab; notes.push(`Defense absorbs ${ab}`); }
+  const dealt = dmg - ab; t.hp -= dealt;
+  P(s, 1 - ti).stats.damageDealt += dealt;
+  checkDeath(s);
+  return { dealt, notes };
+}
+function checkDeath(s) {
+  const d0 = s.players[0].hp <= 0, d1 = s.players[1].hp <= 0;
+  if (d0 || d1) { s.over = true; const [a, b] = s.players; s.winner = d0 && d1 ? (a.hp !== b.hp ? (a.hp > b.hp ? 0 : 1) : a.stats.damageDealt !== b.stats.damageDealt ? (a.stats.damageDealt > b.stats.damageDealt ? 0 : 1) : 'draw') : d0 ? 1 : 0; log(s, s.winner === 'draw' ? 'Both operators fall. Draw.' : d0 && d1 ? `Both operators fall, but ${s.players[s.winner].name} lasted longer and wins.` : `${s.players[s.winner].name} is the last operator standing.`, 'win'); }
+}
+
+function actFire(s, p, opts = {}) {
+  const pl = P(s, p), o = P(s, 1 - p); const e = actionCheck(s, p, 'fire'); if (e) return e;
+  if (opts.fists) {
+    if (pl.pos !== o.pos) return fail('Fists need both operators in the same environment.');
+    spendAction(pl, 'fire');
+    const r = applyDamage(s, 1 - p, 1, false);
+    s.lastFire = { p, fists: true, hit: true, dealt: r.dealt };
+    log(s, `${pl.name} strikes with Fists for ${r.dealt}${r.notes.length ? ` (${r.notes.join(', ')})` : ''}.`, 'hit');
+    if (!s.over) endOpportunity(s, p);
+    return { ok: true, result: s.lastFire };
+  }
+  const sc = shootCheck(s, p); if (!sc.ok) return sc;
+  const commit = Math.max(0, Math.min(pl.res.prec, opts.commit == null ? pl.res.prec : opts.commit | 0));
+  const W = s.weapons[pl.active]; const def = WEAPONS[W.def]; const E = eff(s, pl.active);
+  const br = requiredBreakdown(s, p); const req = br.total;
+  spendAction(pl, 'fire');
+  pl.res.prec -= commit;
+  const n = commit + br.bonusPrec; const revealed = [];
+  for (let i = 0; i < n; i++) {
+    if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; log(s, `${pl.name} shuffles discard into a new draw pile for the Hit Check.`, 'sys'); }
+    revealed.push(pl.deck.pop());
+  }
+  const total = revealed.reduce((a, i) => a + hmOf(s, i), 0);
+  const hit = total >= req;
+  W.ammo -= 1; W.shots += 1;
+  pl.nextFire = { reqMod: 0, recoilIgnore: 0, bonusPrec: 0 }; pl.suppress = null;
+  pl.stats.shots++; pl.stats.shotsBy[W.def] = (pl.stats.shotsBy[W.def] || 0) + 1;
+  let dealt = 0, notes = [];
+  if (hit) { pl.stats.hits++; pl.stats.hitsBy[W.def] = (pl.stats.hitsBy[W.def] || 0) + 1; const r = applyDamage(s, 1 - p, E.damage, true); dealt = r.dealt; notes = r.notes; }
+  pl.discard.push(...revealed);
+  s.lastFire = { p, weapon: def.name, req, breakdown: br, commit, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i) })), total, hit, dealt, short: revealed.length < n };
+  log(s, `${pl.name} fires ${def.name}: needs ${req}, reveals ${revealed.length} card${revealed.length === 1 ? '' : 's'} for ${total} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.`, hit ? 'hit' : 'miss');
+  if (hit && !s.over) fireTrigger(s, p, 'fireHits'); else if (!hit) pl.triggers = pl.triggers.filter(t => t.on !== 'fireHits');
+  if (!s.over) endOpportunity(s, p);
+  return { ok: true, result: s.lastFire };
+}
+
+function lootCost(s, p, item, noDiscount) {
+  const pl = P(s, p); const here = envAt(s, pl.pos); let c = itemDef(s, item).intel_cost - (noDiscount ? 0 : pl.lootDiscount);
+  if (item.kind === 'card' && c >= 3) c -= TUNE.cardDiscount;
+  if (item.kind === 'att' && here.state === 'safe' && ENVS[here.def].special === 'bench' && pl.inside) c -= 1;
+  return Math.max(0, c);
+}
+function actLoot(s, p, iids, o = {}) {
+  const pl = P(s, p); const e = actionCheck(s, p, 'loot'); if (e) return e;
+  const list = (Array.isArray(iids) ? iids : [iids]).filter((x, i, a) => a.indexOf(x) === i);
+  if (!list.length) return fail('Pick something to loot.');
+  const env = envAt(s, pl.pos);
+  const items = list.map(id => env.loot.find(it => it.iid === id));
+  if (items.some(x => !x)) return fail('That item is not in your environment.');
+  if (items.some(x => !x.revealed)) return fail('That loot is still hidden.');
+  if (items.some(x => !canReach(s, p, x))) return fail('That loot is inside. Go inside first.');
+  if (items.filter(x => x.kind === 'weapon').length > 1) return fail('Loot one weapon at a time.');
+  // cost: discounts apply to the first item only
+  let total = 0; const costs = items.map((it, i) => { const c = i === 0 ? lootCost(s, p, it) : lootCost(s, p, it, true); total += c; return c; });
+  if (pl.res.intel < total) return fail(`Needs ${total} Intel (you have ${pl.res.intel}).`);
+  for (const it of items) if (it.kind === 'att') { const at = o.attachTo || (pl.active ? 'active' : pl.back ? 'back' : null); if (!at || !pl[at]) return fail('You need a weapon to mount an attachment.'); }
+  const how = spendAction(pl, 'loot');
+  pl.res.intel -= total; if (pl.lootDiscount) pl.lootDiscount = 0;
+  const got = [];
+  items.forEach((item, idx) => {
+    const iid = item.iid; const cost = costs[idx];
+    env.loot.splice(env.loot.indexOf(item), 1);
+    const name = itemDef(s, item).name; let extra = '';
+    if (item.kind === 'card') { pl.discard.push(iid); pl.stats.cardsAcquired++; extra = ' into discard'; }
+    else if (item.kind === 'att') {
+      const attachTo = o.attachTo || (pl.active ? 'active' : 'back');
+      const W = s.weapons[pl[attachTo]];
+      if (W.att) { env.loot.push({ kind: 'att', iid: W.att, revealed: true }); s.atts[W.att].on = null; extra = `, dropping ${ATTS[s.atts[W.att].def].name}`; }
+      W.att = iid; s.atts[iid].on = W.iid;
+      const cap = eff(s, W.iid).magazine_capacity; if (W.ammo > cap) W.ammo = cap;
+      extra = ` onto ${WEAPONS[W.def].name}` + extra;
+    } else {
+      let slot = !pl.active ? 'active' : !pl.back ? 'back' : (o.replace === 'back' ? 'back' : 'active');
+      const old = pl[slot];
+      if (old) { env.loot.push({ kind: 'weapon', iid: old, revealed: true }); s.weapons[old].loc = { env: env.w }; pl.stats.weaponReplace++; extra = `, dropping ${WEAPONS[s.weapons[old].def].name}`; }
+      pl[slot] = iid; s.weapons[iid].loc = { owner: p, slot }; pl.stats.weaponAcq++;
+      extra = ` (${slot === 'active' ? 'Active' : 'On Back'})` + extra;
+    }
+    got.push(`${name} (${cost})${extra}`);
+  });
+  log(s, `${pl.name} loots ${got.join(', ')} for ${total} Intel${how === 'bonus' ? ' (bonus action)' : ''}.`, 'act');
+  for (const item of items) if (item.kind === 'weapon') {
+    const def = WEAPONS[s.weapons[item.iid].def]; const ctx = { out: [], exclude: [], src: def.name };
+    runEffects(s, p, def.on_gather_effects, null, ctx); pl.stats.onGather++;
+    log(s, `On Gather — ${def.name}: ${ctx.out.join(', ')}.`, 'fx');
+  }
+  endOpportunity(s, p);
+  return { ok: true };
+}
+
+function actReload(s, p, o = {}) {
+  const pl = P(s, p); const e = actionCheck(s, p, 'reload'); if (e) return e;
+  let slot = o.slot;
+  const need = sl => pl[sl] ? eff(s, pl[sl]).magazine_capacity - s.weapons[pl[sl]].ammo : 0;
+  if (!slot) slot = need('active') > 0 ? 'active' : 'back';
+  if (!pl[slot]) return fail('No weapon in that slot.');
+  const n = need(slot); if (n <= 0) return fail('That magazine is already full.');
+  if (pl.res.ammo < 1) return fail('No generated Ammo to load.');
+  const load = Math.min(n, pl.res.ammo);
+  const how = spendAction(pl, 'reload');
+  pl.res.ammo -= load; s.weapons[pl[slot]].ammo += load;
+  log(s, `${pl.name} reloads ${WEAPONS[s.weapons[pl[slot]].def].name} with ${load} Ammo${how === 'bonus' ? ' (bonus action)' : ''}.`, 'act');
+  endOpportunity(s, p);
+  return { ok: true };
+}
+
+function actWait(s, p) {
+  const pl = P(s, p); const e = prepCheck(s, p); if (e) return e;
+  if (pl.actions < 1) return fail('Wait needs a standard Tactical Action.');
+  pl.actions--; log(s, `${pl.name} waits.`, 'act'); endOpportunity(s, p); return { ok: true };
+}
+function finish(s, p) {
+  const pl = P(s, p); const e = prepCheck(s, p); if (e) return e;
+  pl.finished = true; log(s, `${pl.name} finishes the round${pl.actions ? `, forfeiting ${pl.actions} action${pl.actions > 1 ? 's' : ''}` : ''}.`, 'act');
+  endOpportunity(s, p); return { ok: true };
+}
+
+function hasOpportunity(s, i) { const pl = P(s, i); if (pl.finished) return false; return pl.actions > 0 || BONUS_TYPES.some(t => pl.bonus[t] > 0); }
+function endOpportunity(s, p) {
+  const pl = P(s, p);
+  for (const t of BONUS_TYPES) { pl.bonus[t] += pl.bonusPending[t]; pl.bonusPending[t] = 0; }
+  if (s.over) return;
+  if (hasOpportunity(s, 1 - p)) s.turn = 1 - p;
+  else if (hasOpportunity(s, p)) s.turn = p;
+  else endRound(s);
+}
+
+function endRound(s) {
+  log(s, `Round ${s.round} ends. The circle closes.`, 'round');
+  const edge = nextEdge(s);
+  if (edge != null) {
+    const ge = envAt(s, edge);
+    for (const it of ge.loot) if (it.kind === 'weapon') s.weapons[it.iid].loc = { lost: true };
+    const lost = ge.loot.length; ge.loot = []; ge.state = 'gas'; ge.drop = 0; ge.crate = null;
+    for (const q of s.players) if (q.pos === ge.w) q.inside = false;
+    log(s, `Gas consumes ${ENVS[ge.def].name}${lost ? ` and ${lost} loot` : ''}.`, 'gas');
+    s.closeSide = s.closeSide === 'right' ? 'left' : 'right';
+  }
+  for (const pl of s.players) if (envAt(s, pl.pos).state === 'gas') { pl.hp -= TUNE.gasDmg; log(s, `${pl.name} is in the gas: −${TUNE.gasDmg} Health.`, 'gas'); }
+  if (safeBounds(s).n <= 1) {
+    s.finalDmg = s.finalDmg ? s.finalDmg + 1 : TUNE.finalBase;
+    for (const pl of s.players) pl.hp -= s.finalDmg;
+    log(s, `Final circle: the storm tightens. Both operators take ${s.finalDmg} damage.`, 'gas');
+  }
+  if (safeBounds(s).n <= 1) for (const q of s.players) if (q.inside) { q.inside = false; log(s, `Final circle: walls are down. ${q.name} is exposed.`, 'gas'); }
+  // supply drop: an unsearched crate near the centre
+  const safe = s.envs.filter(e => e.state === 'safe' && !e.crate);
+  if (safe.length && s.lootDeck.length >= 4) {
+    const B2 = safeBounds(s); const midw = (B2.lo + B2.hi) / 2; const ne2 = nextEdge(s);
+    const pool = safe.filter(e => e.w !== ne2 || safe.length === 1).sort((a, b) => Math.abs(a.w - midw) - Math.abs(b.w - midw)).slice(0, 3);
+    if (pool.length) { const tgt = pool[Math.floor(rng(s) * pool.length)]; tgt.crate = { searched: false }; tgt.drop = s.round + 1;
+      log(s, `Supply crate lands at ${ENVS[tgt.def].name}. First to search it drafts ${TUNE.crate[1]} of ${TUNE.crate[0]} (2 weapons, 4 others).`, 'fx'); }
+  }
+  checkDeath(s);
+  for (const pl of s.players) {
+    if (pl.activated.length) pl.stats.roundsWithActivation++;
+    if (pl.activated.length >= 2) pl.stats.bothActivated++;
+  }
+  if (s.over) return;
+  for (const pl of s.players) {
+    pl.discard.push(...pl.hand, ...pl.play); pl.hand = []; pl.play = [];
+    pl.res = { move: 0, prec: 0, intel: TUNE.bankIntel ? pl.res.intel : 0, ammo: 0 }; pl.triggers = []; pl.nextFire = { reqMod: 0, recoilIgnore: 0, bonusPrec: 0 };
+    pl.lootDiscount = 0; pl.bonus = { move: 0, fire: 0, loot: 0, reload: 0 }; pl.bonusPending = { move: 0, fire: 0, loot: 0, reload: 0 };
+    if (pl.suppress && pl.suppress.until <= s.round) pl.suppress = null;
+  }
+  for (const k in s.weapons) { s.weapons[k].shots = 0; s.weapons[k].used = false; }
+  s.round++; s.first = 1 - s.first; s.turn = s.first;
+  s.players.forEach((pl, i) => {
+    pl.actions = 3; pl.finished = false; pl.freeSwitch = true; pl.moved = false; pl.movedToward = false;
+    pl.def = 0; pl.eva = 0; pl.activated = []; pl.bonusTaken = []; drawCards(s, i, 5);
+  });
+  log(s, `Round ${s.round} begins. ${s.players[s.first].name} acts first.`, 'round');
+}
+
+// ---------- estimates ----------
+function hitChance(s, p, commit, req, trials = 400) {
+  const pl = P(s, p); if (commit <= 0) return req <= 0 ? 1 : 0;
+  const dk = pl.deck.map(i => hmOf(s, i)), dc = pl.discard.map(i => hmOf(s, i));
+  let seed = 12345, okc = 0;
+  const r = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const sh = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  for (let t = 0; t < trials; t++) {
+    const seq = sh(dk.slice()).concat(sh(dc.slice()));
+    let sum = 0; for (let i = 0; i < Math.min(commit, seq.length); i++) sum += seq[i];
+    if (sum >= req) okc++;
+  }
+  return okc / trials;
+}
+
+// ---------- AI opponent ----------
+function aiChoices(s, p, effs) {
+  const pl = P(s, p); const ch = {};
+  const conv = JSON.stringify(effs).match(/"from":"(\w+)","to":"(\w+)"/);
+  if (conv) {
+    const [, from, to] = conv; const inRange = pl.active && dist(s) <= eff(s, pl.active).max_range;
+    if (to === 'prec') ch.convert = inRange ? 3 : 0;
+    else if (to === 'def') { const W = pl.active && s.weapons[pl.active]; const need = W ? eff(s, pl.active).magazine_capacity - W.ammo : 0; ch.convert = Math.max(0, pl.res.ammo - need); }
+  }
+  return ch;
+}
+function isStarterFodder(s, iid) { const d = cardDef(s, iid); return d.archetype === 'starter' && d.hit_markers === 0; }
+function aiPlayHand(s, p, reserve) {
+  const pl = P(s, p);
+  for (let guard = 0; guard < 30; guard++) {
+    const cands = pl.hand.filter(i => i !== reserve);
+    if (!cands.length) break;
+    cands.sort((a, b) => (cardDef(s, b).intel_cost - cardDef(s, a).intel_cost));
+    const c = cands[0]; const d = cardDef(s, c);
+    let boost = null;
+    if (d.archetype !== 'starter' || d.id === 'T004') {
+      const el = eligibleBoosts(s, p, d.boost_requirement_type, d.boost_min_hit_markers, c).filter(i => i !== reserve);
+      boost = el.find(i => isStarterFodder(s, i)) || (d.archetype !== 'starter' ? el.sort((a, b) => hmOf(s, a) - hmOf(s, b)).find(i => cardDef(s, i).archetype === 'starter') : null) || null;
+    }
+    const r = playCard(s, p, c, boost, aiChoices(s, p, d.boost_effects));
+    if (!r.ok) break;
+  }
+}
+function aiActivate(s, p, reserve) {
+  const pl = P(s, p); if (!pl.active || s.weapons[pl.active].used) return;
+  const def = WEAPONS[s.weapons[pl.active].def];
+  const b = reserve && pl.hand.includes(reserve) && !boostOk(s, p, def.tactical_boost_requirement, def.tactical_boost_min_hit_markers, reserve, null) ? reserve : null;
+  activateWeapon(s, p, b, aiChoices(s, p, def.tactical_boost_effects));
+}
+function aiPrep(s, p) {
+  const pl = P(s, p);
+  if (!pl.active && pl.back && pl.freeSwitch) switchWeapons(s, p);
+  if (pl.active && pl.back && pl.freeSwitch && s.weapons[pl.active].ammo === 0 && s.weapons[pl.back].ammo > 0 && !s.weapons[pl.active].used) switchWeapons(s, p);
+  let reserve = null;
+  if (pl.active && !s.weapons[pl.active].used && pl.hand.length >= 3) {
+    const def = WEAPONS[s.weapons[pl.active].def];
+    const el = eligibleBoosts(s, p, def.tactical_boost_requirement, def.tactical_boost_min_hit_markers, null).sort((a, b) => salvageScore(s, a) - salvageScore(s, b));
+    reserve = el[0] || null;
+  }
+  aiPlayHand(s, p, reserve);
+  aiActivate(s, p, reserve);
+  if (pl.active && s.weapons[pl.active].used && pl.back && !s.weapons[pl.back].used && pl.freeSwitch) {
+    switchWeapons(s, p); aiActivate(s, p, null); aiPlayHand(s, p, null);
+  }
+  aiPlayHand(s, p, null);
+}
+function aiItemScore(s, p, it) {
+  const pl = P(s, p); const d = itemDef(s, it);
+  if (it.kind === 'weapon') return (!pl.active || !pl.back ? 30 : 4) + d.intel_cost;
+  if (it.kind === 'att') return (pl.active || pl.back ? 6 : 0) + d.intel_cost;
+  return 8 + d.intel_cost + d.hit_markers * 2;
+}
+function aiSearch(s, p) {
+  const pl = P(s, p);
+  if (!pl.pendingSearch && searchable(s, p)) searchStart(s, p);
+  const ps = pl.pendingSearch; if (!ps) return;
+  const pick = ps.items.slice().sort((a, b) => aiItemScore(s, p, b) - aiItemScore(s, p, a)).slice(0, ps.keep).map(it => it.iid);
+  searchKeep(s, p, pick);
+}
+const envHasLoot = (s, e) => e.loot.length || (e.cache && !e.cache.searched) || (e.crate && !e.crate.searched);
+function aiStep(s, p) {
+  if (s.over || s.turn !== p) return fail('not AI turn');
+  aiSearch(s, p);
+  aiPrep(s, p);
+  const pl = P(s, p), o = P(s, 1 - p); const tries = [];
+  const here = envAt(s, pl.pos); const edge = nextEdge(s); const B = safeBounds(s); const mid = (B.lo + B.hi) / 2;
+  const ok = w => inSafe(s, w) && (w !== edge || B.n <= 1);
+  const danger = here.state === 'gas' || pl.pos === edge;
+  const reachAll = reachable(s, p).filter(r => envAt(s, r.w).state === 'safe');
+  const reach = reachAll.filter(r => !r.inside && r.w !== pl.pos);
+  const moveTo = cands => { if (!cands.length) return null; return () => actMove(s, p, cands[0].w, { inside: !!cands[0].inside }); };
+  if (danger) { const m = moveTo(reach.filter(r => ok(r.w)).sort((a, b) => Math.abs(a.w - mid) - Math.abs(b.w - mid))); if (m) tries.push(m); }
+  if (pl.active && shootCheck(s, p).ok) {
+    const br = requiredBreakdown(s, p); const n = pl.res.prec + br.bonusPrec; const c = hitChance(s, p, n, br.total, 150);
+    if (c >= 0.45 || (c > 0.15 && pl.actions <= 1)) tries.push(() => actFire(s, p, { commit: pl.res.prec }));
+  }
+  if (pl.pos === o.pos) tries.push(() => actFire(s, p, { fists: true }));
+  if (!pl.inside && !danger) {
+    const en = reachAll.find(r => r.w === pl.pos && r.inside);
+    const wantIn = en && ((here.cache && !here.cache.searched) || here.loot.some(it => !it.out) || (ENVS[here.def].cover && pl.active && dist(s) <= eff(s, pl.active).max_range + 1) || ENVS[here.def].bonus);
+    if (en && wantIn && (!en.breach || (pl.active && pl.hp >= o.hp))) tries.push(() => actMove(s, p, pl.pos, { inside: true }));
+  }
+  if (o.inside && pl.active && !danger) {
+    const br = reachAll.find(r => r.w === o.pos && r.inside && r.breach);
+    if (br && pl.hp + pl.def >= o.hp - 3) tries.push(() => actMove(s, p, br.w, { inside: true }));
+  }
+  const vis = here.loot.filter(it => it.revealed && canReach(s, p, it) && lootCost(s, p, it) <= pl.res.intel);
+  if (!pl.active || !pl.back) for (const it of vis.filter(i => i.kind === 'weapon').sort((a, b) => itemDef(s, b).intel_cost - itemDef(s, a).intel_cost)) tries.push(() => actLoot(s, p, it.iid));
+  if (pl.active && pl.back) {
+    const cost = sl => WEAPONS[s.weapons[pl[sl]].def].intel_cost; const worse = cost('active') <= cost('back') ? 'active' : 'back';
+    for (const it of vis.filter(i => i.kind === 'weapon' && itemDef(s, i).intel_cost > cost(worse))) tries.push(() => actLoot(s, p, it.iid, { replace: worse }));
+  }
+  if (pl.active && s.weapons[pl.active].ammo === 0 && pl.res.ammo > 0) tries.push(() => actReload(s, p, { slot: 'active' }));
+  {
+    let budget = pl.res.intel; const pickL = [];
+    for (const it of vis.filter(i => i.kind !== 'weapon' && (i.kind !== 'att' || pl.active || pl.back)).sort((a, b) => itemDef(s, b).intel_cost - itemDef(s, a).intel_cost)) { const c = lootCost(s, p, it, pickL.length > 0); if (c <= budget) { pickL.push(it.iid); budget -= c; } }
+    if (pickL.length) tries.push(() => actLoot(s, p, pickL));
+  }
+  // movement goals
+  if (!pl.active) {
+    const targets = reach.filter(r => ok(r.w) && (envAt(s, r.w).loot.some(it => it.kind === 'weapon') || envHasLoot(s, envAt(s, r.w)))).sort((a, b) => Math.abs(a.w - pl.pos) - Math.abs(b.w - pl.pos));
+    const m = moveTo(targets); if (m) tries.push(m);
+  } else {
+    const R = eff(s, pl.active).max_range; const d = dist(s);
+    if (d > R || blockedBetween(s)) {
+      const best = reach.filter(r => ok(r.w)).map(r => ({ ...r, nd: Math.abs(r.w - o.pos) })).filter(r => r.nd < d).sort((a, b) => (Math.max(0, a.nd - R) - Math.max(0, b.nd - R)) || (b.nd - a.nd));
+      const m = moveTo(best); if (m) tries.push(m);
+    }
+  }
+  if (pl.active && pl.res.intel >= 2) {
+    const lootT = reach.filter(r => ok(r.w) && envHasLoot(s, envAt(s, r.w))).sort((a, b) => Math.abs(a.w - pl.pos) - Math.abs(b.w - pl.pos));
+    const m = moveTo(lootT); if (m) tries.push(m);
+  }
+  if (pl.res.ammo > 0) { tries.push(() => actReload(s, p, { slot: 'active' })); tries.push(() => actReload(s, p, { slot: 'back' })); }
+  for (const t of tries) { const r = t(); if (r && r.ok) return r; }
+  return finish(s, p);
+}
+
+// ---------- debug / test helpers ----------
+function giveWeapon(s, p, def, slot) {
+  const pl = P(s, p); const iid = newWeapon(s, def); pl[slot] = iid; s.weapons[iid].loc = { owner: p, slot }; return iid;
+}
+function giveCard(s, p, def, zone = 'hand') { const iid = newCard(s, def); P(s, p)[zone].push(iid); return iid; }
+function placeLoot(s, w, kind, def) {
+  const iid = kind === 'weapon' ? newWeapon(s, def) : kind === 'card' ? newCard(s, def) : newAtt(s, def);
+  envAt(s, w).loot.push({ kind, iid, revealed: true }); if (kind === 'weapon') s.weapons[iid].loc = { env: w }; return iid;
+}
+
+const API = {
+  RES, RES_LABEL, ARCH, ARCH_TAG, CARDS, WEAPONS, ATTS, ENVS, WEAPON_COPIES, BONUS_TYPES,
+  newGame, playCard, activateWeapon, switchWeapons, actMove, actFire, actLoot, actReload, actWait, finish,
+  aiStep, reachable, moveCost, mobilityCap, shootCheck, requiredBreakdown, hitChance, lootCost, eligibleBoosts, boostOk,
+  eff, envAt, dist, itemDef, cardDef, maxSafe, nextEdge, safeBounds, inSafe, blockedBetween, hasActionType, TUNE,
+  giveWeapon, giveCard, placeLoot, drawCards, searchable, searchStart, searchKeep, entryCost, canReach,
+};
+if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.WD = API;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+'use strict';
+const app = document.getElementById('app'), layer = document.getElementById('layer');
+let G = null;
+const ui = { screen: 'start', me: 0, mode: 'ai', sheet: null, moveMode: false, busy: false, seenFire: null, handoff: false, toast: null, toastT: 0 };
+
+const ic = (n, cls = '') => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
+const ME = () => G.players[ui.me], OP = () => G.players[1 - ui.me];
+const myTurn = () => G && !G.over && G.turn === ui.me && !ui.busy && !ui.handoff;
+const envName = e => WD.ENVS[e.def].name;
+const wdef = iid => WD.WEAPONS[G.weapons[iid].def];
+const escA = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const nameMe = () => ui.mode === 'ai' ? 'You' : ME().name;
+
+function hmPips(n) {
+  if (!n) return `<span class="hm z" title="0 Hit Markers">${ic('hm0')}</span>`;
+  return `<span class="hm" title="${n} Hit Marker${n > 1 ? 's' : ''}">${Array.from({ length: n }, () => ic('hm')).join('')}</span>`;
+}
+function reqLabel(type, min) {
+  if (type === 'any') return `<span class="reqin" title="Boost: fuel it with any other card from your hand">BOOST ${ic('hm0')}</span>`;
+  return `<span class="reqin" title="Boost: fuel it with a card that has ${min} or more Hit Markers">BOOST ${Array.from({ length: min }, () => ic('hm')).join('')}<b>+</b></span>`;
+}
+// Swap resource and stat words in rules text for their icons (tooltips keep the full words).
+const RES_ICON = { Movement: 'move', Precision: 'prec', Intel: 'intel', Ammo: 'ammo', Defense: 'def', Evasion: 'eva' };
+const STAT_ICON = { Recoil: 'rcl', Difficulty: 'diff', Mobility: 'mob', Range: 'rng', Damage: 'dmg' };
+const ri = (k, word) => `<span class="ri c-${k}" title="${word}" aria-label="${word}">${ic(k)}</span>`;
+const TOK = { move: 'Movement', prec: 'Precision', intel: 'Intel', ammo: 'Ammo', def: 'Defense', eva: 'Evasion', rcl: 'Recoil', diff: 'Difficulty', mob: 'Mobility', rng: 'Range', dmg: 'Damage', hm: 'Hit Marker' };
+function fx(text) {
+  if (!text) return '';
+  const t = k => `\u0001${k}\u0002`; // placeholder so later passes can't touch inserted markup
+  const out = String(text).split(/(?<=\.)\s+/).map(sent => {
+    let s = sent; const isGain = /^Gain\b/.test(s);
+    s = s.replace(/\bHit Markers?\b/g, t('hm'));
+    s = s.replace(/(\+?)(\d+) (additional |extra )?(Movement|Precision|Intel|Ammo|Defense|Evasion)\b/g, (m, plus, n, more, r) => `${plus || isGain || more ? '+' : ''}${n}${t(RES_ICON[r])}`);
+    s = s.replace(/\b(Movement|Precision|Intel|Ammo|Defense|Evasion)\b/g, (m, r) => t(RES_ICON[r]));
+    s = s.replace(/\b(Recoil|Difficulty|Mobility|Range|Damage)\b/g, (m, r) => t(STAT_ICON[r]));
+    if (isGain && /^Gain \+/.test(s)) s = s.replace(/^Gain /, '').replace(/,? and (?=\+)/g, ' ').replace(/, (?=\+)/g, ' ').replace(/\.$/, '');
+    return s;
+  }).join(' ');
+  return out.replace(/\u0001(\w+)\u0002/g, (m, k) => k === 'hm' ? `<span class="ri" title="Hit Marker" aria-label="Hit Marker">${ic('hm')}</span>` : ri(k, TOK[k]));
+}
+function cardTip(def) { return `${def.name} · ${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'}. ${def.main_text} Boost (${def.boost_requirement_type === 'any' ? 'any card' : def.boost_min_hit_markers + '+ Hit Markers'}): ${def.boost_text}`; }
+function cardHTML(def, o = {}) {
+  const cls = ['tc', 'a-' + def.archetype, o.cls || ''].join(' ');
+  const tag = def.tags.map(t => `<span class="tagc">${t}</span>`).join(' · ');
+  const inner = `<div class="tc-top"><span class="tc-name">${def.name}</span>${hmPips(def.hit_markers)}</div>
+    <div class="tc-main">${fx(def.main_text)}</div>
+    <div class="tc-boost"><span><span class="req">${reqLabel(def.boost_requirement_type, def.boost_min_hit_markers)}</span></span><span>${fx(def.boost_text)}</span></div>
+    <div class="tc-foot"><span>${tag}</span>${def.intel_cost ? `<span class="cost">${ic('intel')}${def.intel_cost}</span>` : '<span>Starter</span>'}</div>`;
+  if (o.act) return `<button class="${cls}" data-act="${o.act}" data-id="${o.id || ''}" ${o.dis ? 'disabled' : ''} aria-label="${escA(def.name)}" data-tip="${escA(cardTip(def))}">${inner}</button>`;
+  return `<div class="${cls}" data-tip="${escA(cardTip(def))}">${inner}</div>`;
+}
+function statsHTML(iid, def) {
+  const e = iid ? WD.eff(G, iid) : null;
+  const v = k => e ? e[k] : def[k];
+  const m = k => e && e[k] !== def[k] ? ' class="mod"' : '';
+  return `<div class="stats">
+    <div data-tip="Damage per hit (cover reduces it at range)."><b${m('damage')}>${v('damage')}</b><span>${ic('dmg')}DMG</span></div>
+    <div data-tip="Maximum range in zones."><b${m('max_range')}>${v('max_range')}</b><span>${ic('rng')}RNG</span></div>
+    <div data-tip="Mobility: the most Movement you can spend in one Move."><b${m('mobility')}>${v('mobility')}</b><span>${ic('mob')}MOB</span></div>
+    <div data-tip="Difficulty: added to the Hit Markers you need."><b${m('hit_difficulty')}>${v('hit_difficulty')}</b><span>${ic('diff')}DIF</span></div>
+    <div data-tip="Recoil: each earlier shot this round adds this much to what you need."><b${m('recoil')}>${v('recoil')}</b><span>${ic('rcl')}RCL</span></div></div>`;
+}
+function ammoHTML(iid, def) {
+  const W = iid ? G.weapons[iid] : null; const cap = iid ? WD.eff(G, iid).magazine_capacity : def.magazine_capacity;
+  const ammo = W ? W.ammo : def.starting_ammo;
+  return `<div class="ammo" data-tip="Loaded rounds. Each Fire uses 1. Reload with generated Ammo.">${Array.from({ length: cap }, (_, i) => `<i class="${i < ammo ? '' : 'e'}"></i>`).join('')}<span class="mono">${ammo}/${cap}</span></div>`;
+}
+function weaponBody(def, iid) {
+  const W = iid ? G.weapons[iid] : null;
+  const att = W && W.att ? WD.ATTS[G.atts[W.att].def] : null;
+  return `<div class="w-name">${def.name}<span class="cost">${ic('intel')}${def.intel_cost}</span></div>
+    <div class="lbl">${def.cls} · ${def.tags.join(' · ')}</div>
+    ${statsHTML(iid, def)}${ammoHTML(iid, def)}
+    <div class="preview"><span class="lbl">Tactical · once per round</span>${fx(def.main_text)}</div>
+    <div class="preview"><span><span class="req">${reqLabel(def.tactical_boost_requirement, def.tactical_boost_min_hit_markers)}</span> ${fx(def.boost_text)}</span></div>
+    <div class="preview"><span class="lbl">On Gather · every pickup</span>${fx(def.gather_text)}</div>
+    ${att ? `<div class="preview"><span class="lbl">Attachment</span><b>${att.name}</b> — ${att.text}</div>` : ''}`;
+}
+
+/* ---------- screens ---------- */
+function render() {
+  if (ui.screen === 'start') { app.innerHTML = startHTML(); renderLayer(); return; }
+  const me = ME(), op = OP();
+  const lo = app.querySelector('.logbox ol'); const ls = lo ? lo.scrollTop : 0;
+  app.innerHTML = `<div class="game">${topHTML()}${fieldHTML()}
+    <aside class="left">${oppHTML(op)}${mePanelHTML(me)}${logHTML()}</aside>
+    <section class="handzone">${handHTML(me)}</section>
+    <aside class="right">${wepsHTML(me)}${abarHTML(me)}</aside></div>`;
+  const lo2 = app.querySelector('.logbox ol'); if (lo2) lo2.scrollTop = ls;
+  renderLayer();
+}
+
+function startHTML() {
+  return `<div class="start"><div class="start-in">
+    <div class="ver">TACTICAL DECKBUILDER · v2.1 PROTOTYPE</div>
+    <h1>Warzone <span>Deckbuilder</span></h1>
+    <p>Two operators drop in unarmed. Loot a gun that shapes your engine, build your deck from what you find, and survive the closing circle. Your weapons work like permanent tactical cards you activate once each round.</p>
+    <div class="archs">
+      <div class="a-rungun" style="--arch:var(--c-move)"><b>Run &amp; Gun</b>Movement into Precision, fire up close.</div>
+      <div class="a-entrenched" style="--arch:var(--c-ammo)"><b>Entrenched</b>Ammo into Defense and recoil control.</div>
+      <div class="a-deadeye" style="--arch:var(--c-prec)"><b>Deadeye</b>High-marker cards, long reliable shots.</div>
+      <div class="a-scavenger" style="--arch:var(--c-intel)"><b>Scavenger</b>Intel, loot and deck refinement.</div>
+    </div>
+    <div class="row"><button class="btn sig" data-act="new" data-id="ai">Play vs rival AI</button><button class="btn alt" data-act="new" data-id="hotseat">Pass &amp; play</button><button class="btn alt" data-act="sheet" data-id="rules">How to play</button><button class="btn alt" data-act="sheet" data-id="codex">Card codex</button></div>
+  </div></div>`;
+}
+
+function nextHint() {
+  const me = ME();
+  if (G.over) return 'Match over.';
+  if (!myTurn()) return ui.mode === 'ai' ? `<b>${OP().name}</b> is acting…` : 'Waiting…';
+  if (ui.moveMode) return '<b>Move:</b> tap a highlighted zone.';
+  const here = WD.envAt(G, me.pos);
+  if (here.state === 'gas') return '<b>You are in the gas</b> (−2 at round end). Play Movement and Move into the circle.';
+  if (me.pos === WD.nextEdge(G)) return '<b>This zone closes at round end.</b> Move toward the centre.';
+  if (me.pendingSearch) return '<b>Finish your search:</b> choose what stays at this location.';
+  const sch = WD.searchable(G, ui.me);
+  if (sch) return `<b>Search</b> ${sch === 'crate' ? 'the supply crate' : 'this location'} (free) to draft its loot.`;
+  if (here.cache && !here.cache.searched && !me.inside && WD.ENVS[here.def].entry != null) { const en = WD.entryCost(G, ui.me, me.pos); if (en) return `<b>Go inside</b> to search it: Move → ${en.breach ? 'Breach' : 'Go in'} (${en.cost} Movement).`; }
+  if (!me.active && !me.back) {
+    const gun = here.loot.find(i => i.kind === 'weapon' && WD.canReach(G, ui.me, i));
+    return gun ? `<b>Grab a gun:</b> play Recon for Intel, then Loot the ${WD.itemDef(G, gun).name}.` : '<b>Find a gun:</b> move to a location with a weapon (orange edge), or search a cache.';
+  }
+  if (me.hand.length) return '<b>Play cards</b> to generate resources, then take an action. Hold any card for details.';
+  const fo = fireOdds();
+  if (fo && fo.pct != null && me.res.prec > 0 && fo.pct >= 40) return `<b>Fire</b> now: ${fo.pct}% to hit.`;
+  if (fo && fo.pct != null && me.res.prec > 0) return `Fire is only ${fo.pct}% — your draw pile is low on Hit Markers. Consider moving, looting or reloading.`;
+  return 'Take an action: Move, Fire, Loot, Reload, Wait — or Finish the round.';
+}
+function topHTML() {
+  const mine = myTurn();
+  const who = G.over ? 'Match over' : ui.busy || (ui.mode === 'ai' && G.turn !== ui.me) ? `${G.players[G.turn].name} acting` : G.turn === ui.me ? 'Your turn' : `${G.players[G.turn].name}'s turn`;
+  const B = WD.safeBounds(G); const ne = WD.nextEdge(G);
+  return `<header class="top"><span class="brand">WZ·DB<small>v2.1</small></span>
+    <span class="turnpill ${mine ? 'mine' : ''}">${who}</span>
+    <span class="hint">${nextHint()}</span>
+    <span class="roundinfo">Round <b>${G.round}</b> · ${B.n} safe zone${B.n === 1 ? '' : 's'}<br>${ne == null ? '<b style="color:var(--danger)">Final circle</b>' : `Closes next: ${envName(WD.envAt(G, ne))}`}</span>
+    <button class="iconbtn" data-act="sheet" data-id="rules" aria-label="Rules">?</button>
+    <button class="iconbtn" data-act="sheet" data-id="menu" aria-label="Menu">☰</button></header>`;
+}
+
+function tokHTML(i, pl) { return `<span class="tok ${i === ui.me ? 'me' : 'them'}">${i === ui.me ? (ui.mode === 'ai' ? 'You' : pl.name) : pl.name}</span>`; }
+function lootBtn(it, me, e) {
+  const def = WD.itemDef(G, it); const cost = me.pos === e.w ? WD.lootCost(G, ui.me, it) : def.intel_cost - (it.kind === 'card' && def.intel_cost >= 3 ? WD.TUNE.cardDiscount : 0);
+  const kind = it.kind === 'card' ? 'tactical card' : it.kind === 'weapon' ? 'weapon' : 'attachment';
+  return `<button class="loot-it ${it.kind}" data-act="item" data-id="${it.iid}" data-tip="${escA(def.name)} · ${kind} · ${cost} Intel${it.out ? '' : ' · inside only'}. Tap for details."><span>${def.name}</span><span class="k">${cost}</span></button>`;
+}
+function fieldHTML() {
+  const reach = ui.moveMode ? WD.reachable(G, ui.me) : [];
+  const ne = WD.nextEdge(G); const me = ME(); const final = WD.safeBounds(G).n <= 1;
+  const tiles = G.envs.map(e => {
+    const d = WD.ENVS[e.def];
+    const opts = reach.filter(x => x.w === e.w);
+    if (e.state === 'gas') {
+      const o = opts.find(x => !x.inside);
+      return `<div class="env gas ${G.players.some(p => p.pos === e.w) ? 'occupied' : ''} ${o ? 'reach' : ''}" ${o ? `data-act="moveto" data-id="${e.w}" data-x="out" role="button" tabindex="0"` : ''} data-tip="Gas (was ${escA(d.name)}). Standing here at round end costs 2 Health.">${G.players.map((pl, i) => pl.pos === e.w ? `<span class="tok ${i === ui.me ? 'me' : 'them'}" style="position:absolute;top:4px;left:2px;writing-mode:vertical-rl;padding:4px 1px">${i === ui.me ? 'YOU' : pl.name}</span>` : '').join('')}</div>`;
+    }
+    const drop = e.crate && !e.crate.searched;
+    const st = e.w === ne ? 'warn' : drop ? 'drop' : 'safe';
+    const stLabel = e.w === ne ? 'Closes next' : drop ? 'Supply crate' : final ? 'Final circle' : 'Safe';
+    const hasIn = d.entry != null && !final;
+    const inP = G.players.map((pl, i) => pl.pos === e.w && pl.inside ? tokHTML(i, pl) : '').join('');
+    const outP = G.players.map((pl, i) => pl.pos === e.w && !pl.inside ? tokHTML(i, pl) : '').join('');
+    const inLoot = e.loot.filter(it => !it.out), outLoot = e.loot.filter(it => it.out);
+    const cache = e.cache && !e.cache.searched ? `<span class="cache" data-tip="Unsearched cache: the first operator to search ${d.entry != null ? 'from inside ' : ''}reveals ${e.cache.reveal} items and chooses ${e.cache.keep} to leave here. The rest go back.">Cache ${e.cache.reveal}→${e.cache.keep}</span>` : '';
+    const crate = drop ? `<span class="cache crate" data-tip="Supply crate: the first operator here searches it (free, from outside) and keeps ${WD.TUNE.crate[1]} of ${WD.TUNE.crate[0]} items (2 weapons, 4 others) on this location.">Crate ${WD.TUNE.crate[0]}→${WD.TUNE.crate[1]}</span>` : '';
+    const list = (arr, n) => arr.slice(0, n).map(it => lootBtn(it, me, e)).join('') + (arr.length > n ? `<span class="loot-more">+${arr.length - n}</span>` : '');
+    const cover = d.cover ? `<span class="${d.hard ? 'cover-hard' : ''}">${d.hard ? 'Hard' : 'Soft'} −${d.cover}</span>` : '<span>No cover</span>';
+    let body;
+    if (opts.length) {
+      body = `<div class="mvopts">${opts.map(o => `<button class="mvopt ${o.inside ? (o.breach ? 'breach' : 'in') : ''}" data-act="moveto" data-id="${e.w}" data-x="${o.inside ? 'in' : 'out'}" data-tip="${o.inside ? (o.breach ? `Breach: someone holds ${escA(d.name)}. You go in anyway (+1 Movement); both of you are at close quarters with no cover.` : `Move here and go inside: ${o.cost} Movement total.`) : `Move here and stay outside: ${o.cost} Movement (1 per space).`}">${o.inside ? (o.breach ? 'Breach' : (e.w === me.pos ? 'Go in' : 'In')) : 'Out'} · ${o.cost}</button>`).join('')}</div>`;
+    } else {
+      body = `${hasIn ? `<div class="slot-in ${inP ? 'held' : ''}"><span class="sl">Inside${d.bonusText ? ' · ' + fx(d.bonusText) : ''}</span>${inP}${cache}${list(inLoot, 2)}</div>` : `<div class="slot-in none"><span class="sl">${final && d.entry != null ? 'Walls down' : 'No inside'}</span></div>`}
+        <div class="slot-out"><span class="sl">Outside</span>${outP}${crate}${d.entry == null ? cache : ''}${list(outLoot, 1)}</div>`;
+    }
+    const tip = `${d.name}. Moving here costs 1 per space; ${d.entry != null ? `going inside costs ${d.entry} more` : 'no inside'}. ${d.text}${e.w === ne ? ' Gas takes it at the end of this round.' : ''} Tap for details.`;
+    const cls = ['env', st, ui.moveMode ? (opts.length ? 'reach' : 'noreach') : '', me.pos === e.w ? 'here' : ''].join(' ');
+    return `<div class="${cls}" data-tip="${escA(tip)}">
+      <div class="env-state">${stLabel}</div>
+      <div class="env-body" ${opts.length ? '' : `data-act="loc" data-id="${e.w}"`}><div class="env-name">${d.name}</div>
+      <div class="env-stats">${d.entry != null ? `<span title="Entry cost">In ${d.entry}${ic('move', 'c-move')}</span>` : ''}${cover}</div>
+      ${body}</div></div>`;
+  }).join('');
+  const o = OP(); const d = WD.dist(G); const E = me.active ? WD.eff(G, me.active) : null;
+  const od = WD.ENVS[WD.envAt(G, o.pos).def];
+  const covTxt = o.inside && od.cover && !(me.pos === o.pos && me.inside) ? ` · ${o.name} inside: cover −${od.cover}` : '';
+  const rangeTxt = E ? (d <= E.max_range ? (WD.blockedBetween(G) ? ' · <span style="color:var(--danger)">shot blocked by hard cover</span>' : ` · in range (${E.max_range})`) : ` · <span style="color:var(--danger)">out of range (${E.max_range})</span>`) : '';
+  return `<section class="fieldwrap" aria-label="Battlefield"><div class="field-head"><span class="lbl">The circle</span><span>1 Movement per space · going inside costs the entry · one operator inside each location (Breach +1)</span><span class="distchip">Distance ${d}${rangeTxt}${covTxt}</span></div>
+    <div class="field" id="field">${tiles}</div></section>`;
+}
+
+function oppHTML(op) {
+  const w = id => {
+    if (!id) return '';
+    const W = G.weapons[id]; return `<button class="mini-wep" data-act="wview" data-id="${id}" data-tip="Tap to see ${escA(wdef(id).name)}"><b>${wdef(id).name}</b><span class="mono">${W.ammo}/${WD.eff(G, id).magazine_capacity}</span><span class="ready ${W.used ? 'off' : 'on'}">${W.used ? 'Used' : 'Ready'}</span></button>`;
+  };
+  return `<section class="op" aria-label="Opponent">
+    <div class="op-head"><span class="op-name">${op.name}</span><span class="op-meta"><span>Hand <b class="mono">${op.hand.length}</b></span><span>Actions <b class="mono">${op.finished ? '—' : op.actions}</b></span><span>Deck <b class="mono">${op.deck.length + op.discard.length + op.hand.length + op.play.length}</b></span></span></div>
+    ${hpHTML(op)}
+    <div class="opp-weps">${op.active ? w(op.active) : '<span class="lbl">Unarmed</span>'}${op.back ? w(op.back) : ''}</div>
+  </section>`;
+}
+function hpHTML(pl) {
+  const pct = Math.max(0, pl.hp) / 25 * 100;
+  return `<div class="hp"><div class="hpbar ${pl.hp <= 8 ? 'low' : ''}" role="img" aria-label="Health ${pl.hp} of 25"><i style="width:${pct}%"></i></div><span class="mono">${Math.max(0, pl.hp)}/25</span>
+    <span class="chips"><span class="chip" data-tip="Defense absorbs damage until next round.">${ic('def', 'c-def')}${pl.def}</span><span class="chip" data-tip="Evasion adds to the enemy's Hit requirement.">${ic('eva', 'c-eva')}${pl.eva}</span>${pl.suppress ? `<span class="chip warn">Supp +${pl.suppress.n}</span>` : ''}${pl.finished ? '<span class="chip">Done</span>' : ''}</span></div>`;
+}
+
+function mePanelHTML(me) {
+  const nf = me.nextFire; const st = [];
+  if (nf.reqMod) st.push(`Next Fire −${nf.reqMod} req`);
+  if (nf.recoilIgnore) st.push(`Ignore ${nf.recoilIgnore} recoil`);
+  if (nf.bonusPrec) st.push(`Next Fire +${nf.bonusPrec} Prec`);
+  if (me.lootDiscount) st.push(`Loot −${me.lootDiscount}`);
+  for (const t of me.triggers) st.push(`Armed: ${t.label}`);
+  for (const t of WD.BONUS_TYPES) if (me.bonusPending[t]) st.push(`Bonus ${t} next turn`);
+  const tips = { move: 'Movement: spend it on Move actions to enter zones.', prec: 'Precision: commit it when you Fire. Each point reveals one card from your deck; their Hit Markers must reach the requirement.', intel: 'Intel: pay for loot. Unspent Intel now carries over between rounds.', ammo: 'Ammo: load it into a weapon with a Reload action. Expires at round end unless loaded.' };
+  return `<section class="op" aria-label="Your operator">
+    <div class="op-head"><span class="op-name">${nameMe()}</span><span class="op-meta"><span>Draw <b class="mono">${me.deck.length}</b></span><span>Discard <b class="mono">${me.discard.length}</b></span><span>Deck <b class="mono">${me.deck.length + me.discard.length + me.hand.length + me.play.length}</b></span></span></div>
+    ${hpHTML(me)}
+    <div class="res">${['move', 'prec', 'intel', 'ammo'].map(k => `<div class="${me.res[k] ? '' : 'zero'}" data-tip="${escA(tips[k])}"><b class="c-${k}">${me.res[k]}</b><span>${ic(k, 'c-' + k)}${{ move: 'Move', prec: 'Prec', intel: 'Intel', ammo: 'Ammo' }[k]}</span></div>`).join('')}</div>
+    ${st.length ? `<div class="statusline">${st.map(x => `<span class="chip warn">${x}</span>`).join('')}</div>` : ''}
+  </section>`;
+}
+
+function wepsHTML(me) {
+  const slot = sl => {
+    const iid = me[sl];
+    if (!iid) return `<div class="wcard ${sl}"><div class="w-slot"><span>${sl === 'active' ? 'Active' : 'On back'}</span></div><div class="wempty">${sl === 'active' ? 'Unarmed: Fists only (same location, 1 damage). No Mobility cap.' : 'Empty — loot a second gun.'}</div></div>`;
+    const W = G.weapons[iid]; const def = wdef(iid); const can = myTurn() && sl === 'active' && !W.used;
+    const att = W.att ? WD.ATTS[G.atts[W.att].def] : null;
+    return `<div class="wcard ${sl}"><div class="w-slot"><span>${sl === 'active' ? 'Active' : 'On back'}<span class="wsn"> · ${def.name}</span></span><span class="ready ${W.used ? 'off' : 'on'}">${W.used ? 'Tactical used' : 'Tactical ready'}</span></div>
+      <div class="w-body"><div class="w-name"><span data-act="wview" data-id="${iid}" style="cursor:pointer" data-tip="Tap for the full weapon card.">${def.name}</span>${att ? `<span class="chip" data-tip="${escA(att.name + ': ' + att.text)}">${att.name}</span>` : ''}</div>
+      ${sl === 'active' ? statsHTML(iid, def) : (() => { const E = WD.eff(G, iid); return `<div class="lbl" data-tip="Damage · Range · Mobility · Difficulty · Recoil">DMG ${E.damage} · RNG ${E.max_range} · MOB ${E.mobility} · DIF ${E.hit_difficulty} · RCL ${E.recoil}</div>`; })()}${ammoHTML(iid, def)}
+      ${sl === 'active' ? `<div class="tact" data-tip="${escA('Tactical: ' + def.main_text + ' Boost: ' + def.boost_text + ' On Gather: ' + def.gather_text)}">${fx(def.main_text)}<span class="t2"><span class="req">${reqLabel(def.tactical_boost_requirement, def.tactical_boost_min_hit_markers)}</span>${fx(def.boost_text)}</span></div>
+      <div class="wbtns"><button class="btn sig sm wide" data-act="activate" ${can ? '' : 'disabled'}>${W.used ? 'Tactical used this round' : 'Activate Tactical · free'}</button></div>` : ''}
+      </div></div>`;
+  };
+  return `<section class="weps" aria-label="Your weapons">${slot('active')}
+    <button class="switchbtn" data-act="switch" ${myTurn() && me.freeSwitch && (me.active || me.back) ? '' : 'disabled'} data-tip="Swap Active and Back weapons. Free, once per round.">⇄ Switch ${me.freeSwitch ? '(free, 1/round)' : '(used)'}</button>
+    ${slot('back')}</section>`;
+}
+
+function handHTML(me) {
+  const many = me.hand.length > 4;
+  return `<div class="hand-head"><span class="lbl">Hand · ${me.hand.length}</span><span class="note">Tap to play (optionally Boost with another card). Hold for details.</span></div>
+    <div class="hand ${many ? 'many' : ''}">${me.hand.map(iid => cardHTML(WD.cardDef(G, iid), { act: 'card', id: iid })).join('') || '<span class="empty-hand">No cards left in hand. Take actions or Finish the round.</span>'}</div>
+    ${me.play.length ? `<div class="inplay">In play: ${me.play.map(i => WD.cardDef(G, i).name).join(', ')}</div>` : ''}`;
+}
+
+function logHTML() {
+  const items = G.log.slice(-80).reverse();
+  return `<section class="logbox"><div class="lh lbl">Combat log</div><ol>${items.map(l => `<li class="${l.cls}">${l.msg}</li>`).join('')}</ol></section>`;
+}
+
+function fireOdds() {
+  const me = ME(); if (!me.active) return null;
+  const sc = WD.shootCheck(G, ui.me); if (!sc.ok) return { err: sc.err };
+  const br = WD.requiredBreakdown(G, ui.me); const n = me.res.prec + br.bonusPrec;
+  return { pct: Math.round(WD.hitChance(G, ui.me, n, br.total, 250) * 100), req: br.total, n };
+}
+function abarHTML(me) {
+  const t = myTurn(); const has = ty => WD.hasActionType(me, ty);
+  const fo = t ? fireOdds() : null; const same = me.pos === OP().pos;
+  const here = WD.envAt(G, me.pos); const lootN = here.loot.filter(i => WD.canReach(G, ui.me, i)).length;
+  const sch = t ? WD.searchable(G, ui.me) : null; const pend = me.pendingSearch;
+  const searchBtn = pend ? `<button class="abtn on search" data-act="searchopen" data-tip="Choose what stays at this location.">${ic('loot')}<span>Keep ${pend.keep}</span><small>finish search</small></button>` : sch ? `<button class="abtn on search" data-act="search" data-tip="Free (no action). Reveal the loot here and choose what stays on this location. Taking it is still a Loot action.">${ic('loot')}<span>Search</span><small>${sch === 'crate' ? 'crate · free' : 'free'}</small></button>` : '';
+  const b = (act, label, icon, ty, extra = '', sub = '', tip = '') => {
+    const bonus = ty && ty !== 'wait' && me.bonus[ty] ? `<span class="bad">+${me.bonus[ty]}</span>` : '';
+    const dis = !t || (ty && !has(ty));
+    return `<button class="abtn ${extra}" data-act="${act}" ${dis ? 'disabled' : ''} data-tip="${escA(tip)}">${bonus}${ic(icon)}<span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</button>`;
+  };
+  const fireSub = !t ? '' : fo && fo.pct != null ? `${fo.pct}% · need ${fo.req}` : same ? 'Fists 1' : fo && fo.err ? 'no shot' : 'unarmed';
+  const fireTip = fo && fo.err ? fo.err : fo && fo.pct != null ? `Commit ${fo.n} Precision to reveal ${fo.n} cards; you need ${fo.req} Hit Markers. Estimated ${fo.pct}%.` : 'Fire your Active weapon or use Fists in the same zone.';
+  const pips = Array.from({ length: 3 }, (_, i) => `<i class="${i < me.actions ? 'f' : ''}"></i>`).join('');
+  return `<nav class="abar" aria-label="Tactical actions">
+    <div class="abar-info"><span class="pips" title="Tactical Actions left">${pips}</span><span data-tip="You and your rival alternate one action at a time.">${me.actions} action${me.actions === 1 ? '' : 's'} left</span>${WD.BONUS_TYPES.filter(x => me.bonus[x]).map(x => `<span class="chip">+${me.bonus[x]} ${x}</span>`).join('')}</div>
+    <div class="abtns">${b('move', 'Move', 'move', 'move', ui.moveMode ? 'on' : '', me.res.move ? `${me.res.move} Mvt` : 'no Mvt', '1 Movement per space. Going inside costs the location’s entry (Breach +1 if someone holds it). Leaving is free. Your Active weapon’s Mobility caps each Move.')}${b('fire', 'Fire', 'fire', 'fire', fo && fo.pct >= 60 ? 'go' : '', fireSub, fireTip)}${b('loot', 'Loot', 'loot', 'loot', '', lootN ? `${lootN} here` : 'nothing', 'Take any number of items you can reach here (inside items need you inside), paying Intel for each.')}${b('reload', 'Reload', 'reload', 'reload', '', me.res.ammo ? `${me.res.ammo} Ammo` : 'no Ammo', 'Load generated Ammo into a weapon.')}${searchBtn || b('wait', 'Wait', 'wait', 'wait', '', '', 'Spend an action doing nothing.')}<button class="abtn" data-act="finish" ${t ? '' : 'disabled'} data-tip="End your round now. Remaining actions are lost.">${ic('end')}<span>Finish</span><small>${me.actions ? `lose ${me.actions}` : ''}</small></button></div>
+  </nav>`;
+}
+
+// ---------- sheets ----------
+function renderLayer() {
+  let h = '';
+  if (ui.handoff) h += `<div class="hand-off"><div><div class="lbl">Pass &amp; play</div><h2>Pass to ${G.players[G.turn].name}</h2><p style="color:var(--muted)">Hands stay hidden until the next operator taps.</p><button class="btn sig" data-act="takeover">I'm ${G.players[G.turn].name} — show my hand</button></div></div>`;
+  if (ui.sheet) h += `<div class="scrim" data-act="scrim"><div class="sheet ${['codex', 'rules', 'loot', 'item', 'card', 'loc', 'search'].includes(ui.sheet.type) ? 'wide' : ''}" role="dialog" aria-modal="true">${sheetHTML()}</div></div>`;
+  if (ui.toast) h += `<div class="toast" role="status">${ui.toast}</div>`;
+  layer.innerHTML = h;
+}
+function head(title) { return `<div class="sheet-head"><h2>${title}</h2><button class="iconbtn x" data-act="close" aria-label="Close">✕</button></div>`; }
+function preview(fn) {
+  const clone = JSON.parse(JSON.stringify(G));
+  const r = fn(clone);
+  return r.ok ? r.out.join(', ') : r.err;
+}
+
+function lootSheet(S) {
+  const me = ME();
+  const env = S.type === 'item' ? G.envs.find(e => e.loot.some(i => i.iid === S.id)) : S.type === 'loc' ? WD.envAt(G, S.w) : WD.envAt(G, me.pos);
+  if (!env) return head('Loot') + '<p>That item is gone.</p>';
+  const here = env.w === me.pos;
+  if (S.type === 'item' && here && !S.converted) { const it0 = env.loot.find(i => i.iid === S.id); S.sel = it0 && WD.canReach(G, ui.me, it0) ? [S.id] : []; S.converted = true; }
+  const d0 = WD.ENVS[env.def]; const final0 = WD.safeBounds(G).n <= 1;
+  const info = `<div class="preview"><span><b>${d0.name}</b> · 1 Movement per space${d0.entry != null && !final0 ? ` · going inside costs ${d0.entry}` : ' · no inside'} · ${d0.cover ? `${d0.hard ? 'hard' : 'soft'} cover −${d0.cover} (inside only)` : 'no cover'}</span><span>${fx(d0.text)}</span>${env.cache && !env.cache.searched ? `<span>Unsearched cache: search ${d0.entry != null ? 'from inside ' : ''}to reveal ${env.cache.reveal} and leave ${env.cache.keep} here.</span>` : env.cache ? '<span style="color:var(--muted)">Cache already searched.</span>' : ''}${env.crate && !env.crate.searched ? `<span>Supply crate: search it (free, from outside) to keep ${WD.TUNE.crate[1]} of ${WD.TUNE.crate[0]}.</span>` : ''}${G.players.filter(p => p.pos === env.w).map(p => `<span>${p === me ? 'You are' : p.name + ' is'} ${p.inside ? 'inside' : 'outside'}.</span>`).join('')}</div>`;
+  const can = myTurn() && here && WD.hasActionType(me, 'loot');
+  const items = env.loot;
+  let h = head(here ? `${envName(env)} · loot` : `${envName(env)}`) + info;
+  if (!here && env.loot.length) h += `<div style="color:var(--muted);font-size:13px">Move to ${envName(env)} to loot it.</div>`;
+  const sel = S.sel || [];
+  let total = 0;
+  sel.forEach((id, i) => { const it = items.find(x => x.iid === id); if (it) total += WD.lootCost(G, ui.me, it, i > 0); });
+  const weaponSel = sel.some(id => (items.find(x => x.iid === id) || {}).kind === 'weapon');
+  const attSel = sel.some(id => (items.find(x => x.iid === id) || {}).kind === 'att');
+  h += `<div class="lootlist">${items.map(it => {
+    if (!it.revealed) return `<div class="lootpick" style="cursor:default;color:var(--muted)"><span class="lk">Hidden</span>Revealed when someone enters or passes through.</div>`;
+    const def = WD.itemDef(G, it); const cost = WD.lootCost(G, ui.me, it, sel.length > 0 && sel[0] !== it.iid);
+    const on = sel.includes(it.iid); const reachIt = here && WD.canReach(G, ui.me, it);
+    let body = '';
+    if (it.kind === 'card') body = `${hmPips(def.hit_markers)}<span>${fx(def.main_text)}</span><span style="color:var(--muted)"><span class="req">${reqLabel(def.boost_requirement_type, def.boost_min_hit_markers)}</span> ${fx(def.boost_text)}</span>`;
+    else if (it.kind === 'weapon') body = `${statsHTML(it.iid, def)}<span>${fx(def.main_text)}</span><span style="color:var(--muted)">On gather: ${fx(def.gather_text)}</span>`;
+    else body = `<span>${fx(def.text)}</span>`;
+    return `<button class="lootpick ${on ? 'on' : ''}" data-act="pickloot" data-id="${it.iid}" ${reachIt ? '' : 'disabled'}><span class="lk">${it.kind === 'card' ? 'Tactical card · goes to discard' : it.kind === 'weapon' ? def.cls + ' · weapon' : 'Attachment'}${it.out ? ' · outside' : ' · inside only'}</span><span class="ln"><span>${def.name}</span><span class="cost">${ic('intel')}${cost}</span></span>${body}</button>`;
+  }).join('') || '<p style="color:var(--muted)">No loot here yet.</p>'}</div>`;
+  if (here && items.length) {
+    const opts = [];
+    if (weaponSel && me.active && me.back) opts.push(`<span>Replace:</span><button class="btn sm ${S.replace !== 'back' ? 'sig' : 'alt'}" data-act="lootopt" data-id="replace:active">${wdef(me.active).name}</button><button class="btn sm ${S.replace === 'back' ? 'sig' : 'alt'}" data-act="lootopt" data-id="replace:back">${wdef(me.back).name}</button>`);
+    if (attSel && me.active && me.back) opts.push(`<span>Mount on:</span><button class="btn sm ${S.attachTo !== 'back' ? 'sig' : 'alt'}" data-act="lootopt" data-id="attach:active">${wdef(me.active).name}</button><button class="btn sm ${S.attachTo === 'back' ? 'sig' : 'alt'}" data-act="lootopt" data-id="attach:back">${wdef(me.back).name}</button>`);
+    if (attSel && !me.active && !me.back) opts.push('<span style="color:var(--danger)">You need a weapon to mount an attachment.</span>');
+    h += opts.map(o => `<div class="row">${o}</div>`).join('');
+    h += `<div class="row"><button class="btn sig" data-act="dolot" ${can && sel.length && total <= me.res.intel ? '' : 'disabled'}>Loot ${sel.length || ''} item${sel.length === 1 ? '' : 's'} · ${total} Intel</button><span style="color:${total > me.res.intel ? 'var(--danger)' : 'var(--muted)'};font-size:13px">You have ${me.res.intel} Intel · one Loot action takes everything selected (max one weapon)</span><button class="btn alt" data-act="close">Cancel</button></div>`;
+  }
+  return h;
+}
+
+function sheetHTML() {
+  const S = ui.sheet; const me = ME();
+  if (S.type === 'card') {
+    const def = WD.cardDef(G, S.id);
+    const others = me.hand.filter(i => i !== S.id);
+    const elig = WD.eligibleBoosts(G, ui.me, def.boost_requirement_type, def.boost_min_hit_markers, S.id);
+    const salv = def.boost_effects.some(e => e.op === 'salvageDiscard') ? me.discard : def.boost_effects.some(e => e.op === 'salvageHand') ? others.filter(i => i !== S.boost) : null;
+    const ch = { salvage: S.salvage };
+    const pu = preview(c => WD.playCard(c, ui.me, S.id, null, ch));
+    const pb = S.boost ? preview(c => WD.playCard(c, ui.me, S.id, S.boost, ch)) : null;
+    return `${head('Play tactical card')}<div class="cols"><div class="big">${cardHTML(def)}</div><div style="display:grid;gap:8px">
+      <h3>Boost with one card from hand ${def.boost_requirement_type === 'min' ? `(needs ${def.boost_min_hit_markers}+ Hit Markers on a single card)` : '(any card)'}</h3>
+      <div class="picker">${others.map(i => cardHTML(WD.cardDef(G, i), { act: 'pickboost', id: i, cls: i === S.boost ? 'sel' : elig.includes(i) ? 'elig' : 'inel', dis: !elig.includes(i) })).join('') || '<span style="color:var(--muted);font-size:13px">No other cards in hand.</span>'}</div>
+      ${S.boost && salv ? `<h3>Card to salvage permanently</h3><div class="picker">${salv.map(i => cardHTML(WD.cardDef(G, i), { act: 'picksalv', id: i, cls: i === S.salvage ? 'sel' : '' })).join('') || '<span style="color:var(--muted);font-size:13px">Nothing eligible.</span>'}</div>` : ''}
+      <div class="preview"><div><span class="lbl">Unboosted</span>${fx(pu)}</div>${pb ? `<div><span class="lbl">Boosted</span>${fx(pb)}</div>` : '<div style="color:var(--muted)">Pick a green card to preview the Boost. The Boost card is spent as fuel; its own effects don’t happen.</div>'}</div>
+      <div class="row"><button class="btn alt wide" data-act="playcard">Play unboosted</button><button class="btn sig wide" data-act="playboost" ${S.boost ? '' : 'disabled'}>Play boosted</button><button class="btn alt" data-act="close">Cancel</button></div></div></div>`;
+  }
+  if (S.type === 'weapon') {
+    const iid = me.active; const def = wdef(iid);
+    const elig = WD.eligibleBoosts(G, ui.me, def.tactical_boost_requirement, def.tactical_boost_min_hit_markers, null);
+    const conv = def.tactical_boost_effects.find(e => e.op === 'convert');
+    const ch = conv ? { convert: S.convert } : {};
+    const pu = preview(c => WD.activateWeapon(c, ui.me, null, ch));
+    const pb = S.boost ? preview(c => WD.activateWeapon(c, ui.me, S.boost, ch)) : null;
+    return `${head(`Activate ${def.name}`)}
+      <div class="preview"><div><span class="lbl">Tactical</span>${fx(def.main_text)}</div><div><span class="req">${reqLabel(def.tactical_boost_requirement, def.tactical_boost_min_hit_markers)}</span> ${fx(def.boost_text)}</div></div>
+      <h3>Optional Boost card</h3>
+      <div class="picker">${me.hand.map(i => cardHTML(WD.cardDef(G, i), { act: 'pickboost', id: i, cls: i === S.boost ? 'sel' : elig.includes(i) ? 'elig' : 'inel', dis: !elig.includes(i) })).join('') || '<span style="color:var(--muted);font-size:13px">No cards in hand to Boost with.</span>'}</div>
+      ${conv && S.boost ? `<div class="row"><span>Spend up to</span><span class="stepper"><button data-act="conv" data-id="-1" aria-label="Less">−</button><b>${S.convert}</b><button data-act="conv" data-id="1" aria-label="More">+</button></span><span>${WD.RES_LABEL[conv.from]} → ${WD.RES_LABEL[conv.to]} (max ${conv.max})</span></div>` : ''}
+      <div class="preview"><div><span class="lbl">Unboosted</span>${fx(pu)}</div>${pb ? `<div><span class="lbl">Boosted</span>${fx(pb)}</div>` : ''}</div>
+      <div class="row"><button class="btn alt wide" data-act="actweapon">Activate unboosted</button><button class="btn sig wide" data-act="actweaponb" ${S.boost ? '' : 'disabled'}>Activate boosted</button></div>
+      <div style="font-size:12.5px;color:var(--muted)">Activation is free (no action) and doesn’t use loaded Ammo. The gun stays exhausted this round even if dropped or switched.</div>`;
+  }
+  if (S.type === 'wview') {
+    const def = wdef(S.id); const W = G.weapons[S.id];
+    return `${head(def.name)}<div class="wcard"><div class="w-slot"><span>${def.cls}</span><span class="ready ${W.used ? 'off' : 'on'}">${W.used ? 'Tactical used' : 'Tactical ready'}</span></div><div class="w-body">${weaponBody(def, S.id)}</div></div>`;
+  }
+  if (S.type === 'fire') {
+    const o = OP(); const same = me.pos === o.pos; const sc = WD.shootCheck(G, ui.me);
+    let h = head('Fire');
+    if (me.active) {
+      const def = wdef(me.active);
+      if (sc.ok) {
+        const br = WD.requiredBreakdown(G, ui.me); const n = S.commit + br.bonusPrec; const chn = WD.hitChance(G, ui.me, n, br.total);
+        const E = WD.eff(G, me.active); const tenv = WD.envAt(G, o.pos); const td = WD.ENVS[tenv.def];
+        const coverCut = tenv.state === 'safe' && td.cover && o.inside && !(me.pos === o.pos && me.inside) ? Math.min(td.cover, E.damage - 1) : 0;
+        const dmgLine = `${E.damage} damage${coverCut ? ` − ${coverCut} cover` : ''}${o.def ? ` − up to ${o.def} Defense` : ''} → <b>${Math.max(0, E.damage - coverCut - o.def)}–${E.damage - coverCut}</b> to Health`;
+        h += `<div class="cols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div><h3>${def.name}</h3>
+        <table class="brk"><tr><td>Weapon Difficulty</td><td>+${br.difficulty}</td></tr><tr><td>Distance ${br.rawDistance} (½, rounded down)</td><td>+${br.distance}</td></tr><tr><td>Recoil (earlier shots × recoil)</td><td>+${br.recoil}</td></tr><tr><td>Target Evasion</td><td>+${br.evasion}</td></tr>${br.suppression ? `<tr><td>Suppression</td><td>+${br.suppression}</td></tr>` : ''}<tr><td>Accuracy modifiers</td><td>−${br.accuracy}</td></tr><tr class="tot"><td>Hit Markers needed</td><td>${br.total}</td></tr></table></div>
+        <div style="display:grid;gap:8px;align-content:start"><div class="row"><span>Commit Precision</span><span class="stepper"><button data-act="commit" data-id="-1" aria-label="Less">−</button><b>${S.commit}</b><button data-act="commit" data-id="1" aria-label="More">+</button></span><span style="color:var(--muted)">of ${me.res.prec}${br.bonusPrec ? ` (+${br.bonusPrec} free)` : ''} · reveals ${n} card${n === 1 ? '' : 's'}</span></div>
+        <div class="row"><span class="odds">${Math.round(chn * 100)}%</span><span style="color:var(--muted);font-size:13px">estimated from your draw pile. Precision and 1 round are spent even on a miss.</span></div>
+        <div class="preview">On a hit: ${dmgLine}.</div>
+        <div style="color:var(--muted);font-size:12.5px">Draw pile: ${me.deck.length} card${me.deck.length === 1 ? '' : 's'} with ${me.deck.reduce((a, i) => a + WD.cardDef(G, i).hit_markers, 0)} Hit Markers${me.deck.length < n ? `; your discard (${me.discard.reduce((a, i) => a + WD.cardDef(G, i).hit_markers, 0)} HM) is shuffled in if you run out` : ''}. Cards played this round are not in it.</div>
+        <button class="btn sig" data-act="dofire">Fire ${def.name}</button></div></div>`;
+      } else h += `<div class="preview">${def.name}: ${sc.err}</div>`;
+    }
+    h += same ? `<button class="btn ${me.active && sc.ok ? 'alt' : 'sig'}" data-act="dofists">Use Fists · auto-hit, 1 damage</button>` : `<div style="color:var(--muted);font-size:13px">Fists need you in the same zone as ${o.name}.</div>`;
+    return h;
+  }
+  if (S.type === 'loot' || S.type === 'item' || S.type === 'loc') return lootSheet(S);
+  if (S.type === 'search') {
+    const ps = me.pendingSearch; if (!ps) return head('Search') + '<p>Nothing to choose.</p>';
+    const env = WD.envAt(G, ps.w); const sel = S.sel;
+    return `${head(`Search · ${envName(env)}${ps.which === 'crate' ? ' crate' : ''}`)}
+      <p>Choose <b>${ps.keep}</b> of these ${ps.items.length} to leave ${ps.out ? 'here (outside, anyone can take them)' : 'inside this location'}. The rest go back to the bottom of the loot deck. Taking an item is still a Loot action, paid in Intel — and your rival can grab what you leave.</p>
+      <div class="lootlist">${ps.items.map(it => { const def = WD.itemDef(G, it); const on = sel.includes(it.iid);
+        let body = it.kind === 'card' ? `${hmPips(def.hit_markers)}<span>${fx(def.main_text)}</span><span style="color:var(--muted)"><span class="req">${reqLabel(def.boost_requirement_type, def.boost_min_hit_markers)}</span> ${fx(def.boost_text)}</span>` : it.kind === 'weapon' ? `${statsHTML(null, def)}<span>${fx(def.main_text)}</span>` : `<span>${fx(def.text)}</span>`;
+        return `<button class="lootpick ${on ? 'on' : ''}" data-act="keepsel" data-id="${it.iid}"><span class="lk">${it.kind === 'card' ? 'Tactical card' : it.kind === 'weapon' ? def.cls + ' · weapon' : 'Attachment'}</span><span class="ln"><span>${def.name}</span><span class="cost">${ic('intel')}${WD.lootCost(G, ui.me, it)}</span></span>${body}</button>`; }).join('')}</div>
+      <div class="row"><button class="btn sig" data-act="dokeep" ${sel.length === ps.keep ? '' : 'disabled'}>Leave ${sel.length}/${ps.keep} here</button><span style="color:var(--muted);font-size:13px">You can close this and come back; other actions wait until you choose.</span></div>`;
+  }
+  if (S.type === 'reload') {
+    let h = head('Reload');
+    for (const sl of ['active', 'back']) { const iid = me[sl]; if (!iid) continue; const W = G.weapons[iid]; const cap = WD.eff(G, iid).magazine_capacity; const need = cap - W.ammo;
+      h += `<div class="preview row"><b>${wdef(iid).name}</b> (${sl === 'active' ? 'Active' : 'On back'}) · ${W.ammo}/${cap}<button class="btn sig sm" data-act="doreload" data-id="${sl}" ${need > 0 && me.res.ammo > 0 ? '' : 'disabled'}>Load ${Math.min(need, me.res.ammo)} Ammo</button></div>`; }
+    return h + `<div style="color:var(--muted);font-size:13px">Uses generated Ammo (${me.res.ammo}). Loaded Ammo stays between rounds.</div>`;
+  }
+  if (S.type === 'report') {
+    const f = S.f; const who = G.players[f.p].name;
+    if (f.fists) return `${head(`${who} · Fists`)}<div class="verdict hit">HIT</div><p>${f.dealt} damage dealt.</p><button class="btn sig" data-act="close">Continue</button>`;
+    return `${head(`${who} fires ${f.weapon}`)}
+      <div class="row"><span class="lbl">Needed</span><b class="mono" style="font-size:20px">${f.req}</b><span class="lbl">Revealed</span><b class="mono" style="font-size:20px">${f.total}</b></div>
+      <div class="reveal">${f.revealed.map(r => `<span class="rv">${hmPips(r.hm)}${r.name}</span>`).join('') || '<span style="color:var(--muted)">No cards revealed (0 Precision committed).</span>'}</div>
+      ${f.short ? '<div style="color:var(--muted);font-size:13px">Not enough cards to reveal the full amount.</div>' : ''}
+      <div class="verdict ${f.hit ? 'hit' : 'miss'}">${f.hit ? `HIT — ${f.dealt} damage` : 'MISS'}</div>
+      <button class="btn sig" data-act="close">Continue</button>`;
+  }
+  if (S.type === 'over') {
+    const w = G.winner; const t = w === 'draw' ? 'Draw' : (ui.mode === 'ai' ? (w === 0 ? 'Victory' : 'Eliminated') : `${G.players[w].name} wins`);
+    const st = G.players.map(p => `<tr><td>${p.name}</td><td>${p.stats.hits}/${p.stats.shots}</td><td>${p.stats.damageDealt}</td><td>${p.stats.activations}</td><td>${p.stats.boosts}</td><td>${p.stats.cardsAcquired}</td></tr>`).join('');
+    return `${head(t)}<p>Round ${G.round}. ${G.log[G.log.length - 1].msg}</p>
+      <table class="brk"><tr><td class="lbl">Operator</td><td class="lbl">Hits</td><td class="lbl">Dmg</td><td class="lbl">Weapon acts</td><td class="lbl">Boosts</td><td class="lbl">Cards looted</td></tr>${st}</table>
+      <div class="row"><button class="btn sig" data-act="new" data-id="${ui.mode}">Play again</button><button class="btn alt" data-act="close">See the board</button><button class="btn alt" data-act="home">Main menu</button></div>`;
+  }
+  if (S.type === 'menu') return `${head('Menu')}<div class="row"><button class="btn alt" data-act="sheet" data-id="rules">How to play</button><button class="btn alt" data-act="sheet" data-id="codex">Card codex</button></div><div class="row"><button class="btn alt" data-act="new" data-id="ai">New match vs AI</button><button class="btn alt" data-act="new" data-id="hotseat">New pass &amp; play</button><button class="btn alt" data-act="home">Main menu</button></div>`;
+  if (S.type === 'codex') {
+    const tabs = [['weapons', 'Weapons'], ['starter', 'Starter'], ['rungun', 'Run & Gun'], ['entrenched', 'Entrenched'], ['deadeye', 'Deadeye'], ['scavenger', 'Scavenger'], ['atts', 'Attachments'], ['envs', 'Zones']];
+    let body = '';
+    if (S.tab === 'weapons') body = Object.values(WD.WEAPONS).map(d => `<div class="wcard"><div class="w-slot"><span>${d.cls}</span><span>${WD.WEAPON_COPIES[d.id]} in loot</span></div><div class="w-body">${weaponBodyStatic(d)}</div></div>`).join('');
+    else if (S.tab === 'atts') body = Object.values(WD.ATTS).map(a => `<div class="preview"><b>${a.name}</b><span class="cost">${ic('intel')}${a.intel_cost}</span><div>${fx(a.text)}</div></div>`).join('');
+    else if (S.tab === 'envs') body = Object.values(WD.ENVS).map(e => `<div class="preview"><b>${e.name}</b><div class="env-stats">${e.entry != null ? `Inside: ${e.entry}${ic('move', 'c-move')}` : 'No inside'} · ${e.cover ? (e.hard ? 'Hard' : 'Soft') + ' cover −' + e.cover : 'No cover'} · cache ${e.search[0]}→${e.search[1]}</div><div>${fx(e.text)}</div></div>`).join('');
+    else body = Object.values(WD.CARDS).filter(c => c.archetype === S.tab).map(c => `<div style="display:grid;gap:2px">${cardHTML(c)}<span class="lbl" style="text-align:center">×${c.copies}</span></div>`).join('');
+    return `${head('Card codex')}<div class="tabs">${tabs.map(([k, l]) => `<button class="${S.tab === k ? 'on' : ''}" data-act="tab" data-id="${k}">${l}</button>`).join('')}</div><div class="grid-cards">${body}</div>
+      <div style="font-size:12.5px;color:var(--muted)">Looted cards that cost 3+ Intel cost 1 less in v2.0. All numbers are prototype values.</div>`;
+  }
+  if (S.type === 'rules') return `${head('How to play')}<div class="rules">${RULES}</div>`;
+  return '';
+}
+function weaponBodyStatic(def) {
+  return `<div class="w-name">${def.name}<span class="cost">${ic('intel')}${def.intel_cost}</span></div><div class="lbl">${def.tags.join(' · ')} · Mag ${def.magazine_capacity}</div>${statsHTML(null, def)}
+    <div class="tact">${fx(def.main_text)}<span class="t2"><span class="req">${reqLabel(def.tactical_boost_requirement, def.tactical_boost_min_hit_markers)}</span>${fx(def.boost_text)}</span></div>
+    <div class="tact" style="color:var(--muted)">On Gather: ${fx(def.gather_text)}</div>`;
+}
+
+const RULES = `
+<h4>Goal</h4><ul><li>Two operators, 25 Health each, both start unarmed. Last one standing wins.</li></ul>
+<h4>A round</h4><ul>
+<li>Draw 5 tactical cards. You get 3 Tactical Actions. Players alternate one action at a time; who goes first is random, then alternates.</li>
+<li>Before each action, play any number of cards, activate your Active weapon, use your one free switch and <b>search</b>. None of these costs an action.</li>
+<li>Actions: <b>Move</b>, <b>Fire</b>, <b>Loot</b>, <b>Reload</b>, <b>Wait</b>. <b>Finish</b> forfeits the rest.</li>
+<li>At round end, unspent Movement, Precision and Ammo expire. Intel carries over. Loaded Ammo stays.</li></ul>
+<h4>Moving: outside and inside</h4><ul>
+<li>The golden rule: <b>every space costs 1 Movement</b>, whatever is there. You arrive <b>outside</b> (your card at the bottom of the location).</li>
+<li><b>Going inside</b> costs the location’s entry (shown as “In 2”). Inside you get its <b>cover</b>, its <b>bonus</b> (once per round) and access to its <b>cache</b>. Leaving is free.</li>
+<li><b>One operator inside each location.</b> To get in anyway, <b>Breach</b> for +1 Movement: you’re both inside at close quarters and nobody gets cover.</li>
+<li>Outside you have no cover. Hard cover still blocks shots that pass through a location.</li></ul>
+<h4>The circle</h4><ul>
+<li>11 locations. At each round end the gas takes one edge, alternating sides; the first player’s side closes first. Gas at round end: −2 Health.</li>
+<li>When one location is left, <b>the walls are down</b>: nobody can be inside, and the storm hits both operators every round (2, 3, 4…).</li></ul>
+<h4>Loot: search and draft</h4><ul>
+<li>Each location has a <b>cache</b> (e.g. “Cache 4→2”). Search it from inside (free): reveal 4, choose 2 to leave there, the rest go back.</li>
+<li>Each round a <b>supply crate</b> lands near the centre: search it from outside, keep 3 of 6 (2 weapons, 4 others).</li>
+<li>Taking items is a <b>Loot</b> action: any number you can reach, paid in Intel. What you leave, your rival can take.</li></ul>
+<h4>Boosting</h4><ul>
+<li>Any card or equipped weapon can be fuelled by one other card from your hand. The fuel card’s own effects don’t happen.</li>
+<li>The BOOST tag shows the requirement: an empty ring means any card; filled markers mean a card with that many Hit Markers or more.</li></ul>
+<h4>Firing</h4><ul>
+<li>Hit Markers needed = Difficulty + half the Distance + Recoil + target Evasion − accuracy, minimum 1. Commit Precision to reveal that many cards.</li>
+<li>Cover only protects someone <b>inside</b>, and not against someone inside with them. Defense absorbs damage. Fists: same location, auto-hit for 1.</li></ul>
+<h4>Tips</h4><ul><li>Hold anything for an explanation. Recon Tower gives +2 Precision when you enter; Bunker +2 Defense; House draws a card; Supply Depot +1 Intel.</li></ul>`;
+
+
+// ---------- flow ----------
+function toast(msg) { ui.toast = msg; clearTimeout(ui.toastT); ui.toastT = setTimeout(() => { ui.toast = null; renderLayer(); }, 2600); renderLayer(); }
+function newMatch(mode) {
+  ui.mode = mode; ui.me = 0; ui.sheet = null; ui.moveMode = false; ui.busy = false; ui.handoff = false; ui.screen = 'game'; ui.seenFire = null;
+  G = WD.newGame({ mode, names: mode === 'ai' ? ['Alpha', 'Rival'] : ['Operator 1', 'Operator 2'] });
+  render(); after();
+}
+function act(fn) {
+  const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return; }
+  ui.sheet = null; ui.moveMode = false; after();
+}
+function after() {
+  if (G.lastFire && G.lastFire !== ui.seenFire) { ui.seenFire = G.lastFire; ui.sheet = { type: 'report', f: G.lastFire }; }
+  if (G.over && (!ui.sheet || ui.sheet.type !== 'report')) ui.sheet = { type: 'over' };
+  if (ui.mode === 'hotseat' && !G.over && G.turn !== ui.me) ui.handoff = true;
+  render();
+  if (ui.mode === 'ai' && !G.over && G.turn === 1 && !(ui.sheet && ui.sheet.type === 'report')) {
+    ui.busy = true; render();
+    setTimeout(() => { WD.aiStep(G, 1); ui.busy = false; after(); }, 750);
+  }
+}
+
+document.addEventListener('click', e => {
+  if (LP.suppress) { LP.suppress = false; e.preventDefault(); e.stopPropagation(); return; }
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  if (a === 'scrim') { if (e.target === el && ui.sheet && ui.sheet.type !== 'over') closeSheet(); return; }
+  const S = ui.sheet;
+  switch (a) {
+    case 'new': newMatch(id); break;
+    case 'home': ui.screen = 'start'; ui.sheet = null; G = null; render(); break;
+    case 'sheet': ui.sheet = { type: id, tab: 'weapons' }; renderLayer(); break;
+    case 'close': closeSheet(); break;
+    case 'tab': S.tab = id; renderLayer(); break;
+    case 'takeover': ui.me = G.turn; ui.handoff = false; render(); break;
+    case 'card': if (!myTurn()) return toast('Wait for your turn.'); ui.sheet = { type: 'card', id, boost: null, salvage: null }; renderLayer(); break;
+    case 'pickboost': S.boost = S.boost === id ? null : id; if (S.salvage === id) S.salvage = null; renderLayer(); break;
+    case 'picksalv': S.salvage = id; renderLayer(); break;
+    case 'playcard': act(() => WD.playCard(G, ui.me, S.id, null, { salvage: S.salvage })); break;
+    case 'playboost': act(() => WD.playCard(G, ui.me, S.id, S.boost, { salvage: S.salvage })); break;
+    case 'activate': { const def = wdef(ME().active); const conv = def.tactical_boost_effects.find(x => x.op === 'convert'); ui.sheet = { type: 'weapon', boost: null, convert: conv ? conv.max : 0 }; renderLayer(); break; }
+    case 'conv': { const def = wdef(ME().active); const conv = def.tactical_boost_effects.find(x => x.op === 'convert'); S.convert = Math.max(0, Math.min(conv.max, S.convert + (+id))); renderLayer(); break; }
+    case 'actweapon': act(() => WD.activateWeapon(G, ui.me, null, {})); break;
+    case 'actweaponb': act(() => WD.activateWeapon(G, ui.me, S.boost, { convert: S.convert })); break;
+    case 'wview': ui.sheet = { type: 'wview', id }; renderLayer(); break;
+    case 'switch': act(() => WD.switchWeapons(G, ui.me)); break;
+    case 'move': if (!ME().res.move && !ui.moveMode) return toast('You have no Movement. Play a Movement card first.'); ui.moveMode = !ui.moveMode; render(); if (ui.moveMode && !WD.reachable(G, ui.me).length) toast('No zone is reachable with your current Movement.'); break;
+    case 'moveto': act(() => WD.actMove(G, ui.me, +id, { inside: el.dataset.x === 'in' })); break;
+    case 'loc': ui.sheet = { type: 'loc', w: +id, sel: [] }; renderLayer(); break;
+    case 'search': { const r = WD.searchStart(G, ui.me); if (!r.ok) return toast(r.err); if (r.empty) { toast('Nothing left to find here.'); render(); break; } ui.sheet = { type: 'search', sel: [] }; render(); break; }
+    case 'searchopen': ui.sheet = { type: 'search', sel: [] }; renderLayer(); break;
+    case 'keepsel': { const ps = ME().pendingSearch; const i = S.sel.indexOf(id); if (i >= 0) S.sel.splice(i, 1); else if (S.sel.length < ps.keep) S.sel.push(id); else { S.sel.shift(); S.sel.push(id); } renderLayer(); break; }
+    case 'dokeep': act(() => WD.searchKeep(G, ui.me, S.sel)); break;
+    case 'fire': ui.sheet = { type: 'fire', commit: ME().res.prec }; renderLayer(); break;
+    case 'commit': S.commit = Math.max(0, Math.min(ME().res.prec, S.commit + (+id))); renderLayer(); break;
+    case 'dofire': act(() => WD.actFire(G, ui.me, { commit: S.commit })); break;
+    case 'dofists': act(() => WD.actFire(G, ui.me, { fists: true })); break;
+    case 'loot': ui.sheet = { type: 'loot', sel: [] }; renderLayer(); break;
+    case 'item': ui.sheet = { type: 'item', id, sel: [] }; renderLayer(); break;
+    case 'pickloot': { const i = S.sel.indexOf(id); if (i >= 0) S.sel.splice(i, 1); else S.sel.push(id); renderLayer(); break; }
+    case 'lootopt': { const [k, v] = id.split(':'); if (k === 'replace') S.replace = v; else S.attachTo = v; renderLayer(); break; }
+    case 'dolot': act(() => WD.actLoot(G, ui.me, S.sel, { replace: S.replace || 'active', attachTo: S.attachTo })); break;
+    case 'reload': { const me = ME(); if (!['active', 'back'].some(s => me[s])) return toast('No weapon to reload.'); ui.sheet = { type: 'reload' }; renderLayer(); break; }
+    case 'doreload': act(() => WD.actReload(G, ui.me, { slot: id })); break;
+    case 'wait': act(() => WD.actWait(G, ui.me)); break;
+    case 'finish': act(() => WD.finish(G, ui.me)); break;
+  }
+}, true);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (ui.sheet && ui.sheet.type !== 'over') closeSheet(); else if (ui.moveMode) { ui.moveMode = false; render(); } }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.act === 'moveto') { e.preventDefault(); e.target.click(); }
+});
+function closeSheet() { const wasReport = ui.sheet && ui.sheet.type === 'report'; ui.sheet = null; if (wasReport) after(); else renderLayer(); }
+
+/* ---------- hold for info (touch) / hover (mouse) ---------- */
+const LP = { timer: null, x: 0, y: 0, el: null, shown: false, suppress: false };
+function showTip(text, x, y) {
+  let pop = document.getElementById('tipPop');
+  if (!pop) { pop = document.createElement('div'); pop.id = 'tipPop'; pop.className = 'tip-pop'; pop.setAttribute('role', 'tooltip'); document.body.appendChild(pop); }
+  pop.textContent = text; pop.hidden = false;
+  const r = pop.getBoundingClientRect();
+  const left = Math.min(Math.max(10, x - r.width / 2), innerWidth - r.width - 10);
+  let top = y - r.height - 24; if (top < 8) top = Math.min(y + 24, innerHeight - r.height - 8);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+}
+function hideTip() { const pop = document.getElementById('tipPop'); if (pop) pop.hidden = true; if (LP.el) LP.el.classList.remove('holding'); LP.el = null; LP.shown = false; }
+document.addEventListener('pointerdown', e => {
+  if (LP.shown && e.pointerType !== 'mouse') { hideTip(); LP.suppress = true; return; }
+  LP.suppress = false;
+  if (e.pointerType === 'mouse') { clearTimeout(LP.timer); hideTip(); return; }
+  clearTimeout(LP.timer); LP.x = e.clientX; LP.y = e.clientY;
+  const t = e.target.closest('[data-tip]');
+  if (!t) return;
+  LP.timer = setTimeout(() => {
+    LP.el = t; t.classList.add('holding'); LP.shown = true; LP.suppress = true;
+    showTip(t.dataset.tip, LP.x, LP.y);
+  }, 430);
+}, true);
+document.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse') {
+    const t = e.target.closest('[data-tip]');
+    if (t && t !== LP.el) { if (LP.el) LP.el.classList.remove('holding'); LP.el = t; clearTimeout(LP.timer); LP.timer = setTimeout(() => { if (LP.el === t) showTip(t.dataset.tip, e.clientX, e.clientY); }, 550); }
+    else if (!t && LP.el) { clearTimeout(LP.timer); hideTip(); }
+    return;
+  }
+  if (LP.timer && !LP.shown && Math.hypot(e.clientX - LP.x, e.clientY - LP.y) > 10) clearTimeout(LP.timer);
+}, true);
+document.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') { clearTimeout(LP.timer); if (LP.el) LP.el.classList.remove('holding'); } }, true);
+document.addEventListener('pointercancel', () => clearTimeout(LP.timer), true);
+document.addEventListener('contextmenu', e => { if (e.target.closest('#app, #layer')) e.preventDefault(); });
+
+render();
+})();
+
+</script>

@@ -1,0 +1,26 @@
+name: Publish to itch.io
+
+on:
+  push:
+    branches: [main]
+    paths: ['build/**']
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install butler (itch.io's official upload tool)
+        run: |
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler -V
+
+      - name: Push the HTML5 build
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          ./butler/butler push build "${{ vars.ITCH_USER }}/${{ vars.ITCH_GAME }}:html5" --userversion "${GITHUB_SHA::7}"
