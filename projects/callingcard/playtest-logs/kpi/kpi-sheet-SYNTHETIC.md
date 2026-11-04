@@ -2,7 +2,7 @@
 
 # CallingCard internal playtest: KPI sheet (SYNTHETIC)
 
-Generated 2026-11-04 13:51 UTC by `tools/kpi_sheet.py` · schema from /home/user/Gamestudio/projects/callingcard/source/project-callingcard/autoload/playtest_log.gd · unit: tester · 4 file(s), 3 session(s), 3 tester(s).
+Generated 2026-11-04 13:52 UTC by `tools/kpi_sheet.py` · schema from source/project-callingcard/autoload/playtest_log.gd · unit: tester · 4 file(s), 3 session(s), 3 tester(s).
 
 **Small sample:** 3 tester(s). With 3-5 testers every result is directional only; one tester moves a share by 20-33 points.
 
@@ -36,7 +36,7 @@ Generated 2026-11-04 13:51 UTC by `tools/kpi_sheet.py` · schema from /home/user
 | On a phone (>= 1) | 2 | ok |
 | Started from the menu (>= 2) | 2 | ok |
 | Started from Find a Match (>= 2) | 1 | short |
-| Answered the survey | 3/3 |  |
+| Answered at least one survey statement | 2/3 | missing |
 
 ## Per tester
 
@@ -54,9 +54,9 @@ Generated 2026-11-04 13:51 UTC by `tools/kpi_sheet.py` · schema from /home/user
 - Device: desktop · windows · chrome · date 2026-11-04 · build -
 - Entry: menu · length 17:46 · ended: quit (close) on survey · 107 events
 - Load: 3.8 s (pass)
-- Survey: q1 5, q2 4, q3 4, q4 4
+- Survey: q1 5, q2 4, q3 4, q4 4 (- = skipped)
 - Album: 3 open(s), 2 locked card inspect(s) → album pull yes
-- Duels: 3 rival, 1 lobby, 1 Dossier, 1 resumed, 1 unfinished · counted lengths 3:02, 2:31, 3:25 → median 3:02
+- Duels: 3 rival, 1 lobby, 1 Dossier, 1 resumed, 0 unfinished · counted lengths 3:02, 2:31, 3:25 → median 3:02
 - Results by rival (no Dossiers): archivist: 1W 0L 1D; warden: 0W 1L 0D; quartermaster: 0W 1L 0D · Carded! 1 time(s)
 - Tutorial D1: cleared in 1:39 on attempt 1 · Dossiers cleared: dossier_first_contact
 - Lobby: 1 wait(s), match found ['save'] (1 mid-duel), 1 resume(s) after 5:12
@@ -69,7 +69,7 @@ Generated 2026-11-04 13:51 UTC by `tools/kpi_sheet.py` · schema from /home/user
 - Device: phone · ios · safari · date 2026-11-04 · build -
 - Entry: lobby · length 19:13 · ended: quit (pagehide) on survey · 86 events
 - Load: 14.2 s (FAIL)
-- Survey: q1 3, q2 2, q3 -, q4 5
+- Survey: q1 3, q2 2, q3 -, q4 5 (- = skipped)
 - Album: 1 open(s), 0 locked card inspect(s) → album pull no
 - Duels: 2 rival, 1 lobby, 3 Dossier, 0 resumed, 0 unfinished · counted lengths 3:18, 4:22, 4:48 → median 4:22
 - Results by rival (no Dossiers): quartermaster: 1W 0L 0D; warden: 0W 2L 0D · Carded! 1 time(s)
@@ -84,7 +84,7 @@ Generated 2026-11-04 13:51 UTC by `tools/kpi_sheet.py` · schema from /home/user
 - Device: phone · android · chrome · date 2026-11-04 · build -
 - Entry: menu · length 5:57 · ended: tab/app hidden on survey (no quit line) · 53 events
 - Load: 8.9 s (pass)
-- Survey: q1 -, q2 -, q3 -, q4 -
+- Survey: opened, every statement skipped
 - Album: 2 open(s), 1 locked card inspect(s) → album pull yes
 - Duels: 1 rival, 0 lobby, 1 Dossier, 0 resumed, 1 unfinished · counted lengths 2:56 → median 2:56
 - Results by rival (no Dossiers): archivist: 1W 0L 0D · Carded! 0 time(s)

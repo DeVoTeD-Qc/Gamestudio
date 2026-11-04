@@ -1,13 +1,13 @@
 synthetic,scope,id,metric,value,bar,status
 yes,overall,all,Intent to collect,0.5,>= 70% answer 4-5 (q1),FAIL
-yes,overall,all,Album pull,0.6666666666666666,>= 50% open album 2+ times and inspect a locked card,PASS
+yes,overall,all,Album pull,0.667,>= 50% open album 2+ times and inspect a locked card,PASS
 yes,overall,all,Session fit (duel),198.0,"median < 4:00 (rival + lobby, not resumed)",PASS
 yes,overall,all,Session fit (tutorial D1),236.0,"D1 cleared < 3:00 (median, start to clear)",FAIL
 yes,overall,all,Fairness,1.0,>= 70% answer 4-5 (q4),PASS
 yes,overall,all,Load,14200.0,< 10 s in every session,FAIL
-yes,overall,all,Non-default lineup (live est.),0.4444444444444444,estimate,
+yes,overall,all,Non-default lineup (live est.),0.444,estimate,
 yes,overall,all,Set completion (live est.),0.0,estimate,
-yes,overall,all,Banner Wall duels per matchmaking wait (live est.),1.3333333333333333,estimate,
+yes,overall,all,Banner Wall duels per matchmaking wait (live est.),1.333,estimate,
 yes,tester,T1,q1 intent,5,>= 4,PASS
 yes,tester,T1,q2 album,4,,
 yes,tester,T1,q3 session fit,4,,

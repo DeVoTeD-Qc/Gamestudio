@@ -24,7 +24,8 @@ Options:
 
 Standard library only. Handles empty, partial (cut-off) and consent-off logs: such files are
 listed with what was missing, and every KPI says "no data" rather than guessing.
-Exit code: 0 when a sheet was written, 2 on bad arguments.
+Exit code: 0 when a sheet was written, 1 when no log could be counted (nothing written),
+2 on bad arguments or no input files.
 """
 
 from __future__ import annotations
@@ -176,13 +177,20 @@ def _gd_const(text: str, name: str) -> Any:
     raise ValueError(f"{name} not closed")
 
 
+def _rel(p: Path) -> str:
+    try:
+        return str(p.resolve().relative_to(PROJECT_DIR))
+    except ValueError:
+        return str(p)
+
+
 def load_schema(path: Path | None) -> tuple[Schema, list[str]]:
     notes: list[str] = []
     gd = path or DEFAULT_SCHEMA_GD
     try:
         text = gd.read_text(encoding="utf-8")
         schema = Schema(_gd_const(text, "SCHEMA"), _gd_const(text, "COMMON_FIELDS"),
-                        _gd_const(text, "ENUMS"), _gd_const(text, "DUEL_STATE_FIELDS"), str(gd))
+                        _gd_const(text, "ENUMS"), _gd_const(text, "DUEL_STATE_FIELDS"), _rel(gd))
         if schema.events != FALLBACK_SCHEMA or schema.enums != FALLBACK_ENUMS:
             notes.append("The game's schema differs from the copy in kpi_sheet.py; the game's is used. "
                          "Update FALLBACK_SCHEMA / FALLBACK_ENUMS.")
@@ -439,6 +447,7 @@ def analyse_session(s: Session) -> None:
     # Survey (the last one counts).
     survey = (by.get("survey") or [None])[-1]
     m["survey_taken"] = survey is not None
+    m["survey_answered"] = int(_num(survey.get("answered")) or 0) if survey else 0
     for q in ("q1", "q2", "q3", "q4"):
         m[q] = _q(survey.get(q)) if survey else None
     m["open"] = str(survey.get("open", "")) if survey else ""
@@ -468,7 +477,10 @@ def analyse_session(s: Session) -> None:
     m["results_by_rival"] = results
     started = [e for e in by.get("duel_start", [])]
     m["duels_started"] = len(started) + len(by.get("duel_resumed", []))
-    m["duels_unfinished"] = max(0, m["duels_started"] - len(ends))
+    # A Lobby Duel saved on "match found" ends in its resumed part, so a resume closes one start.
+    saves = sum(1 for e in by.get("lobby_save", []) if e.get("saved") is True)
+    resumes = len(by.get("duel_resumed", []))
+    m["duels_unfinished"] = max(0, m["duels_started"] - len(ends) - min(resumes, saves))
     m["captures_per_duel"] = (_median([float(_num(e.get("captures_p")) or 0) + float(_num(e.get("captures_ai")) or 0)
                                        for e in ends if e.get("source") != "dossier"]))
     m["carded"] = len(by.get("carded", []))
@@ -642,14 +654,14 @@ def coverage(testers: list[Tester], sessions: list[Session]) -> list[tuple[str, 
     phones = sum(1 for t in testers if "phone" in t.m["device"])
     menu = sum(1 for t in testers if t.m["entry"] == "menu")
     lobby = sum(1 for t in testers if t.m["entry"] == "lobby")
-    surveyed = sum(1 for t in testers if any(s.m["survey_taken"] for s in t.sessions))
+    surveyed = sum(1 for t in testers if any(s.m["survey_answered"] > 0 for s in t.sessions))
     return [
         ("Testers (3-5)", str(n), "ok" if 3 <= n <= 5 else "short" if n < 3 else "more than planned"),
         ("Sessions with events", str(sum(1 for s in sessions if s.m["events"] > 0)), ""),
         ("On a phone (>= 1)", str(phones), "ok" if phones >= 1 else "missing"),
         ("Started from the menu (>= 2)", str(menu), "ok" if menu >= 2 else "short"),
         ("Started from Find a Match (>= 2)", str(lobby), "ok" if lobby >= 2 else "short"),
-        ("Answered the survey", f"{surveyed}/{n}", ""),
+        ("Answered at least one survey statement", f"{surveyed}/{n}", "ok" if n and surveyed == n else "missing"),
     ]
 
 
@@ -734,8 +746,9 @@ def build_markdown(title: str, files: list[LogFile], skipped: list[LogFile], sch
                    f"{m['events']} events" + (f" · **{'; '.join(warn)}**" if warn else ""))
         load = "-" if m["load_ms"] is None else f"{m['load_ms'] / 1000:.1f} s ({'pass' if m['load_pass'] else 'FAIL'})"
         out.append(f"- Load: {load}")
-        out.append(f"- Survey: " + ("not taken" if not m["survey_taken"] else
-                   f"q1 {m['q1'] or '-'}, q2 {m['q2'] or '-'}, q3 {m['q3'] or '-'}, q4 {m['q4'] or '-'}"))
+        out.append("- Survey: " + ("not taken" if not m["survey_taken"] else
+                   "opened, every statement skipped" if m["survey_answered"] == 0 else
+                   f"q1 {m['q1'] or '-'}, q2 {m['q2'] or '-'}, q3 {m['q3'] or '-'}, q4 {m['q4'] or '-'} (- = skipped)"))
         out.append(f"- Album: {m['album_opens']} open(s), {m['locked_inspects']} locked card inspect(s) → "
                    f"album pull {_yn(m['album_pull'])}")
         dbs = m["duels_by_source"]
@@ -774,6 +787,14 @@ def build_markdown(title: str, files: list[LogFile], skipped: list[LogFile], sch
     return "\n".join(out) + "\n"
 
 
+def _csv_num(v: Any) -> Any:
+    if v is None:
+        return ""
+    if isinstance(v, float):
+        return round(v, 3)
+    return v
+
+
 def write_csv(path: Path, kpis: list[dict], live: list[dict], testers: list[Tester],
               sessions: list[Session], synthetic: bool) -> None:
     with path.open("w", newline="", encoding="utf-8") as fh:
@@ -781,9 +802,9 @@ def write_csv(path: Path, kpis: list[dict], live: list[dict], testers: list[Test
         w.writerow(["synthetic", "scope", "id", "metric", "value", "bar", "status"])
         tag = "yes" if synthetic else "no"
         for r in kpis:
-            w.writerow([tag, "overall", "all", r["kpi"], r["raw"] if r["raw"] is not None else "", r["bar"], r["status"]])
+            w.writerow([tag, "overall", "all", r["kpi"], _csv_num(r["raw"]), r["bar"], r["status"]])
         for r in live:
-            w.writerow([tag, "overall", "all", r["kpi"], r["raw"] if r["raw"] is not None else "", "estimate", ""])
+            w.writerow([tag, "overall", "all", r["kpi"], _csv_num(r["raw"]), "estimate", ""])
 
         def bar_status(v: Any, ok: bool | None) -> str:
             return "" if ok is None else ("PASS" if ok else "FAIL")
@@ -841,6 +862,11 @@ def main(argv: list[str] | None = None) -> int:
             skipped.append(lf)
             continue
         files.append(lf)
+    if not files:
+        print("No log counted, so no sheet was written:", file=sys.stderr)
+        for lf in skipped:
+            print(f"  {lf.path.name}: {'; '.join(lf.problems)}", file=sys.stderr)
+        return 1
 
     sessions: dict[str, Session] = {}
     seen: set[tuple[str, int]] = set()
