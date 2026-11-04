@@ -89,7 +89,7 @@ Types: `s` string, `i` int, `n` number, `b` bool, `a` array, `d` object, `?` nul
 | Intent to collect | ≥ 70% at 4+ | `survey.q1 ≥ 4` |
 | Album pull | ≥ 50% | `max(album_open.count) ≥ 2` AND any `card_inspect.owned = false` |
 | Session fit (duel) | median < 4 min | median `duel_end.duration_s` where `source ≠ dossier AND resumed = false` |
-| Session fit (tutorial) | D1 < 3 min | `dossier_clear.since_start_s` where `id = d1` (first clear) |
+| Session fit (tutorial) | D1 < 3 min | `dossier_clear.since_start_s` where `id = dossier_first_contact` (or `d1`; first clear) |
 | Fairness | ≥ 70% at 4+ | `survey.q4 ≥ 4` |
 | Load | < 10 s every session | `session_start.load_ms < 10000` |
 | *Live:* non-default lineup | estimate | share of `duel_lineup` with `loaner = false` |
