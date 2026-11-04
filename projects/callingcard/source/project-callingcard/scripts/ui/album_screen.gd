@@ -49,6 +49,8 @@ var _reveal_queue: Array[StringName] = []
 var _refresh_queued: bool = false
 var _pending_celebrate: Dictionary = {}  # card id -> true (light up after the next rebuild)
 var _toast_serial: int = 0
+var _tab_left: Button = null
+var _tab_right: Button = null
 
 @onready var _safe_area: MarginContainer = %SafeArea
 @onready var _column: VBoxContainer = %Column
@@ -72,6 +74,7 @@ func _ready() -> void:
 		collection = get_node_or_null("/root/Collection")
 	_toast.visible = false
 	_back.pressed.connect(_on_back)
+	_build_tab_arrows()
 	_build_tabs()
 	_cipher_lock = (load("res://scenes/album/CipherLock.tscn") as PackedScene).instantiate()
 	_reveal.closed.connect(_on_reveal_closed)
@@ -206,6 +209,8 @@ func show_toast(text: String, seconds: float = 3.0) -> void:
 	var serial: int = _toast_serial
 	_toast_label.text = text
 	_toast.visible = true
+	_place_toast()
+	_place_toast.call_deferred()  # again once the label has its size
 	if is_inside_tree():
 		get_tree().create_timer(seconds).timeout.connect(func() -> void:
 			if serial == _toast_serial and is_instance_valid(_toast):
@@ -213,6 +218,33 @@ func show_toast(text: String, seconds: float = 3.0) -> void:
 
 
 # --- Layout ------------------------------------------------------------------------------
+
+## cc19 BUG-07: the toast sits in the top bar, in the empty stretch between "ALBUM" and the card
+## count, so it never covers the page (Cipher dials and their captions, the reward card, cards).
+## Wider text wraps inside that stretch; the panel is centred on the bar.
+func _place_toast() -> void:
+	if not is_instance_valid(_toast) or not _toast.visible or not is_inside_tree():
+		return
+	var title: Label = %AlbumTitle
+	var bar: Control = title.get_parent()
+	var origin: Vector2 = get_global_rect().position
+	var left: float = title.get_global_rect().position.x - origin.x + title.get_minimum_size().x + 16.0
+	var right: float = _count.get_global_rect().position.x - origin.x - 16.0
+	var w: float = clampf(right - left, 160.0, 520.0)
+	var x: float = left + maxf((right - left - w) * 0.5, 0.0)
+	_toast.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_toast.custom_minimum_size = Vector2(w, 0.0)
+	var pad: float = _toast.get_theme_stylebox(&"panel").get_minimum_size().x
+	_toast_label.custom_minimum_size.x = maxf(w - pad, 32.0)  # wrap width known before sizing
+	_toast.size = Vector2(w, 0.0)  # shrink to the text's height
+	var bar_rect: Rect2 = bar.get_global_rect()
+	_toast.position = Vector2(x, bar_rect.position.y - origin.y + (bar_rect.size.y - _toast.size.y) * 0.5)
+
+
+## The toast's rect in this screen's coordinates (tests).
+func get_toast_rect() -> Rect2:
+	return Rect2(_toast.position, _toast.size)
+
 
 func _relayout() -> void:
 	var logical: Vector2 = get_viewport_rect().size
@@ -250,9 +282,79 @@ func _relayout() -> void:
 	pano_w = floorf(minf(avail, 1080.0) / 12.0) * 12.0
 	# Tabs: one row; if they do not fit the strip scrolls sideways and gets room for its bar.
 	var tabs_w: float = _tab_row.get_combined_minimum_size().x
-	_tab_scroll.custom_minimum_size.y = 64.0 if tabs_w <= inner_w else 64.0 + SCROLLBAR_W
+	var overflow: bool = tabs_w > inner_w
+	_tab_scroll.custom_minimum_size.y = 64.0 if not overflow else 64.0 + SCROLLBAR_W
+	_tab_left.visible = overflow
+	_tab_right.visible = overflow
+	_update_tab_arrows.call_deferred()
 	if current_page != &"":
 		_rebuild_page()
+	_place_toast.call_deferred()
+
+
+## cc19 BUG-09: when the tabs don't fit (phones), visible ‹ › buttons sit at both ends of the
+## strip and step it sideways, so every tab is reachable without knowing to swipe. Each arrow
+## dims at its end of the strip. The selected tab is still scrolled into view (show_page).
+func _build_tab_arrows() -> void:
+	var strip := HBoxContainer.new()
+	strip.name = "TabStrip"
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.add_theme_constant_override(&"separation", 6)
+	var column: Node = _tab_scroll.get_parent()
+	var at: int = _tab_scroll.get_index()
+	column.remove_child(_tab_scroll)
+	column.add_child(strip)
+	column.move_child(strip, at)
+	_tab_left = _tab_arrow("TabLeft", "‹", -1)
+	strip.add_child(_tab_left)
+	_tab_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	strip.add_child(_tab_scroll)
+	_tab_scroll.owner = self  # re-register %TabScroll / %Tabs after the move
+	_tab_row.owner = self
+	_tab_right = _tab_arrow("TabRight", "›", 1)
+	strip.add_child(_tab_right)
+	var hbar: HScrollBar = _tab_scroll.get_h_scroll_bar()
+	hbar.value_changed.connect(func(_v: float) -> void: _update_tab_arrows())
+	hbar.changed.connect(_update_tab_arrows)
+
+
+func _tab_arrow(node_name: String, glyph: String, direction: int) -> Button:
+	var b := Button.new()
+	b.name = node_name
+	b.text = glyph
+	b.theme_type_variation = &"AlbumTab"
+	b.custom_minimum_size = Vector2(64, 64)
+	b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	b.focus_mode = Control.FOCUS_NONE  # the tabs themselves take keyboard focus
+	b.visible = false
+	b.pressed.connect(func() -> void: scroll_tabs(direction))
+	return b
+
+
+## Steps the tab strip one screenful left (-1) or right (+1).
+func scroll_tabs(direction: int) -> void:
+	var step: int = int(maxf(_tab_scroll.size.x * 0.75, 64.0))
+	var target: int = clampi(_tab_scroll.scroll_horizontal + direction * step, 0, _tab_max_scroll())
+	var tween: Tween = create_tween()
+	tween.tween_property(_tab_scroll, "scroll_horizontal", target, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+
+
+func _tab_max_scroll() -> int:
+	var hbar: HScrollBar = _tab_scroll.get_h_scroll_bar()
+	return int(maxf(hbar.max_value - hbar.page, 0.0))
+
+
+func _update_tab_arrows() -> void:
+	if _tab_left == null or not is_instance_valid(_tab_left):
+		return
+	var x: int = _tab_scroll.scroll_horizontal
+	_tab_left.disabled = x <= 0
+	_tab_right.disabled = x >= _tab_max_scroll() - 1
+
+
+## The tab strip's arrow buttons (tests): [left, right].
+func get_tab_arrows() -> Array[Button]:
+	return [_tab_left, _tab_right]
 
 
 func _build_tabs() -> void:

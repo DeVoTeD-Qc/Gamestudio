@@ -38,8 +38,18 @@ var replies_made: int = 0
 
 func _init(p_data: DossierData, p_balance: BalanceConfig = null) -> void:
 	data = p_data
-	balance = p_balance
+	balance = puzzle_balance(p_balance)
 	reset()
+
+
+## cc19 BUG-10: a solo puzzle has no Tempo (the first-player bonus offsets nothing there), so the
+## puzzle plays on a copy of the duel balance with first_player_bonus = 0. Nothing else changes.
+static func puzzle_balance(duel_balance: BalanceConfig) -> BalanceConfig:
+	if duel_balance == null or duel_balance.first_player_bonus == 0:
+		return duel_balance
+	var b: BalanceConfig = duel_balance.duplicate()
+	b.first_player_bonus = 0
+	return b
 
 
 ## Retry: back to the start board, full hand, no replies made.

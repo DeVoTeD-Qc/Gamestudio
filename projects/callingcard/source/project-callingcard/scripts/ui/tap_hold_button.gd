@@ -5,6 +5,9 @@
 #   - right-click, or the "inspect" key  -> inspect_requested
 #   Touch arrives as left mouse (project setting emulate_mouse_from_touch), so one code path
 #   covers mouse and touch. Used by WallSlot and the hand cards.
+#   - a press that turns into a drag (moves > HOLD_SLOP, or a parent ScrollContainer starts a touch
+#     scroll) is neither a tap nor a hold (cc19 BUG-02). Inside a ScrollContainer, set
+#     mouse_filter = MOUSE_FILTER_PASS so the drag reaches it (lineup grid, album, duel hand).
 # Dependencies: none (input action "inspect" from project.godot is optional).
 # Author: UI/UX Agent (cc07)
 extends Button
@@ -18,6 +21,7 @@ const HOLD_SLOP: float = 18.0
 
 var _hold_timer: Timer
 var _held: bool = false
+var _dragged: bool = false
 var _press_pos: Vector2 = Vector2.ZERO
 
 
@@ -45,16 +49,31 @@ func _gui_input(event: InputEvent) -> void:
 		elif mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
 				_held = false
-				_press_pos = mb.position
+				_dragged = false
+				_press_pos = mb.global_position
 				_hold_timer.start()
 			else:
 				_hold_timer.stop()
-	elif event is InputEventMouseMotion and not _hold_timer.is_stopped():
-		if (event as InputEventMouseMotion).position.distance_to(_press_pos) > HOLD_SLOP:
-			_hold_timer.stop()
+	elif event is InputEventMouseMotion:
+		# Global position: while a ScrollContainer follows the finger the local one barely moves.
+		var mm: InputEventMouseMotion = event
+		if is_pressed() and mm.global_position.distance_to(_press_pos) > HOLD_SLOP:
+			_cancel_as_drag()
 	elif event.is_action_pressed(&"inspect", false, true):
 		inspect_requested.emit()
 		accept_event()
+
+
+func _notification(what: int) -> void:
+	# A parent ScrollContainer began a touch-drag scroll with this press in progress.
+	if what == NOTIFICATION_SCROLL_BEGIN and is_pressed():
+		_cancel_as_drag()
+
+
+func _cancel_as_drag() -> void:
+	_dragged = true
+	if _hold_timer != null:
+		_hold_timer.stop()
 
 
 ## Test hook: what a completed long press does.
@@ -68,6 +87,9 @@ func _on_hold() -> void:
 
 
 func _on_pressed() -> void:
+	if _dragged:
+		_dragged = false
+		return
 	if _held:
 		_held = false
 		return

@@ -547,6 +547,7 @@ func ui_state() -> Dictionary:
 		rival_left.append(dossier.rival_replies[i].card.id)
 	return {
 		"first_player": &"player", "turn_side": turn,
+		"first_player_bonus": st.balance.first_player_bonus,  # 0: no TEMPO tag (cc19 BUG-10)
 		"turn_index": mini(puzzle.placements_made() + 1, dossier.max_placements), "turns_total": dossier.max_placements,
 		"rival_name": RIVAL_NAME,
 		"player": {"name": "You", "score": s[0], "signature_id": _signature_id(DataEnums.Side.PLAYER),

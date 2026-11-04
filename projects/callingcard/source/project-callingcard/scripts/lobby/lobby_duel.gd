@@ -82,6 +82,7 @@ var _cancel_button: Button
 var _duel_host: Control
 var _banner_margin: MarginContainer
 var _banner: PanelContainer
+var _banner_actions: PanelContainer
 var _banner_title: Label
 var _banner_body: Label
 var _keep_button: Button
@@ -297,6 +298,10 @@ func _start_resume() -> void:
 		return
 	phase = &"resumed"
 	rival_id = data.get("rival_id", &"")
+	# cc19 BUG-05: duel_resumed carries no rival, so hand the log the saved one first.
+	var plog: Node = get_node_or_null("/root/PlaytestLog")
+	if plog != null and plog.has_method(&"note_resumed_rival"):
+		plog.note_resumed_rival(rival_id)
 	EventBus.duel_resumed.emit(float(data.get("age_s", 0.0)))
 	_spawn_duel(&"resume", data)
 
@@ -313,6 +318,20 @@ func _on_overlay_button(id: StringName) -> void:
 	if id == &"save_leave":
 		duel.get_overlay().close()
 		save_and_leave(false)
+	elif id == &"again" and phase in [&"found", &"resumed"]:
+		_replay_as_rival_duel()
+
+
+## cc19 BUG-04: PLAY AGAIN once the wait is over (match found, or a resumed save) is an ordinary
+## rival duel: logged with source rival, and MENU offers the normal leave prompt (no SAVE & LEAVE).
+## The controller already reopened its setup panel; duel_started follows on START DUEL.
+## A replay while still waiting (phase playing) stays a Lobby Duel: the match can still be found.
+func _replay_as_rival_duel() -> void:
+	var ctrl: Node = controller()
+	if ctrl == null:
+		return
+	ctrl.source = &"rival"
+	ctrl.menu_override = Callable()
 
 
 # --- Routing ---------------------------------------------------------------------------------
@@ -380,78 +399,129 @@ func _build() -> void:
 	row.add_child(_quick_button)
 	_wait_margin.hide()
 
+	# cc19 BUG-08: the Match found banner is two compact pieces in the duel's top bar, so both
+	# score numbers stay readable: the text takes the turn panel's place (between the two scores)
+	# and the buttons sit over the rival counter's name side (beyond its score). Neither covers
+	# the wall, hand, PLACE or MENU. Positions come from the duel screen (_place_banner).
 	_banner_margin = MarginContainer.new()
 	_banner_margin.name = "BannerLayer"
 	_banner_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_banner_margin)
 	_banner_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bcol: VBoxContainer = VBoxContainer.new()
-	bcol.name = "BannerColumn"
-	bcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner_margin.add_child(bcol)
-	_banner = PanelContainer.new()
-	_banner.name = "MatchBanner"
-	_banner.theme_type_variation = &"InspectorPanel"
-	_banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_banner.mouse_filter = Control.MOUSE_FILTER_STOP
-	var sb: StyleBox = _banner.get_theme_stylebox(&"panel", &"InspectorPanel")
-	if sb != null:
-		sb = sb.duplicate()
-		sb.content_margin_top = 3
-		sb.content_margin_bottom = 3
-		sb.content_margin_left = 16
-		sb.content_margin_right = 4
-		if sb is StyleBoxFlat:
-			(sb as StyleBoxFlat).bg_color.a = 1.0  # opaque: the scores under it must not show through
-		_banner.add_theme_stylebox_override(&"panel", sb)
-	bcol.add_child(_banner)
-	var brow: HBoxContainer = HBoxContainer.new()
-	brow.name = "BannerRow"
-	brow.add_theme_constant_override(&"separation", 16)
-	_banner.add_child(brow)
+	var canvas: Control = Control.new()
+	canvas.name = "BannerCanvas"
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner_margin.add_child(canvas)
+	_banner = _banner_panel("MatchBanner", 10, 10)
+	canvas.add_child(_banner)
 	var text_col: VBoxContainer = VBoxContainer.new()
 	text_col.name = "BannerText"
 	text_col.add_theme_constant_override(&"separation", 0)
 	text_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	brow.add_child(text_col)
-	_banner_title = HubUi.label("BannerTitle", "MATCH FOUND", &"InspectorHeading")
+	_banner.add_child(text_col)
+	_banner_title = HubUi.label("BannerTitle", "MATCH FOUND", &"InspectorHeading", HORIZONTAL_ALIGNMENT_CENTER)
 	text_col.add_child(_banner_title)
-	_banner_body = HubUi.label("BannerBody", "", &"Caption")
+	_banner_body = HubUi.label("BannerBody", "", &"Caption", HORIZONTAL_ALIGNMENT_CENTER)
 	_banner_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_banner_body.custom_minimum_size.x = 300
 	text_col.add_child(_banner_body)
-	_save_button = HubUi.button("SaveLeaveButton", "SAVE & LEAVE", &"ActionButton", Vector2(200, 64))
+	_banner_actions = _banner_panel("MatchBannerActions", 0, 0)
+	canvas.add_child(_banner_actions)
+	var brow: HBoxContainer = HBoxContainer.new()
+	brow.name = "BannerRow"
+	brow.add_theme_constant_override(&"separation", 6)
+	_banner_actions.add_child(brow)
+	_save_button = HubUi.button("SaveLeaveButton", "SAVE & LEAVE", &"ActionButton", Vector2(64, 64))
 	_save_button.pressed.connect(save_and_leave)
 	brow.add_child(_save_button)
-	_keep_button = HubUi.button("KeepPlayingButton", "KEEP PLAYING", &"PrimaryButton", Vector2(200, 64))
+	_keep_button = HubUi.button("KeepPlayingButton", "KEEP PLAYING", &"PrimaryButton", Vector2(64, 64))
 	_keep_button.pressed.connect(keep_playing)
 	brow.add_child(_keep_button)
-	_join_button = HubUi.button("JoinMatchButton", "JOIN MATCH", &"PrimaryButton", Vector2(200, 64))
+	_join_button = HubUi.button("JoinMatchButton", "JOIN MATCH", &"PrimaryButton", Vector2(64, 64))
 	_join_button.pressed.connect(join_match)
 	brow.add_child(_join_button)
+	for b: Button in [_save_button, _keep_button, _join_button]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # two lines where the piece is narrow
+		b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		# Tight padding so two lines still fit the top bar's 64 px.
+		for st: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled", &"focus"]:
+			var bsb: StyleBox = b.get_theme_stylebox(st, b.theme_type_variation)
+			if bsb != null:
+				bsb = bsb.duplicate()
+				bsb.content_margin_top = 2
+				bsb.content_margin_bottom = 2
+				bsb.content_margin_left = 6
+				bsb.content_margin_right = 6
+				b.add_theme_stylebox_override(st, bsb)
 	_banner_margin.hide()
+
+
+func _banner_panel(node_name: String, pad_x: int, pad_y: int) -> PanelContainer:
+	var p: PanelContainer = PanelContainer.new()
+	p.name = node_name
+	p.theme_type_variation = &"InspectorPanel"
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	var sb: StyleBox = p.get_theme_stylebox(&"panel", &"InspectorPanel")
+	if sb != null:
+		sb = sb.duplicate()
+		sb.content_margin_top = pad_y
+		sb.content_margin_bottom = pad_y
+		sb.content_margin_left = pad_x
+		sb.content_margin_right = pad_x
+		if sb is StyleBoxFlat:
+			(sb as StyleBoxFlat).bg_color.a = 1.0  # opaque: the counter text under it must not show through
+		p.add_theme_stylebox_override(&"panel", sb)
+	return p
 
 
 func _relayout() -> void:
 	var m: Array[Vector2] = HubUi.safe_margins(self, safe_area_override)
 	HubUi.apply_margins(_wait_margin, m[0], m[1])
-	# The banner sits over the duel's top bar (scores, turn), clear of the wall, hand and PLACE:
-	# only the device's own insets plus a few px, not the screen's base margin.
-	var bm: Array[Vector2] = HubUi.safe_margins(self, safe_area_override, Vector2(16, 2))
-	# Full width over the score bar, but clear of the duel's MENU button (still usable).
-	var menu: Control = duel.get_node_or_null("%MenuButton") if duel != null else null
-	if menu != null and menu.is_visible_in_tree():
-		bm[0].x = maxf(bm[0].x, menu.get_global_rect().end.x + 8.0)
-	HubUi.apply_margins(_banner_margin, bm[0], bm[1])
-	var compact: bool = HubUi.is_compact(self)
-	_banner_body.custom_minimum_size.x = 260 if compact else 360
+	_place_banner()
+	if _banner_margin.visible:
+		_place_banner.call_deferred()  # again once the duel and the labels have their sizes
+
+
+## Lays the two banner pieces over the duel's top bar (see _build). The text piece spans from the
+## player's score to the rival's score; the buttons piece from the rival's score to the counter's
+## outer edge. Both are exactly the top bar's height.
+func _place_banner() -> void:
+	if not _banner_margin.visible or duel == null or not is_instance_valid(duel):
+		return
+	var keys: Dictionary = duel.get_key_controls()
+	var counters: Array = duel.get_counters()
+	if counters.size() < 2:
+		return
+	var origin: Vector2 = get_global_rect().position
+	var turn: Rect2 = (keys["TurnPanel"] as Control).get_global_rect()
+	var rival: Rect2 = (keys["RivalCounter"] as Control).get_global_rect()
+	var p_score: Rect2 = (counters[0].get_score_label() as Control).get_global_rect()
+	var r_score: Rect2 = (counters[1].get_score_label() as Control).get_global_rect()
+	var gap: float = 6.0
+	var top: float = minf(turn.position.y, rival.position.y) - origin.y
+	var h: float = maxf(turn.size.y, rival.size.y)
+	var text_x: float = p_score.end.x + gap - origin.x
+	var text_w: float = maxf(r_score.position.x - gap - origin.x - text_x, 120.0)
+	_banner_body.custom_minimum_size.x = maxf(text_w - 20.0, 60.0)
+	_banner.position = Vector2(text_x, top)
+	_banner.size = Vector2(text_w, h)
+	var act_x: float = r_score.end.x + gap - origin.x
+	var act_w: float = maxf(rival.end.x - origin.x - act_x, 140.0)
+	var shown: Array[Button] = []
 	for b: Button in [_save_button, _keep_button, _join_button]:
-		b.custom_minimum_size.x = 180 if compact else 200
+		if b.visible:
+			shown.append(b)
+	var inner: float = act_w - _banner_actions.get_theme_stylebox(&"panel").get_minimum_size().x
+	var bw: float = floorf((inner - 6.0 * maxf(shown.size() - 1, 0)) / maxf(shown.size(), 1))
+	for b: Button in shown:
+		b.custom_minimum_size.x = maxf(bw, 64.0)  # the wrap width, so a label takes 1-2 lines
+	_banner_actions.position = Vector2(act_x, top)
+	_banner_actions.size = Vector2(act_w, h)
 
 
 ## Controls a layout test checks (visible ones only matter).
 func get_key_controls() -> Dictionary:
 	return {"WaitTitle": _wait_title, "WaitClock": _wait_clock, "WaitHint": _wait_hint,
 			"QuickDuelButton": _quick_button, "CancelButton": _cancel_button, "MatchBanner": _banner,
+			"MatchBannerActions": _banner_actions,
 			"KeepPlayingButton": _keep_button, "SaveLeaveButton": _save_button, "JoinMatchButton": _join_button}

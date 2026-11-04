@@ -581,6 +581,7 @@ func _build_grid() -> void:
 		b.name = "Card_%s" % c.id
 		b.theme_type_variation = &"HandCard"
 		b.custom_minimum_size = grid_card_size + Vector2(0, NAME_H)
+		b.mouse_filter = Control.MOUSE_FILTER_PASS  # a touch drag scrolls the grid (cc19 BUG-02)
 		b.add_to_group(&"tap_target")
 		var cv: BannerCard = BannerCardScene.instantiate()
 		cv.name = "Card"

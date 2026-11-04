@@ -85,7 +85,7 @@ const SCHEMA: Dictionary = {
 	"lobby_wait_start": {"wait_s": "n"},
 	"lobby_match_found": {"choice": "s", "duel_state": "d"},
 	"lobby_save": {"saved": "b"},
-	"duel_resumed": {"age_s": "n", "duel": "i"},
+	"duel_resumed": {"age_s": "n", "duel": "i", "rival": "s"},
 	"unlock": {"kind": "s", "id": "s", "source": "s"},
 	"goal_progress": {"goal_id": "s", "current": "i", "target": "i"},
 	"goal_complete": {"goal_id": "s"},
@@ -798,17 +798,32 @@ func _on_lobby_duel_saved(saved: bool) -> void:
 	_write("lobby_save", {"saved": saved})
 
 
+## cc19 BUG-05: the rival of the Lobby Duel about to resume (lobby_duel.gd calls this right before
+## EventBus.duel_resumed, which carries no rival). Used once by _on_duel_resumed.
+func note_resumed_rival(rival_id: StringName) -> void:
+	_resumed_rival = String(rival_id)
+
+
+var _resumed_rival: String = ""
+
+
 ## A saved Lobby Duel continues: no duel_started follows, so a new duel context starts here
-## (source lobby; the rival is not in the signal, so it is logged as "").
+## (source lobby; the rival from note_resumed_rival, else the Collection's saved duel, else "").
 func _on_duel_resumed(age_s: float) -> void:
 	stats["resumes"] += 1
 	_duel_index += 1
 	_turn = 0
 	_screen_since_duel_end = false
-	_duel = {"source": "lobby", "rival": "", "resumed": true, "play_again": false, "placements": 0,
+	var rival: String = _resumed_rival
+	_resumed_rival = ""
+	if rival == "":
+		var col: Node = get_node_or_null("/root/Collection")
+		if col != null and col.has_method(&"saved_lobby_duel_info"):
+			rival = str(col.saved_lobby_duel_info().get("rival_id", ""))
+	_duel = {"source": "lobby", "rival": rival, "resumed": true, "play_again": false, "placements": 0,
 			"score_p": 0, "score_ai": 0, "captures_p": 0, "captures_ai": 0, "carded_p": 0,
 			"carded_ai": 0, "triptychs_p": 0, "over": false}
-	_write("duel_resumed", {"age_s": snappedf(age_s, 0.1), "duel": _duel_index})
+	_write("duel_resumed", {"age_s": snappedf(age_s, 0.1), "duel": _duel_index, "rival": rival})
 
 
 func _on_collection_reset() -> void:

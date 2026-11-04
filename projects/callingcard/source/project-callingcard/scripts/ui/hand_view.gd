@@ -130,6 +130,7 @@ func _rebuild() -> void:
 		var b: Button = TapHoldButton.new()
 		b.name = "Card_%s" % c.get("id", "")
 		b.custom_minimum_size = card_size
+		b.mouse_filter = Control.MOUSE_FILTER_PASS  # a touch drag scrolls the strip (cc19 BUG-02)
 		b.theme_type_variation = &"HandCard"
 		b.add_to_group(&"tap_target")
 		var card: BannerCard = BannerCardScene.instantiate()

@@ -103,18 +103,20 @@ body {
 
 /* Progress */
 .bw-bar {
-	position: relative; margin: 26px 0 10px; height: 10px;
-	background: #0E1014; border: 1px solid var(--mortar); border-radius: 5px;
+	position: relative; margin: 26px 0 10px; height: 14px;
+	background: #0E1014; border: 1px solid #3A3E48; border-radius: 7px;
 	overflow: hidden;
 }
-.bw-fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: var(--amber); border-radius: 5px; }
+.bw-fill { position: absolute; inset: 0 auto 0 0; width: 0%; background: var(--amber); border-radius: 7px; transition: width 0.2s linear; }
 .bw-bar.bw-indet .bw-fill { width: 30%; animation: bw-sweep 1.1s ease-in-out infinite alternate; }
 @keyframes bw-sweep { from { left: 0%; } to { left: 70%; } }
 .bw-status {
 	display: flex; justify-content: space-between; gap: 12px;
 	font: 500 14px/1.3 var(--sans); color: var(--text);
 }
-.bw-status #bw-pct { color: var(--amber); font-variant-numeric: tabular-nums; }
+.bw-status #bw-pct { color: var(--amber); font: 700 18px/1.1 var(--sans); font-variant-numeric: tabular-nums; }
+.bw-slow { display: none; margin-top: 8px; font: 400 13px/1.45 var(--sans); color: var(--text-dim); }
+#bw-load.bw-is-slow .bw-slow { display: block; }
 .bw-hint { margin-top: 14px; font: 400 13px/1.45 var(--sans); color: var(--text-dim); }
 .bw-disclaimer {
 	margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--mortar);
@@ -168,8 +170,9 @@ $GODOT_HEAD_INCLUDE
 			<h1 class="bw-title">Banner <span>Wall</span></h1>
 			<div class="bw-sub">Concept demo</div>
 		</div>
-		<div class="bw-bar bw-indet" id="bw-bar"><div class="bw-fill" id="bw-fill"></div></div>
-		<div class="bw-status"><span id="bw-text">Hanging the banners&hellip;</span><span id="bw-pct"></span></div>
+		<div class="bw-bar bw-indet" id="bw-bar" role="progressbar" aria-label="Loading Banner Wall" aria-valuemin="0" aria-valuemax="100"><div class="bw-fill" id="bw-fill"></div></div>
+		<div class="bw-status"><span id="bw-text">Hanging the banners&hellip;</span><span id="bw-pct" aria-hidden="true"></span></div>
+		<div class="bw-slow" id="bw-slow">About 10 MB to download once. On mobile data this can take 10&ndash;20 seconds.</div>
 		<div class="bw-error" id="bw-error"></div>
 		<div class="bw-hint">Best on desktop, or on a phone held in landscape.</div>
 		<div class="bw-disclaimer">Unofficial concept demo. Not affiliated with Activision or Call of Duty.</div>
@@ -203,23 +206,32 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 	const t = window.bwLoadTimes = { firstProgress: null, downloaded: null, started: null, failed: null };
 	let failed = false;
 
-	function status(msg, percent) {
+	// cc19: the bar shows the download as a percentage (role=progressbar for screen readers).
+	// pctText overrides the readout when no percentage is known (e.g. "3.1 MB").
+	function status(msg, percent, pctText) {
 		text.textContent = msg;
 		if (percent == null) {
 			bar.classList.add('bw-indet');
 			fill.style.width = '';
-			pct.textContent = '';
+			pct.textContent = pctText || '';
+			bar.removeAttribute('aria-valuenow');
+			bar.setAttribute('aria-valuetext', msg);
 		} else {
 			bar.classList.remove('bw-indet');
 			fill.style.width = percent + '%';
 			pct.textContent = percent + '%';
+			bar.setAttribute('aria-valuenow', String(percent));
+			bar.setAttribute('aria-valuetext', percent + '%');
 		}
 	}
+	// A slow link (about 12 s on 4G): after 4 s say what is happening and roughly how long.
+	const slowTimer = setTimeout(function () { root.classList.add('bw-is-slow'); }, 4000);
 
 	function fail(err) {
 		if (failed) return;
 		failed = true;
 		t.failed = performance.now();
+		if (typeof slowTimer !== 'undefined') clearTimeout(slowTimer);
 		console.error(err);
 		const msg = (err instanceof Error) ? err.message : (typeof err === 'string' ? err : 'An unknown error occurred.');
 		errBox.innerHTML = '';
@@ -261,16 +273,19 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 				lastPercent = p;
 				if (p >= 100) {
 					if (t.downloaded === null) t.downloaded = performance.now();
-					status('Lighting the wall', null);
+					status('Lighting the wall', null, '100%');
 				} else {
 					status('Downloading the demo', p);
 				}
+			} else if (current > 0) {
+				status('Downloading the demo', null, (current / 1048576).toFixed(1) + ' MB');
 			} else {
 				status('Downloading the demo', null);
 			}
 		},
 	}).then(function () {
 		t.started = performance.now();
+		clearTimeout(slowTimer);
 		status('Ready', 100);
 		root.classList.add('bw-done');
 		setTimeout(function () { root.remove(); }, 400);
