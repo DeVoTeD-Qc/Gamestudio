@@ -16,7 +16,7 @@ const SEED_BASE: int = 8800
 const MAX_ACTIONS: int = 3000
 const MAX_PER_TURN: int = 20
 const CHECKS_PER_GAME: int = 8
-const PATH: String = "user://test_save/replay.save"
+var PATH: String = "user://test_save/%d/replay.save" % OS.get_process_id()  # per test process (cz14: concurrent suites)
 
 var _problems: Array[String] = []
 var _stats: Dictionary = {}

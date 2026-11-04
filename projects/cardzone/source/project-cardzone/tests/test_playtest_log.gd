@@ -17,7 +17,7 @@
 extends "res://tests/test_case.gd"
 
 const MatchControllerScript: GDScript = preload("res://scripts/match/match_controller.gd")
-const TEST_DIR: String = "user://test_playtest"
+var TEST_DIR: String = "user://test_playtest/%d" % OS.get_process_id()  # per test process (cz14: concurrent suites)
 const SURVEY_SCENE: String = "res://scenes/survey/Survey.tscn"
 const PROMPT_SCENE: String = "res://scenes/survey/ConsentPrompt.tscn"
 

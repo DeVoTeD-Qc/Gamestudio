@@ -12,7 +12,10 @@
 #      P2 drops first (the controller and the rules engine do the drop as cz11 does).
 #   S2 route: vs the AI the human picks A, B or C, or Pick for me = A, B, C in rotation per match on
 #      this device, starting with A.
-#   Hot-seat (cz14) is not built: choosing it is refused.
+#   Hot-seat (cz14): two humans, one device, no AI. S1: Player 1 is P1 (FIRST TURN does not
+#      apply and Alternate does not advance); S2: Player 2 picks the route in setup (A, B, C or
+#      Pick for me) and drops first. meta {mode: "hotseat", ai_level: "", human_seat: P1}; the
+#      controller then shows only the deciding seat's view, behind a cover at every seat change.
 #   Dev panel overrides (dev_panel_overrides.gd) apply to new matches only; a resumed match keeps
 #   its saved balance.
 # Opponent: CzAI.for_level(level, seed) (cz09), loaded at run time so a broken AI script can't
@@ -74,7 +77,7 @@ static func last_choices() -> Dictionary:
 	return normalize(c)
 
 
-## Unknown values fall back to the defaults; hot-seat stays (it is refused at start).
+## Unknown values fall back to the defaults.
 static func normalize(choices: Dictionary) -> Dictionary:
 	var c: Dictionary = DEFAULT_CHOICES.duplicate()
 	if OPPONENTS.has(String(choices.get("opponent", ""))):
@@ -88,9 +91,12 @@ static func normalize(choices: Dictionary) -> Dictionary:
 
 ## "" when the choices can start a match, else why not (in words).
 static func why_not(choices: Dictionary) -> String:
-	if String(normalize(choices)["opponent"]) == "hotseat":
-		return "Hot-seat isn't in this build yet. Pick Rookie or Veteran."
 	return ""
+
+
+## cz14: true when the choices are a hot-seat match (two humans, one device).
+static func is_hotseat(choices: Dictionary) -> bool:
+	return String(normalize(choices)["opponent"]) == "hotseat"
 
 
 ## What the choices mean for the next match: {human_seat, route (DataEnums.Route), route_letter,
@@ -98,7 +104,8 @@ static func why_not(choices: Dictionary) -> String:
 static func resolve(choices: Dictionary) -> Dictionary:
 	var c: Dictionary = normalize(choices)
 	var seat: int = MatchState.P1
-	match String(c["first"]):
+	var first: String = "me" if is_hotseat(c) else String(c["first"])  # cz14 S1: Player 1 is P1
+	match first:
 		"opponent":
 			seat = MatchState.P2
 		"alternate":
@@ -110,12 +117,14 @@ static func resolve(choices: Dictionary) -> Dictionary:
 		if not ["A", "B", "C"].has(letter):
 			letter = "A"
 	return {"human_seat": seat, "route": MatchState.route_from_letter(letter), "route_letter": letter,
-			"ai_level": String(c["opponent"])}
+			"ai_level": "" if is_hotseat(c) else String(c["opponent"]), "hotseat": is_hotseat(c)}
 
 
 ## Text for the setup screen's "next match" line.
 static func preview_text(choices: Dictionary) -> String:
 	var r: Dictionary = resolve(choices)
+	if bool(r["hotseat"]):
+		return "Next match: hot-seat, route %s (Player 2 picks it), Player 2 drops first, Player 1 takes the first turn." % r["route_letter"]
 	var first: String = "you take the first turn" if int(r["human_seat"]) == MatchState.P1 \
 			else "the rival takes the first turn (you drop first)"
 	return "Next match: route %s, %s." % [r["route_letter"], first]
@@ -125,7 +134,8 @@ static func _commit(choices: Dictionary, resolved: Dictionary) -> void:
 	var c: Dictionary = normalize(choices)
 	for key: String in c.keys():
 		SetupPrefs.set_value("setup", key, c[key])
-	SetupPrefs.set_value("setup", "last_human_seat", int(resolved["human_seat"]))
+	if not bool(resolved.get("hotseat", false)):  # cz14: hot-seat leaves the vs-AI Alternate alone
+		SetupPrefs.set_value("setup", "last_human_seat", int(resolved["human_seat"]))
 	if String(c["route"]) == "rotate":
 		var i: int = "ABC".find(String(resolved["route_letter"]))
 		SetupPrefs.set_value("setup", "next_route", "ABC"[(i + 1) % 3])
@@ -157,6 +167,8 @@ static func _begin_new(ctrl: Node, choices: Dictionary) -> String:
 	if not errors.is_empty():
 		push_warning("SetupLaunch: dev overrides refused: %s" % ", ".join(errors))
 	var ai_seed: int = int(Time.get_unix_time_from_system()) % 1000000
+	if bool(r["hotseat"]):
+		return _begin_hotseat(ctrl, choices, r, content)
 	ctrl.set("opponent", make_opponent(String(r["ai_level"]), ai_seed))
 	var store: Node = _autoload("MatchStore")
 	if store != null and bool(ctrl.get("save_enabled")):
@@ -177,8 +189,24 @@ static func _begin_resume(ctrl: Node) -> String:
 		var text: String = String(store.call("status_text"))
 		return text if text != "" else "There is no saved match."
 	var meta: Dictionary = resumed.get("meta", {})
-	ctrl.set("opponent", make_opponent(String(meta.get("ai_level", "rookie")), int(meta.get("ai_seed", 0))))
+	if String(meta.get("mode", "ai")) == "hotseat":
+		ctrl.set("opponent", null)  # cz14: both seats are human; the controller resumes behind a cover
+	else:
+		ctrl.set("opponent", make_opponent(String(meta.get("ai_level", "rookie")), int(meta.get("ai_seed", 0))))
 	ctrl.call("start_resumed", resumed)
+	return ""
+
+
+## cz14: a new hot-seat match: no AI; Player 1 = P1; P2 (who picked the route) drops first.
+static func _begin_hotseat(ctrl: Node, choices: Dictionary, r: Dictionary, content: RulesData) -> String:
+	_ai_fallback = ""
+	ctrl.set("opponent", null)
+	var store: Node = _autoload("MatchStore")
+	if store != null and bool(ctrl.get("save_enabled")):
+		store.call("clear")
+	_commit(choices, r)
+	var meta: Dictionary = {"mode": "hotseat", "ai_level": "", "ai_seed": 0, "human_seat": MatchState.P1}
+	ctrl.call("start_from", MatchState.new_match(content, int(r["route"])), meta)
 	return ""
 
 

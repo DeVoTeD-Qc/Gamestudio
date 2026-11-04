@@ -11,7 +11,7 @@ extends "res://tests/test_case.gd"
 
 const Fx: GDScript = preload("res://tests/test_rules_fixtures.gd")
 const StoreScript: GDScript = preload("res://autoload/match_store.gd")
-const DIR: String = "user://test_save"
+var DIR: String = "user://test_save/%d" % OS.get_process_id()  # per test process (cz14: concurrent suites)
 const META: Dictionary = {"mode": "ai", "ai_level": "rookie", "ai_seed": 4242, "human_seat": 0}
 
 
@@ -318,10 +318,10 @@ func test_test_runs_never_touch_the_real_save() -> void:
 	var autoload: Node = tree.root.get_node_or_null("MatchStore")
 	assert_not_null(autoload, "MatchStore autoload registered")
 	if autoload != null:
-		assert_eq(autoload.path(), StoreScript.TEST_SAVE_PATH, "autoload uses the test file")
+		assert_eq(autoload.path(), StoreScript.test_save_path(), "autoload uses the test file")
 	var loose: Node = StoreScript.new()
 	assert_eq(loose.save_path, StoreScript.DEFAULT_SAVE_PATH, "a new instance defaults to the real path")
-	assert_eq(loose.path(), StoreScript.TEST_SAVE_PATH, "but writes the test file under the runner")
+	assert_eq(loose.path(), StoreScript.test_save_path(), "but writes the test file under the runner")
 	loose.free()
 
 

@@ -68,6 +68,9 @@ const BraceAdvisor: GDScript = preload("res://scripts/match/brace_advisor.gd")
 
 ## cz12: speed factor of FAST (x the current Event speed delays).
 const FAST_FACTOR: float = 0.4
+## cz17: the longest a game-feel hold keeps the loop on one step (seconds); the FX layer caps its
+## own holds lower (CzMatchFx.MAX_HOLD_S).
+const HOLD_CAP_S: float = 3.0
 ## cz12: how long each kind of step stays up, x event_delay.
 const STEP_WEIGHT: Dictionary = {&"shot": 1.5, &"brace": 1.3, &"hits": 1.3, &"out": 1.5, &"move": 1.0,
 		&"loot": 1.0, &"play": 0.8, &"pack": 1.0, &"turn": 0.6, &"draw": 0.6, &"round": 0.8, &"zone": 0.9, &"other": 0.7}
@@ -177,7 +180,7 @@ func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 	_hotseat_begin()  # cz14: hot-seat starts (and resumes) behind the cover
 	_in_rival_turn = s.phase != MatchState.PHASE_DROP and s.active == rival_seat()
 	_started_ms = Time.get_ticks_msec()
-	EventBus.match_started.emit(StringName(opponent_kind().to_lower()), MatchState.P1)
+	EventBus.match_started.emit(&"hotseat" if hotseat else StringName(opponent_kind().to_lower()), MatchState.P1)
 	_emit_context()
 	_run(null)
 
@@ -197,7 +200,7 @@ func stats() -> Dictionary:
 	return {"rounds": state.round_number if state != null else 0, "turns": _turn_index,
 			"seconds": (Time.get_ticks_msec() - _started_ms) / 1000.0,
 			"actions": state.actions.size() if state != null else 0,
-			"hits_on_me": hits_landed[human], "hits_on_rival": hits_landed[rival_seat()]}
+			"hits_on_me": hits_landed[human], "hits_on_rival": hits_landed[rival_seat()], "hotseat": hotseat}
 
 
 func rival_seat() -> int:
@@ -605,7 +608,8 @@ func _run(first: ActionResult) -> void:
 func _play_step(step: Dictionary, id: int) -> bool:
 	if float(step["duration"]) > 0.0 and not await _wait_for(float(step["duration"]), id):
 		return false
-	while _holds > 0 and not playback_skip and is_inside_tree():
+	var hold_until: int = Time.get_ticks_msec() + int(HOLD_CAP_S * 1000.0)  # cz17: a hold never stalls a match
+	while _holds > 0 and not playback_skip and is_inside_tree() and Time.get_ticks_msec() < hold_until:
 		await get_tree().process_frame
 		if id != _run_id:
 			return false
@@ -917,3 +921,148 @@ func _loot_cost(a: Dictionary) -> int:
 		if (cr["cards"] as Array).has(inst):
 			return 0 if (int(cr["free_picks"]) > 0 and int(cr["picker"]) == human) else bal.crate_cost
 	return 0
+
+
+# --- Hot-seat (cz14) --------------------------------------------------------------------------
+# Two humans pass one device (spec §16.3 S1/S2: Player 1 is P1; Player 2 picks the route in
+# setup and drops first). `human` is the seat on screen. Whenever the deciding seat changes (its
+# turn, its drop, the defender's Brace) the loop stops behind the cover: cover_changed(true) goes
+# out BEFORE anything of the next seat is shown, `phase` is PHASE_COVER, view() is the covered
+# view (no hand, next hand, loadout, held cards, Brace prompt or shot preview: only what both
+# seats see) and every request but concede is refused. The tap calls reveal(): the seat's own
+# view(state, seat) goes out, then cover_changed(false), then a one-line summary of what the other
+# seat did meanwhile (playback_finished, built from events_for(seat) only), then settled.
+# Saves: meta {mode: "hotseat", human_seat: the seat on screen, cover_seat while a cover is
+# pending}. A resumed hot-seat match always starts behind the cover of the deciding seat, so a
+# match saved at a pending cover or Brace resumes at that cover.
+
+## True while the hot-seat cover is up.
+func is_covered() -> bool:
+	return hotseat and cover_seat >= 0
+
+
+## {seat, player (1/2), from_player, reason (&"drop" | &"brace" | &"start" | &"turn"), round, covered}.
+func cover_info() -> Dictionary:
+	if state == null:
+		return {}
+	var seat: int = cover_seat if cover_seat >= 0 else human
+	var reason: StringName = &"turn"
+	if state.phase == MatchState.PHASE_DROP:
+		reason = &"drop"
+	elif state.pending_brace_seat() == seat:
+		reason = &"brace"
+	elif state.actions.is_empty():
+		reason = &"start"
+	return {"seat": seat, "player": seat + 1, "from_player": 2 - seat, "reason": reason,
+			"round": state.round_number, "covered": is_covered()}
+
+
+## The tap on the cover: shows the covered seat its own view. No-op without a cover.
+func reveal() -> void:
+	if not is_covered() or busy or state == null:
+		return
+	var seat: int = cover_seat
+	cover_seat = -1
+	meta.erase("cover_seat")
+	if not state.actions.is_empty():
+		_store_save()
+	var steps: Array = []
+	for batch: Variant in _unseen[seat]:
+		for e: Dictionary in batch:
+			var text: String = ActionText.describe(e, seat)
+			if text == "":
+				continue
+			log_lines.append(text)
+			var t: String = String(e.get("type", ""))
+			steps.append({"type": t, "kind": _STEP_KIND.get(t, &"other"), "seat": int(e.get("seat", -1)),
+					"rival": true, "text": text, "event": e})
+	_unseen[seat] = []
+	_set_phase(_phase_now())
+	_emit_view()
+	cover_changed.emit(false, cover_info())
+	if not steps.is_empty():
+		var summary: String = catch_up_summary(steps)
+		playback_finished.emit(summary, steps, true)
+	if phase == PHASE_BRACE:
+		brace_suggested.emit(brace_suggestion())
+	settled.emit()
+
+
+## "Player 1: dropped into Quarry, fired P-9 Sidearm (2 damage), packed (1 held)." ("" = nothing).
+func catch_up_summary(steps: Array) -> String:
+	var parts: PackedStringArray = []
+	var rest: Array = []
+	for s: Dictionary in steps:
+		if String(s["type"]) == "dropped" and int(s["seat"]) == rival_seat():
+			parts.append("dropped into %s" % ActionText.area_name((s["event"] as Dictionary).get("area", "")))
+		else:
+			rest.append(s)
+	var body: String = summary_of(rest).trim_prefix("Rival's turn: ").trim_suffix(".")
+	if body != "":
+		parts.append(body)
+	if parts.is_empty():
+		return ""
+	return "Player %d: %s." % [rival_seat() + 1, ", ".join(parts)]
+
+
+func _hotseat_begin() -> void:
+	cover_seat = -1
+	_unseen = [[], []]
+	_seat_logs = [PackedStringArray(), PackedStringArray()]
+	_last_lines = [[], []]
+	if not hotseat:
+		return
+	opponent = null  # never asked: both seats are human
+	if state != null and not state.is_over():
+		_cover_up(state.deciding_seat())
+
+
+## Raises the cover for `seat` (which becomes the seat on screen once revealed).
+func _cover_up(seat: int) -> void:
+	_seat_logs[human] = log_lines.duplicate()
+	human = seat
+	meta["human_seat"] = seat
+	meta["cover_seat"] = seat
+	log_lines = (_seat_logs[seat] as PackedStringArray).duplicate()
+	rival_last_line.assign(_last_lines[rival_seat()])
+	_suggestion_key = ""
+	_suggestion = {}
+	cover_seat = seat
+	if not state.actions.is_empty():
+		_store_save()  # the save records the pending cover (meta.cover_seat)
+	cover_changed.emit(true, cover_info())
+
+
+## After each applied action: the other seat's unseen events (an undo takes back the last
+## batch), public last lines, and no cover once the match is over.
+func _hotseat_record(r: ActionResult) -> void:
+	if not hotseat:
+		return
+	for e: Dictionary in r.events:
+		if String(e["type"]) == "packed":
+			var ids: Array = []
+			for inst: Variant in e.get("line_stowed", []):
+				ids.append(state.card_id(int(inst)))
+			_last_lines[int(e["seat"])] = ids
+	var other: int = 1 - human
+	if String(r.action.get("type", "")) == "undo":
+		if not (_unseen[other] as Array).is_empty():
+			(_unseen[other] as Array).pop_back()
+	else:
+		(_unseen[other] as Array).append(r.events_for(other))
+	if state.is_over() and cover_seat >= 0:
+		cover_seat = -1
+		meta.erase("cover_seat")
+		cover_changed.emit(false, cover_info())
+
+
+## view(state, human) with every seat-private part left out (the cover is up).
+func _covered_view() -> Dictionary:
+	var v: Dictionary = LoadoutRules.view(state, human)
+	var me: Dictionary = v["me"]
+	for key: String in ["loadout", "held", "next_draw", "next_hand", "hand"]:
+		me[key] = []
+	v.erase("brace_prompt")
+	v.erase("shot_preview")
+	v["covered"] = true
+	return v

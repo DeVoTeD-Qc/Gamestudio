@@ -93,7 +93,10 @@ static func continue_text(info: Dictionary) -> String:
 	var level: String = String(info.get("ai_level", "")).strip_edges()
 	if level == "" and info.get("meta") is Dictionary:
 		level = String((info["meta"] as Dictionary).get("ai_level", ""))
-	if level != "":
+	var meta: Variant = info.get("meta")
+	if meta is Dictionary and String((meta as Dictionary).get("mode", "")) == "hotseat":
+		parts.append("Hot-seat")  # cz14
+	elif level != "":
 		parts.append("vs %s" % ("placeholder rival" if level == "placeholder" else level.capitalize() + " AI"))
 	var saved_at: int = int(info.get("saved_at", 0))
 	if saved_at > 0:

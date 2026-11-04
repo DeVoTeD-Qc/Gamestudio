@@ -110,9 +110,10 @@ func test_controller_exposes_the_suggestion_for_the_logger() -> void:
 	var plog: Node = tree.root.get_node("PlaytestLog")
 	var saved: Dictionary = {"log_path": plog.log_path, "consent_path": plog.consent_path, "enabled": plog.enabled,
 			"answered": plog.consent_answered, "auto": plog.auto_prompt}
-	DirAccess.make_dir_recursive_absolute("user://test_brace_prompt")
-	plog.log_path = "user://test_brace_prompt/log.jsonl"
-	plog.consent_path = "user://test_brace_prompt/consent.cfg"
+	var dir: String = "user://test_brace_prompt/%d" % OS.get_process_id()  # per test process (cz14)
+	DirAccess.make_dir_recursive_absolute(dir)
+	plog.log_path = dir.path_join("log.jsonl")
+	plog.consent_path = dir.path_join("consent.cfg")
 	plog.auto_prompt = false
 	plog.delete_log()
 	plog.set_consent(true, false)

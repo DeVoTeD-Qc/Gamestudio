@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="Script" path="res://scripts/ui/player_panel.gd" id="2_panel"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/ui/fan_row.gd" id="5_fan"]
 [ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="7_insp"]
 [ext_resource type="Script" path="res://scripts/match/match_controller.gd" id="8_ctrl"]
+[ext_resource type="PackedScene" path="res://scenes/fx/MatchFx.tscn" id="9_fx"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -150,3 +151,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("7_insp")
+
+[node name="FX" parent="." instance=ExtResource("9_fx")]
+unique_name_in_owner = true
+layout_mode = 1

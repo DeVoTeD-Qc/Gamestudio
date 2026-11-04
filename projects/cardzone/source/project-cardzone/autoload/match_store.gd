@@ -12,7 +12,9 @@
 #   a reload right after an action still resumes at that action.
 #   A damaged, old, newer-schema or no-longer-replayable save never crashes: it is copied to
 #   "<save>.<status>.bak", removed, and status()/status_text() say why, so the UI offers a new
-#   match. Under the headless test runner the store never touches the real save (is_test_run).
+#   match. Under the headless test runner the store never touches the real save (is_test_run):
+#   it uses test_save_path(), one file per test process (user://test_match_store/<pid>/...), so
+#   several suites running at once on one machine never share a save (cz14, as cz13 did for prefs).
 #
 # API (cz11 match screen, cz13 title/pause):
 #   save(state, meta = {}) -> bool     after every action; meta is plain data, e.g.
@@ -34,6 +36,7 @@ signal saved(step: int)
 
 const DEFAULT_SAVE_PATH: String = "user://cardzone_match.save"
 ## The autoload's own file under the test runner (wiped at start), so tests never touch a real save.
+## The file actually used is per test process: see test_save_path().
 const TEST_SAVE_PATH: String = "user://test_match_store/autoload_match.save"
 
 ## Where the save lives. Tests point their own instance at their own file.
@@ -57,9 +60,9 @@ var _seq: int = 0                    # header seq of the newest save seen or wri
 
 func _ready() -> void:
 	if is_test_run() and save_path == DEFAULT_SAVE_PATH:
-		save_path = TEST_SAVE_PATH
-		SaveFile.remove(TEST_SAVE_PATH)
-		SaveFile.remove(TEST_SAVE_PATH + ".tmp")
+		save_path = test_save_path()
+		SaveFile.remove(save_path)
+		SaveFile.remove(save_path + ".tmp")
 
 
 ## True when the main loop is the headless test runner (a script under res://tests/).
@@ -69,11 +72,16 @@ static func is_test_run() -> bool:
 	return script != null and script.resource_path.begins_with("res://tests/")
 
 
+## The test runner's save file for this process: user://test_match_store/<pid>/autoload_match.save.
+static func test_save_path() -> String:
+	return TEST_SAVE_PATH.get_base_dir().path_join(str(OS.get_process_id())).path_join(TEST_SAVE_PATH.get_file())
+
+
 ## The file actually used (the default path is swapped for the test file under the test runner,
 ## also for instances that never entered the tree).
 func path() -> String:
 	if save_path == DEFAULT_SAVE_PATH and is_test_run():
-		return TEST_SAVE_PATH
+		return test_save_path()
 	return save_path
 
 

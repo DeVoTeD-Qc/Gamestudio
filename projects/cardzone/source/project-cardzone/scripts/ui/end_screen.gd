@@ -95,6 +95,8 @@ static func summary(view: Dictionary, stats: Dictionary) -> Dictionary:
 	var draw: bool = String(r.get("result", "")) == "draw"
 	var won: bool = not draw and int(r.get("winner", -1)) == me
 	var title: String = "DRAW" if draw else ("YOU WIN" if won else "THE RIVAL WINS")
+	if not draw and bool(stats.get("hotseat", false)):  # hot-seat: name the seat, not "you"
+		title = "PLAYER %d WINS" % (int(r.get("winner", 0)) + 1)
 	var detail: String = ""
 	match cause:
 		"shot", "frag":

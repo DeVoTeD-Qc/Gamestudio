@@ -40,6 +40,9 @@
 #   cz13: when the match comes from the Title / Match setup (a SetupLaunch request), `shell`
 #   (pause_match_shell.gd) starts it and replaces the MENU and end sheets with the pause menu and
 #   the end screen, and runs the first-match coach.
+#   cz14 hot-seat: the controller raises a full-screen cover (cover_screen.gd) at every seat change;
+#   hotseat_cover_reset() clears every seat-private node under it and the screen renders the
+#   controller's covered view until the tap reveals the next seat's own view.
 # Signals: card_tapped(zone, index, card_id), area_tapped(area_id), menu_requested,
 #   card_inspected(card_id, zone), notice_shown(text), option_pressed(key).
 # Dependencies: EventBus, SceneRouter, CardDB, Settings, screen_profile.gd, match_theme.gd,
@@ -67,6 +70,7 @@ const MatchShell: GDScript = preload("res://scripts/ui/pause_match_shell.gd")
 const BracePanel: GDScript = preload("res://scripts/ui/brace_panel.gd")
 const PlaybackPanel: GDScript = preload("res://scripts/ui/playback_panel.gd")
 const TracerLayer: GDScript = preload("res://scripts/ui/tracer_layer.gd")
+const CoverScreen: GDScript = preload("res://scripts/match/cover_screen.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
@@ -156,6 +160,8 @@ var _brace_panel: PanelContainer
 var _playback: PanelContainer
 var _tracer: Control
 var _tags: Control
+## cz14: the hot-seat cover (scenes/match/CoverScreen.tscn), above every overlay while up.
+var _cover: Control
 
 @onready var _safe_area: MarginContainer = %SafeArea
 @onready var _column: VBoxContainer = %Column
@@ -200,6 +206,8 @@ func _ready() -> void:
 	_build_overlays()
 	if SetupLaunch.has_pending() and _controller != null:
 		shell = MatchShell.attach(self)  # cz13: started from the Title / Match setup
+	if _controller != null:
+		_cover = CoverScreen.attach(self, _controller)  # cz14: hot-seat pass-the-device cover (hidden)
 	get_viewport().size_changed.connect(_relayout)
 	EventBus.round_started.connect(_on_round_started)
 	var mock: bool = not _state.is_empty()
@@ -243,6 +251,50 @@ func get_controller() -> Node:
 	return _controller
 
 
+## cz14 hot-seat: the pass-the-device cover (null without a controller).
+func get_cover() -> Control:
+	return _cover
+
+
+## cz14 hot-seat: called as the cover goes up. Clears everything one seat may know and the other
+## may not: selection, hold / brace choices, the dock, sheet, toast, inspector, Brace and playback
+## panels (texts included), SUGGESTED tags; then renders the controller's covered view (no hand,
+## next hand or held cards).
+func hotseat_cover_reset() -> void:
+	_clear_input()
+	close_sheet()
+	if _sheet != null:
+		_sheet_title.text = ""
+		_sheet_text.text = ""
+		_sheet_options = []
+		_clear(_sheet_list)
+	if _inspector != null:
+		_inspector.open_info("", "", "")
+		_inspector.get_card_view().configure({})
+		_inspector.close()
+	if _toast != null:
+		_toast_timer.stop()
+		_toast_label.text = ""
+		_toast.visible = false
+	if _dock != null:
+		_dock_title.text = ""
+		_dock_text.text = ""
+		_dock_options = []
+		_clear(_dock_buttons)
+		_dock.visible = false
+	if _brace_panel != null:
+		_brace_panel.show_prompt({})
+		_brace_panel.visible = false
+	if _playback != null:
+		_playback.begin("")
+		_playback.visible = false
+	if _tags != null:
+		_clear(_tags)
+	last_notice = ""
+	if live and _controller != null and _controller.state != null:
+		_on_view_changed(_controller.view())
+
+
 func _on_view_changed(v: Dictionary) -> void:
 	_state = ViewAdapter.to_screen(v, _controller.opponent_kind(), _controller.rival_last_line)
 	var you: Dictionary = _state["you"]
@@ -266,6 +318,9 @@ func _on_phase_changed(p: StringName) -> void:
 			mode = &"opponent"
 		&"over":
 			mode = &"over"
+		&"cover":
+			mode = &"cover"  # cz14: hot-seat cover up: no input, nothing seat-private
+			brace_set.clear()
 		_:
 			if was != &"pack" and was != &"aim":
 				mode = &"act"

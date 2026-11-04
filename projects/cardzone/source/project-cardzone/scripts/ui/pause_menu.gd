@@ -4,7 +4,8 @@
 #     main      RESUME · RULES · SETTINGS · CONCEDE… · LEAVE TO TITLE (the match stays saved:
 #               CONTINUE on the title picks it up)
 #     rules     a short rules summary (scrolls)
-#     settings  REDUCED MOTION off/on, EVENT SPEED normal/fast/instant (pause_settings.gd), and
+#     settings  REDUCED MOTION off/on, EVENT SPEED normal/fast/instant (pause_settings.gd),
+#               FAST ANIMATIONS off/on (cz17, scripts/fx/fx_settings.gd) and
 #               SHOW TIPS AGAIN (resets the first-match coach)
 #     concede   confirm: CONCEDE / KEEP PLAYING
 #   Every page has a way back; nothing is hover-only; buttons >= 64 px, text >= 16 px.
@@ -16,6 +17,7 @@ extends Control
 const SetupUI: GDScript = preload("res://scripts/ui/setup_ui.gd")
 const PauseSettings: GDScript = preload("res://scripts/ui/pause_settings.gd")
 const CoachTips: GDScript = preload("res://scripts/ui/coach_tips.gd")
+const FxSettings: GDScript = preload("res://scripts/fx/fx_settings.gd")  # cz17
 
 signal resumed
 signal concede_confirmed
@@ -145,6 +147,8 @@ func _settings_rows() -> void:
 	for s: String in PauseSettings.SPEEDS:
 		opts.append([StringName("speed_" + s), PauseSettings.speed_text(s), s == speed])
 	_setting_row("EVENT SPEED", opts)
+	var fx_fast: bool = FxSettings.fast_animations()  # cz17: the FAST ANIMATIONS toggle (scripts/fx)
+	_setting_row("FAST ANIMATIONS", [[&"fx_fast_off", "OFF", not fx_fast], [&"fx_fast_on", "ON", fx_fast]])
 	var seen: int = CoachTips.seen_count()
 	var tips: HBoxContainer = _setting_row("FIRST-MATCH TIPS", [])
 	var reset: Button = _btn(&"reset_tips", "SHOW TIPS AGAIN")
@@ -212,6 +216,10 @@ func _on_button(key: StringName) -> void:
 			leave_requested.emit()
 		&"motion_off", &"motion_on":
 			PauseSettings.set_reduced_motion(key == &"motion_on")
+			show_page(&"settings")
+			settings_changed.emit()
+		&"fx_fast_off", &"fx_fast_on":  # cz17
+			FxSettings.set_fast_animations(key == &"fx_fast_on")
 			show_page(&"settings")
 			settings_changed.emit()
 		&"reset_tips":

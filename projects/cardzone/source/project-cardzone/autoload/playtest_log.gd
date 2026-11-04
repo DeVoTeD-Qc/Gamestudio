@@ -17,6 +17,12 @@
 #   so the logger only ever holds what the human may see: the AI's hand, held cards and loadout
 #   order never reach it. Card ids for instance ids come from a cache filled from those views.
 #   Seats are logged as "human" / "ai" (hot-seat: "ai" = the seat the controller isn't showing).
+#   cz14 hot-seat (mode "hotseat"): "human" = Player 1 (P1), "ai" = Player 2, and both seats are
+#   people, so neither seat's private cards are logged or cached: the views arrive from whichever
+#   seat is on screen (view.seat says which), the card cache keeps public lists only (lines,
+#   removed, drops, shots), turn_start.hand_ids and pack.hold_ids are [] (the counts stay), and
+#   the latest view is kept without its private lists. The Brace prompt is read when the
+#   defender's own view arrives (after the pass-the-device cover); only its counts are logged.
 #   One extra hook: the match screen's option_pressed(&"end_turn") marks the start of the Pack
 #   step (pack_ms); without it, pack_ms runs from the human's last action (pack_from says which).
 #
@@ -653,11 +659,14 @@ func _on_match_context(info: Dictionary) -> void:
 func _on_view(view: Dictionary) -> void:
 	if _m.is_empty():
 		return
-	_view = view
+	var hot: bool = _hotseat()
+	_view = _public_view(view) if hot else view  # cz14: hot-seat keeps no private list
 	var me: Dictionary = view.get("me", {})
 	var opp: Dictionary = view.get("opponent", {})
-	for list: Variant in [me.get("hand", []), me.get("line", []), me.get("loadout", []), me.get("next_hand", []),
-			opp.get("line", []), opp.get("held_cards", []), view.get("removed", [])]:
+	var lists: Array = [me.get("line", []), opp.get("line", []), opp.get("held_cards", []), view.get("removed", [])]
+	if not hot:
+		lists.append_array([me.get("hand", []), me.get("loadout", []), me.get("next_hand", [])])
+	for list: Variant in lists:
 		_remember(list)
 	for area_drops: Variant in (view.get("drops", {}) as Dictionary).values():
 		_remember(area_drops)
@@ -666,16 +675,47 @@ func _on_view(view: Dictionary) -> void:
 		if ls.get(key) is Dictionary:
 			_remember([ls[key]])
 	var prompt: Dictionary = view.get("brace_prompt", {})
-	_remember(prompt.get("next_hand", []))
+	if not hot:
+		_remember(prompt.get("next_hand", []))
+	elif not prompt.is_empty() and int(view.get("seat", -1)) == int(_m["human"]) and int(_m.get("brace_ms", -1)) >= 0 \
+			and (_m.get("brace_prompt", {}) as Dictionary).is_empty():
+		# cz14: the defender's prompt opens after the cover: the Brace time starts here.
+		_m["brace_prompt"] = _prompt_counts(prompt)
+		_m["brace_ms"] = _now()
 	# Health and the Bounty come from the first view only; after that the events carry them, so
 	# round_start shows the health at the round's start (a view is taken after the whole action).
 	if not bool(_m["health_known"]):
 		_m["health_known"] = true
-		var h: int = int(_m["human"])
+		var h: int = int(view.get("seat", _m["human"]))  # cz14: the seat this view belongs to
 		_health[h] = int(me.get("health", 0))
 		_health[1 - h] = int(opp.get("health", 0))
 		_m["zone_card"] = int(view.get("zone_card", 0))
 		_m["bounty"] = int(view.get("bounty", -1))
+
+
+## cz14: true for a hot-seat match (two people: no seat's private cards are logged or cached).
+func _hotseat() -> bool:
+	return str(_m.get("mode", "")) == "hotseat"
+
+
+## cz14: a view without its seat-private lists (hand, loadout, next draw / hand, held, Brace prompt).
+func _public_view(view: Dictionary) -> Dictionary:
+	var v: Dictionary = view.duplicate(true)
+	var me: Dictionary = v.get("me", {})
+	for key: String in ["hand", "loadout", "next_draw", "next_hand", "held"]:
+		if me.has(key):
+			me[key] = []
+	v.erase("brace_prompt")
+	v.erase("shot_preview")
+	return v
+
+
+## cz14: what the brace line needs from a prompt (counts and the suggested / eligible instance
+## ids it compares with the public braced cards), no card ids.
+func _prompt_counts(prompt: Dictionary) -> Dictionary:
+	return {"damage": prompt.get("damage", 0), "kind": prompt.get("kind", "shot"),
+			"eligible": (prompt.get("eligible", []) as Array).duplicate(),
+			"suggested": (prompt.get("suggested", []) as Array).duplicate() if prompt.get("suggested") is Array else null}
 
 
 func _remember(list: Variant) -> void:
@@ -740,7 +780,7 @@ func _on_rules_event(e: Dictionary) -> void:
 		"drew":
 			var human_turn: bool = _is_human(e["seat"])
 			var ids: Array = []
-			if human_turn:
+			if human_turn and not _hotseat():  # cz14: hot-seat logs no seat's drawn cards
 				for inst: Variant in e.get("cards", []):
 					ids.append(_card(inst))
 				_m["human_turns"] = int(_m["human_turns"]) + 1
@@ -915,7 +955,7 @@ func _close_shots() -> void:
 
 func _log_pack(e: Dictionary, now: int) -> void:
 	var held: Array = []
-	for inst: Variant in e.get("held", []):
+	for inst: Variant in ([] if _hotseat() else e.get("held", [])):  # cz14: no held ids in hot-seat
 		held.append(_card(inst))
 	var mark: int = int(_m["pack_mark_ms"])
 	var from: String = "pack_step"
@@ -973,6 +1013,10 @@ func _on_match_ended(winner: int, reason: StringName, rounds: int, _duration_s: 
 		cause = "shot"
 	var me: Dictionary = _view.get("me", {})
 	var opp: Dictionary = _view.get("opponent", {})
+	if int(_view.get("seat", h)) != h:  # cz14: hot-seat ends on either seat's view
+		var swap: Dictionary = me
+		me = opp
+		opp = swap
 	_write("match_end", {"match": _m["match"], "result": result, "rounds": rounds,
 			"duration_s": snappedf((_now() - int(_m["started_ms"])) / 1000.0, 0.1), "cause": cause,
 			"health_h": int(me.get("health", _health[h])), "health_ai": int(opp.get("health", _health[1 - h])),

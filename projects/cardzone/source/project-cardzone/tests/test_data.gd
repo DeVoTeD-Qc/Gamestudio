@@ -9,7 +9,7 @@
 extends "res://tests/test_case.gd"
 
 const CardDBScript: GDScript = preload("res://autoload/card_db.gd")
-const TEST_ROOT: String = "user://test_data"
+var TEST_ROOT: String = "user://test_data/%d" % OS.get_process_id()  # per test process (cz14: concurrent suites)
 ## Save order: referenced files before the files that reference them.
 const SAVE_ORDER: Array[String] = ["cards/", "areas/", "zone/", "packs/", "balance"]
 const T: Dictionary = DataEnums.CardType

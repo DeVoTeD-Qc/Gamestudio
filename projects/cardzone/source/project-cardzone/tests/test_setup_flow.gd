@@ -1,7 +1,7 @@
 # test_setup_flow.gd
 # Purpose: cz13 "a new player can start, finish and replay a match without help", by TOUCH only,
 #   on the phone: Title -> NEW MATCH -> Match setup (Rookie AI, Me first, route B; Hot-seat
-#   refused in words) -> START -> the match screen (shell: coach tips dismissed with GOT IT as
+#   selectable since cz14, see test_hotseat_setup.gd) -> START -> the match screen (shell: coach tips dismissed with GOT IT as
 #   they come) -> the drop and a whole match against the AI (CzAI Rookie when it loads, else the
 #   placeholder) -> the end screen (winner, cause tag, stats) -> NEW MATCH (same setup) ->
 #   MENU -> LEAVE TO TITLE (saved) -> CONTINUE, also after a simulated reload.
@@ -27,7 +27,7 @@ func test_touch_only_title_setup_full_match_end_new_match_and_continue() -> void
 	# Match setup.
 	var setup: Control = await follow(title, SETUP)
 	await touch(setup.get_choice_button("opponent", "hotseat"))
-	assert_true("Hot-seat" in setup.last_notice, "hot-seat refused in words: '%s'" % setup.last_notice)
+	assert_eq(setup.choices["opponent"], "hotseat", "hot-seat can be chosen (cz14)")
 	await touch(setup.get_choice_button("opponent", "rookie"))
 	await touch(setup.get_choice_button("first", "me"))
 	await touch(setup.get_choice_button("route", "B"))
@@ -112,7 +112,7 @@ func test_alternate_and_pick_for_me_rotate_per_device() -> void:
 	assert_eq(SetupLaunch.resolve({"first": "me", "route": "C"})["human_seat"], 0, "Me = P1")
 	assert_eq(SetupLaunch.resolve({"first": "opponent", "route": "C"})["human_seat"], 1, "Opponent first = the human is P2")
 	assert_eq(SetupLaunch.last_choices(), c, "last choices remembered")
-	assert_true(SetupLaunch.why_not({"opponent": "hotseat"}) != "", "hot-seat can't start")
+	assert_eq(SetupLaunch.why_not({"opponent": "hotseat"}), "", "hot-seat can start (cz14)")
 	await phone_end()
 
 

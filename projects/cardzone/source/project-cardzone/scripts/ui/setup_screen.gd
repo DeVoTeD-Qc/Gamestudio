@@ -1,7 +1,7 @@
 # setup_screen.gd
 # Purpose: CardZone Match setup (cz13, spec §16.3 S1-S2). Three rows of choices, each a row of
 #   big segmented buttons (the chosen one is a light plate with a check mark):
-#     OPPONENT     ROOKIE AI · VETERAN AI · HOT-SEAT (not in this build: a tap says so; cz14)
+#     OPPONENT     ROOKIE AI · VETERAN AI · HOT-SEAT (cz14: two players, one device)
 #     FIRST TURN   ME · OPPONENT · ALTERNATE (swap from the last match on this device)
 #     ROUTE        A · B · C · PICK FOR ME (A, B, C in rotation per match on this device)
 #   Under the rows: what the chosen opponent and route mean (the route's gas order, from the
@@ -9,6 +9,8 @@
 #   request (setup_launch.gd) and goes to the match screen, where the drop happens as cz11 does
 #   it. BACK returns to the Title. The last choices are remembered on this device.
 #   A saved match is replaced by a new one: a note says so before START.
+#   cz14 hot-seat (spec §16.3): FIRST TURN is fixed (Player 1 is P1: the row is greyed and a tap
+#   says why) and the ROUTE row becomes "P2 PICKS ROUTE": Player 2 chooses it (S2).
 # Dependencies: setup_launch.gd, setup_ui.gd, dev_panel_overrides.gd, CardDB, MatchStore,
 #   SceneRouter, EventBus.
 # Author: UI/UX Agent (cz13)
@@ -27,7 +29,7 @@ const ROWS: Array = [
 const OPPONENT_TEXT: Dictionary = {
 	"rookie": "Rookie: plays straight and greedy. Good for a first match.",
 	"veteran": "Veteran: plans whole turns and reads the board. A real fight.",
-	"hotseat": "Hot-seat (two players, one device) isn't in this build yet.",
+	"hotseat": "Hot-seat: two players, one device. Pass it when the screen says so: a cover hides each player's cards from the other.",
 }
 
 ## Tests / screenshots: the safe rect in logical px (empty = from the display).
@@ -43,6 +45,7 @@ var _next: Label
 var _notice: Label
 var _dev_tag: Label
 var _heading: Label
+var _row_labels: Dictionary = {}  # cz14: "route" -> its row label
 
 
 func _ready() -> void:
@@ -146,6 +149,7 @@ func _choice_row(key: String, text: String, opts: Array) -> HBoxContainer:
 	l.custom_minimum_size.x = 150.0
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(l)
+	_row_labels[key] = l
 	for o: Array in opts:
 		var value: String = o[0]
 		var b: Button = SetupUI.button(o[1], &"SegOff")
@@ -159,8 +163,8 @@ func _choice_row(key: String, text: String, opts: Array) -> HBoxContainer:
 
 
 func _on_choice(key: String, value: String) -> void:
-	if key == "opponent" and value == "hotseat":
-		_say(SetupLaunch.why_not({"opponent": "hotseat"}))
+	if key == "first" and _hotseat():
+		_say("Hot-seat: Player 1 always takes the first turn; Player 2 picks the route and drops first.")
 		return
 	choices[key] = value
 	_say("")
@@ -172,10 +176,14 @@ func _refresh() -> void:
 		var key: String = r[0]
 		for o: Array in r[2]:
 			var b: Button = _buttons["%s:%s" % [key, o[0]]]
-			var available: bool = not (key == "opponent" and o[0] == "hotseat")
-			SetupUI.set_seg(b, String(choices.get(key, "")) == String(o[0]), available)
+			var available: bool = not (key == "first" and _hotseat())  # cz14: S1 fixes P1
+			SetupUI.set_seg(b, available and String(choices.get(key, "")) == String(o[0]), available)
+	(_row_labels["route"] as Label).text = "P2 PICKS ROUTE" if _hotseat() else "ROUTE"
 	var about: PackedStringArray = [OPPONENT_TEXT.get(String(choices["opponent"]), "")]
-	about.append(_route_text(String(choices["route"])))
+	if _hotseat():
+		about.append("Player 2: pick the route. " + _route_text(String(choices["route"])))
+	else:
+		about.append(_route_text(String(choices["route"])))
 	_about.text = "\n".join(about)
 	_next.text = SetupLaunch.preview_text(choices)
 	_dev_tag.visible = DevOverrides.is_active()
@@ -198,6 +206,10 @@ func _route_text(choice: String) -> String:
 	if closes.is_empty():
 		return "Route %s." % choice
 	return "Route %s: the gas closes %s, in that order." % [choice, ", ".join(closes)]
+
+
+func _hotseat() -> bool:
+	return String(choices.get("opponent", "")) == "hotseat"
 
 
 func _say(text: String) -> void:
