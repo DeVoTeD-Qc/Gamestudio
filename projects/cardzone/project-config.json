@@ -1,0 +1,50 @@
+{
+  "project": {
+    "name": "CardZone",
+    "concept": "A deckbuilding game where players start with a simple 10-card deck and improve it during play, designed to also work as a physical tabletop game: minimal state upkeep and no random effects.",
+    "genre": "Strategy",
+    "platform": "Web",
+    "audience": "Core",
+    "timeline": "Medium",
+    "engine": "Godot",
+    "engine_version": "4.4.1",
+    "mode": "design",
+    "competitors": "Dominion, Star Realms, Clank!",
+    "unique_selling_point": "A deterministic deckbuilder with no shuffling luck that plays the same on the web and on a table.",
+    "version": "1.0.0",
+    "created": "2026-11-04T14:01:41.116293",
+    "phase": "Market Analysis",
+    "status": "active"
+  },
+  "development_rules": [
+    "Physical-playable: every rule must be resolvable by hand with minimal bookkeeping",
+    "No random effects (no shuffles, dice or random draws)"
+  ],
+  "team": {
+    "active_agents": [
+      "master_orchestrator",
+      "producer_agent",
+      "market_analyst",
+      "data_scientist",
+      "sr_game_designer",
+      "mid_game_designer",
+      "sr_game_artist"
+    ],
+    "lead_agent": "producer_agent",
+    "orchestrator": "master_orchestrator"
+  },
+  "milestones": [],
+  "metrics": {
+    "velocity_target": "10 tasks/week",
+    "bug_threshold": "5 critical, 20 minor",
+    "performance_target": "60 FPS, < 3s load"
+  },
+  "risks": [
+    {
+      "risk": "Scope creep",
+      "probability": "Medium",
+      "impact": "High",
+      "mitigation": "Strict feature freeze after design phase"
+    }
+  ]
+}
