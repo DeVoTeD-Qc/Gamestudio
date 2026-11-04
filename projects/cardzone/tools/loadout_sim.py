@@ -7,6 +7,7 @@ always produces the same game. Used for `design/mechanics/loadout-loop-sims.md`.
 
     python3 tools/loadout_sim.py            # all scenarios, summary tables
     python3 tools/loadout_sim.py --log NAME # full turn log of one scenario
+    python3 tools/loadout_sim.py --hand 5   # any of the above with a 5-card hand (default 4)
 """
 from __future__ import annotations
 
@@ -107,6 +108,7 @@ ZONE_A = {
     8: (None, "Longshot .50", 0), 9: (4, None, None), 10: (3, "Phantom Suit", 5), 11: (5, None, None),
 }
 
+HAND = 4  # hand size (non-Hit cards drawn per turn); tunable 4 or 5, set with --hand N
 START = ["Scavenge", "Scavenge", "Scavenge", "Duck", "Dash", "Dash", "Sidearm", "Scavenge", "Duck", "Dash"]
 
 
@@ -155,7 +157,7 @@ class Game:
         """Cards p would draw next turn (top of loadout)."""
         out, nonhit = [], 0
         for card in p.loadout:
-            if nonhit >= 4:
+            if nonhit >= HAND:
                 break
             out.append(card)
             if card.t != "H" or not self.v2:
@@ -297,7 +299,7 @@ class Game:
     def do_turn(self, p):
         # Draw
         drawn = 0
-        while p.loadout and drawn < 4:
+        while p.loadout and drawn < HAND:
             card = p.loadout.pop(0)
             p.hand.append(card)
             if card.t != "H" or not self.v2:
@@ -527,7 +529,12 @@ def ablation():
 
 
 def main():
+    global HAND
     args = sys.argv[1:]
+    if "--hand" in args:
+        i = args.index("--hand")
+        HAND = int(args[i + 1])
+        args = args[:i] + args[i + 2:]
     if args[:1] == ["--ablation"]:
         ablation()
         return

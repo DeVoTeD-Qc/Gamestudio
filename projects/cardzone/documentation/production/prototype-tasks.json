@@ -1,0 +1,331 @@
+[
+  {
+    "id": "cz01",
+    "title": "Prototype rules: 1v1, private loadouts, tunables",
+    "agent": "sr-game-designer",
+    "phase": "plan",
+    "order": 10,
+    "status": "todo",
+    "note": "Add spec section 16: the private-loadout info model (who sees held cards, the Hits-on-top count, loadout size), 1v1 setup and drop order, the Standard pack for a 4- and 5-card hand, the undo boundary, one-line rulings for engine edge cases, and a tunables table for hand size and F1-F8. Done when the Mid Designer has reviewed it and the table matches prototype-scope.md section 4.",
+    "depends": []
+  },
+  {
+    "id": "cz02",
+    "title": "Sim sweep: hand 4 vs 5 in 1v1",
+    "agent": "mid-game-designer",
+    "phase": "plan",
+    "order": 11,
+    "status": "todo",
+    "note": "Extend tools/loadout_sim.py (the --hand flag exists) with routes B and C, a sweep over all 36 drop pairs and --hold N. Done when design/balance-log.md compares hand 4/5 and hold 2/1 on all three routes (first-player rate, both-out-in-final-circle rate, median last round, earliest elimination) with a hand-size recommendation.",
+    "depends": []
+  },
+  {
+    "id": "cz03",
+    "title": "Set up the Godot web project from CallingCard",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 12,
+    "status": "todo",
+    "note": "Copy and adapt CallingCard's project settings (Compatibility renderer instead of the current Forward Plus), test runner, screen profile, settings, scene router, boot, web shell, Web preset and packaging script. Done when the headless tests run and an empty build loads as a private artifact on desktop and on an iPhone in Safari.",
+    "depends": []
+  },
+  {
+    "id": "cz04",
+    "title": "Rules test cases (test-first)",
+    "agent": "qa-agent",
+    "phase": "prototype",
+    "order": 13,
+    "status": "todo",
+    "note": "Write 70+ numbered rule cases (state, action, expected result): draw with Hits at hand 4 and 5, every keyword, Adrenaline, Hold and Stow, Cover, Down, Brace, Bounty, gas, elimination, final circle and tiebreaks, every tunable switch, the private view and the spec's worked example. Done when the Mid Designer has reviewed them, before rules coding starts.",
+    "depends": [
+      "cz01"
+    ]
+  },
+  {
+    "id": "cz05",
+    "title": "Card, map and Zone data format and CardDB",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 14,
+    "status": "todo",
+    "note": "Typed .tres Resources for cards, areas, Zone cards with routes, start packs and a BalanceConfig holding every tunable, loaded by CardDB. Done when bad data fails loudly, including a weapon without damage or range and a route that closes an area twice.",
+    "depends": [
+      "cz03",
+      "cz01"
+    ]
+  },
+  {
+    "id": "cz06",
+    "title": "Write cards, map, Zone deck and balance defaults",
+    "agent": "mid-game-designer",
+    "phase": "prototype",
+    "order": 15,
+    "status": "todo",
+    "note": "Author the 27 player cards and the Bounty, the 7 areas with Cover and piles, 2-player pile sizes, 14 Zone cards for routes A/B/C, the Standard pack and every tunable default. Done when every value matches spec v0.2 and section 16 or a logged change, and CardDB loads it cleanly.",
+    "depends": [
+      "cz05",
+      "cz01"
+    ]
+  },
+  {
+    "id": "cz07",
+    "title": "Loadout Loop rules engine",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 16,
+    "status": "todo",
+    "note": "Node-free, deterministic rules: draw with free Hits, every action and keyword, Adrenaline, Hold and Stow, Cover, Down, Brace from the next hand, Bounty, gas, elimination, final circle and hard end, legal actions, a per-seat view that hides private cards, and exact replay. Done when all cz04 cases pass headless and every tunable is read from the balance file.",
+    "depends": [
+      "cz04",
+      "cz05"
+    ]
+  },
+  {
+    "id": "cz08",
+    "title": "Save, resume and replay",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 17,
+    "status": "todo",
+    "note": "Save the match after every action as setup plus move list, and resume by replaying it. Done when 20 saved AI games replay to the same state, a corrupt save offers a new match without crashing, and a Safari reload mid-turn resumes at the same step.",
+    "depends": [
+      "cz07"
+    ]
+  },
+  {
+    "id": "cz09",
+    "title": "Deterministic AI opponent and balance sim",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 18,
+    "status": "todo",
+    "note": "Rookie (the sim bots' policy) and Veteran (scores turn plans on a cloned state), behind a fairness wall that only sees public info and its own cards. Same state, same move. Done when a turn takes under 300 ms on an iPhone 12-class phone and the 216-game AI-vs-AI sweep (36 drops x 3 routes, hand 4 and 5) is in the balance log with first-player rate 45-55%.",
+    "depends": [
+      "cz07",
+      "cz06"
+    ]
+  },
+  {
+    "id": "cz10",
+    "title": "Match screen layout for phone landscape",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 19,
+    "status": "todo",
+    "note": "On mock state: the map, your hand, line and loadout strip with the next hand shown as armour, health, the opponent panel (health, Down badge, loadout count, Bounty) and the Zone track, plus a long-press inspector. Done when the layout test passes at 1280x720, 844x390 and 667x375 with safe areas, and screenshots are on the board.",
+    "depends": [
+      "cz03"
+    ]
+  },
+  {
+    "id": "cz11",
+    "title": "Turn flow on the real rules",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 20,
+    "status": "todo",
+    "note": "Play cards (Adrenaline asks Move or Search), move, loot, shoot with a damage preview, attach, patch up, ditch, then Hold toggles and End turn, with undo inside the turn, all from the engine's legal actions. Done when a full turn of every kind is playable touch-only and illegal taps say why.",
+    "depends": [
+      "cz07",
+      "cz10"
+    ]
+  },
+  {
+    "id": "cz12",
+    "title": "Brace prompt and AI turn playback",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 21,
+    "status": "todo",
+    "note": "When the AI shoots you: incoming damage after Cover and Down, your next hand with Brace shields, a suggested brace and the resulting Hits, confirmed in 2 taps. AI turns play back step by step with fast and skip. Done when a full match vs each AI level is playable on a phone.",
+    "depends": [
+      "cz11",
+      "cz09"
+    ]
+  },
+  {
+    "id": "cz13",
+    "title": "Title, match setup, end screen and first-match coach",
+    "agent": "ui-ux-agent",
+    "phase": "prototype",
+    "order": 22,
+    "status": "todo",
+    "note": "Title with Continue, match setup (opponent, first player, route, drop), end screen, pause menu, a skippable coach for Hold, Brace, Down and Adrenaline, and a hidden dev panel to switch hand size and F1-F8. Done when a new player can start, finish and replay a match without help, and a saved match continues from the title.",
+    "depends": [
+      "cz11",
+      "cz08"
+    ]
+  },
+  {
+    "id": "cz14",
+    "title": "Hot-seat pass-and-play",
+    "agent": "mechanics-developer",
+    "phase": "prototype",
+    "order": 23,
+    "status": "todo",
+    "note": "Pass and play on one device with a cover screen at every seat change and before the defender's Brace prompt, so no private card is shown to the wrong player. Done when a full hot-seat match plays touch-only. First item on the cut list.",
+    "depends": [
+      "cz12"
+    ]
+  },
+  {
+    "id": "cz15",
+    "title": "Art direction: grounded near-future island",
+    "agent": "sr-game-artist",
+    "phase": "prototype",
+    "order": 24,
+    "status": "todo",
+    "note": "One page: palette with gas and safe-zone colours, 5 rarity colours plus letters that read in greyscale, compact and full card layouts, area tile look (open and gas), the icon list and weapon silhouettes. No real brands. Done when it is on the board for review and cz16 can build from it.",
+    "depends": []
+  },
+  {
+    "id": "cz16",
+    "title": "Placeholder art kit",
+    "agent": "technical-artist",
+    "phase": "prototype",
+    "order": 25,
+    "status": "todo",
+    "note": "Procedural card art by type and rarity (from CallingCard's art kit), Hit and Bounty cards, 7 area tiles with gas states, the map, generated icons, OFL fonts, theme and a rarity glint for Epic and Legendary. Done when the card contact sheet is reviewed and imported assets stay under 5 MB (art-kit test).",
+    "depends": [
+      "cz03",
+      "cz15"
+    ]
+  },
+  {
+    "id": "cz17",
+    "title": "Looting and shooting feel",
+    "agent": "game-feel-developer",
+    "phase": "prototype",
+    "order": 26,
+    "status": "todo",
+    "note": "Event-driven tracer and hit marker, Hits slamming onto the loadout top, Brace cards burning, loot pop by rarity, supply-drop landing, gas sweep, Down pulse, Bounty heal and elimination stamp, with placeholder sfx and a fast-animations toggle. Done when every beat is skippable and the iPhone holds 30+ FPS.",
+    "depends": [
+      "cz12",
+      "cz16"
+    ]
+  },
+  {
+    "id": "cz18",
+    "title": "Playtest logger, survey and KPI sheet",
+    "agent": "data-scientist",
+    "phase": "prototype",
+    "order": 27,
+    "status": "todo",
+    "note": "Adapt CallingCard's opt-in logger, survey and kpi_sheet.py to the plan's section 8 events and KPIs (pack time, turn time, early elimination, comeback, hold and brace use, fully braced shots). Done when the schema test passes and Download log works on iPhone Safari and desktop.",
+    "depends": [
+      "cz03",
+      "cz11"
+    ]
+  },
+  {
+    "id": "cz19",
+    "title": "Rules, device and release check",
+    "agent": "qa-agent",
+    "phase": "qa",
+    "order": 28,
+    "status": "todo",
+    "note": "Test plan from the spec and the definition of done; iPhone Safari landscape first, then Android and desktop; touch-only and mouse-only matches vs both AI levels; resume after reload and phone lock; no private-info leaks to the AI; load time recorded. Done at 0 critical and at most 10 minor open bugs.",
+    "depends": [
+      "cz08",
+      "cz09",
+      "cz13",
+      "cz14",
+      "cz17",
+      "cz18"
+    ]
+  },
+  {
+    "id": "cz20",
+    "title": "Release candidate build and play link",
+    "agent": "mechanics-developer",
+    "phase": "qa",
+    "order": 29,
+    "status": "todo",
+    "note": "Export and package the RC, publish it as a private artifact and put the link on the CardZone project card. Done when the head can open it on his iPhone and the title shows the build version.",
+    "depends": [
+      "cz19"
+    ]
+  },
+  {
+    "id": "cz21",
+    "title": "Internal playtest and report",
+    "agent": "data-scientist",
+    "phase": "play",
+    "order": 30,
+    "status": "todo",
+    "note": "At least 3 sessions including the head on his iPhone, 2+ matches each. KPI sheet from real logs. Done when the report gives the KPI table and a recommendation on hand size, each F1-F8 default and held-card visibility, plus an iterate, extend to 3-4 players or stop call.",
+    "depends": [
+      "cz20"
+    ]
+  },
+  {
+    "id": "czb1",
+    "title": "Concept B Reload: investigation",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 40,
+    "status": "todo",
+    "note": "Backlog (Q1: 'investigate the others later'): a short paper design and sim pass on Reload, compared with A after the prototype playtest.",
+    "depends": []
+  },
+  {
+    "id": "czb2",
+    "title": "Concept C Shrinking Ring as a map variant",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 41,
+    "status": "todo",
+    "note": "Backlog (Q10): adapt the shrinking rondel as an alternative map for Loadout Loop.",
+    "depends": []
+  },
+  {
+    "id": "czb3",
+    "title": "Concept D Supply Line: investigation",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 42,
+    "status": "todo",
+    "note": "Backlog (Q1): a short design pass on the conveyor market for 3-5 players.",
+    "depends": []
+  },
+  {
+    "id": "czb4",
+    "title": "3-4 players",
+    "agent": "mechanics-developer",
+    "phase": "backlog",
+    "order": 43,
+    "status": "todo",
+    "note": "Backlog (Q2, Q5): multi-AI matches, placement points, 3-4 player pile sizes, the camper check (F5), and a UI for several opponents. After the 1v1 playtest.",
+    "depends": []
+  },
+  {
+    "id": "czb5",
+    "title": "Solo mode vs Raiders and the Warden",
+    "agent": "sr-game-designer",
+    "phase": "backlog",
+    "order": 44,
+    "status": "todo",
+    "note": "Backlog (Q5): detail spec section 14, then build it on the same engine.",
+    "depends": []
+  },
+  {
+    "id": "czb6",
+    "title": "Print-and-play sheet",
+    "agent": "sr-game-artist",
+    "phase": "backlog",
+    "order": 45,
+    "status": "todo",
+    "note": "Backlog: the physical version is the USP; a print-and-play file once the 1v1 values settle.",
+    "depends": []
+  },
+  {
+    "id": "czb7",
+    "title": "Prior-art check before any external claim",
+    "agent": "market-analyst",
+    "phase": "backlog",
+    "order": 46,
+    "status": "todo",
+    "note": "Backlog (market-scan risk): a deeper check of 'your next hand is your armour' before any pitch or store text.",
+    "depends": []
+  }
+]
