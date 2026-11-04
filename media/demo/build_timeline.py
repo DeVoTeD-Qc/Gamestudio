@@ -37,18 +37,44 @@ TASKS, CHAT, PROG, ACT = load('tasks'), load('chat'), load('progress'), load('ac
 # Usage-limit pause window. Source: the p18/p19 subagent transcripts (measured by the lead session):
 # both agents stopped on the account's 5-hour usage limit at 06:57:01 UTC and resumed at 11:14:10 UTC.
 # There was no other limit wait before the last commit (13:42). Board progress times can't be used for
-# this: several were guessed by the agents.
+# this: several were guessed by the agents. The art pass on Nov 4 (13:45 -> 20:33 UTC) had no limit
+# wait either: the Nov 4 pauses (CallingCard agents, d428b0d 07:11 and fbead69 11:38) all ended by 12:10,
+# before k-art1 started, so there is nothing to subtract there.
 LIMIT_PAUSE = ('06:57:01', '11:14:10')
 COMMITS = []
 for line in open(os.path.join(DATA, 'gitlog.txt')):
     iso, h, subj = line.rstrip('\n').split('|', 2)
     COMMITS.append({'at': iso, 'hash': h, 'subject': subj, 'wip': subj.startswith('WIP')})
+# The "start to playable" build ends at cec10b9 (Nov 3, 13:42 UTC); the stats card covers that span.
+# After it the repo also holds other studio projects (CallingCard, CardZone), so the replay's commit
+# counter only adds later commits that are Killstreak's: the art pass on Nov 4 (k-art*, incoming art).
+BUILD_END = 'cec10b9'
+_bi = next(i for i, c in enumerate(COMMITS) if c['hash'] == BUILD_END)
+BUILD = COMMITS[:_bi + 1]
+KS_COMMITS = BUILD + [c for c in COMMITS[_bi + 1:] if re.match(r'(Killstreak: |k-art\d)', c['subject']) or 'k-art' in c['subject']]
+# Tasks that belong to the art pass (or came after the build); the stats card leaves them out.
+LATER_TASKS = {'k-art1', 'k-art2', 'k-art3', 'k-art4', 'k-se', 'demo1', 'demo2'}
+
+
+DAY0 = '2026-11-03'
 
 
 def sod(s):
-    """'2026-11-03T03:18:53+00:00' or '03:18:53' -> seconds of day (UTC)."""
+    """'2026-11-03T03:18:53+00:00' or '03:18:53' -> seconds since 2026-11-03 00:00 UTC (a plain time
+    means Nov 3; 'Nov 4 13:45:41' or an ISO date on Nov 4 is 86400 + seconds of day)."""
+    day = 0
+    d = re.match(r'(\d{4}-\d\d-\d\d)T', s)
+    if d:
+        day = (datetime.fromisoformat(d.group(1)) - datetime.fromisoformat(DAY0)).days
+    elif s.startswith('Nov 4 '):
+        day = 1
     m = re.search(r'(\d\d):(\d\d)(?::(\d\d))?', s.split('T')[-1])
-    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3) or 0)
+    return day * 86400 + int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3) or 0)
+
+
+def n4(s):
+    """A Nov 4 clock time ('13:45:41') -> seconds since Nov 3 00:00 UTC."""
+    return 86400 + sod(s)
 
 
 def commit_for(task_id):
@@ -393,26 +419,133 @@ clock += [{'t': S + 0.3, 'utc': sod('11:37:41')}, {'t': S + 4.6, 'utc': sod('12:
 T += 19
 
 # 11. Stats card (computed)
-first, last = COMMITS[0], COMMITS[-1]
+first, last = BUILD[0], BUILD[-1]
 span = sod(last['at']) - sod(first['at'])
 paused = sod(LIMIT_PAUSE[1]) - sod(LIMIT_PAUSE[0])
 active = span - paused
 hm = lambda x: '%dh %02dm' % (x // 3600, x % 3600 // 60)
-shots = len(glob.glob(os.path.join(HERE, '..', '..', 'projects', 'killstreak', 'qa', 'screenshots', '*.png')))
+shots = len([f for f in glob.glob(os.path.join(HERE, '..', '..', 'projects', 'killstreak', 'qa', 'screenshots', '*.png'))
+             if not os.path.basename(f).startswith('k-art')])   # QA screenshots of the build span
+BTASKS = {k: v for k, v in TASKS.items() if k not in LATER_TASKS}
 agents_n = len(glob.glob(os.path.join(HERE, '..', '..', '.claude', 'agents', '*.md')))
 stats = {
     'wall': '%dh %02dm' % (span // 3600, span % 3600 // 60), 'from': first['at'][11:16], 'to': last['at'][11:16],
     'active': hm(active), 'paused': hm(paused), 'pause_from': LIMIT_PAUSE[0][:5], 'pause_to': LIMIT_PAUSE[1][:5],
-    'agents': agents_n, 'tasks': len(TASKS), 'commits': len(COMMITS),
-    'commits_nonwip': sum(1 for c in COMMITS if not c['wip']),
+    'agents': agents_n, 'tasks': len(BTASKS), 'commits': len(BUILD),
+    'commits_nonwip': sum(1 for c in BUILD if not c['wip']),
     'tests': 317, 'screens': shots,
-    'created_by': {k: sum(1 for t in TASKS.values() if t.get('createdBy') == k) for k in
+    'created_by': {k: sum(1 for t in BTASKS.values() if t.get('createdBy') == k) for k in
                    ['lead', 'master-orchestrator', 'producer-agent', 'you']},
 }
 S = scene('stats', T, 7, 'stats', captions=[(0.0, 7, 'About %d hours %d minutes of active work. Another %d h %d min was spent waiting at the usage limit.' % (
     active // 3600, round(active % 3600 / 60), paused // 3600, paused % 3600 // 60))])
 ev(S, 'stats', **stats)
 T += 7
+
+# 11b. The art pass (Nov 4). Sources: board tasks k-art1..k-art4 with their progress reports, the lead's
+# chat reply c-ks-art, the prompt pack itself, and commits dc9fa41, a8c307e, 1c59bcf, 508d350, 2778cf5.
+# The upload itself (6 zip parts, the refused call-in tablet and its softer re-prompt) happened in the
+# lead session's chat; the board and git show its result: batch1 README ("47 of 48 ... the image
+# generator rejected all retry attempts" for fx_callin_tablet) and batch 2 with that one image.
+REPO = os.path.join(HERE, '..', '..')
+PACK = open(os.path.join(REPO, 'projects', 'killstreak', 'documentation', 'art', 'image-prompt-pack.md')).read()
+STYLE = re.search(r'## 2\. Shared style block.*?```\n(.*?)\n```', PACK, re.S).group(1)
+RIFLE = re.search(r'`card_rifleman\.png`.*?```\n(.*?)\n```', PACK, re.S).group(1)
+assert RIFLE.startswith(STYLE)
+ASSETS = os.path.join(REPO, 'projects', 'killstreak', 'source', 'project-killstreak', 'assets')
+ART_SLOTS = []
+for n, name in re.findall(r'^#### (\d+)\. `([a-z0-9_]+)\.png`', PACK, re.M):
+    f = (glob.glob(os.path.join(ASSETS, '**', name + '.webp'), recursive=True) or [None])[0]
+    ART_SLOTS.append({'n': int(n), 'name': name, 'src': os.path.relpath(f, HERE) if f else None})
+assert len(ART_SLOTS) == 48 and all(a['src'] for a in ART_SLOTS)
+pk = TASKS['k-art1']
+
+S = scene('artpack', T, 12, 'floor', captions=[
+    (0.2, 4.4, 'Next day, the art pass. The Sr Game Artist maps every art slot in the game and writes a prompt pack.'),
+    (4.4, 12, '48 ready-to-paste prompts for the head’s ChatGPT image generator: one shared style block, a reject checklist.')])
+ev(S, 'phase', phase='play')
+ev(S, 'project', name='Killstreak', sub='Art pass · Web · Godot 4.4.1')
+ev(S, 'clearDone', ids=[k for k in TASKS if k not in LATER_TASKS])
+add(S + 0.3, 'k-art1', 'todo', fresh=True)
+status(S + 0.8, 'k-art1', 'doing')
+ka1 = progress_of('k-art1')
+for i, p in enumerate([p for p in ka1 if p['status'] != 'done']):
+    agent(S + 0.9 + i * 1.2, 'sr-game-artist', 'working', task='k-art1', text=p['text'], pct=p['pct'])
+status(S + 3.3, 'k-art1', 'review')
+agent(S + 3.3, 'sr-game-artist', 'idle')
+c = next(c for c in COMMITS if c['hash'] == 'dc9fa41')
+ev(S + 3.5, 'commit', hash=c['hash'], subject=c['subject'])
+ev(S + 3.9, 'tap', sel='[data-card="k-art1"]')
+ev(S + 4.2, 'drawer', kind='prompt', task='k-art1', style=STYLE, prompt=RIFLE[len(STYLE):].strip(),
+   file='card_rifleman.png', chips=['48 slots', '36 replace code art · 12 new', 'shared style block', 'reject checklist',
+                                    'session A: 22 images · session B: 26'],
+   result=next(a['src'] for a in ART_SLOTS if a['name'] == 'card_rifleman'))
+ev(S + 11.5, 'drawer', kind=None)
+clock += [{'t': S, 'utc': n4('13:44:30')}, {'t': S + 0.9, 'utc': sod(ka1[0]['at'])}, {'t': S + 3.3, 'utc': sod(ka1[-1]['at'])},
+          {'t': S + 3.5, 'utc': sod(c['at'])}, {'t': S + 12, 'utc': n4('13:52:20')}]
+T += 12
+
+S = scene('upload', T, 10, 'floor', captions=[
+    (0.0, 5.6, 'The head generates the images on the phone and uploads them: 6 zip parts, 47 of the 48 images.'),
+    (5.6, 10, 'The generator refused one, the call-in tablet. A softer re-prompt got it, uploaded as batch 2.')])
+ev(S + 0.05, 'drawer', kind='chat', clear=True)
+ev(S + 0.25, 'chat', who='claude', text=CHAT['c-ks-art']['text'].split('. ', 1)[1].replace(' Each upload wakes me, and the Technical Artist imports the batch.', ''))
+add(S + 0.6, 'k-art2', 'doing', fresh=True)
+ev(S + 2.8, 'drawer', kind='upload', task='k-art2', zips=6, refused='fx_callin_tablet')
+b1 = next(c for c in COMMITS if c['hash'] == 'a8c307e')
+b2 = next(c for c in COMMITS if c['hash'] == '1c59bcf')
+ev(S + 6.0, 'commit', hash=b1['hash'], subject=b1['subject'])
+status(S + 6.0, 'k-art2', 'done')
+ev(S + 6.1, 'upmark', what='refused')
+# the Technical Artist starts k-art3 on batch 1 right away (18:40:53), before batch 2 lands
+ka3, ka4 = progress_of('k-art3'), progress_of('k-art4')
+ka3w = [p for p in ka3 if p['status'] != 'done']
+add(S + 6.3, 'k-art3', 'doing', fresh=True)
+agent(S + 6.3, 'technical-artist', 'working', task='k-art3', text=ka3w[0]['text'], pct=ka3w[0]['pct'])
+agent(S + 7.0, 'technical-artist', 'working', task='k-art3', text=ka3w[1]['text'], pct=ka3w[1]['pct'])
+ev(S + 7.0, 'upmark', what='reprompt')
+ev(S + 7.8, 'commit', hash=b2['hash'], subject=b2['subject'])
+ev(S + 7.8, 'upmark', what='batch2')
+ev(S + 9.6, 'drawer', kind=None)
+clock += [{'t': S + 0.25, 'utc': sod(CHAT['c-ks-art']['at'])}, {'t': S + 6.0, 'utc': sod(b1['at'])},
+          {'t': S + 6.3, 'utc': sod(ka3w[0]['at'])}, {'t': S + 7.0, 'utc': sod(ka3w[1]['at'])},
+          {'t': S + 7.8, 'utc': sod(b2['at'])}, {'t': S + 10, 'utc': sod(b2['at']) + 50}]
+T += 10
+
+SHOT = lambda a, b: {'before': 'k-art%s-before-%s-844x390@3x.png' % (a, b), 'after': 'k-art%s-after-%s-844x390@3x.png' % (a, b)}
+S = scene('artin', T, 15, 'floor', captions=[
+    (0.0, 2.9, 'The Technical Artist checks every image against the reject checklist and wires it into the game.'),
+    (2.9, 10.6, 'k-art3: Title key art, run map, Supply Drop, perk patches, lanes. Real phone screenshots, before → after.'),
+    (10.6, 15, 'k-art4: the painted art moves onto the hand cards and the units deployed on the board.')])
+c3 = next(c for c in COMMITS if c['hash'] == '508d350')
+c4 = next(c for c in COMMITS if c['hash'] == '2778cf5')
+agent(S + 0.4, 'technical-artist', 'working', task='k-art3', text=ka3w[2]['text'], pct=ka3w[2]['pct'])
+status(S + 2.5, 'k-art3', 'review')
+agent(S + 2.5, 'technical-artist', 'idle')
+ev(S + 2.6, 'commit', hash=c3['hash'], subject=c3['subject'])
+ev(S + 2.6, 'tests', n=323)
+ev(S + 2.8, 'drawer', kind='wipes', task='k-art3', step=1.5, pairs=[
+    dict(SHOT(3, '1-title'), label='Title key art', chip='48 images, none rejected'),
+    dict(SHOT(3, '3-runmap'), label='Run map: mode art and the run backdrop', chip='+3.0 MB, still under the 5 MB budget'),
+    dict(SHOT(3, '10-supply-drop'), label='Supply Drop: backdrop and full card art', chip='procedural art kept as fallback'),
+    dict(SHOT(3, '11-perk-offer'), label='Perk offer: perk patches'),
+    dict(SHOT(3, '5-match-round1'), label='Match: lanes, card back on INCOMING, perk rings')])
+add(S + 10.3, 'k-art4', 'todo', fresh=True)
+status(S + 10.5, 'k-art4', 'doing')
+agent(S + 10.5, 'technical-artist', 'working', task='k-art4', text=ka4[0]['text'], pct=ka4[0]['pct'])
+ev(S + 10.6, 'drawer', kind='wipes', task='k-art4', step=4.0, pairs=[
+    dict(SHOT(4, 'board-fullhand'), label='Mid-round board, full 7-card hand (same board, art switch off → on)',
+         chip='323 → 329 tests passing')])
+agent(S + 11.6, 'technical-artist', 'working', task='k-art4', text=ka4[1]['text'], pct=ka4[1]['pct'])
+status(S + 12.6, 'k-art4', 'review')
+agent(S + 12.6, 'technical-artist', 'idle')
+ev(S + 12.7, 'commit', hash=c4['hash'], subject=c4['subject'])
+ev(S + 12.7, 'tests', n=329)
+ev(S + 14.6, 'drawer', kind=None)
+clock += [{'t': S + 0.4, 'utc': sod(ka3w[2]['at'])}, {'t': S + 2.5, 'utc': sod(ka3[-1]['at'])}, {'t': S + 2.6, 'utc': sod(c3['at'])},
+          {'t': S + 10.5, 'utc': sod(ka4[0]['at'])}, {'t': S + 12.6, 'utc': sod(ka4[-1]['at'])},
+          {'t': S + 12.7, 'utc': sod(c4['at'])}, {'t': S + 15, 'utc': sod(c4['at']) + 30}]
+T += 15
 
 # 12. The real game
 GAME_DUR = 0
@@ -444,7 +577,7 @@ out = {'fps': 30, 'width': 1920, 'height': 1080, 'duration': round(T, 3), 'scene
        'names': AGENT_NAMES, 'game': {'clips': game_clips, 'shots': game_shots, 'frames': 'game/frames.json'},
        'docs': {'design-review': open(os.path.join(HERE, '..', '..', 'projects', 'killstreak', 'documentation', 'DESIGN_REVIEW.md')).read()},
        'questions': {k: TASKS[k]['questions'] for k in ('t15', 't16q')},
-       'commitTimes': [sod(c['at']) for c in COMMITS],
+       'commitTimes': [sod(c['at']) for c in KS_COMMITS], 'art': ART_SLOTS,
        'stats': stats, 'shots': '../../projects/killstreak/qa/screenshots', 'gameDir': 'game'}
 json.dump(out, open(os.path.join(HERE, 'timeline.json'), 'w'), indent=1)
 print('timeline.json: %.1f s, %d events, %d scenes' % (T, len(events), len(scenes)))

@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 159.3,
+ "duration": 178.0,
  "scenes": [
   {
    "id": "title",
@@ -198,17 +198,79 @@
    ]
   },
   {
-   "id": "game",
+   "id": "artpack",
    "start": 135.5,
-   "end": 153.8,
+   "end": 147.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 135.7,
+     "until": 139.9,
+     "text": "Next day, the art pass. The Sr Game Artist maps every art slot in the game and writes a prompt pack."
+    },
+    {
+     "t": 139.9,
+     "until": 147.5,
+     "text": "48 ready-to-paste prompts for the head\u2019s ChatGPT image generator: one shared style block, a reject checklist."
+    }
+   ]
+  },
+  {
+   "id": "upload",
+   "start": 147.5,
+   "end": 156.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 147.5,
+     "until": 152.3,
+     "text": "The head generates the images on the phone and uploads them: 6 zip parts, 47 of the 48 images."
+    },
+    {
+     "t": 152.3,
+     "until": 156.5,
+     "text": "The generator refused one, the call-in tablet. A softer re-prompt got it, uploaded as batch 2."
+    }
+   ]
+  },
+  {
+   "id": "artin",
+   "start": 156.5,
+   "end": 171.5,
+   "view": "floor",
+   "title": null,
+   "captions": [
+    {
+     "t": 156.5,
+     "until": 159.4,
+     "text": "The Technical Artist checks every image against the reject checklist and wires it into the game."
+    },
+    {
+     "t": 159.4,
+     "until": 167.1,
+     "text": "k-art3: Title key art, run map, Supply Drop, perk patches, lanes. Real phone screenshots, before \u2192 after."
+    },
+    {
+     "t": 167.1,
+     "until": 171.5,
+     "text": "k-art4: the painted art moves onto the hand cards and the units deployed on the board."
+    }
+   ]
+  },
+  {
+   "id": "game",
+   "start": 171.5,
+   "end": 172.5,
    "view": "game",
    "title": null,
    "captions": []
   },
   {
    "id": "end",
-   "start": 153.8,
-   "end": 159.3,
+   "start": 172.5,
+   "end": 178.0,
    "view": "end",
    "title": null,
    "captions": []
@@ -3273,6 +3335,423 @@
    },
    "t": 128.5,
    "k": "stats"
+  },
+  {
+   "phase": "play",
+   "t": 135.5,
+   "k": "phase"
+  },
+  {
+   "name": "Killstreak",
+   "sub": "Art pass \u00b7 Web \u00b7 Godot 4.4.1",
+   "t": 135.5,
+   "k": "project"
+  },
+  {
+   "ids": [
+    "p20",
+    "p13",
+    "p04",
+    "p01",
+    "rulings",
+    "p06",
+    "p10",
+    "f01",
+    "t13",
+    "f02",
+    "p18",
+    "v01",
+    "p07",
+    "b01",
+    "p05",
+    "p12",
+    "t10",
+    "rulings2",
+    "f03",
+    "t5",
+    "t16",
+    "t9",
+    "p03",
+    "ip-check",
+    "t6",
+    "p14",
+    "p08",
+    "p16",
+    "p19",
+    "p11",
+    "play1",
+    "p17",
+    "t8",
+    "p15",
+    "t1",
+    "t14",
+    "t7",
+    "t11",
+    "f04",
+    "t2",
+    "t17",
+    "t16q",
+    "t15",
+    "t12",
+    "p02",
+    "t4",
+    "p09",
+    "t3"
+   ],
+   "t": 135.5,
+   "k": "clearDone"
+  },
+  {
+   "task": {
+    "id": "k-art1",
+    "title": "Image prompt pack for ChatGPT",
+    "agent": "sr-game-artist",
+    "createdBy": "you",
+    "createdFrom": "chat",
+    "depends": [],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 135.8,
+   "k": "add"
+  },
+  {
+   "id": "k-art1",
+   "status": "doing",
+   "t": 136.3,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "k-art1",
+   "text": "Reading art direction, design docs and procedural art code to map every art slot.",
+   "pct": 5,
+   "t": 136.4,
+   "k": "agent"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "working",
+   "task": "k-art1",
+   "text": "Mapped 47 art slots and their sizes; writing the prompt pack now.",
+   "pct": 35,
+   "t": 137.6,
+   "k": "agent"
+  },
+  {
+   "id": "k-art1",
+   "status": "review",
+   "t": 138.8,
+   "k": "status"
+  },
+  {
+   "id": "sr-game-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 138.8,
+   "k": "agent"
+  },
+  {
+   "hash": "dc9fa41",
+   "subject": "k-art1: Killstreak image prompt pack (48 slots) and incoming drop folder",
+   "t": 139.0,
+   "k": "commit"
+  },
+  {
+   "sel": "[data-card=\"k-art1\"]",
+   "t": 139.4,
+   "k": "tap"
+  },
+  {
+   "kind": "prompt",
+   "task": "k-art1",
+   "style": "Original stylized 2D duotone painting for a mobile card game, modern private-military theme. Flat graphic shapes, bold readable silhouette, light film grain. Palette: slate black #12161A, gunmetal #232A31, fog white #D8DEE3, olive #5B6B3A, sand #C2A878, concrete #7A828A, plus one accent color. Dusk sodium-floodlight rim light, deep soft shadows. No text, letters, numbers, logos, insignia, flags, emblems or brand marks. Faces hidden by helmets, masks or goggles. No gore.",
+   "prompt": "A lone contractor rifleman in helmet and plate carrier, kneeling behind a low concrete barrier, compact rifle raised, three-quarter view from slightly low. Blurred stacked shipping containers behind. Accent: signal amber #FFB020 rim light. Wide landscape composition, subject centered, keep the top and bottom 10% free of important detail.",
+   "file": "card_rifleman.png",
+   "chips": [
+    "48 slots",
+    "36 replace code art \u00b7 12 new",
+    "shared style block",
+    "reject checklist",
+    "session A: 22 images \u00b7 session B: 26"
+   ],
+   "result": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_rifleman.webp",
+   "t": 139.7,
+   "k": "drawer"
+  },
+  {
+   "kind": null,
+   "t": 147.0,
+   "k": "drawer"
+  },
+  {
+   "kind": "chat",
+   "clear": true,
+   "t": 147.55,
+   "k": "drawer"
+  },
+  {
+   "who": "claude",
+   "text": "The image prompt pack is ready: open 'Image prompt pack for ChatGPT' (k-art1) in Review. It has 48 prompts, and session A is 22 images (about 25 min).\n\nNew: the chat now has a '+ Images' button, so you can attach generated images straight from your iPhone and send them.",
+   "t": 147.75,
+   "k": "chat"
+  },
+  {
+   "task": {
+    "id": "k-art2",
+    "title": "Generate session A images in ChatGPT (22)",
+    "agent": "you",
+    "createdBy": "sr-game-artist",
+    "createdFrom": "k-art1",
+    "depends": [
+     "k-art1"
+    ],
+    "fresh": true
+   },
+   "status": "doing",
+   "t": 148.1,
+   "k": "add"
+  },
+  {
+   "kind": "upload",
+   "task": "k-art2",
+   "zips": 6,
+   "refused": "fx_callin_tablet",
+   "t": 149.5,
+   "k": "drawer"
+  },
+  {
+   "hash": "a8c307e",
+   "subject": "Killstreak: incoming generated art batch 1 (47 of 48 game-ready WebP from the k-art1 prompt pack)",
+   "t": 152.7,
+   "k": "commit"
+  },
+  {
+   "id": "k-art2",
+   "status": "done",
+   "t": 152.7,
+   "k": "status"
+  },
+  {
+   "what": "refused",
+   "t": 152.8,
+   "k": "upmark"
+  },
+  {
+   "task": {
+    "id": "k-art3",
+    "title": "Import generated art into Killstreak's UI",
+    "agent": "technical-artist",
+    "createdBy": "you",
+    "createdFrom": "chat",
+    "depends": [
+     "k-art1"
+    ],
+    "fresh": true
+   },
+   "status": "doing",
+   "t": 153.0,
+   "k": "add"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "k-art3",
+   "text": "Starting the batch1 art import: reading the prompt pack and the 47 incoming images.",
+   "pct": 3,
+   "t": 153.0,
+   "k": "agent"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "k-art3",
+   "text": "Reviewed all 47 images (none rejected so far) and took the before phone shots; now testing import settings.",
+   "pct": 25,
+   "t": 153.7,
+   "k": "agent"
+  },
+  {
+   "what": "reprompt",
+   "t": 153.7,
+   "k": "upmark"
+  },
+  {
+   "hash": "1c59bcf",
+   "subject": "Killstreak: incoming art batch 2 (fx_callin_tablet, cropped to 1536x864 WebP)",
+   "t": 154.5,
+   "k": "commit"
+  },
+  {
+   "what": "batch2",
+   "t": 154.5,
+   "k": "upmark"
+  },
+  {
+   "kind": null,
+   "t": 156.1,
+   "k": "drawer"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "k-art3",
+   "text": "All 48 images are wired in, including the batch2 call-in tablet. After shots look good; now running the fallback test with deleted files and measuring load time.",
+   "pct": 70,
+   "t": 156.9,
+   "k": "agent"
+  },
+  {
+   "id": "k-art3",
+   "status": "review",
+   "t": 159.0,
+   "k": "status"
+  },
+  {
+   "id": "technical-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 159.0,
+   "k": "agent"
+  },
+  {
+   "hash": "508d350",
+   "subject": "k-art3: Killstreak uses the 48 generated images (cards, lanes, title, run/supply backdrops, run map, card back, perks, call-in) with procedural fallback",
+   "t": 159.1,
+   "k": "commit"
+  },
+  {
+   "n": 323,
+   "t": 159.1,
+   "k": "tests"
+  },
+  {
+   "kind": "wipes",
+   "task": "k-art3",
+   "step": 1.5,
+   "pairs": [
+    {
+     "before": "k-art3-before-1-title-844x390@3x.png",
+     "after": "k-art3-after-1-title-844x390@3x.png",
+     "label": "Title key art",
+     "chip": "48 images, none rejected"
+    },
+    {
+     "before": "k-art3-before-3-runmap-844x390@3x.png",
+     "after": "k-art3-after-3-runmap-844x390@3x.png",
+     "label": "Run map: mode art and the run backdrop",
+     "chip": "+3.0 MB, still under the 5 MB budget"
+    },
+    {
+     "before": "k-art3-before-10-supply-drop-844x390@3x.png",
+     "after": "k-art3-after-10-supply-drop-844x390@3x.png",
+     "label": "Supply Drop: backdrop and full card art",
+     "chip": "procedural art kept as fallback"
+    },
+    {
+     "before": "k-art3-before-11-perk-offer-844x390@3x.png",
+     "after": "k-art3-after-11-perk-offer-844x390@3x.png",
+     "label": "Perk offer: perk patches"
+    },
+    {
+     "before": "k-art3-before-5-match-round1-844x390@3x.png",
+     "after": "k-art3-after-5-match-round1-844x390@3x.png",
+     "label": "Match: lanes, card back on INCOMING, perk rings"
+    }
+   ],
+   "t": 159.3,
+   "k": "drawer"
+  },
+  {
+   "task": {
+    "id": "k-art4",
+    "title": "Show card art on hand cards and deployed units",
+    "agent": "technical-artist",
+    "createdBy": "you",
+    "createdFrom": "chat",
+    "depends": [
+     "k-art3"
+    ],
+    "fresh": true
+   },
+   "status": "todo",
+   "t": 166.8,
+   "k": "add"
+  },
+  {
+   "id": "k-art4",
+   "status": "doing",
+   "t": 167.0,
+   "k": "status"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "k-art4",
+   "text": "Starting k-art4: reading the hand card and unit slot layouts to add painted art to hand cards and deployed units.",
+   "pct": 3,
+   "t": 167.0,
+   "k": "agent"
+  },
+  {
+   "kind": "wipes",
+   "task": "k-art4",
+   "step": 4.0,
+   "pairs": [
+    {
+     "before": "k-art4-before-board-fullhand-844x390@3x.png",
+     "after": "k-art4-after-board-fullhand-844x390@3x.png",
+     "label": "Mid-round board, full 7-card hand (same board, art switch off \u2192 on)",
+     "chip": "323 \u2192 329 tests passing"
+    }
+   ],
+   "t": 167.1,
+   "k": "drawer"
+  },
+  {
+   "id": "technical-artist",
+   "status": "working",
+   "task": "k-art4",
+   "text": "Hand chips, board units and mulligan cards now show painted art, and all 329 tests pass; now taking final screenshots, measuring frame time and building.",
+   "pct": 70,
+   "t": 168.1,
+   "k": "agent"
+  },
+  {
+   "id": "k-art4",
+   "status": "review",
+   "t": 169.1,
+   "k": "status"
+  },
+  {
+   "id": "technical-artist",
+   "status": "idle",
+   "task": null,
+   "text": null,
+   "pct": null,
+   "t": 169.1,
+   "k": "agent"
+  },
+  {
+   "hash": "2778cf5",
+   "subject": "k-art4: Killstreak painted art on hand chips, deployed units, mulligan and loadout tiles (procedural fallback, kill switch)",
+   "t": 169.2,
+   "k": "commit"
+  },
+  {
+   "n": 329,
+   "t": 169.2,
+   "k": "tests"
+  },
+  {
+   "kind": null,
+   "t": 171.1,
+   "k": "drawer"
   }
  ],
  "clock": [
@@ -3375,6 +3854,78 @@
   {
    "t": 125.7,
    "utc": 46356
+  },
+  {
+   "t": 135.5,
+   "utc": 135870
+  },
+  {
+   "t": 136.4,
+   "utc": 135941
+  },
+  {
+   "t": 138.8,
+   "utc": 136234
+  },
+  {
+   "t": 139.0,
+   "utc": 136263
+  },
+  {
+   "t": 147.5,
+   "utc": 136340
+  },
+  {
+   "t": 147.75,
+   "utc": 136350
+  },
+  {
+   "t": 152.7,
+   "utc": 153622
+  },
+  {
+   "t": 153.0,
+   "utc": 153653
+  },
+  {
+   "t": 153.7,
+   "utc": 154172
+  },
+  {
+   "t": 154.5,
+   "utc": 154612
+  },
+  {
+   "t": 156.5,
+   "utc": 154662
+  },
+  {
+   "t": 156.9,
+   "utc": 154947
+  },
+  {
+   "t": 159.0,
+   "utc": 155789
+  },
+  {
+   "t": 159.1,
+   "utc": 155829
+  },
+  {
+   "t": 167.0,
+   "utc": 156377
+  },
+  {
+   "t": 169.1,
+   "utc": 160359
+  },
+  {
+   "t": 169.2,
+   "utc": 160393
+  },
+  {
+   "t": 171.5,
+   "utc": 160423
   }
  ],
  "agents": [
@@ -3445,340 +3996,7 @@
  },
  "game": {
   "clips": [],
-  "shots": [
-   {
-    "type": "card",
-    "text": "DEPLOY.",
-    "dur": 0.9,
-    "kicker": "KILLSTREAK",
-    "color": "amber",
-    "at": 135.5
-   },
-   {
-    "type": "clip",
-    "src": [
-     23.128,
-     26.73
-    ],
-    "dur": 1.2,
-    "zoom": [
-     540,
-     330,
-     1.15,
-     1.3
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": "fast",
-    "glitch": false,
-    "label": "deploy",
-    "at": 136.4
-   },
-   {
-    "type": "clip",
-    "src": [
-     27.93,
-     28.93
-    ],
-    "dur": 1.0,
-    "zoom": [
-     500,
-     250,
-     1.4,
-     1.6
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": null,
-    "glitch": false,
-    "label": "first shot",
-    "focus2": [
-     560,
-     320
-    ],
-    "at": 137.6
-   },
-   {
-    "type": "clip",
-    "src": [
-     30.63,
-     31.53
-    ],
-    "dur": 0.9,
-    "zoom": [
-     500,
-     200,
-     1.5,
-     1.7
-    ],
-    "shake": 1.0,
-    "flash": "amber",
-    "ramp": null,
-    "glitch": false,
-    "label": "eliminated",
-    "at": 138.6
-   },
-   {
-    "type": "clip",
-    "src": [
-     34.538,
-     35.438
-    ],
-    "dur": 0.8,
-    "zoom": [
-     635,
-     360,
-     1.05,
-     1.15
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": null,
-    "glitch": false,
-    "label": "card",
-    "at": 139.5
-   },
-   {
-    "type": "card",
-    "text": "CALL IN.",
-    "dur": 0.9,
-    "kicker": "STREAK 2",
-    "color": "cyan",
-    "at": 140.3
-   },
-   {
-    "type": "clip",
-    "src": [
-     88.728,
-     90.528
-    ],
-    "dur": 1.4,
-    "zoom": [
-     640,
-     360,
-     1.0,
-     1.2
-    ],
-    "shake": 0.6,
-    "flash": "white",
-    "ramp": "slow",
-    "glitch": true,
-    "label": "recon drone takeover",
-    "at": 141.2
-   },
-   {
-    "type": "clip",
-    "src": [
-     91.928,
-     92.828
-    ],
-    "dur": 0.9,
-    "zoom": [
-     640,
-     225,
-     1.45,
-     1.65
-    ],
-    "shake": 1.0,
-    "flash": "amber",
-    "ramp": null,
-    "glitch": false,
-    "label": "frag lands",
-    "at": 142.6
-   },
-   {
-    "type": "clip",
-    "src": [
-     92.828,
-     93.628
-    ],
-    "dur": 0.8,
-    "zoom": [
-     220,
-     270,
-     1,
-     1
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": null,
-    "glitch": false,
-    "label": "first shot",
-    "inset": [
-     10,
-     100,
-     430,
-     458
-    ],
-    "insetZoom": [
-     1.0,
-     1.06
-    ],
-    "at": 143.5
-   },
-   {
-    "type": "clip",
-    "src": [
-     94.328,
-     95.228
-    ],
-    "dur": 0.9,
-    "zoom": [
-     70,
-     210,
-     1,
-     1
-    ],
-    "shake": 1.0,
-    "flash": "amber",
-    "ramp": null,
-    "glitch": false,
-    "label": "eliminated",
-    "inset": [
-     0,
-     105,
-     300,
-     300
-    ],
-    "insetZoom": [
-     1.0,
-     1.06
-    ],
-    "at": 144.3
-   },
-   {
-    "type": "clip",
-    "src": [
-     95.928,
-     96.828
-    ],
-    "dur": 0.9,
-    "zoom": [
-     630,
-     285,
-     1.45,
-     1.6
-    ],
-    "shake": 0.5,
-    "flash": "white",
-    "ramp": null,
-    "glitch": false,
-    "label": "tracers",
-    "focus2": [
-     700,
-     330
-    ],
-    "at": 145.2
-   },
-   {
-    "type": "clip",
-    "src": [
-     96.928,
-     97.828
-    ],
-    "dur": 0.9,
-    "zoom": [
-     520,
-     375,
-     1.55,
-     1.7
-    ],
-    "shake": 1.2,
-    "flash": "red",
-    "ramp": null,
-    "glitch": false,
-    "label": "operator down",
-    "at": 146.1
-   },
-   {
-    "type": "clip",
-    "src": [
-     98.028,
-     98.828
-    ],
-    "dur": 0.8,
-    "zoom": [
-     950,
-     45,
-     1,
-     1
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": null,
-    "glitch": false,
-    "label": "killfeed",
-    "inset": [
-     820,
-     8,
-     1085,
-     86
-    ],
-    "insetZoom": [
-     1.0,
-     1.06
-    ],
-    "at": 147.0
-   },
-   {
-    "type": "card",
-    "text": "KILLSTREAK.",
-    "dur": 1.0,
-    "kicker": "STREAK 3",
-    "color": "amber",
-    "at": 147.8
-   },
-   {
-    "type": "clip",
-    "src": [
-     102.128,
-     104.028
-    ],
-    "dur": 1.4,
-    "zoom": [
-     150,
-     480,
-     1,
-     1
-    ],
-    "shake": 0.8,
-    "flash": "red",
-    "ramp": null,
-    "glitch": true,
-    "label": "streak lost",
-    "inset": [
-     10,
-     405,
-     300,
-     610
-    ],
-    "insetZoom": [
-     1.0,
-     1.06
-    ],
-    "at": 148.8
-   },
-   {
-    "type": "clip",
-    "src": [
-     6.694,
-     7.994
-    ],
-    "dur": 3.6,
-    "zoom": [
-     640,
-     360,
-     1.12,
-     1.0
-    ],
-    "shake": 0,
-    "flash": "white",
-    "ramp": "hero",
-    "glitch": false,
-    "label": "hero",
-    "at": 150.2
-   }
-  ],
+  "shots": [],
   "frames": "game/frames.json"
  },
  "docs": {
@@ -3981,7 +4199,258 @@
   45374,
   46356,
   48783,
-  49324
+  49324,
+  136263,
+  153622,
+  153668,
+  154420,
+  154612,
+  154626,
+  155829,
+  159195,
+  160393
+ ],
+ "art": [
+  {
+   "n": 1,
+   "name": "card_rifleman",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_rifleman.webp"
+  },
+  {
+   "n": 2,
+   "name": "card_point_man",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_point_man.webp"
+  },
+  {
+   "n": 3,
+   "name": "card_marksman",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_marksman.webp"
+  },
+  {
+   "n": 4,
+   "name": "card_combat_medic",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_combat_medic.webp"
+  },
+  {
+   "n": 5,
+   "name": "card_callout",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_callout.webp"
+  },
+  {
+   "n": 6,
+   "name": "card_recon_drone",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_recon_drone.webp"
+  },
+  {
+   "n": 7,
+   "name": "card_mortar_barrage",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_mortar_barrage.webp"
+  },
+  {
+   "n": 8,
+   "name": "card_attack_helo",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_attack_helo.webp"
+  },
+  {
+   "n": 9,
+   "name": "card_kestrel_ar7",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_kestrel_ar7.webp"
+  },
+  {
+   "n": 10,
+   "name": "card_frag_grenade",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_frag_grenade.webp"
+  },
+  {
+   "n": 11,
+   "name": "card_flashbang",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_flashbang.webp"
+  },
+  {
+   "n": 12,
+   "name": "card_p12_sidearm",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_p12_sidearm.webp"
+  },
+  {
+   "n": 13,
+   "name": "card_breacher",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_breacher.webp"
+  },
+  {
+   "n": 14,
+   "name": "card_gunner",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_gunner.webp"
+  },
+  {
+   "n": 15,
+   "name": "card_shieldman",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_shieldman.webp"
+  },
+  {
+   "n": 16,
+   "name": "card_recon_specialist",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_recon_specialist.webp"
+  },
+  {
+   "n": 17,
+   "name": "card_suppressing_fire",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_suppressing_fire.webp"
+  },
+  {
+   "n": 18,
+   "name": "card_hold_the_line",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_hold_the_line.webp"
+  },
+  {
+   "n": 19,
+   "name": "card_flank_route",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_flank_route.webp"
+  },
+  {
+   "n": 20,
+   "name": "card_ammo_resupply",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_ammo_resupply.webp"
+  },
+  {
+   "n": 21,
+   "name": "card_breach_and_clear",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_breach_and_clear.webp"
+  },
+  {
+   "n": 22,
+   "name": "card_flanker",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_flanker.webp"
+  },
+  {
+   "n": 23,
+   "name": "card_demolitions_expert",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_demolitions_expert.webp"
+  },
+  {
+   "n": 24,
+   "name": "card_comms_relay",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_comms_relay.webp"
+  },
+  {
+   "n": 25,
+   "name": "card_tripwire_charge",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_tripwire_charge.webp"
+  },
+  {
+   "n": 26,
+   "name": "card_sentry",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_sentry.webp"
+  },
+  {
+   "n": 27,
+   "name": "card_sentry_turret",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_sentry_turret.webp"
+  },
+  {
+   "n": 28,
+   "name": "card_gunship",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_gunship.webp"
+  },
+  {
+   "n": 29,
+   "name": "card_okafor_anvil",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_okafor_anvil.webp"
+  },
+  {
+   "n": 30,
+   "name": "card_halek_wren",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_halek_wren.webp"
+  },
+  {
+   "n": 31,
+   "name": "card_wasp_9",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_wasp_9.webp"
+  },
+  {
+   "n": 32,
+   "name": "card_longreach_338",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_longreach_338.webp"
+  },
+  {
+   "n": 33,
+   "name": "lane_containers",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/board/lane_containers.webp"
+  },
+  {
+   "n": 34,
+   "name": "lane_cranes",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/board/lane_cranes.webp"
+  },
+  {
+   "n": 35,
+   "name": "lane_offices",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/board/lane_offices.webp"
+  },
+  {
+   "n": 36,
+   "name": "title_key_art",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/backgrounds/title_key_art.webp"
+  },
+  {
+   "n": 37,
+   "name": "runmap_mode_zone_control",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/runmap_mode_zone_control.webp"
+  },
+  {
+   "n": 38,
+   "name": "runmap_mode_firefight",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/runmap_mode_firefight.webp"
+  },
+  {
+   "n": 39,
+   "name": "runmap_mode_detonator",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/runmap_mode_detonator.webp"
+  },
+  {
+   "n": 40,
+   "name": "runmap_mode_rival",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/runmap_mode_rival.webp"
+  },
+  {
+   "n": 41,
+   "name": "bg_run",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/backgrounds/bg_run.webp"
+  },
+  {
+   "n": 42,
+   "name": "fx_callin_tablet",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/backgrounds/fx_callin_tablet.webp"
+  },
+  {
+   "n": 43,
+   "name": "bg_supply_drop",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/backgrounds/bg_supply_drop.webp"
+  },
+  {
+   "n": 44,
+   "name": "card_back",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/sprites/cards/card_back.webp"
+  },
+  {
+   "n": 45,
+   "name": "perk_streak_discipline",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/perks/perk_streak_discipline.webp"
+  },
+  {
+   "n": 46,
+   "name": "perk_field_salvage",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/perks/perk_field_salvage.webp"
+  },
+  {
+   "n": 47,
+   "name": "perk_grit",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/perks/perk_grit.webp"
+  },
+  {
+   "n": 48,
+   "name": "perk_objective_focus",
+   "src": "../../projects/killstreak/source/project-killstreak/assets/ui/perks/perk_objective_focus.webp"
+  }
  ],
  "stats": {
   "wall": "11h 36m",

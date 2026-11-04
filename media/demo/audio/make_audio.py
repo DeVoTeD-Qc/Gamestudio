@@ -109,12 +109,18 @@ def keyframes(points):
 S = scene_at
 pad_lvl = keyframes([(0, 0.0), (1.5, .55), (S['parallel'], .6), (S['created'], .65), (S['stats'], .6),
                      (GAME0, .75), (GAME1, .9), (DUR, .8)])
+# the art pass (artpack -> upload -> artin, Nov 4) brings the arpeggio back softly, then bass and hats
+# build under the before/after wipes into the riser
+ART0 = S.get('artpack', GAME0)
 arp_lvl = keyframes([(0, 0), (S['design'] - 1, 0), (S['design'] + 2, .35), (S['parallel'], .4),
-                     (S['created'] - 1, .75), (S['created'], .55), (S['stats'], .45), (S['stats'] + 2, 0), (DUR, 0)])
+                     (S['created'] - 1, .75), (S['created'], .55), (S['stats'], .45), (S['stats'] + 2, 0),
+                     (ART0, 0), (ART0 + 2, .3), (GAME0 - 4, .5), (GAME0, 0), (DUR, 0)])
 bass_lvl = keyframes([(0, 0), (S['parallel'] - 1, 0), (S['parallel'] + 2, .3), (S['created'] - 1, .7),
-                      (S['created'], .45), (S['stats'], .4), (S['stats'] + 2, 0), (DUR, 0)])
+                      (S['created'], .45), (S['stats'], .4), (S['stats'] + 2, 0),
+                      (S.get('upload', GAME0), 0), (S.get('artin', GAME0), .35), (GAME0 - 3, .55), (GAME0, 0), (DUR, 0)])
 hat_lvl = keyframes([(0, 0), (S['parallel'] + 6, 0), (S['created'] - 1, .55), (S['created'], .25),
-                     (S['feedback'] + 10, .3), (S['stats'], 0), (DUR, 0)])
+                     (S['feedback'] + 10, .3), (S['stats'], 0), (S.get('artin', GAME0), 0),
+                     (S.get('artin', GAME0) + 3, .3), (GAME0 - 3, .3), (GAME0, 0), (DUR, 0)])
 # the usage-limit banner: everything but the pad drops out while it is up
 lim = [e['t'] for e in TL['events'] if e['k'] == 'limit']
 mute = (lambda t: 0.15 if lim and lim[0] <= t < lim[1] else 1.0) if len(lim) == 2 else (lambda t: 1.0)
@@ -341,6 +347,32 @@ for e in TL['events']:
         place(sfx, t + .05, tick(), gain=.08)
     elif k == 'stats':
         place(sfx, t, whoosh(.5), gain=.08)
+    elif k == 'upmark':
+        if e['what'] == 'refused':          # soft low two-tone: the generator said no
+            place(sfx, t, alert(), gain=.05)
+        elif e['what'] == 'reprompt':       # a quick burst of typing for the re-prompt
+            for j in range(14):
+                place(sfx, t + j * .045 + rng.uniform(0, .01), tick(), pan=rng.uniform(-.2, .2), gain=.04)
+        else:                               # batch 2 lands: 48 of 48
+            place(sfx, t, chime(1318.5), gain=.06)
+            place(sfx, t + .1, chime(1975.5), gain=.05)
+    if k == 'drawer' and e.get('kind') == 'prompt':
+        # style block pasted, then the card's own lines typed at 130 chars/s (as replay.html types them)
+        place(sfx, t + .5, snap(), gain=.12)
+        for j in range(0, len(e['prompt']), 2):
+            place(sfx, t + 1.4 + j / 130 + rng.uniform(0, .006), tick(), pan=rng.uniform(-.2, .2), gain=.025 + .015 * rng.random())
+        place(sfx, t + 1.6 + len(e['prompt']) / 130 + .3, chime(1567.98), gain=.05)
+    elif k == 'drawer' and e.get('kind') == 'upload':
+        for j in range(e['zips']):         # zip parts arrive
+            place(sfx, t + .2 + j * .18, pop(), pan=-.3 + .12 * j, gain=.08)
+        for j in range(0, 48, 3):          # thumbnails fill in (every third one ticks)
+            place(sfx, t + 1.0 + j * .045, blip(1600 + 20 * j), pan=-.4 + j / 60, gain=.035)
+    elif k == 'drawer' and e.get('kind') == 'wipes':
+        for j, pr in enumerate(e['pairs']):
+            a = t + .3 + j * e['step']
+            place(sfx, a + .1, whoosh(.5 if e['step'] < 2 else .9), pan=-.3, gain=.12)
+            if pr.get('chip'):
+                place(sfx, a + .6, chime(1567.98), gain=.05)
 
 # trailer shots
 for sh in TL['game'].get('shots', []):

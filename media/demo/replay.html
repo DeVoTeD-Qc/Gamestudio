@@ -160,6 +160,31 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
 .wipe .bar{position:absolute;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 12px rgba(0,0,0,.6)}
 .wipe .lab{position:absolute;top:14px;font:700 20px var(--f-mono);padding:6px 10px;border-radius:6px;background:rgba(0,0,0,.65)}
 .wipelabel{font:500 22px var(--f-body);color:var(--muted);text-align:center}
+/* art pass: prompt pack, upload, before/after series */
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{font:600 17px var(--f-mono);padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--soft);color:var(--ink)}
+.chip.hi{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.chip.warn{border-color:var(--bad);color:var(--bad);background:#3a1c1a}
+.pbox{border:1px solid var(--line);border-radius:12px;background:#0a0e13;padding:18px 22px;font:500 19px/1.5 var(--f-mono);color:#cfd8e3;white-space:pre-wrap}
+.pbox .lab{display:block;font:600 14px var(--f-mono);letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+.pbox .sty{color:#8fa0b2}
+.pbox .own{color:#ffd28a}
+.pbox .caret{display:inline-block;width:11px;height:21px;background:#ffd28a;vertical-align:-4px;margin-left:2px}
+.prow{display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start}
+.result{display:grid;gap:8px;font:500 16px/1.35 var(--f-mono);color:var(--muted)}
+.result img{width:330px;height:202px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.zips{display:flex;gap:10px}
+.zip{font:600 17px var(--f-mono);padding:9px 14px;border-radius:9px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink)}
+.agrid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.slot{position:relative;aspect-ratio:1.63;border-radius:6px;overflow:hidden;background:var(--soft);border:1px solid var(--line)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot.ref{border:2px solid var(--bad)}
+.slot .rt{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font:700 12.5px/1.25 var(--f-mono);color:var(--bad);background:rgba(20,8,8,.75)}
+.slot.ok2{border:2px solid var(--ok)}
+.upnote{display:flex;gap:14px;align-items:center;font:500 22px/1.35 var(--f-body)}
+.upnote b{font:700 15px var(--f-mono);letter-spacing:.08em;border:2px solid currentColor;border-radius:6px;padding:4px 8px;flex:none}
+.wipes .wipe{width:1100px;height:508px}
+.wcount{font:600 16px var(--f-mono);color:var(--muted)}
 
 /* ---------- spotlight ---------- */
 .spot-h{position:absolute;left:120px;top:56px;font:700 52px var(--f-display)}
@@ -265,7 +290,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.
     <div id="trailer"><div id="tWrap"><img id="tImg" alt=""><img id="tImg2" alt=""></div>
       <div id="tInset"><img id="tInsetImg" alt=""></div>
       <div id="tCard"><div class="k" id="tCardK"></div><div class="w" id="tCardW"></div><div class="bar" id="tCardBar"></div></div>
-      <div id="tHero"><div class="k">PLAYABLE WEB PROTOTYPE</div><div class="h">Built by an AI studio of <b>13 Claude agents</b> · Godot 4.4.1</div></div>
+      <div id="tHero"><div class="k">PLAYABLE WEB PROTOTYPE · NOW WITH PAINTED ART</div><div class="h">Built by an AI studio of <b>13 Claude agents</b> · Godot 4.4.1</div></div>
       <div class="lb" id="lbTop"></div><div class="lb" id="lbBot"></div>
       <div id="tTag">REAL FOOTAGE · KILLSTREAK WEB BUILD</div><div id="tFlash"></div></div></div>
 
@@ -329,6 +354,7 @@ function fold(t) {
       case "scroll": s.scrolls.push(e); break;
       case "scrollq": s.scrollq = e; break;
       case "pulse": s.pulse = e; break;
+      case "upmark": (s.up ||= {})[e.what] = e.t; break;
     }
   }
   return s;
@@ -398,7 +424,7 @@ function clockAt(t) {
   const k = (t - a.t) / (b.t - a.t || 1);
   return {utc: a.utc + (b.utc - a.utc) * k, speed: (b.utc - a.utc) / (b.t - a.t || 1)};
 }
-const hhmm = s => { s = Math.floor(s); return String(Math.floor(s/3600)).padStart(2,"0") + ":" + String(Math.floor(s%3600/60)).padStart(2,"0"); };
+const hhmm = s => { s = Math.floor(s) % 86400; return String(Math.floor(s/3600)).padStart(2,"0") + ":" + String(Math.floor(s%3600/60)).padStart(2,"0"); };
 const ss = s => String(Math.floor(s) % 60).padStart(2,"0");
 function speedText(v) { if (!v || v < 1.5) return "real time"; if (v > 3000) return "fast-forward"; const p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return "speed ×" + Math.round(v / p) * p; }
 
@@ -481,7 +507,7 @@ function renderHeader(s, t, lay) {
   $("rail").innerHTML = PHASES.map((p, n) => `<div class="st ${n < i ? "done" : n === i ? "now" : ""}"><span class="k">${n < i ? "✓ done" : n === i ? "● now" : "step " + (n+1)}</span>${p[1]}</div>`).join("");
   const c = clockAt(t);
   $("kClock").innerHTML = `${hhmm(c.utc)}<span style="font-size:17px;color:var(--muted)">:${ss(c.utc)} UTC</span>`;
-  $("kSpeed").innerHTML = `NOV 3 · <b>${speedText(c.speed)}</b>`;
+  $("kSpeed").innerHTML = `${c.utc >= 86400 ? "NOV 4" : "NOV 3"} · <b>${speedText(c.speed)}</b>`;
   const tv = s.testsT != null && t - s.testsT < 0.6 ? Math.round(s.tests) : s.tests;
   $("kTests").textContent = tv;
   $("kCommits").textContent = TL.commitTimes.filter(x => x <= c.utc + 0.5).length;
@@ -513,11 +539,12 @@ function renderDrawer(s, t) {
   $("scrim").style.opacity = k;
   if (!shown || k <= 0.001) { $("drawer").style.visibility = "hidden"; return; }
   $("drawer").style.visibility = "visible";
-  let key = shown.kind + "|" + shown.task + "|" + s.chat.length + "|" + JSON.stringify(s.answers[shown.task] || {}) + "|" + (shown.kind === "doc" ? s.tasks[shown.task]?.status : "");
+  const wi = shown.kind === "wipes" ? clamp(Math.floor((t - shown.t - 0.3) / shown.step), 0, shown.pairs.length - 1) : 0;
+  let key = shown.kind + "|" + shown.task + "|" + wi + "|" + JSON.stringify(s.up || {}) + "|" + s.chat.length + "|" + JSON.stringify(s.answers[shown.task] || {}) + "|" + (shown.kind === "doc" ? s.tasks[shown.task]?.status : "");
   if (key !== drawerKey) {
     drawerKey = key;
     let h = "";
-    if (shown.kind === "doc" || shown.kind === "questions") {
+    if (shown.kind === "doc" || shown.kind === "questions" || shown.kind === "prompt" || shown.kind === "upload" || shown.kind === "wipes") {
       const x = s.tasks[shown.task];
       h += `<div class="dhead"><div><h3>${esc(x.title)}</h3><div class="byline">${esc(nameOf(x.agent))} · Created by <b>${esc(short(x.createdBy))}</b>${x.createdFrom ? " · from " + esc(x.createdFrom) : ""}</div></div><span class="close">CLOSE ✕</span></div>`;
     }
@@ -536,6 +563,26 @@ function renderDrawer(s, t) {
     } else if (shown.kind === "chat") {
       h += `<div class="dhead"><div><h3>Studio chat</h3><div class="byline">Talk to the Claude session running this studio</div></div><span class="close">CLOSE ✕</span></div>`;
       h += `<div class="scroller" id="scr"><div class="inner chatlog" style="top:auto;bottom:0">` + s.chat.map(m => `<div class="msg ${m.who === "you" ? "me" : "claude"}"><span class="w">${m.who === "you" ? "You" : "Claude · lead session"}</span><div class="bubble">${esc(m.text)}</div></div>`).join("") + `</div></div>`;
+    } else if (shown.kind === "prompt") {
+      h += `<div class="chips">${shown.chips.map((c, i) => `<span class="chip${i === 0 ? " hi" : ""}">${esc(c)}</span>`).join("")}</div>`;
+      h += `<div class="prow"><div class="pbox"><span class="lab">PROMPT ${esc(shown.file)} · READY TO PASTE</span><span class="sty" id="pSty"></span><span class="own" id="pOwn"></span></div>`
+        + `<div class="result" id="pRes"><img src="${esc(shown.result)}"><span>The result, as uploaded later that day:<br><b style="color:var(--ink)">card_rifleman</b> 888×544, in the game.</span></div></div>`;
+    } else if (shown.kind === "upload") {
+      const up = s.up || {};
+      h += `<div class="zips" id="zips">${Array.from({length: shown.zips}, (_, i) => `<span class="zip">ZIP part ${i + 1}/${shown.zips}</span>`).join("")}</div>`;
+      h += `<div class="agrid" id="agrid">` + TL.art.map((a, i) => {
+        if (a.name === shown.refused) {
+          const got = up.batch2 != null;
+          return `<div class="slot ${got ? "ok2" : "ref"}" data-i="${i}">${got ? `<img src="${esc(a.src)}">` : ""}${got ? "" : `<div class="rt">${up.reprompt != null ? "SOFTER<br>RE-PROMPT…" : "REFUSED BY<br>THE GENERATOR"}</div>`}</div>`;
+        }
+        return `<div class="slot" data-i="${i}"><img src="${esc(a.src)}"></div>`;
+      }).join("") + `</div>`;
+      h += `<div class="upnote" id="upnote"></div>`;
+    } else if (shown.kind === "wipes") {
+      const pr = shown.pairs[wi], chips = shown.pairs.slice(0, wi + 1).filter(p => p.chip).map(p => p.chip);
+      h += `<div class="wipes"><div class="wipe" id="wipe"><img src="${TL.shots}/${esc(pr.before)}"><img id="wafter" src="${TL.shots}/${esc(pr.after)}"><span class="lab" style="left:14px">BEFORE</span><span class="lab" style="right:14px">AFTER</span><div class="bar" id="wbar"></div></div></div>`
+        + `<div class="wipelabel"><span class="wcount">${shown.pairs.length > 1 ? `${wi + 1}/${shown.pairs.length} · ` : ""}</span>${esc(pr.label)} · iPhone 844×390, real web build</div>`
+        + `<div class="chips" style="justify-content:center">${chips.map((c, i) => `<span class="chip hi" ${i === chips.length - 1 && pr.chip ? 'id="newchip"' : ""}>✓ ${esc(c)}</span>`).join("")}</div>`;
     } else if (shown.kind === "wipe") {
       h += `<div class="dhead"><div><h3>Visual polish pass (v01)</h3><div class="byline">Sr Game Artist · Created by <b>You</b> · from your chat request</div></div><span class="close">CLOSE ✕</span></div>`;
       h += `<div class="wipe" id="wipe"><img src="${TL.shots}/${esc(shown.before)}"><img id="wafter" src="${TL.shots}/${esc(shown.after)}"><span class="lab" style="left:14px">BEFORE</span><span class="lab" style="right:14px">AFTER</span><div class="bar" id="wbar"></div></div><div class="wipelabel">${esc(shown.label)}</div>`
@@ -559,6 +606,31 @@ function renderDrawer(s, t) {
     const y = Math.min(maxY, prev + (cur - prev) * k2);
     inner.style.transform = `translateY(${-y}px)`;
     document.querySelectorAll(".q").forEach((el, j) => el.classList.toggle("cur", j === i));
+  } else if (shown.kind === "prompt") {
+    const u = t - shown.t;
+    const sa = ease((u - 0.5) / 0.35);
+    $("pSty").style.opacity = sa; $("pSty").textContent = u > 0.5 ? shown.style + " " : "";
+    const n = Math.max(0, Math.floor((u - 1.4) * 130)), own = shown.prompt, typing = n < own.length && u > 1.4;
+    $("pOwn").innerHTML = esc(own.slice(0, n)) + (typing ? '<span class="caret"></span>' : "");
+    const ra = ease((u - 1.6 - own.length / 130 - 0.3) / 0.5);
+    $("pRes").style.opacity = ra; $("pRes").style.transform = `translateY(${(1 - ra) * 20}px)`;
+  } else if (shown.kind === "upload") {
+    const u = t - shown.t, up = s.up || {};
+    document.querySelectorAll("#zips .zip").forEach((el, i) => { const a = ease((u - 0.2 - i * 0.18) / 0.25); el.style.opacity = a; el.style.transform = `translateY(${(1 - a) * -14}px)`; });
+    document.querySelectorAll("#agrid .slot").forEach(el => { const i = +el.dataset.i; const a = ease((u - 1.0 - i * 0.045) / 0.3); el.style.opacity = a; el.style.transform = `scale(${0.85 + 0.15 * a})`; });
+    const note = up.batch2 != null ? ['var(--ok)', 'BATCH 2', 'fx_callin_tablet arrives as batch 2 (1c59bcf): 48 of 48 images.']
+      : up.reprompt != null ? ['var(--warn)', 'RE-PROMPT', 'fx_callin_tablet: the head tries a softer prompt for the refused image.']
+      : up.refused != null ? ['var(--bad)', 'REFUSED', 'Batch 1 committed (a8c307e): 47 of 48. The generator refused fx_callin_tablet.']
+      : u > 1.0 ? ['var(--accent)', 'UPLOAD', 'Studio chat › + Images: 6 zip parts from the phone, 47 images.'] : null;
+    $("upnote").style.color = note ? note[0] : "transparent";
+    $("upnote").innerHTML = note ? `<b>${note[1]}</b><span style="color:var(--ink)">${esc(note[2])}</span>` : "";
+  } else if (shown.kind === "wipes") {
+    const u = t - shown.t - 0.3 - wi * shown.step;
+    const w = ease((u - 0.15) / Math.min(1.0, shown.step * 0.55)) * 100;
+    $("wafter").style.clipPath = `inset(0 0 0 ${100 - w}%)`;
+    $("wbar").style.left = `calc(${100 - w}% - 2px)`;
+    $("wbar").style.opacity = w > 0 && w < 100 ? 1 : 0;
+    const nc = $("newchip"); if (nc) { const a = ease((u - 0.6) / 0.3); nc.style.opacity = a; nc.style.transform = `scale(${0.8 + 0.2 * a})`; }
   } else if (shown.kind === "wipe") {
     const w = ease((t - s.drawerT - 0.6) / 2.2) * 100;
     $("wafter").style.clipPath = `inset(0 0 0 ${100 - w}%)`;
