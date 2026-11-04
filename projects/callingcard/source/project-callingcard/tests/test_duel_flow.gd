@@ -19,6 +19,7 @@ const PHONE: Dictionary = {"name": "iPhone 844x390 @3x + notch", "pt": Vector2(8
 const EPS: float = 0.5
 
 var _saved_root_size: Vector2i
+var _saved_autosave: Variant = null
 var _events: Array = []
 
 
@@ -61,6 +62,7 @@ func _full_duel_with_input(mode: StringName) -> void:
 	_unlisten()
 	_assert_finished(duel, ctrl, "%s only" % mode)
 	duel.queue_free()
+	_release_saves()
 	await tree.process_frame
 	tree.root.size = _saved_root_size
 
@@ -425,7 +427,24 @@ func _seed_where(first: int) -> int:
 	return 1
 
 
+## Test duels emit duel_ended; keep Collection (cc09) from writing them to the player's save.
+func _hold_saves() -> void:
+	var col: Node = tree.root.get_node_or_null("Collection")
+	if col != null and "autosave" in col:
+		if _saved_autosave == null:
+			_saved_autosave = col.autosave
+		col.autosave = false
+
+
+func _release_saves() -> void:
+	var col: Node = tree.root.get_node_or_null("Collection")
+	if col != null and _saved_autosave != null:
+		col.autosave = _saved_autosave
+		_saved_autosave = null
+
+
 func _instance(seed_value: int, rival_id: StringName) -> Control:
+	_hold_saves()
 	DuelControllerScript.set_next_duel(rival_id, DuelControllerScript.next_player_lineup)
 	var duel: Control = (load(DUEL_SCENE) as PackedScene).instantiate()
 	var ctrl: Node = duel.get_node("%DuelController")
@@ -457,5 +476,6 @@ func _spawn_phone(seed_value: int, rival_id: StringName) -> Array:
 
 
 func _despawn(viewport: SubViewport) -> void:
+	_release_saves()
 	viewport.queue_free()
 	tree.root.size = _saved_root_size
