@@ -7,6 +7,8 @@
 #     --seed=1             base seed (duel i uses seed + i for the coin flip and both brains)
 #     --tie=first|draw     tie rule override (default: data/balance.tres)
 #     --second_bonus=N     knob test: +N points to the second player at the end (sim only)
+#     --first_bonus=N      knob test: +N points to the first player at the end (sim only)
+#     --knobs=a:1,b:0      BalanceConfig overrides, e.g. chain_captures:1,ambush_spring_bonus:2
 #     --pairs=all|mixed|mirror  which pairings (default all: 3 mirrors + 3 mixed)
 #     --warden_nodes=N     WardenAI.max_nodes override
 #   Never writes data/; knob overrides only change an in-memory copy of the balance.
@@ -28,11 +30,19 @@ func _run() -> void:
 			args[a.substr(2, a.find("=") - 2)] = a.substr(a.find("=") + 1)
 	var duels: int = int(args.get("duels", "1000"))
 	var base_seed: int = int(args.get("seed", "1"))
-	var second_bonus: int = int(args.get("second_bonus", "0"))
+	var second_bonus: int = int(args.get("second_bonus", "0")) - int(args.get("first_bonus", "0"))
 	var warden_nodes: int = int(args.get("warden_nodes", "0"))
 	var balance: BalanceConfig = (load("res://data/balance.tres") as BalanceConfig).duplicate()
 	if args.has("tie"):
 		balance.tie_winner = DataEnums.TieWinner.DRAW if args["tie"] == "draw" else DataEnums.TieWinner.FIRST_PLAYER
+	for kv: String in str(args.get("knobs", "")).split(",", false):
+		var parts: PackedStringArray = kv.split(":")
+		if parts.size() != 2 or not parts[0] in balance:
+			push_error("sim: unknown knob '%s'" % kv)
+			continue
+		var cur: Variant = balance.get(parts[0])
+		balance.set(parts[0], bool(int(parts[1])) if cur is bool else int(parts[1]))
+		print("knob %s = %s" % [parts[0], str(balance.get(parts[0]))])
 	var triptychs: Array[TriptychData] = []
 	for f: String in ["cold_signal", "midnight_run", "open_book"]:
 		triptychs.append(load("res://data/triptychs/%s.tres" % f))
@@ -98,7 +108,7 @@ func _run() -> void:
 func _result(state: WallState, second_bonus: int) -> Dictionary:
 	var s: Array[int] = WallRules.scores(state)
 	var second: int = WallState.other(state.first_player)
-	s[second] += second_bonus
+	s[second] += second_bonus  # Negative = a first-player bonus.
 	var winner: int = WallState.NO_PLAYER
 	var tie: bool = s[0] == s[1]
 	if not tie:
@@ -140,7 +150,7 @@ func _pct(a: int, b: int) -> String:
 
 func _report(per_pair: Array, total: Dictionary, warden_us: Array[int], warden_nodes: Array[int],
 		balance: BalanceConfig, second_bonus: int, base_seed: int, secs: float) -> void:
-	print("## Sim: %d duels, seed %d, tie rule %s, second-player bonus %d (%.1f s)" % [total["n"], base_seed,
+	print("## Sim: %d duels, seed %d, tie rule %s, second-player bonus %d (negative: first-player bonus) (%.1f s)" % [total["n"], base_seed,
 			"first player" if balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER else "draw", second_bonus, secs])
 	print("")
 	print("| Pairing (A vs B) | Duels | A wins | B wins | Draws | First-player wins | Ties | Avg score (A+B) | Avg first / second |")

@@ -80,6 +80,7 @@ func finish() -> void:
 	for r: Dictionary in _recording:
 		if bus().is_connected(r["sig"], r["cb"]):
 			bus().disconnect(r["sig"], r["cb"])
+	_recording.clear()  # the recorder lambdas hold this object: break the cycle
 	tree.root.get_node("Collection").listening = _autoload_was_listening
 
 

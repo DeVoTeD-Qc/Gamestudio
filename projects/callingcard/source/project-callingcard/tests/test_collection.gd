@@ -56,7 +56,9 @@ func test_long_watch_needs_second_legend_free_warden_win() -> void:
 	# Second Legend-free win (not in a row: losses in between are fine): Long Watch.
 	fx.play(&"win", &"warden")
 	assert_true(c.owns(&"long_watch"), "2nd Legend-free win: Long Watch")
-	assert_eq(fx.unlocked_cards(), [&"city_never_sleeps", &"long_watch"], "unlock order")
+	var warden_cards: Array = fx.unlocked_cards().filter(func(id: StringName) -> bool:
+		return id in [&"city_never_sleeps", &"long_watch"])
+	assert_eq(warden_cards, [&"city_never_sleeps", &"long_watch"], "unlock order (other goals aside)")
 	assert_true(c.goal_progress(goal.id)["done"], "goal done")
 	fx.finish()
 
@@ -78,13 +80,16 @@ func test_count_goals_read_targets_from_data() -> void:
 	fx.play(&"win")
 	assert_true(c.owns(&"polar_night"), "win streak -> Polar Night")
 	assert_eq(c.stats()["best_streak"], streak, "best streak")
-	# Wins in total: 2 * streak - 1 so far.
-	while c.stats()["wins"] < wins - 1:
+	# Wins in total (a separate collection; alternating so no streak builds up).
+	var w: Node = fx.make("counts_wins")
+	for i: int in wins - 1:
 		fx.play(&"win")
-	assert_false(c.owns(&"honor_roll"), "one win short")
-	fx.play(&"loss")
+		fx.play(&"loss")
+	assert_false(w.owns(&"honor_roll"), "one win short")
+	assert_eq(w.goal_progress(&"unlock_wins_5"), {"current": wins - 1, "target": wins, "done": false}, "wins progress")
 	fx.play(&"win")
-	assert_true(c.owns(&"honor_roll"), "wins total -> Honor Roll")
+	assert_true(w.owns(&"honor_roll"), "wins total -> Honor Roll")
+	fx.drop(w)
 	# Captures: only the player's, not in Dossiers.
 	fx.start_duel(&"rival", &"archivist", fx.loaner_ids())
 	for i: int in caps - 1:
@@ -120,7 +125,7 @@ func test_dossier_rewards() -> void:
 	assert_true(c.has_frame(fx.db().get_dossier(&"dossier_lights_out").reward_frame), "D3 frame")
 	fx.bus().dossier_cleared.emit(&"dossier_clean_copy", 1, 50.0)
 	assert_true(c.has_title(&"dossier_clean_copy"), "D5 title")
-	assert_eq(c.cleared_dossier_count(), 3 + 0 + 1 - 1 + 0 + 1 - 1 + 1 - 1 + 1 - 1 + 1, "4 cleared")
+	assert_eq(c.cleared_dossier_count(), 4, "4 cleared")
 	fx.finish()
 
 
