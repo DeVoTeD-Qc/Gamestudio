@@ -2,7 +2,7 @@
 
 # CallingCard internal playtest: KPI sheet (SYNTHETIC)
 
-Generated 2026-11-04 13:52 UTC by `tools/kpi_sheet.py` · schema from source/project-callingcard/autoload/playtest_log.gd · unit: tester · 4 file(s), 3 session(s), 3 tester(s).
+Generated 2026-11-04 13:53 UTC by `tools/kpi_sheet.py` · schema from source/project-callingcard/autoload/playtest_log.gd · unit: tester · 4 file(s), 3 session(s), 3 tester(s).
 
 **Small sample:** 3 tester(s). With 3-5 testers every result is directional only; one tester moves a share by 20-33 points.
 
