@@ -8,6 +8,8 @@
 #     --tie=first|draw     tie rule override (default: data/balance.tres)
 #     --second_bonus=N     knob test: +N points to the second player at the end (sim only)
 #     --first_bonus=N      knob test: +N points to the first player at the end (sim only)
+#     --first_sig_bonus=N  knob test: +N to the first player if they control their own Signature
+#                          at the end (sim only)
 #     --knobs=a:1,b:0      BalanceConfig overrides, e.g. chain_captures:1,ambush_spring_bonus:2
 #     --pairs=all|mixed|mirror  which pairings (default all: 3 mirrors + 3 mixed)
 #     --warden_nodes=N     WardenAI.max_nodes override
@@ -32,6 +34,7 @@ func _run() -> void:
 	var base_seed: int = int(args.get("seed", "1"))
 	var second_bonus: int = int(args.get("second_bonus", "0")) - int(args.get("first_bonus", "0"))
 	var warden_nodes: int = int(args.get("warden_nodes", "0"))
+	var first_sig_bonus: int = int(args.get("first_sig_bonus", "0"))
 	var balance: BalanceConfig = (load("res://data/balance.tres") as BalanceConfig).duplicate()
 	if args.has("tie"):
 		balance.tie_winner = DataEnums.TieWinner.DRAW if args["tie"] == "draw" else DataEnums.TieWinner.FIRST_PLAYER
@@ -95,7 +98,7 @@ func _run() -> void:
 				if not r.ok:
 					push_error("sim: illegal move %s" % r.error)
 					break
-			var res: Dictionary = _result(state, second_bonus)
+			var res: Dictionary = _result(state, second_bonus, first_sig_bonus)
 			for bk: Dictionary in [bucket, total]:
 				_add(bk, res, first, pairs[p])
 		per_pair.append(bucket)
@@ -104,11 +107,16 @@ func _run() -> void:
 	quit(0)
 
 
-## Final result with the sim-only second-player bonus applied.
-func _result(state: WallState, second_bonus: int) -> Dictionary:
+## Final result with the sim-only bonuses applied.
+func _result(state: WallState, second_bonus: int, first_sig_bonus: int = 0) -> Dictionary:
 	var s: Array[int] = WallRules.scores(state)
 	var second: int = WallState.other(state.first_player)
 	s[second] += second_bonus  # Negative = a first-player bonus.
+	if first_sig_bonus != 0:
+		for slot: StringName in state.cells:
+			var pc: PlacedCard = state.cells[slot]
+			if pc.signature and pc.lineup == state.first_player and pc.controller == state.first_player:
+				s[state.first_player] += first_sig_bonus
 	var winner: int = WallState.NO_PLAYER
 	var tie: bool = s[0] == s[1]
 	if not tie:
