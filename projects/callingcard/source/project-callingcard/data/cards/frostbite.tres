@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/whiteout.tres" id="1_whiteout"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"frostbite"
+display_name = "Frostbite"
+card_set = ExtResource("1_whiteout")
+album_order = 1
+top = 3
+side = 6
+bottom = 4
+clearance = 1
+origin = 0
+is_store = false
+signature_eligible = true
+how_earned = "25 eliminations on snow maps"
+art_key = &"frostbite"
+art_seed = 3043
+art_brief = "Ice crystals creeping over a glove"
+cipher_glyph = 2
+starts_owned = true

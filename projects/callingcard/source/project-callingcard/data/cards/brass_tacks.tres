@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/old_guard.tres" id="1_old_guard"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"brass_tacks"
+display_name = "Brass Tacks"
+card_set = ExtResource("1_old_guard")
+album_order = 1
+top = 6
+side = 6
+bottom = 5
+clearance = 3
+origin = 0
+is_store = false
+signature_eligible = true
+how_earned = "100 eliminations without dying across matches"
+art_key = &"brass_tacks"
+art_seed = 1162
+art_brief = "Brass tacks pinning a torn map"
+cipher_glyph = 4
+starts_owned = true

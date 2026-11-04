@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SetData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/set_data.gd" id="1_set_data"]
+
+[resource]
+script = ExtResource("1_set_data")
+id = &"old_guard"
+display_name = "Old Guard"
+kind = 0
+number = 4
+palette_key = &"old_guard"
+tagline = "Ribbons, plaques and long years of service."
+completion_title = "Old Hand"

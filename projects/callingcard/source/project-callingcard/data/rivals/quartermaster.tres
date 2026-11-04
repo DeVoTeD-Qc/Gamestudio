@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RivalData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/rival_data.gd" id="1_rival_data"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/chrome_tiger.tres" id="3_chrome_tiger"]
+[ext_resource type="Resource" path="res://data/cards/gold_leaf.tres" id="4_gold_leaf"]
+[ext_resource type="Resource" path="res://data/cards/glacier.tres" id="5_glacier"]
+[ext_resource type="Resource" path="res://data/cards/mayday.tres" id="6_mayday"]
+[ext_resource type="Resource" path="res://data/cards/open_channel.tres" id="7_open_channel"]
+
+[resource]
+script = ExtResource("1_rival_data")
+id = &"quartermaster"
+display_name = "Quartermaster"
+difficulty = 0
+tagline = "Hands out whatever's on the shelf. Shiny, not sharp."
+art_key = &"quartermaster"
+lineup = Array[ExtResource("2_card_data")]([ExtResource("3_chrome_tiger"), ExtResource("4_gold_leaf"), ExtResource("5_glacier"), ExtResource("6_mayday"), ExtResource("7_open_channel")])
+signature = ExtResource("3_chrome_tiger")
+best_capture_chance = 0.5
+lookahead_plies = 0
+signature_safety_weight = 0.0

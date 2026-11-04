@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/whiteout.tres" id="1_whiteout"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_win_streak_3.tres" id="2_unlock_win_s"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"polar_night"
+display_name = "Polar Night"
+card_set = ExtResource("1_whiteout")
+album_order = 3
+top = 5
+side = 7
+bottom = 5
+clearance = 3
+origin = 4
+is_store = false
+signature_eligible = true
+how_earned = "Reach the 3rd ranked tier"
+art_key = &"polar_night"
+art_seed = 10045
+art_brief = "Aurora over a dark ridge"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_win_s")

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/signal_fire.tres" id="1_signal_fire"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_captures_20.tres" id="2_unlock_captu"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"dead_air"
+display_name = "Dead Air"
+card_set = ExtResource("1_signal_fire")
+album_order = 3
+top = 4
+side = 8
+bottom = 5
+clearance = 3
+origin = 1
+is_store = false
+signature_eligible = true
+how_earned = "Top mastery on any marksman rifle"
+art_key = &"dead_air"
+art_seed = 11621
+art_brief = "Old radio, needle at silence, static bands"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_captu")

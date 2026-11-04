@@ -1,0 +1,79 @@
+[gd_resource type="Resource" script_class="DossierData" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dossier_data.gd" id="1_dossier_data"]
+[ext_resource type="Script" path="res://scripts/data/dossier_placement.gd" id="2_dossier_plac"]
+[ext_resource type="Resource" path="res://data/cards/chrome_tiger.tres" id="3_chrome_tiger"]
+[ext_resource type="Resource" path="res://data/cards/gold_leaf.tres" id="4_gold_leaf"]
+[ext_resource type="Resource" path="res://data/cards/frostbite.tres" id="5_frostbite"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="6_card_data"]
+[ext_resource type="Resource" path="res://data/cards/flare_up.tres" id="7_flare_up"]
+[ext_resource type="Resource" path="res://data/cards/graveyard_shift.tres" id="8_graveyard_sh"]
+[ext_resource type="Resource" path="res://data/cards/service_ribbon.tres" id="9_service_ribb"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("2_dossier_plac")
+slot = &"a3"
+card = ExtResource("3_chrome_tiger")
+side = 1
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("2_dossier_plac")
+slot = &"a1"
+card = ExtResource("4_gold_leaf")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("2_dossier_plac")
+slot = &"b3"
+card = ExtResource("5_frostbite")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("2_dossier_plac")
+slot = &"a2"
+card = ExtResource("9_service_ribb")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("2_dossier_plac")
+slot = &"b2"
+card = ExtResource("7_flare_up")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("2_dossier_plac")
+slot = &"b1"
+card = ExtResource("8_graveyard_sh")
+side = 0
+face_down = false
+is_signature = false
+
+[resource]
+script = ExtResource("1_dossier_data")
+id = &"dossier_lights_out"
+number = 3
+display_name = "Lights Out"
+teaches = "Ambush timing"
+briefing = "Ambush cards go down face-down: they capture nothing and can't be captured.
+At the start of your next turn they flip and capture with +1 to all values.
+The rival will move after your first card. Capture 2 with one spring."
+hint = "The rival is about to fill a2. Hide Flare Up where a2 and a1 sit above it."
+board = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3")])
+player_hand = Array[ExtResource("6_card_data")]([ExtResource("7_flare_up"), ExtResource("8_graveyard_sh")])
+rival_replies = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p4")])
+goal = 2
+goal_count = 2
+max_placements = 2
+solution = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p5"), SubResource("Resource_p6")])
+reward_title = ""
+reward_frame = &"flare_up_gold"

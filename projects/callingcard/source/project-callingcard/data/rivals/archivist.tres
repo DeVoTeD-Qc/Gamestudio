@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RivalData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/rival_data.gd" id="1_rival_data"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/brass_tacks.tres" id="3_brass_tacks"]
+[ext_resource type="Resource" path="res://data/cards/polar_night.tres" id="4_polar_night"]
+[ext_resource type="Resource" path="res://data/cards/dead_air.tres" id="5_dead_air"]
+[ext_resource type="Resource" path="res://data/cards/neon_rain.tres" id="6_neon_rain"]
+[ext_resource type="Resource" path="res://data/cards/service_ribbon.tres" id="7_service_ribb"]
+
+[resource]
+script = ExtResource("1_rival_data")
+id = &"archivist"
+display_name = "Archivist"
+difficulty = 1
+tagline = "Files every match. Always takes the most it can, right now."
+art_key = &"archivist"
+lineup = Array[ExtResource("2_card_data")]([ExtResource("3_brass_tacks"), ExtResource("4_polar_night"), ExtResource("5_dead_air"), ExtResource("6_neon_rain"), ExtResource("7_service_ribb")])
+signature = ExtResource("3_brass_tacks")
+best_capture_chance = 1.0
+lookahead_plies = 1
+signature_safety_weight = 0.0

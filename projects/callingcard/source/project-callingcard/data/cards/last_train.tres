@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/night_shift.tres" id="1_night_shift"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"last_train"
+display_name = "Last Train"
+card_set = ExtResource("1_night_shift")
+album_order = 3
+top = 6
+side = 4
+bottom = 5
+clearance = 2
+origin = 2
+is_store = false
+signature_eligible = true
+how_earned = "Night-event reward"
+art_key = &"last_train"
+art_seed = 10456
+art_brief = "Subway car lights receding into a tunnel"
+cipher_glyph = 0
+starts_owned = true

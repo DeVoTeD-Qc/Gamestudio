@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/signal_fire.tres" id="1_signal_fire"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"open_channel"
+display_name = "Open Channel"
+card_set = ExtResource("1_signal_fire")
+album_order = 4
+top = 4
+side = 5
+bottom = 6
+clearance = 2
+origin = 4
+is_store = false
+signature_eligible = true
+how_earned = "Win 10 ranked matches"
+art_key = &"open_channel"
+art_seed = 15668
+art_brief = "Antenna tower with pulsing rings"
+cipher_glyph = 0
+starts_owned = true

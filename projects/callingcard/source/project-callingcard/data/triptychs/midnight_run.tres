@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TriptychData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/triptych_data.gd" id="1_triptych_dat"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/graveyard_shift.tres" id="3_graveyard_sh"]
+[ext_resource type="Resource" path="res://data/cards/neon_rain.tres" id="4_neon_rain"]
+[ext_resource type="Resource" path="res://data/cards/last_train.tres" id="5_last_train"]
+
+[resource]
+script = ExtResource("1_triptych_dat")
+id = &"midnight_run"
+display_name = "Midnight Run"
+cards = Array[ExtResource("2_card_data")]([ExtResource("3_graveyard_sh"), ExtResource("4_neon_rain"), ExtResource("5_last_train")])
+hint = "The city's last ride, three stops long."
+reward_title = "Night Owl+"
+reward_frame = &""
+panorama_key = &"midnight_run"

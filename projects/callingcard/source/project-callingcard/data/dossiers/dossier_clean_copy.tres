@@ -1,0 +1,96 @@
+[gd_resource type="Resource" script_class="DossierData" load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dossier_data.gd" id="1_dossier_data"]
+[ext_resource type="Script" path="res://scripts/data/dossier_placement.gd" id="2_dossier_plac"]
+[ext_resource type="Resource" path="res://data/cards/frostbite.tres" id="3_frostbite"]
+[ext_resource type="Resource" path="res://data/cards/chrome_tiger.tres" id="4_chrome_tiger"]
+[ext_resource type="Resource" path="res://data/cards/polar_night.tres" id="5_polar_night"]
+[ext_resource type="Resource" path="res://data/cards/glacier.tres" id="6_glacier"]
+[ext_resource type="Resource" path="res://data/cards/brass_tacks.tres" id="7_brass_tacks"]
+[ext_resource type="Resource" path="res://data/cards/graveyard_shift.tres" id="8_graveyard_sh"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="9_card_data"]
+[ext_resource type="Resource" path="res://data/cards/null_glyph.tres" id="10_null_glyph"]
+[ext_resource type="Resource" path="res://data/cards/gold_leaf.tres" id="11_gold_leaf"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("2_dossier_plac")
+slot = &"b3"
+card = ExtResource("3_frostbite")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("2_dossier_plac")
+slot = &"c3"
+card = ExtResource("4_chrome_tiger")
+side = 1
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("2_dossier_plac")
+slot = &"c2"
+card = ExtResource("5_polar_night")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("2_dossier_plac")
+slot = &"b2"
+card = ExtResource("6_glacier")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("2_dossier_plac")
+slot = &"b1"
+card = ExtResource("7_brass_tacks")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("2_dossier_plac")
+slot = &"a1"
+card = ExtResource("8_graveyard_sh")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("2_dossier_plac")
+slot = &"c1"
+card = ExtResource("10_null_glyph")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p8"]
+script = ExtResource("2_dossier_plac")
+slot = &"a2"
+card = ExtResource("11_gold_leaf")
+side = 0
+face_down = false
+is_signature = false
+
+[resource]
+script = ExtResource("1_dossier_data")
+id = &"dossier_clean_copy"
+number = 5
+display_name = "Clean Copy"
+teaches = "Cipher"
+briefing = "On placement, a Cipher card copies the trait of one adjacent card, your pick.
+Win by copying a rival card's trait."
+hint = "You're behind. Which rival trait pays off when you're behind?"
+board = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5"), SubResource("Resource_p6")])
+player_hand = Array[ExtResource("9_card_data")]([ExtResource("10_null_glyph"), ExtResource("11_gold_leaf")])
+rival_replies = Array[ExtResource("2_dossier_plac")]([])
+goal = 4
+goal_count = 0
+max_placements = 2
+solution = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p7"), SubResource("Resource_p8")])
+reward_title = "Copycat"
+reward_frame = &""

@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
 
-[ext_resource type="Resource" path="res://data/sets/showcase.tres" id="1_v3lvx"]
-[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_fclte"]
+[ext_resource type="Resource" path="res://data/sets/showcase.tres" id="1_showcase"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
 
 [resource]
-script = ExtResource("2_fclte")
+script = ExtResource("2_card_data")
 id = &"chrome_tiger"
 display_name = "Chrome Tiger"
-card_set = ExtResource("1_v3lvx")
+card_set = ExtResource("1_showcase")
 album_order = 1
 top = 5
 side = 4

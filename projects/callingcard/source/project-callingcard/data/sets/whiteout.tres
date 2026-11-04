@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SetData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/set_data.gd" id="1_set_data"]
+
+[resource]
+script = ExtResource("1_set_data")
+id = &"whiteout"
+display_name = "Whiteout"
+kind = 0
+number = 2
+palette_key = &"whiteout"
+tagline = "Cold fronts, white fields and long silences."
+completion_title = "Cold Front"

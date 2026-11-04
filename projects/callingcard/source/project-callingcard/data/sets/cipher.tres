@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SetData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/set_data.gd" id="1_set_data"]
+
+[resource]
+script = ExtResource("1_set_data")
+id = &"cipher"
+display_name = "Cipher"
+kind = 1
+number = 5
+palette_key = &"cipher"
+tagline = "Secret cards. Some doors only open with a code."
+completion_title = "Codekeeper"

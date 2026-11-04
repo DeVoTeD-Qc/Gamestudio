@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/cipher.tres" id="1_cipher"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_cipher_lock.tres" id="2_unlock_ciphe"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"key_fragment"
+display_name = "Key Fragment"
+card_set = ExtResource("1_cipher")
+album_order = 2
+top = 6
+side = 5
+bottom = 6
+clearance = 3
+origin = 5
+is_store = false
+signature_eligible = true
+how_earned = "Solve the Cipher Lock"
+art_key = &"key_fragment"
+art_seed = 12355
+art_brief = "Broken key, edges glowing teal, glyph etched"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_ciphe")

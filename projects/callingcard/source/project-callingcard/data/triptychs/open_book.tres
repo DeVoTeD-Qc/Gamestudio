@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TriptychData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/triptych_data.gd" id="1_triptych_dat"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/null_glyph.tres" id="3_null_glyph"]
+[ext_resource type="Resource" path="res://data/cards/key_fragment.tres" id="4_key_fragment"]
+[ext_resource type="Resource" path="res://data/cards/honor_roll.tres" id="5_honor_roll"]
+
+[resource]
+script = ExtResource("1_triptych_dat")
+id = &"open_book"
+display_name = "Open Book"
+cards = Array[ExtResource("2_card_data")]([ExtResource("3_null_glyph"), ExtResource("4_key_fragment"), ExtResource("5_honor_roll")])
+hint = "Old honor, new code."
+reward_title = "Codebreaker"
+reward_frame = &"gold_cipher"
+panorama_key = &"open_book"

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/old_guard.tres" id="1_old_guard"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"service_ribbon"
+display_name = "Service Ribbon"
+card_set = ExtResource("1_old_guard")
+album_order = 2
+top = 4
+side = 5
+bottom = 4
+clearance = 1
+origin = 1
+is_store = false
+signature_eligible = true
+how_earned = "Level any weapon to max"
+art_key = &"service_ribbon"
+art_seed = 14386
+art_brief = "Striped ribbon bar on felt"
+cipher_glyph = 0
+starts_owned = true

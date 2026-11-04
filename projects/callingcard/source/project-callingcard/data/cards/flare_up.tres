@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/signal_fire.tres" id="1_signal_fire"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"flare_up"
+display_name = "Flare Up"
+card_set = ExtResource("1_signal_fire")
+album_order = 2
+top = 6
+side = 3
+bottom = 4
+clearance = 1
+origin = 2
+is_store = false
+signature_eligible = true
+how_earned = "Summer event reward"
+art_key = &"flare_up"
+art_seed = 9127
+art_brief = "Burst of red flares, film-grain"
+cipher_glyph = 0
+starts_owned = true

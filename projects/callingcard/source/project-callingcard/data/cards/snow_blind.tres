@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/whiteout.tres" id="1_whiteout"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"snow_blind"
+display_name = "Snow Blind"
+card_set = ExtResource("1_whiteout")
+album_order = 2
+top = 6
+side = 5
+bottom = 6
+clearance = 3
+origin = 2
+is_store = false
+signature_eligible = true
+how_earned = "Winter event reward"
+art_key = &"snow_blind"
+art_seed = 14330
+art_brief = "Pure-white field, one silhouette, flare glow"
+cipher_glyph = 0
+starts_owned = true

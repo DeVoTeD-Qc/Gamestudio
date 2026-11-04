@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
 
-[ext_resource type="Resource" path="res://data/sets/night_shift.tres" id="1_1vcr1"]
-[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_4s2xo"]
+[ext_resource type="Resource" path="res://data/sets/night_shift.tres" id="1_night_shift"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
 
 [resource]
-script = ExtResource("2_4s2xo")
+script = ExtResource("2_card_data")
 id = &"neon_rain"
 display_name = "Neon Rain"
-card_set = ExtResource("1_1vcr1")
+card_set = ExtResource("1_night_shift")
 album_order = 2
 top = 4
 side = 6

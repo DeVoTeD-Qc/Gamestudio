@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="TriptychData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/triptych_data.gd" id="1_triptych_dat"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/frostbite.tres" id="3_frostbite"]
+[ext_resource type="Resource" path="res://data/cards/mayday.tres" id="4_mayday"]
+[ext_resource type="Resource" path="res://data/cards/dead_air.tres" id="5_dead_air"]
+
+[resource]
+script = ExtResource("1_triptych_dat")
+id = &"cold_signal"
+display_name = "Cold Signal"
+cards = Array[ExtResource("2_card_data")]([ExtResource("3_frostbite"), ExtResource("4_mayday"), ExtResource("5_dead_air")])
+hint = "Someone's calling from the ice."
+reward_title = "Ice Radio"
+reward_frame = &""
+panorama_key = &"cold_signal"

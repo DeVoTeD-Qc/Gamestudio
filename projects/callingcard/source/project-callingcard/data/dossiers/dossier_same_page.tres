@@ -1,0 +1,87 @@
+[gd_resource type="Resource" script_class="DossierData" load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dossier_data.gd" id="1_dossier_data"]
+[ext_resource type="Script" path="res://scripts/data/dossier_placement.gd" id="2_dossier_plac"]
+[ext_resource type="Resource" path="res://data/cards/last_train.tres" id="3_last_train"]
+[ext_resource type="Resource" path="res://data/cards/chrome_tiger.tres" id="4_chrome_tiger"]
+[ext_resource type="Resource" path="res://data/cards/dead_air.tres" id="5_dead_air"]
+[ext_resource type="Resource" path="res://data/cards/brass_tacks.tres" id="6_brass_tacks"]
+[ext_resource type="Resource" path="res://data/cards/service_ribbon.tres" id="7_service_ribb"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="8_card_data"]
+[ext_resource type="Resource" path="res://data/cards/graveyard_shift.tres" id="9_graveyard_sh"]
+[ext_resource type="Resource" path="res://data/cards/neon_rain.tres" id="10_neon_rain"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("2_dossier_plac")
+slot = &"a2"
+card = ExtResource("3_last_train")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("2_dossier_plac")
+slot = &"a1"
+card = ExtResource("4_chrome_tiger")
+side = 1
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("2_dossier_plac")
+slot = &"b1"
+card = ExtResource("5_dead_air")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("2_dossier_plac")
+slot = &"b2"
+card = ExtResource("6_brass_tacks")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("2_dossier_plac")
+slot = &"c3"
+card = ExtResource("7_service_ribb")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("2_dossier_plac")
+slot = &"c2"
+card = ExtResource("10_neon_rain")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("2_dossier_plac")
+slot = &"c1"
+card = ExtResource("9_graveyard_sh")
+side = 0
+face_down = false
+is_signature = false
+
+[resource]
+script = ExtResource("1_dossier_data")
+id = &"dossier_same_page"
+number = 2
+display_name = "Same Page"
+teaches = "Set Link"
+briefing = "A placed card that touches one of your own cards from the same set gets +1 to all values for that placement.
+Win using exactly 2 placements."
+hint = "Graveyard Shift ties Dead Air 5 to 5. Give it a Night Shift neighbor first."
+board = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4"), SubResource("Resource_p5")])
+player_hand = Array[ExtResource("8_card_data")]([ExtResource("9_graveyard_sh"), ExtResource("10_neon_rain")])
+rival_replies = Array[ExtResource("2_dossier_plac")]([])
+goal = 1
+goal_count = 0
+max_placements = 2
+solution = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p6"), SubResource("Resource_p7")])
+reward_title = ""
+reward_frame = &"service_ribbon_frame"

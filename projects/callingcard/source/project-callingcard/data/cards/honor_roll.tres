@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/old_guard.tres" id="1_old_guard"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_wins_5.tres" id="2_unlock_wins_"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"honor_roll"
+display_name = "Honor Roll"
+card_set = ExtResource("1_old_guard")
+album_order = 4
+top = 5
+side = 6
+bottom = 6
+clearance = 3
+origin = 3
+is_store = false
+signature_eligible = true
+how_earned = "Reach prestige 1"
+art_key = &"honor_roll"
+art_seed = 18560
+art_brief = "Engraved plaque wall, names blurred to abstract lines"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_wins_")

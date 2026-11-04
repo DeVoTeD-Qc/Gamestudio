@@ -1,0 +1,90 @@
+[gd_resource type="Resource" script_class="DossierData" load_steps=19 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dossier_data.gd" id="1_dossier_data"]
+[ext_resource type="Script" path="res://scripts/data/dossier_placement.gd" id="2_dossier_plac"]
+[ext_resource type="Resource" path="res://data/cards/graveyard_shift.tres" id="3_graveyard_sh"]
+[ext_resource type="Resource" path="res://data/cards/mayday.tres" id="4_mayday"]
+[ext_resource type="Resource" path="res://data/cards/glacier.tres" id="5_glacier"]
+[ext_resource type="Resource" path="res://data/cards/snow_blind.tres" id="6_snow_blind"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="7_card_data"]
+[ext_resource type="Resource" path="res://data/cards/honor_roll.tres" id="8_honor_roll"]
+[ext_resource type="Resource" path="res://data/cards/service_ribbon.tres" id="9_service_ribb"]
+[ext_resource type="Resource" path="res://data/cards/open_channel.tres" id="10_open_channel"]
+[ext_resource type="Resource" path="res://data/cards/null_glyph.tres" id="11_null_glyph"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("2_dossier_plac")
+slot = &"c2"
+card = ExtResource("3_graveyard_sh")
+side = 0
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("2_dossier_plac")
+slot = &"a1"
+card = ExtResource("4_mayday")
+side = 1
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("2_dossier_plac")
+slot = &"b1"
+card = ExtResource("5_glacier")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("2_dossier_plac")
+slot = &"a2"
+card = ExtResource("6_snow_blind")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("2_dossier_plac")
+slot = &"c1"
+card = ExtResource("10_open_channel")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p6"]
+script = ExtResource("2_dossier_plac")
+slot = &"b3"
+card = ExtResource("9_service_ribb")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p7"]
+script = ExtResource("2_dossier_plac")
+slot = &"b2"
+card = ExtResource("8_honor_roll")
+side = 0
+face_down = false
+is_signature = false
+
+[resource]
+script = ExtResource("1_dossier_data")
+id = &"dossier_carded"
+number = 4
+display_name = "Carded"
+teaches = "Signature, Reclaim"
+briefing = "Signatures count double, for whoever holds them at the end.
+Reclaim takes back every adjacent card from your own lineup, whatever the values.
+The rival will take your Signature. Take it back, Card theirs and win."
+hint = "Honor Roll needs an Old Guard neighbor to beat Mayday's Bottom 5. Place Service Ribbon first."
+board = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3"), SubResource("Resource_p4")])
+player_hand = Array[ExtResource("7_card_data")]([ExtResource("8_honor_roll"), ExtResource("9_service_ribb")])
+rival_replies = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p5")])
+goal = 3
+goal_count = 0
+max_placements = 2
+solution = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p6"), SubResource("Resource_p7")])
+reward_card = ExtResource("11_null_glyph")
+reward_title = ""
+reward_frame = &""

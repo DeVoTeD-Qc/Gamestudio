@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="UnlockGoal" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/unlock_goal.gd" id="1_unlock_goal"]
+
+[resource]
+script = ExtResource("1_unlock_goal")
+id = &"unlock_beat_warden"
+kind = 3
+description = "Beat the Warden"
+target_count = 0
+target_id = &"warden"

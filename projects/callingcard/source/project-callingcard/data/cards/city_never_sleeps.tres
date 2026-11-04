@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/night_shift.tres" id="1_night_shift"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_beat_warden.tres" id="2_unlock_beat_"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"city_never_sleeps"
+display_name = "City Never Sleeps"
+card_set = ExtResource("1_night_shift")
+album_order = 4
+top = 7
+side = 5
+bottom = 7
+clearance = 4
+origin = 3
+is_store = false
+signature_eligible = true
+how_earned = "Reach prestige 3"
+art_key = &"city_never_sleeps"
+art_seed = 18402
+art_brief = "Skyline panorama, every window lit, gold trim"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_beat_")

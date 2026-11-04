@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/old_guard.tres" id="1_old_guard"]
+[ext_resource type="Resource" path="res://data/unlocks/unlock_beat_warden_no_legend.tres" id="2_unlock_beat_"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_card_data"]
+
+[resource]
+script = ExtResource("3_card_data")
+id = &"long_watch"
+display_name = "Long Watch"
+card_set = ExtResource("1_old_guard")
+album_order = 3
+top = 6
+side = 7
+bottom = 6
+clearance = 4
+origin = 4
+is_store = false
+signature_eligible = true
+how_earned = "Finish a ranked season at the top tier"
+art_key = &"long_watch"
+art_seed = 7846
+art_brief = "Lone lighthouse beam across fog"
+cipher_glyph = 0
+starts_owned = false
+unlock_goal = ExtResource("2_unlock_beat_")

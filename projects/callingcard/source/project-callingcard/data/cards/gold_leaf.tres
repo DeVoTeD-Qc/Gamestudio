@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Resource" path="res://data/sets/showcase.tres" id="1_showcase"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+
+[resource]
+script = ExtResource("2_card_data")
+id = &"gold_leaf"
+display_name = "Gold Leaf"
+card_set = ExtResource("1_showcase")
+album_order = 2
+top = 4
+side = 5
+bottom = 4
+clearance = 1
+origin = 6
+is_store = true
+signature_eligible = true
+how_earned = "Store bundle (simulated, free in demo)"
+art_key = &"gold_leaf"
+art_seed = 4136
+art_brief = "Gilded leaf pattern, animated shimmer"
+cipher_glyph = 0
+starts_owned = true

@@ -1,0 +1,72 @@
+[gd_resource type="Resource" script_class="DossierData" load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dossier_data.gd" id="1_dossier_data"]
+[ext_resource type="Script" path="res://scripts/data/dossier_placement.gd" id="2_dossier_plac"]
+[ext_resource type="Resource" path="res://data/cards/chrome_tiger.tres" id="3_chrome_tiger"]
+[ext_resource type="Resource" path="res://data/cards/gold_leaf.tres" id="4_gold_leaf"]
+[ext_resource type="Resource" path="res://data/cards/service_ribbon.tres" id="5_service_ribb"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="6_card_data"]
+[ext_resource type="Resource" path="res://data/cards/glacier.tres" id="7_glacier"]
+[ext_resource type="Resource" path="res://data/cards/frostbite.tres" id="8_frostbite"]
+[ext_resource type="Resource" path="res://data/cards/mayday.tres" id="9_mayday"]
+
+[sub_resource type="Resource" id="Resource_p1"]
+script = ExtResource("2_dossier_plac")
+slot = &"a2"
+card = ExtResource("3_chrome_tiger")
+side = 1
+face_down = false
+is_signature = true
+
+[sub_resource type="Resource" id="Resource_p2"]
+script = ExtResource("2_dossier_plac")
+slot = &"b3"
+card = ExtResource("4_gold_leaf")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p3"]
+script = ExtResource("2_dossier_plac")
+slot = &"c2"
+card = ExtResource("5_service_ribb")
+side = 1
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p4"]
+script = ExtResource("2_dossier_plac")
+slot = &"b2"
+card = ExtResource("7_glacier")
+side = 0
+face_down = false
+is_signature = false
+
+[sub_resource type="Resource" id="Resource_p5"]
+script = ExtResource("2_dossier_plac")
+slot = &"b4"
+card = ExtResource("8_frostbite")
+side = 0
+face_down = false
+is_signature = false
+
+[resource]
+script = ExtResource("1_dossier_data")
+id = &"dossier_first_contact"
+number = 1
+display_name = "First Contact"
+teaches = "Capture, facing values"
+briefing = "Top faces up, Side faces left and right, Bottom faces down.
+A higher facing number captures. Ties do nothing.
+Capture 3 rival cards with your 2 cards."
+hint = "Glacier hits hard up and down but has a weak Side. Frostbite is the opposite."
+board = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p1"), SubResource("Resource_p2"), SubResource("Resource_p3")])
+player_hand = Array[ExtResource("6_card_data")]([ExtResource("7_glacier"), ExtResource("8_frostbite")])
+rival_replies = Array[ExtResource("2_dossier_plac")]([])
+goal = 0
+goal_count = 3
+max_placements = 2
+solution = Array[ExtResource("2_dossier_plac")]([SubResource("Resource_p4"), SubResource("Resource_p5")])
+reward_card = ExtResource("9_mayday")
+reward_title = "Contact Made"
+reward_frame = &""

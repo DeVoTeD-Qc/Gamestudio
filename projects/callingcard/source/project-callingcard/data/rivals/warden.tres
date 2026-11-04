@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RivalData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/rival_data.gd" id="1_rival_data"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/long_watch.tres" id="3_long_watch"]
+[ext_resource type="Resource" path="res://data/cards/snow_blind.tres" id="4_snow_blind"]
+[ext_resource type="Resource" path="res://data/cards/last_train.tres" id="5_last_train"]
+[ext_resource type="Resource" path="res://data/cards/mayday.tres" id="6_mayday"]
+[ext_resource type="Resource" path="res://data/cards/frostbite.tres" id="7_frostbite"]
+
+[resource]
+script = ExtResource("1_rival_data")
+id = &"warden"
+display_name = "Warden"
+difficulty = 2
+tagline = "Keeps the long watch, two moves ahead. Never leaves its Signature open."
+art_key = &"warden"
+lineup = Array[ExtResource("2_card_data")]([ExtResource("3_long_watch"), ExtResource("4_snow_blind"), ExtResource("5_last_train"), ExtResource("6_mayday"), ExtResource("7_frostbite")])
+signature = ExtResource("3_long_watch")
+best_capture_chance = 1.0
+lookahead_plies = 2
+signature_safety_weight = 3.0
