@@ -32,8 +32,11 @@ in `projects/<name>/agents/`. Follow `DEVELOPMENT_RULES.md` and the project's de
 ## Studio Floor dashboard
 Live view: https://claude.ai/artifact/8Yny3UHLg9CXSyR2T7WwGq (private to the owner).
 Keep it current with the ArtifactData tool whenever work starts or finishes:
-- `studio/state` — `{activeProject, ...}`: the project the studio is working on. The user switches it
-  from the page's project switcher (which also messages Claude); always work on the active project.
+- `studio/state` — `{activeProject, ...}`: the project in focus. The user switches it from the page's
+  project switcher (which also messages Claude). The studio works on **every** project with
+  `status: "active"` in parallel: start each Ready task (dependencies done) on all active projects.
+  Priority: when the same agent role has Ready tasks in several projects, or capacity is short
+  (usage limits), start the active project's tasks first, then the others by board `order`.
 - `projects/<id>` — `{name, concept, engine, platform, mode, timeline, phase, status, created, path,
   playUrl?, playNote?}`; phase is one of setup, concept, design, plan, prototype, qa, play; status is
   requested | active | archived. A project created from the page arrives with `status: "requested"`
