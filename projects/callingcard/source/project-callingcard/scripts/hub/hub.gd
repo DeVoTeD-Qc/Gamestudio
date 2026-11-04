@@ -5,6 +5,7 @@
 #   - LINEUP (cc10 builder), ALBUM (cc11; disabled until scenes/Album.tscn exists),
 #     DOSSIERS (DossierController.set_next_dossier(&"") opens the list), FIND A MATCH (Lobby Duel),
 #   - CONTINUE (only while Collection.has_saved_lobby_duel()): resumes the saved Lobby Duel.
+#   - PLAYTEST (cc16): the playtest survey and Download log (scenes/survey/Survey.tscn).
 #   Shows a progress line from Collection: cards owned x / 20, sets complete, Dossiers cleared.
 #   Entering the hub sets SceneRouter.hub_entered, so other screens' "back to the Title" lands here.
 # Dependencies: Collection, CardDB, EventBus, SceneRouter, DuelController, DossierController,
@@ -19,6 +20,8 @@ const DuelSetup: GDScript = preload("res://scripts/duel/duel_setup.gd")
 const DuelTheme: GDScript = preload("res://scripts/ui/duel_theme.gd")
 const HubUi: GDScript = preload("res://scripts/hub/hub_ui.gd")
 const DIFFICULTY_NAMES: Array[String] = ["Easy", "Normal", "Hard"]
+## cc16: PLAYTEST button target.
+const PLAYTEST_SCENE: String = "res://scenes/survey/Survey.tscn"
 
 ## Safe area in logical px (tests / previews). Empty = the device's.
 var safe_area_override: Rect2 = Rect2()
@@ -136,6 +139,13 @@ func open_dossiers() -> void:
 	_go(&"dossier")
 
 
+## cc16: the playtest survey and Download log.
+func open_playtest() -> void:
+	var router: Node = get_node_or_null("/root/SceneRouter")
+	if router != null:
+		router.goto_scene(PLAYTEST_SCENE)
+
+
 func find_match() -> void:
 	LobbyDuelScript.set_mode(LobbyDuelScript.MODE_WAIT)
 	_go(&"lobby")
@@ -188,6 +198,11 @@ func _build() -> void:
 	_progress = HubUi.label("ProgressLabel", "", &"InspectorBody", HORIZONTAL_ALIGNMENT_RIGHT)
 	_progress.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	header.add_child(_progress)
+	# cc16: PLAYTEST (survey + Download log, scenes/survey/Survey.tscn).
+	var playtest: Button = HubUi.button("PlaytestButton", "PLAYTEST", &"ActionButton", Vector2(140, 64))
+	playtest.pressed.connect(open_playtest)
+	header.add_child(playtest)
+	_buttons[&"playtest"] = playtest
 
 	_continue_panel = PanelContainer.new()
 	_continue_panel.name = "ContinuePanel"
@@ -266,6 +281,6 @@ func get_key_controls() -> Dictionary:
 		out["ContinueInfo"] = _continue_info
 	for b: Node in _rival_row.get_children():
 		out[b.name] = b
-	for route: StringName in [&"lobby", &"lineup", &"album", &"dossier"]:
+	for route: StringName in [&"lobby", &"lineup", &"album", &"dossier", &"playtest"]:
 		out[_buttons[route].name] = _buttons[route]
 	return out
