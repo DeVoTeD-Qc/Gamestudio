@@ -2,7 +2,7 @@
 # Purpose: Run map (p11, scenes/run/RunMap.tscn). The run's matches left to right (prototype:
 #   Bracket 1 x2, Bracket 2 x2, Rival), each with squad, mode and goal, map, bracket bonus and its
 #   state in words (WON 6-3 / LOST -1 TICKET / DRAW / NEXT / UPCOMING), plus Reinforcement Tickets
-#   left and the current loadout. DEPLOY starts the next match: it emits
+#   left and the current loadout. k-art3: each card shows its mode's painted image (CardArt.mode_texture). DEPLOY starts the next match: it emits
 #   EventBus.next_match_requested (p16) and SceneRouter.start_run_match() creates the MatchState
 #   (RunState.create_match) and opens Match.tscn with it (hand-off: autoload/scene_router.gd).
 # Dependencies: run_screen.gd, RunState, SceneRouter, EventBus, RunFlow.
@@ -126,7 +126,20 @@ func _refresh_text(r: RunProgress) -> void:
 			r.deck.size(), primary, RunFlow.names_of(r, r.perks), RunFlow.names_of(r, r.killstreaks)]
 
 
-## Illustration per match card: the mode's tactic art; the Rival gets the gunship.
+## Run map mode image key (k-art3: assets/sprites/cards/runmap_mode_<key>.webp).
+func _mode_key(md: RunMatchData, rival: bool) -> StringName:
+	if rival:
+		return &"rival"
+	match md.mode:
+		DataEnums.GameMode.FIREFIGHT:
+			return &"firefight"
+		DataEnums.GameMode.DETONATOR:
+			return &"detonator"
+	return &"zone_control"
+
+
+## Fallback illustration per match card (no mode image): the mode's tactic card art; the Rival
+## gets the gunship.
 func _mode_art(md: RunMatchData, rival: bool) -> StringName:
 	if rival:
 		return &"gunship"
@@ -178,7 +191,7 @@ func _match_node(r: RunProgress, i: int) -> PanelContainer:
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.texture = CardArt.card_texture(_mode_art(md, rival), 2.0)
+	art.texture = CardArt.mode_texture(_mode_key(md, rival), _mode_art(md, rival), 2.0)
 	art.modulate = Color(1, 1, 1, 0.45 if not played.is_empty() else (1.0 if is_next else 0.75))
 	col.add_child(art)
 	var status: Label = make_label("", &"HudHeader", true)

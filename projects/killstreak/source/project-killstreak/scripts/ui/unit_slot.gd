@@ -12,7 +12,7 @@
 #   Compact (phone) profile hides the class word (the icon stays) and drops the
 #   desktop minimum height so the board fits a 540 px tall canvas.
 #   v01: a unit shows a faint class silhouette (card_art.gd token) behind its text, tinted with its
-#   side colour; enemy figures face the other way.
+#   side colour; enemy figures face the other way. k-art3: an INCOMING slot shows the card back.
 # Dependencies: hud_theme.tres variations (SlotFriendly, SlotEnemy, UnitName...), icon_sheet.gd, card_art.gd.
 # Author: UI/UX Agent
 extends PanelContainer
@@ -44,6 +44,9 @@ const FIGURE_FRIEND: Color = Color(0.18, 0.77, 0.71, 0.26)
 const FIGURE_ENEMY: Color = Color(0.9, 0.22, 0.23, 0.26)
 const FIGURE_OPERATOR: Color = Color(0.79, 0.64, 0.15, 0.36)
 const FIGURE_PENDING: Color = Color(1.0, 0.69, 0.13, 0.24)
+## Card back on an INCOMING slot: dimmed so INCOMING / SPOTTED and the red dot stay on top.
+const CARD_BACK_TINT: Color = Color(1.0, 1.0, 1.0, 0.5)
+const CARD_BACK_PX: int = 256
 
 var _figure_key: StringName = &""
 var _figure_scale: float = 0.0
@@ -131,6 +134,13 @@ func show_incoming(revealed_name: String = "") -> void:
 	_class.text = ""
 	_icon.texture = null
 	_hide_figure()
+	# k-art3: the hidden card shows face-down (card back) behind the tag and the red dot.
+	var back: Texture2D = CardArt.card_back_texture(CARD_BACK_PX)
+	if back != null:
+		_figure.texture = back
+		_figure.flip_h = false
+		_figure.modulate = CARD_BACK_TINT
+		_figure.visible = true
 	_set_parts(false, true)
 	_set_keywords([])
 

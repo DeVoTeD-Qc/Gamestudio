@@ -51,6 +51,9 @@ var _gesture: RefCounted = null
 var _backdrop_key: StringName = &""
 var _backdrop_scale: float = 0.0
 
+## k-art3: tint on a painted lane backdrop, so unit tokens and slot brackets stay on top.
+const PAINTED_LANE_DIM: Color = Color(0.6, 0.6, 0.62, 1.0)
+
 @onready var _backdrop: TextureRect = %Backdrop
 @onready var _column: VBoxContainer = %Column
 @onready var _header: PanelContainer = %Header
@@ -101,6 +104,9 @@ func _update_backdrop() -> void:
 		return
 	_backdrop_scale = s
 	_backdrop.texture = CardArt.lane_texture(_backdrop_key, s)
+	# k-art3: a painted lane is brighter than the SVG one, so it is dimmed in engine (the file
+	# keeps its full range); set_target() still fades it further for invalid targets.
+	_backdrop.self_modulate = PAINTED_LANE_DIM if CardArt.lane_is_bitmap(_backdrop_key) else Color.WHITE
 
 
 ## Shows whether the selected card / Operator can go here (TARGET_*), with a short badge text.

@@ -18,6 +18,8 @@ const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 const INSPECTOR_SCENE: PackedScene = preload("res://scenes/match/CardInspector.tscn")
 const MIN_CARD_SCALE: float = 0.8
 const MAX_CARD_SCALE: float = 1.3
+## Perk patch texture width (px) on a Perk offer tile.
+const PERK_PATCH_PX: int = 320
 const KIND_TITLES: Dictionary = {
 	RewardOffers.KIND_SUPPLY_DROP: "SUPPLY DROP",
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
@@ -42,6 +44,10 @@ var _rules_labels: Array[Label] = []
 @onready var _title: Label = %TitleLabel
 @onready var _subtitle: Label = %SubtitleLabel
 @onready var _body: MarginContainer = %Body
+
+
+func backdrop_key() -> StringName:
+	return &"supply_drop"
 
 
 func screen_id() -> StringName:
@@ -218,7 +224,15 @@ func _item_tile(item: LoadoutItem) -> PickTile:
 	# Short texts ("+1 FP.") only repeat the stat line.
 	if item.text != "" and (effect == "" or item.text.length() > 16):
 		tile.add_line(item.text)
-	tile.add_spacer()
+	# k-art3: a Perk shows its patch in the tile's free space (it shrinks, never grows the tile).
+	var patch: TextureRect = CardArt.perk_patch(item.id, PERK_PATCH_PX) \
+			if item.slot == DataEnums.LoadoutSlot.PERK else null
+	if patch != null:
+		patch.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		patch.custom_minimum_size = Vector2(0, 48)
+		tile.content.add_child(patch)
+	else:
+		tile.add_spacer()
 	tile.add_status("TAP TO TAKE")
 	return tile
 

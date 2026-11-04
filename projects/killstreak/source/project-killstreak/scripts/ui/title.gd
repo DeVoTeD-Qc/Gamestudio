@@ -32,6 +32,11 @@ var _key_art_scale: float = 0.0
 @onready var _not_now_button: Button = %NotNowButton
 
 
+## The Title has its own key art (and scrim) in the scene.
+func backdrop_key() -> StringName:
+	return &""
+
+
 func screen_id() -> StringName:
 	return &"title"
 

@@ -32,6 +32,8 @@ const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
 const INFO_WIDTH: float = 170.0
 const INFO_WIDTH_COMPACT: float = 140.0
 const PERK_SIZE: float = 26.0
+## Perk patch texture width (px): 26 canvas px at up to ~3.7 screen px each.
+const PERK_PATCH_PX: int = 96
 ## Text on a selected (filled) item button: the HUD's background ink.
 const SELECTED_TEXT: Color = Color(0.0705882, 0.0862745, 0.101961, 1)
 
@@ -170,7 +172,13 @@ func _build_perks(perks: Array, slots: int) -> void:
 		slot.theme_type_variation = &"PerkSlot"
 		slot.custom_minimum_size = Vector2(PERK_SIZE, PERK_SIZE)
 		# Earned perks get an icon (p13) and tap-to-inspect (p09); empty slots stay outlined.
-		slot.set_meta(&"perk", perks[i] if i < perks.size() else &"")
+		var perk: StringName = StringName(perks[i]) if i < perks.size() else &""
+		slot.set_meta(&"perk", perk)
+		# k-art3: an earned perk shows its patch, masked to a circle inside the ring.
+		var patch: TextureRect = CardArt.perk_patch(perk, PERK_PATCH_PX) if perk != &"" else null
+		if patch != null:
+			patch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
+			slot.add_child(patch)
 		_perk_row.add_child(slot)
 
 

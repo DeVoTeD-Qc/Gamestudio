@@ -5,6 +5,7 @@
 #   screen announcement and small builders for theme-styled Labels / Buttons / tiles.
 #   Phone rules (README "Phone readability"): text >= 16 px and tap targets >= 64 px at the
 #   540 px phone base, i.e. >= 11.6 pt and >= 46 pt on an 844x390 iPhone.
+#   k-art3: backdrop_key() picks a painted backdrop (bg_run; Reward: bg_supply_drop) under a scrim.
 #   Subclasses override _build() (once, from _ready), _apply_compact() (when the profile
 #   changes) and screen_id(). Styling comes from hud_theme.tres variations only.
 # Scene contract: the root Control has a %SafeArea MarginContainer filling the screen.
@@ -21,6 +22,8 @@ const BASE_MARGIN_COMPACT: Vector2 = Vector2(16, 10)
 ## Height of main buttons (px): 64 on the phone = 46 pt at 0.72 pt per px.
 const BUTTON_H: float = 72.0
 const BUTTON_H_COMPACT: float = 64.0
+## Slate-black scrim over a painted backdrop: text sits straight on it, so keep it heavy.
+const BACKDROP_SCRIM: Color = Color(0.0705882, 0.0862745, 0.101961, 0.72)
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
@@ -37,6 +40,7 @@ var _profile_set: bool = false
 
 
 func _ready() -> void:
+	_add_backdrop()
 	_build()
 	resized.connect(_on_resized)
 	get_viewport().size_changed.connect(_apply_safe_area)
@@ -55,6 +59,38 @@ func _build() -> void:
 ## Re-applies sizes for the current profile (compact or not).
 func _apply_compact() -> void:
 	pass
+
+
+## k-art3: painted backdrop of this screen (assets/ui/backgrounds/bg_<key>.webp); &"" = none.
+## Without the image the screen keeps its plain tactical backdrop.
+func backdrop_key() -> StringName:
+	return &"run"
+
+
+## Puts the painted backdrop and its scrim right above the scene's Background, under the UI.
+func _add_backdrop() -> void:
+	var key: StringName = backdrop_key()
+	var tex: Texture2D = CardArt.backdrop_texture(key) if key != &"" else null
+	if tex == null:
+		return
+	var art: TextureRect = TextureRect.new()
+	art.name = "BackdropArt"
+	art.texture = tex
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	var scrim: ColorRect = ColorRect.new()
+	scrim.name = "BackdropScrim"
+	scrim.color = BACKDROP_SCRIM
+	var at: int = 0
+	var bg: Node = get_node_or_null(^"Background")
+	if bg != null:
+		at = bg.get_index() + 1
+	for c: Control in [art, scrim]:
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(c)
+		move_child(c, at)
+		at += 1
 
 
 ## Name announced to PlaytestLog (EventBus.screen_shown).

@@ -9,8 +9,21 @@
 #   CardArt.token_texture(&"sniper", 1.5)                     # unit slot silhouette (white, tint it)
 #   CardArt.lane_texture(&"cranes", 1.5)                      # board lane backdrop
 #   CardArt.key_art_texture(1.0)                              # Title background
+#   k-art3: painted bitmaps (studio batch 1) take over any slot that has an approved image:
+#   res://assets/sprites/cards/card_<key>.webp, assets/sprites/board/lane_<key>.webp,
+#   assets/ui/backgrounds/title_key_art.webp. A missing (or rejected and removed) image falls back
+#   to the SVG above, so no slot is ever blank. New slots with no SVG return null when their image
+#   is missing and the caller keeps its old look:
+#   CardArt.mode_texture(&"rival", &"gunship", 2.0)   # run map card (falls back to the card art)
+#   CardArt.backdrop_texture(&"run")                  # bg_run / bg_supply_drop
+#   CardArt.card_back_texture(140)                    # face-down card back
+#   CardArt.perk_texture(&"grit", 96)                 # perk patch (mask it with circle_mask.gdshader)
+#   The .webp files use the "keep" importer: they ship byte for byte as delivered (WebP q85) and
+#   are decoded here with Image.load_webp_from_buffer. No re-encode, no VRAM compression, no
+#   mipmaps; a slot shown much smaller than the file gets a Lanczos-downscaled copy instead
+#   (bucketed like the SVG scale), so minified art does not shimmer.
 # Dependencies: card_art_data.gd
-# Author: Sr Game Artist Agent (v01)
+# Author: Sr Game Artist Agent (v01); bitmaps: Technical Artist Agent (k-art3)
 class_name CardArt
 extends RefCounted
 
@@ -24,8 +37,27 @@ const TOKEN_FOR_CLASS: Dictionary = {
 	"OPERATOR": &"operator", "": &"shield",
 }
 
+const CARD_DIR: String = "res://assets/sprites/cards/"
+const BOARD_DIR: String = "res://assets/sprites/board/"
+const BACKDROP_DIR: String = "res://assets/ui/backgrounds/"
+const PERK_DIR: String = "res://assets/ui/perks/"
+const BITMAP_EXT: String = ".webp"
+const CIRCLE_MASK: Shader = preload("res://assets/shaders/circle_mask.gdshader")
+## Decoded bitmaps kept in the LRU (textures still shown by a node stay alive anyway).
+const MAX_BITMAPS: int = 40
+## A copy is downscaled only when the slot needs less than this share of the file's width.
+const DOWNSCALE_BELOW: float = 0.75
+
+## Off: every slot uses its procedural art (tests; also a kill switch).
+static var bitmaps_enabled: bool = true
+## Paths treated as missing (tests simulate a rejected / deleted image).
+static var missing_paths: Dictionary = {}
+
 static var _cache: Dictionary = {}
 static var _order: Array = []
+static var _circle_mask: ShaderMaterial = null
+static var _bitmaps: Dictionary = {}
+static var _bitmap_order: Array = []
 
 
 ## Art key for a CardView dictionary: the card id, else its art_icon, else its weapon class / type.
@@ -48,9 +80,97 @@ static func has_card(key: StringName) -> bool:
 
 static func card_texture(key: StringName, scale: float) -> Texture2D:
 	key = Data.ALIASES.get(key, key)
+	var path: String = card_path(key)
+	if has_bitmap(path):
+		return bitmap(path, ceili(Data.CARD_SIZE.x * bucket(scale)))
 	if not Data.CARDS.has(key):
 		return null
 	return _raster("card/" + String(key), Data.CARDS[key], scale)
+
+
+static func card_path(key: StringName) -> String:
+	return CARD_DIR + "card_" + String(Data.ALIASES.get(key, key)) + BITMAP_EXT
+
+
+## Run map match card art for a mode (&"zone_control", &"firefight", &"detonator", &"rival");
+## without its image, the card art of fallback_card.
+static func mode_texture(mode: StringName, fallback_card: StringName, scale: float) -> Texture2D:
+	var path: String = CARD_DIR + "runmap_mode_" + String(mode) + BITMAP_EXT
+	if has_bitmap(path):
+		return bitmap(path, ceili(Data.CARD_SIZE.x * bucket(scale)))
+	return card_texture(fallback_card, scale)
+
+
+## Full-screen run backdrop (&"run", &"supply_drop"); null without its image.
+static func backdrop_texture(key: StringName) -> Texture2D:
+	var path: String = BACKDROP_DIR + "bg_" + String(key) + BITMAP_EXT
+	return bitmap(path) if has_bitmap(path) else null
+
+
+## Face-down card back, at most px wide; null without its image.
+static func card_back_texture(px: int = 0) -> Texture2D:
+	var path: String = CARD_DIR + "card_back" + BITMAP_EXT
+	return bitmap(path, px) if has_bitmap(path) else null
+
+
+## Perk patch (square, round patch inside), at most px wide; null without its image.
+static func perk_texture(perk_id: StringName, px: int = 0) -> Texture2D:
+	var path: String = PERK_DIR + "perk_" + String(perk_id) + BITMAP_EXT
+	return bitmap(path, px) if has_bitmap(path) else null
+
+
+## A TextureRect showing the perk's patch masked to a circle (circle_mask.gdshader), at most px
+## wide; null without its image (the caller keeps its empty / outlined slot).
+static func perk_patch(perk_id: StringName, px: int) -> TextureRect:
+	var tex: Texture2D = perk_texture(perk_id, px)
+	if tex == null:
+		return null
+	if _circle_mask == null:
+		_circle_mask = ShaderMaterial.new()
+		_circle_mask.shader = CIRCLE_MASK
+	var rect := TextureRect.new()
+	rect.name = "Patch"
+	rect.texture = tex
+	rect.material = _circle_mask
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+
+static func has_bitmap(path: String) -> bool:
+	return bitmaps_enabled and not missing_paths.has(path) and FileAccess.file_exists(path)
+
+
+## Decodes a shipped WebP (cached). max_px > 0 and well under the file's width: a Lanczos
+## downscaled copy, width rounded up to a multiple of 64 so nearby sizes share it.
+static func bitmap(path: String, max_px: int = 0) -> Texture2D:
+	var want: int = 0 if max_px <= 0 else ceili(max_px / 64.0) * 64
+	var cache_key: String = "%s@%d" % [path, want]
+	if _bitmaps.has(cache_key):
+		_bitmap_order.erase(cache_key)
+		_bitmap_order.append(cache_key)
+		return _bitmaps[cache_key]
+	var img := Image.new()
+	if img.load_webp_from_buffer(FileAccess.get_file_as_bytes(path)) != OK or img.is_empty():
+		push_warning("CardArt: could not decode %s" % path)
+		return null
+	if want > 0 and want < img.get_width() * DOWNSCALE_BELOW:
+		img.resize(want, maxi(1, roundi(img.get_height() * float(want) / img.get_width())), Image.INTERPOLATE_LANCZOS)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	_bitmaps[cache_key] = tex
+	_bitmap_order.append(cache_key)
+	while _bitmap_order.size() > MAX_BITMAPS:
+		_bitmaps.erase(_bitmap_order.pop_front())
+	return tex
+
+
+## Drops every cached texture (tests, after changing bitmaps_enabled / missing_paths).
+static func clear_cache() -> void:
+	_cache.clear()
+	_order.clear()
+	_bitmaps.clear()
+	_bitmap_order.clear()
 
 
 static func token_texture(key: StringName, scale: float) -> Texture2D:
@@ -72,13 +192,24 @@ static func lane_key(zone_name: String, zone_id: StringName) -> StringName:
 
 
 static func lane_texture(key: StringName, scale: float) -> Texture2D:
+	var path: String = BOARD_DIR + "lane_" + String(key) + BITMAP_EXT
+	if has_bitmap(path):
+		return bitmap(path, ceili(Data.LANE_SIZE.x * bucket(scale)))
 	if not Data.LANES.has(key):
 		return null
 	return _raster("lane/" + String(key), Data.LANES[key], scale)
 
 
 static func key_art_texture(scale: float) -> Texture2D:
+	var path: String = BACKDROP_DIR + "title_key_art" + BITMAP_EXT
+	if has_bitmap(path):
+		return bitmap(path)
 	return _raster("key", Data.KEY_ART, scale)
+
+
+## True when the slot shows a painted image (else procedural art).
+static func lane_is_bitmap(key: StringName) -> bool:
+	return has_bitmap(BOARD_DIR + "lane_" + String(key) + BITMAP_EXT)
 
 
 ## Scale bucket: steps of 0.5 from 0.5 to 4, so a resize doesn't re-rasterise every frame.
