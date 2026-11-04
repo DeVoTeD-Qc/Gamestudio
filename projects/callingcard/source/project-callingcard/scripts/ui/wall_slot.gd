@@ -16,7 +16,7 @@ var target_state: StringName = &"none":
 	set(v):
 		target_state = v
 		_refresh_style()
-## {card: Dictionary, owner, face_down, signature, pending} or {} when empty.
+## {card: Dictionary, owner, face_down, signature, pending, preview, preview_dir, target, boost} or {}.
 var content: Dictionary = {}
 
 @onready var _id_label: Label = %SlotIdLabel
@@ -53,7 +53,10 @@ func _refresh() -> void:
 		_card.side = content.get("owner", &"")
 		_card.signature = content.get("signature", false)
 		_card.face_down = content.get("face_down", false)
-		_card.highlighted = content.get("pending", false)
+		_card.highlighted = content.get("pending", false) or content.get("target", false)
+		_card.preview_flip = content.get("preview", false)
+		_card.preview_dir = content.get("preview_dir", Vector2.RIGHT)
+		_card.boost = content.get("boost", Vector3i.ZERO)
 	_refresh_style()
 
 

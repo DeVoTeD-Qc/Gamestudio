@@ -26,6 +26,8 @@ signal card_picked(card_id: StringName)
 signal slot_chosen(slot_id: StringName)
 signal place_confirmed(card_id: StringName, slot_id: StringName)
 signal menu_requested
+## cc08: a slot listed in pick_targets was tapped (e.g. the card a Cipher copies).
+signal target_tapped(slot_id: StringName)
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const DuelTheme: GDScript = preload("res://scripts/ui/duel_theme.gd")
@@ -50,6 +52,13 @@ var _state: Dictionary = {}
 var _picked: StringName = &""
 var _pending_slot: StringName = &""
 var _valid_slots: Array = []
+## cc08: slot -> Vector2 direction of the capture-preview arrow on that card.
+var _preview: Dictionary = {}
+var _pending_boost: Vector3i = Vector3i.ZERO
+## cc08: occupied slots whose tap means "this one" (target_tapped) instead of "inspect".
+var pick_targets: Array = []
+## cc08 (mock_interactions = false): PLACE is enabled only when the controller says so.
+var place_ready: bool = false
 
 @onready var _safe_area: MarginContainer = %SafeArea
 @onready var _column: VBoxContainer = %Column
@@ -64,6 +73,9 @@ var _valid_slots: Array = []
 @onready var _info: Button = %InfoButton
 @onready var _place: Button = %PlaceButton
 @onready var _inspector: Control = %CardInspector
+@onready var _toast: PanelContainer = %Toast
+@onready var _toast_label: Label = %ToastLabel
+var _toast_serial: int = 0
 
 
 func _ready() -> void:
@@ -85,7 +97,8 @@ func _ready() -> void:
 	EventBus.carded.connect(_on_carded)
 	EventBus.score_changed.connect(_on_score_changed)
 	_relayout()
-	if _state.is_empty():
+	# A DuelController child (cc08) drives the screen; without one the screen shows mock data.
+	if _state.is_empty() and mock_interactions:
 		show_state(MockDuelData.mid_state())
 	EventBus.screen_shown.emit(&"duel")
 
@@ -126,6 +139,65 @@ func set_pending(slot_id: StringName) -> void:
 	_refresh_buttons()
 
 
+## cc08: capture preview. flips: {slot: Vector2 arrow direction}; boost: the pending card's
+## placement bonus (effective - printed values: Set Link, Clutch), shown in amber.
+func set_preview(flips: Dictionary, boost: Vector3i = Vector3i.ZERO) -> void:
+	_preview = flips.duplicate()
+	_pending_boost = boost
+	_render_wall()
+
+
+func get_preview() -> Dictionary:
+	return _preview
+
+
+func get_picked() -> StringName:
+	return _picked
+
+
+func get_pending() -> StringName:
+	return _pending_slot
+
+
+## Drops the picked card, the pending slot, glows and preview.
+func clear_pick() -> void:
+	_hand.picked_id = &""
+	_picked = &""
+	_pending_slot = &""
+	_preview.clear()
+	_pending_boost = Vector3i.ZERO
+	pick_targets = []
+	place_ready = false
+	set_valid_slots([])
+	_render()
+
+
+## Centre of a brick in the wall's coordinates (preview arrow directions).
+func slot_center(slot_id: StringName) -> Vector2:
+	var s: Control = _wall.get_slot(slot_id)
+	return s.position + s.size * 0.5 if s != null else Vector2.ZERO
+
+
+## Short non-blocking message under the score bar ("Pick a card first").
+func show_toast(text: String, seconds: float = 2.2) -> void:
+	_toast_label.text = text
+	_toast.show()
+	_toast_serial += 1
+	var serial: int = _toast_serial
+	if is_inside_tree() and seconds > 0.0:
+		await get_tree().create_timer(seconds).timeout
+		if serial == _toast_serial and is_instance_valid(_toast):
+			_toast.hide()
+
+
+func get_toast_text() -> String:
+	return _toast_label.text if _toast.visible else ""
+
+
+func get_overlay() -> Control:
+	return %DuelOverlay
+
+
 func _render() -> void:
 	if not is_node_ready() or _state.is_empty():
 		return
@@ -159,10 +231,13 @@ func _render_wall() -> void:
 	for slot_id: StringName in wall:
 		var e: Dictionary = wall[slot_id]
 		entries[slot_id] = {"card": card_lookup.call(e.get("card_id", &"")), "owner": e.get("owner", &""),
-				"face_down": e.get("face_down", false), "signature": sigs.has(e.get("card_id", &""))}
+				"face_down": e.get("face_down", false), "signature": e.get("signature", sigs.has(e.get("card_id", &""))),
+				"preview": _preview.has(slot_id), "preview_dir": _preview.get(slot_id, Vector2.RIGHT),
+				"target": pick_targets.has(slot_id)}
 	if _pending_slot != &"" and _picked != &"" and not wall.has(_pending_slot):
 		entries[_pending_slot] = {"card": card_lookup.call(_picked), "owner": &"player", "face_down": false,
-				"signature": sigs.has(_picked), "pending": true}
+				"signature": _picked == _state.get("player", {}).get("signature_id", &""), "pending": true,
+				"boost": _pending_boost}
 	_wall.show_wall(entries)
 
 
@@ -174,7 +249,7 @@ func _counter_data(side: Dictionary) -> Dictionary:
 
 func _refresh_buttons() -> void:
 	_info.disabled = _picked == &""
-	_place.disabled = _picked == &"" or _pending_slot == &""
+	_place.disabled = _picked == &"" or _pending_slot == &"" or (not mock_interactions and not place_ready)
 
 
 # --- Layout --------------------------------------------------------------------
@@ -200,6 +275,7 @@ func _relayout() -> void:
 	_safe_area.add_theme_constant_override(&"margin_right", int(margin_rb.x))
 	_safe_area.add_theme_constant_override(&"margin_bottom", int(margin_rb.y))
 	_inspector.set_safe_margins(margin_lt, margin_rb)
+	%DuelOverlay.set_safe_margins(margin_lt, margin_rb)
 	_inspector.compact = compact
 
 	var sep: int = 8 if compact else 12
@@ -311,19 +387,23 @@ func _on_hand_unpicked() -> void:
 
 
 func _on_slot_tapped(slot_id: StringName) -> void:
+	if pick_targets.has(slot_id):
+		target_tapped.emit(slot_id)
+		return
 	var occupied: bool = _state.get("wall", {}).has(slot_id)
 	if occupied:
 		inspect_slot(slot_id)
 		return
-	if _picked == &"":
+	if _picked == &"" and mock_interactions:
 		return
+	# With a controller every empty-slot tap is reported (it explains "pick a card first").
 	slot_chosen.emit(slot_id)
 	if mock_interactions:
 		set_pending(slot_id)
 
 
 func _on_place() -> void:
-	if _picked == &"" or _pending_slot == &"":
+	if _picked == &"" or _pending_slot == &"" or (not mock_interactions and not place_ready):
 		return
 	var card_id: StringName = _picked
 	var slot_id: StringName = _pending_slot
@@ -365,6 +445,8 @@ func _on_turn_started(side: StringName, turn_index: int) -> void:
 
 
 func _on_card_placed(side: StringName, card_id: StringName, slot: StringName, _captures: Array) -> void:
+	if not _state.has("wall"):
+		return
 	var c: Dictionary = card_lookup.call(card_id)
 	_state["wall"][slot] = {"card_id": card_id, "owner": side, "face_down": c.get("trait", &"") == &"ambush"}
 	var hand: Array = _state.get(String(side), {}).get("hand", [])
@@ -392,6 +474,8 @@ func _on_carded(by_side: StringName, card_id: StringName) -> void:
 
 
 func _on_score_changed(player_score: int, rival_score: int) -> void:
+	if not _state.has("player"):
+		return
 	_state["player"]["score"] = player_score
 	_state["rival"]["score"] = rival_score
 	_render()
