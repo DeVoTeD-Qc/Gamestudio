@@ -58,6 +58,9 @@ signal playback_step(step: Dictionary)
 signal playback_finished(summary: String, steps: Array, skipped: bool)
 ## cz12: the human's Brace step opened with this suggestion (brace_advisor.gd).
 signal brace_suggested(suggestion: Dictionary)
+## cz14 hot-seat: the pass-the-device cover went up (before anything of `info.seat` is shown) or
+## came down (after the seat's view was emitted). info: see cover_info().
+signal cover_changed(up: bool, info: Dictionary)
 
 const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
 const OpponentPlaceholder: GDScript = preload("res://scripts/match/opponent_placeholder.gd")
@@ -75,6 +78,8 @@ const PHASE_ACT: StringName = &"act"
 const PHASE_BRACE: StringName = &"brace"
 const PHASE_OPPONENT: StringName = &"opponent"
 const PHASE_OVER: StringName = &"over"
+## cz14 hot-seat: the cover is up; nothing seat-private is in the view until reveal().
+const PHASE_COVER: StringName = &"cover"
 
 ## Seconds between announced events (0 = no waiting: tests).
 @export var event_delay: float = 0.45
@@ -118,6 +123,17 @@ var _in_rival_turn: bool = false
 ## cz12: cached suggestion for the current Brace step, keyed by the action count.
 var _suggestion: Dictionary = {}
 var _suggestion_key: String = ""
+## cz14 hot-seat (meta.mode == "hotseat"): two humans, one device. `human` is the seat shown.
+var hotseat: bool = false
+## cz14: the seat the cover is up for (-1 = no cover).
+var cover_seat: int = -1
+## cz14: per seat, the events (already filtered for that seat) of each action applied while it
+## was not shown, one Array per action (an undo drops the last one); told after its cover.
+var _unseen: Array = [[], []]
+## cz14: per seat, its own log lines (log_lines is the shown seat's).
+var _seat_logs: Array = [PackedStringArray(), PackedStringArray()]
+## cz14: per seat, the card ids of its last packed line (public, P10).
+var _last_lines: Array = [[], []]
 
 
 func _init() -> void:
@@ -146,6 +162,7 @@ func start_resumed(resumed: Dictionary) -> bool:
 func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 	for k: Variant in match_meta.keys():
 		meta[k] = match_meta[k]
+	hotseat = String(meta.get("mode", "ai")) == "hotseat"  # cz14
 	human = int(meta.get("human_seat", human))
 	meta["human_seat"] = human
 	if not match_meta.has("ai_level"):
@@ -157,6 +174,7 @@ func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 	_turn_index = 0
 	hits_landed = [0, 0]
 	_rival_steps.clear()
+	_hotseat_begin()  # cz14: hot-seat starts (and resumes) behind the cover
 	_in_rival_turn = s.phase != MatchState.PHASE_DROP and s.active == rival_seat()
 	_started_ms = Time.get_ticks_msec()
 	EventBus.match_started.emit(StringName(opponent_kind().to_lower()), MatchState.P1)
@@ -165,6 +183,8 @@ func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 
 
 func opponent_kind() -> String:
+	if hotseat:
+		return "Player %d" % (rival_seat() + 1)  # cz14
 	if opponent != null and "kind" in opponent:
 		return String(opponent.get("kind"))
 	if opponent != null and "level" in opponent:
@@ -189,6 +209,8 @@ func rival_seat() -> int:
 func view() -> Dictionary:
 	if state == null:
 		return {}
+	if is_covered():
+		return _covered_view()  # cz14: nothing seat-private while the cover is up
 	var v: Dictionary = LoadoutRules.view(state, human)
 	if v.has("brace_prompt"):
 		_add_brace_advice(v)
@@ -206,7 +228,7 @@ func brace_suggestion() -> Dictionary:
 ## The live result of bracing with `cards` now: {total, hits, blocked, health_after, eliminated,
 ## comes_up, ...} (brace_advisor.preview). {} when there is no Brace step.
 func brace_preview(cards: Array) -> Dictionary:
-	if state == null or state.pending_brace_seat() != human:
+	if state == null or state.pending_brace_seat() != human or is_covered():
 		return {}
 	var v: Dictionary = LoadoutRules.view(state, human)
 	v["brace_prompt"]["hand_size"] = state.data.balance.hand_size
