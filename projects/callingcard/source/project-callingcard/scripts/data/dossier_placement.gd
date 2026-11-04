@@ -15,6 +15,9 @@ extends Resource
 @export var face_down: bool = false
 ## This card is its side's Signature (counts double).
 @export var is_signature: bool = false
+## Cipher cards only: the adjacent slot whose trait the card copies (spec §4.4 "your pick").
+## &"" = no pick (non-Cipher cards, or a Cipher with no neighbour). Used by solution steps (cc12).
+@export var copy_from: StringName = &""
 
 
 func validate(v: DataValidator, field: String) -> void:

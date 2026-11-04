@@ -67,6 +67,7 @@ card = ExtResource("10_null_glyph")
 side = 0
 face_down = false
 is_signature = false
+copy_from = &"c2"
 
 [sub_resource type="Resource" id="Resource_p8"]
 script = ExtResource("2_dossier_plac")

@@ -244,6 +244,7 @@ func _render_wall() -> void:
 				"signature": _picked == _state.get("player", {}).get("signature_id", &""), "pending": true,
 				"boost": _pending_boost}
 	_wall.show_wall(entries)
+	_apply_reserved()
 
 
 func _counter_data(side: Dictionary) -> Dictionary:
@@ -255,6 +256,62 @@ func _counter_data(side: Dictionary) -> Dictionary:
 func _refresh_buttons() -> void:
 	_info.disabled = _picked == &""
 	_place.disabled = _picked == &"" or _pending_slot == &"" or (not mock_interactions and not place_ready)
+
+
+# --- Dossier hooks (cc12) -----------------------------------------------------------
+# A DossierController drives this screen the way DuelController does, plus three additions:
+# empty slots reserved for a scripted rival reply, extra action buttons, and a goal line.
+
+## Empty slots shown as taken: {slot_id: caption}. The slot keeps reporting taps (slot_chosen),
+## so the controller can say why it is reserved.
+var reserved_slots: Dictionary = {}
+var _goal_label: Label = null
+
+
+func set_reserved_slots(slots: Dictionary) -> void:
+	reserved_slots = slots.duplicate()
+	_apply_reserved()
+
+
+func _apply_reserved() -> void:
+	if not is_node_ready():
+		return
+	for s: Node in _wall.get_slots():
+		var label: Label = s.get_node_or_null("%SlotIdLabel")
+		if label == null:
+			continue
+		var id: String = String(s.slot_id).to_upper()
+		if reserved_slots.has(s.slot_id) and s.is_empty():
+			label.text = "%s · %s" % [id, reserved_slots[s.slot_id]]
+			label.add_theme_color_override(&"font_color", ArtKit.RIVAL)
+			s.set_meta(&"reserved", true)
+		elif s.has_meta(&"reserved"):
+			label.text = id
+			label.remove_theme_color_override(&"font_color")
+			s.remove_meta(&"reserved")
+
+
+## The button column left of the hand (INFO) or right of it (PLACE), for extra buttons.
+func get_action_column(right: bool) -> VBoxContainer:
+	return (_place if right else _info).get_parent() as VBoxContainer
+
+
+## A goal line under the hand cards ("" hides it).
+func set_goal_text(text: String) -> void:
+	if _goal_label == null:
+		_goal_label = Label.new()
+		_goal_label.name = "GoalLabel"
+		_goal_label.theme_type_variation = &"InspectorHeading"
+		_goal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_goal_label.clip_text = true
+		_goal_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		_hand.add_child(_goal_label)
+	_goal_label.text = text
+	_goal_label.visible = text != ""
+
+
+func get_goal_label() -> Label:
+	return _goal_label
 
 
 # --- Layout --------------------------------------------------------------------

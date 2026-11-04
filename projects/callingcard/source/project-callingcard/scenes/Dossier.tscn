@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/Duel.tscn" id="1_duel"]
+[ext_resource type="Script" path="res://scripts/dossier/dossier_controller.gd" id="2_dossier"]
+
+[node name="Dossier" instance=ExtResource("1_duel")]
+
+[node name="DuelController" parent="."]
+script = ExtResource("2_dossier")
