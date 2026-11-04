@@ -17,6 +17,9 @@
 #   cc15 game feel: each replay pause also awaits the FX layer (%FX, DuelFx.wait_idle()) so the
 #   "Carded!" stamp and Triptych merge finish before play moves on (only when event_delay > 0);
 #   emits set_linked (Set Link light) and card_reclaimed, plus duel_lineup_locked for cc09.
+#   cc13 Lobby Duel (scripts/lobby/lobby_duel.gd): `entry` picks how the duel opens (setup panel,
+#   quick start, or resume_duel() from a saved WallState) and `menu_override` replaces the MENU
+#   leave prompt during play (Save & leave). Additive only: the default flow is unchanged.
 # Dependencies: WallRules, WallState, PlacementResult, EventBus, Settings, SceneRouter,
 #   duel_setup.gd, random_rival.gd, DuelScreen (parent), DuelOverlay, BannerCard.
 # Author: UI/UX Agent (cc08)
@@ -80,6 +83,13 @@ var _started_ms: int = 0
 var _seed: int = 0
 ## True when the duel uses the loaner lineup (not the one next_player_lineup asked for).
 var _loaner: bool = false
+## cc13: how the duel opens when autostart is on: &"setup" (rival + Signature panel, default),
+## &"quick" (Lobby Duel: straight to the coin flip with next_rival_id and the lineup's Signature)
+## or &"resume" (continue resume_data, the Dictionary Collection.resume_lobby_duel() returned).
+var entry: StringName = &"setup"
+var resume_data: Dictionary = {}
+## cc13: when valid, MENU during play calls this instead of opening the leave prompt.
+var menu_override: Callable = Callable()
 
 
 func _ready() -> void:
@@ -95,7 +105,7 @@ func _ready() -> void:
 	_screen.menu_requested.connect(_on_menu)
 	_overlay = _screen.get_node("%DuelOverlay")
 	_overlay.button_pressed.connect(_on_overlay_button)
-	open_setup.call_deferred()
+	_open_entry.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -443,8 +453,75 @@ func _on_menu() -> void:
 		_on_overlay_button(&"menu")
 		return
 	_resume_phase = phase if phase != &"resolving" else &"player"
+	if menu_override.is_valid():  # cc13: the Lobby Duel's own prompt (Save & leave)
+		menu_override.call()
+		return
 	_overlay.open(&"leave", "LEAVE THIS DUEL?", "The duel is not saved.", [
 		{"id": &"leave", "text": "LEAVE"}, {"id": &"stay", "text": "KEEP PLAYING", "primary": true}])
+
+
+# --- cc13: Lobby Duel entry points ---------------------------------------------------------
+
+func _open_entry() -> void:
+	match entry:
+		&"resume":
+			if not resume_duel(resume_data):
+				open_setup()
+		&"quick":
+			open_setup()
+			start_duel()
+		_:
+			open_setup()
+
+
+## Continues a saved duel. data: Collection.resume_lobby_duel() ({state: WallState, rival_id,
+## lineup: Array[StringName], signature, loaner, elapsed_s}). Emits neither duel_started nor
+## duel_lineup_locked (Collection already restored the duel context; the caller emits
+## EventBus.duel_resumed). Returns false when there is no state to continue.
+func resume_duel(data: Dictionary) -> bool:
+	var restored: WallState = data.get("state") as WallState
+	if restored == null or _screen == null or restored.is_game_over():
+		return false
+	if not _screen.get_hand().card_unpicked.is_connected(_clear_selection):
+		_screen.get_hand().card_unpicked.connect(_clear_selection)
+	rivals = DuelSetup.rivals()
+	rival = rivals[0]
+	for r: Dictionary in rivals:
+		if r["id"] == StringName(str(data.get("rival_id", ""))):
+			rival = r
+	state = restored
+	player_lineup.clear()
+	for id: Variant in data.get("lineup", []):
+		var c: CardData = DuelSetup.get_card(StringName(str(id)))
+		if c != null:
+			player_lineup.append(c)
+	if player_lineup.is_empty():
+		for c: CardData in state.hands[P1]:
+			player_lineup.append(c)
+	player_signature = state.signature_cards[P1]
+	_loaner = bool(data.get("loaner", false))
+	_seed = seed_value if seed_value != 0 else randi()
+	brain = null
+	if brain_factory.is_valid():
+		brain = brain_factory.call(rival.get("data"), _seed)
+	elif rival.get("data") != null:
+		brain = RivalAI.for_rival(rival["data"], _seed)
+	if brain == null:
+		brain = RandomRival.new(_seed)
+	_started_ms = Time.get_ticks_msec() - int(float(data.get("elapsed_s", 0.0)) * 1000.0)
+	_overlay.close()
+	_screen.clear_pick()
+	_clear_selection()
+	var fx: Node = _fx()
+	if fx != null:
+		fx.stage_changes = event_delay > 0.0
+	_next_turn()
+	return true
+
+
+## Seconds since the duel began (a resumed duel counts its saved time).
+func elapsed_s() -> float:
+	return (Time.get_ticks_msec() - _started_ms) / 1000.0 if _started_ms != 0 else 0.0
 
 
 # --- Setup panel ---------------------------------------------------------------------------
