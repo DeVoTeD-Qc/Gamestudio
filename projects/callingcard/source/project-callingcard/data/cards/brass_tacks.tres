@@ -20,5 +20,5 @@ how_earned = "100 eliminations without dying across matches"
 art_key = &"brass_tacks"
 art_seed = 1162
 art_brief = "Brass tacks pinning a torn map"
-cipher_glyph = 4
+cipher_glyph = 3
 starts_owned = true

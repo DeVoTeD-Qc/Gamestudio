@@ -15,15 +15,15 @@ T / S / B values, Clearance and origin match spec §6 and the QA card table (`qa
 | 2 | neon_rain | Night Shift (2) | Mastery → Veteran | 2 | 4/6/5 | – | Owned |
 | 3 | last_train | Night Shift (3) | Event → Ambush | 2 | 6/4/5 | – | Owned |
 | 4 | city_never_sleeps | Night Shift (4) | Prestige → Reclaim | 4 | 7/5/7 | – | `unlock_beat_warden` |
-| 5 | frostbite | Whiteout (1) | Challenge → Steady | 1 | 3/6/4 | 2 | Owned |
+| 5 | frostbite | Whiteout (1) | Challenge → Steady | 1 | 3/6/4 | 4 | Owned |
 | 6 | snow_blind | Whiteout (2) | Event → Ambush | 3 | 6/5/6 | – | Owned |
 | 7 | polar_night | Whiteout (3) | Ranked → Clutch | 3 | 5/7/5 | – | `unlock_win_streak_3` |
 | 8 | glacier | Whiteout (4) | Mastery → Veteran | 2 | 7/2/6 | – | Owned |
-| 9 | mayday | Signal Fire (1) | Challenge → Steady | 2 | 5/5/5 | 3 | Owned |
+| 9 | mayday | Signal Fire (1) | Challenge → Steady | 2 | 5/5/5 | 2 | Owned |
 | 10 | flare_up | Signal Fire (2) | Event → Ambush | 1 | 6/3/4 | – | Owned |
 | 11 | dead_air | Signal Fire (3) | Mastery → Veteran | 3 | 4/8/5 | – | `unlock_captures_20` |
 | 12 | open_channel | Signal Fire (4) | Ranked → Clutch | 2 | 4/5/6 | – | Owned |
-| 13 | brass_tacks | Old Guard (1) | Challenge → Steady | 3 | 6/6/5 | 4 | Owned |
+| 13 | brass_tacks | Old Guard (1) | Challenge → Steady | 3 | 6/6/5 | 3 | Owned |
 | 14 | service_ribbon | Old Guard (2) | Mastery → Veteran | 1 | 4/5/4 | – | Owned |
 | 15 | long_watch | Old Guard (3) | Ranked → Clutch | 4 | 6/7/6 | – | `unlock_beat_warden_no_legend` |
 | 16 | honor_roll | Old Guard (4) | Prestige → Reclaim | 3 | 5/6/6 | – | `unlock_wins_5` |
@@ -42,7 +42,7 @@ Signature-eligible. Album order inside each set follows the spec list.
 | 2 | whiteout | Standard | Cold fronts, white fields and long silences. | Cold Front |
 | 3 | signal_fire | Standard | Flares, radios and calls for help. | Beacon |
 | 4 | old_guard | Standard | Ribbons, plaques and long years of service. | Old Hand |
-| 5 | cipher | Cipher | Secret cards. Some doors only open with a code. | Codekeeper |
+| 5 | cipher | Cipher | Cold comes first, then the old guard. Night falls third; the signal fires last. (Cipher Lock order hint) | Codekeeper |
 | 6 | showcase | Showcase | Store bundles: premium frames, Clearance 1, no trait. | – |
 
 ## Unlock goals (spec §6 "Demo start")
@@ -50,7 +50,7 @@ Signature-eligible. Album order inside each set follows the spec list.
 |---|---|---|---|---|
 | unlock_win_streak_3 | WIN_STREAK | 3 | Win 3 duels in a row | Polar Night |
 | unlock_beat_warden | BEAT_RIVAL | warden | Beat the Warden | City Never Sleeps |
-| unlock_beat_warden_no_legend | BEAT_RIVAL_NO_LEGEND | warden | Beat the Warden with no Legend in your lineup | Long Watch |
+| unlock_beat_warden_no_legend | BEAT_RIVAL_NO_LEGEND | warden (count 2 pending, see below) | Beat the Warden twice with no Legend in your lineup | Long Watch |
 | unlock_captures_20 | CAPTURES_TOTAL | 20 | Capture 20 cards in total | Dead Air |
 | unlock_wins_5 | WINS_TOTAL | 5 | Win 5 duels | Honor Roll |
 | unlock_dossier_carded | DOSSIER_CLEAR | dossier_carded | Clear Dossier D4: Carded | Null Glyph |
@@ -72,8 +72,11 @@ Graveyard Shift 1, Neon Rain 2, Last Train 2, Snow Blind 3, Mayday 2 = **10 / 12
 the spec §8 walkthrough lineup. All five start owned.
 
 ## Cipher Lock
-Glyph number = set number of the card that carries it: Graveyard Shift 1, Frostbite 2, Mayday 3, Brass Tacks 4
-(spec: cards 1, 5, 9, 13). `cipher_code` = **1, 2, 3, 4**: the glyphs in album page order ("hinted by set numbering").
+Glyphs (spec: cards 1, 5, 9, 13): Graveyard Shift **1**, Mayday **2**, Brass Tacks **3**, Frostbite **4**.
+Glyph numbers no longer follow the set numbers. `cipher_code` = **4, 3, 1, 2**. The order comes from the
+Cipher page tagline, "Cold comes first, then the old guard. Night falls third; the signal fires last."
+(Whiteout → Frostbite 4, Old Guard → Brass Tacks 3, Night Shift → Graveyard Shift 1, Signal Fire → Mayday 2).
+The riddle names sets, not glyphs, so the player still has to find the glyph hidden in each card's art.
 
 ## Triptychs (spec §5.1)
 | id | Cards | Hint | Reward |
@@ -105,17 +108,26 @@ Clutch +2, Ambush spring +1, Signature ×2, Triptych +1, ties to first player, c
 approved. The items below were not fixed by the spec, so they are content decisions:
 1. Rival lineups and AI tuning numbers (Warden `signature_safety_weight` 3.0; Quartermaster under the cap at 8).
 2. Loaner lineup = the spec §8 walkthrough lineup.
-3. Glyph numbers and the Cipher code 1-2-3-4 (set order).
+3. Glyph numbers and the Cipher code: see the follow-up changes below (now 4-3-1-2).
 4. Set taglines and completion titles for Whiteout, Signal Fire, Old Guard and Cipher.
 5. D1 fallback title *Contact Made* (spec: "or title"). Frame ids `service_ribbon_frame`, `flare_up_gold`, `gold_cipher`.
 6. All Dossier boards, hands, replies and briefings.
 
+## Follow-up changes (2026-11-04, studio head decisions)
+1. **Cipher code scrambled.** It was 1-2-3-4 in set order, which was guessable. Glyphs moved: Mayday 3 → 2,
+   Brass Tacks 4 → 3, Frostbite 2 → 4 (Graveyard Shift keeps 1). The code is now 4-3-1-2, and the order hint
+   is the Cipher set tagline (it replaces "Secret cards. Some doors only open with a code."). This replaces
+   spec §5's "the right order (hinted by set numbering)": the order is now hinted by the riddle.
+2. **Long Watch split from City Never Sleeps.** `unlock_beat_warden_no_legend` should need a second Warden
+   win with no Legend, so the first Warden win unlocks only City Never Sleeps. The album line now reads
+   "Beat the Warden twice with no Legend in your lineup". **Pending:** `UnlockGoal` doesn't allow a count on
+   BEAT_RIVAL_NO_LEGEND (`target_count` must be 0), so the count isn't set yet. Needed: `target_count = 2`
+   on `unlock_beat_warden_no_legend`, with BEAT_RIVAL_NO_LEGEND (and ideally BEAT_RIVAL) in
+   `UnlockGoal.needs_count()`. It counts Warden wins with no Legend in total, not in a row. Until cc09 adds
+   that, the evaluator will unlock Long Watch after one win, while the album text says twice.
+
 ## Open questions
-1. **Test conflict:** `tests/test_data.gd::test_sample_cards_match_spec` expects Night Shift to hold only
-   `graveyard_shift, neon_rain` (the cc02 samples). With the full spec content it holds 4 cards, so that one
-   assertion fails. The test should expect `graveyard_shift, neon_rain, last_train, city_never_sleeps`.
-2. **Long Watch unlock:** the player starts with no Legend, so the first Warden win also meets "beat the Warden
-   with no Legend" and unlocks City Never Sleeps and Long Watch together. If they should be two steps, make
-   Long Watch "beat the Warden twice with no Legend" or require City Never Sleeps to be owned first.
+1. ~~Test conflict~~: fixed by the lead (`test_data` now expects 4 Night Shift cards).
+2. ~~Long Watch unlock~~: decided, see follow-up change 2 (count pending cc09).
 3. **Dossier Cipher pick:** `DossierPlacement` can't store a Cipher pick; D5's solution copies from c2 (cc12).
 4. **Reserved reply slots** (D3 a2, D4 c1) need to be shown as taken on the Dossier screen (cc12).

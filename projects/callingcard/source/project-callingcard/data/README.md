@@ -155,9 +155,14 @@ Content log with every table and the decisions behind it:
 | `triptychs/` | `midnight_run`, `cold_signal`, `open_book` |
 | `dossiers/` | `dossier_first_contact` (D1) … `dossier_clean_copy` (D5) |
 
-**Cipher glyphs:** glyph number = set number of the card that carries it (Graveyard Shift 1, Frostbite 2,
-Mayday 3, Brass Tacks 4), so `cipher_code` 1, 2, 3, 4 is "the glyphs in album page order". The Cipher Lock UI
-must not list the glyphs in that order by default, or it shows the answer.
+**Cipher glyphs:** Graveyard Shift 1, Mayday 2, Brass Tacks 3, Frostbite 4 (deliberately not the set
+order). `cipher_code` is **4, 3, 1, 2**. The order hint is the Cipher album page's tagline: "Cold comes first,
+then the old guard. Night falls third; the signal fires last." (Whiteout, Old Guard, Night Shift, Signal Fire).
+The player has to find which glyph each of the four cards carries.
+
+**Long Watch:** `unlock_beat_warden_no_legend` should need **2** Warden wins with no Legend. `UnlockGoal`
+only allows `target_count` on WIN_STREAK / CAPTURES_TOTAL / WINS_TOTAL, so it is 0 for now; set it to 2 once
+BEAT_RIVAL_NO_LEGEND takes a count (cc09).
 
 **Dossier notes for cc12:**
 - A `DossierPlacement` has no Cipher pick, so a solution step for a Cipher card doesn't say what it copies.

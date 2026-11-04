@@ -20,5 +20,5 @@ how_earned = "25 eliminations on snow maps"
 art_key = &"frostbite"
 art_seed = 3043
 art_brief = "Ice crystals creeping over a glove"
-cipher_glyph = 2
+cipher_glyph = 4
 starts_owned = true
