@@ -4,23 +4,25 @@
 #   marked), and chips for the current card and the next ones ("5 Calm", "6 Gas+Drop", "7 Gas")
 #   as many as fit (at least current + next). Gas chips are lime AND say "Gas" (never colour alone).
 #   Tap or long-press opens the inspector with all 14 cards and this route's effects.
-# Dependencies: tap_hold_button.gd, match_theme.gd, mock_match_data.gd (ZONE table, until cz06).
+# Dependencies: tap_hold_button.gd, match_theme.gd, CardDB (the Zone deck, cz06 data).
 # Author: UI/UX Agent (cz10)
 extends "res://scripts/ui/tap_hold_button.gd"
 
 const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
-const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
+const KIND_SHORT: Dictionary = {DataEnums.ZoneKind.CALM: "Calm", DataEnums.ZoneKind.GAS: "Gas",
+		DataEnums.ZoneKind.DROP: "Drop", DataEnums.ZoneKind.GAS_AND_DROP: "Gas+Drop", DataEnums.ZoneKind.FINAL_CIRCLE: "Final"}
 const MAX_CHIPS: int = 4
 const TRACK_H: float = 6.0
 
 var zone_index: int = 1
-var route: StringName = &"A"
+var route: int = DataEnums.Route.A
 var round_index: int = 1
 
 var _title: Label
 var _chips: HBoxContainer
 var _chip_labels: Array[Label] = []
 var _track: Control
+var _deck_size: int = 14
 
 
 func _init() -> void:
@@ -59,22 +61,24 @@ func _init() -> void:
 	resized.connect(_fit_chips)
 
 
-func setup(zone_i: int, rt: StringName, rnd: int) -> void:
+func setup(zone_i: int, rt: int, rnd: int) -> void:
 	zone_index = zone_i
 	route = rt
 	round_index = rnd
-	_title.text = "ROUND %d · ZONE %d/14 · ROUTE %s" % [rnd, zone_i, String(rt)]
+	var deck: Array = CardDB.zone_deck()
+	_deck_size = deck.size()
+	set_short_title(false)
 	for i: int in MAX_CHIPS:
 		var n: int = zone_i + i
 		var l: Label = _chip_labels[i]
-		if n > MockMatchData.ZONE.size():
+		var z: ZoneCardData = CardDB.get_zone_card(n) if n <= _deck_size else null
+		if z == null:
 			l.text = ""
 			l.visible = false
 			continue
-		var z: Dictionary = MockMatchData.zone_card(n)
-		var kind: StringName = z["kind"]
-		l.text = ("%d %s" % [n, MockMatchData.KIND_SHORT[kind]]) if i > 0 else ("NOW %d %s" % [n, MockMatchData.KIND_SHORT[kind]])
-		l.theme_type_variation = &"TagChipNow" if i == 0 else (&"TagChipGas" if kind in [&"gas", &"gas_drop", &"final"] else &"TagChip")
+		var kind: int = z.kind()
+		l.text = ("%d %s" % [n, KIND_SHORT[kind]]) if i > 0 else ("NOW %d %s" % [n, KIND_SHORT[kind]])
+		l.theme_type_variation = &"TagChipNow" if i == 0 else (&"TagChipGas" if kind != DataEnums.ZoneKind.CALM and kind != DataEnums.ZoneKind.DROP else &"TagChip")
 		l.visible = true
 	_fit_chips()
 	_track.queue_redraw()
@@ -82,7 +86,8 @@ func setup(zone_i: int, rt: StringName, rnd: int) -> void:
 
 ## Shortest title for narrow screens.
 func set_short_title(short: bool) -> void:
-	_title.text = ("R%d · ZONE %d/14 · %s" if short else "ROUND %d · ZONE %d/14 · ROUTE %s") % [round_index, zone_index, String(route)]
+	var letter: String = "ABC"[clampi(route, 0, 2)]
+	_title.text = ("R%d · ZONE %d/%d · %s" if short else "ROUND %d · ZONE %d/%d · ROUTE %s") % [round_index, zone_index, _deck_size, letter]
 
 
 func get_title_label() -> Label:
@@ -114,8 +119,8 @@ func _fit_chips() -> void:
 
 func _draw_track() -> void:
 	var w: float = _track.size.x
-	var cell: float = w / 14.0
-	for i: int in 14:
+	var cell: float = w / float(maxi(_deck_size, 1))
+	for i: int in _deck_size:
 		var r: Rect2 = Rect2(i * cell + 1.0, 0, cell - 2.0, TRACK_H)
 		var n: int = i + 1
 		if n < zone_index:

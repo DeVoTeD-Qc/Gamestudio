@@ -1,8 +1,7 @@
 # match_theme.gd
-# Purpose: Placeholder theme for the match screen (cz10), built in code from the cz15 palette
-#   (documentation/art/style-guides/art-direction.md §1-§2). Every colour the match screen uses
-#   is a token here, so cz16 can re-theme by swapping this file (or returning its own Theme from
-#   build()) without touching layout code. Fonts are the engine default until cz16 adds Barlow.
+# Purpose: Match screen theme (cz10): cz16's assets/themes/cardzone_theme.tres (Barlow fonts, palette,
+#   its own variations) plus the few match-only variations below (top-bar buttons, panels, tags).
+#   Colours are the cz15 palette tokens (documentation/art/style-guides/art-direction.md §1-§2).
 #   Hover styles equal normal styles: hover never carries information (touch first).
 # Usage: MatchScreen sets `theme = MatchTheme.build()`. Labels pick a variation by
 #   theme_type_variation (USED lists every one; tests check each is styled).
@@ -39,31 +38,33 @@ const FONT_TITLE: int = 24
 
 ## theme_type_variation -> base type. Tests check each one is defined and styled.
 const USED: Dictionary = {
-	&"TopButton": &"Button", &"CardButton": &"Button", &"TileButton": &"Button", &"InfoPanelButton": &"Button",
+	&"TopButton": &"Button", &"InfoPanelButton": &"Button", &"TileButton": &"Button", &"LineChip": &"Button",
 	&"MatchPanel": &"PanelContainer", &"InspectorPanel": &"PanelContainer",
-	&"CardFace": &"PanelContainer", &"CardFaceHit": &"PanelContainer", &"CardFaceBack": &"PanelContainer",
-	&"CardFaceStack": &"PanelContainer",
 	&"Caption": &"Label", &"CaptionStrong": &"Label", &"KeyNumber": &"Label",
-	&"CardText": &"Label", &"CardNumber": &"Label", &"CardName": &"Label",
-	&"TagBounty": &"Label", &"TagDown": &"Label", &"TagHold": &"Label", &"TagGas": &"Label",
-	&"TagDrop": &"Label", &"TagCover": &"Label", &"TagBrace": &"Label", &"TagChip": &"Label",
-	&"TagChipNow": &"Label", &"TagChipGas": &"Label", &"TileName": &"Label", &"TileText": &"Label",
-	&"InspectorTitle": &"Label", &"InspectorBody": &"Label",
+	&"TagBounty": &"Label", &"TagDown": &"Label", &"TagChip": &"Label",
+	&"TagChipNow": &"Label", &"TagChipGas": &"Label", &"InspectorTitle": &"Label", &"InspectorBody": &"Label",
 }
 
 
+const BASE_THEME: String = "res://assets/themes/cardzone_theme.tres"
+
+
 static func build() -> Theme:
-	var t: Theme = Theme.new()
+	var base: Theme = load(BASE_THEME) as Theme if ResourceLoader.exists(BASE_THEME) else null
+	var t: Theme = base.duplicate() if base != null else Theme.new()
 	t.default_font_size = FONT_BODY
 	t.set_color(&"font_color", &"Label", PAPER)
 
 	# Buttons: hover == normal (no hover-only information); a visible focus ring for keys/pads.
 	var focus: StyleBoxFlat = _box(Color(0, 0, 0, 0), ZONE_EDGE, 3, 6)
 	focus.draw_center = false
-	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton"]:
+	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton", &"LineChip"]:
 		var normal: StyleBoxFlat = _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 10)
 		var pressed: StyleBoxFlat = _box(ZONE_VIOLET, ZONE_EDGE, 2, 6, 10)
 		var disabled: StyleBoxFlat = _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.35), 2, 6, 10)
+		if v == &"LineChip":
+			normal = _box(PAPER, INK, 2, 4, 8, 4)
+			pressed = _box(BRACE_STEEL, INK, 2, 4, 8, 4)
 		if v == &"InfoPanelButton":
 			normal = _box(ZONE_DUSK, Color(ZONE_EDGE, 0.55), 2, 6, 8)
 			pressed = _box(ZONE_VIOLET, ZONE_EDGE, 2, 6, 8)
@@ -73,16 +74,17 @@ static func build() -> Theme:
 		t.set_stylebox(&"hover_pressed", v, pressed)
 		t.set_stylebox(&"disabled", v, disabled)
 		t.set_stylebox(&"focus", v, focus)
-		t.set_color(&"font_color", v, PAPER)
-		t.set_color(&"font_hover_color", v, PAPER)
-		t.set_color(&"font_pressed_color", v, PAPER)
-		t.set_color(&"font_focus_color", v, PAPER)
+		var fc: Color = INK if v == &"LineChip" else PAPER
+		t.set_color(&"font_color", v, fc)
+		t.set_color(&"font_hover_color", v, fc)
+		t.set_color(&"font_pressed_color", v, fc)
+		t.set_color(&"font_focus_color", v, fc)
 		t.set_color(&"font_disabled_color", v, Color(PAPER, 0.5))
 		t.set_font_size(&"font_size", v, FONT_BODY)
 		if v != &"Button":
 			t.set_type_variation(v, &"Button")
-	# Card and tile buttons draw nothing themselves (the face / tile draws); focus ring only.
-	for v: StringName in [&"CardButton", &"TileButton"]:
+	# Tile overlay buttons draw nothing (the cz16 tile draws); focus ring only.
+	for v: StringName in [&"TileButton"]:
 		t.set_type_variation(v, &"Button")
 		var empty: StyleBoxEmpty = StyleBoxEmpty.new()
 		for s: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
@@ -92,31 +94,15 @@ static func build() -> Theme:
 
 	_panel(t, &"MatchPanel", _box(ZONE_DUSK, Color(ZONE_EDGE, 0.45), 2, 6, 8))
 	_panel(t, &"InspectorPanel", _box(ZONE_DUSK, ZONE_EDGE, 2, 8, 12))
-	var face: StyleBoxFlat = _box(PAPER, INK, 2, 6, 4)
-	face.content_margin_left = 9  # room for the rarity stripe
-	_panel(t, &"CardFace", face)
-	_panel(t, &"CardFaceHit", _box(HIT_RED, INK, 2, 6, 4))
-	_panel(t, &"CardFaceBack", _box(BASALT, ZONE_EDGE, 2, 6, 4))
-	_panel(t, &"CardFaceStack", _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.7), 2, 6, 4))
 
 	_label(t, &"Caption", Color(PAPER, 0.86), FONT_BODY)
 	_label(t, &"CaptionStrong", PAPER, FONT_BODY)
 	_label(t, &"KeyNumber", PAPER, FONT_NUMBER)
-	_label(t, &"CardText", INK, FONT_BODY)
-	_label(t, &"CardNumber", INK, FONT_NUMBER)
-	_label(t, &"CardName", INK, FONT_BODY)
-	_label(t, &"TileName", INK, FONT_BODY, _box(PAPER, INK, 1, 3, 2, 0))
-	_label(t, &"TileText", INK, FONT_BODY)
 	_label(t, &"InspectorTitle", PAPER, FONT_TITLE)
 	_label(t, &"InspectorBody", PAPER, FONT_BODY)
 	# Tags: text + shape, never colour alone.
 	_label(t, &"TagBounty", INK, FONT_BODY, _box(Color("#FFEE80"), INK, 1, 3, 3, 0))
 	_label(t, &"TagDown", INK, FONT_BODY, _box(HIT_RED, INK, 1, 3, 3, 0))
-	_label(t, &"TagHold", INK, FONT_BODY, _box(ZONE_EDGE, INK, 1, 3, 3, 0))
-	_label(t, &"TagGas", INK, FONT_BODY, _box(GAS_GLOW, INK, 1, 3, 3, 0))
-	_label(t, &"TagDrop", INK, FONT_BODY, _box(Color("#FFB070"), INK, 1, 3, 3, 0))
-	_label(t, &"TagCover", INK, FONT_BODY, _box(BRACE_STEEL, INK, 1, 3, 3, 0))
-	_label(t, &"TagBrace", INK, FONT_NUMBER, _box(BRACE_STEEL, INK, 1, 8, 4, 0))
 	_label(t, &"TagChip", PAPER, FONT_BODY, _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.6), 1, 3, 5, 0))
 	_label(t, &"TagChipNow", INK, FONT_BODY, _box(PAPER, INK, 1, 3, 5, 0))
 	_label(t, &"TagChipGas", INK, FONT_BODY, _box(GAS_LIME, INK, 1, 3, 5, 0))

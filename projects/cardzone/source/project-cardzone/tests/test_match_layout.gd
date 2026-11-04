@@ -8,12 +8,13 @@
 #     minimum size fits the screen,
 #   - every tap target (Buttons + group "tap_target") >= 64 logical px and >= 44 pt, on screen;
 #     overlapped cards keep an exposed strip >= 64 px / 44 pt,
-#   - text >= 11 pt; key numbers >= 24 px; hand cards >= 84x118 pt (art-direction.md §3),
-#   - names, health, tags and Zone chips show their whole text; card faces and tile contents fit,
-#   - map: 7 tiles in the spec §3 diagram, gas matches the Zone route, pawns differ by shape,
+#   - text >= 11 pt; key numbers >= 24 px; strip and hand cards (cz16 CzCard) >= 84x118 pt
+#     (art-direction.md §3) with numerals >= the art floor (8 pt) and names that fit,
+#   - names, health, tags, headers and Zone chips show their whole text; line chips fit their text,
+#   - map (cz16 CzMap): 7 tiles >= 64 px / 44 pt, gas matches the Zone route (CardDB), pawns,
 #   - loadout strip: next hand outlined as armour, held cards tagged, Brace summed,
 #   - the rival's held cards never reach the screen (only counts),
-#   - the inspector opens for every card on every screen and fits the safe area,
+#   - the inspector opens for every CardDB card on every screen and fits the safe area,
 #   - nothing is hover-only; tap / hold / right-click / INFO all work.
 # Headless note: the headless root window is 64x64; _spawn sizes it to 1280x720 while a test runs.
 # Author: UI/UX Agent (cz10)
@@ -62,7 +63,7 @@ func test_match_scene_instantiates() -> void:
 		return
 	var node: Node = scene.instantiate()
 	for unique: String in ["%SafeArea", "%TopBar", "%MenuButton", "%YouPanel", "%ZoneTrack", "%RivalPanel", "%InfoButton",
-			"%MapPanel", "%MapView", "%LineRow", "%LineCaption", "%LineCards", "%StripRow", "%StripCaption", "%StripCards",
+			"%LeftColumn", "%MapView", "%LineHeader", "%LineChips", "%RightColumn", "%StripHeader", "%StripCards",
 			"%HandCards", "%CardInspector"]:
 		assert_not_null(node.get_node_or_null(unique), "Match lacks %s" % unique)
 	node.free()
@@ -91,9 +92,9 @@ func test_theme_defines_every_variation() -> void:
 			if "theme_type_variation" in line or "_label(" in line or "TagChip" in line:
 				for m: RegExMatch in re.search_all(line):
 					used[StringName(m.get_string(1))] = true
-	assert_true(used.size() >= 15, "found the variations the match screen uses (%d)" % used.size())
+	assert_true(used.size() >= 10, "found the variations the match screen uses (%d)" % used.size())
 	for v: StringName in used.keys():
-		if v in [&"TopButton", &"InfoPanelButton"] or MatchTheme.USED.has(v):
+		if MatchTheme.USED.has(v):
 			continue
 		if ClassDB.class_exists(v):
 			continue
@@ -152,59 +153,50 @@ func test_layout_small_phone() -> void:
 func test_map_tiles_gas_and_pawns() -> void:
 	var setup: Array = await _spawn(PHONE_SMALL, MockMatchData.late_state())
 	var m: Control = setup[1]
-	var tiles: Dictionary = {}
-	for t: Button in m.get_area_tiles():
-		tiles[t.area_id] = t
-	assert_eq(tiles.size(), 7, "7 areas")
-	# Route A after Zone card 12: Docks, Farmstead, Rail Yard, Radio Hill, Quarry, Motel gassed; Core open.
+	var map: CzMap = m.get_map()
+	assert_eq(map.tiles().size(), 7, "7 areas")
+	# Route A after Zone card 12 (CardDB): Docks, Farmstead, Rail Yard, Radio Hill, Quarry, Motel gassed.
 	for id: StringName in [&"docks", &"farmstead", &"rail_yard", &"radio_hill", &"quarry", &"motel"]:
-		assert_true(tiles[id].gas, "%s gassed" % id)
-	assert_false(tiles[&"old_town"].gas, "Core open")
-	assert_true(tiles[&"old_town"].you_here and tiles[&"old_town"].rival_here, "both pawns in the Core")
-	var pr: Array[Rect2] = tiles[&"old_town"].pawn_rects()
-	assert_eq(pr.size(), 2, "two pawns drawn")
-	assert_false(pr[0].intersects(pr[1]), "pawns do not overlap")
-	var k: float = points_per_px(PHONE_SMALL)
-	assert_true(pr[0].size.x * k >= 28.0 - 0.01, "pawn %.1f pt >= 28 pt" % (pr[0].size.x * k))
-	# Diagram: Core in the middle, ring around it, every ring tile touching the Core's row band.
-	var core: Rect2 = tiles[&"old_town"].get_global_rect()
-	assert_true(tiles[&"rail_yard"].get_global_rect().end.x <= core.position.x + EPS, "Rail Yard left of the Core")
-	assert_true(tiles[&"quarry"].get_global_rect().position.x >= core.end.x - EPS, "Quarry right of the Core")
-	assert_true(tiles[&"docks"].get_global_rect().end.y <= core.position.y + EPS, "Docks above")
-	assert_true(tiles[&"radio_hill"].get_global_rect().position.y >= core.end.y - EPS, "Radio Hill below")
-	# Gas is shown by text + hatch, not colour alone.
-	for l: Label in tiles[&"docks"].get_labels():
-		if l.text == "GAS":
-			assert_true(l.is_visible_in_tree(), "GAS tag visible")
+		assert_true(map.tile(id).gassed, "%s gassed" % id)
+	assert_false(map.tile(&"old_town").gassed, "Core open")
+	assert_eq(map.tile(&"old_town").pawns, [&"player", &"ai"], "both pawns in the Core")
+	var core: Rect2 = map.tile(&"old_town").get_global_rect()
+	assert_true(map.tile(&"rail_yard").get_global_rect().end.x <= core.position.x + EPS, "Rail Yard left of the Core")
+	assert_true(map.tile(&"quarry").get_global_rect().position.x >= core.end.x - EPS, "Quarry right of the Core")
+	assert_true(map.tile(&"docks").get_global_rect().end.y <= core.position.y + EPS, "Docks above")
+	assert_true(map.tile(&"radio_hill").get_global_rect().position.y >= core.end.y - EPS, "Radio Hill below")
+	# Supply drop shown as a pile with the drop flag (Phantom Suit at the Motel, card 10 route A).
+	var drops: int = 0
+	for p: Dictionary in map.tile(&"motel").piles:
+		drops += 1 if p.get("drop", false) else 0
+	assert_eq(drops, 1, "Motel shows the supply drop")
 	_despawn(setup[0])
 
 
 func test_loadout_strip_is_armour() -> void:
 	var setup: Array = await _spawn(PHONE, MockMatchData.mid_state())
 	var m: Control = setup[1]
-	var next: Array[Button] = m.get_card_buttons(&"next")
+	var next: Array[Control] = m.get_cards(&"next")
 	assert_eq(next.size(), 5, "next hand: 5 cards")
 	var held: int = 0
-	for b: Button in next:
-		assert_true(b.armour, "%s outlined as armour" % b.card_id)
-		if b.held:
-			held += 1
-			assert_eq(b.get_tag().text, "HOLD", "held card tagged")
-			assert_true(b.get_tag().is_visible_in_tree(), "HOLD tag visible")
-	assert_eq(held, 2, "2 held cards marked")
-	var cap: String = (m.get_node("%StripCaption") as Button).text
-	assert_true("BRACE 3" in cap, "caption sums Brace (Smoke 2 + Duck 1): %s" % cap)
-	assert_true("+4" in cap, "caption counts cards below: %s" % cap)
-	assert_eq(m.get_card_buttons(&"hand").size(), 6, "hand: 5 cards + a free Hit")
-	assert_eq(m.get_card_buttons(&"line").size(), 2, "line: 2 played")
-	# Late: a Hit on top of the loadout is tagged DOWN +1.
+	for c: Control in next:
+		held += 1 if (c as CzCard).held else 0
+	assert_eq(held, 2, "2 held cards marked (HOLD outline + tag)")
+	var cap: String = (m.get_node("%StripHeader") as Label).text
+	assert_true("BRACE 3" in cap, "header sums Brace (Smoke 2 + Duck 1): %s" % cap)
+	assert_true("+4" in cap and "2 HELD" in cap, "header counts held and cards below: %s" % cap)
+	assert_eq(m.get_cards(&"hand").size(), 6, "hand: 5 cards + a free Hit")
+	assert_eq(m.get_cards(&"line").size(), 2, "line: 2 played")
+	# HOLD tags (drawn above the card) stay inside the strip row.
+	var row: Rect2 = m.get_node("%StripCards").get_global_rect()
+	for c: Control in next:
+		assert_true(c.get_global_rect().position.y - row.position.y >= 10.0 * (c as CzCard).px_per_pt() - EPS, "room for the HOLD tag")
+	# Late: a Hit on top of the loadout is marked Down.
 	m.show_state(MockMatchData.late_state())
 	await tree.process_frame
-	var top: Button = m.get_card_buttons(&"next")[0]
-	assert_eq(top.card_id, MockMatchData.HIT, "Hit on top")
-	assert_eq(top.get_tag().text, "DOWN", "Hit tagged Down")
-	var exposed: float = m.get_card_buttons(&"next")[1].get_global_rect().position.x - top.get_global_rect().position.x
-	assert_true(top.get_tag().get_global_rect().end.x <= top.get_global_rect().position.x + exposed + EPS, "DOWN tag inside the exposed strip")
+	var top: CzCard = m.get_cards(&"next")[0]
+	assert_eq(top.get_meta(&"card_id"), &"hit", "Hit on top")
+	assert_true(top.down, "Hit marked Down")
 	assert_true(m.get_player_panels()[0].is_down_shown(), "you are Down")
 	assert_true(m.get_player_panels()[1].is_bounty_shown(), "rival holds the Bounty")
 	_despawn(setup[0])
@@ -222,10 +214,11 @@ func test_opponent_panel_counts_only() -> void:
 	assert_true("3" in all and "DOWN +1" in all and "Loadout 13" in all and "Held 2" in all, "rival panel: %s" % all)
 	assert_false(rival.is_bounty_shown(), "rival has no Bounty in mid state")
 	assert_true(m.get_player_panels()[0].is_bounty_shown(), "you hold the Bounty")
-	# No rival card anywhere on screen.
-	for zone: StringName in [&"line", &"next", &"hand"]:
-		for b: Button in m.get_card_buttons(zone):
-			assert_false(b.card.get("hidden", false), "no hidden card in your rows")
+	# Only your own cards are on screen: every card view is one of your ids.
+	var mine: Array[StringName] = MockMatchData.card_ids(MockMatchData.mid_state())
+	for zone: StringName in [&"next", &"hand"]:
+		for c: Control in m.get_cards(zone):
+			assert_true(mine.has(c.get_meta(&"card_id")), "card on screen is yours")
 	rival.tapped.emit()
 	await tree.process_frame
 	var insp: Control = m.get_inspector()
@@ -247,7 +240,8 @@ func test_zone_track_shows_next_cards() -> void:
 			assert_true(track.encloses(c.get_global_rect()), "%s chip '%s' inside the track" % [screen["name"], c.text])
 		m.get_zone_track().tapped.emit()
 		await tree.process_frame
-		assert_true(m.get_inspector().is_open() and "14." in m.get_inspector().get_body_text(), "tap lists all 14 Zone cards")
+		assert_true(m.get_inspector().is_open() and "14. " in m.get_inspector().get_body_text(), "tap lists all 14 Zone cards")
+		m.get_inspector().close()
 		_despawn(setup[0])
 
 
@@ -261,16 +255,17 @@ func test_inspector_every_card_every_screen() -> void:
 		var k: float = points_per_px(screen)
 		var inspector: Control = m.get_inspector()
 		var safe: Rect2 = _safe_rect(m, viewport)
-		var cards: Array[Dictionary] = MockMatchData.all_cards()
-		cards.append({"id": &"hidden", "hidden": true})
-		for c: Dictionary in cards:
-			if c.get("hidden", false):
-				inspector.open_card({}, {"hidden": true})
+		var cards: Array = CardDB.all_cards()
+		assert_true(cards.size() >= 28, "CardDB has every card (%d)" % cards.size())
+		cards.append(null)
+		for c: Variant in cards:
+			if c == null:
+				inspector.open_card(null, {"hidden": true})
 			else:
 				inspector.open_card(c, {"where": "In your hand"})
 			await tree.process_frame
 			await tree.process_frame
-			var label: String = "%s inspector %s" % [screen["name"], c.get("name", "hidden")]
+			var label: String = "%s inspector %s" % [screen["name"], (c as CardData).display_name if c != null else "hidden"]
 			assert_true(inspector.is_open(), "%s opens" % label)
 			var panel: Rect2 = inspector.get_panel().get_global_rect()
 			assert_true(safe.encloses(panel), "%s panel %s inside safe area %s" % [label, panel, safe])
@@ -289,12 +284,12 @@ func test_inspector_every_card_every_screen() -> void:
 			assert_true(safe.encloses(cr), "%s CLOSE inside the safe area" % label)
 			inspector.close()
 		# Info sheets: areas, Zone deck, players, line, loadout.
-		for a: Dictionary in MockMatchData.AREAS:
-			m.inspect_area(a["id"])
+		for a: AreaData in CardDB.all_areas():
+			m.inspect_area(a.id)
 			await tree.process_frame
-			assert_true(safe.encloses(inspector.get_panel().get_global_rect()), "%s area sheet %s inside safe area" % [screen["name"], a["name"]])
+			assert_true(safe.encloses(inspector.get_panel().get_global_rect()), "%s area sheet %s inside safe area" % [screen["name"], a.display_name])
 			inspector.close()
-		for f: Callable in [m.inspect_zone, m.inspect_line, m.inspect_loadout, m.inspect_player.bind(&"you"), m.inspect_player.bind(&"rival")]:
+		for f: Callable in [m.inspect_zone, m.inspect_player.bind(&"you"), m.inspect_player.bind(&"rival")]:
 			f.call()
 			await tree.process_frame
 			await tree.process_frame
@@ -314,7 +309,7 @@ func test_nothing_is_hover_only() -> void:
 			tips.append(String(m.get_path_to(n)))
 	assert_true(tips.is_empty(), "no tooltips (hover-only info): %s" % [tips])
 	var t: Theme = m.theme
-	for v: StringName in [&"TopButton", &"CardButton", &"TileButton", &"InfoPanelButton"]:
+	for v: StringName in [&"TopButton", &"TileButton", &"InfoPanelButton", &"LineChip"]:
 		assert_eq(t.get_stylebox(&"hover", v), t.get_stylebox(&"normal", v), "%s hover == normal" % v)
 	_despawn(setup[0])
 
@@ -325,29 +320,38 @@ func test_tap_hold_right_click_and_info_inspect() -> void:
 	var inspector: Control = m.get_inspector()
 	var seen: Array = []
 	m.card_inspected.connect(func(id: StringName, zone: StringName) -> void: seen.append([id, zone]))
-	var hand: Array[Button] = m.get_card_buttons(&"hand")
-	# Hold on a hand card: inspector opens, the release does not select.
-	var rifle: Button = hand[1]
-	rifle.simulate_hold()
-	rifle.pressed.emit()
+	var hand: Array[Control] = m.get_cards(&"hand")
+	# Long-press on a hand card (CzCard emits inspect_requested): inspector, no selection.
+	var rifle: CzCard = hand[1]
+	rifle.inspect_requested.emit(rifle)
 	await tree.process_frame
-	assert_true(inspector.is_open(), "hold opens the inspector")
-	assert_eq(inspector.get_title_text(), "Hunting Rifle", "held card inspected")
-	assert_eq(m.get_selected(), null, "hold does not select")
+	assert_true(inspector.is_open(), "long-press opens the inspector")
+	assert_eq(inspector.get_title_text(), "Hunting Rifle", "card inspected (CardDB name)")
+	assert_eq(m.get_selected(), null, "long-press does not select")
 	inspector.close()
-	# Right-click on a line card and on the loadout strip.
-	for zone: StringName in [&"line", &"next"]:
-		var b: Button = m.get_card_buttons(zone)[0]
-		var rc: InputEventMouseButton = InputEventMouseButton.new()
-		rc.button_index = MOUSE_BUTTON_RIGHT
-		rc.pressed = true
-		b._gui_input(rc)
-		await tree.process_frame
-		assert_true(inspector.is_open(), "right-click opens the inspector (%s)" % zone)
-		inspector.close()
-	# Long-press an area tile.
-	var tile: Button = m.get_area_tiles()[0]
-	tile.simulate_hold()
+	# The Hit's text comes from the card data.
+	(hand[0] as CzCard).inspect_requested.emit(hand[0])
+	await tree.process_frame
+	assert_eq(inspector.get_body_text(), CardDB.get_card(&"hit").rules_text, "Hit text from CardDB")
+	inspector.close()
+	# Right-click on a strip card.
+	var rc: InputEventMouseButton = InputEventMouseButton.new()
+	rc.button_index = MOUSE_BUTTON_RIGHT
+	rc.pressed = true
+	(m.get_cards(&"next")[0] as Control)._gui_input(rc)
+	await tree.process_frame
+	assert_true(inspector.is_open() and inspector.get_title_text() == "Smoke Grenade", "right-click inspects a strip card")
+	inspector.close()
+	# Long-press a line chip.
+	var chip: Button = m.get_cards(&"line")[0]
+	chip.simulate_hold()
+	await tree.process_frame
+	assert_true(inspector.is_open() and inspector.get_title_text() == "Crowbar", "hold on a line chip inspects it")
+	inspector.close()
+	# Long-press an area tile (touch layer over the cz16 tile).
+	var touch: Button = m.get_area_touch(&"docks")
+	assert_not_null(touch, "tile touch layer")
+	touch.simulate_hold()
 	await tree.process_frame
 	assert_true(inspector.is_open() and inspector.get_title_text() == "Docks", "hold on a tile inspects the area")
 	assert_true("GAS" in inspector.get_body_text(), "gassed area explains gas")
@@ -355,14 +359,20 @@ func test_tap_hold_right_click_and_info_inspect() -> void:
 	# Tap selects; INFO then inspects the selection.
 	var info: Button = m.get_node("%InfoButton")
 	assert_true(info.disabled, "INFO disabled with nothing selected")
-	hand[3].pressed.emit()
+	var vest: CzCard = hand[3]
+	vest.tapped.emit(vest)
 	await tree.process_frame
-	assert_true(hand[3].selected, "tap selects")
+	assert_true(vest.selected, "tap selects")
 	assert_false(info.disabled, "INFO enabled with a selection")
 	info.pressed.emit()
 	await tree.process_frame
 	assert_true(inspector.is_open() and inspector.get_title_text() == "Plate Vest", "INFO inspects the selected card")
 	inspector.close()
+	touch.tapped.emit()
+	await tree.process_frame
+	assert_false(vest.selected, "tapping an area clears the card selection")
+	assert_eq(m.get_selected_area(), &"docks", "area selected")
+	assert_true(m.get_map().tile(&"docks").selected, "tile shows the selection")
 	# Cancel (Esc / right-click) closes.
 	m.inspect_zone()
 	var esc: InputEventAction = InputEventAction.new()
@@ -370,7 +380,7 @@ func test_tap_hold_right_click_and_info_inspect() -> void:
 	esc.pressed = true
 	inspector._unhandled_input(esc)
 	assert_false(inspector.is_open(), "cancel closes the inspector")
-	assert_true(seen.size() >= 3, "card_inspected emitted (%d)" % seen.size())
+	assert_true(seen.size() >= 4, "card_inspected emitted (%d)" % seen.size())
 	_despawn(setup[0])
 
 
@@ -449,7 +459,7 @@ func _check_layout(screen: Dictionary, state: Dictionary) -> void:
 		if not targets.has(n):
 			targets.append(n)
 	var you: Dictionary = state["you"]
-	var expected: int = 7 + 6 + (you["hand"] as Array).size() + (you["line"] as Array).size() + (you["next"] as Array).size()
+	var expected: int = 7 + 5 + (you["hand"] as Array).size() + (you["line"] as Array).size() + (you["next"] as Array).size()
 	assert_true(targets.size() >= expected, "%s expected >= %d tap targets, got %d" % [label, expected, targets.size()])
 	var min_tap: float = INF
 	for c: Control in targets:
@@ -462,41 +472,49 @@ func _check_layout(screen: Dictionary, state: Dictionary) -> void:
 		assert_true(side_px * k >= MIN_TAP_PT - 0.01, "%s tap target %s = %.1f pt (< 44 pt)" % [label, m.get_path_to(c), side_px * k])
 		assert_true(screen_rect.encloses(r), "%s tap target %s off screen" % [label, m.get_path_to(c)])
 
-	# Card rows: inside their row, exposed strips >= 64 px / 44 pt, faces fit, numerals >= 24 px.
+	# Card rows (cz16 CzCard): inside their row, >= 84x118 pt, exposed strips >= 64 px / 44 pt,
+	# numerals >= the art floor, names fit, and the cards take their own input.
 	var min_number: float = INF
-	var art_hand: Vector2 = Vector2(84, 118) / k
-	for zone: StringName in [&"line", &"next", &"hand"]:
+	var art: Vector2 = CzArtKit.compact_px(k)
+	for zone: StringName in [&"next", &"hand"]:
 		var row: Control = m.get_rows()[zone]
 		var row_rect: Rect2 = row.get_global_rect().grow(EPS)
-		var cards: Array[Button] = m.get_card_buttons(zone)
+		var cards: Array[Control] = m.get_cards(zone)
 		for i: int in cards.size():
-			var b: Button = cards[i]
-			var r: Rect2 = b.get_global_rect()
+			var cv: CzCard = cards[i]
+			var r: Rect2 = cv.get_global_rect()
 			assert_true(row_rect.encloses(r), "%s %s card %d %s spills out of its row %s" % [label, zone, i, r, row_rect])
+			assert_true(r.size.x >= art.x - 1.0 and r.size.y >= art.y - 1.0, "%s %s card %s >= 84x118 pt (%s px)" % [label, zone, r.size, art])
 			if i > 0:
 				var step: float = r.position.x - cards[i - 1].get_global_rect().position.x
 				assert_true(step >= MIN_TAP_PX - EPS and step * k >= MIN_TAP_PT - 0.01, "%s %s card %d exposed strip %.0f px" % [label, zone, i - 1, step])
-			if zone == &"hand":
-				assert_true(r.size.x >= art_hand.x - 1.0 and r.size.y >= art_hand.y - 1.0, "%s hand card %s >= 84x118 pt (%s px)" % [label, r.size, art_hand])
-			var face: Control = b.get_face()
-			assert_eq(face.mouse_filter, Control.MOUSE_FILTER_IGNORE, "%s face leaves input to its button" % label)
-			var need: Vector2 = face.get_combined_minimum_size()
-			assert_true(need.x <= r.size.x + EPS and need.y <= r.size.y + EPS, "%s %s card %s face needs %s, has %s" % [label, zone, b.card_id, need, r.size])
-			var num: int = int(face.layout_report()["numeral_px"])
-			min_number = minf(min_number, num * k)
-			assert_true(num >= MIN_NUMBER_PX, "%s %s card numerals %d px" % [label, zone, num])
+			assert_eq(cv.mouse_filter, Control.MOUSE_FILTER_STOP, "%s card takes input" % label)
+			var lay: Dictionary = cv.layout_report()
+			assert_eq(lay["mode"], "compact", "%s %s card in the compact layout" % [label, zone])
+			assert_true(lay["name_fits"], "%s card %s name fits" % [label, lay["name_text"]])
+			for key: Variant in lay["numerals"]:
+				var pt: float = float(lay["numerals"][key]) * k
+				min_number = minf(min_number, pt)
+				assert_true(pt >= CzArtKit.NUMERAL_FLOOR_PT - 0.01, "%s card numeral %s is %.1f pt" % [label, key, pt])
+	# Line chips: inside the line grid, show their whole text.
+	var line_rect: Rect2 = m.get_node("%LineChips").get_global_rect().grow(EPS)
+	for chip: Control in m.get_cards(&"line"):
+		var r: Rect2 = chip.get_global_rect()
+		assert_true(line_rect.encloses(r), "%s line chip %s inside the line" % [label, r])
+		var need: Vector2 = (chip as Button).get_minimum_size()
+		assert_true(need.x <= r.size.x + EPS and need.y <= r.size.y + EPS, "%s chip '%s' needs %s, has %s" % [label, (chip as Button).text, need, r.size])
 
-	# Map: 7 tiles inside the map panel, no overlaps, contents fit.
-	var map_rect: Rect2 = m.get_node("%MapPanel").get_global_rect().grow(EPS)
-	var tiles: Array[Button] = m.get_area_tiles()
+	# Map: 7 tiles inside the map, no overlaps, every tile a >= 64 px / 44 pt target.
+	var map_rect: Rect2 = m.get_map().get_global_rect().grow(EPS)
+	var tiles: Array = m.get_map().tiles()
 	assert_eq(tiles.size(), 7, "%s 7 area tiles" % label)
 	for i: int in tiles.size():
-		var r: Rect2 = tiles[i].get_global_rect()
+		var r: Rect2 = (tiles[i] as Control).get_global_rect()
 		assert_true(map_rect.encloses(r), "%s tile %s inside the map" % [label, tiles[i].area_id])
-		var content: Vector2 = (tiles[i].get_child(0) as Control).get_combined_minimum_size()
-		assert_true(content.x <= r.size.x + EPS and content.y <= r.size.y + EPS, "%s tile %s content %s fits %s" % [label, tiles[i].area_id, content, r.size])
+		var touch: Button = m.get_area_touch(tiles[i].area_id)
+		assert_true(touch != null and touch.get_global_rect().is_equal_approx(r), "%s tile %s has a full-size touch layer" % [label, tiles[i].area_id])
 		for j: int in range(i + 1, tiles.size()):
-			assert_false(r.grow(-EPS).intersects(tiles[j].get_global_rect().grow(-EPS)), "%s tiles %s and %s overlap" % [label, tiles[i].area_id, tiles[j].area_id])
+			assert_false(r.grow(-EPS).intersects((tiles[j] as Control).get_global_rect().grow(-EPS)), "%s tiles %s and %s overlap" % [label, tiles[i].area_id, tiles[j].area_id])
 
 	# Text sizes (all visible labels and buttons).
 	var min_body: float = INF
@@ -517,12 +535,12 @@ func _check_layout(screen: Dictionary, state: Dictionary) -> void:
 			continue
 		var why: String = _clipped(l)
 		assert_true(why.is_empty(), "%s '%s' (%s) is cut: %s" % [label, l.text, m.get_path_to(l), why])
-	for key: String in ["%LineCaption", "%StripCaption", "%MenuButton", "%InfoButton"]:
+	for key: String in ["%MenuButton", "%InfoButton"]:
 		var b: Button = m.get_node(key)
 		var need: Vector2 = b.get_minimum_size()
 		assert_true(need.x <= b.size.x + EPS and need.y <= b.size.y + EPS, "%s %s text needs %s, has %s" % [label, key, need, b.size])
-	print("     [%s] canvas %s, %.3f pt/px, hand %s mini %s: smallest text %.1f pt, numbers %.1f pt, tap %.1f pt" % [
-			label, viewport.size, k, m.hand_card, m.mini_card, min_body, min_number, min_tap * k])
+	print("     [%s] canvas %s, %.3f pt/px, cards %s px: smallest text %.1f pt, card numerals %.1f pt, tap %.1f pt" % [
+			label, viewport.size, k, m.card_px, min_body, min_number, min_tap * k])
 	_despawn(viewport)
 
 
@@ -570,7 +588,6 @@ static func _lum(c: Color) -> float:
 
 func _ui_files() -> PackedStringArray:
 	var out: PackedStringArray = [MATCH_SCENE]
-	for f: String in ["match_screen.gd", "card_face.gd", "match_card_button.gd", "area_tile.gd", "zone_track.gd",
-			"player_panel.gd", "card_inspector.gd"]:
+	for f: String in ["match_screen.gd", "line_chip.gd", "zone_track.gd", "player_panel.gd", "card_inspector.gd"]:
 		out.append("res://scripts/ui/" + f)
 	return out

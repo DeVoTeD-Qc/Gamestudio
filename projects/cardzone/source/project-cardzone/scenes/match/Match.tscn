@@ -1,11 +1,10 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="Script" path="res://scripts/ui/player_panel.gd" id="2_panel"]
 [ext_resource type="Script" path="res://scripts/ui/zone_track.gd" id="3_zone"]
-[ext_resource type="Script" path="res://scripts/ui/map_view.gd" id="4_map"]
+[ext_resource type="Script" path="res://scripts/art/map_view.gd" id="4_map"]
 [ext_resource type="Script" path="res://scripts/ui/fan_row.gd" id="5_fan"]
-[ext_resource type="Script" path="res://scripts/ui/tap_hold_button.gd" id="6_tap"]
 [ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="7_insp"]
 
 [node name="Match" type="Control"]
@@ -82,16 +81,28 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="MapPanel" type="PanelContainer" parent="SafeArea/Column/Body"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"MatchPanel"
-
-[node name="MapView" type="Container" parent="SafeArea/Column/Body/MapPanel"]
+[node name="LeftColumn" type="VBoxContainer" parent="SafeArea/Column/Body"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
+
+[node name="MapView" type="Control" parent="SafeArea/Column/Body/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
 script = ExtResource("4_map")
+
+[node name="LineHeader" type="Label" parent="SafeArea/Column/Body/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"CaptionStrong"
+text = "LINE"
+
+[node name="LineChips" type="GridContainer" parent="SafeArea/Column/Body/LeftColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+columns = 3
 
 [node name="RightColumn" type="VBoxContainer" parent="SafeArea/Column/Body"]
 unique_name_in_owner = true
@@ -99,43 +110,15 @@ layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="LineRow" type="HBoxContainer" parent="SafeArea/Column/Body/RightColumn"]
+[node name="StripHeader" type="Label" parent="SafeArea/Column/Body/RightColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
+theme_type_variation = &"CaptionStrong"
+text = "NEXT HAND = ARMOUR"
 
-[node name="LineCaption" type="Button" parent="SafeArea/Column/Body/RightColumn/LineRow"]
+[node name="StripCards" type="Container" parent="SafeArea/Column/Body/RightColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"InfoPanelButton"
-text = "LINE"
-alignment = 0
-script = ExtResource("6_tap")
-
-[node name="LineCards" type="Container" parent="SafeArea/Column/Body/RightColumn/LineRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-script = ExtResource("5_fan")
-
-[node name="StripRow" type="HBoxContainer" parent="SafeArea/Column/Body/RightColumn"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-
-[node name="StripCaption" type="Button" parent="SafeArea/Column/Body/RightColumn/StripRow"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"InfoPanelButton"
-text = "NEXT HAND"
-alignment = 0
-script = ExtResource("6_tap")
-
-[node name="StripCards" type="Container" parent="SafeArea/Column/Body/RightColumn/StripRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
 mouse_filter = 2
 script = ExtResource("5_fan")
 

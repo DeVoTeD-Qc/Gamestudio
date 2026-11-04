@@ -4,24 +4,25 @@
 #   margins from the screen, compact flag), rebuilt in code for CardZone cards and with an info
 #   mode for things that are not one card (areas, the Zone deck, player panels, the loadout).
 # Purpose: The match screen's inspector (cz10). Nothing on the match screen is hover-only: every
-#   card, tile and panel opens this. The big card is 220x308 pt (art-direction.md §3), shrunk
-#   only if a screen is too short for it. A card the viewer may not see (the rival's held cards)
-#   shows only what the rules reveal.
-# Dependencies: card_face.gd (placeholder until cz16), match_theme.gd.
+#   card, tile and panel opens this. The big card is cz16's CzCard in its full layout, 220x308 pt
+#   (art-direction.md §3), shrunk only if a screen is too short for it. Text comes from the card
+#   data (CardData, cz05/cz06). A card the viewer may not see (the rival's held cards) shows only
+#   what the rules reveal (face down).
+# Dependencies: scenes/card/CzCard.tscn (cz16), CardData, match_theme.gd.
 # Author: UI/UX Agent (cc07; adapted cz10)
 extends Control
 
 signal closed
 
-const FACE_SCRIPT: GDScript = preload("res://scripts/ui/card_face.gd")
+const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 const BIG_CARD_PT: Vector2 = Vector2(220, 308)
 const TYPE_WORD: Dictionary = {&"weapon": "Weapon", &"item": "Item", &"attachment": "Attachment",
-		&"hit": "Hit card", &"bounty": "Shared marker card"}
-const RARITY_WORD: Dictionary = {&"S": "Starter", &"C": "Common", &"U": "Uncommon", &"R": "Rare",
-		&"E": "Epic", &"L": "Legendary"}
+		&"hit": "Hit card", &"marker": "Shared marker card"}
+const RARITY_WORD: Dictionary = {"S": "Starter", "C": "Common", "U": "Uncommon", "R": "Rare",
+		"E": "Epic", "L": "Legendary"}
 
 var compact: bool = false
-var card: Dictionary = {}
+var card: CardData = null
 var mode: StringName = &"card"
 ## Logical px per point on this screen (1 / pt per px). MatchScreen sets it.
 var px_per_pt: float = 1.0
@@ -29,7 +30,7 @@ var px_per_pt: float = 1.0
 var _scrim: ColorRect
 var _margin: MarginContainer
 var _panel: PanelContainer
-var _card_view: Control
+var _card_view: CzCard
 var _right: VBoxContainer
 var _title: Label
 var _subtitle: Label
@@ -64,8 +65,10 @@ func _init() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 16)
 	_panel.add_child(row)
-	_card_view = FACE_SCRIPT.new()
+	_card_view = CARD_SCENE.instantiate()
 	_card_view.name = "InspectorCard"
+	_card_view.layout_mode_override = "full"
+	_card_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card_view.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_card_view)
 	_right = VBoxContainer.new()
@@ -120,27 +123,32 @@ func set_safe_margins(lt: Vector2, rb: Vector2) -> void:
 	_margin.add_theme_constant_override(&"margin_bottom", int(rb.y))
 
 
-## c: card Dictionary. context: {where: String (e.g. "In your hand"), hidden: bool}.
-func open_card(c: Dictionary, context: Dictionary = {}) -> void:
+## c: CardData. context: {where: String (e.g. "In your hand"), hidden: bool, attached: [CardData]}.
+func open_card(c: CardData, context: Dictionary = {}) -> void:
 	mode = &"card"
 	card = c
-	var hidden: bool = context.get("hidden", false)
+	var hidden: bool = context.get("hidden", false) or c == null
 	_card_view.visible = true
+	_card_view.face_down = hidden
+	_card_view.held = false
+	_card_view.attachments = []
 	if hidden:
-		_card_view.configure({"hidden": true, "type": &"hidden"}, &"big")
 		_title.text = "Hidden card"
 		_subtitle.text = "The rival's held card"
 		_stats.text = ""
 		_body.text = "Held cards are private in this prototype: you see how many the rival holds, not which. They sit on top of the rival's loadout and are part of their next hand, so they can Brace with them."
 	else:
-		_card_view.configure(c, &"big")
-		_title.text = String(c.get("name", ""))
+		_card_view.configure(c)
+		_title.text = c.display_name
 		_subtitle.text = _subtitle_for(c)
 		_stats.text = _stats_for(c)
-		_body.text = String(c.get("text", ""))
-		var att: Array = c.get("attached", [])
+		_body.text = c.rules_text
+		var att: Array = context.get("attached", [])
 		if not att.is_empty():
-			_body.text += "\nAttached: %s." % ", ".join(att)
+			var names: PackedStringArray = []
+			for a: CardData in att:
+				names.append(a.display_name)
+			_body.text += "\nAttached: %s." % ", ".join(names)
 	_where.text = String(context.get("where", ""))
 	_where.visible = _where.text != ""
 	_show()
@@ -149,7 +157,7 @@ func open_card(c: Dictionary, context: Dictionary = {}) -> void:
 ## Text-only sheet (areas, Zone deck, player panels, loadout list).
 func open_info(title: String, subtitle: String, body: String) -> void:
 	mode = &"info"
-	card = {}
+	card = null
 	_card_view.visible = false
 	_title.text = title
 	_subtitle.text = subtitle
@@ -171,7 +179,7 @@ func is_open() -> bool:
 	return visible
 
 
-func get_card_view() -> Control:
+func get_card_view() -> CzCard:
 	return _card_view
 
 
@@ -207,6 +215,7 @@ func _size_panel() -> void:
 	if card_px.y > max_h:
 		card_px = (card_px * (max_h / card_px.y)).floor()
 	_card_view.custom_minimum_size = card_px
+	_card_view.size = card_px
 	var right_w: float = clampf(_avail.x - chrome - 16.0 - (card_px.x if _card_view.visible else 0.0), 280.0, 460.0)
 	if not _card_view.visible:
 		right_w = clampf(_avail.x - chrome, 280.0, 620.0)
@@ -217,29 +226,29 @@ func _size_panel() -> void:
 	_panel.size = Vector2.ZERO
 
 
-func _subtitle_for(c: Dictionary) -> String:
-	var type: StringName = c.get("type", &"")
+func _subtitle_for(c: CardData) -> String:
+	var d: Dictionary = c.to_dict()
+	var type: StringName = d["type"]
 	var parts: PackedStringArray = [TYPE_WORD.get(type, "Card")]
-	var r: StringName = c.get("rarity", &"S")
+	var r: String = c.rarity_letter()
 	if type in [&"weapon", &"item", &"attachment"]:
-		parts.append("%s (%s)" % [RARITY_WORD.get(r, ""), String(r)] if r != &"S" else "Starter")
-	var cost: int = int(c.get("cost", -1))
-	if cost >= 0:
-		parts.append("Loot: Search %d" % cost)
+		parts.append("Starter" if c.is_starter() else "%s (%s)" % [RARITY_WORD.get(r, r), r])
+	if c.supply_drop:
+		parts.append("Supply drop: Search %d" % CzCardArt.drop_cost())
+	elif c.cost > 0:
+		parts.append("Loot: Search %d" % c.cost)
 	return " · ".join(parts)
 
 
-func _stats_for(c: Dictionary) -> String:
+func _stats_for(c: CardData) -> String:
 	var parts: PackedStringArray = []
-	if c.get("type", &"") == &"weapon":
-		parts.append("DMG %d · RNG %d" % [int(c.get("dmg", 0)), int(c.get("rng", 0))])
+	if c.is_weapon():
+		parts.append("DMG %d · RNG %d" % [c.dmg, c.rng])
 	for k: String in ["move", "search", "heal", "pull"]:
-		if c.has(k):
-			parts.append("%s %d" % [k.capitalize(), int(c[k])])
-	if int(c.get("brace", 0)) > 0:
-		parts.append("Brace %d" % int(c["brace"]))
-	if c.has("bonus"):
-		parts.append("Attach: %s" % String(c["bonus"]))
+		if int(c.get(k)) > 0:
+			parts.append("%s %d" % [k.capitalize(), int(c.get(k))])
+	if c.brace > 0:
+		parts.append("Brace %d" % c.brace)
 	return " · ".join(parts)
 
 
