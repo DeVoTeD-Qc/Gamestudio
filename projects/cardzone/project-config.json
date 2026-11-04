@@ -8,7 +8,7 @@
     "timeline": "Medium",
     "engine": "Godot",
     "engine_version": "4.4.1",
-    "mode": "design",
+    "mode": "prototype",
     "competitors": "Dominion, Star Realms, Clank!",
     "unique_selling_point": "A deterministic deckbuilder with no shuffling luck that plays the same on the web and on a table.",
     "version": "1.0.0",
@@ -28,7 +28,12 @@
       "data_scientist",
       "sr_game_designer",
       "mid_game_designer",
-      "sr_game_artist"
+      "sr_game_artist",
+      "mechanics_developer",
+      "ui_ux_agent",
+      "technical_artist",
+      "game_feel_developer",
+      "qa_agent"
     ],
     "lead_agent": "producer_agent",
     "orchestrator": "master_orchestrator"

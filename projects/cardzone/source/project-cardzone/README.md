@@ -1,25 +1,24 @@
-# CardZone - Source Code
+# CardZone - Godot 4.4.1 project (prototype)
 
-## Engine: Godot
+Web-first prototype. Renderer **Compatibility** (WebGL 2), 1280x720 base, `canvas_items` + `expand`,
+landscape. Set up in cz03 from CallingCard (see
+`documentation/production/prototype-milestone-plan.md`, sections 5 and 9).
 
-## Project Structure
-- `/assets` - All game assets (art, audio, etc.)
-- `/scripts` - Game logic and systems
-- `/scenes` - Game scenes/levels
-- `/prefabs` - Reusable game objects
+## Layout
+- `autoload/` - EventBus (signal contract), Settings (+ screen profile), SceneRouter
+- `scenes/` - `Boot.tscn` (main scene) -> `Title.tscn` (placeholder)
+- `scripts/ui/` - `boot.gd`, `title.gd`, `screen_profile.gd`
+- `scripts/{data,rules,ai,save,art,fx}/`, `data/`, `assets/` - empty, filled by later tasks
+- `tests/` - headless runner, `test_case.gd` base, `test_smoke.gd`
+- `web/shell.html` - custom web shell (loading bar, rotate prompt, "Prototype build" line)
+- `export_presets.cfg` - "Web", single-threaded, includes `assets/fonts/*.txt` (OFL licences)
 
-## Setup Instructions
-1. [Engine-specific setup steps]
-2. [Dependencies installation]
-3. [Build configuration]
-
-## Development Guidelines
-- Follow the coding standards in `/documentation/technical/`
-- All commits must pass QA validation
-- Use semantic versioning for releases
-
-## Active Agents
-master_orchestrator, producer_agent, market_analyst, data_scientist, sr_game_designer, mid_game_designer, sr_game_artist
-
-## Current Phase
-Market Analysis
+## Commands
+```bash
+godot --headless --path . --import                       # first run / after adding assets
+godot --headless --path . -s res://tests/run_tests.gd    # tests; exit code 0 = green
+godot --headless --path . -s res://tests/run_tests.gd -- --only=smoke
+../../tools/package_artifact_build.sh <godot-binary> <out-dir>   # web build for a claude.ai artifact
+```
+Publish from `<out-dir>`: `index.html`, `index.js`, `engine.gz.wasm`, `game.pck.wasm`, the two
+`index.audio*.worklet.js` files and the `.png` icons (not `index.wasm` / `index.pck`).
