@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="Script" path="res://scripts/ui/player_panel.gd" id="2_panel"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/art/map_view.gd" id="4_map"]
 [ext_resource type="Script" path="res://scripts/ui/fan_row.gd" id="5_fan"]
 [ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="7_insp"]
+[ext_resource type="Script" path="res://scripts/match/match_controller.gd" id="8_ctrl"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -98,9 +99,15 @@ layout_mode = 2
 theme_type_variation = &"CaptionStrong"
 text = "LINE"
 
-[node name="LineChips" type="GridContainer" parent="SafeArea/Column/Body/LeftColumn"]
+[node name="LineScroll" type="ScrollContainer" parent="SafeArea/Column/Body/LeftColumn"]
 unique_name_in_owner = true
 layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="LineChips" type="GridContainer" parent="SafeArea/Column/Body/LeftColumn/LineScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 mouse_filter = 2
 columns = 3
 
@@ -128,6 +135,10 @@ layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("5_fan")
+
+[node name="MatchController" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("8_ctrl")
 
 [node name="CardInspector" type="Control" parent="."]
 unique_name_in_owner = true

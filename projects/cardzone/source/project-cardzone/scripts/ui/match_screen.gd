@@ -1,39 +1,57 @@
 # match_screen.gd
-# Purpose: CardZone match screen layout (cz10), phone landscape first, on a mock per-seat view.
+# Purpose: CardZone match screen (cz10 layout, cz11 turn flow), phone landscape first.
 #   Layout (anchors + containers; this script only sizes things from the room the screen has):
 #     top bar:  MENU · YOU (health, Bounty, Down) · ZONE TRACK (round, Zone n/14, route, next cards) ·
 #               RIVAL (health, Down, Bounty, loadout count, held count; held cards never shown) · INFO
-#     left:     Ridge Hollow map (cz16 CzMap, >= 416 px wide so every tile is >= 64 px / 44 pt),
-#               under it your LINE (cards played this turn, in order) as chips
+#     left:     Ridge Hollow map (cz16 CzMap, >= 416 px wide so every tile is >= 64 px / 44 pt) with
+#               four controls in its sea corners (cz11): your MOVE / SEARCH pools (top left), LOG (top
+#               right), UNDO (bottom left), END TURN (bottom right); under it your LINE (cards played
+#               this turn, in order) as chips, 3 per row, 2 rows visible, scrolling past 6 (cz11).
 #     right:    NEXT HAND = the loadout strip: the top of your loadout down to your next hand, as
 #               full-size cards (held cards outlined + HOLD, Hits on top marked Down), with a header
 #               that sums Brace and counts the cards below · your HAND (default 5 + free Hits).
+#     overlays: the ACTION DOCK over the line area (what the selected card / area can do, the shot
+#               preview, Pack / Hold, Brace, drop), a TOAST over the strip header (each engine event,
+#               in order), a modal SHEET (loot list, attach target, MENU, concede, match end), and
+#               the inspector.
 #   Cards are cz16 CzCard at the art direction's compact size (84x118 pt, larger on desktop), fanned
-#   when space is short with >= 64 px / 44 pt of each card exposed.
+#   when space is short with >= 64 px / 44 pt of each card exposed; the selected card opens to its
+#   full width (cz11, from the cz10 review: names were cut in the fan).
 #   Pattern adapted from CallingCard scripts/ui/duel_screen.gd (cc07): safe-area margins from
 #   DisplayServer (or safe_area_override in tests / previews), compact flag below 640 px height,
 #   get_key_controls() / get_important_labels() for the layout tests, the inspector as an overlay.
-# State: show_state(Dictionary) with the per-seat view shape in mock_match_data.gd; every id is a
-#   CardDB id. cz11 replaces the mock with cz07's view(state, seat). card_lookup turns an id into a
-#   CardData (default: CardDB.get_card).
-# Signals for cz11: card_tapped(zone, index, card_id), area_tapped(area_id), menu_requested,
-#   card_inspected(card_id, zone). With mock_interactions = true a tap only selects; INFO inspects it.
-# Dependencies: EventBus, SceneRouter (MENU in mock mode), CardDB, Settings, screen_profile.gd,
-#   match_theme.gd, mock_match_data.gd, fan_row.gd, line_chip.gd, zone_track.gd, player_panel.gd,
-#   card_inspector.gd, cz16 CzCard / CzMap / CzAreaTile.
-# Author: UI/UX Agent (cz10)
+# Modes: show_state(mock) before the screen enters the tree = the cz10 mock layout (no engine).
+#   Otherwise the screen is LIVE: %MatchController (scripts/match/match_controller.gd) runs a real
+#   match and the screen renders view_adapter.to_screen(view(state, human)) after every action.
+#   auto_start = false lets a test call start_live(state) itself.
+# Live input (touch first; every refusal is explained in words in the dock or the toast):
+#   tap a hand card -> PLAY / MOVE +1 / SEARCH +1 (a Hit: Adrenaline) / PATCH UP / ATTACH… / DITCH /
+#   THROW (Frag, then tap an area); tap a line weapon -> the shot preview, then FIRE; tap an area ->
+#   MOVE HERE, or LOOT… in your own area (a sheet of piles, drops, crate cards); UNDO; END TURN ->
+#   Pack (tap hand cards to Hold, END TURN again); Brace -> tap armour cards in the strip, BRACE;
+#   MENU -> RESUME / CONCEDE / LEAVE.
+# Signals: card_tapped(zone, index, card_id), area_tapped(area_id), menu_requested,
+#   card_inspected(card_id, zone), notice_shown(text), option_pressed(key).
+# Dependencies: EventBus, SceneRouter, CardDB, Settings, screen_profile.gd, match_theme.gd,
+#   mock_match_data.gd, fan_row.gd, line_chip.gd, zone_track.gd, player_panel.gd, card_inspector.gd,
+#   cz16 CzCard / CzMap / CzAreaTile, scripts/match (controller, view adapter, action text).
+# Author: UI/UX Agent (cz10, cz11)
 extends Control
 
 signal card_tapped(zone: StringName, index: int, card_id: StringName)
 signal area_tapped(area_id: StringName)
 signal menu_requested
 signal card_inspected(card_id: StringName, zone: StringName)
+signal notice_shown(text: String)
+signal option_pressed(key: StringName)
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const LineChip: GDScript = preload("res://scripts/ui/line_chip.gd")
 const TapHoldButton: GDScript = preload("res://scripts/ui/tap_hold_button.gd")
+const ViewAdapter: GDScript = preload("res://scripts/match/view_adapter.gd")
+const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
@@ -49,21 +67,69 @@ const HOLD_TAG_PT: float = 10.0
 const HAND_CAPACITY: int = 7
 const STRIP_CAPACITY: int = 6
 const ROUTE_LETTER: String = "ABC"
+## The map's four sea corners (design pt, CzMap.DESIGN_PT 416 x 248): free of tiles.
+const CORNER_TL: Rect2 = Rect2(0, 0, 78, 92)
+const CORNER_TR: Rect2 = Rect2(338, 0, 78, 92)
+const CORNER_BL: Rect2 = Rect2(0, 156, 78, 92)
+const CORNER_BR: Rect2 = Rect2(338, 156, 78, 92)
+## Seconds a toast stays up after the last event.
+const TOAST_TIME: float = 2.6
 
 ## Safe area in logical px (tests / previews). Empty = read DisplayServer on phones.
 var safe_area_override: Rect2 = Rect2()
 ## Points per logical px (tests). 0 = from the real window via ScreenProfile.
 var points_per_px_override: float = 0.0
 var mock_interactions: bool = true
+## Live mode starts a new match by itself on _ready unless false (tests call start_live).
+var auto_start: bool = true
 var card_lookup: Callable = func(id: StringName) -> CardData: return CardDB.get_card(id)
 var compact: bool = false
 var points_per_px: float = 1.0
 var card_px: Vector2 = Vector2(117, 164)
 
+## Live-mode input state.
+var live: bool = false
+## &"act", &"pack", &"aim", &"drop", &"brace", &"opponent", &"over".
+var mode: StringName = &"act"
+## The selection in act / drop mode: {zone: &"hand"|&"line"|&"next"|&"area", id: inst or area id}.
+var sel: Dictionary = {}
+## Cards marked to Hold at Pack (instance ids, in tap order).
+var hold_set: Array[int] = []
+## Cards chosen to Brace (instance ids, in tap order).
+var brace_set: Array[int] = []
+## The Frag being aimed (aim mode).
+var aim_card: int = 0
+var last_notice: String = ""
+
 var _state: Dictionary = {}
 var _selected: Control = null
 var _selected_area: StringName = &""
 var _sep: int = 8
+var _controller: Node = null
+var _line_entries: Array = []
+var _line_is_rival: bool = false
+var _dock_options: Array[Dictionary] = []
+var _sheet_options: Array[Dictionary] = []
+
+# Overlays built in code (cz11).
+var _dock: PanelContainer
+var _dock_title: Label
+var _dock_text: Label
+var _dock_buttons: HBoxContainer
+var _toast: PanelContainer
+var _toast_label: Label
+var _toast_timer: Timer
+var _sheet: Control
+var _sheet_panel: PanelContainer
+var _sheet_title: Label
+var _sheet_text: Label
+var _sheet_list: VBoxContainer
+var _sheet_scroll: ScrollContainer
+var _sheet_close: Button
+var _pools: Label
+var _log_button: Button
+var _undo_button: Button
+var _end_button: Button
 
 @onready var _safe_area: MarginContainer = %SafeArea
 @onready var _column: VBoxContainer = %Column
@@ -77,6 +143,7 @@ var _sep: int = 8
 @onready var _left: VBoxContainer = %LeftColumn
 @onready var _map: CzMap = %MapView
 @onready var _line_header: Label = %LineHeader
+@onready var _line_scroll: ScrollContainer = %LineScroll
 @onready var _line: GridContainer = %LineChips
 @onready var _right: VBoxContainer = %RightColumn
 @onready var _strip_header: Label = %StripHeader
@@ -87,6 +154,7 @@ var _sep: int = 8
 
 func _ready() -> void:
 	theme = MatchTheme.build()
+	_controller = get_node_or_null("%MatchController")
 	_menu.pressed.connect(_on_menu)
 	_info.pressed.connect(_on_info)
 	_you.side = &"you"
@@ -102,13 +170,102 @@ func _ready() -> void:
 	_strip.valign = 1.0
 	_hand.valign = 1.0  # the hand hugs the bottom edge (thumb reach)
 	_line.columns = LINE_COLUMNS
+	_line_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_build_overlays()
 	get_viewport().size_changed.connect(_relayout)
 	EventBus.round_started.connect(_on_round_started)
-	if _state.is_empty():
+	var mock: bool = not _state.is_empty()
+	if not mock and auto_start and _controller != null:
+		start_live.call_deferred()
+	elif not mock and _controller == null:
 		_state = MockMatchData.mid_state()
 	_relayout()
 	EventBus.screen_shown.emit(&"match")
 	print("Match: ready")
+
+
+# --- Live match -------------------------------------------------------------------
+
+## Starts a real match on %MatchController: a new one (state == null) or the given state.
+func start_live(state: MatchState = null) -> void:
+	if _controller == null:
+		push_error("MatchScreen: no MatchController")
+		return
+	if not live:
+		live = true
+		mock_interactions = false
+		_controller.view_changed.connect(_on_view_changed)
+		_controller.phase_changed.connect(_on_phase_changed)
+		_controller.event_shown.connect(_on_event_shown)
+		_controller.notice.connect(show_notice)
+	_clear_input()
+	mode = &"act"
+	if state == null:
+		_controller.start_new()
+	else:
+		_controller.start_from(state)
+
+
+func get_controller() -> Node:
+	return _controller
+
+
+func _on_view_changed(v: Dictionary) -> void:
+	_state = ViewAdapter.to_screen(v, _controller.opponent_kind(), _controller.rival_last_line)
+	var you: Dictionary = _state["you"]
+	var hand_ids: Array = you["hand_ids"]
+	hold_set.assign(hold_set.filter(func(i: int) -> bool: return hand_ids.has(i) or _line_has(you, i)))
+	if not sel.is_empty() and sel["zone"] != &"area" and _inst_index(sel["zone"], int(sel["id"])) < 0:
+		sel = {}
+	_render()
+
+
+func _on_phase_changed(p: StringName) -> void:
+	var was: StringName = mode
+	match p:
+		&"drop":
+			mode = &"drop"
+		&"brace":
+			mode = &"brace"
+			if was != &"brace":
+				brace_set.clear()
+		&"opponent":
+			mode = &"opponent"
+		&"over":
+			mode = &"over"
+		_:
+			if was != &"pack" and was != &"aim":
+				mode = &"act"
+	if mode != was:
+		if mode != &"pack":
+			hold_set.clear()
+		sel = {}
+		aim_card = 0
+	if is_node_ready():
+		_render()
+	if mode == &"over":
+		_show_end()
+
+
+func _on_event_shown(text: String, _e: Dictionary) -> void:
+	_show_toast(text)
+
+
+func _clear_input() -> void:
+	sel = {}
+	hold_set.clear()
+	brace_set.clear()
+	aim_card = 0
+
+
+## Shows why something can't be done (dock text when the dock is up, else the toast).
+func show_notice(text: String) -> void:
+	last_notice = text
+	notice_shown.emit(text)
+	if _dock != null and _dock.visible:
+		_dock_text.text = text
+	else:
+		_show_toast(text)
 
 
 # --- State ---------------------------------------------------------------------
@@ -134,9 +291,12 @@ func _render() -> void:
 	_zone.setup(int(_state["zone_index"]), int(_state["route"]), int(_state["round"]))
 	_zone.set_short_title(compact)
 	_render_map()
-	_render_line(you["line"])
+	_line_is_rival = live and mode == &"opponent"
+	_render_line(rival.get("line", []) if _line_is_rival else you["line"])
 	# Strip: top of the loadout = next hand (armour). Held cards are the first non-Hit cards.
 	var held: Array = you["held"]
+	var held_ids: Array = you.get("held_ids", [])
+	var next_ids: Array = you.get("next_ids", [])
 	var held_left: Array = held.duplicate()
 	var non_hit: int = 0
 	var brace: int = 0
@@ -145,9 +305,13 @@ func _render() -> void:
 	for i: int in next.size():
 		var c: CardData = card_lookup.call(next[i])
 		var is_hit: bool = c.is_hit()
-		var is_held: bool = not is_hit and non_hit < held.size() and held_left.has(c.id)
-		if is_held:
-			held_left.erase(c.id)
+		var is_held: bool = false
+		if not next_ids.is_empty():
+			is_held = held_ids.has(int(next_ids[i]))
+		else:
+			is_held = not is_hit and non_hit < held.size() and held_left.has(c.id)
+			if is_held:
+				held_left.erase(c.id)
 		if not is_hit:
 			non_hit += 1
 		brace += c.brace
@@ -157,7 +321,9 @@ func _render() -> void:
 	var hand: Array = you["hand"]
 	for i: int in hand.size():
 		_add_card(_hand, card_lookup.call(hand[i]), &"hand", i, false, false)
+	_apply_marks()
 	_refresh_buttons()
+	_refresh_live()
 
 
 func _render_map() -> void:
@@ -170,17 +336,25 @@ func _render_map() -> void:
 			piles.append({"rarity": card_lookup.call(p["card"]).rarity_letter(), "count": int(p["count"])})
 		if st.get("drop", &"") != &"":
 			piles.append({"rarity": card_lookup.call(st["drop"]).rarity_letter(), "drop": true})
+		for cid: StringName in st.get("crate", []):
+			piles.append({"rarity": card_lookup.call(cid).rarity_letter(), "crate": true})
 		areas.append({"id": a.id, "name": a.display_name, "cover": a.cover,
 				"core": a.tier == DataEnums.AreaTier.CORE, "piles": piles})
 		if st.get("gas", false):
 			gassed.append(a.id)
 	_map.configure(areas)
 	var pawns: Dictionary = {}
-	pawns[_state["you"]["area"]] = [&"player"]
+	var y_area: StringName = _state["you"]["area"]
 	var r_area: StringName = _state["rival"]["area"]
-	pawns[r_area] = (pawns.get(r_area, []) as Array) + [&"ai"]
-	_map.set_state({"gassed": gassed, "pawns": pawns, "selected": _selected_area})
-	# A touch layer on each tile: tap = select (cz11: move / loot), long-press / right-click = inspect.
+	if y_area != &"":
+		pawns[y_area] = [&"player"]
+	if r_area != &"":
+		pawns[r_area] = (pawns.get(r_area, []) as Array) + [&"ai"]
+	var selected: StringName = _selected_area
+	if live:
+		selected = StringName(sel["id"]) if sel.get("zone", &"") == &"area" else &""
+	_map.set_state({"gassed": gassed, "pawns": pawns, "selected": selected})
+	# A touch layer on each tile: tap = select (move / loot / drop / throw), long-press / right-click = inspect.
 	for t: CzAreaTile in _map.tiles():
 		var b: Button = TapHoldButton.new()
 		b.name = "Touch"
@@ -195,6 +369,8 @@ func _render_map() -> void:
 
 func _render_line(entries: Array) -> void:
 	_clear(_line)
+	_line_entries = entries
+	var fired: Dictionary = _state["you"].get("fired", {}) if not _line_is_rival else {}
 	for i: int in entries.size():
 		var e: Dictionary = entries[i]
 		var att: Array[CardData] = []
@@ -202,12 +378,29 @@ func _render_line(entries: Array) -> void:
 			att.append(card_lookup.call(a))
 		var chip: Button = LineChip.new()
 		chip.setup(card_lookup.call(e["card"]), att, i)
+		if e.has("id") and int(fired.get(int(e["id"]), 0)) > 0:
+			chip.text += " · FIRED"
 		chip.custom_minimum_size = Vector2(0, MIN_TAP_PX)
 		chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS  # a drag scrolls the line (> 6 cards)
 		chip.tapped.connect(func() -> void: _on_card_tapped(chip, &"line", chip.index, chip.card_id))
 		chip.inspect_requested.connect(func() -> void: _inspect_line_chip(chip))
 		_line.add_child(chip)
-	_line_header.text = ("LINE · %d PLAYED THIS TURN" % entries.size()) if not entries.is_empty() else "LINE · NOTHING PLAYED YET"
+	var who: String = "RIVAL'S LINE" if _line_is_rival else "LINE"
+	var more: int = entries.size() - LINE_COLUMNS * LINE_ROWS
+	if entries.is_empty():
+		_line_header.text = "RIVAL'S LINE · NOTHING PLAYED YET" if _line_is_rival else "LINE · NOTHING PLAYED YET"
+	elif more > 0:
+		_line_header.text = "%s · %d THIS TURN · SCROLL FOR %d MORE" % [who, entries.size(), more]
+	else:
+		_line_header.text = ("%s · %d THIS TURN" if _line_is_rival else "%s · %d PLAYED THIS TURN") % [who, entries.size()]
+	if more > 0 and is_inside_tree():
+		_scroll_line_to_end.call_deferred()
+
+
+func _scroll_line_to_end() -> void:
+	if is_instance_valid(_line_scroll):
+		_line_scroll.scroll_vertical = int(_line.size.y)
 
 
 func _add_card(row: Container, c: CardData, zone: StringName, i: int, held: bool, down: bool) -> void:
@@ -232,7 +425,7 @@ func _clear(row: Node) -> void:
 
 
 func _refresh_buttons() -> void:
-	_info.disabled = _selected == null and _selected_area == &""
+	_info.disabled = _selected == null and _selected_area == &"" and (not live or sel.is_empty())
 
 
 # --- Layout --------------------------------------------------------------------
@@ -278,7 +471,7 @@ func _relayout() -> void:
 	_left.custom_minimum_size = Vector2(map_w, 0)
 	_map.custom_minimum_size = Vector2(map_w, map_h)
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_line.custom_minimum_size = Vector2(map_w, LINE_ROWS * MIN_TAP_PX + (LINE_ROWS - 1) * _sep)
+	_line_scroll.custom_minimum_size = Vector2(map_w, LINE_ROWS * MIN_TAP_PX + (LINE_ROWS - 1) * _sep)
 	var art: Vector2 = CzArtKit.compact_px(points_per_px).ceil()
 	var header_h: float = _strip_header.get_combined_minimum_size().y
 	# Height: two rows plus the header and the HOLD tag room (10 pt of a card of height h).
@@ -294,7 +487,10 @@ func _relayout() -> void:
 		row.gap = 8.0
 		row.min_step = tap
 	_strip.custom_minimum_size.y = card_px.y + hold_room
+	for b: Button in [_undo_button, _end_button, _log_button]:
+		b.custom_minimum_size = Vector2(tap, tap)
 	_render()
+	_place_overlays.call_deferred()
 
 
 ## Margins (left-top, right-bottom) in logical px: base margins, grown to the notch insets.
@@ -315,12 +511,709 @@ func safe_margins(logical: Vector2) -> Array[Vector2]:
 	return [lt.ceil(), rb.ceil()]
 
 
+# --- Overlays (cz11) -----------------------------------------------------------------
+
+func _build_overlays() -> void:
+	# Map corners: pools, LOG, UNDO, END TURN (children of the map, in its sea corners).
+	_pools = Label.new()
+	_pools.name = "Pools"
+	_pools.theme_type_variation = &"PoolTag"
+	_pools.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pools.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_pools.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map.add_child(_pools)
+	_log_button = _corner_button("LogButton", "LOG", _on_log)
+	_undo_button = _corner_button("UndoButton", "UNDO", _on_undo)
+	_end_button = _corner_button("EndTurnButton", "END\nTURN", _on_end_turn)
+
+	# Action dock over the line area.
+	_dock = PanelContainer.new()
+	_dock.name = "ActionDock"
+	_dock.theme_type_variation = &"DockPanel"
+	_dock.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dock.visible = false
+	add_child(_dock)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override(&"separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dock.add_child(col)
+	_dock_title = Label.new()
+	_dock_title.name = "DockTitle"
+	_dock_title.theme_type_variation = &"CaptionStrong"
+	_dock_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_dock_title.clip_text = true
+	col.add_child(_dock_title)
+	_dock_text = Label.new()
+	_dock_text.name = "DockText"
+	_dock_text.theme_type_variation = &"Caption"
+	_dock_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dock_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_dock_text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_dock_text.max_lines_visible = 2
+	col.add_child(_dock_text)
+	_dock_buttons = HBoxContainer.new()
+	_dock_buttons.name = "DockButtons"
+	_dock_buttons.add_theme_constant_override(&"separation", 6)
+	_dock_buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_dock_buttons)
+
+	# Toast over the strip header.
+	_toast = PanelContainer.new()
+	_toast.name = "Toast"
+	_toast.theme_type_variation = &"ToastPanel"
+	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast.visible = false
+	add_child(_toast)
+	_toast_label = Label.new()
+	_toast_label.name = "ToastText"
+	_toast_label.theme_type_variation = &"ToastText"
+	_toast_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_toast_label.clip_text = true
+	_toast.add_child(_toast_label)
+	_toast_timer = Timer.new()
+	_toast_timer.one_shot = true
+	_toast_timer.timeout.connect(func() -> void: _toast.visible = false)
+	add_child(_toast_timer)
+
+	# Modal sheet (loot, attach, MENU, concede, match end).
+	_sheet = Control.new()
+	_sheet.name = "Sheet"
+	_sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP
+	_sheet.visible = false
+	add_child(_sheet)
+	var scrim: ColorRect = ColorRect.new()
+	scrim.color = Color(0.05, 0.02, 0.08, 0.8)
+	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(scrim)
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(center)
+	_sheet_panel = PanelContainer.new()
+	_sheet_panel.theme_type_variation = &"InspectorPanel"
+	center.add_child(_sheet_panel)
+	var scol: VBoxContainer = VBoxContainer.new()
+	scol.add_theme_constant_override(&"separation", 8)
+	_sheet_panel.add_child(scol)
+	_sheet_title = Label.new()
+	_sheet_title.name = "SheetTitle"
+	_sheet_title.theme_type_variation = &"InspectorTitle"
+	scol.add_child(_sheet_title)
+	_sheet_text = Label.new()
+	_sheet_text.name = "SheetText"
+	_sheet_text.theme_type_variation = &"InspectorBody"
+	_sheet_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	scol.add_child(_sheet_text)
+	_sheet_scroll = ScrollContainer.new()
+	_sheet_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_sheet_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scol.add_child(_sheet_scroll)
+	_sheet_list = VBoxContainer.new()
+	_sheet_list.name = "SheetList"
+	_sheet_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sheet_list.add_theme_constant_override(&"separation", 6)
+	_sheet_scroll.add_child(_sheet_list)
+	_sheet_close = Button.new()
+	_sheet_close.name = "SheetClose"
+	_sheet_close.theme_type_variation = &"TopButton"
+	_sheet_close.text = "CLOSE"
+	_sheet_close.custom_minimum_size = Vector2(0, MIN_TAP_PX)
+	_sheet_close.pressed.connect(close_sheet)
+	scol.add_child(_sheet_close)
+	# The inspector stays on top of every overlay.
+	for n: Node in [_dock, _toast, _sheet]:
+		move_child(n, _inspector.get_index())
+
+
+func _corner_button(node_name: String, label: String, handler: Callable) -> Button:
+	var b: Button = Button.new()
+	b.name = node_name
+	b.theme_type_variation = &"CornerButton"
+	b.text = label
+	b.focus_mode = Control.FOCUS_ALL
+	b.pressed.connect(handler)
+	_map.add_child(b)
+	return b
+
+
+## Places the corner controls in the map's sea corners, the dock over the line area and the toast
+## over the strip header. Runs after every layout pass.
+func _place_overlays() -> void:
+	if not is_inside_tree():
+		return
+	var k: float = _map.px_per_pt()
+	var o: Vector2 = (_map.size - CzMap.DESIGN_PT * k) * 0.5
+	var pairs: Array = [[_pools, CORNER_TL], [_log_button, CORNER_TR], [_undo_button, CORNER_BL], [_end_button, CORNER_BR]]
+	var tap: float = maxf(MIN_TAP_PX, ceilf(CzArtKit.TAP_PT / points_per_px))
+	for p: Array in pairs:
+		var c: Control = p[0]
+		var r: Rect2 = p[1]
+		var area: Rect2 = Rect2(o + r.position * k, r.size * k)
+		var side: float = maxf(tap, minf(area.size.x, area.size.y) - 8.0)
+		var s: Vector2 = Vector2(side, side)
+		if c == _pools:
+			s = Vector2(area.size.x - 4.0, minf(area.size.y - 8.0, side))
+		c.size = s
+		c.position = (area.get_center() - s * 0.5).floor()
+	# Dock: from the line header to the bottom of the left column.
+	var top_left: Vector2 = _line_header.global_position - global_position
+	var bottom: float = (_left.global_position.y - global_position.y) + _left.size.y
+	_dock.position = top_left
+	_dock.size = Vector2(_left.size.x, maxf(0.0, bottom - top_left.y))
+	var line_h: float = _dock_text.get_line_height() if _dock_text.get_line_count() > 0 else 20.0
+	var title_h: float = _dock_title.get_combined_minimum_size().y
+	var room: float = _dock.size.y - 16.0 - 8.0 - title_h - tap
+	_dock_text.max_lines_visible = clampi(int(floorf(room / maxf(1.0, line_h))), 1, 4)
+	for b: Node in _dock_buttons.get_children():
+		(b as Control).custom_minimum_size = Vector2(tap, tap)
+	# Toast: over the strip header, the width of the right column.
+	var th: Vector2 = _strip_header.global_position - global_position
+	_toast.position = th
+	_toast.size = Vector2(_right.size.x, maxf(_strip_header.size.y, _toast.get_combined_minimum_size().y))
+	_sheet_panel.custom_minimum_size.x = minf(620.0, size.x - 48.0)
+	_sheet_scroll.custom_minimum_size.y = minf(5.0 * (tap + 6.0), size.y - 260.0)
+
+
+func _show_toast(text: String) -> void:
+	if _toast == null:
+		return
+	_toast_label.text = text
+	_toast.visible = true
+	if is_inside_tree():
+		_toast_timer.start(TOAST_TIME)
+
+
+func get_toast_text() -> String:
+	return _toast_label.text if _toast != null and _toast.visible else ""
+
+
+# --- Live: dock ------------------------------------------------------------------------
+
+func _refresh_live() -> void:
+	if not live or _controller == null or _controller.state == null:
+		return
+	var you: Dictionary = _state["you"]
+	_pools.text = "MOVE %d\nSEARCH %d" % [int(you.get("move", 0)), int(you.get("search", 0))]
+	_end_button.text = "END\nTURN"
+	_refresh_dock()
+
+
+func _refresh_dock() -> void:
+	var title: String = ""
+	var text: String = ""
+	var opts: Array[Dictionary] = []
+	var close_label: String = "CLOSE"
+	var show: bool = true
+	var you: Dictionary = _state["you"]
+	match mode:
+		&"drop":
+			var rival_area: StringName = _state["rival"]["area"]
+			var dropped: String = ("The rival dropped into %s. " % ActionText.area_name(rival_area)) if rival_area != &"" else ""
+			title = "DROP · CHOOSE WHERE TO LAND"
+			text = dropped + "Tap an outer area (1-6) to drop in; not the Core."
+			close_label = ""
+			if sel.get("zone", &"") == &"area":
+				title = _area_title(StringName(sel["id"]))
+				text = dropped + _area_summary(StringName(sel["id"]))
+				opts = _controller.area_options(StringName(sel["id"]))
+				close_label = "CLOSE"
+		&"brace":
+			var bp: Dictionary = _state.get("brace_prompt", {})
+			var dmg: int = int(bp.get("damage", 0))
+			var total: int = 0
+			var names: PackedStringArray = []
+			for inst: int in brace_set:
+				var c: CardData = _controller.card(inst)
+				total += c.brace
+				names.append(c.display_name)
+			var hits: int = maxi(0, dmg - total)
+			title = "BRACE · %d DAMAGE INCOMING" % dmg
+			if (bp.get("eligible", []) as Array).is_empty():
+				text = "No card in your next hand can brace. %d Hit%s will land." % [hits, "" if hits == 1 else "s"]
+			elif names.is_empty():
+				text = "Tap armour cards in your next hand (top row) to brace. Braced cards go to the bottom of your loadout."
+			else:
+				text = "Bracing with %s (Brace %d): %d Hit%s land." % [", ".join(names), total, hits, "" if hits == 1 else "s"]
+			var label: String = "BRACE" if not brace_set.is_empty() else "TAKE %d" % hits
+			opts = [{"key": &"brace", "label": label, "action": {"type": "brace", "cards": brace_set.duplicate()}, "reason": ""}]
+			close_label = ""
+		&"pack":
+			var limit: int = _controller.hold_limit()
+			var names: PackedStringArray = []
+			for inst: int in hold_set:
+				names.append(_controller.card(inst).display_name)
+			title = "PACK · HOLD UP TO %d" % limit
+			text = "Tap hand cards to hold them on top of your loadout (your next hand); the rest goes under. "
+			text += ("Holding: %s." % ", ".join(names)) if not names.is_empty() else "Holding nothing."
+			var gas: Array = _gas_areas()
+			if gas.has(you["area"]):
+				text = "You're in gas: ending here costs 1 Hit. " + text
+			opts = [{"key": &"end_turn", "label": "END TURN", "action": {"type": "end_turn", "hold": hold_set.duplicate()},
+					"reason": _controller.hold_reason(hold_set)}]
+			close_label = "BACK"
+		&"aim":
+			var c: CardData = _controller.card(aim_card)
+			title = "THROW %s" % c.display_name.to_upper()
+			text = "Tap an area within %d of you. Everyone there takes %d damage before Cover, you too." % [maxi(c.blast_rng, 0), c.blast_dmg]
+			close_label = "CANCEL"
+		&"act":
+			if sel.is_empty():
+				show = false
+			else:
+				var zone: StringName = sel["zone"]
+				if zone == &"area":
+					var area: StringName = StringName(sel["id"])
+					title = _area_title(area)
+					text = _area_summary(area)
+					opts = _controller.area_options(area)
+				else:
+					var inst: int = int(sel["id"])
+					var c: CardData = _controller.card(inst)
+					title = "%s · %s" % [c.display_name.to_upper(), LineChip.stat_line(c)] if LineChip.stat_line(c) != "" else c.display_name.to_upper()
+					match zone:
+						&"hand":
+							opts = _controller.hand_options(inst)
+							text = _hand_hint(c)
+						&"line":
+							opts = _controller.line_options(inst)
+							text = _shot_text(inst) if c.is_weapon() else "Played this turn (line position %d)." % (_inst_index(&"line", inst) + 1)
+						&"next":
+							text = "Top of your loadout: in your next hand, so it braces for you on the rival's turn."
+		_:
+			show = false
+	_dock.visible = show
+	if not show:
+		_dock_options = []
+		return
+	_dock_title.text = title
+	_dock_text.text = text
+	_set_dock_options(opts, close_label)
+
+
+func _set_dock_options(opts: Array[Dictionary], close_label: String) -> void:
+	_clear(_dock_buttons)
+	_dock_options = opts.duplicate()
+	if close_label != "":
+		_dock_options.append({"key": &"close", "label": close_label, "action": {}, "reason": ""})
+	var tap: float = maxf(MIN_TAP_PX, ceilf(CzArtKit.TAP_PT / points_per_px))
+	for o: Dictionary in _dock_options:
+		var b: Button = Button.new()
+		b.name = "Dock_%s" % String(o["key"])
+		b.text = o["label"]
+		b.theme_type_variation = &"DockButtonOff" if o["reason"] != "" else &"DockButton"
+		b.custom_minimum_size = Vector2(tap, tap)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.set_meta(&"key", o["key"])
+		var opt: Dictionary = o
+		b.pressed.connect(func() -> void: _on_option(opt))
+		_dock_buttons.add_child(b)
+
+
+func _on_option(o: Dictionary) -> void:
+	var key: StringName = o["key"]
+	option_pressed.emit(key)
+	if o["reason"] != "":
+		show_notice(o["reason"])
+		return
+	match key:
+		&"close":
+			if mode == &"pack" or mode == &"aim":
+				mode = &"act"
+				hold_set.clear()
+				aim_card = 0
+			sel = {}
+			_render()
+			return
+		&"throw":
+			aim_card = int(sel["id"])
+			mode = &"aim"
+			sel = {}
+			_render()
+			return
+		&"attach":
+			var att: int = int(sel["id"])
+			var targets: Array[Dictionary] = _controller.attach_targets(att)
+			var legal: Array = targets.filter(func(t: Dictionary) -> bool: return t["reason"] == "")
+			if legal.size() == 1:
+				_submit(legal[0]["action"])
+			else:
+				open_sheet("ATTACH %s" % _controller.card(att).display_name.to_upper(), "Choose the weapon.", targets)
+			return
+		&"loot":
+			var area: String = ActionText.area_name(_state["you"]["area"])
+			open_sheet("LOOT · %s" % area.to_upper(), "Search %d to spend. The card goes into your line." % int(_state["you"]["search"]),
+					_controller.loot_options())
+			return
+	_submit(o["action"])
+
+
+## Sends one action to the controller. On a refusal the selection stays and the reason shows.
+func _submit(action: Dictionary) -> bool:
+	var why: String = _controller.why_not(action)
+	if why != "":
+		show_notice(why)
+		return false
+	var t: String = String(action.get("type", ""))
+	sel = {}
+	aim_card = 0
+	if t == "end_turn":
+		hold_set.clear()
+	if t == "brace":
+		brace_set.clear()
+	if mode == &"pack" or mode == &"aim":
+		mode = &"act"
+	close_sheet()
+	_controller.request(action)
+	if is_node_ready():
+		_render()
+	return true
+
+
+func _hand_hint(c: CardData) -> String:
+	if c.is_hit():
+		return "A Hit: play it for Adrenaline (Move +1 or Search +1), or spend Search 2 to patch it up (back to health)."
+	if c.blast_dmg > 0:
+		return "Throw it into an area up to %d away: %d damage to everyone there." % [maxi(c.blast_rng, 0), c.blast_dmg]
+	if c.is_weapon():
+		return "Play it into your line, then tap it there to aim and fire."
+	if c.is_attachment():
+		return "Attach it to a weapon in your hand or line."
+	return c.rules_text if c.rules_text != "" else "Play it into your line."
+
+
+func _shot_text(weapon: int) -> String:
+	var p: Dictionary = _controller.shot_preview(weapon)
+	if p["reason"] != "":
+		return p["reason"]
+	var where: String = ActionText.area_name(_state["rival"]["area"])
+	var s: String = "Rival in %s, %d away (range %d). DMG %d − Cover %d − Down %d = %d damage. " % [
+			where, int(p["dist"]), int(p["range"]), int(p["dmg"]), int(p["cover"]), int(p["down"]), int(p["damage"])]
+	if p["suppressed"]:
+		s += "Suppressor: they can't Brace."
+	elif int(p["damage"]) <= 0:
+		s += "0 damage: firing still uses this weapon's shot."
+	else:
+		s += "They may Brace."
+	return s
+
+
+func _area_title(area: StringName) -> String:
+	var a: AreaData = CardDB.get_area(area)
+	var core: bool = a.tier == DataEnums.AreaTier.CORE
+	return "%s · %s · COVER %d%s" % [a.display_name.to_upper(), "CORE" if core else "AREA %d" % a.number, a.cover,
+			" · GAS" if _gas_areas().has(area) else ""]
+
+
+func _area_summary(area: StringName) -> String:
+	var st: Dictionary = _state["areas"].get(area, {})
+	var parts: PackedStringArray = []
+	for p: Dictionary in st.get("piles", []):
+		var c: CardData = card_lookup.call(p["card"])
+		parts.append("%s (Search %d) x%d" % [c.display_name, c.cost, int(p["count"])])
+	if st.get("drop", &"") != &"":
+		parts.append("drop: %s" % card_lookup.call(st["drop"]).display_name)
+	var here: String = "Loot: " + (", ".join(parts) if not parts.is_empty() else "nothing") + "."
+	if live and mode != &"drop" and _controller.state != null:
+		var me: StringName = _state["you"]["area"]
+		if area != me:
+			var d: int = _controller.state.data.distance(me, area)
+			here = "%d area%s away. " % [d, "" if d == 1 else "s"] + here
+	if st.get("gas", false):
+		here = "Gas: ending a turn here costs 1 Hit. " + here
+	return here
+
+
+func _gas_areas() -> Array:
+	var out: Array = []
+	for id: Variant in _state.get("areas", {}).keys():
+		if _state["areas"][id].get("gas", false):
+			out.append(id)
+	return out
+
+
+# --- Live: sheet ----------------------------------------------------------------------
+
+## A modal list of options (each a 64 px row). Illegal options say why when tapped.
+func open_sheet(title: String, text: String, opts: Array[Dictionary], close_label: String = "CLOSE") -> void:
+	_sheet_title.text = title
+	_sheet_text.text = text
+	_sheet_text.visible = text != ""
+	_clear(_sheet_list)
+	_sheet_options = opts.duplicate()
+	var tap: float = maxf(MIN_TAP_PX, ceilf(CzArtKit.TAP_PT / points_per_px))
+	for o: Dictionary in opts:
+		var b: Button = Button.new()
+		b.name = "Sheet_%s" % String(o["key"])
+		b.text = o["label"]
+		b.theme_type_variation = &"DockButtonOff" if o["reason"] != "" else &"DockButton"
+		b.custom_minimum_size = Vector2(0, tap)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.mouse_filter = Control.MOUSE_FILTER_PASS
+		b.set_meta(&"key", o["key"])
+		var opt: Dictionary = o
+		b.pressed.connect(func() -> void: _on_sheet_option(opt))
+		_sheet_list.add_child(b)
+	_sheet_close.text = close_label
+	_sheet_close.visible = close_label != ""
+	_sheet_close.custom_minimum_size = Vector2(0, tap)
+	_sheet.visible = true
+	_place_overlays()
+
+
+func close_sheet() -> void:
+	if _sheet != null:
+		_sheet.visible = false
+
+
+func is_sheet_open() -> bool:
+	return _sheet != null and _sheet.visible
+
+
+func _on_sheet_option(o: Dictionary) -> void:
+	var key: StringName = o["key"]
+	option_pressed.emit(key)
+	if o["reason"] != "":
+		_sheet_text.text = o["reason"]
+		_sheet_text.visible = true
+		last_notice = o["reason"]
+		notice_shown.emit(o["reason"])
+		return
+	match key:
+		&"resume":
+			close_sheet()
+		&"concede":
+			open_sheet("CONCEDE?", "The rival wins this match.", [
+					{"key": &"concede_yes", "label": "CONCEDE", "action": {}, "reason": ""},
+					{"key": &"resume", "label": "KEEP PLAYING", "action": {}, "reason": ""}], "")
+		&"concede_yes":
+			close_sheet()
+			_controller.request({"type": "concede"})
+		&"leave", &"title":
+			close_sheet()
+			SceneRouter.goto_route(&"title")
+		&"new_match":
+			close_sheet()
+			start_live()
+		_:
+			_submit(o["action"])
+
+
+func _show_end() -> void:
+	var v: Dictionary = _controller.view()
+	var me: int = int(v.get("seat", 0))
+	var r: Dictionary = v.get("match_end", {})
+	var title: String = "DRAW"
+	if String(r.get("result", "")) == "win":
+		title = "YOU WIN" if int(r.get("winner", -1)) == me else "THE RIVAL WINS"
+	var text: String = ActionText.result_text(r, me) + " Round %d. Health: you %d, rival %d." % [int(v["round"]),
+			int(v["me"]["health"]), int(v["opponent"]["health"])]
+	open_sheet(title, text, [{"key": &"new_match", "label": "NEW MATCH", "action": {}, "reason": ""},
+			{"key": &"title", "label": "TITLE", "action": {}, "reason": ""}], "CLOSE")
+
+
+# --- Live: taps -------------------------------------------------------------------------
+
+func _inst_for(zone: StringName, index: int) -> int:
+	var you: Dictionary = _state.get("you", {})
+	match zone:
+		&"hand":
+			var ids: Array = you.get("hand_ids", [])
+			return int(ids[index]) if index < ids.size() else 0
+		&"next":
+			var ids: Array = you.get("next_ids", [])
+			return int(ids[index]) if index < ids.size() else 0
+		&"line":
+			return int(_line_entries[index].get("id", 0)) if index < _line_entries.size() else 0
+	return 0
+
+
+func _inst_index(zone: StringName, inst: int) -> int:
+	var you: Dictionary = _state.get("you", {})
+	match zone:
+		&"hand":
+			return (you.get("hand_ids", []) as Array).find(inst)
+		&"next":
+			return (you.get("next_ids", []) as Array).find(inst)
+		&"line":
+			for i: int in _line_entries.size():
+				if int(_line_entries[i].get("id", 0)) == inst:
+					return i
+	return -1
+
+
+func _line_has(you: Dictionary, inst: int) -> bool:
+	for e: Dictionary in you.get("line", []):
+		if int(e.get("id", 0)) == inst:
+			return true
+	return false
+
+
+func _live_card_tap(view: Control, zone: StringName, index: int) -> void:
+	var inst: int = _inst_for(zone, index)
+	match mode:
+		&"opponent":
+			show_notice("It's the rival's turn. Long-press any card to read it.")
+		&"over":
+			_show_end()
+		&"drop":
+			show_notice("Pick your drop area first: tap an outer area on the map.")
+		&"aim":
+			show_notice("Tap an area on the map to throw, or CANCEL.")
+		&"brace":
+			if zone != &"next":
+				show_notice("Brace first: tap armour cards in your next hand (the top row), then BRACE.")
+				return
+			_toggle_brace(inst)
+		&"pack":
+			if zone == &"line" and _line_is_rival:
+				return
+			if zone == &"next":
+				show_notice("Packing: tap cards in your hand to hold them, then END TURN.")
+				return
+			_toggle_hold(inst)
+		_:
+			if _line_is_rival and zone == &"line":
+				show_notice("That's the rival's line. Long-press a card to read it.")
+				return
+			if sel.get("zone", &"") == zone and int(sel.get("id", 0)) == inst:
+				sel = {}
+			else:
+				sel = {"zone": zone, "id": inst}
+			_apply_marks()
+			_refresh_buttons()
+			_refresh_dock()
+			_map.set_state({"selected": &""})
+
+
+func _toggle_hold(inst: int) -> void:
+	if hold_set.has(inst):
+		hold_set.erase(inst)
+	else:
+		var next: Array = hold_set.duplicate()
+		next.append(inst)
+		var why: String = _controller.hold_reason(next)
+		if why != "":
+			show_notice(why)
+			return
+		hold_set.append(inst)
+	_apply_marks()
+	_refresh_dock()
+
+
+func _toggle_brace(inst: int) -> void:
+	var bp: Dictionary = _state.get("brace_prompt", {})
+	var eligible: Array = bp.get("eligible", [])
+	if brace_set.has(inst):
+		brace_set.erase(inst)
+	elif eligible.has(inst):
+		brace_set.append(inst)
+	else:
+		var c: CardData = _controller.card(inst)
+		if c.is_hit():
+			show_notice("A Hit can't brace.")
+		elif (_state["you"].get("braced", []) as Array).has(inst):
+			show_notice("%s already braced this turn." % c.display_name)
+		elif c.brace <= 0:
+			show_notice("%s has no Brace value." % c.display_name)
+		else:
+			show_notice("%s isn't in your next hand." % c.display_name)
+		return
+	_apply_marks()
+	_refresh_dock()
+
+
+## Card marks for the live modes: selection (with the fan opened at it), Hold, Brace, dimming.
+func _apply_marks() -> void:
+	if not live:
+		return
+	var holdable: Array = []
+	if mode == &"pack":
+		holdable = _controller.holdable()
+	var eligible: Array = _state.get("brace_prompt", {}).get("eligible", [])
+	_hand.focus_index = -1
+	_strip.focus_index = -1
+	for zone: StringName in [&"hand", &"next"]:
+		var row: Container = _hand if zone == &"hand" else _strip
+		var cards: Array[Control] = get_cards(zone)
+		for i: int in cards.size():
+			var cv: CzCard = cards[i]
+			var inst: int = _inst_for(zone, i)
+			var picked: bool = sel.get("zone", &"") == zone and int(sel.get("id", 0)) == inst
+			cv.selected = picked or (mode == &"brace" and zone == &"next" and brace_set.has(inst))
+			if picked:
+				row.focus_index = i
+			if zone == &"hand":
+				cv.held = mode == &"pack" and hold_set.has(inst)
+				cv.dimmed = mode == &"pack" and not holdable.has(inst)
+			else:
+				cv.dimmed = mode == &"brace" and not eligible.has(inst)
+	for chip: Node in _line.get_children():
+		var inst: int = _inst_for(&"line", (chip as Button).get("index"))
+		chip.set("selected", not _line_is_rival and sel.get("zone", &"") == &"line" and int(sel.get("id", 0)) == inst)
+
+
+func _on_undo() -> void:
+	option_pressed.emit(&"undo")
+	if not live:
+		return
+	if mode == &"pack" or mode == &"aim":
+		mode = &"act"
+		hold_set.clear()
+		aim_card = 0
+	var why: String = _controller.why_not({"type": "undo"})
+	if why != "":
+		show_notice(why)
+		return
+	sel = {}
+	_controller.request({"type": "undo"})
+	_render()
+
+
+func _on_end_turn() -> void:
+	option_pressed.emit(&"end_turn")
+	if not live:
+		return
+	match mode:
+		&"pack":
+			var a: Dictionary = {"type": "end_turn", "hold": hold_set.duplicate()}
+			var why: String = _controller.hold_reason(hold_set)
+			if why != "":
+				show_notice(why)
+				return
+			_submit(a)
+		&"act", &"aim":
+			var why: String = _controller.why_not({"type": "end_turn", "hold": []})
+			if why != "":
+				show_notice(why)
+				return
+			mode = &"pack"
+			sel = {}
+			aim_card = 0
+			hold_set.clear()
+			_render()
+		&"brace":
+			show_notice("Brace first: tap armour cards in your next hand (the top row), then BRACE.")
+		&"drop":
+			show_notice("Pick your drop area first: tap an outer area on the map.")
+		&"opponent":
+			show_notice("It's the rival's turn.")
+
+
+func _on_log() -> void:
+	var lines: PackedStringArray = _controller.log_lines if live else PackedStringArray()
+	var tail: PackedStringArray = lines.slice(maxi(0, lines.size() - 40))
+	tail.reverse()
+	_inspector.open_info("Match log", "Newest first", "\n".join(tail) if not tail.is_empty() else "Nothing yet.")
+
+
 # --- Accessors for tests and cz11 ------------------------------------------------
 
 ## Controls that must be on screen, inside the safe area and not overlap (tests).
 func get_key_controls() -> Dictionary:
 	return {"MenuButton": _menu, "YouPanel": _you, "ZoneTrack": _zone, "RivalPanel": _rival,
-			"InfoButton": _info, "MapView": _map, "LineChips": _line, "StripCards": _strip, "HandCards": _hand}
+			"InfoButton": _info, "MapView": _map, "LineChips": _line_scroll, "StripCards": _strip, "HandCards": _hand}
 
 
 func get_rows() -> Dictionary:
@@ -364,6 +1257,72 @@ func get_selected_area() -> StringName:
 	return _selected_area
 
 
+func get_dock() -> PanelContainer:
+	return _dock
+
+
+func get_dock_title() -> String:
+	return _dock_title.text if _dock.visible else ""
+
+
+func get_dock_text() -> String:
+	return _dock_text.text if _dock.visible else ""
+
+
+## A dock button by option key (&"play", &"fire", &"close"…), or null.
+func get_dock_button(key: StringName) -> Button:
+	if not _dock.visible:
+		return null
+	for b: Node in _dock_buttons.get_children():
+		if b.get_meta(&"key", &"") == key and not b.is_queued_for_deletion():
+			return b
+	return null
+
+
+func get_dock_keys() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for o: Dictionary in _dock_options:
+		out.append(o["key"])
+	return out
+
+
+func get_sheet_button(key: StringName) -> Button:
+	if not is_sheet_open():
+		return null
+	for b: Node in _sheet_list.get_children():
+		if b.get_meta(&"key", &"") == key and not b.is_queued_for_deletion():
+			return b
+	return null
+
+
+func get_sheet_buttons() -> Array[Button]:
+	var out: Array[Button] = []
+	for b: Node in _sheet_list.get_children():
+		if not b.is_queued_for_deletion():
+			out.append(b)
+	return out
+
+
+func get_sheet_title() -> String:
+	return _sheet_title.text if is_sheet_open() else ""
+
+
+func get_sheet_text() -> String:
+	return _sheet_text.text if is_sheet_open() else ""
+
+
+func get_corner_buttons() -> Dictionary:
+	return {&"undo": _undo_button, &"end_turn": _end_button, &"log": _log_button}
+
+
+func get_pools_label() -> Label:
+	return _pools
+
+
+func get_line_scroll() -> ScrollContainer:
+	return _line_scroll
+
+
 ## Labels whose whole text must show (tests).
 func get_important_labels() -> Array[Label]:
 	var out: Array[Label] = []
@@ -373,6 +1332,7 @@ func get_important_labels() -> Array[Label]:
 	out.append_array(_zone.get_chip_labels())
 	out.append(_strip_header)
 	out.append(_line_header)
+	out.append(_pools)
 	return out
 
 
@@ -383,7 +1343,7 @@ func _inspect_card_view(cc: CzCard) -> void:
 	var i: int = cc.get_meta(&"index", 0)
 	var where: String = {&"hand": "In your hand",
 			&"next": "Top of your loadout, card %d: part of your next hand (armour)" % (i + 1)}.get(zone, "")
-	if cc.held:
+	if cc.held and zone == &"next":
 		where = "Held: on top of your loadout, in your next hand; Brace with it until then"
 	elif cc.down:
 		where = "A Hit on top of your loadout: you are Down (+1 Brace per shot) until you draw it"
@@ -393,7 +1353,8 @@ func _inspect_card_view(cc: CzCard) -> void:
 
 
 func _inspect_line_chip(chip: Button) -> void:
-	_inspector.open_card(chip.card, {"where": "In your line (played this turn, position %d)" % (chip.index + 1), "attached": chip.attached})
+	var whose: String = "In the rival's line" if _line_is_rival else "In your line"
+	_inspector.open_card(chip.card, {"where": "%s (played this turn, position %d)" % [whose, chip.index + 1], "attached": chip.attached})
 	card_inspected.emit(chip.card_id, &"line")
 
 
@@ -414,6 +1375,12 @@ func inspect_area(area_id: StringName) -> void:
 		lines.append("  %s (%s, Search %d) x%d" % [c.display_name, c.rarity_letter(), c.cost, int(p["count"])])
 	if st.get("drop", &"") != &"":
 		lines.append("Supply drop: %s (Search %d)" % [card_lookup.call(st["drop"]).display_name, CzCardArt.drop_cost()])
+	var crate: Array = st.get("crate", [])
+	if not crate.is_empty():
+		var names: PackedStringArray = []
+		for cid: StringName in crate:
+			names.append(card_lookup.call(cid).display_name)
+		lines.append("Crate: %s" % ", ".join(names))
 	var who: PackedStringArray = []
 	if _state.get("you", {}).get("area", &"") == area_id:
 		who.append("you (light disc, chevron)")
@@ -461,7 +1428,7 @@ func inspect_player(which: StringName) -> void:
 		lines.append("Next hand (top of your loadout): %s. +%d cards below." % [", ".join(next), int(d.get("loadout_rest", 0))])
 	var title: String = "You" if which == &"you" else "Rival (%s)" % d.get("kind", "AI")
 	var area: AreaData = CardDB.get_area(d.get("area", &""))
-	_inspector.open_info(title, "Area: %s" % (area.display_name if area != null else "?"), "\n".join(lines))
+	_inspector.open_info(title, "Area: %s" % (area.display_name if area != null else "not dropped yet"), "\n".join(lines))
 
 
 # --- Input --------------------------------------------------------------------------
@@ -470,10 +1437,32 @@ func _on_card_tapped(view: Control, zone: StringName, index: int, card_id: Strin
 	card_tapped.emit(zone, index, card_id)
 	if mock_interactions:
 		_select(view)
+		return
+	if live:
+		_live_card_tap(view, zone, index)
 
 
 func _on_area_tapped(area_id: StringName) -> void:
 	area_tapped.emit(area_id)
+	if live:
+		match mode:
+			&"opponent":
+				show_notice("It's the rival's turn. Long-press an area to read it.")
+			&"over":
+				_show_end()
+			&"brace":
+				show_notice("Brace first: tap armour cards in your next hand (the top row), then BRACE.")
+			&"pack":
+				show_notice("Packing: tap hand cards to hold, then END TURN; BACK returns to your turn.")
+			&"aim":
+				_submit({"type": "frag", "card": aim_card, "area": String(area_id)})
+			_:
+				sel = {} if (sel.get("zone", &"") == &"area" and sel.get("id", &"") == area_id) else {"zone": &"area", "id": area_id}
+				_map.set_state({"selected": StringName(sel["id"]) if not sel.is_empty() else &""})
+				_apply_marks()
+				_refresh_buttons()
+				_refresh_dock()
+		return
 	if not mock_interactions:
 		return
 	_select(null)
@@ -494,6 +1483,19 @@ func _select(c: Control) -> void:
 
 
 func _on_info() -> void:
+	if live and not sel.is_empty():
+		var zone: StringName = sel["zone"]
+		if zone == &"area":
+			inspect_area(StringName(sel["id"]))
+			return
+		var i: int = _inst_index(zone, int(sel["id"]))
+		var cards: Array[Control] = get_cards(zone)
+		if i >= 0 and i < cards.size():
+			if zone == &"line":
+				_inspect_line_chip(cards[i])
+			else:
+				_inspect_card_view(cards[i])
+		return
 	if _selected != null and is_instance_valid(_selected):
 		if _selected is CzCard:
 			_inspect_card_view(_selected)
@@ -505,12 +1507,22 @@ func _on_info() -> void:
 
 func _on_menu() -> void:
 	menu_requested.emit()
+	if live:
+		var over: bool = mode == &"over"
+		var opts: Array[Dictionary] = [{"key": &"resume", "label": "RESUME", "action": {}, "reason": ""}]
+		if not over:
+			opts.append({"key": &"concede", "label": "CONCEDE…", "action": {}, "reason": ""})
+		else:
+			opts.append({"key": &"new_match", "label": "NEW MATCH", "action": {}, "reason": ""})
+		opts.append({"key": &"leave", "label": "LEAVE TO TITLE (this match is not saved yet)", "action": {}, "reason": ""})
+		open_sheet("MENU", "", opts, "")
+		return
 	if mock_interactions:
 		SceneRouter.goto_route(&"title")
 
 
 func _on_round_started(round_index: int) -> void:
-	if _state.is_empty():
+	if _state.is_empty() or live:
 		return
 	_state["round"] = round_index
 	_zone.setup(int(_state["zone_index"]), int(_state["route"]), round_index)

@@ -43,6 +43,9 @@ const USED: Dictionary = {
 	&"Caption": &"Label", &"CaptionStrong": &"Label", &"KeyNumber": &"Label",
 	&"TagBounty": &"Label", &"TagDown": &"Label", &"TagChip": &"Label",
 	&"TagChipNow": &"Label", &"TagChipGas": &"Label", &"InspectorTitle": &"Label", &"InspectorBody": &"Label",
+	# cz11: action dock, map-corner buttons, pools tag, toast.
+	&"DockButton": &"Button", &"DockButtonOff": &"Button", &"CornerButton": &"Button",
+	&"DockPanel": &"PanelContainer", &"ToastPanel": &"PanelContainer", &"PoolTag": &"Label", &"ToastText": &"Label",
 }
 
 
@@ -58,10 +61,21 @@ static func build() -> Theme:
 	# Buttons: hover == normal (no hover-only information); a visible focus ring for keys/pads.
 	var focus: StyleBoxFlat = _box(Color(0, 0, 0, 0), ZONE_EDGE, 3, 6)
 	focus.draw_center = false
-	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton", &"LineChip"]:
+	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton", &"LineChip", &"DockButton", &"DockButtonOff", &"CornerButton"]:
 		var normal: StyleBoxFlat = _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 10)
 		var pressed: StyleBoxFlat = _box(ZONE_VIOLET, ZONE_EDGE, 2, 6, 10)
 		var disabled: StyleBoxFlat = _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.35), 2, 6, 10)
+		if v == &"DockButton":
+			# The thing to do: a light plate (paper on ink), the strongest button on screen.
+			normal = _box(PAPER, INK, 2, 6, 4)
+			pressed = _box(BRACE_STEEL, INK, 3, 6, 4)
+		if v == &"DockButtonOff":
+			# Not possible now: dark plate, dashed-looking thin border; a tap says why.
+			normal = _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.45), 1, 6, 4)
+			pressed = _box(ZONE_VIOLET, ZONE_EDGE, 1, 6, 4)
+		if v == &"CornerButton":
+			normal = _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 4)
+			pressed = _box(ZONE_VIOLET, ZONE_EDGE, 3, 6, 4)
 		if v == &"LineChip":
 			normal = _box(PAPER, INK, 2, 4, 8, 4)
 			pressed = _box(BRACE_STEEL, INK, 2, 4, 8, 4)
@@ -74,7 +88,7 @@ static func build() -> Theme:
 		t.set_stylebox(&"hover_pressed", v, pressed)
 		t.set_stylebox(&"disabled", v, disabled)
 		t.set_stylebox(&"focus", v, focus)
-		var fc: Color = INK if v == &"LineChip" else PAPER
+		var fc: Color = INK if (v == &"LineChip" or v == &"DockButton") else PAPER
 		t.set_color(&"font_color", v, fc)
 		t.set_color(&"font_hover_color", v, fc)
 		t.set_color(&"font_pressed_color", v, fc)
@@ -94,6 +108,8 @@ static func build() -> Theme:
 
 	_panel(t, &"MatchPanel", _box(ZONE_DUSK, Color(ZONE_EDGE, 0.45), 2, 6, 8))
 	_panel(t, &"InspectorPanel", _box(ZONE_DUSK, ZONE_EDGE, 2, 8, 12))
+	_panel(t, &"DockPanel", _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 8))
+	_panel(t, &"ToastPanel", _box(PAPER, INK, 2, 4, 8, 2))
 
 	_label(t, &"Caption", Color(PAPER, 0.86), FONT_BODY)
 	_label(t, &"CaptionStrong", PAPER, FONT_BODY)
@@ -106,6 +122,8 @@ static func build() -> Theme:
 	_label(t, &"TagChip", PAPER, FONT_BODY, _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.6), 1, 3, 5, 0))
 	_label(t, &"TagChipNow", INK, FONT_BODY, _box(PAPER, INK, 1, 3, 5, 0))
 	_label(t, &"TagChipGas", INK, FONT_BODY, _box(GAS_LIME, INK, 1, 3, 5, 0))
+	_label(t, &"PoolTag", PAPER, FONT_BODY, _box(Color(ZONE_VIOLET, 0.92), Color(ZONE_EDGE, 0.6), 1, 4, 2, 2))
+	_label(t, &"ToastText", INK, FONT_BODY)
 	return t
 
 
