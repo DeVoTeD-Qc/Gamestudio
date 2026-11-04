@@ -96,7 +96,20 @@ func _build() -> void:
 			tile.add_line(item.display_name.to_upper(), &"TileName")
 			tile.add_line("STREAK %d" % item.streak_threshold, &"StreakLabel", false)
 			tile.add_line(item.text)
-			tile.add_spacer()
+			# k-art4: the killstreak's card art as a band in the tile's free space (it shrinks
+			# away on short screens and never grows the tile); no art: the old spacer.
+			if CardArt.has_card(item.id):
+				var band := TextureRect.new()
+				band.name = "Art"
+				band.texture = CardArt.card_texture(item.id, 2.0)
+				band.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				band.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+				band.size_flags_vertical = Control.SIZE_EXPAND_FILL
+				band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				band.clip_contents = true
+				tile.content.add_child(band)
+			else:
+				tile.add_spacer()
 			tile.add_status("TAP TO PICK")
 			tile.pressed.connect(toggle.bind(item.id))
 			_grid.add_child(tile)

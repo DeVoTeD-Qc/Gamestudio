@@ -14,6 +14,9 @@
 #   Up to 7 cards (hand cap): CardRow is a plain Control and _fit_cards() places the
 #   cards, centred, overlapping them when they don't fit (so the hand never widens the
 #   bottom bar). Compact (phone) profile: smaller chips, no "HAND n/7" caption.
+#   k-art4: each chip shows the card's painted art (ArtUnderlay, cropped to the chip, inside its
+#   frame) under a slate scrim; names and words get a thin slate outline, and FP / Armor sit on
+#   dark plates, so every number keeps its size and contrast over busy art.
 # Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
 #   HudNumber, HudSubtle, HudTag), press_gesture.gd, mini_icons.gd, cost_hex.gd, icon_sheet.gd.
 # Author: UI/UX Agent
@@ -39,6 +42,8 @@ const ICON_PX_COMPACT: float = 18.0
 const HEX_SIZE: Vector2 = Vector2(28, 32)
 const HEX_SIZE_COMPACT: Vector2 = Vector2(24, 28)
 const HAND_CAP: int = 7
+## k-art4: plate behind FP / Armor over the art.
+static var STAT_PLATE: StyleBoxFlat = ArtUnderlay.plate()
 
 var compact: bool = false
 var _cards_data: Array = []
@@ -171,12 +176,17 @@ func _make_card(card: Dictionary) -> Control:
 	panel.custom_minimum_size = _card_size()
 	panel.add_to_group(&"tap_target")
 	panel.set_meta(&"playable", bool(card.get("playable", true)))
+	var ctype: String = MiniIcons.card_type(card)
+	var weapon: String = MiniIcons.weapon_class(card)
+	# k-art4: painted art behind everything, filling the chip inside its border.
+	var art := ArtUnderlay.new()
+	art.set_art(CardArt.card_key({"id": card.get("id", ""), "type": ctype, "weapon_class": weapon}), ArtUnderlay.SCRIM_CHIP)
+	panel.add_child(art)
+	panel.sort_children.connect(_fit_art.bind(panel, art))
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 0 if compact else 2)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(column)
-	var ctype: String = MiniIcons.card_type(card)
-	var weapon: String = MiniIcons.weapon_class(card)
 	var text_color: Color = get_theme_color(&"text", &"Hud")
 	var icon_px: float = ICON_PX_COMPACT if compact else ICON_PX
 
@@ -200,6 +210,7 @@ func _make_card(card: Dictionary) -> Control:
 	if bool(card.get("elite", false)):
 		top.add_child(MiniIcons.icon(&"elite", icon_px, get_theme_color(&"elite", &"Hud")))
 	var type_word: Label = MiniIcons.word(String(card.get("type", "")).to_upper())
+	ArtUnderlay.outline(type_word)
 	type_word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(type_word)
 	top.resized.connect(MiniIcons.fit_words.bind(top))
@@ -207,6 +218,7 @@ func _make_card(card: Dictionary) -> Control:
 	var title: Label = _label(String(card.get("name", "")), &"UnitName", true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.max_lines_visible = 2
+	ArtUnderlay.outline(title)
 	column.add_child(title)
 
 	# Keyword icons (amber, words only when they fit); cards without keyword icons keep their
@@ -228,6 +240,7 @@ func _make_card(card: Dictionary) -> Control:
 		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		text.custom_minimum_size = Vector2(0, 20)
+		ArtUnderlay.outline(text)
 		column.add_child(text)
 
 	# FP bottom-left, Armor bottom-right, each with its CardView icon.
@@ -242,11 +255,32 @@ func _make_card(card: Dictionary) -> Control:
 				gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				stats.add_child(gap)
-			stats.add_child(MiniIcons.icon(pair[0], icon_px, text_color))
+			# k-art4: icon + number on a dark plate (same sizes as before).
+			var stat: HBoxContainer = HBoxContainer.new()
+			stat.name = "FpPlate" if pair[0] == &"stat_firepower" else "ArPlate"
+			stat.add_theme_constant_override(&"separation", 2)
+			stat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			stat.draw.connect(_draw_plate.bind(stat))
+			stats.add_child(stat)
+			stat.add_child(MiniIcons.icon(pair[0], icon_px, text_color))
 			var value: Label = _label(str(pair[1]), &"HudNumber", true)
 			value.add_to_group(&"key_number")
-			stats.add_child(value)
+			stat.add_child(value)
 	return panel
+
+
+## Stretches the art over the chip inside its border (the content margins hold the text only).
+func _fit_art(panel: PanelContainer, art: Control) -> void:
+	var sb: StyleBox = panel.get_theme_stylebox(&"panel")
+	var inset: float = 2.0
+	if sb is StyleBoxFlat:
+		inset = float((sb as StyleBoxFlat).border_width_left)
+	art.position = Vector2(inset, inset)
+	art.size = panel.size - Vector2(inset, inset) * 2.0
+
+
+func _draw_plate(c: Control) -> void:
+	c.draw_style_box(STAT_PLATE, Rect2(Vector2(-3, -1), c.size + Vector2(6, 2)))
 
 
 func _label(text: String, variation: StringName, important: bool) -> Label:

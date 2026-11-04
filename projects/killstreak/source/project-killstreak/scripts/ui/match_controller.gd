@@ -607,7 +607,7 @@ func is_mulligan_open() -> bool:
 func open_mulligan() -> void:
 	var entries: Array = []
 	for rc: RulesCard in state.sides[PLAYER].hand:
-		entries.append({"uid": rc.uid, "name": rc.card.display_name, "cost": rc.card.cost,
+		entries.append({"uid": rc.uid, "id": rc.card.id, "name": rc.card.display_name, "cost": rc.card.cost,
 				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
 	clear_selection()
 	_mulligan_panel().open(entries)

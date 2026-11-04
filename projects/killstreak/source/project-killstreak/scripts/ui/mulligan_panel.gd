@@ -15,6 +15,8 @@ signal confirmed(put_back: Array[int])
 
 const CARD_SIZE: Vector2 = Vector2(150, 88)
 const CARD_SIZE_COMPACT: Vector2 = Vector2(150, 72)
+## k-art4: fill alpha of a card button over its art (the ArtUnderlay scrim does the rest).
+const ART_FILL_ALPHA: float = 0.35
 
 var compact: bool = false
 var _picked: Array[int] = []
@@ -33,7 +35,8 @@ func _ready() -> void:
 	_confirm.pressed.connect(func() -> void: _finish(_picked.duplicate()))
 
 
-## Shows the hand: entries {uid, name, cost, type} (type: "UNIT", "TACTIC", "EQUIP").
+## Shows the hand: entries {uid, id?, name, cost, type} (type: "UNIT", "TACTIC", "EQUIP").
+## k-art4: with an id that has card art, the button shows it behind its text (see _set_art).
 func open(hand: Array) -> void:
 	_picked.clear()
 	for child: Node in _cards.get_children():
@@ -55,6 +58,7 @@ func open(hand: Array) -> void:
 		b.add_to_group(&"tap_target")
 		b.toggled.connect(func(on: bool) -> void: _toggle(b, uid, on))
 		_cards.add_child(b)
+		_set_art(b, StringName(String(entry.get("id", ""))))
 	_update_confirm()
 	show()
 
@@ -103,7 +107,39 @@ func _toggle(b: Button, uid: int, on: bool) -> void:
 	# Marked cards switch to the cyan KillstreakButton look and say BACK on their second line.
 	b.theme_type_variation = &"KillstreakButton" if on else &"HudButton"
 	b.text = String(b.get_meta(&"back_label") if on else b.get_meta(&"label"))
+	_style_over_art(b)
 	_update_confirm()
+
+
+## k-art4: card art behind a card button. The art and its scrim draw behind the button
+## (show_behind_parent), and the button's own styles get a see-through fill, so its frame, text
+## and pressed / put-back colours stay on top. No art key: the plain button.
+func _set_art(b: Button, key: StringName) -> void:
+	if key == &"" or not CardArt.has_card(key):
+		return
+	var art := ArtUnderlay.new()
+	art.show_behind_parent = true
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	b.add_child(art)
+	art.set_art(key, ArtUnderlay.SCRIM_BUTTON)
+	b.set_meta(&"art", true)
+	b.add_theme_color_override(&"font_outline_color", Color(ArtUnderlay.SLATE, 0.9))
+	b.add_theme_constant_override(&"outline_size", 4)
+	_style_over_art(b)
+
+
+## Re-applies the see-through copies of the current variation's styles (after a toggle).
+func _style_over_art(b: Button) -> void:
+	if not b.has_meta(&"art"):
+		return
+	for st: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"focus", &"disabled"]:
+		b.remove_theme_stylebox_override(st)
+	for st: StringName in [&"normal", &"hover", &"pressed", &"hover_pressed", &"disabled"]:
+		var base: StyleBox = b.get_theme_stylebox(st)
+		if base is StyleBoxFlat:
+			var sb: StyleBoxFlat = (base as StyleBoxFlat).duplicate()
+			sb.bg_color.a = minf(sb.bg_color.a, ART_FILL_ALPHA)
+			b.add_theme_stylebox_override(st, sb)
 
 
 func _update_confirm() -> void:

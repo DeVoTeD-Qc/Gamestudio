@@ -13,6 +13,11 @@
 #   desktop minimum height so the board fits a 540 px tall canvas.
 #   v01: a unit shows a faint class silhouette (card_art.gd token) behind its text, tinted with its
 #   side colour; enemy figures face the other way. k-art3: an INCOMING slot shows the card back.
+#   k-art4: a unit with card art (entry "art": card id, the Operator's primary, a killstreak id)
+#   shows that painted art cropped to the slot instead of the silhouette (ArtUnderlay; enemy art is
+#   mirrored, never recoloured). Whose unit it is stays in the frame (teal chamfer / red heavy top /
+#   brass Operator / amber PLAN) and in a side-coloured tab behind the top row; FP, Armor and the
+#   keyword icons sit on dark plates; the name gets a slate outline. Without art: the silhouette.
 # Dependencies: hud_theme.tres variations (SlotFriendly, SlotEnemy, UnitName...), icon_sheet.gd, card_art.gd.
 # Author: UI/UX Agent
 extends PanelContainer
@@ -48,6 +53,14 @@ const FIGURE_PENDING: Color = Color(1.0, 0.69, 0.13, 0.24)
 const CARD_BACK_TINT: Color = Color(1.0, 1.0, 1.0, 0.5)
 const CARD_BACK_PX: int = 192
 
+## k-art4: painted art behind the unit (null until _ready) and whether it is showing.
+var _underlay: ArtUnderlay = null
+var _art_on: bool = false
+static var STAT_PLATE: StyleBoxFlat = ArtUnderlay.plate()
+static var _tab_plates: Dictionary = {}
+## PLAN (queued) art is see-through, like the amber PLAN frame's fill.
+const ART_PENDING_ALPHA: float = 0.6
+
 var _figure_key: StringName = &""
 var _figure_scale: float = 0.0
 
@@ -71,6 +84,21 @@ const KEYWORD_PX_COMPACT: float = 16.0
 
 
 func _ready() -> void:
+	_underlay = ArtUnderlay.new()
+	add_child(_underlay)
+	move_child(_underlay, 0)
+	_underlay.visible = false
+	sort_children.connect(_fit_underlay)
+	ArtUnderlay.outline(_name)
+	ArtUnderlay.outline(_tag)
+	var top_row: Control = _tag.get_parent()
+	top_row.draw.connect(func() -> void:
+		if _art_on:
+			top_row.draw_style_box(_tab_plate(), Rect2(Vector2(-2, -1), top_row.size + Vector2(4, 2))))
+	for box: Control in [_fp_box, _ar_box, _keywords]:
+		box.draw.connect(func() -> void:
+			if _art_on and box.visible and box.modulate.a > 0.0:
+				box.draw_style_box(STAT_PLATE, Rect2(Vector2(-2, -1), box.size + Vector2(4, 2))))
 	var tint: Color = get_theme_color(&"text", &"Hud")
 	_fp_icon.texture = IconSheet.get_icon(&"stat_firepower")
 	_ar_icon.texture = IconSheet.get_icon(&"stat_armor")
@@ -112,6 +140,7 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	_show_figure(CardArt.TOKEN_FOR_CLASS.get(cls, &"shield"), is_operator)
 	if String(unit.get("name", "")).to_lower().begins_with("sentry"):
 		_show_figure(&"sentry", false)
+	_show_art(StringName(String(unit.get("art", ""))))
 	_fp.text = str(unit.get("fp", 0))
 	var armor: int = unit.get("armor", 0)
 	var armor_max: int = unit.get("armor_max", armor)
@@ -134,6 +163,7 @@ func show_incoming(revealed_name: String = "") -> void:
 	_class.text = ""
 	_icon.texture = null
 	_hide_figure()
+	_show_art(&"")
 	# k-art3: the hidden card shows face-down (card back) behind the tag and the red dot.
 	var back: Texture2D = CardArt.card_back_texture(CARD_BACK_PX)
 	if back != null:
@@ -157,6 +187,7 @@ func show_empty(slot_side: StringName) -> void:
 	_class.text = ""
 	_icon.texture = null
 	_hide_figure()
+	_show_art(&"")
 	_set_parts(false, false)
 	_set_keywords([])
 
@@ -173,6 +204,59 @@ func _show_figure(key: StringName, is_operator: bool) -> void:
 	_figure.visible = true
 	_figure_scale = 0.0
 	_update_figure_texture()
+
+
+## k-art4: painted unit art (key = card art key, &"" = none). Replaces the silhouette when shown.
+func _show_art(key: StringName) -> void:
+	if _underlay == null:
+		return
+	_underlay.set_art(key, ArtUnderlay.SCRIM_SLOT, side == &"enemy")
+	_art_on = _underlay.visible
+	_underlay.modulate.a = ART_PENDING_ALPHA if pending else 1.0
+	if _art_on:
+		_hide_figure()
+	_tag.get_parent().queue_redraw()
+	for box: Control in [_fp_box, _ar_box, _keywords]:
+		box.queue_redraw()
+
+
+## True when the slot shows painted art (tests).
+func has_art() -> bool:
+	return _art_on
+
+
+## The art fills the slot inside its frame (the content margins only hold the text).
+func _fit_underlay() -> void:
+	if _underlay == null:
+		return
+	var sb: StyleBox = get_theme_stylebox(&"panel")
+	var l: float = 2.0
+	var t: float = 2.0
+	var r: float = 2.0
+	var b: float = 2.0
+	if sb is StyleBoxFlat:
+		var f: StyleBoxFlat = sb
+		l = f.border_width_left
+		t = f.border_width_top
+		r = f.border_width_right
+		b = f.border_width_bottom
+	_underlay.position = Vector2(l, t)
+	_underlay.size = size - Vector2(l + r, t + b)
+
+
+## Side-coloured tab behind the top row (class icon, POINT / PLAN tag).
+func _tab_plate() -> StyleBoxFlat:
+	var c: Color
+	if pending:
+		c = get_theme_color(&"accent", &"Hud")
+	elif _base_variation == &"SlotOperator":
+		c = get_theme_color(&"elite", &"Hud")
+	else:
+		c = get_theme_color(&"friend" if side == &"player" else &"enemy", &"Hud")
+	var key: String = c.to_html()
+	if not _tab_plates.has(key):
+		_tab_plates[key] = ArtUnderlay.plate(Color(c.darkened(0.55), 0.92), 2)
+	return _tab_plates[key]
 
 
 func _hide_figure() -> void:
