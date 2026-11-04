@@ -346,9 +346,9 @@ func test_lobby_layout_phone_and_desktop() -> void:
 				"BannerBody": lobby.find_child("BannerBody", true, false)}
 		fails = lx.layout_failures(lobby, banner_keys, screen)
 		assert_true(fails.is_empty(), "banner: %s" % "; ".join(fails))
-		# The banner leaves the wall, hand and PLACE free (non-blocking).
+		# The banner leaves the wall, hand, PLACE and MENU free (non-blocking).
 		var banner_rect: Rect2 = (keys["MatchBanner"] as Control).get_global_rect()
-		for name: String in ["Wall", "Hand", "PlaceButton"]:
+		for name: String in ["Wall", "Hand", "PlaceButton", "MenuButton"]:
 			var c: Control = duel.get_key_controls()[name]
 			assert_false(banner_rect.intersects(c.get_global_rect().grow(-1.0)), "%s: banner %s clear of %s %s" % [screen["name"], banner_rect, name, c.get_global_rect()])
 		await lx.despawn()

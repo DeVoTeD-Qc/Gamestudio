@@ -424,7 +424,7 @@ func _fill_end(word: StringName) -> void:
 	var tl: Label = _label("Triptychs: %s" % (", ".join(trips) if not trips.is_empty() else "none scored"), &"InspectorBody", HORIZONTAL_ALIGNMENT_CENTER)
 	tl.name = "EndTriptychs"
 	box.add_child(tl)
-	var rewards: Label = _label("Rewards (cosmetic only): titles, frames and unlock progress arrive with the Collection.",
+	var rewards: Label = _label("Rewards are cosmetic only. New cards, titles and frames appear in the Album.",
 			&"Caption", HORIZONTAL_ALIGNMENT_CENTER)
 	rewards.name = "EndRewards"
 	rewards.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -449,7 +449,14 @@ func _on_overlay_button(id: StringName) -> void:
 			SceneRouter.goto_scene(SceneRouter.SCENE_TITLE)
 		&"stay":
 			_overlay.close()
-			_set_phase(_resume_phase)
+			if state != null and _resume_phase in [&"player", &"rival"] and not state.is_game_over():
+				# The rival may have moved while the prompt was open: follow the state, not the old phase.
+				if state.to_move == P1:
+					_set_phase(&"player")
+				elif phase != &"rival":
+					_next_turn()
+			else:
+				_set_phase(_resume_phase)
 
 
 var _resume_phase: StringName = &""

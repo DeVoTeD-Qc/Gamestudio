@@ -217,6 +217,7 @@ func _show_banner(kind: StringName, body: String) -> void:
 	_save_button.visible = kind == &"choice"
 	_join_button.visible = kind == &"ready"
 	_banner_margin.show()
+	_relayout()
 
 
 func banner_visible() -> bool:
@@ -391,7 +392,7 @@ func _build() -> void:
 	_banner = PanelContainer.new()
 	_banner.name = "MatchBanner"
 	_banner.theme_type_variation = &"InspectorPanel"
-	_banner.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_banner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_banner.mouse_filter = Control.MOUSE_FILTER_STOP
 	var sb: StyleBox = _banner.get_theme_stylebox(&"panel", &"InspectorPanel")
 	if sb != null:
@@ -400,6 +401,8 @@ func _build() -> void:
 		sb.content_margin_bottom = 3
 		sb.content_margin_left = 16
 		sb.content_margin_right = 4
+		if sb is StyleBoxFlat:
+			(sb as StyleBoxFlat).bg_color.a = 1.0  # opaque: the scores under it must not show through
 		_banner.add_theme_stylebox_override(&"panel", sb)
 	bcol.add_child(_banner)
 	var brow: HBoxContainer = HBoxContainer.new()
@@ -436,6 +439,10 @@ func _relayout() -> void:
 	# The banner sits over the duel's top bar (scores, turn), clear of the wall, hand and PLACE:
 	# only the device's own insets plus a few px, not the screen's base margin.
 	var bm: Array[Vector2] = HubUi.safe_margins(self, safe_area_override, Vector2(16, 2))
+	# Full width over the score bar, but clear of the duel's MENU button (still usable).
+	var menu: Control = duel.get_node_or_null("%MenuButton") if duel != null else null
+	if menu != null and menu.is_visible_in_tree():
+		bm[0].x = maxf(bm[0].x, menu.get_global_rect().end.x + 8.0)
 	HubUi.apply_margins(_banner_margin, bm[0], bm[1])
 	var compact: bool = HubUi.is_compact(self)
 	_banner_body.custom_minimum_size.x = 260 if compact else 360

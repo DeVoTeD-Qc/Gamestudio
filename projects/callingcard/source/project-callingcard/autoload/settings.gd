@@ -51,7 +51,7 @@ func _system_prefers_reduced_motion() -> bool:
 		return false
 	var matches: Variant = JavaScriptBridge.eval(
 			"window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches", true)
-	return matches == true
+	return bool(matches)
 
 
 func _apply_screen_profile() -> void:
