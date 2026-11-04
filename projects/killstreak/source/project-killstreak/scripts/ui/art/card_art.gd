@@ -16,6 +16,7 @@
 #   is missing and the caller keeps its old look:
 #   CardArt.mode_texture(&"rival", &"gunship", 2.0)   # run map card (falls back to the card art)
 #   CardArt.backdrop_texture(&"run")                  # bg_run / bg_supply_drop
+#   CardArt.fx_texture(&"callin_tablet")             # call-in takeover background
 #   CardArt.card_back_texture(140)                    # face-down card back
 #   CardArt.perk_texture(&"grit", 96)                 # perk patch (mask it with circle_mask.gdshader)
 #   The .webp files use the "keep" importer: they ship byte for byte as delivered (WebP q85) and
@@ -45,8 +46,10 @@ const BITMAP_EXT: String = ".webp"
 const CIRCLE_MASK: Shader = preload("res://assets/shaders/circle_mask.gdshader")
 ## Decoded bitmaps kept in the LRU (textures still shown by a node stay alive anyway).
 const MAX_BITMAPS: int = 40
-## A copy is downscaled only when the slot needs less than this share of the file's width.
-const DOWNSCALE_BELOW: float = 0.75
+## A copy is downscaled only when the slot needs less than half the file's width: linear
+## filtering handles up to 2x minification cleanly, and a Lanczos pass costs ~13 ms per card
+## (native; more in wasm), so it is kept for small views (perk rings, card backs, tiny cards).
+const DOWNSCALE_BELOW: float = 0.5
 
 ## Off: every slot uses its procedural art (tests; also a kill switch).
 static var bitmaps_enabled: bool = true
@@ -104,6 +107,12 @@ static func mode_texture(mode: StringName, fallback_card: StringName, scale: flo
 ## Full-screen run backdrop (&"run", &"supply_drop"); null without its image.
 static func backdrop_texture(key: StringName) -> Texture2D:
 	var path: String = BACKDROP_DIR + "bg_" + String(key) + BITMAP_EXT
+	return bitmap(path) if has_bitmap(path) else null
+
+
+## Full-screen effect art (&"callin_tablet": fx_callin_tablet.webp); null without its image.
+static func fx_texture(key: StringName) -> Texture2D:
+	var path: String = BACKDROP_DIR + "fx_" + String(key) + BITMAP_EXT
 	return bitmap(path) if has_bitmap(path) else null
 
 

@@ -46,7 +46,7 @@ const FIGURE_OPERATOR: Color = Color(0.79, 0.64, 0.15, 0.36)
 const FIGURE_PENDING: Color = Color(1.0, 0.69, 0.13, 0.24)
 ## Card back on an INCOMING slot: dimmed so INCOMING / SPOTTED and the red dot stay on top.
 const CARD_BACK_TINT: Color = Color(1.0, 1.0, 1.0, 0.5)
-const CARD_BACK_PX: int = 256
+const CARD_BACK_PX: int = 192
 
 var _figure_key: StringName = &""
 var _figure_scale: float = 0.0

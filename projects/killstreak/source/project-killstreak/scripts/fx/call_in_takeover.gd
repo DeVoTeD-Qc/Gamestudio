@@ -7,7 +7,10 @@
 #   reads without colour. Reduced motion: it cross-fades and the scanlines stand still.
 #   Fast animations: half length. Hidden and idle between call-ins; one instance is reused.
 # Scene: res://scenes/fx/CallInTakeover.tscn (full-rect Control, mouse ignored).
-# Dependencies: fx_style.gd, fx_timing.gd, assets/shaders/scanlines.gdshader, IconSheet.
+#   k-art3: behind the band, the painted tablet (fx_callin_tablet.webp) fills the screen inside the
+#   dim layer, so it fades with it; hostile call-ins grade it red. Without the image the takeover
+#   is the procedural dim + band, as before.
+# Dependencies: fx_style.gd, fx_timing.gd, assets/shaders/scanlines.gdshader, IconSheet, card_art.gd.
 # Author: Game Feel Engineer Agent (p14)
 extends Control
 
@@ -30,6 +33,10 @@ const LINES: Dictionary = {
 	&"attack_helo": "Helo on station over {zone}.",
 	&"gunship": "Gunship overhead. Weapons free.",
 }
+## Painted tablet grade: a little darker than the file, so the band and its text lead; hostile
+## call-ins push it toward red (the band's red frame and hazard ticks still carry the meaning).
+const TABLET_FRIEND: Color = Color(0.8, 0.8, 0.8, 1.0)
+const TABLET_HOSTILE: Color = Color(0.85, 0.4, 0.4, 1.0)
 const DEFAULT_LINE: String = "Uplink confirmed. Stand by."
 const ENEMY_LINE: String = "Hostile {name} inbound on {zone}. Take cover."
 
@@ -38,6 +45,8 @@ var duration: float = 0.0
 var last_data: Dictionary = {}
 
 var _dim: ColorRect
+## Painted tablet behind the band (null without its image).
+var _tablet: TextureRect = null
 var _band: Control
 var _band_bg: ColorRect
 var _lines: ColorRect
@@ -83,6 +92,8 @@ func show_call_in(data: Dictionary, timing: RefCounted = null) -> float:
 	mat.set_shader_parameter(&"line_color", Color(_accent, 0.2))
 	mat.set_shader_parameter(&"scroll_speed", 0.0 if timing.reduced_motion else 0.6)
 	_band_bg.color = Color(FxStyle.SLATE.lerp(_accent, 0.12), 0.94)
+	if _tablet != null:
+		_tablet.modulate = TABLET_HOSTILE if _hostile else TABLET_FRIEND
 	_band.queue_redraw()
 
 	duration = maxf(0.1, timing.get_value(&"takeover"))
@@ -147,6 +158,16 @@ func _build() -> void:
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_dim)
 	_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var tablet: Texture2D = CardArt.fx_texture(&"callin_tablet")
+	if tablet != null:
+		_tablet = TextureRect.new()
+		_tablet.name = "Tablet"
+		_tablet.texture = tablet
+		_tablet.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_tablet.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_tablet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_dim.add_child(_tablet)
+		_tablet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	_band = Control.new()
 	_band.mouse_filter = Control.MOUSE_FILTER_IGNORE

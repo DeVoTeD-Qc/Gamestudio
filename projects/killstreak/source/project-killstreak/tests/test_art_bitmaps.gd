@@ -9,11 +9,11 @@
 extends "res://tests/test_case.gd"
 
 const Data: GDScript = preload("res://scripts/ui/art/card_art_data.gd")
-## The 47 images approved from assets/incoming/batch1 (fx_callin_tablet was never delivered).
+## The 48 images approved: 47 from assets/incoming/batch1, fx_callin_tablet from batch2.
 const APPROVED: Dictionary = {
 	"res://assets/sprites/cards/": 37,  # 32 card art + 4 run map modes + card back
 	"res://assets/sprites/board/": 3,
-	"res://assets/ui/backgrounds/": 3,
+	"res://assets/ui/backgrounds/": 4,  # title key art, bg_run, bg_supply_drop, fx_callin_tablet
 	"res://assets/ui/perks/": 4,
 }
 const MODES: Array[StringName] = [&"zone_control", &"firefight", &"detonator", &"rival"]
@@ -38,7 +38,16 @@ func test_approved_images_shipped() -> void:
 	for dir: String in APPROVED:
 		assert_eq(_webps(dir).size(), int(APPROVED[dir]), "approved images in %s" % dir)
 	assert_true(FileAccess.file_exists("res://assets/incoming/.gdignore"), "incoming/ is never imported")
-	assert_eq(_webps("res://assets/incoming/batch1/").size(), 0, "no raw image left in incoming/")
+	var stack: Array[String] = ["res://assets/incoming"]
+	while not stack.is_empty():
+		var dir: String = stack.pop_back()
+		for d: String in DirAccess.get_directories_at(dir):
+			stack.append(dir.path_join(d))
+		for f: String in DirAccess.get_files_at(dir):
+			assert_false(f.get_extension() in ["webp", "png", "jpg", "import"], "raw drop or import left in incoming: %s/%s" % [dir, f])
+	var preset := ConfigFile.new()
+	assert_eq(preset.load("res://export_presets.cfg"), OK, "export presets load")
+	assert_true("assets/incoming/*" in String(preset.get_value("preset.0", "exclude_filter", "")), "export excludes incoming/")
 
 
 func test_cards_use_image_or_svg() -> void:
@@ -77,6 +86,8 @@ func test_missing_image_falls_back() -> void:
 	assert_eq(CardArt.card_back_texture(256), null, "no card back -> old INCOMING look")
 	assert_eq(CardArt.perk_texture(&"grit", 96), null, "no patch")
 	assert_eq(CardArt.perk_patch(&"grit", 96), null, "no patch node")
+	CardArt.missing_paths[CardArt.BACKDROP_DIR + "fx_callin_tablet.webp"] = true
+	assert_eq(CardArt.fx_texture(&"callin_tablet"), null, "no tablet -> procedural takeover")
 	# Kill switch: everything procedural.
 	CardArt.missing_paths.clear()
 	CardArt.bitmaps_enabled = false
@@ -102,7 +113,7 @@ func test_new_slots_load_images() -> void:
 	var back: Texture2D = CardArt.card_back_texture()
 	if back != null:
 		assert_eq(back.get_size(), Vector2(500, 700), "card back full size")
-		assert_eq(CardArt.card_back_texture(256).get_width(), 256, "card back downscaled for a slot")
+		assert_eq(CardArt.card_back_texture(192).get_width(), 192, "card back downscaled for a slot")
 	for p: StringName in PERKS:
 		var patch: TextureRect = CardArt.perk_patch(p, 96)
 		if patch != null:
@@ -134,7 +145,12 @@ func test_no_vram_compressed_imports() -> void:
 			if importer == "texture":
 				assert_true(int(cfg.get_value("params", "compress/mode", 0)) != 2, "%s is not VRAM compressed" % f)
 			checked += 1
-	assert_true(checked >= 47, "checked the imports (%d)" % checked)
+	var shipped: int = 0
+	for dir: String in APPROVED:
+		for f: String in _webps(dir):
+			shipped += 1
+			assert_true(FileAccess.file_exists(f + ".import"), "%s has its keep import" % f)
+	assert_true(checked >= shipped and checked > 0, "checked the imports (%d)" % checked)
 
 
 func test_slots_and_screens_show_art() -> void:
@@ -166,6 +182,21 @@ func test_slots_and_screens_show_art() -> void:
 		assert_eq(patch != null, CardArt.perk_texture(&"grit") != null, "earned perk shows its patch")
 		assert_eq(slots[1].get_child_count(), 0, "empty slot stays empty")
 	panel.queue_free()
+	# Call-in takeover: painted tablet behind the band, graded red for a hostile call-in.
+	var takeover: Control = (load("res://scenes/fx/CallInTakeover.tscn") as PackedScene).instantiate()
+	tree.root.add_child(takeover)
+	await tree.process_frame
+	var tablet: TextureRect = takeover.find_child("Tablet", true, false)
+	var has_tablet: bool = CardArt.fx_texture(&"callin_tablet") != null
+	assert_eq(tablet != null, has_tablet, "takeover tablet iff its image exists")
+	if tablet != null:
+		assert_eq(tablet.texture.get_size(), Vector2(1536, 864), "tablet full size")
+		takeover.show_call_in({"item_id": &"gunship", "name": "Gunship", "side": &"enemy", "zone": &"mid"})
+		assert_true(tablet.modulate.g < 0.6, "hostile call-in grades the tablet red")
+		takeover.show_call_in({"item_id": &"recon_drone", "name": "Recon Drone", "side": &"player", "zone": &"mid"})
+		assert_true(tablet.modulate.g > 0.6, "own call-in keeps it neutral")
+		takeover.finish_quietly()
+	takeover.queue_free()
 	# Lane: painted backdrop, dimmed in engine.
 	var lane: Control = (load("res://scenes/match/Lane.tscn") as PackedScene).instantiate()
 	tree.root.add_child(lane)
