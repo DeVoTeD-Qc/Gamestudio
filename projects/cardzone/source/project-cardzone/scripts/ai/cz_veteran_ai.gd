@@ -340,7 +340,7 @@ static func _keep_options(w: MatchState, me: int) -> Array:
 		if CzSim.is_item(w, inst) and w.def_of(inst).brace > 0 and w.def_of(inst).pull == 0:
 			cards.append(inst)
 	var keys: Array[String] = [""]
-	for subset: Array in LoadoutRules._subsets(cards, b.hold_limit):
+	for subset: Array in LoadoutRules.subsets(cards, b.hold_limit):
 		if subset.is_empty():
 			continue
 		var names: Array[String] = []
@@ -402,7 +402,7 @@ static func _best_shot(w: MatchState, me: int) -> Dictionary:
 	var opp: int = w.opponent_of(me)
 	var best: Dictionary = {}
 	var best_dmg: int = 0
-	if w.seats[opp].eliminated:
+	if w.seats[opp].eliminated or not LoadoutRules.shooting_open(w):
 		return best
 	var dist: int = -1
 	var down: int = -1
@@ -412,13 +412,13 @@ static func _best_shot(w: MatchState, me: int) -> Dictionary:
 			continue
 		if dist < 0:
 			dist = w.data.distance(st.area, w.seats[opp].area)
-		# R12, R21 (as LoadoutRules._check_shoot): a shot left and the target in range.
+		# R12, R21 (as the engine's shoot check): a shot left and the target in range.
 		if int(st.fired.get(inst, 0)) >= LoadoutRules.fire_limit(w, inst) or dist > LoadoutRules.weapon_range(w, inst):
 			continue
 		if down < 0:
 			down = w.data.balance.down_value if w.is_down(opp) else 0
 		var dmg: int = CzSim.weapon_dmg(w, inst)
-		var cover: int = LoadoutRules._cover(w, st.area, opp, c.ignores_cover)
+		var cover: int = LoadoutRules.cover_for(w, st.area, opp, c.ignores_cover)
 		dmg = maxi(0, dmg - cover - down)
 		if dmg > best_dmg:
 			best_dmg = dmg

@@ -50,6 +50,19 @@ const TUNABLES: Dictionary = {
 	&"ai_think_budget_ms": {"default": 300, "min": 100, "max": 1000, "rules": "AI only"},
 }
 
+## Balance switches under test (cz07b, first-player balance; not §16.8 keys). Same entry format
+## as TUNABLES and the same API (is_allowed, set_tunable, allowed_values, default_value), but
+## every switch is OFF by default and snapshot() lists a switch only when it is on, so the
+## defaults keep the exact snapshot and tunables_hash they had before the switches existed
+## (saves and playtest logs stay valid). The studio head picks which (if any) to turn on (cz-q2).
+const SWITCHES: Dictionary = {
+	## The second player (P2) starts with this many extra health (S4); healing (R15) may refill
+	## P2 up to that larger stack. 0 = off.
+	&"p2_start_health_bonus": {"default": 0, "allowed": [0, 1], "rules": "S4, R15 (P2 only)"},
+	## Shots and Frags are illegal in round 1 (LoadoutRules.ERR_NO_SHOOTING_ROUND1). false = off.
+	&"no_shooting_round1": {"default": false, "allowed": [false, true], "rules": "R21, R31 (round 1)"},
+}
+
 @export_group("Identity")
 @export var id: StringName = DEFAULT_ID
 
@@ -115,6 +128,12 @@ const TUNABLES: Dictionary = {
 ## Veteran's search budget per decision, ms (100-1000).
 @export_range(100, 1000) var ai_think_budget_ms: int = 300
 
+@export_group("First-player switches (cz07b, off by default)")
+## Extra starting health for P2 (0 or 1). See SWITCHES.
+@export_range(0, 1) var p2_start_health_bonus: int = 0
+## No shots or Frags in round 1. See SWITCHES.
+@export var no_shooting_round1: bool = false
+
 
 ## Every tunable key in spec table order.
 static func tunable_keys() -> Array[StringName]:
@@ -123,15 +142,23 @@ static func tunable_keys() -> Array[StringName]:
 	return keys
 
 
+## Every balance switch key (SWITCHES), in table order.
+static func switch_keys() -> Array[StringName]:
+	var keys: Array[StringName] = []
+	keys.assign(SWITCHES.keys())
+	return keys
+
+
 static func default_value(key: StringName) -> Variant:
-	return TUNABLES[key]["default"] if TUNABLES.has(key) else null
+	var spec: Dictionary = _spec(key)
+	return spec["default"] if not spec.is_empty() else null
 
 
 ## The allowed values of a key as a list (ranges expanded). Empty for list keys.
 static func allowed_values(key: StringName) -> Array:
-	if not TUNABLES.has(key):
+	var spec: Dictionary = _spec(key)
+	if spec.is_empty():
 		return []
-	var spec: Dictionary = TUNABLES[key]
 	if spec.has("allowed"):
 		return (spec["allowed"] as Array).duplicate()
 	if spec.get("list", false):
@@ -141,9 +168,9 @@ static func allowed_values(key: StringName) -> Array:
 
 ## Allowed values as text for the dev panel and messages ("4, 5", "3..4", "list of 1..14, each 0..9").
 static func allowed_text(key: StringName) -> String:
-	if not TUNABLES.has(key):
+	var spec: Dictionary = _spec(key)
+	if spec.is_empty():
 		return "?"
-	var spec: Dictionary = TUNABLES[key]
 	if spec.has("allowed"):
 		return ", ".join((spec["allowed"] as Array).map(func(a: Variant) -> String: return str(a)))
 	if spec.get("list", false):
@@ -153,9 +180,9 @@ static func allowed_text(key: StringName) -> String:
 
 ## True when value is allowed for key (types must match: ints for ints, bools for bools).
 static func is_allowed(key: StringName, value: Variant) -> bool:
-	if not TUNABLES.has(key):
+	var spec: Dictionary = _spec(key)
+	if spec.is_empty():
 		return false
-	var spec: Dictionary = TUNABLES[key]
 	if spec.get("list", false):
 		if not (value is PackedInt32Array or value is Array):
 			return false
@@ -190,7 +217,23 @@ func snapshot() -> Dictionary:
 	for key: StringName in TUNABLES.keys():
 		var value: Variant = get(key)
 		result[String(key)] = Array(value) if value is PackedInt32Array else value
+	for key: StringName in SWITCHES.keys():
+		if get(key) != SWITCHES[key]["default"]:
+			result[String(key)] = get(key)
 	return result
+
+
+## The TUNABLES or SWITCHES entry for a key, or {}.
+static func _spec(key: StringName) -> Dictionary:
+	if TUNABLES.has(key):
+		return TUNABLES[key]
+	return SWITCHES.get(key, {})
+
+
+## Starting (and maximum) health of a seat (0 = P1, 1 = P2): `health`, plus
+## p2_start_health_bonus for P2 (S4, R15).
+func start_health(seat: int) -> int:
+	return health + (p2_start_health_bonus if seat == 1 else 0)
 
 
 ## Stable hash of the tunables (match_start.tunables_hash in the playtest log).
@@ -219,7 +262,7 @@ func validate(v: DataValidator) -> void:
 	v.require_id(id)
 	if id != DEFAULT_ID:
 		v.invalid("id", "the balance config must have id '%s' (got '%s')" % [DEFAULT_ID, id])
-	for key: StringName in TUNABLES.keys():
+	for key: StringName in TUNABLES.keys() + SWITCHES.keys():
 		var value: Variant = get(key)
 		if is_allowed(key, value):
 			continue

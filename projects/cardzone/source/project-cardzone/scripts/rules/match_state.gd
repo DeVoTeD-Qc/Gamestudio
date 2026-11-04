@@ -80,7 +80,7 @@ func _init() -> void:
 # --- Construction -------------------------------------------------------------------
 
 ## A fresh match at the drop (S3, S4): piles filled, Standard pack loadouts, full health
-## stacks. P2 drops first (S5); round 1 starts after P1's drop (RQ-04).
+## stacks (BalanceConfig.start_health: P2 gets p2_start_health_bonus extra). P2 drops first (S5); round 1 starts after P1's drop (RQ-04).
 static func new_match(content: RulesData, route_value: int = DataEnums.Route.A) -> MatchState:
 	var s: MatchState = MatchState.new()
 	s.data = content.with_balance()
@@ -101,7 +101,7 @@ static func new_match(content: RulesData, route_value: int = DataEnums.Route.A) 
 		var st: SeatState = s.seats[seat]
 		for id: StringName in s.data.start_pack():
 			st.loadout.append(s.new_card(id, seat))
-		for i: int in b.health:
+		for i: int in b.start_health(seat):
 			st.health.append(s.new_card(s.data.hit_id, seat))
 	s.mark_origin()
 	return s

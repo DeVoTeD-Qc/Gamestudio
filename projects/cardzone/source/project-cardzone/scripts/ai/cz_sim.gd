@@ -5,9 +5,10 @@
 #     clone(state)        a deep copy of the state fields only (about 3x cheaper than
 #                         MatchState.clone(), which round-trips through to_dict/load_dict and
 #                         also copies the log and undo snapshots).
-#     step(state, action) runs one action with the SAME checks and effects as apply()
-#                         (LoadoutRules.normalize -> check -> _do), minus the undo snapshot and
-#                         the log. Returns false (state untouched) when the action is illegal.
+#     step(state, action) runs one action with the SAME checks and effects as apply(), minus
+#                         the undo snapshot and the log: the engine's public fast path
+#                         LoadoutRules.apply_fast (cz07b). Returns false (state untouched) when
+#                         the action is illegal.
 #   Plus small read-only card and map helpers shared by both AI levels.
 # Dependencies: LoadoutRules, MatchState, SeatState, RulesData, CardData, DataEnums.
 # Author: Mechanics Developer Agent
@@ -22,9 +23,6 @@ const VALUE: Dictionary = {
 	&"medkit": 5, &"plate_vest": 5, &"scrap_smg": 5, &"crowbar": 5, &"backpack": 4,
 	&"long_scope": 3, &"smoke_grenade": 4, &"trail_boots": 3, &"bandage": 3,
 }
-
-static var _no_events: Array[Dictionary] = []
-
 
 ## Deep copy of every state field (not the log, undo snapshots or origin). Shares `data`.
 ## share_ids (search clones only): share `defs` and `owners` with `src` instead of copying them.
@@ -76,17 +74,13 @@ static func clone(src: MatchState, share_ids: bool = false) -> MatchState:
 
 ## Applies `action` with apply()'s checks and effects but no undo snapshot and no log entry.
 static func step(state: MatchState, action: Dictionary) -> bool:
-	return step_normalized(state, LoadoutRules.normalize(state, action))
+	return LoadoutRules.apply_fast(state, action)
 
 
 ## step() for an action that is already in normal form (ints for ids and seats, a String type,
 ## card lists as Arrays of ints, the Frag card given): the AI's own executor builds them so.
 static func step_normalized(state: MatchState, a: Dictionary) -> bool:
-	if LoadoutRules.check(state, a) != &"":
-		return false
-	_no_events.clear()
-	LoadoutRules._do(state, a, _no_events)
-	return true
+	return LoadoutRules.apply_fast_normalized(state, a)
 
 
 # --- Cards ---------------------------------------------------------------------------

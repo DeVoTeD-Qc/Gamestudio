@@ -9,7 +9,12 @@
 #                            the pairing spec §16.4a asks the dev panel to switch together)
 #     --wv=key:val,...       Veteran evaluation weights to try (CzVeteranAI.WEIGHTS keys)
 #     --cap=N                Veteran node cap to try (CzVeteranAI.NODE_CAP)
-#     --set=key:val,...      other balance overrides (BalanceConfig keys, ints or true/false)
+#     --set=key:val,...      other balance overrides (BalanceConfig keys, ints or true/false),
+#                            including the cz07b first-player switches (off by default):
+#                              --set=p2_start_health_bonus:1   P2 starts with +1 health
+#                              --set=no_shooting_round1:true   no shots or Frags in round 1
+#     --card=id.field:val,...  card data patches for this run only (res://data is not changed),
+#                            e.g. --card=pump_shotgun.cost:5 (int fields of CardData)
 #     --out=/abs/rows.json   also write every game as JSON (one array)
 #     --merge=/a.json,/b.json  print the tables for earlier --out files instead of playing
 #     --retime=10            re-time the N slowest turns 5 times each (median), since one timing
@@ -24,7 +29,7 @@ const LABEL: Dictionary = {"docks": "Docks", "farmstead": "Farmstead", "quarry":
 		"radio_hill": "Radio Hill", "motel": "Motel", "rail_yard": "Rail Yard"}
 
 var _opts: Dictionary = {"p1": "veteran", "p2": "veteran", "hands": "4,5", "routes": "A,B,C",
-		"cost4": "3", "cost5": "4", "out": "", "merge": "", "wv": "", "cap": "", "set": "", "retime": "0"}
+		"cost4": "3", "cost5": "4", "out": "", "merge": "", "wv": "", "cap": "", "set": "", "card": "", "retime": "0"}
 
 
 func _initialize() -> void:
@@ -57,12 +62,8 @@ func _run() -> void:
 		for hand_text: String in String(_opts["hands"]).split(","):
 			var hand: int = int(hand_text)
 			var errors: Array = []
-			var overrides: Dictionary = {"hand_size": hand, "supply_drop_cost": int(_opts["cost%d" % hand])}
-			if String(_opts["set"]) != "":
-				for kv: String in String(_opts["set"]).split(","):
-					var parts: PackedStringArray = kv.split(":")
-					overrides[parts[0]] = (parts[1] == "true") if parts[1] in ["true", "false"] else int(parts[1])
-			var content: RulesData = base.with_balance(overrides, errors)
+			var overrides: Dictionary = _overrides(hand)
+			var content: RulesData = _patch_cards(base.with_balance(overrides, errors), errors)
 			if not errors.is_empty():
 				printerr(errors)
 				quit(1)
@@ -99,8 +100,7 @@ func _retime(rows: Array, count: int) -> void:
 	for k: int in mini(count, turns.size()):
 		var g: Dictionary = rows[turns[k][1]]
 		var ti: int = turns[k][2]
-		var content: RulesData = base.with_balance({"hand_size": int(g["hand"]),
-				"supply_drop_cost": int(_opts["cost%d" % int(g["hand"])])})
+		var content: RulesData = _patch_cards(base.with_balance(_overrides(int(g["hand"]))))
 		var full: Dictionary = CzAiArena.play(content, MatchState.route_from_letter(g["route"]),
 				CzAI.for_level(StringName(g["p1"]), 1), CzAI.for_level(StringName(g["p2"]), 2), {0: g["a"], 1: g["b"]})
 		var end: MatchState = full["state"]
@@ -118,6 +118,46 @@ func _retime(rows: Array, count: int) -> void:
 		print("| hand %d %s %s/%s | round %d, P%d | %.1f | %.1f | %.1f | %.1f |" % [g["hand"], g["route"], g["a"], g["b"],
 				at.round_number, seat + 1, turns[k][0], times[2], times[0], times[4]])
 	print("Worst re-timed turn (median of 5): %.1f ms" % worst_median)
+
+
+## The balance overrides of a run at `hand`: hand size, its drop cost, then --set.
+func _overrides(hand: int) -> Dictionary:
+	var overrides: Dictionary = {"hand_size": hand, "supply_drop_cost": int(_opts["cost%d" % hand])}
+	if String(_opts["set"]) != "":
+		for kv: String in String(_opts["set"]).split(","):
+			var parts: PackedStringArray = kv.split(":")
+			overrides[parts[0]] = (parts[1] == "true") if parts[1] in ["true", "false"] else int(parts[1])
+	return overrides
+
+
+## --card=id.field:val,...: `content` with patched copies of those cards (its own cards and
+## areas dictionaries, so the shared content and res://data are untouched). Area piles point at
+## the patched copy too (the AI's drop choice reads pile costs from the areas).
+func _patch_cards(content: RulesData, errors: Array = []) -> RulesData:
+	if String(_opts["card"]) == "":
+		return content
+	content.cards = content.cards.duplicate()
+	for kv: String in String(_opts["card"]).split(","):
+		var parts: PackedStringArray = kv.split(":")
+		var path: PackedStringArray = parts[0].split(".")
+		var id: StringName = StringName(path[0])
+		var old: CardData = content.card(id)
+		if old == null or parts.size() != 2 or path.size() != 2 or typeof(old.get(path[1])) != TYPE_INT:
+			errors.append("bad --card entry %s" % kv)
+			continue
+		var c: CardData = old.duplicate() as CardData
+		c.set(path[1], int(parts[1]))
+		content.cards[id] = c
+	var areas: Dictionary = {}
+	for area_id: Variant in content.areas.keys():
+		var a: AreaData = (content.areas[area_id] as AreaData).duplicate() as AreaData
+		var piles: Array[CardData] = []
+		for c: CardData in content.areas[area_id].piles:
+			piles.append(content.card(c.id))
+		a.piles = piles
+		areas[area_id] = a
+	content.areas = areas
+	return content
 
 
 func _game(content: RulesData, hand: int, route_text: String, route: int, a: String, b: String) -> Dictionary:
@@ -180,6 +220,19 @@ func _report(rows: Array) -> void:
 	for hand: int in hands:
 		var sub: Array = rows.filter(func(g: Dictionary) -> bool: return int(g["hand"]) == hand)
 		print(_row("%d | **all**" % hand, sub))
+	# One line per hand with the four balance-log measures (cz07b).
+	for hand: int in hands:
+		var sub: Array = rows.filter(func(g: Dictionary) -> bool: return int(g["hand"]) == hand)
+		var w1: int = sub.filter(func(g: Dictionary) -> bool: return int(g["winner"]) == 0).size()
+		var both: int = sub.filter(func(g: Dictionary) -> bool: return g["how"] == "both_out").size()
+		var rounds: Array = sub.map(func(g: Dictionary) -> int: return int(g["rounds"]))
+		rounds.sort()
+		var n: int = rounds.size()
+		var med: float = float(rounds[n / 2]) if n % 2 == 1 else (rounds[n / 2 - 1] + rounds[n / 2]) / 2.0
+		var elim: Array = sub.filter(func(g: Dictionary) -> bool: return g["how"] != "hard_end").map(
+				func(g: Dictionary) -> int: return int(g["rounds"]))
+		print("SUMMARY hand %d: first player %d/%d (%.1f%%), both out %d (%.1f%%), median round %s, earliest elimination %s" % [
+				hand, w1, n, 100.0 * w1 / n, both, 100.0 * both / n, str(med), str(elim.min()) if not elim.is_empty() else "-"])
 	# The round-3 drop (Twin-Drum LMG): who took it, and how often the taker won.
 	print("\n| Hand | Route | P1 takes the LMG | P2 takes it | Nobody | LMG taker wins |")
 	print("|---|---|---|---|---|---|")

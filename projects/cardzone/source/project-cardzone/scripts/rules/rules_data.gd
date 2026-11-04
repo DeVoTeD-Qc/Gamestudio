@@ -26,6 +26,11 @@ var start_packs: Dictionary = {}
 var hit_id: StringName = &"hit"
 
 var _dist: Dictionary = {}  # StringName -> {StringName: int}
+## zone_card(n) index: Zone card number -> the first ZoneCardData with that number. Rebuilt
+## when zone_cards is replaced or changes size (tests may assign zone_cards directly).
+var _zone_index: Dictionary = {}
+var _zone_index_of: Array[ZoneCardData] = []
+var _zone_index_size: int = -1
 
 
 ## Builds the match content from the CardDB autoload (or any node with its lookup API).
@@ -94,6 +99,9 @@ func with_balance(overrides: Dictionary = {}, errors: Array = []) -> RulesData:
 	d.start_packs = start_packs
 	d.hit_id = hit_id
 	d._dist = _dist
+	d._zone_index = _zone_index
+	d._zone_index_of = _zone_index_of
+	d._zone_index_size = _zone_index_size
 	for key: Variant in overrides.keys():
 		if not d.balance.set_tunable(StringName(key), overrides[key]):
 			errors.append("balance %s = %s is not allowed" % [key, overrides[key]])
@@ -131,14 +139,24 @@ func is_outer(area_id: StringName) -> bool:
 	return a != null and not a.is_core()
 
 
-## The Zone card with this number, or null (also null past the hard end).
+## The Zone card with this number, or null (also null past the hard end). Indexed: one
+## Dictionary lookup (the AI asks this on every search node).
 func zone_card(number: int) -> ZoneCardData:
 	if number > balance.zone_hard_end_card:
 		return null
+	if not is_same(_zone_index_of, zone_cards) or _zone_index_size != zone_cards.size():
+		_index_zone_cards()
+	return _zone_index.get(number)
+
+
+func _index_zone_cards() -> void:
+	# A new Dictionary (not clear()): with_balance() copies share the old index.
+	_zone_index = {}
 	for z: ZoneCardData in zone_cards:
-		if z.number == number:
-			return z
-	return null
+		if not _zone_index.has(z.number):
+			_zone_index[z.number] = z
+	_zone_index_of = zone_cards
+	_zone_index_size = zone_cards.size()
 
 
 ## The starting loadout (top first) for the current hand size.

@@ -206,3 +206,78 @@ From either seat the Veteran does about 21 points better than a Rookie in the sa
 - **Two copies of one AI.** The Veteran plans one turn ahead against a guessed opponent hand; it does not model the opponent's next turn beyond a threat estimate, and it never bluffs a hold. Real players will differ, most of all in drop choice (here every drop pair is forced; in play P2 drops first and P1 answers).
 - **Each row is 36 fixed, deterministic games** (±16 points on one row, ±9 on a pooled 108-game row, Entry 1), plus the AI-build sensitivity in point 4.
 - **Timing** is from a shared VM; the iPhone 12 figure is an estimate by the 4× rule, not a device measurement. The web build (cz12/cz17) should log real turn times on a phone.
+
+## Entry 3: first-player switches, Veteran vs Veteran at hand 5, 108 games per setting (cz07b)
+
+*Mechanics Developer · 2026-11-04 · Board task `cz07b` (project cardzone) · Phase: prototype*
+*Rules: the cz07 engine plus the cz07b switches (`BalanceConfig.SWITCHES`, both **off** in `balance.tres`), on top of commit 71eff7a. Content from `res://data`, `balance.tres` defaults (hand 5, supply drop cost 4) unless a row says otherwise. Tool: `tests/tools/ai_sweep.gd`. AI: the cz09 Veteran, unchanged (the replay check below shows it makes the same moves as before).*
+
+### What was run
+- **The settings.** Baseline, then one change at a time:
+  - `p2_start_health_bonus` = 1: P2 starts with 6 health and can heal up to 6.
+  - `no_shooting_round1` = true: no shots and no Frags in round 1, for either seat (`ERR_NO_SHOOTING_ROUND1`).
+  - Pump Shotgun cost 5 instead of 4: a patch for this run only (`--card`); `res://data` is unchanged.
+  - The pairs of changes, because two of the three single changes miss the 45–55% target.
+- **Games:** 36 drop pairs × routes A/B/C = 108 games per setting, Veteran vs Veteran.
+- **A second AI build:** every setting was also run with the Veteran's search cap at 200 instead of 120. Entry 2 point 4 found that this cap alone moves the baseline 9 points, so a change counts only if it moves the rate the same way on both builds. A Rookie vs Rookie run of each setting is also given, as a policy check.
+- **Baseline check:** the cap-120 baseline reproduces Entry 2 to the game: 67/108, 7 games ending both out, median round 12, earliest elimination in round 3.
+
+```
+godot --headless --path . -s res://tests/tools/ai_sweep.gd -- --hands=5                                         # baseline
+godot --headless --path . -s res://tests/tools/ai_sweep.gd -- --hands=5 --set=p2_start_health_bonus:1
+godot --headless --path . -s res://tests/tools/ai_sweep.gd -- --hands=5 --set=no_shooting_round1:true
+godot --headless --path . -s res://tests/tools/ai_sweep.gd -- --hands=5 --card=pump_shotgun.cost:5
+godot --headless --path . -s res://tests/tools/ai_sweep.gd -- --hands=5 --set=p2_start_health_bonus:1,no_shooting_round1:true
+#   add --cap=200 for the second Veteran build, --p1=rookie --p2=rookie for the policy check
+```
+
+### Result: Veteran vs Veteran (shipping build, cap 120), hand 5, 108 games per row
+
+| Setting | First player wins | Both out | Median last round (range) | Earliest elimination | A / B / C first-player wins (of 36) |
+|---|---|---|---|---|---|
+| Baseline (defaults) | 67/108 (**62%**) | 7 (6.5%) | 12 (3–14) | **round 3** | 19 / 22 / 26 |
+| `p2_start_health_bonus` = 1 | 70/108 (65%) | 9 (8.3%) | 12 (5–14) | round 5 | 23 / 22 / 25 |
+| `no_shooting_round1` = true | 65/108 (60%) | 8 (7.4%) | 12 (8–14) | **round 8** | 28 / 18 / 19 |
+| Pump Shotgun cost 5 | 51/108 (**47%**) | 16 (**14.8%**) | 13 (8–14) | round 8 | 21 / 15 / 15 |
+| Pump 5 + no shooting in round 1 | 66/108 (61%) | 18 (**16.7%**) | 13 (8–14) | round 8 | 20 / 24 / 22 |
+| Pump 5 + P2 health bonus | 47/108 (44%) | 11 (10.2%) | 13 (8–14) | round 8 | 18 / 6 / 23 (3 draws) |
+| P2 health bonus + no shooting in round 1 | 55/108 (**51%**) | 11 (10.2%) | 13 (8–14) | round 8 | 22 / 15 / 18 |
+
+### Check: a second Veteran build (cap 200) and Rookie vs Rookie, hand 5, 108 games per row
+
+| Setting | Veteran cap 200: first player / both out / median / earliest | Rookie vs Rookie: first player / both out / median / earliest |
+|---|---|---|
+| Baseline | 57/108 (53%) / 4 / 11.5 / round 3 | 66/108 (61%) / 0 / 8 / round 4 |
+| `p2_start_health_bonus` = 1 | 64/108 (59%) / 3 / 12 / round 5 | 63/108 (58%) / 5 / 8 / round 4 |
+| `no_shooting_round1` = true | 52/108 (48%) / 2 / 12 / round 8 | 66/108 (61%) / 0 / 8.5 / round 7 |
+| Pump Shotgun cost 5 | 51/108 (47%) / 13 (12%) / 13 / round 7 | 83/108 (**77%**) / 0 / 9 / round 8 |
+| P2 health bonus + no shooting in round 1 | 52/108 (48%) / 2 / 13 / round 8 | 66/108 (61%) / 3 / 9 / round 7 |
+
+**Pooled over both Veteran builds (216 games per setting):**
+
+| Setting | First player | Both out |
+|---|---|---|
+| Baseline | 124/216 (57%) | 11 (5%) |
+| P2 health bonus | 134/216 (62%) | 12 (6%) |
+| No shooting in round 1 | 117/216 (54%) | 10 (5%) |
+| Pump Shotgun cost 5 | 102/216 (47%) | 29 (13%) |
+| P2 health bonus + no shooting in round 1 | 107/216 (50%) | 13 (6%) |
+
+The AI made no illegal actions in any run: it reads the round-1 switch through `LoadoutRules.shooting_open`. The median AI turn took 10.6–12.2 ms per run. The slowest single timing was 93 ms. These runs were not re-timed, and three sweeps ran at once on the 4-core VM, so they are not a speed measurement. Entry 2's re-timed figures still apply, because the Veteran makes the same moves.
+
+### What the numbers say
+1. **`no_shooting_round1` is the one change that works the same on every AI.** It ends the round-3 and round-5 knockouts (P-2) on all three AI builds: the earliest elimination moves to round 8 for both Veterans and to round 7 for the Rookie. It does this without more double knockouts (both out 7.4% and 1.9%) and keeps the median at 12. It also lowers the first-player rate on both Veterans (62% to 60%, and 53% to 48%; pooled, 57% to 54%, inside the target). It does not move the Rookie (61% both ways). It costs no data change, and it is one sentence of rules text.
+2. **`p2_start_health_bonus` alone does not help. It moves the rate the wrong way on both Veteran builds** (62% to 65%, and 53% to 59%) and helps the Rookie by only 3 points. An extra Hit in P2's stack does not stop P1 from hitting first. Why the rate moves the wrong way was not studied. One guess: the Veteran's evaluation scores the health difference, so P2's AI may play differently when it starts one Hit ahead. Do not use it alone.
+3. **Pump Shotgun cost 5 fixes the rate for the Veterans (47% on both builds) but breaks other targets.** Both out rises to 12–15% (target under 10%), the median goes to 13 (target 9–12), and the Rookie goes to 77% for P1. With the shotgun out of a turn-1 budget, the early game becomes a slow loot race that the Veteran ends at the final circle, and the Rookie loses it from the second seat. It also does not combine well: with no shooting in round 1, the shotgun at cost 5 gives 61%, and both out reaches 16.7%. Not recommended.
+4. **P2 health bonus plus no shooting in round 1** is the only pair inside 45–55% on both Veteran builds: 51% and 48%, pooled 50%. Both out stays under 10% on cap 200 (1.9%) but reaches 10.2% at the shipping cap, and the median moves to 13. The pair adds no early-knockout fix beyond what the round-1 rule gives alone. Point 2 suggests that most of its gain over the round-1 rule alone (54% to 50% pooled) is AI noise, not the health bonus.
+5. **Noise is still large.** The same setting moves single routes by up to 20 points between the two Veteran builds (for example, the baseline's route A: 53% at cap 120, 33% at cap 200). Read only the pooled rows. A 4-point gap between settings is within noise; the 14-point gap between the P2 health bonus and the round-1 rule is not.
+
+### Recommendation (for the studio head, board task `cz-q2`; **not applied**, `balance.tres` unchanged)
+- **Turn on `no_shooting_round1`.** It is the only change that helps on every AI and costs nothing elsewhere. It fixes P-2 (no knockout before round 7–8 on any AI), it brings the pooled Veteran first-player rate from 57% to 54%, and it keeps both out, the median round and the AI speed where they are.
+- **Keep `p2_start_health_bonus` = 0 for now.** Hold it as the fallback: if the playtest's first-player KPI is still over 55% with the round-1 rule on, add the bonus (pooled 50% here). Do not ship it alone.
+- **Keep the Pump Shotgun at cost 4.** Cost 5 trades the first-player problem for double knockouts (12–17%) and longer games, and it makes the Rookie level lopsided (77%).
+- Before switching on any default, confirm with the playtest first-player KPI (Entry 2, P-1 step 3). Turning on a switch changes `tunables_hash`. `scripts/save/match_save_codec.gd` (save restore) accepts only `BalanceConfig.tunable_keys()` today, so it must also accept `BalanceConfig.switch_keys()` before a match saved with a switch on can be restored. Saves made with both switches off are unaffected.
+
+### Confidence limits
+- The same limits as Entry 2: two copies of one AI, forced drop pairs, and about ±9 points of sampling noise on a 108-game row. Point 5 above adds about ±5–10 points of AI-build noise.
+- The Pump Shotgun row uses a run-only data patch. `res://data/cards/pump_shotgun.tres` still has cost 4.

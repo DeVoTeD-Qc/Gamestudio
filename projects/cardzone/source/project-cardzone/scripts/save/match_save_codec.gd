@@ -203,6 +203,7 @@ static func restore(body: Dictionary, content: RulesData) -> Dictionary:
 	var overrides: Dictionary = {}
 	var snapshot: Dictionary = body["balance"]
 	var known: Array[StringName] = BalanceConfig.tunable_keys()
+	known.append_array(BalanceConfig.switch_keys())  # cz07b switches are part of a match's rules too
 	for key: Variant in snapshot.keys():
 		if not known.has(StringName(key)):
 			errors.append("tunable %s no longer exists" % key)

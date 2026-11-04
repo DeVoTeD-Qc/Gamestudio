@@ -42,6 +42,12 @@
 #   {type: "undo", seat}                           U2 (never logged)
 #   {type: "concede", seat}                        R49, any time
 #
+# FAST PATH (AI search, cz07b): apply_fast(state, action) -> bool runs the same checks and
+#   effects as apply() with no undo snapshot, no log entry and no events. Public helpers the AI
+#   shares with the engine: brace_candidates, subsets, cover_for, shooting_open, fire_limit, weapon_range,
+#   shot_profile, blast_profile.
+# BALANCE SWITCHES (BalanceConfig.SWITCHES, off by default): p2_start_health_bonus (P2 starts
+#   and heals up to health + 1), no_shooting_round1 (ERR_NO_SHOOTING_ROUND1 on shoot and frag).
 # EVENT TYPES (ActionResult.events, in order): dropped, round_started, bounty_changed,
 #   zone_flipped, gas_closed, drop_landed, final_circle, turn_started, drew*, played, adrenaline,
 #   healed, spent, pulled*, moved, looted, attached, patched_up, ditched, shot_declared,
@@ -83,6 +89,10 @@ const ERR_RACK: StringName = &"bad_rack_move"
 const ERR_BRACE: StringName = &"bad_brace"
 const ERR_UNDO: StringName = &"cant_undo"
 const ERR_DROP: StringName = &"bad_drop"
+## Balance switch no_shooting_round1 (cz07b, off by default): in round 1 no seat may shoot or
+## throw a Frag. Returned by shoot and frag checks before any other shoot/frag reason, so
+## legal_actions() lists no shoot or frag in round 1 while it is on.
+const ERR_NO_SHOOTING_ROUND1: StringName = &"no_shooting_round1"
 
 ## Search to Patch up (spec §5, R18) and to Ditch (R19): printed rules, not §16.8 tunables.
 const PATCH_UP_COST: int = 2
@@ -95,6 +105,9 @@ const PLAYER_ACTIONS: Array[String] = ["play", "move", "loot", "shoot", "frag", 
 
 
 # === Public API ==========================================================================
+
+## apply_fast()'s throwaway event list (never read).
+static var _fast_events: Array[Dictionary] = []
 
 ## Applies one action. On success the state changes, the action is logged (except undo) and the
 ## result carries the ordered events. On failure the state is untouched.
@@ -119,6 +132,25 @@ static func apply(state: MatchState, action: Dictionary) -> ActionResult:
 	if t in ["shoot", "frag", "brace"]:
 		r.shot = state.last_shot.duplicate(true)
 	return r
+
+
+## The search fast path (cz07b): runs `action` with exactly apply()'s checks and effects, but
+## keeps no undo snapshot, adds nothing to the action log and collects no events (it reuses one
+## scratch event list). Returns false and leaves the state untouched when the action is illegal.
+## For AI search on throwaway copies only: a state stepped this way can't be undone or replayed
+## from its log. Undo is refused (it needs the snapshots this path never takes).
+static func apply_fast(state: MatchState, action: Dictionary) -> bool:
+	return apply_fast_normalized(state, normalize(state, action))
+
+
+## apply_fast() for an action already in normal form (normalize(): ints for ids and seats, a
+## String type, card lists as Arrays of ints, the Frag card given).
+static func apply_fast_normalized(state: MatchState, a: Dictionary) -> bool:
+	if String(a.get("type", "")) == "undo" or check(state, a) != &"":
+		return false
+	_fast_events.clear()
+	_do(state, a, _fast_events)
+	return true
 
 
 ## Runs the action on a copy (the same code as apply) and returns what it would do.
@@ -218,6 +250,8 @@ static func normalize(state: MatchState, action: Dictionary) -> Dictionary:
 ## seat; the drop seat during setup). Undo and concede are not listed (meta actions).
 ## Brace options are listed in next-hand order (any order is legal; order only sets where the
 ## cards go at the bottom). end_turn lists every hold choice (or every rack move).
+## With the no_shooting_round1 switch on, round 1 lists no shoot and no frag (check() returns
+## ERR_NO_SHOOTING_ROUND1 for them).
 static func legal_actions(state: MatchState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if state.is_over():
@@ -228,8 +262,8 @@ static func legal_actions(state: MatchState) -> Array[Dictionary]:
 		return out
 	var defender: int = state.pending_brace_seat()
 	if defender != MatchState.NO_SEAT:
-		var eligible: Array[int] = _brace_candidates(state, defender)
-		for subset: Array in _subsets(eligible, eligible.size()):
+		var eligible: Array[int] = brace_candidates(state, defender)
+		for subset: Array in subsets(eligible, eligible.size()):
 			out.append({"type": "brace", "seat": defender, "cards": subset})
 		return out
 	var seat: int = state.active
@@ -282,7 +316,7 @@ static func legal_actions(state: MatchState) -> Array[Dictionary]:
 		for inst: int in _concat([st.hand, st.line]):
 			if _can_hold(state, seat, inst):
 				candidates.append(inst)
-		for subset: Array in _subsets(candidates, b.hold_limit):
+		for subset: Array in subsets(candidates, b.hold_limit):
 			out.append({"type": "end_turn", "seat": seat, "hold": subset})
 	return out
 
@@ -311,7 +345,7 @@ static func shot_profile(state: MatchState, shooter: int, weapon: int, target: i
 		var ac: CardData = state.def_of(att)
 		dmg += ac.attach_dmg
 		suppressed = suppressed or ac.attach_no_brace
-	var cover: int = _cover(state, state.seats[shooter].area, target, ignores)
+	var cover: int = cover_for(state, state.seats[shooter].area, target, ignores)
 	var down: int = b.down_value if state.is_down(target) else 0
 	return {"damage": maxi(0, dmg - cover - down), "cover": cover, "down": down,
 			"suppressed": suppressed, "dmg": dmg}
@@ -323,10 +357,15 @@ static func blast_profile(state: MatchState, thrower: int, card: int, area_id: S
 	var c: CardData = state.def_of(card)
 	var cover: int = 0
 	if not c.ignores_cover and state.seats[thrower].area != area_id:
-		cover = _cover(state, state.seats[thrower].area, target, false)
+		cover = cover_for(state, state.seats[thrower].area, target, false)
 	var down: int = b.down_value if state.is_down(target) else 0
 	return {"damage": maxi(0, c.blast_dmg - cover - down), "cover": cover, "down": down,
 			"suppressed": false, "dmg": c.blast_dmg}
+
+
+## False while the no_shooting_round1 switch keeps shots and Frags closed (round 1 only).
+static func shooting_open(state: MatchState) -> bool:
+	return not (state.data.balance.no_shooting_round1 and state.round_number <= 1)
 
 
 ## Shots per turn for a weapon (R12): printed fires + Extended Mags, checked at declare.
@@ -458,6 +497,8 @@ static func _check_loot(state: MatchState, a: Dictionary) -> StringName:
 
 
 static func _check_shoot(state: MatchState, a: Dictionary) -> StringName:
+	if not shooting_open(state):
+		return ERR_NO_SHOOTING_ROUND1
 	var seat: int = a["seat"]
 	var st: SeatState = state.seats[seat]
 	var weapon: int = int(a.get("weapon", 0))
@@ -476,6 +517,8 @@ static func _check_shoot(state: MatchState, a: Dictionary) -> StringName:
 
 
 static func _check_frag(state: MatchState, a: Dictionary) -> StringName:
+	if not shooting_open(state):
+		return ERR_NO_SHOOTING_ROUND1
 	var st: SeatState = state.seats[a["seat"]]
 	var inst: int = int(a.get("card", 0))
 	if not st.hand.has(inst):
@@ -570,7 +613,7 @@ static func _check_brace(state: MatchState, a: Dictionary) -> StringName:
 		return ERR_NO_PENDING
 	if int(a["seat"]) != defender:
 		return ERR_NOT_YOUR_TURN
-	var eligible: Array[int] = _brace_candidates(state, defender)
+	var eligible: Array[int] = brace_candidates(state, defender)
 	var seen: Array[int] = []
 	for x: Variant in a.get("cards", []):
 		var inst: int = int(x)
@@ -590,8 +633,9 @@ static func _can_hold(state: MatchState, seat: int, inst: int) -> bool:
 	return false
 
 
-## R25, R26: cards in the defender's next hand with a Brace value that haven't braced this turn.
-static func _brace_candidates(state: MatchState, defender: int) -> Array[int]:
+## R25, R26: cards in the defender's next hand with a Brace value that haven't braced this turn
+## (the cards a `brace` action may use; MatchView's brace_prompt.eligible).
+static func brace_candidates(state: MatchState, defender: int) -> Array[int]:
 	var out: Array[int] = []
 	var st: SeatState = state.seats[defender]
 	for inst: int in state.next_hand(defender):
@@ -1117,12 +1161,13 @@ static func _take_hits(state: MatchState, seat: int, count: int) -> int:
 
 
 ## R15: return up to n Hits from the line (last first), then the hand (last first). Health never
-## exceeds the `health` tunable. Returns how many were healed.
+## exceeds the seat's starting health (the `health` tunable, + p2_start_health_bonus for P2).
+## Returns how many were healed.
 static func _heal(state: MatchState, seat: int, n: int) -> int:
 	var st: SeatState = state.seats[seat]
 	var healed: int = 0
 	for i: int in n:
-		if st.health.size() >= state.data.balance.health:
+		if st.health.size() >= state.data.balance.start_health(seat):
 			break
 		var inst: int = _last_hit(state, st.line)
 		var from: Array[int] = st.line
@@ -1155,7 +1200,9 @@ static func _take_from_top(state: MatchState, seat: int, count: int) -> Array[in
 	return taken
 
 
-static func _cover(state: MatchState, from_area: StringName, target: int, ignores: bool) -> int:
+## R22: the Cover the target gets against a shot from `from_area` (0 in the same area, for a
+## weapon that ignores Cover, and for the Bounty holder when bounty_holder_loses_cover).
+static func cover_for(state: MatchState, from_area: StringName, target: int, ignores: bool) -> int:
 	var b: BalanceConfig = state.data.balance
 	var to_area: StringName = state.seats[target].area
 	if ignores or from_area == to_area:
@@ -1188,7 +1235,7 @@ static func _concat(lists: Array) -> Array[int]:
 
 
 ## Every subset of `items` with at most max_size elements, each in the items' order.
-static func _subsets(items: Array, max_size: int) -> Array:
+static func subsets(items: Array, max_size: int) -> Array:
 	var result: Array = [[]]
 	for item: Variant in items:
 		var more: Array = []

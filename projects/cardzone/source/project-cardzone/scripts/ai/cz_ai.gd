@@ -156,7 +156,7 @@ static func attach_action(w: MatchState, seat: int) -> Dictionary:
 static func greedy_brace(w: MatchState, seat: int) -> Dictionary:
 	var rec: Dictionary = w.last_shot["targets"][seat]
 	var damage: int = int(rec["damage_before_brace"])
-	var eligible: Array[int] = LoadoutRules._brace_candidates(w, seat)
+	var eligible: Array[int] = LoadoutRules.brace_candidates(w, seat)
 	eligible.sort_custom(func(x: int, y: int) -> bool:
 		var bx: int = w.def_of(x).brace
 		var by: int = w.def_of(y).brace
@@ -199,7 +199,7 @@ static func end_turn_action(w: MatchState, seat: int, prefer: Array[int], brace_
 
 
 ## A play action for a Hit as Adrenaline: `mode` if allowed, else the other mode, else {}
-## (R6: the Adrenaline cap, and move_only mode). Mirrors LoadoutRules._check_play for a Hit.
+## (R6: the Adrenaline cap, and move_only mode). Mirrors the engine's play check for a Hit.
 static func adrenaline_action(w: MatchState, seat: int, inst: int, mode: String) -> Dictionary:
 	var b: BalanceConfig = w.data.balance
 	var st: SeatState = w.seats[seat]

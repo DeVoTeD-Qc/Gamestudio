@@ -24,15 +24,15 @@ static func build(state: MatchState, seat: int) -> Dictionary:
 		"first_player": MatchState.P1,
 		"gas": _strings(state.gas),
 		"piles": state.pile_counts(),
-		"drops": _drops(state),
+		"drops": drops_view(state),
 		"crates": _crates(state),
 		"bounty": state.bounty,
-		"removed": _cards(state, state.removed),
+		"removed": cards_view(state, state.removed),
 		"pending_brace": state.pending_brace_seat(),
 		"last_shot": _public_shot(state),
 		"match_end": state.match_end.duplicate(true),
 		"me": _me(state, seat),
-		"opponent": _opponent(state, opp),
+		"opponent": opponent_view(state, opp),
 	}
 	var defender: int = state.pending_brace_seat()
 	if defender != MatchState.NO_SEAT:
@@ -40,16 +40,26 @@ static func build(state: MatchState, seat: int) -> Dictionary:
 		if defender == seat:
 			# P20: the defender sees the damage and their own next hand.
 			var eligible: Array = []
-			for inst: int in LoadoutRules._brace_candidates(state, seat):
+			for inst: int in LoadoutRules.brace_candidates(state, seat):
 				eligible.append(inst)
 			v["brace_prompt"] = {"damage": rec["damage_before_brace"], "cover": rec["cover"],
-					"down": rec["down"], "next_hand": _cards(state, state.next_hand(seat)),
+					"down": rec["down"], "next_hand": cards_view(state, state.next_hand(seat)),
 					"eligible": eligible, "kind": state.last_shot["kind"]}
 		elif int(state.last_shot["shooter"]) == seat:
 			# P19: damage after Cover and Down, and "they may Brace"; never the target's hand.
 			v["shot_preview"] = {"damage": rec["damage_before_brace"], "cover": rec["cover"],
 					"down": rec["down"], "may_brace": true, "target": defender}
 	return v
+
+
+## The public part of build(state, seat) that the AI belief model reads (cz07b fast path):
+## {opponent, removed, piles, drops, zone_card}, each equal to the same key of the full view.
+## Skips the seat's own card lists, the crates and the shot record (speed: the AI calls this
+## once per decision). Holds nothing the seat may not see (P18).
+static func public_view(state: MatchState, seat: int) -> Dictionary:
+	return {"opponent": opponent_view(state, state.opponent_of(seat)),
+			"removed": cards_view(state, state.removed), "piles": state.pile_counts(),
+			"drops": drops_view(state), "zone_card": state.zone_card}
 
 
 ## One card as the views show it: instance id, card id, tucked attachments (card ids, in order).
@@ -64,10 +74,10 @@ static func _me(state: MatchState, seat: int) -> Dictionary:
 	var st: SeatState = state.seats[seat]
 	return {
 		"area": st.area, "health": st.health.size(), "eliminated": st.eliminated,
-		"loadout": _cards(state, st.loadout), "held": st.held.duplicate(), "held_count": st.held.size(),
-		"next_draw": _cards(state, state.next_draw(seat)), "next_hand": _cards(state, state.next_hand(seat)),
+		"loadout": cards_view(state, st.loadout), "held": st.held.duplicate(), "held_count": st.held.size(),
+		"next_draw": cards_view(state, state.next_draw(seat)), "next_hand": cards_view(state, state.next_hand(seat)),
 		"next_draw_hits": state.next_draw_hits(seat), "down": state.is_down(seat),
-		"hand": _cards(state, st.hand), "hand_count": st.hand.size(), "line": _cards(state, st.line),
+		"hand": cards_view(state, st.hand), "hand_count": st.hand.size(), "line": cards_view(state, st.line),
 		"fired": st.fired.duplicate(), "move": st.move, "search": st.search,
 		"adrenaline_played": st.adrenaline_played, "ditched": st.ditched, "braced": st.braced.duplicate(),
 		"looted": st.looted.duplicate(), "loadout_count": st.loadout.size(),
@@ -75,18 +85,21 @@ static func _me(state: MatchState, seat: int) -> Dictionary:
 	}
 
 
-static func _opponent(state: MatchState, seat: int) -> Dictionary:
+## What the opponent of `seat`'s viewer sees of `seat` (the view's "opponent" key): public
+## fields only, plus held_cards / next_draw_hits / hand_hits / loadout_count when the
+## information tunables make them public.
+static func opponent_view(state: MatchState, seat: int) -> Dictionary:
 	var b: BalanceConfig = state.data.balance
 	var st: SeatState = state.seats[seat]
 	var o: Dictionary = {
 		"area": st.area, "health": st.health.size(), "eliminated": st.eliminated,
-		"line": _cards(state, st.line), "fired": st.fired.duplicate(),
+		"line": cards_view(state, st.line), "fired": st.fired.duplicate(),
 		"held_count": st.held.size(), "down": state.is_down(seat), "hand_count": st.hand.size(),
 		"move": st.move, "search": st.search, "adrenaline_played": st.adrenaline_played,
 		"ditched": st.ditched, "braced": st.braced.duplicate(),
 	}
 	if b.held_cards_public:
-		o["held_cards"] = _cards(state, st.loadout.filter(func(i: int) -> bool: return st.held.has(i)))
+		o["held_cards"] = cards_view(state, st.loadout.filter(func(i: int) -> bool: return st.held.has(i)))
 	if b.hits_on_top_public:
 		o["next_draw_hits"] = state.next_draw_hits(seat)
 		o["hand_hits"] = state.hits_in(st.hand)
@@ -117,7 +130,8 @@ static func _public_shot(state: MatchState) -> Dictionary:
 	return out
 
 
-static func _drops(state: MatchState) -> Dictionary:
+## The supply drops on the map (the view's "drops" key): area -> [card_view + landed, ready].
+static func drops_view(state: MatchState) -> Dictionary:
 	var out: Dictionary = {}
 	var delay: int = state.data.balance.supply_drop_ready_delay
 	for area_id: Variant in state.drops.keys():
@@ -134,12 +148,13 @@ static func _drops(state: MatchState) -> Dictionary:
 static func _crates(state: MatchState) -> Array:
 	var out: Array = []
 	for crate: Dictionary in state.crates:
-		out.append({"owner": crate["owner"], "area": crate["area"], "cards": _cards(state, crate["cards"]),
+		out.append({"owner": crate["owner"], "area": crate["area"], "cards": cards_view(state, crate["cards"]),
 				"free_picks": crate["free_picks"], "picker": crate["picker"]})
 	return out
 
 
-static func _cards(state: MatchState, list: Array) -> Array:
+## card_view() of each instance in `list`, in order.
+static func cards_view(state: MatchState, list: Array) -> Array:
 	var out: Array = []
 	for inst: Variant in list:
 		out.append(card_view(state, int(inst)))

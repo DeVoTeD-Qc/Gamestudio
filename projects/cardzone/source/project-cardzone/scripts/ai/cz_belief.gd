@@ -83,13 +83,11 @@ static func world(state: MatchState, seat: int) -> MatchState:
 	return w
 
 
-## The parts of view(state, seat) (MatchView) the guess reads, built by MatchView's own
-## builders: {opponent, removed, piles, drops, zone_card}. Equal to those keys of the full view;
-## skips the seat's own card lists and the shot record, which the guess does not need (speed).
+## The parts of view(state, seat) the guess reads: MatchView.public_view, {opponent, removed,
+## piles, drops, zone_card}, equal to those keys of the full view (it skips the seat's own card
+## lists and the shot record, which the guess does not need: speed).
 static func public_view(state: MatchState, seat: int) -> Dictionary:
-	return {"opponent": MatchView._opponent(state, state.opponent_of(seat)),
-			"removed": MatchView._cards(state, state.removed), "piles": state.pile_counts(),
-			"drops": MatchView._drops(state), "zone_card": state.zone_card}
+	return MatchView.public_view(state, seat)
 
 
 ## The opponent's private cards as public information sees them:
@@ -122,7 +120,9 @@ static func guess_private(data: RulesData, v: Dictionary, me: SeatState, state: 
 	for cv: Dictionary in o["line"]:
 		if StringName(cv["card"]) == data.hit_id:
 			line_hits += 1
-	var loadout_hits: int = maxi(0, b.health - int(o["health"]) - line_hits - hand_hits)
+	# The opponent's starting health is public (S4; P2 has p2_start_health_bonus extra).
+	var opp_seat: int = 1 - state.seats.find(me)
+	var loadout_hits: int = maxi(0, b.start_health(opp_seat) - int(o["health"]) - line_hits - hand_hits)
 	var next_hits: int = int(o.get("next_draw_hits", 1 if bool(o["down"]) else 0))
 	next_hits = mini(next_hits, loadout_hits)
 	var want_total: int
