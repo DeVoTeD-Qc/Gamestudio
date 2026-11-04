@@ -187,7 +187,8 @@ func sync() -> void:
 	if collection == null:
 		return
 	if collection.is_cipher_solved():
-		_show_open(false)
+		if _try.visible:  # already showing the open lock: keep the fresh "Click." message
+			_show_open(false)
 	else:
 		for d: VBoxContainer in _dials:
 			d.set_locked(false)
