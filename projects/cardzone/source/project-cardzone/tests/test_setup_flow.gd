@@ -240,7 +240,8 @@ func _do_by_touch(m: Control, a: Dictionary) -> void:
 			for inst: Variant in a["cards"]:
 				var ids: Array = m.get_state()["you"]["next_ids"]
 				await _touch_card(m, &"next", ids.find(int(inst)))
-			await _touch_dock(m, &"brace")
+			await _dismiss_coach(m)
+			await touch(m.get_brace_button(&"brace"))  # cz12: BRACE is on the Brace panel
 		"play":
 			var i: int = (m.get_state()["you"]["hand_ids"] as Array).find(int(a["card"]))
 			await _touch_card(m, &"hand", i)

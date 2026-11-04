@@ -159,6 +159,23 @@ func test_out_of_range_preview_explains() -> void:
 	_despawn(m)
 
 
+func test_no_shooting_round1_switch_explained() -> void:
+	# cz07b balance switch (off by default): in round 1, FIRE and THROW say why not.
+	var m: Control = await _spawn(_fixture({"round": 1, "zone_card": 1, "balance": {"no_shooting_round1": true},
+		"P1": {"area": "radio_hill", "health": 5, "hand": ["frag_grenade"], "line": ["hunting_rifle"], "loadout": ["duck", "dash", "scavenge", "scavenge", "dash"]},
+		"P2": {"area": "quarry", "health": 5, "loadout": ["duck", "dash", "scavenge", "scavenge", "dash"]}}))
+	var want: String = "No shooting in round 1: weapons and Frags open from round 2."
+	await _touch_card(m, &"line", 0)
+	assert_eq(m.get_dock_text(), want, "the shot preview explains")
+	await _touch_dock(m, &"fire")
+	assert_eq(m.last_notice, want, "FIRE refused in words")
+	await _touch_dock(m, &"close")
+	await _touch_card(m, &"hand", 0)
+	await _touch_dock(m, &"throw")
+	assert_eq(m.last_notice, want, "THROW refused in words")
+	_despawn(m)
+
+
 # --- Adrenaline, patch up, ditch, attach, Frag ---------------------------------------------
 
 func test_adrenaline_patch_up_and_ditch() -> void:

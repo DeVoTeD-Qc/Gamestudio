@@ -243,6 +243,9 @@ func _fixture(players: Dictionary) -> MatchState:
 	var setup: Dictionary = {"round": 3, "zone_card": 3, "route": "A", "active": players.get("active", "P1"),
 			"piles": {"rail_yard": {"crowbar": 3, "red_dot_sight": 3}, "old_town": {"assault_rifle": 2}},
 			"players": {"P1": players["P1"], "P2": players["P2"]}}
+	for k: String in ["round", "zone_card", "balance"]:  # cz12: optional overrides
+		if players.has(k):
+			setup[k] = players[k]
 	var errors: Array = []
 	var s: MatchState = MatchState.from_fixture(setup, RulesData.from_card_db(CardDB), {}, errors)
 	if not errors.is_empty():

@@ -78,7 +78,8 @@ static func explain(view: Dictionary, s: Dictionary, lookup: Callable) -> String
 	var cards: Array = s.get("cards", [])
 	var hits: int = int(s.get("hits", 0))
 	if (bp.get("eligible", []) as Array).is_empty():
-		return "Nothing in your next hand can brace: %s." % _hits_text(hits)
+		return "Nothing in your next hand can brace: %s.%s" % [_hits_text(hits),
+				" Not enough armour to survive." if bool(s.get("eliminated", false)) else ""]
 	if cards.is_empty():
 		return "Nothing to block."
 	var ids: Dictionary = _ids(view)

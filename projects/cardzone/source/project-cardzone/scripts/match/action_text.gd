@@ -100,6 +100,8 @@ static func reason(code: StringName, a: Dictionary, ctx: Dictionary) -> String:
 			return "Only cards in your next hand with a Brace value, not braced yet this turn, can brace."
 		LoadoutRules.ERR_UNDO:
 			return "Nothing to undo."
+		LoadoutRules.ERR_NO_SHOOTING_ROUND1:
+			return "No shooting in round 1: weapons and Frags open from round 2."
 		LoadoutRules.ERR_DROP:
 			return "Drop into an outer area (1-6), not the Core."
 		LoadoutRules.ERR_UNKNOWN:
