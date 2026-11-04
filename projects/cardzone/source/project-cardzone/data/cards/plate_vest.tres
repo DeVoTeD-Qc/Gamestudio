@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"plate_vest"
+code = "CZ-019"
+display_name = "Plate Vest"
+type = 2
+rarity = 3
+cost = 4
+brace = 2
+move = 1
+rules_text = "Move 1"

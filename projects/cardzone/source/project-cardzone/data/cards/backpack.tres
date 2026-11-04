@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"backpack"
+code = "CZ-021"
+display_name = "Backpack"
+type = 2
+rarity = 3
+cost = 3
+search = 1
+pull = 1
+rules_text = "Search 1. Pull 1."

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ZoneCardData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/zone_card_data.gd" id="1_script"]
+[ext_resource type="Resource" path="res://data/areas/farmstead.tres" id="2_farmstead"]
+[ext_resource type="Resource" path="res://data/areas/quarry.tres" id="3_quarry"]
+[ext_resource type="Resource" path="res://data/areas/rail_yard.tres" id="4_rail_yard"]
+[ext_resource type="Resource" path="res://data/cards/heavy_plate.tres" id="5_heavy_plate"]
+[ext_resource type="Resource" path="res://data/areas/motel.tres" id="6_motel"]
+[ext_resource type="Resource" path="res://data/areas/radio_hill.tres" id="7_radio_hill"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"zone_06"
+number = 6
+display_name = "Gas closes + drop"
+close_a = ExtResource("2_farmstead")
+close_b = ExtResource("3_quarry")
+close_c = ExtResource("4_rail_yard")
+drop_card = ExtResource("5_heavy_plate")
+drop_a = ExtResource("6_motel")
+drop_b = ExtResource("4_rail_yard")
+drop_c = ExtResource("7_radio_hill")

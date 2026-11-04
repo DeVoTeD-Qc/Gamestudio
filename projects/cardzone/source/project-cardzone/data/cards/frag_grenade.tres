@@ -14,4 +14,4 @@ spent = 1
 ignores_cover = true
 blast_dmg = 2
 blast_rng = 1
-rules_text = "Spent. A 2-damage shot at each player in one area within Range 1 (you too). Ignores Cover."
+rules_text = "Spent. One area within Range 1: a 2-damage shot at each player there (you too). Ignores Cover. Brace, Down apply."

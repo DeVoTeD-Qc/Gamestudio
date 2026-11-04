@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="AreaData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
-[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="9_card_data"]
-[ext_resource type="Resource" path="res://data/cards/pump_shotgun.tres" id="2_pump_shotgun"]
-[ext_resource type="Resource" path="res://data/cards/frag_grenade.tres" id="3_frag_grenade"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/pump_shotgun.tres" id="3_pump_shotgun"]
+[ext_resource type="Resource" path="res://data/cards/frag_grenade.tres" id="4_frag_grenade"]
 
 [resource]
 script = ExtResource("1_script")
@@ -13,4 +13,4 @@ number = 3
 tier = 0
 cover = 1
 adjacent = Array[StringName]([&"farmstead", &"radio_hill", &"old_town"])
-piles = Array[ExtResource("9_card_data")]([ExtResource("2_pump_shotgun"), ExtResource("3_frag_grenade")])
+piles = Array[ExtResource("2_card_data")]([ExtResource("3_pump_shotgun"), ExtResource("4_frag_grenade")])

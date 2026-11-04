@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"extended_mag"
+code = "CZ-025"
+display_name = "Extended Mag"
+type = 1
+rarity = 4
+cost = 5
+attach_extra_fire = 1
+rules_text = "Attach: this weapon may fire one extra time each turn"

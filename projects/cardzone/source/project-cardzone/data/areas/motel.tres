@@ -1,6 +1,9 @@
-[gd_resource type="Resource" script_class="AreaData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="AreaData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/medkit.tres" id="3_medkit"]
+[ext_resource type="Resource" path="res://data/cards/plate_vest.tres" id="4_plate_vest"]
 
 [resource]
 script = ExtResource("1_script")
@@ -10,3 +13,4 @@ number = 5
 tier = 0
 cover = 1
 adjacent = Array[StringName]([&"radio_hill", &"rail_yard", &"old_town"])
+piles = Array[ExtResource("2_card_data")]([ExtResource("3_medkit"), ExtResource("4_plate_vest")])

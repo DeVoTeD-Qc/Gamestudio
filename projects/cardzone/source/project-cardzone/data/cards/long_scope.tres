@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"long_scope"
+code = "CZ-017"
+display_name = "Long Scope"
+type = 1
+rarity = 3
+cost = 3
+attach_rng = 1
+rules_text = "Attach: +1 RNG (max RNG 2)"

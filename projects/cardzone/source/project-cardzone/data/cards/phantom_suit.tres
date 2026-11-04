@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"phantom_suit"
+code = "CZ-033"
+display_name = "Phantom Suit"
+type = 2
+rarity = 6
+cost = 0
+supply_drop = true
+brace = 4
+move = 2
+search = 1
+rules_text = "Move 2. Search 1."

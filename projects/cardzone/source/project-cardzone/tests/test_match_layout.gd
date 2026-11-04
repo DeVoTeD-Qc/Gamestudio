@@ -202,7 +202,9 @@ func test_loadout_strip_is_armour() -> void:
 	await tree.process_frame
 	var top: Button = m.get_card_buttons(&"next")[0]
 	assert_eq(top.card_id, MockMatchData.HIT, "Hit on top")
-	assert_eq(top.get_tag().text, "DOWN +1", "Hit tagged Down")
+	assert_eq(top.get_tag().text, "DOWN", "Hit tagged Down")
+	var exposed: float = m.get_card_buttons(&"next")[1].get_global_rect().position.x - top.get_global_rect().position.x
+	assert_true(top.get_tag().get_global_rect().end.x <= top.get_global_rect().position.x + exposed + EPS, "DOWN tag inside the exposed strip")
 	assert_true(m.get_player_panels()[0].is_down_shown(), "you are Down")
 	assert_true(m.get_player_panels()[1].is_bounty_shown(), "rival holds the Bounty")
 	_despawn(setup[0])

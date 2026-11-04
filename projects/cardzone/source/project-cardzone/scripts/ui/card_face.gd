@@ -120,12 +120,17 @@ func configure(c: Dictionary, size_cls: StringName = &"hand") -> void:
 		_rarity.add_theme_stylebox_override(&"normal", chip)
 		_rarity.add_theme_color_override(&"font_color", cols[1])
 	var nm: String = String(c.get("short", c.get("name", ""))) if size_cls != &"big" else String(c.get("name", ""))
-	_name.text = nm.to_upper()
+	# Mini cards use the mixed-case short name: caps of the default font run ~25 % wider and
+	# web text at 3x oversampling can draw a little wider than it measures.
+	_name.text = nm if size_cls == &"mini" else nm.to_upper()
 	var brace: int = int(c.get("brace", 0))
 	if brace > 0:
 		_brace.visible = true
 		_brace.text = str(brace)
 	_stat.text = main_stat(c)
+	# Mini cards with a Brace shield keep only the first effect (the inspector lists all).
+	if size_cls == &"mini" and brace > 0 and " " in _stat.text and c.get("type", &"") != &"weapon":
+		_stat.text = _stat.text.get_slice(" ", 0)
 	if size_cls != &"mini":
 		var att: Array = c.get("attached", [])
 		if not att.is_empty():

@@ -8,7 +8,7 @@ broken data never reaches a playtest unnoticed.
 **Warnings** (`WARNING [...]`) mark content that is still incomplete: an area with no piles, a
 Zone deck shorter than `zone_hard_end_card`, a loot card that is on no pile and dropped by no Zone
 card, no Hit or Bounty card yet. They don't fail the load, but **cz06 should finish with none**.
-The cz05 samples leave five of them on purpose (four areas without piles, a deck that stops at card 5).
+The full prototype set (cz06) loads with 0 errors and 0 warnings; keep it that way.
 
 | Folder / file | Class (script in `scripts/data/`) | One file per |
 |---|---|---|
@@ -18,13 +18,14 @@ The cz05 samples leave five of them on purpose (four areas without piles, a deck
 | `packs/` | `StartPackData` (`start_pack_data.gd`) | starting loadout order (one: `standard_pack`) |
 | `balance.tres` | `BalanceConfig` (`balance_config.gd`), id `balance` | every §16.8 tunable (exactly one file) |
 
-**Samples to copy** (cz05): cards `p9_sidearm`, `scavenge`, `dash`, `duck` (starters), `hit`, `bounty`,
+**Content** (cz06, complete): all 27 player cards plus the Bounty (`cards/`, CZ-001..006, 010..027,
+030..033), all 7 areas with Cover and loot piles, Zone cards 1–14 for routes A/B/C (drops, gas, final
+circle I/II/III), `packs/standard_pack.tres` (hand 4 and 5) and `balance.tres` at the §16.8 defaults.
+The values, sources and changes from spec are logged in
+`projects/cardzone/documentation/design/content/prototype-content.md`. Any file is a good sample to copy:
 `pump_shotgun` (weapon), `red_dot_sight` (attachment), `bandage` (Spent on play), `smoke_grenade`
-(Spent on Brace), `frag_grenade` (blast), `twin_drum_lmg` (supply drop); all 7 areas (adjacency and
-Cover final, piles partly filled); Zone cards 1–5 (Calm, drop, gas); `packs/standard_pack.tres`;
-`balance.tres` at the spec defaults. `tests/test_data.gd` (`_valid_set()`) builds the whole spec
-data set in code (24 cards, the full map, all 14 Zone cards on routes A/B/C), which is a good
-cross-check for what you author.
+(Spent on Brace), `frag_grenade` (blast), `twin_drum_lmg` (supply drop). `tests/test_data.gd`
+(`_valid_set()`) builds a spec data set in code, which is a good cross-check.
 
 ## How to add a card (or anything else)
 1. In the Godot editor: FileSystem → right-click `data/cards/` → **New Resource…** → `CardData`

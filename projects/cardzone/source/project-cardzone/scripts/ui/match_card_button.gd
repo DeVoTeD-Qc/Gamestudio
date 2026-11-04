@@ -12,6 +12,7 @@ extends "res://scripts/ui/tap_hold_button.gd"
 const FACE_SCRIPT: GDScript = preload("res://scripts/ui/card_face.gd")
 const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
 
+## Tags: HOLD (held card), DOWN (a Hit on top of your loadout: you are Down, +1 Brace per shot).
 ## Where the card sits: &"hand", &"line", &"next" (loadout strip).
 var zone: StringName = &"hand"
 var index: int = 0
@@ -42,7 +43,7 @@ func _init() -> void:
 	_tag = Label.new()
 	_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tag.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE)
+	_tag.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
 	add_child(_tag)
 
 
@@ -59,7 +60,7 @@ func setup(c: Dictionary, where: StringName, i: int, size_class: StringName, is_
 	if held:
 		_show_tag("HOLD", &"TagHold")
 	elif c.get("type", &"") == &"hit" and where == &"next":
-		_show_tag("DOWN +1", &"TagDown")
+		_show_tag("DOWN", &"TagDown")
 	_refresh_outline()
 
 
@@ -81,10 +82,11 @@ func _show_tag(text: String, variation: StringName) -> void:
 	_tag.text = text
 	_tag.theme_type_variation = variation
 	_tag.visible = true
-	# Sits above the bottom row (Brace / stat), centred.
+	# Sits above the bottom row (Brace / stat) at the left, so it stays in a fanned card's
+	# exposed strip.
+	_tag.offset_left = 8.0
 	_tag.offset_bottom = -35.0
 	_tag.offset_top = -35.0 - 24.0
-	_tag.grow_horizontal = Control.GROW_DIRECTION_BOTH
 
 
 func _refresh_outline() -> void:

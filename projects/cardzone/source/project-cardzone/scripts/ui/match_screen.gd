@@ -108,6 +108,7 @@ func _ready() -> void:
 	_line.capacity = ROW_CAPACITY
 	_strip.capacity = ROW_CAPACITY
 	_hand.capacity = HAND_CAPACITY
+	_hand.valign = 1.0  # the hand hugs the bottom edge (thumb reach)
 	get_viewport().size_changed.connect(_relayout)
 	EventBus.round_started.connect(_on_round_started)
 	if _state.is_empty():
@@ -247,7 +248,7 @@ func _relayout() -> void:
 	_map_panel.custom_minimum_size = Vector2(map_w, 0)
 	_map.gap = 6.0 if compact else 10.0
 	for tile: Node in _map.get_children():
-		tile.pawn_d = maxf(28.0, ceilf(PAWN_PT / points_per_px))
+		tile.pawn_d = maxf(ceilf(PAWN_PT / points_per_px), 28.0 if compact else 40.0)
 	_line_caption.custom_minimum_size = Vector2(CAPTION_W, mini_h)
 	_strip_caption.custom_minimum_size = Vector2(CAPTION_W, mini_h)
 	for row: Container in [_line, _strip]:

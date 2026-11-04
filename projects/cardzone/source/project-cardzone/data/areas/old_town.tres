@@ -1,6 +1,12 @@
-[gd_resource type="Resource" script_class="AreaData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="AreaData" load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/assault_rifle.tres" id="3_assault_rifle"]
+[ext_resource type="Resource" path="res://data/cards/marksman_rifle.tres" id="4_marksman_rifle"]
+[ext_resource type="Resource" path="res://data/cards/extended_mag.tres" id="5_extended_mag"]
+[ext_resource type="Resource" path="res://data/cards/suppressor.tres" id="6_suppressor"]
+[ext_resource type="Resource" path="res://data/cards/recon_drone.tres" id="7_recon_drone"]
 
 [resource]
 script = ExtResource("1_script")
@@ -10,3 +16,4 @@ number = 0
 tier = 1
 cover = 1
 adjacent = Array[StringName]([&"docks", &"farmstead", &"quarry", &"radio_hill", &"motel", &"rail_yard"])
+piles = Array[ExtResource("2_card_data")]([ExtResource("3_assault_rifle"), ExtResource("4_marksman_rifle"), ExtResource("5_extended_mag"), ExtResource("6_suppressor"), ExtResource("7_recon_drone")])

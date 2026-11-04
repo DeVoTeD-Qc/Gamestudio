@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"trail_boots"
+code = "CZ-011"
+display_name = "Trail Boots"
+type = 2
+rarity = 2
+cost = 2
+move = 2
+rules_text = "Move 2"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"recon_drone"
+code = "CZ-027"
+display_name = "Recon Drone"
+type = 2
+rarity = 4
+cost = 5
+search = 2
+pull = 1
+rules_text = "Search 2. Pull 1."

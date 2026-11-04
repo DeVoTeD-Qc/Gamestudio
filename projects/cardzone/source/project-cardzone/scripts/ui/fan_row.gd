@@ -15,6 +15,8 @@ var card_size: Vector2 = Vector2(84, 118):
 		update_minimum_size()
 		queue_sort()
 var gap: float = 8.0
+## Vertical placement when the row is taller than a card: 0 top, 0.5 centre, 1 bottom.
+var valign: float = 0.5
 ## Smallest exposed width of a covered card (logical px).
 var min_step: float = 64.0
 ## Cards this row must be able to hold without dropping below min_step (minimum width).
@@ -43,6 +45,6 @@ func _notification(what: int) -> void:
 			if c is Control and (c as Control).visible:
 				cards.append(c)
 		var step: float = step_for(cards.size())
-		var y: float = floorf((size.y - card_size.y) * 0.5)
+		var y: float = floorf((size.y - card_size.y) * valign)
 		for i: int in cards.size():
 			fit_child_in_rect(cards[i], Rect2(Vector2(floorf(i * step), y), card_size))

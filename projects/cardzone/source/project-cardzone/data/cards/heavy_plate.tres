@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"heavy_plate"
+code = "CZ-031"
+display_name = "Heavy Plate"
+type = 2
+rarity = 5
+cost = 0
+supply_drop = true
+brace = 3
+move = 1
+heal = 1
+rules_text = "Heal 1. Move 1."

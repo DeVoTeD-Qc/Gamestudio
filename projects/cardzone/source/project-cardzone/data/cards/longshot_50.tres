@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"longshot_50"
+code = "CZ-032"
+display_name = "Longshot .50"
+type = 0
+rarity = 6
+cost = 0
+supply_drop = true
+dmg = 4
+rng = 2
+ignores_cover = true
+rules_text = "Shoot. DMG 4 · RNG 2. Ignores Cover."

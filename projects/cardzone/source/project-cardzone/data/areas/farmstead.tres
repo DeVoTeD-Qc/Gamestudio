@@ -1,9 +1,9 @@
 [gd_resource type="Resource" script_class="AreaData" load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
-[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="9_card_data"]
-[ext_resource type="Resource" path="res://data/cards/bandage.tres" id="2_bandage"]
-[ext_resource type="Resource" path="res://data/cards/smoke_grenade.tres" id="3_smoke_grenade"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/bandage.tres" id="3_bandage"]
+[ext_resource type="Resource" path="res://data/cards/smoke_grenade.tres" id="4_smoke_grenade"]
 
 [resource]
 script = ExtResource("1_script")
@@ -13,4 +13,4 @@ number = 2
 tier = 0
 cover = 1
 adjacent = Array[StringName]([&"docks", &"quarry", &"old_town"])
-piles = Array[ExtResource("9_card_data")]([ExtResource("2_bandage"), ExtResource("3_smoke_grenade")])
+piles = Array[ExtResource("2_card_data")]([ExtResource("3_bandage"), ExtResource("4_smoke_grenade")])
