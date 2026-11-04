@@ -556,7 +556,7 @@ func _chrome_tiger() -> void:  # low-poly chrome tiger head
 	_vgrad(Rect2(0, 0, CARD_W, DESIGN_H), _deep(), _mid().darkened(0.4))
 	for i: int in 9:
 		_line(Vector2(i * 64 - 40, 128), Vector2(i * 64 + 40, 0), _hi(0.08), 10.0)
-	var c := Vector2(150 + _rng.randf_range(-10, 10), 66)
+	var c := Vector2(360 + _rng.randf_range(-6, 6), 68)  # right-centre: store cards have no trait icon there
 	var tones: Array = [_hi(), _hi().darkened(0.15), _mid().lightened(0.3), _mid(), _hi().darkened(0.3)]
 	var head: Array = [Vector2(-46, -40), Vector2(-20, -50), Vector2(20, -50), Vector2(46, -40), Vector2(58, -6),
 			Vector2(40, 34), Vector2(0, 52), Vector2(-40, 34), Vector2(-58, -6)]
