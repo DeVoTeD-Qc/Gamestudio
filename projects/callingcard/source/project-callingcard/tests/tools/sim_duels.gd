@@ -35,7 +35,8 @@ func _run() -> void:
 			args[a.substr(2, a.find("=") - 2)] = a.substr(a.find("=") + 1)
 	var duels: int = int(args.get("duels", "1000"))
 	var base_seed: int = int(args.get("seed", "1"))
-	var second_bonus: int = int(args.get("second_bonus", "0")) - int(args.get("first_bonus", "0"))
+	var second_bonus: int = int(args.get("second_bonus", "0"))
+	var first_bonus: int = int(args.get("first_bonus", "0"))
 	var warden_nodes: int = int(args.get("warden_nodes", "0"))
 	var warden_ms: float = float(args.get("warden_ms", "0"))
 	var first_sig_bonus: int = int(args.get("first_sig_bonus", "0"))
@@ -105,20 +106,24 @@ func _run() -> void:
 				if not r.ok:
 					push_error("sim: illegal move %s" % r.error)
 					break
-			var res: Dictionary = _result(state, second_bonus, first_sig_bonus, sig_tiebreak)
+			var res: Dictionary = _result(state, first_bonus, second_bonus, first_sig_bonus, sig_tiebreak)
 			for bk: Dictionary in [bucket, total]:
 				_add(bk, res, first, pairs[p])
 		per_pair.append(bucket)
 	var secs: float = (Time.get_ticks_msec() - t0) / 1000.0
-	_report(per_pair, total, warden_us, warden_nodes_seen, balance, second_bonus, base_seed, secs)
+	var knobs: String = "tie rule %s, first-player bonus %d, second-player bonus %d, first-player Signature bonus %d%s" % [
+			"first player" if balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER else "draw", first_bonus,
+			second_bonus, first_sig_bonus, ", Signature tie-break" if sig_tiebreak else ""]
+	_report(per_pair, total, warden_us, warden_nodes_seen, knobs, base_seed, secs)
 	quit(0)
 
 
 ## Final result with the sim-only bonuses applied.
-func _result(state: WallState, second_bonus: int, first_sig_bonus: int = 0, sig_tiebreak: bool = false) -> Dictionary:
+func _result(state: WallState, first_bonus: int, second_bonus: int, first_sig_bonus: int = 0,
+		sig_tiebreak: bool = false) -> Dictionary:
 	var s: Array[int] = WallRules.scores(state)
-	var second: int = WallState.other(state.first_player)
-	s[second] += second_bonus  # Negative = a first-player bonus.
+	s[state.first_player] += first_bonus
+	s[WallState.other(state.first_player)] += second_bonus
 	if first_sig_bonus != 0:
 		for slot: StringName in state.cells:
 			var pc: PlacedCard = state.cells[slot]
@@ -171,9 +176,8 @@ func _pct(a: int, b: int) -> String:
 
 
 func _report(per_pair: Array, total: Dictionary, warden_us: Array[int], warden_nodes: Array[int],
-		balance: BalanceConfig, second_bonus: int, base_seed: int, secs: float) -> void:
-	print("## Sim: %d duels, seed %d, tie rule %s, second-player bonus %d (negative: first-player bonus) (%.1f s)" % [total["n"], base_seed,
-			"first player" if balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER else "draw", second_bonus, secs])
+		knobs: String, base_seed: int, secs: float) -> void:
+	print("## Sim: %d duels, seed %d, %s (%.1f s)" % [total["n"], base_seed, knobs, secs])
 	print("")
 	print("| Pairing (A vs B) | Duels | A wins | B wins | Draws | First-player wins | Ties | Avg score (A+B) | Avg first / second |")
 	print("|---|---|---|---|---|---|---|---|---|")
