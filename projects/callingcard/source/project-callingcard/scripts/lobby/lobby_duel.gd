@@ -151,14 +151,17 @@ func start_quick_duel() -> void:
 	if duel != null:
 		return
 	var ids: Array = []
+	var sig: StringName = &""
 	if collection != null and collection.has_saved_lineup():
-		ids = (collection.get_saved_lineup_ids().get("cards", []) as Array).duplicate()
+		var saved: Dictionary = collection.get_saved_lineup_ids()
+		ids = (saved.get("cards", []) as Array).duplicate()
+		sig = StringName(str(saved.get("signature", "")))
 	var choices: Array[StringName] = []
 	for r: Dictionary in DuelSetup.rivals():
 		if QUICK_RIVALS.has(r["id"]):
 			choices.append(r["id"])
 	rival_id = choices[(duel_seed if duel_seed != 0 else randi()) % choices.size()] if not choices.is_empty() else &""
-	DuelControllerScript.set_next_duel(rival_id, ids)
+	DuelControllerScript.set_next_duel(rival_id, ids, sig)
 	_spawn_duel(&"quick", {})
 	phase = &"playing"
 
@@ -204,7 +207,7 @@ func _on_match_found() -> void:
 	if ctrl.phase == &"over":
 		_show_banner(&"ready", HubUi.result_words(HubUi.result_word(ctrl.last_result)))
 	else:
-		_show_banner(&"choice", "Your match is ready. Keep playing, or save this duel and finish it later.")
+		_show_banner(&"choice", "Your match is ready.")
 
 
 func _show_banner(kind: StringName, body: String) -> void:
@@ -390,6 +393,14 @@ func _build() -> void:
 	_banner.theme_type_variation = &"InspectorPanel"
 	_banner.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_banner.mouse_filter = Control.MOUSE_FILTER_STOP
+	var sb: StyleBox = _banner.get_theme_stylebox(&"panel", &"InspectorPanel")
+	if sb != null:
+		sb = sb.duplicate()
+		sb.content_margin_top = 3
+		sb.content_margin_bottom = 3
+		sb.content_margin_left = 16
+		sb.content_margin_right = 4
+		_banner.add_theme_stylebox_override(&"panel", sb)
 	bcol.add_child(_banner)
 	var brow: HBoxContainer = HBoxContainer.new()
 	brow.name = "BannerRow"
@@ -401,7 +412,7 @@ func _build() -> void:
 	text_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	text_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brow.add_child(text_col)
-	_banner_title = HubUi.label("BannerTitle", "MATCH FOUND", &"InspectorName")
+	_banner_title = HubUi.label("BannerTitle", "MATCH FOUND", &"InspectorHeading")
 	text_col.add_child(_banner_title)
 	_banner_body = HubUi.label("BannerBody", "", &"Caption")
 	_banner_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -422,7 +433,10 @@ func _build() -> void:
 func _relayout() -> void:
 	var m: Array[Vector2] = HubUi.safe_margins(self, safe_area_override)
 	HubUi.apply_margins(_wait_margin, m[0], m[1])
-	HubUi.apply_margins(_banner_margin, m[0], m[1])
+	# The banner sits over the duel's top bar (scores, turn), clear of the wall, hand and PLACE:
+	# only the device's own insets plus a few px, not the screen's base margin.
+	var bm: Array[Vector2] = HubUi.safe_margins(self, safe_area_override, Vector2(16, 2))
+	HubUi.apply_margins(_banner_margin, bm[0], bm[1])
 	var compact: bool = HubUi.is_compact(self)
 	_banner_body.custom_minimum_size.x = 260 if compact else 360
 	for b: Button in [_save_button, _keep_button, _join_button]:

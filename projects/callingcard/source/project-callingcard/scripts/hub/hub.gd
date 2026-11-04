@@ -113,9 +113,12 @@ func _on_lobby_saved(_saved: bool) -> void:
 ## DUEL A RIVAL: the saved lineup (ids; the duel uses its saved Signature) or the loaner.
 func duel_rival(rival_id: StringName) -> void:
 	var ids: Array = []
+	var sig: StringName = &""
 	if collection != null and collection.has_saved_lineup():
-		ids = (collection.get_saved_lineup_ids().get("cards", []) as Array).duplicate()
-	DuelControllerScript.set_next_duel(rival_id, ids)
+		var saved: Dictionary = collection.get_saved_lineup_ids()
+		ids = (saved.get("cards", []) as Array).duplicate()
+		sig = StringName(str(saved.get("signature", "")))
+	DuelControllerScript.set_next_duel(rival_id, ids, sig)
 	_go(&"duel")
 
 

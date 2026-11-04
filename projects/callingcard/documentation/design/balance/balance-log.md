@@ -1,12 +1,60 @@
 # CallingCard: Balance Log
 
-*Mechanics Developer · cc06 · 2026-11-04. Data: `data/balance.tres` (unchanged), `data/rivals/*.tres` (cc03).
+*Mechanics Developer · cc06 · 2026-11-04. Data: `data/balance.tres`, `data/rivals/*.tres` (cc03).
 Tool: `tests/tools/sim_duels.gd` (seeded, headless; the real `WallRules` engine and the cc06 rival AIs).*
 
 ```
-godot --headless --path . -s res://tests/tools/sim_duels.gd -- --duels=1000 [--seed=N] [--tie=draw]
-      [--first_bonus=N] [--second_bonus=N] [--first_sig_bonus=N] [--knobs=chain_captures:1,...]
+godot --headless --path . -s res://tests/tools/sim_duels.gd -- --duels=1000 [--seed=N] [--tie=first|draw]
+      [--first_bonus=N] [--second_bonus=N] [--first_sig_bonus=N] [--knobs=first_player_bonus:0,chain_captures:1,...]
 ```
+
+## Change log
+| Date | Change | Why |
+|---|---|---|
+| 2026-11-04 | **Tempo:** `first_player_bonus` 0 → **2** (new `BalanceConfig` field), `tie_winner` FIRST_PLAYER → **DRAW** | Proposal A below, chosen by the studio head. Moves first-player wins from 41.5% to 47.3% of decided duels |
+| 2026-11-04 | Collection: a draw is not a win for any goal and does not break the win streak (only a loss resets it) | Studio head decision that came with Tempo |
+
+## Tempo adopted: before / after (3 × 1,000 duels, seeds 1 / 5001 / 9001)
+"After" is the shipped data, played by AIs that know the bonus. It is part of `WallRules.score`, so
+the evaluation and the end result both include it.
+
+| Rules | First-player wins (of all) | First-player wins (of decided) | Draws counted as half | Draws | Level scores (ties) | Avg score per duel | Avg first / second |
+|---|---|---|---|---|---|---|---|
+| Before: no bonus, ties to the first player | 44.1 / 41.0 / 39.4% (mean 41.5%) | same (no draws) | 41.5% | 0% | 20.5 / 19.1 / 17.4% (19.0%) | 12.00 | 5.13 / 6.88 |
+| Estimate: +2 applied after scoring, AIs unaware | 44.1 / 41.0 / 39.4% | 55.0 / 52.9 / 50.1% (52.7%) | 52.1% | 21.2% | – | 14.00 | 7.13 / 6.88 |
+| **After: Tempo +2, ties are draws (shipped)** | 39.7 / 37.4 / 37.2% (mean 38.1%) | **49.2 / 46.4 / 46.4% (mean 47.3%)** | **47.8%** | **19.3 / 19.4 / 19.8% (19.5%)** | = draws | 14.00 | 6.99 / 7.02 |
+
+- **Inside the 45–55% band** for decided duels and for the half-credit count. It sits lower than the
+  estimate because the AIs now play for the bonus, and because Clutch's behind-check includes it.
+- **Clutch:** the second player is "behind" at 0–2 from the start, so its first Clutch card always
+  gets +2. In the Warden mirror this brings the first player down from 54.8% (no Tempo) to
+  30–32% of all duels (draws 27–34%).
+- If a little more first-player share is wanted later, the next knob to test is leaving Tempo out of
+  `is_behind`. It would be one `RulesOptions` flag. Not built.
+- Averages: first player 6.98 including the +2, second player 7.02; one duel in five ends level.
+
+### After, full table (seed 1)
+
+| Pairing (A vs B) | Duels | A wins | B wins | Draws | First-player wins | Ties | Avg score (A+B) | Avg first / second |
+|---|---|---|---|---|---|---|---|---|
+| quartermaster vs quartermaster | 167 | 34.1% | 41.9% | 24.0% | 42.5% | 24.0% | 14.00 | 7.16 / 6.84 |
+| quartermaster vs archivist | 167 | 3.0% | 92.2% | 4.8% | 49.7% | 4.8% | 14.00 | 7.37 / 6.63 |
+| quartermaster vs warden | 167 | 4.8% | 86.8% | 8.4% | 44.9% | 8.4% | 14.00 | 6.81 / 7.19 |
+| archivist vs archivist | 167 | 39.5% | 31.7% | 28.7% | 27.5% | 28.7% | 14.00 | 6.84 / 7.16 |
+| archivist vs warden | 166 | 16.3% | 68.1% | 15.7% | 41.6% | 15.7% | 14.02 | 7.00 / 7.02 |
+| warden vs warden | 166 | 31.9% | 33.7% | 34.3% | 31.9% | 34.3% | 14.00 | 6.93 / 7.07 |
+| **All** | 1000 | 21.6% | 59.1% | 19.3% | 39.7% (49.2% of decided) | 19.3% | 14.00 | 7.02 / 6.99 |
+
+Seeds 5001 / 9001: Warden beats the Quartermaster 88.6% / 86.2% and the Archivist 62.7% / 67.5%
+(draws 20.5% / 18.1%). The Archivist beats the Quartermaster 88.6% / 92.2%. The difficulty ladder holds.
+
+Warden timings with Tempo, same code: mean 12.2 ms, p95 29.3 ms, p99 37.6 ms, nodes max 227–231.
+Single maxima of 85–95 ms appeared while other studio agents were loading the machine (load average 1.6–2.1).
+They are scheduler stalls, not search size. See Timings below.
+
+---
+
+*Everything below is the original cc06 analysis (pre-Tempo data) that led to the decision.*
 
 ## Summary
 - **First-player win rate: 39.4–44.1% across three 1,000-duel runs (mean 41.5%).** That is below the

@@ -43,6 +43,8 @@ static var autostart: bool = true
 static var next_rival_id: StringName = &""
 ## Set by the lineup builder (CardData or ids); empty = loaner lineup.
 static var next_player_lineup: Array = []
+## cc13: the Signature for next_player_lineup (&"" = the one saved with that lineup, else the default).
+static var next_signature: StringName = &""
 ## Override for the rival brain: func(rival: RivalData, seed: int) -> brain with
 ## choose_move(state, player). Invalid (default) = RivalAI.for_rival (cc06), random without RivalData.
 static var brain_factory: Callable = Callable()
@@ -52,9 +54,10 @@ static func set_autostart(v: bool) -> void:
 	autostart = v
 
 
-static func set_next_duel(rival_id: StringName, lineup: Array = []) -> void:
+static func set_next_duel(rival_id: StringName, lineup: Array = [], signature: StringName = &"") -> void:
 	next_rival_id = rival_id
 	next_player_lineup = lineup.duplicate()
+	next_signature = signature
 
 
 ## 0 = random seed per duel. Same seed = same coin flip and rival moves.
@@ -129,6 +132,9 @@ func open_setup() -> void:
 		var p: Dictionary = DuelSetup.player_lineup(next_player_lineup)
 		player_lineup.assign(p["lineup"])
 		player_signature = p["signature"]
+		for c: CardData in player_lineup:  # cc13: an explicit Signature wins when it is legal
+			if c.id == next_signature and c.signature_eligible:
+				player_signature = c
 		var asked: Array = next_player_lineup.map(func(c: Variant) -> StringName: return c.id if c is CardData else StringName(str(c)))
 		_loaner = asked != player_lineup.map(func(c: CardData) -> StringName: return c.id)
 	state = null
@@ -179,7 +185,7 @@ func start_duel() -> void:
 	var you_first: bool = first == P1
 	_overlay.open(&"coin", "COIN FLIP: %s" % ("HEADS" if you_first else "TAILS"),
 			("You place first." if you_first else "%s places first." % rival["name"])
-			+ " A tied score goes to the first player; the second player gets the last placement.",
+			+ " " + _tie_rule_text(first),
 			[{"id": &"begin", "text": "BEGIN", "primary": true}])
 
 
@@ -404,8 +410,9 @@ func _fill_end(word: StringName) -> void:
 	box.add_child(score)
 	box.add_child(_label("You  ·  %s" % rival["name"], &"Caption", HORIZONTAL_ALIGNMENT_CENTER))
 	if last_result["tie"]:
-		box.add_child(_label("Tied score: the first player (%s) takes it." % ("you" if state.first_player == P1 else rival["name"]),
-				&"InspectorBody", HORIZONTAL_ALIGNMENT_CENTER))
+		var tie_text: String = "Level score: a draw." if state.balance.tie_winner == DataEnums.TieWinner.DRAW \
+				else "Tied score: the first player (%s) takes it." % ("you" if state.first_player == P1 else rival["name"])
+		box.add_child(_label(tie_text, &"InspectorBody", HORIZONTAL_ALIGNMENT_CENTER))
 	var ui: Dictionary = ui_state()
 	box.add_child(_label("Signatures (count double): yours %s · theirs %s" % [
 			_sig_word(ui["player"]["signature_carded_by"]), _sig_word(ui["rival"]["signature_carded_by"])],
@@ -581,6 +588,16 @@ func _fill_setup() -> void:
 # --- UI state ---------------------------------------------------------------------------------
 
 ## The screen's state Dictionary (mock_duel_data.gd shape) from the WallState.
+## Coin-flip line describing Tempo and the tie rule from the duel's balance data.
+func _tie_rule_text(first: int) -> String:
+	var bal: BalanceConfig = state.balance
+	var who: String = "You start" if first == P1 else "%s starts" % rival["name"]
+	var tempo: String = ("%s with +%d (Tempo). " % [who, bal.first_player_bonus]) if bal.first_player_bonus > 0 else ""
+	if bal.tie_winner == DataEnums.TieWinner.DRAW:
+		return tempo + "A level score is a draw."
+	return tempo + "A tied score goes to the first player; the second player gets the last placement."
+
+
 func ui_state() -> Dictionary:
 	if state == null:
 		return _preview_ui()
@@ -592,7 +609,7 @@ func ui_state() -> Dictionary:
 	return {
 		"first_player": _side(state.first_player), "turn_side": _side(state.to_move),
 		"turn_index": state.placements + 1, "turns_total": state.topology.slot_count(),
-		"rival_name": rival["name"],
+		"rival_name": rival["name"], "first_player_bonus": state.balance.first_player_bonus,
 		"player": _side_ui(P1, "You", over), "rival": _side_ui(P2, rival["name"], over), "wall": wall,
 	}
 

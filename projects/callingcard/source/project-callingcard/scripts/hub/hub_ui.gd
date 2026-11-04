@@ -21,9 +21,10 @@ static func is_compact(c: Control) -> bool:
 
 ## [left-top, right-bottom] margins in logical px: the base margin, grown to the device safe area
 ## on phones (or to override, a safe rect in logical px, for tests and previews).
-static func safe_margins(c: Control, override: Rect2 = Rect2()) -> Array[Vector2]:
+## base: the minimum margin (default: the screen's base margin, compact or not).
+static func safe_margins(c: Control, override: Rect2 = Rect2(), base: Vector2 = Vector2(-1, -1)) -> Array[Vector2]:
 	var logical: Vector2 = c.get_viewport_rect().size
-	var lt: Vector2 = BASE_MARGIN_COMPACT if is_compact(c) else BASE_MARGIN
+	var lt: Vector2 = base if base.x >= 0.0 else (BASE_MARGIN_COMPACT if is_compact(c) else BASE_MARGIN)
 	var rb: Vector2 = lt
 	var on_phone: bool = OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android")
 	if on_phone or override.has_area():
