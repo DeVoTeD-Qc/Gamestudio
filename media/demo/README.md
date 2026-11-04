@@ -1,7 +1,9 @@
 # Killstreak studio demo video
 
 `killstreak-studio-demo.mp4` shows how the studio built Killstreak from one prompt: a replay of the
-Studio Floor board (tasks, agents, reviews, chat, commits), then a short trailer-style teaser cut from real gameplay of the web build.
+Studio Floor board (tasks, agents, reviews, chat, commits) up to the playable build, then the next day's
+art pass (the image prompt pack, the studio head's generated images, the before/after integration),
+then a short trailer-style teaser cut from real gameplay of the web build with the new painted art.
 `poster.png` is a 1280×720 frame for the player.
 
 Everything in the replay comes from real records. `build_timeline.py` reads an export of the Studio
@@ -14,7 +16,7 @@ was recorded by tapping through the real game, nothing staged. The teaser adds z
 
 | File | What it does |
 |---|---|
-| `build_timeline.py` | Builds `timeline.json` (scenes, captions, events, clock) from the data export and the game recording |
+| `build_timeline.py` | Builds `timeline.json` (scenes, captions, events, clock) from the data export, the git log, the image prompt pack, the art files and the game recording |
 | `timeline.json` | The scripted timeline that `replay.html` plays |
 | `replay.html` | Replica of the Studio Floor page. `render(t)` draws the frame at time `t`, so the output does not depend on capture speed |
 | `record.js` | Frame-accurate capture of `replay.html`: one screenshot per 1/30 s |
@@ -31,7 +33,9 @@ You need Godot 4.4.1 with web export templates, Node with Playwright and Chromiu
 Keep the intermediate frames outside the repo. `$W` below is a scratch folder.
 
 ```bash
-# 1. Export the Studio Floor data: tasks/ activity/ chat/ progress/ as one JSON per doc, plus the git log
+# 1. Export the Studio Floor data: tasks/ activity/ chat/ progress/ as one JSON per doc, plus the git log.
+#    The board now holds several projects: keep Killstreak's docs only (`project` is "killstreak" or
+#    missing; a progress doc belongs to Killstreak when its task does).
 git log --reverse --format='%aI|%h|%s' > $W/data/gitlog.txt
 
 # 2. Build a capture-only web build (adds the probe to a temporary copy of the project) and serve it
@@ -60,6 +64,32 @@ ffmpeg -i $W/video_only.mp4 -i $W/final.wav -map 0:v -map 1:a -c:v copy -c:a aac
   -movflags +faststart media/demo/killstreak-studio-demo.mp4
 ```
 
+## Beats
+
+| Time | Scene | What it shows |
+|---|---|---|
+| 0:00 | title | One prompt → a playable game |
+| 0:04 | prompt | The terminal request that set up the studio and the Killstreak project |
+| 0:13 | design | The Master Orchestrator's 7 design tasks |
+| 0:23 | review | The head approves the design docs and answers 10 questions |
+| 0:39 | plan | The Producer's 20-task plan, 5 more answers |
+| 0:50 | gate | The Godot download safety stop, then "go" |
+| 0:59 | parallel | Parallel build replayed from the commit log, tests 8 → 287 |
+| 1:26 | created | Tasks agents created mid-flight |
+| 1:39 | qa | QA and balance, the usage-limit pause (06:57 → 11:14 UTC) |
+| 1:49 | feedback | Visual polish (v01), the First Shot bug report, f04 |
+| 2:08 | stats | Start to playable: 7h 19m active build time |
+| 2:15 | artpack | Nov 4: the Sr Game Artist writes the 48-slot image prompt pack (k-art1, dc9fa41); the style block and the card_rifleman prompt type out, with the image it became |
+| 2:27 | upload | The head's upload: 6 zip parts, 47 of 48 images (a8c307e); the refused call-in tablet, the softer re-prompt, batch 2 (1c59bcf) |
+| 2:37 | artin | The Technical Artist's before/after wipes: k-art3 Title, run map, Supply Drop, perk offer, match (508d350); k-art4 hand cards and units (2778cf5), 323 → 329 tests |
+| 2:52 | game | Trailer cut from new gameplay on the new-art build |
+| 3:11 | end | End card |
+
+The art pass is shown on Nov 4's real clock (13:44 → 20:33 UTC). It is not added to the stats card,
+which covers the build from the first commit to the playable build (02:05 → 13:42 UTC, Nov 3). The
+board also holds other studio projects now, so the commit counter after Nov 3 counts only Killstreak
+commits (`KS_COMMITS` in `build_timeline.py`).
+
 ## Soundtrack
 
 All of it is synthesized in `audio/make_audio.py`. There are no samples, loops or downloaded sounds.
@@ -68,13 +98,16 @@ All of it is synthesized in `audio/make_audio.py`. There are no samples, loops o
   comes in at the design phase. Bass pulses and light hats build through the parallel-work section,
   and everything but the pad drops out while the usage-limit banner is up. A noise/sine riser leads
   into the trailer, where the bed lifts: kick grid, sub ostinato, hits on the cuts. The end card has
-  a soft add9 outro.
+  a soft add9 outro. In the art pass (Nov 4) the arpeggio returns softly, then bass and hats build
+  under the before/after wipes into the riser.
 - **SFX, placed on the timeline's real events:** blips when cards appear, ticks when tasks start,
   chimes for Review and approvals, clicks on taps, typing ticks under the terminal, pops on chat
   bubbles, whooshes on scene and drawer changes, and a two-tone alert for the usage limit. In the
   trailer: booms on shakes and stamps, whoosh plus bass drop on the title cards, a generic
   static/uplink sweep on the call-in, glitch blips on RGB-split shots, and a big low hit on the hero
-  reveal.
+  reveal. In the art pass: a paste snap and typing ticks for the prompt, pops for the 6 zip parts,
+  blips as the thumbnails fill in, a soft two-tone for the refused image, typing for the re-prompt,
+  chimes for batch 2 and for each before/after caption, whooshes on the wipes.
 - **Mix:** the music is ducked under the SFX. The replay sits around -18 to -20 LUFS short-term, the
   trailer around -10. Integrated loudness is -16 LUFS, true peak about -2 dBFS.
 
@@ -90,4 +123,13 @@ with a short range.
 - The usage-limit pause comes from the p18/p19 subagent transcripts, not from the board, where some
   agents guessed their report times: the agents stopped at 06:57:01 UTC and resumed at 11:14:10 UTC
   (`LIMIT_PAUSE` in `build_timeline.py`). The stats card shows active build time: 11h 36m wall clock
-  (02:05→13:42 UTC) minus 4h 17m paused, so 7h 19m. There was no other limit wait.
+  (02:05→13:42 UTC) minus 4h 17m paused, so 7h 19m. There was no other limit wait in that span.
+- The art pass (Nov 4, 13:45 → 20:33 UTC) had no usage-limit wait. The Nov 4 limit pauses hit the
+  CallingCard agents (d428b0d at 07:11, fbead69 at 11:38) and had ended by about 12:10.
+- The upload details (6 zip parts, the refusal of `fx_callin_tablet` and the softer re-prompt that
+  produced it) come from the lead session's chat with the head, not from the board. The repo confirms
+  them only in part: the batch1 README ("47 of 48", "the image generator rejected all retry attempts",
+  "Each ZIP is independent") and batch 2 with the single tablet image. The head's own upload messages
+  and the re-prompt text are not on the board, so the video shows them as labels, not as chat bubbles.
+- The Sr Game Artist's prompt pack was asked for in the lead session's chat, so the request text is
+  not shown either; the card says "Created by You · from chat", as on the board.

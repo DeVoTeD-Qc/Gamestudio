@@ -2,7 +2,7 @@
  "fps": 30,
  "width": 1920,
  "height": 1080,
- "duration": 178.0,
+ "duration": 179.0,
  "scenes": [
   {
    "id": "title",
@@ -219,58 +219,58 @@
   {
    "id": "upload",
    "start": 147.5,
-   "end": 156.5,
+   "end": 157.5,
    "view": "floor",
    "title": null,
    "captions": [
     {
      "t": 147.5,
-     "until": 152.3,
+     "until": 153.1,
      "text": "The head generates the images on the phone and uploads them: 6 zip parts, 47 of the 48 images."
     },
     {
-     "t": 152.3,
-     "until": 156.5,
+     "t": 153.1,
+     "until": 157.5,
      "text": "The generator refused one, the call-in tablet. A softer re-prompt got it, uploaded as batch 2."
     }
    ]
   },
   {
    "id": "artin",
-   "start": 156.5,
-   "end": 171.5,
+   "start": 157.5,
+   "end": 172.5,
    "view": "floor",
    "title": null,
    "captions": [
     {
-     "t": 156.5,
-     "until": 159.4,
+     "t": 157.5,
+     "until": 160.4,
      "text": "The Technical Artist checks every image against the reject checklist and wires it into the game."
     },
     {
-     "t": 159.4,
-     "until": 167.1,
+     "t": 160.4,
+     "until": 168.1,
      "text": "k-art3: Title key art, run map, Supply Drop, perk patches, lanes. Real phone screenshots, before \u2192 after."
     },
     {
-     "t": 167.1,
-     "until": 171.5,
+     "t": 168.1,
+     "until": 172.5,
      "text": "k-art4: the painted art moves onto the hand cards and the units deployed on the board."
     }
    ]
   },
   {
    "id": "game",
-   "start": 171.5,
-   "end": 172.5,
+   "start": 172.5,
+   "end": 173.5,
    "view": "game",
    "title": null,
    "captions": []
   },
   {
    "id": "end",
-   "start": 172.5,
-   "end": 178.0,
+   "start": 173.5,
+   "end": 179.0,
    "view": "end",
    "title": null,
    "captions": []
@@ -3520,24 +3520,24 @@
    "task": "k-art2",
    "zips": 6,
    "refused": "fx_callin_tablet",
-   "t": 149.5,
+   "t": 150.3,
    "k": "drawer"
   },
   {
    "hash": "a8c307e",
    "subject": "Killstreak: incoming generated art batch 1 (47 of 48 game-ready WebP from the k-art1 prompt pack)",
-   "t": 152.7,
+   "t": 153.5,
    "k": "commit"
   },
   {
    "id": "k-art2",
    "status": "done",
-   "t": 152.7,
+   "t": 153.5,
    "k": "status"
   },
   {
    "what": "refused",
-   "t": 152.8,
+   "t": 153.6,
    "k": "upmark"
   },
   {
@@ -3553,7 +3553,7 @@
     "fresh": true
    },
    "status": "doing",
-   "t": 153.0,
+   "t": 153.8,
    "k": "add"
   },
   {
@@ -3562,7 +3562,7 @@
    "task": "k-art3",
    "text": "Starting the batch1 art import: reading the prompt pack and the 47 incoming images.",
    "pct": 3,
-   "t": 153.0,
+   "t": 153.8,
    "k": "agent"
   },
   {
@@ -3571,28 +3571,28 @@
    "task": "k-art3",
    "text": "Reviewed all 47 images (none rejected so far) and took the before phone shots; now testing import settings.",
    "pct": 25,
-   "t": 153.7,
+   "t": 154.5,
    "k": "agent"
   },
   {
    "what": "reprompt",
-   "t": 153.7,
+   "t": 154.5,
    "k": "upmark"
   },
   {
    "hash": "1c59bcf",
    "subject": "Killstreak: incoming art batch 2 (fx_callin_tablet, cropped to 1536x864 WebP)",
-   "t": 154.5,
+   "t": 155.3,
    "k": "commit"
   },
   {
    "what": "batch2",
-   "t": 154.5,
+   "t": 155.3,
    "k": "upmark"
   },
   {
    "kind": null,
-   "t": 156.1,
+   "t": 157.1,
    "k": "drawer"
   },
   {
@@ -3601,13 +3601,13 @@
    "task": "k-art3",
    "text": "All 48 images are wired in, including the batch2 call-in tablet. After shots look good; now running the fallback test with deleted files and measuring load time.",
    "pct": 70,
-   "t": 156.9,
+   "t": 157.9,
    "k": "agent"
   },
   {
    "id": "k-art3",
    "status": "review",
-   "t": 159.0,
+   "t": 160.0,
    "k": "status"
   },
   {
@@ -3616,18 +3616,18 @@
    "task": null,
    "text": null,
    "pct": null,
-   "t": 159.0,
+   "t": 160.0,
    "k": "agent"
   },
   {
    "hash": "508d350",
    "subject": "k-art3: Killstreak uses the 48 generated images (cards, lanes, title, run/supply backdrops, run map, card back, perks, call-in) with procedural fallback",
-   "t": 159.1,
+   "t": 160.1,
    "k": "commit"
   },
   {
    "n": 323,
-   "t": 159.1,
+   "t": 160.1,
    "k": "tests"
   },
   {
@@ -3664,7 +3664,7 @@
      "label": "Match: lanes, card back on INCOMING, perk rings"
     }
    ],
-   "t": 159.3,
+   "t": 160.3,
    "k": "drawer"
   },
   {
@@ -3680,13 +3680,13 @@
     "fresh": true
    },
    "status": "todo",
-   "t": 166.8,
+   "t": 167.8,
    "k": "add"
   },
   {
    "id": "k-art4",
    "status": "doing",
-   "t": 167.0,
+   "t": 168.0,
    "k": "status"
   },
   {
@@ -3695,7 +3695,7 @@
    "task": "k-art4",
    "text": "Starting k-art4: reading the hand card and unit slot layouts to add painted art to hand cards and deployed units.",
    "pct": 3,
-   "t": 167.0,
+   "t": 168.0,
    "k": "agent"
   },
   {
@@ -3710,7 +3710,7 @@
      "chip": "323 \u2192 329 tests passing"
     }
    ],
-   "t": 167.1,
+   "t": 168.1,
    "k": "drawer"
   },
   {
@@ -3719,13 +3719,13 @@
    "task": "k-art4",
    "text": "Hand chips, board units and mulligan cards now show painted art, and all 329 tests pass; now taking final screenshots, measuring frame time and building.",
    "pct": 70,
-   "t": 168.1,
+   "t": 169.1,
    "k": "agent"
   },
   {
    "id": "k-art4",
    "status": "review",
-   "t": 169.1,
+   "t": 170.1,
    "k": "status"
   },
   {
@@ -3734,23 +3734,23 @@
    "task": null,
    "text": null,
    "pct": null,
-   "t": 169.1,
+   "t": 170.1,
    "k": "agent"
   },
   {
    "hash": "2778cf5",
    "subject": "k-art4: Killstreak painted art on hand chips, deployed units, mulligan and loadout tiles (procedural fallback, kill switch)",
-   "t": 169.2,
+   "t": 170.2,
    "k": "commit"
   },
   {
    "n": 329,
-   "t": 169.2,
+   "t": 170.2,
    "k": "tests"
   },
   {
    "kind": null,
-   "t": 171.1,
+   "t": 172.1,
    "k": "drawer"
   }
  ],
@@ -3880,51 +3880,51 @@
    "utc": 136350
   },
   {
-   "t": 152.7,
+   "t": 153.5,
    "utc": 153622
   },
   {
-   "t": 153.0,
+   "t": 153.8,
    "utc": 153653
   },
   {
-   "t": 153.7,
+   "t": 154.5,
    "utc": 154172
   },
   {
-   "t": 154.5,
+   "t": 155.3,
    "utc": 154612
   },
   {
-   "t": 156.5,
+   "t": 157.5,
    "utc": 154662
   },
   {
-   "t": 156.9,
+   "t": 157.9,
    "utc": 154947
   },
   {
-   "t": 159.0,
+   "t": 160.0,
    "utc": 155789
   },
   {
-   "t": 159.1,
+   "t": 160.1,
    "utc": 155829
   },
   {
-   "t": 167.0,
+   "t": 168.0,
    "utc": 156377
   },
   {
-   "t": 169.1,
+   "t": 170.1,
    "utc": 160359
   },
   {
-   "t": 169.2,
+   "t": 170.2,
    "utc": 160393
   },
   {
-   "t": 171.5,
+   "t": 172.5,
    "utc": 160423
   }
  ],
