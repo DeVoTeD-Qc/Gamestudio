@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"pump_shotgun"
+code = "CZ-014"
+display_name = "Pump Shotgun"
+type = 0
+rarity = 3
+cost = 4
+dmg = 3
+rng = 0
+rules_text = "Shoot. DMG 3 · RNG 0"

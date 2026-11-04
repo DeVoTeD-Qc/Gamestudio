@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"p9_sidearm"
+code = "CZ-001"
+display_name = "P-9 Sidearm"
+type = 0
+rarity = 1
+cost = 0
+dmg = 1
+rng = 0
+rules_text = "Shoot. DMG 1 · RNG 0"

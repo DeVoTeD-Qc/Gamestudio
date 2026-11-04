@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="AreaData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"radio_hill"
+display_name = "Radio Hill"
+number = 4
+tier = 0
+cover = 0
+adjacent = Array[StringName]([&"quarry", &"motel", &"old_town"])

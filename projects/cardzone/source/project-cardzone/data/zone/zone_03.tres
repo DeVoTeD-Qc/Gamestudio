@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ZoneCardData" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/zone_card_data.gd" id="1_script"]
+[ext_resource type="Resource" path="res://data/cards/twin_drum_lmg.tres" id="2_twin_drum_lmg"]
+[ext_resource type="Resource" path="res://data/areas/quarry.tres" id="3_quarry"]
+[ext_resource type="Resource" path="res://data/areas/docks.tres" id="4_docks"]
+[ext_resource type="Resource" path="res://data/areas/motel.tres" id="5_motel"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"zone_03"
+number = 3
+display_name = "Supply drop"
+drop_card = ExtResource("2_twin_drum_lmg")
+drop_a = ExtResource("3_quarry")
+drop_b = ExtResource("4_docks")
+drop_c = ExtResource("5_motel")

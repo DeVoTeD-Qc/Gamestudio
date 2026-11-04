@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="BalanceConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/balance_config.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"balance"
+hand_size = 5
+health = 5
+packing_rule = 0
+hold_limit = 2
+hold_looted = false
+adrenaline_mode = 0
+adrenaline_cap_per_turn = 0
+down_enabled = true
+down_value = 1
+bounty_heal = 1
+bounty_final_circle_extra = 1
+bounty_holder_loses_cover = false
+final_circle_hits = PackedInt32Array(1, 2, 3)
+zone_hard_end_card = 14
+standard_pack = true
+held_cards_public = false
+hits_on_top_public = true
+loadout_count_public = true
+supply_drop_cost = 4
+crate_cost = 1
+crate_free_picks = 1
+supply_drop_ready_delay = 0
+ditch_per_turn = 1
+min_loadout = 6
+pile_size_outer = 3
+pile_size_core = 2
+ai_think_budget_ms = 300

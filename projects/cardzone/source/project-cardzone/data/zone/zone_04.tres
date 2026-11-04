@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ZoneCardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/zone_card_data.gd" id="1_script"]
+[ext_resource type="Resource" path="res://data/areas/docks.tres" id="2_docks"]
+[ext_resource type="Resource" path="res://data/areas/radio_hill.tres" id="3_radio_hill"]
+[ext_resource type="Resource" path="res://data/areas/farmstead.tres" id="4_farmstead"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"zone_04"
+number = 4
+display_name = "Gas closes"
+close_a = ExtResource("2_docks")
+close_b = ExtResource("3_radio_hill")
+close_c = ExtResource("4_farmstead")

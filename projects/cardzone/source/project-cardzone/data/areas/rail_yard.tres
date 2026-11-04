@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AreaData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/area_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="9_card_data"]
+[ext_resource type="Resource" path="res://data/cards/red_dot_sight.tres" id="2_red_dot_sight"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"rail_yard"
+display_name = "Rail Yard"
+number = 6
+tier = 0
+cover = 0
+adjacent = Array[StringName]([&"motel", &"docks", &"old_town"])
+piles = Array[ExtResource("9_card_data")]([ExtResource("2_red_dot_sight")])

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StartPackData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/start_pack_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_card_data"]
+[ext_resource type="Resource" path="res://data/cards/scavenge.tres" id="3_scavenge"]
+[ext_resource type="Resource" path="res://data/cards/duck.tres" id="4_duck"]
+[ext_resource type="Resource" path="res://data/cards/dash.tres" id="5_dash"]
+[ext_resource type="Resource" path="res://data/cards/p9_sidearm.tres" id="6_p9_sidearm"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"standard_pack"
+display_name = "Standard pack"
+hand_sizes = PackedInt32Array(4, 5)
+cards = Array[ExtResource("2_card_data")]([ExtResource("3_scavenge"), ExtResource("3_scavenge"), ExtResource("3_scavenge"), ExtResource("4_duck"), ExtResource("5_dash"), ExtResource("5_dash"), ExtResource("6_p9_sidearm"), ExtResource("3_scavenge"), ExtResource("4_duck"), ExtResource("5_dash")])
