@@ -28,6 +28,11 @@ extends RefCounted
 ## Filler when the public count is short (fixtures that do not start from the Standard pack).
 const FILLER: StringName = &"scavenge"
 
+# Memo of guess_private (a pure function of the public view and the AI's own cards), keyed by
+# their hash: one entry per seat. It never changes a result, only skips recomputing it.
+static var _memo_key: Array[int] = [0, 0]
+static var _memo_guess: Array[Dictionary] = [{}, {}]
+
 
 ## The belief world for `seat`. Never changes `state`.
 static func world(state: MatchState, seat: int) -> MatchState:
@@ -50,7 +55,15 @@ static func world(state: MatchState, seat: int) -> MatchState:
 	ost.hand.clear()
 	ost.held.clear()
 	# 2. Rebuild them from public information.
-	var guess: Dictionary = guess_private(w.data, v, state.seats[seat], state)
+	var mine: SeatState = state.seats[seat]
+	var key: int = [v, _own_ids(state, mine), w.data.balance.get_instance_id(), state.route].hash()
+	var guess: Dictionary
+	if _memo_key[seat] == key and not _memo_guess[seat].is_empty():
+		guess = _memo_guess[seat]
+	else:
+		guess = guess_private(w.data, v, mine, state)
+		_memo_key[seat] = key
+		_memo_guess[seat] = guess
 	var held: Array[int] = []
 	for entry: Dictionary in guess["held"]:
 		var inst: int = _make(w, entry, opp)
@@ -223,6 +236,20 @@ static func public_counts(data: RulesData, v: Dictionary, me: SeatState, state: 
 
 
 # --- Internals --------------------------------------------------------------------------
+
+## The AI's own card ids, attachments included, sorted: all guess_private reads of its cards
+## (it only counts them, so where they sit does not matter).
+static func _own_ids(state: MatchState, me: SeatState) -> Array:
+	var out: Array = []
+	for list: Array[int] in [me.loadout, me.hand, me.line]:
+		for inst: int in list:
+			out.append(String(state.defs.get(inst, &"")))
+			if state.attachments.has(inst):
+				for att: Variant in state.attachments[inst]:
+					out.append(String(state.defs.get(int(att), &"")))
+	out.sort()
+	return out
+
 
 static func _make(w: MatchState, entry: Dictionary, owner: int) -> int:
 	var inst: int = w.new_card(entry["id"], owner)

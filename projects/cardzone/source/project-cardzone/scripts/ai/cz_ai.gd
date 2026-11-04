@@ -119,16 +119,17 @@ func _decide(_world: MatchState, _seat: int) -> Dictionary:
 static func attach_action(w: MatchState, seat: int) -> Dictionary:
 	var st: SeatState = w.seats[seat]
 	var cards: Dictionary = w.data.cards
-	var pool: Array[int] = []
 	var any_att: bool = false
 	for list: Array[int] in [st.hand, st.line]:
 		for inst: int in list:
-			pool.append(inst)
 			var c: CardData = cards.get(w.defs.get(inst, &""))
 			if c != null and c.type == DataEnums.CardType.ATTACHMENT:
 				any_att = true
 	if not any_att:
 		return {}
+	var pool: Array[int] = []
+	pool.append_array(st.hand)
+	pool.append_array(st.line)
 	var weapons: Array[int] = []
 	for inst: int in pool:
 		var c: CardData = w.def_of(inst)

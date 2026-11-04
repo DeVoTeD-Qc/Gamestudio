@@ -395,7 +395,8 @@ static func _loot_step(w: MatchState, me: int, th: Dictionary, dest: StringName)
 	return l
 
 
-## The strongest legal gun shot with damage > 0, or {}.
+## The strongest legal gun shot with damage > 0, or {}. Damage as LoadoutRules.shot_profile
+## computes it (DMG + attachments - Cover - Down), with Cover and Down worked out once.
 static func _best_shot(w: MatchState, me: int) -> Dictionary:
 	var st: SeatState = w.seats[me]
 	var opp: int = w.opponent_of(me)
@@ -403,18 +404,25 @@ static func _best_shot(w: MatchState, me: int) -> Dictionary:
 	var best_dmg: int = 0
 	if w.seats[opp].eliminated:
 		return best
-	var dist: int = w.data.distance(st.area, w.seats[opp].area)
+	var dist: int = -1
+	var down: int = -1
 	for inst: int in st.line:
-		if not w.def_of(inst).is_weapon():
+		var c: CardData = w.def_of(inst)
+		if not c.is_weapon():
 			continue
+		if dist < 0:
+			dist = w.data.distance(st.area, w.seats[opp].area)
 		# R12, R21 (as LoadoutRules._check_shoot): a shot left and the target in range.
 		if int(st.fired.get(inst, 0)) >= LoadoutRules.fire_limit(w, inst) or dist > LoadoutRules.weapon_range(w, inst):
 			continue
-		var a: Dictionary = {"type": "shoot", "seat": me, "weapon": inst, "target": opp}
-		var dmg: int = int(LoadoutRules.shot_profile(w, me, inst, opp)["damage"])
+		if down < 0:
+			down = w.data.balance.down_value if w.is_down(opp) else 0
+		var dmg: int = CzSim.weapon_dmg(w, inst)
+		var cover: int = LoadoutRules._cover(w, st.area, opp, c.ignores_cover)
+		dmg = maxi(0, dmg - cover - down)
 		if dmg > best_dmg:
 			best_dmg = dmg
-			best = a
+			best = {"type": "shoot", "seat": me, "weapon": inst, "target": opp}
 	return best
 
 
