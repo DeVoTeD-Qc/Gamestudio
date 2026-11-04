@@ -67,7 +67,9 @@ func test_balance_defaults_match_spec() -> void:
 	assert_eq([b.budget_for(1), b.budget_for(2), b.budget_for(3), b.budget_for(4), b.budget_for(5)], [13, 15, 17, 19, -1], "budgets")
 	assert_eq([b.set_link_bonus, b.clutch_bonus, b.ambush_spring_bonus], [1, 2, 1], "bonuses")
 	assert_eq([b.signature_value, b.triptych_bonus], [2, 1], "Signature x2, Triptych +1")
-	assert_eq(b.tie_winner, DataEnums.TieWinner.FIRST_PLAYER, "ties to first player")
+	# Tempo (cc06 Proposal A, decided 2026-11-04): first player +2, ties are draws.
+	assert_eq(b.tie_winner, DataEnums.TieWinner.DRAW, "ties are draws")
+	assert_eq(b.first_player_bonus, 2, "Tempo +2 for the first player")
 	assert_false(b.chain_captures, "no chain captures")
 	assert_eq([b.lobby_wait_min_s, b.lobby_wait_max_s], [60, 150], "lobby wait")
 

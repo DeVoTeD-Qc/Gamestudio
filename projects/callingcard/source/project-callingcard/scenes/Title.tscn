@@ -107,6 +107,15 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button")
 theme_override_styles/focus = SubResource("StyleBoxFlat_button")
 text = "ENTER THE WALL"
 
+[node name="LobbyButton" type="Button" parent="Margin/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"GhostButton"
+theme_override_font_sizes/font_size = 22
+text = "FIND A MATCH"
+
 [node name="StatusLabel" type="Label" parent="Margin/Column"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 28)

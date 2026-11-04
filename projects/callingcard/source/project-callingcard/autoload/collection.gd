@@ -604,6 +604,8 @@ func _on_dossier_completed(dossier_id: StringName) -> void:
 
 ## Counts one finished duel (not a Dossier). no_legend: the player's lineup is known and holds
 ## no Clearance 4 card. Wins against a rival are counted in total, not in a row.
+## A draw (decided 2026-11-04 with the Tempo rule) is not a win for any goal and does not break
+## the win streak; only a loss resets it.
 func _record_duel_result(result: StringName, rival_id: StringName, no_legend: bool) -> void:
 	_stats["duels"] += 1
 	match result:
@@ -621,7 +623,6 @@ func _record_duel_result(result: StringName, rival_id: StringName, no_legend: bo
 			_stats["streak"] = 0
 		_:
 			_stats["draws"] += 1
-			_stats["streak"] = 0
 
 
 ## Current value of a goal's counter (not capped).

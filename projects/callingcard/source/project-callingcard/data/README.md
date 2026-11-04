@@ -129,7 +129,8 @@ Each slot is used once across board, replies and solution; at most one Signature
 | `set_link_bonus` / `clutch_bonus` / `ambush_spring_bonus` | 1 / 2 / 1 | 0–3 |
 | `signature_value` | 2 | 1–3 |
 | `triptych_bonus` | 1 | 0–2 |
-| `tie_winner` | `FIRST_PLAYER`(0) | or `DRAW`(1) |
+| `tie_winner` | `DRAW`(1) since 2026-11-04 (spec: `FIRST_PLAYER`(0)) | or `FIRST_PLAYER`(0) |
+| `first_player_bonus` | 2 since 2026-11-04 ("Tempo"; class default 0) | 0–3; added to the first player's score |
 | `chain_captures` | off | |
 | `cipher_code` | 1, 2, 3, 4 | 4 distinct glyph numbers 1–4; each should be on a card |
 | `loaner_lineup` / `loaner_signature` | empty (cc03) | when set, a legal lineup (lineup rule) |

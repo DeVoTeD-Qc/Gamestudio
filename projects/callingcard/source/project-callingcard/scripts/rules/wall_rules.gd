@@ -138,10 +138,13 @@ static func copied_trait(state: WallState, from_slot: StringName) -> DataEnums.C
 # --- Scoring --------------------------------------------------------------------
 
 ## Points for `player` (spec §4.5): 1 per controlled card, signature_value per controlled Signature,
-## plus triptych_bonus per Triptych scored. full = the true board (face-down cards counted with
-## their identity). full = false is the public score: face-down cards count 1, no Triptychs.
+## plus triptych_bonus per Triptych scored, plus balance.first_player_bonus ("Tempo", decided
+## 2026-11-04) when `player` is the first player. full = the true board (face-down cards counted
+## with their identity). full = false is the public score: face-down cards count 1, no Triptychs.
+## The Tempo bonus is public and part of the real score, so it counts in both, from the first
+## placement on: final_result, the score bar and Clutch's behind-check (is_behind) all include it.
 static func score(state: WallState, player: int, full: bool = true) -> int:
-	var total: int = 0
+	var total: int = state.balance.first_player_bonus if player == state.first_player else 0
 	for slot: StringName in state.cells:
 		var pc: PlacedCard = state.cells[slot]
 		if pc.controller != player:
@@ -160,7 +163,8 @@ static func scores(state: WallState) -> Array[int]:
 	return [score(state, WallState.P1), score(state, WallState.P2)]
 
 
-## Clutch's behind-check (spec §10, RQ-09): strictly lower score, before the placement.
+## Clutch's behind-check (spec §10, RQ-09): strictly lower score, before the placement. Includes
+## the Tempo bonus (see score), so the second player is behind at 0-2.
 static func is_behind(state: WallState, player: int) -> bool:
 	var full: bool = state.options.clutch_uses_full_score
 	return score(state, player, full) < score(state, WallState.other(player), full)
@@ -190,7 +194,8 @@ static func triptychs_scored(state: WallState, player: int) -> Array[StringName]
 
 
 ## End-of-game result: {score: [P1, P2], winner: P1 / P2 / NO_PLAYER (draw), tie: bool,
-## triptychs: [[ids of P1], [ids of P2]]}. Ties go to the first player unless tie_winner is DRAW.
+## triptychs: [[ids of P1], [ids of P2]]}. Scores include the Tempo bonus. Ties go to the first
+## player unless tie_winner is DRAW (the shipped setting since 2026-11-04: winner NO_PLAYER).
 static func final_result(state: WallState) -> Dictionary:
 	var s: Array[int] = scores(state)
 	var winner: int = WallState.NO_PLAYER

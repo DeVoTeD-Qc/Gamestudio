@@ -1,9 +1,9 @@
 # title.gd
 # Purpose: Placeholder Title screen (cc01): game name, "concept demo" line and the
-#   unofficial-pitch disclaimer (plan header, IP rule). cc13 replaces the placeholder
-#   button with the hub entry points (Lobby Duel / Banner Wall).
+#   unofficial-pitch disclaimer (plan header, IP rule). cc13: the two entry points, ENTER THE WALL
+#   (the Banner Wall hub) and FIND A MATCH (the Lobby Duel's simulated matchmaking wait).
 #   Prints "Title: ready", the marker the web load-time check waits for (cc17).
-# Dependencies: EventBus, Settings.
+# Dependencies: EventBus, Settings, SceneRouter.
 # Author: Mechanics Developer Agent
 extends Control
 
@@ -16,6 +16,7 @@ const DISCLAIMER: String = "Unofficial concept demo. Not affiliated with Activis
 @onready var _disclaimer: Label = %DisclaimerLabel
 @onready var _status: Label = %StatusLabel
 @onready var _start: Button = %StartButton
+@onready var _lobby: Button = %LobbyButton
 
 
 func _ready() -> void:
@@ -24,10 +25,16 @@ func _ready() -> void:
 	_disclaimer.text = DISCLAIMER
 	_status.text = ""
 	_start.pressed.connect(_on_start_pressed)
+	_lobby.pressed.connect(_on_lobby_pressed)
 	EventBus.screen_shown.emit(&"title")
 	print("Title: ready")
 
 
 func _on_start_pressed() -> void:
-	# Placeholder until the hub (cc13) exists.
-	_status.text = "The wall is still being built. Check back soon."
+	_status.text = "Opening the wall..."
+	SceneRouter.goto_scene(SceneRouter.SCENE_HUB)
+
+
+func _on_lobby_pressed() -> void:
+	_status.text = "Looking for a match..."
+	SceneRouter.goto_scene(SceneRouter.SCENE_LOBBY)

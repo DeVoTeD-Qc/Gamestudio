@@ -69,13 +69,15 @@ func test_count_goals_read_targets_from_data() -> void:
 	var streak: int = _goal(&"unlock_win_streak_3").target_count
 	var wins: int = _goal(&"unlock_wins_5").target_count
 	var caps: int = _goal(&"unlock_captures_20").target_count
-	# Streak: a loss or draw resets it.
+	# Streak: a loss resets it; a draw neither breaks nor extends it (decided 2026-11-04).
+	for i: int in streak - 1:
+		fx.play(&"win")
+	fx.play(&"loss")
+	assert_eq(c.goal_progress(&"unlock_win_streak_3")["current"], 0, "loss resets the streak")
 	for i: int in streak - 1:
 		fx.play(&"win")
 	fx.play(&"draw")
-	assert_eq(c.goal_progress(&"unlock_win_streak_3")["current"], 0, "draw resets the streak")
-	for i: int in streak - 1:
-		fx.play(&"win")
+	assert_eq(c.goal_progress(&"unlock_win_streak_3")["current"], streak - 1, "draw keeps the streak")
 	assert_false(c.owns(&"polar_night"), "streak not reached yet")
 	fx.play(&"win")
 	assert_true(c.owns(&"polar_night"), "win streak -> Polar Night")
@@ -291,4 +293,29 @@ func test_reclaim_is_not_a_capture() -> void:
 	fx.bus().card_reclaimed.emit(&"player", &"mayday", &"b2")
 	fx.end_duel(&"loss")
 	assert_eq(c.stats()["captures"], 0, "Reclaim doesn't count toward captures")
+	fx.finish()
+
+
+## Tempo rule (2026-11-04): duels can end in a draw. A draw is never a win for any goal, and it
+## doesn't break (or extend) the win streak.
+func test_draws_are_not_wins_and_keep_the_streak() -> void:
+	var fx: RefCounted = Fx.new(tree)
+	var c: Node = fx.make("draws")
+	for i: int in 6:
+		fx.play(&"draw", &"warden")
+	var st: Dictionary = c.stats()
+	assert_eq([st["duels"], st["draws"], st["wins"], st["losses"]], [6, 6, 0, 0], "6 draws counted as draws only")
+	assert_eq(int(st["rival_wins"].get("warden", 0)), 0, "a draw doesn't beat the Warden")
+	assert_eq(int(st["rival_wins_no_legend"].get("warden", 0)), 0, "nor Legend-free")
+	assert_eq(c.goal_progress(&"unlock_wins_5")["current"], 0, "wins total unchanged")
+	assert_eq(c.goal_progress(&"unlock_win_streak_3")["current"], 0, "draws don't build a streak")
+	assert_false(c.owns(&"city_never_sleeps"), "no Beat-the-Warden unlock")
+	assert_false(c.owns(&"honor_roll"), "no wins-total unlock")
+	# Win, draw, win, draw, win: the streak survives the draws.
+	for r: StringName in [&"win", &"draw", &"win", &"draw"]:
+		fx.play(r)
+	assert_eq(c.stats()["streak"], 2, "streak 2 after W D W D")
+	fx.play(&"loss")
+	assert_eq(c.stats()["streak"], 0, "a loss still resets it")
+	assert_eq(c.stats()["best_streak"], 2, "best streak counts wins only")
 	fx.finish()

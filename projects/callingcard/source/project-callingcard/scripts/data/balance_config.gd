@@ -44,6 +44,10 @@ const ROW_LETTERS: String = "abc"
 @export_range(1, 3) var signature_value: int = 2
 @export_range(0, 2) var triptych_bonus: int = 1
 @export var tie_winner: DataEnums.TieWinner = DataEnums.TieWinner.FIRST_PLAYER
+## "Tempo": points the first player starts with, offsetting the second player's last placement
+## (cc06 balance log, Proposal A, decided 2026-11-04: 2 with tie_winner DRAW). Part of the score
+## everywhere (WallRules.score). 0 = off (the default, so fixtures and old data are unchanged).
+@export_range(0, 3) var first_player_bonus: int = 0
 ## Captured cards re-check their neighbors (off in the base rules).
 @export var chain_captures: bool = false
 
@@ -154,6 +158,7 @@ func validate(v: DataValidator) -> void:
 	v.check_range("signature_value", signature_value, 1, 3)
 	v.check_range("triptych_bonus", triptych_bonus, 0, 2)
 	v.check_enum("tie_winner", tie_winner, DataEnums.TieWinner)
+	v.check_range("first_player_bonus", first_player_bonus, 0, 3)
 	# Cipher Lock: 4 distinct glyph numbers 1-4.
 	if cipher_code.size() != 4:
 		v.out_of_range("cipher_code", "needs 4 glyphs, got %d" % cipher_code.size())

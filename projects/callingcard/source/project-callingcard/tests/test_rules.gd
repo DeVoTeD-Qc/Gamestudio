@@ -199,3 +199,65 @@ func _typed(ids: Array) -> Array[CardData]:
 	for id: String in ids:
 		out.append(_cards[StringName(id)])
 	return out
+
+
+func _tempo_balance(bonus: int, tie: DataEnums.TieWinner) -> BalanceConfig:
+	var b: BalanceConfig = BalanceConfig.new()
+	b.first_player_bonus = bonus
+	b.tie_winner = tie
+	return b
+
+
+## Tempo (cc06 Proposal A, decided 2026-11-04): the first player's score includes
+## first_player_bonus, public and full, from the first placement on.
+func test_tempo_bonus_in_score() -> void:
+	assert_eq(BalanceConfig.new().first_player_bonus, 0, "class default off")
+	var setup: Dictionary = {"first_player": "P2", "to_move": "P1", "board": [
+		{"slot": "a1", "card": "gold_leaf", "lineup": "P1", "controller": "P1", "face_down": false, "signature": false},
+		{"slot": "c3", "card": "snow_blind", "lineup": "P2", "controller": "P2", "face_down": true, "signature": true}]}
+	var s: WallState = WallState.from_setup(setup, _cards, _tempo_balance(2, DataEnums.TieWinner.DRAW), RulesOptions.new(), _triptychs)
+	assert_eq(WallRules.score(s, WallState.P2), 2 + 2, "first player (P2): Signature 2 + Tempo 2")
+	assert_eq(WallRules.score(s, WallState.P2, false), 1 + 2, "public: face-down 1 + Tempo 2")
+	assert_eq(WallRules.score(s, WallState.P1), 1, "second player: no bonus")
+	assert_eq(WallRules.scores(s), [1, 4] as Array[int], "scores()")
+	var empty: WallState = WallState.from_setup({"first_player": "P1", "to_move": "P1", "board": []}, _cards,
+			_tempo_balance(2, DataEnums.TieWinner.DRAW))
+	assert_eq(WallRules.scores(empty), [2, 0] as Array[int], "2-0 before anyone places")
+
+
+func test_tempo_ties_are_draws() -> void:
+	# 6-6 on the board, first player P1 with Tempo 2 -> 8-6, P1 wins; 4-8 board -> 6-8 P2 wins;
+	# 4-6 board (P1 first) -> 6-6, a draw under DRAW, P1 under FIRST_PLAYER.
+	var board: Array = []
+	var ids: Array[String] = ["gold_leaf", "chrome_tiger", "mayday", "glacier", "frostbite", "flare_up", "neon_rain",
+			"graveyard_shift", "service_ribbon", "open_channel"]
+	var slots: Array[String] = ["a1", "a2", "a3", "b1", "b2", "b3", "b4", "c1", "c2", "c3"]
+	for i: int in 10:
+		var owner: String = "P1" if i < 4 else "P2"
+		board.append({"slot": slots[i], "card": ids[i], "lineup": owner, "controller": owner, "face_down": false,
+				"signature": false})
+	var setup: Dictionary = {"first_player": "P1", "to_move": "P2", "board": board}
+	var draw_rule: WallState = WallState.from_setup(setup, _cards, _tempo_balance(2, DataEnums.TieWinner.DRAW))
+	var res: Dictionary = WallRules.final_result(draw_rule)
+	assert_eq(res["score"], [6, 6], "4 cards + Tempo 2 vs 6 cards")
+	assert_true(res["tie"], "level")
+	assert_eq(res["winner"], WallState.NO_PLAYER, "DRAW: nobody wins")
+	var first_rule: WallState = WallState.from_setup(setup, _cards, _tempo_balance(2, DataEnums.TieWinner.FIRST_PLAYER))
+	assert_eq(WallRules.final_result(first_rule)["winner"], WallState.P1, "FIRST_PLAYER: the first player takes it")
+	var no_bonus: WallState = WallState.from_setup(setup, _cards, _tempo_balance(0, DataEnums.TieWinner.DRAW))
+	assert_eq(WallRules.final_result(no_bonus)["winner"], WallState.P2, "no Tempo: 4-6, P2 wins")
+	setup["first_player"] = "P2"
+	var p2_first: WallState = WallState.from_setup(setup, _cards, _tempo_balance(2, DataEnums.TieWinner.DRAW))
+	assert_eq(WallRules.final_result(p2_first)["score"], [4, 8], "the bonus follows the first player")
+
+
+## Clutch's behind-check counts the Tempo bonus (part of the real score): the second player is
+## behind at 0-2 and gets Clutch on an empty wall.
+func test_tempo_counts_for_clutch() -> void:
+	var setup: Dictionary = {"first_player": "P1", "to_move": "P2", "board": []}
+	for bonus: int in [0, 2]:
+		var s: WallState = WallState.from_setup(setup, _cards, _tempo_balance(bonus, DataEnums.TieWinner.DRAW),
+				RulesOptions.new(), _triptychs)
+		assert_eq(WallRules.is_behind(s, WallState.P2), bonus > 0, "Tempo %d: P2 behind" % bonus)
+		var r: PlacementResult = WallRules.place(s, WallState.P2, _cards[&"open_channel"], &"c3")
+		assert_eq(r.clutch, bonus > 0, "Tempo %d: Clutch fires" % bonus)
