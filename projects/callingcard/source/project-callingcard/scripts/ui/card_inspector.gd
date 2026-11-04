@@ -13,7 +13,7 @@ signal closed
 
 const CardText: GDScript = preload("res://scripts/ui/card_text.gd")
 const CARD_WIDE: Vector2 = Vector2(720, 180)
-const CARD_COMPACT: Vector2 = Vector2(560, 140)
+const CARD_COMPACT: Vector2 = Vector2(520, 130)
 
 var compact: bool = false
 var card: Dictionary = {}
@@ -57,7 +57,8 @@ func open_card(c: Dictionary, context: Dictionary = {}) -> void:
 	_card_view.compact = false
 	_card_view.show_card(c, owner, context.get("signature", false), context.get("face_down", false) and hidden)
 	_card_view.set_text_scale(clampf(size_px.y / 64.0 * 0.7, 1.0, 2.0))
-	_right.custom_minimum_size.x = 300 if compact else 340
+	_right.custom_minimum_size.x = 380 if compact else 360
+	%Column.add_theme_constant_override(&"separation", 8 if compact else 12)
 	if hidden:
 		_name.text = "Face-down card"
 		_set_origin.text = "Event card (Ambush), placed face-down"

@@ -52,12 +52,14 @@ void fragment() {
 		col = vec4(mix(wash_color.rgb, vec3(1.0), lead * 0.5), a);
 	}
 
-	// Edge light (set complete): inner glow just inside the frame.
+	// Edge light (set complete): a lit line on the frame's inner edge plus a glow into the art.
 	if (edge_amount > 0.0) {
-		float falloff = card_size.y * 0.16;
-		float g = exp(-max(d - border, 0.0) / falloff) * art;
-		float a = g * edge_amount * (0.45 + 0.55 * edge_pulse);
-		col.rgb = mix(col.rgb, edge_color.rgb, a / max(col.a + a, 0.001));
+		float falloff = card_size.y * 0.12;
+		float g = exp(-max(d - border, 0.0) / falloff) * art * 0.8;
+		float line_w = max(1.5, border * 0.35);
+		float line = frame * smoothstep(border - line_w - 1.0, border - line_w, d);
+		float a = max(g, line) * edge_amount * (0.6 + 0.4 * edge_pulse);
+		col.rgb = mix(col.rgb, mix(edge_color.rgb, vec3(1.0), line * 0.25), a / max(col.a + a, 0.001));
 		col.a = max(col.a, a);
 	}
 

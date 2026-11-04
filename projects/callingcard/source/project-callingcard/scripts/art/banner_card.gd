@@ -267,13 +267,13 @@ func _compute_layout() -> Dictionary:
 	var h: float = size.y
 	var w: float = size.x
 	var inset: float = _inset()
-	var r: float = clampf(13.0 + (h - 64.0) * 0.06, 11.0, 26.0)
+	var r: float = clampf(15.0 + (h - 64.0) * 0.055, 12.0, 26.0)
 	var gap: float = maxf(2.0, h * 0.03)
 	var m: float = inset + gap * 0.5
 	var full: bool = is_full_detail()
 	var lay: Dictionary = {
 		"r": r, "m": m, "gap": gap, "full": full,
-		"numeral_px": int(roundf(r * 1.6)),
+		"numeral_px": _numeral_px(r),
 		"s_left": Vector2(m + r, h * 0.5),
 		"s_right": Vector2(w - m - r, h * 0.5),
 		"top": Vector2(m + 3.0 * r + gap, m + r),
@@ -312,6 +312,11 @@ func _compute_layout() -> Dictionary:
 		lay["name_text"] = name_text if fits else _ellipsize(font, name_text, px, avail)
 	_last_layout = lay
 	return lay
+
+
+## Key numbers never go below 24 logical px (README phone rule).
+static func _numeral_px(r: float) -> int:
+	return maxi(24, int(roundf(r * 1.6)))
 
 
 static func _ellipsize(font: Font, text: String, px: int, avail: float) -> String:
@@ -421,7 +426,7 @@ func _pip(o: Control, center: Vector2, r: float, value: int, bonus: int, rim: Co
 	o.draw_circle(center, r * 0.84, ArtKit.ENAMEL)
 	o.draw_arc(center, r * 0.72, PI * 1.1, PI * 1.6, 12, Color(1, 1, 1, 0.16), maxf(1.0, r * 0.1), true)
 	var font: Font = ArtKit.font_numeral()
-	var px: int = int(roundf(r * 1.6))
+	var px: int = _numeral_px(r)
 	var text: String = str(value + bonus)
 	var col: Color = ArtKit.AMBER if bonus > 0 else ArtKit.TEXT
 	var ts: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px)
@@ -510,7 +515,7 @@ func _draw_signature(o: Control, lay: Dictionary) -> void:
 func _draw_owner_tab(o: Control) -> void:
 	if side == &"":
 		return
-	var l: float = maxf(16.0, size.y * 0.3)
+	var l: float = maxf(18.0, size.y * 0.32)
 	var col: Color = ArtKit.side_color(side)
 	var pts: PackedVector2Array
 	if side == &"rival":

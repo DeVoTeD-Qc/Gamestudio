@@ -4,7 +4,6 @@
 [ext_resource type="PackedScene" path="res://scenes/duel/CardView.tscn" id="2_card"]
 
 [node name="Slot" type="Button" groups=["tap_target"]]
-custom_minimum_size = Vector2(256, 64)
 offset_right = 256.0
 offset_bottom = 64.0
 theme_type_variation = &"WallSlot"

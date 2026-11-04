@@ -81,11 +81,16 @@ static func build() -> Theme:
 	badge.content_margin_left = 4
 	badge.content_margin_right = 4
 	t.set_stylebox(&"panel", &"TraitBadge", badge)
-	t.set_stylebox(&"panel", &"WallPanel", _box(Color("#1A1D23"), Palette.MORTAR, 2, 6, 14))
-	t.set_stylebox(&"panel", &"CounterPlayer", _box(Color("#173332"), Palette.PLAYER, 3, 6, 10))
-	t.set_stylebox(&"panel", &"CounterRival", _box(Color("#3A201C"), Palette.RIVAL, 3, 6, 10))
+	t.set_stylebox(&"panel", &"WallPanel", _box(Color("#1A1D23"), Palette.MORTAR, 2, 6, 12))
+	var counter_p: StyleBoxFlat = _box(Color("#173332"), Palette.PLAYER, 3, 6, 12)
+	var counter_r: StyleBoxFlat = _box(Color("#3A201C"), Palette.RIVAL, 3, 6, 12)
+	for b: StyleBoxFlat in [counter_p, counter_r]:
+		b.content_margin_top = 6
+		b.content_margin_bottom = 6
+	t.set_stylebox(&"panel", &"CounterPlayer", counter_p)
+	t.set_stylebox(&"panel", &"CounterRival", counter_r)
 	t.set_stylebox(&"panel", &"TurnPanel", _box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 4))
-	t.set_stylebox(&"panel", &"InspectorPanel", _box(Color("#1C1F26"), Palette.AMBER, 2, 8, 20))
+	t.set_stylebox(&"panel", &"InspectorPanel", _box(Color("#1C1F26"), Palette.AMBER, 2, 8, 16))
 
 	# Buttons. Hover never carries information (touch first): hover = normal.
 	var focus: StyleBoxFlat = _box(Color(0, 0, 0, 0), Palette.AMBER, 3, 6, 0)

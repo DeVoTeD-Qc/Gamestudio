@@ -43,6 +43,11 @@ var _k: Vector2 = Vector2.ONE
 static var _grain: ShaderMaterial
 
 
+func _init() -> void:
+	clip_contents = true  # glows and rain never spill past the banner
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 ## Shared film-grain material (one instance for every card keeps batching cheap).
 static func grain_material() -> ShaderMaterial:
 	if _grain == null:
@@ -632,11 +637,11 @@ func _pano_cold_signal() -> void:  # ice field, a radio mast calling out under a
 	_poly([Vector2(0, 128), Vector2(0, 92), Vector2(300, 84), Vector2(700, 98), Vector2(1100, 86), Vector2(1536, 94), Vector2(1536, 128)], _hi())
 	for i: int in 3:
 		_hex_star(Vector2(160 + i * 120, 104), 10, _mid(0.7), 1.5)
-	var top := Vector2(1230, 22)
-	for i: int in 6:
-		_ring(top, 24.0 + i * 30.0, 3.0, Color("#E0452E", 0.7 - i * 0.1), -PI * 0.95, -PI * 0.05)
-	_line(top, Vector2(top.x - 22, 92), _deep(), 3.5)
-	_line(top, Vector2(top.x + 22, 92), _deep(), 3.5)
+	var top := Vector2(1230, 52)
+	for i: int in 4:
+		_ring(top, 14.0 + i * 11.0, 3.0, Color("#E0452E", 0.8 - i * 0.15), -PI * 0.9, -PI * 0.1)
+	_line(top, Vector2(top.x - 16, 94), _deep(), 3.5)
+	_line(top, Vector2(top.x + 16, 94), _deep(), 3.5)
 	_glow(top, 16, Color("#E0452E"), 0.9)
 	_figure(760, 96, 30, _deep())
 

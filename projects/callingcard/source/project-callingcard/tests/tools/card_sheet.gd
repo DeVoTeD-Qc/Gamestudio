@@ -148,7 +148,7 @@ func _extras() -> void:
 		y += 104.0
 	_label("ICONS: traits · cipher glyphs · sets · utility (shown 40 px)", Vector2(24, y + 4))
 	var names: Array = ArtIcons.names()
-	names.sort()
+	names.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	var x: float = 24.0
 	y += 36.0
 	for n: StringName in names:
@@ -160,7 +160,7 @@ func _extras() -> void:
 		tr.size = Vector2(40, 40)
 		tr.modulate = ArtKit.SIGNATURE if String(n).begins_with("cipher") else ArtKit.TEXT
 		_ui.add_child(tr)
-		var l := _label(String(n).replace("trait_", "").replace("set_", "").replace("_", " "), Vector2(x - 20, y + 44), &"Caption")
+		var l := _label(String(n).replace("capture_", "").replace("trait_", "").replace("set_", "").replace("_", " "), Vector2(x - 20, y + 44), &"Caption")
 		l.custom_minimum_size = Vector2(80, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		x += 92.0

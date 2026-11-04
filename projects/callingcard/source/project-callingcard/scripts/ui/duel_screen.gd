@@ -36,8 +36,6 @@ const BASE_MARGIN_COMPACT: Vector2 = Vector2(16, 10)
 const MAX_BRICK: Vector2 = Vector2(288, 72)
 const MIN_BRICK_H: float = 64.0
 const WALL_GAP: Vector2 = Vector2(10, 10)
-## Wall panel padding + border (WallPanel style), both sides together.
-const WALL_CHROME: float = 24.0
 const HAND_HEADER_H: float = 31.0
 
 ## Safe area in logical px (tests / previews). Empty = read DisplayServer on phones.
@@ -221,7 +219,9 @@ func _relayout() -> void:
 	_place.custom_minimum_size = Vector2(120 if compact else 150, 64)
 
 	var inner_w: float = logical.x - int(margin_lt.x) - int(margin_rb.x)
-	var brick: Vector2 = brick_size_for(inner_w - WALL_CHROME)
+	# Wall panel padding from the theme (placeholder or cc14), both sides together.
+	var chrome: Vector2 = _wall.get_theme_stylebox(&"panel").get_minimum_size()
+	var brick: Vector2 = brick_size_for(inner_w - chrome.x)
 	_wall.set_brick_size(brick, WALL_GAP)
 	_wall.set_compact(compact)
 
@@ -229,10 +229,11 @@ func _relayout() -> void:
 	var hand_w: float = inner_w - _info.custom_minimum_size.x - _place.custom_minimum_size.x - 2.0 * sep
 	_hand.card_size = brick
 	var rows: int = _hand.rows_for(hand_w, MockDuelData.PLAYER_LINEUP.size())
-	var fixed_h: float = int(margin_lt.y) + int(margin_rb.y) + 64.0 + 2.0 * sep + brick.y * 3.0 + WALL_GAP.y * 2.0 + WALL_CHROME
+	var fixed_h: float = int(margin_lt.y) + int(margin_rb.y) + 64.0 + 2.0 * sep + brick.y * 3.0 + WALL_GAP.y * 2.0 + chrome.y
 	var room: float = logical.y - fixed_h
-	hand_strip = hand_height(brick.y, rows) > room
-	var hand_h: float = hand_height(brick.y, 1 if hand_strip else rows)
+	hand_strip = hand_height(brick.y, rows) + 4.0 > room
+	# +4: slack for half-pixel centering so the last row never pokes out of the hand.
+	var hand_h: float = hand_height(brick.y, 1 if hand_strip else rows) + 4.0
 	if hand_strip:
 		hand_h += 12.0  # scrollbar
 	_hand.custom_minimum_size.y = hand_h
