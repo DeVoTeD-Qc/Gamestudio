@@ -3,6 +3,7 @@
 *Sr Game Designer · 2026-11-04 · Board task `cz-spec2` (from the studio head's review of `cz-review`) · Phase: design*
 *Revises v0.1 by the Mid Game Designer (`cz-spec`, commit d5a926e; v0.1 stays in git history). Worked examples: `loadout-loop-sims.md`. Sim script: `projects/cardzone/tools/loadout_sim.py`.*
 *All numbers are **starting values for paper playtests**. Names, map and cards are original. Gear names are generic military terms.*
+*§16 (added 2026-11-04, board task `cz01`): **prototype rules for the 1v1 web build** (private loadouts, setup, undo, engine rulings, tunables). In the prototype, §16 overrides §1–§15 where they differ; the paper rules are unchanged.*
 
 ## v0.1 → v0.2 changes (read this first)
 
@@ -173,7 +174,7 @@ Play then passes to the left. When play returns to the first player, a new round
 6. **Bounty claim:** if the target held the Bounty and took at least 1 Hit, the shooter **heals 1** (from their hand or line).
 7. **Elimination:** if the target must take a Hit and their health stack is empty, they are **eliminated**. They form a **crate**: every card in their loadout, hand and line except Starters and Hits is placed face up in their area. The shooter may immediately take **1 card from the crate for free**. Other crate cards cost Search 1 each for anyone standing there. Hits go back to the box.
 
-**Open information:** anyone may look through any loadout at any time (recommended; DESIGN_REVIEW Q3). A player is never forced to reveal *why* they hold a card, only the cards.
+**Open information:** anyone may look through any loadout at any time (recommended; DESIGN_REVIEW Q3). *(Prototype: loadouts are **private**; see §16.2.)* A player is never forced to reveal *why* they hold a card, only the cards.
 
 **What a shot does now, in one line:** it takes health, it can force the target to **burn the armour in their next hand**, and it marks them Down. It **never** shrinks their next hand.
 
