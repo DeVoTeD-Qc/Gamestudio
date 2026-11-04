@@ -1,0 +1,70 @@
+synthetic,scope,id,metric,value,bar,status
+yes,overall,all,Intent to collect,0.5,>= 70% answer 4-5 (q1),FAIL
+yes,overall,all,Album pull,0.6666666666666666,>= 50% open album 2+ times and inspect a locked card,PASS
+yes,overall,all,Session fit (duel),198.0,"median < 4:00 (rival + lobby, not resumed)",PASS
+yes,overall,all,Session fit (tutorial D1),236.0,"D1 cleared < 3:00 (median, start to clear)",FAIL
+yes,overall,all,Fairness,1.0,>= 70% answer 4-5 (q4),PASS
+yes,overall,all,Load,14200.0,< 10 s in every session,FAIL
+yes,overall,all,Non-default lineup (live est.),0.4444444444444444,estimate,
+yes,overall,all,Set completion (live est.),0.0,estimate,
+yes,overall,all,Banner Wall duels per matchmaking wait (live est.),1.3333333333333333,estimate,
+yes,tester,T1,q1 intent,5,>= 4,PASS
+yes,tester,T1,q2 album,4,,
+yes,tester,T1,q3 session fit,4,,
+yes,tester,T1,q4 fairness,4,>= 4,PASS
+yes,tester,T1,album pull,True,2+ opens and a locked inspect,PASS
+yes,tester,T1,median duel s,182.4,< 240,PASS
+yes,tester,T1,D1 since start s,99.0,< 180,PASS
+yes,tester,T1,load ms,3800,< 10000,PASS
+yes,tester,T1,device,desktop,,
+yes,tester,T1,entry,menu,,
+yes,tester,T2,q1 intent,3,>= 4,FAIL
+yes,tester,T2,q2 album,2,,
+yes,tester,T2,q3 session fit,,,
+yes,tester,T2,q4 fairness,5,>= 4,PASS
+yes,tester,T2,album pull,False,2+ opens and a locked inspect,FAIL
+yes,tester,T2,median duel s,262.0,< 240,FAIL
+yes,tester,T2,D1 since start s,236.0,< 180,FAIL
+yes,tester,T2,load ms,14200,< 10000,FAIL
+yes,tester,T2,device,phone,,
+yes,tester,T2,entry,lobby,,
+yes,tester,T3,q1 intent,,>= 4,
+yes,tester,T3,q2 album,,,
+yes,tester,T3,q3 session fit,,,
+yes,tester,T3,q4 fairness,,>= 4,
+yes,tester,T3,album pull,True,2+ opens and a locked inspect,PASS
+yes,tester,T3,median duel s,176.0,< 240,PASS
+yes,tester,T3,D1 since start s,,< 180,FAIL
+yes,tester,T3,load ms,8900,< 10000,PASS
+yes,tester,T3,device,phone,,
+yes,tester,T3,entry,menu,,
+yes,session,7d232ffaff56,q1 intent,5,>= 4,PASS
+yes,session,7d232ffaff56,q2 album,4,,
+yes,session,7d232ffaff56,q3 session fit,4,,
+yes,session,7d232ffaff56,q4 fairness,4,>= 4,PASS
+yes,session,7d232ffaff56,album pull,True,2+ opens and a locked inspect,PASS
+yes,session,7d232ffaff56,median duel s,182.4,< 240,PASS
+yes,session,7d232ffaff56,D1 since start s,99.0,< 180,PASS
+yes,session,7d232ffaff56,load ms,3800,< 10000,PASS
+yes,session,7d232ffaff56,device,desktop,,
+yes,session,7d232ffaff56,entry,menu,,
+yes,session,98c2ae66f8c6,q1 intent,3,>= 4,FAIL
+yes,session,98c2ae66f8c6,q2 album,2,,
+yes,session,98c2ae66f8c6,q3 session fit,,,
+yes,session,98c2ae66f8c6,q4 fairness,5,>= 4,PASS
+yes,session,98c2ae66f8c6,album pull,False,2+ opens and a locked inspect,FAIL
+yes,session,98c2ae66f8c6,median duel s,262.0,< 240,FAIL
+yes,session,98c2ae66f8c6,D1 since start s,236.0,< 180,FAIL
+yes,session,98c2ae66f8c6,load ms,14200,< 10000,FAIL
+yes,session,98c2ae66f8c6,device,phone,,
+yes,session,98c2ae66f8c6,entry,lobby,,
+yes,session,9d39584e44ae,q1 intent,,>= 4,
+yes,session,9d39584e44ae,q2 album,,,
+yes,session,9d39584e44ae,q3 session fit,,,
+yes,session,9d39584e44ae,q4 fairness,,>= 4,
+yes,session,9d39584e44ae,album pull,True,2+ opens and a locked inspect,PASS
+yes,session,9d39584e44ae,median duel s,176.0,< 240,PASS
+yes,session,9d39584e44ae,D1 since start s,,< 180,FAIL
+yes,session,9d39584e44ae,load ms,8900,< 10000,PASS
+yes,session,9d39584e44ae,device,phone,,
+yes,session,9d39584e44ae,entry,menu,,
