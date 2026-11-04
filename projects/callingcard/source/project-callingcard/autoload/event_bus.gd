@@ -5,7 +5,7 @@
 #   cc01 declares the contract below so UI/UX and Game Feel can build on mock state;
 #   cc05 (rules), cc09 (collection), cc13 (entry points) and cc16 (logger) emit/listen.
 # Conventions: ids are StringName; `side` is &"player" or &"rival"; `slot` is a wall slot id
-#   (StringName, e.g. &"t1", &"m2", &"b3"); rich payloads use Dictionary until cc02's data classes land.
+#   (StringName, a1–a3 / b1–b4 / c1–c3, top/middle/bottom rows); rich payloads use Dictionary until cc02's data classes land.
 # Dependencies: none.
 # Author: Mechanics Developer Agent
 extends Node

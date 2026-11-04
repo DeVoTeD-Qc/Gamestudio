@@ -6,6 +6,11 @@
 #   and a summary, and exits with code 1 if anything failed (0 otherwise).
 #   Autoloads from project.godot are added to the root before the first frame, so
 #   tests can reach them via tree.root.get_node("EventBus") etc.
+#   Registered suites (auto-discovered by the test_ prefix):
+#     test_rules_cases.gd  QA's 103 rules cases from documentation/qa/rules-test-cases.json (cc04/cc05)
+#     test_rules.gd        rules engine contract: RQ flags, preview, copies, random full duels
+#     test_rules_fixtures.gd  shared helpers only (no test methods)
+#   Rules only: -- --only=rules ; single QA cases: -- --only=rules_cases --case=BW-101,BW-103
 # Author: Mechanics Developer Agent
 extends SceneTree
 

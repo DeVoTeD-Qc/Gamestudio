@@ -142,7 +142,7 @@ func _build(wall_rows: PackedInt32Array) -> void:
 ## brick j touches the short row's bricks j-1 and j.
 func _touching(other: Array, own_len: int, c: int) -> Array[StringName]:
 	var out: Array[StringName] = []
-	var cols: Array[int] = [c, c + 1] if other.size() > own_len else [c - 1, c]
+	var cols: Array = [c, c + 1] if other.size() > own_len else [c - 1, c]
 	for oc: int in cols:
 		if oc >= 0 and oc < other.size():
 			out.append(other[oc])
