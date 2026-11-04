@@ -296,12 +296,12 @@ func step_duration(kind: StringName) -> float:
 
 ## True when the human must decide now (drop, turn or Brace) and nothing is playing out.
 func is_human_turn() -> bool:
-	return state != null and not busy and not state.is_over() and state.deciding_seat() == human
+	return state != null and not busy and not state.is_over() and state.deciding_seat() == human and not is_covered()
 
 
-## The human's legal actions now ([] while the rival decides).
+## The human's legal actions now ([] while the rival decides, or behind the hot-seat cover).
 func legal() -> Array[Dictionary]:
-	if state == null or state.is_over() or state.deciding_seat() != human:
+	if state == null or state.is_over() or state.deciding_seat() != human or is_covered():
 		return []
 	return LoadoutRules.legal_actions(state)
 
@@ -313,6 +313,8 @@ func why_not(action: Dictionary) -> String:
 	var a: Dictionary = LoadoutRules.normalize(state, _own(action))
 	var t: String = a["type"]
 	if t != "concede":
+		if is_covered():
+			return "Pass the device: Player %d taps the cover when ready." % (cover_seat + 1)  # cz14
 		if busy:
 			return "Wait: the last action is still playing out."
 		if state.is_over():
@@ -536,11 +538,13 @@ func _run(first: ActionResult) -> void:
 	while true:
 		if r != null:
 			_after_apply(r)
+			_hotseat_record(r)  # cz14
 			_store_save()
 			# Pace the steps while the rival is involved (its action, or the human's last one before
-			# the rival decides); the human's own actions answer at once.
-			var paced: bool = r != first or (not state.is_over() and state.deciding_seat() != human)
-			if not state.is_over() and state.deciding_seat() != human:
+			# the rival decides); the human's own actions answer at once. cz14: in hot-seat every
+			# action is a present human's own: no pacing, no rival phase (the cover comes next).
+			var paced: bool = not hotseat and (r != first or (not state.is_over() and state.deciding_seat() != human))
+			if not hotseat and not state.is_over() and state.deciding_seat() != human:
 				_set_phase(PHASE_OPPONENT)  # the rival's part starts with these events
 			_emit_view()
 			for e: Dictionary in r.events_for(human):
@@ -555,6 +559,9 @@ func _run(first: ActionResult) -> void:
 			break
 		var d: int = state.deciding_seat()
 		if d == human:
+			break
+		if hotseat:
+			_cover_up(d)  # cz14: the other human decides next: pass the device
 			break
 		_set_phase(PHASE_OPPONENT)
 		var think: float = 0.0 if playback_skip else opponent_delay * (FAST_FACTOR if playback_fast else 1.0)
@@ -582,6 +589,8 @@ func _run(first: ActionResult) -> void:
 	_skipped_any = false
 	_set_phase(_phase_now())
 	_emit_view()
+	if hotseat:
+		_rival_steps.clear()  # cz14: the next seat hears what happened after its cover (reveal)
 	if not _rival_steps.is_empty():
 		var steps: Array = _rival_steps.duplicate()
 		_rival_steps.clear()
@@ -790,7 +799,7 @@ func _emit_context() -> void:
 	EventBus.match_context.emit({
 		"resumed": not _resume_info.is_empty(), "age_s": float(_resume_info.get("age_s", -1.0)),
 		"mode": String(meta.get("mode", "ai")), "ai_level": String(meta.get("ai_level", "")),
-		"human_seat": human, "first_seat": MatchState.P1, "route": MatchState.route_letter(state.route),
+		"human_seat": MatchState.P1 if hotseat else human, "first_seat": MatchState.P1, "route": MatchState.route_letter(state.route),
 		"hand_size": b.hand_size, "tunables_hash": b.tunables_hash(), "tunables": b.snapshot(),
 		"actions": state.actions.size(), "round": state.round_number,
 	})
@@ -821,6 +830,8 @@ func _phase_now() -> StringName:
 		return PHASE_IDLE
 	if state.is_over():
 		return PHASE_OVER
+	if is_covered():
+		return PHASE_COVER  # cz14
 	if state.deciding_seat() != human:
 		return PHASE_OPPONENT
 	if state.phase == MatchState.PHASE_DROP:
