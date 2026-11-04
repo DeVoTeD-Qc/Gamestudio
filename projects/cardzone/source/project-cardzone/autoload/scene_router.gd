@@ -13,7 +13,7 @@ signal scene_change_finished(path: String)
 
 const SCENE_BOOT: String = "res://scenes/Boot.tscn"
 const SCENE_TITLE: String = "res://scenes/Title.tscn"
-const SCENE_MATCH_SETUP: String = "res://scenes/MatchSetup.tscn"
+const SCENE_MATCH_SETUP: String = "res://scenes/setup/MatchSetup.tscn"  # cz13
 const SCENE_MATCH: String = "res://scenes/match/Match.tscn"  # cz10 match screen
 const SCENE_MATCH_END: String = "res://scenes/MatchEnd.tscn"
 

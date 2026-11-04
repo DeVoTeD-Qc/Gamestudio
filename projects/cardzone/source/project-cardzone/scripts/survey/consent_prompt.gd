@@ -1,0 +1,101 @@
+# consent_prompt.gd
+# Adapted from CallingCard scripts/survey/consent_prompt.gd (wording and theme changed for CardZone).
+# Purpose: Playtest consent prompt (cz18). An overlay PlaytestLog opens over the first screen of a
+#   launch while the tester has not answered. Explains in plain words what the anonymous log holds
+#   and asks yes / no. Default is off: closing without YES keeps logging off. The answer is
+#   remembered on this device; the title's PLAYTEST screen can turn logging on or off later.
+# Dependencies: PlaytestLog (or plog for tests), match_theme.gd, survey_ui.gd.
+# Author: Data Scientist Agent
+extends CanvasLayer
+
+const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
+const SurveyUi: GDScript = preload("res://scripts/survey/survey_ui.gd")
+
+const TITLE_TEXT: String = "HELP US TEST CARDZONE?"
+const BODY_TEXT: String = "With your OK, this prototype keeps an anonymous log of how you play: screens, matches, the cards you play and hold, shots, Brace choices and timings, plus your survey answers. It never records the AI's hidden cards. The log stays on this device: no names, accounts or location, and nothing is sent. At the end, open PLAYTEST on the title screen, answer 5 quick questions and press DOWNLOAD LOG to send us the file yourself. You can stop and delete the log there at any time."
+
+## Emitted once with the tester's answer, right before the prompt frees itself.
+signal answered(given: bool)
+
+## The PlaytestLog to answer to (tests pass their own); null = the autoload.
+var plog: Node = null
+
+var _root: Control
+var _yes: Button
+var _no: Button
+var _session: Label
+
+
+func _ready() -> void:
+	layer = 90
+	if plog == null:
+		plog = get_node_or_null("/root/PlaytestLog")
+	_build()
+	print("ConsentPrompt: ready")
+
+
+## YES (true) turns logging on, NO (false) keeps it off. Either answer is remembered.
+func answer(given: bool) -> void:
+	if plog != null:
+		plog.set_consent(given)
+	answered.emit(given)
+	queue_free()
+
+
+func get_button(given: bool) -> Button:
+	return _yes if given else _no
+
+
+func get_root() -> Control:
+	return _root
+
+
+func _build() -> void:
+	_root = Control.new()
+	_root.name = "ConsentRoot"
+	_root.theme = MatchTheme.build()
+	add_child(_root)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim: ColorRect = ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0, 0, 0, 0.72)
+	_root.add_child(dim)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var margin: MarginContainer = MarginContainer.new()
+	margin.name = "SafeArea"
+	_root.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var m: Array[Vector2] = SurveyUi.safe_margins(_root)
+	SurveyUi.apply_margins(margin, m[0], m[1])
+	var center: CenterContainer = CenterContainer.new()
+	center.name = "Center"
+	margin.add_child(center)
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "ConsentPanel"
+	panel.theme_type_variation = &"InspectorPanel"
+	panel.custom_minimum_size = Vector2(minf(760.0, _root.get_viewport_rect().size.x - m[0].x - m[1].x), 0)
+	center.add_child(panel)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.name = "Column"
+	col.add_theme_constant_override(&"separation", 8 if SurveyUi.is_compact(_root) else 16)
+	panel.add_child(col)
+	col.add_child(SurveyUi.label("ConsentTitle", TITLE_TEXT, &"InspectorTitle"))
+	var body: Label = SurveyUi.label("ConsentBody", BODY_TEXT, &"InspectorBody")
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(body)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "ButtonRow"
+	row.add_theme_constant_override(&"separation", 12)
+	col.add_child(row)
+	_no = SurveyUi.button("NoButton", "NO THANKS")
+	_no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_no.pressed.connect(answer.bind(false))
+	row.add_child(_no)
+	_yes = SurveyUi.button("YesButton", "YES, LOG MY SESSION", &"DockButton")
+	_yes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_yes.pressed.connect(answer.bind(true))
+	row.add_child(_yes)
+	_session = SurveyUi.label("SessionLabel", "", &"Caption")
+	if plog != null:
+		_session.text = "Anonymous session %s · log format v%d" % [plog.session_id, plog.SCHEMA_VERSION]
+	col.add_child(_session)

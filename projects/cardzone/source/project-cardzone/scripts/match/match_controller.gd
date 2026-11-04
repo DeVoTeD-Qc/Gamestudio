@@ -16,8 +16,13 @@
 #   undo included, and the opponent's); MatchStore.clear() on a new match, a concede and the match
 #   end. start_resumed(MatchStore.resume()) continues a saved match (cz13 owns the title's
 #   Continue). meta = {mode, ai_level, ai_seed, human_seat}.
+# Shell hooks (cz13): `paused` holds the loop before the next event / rival action while the
+#   pause menu or a coach tip is open; stats() feeds the end screen; a CzAI opponent is named by
+#   its level.
 # Signals: view_changed(view) after every applied action, event_shown(text, event) per event,
 #   notice(text) for a refused request, phase_changed(phase), settled() when input is open again.
+#   cz18 (playtest log): also EventBus.match_context(info) once per start / resume and
+#   EventBus.match_view_changed(view) with every view_changed (additive emits only).
 # Dependencies: LoadoutRules, MatchState, RulesData, MatchView, CardDB, EventBus, MatchStore,
 #   action_text.gd, opponent_placeholder.gd.
 # Author: UI/UX Agent (cz11)
@@ -60,10 +65,16 @@ var undo_count: int = 0
 var save_enabled: bool = true
 ## Saved with the match: {mode, ai_level, ai_seed, human_seat}.
 var meta: Dictionary = {"mode": "ai", "ai_level": "placeholder", "ai_seed": 0, "human_seat": MatchState.P1}
+## cz13: while true the loop waits before announcing the next event or asking the rival.
+var paused: bool = false
+## cz13: Hits landed on each seat this match (before Brace is not counted: what actually landed).
+var hits_landed: Array[int] = [0, 0]
 
 var _run_id: int = 0
 var _started_ms: int = 0
 var _turn_index: int = 0
+## cz18: set by start_resumed for the next match_context ({age_s}); {} = a new match.
+var _resume_info: Dictionary = {}
 
 
 func _init() -> void:
@@ -83,6 +94,7 @@ func start_new(route: int = DataEnums.Route.A) -> void:
 func start_resumed(resumed: Dictionary) -> bool:
 	if resumed.is_empty() or resumed.get("state") == null:
 		return false
+	_resume_info = {"age_s": _save_age_s(resumed)}  # cz18: match_context.resumed
 	start_from(resumed["state"], resumed.get("meta", {}))
 	return true
 
@@ -100,15 +112,27 @@ func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
 	rival_last_line.clear()
 	undo_count = 0
 	_turn_index = 0
+	hits_landed = [0, 0]
 	_started_ms = Time.get_ticks_msec()
 	EventBus.match_started.emit(StringName(opponent_kind().to_lower()), MatchState.P1)
+	_emit_context()
 	_run(null)
 
 
 func opponent_kind() -> String:
 	if opponent != null and "kind" in opponent:
 		return String(opponent.get("kind"))
+	if opponent != null and "level" in opponent:
+		return String(opponent.get("level")).capitalize()  # CzAI (cz09): "Rookie" / "Veteran"
 	return "AI"
+
+
+## cz13 end screen: {rounds, turns, seconds, actions, hits_on_me, hits_on_rival}.
+func stats() -> Dictionary:
+	return {"rounds": state.round_number if state != null else 0, "turns": _turn_index,
+			"seconds": (Time.get_ticks_msec() - _started_ms) / 1000.0,
+			"actions": state.actions.size() if state != null else 0,
+			"hits_on_me": hits_landed[human], "hits_on_rival": hits_landed[rival_seat()]}
 
 
 func rival_seat() -> int:
@@ -364,13 +388,15 @@ func _run(first: ActionResult) -> void:
 			_store_save()
 			if not state.is_over() and state.deciding_seat() != human:
 				_set_phase(PHASE_OPPONENT)  # the rival's part starts with these events
-			view_changed.emit(view())
+			_emit_view()
 			for e: Dictionary in r.events_for(human):
 				_announce(e)
 				if event_delay > 0.0 and is_inside_tree():
 					await get_tree().create_timer(event_delay).timeout
 					if id != _run_id or not is_inside_tree():
 						return
+				if paused and not await _wait_unpaused(id):
+					return
 		r = null
 		if state.is_over():
 			break
@@ -382,8 +408,10 @@ func _run(first: ActionResult) -> void:
 			await get_tree().create_timer(opponent_delay).timeout
 			if id != _run_id or not is_inside_tree():
 				return
-			if state.is_over() or state.deciding_seat() != d:
-				continue
+		if paused and not await _wait_unpaused(id):
+			return
+		if state.is_over() or state.deciding_seat() != d:
+			continue
 		var a: Dictionary = opponent.call("choose_action", state, d) if opponent != null else {}
 		if not a.is_empty():
 			r = LoadoutRules.apply(state, a)
@@ -396,8 +424,17 @@ func _run(first: ActionResult) -> void:
 			r = LoadoutRules.apply(state, options[0])
 	busy = false
 	_set_phase(_phase_now())
-	view_changed.emit(view())
+	_emit_view()
 	settled.emit()
+
+
+## cz13: waits while `paused`. False when this run was replaced or the screen left the tree.
+func _wait_unpaused(id: int) -> bool:
+	while paused and is_inside_tree():
+		await get_tree().process_frame
+		if id != _run_id:
+			return false
+	return id == _run_id and is_inside_tree()
 
 
 func _store_save() -> void:
@@ -450,6 +487,8 @@ func _announce(e: Dictionary) -> void:
 		"brace_requested":
 			EventBus.brace_requested.emit(int(e["seat"]), int(e["damage"]))
 		"hits_landed":
+			if int(e["seat"]) >= 0 and int(e["seat"]) < 2:
+				hits_landed[int(e["seat"])] += int(e.get("count", 0))
 			var shot: Dictionary = view().get("last_shot", {})
 			var shooter: int = int(shot.get("shooter", -1))
 			var cid: StringName = StringName(str((shot.get("weapon", shot.get("card", {})) as Dictionary).get("card", "")))
@@ -457,6 +496,40 @@ func _announce(e: Dictionary) -> void:
 		"match_ended":
 			EventBus.match_ended.emit(int(e.get("winner", -1)), StringName(str(e.get("cause", ""))),
 					state.round_number, (Time.get_ticks_msec() - _started_ms) / 1000.0)
+
+
+# --- Playtest log hooks (cz18, additive: EventBus emits only, no behaviour change) -----------
+
+## view_changed plus EventBus.match_view_changed with the same human view.
+func _emit_view() -> void:
+	var v: Dictionary = view()
+	view_changed.emit(v)
+	EventBus.match_view_changed.emit(v)
+
+
+## EventBus.match_context: the match's setup facts (public or the human's own; see EventBus).
+func _emit_context() -> void:
+	var b: BalanceConfig = state.data.balance
+	EventBus.match_context.emit({
+		"resumed": not _resume_info.is_empty(), "age_s": float(_resume_info.get("age_s", -1.0)),
+		"mode": String(meta.get("mode", "ai")), "ai_level": String(meta.get("ai_level", "")),
+		"human_seat": human, "first_seat": MatchState.P1, "route": MatchState.route_letter(state.route),
+		"hand_size": b.hand_size, "tunables_hash": b.tunables_hash(), "tunables": b.snapshot(),
+		"actions": state.actions.size(), "round": state.round_number,
+	})
+	_resume_info = {}
+
+
+## Seconds since the resumed match was saved (resumed.saved_at, else MatchStore's save header),
+## -1 when unknown.
+func _save_age_s(resumed: Dictionary) -> float:
+	var saved_at: int = int(resumed.get("saved_at", -1))
+	var store: Node = _store()
+	if saved_at < 0 and store != null and store.get("_body") is Dictionary:
+		saved_at = int((store.get("_body") as Dictionary).get("saved_at", -1))
+	if saved_at <= 0:
+		return -1.0
+	return maxf(0.0, Time.get_unix_time_from_system() - saved_at)
 
 
 func _set_phase(p: StringName) -> void:

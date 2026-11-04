@@ -18,32 +18,117 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0824, 0.0941, 0.1137, 1)
+mouse_filter = 2
+color = Color(0.168627, 0.0941176, 0.25098, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
-[node name="Column" type="VBoxContainer" parent="Center"]
+[node name="Frame" type="Control" parent="SafeArea"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="DevTag" type="Label" parent="SafeArea/Frame"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+offset_right = 240.0
+offset_bottom = 28.0
+theme_type_variation = &"ShellTag"
+text = "DEV SETTINGS ACTIVE"
+
+[node name="SettingsButton" type="Button" parent="SafeArea/Frame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -64.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "SETTINGS"
+
+[node name="VersionLabel" type="Label" parent="SafeArea/Frame"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+offset_right = 400.0
+grow_vertical = 0
+theme_type_variation = &"ShellMuted"
+text = "v0.1"
+
+[node name="Center" type="CenterContainer" parent="SafeArea/Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Column" type="VBoxContainer" parent="SafeArea/Frame/Center"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="Center/Column"]
+[node name="TitleLabel" type="Label" parent="SafeArea/Frame/Center/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.925, 0.918, 0.894, 1)
-theme_override_font_sizes/font_size = 80
+mouse_filter = 0
+theme_type_variation = &"ShellTitle"
+theme_override_font_sizes/font_size = 88
 text = "CardZone"
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="Center/Column"]
+[node name="SubtitleLabel" type="Label" parent="SafeArea/Frame/Center/Column"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.91, 0.698, 0.227, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.886, 1, 0.541, 1)
+theme_override_font_sizes/font_size = 22
 text = "Prototype build"
 horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="SafeArea/Frame/Center/Column"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ContinueButton" type="Button" parent="SafeArea/Frame/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 64)
+layout_mode = 2
+theme_type_variation = &"DockButton"
+text = "CONTINUE"
+
+[node name="ContinueInfo" type="Label" parent="SafeArea/Frame/Center/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ShellMuted"
+horizontal_alignment = 1
+
+[node name="NewMatchButton" type="Button" parent="SafeArea/Frame/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 64)
+layout_mode = 2
+text = "NEW MATCH"
+
+[node name="StatusLabel" type="Label" parent="SafeArea/Frame/Center/Column"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_type_variation = &"ShellWarn"
+autowrap_mode = 3

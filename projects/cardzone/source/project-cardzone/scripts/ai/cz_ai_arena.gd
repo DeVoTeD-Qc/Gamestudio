@@ -6,10 +6,12 @@
 #       drops: optional {0: area, 1: area} forcing each seat's drop (the sweep's drop pairs);
 #       otherwise each AI picks its own drop (S5: P2 first).
 #   Result: {result, winner (-1 draw), cause, rounds, actions, turns, health: [p1, p2],
-#     turn_ms: [ms per AI turn, both seats], max_turn_ms, decision_ms_max, illegal (count),
-#     state (the final MatchState)}.
-#   A turn's time is the sum of the AI's choose_action calls for that seat from its draw to its
-#   end_turn (the Brace answers it gives on the other turn are timed as their own "turn").
+#     turn_ms: [ms per AI turn], turn_start: [log size when each turn began], turn_seat,
+#     max_turn_ms, brace_ms_max, decision_ms_max, illegal (count), state (the final MatchState)}.
+#   A turn's time is everything the active seat's AI spent from its draw to its end_turn (all
+#   its choose_action calls, across its shots); the opponent's Brace answers in that turn are
+#   timed on their own (brace_ms_max).
+#     CzAiArena.time_turn(state, ai_active, ai_other) -> float re-times one turn from a state.
 # Dependencies: CzAI, LoadoutRules, MatchState, RulesData.
 # Author: Mechanics Developer Agent
 class_name CzAiArena
@@ -21,27 +23,32 @@ const MAX_ACTIONS: int = 4000
 static func play(content: RulesData, route: int, ai_p1: CzAI, ai_p2: CzAI, drops: Dictionary = {}) -> Dictionary:
 	var state: MatchState = MatchState.new_match(content, route)
 	var ais: Array[CzAI] = [ai_p1, ai_p2]
-	var out: Dictionary = {"illegal": 0, "turns": 0, "turn_ms": [], "max_turn_ms": 0.0, "decision_ms_max": 0.0,
-			"actions": 0}
+	var out: Dictionary = {"illegal": 0, "turns": 0, "turn_ms": [], "turn_start": [], "turn_seat": [],
+			"max_turn_ms": 0.0, "brace_ms_max": 0.0, "decision_ms_max": 0.0, "actions": 0}
 	var turn_ms: float = 0.0
 	var turn_key: String = ""
 	var n: int = 0
 	while not state.is_over() and n < MAX_ACTIONS:
 		n += 1
 		var seat: int = state.deciding_seat()
-		var key: String = "%d:%d:%d" % [state.round_number, state.active, 1 if state.pending_brace_seat() == seat and seat != state.active else 0]
-		if key != turn_key:
+		var key: String = _key(state)
+		if key != turn_key and state.phase == MatchState.PHASE_PLAY:
 			if turn_key != "":
 				_close_turn(out, turn_ms)
 			turn_key = key
 			turn_ms = 0.0
+			(out["turn_start"] as Array).append(state.actions.size())
+			(out["turn_seat"] as Array).append(state.active)
 		var action: Dictionary
 		if state.phase == MatchState.PHASE_DROP and drops.has(seat):
 			action = {"type": "drop", "seat": seat, "area": String(drops[seat])}
 		else:
 			action = ais[seat].choose_action(state, seat)
 			var ms: float = float(ais[seat].last_stats.get("ms", 0.0))
-			turn_ms += ms
+			if seat == state.active:
+				turn_ms += ms
+			else:
+				out["brace_ms_max"] = maxf(float(out["brace_ms_max"]), ms)
 			out["decision_ms_max"] = maxf(float(out["decision_ms_max"]), ms)
 		var r: ActionResult = LoadoutRules.apply(state, action)
 		if not r.ok:
@@ -65,6 +72,31 @@ static func play(content: RulesData, route: int, ai_p1: CzAI, ai_p2: CzAI, drops
 	out["health"] = [state.health_of(MatchState.P1), state.health_of(MatchState.P2)]
 	out["state"] = state
 	return out
+
+
+## Plays the active seat's current turn from a copy of `state` (its decisions by `ai`, the other
+## seat's Brace answers by `other`) and returns the ms `ai` spent, grouped as play() does.
+static func time_turn(state: MatchState, ai: CzAI, other: CzAI) -> float:
+	var s: MatchState = state.clone()
+	var seat: int = s.active
+	var key: String = _key(s)
+	var ms: float = 0.0
+	while not s.is_over() and _key(s) == key:
+		var who: int = s.deciding_seat()
+		var a: Dictionary
+		if who == seat:
+			a = ai.choose_action(s, who)
+			ms += float(ai.last_stats.get("ms", 0.0))
+		else:
+			a = other.choose_action(s, who)
+		if not LoadoutRules.apply(s, a).ok:
+			break
+	return ms
+
+
+## One key per turn: the round and the active seat.
+static func _key(state: MatchState) -> String:
+	return "%d:%d" % [state.round_number, state.active]
 
 
 static func _close_turn(out: Dictionary, ms: float) -> void:

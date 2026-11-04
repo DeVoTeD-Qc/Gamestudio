@@ -30,6 +30,9 @@
 #   MOVE HERE, or LOOT… in your own area (a sheet of piles, drops, crate cards); UNDO; END TURN ->
 #   Pack (tap hand cards to Hold, END TURN again); Brace -> tap armour cards in the strip, BRACE;
 #   MENU -> RESUME / CONCEDE / LEAVE.
+#   cz13: when the match comes from the Title / Match setup (a SetupLaunch request), `shell`
+#   (pause_match_shell.gd) starts it and replaces the MENU and end sheets with the pause menu and
+#   the end screen, and runs the first-match coach.
 # Signals: card_tapped(zone, index, card_id), area_tapped(area_id), menu_requested,
 #   card_inspected(card_id, zone), notice_shown(text), option_pressed(key).
 # Dependencies: EventBus, SceneRouter, CardDB, Settings, screen_profile.gd, match_theme.gd,
@@ -52,6 +55,8 @@ const LineChip: GDScript = preload("res://scripts/ui/line_chip.gd")
 const TapHoldButton: GDScript = preload("res://scripts/ui/tap_hold_button.gd")
 const ViewAdapter: GDScript = preload("res://scripts/match/view_adapter.gd")
 const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
+const SetupLaunch: GDScript = preload("res://scripts/ui/setup_launch.gd")
+const MatchShell: GDScript = preload("res://scripts/ui/pause_match_shell.gd")
 const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
@@ -106,6 +111,8 @@ var _selected: Control = null
 var _selected_area: StringName = &""
 var _sep: int = 8
 var _controller: Node = null
+## cz13 MatchShell (pause menu, end screen, coach) when the match came from the Title / Match setup.
+var shell: Control = null
 var _line_entries: Array = []
 var _line_is_rival: bool = false
 var _dock_options: Array[Dictionary] = []
@@ -172,6 +179,8 @@ func _ready() -> void:
 	_line.columns = LINE_COLUMNS
 	_line_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_build_overlays()
+	if SetupLaunch.has_pending() and _controller != null:
+		shell = MatchShell.attach(self)  # cz13: started from the Title / Match setup
 	get_viewport().size_changed.connect(_relayout)
 	EventBus.round_started.connect(_on_round_started)
 	var mock: bool = not _state.is_empty()
@@ -201,7 +210,10 @@ func start_live(state: MatchState = null) -> void:
 	_clear_input()
 	mode = &"act"
 	if state == null:
-		_controller.start_new()
+		if shell != null:
+			shell.begin(_controller)  # cz13: the setup choices, or the saved match
+		else:
+			_controller.start_new()
 	else:
 		_controller.start_from(state)
 
@@ -1003,6 +1015,9 @@ func _on_sheet_option(o: Dictionary) -> void:
 
 
 func _show_end() -> void:
+	if shell != null:
+		shell.show_end()
+		return
 	var v: Dictionary = _controller.view()
 	var me: int = int(v.get("seat", 0))
 	var r: Dictionary = v.get("match_end", {})
@@ -1509,6 +1524,9 @@ func _on_info() -> void:
 
 func _on_menu() -> void:
 	menu_requested.emit()
+	if live and shell != null:
+		shell.open_pause()
+		return
 	if live:
 		var over: bool = mode == &"over"
 		var opts: Array[Dictionary] = [{"key": &"resume", "label": "RESUME", "action": {}, "reason": ""}]

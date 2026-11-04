@@ -18,42 +18,47 @@
 #   Heal items). Inside a rollout the opponent braces with the greedy rule on its guessed hand.
 #   Search: a depth-first walk that branches only at those choices, cloning the state at each
 #   branch, plays every branch to the end of the turn (end_turn applied: gas check, Pack, the
-#   opponent's draw and any round start) and scores it with evaluate(). The best branch's first
-#   action is played. When the next action needs no choice it is returned without a search.
-#   A deterministic node cap bounds the work (after it, branches take their first option);
+#   opponent's draw and any round start) and scores it with evaluate(). When the next action
+#   needs no choice it is returned without a search.
+#   One plan per segment: a turn's segments start at the turn start and after each shot or Frag
+#   (CzAI: segment anchor). The search runs from the segment's anchor (its belief world); every
+#   later call in the segment follows the winning plan with the same executor, and searches again
+#   (from where it stands, keeping the plan's choices) only if the plan meets a choice it hadn't
+#   made. So a turn costs about one search per shot, not one per action.
+#   A deterministic node cap bounds each search (after it, branches take their first option);
 #   ai_think_budget_ms is only a safety stop for very slow devices.
 #   As the defender it scores every legal Brace subset with evaluate().
-#   Determinism: options come in a fixed order and ties keep the first, so the same state gives
-#   the same action; nothing is remembered between calls.
+#   Determinism: options come in a fixed order and ties keep the first, and the anchor is part of
+#   the state, so the same state gives the same action from any instance. The only memory is a
+#   memo of anchor -> plan (a pure function of the anchor), which never changes an answer.
 # Dependencies: CzAI, CzSim, CzBelief, LoadoutRules, MatchState, SeatState, CardData.
 # Author: Mechanics Developer Agent
 class_name CzVeteranAI
 extends CzAI
 
-## Simulated actions per decision (the deterministic search bound): NODE_CAP for the first
-## search of a turn, NODE_CAP / (1 + n) once n commitments are made this turn (Hits played,
-## shots, loots, Brace cards played), never under NODE_MIN. Later searches in a turn have few
-## real options left (fewer cards, less Move), and this keeps a whole turn within budget.
-const NODE_CAP: int = 200
+## Simulated actions per search (the deterministic bound): NODE_CAP for the turn's first
+## segment, NODE_CAP / (1 + n)^2 after n shots this turn, never under NODE_MIN. Later segments
+## have few options left (fewer cards, less Move), and this keeps a whole turn within budget
+## (measured: a 4-shot turn stays under 75 ms on the dev machine, see balance-log entry 2).
+const NODE_CAP: int = 120
 const NODE_MIN: int = 30
 ## Deepest rollout (actions) before a branch is scored where it stands.
 const MAX_DEPTH: int = 60
 ## Marks a plan_step result that asks for a choice: {NEED: field, "options": [...]}.
 const NEED: String = "need"
 
-# Evaluation weights (see evaluate()).
-const W_HEALTH: float = 100.0
-const W_POWER: float = 14.0
-const W_VALUE: float = 2.0
-const W_THREAT_IN: float = 38.0
-const W_THREAT_OUT: float = 16.0
-const W_GAS: float = 60.0
-const W_CLOSING: float = 30.0
-const W_HAND: float = 3.0
-const W_CARDS: float = 3.0
-const W_BOUNTY: float = 8.0
-const W_NEXT_DROP: float = 6.0
+## Evaluation weights (see evaluate()). `weights` on an instance starts as a copy, so a tool
+## can try other values on one AI without touching the others.
+const WEIGHTS: Dictionary = {
+	"health": 100.0, "power": 14.0, "value": 6.0, "threat_in": 38.0, "threat_out": 16.0,
+	"gas": 60.0, "closing": 30.0, "hand": 3.0, "cards": 3.0, "bounty": 8.0, "next_drop": 6.0,
+	"all_guns": 0.6,
+}
 const WIN: float = 100000.0
+
+var weights: Dictionary = WEIGHTS.duplicate()
+## This instance's NODE_CAP (a tool may try another bound).
+var cap_base: int = NODE_CAP
 
 var _me: int = 0
 var _nodes: int = 0
@@ -62,6 +67,10 @@ var _cap: int = NODE_CAP
 var _deadline_us: int = 0
 var _best_score: float = -INF
 var _best_first: Dictionary = {}
+var _best_plan: Dictionary = {}
+# Memo of the pure function anchor -> best plan (see CzAI: segment anchor).
+var _plan_key: int = 0
+var _plan: Dictionary = {}
 
 
 func _init(seed_in: int = 0) -> void:
@@ -78,34 +87,52 @@ func _decide(w: MatchState, me: int) -> Dictionary:
 		return CzAI.drop_action(w, me, true)
 	if w.pending_brace_seat() == me:
 		return _choose_brace(w, me)
-	var first: Dictionary = plan_step(w, me, {})
-	if not first.has(NEED):
-		return first
-	last_stats["searched"] = true
-	_cap = node_cap(w, me)
-	_best_score = -INF
-	_best_first = {}
-	_search(CzSim.clone(w, true), {}, {}, 0)
-	last_stats["nodes"] = _nodes
-	last_stats["plans"] = _leaves
+	# Inside a segment: follow the plan made at its anchor.
+	var plan: Dictionary = {}
+	var key: int = anchor_key()
+	if key != 0:
+		if key != _plan_key:
+			var aw: MatchState = anchor_world()
+			_search_from(aw, me, {})
+			_plan_key = key
+			_plan = _best_plan
+		plan = _plan
+	var r: Dictionary = plan_step(w, me, plan)
+	if not r.has(NEED):
+		return r
+	# A choice is due here: search from this state (keeping the plan's choices so far).
+	_search_from(w, me, plan)
+	if key == 0:
+		# A segment start: this search is the anchor's plan for the calls that follow.
+		_plan_key = segment_key()
+		_plan = _best_plan
 	if _best_first.is_empty():
 		return CzAI.end_turn_action(w, me, [], true)
 	return _best_first
 
 
+## Runs the search from `w` with the choices in `seed_plan` fixed; leaves the result in
+## _best_first (the first action) and _best_plan (the winning leaf's choices).
+func _search_from(w: MatchState, me: int, seed_plan: Dictionary) -> void:
+	_me = me
+	last_stats["searched"] = true
+	_cap = node_cap(w, me, cap_base)
+	_best_score = -INF
+	_best_first = {}
+	_best_plan = {}
+	_search(CzSim.clone(w, true), seed_plan, {}, 0)
+	last_stats["nodes"] = _nodes
+	last_stats["plans"] = _leaves
+
+
 # === Search =================================================================================
 
 ## The node cap for a decision in this state (see NODE_CAP).
-static func node_cap(w: MatchState, me: int) -> int:
-	var st: SeatState = w.seats[me]
-	var progress: int = st.adrenaline_played + st.looted.size()
-	for v: Variant in st.fired.values():
-		progress += int(v)
-	for inst: int in st.line:
-		var c: CardData = w.def_of(inst)
-		if c != null and c.type == DataEnums.CardType.ITEM and c.brace > 0:
-			progress += 1
-	return maxi(NODE_MIN, NODE_CAP / (1 + progress))
+static func node_cap(w: MatchState, me: int, base: int = NODE_CAP) -> int:
+	var shots: int = 0
+	for v: Variant in w.seats[me].fired.values():
+		shots += int(v)
+	return maxi(NODE_MIN, base / ((1 + shots) * (1 + shots)))
 
 
 ## Plays plan `th` forward from `node` (which this call changes), branching at every choice the
@@ -130,23 +157,24 @@ func _search(node: MatchState, th: Dictionary, first: Dictionary, depth: int) ->
 				_search(child, th2, head, d)
 			return
 		if r.is_empty() or d >= MAX_DEPTH or not CzSim.step_normalized(node, r):
-			_leaf(node, head)
+			_leaf(node, head, plan)
 			return
 		_nodes += 1
 		d += 1
 		if head.is_empty():
 			head = r
 		if node.is_over() or String(r["type"]) == "end_turn":
-			_leaf(node, head)
+			_leaf(node, head, plan)
 			return
 
 
-func _leaf(node: MatchState, head: Dictionary) -> void:
+func _leaf(node: MatchState, head: Dictionary, plan: Dictionary) -> void:
 	_leaves += 1
-	var score: float = evaluate(node, _me)
+	var score: float = evaluate(node, _me, weights)
 	if score > _best_score and not head.is_empty():
 		_best_score = score
 		_best_first = head
+		_best_plan = plan
 
 
 func _choose_brace(w: MatchState, me: int) -> Dictionary:
@@ -158,7 +186,7 @@ func _choose_brace(w: MatchState, me: int) -> Dictionary:
 		if not CzSim.step(c, a):
 			continue
 		_nodes += 1
-		var score: float = evaluate(c, me)
+		var score: float = evaluate(c, me, weights)
 		if score > best_score:
 			best_score = score
 			best = a
@@ -447,7 +475,7 @@ static func _best_loot(w: MatchState, me: int, dest: StringName) -> Dictionary:
 ## gun power and loot value (all cards); the damage the opponent can likely deal on its next turn
 ## (after my next hand's Brace and Down) and what I can deal on mine; gas and the area closing
 ## next round; Move+Search in my next hand; card count (the tiebreak); the Bounty; the next drop.
-static func evaluate(w: MatchState, me: int) -> float:
+static func evaluate(w: MatchState, me: int, wt: Dictionary = WEIGHTS) -> float:
 	if w.is_over():
 		var r: Dictionary = w.match_end
 		if String(r.get("result", "")) == "win":
@@ -456,40 +484,40 @@ static func evaluate(w: MatchState, me: int) -> float:
 	var opp: int = w.opponent_of(me)
 	var a: Dictionary = _seat_facts(w, me)
 	var o: Dictionary = _seat_facts(w, opp)
-	var s: float = W_HEALTH * float(w.health_of(me) - w.health_of(opp))
-	s += W_POWER * float(int(a["power"]) - int(o["power"]))
-	s += W_VALUE * float(int(a["value"]) - int(o["value"]))
+	var s: float = float(wt["health"]) * float(w.health_of(me) - w.health_of(opp))
+	s += float(wt["power"]) * float(int(a["power"]) - int(o["power"]))
+	s += float(wt["value"]) * float(int(a["value"]) - int(o["value"]))
 	var data: RulesData = w.data
 	var my_area: StringName = w.seats[me].area
 	var opp_area: StringName = w.seats[opp].area
 	var threat_in: float = maxf(_threat(data, o["now"], opp_area, my_area, 1, a),
-			0.6 * _threat(data, o["guns"], opp_area, my_area, 1, a))
+			float(wt["all_guns"]) * _threat(data, o["guns"], opp_area, my_area, 1, a))
 	var threat_out: float = maxf(_threat(data, a["next"], my_area, opp_area, mini(int(a["next_move"]), 2), o),
-			0.6 * _threat(data, a["guns"], my_area, opp_area, 1, o))
-	s -= W_THREAT_IN * threat_in
-	s += W_THREAT_OUT * threat_out
+			float(wt["all_guns"]) * _threat(data, a["guns"], my_area, opp_area, 1, o))
+	s -= float(wt["threat_in"]) * threat_in
+	s += float(wt["threat_out"]) * threat_out
 	var closing: StringName = CzSim.closing_next(w)
 	if w.gas.has(my_area):
-		s -= W_GAS
+		s -= float(wt["gas"])
 	elif my_area == closing:
-		s -= W_CLOSING
+		s -= float(wt["closing"])
 	if w.gas.has(opp_area):
-		s += W_GAS
+		s += float(wt["gas"])
 	elif opp_area == closing:
-		s += W_CLOSING
-	s += W_HAND * float(a["next_gain"])
-	s += W_CARDS * float(int(a["cards"]) - int(o["cards"]))
+		s += float(wt["closing"])
+	s += float(wt["hand"]) * float(a["next_gain"])
+	s += float(wt["cards"]) * float(int(a["cards"]) - int(o["cards"]))
 	if w.bounty == me:
-		s -= W_BOUNTY
+		s -= float(wt["bounty"])
 	elif w.bounty == opp:
-		s += W_BOUNTY
+		s += float(wt["bounty"])
 	var z: ZoneCardData = data.zone_card(w.zone_card + 1)
 	if z != null and z.drop_card != null and z.drop_area_for(w.route) != null:
 		var drop_area: StringName = z.drop_area_for(w.route).id
 		if data.distance(my_area, drop_area) <= 1:
-			s += W_NEXT_DROP
+			s += float(wt["next_drop"])
 		if data.distance(opp_area, drop_area) <= 1:
-			s -= W_NEXT_DROP
+			s -= float(wt["next_drop"])
 	return s
 
 

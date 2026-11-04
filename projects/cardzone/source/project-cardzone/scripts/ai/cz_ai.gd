@@ -10,10 +10,17 @@
 #   brain (_decide) only ever reads that world: the opponent's private cards in it are a guess made
 #   from view(state, seat) alone. tests/test_ai.gd proves it: states that differ only in the
 #   opponent's hidden cards give identical worlds and identical moves.
+#   Segment anchor: a turn is split into segments by the commit points (U3: the turn start and
+#   each declared shot or Frag, after which the opponent may reveal cards). The real state already
+#   records where the current segment began: its undo snapshots (state.undo_stack[0], the state
+#   before the segment's first undoable action). anchor_world() is the belief world of that state
+#   (built through the same wall, so it holds no private opponent card either). The Veteran plans
+#   once per segment from the anchor and follows that plan, which keeps a whole turn cheap.
 #   Determinism: no randomness, no clocks in the decision (the node cap, not a timer, bounds the
-#   search), no memory between calls. The same state always gives the same action, whichever
-#   instance is asked and whatever it was asked before. `seed` is kept for the factory contract
-#   and the logs; neither level draws random numbers.
+#   search). The action is a pure function of the state (including its undo snapshots, which
+#   replay() and load_text() rebuild exactly), whichever instance is asked and whatever it was
+#   asked before. A brain may memoise a pure result by the anchor's hash; that never changes an
+#   answer. `seed` is kept for the factory contract and the logs; no level draws random numbers.
 #   Levels:
 #     Rookie  (CzRookieAI)  the sim bots' greedy policy (tools/loadout_sim.py Game.do_turn).
 #     Veteran (CzVeteranAI) scores whole-turn plans on cloned belief worlds.
@@ -30,6 +37,14 @@ var level: StringName = ROOKIE
 var seed_value: int = 0
 ## Statistics of the last choose_action: {nodes, plans, ms, searched}.
 var last_stats: Dictionary = {}
+
+# The current segment's anchor (see the header). Private to this base class: brains read it only
+# through anchor_key() and anchor_world().
+var _anchor_snapshot: Dictionary = {}
+var _anchor_data: RulesData = null
+var _anchor_seat: int = -1
+var _anchor_hash: int = 0
+var _asked: MatchState = null
 
 
 func _init(seed_in: int = 0) -> void:
@@ -53,9 +68,43 @@ func choose_action(state: MatchState, seat: int) -> Dictionary:
 		return {}
 	var started: int = Time.get_ticks_usec()
 	var world: MatchState = CzBelief.world(state, seat)
+	_anchor_snapshot = {}
+	_anchor_hash = 0
+	if state.active == seat and state.pending.is_empty() and not state.undo_stack.is_empty():
+		_anchor_snapshot = state.undo_stack[0]["state"]
+		_anchor_data = state.data
+		_anchor_seat = seat
+		_anchor_hash = _anchor_snapshot.hash()
+	_asked = state
 	var action: Dictionary = _decide(world, seat)
+	_asked = null
+	_anchor_snapshot = {}
 	last_stats["ms"] = float(Time.get_ticks_usec() - started) / 1000.0
 	return action
+
+
+## A hash identifying the current segment's anchor, or 0 when the state is itself a segment
+## start (no undoable action yet since the turn start or the last shot).
+func anchor_key() -> int:
+	return _anchor_hash
+
+
+## At a segment start: the key the NEXT call will see as anchor_key() if this call's action is
+## undoable (the hash of this state's snapshot, which apply() stores). 0 otherwise.
+func segment_key() -> int:
+	if _asked == null or not _anchor_snapshot.is_empty():
+		return 0
+	return _asked.to_dict().hash()
+
+
+## The belief world (CzBelief.world) of the current segment's anchor, or null at a segment start.
+func anchor_world() -> MatchState:
+	if _anchor_snapshot.is_empty():
+		return null
+	var a: MatchState = MatchState.new()
+	a.data = _anchor_data
+	a.load_dict(_anchor_snapshot)
+	return CzBelief.world(a, _anchor_seat)
 
 
 ## Subclasses: the action for `seat` in the belief world (the only state they may read).

@@ -1,0 +1,73 @@
+synthetic,scope,id,metric,value,bar,status
+yes,overall,all,Pack time,9028.0,median <= 10 s and 90th pct <= 20 s (human packs vs AI),FAIL
+yes,overall,all,Human turn time,85214.0,median <= 60 s,FAIL
+yes,overall,all,Match length vs AI,802.0,median 12-20 min and last round 8-14 (concedes left out),PASS
+yes,overall,all,Early elimination,1.0,no human eliminated before round 6 in >= 90% of matches,PASS
+yes,overall,all,Comeback,0.667,>= 1 in 3 of matches with the human at <= 3 health in round 4 end in a win or reach round 10+,PASS
+yes,overall,all,Hold used,0.0,">= 60% of packs hold >= 1 card, from the second match on",FAIL
+yes,overall,all,Brace used,1.0,>= 50% of shots at the human where Brace was possible get >= 1 Brace card,PASS
+yes,overall,all,Hidden-armour check (Q3),0.235,<= 35% of the human's shots at the AI fully braced (0 Hits),PASS
+yes,overall,all,Replay intent,0.667,>= 50% of testers start a 2nd match,PASS
+yes,overall,all,Survey: play another,0.5,">= 70% answer 4-5 (""I want to play another match."")",FAIL
+yes,overall,all,Survey: damage understood,0.5,">= 70% answer 4-5 (""I understood why I took damage."")",FAIL
+yes,overall,all,Survey: packing quick,0.5,">= 70% answer 4-5 (""Packing felt quick."")",FAIL
+yes,overall,all,Survey: choices over luck,1.0,">= 70% answer 4-5 (""My choices mattered more than luck."")",PASS
+yes,overall,all,Survey: AI fair,1.0,">= 60% answer 4-5 (""The AI played fair."")",PASS
+yes,overall,all,Load (iPhone),12400.0,< 10 s in every iPhone session,FAIL
+yes,overall,all,Saves,0,0 lost matches across reloads,PASS
+yes,tester,T1,match starts,3,,
+yes,tester,T1,median pack ms,6540.0,,
+yes,tester,T1,median turn ms,62394.0,,
+yes,tester,T1,hold share 2nd+,0.0,,
+yes,tester,T1,worst load ms,6200.0,,
+yes,tester,T1,device,phone-ios,,
+yes,tester,T1,suspected lost matches,0,,
+yes,tester,T1,q1,5,,
+yes,tester,T1,q2,4,,
+yes,tester,T1,q3,4,,
+yes,tester,T1,q4,4,,
+yes,tester,T1,q5,5,,
+yes,tester,T2,match starts,2,,
+yes,tester,T2,median pack ms,20888.0,,
+yes,tester,T2,median turn ms,123107.0,,
+yes,tester,T2,hold share 2nd+,0.0,,
+yes,tester,T2,worst load ms,3100.0,,
+yes,tester,T2,device,desktop-windows,,
+yes,tester,T2,suspected lost matches,0,,
+yes,tester,T2,q1,3,,
+yes,tester,T2,q2,2,,
+yes,tester,T2,q3,2,,
+yes,tester,T2,q4,4,,
+yes,tester,T2,q5,4,,
+yes,tester,T3,match starts,1,,
+yes,tester,T3,median pack ms,11380.0,,
+yes,tester,T3,median turn ms,92697.0,,
+yes,tester,T3,hold share 2nd+,,,
+yes,tester,T3,worst load ms,12400.0,,
+yes,tester,T3,device,phone-ios,,
+yes,tester,T3,suspected lost matches,0,,
+yes,tester,T3,q1,,,
+yes,tester,T3,q2,,,
+yes,tester,T3,q3,,,
+yes,tester,T3,q4,,,
+yes,tester,T3,q5,,,
+yes,session,705fda8de91b,load ms,6200.0,,
+yes,session,705fda8de91b,device,phone,,
+yes,session,705fda8de91b,os,ios,,
+yes,session,705fda8de91b,match starts,2,,
+yes,session,705fda8de91b,resumes,0,,
+yes,session,7bf230722ee4,load ms,6200.0,,
+yes,session,7bf230722ee4,device,phone,,
+yes,session,7bf230722ee4,os,ios,,
+yes,session,7bf230722ee4,match starts,1,,
+yes,session,7bf230722ee4,resumes,1,,
+yes,session,0a2e1d68b1b8,load ms,3100.0,,
+yes,session,0a2e1d68b1b8,device,desktop,,
+yes,session,0a2e1d68b1b8,os,windows,,
+yes,session,0a2e1d68b1b8,match starts,2,,
+yes,session,0a2e1d68b1b8,resumes,0,,
+yes,session,0c579b58e4b9,load ms,12400.0,,
+yes,session,0c579b58e4b9,device,phone,,
+yes,session,0c579b58e4b9,os,ios,,
+yes,session,0c579b58e4b9,match starts,1,,
+yes,session,0c579b58e4b9,resumes,0,,

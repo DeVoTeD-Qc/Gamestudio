@@ -31,7 +31,7 @@ const FILLER: StringName = &"scavenge"
 
 ## The belief world for `seat`. Never changes `state`.
 static func world(state: MatchState, seat: int) -> MatchState:
-	var v: Dictionary = LoadoutRules.view(state, seat)
+	var v: Dictionary = public_view(state, seat)
 	var w: MatchState = CzSim.clone(state)
 	var opp: int = state.opponent_of(seat)
 	var ost: SeatState = w.seats[opp]
@@ -68,6 +68,15 @@ static func world(state: MatchState, seat: int) -> MatchState:
 		ost.hand.append(_make(w, entry, opp))
 	ost.held = held
 	return w
+
+
+## The parts of view(state, seat) (MatchView) the guess reads, built by MatchView's own
+## builders: {opponent, removed, piles, drops, zone_card}. Equal to those keys of the full view;
+## skips the seat's own card lists and the shot record, which the guess does not need (speed).
+static func public_view(state: MatchState, seat: int) -> Dictionary:
+	return {"opponent": MatchView._opponent(state, state.opponent_of(seat)),
+			"removed": MatchView._cards(state, state.removed), "piles": state.pile_counts(),
+			"drops": MatchView._drops(state), "zone_card": state.zone_card}
 
 
 ## The opponent's private cards as public information sees them:
@@ -110,19 +119,49 @@ static func guess_private(data: RulesData, v: Dictionary, me: SeatState, state: 
 		want_total = loose.size() + held.size()
 	var want_loose: int = maxi(0, want_total - held.size())
 	_fit(data, loose, want_loose)
-	# Held: the real ones when public, else the highest-Brace cards.
+	# Group equal entries (sorting a few groups is much cheaper than sorting every card).
+	var groups: Dictionary = {}
+	for e: Dictionary in loose:
+		var k: String = _entry_key(e)
+		if groups.has(k):
+			groups[k]["n"] = int(groups[k]["n"]) + 1
+		else:
+			groups[k] = {"e": e, "n": 1, "brace": _brace(data, e)}
+	var keys: Array = groups.keys()
+	# Held: the real ones when public, else the highest-Brace cards (then by id).
 	var held_count: int = int(o["held_count"])
 	if held.size() < held_count:
-		loose.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return _brace_first(data, x, y))
-		while held.size() < held_count and not loose.is_empty():
-			held.append(loose.pop_front())
-	# Hand: the lowest-Brace cards (stable by id).
-	loose.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return _brace_last(data, x, y))
+		keys.sort_custom(func(x: Variant, y: Variant) -> bool:
+			var bx: int = groups[x]["brace"]
+			var by: int = groups[y]["brace"]
+			return bx > by if bx != by else String(x) < String(y))
+		for k: Variant in keys:
+			while held.size() < held_count and int(groups[k]["n"]) > 0:
+				held.append((groups[k]["e"] as Dictionary).duplicate(true))
+				groups[k]["n"] = int(groups[k]["n"]) - 1
+	# Hand: the lowest-Brace cards (then by id); the rest in the same order, spread.
+	keys.sort_custom(func(x: Variant, y: Variant) -> bool:
+		var bx: int = groups[x]["brace"]
+		var by: int = groups[y]["brace"]
+		return bx < by if bx != by else String(x) < String(y))
 	var hand: Array[Dictionary] = []
-	while hand.size() < hand_nonhits and not loose.is_empty():
-		hand.append(loose.pop_front())
-	return {"held": held, "loadout": _spread(data, loose), "hand": hand, "top_hits": next_hits,
+	var rest: Array[Dictionary] = []
+	for k: Variant in keys:
+		for i: int in int(groups[k]["n"]):
+			var copy: Dictionary = (groups[k]["e"] as Dictionary).duplicate(true)
+			if hand.size() < hand_nonhits:
+				hand.append(copy)
+			else:
+				rest.append(copy)
+	return {"held": held, "loadout": _spread(data, rest), "hand": hand, "top_hits": next_hits,
 			"bottom_hits": loadout_hits - next_hits, "hand_hits": hand_hits}
+
+
+static func _entry_key(e: Dictionary) -> String:
+	var k: String = String(e["id"])
+	for a: Variant in e["atts"]:
+		k += "+" + String(a)
+	return k
 
 
 ## Card id -> how many of it the opponent holds privately (loadout + hand, attachments loose),
@@ -132,9 +171,12 @@ static func public_counts(data: RulesData, v: Dictionary, me: SeatState, state: 
 	var mine: Dictionary = {}
 	for list: Array[int] in [me.loadout, me.hand, me.line]:
 		for inst: int in list:
-			_add(mine, state.card_id(inst), 1)
-			for att: int in state.attachments_of(inst):
-				_add(mine, state.card_id(att), 1)
+			var id: StringName = state.defs.get(inst, &"")
+			mine[id] = int(mine.get(id, 0)) + 1
+			if state.attachments.has(inst):
+				for att: Variant in state.attachments[inst]:
+					var aid: StringName = state.defs.get(int(att), &"")
+					mine[aid] = int(mine.get(aid, 0)) + 1
 	var removed: Dictionary = {}
 	for cv: Dictionary in v["removed"]:
 		_add(removed, StringName(cv["card"]), 1)
@@ -158,9 +200,9 @@ static func public_counts(data: RulesData, v: Dictionary, me: SeatState, state: 
 		var now: Dictionary = piles_now.get(area_id, {})
 		for c: CardData in area.piles:
 			_add(taken, c.id, maxi(0, area.pile_size(b) - int(now.get(c.id, 0))))
-	for k: int in range(1, int(v["zone_card"]) + 1):
-		var z: ZoneCardData = data.zone_card(k)
-		if z != null and z.drop_card != null and z.drop_area_for(state.route) != null:
+	var flipped: int = mini(int(v["zone_card"]), b.zone_hard_end_card)
+	for z: ZoneCardData in data.zone_cards:
+		if z.number <= flipped and z.drop_card != null and z.drop_area_for(state.route) != null:
 			_add(taken, z.drop_card.id, 1)
 	for area_id: Variant in v["drops"].keys():
 		for cv: Dictionary in v["drops"][area_id]:
@@ -263,18 +305,6 @@ static func _spread(data: RulesData, cards: Array[Dictionary]) -> Array[Dictiona
 static func _brace(data: RulesData, e: Dictionary) -> int:
 	var c: CardData = data.card(e["id"])
 	return c.brace if c != null else 0
-
-
-static func _brace_first(data: RulesData, x: Dictionary, y: Dictionary) -> bool:
-	var bx: int = _brace(data, x)
-	var by: int = _brace(data, y)
-	return bx > by if bx != by else String(x["id"]) < String(y["id"])
-
-
-static func _brace_last(data: RulesData, x: Dictionary, y: Dictionary) -> bool:
-	var bx: int = _brace(data, x)
-	var by: int = _brace(data, y)
-	return bx < by if bx != by else String(x["id"]) < String(y["id"])
 
 
 static func _names(list: Array) -> Array[StringName]:
