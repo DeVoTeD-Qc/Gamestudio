@@ -11,7 +11,7 @@
 #   CardView.art_factory  : Callable(card: Dictionary) -> Control  - poster art filling the card.
 #   CardView.icon_factory : Callable(icon_id: StringName) -> Texture2D - e.g. &"trait_veteran".
 #   Frames come from the theme variations CardFrameC1..C4 / CardFrameShowcase.
-#   Until set, a seeded duotone placeholder and one-letter trait marks are drawn here.
+#   Until set, a seeded duotone placeholder and two-letter trait marks are drawn here.
 # Dependencies: wall_palette.gd, card_text.gd.
 # Author: UI/UX Agent (cc07)
 extends Control
@@ -47,6 +47,7 @@ var compact: bool = false:
 @onready var _trait_icon: TextureRect = %TraitIcon
 @onready var _trait_badge: PanelContainer = %TraitBadge
 @onready var _clearance: HBoxContainer = %ClearancePips
+@onready var _side_pip_r: Control = $Frame/Row/SidePipRight
 
 var _art_node: Control = null
 var _text_scale: float = 1.0
@@ -56,6 +57,7 @@ func _ready() -> void:
 	_art.draw.connect(_draw_placeholder_art)
 	_overlay.draw.connect(_draw_overlay)
 	resized.connect(_on_resized)
+	_side_pip_r.item_rect_changed.connect(_overlay.queue_redraw)
 	if not card.is_empty():
 		_apply()
 
@@ -201,7 +203,10 @@ func _draw_overlay() -> void:
 	if is_signature:
 		var w: float = 14.0 * maxf(_text_scale, 1.0)
 		var h: float = 20.0 * maxf(_text_scale, 1.0)
-		var x0: float = r.size.x - w - 6.0
+		# Left of the right-hand Side pip, above the Bottom pip, so it never covers a value.
+		var pip_r: Control = _side_pip_r
+		var x0: float = (pip_r.get_global_rect().position.x - _overlay.get_global_rect().position.x) - w - 6.0 \
+				if _frame.visible else r.size.x - w - 6.0
 		_overlay.draw_colored_polygon(PackedVector2Array([Vector2(x0, 0), Vector2(x0 + w, 0), Vector2(x0 + w, h),
 				Vector2(x0 + w * 0.5, h * 0.7), Vector2(x0, h)]), Palette.SIGNATURE)
 

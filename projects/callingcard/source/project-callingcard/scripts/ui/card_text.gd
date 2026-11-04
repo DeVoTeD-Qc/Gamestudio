@@ -31,9 +31,9 @@ const TRAIT_RULES: Dictionary = {
 	&"none": "Store card: premium frame, Clearance 1, no trait.",
 }
 
-## One-letter fallback marks for trait icons until cc14's icons are wired in (card_view.gd).
+## Two-letter fallback marks (not "S", which reads as Side) for trait icons until cc14's icons are wired in (card_view.gd).
 const TRAIT_MARKS: Dictionary = {
-	&"steady": "S", &"veteran": "V", &"ambush": "A", &"reclaim": "R", &"clutch": "C", &"cipher": "?", &"none": "",
+	&"steady": "St", &"veteran": "Vt", &"ambush": "Am", &"reclaim": "Rc", &"clutch": "Cl", &"cipher": "Ci", &"none": "",
 }
 
 const SET_NAMES: Dictionary = {
