@@ -1,0 +1,139 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/album_screen.gd" id="1_album"]
+[ext_resource type="PackedScene" path="res://scenes/album/TriptychReveal.tscn" id="2_reveal"]
+[ext_resource type="PackedScene" path="res://scenes/duel/CardInspector.tscn" id="3_insp"]
+
+[node name="Album" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_album")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0784, 0.0863, 0.106, 1)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 18
+
+[node name="Column" type="VBoxContainer" parent="SafeArea"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TopBar" type="HBoxContainer" parent="SafeArea/Column"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 64)
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+text = "BACK"
+
+[node name="AlbumTitle" type="Label" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Heading"
+text = "ALBUM"
+vertical_alignment = 1
+
+[node name="CardCount" type="Label" parent="SafeArea/Column/TopBar" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"AlbumCount"
+text = "13 / 20"
+vertical_alignment = 1
+
+[node name="TitlesLabel" type="Label" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Caption"
+text = "cards · 0 titles"
+vertical_alignment = 1
+
+[node name="TabScroll" type="ScrollContainer" parent="SafeArea/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+vertical_scroll_mode = 0
+
+[node name="Tabs" type="HBoxContainer" parent="SafeArea/Column/TabScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Page" type="PanelContainer" parent="SafeArea/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_type_variation = &"AlbumPage"
+
+[node name="PageScroll" type="ScrollContainer" parent="SafeArea/Column/Page"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="PageHost" type="VBoxContainer" parent="SafeArea/Column/Page/PageScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Toast" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -112.0
+offset_right = 260.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_type_variation = &"ToastPanel"
+
+[node name="ToastLabel" type="Label" parent="Toast"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Body"
+text = "New card"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="CardInspector" parent="." instance=ExtResource("3_insp")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="TriptychReveal" parent="." instance=ExtResource("2_reveal")]
+unique_name_in_owner = true
+layout_mode = 1

@@ -28,6 +28,9 @@ signal ambush_sprung(side: StringName, card_id: StringName, slot: StringName)
 ## player, card_id). by_side is the Reclaim player. Emitted once per card, after card_placed.
 ## Not a capture: Collection's capture count ignores it.
 signal card_reclaimed(by_side: StringName, card_id: StringName, slot: StringName)
+## The placed card got Set Link (cc15 light): linked lists the same-set slots it touched.
+## Emitted right after card_placed, before the captures.
+signal set_linked(side: StringName, slot: StringName, linked: Array)
 ## A Signature card was captured ("Carded!"). by_side is the captor.
 signal carded(by_side: StringName, card_id: StringName)
 signal triptych_scored(side: StringName, triptych_id: StringName, first_time: bool)

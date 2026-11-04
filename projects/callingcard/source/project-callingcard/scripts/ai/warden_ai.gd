@@ -13,9 +13,14 @@ extends RivalAI
 
 ## Placements simulated per move at most (root moves + replies; half when a Triptych can score,
 ## since every score then checks it). Only the first two or three moves of a duel reach it.
-## 250 keeps the slowest move under ~35 ms on the dev machine (target: 200 ms on a phone with
+## 200 keeps the slowest move under ~35 ms on the dev machine (target: 200 ms on a phone with
 ## 4x headroom). See documentation/design/balance/balance-log.md for timings.
-var max_nodes: int = 250
+var max_nodes: int = 200
+## Optional wall-clock safety cap in ms (0 = off, the default). When on, the search also stops
+## between root moves once this much time has passed. That keeps a slow phone or a hiccup inside
+## the frame budget, but a move cut by the clock is no longer reproducible from the seed, so the
+## sim tool and the tests leave it off. Suggested for release builds: 150.
+var max_ms: float = 0.0
 
 
 func brain_name() -> StringName:
@@ -23,6 +28,7 @@ func brain_name() -> StringName:
 
 
 func _pick(world: WallState, me: int, moves: Array[Dictionary]) -> int:
+	var deadline: int = Time.get_ticks_usec() + int(max_ms * 1000.0) if max_ms > 0.0 else 0
 	var opp: int = WallState.other(me)
 	var after: Array[WallState] = []
 	var greedy: Array[float] = []
@@ -46,7 +52,7 @@ func _pick(world: WallState, me: int, moves: Array[Dictionary]) -> int:
 		var w1: WallState = after[i]
 		if w1 == null:
 			continue
-		if last_nodes >= cap and best >= 0:
+		if best >= 0 and (last_nodes >= cap or (deadline > 0 and Time.get_ticks_usec() >= deadline)):
 			break
 		var v: float
 		if w1.is_game_over() or w1.to_move != opp:

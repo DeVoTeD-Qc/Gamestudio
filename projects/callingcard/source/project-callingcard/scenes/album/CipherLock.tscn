@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/cipher_lock.gd" id="1_lock"]
+
+[node name="CipherLock" type="PanelContainer"]
+size_flags_horizontal = 3
+theme_type_variation = &"CipherPanel"
+script = ExtResource("1_lock")

@@ -1,0 +1,50 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/lineup_row.gd" id="1_row"]
+[ext_resource type="Script" path="res://scripts/ui/tap_hold_button.gd" id="2_tap"]
+[ext_resource type="PackedScene" path="res://scenes/card/BannerCard.tscn" id="3_card"]
+
+[node name="LineupRow" type="HBoxContainer"]
+theme_override_constants/separation = 8
+script = ExtResource("1_row")
+
+[node name="CardButton" type="Button" parent="." groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(256, 64)
+layout_mode = 2
+theme_type_variation = &"SlotButton"
+script = ExtResource("2_tap")
+
+[node name="Card" parent="CardButton" instance=ExtResource("3_card")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EmptyLabel" type="Label" parent="CardButton"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"Caption"
+text = "EMPTY SLOT"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SigToggle" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(112, 64)
+layout_mode = 2
+toggle_mode = true
+text = "SIGNATURE"

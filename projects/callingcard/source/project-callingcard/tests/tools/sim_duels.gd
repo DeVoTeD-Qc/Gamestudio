@@ -10,9 +10,12 @@
 #     --first_bonus=N      knob test: +N points to the first player at the end (sim only)
 #     --first_sig_bonus=N  knob test: +N to the first player if they control their own Signature
 #                          at the end (sim only)
+#     --tiebreak=signatures  knob test: a tie goes to the player controlling more Signatures, then
+#                          to the tie rule (sim only)
 #     --knobs=a:1,b:0      BalanceConfig overrides, e.g. chain_captures:1,ambush_spring_bonus:2
 #     --pairs=all|mixed|mirror  which pairings (default all: 3 mirrors + 3 mixed)
 #     --warden_nodes=N     WardenAI.max_nodes override
+#     --warden_ms=N        WardenAI.max_ms safety cap (off by default; on = not reproducible)
 #   Never writes data/; knob overrides only change an in-memory copy of the balance.
 # Dependencies: RivalAI, WallRules, WallState, RivalData, BalanceConfig, TriptychData.
 # Author: Mechanics Developer Agent
@@ -34,7 +37,9 @@ func _run() -> void:
 	var base_seed: int = int(args.get("seed", "1"))
 	var second_bonus: int = int(args.get("second_bonus", "0")) - int(args.get("first_bonus", "0"))
 	var warden_nodes: int = int(args.get("warden_nodes", "0"))
+	var warden_ms: float = float(args.get("warden_ms", "0"))
 	var first_sig_bonus: int = int(args.get("first_sig_bonus", "0"))
+	var sig_tiebreak: bool = args.get("tiebreak", "") == "signatures"
 	var balance: BalanceConfig = (load("res://data/balance.tres") as BalanceConfig).duplicate()
 	if args.has("tie"):
 		balance.tie_winner = DataEnums.TieWinner.DRAW if args["tie"] == "draw" else DataEnums.TieWinner.FIRST_PLAYER
@@ -82,6 +87,8 @@ func _run() -> void:
 			for br: RivalAI in brains:
 				if br is WardenAI and warden_nodes > 0:
 					(br as WardenAI).max_nodes = warden_nodes
+				if br is WardenAI:
+					(br as WardenAI).max_ms = warden_ms
 			while not state.is_game_over():
 				var me: int = state.to_move
 				var brain: RivalAI = brains[me]
@@ -98,7 +105,7 @@ func _run() -> void:
 				if not r.ok:
 					push_error("sim: illegal move %s" % r.error)
 					break
-			var res: Dictionary = _result(state, second_bonus, first_sig_bonus)
+			var res: Dictionary = _result(state, second_bonus, first_sig_bonus, sig_tiebreak)
 			for bk: Dictionary in [bucket, total]:
 				_add(bk, res, first, pairs[p])
 		per_pair.append(bucket)
@@ -108,7 +115,7 @@ func _run() -> void:
 
 
 ## Final result with the sim-only bonuses applied.
-func _result(state: WallState, second_bonus: int, first_sig_bonus: int = 0) -> Dictionary:
+func _result(state: WallState, second_bonus: int, first_sig_bonus: int = 0, sig_tiebreak: bool = false) -> Dictionary:
 	var s: Array[int] = WallRules.scores(state)
 	var second: int = WallState.other(state.first_player)
 	s[second] += second_bonus  # Negative = a first-player bonus.
@@ -119,8 +126,15 @@ func _result(state: WallState, second_bonus: int, first_sig_bonus: int = 0) -> D
 				s[state.first_player] += first_sig_bonus
 	var winner: int = WallState.NO_PLAYER
 	var tie: bool = s[0] == s[1]
+	var sigs: Array[int] = [0, 0]
+	for slot: StringName in state.cells:
+		var pc: PlacedCard = state.cells[slot]
+		if pc.signature:
+			sigs[pc.controller] += 1
 	if not tie:
 		winner = WallState.P1 if s[0] > s[1] else WallState.P2
+	elif sig_tiebreak and sigs[0] != sigs[1]:
+		winner = WallState.P1 if sigs[0] > sigs[1] else WallState.P2
 	elif state.balance.tie_winner == DataEnums.TieWinner.FIRST_PLAYER:
 		winner = state.first_player
 	return {"score": s, "winner": winner, "tie": tie, "first": state.first_player}

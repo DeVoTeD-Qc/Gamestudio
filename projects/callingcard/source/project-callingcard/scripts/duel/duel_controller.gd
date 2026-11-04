@@ -14,6 +14,9 @@
 # Hooks: autostart (tests of the bare layout turn it off), next_rival_id / next_player_lineup
 #   (hub cc13 / lineup builder cc10 set them before routing here), brain_factory (cc06 AI:
 #   func(rival: RivalData, seed: int) -> object with choose_move(state, player) -> Dictionary).
+#   cc15 game feel: each replay pause also awaits the FX layer (%FX, DuelFx.wait_idle()) so the
+#   "Carded!" stamp and Triptych merge finish before play moves on (only when event_delay > 0);
+#   emits set_linked (Set Link light) and card_reclaimed, plus duel_lineup_locked for cc09.
 # Dependencies: WallRules, WallState, PlacementResult, EventBus, Settings, SceneRouter,
 #   duel_setup.gd, random_rival.gd, DuelScreen (parent), DuelOverlay, BannerCard.
 # Author: UI/UX Agent (cc08)
@@ -74,6 +77,8 @@ var _copy_from: StringName = &""
 var _cipher_picks: Array[StringName] = []
 var _started_ms: int = 0
 var _seed: int = 0
+## True when the duel uses the loaner lineup (not the one next_player_lineup asked for).
+var _loaner: bool = false
 
 
 func _ready() -> void:
@@ -113,6 +118,8 @@ func open_setup() -> void:
 		var p: Dictionary = DuelSetup.player_lineup(next_player_lineup)
 		player_lineup.assign(p["lineup"])
 		player_signature = p["signature"]
+		var asked: Array = next_player_lineup.map(func(c: Variant) -> StringName: return c.id if c is CardData else StringName(str(c)))
+		_loaner = asked != player_lineup.map(func(c: CardData) -> StringName: return c.id)
 	state = null
 	_set_phase(&"setup")
 	_screen.clear_pick()
@@ -165,6 +172,11 @@ func start_duel() -> void:
 func begin() -> void:
 	_overlay.close()
 	EventBus.duel_started.emit(source, rival["id"], _side(state.first_player))
+	EventBus.duel_lineup_locked.emit(player_lineup.map(func(c: CardData) -> StringName: return c.id),
+			player_signature.id if player_signature != null else &"", _loaner)
+	var fx: Node = _fx()
+	if fx != null:
+		fx.stage_changes = event_delay > 0.0
 	EventBus.turn_started.emit(_side(state.to_move), 1)
 	_next_turn()
 
@@ -323,10 +335,13 @@ func _replay(r: PlacementResult) -> void:
 		match e["type"]:
 			&"placed":
 				EventBus.card_placed.emit(side, e["card_id"], e["slot"], r.captured.duplicate())
+				if r.set_link and e["slot"] == r.slot:
+					EventBus.set_linked.emit(side, r.slot, _set_link_slots(r))
 			&"captured":
 				EventBus.card_captured.emit(side, e["card_id"], e["slot"])
 			&"reclaimed":
 				_screen.set_slot_owner(e["slot"], side)
+				EventBus.card_reclaimed.emit(side, e["card_id"], e["slot"])
 			&"spring":
 				EventBus.ambush_sprung.emit(side, e["card_id"], e["slot"])
 			&"carded":
@@ -338,7 +353,7 @@ func _replay(r: PlacementResult) -> void:
 			_:
 				pass
 		if event_delay > 0.0 and e["type"] in [&"placed", &"captured", &"reclaimed", &"spring", &"carded"]:
-			await get_tree().create_timer(_paced(event_delay)).timeout
+			await _beat(event_delay)
 	var pub: Array[int] = [WallRules.score(state, P1, state.is_game_over()), WallRules.score(state, P2, state.is_game_over())]
 	EventBus.score_changed.emit(pub[0], pub[1])
 
@@ -355,6 +370,10 @@ func _end() -> void:
 	for side: int in [P1, P2]:
 		for tid: StringName in (last_result["triptychs"] as Array)[side]:
 			EventBus.triptych_scored.emit(_side(side), tid, true)
+	if event_delay > 0.0 and _fx() != null:
+		await _fx().wait_idle(6.0)  # cc15: let the Triptych merge play before the end screen
+		if phase != &"over":
+			return
 	EventBus.duel_ended.emit(word, s[0], s[1], state.placements, duration)
 	_screen.show_state(ui_state())
 	var title: String = {&"win": "YOU WIN", &"loss": "%s WINS" % String(rival["name"]).to_upper(), &"draw": "DRAW"}[word]
@@ -608,6 +627,34 @@ func _hand_card(card_id: StringName) -> CardData:
 
 func _side(p: int) -> StringName:
 	return &"player" if p == P1 else (&"rival" if p == P2 else &"")
+
+
+## cc15: one replay pause, then (if still running) the FX layer's animation, e.g. "Carded!".
+func _beat(seconds: float) -> void:
+	await get_tree().create_timer(_paced(seconds)).timeout
+	var fx: Node = _fx()
+	if fx != null and phase != &"gone":
+		await fx.wait_idle()
+
+
+## cc15: the feedback layer (scenes/fx/DuelFx.tscn, %FX in Duel.tscn), or null.
+func _fx() -> Node:
+	return _screen.get_node_or_null(^"%FX") if _screen != null else null
+
+
+## cc15: own face-up same-set neighbours that gave the placed card its Set Link.
+func _set_link_slots(r: PlacementResult) -> Array:
+	var out: Array = []
+	if r.card == null or r.card.card_set == null:
+		return out
+	var flipped: Array[StringName] = r.all_flipped()
+	for n: StringName in state.topology.neighbour_slots(r.slot):
+		var pc: PlacedCard = state.get_card(n)
+		if pc == null or pc.face_down or pc.card.card_set == null or flipped.has(n):
+			continue
+		if pc.controller == r.player and pc.card.card_set.id == r.card.card_set.id:
+			out.append(n)
+	return out
 
 
 func _paced(seconds: float) -> float:
