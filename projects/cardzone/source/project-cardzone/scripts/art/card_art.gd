@@ -32,8 +32,8 @@ const TYPE_ART: Dictionary = {&"weapon": &"assault_rifle", &"attachment": &"red_
 ## Keywords bolded in inspector effect text (spec section 6, plus stat words).
 const KEYWORDS: Array[String] = ["Move", "Search", "Shoot", "Brace", "Heal", "Pull", "Spent", "Attach",
 	"Down", "Adrenaline", "Free draw", "Ignores Cover", "DMG", "RNG"]
-## Supply drops cost BalanceConfig.supply_drop_cost (3 in spec v0.2); shown when the data says cost 0.
-const DROP_COST_DEFAULT: int = 3
+## Fallback when no BalanceConfig is reachable: spec §16.4a default for supply_drop_cost.
+const DROP_COST_DEFAULT: int = 4
 ## Area ids, for backdrops and the map.
 const AREA_IDS: Array[StringName] = [&"docks", &"farmstead", &"quarry", &"radio_hill", &"motel", &"rail_yard", &"old_town"]
 
@@ -101,7 +101,7 @@ static func read(card: Variant) -> Dictionary:
 	if cost <= 0:
 		cost = stat(d, ["drop_cost"]) if info["drop"] else -1
 		if info["drop"] and cost <= 0:
-			cost = DROP_COST_DEFAULT
+			cost = drop_cost()
 	info["cost"] = cost
 	info["brace"] = stat(d, ["brace", "brace_value"])
 	info["dmg"] = stat(d, ["dmg", "damage"])
@@ -134,6 +134,19 @@ static func read(card: Variant) -> Dictionary:
 	info["area"] = StringName(str(field(d, ["area", "where", "home_area"], "")).to_lower().replace(" ", "_"))
 	info["stencil"] = str(field(d, ["stencil", "marking"], stencil_code(info["id"], info["name"])))
 	return info
+
+
+## Search cost of a supply drop: CardDB's BalanceConfig.supply_drop_cost (a supply-drop CardData has
+## cost 0), else DROP_COST_DEFAULT. A card dictionary may also carry its own "drop_cost".
+static func drop_cost() -> int:
+	var ml: MainLoop = Engine.get_main_loop()
+	if ml is SceneTree:
+		var db: Node = (ml as SceneTree).root.get_node_or_null("CardDB")
+		if db != null and db.has_method("get_balance"):
+			var bal: Object = db.call("get_balance")
+			if bal != null and "supply_drop_cost" in bal:
+				return int(bal.get("supply_drop_cost"))
+	return DROP_COST_DEFAULT
 
 
 ## "+1 DMG" style strip text from an attach dictionary.

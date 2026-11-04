@@ -144,10 +144,10 @@ func layout_report() -> Dictionary:
 		texts["gas_tag"] = gp
 		texts["hint"] = gp
 		var gw: float = font.get_string_size("GAS", HORIZONTAL_ALIGNMENT_LEFT, -1, gp).x + 6.0 * k
-		boxes["gas_tag"] = Rect2(Vector2(6.0, 21.0) * k, Vector2(gw, 12.0 * k))
-		boxes["gas_icon"] = Rect2(Vector2(boxes["gas_tag"].end.x + 2.0 * k, 21.0 * k), Vector2(12.0, 12.0) * k)
+		boxes["gas_tag"] = Rect2(Vector2(6.0, 20.0) * k, Vector2(gw, 12.0 * k))
+		boxes["gas_icon"] = Rect2(Vector2(boxes["gas_tag"].end.x + 2.0 * k, 20.0 * k), Vector2(12.0, 12.0) * k)
 		var hw: float = font.get_string_size("-1 HIT AT END", HORIZONTAL_ALIGNMENT_LEFT, -1, gp).x
-		boxes["hint"] = Rect2(Vector2(boxes["gas_icon"].end.x + 2.0 * k, 21.0 * k + (12.0 * k - gp * 0.72) * 0.5), Vector2(hw, gp * 0.72))
+		boxes["hint"] = Rect2(Vector2(boxes["gas_icon"].end.x + 2.0 * k, 20.0 * k + (12.0 * k - gp * 0.72) * 0.5), Vector2(hw, gp * 0.72))
 	# Loot pips: up to 3 per row; ring row at y 44, Core rows at y 38 and 56.
 	var row_y: Array = [38.0, 56.0] if core else [44.0, 26.0]
 	texts["pip_letter"] = _fpx(10.0, k)
@@ -169,7 +169,7 @@ func layout_report() -> Dictionary:
 	var pr: float = PAWN_PT * 0.5
 	for i: int in pawns.size():
 		var cx: float = dpt.x - 4.0 - pr - float(i) * (PAWN_PT + 2.0)
-		var cy: float = dpt.y - 2.0 - pr
+		var cy: float = dpt.y - 4.0 - pr  # clear of the bottom-right corner cut
 		boxes["pawn%d" % i] = Rect2(Vector2(cx - pr, cy - pr) * k, Vector2(PAWN_PT, PAWN_PT) * k)
 	boxes["glyph"] = Rect2(Vector2(dpt.x - 4.0 - (dpt.y - 10.0), 5.0) * k, Vector2(dpt.y - 10.0, dpt.y - 10.0) * k)
 	return {"k": k, "boxes": boxes, "texts": texts, "gassed": gassed}

@@ -306,6 +306,8 @@ func _layout_compact(lay: Dictionary, k: float) -> void:
 	boxes["band"] = _r(6, 27, 76, 17, k)
 	_fit_name(lay, disp, 10.0, 9.0, 72.0, k, 27.0 + 17.0 * 0.5)
 	boxes["art"] = _r(8, 46, 72, 40, k)
+	if info.get("type", &"item") == &"weapon" and bool(info.get("fires_twice", false)):
+		boxes["twice_badge"] = _r(63, 48, 15, 11, k)
 	# Brace shield, bottom-left.
 	boxes["brace"] = _r(9, 89, 22, 26, k)
 	lay["numerals"]["brace"] = _fpx(15.0, k)
@@ -469,8 +471,9 @@ func _stat_groups(full: bool) -> Array:
 			out.append({"id": "rng", "icon": &"range", "value": rng, "pt": big, "caption": "RNG"})
 		else:
 			out.append({"id": "rng", "icon": &"", "prefix": "R", "value": rng, "pt": 12.0, "caption": "RNG"})
-		if bool(info.get("fires_twice", false)):
-			out.append({"id": "twice", "icon": &"fires_twice", "value": "2", "pt": big if full else 12.0, "caption": "SHOTS", "icon_pt": 10.0})
+		# Compact: "fires twice" is a badge on the art window (no room in the stat row).
+		if bool(info.get("fires_twice", false)) and full:
+			out.append({"id": "twice", "icon": &"fires_twice", "value": "2", "pt": big, "caption": "SHOTS"})
 		return out
 	if type == &"attachment":
 		var a: Dictionary = info.get("attach", {})
@@ -653,6 +656,10 @@ func _draw_bottom(lay: Dictionary, k: float, full: bool) -> void:
 		var bc: Rect2 = boxes["brace_caption"]
 		draw_string(disp, Vector2(bc.position.x, bc.end.y), "BRACE", HORIZONTAL_ALIGNMENT_LEFT, -1, lay["texts"]["brace_caption"], Color(CzArtKit.INK, 0.8))
 	_draw_stats(lay, k, full)
+	if boxes.has("twice_badge"):
+		var tb: Rect2 = boxes["twice_badge"]
+		CzArtKit.draw_tag(self, tb, 3.0 * k, CzArtKit.INK)
+		_icon(&"fires_twice", Rect2(tb.get_center() - Vector2(4.5, 4.5) * k, Vector2(9, 9) * k), CzArtKit.PAPER)
 	if full:
 		_draw_inspector_footer(lay, k)
 

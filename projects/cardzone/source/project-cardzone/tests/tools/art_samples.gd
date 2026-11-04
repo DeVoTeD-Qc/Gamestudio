@@ -48,13 +48,13 @@ const CARDS: Array[Dictionary] = [
 		"effect": "Attach: targets can't Brace with cards against this weapon (Down still applies)", "area": "old_town"},
 	{"id": "CZ-027", "name": "Recon Drone", "type": "item", "rarity": "R", "cost": 5, "search": 2, "pull": 1,
 		"effect": "Search 2. Pull 1.", "area": "old_town"},
-	{"id": "CZ-030", "name": "Twin-Drum LMG", "short_name": "Twin LMG", "type": "weapon", "rarity": "E", "cost": 3, "drop": true,
+	{"id": "CZ-030", "name": "Twin-Drum LMG", "short_name": "Twin LMG", "type": "weapon", "rarity": "E", "cost": 0, "drop": true,
 		"dmg": 2, "rng": 1, "fires_twice": true, "effect": "Shoot. DMG 2 · RNG 1. Fires twice each turn.", "area": "quarry"},
-	{"id": "CZ-031", "name": "Heavy Plate", "type": "item", "rarity": "E", "cost": 3, "drop": true, "brace": 3, "heal": 1,
+	{"id": "CZ-031", "name": "Heavy Plate", "type": "item", "rarity": "E", "cost": 0, "drop": true, "brace": 3, "heal": 1,
 		"move": 1, "effect": "Heal 1. Move 1.", "area": "motel"},
-	{"id": "CZ-032", "name": "Longshot .50", "type": "weapon", "rarity": "L", "cost": 3, "drop": true, "dmg": 4, "rng": 2,
+	{"id": "CZ-032", "name": "Longshot .50", "type": "weapon", "rarity": "L", "cost": 0, "drop": true, "dmg": 4, "rng": 2,
 		"ignores_cover": true, "effect": "Shoot. DMG 4 · RNG 2. Ignores Cover.", "area": "old_town"},
-	{"id": "CZ-033", "name": "Phantom Suit", "type": "item", "rarity": "L", "cost": 3, "drop": true, "brace": 4, "move": 2,
+	{"id": "CZ-033", "name": "Phantom Suit", "type": "item", "rarity": "L", "cost": 0, "drop": true, "brace": 4, "move": 2,
 		"search": 1, "effect": "Move 2. Search 1.", "area": "motel"},
 ]
 

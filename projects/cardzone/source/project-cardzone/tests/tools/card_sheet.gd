@@ -15,7 +15,7 @@ const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 const THEME_PATH: String = "res://assets/themes/cardzone_theme.tres"
 ## Physical px per logical px on the 844x390 @3x phone (2532 / 1168).
 const PHONE_STRETCH: float = 2.168
-const LOGICAL: Dictionary = {"compact": Vector2(1240, 860), "inspector": Vector2(1300, 940), "board": Vector2(1300, 1010)}
+const LOGICAL: Dictionary = {"compact": Vector2(1240, 900), "inspector": Vector2(1300, 940), "board": Vector2(1300, 1010)}
 
 var _page: String = "compact"
 var _out: String = ""
