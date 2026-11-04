@@ -81,9 +81,8 @@ static func next_action(w: MatchState, me: int) -> Dictionary:
 	if not loot.is_empty():
 		return loot
 	# 7. Patch up.
-	var patch: Dictionary = {"type": "patch_up", "seat": me}
-	if LoadoutRules.is_legal(w, patch):
-		return patch
+	if CzAI.can_patch_up(w, me):
+		return {"type": "patch_up", "seat": me}
 	# 8. Pack.
 	return CzAI.end_turn_action(w, me, [], true)
 
@@ -136,6 +135,7 @@ static func destination(w: MatchState, me: int) -> StringName:
 	var budget_s: int = st.search + adren + reserve_search
 	var best_area: StringName = here
 	var best_score: float = -1.0
+	var facts: Dictionary = CzAI.owned_facts(w, me)
 	for a: StringName in order:
 		var d: int = data.distance(here, a)
 		if d > budget_m or w.gas.has(a) or a == closing:
@@ -143,7 +143,7 @@ static func destination(w: MatchState, me: int) -> StringName:
 		var top: int = 0
 		for opt: Dictionary in CzSim.loot_options(w, me, a):
 			if int(opt["cost"]) <= budget_s - maxi(0, d - st.move - reserve_move):
-				top = maxi(top, CzAI.want(w, me, opt["id"]))
+				top = maxi(top, CzAI.want_in(w, opt["id"], facts))
 		var score: float = float(top) - float(d) * 0.5
 		if score > best_score:
 			best_score = score
@@ -200,8 +200,9 @@ static func _loot(w: MatchState, me: int) -> Dictionary:
 			extra += w.def_of(inst).search
 	var best: Dictionary = {}
 	var best_key: Vector2i = Vector2i(0, 0)
+	var facts: Dictionary = CzAI.owned_facts(w, me)
 	for opt: Dictionary in CzSim.loot_options(w, me, st.area):
-		var v: int = CzAI.want(w, me, opt["id"])
+		var v: int = CzAI.want_in(w, opt["id"], facts)
 		var cost: int = int(opt["cost"])
 		if v <= 0 or cost > st.search + extra:
 			continue

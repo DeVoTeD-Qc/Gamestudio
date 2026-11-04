@@ -27,7 +27,11 @@ static var _no_events: Array[Dictionary] = []
 
 
 ## Deep copy of every state field (not the log, undo snapshots or origin). Shares `data`.
-static func clone(src: MatchState) -> MatchState:
+## share_ids (search clones only): share `defs` and `owners` with `src` instead of copying them.
+## The engine only ever adds to them (new_card, for the supply drop a round start lands), and
+## every rollout of one search adds the same card under the same id, so sharing is safe there;
+## owners is never read by the rules. Never use it for a state that outlives the search.
+static func clone(src: MatchState, share_ids: bool = false) -> MatchState:
 	var s: MatchState = MatchState.new()
 	s.data = src.data
 	s.phase = src.phase
@@ -35,8 +39,8 @@ static func clone(src: MatchState) -> MatchState:
 	s.zone_card = src.zone_card
 	s.route = src.route
 	s.active = src.active
-	s.defs = src.defs.duplicate()
-	s.owners = src.owners.duplicate()
+	s.defs = src.defs if share_ids else src.defs.duplicate()
+	s.owners = src.owners if share_ids else src.owners.duplicate()
 	s.attachments = src.attachments.duplicate(true)
 	s.next_id = src.next_id
 	s.gas = src.gas.duplicate()
@@ -72,7 +76,12 @@ static func clone(src: MatchState) -> MatchState:
 
 ## Applies `action` with apply()'s checks and effects but no undo snapshot and no log entry.
 static func step(state: MatchState, action: Dictionary) -> bool:
-	var a: Dictionary = LoadoutRules.normalize(state, action)
+	return step_normalized(state, LoadoutRules.normalize(state, action))
+
+
+## step() for an action that is already in normal form (ints for ids and seats, a String type,
+## card lists as Arrays of ints, the Frag card given): the AI's own executor builds them so.
+static func step_normalized(state: MatchState, a: Dictionary) -> bool:
 	if LoadoutRules.check(state, a) != &"":
 		return false
 	_no_events.clear()
@@ -103,12 +112,12 @@ static func weapon_power(state: MatchState, weapon: int) -> int:
 
 
 static func is_item(state: MatchState, inst: int) -> bool:
-	var c: CardData = state.def_of(inst)
+	var c: CardData = state.data.cards.get(state.defs.get(inst, &""))
 	return c != null and c.type == DataEnums.CardType.ITEM and c.blast_dmg <= 0
 
 
 static func is_frag(state: MatchState, inst: int) -> bool:
-	var c: CardData = state.def_of(inst)
+	var c: CardData = state.data.cards.get(state.defs.get(inst, &""))
 	return c != null and c.blast_dmg > 0
 
 
@@ -142,7 +151,15 @@ static func best_weapon(state: MatchState, cards: Array[int], skip_sidearm: bool
 ## Hits in a seat's hand and line (what Patch up and Heal can return).
 static func healable_hits(state: MatchState, seat: int) -> int:
 	var st: SeatState = state.seats[seat]
-	return state.hits_in(st.hand) + state.hits_in(st.line)
+	var hit_id: StringName = state.data.hit_id
+	var n: int = 0
+	for inst: int in st.hand:
+		if state.defs.get(inst, &"") == hit_id:
+			n += 1
+	for inst: int in st.line:
+		if state.defs.get(inst, &"") == hit_id:
+			n += 1
+	return n
 
 
 # --- Map -------------------------------------------------------------------------------

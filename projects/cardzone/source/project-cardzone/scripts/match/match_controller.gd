@@ -12,9 +12,13 @@
 #   The human's Brace step stops the loop until request({type: "brace", cards}) arrives.
 # Opponent: `opponent` is any object with choose_action(state, seat) -> Dictionary (see
 #   opponent_placeholder.gd; CzAI, cz09, implements the same call).
+# Saving (cz08 MatchStore): MatchStore.save(state, meta) after every applied action (the human's,
+#   undo included, and the opponent's); MatchStore.clear() on a new match, a concede and the match
+#   end. start_resumed(MatchStore.resume()) continues a saved match (cz13 owns the title's
+#   Continue). meta = {mode, ai_level, ai_seed, human_seat}.
 # Signals: view_changed(view) after every applied action, event_shown(text, event) per event,
 #   notice(text) for a refused request, phase_changed(phase), settled() when input is open again.
-# Dependencies: LoadoutRules, MatchState, RulesData, MatchView, CardDB, EventBus,
+# Dependencies: LoadoutRules, MatchState, RulesData, MatchView, CardDB, EventBus, MatchStore,
 #   action_text.gd, opponent_placeholder.gd.
 # Author: UI/UX Agent (cz11)
 extends Node
@@ -52,6 +56,10 @@ var log_lines: PackedStringArray = []
 var rival_last_line: Array[StringName] = []
 ## Undos this turn (spec U6: turn_end.undo_count, for the playtest log).
 var undo_count: int = 0
+## Save after every action (MatchStore). Off for fixtures that must not replace the player's match.
+var save_enabled: bool = true
+## Saved with the match: {mode, ai_level, ai_seed, human_seat}.
+var meta: Dictionary = {"mode": "ai", "ai_level": "placeholder", "ai_seed": 0, "human_seat": MatchState.P1}
 
 var _run_id: int = 0
 var _started_ms: int = 0
@@ -67,11 +75,26 @@ func _init() -> void:
 ## A fresh match from CardDB content at the drop (P2 drops first, then the human as P1).
 func start_new(route: int = DataEnums.Route.A) -> void:
 	var content: RulesData = RulesData.from_card_db(CardDB)
+	_store_clear()
 	start_from(MatchState.new_match(content, route))
 
 
-## Any state (a new match or a QA fixture mid-turn).
-func start_from(s: MatchState) -> void:
+## A saved match from MatchStore.resume() ({state, meta}). False when there is nothing to resume.
+func start_resumed(resumed: Dictionary) -> bool:
+	if resumed.is_empty() or resumed.get("state") == null:
+		return false
+	start_from(resumed["state"], resumed.get("meta", {}))
+	return true
+
+
+## Any state (a new match, a resumed one or a QA fixture mid-turn). match_meta: see `meta`.
+func start_from(s: MatchState, match_meta: Dictionary = {}) -> void:
+	for k: Variant in match_meta.keys():
+		meta[k] = match_meta[k]
+	human = int(meta.get("human_seat", human))
+	meta["human_seat"] = human
+	if not match_meta.has("ai_level"):
+		meta["ai_level"] = opponent_kind().to_lower()
 	state = s
 	log_lines.clear()
 	rival_last_line.clear()
@@ -338,6 +361,9 @@ func _run(first: ActionResult) -> void:
 	while true:
 		if r != null:
 			_after_apply(r)
+			_store_save()
+			if not state.is_over() and state.deciding_seat() != human:
+				_set_phase(PHASE_OPPONENT)  # the rival's part starts with these events
 			view_changed.emit(view())
 			for e: Dictionary in r.events_for(human):
 				_announce(e)
@@ -372,6 +398,28 @@ func _run(first: ActionResult) -> void:
 	_set_phase(_phase_now())
 	view_changed.emit(view())
 	settled.emit()
+
+
+func _store_save() -> void:
+	if not save_enabled or state == null:
+		return
+	var store: Node = _store()
+	if store == null:
+		return
+	if state.is_over():
+		store.call("clear")  # concede or match end: nothing to resume
+	else:
+		store.call("save", state, meta)
+
+
+func _store_clear() -> void:
+	var store: Node = _store()
+	if save_enabled and store != null:
+		store.call("clear")
+
+
+func _store() -> Node:
+	return get_node_or_null("/root/MatchStore") if is_inside_tree() else null
 
 
 func _after_apply(r: ActionResult) -> void:

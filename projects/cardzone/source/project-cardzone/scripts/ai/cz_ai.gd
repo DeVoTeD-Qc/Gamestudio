@@ -69,9 +69,17 @@ func _decide(_world: MatchState, _seat: int) -> Dictionary:
 ## non-Starter weapon in hand or line that can take it. {} when none.
 static func attach_action(w: MatchState, seat: int) -> Dictionary:
 	var st: SeatState = w.seats[seat]
+	var cards: Dictionary = w.data.cards
 	var pool: Array[int] = []
-	pool.append_array(st.hand)
-	pool.append_array(st.line)
+	var any_att: bool = false
+	for list: Array[int] in [st.hand, st.line]:
+		for inst: int in list:
+			pool.append(inst)
+			var c: CardData = cards.get(w.defs.get(inst, &""))
+			if c != null and c.type == DataEnums.CardType.ATTACHMENT:
+				any_att = true
+	if not any_att:
+		return {}
 	var weapons: Array[int] = []
 	for inst: int in pool:
 		var c: CardData = w.def_of(inst)
@@ -140,52 +148,79 @@ static func end_turn_action(w: MatchState, seat: int, prefer: Array[int], brace_
 	return {"type": "end_turn", "seat": seat, "hold": hold}
 
 
-## A play action for a Hit as Adrenaline: `mode` if legal, else the other mode, else {}.
+## A play action for a Hit as Adrenaline: `mode` if allowed, else the other mode, else {}
+## (R6: the Adrenaline cap, and move_only mode). Mirrors LoadoutRules._check_play for a Hit.
 static func adrenaline_action(w: MatchState, seat: int, inst: int, mode: String) -> Dictionary:
-	for m: String in [mode, "search" if mode == "move" else "move"]:
-		var a: Dictionary = {"type": "play", "seat": seat, "card": inst, "adrenaline": m}
-		if LoadoutRules.is_legal(w, a):
-			return a
-	return {}
+	var b: BalanceConfig = w.data.balance
+	var st: SeatState = w.seats[seat]
+	if inst == 0 or not st.hand.has(inst):
+		return {}
+	if b.adrenaline_cap_per_turn > 0 and st.adrenaline_played >= b.adrenaline_cap_per_turn:
+		return {}
+	var m: String = mode
+	if m == "search" and b.adrenaline_mode == DataEnums.AdrenalineMode.MOVE_ONLY:
+		m = "move"
+	return {"type": "play", "seat": seat, "card": inst, "adrenaline": m}
 
 
 ## The first Hit in hand, or 0.
 static func first_hit(w: MatchState, seat: int) -> int:
+	var hit_id: StringName = w.data.hit_id
 	for inst: int in w.seats[seat].hand:
-		if w.is_hit(inst):
+		if w.defs.get(inst, &"") == hit_id:
 			return inst
 	return 0
 
 
+## Patch up is legal (R18): Search 2 and a Hit in hand or line.
+static func can_patch_up(w: MatchState, seat: int) -> bool:
+	var st: SeatState = w.seats[seat]
+	return st.search >= LoadoutRules.PATCH_UP_COST and CzSim.healable_hits(w, seat) > 0
+
+
 ## Sim want(): loot value of a card for `seat` given what it already owns.
 static func want(w: MatchState, seat: int, id: StringName) -> int:
+	return want_in(w, id, owned_facts(w, seat))
+
+
+## What want() needs to know about a seat's cards, computed once:
+## {power (best weapon DMG x fires), guns (non-Starter weapons), full (all guns carry 2
+## attachments), ids (card ids owned, attachments included)}.
+static func owned_facts(w: MatchState, seat: int) -> Dictionary:
+	var power: int = 0
+	var guns: int = 0
+	var full: bool = true
+	var ids: Dictionary = {}
+	for inst: int in CzSim.all_cards(w, seat):
+		var c: CardData = w.def_of(inst)
+		if c == null:
+			continue
+		ids[c.id] = true
+		if c.is_weapon():
+			power = maxi(power, CzSim.weapon_power(w, inst))
+			var atts: Array[int] = w.attachments_of(inst)
+			for att: int in atts:
+				ids[w.card_id(att)] = true
+			if not c.is_starter():
+				guns += 1
+				if atts.size() < 2:
+					full = false
+	return {"power": power, "guns": guns, "full": full, "ids": ids}
+
+
+## want() with the owner's facts precomputed (owned_facts).
+static func want_in(w: MatchState, id: StringName, facts: Dictionary) -> int:
 	var c: CardData = w.data.card(id)
 	if c == null or c.blast_dmg > 0:
 		return 0
 	var v: int = CzSim.value_of(id)
-	var mine: Array[int] = CzSim.all_cards(w, seat)
+	if (c.is_weapon() or c.is_attachment()) and facts.is_empty():
+		return v
 	if c.is_weapon():
-		var best: int = CzSim.best_weapon(w, mine)
-		if best != 0 and CzSim.weapon_power(w, best) >= c.dmg * c.fires_per_turn:
+		if int(facts["power"]) > 0 and int(facts["power"]) >= c.dmg * c.fires_per_turn:
 			v -= 6
 	elif c.is_attachment():
-		var weapons: Array[int] = []
-		var owned: bool = false
-		for inst: int in mine:
-			var mc: CardData = w.def_of(inst)
-			if mc.id == id:
-				owned = true
-			if mc.is_weapon():
-				for att: int in w.attachments_of(inst):
-					if w.card_id(att) == id:
-						owned = true
-				if not mc.is_starter():
-					weapons.append(inst)
-		var all_full: bool = true
-		for wpn: int in weapons:
-			if w.attachments_of(wpn).size() < 2:
-				all_full = false
-		if owned or weapons.is_empty() or all_full:
+		if (facts["ids"] as Dictionary).has(id) or int(facts["guns"]) == 0 or facts["full"]:
 			v -= 6
 	return v
 

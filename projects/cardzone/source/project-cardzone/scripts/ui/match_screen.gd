@@ -362,7 +362,7 @@ func _render_map() -> void:
 		b.set_anchors_preset(Control.PRESET_FULL_RECT)
 		b.add_to_group(&"tap_target")
 		var id: StringName = t.area_id
-		b.tapped.connect(func() -> void: _on_area_tapped(id))
+		b.tapped.connect(func() -> void: _on_area_tapped(id), CONNECT_DEFERRED)  # the tap re-renders the map
 		b.inspect_requested.connect(func() -> void: inspect_area(id))
 		t.add_child(b)
 
@@ -383,7 +383,7 @@ func _render_line(entries: Array) -> void:
 		chip.custom_minimum_size = Vector2(0, MIN_TAP_PX)
 		chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		chip.mouse_filter = Control.MOUSE_FILTER_PASS  # a drag scrolls the line (> 6 cards)
-		chip.tapped.connect(func() -> void: _on_card_tapped(chip, &"line", chip.index, chip.card_id))
+		chip.tapped.connect(func() -> void: _on_card_tapped(chip, &"line", chip.index, chip.card_id), CONNECT_DEFERRED)
 		chip.inspect_requested.connect(func() -> void: _inspect_line_chip(chip))
 		_line.add_child(chip)
 	var who: String = "RIVAL'S LINE" if _line_is_rival else "LINE"
@@ -413,7 +413,7 @@ func _add_card(row: Container, c: CardData, zone: StringName, i: int, held: bool
 	card.set_meta(&"index", i)
 	card.set_meta(&"card_id", c.id)
 	card.add_to_group(&"tap_target")
-	card.tapped.connect(func(cc: CzCard) -> void: _on_card_tapped(cc, zone, i, c.id))
+	card.tapped.connect(func(cc: CzCard) -> void: _on_card_tapped(cc, zone, i, c.id), CONNECT_DEFERRED)
 	card.inspect_requested.connect(func(cc: CzCard) -> void: _inspect_card_view(cc))
 	row.add_child(card)
 
@@ -744,9 +744,11 @@ func _refresh_dock() -> void:
 			var names: PackedStringArray = []
 			for inst: int in hold_set:
 				names.append(_controller.card(inst).display_name)
-			title = "PACK · HOLD UP TO %d" % limit
-			text = "Tap hand cards to hold them on top of your loadout (your next hand); the rest goes under. "
-			text += ("Holding: %s." % ", ".join(names)) if not names.is_empty() else "Holding nothing."
+			title = "PACK · HOLDING %d OF %d" % [names.size(), limit]
+			if names.is_empty():
+				text = "Tap hand cards to hold them on top of your loadout (your next hand); the rest goes under."
+			else:
+				text = "Holding %s. Tap a hand card to hold it or let it go." % ", ".join(names)
 			var gas: Array = _gas_areas()
 			if gas.has(you["area"]):
 				text = "You're in gas: ending here costs 1 Hit. " + text
@@ -807,7 +809,7 @@ func _set_dock_options(opts: Array[Dictionary], close_label: String) -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.set_meta(&"key", o["key"])
 		var opt: Dictionary = o
-		b.pressed.connect(func() -> void: _on_option(opt))
+		b.pressed.connect(func() -> void: _on_option(opt), CONNECT_DEFERRED)  # it rebuilds the dock
 		_dock_buttons.add_child(b)
 
 
@@ -953,7 +955,7 @@ func open_sheet(title: String, text: String, opts: Array[Dictionary], close_labe
 		b.mouse_filter = Control.MOUSE_FILTER_PASS
 		b.set_meta(&"key", o["key"])
 		var opt: Dictionary = o
-		b.pressed.connect(func() -> void: _on_sheet_option(opt))
+		b.pressed.connect(func() -> void: _on_sheet_option(opt), CONNECT_DEFERRED)
 		_sheet_list.add_child(b)
 	_sheet_close.text = close_label
 	_sheet_close.visible = close_label != ""

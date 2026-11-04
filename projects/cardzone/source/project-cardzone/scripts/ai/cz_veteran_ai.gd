@@ -1,35 +1,45 @@
 # cz_veteran_ai.gd
 # Purpose: Veteran, the hard CardZone AI (cz09). It scores whole-turn plans on cloned belief
 #   worlds (CzBelief) and plays the first action of the best one.
-#   A plan (theta) is a small set of choices for the rest of this turn:
-#     keep  which Brace cards in hand to keep unplayed and Hold (subsets up to hold_limit);
-#     dest  where to end the turn (every non-gas area the turn's Move can reach, or stay);
-#     pre   what to do before leaving: 0 nothing, 1 shoot, 2 shoot and loot (hit and run);
-#     loot  loot (greedy by value) or keep the Search for Patch up;
-#     frag  throw a Frag at the opponent's area when it reaches and deals damage.
-#   One deterministic executor (plan_step) turns (state, plan) into the next concrete action:
-#   attach, play the items the plan doesn't keep, play weapons, act at the origin, step toward
-#   dest (Move, then Hits as Adrenaline), act at dest (shoot best-first, Frag, loot), Hits for
-#   Search, Patch up, end_turn holding the kept cards. The opponent's Brace inside a rollout is
-#   the greedy rule on its guessed next hand.
-#   Search: every plan is rolled out to the end of the turn (end_turn applied, so the gas check,
-#   the Pack and the opponent's draw happen) and scored by evaluate(). Plans that share actions
-#   share the work (a trie: the state is cloned only where plans part ways). When every plan
-#   starts with the same action (attach, plays), that action is returned without a search.
-#   A node cap (NODE_CAP simulated actions per decision) bounds the work deterministically; the
-#   ai_think_budget_ms tunable is only a safety stop for very slow devices.
+#   A plan is a few choices for the rest of this turn, made lazily: the executor (plan_step)
+#   plays everything the choices don't affect and asks for a choice only when it reaches one:
+#     keep   which Brace cards in hand stay unplayed to be Held (subsets up to hold_limit),
+#            asked when the next card to play is a Brace card;
+#     route  where to end the turn (stay, or any non-gas area this turn's Move and Hits reach),
+#            asked once the plays are done;
+#     pre    before leaving: 0 nothing, 1 shoot, 2 shoot and loot (hit and run);
+#     frag   throw a Frag at the opponent's area (asked only when one can hurt them and no gun
+#            shot is left);
+#     loot   loot (best by value) or keep the Search for Patch up (asked only when both exist).
+#   Between choices the executor is fixed: attach, play the Pull items, the other items (a
+#   Heal-only card waits for a Hit to heal), the weapons and the Brace cards not kept; act at the
+#   origin; step toward the destination (Move, then Hits as Adrenaline); act there (best shot
+#   first, Frag, loot); Hits for Search; Patch up; end_turn holding the kept cards (then Frags and
+#   Heal items). Inside a rollout the opponent braces with the greedy rule on its guessed hand.
+#   Search: a depth-first walk that branches only at those choices, cloning the state at each
+#   branch, plays every branch to the end of the turn (end_turn applied: gas check, Pack, the
+#   opponent's draw and any round start) and scores it with evaluate(). The best branch's first
+#   action is played. When the next action needs no choice it is returned without a search.
+#   A deterministic node cap bounds the work (after it, branches take their first option);
+#   ai_think_budget_ms is only a safety stop for very slow devices.
 #   As the defender it scores every legal Brace subset with evaluate().
-#   Determinism: plans are enumerated in a fixed order and ties keep the first, so the same
-#   state gives the same action.
+#   Determinism: options come in a fixed order and ties keep the first, so the same state gives
+#   the same action; nothing is remembered between calls.
 # Dependencies: CzAI, CzSim, CzBelief, LoadoutRules, MatchState, SeatState, CardData.
 # Author: Mechanics Developer Agent
 class_name CzVeteranAI
 extends CzAI
 
-## Simulated actions per decision (the deterministic search bound).
-const NODE_CAP: int = 900
-## Deepest rollout (actions) before a plan is cut and scored where it stands.
+## Simulated actions per decision (the deterministic search bound): NODE_CAP for the first
+## search of a turn, NODE_CAP / (1 + n) once n commitments are made this turn (Hits played,
+## shots, loots, Brace cards played), never under NODE_MIN. Later searches in a turn have few
+## real options left (fewer cards, less Move), and this keeps a whole turn within budget.
+const NODE_CAP: int = 200
+const NODE_MIN: int = 30
+## Deepest rollout (actions) before a branch is scored where it stands.
 const MAX_DEPTH: int = 60
+## Marks a plan_step result that asks for a choice: {NEED: field, "options": [...]}.
+const NEED: String = "need"
 
 # Evaluation weights (see evaluate()).
 const W_HEALTH: float = 100.0
@@ -47,7 +57,11 @@ const WIN: float = 100000.0
 
 var _me: int = 0
 var _nodes: int = 0
+var _leaves: int = 0
+var _cap: int = NODE_CAP
 var _deadline_us: int = 0
+var _best_score: float = -INF
+var _best_first: Dictionary = {}
 
 
 func _init(seed_in: int = 0) -> void:
@@ -58,357 +72,81 @@ func _init(seed_in: int = 0) -> void:
 func _decide(w: MatchState, me: int) -> Dictionary:
 	_me = me
 	_nodes = 0
+	_leaves = 0
 	_deadline_us = Time.get_ticks_usec() + 1000 * w.data.balance.ai_think_budget_ms
 	if w.phase == MatchState.PHASE_DROP:
 		return CzAI.drop_action(w, me, true)
 	if w.pending_brace_seat() == me:
 		return _choose_brace(w, me)
-	var plans: Array[Dictionary] = plans_for(w, me)
-	last_stats["plans"] = plans.size()
-	var firsts: Array[Dictionary] = []
-	var same: bool = true
-	var memo: Dictionary = {}
-	for th: Dictionary in plans:
-		var a: Dictionary = plan_step(w, me, th, memo)
-		firsts.append(a)
-		if same and str(a) != str(firsts[0]):
-			same = false
-	if same:
-		return firsts[0]
+	var first: Dictionary = plan_step(w, me, {})
+	if not first.has(NEED):
+		return first
 	last_stats["searched"] = true
-	var scores: Array[float] = []
-	scores.resize(plans.size())
-	scores.fill(-INF)
-	var idxs: Array[int] = []
-	for i: int in plans.size():
-		idxs.append(i)
-	_expand(CzSim.clone(w), plans, idxs, scores, 0)
+	_cap = node_cap(w, me)
+	_best_score = -INF
+	_best_first = {}
+	_search(CzSim.clone(w, true), {}, {}, 0)
 	last_stats["nodes"] = _nodes
-	var best: int = 0
-	for i: int in plans.size():
-		if scores[i] > scores[best]:
-			best = i
-	return firsts[best]
-
-
-# === Plans ==================================================================================
-
-## Every plan for `me` from this state, in a fixed order.
-static func plans_for(w: MatchState, me: int) -> Array[Dictionary]:
-	var st: SeatState = w.seats[me]
-	var b: BalanceConfig = w.data.balance
-	var opp: int = w.opponent_of(me)
-	var origin: StringName = st.area
-	var opp_area: StringName = w.seats[opp].area
-	# Keep sets: distinct Brace-card combinations (by card id) up to hold_limit.
-	var brace_cards: Array[int] = []
-	for inst: int in st.hand:
-		if CzSim.is_item(w, inst) and w.def_of(inst).brace > 0:
-			brace_cards.append(inst)
-	var keeps: Array = [[]]
-	if b.packing_rule != DataEnums.PackingRule.RACK_SWAP:
-		var keys: Array[String] = [""]
-		for subset: Array in LoadoutRules._subsets(brace_cards, b.hold_limit):
-			if subset.is_empty():
-				continue
-			var names: Array[String] = []
-			for x: Variant in subset:
-				names.append(String(w.card_id(int(x))))
-			names.sort()
-			var key: String = ",".join(names)
-			if keys.has(key):
-				continue
-			keys.append(key)
-			keeps.append(subset)
-	var has_frag: bool = false
-	for inst: int in st.hand:
-		if CzSim.is_frag(w, inst):
-			has_frag = true
-	var can_heal: bool = CzSim.healable_hits(w, me) > 0
-	var shoot_here: bool = _can_shoot_from(w, me, origin, has_frag)
-	var loot_here: bool = false
-	for opt: Dictionary in CzSim.loot_options(w, me, origin):
-		if CzAI.want(w, me, opt["id"]) > 0:
-			loot_here = true
-	var out: Array[Dictionary] = []
-	for keep: Array in keeps:
-		var max_move: int = st.move + w.hits_in(st.hand)
-		for inst: int in st.hand:
-			if CzSim.is_item(w, inst) and not keep.has(inst):
-				max_move += w.def_of(inst).move
-		var dests: Array[StringName] = [origin]
-		for a: StringName in w.data.area_order:
-			if a != origin and not w.gas.has(a) and w.data.distance(origin, a) <= max_move:
-				dests.append(a)
-		for dest: StringName in dests:
-			var pres: Array[int] = [0]
-			if dest != origin:
-				if shoot_here:
-					pres.append(1)
-				if loot_here:
-					pres.append(2)
-			var frag_opts: Array[bool] = [false]
-			if has_frag and not w.seats[opp].eliminated and (w.data.distance(origin, opp_area) <= 1 \
-					or w.data.distance(dest, opp_area) <= 1):
-				frag_opts.append(true)
-			for pre: int in pres:
-				for loot: bool in ([true, false] if can_heal or w.hits_in(st.hand) > 0 else [true]):
-					for frag: bool in frag_opts:
-						out.append({"keep": keep, "dest": dest, "origin": origin, "pre": pre, "loot": loot,
-								"frag": frag})
-	return out
-
-
-static func _can_shoot_from(w: MatchState, me: int, area: StringName, has_frag: bool) -> bool:
-	var st: SeatState = w.seats[me]
-	var opp_area: StringName = w.seats[w.opponent_of(me)].area
-	var d: int = w.data.distance(area, opp_area)
-	if has_frag and d <= 1 and area != opp_area:
-		return true
-	for inst: int in st.hand + st.line:
-		if w.def_of(inst).is_weapon() and LoadoutRules.weapon_range(w, inst) >= d:
-			return true
-	return false
-
-
-## The executor: the next action of plan `th` for `me` (or the pending Brace of either seat).
-## `memo` caches the plan-independent parts for this exact state (pass {} for a one-off call;
-## share one Dictionary between the plans asked about the same state).
-static func plan_step(w: MatchState, me: int, th: Dictionary, memo: Dictionary = {}) -> Dictionary:
-	if not memo.has("pending"):
-		var pb: int = w.pending_brace_seat()
-		memo["pending"] = CzAI.greedy_brace(w, pb) if pb != MatchState.NO_SEAT else {}
-	if not (memo["pending"] as Dictionary).is_empty():
-		return memo["pending"]
-	if w.is_over() or w.active != me:
-		return {}
-	var st: SeatState = w.seats[me]
-	var keep: Array = th["keep"]
-	# 1. Attach.
-	if not memo.has("attach"):
-		memo["attach"] = CzAI.attach_action(w, me)
-	if not (memo["attach"] as Dictionary).is_empty():
-		return memo["attach"]
-	# 2. Items the plan doesn't keep (Pull cards first), 3. weapons to the line.
-	if not memo.has("plays"):
-		memo["plays"] = _plays(w, me)
-	for inst: int in memo["plays"]:
-		if not keep.has(inst):
-			return {"type": "play", "seat": me, "card": inst}
-	# 4. Act at the origin, move, act at the destination.
-	var dest: StringName = th["dest"]
-	var stuck: bool = false
-	if st.area != dest:
-		if st.area == th["origin"] and int(th["pre"]) >= 1:
-			var s1: Dictionary = _memo_shot(w, me, th["frag"], memo)
-			if not s1.is_empty():
-				return s1
-			if int(th["pre"]) >= 2 and th["loot"]:
-				var l1: Dictionary = _memo_loot(w, me, dest, memo)
-				if not l1.is_empty():
-					return l1
-		if st.move >= 1:
-			return {"type": "move", "seat": me, "to": String(CzSim.step_toward(w.data, st.area, dest))}
-		var adr: Dictionary = _memo_adrenaline(w, me, "move", memo)
-		if not adr.is_empty() and adr["adrenaline"] == "move":
-			return adr
-		stuck = true
-	if st.area == dest or stuck:
-		var s2: Dictionary = _memo_shot(w, me, th["frag"], memo)
-		if not s2.is_empty():
-			return s2
-		if th["loot"]:
-			var l2: Dictionary = _memo_loot(w, me, st.area, memo)
-			if not l2.is_empty():
-				return l2
-	# 5. Hits for Search, Patch up.
-	var adr2: Dictionary = _memo_adrenaline(w, me, "search", memo)
-	if not adr2.is_empty():
-		return adr2
-	if not memo.has("patch"):
-		memo["patch"] = LoadoutRules.is_legal(w, {"type": "patch_up", "seat": me})
-	if memo["patch"]:
-		return {"type": "patch_up", "seat": me}
-	# 6. Pack: hold the kept cards (highest Brace first), then Frags and Heal items.
-	var prefer: Array[int] = []
-	for x: Variant in keep:
-		prefer.append(int(x))
-	prefer.sort_custom(func(x: int, y: int) -> bool:
-		var bx: int = w.def_of(x).brace
-		var by: int = w.def_of(y).brace
-		return bx > by if bx != by else x < y)
-	for inst: int in st.hand:
-		if CzSim.is_frag(w, inst):
-			prefer.append(inst)
-	for inst: int in st.hand:
-		var c: CardData = w.def_of(inst)
-		if CzSim.is_item(w, inst) and c.heal > 0 and c.brace == 0:
-			prefer.append(inst)
-	return CzAI.end_turn_action(w, me, prefer, false)
-
-
-## Hand cards a plan plays before acting, in order: Pull items, other useful items (a Heal-only
-## or Spent Heal card waits for a Hit to heal), then weapons. A plan skips the ones it keeps.
-static func _plays(w: MatchState, me: int) -> Array[int]:
-	var st: SeatState = w.seats[me]
-	var out: Array[int] = []
-	var heal_now: bool = CzSim.healable_hits(w, me) > 0
-	# Pass 0: Pull items; 1: other items without Brace; 2: weapons; 3: Brace items (the ones a
-	# plan may keep come last, so plans agree on everything before them).
-	for pass_no: int in 4:
-		for inst: int in st.hand:
-			var c: CardData = w.def_of(inst)
-			if pass_no == 2:
-				if c.is_weapon():
-					out.append(inst)
-				continue
-			if not CzSim.is_item(w, inst):
-				continue
-			var p: int = 0 if c.pull > 0 else (3 if c.brace > 0 else 1)
-			if p != pass_no:
-				continue
-			if c.heal > 0 and not heal_now and (c.move + c.search + c.pull == 0 or c.spent == DataEnums.SpentMode.ON_PLAY):
-				continue
-			if c.move + c.search + c.pull + c.heal == 0:
-				continue
-			out.append(inst)
-	return out
-
-
-static func _memo_shot(w: MatchState, me: int, frag: bool, memo: Dictionary) -> Dictionary:
-	var key: String = "shot1" if frag else "shot0"
-	if not memo.has(key):
-		memo[key] = _best_shot(w, me, frag)
-	return memo[key]
-
-
-static func _memo_loot(w: MatchState, me: int, dest: StringName, memo: Dictionary) -> Dictionary:
-	var key: String = "loot:" + String(dest)
-	if not memo.has(key):
-		memo[key] = _best_loot(w, me, dest)
-	return memo[key]
-
-
-static func _memo_adrenaline(w: MatchState, me: int, mode: String, memo: Dictionary) -> Dictionary:
-	var key: String = "adr:" + mode
-	if not memo.has(key):
-		var hit: int = CzAI.first_hit(w, me)
-		memo[key] = CzAI.adrenaline_action(w, me, hit, mode) if hit != 0 else {}
-	return memo[key]
-
-
-## The strongest legal shot with damage > 0 (weapons by damage), then a Frag at the opponent's
-## area when allowed and it hurts only them. {} when none.
-static func _best_shot(w: MatchState, me: int, allow_frag: bool) -> Dictionary:
-	var st: SeatState = w.seats[me]
-	var opp: int = w.opponent_of(me)
-	var best: Dictionary = {}
-	var best_dmg: int = 0
-	for inst: int in st.line:
-		if not w.def_of(inst).is_weapon():
-			continue
-		var a: Dictionary = {"type": "shoot", "seat": me, "weapon": inst, "target": opp}
-		if not LoadoutRules.is_legal(w, a):
-			continue
-		var dmg: int = int(LoadoutRules.shot_profile(w, me, inst, opp)["damage"])
-		if dmg > best_dmg:
-			best_dmg = dmg
-			best = a
-	if not best.is_empty():
-		return best
-	if allow_frag:
-		var opp_area: StringName = w.seats[opp].area
-		if opp_area != st.area:
-			for inst: int in st.hand:
-				if not CzSim.is_frag(w, inst):
-					continue
-				var f: Dictionary = {"type": "frag", "seat": me, "card": inst, "area": String(opp_area)}
-				if LoadoutRules.is_legal(w, f) and \
-						int(LoadoutRules.blast_profile(w, me, inst, opp_area, opp)["damage"]) > 0:
-					return f
-	return {}
-
-
-## The best wanted loot here (value, then cheaper), paying with Hits not needed to reach `dest`.
-static func _best_loot(w: MatchState, me: int, dest: StringName) -> Dictionary:
-	var st: SeatState = w.seats[me]
-	var need_move: int = maxi(0, w.data.distance(st.area, dest) - st.move)
-	var spare: int = maxi(0, w.hits_in(st.hand) - need_move)
-	if w.data.balance.adrenaline_mode == DataEnums.AdrenalineMode.MOVE_ONLY:
-		spare = 0
-	var best: Dictionary = {}
-	var best_key: Vector2i = Vector2i(0, 0)
-	for opt: Dictionary in CzSim.loot_options(w, me, st.area):
-		var v: int = CzAI.want(w, me, opt["id"])
-		var cost: int = int(opt["cost"])
-		if v <= 0 or cost > st.search + spare:
-			continue
-		var key: Vector2i = Vector2i(v, -cost)
-		if best.is_empty() or key > best_key:
-			best_key = key
-			best = opt
-	if best.is_empty():
-		return {}
-	if st.search < int(best["cost"]):
-		var hit: int = CzAI.first_hit(w, me)
-		var adr: Dictionary = CzAI.adrenaline_action(w, me, hit, "search")
-		if not adr.is_empty() and adr["adrenaline"] == "search":
-			return adr
-		return {}
-	return CzSim.loot_action(me, best)
+	last_stats["plans"] = _leaves
+	if _best_first.is_empty():
+		return CzAI.end_turn_action(w, me, [], true)
+	return _best_first
 
 
 # === Search =================================================================================
 
-## Rolls the plans `idxs` forward from `node` (which this call may change), sharing common
-## actions, and writes each plan's score.
-func _expand(node: MatchState, plans: Array[Dictionary], idxs: Array[int], scores: Array[float], depth: int) -> void:
-	var order: Array[String] = []
-	var groups: Dictionary = {}
-	var actions: Dictionary = {}
-	var memo: Dictionary = {}
-	for i: int in idxs:
-		var a: Dictionary = plan_step(node, _me, plans[i], memo)
-		var key: String = str(a)
-		if not groups.has(key):
-			var fresh: Array[int] = []
-			groups[key] = fresh
-			actions[key] = a
-			order.append(key)
-		(groups[key] as Array[int]).append(i)
-	for g: int in order.size():
-		var key: String = order[g]
-		var members: Array[int] = groups[key]
-		var child: MatchState = node if g == order.size() - 1 else CzSim.clone(node)
-		var a: Dictionary = actions[key]
-		var score: float
-		if a.is_empty() or not CzSim.step(child, a):
-			score = evaluate(child, _me)
-		else:
-			_nodes += 1
-			if child.is_over() or String(a["type"]) == "end_turn" or depth >= MAX_DEPTH:
-				score = evaluate(child, _me)
-			elif _nodes >= NODE_CAP or Time.get_ticks_usec() > _deadline_us:
-				score = _rollout(child, plans[members[0]], depth + 1)
-			else:
-				_expand(child, plans, members, scores, depth + 1)
-				continue
-		for i: int in members:
-			scores[i] = score
+## The node cap for a decision in this state (see NODE_CAP).
+static func node_cap(w: MatchState, me: int) -> int:
+	var st: SeatState = w.seats[me]
+	var progress: int = st.adrenaline_played + st.looted.size()
+	for v: Variant in st.fired.values():
+		progress += int(v)
+	for inst: int in st.line:
+		var c: CardData = w.def_of(inst)
+		if c != null and c.type == DataEnums.CardType.ITEM and c.brace > 0:
+			progress += 1
+	return maxi(NODE_MIN, NODE_CAP / (1 + progress))
 
 
-## Past the cap: plays one plan to the end without branching and scores it.
-func _rollout(s: MatchState, th: Dictionary, depth: int) -> float:
+## Plays plan `th` forward from `node` (which this call changes), branching at every choice the
+## executor asks for, and keeps the best leaf's first action.
+func _search(node: MatchState, th: Dictionary, first: Dictionary, depth: int) -> void:
+	var plan: Dictionary = th
 	var d: int = depth
-	while d < MAX_DEPTH:
-		var a: Dictionary = plan_step(s, _me, th, {})
-		if a.is_empty() or not CzSim.step(s, a):
-			break
+	var head: Dictionary = first
+	while true:
+		var r: Dictionary = plan_step(node, _me, plan)
+		if r.has(NEED):
+			var opts: Array = r["options"]
+			var field: String = r[NEED]
+			if opts.size() == 1 or _nodes >= _cap or Time.get_ticks_usec() > _deadline_us:
+				plan = plan.duplicate()
+				plan[field] = opts[0]
+				continue
+			for k: int in opts.size():
+				var child: MatchState = node if k == opts.size() - 1 else CzSim.clone(node, true)
+				var th2: Dictionary = plan.duplicate()
+				th2[field] = opts[k]
+				_search(child, th2, head, d)
+			return
+		if r.is_empty() or d >= MAX_DEPTH or not CzSim.step_normalized(node, r):
+			_leaf(node, head)
+			return
 		_nodes += 1
 		d += 1
-		if s.is_over() or String(a["type"]) == "end_turn":
-			break
-	return evaluate(s, _me)
+		if head.is_empty():
+			head = r
+		if node.is_over() or String(r["type"]) == "end_turn":
+			_leaf(node, head)
+			return
+
+
+func _leaf(node: MatchState, head: Dictionary) -> void:
+	_leaves += 1
+	var score: float = evaluate(node, _me)
+	if score > _best_score and not head.is_empty():
+		_best_score = score
+		_best_first = head
 
 
 func _choose_brace(w: MatchState, me: int) -> Dictionary:
@@ -426,6 +164,281 @@ func _choose_brace(w: MatchState, me: int) -> Dictionary:
 			best = a
 	last_stats["nodes"] = _nodes
 	return best
+
+
+# === The executor ===========================================================================
+
+static func _need(field: String, options: Array) -> Dictionary:
+	return {NEED: field, "options": options}
+
+
+## The next action of plan `th` for `me` (or the pending Brace of either seat), or
+## {NEED: field, options} when it reaches a choice `th` hasn't made.
+static func plan_step(w: MatchState, me: int, th: Dictionary) -> Dictionary:
+	var pb: int = w.pending_brace_seat()
+	if pb != MatchState.NO_SEAT:
+		return CzAI.greedy_brace(w, pb)
+	if w.is_over() or w.active != me:
+		return {}
+	var st: SeatState = w.seats[me]
+	# 1. Attach.
+	var att: Dictionary = CzAI.attach_action(w, me)
+	if not att.is_empty():
+		return att
+	# 2. Plays: Pull items, other items, weapons, then the Brace cards the plan doesn't keep.
+	for inst: int in _plays(w, me):
+		var c: CardData = w.def_of(inst)
+		if CzSim.is_item(w, inst) and c.brace > 0 and c.pull == 0:
+			if not th.has("keep"):
+				var keeps: Array = _keep_options(w, me)
+				if keeps.size() > 1:
+					return _need("keep", keeps)
+			elif (th["keep"] as Array).has(inst):
+				continue
+		return {"type": "play", "seat": me, "card": inst}
+	# 3. Route.
+	if not th.has("route"):
+		var routes: Array = _route_options(w, me)
+		if routes.size() > 1:
+			return _need("route", routes)
+	var route: Dictionary = th.get("route", {"dest": st.area, "origin": st.area})
+	var dest: StringName = route["dest"]
+	var stuck: bool = false
+	if st.area != dest:
+		if st.area == route["origin"]:
+			var pre: int = 0
+			if th.has("pre"):
+				pre = int(th["pre"])
+			else:
+				var pres: Array = [0]
+				if _can_shoot(w, me):
+					pres.append(1)
+				if not _best_loot(w, me, dest).is_empty():
+					pres.append(2)
+				if pres.size() > 1:
+					return _need("pre", pres)
+			if pre >= 1:
+				var s1: Dictionary = _shot_step(w, me, th)
+				if not s1.is_empty():
+					return s1
+			if pre >= 2:
+				var l1: Dictionary = _loot_step(w, me, th, dest)
+				if not l1.is_empty():
+					return l1
+		if st.move >= 1:
+			return {"type": "move", "seat": me, "to": String(CzSim.step_toward(w.data, st.area, dest))}
+		var hit: int = CzAI.first_hit(w, me)
+		if hit != 0:
+			var adr: Dictionary = CzAI.adrenaline_action(w, me, hit, "move")
+			if not adr.is_empty() and adr["adrenaline"] == "move":
+				return adr
+		stuck = true
+	if st.area == dest or stuck:
+		var s2: Dictionary = _shot_step(w, me, th)
+		if not s2.is_empty():
+			return s2
+		var l2: Dictionary = _loot_step(w, me, th, st.area)
+		if not l2.is_empty():
+			return l2
+	# 4. Hits for Search, Patch up.
+	var left: int = CzAI.first_hit(w, me)
+	if left != 0:
+		var adr2: Dictionary = CzAI.adrenaline_action(w, me, left, "search")
+		if not adr2.is_empty():
+			return adr2
+	if CzAI.can_patch_up(w, me):
+		return {"type": "patch_up", "seat": me}
+	# 5. Pack: hold the kept cards (highest Brace first), then Frags and Heal items.
+	var prefer: Array[int] = []
+	for x: Variant in th.get("keep", []):
+		prefer.append(int(x))
+	prefer.sort_custom(func(x: int, y: int) -> bool:
+		var bx: int = w.def_of(x).brace
+		var by: int = w.def_of(y).brace
+		return bx > by if bx != by else x < y)
+	for inst: int in st.hand:
+		if CzSim.is_frag(w, inst):
+			prefer.append(inst)
+	for inst: int in st.hand:
+		var c: CardData = w.def_of(inst)
+		if CzSim.is_item(w, inst) and c.heal > 0 and c.brace == 0:
+			prefer.append(inst)
+	return CzAI.end_turn_action(w, me, prefer, false)
+
+
+## Hand cards to play before acting, in order: Pull items, other useful items (a Heal-only or
+## Spent Heal card waits for a Hit to heal), weapons, then Brace items (the plan may keep these).
+static func _plays(w: MatchState, me: int) -> Array[int]:
+	var st: SeatState = w.seats[me]
+	var cards: Dictionary = w.data.cards
+	var hit_id: StringName = w.data.hit_id
+	var heal_now: bool = false
+	for inst: int in st.hand:
+		if w.defs.get(inst, &"") == hit_id:
+			heal_now = true
+	for inst: int in st.line:
+		if w.defs.get(inst, &"") == hit_id:
+			heal_now = true
+	var buckets: Array = [[], [], [], []]
+	for inst: int in st.hand:
+		var c: CardData = cards.get(w.defs.get(inst, &""))
+		if c == null:
+			continue
+		if c.type == DataEnums.CardType.WEAPON:
+			buckets[2].append(inst)
+			continue
+		if c.type != DataEnums.CardType.ITEM or c.blast_dmg > 0:
+			continue
+		if c.heal > 0 and not heal_now and (c.move + c.search + c.pull == 0 or c.spent == DataEnums.SpentMode.ON_PLAY):
+			continue
+		if c.move + c.search + c.pull + c.heal == 0:
+			continue
+		buckets[0 if c.pull > 0 else (3 if c.brace > 0 else 1)].append(inst)
+	var out: Array[int] = []
+	for bucket: Array in buckets:
+		for inst: Variant in bucket:
+			out.append(int(inst))
+	return out
+
+
+## [[]] plus every distinct (by card id) set of Brace items in hand up to hold_limit.
+static func _keep_options(w: MatchState, me: int) -> Array:
+	var b: BalanceConfig = w.data.balance
+	var out: Array = [[]]
+	if b.packing_rule == DataEnums.PackingRule.RACK_SWAP:
+		return out
+	var cards: Array[int] = []
+	for inst: int in w.seats[me].hand:
+		if CzSim.is_item(w, inst) and w.def_of(inst).brace > 0 and w.def_of(inst).pull == 0:
+			cards.append(inst)
+	var keys: Array[String] = [""]
+	for subset: Array in LoadoutRules._subsets(cards, b.hold_limit):
+		if subset.is_empty():
+			continue
+		var names: Array[String] = []
+		for x: Variant in subset:
+			names.append(String(w.card_id(int(x))))
+		names.sort()
+		var key: String = ",".join(names)
+		if not keys.has(key):
+			keys.append(key)
+			out.append(subset)
+	return out
+
+
+## Stay, then every non-gas area within this turn's Move (pool + Hits in hand).
+static func _route_options(w: MatchState, me: int) -> Array:
+	var st: SeatState = w.seats[me]
+	var here: StringName = st.area
+	var reach: int = st.move + w.hits_in(st.hand)
+	var out: Array = [{"dest": here, "origin": here}]
+	for a: StringName in w.data.area_order:
+		if a != here and not w.gas.has(a) and w.data.distance(here, a) <= reach:
+			out.append({"dest": a, "origin": here})
+	return out
+
+
+static func _can_shoot(w: MatchState, me: int) -> bool:
+	return not _best_shot(w, me).is_empty() or not _frag_action(w, me).is_empty()
+
+
+## The best gun shot; else a Frag when the plan chose (or now chooses) to throw it.
+static func _shot_step(w: MatchState, me: int, th: Dictionary) -> Dictionary:
+	var s: Dictionary = _best_shot(w, me)
+	if not s.is_empty():
+		return s
+	var f: Dictionary = _frag_action(w, me)
+	if f.is_empty():
+		return {}
+	if not th.has("frag"):
+		return _need("frag", [false, true])
+	return f if th["frag"] else {}
+
+
+## The best loot here, or the choice to keep the Search for Patch up when that is possible.
+static func _loot_step(w: MatchState, me: int, th: Dictionary, dest: StringName) -> Dictionary:
+	var l: Dictionary = _best_loot(w, me, dest)
+	if l.is_empty():
+		return {}
+	if th.has("loot"):
+		return l if th["loot"] else {}
+	if CzSim.healable_hits(w, me) > 0 or w.hits_in(w.seats[me].hand) > 0:
+		return _need("loot", [true, false])
+	return l
+
+
+## The strongest legal gun shot with damage > 0, or {}.
+static func _best_shot(w: MatchState, me: int) -> Dictionary:
+	var st: SeatState = w.seats[me]
+	var opp: int = w.opponent_of(me)
+	var best: Dictionary = {}
+	var best_dmg: int = 0
+	if w.seats[opp].eliminated:
+		return best
+	var dist: int = w.data.distance(st.area, w.seats[opp].area)
+	for inst: int in st.line:
+		if not w.def_of(inst).is_weapon():
+			continue
+		# R12, R21 (as LoadoutRules._check_shoot): a shot left and the target in range.
+		if int(st.fired.get(inst, 0)) >= LoadoutRules.fire_limit(w, inst) or dist > LoadoutRules.weapon_range(w, inst):
+			continue
+		var a: Dictionary = {"type": "shoot", "seat": me, "weapon": inst, "target": opp}
+		var dmg: int = int(LoadoutRules.shot_profile(w, me, inst, opp)["damage"])
+		if dmg > best_dmg:
+			best_dmg = dmg
+			best = a
+	return best
+
+
+## A Frag at the opponent's area (never their area when it is mine) that deals damage, or {}.
+static func _frag_action(w: MatchState, me: int) -> Dictionary:
+	var st: SeatState = w.seats[me]
+	var opp: int = w.opponent_of(me)
+	var opp_area: StringName = w.seats[opp].area
+	if opp_area == st.area or w.seats[opp].eliminated:
+		return {}
+	for inst: int in st.hand:
+		if not CzSim.is_frag(w, inst):
+			continue
+		var f: Dictionary = {"type": "frag", "seat": me, "card": inst, "area": String(opp_area)}
+		if LoadoutRules.is_legal(w, f) and int(LoadoutRules.blast_profile(w, me, inst, opp_area, opp)["damage"]) > 0:
+			return f
+	return {}
+
+
+## The best wanted loot here (value, then cheaper), paying with Hits not needed to reach `dest`.
+static func _best_loot(w: MatchState, me: int, dest: StringName) -> Dictionary:
+	var st: SeatState = w.seats[me]
+	var need_move: int = maxi(0, w.data.distance(st.area, dest) - st.move)
+	var spare: int = maxi(0, w.hits_in(st.hand) - need_move)
+	if w.data.balance.adrenaline_mode == DataEnums.AdrenalineMode.MOVE_ONLY:
+		spare = 0
+	var best: Dictionary = {}
+	var best_key: Vector2i = Vector2i(0, 0)
+	var facts: Dictionary = {}
+	for opt: Dictionary in CzSim.loot_options(w, me, st.area):
+		var cost: int = int(opt["cost"])
+		if cost > st.search + spare:
+			continue
+		var oc: CardData = w.data.card(opt["id"])
+		if facts.is_empty() and oc != null and (oc.is_weapon() or oc.is_attachment()):
+			facts = CzAI.owned_facts(w, me)
+		var v: int = CzAI.want_in(w, opt["id"], facts)
+		if v <= 0:
+			continue
+		var key: Vector2i = Vector2i(v, -cost)
+		if best.is_empty() or key > best_key:
+			best_key = key
+			best = opt
+	if best.is_empty():
+		return {}
+	if st.search < int(best["cost"]):
+		var hit: int = CzAI.first_hit(w, me)
+		var adr: Dictionary = CzAI.adrenaline_action(w, me, hit, "search")
+		if not adr.is_empty() and adr["adrenaline"] == "search":
+			return adr
+		return {}
+	return CzSim.loot_action(me, best)
 
 
 # === Evaluation =============================================================================
