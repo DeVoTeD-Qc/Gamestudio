@@ -461,6 +461,22 @@ func clone() -> MatchState:
 	return s
 
 
+## Save text: the origin plus the action log (U1), as Godot variant text (keeps ints and ids).
+func save_text() -> String:
+	return var_to_str({"version": 1, "origin": origin, "actions": actions})
+
+
+## Rebuilds a match from save_text() by replaying its actions on `content`. Null when the text
+## is not a save or an action no longer applies (the errors say which).
+static func load_text(text: String, content: RulesData, errors: Array = []) -> MatchState:
+	var parsed: Variant = str_to_var(text)
+	if not (parsed is Dictionary) or not parsed.has("origin") or not parsed.has("actions"):
+		errors.append("not a CardZone match save")
+		return null
+	var s: MatchState = LoadoutRules.replay(parsed["origin"], parsed["actions"], content, errors)
+	return s if errors.is_empty() else null
+
+
 ## Stable text of the state (replay and fairness comparisons).
 func fingerprint() -> String:
 	return JSON.stringify(to_dict(), "", true)
