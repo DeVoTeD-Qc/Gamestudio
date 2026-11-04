@@ -72,7 +72,7 @@ func test_sample_cards_match_spec() -> void:
 	assert_eq(db.hit_card(), db.get_card(&"hit"), "Hit card lookup")
 	assert_eq(db.bounty_card(), db.get_card(&"bounty"), "Bounty lookup")
 	assert_eq(db.all_cards()[0].id, &"p9_sidearm", "printed order starts at CZ-001")
-	assert_eq(db.supply_drop_cards().map(func(c: CardData) -> StringName: return c.id), [&"twin_drum_lmg"], "drop cards")
+	assert_eq(db.supply_drop_cards().map(func(c: CardData) -> StringName: return c.id), [&"twin_drum_lmg", &"heavy_plate", &"longshot_50", &"phantom_suit"], "drop cards")
 	if shotgun != null:
 		var d: Dictionary = shotgun.to_dict()
 		assert_eq([d["type"], d["rarity"], d["dmg"], d["art_key"]], [&"weapon", "U", 3, &"pump_shotgun"], "card dict")
