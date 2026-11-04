@@ -55,3 +55,21 @@ Deckbuilding is evergreen on the table and booming as digital roguelikes. Its be
 
 ## After approval
 Producer plans: (1) a print-and-play sheet and 3–5 paper sessions (2 and 4 players) with a timing log, (2) a balance pass on §12 of the spec, (3) art direction (Sr Game Artist), then (4) a Godot 4.4.1 web prototype with a pure rules engine, packing UI, async play and AI.
+
+## v0.2 follow-ups (after the head's review of `cz-review`, board task `cz-spec2`)
+*Sr Game Designer · 2026-11-04. The spec is now **v0.2** (`design/mechanics/loadout-loop-spec.md`; v0.1 is in git history). Worked examples and the bot sim are in `design/mechanics/loadout-loop-sims.md`.*
+
+**The head's two concerns, and the answers**
+- **Packing AP:** packing is now **Hold and Stow**. Played and looted cards go under your loadout in the order you used them, and you may keep up to 2 unplayed cards on top. That's one small choice, about 5 s, instead of 24–720 orders.
+- **Shots costing draws (agency and snowball):** Hits still land on top of your loadout, but they are **free draws** (your hand is always 4 real cards) and playable as **Adrenaline** (Move 1 or Search 1). **Down** (+1 Brace while a Hit is in your next draw) softens focus-fire, and the **Bounty** (whoever lands a Hit on the healthiest player heals 1) pays the trailing players to fight the leader. Sims: a player ambushed early lasts to round 7–12 instead of 3–6, and never has a turn with fewer than 4 usable cards.
+
+**New decisions for the head (defaults in bold)**
+- **F1. Packing rule:** **Hold and Stow, hold limit 2**? Or hold limit 1 (faster, less armour), or the backup "play order + 1 Rack swap"?
+- **F2. Adrenaline strength:** **Move 1 or Search 1, no cap**? Or Move 1 only, or at most 2 Adrenaline per turn? (A player hit for 4–5 at once gets a big "last stand" turn. We think that's exciting, but it needs a paper check.)
+- **F3. Down:** **flat +1 Brace per shot** while a Hit is in your next draw? Or off (faster kills, more snowball)?
+- **F4. Bounty:** **heal 1 on a Hit, goes to the strictly healthiest player at round start**. Keep the **extra final-circle Hit** for the holder? It changed no sim result. Default: **keep for paper tests and cut it if it confuses players.**
+- **F5. Campers:** in 3-player sims where nobody chases the Bounty, the player who avoided every fight won. Is the Bounty enough, or should the holder also **lose Cover** (one line on the same card)? Default: **test the Bounty alone first.**
+- **F6. Final circle:** **escalating 1/2/3 Hits on Zone cards 12–14, with a hard end after card 14** (healthiest survivor wins)? This adds 2 Zone cards and fixes v0.1's unbounded length when players heal.
+- **F7. Standard pack:** print a **recommended starting order** on the reference card (default **yes**), so nobody spends setup sorting 10 cards.
+- **F8. Holding loot:** may a card you looted this turn be held instead of stowed? Default **no** (it goes to the bottom, as in v0.1).
+- **Paper-test gates (added):** median Pack ≤ 10 s; nobody eliminated before round 6; at least 1 in 3 players who are at ≤ 3 health in round 4 finish in the top half.
