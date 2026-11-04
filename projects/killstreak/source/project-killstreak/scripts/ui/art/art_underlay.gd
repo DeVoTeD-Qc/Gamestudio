@@ -16,21 +16,25 @@ class_name ArtUnderlay
 extends Control
 
 ## Scrim profiles: [offset, alpha] stops, top to bottom (slate #12161A).
-## Hand chip: cost / type row and name at the top, keyword or rules line, then the stat plates.
+## Hand chip art band (under the name): a soft top edge, then the art nearly clear (keywords and
+## stats on it have their own plates).
 const SCRIM_CHIP: StringName = &"chip"
 ## Unit slot: tab and name at the top, stats (on plates) at the bottom.
 const SCRIM_SLOT: StringName = &"slot"
 ## Mulligan button: two centred text lines.
 const SCRIM_BUTTON: StringName = &"button"
 const SCRIMS: Dictionary = {
-	&"chip": [[0.0, 0.50], [0.30, 0.62], [0.55, 0.80], [1.0, 0.92]],
-	&"slot": [[0.0, 0.72], [0.40, 0.40], [0.70, 0.45], [1.0, 0.80]],
+	&"chip": [[0.0, 0.45], [0.30, 0.08], [1.0, 0.22]],
+	&"slot": [[0.0, 0.66], [0.30, 0.22], [0.66, 0.28], [1.0, 0.76]],
 	&"button": [[0.0, 0.62], [0.5, 0.72], [1.0, 0.62]],
 }
 const SLATE: Color = Color(0.0705882, 0.0862745, 0.101961)
 ## Art is 1.63:1; a control is covered by height when it is narrower than that.
 const ART_ASPECT: float = 1.6324
 
+## Off: no small view shows art (each keeps its pre-art look: silhouette, rules line, plain
+## button). Tests compare against it; also a kill switch.
+static var enabled: bool = true
 static var _scrim_textures: Dictionary = {}
 
 var art_key: StringName = &""
@@ -63,7 +67,7 @@ func _init() -> void:
 
 ## Card art key (CardArt.card_key / a card id); &"" or an unknown key hides the underlay.
 func set_art(key: StringName, scrim: StringName = SCRIM_CHIP, mirrored: bool = false) -> void:
-	art_key = key if key != &"" and CardArt.has_card(key) else &""
+	art_key = key if enabled and key != &"" and CardArt.has_card(key) else &""
 	flip = mirrored
 	_art.flip_h = mirrored
 	_scrim.texture = scrim_texture(scrim)

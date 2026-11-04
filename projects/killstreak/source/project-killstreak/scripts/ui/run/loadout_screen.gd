@@ -98,7 +98,7 @@ func _build() -> void:
 			tile.add_line(item.text)
 			# k-art4: the killstreak's card art as a band in the tile's free space (it shrinks
 			# away on short screens and never grows the tile); no art: the old spacer.
-			if CardArt.has_card(item.id):
+			if ArtUnderlay.enabled and CardArt.has_card(item.id):
 				var band := TextureRect.new()
 				band.name = "Art"
 				band.texture = CardArt.card_texture(item.id, 2.0)

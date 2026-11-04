@@ -14,9 +14,11 @@
 #   Up to 7 cards (hand cap): CardRow is a plain Control and _fit_cards() places the
 #   cards, centred, overlapping them when they don't fit (so the hand never widens the
 #   bottom bar). Compact (phone) profile: smaller chips, no "HAND n/7" caption.
-#   k-art4: each chip shows the card's painted art (ArtUnderlay, cropped to the chip, inside its
-#   frame) under a slate scrim; names and words get a thin slate outline, and FP / Armor sit on
-#   dark plates, so every number keeps its size and contrast over busy art.
+#   k-art4: a chip is cost / type row and name on the chip's own panel, then an art band (the
+#   card's painted art, ArtUnderlay, cropped) filling the lower part: a unit's keyword icons and
+#   FP / Armor sit on dark plates over it; a tactic / equipment chip shows the art in place of its
+#   cut-off rules line (the full text is one long-press away, in the inspector). Numbers keep
+#   their sizes. Without art (unknown key) the chip is as before, rules line included.
 # Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
 #   HudNumber, HudSubtle, HudTag), press_gesture.gd, mini_icons.gd, cost_hex.gd, icon_sheet.gd.
 # Author: UI/UX Agent
@@ -178,11 +180,16 @@ func _make_card(card: Dictionary) -> Control:
 	panel.set_meta(&"playable", bool(card.get("playable", true)))
 	var ctype: String = MiniIcons.card_type(card)
 	var weapon: String = MiniIcons.weapon_class(card)
-	# k-art4: painted art behind everything, filling the chip inside its border.
+	# k-art4: painted art band behind the lower part of the chip (placed after the column sorts).
 	var art := ArtUnderlay.new()
 	art.set_art(CardArt.card_key({"id": card.get("id", ""), "type": ctype, "weapon_class": weapon}), ArtUnderlay.SCRIM_CHIP)
-	panel.add_child(art)
-	panel.sort_children.connect(_fit_art.bind(panel, art))
+	# A plain layer holds it, so the PanelContainer never re-fits the band over the whole chip.
+	var layer: Control = Control.new()
+	layer.name = "ArtLayer"
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(layer)
+	layer.add_child(art)
+	var has_art: bool = art.visible
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 0 if compact else 2)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -218,8 +225,9 @@ func _make_card(card: Dictionary) -> Control:
 	var title: Label = _label(String(card.get("name", "")), &"UnitName", true)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.max_lines_visible = 2
-	ArtUnderlay.outline(title)
 	column.add_child(title)
+	if has_art:
+		column.sort_children.connect(_fit_art.bind(panel, column, title, art))
 
 	# Keyword icons (amber, words only when they fit); cards without keyword icons keep their
 	# rules line, which trims (the full text is in the inspector, p09).
@@ -227,11 +235,26 @@ func _make_card(card: Dictionary) -> Control:
 	if not keywords.is_empty():
 		var kw: HBoxContainer = MiniIcons.keyword_row(keywords, icon_px, get_theme_color(&"accent", &"Hud"))
 		column.add_child(kw)
+		if has_art:
+			kw.draw.connect(_draw_kw_plate.bind(kw))
 		kw.resized.connect(MiniIcons.fit_words.bind(kw))
 		var spacer: Control = Control.new()
 		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		column.add_child(spacer)
+	elif has_art and card.has("fp"):
+		var spacer2: Control = Control.new()
+		spacer2.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		spacer2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		column.add_child(spacer2)
+	elif has_art:
+		# The art band takes the cut-off rules line's place (full text: long-press inspector).
+		var band: Control = Control.new()
+		band.name = "ArtBand"
+		band.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		band.custom_minimum_size = Vector2(0, 20)
+		band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		column.add_child(band)
 	else:
 		var text: Label = _label(String(card.get("text", "")), &"HudSubtle", false)
 		text.add_theme_color_override(&"font_color", text_color)
@@ -240,7 +263,6 @@ func _make_card(card: Dictionary) -> Control:
 		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		text.custom_minimum_size = Vector2(0, 20)
-		ArtUnderlay.outline(text)
 		column.add_child(text)
 
 	# FP bottom-left, Armor bottom-right, each with its CardView icon.
@@ -269,14 +291,26 @@ func _make_card(card: Dictionary) -> Control:
 	return panel
 
 
-## Stretches the art over the chip inside its border (the content margins hold the text only).
-func _fit_art(panel: PanelContainer, art: Control) -> void:
+## The art band: from under the name to the chip's inner bottom edge, full inner width.
+func _fit_art(panel: PanelContainer, column: Control, title: Control, art: Control) -> void:
 	var sb: StyleBox = panel.get_theme_stylebox(&"panel")
 	var inset: float = 2.0
 	if sb is StyleBoxFlat:
 		inset = float((sb as StyleBoxFlat).border_width_left)
-	art.position = Vector2(inset, inset)
-	art.size = panel.size - Vector2(inset, inset) * 2.0
+	var top: float = column.position.y + title.position.y + title.size.y + 1.0
+	var origin: Vector2 = (art.get_parent() as Control).position
+	art.position = Vector2(inset, top) - origin
+	art.size = Vector2(panel.size.x - inset * 2.0, maxf(0.0, panel.size.y - inset - top))
+
+
+## Plate behind the visible keyword icons / words only (not the row's empty end).
+func _draw_kw_plate(kw: Control) -> void:
+	var right: float = 0.0
+	for c: Node in kw.get_children():
+		if c is Control and (c as Control).visible:
+			right = maxf(right, (c as Control).position.x + (c as Control).size.x)
+	if right > 0.0:
+		kw.draw_style_box(STAT_PLATE, Rect2(Vector2(-3, -1), Vector2(right + 6, kw.size.y + 2)))
 
 
 func _draw_plate(c: Control) -> void:

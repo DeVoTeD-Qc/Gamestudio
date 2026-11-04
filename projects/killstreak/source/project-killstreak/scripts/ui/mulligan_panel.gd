@@ -115,7 +115,7 @@ func _toggle(b: Button, uid: int, on: bool) -> void:
 ## (show_behind_parent), and the button's own styles get a see-through fill, so its frame, text
 ## and pressed / put-back colours stay on top. No art key: the plain button.
 func _set_art(b: Button, key: StringName) -> void:
-	if key == &"" or not CardArt.has_card(key):
+	if key == &"" or not ArtUnderlay.enabled or not CardArt.has_card(key):
 		return
 	var art := ArtUnderlay.new()
 	art.show_behind_parent = true
