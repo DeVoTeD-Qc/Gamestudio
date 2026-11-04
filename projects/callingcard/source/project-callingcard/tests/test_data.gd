@@ -55,7 +55,7 @@ func test_sample_cards_match_spec() -> void:
 	if ct != null:
 		assert_eq(ct.to_ui_dict()["trait"], &"none", "store card UI trait")
 	assert_eq(db.cards_in_set(&"night_shift").map(func(c: CardData) -> StringName: return c.id),
-			[&"graveyard_shift", &"neon_rain"], "set members in album order")
+			[&"graveyard_shift", &"neon_rain", &"last_train", &"city_never_sleeps"], "set members in album order")
 
 
 func test_balance_defaults_match_spec() -> void:

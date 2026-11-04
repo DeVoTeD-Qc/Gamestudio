@@ -141,3 +141,31 @@ Log every change from the spec values in `../../../documentation/design/balance-
 ## Issue codes
 `load_failed`, `unknown_type`, `duplicate_id`, `missing_field`, `out_of_range`, `invalid_value`,
 `broken_reference`, `wrong_type`, `budget_mismatch`, `store_rule`, `lineup_rule`.
+
+## Shipped prototype content (cc03)
+Content log with every table and the decisions behind it:
+`../../../documentation/design/content/prototype-content.md`.
+
+| Folder | Files |
+|---|---|
+| `cards/` | the 20 cards of spec §6 (13 start owned, 7 locked) |
+| `sets/` | `night_shift` 1, `whiteout` 2, `signal_fire` 3, `old_guard` 4, `cipher` 5, `showcase` 6 |
+| `unlocks/` | `unlock_win_streak_3`, `unlock_beat_warden`, `unlock_beat_warden_no_legend`, `unlock_captures_20`, `unlock_wins_5`, `unlock_dossier_carded`, `unlock_cipher_lock` |
+| `rivals/` | `quartermaster`, `archivist`, `warden` |
+| `triptychs/` | `midnight_run`, `cold_signal`, `open_book` |
+| `dossiers/` | `dossier_first_contact` (D1) … `dossier_clean_copy` (D5) |
+
+**Cipher glyphs:** glyph number = set number of the card that carries it (Graveyard Shift 1, Frostbite 2,
+Mayday 3, Brass Tacks 4), so `cipher_code` 1, 2, 3, 4 is "the glyphs in album page order". The Cipher Lock UI
+must not list the glyphs in that order by default, or it shows the answer.
+
+**Dossier notes for cc12:**
+- A `DossierPlacement` has no Cipher pick, so a solution step for a Cipher card doesn't say what it copies.
+  D5's solution copies from **c2** (Polar Night's Clutch). The solution test must try the picks
+  (`WallRules.cipher_picks`) or a `copy_from` field must be appended to `DossierPlacement`.
+- Rival replies own their slot from the start (D3 `a2`, D4 `c1`); the Dossier screen should mark those
+  slots as taken so the player can't place there.
+- No solution relies on a spring at the end of the puzzle: D3's Ambush springs at the start of the
+  player's second placement, after the scripted reply.
+- Every solution was played through `WallRules` (players P1 = you, P2 = rival, rival reply after each
+  of your placements) and meets its goal with a strict win where the goal needs one.
