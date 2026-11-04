@@ -2,12 +2,20 @@
 """CardZone Loadout Loop: scripted, deterministic rules sim (v0.1 vs v0.2).
 
 Paper-design aid only (not the Godot rules engine). Simple greedy bots play
-Ridge Hollow on Zone route A. There is no RNG anywhere: the same scenario
-always produces the same game. Used for `design/mechanics/loadout-loop-sims.md`.
+Ridge Hollow on Zone route A, B or C (spec v0.2 section 8). There is no RNG
+anywhere: the same scenario always produces the same game. Used for
+`design/mechanics/loadout-loop-sims.md` and `design/balance-log.md`.
 
     python3 tools/loadout_sim.py            # all scenarios, summary tables
     python3 tools/loadout_sim.py --log NAME # full turn log of one scenario
     python3 tools/loadout_sim.py --hand 5   # any of the above with a 5-card hand (default 4)
+    python3 tools/loadout_sim.py --hold 1   # any of the above with a hold limit of 1 (default 2)
+    python3 tools/loadout_sim.py --route B  # any of the above on Zone route B or C (default A)
+    python3 tools/loadout_sim.py --sweep    # v0.2 1v1 over all 36 drop pairs, one row per game
+    python3 tools/loadout_sim.py --sweep --summary         # hand 4/5 x hold 2/1 x route A/B/C table
+    python3 tools/loadout_sim.py --sweep --ambush ...      # same, Ben takes 2 Hits in round 2
+
+The defaults (hand 4, hold 2, route A, no --sweep) reproduce the original tables exactly.
 """
 from __future__ import annotations
 
@@ -102,11 +110,22 @@ def dist(a, b):
     return 1 if (a - b) % 6 in (1, 5) else 2
 
 
-# Zone route A: (close, drop-card, drop-area)
+# Zone routes (spec v0.2 section 8): {zone card: (close, drop-card, drop-area)}
 ZONE_A = {
     3: (None, "Twin-Drum LMG", 3), 4: (1, None, None), 6: (2, "Heavy Plate", 5), 7: (6, None, None),
     8: (None, "Longshot .50", 0), 9: (4, None, None), 10: (3, "Phantom Suit", 5), 11: (5, None, None),
 }
+ZONE_B = {
+    3: (None, "Twin-Drum LMG", 1), 4: (4, None, None), 6: (3, "Heavy Plate", 6), 7: (5, None, None),
+    8: (None, "Longshot .50", 0), 9: (2, None, None), 10: (1, "Phantom Suit", 6), 11: (6, None, None),
+}
+ZONE_C = {
+    3: (None, "Twin-Drum LMG", 5), 4: (2, None, None), 6: (6, "Heavy Plate", 4), 7: (1, None, None),
+    8: (None, "Longshot .50", 0), 9: (3, None, None), 10: (4, "Phantom Suit", 5), 11: (5, None, None),
+}
+ROUTES = {"A": ZONE_A, "B": ZONE_B, "C": ZONE_C}
+ROUTE = "A"  # Zone route; set with --route A|B|C
+HOLD = 2  # hold limit at Pack (v0.2); tunable 2 or 1, set with --hold N
 
 HAND = 4  # hand size (non-Hit cards drawn per turn); tunable 4 or 5, set with --hand N
 START = ["Scavenge", "Scavenge", "Scavenge", "Duck", "Dash", "Dash", "Sidearm", "Scavenge", "Duck", "Dash"]
@@ -120,6 +139,8 @@ class Player:
     health: int = 5
     alive: bool = True
     out_round: int | None = None
+    out_cause: str | None = None  # "shot", "gas" or "final" (final circle), for the sweep
+    out_cards: int = 0  # non-Hit cards in loadout when eliminated (spec section 9 tiebreak)
     hand: list = field(default_factory=list)
     play: list = field(default_factory=list)
     log_cards: int = 0
@@ -143,6 +164,7 @@ class Game:
         self.logging = log
         self.lines = []
         self.history = []  # per round snapshot
+        self.in_final_circle = False
         self.turn_stats = {p.name: [] for p in self.players}
 
     # ------------------------------------------------------------ helpers
@@ -177,6 +199,8 @@ class Game:
     def eliminate(self, p, source):
         p.alive = False
         p.out_round = self.round
+        p.out_cause = "shot" if source else ("final" if self.in_final_circle else "gas")
+        p.out_cards = sum(1 for x in p.loadout if x.t != "H")
         crate = [x for x in p.loadout + p.hand + p.play if x.t != "H" and not c(x.name, "starter")]
         p.loadout, p.hand, p.play = [], [], []
         crate.sort(key=lambda x: -VALUE.get(x.name, 0))
@@ -228,8 +252,9 @@ class Game:
     # ------------------------------------------------------------ zone
     def zone_flip(self):
         r = self.round
-        if r in ZONE_A:
-            close, drop, area = ZONE_A[r]
+        zone = ROUTES[ROUTE]
+        if r in zone:
+            close, drop, area = zone[r]
             if close:
                 self.gas.add(close)
                 self.log(f"Zone {r}: gas closes {AREAS[close]}")
@@ -238,10 +263,12 @@ class Game:
                 self.log(f"Zone {r}: supply drop {drop} at {AREAS[area]}")
         if r >= 12:
             base = (min(3, r - 11) if self.v2 else 1)
+            self.in_final_circle = True
             for p in list(self.alive()):
                 extra = 1 if (self.v2 and self.bounty is p and "bounty_gas" not in self.off) else 0
                 self.log(f"Final circle: {p.name} takes {base + extra}")
                 self.take_hit(p, base + extra, None)
+            self.in_final_circle = False
 
     def set_bounty(self):
         if not self.v2:
@@ -255,7 +282,7 @@ class Game:
         self.bounty = lead[0] if len(lead) == 1 else None
 
     def closing_next(self):
-        nxt = ZONE_A.get(self.round + 1)
+        nxt = ROUTES[ROUTE].get(self.round + 1)
         return {nxt[0]} if nxt and nxt[0] else set()
 
     # ------------------------------------------------------------ bot turn
@@ -454,7 +481,7 @@ class Game:
         # Pack
         if self.v2:
             hold = sorted([x for x in p.hand if x.t != "H"], key=lambda x: -c(x.name, "brace"))[:2]
-            hold = [x for x in hold if c(x.name, "brace") > 0]
+            hold = [x for x in hold if c(x.name, "brace") > 0][:HOLD]
             rest = [x for x in p.hand if x not in hold]
             p.loadout = hold + p.loadout + p.play + rest
         else:
@@ -528,13 +555,121 @@ def ablation():
             print(f"| {name} | {label} | {w} | {g.round} | {surv} |")
 
 
+# ---------------------------------------------------------------- 1v1 sweep (cz02)
+OUTER = [1, 2, 3, 4, 5, 6]
+SWEEP_LAST_ROUND = 14  # spec v0.2: the game ends after Zone card 14
+
+
+def sweep_game(a, b, ambush=False):
+    """One v0.2 1v1 game: Ana (first player) drops on area a, Ben on b.
+
+    Unlike the scenario tables, the sweep applies the spec's hard end after round 14
+    and the tiebreaks (section 8 card 14 and section 9), so every game has a result.
+    """
+    hits = {2: [("Ana", "Ben", 2)]} if ambush else None
+    g = Game("v0.2", drops=[("Ana", a), ("Ben", b)], hits_early=hits)
+    g.run(max_round=SWEEP_LAST_ROUND)
+    ana, ben = g.players
+    alive = g.alive()
+    outs = [p.out_round for p in g.players if not p.alive]
+    if len(alive) == 1:
+        winner = alive[0].name
+        loser = ben if winner == "Ana" else ana
+        how = loser.out_cause
+    elif not alive:  # both out at the same moment (final circle): more non-Hit loadout cards wins
+        how = "both-final"
+        winner = ("Ana" if ana.out_cards > ben.out_cards else "Ben" if ben.out_cards > ana.out_cards else "tie")
+    else:  # hard end: most health, then more non-Hit loadout cards
+        how = "hard-end"
+        key = [(p.health, sum(1 for x in p.loadout if x.t != "H")) for p in (ana, ben)]
+        winner = "Ana" if key[0] > key[1] else "Ben" if key[1] > key[0] else "tie"
+    return dict(a=a, b=b, winner=winner, how=how, last=g.round,
+                first_out=min(outs) if outs else None,
+                hp=(ana.health if ana.alive else 0, ben.health if ben.alive else 0))
+
+
+def sweep(ambush=False):
+    return [sweep_game(a, b, ambush) for a in OUTER for b in OUTER]
+
+
+def median(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+
+
+def sweep_stats(games):
+    n = len(games)
+    first = sum(1 for g in games if g["winner"] == "Ana")
+    second = sum(1 for g in games if g["winner"] == "Ben")
+    by_play = [g for g in games if g["how"] in ("shot", "gas", "final")]
+    first_play = sum(1 for g in by_play if g["winner"] == "Ana")
+    both = sum(1 for g in games if g["how"] == "both-final")
+    lasts = [g["last"] for g in games]
+    outs = [g["first_out"] for g in games if g["first_out"] is not None]
+    hows = {k: sum(1 for g in games if g["how"] == k) for k in ("shot", "gas", "final", "both-final", "hard-end")}
+    return dict(n=n, first=first, second=second, ties=n - first - second, first_play=first_play,
+                n_play=len(by_play), both=both, med=median(lasts), lo=min(lasts), hi=max(lasts),
+                earliest=min(outs) if outs else None, hows=hows)
+
+
+def sweep_rows(ambush=False):
+    print(f"## v0.2 1v1 sweep: hand {HAND}, hold {HOLD}, route {ROUTE}" + (", Ben ambushed in round 2" if ambush else ""))
+    print("| Ana drop | Ben drop | Winner | Decided by | Last round | First elimination | HP Ana / Ben |")
+    print("|---|---|---|---|---|---|---|")
+    games = sweep(ambush)
+    for g in games:
+        print(f"| {AREAS[g['a']]} | {AREAS[g['b']]} | {g['winner']} | {g['how']} | {g['last']} | "
+              f"{g['first_out'] if g['first_out'] else '-'} | {g['hp'][0]} / {g['hp'][1]} |")
+    st = sweep_stats(games)
+    print(f"\nFirst player wins {st['first']}/{st['n']}, second {st['second']}, ties {st['ties']}; "
+          f"both out in the final circle {st['both']}; median last round {st['med']} ({st['lo']}-{st['hi']}); "
+          f"earliest elimination round {st['earliest']}")
+
+
+def sweep_summary(ambush=False):
+    global HAND, HOLD, ROUTE
+    saved = HAND, HOLD, ROUTE
+    print("## v0.2 1v1 sweep summary: 36 drop pairs per row" + (", Ben (second player) ambushed in round 2" if ambush else ""))
+    print("| Hand | Hold | Route | First-player wins | 1st wins of games decided by play | Both out in final circle "
+          "| Median last round (range) | Earliest elimination | Shot / gas / final circle / both-final / hard end |")
+    print("|---|---|---|---|---|---|---|---|---|")
+    for HAND in (4, 5):
+        for HOLD in (2, 1):
+            for ROUTE in ("A", "B", "C"):
+                st = sweep_stats(sweep(ambush))
+                h = st["hows"]
+                print(f"| {HAND} | {HOLD} | {ROUTE} | {st['first']}/36 ({st['first'] / 36:.0%}) "
+                      f"| {st['first_play']}/{st['n_play']} | {st['both']}/36 ({st['both'] / 36:.0%}) "
+                      f"| {st['med']} ({st['lo']}-{st['hi']}) | round {st['earliest']} "
+                      f"| {h['shot']} / {h['gas']} / {h['final']} / {h['both-final']} / {h['hard-end']} |")
+    HAND, HOLD, ROUTE = saved
+
+
 def main():
-    global HAND
+    global HAND, HOLD, ROUTE
     args = sys.argv[1:]
     if "--hand" in args:
         i = args.index("--hand")
         HAND = int(args[i + 1])
         args = args[:i] + args[i + 2:]
+    if "--hold" in args:
+        i = args.index("--hold")
+        HOLD = int(args[i + 1])
+        args = args[:i] + args[i + 2:]
+    if "--route" in args:
+        i = args.index("--route")
+        ROUTE = args[i + 1].upper()
+        if ROUTE not in ROUTES:
+            sys.exit("--route must be A, B or C")
+        args = args[:i] + args[i + 2:]
+    if args[:1] == ["--sweep"]:
+        ambush = "--ambush" in args
+        if "--summary" in args:
+            sweep_summary(ambush)
+        else:
+            sweep_rows(ambush)
+        return
     if args[:1] == ["--ablation"]:
         ablation()
         return
