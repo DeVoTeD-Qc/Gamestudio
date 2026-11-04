@@ -50,7 +50,7 @@ Types: `s` string, `i` int, `n` number, `b` bool, `a` array, `d` object, `?` nul
 | `set_complete(set_id)` | `set_complete` | `set_id s` | *Live:* set completion rate |
 | `cipher_attempt(correct)` | `cipher_attempt` | `correct b, attempt i (running count this session)` | Puzzle engagement |
 | `dossier_start(id)` | `dossier_start` | `id s` | Tutorial funnel |
-| `dossier_clear(id, attempts, duration_s)` | `dossier_clear` | `id s, attempts i, duration_s n (the winning attempt), since_start_s n (from dossier_start to the clear), via s (duel_end\|dossier_cleared\|dossier_completed)` | **Session fit:** tutorial Dossier D1 cleared < 3 min (use `since_start_s` for `id = d1`) |
+| `dossier_clear(id, attempts, duration_s)` | `dossier_clear` | `id s, attempts i, duration_s n (the winning attempt), since_start_s n (from dossier_start to the clear), via s (duel_end\|dossier_cleared\|dossier_completed)` | **Session fit:** tutorial Dossier D1 cleared < 3 min (use `since_start_s` for `id = dossier_first_contact` (Dossier number 1; tools also accept `d1`)) |
 | `survey(answers)` | `survey` | `q1..q4 i? (1-5, null = skipped), open s, answered i` | **Intent to collect** (`q1 ≥ 4` for 70%), **fairness** (`q4 ≥ 4` for 70%), plus the album pull and session fit perception checks (q2, q3) |
 | `quit(screen)` | `quit` | `screen s, session_s n, reason s (close\|pagehide)` | Where sessions end; session length |
 
