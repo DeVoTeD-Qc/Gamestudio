@@ -1,0 +1,158 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
+[ext_resource type="Script" path="res://scripts/ui/player_panel.gd" id="2_panel"]
+[ext_resource type="Script" path="res://scripts/ui/zone_track.gd" id="3_zone"]
+[ext_resource type="Script" path="res://scripts/ui/map_view.gd" id="4_map"]
+[ext_resource type="Script" path="res://scripts/ui/fan_row.gd" id="5_fan"]
+[ext_resource type="Script" path="res://scripts/ui/tap_hold_button.gd" id="6_tap"]
+[ext_resource type="Script" path="res://scripts/ui/card_inspector.gd" id="7_insp"]
+
+[node name="Match" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_match")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.168627, 0.0941176, 0.25098, 1)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Column" type="VBoxContainer" parent="SafeArea"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="SafeArea/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MenuButton" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TopButton"
+text = "MENU"
+
+[node name="YouPanel" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_panel")
+
+[node name="ZoneTrack" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+script = ExtResource("3_zone")
+
+[node name="RivalPanel" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+script = ExtResource("2_panel")
+
+[node name="InfoButton" type="Button" parent="SafeArea/Column/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TopButton"
+disabled = true
+text = "INFO"
+
+[node name="Body" type="HBoxContainer" parent="SafeArea/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="MapPanel" type="PanelContainer" parent="SafeArea/Column/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MatchPanel"
+
+[node name="MapView" type="Container" parent="SafeArea/Column/Body/MapPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_map")
+
+[node name="RightColumn" type="VBoxContainer" parent="SafeArea/Column/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="LineRow" type="HBoxContainer" parent="SafeArea/Column/Body/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="LineCaption" type="Button" parent="SafeArea/Column/Body/RightColumn/LineRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InfoPanelButton"
+text = "LINE"
+alignment = 0
+script = ExtResource("6_tap")
+
+[node name="LineCards" type="Container" parent="SafeArea/Column/Body/RightColumn/LineRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("5_fan")
+
+[node name="StripRow" type="HBoxContainer" parent="SafeArea/Column/Body/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="StripCaption" type="Button" parent="SafeArea/Column/Body/RightColumn/StripRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InfoPanelButton"
+text = "NEXT HAND"
+alignment = 0
+script = ExtResource("6_tap")
+
+[node name="StripCards" type="Container" parent="SafeArea/Column/Body/RightColumn/StripRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("5_fan")
+
+[node name="HandCards" type="Container" parent="SafeArea/Column/Body/RightColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("5_fan")
+
+[node name="CardInspector" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_insp")
