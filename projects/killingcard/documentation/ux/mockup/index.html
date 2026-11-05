@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KillingCard Board Mock-up</title>
+<style>
+:root {
+  --bg: #0b0f14; --panel: #151b23; --panel2: #1d2530; --line: #2b3542; --text: #e8edf2; --muted: #93a1b1;
+  --you: #2ec4b6; --you-dk: #0f5c56; --rival: #e5484d; --rival-dk: #6b1d20; --amber: #f5b83d;
+  --fp: #ff7a45; --ar: #b8c4d2; --obj: #3a4656;
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0b0f14; } }
+:root[data-theme="dark"] { --bg: #0b0f14; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--ui); }
+body.chrome { padding: 12px 16px 40px; }
+#toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; max-width: 1440px; }
+#toolbar .grp { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+#toolbar .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+#toolbar button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; font: 600 13px var(--ui); cursor: pointer; min-height: 34px; }
+#toolbar button.on { background: var(--you-dk); border-color: var(--you); }
+#toolbar button:hover { border-color: var(--muted); }
+#hint { color: var(--muted); font-size: 13px; max-width: 1440px; margin: 0 0 10px; line-height: 1.45; }
+body:not(.chrome) #toolbar, body:not(.chrome) #hint { display: none; }
+#stage { position: relative; overflow: hidden; background: #000; }
+body.chrome #stage { outline: 1px solid var(--line); }
+#canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(46,70,90,.35), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 48px),
+    linear-gradient(180deg, #10161d, #0c1117 50%, #10161d);
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.abs { position: absolute; }
+
+/* ---- column lanes ---- */
+.lane { position: absolute; border-radius: 6px; background: rgba(255,255,255,.025); }
+.slotbox { position: absolute; border: 1px dashed rgba(255,255,255,.10); border-radius: 4px; }
+.slotbox.front { border-color: rgba(255,255,255,.22); }
+.slotbox .fl { position: absolute; left: 50%; transform: translateX(-50%); font: 700 11px var(--ui); letter-spacing: .12em; color: rgba(255,255,255,.28); }
+.drop { position: absolute; border-radius: 6px; border: 2px solid transparent; transition: border-color .15s, background .15s; }
+.drop.valid { border-color: rgba(46,196,182,.75); background: rgba(46,196,182,.07); cursor: pointer; }
+.drop.valid::after { content: "PLAY HERE"; position: absolute; right: 6px; bottom: 4px; font: 800 12px var(--ui); letter-spacing: .1em; color: var(--you); }
+
+/* ---- objective ---- */
+.obj { position: absolute; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,.14);
+  background: linear-gradient(135deg, #324152, #1c2631 60%, #26323f); display: flex; align-items: center; justify-content: center; }
+.obj::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 6px, transparent 6px 14px); }
+.obj .mark { position: relative; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; }
+.obj .mark.you { background: var(--you-dk); border: 2px solid var(--you); border-radius: 50%; }
+.obj .mark.rival { background: var(--rival-dk); border: 2px solid var(--rival); transform: rotate(45deg); }
+.obj .mark.rival span { transform: rotate(-45deg); }
+.obj .mark.none { background: #3b4552; border: 2px dashed #8796a7; border-radius: 6px; }
+.obj .pw { position: absolute; left: 8px; display: flex; align-items: center; gap: 4px; font-weight: 800; }
+.obj .pw.r { top: 4px; color: #ffb3b5; } .obj .pw.y { bottom: 4px; color: #9ff0e7; }
+.obj .ctl { position: absolute; right: 8px; font-weight: 700; color: var(--muted); letter-spacing: .06em; }
+
+/* ---- banner (board card) ---- */
+.banner { position: absolute; border-radius: 3px; overflow: visible; transition: left .32s cubic-bezier(.2,.8,.2,1), top .32s cubic-bezier(.2,.8,.2,1), filter .2s, opacity .3s; cursor: pointer; }
+.banner .art { position: absolute; inset: 0; border-radius: 3px; overflow: hidden; background: #222; }
+.banner .art svg { width: 100%; height: 100%; display: block; }
+.banner .spine { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px 0 0 3px; }
+.side-you .spine { background: repeating-linear-gradient(160deg, var(--you) 0 5px, #0b6b63 5px 9px); }
+.side-rival .spine { background: repeating-linear-gradient(135deg, var(--rival) 0 4px, #1a0a0b 4px 8px); }
+.banner.back { filter: brightness(.74) saturate(.8); }
+.banner.front .art { box-shadow: 0 0 0 2px var(--sidec), 0 0 14px rgba(0,0,0,.6); }
+.side-you { --sidec: var(--you); } .side-rival { --sidec: var(--rival); }
+.banner .ftab { position: absolute; left: 50%; transform: translateX(-50%); background: var(--sidec); color: #061012; font-weight: 900; letter-spacing: .1em; display: flex; align-items: center; justify-content: center; border-radius: 3px; }
+.badge { position: absolute; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; text-shadow: 0 1px 0 #000; z-index: 2; }
+.badge.fp { background: radial-gradient(circle at 35% 30%, #ff9b6b, #c0461c 70%); border: 2px solid #1a0b05; border-radius: 50%; }
+.badge.ar { background: linear-gradient(180deg, #d4dde7, #6d7c8d); color: #0b0f14; text-shadow: none; border: 2px solid #11161c; clip-path: polygon(50% 0, 100% 14%, 100% 58%, 50% 100%, 0 58%, 0 14%); border-radius: 0; }
+.badge.ar.hurt { background: linear-gradient(180deg, #ffd0d1, #c2474b); }
+.kws { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; z-index: 2; }
+.kw { display: flex; align-items: center; justify-content: center; background: rgba(8,10,14,.82); border: 1px solid rgba(245,184,61,.55); border-radius: 4px; color: var(--amber); }
+.kw svg { width: 76%; height: 76%; }
+.tag-plan { position: absolute; left: 10px; top: 3px; background: var(--amber); color: #1a1200; font: 900 11px var(--ui); padding: 1px 5px; border-radius: 3px; letter-spacing: .08em; z-index: 3; }
+.banner.ghost { opacity: .5; pointer-events: none; }
+.banner.ghost .art { outline: 2px dashed var(--you); outline-offset: 2px; }
+.banner.hover { z-index: 40; }
+.banner.hover .scaler { transform: scale(var(--hz,1.5)); }
+.banner .scaler { position: absolute; inset: 0; transition: transform .16s ease-out; }
+.banner .nametag { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: rgba(8,10,14,.92); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font-weight: 700; display: none; white-space: nowrap; }
+.banner.hover .nametag { display: block; }
+.banner.dying { animation: die .5s forwards; }
+@keyframes die { 0% { filter: brightness(2) saturate(0); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(.9); } }
+.banner.fresh .badge, .banner.fresh .kws { animation: pop .28s .38s both cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+.banner.fresh .kws { animation-name: popk; }
+@keyframes popk { from { transform: translateX(-50%) scale(0); } to { transform: translateX(-50%) scale(1); } }
+
+/* animation of banner art: paused unless .anim (focused / selected / placing) */
+.art svg .fx { animation-play-state: paused; }
+.anim .art svg .fx, .anim svg .fx { animation-play-state: running; }
+.shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.28) 45%, transparent 60%); background-size: 250% 100%; background-position: 150% 0; opacity: 0; }
+.anim .shine { opacity: 1; animation: shine 1.6s linear infinite; }
+@keyframes shine { to { background-position: -100% 0; } }
+.animdot { position: absolute; right: 4px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: #ff4d6d; box-shadow: 0 0 6px #ff4d6d; display: none; z-index: 3; }
+.anim > .animdot, .anim .animdot { display: block; }
+
+/* ---- hand ---- */
+.hcard { position: absolute; border-radius: 6px; background: linear-gradient(180deg, #222b36, #151b23); border: 1px solid #3a4655; transition: top .16s ease-out, box-shadow .16s, left .2s; cursor: pointer; overflow: hidden; }
+.hcard.sel { box-shadow: 0 0 0 2px var(--you), 0 8px 20px rgba(0,0,0,.6); z-index: 20; }
+.hcard.dim { filter: grayscale(.7) brightness(.6); }
+.hcard .hart { position: absolute; left: 0; right: 0; top: 0; overflow: hidden; }
+.hcard .hart svg { width: 100%; height: 100%; display: block; }
+.hcard .hex { position: absolute; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #10110a; background: var(--amber); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); z-index: 3; }
+.hcard .hname { position: absolute; left: 5px; right: 5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hcard .hstats { position: absolute; left: 5px; right: 5px; display: flex; align-items: center; justify-content: space-between; font-weight: 900; }
+.hcard .hstats .s { display: flex; align-items: center; gap: 2px; }
+.hcard .ttype { color: var(--amber); font-weight: 800; letter-spacing: .06em; }
+.hcard .bkdrop { position: absolute; inset: 0; filter: blur(6px) brightness(.45) saturate(1.2); transform: scale(1.3); }
+.hcard .bkdrop svg { width: 100%; height: 100%; }
+.hcard .stripe { position: absolute; left: 0; right: 0; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.25), 0 2px 8px rgba(0,0,0,.7); }
+.hcard .stripe svg { width: 100%; height: 100%; display: block; }
+.peek { position: absolute; z-index: 30; pointer-events: none; }
+
+/* ---- rails ---- */
+.rail { position: absolute; display: flex; flex-direction: column; gap: 8px; }
+.box { background: rgba(21,27,35,.92); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.box .k { color: var(--muted); font-weight: 700; letter-spacing: .08em; }
+.box .v { font-weight: 900; }
+.btn-ready { background: linear-gradient(180deg, #31d3c4, #148c82); color: #03201d; font-weight: 900; letter-spacing: .12em; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid #8ff3ea; }
+.btn-sm { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text); }
+
+/* ---- focus overlay ---- */
+#scrim { position: absolute; inset: 0; background: rgba(3,5,8,.72); z-index: 80; display: none; }
+#focus { position: absolute; z-index: 90; display: none; background: rgba(15,20,27,.97); border: 1px solid #3a4655; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.7); }
+#focus .fb { position: relative; }
+#focus h3 { margin: 0; font-weight: 900; }
+#focus .tl { color: var(--muted); font-weight: 700; letter-spacing: .06em; }
+#focus .row { display: flex; gap: 8px; flex-wrap: wrap; }
+#focus .chip { display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-weight: 800; }
+#focus .rules { line-height: 1.3; }
+#focus .rules b { color: var(--amber); }
+#focus .close { position: absolute; right: 8px; top: 8px; }
+
+/* ---- overlays for demos ---- */
+#fxsvg { position: absolute; inset: 0; pointer-events: none; z-index: 60; overflow: visible; }
+.callout { position: absolute; z-index: 70; background: rgba(8,10,14,.92); border: 1px solid var(--amber); color: var(--text); border-radius: 6px; padding: 4px 8px; font-weight: 700; pointer-events: none; white-space: nowrap; }
+.callout b { color: var(--amber); }
+.toast { position: absolute; z-index: 75; left: 50%; transform: translateX(-50%); background: rgba(8,10,14,.92); border: 1px solid var(--line); border-radius: 6px; padding: 5px 12px; font-weight: 700; pointer-events: none; white-space: nowrap; }
+
+/* ---- compare sheet ---- */
+#compare { position: absolute; inset: 0; z-index: 95; background: #0d1217; display: none; overflow: hidden; color: var(--text); }
+#compare h4 { margin: 0 0 4px; font-size: 16px; }
+#compare .cap { color: var(--muted); font-size: 14px; line-height: 1.35; }
+</style>
+</head>
+<body class="chrome">
+<div id="toolbar">
+  <div class="grp"><span class="lbl">Screen</span><button data-size="phone">Phone 844x390</button><button data-size="desktop">Desktop 1440x900</button></div>
+  <div class="grp"><span class="lbl">Hand</span><button data-hand="A">A: centred crop</button><button data-hand="B">B: banner stripe</button></div>
+  <div class="grp"><span class="lbl">Demo</span>
+    <button data-demo="select">Select card</button>
+    <button data-demo="play">Play into B</button>
+    <button data-demo="protector">Protector slide</button>
+    <button data-demo="rival">Rival plays</button>
+    <button data-demo="advance">Front dies / advance</button>
+    <button data-demo="pick">Pick shot</button>
+    <button data-demo="focus">Focus / zoom</button>
+    <button data-demo="compare">Hand A vs B sheet</button>
+    <button data-demo="reset">Reset</button>
+  </div>
+</div>
+<p id="hint">Tap a hand card to select it (it animates; landing slots show ghosts), then tap a highlighted column, or drag it onto a column. Long-press (or right-click) any card for the focus view. On the desktop size, hover a banner to zoom it in place. Placeholder art is CSS/SVG made here; the red dot marks a banner that is animating. The stage is drawn on Godot's logical canvas (1168x540 phone, 1280x800 desktop) and scaled to the device size, exactly as screen_profile.gd does.</p>
+<div id="stage"><div id="canvas"></div></div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- layout config (Godot logical px)
+const LAYOUTS = {
+  phone: { dev: [844, 390], W: 1168, H: 540, bw: 208, bh: 52, rowGap: 4, rows: 3, objH: 64, colGap: 20, top: 6, midGap: 6,
+    handGap: 8, handH: 116, cw: 92, ch: 116, cardGap: 4, badge: 26, bfont: 18, kw: 20, ftab: [44, 12, 9],
+    hex: [24, 28, 16], artH: 70, nameF: 16, statF: 18, sicon: 16, raise: 0, railFont: 16, focusW: 560, zoomW: 512 },
+  desktop: { dev: [1440, 900], W: 1280, H: 800, bw: 304, bh: 76, rowGap: 6, rows: 3, objH: 88, colGap: 28, top: 12, midGap: 8,
+    handGap: 12, handH: 180, cw: 130, ch: 172, cardGap: 8, badge: 34, bfont: 22, kw: 26, ftab: [60, 14, 11],
+    hex: [30, 34, 20], artH: 104, nameF: 18, statF: 22, sicon: 20, raise: 0, railFont: 16, focusW: 620, zoomW: 512 }
+};
+const P = new URLSearchParams(location.search);
+let size = P.get("size") === "desktop" ? "desktop" : "phone";
+let handOpt = P.get("hand") === "B" ? "B" : "A";
+if (P.get("chrome") === "0") document.body.classList.remove("chrome");
+let L;
+
+function geom() {
+  const g = LAYOUTS[size];
+  const sideH = g.rows * g.bh + (g.rows - 1) * g.rowGap;
+  g.rivalTop = g.top; g.objY = g.top + sideH + g.midGap; g.youTop = g.objY + g.objH + g.midGap;
+  g.youBottom = g.youTop + sideH; g.handY = g.youBottom + g.handGap;
+  g.boardW = 3 * g.bw + 2 * g.colGap; g.x0 = Math.round((g.W - g.boardW) / 2);
+  g.colX = i => g.x0 + i * (g.bw + g.colGap);
+  g.slotY = (side, k) => side === "you" ? g.youTop + k * (g.bh + g.rowGap) : g.objY - g.midGap - (k + 1) * g.bh - k * g.rowGap;
+  g.scale = g.dev[0] / g.W;
+  return g;
+}
+
+// ---------------------------------------------------------------- placeholder art (512x128 = 4:1)
+const ICON = {
+  bolt: '<path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/>',
+  pick: '<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 1v6M12 17v6M1 12h6M17 12h6" stroke="currentColor" stroke-width="2.4"/>',
+  protector: '<path d="M12 2 21 5v6c0 6-4 10-9 12-5-2-9-6-9-12V5z" fill="currentColor"/><path d="M8 13l4-4 4 4" stroke="#111" stroke-width="2.4" fill="none"/>',
+  cover: '<path d="M3 20V9l9-6 9 6v11z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8 20v-6h8v6" fill="currentColor"/>',
+  fp: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/>',
+  ar: '<path d="M12 2 21 5v6c0 6-4 10-9 12-5-2-9-6-9-12V5z" fill="currentColor"/>'
+};
+const ico = (n, s, col) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" style="color:${col || "currentColor"}">${ICON[n]}</svg>`;
+
+function soldier(x, s, col, flip) {
+  // simple original silhouette: helmet, torso, rifle. x = centre in 512-space, s = scale
+  return `<g transform="translate(${x} 128) scale(${flip ? -s : s} ${s})" fill="${col}">
+    <path d="M-14 -118 q14 -16 30 0 l2 10 h-34z"/><circle cx="1" cy="-100" r="11"/>
+    <path d="M-24 -86 q25 -10 50 0 l6 60 h-62z"/><path d="M-26 -30 h22 l-2 30 h-20zM4 -30 h22 l-2 30 h-20z"/>
+    <path d="M-40 -70 l110 -18 l2 7 l-70 13 l-4 14 l-8 -2 l3 -11 l-32 6z"/>
+    <rect x="58" y="-92" width="22" height="5" rx="2"/></g>`;
+}
+const ARTS = {
+  ridge:  { bg: ["#ff8f3c", "#c2334a", "#3a1640"], sky: "sun", fig: .62, fcol: "#160912", focal: .62 },
+  viper:  { bg: ["#ff3fd4", "#7b2ff7", "#14063a"], sky: "grid", fig: .68, fcol: "#12042a", focal: .66 },
+  wolf:   { bg: ["#bfe8ff", "#3a8fd6", "#0b2547"], sky: "snow", fig: .30, fcol: "#071729", focal: .32 },
+  iron:   { bg: ["#9aa7b6", "#4c5967", "#1a2028"], sky: "plates", fig: .50, fcol: "#0e1217", focal: .5, shield: true },
+  ledger: { bg: ["#ff2b2b", "#8c0d0d", "#2a0505"], sky: "splat", fig: null, focal: .45 },
+  storm:  { bg: ["#38f2d0", "#0d6b80", "#041b26"], sky: "bolts", fig: null, focal: .5 },
+  long:   { bg: ["#8cd17a", "#2c5e3a", "#08180f"], sky: "reticle", fig: .24, fcol: "#06120a", focal: .4 },
+  gold:   { bg: ["#ffe08a", "#d9902b", "#5a2b0c"], sky: "sun", fig: .40, fcol: "#2a1404", focal: .42 },
+  ember:  { bg: ["#ffb347", "#d1471b", "#2b0b05"], sky: "embers", fig: null, focal: .55 },
+  tide:   { bg: ["#73e0ff", "#1866a8", "#061a36"], sky: "waves", fig: .55, fcol: "#03101f", focal: .55 },
+  comet:  { bg: ["#ffd0d0", "#e0414a", "#3d0b19"], sky: "stripes", fig: .45, fcol: "#21050c", focal: .45 },
+  saint:  { bg: ["#e7e0d0", "#8a7a64", "#2a2219"], sky: "rays", fig: .58, fcol: "#1a140d", focal: .58 },
+  stallion:{ bg: ["#ffcf5a", "#e0412c", "#5e0f0f"], sky: "stripes", fig: .30, fcol: "#3a0808", focal: .3 },
+  glass:  { bg: ["#c9b8ff", "#5a3fb8", "#120a33"], sky: "grid", fig: .5, fcol: "#0d0626", focal: .5 },
+  choir:  { bg: ["#c8f0e0", "#3f8f7a", "#0d2a23"], sky: "rays", fig: .38, fcol: "#081a15", focal: .38 },
+  kite:   { bg: ["#fff3b0", "#f08a5d", "#3d1f3a"], sky: "snow", fig: .7, fcol: "#20101e", focal: .7 },
+  bastion:{ bg: ["#a3b8c9", "#3d5770", "#0f1b27"], sky: "plates", fig: .45, fcol: "#081018", focal: .45, shield: true },
+  rider:  { bg: ["#a8e6ff", "#3b7fc4", "#13284a"], sky: "sun", fig: .64, fcol: "#0b1630", focal: .64 },
+  eyes:   { bg: ["#e8e8ff", "#7d7dc8", "#1b1b3a"], sky: "eyes", fig: null, focal: .5 },
+  caller: { bg: ["#7dffc2", "#13996b", "#05261b"], sky: "waves", fig: .36, fcol: "#03170f", focal: .36 }
+};
+let artSeq = 0;
+function artSVG(key, vb) {
+  const a = ARTS[key]; const id = "g" + (artSeq++);
+  let sky = "";
+  switch (a.sky) {
+    case "sun": sky = `<circle class="fx" style="animation:pulse 1.6s ease-in-out infinite alternate;transform-origin:${a.fig ? (1 - a.fig) * 512 : 380}px 70px" cx="${a.fig ? (1 - a.fig) * 512 : 380}" cy="70" r="42" fill="${a.bg[0]}" opacity=".9"/>
+      <path d="M0 128 L80 70 L150 104 L240 58 L330 100 L420 66 L512 96 V128z" fill="${a.bg[2]}" opacity=".75"/>`; break;
+    case "grid": sky = `<g class="fx" style="animation:gridmove 1s linear infinite">${Array.from({ length: 12 }, (_, i) => `<line x1="${i * 48 - 20}" y1="128" x2="${256 + (i * 48 - 276) * .25}" y2="64" stroke="${a.bg[0]}" stroke-width="2" opacity=".55"/>`).join("")}${[72, 84, 100, 122].map(y => `<line x1="0" x2="512" y1="${y}" y2="${y}" stroke="${a.bg[0]}" stroke-width="2" opacity=".5"/>`).join("")}</g>
+      <circle cx="140" cy="46" r="30" fill="#ffd36e" opacity=".85"/>`; break;
+    case "snow": sky = `<g class="fx" style="animation:drift 2.2s linear infinite">${Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 512}" cy="${(i * 53) % 128}" r="${1 + (i % 3)}" fill="#fff" opacity=".8"/>`).join("")}</g>`; break;
+    case "plates": sky = `${Array.from({ length: 9 }, (_, i) => `<rect x="${i * 60 - 10}" y="${i % 2 ? 6 : 18}" width="54" height="104" rx="4" fill="#fff" opacity="${.05 + (i % 3) * .03}"/>`).join("")}<rect class="fx" style="animation:scan 1.4s linear infinite" x="0" y="0" width="512" height="6" fill="#fff" opacity=".25"/>`; break;
+    case "splat": sky = `<g fill="#120202">${[[60, 40, 38], [140, 90, 26], [250, 50, 50], [330, 100, 30], [430, 40, 44], [480, 110, 20], [200, 110, 18]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/><path d="M${x} ${y} l${r * 1.8} ${-r * .4} l${-r * 1.4} ${r * .6}z"/>`).join("")}</g>
+      <g class="fx" style="animation:pulse 1.2s ease-in-out infinite alternate;transform-origin:230px 64px"><rect x="180" y="40" width="100" height="48" fill="none" stroke="#fff" stroke-width="5" transform="rotate(-8 230 64)"/><path d="M196 64h68" stroke="#fff" stroke-width="5" transform="rotate(-8 230 64)"/></g>`; break;
+    case "bolts": sky = `<g class="fx" style="animation:flicker .5s steps(2) infinite" fill="none" stroke="#e8fffb" stroke-width="5" stroke-linejoin="round">
+      <path d="M120 0 L100 50 L135 56 L105 128"/><path d="M300 0 L270 60 L310 64 L280 128"/><path d="M430 0 L415 40 L445 46 L420 110"/></g>
+      <circle cx="256" cy="64" r="38" fill="none" stroke="#e8fffb" stroke-width="3" opacity=".6"/>`; break;
+    case "reticle": sky = `<g class="fx" style="animation:spin 3s linear infinite;transform-origin:360px 64px"><circle cx="360" cy="64" r="44" fill="none" stroke="#d8ffd0" stroke-width="3"/><path d="M360 12v30M360 86v30M308 64h30M382 64h30" stroke="#d8ffd0" stroke-width="3"/></g><circle cx="360" cy="64" r="5" fill="#ff4d4d"/>`; break;
+    case "embers": sky = `<g class="fx" style="animation:rise 1.8s linear infinite">${Array.from({ length: 36 }, (_, i) => `<circle cx="${(i * 71) % 512}" cy="${(i * 37) % 160}" r="${1.5 + (i % 3)}" fill="#ffe2a3"/>`).join("")}</g>
+      <rect x="236" y="34" width="60" height="60" rx="10" fill="#fff4e0" transform="rotate(20 266 64)"/><circle cx="252" cy="54" r="5" fill="#2b0b05"/><circle cx="278" cy="72" r="5" fill="#2b0b05"/><circle cx="262" cy="80" r="5" fill="#2b0b05"/>`; break;
+    case "waves": sky = `<g class="fx" style="animation:wave 1.6s linear infinite">${[70, 92, 112].map((y, i) => `<path d="M-128 ${y} ${Array.from({ length: 12 }, (_, k) => `q32 ${k % 2 ? 14 : -14} 64 0`).join(" ")}" fill="none" stroke="#dff7ff" stroke-width="${4 - i}" opacity=".7"/>`).join("")}</g>`; break;
+    case "stripes": sky = `${Array.from({ length: 14 }, (_, i) => `<rect x="${i * 40}" y="${20 + (i % 4) * 22}" width="70" height="6" fill="#fff" opacity=".18"/>`).join("")}<g class="fx" style="animation:wave 1s linear infinite"><path d="M-64 100 h700" stroke="${a.bg[0]}" stroke-width="10" opacity=".45"/></g>`; break;
+    case "rays": sky = `<g class="fx" style="animation:spin 8s linear infinite;transform-origin:${(1 - a.fig) * 512}px 128px" opacity=".22">${Array.from({ length: 12 }, (_, i) => `<path d="M${(1 - a.fig) * 512} 128 L${(1 - a.fig) * 512 + Math.cos(i * .52) * 600} ${128 - Math.sin(i * .52) * 600} L${(1 - a.fig) * 512 + Math.cos(i * .52 + .2) * 600} ${128 - Math.sin(i * .52 + .2) * 600}z" fill="#fff"/>`).join("")}</g>`; break;
+    case "eyes": sky = `${[180, 330].map(x => `<ellipse cx="${x}" cy="64" rx="56" ry="34" fill="#fff"/><g class="fx" style="animation:look 1.4s ease-in-out infinite alternate"><circle cx="${x}" cy="64" r="20" fill="#c22"/><circle cx="${x}" cy="64" r="8" fill="#000"/></g>`).join("")}`; break;
+  }
+  const fig = a.fig != null ? soldier(a.fig * 512, 1, a.fcol, a.fig > .5) : "";
+  const shield = a.shield ? `<path d="M${a.fig * 512 - 80} 40 h56 v44 q-28 28 -56 0z" fill="${a.bg[0]}" stroke="${a.fcol}" stroke-width="5"/>` : "";
+  return `<svg viewBox="${vb || "0 0 512 128"}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a.bg[0]}"/><stop offset=".55" stop-color="${a.bg[1]}"/><stop offset="1" stop-color="${a.bg[2]}"/></linearGradient></defs>
+    <rect width="512" height="128" fill="url(#${id})"/>${sky}${fig}${shield}
+    <rect width="512" height="128" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="4"/></svg>`;
+}
+const kf = document.createElement("style");
+kf.textContent = `@keyframes pulse{from{transform:scale(.92)}to{transform:scale(1.08)}}@keyframes gridmove{from{transform:translateY(0)}to{transform:translateY(12px)}}
+@keyframes drift{from{transform:translate(0,-128px)}to{transform:translate(-30px,0)}}@keyframes scan{from{transform:translateY(0)}to{transform:translateY(128px)}}
+@keyframes flicker{0%{opacity:1}50%{opacity:.2}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes rise{from{transform:translateY(0)}to{transform:translateY(-40px)}}
+@keyframes wave{from{transform:translateX(0)}to{transform:translateX(64px)}}@keyframes look{from{transform:translateX(-14px)}to{transform:translateX(14px)}}`;
+document.head.appendChild(kf);
+
+// ---------------------------------------------------------------- data
+const CARDS = {
+  y1: { name: "Ridge Runner", art: "ridge", type: "unit", fp: 3, ar: 1, max: 1, kws: [] },
+  y2: { name: "Steel Choir", art: "choir", type: "unit", fp: 1, ar: 4, max: 4, kws: [] },
+  y3: { name: "Deep Tide", art: "tide", type: "unit", fp: 2, ar: 1, max: 2, kws: [] },
+  y4: { name: "Wide Eyes", art: "eyes", type: "unit", fp: 1, ar: 4, max: 4, kws: ["bolt"], text: "<b>On Deploy:</b> reveal the rival's plan in this column." },
+  y5: { name: "Neon Viper", art: "viper", type: "unit", fp: 2, ar: 4, max: 4, kws: [] },
+  y6: { name: "Bastion", art: "bastion", type: "unit", fp: 2, ar: 5, max: 5, kws: ["cover"], text: "<b>Cover 1:</b> takes 1 less damage from each shot." },
+  y7: { name: "Paper Kite", art: "kite", type: "unit", fp: 1, ar: 1, max: 1, kws: [] },
+  r1: { name: "Red Comet", art: "comet", type: "unit", fp: 2, ar: 2, max: 2, kws: ["bolt"], text: "<b>On Down:</b> deal 1 to your front unit here." },
+  r2: { name: "Ash Saint", art: "saint", type: "unit", fp: 1, ar: 3, max: 3, kws: [] },
+  r3: { name: "Gilded Stallion", art: "stallion", type: "unit", fp: 3, ar: 2, max: 2, kws: [] },
+  r4: { name: "Night Glass", art: "glass", type: "unit", fp: 1, ar: 3, max: 3, kws: [] },
+  r5: { name: "Frost Wolf", art: "wolf", type: "unit", fp: 3, ar: 3, max: 3, kws: ["bolt"], text: "<b>On Deploy:</b> -1 FP to your front unit here." },
+  r6: { name: "Long Shot", art: "long", type: "unit", fp: 2, ar: 3, max: 3, kws: ["pick"], text: "<b>Pick:</b> shoots the enemy with the lowest Armor (ties: front-most)." },
+  r7: { name: "Blue Rider", art: "rider", type: "unit", fp: 2, ar: 2, max: 2, kws: [] },
+  h1: { name: "Ironclad", art: "iron", type: "unit", cost: 3, fp: 1, ar: 5, max: 5, kws: ["protector"], text: "<b>Protector:</b> arrives at the front of the column and becomes the frontline unit." },
+  h2: { name: "Golden Hour", art: "gold", type: "unit", cost: 4, fp: 3, ar: 3, max: 3, kws: [] },
+  h3: { name: "Red Ledger", art: "ledger", type: "tactic", cost: 2, kws: ["bolt"], text: "Deal 2 damage to the rival's front unit in a column." },
+  h4: { name: "Static Storm", art: "storm", type: "tactic", cost: 1, kws: ["bolt"], text: "Rival units in a column get -1 FP this round." },
+  h5: { name: "Tide Caller", art: "caller", type: "unit", cost: 2, fp: 2, ar: 2, max: 2, kws: [] },
+  h6: { name: "Ember Fall", art: "ember", type: "tactic", cost: 3, kws: ["bolt"], text: "Deal 1 damage to every rival unit in a column.", dim: true },
+  r9: { name: "Saint's Echo", art: "saint", type: "unit", fp: 2, ar: 2, max: 2, kws: [] }
+};
+const INIT = () => ({
+  cols: [
+    { id: "A", rival: ["r1", "r2"], you: ["y1", "y2"] },
+    { id: "B", rival: ["r3", "r4"], you: ["y3", "y4", "y5"] },
+    { id: "C", rival: ["r5", "r6", "r7"], you: ["y6", "y7"] }
+  ],
+  hand: ["h1", "h2", "h3", "h4", "h5", "h6"],
+  sel: null
+});
+let S = INIT();
+function resetCards() { for (const c of Object.values(CARDS)) if (c.max) c.ar = c.max; CARDS.y1.ar = 1; CARDS.y3.ar = 1; }
+resetCards();
+
+// ---------------------------------------------------------------- render
+const canvas = document.getElementById("canvas"), stage = document.getElementById("stage");
+const els = new Map();
+function el(tag, cls, css, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (css) Object.assign(e.style, css); if (html != null) e.innerHTML = html; return e; }
+const px = v => v + "px";
+
+function bannerEl(id, side, w, h) {
+  const c = CARDS[id], g = L;
+  const b = el("div", `banner side-${side}`, { width: px(w), height: px(h) });
+  b.dataset.id = id;
+  const sc = el("div", "scaler"); b.appendChild(sc);
+  const art = el("div", "art", null, artSVG(c.art)); sc.appendChild(art);
+  art.appendChild(el("div", "shine"));
+  sc.appendChild(el("div", "spine", { width: px(Math.round(h * .1)) }));
+  const bs = g.badge, inset = 3;
+  if (c.type === "unit") {
+    sc.appendChild(el("div", "badge fp", { width: px(bs), height: px(bs), left: px(Math.round(h * .1) + inset), bottom: px(inset), fontSize: px(g.bfont) }, c.fp));
+    sc.appendChild(el("div", "badge ar" + (c.ar < c.max ? " hurt" : ""), { width: px(bs), height: px(bs + 2), right: px(inset), bottom: px(inset), fontSize: px(g.bfont) }, c.ar));
+  }
+  if (c.kws.length) {
+    const k = el("div", "kws", { bottom: px(inset) });
+    c.kws.forEach(n => k.appendChild(el("div", "kw", { width: px(g.kw), height: px(g.kw) }, ico(n, g.kw))));
+    sc.appendChild(k);
+  }
+  const ft = el("div", "ftab", { width: px(g.ftab[0]), height: px(g.ftab[1]), fontSize: px(g.ftab[2]) }, "FRONT");
+  ft.style[side === "you" ? "top" : "bottom"] = px(-g.ftab[1] + 2);
+  ft.style.display = "none"; ft.className += " ftab"; sc.appendChild(ft);
+  sc.appendChild(el("div", "animdot"));
+  sc.appendChild(el("div", "nametag", { fontSize: px(14) }, `${c.name} <span style="color:var(--muted)">${c.type === "unit" ? "Unit" : "Tactic"}${c.kws.includes("pick") ? " - Pick" : ""}${c.kws.includes("protector") ? " - Protector" : ""}</span>`));
+  attachPress(b, () => openFocus(id, side), null);
+  b.addEventListener("mouseenter", () => { if (size !== "desktop" || b.classList.contains("ghost")) return; b._ht = setTimeout(() => hoverOn(b), 120); });
+  b.addEventListener("mouseleave", () => { clearTimeout(b._ht); hoverOff(b); });
+  return b;
+}
+function hoverOn(b) {
+  const col = +b.dataset.col, side = b.dataset.side;
+  b.classList.add("hover", "anim");
+  const sc = b.querySelector(".scaler");
+  sc.style.transformOrigin = `${col === 0 ? "0%" : col === 2 ? "100%" : "50%"} ${side === "you" ? "100%" : "0%"}`;
+  b.style.setProperty("--hz", (L.zoomW / L.bw).toFixed(3));
+}
+function hoverOff(b) { b.classList.remove("hover"); if (!b.classList.contains("placing")) b.classList.remove("anim"); }
+
+function attachPress(node, onLong, onTap) {
+  let t = null, moved = false, sx = 0, sy = 0, fired = false;
+  node.addEventListener("pointerdown", e => { if (e.button !== 0) return; fired = false; moved = false; sx = e.clientX; sy = e.clientY;
+    t = setTimeout(() => { fired = true; onLong && onLong(); }, 400); });
+  node.addEventListener("pointermove", e => { if (Math.hypot(e.clientX - sx, e.clientY - sy) > 8) { moved = true; clearTimeout(t); } });
+  node.addEventListener("pointerup", () => { clearTimeout(t); if (!fired && !moved && onTap) onTap(); });
+  node.addEventListener("pointerleave", () => clearTimeout(t));
+  node.addEventListener("contextmenu", e => { e.preventDefault(); clearTimeout(t); onLong && onLong(); });
+}
+
+function power(list) { return list.reduce((s, id) => s + (CARDS[id].fp || 0), 0); }
+
+function render() {
+  L = geom();
+  stage.style.width = px(L.dev[0]); stage.style.height = px(L.dev[1]);
+  canvas.style.width = px(L.W); canvas.style.height = px(L.H); canvas.style.transform = `scale(${L.scale})`;
+  if (!canvas._built || canvas._built !== size) { canvas.innerHTML = ""; els.clear(); buildStatic(); canvas._built = size; }
+  layoutUnits();
+  renderHand();
+  document.querySelectorAll("#toolbar [data-size]").forEach(b => b.classList.toggle("on", b.dataset.size === size));
+  document.querySelectorAll("#toolbar [data-hand]").forEach(b => b.classList.toggle("on", b.dataset.hand === handOpt));
+}
+
+function buildStatic() {
+  const g = L;
+  // lanes, slot frames, objective row
+  S.cols.forEach((col, i) => {
+    const x = g.colX(i);
+    canvas.appendChild(el("div", "lane", { left: px(x - 6), top: px(g.rivalTop - 4), width: px(g.bw + 12), height: px(g.youBottom - g.rivalTop + 8) }));
+    for (const side of ["rival", "you"]) for (let k = 0; k < g.rows; k++) {
+      const sb = el("div", "slotbox" + (k === 0 ? " front" : ""), { left: px(x), top: px(g.slotY(side, k)), width: px(g.bw), height: px(g.bh) });
+      if (k === 0) { const fl = el("div", "fl", { top: px(g.bh / 2 - 7) }, "FRONT"); sb.appendChild(fl); }
+      canvas.appendChild(sb);
+    }
+    const o = el("div", "obj", { left: px(x), top: px(g.objY), width: px(g.bw), height: px(g.objH) });
+    o.id = "obj" + i; canvas.appendChild(o);
+    const d = el("div", "drop", { left: px(x - 6), top: px(g.youTop - 4), width: px(g.bw + 12), height: px(g.youBottom - g.youTop + 8) });
+    d.id = "drop" + i; d.addEventListener("click", () => { if (S.sel) playCard(S.sel, i); });
+    canvas.appendChild(d);
+  });
+  // rails
+  const lw = g.x0 - 12 - 18, f = g.railFont;
+  const left = el("div", "rail", { left: px(12), top: px(g.top), width: px(lw) });
+  left.innerHTML = `
+    <div class="box"><div class="k" style="font-size:${f - 3}px">ROUND 3 · PLAN</div>
+      <div class="v" style="font-size:${f + 6}px"><span style="color:var(--you)">YOU 1</span> <span style="color:var(--muted)">-</span> <span style="color:var(--rival)">1 RIVAL</span></div>
+      <div class="k" style="font-size:${f - 3}px">Objectives held</div></div>
+    <div class="box" style="display:flex;gap:8px;align-items:center"><div style="width:${f * 2.4}px;height:${f * 2.4}px;border-radius:50%;background:linear-gradient(135deg,#2ec4b6,#0b3d3a);border:2px solid #8ff3ea"></div>
+      <div><div class="v" style="font-size:${f}px">Operator</div><div class="k" style="font-size:${f - 3}px">FP 3 · AR 5/7</div></div></div>`;
+  canvas.appendChild(left);
+  const leftB = el("div", "rail", { left: px(12), top: px(g.handY + g.handH - (f * 3.6)), width: px(lw) });
+  leftB.innerHTML = `<div class="box" style="display:flex;justify-content:space-between"><span class="k" style="font-size:${f - 3}px">DECK <b class="v" style="font-size:${f}px">14</b></span><span class="k" style="font-size:${f - 3}px">USED <b class="v" style="font-size:${f}px">5</b></span></div>`;
+  canvas.appendChild(leftB);
+  const rx = g.x0 + g.boardW + 18;
+  const right = el("div", "rail", { left: px(rx), top: px(g.top), width: px(g.W - rx - 12) });
+  right.innerHTML = `<div style="display:flex;gap:8px;justify-content:flex-end"><div class="btn-sm" style="width:${f * 3.6}px;height:${Math.max(44, f * 2.8)}px;font-size:${f - 2}px">UNDO</div><div class="btn-sm" style="width:${f * 3.6}px;height:${Math.max(44, f * 2.8)}px;font-size:${f - 2}px">MENU</div></div>
+    <div class="box"><div class="k" style="font-size:${f - 3}px">RIVAL HAND</div><div class="v" style="font-size:${f + 2}px">5 cards</div></div>`;
+  canvas.appendChild(right);
+  const rb = el("div", "rail", { left: px(rx), top: px(g.handY), width: px(g.W - rx - 12) });
+  rb.innerHTML = `<div class="box"><div class="k" style="font-size:${f - 3}px">SUPPLY</div><div class="v" style="font-size:${f + 6}px;color:var(--amber)">4 / 5</div></div>
+    <div class="btn-ready" style="height:${size === "phone" ? 64 : 72}px;font-size:${f + 6}px">READY</div>`;
+  canvas.appendChild(rb);
+  const fx = document.createElementNS("http://www.w3.org/2000/svg", "svg"); fx.id = "fxsvg"; fx.setAttribute("viewBox", `0 0 ${g.W} ${g.H}`); fx.setAttribute("width", g.W); fx.setAttribute("height", g.H); canvas.appendChild(fx);
+  canvas.appendChild(el("div", null, null)).id = "scrim";
+  canvas.appendChild(el("div", null, null)).id = "focus";
+  canvas.appendChild(el("div", null, null)).id = "compare";
+  document.getElementById("scrim").addEventListener("click", closeFocus);
+}
+
+function layoutUnits() {
+  const g = L; const seen = new Set();
+  S.cols.forEach((col, i) => {
+    for (const side of ["rival", "you"]) col[side].forEach((id, k) => {
+      seen.add(id);
+      let b = els.get(id);
+      if (!b) { b = bannerEl(id, side, g.bw, g.bh); els.set(id, b); canvas.appendChild(b); }
+      b.dataset.col = i; b.dataset.side = side;
+      b.style.left = px(g.colX(i)); b.style.top = px(g.slotY(side, k));
+      b.classList.toggle("front", k === 0); b.classList.toggle("back", k > 0);
+      b.querySelector(".ftab").style.display = k === 0 ? "flex" : "none";
+    });
+    const o = document.getElementById("obj" + i);
+    const rp = power(col.rival), yp = power(col.you), ctl = yp > rp ? "you" : rp > yp ? "rival" : "none";
+    const m = Math.round(g.objH * .62);
+    o.innerHTML = `<div class="pw r" style="font-size:${g.bfont - 2}px">${ico("fp", g.bfont - 2, "#ffb3b5")} ${rp}</div>
+      <div class="mark ${ctl}" style="width:${ctl === "rival" ? m * .78 : m}px;height:${ctl === "rival" ? m * .78 : m}px;font-size:${Math.round(m * .6)}px"><span>${col.id}</span></div>
+      <div class="pw y" style="font-size:${g.bfont - 2}px">${ico("fp", g.bfont - 2, "#9ff0e7")} ${yp}</div>
+      <div class="ctl" style="font-size:${size === "phone" ? 12 : 13}px">${ctl === "you" ? "YOURS" : ctl === "rival" ? "RIVAL" : "CONTESTED"}</div>`;
+  });
+  for (const [id, b] of els) if (!seen.has(id) && !b.classList.contains("placing")) { b.remove(); els.delete(id); }
+}
+
+function handRects() {
+  const g = L, n = S.hand.length;
+  const span = g.boardW, need = n * g.cw + (n - 1) * g.cardGap;
+  const step = need <= span ? g.cw + g.cardGap : (span - g.cw) / (n - 1);
+  const start = g.x0 + (span - (need <= span ? need : span)) / 2;
+  return S.hand.map((id, i) => ({ id, x: Math.round(start + i * step), y: g.handY + (g.handH - g.ch), w: g.cw, h: g.ch }));
+}
+function cropViewBox(key, w, h) {
+  const cw = Math.min(512, 128 * w / h), f = ARTS[key].focal * 512;
+  const x = Math.max(0, Math.min(512 - cw, f - cw / 2));
+  return `${x.toFixed(1)} 0 ${cw.toFixed(1)} 128`;
+}
+function handCardEl(r) {
+  const g = L, c = CARDS[r.id];
+  const e = el("div", "hcard" + (S.sel === r.id ? " sel anim" : "") + (c.dim ? " dim" : ""), { left: px(r.x), top: px(r.y - (S.sel === r.id ? Math.round(g.ch * .14) : 0)), width: px(r.w), height: px(r.h) });
+  e.dataset.id = r.id;
+  const hex = el("div", "hex", { width: px(g.hex[0]), height: px(g.hex[1]), fontSize: px(g.hex[2]), left: px(3), top: px(3) }, c.cost);
+  let inner = "";
+  const stats = c.type === "unit"
+    ? `<span class="s" style="color:#ffb08a">${ico("fp", g.sicon, "#ff8a5a")}${c.fp}</span>${c.kws.map(k => `<span class="s" style="color:var(--amber)">${ico(k, g.sicon)}</span>`).join("")}<span class="s" style="color:#d6dee8">${ico("ar", g.sicon, "#b8c4d2")}${c.ar}</span>`
+    : `<span class="ttype" style="font-size:${g.statF - 4}px">TACTIC</span>${c.kws.map(k => `<span class="s" style="color:var(--amber)">${ico(k, g.sicon)}</span>`).join("")}`;
+  if (handOpt === "A") {
+    const vb = cropViewBox(c.art, r.w, g.artH);
+    inner = `<div class="hart" style="height:${g.artH}px">${artSVG(c.art, vb)}<div class="shine"></div></div>
+      <div class="hname" style="top:${g.artH + 3}px;font-size:${g.nameF}px">${c.name}</div>
+      <div class="hstats" style="bottom:${4}px;font-size:${g.statF}px">${stats}</div>`;
+  } else {
+    const sh = Math.round(r.w / 4), st = g.hex[1] + 8;
+    inner = `<div class="bkdrop">${artSVG(c.art, cropViewBox(c.art, r.w, r.h))}</div>
+      <div class="hname" style="top:${st - g.nameF - 6}px;left:${g.hex[0] + 6}px;font-size:${g.nameF}px">${c.name}</div>
+      <div class="stripe" style="top:${st}px;height:${sh}px">${artSVG(c.art)}<div class="shine"></div></div>
+      <div style="position:absolute;left:5px;right:5px;top:${st + sh + 6}px;font-size:${g.nameF - 3}px;color:#c8d2dc;line-height:1.15;max-height:${r.h - st - sh - 6 - g.statF - 10}px;overflow:hidden">${c.type === "unit" ? (c.text ? c.text.replace(/<[^>]+>/g, "").split(":")[0] : "Unit") : c.text}</div>
+      <div class="hstats" style="bottom:4px;font-size:${g.statF}px">${stats}</div>`;
+  }
+  e.innerHTML = inner; e.appendChild(hex);
+  e.appendChild(el("div", "animdot"));
+  attachPress(e, () => openFocus(r.id, "you"), () => selectCard(r.id));
+  // drag to a column
+  let drag = null;
+  e.addEventListener("pointerdown", ev => { drag = { x: ev.clientX, y: ev.clientY, on: false }; e.setPointerCapture(ev.pointerId); });
+  e.addEventListener("pointermove", ev => {
+    if (!drag) return; const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    if (!drag.on && Math.hypot(dx, dy) > 10) { drag.on = true; if (S.sel !== r.id) selectCard(r.id); }
+    if (drag.on) { const cur = canvas.querySelector(`.hcard[data-id="${r.id}"]`); if (cur) cur.style.transform = `translate(${dx / L.scale}px,${dy / L.scale}px)`; }
+  });
+  e.addEventListener("pointerup", ev => {
+    if (drag && drag.on) { const cr = canvas.getBoundingClientRect(); const lx = (ev.clientX - cr.left) / L.scale, ly = (ev.clientY - cr.top) / L.scale;
+      const i = [0, 1, 2].find(i => lx >= L.colX(i) - 10 && lx <= L.colX(i) + L.bw + 10 && ly < L.youBottom + 10);
+      if (i != null) playCard(r.id, i); else render(); }
+    drag = null;
+  });
+  if (size === "desktop") {
+    e.addEventListener("mouseenter", () => { e.classList.add("anim"); e.style.top = px(r.y - Math.round(g.ch * .1)); showPeek(r); });
+    e.addEventListener("mouseleave", () => { if (S.sel !== r.id) { e.classList.remove("anim"); e.style.top = px(r.y); } hidePeek(); });
+  }
+  return e;
+}
+function showPeek(r) {
+  hidePeek(); if (handOpt !== "A") return;
+  const g = L, w = g.bw, h = g.bh;
+  const p = el("div", "peek anim", { left: px(Math.max(g.x0, Math.min(g.x0 + g.boardW - w, r.x + r.w / 2 - w / 2))), top: px(r.y - Math.round(g.ch * .1) - h - 10), width: px(w), height: px(h) },
+    `<div class="banner side-you anim" style="position:absolute;inset:0;width:${w}px;height:${h}px"><div class="art">${artSVG(CARDS[r.id].art)}<div class="shine"></div></div></div>`);
+  p.id = "peek"; canvas.appendChild(p);
+}
+function hidePeek() { const p = document.getElementById("peek"); if (p) p.remove(); }
+
+function renderHand() {
+  canvas.querySelectorAll(".hcard,.banner.ghost").forEach(n => n.remove());
+  hidePeek();
+  handRects().forEach(r => canvas.appendChild(handCardEl(r)));
+  // landing ghosts + valid columns while a unit is selected
+  const sc = S.sel && CARDS[S.sel];
+  S.cols.forEach((col, i) => {
+    const d = document.getElementById("drop" + i);
+    const ok = !!sc && (sc.type !== "unit" || col.you.length < L.rows);
+    d.classList.toggle("valid", ok);
+    if (ok && sc.type === "unit") {
+      const k = sc.kws.includes("protector") ? 0 : col.you.length;
+      const gb = bannerEl(S.sel, "you", L.bw, L.bh); gb.classList.add("ghost");
+      gb.style.left = px(L.colX(i)); gb.style.top = px(sc.kws.includes("protector") ? L.slotY("you", 0) - 0 : L.slotY("you", k));
+      if (sc.kws.includes("protector")) { gb.style.top = px(L.slotY("you", 0)); gb.style.zIndex = 5; }
+      canvas.appendChild(gb);
+    }
+  });
+}
+function selectCard(id) { if (CARDS[id].dim) { toast("Needs 3 Supply - you have 2 left after plans"); return; } S.sel = S.sel === id ? null : id; renderHand(); }
+
+// ---------------------------------------------------------------- placement animation
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function playCard(id, colIdx, opts = {}) {
+  const g = L, c = CARDS[id], col = S.cols[colIdx];
+  const r = handRects().find(h => h.id === id);
+  S.sel = null; S.hand = S.hand.filter(h => h !== id); renderHand();
+  if (c.type !== "unit") { await tacticFx(id, colIdx, r); return; }
+  const protector = c.kws.includes("protector");
+  const k = col.you.length;
+  const b = bannerEl(id, "you", g.bw, g.bh); b.classList.add("placing", "anim", "fresh"); b.style.transition = "none"; b.style.zIndex = 50;
+  b.dataset.col = colIdx; b.dataset.side = "you";
+  canvas.appendChild(b);
+  const ax = r ? r.x : g.colX(colIdx), ay = r ? r.y : g.H, aw = r ? r.w : g.bw, ah = r ? (handOpt === "A" ? g.artH : r.h) : g.bh;
+  const entryY = g.youBottom + g.rowGap;          // just outside the back row (outer edge)
+  const T = opts.slow || 1;
+  // 1. lift + morph into banner at the column's outer edge
+  await b.animate([
+    { left: px(ax), top: px(ay), width: px(aw), height: px(ah), transform: "scale(1)" },
+    { left: px(g.colX(colIdx)), top: px(entryY), width: px(g.bw), height: px(g.bh), transform: "scale(1.04)" }
+  ], { duration: 220 * T, easing: "cubic-bezier(.3,.7,.3,1)", fill: "forwards" }).finished;
+  // 2. slide toward the objective, into the first free slot
+  const ty = g.slotY("you", k);
+  await b.animate([{ left: px(g.colX(colIdx)), top: px(entryY), width: px(g.bw), height: px(g.bh), transform: "scale(1.04)" },
+    { left: px(g.colX(colIdx)), top: px(ty), width: px(g.bw), height: px(g.bh), transform: "scale(1)" }],
+    { duration: (180 + 70 * (g.rows - k)) * T, easing: "cubic-bezier(.2,.9,.25,1.12)", fill: "forwards" }).finished;
+  b.getAnimations().forEach(a => { a.commitStyles && a.commitStyles(); a.cancel(); });
+  b.style.left = px(g.colX(colIdx)); b.style.top = px(ty); b.style.width = px(g.bw); b.style.height = px(g.bh); b.style.transform = "";
+  b.classList.remove("placing"); els.set(id, b); b.style.transition = ""; b.style.zIndex = "";
+  b.appendChild(el("div", "tag-plan", null, "PLAN"));
+  col.you.push(id);
+  layoutUnits();
+  if (protector) {
+    await wait(160 * T);
+    col.you = [id, ...col.you.filter(x => x !== id)];
+    b.style.zIndex = 5;
+    layoutUnits();
+    const co = callout(`<b>Protector</b> slides to the front`, g.colX(colIdx) + g.bw + 8, g.slotY("you", 0) + 4);
+    await wait(1400 * T); co.remove(); b.style.zIndex = "";
+  }
+  await wait(Math.max(0, 900 - 400) * T);
+  if (!opts.keepAnim) b.classList.remove("anim", "fresh");
+}
+async function tacticFx(id, colIdx, r) {
+  const g = L, c = CARDS[id];
+  const b = bannerEl(id, "you", g.bw, g.bh); b.classList.add("placing", "anim"); b.style.zIndex = 50; canvas.appendChild(b);
+  const cx = g.colX(colIdx);
+  await b.animate([{ left: px(r.x), top: px(r.y), width: px(r.w), height: px(handOpt === "A" ? g.artH : r.h), opacity: 1 },
+    { left: px(cx), top: px(g.objY + g.objH / 2 - g.bh / 2), width: px(g.bw), height: px(g.bh), opacity: 1, offset: .55 },
+    { left: px(cx), top: px(g.objY + g.objH / 2 - g.bh / 2), width: px(g.bw), height: px(g.bh), opacity: 0 }], { duration: 1100, fill: "forwards" }).finished;
+  b.remove();
+  const front = S.cols[colIdx].rival[0];
+  if (front && /front unit/.test(c.text)) { const fb = els.get(front); CARDS[front].ar = Math.max(0, CARDS[front].ar - 2); fb.replaceWith(Object.assign(bannerEl(front, "rival", g.bw, g.bh))); els.delete(front); layoutUnits(); }
+}
+async function rivalPlays() {
+  const g = L, colIdx = 0, col = S.cols[colIdx], id = "r9";
+  if (col.rival.includes(id)) return;
+  const b = bannerEl(id, "rival", g.bw, g.bh); b.classList.add("placing", "anim", "fresh"); b.style.transition = "none"; b.style.zIndex = 50; canvas.appendChild(b);
+  const k = col.rival.length, ty = g.slotY("rival", k);
+  await b.animate([{ left: px(g.colX(colIdx)), top: px(-g.bh - 4) }, { left: px(g.colX(colIdx)), top: px(ty) }], { duration: 420, easing: "cubic-bezier(.2,.9,.25,1.12)", fill: "forwards" }).finished;
+  b.getAnimations().forEach(a => a.cancel());
+  b.style.left = px(g.colX(colIdx)); b.style.top = px(ty); b.classList.remove("placing"); b.style.transition = ""; b.style.zIndex = "";
+  els.set(id, b); col.rival.push(id); layoutUnits();
+  await wait(600); b.classList.remove("anim", "fresh");
+}
+async function advanceDemo() {
+  const g = L, col = S.cols[1], id = col.you[0]; if (!id) return;
+  const b = els.get(id); b.classList.add("dying");
+  const co = callout(`<b>${CARDS[id].name}</b> down: the column advances`, g.colX(1) + g.bw + 8, g.slotY("you", 0) + 4);
+  await wait(520); col.you.shift(); b.remove(); els.delete(id); layoutUnits();
+  const nf = els.get(col.you[0]); if (nf) { nf.classList.add("anim"); nf.animate([{ transform: "scale(1.06)" }, { transform: "scale(1)" }], { duration: 300, delay: 300 }); setTimeout(() => nf.classList.remove("anim"), 1200); }
+  await wait(1600); co.remove();
+}
+
+// ---------------------------------------------------------------- Pick
+function pickDemo(hold) {
+  const g = L, ci = 2, col = S.cols[ci];
+  const shooter = "r6", targets = col.you;
+  const tgt = targets.reduce((a, b) => (CARDS[b].ar < CARDS[a].ar ? b : a), targets[0]);
+  const si = col.rival.indexOf(shooter), ti = col.you.indexOf(tgt);
+  const sx = g.colX(ci) + g.bw * .5, sy = g.slotY("rival", si) + g.bh / 2;
+  const tx = g.colX(ci) + g.bw * .5, ty = g.slotY("you", ti) + g.bh / 2;
+  const fx = document.getElementById("fxsvg");
+  const bend = g.colX(ci) + g.bw + g.colGap * .5 + 6;
+  fx.innerHTML = `<defs><marker id="ah" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff4d6d"/></marker></defs>
+    <path d="M${sx + g.bw * .35} ${sy} C ${bend + 30} ${sy}, ${bend + 30} ${ty}, ${tx + g.bw * .38} ${ty}" fill="none" stroke="#ff4d6d" stroke-width="3" stroke-dasharray="8 5" marker-end="url(#ah)">
+      <animate attributeName="stroke-dashoffset" from="26" to="0" dur=".6s" repeatCount="indefinite"/></path>
+    <g transform="translate(${tx} ${ty})"><circle r="${g.bh * .42}" fill="none" stroke="#ff4d6d" stroke-width="3"/><path d="M0 ${-g.bh * .55}v${g.bh * .25}M0 ${g.bh * .3}v${g.bh * .25}M${-g.bh * .55} 0h${g.bh * .25}M${g.bh * .3} 0h${g.bh * .25}" stroke="#ff4d6d" stroke-width="3"/></g>
+    <g opacity=".9"><rect x="${g.colX(ci) + 4}" y="${g.slotY("you", 0) + 4}" width="${g.bw - 8}" height="${g.bh - 8}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 4"/></g>`;
+  els.get(shooter).classList.add("anim");
+  const fs = size === "phone" ? 14 : 15;
+  const c1 = callout(`<b>PICK</b> skips the front: lowest Armor (${CARDS[tgt].ar})`, Math.min(g.W - 330, bend + 18), (sy + ty) / 2 - 14); c1.style.fontSize = px(fs);
+  const c2 = callout(`front unit skipped`, g.colX(ci) - 150, g.slotY("you", 0) + g.bh / 2 - 12); c2.style.fontSize = px(fs - 1); c2.style.borderColor = "#fff";
+  if (!hold) setTimeout(() => { fx.innerHTML = ""; c1.remove(); c2.remove(); els.get(shooter).classList.remove("anim"); }, 3200);
+}
+function callout(html, x, y) { const c = el("div", "callout", { left: px(x), top: px(y), fontSize: px(size === "phone" ? 14 : 15) }, html); canvas.appendChild(c); return c; }
+function toast(t) { const e = el("div", "toast", { top: px(L.objY + L.objH / 2 - 14), fontSize: px(16) }, t); canvas.appendChild(e); setTimeout(() => e.remove(), 2200); }
+
+// ---------------------------------------------------------------- focus / zoom
+function openFocus(id, side) {
+  const g = L, c = CARDS[id];
+  hidePeek();
+  const f = document.getElementById("focus"), s = document.getElementById("scrim");
+  const W = g.focusW, zw = g.zoomW, zh = zw / 4, pad = 20;
+  const fz = size === "phone" ? 16 : 17;
+  f.innerHTML = `<div class="fb anim side-${side}" style="width:${zw}px;height:${zh}px;margin:${pad}px auto 10px;">
+      <div class="banner side-${side} anim" style="position:absolute;inset:0;width:${zw}px;height:${zh}px;cursor:default"><div class="scaler"><div class="art">${artSVG(c.art)}<div class="shine"></div></div>
+      <div class="spine" style="width:${Math.round(zh * .08)}px"></div>
+      ${c.type === "unit" ? `<div class="badge fp" style="width:44px;height:44px;left:${Math.round(zh * .08) + 6}px;bottom:6px;font-size:26px">${c.fp}</div><div class="badge ar${c.ar < c.max ? " hurt" : ""}" style="width:44px;height:46px;right:6px;bottom:6px;font-size:26px">${c.ar}</div>` : ""}
+      ${c.kws.length ? `<div class="kws" style="bottom:6px">${c.kws.map(k => `<div class="kw" style="width:34px;height:34px">${ico(k, 34)}</div>`).join("")}</div>` : ""}
+      <div class="animdot"></div></div></div></div>
+    <div style="padding:0 ${pad}px ${pad}px">
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="font-size:${fz + 8}px">${c.name}</h3>
+        <span class="tl" style="font-size:${fz - 1}px">${c.type === "unit" ? "UNIT" : "TACTIC"} · ${side === "you" ? "YOURS" : "RIVAL"}${c.cost ? ` · COST ${c.cost}` : ""}</span></div>
+      ${c.type === "unit" ? `<div class="row" style="margin:8px 0;font-size:${fz}px"><span class="chip">${ico("fp", 20, "#ff8a5a")} Firepower ${c.fp}</span><span class="chip">${ico("ar", 20, "#b8c4d2")} Armor ${c.ar}/${c.max}</span></div>` : ""}
+      <div class="rules" style="font-size:${fz}px">${c.text || "No effect."}</div>
+      <div class="tl" style="margin-top:8px;font-size:${fz - 3}px">Art: alternate art 1 of 3 · tap anywhere to close</div>
+    </div>`;
+  Object.assign(f.style, { width: px(W), left: px((g.W - W) / 2), top: px(Math.max(8, (g.H - (zh + 2 * pad + 150)) / 2)), display: "block" });
+  s.style.display = "block";
+  f.onclick = closeFocus;
+}
+function closeFocus() { document.getElementById("focus").style.display = "none"; document.getElementById("scrim").style.display = "none"; }
+
+// ---------------------------------------------------------------- compare sheet (hand A vs B)
+function compareSheet() {
+  const g = L, c = CARDS.h2, cv = document.getElementById("compare");
+  const z = size === "phone" ? 2 : 1.6;
+  const keep = handOpt;
+  const mk = (opt, scale) => {
+    handOpt = opt;
+    const r = { id: "h2", x: 0, y: 0, w: g.cw, h: g.ch };
+    const e = handCardEl(r); e.classList.add("anim"); e.style.position = "relative"; e.style.left = "0"; e.style.top = "0";
+    const wrap = el("div", null, { width: px(g.cw * scale), height: px(g.ch * scale), position: "relative" });
+    e.style.transform = `scale(${scale})`; e.style.transformOrigin = "0 0"; wrap.appendChild(e); return wrap;
+  };
+  cv.innerHTML = "";
+  const pad = 24;
+  const head = el("div", null, { position: "absolute", left: px(pad), top: px(14), right: px(pad) },
+    `<h4 style="font-size:20px">Hand card: A (centred crop) vs B (banner stripe) - ${size === "phone" ? "phone 1168x540 canvas, 0.72 pt per px" : "desktop 1280x800 canvas, 1.125 px per px"}</h4>
+     <div class="cap" style="font-size:15px">Same footprint (${g.cw}x${g.ch} px). Left of each pair: true size. Right: ${z}x for reading the anatomy. The source banner is 512x128 (4:1); the dashed box is A's crop window (focal point set per art).</div>`);
+  cv.appendChild(head);
+  const src = el("div", null, { position: "absolute", left: px(pad), top: px(84), width: px(512), height: px(128) }, artSVG(c.art));
+  const vb = cropViewBox(c.art, g.cw, g.artH).split(" ").map(Number);
+  src.appendChild(el("div", null, { position: "absolute", left: px(vb[0]), top: 0, width: px(vb[2]), height: px(128), outline: "3px dashed #fff", boxShadow: "0 0 0 2000px rgba(0,0,0,.45)" }));
+  src.style.overflow = "hidden";
+  cv.appendChild(src);
+  cv.appendChild(el("div", "cap", { position: "absolute", left: px(pad + 530), top: px(88), width: px(g.W - pad * 2 - 540), fontSize: px(15) },
+    `<b style="color:var(--text)">A</b> shows ${Math.round(vb[2] / 512 * 100)}% of the banner width at ${(g.artH / 128).toFixed(2)}x source scale. <b style="color:var(--text)">B</b> shows 100% at ${(g.cw / 4 / 128).toFixed(2)}x: the stripe is ${Math.round(g.cw / 4)} px tall (${size === "phone" ? (g.cw / 4 * .722).toFixed(0) + " pt on the iPhone" : Math.round(g.cw / 4 * 1.125) + " physical px"}). The board banner is ${g.bw}x${g.bh} px, so A's crop is ${(g.artH / g.bh).toFixed(2)}x the board scale and the placement morph is a pure un-crop.`));
+  const rowY = 232;
+  let x = pad;
+  for (const opt of ["A", "B"]) {
+    const lab = el("div", null, { position: "absolute", left: px(x), top: px(rowY - 26), fontWeight: 900, fontSize: "18px" }, `Option ${opt}`);
+    cv.appendChild(lab);
+    const a = mk(opt, 1); Object.assign(a.style, { position: "absolute", left: px(x), top: px(rowY) }); cv.appendChild(a);
+    const b2 = mk(opt, z); Object.assign(b2.style, { position: "absolute", left: px(x + g.cw + 16), top: px(rowY) }); cv.appendChild(b2);
+    x += g.cw + 16 + g.cw * z + 48;
+  }
+  const bb = bannerEl("h2", "you", g.bw, g.bh); bb.classList.add("front", "anim"); bb.querySelector(".ftab").style.display = "flex";
+  Object.assign(bb.style, { left: px(x), top: px(rowY + 20) }); cv.appendChild(bb);
+  cv.appendChild(el("div", null, { position: "absolute", left: px(x), top: px(rowY - 26), fontWeight: 900, fontSize: "18px" }, "On the board (front)"));
+  handOpt = keep;
+  cv.style.display = "block";
+  cv.onclick = () => { cv.style.display = "none"; };
+}
+
+// ---------------------------------------------------------------- controls
+document.getElementById("toolbar").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.size) { size = b.dataset.size; S = INIT(); resetCards(); render(); }
+  if (b.dataset.hand) { handOpt = b.dataset.hand; renderHand(); }
+  const d = b.dataset.demo; if (!d) return;
+  closeFocus(); document.getElementById("compare").style.display = "none";
+  if (d === "reset") { S = INIT(); resetCards(); canvas._built = null; render(); }
+  if (d === "select") selectCard("h2");
+  if (d === "play") { if (!S.hand.includes("h5")) { S = INIT(); resetCards(); canvas._built = null; render(); } await playCard("h5", 0); }
+  if (d === "protector") { if (!S.hand.includes("h1")) { S = INIT(); resetCards(); canvas._built = null; render(); } await playCard("h1", 0, { slow: 1.4 }); }
+  if (d === "rival") await rivalPlays();
+  if (d === "advance") await advanceDemo();
+  if (d === "pick") pickDemo(false);
+  if (d === "focus") openFocus("r6", "rival");
+  if (d === "compare") compareSheet();
+});
+document.querySelector('[data-demo="play"]').textContent = "Play into A";
+render();
+
+// URL states for screenshots: ?state=selected|focus|pick|placement|protector|hover|compare|advance|rival
+(async () => {
+  const st = P.get("state");
+  if (st === "selected") selectCard(P.get("card") || "h2");
+  if (st === "focus") openFocus(P.get("card") || "r6", P.get("side") || "rival");
+  if (st === "pick") pickDemo(true);
+  if (st === "placement") playCard(P.get("card") || "h5", +(P.get("col") || 0), { slow: +(P.get("slow") || 1), keepAnim: true });
+  if (st === "protector") playCard("h1", 0, { slow: +(P.get("slow") || 1.4), keepAnim: true });
+  if (st === "rival") rivalPlays();
+  if (st === "advance") advanceDemo();
+  if (st === "compare") compareSheet();
+  if (st === "hover") { const b = els.get(P.get("card") || "y5"); hoverOn(b); }
+  document.body.dataset.ready = "1";
+})();
+</script>
+</body>
+</html>
