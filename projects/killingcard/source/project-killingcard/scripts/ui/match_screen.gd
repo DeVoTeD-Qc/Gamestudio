@@ -129,6 +129,7 @@ var _hand_count: int = 0
 var flyout_key: StringName = &""
 var _operator_can_deploy: bool = false
 var _flyout_dragging: bool = false
+var _streak_callout_shown: bool = false
 
 
 func _ready() -> void:
@@ -144,6 +145,7 @@ func _ready() -> void:
 	_toasts.life_scale = KILL_TOAST_LIFE
 	_toasts.mirror = _killfeed_fx
 	_killfeed_fx.persistent = true
+	_killfeed_fx.left_aligned = true
 	_killfeed_fx.line_cap = LOG_LINES
 	_fx.killfeed = _toasts
 	if _fx.has_signal(&"event_started"):
@@ -666,6 +668,10 @@ func _set_badges(snapshot: Dictionary) -> void:
 	for ks: Dictionary in snapshot.get("killstreaks", []):
 		ready_ks = ready_ks or (bool(ks.get("earned", false)) and bool(ks.get("ready", false)))
 	_streak_badge.set_value([[[str(int(snapshot.get("streak", 0))), text_c]]], ready_ks)
+	# A one-time callout the first time a killstreak is ready (board-layout-v2.md §6).
+	if ready_ks and not _streak_callout_shown and bool(snapshot.get("deploy_open", false)):
+		_streak_callout_shown = true
+		show_toast.call_deferred("Killstreak ready: tap the STREAK badge")
 	_rival_badge.set_value([[[str(int(snapshot.get("enemy_hand", 0))), Color("#ffb3b5")]]])
 	_deck_badge.set_value([[[str(int(snapshot.get("deck_count", 0))), text_c]]])
 

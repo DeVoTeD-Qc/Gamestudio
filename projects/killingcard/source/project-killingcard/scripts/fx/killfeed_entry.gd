@@ -24,6 +24,8 @@ var entry: Dictionary = {}
 var life: float = 0.0
 ## kc-board2 toasts: the row is centred in the line (set before setup()).
 var centered: bool = false
+## kc-board2 tray log: the row starts at the left edge (set before setup()).
+var left_aligned: bool = false
 
 var _row: HBoxContainer = null
 var _enter: Tween = null
@@ -60,7 +62,7 @@ func setup(data: Dictionary) -> void:
 	entry = data
 	_row = HBoxContainer.new()
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_row.alignment = BoxContainer.ALIGNMENT_CENTER if centered else BoxContainer.ALIGNMENT_END
+	_row.alignment = BoxContainer.ALIGNMENT_CENTER if centered else (BoxContainer.ALIGNMENT_BEGIN if left_aligned else BoxContainer.ALIGNMENT_END)
 	_row.add_theme_constant_override(&"separation", 6)
 	add_child(_row)
 	_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -180,7 +182,9 @@ func _draw() -> void:
 	var right: float = _row.position.x + _row.size.x
 	var x: float = maxf(0.0, right - _row.get_combined_minimum_size().x - 10.0)
 	var end: float = size.x
-	if centered:
+	if left_aligned:
+		x = 0.0
+	elif centered:
 		var w: float = _row.get_combined_minimum_size().x + 16.0
 		x = maxf(0.0, _row.position.x + (_row.size.x - w) * 0.5)
 		end = minf(size.x, x + w)

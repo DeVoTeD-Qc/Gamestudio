@@ -284,3 +284,5 @@ Built in `source/project-killingcard` to the head's decisions (3 columns x 4 row
 - Display names: Shieldman is now Protector, and the two elites are Commander and Ace. Their ids are unchanged. The ★ is drawn as a gold star plate on the banner and the hand card, because the UI fonts have no ★ glyph.
 - The selected hand card rises 14%.
 - QA: `?qa=1&seed=N` replays a run seed.
+
+**kc-board2 (2026-11-05):** the screen layout (§2, hand row, rails, killfeed) is replaced by layout v2: see `board-layout-v2.md` and its implementation notes. The card, banner, column and interaction rules here still apply.

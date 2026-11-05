@@ -190,3 +190,34 @@ Toolbar: **Layout** (v1 / Layout v2), **Screen** (phone / desktop / portrait eva
 1. **Tray in the Firefight:** (a) it closes on its own to the `HAND · n PEEK` tab and shows the killfeed log. **Recommended.** (b) It stays open with the cards dimmed.
 2. **Killfeed:** (a) toasts at the top of the board plus the log in the tray. **Recommended.** (b) Log in the tray only, with nothing over the board.
 3. **Handedness:** (a) the tray on the right, with a "mirror layout" setting for left-handed players. **Recommended.** (b) Always on the right.
+
+---
+
+## Implementation notes (kc-board2, Mechanics Developer, 2026-11-05)
+Built in `source/project-killingcard` to the head's answers: the tray closes to `HAND · n PEEK` in the Firefight and shows the killfeed log; killfeed = toasts over the board + the tray log; tray on the right with a **MIRROR LAYOUT** setting; landscape only. Everything else from kc-board / kc-polish is unchanged (3 columns x 4 rows, Protector slide and B1 shift preview, PLAN / INCOMING, Fields + Overrun on the objective tile, inspect everywhere, hand option A / 4:1 strip for licensed art).
+
+**Measured in the public web build** (Playwright, device scale factor 1, `?qa=1&seed=101` and `303`): phone 844x390: banners **228x57** logical (164.8x41.2 CSS px), hand cards 104x130, tray 362 wide (800..1162); desktop 1440x900: banners **304x76** (342x85.5 CSS px), hand cards 108x136, tray 224 wide (1050..1274); hover zoom 608 px. Headless tests also check 16:9 (208x52, 2-column hand) and the notched phone.
+
+| Piece | Where |
+|---|---|
+| §1 / §2 numbers: banner size from the height, tray minimum, strip, badge rows, hand grid (3 or 2 columns, whichever card is larger), mirror | `scripts/ui/board_metrics.gd` (`compute(area, compact, mirror)`, `badge_rects()`) |
+| Icon strip badges (glyph + live value, amber glow; tap / long-press / right-click) | `scripts/ui/strip_badge.gd`; MENU and PREVIEW stay real Buttons (eye glyph over ON / OFF) |
+| Flyouts: SCORE (ScoreBar), OPERATOR (Operator panel info), STREAK (streak meter + the 6 tiles), RIVAL (intel), DECK; light scrim, tap outside closes, a tile tap closes it | `scenes/Match.tscn` `%Flyout`, `match_screen.gd` `open_flyout()`, `operator_panel.gd` `set_section()` |
+| Hand tray OPEN / CLOSED / PEEK by phase (200 ms cross-fade + 160 ms card slide; the board never moves), step header, SPEED x2 | `match_screen.gd` (`set_tray_state`, `_follow_phase`), `hand_area.gd` (grid, read-only PEEK with `NEXT DEPLOY`, 14 px shift toward the board) |
+| Killfeed toasts (2 max, 2.5 s, no input, top centre of the board) + persistent tray log | `scripts/fx/killfeed.gd` (`mirror`, `persistent`, `line_cap`, `centered`, `left_aligned`) |
+| Objective tile sideways (FP pair, 40 / 64 px mark, range over control word, chips 70x22 / 96x28; `EVEN` replaces `CONTESTED`) | `scripts/ui/objective_tile.gd` |
+| Banner badge / number / plate 28/20/22 (phone) and 34/24/26 (desktop), FRONT tab 48x13 / 64x15 | `banner_view.gd` `metrics()`, `lane.gd` |
+| Placement enters at the back-row slot (yours); rival still from past the top edge | `lane.gd` `_enter()` |
+| Mirror setting | `Settings.mirror_layout`, MENU > `MIRROR LAYOUT: ON/OFF` (`pause_menu.gd`) |
+| QA bridge: tray state, flyout, mirror, banner / card size, badge rects and values, toasts, log lines | `scripts/qa/qa_bridge.gd` |
+
+**Decisions the spec left open.**
+- **Operator placement:** while the Operator can deploy (Round 1, after a respawn, not yet planned), the OPERATOR badge reads `DEPLOY`, glows and *is* the Operator's handle (tap = select, drag = drag to a column). Otherwise tap opens its flyout, where tapping the panel selects it (Rotate). The tutorial's spotlight follows the badge / flyout.
+- **SPEED x2** doubles `Engine.time_scale` while the round's feedback plays (reset when it ends and when the screen closes). The toggle stays on between rounds.
+- A one-time toast "Killstreak ready: tap the STREAK badge" the first time a killstreak is ready in Deploy.
+
+**Deviations.** The `HAND · n PEEK` tab is **64 px** tall, not 48 (48 px is 35 pt on the phone, below the 44 pt tap rule the layout tests enforce). UNDO no longer names the play on its face (its tooltip and the toast after undoing do). Supply pips narrow to fit 10 Supply in the tray. On the 224 px desktop tray the killfeed log shortens names to 8-10 characters (the inspector has the full names).
+
+**Not built yet.** Tapping a log line to highlight both cards; the desktop hover peek of a hand card (left of the tray; v1 never had one either); the first match's tutorial tapping each badge once; per-column toast anchoring (the §6 option). The mirror setting is not saved between sessions (Settings has no persistence yet).
+
+**QA.** `tests/test_board_columns.gd`: v2 metrics (phone / 16:9 / desktop / mirror / notch), banner numbers, live columns and tray, `test_tray_open_close_by_phase`, `test_mirror_layout_setting`, `test_strip_badges_flyouts_and_killfeed_toasts`; `test_board_layout.gd` checks the tray grid, the log in the closed tray, and every key control (badges included) at 44 pt+. 378 tests pass with and without `assets/licensed`. Screenshots (public art, WebP): `qa/screenshots/board-v2/`.

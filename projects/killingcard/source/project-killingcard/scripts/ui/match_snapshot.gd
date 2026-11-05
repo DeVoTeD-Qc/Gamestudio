@@ -84,7 +84,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"hand": hand,
 		"killfeed": killfeed,
 		"deploy_open": deploy_open,
-		"operator_can_deploy": me.operator_can_deploy and deploy_open,
+		# kc-board2: true until the Operator is planned this Deploy (the strip badge is its handle).
+		"operator_can_deploy": me.operator_can_deploy and deploy_open and state.projected_operator_zone(me.index) == MatchState.NO_ZONE,
 		"can_undo": deploy_open and not me.plays.is_empty() and not bool(me.plays.back()["immediate_done"]),
 		"undo_label": play_name(state, me, me.plays.back()) if not me.plays.is_empty() else "",
 		"result": state.result,

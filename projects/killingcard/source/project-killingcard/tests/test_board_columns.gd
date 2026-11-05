@@ -2,54 +2,84 @@
 # Purpose: kc-board (board-and-cards-ux.md, approved): the vertical 3-column board, 4:1 banners,
 #   the BannerArt data path, option A hand cards, landing ghosts, Protector slide, tap snapping,
 #   Field chips with the Overrun warning, the inspector's 512x128 banner and the QA bridge.
-#   Layout numbers are the spec's: phone 844x390 -> canvas 1168x540, banners 176x44, columns at
-#   x 300 / 496 / 692; desktop 1440x900 -> canvas 1280x800, banners 256x64, columns at 232 / 512 / 792.
-# Author: Mechanics Developer Agent (kc-board)
+#   Layout numbers are board-layout-v2.md's (kc-board2): phone 844x390 -> canvas 1168x540, banners
+#   228x57, strip 6..68, columns at x 76 / 318 / 560, tray 800..1162 with 104x130 hand cards; 16:9
+#   (canvas 960x540) 208x52; desktop 1440x900 -> canvas 1280x800, banners 304x76, columns at
+#   86 / 410 / 734, tray 1050..1274 with 108x136 cards. Plus the tray's OPEN / CLOSED / PEEK states
+#   by phase, the mirror layout, the strip badges and their flyouts, and the killfeed toasts + log.
+# Author: Mechanics Developer Agent (kc-board, kc-board2)
 extends "res://tests/test_case.gd"
 
 const BoardLayout: GDScript = preload("res://tests/test_board_layout.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const QaBridge: GDScript = preload("res://scripts/qa/qa_bridge.gd")
+const MatchSnapshot: GDScript = preload("res://scripts/ui/match_snapshot.gd")
 const DESKTOP_1440: Dictionary = {"name": "desktop 1440x900", "pt": Vector2(1440, 900), "ratio": 1.0}
 const EPS: float = 0.6
 
 
 func test_metrics_match_the_spec() -> void:
-	# Phone: safe area = canvas minus the 12 px side margins.
-	var m: Dictionary = BoardMetrics.compute(Vector2(1168 - 24, 540), true)
-	assert_eq([m["bw"], m["bh"]], [176.0, 44.0], "phone banner 176x44")
-	assert_eq((m["board"] as Rect2).position.x + 12.0, 300.0, "phone column A at x 300")
-	assert_eq(float(m["col_x"][1]) + (m["board"] as Rect2).position.x + 12.0, 496.0, "column B at 496")
-	assert_eq(float(m["col_x"][2]) + (m["board"] as Rect2).position.x + 12.0, 692.0, "column C at 692")
-	assert_eq((m["hand"] as Rect2).position.y, 442.0, "phone hand row at y 442")
-	assert_eq(m["obj_h"], 66.0, "phone objective tile 66 px (kc-polish)")
-	assert_eq((m["hand"] as Rect2).end.y, 540.0, "hand reaches the bottom")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + (m["board"] as Rect2).position.y, 2.0, "rival back row at y 2")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + (m["board"] as Rect2).position.y, 140.0, "rival front row at y 140")
-	assert_eq(BoardMetrics.objective_y(m) + (m["board"] as Rect2).position.y, 187.0, "objective at y 187")
-	assert_eq(BoardMetrics.row_y(m, &"player", 0) + (m["board"] as Rect2).position.y, 256.0, "your front row at y 256")
-	assert_eq(BoardMetrics.row_y(m, &"player", 3) + (m["board"] as Rect2).position.y, 394.0, "your back row at y 394")
-	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 24, 800), false)
-	assert_eq([d["bw"], d["bh"]], [256.0, 64.0], "desktop banner 256x64")
-	assert_eq((d["board"] as Rect2).position.x + 12.0, 232.0, "desktop column A at x 232")
-	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 384.0, "desktop front row at y 384")
-	assert_eq(d["obj_h"], 92.0, "desktop objective tile 92 px")
-	assert_eq((d["hand"] as Rect2).position.y, 660.0, "desktop hand at y 660")
-	# Narrow safe area (notch): banners shrink but keep 4:1 and rails keep their minimum.
+	# Phone: safe area = canvas minus the 6 px side margins; canvas x = area x + 6.
+	var m: Dictionary = BoardMetrics.compute(Vector2(1168 - 12, 540), true)
+	var bx: float = (m["board"] as Rect2).position.x + 6.0
+	var by: float = (m["board"] as Rect2).position.y
+	assert_eq([m["bw"], m["bh"]], [228.0, 57.0], "phone banner 228x57 (v1: 176x44)")
+	assert_eq([(m["strip"] as Rect2).position.x + 6.0, (m["strip"] as Rect2).size.x], [6.0, 62.0], "strip 6..68")
+	assert_eq(bx, 76.0, "phone column A at x 76")
+	assert_eq(float(m["col_x"][1]) + bx, 318.0, "column B at 318")
+	assert_eq(float(m["col_x"][2]) + bx, 560.0, "column C at 560")
+	assert_eq([(m["tray"] as Rect2).position.x + 6.0, (m["tray"] as Rect2).end.x + 6.0], [800.0, 1162.0], "tray 800..1162")
+	assert_eq(m["obj_h"], 52.0, "phone objective tile 52 px")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + by, 4.0, "rival back row at y 4")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + by, 184.0, "rival front row at y 184")
+	assert_eq(BoardMetrics.objective_y(m) + by, 244.0, "objective at y 244")
+	assert_eq(BoardMetrics.row_y(m, &"player", 0) + by, 299.0, "your front row at y 299")
+	assert_eq(BoardMetrics.row_y(m, &"player", 3) + by + 57.0, 536.0, "your back row ends at y 536")
+	assert_eq([m["card"], m["hand_cols"]], [Vector2(104, 130), 3], "phone hand: 3 columns of 104x130")
+	var grid: Rect2 = m["grid"]
+	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [817.0, 60.0], "hand grid at x 817, y 60")
+	var badges: Array[Rect2] = BoardMetrics.badge_rects(m)
+	assert_eq(badges.map(func(r: Rect2) -> float: return r.position.y + 4.0), [4.0, 73.0, 142.0, 211.0, 280.0, 349.0, 472.0], "badge rows")
+	assert_eq(badges[0].size, Vector2(62, 64), "badge 62x64")
+	# 16:9 phone (canvas 960x540): the tray needs room, so the banners shrink to 208x52 (1.40x v1).
+	var w: Dictionary = BoardMetrics.compute(Vector2(960 - 12, 540), true)
+	assert_eq([w["bw"], w["bh"]], [208.0, 52.0], "16:9 banner 208x52")
+	assert_eq((w["tray"] as Rect2).size.x, 214.0, "16:9 tray 214 wide")
+	assert_eq(w["hand_cols"], 2, "16:9: a 2-column hand")
+	# Desktop 1440x900 (canvas 1280x800).
+	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 12, 800), false)
+	var dx: float = (d["board"] as Rect2).position.x + 6.0
+	assert_eq([d["bw"], d["bh"]], [304.0, 76.0], "desktop banner 304x76 (v1: 256x64)")
+	assert_eq([dx, float(d["col_x"][1]) + dx, float(d["col_x"][2]) + dx], [86.0, 410.0, 734.0], "desktop columns")
+	assert_eq(BoardMetrics.row_y(d, &"enemy", 3) + (d["board"] as Rect2).position.y, 24.0, "desktop rival back row at y 24")
+	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 454.0, "desktop front row at y 454")
+	assert_eq(d["obj_h"], 96.0, "desktop objective tile 96 px")
+	assert_eq([(d["tray"] as Rect2).position.x + 6.0, (d["tray"] as Rect2).size.x], [1050.0, 224.0], "desktop tray 1050..1274")
+	assert_eq([d["card"], d["hand_cols"]], [Vector2(108, 136), 2], "desktop hand: 2 columns of 108x136")
+	# Mirror: the tray on the left, the strip on the right, the same board.
+	var mm: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true, true)
+	assert_eq((mm["tray"] as Rect2).position.x, 0.0, "mirrored tray at the left edge")
+	assert_eq((mm["strip"] as Rect2).end.x, 1156.0, "mirrored strip at the right edge")
+	assert_eq([mm["bw"], (mm["board"] as Rect2).size.x], [228.0, 712.0], "mirrored board unchanged")
+	assert_eq((mm["board"] as Rect2).position.x, 1156.0 - (m["board"] as Rect2).end.x, "board mirrored")
+	# Narrow safe area (notch): banners keep 4:1 and the tray keeps its minimum.
 	var n: Dictionary = BoardMetrics.compute(Vector2(900, 540), true)
 	assert_true(is_equal_approx(n["bw"], n["bh"] * 4.0), "4:1 kept")
-	assert_true((n["left"] as Rect2).size.x >= 204.0 - EPS, "rail minimum kept")
+	assert_true((n["tray"] as Rect2).size.x >= 210.0 - EPS, "tray minimum kept")
 
 
 func test_board_numbers_readable() -> void:
-	# Badges / numbers / plates (phone 22/16/18, desktop 28/20/22), >= 11.6 pt on the phone.
-	var p: Dictionary = BannerView.metrics(44.0)
-	assert_eq([p["badge"], p["number"], p["plate"]], [22.0, 16.0, 18.0], "phone banner metrics")
-	var d: Dictionary = BannerView.metrics(64.0)
-	assert_eq([d["badge"], d["number"], d["plate"]], [28.0, 20.0, 22.0], "desktop banner metrics")
+	# Badges / numbers / plates (v2 phone 28/20/22, desktop 34/24/26), >= 14 pt numbers on the phone.
+	var p: Dictionary = BannerView.metrics(57.0)
+	assert_eq([p["badge"], p["number"], p["plate"]], [28.0, 20.0, 22.0], "phone banner metrics")
+	var d: Dictionary = BannerView.metrics(76.0)
+	assert_eq([d["badge"], d["number"], d["plate"]], [34.0, 24.0, 26.0], "desktop banner metrics")
 	var k: float = BoardLayout.points_per_px(BoardLayout.PHONE)
-	assert_true(float(p["number"]) * k >= 11.5, "phone stat numbers %.1f pt" % (float(p["number"]) * k))
+	assert_true(float(p["number"]) * k >= 14.0, "phone stat numbers %.1f pt" % (float(p["number"]) * k))
+	# Slot tap pitch 60 px = 43 pt (v1: 47 px = 34 pt).
+	var m: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true)
+	assert_true((m["bh"] + m["row_gap"]) * k >= 43.0, "slot pitch %.1f pt" % ((m["bh"] + m["row_gap"]) * k))
 
 
 func test_live_layout_columns_and_rows() -> void:
@@ -61,10 +91,11 @@ func test_live_layout_columns_and_rows() -> void:
 		var m: Control = setup[1]
 		var label: String = screen["name"]
 		var lanes: Array[Node] = m.get_board().get_lanes()
-		var want_bh: float = 44.0 if m.compact else 64.0
+		var want_bh: float = 57.0 if m.compact else 76.0
 		for z: int in 3:
 			var lane: Node = lanes[z]
 			var tile: Rect2 = (lane.get_objective_tile() as Control).get_global_rect()
+			assert_true(absf(tile.size.x - want_bh * 4.0) < EPS and absf(tile.size.y - (52.0 if m.compact else 96.0)) < EPS, "%s objective tile %s" % [label, tile.size])
 			for i: int in 4:
 				var fr: Rect2 = (lane.get_friendly_slots()[i] as Control).get_global_rect()
 				var er: Rect2 = (lane.get_enemy_slots()[i] as Control).get_global_rect()
@@ -76,14 +107,214 @@ func test_live_layout_columns_and_rows() -> void:
 					assert_true(fr.position.y > prev.position.y, "%s your row %d further from the objective" % [label, i + 1])
 					var eprev: Rect2 = (lane.get_enemy_slots()[i - 1] as Control).get_global_rect()
 					assert_true(er.position.y < eprev.position.y, "%s rival row %d further up" % [label, i + 1])
-		# Hand cards (option A) under the board, inside the hand row, art window on top.
+		# Hand cards (option A) in the tray to the right of the board, art window on top.
 		var hand: Control = m.get_hand()
-		assert_true(hand.get_global_rect().position.y >= m.get_board().get_global_rect().end.y - EPS, "%s hand under the board" % label)
+		assert_true(hand.get_global_rect().position.x >= m.get_board().get_global_rect().end.x - EPS, "%s hand right of the board" % label)
 		var card: Control = hand.get_cards()[0]
-		var want: Vector2 = Vector2(78, 98) if m.compact else Vector2(108, 140)
+		var want: Vector2 = Vector2(104, 130) if m.compact else Vector2(108, 136)
 		assert_true(card.size.distance_to(want) < 1.0, "%s hand card %s" % [label, card.size])
+		print("     [%s] banner %s, objective %s, hand card %s, tray %s" % [label, (lanes[0].get_friendly_slots()[0] as Control).size,
+				(lanes[0].get_objective_tile() as Control).size, card.size, m.get_tray().get_global_rect()])
 		layout._despawn(vp)
 		await tree.process_frame
+
+
+## kc-board2 §4.1: the tray is OPEN in Deploy, CLOSED (step header, killfeed log, HAND · n PEEK tab,
+## SPEED) once READY is pressed, PEEK opens it read-only and closes on the next step; the board never
+## moves or resizes.
+func test_tray_open_close_by_phase() -> void:
+	var layout: RefCounted = BoardLayout.new()
+	layout.set("tree", tree)
+	var setup: Array = await layout._spawn(BoardLayout.PHONE)
+	var vp: SubViewport = setup[0]
+	var m: Control = setup[1]
+	var c: Node = m.get_node("%MatchController")
+	if c.is_mulligan_open():
+		c.keep_hand()
+	await tree.process_frame
+	var board_rect: Rect2 = m.get_board().get_global_rect()
+	assert_eq(m.tray_state, &"open", "Deploy: tray open")
+	assert_true(m.get_hand().is_visible_in_tree() and m.get_ready_button().is_visible_in_tree(), "hand and READY shown")
+	assert_false(m.get_hand_tab().is_visible_in_tree(), "no PEEK tab in Deploy")
+	var states: Array[StringName] = []
+	m.tray_state_changed.connect(func(st: StringName) -> void: states.append(st))
+	var seen_closed: Array = [false]
+	c.round_resolved.connect(func(_ev: Array) -> void:
+		seen_closed[0] = m.tray_state == &"closed" and m.get_hand_tab().is_visible_in_tree() \
+				and m.get_speed_button().is_visible_in_tree() and not m.get_hand().is_visible_in_tree() \
+				and m.get_killfeed().is_visible_in_tree())
+	# READY: CLOSED while the round plays (checked when the engine's events arrive), then the next
+	# Deploy opens it again.
+	await c.press_ready()
+	await tree.process_frame
+	assert_true(seen_closed[0], "READY closes the tray: tab, SPEED and the killfeed log, no hand")
+	assert_eq(m.tray_state, &"open", "next Deploy: the tray opens on its own")
+	assert_true(states.size() >= 2 and states[0] == &"closed" and states.back() == &"open", "states %s" % [states])
+	assert_true(m.get_board().get_global_rect() == board_rect, "the board never moved or resized")
+	# Outside Deploy (a Reveal / Firefight snapshot): CLOSED, then PEEK (read-only) from the tab.
+	var hand_n: int = c.state.sides[0].hand.size()
+	var snap: Dictionary = MatchSnapshot.build(c.state, c.map, 0, [])
+	snap["deploy_open"] = false
+	snap["phase"] = "REVEAL"
+	m.show_snapshot(snap)
+	await tree.process_frame
+	assert_eq(m.tray_state, &"closed", "outside Deploy the tray is closed")
+	assert_true(m.get_hand_tab().text.begins_with("HAND · %d" % hand_n), "tab: %s" % m.get_hand_tab().text)
+	assert_true(m.get_hand_tab().text.contains("PEEK"), "tab offers PEEK")
+	assert_false(m.get_ready_button().is_visible_in_tree(), "no READY while closed")
+	m.get_hand_tab().pressed.emit()
+	assert_eq(m.tray_state, &"peek", "tab opens a PEEK")
+	assert_true(m.get_hand().read_only and m.get_hand().is_visible_in_tree(), "PEEK shows the hand read-only")
+	var chip: Control = m.get_hand().get_cards()[0]
+	var tag: Control = chip.find_child("NextTag", true, false)
+	assert_true(tag != null and tag.visible, "cards tagged NEXT DEPLOY")
+	var insp: Array = []
+	m.get_hand().card_inspected.connect(func(uid: int) -> void: insp.append(uid))
+	m.get_hand().card_tapped.connect(func(uid: int) -> void: insp.append(-uid))
+	(chip.get_meta(&"gesture") as RefCounted).tapped.emit(Vector2.ZERO)
+	assert_eq(insp, [int(chip.get_meta(&"uid"))], "a tap in PEEK inspects, never plays")
+	m.get_inspector().close()
+	m.get_node("%PeekCatcher").gui_input.emit(_press())
+	assert_eq(m.tray_state, &"closed", "a tap outside closes the PEEK")
+	# A PEEK closes when the next step starts; the next Deploy opens the tray.
+	m.set_tray_state(&"peek")
+	snap["phase"] = "FIREFIGHT"
+	m.show_snapshot(snap)
+	await tree.process_frame
+	assert_eq(m.tray_state, &"closed", "a new step closes the PEEK")
+	c.refresh()
+	await tree.process_frame
+	assert_eq(m.tray_state, &"open", "Deploy opens it")
+	layout._despawn(vp)
+	await tree.process_frame
+
+
+## Settings.mirror_layout: tray left, strip right; the board stays the same size; the selected card
+## shifts toward the board (right when mirrored); the pause menu toggles it.
+func test_mirror_layout_setting() -> void:
+	var layout: RefCounted = BoardLayout.new()
+	layout.set("tree", tree)
+	var setup: Array = await layout._spawn(BoardLayout.PHONE, MockMatchData.round_3_sample())
+	var vp: SubViewport = setup[0]
+	var m: Control = setup[1]
+	var board_size: Vector2 = m.get_board().size
+	assert_false(m.mirror, "mirror off by default")
+	assert_true(m.get_tray().get_global_rect().position.x > m.get_board().get_global_rect().end.x, "tray right of the board")
+	var pause: Control = m.get_pause_menu()
+	pause.open({})
+	var button: Button = pause.get_mirror_button()
+	assert_eq(button.text, "MIRROR LAYOUT: OFF", "pause menu offers the mirror setting")
+	button.button_pressed = true
+	await tree.process_frame
+	await tree.process_frame
+	assert_true(bool(Settings.mirror_layout), "Settings.mirror_layout on")
+	assert_true(m.mirror, "screen follows the setting")
+	assert_eq(button.text, "MIRROR LAYOUT: ON", "button says ON")
+	pause.close()
+	var tray: Rect2 = m.get_tray().get_global_rect()
+	var board: Rect2 = m.get_board().get_global_rect()
+	var strip: Rect2 = m.get_badge(&"menu").get_global_rect()
+	assert_true(tray.end.x < board.position.x, "mirrored: tray left of the board (%s / %s)" % [tray, board])
+	assert_true(strip.position.x > board.end.x, "mirrored: strip right of the board")
+	assert_eq(m.get_board().size, board_size, "board size unchanged")
+	assert_eq(m.get_hand().board_side, 1.0, "selected card shifts right, toward the board")
+	m.open_flyout(&"score")
+	await tree.process_frame
+	await tree.process_frame
+	assert_true(m.get_node("%FlyoutPanel").get_global_rect().end.x <= strip.position.x + EPS, "flyout opens toward the board")
+	m.close_flyout()
+	Settings.set_value(&"mirror_layout", false)
+	await tree.process_frame
+	assert_false(m.mirror, "mirror off again")
+	assert_true(m.get_tray().get_global_rect().position.x > m.get_board().get_global_rect().end.x, "tray back on the right")
+	layout._despawn(vp)
+	await tree.process_frame
+
+
+## The icon strip: every badge shows its key value, tap opens its flyout next to it, long-press /
+## right-click opens its rules (studio rule); the killfeed shows as toasts over the board and a
+## log in the tray.
+func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
+	var layout: RefCounted = BoardLayout.new()
+	layout.set("tree", tree)
+	var setup: Array = await layout._spawn(BoardLayout.PHONE)
+	var vp: SubViewport = setup[0]
+	var m: Control = setup[1]
+	var c: Node = m.get_node("%MatchController")
+	if c.is_mulligan_open():
+		c.keep_hand()
+	await tree.process_frame
+	var st: MatchState = c.state
+	assert_eq(m.get_badge(&"score").get_text(), "R%d %d-%d" % [st.round_number, st.sides[0].score, st.sides[1].score], "SCORE badge")
+	assert_eq(m.get_badge(&"rival").get_text(), str(st.sides[1].hand.size()), "RIVAL badge: hand count")
+	assert_eq(m.get_badge(&"deck").get_text(), str(st.sides[0].deck.size()), "DECK badge: deck count")
+	assert_eq(m.get_badge(&"operator").get_text(), "DEPLOY", "OPERATOR badge says DEPLOY in Round 1")
+	assert_true(m.get_badge(&"operator").hot, "and glows")
+	var flyouts: Dictionary = {&"score": "%ScoreBar", &"rival": "%Minimap", &"deck": "%DeckBox", &"streak": "%OperatorPanel"}
+	for key: StringName in flyouts:
+		m.get_badge(key).tapped.emit()
+		await tree.process_frame
+		await tree.process_frame
+		assert_eq(m.flyout_key, key, "%s badge opens its flyout" % key)
+		var body: Control = m.get_node(flyouts[key])
+		assert_true(body.is_visible_in_tree(), "%s flyout shows %s" % [key, flyouts[key]])
+		var panel: Rect2 = m.get_node("%FlyoutPanel").get_global_rect()
+		assert_true(Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS).encloses(panel), "%s flyout on screen %s" % [key, panel])
+		assert_true(panel.position.x >= m.get_badge(key).get_global_rect().end.x, "%s flyout beside the strip" % key)
+	assert_eq(m.get_operator_panel().get_buttons().size(), 6, "STREAK flyout: 6 tiles")
+	assert_true((m.get_operator_panel().get_buttons()[0] as Control).is_visible_in_tree(), "tiles visible")
+	m.get_node("%FlyoutScrim").gui_input.emit(_press())
+	assert_false(m.is_flyout_open(), "a tap outside closes the flyout")
+	# Long-press / right-click: rules for every badge, the supply row and the killfeed log.
+	var insp: Control = m.get_inspector()
+	for key: StringName in [&"score", &"streak", &"rival", &"deck"]:
+		m.get_badge(key).inspected.emit()
+		await tree.process_frame
+		assert_true(insp.is_open(), "%s badge inspectable" % key)
+		insp.close()
+	for key: StringName in [&"menu", &"preview"]:
+		var right := InputEventMouseButton.new()
+		right.button_index = MOUSE_BUTTON_RIGHT
+		right.pressed = true
+		m.get_badge(key).gui_input.emit(right)
+		await tree.process_frame
+		assert_true(insp.is_open(), "%s button inspectable by right-click" % key)
+		insp.close()
+	m.get_badge(&"operator").inspected.emit()
+	await tree.process_frame
+	assert_true(insp.is_open(), "OPERATOR badge inspects the Operator")
+	insp.close()
+	# While it can deploy, the OPERATOR badge is its handle.
+	m.get_badge(&"operator").tapped.emit()
+	await tree.process_frame
+	assert_eq(c.selection.get("kind"), &"operator", "OPERATOR badge tap selects the Operator")
+	c.clear_selection()
+	# Killfeed: a push shows a toast over the board's top centre AND a line in the tray log.
+	var toasts: Control = m.get_killfeed_toasts()
+	toasts.push({"attacker": "Demolitions Expert", "attacker_side": &"player", "victim": "Kestrel AR-7",
+			"victim_side": &"enemy", "icon": &"class_lmg", "zone": &"left"})
+	await tree.process_frame
+	assert_eq(toasts.get_entries().size(), 1, "one toast")
+	assert_eq(m.get_killfeed().get_entries().size(), 1, "copied to the tray log")
+	var tr: Rect2 = toasts.get_global_rect()
+	var br: Rect2 = m.get_board().get_global_rect()
+	assert_true(br.encloses(tr) and tr.position.y - br.position.y < 10.0, "toasts at the top of the board %s" % tr)
+	assert_eq(toasts.mouse_filter, Control.MOUSE_FILTER_IGNORE, "toasts take no input")
+	for i: int in 3:
+		toasts.push({"attacker": "Breacher", "attacker_side": &"enemy", "victim": "Point Man", "victim_side": &"player"})
+	await tree.process_frame
+	assert_eq(toasts.get_entries().size(), 2, "at most 2 toasts")
+	assert_eq(m.get_killfeed().get_entries().size(), 4, "the log keeps every line")
+	assert_true(absf(float(toasts.get_entries()[0].life) - 2.5) < 0.6, "toast life ~2.5 s (%s)" % toasts.get_entries()[0].life)
+	layout._despawn(vp)
+	await tree.process_frame
+
+
+static func _press() -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	return e
 
 
 func test_banner_art_path_and_crops() -> void:
@@ -454,7 +685,7 @@ func test_inspector_shows_the_512_banner_and_rails_inspect() -> void:
 	insp.close()
 	if banner != null:
 		assert_false(banner.is_focused(), "stops when closed")
-	for key: StringName in [&"score", &"deck", &"intel", &"supply"]:
+	for key: StringName in [&"score", &"deck", &"intel", &"supply", &"streak", &"menu", &"preview", &"killfeed", &"hand_tab"]:
 		m.rail_inspected.emit(key)
 		await tree.process_frame
 		assert_true(insp.is_open(), "rail box %s inspectable" % key)

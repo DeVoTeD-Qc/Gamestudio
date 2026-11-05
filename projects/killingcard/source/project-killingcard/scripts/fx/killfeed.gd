@@ -24,6 +24,8 @@ var persistent: bool = false
 var line_cap: int = MAX_LINES
 ## Lines centred in the rect (the killfeed toasts over the board) instead of right-aligned.
 var centered: bool = false
+## Lines start at the left edge (the tray's killfeed log).
+var left_aligned: bool = false
 ## A second feed every push() is copied to (the log's toasts), or null.
 var mirror: Control = null
 var _entries: Array[Control] = []
@@ -46,6 +48,7 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 		mirror.push(data, timing)
 	var line: Control = KillfeedEntry.new()
 	line.centered = centered
+	line.left_aligned = left_aligned
 	line.setup(data)
 	var keep: int = max_lines() - 1
 	while _entries.size() > keep:

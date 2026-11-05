@@ -55,11 +55,11 @@ func _toggle_and_readability(screen: Dictionary) -> void:
 	var button: Button = m.get_preview_button()
 	var k: float = Layout.points_per_px(screen)
 	assert_false(preview.visible, "%s preview starts off" % label)
-	assert_eq(button.text, "PREVIEW\nOFF", "%s button says OFF" % label)
+	assert_eq(button.text.strip_edges(), "OFF", "%s strip badge says OFF (kc-board2: eye glyph over the word)" % label)
 	# Tap the toggle (real input).
 	await _tap(vp, button.get_global_rect().get_center())
 	assert_true(preview.enabled and preview.visible, "%s tap turns the preview on" % label)
-	assert_eq(button.text, "PREVIEW\nON", "%s button says ON" % label)
+	assert_eq(button.text.strip_edges(), "ON", "%s strip badge says ON" % label)
 	assert_true(button.button_pressed, "%s button shows its pressed (on) frame" % label)
 	assert_eq(_toggles, [true] as Array[bool], "%s EventBus.preview_toggled(true)" % label)
 	# The numbers are the engine's.

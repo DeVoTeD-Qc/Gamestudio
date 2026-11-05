@@ -85,7 +85,7 @@ static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
 		var rows: int = ceili(float(HAND_SLOTS) / cols)
 		var h: float = minf(cmax.y, floorf((grid_h - (rows - 1) * gap) / rows))
 		var w: float = minf(cmax.x, minf(floorf(h * CARD_RATIO), floorf((tray.x - (cols - 1) * gap) / cols)))
-		h = minf(h, floorf(w / CARD_RATIO))
+		h = minf(h, roundf(w * 1.26))
 		if w * h > best.x * best.y:
 			best = Vector2(w, h)
 			best_cols = cols

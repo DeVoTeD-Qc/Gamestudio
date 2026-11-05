@@ -69,10 +69,9 @@ func _tap_tap_deploy(screen: Dictionary) -> void:
 	if queued != null:
 		assert_true(queued.pending, "%s tagged PLAN" % label)
 	assert_false(m.get_undo_button().disabled, "%s UNDO enabled" % label)
-	if not m.compact:
-		assert_true(String(m.get_undo_button().text).contains(rc.card.display_name), "%s UNDO names the play: %s" % [label, m.get_undo_button().text])
-	else:
-		assert_eq(m.get_undo_button().get_parent(), m.get_node("%MenuButton").get_parent(), "%s phone UNDO sits in the top bar" % label)
+	# kc-board2: UNDO sits in the hand tray beside READY; its tooltip names the play.
+	assert_true(String(m.get_undo_button().tooltip_text).contains(rc.card.display_name), "%s UNDO names the play: %s" % [label, m.get_undo_button().tooltip_text])
+	assert_eq(m.get_undo_button().get_parent(), m.get_tray(), "%s UNDO sits in the hand tray" % label)
 	_despawn(vp)
 
 
@@ -144,8 +143,8 @@ func test_place_operator_tap_tap_phone() -> void:
 	var c: Node = s[2]
 	assert_true(c.state.sides[0].operator_can_deploy, "Round 1: Operator can be placed")
 	var panel: Control = m.get_operator_panel()
-	var r: Rect2 = panel.get_global_rect()
-	await _tap(vp, r.position + Vector2(30, 20))  # the info column (name / caption)
+	# kc-board2: while the Operator can deploy, the strip's OPERATOR badge is its handle.
+	await _tap(vp, m.get_operator_handle().get_global_rect().get_center())
 	assert_eq(c.selection.get("kind"), &"operator", "tap on the panel selects the Operator")
 	assert_eq(panel.theme_type_variation, &"OperatorSelected", "Operator panel selected style")
 	assert_eq(m.get_board().get_lanes()[1].target_text, "PLACE HERE", "lanes offer placement")
@@ -392,7 +391,7 @@ func test_frag_targets_a_lane_then_goes_on_cooldown_phone() -> void:
 	assert_not_null(frag, "Frag button")
 	assert_true(frag.disabled, "Frag disabled while the Operator is off the board")
 	assert_true(frag.text.contains("NO OP"), "button says why: %s" % frag.text)
-	await _tap(vp, frag.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
 	assert_true(m.get_toast_text().contains("Operator is not on the board"), "tap on a disabled button toasts the reason: %s" % m.get_toast_text())
 	assert_true(c.selection.is_empty(), "nothing selected")
 	c.select_operator()
@@ -400,7 +399,7 @@ func test_frag_targets_a_lane_then_goes_on_cooldown_phone() -> void:
 	await _frames(2)
 	frag = panel.get_item_button(&"frag_grenade")
 	assert_false(frag.disabled, "Frag usable with the Operator planned in Mid")
-	await _tap(vp, frag.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
 	assert_eq(c.selection, {"kind": &"item", "id": &"frag_grenade"}, "tap selects Frag for targeting")
 	assert_true(panel.get_item_button(&"frag_grenade").button_pressed, "Frag button shows as pressed")
 	for lane: Node in m.get_board().get_lanes():
@@ -413,7 +412,7 @@ func test_frag_targets_a_lane_then_goes_on_cooldown_phone() -> void:
 	frag = panel.get_item_button(&"frag_grenade")
 	assert_true(frag.disabled, "Frag now on cooldown")
 	assert_true(frag.text.contains("CD 3"), "cooldown shown: %s" % frag.text)
-	await _tap(vp, frag.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
 	assert_true(m.get_toast_text().contains("cooldown: ready in 3 rounds"), "toast: %s" % m.get_toast_text())
 	# UNDO gives the cooldown back.
 	c.undo()
@@ -440,7 +439,7 @@ func test_sidearm_taps_an_enemy_in_the_operator_zone_desktop() -> void:
 	var sidearm: Button = panel.get_item_button(&"p12_sidearm")
 	assert_false(sidearm.disabled, "Sidearm usable: an enemy in the Operator's zone")
 	assert_true(sidearm.text.contains("1 SUP"), "costs 1 Supply: %s" % sidearm.text)
-	await _tap(vp, sidearm.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"p12_sidearm"))
 	assert_eq(c.selection.get("id"), &"p12_sidearm", "Sidearm selected")
 	var left: Node = m.get_board().get_lanes()[0]
 	var right: Node = m.get_board().get_lanes()[2]
@@ -470,7 +469,7 @@ func test_killstreak_in_tray_is_called_in_phone() -> void:
 	var mortar: Button = panel.get_item_button(&"mortar_barrage")
 	assert_true(mortar.disabled, "Mortar locked before it is earned")
 	assert_true(mortar.text.contains("AT 3"), "threshold shown: %s" % mortar.text)
-	await _tap(vp, mortar.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"mortar_barrage"))
 	assert_true(m.get_toast_text().contains("not earned yet: reach a streak of 3"), "toast: %s" % m.get_toast_text())
 	StreakTracker.grant(c.state, 0, &"mortar_barrage")
 	StreakTracker.grant(c.state, 0, &"recon_drone")
@@ -479,7 +478,7 @@ func test_killstreak_in_tray_is_called_in_phone() -> void:
 	mortar = panel.get_item_button(&"mortar_barrage")
 	assert_false(mortar.disabled, "in the Streak Tray: enabled")
 	assert_true(mortar.text.contains("CALL IN"), "tray state: %s" % mortar.text)
-	await _tap(vp, mortar.get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"mortar_barrage"))
 	assert_eq(c.selection.get("id"), &"mortar_barrage", "Mortar selected for a zone")
 	assert_eq(m.get_board().get_lanes()[1].target_text, "CALL IN HERE", "lanes offer the call-in")
 	await _tap(vp, _row_point(m.get_board().get_lanes()[1]))
@@ -487,7 +486,7 @@ func test_killstreak_in_tray_is_called_in_phone() -> void:
 	assert_false(&"mortar_barrage" in c.state.sides[0].streak_tray, "taken from the tray")
 	assert_true(panel.get_item_button(&"mortar_barrage").text.contains("AT 3"), "back to locked")
 	# Recon Drone needs no target: one tap queues it.
-	await _tap(vp, panel.get_item_button(&"recon_drone").get_global_rect().get_center())
+	await _tap(vp, await _item_point(vp, m, &"recon_drone"))
 	assert_eq(c.intent_log.back()["intent"], RulesIntent.use_item(&"recon_drone"), "Recon Drone queued at once")
 	assert_true(c.intent_log.back()["result"]["ok"], "accepted")
 	assert_true(c.selection.is_empty(), "nothing left selected")
@@ -705,9 +704,23 @@ func _chip_point(m: Control, chip: Control) -> Vector2:
 	var cards: Array[Node] = m.get_hand().get_cards()
 	var i: int = cards.find(chip)
 	var visible_w: float = r.size.x
+	# kc-board2: a grid; only a card further along the SAME row can cover this one.
 	if i >= 0 and i + 1 < cards.size():
-		visible_w = minf(visible_w, (cards[i + 1] as Control).get_global_rect().position.x - r.position.x)
+		var nxt: Rect2 = (cards[i + 1] as Control).get_global_rect()
+		if absf(nxt.position.y - r.position.y) < 1.0 and nxt.position.x > r.position.x:
+			visible_w = minf(visible_w, nxt.position.x - r.position.x)
 	return Vector2(r.position.x + visible_w * 0.5, r.position.y + r.size.y * 0.5)
+
+
+## kc-board2: the item / killstreak tiles live in the STREAK flyout. Opens it with a tap on its
+## badge (if closed) and returns the centre of the item's button.
+func _item_point(vp: SubViewport, m: Control, item_id: StringName) -> Vector2:
+	if m.flyout_key != &"streak":
+		await _tap(vp, m.get_badge(&"streak").get_global_rect().get_center())
+		await _frames(2)
+	var b: Button = m.get_operator_panel().get_item_button(item_id)
+	assert_true(b != null and b.is_visible_in_tree(), "%s tile shows in the STREAK flyout" % item_id)
+	return b.get_global_rect().get_center() if b != null else Vector2.ZERO
 
 
 ## Centre of a lane's friendly row (the deploy target).

@@ -157,10 +157,14 @@ func _play_through(screen: Dictionary, fast_forward: bool) -> void:
 				await _tap(vp, _row_point(d, st.zone))
 				taps += 2
 			&"use_item":
+				# kc-board2: the tiles live in the STREAK flyout; the coach points at its badge first.
+				await _tap(vp, d.match_screen.get_badge(&"streak").get_global_rect().get_center())
+				await _frames(2)
 				var b: Button = d.match_screen.get_operator_panel().get_item_button(st.item_id)
 				assert_false(b.disabled, "%s %s is ready in the tray" % [label, st.item_id])
+				assert_true(b.is_visible_in_tree(), "%s %s shows in the STREAK flyout" % [label, st.item_id])
 				await _tap(vp, b.get_global_rect().get_center())
-				taps += 1
+				taps += 2
 			&"ready":
 				if not st.lock_input:
 					await _free_play(vp, d)
@@ -375,7 +379,6 @@ func _row_point(d: Control, zone: int) -> Vector2:
 	return (lane.get_node("%FriendlyRow") as Control).get_global_rect().get_center()
 
 
-## A point on the Operator panel's own area (its name / stats), not on an item button.
+## The Operator's handle: kc-board2's OPERATOR strip badge while it can deploy.
 func _op_point(d: Control) -> Vector2:
-	var r: Rect2 = d.match_screen.get_operator_panel().get_global_rect()
-	return r.position + Vector2(30, 20)
+	return d.match_screen.get_operator_handle().get_global_rect().get_center()

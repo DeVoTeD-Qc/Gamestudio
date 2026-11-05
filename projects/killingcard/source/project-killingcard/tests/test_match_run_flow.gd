@@ -267,8 +267,11 @@ func _chip_point(m: Control, chip: Control) -> Vector2:
 	var cards: Array[Node] = m.get_hand().get_cards()
 	var i: int = cards.find(chip)
 	var visible_w: float = r.size.x
+	# kc-board2: a grid; only a card further along the SAME row can cover this one.
 	if i >= 0 and i + 1 < cards.size():
-		visible_w = minf(visible_w, (cards[i + 1] as Control).get_global_rect().position.x - r.position.x)
+		var nxt: Rect2 = (cards[i + 1] as Control).get_global_rect()
+		if absf(nxt.position.y - r.position.y) < 1.0 and nxt.position.x > r.position.x:
+			visible_w = minf(visible_w, nxt.position.x - r.position.x)
 	return Vector2(r.position.x + visible_w * 0.5, r.position.y + r.size.y * 0.5)
 
 
@@ -280,8 +283,8 @@ func _play_round(m: Control, c: Node) -> int:
 	var accepted: int = 0
 	var log_start: int = c.intent_log.size()
 	if me.operator_can_deploy:
-		var r: Rect2 = m.get_operator_panel().get_global_rect()
-		await _tap_at(r.position + Vector2(30, 20))
+		# kc-board2: the strip's OPERATOR badge is the Operator's handle while it can deploy.
+		await _tap_at(m.get_operator_handle().get_global_rect().get_center())
 		await _tap_at(_row_point(lanes[1]))
 	var tried: Array[int] = []
 	for attempt: int in 6:
