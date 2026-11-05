@@ -1,0 +1,743 @@
+/* WARZONE DECKBUILDER v5 "Engine & Synergy" — rules engine (board task wb-rules).
+   Spec: documentation/design/engine-synergy-spec.md (approved), with the head's answers S1–S4.
+   Squads + Loadout build the engine; a fixed 7-location row closes on a public schedule into an escalating final circle and a hard end.
+   Shooting: commit Precision to a shot (1 card revealed per Precision committed); the shot spends it, and Recoil costs more Precision on top.
+   Resources: Movement, Precision, Intel (+ Armor, which lasts until your next turn). */
+(function (root) {
+'use strict';
+
+const RES = ['move', 'prec', 'intel'];
+const TUNE = {
+  hp: 40, hand: 5, firstHand: 5, lowHp: 10, digIn: 2, minDeck: 7,
+  zones: 7, startA: 1, startB: 5, stackSize: 3, affinityShare: 2 / 3, adjCost: 1, cycleCost: 1,
+  closeAfter: [2, 4, 5, 6, 7, 8], gasDmg: 3, finalStorm: [3, 4, 5, 6], hardEnd: 11, crateRounds: [2, 4], crate: [3, 1],
+  buyCap: 2, hotDrop: 3, supplyCost: 2, station: ['K02', 'K04', 'K05', 'K03'], stationCopies: 6, stationScrapCost: 1,
+  loadoutSlots: 2, squadCap: 3, rally: [3, 5],
+  needPlus: 0, closeQuarters: true, pointBlank: true, aim: 'spend',
+  stSprint: 3, stScout: 3, stAim: 2, alternateFirst: true,
+  // kept for the UI and print-and-play (old systems switched off)
+  lite: true, perks: false, ammo: false, phases: false, stacks: true, physical: true, tradeIn: 0, combos: false, locEveryTurn: true,
+};
+const TIER_NAME = ['Common', 'Uncommon', 'Rare', 'Epic'];
+const RES_LABEL = { move: 'Movement', prec: 'Precision', intel: 'Intel', def: 'Armor', shot: 'extra shot' };
+const ARCH_TAG = { supply: 'Supply', starter: 'Starter', assault: 'Assault', support: 'Support', recon: 'Recon', engineer: 'Engineer' };
+const SQUADS = ['assault', 'recon', 'support', 'engineer'];
+const NEIGHBOURS = { assault: [], recon: [], support: [], engineer: [] }; // old combo pairs: cut
+const COND_LABEL = {};
+
+// ---------- effects (one small language for cards, Loadouts, Squad lines, Rally and locations) ----------
+const gain = (res, n) => ({ op: 'gain', res, n });
+const M = n => gain('move', n), Pr = n => gain('prec', n), I = n => gain('intel', n), Ar = n => gain('def', n), Sh = n => gain('shot', n);
+const D = n => ({ op: 'draw', n }), SC = n => ({ op: 'scrap', n }), CY = n => ({ op: 'cycleFree', n });
+const MK = (n = 1) => ({ op: 'mark', n }), PI = { op: 'pierce' }, ST = (n = 1) => ({ op: 'steady', n }), DM = (n = 1) => ({ op: 'dmgTurn', n }), BY = (n = 1) => ({ op: 'buy', n });
+const times = (n, w) => n > 1 ? `${w} ×${n}` : w;
+// short text: "+1 Movement, +2 Precision, Draw 1, Pierce"
+function effParts(effs) {
+  const out = [];
+  for (const e of effs) {
+    if (e.op === 'gain') out.push(`+${e.n} ${RES_LABEL[e.res]}${e.res === 'shot' && e.n > 1 ? 's' : ''}`);
+    else if (e.op === 'draw') out.push(`Draw ${e.n}`);
+    else if (e.op === 'scrap') out.push(`Scrap ${e.n}`);
+    else if (e.op === 'cycleFree') out.push(`${e.n} free cycle${e.n > 1 ? 's' : ''}`);
+    else if (e.op === 'mark') out.push(times(e.n, 'Mark'));
+    else if (e.op === 'pierce') out.push('Pierce');
+    else if (e.op === 'steady') out.push(times(e.n, 'Steady'));
+    else if (e.op === 'dmgTurn') out.push(`hits +${e.n} damage`);
+    else if (e.op === 'buy') out.push(`+${e.n} Buy`);
+  }
+  return out;
+}
+const effText = effs => effParts(effs).join(', ');
+// full sentence for a card's play line: "Gain 1 Movement and 2 Precision. Pierce. Draw 1."
+function playText(effs) {
+  const g = effs.filter(e => e.op === 'gain'); const rest = effs.filter(e => e.op !== 'gain');
+  const gs = g.map(e => `${e.n} ${RES_LABEL[e.res]}${e.res === 'shot' && e.n > 1 ? 's' : ''}`);
+  const s = [];
+  if (gs.length) s.push(`Gain ${gs.length > 1 ? gs.slice(0, -1).join(', ') + ' and ' + gs[gs.length - 1] : gs[0]}.`);
+  for (const p of effParts(rest)) s.push(p.charAt(0).toUpperCase() + p.slice(1) + '.');
+  return s.join(' ');
+}
+
+// ---------- TACTICAL CARDS ----------
+// TC(id, name, squad, tier, Hit Markers, cost, copies, play effects, extra: { squad: [...] (Squad line), loadout: [...] (Ready effect), reaction })
+const CARDS = {};
+function TC(id, name, archetype, tier, hm, cost, copies, effects, extra) {
+  const d = Object.assign({ id, name, archetype, tier, hit_markers: hm, intel_cost: cost, copies, effects, tags: [ARCH_TAG[archetype]] }, extra || {});
+  d.text = d.loadout ? `Loadout. Ready: ${effText(d.loadout)}.` : playText(effects);
+  if (d.squad) d.squadText = effText(d.squad);
+  CARDS[id] = d;
+}
+// Starter deck (10): no squad
+TC('T001', 'Sprint', 'starter', 0, 0, 0, 3, [M(1)]);
+TC('T002', 'Scout', 'starter', 0, 0, 0, 3, [I(1)]);
+TC('T004', 'Steady Aim', 'starter', 0, 1, 0, 2, [Pr(1)]);
+TC('T005', 'Recon Run', 'starter', 0, 1, 0, 2, [M(1), I(1)]);
+// Buy Station: one basic per squad, 2 Intel, 6 copies each
+TC('K02', 'Tac Sprint', 'assault', 1, 1, 2, 0, [M(1), Pr(2)], { squad: [Pr(1)] });
+TC('K04', 'Focus', 'recon', 1, 2, 2, 0, [Pr(2)], { squad: [Pr(1)] });
+TC('K05', 'Spare Rounds', 'support', 1, 1, 2, 0, [Pr(2), Sh(1)], { squad: [Pr(1)] });
+TC('K03', 'Dead Drop', 'engineer', 1, 1, 2, 0, [I(2)], { squad: [I(1)] });
+// ASSAULT: hits hit harder
+TC('A11', 'Breach', 'assault', 1, 2, 1, 2, [M(1), Pr(2)], { squad: [DM(1), Pr(1)] });
+TC('A12', 'Slide Cancel', 'assault', 1, 2, 1, 2, [M(2), Pr(1), SC(1)], { squad: [D(1), Pr(2)] });
+TC('A13', 'Hip Fire', 'assault', 1, 2, 2, 2, [M(1), Pr(2)], { squad: [Pr(3)] });
+TC('A21', 'Rush the Door', 'assault', 2, 2, 3, 2, [M(1), Pr(3), PI], { squad: [DM(1), Pr(2)] });
+TC('A22', 'Flank', 'assault', 2, 2, 3, 2, [M(2), Pr(2), D(1)], { squad: [D(1), Pr(2)] });
+TC('A23', 'Run and Gun', 'assault', 2, 2, 3, 2, [M(1), Pr(2), Sh(1)], { squad: [ST(1), Pr(2)] });
+TC('A31', 'Blitz', 'assault', 3, 3, 5, 2, [M(2), Pr(3), DM(1)], { squad: [Pr(2)] });
+TC('A32', 'Breaching Charge', 'assault', 3, 3, 4, 2, [M(1), Pr(3), PI, DM(1)], { squad: [DM(1), Sh(1), ST(1)] });
+TC('L1A', 'Tac Vest', 'assault', 2, 1, 3, 3, [], { loadout: [Pr(2), DM(1)], tiers: [1, 2, 2] });
+// RECON: aim
+TC('R11', 'Mark Target', 'recon', 1, 2, 1, 2, [Pr(2)], { squad: [MK(1), Pr(1)] });
+TC('R12', 'Steady Breath', 'recon', 1, 3, 1, 2, [Pr(2)], { squad: [Pr(2)] });
+TC('R13', 'Snapshot', 'recon', 1, 2, 2, 2, [Pr(2), I(1)], { squad: [I(2), Pr(1)] });
+TC('R21', 'Heartbeat Sensor', 'recon', 2, 2, 3, 2, [Pr(2), D(1)], { squad: [Pr(4)] });
+TC('R22', 'Spotter Scope', 'recon', 2, 3, 3, 2, [Pr(3)], { squad: [MK(1), Pr(2)] });
+TC('R23', 'Thermal Optic', 'recon', 2, 2, 3, 2, [Pr(3), PI], { squad: [I(2), Pr(2)] });
+TC('R31', 'UAV', 'recon', 3, 3, 4, 2, [Pr(3), I(1), PI], { squad: [D(1), MK(1), Pr(1)] });
+TC('R32', 'Headhunter', 'recon', 3, 3, 5, 2, [Pr(4), MK(1)], { squad: [Pr(2)] });
+TC('L1R', 'Recon Post', 'recon', 2, 1, 3, 3, [], { loadout: [Pr(2)], tiers: [1, 2, 2] });
+// SUPPORT: sustained fire (extra shots, Steady = free reveals, Armor)
+TC('S11', 'Ammo Box', 'support', 1, 2, 2, 2, [Pr(2), Sh(1), SC(1)], { squad: [Pr(3)] });
+TC('S12', 'Suppressing Fire', 'support', 1, 2, 2, 2, [Pr(2), Ar(1)], { squad: [Pr(2), Ar(1)] });
+TC('S13', 'Bandolier', 'support', 1, 2, 2, 2, [Pr(2), Sh(1), Ar(1), ST(1)], { squad: [Pr(3)] });
+TC('S21', 'Steady Grip', 'support', 2, 2, 3, 2, [Pr(3), Sh(1), ST(1)], { squad: [Pr(3)] });
+TC('S22', 'Resupply', 'support', 2, 2, 3, 2, [Pr(1), I(1), Sh(1), D(1)], { squad: [ST(1), Pr(2)] });
+TC('S23', 'Covering Fire', 'support', 2, 2, 3, 2, [Pr(3), Ar(2)], { squad: [Pr(2), ST(1), Ar(1)] });
+TC('S31', 'Overwatch', 'support', 3, 3, 5, 2, [Pr(4), Sh(1), Ar(2)], { squad: [Pr(2), Ar(1)] });
+TC('S32', 'Munitions Drop', 'support', 3, 3, 4, 2, [Pr(4), Sh(2), ST(1)], { squad: [Pr(2)] });
+TC('L1S', 'Field Pack', 'support', 2, 1, 3, 3, [], { loadout: [Pr(1), Sh(1), ST(1)], tiers: [1, 2, 2] });
+// ENGINEER: cash and contracts (Intel, +1 Buy, draw, Scrap)
+TC('E11', 'Scrounge', 'engineer', 1, 1, 2, 2, [Pr(1), I(2), SC(1)], { squad: [I(2)] });
+TC('E12', 'Deployable Cover', 'engineer', 1, 1, 2, 2, [Pr(1), I(2)], { squad: [I(2)], reaction: 3 });
+TC('E13', 'Ping', 'engineer', 1, 1, 1, 2, [Pr(1), I(1), CY(1)], { squad: [D(1), I(1)] });
+TC('E21', 'Munitions Box', 'engineer', 2, 2, 3, 2, [Pr(2), I(2)], { squad: [Pr(2)] });
+TC('E22', 'Field Kit', 'engineer', 2, 2, 3, 2, [Pr(1), I(2), D(1)], { squad: [Pr(2)] });
+TC('E23', 'Salvage', 'engineer', 2, 2, 3, 2, [Pr(1), I(2), SC(1), CY(2)], { squad: [I(2), BY(1)] });
+TC('E31', 'Field Workshop', 'engineer', 3, 2, 4, 2, [Pr(2), I(2), D(1), SC(2)], { squad: [Pr(2), D(1)] });
+TC('E32', 'Black Market', 'engineer', 3, 2, 5, 2, [Pr(2), I(3), D(1)], { squad: [I(1), Pr(2)] });
+TC('L1E', 'Bounty Contract', 'engineer', 2, 1, 3, 3, [], { loadout: [I(1), Pr(1)], tiers: [1, 2, 2] });
+
+// Rally (head's S4): 3+ / 5+ cards of one squad in play this turn (Loadout counts) give that squad's bonus, once per turn each.
+const RALLY = {
+  assault: { 3: [DM(1), Pr(2), PI], 5: [DM(1), Pr(2)] },
+  recon: { 3: [MK(1), Pr(1)], 5: [MK(1), Pr(3)] },
+  support: { 3: [Pr(2), Sh(1), ST(1)], 5: [Pr(3), Sh(1), ST(2)] },
+  engineer: { 3: [I(1)], 5: [D(1)] },
+};
+const RALLY_TEXT = {}; for (const a in RALLY) RALLY_TEXT[a] = { 3: effText(RALLY[a][3]), 5: effText(RALLY[a][5]) };
+const SQUAD_TEXT = { 3: 'Rally at 3 cards of one squad in play', 4: '' };
+
+// ---------- GUNS: one model per class, five rarities. Every class may fire at distance 0 (point blank). ----------
+const RARITY = [
+  { key: 'common', name: 'Common', color: '#9AA0A6' }, { key: 'uncommon', name: 'Uncommon', color: '#3FA34D' },
+  { key: 'rare', name: 'Rare', color: '#2F7FD8' }, { key: 'epic', name: 'Epic', color: '#9B4DCA' }, { key: 'legendary', name: 'Legendary', color: '#E0A800' }];
+const MODS = {
+  hollow: { name: 'Hollow Points', text: '+1 Damage on every step', mod: { damage: 1 } },
+  extmag: { name: 'Extended Mag', text: '+1 shot per turn', mod: { magazine_capacity: 1 } },
+  comp: { name: 'Compensator', text: '−1 Recoil', mod: { recoil: -1 } },
+  reddot: { name: 'Red Dot', text: 'every Hit Marker step −1', mod: { hit_need: -1 } },
+  none: { name: '', text: '', mod: {} },
+};
+// wb-rules retune for the Precision-spend rule: Recoil is now a Precision cost per shot, so multi-shot guns lost Recoil; the big single shots lost 1 damage.
+const GUNCLASS = {
+  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 2, range: 1, band: [0, 2], ladder: [[2, 2], [4, 3]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
+  revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [6, 7]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
+  knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 3, range: 0, band: [0, 0], ladder: [[0, 3]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
+  smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 2, range: 0, band: [0, 1], ladder: [[2, 2], [5, 4]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
+  shotgun: { name: 'Breacher', cls: 'Shotgun', arch: 'engineer', damage: 3, range: 0, band: [0, 1], ladder: [[2, 3], [6, 6]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Dragon’s Breath' },
+  burst: { name: 'Raider', cls: 'Burst Rifle', arch: 'assault', damage: 2, range: 1, band: [0, 2], ladder: [[2, 2], [6, 4]], shots: 2, recoil: 0, cost: 2, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Night Raid' },
+  launcher: { name: 'Sapper', cls: 'Launcher', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [6, 7]], shots: 1, recoil: 3, cost: 3, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Demolition' },
+  ar: { name: 'Sentinel', cls: 'Assault Rifle', arch: 'support', damage: 2, range: 2, band: [0, 3], ladder: [[3, 3], [5, 5]], shots: 2, recoil: 1, cost: 3, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Crown Jewel' },
+  lmg: { name: 'Bastion', cls: 'LMG', arch: 'support', damage: 3, range: 2, band: [0, 3], ladder: [[3, 3], [6, 5]], shots: 3, recoil: 0, cost: 3, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Iron Monarch' },
+  dmr: { name: 'Ranger', cls: 'Marksman Rifle', arch: 'recon', damage: 3, range: 3, band: [0, 4], ladder: [[3, 3], [7, 6]], shots: 2, recoil: 1, cost: 3, mods: ['reddot', 'hollow', 'comp', 'hollow'], skin: 'Golden Hour' },
+  sniper: { name: 'Longbow', cls: 'Sniper', arch: 'recon', damage: 3, range: 4, band: [0, 5], ladder: [[3, 4], [8, 8]], shots: 1, recoil: 2, cost: 4, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Sun God' },
+};
+const WEAPONS = {};
+for (const k in GUNCLASS) for (let r = 0; r < RARITY.length; r++) {
+  const g = GUNCLASS[k]; const mods = g.mods.slice(0, r);
+  const st = { damage: g.damage, max_range: g.range, magazine_capacity: g.shots, recoil: g.recoil, hit_need: g.ladder[0][0], reveal: 0 };
+  for (const m of mods) for (const f in MODS[m].mod) st[f] = Math.max(f === 'hit_need' ? 1 : 0, st[f] + MODS[m].mod[f]);
+  const id = `${k}-${r}`;
+  WEAPONS[id] = { id, gunClass: k, name: r === 4 ? `${g.name} “${g.skin}”` : g.name, baseName: g.name, skin: r === 4 ? g.skin : null, archetype: g.arch, cls: g.cls, tier: r, rarity: RARITY[r].key, rarityName: RARITY[r].name,
+    ladder: g.ladder.map(([h, dm]) => [g.melee ? 0 : Math.max(1, h + st.hit_need - g.ladder[0][0]), dm + st.damage - g.damage]), band: g.band.slice(), melee: !!g.melee,
+    damage: st.damage, max_range: st.max_range, magazine_capacity: st.magazine_capacity, recoil: st.recoil, hit_need: st.hit_need, reveal: 0, intel_cost: 1 + r,
+    mods: mods.filter(m => MODS[m].name).map(m => MODS[m].name), modText: mods.filter(m => MODS[m].name).map(m => `${MODS[m].name} (${MODS[m].text})`),
+    tactical_main_effects: [], main_text: '', slot: 0, gcombo: null, tactical_boost_effects: [], boost_text: '', tags: [ARCH_TAG[g.arch]] };
+}
+const WEAPON_COPIES = {};
+const ATTS = {};
+
+// ---------- LOCATIONS (8 types, 7 dealt in a fixed row). Each has a squad: 2 in 3 refills of its stack are that squad's cards. ----------
+const ENVS = {
+  E01: { affinity: 'assault', id: 'E01', name: 'Open Road', cover: 0, bonus: { move: 1 }, bonusText: '+1 Movement', text: 'No cover. Here: +1 Movement.' },
+  E02: { affinity: 'assault', id: 'E02', name: 'Small Shed', cover: 1, bonus: { cycle: 1 }, bonusText: '1 free cycle', text: 'Cover −1. Here: 1 free cycle.' },
+  E03: { affinity: 'engineer', id: 'E03', name: 'House', cover: 1, bonus: { draw: 1 }, bonusText: 'Draw 1', text: 'Cover −1. Here: draw 1 card.' },
+  E04: { affinity: 'engineer', id: 'E04', name: 'Supply Depot', cover: 0, bonus: { intel: 1 }, bonusText: '+1 Intel', text: 'No cover. Here: +1 Intel.' },
+  E05: { affinity: 'support', id: 'E05', name: 'Concrete Barrier', cover: 1, bonus: { def: 1 }, bonusText: '+1 Armor', text: 'Cover −1. Here: +1 Armor.' },
+  E06: { affinity: 'support', id: 'E06', name: 'Military Bunker', cover: 1, bonus: { shot: 1 }, bonusText: '+1 extra shot', text: 'Cover −1. Here: +1 extra shot.' },
+  E07: { affinity: 'recon', id: 'E07', name: 'Recon Tower', cover: 1, bonus: { prec: 1 }, bonusText: '+1 Precision', text: 'Cover −1. Here: +1 Precision.' },
+  E08: { affinity: 'recon', id: 'E08', name: 'Workbench', cover: 0, bonus: { scrap: 1 }, bonusText: 'Scrap 1', text: 'No cover. Here: Scrap 1.' },
+};
+for (const k in ENVS) ENVS[k].cache = TUNE.stackSize;
+
+// ---------- helpers ----------
+function rng(s) { s.seed = (s.seed + 0x6D2B79F5) | 0; let t = s.seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+function shuffle(s, a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng(s) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const fail = err => ({ ok: false, err });
+const P = (s, i) => s.players[i];
+const envAt = (s, w) => s.envs.find(e => e.w === w);
+const dist = s => Math.abs(s.players[0].pos - s.players[1].pos);
+function log(s, msg, cls) { s.log.push({ r: s.round, msg, cls: cls || '' }); if (s.log.length > 500) s.log.shift(); if (s._rec) { const r = s._rec; s._rec = null; r.push({ msg, cls: cls || '', state: JSON.stringify(s) }); s._rec = r; } }
+const cardDef = (s, iid) => CARDS[s.cards[iid].def];
+const hmOf = (s, iid) => cardDef(s, iid).hit_markers;
+const isStarter = (s, iid) => cardDef(s, iid).archetype === 'starter';
+function itemDef(s, item) { return item.kind === 'card' ? CARDS[s.cards[item.iid].def] : item.kind === 'weapon' ? WEAPONS[s.weapons[item.iid].def] : ATTS[s.atts[item.iid].def]; }
+function eff(s, wiid) {
+  const W = s.weapons[wiid]; const d = WEAPONS[W.def];
+  const e = { damage: d.damage, max_range: d.max_range, magazine_capacity: d.magazine_capacity, hit_need: d.hit_need, recoil: d.recoil, reveal: 0 };
+  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
+  return e;
+}
+const guns = pl => pl.guns.filter(Boolean);
+const allCards = pl => pl.deck.concat(pl.discard, pl.hand, pl.play, pl.loadout || []);
+const owned = pl => allCards(pl).length;
+const isSquad = a => SQUADS.includes(a);
+const phaseTier = s => s.round <= 3 ? 1 : s.round <= 7 ? 2 : 3;
+
+function mkPlayer(idx, name) {
+  return { idx, name, hp: TUNE.hp, pos: 0, res: { move: 0, prec: 0, intel: 0 }, def: 0, shot: 0,
+    deck: [], discard: [], hand: [], play: [], loadout: [], fuelled: [], removed: [], guns: [null, null],
+    bonusTaken: [], moved: false, movedToward: false, nextFire: { reqMod: 0, bonusPrec: 0 }, revealPlus: 0, dmgTurn: 0, ignoreCover: false,
+    buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0, stationScrapped: false, squadN: {}, rallyDone: [], fp: 0, fpHist: [], perks: [], perkOffer: null,
+    stats: { shots: 0, hits: 0, jams: 0, damageDealt: 0, cardsAcquired: 0, weaponAcq: 0, burned: 0, searches: 0, reactions: 0, hitsBy: {}, maxTurnDmg: 0, turnDmg: 0, squads: 0, rallies: 0, big: 0, buys: 0 } };
+}
+function newCard(s, def) { const iid = 'c' + (s.nid++); s.cards[iid] = { iid, def }; return iid; }
+function newWeapon(s, def) { const iid = 'w' + (s.nid++); s.weapons[iid] = { iid, def, shots: 0, used: false, att: null }; return iid; }
+
+function drawCards(s, p, n) {
+  const pl = P(s, p); let d = 0;
+  for (let i = 0; i < n; i++) {
+    if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; }
+    pl.hand.push(pl.deck.pop()); d++;
+  }
+  return d;
+}
+
+// ---------- physical component sets (the print-and-play uses exactly these) ----------
+const GUNSET = { 1: ['smg-0', 'shotgun-0', 'lmg-0', 'dmr-0', 'knife-0', 'revolver-0'], 2: ['burst-1', 'launcher-1', 'ar-1', 'sniper-1', 'smg-2', 'shotgun-2', 'lmg-2', 'dmr-2', 'pistol-2', 'knife-2', 'revolver-1'], 3: ['burst-3', 'launcher-3', 'ar-3', 'sniper-3', 'smg-4', 'shotgun-4', 'lmg-4', 'dmr-4', 'pistol-4', 'knife-4', 'revolver-3'] };
+// location cards: one of each type; 7 are dealt into the row each match
+const LOCSET = Object.keys(ENVS).map(def => ({ ph: 'start', def, gun: 0 }));
+function locTier() { return 1; }
+function locSize() { return TUNE.stackSize; }
+
+// ---------- setup ----------
+function newGame(opts = {}) {
+  const s = { v: '6.0', seed: (opts.seed ?? (Date.now() & 0x7fffffff)) | 0, round: 1, turnNo: 1, first: 0, turn: 0, over: false, winner: null, endBy: null,
+    log: [], nid: 1, cards: {}, weapons: {}, atts: {}, envs: [], players: [], lastFire: null, finalN: 0, finalDmg: 0, gone: [], aiMode: ['aware', 'aware'] };
+  s.players = [mkPlayer(0, (opts.names && opts.names[0]) || 'You'), mkPlayer(1, (opts.names && opts.names[1]) || 'Rival')];
+  for (const pl of s.players) { for (const id of ['T001', 'T002', 'T004', 'T005']) for (let c = 0; c < CARDS[id].copies; c++) pl.deck.push(newCard(s, id)); shuffle(s, pl.deck); }
+  s.loot = { 1: [], 2: [], 3: [] };
+  for (const id in CARDS) { const d = CARDS[id]; if (!d.tier || !d.copies) continue; const tiers = d.tiers || Array(d.copies).fill(d.tier); for (const t of tiers) s.loot[t].push({ kind: 'card', iid: newCard(s, id) }); }
+  for (const t of [1, 2, 3]) for (const id of GUNSET[t]) s.loot[t].push({ kind: 'weapon', iid: newWeapon(s, id) });
+  for (const t of [1, 2, 3]) shuffle(s, s.loot[t]);
+  // the fixed row: 7 of the 8 location types; the leftover card stays in the box (s.envDeck)
+  const types = shuffle(s, Object.keys(ENVS));
+  types.slice(0, TUNE.zones).forEach((def, w) => s.envs.push(mkEnv(def, w)));
+  s.envDeck = types.slice(TUNE.zones); s.envPh = s.envDeck.map(() => 'start'); s.phase = 1;
+  // every stack: a Common gun on top (while they last) and 2 cards, biased to the location's squad; all stacks are face up
+  const g1 = s.loot[1].filter(x => x.kind === 'weapon'); s.loot[1] = s.loot[1].filter(x => x.kind !== 'weapon');
+  for (const e of s.envs) { const g = g1.shift(); if (g) e.loot.push(g); while (e.loot.length < TUNE.stackSize) { const it = pull(s, e, 1, true); if (!it) break; e.loot.push(it); } markTop(e); }
+  s.loot[1].push(...g1); shuffle(s, s.loot[1]);
+  s.stationLeft = {}; for (const id of TUNE.station) s.stationLeft[id] = TUNE.stationCopies;
+  const a = rng(s) < 0.5; s.players[0].pos = a ? TUNE.startA : TUNE.startB; s.players[1].pos = a ? TUNE.startB : TUNE.startA;
+  s.first = rng(s) < 0.5 ? 0 : 1; s.turn = s.first;
+  s.closeSide = rng(s) < 0.5 ? 'left' : 'right';
+  for (const pl of s.players) pl.guns[0] = newWeapon(s, 'pistol-0');
+  drawCards(s, s.first, TUNE.firstHand); drawCards(s, 1 - s.first, TUNE.hand);
+  log(s, `Round 1. ${s.players[s.first].name} goes first.`, 'round');
+  startTurn(s, s.turn);
+  return s;
+}
+function mkEnv(def, w) { return { w, def, tier: 1, state: 'safe', hot: false, fresh: false, loot: [], cache: { reveal: TUNE.stackSize, searched: true }, crate: null }; }
+function markTop(e) { if (e.loot[0]) e.loot[0].seen = true; }
+// one loot item for a location's stack: 2 in 3 are a card of the location's squad (if the tier has one)
+function pull(s, env, t, noGun) {
+  const aff = ENVS[env.def].affinity; const wantAff = rng(s) < TUNE.affinityShare;
+  for (const k of [t, t + 1, t - 1, 3, 2, 1]) {
+    const Dk = s.loot[k]; if (!Dk || !Dk.length) continue;
+    let j = -1;
+    if (wantAff) j = Dk.findIndex(x => x.kind === 'card' && CARDS[s.cards[x.iid].def].archetype === aff);
+    if (j < 0) j = Dk.findIndex(x => !noGun || x.kind === 'card');
+    if (j >= 0) return Dk.splice(j, 1)[0];
+  }
+  return null;
+}
+function safeBounds(s) { const w = s.envs.filter(e => e.state === 'safe').map(e => e.w); return { lo: Math.min(...w), hi: Math.max(...w), n: w.length }; }
+function nextEdge(s) { const b = safeBounds(s); if (b.n <= 1) return null; return s.closeSide === 'right' ? b.hi : b.lo; }
+function inSafe(s, w) { const e = envAt(s, w); return !!e && e.state === 'safe'; }
+// the public schedule: which round each safe location closes at the end of (null = final circle)
+function closeSchedule(s) {
+  const out = {}; const safe = s.envs.filter(e => e.state === 'safe').map(e => e.w).sort((a, b) => a - b); let lo = 0, hi = safe.length - 1; let side = s.closeSide;
+  for (const r of TUNE.closeAfter) { if (r < s.round || hi <= lo) continue; if (side === 'right') { out[safe[hi]] = r; hi--; } else { out[safe[lo]] = r; lo++; } side = side === 'right' ? 'left' : 'right'; }
+  return out;
+}
+
+// ---------- effects ----------
+const FPW = { move: 1, prec: 1, intel: 1, def: 1, shot: 2, draw: 2, mark: 2, pierce: 1, steady: 1, dmgTurn: 2, buy: 1, scrap: 1, cycleFree: 0.5 };
+function runEffects(s, p, effs, ctx) { for (const e of effs) runEffect(s, p, e, ctx); }
+function runEffect(s, p, e, ctx) {
+  const pl = P(s, p); let fp = 0;
+  switch (e.op) {
+    case 'gain': if (e.res === 'def') pl.def += e.n; else if (e.res === 'shot') pl.shot += e.n; else pl.res[e.res] += e.n; ctx.out.push(`+${e.n} ${RES_LABEL[e.res]}`); fp = FPW[e.res] * e.n; break;
+    case 'draw': { const n = drawCards(s, p, e.n); ctx.out.push(`Draw ${n}`); fp = FPW.draw * n; break; }
+    case 'nextFire': if (e.reqMod) { pl.nextFire.reqMod += e.reqMod; ctx.out.push(`Mark ${e.reqMod}`); } break;
+    case 'mark': pl.nextFire.reqMod += e.n; ctx.out.push(times(e.n, 'Mark')); fp = FPW.mark * e.n; break;
+    case 'pierce': case 'ignoreCover': if (!pl.ignoreCover) fp = FPW.pierce; pl.ignoreCover = true; ctx.out.push('Pierce'); break;
+    case 'steady': case 'revealPlus': pl.revealPlus += e.n; ctx.out.push(times(e.n, 'Steady')); fp = FPW.steady * e.n; break;
+    case 'dmgTurn': pl.dmgTurn += e.n; ctx.out.push(`hits +${e.n} damage`); fp = FPW.dmgTurn * e.n; break;
+    case 'buy': pl.buyBonus += e.n; ctx.out.push(`+${e.n} Buy`); fp = FPW.buy * e.n; break;
+    case 'scrap': pl.scrapAvail += e.n; ctx.out.push(`Scrap ${e.n}`); fp = FPW.scrap * e.n; break;
+    case 'cycleFree': pl.freeCycles += e.n; ctx.out.push(`${e.n} free cycle${e.n > 1 ? 's' : ''}`); fp = FPW.cycleFree * e.n; break;
+  }
+  if (s.turn === p) pl.fp += fp;
+}
+
+// ---------- turn checks ----------
+function check(s, p) { if (s.over) return fail('The match is over.'); if (s.turn !== p) return fail("It isn't your turn."); return null; }
+
+// Squad: a card's Squad line pays once for each OTHER card of its squad in play (Loadout counts), up to ×3.
+// Order never matters: whenever a new squad card arrives, every line already in play is topped up to its new count.
+function squadCounts(s, p) { const pl = P(s, p); const c = { assault: 0, recon: 0, support: 0, engineer: 0 }; for (const i of pl.play.concat(pl.loadout)) { const a = cardDef(s, i).archetype; if (a in c) c[a]++; } return c; }
+function checkSquads(s, p, ctx) {
+  const pl = P(s, p); const cnt = squadCounts(s, p);
+  for (const i of pl.play) { const d = cardDef(s, i); if (!d.squad) continue;
+    const want = Math.min(TUNE.squadCap, cnt[d.archetype] - 1); const have = pl.squadN[i] || 0; if (want <= have) continue;
+    const c2 = { out: [] }; for (let k = have; k < want; k++) runEffects(s, p, d.squad, c2);
+    pl.squadN[i] = want; pl.stats.squads += want - have; pl.turnSquads = (pl.turnSquads || 0) + want - have; ctx.out.push(`Squad ×${want} (${d.name}): ${effText(d.squad)}${want - have > 1 ? ` ×${want - have}` : ''}`); }
+  for (const a of SQUADS) for (const n of TUNE.rally) { const key = a + n; if (cnt[a] >= n && !pl.rallyDone.includes(key)) {
+    pl.rallyDone.push(key); const c2 = { out: [] }; runEffects(s, p, RALLY[a][n], c2); pl.stats.rallies++; ctx.out.push(`${ARCH_TAG[a].toUpperCase()} RALLY ${n}: ${c2.out.join(', ')}`); } }
+}
+// o.slot: Loadout slot (0/1) to replace when the row is full; o.once: use a Loadout card once instead of deploying it
+function playCard(s, p, iid, o = {}) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  if (!pl.hand.includes(iid)) return fail('That card is not in your hand.');
+  const def = cardDef(s, iid);
+  pl.hand.splice(pl.hand.indexOf(iid), 1);
+  const ctx = { out: [] };
+  if (def.loadout) {
+    const full = pl.loadout.length >= TUNE.loadoutSlots;
+    if (o.once || (full && o.slot == null)) { pl.play.push(iid); ctx.out.push('used once'); }
+    else { if (full) { const old = pl.loadout.splice(o.slot, 1)[0]; pl.discard.push(old); ctx.out.push(`replaces ${cardDef(s, old).name}`); } pl.loadout.push(iid); ctx.out.push('deployed to the Loadout row'); }
+    runEffects(s, p, def.loadout, ctx);
+  } else { pl.play.push(iid); runEffects(s, p, def.effects, ctx); }
+  checkSquads(s, p, ctx);
+  log(s, `${pl.name} plays ${def.name}${ctx.out.length ? ': ' + ctx.out.join(', ') : ''}.`, 'play');
+  return { ok: true, out: ctx.out };
+}
+function playAll(s, p) { const pl = P(s, p); const e = check(s, p); if (e) return e; for (const iid of pl.hand.slice()) playCard(s, p, iid); return { ok: true }; }
+function rolesPlayed(s, p) { const pl = P(s, p); return new Set(pl.play.concat(pl.loadout).map(i => cardDef(s, i).archetype).filter(isSquad)); }
+function archCounts(s, p) { const c = { assault: 0, support: 0, recon: 0, engineer: 0 }; allCards(P(s, p)).forEach(i => { const a = cardDef(s, i).archetype; if (a in c) c[a]++; }); return c; }
+function mainSquad(s, p) { const c = archCounts(s, p); const a = SQUADS.slice().sort((x, y) => c[y] - c[x])[0]; return c[a] ? a : null; }
+
+// ---------- movement ----------
+function moveCost(s, p, tw) { const pl = P(s, p); if (!envAt(s, tw) || tw === pl.pos) return null; return Math.abs(tw - pl.pos); }
+function reachable(s, p) { const pl = P(s, p); return s.envs.map(e => ({ w: e.w, cost: moveCost(s, p, e.w) })).filter(r => r.cost != null && r.cost <= pl.res.move); }
+function arriveBonus(s, p, env) {
+  const pl = P(s, p); const d = ENVS[env.def]; if (env.state !== 'safe' || !d.bonus || pl.bonusTaken.includes(env.w)) return '';
+  pl.bonusTaken.push(env.w); const b = d.bonus; const ctx = { out: [] };
+  const fx = []; if (b.draw) fx.push(D(b.draw)); if (b.intel) fx.push(I(b.intel)); if (b.def) fx.push(Ar(b.def)); if (b.prec) fx.push(Pr(b.prec)); if (b.move) fx.push(M(b.move)); if (b.shot) fx.push(Sh(b.shot)); if (b.scrap) fx.push(SC(b.scrap)); if (b.cycle) fx.push(CY(b.cycle));
+  runEffects(s, p, fx, ctx);
+  return ctx.out.length ? ` ${d.name}: ${ctx.out.join(', ')}.` : '';
+}
+function move(s, p, tw) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  const cost = moveCost(s, p, tw); if (cost == null) return fail('Choose a different location.');
+  if (!inSafe(s, tw)) return fail('That location is in the gas.');
+  if (cost > pl.res.move) return fail(`Needs ${cost} Movement (you have ${pl.res.move}).`);
+  if (pl.moved) return fail('You already moved this turn (one Move per turn).');
+  const before = dist(s); pl.res.move -= cost; pl.pos = tw; pl.moved = true;
+  let extra = arriveBonus(s, p, envAt(s, tw));
+  if (pl.pos === P(s, 1 - p).pos) extra += ' Close quarters: shots ignore cover and Armor.';
+  if (dist(s) < before) pl.movedToward = true;
+  log(s, `${pl.name} moves to ${ENVS[envAt(s, tw).def].name} (−${cost}).${extra}`, 'act');
+  return { ok: true };
+}
+
+// ---------- market ----------
+const buysLeft = (s, p) => Math.max(0, TUNE.buyCap + P(s, p).buyBonus - P(s, p).buys);
+function gainCard(s, p, iid) { const pl = P(s, p); if (s.round <= TUNE.hotDrop) pl.deck.push(iid); else pl.discard.push(iid); pl.stats.cardsAcquired++; }
+function cycle(s, p, pay) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  const env = envAt(s, pl.pos); if (!env || env.state !== 'safe') return fail('Nothing to cycle here.');
+  if (env.loot.length < 2) return fail('Only one card in this stack.');
+  let how;
+  if (pl.freeCycles > 0) { pl.freeCycles--; how = 'free'; }
+  else if (pay === 'move') { if (pl.res.move < TUNE.cycleCost) return fail('Cycling costs 1 Movement or 1 Intel.'); pl.res.move -= TUNE.cycleCost; how = `−${TUNE.cycleCost} Movement`; }
+  else { if (pl.res.intel < TUNE.cycleCost) return fail('Cycling costs 1 Intel or 1 Movement.'); pl.res.intel -= TUNE.cycleCost; how = `−${TUNE.cycleCost} Intel`; }
+  const top = env.loot.shift(); env.loot.push(top); markTop(env); pl.stats.cycles = (pl.stats.cycles || 0) + 1;
+  log(s, `${pl.name} cycles ${itemDef(s, top).name} to the bottom (${how}): ${itemDef(s, env.loot[0]).name} on top.`, 'act');
+  return { ok: true };
+}
+function lootNear(s, p, id) {
+  const pl = P(s, p);
+  for (const w of [pl.pos, pl.pos - 1, pl.pos + 1]) { const e = envAt(s, w); if (!e || e.state !== 'safe') continue; const it = e.loot[0] && e.loot[0].iid === id ? e.loot[0] : null; if (it) return { it, env: e, adj: w !== pl.pos }; }
+  return null;
+}
+function lootCost(s, p, item) { const near = lootNear(s, p, item.iid); return Math.max(0, itemDef(s, item).intel_cost + (near && near.adj ? TUNE.adjCost : 0)); }
+function buyTotal(s, p, iids) { let t = 0; for (const id of iids) { const n = lootNear(s, p, id); if (n) t += lootCost(s, p, n.it); } return t; }
+function buy(s, p, iids, o = {}) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  const list = (Array.isArray(iids) ? iids : [iids]).filter((x, i, a) => a.indexOf(x) === i);
+  if (!list.length) return fail('Pick something.');
+  if (list.length > 1) return fail('Buy one item at a time.');
+  const near = lootNear(s, p, list[0]); if (!near) return fail('You can only buy the top card of a stack where you stand or next door (+1 Intel).');
+  if (buysLeft(s, p) < 1) return fail(`No buys left this turn (${TUNE.buyCap}${pl.buyBonus ? ` + ${pl.buyBonus}` : ''} per turn).`);
+  const item = near.it; const total = lootCost(s, p, item);
+  if (pl.res.intel < total) return fail(`Needs ${total} Intel (you have ${pl.res.intel}).`);
+  pl.res.intel -= total; pl.buys++; pl.stats.buys++;
+  const src = near.env; src.loot.splice(src.loot.indexOf(item), 1); markTop(src); let extra = near.adj ? ' (from next door)' : '';
+  if (item.kind === 'card') { gainCard(s, p, item.iid); if (s.round <= TUNE.hotDrop) extra += ' (Hot Drop: on top of the deck)'; }
+  else {
+    const old = pl.guns[0];
+    if (old) { src.loot.push({ kind: 'weapon', iid: old }); extra += `, dropping ${WEAPONS[s.weapons[old].def].name}`; }
+    pl.guns[0] = item.iid; pl.stats.weaponAcq++; s.weapons[item.iid].shots = 0; extra = ' (loaded)' + extra;
+  }
+  log(s, `${pl.name} takes ${itemDef(s, item).name}${extra} for ${total} Intel.`, 'act');
+  return { ok: true };
+}
+function plateCost() { return TUNE.supplyCost; }
+function buySupply(s, p, id) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e; id = id || TUNE.station[0];
+  if (!TUNE.station.includes(id)) return fail('Not sold at the Buy Station.');
+  if (!(s.stationLeft[id] > 0)) return fail(`${CARDS[id].name} is sold out.`);
+  if (buysLeft(s, p) < 1) return fail(`No buys left this turn (${TUNE.buyCap}${pl.buyBonus ? ` + ${pl.buyBonus}` : ''} per turn).`);
+  const cost = plateCost(); if (pl.res.intel < cost) return fail(`Buy Station cards cost ${cost} Intel.`);
+  pl.res.intel -= cost; pl.buys++; pl.stats.buys++; s.stationLeft[id]--; const iid = newCard(s, id); gainCard(s, p, iid); pl.stats.supply = (pl.stats.supply || 0) + 1;
+  log(s, `${pl.name} buys ${CARDS[id].name} at the Buy Station.`, 'act'); return { ok: true };
+}
+// Buy Station service: pay 1 Intel to Scrap a Sprint (hand, play area or discard), once per turn. Not a buy.
+function stationScrap(s, p, iid) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  if (pl.stationScrapped) return fail('The Scrap service is once per turn.');
+  if (pl.res.intel < TUNE.stationScrapCost) return fail(`The Scrap service costs ${TUNE.stationScrapCost} Intel.`);
+  const from = [pl.hand, pl.play, pl.discard].find(z => z.includes(iid)); if (!from) return fail('Choose a Sprint in your hand, play area or discard pile.');
+  if (cardDef(s, iid).id !== 'T001') return fail('The Scrap service only takes a Sprint.');
+  if (owned(pl) <= TUNE.minDeck) return fail(`Your deck is at the ${TUNE.minDeck}-card minimum.`);
+  pl.res.intel -= TUNE.stationScrapCost; pl.stationScrapped = true; from.splice(from.indexOf(iid), 1); pl.removed.push(iid); pl.stats.burned++;
+  log(s, `${pl.name} pays ${TUNE.stationScrapCost} Intel at the Buy Station to scrap a Sprint (out of the game).`, 'fx'); return { ok: true };
+}
+function scrap(s, p, iid) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  if (!(pl.scrapAvail > 0)) return fail('No Scrap available. Play a card with Scrap first.');
+  const from = [pl.hand, pl.play, pl.discard].find(z => z.includes(iid));
+  if (!from) return fail('Scrap takes a card from your hand, play area or discard pile.');
+  if (owned(pl) <= TUNE.minDeck) return fail(`Your deck is at the ${TUNE.minDeck}-card minimum.`);
+  from.splice(from.indexOf(iid), 1); pl.removed.push(iid); pl.scrapAvail--; pl.stats.burned++;
+  log(s, `${pl.name} scraps ${cardDef(s, iid).name} (out of the game).`, 'fx'); return { ok: true };
+}
+
+// ---------- fire ----------
+// Aim (head's S1 "Recoil decreases Precision"): you commit Precision to a shot; it reveals 1 card per Precision committed (+1 free card
+// per Steady). The shot spends what you committed, and then the gun's Recoil costs that much more Precision (down to 0).
+function shotsLeft(s, p, gi) { const pl = P(s, p); const wid = pl.guns[gi]; if (!wid) return 0; return Math.max(0, eff(s, wid).magazine_capacity - s.weapons[wid].shots) + pl.shot; }
+function shotPreview(s, p, gi, commit) {
+  const pl = P(s, p), o = P(s, 1 - p); const wid = pl.guns[gi]; if (!wid) return null;
+  const W = s.weapons[wid]; const E = eff(s, wid); const d = WEAPONS[W.def];
+  const Dd = dist(s); const inBand = Dd >= E.band[0] && Dd <= E.band[1];
+  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, commit == null ? pl.res.prec : commit | 0));
+  const free = d.melee ? 0 : pl.revealPlus;
+  const reveal = c + free;
+  const shift = TUNE.needPlus - pl.nextFire.reqMod;
+  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn]); const need = steps[0][0];
+  const cq = TUNE.closeQuarters && Dd === 0;
+  const tEnv = envAt(s, o.pos); const cover = !cq && tEnv && tEnv.state === 'safe' && !pl.ignoreCover ? ENVS[tEnv.def].cover : 0;
+  const net = dm => Math.max(1, dm - cover);
+  return { gi, commit: c, free, prec: pl.res.prec, reveal, need, base: E.hit_need, accuracy: pl.nextFire.reqMod, recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover, cq, damage: E.damage, dmg: net(steps[0][1]),
+    steps: steps.map(([h, dm]) => [h, net(dm)]), rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
+}
+function shootCheck(s, p, gi, commit) {
+  const pl = P(s, p); const wid = pl.guns[gi];
+  if (!wid) return fail('No gun in that slot.');
+  if (shotsLeft(s, p, gi) < 1) return fail(`${WEAPONS[s.weapons[wid].def].name} has fired its shots this turn.`);
+  const E = eff(s, wid);
+  if (dist(s) < E.band[0] || dist(s) > E.band[1]) return fail(`${WEAPONS[s.weapons[wid].def].name} fires at distance ${E.band[0]}–${E.band[1]}. You are at ${dist(s)}.`);
+  if (!WEAPONS[s.weapons[wid].def].melee && shotPreview(s, p, gi, commit).reveal < 1) return fail('Nothing to reveal: commit Precision first (play Precision cards).');
+  return { ok: true };
+}
+function applyHit(s, ti, dmg, cq) {
+  const t = P(s, ti); const notes = [];
+  // reaction cards in hand: the best one is used automatically
+  const rx = t.hand.filter(i => cardDef(s, i).reaction).sort((a, b) => cardDef(s, b).reaction - cardDef(s, a).reaction)[0];
+  if (rx && dmg > 1) { const r = Math.min(cardDef(s, rx).reaction, dmg - 1); dmg -= r; t.hand.splice(t.hand.indexOf(rx), 1); t.discard.push(rx); t.stats.reactions++; notes.push(`${cardDef(s, rx).name} reaction −${r}`); }
+  if (!cq) { const ab = Math.min(t.def, dmg - 1); if (ab > 0) { t.def -= ab; dmg -= ab; notes.push(`Armor −${ab}`); } }
+  else if (t.def) notes.push('close quarters: Armor ignored');
+  t.hp -= dmg; return { dealt: dmg, notes };
+}
+function checkDeath(s, by) {
+  const d0 = s.players[0].hp <= 0, d1 = s.players[1].hp <= 0;
+  if (!d0 && !d1) return;
+  s.over = true; s.endBy = by || 'ko'; const [a, b] = s.players;
+  s.winner = d0 && d1 ? (a.hp !== b.hp ? (a.hp > b.hp ? 0 : 1) : 'draw') : d0 ? 1 : 0;
+  log(s, s.winner === 'draw' ? 'Both operators fall. Draw.' : `${s.players[s.winner].name} is the last operator standing.`, 'win');
+}
+// o: a number (Precision to commit) or { commit }. Without one, the shot commits all your Precision.
+function fire(s, p, gi, o) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  const commit = typeof o === 'number' ? o : o && typeof o === 'object' && o.commit != null ? o.commit : null;
+  const sc = shootCheck(s, p, gi, commit); if (!sc.ok) return sc;
+  const W = s.weapons[pl.guns[gi]]; const d = WEAPONS[W.def]; const sp = shotPreview(s, p, gi, commit);
+  if (W.shots >= eff(s, pl.guns[gi]).magazine_capacity) pl.shot--; else W.shots++; W.shotTurn = s.turnNo;
+  const revealed = [];
+  for (let i = 0; i < sp.reveal; i++) { if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; } revealed.push(pl.deck.pop()); }
+  const total = revealed.reduce((a, i) => a + hmOf(s, i), 0);
+  const hit = d.melee || total >= sp.need;
+  const before = pl.res.prec; pl.res.prec = d.melee ? pl.res.prec : Math.max(0, pl.res.prec - sp.commit - sp.recoil);
+  pl.nextFire = { reqMod: 0, bonusPrec: 0 };
+  pl.stats.shots++;
+  let dealt = 0, notes = [], lvl = -1;
+  if (hit) { pl.stats.hits++; pl.stats.hitsBy[W.def] = (pl.stats.hitsBy[W.def] || 0) + 1; lvl = d.melee ? 0 : sp.steps.filter(([h]) => total >= h).length - 1; if (lvl > 0) pl.stats.big++;
+    // applyHit's notes may already say 'close quarters: Armor ignored': the bare 'close quarters' tag is added only if not
+    const r = applyHit(s, 1 - p, sp.steps[lvl][1], sp.cq); if (lvl > 0) notes.push(lvl === 1 && d.gunClass === 'sniper' ? 'HEADSHOT' : `step ${lvl + 1}`); dealt = r.dealt; notes = notes.concat(r.notes);
+    if (sp.cover) notes.unshift(`cover −${sp.cover}`); if (sp.cq && !notes.some(n => n.startsWith('close quarters'))) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt; }
+  pl.discard.push(...revealed);
+  s.lastFire = { p, weapon: d.name, bullet: null, req: sp.need, steps: sp.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < sp.reveal, recoil: before - pl.res.prec, commit: sp.commit, free: sp.free };
+  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.free ? ` + ${sp.free} Steady` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
+  checkDeath(s, 'ko');
+  return { ok: true, result: s.lastFire };
+}
+
+// ---------- turn flow ----------
+// Ready: reset, Loadout cards fire, then the location's bonus.
+function startTurn(s, p) {
+  const pl = P(s, p);
+  Object.assign(pl, { res: { move: 0, prec: 0, intel: 0 }, def: 0, shot: 0, revealPlus: 0, dmgTurn: 0, ignoreCover: false, buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0,
+    stationScrapped: false, squadN: {}, rallyDone: [], turnSquads: 0, moved: false, movedToward: false, bonusTaken: [], fp: 0 });
+  pl.nextFire = { reqMod: 0, bonusPrec: 0 };
+  for (const wid of guns(pl)) { s.weapons[wid].shots = 0; s.weapons[wid].used = false; }
+  pl.stats.turnDmg = 0;
+  if (pl.loadout.length) { const ctx = { out: [] }; for (const i of pl.loadout) runEffects(s, p, cardDef(s, i).loadout, ctx); checkSquads(s, p, ctx); log(s, `${poss(pl.name)} Loadout (${pl.loadout.map(i => cardDef(s, i).name).join(', ')}): ${ctx.out.join(', ')}.`, 'play'); }
+  const env = envAt(s, pl.pos); if (env) { const t = arriveBonus(s, p, env); if (t) log(s, `${pl.name} holds${t}`, 'fx'); }
+}
+function endTurn(s, p) {
+  const pl = P(s, p); const e = check(s, p); if (e) return e;
+  pl.stats.maxTurnDmg = Math.max(pl.stats.maxTurnDmg, pl.stats.turnDmg);
+  pl.fpHist.push(Math.round(pl.fp * 10) / 10);
+  pl.discard.push(...pl.hand, ...pl.play); pl.hand = []; pl.play = [];
+  pl.scrapAvail = 0;
+  if (TUNE.digIn && pl.res.move > 0) { const a = Math.min(TUNE.digIn, pl.res.move); pl.def += a; pl.stats.dugIn = (pl.stats.dugIn || 0) + a; log(s, `${pl.name} digs in: +${a} Armor from unused Movement.`, 'fx'); }
+  pl.res = { move: 0, prec: 0, intel: 0 }; pl.shot = 0; // Armor stays up through the rival's turn
+  drawCards(s, p, TUNE.hand + (TUNE.lowHp && pl.hp > 0 && pl.hp <= TUNE.lowHp ? 1 : 0));
+  const fpN = pl.fpHist[pl.fpHist.length - 1], fpP = pl.fpHist[pl.fpHist.length - 2]; const dd = fpP == null ? '' : ` (${fpN >= fpP ? '▲' : '▼'}${Math.round(Math.abs(fpN - fpP))})`;
+  log(s, `${pl.name} ends the turn. Turn ${pl.fpHist.length}: Firepower ${Math.round(fpN)}${dd} · Squad ×${pl.turnSquads || 0} · ${pl.stats.turnDmg} damage.`, 'act');
+  s.turnNo++;
+  let next = 1 - p;
+  if (p !== s.first) { endRound(s); if (TUNE.alternateFirst && !s.over) { s.first = 1 - s.first; log(s, `${s.players[s.first].name} takes the lead this round.`, 'round'); } next = s.first; }
+  if (s.over) return { ok: true };
+  s.turn = next; startTurn(s, s.turn); // Armor lasts until your next turn: it drops at Ready
+  return { ok: true };
+}
+function nextPhase() { return null; }
+function gasRate(s) { return TUNE.closeAfter.includes(s.round) ? 1 : 0; }
+// the edge that closes at the end of this round (public schedule), or []
+function closing(s) { const B = safeBounds(s); if (B.n <= 1 || !TUNE.closeAfter.includes(s.round)) return []; return [s.closeSide === 'right' ? B.hi : B.lo]; }
+function endRound(s) {
+  const list = closing(s);
+  if (list.length) {
+    for (const w of list) { const ge = envAt(s, w); ge.state = 'gas'; s.gone.push(...ge.loot.filter(it => it.kind === 'card' || it.kind === 'weapon')); ge.loot = []; ge.crate = null; log(s, `Round ${s.round} ends. Gas swallows ${ENVS[ge.def].name}.`, 'gas'); }
+    s.closeSide = s.closeSide === 'right' ? 'left' : 'right';
+  } else log(s, `Round ${s.round} ends.`, 'round');
+  // caught outside: 3 damage +1 per extra space, then pushed back to the nearest safe location
+  const B = safeBounds(s);
+  for (const pl of s.players) {
+    if (pl.pos >= B.lo && pl.pos <= B.hi) continue;
+    const depth = pl.pos < B.lo ? B.lo - pl.pos : pl.pos - B.hi; const dmg = TUNE.gasDmg + depth - 1;
+    pl.hp -= dmg; const back = pl.pos < B.lo ? B.lo : B.hi; pl.pos = back; pl.stats.gasTaken = (pl.stats.gasTaken || 0) + dmg;
+    log(s, `${pl.name} is caught ${depth} space${depth > 1 ? 's' : ''} deep in the gas: −${dmg}, pushed back to ${ENVS[envAt(s, back).def].name}.`, 'gas');
+  }
+  if (B.n <= 1) { s.finalReached = true; const dmg = TUNE.finalStorm[Math.min(s.finalN, TUNE.finalStorm.length - 1)]; s.finalN++; s.finalDmg = dmg; for (const pl of s.players) { pl.hp -= dmg; pl.stats.gasTaken = (pl.stats.gasTaken || 0) + dmg; } log(s, `Final circle: the storm hits both operators for ${dmg}.`, 'gas'); }
+  checkDeath(s, s.finalN ? 'storm' : 'gas'); if (s.over) return;
+  if (s.round >= TUNE.hardEnd) {
+    const [a, b] = s.players; s.over = true; s.endBy = 'hardEnd'; s.winner = a.hp === b.hp ? 'draw' : a.hp > b.hp ? 0 : 1;
+    log(s, `Hard end after round ${s.round}: ${s.winner === 'draw' ? 'equal Health, a draw' : `${s.players[s.winner].name} wins on Health (${a.hp}–${b.hp})`}.`, 'win'); return;
+  }
+  s.round++;
+  // fresh loot lands on top of every safe stack (2 in 3 of the location's squad, tier by phase); a stack over 3 loses its bottom item
+  for (const e of s.envs) { if (e.state !== 'safe') continue; const it = pull(s, e, phaseTier(s), false); if (it) e.loot.unshift(it); while (e.loot.length > TUNE.stackSize) s.gone.push(e.loot.pop()); markTop(e); }
+  if (TUNE.crateRounds.includes(s.round - 1)) {
+    const B2 = safeBounds(s); const mid = (B2.lo + B2.hi) / 2;
+    const t = s.envs.filter(e => e.state === 'safe').sort((a, b) => Math.abs(a.w - mid) - Math.abs(b.w - mid) || a.w - b.w)[0];
+    if (t) { const items = []; const g = (s.loot[3].findIndex(it => it.kind === 'weapon')); if (g >= 0) items.push(s.loot[3].splice(g, 1)[0]);
+      while (items.length < TUNE.crate[0]) { const j = s.loot[3].findIndex(it => it.kind !== 'weapon'); if (j < 0) break; items.push(s.loot[3].splice(j, 1)[0]); }
+      t.loot.unshift(...items); markTop(t); t.dropRound = s.round; if (items.length) log(s, `Supply crate lands on ${ENVS[t.def].name}: ${items.length} tier III items on top of its stack, ${itemDef(s, items[0]).name} face up.`, 'fx'); }
+  }
+  log(s, `Round ${s.round}.${TUNE.closeAfter.includes(s.round) && safeBounds(s).n > 1 ? ` ${ENVS[envAt(s, closing(s)[0]).def].name} closes at the end of this round.` : ''}`, 'round');
+}
+
+// ---------- estimates ----------
+function lcg(seed) { let x = seed | 0; return () => { x = (x * 1103515245 + 12345) & 0x7fffffff; return x / 0x7fffffff; }; }
+function hitChance(s, p, n, req, trials = 300) {
+  const pl = P(s, p); if (n <= 0) return 0; if (req <= 0) return 1;
+  const dk = pl.deck.map(i => hmOf(s, i)), dc = pl.discard.map(i => hmOf(s, i));
+  const r = lcg(12345); let ok = 0; const sh = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  for (let t = 0; t < trials; t++) { const seq = sh(dk.slice()).concat(sh(dc.slice())); let sum = 0; for (let i = 0; i < Math.min(n, seq.length); i++) sum += seq[i]; if (sum >= req) ok++; }
+  return ok / trials;
+}
+// probability of reaching each ladder step when revealing 0..max cards (one Monte Carlo pass, prefix sums)
+function stepOdds(s, p, steps, max, trials = 120) {
+  const pl = P(s, p); const dk = pl.deck.map(i => hmOf(s, i)), dc = pl.discard.map(i => hmOf(s, i));
+  const cnt = Array.from({ length: max + 1 }, () => steps.map(() => 0)); const r = lcg(777 + dk.length * 31 + max);
+  const sh = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  for (let t = 0; t < trials; t++) { const a = sh(dk.slice()).concat(sh(dc.slice())); let sum = 0;
+    for (let c = 1; c <= max; c++) { sum += c <= a.length ? a[c - 1] : 0; steps.forEach(([h], i) => { if (sum >= h) cnt[c][i]++; }); } }
+  return cnt.map(x => x.map(v => v / trials));
+}
+function expDmg(s, p, sp) { if (sp.melee) return sp.steps[0][1]; const o = stepOdds(s, p, sp.steps, sp.reveal)[sp.reveal] || sp.steps.map(() => 0); let ev = 0; sp.steps.forEach(([, dm], i) => { ev += (o[i] - (o[i + 1] || 0)) * dm; }); return ev; }
+// Best Precision to commit to the next shot: a small dynamic programme over the shots left this turn (expected damage, Armor ignored).
+// V(q, l, first): best expected damage with q Precision and l shots still allowed. The model behind it:
+// - every shot is optional: a shot that cannot add damage is simply not fired, so the plan never burns Precision on a dud shot
+//   just to reach a later one (it used to: with spare shots it suggested a 0% commit-1 shot first);
+// - Mark (nextFire.reqMod) helps only the next shot; Steady (+reveal) and +damage last the whole turn;
+// - ties go to the larger commit: the surer shot now, and Precision left at End turn is worth nothing.
+// The planner re-runs after every shot, so later shots are re-planned with the cards actually left.
+function suggestCommit(s, p, gi) {
+  const pl = P(s, p); const sp = shotPreview(s, p, gi, 0); if (!sp || sp.melee) return { commit: 0, ev: sp ? sp.steps[0][1] : 0, p: 1 };
+  const pool = pl.res.prec, fr = pl.revealPlus, rc = sp.recoil; if (pool + fr < 1) return { commit: 0, ev: 0, p: 0 };
+  const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
+  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus), sp.steps[i][1]]) : sp.steps;
+  const odds = stepOdds(s, p, sp.steps.concat(later), pool + fr, 300); // one pass, same samples for both ladders
+  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, c + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * dm; }); return e; };
+  const EV = [0, 1].map(k => Array.from({ length: pool + 1 }, (_, c) => evOf(c, k))); const memo = {};
+  const V = (q, l, first) => { if (l <= 0) return [0, -1]; const key = (q * 16 + l) * 2 + (first ? 1 : 0); if (memo[key]) return memo[key];
+    let best = V(q, l - 1, first); // leave one shot unfired
+    for (let c = q; c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
+    return (memo[key] = best); };
+  const [, c] = V(pool, Math.min(sp.left, 6), true);
+  if (c < 0) return { commit: 0, ev: 0, p: 0 };
+  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, c + fr)][0] };
+}
+
+// ---------- AI ----------
+const W8 = { move: 0.7, prec: 1, intel: 1, def: 0.6, shot: 2, draw: 1.8, mark: 1.5, pierce: 0.6, scrap: 1, cycleFree: 0.3, dmgTurn: 2.5, steady: 1.5, buy: 1.5 };
+const val = effs => (effs || []).reduce((t, e) => t + (e.op === 'gain' ? W8[e.res] : W8[e.op] || 0) * (e.n || 1), 0);
+const aiAware = (s, p) => !(s.aiMode && s.aiMode[p] === 'blind');
+const poss = name => name === 'You' ? 'Your' : `${name}’s`;
+function cardScore(s, p, d) {
+  const pl = P(s, p); const aware = aiAware(s, p);
+  let v = val(d.effects) + d.hit_markers * 1.1;
+  if (d.loadout) v = val(d.loadout) * Math.min(4, Math.max(1, TUNE.hardEnd - s.round) / 2) + d.hit_markers * 0.3;
+  if (d.reaction) v += 1;
+  if (aware && isSquad(d.archetype)) {
+    const fc = archCounts(s, p); const n = owned(pl) + 1; const f = (fc[d.archetype] + 1) / n;
+    const lo = pl.loadout.some(i => cardDef(s, i).archetype === d.archetype) ? 1 : 0;
+    const pSquad = lo ? 1 : 1 - Math.pow(1 - f, TUNE.hand - 1);
+    if (d.squad) v += pSquad * val(d.squad) * Math.max(1, Math.min(TUNE.squadCap, (fc[d.archetype] + 1) * TUNE.hand / n));
+    const force = s.aiMode && /^force:/.test(s.aiMode[p] || '') ? s.aiMode[p].slice(6) : null; // sim only: a one-squad deck
+    const mf = force || mainSquad(s, p); if (mf && d.archetype === mf) v += 1.8; else if (force) v -= 4; else if (mf && fc[mf] >= 3) v -= 1.5;
+    let partners = 0; for (const i of allCards(pl)) { const dx = cardDef(s, i); if (dx.archetype === d.archetype && dx.squad) partners += val(dx.squad); } v += Math.min(3, partners * 0.12);
+  }
+  return v;
+}
+function gunScore(s, p, wd) {
+  const cur = WEAPONS[s.weapons[P(s, p).guns[0]].def];
+  if (wd.gunClass === cur.gunClass && wd.tier <= cur.tier) return -1;
+  if (cur.gunClass === 'pistol') return 12 + wd.tier * 3;
+  const dd = wd.tier - cur.tier; return dd > 0 ? 10 + dd * 3 : -1;
+}
+function aiItemScore(s, p, it) { const d = itemDef(s, it); return it.kind === 'weapon' ? gunScore(s, p, d) : cardScore(s, p, d); }
+function stationScore(s, p, id) {
+  const d = CARDS[id];
+  if (aiAware(s, p)) return cardScore(s, p, d) - 0.5;
+  // combo-blind: buy whatever resource the deck has least of
+  const tot = { move: 0, prec: 0, intel: 0, shot: 0 }; for (const i of allCards(P(s, p))) for (const e of cardDef(s, i).effects) if (e.op === 'gain' && e.res in tot) tot[e.res] += e.n;
+  const want = { K02: tot.move / 1.0, K04: tot.prec / 1.4, K03: tot.intel / 1.2, K05: (tot.shot + 3) / 0.8 };
+  const best = TUNE.station.slice().sort((a, b) => want[a] - want[b])[0];
+  return id === best ? val(d.effects) + d.hit_markers * 1.1 : 0;
+}
+const MIN_SCORE = 3.0;
+function aiBuy(s, p) {
+  const pl = P(s, p);
+  for (let guard = 0; guard < 6 && buysLeft(s, p) > 0; guard++) {
+    const opts = [];
+    for (const w of [pl.pos - 1, pl.pos, pl.pos + 1]) { const e = envAt(s, w); if (!e || e.state !== 'safe' || !e.loot.length) continue; const it = e.loot[0]; opts.push({ it, cost: lootCost(s, p, it), sc: aiItemScore(s, p, it) }); }
+    for (const id of TUNE.station) if (s.stationLeft[id] > 0) opts.push({ station: id, cost: TUNE.supplyCost, sc: stationScore(s, p, id) });
+    const ok = opts.filter(o => o.cost <= pl.res.intel && o.sc >= (o.it && o.it.kind === 'weapon' ? 0 : MIN_SCORE)).sort((a, b) => (b.sc - 0.35 * b.cost) - (a.sc - 0.35 * a.cost));
+    const o = ok[0]; if (!o) break;
+    const r = o.station ? buySupply(s, p, o.station) : buy(s, p, [o.it.iid]); if (!r.ok) break;
+  }
+}
+function aiCycle(s, p) {
+  const pl = P(s, p); const env = envAt(s, pl.pos);
+  for (let k = 0; k < 2; k++) {
+    if (!env || env.loot.length < 2 || buysLeft(s, p) < 1) return;
+    const top = env.loot[0]; if (aiItemScore(s, p, top) >= MIN_SCORE && lootCost(s, p, top) <= pl.res.intel) return;
+    const pay = pl.freeCycles > 0 ? 'intel' : pl.res.move >= 1 ? 'move' : null; if (!pay) return;
+    if (!cycle(s, p, pay).ok) return; aiBuy(s, p);
+  }
+}
+function aiScrap(s, p) {
+  const pl = P(s, p); const mf = mainSquad(s, p);
+  if (pl.res.intel >= TUNE.stationScrapCost && owned(pl) > TUNE.minDeck && mf && archCounts(s, p)[mf] >= 2) { const t = pl.discard.concat(pl.play).find(i => cardDef(s, i).id === 'T001'); if (t) stationScrap(s, p, t); }
+  while (pl.scrapAvail > 0 && owned(pl) > TUNE.minDeck) {
+    const intelSrc = allCards(pl).filter(i => cardDef(s, i).id !== 'T002').reduce((t, i) => t + cardDef(s, i).effects.concat(cardDef(s, i).loadout || []).reduce((a, e) => a + (e.op === 'gain' && e.res === 'intel' ? e.n : 0), 0), 0);
+    const pool = pl.discard.concat(pl.play).filter(i => { const id = cardDef(s, i).id; return id === 'T001' || (id === 'T002' && intelSrc >= 6) || (id === 'T005' && s.round >= 5 && intelSrc >= 6); });
+    const t = pool.sort((a, b) => (cardDef(s, a).id === 'T005') - (cardDef(s, b).id === 'T005'))[0]; if (!t || !scrap(s, p, t).ok) break;
+  }
+}
+function aiScoreLoc(s, p, w) {
+  const pl = P(s, p), o = P(s, 1 - p); const env = envAt(s, w); if (!env || env.state !== 'safe') return -99;
+  let sc = 0; if (closing(s).includes(w)) sc -= 12;
+  const E = eff(s, pl.guns[0]); const dd = Math.abs(w - o.pos);
+  const off = dd < E.band[0] ? E.band[0] - dd : dd > E.band[1] ? dd - E.band[1] : 0; sc += 6 - 2.5 * off;
+  if (off === 0 && E.band[1] <= 1 && dd === 0) sc += 1.5;
+  const oE = eff(s, o.guns[0]); if (dd >= oE.band[0] && dd <= oE.band[1]) sc -= 1.5;
+  if (dd !== 0) sc += ENVS[env.def].cover * 1.5;
+  if (env.loot.length) { const it = env.loot[0]; const v = aiItemScore(s, p, it); if (v > MIN_SCORE || (it.kind === 'weapon' && v > 0)) sc += Math.min(3, v * 0.35); }
+  if (aiAware(s, p)) { const mf = mainSquad(s, p); if (mf && ENVS[env.def].affinity === mf) sc += 1.2; }
+  return sc;
+}
+function aiMove(s, p) {
+  const pl = P(s, p); const here = aiScoreLoc(s, p, pl.pos);
+  const opts = reachable(s, p).filter(r => inSafe(s, r.w)).map(r => ({ w: r.w, sc: aiScoreLoc(s, p, r.w) - 0.3 * r.cost })).sort((a, b) => b.sc - a.sc);
+  if (opts.length && opts[0].sc > here + 0.5) move(s, p, opts[0].w);
+}
+function aiPlay(s, p) {
+  const pl = P(s, p);
+  for (const iid of pl.hand.slice()) {
+    const d = cardDef(s, iid); if (!pl.hand.includes(iid)) continue;
+    if (d.loadout && pl.loadout.length >= TUNE.loadoutSlots) { // replace the weakest slot if the new card is better, else use it once
+      const mf = mainSquad(s, p); const sc = i => val(cardDef(s, i).loadout) + (aiAware(s, p) && cardDef(s, i).archetype === mf ? 1 : 0);
+      const worst = pl.loadout.map((i, k) => [sc(i), k]).sort((a, b) => a[0] - b[0])[0];
+      playCard(s, p, iid, sc(iid) > worst[0] ? { slot: worst[1] } : { once: true });
+    } else playCard(s, p, iid);
+  }
+}
+function aiFireLoop(s, p) {
+  const pl = P(s, p);
+  for (let g = 0; g < 12 && !s.over; g++) {
+    if (!shootCheck(s, p, 0, pl.res.prec).ok) break;
+    const sg = suggestCommit(s, p, 0); if (sg.ev < 0.3) break;
+    if (!fire(s, p, 0, sg.commit).ok) break;
+  }
+}
+function aiTurn(s, p) {
+  if (s.over || s.turn !== p) return fail('not AI turn');
+  aiPlay(s, p);
+  aiMove(s, p);
+  aiBuy(s, p); aiCycle(s, p);
+  aiFireLoop(s, p);
+  if (!s.over) { aiScrap(s, p); aiBuy(s, p); }
+  if (s.over) return { ok: true };
+  return endTurn(s, p);
+}
+
+// ---------- removed systems (kept as stubs so older callers fail politely) ----------
+const LOADOUT = {}; const PERKS = {};
+const no = () => fail('Not in these rules.');
+const API = { RES, RES_LABEL, TIER_NAME, RARITY, MODS, GUNCLASS, CARDS, WEAPONS, ATTS, ENVS, WEAPON_COPIES, TUNE, ARCH_TAG, SQUADS, RALLY, RALLY_TEXT, FPW,
+  newGame, playCard, playAll, move, buy, fire, endTurn, aiTurn, aiPlay, aiMove, aiBuy, aiCycle, aiFireLoop, aiScrap, suggestCommit, stepOdds, stationScrap, squadCounts, mainSquad, buysLeft, closeSchedule, effText, playText,
+  reachable, closing, GUNSET, LOCSET, locTier, locSize, SQUAD_TEXT, rolesPlayed, NEIGHBOURS, cycle, LOADOUT, plateCost, nextPhase, buySupply, scrap, lootNear, PERKS, archCounts, gasRate, moveCost,
+  shotPreview, shootCheck, shotsLeft, hitChance, expDmg, lootCost, buyTotal, eff, envAt, dist, itemDef, cardDef, nextEdge, safeBounds, inSafe, isStarter, guns, owned, aiItemScore,
+  activateGun: no, eligibleFuel: () => [], boostOk: () => 'Not in these rules.', search: no, searchable: () => null, burnAtBench: no, canBench: () => false, punch: no, pickPerk: no, perksOf: () => [], hasPerk: () => false, stackPlan: () => [], flip: () => false, ammoLeft: () => 0 };
+if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.WD = API;
+})(typeof window !== 'undefined' ? window : globalThis);
