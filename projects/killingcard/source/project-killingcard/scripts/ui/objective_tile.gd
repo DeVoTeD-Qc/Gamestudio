@@ -2,9 +2,9 @@
 # Purpose: The objective tile in the middle of a column (board-and-cards-ux.md §3.2, field-cards.md
 #   model B). Left: rival column Firepower (top) and yours (bottom). Centre: the column letter in a
 #   control mark (yours: teal circle, rival: red diamond, contested: grey dashed square, open: grey
-#   ring). Right: the range word (top half) and the control word (bottom half).
-#   Fields sit on their owner's half of the tile: a 4:1 chip of the Field's banner art with a stake
-#   glyph, replacing that half's word. Your hidden trap shows as a dashed chip (the rival never
+#   ring). Right: the rival's Field chip (top band), the range and control words (middle), your
+#   Field chip (bottom band); kc-polish made the tile taller so chips never cover the words.
+#   A Field chip is a 4:1 slice of the Field's banner art with a stake glyph. Your hidden trap shows as a dashed chip (the rival never
 #   sees yours, you never see theirs). A queued Field shows PLAN. A Field the enemy controls the
 #   column of (field_view overrun_risk) gets a pulsing red OVERRUN tab: it is torn down at the end
 #   of the round unless the column changes hands.
@@ -101,25 +101,25 @@ func _draw() -> void:
 	var lsz: Vector2 = word_font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs)
 	draw_string(word_font, Vector2(c.x - lsz.x * 0.5, c.y + (word_font.get_ascent(lfs) - word_font.get_descent(lfs)) * 0.5), letter,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, Color.WHITE)
-	# Right region: Field chips on their owner's half, else range (top) / control word (bottom).
+	# Right region (kc-polish, B2), three bands: the rival's Field chip on top, the range and
+	# control words in the middle, your Field chip at the bottom, so chips never cover the words.
 	_chip_rects.clear()
 	var rx: float = c.x + mark_r * 1.25 + 4.0
 	var rw: float = size.x - rx - 4.0
-	var half: float = h * 0.5
-	var chip_h: float = minf(half - 4.0, rw / 4.0)
+	var wfs: int = 16 if compact else 18
+	var line_h: float = float(wfs) + 1.0
+	var chip_h: float = clampf(floorf((h - 2.0 * line_h - 4.0) * 0.5), 12.0, rw / 4.0)
 	var top_fields: Array = fields.get("enemy", [])
 	var bottom_fields: Array = fields.get("player", [])
-	var wfs: int = 16 if compact else 18
-	if top_fields.is_empty():
-		_word(word_font, wfs, range_word, Rect2(rx, 0, rw, half), Color("#9AA5AE"))
-	else:
-		_chip(Rect2(rx, half - chip_h - 2.0, rw, chip_h), &"enemy", top_fields[0])
-	if bottom_fields.is_empty():
-		var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "CONTESTED"}.get(control, "OPEN")
-		var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
-		_word(word_font, wfs, word, Rect2(rx, half, rw, half), wc)
-	else:
-		_chip(Rect2(rx, half + 2.0, rw, chip_h), &"player", bottom_fields[0])
+	if not top_fields.is_empty():
+		_chip(Rect2(rx, 1.0, rw, chip_h), &"enemy", top_fields[0])
+	if not bottom_fields.is_empty():
+		_chip(Rect2(rx, h - chip_h - 1.0, rw, chip_h), &"player", bottom_fields[0])
+	var mid_top: float = (h - 2.0 * line_h) * 0.5
+	_word(word_font, wfs, range_word, Rect2(rx, mid_top, rw, line_h), Color("#9AA5AE"))
+	var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "CONTESTED"}.get(control, "OPEN")
+	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
+	_word(word_font, wfs, word, Rect2(rx, mid_top + line_h, rw, line_h), wc)
 
 
 func _fp_line(font: Font, fs: int, at: Vector2, value: int, c: Color) -> void:
@@ -172,7 +172,7 @@ func _chip(rr: Rect2, side: StringName, f: Dictionary) -> void:
 
 func _tag(rr: Rect2, text: String, fg: Color, bg: Color) -> void:
 	var font: Font = get_theme_font(&"font", &"HudHeader")
-	var fs: int = clampi(int(rr.size.y) - 2, 11, 16)
+	var fs: int = clampi(int(rr.size.y) - 1, 12, 16)
 	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var box: Rect2 = Rect2(rr.get_center() - Vector2(sz.x * 0.5 + 3.0, rr.size.y * 0.5), Vector2(sz.x + 6.0, rr.size.y))
 	if bg.a > 0.0:

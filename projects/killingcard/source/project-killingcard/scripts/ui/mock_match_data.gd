@@ -87,4 +87,4 @@ static func _unit(unit_name: String, cls: String, fp: int, armor: int, armor_max
 
 static func _operator() -> Dictionary:
 	return {"name": "Kestrel AR-7", "cls": "OPERATOR", "fp": 3, "armor": 5, "armor_max": 7, "operator": true,
-			"banner": "kestrel_ar7", "camo": "gold"}
+			"banner": "kestrel_ar7", "camo": "base"}

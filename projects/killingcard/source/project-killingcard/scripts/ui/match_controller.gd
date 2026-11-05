@@ -1274,7 +1274,7 @@ func _open_operator(side: int) -> void:
 		"text": String(view["text"]), "keywords": CardInfo.operator_keywords(op), "status": where,
 		"banner": MatchSnapshot.unit_entry(state, op, s), "side": side,
 		"art_line": _art_line(BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))) \
-				+ " · Camo tier: %s (mastery tiers come later)" % ("Gold" if side == PLAYER else "Base"),
+				+ " · Camo tier: Base (mastery tiers come later)",
 	})
 
 

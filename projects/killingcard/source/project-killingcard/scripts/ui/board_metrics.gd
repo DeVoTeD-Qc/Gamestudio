@@ -12,9 +12,11 @@ extends RefCounted
 const COLUMNS: int = 3
 const ROWS: int = 4
 ## [top, row_gap, mid_gap, obj_h, hand_gap, hand_h, gutter, hand card w, rail gap, rail_min]
-const PHONE: Dictionary = {"top": 4.0, "row_gap": 3.0, "mid_gap": 4.0, "obj_h": 54.0, "hand_gap": 6.0,
+## kc-polish (head, B2): a taller objective tile (phone 66, desktop 92) so a Field chip and the tile's
+## own words both fit; the height comes from tighter gaps, so banners keep 176x44 / 256x64.
+const PHONE: Dictionary = {"top": 2.0, "row_gap": 2.0, "mid_gap": 3.0, "obj_h": 66.0, "hand_gap": 4.0,
 		"hand_h": 98.0, "gutter": 20.0, "card_w": 78.0, "card_gap": 4.0, "rail_gap": 12.0, "rail_min": 204.0}
-const DESKTOP: Dictionary = {"top": 12.0, "row_gap": 5.0, "mid_gap": 8.0, "obj_h": 80.0, "hand_gap": 10.0,
+const DESKTOP: Dictionary = {"top": 8.0, "row_gap": 4.0, "mid_gap": 8.0, "obj_h": 92.0, "hand_gap": 8.0,
 		"hand_h": 140.0, "gutter": 24.0, "card_w": 108.0, "card_gap": 8.0, "rail_gap": 18.0, "rail_min": 196.0}
 
 

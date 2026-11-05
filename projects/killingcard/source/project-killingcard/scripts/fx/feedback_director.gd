@@ -392,7 +392,9 @@ func _on_step(ev: Dictionary, t: RefCounted) -> float:
 	var r: Rect2 = _zone_rect(_current_zone)
 	if text == "" or not r.has_area() or _skipping:
 		return t.get_value(&"step_pause")
-	_popup_at(_to_local(r.get_center()), text, &"heading", 20, FxStyle.FOG, ev, &"step")
+	# kc-board: the column centre is the objective tile (its own words); name the step at the
+	# column's top edge instead, over the rival's back row.
+	_popup_at(_to_local(Vector2(r.get_center().x, r.position.y + minf(28.0, r.size.y * 0.1))), text, &"heading", 20, FxStyle.FOG, ev, &"step")
 	return t.get_value(&"step_pause") + t.get_value(&"popup_beat")
 
 

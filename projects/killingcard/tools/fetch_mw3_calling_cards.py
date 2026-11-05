@@ -214,7 +214,9 @@ def download(rows: list[dict], img_dir: str, limit: int | None) -> tuple[int, in
             skipped += 1
             continue
         try:
-            data = http_get(r["url"])
+            # Without format=original the CDN content-negotiates a lossy WebP re-encode.
+            sep = "&" if "?" in r["url"] else "?"
+            data = http_get(r["url"] + sep + "format=original")
         except Exception as e:  # keep going; resumable on the next run
             failed.append(f"{r['file']} ({e})")
             continue

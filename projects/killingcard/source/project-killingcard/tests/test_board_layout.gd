@@ -463,6 +463,9 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 	var cards: Array[Node] = match_node.get_node("%HandArea").get_cards()
 	for i: int in cards.size():
 		var card_rect: Rect2 = (cards[i] as Control).get_global_rect()
+		# kc-polish: the selected card rises by 14% of its height above the hand row (§3.7).
+		if (cards[i] as Control).theme_type_variation == &"HandCardSelected":
+			card_rect = card_rect.grow_side(SIDE_BOTTOM, -card_rect.size.y * 0.15).grow_side(SIDE_TOP, -card_rect.size.y * 0.15)
 		assert_true(hand_rect.encloses(card_rect), "%s hand card spills" % label)
 		# Overlapped cards: the uncovered strip of each card is still a full tap target.
 		if i + 1 < cards.size():

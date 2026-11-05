@@ -6,10 +6,10 @@
 [resource]
 script = ExtResource("2_ca4wp")
 id = &"shieldman"
-display_name = "Shieldman"
+display_name = "Protector"
 card_type = 0
 is_elite = false
-text = "Cover 1. Arrives at the front of the line, ahead of units already there."
+text = "Cover 1. Slides to the front of its column on arrival."
 cost = 3
 weapon_class = 0
 firepower = 1

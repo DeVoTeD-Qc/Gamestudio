@@ -130,7 +130,7 @@ static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: Ru
 	e["front_kw"] = card != null and card.arrives_front
 	e["elite"] = card != null and card.is_elite
 	if e.get("operator", false):
-		e["camo"] = "gold" if side.index == MatchState.PLAYER else "base"
+		e["camo"] = "base"  # head (kc-polish): Base for both sides until the mastery grind exists
 
 
 static func art_key_of_card(card: CardData) -> String:

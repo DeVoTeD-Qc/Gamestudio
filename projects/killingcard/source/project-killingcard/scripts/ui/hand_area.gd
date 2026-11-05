@@ -29,6 +29,8 @@ const CARD_SIZE: Vector2 = Vector2(108, 140)
 const CARD_SIZE_COMPACT: Vector2 = Vector2(78, 98)
 const CARD_GAP: int = 8
 const SHIMMER: Shader = preload("res://assets/shaders/banner_shimmer.gdshader")
+## Selected card lift (board-and-cards-ux.md §3.7), share of the card height.
+const SELECTED_LIFT: float = 0.14
 ## f04 icon sizes and cost hex (pointy-top, as on CardView).
 const ICON_PX: float = 20.0
 const ICON_PX_COMPACT: float = 18.0
@@ -105,8 +107,11 @@ func get_card(uid: int) -> Control:
 
 
 func set_selected(uid: int) -> void:
+	var changed: bool = uid != selected_uid
 	selected_uid = uid
 	_apply_styles()
+	if changed:
+		_fit_cards()
 
 
 ## Hides the chip being dragged (-1 shows all again).
@@ -187,7 +192,11 @@ func _fit_cards() -> void:
 	for card: Node in cards:
 		var c: Control = card
 		c.size = card_size
-		c.position = Vector2(roundf(x), roundf((_row.size.y - card_size.y) * 0.5))
+		var y: float = roundf((_row.size.y - card_size.y) * 0.5)
+		# kc-polish: the selected card rises by 14% of its height (over the board's bottom gap).
+		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
+			y -= roundf(card_size.y * SELECTED_LIFT)
+		c.position = Vector2(roundf(x), y)
 		x += pitch
 
 
@@ -222,6 +231,18 @@ func _make_card(card: Dictionary) -> Control:
 	hex.set_text(str(card.get("cost", 0)))
 	hex.label.set_meta(&"important", true)
 	face.add_child(hex)
+	if bool(card.get("elite", false)):
+		# Elite (Commander / Ace): gold star over the art's top-right corner.
+		var star: Control = Control.new()
+		star.name = "EliteStar"
+		star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		star.custom_minimum_size = Vector2(18, 18) if not big else Vector2(22, 22)
+		star.size = star.custom_minimum_size
+		star.draw.connect(func() -> void:
+			star.draw_circle(star.size * 0.5, star.size.x * 0.5, Color(0.05, 0.06, 0.07, 0.85))
+			BannerView.draw_star(star, star.size * 0.5, star.size.x * 0.4, get_theme_color(&"elite", &"Hud")))
+		face.add_child(star)
+		panel.sort_children.connect(func() -> void: star.position = Vector2(face.size.x - star.size.x - 2.0, 2.0))
 	var title: Label = _label(String(card.get("name", "")), &"UnitName", false)
 	title.name = "NameLabel"
 	title.add_theme_font_size_override(&"font_size", 16)

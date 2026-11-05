@@ -60,6 +60,9 @@ func _ready() -> void:
 ## Starts a new run (replacing any saved one). seed < 0 picks a random seed.
 func start_run(seed_value: int = -1) -> RunProgress:
 	var s: int = seed_value
+	if s < 0 and OS.has_feature("web"):
+		# Browser smoke tests replay a run with ?qa=1&seed=N (scripts/qa/qa_bridge.gd).
+		s = (load("res://scripts/qa/qa_bridge.gd") as GDScript).call(&"url_seed")
 	if s < 0:
 		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		rng.randomize()

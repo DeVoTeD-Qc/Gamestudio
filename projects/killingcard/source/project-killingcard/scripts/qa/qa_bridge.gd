@@ -20,6 +20,17 @@ static func enabled() -> bool:
 	return String(q).contains("qa=1")
 
 
+## ?qa=1&seed=N: the run seed a new run uses (-1 = none), so a smoke test can replay a run.
+static func url_seed() -> int:
+	if not enabled():
+		return -1
+	var q: String = String(JavaScriptBridge.eval("window.location.search || ''", true))
+	for part: String in q.trim_prefix("?").split("&"):
+		if part.begins_with("seed=") and part.substr(5).is_valid_int():
+			return int(part.substr(5))
+	return -1
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	if _t < PERIOD:
@@ -34,6 +45,9 @@ func snapshot(scene: Node = null) -> Dictionary:
 	if scene == null:
 		scene = get_tree().current_scene
 	var out: Dictionary = {"scene": String(scene.name) if scene != null else "", "buttons": []}
+	var rs: Node = get_node_or_null(^"/root/RunState")
+	if rs != null and rs.get(&"run") != null:
+		out["run_seed"] = rs.run.get(&"seed_value")
 	if scene == null:
 		return out
 	for n: Node in scene.find_children("*", "Control", true, false):

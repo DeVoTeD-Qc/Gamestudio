@@ -242,7 +242,7 @@ func _draw_overlay() -> void:
 	var band_h: float = 6.0 if size.y < 100.0 else 10.0
 	if op:
 		var band: Rect2 = Rect2(spine, size.y - band_h if mine else 0.0, size.x - spine, band_h)
-		_draw_camo(o, band, StringName(String(entry.get("camo", "gold"))))
+		_draw_camo(o, band, StringName(String(entry.get("camo", "base"))))
 		var fr: Rect2 = r.grow(-1.5)
 		o.draw_rect(fr.grow(1.0), INK, false, 1.0)
 		o.draw_rect(fr, BRASS, false, 3.0)
@@ -263,6 +263,11 @@ func _draw_overlay() -> void:
 	var cls: String = String(entry.get("cls", "")).to_upper()
 	if CLASS_ICONS.has(cls) and not op:
 		_draw_plate_icon(o, Rect2(left_x, outer_y, m["plate"], m["plate"]), IconSheet.get_icon(CLASS_ICONS[cls]), _col(&"text"))
+	if bool(entry.get("elite", false)):
+		# Elite (Commander / Ace): a gold star plate next to the class pip (the fonts have no star glyph).
+		var sr: Rect2 = Rect2(left_x + m["plate"] + 2.0, outer_y, m["plate"], m["plate"])
+		o.draw_rect(sr, Color(INK, 0.82))
+		draw_star(o, sr.get_center(), sr.size.x * 0.42, BRASS)
 	# Effect (outer-right): Operator dog tag, else up to 2 keyword glyphs, else a bolt.
 	var ex: float = size.x - m["pad"] - m["plate"]
 	if op:
@@ -436,6 +441,15 @@ func _draw_reticle(o: Control, r: Rect2) -> void:
 	o.draw_arc(ctr, rad, 0, TAU, 28, c, 2.0)
 	o.draw_line(ctr - Vector2(rad * 1.5, 0), ctr - Vector2(rad * 0.5, 0), c, 2.0)
 	o.draw_line(ctr + Vector2(rad * 0.5, 0), ctr + Vector2(rad * 1.5, 0), c, 2.0)
+
+
+## A filled 5-point star (Elite mark).
+static func draw_star(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
+	var pts: PackedVector2Array = []
+	for i: int in 10:
+		var a: float = -PI / 2.0 + i * PI / 5.0
+		pts.append(c + Vector2(cos(a), sin(a)) * (r if i % 2 == 0 else r * 0.45))
+	ci.draw_colored_polygon(pts, col)
 
 
 static func _dashed_rect(o: Control, rr: Rect2, c: Color, w: float) -> void:

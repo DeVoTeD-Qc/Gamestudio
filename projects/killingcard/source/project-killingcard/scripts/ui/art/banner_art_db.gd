@@ -125,7 +125,7 @@ static func _licensed_art(art_id: StringName) -> BannerArt:
 
 ## Imported texture, else the raw PNG / JPG / WebP bytes decoded (null when unreadable).
 static func _load_image(path: String) -> Texture2D:
-	if ResourceLoader.exists(path):
+	if FileAccess.file_exists(path + ".import") and ResourceLoader.exists(path):
 		var res: Resource = load(path)
 		if res is Texture2D:
 			return res
@@ -134,13 +134,13 @@ static func _load_image(path: String) -> Texture2D:
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
 	var img := Image.new()
 	var err: Error = ERR_FILE_UNRECOGNIZED
-	match path.get_extension().to_lower():
-		"png":
-			err = img.load_png_from_buffer(bytes)
-		"jpg", "jpeg":
-			err = img.load_jpg_from_buffer(bytes)
-		"webp":
-			err = img.load_webp_from_buffer(bytes)
+	# Sniff the bytes, not the extension (some downloads are WebP saved as .png).
+	if bytes.size() >= 12 and bytes.slice(0, 4).get_string_from_ascii() == "RIFF" and bytes.slice(8, 12).get_string_from_ascii() == "WEBP":
+		err = img.load_webp_from_buffer(bytes)
+	elif bytes.size() >= 8 and bytes[0] == 0x89 and bytes[1] == 0x50:
+		err = img.load_png_from_buffer(bytes)
+	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8:
+		err = img.load_jpg_from_buffer(bytes)
 	return ImageTexture.create_from_image(img) if err == OK and not img.is_empty() else null
 
 

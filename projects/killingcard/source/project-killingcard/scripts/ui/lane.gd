@@ -184,18 +184,44 @@ func show_ghost(entry: Dictionary, front: bool = false) -> void:
 		_ghost.visible = false
 		_ghost.set_focus(false)
 		_ghost_row = -1
+		_shift_for_ghost(false)
 		_place_badge()
 		return
 	var line: int = (lane_data.get("friendly", []) as Array).size()
 	_ghost_row = 0 if front else line
-	if _ghost_row >= ROWS:
+	if _ghost_row >= ROWS or (front and line >= ROWS):
 		_ghost.visible = false
 		_ghost_row = -1
+		_shift_for_ghost(false)
 		return
 	_ghost.show_ghost(entry)
 	_ghost.visible = true
+	# kc-polish (B1): a Protector's ghost takes row 1 and your cards preview their shift back one
+	# row, so the ghost never covers your current front card.
+	_shift_for_ghost(front and line > 0)
 	_place_ghost()
 	_place_badge()
+
+
+var _ghost_shift: bool = false
+
+
+## Moves your banners back one row (preview of the Protector slide), or returns them.
+func _shift_for_ghost(on: bool) -> void:
+	if on == _ghost_shift or metrics.is_empty():
+		return
+	_ghost_shift = on
+	var pitch: float = metrics["bh"] + metrics["row_gap"]
+	for slot: Node in _friendly_slots:
+		if slot.kind == slot.Kind.EMPTY:
+			continue
+		var b: BannerView = slot.banner
+		var tw: Tween = _motion(b)
+		tw.tween_property(b, "position:y", pitch if on else 0.0, _ms(140.0) / 1000.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func is_ghost_shift() -> bool:
+	return _ghost_shift
 
 
 func get_ghost() -> BannerView:
@@ -215,7 +241,7 @@ func _place_badge() -> void:
 	if metrics.is_empty() or _badge == null:
 		return
 	_badge.reset_size()
-	var line: int = (lane_data.get("friendly", []) as Array).size()
+	var line: int = (lane_data.get("friendly", []) as Array).size() + (1 if _ghost_shift else 0)
 	var row: int = clampi(line, 0, ROWS - 1)
 	if row == _ghost_row:
 		row = mini(row + 1, ROWS - 1) if row < ROWS - 1 else maxi(row - 1, 0)
@@ -274,6 +300,11 @@ func _slot_hit(global_pos: Vector2, inspect: bool = false) -> Array:
 func set_lane(lane: Dictionary) -> void:
 	lane_data = lane
 	zone_id = lane.get("id", &"")
+	if _ghost_shift:
+		_ghost_shift = false
+		for slot: Node in _friendly_slots:
+			_motion(slot.banner).kill()
+			slot.banner.position.y = 0.0
 	_tile.set_tile(lane)
 	var enemy: Array = lane.get("enemy", [])
 	var friendly: Array = lane.get("friendly", [])
@@ -436,7 +467,7 @@ func _enter(slot: Node, s_side: StringName, land_row: int, row: int, protector: 
 	banner.scale = Vector2(1.04, 1.04)
 	banner.pivot_offset = banner.size * 0.5
 	banner.set_focus(true, _ms(900.0) / 1000.0 if not protector else _ms(1300.0) / 1000.0)
-	var tw: Tween = banner.create_tween()
+	var tw: Tween = _motion(banner)
 	tw.tween_property(banner, "modulate:a", 1.0, _ms(LIFT_MS) / 1000.0)
 	var slide: float = SLIDE_BASE_MS + SLIDE_PER_ROW_MS * float(ROWS - 1 - land_row)
 	tw.tween_property(banner, "position:y", land_y - slot_y, _ms(slide) / 1000.0).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -451,10 +482,21 @@ func _enter(slot: Node, s_side: StringName, land_row: int, row: int, protector: 
 func _shift(slot: Node, s_side: StringName, from_row: int, row: int, delay_ms: float) -> void:
 	var banner: BannerView = slot.banner
 	banner.position = Vector2(0, BoardMetrics.row_y(metrics, s_side, from_row) - BoardMetrics.row_y(metrics, s_side, row))
-	var tw: Tween = banner.create_tween()
+	var tw: Tween = _motion(banner)
 	if delay_ms > 0.0:
 		tw.tween_interval(_ms(delay_ms) / 1000.0)
 	tw.tween_property(banner, "position:y", 0.0, _ms(SHIFT_MS) / 1000.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## One motion tween per banner: a new move replaces the one still running.
+func _motion(b: BannerView) -> Tween:
+	if b.has_meta(&"motion"):
+		var old: Tween = b.get_meta(&"motion") as Tween
+		if old != null and old.is_valid():
+			old.kill()
+	var tw: Tween = b.create_tween()
+	b.set_meta(&"motion", tw)
+	return tw
 
 
 func _fade_out_copy(s_side: StringName, row: int, entry: Dictionary) -> void:

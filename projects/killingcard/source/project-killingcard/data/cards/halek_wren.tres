@@ -20,10 +20,10 @@ delay_rounds = 0
 [resource]
 script = ExtResource("2_ala0a")
 id = &"halek_wren"
-display_name = "Lt. Halek \"Wren\""
+display_name = "Ace"
 card_type = 0
 is_elite = true
-text = "Pick. Her eliminations give +1 extra streak."
+text = "Pick. Its eliminations give +1 extra streak."
 cost = 5
 weapon_class = 4
 firepower = 4

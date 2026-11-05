@@ -276,3 +276,11 @@ Built in `source/project-killingcard` to the head's decisions (3 columns x 4 row
 **Deviations.** Card art never rises 14% when selected (the hand row has no spare height; the selected card gets the amber frame and the shimmer instead). Card names on the board and in the hand are still Killstreak's (`Shieldman`, not `Protector`: data renames belong to the rules/data task). Column objective words: `YOURS / RIVAL / CONTESTED / OPEN`; the range word sits on the tile's top-right and gives way to a rival Field chip. The forecast (PREVIEW) cards now stack 4 lines over the objective tile. The killfeed lives in the right rail on every screen (names may shorten to 10 characters there).
 
 **QA.** `tests/test_board_columns.gd` (metrics vs this spec, rows and order, crops, drop-in and licensed paths, ghost / Protector slide / snapping, Fields + Overrun, inspector banner, QA bridge). Web builds opened with `?qa=1` publish `window.kcQa` (`scripts/qa/qa_bridge.gd`) so Playwright clicks real rects. Dev screenshots: `tests/tools/shot_match.gd` (xvfb).
+
+**kc-polish (head's answers, 2026-11-05).**
+- B1: while a Protector is selected, your cards in each valid column preview their shift back one row, so its row-1 ghost never covers your front card.
+- B2: the objective tile is taller (phone 66 px, desktop 92 px; the space comes from tighter row, mid and hand gaps, so banners stay 176x44 / 256x64). It has three bands: the rival Field chip on top, then the range and control words, then your Field chip at the bottom. Firefight step labels (FIRST SHOT / MAIN) now show at the column's top edge, not over the tile.
+- B3: the Operator camo is Base for both sides.
+- Display names: Shieldman is now Protector, and the two elites are Commander and Ace. Their ids are unchanged. The ★ is drawn as a gold star plate on the banner and the hand card, because the UI fonts have no ★ glyph.
+- The selected hand card rises 14%.
+- QA: `?qa=1&seed=N` replays a run seed.

@@ -20,7 +20,7 @@ delay_rounds = 0
 [resource]
 script = ExtResource("2_4lxvo")
 id = &"okafor_anvil"
-display_name = "Sgt. Okafor \"Anvil\""
+display_name = "Commander"
 card_type = 0
 is_elite = true
 text = "Holder. Your other units here get +1 FP."

@@ -23,16 +23,18 @@ func test_metrics_match_the_spec() -> void:
 	assert_eq(float(m["col_x"][1]) + (m["board"] as Rect2).position.x + 12.0, 496.0, "column B at 496")
 	assert_eq(float(m["col_x"][2]) + (m["board"] as Rect2).position.x + 12.0, 692.0, "column C at 692")
 	assert_eq((m["hand"] as Rect2).position.y, 442.0, "phone hand row at y 442")
+	assert_eq(m["obj_h"], 66.0, "phone objective tile 66 px (kc-polish)")
 	assert_eq((m["hand"] as Rect2).end.y, 540.0, "hand reaches the bottom")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + (m["board"] as Rect2).position.y, 4.0, "rival back row at y 4")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + (m["board"] as Rect2).position.y, 145.0, "rival front row at y 145")
-	assert_eq(BoardMetrics.objective_y(m) + (m["board"] as Rect2).position.y, 193.0, "objective at y 193")
-	assert_eq(BoardMetrics.row_y(m, &"player", 0) + (m["board"] as Rect2).position.y, 251.0, "your front row at y 251")
-	assert_eq(BoardMetrics.row_y(m, &"player", 3) + (m["board"] as Rect2).position.y, 392.0, "your back row at y 392")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + (m["board"] as Rect2).position.y, 2.0, "rival back row at y 2")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + (m["board"] as Rect2).position.y, 140.0, "rival front row at y 140")
+	assert_eq(BoardMetrics.objective_y(m) + (m["board"] as Rect2).position.y, 187.0, "objective at y 187")
+	assert_eq(BoardMetrics.row_y(m, &"player", 0) + (m["board"] as Rect2).position.y, 256.0, "your front row at y 256")
+	assert_eq(BoardMetrics.row_y(m, &"player", 3) + (m["board"] as Rect2).position.y, 394.0, "your back row at y 394")
 	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 24, 800), false)
 	assert_eq([d["bw"], d["bh"]], [256.0, 64.0], "desktop banner 256x64")
 	assert_eq((d["board"] as Rect2).position.x + 12.0, 232.0, "desktop column A at x 232")
-	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 379.0, "desktop front row at y 379")
+	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 384.0, "desktop front row at y 384")
+	assert_eq(d["obj_h"], 92.0, "desktop objective tile 92 px")
 	assert_eq((d["hand"] as Rect2).position.y, 660.0, "desktop hand at y 660")
 	# Narrow safe area (notch): banners shrink but keep 4:1 and rails keep their minimum.
 	var n: Dictionary = BoardMetrics.compute(Vector2(900, 540), true)
@@ -173,7 +175,7 @@ func test_ghost_protector_slide_and_snap() -> void:
 	me.hand.append(prot)
 	me.supply = 10
 	c.refresh()
-	await tree.process_frame
+	await tree.create_timer(1.5).timeout  # the two new units finish entering
 	c.select_card(prot.uid)
 	await tree.process_frame
 	var ghost: BannerView = lane.get_ghost()
@@ -181,6 +183,9 @@ func test_ghost_protector_slide_and_snap() -> void:
 	if ghost != null:
 		assert_eq(ghost.position.y, BoardMetrics.row_y(lane.metrics, &"player", 0), "Protector ghost in row 1")
 	assert_eq(lane.target_text, "TAKES THE FRONT", "Protector badge")
+	await tree.create_timer(0.4).timeout
+	assert_true(lane.is_ghost_shift(), "your cards preview their shift back (B1)")
+	assert_true(lane.get_friendly_slots()[0].banner.position.y > 10.0, "front card moved out from under the ghost")
 	# A normal unit's ghost goes to the first free row.
 	var rif := RulesCard.new(st.new_uid(), CardDB.get_card(&"rifleman"))
 	me.hand.append(rif)
@@ -190,6 +195,9 @@ func test_ghost_protector_slide_and_snap() -> void:
 	ghost = lane.get_ghost()
 	assert_true(ghost != null and is_equal_approx(ghost.position.y, BoardMetrics.row_y(lane.metrics, &"player", 2)), "unit ghost in row 3")
 	c.clear_selection()
+	await tree.process_frame
+	assert_false(lane.is_ghost_shift(), "shift undone when the selection clears")
+	await tree.create_timer(0.3).timeout
 	# Play the Protector: it lands in row 1 (PLAN); its banner starts away from row 1 and slides.
 	c.select_card(prot.uid)
 	var res: Dictionary = c.play_at(0)

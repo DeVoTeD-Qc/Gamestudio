@@ -110,17 +110,17 @@ func _gen() -> void:
 	var breacher := unit("breacher", "Breacher", W.SHOTGUN, 3, 3, 4, "First Shot", {"first_shot": true})
 	var marksman := unit("marksman", "Marksman", W.SNIPER, 3, 2, 2, "Pick", {"pick": true})
 	var flanker := unit("flanker", "Flanker", W.SMG, 3, 2, 3, "Flank", {"flank": true})
-	var shieldman := unit("shieldman", "Shieldman", W.NONE, 3, 1, 5,
-		"Cover 1. Arrives at the front of the line, ahead of units already there.", {"cover": 1, "arrives_front": true})
+	var shieldman := unit("shieldman", "Protector", W.NONE, 3, 1, 5,
+		"Cover 1. Slides to the front of its column on arrival.", {"cover": 1, "arrives_front": true})
 	var gunner := unit("gunner", "Gunner", W.LMG, 4, 2, 6, "Suppress", {"suppress": true})
 	var demo := unit("demolitions_expert", "Demolitions Expert", W.LMG, 4, 2, 4,
 		"On Down: 3 damage to the enemy point man here.", {},
 		[fx(T.ON_DOWN, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.THIS_ZONE, 3)])
-	var anvil := unit("okafor_anvil", "Sgt. Okafor \"Anvil\"", W.AR, 5, 3, 6,
+	var anvil := unit("okafor_anvil", "Commander", W.AR, 5, 3, 6,
 		"Holder. Your other units here get +1 FP.", {"is_elite": true, "holder": true},
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.OTHER_FRIENDLIES, Z.THIS_ZONE, 1)])
-	var wren := unit("halek_wren", "Lt. Halek \"Wren\"", W.SNIPER, 5, 4, 3,
-		"Pick. Her eliminations give +1 extra streak.", {"is_elite": true, "pick": true},
+	var wren := unit("halek_wren", "Ace", W.SNIPER, 5, 4, 3,
+		"Pick. Its eliminations give +1 extra streak.", {"is_elite": true, "pick": true},
 		[fx(T.ON_ELIMINATE, K.STREAK_BONUS, TG.OWNER, Z.ANY, 1)])
 	var callout := card("callout", "Callout", DataEnums.CardType.TACTIC, 0,
 		"Resolves immediately: reveal red dots in a zone; your first unit to arrive there gets +1 FP.",
