@@ -5,6 +5,9 @@
     python3 src/webart/reencode_art.py --from DIR     # read originals from DIR (same layout as src/webart)
     python3 src/webart/reencode_art.py --check        # print what it would write, change nothing
 
+Art added after the import has no original at ORIGINALS_REV; its original lives in src/webart/originals/
+(same name, 520 px RGBA WebP) and is used when git has none.
+
 Always start from the ORIGINALS, never from files this script already wrote (re-encoding a lossy
 file again only loses quality). The originals are in git at ORIGINALS_REV (the 520 px RGBA card art,
 360 px gun art, 420 px location art as imported). Needs Pillow (with WebP) and numpy.
@@ -43,6 +46,13 @@ GROUPS = {
     'locs': dict(max_w=336, quality=45, alpha=None),
 }
 ALPHA_QUALITY = 50
+# Full-frame card art (the 4 Loadout cards, wb-art): the vignette is solid khaki edge to edge, so at the
+# card settings each file was ~16 KB against ~11-13 KB for the older, airier cards, and the four pushed the
+# build ~15 KB over 1.5 MB. A 0.4 px pre-blur (below what shows at 1x) plus lower quality brings them to
+# ~11 KB each. Per file, so the other 40 cards are byte-for-byte unchanged.
+DENSE = dict(quality=32, alpha_quality=30, preblur=0.4)
+OVERRIDES = {f: DENSE for f in ('Tac_Vest.webp', 'Recon_Post.webp', 'Field_Pack.webp', 'Bounty_Contract.webp')}
+ORIGINALS_DIR = os.path.join(HERE, 'originals')  # originals of art added after ORIGINALS_REV
 MATTE_RADIUS = 3  # px the soft silhouette grows past the ink (at the output size)
 
 
@@ -66,10 +76,12 @@ def soft_matte(im, r=MATTE_RADIUS):
 
 def encode(im, cfg):
     im = resize(im.convert('RGBA') if cfg['alpha'] else im.convert('RGB'), cfg['max_w'])
+    if cfg.get('preblur'):
+        im = im.filter(ImageFilter.GaussianBlur(cfg['preblur']))
     if cfg['alpha'] == 'soft':
         im = soft_matte(im)
     buf = io.BytesIO()
-    im.save(buf, 'WEBP', quality=cfg['quality'], alpha_quality=ALPHA_QUALITY, method=6)
+    im.save(buf, 'WEBP', quality=cfg['quality'], alpha_quality=cfg.get('alpha_quality', ALPHA_QUALITY), method=6)
     return buf.getvalue(), im.size
 
 
@@ -83,6 +95,9 @@ def read_original(src_dir, rel):
         with open(os.path.join(src_dir, rel), 'rb') as f:
             return f.read()
     out = subprocess.run(['git', 'show', f'{ORIGINALS_REV}:{REPO_PATH}/{rel}'], cwd=HERE, capture_output=True)
+    if out.returncode and os.path.isfile(os.path.join(ORIGINALS_DIR, rel)):
+        with open(os.path.join(ORIGINALS_DIR, rel), 'rb') as f:
+            return f.read()
     if out.returncode:
         sys.exit(f'git show failed for {rel}: {out.stderr.decode().strip()}')
     return out.stdout
@@ -99,7 +114,7 @@ def main():
         for f in sorted(os.listdir(listing)):
             if f.endswith('.webp'):
                 rel = os.path.join(sub, f) if sub else f
-                jobs.append((rel, read_original(args.src, rel), cfg))
+                jobs.append((rel, read_original(args.src, rel), {**cfg, **OVERRIDES.get(rel, {})}))
     total_in = total_out = 0
     with ProcessPoolExecutor() as ex:
         for (rel, orig, _), (data, size) in zip(jobs, ex.map(_encode_bytes, jobs)):

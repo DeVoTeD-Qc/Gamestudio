@@ -51,12 +51,18 @@ test('every component a match can deal has a card face for the web build', () =>
   WD.LOCSET.forEach((L, i) => assert.ok(names.has('loc_L' + String(i + 1).padStart(2, '0'))));
 });
 
-// The 4 Loadout cards (new in wb-rules) have no art yet: they show their squad's sample art until the art pass (ui.js artURL fallback).
-const SQUAD_ART = { assault: 'Breach', recon: 'Mark_Target', support: 'Ammo_Box', engineer: 'Deployable_Cover' };
+// Every card in play has its own art, the 4 Loadout cards included (wb-art). ui.js keeps a squad-art
+// fallback (SQUAD_ART) only as a safety net for a future Loadout card that ships before its picture.
 test('every card, gun and location in play has web art', () => {
   const list = dir => new Set(fs.readdirSync(path.join(SRC, 'webart', dir)).filter(f => /\.(webp|png|jpe?g|avif)$/i.test(f)).map(f => f.replace(/\.[^.]+$/, '')));
   const art = list(''), gunArt = list('guns'), locArt = list('locs');
-  for (const id of IN_PLAY) assert.ok(art.has(WD.CARDS[id].name.replace(/ /g, '_')) || (WD.CARDS[id].loadout && art.has(SQUAD_ART[WD.CARDS[id].archetype])), WD.CARDS[id].name);
+  for (const id of IN_PLAY) assert.ok(art.has(WD.CARDS[id].name.replace(/ /g, '_')), `${WD.CARDS[id].name} has no art of its own in src/webart`);
+  const loadouts = Object.values(WD.CARDS).filter(d => d.loadout).map(d => d.name.replace(/ /g, '_')).sort();
+  assert.deepEqual(loadouts, ['Bounty_Contract', 'Field_Pack', 'Recon_Post', 'Tac_Vest']);
+  for (const n of loadouts) {
+    assert.ok(art.has(n), `webart/${n}.webp`);
+    assert.ok(fs.existsSync(path.join(SRC, 'pnp', 'art', n + '.jpg')), `pnp/art/${n}.jpg`);
+  }
   for (const id of ['pistol-0', ...[1, 2, 3].flatMap(t => WD.GUNSET[t])]) assert.ok(gunArt.has(id), id);
   for (const id in WD.ENVS) assert.ok(locArt.has(id), id);
 });
