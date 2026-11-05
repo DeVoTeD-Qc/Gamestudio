@@ -413,3 +413,12 @@ Gameplay power comes only from **chassis**, which you earn through run rewards j
 2. **Rows per side:** (a) **4, Killstreak's capacity: zero balance risk, smaller banners** (recommended for the prototype), or (b) 3, like the reference: about 25% bigger banners, but it needs a balance re-run and changes some test expectations.
 3. **The 4 new chassis** (Brawler, Smoke Screen, Blackout, Sabotage): (a) **add them through the reward pool only, after a sim pass** (recommended), (b) ship with Killstreak's 20 only and squeeze beast, myth and smoke art into the existing chassis, or (c) also put one Brawler into the starter deck.
 4. **Calling card = Operator:** (a) **any owned art can be your Operator banner, unit or tactic** (recommended: it's your profile), or (b) unit arts only, so the Operator always shows a character.
+
+---
+
+## Head's decisions (2026-11-05, task kc-sys)
+- **S1 Elites:** role names **Commander ★ / Ace ★**, so any hero art can wear them.
+- **S2 Rows:** **4 rows per side**, like Killstreak (no balance change).
+- **S3 New chassis** (Brawler, Smoke Screen, Blackout, Sabotage): **reward pool only, after a balance sim**.
+- **S4 Operator:** **unit art only** for now. The Operator is a deployable unit with stronger stats. Idea to explore next: Operators use **weapon-mastery style banners** that the player grinds for **camo variants** (alt-art tiers of the same Operator), because the Operator is the card you see every game.
+- From kc-art: invented faces OK in stylised styles; flat emblems are tactics (a third "field card" type is being explored in `field-cards.md`, task kc-field); new weapon types map onto the existing 6 classes.
