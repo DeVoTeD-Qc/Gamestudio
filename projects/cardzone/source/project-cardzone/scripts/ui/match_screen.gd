@@ -45,6 +45,11 @@
 #   cz14 hot-seat: the controller raises a full-screen cover (cover_screen.gd) at every seat change;
 #   hotseat_cover_reset() clears every seat-private node under it and the screen renders the
 #   controller's covered view until the tap reveals the next seat's own view.
+#   cz-clarity (documentation/ux/clarity-audit.md): in a live match the NEXT HAND strip is hidden
+#   behind a DECK row (tap = peek, long press = what the deck is; the Brace step opens it); the room
+#   holds the TURN PANEL (phase: what to do now, plus the outcome feed from ActionText.outcome);
+#   corner, dock, sheet and pools controls explain themselves on long press / right click; INFO is
+#   HELP (How to play, how_to_play.gd) with nothing selected; a 5-card hand never fans.
 # Signals: card_tapped(zone, index, card_id), area_tapped(area_id), menu_requested,
 #   card_inspected(card_id, zone), notice_shown(text), option_pressed(key).
 # Dependencies: EventBus, SceneRouter, CardDB, Settings, screen_profile.gd, match_theme.gd,

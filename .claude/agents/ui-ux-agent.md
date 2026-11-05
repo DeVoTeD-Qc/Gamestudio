@@ -200,6 +200,9 @@ func button_press_feedback(button: Button):
 - Maintain visual hierarchy through typography
 
 ### Usability Testing Checklist
+- [ ] Studio rule: every card, unit, icon, chip, panel and button opens a tooltip or zoom on right click (desktop) and long press (touch), saying in plain words what it is and what it gives the player now
+- [ ] Clarity over information: the main view shows what this decision needs; the rest sits one tap or one inspect away
+- [ ] After every action and every opponent turn, a plain line says what happened (with the numbers that changed), and the screen says what to do now
 - [ ] All interactive elements are clearly identifiable
 - [ ] Navigation flows are intuitive and logical
 - [ ] Error messages are helpful and actionable
