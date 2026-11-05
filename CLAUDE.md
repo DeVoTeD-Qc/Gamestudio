@@ -10,6 +10,12 @@ This repo is an AI game studio built on [pamirtuna/gamestudio-subagents](https:/
 - Godot conventions: scenes `PascalCase.tscn`, scripts `snake_case.gd`, resources `snake_case.tres`,
   typed GDScript (`var speed: float = 200.0`), signals over polling, autoloads for global singletons.
 
+## Studio UX rules (from the studio head)
+- Every card, unit, icon and board element must have a tooltip or zoomed view on **right click
+  (desktop) and long press (touch)**. No game ships a screen where the player can't inspect something.
+- Clarity over information: show what the player needs for this decision; put the rest behind
+  inspect/zoom. The player must always be able to tell what a card gives them and what just happened.
+
 ## Studio team (Claude Code subagents in `.claude/agents/`)
 Start with **master-orchestrator** (or **producer-agent**), which delegates to:
 market-analyst, data-scientist, sr-game-designer, mid-game-designer, mechanics-developer,
