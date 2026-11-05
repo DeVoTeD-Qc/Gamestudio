@@ -410,19 +410,9 @@ ${locPages.map((p, i) => `<section class="page"><div class="sheet loc4">${p.join
 // shrink a card's text (never its art) until everything fits
 // uniform text: no per-card shrinking
 </script></body></html>`;
-fs.writeFileSync(path.join(__dirname, 'pnp.html'), html);
-if (process.env.VARIANTS) {
-  const headPart = html.slice(0, html.indexOf('<body>') + 6) + SYM;
-  const pick = ['A21', 'S31', 'T002', 'E12'];
-  const names = { 0: 'Current', 1: 'V1 · tinted bar', 2: 'V2 · dark bar', 3: 'V3 · cost coin on band', 4: 'V4 · full-bleed colour bar', 5: 'V5 · cost first, grey bar' };
-  const rows = [0, 1, 2, 3, 4, 5].map(v => `<div class="vrow"><div class="vlab">${names[v]}</div>${pick.map(id => tacCard(WD.CARDS[id], v)).join('')}</div>`).join('');
-  fs.writeFileSync(path.join(__dirname, 'variants.html'), headPart + `<style>.vrow{display:flex;gap:10px;align-items:center;margin:0 0 12px 12px}.vlab{width:1.3in;font-weight:800;font-size:11pt}.vrow .card{border:0.5px solid #9AA08F}</style><div style="padding:14px 0">${rows}</div><script>for (const t of document.querySelectorAll('.tac .txt')) { let z = 1; while (t.scrollHeight > t.clientHeight + 1 && z > 0.62) { z -= 0.03; t.style.zoom = z; } }</script></body></html>`);
-}
-console.log('cards', counts.total, 'card pages', pages.length);
-
 // ---------- asset sheet for the digital version: every unique component once, named ----------
-if (process.env.ASSETS) {
-  const headPart = html.slice(0, html.indexOf('<body>') + 6) + SYM;
+// tools/build.js turns this sheet into the FACES table of the web build (scoped CSS, sprite, one HTML string per face).
+function assetList() {
   const A = [];
   const seen = new Set();
   for (const id of ['T001', 'T002', 'T004', 'T005']) A.push(['card_' + id, tacCard(WD.CARDS[id])]);
@@ -436,7 +426,27 @@ if (process.env.ASSETS) {
   for (const k in WD.LOADOUT) A.push(['perk_' + k, perkCard(k)]);
   A.push(['back_loot_tier1', backs[0]], ['back_loot_tier2', backs[1]], ['back_loot_tier3', backs[2]], ['back_perk', backs[3]]);
   A.push(['ref_turn', refTurn()], ['ref_squad', refSquad()], ['health_A', hpCard('Operator A', '#1FB0C4')], ['health_B', hpCard('Operator B', '#C8442B')], ['tokens', tokens()]);
-  fs.writeFileSync(path.join(__dirname, 'assets.html'), headPart + `<style>body{background:#fff}.asset{display:inline-block;margin:6px;vertical-align:top}</style>` + A.map(([n, h]) => `<div class="asset" data-name="${n}">${h}</div>`).join('\n') + '</body></html>');
-  console.log('assets', A.length);
+  return A;
+}
+function assetsHtml(A = assetList()) {
+  const headPart = html.slice(0, html.indexOf('<body>') + 6) + SYM;
+  return headPart + `<style>body{background:#fff}.asset{display:inline-block;margin:6px;vertical-align:top}</style>` + A.map(([n, h]) => `<div class="asset" data-name="${n}">${h}</div>`).join('\n') + '</body></html>';
+}
+function variantsHtml() {
+  const headPart = html.slice(0, html.indexOf('<body>') + 6) + SYM;
+  const pick = ['A21', 'S31', 'T002', 'E12'];
+  const names = { 0: 'Current', 1: 'V1 · tinted bar', 2: 'V2 · dark bar', 3: 'V3 · cost coin on band', 4: 'V4 · full-bleed colour bar', 5: 'V5 · cost first, grey bar' };
+  const rows = [0, 1, 2, 3, 4, 5].map(v => `<div class="vrow"><div class="vlab">${names[v]}</div>${pick.map(id => tacCard(WD.CARDS[id], v)).join('')}</div>`).join('');
+  return headPart + `<style>.vrow{display:flex;gap:10px;align-items:center;margin:0 0 12px 12px}.vlab{width:1.3in;font-weight:800;font-size:11pt}.vrow .card{border:0.5px solid #9AA08F}</style><div style="padding:14px 0">${rows}</div><script>for (const t of document.querySelectorAll('.tac .txt')) { let z = 1; while (t.scrollHeight > t.clientHeight + 1 && z > 0.62) { z -= 0.03; t.style.zoom = z; } }</script></body></html>`;
 }
 
+// Used by tools/build.js, tools/pnp.js and the tests: nothing is written when this file is required.
+module.exports = { html, assetList, assetsHtml, variantsHtml, counts, components: { cards: cards.length, guns: guns.length - 4, gunBacks: 4, locations: locs.length }, pages: { cards: pages.length, guns: gunPages.length, locations: locPages.length } };
+
+// CLI (kept for compatibility): node gen.js → pnp.html next to this file; VARIANTS=1 / ASSETS=1 add the extra sheets.
+if (require.main === module) {
+  fs.writeFileSync(path.join(__dirname, 'pnp.html'), html);
+  if (process.env.VARIANTS) fs.writeFileSync(path.join(__dirname, 'variants.html'), variantsHtml());
+  console.log('cards', counts.total, 'card pages', pages.length);
+  if (process.env.ASSETS) { const A = assetList(); fs.writeFileSync(path.join(__dirname, 'assets.html'), assetsHtml(A)); console.log('assets', A.length); }
+}
