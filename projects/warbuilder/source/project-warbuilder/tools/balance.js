@@ -17,8 +17,10 @@ const BANDS = [
   ['first-player win rate', r => r.firstPlayerWinRate, 0.45, 0.55],
   ['average rounds', r => r.avgRounds, 8, 12],
   ['gas share of damage', r => r.gasShareOfDamage, 0.10, 0.20],
+  ['hit rate (shots that deal)', r => r.hitRate, 0.60, 0.70],
+  ['whole turns wiped by a bust', r => r.pyl && r.pyl.wipedTurns, 0.03, 0.07], // bust-variants.md §5
 ];
-const GUN_BAND = [0.40, 0.60];
+const GUN_BAND = [0.42, 0.58];
 
 function run(args) {
   const out = execFileSync(process.execPath, [SIM, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 64 << 20 });
@@ -36,7 +38,8 @@ function report(r) {
   if (r.errors || r.stuck || r.invariantFailures) { lines.push(`FAIL  errors ${r.errors}, stuck ${r.stuck}, invariant failures ${r.invariantFailures}`); warn++; }
   for (const [label, get, lo, hi] of BANDS) row(label, get(r), lo, hi);
   for (const [gun, txt] of Object.entries(r.winRateByGunHeldAtEnd || {})) row(`win rate holding ${gun}`, parseFloat(txt), GUN_BAND[0], GUN_BAND[1]);
-  lines.push(`      hit rate ${r.hitRate} (${r.hitRateExclMelee} without the knife; head's target 0.60–0.70), final circle ${r.finalCircleReached}, shots per match ${r.shotsPerGame}, draws ${r.draws}, P1 win rate ${r.p1WinRate}${r.awareWinRate != null && /blind/.test(r.match) ? `, combo-aware ${r.awareWinRate} (target ≥ 0.55)` : ''}`);
+  if (r.pyl) lines.push(`      Firefight: busts in ${r.pyl.bustPerShootingTurn} of shooting turns, ${r.pyl.wipedTurns} wiped, ${r.pyl.lostShareOfDamage} of damage lost to busts, ${r.pyl.flipsPerTurn} flips per turn (${r.pyl.flipsPerShootingTurn} per shooting turn), ${r.pyl.shotsPerCash} shots per cash-out`);
+  lines.push(`      hit rate ${r.hitRate} (${r.hitRateExclMelee} without the knife), final circle ${r.finalCircleReached}, shots per match ${r.shotsPerGame}, draws ${r.draws}, P1 win rate ${r.p1WinRate}${r.awareWinRate != null && /blind/.test(r.match) ? `, combo-aware ${r.awareWinRate} (target ≥ 0.55)` : ''}`);
   lines.push(warn ? `${warn} number(s) outside the target bands (report only, not a failure).` : 'All numbers inside the target bands.');
   return { text: lines.join('\n'), warn };
 }

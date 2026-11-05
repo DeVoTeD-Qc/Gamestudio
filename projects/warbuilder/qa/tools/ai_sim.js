@@ -1,4 +1,5 @@
-// Warbuilder headless AI-vs-AI simulator for the SHIPPED engine (studio QA tool; rewritten for wb-rules, 2026-11-05).
+// Warbuilder headless AI-vs-AI simulator for the SHIPPED engine (studio QA tool; rewritten for wb-rules, 2026-11-05;
+// push-your-luck Firefight FIRE metrics added for wb-pyl-impl: busts, wiped turns, pot, flips per turn).
 // Runs src/engine.js in Node (no browser) and reports balance and pacing numbers against the engine-synergy targets.
 // It only reads the engine; it never changes the game source.
 //
@@ -8,6 +9,8 @@
 //     --force=assault|recon|support|engineer            the aware AI buys only that squad
 //     --set=key:value,...                               override TUNE values (numbers or true/false)
 //     --curve                                           also print the per-round Firepower table
+//     --ai=key:value,...                                override WD.AI_PYL (AI knobs, e.g. startMin, scoutIntel)
+//     --pa=ev|timid|reckless --pb=...                   stop policy of the first / second AI in --match (default ev, the shipped AI)
 // Back-compat: a bare second argument "nosyn" means --flat.
 'use strict';
 const path = require('path');
@@ -26,7 +29,8 @@ const [aiA, aiB] = match.split('-');
 const avg = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;
 const pct = (w, n) => n ? +(w / n).toFixed(3) : null;
 const R = { errors: 0, stuck: 0, invariantFailures: 0, decided: 0, draws: 0, aWins: 0, firstWins: 0, seat0: 0, rounds: [], endBy: {}, final: 0,
-  shots: 0, hits: 0, rangedShots: 0, rangedHits: 0, big: 0, shotDmg: 0, gasDmg: 0, gun: {}, fam: {}, share: {}, byRound: {}, squads: 0, rallies: 0, turns: 0 };
+  shots: 0, hits: 0, rangedShots: 0, rangedHits: 0, big: 0, shotDmg: 0, gasDmg: 0, gun: {}, fam: {}, share: {}, byRound: {}, squads: 0, rallies: 0, turns: 0,
+  pyl: { turns: 0, shotTurns: 0, flips: 0, bustTurns: 0, wipeTurns: 0, zeroTurns: 0, potLost: 0, dealt: 0, cashes: 0, banked: 0, outs: 0, busts: 0, jamsPerTurn: 0 }, hitByRound: {} };
 
 function cardCount(s) { // every card instance must be in exactly one place
   const seen = new Map();
@@ -42,16 +46,21 @@ for (let i = 0; i < N; i++) {
   const aSeat = i % 2; const s = WD.newGame({ seed: i + 1 }); const first = s.first;
   const mode = k => k === 'aware' && force ? 'force:' + force : k;
   s.aiMode = aSeat === 0 ? [mode(aiA), mode(aiB)] : [mode(aiB), mode(aiA)];
+  if (opt('pa') || opt('pb')) { const pa = opt('pa') || 'ev', pb = opt('pb') || 'ev'; s.aiPolicy = aSeat === 0 ? [pa, pb] : [pb, pa]; } // stop policy per AI: ev | timid | reckless
   const ai = q => (q === aSeat ? aiA : aiB);
   let guard = 0; const turnLog = [];
   try {
     while (!s.over && guard++ < 400) {
       const p = s.turn; const round = s.round; const pl = s.players[p];
       const sh0 = pl.stats.shots, hit0 = pl.stats.hits, sq0 = pl.stats.squads, ra0 = pl.stats.rallies, dmg0 = pl.stats.damageDealt;
+      const st0 = Object.assign({}, pl.stats); const oHp0 = s.players[1 - p].hp;
       const melee = WD.WEAPONS[s.weapons[pl.guns[0]].def].melee;
       const r = WD.aiTurn(s, p); if (!r.ok) throw new Error(r.err);
       if (s.players.some(q => q.res.intel < 0 || q.res.move < 0 || q.res.prec < 0 || q.def < 0)) throw new Error('negative resource');
       if (!melee) { R.rangedShots += pl.stats.shots - sh0; R.rangedHits += pl.stats.hits - hit0; }
+      { const d = k => pl.stats[k] - (st0[k] || 0); const Y = R.pyl; Y.turns++; Y.flips += d('flips'); Y.jamsPerTurn += d('jams'); Y.busts += d('busts'); Y.outs += d('outs'); Y.banked += d('banked'); Y.cashes += d('cashes'); Y.potLost += d('potLost'); Y.dealt += d('damageDealt');
+        if (d('shots')) { Y.shotTurns++; if (d('busts')) Y.bustTurns++; if (d('wipes')) Y.wipeTurns++; if (!d('damageDealt')) Y.zeroTurns++; }
+        const hb = R.hitByRound[round] = R.hitByRound[round] || [0, 0]; hb[0] += d('hits'); hb[1] += d('shots'); }
       turnLog.push({ p, round, fp: pl.fpHist.length && s.players[p].fpHist[s.players[p].fpHist.length - 1], squads: pl.stats.squads - sq0, rallies: pl.stats.rallies - ra0, dmg: pl.stats.damageDealt - dmg0, ended: !s.over || pl.fpHist.length });
     }
     cardCount(s);
@@ -78,6 +87,10 @@ const out = {
   avgRounds: avg(R.rounds), maxRound: done ? Math.max(...R.rounds) : null, endBy: R.endBy, finalCircleReached: pct(R.final, done),
   hitRate: pct(R.hits, R.shots), hitRateExclMelee: pct(R.rangedHits, R.rangedShots), bigHitShare: pct(R.big, R.hits), shotsPerGame: done ? +(R.shots / done).toFixed(1) : null,
   gasShareOfDamage: pct(R.gasDmg, R.gasDmg + R.shotDmg), squadsPerTurn: +(R.squads / Math.max(1, R.turns)).toFixed(2), ralliesPerTurn: +(R.rallies / Math.max(1, R.turns)).toFixed(2),
+  pyl: { flipsPerTurn: pct(R.pyl.flips, R.pyl.turns), flipsPerShootingTurn: pct(R.pyl.flips, R.pyl.shotTurns), shotsPerShootingTurn: pct(R.shots, R.pyl.shotTurns),
+    bustPerShootingTurn: pct(R.pyl.bustTurns, R.pyl.shotTurns), wipedTurns: pct(R.pyl.wipeTurns, R.pyl.shotTurns), zeroDamageShootingTurns: pct(R.pyl.zeroTurns, R.pyl.shotTurns),
+    lostShareOfDamage: pct(R.pyl.potLost, R.pyl.potLost + R.pyl.dealt), outOfPrecisionShareOfShots: pct(R.pyl.outs, R.shots), jamsPerTurn: pct(R.pyl.jamsPerTurn, R.pyl.turns), shotsPerCash: pct(R.pyl.banked - 0, R.pyl.cashes) },
+  hitRateByRound: Object.fromEntries(Object.entries(R.hitByRound).map(([r, v]) => [r, pct(v[0], v[1])])),
   winRateByGunHeldAtEnd: fmt(R.gun), winRateByMainSquad: fmt(R.fam), winRateBySquadShare: fmt(R.share), curve,
 };
 console.log(JSON.stringify(opt('curve') ? Object.assign({}, out, { curve: undefined }) : out, null, 1));

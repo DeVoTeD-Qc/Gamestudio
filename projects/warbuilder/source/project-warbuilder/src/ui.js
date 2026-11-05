@@ -44,7 +44,7 @@ function fx(text) {
 }
 const KW = { Mark: 'Mark: your next shot needs 1 fewer Hit Marker on every step.', Pierce: 'Pierce: your shots ignore cover this turn.', Steady: 'Steady: cancel the next Jam you flip this turn (stacks).', Buy: '+1 Buy: one more purchase this turn.' };
 function cardTip(def) {
-  const all = `${def.text} ${def.squadText || ''}`; const kws = (def.jam ? 'Jam: flipped in a shot, it costs your gun\'s Recoil in Precision; your second Jam in one shot is a miss (in the final circle, the first). ' : '') + Object.keys(KW).filter(k => all.includes(k)).map(k => KW[k]).join(' ');
+  const all = `${def.text} ${def.squadText || ''}`; const kws = (def.jam ? 'Jam: flipped in a shot, it costs your gun\'s Recoil in Precision. Jams count for the turn: at your limit (2, +1 per Rally) you bust and lose your pot. ' : '') + Object.keys(KW).filter(k => all.includes(k)).map(k => KW[k]).join(' ');
   return `${def.name} · ${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'}. ${def.text}${def.squad ? ` Squad: ${def.squadText} for each other ${ARCH_SHORT[def.archetype]} card in play this turn (Loadout counts), up to ×${WD.TUNE.squadCap}.` : ''}${def.loadout ? ' Loadout: stays on the table, fires at the start of every turn, counts for Squad.' : ''}${def.reaction ? ` Reaction: in your hand when hit, −${def.reaction} damage.` : ''}${(def.effects || []).some(x => x.op === 'scrap') ? ' Scrap: remove a card in your hand, play area or discard pile from the game.' : ''} ${kws}`; }
 const GSHORT = { Pistol: '', SMG: 'SMG', Shotgun: 'Shotgun', 'Assault Rifle': 'AR', LMG: 'LMG', 'Marksman Rifle': 'DMR', Sniper: 'Sniper', 'Burst Rifle': 'Burst', Launcher: 'Launcher', Revolver: '', Melee: '' };
 const wnm = d => { if (!d || !d.cls || !GSHORT[d.cls]) return d ? d.name : ''; const m = d.name.match(/^(.*?)( “.*”)?$/); return `${m[1]} ${GSHORT[d.cls]}${m[2] || ''}`; };
@@ -435,6 +435,7 @@ function shortErr(e) {
   if (/No ammo/.test(e)) return 'No ammo · keep a card';
   if (/fired its (magazine|shots)/.test(e)) return 'No shots left';
   if (/No Precision|Nothing to reveal/.test(e)) return 'No Precision';
+  if (/busted/.test(e)) return 'Busted this turn';
   return e.replace(/\.$/, '');
 }
 function curGun(me) {
@@ -470,13 +471,13 @@ function gunPanel(me, gi) {
 }
 // "Jams 4/17": Jam cards among everything you own. Scrapping Sprints and Scouts brings it down (the deck you build is the gun you fire).
 function jamBadge(pl) { const all = pl.deck.concat(pl.discard, pl.hand, pl.play); const n = all.filter(i => WD.cardDef(G, i).jam).length;
-  return `<span class="jamct" data-tip="${escA(`Jams in your deck: ${n} of ${all.length} cards (Sprint and Scout). A flipped Jam costs your gun's Recoil in Precision; the second one in a shot is a miss. Scrap them to fire safer.`)}">${ic('jam')}Jams <b>${n}/${all.length}</b></span>`; }
+  return `<span class="jamct" data-tip="${escA(`Jams in your deck: ${n} of ${all.length} cards (Sprint and Scout). A flipped Jam costs your gun's Recoil in Precision, and Jams count toward your turn's bust limit. Scrap them to fire safer.`)}">${ic('jam')}Jams <b>${n}/${all.length}</b></span>`; }
 function hudBtns(me) {
   const t = myTurn(); const gi = curGun(me); const fo = t && me.guns[gi] ? fireOdds(gi) : null; const ok = fo && fo.pct != null;
   const same = me.pos === OP().pos; const canPunch = WD.TUNE.punch && t && same && !me.punched && !ok;
   const pc = WD.plateCost(G, ui.me);
   const fireBtn = canPunch ? `<button class="hb-fire" data-act="dofists" data-tip="No gun can fire: punch your rival for 1 damage.">PUNCH · 1</button>`
-    : `<button class="hb-fire ${t && ok && fo.pct >= 60 ? 'ready' : ''} ${t && ok && fo.pct < 20 ? 'long' : ''} ${ok && fo.sp.hotZone ? 'hot' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? `Fire the ${wnm(wdef(me.guns[gi]))}: flip cards one at a time (1 Precision each) and add up the Hit Markers. Step 1 needs ${fo.sp.need}: ${fo.pct}% if you keep flipping. ${fo.sp.jamsInDeck} of the ${fo.sp.cardsInDeck} cards in your deck are Jams (Recoil ${fo.sp.recoil} each; ${fo.sp.hotZone ? 'final circle: the first Jam misses' : 'the second Jam misses'}).` : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">FIRE${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? `<small class="hb-why">${fo.sp.hotZone ? 'first Jam misses' : `step 1 · Jams ${fo.sp.jamsInDeck}/${fo.sp.cardsInDeck}`}</small>` : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>`;
+    : `<button class="hb-fire ${t && ok && fo.pct >= 60 ? 'ready' : ''} ${t && ok && fo.pct < 20 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? `${fo.sp.pot ? 'Fire again' : 'Fire'} the ${wnm(wdef(me.guns[gi]))}: flip cards one at a time (1 Precision each) and add up the Hit Markers. Step 1 needs ${fo.sp.need}: ${fo.pct}% if you keep flipping. Jams this turn: ${fo.sp.jams}/${fo.sp.limit}; ${fo.sp.jamsInDeck} of the ${fo.sp.cardsInDeck} cards in your deck are Jams (Recoil ${fo.sp.recoil} each).${fo.sp.pot ? ` Your pot of ${fo.sp.pot} is at stake: bust chance ${pctT(fo.o.bust[0])}.` : ''}` : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">${ok && fo.sp.pot ? 'AGAIN' : 'FIRE'}${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? `<small class="hb-why">${fo.sp.pot ? `risk ${fo.sp.pot} · bust ${pctT(fo.o.bust[0])}` : `step 1 · Jams ${fo.sp.jams}/${fo.sp.limit}`}</small>` : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>${t && me.pot.length ? `<button class="hb-cash" data-act="cashout" data-tip="STOP: cash out your pot. Every banked shot hits now.">STOP · deal ${WD.potValue(me)}</button>` : ''}`;
   return `${fireBtn}
     <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="${escA(`Buy Station: one basic card per squad, ${pc} Intel each (counts as a buy). Also: pay ${WD.TUNE.stationScrapCost} Intel to scrap a Sprint, once per turn.`)}">${ic('para')} Buy Station <small>${ic('intel')}${pc} · ${t ? WD.buysLeft(G, ui.me) : WD.TUNE.buyCap} buys</small></button>
     <button class="hb-move ${ui.moveMode ? 'on' : ''}" data-act="move" ${t && (ui.moveMode || ((!me.moved || WD.TUNE.multiMove) && me.res.move > 0 && WD.reachable(G, ui.me).length)) ? '' : 'disabled'} data-tip="Your one Move this turn: tap to light up the locations you can reach, then tap one. 1 Movement per space (+ cover).">${ic('move')} ${ui.moveMode ? 'Cancel move' : me.moved && !WD.TUNE.multiMove ? 'Moved' : `Move <small>${me.res.move}</small>`}</button>
@@ -572,54 +573,66 @@ function fireOdds(gi) {
   const sp = WD.shotPreview(G, ui.me, gi); const o = WD.shotOdds(G, ui.me, gi, 300);
   const v = { gi, pct: Math.round(o.reach[0] * 100), reach: o.reach, sp, o }; ui.foCache = { k, v }; return v;
 }
-/* ---------- the shot: push your luck, one tap per flip (wb-pyl-impl) ----------
-   A strip docked over the bottom of the screen while a shot is open (yours, or the rival's during its replay) and right after it ends.
-   Flipped cards land on the strip one by one; the Hit Marker track fills toward the ladder steps; Jams slam into the Jam slots. */
+/* ---------- the shot: push your luck, Firefight (wb-pyl-impl) ----------
+   A strip docked over the bottom of the screen while a shot is open (yours, or the rival's during its replay) and between shots
+   while your pot is at stake. Flipped cards land on the strip one by one; the Hit Marker track fills toward the ladder steps;
+   Jams slam into the turn's Jam slots (2 + a gold slot per Rally); banked shots stack in the POT; a bust wipes it. */
 const pctT = x => x >= 0.995 ? '100%' : x < 0.01 ? (x > 0 ? '<1%' : '0%') : Math.round(x * 100) + '%';
 function shotView() {
   if (G && G.shot) return { live: true, sh: G.shot, pi: G.shot.p };
-  if (ui.shotEnd && G) return { live: false, f: ui.shotEnd, pi: ui.shotEnd.p };
+  if (ui.shotEnd && G) return { live: false, f: ui.shotEnd.f, cash: ui.shotEnd.cash, pi: ui.shotEnd.p };
   return null;
+}
+function potTray(pl, extra, wiped) {
+  const items = pl.pot.map(x => ({ dmg: x.dmg, w: x.weapon })); const tot = items.reduce((a, x) => a + x.dmg, 0) + (wiped || 0);
+  return `<div class="sh-pot ${wiped ? 'wiped' : ''} ${tot ? '' : 'empty'}" data-tip="Your pot: banked shots wait here until you STOP (cash out) or end the turn. A bust loses all of it."><small>POT</small><b>${wiped ? `−${wiped}` : tot}</b>${items.map(x => `<i title="${escA(x.w)}">${x.dmg}</i>`).join('')}${extra ? `<i class="cur">+${extra}?</i>` : ''}</div>`;
 }
 function shotHTML() {
   const v = shotView(); if (!v) return '';
   const pl = G.players[v.pi]; const mine = v.pi === ui.me && !ui.play; const who = v.pi === ui.me && ui.mode === 'ai' ? 'You' : pl.name;
-  const x = v.live ? { steps: v.sh.steps, cards: v.sh.flipped, sum: v.sh.sum, lvl: v.sh.level, bustAt: v.sh.bustAt, jams: v.sh.jams, hot: v.sh.hotZone, gun: v.sh.weapon, gi: v.sh.gi }
-    : { steps: v.f.steps, cards: v.f.revealed, sum: v.f.total, lvl: v.f.reached, bustAt: v.f.bustAt, jams: v.f.jams, hot: v.f.hotZone, gun: v.f.weapon, gi: v.f.gi };
-  const heat = WD.TUNE.pyl.jamScope === 'turn'; const jamN = heat ? pl.heat : x.jams; // a turn-wide Jam counter ("Heat") if the bust rule counts per turn
+  const f = v.f || {}; const cash = v.cash;
+  const x = v.live ? { steps: v.sh.steps, cards: v.sh.flipped, sum: v.sh.sum, lvl: v.sh.level, gun: v.sh.weapon, gi: v.sh.gi }
+    : { steps: f.steps || [], cards: cash ? [] : f.revealed || [], sum: cash ? 0 : f.total || 0, lvl: cash ? -1 : f.reached, gun: f.weapon || '', gi: f.gi || 0 };
+  const turnJams = WD.TUNE.pyl.jamScope === 'turn'; const jamN = turnJams ? pl.heat : v.live ? v.sh.jams : f.jams || 0; const limit = WD.jamLimit(G, v.pi);
   const fxk = ui.shotFx || {}; const fx = fxk.ev || '';
-  const top = x.steps[x.steps.length - 1][0]; const span = Math.max(top, x.sum);
-  // Hit Marker track: one pip per Hit Marker up to the top step, a notch at every step
+  const top = x.steps.length ? x.steps[x.steps.length - 1][0] : 1; const span = Math.max(top, x.sum);
   const stepAt = new Set(x.steps.map(s => s[0]));
-  const pips = Array.from({ length: span }, (_, i) => `<i class="${i < x.sum ? 'on' : ''} ${stepAt.has(i + 1) ? 'notch' : ''} ${i >= top ? 'over' : ''}"></i>`).join('');
-  const lad = x.steps.map(([h, d], i) => { const st = i <= x.lvl ? (v.live ? 'got' : !v.f.hit ? 'lost' : i === v.f.level ? 'bank' : 'got') : i === x.lvl + 1 && v.live ? 'next' : '';
+  const pips = cash ? '' : Array.from({ length: span }, (_, i) => `<i class="${i < x.sum ? 'on' : ''} ${stepAt.has(i + 1) ? 'notch' : ''} ${i >= top ? 'over' : ''}"></i>`).join('');
+  const lad = cash ? '' : x.steps.map(([h, d], i) => { const st = i <= x.lvl ? (v.live ? 'got' : !f.hit ? 'lost' : i === f.level ? 'bank' : 'got') : i === x.lvl + 1 && v.live ? 'next' : '';
     return `<span class="sl ${st} ${i === x.steps.length - 1 ? 'topst' : ''}"><small>${ic('hm')}${h}</small><b>${d}</b>${st === 'next' ? '<em>next</em>' : st === 'bank' ? '<em>banked</em>' : ''}</span>`; }).join('<span class="sl-ar">›</span>');
-  const slots = Array.from({ length: Math.max(x.bustAt, jamN) }, (_, i) => `<i class="${i < jamN ? 'on' : ''} ${i === jamN - 1 && fx === 'jam' ? 'slam' : ''}">${i < jamN ? ic('jam') : ''}</i>`).join('');
+  const base = WD.TUNE.pyl.jamLimit;
+  const slots = Array.from({ length: Math.max(limit, jamN) }, (_, i) => `<i class="${i < jamN ? 'on' : ''} ${i >= base ? 'rally' : ''} ${i === jamN - 1 && (fx === 'jam' || fx === 'bust') ? 'slam' : ''}">${i < jamN ? ic('jam') : ''}</i>`).join('');
   const last = x.cards.length - 1;
   const strip = x.cards.map((c, k) => { const id = CARD_BY_NAME[c.name];
     return `<span class="sc ${c.jam ? (c.cancelled ? 'jam cx' : 'jam') : ''} ${k === last ? 'fresh' : ''}" style="--k:${k}">${id && hasFace('card_' + id) ? pf('card_' + id) : `<b class="sc-n">${escA(c.name)}</b>`}${c.jam ? `<em>${c.cancelled ? 'STEADY' : `JAM${c.recoil ? ` −${c.recoil}` : ''}`}</em>` : `<i class="sc-hm">+${c.hm}</i>`}</span>`; }).join('')
     + (v.live ? `<span class="sc next" aria-hidden="true"><span>${ic('fire')}</span></span>` : '');
+  const pot = WD.potValue(pl);
   let odds = '', btns = '', verdict = '';
   if (v.live) {
     const o = WD.shotOdds(G, v.pi, x.gi, 300);
-    const nxt = o.next != null ? `<span>reach <b>${x.steps[x.lvl + 1][1]} dmg</b>: <b class="${o.next >= 0.65 ? 'ok' : o.next < 0.35 ? 'bad' : ''}">${pctT(o.next)}</b></span>` : '';
-    const jam = o.cardsLeft ? `<span class="${o.pBust ? 'bad' : ''}">Jam next: <b>${o.jamsLeft}/${o.cardsLeft}</b> (${pctT(o.pJam)})${o.pBust ? ' · <b>a Jam now misses</b>' : o.steady ? ' · Steady covers it' : ''}</span>` : '';
+    const nxt = o.next != null ? `<span>reach <b>${x.steps[x.lvl + 1][1]} dmg</b>: <b class="${o.next >= 0.65 ? 'ok' : o.next < 0.35 ? 'bad' : ''}">${pctT(o.next)}</b>${o.nextBust ? ` · bust first: <b class="${o.nextBust >= 0.25 ? 'bad' : ''}">${pctT(o.nextBust)}</b>` : ''}</span>` : '';
+    const jam = o.cardsLeft ? `<span class="${o.pBust ? 'bad' : ''}">Jam next: <b>${o.jamsLeft}/${o.cardsLeft}</b> (${pctT(o.pJam)})${o.pBust ? ` · <b>a Jam now busts${pot || x.lvl >= 0 ? ` the pot` : ''}</b>` : o.steady ? ' · Steady covers it' : ''}</span>` : '';
     odds = `<div class="sh-odds">${jam}${nxt}</div>`;
-    if (mine) btns = `<div class="sh-btns">${x.lvl >= 0 ? `<button class="sh-stop" data-act="stop" data-tip="Bank step ${x.lvl + 1}: deal ${x.steps[x.lvl][1]} damage now."><small>STOP</small>deal ${x.steps[x.lvl][1]}</button>` : `<span class="sh-wait">Reach <b>${x.steps[0][0]} ${ic('hm')}</b> to stop</span>`}
-      <button class="sh-flip ${x.lvl >= 0 ? '' : 'solo'}" data-act="flip" data-tip="Flip the top card of your deck: 1 Precision."><small>FLIP ▶</small><span>−1 ${ic('prec')}</span></button></div>`;
+    if (mine) { const cur = x.lvl >= 0 ? x.steps[x.lvl][1] : 0; const more = WD.shotsLeft(G, ui.me, x.gi) > 0;
+      btns = `<div class="sh-btns">${x.lvl >= 0 ? `<button class="sh-stop" data-act="stopcash" data-tip="STOP: bank this step and cash out the whole pot: ${pot + cur} damage now."><small>STOP · CASH OUT</small>deal ${pot + cur}</button>${more ? `<button class="sh-bank" data-act="stop" data-tip="Bank step ${x.lvl + 1} (${cur}) into the pot and keep firing: the pot stays at stake."><small>BANK +${cur}</small>keep firing</button>` : ''}` : `<span class="sh-wait">Reach <b>${x.steps[0][0]} ${ic('hm')}</b> to bank${pot ? ` · pot ${pot} at stake` : ''}</span>`}
+      <button class="sh-flip ${x.lvl >= 0 ? '' : 'solo'}" data-act="flip" data-tip="Flip the top card of your deck: 1 Precision."><small>FLIP ▶</small><span>−1 ${ic('prec')}</span></button></div>`; }
+  } else if (cash) {
+    verdict = `<div class="sh-verdict hit"><b>HIT −${cash.total}</b><small>${cash.shots} shot${cash.shots === 1 ? '' : 's'} cashed out${cash.hits.some(h => h.notes.length) ? ` · ${escA(cash.hits.flatMap(h => h.notes).join(' · '))}` : ''}</small></div>`;
+    if (mine) btns = `<div class="sh-btns"><button class="sh-ok" data-act="shotok">Continue</button></div>`;
   } else {
-    const f = v.f; const more = mine && myTurn() && WD.shootCheck(G, ui.me, f.gi).ok; const fo = more ? fireOdds(f.gi) : null;
-    verdict = f.hit ? `<div class="sh-verdict hit"><b>HIT −${f.dealt}</b><small>step ${f.level + 1}${f.stopped ? ' · you stopped' : f.level === x.steps.length - 1 ? ' · top step' : ' · banked'}${f.notes.length ? ` · ${escA(f.notes.join(' · '))}` : ''}</small></div>`
-      : f.how === 'bust' ? `<div class="sh-verdict bust"><b>JAMMED</b><small>${f.hotZone ? 'final circle: the first Jam misses' : 'second Jam: the shot misses'}</small></div>`
-      : `<div class="sh-verdict out"><b>MISS</b><small>out of Precision before step 1</small></div>`;
-    if (mine) btns = `<div class="sh-btns">${more && fo ? `<button class="sh-again" data-act="fireagain"><small>FIRE AGAIN · ${WD.shotsLeft(G, ui.me, f.gi)} left</small>step 1: ${pctT(fo.pct / 100)}</button>` : ''}<button class="sh-ok" data-act="shotok">Continue</button></div>`;
+    const more = mine && myTurn() && WD.shootCheck(G, ui.me, x.gi).ok; const fo = more ? fireOdds(x.gi) : null;
+    verdict = f.how === 'bust' ? `<div class="sh-verdict bust"><b>BUST${f.lost ? ` · POT LOST −${f.lost}` : ''}</b><small>Jam limit ${f.limit} reached · no more shots this turn</small></div>`
+      : f.hit ? `<div class="sh-verdict bank"><b>BANKED +${f.banked}</b><small>step ${f.level + 1} · pot ${pot}${f.notes.length ? ` · ${escA(f.notes.join(' · '))}` : ''}</small></div>`
+      : `<div class="sh-verdict out"><b>MISS</b><small>out of Precision before step 1${pot ? ` · pot ${pot} stays` : ''}</small></div>`;
+    if (mine) btns = `<div class="sh-btns">${more && fo ? `<button class="sh-again" data-act="fireagain" data-tip="Fire again: the pot stays at stake."><small>FIRE AGAIN · ${WD.shotsLeft(G, ui.me, x.gi)} left${pot ? ` · risk ${pot}` : ''}</small>step 1 ${pctT(fo.reach[0])}${pot && fo.o.bust[0] ? ` · bust ${pctT(fo.o.bust[0])}` : ''}</button>` : ''}${pot ? `<button class="sh-stop" data-act="cashout"><small>STOP · CASH OUT</small>deal ${pot}</button><button class="sh-ok sm" data-act="shotok" data-tip="Back to the board (play cards, move, buy). Your pot stays at stake until you cash out or end the turn.">Board</button>` : `<button class="sh-ok" data-act="shotok">Continue</button>`}</div>`;
   }
-  return `<div class="shotwrap ${mine ? 'mine' : 'theirs'}" ${mine ? '' : 'aria-hidden="true"'}><div class="shot ${v.live ? 'live' : 'done'} ${fx ? 'fx-' + fx : ''} ${x.hot ? 'hot' : ''}" data-fxn="${fxk.n || 0}" role="region" aria-label="Shot in progress">
-    <div class="sh-head"><b class="sh-who">${escA(who)} · ${escA(x.gun)}</b><span class="sh-prec">${ic('prec')}<b>${pl.res.prec}</b><small>Precision</small></span>
-      <span class="sh-jams ${x.hot ? 'hot' : ''}" data-tip="${escA(x.hot ? 'Final circle: your first Jam in this shot is a miss.' : `Jams this ${heat ? 'turn' : 'shot'}: the ${x.bustAt === 2 ? 'second' : x.bustAt === 1 ? 'first' : x.bustAt + 'th'} is a miss.`)}"><small>${heat ? 'Heat' : 'Jams'}</small>${slots}${x.hot ? '<em>first Jam misses</em>' : ''}</span>${pl.revealPlus ? `<span class="sh-steady" data-tip="Steady: cancels your next Jam.">Steady ×${pl.revealPlus}</span>` : ''}</div>
-    <div class="sh-track"><div class="sh-pips" aria-label="${x.sum} Hit Markers">${pips}</div><b class="sh-sum">${x.sum}</b></div>
+  const wiped = !v.live && f.how === 'bust' ? f.lost : 0;
+  return `<div class="shotwrap ${mine ? 'mine' : 'theirs'}" ${mine ? '' : 'aria-hidden="true"'}><div class="shot ${v.live ? 'live' : 'done'} ${fx ? 'fx-' + fx : ''}" role="region" aria-label="Firefight">
+    <div class="sh-head"><b class="sh-who">${escA(who)}${x.gun ? ` · ${escA(x.gun)}` : ''}</b>${potTray(pl, v.live && x.lvl >= 0 ? x.steps[x.lvl][1] : 0, wiped)}<span class="sh-prec">${ic('prec')}<b>${pl.res.prec}</b><small>Precision</small></span>
+      <span class="sh-jams" data-tip="${escA(`Jams this ${turnJams ? 'turn' : 'shot'}: ${jamN} of ${limit}. The limit is ${base}, +1 for each Rally you made this turn (gold). Reach it and you bust: the pot is lost.`)}"><small>Jams <b>${jamN}/${limit}</b></small>${slots}</span>${pl.revealPlus ? `<span class="sh-steady" data-tip="Steady: cancels your next Jam.">Steady ×${pl.revealPlus}</span>` : ''}</div>
+    ${cash ? '' : `<div class="sh-track"><div class="sh-pips" aria-label="${x.sum} Hit Markers">${pips}</div><b class="sh-sum">${x.sum}</b></div>
     <div class="sh-lad">${lad}</div>
-    <div class="sh-strip">${strip}</div>
+    <div class="sh-strip">${strip}</div>`}
     ${verdict}${odds}${btns}</div></div>`;
 }
 function startShot(gi) {
@@ -630,8 +643,12 @@ function shotAct(fn) {
   const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return; }
   const ev = r.done ? (r.event === 'bank' ? 'bank' : r.event === 'bust' ? 'bust' : 'miss') : r.event === 'jam' ? 'jam' : r.stepUp ? 'step' : r.event;
   ui.shotFx = { ev, n: (ui.shotFx ? ui.shotFx.n : 0) + 1 };
-  if (r.done) ui.shotEnd = r.result;
+  if (r.done) ui.shotEnd = { p: ui.me, f: r.result, cash: null };
   after();
+}
+function cashAct() {
+  const r = WD.cashOut(G, ui.me); if (!r.ok) return toast(r.err);
+  ui.shotFx = { ev: 'cash', n: (ui.shotFx ? ui.shotFx.n : 0) + 1 }; ui.shotEnd = { p: ui.me, f: G.lastFire, cash: r.result }; after();
 }
 function nextHint() {
   const me = ME();
@@ -971,15 +988,15 @@ const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>
 <h4>Your engine</h4><ul>
 <li><b>Squads.</b> Every loot card is ${roleB('assault')} Assault (hits harder), ${roleB('recon')} Recon (aim, Mark), ${roleB('support')} Support (extra shots, Steady) or ${roleB('engineer')} Engineer (Intel, buys, Scrap). The squad counters show how many you own.</li>
 <li><b>Squad</b> line: pays once <b>for each other card of its squad</b> in play this turn: ×1, ×2, at most ×${T.squadCap}. Order doesn't matter. In your hand a card shows <b>×N</b> when it would pay.</li>
-<li><b>Rally</b>: ${r1} and ${r2} cards of one squad in play pay a bonus, once per turn each. ${WD.SQUADS.map(a => `${ARCH_SHORT[a]} ${r1}: ${WD.RALLY_TEXT[a][r1]}; ${r2}: ${WD.RALLY_TEXT[a][r2]}`).join('. ')}.</li>
+<li><b>Rally</b>: ${r1} and ${r2} cards of one squad in play pay a bonus, once per turn each, and each Rally raises your Jam limit by 1 this turn. ${WD.SQUADS.map(a => `${ARCH_SHORT[a]} ${r1}: ${WD.RALLY_TEXT[a][r1]}; ${r2}: ${WD.RALLY_TEXT[a][r2]}`).join('. ')}.</li>
 <li><b>Loadout</b> cards stay on the table (${T.loadoutSlots} slots). They fire at the start of every turn and count for Squad and Rally. A third one replaces a slot or is used once.</li>
 <li><b>Mark</b>: next shot needs 1 fewer Hit Marker per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: cancel a Jam. <b>Scrap</b>: remove a card from the game (deck never below ${T.minDeck}). <b>+1 Buy</b>: one more buy. <b>Reaction</b>: in your hand when hit, less damage.</li></ul>
 <h4>Firing</h4><ul>
 <li>One gun; buying a gun swaps it. Your rival must be in its <b>Range</b> (every gun fires at distance 0).</li>
-<li><b>FIRE.</b> Flip cards off the top of your deck one at a time. Each flip costs 1 ${ic('prec', 'c-prec')} Precision. Add up the ${ic('hm')} Hit Markers.</li>
-<li>When your total reaches a step on your gun's ladder, you may <b>STOP</b> and deal that step's damage, or <b>FLIP</b> on for the next step. The top step stops by itself.</li>
-<li>A card with the ${ic('jam', 'c-jam')} <b>Jam</b> icon (Sprint, Scout) is a Jam. It costs your gun's <b>Recoil</b> in Precision, and your <b>second Jam</b> in one shot is a miss. <b>In the final circle, your first Jam is a miss.</b></li>
-<li>If you run out of Precision before the first step, you miss. <b>Steady:</b> cancel a Jam. <b>Mark:</b> your next shot needs 1 fewer Hit Marker on every step.</li>
+<li><b>FIRE.</b> Flip cards off the top of your deck one at a time. Each flip costs 1 ${ic('prec', 'c-prec')} Precision. Add up the ${ic('hm')} Hit Markers. When your total reaches a step on your gun's ladder, you may <b>bank</b> that step into your <b>pot</b>, or <b>FLIP</b> on for the next step.</li>
+<li>Banked shots wait in the pot. <b>STOP</b> (cash out) whenever you like to deal the whole pot. End turn cashes it out too.</li>
+<li>A card with the ${ic('jam', 'c-jam')} <b>Jam</b> icon (Sprint, Scout) is a Jam. It costs your gun's <b>Recoil</b> in Precision. Jams count for your whole turn: your limit is <b>${WD.TUNE.pyl.jamLimit}, +1 for each Rally</b> you made this turn. Reach it and you <b>BUST</b>: the pot is lost and your shooting ends this turn.</li>
+<li>If you run out of Precision before a shot's first step, that shot misses (the pot stays). <b>Steady:</b> cancel a Jam. <b>Mark:</b> your next shot needs 1 fewer Hit Marker on every step.</li>
 <li>Damage: cover −1 (not at distance 0 or with Pierce). <b>Close quarters</b> (same location): no cover, no Armor. Reactions, then Armor, reduce the rest; a hit deals at least 1. Flipped cards go to your discard pile.</li></ul>
 <h4>The circle</h4><ul>
 <li>${T.zones} locations in a row, each with a 3-card loot stack; a fresh card lands on top each round (2 in 3 match the location's squad).</li>
@@ -1028,7 +1045,7 @@ function newMatch(mode) {
   if (mode === 'hotseat') ui.me = G.turn;
   render(); after(); if (G.turn === ui.me) turnBanner('Your turn', 'Round 1 · drop in', 'me');
 }
-const FRAME_MS = { play: 750, act: 1000, fx: 1000, hit: 1700, miss: 1600, gas: 1300, round: 700, win: 1400, flip: 720, jamf: 950 };
+const FRAME_MS = { play: 750, act: 1000, fx: 1000, hit: 1700, miss: 1600, gas: 1300, round: 700, win: 1400, flip: 720, jamf: 950, bank: 1300 };
 function itemFaceS(st, it) { const def = it.kind === 'card' ? WD.CARDS[st.cards[it.iid].def] : it.kind === 'weapon' ? WD.WEAPONS[st.weapons[it.iid].def] : null; if (!def) return ''; const n = (it.kind === 'card' ? 'card_' : 'gun_') + def.id; return hasFace(n) ? n : ''; }
 function fxFor(prev, cur, f) {
   const r = 1 - ui.me, m = ui.me; const fx = {};
@@ -1060,8 +1077,10 @@ function playStep() {
   const prev = G; G = JSON.parse(f.state);
   ui.fx = fxFor(prev, G, f); ui.banner = f;
   // the rival's shot: each flip is its own frame (G.shot); the result frame keeps the strip up with the verdict
-  const rs = / fires /.test(f.msg) && (f.cls === 'hit' || f.cls === 'miss') && G.lastFire && G.lastFire.p !== ui.me;
-  ui.shotEnd = rs ? G.lastFire : null; ui.shotFx = G.shot || rs ? { ev: rs ? (G.lastFire.hit ? 'bank' : G.lastFire.how === 'bust' ? 'bust' : 'miss') : f.cls === 'jamf' ? 'jam' : 'flip', n: P.i } : null;
+  const rs = / fires /.test(f.msg) && ['hit', 'miss', 'bank'].includes(f.cls) && G.lastFire && G.lastFire.p !== ui.me;
+  const rc = / cashes out /.test(f.msg) && G.lastCash && G.lastCash.p !== ui.me;
+  ui.shotEnd = rs ? { p: G.lastFire.p, f: G.lastFire, cash: null } : rc ? { p: G.lastCash.p, f: G.lastFire, cash: G.lastCash } : null;
+  ui.shotFx = G.shot || rs || rc ? { ev: rc ? 'cash' : rs ? (G.lastFire.hit ? 'bank' : G.lastFire.how === 'bust' ? 'bust' : 'miss') : f.cls === 'jamf' ? 'jam' : 'flip', n: P.i } : null;
   render();
   P.t = setTimeout(playStep, FRAME_MS[f.cls] || 600);
 }
@@ -1173,8 +1192,10 @@ document.addEventListener('click', e => {
     case 'fire': if (!myTurn()) return toast('Wait for your turn.'); startShot(id != null ? +id : curGun(me)); break;
     case 'flip': if (!myTurn()) return; shotAct(() => WD.flip(G, ui.me)); break;
     case 'stop': if (!myTurn()) return; shotAct(() => WD.stop(G, ui.me)); break;
+    case 'stopcash': { if (!myTurn()) return; const r = WD.stop(G, ui.me); if (!r.ok) return toast(r.err); if (G.over) { ui.shotEnd = { p: ui.me, f: r.result, cash: null }; after(); break; } cashAct(); break; }
+    case 'cashout': if (!myTurn()) return; cashAct(); break;
     case 'shotok': ui.shotEnd = null; ui.shotFx = null; after(); break;
-    case 'fireagain': { const gi = ui.shotEnd ? ui.shotEnd.gi : 0; ui.shotEnd = null; startShot(gi); break; }
+    case 'fireagain': { const gi = ui.shotEnd && ui.shotEnd.f ? ui.shotEnd.f.gi : 0; ui.shotEnd = null; startShot(gi); break; }
     case 'dofists': { const r = WD.punch(G, ui.me); if (!r.ok) return toast(r.err); ui.sheet = { type: 'report', f: r.result }; after(); break; }
     case 'loot': ui.sheet = { type: 'loot', sel: [], trade: [] }; renderLayer(); break;
     case 'item': ui.sheet = { type: 'item', id, sel: [], trade: [] }; renderLayer(); break;
@@ -1193,7 +1214,7 @@ document.addEventListener('click', e => {
   }
 }, true);
 document.addEventListener('keydown', e => {
-  if (G && G.shot && G.shot.p === ui.me && myTurn() && !ui.sheet) { const k = e.key.toLowerCase(); if (k === 'f' || k === ' ') { e.preventDefault(); shotAct(() => WD.flip(G, ui.me)); return; } if (k === 's' && G.shot.level >= 0) { shotAct(() => WD.stop(G, ui.me)); return; } }
+  if (G && G.shot && G.shot.p === ui.me && myTurn() && !ui.sheet) { const k = e.key.toLowerCase(); if (k === 'f' || k === ' ') { e.preventDefault(); shotAct(() => WD.flip(G, ui.me)); return; } if (k === 's' && G.shot.level >= 0) { const r = WD.stop(G, ui.me); if (r.ok && !G.over) cashAct(); return; } }
   else if (ui.shotEnd && !ui.play && (e.key === 'Enter' || e.key === 'Escape') && !ui.sheet) { e.preventDefault(); ui.shotEnd = null; ui.shotFx = null; after(); return; }
   if (e.key === 'Escape') { if (ui.sheet && ui.sheet.type !== 'over') closeSheet(); else if (ui.moveMode || ui.burnMode) { ui.moveMode = false; ui.burnMode = false; render(); } }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.act === 'moveto') { e.preventDefault(); e.target.click(); }

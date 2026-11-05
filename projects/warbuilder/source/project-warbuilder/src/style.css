@@ -2688,3 +2688,21 @@ button.lf-p:hover { box-shadow: 0 0 0 2px #F2CC4A, 1px 2px 0 rgba(0,0,0,.45); }
 .shot.still:not(.fx-jam):not(.fx-bust) { animation: none; }
 @media (min-height: 700px) and (min-width: 1000px) { .sc, .sc pnp-face, .sc.next { width: 72px; } .sc.next, .sc .sc-n { height: 101px; } .sh-strip { min-height: 112px; } .sc-hm { font-size: 15px; } .sc.jam em { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .shot, .sc.fresh, .sh-verdict, .sh-jams i.slam { animation: none !important; } .shot::after { display: none; } }
+/* Firefight: the pot, the turn's Jam slots (gold = raised by a Rally), bank / cash out */
+.sh-pot { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 3px 8px; border-radius: 8px; background: color-mix(in srgb, var(--s-gold) 18%, var(--s-panel)); border: 1.5px solid var(--s-gold); }
+.sh-pot small { font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--s-gold); }
+.sh-pot > b { font-family: var(--f-display); font-size: 24px; line-height: 1; color: var(--s-gold); min-width: 1.2ch; text-align: center; }
+.sh-pot i { font-style: normal; font-family: var(--f-mono); font-size: 11.5px; font-weight: 700; background: var(--s-gold); color: #1C2017; border-radius: 4px; padding: 0 4px; }
+.sh-pot i.cur { background: transparent; color: var(--s-gold); border: 1px dashed var(--s-gold); }
+.sh-pot.empty { opacity: .55; border-style: dashed; }
+.sh-pot.wiped { border-color: var(--s-red); background: color-mix(in srgb, var(--s-red) 25%, var(--s-panel)); animation: shWipe .7s ease-out both; }
+.sh-pot.wiped > b, .sh-pot.wiped small { color: #FF8A78; text-decoration: line-through; }
+@keyframes shWipe { 0% { transform: scale(1.25); filter: brightness(2); } 30% { transform: scale(.92) rotate(-3deg); } 100% { transform: none; } }
+.sh-jams small b { color: var(--s-ink); font-family: var(--f-mono); font-size: 13px; }
+.sh-jams i.rally { border-color: var(--s-gold); } .sh-jams i.rally.on { background: var(--s-red); }
+.sh-bank { background: color-mix(in srgb, var(--s-gold) 85%, #000); color: #1C2017; font-size: 17px !important; flex: .8 !important; }
+.sh-verdict.bank b { color: var(--s-gold); }
+.sh-ok.sm { flex: .45 !important; font-family: var(--f-body) !important; font-size: 14px !important; font-weight: 700; }
+.shot.fx-cash .sh-verdict b { text-shadow: 0 0 22px rgba(242,193,78,.7); }
+.hb-cash { border: 0; background: #3F8F4A; color: #fff; font-weight: 900; letter-spacing: .04em; min-height: 40px; border-radius: 6px; }
+@media (orientation: landscape) and (max-height: 540px) { .sh-pot > b { font-size: 19px; } .sh-pot { padding: 1px 7px; } .sh-bank { font-size: 14px !important; } }

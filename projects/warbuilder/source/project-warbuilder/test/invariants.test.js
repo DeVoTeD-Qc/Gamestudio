@@ -14,7 +14,7 @@ function since(s, mark) { const i = mark ? s.log.lastIndexOf(mark) : -1; return 
 function loggedDamage(s, lines) {
   const dmg = [0, 0]; const who = name => s.players.findIndex(pl => pl.name === name);
   for (const { msg } of lines) {
-    let m = msg.match(/^(.+?) fires .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1])] += +m[2]; continue; }
+    let m = msg.match(/^(.+?) (?:fires|cashes out) .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1])] += +m[2]; continue; }
     m = msg.match(/^(.+?) is caught \d+ spaces? deep in the gas: −(\d+)/); if (m) { dmg[who(m[1])] += +m[2]; continue; }
     m = msg.match(/storm hits both operators for (\d+)/); if (m) { dmg[0] += +m[1]; dmg[1] += +m[1]; }
   }

@@ -1,8 +1,8 @@
-// Playwright smoke + screenshot pass for wb-pyl-impl (push-your-luck FIRE: one tap per flip).
-// Plays several of my turns at 844x390 (phone landscape, touch) and 1440x900 by tapping: Play all, then FIRE and FLIP / STOP
-// (stop when pushing would fail more than 35% of the time, as the AI does), Continue or Fire again, End turn. Move and buy
+// Playwright smoke + screenshot pass for wb-pyl-impl (push-your-luck FIRE, Firefight bust: one tap per flip, a pot, cash out).
+// Plays several of my turns at 844x390 (phone landscape, touch) and 1440x900 by tapping: Play all, then FIRE and FLIP / BANK / STOP
+// (decided by the AI's pot-counting rule), FIRE AGAIN or CASH OUT, End turn. Move and buy
 // use the engine's AI helpers so the board reaches real mid-game states. It also watches one of the rival's shots replay
-// flip by flip, and stages one final-circle shot (Hot Zone: the first Jam misses) by editing the state, so every moment is shot.
+// flip by flip, and stages one shot with a pot at stake and a Rally-raised Jam limit by editing the state, so every moment is shot.
 //   NODE_PATH=$(npm root -g) node projects/warbuilder/qa/tools/smoke_pyl.js [turns=7]
 // Writes WebP files (deviceScaleFactor 1) to projects/warbuilder/qa/screenshots/pyl/<viewport>-<n>-<name>.webp. Exit code 1 on any console error.
 'use strict';
@@ -45,32 +45,37 @@ const SEED_NOW = +process.env.PYL_SEED || 140;
       }
       return false;
     };
-    const stats = { shots: 0, flips: 0, stops: 0, jams: 0, hits: 0, misses: 0, rivalFlipFrames: 0 };
-    // one shot by taps; returns false if FIRE was not available
+    const stats = { shots: 0, flips: 0, stops: 0, jams: 0, busts: 0, cashes: 0, fireAgain: 0, misses: 0, rivalFlipFrames: 0 };
+    // one firefight by taps (the AI's pot-counting policy decides): FIRE, FLIP / BANK / STOP, FIRE AGAIN or CASH OUT. Returns false if FIRE was off.
     const fireByTaps = async (tag) => {
       if (!(await tap('.hb-fire:not([disabled])'))) return false;
-      stats.shots++; await page.waitForTimeout(260); await shot(`${tag}-fire-start`, true);
-      for (let k = 0; k < 40; k++) {
-        const s = await page.evaluate(() => { const G = WZ.G; if (!G.shot) return null; const o = WD.shotOdds(G, WZ.ui.me, G.shot.gi, 300); return { lvl: G.shot.level, next: o.next }; });
-        if (!s) break;
-        if (s.lvl >= 0 && (s.next == null || 1 - s.next > 0.35)) { await tap('[data-act="stop"]'); stats.stops++; await page.waitForTimeout(520); await shot('stop-bank', true); break; }
-        await tap('[data-act="flip"]'); stats.flips++; await page.waitForTimeout(470);
-        const ev = await page.evaluate(() => (WZ.ui.shotFx || {}).ev);
-        if (ev === 'jam') { stats.jams++; await shot('flip-jam', true); }
-        else if (ev === 'step') await shot('flip-step-reached', true);
-        else if (ev === 'bust') { stats.jams++; await page.waitForTimeout(300); await shot('bust-jammed', true); }
-        else if (ev === 'bank') { await page.waitForTimeout(300); await shot('bank-top-or-out', true); }
-        else if (ev === 'miss') { await page.waitForTimeout(300); await shot('miss-out-of-precision', true); }
-        else await shot(`flip-${Math.min(k + 1, 3)}`, true);
+      for (let shotN = 0; shotN < 6; shotN++) {
+        stats.shots++; await page.waitForTimeout(260); await shot(shotN ? 'fire-again-start' : `${tag}-fire-start`, true);
+        for (let k = 0; k < 40; k++) {
+          const s = await page.evaluate(() => { const G = WZ.G; if (!G.shot) return null; const sh = G.shot, o = WD.shotOdds(G, WZ.ui.me, sh.gi, 300);
+            if (sh.level < 0) return { lvl: -1 }; const cur = sh.steps[sh.level][1], nxt = sh.steps[sh.level + 1][1]; return { lvl: sh.level, push: o.next * (nxt - cur) > o.nextBust * (o.pot + cur), more: WD.shotsLeft(G, WZ.ui.me, sh.gi) > 0 }; });
+          if (!s) break;
+          if (s.lvl >= 0 && !s.push) { stats.stops++; if (s.more && shotN === 0) { await tap('.shot [data-act="stop"]'); await page.waitForTimeout(520); await shot('bank-into-pot', true); } else { await tap('.shot [data-act="stopcash"]'); await page.waitForTimeout(600); await shot('stop-cash-out', true); } break; }
+          await tap('.shot [data-act="flip"]'); stats.flips++; await page.waitForTimeout(470);
+          const ev = await page.evaluate(() => (WZ.ui.shotFx || {}).ev);
+          if (ev === 'jam') { stats.jams++; await shot('flip-jam', true); }
+          else if (ev === 'step') await shot('flip-step-reached', true);
+          else if (ev === 'bust') { stats.jams++; stats.busts++; await page.waitForTimeout(350); await shot(await page.evaluate(() => WZ.ui.shotEnd && WZ.ui.shotEnd.f.lost) ? 'bust-pot-lost' : 'bust', true); }
+          else if (ev === 'bank') { await page.waitForTimeout(300); await shot('bank-top-or-out', true); }
+          else if (ev === 'miss') { await page.waitForTimeout(300); await shot('miss-out-of-precision', true); }
+          else await shot(`flip-${Math.min(k + 1, 3)}`, true);
+        }
+        // between shots: fire again into the pot, or cash out
+        const nx = await page.evaluate(() => { const G = WZ.G, me = G.players[WZ.ui.me]; if (!WZ.ui.shotEnd || WZ.ui.shotEnd.cash) return 'done'; if (!me.pot.length) return 'nopot';
+          if (!WD.shootCheck(G, WZ.ui.me, 0).ok) return 'cash'; const o = WD.shotOdds(G, WZ.ui.me, 0, 300); return o.reach[0] * o.steps[0][1] > o.bust[0] * o.pot ? 'again' : 'cash'; });
+        if (nx === 'again' && await tap('.shot [data-act="fireagain"]')) { stats.fireAgain++; continue; }
+        if (nx === 'cash' || nx === 'again') { await shot('pot-decision', true); await tap('.shot [data-act="cashout"]'); await page.waitForTimeout(600); await shot('cash-out', true); }
+        const r = await page.evaluate(() => WZ.ui.shotEnd && (WZ.ui.shotEnd.cash ? 'cash' : WZ.ui.shotEnd.f.how));
+        if (r === 'cash') stats.cashes++; else if (r) stats.misses++;
+        await tap('.shot [data-act="shotok"]'); await page.waitForTimeout(200);
+        break;
       }
-      const r = await page.evaluate(() => WZ.ui.shotEnd && { hit: WZ.ui.shotEnd.hit, how: WZ.ui.shotEnd.how });
-      if (r) { r.hit ? stats.hits++ : stats.misses++; await shot(r.hit ? 'result-hit' : 'result-miss', true); }
-      if (!(await tap('[data-act="fireagain"]'))) await tap('[data-act="shotok"]'); else { stats.shots++; await page.waitForTimeout(260); await shot('fire-again', true); await finishOpenShot(); }
       return true;
-    };
-    const finishOpenShot = async () => { // a shot opened with Fire again: flip to the end, stopping at step 1
-      for (let k = 0; k < 40; k++) { const lvl = await page.evaluate(() => WZ.G.shot ? WZ.G.shot.level : null); if (lvl == null) break; await tap(lvl >= 0 ? '[data-act="stop"]' : '[data-act="flip"]'); stats.flips++; await page.waitForTimeout(380); }
-      await tap('[data-act="shotok"]'); await page.waitForTimeout(200);
     };
     await page.click('[data-act="new"][data-id="ai"]');
     await page.waitForTimeout(600);
@@ -95,14 +100,15 @@ const SEED_NOW = +process.env.PYL_SEED || 140;
         await page.waitForTimeout(90);
       }
     }
-    // staged: the final circle (Hot Zone). Both operators on the last location, a fresh turn with Precision.
+    // staged: a pot at stake with a Rally-raised Jam limit (the state is edited so this moment is always captured)
     if (await waitMine()) {
       await page.evaluate(() => { const G = WZ.G, me = G.players[WZ.ui.me], op = G.players[1 - WZ.ui.me];
-        for (const e of G.envs) e.state = e.w === me.pos ? 'safe' : 'gas'; op.pos = me.pos; me.res.prec = Math.max(me.res.prec, 6); WZ.render(); });
-      await page.waitForTimeout(1900); await shot('hotzone-fire-button');
-      if (await tap('.hb-fire:not([disabled])')) { await page.waitForTimeout(300); await shot('hotzone-shot');
-        for (let k = 0; k < 20; k++) { const lvl = await page.evaluate(() => WZ.G.shot ? WZ.G.shot.level : null); if (lvl == null) break; await tap('[data-act="flip"]'); await page.waitForTimeout(420); }
-        await shot('hotzone-result'); await tap('[data-act="shotok"]'); }
+        op.pos = me.pos; me.res.prec = Math.max(me.res.prec, 8); me.rallyDone = ['support3']; me.heat = 1; me.shot = 1;
+        me.pot = [{ dmg: 4, cq: true, cover: 0, weapon: WD.WEAPONS[G.weapons[me.guns[0]].def].name, level: 0, steps: 3 }, { dmg: 3, cq: true, cover: 0, weapon: WD.WEAPONS[G.weapons[me.guns[0]].def].name, level: 0, steps: 3 }]; WZ.render(); });
+      await page.waitForTimeout(1900); await shot('staged-pot-fire-again-button');
+      if (await tap('.hb-fire:not([disabled])')) { await page.waitForTimeout(300); await shot('staged-pot-shot');
+        for (let k = 0; k < 20; k++) { const lvl = await page.evaluate(() => WZ.G.shot ? WZ.G.shot.level : null); if (lvl == null) break; await tap('.shot [data-act="flip"]'); await page.waitForTimeout(420); if (k === 1) await shot('staged-pot-flipping'); }
+        await page.waitForTimeout(300); await shot('staged-pot-result'); }
     }
     await page.evaluate(() => { WZ.ui.sheet = { type: 'rules' }; WZ.renderLayer(); }); await page.waitForTimeout(300);
     await page.evaluate(() => { const el = [...document.querySelectorAll('.rules h4')].find(h => /Firing/.test(h.textContent)); if (el) el.scrollIntoView(); });

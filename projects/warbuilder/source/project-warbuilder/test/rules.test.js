@@ -52,7 +52,7 @@ describe('setup', () => {
   });
 });
 
-describe('firing: push your luck (flip, stop, Jam)', () => {
+describe('firing: push your luck, Firefight (flip, bank, pot, Jam limit, cash out)', () => {
   // decks are listed bottom → top: the LAST card is flipped first
   const finalCircle = (s, w) => { for (const e of s.envs) e.state = e.w === w ? 'safe' : 'gas'; };
   test('FIRE starts a shot without flipping; each flip costs 1 Precision; flipped cards go to the discard pile when the shot ends', () => {
@@ -63,38 +63,63 @@ describe('firing: push your luck (flip, stop, Jam)', () => {
     assert.equal(me.discard.length, 0, 'the flipped card stays in the shot until it ends');
     WD.stop(s, p); assert.equal(s.shot, null); assert.equal(me.discard.length, 1);
   });
-  test('the ladder: STOP banks the step you are on; flip on for the next; the top step banks by itself', () => {
+  test('the ladder: STOP banks the step you are on into the pot; flip on for the next; the top step banks by itself; cashing out deals the pot', () => {
     assert.deepEqual(WD.WEAPONS['pistol-0'].ladder, [[2, 2], [4, 4], [6, 5]]);
     let d = duel({ prec: 9, deck: ['K04', 'K04', 'K04'] });
     WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p);
-    let r = WD.stop(d.s, d.p); assert.equal(r.result.hit, true); assert.equal(r.result.level, 0); assert.equal(r.result.dealt, 2); assert.equal(d.them.hp, 38);
+    let r = WD.stop(d.s, d.p); assert.equal(r.result.hit, true); assert.equal(r.result.level, 0); assert.equal(r.result.banked, 2);
+    assert.equal(d.them.hp, 40, 'a banked shot deals nothing yet'); assert.equal(WD.potValue(d.me), 2);
+    const c = WD.cashOut(d.s, d.p); assert.equal(c.total, 2); assert.equal(d.them.hp, 38); assert.equal(d.me.pot.length, 0);
+    assert.match(WD.cashOut(d.s, d.p).err, /pot is empty/);
     d = duel({ prec: 9, deck: ['K04', 'K04', 'K04'] });
     WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p); WD.flip(d.s, d.p);
-    r = WD.stop(d.s, d.p); assert.equal(r.result.dealt, 4); assert.equal(r.result.level, 1);
+    r = WD.stop(d.s, d.p); assert.equal(r.result.banked, 4); assert.equal(r.result.level, 1);
     d = duel({ prec: 9, deck: ['K04', 'K04', 'K04'] });
     WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p); WD.flip(d.s, d.p); r = WD.flip(d.s, d.p);
-    assert.equal(r.done, true); assert.equal(r.result.dealt, 5); assert.equal(d.s.shot, null, 'the top step ends the shot');
+    assert.equal(r.done, true); assert.equal(r.result.banked, 5); assert.equal(d.s.shot, null, 'the top step ends the shot');
+  });
+  test('the pot grows over several shots; each banked shot hits on its own when you cash out; End turn cashes out too', () => {
+    const { s, p, me, them } = duel({ prec: 9, deck: Array(6).fill('K04') }); them.def = 2;
+    assert.equal(WD.fire(s, p, 0, { cash: false }).ok, true); assert.equal(WD.fire(s, p, 0, { cash: false }).ok, true);
+    assert.deepEqual(me.pot.map(x => x.dmg), [2, 2]); assert.equal(them.hp, 40);
+    const c = WD.cashOut(s, p); assert.deepEqual(c.result.hits.map(h => h.dealt), [1, 1], 'Armor soaks each shot: 2 − 1, then 2 − 1'); assert.equal(them.def, 0);
+    const d = duel({ prec: 9, deck: Array(6).fill('K04') });
+    WD.fire(d.s, d.p, 0, { cash: false }); assert.equal(d.them.hp, 40);
+    WD.endTurn(d.s, d.p); assert.equal(d.them.hp, 38); assert.match(d.s.log.map(l => l.msg).join('\n'), /cashes out Sidearm → HIT for 2/);
   });
   test('you cannot STOP before the first step', () => {
     const { s, p } = duel({ prec: 5, deck: ['K04', 'T004'] });
     WD.fireStart(s, p, 0); WD.flip(s, p);
     assert.match(WD.stop(s, p).err, /Reach the first step/); assert.ok(s.shot);
   });
-  test('a Jam (Sprint, Scout) costs the gun\'s Recoil in Precision; the second Jam in one shot is a miss', () => {
+  test('a Jam (Sprint, Scout) costs the gun\'s Recoil in Precision; Jams count for the whole turn; at the limit (2) you bust', () => {
     assert.equal(WD.CARDS.T001.jam, true); assert.equal(WD.CARDS.T002.jam, true); assert.ok(!WD.CARDS.T004.jam && !WD.CARDS.T005.jam);
     const { s, p, me, them } = duel({ prec: 8, deck: ['T002', 'T004', 'T001'] }); // Sidearm Recoil 2
     WD.fireStart(s, p, 0);
-    let r = WD.flip(s, p); assert.equal(r.event, 'jam'); assert.equal(me.res.prec, 8 - 1 - 2); assert.equal(s.shot.jams, 1);
+    let r = WD.flip(s, p); assert.equal(r.event, 'jam'); assert.equal(me.res.prec, 8 - 1 - 2); assert.equal(me.heat, 1); assert.equal(WD.jamLimit(s, p), 2);
     WD.flip(s, p); r = WD.flip(s, p);
     assert.equal(r.done, true); assert.equal(r.result.hit, false); assert.equal(r.result.how, 'bust'); assert.equal(them.hp, 40);
     assert.equal(me.stats.busts, 1); assert.equal(me.discard.length, 3);
   });
-  test('Hot Zone: in the final circle the first Jam is a miss', () => {
-    const { s, p, me } = duel({ prec: 8, deck: ['K04', 'T001'], posThem: 2, types: { 2: 'E01' } });
-    finalCircle(s, me.pos); assert.equal(WD.bustLine(s), 1);
-    WD.fireStart(s, p, 0); assert.equal(s.shot.hotZone, true);
-    const r = WD.flip(s, p); assert.equal(r.done, true); assert.equal(r.result.how, 'bust');
-    const d = duel({ prec: 8, deck: ['K04', 'T001'] }); assert.equal(WD.bustLine(d.s), 2, 'before the final circle: the second Jam');
+  test('BUST: the pot is lost and your shooting ends this turn; Jams from earlier shots count', () => {
+    const { s, p, me, them } = duel({ prec: 12, deck: ['T001', 'K04', 'K04', 'T002'] }); me.shot = 1;
+    WD.fireStart(s, p, 0); WD.flip(s, p); assert.equal(me.heat, 1); WD.flip(s, p); WD.stop(s, p); // Jam, then 2 Hit Markers: bank 2
+    WD.fireStart(s, p, 0); WD.flip(s, p); WD.stop(s, p); assert.equal(WD.potValue(me), 4);
+    WD.fireStart(s, p, 0); const r = WD.flip(s, p); // the turn's second Jam
+    assert.equal(r.result.how, 'bust'); assert.equal(r.result.lost, 4); assert.equal(me.pot.length, 0); assert.equal(them.hp, 40);
+    assert.equal(me.busted, true); assert.match(WD.fireStart(s, p, 0).err, /busted/); assert.equal(me.stats.wipes, 1);
+    WD.endTurn(s, p); assert.equal(them.hp, 40, 'nothing to cash out');
+  });
+  test('the Jam limit is 2, +1 for each Rally you made this turn (a Rally between shots raises it); the final circle does not change it', () => {
+    const { s, p, me } = duel({ prec: 12, deck: Array(6).fill('K04'), posThem: 2, types: { 2: 'E01' } });
+    assert.equal(WD.jamLimit(s, p), 2);
+    me.rallyDone = ['support3']; assert.equal(WD.jamLimit(s, p), 3);
+    me.rallyDone = ['support3', 'support5', 'recon3']; assert.equal(WD.jamLimit(s, p), 5);
+    me.rallyDone = []; for (const e of s.envs) e.state = e.w === me.pos ? 'safe' : 'gas'; assert.equal(WD.jamLimit(s, p), 2, 'no Hot Zone');
+    // between shots you may play cards: three Support cards make a Rally and lift the limit
+    const d = duel({ prec: 9, deck: Array(6).fill('K04') }); WD.fire(d.s, d.p, 0, { cash: false });
+    d.me.hand = cards(d.s, ['K05', 'K05', 'K05']); for (const i of d.me.hand.slice()) assert.equal(WD.playCard(d.s, d.p, i).ok, true);
+    assert.equal(WD.jamLimit(d.s, d.p), 3); assert.equal(WD.potValue(d.me), 2, 'the pot stays while you play cards');
   });
   test('Steady cancels a Jam: no Recoil, it does not count, and it is used up (it lasts across the turn\'s shots)', () => {
     const { s, p, me } = duel({ prec: 8, deck: ['T001', 'T001', 'T001'] }); me.revealPlus = 1;
@@ -103,13 +128,15 @@ describe('firing: push your luck (flip, stop, Jam)', () => {
     r = WD.flip(s, p); assert.equal(r.event, 'jam'); assert.equal(s.shot.jams, 1);
     r = WD.flip(s, p); assert.equal(r.result.how, 'bust');
   });
-  test('out of Precision before the first step: a miss; out of Precision on a step: that step banks', () => {
+  test('out of Precision before the first step: that shot misses (the pot stays); out of Precision on a step: that step banks', () => {
     let d = duel({ prec: 1, deck: ['K04', 'T004'] });
     WD.fireStart(d.s, d.p, 0); let r = WD.flip(d.s, d.p);
     assert.equal(r.done, true); assert.equal(r.result.how, 'out'); assert.equal(r.result.hit, false); assert.equal(d.me.stats.outs, 1);
     d = duel({ prec: 3, deck: ['T004', 'T001', 'K04'] }); // 2 → step 1, then a Jam: 3 − 1 − 1 − 2 = 0 Precision
     WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p); r = WD.flip(d.s, d.p);
-    assert.equal(r.done, true); assert.equal(r.result.hit, true); assert.equal(r.result.dealt, 2); assert.equal(d.me.res.prec, 0);
+    assert.equal(r.done, true); assert.equal(r.result.hit, true); assert.equal(r.result.banked, 2); assert.equal(d.me.res.prec, 0);
+    d = duel({ prec: 2, deck: ['T004', 'K04'] }); d.me.shot = 1; WD.fire(d.s, d.p, 0, { cash: false }); WD.fireStart(d.s, d.p, 0); r = WD.flip(d.s, d.p);
+    assert.equal(r.result.how, 'out'); assert.equal(WD.potValue(d.me), 2, 'a miss keeps the pot');
   });
   test('no Precision: FIRE is refused', () => {
     const { s, p } = duel({ prec: 0, deck: ['T004'] });
@@ -141,6 +168,7 @@ describe('firing: push your luck (flip, stop, Jam)', () => {
     assert.match(WD.playCard(s, p, me.hand[0]).err, /Finish the shot/);
     assert.match(WD.endTurn(s, p).err, /Finish the shot/);
     assert.match(WD.fireStart(s, p, 0).err, /Finish the shot/);
+    assert.match(WD.cashOut(s, p).err, /Finish the shot/);
   });
   test('"Your hits deal +1 damage this turn" adds to every step', () => {
     const { s, p, me } = duel({ prec: 2, deck: ['K04'] }); me.dmgTurn = 2;
@@ -194,28 +222,37 @@ describe('firing: push your luck (flip, stop, Jam)', () => {
     d = duel(big);
     notes = WD.fire(d.s, d.p, 0).result.notes;
     assert.equal(notes.filter(n => /close quarters/.test(n)).length, 1, notes.join(' · ')); assert.ok(notes.includes('close quarters'));
-    assert.match(d.s.log[d.s.log.length - 1].msg, /fires Sidearm: 2 → HIT for 2 \(step 1, banked/);
+    assert.ok(d.s.log.some(l => /fires Sidearm: 2 → BANKED 2 \(step 1, banked; pot 2\)/.test(l.msg)), d.s.log.map(l => l.msg).join('\n'));
   });
-  test('shotOdds: sure decks and hopeless decks give exact odds; the next-flip Jam chance counts the deck', () => {
+  test('shotOdds: sure decks and hopeless decks give exact odds; the next-flip Jam and bust chances count the deck and the turn\'s Jams', () => {
     let d = duel({ prec: 9, deck: Array(8).fill('K04') });
-    let o = WD.shotOdds(d.s, d.p, 0); assert.deepEqual(o.reach, [1, 1, 1]); assert.equal(o.pJam, 0);
+    let o = WD.shotOdds(d.s, d.p, 0); assert.deepEqual(o.reach, [1, 1, 1]); assert.deepEqual(o.bust, [0, 0, 0]); assert.equal(o.pJam, 0);
     d = duel({ prec: 9, deck: Array(8).fill('T001') });
-    o = WD.shotOdds(d.s, d.p, 0); assert.equal(o.reach[0], 0); assert.equal(o.pJam, 1); assert.equal(o.jamsLeft, 8);
+    o = WD.shotOdds(d.s, d.p, 0); assert.equal(o.reach[0], 0); assert.equal(o.bust[0], 1); assert.equal(o.pJam, 1); assert.equal(o.jamsLeft, 8);
     d = duel({ prec: 9, deck: ['K04', 'K04', 'T001', 'K04'] }); WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p);
-    o = WD.shotOdds(d.s, d.p, 0); assert.equal(o.level, 0); assert.ok(Math.abs(o.pJam - 1 / 3) < 1e-9); assert.equal(o.pBust, 0, 'one Jam is not a miss yet');
+    o = WD.shotOdds(d.s, d.p, 0); assert.equal(o.level, 0); assert.ok(Math.abs(o.pJam - 1 / 3) < 1e-9); assert.equal(o.pBust, 0, 'one Jam is not a bust yet');
+    d.me.heat = 1; o = WD.shotOdds(d.s, d.p, 0); assert.ok(Math.abs(o.pBust - 1 / 3) < 1e-9, 'a Jam earlier this turn counts');
   });
-  test('AI stop policy: it banks a step when pushing would fail too often, and pushes when it is safe', () => {
-    // two sure Focus cards then a deck of Jams: pushing past step 1 is hopeless, so the AI stops at step 1
+  test('AI stop policy counts the pot: it banks when pushing is a bad bet, pushes when it is safe, and cashes out', () => {
+    // two sure Focus cards then a deck of Jams: pushing past step 1 is hopeless, so the AI stops at step 1 and cashes out
     let d = duel({ prec: 9, deck: [...Array(6).fill('T001'), 'K04'] });
     WD.aiFireLoop(d.s, d.p); assert.equal(d.s.shot, null); assert.equal(d.s.lastFire.level, 0); assert.equal(d.s.lastFire.stopped, true);
+    assert.equal(d.them.hp, 38); assert.equal(d.me.pot.length, 0);
     d = duel({ prec: 9, deck: Array(8).fill('K04') });
-    WD.aiFireLoop(d.s, d.p); assert.equal(d.s.lastFire.level, 2, 'a sure push goes to the top step');
+    WD.aiFireLoop(d.s, d.p); assert.equal(d.s.lastFire.level, 2, 'a sure push goes to the top step'); assert.equal(d.them.hp, 30, 'two top steps (5 + 5), cashed out');
   });
-  test('the bust rule is swappable but only the built values run', () => {
-    assert.deepEqual(T.pyl, { flipCost: 1, jamRecoil: true, bustAt: 2, finalBustAt: 1, jamScope: 'shot', bustCost: 'shot', bank: 'shot' });
-    const { s, p } = duel({ prec: 9, deck: Array(4).fill('K04') });
-    T.pyl.bustCost = 'turn';
-    try { assert.throws(() => WD.fireStart(s, p, 0), /not built yet/); } finally { T.pyl.bustCost = 'shot'; }
+  test('the bust rule is swappable: Firefight ships; the earlier Hot Zone rule still runs; unbuilt values refuse to run', () => {
+    assert.deepEqual(T.pyl, { flipCost: 1, jamRecoil: true, jamLimit: 2, rallyPlus: 1, finalMinus: 0, jamScope: 'turn', bustCost: 'pot', bank: 'pot' });
+    const keep = Object.assign({}, T.pyl);
+    try {
+      Object.assign(T.pyl, { jamScope: 'shot', bustCost: 'shot', bank: 'shot', rallyPlus: 0, finalMinus: 1 }); // Hot Zone
+      let d = duel({ prec: 8, deck: ['K04', 'T001'], posThem: 2, types: { 2: 'E01' } });
+      for (const e of d.s.envs) e.state = e.w === d.me.pos ? 'safe' : 'gas';
+      WD.fireStart(d.s, d.p, 0); assert.equal(WD.flip(d.s, d.p).result.how, 'bust', 'final circle: the first Jam misses');
+      d = duel({ prec: 8, deck: ['K04'] }); WD.fireStart(d.s, d.p, 0); WD.flip(d.s, d.p); WD.stop(d.s, d.p); assert.equal(d.them.hp, 38, 'bank "shot": the hit lands at once');
+      T.pyl.bank = 'turn'; d = duel({ prec: 9, deck: Array(4).fill('K04') });
+      assert.throws(() => WD.fireStart(d.s, d.p, 0), /not built yet/);
+    } finally { Object.assign(T.pyl, keep); }
   });
 });
 
