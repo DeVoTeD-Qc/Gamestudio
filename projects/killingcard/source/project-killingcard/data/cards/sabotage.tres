@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_h3dn5"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_ijgch"]
+
+[sub_resource type="Resource" id="Resource_arkq6"]
+script = ExtResource("1_h3dn5")
+trigger = 0
+kind = 17
+target = 12
+zone_scope = 1
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_l03o6"]
+script = ExtResource("1_h3dn5")
+trigger = 0
+kind = 1
+target = 7
+zone_scope = 1
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_ijgch")
+id = &"sabotage"
+display_name = "Sabotage"
+card_type = 1
+is_elite = false
+text = "Destroy an enemy Field in a zone; 1 damage to each enemy unit there."
+cost = 2
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_h3dn5")]([SubResource("Resource_arkq6"), SubResource("Resource_l03o6")])

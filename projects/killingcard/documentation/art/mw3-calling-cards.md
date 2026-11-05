@@ -99,7 +99,9 @@ Every mastery card is the same composition: one weapon in a mastery camo, centre
 - Text: many MW3 cards contain text and logos (our own art never does). Several put the text in the left or right third, where our icons sit. The curator should prefer cards without side text for the pitch set.
 
 
-## 5. Step 2 plan (after kc-board lands; nothing wired yet)
+## 5. Step 2 plan (after kc-board lands)
+**Step 2 is done (kc-cod2): see `mw3-pitch-set.md` for the curated set, the title -> chassis mapping and how to build the private pitch.**
+
 **kc-board has landed** and its `scripts/ui/art/banner_art_db.gd` already has the hook this task needs (lookup step 1b): if `res://assets/licensed/mw3/manifest.csv` exists it uses the first row per chassis id (`file`, `kind`, `card`, `banner_y`, `portrait_x`, `title`), and a clean checkout silently falls back to placeholders. So:
 
 1. **Done now, local only (git-ignored):** the manifest step also writes `assets/licensed/mw3/manifest.csv` (1,676 rows plus 4 Operator rows, ordered so that a non-review, non-mastery, static card comes first per chassis) and `assets/licensed/mw3/stills/*.png`: one representative frame per GIF, because **Godot 4.4 has no GIF importer** (`_load_image` reads PNG/JPG/WebP only). With the folder present, every chassis, every killstreak and the Operator (art id = the primary weapon: `kestrel_ar7` → MCW, `longreach_338` → KATT-AMR, `wasp_9` → WSP-9, `p12_sidearm` → COR-45, Gilded tier) already shows an MW3 card. Not tested in-engine yet (no Godot run in this step).

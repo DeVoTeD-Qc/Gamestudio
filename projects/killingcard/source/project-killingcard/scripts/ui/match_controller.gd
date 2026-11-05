@@ -281,6 +281,9 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	_end_shown = false
 	_finished = false
 	_match_started_ms = Time.get_ticks_msec()
+	if PitchDecks.active():
+		for s: RulesSide in state.sides:
+			s.setup.deck = PitchDecks.apply(s.setup.deck)
 	_assign_copy_arts(state)
 	state.start_match()
 	_begin_deploy()
@@ -1206,7 +1209,8 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	if card.is_field():
 		text = _join(text, FIELD_RULE)
 	_screen.get_inspector().open({
-		"view": CardInfo.view_dict(card, side), "title": card.display_name, "type": type_text,
+		"view": CardInfo.view_dict(card, side), "title": art.title if BannerArtDB.is_card_art(art) else card.display_name,
+		"type": (card.display_name + " · " + type_text) if BannerArtDB.is_card_art(art) else type_text,
 		"text": text, "keywords": keywords, "status": status,
 		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
 		"art_line": _art_line(art), "is_unit": card.is_unit(),

@@ -144,7 +144,7 @@ func _word(font: Font, fs: int, text: String, rr: Rect2, c: Color) -> void:
 func _chip(rr: Rect2, side: StringName, f: Dictionary) -> void:
 	_chip_rects.append([rr, side, f])
 	var side_c: Color = _col(&"friend") if side == &"player" else _col(&"enemy")
-	var tex: Texture2D = BannerArtDB.banner_texture(StringName(String(f.get("card_id", ""))), {"type": "field"})
+	var tex: Texture2D = BannerArtDB.banner_texture(StringName(String(f.get("banner", f.get("card_id", "")))), {"type": "field"})
 	var hidden: bool = bool(f.get("hidden", false))
 	draw_rect(rr, Color("#1C2228"))
 	if tex != null and not hidden:

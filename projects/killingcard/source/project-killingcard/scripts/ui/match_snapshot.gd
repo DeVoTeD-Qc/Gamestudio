@@ -58,6 +58,10 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		var c: Dictionary = CardInfo.chip(rc.uid, rc.card)
 		c["playable"] = rc.card.cost <= me.supply
 		c["banner"] = String(state.art_by_uid.get(rc.uid, rc.card.id))
+		var title: String = BannerArtDB.art_title(StringName(String(c["banner"])))
+		if title != "":
+			c["chassis"] = c.get("name", "")
+			c["name"] = title  # kc-cod2: the calling card's own title (private pitch art only)
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -132,6 +136,9 @@ static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: Ru
 	if state != null and uid >= 0 and state.art_by_uid.has(uid):
 		id = state.art_by_uid[uid]
 	e["banner"] = String(id)
+	var title: String = BannerArtDB.art_title(id)
+	if title != "":
+		e["art_title"] = title
 	e["bolt"] = card != null and not card.effects.is_empty()
 	e["front_kw"] = card != null and card.arrives_front
 	e["elite"] = card != null and card.is_elite
@@ -279,13 +286,18 @@ static func _fields(state: MatchState, viewer: int, z: int, view: Array[Dictiona
 		var row: Dictionary = view[z]
 		var me_name: StringName = MatchState.SIDE_NAMES[viewer]
 		var foe_name: StringName = MatchState.SIDE_NAMES[1 - viewer]
-		out["player"] = (row.get(me_name, []) as Array).duplicate()
-		out["enemy"] = (row.get(foe_name, []) as Array).duplicate()
+		out["player"] = (row.get(me_name, []) as Array).duplicate(true)
+		out["enemy"] = (row.get(foe_name, []) as Array).duplicate(true)
 	for p: Dictionary in state.sides[viewer].plays:
 		if p["kind"] == &"equipment" and int(p["zone"]) == z:
 			var rc: RulesCard = p["card"]
 			(out["player"] as Array).push_front({"card_uid": rc.uid, "card_id": rc.card.id, "name": rc.card.display_name,
 					"text": rc.card.text, "hidden": rc.card.hidden, "pending": true, "overrun_risk": false})
+	# kc-cod2: a Field copy with its own art shows it on the objective tile.
+	for key: String in out:
+		for f: Dictionary in out[key]:
+			if state.art_by_uid.has(int(f.get("card_uid", -1))):
+				f["banner"] = String(state.art_by_uid[int(f["card_uid"])])
 	return out
 
 

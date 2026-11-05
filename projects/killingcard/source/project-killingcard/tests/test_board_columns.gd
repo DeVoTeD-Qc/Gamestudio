@@ -219,6 +219,9 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 		var uids: Array = m.art_by_uid.keys()
 		assert_eq(uids.size(), 2, "both copies mapped")
 		assert_eq(MatchClone.copy(m).art_by_uid, m.art_by_uid, "clone keeps the art map")
+	# The calling card's own title is the card name; the Operator's mastery card is not.
+	assert_eq(BannerArtDB.art_title(&"kc_t_r2"), "Rifle Two", "art title as card name")
+	assert_eq(BannerArtDB.art_title(&"kc_t_g1"), "", "Operator keeps its weapon name")
 	# BannerView: flipbook only while focused, still art otherwise; safety net needs licensed art.
 	var view := BannerView.new()
 	view.size = Vector2(256, 64)
@@ -241,6 +244,30 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 	BannerArtDB.licensed_dir = saved
 	BannerArtDB.licensed_enabled = was_enabled
 	BannerArtDB.clear_cache()
+
+
+## kc-cod2: the private pitch build's deck swaps (Units, Tactics and Fields all shown, new chassis in),
+## off by default so the public game and every other test keep the real decks.
+func test_pitch_decks_swaps_only_when_active() -> void:
+	var cfg: RunConfig = load("res://data/run_config.tres")
+	var starter: Array[CardData] = cfg.starter_deck
+	assert_false(PitchDecks.active(), "off outside the pitch export")
+	assert_eq(PitchDecks.apply(starter), starter, "inactive: unchanged")
+	PitchDecks.forced = true
+	var deck: Array[CardData] = PitchDecks.apply(starter)
+	PitchDecks.forced = false
+	assert_eq(deck.size(), starter.size(), "same deck size")
+	assert_eq(cfg.starter_deck, starter, "the source deck is not modified")
+	var ids: Array = deck.map(func(c: CardData) -> StringName: return c.id)
+	for id: StringName in [&"brawler", &"war_standard", &"listening_post", &"smoke_screen", &"blackout"]:
+		assert_true(ids.has(id), "pitch deck has %s" % id)
+	var fields: int = deck.filter(func(c: CardData) -> bool: return c.card_type == DataEnums.CARD_TYPE_FIELD).size()
+	var units: int = deck.filter(func(c: CardData) -> bool: return c.card_type == DataEnums.CardType.UNIT).size()
+	assert_true(fields >= 3, "at least 3 Fields (%d)" % fields)
+	assert_true(units >= PitchDecks.MIN_UNITS, "units kept (%d)" % units)
+	for id: StringName in [&"brawler", &"smoke_screen", &"blackout", &"sabotage"]:
+		var c: CardData = CardDB.get_card(id)
+		assert_not_null(c, "%s is in data/cards" % id)
 
 
 func test_ghost_protector_slide_and_snap() -> void:

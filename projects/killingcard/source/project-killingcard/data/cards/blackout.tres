@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_a1e7l"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_6yr0o"]
+
+[sub_resource type="Resource" id="Resource_hclst"]
+script = ExtResource("1_a1e7l")
+trigger = 0
+kind = 7
+target = 7
+zone_scope = 1
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 1
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_6yr0o")
+id = &"blackout"
+display_name = "Blackout"
+card_type = 1
+is_elite = false
+text = "Enemy units in a zone lose First Shot this round."
+cost = 1
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_a1e7l")]([SubResource("Resource_hclst")])

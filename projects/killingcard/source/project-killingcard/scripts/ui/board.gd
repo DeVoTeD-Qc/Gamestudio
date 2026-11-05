@@ -82,7 +82,8 @@ func _show_zoom(slot: Node) -> void:
 	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - ZOOM_SIZE.x))
 	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - ZOOM_SIZE.y))
 	_zoom.position = pos
-	_zoom_label.text = "%s · %s" % [String(slot.entry.get("name", "")), String(slot.entry.get("cls", "")).capitalize()]
+	var zoom_name: String = String(slot.entry.get("art_title", slot.entry.get("name", "")))
+	_zoom_label.text = "%s · %s" % [zoom_name, String(slot.entry.get("cls", "")).capitalize()]
 	_zoom_label.reset_size()
 	var below: bool = pos.y + ZOOM_SIZE.y + _zoom_label.size.y <= size.y
 	_zoom_label.position = Vector2(pos.x + (ZOOM_SIZE.x - _zoom_label.size.x) * 0.5,

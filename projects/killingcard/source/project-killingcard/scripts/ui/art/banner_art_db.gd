@@ -140,6 +140,20 @@ static func has_licensed() -> bool:
 	return licensed_enabled and not licensed_rows().is_empty()
 
 
+## kc-cod2 (head): a licensed calling card shows its own title as the card's name (the chassis name
+## becomes the type line). Not for the Operator's mastery cards (the Operator keeps its weapon name).
+static func is_card_art(art: BannerArt) -> bool:
+	return art != null and art.licensed and art.mastery_tier == 0 and art.title != ""
+
+
+## The art's own title for a card name ("" when the art is not a licensed calling card).
+static func art_title(art_id: StringName) -> String:
+	if art_id == &"" or not has_licensed():
+		return ""
+	var art: BannerArt = get_art(art_id)
+	return art.title if is_card_art(art) else ""
+
+
 ## Licensed art ids for a chassis (or an Operator weapon's mastery ladder, tier order), [] without.
 static func licensed_pool(chassis: StringName) -> Array[StringName]:
 	if not licensed_enabled:
