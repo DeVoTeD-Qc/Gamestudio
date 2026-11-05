@@ -18,7 +18,7 @@
 | Target | Result | Pass |
 |---|---|---|
 | Combo-aware AI beats combo-blind AI ≥ 55% | **57.5%** (95% CI 56.0–59.1). Shipping game today: 49.0% vs 48.7%, no difference | Yes |
-| Average turn power rises round over round | **8.2 → 9.6 → 11.4 → 12.6 → 13.0 → 15.8 → 17.8 → 19.4 → 19.7** (rounds 1–9, combo-aware) | Yes, rounds 1–9 |
+| Average turn power rises round over round | **8.2 → 9.6 → 11.4 → 12.6 → 13.0 → 15.8 → 17.7 → 19.4 → 19.5** (rounds 1–9, combo-aware) | Yes, rounds 1–9 |
 | Matches end by the hard end | Longest match 11 rounds, **0 past the hard end**. 87% end by KO, 12% in the storm, 0.3% at the hard end | Yes |
 | No gun class outside 42–58% | **42–57%** in the mirror match (DMR at the edge, 42%) | Yes |
 | Shot odds 60–70% (head's decision) | Taken shots hit **92%** (shipping game: 83%). Not fixed by this spec: see §8 and question Q1 | **No** |
@@ -26,7 +26,7 @@
 ## 2. Design pillars for this redesign
 1. **Watch the engine form.** Turn 8 must feel visibly stronger than turn 4, and the screen must say so in numbers.
 2. **One rule, read once.** One synergy rule (Squad), one persistent zone (Loadout), and at most 7 keywords. No neighbour-pair tables, no gun combos.
-3. **Quick turns.** Five steps, a cap of 2 buys, auto-resolving squads. A turn is about 60–90 seconds for a practised player.
+3. **Quick turns.** Five steps, a cap of 2 buys, auto-resolving squads. A turn should take a practised player about 60–90 seconds (estimate; not measured).
 4. **Battle royale arc.** Loot early, build mid-game, showdown in a shrinking circle with a hard end. Engines peak exactly when the circle forces contact.
 5. **Your deck is your aim.** The reveal-to-shoot signature stays. Synergy feeds Precision, Hit Markers and damage, so the engine you build is the gun you fire.
 
@@ -46,8 +46,8 @@
 ### 3.2 Keywords (7)
 | Keyword | Rule | On today's engine |
 |---|---|---|
-| **Squad** | "Squad: X." You get X **once for each other card of this card's squad** in play this turn. Your Loadout cards count. | Replaces combo boxes and gun combos. The engine's dormant `allies` code is the same idea (binary); add the count. |
-| **Loadout** | When played, the card goes to your Loadout row (2 slots; to deploy a third, discard one). At **Ready**, each Loadout card gives its effect. It counts as a squad card in play every turn. It is not in your deck, so it is never revealed. | New zone `pl.loadout`, resolved in `startTurn` like `autoTactical`. |
+| **Squad** | "Squad: X." You get X **once for each other card of this card's squad** in play this turn, **up to ×3**. Your Loadout cards count. | Replaces combo boxes and gun combos. The engine's dormant `allies` code is the same idea (binary); add the count. |
+| **Loadout** | When played, the card goes to your Loadout row (2 slots; to deploy a third, discard one, or use the new card once and discard it). At **Ready**, each Loadout card gives its effect. It counts as a squad card in play every turn. It is not in your deck, so it is never revealed. | New zone `pl.loadout`, resolved in `startTurn` like `autoTactical`. |
 | **Scrap** | Remove a card in your hand, play area or discard pile from the game. Your deck can't go below 7 cards. | Exists (`scrap`). |
 | **Mark** | Your next shot needs 1 fewer Hit Marker on every step. | Exists (`nextFire.reqMod`). |
 | **Pierce** | Your shots ignore cover this turn. | Exists (`ignoreCover`). |
@@ -73,13 +73,13 @@ Plain effect words, not keywords: Gain (Movement, Precision, Intel, Armor, extra
 | **Buy Station Scrap** | At the Buy Station, pay 1 Intel: Scrap a Sprint (once per turn). | Steady thinning is what makes squad pairs show up in a 5-card hand. |
 | **Buy cap 2** | At most 2 buys per turn (+1 Buy effects add more). | Keeps turns short and makes Engineer's +1 Buy mean something. |
 | **Health 40** | Was 30. | Engines need runway. At 30, matches last 7.9 rounds and only 31% reach the final circle (§9.4). |
-| **Point blank** | Every gun may fire at distance 0. | Without it, DMR, sniper and launcher can't fire in a one-location final circle (they won 16–29% in an early run). |
+| **Point blank** | Every gun may fire at distance 0. | Without it, DMR, sniper and launcher can't fire in a one-location final circle (they won 16–36% in an early run). |
 | **Close quarters** (M3) | At distance 0, shots ignore cover and Armor. | Close guns get their edge. |
 | **Ladder +1** (M2) | +1 Hit Marker on every ladder step. | Meant to lower the odds. It is not enough on its own (§8). |
 | **Gun tweaks** | SMG: first step −1 Hit Marker, Recoil −1. Combat Knife: 2 stabs per turn. Breacher (shotgun): first step −1 Hit Marker, +1 damage. | Brings every gun class into 42–57%. |
 | **Cut** | Combo boxes and neighbour-pair roles, gun combos (`gcombo`), perks (already decided), Armor Plates (K01, unused), Take Cover (T006, unused). | Simpler card text. The old combos did not change decisions. |
 
-**Tested and cut:** *Streak* (your 2nd and later hits each turn deal +N damage). It made up 2.4% of all damage, and removing it changed the combo-aware win rate by 0.2 points. It was decoration, as the old combos were. *Specialist ranks* (own 4 or 7 cards of a squad: a free bonus every turn) added 0.6 points (58.1%). That is not worth a rule; it stays an optional knob.
+**Tested and cut:** *Streak* (your 2nd and later hits each turn deal +N damage). It made up 2.4% of all damage, and removing it changed the combo-aware win rate by 0.2 points. It was decoration, as the old combos were. *Specialist ranks* (own 4 or 7 cards of a squad: a free bonus every turn) added 0.5 points (58.0%). That is not worth a rule; it stays an optional knob.
 
 ## 4. Making growth visible (UI brief for ui-ux-agent)
 1. **Firepower readout** (top of the hand area): one number, updated live as cards resolve, with "▲3 vs last turn". Formula (the same one the simulator uses): **Movement + Precision + Intel + Armor + Pierce + Steady + Scrap + 2 × (extra shots, cards drawn, Mark, "hits +1 damage") + 1 per +1 Buy**. A sparkline under it shows Firepower for each round so far.
@@ -94,13 +94,13 @@ Plain effect words, not keywords: Gain (Movement, Precision, Intel, Armor, extra
 | Round | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|---|---|
 | **Target Firepower** | 8 | 10 | 11 | 12–13 | 13–14 | 15–16 | 17–18 | 19–20 | ~20 (plateau; final circle) |
-| Measured, combo-aware | 8.2 | 9.6 | 11.4 | 12.6 | 13.0 | 15.8 | 17.8 | 19.4 | 19.7 |
+| Measured, combo-aware | 8.2 | 9.6 | 11.4 | 12.6 | 13.0 | 15.8 | 17.7 | 19.4 | 19.5 |
 | Measured, combo-blind | 8.2 | 9.7 | 10.9 | 12.2 | 12.4 | 14.3 | 16.2 | 17.8 | 18.5 |
 | Same cards, Squad switched off | 8.2 | 9.6 | 10.5 | 11.2 | 11.4 | 12.6 | 13.6 | 14.5 | 14.9 |
-| Squad triggers per turn (aware) | 0 | 0 | 0.25 | 0.41 | 0.41 | 0.71 | 0.87 | 0.99 | 0.98 |
+| Squad triggers per turn (aware) | 0 | 0 | 0.25 | 0.41 | 0.41 | 0.71 | 0.87 | 1.00 | 0.98 |
 | Damage dealt per turn (aware) | 0 | 0.8 | 1.3 | 1.8 | 2.7 | 5.3 | 7.3 | 9.1 | 9.5 |
 
-The synergy is what makes the curve steep: the same cards with Squad switched off reach 14.9 by round 9, and with Squad 19.7 (+32%). Rounds 10–11 dip (19.1, 17.0) because only the slowest matches get that far (13% and 2% of turns), so the curve is quoted for rounds 1–9.
+The synergy is what makes the curve steep: the same cards with Squad switched off reach 14.9 by round 9, and with Squad 19.5 (+31%). Rounds 10–11 dip (19.1, 17.0) because only the slowest matches get that far (13% and 2% of turns), so the curve is quoted for rounds 1–9.
 
 ## 5. Card list (exact numbers)
 Notation: **HM** = Hit Markers, **Cost** in Intel. "Squad" lines repeat once per other card of that squad in play (Loadout counts). Copies: 2 of each loot card; each Loadout has 3 copies (1 in tier I loot, 2 in tier II). Names are kept; four new cards are marked **NEW**.
@@ -117,7 +117,7 @@ Sprint ×3 (+1 Movement, 0 HM) · Scout ×3 (+1 Intel, 0 HM) · Steady Aim ×2 (
 | Dead Drop | Engineer | 1 | +2 Intel | same |
 | *Service* | — | — | Pay 1 Intel: Scrap a Sprint (once per turn) | new |
 
-The station basics decide which squads are viable. When Tac Sprint gave only Movement, a deck built on Assault won 13%. Station basics have no Squad line, but they count as squad cards for other cards' Squad lines.
+The station basics decide which squads are viable. In an early version, when Tac Sprint gave only Movement, a deck built on Assault won 13%. Station basics have no Squad line, but they count as squad cards for other cards' Squad lines.
 
 ### Assault: hits hit harder
 | ID | Card | Tier | Cost | HM | Play | Squad (each) | Change vs today |
@@ -129,7 +129,7 @@ The station basics decide which squads are viable. When Tac Sprint gave only Mov
 | A22 | Flank | II | 3 | 2 | +2 Move, +2 Prec, Draw 1 | Draw 1, +2 Prec | −1 Move, −1 Intel, +2 Prec |
 | A23 | Run and Gun | II | 3 | 2 | +1 Move, +2 Prec, +1 shot | Steady, +2 Prec | −1 Move |
 | A31 | Blitz | III | 5 | 3 | +2 Move, +3 Prec, hits +1 dmg | +2 Prec | −1 Move, draw → +1 dmg |
-| A32 | Breaching Charge | III | 4 | 3 | +1 Move, +3 Prec, Pierce, hits +1 dmg | +1 shot, Steady | "next hit +2" → "all hits +1" |
+| A32 | Breaching Charge | III | 4 | 3 | +1 Move, +3 Prec, Pierce, hits +1 dmg | +1 shot, Steady | −1 Move, +1 Prec, HM 2→3; "next hit +2" → "all hits +1" |
 | L1A | **Tac Vest** (NEW) | Loadout | 3 | 1 | Loadout. Ready: +1 Prec, your hits deal +1 dmg | — | new |
 
 ### Recon: aim
@@ -175,9 +175,9 @@ The station basics decide which squads are viable. When Tac Sprint gave only Mov
 
 ### A worked turn (round 7, Recon deck)
 Hand: Heartbeat Sensor, Spotter Scope, Mark Target, Scout, Focus. Recon Post is in the Loadout row.
-Ready: Recon Post +2 Precision. Play all: four Recon cards are in play and the Loadout counts too, so each Recon card has **4 others**.
-Heartbeat Sensor: +2 Prec, Draw 1, Squad ×4: **+16 Prec**. Spotter Scope: +3, Squad ×4: **4 Marks, +8 Prec**. Mark Target: +2, Squad ×4: **4 Marks, +4 Prec**. Focus: +2 (no Squad line).
-This is the "engine has formed" turn: about 40 Precision and 8 Marks (Mark can't push a step below 1 Hit Marker). In practice the gun's shots per turn cap the payoff, so Recon decks convert surplus into the **big ladder step**. (The UI shows this as Firepower ≈ 50, ▲ big.) **Tuning note:** a ×4 Recon chain is the top of the range. The sim's combo-aware decks average 1 Squad trigger per turn at their peak, but a capped multiplier ("Squad: at most ×3") is the obvious safety valve if playtests find it too swingy.
+Ready: Recon Post +2 Precision. Play all: four Recon cards are in play and the Loadout counts too, so each Recon card has 4 others, **capped at ×3**.
+Heartbeat Sensor: +2 Prec, Draw 1, Squad ×3: **+12 Prec**. Spotter Scope: +3, Squad ×3: **3 Marks, +6 Prec**. Mark Target: +2, Squad ×3: **3 Marks, +3 Prec**. Focus: +2 (no Squad line).
+This is the "engine has formed" turn: 32 Precision and 6 Marks (Mark can't push a step below 1 Hit Marker). The gun's shots per turn cap the payoff, so a Recon deck turns its surplus into the **big ladder step** (the UI shows Firepower of about 47, ▲ big). This is the top of the range. The sim's combo-aware decks average 1 Squad trigger per turn at their peak, and **the ×3 cap almost never binds** (results are the same with and without it). The cap is there so the table never has to count a ×5.
 
 ## 6. Market and loot structure
 | Source | What | Access | Change |
@@ -186,7 +186,7 @@ This is the "engine has formed" turn: about 40 Precision and 8 Marks (Mark can't
 | **Buy Station** | The 4 squad basics + Scrap service | Anywhere, 2 Intel | Squad-tagged basics with equal value (§5). |
 | **Supply crates** | Unchanged (rounds 2 and 4, tier III), not modelled in the sim. | — | — |
 
-**Why this works for engines:** position *is* drafting. Going to the Recon Tower means Recon loot, so the map choice (move toward the rival, toward cover, toward your squad's loot) becomes the battle-royale "where to rotate" decision. **Tested and rejected:** a CardZone-style always-on "Supply Line" (one face-up card per squad, buyable anywhere). It made focus *too* easy for both AIs and dropped the combo-aware edge to 45%, so the map-tied loot stays.
+**Why this works for engines:** position *is* drafting. Going to the Recon Tower means Recon loot, so the map choice (move toward the rival, toward cover, toward your squad's loot) becomes the battle-royale "where to rotate" decision. **Tested and rejected:** a CardZone-style always-on "Supply Line" (one face-up card per squad, buyable anywhere). It made focus easy for *both* AIs (the combo-blind deck's top squad share rose from 44% to 48%). It cut the combo-aware edge to 54.3% and shortened matches to 8.1 rounds, with the final circle in only 39%. The map-tied loot stays.
 
 ## 7. Closing circle and hard end (M1, as decided)
 | Round end | 2 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
@@ -196,19 +196,20 @@ This is the "engine has formed" turn: about 40 Precision and 8 Marks (Mark can't
 
 - The closing edge alternates sides. Each location shows "closes end of round N" (the public schedule). Caught outside: 3 damage, +1 per extra space, then pushed back in.
 - **Fit with the engine:** engines peak (Firepower 18–20) in rounds 7–9, exactly when 1–2 locations remain and everyone is at distance 0–1, where close quarters ignores cover and Armor. The build-up and the showdown line up.
-- **Measured:** final circle reached in 57% of matches (target ≥ 50%, met); longest match 11 rounds; 87% end by KO, 12% in the storm, 0.3% at the hard end. Gas and storm deal **7%** of all damage (M1 target 10–20%, *not met*). Moving the schedule 1 round earlier (final circle after round 7) raises it but cuts matches to 8 rounds. That trade is question Q2.
+- **Measured:** final circle reached in 57% of matches (target ≥ 50%, met); longest match 11 rounds; 87% end by KO, 12% in the storm, 0.3% at the hard end. Gas and storm deal **7%** of all damage (M1 target 10–20%, *not met*).
+- **One round faster** (close after rounds 2–7, final circle after round 7, hard end at the end of round 10) meets that target: gas 12.4%, final circle in 84%, 8.3 rounds, combo-aware 57.9%. But the Longbow rises to 60% in the mirror (outside the band), and power plateaus from round 8 to round 9 (18.8 → 18.6). That trade is question Q2.
 
 ## 8. Shot odds (60–70%): an honest finding
 The head decided typical shots should hit about 60–70%. **This spec does not deliver that, and synergy makes it harder.**
 - Taken shots hit **92%** in the prototype (ranged 88%, close quarters 91%, knife 100%), against 83% in today's game.
-- The cause is structural. A shot reveals 1 card per Precision, and Precision per turn ranges from about 2 (starter hands) to 20+ (formed engines). For a given need, the hit chance jumps from about 0% to about 100% over a few points of Precision. When in range, **36% of first-shot chances are under 20% and 41% are over 80%**; only 21% are in 20–80%. Any sensible player, like the AI, waits for the high-odds turns, so the shots actually taken almost always hit.
+- The cause is structural. A shot reveals 1 card per Precision, and Precision per turn ranges from about 2 (starter hands) to 20+ (formed engines). For a given need, the hit chance jumps from about 0% to about 100% over a few points of Precision. When in range, **36% of first-shot chances are under 20% and 41% are over 80%**; only 22% are in 20–80%. Any sensible player, like the AI, waits for the high-odds turns, so the shots actually taken almost always hit.
 - **Levers tested in the prototype** (4,000 games each):
 
 | Lever | Taken shots hit | Combo-aware win | Side effects |
 |---|---|---|---|
 | Spec as written (+1 on the ladder) | 92% | 57.5% | — |
-| +2 or +3 on the ladder | 88–89% | 53–55% | Fewer shots; more hard ends |
-| Reveal cap of 4–5 cards | 84–86% | 53–55% | Precision cards lose value |
+| +2 on the ladder (instead of +1) | 93% | 57.5% | Half of all chances drop under 20%; fewer shots (16.8 per match); 8.9 rounds |
+| Reveal cap: a shot reveals at most 4 cards | 88% (ranged 81%) | 57.4% | Big hits fall from 29% to 12% of hits; 9.3 rounds; gas 14% of damage (meets M1); 2% hard ends |
 | **Dodge:** the target flips their top card; its Hit Markers raise the need | **90%** (ranged 85%) | **57.5%** | The defender's deck matters; a duel moment; +1 flip per shot |
 | **Commit Aim:** spend Precision per shot instead of Recoil | **86%** (ranged 80%) | **52.9%** (fails ≥ 55%) | Matches 9.6 rounds; 7% hard ends; weakens synergy |
 
@@ -235,33 +236,38 @@ node projects/warbuilder/qa/tools/ai_sim_syn.js 4000 --curve               # + p
 | Run | Combo-aware win | First player | Rounds (max) | End: KO / storm / hard end | Final circle | Gas+storm share of damage | Hit rate |
 |---|---|---|---|---|---|---|---|
 | **Aware vs blind (spec)** | **57.5%** | 50.0% | 8.6 (11) | 87% / 12% / 0.3% | 57% | 7.0% | 92% |
-| Aware mirror | 50.5% (seat) | 50.0% | 8.4 (11) | 89% / 11% / 0.2% | 51% | 5.9% | 93% |
-| Blind mirror | 49.1% (seat) | 48.7% | 8.7 (11) | 85% / 14% / 0.5% | 63% | 8.0% | 92% |
+| Aware mirror | 50.6% (seat) | 50.1% | 8.4 (11) | 89% / 11% / 0.1% | 51% | 5.9% | 93% |
+| Blind mirror | 49.1% (seat) | 48.8% | 8.7 (11) | 85% / 14% / 0.5% | 63% | 8.0% | 92% |
 | Control: Squad off (`--flat`) | **49.6%** | 49.8% | 9.4 (11) | 78% / 20% / 2% | 86% | 14% | 90% |
-| + Specialist ranks | 58.1% | 49.5% | 8.6 | 87% / 12% / 0.4% | 57% | 6.9% | 93% |
-| + Gun's squad counts for Squad | 58.5% | 50.1% | 8.2 | 91% / 9% / 0% | 42% | 4.5% | 93% |
+| + Specialist ranks | 58.0% | 49.5% | 8.6 | 87% / 12% / 0.4% | 57% | 6.9% | 93% |
+| + Gun's squad counts for Squad | 58.4% | 50.0% | 8.2 | 91% / 9% / 0% | 42% | 4.5% | 93% |
+| No ×3 cap on Squad | 57.5% | 49.9% | 8.6 | identical to the spec row | 57% | 7.0% | 92% |
 | + Dodge (ladder +0) | 57.5% | 48.5% | 8.5 | 87% / 13% / 0.4% | 56% | 6.9% | 90% |
-| Commit Aim instead of Recoil | 52.9% | 48.5% | 9.6 | 72% / 21% / 7% | 87% | 18% | 86% |
-| Health 30 instead of 40 | 56.9% | 49.0% | 7.9 | 92% / 8% / 0% | 31% | 4.4% | 92% |
+| Commit Aim instead of Recoil | 52.9% | 48.4% | 9.6 | 72% / 21% / 7% | 87% | 18% | 86% |
+| Reveal cap 4 | 57.4% | 49.2% | 9.3 | 79% / 19% / 2% | 81% | 14% | 88% |
+| Supply Line market row | 54.3% | 48.2% | 8.1 | 92% / 8% / 0% | 39% | 3.6% | 92% |
+| Circle one round faster (hard end 10) | 57.9% | 48.5% | 8.3 (10) | 82% / 17% / 0.9% | 84% | 12.4% | 92% |
+| Health 30 instead of 40 | 56.9% | 48.9% | 7.9 | 92% / 8% / 0% | 31% | 4.4% | 92% |
 | *Shipping game today (`ai_sim.js`, 2,000)* | *combo-blind 48.7% vs normal 49.0%* | *50.5%* | *9.4* | *gas never closes* | *0%* | *0.7%* | *83%* |
 
-- **Synergy is what wins.** With Squad switched off, a combo-aware deck that still leans into one squad wins only 49.6%. With Squad on, 57.5%. Combo-aware decks end with 64% of their squad cards in one squad; combo-blind decks end with 43%.
+- **Synergy is what wins.** With Squad switched off, a combo-aware deck that still leans into one squad wins only 49.6%. With Squad on, 57.5%. Combo-aware decks end with 64% of their squad cards in one squad; combo-blind decks end with 44%.
 - **Lean in, don't go all in.** Decks forced to buy *only* one squad (2,000 games each): Assault 41%, Recon 46%, Support 40%, Engineer 55% against the combo-blind AI. The winning plan is about two-thirds one squad, plus the best other cards. That is a healthy deckbuilder shape, but **Assault and Support are the weaker "pure" plans** (tuning item).
-- **Squad balance, combo-aware as the main squad vs combo-blind:** Assault 62% (n=680), Recon 59% (n=452), Support 54% (n=2,619), **Engineer 74% (n=249)**. In the mirror: Assault 51%, Recon 52%, Support 47%, Engineer 68%. **Engineer is the strongest engine when it comes together** (more buys, more gun upgrades). A first nerf candidate: Black Market loses its +1 Buy, or Bounty Contract drops to +1 Intel and +1 Precision.
+- **Squad balance, combo-aware as the main squad vs combo-blind:** Assault 62% (n=678), Recon 59% (n=453), Support 54% (n=2,621), **Engineer 73% (n=248)**. In the mirror: Assault 51%, Recon 52%, Support 47%, Engineer 69%. **Engineer is the strongest engine when it comes together** (more buys, more gun upgrades). A first nerf candidate: Black Market loses its +1 Buy, or Bounty Contract drops to +1 Intel and +1 Precision.
 
 ### 9.3 Gun classes (win rate by gun held at the end; aware mirror, 4,000 games)
 | Assault Rifle | Burst | DMR | Knife | Launcher | LMG | Pistol | Magnum | Breacher | SMG | Longbow |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 51% | 51% | **42%** | 52% | 56% | 46% | 50% | 50% | 48% | 55% | 57% |
+| 50% | 50% | **42%** | 52% | 55% | 46% | 49% | 50% | 48% | 55% | 57% |
 
-All are within 42–58% (aware vs blind: 44–53%; blind mirror: 44–57%). Today's game: knife 32%, sniper 64%. The DMR sits at the edge; if needed, give it +1 shot or drop its Recoil by 1.
+All are within 42–58% (aware vs blind: 44–55%; blind mirror: 44–57%). Today's game: knife 32%, sniper 64%. The DMR sits at the edge; if needed, give it +1 shot or drop its Recoil by 1.
 
 ### 9.4 Pacing knobs tried
-| Knob | Effect |
+| Knob (everything else as specced) | Effect |
 |---|---|
 | Health 30 → 40 | Rounds 7.9 → 8.6; final circle 31% → 57%; combo-aware edge 56.9 → 57.5% |
-| Circle closes after rounds 2,3,4,5,6,7 (final circle after 7) | Rounds ≈ 8.0; more storm KOs; tested at Health 30 only |
-| Circle closes after rounds 2,4,6,8,9,10 (final after 10, hard end 12) | Final circle about 17%; gas ≈ 2% of damage (too late) |
+| Final circle after round 7, hard end 10 | 8.3 rounds; final circle 84%; gas 12.4% of damage; Longbow 60% in the mirror; power flat from round 8 to 9 |
+| **Final circle after round 8, hard end 11 (spec)** | 8.6 rounds; final circle 57%; gas 7%; all targets met |
+| Final circle after round 10, hard end 12 | 8.9 rounds; final circle 12%; gas 1.5% of damage (too late; 3,000 games) |
 
 ### 9.5 Limits of the prototype
 - It is a **model**: simplified AIs, a fixed drop (locations 2 and 6), no supply crates, Reaction only on Deployable Cover, one gun slot, and no cover choice beyond the AI's scoring. The absolute numbers (match length, hit rate) will move in the real engine; the **comparisons** (aware vs blind, Squad on vs off, gun classes) are the useful part.
@@ -271,7 +277,7 @@ All are within 42–58% (aware vs blind: 44–53%; blind mirror: 44–57%). Toda
 ## 10. Implementation notes (for mechanics-developer, after approval)
 | Spec item | Where in `engine.js` | Work |
 |---|---|---|
-| Squad (count-based) | `checkAllies` / `allyReady` (TUNE.allies) already implement a binary same-archetype ally. Replace `combos` with `squad: { eff, text }` and run the effect **(count of other same-archetype cards in `pl.play` + `pl.loadout`)** times. | S |
+| Squad (count-based) | `checkAllies` / `allyReady` (TUNE.allies) already implement a binary same-archetype ally. Replace `combos` with `squad: { eff, text }` and run the effect **min(3, count of other same-archetype cards in `pl.play` + `pl.loadout`)** times. | S |
 | Loadout row | New `pl.loadout` (max 2), played cards with `loadout: [...]` move there; resolve in `startTurn`; include it in card-count invariants, the AI and the UI. | M |
 | New effect ops | `dmgTurn` (hits +1 damage this turn), `buy` (+1 Buy); `recoilTurn` (Steady), `nextFire.reqMod` (Mark) and `ignoreCover` (Pierce) already exist. | S |
 | Buy cap, Hot Drop, Station Scrap | `buy` / `buySupply` (count buys; gain to `deck` top in rounds ≤ 3); a new station action. | S |
@@ -283,6 +289,6 @@ All are within 42–58% (aware vs blind: 44–53%; blind mirror: 44–57%). Toda
 
 ## 11. Open questions for the head (also the summary's list)
 1. **Q1. Shot odds.** The 60–70% target is not met (92% of taken shots hit) because Precision swings from about 2 to 20+ per turn. (a) Add **Dodge** (the target flips 1 card; 90%, keeps the synergy edge); (b) **Commit Aim** (86%, but it drops the combo-aware edge to 53%); (c) accept it for now and measure with human playtests, since humans take riskier shots (recommended: (c), with (a) ready).
-2. **Q2. Match length vs circle pressure.** (a) Health 40, final circle after round 8 (8.6 rounds, final circle in 57%, gas 7%; recommended); (b) Health 30 (7.9 rounds, final circle 31%); (c) close the circle one round earlier for more gas pressure, with shorter matches.
-3. **Q3. More visible chains, or simpler rules?** (a) Squad counts **cards only** (cards in play and Loadouts; 0.41 triggers per turn, 57.5%; recommended); (b) your **gun's squad also counts** (0.61 triggers per turn, 58.5%, but shorter matches and the final circle in only 42%).
-4. **Q4. Should a pure one-squad deck be a top strategy?** (a) No: lean about two-thirds (as tested; pure Assault and Support win only 40–41%); (b) yes: add Specialist ranks with bigger bonuses, and buff Assault and Support "pure" play; (c) yes, but only for Engineer (nerf it first, since it is the strongest at 74%).
+2. **Q2. Match length vs circle pressure.** (a) Health 40, final circle after round 8 (8.6 rounds, final circle in 57%, gas 7%; meets every sim target; recommended to start); (b) one round faster (8.3 rounds, final circle 84%, gas 12%, which meets the M1 target, but the Longbow needs a nerf); (c) Health 30 (7.9 rounds, final circle in only 31%).
+3. **Q3. More visible chains, or simpler rules?** (a) Squad counts **cards only** (cards in play and Loadouts; 0.41 triggers per turn, 57.5%; recommended); (b) your **gun's squad also counts** (0.61 triggers per turn, 58.4%, but 8.2-round matches and the final circle in only 42%).
+4. **Q4. Should a pure one-squad deck be a top strategy?** (a) No: lean about two-thirds (as tested; pure Assault and Support win only 40–41%); (b) yes: add Specialist ranks with bigger bonuses, and buff Assault and Support "pure" play; (c) yes, but only for Engineer (nerf it first, since it is the strongest at 73%).
