@@ -17,7 +17,7 @@ const SECTION: String = "coach"
 const KEY: String = "how_to_play"
 ## [title, text]: the whole game in seven lines.
 const BULLETS: Array = [
-	["GOAL", "Be the last one standing. You have 5 health and every Hit costs 1. The match lasts 14 rounds at most, and the gas closes areas as it goes."],
+	["GOAL", "Be the last one standing. You have 5 health and every Hit costs one. The match lasts 14 rounds at most, and the gas closes areas as it goes."],
 	["YOUR TURN", "You draw 5 cards. Tap a card, then PLAY: it gives Move (boot icon) and Search (magnifier icon) for this turn."],
 	["MOVE AND LOOT", "Tap a neighbouring area, then MOVE HERE (1 Move). Tap your own area, then LOOT: spend Search to take a gun, armour or a kit."],
 	["FIGHT", "A gun you play or loot sits in your played row. Tap it there, then FIRE. Range 0 reaches your own area; range 1 also the next one."],
@@ -33,6 +33,10 @@ var _bullets: VBoxContainer
 var _scroll: ScrollContainer
 var _ok: Button
 var _title: Label
+var _hint: Label
+var _left: VBoxContainer
+## The picture fills the sheet (tap it to toggle).
+var zoomed: bool = false
 
 
 static func is_seen() -> bool:
@@ -87,13 +91,25 @@ func _init() -> void:
 	row.add_theme_constant_override(&"separation", 14)
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(row)
+	_left = VBoxContainer.new()
+	_left.add_theme_constant_override(&"separation", 4)
+	row.add_child(_left)
 	_image = TextureRect.new()
 	_image.name = "HowImage"
 	_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_image.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_image.mouse_filter = Control.MOUSE_FILTER_STOP
 	_image.texture = image()
-	row.add_child(_image)
+	_image.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed:
+			toggle_zoom())
+	_left.add_child(_image)
+	_hint = Label.new()
+	_hint.name = "HowHint"
+	_hint.theme_type_variation = &"Caption"
+	_hint.text = "Tap the picture to enlarge it."
+	_left.add_child(_hint)
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -146,7 +162,14 @@ func close() -> void:
 	if not visible:
 		return
 	visible = false
+	zoomed = false
 	closed.emit()
+
+
+## The picture full size (bullets hidden) or back beside the bullets.
+func toggle_zoom() -> void:
+	zoomed = not zoomed
+	_fit()
 
 
 func is_open() -> bool:
@@ -177,9 +200,14 @@ func _fit() -> void:
 	var inner_h: float = h - 24.0 - _title.get_combined_minimum_size().y - 64.0 - 24.0
 	if _image.texture != null:
 		var tex: Vector2 = _image.texture.get_size()
-		var iw: float = floorf(minf(w * 0.46, inner_h * tex.x / maxf(tex.y, 1.0)))
+		var share: float = 1.0 if zoomed else 0.46
+		var room_h: float = inner_h - (0.0 if zoomed else 26.0)
+		var iw: float = floorf(minf((w - 24.0) * share, room_h * tex.x / maxf(tex.y, 1.0)))
 		_image.custom_minimum_size = Vector2(iw, floorf(iw * tex.y / maxf(tex.x, 1.0)))
-		_image.visible = true
+		_left.visible = true
+		_hint.text = "Tap the picture to go back." if zoomed else "Tap the picture to enlarge it."
+		_hint.visible = not zoomed
 	else:
-		_image.visible = false
+		_left.visible = false
+	_scroll.visible = not zoomed or _image.texture == null
 	_scroll.custom_minimum_size = Vector2(0, maxf(120.0, inner_h))

@@ -644,7 +644,10 @@ func _relayout() -> void:
 	# Width: the right column must hold a full hand fanned at the minimum exposed strip.
 	var right_w: float = inner.x - map_w - _sep
 	var fit_w_h: float = floorf((right_w - (HAND_CAPACITY - 1) * tap) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
-	var h: float = clampf(minf(fit_h, fit_w_h), art.y, maxf(art.y, TABLET_MAX_CARD_H if tablet else MAX_CARD_H))
+	# cz-clarity: a normal hand (hand_size cards) sits side by side, so no card hides another's numbers.
+	var hand_n: int = int(_state.get("hand_size", 5)) if not _state.is_empty() else 5
+	var fit_row_h: float = floorf((right_w - (hand_n - 1) * 8.0) / float(hand_n) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
+	var h: float = clampf(minf(minf(fit_h, fit_w_h), fit_row_h), art.y, maxf(art.y, TABLET_MAX_CARD_H if tablet else MAX_CARD_H))
 	var hold_room: float = ceilf(HOLD_TAG_PT * h / CzArtKit.COMPACT_PT.y)
 	card_px = Vector2(ceilf(h * CzArtKit.COMPACT_PT.x / CzArtKit.COMPACT_PT.y), h)
 	for row: Container in [_strip, _hand]:
@@ -1321,11 +1324,11 @@ func _on_option(o: Dictionary) -> void:
 			if legal.size() == 1:
 				_submit(legal[0]["action"])
 			else:
-				open_sheet("ATTACH %s" % _controller.card(att).display_name.to_upper(), "Choose the weapon.", targets)
+				open_sheet("ATTACH %s" % _controller.card(att).display_name.to_upper(), "Choose the gun. Long-press a row to read it.", targets)
 			return
 		&"loot":
 			var area: String = ActionText.area_name(_state["you"]["area"])
-			open_sheet("LOOT · %s" % area.to_upper(), "Search %d to spend. The card goes into your line." % int(_state["you"]["search"]),
+			open_sheet("LOOT · %s" % area.to_upper(), "You have Search %d. The card goes into your played row and joins your deck. Long-press a row to read the card." % int(_state["you"]["search"]),
 					_controller.loot_options())
 			return
 	_submit(o["action"])
@@ -2053,8 +2056,8 @@ func _inspect_card_view(cc: CzCard) -> void:
 	var c: CardData = card_lookup.call(id)
 	var now: String = ""
 	if live and c != null:
-		if zone == &"hand":
-			now = "NOW: " + _hand_hint(c)
+		if zone == &"hand" and (c.is_hit() or c.is_weapon() or c.is_attachment() or c.blast_dmg > 0):
+			now = "NOW: " + _hand_hint(c)  # plain cards: WHAT IT GIVES YOU already says it
 		elif zone == &"next" and c.brace > 0:
 			now = "NOW: if the rival shoots you before your turn, it can block %d damage." % c.brace
 	_inspector.open_card(c, {"where": where, "now": now})
