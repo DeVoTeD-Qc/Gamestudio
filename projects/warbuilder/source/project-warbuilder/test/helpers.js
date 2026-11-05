@@ -22,7 +22,7 @@ function card(s, def) {
 const cards = (s, defs) => defs.map(d => card(s, d));
 // replace a player's whole card pool. deck is listed bottom → top (the engine draws with pop()).
 function setCards(s, pl, { deck = [], hand = [], discard = [] } = {}) {
-  pl.deck = cards(s, deck); pl.hand = cards(s, hand); pl.discard = cards(s, discard); pl.play = []; pl.fuelled = []; pl.removed = [];
+  pl.deck = cards(s, deck); pl.hand = cards(s, hand); pl.discard = cards(s, discard); pl.play = []; pl.loadout = []; pl.fuelled = []; pl.removed = [];
 }
 // give player `pl` gun `def` in slot 0, unfired this turn
 function setGun(s, pl, def) {
@@ -34,7 +34,7 @@ function place(s, posMe, posThem, p, types = {}) {
   s.players[p].pos = posMe; s.players[1 - p].pos = posThem;
   for (const w in types) { const e = WD.envAt(s, +w); e.def = types[w]; e.state = 'safe'; }
 }
-const zero = pl => { pl.res = { move: 0, prec: 0, intel: 0 }; pl.def = 0; pl.shot = 0; pl.freeCycles = 0; pl.lootDiscount = 0; };
+const zero = pl => { pl.res = { move: 0, prec: 0, intel: 0 }; pl.def = 0; pl.shot = 0; pl.freeCycles = 0; pl.revealPlus = 0; pl.dmgTurn = 0; pl.ignoreCover = false; pl.buys = 0; pl.buyBonus = 0; pl.scrapAvail = 0; pl.squadN = {}; pl.rallyDone = []; pl.nextFire = { reqMod: 0, bonusPrec: 0 }; pl.moved = false; };
 
 // ---------- playing whole matches ----------
 // AI vs AI. `onTurn(s)` runs after every turn (for invariant checks). Returns the final state.
@@ -47,7 +47,7 @@ function aiMatch(seed, { maxTurns = 400, onTurn } = {}) {
   }
   return s;
 }
-// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow, end the turn.
+// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow (each shot commits all Precision), end the turn.
 function scriptedMatch(seed, { maxTurns = 400 } = {}) {
   const s = WD.newGame({ seed }); const actions = []; let n = 0;
   while (!s.over) {
@@ -71,7 +71,8 @@ function stateHash(s) {
 function cardPlaces(s) {
   const seen = new Map();
   const note = (iid, where) => { if (seen.has(iid)) throw new Error(`card ${iid} is in ${seen.get(iid)} and ${where}`); seen.set(iid, where); };
-  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'fuelled', 'removed'].forEach(z => pl[z].forEach(c => note(c, `p${i}.${z}`))));
+  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'loadout', 'fuelled', 'removed'].forEach(z => pl[z].forEach(c => note(c, `p${i}.${z}`))));
+  s.gone.forEach(it => note(it.iid, 'gone'));
   s.envs.forEach(e => e.loot.forEach(it => note(it.iid, `loc${e.w}`)));
   [1, 2, 3].forEach(t => s.loot[t].forEach(it => note(it.iid, `loot${t}`)));
   s.players.forEach((pl, i) => pl.guns.filter(Boolean).forEach(w => note(w, `p${i}.gun`)));

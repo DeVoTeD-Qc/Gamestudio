@@ -28,7 +28,7 @@ test('everything is inlined: CSS, sprite, engine, UI, art and card faces', () =>
   assert.ok(Object.keys(gunArt).includes('pistol-0'));
   assert.deepEqual(Object.keys(locArt).sort(), ['E01', 'E02', 'E03', 'E04', 'E05', 'E06', 'E07', 'E08']);
   for (const v of [...Object.values(art), ...Object.values(gunArt), ...Object.values(locArt)]) assert.match(v, /^data:image\/[a-z+]+;base64,/);
-  assert.equal(Object.keys(faces).length, 116);
+  assert.equal(Object.keys(faces).length, 98);
   assert.match(dataLine('FACESPRITE'), /^<svg[\s\S]*<\/svg>$/);
   assert.match(dataLine('FACECSS'), /\.fw\{position:relative/);
   for (const l of html.split('\n').filter(l => /^const (ART|GUNART|FACES|LOCART|FACECSS|FACESPRITE)=/.test(l))) assert.doesNotMatch(l, /<\/script/i, 'data cannot close its <script>');

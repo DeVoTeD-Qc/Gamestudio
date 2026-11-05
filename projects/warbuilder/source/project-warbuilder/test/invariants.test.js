@@ -32,6 +32,8 @@ test(`${N} seeded AI-vs-AI matches keep every invariant`, () => {
         assert.ok(pl.def >= 0, `${ctx}: negative Armor`);
         assert.ok(pl.hp <= WD.TUNE.hp, `${ctx}: health above the maximum`);
         assert.ok(pl.guns[0], `${ctx}: ${pl.name} has no gun`);
+        assert.ok(pl.loadout.length <= WD.TUNE.loadoutSlots, `${ctx}: Loadout row over ${WD.TUNE.loadoutSlots}`);
+        assert.ok(WD.owned(pl) >= WD.TUNE.minDeck, `${ctx}: deck below the minimum`);
       }
       cardPlaces(s); // throws if a card or gun is in two places
       const lines = since(s, mark); const dmg = loggedDamage(s, lines);
@@ -40,18 +42,19 @@ test(`${N} seeded AI-vs-AI matches keep every invariant`, () => {
       if (!s.over) {
         assert.ok(s.turn === 0 || s.turn === 1, `${ctx}: bad turn`);
         assert.ok(WD.safeBounds(s).n >= 1, `${ctx}: no safe location left`);
+        assert.ok(s.envs.filter(e => e.state === 'safe').every(e => e.loot.length <= WD.TUNE.stackSize + WD.TUNE.crate[0]), `${ctx}: a stack grew too big`);
         const B = WD.safeBounds(s); for (const pl of s.players) assert.ok(pl.pos >= B.lo && pl.pos <= B.hi || s.turn !== s.players.indexOf(pl), `${ctx}: ${pl.name} starts the turn in the gas`);
       }
     };
     const s = aiMatch(seed, { onTurn: check, maxTurns: 400 });
     assert.equal(s.over, true);
-    if (s.winner === 'draw') assert.ok(s.players.every(pl => pl.hp <= 0) && s.players[0].hp === s.players[1].hp, `seed ${seed}: bad draw`);
-    else { assert.ok(s.winner === 0 || s.winner === 1, `seed ${seed}: bad winner`); const w = s.players[s.winner], l = s.players[1 - s.winner]; assert.ok(l.hp <= 0, `seed ${seed}: loser still alive`); assert.ok(w.hp > 0 || w.hp > l.hp, `seed ${seed}: winner has less health`); }
+    if (s.winner === 'draw') assert.ok((s.endBy === 'hardEnd' || s.players.every(pl => pl.hp <= 0)) && s.players[0].hp === s.players[1].hp, `seed ${seed}: bad draw`);
+    else { assert.ok(s.winner === 0 || s.winner === 1, `seed ${seed}: bad winner`); const w = s.players[s.winner], l = s.players[1 - s.winner]; assert.ok(l.hp <= 0 || s.endBy === 'hardEnd', `seed ${seed}: loser still alive`); assert.ok(w.hp > 0 || w.hp > l.hp, `seed ${seed}: winner has less health`); if (s.endBy === 'hardEnd') assert.ok(w.hp > l.hp, `seed ${seed}: hard end winner must have more Health`); }
     assert.deepEqual(JSON.parse(JSON.stringify(s)), s, `seed ${seed}: state is not plain JSON`);
     rounds.push(s.round);
   }
   assert.equal(rounds.length, N);
-  assert.ok(Math.max(...rounds) <= 40, `a match lasted ${Math.max(...rounds)} rounds`);
+  assert.ok(Math.max(...rounds) <= WD.TUNE.hardEnd, `a match lasted ${Math.max(...rounds)} rounds (hard end: ${WD.TUNE.hardEnd})`);
 });
 
 test('loot decks never hold the same item twice, and every match deals the full component set', () => {
@@ -63,5 +66,6 @@ test('loot decks never hold the same item twice, and every match deals the full 
     assert.deepEqual(guns, [1, 2, 3].flatMap(t => WD.GUNSET[t]).sort(), `seed ${seed}: loot guns`);
     const cards = items.filter(it => it.kind === 'card').length;
     assert.equal(cards, Object.values(WD.CARDS).reduce((a, d) => a + (d.tier ? d.copies : 0), 0));
+    assert.equal(cards, 76, '32 loot cards × 2 + 4 Loadouts × 3');
   }
 });

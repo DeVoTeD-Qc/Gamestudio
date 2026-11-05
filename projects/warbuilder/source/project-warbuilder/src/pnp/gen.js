@@ -8,7 +8,7 @@ const SYM = fs.readFileSync(path.join(__dirname, '..', 'symbols.html'), 'utf8');
 const ROLE = {
   assault: { name: 'Assault', shape: '▲', color: '#2F7FD8', best: 'Movement' },
   recon: { name: 'Recon', shape: '◉', color: '#C8442B', best: 'Precision' },
-  support: { name: 'Support', shape: '■', color: '#3F8F4A', best: 'Ammo' },
+  support: { name: 'Support', shape: '■', color: '#3F8F4A', best: 'Extra shots' },
   engineer: { name: 'Engineer', shape: '✚', color: '#B98A10', best: 'Intel' },
 };
 const RES = { move: '#2F7FD8', prec: '#C8442B', intel: '#B98A10', ammo: '#3F8F4A', mag: '#5B6152' };
@@ -43,9 +43,9 @@ function fx(text) {
     let s = esc(sent); const isGain = /^Gain\b/.test(s);
     s = s.replace(/\bHit Markers?\b/g, ic('hm'));
     s = s.replace(/(\d+) (more )?free bullets?/g, (m, n) => `+${n}${ic('ammo', RES.ammo)}`);
-    s = s.replace(/(\d+) extra shots?/g, (m, n) => `+${n}${ic('ammo', RES.ammo)}`);
-    s = s.replace(/(\d+) Armor\b/g, (m, n) => `+${n}${ic('def', '#475827')}`);
-    s = s.replace(/(\d+) free cycles?/g, (m, n) => `+${n}${ic('cyc')}`);
+    s = s.replace(/\+?(\d+) extra shots?/g, (m, n) => `+${n}${ic('ammo', RES.ammo)}`);
+    s = s.replace(/\+?(\d+) Armor\b/g, (m, n) => `+${n}${ic('def', '#475827')}`);
+    s = s.replace(/\+?(\d+) free cycles?/g, (m, n) => `+${n}${ic('cyc')}`);
     s = s.replace(/\+?(\d+) magazine/g, (m, n) => `+${n}${ic('mag', RES.mag)}`);
     s = s.replace(/(\+?)(\d+) (Movement|Precision|Intel)\b/g, (m, p, n, r) => `${p || isGain ? '+' : ''}${n}${ic({ Movement: 'move', Precision: 'prec', Intel: 'intel' }[r], RES[{ Movement: 'move', Precision: 'prec', Intel: 'intel' }[r]])}`);
     s = s.replace(/\b(Movement|Precision|Intel)\b/g, (m, r) => ic({ Movement: 'move', Precision: 'prec', Intel: 'intel' }[r], RES[{ Movement: 'move', Precision: 'prec', Intel: 'intel' }[r]]));
@@ -58,6 +58,12 @@ function fx(text) {
 }
 
 // ---------- card builders ----------
+// Squad line: pays once per OTHER card of the same squad in play this turn (Loadout counts), up to ×3. Loadout cards stay on the table.
+function squadBox(d) {
+  const r = ROLE[d.archetype]; if (!r) return '';
+  if (d.loadout) return `<div class="combo lo" style="--rc:${r.color}">${roleB(d.archetype, true)} <b class="ct">LOADOUT</b> Stays on the table (2 slots). Counts for Squad every turn.</div>`;
+  return d.squad ? `<div class="combo" style="--rc:${r.color}">${roleB(d.archetype, true)} <b class="ct">SQUAD</b> ${fx(d.squadText)} <small>each other ${r.name}</small></div>` : '';
+}
 function tacCard(d, v = (process.env.TACV || 0) * 1) {
   const r = ROLE[d.archetype]; const grey = !r;
   if (v) return tacCardV(d, v);
@@ -68,7 +74,7 @@ function tacCard(d, v = (process.env.TACV || 0) * 1) {
     <div class="cin"><div class="txt">
       <div class="top"><span class="nm">${esc(d.name)}</span>${d.intel_cost ? `<span class="costb">${ic('intel', RES.intel)}<b>${d.intel_cost}</b></span>` : ''}</div>
       <div class="main">${fx(d.text)}</div>
-      ${(d.combos || []).map(c => { const rs = [].concat(c.role); return `<div class="combo" style="--rc:${rs.length > 1 ? '#1C2017' : ROLE[rs[0]].color}">${rs.map(r => roleB(r, true)).join('<b class="cor">/</b>')} ${fx(c.text)}</div>`; }).join('')}
+      ${squadBox(d)}
       ${d.reaction ? `<div class="react"><b>${ic('def')} REACTION</b> In your hand when hit: −${d.reaction} damage, then discard it.</div>` : ''}
       </div>${artFor(d) ? `<div class="art"><img src="${artFor(d)}" alt=""></div>` : ''}
     </div></div>`;
@@ -86,7 +92,7 @@ function tacCardV(d, v) {
     <div class="band">${v === 3 && d.intel_cost ? `<span class="coin">${ic('intel', RES.intel)}<b>${d.intel_cost}</b></span>` : ''}${r ? `${shapeSvg(d.archetype, 'bshape')}${/^K/.test(d.id) ? '' : rank(d.tier, 'bchev')}` : ''}</div>
     <div class="cin"><div class="txt">${head}
       <div class="main">${fx(d.text)}</div>
-      ${(d.combos || []).map(c => { const rs = [].concat(c.role); return `<div class="combo" style="--rc:${rs.length > 1 ? '#1C2017' : ROLE[rs[0]].color}">${rs.map(r => roleB(r, true)).join('<b class="cor">/</b>')} ${fx(c.text)}</div>`; }).join('')}
+      ${squadBox(d)}
       ${d.reaction ? `<div class="react"><b>${ic('def')} REACTION</b> In your hand when hit: −${d.reaction} damage, then discard it.</div>` : ''}
       </div>${artFor(d) ? `<div class="art"><img src="${artFor(d)}" alt=""></div>` : ''}
     </div></div>`;
@@ -125,18 +131,18 @@ function gunCard(id, tierBack) {
 function gunBack(label, sub, bg, dark) { return `<div class="card gunL gback" style="--gb:${bg};color:${dark ? '#1C2017' : '#fff'}"><div class="bk"><div class="bl">${label}</div><div class="bs">${sub}</div></div></div>`; }
 function locCard(def, kind, tier, size, gunAt, centre) {
   const e = WD.ENVS[def];
-  const ph = { start: 'START', 1: 'PHASE 1', 2: 'PHASE 2', 3: 'PHASE 3' }[kind];
+  const ph = `${ROLE[e.affinity].name.toUpperCase()} LOOT`;
   const slots = Array.from({ length: size }, (_, i) => `<i class="${i === gunAt ? 'g' : ''}">${i === gunAt ? ic('ammo', '#fff') : ''}</i>`).join('');
   const lart = fs.existsSync(path.join(ART_DIR, 'locs', def + '.jpg')) ? `art/locs/${def}.jpg` : null;
   return `<div class="bigloc">${lart ? `<div class="lart"><img src="${lart}" alt=""></div>` : ''}
-    <div class="zone"><div class="zin">LOOT STACK<br><small>${size} cards · tier ${chev(tier)} · ▮ gun, □ card<br>face down until someone stands here<br>only the top card is for sale</small></div></div>
+    <div class="zone"><div class="zin">LOOT STACK<br><small>${size} cards, face up · start: a Common gun on top<br>each round a fresh card lands on top<br>(over ${size}: the bottom card leaves)<br>only the top card is for sale</small></div></div>
     <div class="linfo">
       <div class="lleft"><div class="gname">${esc(e.name)}</div>
         <div class="cover">${e.cover ? `Cover −${e.cover}` : 'No cover'}<small>${e.cover ? `Hits on you here: −${e.cover} damage` : 'Open ground.'}</small></div>
         ${e.bonusText ? `<div class="arrive"><b>HERE</b> ${fx(e.bonusText.replace(/^\+?(\d+) (Movement|Precision|Intel|Armor|extra shot)/, 'Gain $1 $2'))}<small> every turn</small></div>` : '<div class="arrive dim">No bonus.</div>'}</div>
       <div class="lright"><div class="lab">STACK · top first</div><div class="stack">${slots}</div></div>
     </div>
-    <div class="lhead"><span>${ph}${centre ? ' · CENTRE' : ''}</span><span>LOOT TIER ${chev(tier)}</span></div>
+    <div class="lhead"><span>${ph}</span><span>2 in 3 refills</span></div>
   </div>`;
 }
 function perkCard(k) {
@@ -149,17 +155,17 @@ function perkCard(k) {
     <div class="foot"><span>Loadout perk</span></div></div></div>`;
 }
 const refTurn = () => `<div class="card ref"><div class="phead dark"><span>YOUR TURN</span><span>reference</span></div><div class="cin small2">
-  <ol><li><b>Play cards</b> from your hand in any order. Combos fire when another card of the role shown is played.</li>
+  <ol><li><b>Ready</b>: your Loadout cards fire, then your location's HERE bonus.</li>
+  <li><b>Play</b> cards (any order). Squad lines pay for each other card of their squad in play.</li>
   <li><b>Move once</b>: 1 ${ic('move', RES.move)} per space.</li>
-  <li><b>Buy</b> top cards here (or next door +1 ${ic('intel', RES.intel)}). <b>Cycle</b>: 1 ${ic('intel', RES.intel)} or 1 ${ic('move', RES.move)}.</li>
-  <li><b>Fire</b> (in range): reveal 1 card per ${ic('prec', RES.prec)}, count ${ic('hm')}, read the ladder. Then lose Recoil ${ic('prec', RES.prec)}.</li>
-  <li><b>Buy Station</b> any time: 2 ${ic('intel', RES.intel)}.</li>
-  <li><b>${ic('scrap', '#C2531A')} Scrap</b> from your discard.</li>
-  <li><b>End</b>: unused ${ic('move', RES.move)} → ${ic('def', '#475827')} (max ${T.digIn}). Discard all, draw 5.</li></ol></div></div>`;
-const refSquad = () => `<div class="card ref"><div class="phead dark"><span>SQUAD</span><span>combos</span></div><div class="cin small2">
-  <div class="square"><div>${roleB('assault')} Assault<br><small>Movement</small></div><div>${roleB('recon')} Recon<br><small>Precision</small></div><div>${roleB('support')} Support<br><small>Ammo</small></div><div>${roleB('engineer')} Engineer<br><small>Intel</small></div></div>
-  <p>Each <b>combo line</b> shows one role. It fires if you play <b>another card of that role</b> this turn (any order). Common: 1 line · Rare: 2 · Epic: 3 (incl. own role).</p>
-  <p><b>SQUAD</b> — 3 roles this turn: ${esc(WD.SQUAD_TEXT[3])}.<br><b>FULL SQUAD</b> — all 4: ${esc(WD.SQUAD_TEXT[4])}.<br><small>Your primary gun counts as one squad member (its combo role).</small></p></div></div>`;
+  <li><b>Loot</b>: up to ${T.buyCap} buys: top card here (next door +1 ${ic('intel', RES.intel)}) or the Buy Station (${T.supplyCost} ${ic('intel', RES.intel)}). Cycle: 1 ${ic('intel', RES.intel)} or 1 ${ic('move', RES.move)}.</li>
+  <li><b>Fire</b>: commit ${ic('prec', RES.prec)}, reveal that many cards, count ${ic('hm')}. Spend what you committed, then Recoil more ${ic('prec', RES.prec)}.</li>
+  <li><b>End</b>: unused ${ic('move', RES.move)} → ${ic('def', '#475827')} (max ${T.digIn}). Discard all but the Loadout, draw 5.</li></ol></div></div>`;
+const refSquad = () => `<div class="card ref"><div class="phead dark"><span>SQUAD &amp; RALLY</span><span>reference</span></div><div class="cin small2">
+  <p><b>Squad</b>: a Squad line pays once for <b>each other</b> card of its squad in play this turn, up to ×${T.squadCap}. Loadout cards count.</p>
+  <p><b>Rally</b> at ${T.rally.join(' and ')} cards of one squad in play, once per turn each:</p>
+  ${WD.SQUADS.map(a => `<p>${roleB(a, true)} 3: ${fx(WD.RALLY_TEXT[a][3])} · 5: ${fx(WD.RALLY_TEXT[a][5])}</p>`).join('')}
+  <p><small><b>Mark</b>: next shot needs 1 fewer ${ic('hm')} per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: each shot reveals 1 more card free.</small></p></div></div>`;
 const hpCard = (who, col) => `<div class="card hp" style="--rc:${col}"><div class="phead" style="background:${col}"><span>${ic('heart', '#fff')} HEALTH</span><span>${who}</span></div><div class="cin"><div class="hpgrid">${Array.from({ length: T.hp }, (_, i) => `<span>${T.hp - i}</span>`).join('')}</div><div class="small">Start at ${T.hp}. Mark damage with a paperclip. Off the track = eliminated.</div></div></div>`;
 const OPFACE = {
   me: `<svg viewBox="0 0 64 64" class="opface" aria-hidden="true"><defs><clipPath id="ofA"><circle cx="32" cy="32" r="30"/></clipPath></defs><g clip-path="url(#ofA)"><rect width="64" height="64" fill="#16343A"/><path d="M4 70c2-14 12-20 28-20s26 6 28 20z" fill="#2C3A2A"/><path d="M20 52l12 6 12-6 2 8H18z" fill="#3E4E36"/><path d="M22 40c0 7 4 12 10 12s10-5 10-12v-6H22z" fill="#C49A74"/><path d="M24 44c2 4 5 6 8 6s6-2 8-6c-2 2-5 3-8 3s-6-1-8-3z" fill="#9C7556"/><path d="M15 31c0-11 8-19 17-19s17 8 17 19v3H15z" fill="#4A5A3A"/><path d="M15 31h34v4H15z" fill="#3A4730"/><rect x="18" y="27" width="28" height="9" rx="4.5" fill="#101614"/><rect x="20" y="28.5" width="11" height="6" rx="3" fill="#1FB0C4"/><rect x="33" y="28.5" width="11" height="6" rx="3" fill="#1FB0C4"/><path d="M21 30h5" stroke="#B9F1F8" stroke-width="1.4" stroke-linecap="round"/><path d="M34 30h5" stroke="#B9F1F8" stroke-width="1.4" stroke-linecap="round"/><path d="M46 36c3 1 4 4 3 8l-6 3" fill="none" stroke="#101614" stroke-width="2"/><circle cx="43" cy="47" r="1.8" fill="#101614"/></g><circle cx="32" cy="32" r="30" fill="none" stroke="#1FB0C4" stroke-width="4"/></svg>`,
@@ -184,7 +190,7 @@ for (const t of [1, 2, 3]) for (const id of WD.GUNSET[t]) guns.push(gunCard(id, 
 guns.push(gunBack('LOOT GUN', 'Tier ›', GUN_BG[0]), gunBack('LOOT GUN', 'Tier ››', GUN_BG[0]), gunBack('LOOT GUN', 'Tier ›››', GUN_BG[0]), gunBack('SIDEARM', 'Starting gun', GUN_BG[0]));
 const locs = WD.LOCSET.map(L => locCard(L.def, L.ph, WD.locTier(L), WD.locSize(L), L.gun, !!L.centre));
 if (T.perks) for (const k in WD.LOADOUT) add(perkCard(k));
-add(refTurn(), 2); if (!T.lite) add(refSquad(), 2); add(hpCard('Operator A', '#1FB0C4')); add(hpCard('Operator B', '#C8442B')); add(tokens());
+add(refTurn(), 2); add(refSquad(), 2); add(hpCard('Operator A', '#1FB0C4')); add(hpCard('Operator B', '#C8442B')); add(tokens());
 const backs = [back('LOOT', 'Tier › · card', '#3FA34D'), back('LOOT', 'Tier ›› · card', '#2F7FD8'), back('LOOT', 'Tier ››› · card', '#9B4DCA')].concat(T.perks ? [back('PERK', 'Loadout', '#C2531A')] : []);
 
 const pages = []; for (let i = 0; i < cards.length; i += 9) pages.push(cards.slice(i, i + 9));
@@ -197,48 +203,45 @@ const counts = { total: cards.length + guns.length - 4 };
 // ---------- rules ----------
 const RULES = `
 <section class="page rules"><div class="rcol">
-<h1>WARZONE DECKBUILDER <span>print &amp; play · prototype v7 lite</span></h1>
-<p class="lead">Two operators drop into a shrinking battlefield made of location cards. Loot, build your deck, and win the gunfight before the gas closes in.</p>
+<h1>WARZONE DECKBUILDER <span>print &amp; play · v6 engine &amp; synergy</span></h1>
+<p class="lead">Two operators drop into a shrinking battlefield. Loot squad cards, build an engine that hits harder every turn, and win the gunfight before the storm ends it.</p>
 <h2>Components</h2>
-<ul><li>${2 * (T.stSprint + T.stScout + T.stAim + 2)} starter cards (10 per player) · ${T.station.length * T.stationCopies} Buy Station cards</li>
-<li>64 loot cards in 3 tiers (› Uncommon, ›› Rare, ››› Epic) · loot guns per tier + 2 starting pistols</li>
-<li>18 large location cards (6 Start, 3 Phase 1, 4 Phase 2, 5 Phase 3) · references, health tracks, tokens</li></ul>
-<p class="small">Print on Letter, 100% scale, cut on the lines. Sleeve each card with a back from the last page: loot cards need their tier visible, location cards their phase.</p>
+<ul><li>${2 * (T.stSprint + T.stScout + T.stAim + 2)} starter cards (10 per player) · ${T.station.length * T.stationCopies} Buy Station cards (${T.stationCopies} of each squad basic)</li>
+<li>${Object.values(WD.CARDS).filter(d => d.tier && d.copies).reduce((a, d) => a + d.copies, 0)} loot cards in 3 tiers, 4 squads (incl. 12 Loadout cards) · ${[1, 2, 3].reduce((a, t) => a + WD.GUNSET[t].length, 0)} loot guns + 2 starting pistols</li>
+<li>${WD.LOCSET.length} location cards (${T.zones} are used each game) · references, health tracks, tokens</li></ul>
+<p class="small">Print on Letter, 100% scale, cut on the lines. Sleeve each loot card with a back from the last page so its tier shows.</p>
 <h2>Setup</h2>
-<ol><li>Sort loot into six face-down decks: cards and guns for each tier. Shuffle each. If a deck runs out, draw from the next lower tier (then higher).</li>
-<li>Shuffle the 6 Start locations and lay them in a row. Shuffle each phase deck and stack them: Phase 3 at the bottom, Phase 2, then Phase 1 on top. This is the <b>new-ground deck</b>.</li>
-<li>For every location, build its <b>loot stack</b> face down as shown by its icons (▮ gun, □ card, top first), from the matching tier.</li>
-<li>Each player: 10 starters, a Sidearm pistol, a health track at ${T.hp}, a token. Players start on the 2nd and 5th locations. Flip both stacks. Draw 5 cards. Random first player.</li></ol>
+<ol><li>Sort loot into three face-down decks by tier (cards and guns together). Shuffle each. If a deck runs out, draw from the next tier.</li>
+<li>Shuffle the location cards and lay ${T.zones} in a row. Put the last one back in the box.</li>
+<li>Each location gets a <b>loot stack</b> of ${T.stackSize}, face up: a Common gun on top (while they last), then tier › cards. For each card roll a die: on 1–4 take the first card of the location's squad from the deck, otherwise the top card.</li>
+<li>Each player: 10 starters, a Sidearm pistol, a health track at ${T.hp}, a token. Players start on the 2nd and 6th locations. Draw 5 cards. Random first player; a die decides which end of the row closes first.</li></ol>
 <h2>Your turn</h2>
-<ol><li><b>Play cards</b> to gain ${ic('move', RES.move)} Movement, ${ic('prec', RES.prec)} Precision, ${ic('intel', RES.intel)} Intel, ${ic('ammo', RES.ammo)} extra shots and ${ic('def', '#475827')} Armor. Leave played cards in front of you.</li>
-<li><b>Move once</b>: 1 Movement per space. Entering a location flips its stack face up.</li>
-<li><b>Location icon</b>: every location gives its icon (HERE) when you arrive, and again at the start of each turn you stay there.</li>
-<li><b>Buy</b> the top card of the stack where you stand, or of a face-up stack next door for +${T.adjCost} Intel. <b>Cycle</b>: pay 1 Intel or 1 Movement to put the top card under its stack (your location only). Bought cards go to your discard pile.</li>
-<li><b>Buy Station</b>: any time, ${T.supplyCost} Intel each (${T.stationCopies} of each, shared).</li>
-<li><b>Fire</b> (see right). <b>${ic('scrap', '#C2531A')} Scrap</b>: remove a card in your hand or discard from the game (never below ${T.minDeck} cards).</li>
-<li><b>Dig in</b>: unused Movement at the end of your turn becomes ${ic('def', '#475827')} Armor (up to ${T.digIn}).</li>
-<li><b>End</b>: discard your hand and played cards, draw 5 (6 at ${T.lowHp} Health or less). Unspent resources and card effects end with your turn. Armor stays up until your next turn.</li></ol>
+<ol><li><b>Ready</b>: your Loadout cards give their effect, then your location's HERE bonus.</li>
+<li><b>Play cards</b> to gain ${ic('move', RES.move)} Movement, ${ic('prec', RES.prec)} Precision, ${ic('intel', RES.intel)} Intel, ${ic('ammo', RES.ammo)} extra shots and ${ic('def', '#475827')} Armor. Leave played cards in front of you.</li>
+<li><b>Move once</b>: 1 Movement per space. Arriving gives that location's HERE bonus.</li>
+<li><b>Loot</b> up to <b>${T.buyCap} buys</b> (+1 for each <b>+1 Buy</b>): the top card of the stack where you stand, or next door for +${T.adjCost} Intel, or a Buy Station card (${T.supplyCost} Intel). <b>Cycle</b>: pay 1 Intel or 1 Movement to put the top card under its stack. <b>Hot Drop</b>: in rounds 1–${T.hotDrop} gained cards go on top of your deck; later to your discard.</li>
+<li><b>Fire</b> (see right). <b>${ic('scrap', '#C2531A')} Scrap</b>: remove a card in your hand, play area or discard from the game (never below ${T.minDeck} cards). Buy Station service: ${T.stationScrapCost} Intel scraps a Sprint (once per turn, not a buy).</li>
+<li><b>End</b>: unused Movement becomes ${ic('def', '#475827')} Armor (up to ${T.digIn}). Discard your hand and played cards (not the Loadout), draw 5 (6 at ${T.lowHp} Health or less). Armor lasts until your next turn.</li></ol>
+<h2>Squads &amp; Loadout</h2>
+<p>${roleB('assault')} Assault: hits hit harder · ${roleB('recon')} Recon: aim and Mark · ${roleB('support')} Support: extra shots, Steady, Armor · ${roleB('engineer')} Engineer: Intel, +1 Buy, Scrap. Starters have no squad.</p>
+<p><b>Squad line</b>: pays once for <b>each other card</b> of its squad in play this turn, up to ×${T.squadCap}, in any order. <b>Rally</b>: with ${T.rally.join(' and ')} cards of one squad in play you also get that squad's Rally bonus (reference card). <b>Loadout</b> cards go to your Loadout row (${T.loadoutSlots} slots), give their effect at every Ready and count for Squad every turn. To play a third, discard one from the row or use the new card once.</p>
 </div><div class="rcol">
 <h2>Firing</h2>
-<ol><li>You carry <b>one gun</b>. Buying a gun replaces yours (the old one goes back on the stack).</li>
-<li>Your rival must be within the gun’s <b>Range</b> (spaces between you; same location = 0).</li>
-<li><b>Reveal</b> one card from your deck per ${ic('prec', RES.prec)} Precision. Count the ${ic('hm')} Hit Markers.</li>
-<li><b>Recoil</b>: after each shot, lose that gun’s Recoil in Precision for the rest of the turn. Your first shot is always your best.</li>
-<li>Read the <b>damage ladder</b> (2 steps): reach the first step to hit, the second for a big hit. Cover at the target’s location: −1 (not at distance 0). Reaction cards in hand and Armor reduce it more. A hit always deals at least 1.</li>
-<li>Each gun fires up to its <b>Shots</b> per turn, plus any ${ic('ammo', RES.ammo)} extra shots.</li>
-<li><b>Melee</b> (Combat Knife): only at your rival’s location, always hits.</li>
+<ol><li>You carry <b>one gun</b>. Buying a gun replaces yours (the old one goes under that stack).</li>
+<li>Your rival must be within the gun’s <b>Range</b> (spaces between you; same location = 0). Every gun can fire at 0.</li>
+<li><b>Commit</b> Precision: reveal one card from your deck per Precision committed, and count the ${ic('hm')} Hit Markers. <b>Steady</b>: each shot reveals 1 more card for free.</li>
+<li><b>Recoil</b>: the shot spends the Precision you committed, then the gun's Recoil costs that much more (down to 0). Plan your shots: big commits are sure, small ones leave Precision for the next shot.</li>
+<li>Read the <b>damage ladder</b>: reach the first step to hit, the second for a big hit. <b>Mark</b>: your next shot needs 1 fewer ${ic('hm')} on every step. Cover at the target's location: −1 damage (<b>Pierce</b> ignores it). <b>Close quarters</b> (distance 0): ignore cover and Armor. Reaction cards in hand, then Armor, reduce damage. A hit deals at least 1.</li>
+<li>Each gun fires up to its <b>Shots</b> per turn, plus any ${ic('ammo', RES.ammo)} extra shots. <b>Combat Knife</b>: distance 0 only, always hits.</li>
 <li>Revealed cards go to your discard. Whenever your deck is empty, shuffle your discard to form a new deck.</li></ol>
-<h2>Roles &amp; combos</h2>
-<p>${roleB('assault')} Assault: Movement · ${roleB('recon')} Recon: Precision · ${roleB('support')} Support: shots &amp; Armor · ${roleB('engineer')} Engineer: Intel &amp; Scrap. Starters are grey.</p>
-<p><b>Combo box</b>: if you play <b>another card</b> of a role shown in the box this turn (any order), you also get the box. Uncommon cards combo with their own role; Rare and Epic with their own role <b>or</b> a second one. Buy Station cards count for their role. <b>Gun combo</b>: once per turn, when you play a card of the role on your gun.</p>
 <h2>The circle</h2>
-<ul><li>After each round, the gas takes <b>1 location</b> from the right end and 1 new location is revealed on the left from the new-ground deck.</li>
-<li>When the deck is empty, the circle shrinks one location per round, alternating ends.</li>
-<li>In the gas at round end: ${T.gasDmg} damage +1 per extra space outside, then move to the nearest safe location. Final circle (1 location left): both take ${T.finalBase}, then +1 each round.</li>
-<li>Supply crates: after rounds ${T.crateRounds.join(' and ')}, put 3 tier ››› cards (a gun on top, face up) on top of the stack in the middle of the row.</li>
+<ul><li>At the end of rounds ${T.closeAfter.join(', ')} one end location closes (alternating ends): ${T.zones} → 1 location, the <b>final circle</b>, after round ${T.closeAfter[T.closeAfter.length - 1]}.</li>
+<li>Its loot is lost. Caught outside: ${T.gasDmg} damage +1 per extra space, then move to the nearest safe location.</li>
+<li>Final circle: at each round end the storm hits both for ${T.finalStorm.join(', ')}. <b>Hard end</b> after round ${T.hardEnd}: the most Health wins.</li>
+<li>Every round end: each safe stack gets 1 fresh card on top (tier › rounds 1–3, ›› rounds 4–7, ››› after); a stack over ${T.stackSize} loses its bottom card. Supply crates: after rounds ${T.crateRounds.join(' and ')}, 3 tier ››› items (a gun first) go on top of the middle stack.</li>
 <li>The first player alternates each round.</li></ul>
-<h2>Winning</h2><p>Reduce your rival to 0 Health. If both fall at once, higher Health before the last hit wins; otherwise it is a draw.</p>
-<p class="small">Tuned by simulation (about 9 rounds per game). Digital version: same rules.</p>
+<h2>Winning</h2><p>Reduce your rival to 0 Health. If both fall at once, the higher Health wins; equal is a draw.</p>
+<p class="small">Tuned by simulation (about 9 rounds per game). Digital version: same rules; it also shows your <b>Firepower</b> each turn.</p>
 </div></section>`;
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><title>Warzone Deckbuilder — Print &amp; Play</title><style>
@@ -403,7 +406,7 @@ svg.rank.inl { display: inline-block; width: 13px; height: auto; vertical-align:
 ${RULES}
 ${pages.map((p, i) => `<section class="page"><div class="sheet">${p.join('')}</div><div class="pfoot">Warzone Deckbuilder · print &amp; play · cards page ${i + 1}/${pages.length} · cut on the dashed lines (2.5 × 3.5 in)</div></section>`).join('\n')}
 ${gunPages.map((p, i) => `<section class="page"><div class="sheet gun8">${p.join('')}</div><div class="pfoot">Guns ${i + 1}/${gunPages.length} · 3.5 × 2.5 in, played sideways · the last page holds the gun backs</div></section>`).join('\n')}
-${locPages.map((p, i) => `<section class="page"><div class="sheet loc4">${p.join('')}</div><div class="pfoot">Locations ${i + 1}/${locPages.length} · 3.5 × 5.1 in · the loot stack sits on the upper part; the info stays visible below; slide the card with its stack when the map drifts</div></section>`).join('\n')}
+${locPages.map((p, i) => `<section class="page"><div class="sheet loc4">${p.join('')}</div><div class="pfoot">Locations ${i + 1}/${locPages.length} · 3.5 × 5.1 in · the loot stack sits on the upper part; the info stays visible below</div></section>`).join('\n')}
 <section class="page"><div class="sheet loc4">${locBacks.join('')}</div><div class="pfoot">Location backs (one per phase) — print and glue, or write the phase on the back</div></section>
 <section class="page"><div class="sheet">${backs.join('')}</div><div class="pfoot">Card backs — print as many as you need, or slip one behind each card in a sleeve</div></section>
 <script>
