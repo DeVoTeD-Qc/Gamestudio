@@ -156,11 +156,31 @@ body.chrome #stage { outline: 1px solid var(--line); }
 #compare { position: absolute; inset: 0; z-index: 95; background: #0d1217; display: none; overflow: hidden; color: var(--text); }
 #compare h4 { margin: 0 0 4px; font-size: 16px; }
 #compare .cap { color: var(--muted); font-size: 14px; line-height: 1.35; }
+
+/* ---- layout v2: icon strip, side hand tray, field chips, killfeed toasts ---- */
+body:not(.v2) #toolbar .v2only { display: none; }
+.sbadge { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 2px; cursor: pointer; text-align: center; line-height: 1.05; }
+.sbadge .k { font-size: 14px; }
+.sbadge.hot { border-color: var(--amber); box-shadow: 0 0 10px rgba(245,184,61,.45); }
+.fchip { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 4px; font: 800 16px var(--ui); letter-spacing: .02em; padding: 0 6px; white-space: nowrap; }
+.fchip.r { background: rgba(107,29,32,.85); border: 1px solid var(--rival); color: #ffd0d1; }
+.fchip.y { background: rgba(15,92,86,.85); border: 1px solid var(--you); color: #c9fbf5; }
+.ktoast { position: absolute; z-index: 72; transform: translateX(-50%); background: rgba(8,10,14,.92); border: 1px solid var(--line); border-left: 4px solid var(--rival); border-radius: 6px; padding: 4px 12px; font-weight: 800; white-space: nowrap; pointer-events: none; display: flex; gap: 8px; align-items: center; }
+.ktoast.you { border-left-color: var(--you); }
+.tray { position: absolute; }
+.trayTab { position: absolute; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; background: linear-gradient(180deg, #222b36, #151b23); border: 1px solid #3a4655; border-radius: 8px 8px 0 0; font-weight: 900; letter-spacing: .06em; cursor: pointer; }
+.feed { display: flex; flex-direction: column; gap: 6px; }
+.feed .ln { display: flex; gap: 8px; align-items: center; background: rgba(21,27,35,.92); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-weight: 800; }
+.flyk { display: grid; gap: 6px; }
+.flyk div { border: 2px solid #2b6f8a; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; color: #8fd8f0; background: #10202b; }
+.flyk div.off { border-color: #6b5a2a; color: #e7c56a; background: #1b170c; }
 </style>
 </head>
 <body class="chrome">
 <div id="toolbar">
-  <div class="grp"><span class="lbl">Screen</span><button data-size="phone">Phone 844x390</button><button data-size="desktop">Desktop 1440x900</button></div>
+  <div class="grp"><span class="lbl">Layout</span><button data-layout="v1">v1 (current build)</button><button data-layout="v2">Layout v2</button></div>
+  <div class="grp"><span class="lbl">Screen</span><button data-size="phone">Phone 844x390</button><button data-size="desktop">Desktop 1440x900</button><button data-size="portrait" title="Layout v2 only: evaluated and rejected">Portrait 390x844 (eval)</button></div>
+  <div class="grp v2only"><span class="lbl">Phase</span><button data-phase="deploy">Deploy (tray open)</button><button data-phase="firefight">Firefight (tray closed)</button></div>
   <div class="grp"><span class="lbl">Hand</span><button data-hand="A">A: centred crop</button><button data-hand="B">B: banner stripe</button></div>
   <div class="grp"><span class="lbl">Demo</span>
     <button data-demo="select">Select card</button>
@@ -171,10 +191,13 @@ body.chrome #stage { outline: 1px solid var(--line); }
     <button data-demo="pick">Pick shot</button>
     <button data-demo="focus">Focus / zoom</button>
     <button data-demo="compare">Hand A vs B sheet</button>
+    <button data-demo="flyop" class="v2only">Operator badge</button>
+    <button data-demo="flystreak" class="v2only">Killstreak badge</button>
+    <button data-demo="kill" class="v2only">Killfeed toast</button>
     <button data-demo="reset">Reset</button>
   </div>
 </div>
-<p id="hint">Tap a hand card to select it (it animates; landing slots show ghosts), then tap a highlighted column, or drag it onto a column. Long-press (or right-click) any card for the focus view. On the desktop size, hover a banner to zoom it in place. Placeholder art is CSS/SVG made here; the red dot marks a banner that is animating. The stage is drawn on Godot's logical canvas (1168x540 phone, 1280x800 desktop) and scaled to the device size, exactly as screen_profile.gd does.</p>
+<p id="hint">Tap a hand card to select it (it animates; landing slots show ghosts), then tap a highlighted column, or drag it onto a column. Long-press (or right-click) any card for the focus view. On the desktop size, hover a banner to zoom it in place. Placeholder art is CSS/SVG made here; the red dot marks a banner that is animating. The stage is drawn on Godot's logical canvas (1168x540 phone, 1280x800 desktop) and scaled to the device size, exactly as screen_profile.gd does. <b>Layout v2</b> (board-layout-v2.md): the board takes the full height (phone banners 228x57 instead of 176x44), the hand is a side tray that is open in Deploy and closes to a tab in the Firefight (Phase toggle), and the rails become an icon strip on the left: tap a badge for its flyout, long-press for its rules.</p>
 <div id="stage"><div id="canvas"></div></div>
 
 <script>
@@ -193,19 +216,40 @@ LAYOUTS.phone4 = Object.assign({}, LAYOUTS.phone, { rows: 4, bw: 176, bh: 44, ro
   cw: 78, ch: 98, badge: 22, bfont: 16, kw: 18, ftab: [40, 11, 8], hex: [22, 26, 15], artH: 56, nameF: 16, statF: 16, sicon: 14 });
 LAYOUTS.desktop4 = Object.assign({}, LAYOUTS.desktop, { rows: 4, bw: 256, bh: 64, rowGap: 5, objH: 80, top: 12, midGap: 8, handGap: 10, handH: 140,
   cw: 108, ch: 140, badge: 28, bfont: 20, kw: 22, artH: 82, nameF: 16, statF: 18, sicon: 16 });
+// Layout v2 (kc-ux2, board-layout-v2.md): the board takes the full height; the hand moves to a side tray,
+// the rails collapse into an icon strip. Banner size is set by the height, so the freed width holds the tray.
+const V2COMMON = { rows: 4, raise: 0, railFont: 16, nameF: 16, statF: 18, sicon: 16 };
+LAYOUTS.phoneV2 = Object.assign({}, V2COMMON, { dev: [844, 390], W: 1168, H: 540, bw: 228, bh: 57, rowGap: 3, objH: 52, colGap: 14, top: 4, midGap: 3, bx: 76,
+  cw: 104, ch: 130, cardGap: 8, hcols: 3, badge: 28, bfont: 20, kw: 22, ftab: [48, 13, 10], hex: [26, 30, 18], artH: 76, focusW: 560, zoomW: 512,
+  strip: { x: 6, y: 4, w: 62, h: 64, gap: 5, dir: "v" }, panel: { x: 800, y: 4, w: 362, h: 532 }, supH: 48, btnH: 64, chipW: 70, chipH: 22 });
+LAYOUTS.desktopV2 = Object.assign({}, V2COMMON, { dev: [1440, 900], W: 1280, H: 800, bw: 304, bh: 76, rowGap: 6, objH: 96, colGap: 20, top: 24, midGap: 6, bx: 86,
+  cw: 108, ch: 136, cardGap: 8, hcols: 2, badge: 34, bfont: 24, kw: 26, ftab: [64, 15, 11], hex: [30, 34, 20], artH: 80, focusW: 640, zoomW: 608,
+  strip: { x: 6, y: 12, w: 68, h: 64, gap: 8, dir: "v" }, panel: { x: 1050, y: 12, w: 224, h: 776 }, supH: 48, btnH: 72, chipW: 96, chipH: 28 });
+LAYOUTS.portraitV2 = Object.assign({}, V2COMMON, { dev: [390, 844], W: 540, H: 1168, bw: 168, bh: 42, rowGap: 3, objH: 52, colGap: 8, top: 76, midGap: 3, bx: 10,
+  cw: 124, ch: 156, cardGap: 8, hcols: 4, badge: 22, bfont: 16, kw: 18, ftab: [40, 11, 8], hex: [26, 30, 18], artH: 92, focusW: 520, zoomW: 496,
+  strip: { x: 10, y: 6, w: 70, h: 62, gap: 5, dir: "h" }, panel: { x: 10, y: 500, w: 520, h: 660 }, supH: 48, btnH: 64, chipW: 60, chipH: 22 });
 const P = new URLSearchParams(location.search);
 let rows = P.get("rows") === "3" ? 3 : 4; // head decision 2026-11-05: 4 rows per side (3 kept only via ?rows=3 for reference)
-let size = P.get("size") === "desktop" ? "desktop" : "phone";
+let layout = P.get("layout") === "v2" || P.get("size") === "portrait" ? "v2" : "v1";
+let phase = P.get("phase") === "firefight" ? "firefight" : "deploy";
+let size = ["desktop", "portrait"].includes(P.get("size")) ? P.get("size") : "phone";
 let handOpt = P.get("hand") === "B" ? "B" : "A";
 if (P.get("chrome") === "0") document.body.classList.remove("chrome");
 let L;
 
 function geom() {
-  const g = Object.assign({}, LAYOUTS[size + (rows === 4 ? "4" : "")]);
+  if (size === "portrait") layout = "v2";
+  const g = Object.assign({}, LAYOUTS[layout === "v2" ? size + "V2" : size + (rows === 4 ? "4" : "")]);
+  g.v2 = layout === "v2";
   const sideH = g.rows * g.bh + (g.rows - 1) * g.rowGap;
   g.rivalTop = g.top; g.objY = g.top + sideH + g.midGap; g.youTop = g.objY + g.objH + g.midGap;
   g.youBottom = g.youTop + sideH; g.handY = g.youBottom + g.handGap;
-  g.boardW = 3 * g.bw + 2 * g.colGap; g.x0 = Math.round((g.W - g.boardW) / 2);
+  g.boardW = 3 * g.bw + 2 * g.colGap; g.x0 = g.bx != null ? g.bx : Math.round((g.W - g.boardW) / 2);
+  if (g.v2) {
+    const gw = g.hcols * g.cw + (g.hcols - 1) * g.cardGap;
+    g.gridX = g.panel.x + Math.round((g.panel.w - gw) / 2); g.gridY = g.panel.y + g.supH + 8;
+    g.btnY = g.panel.y + g.panel.h - g.btnH;
+  }
   g.colX = i => g.x0 + i * (g.bw + g.colGap);
   g.slotY = (side, k) => side === "you" ? g.youTop + k * (g.bh + g.rowGap) : g.objY - g.midGap - (k + 1) * g.bh - k * g.rowGap;
   g.scale = g.dev[0] / g.W;
@@ -403,9 +447,13 @@ function render() {
   L = geom();
   stage.style.width = px(L.dev[0]); stage.style.height = px(L.dev[1]);
   canvas.style.width = px(L.W); canvas.style.height = px(L.H); canvas.style.transform = `scale(${L.scale})`;
-  if (!canvas._built || canvas._built !== size + rows) { canvas.innerHTML = ""; els.clear(); buildStatic(); canvas._built = size + rows; }
+  const key = size + rows + layout + phase;
+  if (!canvas._built || canvas._built !== key) { canvas.innerHTML = ""; els.clear(); buildStatic(); canvas._built = key; }
   layoutUnits();
   renderHand();
+  document.body.classList.toggle("v2", layout === "v2");
+  document.querySelectorAll("#toolbar [data-layout]").forEach(b => b.classList.toggle("on", b.dataset.layout === layout));
+  document.querySelectorAll("#toolbar [data-phase]").forEach(b => b.classList.toggle("on", b.dataset.phase === phase));
   document.querySelectorAll("#toolbar [data-size]").forEach(b => b.classList.toggle("on", b.dataset.size === size));
   document.querySelectorAll("#toolbar [data-rows]").forEach(b => b.classList.toggle("on", +b.dataset.rows === rows));
   document.querySelectorAll("#toolbar [data-hand]").forEach(b => b.classList.toggle("on", b.dataset.hand === handOpt));
@@ -428,6 +476,103 @@ function buildStatic() {
     d.id = "drop" + i; d.addEventListener("click", () => { if (S.sel) playCard(S.sel, i); });
     canvas.appendChild(d);
   });
+  if (g.v2) buildV2Chrome(g); else buildV1Rails(g);
+  const fx = document.createElementNS("http://www.w3.org/2000/svg", "svg"); fx.id = "fxsvg"; fx.setAttribute("viewBox", `0 0 ${g.W} ${g.H}`); fx.setAttribute("width", g.W); fx.setAttribute("height", g.H); canvas.appendChild(fx);
+  canvas.appendChild(el("div", null, null)).id = "scrim";
+  canvas.appendChild(el("div", null, null)).id = "focus";
+  canvas.appendChild(el("div", null, null)).id = "compare";
+  document.getElementById("scrim").addEventListener("click", closeFocus);
+}
+
+// ---------------------------------------------------------------- layout v2 chrome
+const CAMO_BG = "conic-gradient(from 90deg at 25% 50%,#6b5a2a 0 25%,#c9a548 0 50%,#3d3a1c 0 75%,#e7c56a 0) 0 0/8px 8px";
+const SVGI = {
+  menu: '<path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="3.2" fill="currentColor"/>',
+  cards: '<rect x="3" y="6" width="11" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 3h10a2 2 0 0 1 2 2v12" fill="none" stroke="currentColor" stroke-width="2.2"/>',
+  streak: '<path d="M3 17l5-5 4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h5v5" fill="none" stroke="currentColor" stroke-width="2.6"/>'
+};
+const si = (n, s, col) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" style="color:${col || "currentColor"}">${SVGI[n]}</svg>`;
+function stripBadges() {
+  return [
+    { id: "menu", html: `${si("menu", 26)}`, info: ["Menu", "Settings, rules, concede. Same as the v1 MENU button."] },
+    { id: "score", html: `<div class="k">R3</div><div class="v" style="font-size:20px"><span style="color:var(--you)">1</span><span style="color:var(--muted)">-</span><span style="color:var(--rival)">2</span></div>`, info: ["Score", "Round 3 of 8, Deploy. You 1, Rival 2. Zone Control: first to 6. Tap for the score sheet."] },
+    { id: "op", html: `<div style="width:26px;height:26px;border-radius:50%;background:${CAMO_BG};border:2px solid #e7c56a"></div><div class="v" style="font-size:16px">5/7</div>`, info: ["Operator", "Kestrel AR-7. Tap for its stats, perks and position."] },
+    { id: "streak", html: `${si("streak", 24, "#8fd8f0")}<div class="v" style="font-size:16px">0</div>`, info: ["Killstreaks", "Streak 0. Tap to open the killstreak tray; it glows when one is ready."] },
+    { id: "rival", html: `${si("cards", 22, "#ff8a8d")}<div class="v" style="font-size:16px;color:#ffb3b5">5</div>`, info: ["Rival hand", "5 cards. Planned this Deploy: A 1, B 0, C 1 (shown as INCOMING on the board)."] },
+    { id: "preview", html: `${si("eye", 24)}<div class="k">OFF</div>`, info: ["Preview", "Shows the forecast of this round's firefight on the objective tiles."] },
+    { id: "deck", html: `${si("cards", 22, "#c8d2dc")}<div class="v" style="font-size:16px">11</div>`, info: ["Deck", "11 cards left, 2 used."] }
+  ];
+}
+function buildV2Chrome(g) {
+  const s = g.strip, list = stripBadges();
+  list.forEach((b, i) => {
+    let x = s.x, y = s.y + i * (s.h + s.gap);
+    if (s.dir === "h") { x = s.x + i * (s.w + s.gap); y = s.y; }
+    else if (b.id === "deck") y = g.H - s.y - s.h;
+    const n = el("div", "box sbadge" + (b.id === "op" ? " opb" : ""), { left: px(x), top: px(y), width: px(s.w), height: px(s.h) }, b.html);
+    n.id = "sb-" + b.id;
+    attachPress(n, () => openInfo(b.info[0], b.info[1]), () => { if (b.id === "op" || b.id === "streak") openFlyout(b.id); else openInfo(b.info[0], b.info[1]); });
+    canvas.appendChild(n);
+  });
+  const p = g.panel;
+  // supply row (top of the tray)
+  const sup = el("div", "box", { position: "absolute", left: px(p.x), top: px(p.y), width: px(p.w), height: px(g.supH), display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" },
+    `<span class="k" style="font-size:16px">SUPPLY</span><span style="display:flex;gap:3px">${[1, 1, 1, 1, 0].map(f => `<i style="width:13px;height:18px;border-radius:3px;background:${f ? "var(--amber)" : "transparent"};border:2px solid var(--amber)"></i>`).join("")}</span><span class="v" style="font-size:22px;color:var(--amber)">4/5</span>`);
+  attachPress(sup, () => openInfo("Supply", "4 of 5 left this round. Cards cost Supply; unspent Supply is lost at round end."), null);
+  canvas.appendChild(sup);
+  const undoW = Math.round(p.w * .3);
+  if (phase === "deploy") {
+    const u = el("div", "btn-sm", { position: "absolute", left: px(p.x), top: px(g.btnY), width: px(undoW), height: px(g.btnH), fontSize: "16px" }, "UNDO");
+    const r = el("div", "btn-ready", { position: "absolute", left: px(p.x + undoW + 8), top: px(g.btnY), width: px(p.w - undoW - 8), height: px(g.btnH), fontSize: "22px" }, "READY");
+    canvas.appendChild(u); canvas.appendChild(r);
+  } else {
+    // firefight: the hand tray is closed; the tray area shows the step and the killfeed log
+    const ff = el("div", "tray feed", { left: px(p.x), top: px(g.gridY), width: px(p.w), padding: "0 2px" });
+    ff.innerHTML = `<div class="k" style="font-size:16px;color:var(--amber);letter-spacing:.08em;font-weight:900">FIREFIGHT · MAIN STEP</div>
+      ${[["r6", "y7", "rival"], ["y5", "r4", "you"], ["r3", "y3", "rival"]].map(([a, b, sd]) => `<div class="ln" style="font-size:16px;border-left:4px solid ${sd === "you" ? "var(--you)" : "var(--rival)"}"><span style="color:${sd === "you" ? "#9ff0e7" : "#ffb3b5"}">${CARDS[a].name}</span>${ico("pick", 16, "#c8d2dc")}<span style="color:${sd === "you" ? "#ffb3b5" : "#9ff0e7"}">${CARDS[b].name}</span></div>`).join("")}
+      <div class="k" style="font-size:14px">Tap a line to highlight both cards on the board.</div>`;
+    canvas.appendChild(ff);
+    const tabH = 48;
+    const tab = el("div", "trayTab", { left: px(p.x), top: px(g.btnY - tabH - 8), width: px(p.w), height: px(tabH), fontSize: "16px" },
+      `<span>HAND · ${S.hand.length}</span><span style="color:var(--muted)">PEEK ▲</span>`);
+    tab.addEventListener("click", () => { phase = "deploy"; render(); });
+    canvas.appendChild(tab);
+    const sp = el("div", "btn-sm", { position: "absolute", left: px(p.x), top: px(g.btnY), width: px(p.w), height: px(g.btnH), fontSize: "18px" }, "SPEED x2 ▶▶");
+    canvas.appendChild(sp);
+  }
+}
+function openFlyout(which) {
+  const g = L, f = document.getElementById("focus"), s = document.getElementById("scrim"), b = document.getElementById("sb-" + which);
+  const W = size === "desktop" ? 380 : 360;
+  if (which === "op") {
+    f.innerHTML = `<div style="padding:14px 16px">
+      <div style="display:flex;gap:10px;align-items:center"><div style="width:44px;height:44px;border-radius:50%;background:${CAMO_BG};border:2px solid #e7c56a"></div>
+        <div><div class="v" style="font-size:20px;font-weight:900">Kestrel AR-7 <span style="color:#e7c56a">OPERATOR</span></div><div class="tl" style="font-size:16px">On board: A, row 2 · Base camo</div></div></div>
+      <div class="row" style="margin:10px 0;font-size:16px"><span class="chip">${ico("fp", 20, "#2ec4b6")} FP 3</span><span class="chip">${ico("ar", 20, "#b8c4d2")} AR 5/7</span><span class="chip">Streak 0</span></div>
+      <div class="tl" style="font-size:16px">PERKS <span style="letter-spacing:6px">○ ○ ○</span></div>
+      <div class="tl" style="margin-top:8px;font-size:14px">Tap the Operator on the board to find it · long-press for rules · tap anywhere to close</div></div>`;
+  } else {
+    const ks = [["P-12", "NO OP", 1], ["FRAG", "NO OP", 1], ["FLASH", "NO OP", 1], ["RECON", "AT 2", 0], ["MORTAR", "AT 3", 0], ["ATTACK", "AT 5", 0]];
+    f.innerHTML = `<div style="padding:14px 16px"><div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:20px">Killstreaks</h3><span class="tl" style="font-size:16px">STREAK 0</span></div>
+      <div class="flyk" style="grid-template-columns:repeat(3,1fr);margin-top:10px">${ks.map(k => `<div class="${k[2] ? "off" : ""}" style="height:61px;font-size:16px"><span>${k[0]}</span><span>${k[1]}</span></div>`).join("")}</div>
+      <div class="tl" style="margin-top:8px;font-size:14px">Tap a ready streak to arm it (the tray closes) · long-press for rules</div></div>`;
+  }
+  const bt = b ? parseFloat(b.style.top) : 0;
+  const left = g.strip.dir === "h" ? g.strip.x : g.strip.x + g.strip.w + 8;
+  const top = g.strip.dir === "h" ? g.strip.y + g.strip.h + 8 : Math.max(4, Math.min(g.H - 250, bt));
+  Object.assign(f.style, { width: px(W), left: px(left), top: px(top), display: "block" });
+  s.style.display = "block"; s.style.background = "rgba(3,5,8,.45)"; f.onclick = closeFocus;
+  if (b) b.classList.add("hot");
+}
+function killToast(a, b, side, slot, hold) {
+  const g = L;
+  const t = el("div", "ktoast" + (side === "you" ? " you" : ""), { left: px(g.x0 + g.boardW / 2), top: px(g.top + 4 + slot * (g.v2 && size === "desktop" ? 40 : 34)), fontSize: px(16) },
+    `<span style="color:${side === "you" ? "#9ff0e7" : "#ffb3b5"}">${CARDS[a].name}</span>${ico("pick", 16, "#c8d2dc")}<span style="color:${side === "you" ? "#ffb3b5" : "#9ff0e7"}">${CARDS[b].name}</span>`);
+  canvas.appendChild(t); if (!hold) setTimeout(() => t.remove(), 2500); return t;
+}
+
+function buildV1Rails(g) {
   // rails
   const lw = g.x0 - 12 - 18, f = g.railFont;
   const left = el("div", "rail", { left: px(12), top: px(g.top), width: px(lw) });
@@ -450,11 +595,6 @@ function buildStatic() {
   rb.innerHTML = `<div class="box"><div class="k" style="font-size:${f - 3}px">SUPPLY</div><div class="v" style="font-size:${f + 6}px;color:var(--amber)">4 / 5</div></div>
     <div class="btn-ready" style="height:${size === "phone" ? 64 : 72}px;font-size:${f + 6}px">READY</div>`;
   canvas.appendChild(rb);
-  const fx = document.createElementNS("http://www.w3.org/2000/svg", "svg"); fx.id = "fxsvg"; fx.setAttribute("viewBox", `0 0 ${g.W} ${g.H}`); fx.setAttribute("width", g.W); fx.setAttribute("height", g.H); canvas.appendChild(fx);
-  canvas.appendChild(el("div", null, null)).id = "scrim";
-  canvas.appendChild(el("div", null, null)).id = "focus";
-  canvas.appendChild(el("div", null, null)).id = "compare";
-  document.getElementById("scrim").addEventListener("click", closeFocus);
 }
 
 function layoutUnits() {
@@ -472,6 +612,20 @@ function layoutUnits() {
     const o = document.getElementById("obj" + i);
     const rp = power(col.rival), yp = power(col.you), ctl = yp > rp ? "you" : rp > yp ? "rival" : "none";
     const m = Math.round(g.objH * .62);
+    if (g.v2) {
+      // v2 tile: FP pair | control mark | range + control words | Field chips (rival top, yours bottom)
+      const mm = Math.min(Math.round(g.objH * .76), 64), fs = size === "desktop" ? 20 : 16, ms = ctl === "rival" ? mm * .74 : mm;
+      const mx = size === "desktop" ? 58 : 44, wx = mx + mm + (size === "desktop" ? 14 : 8);
+      const range = ["CLOSE", "LONG", "MID"][i], cw = { you: "YOURS", rival: "RIVAL", none: "EVEN" }[ctl];
+      const chips = { 0: { r: "MINES" }, 2: { y: "SMOKE" } }[i] || {};
+      o.innerHTML = `<div class="pw r" style="font-size:${fs}px;left:6px">${ico("fp", fs, "#ffb3b5")} ${rp}</div>
+        <div class="mark ${ctl}" style="position:absolute;left:${mx + (mm - ms) / 2}px;top:${(g.objH - ms) / 2}px;width:${ms}px;height:${ms}px;font-size:${Math.round(mm * .55)}px"><span>${col.id}</span></div>
+        <div class="pw y" style="font-size:${fs}px;left:6px">${ico("fp", fs, "#9ff0e7")} ${yp}</div>
+        <div style="position:absolute;left:${wx}px;top:50%;transform:translateY(-50%);font:800 ${fs}px/1.2 var(--ui);color:var(--muted)">${range}<br><span style="color:${ctl === "you" ? "var(--you)" : ctl === "rival" ? "#ff8a8d" : "#c8d2dc"}">${cw}</span></div>
+        ${chips.r ? `<div class="fchip r" style="right:4px;top:3px;width:${g.chipW}px;height:${g.chipH}px;font-size:${fs}px">${chips.r}</div>` : ""}
+        ${chips.y ? `<div class="fchip y" style="right:4px;bottom:3px;width:${g.chipW}px;height:${g.chipH}px;font-size:${fs}px">${chips.y}</div>` : ""}`;
+      return;
+    }
     o.innerHTML = `<div class="pw r" style="font-size:${g.bfont - 2}px">${ico("fp", g.bfont - 2, "#ffb3b5")} ${rp}</div>
       <div class="mark ${ctl}" style="width:${ctl === "rival" ? m * .78 : m}px;height:${ctl === "rival" ? m * .78 : m}px;font-size:${Math.round(m * .6)}px"><span>${col.id}</span></div>
       <div class="pw y" style="font-size:${g.bfont - 2}px">${ico("fp", g.bfont - 2, "#9ff0e7")} ${yp}</div>
@@ -490,6 +644,11 @@ function layoutUnits() {
 
 function handRects() {
   const g = L, n = S.hand.length;
+  if (g.v2) { // grid in the side tray; rows compress if the hand passes the grid's slots (hand_cap up to 10)
+    const rowsN = Math.ceil(n / g.hcols), avail = g.btnY - 6 - g.gridY;
+    const step = rowsN > 1 ? Math.min(g.ch + g.cardGap, (avail - g.ch) / (rowsN - 1)) : 0;
+    return S.hand.map((id, i) => ({ id, x: g.gridX + (i % g.hcols) * (g.cw + g.cardGap), y: Math.round(g.gridY + Math.floor(i / g.hcols) * step), w: g.cw, h: g.ch }));
+  }
   const span = g.boardW, need = n * g.cw + (n - 1) * g.cardGap;
   const step = need <= span ? g.cw + g.cardGap : (span - g.cw) / (n - 1);
   const start = g.x0 + (span - (need <= span ? need : span)) / 2;
@@ -502,7 +661,7 @@ function cropViewBox(key, w, h) {
 }
 function handCardEl(r) {
   const g = L, c = CARDS[r.id];
-  const e = el("div", "hcard" + (S.sel === r.id ? " sel anim" : "") + (c.dim ? " dim" : ""), { left: px(r.x), top: px(r.y - (S.sel === r.id ? Math.round(g.ch * .14) : 0)), width: px(r.w), height: px(r.h) });
+  const e = el("div", "hcard" + (S.sel === r.id ? " sel anim" : "") + (c.dim ? " dim" : ""), { left: px(r.x - (S.sel === r.id && g.v2 ? 14 : 0)), top: px(r.y - (S.sel === r.id && !g.v2 ? Math.round(g.ch * .14) : 0)), width: px(r.w), height: px(r.h) });
   e.dataset.id = r.id;
   const hex = el("div", "hex", { width: px(g.hex[0]), height: px(g.hex[1]), fontSize: px(g.hex[2]), left: px(3), top: px(3) }, c.cost);
   let inner = "";
@@ -540,15 +699,17 @@ function handCardEl(r) {
     drag = null;
   });
   if (size === "desktop") {
-    e.addEventListener("mouseenter", () => { e.classList.add("anim"); e.style.top = px(r.y - Math.round(g.ch * .1)); showPeek(r); });
-    e.addEventListener("mouseleave", () => { if (S.sel !== r.id) { e.classList.remove("anim"); e.style.top = px(r.y); } hidePeek(); });
+    e.addEventListener("mouseenter", () => { e.classList.add("anim"); if (g.v2) e.style.left = px(r.x - 10); else e.style.top = px(r.y - Math.round(g.ch * .1)); showPeek(r); });
+    e.addEventListener("mouseleave", () => { if (S.sel !== r.id) { e.classList.remove("anim"); e.style.top = px(r.y); e.style.left = px(r.x); } hidePeek(); });
   }
   return e;
 }
 function showPeek(r) {
   hidePeek(); if (handOpt !== "A") return;
   const g = L, w = g.bw, h = g.bh;
-  const p = el("div", "peek anim", { left: px(Math.max(g.x0, Math.min(g.x0 + g.boardW - w, r.x + r.w / 2 - w / 2))), top: px(r.y - Math.round(g.ch * .1) - h - 10), width: px(w), height: px(h) },
+  const pl = g.v2 ? g.panel.x - w - 12 : Math.max(g.x0, Math.min(g.x0 + g.boardW - w, r.x + r.w / 2 - w / 2));
+  const pt = g.v2 ? Math.max(4, Math.min(g.H - h - 4, r.y + r.h / 2 - h / 2)) : r.y - Math.round(g.ch * .1) - h - 10;
+  const p = el("div", "peek anim", { left: px(pl), top: px(pt), width: px(w), height: px(h) },
     `<div class="banner side-you anim" style="position:absolute;inset:0;width:${w}px;height:${h}px"><div class="art">${artSVG(CARDS[r.id].art)}<div class="shine"></div></div></div>`);
   p.id = "peek"; canvas.appendChild(p);
 }
@@ -557,6 +718,7 @@ function hidePeek() { const p = document.getElementById("peek"); if (p) p.remove
 function renderHand() {
   canvas.querySelectorAll(".hcard,.banner.ghost").forEach(n => n.remove());
   hidePeek();
+  if (L.v2 && phase === "firefight") { S.cols.forEach((c, i) => document.getElementById("drop" + i).classList.remove("valid")); return; }
   handRects().forEach(r => canvas.appendChild(handCardEl(r)));
   // landing ghosts + valid columns while a unit is selected
   const sc = S.sel && CARDS[S.sel];
@@ -588,7 +750,7 @@ async function playCard(id, colIdx, opts = {}) {
   b.dataset.col = colIdx; b.dataset.side = "you";
   canvas.appendChild(b);
   const ax = r ? r.x : g.colX(colIdx), ay = r ? r.y : g.H, aw = r ? r.w : g.bw, ah = r ? (handOpt === "A" ? g.artH : r.h) : g.bh;
-  const entryY = g.youBottom + g.rowGap;          // just outside the back row (outer edge)
+  const entryY = g.v2 ? g.slotY("you", g.rows - 1) : g.youBottom + g.rowGap; // v1: just outside the back row; v2: the back-row slot (the board touches the screen edge)
   const T = opts.slow || 1;
   // 1. lift + morph into banner at the column's outer edge
   await b.animate([
@@ -611,7 +773,7 @@ async function playCard(id, colIdx, opts = {}) {
     col.you = [id, ...col.you.filter(x => x !== id)];
     b.style.zIndex = 5;
     layoutUnits();
-    const co = callout(`<b>Protector</b> slides to the front`, colIdx === 0 ? 12 : g.colX(colIdx) - 236, g.slotY("you", 0) + g.bh / 2 - 14);
+    const co = callout(`<b>Protector</b> slides to the front`, g.v2 ? g.colX(colIdx) + 8 : colIdx === 0 ? 12 : g.colX(colIdx) - 236, g.v2 ? g.slotY("you", 1) + g.bh / 2 - 14 : g.slotY("you", 0) + g.bh / 2 - 14);
     await wait(1400 * T); co.remove(); b.style.zIndex = "";
   }
   await wait(Math.max(0, 900 - 400) * T);
@@ -643,7 +805,7 @@ async function rivalPlays() {
 async function advanceDemo() {
   const g = L, col = S.cols[1], id = col.you[0]; if (!id) return;
   const b = els.get(id); b.classList.add("dying");
-  const co = callout(`<b>${CARDS[id].name}</b> down: column B advances`, 12, g.slotY("you", 0) + g.bh / 2 - 14);
+  const co = callout(`<b>${CARDS[id].name}</b> down: column B advances`, g.v2 ? g.x0 + 8 : 12, g.slotY("you", 0) + g.bh / 2 - 14);
   await wait(520); col.you.shift(); b.remove(); els.delete(id); layoutUnits();
   const nf = els.get(col.you[0]); if (nf) { nf.classList.add("anim"); nf.animate([{ transform: "scale(1.06)" }, { transform: "scale(1)" }], { duration: 300, delay: 300 }); setTimeout(() => nf.classList.remove("anim"), 1200); }
   await wait(1600); co.remove();
@@ -712,7 +874,7 @@ function openObjective(i) {
   Object.assign(f.style, { width: px(460), left: px((g.W - 460) / 2), top: px(g.objY - 40), display: "block" });
   s.style.display = "block"; f.onclick = closeFocus;
 }
-function closeFocus() { document.getElementById("focus").style.display = "none"; document.getElementById("scrim").style.display = "none"; }
+function closeFocus() { document.getElementById("focus").style.display = "none"; const s = document.getElementById("scrim"); s.style.display = "none"; s.style.background = ""; document.querySelectorAll(".sbadge.hot").forEach(n => n.classList.remove("hot")); }
 
 // ---------------------------------------------------------------- compare sheet (hand A vs B)
 function compareSheet() {
@@ -760,6 +922,8 @@ function compareSheet() {
 document.getElementById("toolbar").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.size) { size = b.dataset.size; S = INIT(); resetCards(); render(); }
+  if (b.dataset.layout) { layout = b.dataset.layout; if (layout === "v1" && size === "portrait") size = "phone"; S = INIT(); resetCards(); render(); }
+  if (b.dataset.phase) { phase = b.dataset.phase; S.sel = null; render(); }
   if (b.dataset.rows) { rows = +b.dataset.rows; S = INIT(); resetCards(); render(); }
   if (b.dataset.hand) { handOpt = b.dataset.hand; renderHand(); }
   const d = b.dataset.demo; if (!d) return;
@@ -773,6 +937,9 @@ document.getElementById("toolbar").addEventListener("click", async e => {
   if (d === "pick") pickDemo(false);
   if (d === "focus") openFocus("r6", "rival");
   if (d === "compare") compareSheet();
+  if (d === "flyop") openFlyout("op");
+  if (d === "flystreak") openFlyout("streak");
+  if (d === "kill") { killToast("r6", "y7", "rival", 0); setTimeout(() => killToast("y5", "r4", "you", 1), 400); }
 });
 document.querySelector('[data-demo="play"]').textContent = "Play into A";
 render();
@@ -789,6 +956,9 @@ render();
   if (st === "advance") advanceDemo();
   if (st === "compare") compareSheet();
   if (st === "hover") { const b = els.get(P.get("card") || "y5"); hoverOn(b); }
+  if (P.get("pick") === "1") pickDemo(true);
+  if (st === "flyout") openFlyout(P.get("which") || "op");
+  if (st === "killfeed") { killToast("r6", "y7", "rival", 0, true); killToast("y5", "r4", "you", 1, true); }
   document.body.dataset.ready = "1";
 })();
 </script>
