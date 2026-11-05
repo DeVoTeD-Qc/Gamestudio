@@ -22,7 +22,7 @@ Every **gate** must pass for GO. A failed **watch** item doesn't block round 1. 
 | # | Gate | Pass when | Result | Status |
 |---|---|---|---|---|
 | G1 | Sessions played | ≥ 3 sessions with a finished run, ≥ 1 of them a full 5-match run or a run lost on tickets | [n finished runs] | [ ] |
-| G2 | Log hand-off works | Every finished session reached the chat as a file the KPI tool reads, through the steps in the tester brief, with 0 schema problems in the KPI sheet. If the `.jsonl` → `.json` rename is still needed, it must be fixed in the game or the Studio Floor first, because external testers won't rename files. | [n logs read / n sessions; schema problems] | [ ] |
+| G2 | Log hand-off works | Every finished session reached the chat as a file the KPI tool reads, through the steps in the tester brief, with 0 schema problems in the KPI sheet. (Fixed 2026-11-05: the Studio Floor upload now accepts the game's `.jsonl` file directly; confirm on the first iPhone session.) | [n logs read / n sessions; schema problems] | [ ] |
 | G3 | No blocker bugs | 0 open blocker or critical bugs: no stuck screen, crash, lost run or broken input on the iPhone | [bug ids] | [ ] |
 | G4 | Onboarding | The tutorial was played to the last step (KPI "Tutorial completion" = 100% of 1) and the first run started without help | [ ] | [ ] |
 | G5 | Core loop fires | ≥ 1 killstreak used in ≥ 60% of matches; the Operator went down in ≥ 1 match and the run continued | [..% of n] | [ ] |

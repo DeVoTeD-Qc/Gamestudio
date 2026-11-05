@@ -2,7 +2,6 @@
 
 **For the studio head, on an iPhone. 3–5 sessions of about 20–30 minutes.** Play the way you normally would. We are testing the game, not you.
 
-> **Known snag (read first):** the game saves the log as a **`.jsonl`** file, and the Studio Floor **+ Images / logs** button only takes **`.json`**. On iPhone, the `.jsonl` file shows greyed out in the picker. Until that is fixed, rename the file before you upload it (step 4b). It takes about 10 seconds.
 
 ## 1. Before the first session
 - Open **https://claude.ai/artifact/WNcHGuWBMjELqegWCyeihd** in **Safari**, in a normal tab (not Private, which can lose the log). Turn the phone **sideways**.
@@ -39,14 +38,9 @@ Don't stop to write notes during a match. Afterwards, send a line or two in the 
 2. On **Thanks for playing!**, tap **Download log**. Safari asks whether to download `killstreak-playtest-<date>-<code>.jsonl`: tap **Download**.
 3. Then tap **Done**.
 
-**b. Rename the file** (until the snag above is fixed)
-1. Open the **Files** app → **Downloads**.
-2. If you can't see `.jsonl` at the end of the name: tap **•••** (top right) → **View Options** → turn on **Show All Extensions**.
-3. Long-press the newest `killstreak-playtest-….jsonl` → **Rename**. Delete the final **l** so it ends in **`.json`** → **Done**. If iPhone asks about changing the extension, tap **Use ".json"**.
-
-**c. Upload**
+**b. Upload**
 1. Open the **Studio Floor** → **Chat**.
-2. Tap **+ Images / logs** → **Browse** → **Downloads** → pick the `.json` file.
+2. Tap **+ Images / logs** → **Browse** → **Downloads** → pick the newest `killstreak-playtest-….jsonl` file.
 3. Type the session number and your notes, for example *"Session 2. Lost the mid lane twice and couldn't see why."*, then **Send**.
 
 Each download holds every session so far, so it's fine that later files repeat earlier ones. Upload one file per session anyway: if one goes missing, the next still covers it.
