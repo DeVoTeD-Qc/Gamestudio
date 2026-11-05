@@ -5,9 +5,14 @@
 #     BannerArtDB.portrait_texture(&"marksman")  # 2:3 column, for hand cards (option A)
 #   Lookup order, so the head's ChatGPT banners drop in without code changes:
 #   1. res://data/banners/<art_id>.tres (a BannerArt: master texture or image_path + crop centres).
-#   1b. Optional licensed source (private pitch build only, kc-cod): when the git-ignored folder
-#      res://assets/licensed/mw3/ exists with a manifest.csv (header row; columns file, kind,
-#      chassis or card, optional banner_y, portrait_x, title), the first row per chassis id is used.
+#   1b. Optional licensed source (private pitch build only, kc-cod / kc-cod2): the first git-ignored
+#      folder of LICENSED_DIRS with a manifest.csv (header row; columns file, kind, chassis or card,
+#      optional banner_y, portrait_x, title, id, frames_file, frames, frame_ms, mastery_family,
+#      tier_rank). res://assets/licensed/mw3_pitch/ is the curated pitch set (tools/
+#      build_mw3_pitch_set.py), res://assets/licensed/mw3/ the full download. The first row per
+#      chassis id is that chassis' default art; every row is also reachable by its own id (kc_mw3_*),
+#      which is what per-copy art uses (copy_arts, MatchState.art_by_uid). Operator rows (kind
+#      operator, card = the primary weapon id) form the weapon's mastery ladder (operator_art_id).
 #      A clean checkout has no such folder and silently falls through to the placeholders.
 #   2. Placeholder from Killstreak's painted card art (assets/sprites/cards/card_<id>.webp, or its
 #      SVG when bitmaps are off), cut with PLACEHOLDER_CROPS (eyeballed per card so the head and the
@@ -21,9 +26,18 @@ class_name BannerArtDB
 extends RefCounted
 
 const BANNER_DIR: String = "res://data/banners/"
-## Optional, git-ignored licensed art (never required; see the header).
-static var licensed_dir: String = "res://assets/licensed/mw3/"
+## Optional, git-ignored licensed art folders, first one with a manifest wins (see the header).
+const LICENSED_DIRS: PackedStringArray = ["res://assets/licensed/mw3_pitch/", "res://assets/licensed/mw3/"]
+## Tests point this at a scratch folder; "" = search LICENSED_DIRS.
+static var licensed_dir: String = ""
 const LICENSED_MANIFEST: String = "manifest.csv"
+## Operator mastery tiers (MW3 multiplayer ladder) and the camo band id each one maps to.
+## Tier 1 is the Base camo (head, kc-polish B3: Base for both sides until the mastery grind exists).
+const MASTERY_TIERS: PackedStringArray = ["Gilded", "Forged", "Priceless", "Interstellar"]
+const MASTERY_CAMO: Array[StringName] = [&"base", &"forged", &"priceless", &"interstellar"]
+## Dev toggle for the pitch: 0 = the match's tier (Base), 1-4 = force that mastery tier on every
+## Operator (URL ?mastery=N on the web build, or Ctrl+M on the match screen cycles it).
+static var operator_tier_override: int = 0
 ## art id -> [banner_y, portrait_x] for the Killstreak card art (888x544) placeholders.
 const PLACEHOLDER_CROPS: Dictionary = {
 	&"ammo_resupply": [0.40, 0.42], &"attack_helo": [0.42, 0.40], &"breach_and_clear": [0.45, 0.50],
@@ -54,7 +68,11 @@ static var licensed_enabled: bool = true
 static var _arts: Dictionary = {}
 static var _crops: Dictionary = {}
 static var _licensed: Dictionary = {}   # chassis id -> manifest row Dictionary
+static var _licensed_by_id: Dictionary = {}   # art id (kc_mw3_*) -> manifest row
+static var _licensed_pool: Dictionary = {}    # chassis / weapon id -> Array[StringName] of art ids
+static var _licensed_root: String = ""
 static var _licensed_loaded: bool = false
+static var _frames: Dictionary = {}           # art id -> frame sheet Texture2D
 
 
 ## The BannerArt for an art id (never null; a generated placeholder at worst).
@@ -78,8 +96,14 @@ static func licensed_rows() -> Dictionary:
 	if _licensed_loaded:
 		return _licensed
 	_licensed_loaded = true
-	var path: String = licensed_dir + LICENSED_MANIFEST
-	if not FileAccess.file_exists(path):
+	var dirs: PackedStringArray = [licensed_dir] if licensed_dir != "" else LICENSED_DIRS
+	var path: String = ""
+	for d: String in dirs:
+		if FileAccess.file_exists(d + LICENSED_MANIFEST):
+			_licensed_root = d
+			path = d + LICENSED_MANIFEST
+			break
+	if path == "":
 		return _licensed
 	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if f == null:
@@ -96,36 +120,119 @@ static func licensed_rows() -> Dictionary:
 			row[header[i]] = cells[i].strip_edges()
 		var chassis: String = String(row.get("chassis", row.get("card", row.get("chassis_id", ""))))
 		var file: String = String(row.get("file", row.get("filename", row.get("path", ""))))
-		if chassis != "" and file != "" and not _licensed.has(StringName(chassis)):
-			row["file"] = file
-			_licensed[StringName(chassis)] = row
+		if chassis == "" or file == "":
+			continue
+		row["file"] = file
+		var key := StringName(chassis)
+		if not _licensed.has(key):
+			_licensed[key] = row
+		var art_id := StringName(String(row.get("id", "")))
+		if art_id != &"" and not _licensed_by_id.has(art_id):
+			_licensed_by_id[art_id] = row
+			if not _licensed_pool.has(key):
+				_licensed_pool[key] = [] as Array[StringName]
+			(_licensed_pool[key] as Array[StringName]).append(art_id)
 	return _licensed
 
 
+## True when licensed art is loaded (the private pitch folder is present and enabled).
+static func has_licensed() -> bool:
+	return licensed_enabled and not licensed_rows().is_empty()
+
+
+## Licensed art ids for a chassis (or an Operator weapon's mastery ladder, tier order), [] without.
+static func licensed_pool(chassis: StringName) -> Array[StringName]:
+	if not licensed_enabled:
+		return [] as Array[StringName]
+	licensed_rows()
+	return (_licensed_pool.get(chassis, [] as Array[StringName]) as Array[StringName]).duplicate()
+
+
+## Per-copy art (card-system §5.2, display only): one art id per entry of `card_ids` (a deck, in
+## order). The n-th copy of a chassis across all `decks` gets the n-th art of its licensed pool
+## (wrapping), so copies of the same chassis wear different banners on the board, also across the
+## two sides. &"" = the chassis' default art. Without licensed art every entry is &"".
+static func copy_arts(decks: Array) -> Array:
+	var used: Dictionary = {}
+	var out: Array = []
+	for deck: Array in decks:
+		var arts: Array[StringName] = []
+		for id: Variant in deck:
+			var chassis := StringName(String(id))
+			var pool: Array[StringName] = licensed_pool(chassis)
+			if pool.is_empty():
+				arts.append(&"")
+				continue
+			var n: int = int(used.get(chassis, 0))
+			used[chassis] = n + 1
+			arts.append(pool[n % pool.size()])
+		out.append(arts)
+	return out
+
+
+## The Operator's banner art id for its primary weapon at mastery tier (1-4; the dev override wins).
+## Licensed: the weapon's mastery card of that tier (clamped to the ladder). Otherwise the weapon id.
+static func operator_art_id(weapon_id: StringName, tier: int = 1) -> StringName:
+	var pool: Array[StringName] = licensed_pool(weapon_id)
+	if pool.is_empty():
+		return weapon_id
+	var t: int = operator_tier_override if operator_tier_override > 0 else tier
+	return pool[clampi(t, 1, pool.size()) - 1]
+
+
+## Camo band id for a mastery tier (1 = Base).
+static func camo_for_tier(tier: int) -> StringName:
+	var t: int = operator_tier_override if operator_tier_override > 0 else tier
+	return MASTERY_CAMO[clampi(t, 1, MASTERY_CAMO.size()) - 1]
+
+
+## Frame sheet of an animated art (null when the art is still or the sheet is missing).
+static func frames_texture(art: BannerArt) -> Texture2D:
+	if art == null or art.frames_path == "" or art.frame_count < 2:
+		return null
+	if _frames.has(art.id):
+		return _frames[art.id]
+	var tex: Texture2D = _load_image(art.frames_path)
+	_frames[art.id] = tex
+	return tex
+
+
 static func _licensed_art(art_id: StringName) -> BannerArt:
-	var row: Dictionary = licensed_rows().get(art_id, {})
+	var row: Dictionary = licensed_rows().get(art_id, _licensed_by_id.get(art_id, {}))
 	if row.is_empty():
 		return null
 	var path: String = String(row["file"])
 	if not path.contains("://"):
-		path = licensed_dir + path
+		path = _licensed_root + path
 	var tex: Texture2D = _load_image(path)
 	if tex == null:
 		return null
 	var art := BannerArt.new()
-	art.id = art_id
-	art.card_id = art_id
+	art.id = StringName(String(row.get("id", ""))) if String(row.get("id", "")) != "" else art_id
+	art.card_id = StringName(String(row.get("card", row.get("chassis", art_id))))
 	art.texture = tex
+	art.licensed = true
 	art.title = String(row.get("title", String(art_id).capitalize()))
 	art.banner_y = float(row.get("banner_y", "0.5")) if String(row.get("banner_y", "")) != "" else 0.5
 	art.portrait_x = float(row.get("portrait_x", "0.5")) if String(row.get("portrait_x", "")) != "" else 0.5
+	var frames_file: String = String(row.get("frames_file", ""))
+	if frames_file != "" and String(row.get("frames", "")).is_valid_int():
+		art.frames_path = frames_file if frames_file.contains("://") else _licensed_root + frames_file
+		art.frame_count = int(row["frames"])
+		art.frame_ms = maxi(30, int(row.get("frame_ms", "80"))) if String(row.get("frame_ms", "")).is_valid_int() else 80
+		art.animated = &"yes"
+	art.mastery_family = StringName(String(row.get("mastery_family", "")))
+	art.mastery_tier = int(row.get("tier_rank", "0")) if String(row.get("tier_rank", "")).is_valid_int() else 0
+	art.licence = "Activision. NOT LICENSED: private pitch prototype only, never ship or publish."
 	art.source_note = "Licensed reference art (private pitch build): " + path.get_file()
 	return art
 
 
 ## Imported texture, else the raw PNG / JPG / WebP bytes decoded (null when unreadable).
 static func _load_image(path: String) -> Texture2D:
-	if FileAccess.file_exists(path + ".import") and ResourceLoader.exists(path):
+	# A "keep" import (the pitch set's WebP) ships the raw bytes: decode them, never load().
+	if FileAccess.file_exists(path + ".import") and not FileAccess.get_file_as_string(path + ".import").contains('importer="keep"') \
+			and ResourceLoader.exists(path):
 		var res: Resource = load(path)
 		if res is Texture2D:
 			return res
@@ -172,6 +279,10 @@ static func clear_cache() -> void:
 	_arts.clear()
 	_crops.clear()
 	_licensed.clear()
+	_licensed_by_id.clear()
+	_licensed_pool.clear()
+	_licensed_root = ""
+	_frames.clear()
 	_licensed_loaded = false
 
 
@@ -186,7 +297,9 @@ static func _crop(art_id: StringName, kind: StringName, hint: Dictionary) -> Tex
 	var sz: Vector2 = tex.get_size()
 	var atlas := AtlasTexture.new()
 	atlas.atlas = tex
-	atlas.region = art.banner_region(sz) if kind == &"banner" else art.portrait_region(sz)
+	# Licensed art is already a 4:1 strip: its "portrait" is the whole strip (hand cards show it
+	# letterboxed, hand_area.gd), never an 85x128 column.
+	atlas.region = art.banner_region(sz) if kind == &"banner" or art.licensed else art.portrait_region(sz)
 	atlas.filter_clip = true
 	_crops[key] = atlas
 	return atlas

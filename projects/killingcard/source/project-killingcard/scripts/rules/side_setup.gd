@@ -9,6 +9,9 @@ extends RefCounted
 
 var display_name: String = ""
 var deck: Array[CardData] = []
+## Display only (card-system §4.6, kc-cod2): one banner art id per deck entry, parallel to `deck`
+## (&"" or missing = the chassis' default art). MatchState copies it into art_by_uid; rules never read it.
+var deck_arts: Array[StringName] = []
 ## Defines the Operator (class, FP, Armor, keywords). Null = no Operator (tests only).
 var primary: LoadoutItem = null
 var attachments: Array[LoadoutItem] = []

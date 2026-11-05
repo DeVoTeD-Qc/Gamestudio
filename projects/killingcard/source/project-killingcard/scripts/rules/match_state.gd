@@ -75,6 +75,11 @@ var firefight_effects: Array[Dictionary] = []
 ## Effects waiting for a later round (delay_rounds): {due_round, effect, ctx}.
 var delayed_effects: Array[Dictionary] = []
 
+## Display only (card-system §4.6, kc-cod2): card uid -> banner art id of that copy, filled from
+## SideSetup.deck_arts. A unit keeps its card's uid, so board, killfeed and discard show the copy's
+## art. The rules never read it (MatchClone copies it like every other variable).
+var art_by_uid: Dictionary = {}
+
 var _next_uid: int = 1
 var _play_counter: int = 0
 
@@ -104,8 +109,11 @@ func _init(p_config: RunConfig = null, p_map: MapData = null, player: SideSetup 
 ## Builds decks and Operators, shuffles (seeded) and runs Round 1 Briefing.
 func start_match() -> void:
 	for s: RulesSide in sides:
-		for card: CardData in s.setup.deck:
-			s.deck.append(RulesCard.new(new_uid(), card))
+		for i: int in s.setup.deck.size():
+			var rc: RulesCard = RulesCard.new(new_uid(), s.setup.deck[i])
+			if i < s.setup.deck_arts.size() and s.setup.deck_arts[i] != &"":
+				art_by_uid[rc.uid] = s.setup.deck_arts[i]
+			s.deck.append(rc)
 		if not s.setup.keep_deck_order:
 			shuffle(s.deck)
 		s.operator_unit = _build_operator(s.index, s.setup)

@@ -18,6 +18,10 @@ func _initialize() -> void:
 func _run() -> void:
 	# Let autoloads finish _ready() before any test touches them.
 	await process_frame
+	# kc-cod2: a dev machine may hold the private, git-ignored licensed art (assets/licensed/); results
+	# must not depend on it. Tests that cover it switch it on with their own scratch folder.
+	BannerArtDB.licensed_enabled = false
+	BannerArtDB.clear_cache()
 	var passed: int = 0
 	var failed: int = 0
 	for path: String in _find_test_files():

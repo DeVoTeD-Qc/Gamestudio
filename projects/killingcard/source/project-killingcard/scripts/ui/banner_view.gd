@@ -12,7 +12,10 @@
 #   Sizes scale with the banner height (phone 44 px: 22 px badges, 16 px numbers, 18 px plates;
 #   desktop 64 px: 28 / 20 / 22; inspector 128 px). Display only: input is handled by the column.
 #   Focus / placement plays the banner_shimmer shader on the art (one animated banner at a time is
-#   the caller's job: BannerView.focus_owner).
+#   the caller's job: BannerView.focus_owner). kc-cod2: an animated licensed art (BannerArt.frames_path)
+#   plays its frame sheet as a flipbook instead, also only while focused / placed; licensed art gets
+#   the art doc's side-gradient safety net (15% each side, black ~35%) so the corner icons stay
+#   readable on art that was not composed for our icon columns.
 # Dependencies: BannerArtDB, IconSheet, hud_theme.tres colours (Hud: friend, enemy, elite, accent).
 # Author: Mechanics Developer Agent (kc-board)
 class_name BannerView
@@ -35,7 +38,14 @@ const DAMAGED: Color = Color("#F2A33A")
 const CAMO: Dictionary = {
 	&"base": [Color("#4B5A3A"), Color("#2F3A25"), Color("#7A8A5A")],
 	&"gold": [Color("#C9A227"), Color("#7A5E12"), Color("#F3D36B")],
+	# kc-cod2 weapon-mastery tiers 2-4 (tier 1 Gilded = the Base camo, head B3).
+	&"forged": [Color("#D9DEE3"), Color("#8E979F"), Color("#FFFFFF")],
+	&"priceless": [Color("#3E8EDE"), Color("#1B3F78"), Color("#9FE3FF")],
+	&"interstellar": [Color("#7B3FC4"), Color("#1A0F3A"), Color("#FF7AD9")],
 }
+## Safety net behind the icon columns on licensed art: width share per side and peak opacity.
+const SAFETY_W: float = 0.15
+const SAFETY_A: float = 0.35
 
 ## The one banner animating right now (focus / placement), so a new focus stops the old one.
 static var focus_owner: WeakRef = null
@@ -56,6 +66,11 @@ var _art: TextureRect
 var _overlay: Control
 var _shimmer_until: float = -1.0
 var _pulse: float = 0.0
+## The shown art (null for INCOMING / EMPTY) and its flipbook while focused.
+var _banner_art: BannerArt = null
+var _still: Texture2D = null
+var _flip: AtlasTexture = null
+var _flip_t0: float = 0.0
 
 
 func _init() -> void:
@@ -95,7 +110,7 @@ func show_incoming(revealed_name: String = "") -> void:
 	side = &"enemy"
 	is_front = false
 	revealed = revealed_name
-	_art.texture = null
+	_clear_art()
 	_refresh()
 
 
@@ -113,8 +128,15 @@ func show_empty() -> void:
 	mode = Mode.EMPTY
 	entry = {}
 	is_front = false
-	_art.texture = null
+	_clear_art()
 	_refresh()
+
+
+func _clear_art() -> void:
+	_flip = null
+	_banner_art = null
+	_still = null
+	_art.texture = null
 
 
 func set_target(value: bool) -> void:
@@ -131,20 +153,63 @@ func set_focus(on: bool, seconds: float = 0.0) -> void:
 			if prev != null and prev != self:
 				prev.set_focus(false)
 		focus_owner = weakref(self)
-		var mat := ShaderMaterial.new()
-		mat.shader = SHIMMER
-		mat.set_shader_parameter(&"start_time", Time.get_ticks_msec() / 1000.0)
-		_art.material = mat
+		if not _start_flipbook():
+			var mat := ShaderMaterial.new()
+			mat.shader = SHIMMER
+			mat.set_shader_parameter(&"start_time", Time.get_ticks_msec() / 1000.0)
+			_art.material = mat
 		_shimmer_until = Time.get_ticks_msec() / 1000.0 + seconds if seconds > 0.0 else INF
 		set_process(true)
 	else:
 		_art.material = null
+		_stop_flipbook()
 		_shimmer_until = -1.0
 		set_process(mode == Mode.INCOMING)
 
 
 func is_focused() -> bool:
-	return _art.material != null
+	return _art.material != null or _flip != null
+
+
+## True while an animated (frame sheet) art plays.
+func is_flipbook_playing() -> bool:
+	return _flip != null
+
+
+## The BannerArt shown (null when none).
+func get_banner_art() -> BannerArt:
+	return _banner_art
+
+
+func _start_flipbook() -> bool:
+	if _banner_art == null or mode not in [Mode.UNIT, Mode.GHOST]:
+		return false
+	var sheet: Texture2D = BannerArtDB.frames_texture(_banner_art)
+	if sheet == null:
+		return false
+	var cell_h: float = sheet.get_height() / float(_banner_art.frame_count)
+	_flip = AtlasTexture.new()
+	_flip.atlas = sheet
+	_flip.filter_clip = true
+	_flip.region = Rect2(0, 0, sheet.get_width(), cell_h)
+	_flip_t0 = Time.get_ticks_msec() / 1000.0
+	_art.texture = _flip
+	return true
+
+
+func _stop_flipbook() -> void:
+	if _flip != null:
+		_flip = null
+		_art.texture = _still
+
+
+func _step_flipbook() -> void:
+	var n: int = _banner_art.frame_count
+	var i: int = int((Time.get_ticks_msec() / 1000.0 - _flip_t0) * 1000.0 / float(_banner_art.frame_ms)) % n
+	var cell_h: float = _flip.atlas.get_height() / float(n)
+	var r: Rect2 = Rect2(0, i * cell_h, _flip.atlas.get_width(), cell_h)
+	if r != _flip.region:
+		_flip.region = r
 
 
 func has_art() -> bool:
@@ -163,6 +228,8 @@ static func metrics(h: float) -> Dictionary:
 func _process(_delta: float) -> void:
 	if _shimmer_until > 0.0 and Time.get_ticks_msec() / 1000.0 > _shimmer_until:
 		set_focus(false)
+	elif _flip != null:
+		_step_flipbook()
 	if mode == Mode.INCOMING:
 		_pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0)
 		_overlay.queue_redraw()
@@ -170,7 +237,18 @@ func _process(_delta: float) -> void:
 
 func _set_art(art_id: StringName, unit: Dictionary) -> void:
 	var hint: Dictionary = {"cls": unit.get("cls", ""), "type": unit.get("type", "unit")}
-	_art.texture = BannerArtDB.banner_texture(art_id, hint) if art_id != &"" else null
+	var prev: BannerArt = _banner_art
+	var flip: AtlasTexture = _flip
+	_flip = null
+	_banner_art = BannerArtDB.get_art(art_id, hint) if art_id != &"" else null
+	_still = BannerArtDB.banner_texture(art_id, hint) if art_id != &"" else null
+	_art.texture = _still
+	if flip != null:
+		if prev == _banner_art:
+			_flip = flip  # same art re-shown by a refresh: keep the loop running
+			_art.texture = _flip
+		elif not _start_flipbook():
+			set_focus(false)
 	# Rival figures face the other way (the art is mirrored, never recoloured).
 	_art.flip_h = side == &"enemy"
 
@@ -228,6 +306,8 @@ func _draw_overlay() -> void:
 		return
 	var op: bool = bool(entry.get("operator", false))
 	var pending: bool = bool(entry.get("pending", false))
+	if _banner_art != null and _banner_art.licensed and has_art():
+		_draw_safety_net(o)
 	# Spine: side colour + pattern (chevrons for you, hazard stripes for the rival).
 	var spine: float = m["spine"]
 	o.draw_rect(Rect2(0, 0, spine, size.y), side_c)
@@ -302,6 +382,18 @@ func _draw_overlay() -> void:
 		_dashed_rect(o, r.grow(-1.0), _col(&"text"), 2.0)
 	if is_target:
 		_draw_reticle(o, r)
+
+
+## Art doc safety net: a black gradient (SAFETY_A at the edge to 0) over each side's icon column.
+func _draw_safety_net(o: Control) -> void:
+	var w: float = size.x * SAFETY_W
+	var a: float = SAFETY_A * (_art.self_modulate.a if mode == Mode.GHOST else 1.0)
+	var edge: Color = Color(0, 0, 0, a)
+	var clear: Color = Color(0, 0, 0, 0)
+	o.draw_polygon(PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, size.y), Vector2(0, size.y)]),
+			PackedColorArray([edge, clear, clear, edge]))
+	o.draw_polygon(PackedVector2Array([Vector2(size.x - w, 0), Vector2(size.x, 0), Vector2(size.x, size.y), Vector2(size.x - w, size.y)]),
+			PackedColorArray([clear, edge, edge, clear]))
 
 
 func _draw_incoming_text(o: Control, r: Rect2, m: Dictionary) -> void:

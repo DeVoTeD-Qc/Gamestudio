@@ -57,4 +57,7 @@ build/
 # Never commit these images, their Godot .import sidecars, or fetch caches.
 projects/*/source/**/assets/licensed/
 projects/*/assets/licensed/
+# Private pitch builds carry licensed art inside game.pck.wasm / index.pck: never commit them.
+projects/*/builds/pitch/
+**/web-pitch/
 **/licensed_cache/

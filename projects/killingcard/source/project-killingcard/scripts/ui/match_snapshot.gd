@@ -57,7 +57,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	for rc: RulesCard in me.hand:
 		var c: Dictionary = CardInfo.chip(rc.uid, rc.card)
 		c["playable"] = rc.card.cost <= me.supply
-		c["banner"] = String(rc.card.id)
+		c["banner"] = String(state.art_by_uid.get(rc.uid, rc.card.id))
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -112,25 +112,35 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 		"operator": u.is_operator, "keywords": CardInfo.icon_keywords(CardInfo.unit_keywords(u)),
 		"art": art_key(u, side),
 	}
-	_banner_fields(e, u.card, u, side)
+	_banner_fields(e, u.card, u, side, state, u.uid)
 	return e
 
 
 ## kc-board banner fields of a unit entry: art id, effect bolt, Protector glyph, Elite frame, camo.
-static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: RulesSide) -> void:
+## state + uid (kc-cod2): a copy with its own art (MatchState.art_by_uid) shows that art. The Operator
+## wears its primary weapon's mastery card at its tier (Base = tier 1 until the mastery grind exists).
+static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: RulesSide,
+		state: MatchState = null, uid: int = -1) -> void:
 	var id: StringName = &""
+	var op_tier: int = 1
 	if card != null:
 		id = card.id
 	elif u != null and u.is_operator and side.setup.primary != null:
-		id = side.setup.primary.id
+		id = BannerArtDB.operator_art_id(side.setup.primary.id, op_tier)
 	elif u != null:
 		id = u.source_id
+	if state != null and uid >= 0 and state.art_by_uid.has(uid):
+		id = state.art_by_uid[uid]
 	e["banner"] = String(id)
 	e["bolt"] = card != null and not card.effects.is_empty()
 	e["front_kw"] = card != null and card.arrives_front
 	e["elite"] = card != null and card.is_elite
 	if e.get("operator", false):
-		e["camo"] = "base"  # head (kc-polish): Base for both sides until the mastery grind exists
+		# head (kc-polish B3): Base for both sides until the mastery grind exists; the camo band follows
+		# the mastery tier (BannerArtDB.operator_tier_override is the pitch's dev preview).
+		var tier: int = BannerArtDB.operator_tier_override if BannerArtDB.operator_tier_override > 0 else op_tier
+		e["camo"] = String(BannerArtDB.camo_for_tier(tier))
+		e["mastery_tier"] = tier
 
 
 static func art_key_of_card(card: CardData) -> String:
@@ -200,7 +210,7 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 						"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
 						"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor,
 						"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card)), "art": art_key_of_card(rc.card)}
-				_banner_fields(entry, rc.card, null, side)
+				_banner_fields(entry, rc.card, null, side, state, rc.uid)
 			&"place", &"rotate":
 				var op: RulesUnit = side.operator_unit
 				entry = {"uid": op.uid, "name": unit_name(op, side), "cls": "OPERATOR", "operator": true,

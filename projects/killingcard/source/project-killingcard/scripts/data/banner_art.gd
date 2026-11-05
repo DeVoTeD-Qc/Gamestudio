@@ -36,6 +36,17 @@ extends Resource
 @export var tags: Dictionary = {}
 ## True for art made by BannerArtDB from older card art / a gradient (shown as such in the inspector).
 @export var placeholder: bool = false
+## kc-cod2: licensed reference art (private pitch build only). Its master is already a 4:1 strip, so
+## hand cards show the whole strip instead of a 2:3 column, and banners add the side-gradient safety net.
+@export var licensed: bool = false
+## Animated art: a vertical frame sheet (frame_count 4:1 cells, frame_ms each), played as a flipbook
+## only on focus / placement (BannerView). Empty = still art (the shimmer shader plays instead).
+@export var frames_path: String = ""
+@export var frame_count: int = 0
+@export var frame_ms: int = 80
+## Operator weapon-mastery art: family (wm_mcw) and tier 1-4 (Gilded, Forged, Priceless, Interstellar).
+@export var mastery_family: StringName = &""
+@export var mastery_tier: int = 0
 
 ## The banner ratio on the board (4:1) and the hand crop ratio (2:3).
 const BANNER_RATIO: float = 4.0

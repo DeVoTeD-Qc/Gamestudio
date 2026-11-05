@@ -6,6 +6,7 @@
 #   Armor; tactics show TACTIC and a bolt; Fields show FIELD and a stake. Phone cards are 78x98,
 #   desktop 108x140 (BoardMetrics), 7 fit side by side; more overlap so the row never widens.
 #   A card you can't afford is greyed. The selected card animates its art (shimmer).
+#   kc-cod2: licensed MW3 art (private pitch only) shows its whole 4:1 strip instead of the 2:3 crop.
 #   Input (p09): each card runs a PressGesture: tap = select, drag = drag to a column,
 #   long-press / right-click = inspect. The hand only reports gestures with the card's rules uid;
 #   match_controller.gd decides what they mean.
@@ -223,6 +224,20 @@ func _make_card(card: Dictionary) -> Control:
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var art_id: StringName = StringName(String(card.get("banner", card.get("id", ""))))
 	art.texture = BannerArtDB.portrait_texture(art_id, {"cls": card.get("type", ""), "type": ctype}) if art_id != &"" else null
+	# kc-cod2: licensed art (private pitch) is a 4:1 strip with no room for a 2:3 crop, so the card
+	# shows the WHOLE strip at the bottom of its art window over a dimmed, cover-cropped copy of it.
+	var strip: bool = art_id != &"" and BannerArtDB.get_art(art_id).licensed and art.texture != null
+	if strip:
+		var back := TextureRect.new()
+		back.name = "ArtBack"
+		back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		back.texture = art.texture
+		back.self_modulate = Color(0.42, 0.42, 0.45, 1.0)
+		face.add_child(back)
+		art.stretch_mode = TextureRect.STRETCH_SCALE
+		art.set_meta(&"strip", back)
 	face.add_child(art)
 	var hex: Control = CostHex.new()
 	hex.custom_minimum_size = HEX_SIZE if big else HEX_SIZE_COMPACT
@@ -300,6 +315,13 @@ func _fit_face(panel: PanelContainer, face: Control, art: Control, hex: Control,
 	face.size = panel.size - Vector2(inset, inset) * 2.0
 	art.position = Vector2.ZERO
 	art.size = Vector2(face.size.x, art_h - inset)
+	if art.has_meta(&"strip"):
+		var back: Control = art.get_meta(&"strip")
+		back.position = Vector2.ZERO
+		back.size = art.size
+		var strip_h: float = roundf(face.size.x / BannerArt.BANNER_RATIO)
+		art.position = Vector2(0.0, art.size.y - strip_h)
+		art.size = Vector2(face.size.x, strip_h)
 	hex.position = Vector2(2, 2)
 	var pad: float = 4.0
 	var bottom_h: float = bottom.get_combined_minimum_size().y

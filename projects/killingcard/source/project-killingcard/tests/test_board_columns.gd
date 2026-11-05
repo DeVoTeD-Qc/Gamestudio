@@ -87,6 +87,7 @@ func test_live_layout_columns_and_rows() -> void:
 
 
 func test_banner_art_path_and_crops() -> void:
+	var was_enabled: bool = BannerArtDB.licensed_enabled
 	BannerArtDB.licensed_enabled = false  # a dev machine may have the private licensed folder
 	BannerArtDB.clear_cache()
 	# Killstreak card art placeholder: 4:1 band and 2:3 column of the same master.
@@ -121,13 +122,15 @@ func test_banner_art_path_and_crops() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if DirAccess.get_files_at("res://data/banners").is_empty():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path("res://data/banners"))
-	BannerArtDB.licensed_enabled = true
+	BannerArtDB.licensed_enabled = was_enabled
 	BannerArtDB.clear_cache()
 
 
 ## kc-cod hook: an optional licensed folder with a manifest is used when present, ignored when not.
 func test_licensed_manifest_optional() -> void:
 	var saved: String = BannerArtDB.licensed_dir
+	var was_enabled: bool = BannerArtDB.licensed_enabled
+	BannerArtDB.licensed_enabled = true
 	BannerArtDB.licensed_dir = "user://kc_licensed_test/"
 	BannerArtDB.clear_cache()
 	assert_true(BannerArtDB.licensed_rows().is_empty(), "no folder: no rows")
@@ -150,6 +153,93 @@ func test_licensed_manifest_optional() -> void:
 		DirAccess.remove_absolute(BannerArtDB.licensed_dir + file)
 	DirAccess.remove_absolute(BannerArtDB.licensed_dir)
 	BannerArtDB.licensed_dir = saved
+	BannerArtDB.licensed_enabled = was_enabled
+	BannerArtDB.clear_cache()
+
+
+## kc-cod2: the pitch-set manifest (ids, frame sheets, Operator mastery ladder) drives per-copy art,
+## the Operator's mastery banner and camo, the hand strip and the focus-only flipbook. Uses a scratch
+## folder with generated images (no licensed art in tests).
+func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
+	var saved: String = BannerArtDB.licensed_dir
+	var was_enabled: bool = BannerArtDB.licensed_enabled
+	BannerArtDB.licensed_enabled = true
+	BannerArtDB.licensed_dir = "user://kc_pitch_test/"
+	DirAccess.make_dir_recursive_absolute(BannerArtDB.licensed_dir)
+	var colors: Dictionary = {"r1": Color.RED, "r2": Color.GREEN, "m1": Color.BLUE, "g1": Color.GOLD, "g2": Color.SILVER}
+	for key: String in colors:
+		var img: Image = Image.create(64, 16, false, Image.FORMAT_RGB8)
+		img.fill(colors[key])
+		img.save_png(BannerArtDB.licensed_dir + key + ".png")
+	var sheet: Image = Image.create(64, 64, false, Image.FORMAT_RGB8)  # 4 frames of 64x16
+	for i: int in 4:
+		sheet.fill_rect(Rect2i(0, i * 16, 64, 16), Color(i / 4.0, 0, 0))
+	sheet.save_png(BannerArtDB.licensed_dir + "r2_frames.png")
+	var f: FileAccess = FileAccess.open(BannerArtDB.licensed_dir + "manifest.csv", FileAccess.WRITE)
+	f.store_line("file,kind,card,title,id,animated,frames_file,frames,frame_ms,mastery_family,tier_rank")
+	f.store_line("r1.png,unit,rifleman,Rifle One,kc_t_r1,no,,,,,")
+	f.store_line("r2.png,unit,rifleman,Rifle Two,kc_t_r2,yes,r2_frames.png,4,50,,")
+	f.store_line("m1.png,unit,marksman,Mark One,kc_t_m1,no,,,,,")
+	f.store_line("g1.png,operator,kestrel_ar7,MCW Gilded,kc_t_g1,no,,,,wm_mcw,1")
+	f.store_line("g2.png,operator,kestrel_ar7,MCW Forged,kc_t_g2,no,,,,wm_mcw,2")
+	f.close()
+	BannerArtDB.clear_cache()
+	assert_true(BannerArtDB.has_licensed(), "pitch manifest loaded")
+	assert_eq(BannerArtDB.licensed_pool(&"rifleman"), [&"kc_t_r1", &"kc_t_r2"] as Array[StringName], "rifleman pool in order")
+	# Per-copy art: copies of a chassis cycle through the pool, across both sides.
+	var arts: Array = BannerArtDB.copy_arts([[&"rifleman", &"rifleman", &"marksman", &"callout"], [&"rifleman"]])
+	assert_eq(arts[0], [&"kc_t_r1", &"kc_t_r2", &"kc_t_m1", &""], "player copies get different arts")
+	assert_eq(arts[1], [&"kc_t_r1"], "rival copies continue the cycle (wraps)")
+	var art: BannerArt = BannerArtDB.get_art(&"kc_t_r2")
+	assert_true(art.licensed and not art.placeholder, "art reachable by its own id")
+	assert_eq(art.frame_count, 4, "frame sheet rows")
+	assert_not_null(BannerArtDB.frames_texture(art), "frame sheet loads")
+	# Licensed art: the hand "portrait" is the whole 4:1 strip, not a 2:3 column.
+	var p: Texture2D = BannerArtDB.portrait_texture(&"kc_t_r1")
+	assert_true(absf(float(p.get_width()) / p.get_height() - 4.0) < 0.05, "hand shows the strip (%s)" % p.get_size())
+	# Operator mastery ladder: Base = tier 1, the dev override previews higher tiers.
+	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g1", "Base = first mastery tier")
+	assert_eq(BannerArtDB.camo_for_tier(1), &"base", "tier 1 wears the Base camo")
+	BannerArtDB.operator_tier_override = 2
+	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g2", "dev toggle shows tier 2")
+	assert_eq(BannerArtDB.camo_for_tier(1), &"forged", "camo follows the tier")
+	BannerArtDB.operator_tier_override = 4
+	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g2", "clamped to the ladder")
+	BannerArtDB.operator_tier_override = 0
+	assert_eq(BannerArtDB.operator_art_id(&"wasp_9", 1), &"wasp_9", "no ladder: weapon id")
+	# MatchState keeps the copy's art by uid (display only; clones carry it).
+	var setup := SideSetup.new()
+	var rifle: CardData = CardDB.get_card(&"rifleman")
+	if rifle != null:
+		setup.deck.assign([rifle, rifle])
+		setup.deck_arts.assign([&"kc_t_r1", &"kc_t_r2"])
+		setup.keep_deck_order = true
+		var m := MatchState.new(null, null, setup, SideSetup.new(), 7)
+		m.start_match()
+		var uids: Array = m.art_by_uid.keys()
+		assert_eq(uids.size(), 2, "both copies mapped")
+		assert_eq(MatchClone.copy(m).art_by_uid, m.art_by_uid, "clone keeps the art map")
+	# BannerView: flipbook only while focused, still art otherwise; safety net needs licensed art.
+	var view := BannerView.new()
+	view.size = Vector2(256, 64)
+	tree.root.add_child(view)
+	view.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "banner": "kc_t_r2"}, &"player", true)
+	assert_false(view.is_flipbook_playing(), "still until focused")
+	view.set_focus(true)
+	assert_true(view.is_flipbook_playing(), "focus plays the frame sheet")
+	view.set_focus(false)
+	assert_false(view.is_flipbook_playing(), "unfocus stops it")
+	assert_eq(view.get_node("Art").texture, BannerArtDB.banner_texture(&"kc_t_r2"), "back to the still")
+	view.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "banner": "kc_t_r1"}, &"player", true)
+	view.set_focus(true)
+	assert_false(view.is_flipbook_playing(), "still art shimmers instead")
+	assert_true(view.is_focused(), "but is focused")
+	view.queue_free()
+	for file: String in DirAccess.get_files_at(BannerArtDB.licensed_dir):
+		DirAccess.remove_absolute(BannerArtDB.licensed_dir + file)
+	DirAccess.remove_absolute(BannerArtDB.licensed_dir)
+	BannerArtDB.licensed_dir = saved
+	BannerArtDB.licensed_enabled = was_enabled
 	BannerArtDB.clear_cache()
 
 

@@ -114,6 +114,7 @@ var _finished: bool = false
 
 
 func _ready() -> void:
+	_read_mastery_param()
 	_screen = get_parent() as Control
 	if _screen == null:
 		return
@@ -123,6 +124,16 @@ func _ready() -> void:
 		_on_screen_ready()
 	else:
 		_screen.ready.connect(_on_screen_ready, CONNECT_ONE_SHOT)
+
+
+## Pitch dev toggle (kc-cod2): ?mastery=N (1-4) on the web build previews that Operator mastery tier.
+static func _read_mastery_param() -> void:
+	if not OS.has_feature("web"):
+		return
+	var q: String = String(JavaScriptBridge.eval("window.location.search || ''", true))
+	for part: String in q.trim_prefix("?").split("&"):
+		if part.begins_with("mastery=") and part.substr(8).is_valid_int():
+			BannerArtDB.operator_tier_override = clampi(int(part.substr(8)), 0, 4)
 
 
 func _on_screen_ready() -> void:
@@ -188,6 +199,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			skip_feedback()
 		return
 	if _screen.get_inspector().is_open():
+		return
+	if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
+			and (event as InputEventKey).keycode == KEY_M and (event as InputEventKey).ctrl_pressed \
+			and BannerArtDB.has_licensed():
+		# Pitch dev toggle: cycle the Operator mastery tier (Base -> Forged -> Priceless -> Interstellar).
+		get_viewport().set_input_as_handled()
+		BannerArtDB.operator_tier_override = (maxi(1, BannerArtDB.operator_tier_override) % 4) + 1
+		refresh()
 		return
 	if event.is_action_pressed(&"cancel") and not selection.is_empty():
 		get_viewport().set_input_as_handled()
@@ -262,8 +281,26 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	_end_shown = false
 	_finished = false
 	_match_started_ms = Time.get_ticks_msec()
+	_assign_copy_arts(state)
 	state.start_match()
 	_begin_deploy()
+
+
+## kc-cod2: per-copy banner art (display only). With the private licensed art present, every copy
+## of a chassis, on both sides, wears a different banner; without it deck_arts stays empty.
+static func _assign_copy_arts(m: MatchState) -> void:
+	var decks: Array = []
+	for s: RulesSide in m.sides:
+		var ids: Array = []
+		for card: CardData in s.setup.deck:
+			ids.append(card.id if card != null else &"")
+		decks.append(ids)
+	var arts: Array = BannerArtDB.copy_arts(decks)
+	for i: int in m.sides.size():
+		var setup: SideSetup = m.sides[i].setup
+		setup.deck_arts.clear()
+		if BannerArtDB.has_licensed():
+			setup.deck_arts.assign(arts[i])
 
 
 func _ai_turn(st: MatchState) -> void:
@@ -937,7 +974,7 @@ func _ghost_entry() -> Dictionary:
 					"armor": rc.card.armor, "armor_max": rc.card.armor,
 					"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
 					"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card))}
-			MatchSnapshot._banner_fields(e, rc.card, null, me)
+			MatchSnapshot._banner_fields(e, rc.card, null, me, state, rc.uid)
 			return e
 		&"operator":
 			var op: RulesUnit = me.operator_unit
@@ -1089,7 +1126,7 @@ func _on_card_inspected(uid: int) -> void:
 	var status: String = "Costs %d Supply, you have %d." % [rc.card.cost, s.supply]
 	if rc.card.cost > s.supply:
 		status += " Not enough to play it now."
-	open_card_inspector(rc.card, "friend", _join(status, _range_hint(rc.card)))
+	open_card_inspector(rc.card, "friend", _join(status, _range_hint(rc.card)), {}, -1, uid)
 
 
 func _on_operator_inspected() -> void:
@@ -1142,12 +1179,12 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 			var e3: Dictionary = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 					"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(), "pending": true,
 					"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
-			MatchSnapshot._banner_fields(e3, card, null, s)
+			MatchSnapshot._banner_fields(e3, card, null, s, state, uid)
 			open_card_inspector(card, "friend", "Queued for %s (PLAN). It arrives at Reveal." % ZONE_WORDS[zone], e3, PLAYER)
 			return
 
 
-func open_card_inspector(card: CardData, side: String, status: String, banner: Dictionary = {}, banner_side: int = -1) -> void:
+func open_card_inspector(card: CardData, side: String, status: String, banner: Dictionary = {}, banner_side: int = -1, card_uid: int = -1) -> void:
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
 	if card.is_unit() and CardInfo.CLASS_WORDS.get(card.weapon_class, "") != "":
 		type_text += " · " + String(CardInfo.CLASS_WORDS[card.weapon_class])
@@ -1164,7 +1201,7 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 		banner = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 				"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
 				"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
-		MatchSnapshot._banner_fields(banner, card, null, state.sides[PLAYER])
+		MatchSnapshot._banner_fields(banner, card, null, state.sides[PLAYER], state, card_uid)
 	var art: BannerArt = BannerArtDB.get_art(StringName(String(banner.get("banner", card.id))))
 	if card.is_field():
 		text = _join(text, FIELD_RULE)
@@ -1183,6 +1220,12 @@ const FIELD_RULE: String = "Overrun: at the end of each round, if the enemy cont
 ## "Art: Marksman (placeholder from Killstreak art) · alternate art 1 of 1" for the inspector.
 func _art_line(art: BannerArt) -> String:
 	var what: String = art.title if art.title != "" else String(art.id).capitalize()
+	if art.licensed:
+		# kc-cod2: n of the chassis' (or the Operator weapon's) licensed arts, plus the MW3 credit.
+		var pool: Array[StringName] = BannerArtDB.licensed_pool(art.card_id)
+		var n: int = maxi(1, pool.find(art.id) + 1)
+		return "Banner: %s · %s %d of %d · MW3 calling card (reference art, private pitch)" % [what,
+				"mastery tier" if art.mastery_tier > 0 else "art", n, maxi(1, pool.size())]
 	return "Banner: %s%s · alternate art 1 of 1" % [what, " (placeholder)" if art.placeholder else ""]
 
 
@@ -1274,8 +1317,17 @@ func _open_operator(side: int) -> void:
 		"text": String(view["text"]), "keywords": CardInfo.operator_keywords(op), "status": where,
 		"banner": MatchSnapshot.unit_entry(state, op, s), "side": side,
 		"art_line": _art_line(BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))) \
-				+ " · Camo tier: Base (mastery tiers come later)",
+				+ _mastery_line(MatchSnapshot.unit_entry(state, op, s)),
 	})
+
+
+## Operator inspector line: the camo / weapon-mastery tier the banner shows.
+static func _mastery_line(e: Dictionary) -> String:
+	var tier: int = int(e.get("mastery_tier", 1))
+	if not BannerArtDB.has_licensed():
+		return " · Camo tier: Base (mastery tiers come later)"
+	var name: String = BannerArtDB.MASTERY_TIERS[clampi(tier, 1, 4) - 1]
+	return " · Mastery tier %d of 4: %s%s" % [tier, name, " (Base camo)" if tier == 1 else " (dev preview)"]
 
 
 ## "Best in Close (Left): +2 FP" for units with a range bonus on this map.

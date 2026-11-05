@@ -72,7 +72,8 @@ func _match(scene: Node, ctrl: Node) -> Dictionary:
 		var rc: RulesCard = me.hand[i]
 		hand.append({"name": rc.card.display_name, "id": String(rc.card.id), "cost": rc.card.cost,
 				"type": int(rc.card.card_type), "front": rc.card.arrives_front,
-				"playable": rc.card.cost <= me.supply, "rect": _css(chips[i])})
+				"playable": rc.card.cost <= me.supply, "rect": _css(chips[i]),
+				"art": String(st.art_by_uid.get(rc.uid, rc.card.id))})
 	var cols: Array = []
 	var lanes: Array = scene.get_board().get_lanes()
 	for z: int in lanes.size():
@@ -86,11 +87,12 @@ func _match(scene: Node, ctrl: Node) -> Dictionary:
 		var slots: Array = []
 		for slot: Node in lane.get_enemy_slots() + lane.get_friendly_slots():
 			slots.append({"side": String(slot.side), "row": slot.row, "kind": int(slot.kind), "uid": slot.slot_uid,
-					"rect": _css(slot)})
+					"rect": _css(slot)}.merged(_art_info(slot.get(&"banner"))))
 		cols.append({"rect": _css(lane), "your_half": _css(lane.get_node("%FriendlyRow")),
 				"objective": _css(lane.get_objective_tile()), "you": mine, "rival": theirs,
 				"fields": st.field_view(0)[z], "target": String(lane.target_state), "slots": slots})
 	var insp: Control = scene.get_inspector()
+	var insp_banner: Variant = insp.call(&"get_banner") if insp.is_open() and insp.has_method(&"get_banner") else null
 	var fx: Node = scene.get_fx()
 	var skips: Array = (fx.get(&"_skip_called") as Dictionary).keys() if fx != null and fx.get(&"_skip_called") != null else []
 	return {"round": st.round_number, "phase": String(MatchState.PHASE_NAMES[st.phase]), "supply": me.supply,
@@ -98,8 +100,21 @@ func _match(scene: Node, ctrl: Node) -> Dictionary:
 			"operator_can_deploy": me.operator_can_deploy, "operator": _css(scene.get_operator_panel()),
 			"hand": hand, "columns": cols, "inspector_open": insp.is_open(),
 			"inspector_title": String((insp.get_node("%TitleLabel") as Label).text) if insp.is_open() else "",
-			"toast": scene.get_toast_text(), "fx_skips": skips,
+			"toast": scene.get_toast_text(), "fx_skips": skips, "inspector_art": _art_info(insp_banner),
+			"mastery_override": BannerArtDB.operator_tier_override,
 			"fx_playing": fx != null and fx.is_playing()}
+
+
+## kc-cod2: which art a BannerView shows (art id, licensed, animated, flipbook playing now).
+static func _art_info(banner: Variant) -> Dictionary:
+	if not (banner is BannerView):
+		return {}
+	var b: BannerView = banner
+	var art: BannerArt = b.get_banner_art()
+	if art == null:
+		return {}
+	return {"art": String(art.id), "licensed": art.licensed, "animated": art.frame_count > 1,
+			"flip": b.is_flipbook_playing(), "focused": b.is_focused()}
 
 
 ## A Control's rect in CSS px of the page (window px / devicePixelRatio).
