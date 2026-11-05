@@ -88,7 +88,7 @@ body.chrome #stage { outline: 1px solid var(--line); }
 @keyframes die { 0% { filter: brightness(2) saturate(0); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(.9); } }
 .banner.fresh .badge, .banner.fresh .kws { animation: pop .28s .38s both cubic-bezier(.3,1.6,.5,1); }
 @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-.banner.fresh .kws { animation-name: popk; }
+.banner.fresh .kws { animation-name: pop; }
 @keyframes popk { from { transform: translateX(-50%) scale(0); } to { transform: translateX(-50%) scale(1); } }
 
 /* animation of banner art: paused unless .anim (focused / selected / placing) */
@@ -211,6 +211,9 @@ const ICON = {
   protector: '<path d="M12 2 21 5v6c0 6-4 10-9 12-5-2-9-6-9-12V5z" fill="currentColor"/><path d="M8 13l4-4 4 4" stroke="#111" stroke-width="2.4" fill="none"/>',
   cover: '<path d="M3 20V9l9-6 9 6v11z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M8 20v-6h8v6" fill="currentColor"/>',
   fp: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/>',
+  w_ar: '<path d="M1 10h15l2-2h5v3h-4l-1 2H9l-1 4H5l1-4H1z" fill="currentColor"/>',
+  w_smg: '<path d="M4 9h11l2-2h3v3h-3l-1 2h-3l-1 5H9l1-5H4z" fill="currentColor"/>',
+  w_sn: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.6"/>',
   ar: '<path d="M12 2 21 5v6c0 6-4 10-9 12-5-2-9-6-9-12V5z" fill="currentColor"/>'
 };
 const ico = (n, s, col) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" style="color:${col || "currentColor"}">${ICON[n]}</svg>`;
@@ -320,6 +323,8 @@ const INIT = () => ({
 let S = INIT();
 function resetCards() { for (const c of Object.values(CARDS)) if (c.max) c.ar = c.max; CARDS.y1.ar = 1; CARDS.y3.ar = 1; }
 resetCards();
+const CLS = { r6: "w_sn", y4: "w_smg", y3: "w_smg", r3: "w_smg", y7: "w_smg", h5: "w_smg" };
+for (const [k, c] of Object.entries(CARDS)) if (c.type === "unit") c.cls = CLS[k] || "w_ar";
 
 // ---------------------------------------------------------------- render
 const canvas = document.getElementById("canvas"), stage = document.getElementById("stage");
@@ -342,10 +347,11 @@ function bannerEl(id, side, w, h) {
     const arb = el("div", "badge ar" + (c.ar < c.max ? " hurt" : ""), { width: px(bs), height: px(bs + 2), right: px(inset), fontSize: px(g.bfont) }, c.ar); arb.style[inner] = px(inset); sc.appendChild(arb);
   }
   if (c.kws.length) {
-    const k = el("div", "kws"); k.style[inner] = px(inset + (bs - g.kw) / 2);
+    const k = el("div", "kws", { left: "auto", right: px(inset), transform: "none" }); k.style[side === "you" ? "bottom" : "top"] = px(inset);
     c.kws.forEach(n => k.appendChild(el("div", "kw", { width: px(g.kw), height: px(g.kw) }, ico(n, g.kw))));
     sc.appendChild(k);
   }
+  if (c.cls) { const cp = el("div", "kw", { position: "absolute", width: px(g.kw), height: px(g.kw), left: px(Math.round(h * .1) + inset + (bs - g.kw) / 2), borderColor: "rgba(255,255,255,.35)", color: "#dfe6ee", zIndex: 2 }, ico(c.cls, g.kw)); cp.style[side === "you" ? "bottom" : "top"] = px(inset); sc.appendChild(cp); }
   const ft = el("div", "ftab", { width: px(g.ftab[0]), height: px(g.ftab[1]), fontSize: px(g.ftab[2]) }, "FRONT");
   ft.style[side === "you" ? "top" : "bottom"] = px(-g.ftab[1] + 2);
   ft.style.display = "none"; ft.className += " ftab"; sc.appendChild(ft);
@@ -662,7 +668,7 @@ function openFocus(id, side) {
       <div class="banner side-${side} anim" style="position:absolute;inset:0;width:${zw}px;height:${zh}px;cursor:default"><div class="scaler"><div class="art">${artSVG(c.art)}<div class="shine"></div></div>
       <div class="spine" style="width:${Math.round(zh * .08)}px"></div>
       ${c.type === "unit" ? `<div class="badge fp" style="width:44px;height:44px;left:${Math.round(zh * .08) + 6}px;${side === "you" ? "top" : "bottom"}:6px;font-size:26px">${c.fp}</div><div class="badge ar${c.ar < c.max ? " hurt" : ""}" style="width:44px;height:46px;right:6px;${side === "you" ? "top" : "bottom"}:6px;font-size:26px">${c.ar}</div>` : ""}
-      ${c.kws.length ? `<div class="kws" style="${side === "you" ? "top" : "bottom"}:11px">${c.kws.map(k => `<div class="kw" style="width:34px;height:34px">${ico(k, 34)}</div>`).join("")}</div>` : ""}
+      ${c.kws.length ? `<div class="kws" style="left:auto;right:6px;transform:none;${side === "you" ? "bottom" : "top"}:6px">${c.kws.map(k => `<div class="kw" style="width:34px;height:34px">${ico(k, 34)}</div>`).join("")}</div>` : ""}
       <div class="animdot"></div></div></div></div>
     <div style="padding:0 ${pad}px ${pad}px">
       <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="font-size:${fz + 8}px">${c.name}</h3>
