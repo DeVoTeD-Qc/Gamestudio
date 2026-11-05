@@ -39,9 +39,15 @@ const UNIT_ARRIVED: StringName = &"unit_arrived"              ## side, uid, card
 const UNIT_MOVED: StringName = &"unit_moved"                  ## side, uid, from_zone, zone
 const OPERATOR_PLACED: StringName = &"operator_placed"        ## side, uid, zone
 const OPERATOR_ROTATED: StringName = &"operator_rotated"      ## side, uid, from_zone, zone
+# "Equipment" events are the Field events (Field = CardType.EQUIPMENT, kc-field-impl).
 const EQUIPMENT_PLACED: StringName = &"equipment_placed"      ## side, card_uid, card_id, zone, hidden
 const EQUIPMENT_TRIGGERED: StringName = &"equipment_triggered" ## side, card_uid, card_id, zone, target_uid
-const EQUIPMENT_DESTROYED: StringName = &"equipment_destroyed" ## side, card_uid, card_id, zone
+const EQUIPMENT_DESTROYED: StringName = &"equipment_destroyed" ## side, card_uid, card_id, zone, reason (FIELD_GONE_*)
+## EQUIPMENT_DESTROYED reasons: an enemy effect (Sabotage), a newer Field of yours in the
+## same column, or Overrun (the enemy controls the column at the end of the Score step).
+const FIELD_GONE_DESTROYED: StringName = &"destroyed"
+const FIELD_GONE_REPLACED: StringName = &"replaced"
+const FIELD_GONE_OVERRUN: StringName = &"overrun"
 const RED_DOTS_REVEALED: StringName = &"red_dots_revealed"    ## side (viewer), zone, card_ids (private)
 
 # --- Effects / combat -------------------------------------------------------------
@@ -56,6 +62,7 @@ const SURVIVED_LETHAL: StringName = &"survived_lethal"        ## side, uid, armo
 const UNIT_ELIMINATED: StringName = &"unit_eliminated"        ## victim_uid, victim_side, by_uid, by_side, zone, source_kind, by_killstreak, credit
 const OPERATOR_DOWN: StringName = &"operator_down"            ## side, uid
 const PATCHED: StringName = &"patched"                        ## side, uid (medic), target_uid, amount
+const UNIT_HEALED: StringName = &"unit_healed"                ## side (healed unit's), source_id, source_uid, target_uid, amount, remaining, zone (HEAL effects: Aid Station)
 
 # --- Score -----------------------------------------------------------------------
 const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"player" / &"enemy" / &"contested" / &"empty")

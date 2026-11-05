@@ -7,6 +7,8 @@
 # Author: UI/UX Agent (cz11)
 extends RefCounted
 
+const CardWords: GDScript = preload("res://scripts/ui/card_words.gd")
+
 
 static func _db() -> Node:
 	var loop: SceneTree = Engine.get_main_loop() as SceneTree
@@ -207,6 +209,105 @@ static func describe(e: Dictionary, me: int) -> String:
 		"conceded":
 			return "%s conceded." % who
 	return ""
+
+
+## cz-clarity: the outcome line for the match screen's "what just happened" feed: what an event
+## did to you or the rival, in plain words, with the numbers that changed ("Rival shot you with
+## Pump Shotgun: -3 health, now 2."). "" = not worth a line (the turn indicator already says it).
+## ctx: {move, search} = your pools after the event (for your own plays and loots).
+static func outcome(e: Dictionary, me: int, ctx: Dictionary = {}) -> String:
+	var seat: int = int(e.get("seat", -1))
+	var you: bool = seat == me
+	var who: String = "You" if you else "Rival"
+	var pools: String = " You have Move %d, Search %d." % [int(ctx.get("move", 0)), int(ctx.get("search", 0))] if ctx.has("move") else ""
+	match String(e.get("type", "")):
+		"turn_started", "drew", "round_started", "brace_requested", "undone":
+			return ""
+		"played":
+			var gain: PackedStringArray = []
+			if int(e.get("move", 0)) > 0:
+				gain.append("+%d Move" % int(e["move"]))
+			if int(e.get("search", 0)) > 0:
+				gain.append("+%d Search" % int(e["search"]))
+			var c: CardData = _card(e.get("card_id", ""))
+			if gain.is_empty() and c != null and c.is_weapon():
+				return "%s readied %s (%s)%s" % [who, c.display_name, CardWords.short(c), (". Tap it in your played row to FIRE." if you else ".")]
+			return "%s played %s%s.%s" % [who, card_name(e["card_id"]), (": " + ", ".join(gain)) if not gain.is_empty() else "", pools if you else ""]
+		"adrenaline":
+			return "%s played a Hit as Adrenaline: +1 %s.%s" % [who, "Move" if e["mode"] == "move" else "Search", pools if you else ""]
+		"looted":
+			var c: CardData = _card(e.get("card_id", ""))
+			var what: String = (" (%s)" % CardWords.short(c)) if c != null else ""
+			var tail: String = " It joins your played row and your deck." if you else ""
+			return "%s looted %s%s.%s" % [who, card_name(e["card_id"]), what, tail]
+		"moved":
+			var a: AreaData = _area(e.get("to", ""))
+			var cover: String = (" (Cover %d)" % a.cover) if a != null and a.cover > 0 else ""
+			return "%s moved to %s%s.%s" % [who, area_name(e["to"]), cover, pools if you else ""]
+		"shot_declared":
+			var dmg: int = int(e["damage"])
+			var how: String = " The rival can't block it (Suppressor)." if e.get("suppressed", false) and you else ""
+			if you:
+				return "You fired %s at the rival: %d damage before they block.%s" % [card_name(e["weapon_id"]), dmg, how]
+			return "Rival fired %s at you: %d damage before you block." % [card_name(e["weapon_id"]), dmg]
+		"frag_thrown":
+			return "%s threw a Frag into %s." % [who, area_name(e["area"])]
+		"braced":
+			var names: PackedStringArray = []
+			for id: Variant in e.get("card_ids", []):
+				names.append(card_name(id))
+			if names.is_empty():
+				return ""
+			return "%s blocked %d with %s." % [who, int(e["total"]), ", ".join(names)]
+		"hits_landed":
+			var n: int = int(e["count"])
+			var down: String = ""
+			if e.get("down", false):
+				down = " You are Down: the next shot at you deals 1 less." if you else " The rival is Down: your next shot deals 1 less."
+			if n <= 0:
+				return "%s took no damage." % ("You" if you else "The rival")
+			var src: String = String(e.get("source", "shot"))
+			var lead: String = ""
+			match src:
+				"shot":
+					lead = "The rival's shot hit you" if you else "Your shot hit the rival"
+				"frag":
+					lead = "The Frag hit you" if you else "The Frag hit the rival"
+				_:
+					lead = "You took %d Hit%s" % [n, "" if n == 1 else "s"] if you else "The rival took %d Hit%s" % [n, "" if n == 1 else "s"]
+			return "%s: -%d health, now %d.%s" % [lead, n, int(e["health"]), down]
+		"gas_hit":
+			return "%s ended the turn in gas: -1 health, now %d." % [who, int(e["health"])]
+		"healed", "patched_up", "bounty_claimed":
+			var amount: int = int(e.get("healed", 1))
+			return "%s healed %d: health now %d." % [who, amount, int(e.get("health", 0))] if e.has("health") else describe(e, me)
+		"packed":
+			var held: int = int(e.get("held_count", 0))
+			if you:
+				return "You kept %d card%s for next turn; the rest went under your deck." % [held, "" if held == 1 else "s"]
+			return "Rival ended the turn (kept %d card%s)." % [held, "" if held == 1 else "s"]
+		"zone_flipped":
+			var db: Node = _db()
+			var z: ZoneCardData = db.get_zone_card(int(e["card"])) if db != null else null
+			return "Round %d: %s." % [int(e["card"]), z.display_name if z != null else "?"]
+		"gas_closed":
+			return "Gas closed %s: don't end a turn there (-1 health)." % area_name(e["area"])
+		"drop_landed":
+			var c: CardData = _card(e.get("card_id", ""))
+			return "Supply drop in %s: %s%s." % [area_name(e["area"]), card_name(e["card_id"]), (" (%s)" % CardWords.short(c)) if c != null else ""]
+		"final_circle":
+			return describe(e, me)
+	return describe(e, me)
+
+
+static func _card(id: Variant) -> CardData:
+	var db: Node = _db()
+	return db.get_card(StringName(str(id))) if db != null and str(id) != "" else null
+
+
+static func _area(id: Variant) -> AreaData:
+	var db: Node = _db()
+	return db.get_area(StringName(str(id))) if db != null and str(id) != "" else null
 
 
 ## "You win: rival eliminated by a shot." / "Draw: ..." from a match_end dictionary.

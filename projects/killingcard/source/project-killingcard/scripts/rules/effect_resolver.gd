@@ -10,7 +10,7 @@
 #   REMOVE_COVER, GRANT_FIRST_SHOT, REMOVE_FIRST_SHOT, UNTARGETABLE_BY_PICK_FLANK, DRAW,
 #   REVEAL_RED_DOTS, REVEAL_DEPLOYMENTS / HIDE_FROM_INTEL (side flags), MOVE_UNIT,
 #   STREAK_BONUS (counted by MatchHooks.apply_streak), DESTROY_EQUIPMENT, SUMMON_UNIT,
-#   SURVIVE_LETHAL. STREAK_THRESHOLD_MOD and COOLDOWN_MOD only log an event: p05
+#   SURVIVE_LETHAL, HEAL (kc-field-impl: Aid Station). STREAK_THRESHOLD_MOD and COOLDOWN_MOD only log an event: p05
 #   reads them from the perks when it builds the Streak Tray / cooldowns.
 # Dependencies: DataEnums, EffectData, RulesUnit, RulesSide, RulesEvent (MatchState passed in).
 # Author: Mechanics Developer Agent
@@ -163,6 +163,12 @@ static func targets(state, e: EffectData, ctx: Dictionary, z: int) -> Array[Rule
 					found.erase(ctx.get("source_unit"))
 			T.ARRIVING_ENEMY:
 				_add_if(found, foe.find_unit(int(ctx.get("arriving_uid", -1))), z)
+			T.FRIENDLY_POINT_MAN:
+				if z >= 0 and own.line(z).size() > 0:
+					found.append(own.line(z)[0])
+			T.MOST_DAMAGED_FRIENDLY:
+				if z >= 0:
+					_add_if(found, most_damaged(state, own.line(z)), z)
 	if e.target_class != DataEnums.WeaponClass.NONE:
 		var of_class: Array = found.filter(func(u: RulesUnit) -> bool: return u.weapon_class == e.target_class)
 		found.assign(of_class)
@@ -182,6 +188,23 @@ static func passive_applies(state, e: EffectData, friendly: bool, src: RulesUnit
 		var op: RulesUnit = state.sides[owner].operator_unit
 		if op == null or op.zone != u.zone:
 			return false
+	return _passive_target_ok(state, e, friendly, src, u)
+
+
+## Does a PASSIVE effect of a Field (owned by `field_side`, standing in `field_zone`) apply
+## to unit u? A Field's aura covers only its own column (zone_scope THIS_ZONE, validated).
+static func field_passive_applies(state, e: EffectData, field_side: int, field_zone: int, u: RulesUnit) -> bool:
+	if u.zone != field_zone:
+		return false
+	if not condition_holds(state, e.condition, field_side, u.zone):
+		return false
+	if e.target_class != DataEnums.WeaponClass.NONE and e.target_class != u.weapon_class:
+		return false
+	return _passive_target_ok(state, e, u.side == field_side, null, u)
+
+
+static func _passive_target_ok(state, e: EffectData, friendly: bool, src: RulesUnit, u: RulesUnit) -> bool:
+	var at_front: bool = state.sides[u.side].line(u.zone).find(u) == 0
 	if friendly:
 		match e.target:
 			T.SELF:
@@ -192,13 +215,28 @@ static func passive_applies(state, e: EffectData, friendly: bool, src: RulesUnit
 				return true
 			T.OTHER_FRIENDLIES:
 				return src != u
+			T.FRIENDLY_POINT_MAN:
+				return at_front
 		return false
 	match e.target:
 		T.ALL_ENEMIES:
 			return true
 		T.ENEMY_POINT_MAN:
-			return state.sides[u.side].line(u.zone).find(u) == 0
+			return at_front
 	return false
+
+
+## The unit in `line` with the most lost Armor (ties: front-most), skipping `exclude`;
+## null when nobody is hurt. Shared by Patch (FirefightResolver) and HEAL (Aid Station).
+static func most_damaged(state, line: Array, exclude: RulesUnit = null) -> RulesUnit:
+	var best: RulesUnit = null
+	for u: RulesUnit in line:
+		if u == exclude or not u.is_alive():
+			continue
+		var missing: int = u.damage_taken(state.round_number)
+		if missing > 0 and (best == null or missing > best.damage_taken(state.round_number)):
+			best = u
+	return best
 
 
 static func until_round(state, e: EffectData) -> int:
@@ -241,6 +279,20 @@ static func _apply(state, e: EffectData, ctx: Dictionary, z: int, amount: int) -
 		for t: RulesUnit in targets(state, e, ctx, z):
 			t.survive_lethal = amount
 			_applied(state, e, ctx, t.uid, amount)
+	elif kind == K.HEAL:
+		var healed_any: bool = false
+		for t: RulesUnit in targets(state, e, ctx, z):
+			var healed: int = mini(amount, t.damage_taken(state.round_number))
+			if healed <= 0:
+				continue
+			t.armor += healed
+			healed_any = true
+			_applied(state, e, ctx, t.uid, healed)
+			state.emit_event(RulesEvent.UNIT_HEALED, {"side": state.side_name(t.side), "source_id": ctx["source_id"],
+					"source_uid": ctx["source_uid"], "target_uid": t.uid, "amount": healed, "remaining": t.armor,
+					"zone": state.zone_name(t.zone)})
+		if not healed_any:
+			_wasted(state, e, ctx, "no damaged unit")
 	elif kind == K.DRAW:
 		state.draw_cards(side, amount)
 		_applied(state, e, ctx, -1, amount)
@@ -275,7 +327,8 @@ static func _apply(state, e: EffectData, ctx: Dictionary, z: int, amount: int) -
 				foe.discard.append(rc)
 				left -= 1
 				state.emit_event(RulesEvent.EQUIPMENT_DESTROYED, {"side": state.side_name(foe.index),
-						"card_uid": rc.uid, "card_id": rc.card.id, "zone": state.zone_name(zz)})
+						"card_uid": rc.uid, "card_id": rc.card.id, "zone": state.zone_name(zz),
+						"reason": RulesEvent.FIELD_GONE_DESTROYED})
 	elif kind == K.SUMMON_UNIT:
 		var at: int = z if z >= 0 else ctx["zone"]
 		if not state.is_zone(at) or own.line(at).size() >= state.config.zone_capacity or e.summon_card == null:

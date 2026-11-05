@@ -11,7 +11,9 @@ extends "res://scripts/ui/tap_hold_button.gd"
 const MatchTheme: GDScript = preload("res://scripts/ui/match_theme.gd")
 const KIND_SHORT: Dictionary = {DataEnums.ZoneKind.CALM: "Calm", DataEnums.ZoneKind.GAS: "Gas",
 		DataEnums.ZoneKind.DROP: "Drop", DataEnums.ZoneKind.GAS_AND_DROP: "Gas+Drop", DataEnums.ZoneKind.FINAL_CIRCLE: "Final"}
-const MAX_CHIPS: int = 4
+## cz-clarity: now, next and the one after (was 4): the rest is behind inspect.
+const MAX_CHIPS: int = 3
+const CHIP_WORD: Array[String] = ["NOW", "NEXT", "THEN"]
 const TRACK_H: float = 6.0
 
 var zone_index: int = 1
@@ -77,7 +79,7 @@ func setup(zone_i: int, rt: int, rnd: int) -> void:
 			l.visible = false
 			continue
 		var kind: int = z.kind()
-		l.text = ("%d %s" % [n, KIND_SHORT[kind]]) if i > 0 else ("NOW %d %s" % [n, KIND_SHORT[kind]])
+		l.text = "%s %s" % [CHIP_WORD[i], KIND_SHORT[kind]]
 		l.theme_type_variation = &"TagChipNow" if i == 0 else (&"TagChipGas" if kind != DataEnums.ZoneKind.CALM and kind != DataEnums.ZoneKind.DROP else &"TagChip")
 		l.visible = true
 	_fit_chips()
@@ -87,7 +89,9 @@ func setup(zone_i: int, rt: int, rnd: int) -> void:
 ## Shortest title for narrow screens.
 func set_short_title(short: bool) -> void:
 	var letter: String = "ABC"[clampi(route, 0, 2)]
-	_title.text = ("R%d · ZONE %d/%d · %s" if short else "ROUND %d · ZONE %d/%d · ROUTE %s") % [round_index, zone_index, _deck_size, letter]
+	# cz-clarity: the round is the clock (one Zone card a round); the route letter is in the inspector.
+	_title.text = ("ROUND %d/%d" if short else "ROUND %d OF %d") % [zone_index, _deck_size]
+	tooltip_text = "Route %s" % letter
 
 
 func get_title_label() -> Label:

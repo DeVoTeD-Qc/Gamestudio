@@ -216,7 +216,7 @@ static func draw_art(ci: CanvasItem, rect: Rect2, info: Dictionary, full: bool, 
 	var font: Font = CzArtKit.font_mono()
 	var fs: int = int(ceilf((8.0 if not full else 9.0) * k))
 	var code: String = str(info.get("stencil", ""))
-	if code != "":
+	if code != "" and full:  # cz-clarity: decorative only, so not on the small cards (read as a stat)
 		var base := Vector2(rect.position.x + 3.0 * k, rect.end.y - 3.0 * k)
 		ci.draw_string(font, base, code, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(CzArtKit.RUST, 0.9))
 

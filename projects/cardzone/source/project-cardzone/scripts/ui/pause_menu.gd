@@ -1,7 +1,7 @@
 # pause_menu.gd
 # Purpose: CardZone pause menu (cz13), a modal overlay over the match (MatchShell opens it from
 #   MENU) and, settings-only, over the Title (SETTINGS). Pages:
-#     main      RESUME · RULES · SETTINGS · CONCEDE… · LEAVE TO TITLE (the match stays saved:
+#     main      RESUME · HOW TO PLAY (cz-clarity) · RULES · SETTINGS · CONCEDE… · LEAVE TO TITLE (the match stays saved:
 #               CONTINUE on the title picks it up)
 #     rules     a short rules summary (scrolls)
 #     settings  REDUCED MOTION off/on, EVENT SPEED normal/fast/instant (pause_settings.gd),
@@ -20,23 +20,21 @@ const CoachTips: GDScript = preload("res://scripts/ui/coach_tips.gd")
 const FxSettings: GDScript = preload("res://scripts/fx/fx_settings.gd")  # cz17
 
 signal resumed
+## cz-clarity: HOW TO PLAY (the shell opens the screen's How to play sheet).
+signal how_requested
 signal concede_confirmed
 signal leave_requested
 signal settings_changed
 ## The menu closed (any way).
 signal closed
 
-const RULES_TEXT: String = """GOAL  Be the last one standing. Shots, Frags, the gas and the final circle put Hits on you; with no health left you are out. If the Zone deck runs out (the hard end), more health wins.
-
-YOUR TURN  You draw your next hand from the top of your loadout. Play cards to your line for MOVE and SEARCH; move to a neighbouring area; loot the piles in your area with Search; fire weapons in your line at the rival in range. UNDO works until you fire.
-
-PACK  END TURN, then tap up to 2 hand cards to HOLD them on top. Everything else goes under your loadout, so your cards come round again.
-
-BRACE  When you are shot, armour in your NEXT HAND can stop Hits. Braced cards go to the bottom.
-
-HITS  A Hit goes on top of your loadout. While it is in your next draw you are DOWN: shots at you deal 1 less. In your hand a Hit is ADRENALINE: play it for Move 1 or Search 1. PATCH UP (Search 2) heals 1.
-
-ZONE  Each round flips a Zone card: gas closes areas and supply drops land. Cover in an area makes shots from other areas weaker. The final circle hurts everyone still standing."""
+const RULES_TEXT: String = """GOAL  Be the last one standing. Shots, Frags, the gas and the final circle put Hits on you; with no health left you are out. After round 14, more health wins.
+YOUR TURN  You draw 5 cards from the top of your deck. PLAY cards for MOVE and SEARCH; move to a neighbouring area; LOOT the piles in your area with Search; FIRE guns in your played row at the rival in range. UNDO works until you fire.
+END TURN  Tap up to 2 hand cards to keep them on top of your deck. Everything else goes under your deck in the order you used it, so your cards (and your loot) come round again. Nothing is shuffled.
+BLOCK (BRACE)  When you are shot, cards with a shield in your NEXT HAND (the top of your deck) can block damage. Cards you block with go to the bottom of your deck.
+HITS  A Hit goes on top of your deck. While it is in your next hand you are DOWN: shots at you deal 1 less. When you draw it, play it for +1 Move or +1 Search (Adrenaline). PATCH UP (2 Search) heals 1.
+ZONE  Each round flips a Zone card: gas closes areas and supply drops land. Cover (shield on an area) makes shots from other areas 1 weaker. The final circle hurts everyone still standing.
+INSPECT  Long-press or right-click anything to read what it is and what it gives you."""
 
 ## Title mode: settings only, CLOSE instead of BACK.
 var settings_only: bool = false
@@ -94,7 +92,7 @@ func show_page(p: StringName) -> void:
 	match p:
 		&"main":
 			_title.text = "PAUSED"
-			_row([_btn(&"resume", "RESUME", &"DockButton")])
+			_row([_btn(&"resume", "RESUME", &"DockButton"), _btn(&"how", "HOW TO PLAY")])
 			_row([_btn(&"rules", "RULES"), _btn(&"settings", "SETTINGS")])
 			_row([_btn(&"concede", "CONCEDE…"), _btn(&"leave", "LEAVE TO TITLE")])
 			_content.add_child(SetupUI.label("Your match is saved after every move: CONTINUE on the title picks it up.", &"ShellMuted", true))
@@ -195,6 +193,9 @@ func _on_button(key: StringName) -> void:
 		&"resume":
 			close()
 			resumed.emit()
+		&"how":
+			how_requested.emit()
+			close()
 		&"rules":
 			show_page(&"rules")
 		&"settings":

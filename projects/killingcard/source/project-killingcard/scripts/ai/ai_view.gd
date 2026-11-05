@@ -11,6 +11,10 @@
 #   object) cannot reach them. tests/test_ai_player.gd checks both properties.
 #   Frame: "me" = the AI's side, "foe" = the other side. Zones 0 = left, 1 = mid, 2 = right.
 #   Unit records are Dictionaries (see _unit_record); the planner clones what it changes.
+#   Fields (CardType.EQUIPMENT, kc-field-impl): my_fields / foe_fields hold the Field cards per
+#   column (the foe's hidden traps are left out). Unit records leave Field auras OUT of fp /
+#   cover, because "your frontline unit" auras follow the line; the planner re-applies them to
+#   whoever stands in front in its estimate (AiPlanner._field_aura).
 # Dependencies: DataEnums, CardData, LoadoutItem, EffectData, LoadoutRules, StreakTracker,
 #   ModeRules (MatchState passed in to capture() only).
 # Author: Mechanics Developer Agent
@@ -48,14 +52,18 @@ var my_firepower_bonus: int = 0
 var my_armor_bonus: int = 0
 ## True while the foe's side-wide Cover removal (Recon Drone) also strips my new units.
 var my_cover_removed: bool = false
+## True while my side-wide Cover removal (Recon Drone) strips the foe's Cover.
+var foe_cover_removed: bool = false
 ## A START_OF_FIREFIGHT effect of mine is active this round (Attack Helo): damage per zone.
 var my_firefight_damage: int = 0
 var foe_firefight_damage: int = 0
 ## [{item: LoadoutItem, ready: bool}] for Secondary, Lethal, Tactical, then tray killstreaks.
 var items: Array[Dictionary] = []
 var tray: Array[StringName] = []
-## Card ids of my Equipment per zone.
+## Card ids of my Equipment (Fields) per zone.
 var my_equipment: Array = [[], [], []]
+## My Field cards per zone (CardData, placement order; hidden traps included).
+var my_fields: Array = [[], [], []]
 
 # --- my Operator --------------------------------------------------------------------------
 var op_exists: bool = false
@@ -76,6 +84,8 @@ var foe_tray_count: int = 0
 var foe_op_on_board: bool = false
 ## Card ids of the foe's face-up Equipment per zone (hidden Equipment such as Tripwire is left out).
 var foe_equipment: Array = [[], [], []]
+## The foe's face-up Field cards per zone (CardData; hidden traps left out).
+var foe_fields: Array = [[], [], []]
 ## What my side's minimap shows: foe unit deployments per zone (count only, Ruling 13).
 var red_dots: PackedInt32Array = PackedInt32Array([0, 0, 0])
 ## Card ids behind the red dots of zones my side has revealed this round.
@@ -122,6 +132,7 @@ static func capture(state, p_side: int) -> AiView:
 	v.my_firepower_bonus = int(me.setup.firepower_bonus)
 	v.my_armor_bonus = int(me.setup.armor_bonus)
 	v.my_cover_removed = foe.has_flag(DataEnums.EffectKind.REMOVE_COVER, state.round_number)
+	v.foe_cover_removed = me.has_flag(DataEnums.EffectKind.REMOVE_COVER, state.round_number)
 	for f: Dictionary in state.firefight_effects:
 		if int(f["until_round"]) < state.round_number:
 			continue
@@ -144,9 +155,11 @@ static func capture(state, p_side: int) -> AiView:
 	for z: int in ZONES:
 		for entry: Dictionary in me.equipment[z]:
 			v.my_equipment[z].append(entry["card"].card.id)
+			v.my_fields[z].append(entry["card"].card)
 		for entry: Dictionary in foe.equipment[z]:
 			if not entry["card"].card.hidden:
 				v.foe_equipment[z].append(entry["card"].card.id)
+				v.foe_fields[z].append(entry["card"].card)
 
 	# Board: units on it are public (both sides see each other's lines and stats).
 	for si: int in 2:
@@ -187,11 +200,12 @@ static func _unit_record(state, u) -> Dictionary:
 	r["id"] = u.source_id
 	r["is_op"] = bool(u.is_operator)
 	r["class"] = int(u.weapon_class)
-	r["fp"] = int(state.firepower_of(u))
+	# Field auras are left out here (see the header); the planner applies them per position.
+	r["fp"] = maxi(0, int(state.firepower_of(u)) - int(state.field_passive_total(u, DataEnums.EffectKind.MODIFY_FIREPOWER)))
 	r["armor"] = int(u.armor)
 	r["armor0"] = int(u.armor)
 	r["max_armor"] = int(u.max_armor(state.round_number))
-	r["cover"] = int(state.cover_of(u))
+	r["cover"] = maxi(0, int(state.cover_of(u)) - int(state.field_passive_total(u, DataEnums.EffectKind.GRANT_COVER)))
 	r["first_shot"] = bool(state.has_first_shot(u))
 	r["pick"] = bool(u.pick)
 	r["flank"] = bool(u.flank)
@@ -279,6 +293,14 @@ func record_for_card(card: CardData, uid: int, z: int) -> Dictionary:
 	r["arrives_front"] = card.arrives_front
 	_read_effects(r, card.effects)
 	return r
+
+
+## My visible (non-hidden) Field standing in zone z, or null (one per column).
+func my_visible_field(z: int) -> CardData:
+	for c: CardData in my_fields[z]:
+		if c.is_visible_field():
+			return c
+	return null
 
 
 ## Units of `who` (ME / FOE) in zone z right now.

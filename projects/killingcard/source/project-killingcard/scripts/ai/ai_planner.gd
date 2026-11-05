@@ -18,6 +18,12 @@
 #   killstreak) with the best gain until nothing gains. A second plan starts from the
 #   second-best first step; with `second_best_chance` (seeded) that one is played.
 #   Each zone's score is cached and only zones an action touches are re-simulated.
+#   Fields (kc-field-impl): the estimator applies Field auras by position (frontline auras go
+#   to whoever is in front at each step, class auras to that class), then the END_OF_ROUND
+#   Field effects (Mortar Pit damage, Aid Station heal). A Field's later rounds are valued in
+#   _field_future (rounds left x the chance it survives Overrun); a plan that loses a column
+#   pays for the Field it would lose there, replacing a standing Field pays for the old one,
+#   and overrunning an enemy Field is worth its future value to the AI.
 #   Deterministic: the only randomness is an RNG seeded from (match seed, round, side).
 # Dependencies: AiView, AiPersonality, DataEnums, CardData, EffectData, LoadoutItem, RulesIntent.
 # Author: Mechanics Developer Agent
@@ -68,6 +74,8 @@ class Plan:
 	## projected_occupancy does not see moves).
 	var moved_out: Array[int] = [0, 0, 0]
 	var equip_new: Array = [[], [], []]
+	## A new visible Field in this zone replaces my standing one (one per side per column).
+	var field_replaced: Array[bool] = [false, false, false]
 	var foe_cover_removed: bool = false
 	var my_ff_damage: int = 0
 	var flat: float = 0.0
@@ -100,6 +108,7 @@ class Plan:
 		p.callout = callout.duplicate()
 		p.moved_out = moved_out.duplicate()
 		p.equip_new = [equip_new[0].duplicate(), equip_new[1].duplicate(), equip_new[2].duplicate()]
+		p.field_replaced = field_replaced.duplicate()
 		p.foe_cover_removed = foe_cover_removed
 		p.my_ff_damage = my_ff_damage
 		p.flat = flat
@@ -304,8 +313,10 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 						a["card"] = card
 						a["uid"] = uid
 						out.append(a)
-			DataEnums.CardType.EQUIPMENT:
+			DataEnums.CardType.EQUIPMENT:  # Fields
 				for z: int in 3:
+					if card.is_visible_field() and not _field_slot_open(p, card, z):
+						continue
 					var a: Dictionary = _action(&"equipment", z, [z])
 					a["card"] = card
 					a["uid"] = uid
@@ -483,6 +494,8 @@ func _apply(p: Plan, a: Dictionary) -> void:
 		&"equipment":
 			var card: CardData = a["card"]
 			p.equip_new[z].append(card)
+			if card.is_visible_field() and _view.my_visible_field(z) != null:
+				p.field_replaced[z] = true
 			_apply_effects(p, card.effects, z, -1, -1)
 			_spend_card(p, a, card.cost)
 		_:
@@ -735,12 +748,24 @@ func _eval_zone(p: Plan, z: int) -> float:
 				c = 0
 			fp[si].append(f)
 			cover[si].append(c)
+	# Field auras: class / all auras now, frontline auras per step (they follow the line).
+	var auras: Array = [_field_aura(_my_fields_after(p, z)), _field_aura(_view.foe_fields[z])]
+	var cover_off: Array[bool] = [_view.my_cover_removed, p.foe_cover_removed or _view.foe_cover_removed]
+	for si: int in 2:
+		var au: Dictionary = auras[si]
+		for i: int in n[si]:
+			fp[si][i] = int(fp[si][i]) + int(au["all_fp"]) + int(au["class_fp"][_class_of(sides[si][i])])
+			if not cover_off[si]:
+				cover[si][i] = int(cover[si][i]) + int(au["all_cover"])
+	var front_fp: Array[int] = [int(auras[ME]["front_fp"]), int(auras[FOE]["front_fp"])]
+	var front_cover: Array[int] = [0 if cover_off[ME] else int(auras[ME]["front_cover"]),
+			0 if cover_off[FOE] else int(auras[FOE]["front_cover"])]
 	var foe_present_at_start: bool = _any_alive(armor[FOE])
 	# 0. Start-of-firefight damage (Attack Helo) on each point man.
 	if p.my_ff_damage > 0:
-		_hit_point_man(armor[FOE], cover[FOE], survive[FOE], p.my_ff_damage)
+		_hit_point_man(armor[FOE], cover[FOE], survive[FOE], p.my_ff_damage, front_cover[FOE])
 	if _view.foe_firefight_damage > 0:
-		_hit_point_man(armor[ME], cover[ME], survive[ME], _view.foe_firefight_damage)
+		_hit_point_man(armor[ME], cover[ME], survive[ME], _view.foe_firefight_damage, front_cover[ME])
 	if _any_alive(armor[ME]) and _any_alive(armor[FOE]):
 		# 1. Suppress.
 		for si: int in 2:
@@ -760,6 +785,7 @@ func _eval_zone(p: Plan, z: int) -> float:
 				for i: int in n[si]:
 					dmg[si].append(0)
 			var any: bool = false
+			var front: Array[int] = [_first_alive(armor[ME]), _first_alive(armor[FOE])]
 			for si: int in 2:
 				var o: int = 1 - si
 				var assigned: Array[int] = []
@@ -772,7 +798,8 @@ func _eval_zone(p: Plan, z: int) -> float:
 					var t: int = _target(sides[si][i], sides[o], armor[o], assigned)
 					if t < 0:
 						continue
-					var d: int = maxi(0, maxi(0, int(fp[si][i])) - int(cover[o][t]))
+					var shot: int = int(fp[si][i]) + (front_fp[si] if i == front[si] else 0)
+					var d: int = maxi(0, maxi(0, shot) - int(cover[o][t]) - (front_cover[o] if t == front[o] else 0))
 					assigned[t] += d
 					dmg[o][t] = int(dmg[o][t]) + d
 			if not any:
@@ -794,7 +821,7 @@ func _eval_zone(p: Plan, z: int) -> float:
 				for i: int in died[si]:
 					var od: int = int(sides[si][i]["on_down_damage"])
 					if od > 0:
-						_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], od)
+						_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], od, front_cover[1 - si])
 		# 3. Patch.
 		for si: int in 2:
 			for i: int in n[si]:
@@ -812,6 +839,21 @@ func _eval_zone(p: Plan, z: int) -> float:
 						best_missing = missing
 				if best >= 0:
 					armor[si][best] = int(armor[si][best]) + mini(patch, best_missing)
+	# 4. END_OF_ROUND Field effects (Score step): Mortar Pit chip, Aid Station heal.
+	for si: int in 2:
+		var au: Dictionary = auras[si]
+		if int(au["eor_damage"]) > 0:
+			_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], int(au["eor_damage"]), front_cover[1 - si])
+		if int(au["eor_heal"]) > 0:
+			var best: int = -1
+			var best_missing: int = 0
+			for j: int in n[si]:
+				var missing: int = int(sides[si][j]["max_armor"]) - int(armor[si][j])
+				if armor[si][j] > 0 and missing > best_missing:
+					best = j
+					best_missing = missing
+			if best >= 0:
+				armor[si][best] = int(armor[si][best]) + mini(int(au["eor_heal"]), best_missing)
 	return _zone_value(p, z, sides, armor, foe_present_at_start)
 
 
@@ -889,11 +931,21 @@ func _zone_value(p: Plan, z: int, sides: Array, armor: Array, foe_present_at_sta
 		if foe_present_at_start:
 			v += P.push_bonus
 	for card: CardData in p.equip_new[z]:
-		v += _equipment_value(card, control, present[ME], preferred)
+		v += _equipment_value(card, control, present[ME], preferred, sides[ME])
+	# Fields already standing: Overrun takes mine in a column the foe ends up controlling,
+	# a replaced one is gone, and overrunning a foe Field denies its later rounds.
+	var standing: CardData = _view.my_visible_field(z)
+	if standing != null and (control == -1 or p.field_replaced[z]):
+		v -= _field_future(standing, 1, sides[ME])
+	var foe_field: CardData = _foe_visible_field(z)
+	if foe_field != null and control == 1:
+		v += 0.8 * _field_future(foe_field, 1, sides[FOE])
 	return v
 
 
-func _equipment_value(card: CardData, control: int, mine_present: bool, preferred: bool) -> float:
+## Value of a new Field: this round's aura / END_OF_ROUND effects are already in the zone
+## estimate; this adds the streak / trap parts and the rounds after this one.
+func _equipment_value(card: CardData, control: int, mine_present: bool, preferred: bool, mine: Array = []) -> float:
 	var v: float = 0.2
 	for e: EffectData in card.effects:
 		if e == null:
@@ -902,14 +954,122 @@ func _equipment_value(card: CardData, control: int, mine_present: bool, preferre
 			v += (personality.weight_deny_streak * 0.4 + 0.8) * e.amount if control == 1 else 0.1
 		elif e.trigger == TR.ON_ENEMY_ARRIVE and e.kind == K.DAMAGE:
 			v += personality.weight_damage_dealt * e.amount * (0.55 if mine_present or preferred else 0.25)
+	if card.is_visible_field():
+		v += _field_future(card, control, mine)
 	return v
 
 
-func _hit_point_man(armor: Array, cover: Array, survive: Array, amount: int) -> void:
+## Expected value of a visible Field's rounds after this one: per-round value x the rounds
+## left (at most 3 counted) x the chance it survives Overrun (control after this round:
+## 1 mine, 0 contested / empty, -1 the foe's: torn down now, so 0).
+func _field_future(card: CardData, control: int, mine: Array) -> float:
+	if control < 0:
+		return 0.0
+	var rounds: int = clampi(_view.round_cap - _view.round_number, 0, 3)
+	var keep: float = 0.6 if control == 1 else 0.3
+	return _field_round_value(card, mine) * rounds * keep
+
+
+## Rough value of one round of a Field's effects (weights of this personality).
+func _field_round_value(card: CardData, mine: Array) -> float:
+	var P: AiPersonality = personality
+	var v: float = 0.0
+	for e: EffectData in card.effects:
+		if e == null:
+			continue
+		match e.kind:
+			K.MODIFY_FIREPOWER:
+				if e.trigger != TR.PASSIVE:
+					continue
+				var hits: float = 1.0
+				if e.target_class != DataEnums.WeaponClass.NONE:
+					hits = 0.0
+					for rec: Dictionary in mine:
+						if _class_of(rec) == e.target_class:
+							hits += 1.0
+					hits = maxf(hits, 0.3)  # more of that class may come
+				elif e.target == T.ALL_FRIENDLIES:
+					hits = maxf(1.0, mine.size())
+				v += P.weight_damage_dealt * e.amount * hits * 0.8
+			K.GRANT_COVER:
+				if e.trigger == TR.PASSIVE:
+					v += P.weight_damage_taken * e.amount * 1.6
+			K.DAMAGE:
+				if e.trigger == TR.END_OF_ROUND:
+					v += P.weight_damage_dealt * e.amount * 0.8
+			K.HEAL:
+				v += P.weight_damage_taken * e.amount * 0.7
+			K.STREAK_BONUS:
+				v += 0.5 * e.amount
+			K.REVEAL_RED_DOTS:
+				v += 0.1
+	return v
+
+
+## The visible Fields I would have in zone z after the plan (a new visible one replaces the old).
+func _my_fields_after(p: Plan, z: int) -> Array:
+	var out: Array = []
+	for c: CardData in _view.my_fields[z]:
+		if not (p.field_replaced[z] and c.is_visible_field()):
+			out.append(c)
+	out.append_array(p.equip_new[z])
+	return out
+
+
+func _foe_visible_field(z: int) -> CardData:
+	for c: CardData in _view.foe_fields[z]:
+		if c.is_visible_field():
+			return c
+	return null
+
+
+## Rules allow one visible Field per side per column per Deploy, and replacing a Field with
+## another copy of itself gains nothing.
+func _field_slot_open(p: Plan, card: CardData, z: int) -> bool:
+	for c: CardData in p.equip_new[z]:
+		if c.is_visible_field():
+			return false
+	var standing: CardData = _view.my_visible_field(z)
+	return standing == null or standing.id != card.id
+
+
+## Field aura totals of a list of Field cards (PASSIVE and END_OF_ROUND kinds the estimator models).
+static func _field_aura(cards: Array) -> Dictionary:
+	var class_fp: Array[int] = []
+	class_fp.resize(DataEnums.WeaponClass.size())
+	var out: Dictionary = {"front_fp": 0, "front_cover": 0, "all_fp": 0, "all_cover": 0, "class_fp": class_fp,
+			"eor_damage": 0, "eor_heal": 0}
+	for c: CardData in cards:
+		for e: EffectData in c.effects:
+			if e == null or e.condition != DataEnums.Condition.ALWAYS:
+				continue
+			if e.trigger == TR.PASSIVE:
+				var front: bool = e.target == T.FRIENDLY_POINT_MAN
+				if not (front or e.target == T.ALL_FRIENDLIES):
+					continue
+				if e.kind == K.MODIFY_FIREPOWER:
+					if front:
+						out["front_fp"] = int(out["front_fp"]) + e.amount
+					elif e.target_class != DataEnums.WeaponClass.NONE:
+						class_fp[e.target_class] += e.amount
+					else:
+						out["all_fp"] = int(out["all_fp"]) + e.amount
+				elif e.kind == K.GRANT_COVER and e.target_class == DataEnums.WeaponClass.NONE:
+					var key: String = "front_cover" if front else "all_cover"
+					out[key] = int(out[key]) + e.amount
+			elif e.trigger == TR.END_OF_ROUND:
+				if e.kind == K.DAMAGE and e.target == T.ENEMY_POINT_MAN:
+					out["eor_damage"] = int(out["eor_damage"]) + e.amount
+				elif e.kind == K.HEAL:
+					out["eor_heal"] = int(out["eor_heal"]) + e.amount
+	return out
+
+
+func _hit_point_man(armor: Array, cover: Array, survive: Array, amount: int, front_cover: int = 0) -> void:
 	var pm: int = _first_alive(armor)
 	if pm < 0:
 		return
-	armor[pm] = int(armor[pm]) - maxi(0, amount - int(cover[pm]))
+	armor[pm] = int(armor[pm]) - maxi(0, amount - int(cover[pm]) - front_cover)
 	if armor[pm] <= 0 and survive[pm] > 0:
 		armor[pm] = survive[pm]
 		survive[pm] = 0

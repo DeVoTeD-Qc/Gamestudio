@@ -141,13 +141,33 @@ func _gen() -> void:
 	var bac := card("breach_and_clear", "Breach and Clear", DataEnums.CardType.TACTIC, 3,
 		"2 damage to each enemy unit in a zone (3 if Close).",
 		[fx(T.ON_PLAY, K.DAMAGE, TG.ALL_ENEMIES, Z.CHOSEN_ZONE, 2, {"bonus_amount": 1, "bonus_condition": C.ZONE_IS_CLOSE})])
-	var tripwire := card("tripwire_charge", "Tripwire Charge", DataEnums.CardType.EQUIPMENT, 2,
-		"Hidden in a zone: the next enemy unit to arrive there takes 3 damage.",
+	# --- Fields (CardType.EQUIPMENT; KillingCard field-cards.md §4, kc-field-impl) ---------
+	var FIELD: int = DataEnums.CARD_TYPE_FIELD
+	var tripwire := card("tripwire_charge", "Tripwire Charge", FIELD, 2,
+		"Hidden. The next enemy unit to arrive in this column takes 3 damage. Then it's gone.",
 		[fx(T.ON_ENEMY_ARRIVE, K.DAMAGE, TG.ARRIVING_ENEMY, Z.THIS_ZONE, 3)],
 		{"hidden": true, "consumed_on_trigger": true})
-	var comms := card("comms_relay", "Comms Relay", DataEnums.CardType.EQUIPMENT, 2,
-		"While you control this zone: streak +1 at end of round.",
+	var comms := card("comms_relay", "Comms Relay", FIELD, 2,
+		"While you control this column: streak +1 at end of round.",
 		[fx(T.END_OF_ROUND, K.STREAK_BONUS, TG.OWNER, Z.THIS_ZONE, 1, {"condition": C.YOU_CONTROL_ZONE})])
+	var listening_post := card("listening_post", "Listening Post", FIELD, 1,
+		"Each round, enemy red dots in this column are revealed to you.",
+		[fx(T.END_OF_ROUND, K.REVEAL_RED_DOTS, TG.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
+	var mortar_pit := card("mortar_pit", "Mortar Pit", FIELD, 3,
+		"At end of round: 1 damage to the enemy frontline unit in this column.",
+		[fx(T.END_OF_ROUND, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.THIS_ZONE, 1)])
+	var bulwark := card("bulwark", "Bulwark", FIELD, 3,
+		"Your frontline unit in this column has Cover 1.",
+		[fx(T.PASSIVE, K.GRANT_COVER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
+	var war_standard := card("war_standard", "War Standard", FIELD, 3,
+		"Your frontline unit in this column gets +1 FP.",
+		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
+	var sniper_perch := card("sniper_perch", "Sniper Perch", FIELD, 2,
+		"Your Sniper units in this column get +1 FP.",
+		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.ALL_FRIENDLIES, Z.THIS_ZONE, 1, {"target_class": W.SNIPER})])
+	var aid_station := card("aid_station", "Aid Station", FIELD, 2,
+		"At end of round: your most damaged unit in this column heals 1.",
+		[fx(T.END_OF_ROUND, K.HEAL, TG.MOST_DAMAGED_FRIENDLY, Z.THIS_ZONE, 1)])
 
 	# --- Loadout -------------------------------------------------------------
 	var ext_mag := item("extended_mag", "Extended Mag", DataEnums.LoadoutSlot.ATTACHMENT, "+1 FP.", {"firepower_bonus": 1})
@@ -260,7 +280,9 @@ func _gen() -> void:
 	run.starter_killstreaks = items([recon, mortar, helo])
 	run.reward_pool = cards_list([[flanker, 2], [demo, 2], [bac, 2], [comms, 2], [anvil, 1], [wren, 1],
 		[point_man, 1], [marksman, 1], [medic, 1], [breacher, 1], [gunner, 1], [shieldman, 1], [recon_spec, 1],
-		[callout, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1]])
+		[callout, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1],
+		# kc-field-impl: the six new Fields enter through the reward pool only (field-cards.md §4.2).
+		[listening_post, 1], [mortar_pit, 1], [bulwark, 1], [war_standard, 1], [sniper_perch, 1], [aid_station, 1]])
 	run.killstreak_pool = items([recon, mortar, sentry_ks, helo])
 	run.perk_pool = items([p_disc, p_salv, p_grit, p_obj])
 	run.perk_slots = 3; run.killstreak_slots = 3

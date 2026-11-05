@@ -65,6 +65,7 @@ signal cover_changed(up: bool, info: Dictionary)
 const ActionText: GDScript = preload("res://scripts/match/action_text.gd")
 const OpponentPlaceholder: GDScript = preload("res://scripts/match/opponent_placeholder.gd")
 const BraceAdvisor: GDScript = preload("res://scripts/match/brace_advisor.gd")
+const CardWords: GDScript = preload("res://scripts/ui/card_words.gd")
 
 ## cz12: speed factor of FAST (x the current Event speed delays).
 const FAST_FACTOR: float = 0.4
@@ -440,20 +441,20 @@ func loot_options() -> Array[Dictionary]:
 		if int(piles[cid]) <= 0:
 			continue
 		var c: CardData = CardDB.get_card(StringName(str(cid)))
-		out.append(_opt(StringName("loot_" + str(cid)), "%s · Search %d · %d left" % [c.display_name, c.cost, int(piles[cid])],
-				{"type": "loot", "pile": str(cid)}))
+		out.append(_card_opt(_opt(StringName("loot_" + str(cid)), "%s · Search %d · %d left" % [c.display_name, c.cost, int(piles[cid])],
+				{"type": "loot", "pile": str(cid)}), c))
 	for d: Dictionary in v["drops"].get(StringName(here), v["drops"].get(here, [])):
 		var c: CardData = CardDB.get_card(StringName(d["card"]))
-		out.append(_opt(StringName("loot_drop_%d" % int(d["id"])), "%s · supply drop · Search %d" % [c.display_name, bal.supply_drop_cost],
-				{"type": "loot", "card": int(d["id"])}))
+		out.append(_card_opt(_opt(StringName("loot_drop_%d" % int(d["id"])), "%s · supply drop · Search %d" % [c.display_name, bal.supply_drop_cost],
+				{"type": "loot", "card": int(d["id"])}), c))
 	for cr: Dictionary in v["crates"]:
 		if String(cr["area"]) != here:
 			continue
 		var free: bool = int(cr["free_picks"]) > 0 and int(cr["picker"]) == human
 		for cv: Dictionary in cr["cards"]:
 			var c: CardData = CardDB.get_card(StringName(cv["card"]))
-			out.append(_opt(StringName("loot_crate_%d" % int(cv["id"])), "%s · crate · %s" % [c.display_name,
-					"free" if free else "Search %d" % bal.crate_cost], {"type": "loot", "card": int(cv["id"])}))
+			out.append(_card_opt(_opt(StringName("loot_crate_%d" % int(cv["id"])), "%s · crate · %s" % [c.display_name,
+					"free" if free else "Search %d" % bal.crate_cost], {"type": "loot", "card": int(cv["id"])}), c))
 	return out
 
 
@@ -464,8 +465,8 @@ func attach_targets(att: int) -> Array[Dictionary]:
 	for w: int in st.hand + st.line:
 		var c: CardData = card(w)
 		if c != null and c.is_weapon():
-			out.append(_opt(StringName("attach_%d" % w), "%s (%s)" % [c.display_name, "line" if st.line.has(w) else "hand"],
-					{"type": "attach", "attachment": att, "weapon": w}))
+			out.append(_card_opt(_opt(StringName("attach_%d" % w), "%s (%s)" % [c.display_name, "played row" if st.line.has(w) else "hand"],
+					{"type": "attach", "attachment": att, "weapon": w}), c, "Gun to attach to"))
 	return out
 
 
@@ -509,6 +510,19 @@ func hold_reason(hold: Array) -> String:
 
 func hold_limit() -> int:
 	return state.data.balance.hold_limit if state != null else 2
+
+
+## cz-clarity: a loot / attach row names what the card gives on a second line, and carries the
+## card id so a long press / right click on the row opens the card in the inspector.
+func _card_opt(o: Dictionary, c: CardData, where: String = "Loot") -> Dictionary:
+	if c == null:
+		return o
+	o["card_id"] = c.id
+	o["where"] = where
+	var what: String = CardWords.short(c)
+	if what != "":
+		o["label"] = "%s\n%s" % [o["label"], what.left(1).to_upper() + what.substr(1)]
+	return o
 
 
 func _opt(key: StringName, label: String, action: Dictionary) -> Dictionary:

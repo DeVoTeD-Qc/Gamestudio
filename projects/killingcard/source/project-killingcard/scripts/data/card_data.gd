@@ -1,7 +1,10 @@
 # card_data.gd
-# Purpose: One deck card (Unit, Tactic or Equipment) from core-rules §5, plus
+# Purpose: One deck card (Unit, Tactic or Field) from core-rules §5, plus
 #   non-collectible tokens such as the Sentry placed by a killstreak.
 #   One card design = one .tres in res://data/cards/; copies in a deck reference the same file.
+#   "Field" (KillingCard) is the player-facing name of CardType.EQUIPMENT: it stays on your
+#   half of a column's objective (one visible Field per side per column, torn down by
+#   Overrun), can't be shot and never counts for control (field-cards.md, Model B).
 # Dependencies: DataEnums, EffectData, DataValidator.
 # Author: Mechanics Developer Agent
 class_name CardData
@@ -44,9 +47,10 @@ const MAX_TEXT_LENGTH: int = 100
 @export_group("Special rules")
 ## Always arrives at the front of the line (Shieldman).
 @export var arrives_front: bool = false
-## Equipment stays hidden from the enemy after Reveal (Tripwire Charge).
+## Field stays hidden from the enemy after Reveal (Tripwire Charge). Hidden Fields are
+## traps: they don't count toward the one-Field-per-column limit and aren't overrun.
 @export var hidden: bool = false
-## Equipment is discarded after its effect fires once (traps).
+## Field is discarded after its effect fires once (traps).
 @export var consumed_on_trigger: bool = false
 ## Counts for zone control (false for the Sentry).
 @export var counts_for_control: bool = true
@@ -63,10 +67,25 @@ func is_unit() -> bool:
 	return card_type == DataEnums.CardType.UNIT
 
 
+## Field = CardType.EQUIPMENT (the engine's internal name).
+func is_field() -> bool:
+	return card_type == DataEnums.CardType.EQUIPMENT
+
+
+## A Field the enemy can see: limited to one per side per column and subject to Overrun.
+func is_visible_field() -> bool:
+	return is_field() and not hidden
+
+
+## Player-facing type name: "Unit", "Tactic" or "Field".
+func type_label() -> String:
+	return DataEnums.type_label(card_type)
+
+
 ## True when playing the card asks the player to pick a zone.
 func requires_zone_choice() -> bool:
 	if card_type != DataEnums.CardType.TACTIC:
-		return true  # units and equipment are placed in a zone
+		return true  # units and Fields are placed in a zone
 	for effect: EffectData in effects:
 		if effect != null and effect.zone_scope in [DataEnums.ZoneScope.CHOSEN_ZONE, DataEnums.ZoneScope.OPERATOR_OR_ADJACENT]:
 			return true
@@ -100,7 +119,7 @@ func validate(v: DataValidator) -> void:
 		if effects.is_empty():
 			v.missing("effects", "a %s needs at least one effect" % DataEnums.key_of(DataEnums.CardType, card_type))
 	if card_type != DataEnums.CardType.EQUIPMENT and (hidden or consumed_on_trigger):
-		v.invalid("hidden", "hidden / consumed_on_trigger are for equipment only")
+		v.invalid("hidden", "hidden / consumed_on_trigger are for Fields only")
 	if collectible and not (counts_for_control and grants_elimination_credit):
 		v.invalid("collectible", "collectible cards must count for control and give elimination credit (tokens: collectible = false)")
 	for i: int in effects.size():
@@ -113,4 +132,9 @@ func validate(v: DataValidator) -> void:
 		if not is_unit() and effect.trigger in [DataEnums.Trigger.ON_DEPLOY, DataEnums.Trigger.ON_DOWN]:
 			v.invalid(field + ".trigger", "ON_DEPLOY / ON_DOWN only make sense on units")
 		if effect.trigger == DataEnums.Trigger.ON_ENEMY_ARRIVE and card_type != DataEnums.CardType.EQUIPMENT:
-			v.invalid(field + ".trigger", "ON_ENEMY_ARRIVE is for equipment traps")
+			v.invalid(field + ".trigger", "ON_ENEMY_ARRIVE is for Field traps")
+		if is_field() and effect.trigger in [DataEnums.Trigger.PASSIVE, DataEnums.Trigger.END_OF_ROUND] \
+				and effect.zone_scope != DataEnums.ZoneScope.THIS_ZONE:
+			v.invalid(field + ".zone_scope", "a Field's PASSIVE / END_OF_ROUND effects work in its own column (THIS_ZONE)")
+		if card_type == DataEnums.CardType.TACTIC and effect.trigger == DataEnums.Trigger.PASSIVE:
+			v.invalid(field + ".trigger", "a Tactic leaves play at Reveal, so it can't have a PASSIVE effect")

@@ -147,13 +147,7 @@ static func _patch(state, z: int) -> void:
 		for medic: RulesUnit in line:
 			if medic.patch <= 0 or not medic.is_alive():
 				continue
-			var best: RulesUnit = null
-			for u: RulesUnit in line:
-				if u == medic or not u.is_alive():
-					continue
-				var missing: int = u.damage_taken(state.round_number)
-				if missing > 0 and (best == null or missing > best.damage_taken(state.round_number)):
-					best = u
+			var best: RulesUnit = EffectResolver.most_damaged(state, line, medic)
 			if best == null:
 				continue
 			var healed: int = mini(medic.patch, best.damage_taken(state.round_number))

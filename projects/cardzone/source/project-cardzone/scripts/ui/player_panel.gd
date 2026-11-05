@@ -23,6 +23,9 @@ var _held_label: Label
 var _margin: MarginContainer
 ## Smallest width the screen wants (MatchScreen); the panel grows to fit its text.
 var base_width: float = 150.0
+## cz-clarity: the rival's deck and kept-card counts moved behind inspect in a live match (they are
+## in the panel's long-press sheet); the cz10 mock layout still shows them.
+var show_counts: bool = true
 
 
 func _init() -> void:
@@ -67,8 +70,8 @@ func setup(which: StringName, d: Dictionary) -> void:
 	_health_max.text = "/%d HP" % int(d.get("max_health", 5))
 	_down.visible = d.get("down", false)
 	var rival: bool = which == &"rival"
-	_loadout.visible = rival
-	_held_label.visible = rival
+	_loadout.visible = rival and show_counts
+	_held_label.visible = rival and show_counts
 	if rival:
 		_loadout.text = "Loadout %d" % int(d.get("loadout_count", 0))
 		_held_label.text = "Held %d" % int(d.get("held_count", 0))

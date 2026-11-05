@@ -437,7 +437,12 @@ func _fx_slam(e: Dictionary, t: RefCounted, down_before: Array) -> void:
 	var card_px: Vector2 = _card_px()
 	var target: Rect2
 	var hidden: Array[Control] = []
-	if mine:
+	# cz-clarity: the next hand may be tucked away (DECK row): the Hits then land on the DECK row.
+	var next_shown: bool = not _screen.has_method(&"is_next_shown") or bool(_screen.call(&"is_next_shown"))
+	if mine and not next_shown and _screen.has_method(&"get_deck_button") and _screen.call(&"get_deck_button") != null:
+		var deck: Rect2 = _local(_screen.call(&"get_deck_button"))
+		target = Rect2(Vector2(deck.position.x + 8.0, deck.position.y), card_px * 0.55)
+	elif mine:
 		var cards: Array = _screen.call(&"get_cards", &"next")
 		if not cards.is_empty():
 			target = _local(cards[0])
@@ -559,7 +564,10 @@ func _fx_burn(e: Dictionary, t: RefCounted, snap: Array) -> void:
 				rects.append(left[found]["rect"])
 				left.remove_at(found)
 			else:
-				var base: Rect2 = rects.back() if not rects.is_empty() else _local(_screen.get_node(^"%StripCards"))
+				var strip_node: Control = _screen.get_node(^"%StripCards")
+				if not strip_node.is_visible_in_tree() and _screen.has_method(&"get_deck_button") and _screen.call(&"get_deck_button") != null:
+					strip_node = _screen.call(&"get_deck_button")  # cz-clarity: next hand tucked away
+				var base: Rect2 = rects.back() if not rects.is_empty() else _local(strip_node)
 				rects.append(Rect2(base.position + Vector2(card_px.x * 0.5 if not rects.is_empty() else 0.0, 0), card_px))
 	else:
 		var panel: Control = _panel(seat)
@@ -937,6 +945,8 @@ func _snapshot_strip() -> void:
 	if _screen == null or not _screen.has_method(&"get_cards"):
 		return
 	_strip_snap.clear()
+	if _screen.has_method(&"is_next_shown") and not bool(_screen.call(&"is_next_shown")):
+		return  # cz-clarity: the next hand is tucked away; burns play on the DECK row instead
 	for c: Control in _screen.call(&"get_cards", &"next"):
 		if c.size.x > 1.0 and c.has_meta(&"card_id"):
 			_strip_snap.append({"card_id": c.get_meta(&"card_id"), "rect": _local(c)})

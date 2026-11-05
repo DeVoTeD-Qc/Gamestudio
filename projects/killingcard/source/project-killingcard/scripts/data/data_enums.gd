@@ -8,7 +8,16 @@ class_name DataEnums
 extends RefCounted
 
 ## What kind of deck card this is (core-rules §5 "Type").
+## EQUIPMENT is shown to players as **Field** (KillingCard, field-cards.md decision F2):
+## a card that stays on your half of a column's objective, gives an effect and is not a
+## unit. The enum key stays EQUIPMENT (stored as an int in .tres); use CARD_TYPE_FIELD /
+## type_label() in new code.
 enum CardType { UNIT, TACTIC, EQUIPMENT }
+
+## Player-facing alias of CardType.EQUIPMENT.
+const CARD_TYPE_FIELD: int = CardType.EQUIPMENT
+## Player-facing names of the card types.
+const CARD_TYPE_LABELS: Dictionary = {CardType.UNIT: "Unit", CardType.TACTIC: "Tactic", CardType.EQUIPMENT: "Field"}
 
 ## Weapon class of a unit or Primary (core-rules §1 range table). NONE = "—".
 enum WeaponClass { NONE, SMG, SHOTGUN, AR, SNIPER, LMG }
@@ -36,7 +45,7 @@ enum Trigger {
 	PASSIVE,            ## Always on while the source is in play / equipped.
 	START_OF_FIREFIGHT, ## Start of each firefight (for duration_rounds firefights).
 	END_OF_ROUND,       ## Score & Streak step.
-	ON_ENEMY_ARRIVE,    ## Equipment trap: next enemy unit to arrive in this zone.
+	ON_ENEMY_ARRIVE,    ## Field trap: next enemy unit to arrive in this zone.
 }
 
 ## What an effect does. The rules engine (p04/p05) implements each kind once.
@@ -61,6 +70,7 @@ enum EffectKind {
 	DESTROY_EQUIPMENT,          ## Destroy amount enemy Equipment card(s) in the zone.
 	SUMMON_UNIT,                ## Place summon_card as a unit.
 	SURVIVE_LETHAL,             ## Target survives lethal damage with amount Armor.
+	HEAL,                       ## Each target regains up to amount lost Armor (never above max).
 }
 
 ## Who an effect hits. CHOSEN_* targets are picked by the player once per play
@@ -79,6 +89,8 @@ enum Target {
 	NEXT_FRIENDLY_ARRIVING,  ## Next friendly unit to arrive in the zone this round.
 	ARRIVING_ENEMY,          ## The enemy unit that set off an ON_ENEMY_ARRIVE trap.
 	ENEMY_EQUIPMENT,
+	FRIENDLY_POINT_MAN,      ## Your frontline unit (index 0 of your line) in the zone; follows the line.
+	MOST_DAMAGED_FRIENDLY,   ## Your unit with the most lost Armor in the zone (ties: front-most); none if unhurt.
 }
 
 ## Which zone(s) an effect looks at.
@@ -101,6 +113,11 @@ enum Condition {
 	YOU_CONTROL_ZONE,
 	YOU_CONTROL_2_PLUS_ZONES,
 }
+
+
+## Player-facing name of a CardType value ("Unit" / "Tactic" / "Field").
+static func type_label(card_type: int) -> String:
+	return String(CARD_TYPE_LABELS.get(card_type, key_of(CardType, card_type)))
 
 
 ## Enum key for a value, for readable validation messages ("ZONE_CONTROL" or "<7?>").

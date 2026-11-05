@@ -65,18 +65,18 @@ static func text(tip: StringName, rules: Dictionary = {}) -> Dictionary:
 	var down: int = int(rules.get("down_value", 1))
 	match tip:
 		&"hold":
-			return {"title": "HOLD", "text": ("Tap up to %d card%s in your hand to HOLD them: they go back on top of your " +
-					"loadout and come round again in your next hand. Everything else goes under. Then END TURN.") % [
+			return {"title": "KEEP CARDS (HOLD)", "text": ("Tap up to %d card%s in your hand to keep them: they stay on top of your " +
+					"deck and start your next hand (a shield card there blocks shots). Everything else goes under your deck. Then END TURN.") % [
 					limit, "" if limit == 1 else "s"]}
 		&"brace":
-			return {"title": "BRACE", "text": "You've been shot. Tap armour cards in your NEXT HAND (the top row): " +
-					"each point of Brace stops 1 Hit. Braced cards go to the bottom of your loadout. Then BRACE."}
+			return {"title": "BLOCK THE SHOT (BRACE)", "text": "You've been shot. Your NEXT HAND is open above your hand: tap cards with a " +
+					"shield to block (each point stops 1 Hit), or USE SUGGESTED. Blocking cards go to the bottom of your deck."}
 		&"down":
 			var who: String = "You are" if bool(rules.get("me_down", false)) else "A player is"
-			return {"title": "DOWN", "text": ("%s DOWN: a Hit sits in the next draw. Every shot at a Down player deals " +
-					"%d less. Patch up or Heal to put Hits back on your health.") % [who, down]}
+			return {"title": "DOWN", "text": ("%s DOWN: a Hit sits in the next hand. Every shot at a Down player deals " +
+					"%d less. PATCH UP or Heal puts Hits back on your health.") % [who, down]}
 		&"adrenaline":
 			var what: String = "MOVE +1" if bool(rules.get("move_only", false)) else "MOVE +1 or SEARCH +1"
 			return {"title": "ADRENALINE", "text": ("A Hit in your hand is a free extra card: tap it and play it for %s. " +
-					"PATCH UP (Search 2) puts a Hit back on your health.") % what}
+					"Or PATCH UP (2 Search) to get the health back.") % what}
 	return {"title": "", "text": ""}

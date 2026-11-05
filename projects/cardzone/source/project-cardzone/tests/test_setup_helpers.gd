@@ -34,6 +34,7 @@ func phone_begin() -> void:
 	await tree.process_frame
 	SetupPrefs.reset_all()
 	SetupPrefs.set_value("settings", "event_speed", "instant")
+	SetupPrefs.set_value("coach", "how_to_play", true)  # cz-clarity: How to play is tested in test_clarity.gd
 	MatchStore.clear()
 	SetupLaunch.clear_pending()
 	SceneRouter.last_requested = ""

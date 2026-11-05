@@ -23,6 +23,7 @@ const PauseMenu: GDScript = preload("res://scripts/ui/pause_menu.gd")
 const PauseSettings: GDScript = preload("res://scripts/ui/pause_settings.gd")
 const END_SCENE: PackedScene = preload("res://scenes/end/EndScreen.tscn")
 const COACH_SCENE: PackedScene = preload("res://scenes/coach/CoachTip.tscn")
+const HowToPlay: GDScript = preload("res://scripts/ui/how_to_play.gd")
 
 var pause_menu: Control
 var end_screen: Control
@@ -62,6 +63,7 @@ func _ready() -> void:
 	pause_menu.resumed.connect(_on_pause_closed)
 	pause_menu.closed.connect(_on_pause_closed)
 	pause_menu.concede_confirmed.connect(_on_concede)
+	pause_menu.how_requested.connect(func() -> void: _screen.call("show_how_to_play"))
 	pause_menu.leave_requested.connect(_to_title)
 	pause_menu.settings_changed.connect(func() -> void: PauseSettings.apply_to_controller(_ctrl))
 
@@ -78,6 +80,8 @@ func begin(ctrl: Node) -> String:
 	start_error = SetupLaunch.begin(ctrl)
 	if start_error != "":
 		_show_error(start_error)
+	elif not HowToPlay.is_seen():
+		_screen.call("show_how_to_play", true)  # cz-clarity: the rules in 7 lines before the first match
 	return start_error
 
 
@@ -102,6 +106,9 @@ func is_paused() -> bool:
 
 
 func _on_pause_closed() -> void:
+	var how: Control = _screen.call("get_how_to_play") if _screen != null else null
+	if how != null and how.is_open():
+		return  # How to play (opened from the pause menu) keeps the match waiting
 	if _ctrl != null and not coach.is_showing():
 		_ctrl.set("paused", false)
 	coach.enabled = true

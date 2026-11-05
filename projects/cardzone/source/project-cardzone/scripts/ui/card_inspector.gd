@@ -15,6 +15,7 @@ extends Control
 signal closed
 
 const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
+const CardWords: GDScript = preload("res://scripts/ui/card_words.gd")
 const BIG_CARD_PT: Vector2 = Vector2(220, 308)
 const TYPE_WORD: Dictionary = {&"weapon": "Weapon", &"item": "Item", &"attachment": "Attachment",
 		&"hit": "Hit card", &"marker": "Shared marker card"}
@@ -123,7 +124,8 @@ func set_safe_margins(lt: Vector2, rb: Vector2) -> void:
 	_margin.add_theme_constant_override(&"margin_bottom", int(rb.y))
 
 
-## c: CardData. context: {where: String (e.g. "In your hand"), hidden: bool, attached: [CardData]}.
+## c: CardData. context: {where: String (e.g. "In your hand"), hidden: bool, attached: [CardData],
+## now: String (cz-clarity: what you can do with it right now, shown first)}.
 func open_card(c: CardData, context: Dictionary = {}) -> void:
 	mode = &"card"
 	card = c
@@ -142,13 +144,25 @@ func open_card(c: CardData, context: Dictionary = {}) -> void:
 		_title.text = c.display_name
 		_subtitle.text = _subtitle_for(c)
 		_stats.text = _stats_for(c)
-		_body.text = c.rules_text
+		# cz-clarity: what the card gives you, in plain words, before the printed card text.
+		var lines: PackedStringArray = []
+		var now: String = String(context.get("now", ""))
+		if now != "":
+			lines.append(now)
+		lines.append("WHAT IT GIVES YOU")
+		lines.append_array(CardWords.gives(c))
 		var att: Array = context.get("attached", [])
 		if not att.is_empty():
 			var names: PackedStringArray = []
 			for a: CardData in att:
-				names.append(a.display_name)
-			_body.text += "\nAttached: %s." % ", ".join(names)
+				names.append("%s (%s)" % [a.display_name, CardWords.short(a).trim_prefix("a gun attachment: ")])
+			lines.append("Attached: %s." % ", ".join(names))
+		if c.rules_text != "":
+			lines.append("Card text: %s" % c.rules_text)
+		var legend: String = CardWords.icon_legend(c)
+		if legend != "":
+			lines.append(legend)
+		_body.text = "\n".join(lines)
 	_where.text = String(context.get("where", ""))
 	_where.visible = _where.text != ""
 	_show()

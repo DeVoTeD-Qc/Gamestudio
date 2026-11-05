@@ -32,7 +32,7 @@ extends Resource
 const _NEEDS_POSITIVE_AMOUNT: Array[int] = [
 	DataEnums.EffectKind.DAMAGE, DataEnums.EffectKind.GRANT_COVER, DataEnums.EffectKind.DRAW,
 	DataEnums.EffectKind.STREAK_BONUS, DataEnums.EffectKind.DESTROY_EQUIPMENT,
-	DataEnums.EffectKind.SURVIVE_LETHAL,
+	DataEnums.EffectKind.SURVIVE_LETHAL, DataEnums.EffectKind.HEAL,
 ]
 const _NEEDS_NONZERO_AMOUNT: Array[int] = [
 	DataEnums.EffectKind.MODIFY_FIREPOWER, DataEnums.EffectKind.MODIFY_ARMOR,

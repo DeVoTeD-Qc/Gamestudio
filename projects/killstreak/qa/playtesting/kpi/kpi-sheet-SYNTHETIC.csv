@@ -1,0 +1,39 @@
+section,kpi,target,result,n,status,note
+kpi,Tutorial completion,≥ 90% of tutorials started,100% (1/1),1,PASS,
+kpi,Time to first win (Shooter segment),≤ 10:00 of play,10:35,1,MISS,includes tutorial; 'both' counted as Shooter
+kpi,Session length,(no bar),"median 22:02, total 85:36",4,INFO,
+kpi,Matches per finished run,(no bar; a full run is 5),"median 5.0 (runs: 5, 4, 5)",3,INFO,"runs started 4, finished 3"
+kpi,Turn (round) time,(no bar),"median 0:57, slowest 1:30",61,INFO,round_end to round_end; round 1 includes the mulligan
+kpi,Median match duration,3:00–5:00,3:50,16,PASS,
+kpi,Matches with ≥ 1 killstreak used,≥ 80%,81% (13/16),16,PASS,
+kpi,Matches with the Operator down ≥ once,40–70%,56% (9/16),16,PASS,
+kpi,"Win rate vs AI, bracket 1",~75% (±15),75% (6W 1L 1D),8,ON TARGET,
+kpi,"Win rate vs AI, bracket 2",~55% (±15),33% (2W 4L 0D),6,TOO HARD,
+kpi,"Win rate vs AI, rival",~40% (±15),100% (2W 0L 0D),2,TOO EASY,
+kpi,One more match (next within 60 s),≥ 60%,69% (9/13),13,PASS,"clock starts at match_end, so it includes the After-Action and reward screens"
+kpi,Supply Drop pick-rate spread,no card > 60% or < 5%,1 of 2 cards outside: point_man 0%,24 offers,MISS,only cards offered ≥ 3 times are judged; 0 offers skipped
+kpi,Median unspent Supply per round,≤ 1,0,61,PASS,
+kpi,Survey Q1 (Shooter segment),average ≥ 4,4.0,3,PASS,It felt like a modern shooter match.
+kpi,Survey Q2 (Shooter segment),average ≥ 4,3.3,3,MISS,I understood why I won or lost firefights.
+kpi,Survey Q3 (Card segment),average ≥ 4,4.0,3,PASS,I had interesting choices each round.
+kpi,Survey Q5 (all segment),average ≥ 4,4.0,3,PASS,I want to play another run.
+kpi,Survey Q4 (all),(no bar),5.0,2,INFO,Killstreaks felt exciting.
+
+section,session,match,bracket,mode,result,rounds,duration_s,killstreaks_used,operator_downs
+match,86fe8f5f3985,0,bracket 1,zone_control,win,4.0,210.3,1.0,1.0
+match,86fe8f5f3985,1,bracket 1,zone_control,win,4.0,216.0,1.0,0
+match,86fe8f5f3985,2,bracket 2,firefight,loss,4.0,248.5,0,2.0
+match,86fe8f5f3985,3,bracket 2,firefight,win,3.0,175.8,1.0,0
+match,86fe8f5f3985,4,rival,zone_control,win,5.0,277.6,1.0,1.0
+match,84c85c661b4b,0,bracket 1,zone_control,loss,4.0,318.6,0,2.0
+match,84c85c661b4b,1,bracket 1,zone_control,win,4.0,237.0,1.0,0
+match,84c85c661b4b,2,bracket 2,firefight,loss,4.0,266.9,0,1.0
+match,84c85c661b4b,3,bracket 2,firefight,loss,4.0,247.3,1.0,2.0
+match,2e24ad70db38,0,bracket 1,zone_control,win,3.0,147.1,1.0,0
+match,2e24ad70db38,1,bracket 1,zone_control,draw,5.0,255.0,1.0,1.0
+match,2e24ad70db38,2,bracket 2,zone_control,unfinished,,,,
+match,75df7422891b,0,bracket 1,zone_control,win,3.0,132.4,1.0,0
+match,75df7422891b,1,bracket 1,zone_control,win,3.0,147.1,1.0,0
+match,75df7422891b,2,bracket 2,firefight,win,3.0,127.3,1.0,1.0
+match,75df7422891b,3,bracket 2,firefight,loss,4.0,247.5,1.0,1.0
+match,75df7422891b,4,rival,zone_control,win,4.0,222.0,1.0,0

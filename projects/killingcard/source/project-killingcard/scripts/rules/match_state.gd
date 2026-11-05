@@ -365,10 +365,14 @@ func _check_card(side: int, intent: Dictionary) -> Dictionary:
 				return _fail("pick a zone", &"no_zone")
 			if projected_occupancy(side, zone) >= config.zone_capacity:
 				return _zone_full(zone)
-		DataEnums.CardType.EQUIPMENT:
+		DataEnums.CardType.EQUIPMENT:  # a Field
 			kind = &"equipment"
 			if not is_zone(zone):
 				return _fail("pick a zone", &"no_zone")
+			# One visible Field per side per column: a new one replaces the standing one at
+			# Reveal, but two in the same column in one Deploy would just waste the first.
+			if card.is_visible_field() and _field_planned(side, zone):
+				return _fail("you already play a Field in this column", &"field_already_planned", {"zone": zone})
 		DataEnums.CardType.TACTIC:
 			kind = &"tactic"
 	var play: Dictionary = _draft_play(kind, zone, intent)
@@ -743,6 +747,8 @@ func _reveal_tactic(si: int, play: Dictionary) -> void:
 	emit_event(RulesEvent.CARD_DISCARDED, {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id})
 
 
+## Places a Field (CardType.EQUIPMENT). A visible Field replaces the side's standing visible
+## Field in that column (one per side per column, field-cards.md F1); hidden traps don't count.
 func _reveal_equipment(si: int, play: Dictionary) -> void:
 	var rc: RulesCard = play["card"]
 	var zone: int = play["zone"]
@@ -750,6 +756,10 @@ func _reveal_equipment(si: int, play: Dictionary) -> void:
 	if rc.card.hidden:
 		fields["private_to"] = side_name(si)
 	emit_event(RulesEvent.CARD_REVEALED, fields)
+	if rc.card.is_visible_field():
+		for entry: Dictionary in sides[si].equipment[zone].duplicate():
+			if (entry["card"] as RulesCard).card.is_visible_field():
+				remove_field(si, zone, entry, RulesEvent.FIELD_GONE_REPLACED)
 	sides[si].equipment[zone].append({"card": rc, "round": round_number})
 	emit_event(RulesEvent.EQUIPMENT_PLACED, fields)
 	var ctx: Dictionary = make_ctx(si, SRC_EQUIPMENT, rc.card.id, rc.uid, zone, play["target_uid"], play["dest_zone"])
@@ -821,6 +831,7 @@ func score() -> void:
 			var pctx: Dictionary = make_ctx(si, SRC_PERK, perk.id, -1, NO_ZONE, -1, -1)
 			EffectResolver.resolve_triggered(self, perk.effects, DataEnums.Trigger.END_OF_ROUND, pctx)
 	process_eliminations()
+	_overrun()
 	for si: int in side_order():
 		hooks.apply_streak(self, si)
 	hooks.score_round(self, control)
@@ -840,6 +851,29 @@ func score() -> void:
 		var details: Dictionary = hooks.match_end_details(self)
 		details["result"] = outcome
 		emit_event(RulesEvent.MATCH_ENDED, details)
+
+
+## Overrun (field-cards.md F1): after the END_OF_ROUND effects, each visible Field standing
+## in a column the enemy controls (control as it is now, after those effects) is torn down
+## to its owner's discard. Hidden traps are exempt.
+func _overrun() -> void:
+	for si: int in side_order():
+		for z: int in ZONE_COUNT:
+			if control_of(z) != 1 - si:
+				continue
+			for entry: Dictionary in sides[si].equipment[z].duplicate():
+				if (entry["card"] as RulesCard).card.is_visible_field():
+					remove_field(si, z, entry, RulesEvent.FIELD_GONE_OVERRUN)
+
+
+## Takes one Field entry ({card, round}) off the board into its owner's discard.
+func remove_field(si: int, zone: int, entry: Dictionary, reason: StringName) -> void:
+	var s: RulesSide = sides[si]
+	s.equipment[zone].erase(entry)
+	var rc: RulesCard = entry["card"]
+	s.discard.append(rc)
+	emit_event(RulesEvent.EQUIPMENT_DESTROYED, {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id,
+			"zone": zone_name(zone), "reason": reason})
 
 
 ## Removes every unit at 0 Armor (initiative side first, zone and line order),
@@ -1078,7 +1112,8 @@ func is_untargetable_by_pick_flank(u: RulesUnit) -> bool:
 
 
 ## Sum of PASSIVE effects of `kind` that apply to u: effects of units on the board
-## (auras like Anvil's), of the Operator's loadout, and of the side's perks.
+## (auras like Anvil's), of the Operator's loadout, of the side's perks, and of the Fields
+## standing in u's column (Bulwark, War Standard, Sniper Perch; either side's).
 func passive_total(u: RulesUnit, kind: int) -> int:
 	var total: int = 0
 	for entry: Array in _passives_for(u, kind):
@@ -1102,6 +1137,11 @@ func _passives_for(u: RulesUnit, kind: int) -> Array:
 					continue
 				if EffectResolver.passive_applies(self, e, friendly, src, u, src.zone):
 					out.append([e, EffectResolver.amount_for(self, e, u.side, u.zone)])
+		for entry: Dictionary in s.equipment[u.zone]:
+			for e: EffectData in (entry["card"] as RulesCard).card.effects:
+				if e != null and e.trigger == DataEnums.Trigger.PASSIVE and e.kind == kind \
+						and EffectResolver.field_passive_applies(self, e, s.index, u.zone, u):
+					out.append([e, EffectResolver.amount_for(self, e, s.index, u.zone)])
 		if friendly:
 			for perk: LoadoutItem in s.setup.perks:
 				for e: EffectData in perk.effects:
@@ -1109,6 +1149,76 @@ func _passives_for(u: RulesUnit, kind: int) -> Array:
 							and EffectResolver.passive_applies(self, e, true, null, u, NO_ZONE):
 						out.append([e, EffectResolver.amount_for(self, e, u.side, u.zone)])
 	return out
+
+
+## Field-aura part of passive_total (the AI's records leave it out and re-apply it to
+## whoever is at the front in its estimate).
+func field_passive_total(u: RulesUnit, kind: int) -> int:
+	var total: int = 0
+	if u.zone < 0:
+		return total
+	for s: RulesSide in sides:
+		for entry: Dictionary in s.equipment[u.zone]:
+			for e: EffectData in (entry["card"] as RulesCard).card.effects:
+				if e != null and e.trigger == DataEnums.Trigger.PASSIVE and e.kind == kind \
+						and EffectResolver.field_passive_applies(self, e, s.index, u.zone, u):
+					total += EffectResolver.amount_for(self, e, s.index, u.zone)
+	return total
+
+
+# =============================================================================
+# Fields (CardType.EQUIPMENT; kc-field-impl)
+# =============================================================================
+
+## Field entries ({card: RulesCard, round: int}) of `side` in `zone`, placement order.
+## include_hidden = false leaves out traps (what the other side may see).
+func fields_in(side: int, zone: int, include_hidden: bool = true) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not is_zone(zone):
+		return out
+	for entry: Dictionary in sides[side].equipment[zone]:
+		if include_hidden or not (entry["card"] as RulesCard).card.hidden:
+			out.append(entry)
+	return out
+
+
+## The visible Field `side` has standing in `zone` (at most one), or null.
+func visible_field(side: int, zone: int) -> RulesCard:
+	for entry: Dictionary in sides[side].equipment[zone]:
+		var rc: RulesCard = entry["card"]
+		if rc.card.is_visible_field():
+			return rc
+	return null
+
+
+## UI hook for the vertical column board (kc-board): per column, what `viewer` may see of
+## both sides' Fields. [{zone: &"left", player: [entry...], enemy: [entry...]}, ...] where an
+## entry is {card_uid, card_id, name, text, hidden, placed_round, overrun_risk}. The viewer's
+## own hidden traps are listed (hidden = true, draw them dashed); the other side's are not.
+## overrun_risk = the other side controls the column right now (the Field falls at the end
+## of this round's Score step if that still holds), false for traps.
+func field_view(viewer: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for z: int in ZONE_COUNT:
+		var row: Dictionary = {"zone": zone_name(z)}
+		var control: int = control_of(z)
+		for si: int in 2:
+			var list: Array[Dictionary] = []
+			for entry: Dictionary in fields_in(si, z, si == viewer):
+				var rc: RulesCard = entry["card"]
+				list.append({"card_uid": rc.uid, "card_id": rc.card.id, "name": rc.card.display_name,
+						"text": rc.card.text, "hidden": rc.card.hidden, "placed_round": int(entry["round"]),
+						"overrun_risk": rc.card.is_visible_field() and control == 1 - si})
+			row[side_name(si)] = list
+		out.append(row)
+	return out
+
+
+func _field_planned(side: int, zone: int) -> bool:
+	for p: Dictionary in sides[side].plays:
+		if p["kind"] == &"equipment" and int(p["zone"]) == zone and (p["card"] as RulesCard).card.is_visible_field():
+			return true
+	return false
 
 
 ## PLAYER / ENEMY, CONTROL_CONTESTED or CONTROL_EMPTY (core-rules §2.5, Holder, Ruling 5).

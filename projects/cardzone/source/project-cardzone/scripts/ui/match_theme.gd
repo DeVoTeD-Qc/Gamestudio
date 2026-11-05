@@ -49,6 +49,7 @@ const USED: Dictionary = {
 	# cz11: action dock, map-corner buttons, pools tag, toast.
 	&"DockButton": &"Button", &"DockButtonOff": &"Button", &"CornerButton": &"Button",
 	&"DockPanel": &"PanelContainer", &"ToastPanel": &"PanelContainer", &"PoolTag": &"Label", &"ToastText": &"Label",
+	&"TurnPanel": &"PanelContainer", &"PhaseTitle": &"Label", &"FeedNew": &"Label", &"FeedOld": &"Label", &"DeckButton": &"Button",
 }
 
 
@@ -64,7 +65,7 @@ static func build() -> Theme:
 	# Buttons: hover == normal (no hover-only information); a visible focus ring for keys/pads.
 	var focus: StyleBoxFlat = _box(Color(0, 0, 0, 0), ZONE_EDGE, 3, 6)
 	focus.draw_center = false
-	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton", &"LineChip", &"DockButton", &"DockButtonOff", &"CornerButton"]:
+	for v: StringName in [&"Button", &"TopButton", &"InfoPanelButton", &"LineChip", &"DockButton", &"DockButtonOff", &"CornerButton", &"DeckButton"]:
 		var normal: StyleBoxFlat = _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 10)
 		var pressed: StyleBoxFlat = _box(ZONE_VIOLET, ZONE_EDGE, 2, 6, 10)
 		var disabled: StyleBoxFlat = _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.35), 2, 6, 10)
@@ -82,6 +83,10 @@ static func build() -> Theme:
 		if v == &"LineChip":
 			normal = _box(PAPER, INK, 2, 4, 8, 4)
 			pressed = _box(BRACE_STEEL, INK, 2, 4, 8, 4)
+		if v == &"DeckButton":
+			# cz-clarity: the deck pile row (tap to peek at the next hand): a quiet plate.
+			normal = _box(ZONE_VIOLET, Color(ZONE_EDGE, 0.55), 2, 6, 10, 4)
+			pressed = _box(ZONE_DUSK, ZONE_EDGE, 2, 6, 10, 4)
 		if v == &"InfoPanelButton":
 			normal = _box(ZONE_DUSK, Color(ZONE_EDGE, 0.55), 2, 6, 8)
 			pressed = _box(ZONE_VIOLET, ZONE_EDGE, 2, 6, 8)
@@ -127,6 +132,11 @@ static func build() -> Theme:
 	_label(t, &"TagChipGas", INK, FONT_BODY, _box(GAS_LIME, INK, 1, 3, 5, 0))
 	_label(t, &"PoolTag", PAPER, FONT_BODY, _box(Color(ZONE_VIOLET, 0.92), Color(ZONE_EDGE, 0.6), 1, 4, 2, 2))
 	_label(t, &"ToastText", INK, FONT_BODY)
+	# cz-clarity: the turn panel (what to do now + what just happened).
+	_panel(t, &"TurnPanel", _box(Color(ZONE_VIOLET, 0.6), Color(ZONE_EDGE, 0.35), 1, 6, 10, 6))
+	_label(t, &"PhaseTitle", PAPER, FONT_TITLE - 4)
+	_label(t, &"FeedNew", PAPER, FONT_BODY)
+	_label(t, &"FeedOld", Color(PAPER, 0.62), FONT_BODY)
 	return t
 
 
