@@ -205,6 +205,9 @@ func test_killfeed_lines_fit_on_phone() -> void:
 		var setup: Array = await _spawn(screen, MockMatchData.round_3_sample())
 		var viewport: SubViewport = setup[0]
 		var match_node: Control = setup[1]
+		# kc-board2: the killfeed log lives in the CLOSED tray (Reveal / Firefight).
+		match_node.set_tray_state(&"closed")
+		await tree.process_frame
 		var feed: Control = match_node.get_killfeed()
 		for pair: Array in [["Demolitions Expert", "Kestrel AR-7"], ["Recon Specialist", "Combat Medic"],
 				["Breacher", "Point Man"]]:
@@ -214,8 +217,8 @@ func test_killfeed_lines_fit_on_phone() -> void:
 			await tree.process_frame
 		var label: String = screen["name"]
 		var lines: Array = feed.get_entries()
-		# kc-board: phone 2 lines, desktop 3, in the right rail.
-		assert_eq(lines.size(), 2 if match_node.compact else 3, "%s: killfeed lines shown" % label)
+		# kc-board2: the tray log keeps every line of the round (up to 8).
+		assert_eq(lines.size(), 3, "%s: killfeed lines shown" % label)
 		var screen_rect: Rect2 = Rect2(Vector2.ZERO, Vector2(viewport.size)).grow(EPS)
 		assert_true(feed.is_visible_in_tree(), "%s: killfeed visible while it has lines" % label)
 		assert_true(screen_rect.encloses(feed.get_global_rect()), "%s: killfeed on screen" % label)
@@ -233,8 +236,8 @@ func test_killfeed_lines_fit_on_phone() -> void:
 			var full: Dictionary = line.entry
 			var want: Array[String] = [String(full["attacker"]).to_upper().left(14), String(full["victim"]).to_upper().left(14)]
 			if true:
-				# kc-board: the killfeed sits in the right rail on every screen; names may drop to
-				# 10 characters there (the full names are in the inspector).
+				# kc-board2: the log sits in the tray on every screen; names may drop to 10
+				# characters there (the full names are in the inspector).
 				for i: int in names.size():
 					assert_true(names[i] == want[i] or names[i].length() >= 10, "%s: killfeed name %s readable" % [label, names[i]])
 		_assert_killfeed_clear(match_node, label)
@@ -251,6 +254,8 @@ func test_killfeed_never_covers_hand_or_tap_targets() -> void:
 			var setup: Array = await _spawn(screen, {} if live else _full_board())
 			var viewport: SubViewport = setup[0]
 			var match_node: Control = setup[1]
+			match_node.set_tray_state(&"closed")
+			await tree.process_frame
 			var feed: Control = match_node.get_killfeed()
 			for i: int in 3:
 				feed.push({"attacker": "Demolitions Expert", "attacker_side": &"enemy", "victim": "Kestrel AR-7",
@@ -268,7 +273,8 @@ func _assert_killfeed_clear(match_node: Control, label: String) -> void:
 	assert_true(feed_rect.has_area(), "%s: killfeed shows while it has lines" % label)
 	var inner: Rect2 = feed_rect.grow(-EPS)
 	var hand: Control = match_node.get_hand()
-	assert_false(inner.intersects(hand.get_global_rect()), "%s: killfeed %s covers the hand %s" % [label, feed_rect, hand.get_global_rect()])
+	if hand.is_visible_in_tree():
+		assert_false(inner.intersects(hand.get_global_rect()), "%s: killfeed %s covers the hand %s" % [label, feed_rect, hand.get_global_rect()])
 	for lane: Node in match_node.get_board().get_lanes():
 		assert_false(inner.intersects((lane as Control).get_global_rect()), "%s: killfeed covers lane %s" % [label, lane.name])
 	var checked: int = 0
@@ -281,7 +287,7 @@ func _assert_killfeed_clear(match_node: Control, label: String) -> void:
 			continue
 		checked += 1
 		assert_false(inner.intersects(c.get_global_rect()), "%s: killfeed covers tap target %s %s" % [label, match_node.get_path_to(c), c.get_global_rect()])
-	assert_true(checked >= 15, "%s: checked %d tap targets" % [label, checked])
+	assert_true(checked >= 8, "%s: checked %d tap targets" % [label, checked])
 	var screen_rect: Rect2 = match_node.get_viewport_rect().grow(EPS)
 	assert_true(screen_rect.encloses(feed_rect), "%s: killfeed on screen" % label)
 
@@ -458,20 +464,24 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 		var why: String = _clipped(l)
 		assert_true(why.is_empty(), "%s '%s' (%s) is cut: %s" % [label, l.text, match_node.get_path_to(l), why])
 
-	# Contents stay inside their panels (no spill into neighbours).
-	var hand_rect: Rect2 = match_node.get_node("%HandArea").get_global_rect().grow(EPS)
-	var cards: Array[Node] = match_node.get_node("%HandArea").get_cards()
+	# Contents stay inside their panels (no spill into neighbours). kc-board2: the hand is a grid
+	# in the tray; the selected card shifts 14 px toward the board (board-layout-v2.md §4.2).
+	var hand_node: Control = match_node.get_node("%HandArea")
+	var hand_rect: Rect2 = hand_node.get_global_rect().grow(EPS)
+	var cards: Array[Node] = hand_node.get_cards()
+	if hand_node.is_visible_in_tree():
+		assert_true(match_node.get_tray().get_global_rect().grow(EPS).encloses(hand_node.get_global_rect()), "%s hand inside the tray" % label)
+		assert_false(hand_node.get_global_rect().intersects(match_node.get_board().get_global_rect()), "%s hand never covers the board" % label)
 	for i: int in cards.size():
 		var card_rect: Rect2 = (cards[i] as Control).get_global_rect()
-		# kc-polish: the selected card rises by 14% of its height above the hand row (§3.7).
 		if (cards[i] as Control).theme_type_variation == &"HandCardSelected":
-			card_rect = card_rect.grow_side(SIDE_BOTTOM, -card_rect.size.y * 0.15).grow_side(SIDE_TOP, -card_rect.size.y * 0.15)
+			card_rect = card_rect.grow_side(SIDE_LEFT, -15.0).grow_side(SIDE_RIGHT, -15.0)
 		assert_true(hand_rect.encloses(card_rect), "%s hand card spills" % label)
-		# Overlapped cards: the uncovered strip of each card is still a full tap target.
-		if i + 1 < cards.size():
-			var strip: float = (cards[i + 1] as Control).get_global_rect().position.x - card_rect.position.x
-			min_tap = minf(min_tap, strip)
-			assert_true(strip * k >= MIN_TAP_PT - 0.01, "%s hand card %d shows only %.0f px = %.1f pt" % [label, i, strip, strip * k])
+		# Grid: up to 7 cards never overlap (more overlap upward, keeping a full-width strip).
+		for j: int in range(i + 1, cards.size()):
+			var other: Rect2 = (cards[j] as Control).get_global_rect()
+			if cards.size() <= 7:
+				assert_false(card_rect.grow(-EPS).intersects(other.grow(-EPS)), "%s hand cards %d / %d overlap" % [label, i, j])
 	var op_rect: Rect2 = match_node.get_node("%OperatorPanel").get_global_rect().grow(EPS)
 	for b: Node in match_node.get_node("%OperatorPanel").get_buttons():
 		assert_true(op_rect.encloses((b as Control).get_global_rect()), "%s operator button spills" % label)

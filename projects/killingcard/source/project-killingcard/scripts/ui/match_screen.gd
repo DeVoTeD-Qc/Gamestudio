@@ -380,9 +380,7 @@ func _update_profile() -> void:
 	_mulligan.set_compact(compact)
 	_end_banner.set_compact(compact)
 	_pause_menu.set_compact(compact)
-	_supply_pips.add_theme_constant_override(&"separation", 3 if compact else 4)
-	for pip: Node in _supply_pips.get_children():
-		(pip as Control).custom_minimum_size = _pip_size()
+	_supply_pips.add_theme_constant_override(&"separation", 3)
 	_apply_safe_area()
 	_layout_regions.call_deferred()
 
@@ -443,6 +441,7 @@ func _layout_tray() -> void:
 	var h: float = _tray.size.y
 	var btn_h: float = metrics["btn_h"]
 	var tab_h: float = metrics["tab_h"]
+	_fit_pips()
 	_place(_supply_box, Rect2(0, 0, w, metrics["supply_h"]))
 	var grid: Rect2 = metrics["grid"]
 	_place(_hand, grid)
@@ -804,9 +803,12 @@ func get_killfeed_rect() -> Rect2:
 	return _killfeed_fx.get_global_rect()
 
 
-## Supply pips: narrower on the phone so a 10-Supply bar fits the tray's Supply row.
+## Supply pips: as wide as the tray's Supply row allows for the current Supply (6..14 px).
 func _pip_size() -> Vector2:
-	return Vector2(12, 18) if compact else Vector2(14, 20)
+	var n: int = maxi(1, _supply_pips.get_child_count())
+	var room: float = (_tray.size.x if _tray != null and _tray.size.x > 0.0 else 300.0) - 150.0
+	var w: float = clampf(floorf(room / n) - 3.0, 6.0, 14.0)
+	return Vector2(w, 18 if compact else 20)
 
 
 func _set_supply(supply: int, supply_max: int) -> void:
@@ -817,9 +819,14 @@ func _set_supply(supply: int, supply_max: int) -> void:
 	for i: int in supply_max:
 		var pip: Panel = Panel.new()
 		pip.theme_type_variation = &"SupplyPip" if i < supply else &"SupplyPipSpent"
-		pip.custom_minimum_size = _pip_size()
 		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_supply_pips.add_child(pip)
+	_fit_pips()
+
+
+func _fit_pips() -> void:
+	for pip: Node in _supply_pips.get_children():
+		(pip as Control).custom_minimum_size = _pip_size()
 
 
 ## Keeps the HUD clear of phone notches / home indicator (Xogot on iPhone, mobile web).
