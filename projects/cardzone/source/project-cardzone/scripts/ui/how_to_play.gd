@@ -170,8 +170,9 @@ func has_image() -> bool:
 
 func _fit() -> void:
 	var avail: Vector2 = get_viewport_rect().size if is_inside_tree() else Vector2(1168, 540)
-	var w: float = minf(1180.0, avail.x - 40.0)
-	var h: float = minf(640.0, avail.y - 32.0)
+	# Clear of notches and the home bar (landscape phones inset ~47 pt at the sides, ~21 pt below).
+	var w: float = minf(1180.0, avail.x - 150.0)
+	var h: float = minf(640.0, avail.y - 64.0)
 	_panel.custom_minimum_size = Vector2(w, h)
 	var inner_h: float = h - 24.0 - _title.get_combined_minimum_size().y - 64.0 - 24.0
 	if _image.texture != null:

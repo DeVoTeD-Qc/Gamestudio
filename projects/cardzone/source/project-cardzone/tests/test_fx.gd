@@ -311,6 +311,9 @@ func test_reduced_motion_draws_in_place() -> void:
 	settings.reduced_motion = true
 	var m: Control = await _spawn(_walk_fixture(), Walker.new())
 	var fx: CzMatchFx = _fx(m)
+	m.peek_next = true  # cz-clarity: next hand open, so the Hit lands on the strip
+	m.show_state(m.get_state())
+	await _frames(2)
 	var safe: Control = m.get_node("%SafeArea")
 	var origin: Vector2 = safe.position
 	var bus: Node = tree.root.get_node("EventBus")

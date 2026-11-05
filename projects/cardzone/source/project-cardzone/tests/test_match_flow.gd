@@ -343,7 +343,7 @@ func test_rival_turn_taps_explain_and_events_are_paced() -> void:
 	await _touch_dock(m, &"end_turn")
 	assert_true(ctrl.busy, "events play out over time with a delay")
 	assert_eq(ctrl.phase, &"opponent", "rival's turn")
-	await _touch_card(m, &"next", 0)
+	await _touch(m.get_area_touch(&"docks"))  # cz-clarity: the next hand is tucked away; tap the map
 	assert_true("rival's turn" in m.last_notice, "tap during the rival's turn explained: '%s'" % m.last_notice)
 	await _touch(m.get_corner_buttons()[&"undo"])
 	assert_true(m.last_notice != "", "undo during the rival's turn explained: '%s'" % m.last_notice)

@@ -18,6 +18,8 @@ var _bounty: Label
 var _health: Label
 var _health_max: Label
 var _down: Label
+## cz-clarity: "0/5 HP" while still playing read as a bug; at 0 health the next Hit puts you out.
+var _last: Label
 var _loadout: Label
 var _held_label: Label
 var _margin: MarginContainer
@@ -26,6 +28,8 @@ var base_width: float = 150.0
 ## cz-clarity: the rival's deck and kept-card counts moved behind inspect in a live match (they are
 ## in the panel's long-press sheet); the cz10 mock layout still shows them.
 var show_counts: bool = true
+## Live match (MatchScreen): enables the NEXT HIT = OUT tag.
+var live_mode: bool = false
 
 
 func _init() -> void:
@@ -57,6 +61,8 @@ func _init() -> void:
 	_health_max = _label(row2, &"Caption")
 	_down = _label(row2, &"TagDown")
 	_down.text = "DOWN +1"
+	_last = _label(row2, &"TagDown")
+	_last.text = "NEXT HIT = OUT"
 	_loadout = _label(row2, &"Caption")
 	_held_label = _label(row2, &"Caption")
 
@@ -69,6 +75,7 @@ func setup(which: StringName, d: Dictionary) -> void:
 	_health.text = str(int(d.get("health", 0)))
 	_health_max.text = "/%d HP" % int(d.get("max_health", 5))
 	_down.visible = d.get("down", false)
+	_last.visible = int(d.get("health", 0)) <= 0 and not bool(d.get("eliminated", false)) and live_mode
 	var rival: bool = which == &"rival"
 	_loadout.visible = rival and show_counts
 	_held_label.visible = rival and show_counts
@@ -89,7 +96,7 @@ func get_health_label() -> Label:
 
 
 func get_labels() -> Array[Label]:
-	return [_name, _bounty, _health, _health_max, _down, _loadout, _held_label]
+	return [_name, _bounty, _health, _health_max, _down, _last, _loadout, _held_label]
 
 
 func is_down_shown() -> bool:

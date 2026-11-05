@@ -234,6 +234,37 @@ static func comms_relay() -> CardData:
 		eff(TR.END_OF_ROUND, K.STREAK_BONUS, T.OWNER, Z.THIS_ZONE, 1,
 			{"condition": DataEnums.Condition.YOU_CONTROL_ZONE})])
 
+# --- Fields (KillingCard field-cards.md §4; CardType.EQUIPMENT) ----------------------------
+
+static func listening_post() -> CardData:
+	return equipment("listening_post", 1, [
+		eff(TR.END_OF_ROUND, K.REVEAL_RED_DOTS, T.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
+
+static func mortar_pit() -> CardData:
+	return equipment("mortar_pit", 3, [eff(TR.END_OF_ROUND, K.DAMAGE, T.ENEMY_POINT_MAN, Z.THIS_ZONE, 1)])
+
+static func bulwark() -> CardData:
+	return equipment("bulwark", 3, [eff(TR.PASSIVE, K.GRANT_COVER, T.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
+
+static func war_standard() -> CardData:
+	return equipment("war_standard", 3, [eff(TR.PASSIVE, K.MODIFY_FIREPOWER, T.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
+
+static func sniper_perch() -> CardData:
+	return equipment("sniper_perch", 2, [
+		eff(TR.PASSIVE, K.MODIFY_FIREPOWER, T.ALL_FRIENDLIES, Z.THIS_ZONE, 1, {"target_class": W.SNIPER})])
+
+static func aid_station() -> CardData:
+	return equipment("aid_station", 2, [eff(TR.END_OF_ROUND, K.HEAL, T.MOST_DAMAGED_FRIENDLY, Z.THIS_ZONE, 1)])
+
+static func sabotage() -> CardData:
+	return tactic("sabotage", 2, [eff(TR.ON_PLAY, K.DESTROY_EQUIPMENT, T.ENEMY_EQUIPMENT, Z.CHOSEN_ZONE, 1)])
+
+## Puts a Field straight onto the board (as if revealed in an earlier round).
+static func place_field(m: MatchState, side: int, card: CardData, zone: int, placed_round: int = 0) -> RulesCard:
+	var rc: RulesCard = RulesCard.new(m.new_uid(), card)
+	m.sides[side].equipment[zone].append({"card": rc, "round": placed_round})
+	return rc
+
 static func sentry() -> CardData:
 	return unit("sentry", 2, 4, W.NONE, {"cover": 1, "collectible": false,
 		"counts_for_control": false, "grants_elimination_credit": false})

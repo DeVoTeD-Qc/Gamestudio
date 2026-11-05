@@ -421,6 +421,8 @@ func _render() -> void:
 	_selected = null
 	var you: Dictionary = _state["you"]
 	var rival: Dictionary = _state["rival"]
+	_you.live_mode = live
+	_rival.live_mode = live
 	_you.setup(&"you", you)
 	_rival.show_counts = not live
 	_rival.setup(&"rival", rival)
@@ -635,7 +637,8 @@ func _relayout() -> void:
 	var rows: int = _line_rows()
 	_line_scroll.custom_minimum_size = Vector2(map_w, rows * _chip_h() + (rows - 1) * _sep)
 	var art: Vector2 = CzArtKit.compact_px(points_per_px).ceil()
-	var header_h: float = _strip_header.get_combined_minimum_size().y
+	# cz-clarity: the DECK row (a 44 pt tap target) takes the strip header's place in a live match.
+	var header_h: float = maxf(_strip_header.get_combined_minimum_size().y, tap)
 	# Height: two rows plus the header and the HOLD tag room (10 pt of a card of height h).
 	var fit_h: float = floorf((body_h - header_h - 2.0 * _sep) / (2.0 + HOLD_TAG_PT / CzArtKit.COMPACT_PT.y))
 	# Width: the right column must hold a full hand fanned at the minimum exposed strip.
@@ -649,6 +652,8 @@ func _relayout() -> void:
 		row.gap = 8.0
 		row.min_step = tap
 	_strip.custom_minimum_size.y = card_px.y + hold_room
+	if _deck_button != null:
+		_deck_button.custom_minimum_size = Vector2(0, tap)
 	for b: Button in [_undo_button, _end_button, _log_button]:
 		b.custom_minimum_size = Vector2(tap, tap)
 	_render()
@@ -854,6 +859,8 @@ func _build_clarity() -> void:
 	_phase_text.theme_type_variation = &"Caption"
 	_phase_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_phase_text.max_lines_visible = 2
+	_phase_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_phase_text.custom_minimum_size = Vector2(80, 44)  # two lines; an autowrap label has no height of its own
 	_phase_text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	col.add_child(_phase_text)
 	_feed = VBoxContainer.new()
@@ -967,7 +974,6 @@ func _refresh_feed() -> void:
 	var labels: Array[Node] = _feed.get_children()
 	for i: int in labels.size():
 		(labels[i] as Label).text = feed_lines[i] if i < feed_lines.size() else ""
-		(labels[i] as Label).tooltip_text = (labels[i] as Label).text
 
 
 ## The deck row and the turn panel for the current mode (live only).
@@ -979,7 +985,7 @@ func _refresh_clarity() -> void:
 	var was_strip: bool = _strip.visible
 	_strip.visible = shown
 	_strip_header.visible = shown and not live
-	_deck_button.visible = live and _state.has("you")
+	_deck_button.visible = live and _state.has("you") and mode != &"brace"  # the Brace panel says it all then
 	_turn_panel.visible = live and not shown and mode != &"cover"
 	_hand.size_flags_vertical = Control.SIZE_SHRINK_END if _turn_panel.visible else Control.SIZE_EXPAND_FILL
 	if (was != _turn_panel.visible or was_strip != _strip.visible) and is_inside_tree():
@@ -1128,6 +1134,9 @@ func _place_overlays() -> void:
 			s = Vector2(area.size.x - 4.0, minf(area.size.y - 8.0, side))
 		c.size = s
 		c.position = (area.get_center() - s * 0.5).floor()
+		if c == _pools and _pools_button != null:
+			_pools_button.size = s  # cz-clarity: the touch layer under MOVE / SEARCH
+			_pools_button.position = c.position
 	# Dock: from the line header to the bottom of the left column.
 	var top_left: Vector2 = _line_header.global_position - global_position
 	var bottom: float = (_left.global_position.y - global_position.y) + _left.size.y
@@ -2116,7 +2125,9 @@ func inspect_zone() -> void:
 func inspect_player(which: StringName) -> void:
 	var d: Dictionary = _state.get(String(which), {})
 	var lines: PackedStringArray = []
-	lines.append("Health %d of %d. Each Hit moves one card from the health stack to the top of the loadout." % [int(d.get("health", 0)), int(d.get("max_health", 5))])
+	lines.append("Health %d of %d. Each Hit takes 1 health and puts a Hit card on top of the deck." % [int(d.get("health", 0)), int(d.get("max_health", 5))])
+	if int(d.get("health", 0)) <= 0:
+		lines.append("At 0 health the next Hit puts this player out. PATCH UP (2 Search) or a Heal card gives health back from Hits in hand or played row.")
 	lines.append("DOWN: a Hit sits in the next hand, so every shot at them deals 1 less." if d.get("down", false) else "Not Down.")
 	lines.append("BOUNTY: holds the Bounty (most health). Whoever lands a Hit on them heals 1; in the final circle they take 1 extra Hit." if d.get("bounty", false) else "No Bounty.")
 	if which == &"rival":

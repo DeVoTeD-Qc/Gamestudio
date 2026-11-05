@@ -265,8 +265,9 @@ func test_zone_track_shows_next_cards() -> void:
 		var m: Control = setup[1]
 		var chips: Array[Label] = m.get_zone_track().get_chip_labels()
 		assert_true(chips.size() >= 2, "%s: current + next chips (%d)" % [screen["name"], chips.size()])
-		assert_true(chips[0].text.begins_with("NOW 5"), "%s current chip: %s" % [screen["name"], chips[0].text])
-		assert_true(chips[1].text.begins_with("6 "), "%s next chip: %s" % [screen["name"], chips[1].text])
+		# cz-clarity: chips say NOW / NEXT / THEN and the kind (Zone card 5 is Calm, 6 Gas+Drop).
+		assert_eq(chips[0].text, "NOW Calm", "%s current chip" % screen["name"])
+		assert_eq(chips[1].text, "NEXT Gas+Drop", "%s next chip" % screen["name"])
 		var track: Rect2 = m.get_zone_track().get_global_rect().grow(EPS)
 		for c: Label in chips:
 			assert_true(track.encloses(c.get_global_rect()), "%s chip '%s' inside the track" % [screen["name"], c.text])
@@ -364,7 +365,9 @@ func test_tap_hold_right_click_and_info_inspect() -> void:
 	# The Hit's text comes from the card data.
 	(hand[0] as CzCard).inspect_requested.emit(hand[0])
 	await tree.process_frame
-	assert_eq(inspector.get_body_text(), CardDB.get_card(&"hit").rules_text, "Hit text from CardDB")
+	# cz-clarity: plain "what it gives you" first, then the printed card text from the card data.
+	assert_true(inspector.get_body_text().begins_with("WHAT IT GIVES YOU"), "plain words first: %s" % inspector.get_body_text())
+	assert_true(("Card text: " + CardDB.get_card(&"hit").rules_text) in inspector.get_body_text(), "Hit text from CardDB")
 	inspector.close()
 	# Right-click on a strip card.
 	var rc: InputEventMouseButton = InputEventMouseButton.new()

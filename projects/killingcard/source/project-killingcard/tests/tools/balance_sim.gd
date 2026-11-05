@@ -23,6 +23,8 @@
 #     proxies=a,b    competent,casual,greedy (default competent,casual)
 #     slots=1,2      match block: only these run slots (1-based); modes=run: only each slot's own mode
 #     json=PATH      also write the results as JSON (for before / after tables)
+#     offers=fields  runs: Supply Drops prefer a Field (then the most expensive unit), to
+#                    see Fields across a whole run (kc-field-impl snowball check)
 #     proxy=NAME.FIELD=VALUE   player-proxy AiPersonality override (e.g. competent.weight_deny_streak=1.0;
 #                    competent@1.FIELD=VALUE applies only in Firefight, @0 only in Zone Control)
 #     set=TARGET.FIELD=VALUE   in-memory data override for what-if tuning (repeatable):
@@ -61,6 +63,8 @@ var config: RunConfig = null
 var out: Dictionary = {}
 ## Proxy personality overrides from `proxy=NAME.FIELD=VALUE` (what-if on the player side).
 var proxy_overrides: Dictionary = {}
+## Run offer rule: "" (most expensive unit) or "fields" (prefer Fields).
+var offer_rule: String = ""
 
 
 func _initialize() -> void:
@@ -81,6 +85,7 @@ func _main() -> void:
 				for p: String in kv[1].split(","):
 					proxies.append(p)
 			"json": json_path = kv[1]
+			"offers": offer_rule = kv[1]
 			"slots":
 				for n: String in kv[1].split(","):
 					only_slots.append(int(n))
@@ -244,6 +249,12 @@ func _summarize(m: MatchState, log: Dictionary) -> Dictionary:
 	var op_downs: int = 0
 	var enemy_op_downs: int = 0
 	var reason: String = ""
+	# kc-field-impl: visible Fields per side as [rounds standing, how it left], for the
+	# snowball check (traps are left out: they are one-shot).
+	var placed_at: Dictionary = {}
+	var fields: Array = [[], []]
+	## Sign of the player's score lead after Round 3 (snowball check: does the leader win more?).
+	var lead3: int = 0
 	for e: Dictionary in m.events:
 		var side: StringName = StringName(str(e.get("side", "")))
 		match e["type"]:
@@ -266,6 +277,21 @@ func _summarize(m: MatchState, log: Dictionary) -> Dictionary:
 					enemy_op_downs += 1
 			RulesEvent.MATCH_ENDED:
 				reason = str(e.get("reason", ""))
+			RulesEvent.ROUND_ENDED:
+				if int(e["round"]) == 3:
+					lead3 = signi(int(e["player_score"]) - int(e["enemy_score"]))
+			RulesEvent.EQUIPMENT_PLACED:
+				if not bool(e.get("hidden", false)):
+					placed_at[int(e["card_uid"])] = [side, int(e["round"])]
+			RulesEvent.EQUIPMENT_DESTROYED:
+				var uid: int = int(e["card_uid"])
+				if placed_at.has(uid):
+					var who: int = 0 if placed_at[uid][0] == &"player" else 1
+					fields[who].append([int(e["round"]) - int(placed_at[uid][1]) + 1, str(e.get("reason", "destroyed"))])
+					placed_at.erase(uid)
+	for uid: int in placed_at:
+		var who: int = 0 if placed_at[uid][0] == &"player" else 1
+		fields[who].append([m.round_number - int(placed_at[uid][1]), "standing"])
 	var plays: int = 0
 	for n: int in log["plays"]:
 		plays += n
@@ -274,7 +300,7 @@ func _summarize(m: MatchState, log: Dictionary) -> Dictionary:
 	return {"result": String(m.result), "rounds": rounds, "reason": reason, "unspent": log["unspent"],
 			"enemy_unspent": log["enemy_unspent"], "plays": plays, "cards": cards, "max_streak": max_streak,
 			"ks_earned": ks_earned, "ks_used": ks_used, "op_downs": op_downs, "enemy_op_downs": enemy_op_downs,
-			"score": [m.sides[0].score, m.sides[1].score], "seconds": seconds}
+			"score": [m.sides[0].score, m.sides[1].score], "seconds": seconds, "fields": fields, "lead3": lead3}
 
 
 # =============================================================================
@@ -316,6 +342,7 @@ func _match_block(proxy: String) -> Dictionary:
 	print("     enemy unspent %.2f/round  rounds histogram %s" % [total["enemy_unspent"], total["rounds_hist"]])
 	print("     killstreaks earned %s  used %s" % [total["ks_earned"], total["ks_used"]])
 	_print_cards(total)
+	_print_fields(total)
 	return {"rows": rows, "total": _strip(total)}
 
 
@@ -324,7 +351,9 @@ func _aggregate(logs: Array[Dictionary]) -> Dictionary:
 	var a: Dictionary = {"n": n, "win": 0.0, "loss": 0.0, "draws": 0, "rounds": 0.0, "rounds_min": 99, "rounds_max": 0,
 			"unspent": 0.0, "enemy_unspent": 0.0, "plays_round": 0.0, "max_streak": 0.0, "ks_earned_match": 0.0,
 			"ks_used_hits": 0.0, "ks_used_match": 0.0, "op_down_match": 0.0, "minutes": 0.0, "reasons": {},
-			"rounds_hist": {}, "ks_earned": {}, "ks_used": {}, "cards": {}}
+			"rounds_hist": {}, "ks_earned": {}, "ks_used": {}, "cards": {},
+			"fields": {"player": 0, "enemy": 0, "rounds": [0, 0], "gone": {}, "more_n": 0, "more_win": 0, "fewer_n": 0, "fewer_win": 0,
+				"any_n": 0, "any_win": 0}, "lead_n": 0, "lead_win": 0}
 	var unspent_all: Array = []
 	var enemy_unspent: Array = []
 	var total_rounds: int = 0
@@ -359,6 +388,29 @@ func _aggregate(logs: Array[Dictionary]) -> Dictionary:
 		a["ks_used_hits"] += used
 		a["ks_used_match"] += 1.0 if used > 0 else 0.0
 		a["op_down_match"] += 1.0 if l["op_downs"] > 0 else 0.0
+		var fa: Dictionary = a["fields"]
+		var fr: Array[int] = [0, 0]
+		for who: int in 2:
+			for f: Array in l.get("fields", [[], []])[who]:
+				fa["player" if who == 0 else "enemy"] += 1
+				fa["rounds"][who] += int(f[0])
+				fr[who] += int(f[0])
+				var key: String = ("P " if who == 0 else "E ") + str(f[1])
+				fa["gone"][key] = int(fa["gone"].get(key, 0)) + 1
+		var won: int = 1 if l["result"] == "player" else 0
+		var lead: int = int(l.get("lead3", 0))
+		if lead != 0 and l["rounds"] > 3:
+			a["lead_n"] += 1
+			a["lead_win"] += 1 if (lead > 0 and won == 1) or (lead < 0 and l["result"] == "enemy") else 0
+		if fr[0] > 0:
+			fa["any_n"] += 1
+			fa["any_win"] += won
+		if fr[0] > fr[1]:
+			fa["more_n"] += 1
+			fa["more_win"] += won
+		elif fr[0] < fr[1]:
+			fa["fewer_n"] += 1
+			fa["fewer_win"] += won
 		for c: String in l["cards"]:
 			var row: Array = a["cards"].get(c, [0, 0, 0])
 			row[0] += 1
@@ -373,6 +425,22 @@ func _aggregate(logs: Array[Dictionary]) -> Dictionary:
 	a["enemy_unspent"] = _mean(enemy_unspent)
 	a["plays_round"] = float(total_plays) / maxf(1.0, total_rounds)
 	return a
+
+
+## Field summary: placements, average rounds standing, how they left, and the player's win
+## rate when it had more / fewer Field-rounds than the enemy (snowball check).
+func _print_fields(a: Dictionary) -> void:
+	var fa: Dictionary = a["fields"]
+	print("     leader after Round 3 wins %.0f%% (n %d)" % [100.0 * a["lead_win"] / maxf(1, a["lead_n"]), a["lead_n"]])
+	if int(fa["player"]) + int(fa["enemy"]) == 0:
+		print("     fields: none placed")
+		return
+	print("     fields (visible): placed/match P %.2f E %.2f, avg rounds standing P %.2f E %.2f, gone %s" % [
+			float(fa["player"]) / maxf(1, a["n"]), float(fa["enemy"]) / maxf(1, a["n"]),
+			float(fa["rounds"][0]) / maxf(1, fa["player"]), float(fa["rounds"][1]) / maxf(1, fa["enemy"]), fa["gone"]])
+	print("     player win%% with >=1 Field %.0f%% (n %d) | more Field-rounds than enemy %.0f%% (n %d) | fewer %.0f%% (n %d)" % [
+			100.0 * fa["any_win"] / maxf(1, fa["any_n"]), fa["any_n"], 100.0 * fa["more_win"] / maxf(1, fa["more_n"]), fa["more_n"],
+			100.0 * fa["fewer_win"] / maxf(1, fa["fewer_n"]), fa["fewer_n"]])
 
 
 func _print_cards(a: Dictionary) -> void:
@@ -420,6 +488,11 @@ func _choose(r: RunProgress) -> int:
 		return 0
 	var best: int = 0
 	var best_cost: int = -1
+	if offer_rule == "fields":
+		for i: int in offer["options"].size():
+			var f: CardData = r.resource(offer["options"][i]) as CardData
+			if f != null and f.is_visible_field():
+				return i
 	for i: int in offer["options"].size():
 		var c: CardData = r.resource(offer["options"][i]) as CardData
 		if c != null and c.card_type == DataEnums.CardType.UNIT and c.cost > best_cost:
@@ -482,6 +555,7 @@ func _run_block(proxy: String) -> Dictionary:
 			_median(run_minutes), _mean(win_minutes), total["minutes"]])
 	print("  5-match run at this pace: %.1f min" % (RUN_SETUP_S / 60.0 + 5 * (total["minutes"] + BETWEEN_MATCH_S / 60.0)))
 	_print_cards(total)
+	_print_fields(total)
 	return {"run_win": float(victories) / maxf(1, runs), "played": played_hist, "slots": slots,
 			"median_run_min": _median(run_minutes), "win_run_min": _mean(win_minutes),
 			"five_match_min": RUN_SETUP_S / 60.0 + 5 * (total["minutes"] + BETWEEN_MATCH_S / 60.0), "total": total}

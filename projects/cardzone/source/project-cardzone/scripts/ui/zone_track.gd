@@ -88,10 +88,8 @@ func setup(zone_i: int, rt: int, rnd: int) -> void:
 
 ## Shortest title for narrow screens.
 func set_short_title(short: bool) -> void:
-	var letter: String = "ABC"[clampi(route, 0, 2)]
 	# cz-clarity: the round is the clock (one Zone card a round); the route letter is in the inspector.
 	_title.text = ("ROUND %d/%d" if short else "ROUND %d OF %d") % [zone_index, _deck_size]
-	tooltip_text = "Route %s" % letter
 
 
 func get_title_label() -> Label:

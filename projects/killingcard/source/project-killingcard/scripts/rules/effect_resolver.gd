@@ -319,7 +319,9 @@ static func _apply(state, e: EffectData, ctx: Dictionary, z: int, amount: int) -
 		_applied(state, e, ctx, -1, amount)
 	elif kind == K.DESTROY_EQUIPMENT:
 		var foe: RulesSide = state.sides[1 - side]
-		var zones_hit: Array[int] = [z] if z >= 0 else [0, 1, 2]
+		var zones_hit: Array[int] = [0, 1, 2]
+		if z >= 0:
+			zones_hit = [z]
 		var left: int = amount
 		for zz: int in zones_hit:
 			while left > 0 and not foe.equipment[zz].is_empty():

@@ -231,3 +231,28 @@ The card-system doc's promise holds: **the prototype needs no rules logic change
 - **F1:** Model **B**: a Field sits on your half of the objective, can't be shot, **one per side per column**.
 - **F2:** the type is called **Field**.
 - **F3:** the **full model goes into the first prototype**: auras from Fields, the one-per-column limit, **Overrun**, Aid Station (heal), plus the data-only cards. Use timers only if the balance sim shows Fields snowballing.
+
+---
+
+## Implementation notes (kc-field-impl, Mechanics Developer, 2026-11-05)
+Rules layer only (`scripts/data`, `scripts/rules`, `scripts/ai`, `data/`, `tests/`); no UI or scene changes.
+
+**Naming.** `CardType.EQUIPMENT` stays the stored value (2) and is shown as **Field**: `DataEnums.CARD_TYPE_FIELD`, `DataEnums.type_label()` / `CardData.type_label()` return "Field", `CardData.is_field()` / `is_visible_field()`. Internal identifiers (`RulesSide.equipment`, `EQUIPMENT_*` events, `SRC_EQUIPMENT`, play kind `&"equipment"`) are unchanged, to avoid churn.
+
+**Rulings as implemented**
+| Rule | Behaviour |
+|---|---|
+| One Field per side per column | A visible Field revealed in a column where you already have a visible Field **replaces** it (old one to your discard, `EQUIPMENT_DESTROYED` reason `replaced`). Two visible Fields into the same column in **one Deploy** are refused at submit (`code = field_already_planned`). Hidden traps (Tripwire) never count and are never replaced. Each side has its own slot. |
+| Auras | `PASSIVE` effects are now read from Fields (both sides), only for units in the Field's column. Field PASSIVE / END_OF_ROUND effects must use `THIS_ZONE` (validator). Tactics can't carry PASSIVE effects (validator). |
+| Frontline target | New `Target.FRIENDLY_POINT_MAN`: as a passive it applies to whoever is index 0 of your line *right now*, so it follows the line (new front between First Shot and Main step; a Protector that slides in takes it; the old front loses it). |
+| Heal | New `EffectKind.HEAL` + `Target.MOST_DAMAGED_FRIENDLY` (Patch's rule: most lost Armor, ties front-most; Patch now shares the helper). Never above max Armor; no hurt unit = `EFFECT_WASTED`. New event `UNIT_HEALED {side, source_id, source_uid, target_uid, amount, remaining, zone}`. |
+| Overrun | In `score()`, after all END_OF_ROUND effects and their eliminations, each visible Field in a column the **enemy controls at that moment** is torn down (discard, `EQUIPMENT_DESTROYED` reason `overrun`). So a Mortar Pit that kills the last enemy in its column saves itself; a Field's END_OF_ROUND effect still fires in the round it falls. Traps exempt. Applies to both sides, in both modes. |
+| Sabotage etc. | `DESTROY_EQUIPMENT` events now carry reason `destroyed` (also fixed a typed-array bug in that branch that made it fail at runtime). |
+
+**Cards (data/cards, numbers exactly as §4).** Texts use "column". Tripwire stays in the starter deck; Comms Relay (×2) stays in the reward pool; **Listening Post, Mortar Pit, Bulwark, War Standard, Sniper Perch, Aid Station enter the reward pool once each** (pool 23 → 29). Enemy decks unchanged. `tests/tools/gen_content.gd` generates them.
+
+**AI.** `AiView` lists `my_fields` / `foe_fields` (foe traps hidden) and keeps Field auras out of unit records; `AiPlanner` re-applies them by position in its firefight estimate (frontline aura to the current front each step, class / all auras, then END_OF_ROUND Mortar damage and Aid Station heal). New Fields are valued for this round (estimate) plus later rounds (`_field_future`: per-round value × up to 3 rounds left × 0.6 if it keeps the column / 0.3 contested / 0 if overrun now; auras need its own units there). Plans pay for a standing Field they would lose to Overrun or replace, and gain from overrunning an enemy Field. It never stacks two visible Fields in one column in one Deploy and never replaces a Field with a copy.
+
+**UI hook for kc-board.** `MatchState.field_view(viewer) -> Array[Dictionary]`, one row per column: `{zone, player: [entry...], enemy: [entry...]}`, entry `{card_uid, card_id, name, text, hidden, placed_round, overrun_risk}`. The viewer's own traps are listed (`hidden = true`, draw dashed); the other side's are not. `overrun_risk` = the other side controls the column now. Also `MatchState.fields_in(side, zone, include_hidden)` and `visible_field(side, zone)`. Events to animate: `EQUIPMENT_PLACED` (placement fold-down), `EQUIPMENT_DESTROYED.reason` (`replaced` / `overrun` / `destroyed`), `EQUIPMENT_TRIGGERED` (trap), `UNIT_HEALED`. `match_snapshot.gd` (UI) does not call `field_view` yet.
+
+**Tests.** `tests/test_rules_fields.gd` (35 tests) covers every rule and interaction above, the shipped data and the AI.

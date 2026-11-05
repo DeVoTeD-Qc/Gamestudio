@@ -37,7 +37,7 @@ tables below for the order). Never reorder enum values in `data_enums.gd`, only 
 ## CardData (deck cards)
 | Field | Meaning / allowed values |
 |---|---|
-| `card_type` | `UNIT`(0), `TACTIC`(1), `EQUIPMENT`(2) |
+| `card_type` | `UNIT`(0), `TACTIC`(1), `EQUIPMENT`(2) = **Field** to players (`DataEnums.CARD_TYPE_FIELD`, `type_label()`). One visible Field per side per column (a new one replaces the old at Reveal; two in one Deploy are refused); visible Fields are torn down by **Overrun** (enemy controls the column after END_OF_ROUND effects). Hidden Fields (traps) are exempt from both. Field PASSIVE / END_OF_ROUND effects must use `THIS_ZONE`. |
 | `is_elite` | ★ elite unit (units only) |
 | `cost` | Supply, 0–10 |
 | `weapon_class` | `NONE`(0, "—"), `SMG`(1), `SHOTGUN`(2), `AR`(3), `SNIPER`(4), `LMG`(5). Units only. |
@@ -68,12 +68,12 @@ All effects of one play share the player's choices (the chosen zone / unit) and 
 | Field | Values |
 |---|---|
 | `trigger` | `ON_PLAY` resolves at Reveal · `IMMEDIATE` "Resolves immediately" in Deploy · `ON_DEPLOY` · `ON_DOWN` (units) · `ON_ELIMINATE` (this unit's kills on a unit card; any of yours on a perk) · `PASSIVE` · `START_OF_FIREFIGHT` · `END_OF_ROUND` · `ON_ENEMY_ARRIVE` (equipment traps) |
-| `kind` | `DAMAGE`, `MODIFY_FIREPOWER` (± amount), `MODIFY_ARMOR`, `GRANT_COVER`, `REMOVE_COVER`, `GRANT_FIRST_SHOT`, `REMOVE_FIRST_SHOT`, `UNTARGETABLE_BY_PICK_FLANK`, `DRAW`, `REVEAL_RED_DOTS`, `REVEAL_DEPLOYMENTS`, `HIDE_FROM_INTEL`, `MOVE_UNIT`, `STREAK_BONUS`, `STREAK_THRESHOLD_MOD`, `COOLDOWN_MOD`, `DESTROY_EQUIPMENT`, `SUMMON_UNIT` (needs `summon_card`, a UNIT), `SURVIVE_LETHAL` |
-| `target` | `SELF`, `OPERATOR`, `OWNER` (your side: draw, streak, cooldowns), `CHOSEN_ENEMY`, `CHOSEN_FRIENDLY`, `ENEMY_POINT_MAN`, `ENEMY_SECOND_IN_LINE`, `ALL_ENEMIES`, `ALL_FRIENDLIES`, `OTHER_FRIENDLIES`, `NEXT_FRIENDLY_ARRIVING`, `ARRIVING_ENEMY`, `ENEMY_EQUIPMENT` |
+| `kind` | `DAMAGE`, `MODIFY_FIREPOWER` (± amount), `MODIFY_ARMOR`, `GRANT_COVER`, `REMOVE_COVER`, `GRANT_FIRST_SHOT`, `REMOVE_FIRST_SHOT`, `UNTARGETABLE_BY_PICK_FLANK`, `DRAW`, `REVEAL_RED_DOTS`, `REVEAL_DEPLOYMENTS`, `HIDE_FROM_INTEL`, `MOVE_UNIT`, `STREAK_BONUS`, `STREAK_THRESHOLD_MOD`, `COOLDOWN_MOD`, `DESTROY_EQUIPMENT`, `SUMMON_UNIT` (needs `summon_card`, a UNIT), `SURVIVE_LETHAL`, `HEAL` (each target regains up to amount lost Armor) |
+| `target` | `SELF`, `OPERATOR`, `OWNER` (your side: draw, streak, cooldowns), `CHOSEN_ENEMY`, `CHOSEN_FRIENDLY`, `ENEMY_POINT_MAN`, `ENEMY_SECOND_IN_LINE`, `ALL_ENEMIES`, `ALL_FRIENDLIES`, `OTHER_FRIENDLIES`, `NEXT_FRIENDLY_ARRIVING`, `ARRIVING_ENEMY`, `ENEMY_EQUIPMENT`, `FRIENDLY_POINT_MAN` (your frontline unit; as a PASSIVE it follows the line), `MOST_DAMAGED_FRIENDLY` (Patch's rule: most lost Armor, ties front-most) |
 | `target_class` | Only units of this weapon class (`NONE` = any). Overwatch Training: `SNIPER`. |
 | `zone_scope` | `THIS_ZONE`, `CHOSEN_ZONE`, `OPERATOR_ZONE`, `OPERATOR_OR_ADJACENT`, `ADJACENT_ZONE`, `ALL_ZONES`, `ANY` (not zone-bound) |
 | `condition`, `bonus_condition` | `ALWAYS`, `ZONE_IS_CLOSE`, `ZONE_IS_MID`, `ZONE_IS_LONG`, `YOU_CONTROL_ZONE`, `YOU_CONTROL_2_PLUS_ZONES` |
-| `amount`, `bonus_amount` | −10..10. DAMAGE, GRANT_COVER, DRAW, STREAK_BONUS, DESTROY_EQUIPMENT, SURVIVE_LETHAL need ≥ 1; the MODIFY / MOD kinds need ≠ 0. A bonus needs a bonus_condition. |
+| `amount`, `bonus_amount` | −10..10. DAMAGE, GRANT_COVER, DRAW, STREAK_BONUS, DESTROY_EQUIPMENT, SURVIVE_LETHAL, HEAL need ≥ 1; the MODIFY / MOD kinds need ≠ 0. A bonus needs a bonus_condition. |
 | `duration_rounds` | 0 = instant/permanent, 1 = this round, 2 = this and next round (or the next 2 firefights) |
 | `delay_rounds` | 0 = now, 1 = next round (Recon Specialist) |
 

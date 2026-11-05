@@ -974,6 +974,12 @@ func _field_future(card: CardData, control: int, mine: Array) -> float:
 func _field_round_value(card: CardData, mine: Array) -> float:
 	var P: AiPersonality = personality
 	var v: float = 0.0
+	# Auras need my units in the column: worth much less while it is empty.
+	var alive: int = 0
+	for rec: Dictionary in mine:
+		if int(rec["armor"]) > 0:
+			alive += 1
+	var presence: float = 1.0 if alive > 0 else 0.25
 	for e: EffectData in card.effects:
 		if e == null:
 			continue
@@ -990,15 +996,15 @@ func _field_round_value(card: CardData, mine: Array) -> float:
 					hits = maxf(hits, 0.3)  # more of that class may come
 				elif e.target == T.ALL_FRIENDLIES:
 					hits = maxf(1.0, mine.size())
-				v += P.weight_damage_dealt * e.amount * hits * 0.8
+				v += P.weight_damage_dealt * e.amount * hits * 0.8 * presence
 			K.GRANT_COVER:
 				if e.trigger == TR.PASSIVE:
-					v += P.weight_damage_taken * e.amount * 1.6
+					v += P.weight_damage_taken * e.amount * 1.6 * presence
 			K.DAMAGE:
 				if e.trigger == TR.END_OF_ROUND:
 					v += P.weight_damage_dealt * e.amount * 0.8
 			K.HEAL:
-				v += P.weight_damage_taken * e.amount * 0.7
+				v += P.weight_damage_taken * e.amount * 0.7 * presence
 			K.STREAK_BONUS:
 				v += 0.5 * e.amount
 			K.REVEAL_RED_DOTS:
