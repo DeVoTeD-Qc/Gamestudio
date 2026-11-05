@@ -207,7 +207,15 @@ func _refresh() -> void:
 	# Art window silhouette: killstreak/class/type icon.
 	_art_key = CardArt.card_key(data)
 	_art_scale = 0.0
-	if not CardArt.has_card(_art_key):
+	# kc-cod3: a copy wearing licensed MW3 art (private pitch build) shows that art in the window.
+	var licensed: Texture2D = null
+	if String(data.get("licensed_art", "")) != "":
+		licensed = BannerArtDB.banner_texture(StringName(String(data["licensed_art"])))
+	if licensed != null:
+		_art_key = &""
+		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		_art_icon.texture = licensed
+	elif not CardArt.has_card(_art_key):
 		var art: StringName = StringName(String(data.get("art_icon", "")))
 		if art == &"" or not IconSheet.has_icon(art):
 			art = StringName("class_" + String(weapon)) if weapon != &"" else StringName("type_" + type_name)
@@ -307,7 +315,7 @@ func _best_band(weapon: StringName) -> int:
 func _tint_icons() -> void:
 	var text_dim: Color = get_theme_color(&"text_dim", &"Card")
 	var art_tint: Color = get_theme_color(&"special", &"Card") if _card_type() == "killstreak" else get_theme_color(&"concrete", &"Card")
-	_art_icon.modulate = Color.WHITE if _art_key != &"" else Color(art_tint, 0.55)
+	_art_icon.modulate = Color.WHITE if _art_key != &"" or String(data.get("licensed_art", "")) != "" else Color(art_tint, 0.55)
 	_type_icon.modulate = get_theme_color(&"text", &"Card")
 	_range_icon.modulate = text_dim
 	_fp_icon.modulate = get_theme_color(&"text", &"Card")

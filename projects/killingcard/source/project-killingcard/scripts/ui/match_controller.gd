@@ -1208,8 +1208,12 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	var art: BannerArt = BannerArtDB.get_art(StringName(String(banner.get("banner", card.id))))
 	if card.is_field():
 		text = _join(text, FIELD_RULE)
+	var view: Dictionary = CardInfo.view_dict(card, side)
+	if BannerArtDB.is_card_art(art):
+		view["licensed_art"] = String(art.id)
+		view["name"] = art.title
 	_screen.get_inspector().open({
-		"view": CardInfo.view_dict(card, side), "title": art.title if BannerArtDB.is_card_art(art) else card.display_name,
+		"view": view, "title": art.title if BannerArtDB.is_card_art(art) else card.display_name,
 		"type": (card.display_name + " · " + type_text) if BannerArtDB.is_card_art(art) else type_text,
 		"text": text, "keywords": keywords, "status": status,
 		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
@@ -1316,6 +1320,9 @@ func _open_operator(side: int) -> void:
 		where = "Off the board: tap it, then a column, to place it."
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)
 	view["side"] = "friend" if side == PLAYER else "enemy"
+	var op_art: BannerArt = BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))
+	if op_art.licensed:
+		view["licensed_art"] = String(op_art.id)  # kc-cod3: the mastery card in the card picture too
 	_screen.get_inspector().open({
 		"view": view, "title": title, "type": "operator · %s" % String(CardInfo.CLASS_WORDS.get(op.weapon_class, "")),
 		"text": String(view["text"]), "keywords": CardInfo.operator_keywords(op), "status": where,
