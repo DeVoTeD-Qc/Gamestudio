@@ -78,6 +78,15 @@ body.chrome #stage { outline: 1px solid var(--line); }
 .kw svg { width: 76%; height: 76%; }
 .tag-plan { position: absolute; left: 10px; top: 3px; background: var(--amber); color: #1a1200; font: 900 11px var(--ui); padding: 1px 5px; border-radius: 3px; letter-spacing: .08em; z-index: 3; }
 .banner.ghost { opacity: .5; pointer-events: none; }
+/* Operator: your equipped calling card on the board. Brass mastery frame + camo band on the outer edge + dog-tag plate. */
+.banner.operator .art { box-shadow: inset 0 0 0 3px #e7c56a, inset 0 0 0 5px rgba(0,0,0,.55), 0 0 10px rgba(231,197,106,.45); }
+.banner.operator.front .art { box-shadow: inset 0 0 0 3px #e7c56a, inset 0 0 0 5px rgba(0,0,0,.55), 0 0 0 2px var(--sidec), 0 0 14px rgba(0,0,0,.6); }
+.banner .camo { position: absolute; left: 0; right: 0; height: 6px; z-index: 1; pointer-events: none;
+  background: conic-gradient(from 90deg at 25% 50%, #6b5a2a 0 25%, #c9a548 0 50%, #3d3a1c 0 75%, #e7c56a 0) 0 0 / 10px 5px; }
+.banner .camo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,240,190,.55), transparent); background-size: 40% 100%; background-repeat: no-repeat; background-position: -50% 0; }
+.anim .camo::after { animation: glint 1.4s linear infinite; }
+@keyframes glint { to { background-position: 150% 0; } }
+.kw.optag { border-color: #e7c56a; color: #e7c56a; background: linear-gradient(180deg, #2b230f, #120e05); }
 .banner.ghost .art { outline: 2px dashed var(--you); outline-offset: 2px; }
 .banner.hover { z-index: 40; }
 .banner.hover .scaler { transform: scale(var(--hz,1.5)); }
@@ -152,7 +161,6 @@ body.chrome #stage { outline: 1px solid var(--line); }
 <body class="chrome">
 <div id="toolbar">
   <div class="grp"><span class="lbl">Screen</span><button data-size="phone">Phone 844x390</button><button data-size="desktop">Desktop 1440x900</button></div>
-  <div class="grp"><span class="lbl">Rows</span><button data-rows="3">3 per side</button><button data-rows="4">4 per side</button></div>
   <div class="grp"><span class="lbl">Hand</span><button data-hand="A">A: centred crop</button><button data-hand="B">B: banner stripe</button></div>
   <div class="grp"><span class="lbl">Demo</span>
     <button data-demo="select">Select card</button>
@@ -186,7 +194,7 @@ LAYOUTS.phone4 = Object.assign({}, LAYOUTS.phone, { rows: 4, bw: 176, bh: 44, ro
 LAYOUTS.desktop4 = Object.assign({}, LAYOUTS.desktop, { rows: 4, bw: 256, bh: 64, rowGap: 5, objH: 80, top: 12, midGap: 8, handGap: 10, handH: 140,
   cw: 108, ch: 140, badge: 28, bfont: 20, kw: 22, artH: 82, nameF: 16, statF: 18, sicon: 16 });
 const P = new URLSearchParams(location.search);
-let rows = P.get("rows") === "4" ? 4 : 3;
+let rows = P.get("rows") === "3" ? 3 : 4; // head decision 2026-11-05: 4 rows per side (3 kept only via ?rows=3 for reference)
 let size = P.get("size") === "desktop" ? "desktop" : "phone";
 let handOpt = P.get("hand") === "B" ? "B" : "A";
 if (P.get("chrome") === "0") document.body.classList.remove("chrome");
@@ -246,6 +254,7 @@ const ARTS = {
   bastion:{ bg: ["#a3b8c9", "#3d5770", "#0f1b27"], sky: "plates", fig: .45, fcol: "#081018", focal: .45, shield: true },
   rider:  { bg: ["#a8e6ff", "#3b7fc4", "#13284a"], sky: "sun", fig: .64, fcol: "#0b1630", focal: .64 },
   eyes:   { bg: ["#e8e8ff", "#7d7dc8", "#1b1b3a"], sky: "eyes", fig: null, focal: .5 },
+  opcamo: { bg: ["#f3d88a", "#8a6a2a", "#1d1608"], sky: "rays", fig: .5, fcol: "#140f05", focal: .5 },
   caller: { bg: ["#7dffc2", "#13996b", "#05261b"], sky: "waves", fig: .36, fcol: "#03170f", focal: .36 }
 };
 let artSeq = 0;
@@ -288,6 +297,7 @@ document.head.appendChild(kf);
 
 // ---------------------------------------------------------------- data
 const CARDS = {
+  op: { name: "Kestrel", art: "opcamo", type: "unit", fp: 3, ar: 5, max: 7, kws: [], operator: true, text: "<b>Operator</b> (your calling card). Deployable unit with stronger stats. Respawns after being downed. Mastery: Gold camo (tier 3 of 4).", cls: "w_ar" },
   y1: { name: "Ridge Runner", art: "ridge", type: "unit", fp: 3, ar: 1, max: 1, kws: [] },
   y2: { name: "Steel Choir", art: "choir", type: "unit", fp: 1, ar: 4, max: 4, kws: [] },
   y3: { name: "Deep Tide", art: "tide", type: "unit", fp: 2, ar: 1, max: 2, kws: [] },
@@ -312,7 +322,7 @@ const CARDS = {
 };
 const INIT = () => ({
   cols: [
-    { id: "A", rival: ["r1", "r2"], you: ["y1", "y2"] },
+    { id: "A", rival: ["r1", "r2"], you: ["y1", "op", "y2"] },
     { id: "B", rival: ["r3", "r4"], you: ["y3", "y4", "y5"] },
     { id: "C", rival: ["r5", "r6", "r7"], you: ["y6", "y7"] }
   ],
@@ -321,10 +331,10 @@ const INIT = () => ({
   sel: null
 });
 let S = INIT();
-function resetCards() { for (const c of Object.values(CARDS)) if (c.max) c.ar = c.max; CARDS.y1.ar = 1; CARDS.y3.ar = 1; }
+function resetCards() { for (const c of Object.values(CARDS)) if (c.max) c.ar = c.max; CARDS.y1.ar = 1; CARDS.y3.ar = 1; CARDS.op.ar = 5; }
 resetCards();
 const CLS = { r6: "w_sn", y4: "w_smg", y3: "w_smg", r3: "w_smg", y7: "w_smg", h5: "w_smg" };
-for (const [k, c] of Object.entries(CARDS)) if (c.type === "unit") c.cls = CLS[k] || "w_ar";
+for (const [k, c] of Object.entries(CARDS)) if (c.type === "unit" && !c.cls) c.cls = CLS[k] || "w_ar";
 
 // ---------------------------------------------------------------- render
 const canvas = document.getElementById("canvas"), stage = document.getElementById("stage");
@@ -352,12 +362,18 @@ function bannerEl(id, side, w, h) {
     sc.appendChild(k);
   }
   if (c.cls) { const cp = el("div", "kw", { position: "absolute", width: px(g.kw), height: px(g.kw), left: px(Math.round(h * .1) + inset + (bs - g.kw) / 2), borderColor: "rgba(255,255,255,.35)", color: "#dfe6ee", zIndex: 2 }, ico(c.cls, g.kw)); cp.style[side === "you" ? "bottom" : "top"] = px(inset); sc.appendChild(cp); }
+  if (c.operator) {
+    b.classList.add("operator");
+    const cm = el("div", "camo"); cm.style[side === "you" ? "bottom" : "top"] = "0"; sc.querySelector(".art").appendChild(cm);
+    const tag = el("div", "kw optag", { position: "absolute", width: px(g.kw), height: px(g.kw), right: px(inset), zIndex: 2 }, '<svg viewBox="0 0 24 24"><path d="M7 3h10a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z" fill="currentColor"/><circle cx="12" cy="7" r="1.8" fill="#120e05"/><path d="M8 12h8M8 15.5h6" stroke="#120e05" stroke-width="1.6"/></svg>');
+    tag.style[side === "you" ? "bottom" : "top"] = px(inset); sc.appendChild(tag);
+  }
   const ft = el("div", "ftab", { width: px(g.ftab[0]), height: px(g.ftab[1]), fontSize: px(g.ftab[2]) }, "FRONT");
   ft.style[side === "you" ? "top" : "bottom"] = px(-g.ftab[1] + 2);
   ft.style.display = "none"; ft.className += " ftab"; sc.appendChild(ft);
   sc.appendChild(el("div", "animdot"));
-  sc.appendChild(el("div", "nametag", { fontSize: px(14) }, `${c.name} <span style="color:var(--muted)">· ${c.type === "unit" ? "Unit" : "Tactic"}${c.kws.includes("pick") ? " - Pick" : ""}${c.kws.includes("protector") ? " - Protector" : ""}</span>`));
-  attachPress(b, () => openFocus(id, side), null);
+  sc.appendChild(el("div", "nametag", { fontSize: px(14) }, `${c.name} <span style="color:var(--muted)">· ${c.operator ? "Operator" : c.type === "unit" ? "Unit" : "Tactic"}${c.kws.includes("pick") ? " - Pick" : ""}${c.kws.includes("protector") ? " - Protector" : ""}</span>`));
+  attachPress(b, () => openFocus(id, side), () => { if (S.sel && b.dataset.side === "you" && !b.classList.contains("ghost")) playCard(S.sel, +b.dataset.col); });
   b.addEventListener("mouseenter", () => { if (size !== "desktop" || b.classList.contains("ghost")) return; b._ht = setTimeout(() => hoverOn(b), 120); });
   b.addEventListener("mouseleave", () => { clearTimeout(b._ht); hoverOff(b); });
   return b;
@@ -419,8 +435,8 @@ function buildStatic() {
     <div class="box"><div class="k" style="font-size:${f - 3}px">ROUND 3 · PLAN</div>
       <div class="v" style="font-size:${f + 6}px"><span style="color:var(--you)">YOU 1</span> <span style="color:var(--muted)">-</span> <span style="color:var(--rival)">1 RIVAL</span></div>
       <div class="k" style="font-size:${f - 3}px">Objectives held</div></div>
-    <div class="box" style="display:flex;gap:8px;align-items:center"><div style="width:${f * 2.4}px;height:${f * 2.4}px;border-radius:50%;background:linear-gradient(135deg,#2ec4b6,#0b3d3a);border:2px solid #8ff3ea"></div>
-      <div><div class="v" style="font-size:${f}px">Operator</div><div class="k" style="font-size:${f - 3}px">FP 3 · AR 5/7</div></div></div>`;
+    <div class="box" style="display:flex;gap:8px;align-items:center"><div style="width:${f * 2.4}px;height:${f * 2.4}px;border-radius:50%;background:conic-gradient(from 90deg at 25% 50%,#6b5a2a 0 25%,#c9a548 0 50%,#3d3a1c 0 75%,#e7c56a 0) 0 0/8px 8px;border:2px solid #e7c56a"></div>
+      <div><div class="v" style="font-size:${f}px">Kestrel <span style="color:#e7c56a">OPERATOR</span></div><div class="k" style="font-size:${f - 3}px">On board: A, row 2 · Gold camo</div></div></div>`;
   canvas.appendChild(left);
   const leftB = el("div", "rail", { left: px(12), bottom: px(6), width: px(lw) });
   leftB.innerHTML = `<div class="box" style="display:flex;justify-content:space-between"><span class="k" style="font-size:${f - 3}px">DECK <b class="v" style="font-size:${f}px">14</b></span><span class="k" style="font-size:${f - 3}px">USED <b class="v" style="font-size:${f}px">5</b></span></div>`;
@@ -665,14 +681,14 @@ function openFocus(id, side) {
   const W = g.focusW, zw = g.zoomW, zh = zw / 4, pad = 20;
   const fz = size === "phone" ? 16 : 17;
   f.innerHTML = `<div class="fb anim side-${side}" style="width:${zw}px;height:${zh}px;margin:${pad}px auto 10px;">
-      <div class="banner side-${side} anim" style="position:absolute;inset:0;width:${zw}px;height:${zh}px;cursor:default"><div class="scaler"><div class="art">${artSVG(c.art)}<div class="shine"></div></div>
+      <div class="banner side-${side} anim${c.operator ? " operator" : ""}" style="position:absolute;inset:0;width:${zw}px;height:${zh}px;cursor:default"><div class="scaler"><div class="art">${artSVG(c.art)}<div class="shine"></div>${c.operator ? `<div class="camo" style="${side === "you" ? "bottom" : "top"}:0;height:10px"></div>` : ""}</div>
       <div class="spine" style="width:${Math.round(zh * .08)}px"></div>
       ${c.type === "unit" ? `<div class="badge fp" style="width:44px;height:44px;left:${Math.round(zh * .08) + 6}px;${side === "you" ? "top" : "bottom"}:6px;font-size:26px">${c.fp}</div><div class="badge ar${c.ar < c.max ? " hurt" : ""}" style="width:44px;height:46px;right:6px;${side === "you" ? "top" : "bottom"}:6px;font-size:26px">${c.ar}</div>` : ""}
       ${c.kws.length ? `<div class="kws" style="left:auto;right:6px;transform:none;${side === "you" ? "bottom" : "top"}:6px">${c.kws.map(k => `<div class="kw" style="width:34px;height:34px">${ico(k, 34)}</div>`).join("")}</div>` : ""}
       <div class="animdot"></div></div></div></div>
     <div style="padding:0 ${pad}px ${pad}px">
       <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h3 style="font-size:${fz + 8}px">${c.name}</h3>
-        <span class="tl" style="font-size:${fz - 1}px">${c.type === "unit" ? "UNIT" : "TACTIC"} · ${side === "you" ? "YOURS" : "RIVAL"}${c.cost ? ` · COST ${c.cost}` : ""}</span></div>
+        <span class="tl" style="font-size:${fz - 1}px">${c.operator ? "OPERATOR UNIT" : c.type === "unit" ? "UNIT" : "TACTIC"} · ${side === "you" ? "YOURS" : "RIVAL"}${c.cost ? ` · COST ${c.cost}` : ""}</span></div>
       ${c.type === "unit" ? `<div class="row" style="margin:8px 0;font-size:${fz}px"><span class="chip">${ico("fp", 20, side === "you" ? "#2ec4b6" : "#ff6b6f")} Firepower ${c.fp}</span><span class="chip">${ico("ar", 20, "#b8c4d2")} Armor ${c.ar}/${c.max}</span></div>` : ""}
       <div class="rules" style="font-size:${fz}px">${c.text || "No effect."}</div>
       <div class="tl" style="margin-top:8px;font-size:${fz - 3}px">Art: alternate art 1 of 3 · tap anywhere to close</div>
