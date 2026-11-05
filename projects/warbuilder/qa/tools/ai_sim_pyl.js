@@ -14,10 +14,12 @@
 //
 //   node projects/warbuilder/qa/tools/ai_sim_pyl.js [games=2000] [options]
 //     --match=aware-blind | aware-aware | blind-blind   who plays (default aware-blind; seats alternate every game)
-//     --variant=jam2 | blank | free                      jam2: Jam icons, 2nd Jam misses, 1 Precision per flip (default)
-//                                                        blank: no new icon, any 0-Hit-Marker card is a Jam (otherwise as jam2)
-//                                                        free: flips cost no Precision; each Jam costs Recoil+1 Precision instead and a
-//                                                              shot misses when it can't pay (Precision is the bust buffer)
+//     --variant=jam2 | hotzone | onejam | blank | free   jam2 (V1): Jam icons on Sprint and Scout, 2nd Jam misses, 1 Precision per flip (default)
+//                                                        hotzone (V2, recommended): jam2, but in the final circle the 1st Jam misses
+//                                                        onejam (V3): the 1st Jam always misses
+//                                                        blank: no new icon, any 0-Hit-Marker card is a Jam (= jam2 with today's cards)
+//                                                        free (rejected): flips cost no Precision; each Jam costs Recoil+1 Precision and
+//                                                              a shot misses when it can't pay (Precision is the bust buffer)
 //     --policy=cautious | normal | bold | ev              AI stop rule (push when the risk of the push failing is <= 20 / 35 / 50 %;
 //                                                        ev = push when it raises expected damage). Both AIs use it.
 //     --set=key:value,...                                 override CFG (e.g. --set=bustAt:3,peek:true,jamSet:starters)
@@ -44,11 +46,14 @@ const CFG = {
   ladders: 'final',     // 'shipped' or a LADDERS key (pyl2, pyl, long, steep, final)
   dmgPlus: 0, dmgPlusStep1: false, // +N damage on steps 2+ (and step 1 if dmgPlusStep1)
   shotsPlus: 0,         // +N shots per turn for every gun
+  finalBust: 0, finalSafe: 1, // >0: with finalSafe or fewer safe locations left, a shot misses at this many Jams
   rising: 0,           // >0: flip cost rises by 1 every `rising` flips within a shot (Recoil climbs)
   startMin: 0.05,       // AI fires only if P(reach step 1) >= this (a miss costs nothing but the flips, so fire almost always)
   trials: 150,          // Monte Carlo trials per AI decision
 };
 if (opt('set')) for (const kv of String(opt('set')).split(',')) { const [k, v] = kv.split(':'); CFG[k] = isNaN(+v) ? (v === 'true' ? true : v === 'false' ? false : v) : +v; }
+if (CFG.variant === 'hotzone' && !/finalBust/.test(String(opt('set') || ''))) CFG.finalBust = 1;
+if (CFG.variant === 'onejam' && !/bustAt/.test(String(opt('set') || ''))) CFG.bustAt = 1;
 const POLICY = { cautious: 0.20, normal: 0.35, bold: 0.50, ev: null };
 const T = POLICY[CFG.policy];
 const match = opt('match') || 'aware-blind';
@@ -168,7 +173,7 @@ function applyFlip(st, hm, jam) {
     st.jams++;
     if (CFG.variant === 'free') { const c = st.recoil + 1; if (st.prec < c) return 'bust'; st.prec -= c; }
     else if (CFG.jamRecoil) st.prec = Math.max(0, st.prec - st.recoil);
-    if (st.jams >= CFG.bustAt) return 'bust';
+    if (st.jams >= (st.bustAt || CFG.bustAt)) return 'bust';
   }
   return null;
 }
@@ -211,7 +216,8 @@ function pylShot(s, p, acc) {
   if (WD.shotsLeft(s, p, 0) < 1) { acc.why.noShots = (acc.why.noShots || 0) + 1; return null; }
   const sp = WD.shotPreview(s, p, 0, 0); if (!sp.inRange) { acc.why.range = (acc.why.range || 0) + 1; return null; }
   const steps = wd.melee ? (wd._pyl || [[1, 3]]).map(([h, d]) => [Math.max(1, h - pl.nextFire.reqMod), d + pl.dmgTurn]) : sp.steps;
-  const st = { sum: 0, jams: 0, prec: pl.res.prec, steady: pl.revealPlus, recoil: sp.recoil, melee: false, flips: 0 };
+  const st = { sum: 0, jams: 0, prec: pl.res.prec, steady: pl.revealPlus, recoil: sp.recoil, melee: false, flips: 0,
+    bustAt: CFG.finalBust && WD.safeBounds(s).n <= CFG.finalSafe ? CFG.finalBust : CFG.bustAt }; // optional: the circle's pressure lowers the bust line
   if (!canFlip(st)) { acc.why.noPrec = (acc.why.noPrec || 0) + 1; return null; }
   const known = () => [pl.deck.map(i => [def(s, i).hit_markers, isJam(s, i)]), pl.discard.map(i => [def(s, i).hit_markers, isJam(s, i)])];
   const [dk0, dc0] = known(); const p1 = pReach(st, steps, 0, dk0, dc0);
@@ -287,8 +293,9 @@ for (let i = 0; i < N; i++) {
       const p = s.turn, round = s.round, pl = P(s, p);
       const a0 = { shots: R.shots, hits: R.hits, flips: R.flips, dmg: pl.stats.damageDealt };
       const js = jamShareOf(s, pl);
+      if (CFG.shipped) s.log.length = 0; // the log is UI-only; cleared so this turn's reveals can be counted
       const r = CFG.shipped ? WD.aiTurn(s, p) : pylTurn(s, p, R); if (!r.ok) throw new Error(r.err);
-      if (CFG.shipped) { /* count from engine stats below */ }
+      if (CFG.shipped) { let fl = 0; for (const e of s.log) { const m = / reveals (\d+)/.exec(e.msg); if (m) fl += +m[1]; } R.flips += fl; if (fl) R.shotTurns++; }
       if (s.players.some(q => q.res.prec < 0 || q.res.intel < 0)) throw new Error('negative resource');
       R.turns++;
       const b = R.byRound[round] = R.byRound[round] || {}; const k = ai(p); const x = b[k] = b[k] || { fp: 0, n: 0, shots: 0, hits: 0, flips: 0, dmg: 0, jam: 0 };
@@ -310,7 +317,7 @@ const done = R.rounds.length; const pc = (a, b) => b ? +(a / b).toFixed(3) : nul
 const fmt = o => Object.fromEntries(Object.entries(o).sort().map(([k, v]) => [k, `${(v[0] / v[1]).toFixed(2)} (n=${v[1]})`]));
 const gunRates = Object.values(R.gun).filter(v => v[1] >= 40).map(v => v[0] / v[1]);
 const out = {
-  games: N, match, variant: CFG.shipped ? 'shipped' : CFG.variant, policy: CFG.shipped ? 'planner' : CFG.policy, cfg: CFG.shipped ? null : { bustAt: CFG.bustAt, jamSet: CFG.variant === 'blank' ? '0-HM cards' : CFG.jamSet, steady: CFG.steady, peek: CFG.peek, ladders: CFG.ladders, startMin: CFG.startMin },
+  games: N, match, variant: CFG.shipped ? 'shipped' : CFG.variant, policy: CFG.shipped ? 'planner' : CFG.policy, cfg: CFG.shipped ? null : { bustAt: CFG.bustAt, finalBust: CFG.finalBust, jamSet: CFG.variant === 'blank' ? '0-HM cards' : CFG.jamSet, steady: CFG.steady, peek: CFG.peek, ladders: CFG.ladders, startMin: CFG.startMin },
   completed: done, errors: R.errors, stuck: R.stuck, invariantFailures: R.inv,
   [`${aiA}WinRate`]: pc(R.aWins, R.decided), firstPlayerWinRate: pc(R.firstWins, R.decided), draws: R.draws,
   avgRounds: avg(R.rounds), maxRound: done ? Math.max(...R.rounds) : null, endBy: R.endBy, finalCircleReached: pc(R.final, done),
