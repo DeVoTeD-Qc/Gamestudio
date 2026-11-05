@@ -2647,7 +2647,7 @@ button.lf-p:hover { box-shadow: 0 0 0 2px #F2CC4A, 1px 2px 0 rgba(0,0,0,.45); }
 .sh-btns { display: flex; gap: 10px; align-items: stretch; }
 .sh-btns button { flex: 1; min-height: 54px; border: 0; border-radius: 8px; font-family: var(--f-display); font-size: 21px; letter-spacing: .03em; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; line-height: 1; }
 .sh-btns button small { font-family: var(--f-body); font-weight: 800; font-size: 11.5px; letter-spacing: .12em; opacity: .9; }
-.sh-btns button svg.i { width: 16px; height: 16px; vertical-align: -2px; }
+.sh-btns button svg.i { width: 16px; height: 16px; vertical-align: -2px; } .sh-btns button > span { display: inline-flex; align-items: center; gap: 4px; }
 .sh-flip { background: #C8442B; color: #fff; flex: 1.25 !important; } .sh-flip.solo { flex: 2 !important; }
 .sh-stop { background: var(--s-good); color: #0E1F10; }
 .shot.fx-step .sh-stop { animation: shPulse .9s ease-out 2; }
@@ -2685,4 +2685,6 @@ button.lf-p:hover { box-shadow: 0 0 0 2px #F2CC4A, 1px 2px 0 rgba(0,0,0,.45); }
   .sh-btns button { min-height: 44px; font-size: 18px; } .sh-verdict b { font-size: 30px; }
 }
 @media (orientation: portrait) { .sh-btns button { min-height: 58px; } }
+.shot.still:not(.fx-jam):not(.fx-bust) { animation: none; }
+@media (min-height: 700px) and (min-width: 1000px) { .sc, .sc pnp-face, .sc.next { width: 72px; } .sc.next, .sc .sc-n { height: 101px; } .sh-strip { min-height: 112px; } .sc-hm { font-size: 15px; } .sc.jam em { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .shot, .sc.fresh, .sh-verdict, .sh-jams i.slam { animation: none !important; } .shot::after { display: none; } }

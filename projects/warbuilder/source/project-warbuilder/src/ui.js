@@ -606,7 +606,7 @@ function shotHTML() {
     const jam = o.cardsLeft ? `<span class="${o.pBust ? 'bad' : ''}">Jam next: <b>${o.jamsLeft}/${o.cardsLeft}</b> (${pctT(o.pJam)})${o.pBust ? ' · <b>a Jam now misses</b>' : o.steady ? ' · Steady covers it' : ''}</span>` : '';
     odds = `<div class="sh-odds">${jam}${nxt}</div>`;
     if (mine) btns = `<div class="sh-btns">${x.lvl >= 0 ? `<button class="sh-stop" data-act="stop" data-tip="Bank step ${x.lvl + 1}: deal ${x.steps[x.lvl][1]} damage now."><small>STOP</small>deal ${x.steps[x.lvl][1]}</button>` : `<span class="sh-wait">Reach <b>${x.steps[0][0]} ${ic('hm')}</b> to stop</span>`}
-      <button class="sh-flip ${x.lvl >= 0 ? '' : 'solo'}" data-act="flip" data-tip="Flip the top card of your deck: 1 Precision."><small>FLIP ▶</small>−1 ${ic('prec')}</button></div>`;
+      <button class="sh-flip ${x.lvl >= 0 ? '' : 'solo'}" data-act="flip" data-tip="Flip the top card of your deck: 1 Precision."><small>FLIP ▶</small><span>−1 ${ic('prec')}</span></button></div>`;
   } else {
     const f = v.f; const more = mine && myTurn() && WD.shootCheck(G, ui.me, f.gi).ok; const fo = more ? fireOdds(f.gi) : null;
     verdict = f.hit ? `<div class="sh-verdict hit"><b>HIT −${f.dealt}</b><small>step ${f.level + 1}${f.stopped ? ' · you stopped' : f.level === x.steps.length - 1 ? ' · top step' : ' · banked'}${f.notes.length ? ` · ${escA(f.notes.join(' · '))}` : ''}</small></div>`
@@ -849,6 +849,7 @@ function renderLayer() {
       const sc = k === 'sheet' && slot.querySelector('.sheet'); const top = sc ? sc.scrollTop : 0; const same = sc && slot._type === (ui.sheet && ui.sheet.type);
       slot.innerHTML = parts[k]; slot._h = parts[k]; slot._type = ui.sheet && ui.sheet.type;
       if (same) { const n = slot.querySelector('.sheet'); if (n) { n.scrollTop = top; n.classList.add('still'); } }
+      if (k === 'shot') { const n = slot.querySelector('.shot'); if (n && slot._open) n.classList.add('still'); slot._open = !!n; } // the strip slides in once per shot
     }
   }
 }

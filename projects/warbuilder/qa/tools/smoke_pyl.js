@@ -99,7 +99,7 @@ const SEED_NOW = +process.env.PYL_SEED || 140;
     if (await waitMine()) {
       await page.evaluate(() => { const G = WZ.G, me = G.players[WZ.ui.me], op = G.players[1 - WZ.ui.me];
         for (const e of G.envs) e.state = e.w === me.pos ? 'safe' : 'gas'; op.pos = me.pos; me.res.prec = Math.max(me.res.prec, 6); WZ.render(); });
-      await page.waitForTimeout(300); await shot('hotzone-fire-button');
+      await page.waitForTimeout(1900); await shot('hotzone-fire-button');
       if (await tap('.hb-fire:not([disabled])')) { await page.waitForTimeout(300); await shot('hotzone-shot');
         for (let k = 0; k < 20; k++) { const lvl = await page.evaluate(() => WZ.G.shot ? WZ.G.shot.level : null); if (lvl == null) break; await tap('[data-act="flip"]'); await page.waitForTimeout(420); }
         await shot('hotzone-result'); await tap('[data-act="shotok"]'); }
