@@ -32,6 +32,7 @@ func _ready() -> void:
 		_lanes[i].tapped.connect(func(_id: StringName, slot_side: StringName, uid: int) -> void:
 			lane_tapped.emit(zone, slot_side, uid))
 		_lanes[i].long_pressed.connect(func(_id: StringName, slot_side: StringName, uid: int) -> void:
+			_hover_id += 1  # cancels a pending zoom
 			_hide_zoom()
 			lane_long_pressed.emit(zone, slot_side, uid))
 		_lanes[i].hovered.connect(_on_hovered)
@@ -67,6 +68,10 @@ func _on_hovered(slot: Node) -> void:
 
 
 func _show_zoom(slot: Node) -> void:
+	# Only while the pointer is really on that column (not under the inspector or a menu).
+	var lane: Node = slot.get_parent().get_parent()
+	if get_viewport().gui_get_hovered_control() != lane:
+		return
 	var r: Rect2 = (slot as Control).get_global_rect()
 	var local: Vector2 = get_global_transform().affine_inverse() * r.get_center()
 	_zoom.size = ZOOM_SIZE

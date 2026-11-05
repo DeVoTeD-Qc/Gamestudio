@@ -253,3 +253,26 @@ Open `documentation/ux/mockup/index.html`. The toolbar switches Screen (phone / 
 1. **Rival plans and your plays:** (a) show them **in their landing slot**: your card face-up with `PLAN`, the rival's as an `INCOMING` back. No staging strip. **Recommended**, because a staging strip doesn't fit on the phone with 4 rows. (b) A staging strip at each column's outer edge (card-system.md §4.2). This shrinks the phone banners to about 160x40.
 2. **Hand card:** (a) option A, a crop from the 2:3 column. **Recommended.** (b) Option B, the full banner as a stripe. (c) A on the phone, B on desktop.
 3. **Operator mastery frame:** (a) a brass frame plus a camo band on the outer edge, whose pattern is the mastery tier. **Recommended:** it's visible on the board at phone size, and the art stays the player's own. (b) Camo applied over the whole banner art (a stronger look, but it hides the art). (c) Frame only, with camo shown in the inspector and profile only.
+
+---
+
+## Implementation notes (kc-board, Mechanics Developer, 2026-11-05)
+Built in `source/project-killingcard` to the head's decisions (3 columns x 4 rows per side, entry from the outside, frontline next to the objective, Protector slides to row 1, PLAN / INCOMING in the landing slot with no staging strip, hand option A, Operator brass frame + camo band, animation only on focus / placement). The rules layer is unchanged.
+
+| Piece | Where |
+|---|---|
+| Grid numbers (§2): banner size from the height, columns, hand row, rails | `scripts/ui/board_metrics.gd` (phone 176x44 at x 300/496/692; desktop 256x64 at 232/512/792) |
+| Column: rival rows 4..1, objective tile, your rows 1..4; targets, landing ghost, tap snapping, motion | `scripts/ui/lane.gd`, `scenes/match/Lane.tscn` |
+| Banner (4:1, icon slots, spine, frontline, PLAN, Operator frame, INCOMING back, reticle, shimmer) | `scripts/ui/banner_view.gd`, `assets/shaders/banner_shimmer.gdshader` |
+| Objective tile + Field chips (model B, OVERRUN tab when `overrun_risk`) | `scripts/ui/objective_tile.gd` |
+| Hand option A (2:3 crop, cost hex, one-line name, stat row) | `scripts/ui/hand_area.gd` |
+| Rails (score, Operator + loadout, deck / used; UNDO, MENU, PREVIEW, rival hand + intel, killfeed, Supply, READY) | `scenes/Match.tscn`, `scripts/ui/match_screen.gd` |
+| Inspector: 512x128 banner above the card, generic info mode (objective, INCOMING back, rail boxes, Fields with the plain-words Overrun rule) | `scripts/ui/card_inspector.gd`, `match_controller.gd` |
+| Pick / Flank tracer down the gutter + one-time callout; FIELD OVERRUN / DESTROYED / REPLACED callouts | `scripts/fx/feedback_director.gd`, `match_controller._board_callout` |
+| Desktop hover zoom (512 px, 120 ms) | `scripts/ui/board.gd` |
+
+**BannerArt data path.** `scripts/data/banner_art.gd` (`BannerArt`: master texture or `image_path`, `banner_y`, `portrait_x`, tags, licence fields) and `scripts/ui/art/banner_art_db.gd` (`BannerArtDB.banner_texture(id)` / `portrait_texture(id)`, AtlasTexture crops of one master). Lookup: `res://data/banners/<art_id>.tres` (drop the head's banners here) → optional git-ignored `res://assets/licensed/mw3/manifest.csv` (columns `file, kind, chassis|card, banner_y?, portrait_x?, title?`; kc-cod) → placeholder cut from Killstreak's card art with per-card crop centres → generated gradient + silhouette (new chassis such as the Fields). Art id = card id (Operator: its primary weapon).
+
+**Deviations.** Card art never rises 14% when selected (the hand row has no spare height; the selected card gets the amber frame and the shimmer instead). Card names on the board and in the hand are still Killstreak's (`Shieldman`, not `Protector`: data renames belong to the rules/data task). Column objective words: `YOURS / RIVAL / CONTESTED / OPEN`; the range word sits on the tile's top-right and gives way to a rival Field chip. The forecast (PREVIEW) cards now stack 4 lines over the objective tile. The killfeed lives in the right rail on every screen (names may shorten to 10 characters there).
+
+**QA.** `tests/test_board_columns.gd` (metrics vs this spec, rows and order, crops, drop-in and licensed paths, ghost / Protector slide / snapping, Fields + Overrun, inspector banner, QA bridge). Web builds opened with `?qa=1` publish `window.kcQa` (`scripts/qa/qa_bridge.gd`) so Playwright clicks real rects. Dev screenshots: `tests/tools/shot_match.gd` (xvfb).

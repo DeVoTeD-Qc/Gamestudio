@@ -11,7 +11,7 @@ uniform float strength = 0.38;
 uniform float start_time = 0.0;  // TIME when focus started, so every focus begins with a sweep
 
 void fragment() {
-	vec4 c = texture(TEXTURE, UV) * COLOR;
+	vec4 c = COLOR;  // Godot 4: COLOR already holds texture * modulate here
 	float t = fract((TIME - start_time) * speed);
 	float pos = mix(-0.4, 1.4, t);
 	float d = abs((UV.x + UV.y * 0.35) - pos);

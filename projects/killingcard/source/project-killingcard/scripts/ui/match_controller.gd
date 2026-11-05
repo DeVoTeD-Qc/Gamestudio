@@ -1272,6 +1272,9 @@ func _open_operator(side: int) -> void:
 	_screen.get_inspector().open({
 		"view": view, "title": title, "type": "operator · %s" % String(CardInfo.CLASS_WORDS.get(op.weapon_class, "")),
 		"text": String(view["text"]), "keywords": CardInfo.operator_keywords(op), "status": where,
+		"banner": MatchSnapshot.unit_entry(state, op, s), "side": side,
+		"art_line": _art_line(BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))) \
+				+ " · Camo tier: %s (mastery tiers come later)" % ("Gold" if side == PLAYER else "Base"),
 	})
 
 

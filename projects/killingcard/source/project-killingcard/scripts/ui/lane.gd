@@ -99,6 +99,7 @@ func _ready() -> void:
 		var hit: Array = _slot_hit(pos)
 		tapped.emit(zone_id, hit[0], hit[1]))
 	_gesture.long_pressed.connect(func(pos: Vector2) -> void:
+		_hover_slot = null
 		var hit: Array = _slot_hit(pos, true)
 		long_pressed.emit(zone_id, hit[0], hit[1]))
 	resized.connect(_layout)
