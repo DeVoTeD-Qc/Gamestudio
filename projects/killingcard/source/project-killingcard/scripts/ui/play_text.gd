@@ -1,13 +1,14 @@
 # play_text.gd
 # Purpose: Player-facing text for the rules engine's play-check reason codes (f02). The engine
 #   (MatchState.can_submit / check_use / can_mulligan) decides; this only words its answer:
-#   a short lane badge ("ZONE FULL"), a sentence for the toast, and a short button state for
+#   a short column badge ("COLUMN FULL"), a sentence for the toast, and a short button state for
 #   the Operator panel ("CD 2", "USED"). Unknown codes fall back to the engine's own reason.
 # Dependencies: MatchState (zone count only).
 # Author: Mechanics Developer Agent (f02)
 extends RefCounted
 
-const ZONE_WORDS: PackedStringArray = ["Left", "Mid", "Right"]
+## kc-board: zones are shown as columns A / B / C.
+const ZONE_WORDS: PackedStringArray = ["Column A", "Column B", "Column C"]
 
 
 ## {badge, reason} for a refused check. `ctx` names the thing being played:
@@ -29,29 +30,29 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 					"Not enough Supply: %s costs %d, you have %d." % [label, int(data.get("cost", 0)), int(data.get("supply", 0))])
 		&"zone_full":
 			var z: int = int(data.get("zone", 0))
-			return _t("ZONE FULL", "Zone full: %s already has %d units." % [_zone(z), int(data.get("capacity", 4))])
+			return _t("COLUMN FULL", "Column full: %s already has %d units." % [_zone(z), int(data.get("capacity", 4))])
 		&"no_zone":
-			return _t("", "Drop it on a zone.")
+			return _t("", "Drop it on a column.")
 		&"operator_not_placed":
 			return _t("NO OPERATOR", "Your Operator is not on the board.")
 		&"out_of_range":
-			return _t("TOO FAR", "Pick your Operator's zone or one next to it.")
+			return _t("TOO FAR", "Pick your Operator's column or one next to it.")
 		&"no_target":
 			if data.get("want", &"") == &"friendly":
 				return _t("PICK A UNIT", "Pick one of your units first.")
 			return _t("PICK AN ENEMY", "Pick an enemy unit first.")
 		&"target_out_of_range":
-			return _t("OUT OF RANGE", "Pick an enemy in your Operator's zone.")
+			return _t("OUT OF RANGE", "Pick an enemy in your Operator's column.")
 		&"no_legal_target":
 			return _t("NO TARGET", "%s has no target in reach right now." % label)
 		&"same_zone":
 			if kind == &"operator":
 				return _t("HERE NOW", "Your Operator is already here.")
-			return _t("ALREADY HERE", "That unit is already in this zone.")
+			return _t("ALREADY HERE", "That unit is already in this column.")
 		&"not_adjacent":
 			if kind == &"operator":
-				return _t("NOT ADJACENT", "Rotate only to an adjacent zone.")
-			return _t("NOT ADJACENT", "Move only to an adjacent zone.")
+				return _t("NOT ADJACENT", "Rotate only to an adjacent column.")
+			return _t("NOT ADJACENT", "Move only to an adjacent column.")
 		&"no_rotations_left":
 			return _t("NO ROTATION", "No Rotations left this round.")
 		&"no_operator":
@@ -108,7 +109,7 @@ static func sentence(reason: String) -> String:
 
 
 static func _zone(z: int) -> String:
-	return ZONE_WORDS[z] if z >= 0 and z < ZONE_WORDS.size() else "That zone"
+	return ZONE_WORDS[z] if z >= 0 and z < ZONE_WORDS.size() else "That column"
 
 
 static func _t(badge: String, reason: String) -> Dictionary:

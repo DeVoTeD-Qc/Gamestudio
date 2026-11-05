@@ -32,71 +32,85 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Row" type="HBoxContainer" parent="Center"]
+[node name="Stack" type="VBoxContainer" parent="Center"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="BannerHolder" type="Control" parent="Center/Stack"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(512, 128)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="Row" type="HBoxContainer" parent="Center/Stack"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 24
 
-[node name="CardHolder" type="Control" parent="Center/Row"]
+[node name="CardHolder" type="Control" parent="Center/Stack/Row"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 350)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="Card" parent="Center/Row/CardHolder" instance=ExtResource("2_card")]
+[node name="Card" parent="Center/Stack/Row/CardHolder" instance=ExtResource("2_card")]
 unique_name_in_owner = true
 layout_mode = 0
 pivot_offset = Vector2(0, 0)
 mouse_filter = 2
 
-[node name="InfoPanel" type="PanelContainer" parent="Center/Row"]
+[node name="InfoPanel" type="PanelContainer" parent="Center/Stack/Row"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(420, 0)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"HudPanelDark"
 
-[node name="Info" type="VBoxContainer" parent="Center/Row/InfoPanel"]
+[node name="Info" type="VBoxContainer" parent="Center/Stack/Row/InfoPanel"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+[node name="TitleLabel" type="Label" parent="Center/Stack/Row/InfoPanel/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudHeader"
 text = "Card"
 autowrap_mode = 3
 
-[node name="TypeLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+[node name="TypeLabel" type="Label" parent="Center/Stack/Row/InfoPanel/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudSubtle"
 text = "UNIT"
 autowrap_mode = 3
 
-[node name="RulesLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+[node name="RulesLabel" type="Label" parent="Center/Stack/Row/InfoPanel/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Rules text"
 autowrap_mode = 3
 
-[node name="KeywordList" type="VBoxContainer" parent="Center/Row/InfoPanel/Info"]
+[node name="KeywordList" type="VBoxContainer" parent="Center/Stack/Row/InfoPanel/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="StatusLabel" type="Label" parent="Center/Row/InfoPanel/Info"]
+[node name="StatusLabel" type="Label" parent="Center/Stack/Row/InfoPanel/Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudAccent"
 text = "Status"
 autowrap_mode = 3
 
-[node name="CloseButton" type="Button" parent="Center/Row/InfoPanel/Info" groups=["tap_target"]]
+[node name="CloseButton" type="Button" parent="Center/Stack/Row/InfoPanel/Info" groups=["tap_target"]]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(140, 64)
 layout_mode = 2

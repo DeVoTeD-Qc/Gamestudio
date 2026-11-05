@@ -8,8 +8,9 @@
 # Author: UI/UX Agent
 extends PanelContainer
 
-const CELL_WIDTH: float = 92.0
-const CELL_WIDTH_COMPACT: float = 78.0
+## kc-board: the intel strip lives in the right rail (3 cells side by side, A / B / C).
+const CELL_WIDTH: float = 56.0
+const CELL_WIDTH_COMPACT: float = 56.0
 const DOT_SIZE: float = 20.0
 const DOT_SIZE_COMPACT: float = 16.0
 
@@ -17,6 +18,12 @@ var compact: bool = false
 var _lanes: Array = []
 
 @onready var _cells: HBoxContainer = %Cells
+@onready var _rival_hand: Label = %RivalHand
+
+
+## kc-board: the rival's hand size (public information), next to the intel cells.
+func set_rival_hand(count: int) -> void:
+	_rival_hand.text = "%d" % count
 
 
 func set_compact(value: bool) -> void:
@@ -28,7 +35,7 @@ func set_compact(value: bool) -> void:
 
 ## Labels whose whole text must stay visible (zone labels and red-dot counts).
 func get_important_labels() -> Array[Label]:
-	var out: Array[Label] = []
+	var out: Array[Label] = [_rival_hand]
 	for label: Node in _cells.find_children("*", "Label", true, false):
 		if label.name != "SpottedLabel":  # trimmed on purpose (full names on the lane slots)
 			out.append(label)
@@ -52,6 +59,7 @@ func _make_cell(label_text: String, count: int, revealed: Array = []) -> Control
 	var cell: PanelContainer = PanelContainer.new()
 	cell.theme_type_variation = &"MinimapCell"
 	cell.custom_minimum_size = Vector2(CELL_WIDTH_COMPACT if compact else CELL_WIDTH, 0)
+	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cell.name = "Cell%s" % label_text.capitalize()
 	var column: VBoxContainer = VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 0)

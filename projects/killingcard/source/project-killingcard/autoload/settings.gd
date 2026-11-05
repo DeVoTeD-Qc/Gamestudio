@@ -31,6 +31,12 @@ func _ready() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	var root: Window = get_tree().root
+	# kc-board: browser smoke tests (?qa=1) read window.kcQa (scripts/qa/qa_bridge.gd).
+	var qa: GDScript = load("res://scripts/qa/qa_bridge.gd") as GDScript
+	if qa != null and qa.call(&"enabled"):
+		var bridge: Node = qa.new()
+		bridge.name = "QaBridge"
+		add_child(bridge)
 	root.size_changed.connect(_apply_screen_profile)
 	settings_changed.connect(_apply_screen_profile)
 	_apply_screen_profile()

@@ -598,7 +598,7 @@ func test_revealed_red_dots_name_the_incoming_slots_phone() -> void:
 	for slot: Node in lanes[zone].get_enemy_slots():
 		if slot.kind == slot.Kind.INCOMING:
 			shown.append(slot.revealed)
-			assert_eq(slot._tag.text, "SPOTTED", "revealed slot tagged SPOTTED")
+			assert_eq(slot.banner.revealed, slot.revealed, "revealed back names the card (SPOTTED)")
 	assert_eq(shown, names, "INCOMING slots name the revealed cards")
 	assert_eq(minimap.get_spotted_text(zone), ", ".join(PackedStringArray(names)), "minimap names them")
 	for z: int in 3:
@@ -622,6 +622,6 @@ func test_revealed_red_dots_name_the_incoming_slots_phone() -> void:
 	for lane: Node in lanes:
 		for slot: Node in lane.get_enemy_slots():
 			if slot.kind == slot.Kind.INCOMING and slot.revealed != "":
-				assert_true(slot._name.get_theme_font_size(&"font_size") * k >= MIN_TEXT_PT, "slot name >= 11 pt")
+				assert_true(BannerView.metrics(slot.size.y)["number"] * k >= MIN_TEXT_PT, "slot name >= 11 pt")
 	me.flags.erase(DataEnums.EffectKind.REVEAL_DEPLOYMENTS)
 	_teardown()

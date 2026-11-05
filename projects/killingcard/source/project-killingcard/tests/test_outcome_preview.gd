@@ -91,7 +91,7 @@ func _toggle_and_readability(screen: Dictionary) -> void:
 		assert_eq(_clipped(l), "", "%s worst case '%s' fits" % [label, l.text])
 	for z: int in 3:
 		var need: float = cards[z].get_combined_minimum_size().x
-		var room: float = (lanes[z].get_node(^"Column/Header") as Control).size.x
+		var room: float = (lanes[z].get_objective_tile() as Control).size.x
 		assert_true(need <= room + 0.5, "%s worst-case card %d needs %.0f px, lane header has %.0f" % [label, z, need, room])
 	var tap_pt: float = minf(button.size.x, button.size.y) * k
 	assert_true(tap_pt >= Layout.MIN_TAP_PT - 0.01, "%s toggle is %.1f pt" % [label, tap_pt])

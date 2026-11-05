@@ -80,6 +80,8 @@ const CLASS_ICONS: Array[StringName] = [&"stat_firepower", &"class_smg", &"class
 ## Read fast_animations / reduced_motion from Settings at each play() (tests can turn it off).
 @export var use_settings: bool = true
 
+## kc-board: the first Pick / Flank shot of a match explains itself once (keys &"pick", &"flank").
+var _skip_called: Dictionary = {}
 var fast: bool = false
 var reduced_motion: bool = false
 ## Object with unit_rect(uid) / zone_rect(zone) / anchor_rect(name) -> Rect2 (global canvas px).
@@ -335,6 +337,24 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 		var fx: Control = TracerFx.new()
 		fx.from = from + dir * 18.0 + lane_off
 		fx.to = to - dir * 6.0 + lane_off
+		# kc-board: a shot that skips the frontline (Pick, Flank) runs OUTSIDE the column, down the
+		# gutter, so it visibly passes the cards in front of its target.
+		var skipped: int = _row_of(target)
+		if skipped > 0 and locator != null:
+			var col: Rect2 = locator.zone_rect(zone)
+			if col.has_area():
+				var gx: float = _to_local(Vector2(col.end.x + 7.0, 0.0)).x
+				fx.from = Vector2(gx, from.y)
+				fx.to = Vector2(gx, to.y)
+				var flank: bool = false
+				for kw: Dictionary in _slot_entry(shooter).get("keywords", []):
+					flank = flank or StringName(kw.get("id", &"")) == &"flank"
+				var key: StringName = &"flank" if flank else &"pick"
+				if not _skip_called.has(key):
+					_skip_called[key] = true
+					var armor: int = int(_slot_entry(target).get("armor", 0))
+					_popup_at(to + Vector2(0, -4.0), "FLANK: OUTERMOST" if flank else "PICK: LOWEST ARMOR (%d)" % armor,
+							&"heading", 16, FxStyle.side_color(side), ev, &"tag")
 		fx.color = FxStyle.side_color(side)
 		fx.wasted = target < 0
 		_start(fx, &"tracer", ev)
@@ -348,6 +368,19 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 		_popup_at(_unit_point(shooter, side, zone) + Vector2(0, -22.0), "FIRST SHOT", &"heading", 16,
 				FxStyle.side_color(side), ev, &"tag")
 	return t.get_value(&"shot_stagger")
+
+
+## Row of a unit on the board (0 = frontline), -1 when unknown (kc-board columns).
+func _row_of(uid: int) -> int:
+	if uid < 0 or locator == null or not locator.has_method(&"find_slot"):
+		return -1
+	var slot: Control = locator.find_slot(uid)
+	return int(slot.get(&"row")) if slot != null and "row" in slot else -1
+
+
+func _slot_entry(uid: int) -> Dictionary:
+	var slot: Control = locator.find_slot(uid) if locator != null and locator.has_method(&"find_slot") else null
+	return slot.get(&"entry") if slot != null and "entry" in slot else {}
 
 
 ## b01: names the step so a trade in the First Shot step and the next unit's return fire in

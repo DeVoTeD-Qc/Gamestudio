@@ -155,20 +155,16 @@ func test_no_vram_compressed_imports() -> void:
 
 func test_slots_and_screens_show_art() -> void:
 	_reset()
-	# INCOMING slot: card back behind the tag and red dot; back to a token for a unit.
+	# kc-board: an INCOMING slot is a face-down banner back; a unit replaces it with its banner.
 	var slot: Control = (load("res://scenes/match/UnitSlot.tscn") as PackedScene).instantiate()
 	tree.root.add_child(slot)
 	await tree.process_frame
 	slot.show_incoming()
-	var fig: TextureRect = slot.get_node("%Figure")
-	var has_back: bool = CardArt.card_back_texture() != null
-	assert_eq(fig.visible, has_back, "card back shown iff its image exists")
-	if has_back:
-		assert_true(fig.texture == CardArt.card_back_texture(slot.CARD_BACK_PX), "incoming shows the card back")
-		assert_true(fig.modulate.a < 0.6, "card back dimmed under the tag and dot")
-	slot.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2}, &"enemy", true)
+	assert_eq(slot.banner.mode, BannerView.Mode.INCOMING, "incoming shows the banner back")
+	assert_false(slot.has_art(), "no unit art on a back")
+	slot.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "banner": "rifleman"}, &"enemy", true)
 	await tree.process_frame
-	assert_true(fig.texture != CardArt.card_back_texture(slot.CARD_BACK_PX), "unit replaces the card back")
+	assert_true(slot.has_art(), "unit replaces the back")
 	slot.queue_free()
 	# Operator panel: earned perks get a masked patch, empty slots stay empty.
 	var panel: Control = (load("res://scenes/match/OperatorPanel.tscn") as PackedScene).instantiate()
@@ -197,18 +193,13 @@ func test_slots_and_screens_show_art() -> void:
 		assert_true(tablet.modulate.g > 0.6, "own call-in keeps it neutral")
 		takeover.finish_quietly()
 	takeover.queue_free()
-	# Lane: painted backdrop, dimmed in engine.
+	# kc-board: columns have no zone backdrop (the banners are the art); an invalid target dims.
 	var lane: Control = (load("res://scenes/match/Lane.tscn") as PackedScene).instantiate()
 	tree.root.add_child(lane)
 	await tree.process_frame
 	lane.set_lane({"id": &"mid", "name": "Crane Yard"})
-	await tree.process_frame
-	var backdrop: TextureRect = lane.get_node("%Backdrop")
-	assert_not_null(backdrop.texture, "lane backdrop")
-	if CardArt.lane_is_bitmap(&"cranes"):
-		assert_true(backdrop.self_modulate.v < 0.8, "painted lane dimmed")
 	lane.set_target(&"invalid", "NO")
-	assert_true(backdrop.modulate.a < 0.5, "invalid-target fade still applies")
+	assert_eq(lane.target_state, &"invalid", "invalid-target state still applies")
 	lane.queue_free()
 	# Run screens: painted backdrop between the Background and the UI, with a scrim.
 	for path: String in ["res://scenes/run/RunMap.tscn", "res://scenes/run/Reward.tscn", "res://scenes/Title.tscn"]:

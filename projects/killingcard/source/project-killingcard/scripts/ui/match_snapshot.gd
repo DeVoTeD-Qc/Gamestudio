@@ -17,7 +17,8 @@ extends RefCounted
 
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
-const ZONE_LABELS: PackedStringArray = ["LEFT", "MID", "RIGHT"]
+## kc-board: the columns are A / B / C (zones Left / Mid / Right).
+const ZONE_LABELS: PackedStringArray = ["A", "B", "C"]
 const RANGE_LABELS: PackedStringArray = ["CLOSE", "MID", "LONG"]
 
 
@@ -26,6 +27,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var foe: RulesSide = state.sides[1 - viewer]
 	var dots: PackedInt32Array = state.red_dots(viewer)
 	var lanes: Array = []
+	var fields: Array[Dictionary] = state.field_view(viewer)
 	for z: int in MatchState.ZONE_COUNT:
 		var friendly: Array = []
 		for u: RulesUnit in me.lines[z]:
@@ -34,6 +36,12 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		var enemy: Array = []
 		for u: RulesUnit in foe.lines[z]:
 			enemy.append(unit_entry(state, u, foe))
+		var fp_me: int = 0
+		for u: RulesUnit in me.lines[z]:
+			fp_me += state.firepower_of(u)
+		var fp_foe: int = 0
+		for u: RulesUnit in foe.lines[z]:
+			fp_foe += state.firepower_of(u)
 		lanes.append({
 			"id": MapData.ZONE_IDS[z], "label": ZONE_LABELS[z],
 			"name": map.zone_names[z] if map != null and z < map.zone_names.size() else ZONE_LABELS[z],
@@ -42,11 +50,14 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 			"incoming": dots[z] if z < dots.size() else 0,
 			"revealed": revealed_names(state, viewer, z),
 			"friendly": friendly, "enemy": enemy,
+			"fp_player": fp_me, "fp_enemy": fp_foe,
+			"fields": _fields(state, viewer, z, fields),
 		})
 	var hand: Array = []
 	for rc: RulesCard in me.hand:
 		var c: Dictionary = CardInfo.chip(rc.uid, rc.card)
 		c["playable"] = rc.card.cost <= me.supply
+		c["banner"] = String(rc.card.id)
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -60,6 +71,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"score_player": me.score, "score_enemy": foe.score,
 		"enemy_name": foe.setup.display_name.to_upper(),
 		"supply": me.supply, "supply_max": state.config.supply_for_round(state.round_number),
+		"deck_count": me.deck.size(), "discard_count": me.discard.size(), "enemy_hand": foe.hand.size(),
 		"lanes": lanes,
 		"operator": _operator_entry(state, me),
 		"streak": me.streak,
@@ -90,15 +102,35 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	return snap
 
 
-## {uid, name, cls, fp, armor, armor_max, operator}: FP includes this zone's range bonus.
+## {uid, name, cls, fp, armor, armor_max, operator, keywords, art, banner, bolt, front_kw, elite}:
+## FP includes this zone's range bonus. banner = BannerArtDB art id (kc-board).
 static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dictionary:
-	return {
+	var e: Dictionary = {
 		"uid": u.uid, "name": unit_name(u, side),
 		"cls": "OPERATOR" if u.is_operator else String(CardInfo.CLASS_WORDS.get(u.weapon_class, "")).to_upper(),
 		"fp": state.firepower_of(u), "armor": u.armor, "armor_max": u.max_armor(state.round_number),
 		"operator": u.is_operator, "keywords": CardInfo.icon_keywords(CardInfo.unit_keywords(u)),
 		"art": art_key(u, side),
 	}
+	_banner_fields(e, u.card, u, side)
+	return e
+
+
+## kc-board banner fields of a unit entry: art id, effect bolt, Protector glyph, Elite frame, camo.
+static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: RulesSide) -> void:
+	var id: StringName = &""
+	if card != null:
+		id = card.id
+	elif u != null and u.is_operator and side.setup.primary != null:
+		id = side.setup.primary.id
+	elif u != null:
+		id = u.source_id
+	e["banner"] = String(id)
+	e["bolt"] = card != null and not card.effects.is_empty()
+	e["front_kw"] = card != null and card.arrives_front
+	e["elite"] = card != null and card.is_elite
+	if e.get("operator", false):
+		e["camo"] = "gold" if side.index == MatchState.PLAYER else "base"
 
 
 static func art_key_of_card(card: CardData) -> String:
@@ -168,12 +200,14 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 						"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
 						"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor,
 						"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card)), "art": art_key_of_card(rc.card)}
+				_banner_fields(entry, rc.card, null, side)
 			&"place", &"rotate":
 				var op: RulesUnit = side.operator_unit
 				entry = {"uid": op.uid, "name": unit_name(op, side), "cls": "OPERATOR", "operator": true,
 						"fp": op.base_firepower, "armor": op.armor if p["kind"] == &"rotate" else op.base_max_armor,
 						"armor_max": op.max_armor(state.round_number),
 						"keywords": CardInfo.icon_keywords(CardInfo.operator_keywords(op)), "art": art_key(op, side)}
+				_banner_fields(entry, null, op, side)
 		if not entry.is_empty():
 			entry["pending"] = true
 			out.append(entry)
@@ -186,7 +220,7 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 		return {"name": "NO OPERATOR", "zone": "OFF BOARD"}
 	var zone_text: String = "OFF BOARD"
 	if op.is_on_board():
-		zone_text = ZONE_LABELS[op.zone]
+		zone_text = "%s, ROW %d" % [ZONE_LABELS[op.zone], side.lines[op.zone].find(op) + 1]
 	var planned: int = state.projected_operator_zone(side.index)
 	if planned != MatchState.NO_ZONE and planned != op.zone:
 		zone_text = "TO " + ZONE_LABELS[planned]
@@ -225,6 +259,24 @@ static func item_entry(state: MatchState, viewer: int, item: LoadoutItem, ctx: D
 		"in_tray": state.sides[viewer].streak_tray.has(item.id),
 		"needs_target": state.needs_unit_target(viewer, item.id),
 	}
+
+
+## kc-board: Fields on the objective tile, per side: MatchState.field_view rows (the viewer's own
+## hidden traps included, the other side's never) plus the viewer's Fields queued this Deploy (PLAN).
+static func _fields(state: MatchState, viewer: int, z: int, view: Array[Dictionary]) -> Dictionary:
+	var out: Dictionary = {"player": [], "enemy": []}
+	if z < view.size():
+		var row: Dictionary = view[z]
+		var me_name: StringName = MatchState.SIDE_NAMES[viewer]
+		var foe_name: StringName = MatchState.SIDE_NAMES[1 - viewer]
+		out["player"] = (row.get(me_name, []) as Array).duplicate()
+		out["enemy"] = (row.get(foe_name, []) as Array).duplicate()
+	for p: Dictionary in state.sides[viewer].plays:
+		if p["kind"] == &"equipment" and int(p["zone"]) == z:
+			var rc: RulesCard = p["card"]
+			(out["player"] as Array).push_front({"card_uid": rc.uid, "card_id": rc.card.id, "name": rc.card.display_name,
+					"text": rc.card.text, "hidden": rc.card.hidden, "pending": true, "overrun_risk": false})
+	return out
 
 
 static func _control_id(control: int, viewer: int) -> StringName:

@@ -47,7 +47,7 @@ func _tap_tap_deploy(screen: Dictionary) -> void:
 	assert_eq(chip.theme_type_variation, &"HandCardSelected", "%s selected style" % label)
 	for lane: Node in m.get_board().get_lanes():
 		assert_eq(lane.target_state, &"valid", "%s %s highlighted as a valid target" % [label, lane.zone_id])
-		assert_eq(lane.target_text, "DEPLOY HERE", "%s %s badge" % [label, lane.zone_id])
+		assert_eq(lane.target_text, "PLAY HERE", "%s %s badge" % [label, lane.zone_id])
 	# Second tap on the same card deselects; a third selects again.
 	await _tap(vp, _chip_point(m, chip))
 	assert_true(c.selection.is_empty(), "%s tapping the card again deselects" % label)
@@ -304,10 +304,10 @@ func test_refused_zone_full() -> void:
 	await _tap(vp, _chip_point(m, m.get_hand().get_card(rc.uid)))
 	var lanes: Array[Node] = m.get_board().get_lanes()
 	assert_eq(lanes[0].target_state, &"invalid", "full zone is greyed out")
-	assert_eq(lanes[0].target_text, "ZONE FULL", "full zone badge")
+	assert_eq(lanes[0].target_text, "COLUMN FULL", "full zone badge")
 	assert_eq(lanes[1].target_state, &"valid", "other zones still valid")
 	await _tap(vp, _row_point(lanes[0]))
-	assert_true(m.get_toast_text().begins_with("Zone full"), "toast: %s" % m.get_toast_text())
+	assert_true(m.get_toast_text().begins_with("Column full"), "toast: %s" % m.get_toast_text())
 	assert_eq(c.intent_log.size(), 0, "refused play never reaches the engine")
 	# The engine agrees with the presenter.
 	assert_false(c.state.submit(0, RulesIntent.play_card(rc.uid, 0))["ok"], "engine refuses it too")
@@ -409,7 +409,7 @@ func test_frag_targets_a_lane_then_goes_on_cooldown_phone() -> void:
 	var last: Dictionary = c.intent_log.back() if not c.intent_log.is_empty() else {}
 	assert_eq(last.get("intent", {}), RulesIntent.use_item(&"frag_grenade", 2), "engine got use_item(frag, right)")
 	assert_true(last.get("result", {}).get("ok", false), "accepted")
-	assert_true(m.get_toast_text().contains("Frag Grenade queued on Right"), "toast: %s" % m.get_toast_text())
+	assert_true(m.get_toast_text().contains("Frag Grenade queued on column C"), "toast: %s" % m.get_toast_text())
 	frag = panel.get_item_button(&"frag_grenade")
 	assert_true(frag.disabled, "Frag now on cooldown")
 	assert_true(frag.text.contains("CD 3"), "cooldown shown: %s" % frag.text)

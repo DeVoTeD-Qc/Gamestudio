@@ -8,8 +8,8 @@
 #   Deploying (core-rules section 2.2), nothing hover-only:
 #   - tap a hand card (it is selected), then tap a lane; or drag the card onto a lane
 #   - the Operator panel works the same way: place it (Round 1 / respawn) or Rotate it
-#   - while something is selected or dragged every lane shows DEPLOY HERE or the reason it
-#     can't take it (NEED 3 SUPPLY, ZONE FULL, WAIT ...); a refused play shows a toast with
+#   - while something is selected or dragged every column shows PLAY HERE or the reason it
+#     can't take it (NEED 3 SUPPLY, COLUMN FULL, WAIT ...); a refused play shows a toast with
 #     the reason and changes nothing
 #   - Flank Route style cards (CHOSEN_FRIENDLY): tap / drop on one of your units, then a lane
 #   - f02 loadout: tap Sidearm / Frag / Flashbang or a killstreak in the tray, then tap what it
@@ -61,7 +61,7 @@ const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
-const ZONE_WORDS: PackedStringArray = ["Left", "Mid", "Right"]
+const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
 const RANGE_WORDS: PackedStringArray = ["Close", "Mid", "Long"]
 const KILLFEED_KEEP: int = 6
 const SCENE_TITLE: String = "res://scenes/Title.tscn"
@@ -146,6 +146,8 @@ func _on_screen_ready() -> void:
 	board.lane_tapped.connect(_on_lane_tapped, d)
 	board.lane_long_pressed.connect(_on_lane_long_pressed, d)
 	_screen.ready_pressed.connect(press_ready, d)
+	if _screen.has_signal(&"rail_inspected"):
+		_screen.rail_inspected.connect(_on_rail_inspected, d)
 	_screen.undo_pressed.connect(undo, d)
 	if _screen.has_method(&"get_mulligan_panel"):
 		_screen.get_mulligan_panel().confirmed.connect(_on_mulligan_confirmed, d)
@@ -320,6 +322,7 @@ func press_ready() -> void:
 		var on_event: Callable = func(ev: Dictionary) -> void:
 			if ev.get("type") == RulesEvent.PHASE_CHANGED and StringName(ev.get("phase", "")) == &"firefight":
 				_screen.show_snapshot(after_reveal)
+			_board_callout(ev)
 		fx.event_started.connect(on_event)
 		await fx.play(resolved)
 		fx.event_started.disconnect(on_event)
@@ -336,6 +339,18 @@ func press_ready() -> void:
 	state.begin_round()
 	_begin_deploy()
 	round_presented.emit()
+
+
+## kc-board: short on-board callouts for events the board itself can't show (a Field torn down).
+func _board_callout(ev: Dictionary) -> void:
+	if ev.get("type") != RulesEvent.EQUIPMENT_DESTROYED:
+		return
+	var z: int = MapData.ZONE_IDS.find(StringName(ev.get("zone", &"")))
+	var side: StringName = StringName(ev.get("side", &""))
+	var text: String = {RulesEvent.FIELD_GONE_OVERRUN: "FIELD OVERRUN", RulesEvent.FIELD_GONE_DESTROYED: "FIELD DESTROYED",
+			RulesEvent.FIELD_GONE_REPLACED: "FIELD REPLACED"}.get(StringName(ev.get("reason", &"")), "")
+	if z >= 0 and text != "":
+		_screen.get_board().show_callout(z, text, &"enemy" if side == MatchState.SIDE_NAMES[ENEMY] else &"player")
 
 
 ## Takes back the last play of this Deploy.
@@ -375,7 +390,7 @@ func _begin_deploy() -> void:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[PLAYER]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator, then a zone." % state.round_number)
+		_screen.show_toast("Round %d: tap your Operator, then a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 
@@ -639,7 +654,7 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 		res = state.mulligan(PLAYER, put_back)
 		_after_change()
 		if res["ok"]:
-			_screen.show_toast("Put back %d card%s and drew %d. Round 1: tap your Operator, then a zone."
+			_screen.show_toast("Put back %d card%s and drew %d. Round 1: tap your Operator, then a column."
 					% [put_back.size(), "" if put_back.size() == 1 else "s", put_back.size()])
 		else:
 			_screen.show_toast(PlayText.describe(res)["reason"])
@@ -697,9 +712,9 @@ func select_item(item_id: StringName) -> Dictionary:
 	_show_selection()
 	var verb: String = "call in" if item.slot == DataEnums.LoadoutSlot.KILLSTREAK else "use"
 	if kind == &"enemy":
-		_screen.show_toast("%s: tap an enemy in your Operator's zone." % item.display_name)
+		_screen.show_toast("%s: tap an enemy in your Operator's column." % item.display_name)
 	else:
-		_screen.show_toast("%s: tap a zone to %s it." % [item.display_name, verb])
+		_screen.show_toast("%s: tap a column to %s it." % [item.display_name, verb])
 	return check
 
 
@@ -750,7 +765,7 @@ func check_play(zone: int) -> Dictionary:
 		var phase_check: Dictionary = state.can_submit(PLAYER, {"type": &"probe"})
 		if phase_check["code"] in [&"wrong_phase", &"already_ready"]:
 			return PlayText.describe(phase_check)
-		return _no("", "Drop it on a zone.")
+		return _no("", "Drop it on a column.")
 	if selection.get("kind") == &"card" and state.sides[PLAYER].find_in_hand(int(selection["uid"])) == null:
 		return _no("", "That card is not in your hand any more.")
 	var r: Dictionary = state.can_submit(PLAYER, _intent_for(zone))
@@ -773,16 +788,16 @@ func _badge(kind: StringName) -> String:
 			var item: LoadoutItem = state.find_item(PLAYER, selection["id"])
 			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 				return "CALL IN HERE"
-			return "THROW HERE" if item != null and item.slot == DataEnums.LoadoutSlot.LETHAL else "TARGET ZONE"
+			return "THROW HERE" if item != null and item.slot == DataEnums.LoadoutSlot.LETHAL else "TARGET COLUMN"
 	var card: CardData = state.sides[PLAYER].find_in_hand(int(selection["uid"])).card
 	match card.card_type:
 		DataEnums.CardType.UNIT:
-			return "DEPLOY HERE"
+			return "PLAY HERE"
 		DataEnums.CardType.EQUIPMENT:
 			return "PLACE HERE"
 	if kind == &"friendly":
 		return "MOVE HERE"
-	return "TARGET ZONE" if card.requires_zone_choice() else "PLAY"
+	return "TARGET COLUMN" if card.requires_zone_choice() else "PLAY"
 
 
 ## Name / kind of the selection, for play_text.describe().
@@ -881,10 +896,12 @@ func _show_selection() -> void:
 	if selection.is_empty() or state == null:
 		board.show_targets([])
 		board.set_unit_targets([])
+		board.show_ghosts([])
 		return
 	var kind: StringName = _unit_target_kind()
 	if kind != &"" and target_uid < 0:
 		board.show_targets([])
+		board.show_ghosts([])
 		board.set_unit_targets(_target_candidates(kind))
 		return
 	var targets: Array = []
@@ -894,8 +911,42 @@ func _show_selection() -> void:
 		if c["ok"]:
 			lane_state = &"hover" if z == _hover_zone else &"valid"
 		targets.append({"state": lane_state, "text": c["badge"]})
+	# kc-board: the selected unit's full banner as a ghost in each valid column's landing slot
+	# (row 1 for a Protector, whose badge reads TAKES THE FRONT).
+	var ghost: Dictionary = _ghost_entry()
+	var ghosts: Array = []
+	for z: int in MatchState.ZONE_COUNT:
+		var ok: bool = (targets[z] as Dictionary)["state"] != &"invalid" and not ghost.is_empty()
+		ghosts.append({"entry": ghost, "front": bool(ghost.get("front_kw", false))} if ok else {})
+		if ok and bool(ghost.get("front_kw", false)):
+			targets[z]["text"] = "TAKES THE FRONT"
 	board.show_targets(targets)
+	board.show_ghosts(ghosts)
 	board.set_unit_targets([target_uid] if target_uid >= 0 else [])
+
+
+## Banner entry of the selected unit card / Operator (for the landing ghost), {} for anything else.
+func _ghost_entry() -> Dictionary:
+	var me: RulesSide = state.sides[PLAYER]
+	match selection.get("kind"):
+		&"card":
+			var rc: RulesCard = me.find_in_hand(int(selection["uid"]))
+			if rc == null or not rc.card.is_unit():
+				return {}
+			var e: Dictionary = {"uid": rc.uid, "name": rc.card.display_name, "fp": rc.card.firepower,
+					"armor": rc.card.armor, "armor_max": rc.card.armor,
+					"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
+					"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card))}
+			MatchSnapshot._banner_fields(e, rc.card, null, me)
+			return e
+		&"operator":
+			var op: RulesUnit = me.operator_unit
+			if op == null:
+				return {}
+			var e2: Dictionary = MatchSnapshot.unit_entry(state, op, me)
+			e2["pending"] = false
+			return e2
+	return {}
 
 
 # =============================================================================
@@ -959,7 +1010,7 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 				play_at(_enemy_zone(uid))
 				return
 			_show_selection()
-			_screen.show_toast("Now tap an adjacent zone.")
+			_screen.show_toast("Now tap an adjacent column.")
 			return
 	play_at(zone)
 
@@ -1048,7 +1099,22 @@ func _on_operator_inspected() -> void:
 
 
 func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
-	if state == null or uid < 0:
+	if state == null:
+		return
+	match slot_side:
+		&"objective":
+			_open_objective(zone)
+			return
+		&"incoming":
+			_open_info({"banner_back": true, "title": "Incoming rival play",
+					"type": "hidden · %s" % ZONE_WORDS[zone],
+					"text": "The rival committed a unit to %s this Deploy. It stays face down until Reveal, then flips and slides in from the top edge to this slot (a Protector slides on to the front)." % ZONE_WORDS[zone],
+					"status": "Recon Drone or Callout can spot it before Reveal."})
+			return
+		&"field_player", &"field_enemy":
+			_open_field(zone, PLAYER if slot_side == &"field_player" else ENEMY, uid)
+			return
+	if uid < 0:
 		return
 	var side: int = PLAYER if slot_side == &"player" else ENEMY
 	var s: RulesSide = state.sides[side]
@@ -1057,17 +1123,31 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		return
 	var u: RulesUnit = s.find_unit(uid)
 	if u != null and u.card != null:
-		var status: String = "In %s (%s): FP %d, Armor %d/%d." % [ZONE_WORDS[zone], RANGE_WORDS[state.zone_ranges[zone]],
+		var row: int = s.lines[zone].find(u) + 1
+		var status: String = "In %s, row %d%s (%s): FP %d, Armor %d/%d." % [ZONE_WORDS[zone], row,
+				" (frontline)" if row == 1 else "", RANGE_WORDS[state.zone_ranges[zone]],
 				state.firepower_of(u), u.armor, u.max_armor(state.round_number)]
-		open_card_inspector(u.card, "friend" if side == PLAYER else "enemy", status)
+		open_card_inspector(u.card, "friend" if side == PLAYER else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side)
+		return
+	if u != null:
+		# A token without a card (Sentry Turret).
+		var e: Dictionary = MatchSnapshot.unit_entry(state, u, s)
+		_open_info({"banner": e, "side": side, "title": String(e["name"]), "type": "token · %s" % ZONE_WORDS[zone],
+				"text": "FP %d, Armor %d/%d. It does not count for control." % [int(e["fp"]), int(e["armor"]), int(e["armor_max"])],
+				"status": ""})
 		return
 	for p: Dictionary in s.plays:
 		if p["kind"] == &"unit" and (p["card"] as RulesCard).uid == uid:
-			open_card_inspector((p["card"] as RulesCard).card, "friend", "Queued for %s. It arrives at Reveal." % ZONE_WORDS[zone])
+			var card: CardData = (p["card"] as RulesCard).card
+			var e3: Dictionary = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
+					"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(), "pending": true,
+					"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
+			MatchSnapshot._banner_fields(e3, card, null, s)
+			open_card_inspector(card, "friend", "Queued for %s (PLAN). It arrives at Reveal." % ZONE_WORDS[zone], e3, PLAYER)
 			return
 
 
-func open_card_inspector(card: CardData, side: String, status: String) -> void:
+func open_card_inspector(card: CardData, side: String, status: String, banner: Dictionary = {}, banner_side: int = -1) -> void:
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
 	if card.is_unit() and CardInfo.CLASS_WORDS.get(card.weapon_class, "") != "":
 		type_text += " · " + String(CardInfo.CLASS_WORDS[card.weapon_class])
@@ -1080,10 +1160,102 @@ func open_card_inspector(card: CardData, side: String, status: String) -> void:
 	for k: Dictionary in keywords:
 		names.append(String(k["name"]).to_lower())
 	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else card.text
+	if banner.is_empty():
+		banner = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
+				"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
+				"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
+		MatchSnapshot._banner_fields(banner, card, null, state.sides[PLAYER])
+	var art: BannerArt = BannerArtDB.get_art(StringName(String(banner.get("banner", card.id))))
+	if card.is_field():
+		text = _join(text, FIELD_RULE)
 	_screen.get_inspector().open({
 		"view": CardInfo.view_dict(card, side), "title": card.display_name, "type": type_text,
 		"text": text, "keywords": keywords, "status": status,
+		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
+		"art_line": _art_line(art), "is_unit": card.is_unit(),
 	})
+
+
+## Plain-words Overrun rule (the head asked "What is overrun again?"), shown on every Field.
+const FIELD_RULE: String = "Overrun: at the end of each round, if the enemy controls this column, this Field is destroyed (hidden traps are exempt)."
+
+
+## "Art: Marksman (placeholder from Killstreak art) · alternate art 1 of 1" for the inspector.
+func _art_line(art: BannerArt) -> String:
+	var what: String = art.title if art.title != "" else String(art.id).capitalize()
+	return "Banner: %s%s · alternate art 1 of 1" % [what, " (placeholder)" if art.placeholder else ""]
+
+
+## Inspector for something that is not a card in hand (objective tile, incoming back, rails).
+func _open_info(info: Dictionary) -> void:
+	var d: Dictionary = info.duplicate()
+	d["view"] = {}
+	d["side"] = int(info.get("side", PLAYER))
+	_screen.get_inspector().open(d)
+
+
+## Long-press / right-click on a rail box (studio rule: everything can be inspected).
+func _on_rail_inspected(key: StringName) -> void:
+	if state == null:
+		return
+	var me: RulesSide = state.sides[PLAYER]
+	var foe: RulesSide = state.sides[ENEMY]
+	match key:
+		&"score":
+			var goal: String = String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") else ""
+			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
+					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal], "status": "Each round you score the columns you control."})
+		&"deck":
+			_open_info({"title": "Your deck", "type": "deck · discard",
+					"text": "%d cards left to draw, %d used (discard pile). You draw at the start of each round; the hand holds up to 7." % [me.deck.size(), me.discard.size()],
+					"status": ""})
+		&"intel":
+			var dots: PackedInt32Array = state.red_dots(PLAYER)
+			_open_info({"title": "Rival intel", "type": "rival hand · incoming plays",
+					"text": "The rival holds %d cards. Hidden plays this Deploy: A %d, B %d, C %d. Each shows on the board as an INCOMING back in the slot where it will land." % [foe.hand.size(), dots[0], dots[1], dots[2]],
+					"status": "Recon Drone and Callout reveal what they are."})
+		&"supply":
+			_open_info({"title": "Supply", "type": "resource",
+					"text": "%d of %d Supply left this round. Cards cost Supply to play; it refills (and grows) each round." % [me.supply, state.config.supply_for_round(state.round_number)],
+					"status": ""})
+
+
+func _open_objective(zone: int) -> void:
+	var lane: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)["lanes"][zone]
+	var control_text: String = {&"player": "You control it", &"enemy": "The rival controls it",
+			&"contested": "Contested: both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
+	var lines: PackedStringArray = []
+	lines.append("%s. A side controls a column when it has at least one unit there and the other side has none (a Holder breaks a tie)." % control_text)
+	lines.append("Column Firepower: yours %d, rival %d. Range: %s (some weapon classes get +FP here)." % [int(lane["fp_player"]), int(lane["fp_enemy"]), String(lane["range"]).capitalize()])
+	for key: String in ["player", "enemy"]:
+		for f: Dictionary in (lane["fields"] as Dictionary).get(key, []):
+			lines.append("%s Field: %s%s." % ["Your" if key == "player" else "Rival", f["name"], " (hidden trap)" if f.get("hidden", false) else ""])
+	_open_info({"title": "Objective %s · %s" % [String(lane["label"]), String(lane["name"]).capitalize()],
+			"type": "objective · %s" % String(lane["range"]).to_lower(), "text": "\n".join(lines),
+			"status": "Row 1 on each side touches the objective: that card is the frontline."})
+
+
+func _open_field(zone: int, side: int, uid: int) -> void:
+	var s: RulesSide = state.sides[side]
+	var rc: RulesCard = null
+	var risk: bool = false
+	for entry: Dictionary in state.fields_in(side, zone, side == PLAYER):
+		if (entry["card"] as RulesCard).uid == uid:
+			rc = entry["card"]
+	for p: Dictionary in s.plays:
+		if p["kind"] == &"equipment" and (p["card"] as RulesCard).uid == uid:
+			rc = p["card"]
+	if rc == null:
+		return
+	var control: int = state.control_of(zone)
+	risk = rc.card.is_visible_field() and control == 1 - side
+	var status: String = "On %s's half of objective %s." % ["your" if side == PLAYER else "the rival", MatchSnapshot.ZONE_LABELS[zone]]
+	if rc.card.hidden:
+		status = "Hidden trap: the rival can't see it. Traps are never overrun."
+	elif risk:
+		status = "OVERRUN RISK: the %s controls this column now. If it still does at the end of the round, this Field is destroyed." % ("rival" if side == PLAYER else "you")
+	status += " Removed by: Overrun, Sabotage, or a newer Field of the same side here."
+	open_card_inspector(rc.card, "friend" if side == PLAYER else "enemy", status, {}, side)
 
 
 func _open_operator(side: int) -> void:
@@ -1094,7 +1266,7 @@ func _open_operator(side: int) -> void:
 	if op.is_on_board():
 		where = "In %s: FP %d, Armor %d/%d." % [ZONE_WORDS[op.zone], state.firepower_of(op), op.armor, op.max_armor(state.round_number)]
 	elif side == PLAYER and s.operator_can_deploy:
-		where = "Off the board: tap it, then a zone, to place it."
+		where = "Off the board: tap it, then a column, to place it."
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)
 	view["side"] = "friend" if side == PLAYER else "enemy"
 	_screen.get_inspector().open({

@@ -95,7 +95,10 @@ func test_board_shows_art() -> void:
 	var viewport: SubViewport = setup[0]
 	var match_node: Control = setup[1]
 	await tree.process_frame
-	# Unit slots: art replaces the silhouette, enemy art mirrored, frame variation keeps the side.
+	# Let the arrival slides (lane.gd motion) settle.
+	await tree.create_timer(2.0).timeout
+	# kc-board: unit slots show their 4:1 banner (BannerArtDB), enemy art mirrored, never recoloured
+	# (back rows are only darker: r == g == b).
 	var units: int = 0
 	for lane: Node in match_node.get_board().get_lanes():
 		for slot: Node in lane.get_enemy_slots() + lane.get_friendly_slots():
@@ -103,37 +106,27 @@ func test_board_shows_art() -> void:
 				continue
 			units += 1
 			assert_true(slot.has_art(), "slot %s shows art" % slot.get_path())
-			assert_false((slot.get_node("%Figure") as Control).visible, "art replaces the silhouette")
-			var under: ArtUnderlay = slot.get_node("ArtUnderlay")
-			assert_not_null(under.get_art_texture(), "slot art texture")
-			assert_eq(under.flip, slot.side == &"enemy", "enemy art mirrored, own art not")
-			var m: Color = under.modulate * under.self_modulate
-			assert_true(is_equal_approx(m.r, 1.0) and is_equal_approx(m.g, 1.0) and is_equal_approx(m.b, 1.0), "art never recoloured")
-			var variation: StringName = slot.theme_type_variation
-			assert_true(variation in [&"SlotFriendly", &"SlotEnemy", &"SlotOperator", &"SlotPending", &"SlotTarget"], "side frame kept (%s)" % variation)
-			if slot.side == &"enemy":
-				assert_eq(variation, &"SlotEnemy", "enemy frame")
-			# Art sits inside the frame, behind the text.
-			assert_eq(under.get_index(), 0, "art drawn first")
-			assert_true(Rect2(Vector2.ZERO, (slot as Control).size).grow(0.5).encloses(Rect2(under.position, under.size)), "art inside the slot")
+			var art: TextureRect = slot.banner.get_node("Art")
+			assert_not_null(art.texture, "slot banner texture")
+			assert_eq(art.flip_h, slot.side == &"enemy", "enemy art mirrored, own art not")
+			var m: Color = art.modulate * art.self_modulate
+			assert_true(is_equal_approx(m.r, m.g) and is_equal_approx(m.g, m.b), "art never recoloured")
+			var tex_size: Vector2 = art.texture.get_size()
+			assert_true(absf(tex_size.x / tex_size.y - 4.0) < 0.05, "banner crop is 4:1 (%s)" % tex_size)
+			assert_true(Rect2(Vector2.ZERO, (slot as Control).size).grow(0.5).encloses(Rect2(slot.banner.position, slot.banner.size)), "banner inside the slot")
 	assert_eq(units, 24, "every unit slot checked")
-	# Hand chips: art band under the name; units keep stats on plates; tactics show art instead of
-	# their rules line.
+	# Hand cards (option A): the art window shows the art's 2:3 column, inside the card.
 	var chips: Array[Node] = match_node.get_hand().get_cards()
 	assert_eq(chips.size(), HAND_IDS.size(), "full hand")
 	for chip: Node in chips:
-		var under: ArtUnderlay = chip.find_child("ArtUnderlay", true, false)
-		assert_not_null(under, "chip has art")
-		if under == null:
+		var art2: TextureRect = chip.find_child("Art", true, false)
+		assert_not_null(art2, "card has an art window")
+		if art2 == null:
 			continue
-		assert_true(under.visible and under.has_art(), "chip art visible")
-		var c: Control = chip
-		assert_true(under.size.y > 8.0, "art band has height (%s)" % under.size)
-		var band_global: Rect2 = under.get_global_rect()
-		assert_true(c.get_global_rect().grow(0.5).encloses(band_global), "art band inside the chip")
-		var has_stats: bool = chip.find_child("FpPlate", true, false) != null
-		if not has_stats:
-			assert_not_null(chip.find_child("ArtBand", true, false), "tactic chip shows art in the rules line's place")
+		assert_not_null(art2.texture, "card art visible")
+		var ts: Vector2 = art2.texture.get_size()
+		assert_true(absf(ts.x / ts.y - 2.0 / 3.0) < 0.02, "hand art is the 2:3 column (%s)" % ts)
+		assert_true((chip as Control).get_global_rect().grow(0.5).encloses(art2.get_global_rect()), "art window inside the card")
 	_reset()
 	layout._despawn(viewport)
 	await tree.process_frame
@@ -141,40 +134,43 @@ func test_board_shows_art() -> void:
 
 func test_no_art_falls_back() -> void:
 	_reset()
-	# Slot: unknown art key -> silhouette as before.
+	BannerArtDB.clear_cache()
+	# kc-board: an art id with no banner and no Killstreak art still gets a generated placeholder.
 	var slot: Control = (load("res://scenes/match/UnitSlot.tscn") as PackedScene).instantiate()
 	tree.root.add_child(slot)
 	await tree.process_frame
-	slot.show_unit({"name": "Mystery", "cls": "AR", "fp": 1, "armor": 1, "art": "not_a_card"}, &"player", false)
-	assert_false(slot.has_art(), "no art for unknown key")
-	assert_true((slot.get_node("%Figure") as Control).visible, "silhouette fallback")
-	# Bitmaps off: the procedural SVG card art (still art, never blank).
+	slot.show_unit({"name": "Mystery", "cls": "AR", "fp": 1, "armor": 1, "banner": "not_a_card"}, &"player", false)
+	assert_true(slot.has_art(), "generated placeholder for an unknown art id")
+	assert_true(BannerArtDB.get_art(&"not_a_card").placeholder, "marked as placeholder")
+	# Bitmaps off: the procedural SVG card art, cropped (still art, never blank).
 	CardArt.bitmaps_enabled = false
 	CardArt.clear_cache()
-	slot.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "art": "rifleman"}, &"enemy", true)
+	BannerArtDB.clear_cache()
+	slot.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "banner": "rifleman"}, &"enemy", true)
 	await tree.process_frame
 	assert_true(slot.has_art(), "SVG art when the image is missing")
-	var tex: Texture2D = (slot.get_node("ArtUnderlay") as ArtUnderlay).get_art_texture()
-	assert_true(tex != null and not CardArt.has_bitmap(CardArt.card_path(&"rifleman")), "procedural texture")
-	# INCOMING keeps the card back, no unit art.
+	assert_false(CardArt.has_bitmap(CardArt.card_path(&"rifleman")), "procedural texture")
+	# INCOMING shows the face-down back, no unit art.
 	_reset()
 	slot.show_incoming()
 	assert_false(slot.has_art(), "incoming has no unit art")
+	assert_eq(slot.banner.mode, BannerView.Mode.INCOMING, "incoming back")
 	slot.queue_free()
-	# Hand chip without a known card (no id, unknown type): rules line as before.
+	# Hand card without any art id: no art window texture, the name still shows.
 	var hand: Control = (load("res://scenes/match/HandArea.tscn") as PackedScene).instantiate()
 	tree.root.add_child(hand)
 	await tree.process_frame
 	hand.set_hand([{"uid": 1, "name": "Odd", "type": "Thing", "card_type": "nothing", "cost": 1, "text": "Some rules"}])
 	await tree.process_frame
 	var chip: Node = hand.get_cards()[0]
-	var under: Node = chip.find_child("ArtUnderlay", true, false)
-	assert_true(under == null or not (under as Control).visible, "no art for an unknown card")
-	var texts: Array = chip.find_children("*", "Label", true, false).filter(func(l: Label) -> bool: return l.text == "Some rules")
-	assert_eq(texts.size(), 1, "rules line kept without art")
+	var art: TextureRect = chip.find_child("Art", true, false)
+	assert_true(art == null or art.texture == null, "no art for a card without an id")
+	var names: Array = chip.find_children("*", "Label", true, false).filter(func(l: Label) -> bool: return l.text == "Odd")
+	assert_eq(names.size(), 1, "name kept without art")
 	hand.queue_free()
 	await tree.process_frame
 	_reset()
+	BannerArtDB.clear_cache()
 
 
 func test_mulligan_shows_art() -> void:

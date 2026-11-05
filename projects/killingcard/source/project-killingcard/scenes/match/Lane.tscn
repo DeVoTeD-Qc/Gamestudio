@@ -1,113 +1,63 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/lane.gd" id="1_lane"]
-[ext_resource type="PackedScene" path="res://scenes/match/UnitSlot.tscn" id="2_slot"]
+[ext_resource type="Script" path="res://scripts/ui/objective_tile.gd" id="2_tile"]
 
-[node name="Lane" type="PanelContainer"]
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_type_variation = &"LanePanel"
+[node name="Lane" type="Control"]
+layout_mode = 3
+anchors_preset = 0
 script = ExtResource("1_lane")
 
-[node name="Backdrop" type="TextureRect" parent="."]
+[node name="EnemyRow" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 3
+anchors_preset = 0
 mouse_filter = 2
-expand_mode = 1
-stretch_mode = 6
 
-[node name="Column" type="VBoxContainer" parent="."]
+[node name="FriendlyRow" type="Control" parent="." groups=["tap_target"]]
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 4
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
 
-[node name="Header" type="PanelContainer" parent="Column"]
+[node name="Objective" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"ZoneNeutral"
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("2_tile")
 
-[node name="Row" type="HBoxContainer" parent="Column/Header"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="NameLabel" type="Label" parent="Column/Header/Row"]
+[node name="Slots" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudHeader"
-text = "ZONE"
-clip_text = true
-text_overrun_behavior = 3
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
 
-[node name="RangeLabel" type="Label" parent="Column/Header/Row"]
+[node name="FxLayer" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 4
-theme_type_variation = &"RangeBadge"
-text = "MID"
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
 
-[node name="ControlLabel" type="Label" parent="Column/Header/Row"]
+[node name="Decor" type="Control" parent="."]
 unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "EMPTY"
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="EnemyRow" type="PanelContainer" parent="Column"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_type_variation = &"LaneRowEnemy"
-
-[node name="Slots" type="HBoxContainer" parent="Column/EnemyRow"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="Slot1" parent="Column/EnemyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot2" parent="Column/EnemyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot3" parent="Column/EnemyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot4" parent="Column/EnemyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="FriendlyRow" type="PanelContainer" parent="Column" groups=["tap_target"]]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-theme_type_variation = &"LaneRowFriendly"
-
-[node name="Slots" type="HBoxContainer" parent="Column/FriendlyRow"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="Slot1" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot2" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot3" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="Slot4" parent="Column/FriendlyRow/Slots" instance=ExtResource("2_slot")]
-layout_mode = 2
-
-[node name="TargetBadge" type="PanelContainer" parent="Column/FriendlyRow"]
+[node name="TargetBadge" type="PanelContainer" parent="."]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
+layout_mode = 3
+anchors_preset = 0
 mouse_filter = 2
 theme_type_variation = &"TargetBadge"
 
-[node name="TargetText" type="Label" parent="Column/FriendlyRow/TargetBadge"]
+[node name="TargetText" type="Label" parent="TargetBadge"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"TargetText"
-text = "DEPLOY HERE"
+text = "PLAY HERE"
 horizontal_alignment = 1

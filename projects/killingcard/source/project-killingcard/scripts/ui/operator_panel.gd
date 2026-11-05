@@ -27,7 +27,7 @@ signal operator_drag_ended(pos: Vector2)
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 
-const BUTTON_SIZE: Vector2 = Vector2(76, 72)
+const BUTTON_SIZE: Vector2 = Vector2(64, 64)
 const BUTTON_SIZE_COMPACT: Vector2 = Vector2(64, 64)
 const INFO_WIDTH: float = 170.0
 const INFO_WIDTH_COMPACT: float = 140.0
@@ -84,12 +84,21 @@ func set_selected(value: bool) -> void:
 
 func set_compact(value: bool) -> void:
 	compact = value
-	_info.custom_minimum_size.x = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
-	_info.get_parent().add_theme_constant_override(&"separation", 8 if compact else 12)
-	# Key number floor is 20 px (14.4 pt on the phone); 20 keeps "FP 3  AR 5/7" in 140 px.
+	_info.get_parent().add_theme_constant_override(&"separation", 6 if compact else 8)
+	# Key number floor is 20 px (14.4 pt on the phone).
 	_stats.add_theme_font_size_override(&"font_size", 20 if compact else 22)
 	for b: Node in _buttons.get_children():
 		(b as Control).custom_minimum_size = _button_size()
+
+
+## kc-board: the panel sits in the left rail; 3 buttons per row when the rail is wide enough
+## (phone 844x390), else 2 (desktop's 202 px rail, notched phones).
+func fit_rail_width(width: float) -> void:
+	var sb: StyleBox = get_theme_stylebox(&"panel")
+	var inner: float = width - (sb.get_minimum_size().x if sb != null else 16.0)
+	var sep: int = _buttons.get_theme_constant(&"h_separation")
+	var bw: float = _button_size().x
+	_buttons.columns = 3 if inner >= 3.0 * bw + 2.0 * sep else 2
 
 
 ## Labels whose whole text must stay visible.

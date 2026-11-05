@@ -1,6 +1,6 @@
 # score_bar.gd
-# Purpose: Score bar (top-left): YOU score - score ENEMY, the round counter
-#   "RD 3/8 · DEPLOY" and the mode line. Side names are spelled out (not color only).
+# Purpose: Score box (top of the left rail, kc-board): the round counter "RD 3/8 · DEPLOY",
+#   YOU score - score RIVAL, and the mode line. Side names are spelled out (not color only).
 # Dependencies: none.
 # Author: UI/UX Agent
 extends PanelContainer

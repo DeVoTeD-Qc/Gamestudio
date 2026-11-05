@@ -1,27 +1,17 @@
 # hand_area.gd
-# Purpose: Hand area (bottom-center). Shows the hand as compact HandCard chips, a mini version
-#   of the card in CardView's icon language (f04): cost hex, card-type and weapon-class icons
-#   (+ type word when it fits), name, keyword icons in amber (words when they fit; cards with no
-#   keyword icon show one rules line instead), FP / Armor icons with their numbers.
-#   The full CardView (p13) is NOT used here: at the
-#   ~0.4x scale a hand slot allows, its name/cost text would be 7-10 pt on a phone
-#   (see README "Phone readability"). CardView belongs in the long-press inspector (p09),
-#   at >= 0.8x.
-#   Input (p09): each chip runs a PressGesture: tap = select, drag = drag to a lane,
-#   long-press / right-click = inspect. The hand only reports gestures with the card's rules
-#   uid; match_controller.gd decides what they mean. set_selected() marks the chosen card;
-#   chips the player can't afford (playable = false) use the dim style.
-#   Up to 7 cards (hand cap): CardRow is a plain Control and _fit_cards() places the
-#   cards, centred, overlapping them when they don't fit (so the hand never widens the
-#   bottom bar). Compact (phone) profile: smaller chips, no "HAND n/7" caption.
-#   k-art4: a chip is cost / type row and name on the chip's own panel, then an art band (the
-#   card's painted art, ArtUnderlay, cropped) filling the lower part: a unit's keyword icons and
-#   FP / Armor sit on dark plates over it; a tactic / equipment chip shows the art in place of its
-#   cut-off rules line (the full text is one long-press away, in the inspector). Numbers keep
-#   their sizes. Without art (unknown key) the chip is as before, rules line included.
+# Purpose: The hand row under the board (kc-board, board-and-cards-ux.md §3.4, option A approved).
+#   Each card: an art window on top (the art's 2:3 hand column, BannerArtDB.portrait_texture, cropped
+#   to fill), the cost hex over its top-left corner, the chassis name on one line (ellipsis: the full
+#   name is one long-press away), and a bottom row: units show Firepower, up to 2 keyword glyphs and
+#   Armor; tactics show TACTIC and a bolt; Fields show FIELD and a stake. Phone cards are 78x98,
+#   desktop 108x140 (BoardMetrics), 7 fit side by side; more overlap so the row never widens.
+#   A card you can't afford is greyed. The selected card animates its art (shimmer).
+#   Input (p09): each card runs a PressGesture: tap = select, drag = drag to a column,
+#   long-press / right-click = inspect. The hand only reports gestures with the card's rules uid;
+#   match_controller.gd decides what they mean.
 # Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
-#   HudNumber, HudSubtle, HudTag), press_gesture.gd, mini_icons.gd, cost_hex.gd, icon_sheet.gd.
-# Author: UI/UX Agent
+#   HudNumber, HudTag), press_gesture.gd, cost_hex.gd, icon_sheet.gd, BannerArtDB.
+# Author: UI/UX Agent (p08-f04), Mechanics Developer Agent (kc-board: option A cards)
 extends PanelContainer
 
 signal card_tapped(uid: int)
@@ -34,10 +24,11 @@ const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
 const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
 
-## Desktop chip size (about 45% of the 250x350 card frame); compact chip for the phone profile.
-const CARD_SIZE: Vector2 = Vector2(112, 156)
-const CARD_SIZE_COMPACT: Vector2 = Vector2(104, 108)
+## Desktop / phone card size (board-and-cards-ux.md §3.4); set_card_size() follows BoardMetrics.
+const CARD_SIZE: Vector2 = Vector2(108, 140)
+const CARD_SIZE_COMPACT: Vector2 = Vector2(78, 98)
 const CARD_GAP: int = 8
+const SHIMMER: Shader = preload("res://assets/shaders/banner_shimmer.gdshader")
 ## f04 icon sizes and cost hex (pointy-top, as on CardView).
 const ICON_PX: float = 20.0
 const ICON_PX_COMPACT: float = 18.0
@@ -48,6 +39,8 @@ const HAND_CAP: int = 7
 static var STAT_PLATE: StyleBoxFlat = ArtUnderlay.plate()
 
 var compact: bool = false
+var _card_size_override: Vector2 = Vector2.ZERO
+var _gap: float = CARD_GAP
 var _cards_data: Array = []
 ## Rules uid of the selected card, -1 = none.
 var selected_uid: int = -1
@@ -59,14 +52,27 @@ var dragging_uid: int = -1
 
 
 func _ready() -> void:
+	# kc-board: the cards sit straight under the board (no panel behind the row).
+	add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
+	_caption.visible = false
 	_row.resized.connect(_fit_cards)
 
 
 func set_compact(value: bool) -> void:
+	_caption.visible = false
 	if value == compact:
 		return
 	compact = value
-	_caption.visible = not compact
+	set_hand(_cards_data)
+
+
+## Card size and gap from BoardMetrics (the hand row is exactly one card tall).
+func set_card_size(card: Vector2, gap: float) -> void:
+	_caption.visible = false
+	if card == _card_size_override and gap == _gap:
+		return
+	_card_size_override = card
+	_gap = gap
 	set_hand(_cards_data)
 
 
@@ -120,6 +126,19 @@ func _apply_styles() -> void:
 		# Unaffordable chips fade so the playable ones stand out; the dragged one fades more.
 		var alpha: float = 1.0 if playable or uid == selected_uid else 0.55
 		(chip as Control).modulate.a = 0.35 if uid == dragging_uid and uid >= 0 else alpha
+		# Can't afford it: greyscale-ish, 60% brightness (§3.4).
+		(chip as Control).self_modulate = Color.WHITE
+		var art: TextureRect = chip.find_child("Art", true, false) as TextureRect
+		if art != null:
+			art.self_modulate = Color(0.6, 0.6, 0.6) if not playable and uid != selected_uid else Color.WHITE
+			var on: bool = uid == selected_uid and uid >= 0
+			if on and art.material == null:
+				var mat := ShaderMaterial.new()
+				mat.shader = SHIMMER
+				mat.set_shader_parameter(&"start_time", Time.get_ticks_msec() / 1000.0)
+				art.material = mat
+			elif not on:
+				art.material = null
 
 
 func _wire(chip: Control, uid: int) -> void:
@@ -148,6 +167,8 @@ func get_important_labels() -> Array[Label]:
 
 
 func _card_size() -> Vector2:
+	if _card_size_override != Vector2.ZERO:
+		return _card_size_override
 	return CARD_SIZE_COMPACT if compact else CARD_SIZE
 
 
@@ -155,12 +176,10 @@ func _fit_cards() -> void:
 	var cards: Array[Node] = _row.get_children()
 	var n: int = cards.size()
 	var card_size: Vector2 = _card_size()
-	for card: Node in cards:
-		card_size = card_size.max((card as Control).get_combined_minimum_size())
 	_row.custom_minimum_size = Vector2(card_size.x, card_size.y)
 	if n == 0:
 		return
-	var pitch: float = card_size.x + CARD_GAP
+	var pitch: float = card_size.x + _gap
 	if n > 1:
 		pitch = minf(pitch, (_row.size.x - card_size.x) / (n - 1))
 	var total: float = card_size.x + pitch * (n - 1)
@@ -178,143 +197,109 @@ func _make_card(card: Dictionary) -> Control:
 	panel.custom_minimum_size = _card_size()
 	panel.add_to_group(&"tap_target")
 	panel.set_meta(&"playable", bool(card.get("playable", true)))
+	panel.tooltip_text = String(card.get("name", ""))
 	var ctype: String = MiniIcons.card_type(card)
-	var weapon: String = MiniIcons.weapon_class(card)
-	# k-art4: painted art band behind the lower part of the chip (placed after the column sorts).
-	var art := ArtUnderlay.new()
-	art.set_art(CardArt.card_key({"id": card.get("id", ""), "type": ctype, "weapon_class": weapon}), ArtUnderlay.SCRIM_CHIP)
-	# A plain layer holds it, so the PanelContainer never re-fits the band over the whole chip.
-	var layer: Control = Control.new()
-	layer.name = "ArtLayer"
-	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(layer)
-	layer.add_child(art)
-	var has_art: bool = art.visible
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 0 if compact else 2)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(column)
+	# The face ignores the panel's content margins: it is placed over the whole card (fit below).
+	var face: Control = Control.new()
+	face.name = "Face"
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.clip_contents = true
+	panel.add_child(face)
+	var big: bool = _card_size().x >= 100.0
+	var art_h: float = roundf(_card_size().y * (82.0 / 140.0 if big else 56.0 / 98.0))
+	var art := TextureRect.new()
+	art.name = "Art"
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art_id: StringName = StringName(String(card.get("banner", card.get("id", ""))))
+	art.texture = BannerArtDB.portrait_texture(art_id, {"cls": card.get("type", ""), "type": ctype}) if art_id != &"" else null
+	face.add_child(art)
+	var hex: Control = CostHex.new()
+	hex.custom_minimum_size = HEX_SIZE if big else HEX_SIZE_COMPACT
+	hex.size = hex.custom_minimum_size
+	hex.label.add_theme_font_size_override(&"font_size", 20 if big else 16)
+	hex.set_text(str(card.get("cost", 0)))
+	hex.label.set_meta(&"important", true)
+	face.add_child(hex)
+	var title: Label = _label(String(card.get("name", "")), &"UnitName", false)
+	title.name = "NameLabel"
+	title.add_theme_font_size_override(&"font_size", 16)
+	title.clip_text = true
+	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	face.add_child(title)
+	var bottom: HBoxContainer = HBoxContainer.new()
+	bottom.name = "Bottom"
+	bottom.add_theme_constant_override(&"separation", 2)
+	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.add_child(bottom)
 	var text_color: Color = get_theme_color(&"text", &"Hud")
-	var icon_px: float = ICON_PX_COMPACT if compact else ICON_PX
-
-	# Row 1 (as on CardView): cost hex, card-type icon, weapon-class icon, elite mark, then the
-	# type word if it still fits (words go before icons).
-	var top: HBoxContainer = HBoxContainer.new()
-	top.add_theme_constant_override(&"separation", 3)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(top)
-	var badge: Control = CostHex.new()
-	badge.custom_minimum_size = HEX_SIZE_COMPACT if compact else HEX_SIZE
-	badge.set_text(str(card.get("cost", 0)))
-	badge.label.set_meta(&"important", true)
-	badge.label.add_to_group(&"key_number")
-	top.add_child(badge)
-	var type_icon: TextureRect = MiniIcons.icon(StringName("type_" + ctype), icon_px, text_color)
-	type_icon.tooltip_text = ctype.to_upper()
-	top.add_child(type_icon)
-	if weapon != "":
-		top.add_child(MiniIcons.icon(StringName("class_" + weapon), icon_px, text_color))
-	if bool(card.get("elite", false)):
-		top.add_child(MiniIcons.icon(&"elite", icon_px, get_theme_color(&"elite", &"Hud")))
-	var type_word: Label = MiniIcons.word(String(card.get("type", "")).to_upper())
-	ArtUnderlay.outline(type_word)
-	type_word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(type_word)
-	top.resized.connect(MiniIcons.fit_words.bind(top))
-
-	var title: Label = _label(String(card.get("name", "")), &"UnitName", true)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	title.max_lines_visible = 2
-	column.add_child(title)
-	if has_art:
-		column.sort_children.connect(_fit_art.bind(panel, column, title, art))
-
-	# Keyword icons (amber, words only when they fit); cards without keyword icons keep their
-	# rules line, which trims (the full text is in the inspector, p09).
-	var keywords: Array = card.get("keywords", [])
-	if not keywords.is_empty():
-		var kw: HBoxContainer = MiniIcons.keyword_row(keywords, icon_px, get_theme_color(&"accent", &"Hud"))
-		column.add_child(kw)
-		if has_art:
-			kw.draw.connect(_draw_kw_plate.bind(kw))
-		kw.resized.connect(MiniIcons.fit_words.bind(kw))
-		var spacer: Control = Control.new()
-		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		column.add_child(spacer)
-	elif has_art and card.has("fp"):
-		var spacer2: Control = Control.new()
-		spacer2.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		spacer2.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		column.add_child(spacer2)
-	elif has_art:
-		# The art band takes the cut-off rules line's place (full text: long-press inspector).
-		var band: Control = Control.new()
-		band.name = "ArtBand"
-		band.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		band.custom_minimum_size = Vector2(0, 20)
-		band.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		column.add_child(band)
-	else:
-		var text: Label = _label(String(card.get("text", "")), &"HudSubtle", false)
-		text.add_theme_color_override(&"font_color", text_color)
-		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		text.clip_text = true
-		text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		text.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		text.custom_minimum_size = Vector2(0, 20)
-		column.add_child(text)
-
-	# FP bottom-left, Armor bottom-right, each with its CardView icon.
+	var accent: Color = get_theme_color(&"accent", &"Hud")
+	var icon_px: float = 16.0 if big else 14.0
 	if card.has("fp"):
-		var stats: HBoxContainer = HBoxContainer.new()
-		stats.add_theme_constant_override(&"separation", 2)
-		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		column.add_child(stats)
-		for pair: Array in [[&"stat_firepower", card.get("fp", 0)], [&"stat_armor", card.get("armor", 0)]]:
-			if pair[0] == &"stat_armor":
-				var gap: Control = Control.new()
-				gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-				stats.add_child(gap)
-			# k-art4: icon + number on a dark plate (same sizes as before).
-			var stat: HBoxContainer = HBoxContainer.new()
-			stat.name = "FpPlate" if pair[0] == &"stat_firepower" else "ArPlate"
-			stat.add_theme_constant_override(&"separation", 2)
-			stat.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			stat.draw.connect(_draw_plate.bind(stat))
-			stats.add_child(stat)
-			stat.add_child(MiniIcons.icon(pair[0], icon_px, text_color))
-			var value: Label = _label(str(pair[1]), &"HudNumber", true)
-			value.add_to_group(&"key_number")
-			stat.add_child(value)
+		bottom.add_child(MiniIcons.icon(&"stat_firepower", icon_px, text_color))
+		bottom.add_child(_number(str(card.get("fp", 0)), big))
+		var mid: HBoxContainer = MiniIcons.keyword_row((card.get("keywords", []) as Array).slice(0, 2), icon_px, accent, false)
+		for c: Node in mid.get_children():
+			if c is Label:
+				(c as Label).add_theme_font_size_override(&"font_size", 16)
+		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mid.alignment = BoxContainer.ALIGNMENT_CENTER
+		bottom.add_child(mid)
+		bottom.add_child(MiniIcons.icon(&"stat_armor", icon_px, text_color))
+		bottom.add_child(_number(str(card.get("armor", 0)), big))
+	else:
+		var word: Label = _label("FIELD" if ctype == "equipment" else "TACTIC", &"HudTag", false)
+		word.add_theme_color_override(&"font_color", accent)
+		word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bottom.add_child(word)
+		var glyph: Control = Control.new()
+		glyph.custom_minimum_size = Vector2(icon_px, icon_px)
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		glyph.draw.connect(_draw_type_glyph.bind(glyph, ctype == "equipment", accent))
+		bottom.add_child(glyph)
+	panel.sort_children.connect(_fit_face.bind(panel, face, art, hex, title, bottom, art_h))
 	return panel
 
 
-## The art band: from under the name to the chip's inner bottom edge, full inner width.
-func _fit_art(panel: PanelContainer, column: Control, title: Control, art: Control) -> void:
+func _number(text: String, big: bool) -> Label:
+	var v: Label = _label(text, &"HudNumber", true)
+	v.add_theme_font_size_override(&"font_size", 18 if big else 16)
+	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return v
+
+
+## The face covers the card inside its border: art window on top, name, then the stat row.
+func _fit_face(panel: PanelContainer, face: Control, art: Control, hex: Control, title: Control, bottom: Control, art_h: float) -> void:
 	var sb: StyleBox = panel.get_theme_stylebox(&"panel")
 	var inset: float = 2.0
 	if sb is StyleBoxFlat:
 		inset = float((sb as StyleBoxFlat).border_width_left)
-	var top: float = column.position.y + title.position.y + title.size.y + 1.0
-	var origin: Vector2 = (art.get_parent() as Control).position
-	art.position = Vector2(inset, top) - origin
-	art.size = Vector2(panel.size.x - inset * 2.0, maxf(0.0, panel.size.y - inset - top))
+	face.position = Vector2(inset, inset)
+	face.size = panel.size - Vector2(inset, inset) * 2.0
+	art.position = Vector2.ZERO
+	art.size = Vector2(face.size.x, art_h - inset)
+	hex.position = Vector2(2, 2)
+	var pad: float = 4.0
+	var bottom_h: float = bottom.get_combined_minimum_size().y
+	bottom.position = Vector2(pad, face.size.y - bottom_h - 1.0)
+	bottom.size = Vector2(face.size.x - pad * 2.0, bottom_h)
+	var title_h: float = title.get_combined_minimum_size().y
+	var free_top: float = art.size.y
+	title.position = Vector2(pad, free_top + maxf(0.0, (bottom.position.y - free_top - title_h) * 0.5))
+	title.size = Vector2(face.size.x - pad * 2.0, title_h)
 
 
-## Plate behind the visible keyword icons / words only (not the row's empty end).
-func _draw_kw_plate(kw: Control) -> void:
-	var right: float = 0.0
-	for c: Node in kw.get_children():
-		if c is Control and (c as Control).visible:
-			right = maxf(right, (c as Control).position.x + (c as Control).size.x)
-	if right > 0.0:
-		kw.draw_style_box(STAT_PLATE, Rect2(Vector2(-3, -1), Vector2(right + 6, kw.size.y + 2)))
-
-
-func _draw_plate(c: Control) -> void:
-	c.draw_style_box(STAT_PLATE, Rect2(Vector2(-3, -1), c.size + Vector2(6, 2)))
+## Bolt (tactic) or stake (Field) glyph in the hand card's bottom row.
+func _draw_type_glyph(c: Control, field: bool, col: Color) -> void:
+	var s: float = c.size.x
+	if field:
+		c.draw_line(Vector2(s * 0.5, s * 0.1), Vector2(s * 0.5, s * 0.95), col, 2.0)
+		c.draw_line(Vector2(s * 0.2, s * 0.35), Vector2(s * 0.8, s * 0.35), col, 2.0)
+		c.draw_line(Vector2(s * 0.28, s * 0.6), Vector2(s * 0.72, s * 0.6), col, 2.0)
+	else:
+		c.draw_colored_polygon(PackedVector2Array([Vector2(s * 0.58, 0), Vector2(s * 0.2, s * 0.56), Vector2(s * 0.46, s * 0.56),
+				Vector2(s * 0.36, s), Vector2(s * 0.8, s * 0.42), Vector2(s * 0.54, s * 0.42)]), col)
 
 
 func _label(text: String, variation: StringName, important: bool) -> Label:

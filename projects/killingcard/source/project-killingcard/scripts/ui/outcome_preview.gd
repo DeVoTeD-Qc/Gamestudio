@@ -147,26 +147,20 @@ func _fill(c: Dictionary, zone: Dictionary) -> void:
 	unk.theme_type_variation = &"PreviewUnknown" if int(zone.get("unknown", 0)) > 0 else &"PreviewQuiet"
 
 
-## Puts each card over its lane's header, full lane width, growing down into the enemy row.
+## kc-board: each card sits over its column's objective tile (full column width, bottom aligned with
+## the tile), growing up into the rival's half if it needs more height; your rows stay free.
 func _place_cards() -> void:
 	if _screen == null or not visible:
 		return
 	var lanes: Array[Node] = _screen.get_board().get_lanes()
 	for i: int in mini(lanes.size(), _cards.size()):
-		var header: Control = (lanes[i] as Node).get_node(^"Column/Header")
+		var tile: Control = lanes[i].get_objective_tile()
 		var card: Control = _cards[i]["card"]
-		var r: Rect2 = header.get_global_rect()
+		var r: Rect2 = tile.get_global_rect()
 		var to_local: Transform2D = get_global_transform().affine_inverse()
-		card.position = to_local * r.position
-		# Down to the end of the enemy slots' tag row (class icon, POINT / INCOMING), so no half-cut
-		# words show under the card; names and FP / AR stay visible.
-		var h: float = card.get_combined_minimum_size().y
-		var slots: Array[Node] = lanes[i].get_enemy_slots()
-		if not slots.is_empty():
-			var tag: Control = (slots[0] as Node).get_node_or_null(^"%TagLabel")
-			if tag != null and tag.is_visible_in_tree():
-				h = maxf(h, tag.get_global_rect().end.y - r.position.y)
+		var h: float = maxf(card.get_combined_minimum_size().y, r.size.y)
 		card.size = Vector2(r.size.x, h)
+		card.position = to_local * Vector2(r.position.x, r.end.y - h)
 
 
 func _make_card() -> Dictionary:
@@ -177,10 +171,19 @@ func _make_card() -> Dictionary:
 	col.add_theme_constant_override(&"separation", 0)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(col)
-	var row1: Array = _row(col, &"PreviewText", &"PreviewQuiet")
-	var row2: Array = _row(col, &"PreviewText", &"PreviewQuiet")
+	# kc-board: a column is narrow (176 px on the phone), so the four values stack.
+	var row1: Array = [_line(col, &"PreviewText"), _line(col, &"PreviewQuiet")]
+	var row2: Array = [_line(col, &"PreviewText"), _line(col, &"PreviewQuiet")]
 	add_child(card)
 	return {"card": card, "damage": row1[0], "control": row1[1], "kills": row2[0], "unknown": row2[1]}
+
+
+func _line(parent: Control, variation: StringName) -> Label:
+	var l: Label = Label.new()
+	l.theme_type_variation = variation
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(l)
+	return l
 
 
 func _row(parent: Control, left_var: StringName, right_var: StringName) -> Array:
@@ -206,4 +209,4 @@ func _sync_button() -> void:
 		return
 	_button.set_pressed_no_signal(enabled)
 	_button.text = "PREVIEW\nON" if enabled else "PREVIEW\nOFF"
-	_button.tooltip_text = "Forecast each zone from what you can see (P)"
+	_button.tooltip_text = "Forecast each column from what you can see (P)"

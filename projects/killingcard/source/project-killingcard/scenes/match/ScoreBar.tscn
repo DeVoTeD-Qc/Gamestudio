@@ -3,59 +3,56 @@
 [ext_resource type="Script" path="res://scripts/ui/score_bar.gd" id="1_score"]
 
 [node name="ScoreBar" type="PanelContainer"]
-size_flags_horizontal = 3
 theme_type_variation = &"HudPanelDark"
 script = ExtResource("1_score")
 
-[node name="Row" type="HBoxContainer" parent="."]
+[node name="Info" type="VBoxContainer" parent="."]
 layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="YouLabel" type="Label" parent="Row"]
-layout_mode = 2
-theme_type_variation = &"FriendlyLabel"
-text = "YOU"
-
-[node name="PlayerScore" type="Label" parent="Row" groups=["key_number"]]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudBig"
-text = "0"
-
-[node name="Dash" type="Label" parent="Row"]
-layout_mode = 2
-theme_type_variation = &"HudSubtle"
-text = "-"
-
-[node name="EnemyScore" type="Label" parent="Row" groups=["key_number"]]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudBig"
-text = "0"
-
-[node name="EnemyLabel" type="Label" parent="Row"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"EnemyLabel"
-text = "ENEMY"
-
-[node name="Sep" type="VSeparator" parent="Row"]
-layout_mode = 2
-
-[node name="Info" type="VBoxContainer" parent="Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
 theme_override_constants/separation = 0
 
-[node name="RoundLabel" type="Label" parent="Row/Info" groups=["key_number"]]
+[node name="RoundLabel" type="Label" parent="Info" groups=["key_number"]]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudHeader"
 text = "RD 1/8"
 clip_text = true
 
-[node name="ModeLabel" type="Label" parent="Row/Info"]
+[node name="Row" type="HBoxContainer" parent="Info"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="YouLabel" type="Label" parent="Info/Row"]
+layout_mode = 2
+theme_type_variation = &"FriendlyLabel"
+text = "YOU"
+vertical_alignment = 1
+
+[node name="PlayerScore" type="Label" parent="Info/Row" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "0"
+
+[node name="Dash" type="Label" parent="Info/Row"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "-"
+vertical_alignment = 1
+
+[node name="EnemyScore" type="Label" parent="Info/Row" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "0"
+
+[node name="EnemyLabel" type="Label" parent="Info/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"EnemyLabel"
+text = "RIVAL"
+vertical_alignment = 1
+
+[node name="ModeLabel" type="Label" parent="Info"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudSubtle"
