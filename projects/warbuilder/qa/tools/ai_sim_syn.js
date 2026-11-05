@@ -29,12 +29,21 @@ const CFG = {
   hardEnd: 12,               // end of this round: most Health wins
   stationCost: 2, stationCopies: 6,
   stackSize: 3, affinityShare: 2 / 3,
-  pointBlank: false, evasion: false, revealCap: 99, coverNeed: false, aim: 'recoil', aiCommitP: 0.65,
-  squad: true, streak: true, loadout: true, specialist: false,
+  stationScrap: 1, gunTweaks: true, pointBlank: true, evasion: false, revealCap: 99, coverNeed: false, aim: 'recoil', aiCommitP: 0.65,
+  famBias: 1, supplyRow: false, rowExtra: 0, gunSquad: true, force: null, squadMult: 1, squad: true, streak: true, loadout: true, specialist: false,
   specRanks: [4, 7],
   minDeck: 7,
   aiFireP: 0.40, aiFireEV: 1.6, mcTrials: 80,
 };
+
+// gun tweaks proposed by the spec (applied to this process's in-memory copy of the engine's gun table only)
+const GUN_TWEAKS = { smg: { need0: -1 }, burst: { recoil: 1 } };
+function applyGunTweaks() {
+  if (!CFG.gunTweaks) return;
+  for (const id in WD.WEAPONS) { const g = WD.WEAPONS[id]; const t = GUN_TWEAKS[g.gunClass]; if (!t || g._tw) continue; g._tw = true;
+    if (t.need0) g.ladder = g.ladder.map(([h, d], i) => [i === 0 ? Math.max(1, h + t.need0) : h, d]);
+    if (t.recoil) g.recoil += t.recoil; if (t.shots) g.magazine_capacity += t.shots; if (t.dmg) g.ladder = g.ladder.map(([h, d]) => [h, d + t.dmg]); }
+}
 
 // ---------------- cards ----------------
 // effect keys: m Movement, p Precision, i Intel, a Armor, s extra shot, d draw, k Mark (next shot needs 1 fewer Hit Marker),
@@ -48,62 +57,64 @@ C('T002', 'Scout', null, 0, 0, 0, { i: 1 }, { copies: 3 });
 C('T004', 'Steady Aim', null, 0, 1, 0, { p: 1 }, { copies: 2 });
 C('T005', 'Recon Run', null, 0, 1, 0, { m: 1, i: 1 }, { copies: 2 });
 // Buy Station (family basics; always available, 6 copies each)
-C('K02', 'Tac Sprint', 'A', 1, 1, 2, { m: 2 }, { copies: 0 });
+C('K02', 'Tac Sprint', 'A', 1, 1, 2, { m: 1, p: 2 }, { copies: 0 });
 C('K04', 'Focus', 'R', 1, 2, 2, { p: 2 }, { copies: 0 });
-C('K05', 'Spare Rounds', 'S', 1, 1, 2, { s: 1 }, { copies: 0 });
+C('K05', 'Spare Rounds', 'S', 1, 2, 2, { p: 1, s: 1 }, { copies: 0 });
 C('K03', 'Dead Drop', 'E', 1, 1, 2, { i: 2 }, { copies: 0 });
-// ASSAULT: tempo. Movement, extra shots, Streak (2nd+ hits hit harder).
-C('A11', 'Breach', 'A', 1, 1, 1, { m: 2, p: 1 }, { squad: { p: 1 } });
-C('A12', 'Slide Cancel', 'A', 1, 1, 1, { m: 2, sc: 1 }, { squad: { d: 1 } });
-C('A13', 'Hip Fire', 'A', 1, 1, 2, { m: 1, p: 2 }, { squad: { p: 1 }, streak: 1 });
-C('A21', 'Rush the Door', 'A', 2, 2, 3, { m: 1, p: 2, x: 1 }, { squad: { p: 2 } });
-C('A22', 'Flank', 'A', 2, 2, 3, { m: 2, d: 1 }, { squad: { d: 1 } });
-C('A23', 'Run and Gun', 'A', 2, 2, 3, { m: 1, p: 2, s: 1 }, { streak: 2 });
-C('A31', 'Blitz', 'A', 3, 3, 5, { m: 2, p: 3 }, { squad: { s: 1, d: 1 } });
-C('A32', 'Breaching Charge', 'A', 3, 2, 4, { m: 1, p: 2, x: 1 }, { squad: { s: 1 }, streak: 3 });
-C('L1A', 'Tac Vest', 'A', 2, 1, 4, {}, { ready: { m: 1, p: 1 } });
-// RECON: aim. Precision, high Hit Markers, Mark.
+// Every family card helps you shoot (Precision); its family decides what else it does and what its Squad line pays.
+// ASSAULT: hits hit harder. Movement, +damage on hits (g), Streak (2nd+ hits this turn).
+C('A11', 'Breach', 'A', 1, 2, 1, { m: 1, p: 2 }, { squad: { g: 1 } });
+C('A12', 'Slide Cancel', 'A', 1, 2, 1, { m: 2, p: 1, sc: 1 }, { squad: { d: 1 } });
+C('A13', 'Hip Fire', 'A', 1, 2, 2, { m: 1, p: 2 }, { squad: { p: 2 }, streak: 1 });
+C('A21', 'Rush the Door', 'A', 2, 2, 3, { m: 1, p: 3, x: 1 }, { squad: { g: 1 } });
+C('A22', 'Flank', 'A', 2, 2, 3, { m: 2, p: 2, d: 1 }, { squad: { d: 1 } });
+C('A23', 'Run and Gun', 'A', 2, 2, 3, { m: 1, p: 2, s: 1 }, { squad: { st: 1 }, streak: 2 });
+C('A31', 'Blitz', 'A', 3, 3, 5, { m: 2, p: 3, g: 1 }, { squad: { p: 1 }, squadEach: true });
+C('A32', 'Breaching Charge', 'A', 3, 3, 4, { m: 1, p: 3, x: 1 }, { squad: { s: 1 }, streak: 3 });
+C('L1A', 'Tac Vest', 'A', 2, 1, 3, {}, { ready: { p: 1, g: 1 }, tiers: [1, 2, 2] });
+// RECON: aim. Precision, the most Hit Markers, Mark.
 C('R11', 'Mark Target', 'R', 1, 2, 1, { p: 2 }, { squad: { k: 1 } });
 C('R12', 'Steady Breath', 'R', 1, 3, 1, { p: 2 }, { squad: { p: 1 } });
-C('R13', 'Snapshot', 'R', 1, 2, 2, { p: 2, i: 1 }, { squad: { i: 1 } });
+C('R13', 'Snapshot', 'R', 1, 2, 2, { p: 2, i: 1 }, { squad: { i: 2 } });
 C('R21', 'Heartbeat Sensor', 'R', 2, 2, 3, { p: 2, d: 1 }, { squad: { p: 2 } });
 C('R22', 'Spotter Scope', 'R', 2, 3, 3, { p: 3 }, { squad: { k: 1 } });
-C('R23', 'Thermal Optic', 'R', 2, 2, 3, { p: 3, x: 1 }, { squad: { p: 1, i: 1 } });
+C('R23', 'Thermal Optic', 'R', 2, 2, 3, { p: 3, x: 1 }, { squad: { i: 2 } });
 C('R31', 'UAV', 'R', 3, 3, 4, { p: 3, i: 1, x: 1 }, { squad: { d: 1, k: 1 } });
-C('R32', 'Headhunter', 'R', 3, 3, 5, { p: 4, k: 1 }, { squad: { k: 1 } });
-C('L1R', 'Recon Post', 'R', 2, 1, 4, {}, { ready: { p: 2 } });
-// SUPPORT: firepower and staying power. Extra shots, Armor.
-C('S11', 'Ammo Box', 'S', 1, 1, 2, { p: 1, s: 1, sc: 1 }, { squad: { p: 1 } });
-C('S12', 'Suppressing Fire', 'S', 1, 1, 2, { p: 2, a: 1 }, { squad: { s: 1 } });
-C('S13', 'Bandolier', 'S', 1, 1, 2, { s: 1, a: 1 }, { squad: { p: 2 } });
-C('S21', 'Steady Grip', 'S', 2, 2, 3, { p: 2, s: 1 }, { squad: { p: 1, a: 1 } });
-C('S22', 'Resupply', 'S', 2, 1, 3, { i: 1, s: 1, d: 1 }, { squad: { i: 1 } });
-C('S23', 'Covering Fire', 'S', 2, 2, 3, { p: 3, a: 2 }, { squad: { s: 1 } });
-C('S31', 'Overwatch', 'S', 3, 2, 5, { p: 4, s: 1, a: 2 }, { squad: { s: 1 } });
-C('S32', 'Munitions Drop', 'S', 3, 2, 4, { p: 3, s: 2 }, { squad: { p: 1 }, streak: 1 });
-C('L1S', 'Field Pack', 'S', 2, 1, 4, {}, { ready: { s: 1, a: 1 } });
-// ENGINEER: economy. Intel, draw, Scrap (thinning), cycles.
-C('E11', 'Scrounge', 'E', 1, 1, 2, { i: 2, sc: 1 }, { squad: { i: 1 } });
-C('E12', 'Deployable Cover', 'E', 1, 0, 2, { i: 2 }, { squad: { i: 1 }, reaction: 3 });
-C('E13', 'Ping', 'E', 1, 1, 1, { i: 1, p: 1, cy: 1 }, { squad: { d: 1 } });
-C('E21', 'Munitions Box', 'E', 2, 1, 3, { i: 2, p: 1 }, { squad: { s: 1 } });
-C('E22', 'Field Kit', 'E', 2, 2, 3, { i: 2, d: 1 }, { squad: { p: 1, i: 1 } });
-C('E23', 'Salvage', 'E', 2, 1, 3, { i: 2, sc: 1, cy: 2 }, { squad: { i: 2 } });
-C('E31', 'Field Workshop', 'E', 3, 2, 4, { i: 2, d: 1, sc: 2 }, { squad: { d: 1 } });
-C('E32', 'Black Market', 'E', 3, 2, 5, { i: 4, d: 1 }, { squad: { i: 2 } });
-C('L1E', 'Bounty Contract', 'E', 2, 1, 4, {}, { ready: { i: 2 } });
+C('R32', 'Headhunter', 'R', 3, 3, 5, { p: 4, k: 1 }, { squad: { p: 1 }, squadEach: true });
+C('L1R', 'Recon Post', 'R', 2, 1, 3, {}, { ready: { p: 2 }, tiers: [1, 2, 2] });
+// SUPPORT: sustained fire. Extra shots, Steady (shots ignore 1 Recoil), Armor.
+C('S11', 'Ammo Box', 'S', 1, 2, 2, { p: 2, s: 1, sc: 1 }, { squad: { st: 1 } });
+C('S12', 'Suppressing Fire', 'S', 1, 2, 2, { p: 2, a: 1 }, { squad: { s: 1 } });
+C('S13', 'Bandolier', 'S', 1, 2, 2, { p: 1, s: 1, a: 1, st: 1 }, { squad: { p: 2 } });
+C('S21', 'Steady Grip', 'S', 2, 2, 3, { p: 2, s: 1, st: 1 }, { squad: { p: 2 } });
+C('S22', 'Resupply', 'S', 2, 2, 3, { p: 1, i: 1, s: 1, d: 1 }, { squad: { st: 1, i: 1 } });
+C('S23', 'Covering Fire', 'S', 2, 2, 3, { p: 3, a: 2 }, { squad: { s: 1, st: 1 } });
+C('S31', 'Overwatch', 'S', 3, 3, 5, { p: 4, s: 1, a: 2 }, { squad: { p: 1, a: 1 }, squadEach: true });
+C('S32', 'Munitions Drop', 'S', 3, 3, 4, { p: 3, s: 2, st: 1 }, { squad: { s: 1 }, streak: 1 });
+C('L1S', 'Field Pack', 'S', 2, 1, 3, {}, { ready: { p: 1, s: 1 }, tiers: [1, 2, 2] });
+// ENGINEER: economy. Intel, extra Buys (b), draw, Scrap (thinning), cycles.
+C('E11', 'Scrounge', 'E', 1, 1, 2, { p: 1, i: 2, sc: 1 }, { squad: { i: 2 } });
+C('E12', 'Deployable Cover', 'E', 1, 1, 2, { p: 1, i: 2 }, { squad: { b: 1 }, reaction: 3 });
+C('E13', 'Ping', 'E', 1, 1, 1, { p: 1, i: 1, cy: 1 }, { squad: { d: 1 } });
+C('E21', 'Munitions Box', 'E', 2, 2, 3, { p: 2, i: 2 }, { squad: { s: 1, p: 1 } });
+C('E22', 'Field Kit', 'E', 2, 2, 3, { p: 1, i: 2, d: 1 }, { squad: { p: 2 } });
+C('E23', 'Salvage', 'E', 2, 2, 3, { p: 1, i: 2, sc: 1, cy: 2 }, { squad: { i: 2, b: 1 } });
+C('E31', 'Field Workshop', 'E', 3, 2, 4, { p: 2, i: 2, d: 1, sc: 2 }, { squad: { p: 2 } });
+C('E32', 'Black Market', 'E', 3, 2, 5, { p: 2, i: 4, d: 1, b: 1 }, { squad: { i: 1, p: 1 }, squadEach: true });
+C('L1E', 'Bounty Contract', 'E', 2, 1, 3, {}, { ready: { i: 2 }, tiers: [1, 2, 2] });
 const STATION = ['K02', 'K04', 'K05', 'K03'];
 
 // ---------------- helpers ----------------
 function mkRng(seed) { let s = seed | 0; return () => { s = (s + 0x6D2B79F5) | 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const shuffle = (r, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const W8 = { m: 0.7, p: 1, i: 1, a: 0.6, s: 2, d: 1.8, k: 1.5, x: 0.6, sc: 1, cy: 0.3 }; // AI value of one point
-const TPW = { m: 1, p: 1, i: 1, a: 1, s: 2, d: 2, k: 2, x: 1, sc: 1, cy: 0.5 };     // Turn Power readout weights (spec §4)
+const W8 = { m: 0.7, p: 1, i: 1, a: 0.6, s: 2, d: 1.8, k: 1.5, x: 0.6, sc: 1, cy: 0.3, g: 2.5, st: 1.5, b: 1.5 }; // AI value of one point
+const TPW = { m: 1, p: 1, i: 1, a: 1, s: 2, d: 2, k: 2, x: 1, sc: 1, cy: 0.5, g: 2, st: 1, b: 1 };     // Turn Power readout weights (spec §4)
 const val = fx => fx ? Object.entries(fx).reduce((t, [k, n]) => t + (W8[k] || 0) * n, 0) : 0;
 const def = c => CARDS[c.id];
 
 // ---------------- setup ----------------
 function newGame(seed, ais) {
+  applyGunTweaks();
   const r = mkRng(seed * 7919 + 13);
   const s = { gone: [], r, seed, round: 1, over: false, winner: null, endBy: null, uid: 1, players: [], locs: [], decks: { 1: [], 2: [], 3: [] }, stationLeft: {}, log: [], finalN: 0 };
   const card = id => ({ uid: s.uid++, id });
@@ -115,9 +126,16 @@ function newGame(seed, ais) {
     for (const id of ['T001', 'T002', 'T004', 'T005']) for (let k = 0; k < CARDS[id].copies; k++) pl.deck.push(card(id));
     shuffle(r, pl.deck); s.players.push(pl);
   }
-  for (const id in CARDS) { const d = CARDS[id]; if (!d.fam || STATION.includes(id)) continue; for (let k = 0; k < d.copies; k++) s.decks[d.tier].push({ kind: 'card', c: card(id) }); }
+  for (const id in CARDS) { const d = CARDS[id]; if (!d.fam || STATION.includes(id)) continue; if (d.tiers) { for (const t of d.tiers) s.decks[t].push({ kind: 'card', c: card(id) }); continue; } for (let k = 0; k < d.copies; k++) s.decks[d.tier].push({ kind: 'card', c: card(id) }); }
   for (const t of [1, 2, 3]) for (const g of WD.GUNSET[t]) s.decks[t].push({ kind: 'gun', g });
   for (const t of [1, 2, 3]) shuffle(r, s.decks[t]);
+  // Supply Line: one face-up card per family, refilled from that family's own deck (one copy of every family card goes there)
+  s.row = {}; s.famDeck = {};
+  if (CFG.supplyRow) for (const f of ['A', 'R', 'S', 'E']) {
+    s.famDeck[f] = { 1: [], 2: [], 3: [] };
+    for (const t of [1, 2, 3]) { const D = s.decks[t]; const seenId = new Set(); for (let j = D.length - 1; j >= 0; j--) { const it = D[j]; if (it.kind === 'card' && def(it.c).fam === f && !seenId.has(it.c.id)) { seenId.add(it.c.id); s.famDeck[f][t].push(D.splice(j, 1)[0]); } } shuffle(r, s.famDeck[f][t]); }
+    s.row[f] = null;
+  }
   for (const id of STATION) s.stationLeft[id] = CFG.stationCopies;
   // fixed row of 7 locations (7 of the 8 types), each with an affinity family
   const types = shuffle(r, Object.keys(WD.ENVS)).slice(0, 7);
@@ -132,7 +150,11 @@ function newGame(seed, ais) {
   s.first = r() < 0.5 ? 0 : 1;
   s.closeSide = r() < 0.5 ? 'L' : 'R';
   for (const pl of s.players) draw(s, pl, CFG.hand);
+  if (CFG.supplyRow) refillRow(s);
   return s;
+}
+function refillRow(s) {
+  for (const f in s.row) { if (s.row[f]) continue; const t = phaseTier(s); for (const k of [t, t - 1, t + 1, 1, 2, 3]) { const D = s.famDeck[f][k]; if (D && D.length) { s.row[f] = D.pop(); break; } } }
 }
 function phaseTier(s) { return s.round <= 3 ? 1 : s.round <= 7 ? 2 : 3; }
 function pull(s, L, t, noGun) {
@@ -157,7 +179,7 @@ const dist = s => Math.abs(s.players[0].pos - s.players[1].pos);
 const W = id => WD.WEAPONS[id];
 const owned = pl => pl.deck.length + pl.discard.length + pl.hand.length + pl.play.length + pl.loadout.length;
 function famCounts(pl) { const c = { A: 0, R: 0, S: 0, E: 0 }; for (const x of [...pl.deck, ...pl.discard, ...pl.hand, ...pl.play, ...pl.loadout]) { const f = def(x).fam; if (f) c[f]++; } return c; }
-function mainFam(pl) { const c = famCounts(pl); const f = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; return c[f] ? f : null; }
+function mainFam(pl) { if (pl.ai === 'aware' && CFG.force) return CFG.force; const c = famCounts(pl); const f = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; return c[f] ? f : null; }
 // which edge closes at the end of this round (public schedule), or null
 function closingW(s) { if (!CFG.closeAfter[s.round]) return []; const B = bounds(s); if (B.n <= 1) return []; return [s.closeSide === 'L' ? B.lo : B.hi]; }
 
@@ -167,13 +189,13 @@ function gain(s, pl, fx, tag) {
   for (const [k, n] of Object.entries(fx)) {
     if (k === 'm' || k === 'p' || k === 'i') pl.res[k] += n;
     else if (k === 'a') pl.armor += n; else if (k === 's') pl.shot += n; else if (k === 'k') pl.mark += n;
-    else if (k === 'x') pl.pierce = true; else if (k === 'sc') pl.sc += n; else if (k === 'cy') pl.cy += n;
+    else if (k === 'x') pl.pierce = true; else if (k === 'g') pl.dmgUp += n; else if (k === 'st') pl.steady += n; else if (k === 'b') pl.buyBonus += n; else if (k === 'sc') pl.sc += n; else if (k === 'cy') pl.cy += n;
     else if (k === 'd') { const got = draw(s, pl, n); pl.tp += TPW.d * got; continue; }
     pl.tp += (TPW[k] || 0) * n;
   }
 }
 function startTurn(s, pl) {
-  Object.assign(pl, { res: { m: 0, p: 0, i: 0 }, armor: 0, shot: 0, mark: 0, pierce: false, sc: 0, cy: 0, hitsTurn: 0, gunShots: 0, moved: false, buys: 0, tp: 0, turnSquads: 0, streakSum: 0 });
+  Object.assign(pl, { dmgUp: 0, steady: 0, buyBonus: 0, res: { m: 0, p: 0, i: 0 }, armor: 0, shot: 0, mark: 0, pierce: false, sc: 0, cy: 0, hitsTurn: 0, gunShots: 0, moved: false, buys: 0, tp: 0, turnSquads: 0, streakSum: 0 });
   pl.squadDone = new Set();
   if (CFG.loadout) for (const c of pl.loadout) gain(s, pl, def(c).ready);
   if (CFG.specialist) { const fc = famCounts(pl); for (const f in fc) { const rk = fc[f] >= CFG.specRanks[1] ? 2 : fc[f] >= CFG.specRanks[0] ? 1 : 0; if (rk) gain(s, pl, SPEC[f][rk - 1]); } }
@@ -196,11 +218,13 @@ function playCard(s, pl, c) {
   if (d.streak && CFG.streak) pl.streakSum += d.streak;
   checkSquads(s, pl);
 }
+const GUNFAM = { knife: 'A', smg: 'A', shotgun: 'A', burst: 'R', dmr: 'R', sniper: 'R', ar: 'S', lmg: 'S', launcher: 'S', pistol: 'E', revolver: 'E' };
 function checkSquads(s, pl) {
   if (!CFG.squad) return;
   const present = {}; for (const x of [...pl.play, ...pl.loadout]) { const f = def(x).fam; if (f) present[f] = (present[f] || 0) + 1; }
+  if (CFG.gunSquad) { const gf = GUNFAM[W(pl.gun.def).gunClass]; present[gf] = (present[gf] || 0) + 1; }
   for (const x of pl.play) { const d = def(x); if (!d.squad || pl.squadDone.has(x.uid)) continue;
-    if ((present[d.fam] || 0) - 1 >= 1) { pl.squadDone.add(x.uid); gain(s, pl, d.squad); pl.st.squads++; pl.turnSquads++; } }
+    if ((present[d.fam] || 0) - 1 >= 1) { pl.squadDone.add(x.uid); const k = d.squadEach ? present[d.fam] - 1 : 1; for (let j = 0; j < k * CFG.squadMult; j++) gain(s, pl, d.squad); pl.st.squads++; pl.turnSquads++; } }
 }
 
 // ---------------- shooting ----------------
@@ -228,7 +252,7 @@ function stepProbs(s, p, si) {
   return cnt.map(c => c / CFG.mcTrials);
 }
 function netDmg(s, p, si, dm, streakOn) {
-  const o = s.players[1 - p]; let d = Math.max(1, dm + (streakOn ? s.players[p].streakSum : 0) - si.cover);
+  const o = s.players[1 - p]; let d = Math.max(1, dm + s.players[p].dmgUp + (streakOn ? s.players[p].streakSum : 0) - si.cover);
   if (!si.cq) d -= Math.min(o.armor, d - 1);
   return d;
 }
@@ -251,12 +275,12 @@ function fire(s, p, commit) {
   pl.discard.push(...revealed);
   pl.st.shots++;
   const hitStep = si.steps.filter(([h]) => total >= h).length - 1;
-  if (CFG.aim === 'commit') pl.res.p = Math.max(0, pl.res.p - (si.G.melee ? 0 : si.reveal)); else pl.res.p = Math.max(0, pl.res.p - si.G.recoil);
+  if (CFG.aim === 'commit') pl.res.p = Math.max(0, pl.res.p - (si.G.melee ? 0 : si.reveal)); else pl.res.p = Math.max(0, pl.res.p - Math.max(0, si.G.recoil - pl.steady));
   pl.mark = 0;
   if (hitStep < 0) return false;
   pl.hitsTurn++; pl.st.hits++; if (hitStep > 0) pl.st.big++;
   const streakOn = CFG.streak && pl.hitsTurn >= 2 && pl.streakSum > 0;
-  let dmg = Math.max(1, si.steps[hitStep][1] + (streakOn ? pl.streakSum : 0) - si.cover);
+  let dmg = Math.max(1, si.steps[hitStep][1] + pl.dmgUp + (streakOn ? pl.streakSum : 0) - si.cover);
   if (streakOn) pl.st.streakDmg += pl.streakSum;
   const rx = o.hand.filter(c => def(c).reaction).sort((a, b) => def(b).reaction - def(a).reaction)[0];
   if (rx && dmg > 1) { dmg -= Math.min(def(rx).reaction, dmg - 1); o.hand.splice(o.hand.indexOf(rx), 1); o.discard.push(rx); }
@@ -306,31 +330,39 @@ function cardScore(s, pl, d) {
   if (d.reaction) v += 1;
   if (aware && d.fam) {
     const fc = famCounts(pl); const n = owned(pl) + 1; const f = (fc[d.fam] + 1) / n;
-    const lo = pl.loadout.some(c => def(c).fam === d.fam) ? 1 : 0;
+    const lo = pl.loadout.some(c => def(c).fam === d.fam) || (CFG.gunSquad && GUNFAM[W(pl.gun.def).gunClass] === d.fam) ? 1 : 0;
     const pSquad = lo ? 1 : 1 - Math.pow(1 - f, CFG.hand - 1);
-    if (d.squad && CFG.squad) v += pSquad * val(d.squad);
+    if (d.squad && CFG.squad) v += pSquad * val(d.squad) * (d.squadEach ? Math.max(1, (fc[d.fam] + 1) * CFG.hand / n) : 1);
     if (d.streak && CFG.streak) { const G = W(pl.gun.def); v += d.streak * (G.magazine_capacity >= 2 ? 0.8 : 0.35); }
-    const mf = mainFam(pl); if (mf && d.fam === mf) v += 1.2; else if (mf && fc[mf] >= 3) v -= 1;
+    const mf = mainFam(pl); if (mf && d.fam === mf) v += 1.2 * CFG.famBias; else if (mf && (fc[mf] >= 3 || CFG.force)) v -= CFG.force ? 4 : CFG.famBias;
     // a family card also switches on the Squad text of cards already owned
     if (CFG.squad) { let partners = 0; for (const x of [...pl.deck, ...pl.discard, ...pl.hand, ...pl.play]) { const dx = def(x); if (dx.fam === d.fam && dx.squad) partners += val(dx.squad); } v += Math.min(3, partners * 0.12); }
     if (CFG.specialist) { const c0 = fc[d.fam]; if (CFG.specRanks.includes(c0 + 1)) v += 3; }
   }
   return v;
 }
-function gunScore(s, pl, gid) { const cur = W(pl.gun.def), g = W(gid); if (g.gunClass === cur.gunClass && g.tier <= cur.tier) return -1; if (cur.gunClass === 'pistol') return 12 + g.tier * 3; return g.tier > cur.tier ? 10 + (g.tier - cur.tier) * 3 : -1; }
+function gunScore(s, pl, gid) {
+  const cur = W(pl.gun.def), g = W(gid); let fit = 0;
+  if (CFG.gunSquad && pl.ai === 'aware') { const mf = mainFam(pl); if (mf) fit = (GUNFAM[g.gunClass] === mf ? 1 : 0) - (GUNFAM[cur.gunClass] === mf ? 1 : 0); }
+  if (g.gunClass === cur.gunClass && g.tier <= cur.tier) return -1;
+  if (cur.gunClass === 'pistol') return 12 + g.tier * 3 + fit * 4;
+  const d = g.tier - cur.tier + fit * 1.5; return d > 0 ? 10 + d * 3 : -1;
+}
 function itemScore(s, pl, it) { return it.kind === 'gun' ? gunScore(s, pl, it.g) : cardScore(s, pl, def(it.c)); }
 function itemCost(it) { return it.kind === 'gun' ? W(it.g).intel_cost : def(it.c).c; }
 const MIN_SCORE = 3.0;
 function aiBuy(s, p) {
   const pl = s.players[p];
-  for (let guard = 0; guard < 6 && pl.buys < CFG.buyCap; guard++) {
+  for (let guard = 0; guard < 6 && pl.buys < CFG.buyCap + pl.buyBonus; guard++) {
     const opts = [];
     for (const w of [pl.pos - 1, pl.pos, pl.pos + 1]) { const L = s.locs[w]; if (!L || !L.safe || !L.stack.length) continue; const it = L.stack[0]; opts.push({ it, L, cost: itemCost(it) + (w !== pl.pos ? 1 : 0), sc: itemScore(s, pl, it) }); }
     for (const id of STATION) if (s.stationLeft[id] > 0) opts.push({ station: id, cost: CFG.stationCost, sc: stationScore(s, pl, id) });
+    if (CFG.supplyRow) for (const f in s.row) { const it = s.row[f]; if (it) opts.push({ it, rowFam: f, cost: def(it.c).c + CFG.rowExtra, sc: itemScore(s, pl, it) }); }
     const ok = opts.filter(o => o.cost <= pl.res.i && o.sc >= (o.it && o.it.kind === 'gun' ? 0 : MIN_SCORE)).sort((a, b) => (b.sc - 0.35 * b.cost) - (a.sc - 0.35 * a.cost));
     const o = ok[0]; if (!o) break;
     pl.res.i -= o.cost; pl.buys++; pl.st.buys++;
     if (o.station) { s.stationLeft[o.station]--; pl.discard.push({ uid: s.uid++, id: o.station }); continue; }
+    if (o.rowFam) { s.row[o.rowFam] = null; refillRow(s); pl.discard.push(o.it.c); continue; }
     o.L.stack.shift();
     if (o.it.kind === 'gun') { const old = pl.gun.def; pl.gun = { def: o.it.g }; pl.gunShots = 0; o.L.stack.push({ kind: 'gun', g: old }); }
     else pl.discard.push(o.it.c);
@@ -348,7 +380,7 @@ function stationScore(s, pl, id) {
 function aiCycle(s, p) {
   const pl = s.players[p]; const L = loc(s, pl.pos);
   for (let k = 0; k < 2; k++) {
-    if (!L.stack.length || L.stack.length < 2 || pl.buys >= CFG.buyCap) return;
+    if (!L.stack.length || L.stack.length < 2 || pl.buys >= CFG.buyCap + pl.buyBonus) return;
     const top = L.stack[0]; if (itemScore(s, pl, top) >= MIN_SCORE && itemCost(top) <= pl.res.i) return;
     if (pl.cy > 0) pl.cy--; else if (pl.res.m >= 1) pl.res.m--; else return;
     L.stack.push(L.stack.shift()); aiBuy(s, p);
@@ -356,8 +388,11 @@ function aiCycle(s, p) {
 }
 function aiScrap(s, p) {
   const pl = s.players[p];
+  // Buy Station service: pay 1 Intel to Scrap one Starter card (once per turn)
+  if (CFG.stationScrap && pl.res.i >= CFG.stationScrap && owned(pl) > CFG.minDeck && famCounts(pl)[mainFam(pl) || 'A'] >= 2 && [...pl.discard, ...pl.play].some(c => c.id === 'T001')) { pl.res.i -= CFG.stationScrap; pl.sc++; }
   while (pl.sc > 0 && owned(pl) > CFG.minDeck) {
-    const pool = [...pl.discard, ...pl.play].filter(c => ['T001', 'T002'].includes(c.id) || (c.id === 'T005' && s.round >= 5));
+    const intelSrc = [...pl.deck, ...pl.discard, ...pl.hand, ...pl.play].filter(c => c.id !== 'T002').reduce((t, c) => t + (def(c).base.i || 0), 0) + pl.loadout.reduce((t, c) => t + ((def(c).ready || {}).i || 0), 0);
+    const pool = [...pl.discard, ...pl.play].filter(c => c.id === 'T001' || (c.id === 'T002' && intelSrc >= 6) || (c.id === 'T005' && s.round >= 5 && intelSrc >= 6));
     const t = pool.sort((a, b) => (a.id === 'T005') - (b.id === 'T005'))[0]; if (!t) break;
     const from = pl.discard.includes(t) ? pl.discard : pl.play; from.splice(from.indexOf(t), 1); pl.removed.push(t); pl.sc--; pl.st.scraps++; pl.tp += 0;
   }
@@ -425,9 +460,10 @@ function playGame(seed, ais) {
   const seen = new Set();
   for (const pl of s.players) for (const z of ['deck', 'discard', 'hand', 'play', 'loadout', 'removed']) for (const c of pl[z]) { if (seen.has(c.uid)) throw new Error('dup card ' + c.uid); seen.add(c.uid); }
   for (const L of s.locs) for (const it of L.stack) if (it.kind === 'card') { if (seen.has(it.c.uid)) throw new Error('dup card ' + it.c.uid); seen.add(it.c.uid); }
+  for (const f in s.row) { const extra = [s.row[f], ...s.famDeck[f][1], ...s.famDeck[f][2], ...s.famDeck[f][3]].filter(Boolean); for (const it of extra) { if (seen.has(it.c.uid)) throw new Error('dup card ' + it.c.uid); seen.add(it.c.uid); } }
   for (const it of s.gone) if (it.kind === 'card') { if (seen.has(it.c.uid)) throw new Error('dup card ' + it.c.uid); seen.add(it.c.uid); }
   for (const t of [1, 2, 3]) for (const it of s.decks[t]) if (it.kind === 'card') { if (seen.has(it.c.uid)) throw new Error('dup card ' + it.c.uid); seen.add(it.c.uid); }
-  for (const pl of s.players) pl.st.famAtEnd = famCounts(pl);
+  for (const pl of s.players) { pl.st.famAtEnd = famCounts(pl); pl.st.main = mainFam(pl); }
   return s;
 }
 
@@ -440,9 +476,10 @@ if (require.main === module) {
   if (opt('flat')) { CFG.squad = false; CFG.streak = false; }
   if (opt('spec')) CFG.specialist = true;
   if (opt('set')) for (const kv of String(opt('set')).split(',')) { const [k, v] = kv.split(':'); CFG[k] = isNaN(+v) ? (v === 'true' ? true : v === 'false' ? false : v) : +v; }
+  if (CFG.gunTweaks === false) { /* reload untweaked */ }
   const [aiA, aiB] = match.split('-');
   const R = { games: N, match, flat: !!opt('flat'), specialist: CFG.specialist, errors: 0, wins: { A: 0, B: 0, draw: 0 }, firstWins: 0, decided: 0, rounds: [], endBy: {}, finalReached: 0,
-    shots: 0, hits: 0, big: 0, firstP: [], oppP: [], dmg: 0, gas: 0, streakDmg: 0, squads: 0, turns: 0, gun: {}, byRound: {}, topFamShare: { [aiA]: [], [aiB + '_']: [] }, loadouts: 0, deckEnd: [], winnerHpEnd: [] };
+    shots: 0, hits: 0, big: 0, firstP: [], oppP: [], dmg: 0, gas: 0, streakDmg: 0, squads: 0, turns: 0, gun: {}, byRound: {}, topFamShare: { [aiA]: [], [aiB + '_']: [] }, loadouts: 0, deckEnd: [], winnerHpEnd: [], fam: {} };
   for (let i = 0; i < N; i++) {
     const aSeat = i % 2; const ais = aSeat === 0 ? [aiA, aiB] : [aiB, aiA];
     let s; try { s = playGame(i + 1, ais); } catch (e) { R.errors++; if (R.errors < 4) console.error('seed', i + 1, e.message); continue; }
@@ -457,6 +494,7 @@ if (require.main === module) {
       for (const t of st.turns) { const b = R.byRound[t.round] = R.byRound[t.round] || { n: 0, tp: 0, squads: 0, dmg: 0, deck: 0, lo: 0, ai: {} }; b.n++; b.tp += t.tp; b.squads += t.squads; b.dmg += t.dmg; b.deck += t.deck; b.lo += t.lo;
         const k = pl.ai; b.ai[k] = b.ai[k] || [0, 0, 0, 0]; b.ai[k][0] += t.tp; b.ai[k][1]++; b.ai[k][2] += t.squads; b.ai[k][3] += t.dmg; }
       if (s.winner === pl.idx) R.winnerHpEnd.push(pl.hp);
+      { const k = (pl.st.main || '-') + ':' + pl.ai; R.fam[k] = R.fam[k] || [0, 0]; R.fam[k][1]++; if (s.winner === pl.idx) R.fam[k][0]++; }
     }
   }
   const avg = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;
@@ -470,6 +508,7 @@ if (require.main === module) {
     gasShareOfDamage: +(R.gas / (R.gas + R.dmg)).toFixed(3), streakShareOfDamage: +(R.streakDmg / R.dmg).toFixed(3), squadsPerTurn: +(R.squads / R.turns).toFixed(2), loadoutsPerPlayer: +(R.loadouts / (2 * done)).toFixed(2),
     topFamilyShareAtEnd: Object.fromEntries(Object.entries(R.topFamShare).map(([k, v]) => [k, avg(v)])), deckSizeAtEnd: avg(R.deckEnd), winnerHpAtEnd: avg(R.winnerHpEnd),
     winRateByGunHeldAtEnd: Object.fromEntries(Object.entries(R.gun).sort().map(([k, v]) => [k, `${(v[0] / v[1]).toFixed(2)} (n=${v[1]})`])),
+    winRateByMainFamily: Object.fromEntries(Object.entries(R.fam).sort().map(([k, v]) => [k, `${(v[0] / v[1]).toFixed(2)} (n=${v[1]})`])),
     curve,
   };
   if (opt('curve')) { const o2 = Object.assign({}, out); delete o2.curve; console.log(JSON.stringify(o2, null, 1)); } else console.log(JSON.stringify(out, null, 1));
