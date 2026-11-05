@@ -328,7 +328,7 @@ func _fit_face(panel: PanelContainer, face: Control, art: Control, hex: Control,
 	bottom.position = Vector2(pad, face.size.y - bottom_h - 1.0)
 	bottom.size = Vector2(face.size.x - pad * 2.0, bottom_h)
 	var title_h: float = title.get_combined_minimum_size().y
-	var free_top: float = art.size.y
+	var free_top: float = art.position.y + art.size.y
 	title.position = Vector2(pad, free_top + maxf(0.0, (bottom.position.y - free_top - title_h) * 0.5))
 	title.size = Vector2(face.size.x - pad * 2.0, title_h)
 
