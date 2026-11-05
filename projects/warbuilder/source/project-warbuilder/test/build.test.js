@@ -20,7 +20,7 @@ test('the page has a real document wrapper (standards mode, mobile viewport)', (
 });
 
 test('everything is inlined: CSS, sprite, engine, UI, art and card faces', () => {
-  assert.ok(html.includes(fs.readFileSync(path.join(SRC, 'style.css'), 'utf8')));
+  assert.ok(html.includes(B.minifyCss(fs.readFileSync(path.join(SRC, 'style.css'), 'utf8'))), 'style.css (minified)');
   assert.ok(html.includes(fs.readFileSync(path.join(SRC, 'ui.js'), 'utf8')));
   assert.ok(html.includes('<symbol id="i-move"'));
   const art = dataLine('ART'), gunArt = dataLine('GUNART'), locArt = dataLine('LOCART'), faces = dataLine('FACES');
@@ -55,4 +55,51 @@ test('inlineImages() reads one folder, sorted, keyed by file name', () => {
     fs.writeFileSync(path.join(tmp, 'a.png'), Buffer.from([4]));
     assert.throws(() => B.inlineImages(tmp), /Two images named "a"/);
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+// ---------- size (DESIGN_REVIEW Q4: single file <= 1.5 MB, first load < 2 s on 4G) ----------
+test('the build stays under the 1.5 MB budget', () => {
+  const bytes = Buffer.byteLength(html);
+  assert.ok(bytes <= 1500000, `build/index.html is ${bytes.toLocaleString('en-US')} bytes; budget 1,500,000. Re-encode new art with src/webart/reencode_art.py`);
+});
+
+test('web art is sized to display (WebP, capped widths)', () => {
+  const webpWidth = buf => { // VP8 / VP8L / VP8X headers
+    const kind = buf.toString('ascii', 12, 16);
+    if (kind === 'VP8 ') return buf.readUInt16LE(26) & 0x3fff;
+    if (kind === 'VP8L') return 1 + (buf.readUInt16LE(21) & 0x3fff);
+    if (kind === 'VP8X') return 1 + buf.readUIntLE(24, 3);
+    throw new Error('not a WebP file');
+  };
+  for (const [sub, cap] of [['', 280], ['guns', 280], ['locs', 336]]) {
+    const dir = path.join(SRC, 'webart', sub);
+    const files = fs.readdirSync(dir).filter(f => /\.(webp|png|jpe?g|avif)$/i.test(f));
+    assert.ok(files.length > 0, dir);
+    for (const f of files) {
+      assert.match(f, /\.webp$/, `${sub}/${f} should be WebP`);
+      const buf = fs.readFileSync(path.join(dir, f));
+      assert.equal(buf.toString('ascii', 0, 4) + buf.toString('ascii', 8, 12), 'RIFFWEBP', f);
+      assert.ok(webpWidth(buf) <= cap, `${sub}/${f} is ${webpWidth(buf)} px wide (cap ${cap})`);
+    }
+  }
+});
+
+test('minifyCss() keeps strings, url(), calc() and descendant pseudo-selectors intact', () => {
+  const css = `/* c */ .a  :hover , .b > .c {\n  content: " /* not a comment */ ; } ";\n  width: calc(100% - 2px);\n  background: url(data:image/svg+xml,a%20b) , url( "x y.png" );\n}\n@media (max-width: 600px) { .d { grid-template-areas: "a  b" 'c  d'; } }\n`;
+  assert.equal(B.minifyCss(css),
+    '.a :hover,.b>.c{content:" /* not a comment */ ; } ";width:calc(100% - 2px);background:url(data:image/svg+xml,a%20b),url( "x y.png" )}@media (max-width:600px){.d{grid-template-areas:"a  b" \'c  d\'}}');
+  assert.equal(B.minifyCss('a{content:"\\"";b:1}'), 'a{content:"\\"";b:1}', 'escaped quote');
+  assert.throws(() => B.minifyCss('a{content:"x}'), /unclosed string/);
+  assert.throws(() => B.minifyCss('a{} /* x'), /unclosed comment/);
+});
+
+test('--no-minify keeps style.css and the card-face HTML exactly as written', () => {
+  const raw = B.build({ write: false, minify: false }).html;
+  assert.ok(raw.includes(fs.readFileSync(path.join(SRC, 'style.css'), 'utf8')));
+  assert.ok(raw.length > html.length);
+  // collapsing whitespace in the faces is only safe while nothing in them preserves whitespace
+  const gen = B.generateFaces();
+  assert.doesNotMatch(gen.css, /white-space\s*:\s*(pre|break-spaces)/);
+  assert.doesNotMatch(Object.values(gen.faces).join(''), /<(pre|textarea)\b/i);
+  assert.equal(B.collapseHtml(' <b>1</b>\n   <i>2</i> '), '<b>1</b> <i>2</i>');
 });
