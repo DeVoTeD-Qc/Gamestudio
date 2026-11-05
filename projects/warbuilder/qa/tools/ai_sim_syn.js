@@ -29,7 +29,7 @@ const CFG = {
   hardEnd: 12,               // end of this round: most Health wins
   stationCost: 2, stationCopies: 6,
   stackSize: 3, affinityShare: 2 / 3,
-  evasion: false, revealCap: 99, coverNeed: false, aim: 'recoil', aiCommitP: 0.65,
+  pointBlank: false, evasion: false, revealCap: 99, coverNeed: false, aim: 'recoil', aiCommitP: 0.65,
   squad: true, streak: true, loadout: true, specialist: false,
   specRanks: [4, 7],
   minDeck: 7,
@@ -206,7 +206,7 @@ function checkSquads(s, pl) {
 // ---------------- shooting ----------------
 function shotInfo(s, p) {
   const pl = s.players[p], o = s.players[1 - p]; const G = W(pl.gun.def); const D = dist(s);
-  const inBand = D >= G.band[0] && D <= G.band[1];
+  const lo = CFG.pointBlank ? 0 : G.band[0]; const inBand = D >= lo && D <= G.band[1];
   const left = Math.max(0, G.magazine_capacity - pl.gunShots) + pl.shot;
   const cq = CFG.closeQuarters && D === 0;
   const cv = !cq && !pl.pierce ? WD.ENVS[loc(s, o.pos).def].cover : 0;
@@ -368,9 +368,9 @@ function locScore(s, p, w) {
   const pl = s.players[p], o = s.players[1 - p]; const L = s.locs[w]; if (!L.safe) return -99;
   let sc = 0; if (closingW(s).includes(w)) sc -= 12;
   const G = W(pl.gun.def); const dd = Math.abs(w - o.pos);
-  const off = dd < G.band[0] ? G.band[0] - dd : dd > G.band[1] ? dd - G.band[1] : 0; sc += 6 - 2.5 * off;
+  const blo = CFG.pointBlank ? 0 : G.band[0]; const off = dd < blo ? blo - dd : dd > G.band[1] ? dd - G.band[1] : 0; sc += 6 - 2.5 * off;
   if (off === 0 && G.band[1] <= 1 && dd === 0) sc += 1.5; // close guns love close quarters
-  const oG = W(o.gun.def); if (dd >= oG.band[0] && dd <= oG.band[1]) sc -= 1.5; // in the rival's band
+  const oG = W(o.gun.def); if (dd >= (CFG.pointBlank ? 0 : oG.band[0]) && dd <= oG.band[1]) sc -= 1.5; // in the rival's band
   if (dd !== 0) sc += WD.ENVS[L.def].cover * 1.5;
   if (L.stack.length) { const it = L.stack[0]; const v = itemScore(s, pl, it); if (v > MIN_SCORE || (it.kind === 'gun' && v > 0)) sc += Math.min(3, v * 0.35); }
   if (pl.ai === 'aware') { const mf = mainFam(pl); if (mf && L.fam === mf) sc += 1.2; }
