@@ -78,6 +78,23 @@ static func apply(deck: Array[CardData], card_lookup: Callable = Callable()) -> 
 	return out
 
 
+## kc-syn-impl: the pitch version of a whole side (deck + copy levels). Card slots keep their
+## index, so SideSetup.deck_levels stays parallel; with `train_all` (the default) every copy plays
+## Trained so the pitch shows the neighbor links and the trait sets its calling-card families
+## illustrate (the Recruit starter would show none). Unchanged when inactive.
+## Hook: MatchController.start should call this instead of apply() on setup.deck (UI task).
+static func apply_setup(setup: SideSetup, train_all: bool = true, card_lookup: Callable = Callable()) -> void:
+	if not active() or setup == null:
+		return
+	var before: Array[CardData] = setup.deck.duplicate()
+	setup.deck = apply(setup.deck, card_lookup)
+	var levels: Array[int] = []
+	for i: int in setup.deck.size():
+		var swapped: bool = i >= before.size() or before[i] != setup.deck[i]
+		levels.append(SynergyRules.LEVEL_TRAINED if train_all or swapped else setup.level_of(i))
+	setup.deck_levels = levels
+
+
 static func _first_missing(deck: Array[CardData], ids: Array[StringName], lookup: Callable) -> CardData:
 	for id: StringName in ids:
 		if not _has(deck, id):

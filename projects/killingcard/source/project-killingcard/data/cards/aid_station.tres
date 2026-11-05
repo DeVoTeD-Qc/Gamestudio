@@ -42,3 +42,4 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_iifb1")]([SubResource("Resource_qab5c")])
+card_trait = &"undead"

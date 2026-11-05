@@ -28,3 +28,5 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_uv53w")]([])
+neighbor_keyword = &"overwatch"
+card_trait = &"heavy"

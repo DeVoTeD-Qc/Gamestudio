@@ -37,6 +37,10 @@
 #     pkg=TRAIT:a,b,c,d   replace a trait deck's 4 reward cards
 #     card=ID.FIELD=N     in-memory card stat override (e.g. card=recon_specialist.armor=3)
 #     json=PATH    write results
+#   kc-syn-impl note: the engine now ships the synergy layer (scripts/rules/synergy_rules.gd) and
+#   the Operator cost (RunConfig.operator_cost). This proposal model switches both OFF at start
+#   (SynergyRules.enabled = false, operator_cost = 0) so it still measures exactly its own rules;
+#   tests/tools/synergy_check.gd measures the shipped engine.
 # Author: Sr Game Designer Agent (kc-syn)
 extends SceneTree
 
@@ -120,10 +124,10 @@ class SynState extends MatchState:
 			return c
 		return c + int(syn_of(u).get("cover", 0))
 
-	func has_first_shot(u: RulesUnit) -> bool:
+	func has_first_shot(u: RulesUnit, with_synergy: bool = true) -> bool:
 		if u.has_mod(DataEnums.EffectKind.REMOVE_FIRST_SHOT, round_number) or passive_has(u, DataEnums.EffectKind.REMOVE_FIRST_SHOT):
 			return false
-		return super(u) or bool(syn_of(u).get("fs", false))
+		return super(u, with_synergy) or bool(syn_of(u).get("fs", false))
 
 	func resolve_round() -> Array[Dictionary]:
 		var start: int = events.size()
@@ -195,13 +199,13 @@ class SynPlanner extends OpPlanner:
 
 	func _root_plan() -> AiPlanner.Plan:
 		var p: AiPlanner.Plan = super()
-		_resync(p, true)
+		_syn_resync(p, true)
 		return p
 
 	func _apply(p: AiPlanner.Plan, a: Dictionary) -> void:
 		super(p, a)
 		if a["kind"] in EXPAND:
-			_resync(p, false)
+			_syn_resync(p, false)
 
 	func _native_fs(id0: StringName) -> bool:
 		var id: StringName = Syn.base_id(id0)
@@ -213,7 +217,7 @@ class SynPlanner extends OpPlanner:
 
 	## Re-applies links and set bonuses to my records. At the root the records already hold
 	## the engine's current bonuses (they were read through firepower_of), so it only stores them.
-	func _resync(p: AiPlanner.Plan, root: bool) -> void:
+	func _syn_resync(p: AiPlanner.Plan, root: bool) -> void:
 		var ids: Array = [[], [], []]
 		for z: int in 3:
 			for rec: Dictionary in p.lines[ME][z]:
@@ -294,6 +298,8 @@ func _initialize() -> void:
 func _main() -> void:
 	await process_frame
 	config = load("res://data/run_config.tres") as RunConfig
+	SynergyRules.enabled = false  # kc-syn-impl: this model adds its own synergy (see the header)
+	config.operator_cost = 0
 	for arg: String in OS.get_cmdline_user_args():
 		var kv: PackedStringArray = arg.split("=", true, 1)
 		match kv[0]:

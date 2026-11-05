@@ -6,6 +6,10 @@
 #   Pure and deterministic: every pick draws from the RandomNumberGenerator passed in.
 #   An offer is a plain Dictionary so it can go straight into the save file:
 #     {kind: &"supply_drop" | &"attachment" | &"perk", match: int (1-based), options: Array[StringName]}
+#   kc-syn (synergy-system.md §5) adds: &"doctrine" (options = trait ids), &"promotion" and
+#   &"regroup" (options = card ids with a parallel `levels` array: each option is the first copy
+#   of that design at that level). A Supply Drop may carry `on_trait` (slot 1's trait) and
+#   `retire: true` (Retire is its 4th option). RunProgress builds and resolves them.
 # Dependencies: RunConfig, CardData, LoadoutItem.
 # Author: Mechanics Developer Agent
 class_name RewardOffers
@@ -14,7 +18,10 @@ extends RefCounted
 const KIND_SUPPLY_DROP: StringName = &"supply_drop"
 const KIND_ATTACHMENT: StringName = &"attachment"
 const KIND_PERK: StringName = &"perk"
-const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK]
+const KIND_DOCTRINE: StringName = &"doctrine"
+const KIND_PROMOTION: StringName = &"promotion"
+const KIND_REGROUP: StringName = &"regroup"
+const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK, KIND_DOCTRINE, KIND_PROMOTION, KIND_REGROUP]
 
 
 ## Supply Drop: `config.supply_drop_choices` different designs, each design's chance
@@ -26,6 +33,41 @@ static func supply_drop(config: RunConfig, rng: RandomNumberGenerator) -> Array[
 		if card != null and card.collectible:
 			ids.append(card.id)
 	return weighted_distinct(ids, config.supply_drop_choices, rng)
+
+
+## kc-syn §5.2 Supply Drop with an on-trait slot: slot 1 is a card of `main_trait` (weighted by its
+## copies in the pool), slots 2-3 are weighted random among the other designs. No on-trait card in
+## the pool (or no main trait) -> a plain supply_drop().
+static func supply_drop_on_trait(config: RunConfig, main_trait: StringName, rng: RandomNumberGenerator) -> Array[StringName]:
+	if main_trait == &"":
+		return supply_drop(config, rng)
+	var on: Array[StringName] = []
+	for card: CardData in config.reward_pool:
+		if card != null and card.collectible and card.card_trait == main_trait:
+			on.append(card.id)
+	if on.is_empty():
+		return supply_drop(config, rng)
+	var first: Array[StringName] = weighted_distinct(on, 1, rng)
+	var rest: Array[StringName] = []
+	for card: CardData in config.reward_pool:
+		if card != null and card.collectible and card.id != first[0]:
+			rest.append(card.id)
+	var picks: Array[StringName] = first
+	picks.append_array(weighted_distinct(rest, config.supply_drop_choices - 1, rng))
+	return picks
+
+
+## kc-syn §5.2 Doctrine: `best` first (the deck's main trait), then random other traits, up to `count`.
+static func doctrine(best: StringName, count: int, rng: RandomNumberGenerator) -> Array[StringName]:
+	var picks: Array[StringName] = []
+	if best != &"":
+		picks.append(best)
+	var others: Array[StringName] = []
+	for t: StringName in SynergyRules.TRAITS:
+		if t not in picks:
+			others.append(t)
+	picks.append_array(weighted_distinct(others, count - picks.size(), rng))
+	return picks
 
 
 ## Weapon level: up to `config.attachment_choices` attachments from the Primary's

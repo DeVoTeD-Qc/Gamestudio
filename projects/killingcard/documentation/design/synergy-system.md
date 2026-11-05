@@ -1,6 +1,6 @@
 # KillingCard: Synergy System (neighbor links, calling-card traits, a deck that grows into an engine)
 
-*Author: Sr Game Designer Agent · 2026-11-05 · Board task kc-syn · Status: **proposal for the head's review** · DESIGN + SIM ONLY. No rules, UI, scene or data file was changed. The sim lives in `source/project-killingcard/tests/tools/synergy_rules.gd` and `synergy_sim.gd`.*
+*Author: Sr Game Designer Agent · 2026-11-05 · Board task kc-syn · Status: **approved (S1-S4, recommended answers) and implemented in kc-syn-impl, see §11** · this design section was written before the implementation: No rules, UI, scene or data file was changed. The sim lives in `source/project-killingcard/tests/tools/synergy_rules.gd` and `synergy_sim.gd`.*
 *Inputs: `card-system.md` (incl. head's decisions S1–S4), `field-cards.md` (incl. F1–F3 and the kc-field-impl notes), `../art/mw3-calling-cards.md`, `mw3-calling-cards-manifest.csv`, `mw3-pitch-set.md`, the Killstreak rules in `scripts/rules/`, the AI in `scripts/ai/` and the run layer in `scripts/run/`.*
 *The head's direction (verbatim): "we also need nice improvement to the deck as we progress. Cards that have synergy together. We can also have mechanic based on neighbors, left right. And top down. Calling card of same kind should maybe have a trait and bonus if played together."*
 *Follow-up from the head (via the lead), also covered here: **(A)** a simpler starter deck with more duplicates, with complexity arriving through the run (§5.1); **(B)** card removal during a run (§5.4); **(C)** a Supply cost for the Operator (§6.3).*
@@ -323,3 +323,75 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 2. **Starter and early squads:** (a) **the plain 9-design Recruit starter (§5.1), with bracket-1 squads as Recruits too** (recommended: same overall difficulty with Operator cost 1, easier first matches), (b) keep today's 13-design starter list as Recruits (more variety, 30% campaign), or (c) keep today's starter with keywords and traits on it (synergy from match 1; 39–42%; more to read early).
 3. **Card removal:** (a) **Retire as the 4th Supply Drop option + a free Regroup Retire after a loss, a 15-card floor, and the twin-training rule** (recommended), (b) Retire only after losses, or (c) a paid Retire (a ticket).
 4. **Operator Supply cost:** (a) **1 Supply for every placement, deploy and respawn** (recommended: +0.3 rounds, seats unchanged, +3 points vs squads), (b) keep it free (today), or (c) 2 Supply (+0.9 rounds and an empty round 1). Not recommended in any option: scaling the cost with the mastery tier, because tiers are cosmetic.
+
+---
+
+## 11. Implementation (kc-syn-impl, after the head's approval of S1-S4 with the recommended answers)
+*Mechanics Developer Agent · 2026-11-05 · rules / data / AI / run state only (no UI or scene file touched). Status: implemented and tested; the UI is a later task (§11.4).*
+
+### 11.1 What shipped where
+| Item | Where |
+|---|---|
+| `SynergyRules` (static, pure): the 4 keywords, the 4 traits with the v1.1 tier table, copy levels (Recruit / Trained / Veteran / Elite), texts for the UI | `scripts/rules/synergy_rules.gd` |
+| `CardData.neighbor_keyword`, `CardData.card_trait` (`trait` is a reserved word in GDScript) + validation; 18 chassis per §6.1; Recon Specialist 2/3; Sniper Perch = Spec Ops, Listening Post untraited | `card_data.gd`, `data/cards/*.tres` |
+| Copy level: `SideSetup.deck_levels` (parallel to `deck`, missing = Trained), `RulesCard.level`, `RulesUnit.level / neighbor_keyword / synergy_trait`; `create_unit(side, card, uid, level)` drops keyword + trait on Recruits, Veteran +1 Armor, Elite +1 Armor +1 FP; the discard keeps the level | `side_setup.gd`, `rules_card.gd`, `rules_unit.gd`, `match_state.gd` |
+| Read live in `firepower_of`, `cover_of` (removed with the rest by REMOVE_COVER) and `has_first_shot` (removed by REMOVE_FIRST_SHOT); cached per board signature (line order + Fields of both sides) | `match_state.gd` |
+| Undead heal at the start of the Score step (after the Firefight, before END_OF_ROUND effects), `UNIT_HEALED` with `source_id = &"trait_undead"` | `match_state.gd` |
+| Doctrine: `SideSetup.doctrine` (+1 to that set count while the side has a member in play) | `side_setup.gd`, `synergy_rules.gd` |
+| Operator cost: `RunConfig.operator_cost` (1 in `run_config.tres`, 0 for `RunConfig.new()`), checked / paid in `_check_place` / `_commit_place`, refunded by undo | `run_config.gd`, `match_state.gd` |
+| AI: records carry `kw / trait / level / syn_*`; `AiPlanner.synergy_aware` (default on, squads and player proxies) re-computes links and sets on all three columns per unit / Operator / traited Field / move candidate and values them for the rounds left (`synergy_future_weight` 1.5); the planner pays the Operator cost; a Recruit and a Trained copy of one design are planned separately | `ai_view.gd`, `ai_planner.gd` |
+| Run: plain v3 Recruit starter (`starter_recruits`), Trained rewards, Bracket-1 squads as Recruits (`RunMatchData.enemy_recruits`), main trait + on-trait Supply Drop slot (`supply_drop_on_trait`), Doctrine, Promotion, Retire (4th Supply Drop option), Regroup (free Retire after a loss), twin training, 15-card floor, Honor Roll, save version 2 (version 1 saves load as all-Trained) | `run_progress.gd`, `reward_offers.gd`, `run_config.gd`, `run_match_data.gd`, `run_config.tres`, `autoload/run_state.gd` (`retire_card`) |
+| Data: §6.1 numbers, reward pool + Brawler x2 and +1 Callout / Flank Route / Suppressing Fire / Tripwire Charge | `run_config.tres`, `recon_specialist.tres`, `gen_content.gd` (notes) |
+| Pitch: 31 traited unit arts re-picked to their calling-card family (`../art/mw3-pitch-set.md` §1.1); `PitchDecks.apply_setup(setup)` keeps `deck_levels` parallel and trains the pitch decks | `mw3-pitch-set.csv/.md`, `pitch_decks.gd` |
+| Tests: `tests/test_rules_synergy.gd` (25), `tests/test_run_synergy.gd` (10); balance tool `tests/tools/synergy_check.gd` (the shipped engine); `synergy_sim.gd` now switches the engine's synergy off so it still measures the proposal model alone | `tests/` |
+
+**One deviation, waiting on the UI:** `RunConfig.synergy_offers` is **false** in `run_config.tres`. Doctrine, Promotion, Retire and Regroup are implemented and tested, but today's reward screen renders every option as a card or loadout item, and a Doctrine option is a trait id (it would break the screen). Flip it to true when the Doctrine / Promotion / Retire screens land. The Recruit starter, Trained rewards, Recruit squads, the on-trait slot and the Operator cost are live now.
+
+### 11.2 Numbers on the shipped engine (synergy_check.gd, balance_sim.gd; seats and modes alternate, Port Vasel)
+| Check (target) | Result | Doc §7 (proposal model) |
+|---|---|---|
+| Aware vs blind, same **late** deck (>= 55%) | **52.0%** pooled (Vanguard 60.0, Spec Ops 49.0, Heavy 50.5, Undead 48.5; n = 800) | 60.0% |
+| Same at Operator cost 0 | 55.0% (61.0 / 52.0 / 54.5 / 52.5) | (cost 0) 60.0% |
+| Same, **mid** decks | 49.8% | 55.1% |
+| Same, late decks with every copy Trained (no Recruits) | 62.4% | 57.7% (today's starter with synergy) |
+| Control: late decks, synergy off (aware search, nothing to find) | 46.0% | 49.9% |
+| Seat 0, aware mirror, starter + 4 late decks (45-55%) | **51.8%** (47.5 / 54.5 / 48.0 / 49.5 / 59.5; n = 1000) | 49.2% |
+| Trait round robin, late decks, aware (40-60% each) | Vanguard **67.3**, Spec Ops **42.3**, Heavy 47.7, Undead **42.1** (n = 480 per trait) | 58.8 / 46.5 / 49.2 / 45.4 |
+| Same, synergy off (the packages alone) | Vanguard 56.9, Spec Ops 41.9, Heavy 49.4, Undead 50.4 | 57.9 / 44.2 / 49.0 / 48.3 |
+| Same with Vanguard tier 3 = "Cover +1 in row 1 only" (the doc's next lever) | Vanguard 66.2: no real change | — |
+| Campaign: aware player, Recruit starter in every slot vs the real squads (today 37.8%) | **37.5%** with aware squads (63.8 / 70.0 / 17.5 / 30.0 / 6.2), 38.5% with blind squads | 37.5% |
+| Full runs, competent proxy, offers taken (balance_sim, 300 runs) | **40%** run win (synergy offers off, as shipped) vs **41%** before kc-syn-impl; per match M1 83 / M2 95 / M3 19 / M4 25 / M5 47 (before: 65 / 90 / 38 / 47 / 47) | — |
+| Same with `synergy_offers` on (Doctrine 0, Promotion / Regroup first option, Retire a twin Recruit at 22+ cards) | 34% (M3 16, M4 34, M5 39) | — |
+| AI turn time (aware / blind) | 7.4-8.6 ms / 4.0-4.6 ms per turn (~1.9x) | 7.5-9 / 4-5 ms |
+
+- **Aware vs blind misses the 55% target on late decks (52%).** Two reasons in the data: the late decks are still mostly Recruits (15 of 21 cards), so there are few links to plan (all-Trained decks give 62%), and the Operator cost takes the Supply a planner would spend on a linking unit (cost 0: 55%). Against the synergy-off control (46%) the planning edge is +6 points. Vanguard is the only deck far above 55%.
+- **Vanguard is too strong (67%, target <= 60%)**, and it is mostly the package (57% with synergy off) plus the starter: 8 of the 20 Recruits are Vanguard chassis, so every Promotion and twin training feeds Vanguard. The doc's tier-3 lever does nothing here. Candidate levers for the designer: fewer Vanguard Recruits in the starter (e.g. Point Man 4 -> 3, Rifleman 3 -> 4), or Vanguard tier 2 at 3 in play.
+- **The difficulty curve moved as designed but steeper:** Bracket 1 is easier (83-95%), the first Trained squad (M3, Rusher+ in Firefight) is a wall (38% -> 19%), and the run total is unchanged (40% vs 41%).
+- The Doctrine / Promotion / Retire offers with the sim's naive picks did not raise the run win rate (34% vs 40%, about 1.5 standard errors); a player who promotes on-trait cards should do better. Re-measure with the real screens and a smarter offer rule.
+- Run: `godot --headless --path . -s res://tests/tools/synergy_check.gd -- exp=duel|mirror|traits|campaign n=N [stage=mid|late] [opcost=N] [trained=1] [syn=0] [squads=aware|blind] [tune=vanguard.1.where=front]`; balance_sim adds `synoffers=1 aware=0|1 squadaware=0|1 syn=0`.
+
+### 11.3 UI hooks
+**Match (MatchState, public board information, safe for either viewer):**
+- `synergy_view(viewer) -> {player: SIDE, enemy: SIDE, units: {uid: UNIT}}`.
+  `SIDE = {counts: {trait: n}, tiers: {trait: 0|2|3}, doctrine: trait, links: [{kind, from_uid, to_uid}], rail: [{trait, name, count, tier, next, doctrine}]}` (rail = traits with count > 0 in `SynergyRules.TRAITS` order; `next` = the next threshold or 0 at tier 3).
+  `UNIT = {uid, side, keyword, trait, level, band (&"" / gilded / forged / priceless), fp, cover, fs, heal, links: [{kind, from_uid}], sets: [[trait, tier]]}`. fp / cover / fs / heal are the synergy part only (`firepower_of` / `cover_of` / `has_first_shot` already include it), so the inspector can write "FP 3 = 2 + Spotter + Vanguard 2". Link ticks: one per `links` entry of the side (`from_uid` gives, `to_uid` receives; Fireteam's `from_uid` is the friend beside it).
+- `synergy_of(unit)`, `synergy_side(side)`: the same data for one unit / one side.
+- `preview_synergy(side, hand_card_uid, zone) -> {ok, links, new_links, card: {fp, cover, fs, links, sets}, tiers_before, tiers_after, counts_before, counts_after}`: the placement preview (ghost ticks, "+1 FP", "Vanguard 2 ▶ 3") for a unit or a Field arriving after this Deploy's queued plays.
+- `card_level(uid)` for any copy (hand, deck, discard, plays, Fields, board); `RulesCard.level`, `RulesCard.neighbor_keyword()`, `RulesCard.card_trait()`; `RulesUnit.level / neighbor_keyword / synergy_trait`. Hand cards of a Recruit return `&""` for both: no trait icon, no keyword pip.
+- Events: `RulesEvent.SYNERGY_CHANGED {side, links, counts, sets}` after Reveal, the Firefight and the Score step, only when a side's links or tiers changed (set callouts, crack ticks); `UNIT_HEALED` with `source_id = &"trait_undead"` (heal float text).
+- Operator cost: `operator_cost()`; `check_use(side, &"operator")` / `can_submit(place_operator)` refuse with `not_enough_supply {cost, supply}` (grey the staging card with "1 Supply").
+- Texts: `SynergyRules.KEYWORD_TEXT`, `TIER_TEXT` (per trait: [tier 2, tier 3]), `TRAIT_NAMES`, `LEVEL_NAMES`, `LEVEL_BANDS`, `TIER2` / `TIER3`.
+
+**Run (RunProgress, through RunState.run):**
+- `deck_levels` (parallel to `deck`), `level_of(i)`, `deck_view() -> [{index, id, level, level_name, band, keyword, trait}]`.
+- `engine_summary() -> {traits: {trait: Trained n}, keywords: {kw: n}, recruits, main_trait, doctrine, deck_size, floor}` (the Engine panel), `trait_counts()`, `main_trait()`.
+- Offers (`current_offer()`): `supply_drop` may carry `on_trait: trait` (slot 1 is on it; show "Vanguard 3 ▶ 4") and `retire: true` (show Retire as the 4th option); `doctrine` (options = trait ids; `choose_offer(i)`); `promotion` and `regroup` (options = card ids + parallel `levels`; each option is the first copy of that design at that level; `choose_offer(i)`). Promotion / Regroup options are rebuilt when they become current (an earlier offer may have changed the deck).
+- `retire_options() -> [{index, id, level, cost, trait, twin_index}]` (Recruits first, then 1-cost cards, then the rest; `twin_index >= 0` = "Point Man ▶ Gilded" preview), `can_retire()` (false at the 15-card floor: grey the option), `retire_card(i)` / `RunState.retire_card(i)` (resolves the Supply Drop or the Regroup; EventBus `reward_picked(&"retire", id)`).
+- `promotion_options() -> [{index, id, level, next_level}]`, `doctrine`, `honor_roll: [{id, level, match, trained_twin}]` (After-Action album page).
+- `RunConfig.starter_levels()` gives the starter's levels for setups built outside a run.
+
+### 11.4 Open items for the UI task
+1. The reward screen needs the Doctrine / Promotion / Regroup / Retire views; then set `synergy_offers = true` in `run_config.tres`.
+2. `MatchController.start_local_match` and the tutorial build their player setup from `config.starter_deck` without levels, so the quick match and the tutorial play a **Trained** starter (`deck_levels` empty = Trained). Use `config.starter_levels()` for the quick match; the tutorial can stay Trained or go plain (its script was written for today's cards).
+3. `MatchController.start` should call `PitchDecks.apply_setup(s.setup)` instead of `apply(s.setup.deck)` so the pitch decks show links and sets.
+4. The phone inspector of the Protector is 1 px too tall (InfoPanel 135 + 406 = 541 on a 540 canvas): `test_board_layout` (inspector phone ×2) and `test_board_columns::test_inspector_shows_the_512_banner_and_rails_inspect` fail now that the new starter puts a Protector in the first hand of the test seed. Not a rules change; the layout needs a pixel of slack.

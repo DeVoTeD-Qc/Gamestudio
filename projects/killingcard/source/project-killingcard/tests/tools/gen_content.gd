@@ -104,7 +104,10 @@ func _gen() -> void:
 	var rifleman := unit("rifleman", "Rifleman", W.AR, 1, 2, 2)
 	var point_man := unit("point_man", "Point Man", W.SMG, 2, 2, 3, "First Shot", {"first_shot": true})
 	var medic := unit("combat_medic", "Combat Medic", W.AR, 2, 1, 3, "Patch 2", {"patch": 2})
-	var recon_spec := unit("recon_specialist", "Recon Specialist", W.AR, 2, 1, 2,
+	# kc-syn v1.1: Recon Specialist 1/2 -> 2/3. Neighbor keywords / traits (neighbor_keyword,
+	# card_trait) and the Brawler / Smoke Screen / Blackout / Sabotage chassis were added to the
+	# .tres files directly (synergy-system.md §6.1); this generator predates them.
+	var recon_spec := unit("recon_specialist", "Recon Specialist", W.AR, 2, 2, 3,
 		"On Deploy: next round, enemy red dots in this zone are revealed.", {},
 		[fx(T.ON_DEPLOY, K.REVEAL_RED_DOTS, TG.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
 	var breacher := unit("breacher", "Breacher", W.SHOTGUN, 3, 3, 4, "First Shot", {"first_shot": true})
@@ -271,8 +274,9 @@ func _gen() -> void:
 	run.perk_offer_after_matches = PackedInt32Array([2, 4])
 	run.perk_choices = 2
 	# p19 (balance-log B1): Recon Specialist -> a second Breacher.
-	run.starter_deck = cards_list([[rifleman, 3], [point_man, 2], [marksman, 2], [medic, 2], [callout, 2], [breacher, 2],
-		[gunner, 1], [shieldman, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1]])
+	# kc-syn §5.1: the plain v3 Recruit starter (run.starter_recruits = true in the shipped data).
+	run.starter_deck = cards_list([[rifleman, 3], [point_man, 4], [breacher, 3], [marksman, 2], [medic, 2],
+		[gunner, 1], [shieldman, 1], [ammo, 2], [hold, 2]])
 	run.starter_primary = kestrel
 	run.starter_secondary = sidearm
 	run.starter_lethal = frag
@@ -280,7 +284,7 @@ func _gen() -> void:
 	run.starter_killstreaks = items([recon, mortar, helo])
 	run.reward_pool = cards_list([[flanker, 2], [demo, 2], [bac, 2], [comms, 2], [anvil, 1], [wren, 1],
 		[point_man, 1], [marksman, 1], [medic, 1], [breacher, 1], [gunner, 1], [shieldman, 1], [recon_spec, 1],
-		[callout, 1], [ammo, 1], [flank_route, 1], [supp_fire, 1], [hold, 1], [tripwire, 1],
+		[callout, 2], [ammo, 1], [flank_route, 2], [supp_fire, 2], [hold, 1], [tripwire, 2],  # kc-syn: +1 each (+ Brawler x2 in the .tres)
 		# kc-field-impl: the six new Fields enter through the reward pool only (field-cards.md §4.2).
 		[listening_post, 1], [mortar_pit, 1], [bulwark, 1], [war_standard, 1], [sniper_perch, 1], [aid_station, 1]])
 	run.killstreak_pool = items([recon, mortar, sentry_ks, helo])

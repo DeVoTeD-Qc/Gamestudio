@@ -62,7 +62,9 @@ const SURVIVED_LETHAL: StringName = &"survived_lethal"        ## side, uid, armo
 const UNIT_ELIMINATED: StringName = &"unit_eliminated"        ## victim_uid, victim_side, by_uid, by_side, zone, source_kind, by_killstreak, credit
 const OPERATOR_DOWN: StringName = &"operator_down"            ## side, uid
 const PATCHED: StringName = &"patched"                        ## side, uid (medic), target_uid, amount
-const UNIT_HEALED: StringName = &"unit_healed"                ## side (healed unit's), source_id, source_uid, target_uid, amount, remaining, zone (HEAL effects: Aid Station)
+const UNIT_HEALED: StringName = &"unit_healed"                ## side (healed unit's), source_id, source_uid, target_uid, amount, remaining, zone (HEAL effects: Aid Station; source_id &"trait_undead" = the Undead set heal)
+## kc-syn: a side's active neighbor links or trait set tiers changed (after Reveal, the Firefight, the Score step).
+const SYNERGY_CHANGED: StringName = &"synergy_changed"        ## side, links [{kind, from_uid, to_uid}], counts {trait: n}, sets {trait: tier}
 
 # --- Score -----------------------------------------------------------------------
 const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"player" / &"enemy" / &"contested" / &"empty")

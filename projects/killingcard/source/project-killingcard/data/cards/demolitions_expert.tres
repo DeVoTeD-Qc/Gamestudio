@@ -42,3 +42,4 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_bx53g")]([SubResource("Resource_g1a56")])
+card_trait = &"heavy"

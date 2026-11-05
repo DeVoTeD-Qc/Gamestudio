@@ -44,6 +44,14 @@ const MAX_TEXT_LENGTH: int = 100
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
 
+@export_group("Synergy (kc-syn)")
+## Neighbor keyword of a Trained copy (synergy-system.md §3): &"guard", &"spotter", &"fireteam",
+## &"overwatch" or &"" (none). Units only. Recruit copies (level 0) don't have it.
+@export var neighbor_keyword: StringName = &""
+## Trait of the chassis (§4): &"vanguard", &"specops", &"heavy", &"undead" or &"" (none). Units and
+## Fields only. Recruit copies don't count for or receive set bonuses.
+@export var card_trait: StringName = &""
+
 @export_group("Special rules")
 ## Always arrives at the front of the line (Shieldman).
 @export var arrives_front: bool = false
@@ -104,6 +112,14 @@ func validate(v: DataValidator) -> void:
 		v.out_of_range("text", "rules text is %d characters (max %d, one line)" % [text.length(), MAX_TEXT_LENGTH])
 	if text.contains("\n"):
 		v.invalid("text", "rules text must be one line")
+	if neighbor_keyword != &"" and neighbor_keyword not in SynergyRules.KEYWORDS:
+		v.invalid("neighbor_keyword", "unknown neighbor keyword '%s' (one of %s)" % [neighbor_keyword, SynergyRules.KEYWORDS])
+	if neighbor_keyword != &"" and not is_unit():
+		v.invalid("neighbor_keyword", "only units have a neighbor keyword")
+	if card_trait != &"" and card_trait not in SynergyRules.TRAITS:
+		v.invalid("card_trait", "unknown trait '%s' (one of %s)" % [card_trait, SynergyRules.TRAITS])
+	if card_trait != &"" and card_type == DataEnums.CardType.TACTIC:
+		v.invalid("card_trait", "only units and Fields have a trait")
 	if is_unit():
 		v.check_range("firepower", firepower, 0, 10)
 		v.check_range("armor", armor, 1, 20)

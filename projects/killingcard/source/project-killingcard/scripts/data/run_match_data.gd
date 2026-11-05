@@ -16,6 +16,9 @@ extends Resource
 ## Added to every enemy unit's Firepower / Armor in this match (Bracket 2 scaling).
 @export_range(0, 5) var enemy_firepower_bonus: int = 0
 @export_range(0, 5) var enemy_armor_bonus: int = 0
+## kc-syn §5.1: the squad plays Recruit copies of its units (no neighbor keyword, no trait).
+## On in Bracket 1 (slots 1-2) so a plain starter meets plain squads.
+@export var enemy_recruits: bool = false
 
 
 func validate(v: DataValidator, prefix: String) -> void:

@@ -422,7 +422,8 @@ func test_new_fields_enter_through_the_reward_pool_only() -> void:
 	for id: StringName in [&"listening_post", &"mortar_pit", &"bulwark", &"war_standard", &"sniper_perch", &"aid_station"]:
 		assert_eq(pool.count(id), 1, "%s once in the reward pool" % id)
 		assert_false(id in starter, "%s not in the starter deck" % id)
-	assert_true(&"tripwire_charge" in starter, "Tripwire stays the starter Field")
+	# kc-syn §5.1: the plain Recruit starter has no Field; the first Field comes as a reward.
+	assert_true(&"tripwire_charge" in pool, "Tripwire is in the reward pool")
 	for sq: String in ["squad_rusher", "squad_anchor", "squad_black_meridian"]:
 		var squad: SquadData = load("res://data/squads/%s.tres" % sq) as SquadData
 		for c: CardData in squad.deck:

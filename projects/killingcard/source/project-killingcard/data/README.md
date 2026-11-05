@@ -47,6 +47,8 @@ tables below for the order). Never reorder enum values in `data_enums.gd`, only 
 | `hidden`, `consumed_on_trigger` | Equipment only: stays hidden after Reveal; discarded after it fires (Tripwire). |
 | `counts_for_control`, `grants_elimination_credit`, `collectible` | Leave on for normal cards. Tokens (the Sentry) set all three off. A non-collectible card can't be in a deck or a reward pool. |
 | `effects` | List of EffectData (below). Tactics and equipment need at least one. |
+| `neighbor_keyword` | kc-syn: `guard`, `spotter`, `fireteam`, `overwatch` or empty. Units only. Recruit copies (level 0) don't have it. |
+| `card_trait` | kc-syn: `vanguard`, `specops`, `heavy`, `undead` or empty. Units and Fields only. Copies count for sets only when Trained (level 1+). |
 
 ## LoadoutItem
 `slot`: `PRIMARY`(0), `ATTACHMENT`(1), `SECONDARY`(2), `LETHAL`(3), `TACTICAL`(4), `PERK`(5), `KILLSTREAK`(6).
@@ -96,6 +98,7 @@ AI weights `weight_damage_dealt` / `weight_damage_taken` / `weight_zone_control`
 - **Run:** `matches` (in order; each a RunMatchData: `bracket`, `is_rival`, `squad`, `mode` ZONE_CONTROL/FIREFIGHT/DETONATOR, `map`, `enemy_firepower_bonus`, `enemy_armor_bonus`), `tickets` (3), `supply_drop_choices` (3), `weapon_level_after_matches` ([1, 3, 4] per core-rules Ruling 1; the script default is also [1, 3, 4]), `attachment_choices` (2), `perk_offer_after_matches` ([2, 4]), `perk_choices` (2).
 - **Starter kit:** `starter_deck` (exactly `deck_size` = 20 entries), `starter_primary/secondary/lethal/tactical`, `starter_killstreaks` (exactly `killstreak_slots`, all in `killstreak_pool`).
 - **Pools:** `reward_pool`, `killstreak_pool`, `perk_pool`.
+- **Synergy run layer (kc-syn §5):** `starter_recruits` (starter copies are Recruits), `supply_drop_on_trait` (Supply Drop slot 1 on the deck's main trait), `synergy_offers` (Doctrine after `doctrine_after_matches`, Promotion after `promotion_after_matches`, Retire as the Supply Drop's 4th option, Regroup after a loss; off until the UI screens exist), `doctrine_choices` 2, `deck_floor` 15, `operator_cost` (Supply to place the Operator, 1 in the shipped run). RunMatchData `enemy_recruits`: that squad plays Recruit copies (slots 1-2).
 - **Match rules (core-rules §10):** `deck_size`, `opening_hand` 4, `round1_extra_draw` 1, `free_mulligans` 1, `draws_per_round` 2, `hand_cap` 7, `supply_round_offset` 1 + `supply_cap` 7 (Round N gives N+1, max 7), `zone_capacity` 4, `default_cooldown` 3, `zone_control_target` 6, `firefight_target` 7, `round_cap` 8, `overtime_draw_round` 10, `detonator_arm_rounds` 2, `perk_slots` 3, `killstreak_slots` 3.
 - **Range bonuses:** `range_bonus_smg/shotgun/ar/sniper/lmg`, 3 numbers each (Close, Mid, Long), −5..5.
 

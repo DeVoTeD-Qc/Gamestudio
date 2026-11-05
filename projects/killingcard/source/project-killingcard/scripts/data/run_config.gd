@@ -27,6 +27,22 @@ extends Resource
 @export var perk_offer_after_matches: PackedInt32Array = PackedInt32Array([2, 4])
 @export_range(1, 5) var perk_choices: int = 2
 
+@export_group("Synergy run layer (kc-syn §5)")
+## The starter deck's copies are Recruits (level 0: no neighbor keyword, no trait). Off = Trained.
+@export var starter_recruits: bool = false
+## Supply Drop slot 1 is always a card of the deck's main trait (§5.2).
+@export var supply_drop_on_trait: bool = false
+## The run offers of §5.2 / §5.4: Doctrine (after doctrine_after_matches), Promotion (after
+## promotion_after_matches), Retire as the Supply Drop's 4th option and Regroup (a free Retire)
+## after a loss. Their screens are a UI task; until they land the data keeps this off.
+@export var synergy_offers: bool = false
+@export var doctrine_after_matches: PackedInt32Array = PackedInt32Array([1])
+@export var promotion_after_matches: PackedInt32Array = PackedInt32Array([2, 4])
+## Doctrine offer: pick 1 of this many trait emblems (the deck's best trait + random others).
+@export_range(1, 4) var doctrine_choices: int = 2
+## Retire never takes the deck below this many cards (the option greys out).
+@export_range(1, 40) var deck_floor: int = 15
+
 @export_group("Starter kit")
 ## Exactly deck_size card references (copies = repeated entries).
 @export var starter_deck: Array[CardData] = []
@@ -61,6 +77,9 @@ extends Resource
 @export_range(0, 5) var supply_round_offset: int = 1
 @export_range(1, 15) var supply_cap: int = 7
 @export_range(1, 6) var zone_capacity: int = 4
+## kc-syn §6.3: Supply to place the Operator (round 1 and every respawn), both sides, all modes.
+## 0 = free (RunConfig.new() default, so hand-built test configs keep the old rule).
+@export_range(0, 3) var operator_cost: int = 0
 ## Lethal/Tactical cooldown used when an item leaves cooldown_rounds at 0.
 @export_range(0, 10) var default_cooldown: int = 3
 
@@ -102,6 +121,15 @@ func supply_for_round(round_number: int) -> int:
 	return mini(round_number + supply_round_offset, supply_cap)
 
 
+## kc-syn: copy levels of the starter deck (parallel to starter_deck): all Recruits (0) with
+## starter_recruits, else all Trained (1).
+func starter_levels() -> Array[int]:
+	var out: Array[int] = []
+	for c: CardData in starter_deck:
+		out.append(0 if starter_recruits else 1)
+	return out
+
+
 func match_count() -> int:
 	return matches.size()
 
@@ -121,7 +149,10 @@ func validate(v: DataValidator) -> void:
 	v.check_range("supply_drop_choices", supply_drop_choices, 1, 5)
 	v.check_range("attachment_choices", attachment_choices, 1, 4)
 	v.check_range("perk_choices", perk_choices, 1, 5)
-	for field: String in ["weapon_level_after_matches", "perk_offer_after_matches"]:
+	v.check_range("doctrine_choices", doctrine_choices, 1, 4)
+	v.check_range("deck_floor", deck_floor, 1, deck_size)
+	v.check_range("operator_cost", operator_cost, 0, 3)
+	for field: String in ["weapon_level_after_matches", "perk_offer_after_matches", "doctrine_after_matches", "promotion_after_matches"]:
 		var list: PackedInt32Array = get(field)
 		for i: int in list.size():
 			v.check_range("%s[%d]" % [field, i], list[i], 1, maxi(matches.size(), 1))

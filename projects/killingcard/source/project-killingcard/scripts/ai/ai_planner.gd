@@ -24,6 +24,13 @@
 #   _field_future (rounds left x the chance it survives Overrun); a plan that loses a column
 #   pays for the Field it would lose there, replacing a standing Field pays for the old one,
 #   and overrunning an enemy Field is worth its future value to the AI.
+#   Synergy (kc-syn, synergy-system.md §8): records carry the neighbor keyword / trait / level of
+#   each unit. With synergy_aware (default) every unit / Operator / Field / move candidate
+#   re-computes the links and set bonuses of all three columns (side links cross columns) with
+#   SynergyRules, swaps them into the records and adds their value for the rounds left
+#   (future_weight per point x the share of rounds left, like a Field's future value). Blind
+#   planners only see the bonuses already on the board. Placing the Operator costs
+#   AiView.operator_cost Supply.
 #   Deterministic: the only randomness is an RNG seeded from (match seed, round, side).
 # Dependencies: AiView, AiPersonality, DataEnums, CardData, EffectData, LoadoutItem, RulesIntent.
 # Author: Mechanics Developer Agent
@@ -46,6 +53,10 @@ const Z := DataEnums.ZoneScope
 const TR := DataEnums.Trigger
 
 var personality: AiPersonality = null
+## kc-syn: plan links and trait sets (false = only see the bonuses already on the board).
+var synergy_aware: bool = true
+## kc-syn: value per point of link / set bonus for the rounds after this one (x share of rounds left).
+var synergy_future_weight: float = 1.5
 ## Plans scored during the last plan() call (for profiling and tests).
 var evaluations: int = 0
 
@@ -74,6 +85,10 @@ class Plan:
 	## projected_occupancy does not see moves).
 	var moved_out: Array[int] = [0, 0, 0]
 	var equip_new: Array = [[], [], []]
+	## kc-syn: traits of the new Trained visible Fields per zone (they count for my sets).
+	var field_traits_new: Array = [[], [], []]
+	## kc-syn: synergy value of the plan's board (for the future-value delta).
+	var syn_total: float = 0.0
 	## A new visible Field in this zone replaces my standing one (one per side per column).
 	var field_replaced: Array[bool] = [false, false, false]
 	var foe_cover_removed: bool = false
@@ -108,6 +123,8 @@ class Plan:
 		p.callout = callout.duplicate()
 		p.moved_out = moved_out.duplicate()
 		p.equip_new = [equip_new[0].duplicate(), equip_new[1].duplicate(), equip_new[2].duplicate()]
+		p.field_traits_new = [field_traits_new[0].duplicate(), field_traits_new[1].duplicate(), field_traits_new[2].duplicate()]
+		p.syn_total = syn_total
 		p.field_replaced = field_replaced.duplicate()
 		p.foe_cover_removed = foe_cover_removed
 		p.my_ff_damage = my_ff_damage
@@ -216,6 +233,8 @@ func _root_plan() -> Plan:
 	p.rotations_left = _view.op_rotations_left
 	for z: int in 3:
 		p.zone_scores[z] = _eval_zone(p, z)
+	if synergy_aware:
+		p.syn_total = _synergy_total(p)
 	return p
 
 
@@ -253,9 +272,9 @@ func _gain(p: Plan, c: Dictionary, gains: Dictionary) -> float:
 
 ## Identity of a candidate for the gain cache: copies of one card design share it.
 func _key(c: Dictionary) -> String:
-	var src: StringName = &""
+	var src: String = ""
 	if c["card"] != null:
-		src = (c["card"] as CardData).id
+		src = "%s@%d" % [(c["card"] as CardData).id, int(c.get("level", 1))]
 	elif c["item"] != null:
 		src = (c["item"] as LoadoutItem).id
 	return "%s|%s|%d|%d|%d" % [c["kind"], src, c["zone"], c["target_uid"], c["dest_zone"]]
@@ -290,41 +309,46 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 	# Operator placement (off board, may deploy) / Rotation.
 	if _view.op_exists:
 		if _view.op_can_deploy and _view.op_zone < 0 and not p.op_placed:
-			for z: int in 3:
+			for z: int in (3 if p.supply >= _view.operator_cost else 0):
 				if _occupancy(p, z) < cap:
-					out.append(_action(&"place", z, [z]))
+					out.append(_action(&"place", z, _syn_zones([z])))
 		elif _view.op_zone >= 0 and p.op_zone >= 0 and p.rotations_left > 0 and not p.op_locked:
 			for z: int in [p.op_zone - 1, p.op_zone + 1]:
 				if z >= 0 and z < 3 and _occupancy(p, z) < cap:
-					out.append(_action(&"rotate", z, [p.op_zone, z]))
+					out.append(_action(&"rotate", z, _syn_zones([p.op_zone, z])))
 	# Deck cards (one candidate set per distinct card design).
 	var seen: Dictionary = {}
 	for h: Dictionary in _view.hand:
 		var uid: int = h["uid"]
 		var card: CardData = h["card"]
-		if p.used_cards.has(uid) or card.cost > p.supply or seen.has(card.id):
+		var level: int = int(h.get("level", SynergyRules.LEVEL_TRAINED))
+		var design: String = "%s@%d" % [card.id, level]  # a Recruit and a Trained copy plan differently
+		if p.used_cards.has(uid) or card.cost > p.supply or seen.has(design):
 			continue
-		seen[card.id] = true
+		seen[design] = true
 		match card.card_type:
 			DataEnums.CardType.UNIT:
 				for z: int in 3:
 					if _occupancy(p, z) < cap:
-						var a: Dictionary = _action(&"unit", z, [z])
+						var a: Dictionary = _action(&"unit", z, _syn_zones([z]))
 						a["card"] = card
 						a["uid"] = uid
+						a["level"] = level
 						out.append(a)
 			DataEnums.CardType.EQUIPMENT:  # Fields
 				for z: int in 3:
 					if card.is_visible_field() and not _field_slot_open(p, card, z):
 						continue
-					var a: Dictionary = _action(&"equipment", z, [z])
+					var a: Dictionary = _action(&"equipment", z, _syn_zones([z]) if SynergyRules.trait_at(card, level) != &"" else [z])
 					a["card"] = card
 					a["uid"] = uid
+					a["level"] = level
 					out.append(a)
 			DataEnums.CardType.TACTIC:
 				for a: Dictionary in _effect_candidates(p, card, card.effects):
 					a["card"] = card
 					a["uid"] = uid
+					a["level"] = level
 					out.append(a)
 	# Loadout items and earned killstreaks.
 	for entry: Dictionary in _view.items:
@@ -360,7 +384,7 @@ func _effect_candidates(p: Plan, owner: Resource, effects: Array[EffectData]) ->
 					continue
 				for dest: int in [z - 1, z + 1]:
 					if dest >= 0 and dest < 3 and _occupancy(p, dest) < _view.zone_capacity:
-						var a: Dictionary = _action(&"tactic", z, [z, dest])
+						var a: Dictionary = _action(&"tactic", z, _syn_zones([z, dest]))
 						a["target_uid"] = rec["uid"]
 						a["dest_zone"] = dest
 						a["op_bound"] = false
@@ -467,6 +491,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			p.lines[ME][z].append(rec)
 			p.op_zone = z
 			p.op_placed = true
+			p.supply -= _view.operator_cost
 		&"rotate":
 			var from: int = p.op_zone
 			var line: Array = p.lines[ME][from]
@@ -485,7 +510,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			p.rotations_left -= 1
 		&"unit":
 			var card: CardData = a["card"]
-			var rec: Dictionary = _view.record_for_card(card, a["uid"], z)
+			var rec: Dictionary = _view.record_for_card(card, a["uid"], z, int(a.get("level", SynergyRules.LEVEL_TRAINED)))
 			if card.arrives_front:
 				p.lines[ME][z].insert(0, rec)
 			else:
@@ -496,6 +521,10 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			p.equip_new[z].append(card)
 			if card.is_visible_field() and _view.my_visible_field(z) != null:
 				p.field_replaced[z] = true
+			if card.is_visible_field():
+				var ft: StringName = SynergyRules.trait_at(card, int(a.get("level", SynergyRules.LEVEL_TRAINED)))
+				if ft != &"":
+					p.field_traits_new[z].append(ft)
 			_apply_effects(p, card.effects, z, -1, -1)
 			_spend_card(p, a, card.cost)
 		_:
@@ -515,6 +544,57 @@ func _apply(p: Plan, a: Dictionary) -> void:
 					p.flat -= personality.cooldown_keep_cost
 			if a["op_bound"]:
 				p.op_locked = true
+	if synergy_aware and (a["zones"] as Array).size() == 3 and a["kind"] in [&"place", &"rotate", &"unit", &"equipment", &"tactic"]:
+		_resync(p)
+
+
+## kc-syn: zones an action touches when links are planned (side links cross columns: all three).
+func _syn_zones(zones: Array) -> Array:
+	return [0, 1, 2] if synergy_aware else zones
+
+
+## kc-syn: my projected board as SynergyRules slots + the traits of my visible Fields after the plan.
+func _synergy_of_plan(p: Plan) -> Dictionary:
+	var lines: Array = [[], [], []]
+	for z: int in 3:
+		for rec: Dictionary in p.lines[ME][z]:
+			lines[z].append(SynergyRules.slot(int(rec["uid"]), rec.get("kw", &""), rec.get("trait", &"")))
+	var fields: Array = []
+	for z: int in 3:
+		if not p.field_replaced[z]:
+			fields.append_array(_view.my_field_traits[z])
+		fields.append_array(p.field_traits_new[z])
+	return SynergyRules.compute(lines, fields, _view.my_doctrine)
+
+
+func _synergy_total(p: Plan) -> float:
+	return SynergyRules.total_value(_synergy_of_plan(p))
+
+
+## kc-syn: puts the links / set bonuses of the plan's board into my records (replacing the part
+## each record carried) and adds the value of the change for the rounds after this one.
+func _resync(p: Plan) -> void:
+	var res: Dictionary = _synergy_of_plan(p)
+	var total: float = SynergyRules.total_value(res)
+	var left: float = clampf(float(_view.round_cap - _view.round_number) / maxf(1.0, _view.round_cap), 0.0, 1.0)
+	p.flat += synergy_future_weight * left * (total - p.syn_total)
+	p.syn_total = total
+	for z: int in 3:
+		var line: Array = p.lines[ME][z]
+		for i: int in line.size():
+			var rec: Dictionary = line[i]
+			var syn: Dictionary = res["zones"][z][i]
+			var fp_new: int = int(syn["fp"])
+			var cov_new: int = 0 if _view.my_cover_removed else int(syn["cover"])
+			var fs_new: bool = bool(syn["fs"])
+			if fp_new == int(rec.get("syn_fp", 0)) and cov_new == int(rec.get("syn_cover", 0)) and fs_new == bool(rec.get("syn_fs", false)):
+				continue
+			rec["fp"] = maxi(0, int(rec["fp"]) + fp_new - int(rec.get("syn_fp", 0)))
+			rec["cover"] = maxi(0, int(rec["cover"]) + cov_new - int(rec.get("syn_cover", 0)))
+			rec["first_shot"] = bool(rec.get("fs_native", rec["first_shot"])) or fs_new
+			rec["syn_fp"] = fp_new
+			rec["syn_cover"] = cov_new
+			rec["syn_fs"] = fs_new
 
 
 func _spend_card(p: Plan, a: Dictionary, cost: int) -> void:

@@ -41,7 +41,7 @@ var range_bonus: Array = []
 
 # --- my side ------------------------------------------------------------------------------
 var supply: int = 0
-## [{uid: int, card: CardData}] in hand order.
+## [{uid: int, card: CardData, level: int}] in hand order (level: kc-syn copy level, 0 = Recruit).
 var hand: Array[Dictionary] = []
 var mulligans_left: int = 0
 var my_score: int = 0
@@ -64,6 +64,11 @@ var tray: Array[StringName] = []
 var my_equipment: Array = [[], [], []]
 ## My Field cards per zone (CardData, placement order; hidden traps included).
 var my_fields: Array = [[], [], []]
+## kc-syn: traits of my visible Trained Fields per zone (they count for my sets).
+var my_field_traits: Array = [[], [], []]
+## kc-syn: my Doctrine trait (+1 to that set count), and the Operator's Supply cost to place.
+var my_doctrine: StringName = &""
+var operator_cost: int = 0
 
 # --- my Operator --------------------------------------------------------------------------
 var op_exists: bool = false
@@ -124,7 +129,9 @@ static func capture(state, p_side: int) -> AiView:
 
 	v.supply = int(me.supply)
 	for c in me.hand:
-		v.hand.append({"uid": int(c.uid), "card": c.card})
+		v.hand.append({"uid": int(c.uid), "card": c.card, "level": int(c.level)})
+	v.my_doctrine = me.setup.doctrine
+	v.operator_cost = int(state.operator_cost())
 	v.mulligans_left = int(me.mulligans_left)
 	v.my_score = int(me.score)
 	v.my_streak = int(me.streak)
@@ -156,6 +163,8 @@ static func capture(state, p_side: int) -> AiView:
 		for entry: Dictionary in me.equipment[z]:
 			v.my_equipment[z].append(entry["card"].card.id)
 			v.my_fields[z].append(entry["card"].card)
+			if entry["card"].card.is_visible_field() and entry["card"].card_trait() != &"":
+				v.my_field_traits[z].append(entry["card"].card_trait())
 		for entry: Dictionary in foe.equipment[z]:
 			if not entry["card"].card.hidden:
 				v.foe_equipment[z].append(entry["card"].card.id)
@@ -216,6 +225,17 @@ static func _unit_record(state, u) -> Dictionary:
 	r["credit"] = bool(u.grants_elimination_credit)
 	r["untargetable"] = bool(state.is_untargetable_by_pick_flank(u))
 	r["survive"] = int(u.survive_lethal)
+	# kc-syn: what the unit carries, and the synergy part of fp / cover / first_shot (the
+	# synergy-aware planner swaps it for the bonus at the unit's projected position).
+	r["kw"] = u.neighbor_keyword
+	r["trait"] = u.synergy_trait
+	r["level"] = int(u.level)
+	var syn: Dictionary = state.synergy_of(u)
+	r["syn_fp"] = mini(int(syn.get("fp", 0)), int(r["fp"]))
+	var cover_removed: bool = int(state.cover_of(u)) == 0
+	r["syn_cover"] = 0 if cover_removed else mini(int(syn.get("cover", 0)), int(r["cover"]))
+	r["syn_fs"] = bool(syn.get("fs", false))
+	r["fs_native"] = bool(state.has_first_shot(u, false))
 	_read_effects(r, u.effects)
 	return r
 
@@ -237,6 +257,12 @@ static func _operator_in_zone(state, op, z: int, v: AiView) -> Dictionary:
 			fp += e.amount
 	r["fp"] = maxi(0, fp)
 	r["first_shot"] = first_shot
+	# Synergy at the current spot doesn't travel with it (the planner adds it per position).
+	r["cover"] = maxi(0, int(r["cover"]) - int(r["syn_cover"]))
+	r["syn_fp"] = 0
+	r["syn_cover"] = 0
+	r["syn_fs"] = false
+	r["fs_native"] = first_shot
 	if not op.is_on_board():
 		r["armor"] = int(op.max_armor(state.round_number))
 		r["armor0"] = r["armor"]
@@ -252,6 +278,7 @@ static func new_record() -> Dictionary:
 		"first_shot": false, "pick": false, "flank": false, "suppress": false, "patch": 0,
 		"holder": false, "control": true, "credit": true, "untargetable": false, "survive": 0,
 		"aura": 0, "on_down_damage": 0, "arrives_front": false,
+		"kw": &"", "trait": &"", "level": 1, "syn_fp": 0, "syn_cover": 0, "syn_fs": false, "fs_native": false,
 	}
 
 
@@ -268,16 +295,22 @@ static func _read_effects(r: Dictionary, effects: Array) -> void:
 			r["on_down_damage"] = int(r["on_down_damage"]) + e.amount
 
 
-## Record for a unit card I would deploy into zone z (stats as the engine would build it).
-func record_for_card(card: CardData, uid: int, z: int) -> Dictionary:
+## Record for a unit card I would deploy into zone z (stats as the engine would build it,
+## including the copy's kc-syn level: Recruits carry no keyword or trait).
+func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules.LEVEL_TRAINED) -> Dictionary:
 	var r: Dictionary = new_record()
+	var lv: Dictionary = SynergyRules.level_stats(level)
 	r["uid"] = uid
 	r["id"] = card.id
 	r["new"] = true
 	r["card_unit"] = true
 	r["class"] = int(card.weapon_class)
-	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(range_bonus[int(card.weapon_class)][z]))
-	var armor: int = maxi(1, card.armor + my_armor_bonus)
+	r["kw"] = SynergyRules.keyword_at(card, level)
+	r["trait"] = SynergyRules.trait_at(card, level)
+	r["level"] = level
+	r["fs_native"] = card.first_shot
+	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]) + int(range_bonus[int(card.weapon_class)][z]))
+	var armor: int = maxi(1, card.armor + my_armor_bonus + int(lv["armor"]))
 	r["armor"] = armor
 	r["armor0"] = armor
 	r["max_armor"] = armor
@@ -301,6 +334,14 @@ func my_visible_field(z: int) -> CardData:
 		if c.is_visible_field():
 			return c
 	return null
+
+
+## Level of the hand card with this uid (Trained if unknown).
+func hand_level(uid: int) -> int:
+	for h: Dictionary in hand:
+		if int(h["uid"]) == uid:
+			return int(h.get("level", SynergyRules.LEVEL_TRAINED))
+	return SynergyRules.LEVEL_TRAINED
 
 
 ## Units of `who` (ME / FOE) in zone z right now.

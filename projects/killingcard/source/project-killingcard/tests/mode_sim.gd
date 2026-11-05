@@ -13,6 +13,7 @@ static func player_setup(config: RunConfig) -> SideSetup:
 	var s: SideSetup = SideSetup.new()
 	s.display_name = "Player"
 	s.deck = config.starter_deck.duplicate()
+	s.deck_levels = config.starter_levels()  # kc-syn: the starter plays Recruit copies
 	s.primary = config.starter_primary
 	s.secondary = config.starter_secondary
 	s.lethal = config.starter_lethal

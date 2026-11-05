@@ -3,13 +3,26 @@
 **PRIVATE PITCH ONLY.** The images are Activision's and are not licensed to us. This file lists titles and ids only; the images live in the git-ignored `source/project-killingcard/assets/licensed/` and only the "Web (private pitch)" export carries them. Never commit, publish or reuse them.
 
 ## 1. What the set is
-- **96 calling cards** on 32 chassis, plus **16 Operator mastery cards** (4 weapons x 4 multiplayer tiers): 112 arts, 42 animated.
+- **96 calling cards** on 32 chassis, plus **16 Operator mastery cards** (4 weapons x 4 multiplayer tiers): 112 arts, 47 animated (kc-syn-impl: 31 unit arts re-picked to their trait family, §1.1).
 - By kind: 60 units, 20 tactics, 10 Fields, 6 killstreaks.
 - Spread: no chassis above 9 cards (9.4% of the card arts; guard rail 12%).
 - Every pick is `review = no` in `mw3-calling-cards-manifest.csv` and was checked by eye on contact sheets: no third-party IP, no real-looking celebrities, no blood or gore, little or no side text over the icon columns. Cards the classifier had missed were flagged `review = yes` while curating (Gundam x3, Homelander, Toronto Ultra, Carolina Royal Ravens, Xolos de Tijuana, Rojinegros, Little Caesars "Hot-N-Ready"; kc-cod3: ten 2024 Call of Duty League team cards, The Boys, Monster Energy, Gallos Blancos).
 - **No MW3 text on Fields or tactics** (head, kc-cod3): the ranked "Top 250 / #1" crests, "TOP SECRET", "DISARMED", "FLASHED" and the hacked-screen card were swapped for text-free crests and images.
 - **Image decides the chassis** (head, kc-cod2): soldiers and weapons are units matched by weapon or role; explosions and barrages are damage tactics or killstreaks; smoke, night and blinding are Smoke Screen / Blackout; intel is Callout; crates are Ammo Resupply; emblems, crests and structures are Fields. Ambiguous images were skipped. No art fit Sniper Perch or Aid Station, so those two keep the placeholder (they are not in the pitch decks).
 - **Name on the card:** a card wearing one of these arts shows the calling card's own title as its name (hand card, inspector title, hover zoom); the chassis name moves to the type line ("Laser Grid", type "Flanker · unit · SMG"). The Operator keeps its weapon name.
+
+### 1.1 Trait families (kc-syn-impl, head S1)
+Traits live on the chassis (synergy-system.md §4.1) and each traited chassis wears its **calling-card family**, so "same kind played together" shows on screen:
+| Trait | Chassis | Family (manifest `section`) |
+|---|---|---|
+| Vanguard | Point Man, Breacher, Protector (Bulwark) | Prestige Mastery / Multiplayer, Ranked Play, Challenges / Multiplayer and General |
+| Spec Ops | Flanker, Recon Specialist, Marksman (Ace, Sniper Perch) | Standard / Store, Battle Pass, Armory Unlocks, Events (operator bundles) |
+| Heavy | Gunner (LMG mastery), Demolitions Expert (launcher mastery) (Commander, Mortar Pit) | Weapon Mastery (Gilded / Golden Ivory tiers; Interstellar stays the Operator's) |
+| Undead | Brawler, Combat Medic (War Standard, Aid Station) | Challenges / Zombies, Prestige Mastery / Zombies, Zombies |
+
+- 19 of the set's traited unit / Field arts already matched; **31 were re-picked** (`review = no` only, never an id already in the set, no duplicate title) and checked by eye on contact sheets. Rejected on sight: Smoke And Blood, Cut And Gutted, Green Glow, Pure Rage, Chest Cavity Cave In, Room Cleared (blood), Too Much Speed (no weapon), Going Down and Bursting (titles already in the set).
+- **Kept as they were:** the Elites (Ace: Big Game Hunter, Commander: Golden Throne / King Of It All), Bulwark and Mortar Pit (no family art fits a crest), and one Marksman (Snow Snipers: the Spec Ops family has only four usable sniper arts). The rule is the trait icon, not the art.
+- Heavy units use weapon-mastery cards with the unit's own weapon type (LMGs on the Gunner, launchers on the Demolitions Expert) and keep `mastery_family` empty, so BannerArtDB never mistakes them for the Operator's mastery ladder.
 
 ## 2. Mapping: title -> chassis, and why
 | # | Calling card | Chassis | Kind | Anim. | Why (what the image shows) |
@@ -24,45 +37,45 @@
 | 8 | No Effs Given | Rifleman | unit | yes | operator with an assault rifle |
 | 9 | Glowing Eyes | Rifleman | unit |  | operator with an assault rifle |
 | 10 | Smoking Guns | Point Man | unit | yes | operator with an SMG or pistol, close in |
-| 11 | Staying On Beat | Point Man | unit |  | operator with an SMG or pistol, close in |
-| 12 | Two Sides To Everything | Point Man | unit |  | operator with an SMG or pistol, close in |
-| 13 | Squeeze The Trigger | Point Man | unit | yes | operator with an SMG or pistol, close in |
-| 14 | Cobalt Conspirator | Point Man | unit |  | operator with an SMG or pistol, close in |
+| 11 | Non-Business | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 12 | Close Quarters | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 13 | Dual SMGs | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 14 | Nades And Guns | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 15 | Bang! | Point Man | unit |  | operator with an SMG or pistol, close in |
-| 16 | Running Out Of Time | Point Man | unit |  | operator with an SMG or pistol, close in |
-| 17 | Laser Grid | Flanker | unit | yes | stealthy operator moving or infiltrating |
+| 16 | Standoff | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 17 | Urban Tech | Flanker | unit | yes | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 18 | Operation Azure | Flanker | unit |  | stealthy operator moving or infiltrating |
 | 19 | Can't Catch Me | Flanker | unit | yes | stealthy operator moving or infiltrating |
 | 20 | Operator Infil | Flanker | unit | yes | stealthy operator moving or infiltrating |
-| 21 | In The Trees | Flanker | unit |  | stealthy operator moving or infiltrating |
-| 22 | Blaze Of Glory | Gunner | unit |  | heavy machine gun firing |
-| 23 | Unleashing Chaos | Gunner | unit |  | heavy machine gun firing |
-| 24 | Suppression | Gunner | unit |  | heavy machine gun firing |
-| 25 | Heavy Barrage | Gunner | unit |  | heavy machine gun firing |
-| 26 | Speed Bumps | Gunner | unit |  | heavy machine gun firing |
-| 27 | Chaos Of Battle | Marksman | unit |  | sniper rifle / scope |
-| 28 | Scoped And Ready | Marksman | unit |  | sniper rifle / scope |
-| 29 | Glint | Marksman | unit |  | sniper rifle / scope |
-| 30 | Message Inbound | Marksman | unit |  | sniper rifle / scope |
+| 21 | Gift Giver | Flanker | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 22 | Pulemyot 762 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 23 | DG-58 LSW Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 24 | Holger 26 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 25 | Bruen Mk9 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 26 | TAQ Eradicator Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 27 | Battle Highlights | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 28 | Stained Memory | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 29 | Trophy Collector | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 30 | Winter's Silence | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 31 | Snow Snipers | Marksman | unit |  | sniper rifle / scope |
 | 32 | Art Of Disguise | Marksman | unit | yes | sniper rifle / scope |
 | 33 | Big Game Hunter | Ace | unit |  | lone sniper hunting (Ace, sniper elite) |
 | 34 | Keeping These | Protector | unit | yes | riot shield / armoured defender (Protector) |
 | 35 | Shields Above All | Protector | unit |  | riot shield / armoured defender (Protector) |
-| 36 | Quiet At Last | Protector | unit |  | riot shield / armoured defender (Protector) |
+| 36 | Resolved Eyes | Protector | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 37 | Broken Walls | Breacher | unit | yes | shotgun at close quarters / room entry |
-| 38 | CQC (Close Quarters Combat) | Breacher | unit |  | shotgun at close quarters / room entry |
+| 38 | Lethal Patience | Breacher | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 39 | Behind The Door | Breacher | unit |  | shotgun at close quarters / room entry |
-| 40 | Clearer Vision | Breacher | unit |  | shotgun at close quarters / room entry |
-| 41 | Battle Stance | Demolitions Expert | unit |  | launcher, grenade or demolition |
-| 42 | Throw Like You Mean It | Demolitions Expert | unit |  | launcher, grenade or demolition |
-| 43 | Out With A Bang | Demolitions Expert | unit |  | launcher, grenade or demolition |
-| 44 | Armor Crusher | Demolitions Expert | unit |  | launcher, grenade or demolition |
-| 45 | Cycloptic | Recon Specialist | unit | yes | night vision, optics, scouting |
+| 40 | Fast Acting | Breacher | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 41 | RGL-80 Mastery: Gilded | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
+| 42 | Stormender Mastery: Gilded | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
+| 43 | PILA Mastery: Golden Ivory | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
+| 44 | Strela-P Mastery: Golden Ivory | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
+| 45 | Dark Patrol | Recon Specialist | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 46 | Infiltration | Recon Specialist | unit |  | night vision, optics, scouting |
-| 47 | Seal Time | Recon Specialist | unit |  | night vision, optics, scouting |
-| 48 | Blizzard Patrol | Recon Specialist | unit |  | night vision, optics, scouting |
-| 49 | Combat Surgeon | Combat Medic | unit |  | medical or stim gear |
+| 47 | Don't Look Back | Recon Specialist | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 48 | Power And Poise | Recon Specialist | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
+| 49 | Start Packing! | Combat Medic | unit |  | Undead trait: Zombies card (kc-syn S1) |
 | 50 | Refreshing! | Combat Medic | unit |  | medical or stim gear |
 | 51 | Drink Up | Combat Medic | unit |  | medical or stim gear |
 | 52 | Golden Throne | Commander | unit |  | commander on a throne (Elite) |
@@ -98,10 +111,10 @@
 | 82 | Dragon's Glow | Mortar Barrage | killstreak |  | missile / bombs / fireworks barrage |
 | 83 | Shield Day | Hold the Line | tactic |  | shield wall / holding the flag |
 | 84 | Protect The Flag | Hold the Line | tactic |  | shield wall / holding the flag |
-| 85 | Last Look | Brawler | unit |  | melee: blade, fists, bat |
-| 86 | Sliced Up | Brawler | unit |  | melee: blade, fists, bat |
-| 87 | Charging... | Brawler | unit | yes | melee: blade, fists, bat |
-| 88 | In The Spotlight | Brawler | unit | yes | melee: blade, fists, bat |
+| 85 | FWOOM! | Brawler | unit |  | Undead trait: Zombies card (kc-syn S1) |
+| 86 | Power And Pain | Brawler | unit |  | Undead trait: Zombies card (kc-syn S1) |
+| 87 | Blade Is Mightier | Brawler | unit |  | Undead trait: Zombies card (kc-syn S1) |
+| 88 | Ride And Die | Brawler | unit |  | Undead trait: Zombies card (kc-syn S1) |
 | 89 | Knuckle Bros | Brawler | unit |  | melee: blade, fists, bat |
 | 90 | Raging | Brawler | unit |  | melee: blade, fists, bat |
 | 91 | Baseball Fan | Brawler | unit |  | melee: blade, fists, bat |

@@ -30,6 +30,10 @@
 #     set=TARGET.FIELD=VALUE   in-memory data override for what-if tuning (repeatable):
 #        run.firefight_target=6 · slot3.enemy_armor_bonus=0 · squad_rusher.second_best_chance=0.3
 #        breacher.cost=2 (any card / loadout / squad id under res://data) · squad_rusher.primary=@kestrel_ar7
+#     synoffers=1    kc-syn: turn on the run's synergy offers (Doctrine, Promotion, Retire, Regroup)
+#     aware=0|1      kc-syn: the player proxy plans links / sets (default 1)
+#     squadaware=0|1 kc-syn: the squads' AI plans links / sets (default 1)
+#     syn=0          kc-syn control: no links and no sets anywhere (SynergyRules.enabled = false)
 #   Overrides never touch the files; edit the .tres (and gen_content.gd) to keep a change.
 #
 #   Real-time estimate (stated assumption, not measured): a round takes
@@ -65,6 +69,9 @@ var out: Dictionary = {}
 var proxy_overrides: Dictionary = {}
 ## Run offer rule: "" (most expensive unit) or "fields" (prefer Fields).
 var offer_rule: String = ""
+## kc-syn: synergy-aware planning for the player proxy / the squads.
+var proxy_aware: bool = true
+var squad_aware: bool = true
 
 
 func _initialize() -> void:
@@ -86,6 +93,10 @@ func _main() -> void:
 					proxies.append(p)
 			"json": json_path = kv[1]
 			"offers": offer_rule = kv[1]
+			"synoffers": config.synergy_offers = kv[1] == "1"
+			"aware": proxy_aware = kv[1] != "0"
+			"squadaware": squad_aware = kv[1] != "0"
+			"syn": SynergyRules.enabled = kv[1] != "0"
 			"slots":
 				for n: String in kv[1].split(","):
 					only_slots.append(int(n))
@@ -216,7 +227,15 @@ func _player_ai(proxy: String, mode: int = -1) -> AiPlayer:
 		var po: Dictionary = proxy_overrides.get(key, {})
 		for f: String in po:
 			p.set(f, po[f])
-	return AiPlayer.new(p)
+	var ai: AiPlayer = AiPlayer.new(p)
+	ai.planner.synergy_aware = proxy_aware
+	return ai
+
+
+func _squad_ai(squad: SquadData) -> AiPlayer:
+	var ai: AiPlayer = AiPlayer.for_squad(squad)
+	ai.planner.synergy_aware = squad_aware
+	return ai
 
 
 ## Plays m to the end. Returns the per-match log.
@@ -323,7 +342,7 @@ func _match_block(proxy: String) -> Dictionary:
 			for s: int in seeds:
 				var seed_value: int = 50000 + i * 1000 + mode * 500 + s
 				var m: MatchState = Sim.match_for(config, slot, seed_value, mode)
-				logs.append(_play(m, AiPlayer.for_squad(slot.squad), _player_ai(proxy, mode)))
+				logs.append(_play(m, _squad_ai(slot.squad), _player_ai(proxy, mode)))
 			var label: String = "M%d B%d%s %s %s%s" % [i + 1, slot.bracket, " RIVAL" if slot.is_rival else "",
 					slot.squad.id.trim_prefix("squad_"), MODE_NAMES[mode], " *" if mode == slot.mode else ""]
 			var agg: Dictionary = _aggregate(logs)
@@ -482,10 +501,16 @@ func _median(list: Array) -> float:
 
 ## Offer rule: Supply Drop = the most expensive offered unit (ties: first), else option 0;
 ## weapon level and Perk = option 0. Same rule for every proxy (offers are seeded).
+## kc-syn: the Supply Drop takes its on-trait slot 1 when that is a unit or a Field; Doctrine takes
+## the deck's best trait (option 0), Promotion and Regroup their first option (Recruits first).
 func _choose(r: RunProgress) -> int:
 	var offer: Dictionary = r.current_offer()
 	if offer["kind"] != RewardOffers.KIND_SUPPLY_DROP:
 		return 0
+	if offer.has("on_trait"):
+		var c0: CardData = r.resource(offer["options"][0]) as CardData
+		if c0 != null and c0.card_type != DataEnums.CardType.TACTIC:
+			return 0
 	var best: int = 0
 	var best_cost: int = -1
 	if offer_rule == "fields":
@@ -521,12 +546,18 @@ func _run_block(proxy: String) -> Dictionary:
 			var md: RunMatchData = r.current_match()
 			var m: MatchState = r.create_match()
 			m.start_match()
-			var l: Dictionary = _play(m, AiPlayer.for_squad(md.squad), _player_ai(proxy, md.mode))
+			var l: Dictionary = _play(m, _squad_ai(md.squad), _player_ai(proxy, md.mode))
 			slot_logs[idx].append(l)
 			all.append(l)
 			seconds += l["seconds"] + BETWEEN_MATCH_S
 			r.record_match(m)
 			while not r.current_offer().is_empty():
+				# kc-syn: Retire a Recruit with a twin instead of a card once the deck has 22+ cards.
+				var off: Dictionary = r.current_offer()
+				if off.get("retire", false) and r.deck.size() >= 22 and not r.retire_options().is_empty() \
+						and int(r.retire_options()[0]["twin_index"]) >= 0:
+					r.retire_card(0)
+					continue
 				r.choose_offer(_choose(r))
 		if r.is_victory():
 			victories += 1

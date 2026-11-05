@@ -208,6 +208,20 @@ func choose_offer(index: int) -> String:
 	return err
 
 
+## kc-syn §5.4: Retire option `index` of run.retire_options() as the current offer's choice
+## (the Supply Drop's 4th option or Regroup). Returns "" or the reason.
+func retire_card(index: int) -> String:
+	if run == null:
+		return "no run"
+	var options: Array[Dictionary] = run.retire_options()
+	var err: String = run.retire_card(index)
+	if err == "":
+		EventBus.reward_picked.emit(&"retire", options[index]["id"])
+		_changed()
+		_announce_offer()
+	return err
+
+
 func skip_offer() -> String:
 	if run == null:
 		return "no run"

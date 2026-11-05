@@ -355,6 +355,7 @@ func test_undo_then_ready_phone() -> void:
 	assert_not_null(me.find_in_hand(rc.uid), "card back in hand")
 	assert_true(m.get_undo_button().disabled, "UNDO disabled with nothing to undo")
 	# Place the Operator and deploy the unit again, then READY.
+	me.supply += c.state.operator_cost()  # kc-syn: the Operator's placement costs Supply
 	c.select_operator()
 	c.play_at(1)
 	await _tap(vp, _chip_point(m, m.get_hand().get_card(rc.uid)))
@@ -432,6 +433,7 @@ func test_sidearm_taps_an_enemy_in_the_operator_zone_desktop() -> void:
 	st.put_in_line(near, 0)
 	var far: RulesUnit = st.create_unit(1, foe_card)
 	st.put_in_line(far, 2)
+	st.sides[0].supply += st.operator_cost()  # kc-syn: the Operator's placement costs Supply
 	c.select_operator()
 	c.play_at(0)
 	await _frames(2)
@@ -593,8 +595,9 @@ func test_full_rounds_with_the_ai_phone() -> void:
 	assert_true(c.is_busy() and fx.is_playing(), "the round plays as feedback")
 	await _until_presented(c)
 	assert_eq(c.state.round_number, 2, "Round 2")
+	# kc-syn: with the Operator's Supply cost, a Round 1 AI may only place its Operator.
 	var enemy_revealed: int = c.state.events.filter(func(e: Dictionary) -> bool:
-		return e["type"] == RulesEvent.CARD_REVEALED and e["side"] == &"enemy" and int(e["round"]) == 1).size()
+		return e["type"] in [RulesEvent.CARD_REVEALED, RulesEvent.OPERATOR_PLACED] and e["side"] == &"enemy" and int(e["round"]) == 1).size()
 	assert_true(enemy_revealed > 0, "the AI's cards were revealed")
 	var shots: int = c.state.events.filter(func(e: Dictionary) -> bool:
 		return e["type"] == RulesEvent.SHOT_FIRED and int(e["round"]) == 1).size()

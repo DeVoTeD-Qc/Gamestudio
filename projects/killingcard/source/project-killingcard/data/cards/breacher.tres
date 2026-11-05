@@ -28,3 +28,5 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_y6ilf")]([])
+neighbor_keyword = &"guard"
+card_trait = &"vanguard"

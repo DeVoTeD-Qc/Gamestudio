@@ -28,3 +28,5 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_vp4k5")]([])
+neighbor_keyword = &"spotter"
+card_trait = &"specops"
