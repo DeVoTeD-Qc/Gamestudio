@@ -77,7 +77,7 @@ const CARD_SCENE: PackedScene = preload("res://scenes/card/CzCard.tscn")
 const CardWords: GDScript = preload("res://scripts/ui/card_words.gd")
 const HowToPlay: GDScript = preload("res://scripts/ui/how_to_play.gd")
 ## cz-clarity: lines kept in the "what just happened" feed (newest first).
-const FEED_LINES: int = 3
+const FEED_LINES: int = 5
 
 const BASE_MARGIN: Vector2 = Vector2(32, 18)
 const BASE_MARGIN_COMPACT: Vector2 = Vector2(16, 10)
@@ -646,7 +646,9 @@ func _relayout() -> void:
 	var fit_w_h: float = floorf((right_w - (HAND_CAPACITY - 1) * tap) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
 	# cz-clarity: a normal hand (hand_size cards) sits side by side, so no card hides another's numbers.
 	var hand_n: int = int(_state.get("hand_size", 5)) if not _state.is_empty() else 5
-	var fit_row_h: float = floorf((right_w - (hand_n - 1) * 8.0) / float(hand_n) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
+	var fit_row_h: float = floorf((right_w - 24.0 - (hand_n - 1) * 8.0) / float(hand_n) * CzArtKit.COMPACT_PT.y / CzArtKit.COMPACT_PT.x)
+	if tablet:
+		fit_row_h = INF  # cz19b: tablets use the height for bigger cards (the fan opens the selected one)
 	var h: float = clampf(minf(minf(fit_h, fit_w_h), fit_row_h), art.y, maxf(art.y, TABLET_MAX_CARD_H if tablet else MAX_CARD_H))
 	var hold_room: float = ceilf(HOLD_TAG_PT * h / CzArtKit.COMPACT_PT.y)
 	card_px = Vector2(ceilf(h * CzArtKit.COMPACT_PT.x / CzArtKit.COMPACT_PT.y), h)
@@ -1589,7 +1591,7 @@ func _on_playback_step(step: Dictionary) -> void:
 func _on_playback_finished(summary: String, _steps: Array, skipped: bool) -> void:
 	if skipped and summary != "" and mode != &"brace":  # a Brace step has its own panel
 		_show_toast(summary, SUMMARY_TIME)
-		add_feed_line(summary)
+	add_feed_line(summary)  # cz-clarity: the rival's whole turn in one line, on top of the feed
 
 
 func _on_playback_option(key: StringName) -> void:

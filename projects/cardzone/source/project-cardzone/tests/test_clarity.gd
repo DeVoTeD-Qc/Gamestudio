@@ -115,6 +115,10 @@ func test_outcome_lines_name_what_changed() -> void:
 	var play: String = ActionText.outcome({"type": "played", "seat": 0, "card_id": "scavenge", "search": 1}, me, {"move": 0, "search": 2})
 	assert_eq(play, "You played Scavenge: +1 Search. You have Move 0, Search 2.", "play with pools")
 	assert_eq(ActionText.outcome({"type": "turn_started", "seat": 0}, me), "", "turn starts are the indicator's job")
+	var ctrl: Node = (load("res://scripts/match/match_controller.gd") as GDScript).new()
+	var sum: String = ctrl.summary_of([{"kind": &"move", "event": {"type": "dropped", "seat": 1, "area": "quarry"}}])
+	assert_eq(sum, "Rival's turn: dropped into Quarry.", "the drop in the rival summary")
+	ctrl.free()
 	var gas: String = ActionText.outcome({"type": "gas_hit", "seat": 0, "health": 3}, me)
 	assert_eq(gas, "You ended the turn in gas: -1 health, now 3.", "gas")
 
@@ -185,7 +189,7 @@ func test_long_press_explains_buttons_rows_and_loot() -> void:
 	assert_true(insp.is_open() and "MOVE" in insp.get_body_text(), "pools explained")
 	insp.close()
 	# Hand card: the inspector says what it does now, then what it gives.
-	await long_press(m.get_cards(&"hand")[0], 0.6)
+	await long_press(m.get_cards(&"hand")[2], 0.6)  # Red-dot Sight: what to do with it now
 	assert_true(insp.get_body_text().begins_with("NOW: "), "inspector leads with what to do now: %s" % insp.get_body_text().left(80))
 	assert_true("WHAT IT GIVES YOU" in insp.get_body_text(), "then what it gives")
 	insp.close()

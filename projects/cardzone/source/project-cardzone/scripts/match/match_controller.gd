@@ -660,7 +660,10 @@ func summary_of(steps: Array) -> String:
 		var e: Dictionary = s["event"]
 		match StringName(s["kind"]):
 			&"move":
-				parts.append("moved to %s" % ActionText.area_name(e.get("to", "")))
+				if String(e.get("type", "")) == "dropped":
+					parts.append("dropped into %s" % ActionText.area_name(e.get("area", "")))
+				else:
+					parts.append("moved to %s" % ActionText.area_name(e.get("to", "")))
 			&"loot":
 				parts.append("looted %s" % ActionText.card_name(e.get("card_id", "")))
 			&"play":
