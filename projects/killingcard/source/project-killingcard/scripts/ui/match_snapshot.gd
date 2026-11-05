@@ -84,6 +84,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"hand": hand,
 		"killfeed": killfeed,
 		"deploy_open": deploy_open,
+		"operator_can_deploy": me.operator_can_deploy and deploy_open,
 		"can_undo": deploy_open and not me.plays.is_empty() and not bool(me.plays.back()["immediate_done"]),
 		"undo_label": play_name(state, me, me.plays.back()) if not me.plays.is_empty() else "",
 		"result": state.result,

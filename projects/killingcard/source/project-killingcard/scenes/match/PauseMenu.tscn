@@ -75,6 +75,15 @@ theme_type_variation = &"HudButton"
 toggle_mode = true
 text = "FAST ANIMATIONS: OFF"
 
+[node name="MirrorButton" type="Button" parent="Center/Box/Column/MainButtons" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 64)
+layout_mode = 2
+tooltip_text = "Hand tray on the left, icon strip on the right (left-handed play)"
+theme_type_variation = &"HudButton"
+toggle_mode = true
+text = "MIRROR LAYOUT: OFF"
+
 [node name="ForfeitButton" type="Button" parent="Center/Box/Column/MainButtons" groups=["tap_target"]]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(400, 64)

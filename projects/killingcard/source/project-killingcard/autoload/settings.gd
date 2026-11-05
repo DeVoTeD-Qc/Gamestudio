@@ -23,6 +23,9 @@ var ui_scale: float = 1.0
 var master_volume: float = 0.8
 ## Show the firefight outcome preview by default.
 var show_outcome_preview: bool = true
+## kc-board2: mirror the match layout (hand tray on the left, icon strip on the right) for
+## left-handed players. The board itself is symmetric.
+var mirror_layout: bool = false
 
 
 func _ready() -> void:

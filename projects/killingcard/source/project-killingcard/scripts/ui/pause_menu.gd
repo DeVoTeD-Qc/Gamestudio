@@ -1,6 +1,7 @@
 # pause_menu.gd
 # Purpose: Match pause sheet (f03), opened by MENU. A modal over the board with RESUME, a
-#   FAST ANIMATIONS toggle (Settings.fast_animations), FORFEIT MATCH (asks first: it counts as
+#   FAST ANIMATIONS toggle (Settings.fast_animations), MIRROR LAYOUT (Settings.mirror_layout,
+#   kc-board2: hand tray on the left for left-handed players; applied at once), FORFEIT MATCH (asks first: it counts as
 #   a loss) and QUIT TO TITLE (a run stays saved; the match restarts with the same seed next
 #   time). It only collects the choice and emits a signal; MatchController acts on it.
 #   The match is not paused underneath (no get_tree().paused): the sheet blocks taps, and a
@@ -27,6 +28,7 @@ var compact: bool = false
 @onready var _confirm_hint: Label = %ConfirmHint
 @onready var _resume: Button = %ResumeButton
 @onready var _fast: Button = %FastButton
+@onready var _mirror: Button = %MirrorButton
 @onready var _forfeit: Button = %ForfeitButton
 @onready var _quit: Button = %QuitButton
 @onready var _forfeit_yes: Button = %ForfeitYesButton
@@ -37,6 +39,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_resume.pressed.connect(func() -> void: resume_pressed.emit())
 	_fast.toggled.connect(_on_fast_toggled)
+	_mirror.toggled.connect(_on_mirror_toggled)
 	_forfeit.pressed.connect(_ask_forfeit)
 	_forfeit_no.pressed.connect(_show_main)
 	_forfeit_yes.pressed.connect(func() -> void: forfeit_confirmed.emit())
@@ -56,6 +59,9 @@ func open(info: Dictionary = {}) -> void:
 	_forfeit.visible = bool(info.get("can_forfeit", true))
 	_fast.set_pressed_no_signal(bool(info.get("fast_animations", false)))
 	_update_fast_text()
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	_mirror.set_pressed_no_signal(settings != null and bool(settings.get(&"mirror_layout")))
+	_update_mirror_text()
 	_show_main()
 	show()
 
@@ -75,7 +81,7 @@ func is_confirming() -> bool:
 func set_compact(value: bool) -> void:
 	compact = value
 	var w: float = 360.0 if compact else 400.0
-	for b: Button in [_resume, _fast, _forfeit, _quit]:
+	for b: Button in [_resume, _fast, _mirror, _forfeit, _quit]:
 		b.custom_minimum_size = Vector2(w, 64)
 	for b: Button in [_forfeit_yes, _forfeit_no]:
 		b.custom_minimum_size = Vector2(176 if compact else 196, 64)
@@ -95,6 +101,10 @@ func get_resume_button() -> Button:
 
 func get_fast_button() -> Button:
 	return _fast
+
+
+func get_mirror_button() -> Button:
+	return _mirror
 
 
 func get_forfeit_button() -> Button:
@@ -130,3 +140,14 @@ func _on_fast_toggled(on: bool) -> void:
 
 func _update_fast_text() -> void:
 	_fast.text = "FAST ANIMATIONS: %s" % ("ON" if _fast.button_pressed else "OFF")
+
+
+func _on_mirror_toggled(on: bool) -> void:
+	_update_mirror_text()
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	if settings != null:
+		settings.set_value(&"mirror_layout", on)
+
+
+func _update_mirror_text() -> void:
+	_mirror.text = "MIRROR LAYOUT: %s" % ("ON" if _mirror.button_pressed else "OFF")

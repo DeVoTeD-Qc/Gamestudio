@@ -216,11 +216,12 @@ func has_art() -> bool:
 	return _art.texture != null
 
 
-## Badge / number / plate sizes for a banner height h (phone 44: 22/16/18, desktop 64: 28/20/22).
+## Badge / number / plate sizes for a banner height h (v2 phone 57: 28/20/22, desktop 76: 34/24/26).
 static func metrics(h: float) -> Dictionary:
-	var badge: float = roundf(0.3 * h + 8.8)
+	# kc-board2 (board-layout-v2.md §2.1): phone 57 px -> 28 / 20 / 22, desktop 76 px -> 34 / 24 / 26.
+	var badge: float = roundf(h * 6.0 / 19.0 + 10.0)
 	return {
-		"badge": badge, "number": roundf(badge * 0.72), "plate": roundf(0.2 * h + 9.2),
+		"badge": badge, "number": roundf(badge * 0.72), "plate": roundf(h * 4.0 / 19.0 + 10.0),
 		"spine": 4.0 if h < 56.0 else 6.0, "pad": maxf(2.0, roundf(h * 0.04)),
 	}
 

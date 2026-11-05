@@ -55,6 +55,10 @@ func snapshot(scene: Node = null) -> Dictionary:
 		if not c.is_visible_in_tree() or not (c is BaseButton or c.is_in_group(&"tap_target")):
 			continue
 		var text: String = String(c.get("text")) if c is Button else String(c.name)
+		if c.has_method(&"get_text") and not c is Button:
+			text = "%s %s" % [c.name, c.call(&"get_text")]
+		elif c is Button and text.strip_edges().is_empty():
+			text = String(c.name)
 		(out["buttons"] as Array).append({"text": text.replace("\n", " "), "path": String(scene.get_path_to(c)),
 				"disabled": c is BaseButton and (c as BaseButton).disabled, "rect": _css(c)})
 	var ctrl: Node = scene.get_node_or_null("%MatchController") if scene.has_node("%MatchController") else null
@@ -97,12 +101,32 @@ func _match(scene: Node, ctrl: Node) -> Dictionary:
 	var skips: Array = (fx.get(&"_skip_called") as Dictionary).keys() if fx != null and fx.get(&"_skip_called") != null else []
 	return {"round": st.round_number, "phase": String(MatchState.PHASE_NAMES[st.phase]), "supply": me.supply,
 			"busy": ctrl.is_busy(), "mulligan": ctrl.is_mulligan_open(), "result": String(st.result),
-			"operator_can_deploy": me.operator_can_deploy, "operator": _css(scene.get_operator_panel()),
+			"operator_can_deploy": me.operator_can_deploy,
+			"operator": _css(scene.get_operator_handle() if scene.has_method(&"get_operator_handle") else scene.get_operator_panel()),
 			"hand": hand, "columns": cols, "inspector_open": insp.is_open(),
 			"inspector_title": String((insp.get_node("%TitleLabel") as Label).text) if insp.is_open() else "",
 			"toast": scene.get_toast_text(), "fx_skips": skips, "inspector_art": _art_info(insp_banner),
 			"mastery_override": BannerArtDB.operator_tier_override,
-			"fx_playing": fx != null and fx.is_playing()}
+			"fx_playing": fx != null and fx.is_playing()}.merged(_layout_v2(scene))
+
+
+## kc-board2: tray state, flyout, mirror, banner / card sizes and the badges' rects.
+static func _layout_v2(scene: Node) -> Dictionary:
+	if not scene.has_method(&"get_tray"):
+		return {}
+	var m: Dictionary = scene.get(&"metrics")
+	var badges: Dictionary = {}
+	for k: StringName in [&"menu", &"score", &"operator", &"streak", &"rival", &"preview", &"deck"]:
+		var b: Control = scene.get_badge(k)
+		badges[String(k)] = {"rect": _css(b), "text": String(b.call(&"get_text")) if b.has_method(&"get_text") else String(b.get(&"text"))}
+	var toasts: Array = []
+	for line: Control in scene.get_killfeed_toasts().get_entries():
+		toasts.append(_css(line))
+	var log_lines: int = scene.get_killfeed().get_entries().size()
+	return {"tray": String(scene.get(&"tray_state")), "tray_rect": _css(scene.get_tray()),
+			"flyout": String(scene.get(&"flyout_key")), "mirror": bool(scene.get(&"mirror")),
+			"banner": [m.get("bw", 0.0), m.get("bh", 0.0)], "card": [m.get("card", Vector2.ZERO).x, m.get("card", Vector2.ZERO).y],
+			"hand_tab": _css(scene.get_hand_tab()), "badges": badges, "toasts": toasts, "log_lines": log_lines}
 
 
 ## kc-cod2: which art a BannerView shows (art id, licensed, animated, flipbook playing now).
@@ -118,7 +142,7 @@ static func _art_info(banner: Variant) -> Dictionary:
 
 
 ## A Control's rect in CSS px of the page (window px / devicePixelRatio).
-func _css(c: Control) -> Array:
+static func _css(c: Control) -> Array:
 	var xf: Transform2D = c.get_viewport().get_screen_transform() * c.get_global_transform_with_canvas()
 	var p: Vector2 = xf * Vector2.ZERO
 	var e: Vector2 = xf * c.size

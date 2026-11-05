@@ -222,6 +222,15 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 	# The calling card's own title is the card name; the Operator's mastery card is not.
 	assert_eq(BannerArtDB.art_title(&"kc_t_r2"), "Rifle Two", "art title as card name")
 	assert_eq(BannerArtDB.art_title(&"kc_t_g1"), "", "Operator keeps its weapon name")
+	# kc-cod3: the inspector's card picture (CardView) shows the copy's licensed art.
+	var cv: Control = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()
+	tree.root.add_child(cv)
+	await tree.process_frame
+	var vd: Dictionary = (load("res://scripts/ui/card_info.gd") as GDScript).view_dict(CardDB.get_card(&"rifleman"), "friend")
+	vd["licensed_art"] = "kc_t_r1"
+	cv.set_card_data(vd)
+	assert_eq((cv.get_node("%ArtIcon") as TextureRect).texture, BannerArtDB.banner_texture(&"kc_t_r1"), "card picture shows the licensed art")
+	cv.queue_free()
 	# BannerView: flipbook only while focused, still art otherwise; safety net needs licensed art.
 	var view := BannerView.new()
 	view.size = Vector2(256, 64)
@@ -259,15 +268,35 @@ func test_pitch_decks_swaps_only_when_active() -> void:
 	assert_eq(deck.size(), starter.size(), "same deck size")
 	assert_eq(cfg.starter_deck, starter, "the source deck is not modified")
 	var ids: Array = deck.map(func(c: CardData) -> StringName: return c.id)
-	for id: StringName in [&"brawler", &"war_standard", &"listening_post", &"smoke_screen", &"blackout"]:
+	for id: StringName in [&"brawler", &"war_standard", &"listening_post", &"smoke_screen", &"blackout", &"sabotage"]:
 		assert_true(ids.has(id), "pitch deck has %s" % id)
-	var fields: int = deck.filter(func(c: CardData) -> bool: return c.card_type == DataEnums.CARD_TYPE_FIELD).size()
-	var units: int = deck.filter(func(c: CardData) -> bool: return c.card_type == DataEnums.CardType.UNIT).size()
-	assert_true(fields >= 3, "at least 3 Fields (%d)" % fields)
-	assert_true(units >= PitchDecks.MIN_UNITS, "units kept (%d)" % units)
+	assert_eq(_kinds(deck), [10, 7, 3], "starter pitch deck: 10 units / 7 tactics / 3 Fields")
+	# AI squads lean on units the same way, never with Sniper Perch / Aid Station.
+	PitchDecks.forced = true
+	for f: String in ["squad_anchor", "squad_black_meridian", "squad_rusher"]:
+		var sq: SquadData = load("res://data/squads/%s.tres" % f)
+		var d: Array[CardData] = PitchDecks.apply(sq.deck)
+		var k: Array = _kinds(d)
+		assert_eq(k[0], PitchDecks.unit_target(d.size()), "%s units" % f)
+		assert_eq(k[2], 3, "%s Fields" % f)
+		assert_true(k[1] >= 5, "%s tactics (%d)" % [f, k[1]])
+		var dids: Array = d.map(func(c: CardData) -> StringName: return c.id)
+		assert_false(dids.has(&"sniper_perch") or dids.has(&"aid_station"), "%s: no Sniper Perch / Aid Station" % f)
+		assert_true(dids.has(&"brawler") and dids.has(&"smoke_screen"), "%s shows the new chassis" % f)
+	var with_perch: Array[CardData] = starter.duplicate()
+	with_perch[0] = CardDB.get_card(&"sniper_perch")
+	assert_false(PitchDecks.apply(with_perch).has(CardDB.get_card(&"sniper_perch")), "Sniper Perch swapped out")
+	PitchDecks.forced = false
 	for id: StringName in [&"brawler", &"smoke_screen", &"blackout", &"sabotage"]:
 		var c: CardData = CardDB.get_card(id)
 		assert_not_null(c, "%s is in data/cards" % id)
+
+
+static func _kinds(deck: Array[CardData]) -> Array:
+	var k: Array = [0, 0, 0]
+	for c: CardData in deck:
+		k[c.card_type] += 1
+	return k
 
 
 func test_ghost_protector_slide_and_snap() -> void:

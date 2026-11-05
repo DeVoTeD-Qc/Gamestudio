@@ -39,6 +39,8 @@ const SELECTED_TEXT: Color = Color(0.0705882, 0.0862745, 0.101961, 1)
 
 var compact: bool = false
 var selected: bool = false
+## &"all", &"operator" or &"streak" (set_section).
+var section: StringName = &"all"
 var _gesture: RefCounted = null
 ## Item id whose button shows as pressed (being targeted), &"" = none.
 var selected_item: StringName = &""
@@ -73,8 +75,25 @@ func _pass_through() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	# kc-board2: in the STREAK flyout the panel is only the killstreak tiles, not the Operator handle.
+	if section == &"streak":
+		return
 	if _gesture.handle(event):
 		accept_event()
+
+
+## kc-board2 flyouts (board-layout-v2.md §3): &"operator" shows the Operator's info (name, FP / AR,
+## position, streak, perks), &"streak" the streak meter and the 6 item / killstreak tiles,
+## &"all" everything (the v1 rail panel).
+func set_section(value: StringName) -> void:
+	section = value
+	var info_only: bool = value == &"operator"
+	var streak_only: bool = value == &"streak"
+	_buttons.visible = not info_only
+	_buttons.columns = 3
+	for n: Control in [_caption, _name, _stats, _perk_row]:
+		n.visible = not streak_only
+	_info.visible = true
 
 
 func set_selected(value: bool) -> void:

@@ -18,6 +18,14 @@ const SHIFT_TIME: float = 0.12
 
 ## Multiplies each line's life (feed_life); the phone layout shortens it (match_screen.gd, f04).
 var life_scale: float = 1.0
+## kc-board2: the tray's killfeed LOG keeps its lines (no fade); the newest line_cap lines show.
+var persistent: bool = false
+## Most lines shown at once (MAX_LINES unless set).
+var line_cap: int = MAX_LINES
+## Lines centred in the rect (the killfeed toasts over the board) instead of right-aligned.
+var centered: bool = false
+## A second feed every push() is copied to (the log's toasts), or null.
+var mirror: Control = null
 var _entries: Array[Control] = []
 var _reduced: bool = false
 
@@ -34,7 +42,10 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 	if timing == null:
 		timing = FxTiming.from_settings()
 	_reduced = timing.reduced_motion
+	if mirror != null and is_instance_valid(mirror):
+		mirror.push(data, timing)
 	var line: Control = KillfeedEntry.new()
+	line.centered = centered
 	line.setup(data)
 	var keep: int = max_lines() - 1
 	while _entries.size() > keep:
@@ -45,7 +56,7 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 	line.size = Vector2(size.x, KillfeedEntry.ROW_HEIGHT)
 	line.position = _row_position(_entries.size() - 1)
 	_layout(true)
-	line.start(timing, life_scale)
+	line.start(timing, -1.0 if persistent else life_scale)
 	return line
 
 
@@ -57,14 +68,16 @@ func get_entries() -> Array[Control]:
 ## How many lines fit the current height (1..MAX_LINES; MAX_LINES before the first layout).
 func max_lines() -> int:
 	if size.y <= 0.0:
-		return MAX_LINES
-	return clampi(int(floor((size.y + 0.5) / KillfeedEntry.ROW_HEIGHT)), 1, MAX_LINES)
+		return line_cap
+	return clampi(int(floor((size.y + 0.5) / KillfeedEntry.ROW_HEIGHT)), 1, line_cap)
 
 
 ## Fast-forward: finish every enter animation (lines keep their remaining life).
 func finish_all() -> void:
 	for line: Control in _entries:
 		line.finish_enter()
+	if mirror != null and is_instance_valid(mirror):
+		mirror.finish_all()
 
 
 func clear() -> void:
@@ -78,10 +91,11 @@ func _on_expired(line: Control) -> void:
 
 
 ## Oldest line on top, newest below it; the lines shown are vertically centred in the rect
-## (f04: a single line no longer sits at the bottom of an empty box).
+## (f04: a single line no longer sits at the bottom of an empty box). A persistent log and the
+## toasts stack from the top instead.
 func _row_position(index: int) -> Vector2:
 	var shown: int = mini(_entries.size(), max_lines())
-	var top: float = (size.y - shown * KillfeedEntry.ROW_HEIGHT) * 0.5
+	var top: float = 0.0 if persistent or centered else (size.y - shown * KillfeedEntry.ROW_HEIGHT) * 0.5
 	var row: int = index - (_entries.size() - shown)
 	return Vector2(0, top + row * KillfeedEntry.ROW_HEIGHT)
 

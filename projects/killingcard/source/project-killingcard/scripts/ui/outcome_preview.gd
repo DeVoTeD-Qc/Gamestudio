@@ -208,5 +208,9 @@ func _sync_button() -> void:
 	if _button == null:
 		return
 	_button.set_pressed_no_signal(enabled)
-	_button.text = "PREVIEW\nON" if enabled else "PREVIEW\nOFF"
+	# kc-board2: the strip's PREVIEW badge draws an eye over the state word.
+	if _button.has_meta(&"badge"):
+		_button.text = "\nON" if enabled else "\nOFF"
+	else:
+		_button.text = "PREVIEW\nON" if enabled else "PREVIEW\nOFF"
 	_button.tooltip_text = "Forecast each column from what you can see (P)"

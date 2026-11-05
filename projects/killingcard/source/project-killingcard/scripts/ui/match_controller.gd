@@ -1269,12 +1269,32 @@ func _on_rail_inspected(key: StringName) -> void:
 			_open_info({"title": "Supply", "type": "resource",
 					"text": "%d of %d Supply left this round. Cards cost Supply to play; it refills (and grows) each round." % [me.supply, state.config.supply_for_round(state.round_number)],
 					"status": ""})
+		# kc-board2: the icon strip's other badges and the tray's controls.
+		&"streak":
+			var names: PackedStringArray = []
+			for item: LoadoutItem in me.setup.killstreaks:
+				if item != null:
+					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, PLAYER, item)])
+			_open_info({"title": "Killstreaks", "type": "streak %d" % me.streak,
+					"text": "Eliminations build your streak; each killstreak is earned at its threshold (%s) and called in from this badge. Your loadout items (sidearm, lethal, tactical) are here too." % ", ".join(names),
+					"status": "The badge glows amber when one is ready."})
+		&"menu":
+			_open_info({"title": "Menu", "type": "pause", "text": "Pause the match: fast animations, mirror layout (tray on the left), forfeit, quit to title.", "status": ""})
+		&"preview":
+			_open_info({"title": "Preview", "type": "forecast",
+					"text": "Shows the forecast of this round's firefight on the objective tiles, from what you can see (P).", "status": ""})
+		&"killfeed":
+			_open_info({"title": "Killfeed", "type": "this round",
+					"text": "Every elimination of the round, oldest first. Short toasts also show at the top of the board.", "status": ""})
+		&"hand_tab":
+			_open_info({"title": "Your hand", "type": "%d cards" % me.hand.size(),
+					"text": "The hand tray opens on its own in Deploy. Outside Deploy, PEEK shows your cards read-only (NEXT DEPLOY); long-press a card for its rules.", "status": ""})
 
 
 func _open_objective(zone: int) -> void:
 	var lane: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)["lanes"][zone]
 	var control_text: String = {&"player": "You control it", &"enemy": "The rival controls it",
-			&"contested": "Contested: both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
+			&"contested": "Even (contested): both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
 	var lines: PackedStringArray = []
 	lines.append("%s. A side controls a column when it has at least one unit there and the other side has none (a Holder breaks a tie)." % control_text)
 	lines.append("Column Firepower: yours %d, rival %d. Range: %s (some weapon classes get +FP here)." % [int(lane["fp_player"]), int(lane["fp_enemy"]), String(lane["range"]).capitalize()])

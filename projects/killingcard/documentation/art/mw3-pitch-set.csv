@@ -52,9 +52,9 @@ combat_medic,kc_mw3_stocking_up,Refreshing!,unit,no,,,StockingUp_CallingCard_MWI
 combat_medic,kc_mw3_drink_up,Drink Up,unit,no,,,DrinkUp_CallingCard_MWIII.png,medical or stim gear
 okafor_anvil,kc_mw3_golden_throne,Golden Throne,unit,no,,,GoldenThrone_CallingCard_MWIII.png,commander on a throne (Elite)
 okafor_anvil,kc_mw3_long_arms,King Of It All,unit,no,,,LongArms_CallingCard_MWIII.png,commander on a throne (Elite)
-war_standard,kc_mw3_chaos_maker,Chaos Maker,field,no,,,ChaosMaker_CallingCard_MWIII.png,emblem / crest
-war_standard,kc_mw3_mwiii_season2_top1_overall,MWIII Season 2 #1 Overall,field,yes,,,MWIIISeason2Top1Overall_CallingCard_MWIII.gif,emblem / crest
-war_standard,kc_mw3_wz_season6_top250,WZ Season 6 Top 250,field,yes,,,WZSeason6Top250_CallingCard_MWIII.gif,emblem / crest
+war_standard,kc_mw3_bullet_pro,Bullet Pro,field,yes,,,BulletPro_CallingCard_MWIII.gif,text-free skull / helmet crest
+war_standard,kc_mw3_turning_tide,Turning Tide,field,yes,,,TurningTide_CallingCard_MWIII.gif,text-free skull / helmet crest
+war_standard,kc_mw3_warmonger,Warmonger,field,yes,,,Warmonger_CallingCard_MWIII.gif,text-free skull / helmet crest
 ammo_resupply,kc_mw3_mythical_crate,Mythical Crate,tactic,no,,,MythicalCrate_CallingCard_MWIII.png,supply crate / loot
 ammo_resupply,kc_mw3_the_heist,The Heist,tactic,yes,,,TheHeist_CallingCard_MWIII.gif,supply crate / loot
 ammo_resupply,kc_mw3_making_bank,Making Bank,tactic,no,,,MakingBank_CallingCard_MWIII.png,supply crate / loot
@@ -63,7 +63,7 @@ breach_and_clear,kc_mw3_scorched_beginnings,Scorched Beginnings,tactic,yes,,,Sco
 breach_and_clear,kc_mw3_going_down_2,Going Down,tactic,no,,,GoingDown_CallingCard_MWIII.png,explosion (damage tactic)
 callout,kc_mw3_specter_vision,Specter Vision,tactic,yes,,,SpecterVision_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
 callout,kc_mw3_primal_instinct,Primal Instinct,tactic,yes,,,PrimalInstinct_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
-callout,kc_mw3_top_secret,Top Secret,tactic,no,,,TopSecret_CallingCard_MWIII.png,"intel: eye, scanner, dossier"
+callout,kc_mw3_hes_watching,He's Watching,tactic,no,,,HesWatching_CallingCard_MWIII.png,intel: a figure watching from the dark
 listening_post,kc_mw3_geometric_resonance,Geometric Resonance,field,no,,,GeometricResonance_CallingCard_MWIII.png,emblem (skull sigil)
 listening_post,kc_mw3_bursting_calling_card_prestige_mwiii,Bursting,field,no,,,Bursting_CallingCard_Prestige_MWIII.png,emblem (skull sigil)
 comms_relay,kc_mw3_redeploy,Redeploy,field,no,,,Redeploy_CallingCard_MWIII.png,parachute insignia (comms / redeploy)
@@ -91,11 +91,10 @@ brawler,kc_mw3_knuckle_bros,Knuckle Bros,unit,no,,,KnuckleBros_CallingCard_MWIII
 brawler,kc_mw3_raging,Raging,unit,no,,,Raging_CallingCard_MWIII.png,"melee: blade, fists, bat"
 brawler,kc_mw3_baseball_fan,Baseball Fan,unit,no,,,BaseballFan_CallingCard_MWIII.png,"melee: blade, fists, bat"
 blackout,kc_mw3_close_your_eyes,Close Your Eyes,tactic,no,,,CloseYourEyes_CallingCard_MWIII.png,flashbang / blinding / hacked screens
-blackout,kc_mw3_flashed,Flashed,tactic,no,,,Flashed_CallingCard_MWIII.png,flashbang / blinding / hacked screens
-blackout,kc_mw3_got_hacked,Got Hacked,tactic,no,,,GotHacked_CallingCard_MWIII.png,flashbang / blinding / hacked screens
+blackout,kc_mw3_zapped,Zapped,tactic,no,,,Zapped_CallingCard_MWIII.png,"electrocuted, blinded skeletons"
 smoke_screen,kc_mw3_tales_of_the_night,Tales Of The Night,tactic,yes,,,TalesOfTheNight_CallingCard_MWIII.gif,night cover
-sabotage,kc_mw3_clutch,Clutch,tactic,yes,,,Clutch_CallingCard_MWIII.gif,disarmed bomb / overloaded battery
-sabotage,kc_mw3_charged_up,Charged Up,tactic,no,,,ChargedUp_CallingCard_MWIII.png,disarmed bomb / overloaded battery
+sabotage,kc_mw3_detonated,Detonated,tactic,no,,,Detonated_CallingCard_MWIII.png,detonator in hand: blowing up enemy gear
+sabotage,kc_mw3_fireworks_show,Fireworks Show,tactic,no,,,FireworksShow_CallingCard_MWIII.png,planted charge with a timer
 kestrel_ar7,kc_mw3_mcw_mastery_gilded,MCW Mastery: Gilded,operator,yes,wm_mcw,1,MCW_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
 kestrel_ar7,kc_mw3_mcw_mastery_forged,MCW Mastery: Forged,operator,yes,wm_mcw,2,MCW_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
 kestrel_ar7,kc_mw3_mcw_mastery_priceless,MCW Mastery: Priceless,operator,yes,wm_mcw,3,MCW_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon

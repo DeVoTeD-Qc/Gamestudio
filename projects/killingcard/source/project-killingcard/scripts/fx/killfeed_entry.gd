@@ -22,6 +22,8 @@ const ENTER_OFFSET: float = 28.0
 var entry: Dictionary = {}
 ## Life and fade lengths after timing options (seconds), set by start().
 var life: float = 0.0
+## kc-board2 toasts: the row is centred in the line (set before setup()).
+var centered: bool = false
 
 var _row: HBoxContainer = null
 var _enter: Tween = null
@@ -58,7 +60,7 @@ func setup(data: Dictionary) -> void:
 	entry = data
 	_row = HBoxContainer.new()
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_row.alignment = BoxContainer.ALIGNMENT_END
+	_row.alignment = BoxContainer.ALIGNMENT_CENTER if centered else BoxContainer.ALIGNMENT_END
 	_row.add_theme_constant_override(&"separation", 6)
 	add_child(_row)
 	_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -95,7 +97,7 @@ func setup(data: Dictionary) -> void:
 
 
 ## Starts enter + life + fade. timing: FxTiming (null = Settings). life_scale shortens the life
-## (phone layout, f04).
+## (phone layout, f04); a negative life_scale keeps the line until it is pushed out (tray log).
 func start(timing: RefCounted = null, life_scale: float = 1.0) -> void:
 	if timing == null:
 		timing = FxTiming.from_settings()
@@ -108,6 +110,9 @@ func start(timing: RefCounted = null, life_scale: float = 1.0) -> void:
 	if not timing.reduced_motion:
 		_row.position.x = ENTER_OFFSET
 		_enter.tween_property(_row, ^"position:x", 0.0, enter).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if life_scale < 0.0:
+		life = INF
+		return
 	_life_tween = create_tween()
 	_life_tween.tween_interval(enter + life)
 	_life_tween.tween_property(self, ^"modulate:a", 0.0, fade)
@@ -174,8 +179,13 @@ func _draw() -> void:
 		return
 	var right: float = _row.position.x + _row.size.x
 	var x: float = maxf(0.0, right - _row.get_combined_minimum_size().x - 10.0)
+	var end: float = size.x
+	if centered:
+		var w: float = _row.get_combined_minimum_size().x + 16.0
+		x = maxf(0.0, _row.position.x + (_row.size.x - w) * 0.5)
+		end = minf(size.x, x + w)
 	var friendly: bool = entry.get("attacker_side", &"player") == &"player"
-	draw_rect(Rect2(x, 1, size.x - x, size.y - 2), Color(FxStyle.GUNMETAL, 0.82))
+	draw_rect(Rect2(x, 1, end - x, size.y - 2), Color(FxStyle.GUNMETAL, 0.92))
 	draw_rect(Rect2(x, 1, 2, size.y - 2), FxStyle.side_color(&"player" if friendly else &"enemy"))
 
 

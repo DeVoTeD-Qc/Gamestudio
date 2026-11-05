@@ -138,7 +138,7 @@ func _notification(what: int) -> void:
 
 func set_metrics(m: Dictionary) -> void:
 	metrics = m
-	compact = m.get("bh", 64.0) < 56.0
+	compact = bool(m.get("compact", m.get("bh", 64.0) < 56.0))
 	_tile.compact = compact
 	for slot: Node in _enemy_slots + _friendly_slots:
 		slot.set_compact(compact)
@@ -456,11 +456,13 @@ func _play_motion(now: Dictionary, enemy: Array, friendly: Array) -> void:
 					_shift(slot, s_side, from_row, i, delay)
 
 
-## A new banner enters from its side's outer edge, lands at land_row, then (Protector) slides to row.
+## A new banner enters at its side's back row (yours) or outer edge (rival), lands at land_row, then (Protector) slides to row.
 func _enter(slot: Node, s_side: StringName, land_row: int, row: int, protector: bool) -> void:
 	var banner: BannerView = slot.banner
 	var slot_y: float = BoardMetrics.row_y(metrics, s_side, row)
-	var outer_y: float = BoardMetrics.row_y(metrics, s_side, ROWS - 1) + (metrics["bh"] + metrics["row_gap"]) * (1.0 if s_side == &"player" else -1.0)
+	# kc-board2 (board-layout-v2.md §4.4): your card morphs from the tray INTO the back-row slot (the
+	# back row touches the screen edge); the rival's still enters from just past the top edge.
+	var outer_y: float = BoardMetrics.row_y(metrics, s_side, ROWS - 1) + (0.0 if s_side == &"player" else -(metrics["bh"] + metrics["row_gap"]))
 	var land_y: float = BoardMetrics.row_y(metrics, s_side, land_row)
 	banner.position = Vector2(0, outer_y - slot_y)
 	banner.modulate.a = 0.0
@@ -532,7 +534,7 @@ func _draw_decor() -> void:
 	var oy: float = BoardMetrics.objective_y(metrics)
 	# FRONT tabs: linking each side's row 1 to the objective tile.
 	var font: Font = get_theme_font(&"font", &"HudHeader")
-	var tab: Vector2 = Vector2(40, 12) if compact else Vector2(60, 15)
+	var tab: Vector2 = Vector2(48, 13) if compact else Vector2(64, 15)  # kc-board2 §2.1
 	var fs: int = 11 if compact else 13
 	for pair: Array in [[&"enemy", _enemy_slots], [&"player", _friendly_slots]]:
 		var slot: Node = pair[1][0]

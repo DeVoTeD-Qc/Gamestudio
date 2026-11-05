@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/match_screen.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://scenes/match/ScoreBar.tscn" id="2_score"]
@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" path="res://scenes/match/MatchEndBanner.tscn" id="13_end"]
 [ext_resource type="PackedScene" path="res://scenes/match/PauseMenu.tscn" id="14_pause"]
 [ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
+[ext_resource type="Script" path="res://scripts/ui/strip_badge.gd" id="15_badge"]
 
 [node name="Match" type="Control"]
 layout_mode = 3
@@ -45,9 +46,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 12
+theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 0
-theme_override_constants/margin_right = 12
+theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 0
 
 [node name="Layout" type="Control" parent="SafeArea"]
@@ -55,162 +56,173 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 
-[node name="LeftRail" type="VBoxContainer" parent="SafeArea/Layout"]
+[node name="IconStrip" type="Control" parent="SafeArea/Layout"]
 unique_name_in_owner = true
 layout_mode = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
 
-[node name="ScoreBar" parent="SafeArea/Layout/LeftRail" instance=ExtResource("2_score")]
+[node name="MenuButton" type="Button" parent="SafeArea/Layout/IconStrip" groups=["tap_target"]]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
+tooltip_text = "Menu"
+theme_type_variation = &"HudButton"
 
-[node name="OperatorPanel" parent="SafeArea/Layout/LeftRail" instance=ExtResource("5_op")]
+[node name="ScoreBadge" type="Control" parent="SafeArea/Layout/IconStrip"]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
+script = ExtResource("15_badge")
+key = &"score"
+glyph = &"none"
 
-[node name="LeftSpacer" type="Control" parent="SafeArea/Layout/LeftRail"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="DeckBox" type="PanelContainer" parent="SafeArea/Layout/LeftRail"]
+[node name="OperatorBadge" type="Control" parent="SafeArea/Layout/IconStrip"]
 unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudPanelDark"
+layout_mode = 0
+script = ExtResource("15_badge")
+key = &"operator"
+glyph = &"camo"
 
-[node name="DeckRow" type="HBoxContainer" parent="SafeArea/Layout/LeftRail/DeckBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="DeckCaption" type="Label" parent="SafeArea/Layout/LeftRail/DeckBox/DeckRow"]
-layout_mode = 2
-theme_type_variation = &"HudSubtle"
-text = "DECK"
-vertical_alignment = 1
-
-[node name="DeckValue" type="Label" parent="SafeArea/Layout/LeftRail/DeckBox/DeckRow" groups=["key_number"]]
+[node name="StreakBadge" type="Control" parent="SafeArea/Layout/IconStrip"]
 unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudNumber"
-text = "0"
+layout_mode = 0
+script = ExtResource("15_badge")
+key = &"streak"
+glyph = &"streak"
 
-[node name="UsedCaption" type="Label" parent="SafeArea/Layout/LeftRail/DeckBox/DeckRow"]
-layout_mode = 2
-theme_type_variation = &"HudSubtle"
-text = "USED"
-vertical_alignment = 1
-
-[node name="UsedValue" type="Label" parent="SafeArea/Layout/LeftRail/DeckBox/DeckRow" groups=["key_number"]]
+[node name="RivalBadge" type="Control" parent="SafeArea/Layout/IconStrip"]
 unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudNumber"
-text = "0"
+layout_mode = 0
+script = ExtResource("15_badge")
+key = &"rival"
+glyph = &"cards_rival"
+
+[node name="PreviewButton" type="Button" parent="SafeArea/Layout/IconStrip" groups=["tap_target"]]
+unique_name_in_owner = true
+layout_mode = 0
+tooltip_text = "Forecast each column from what you can see (P)"
+theme_type_variation = &"PreviewToggle"
+toggle_mode = true
+text = "OFF"
+
+[node name="DeckBadge" type="Control" parent="SafeArea/Layout/IconStrip"]
+unique_name_in_owner = true
+layout_mode = 0
+script = ExtResource("15_badge")
+key = &"deck"
+glyph = &"cards"
 
 [node name="Board" parent="SafeArea/Layout" instance=ExtResource("4_board")]
 unique_name_in_owner = true
 layout_mode = 0
 
-[node name="HandArea" parent="SafeArea/Layout" instance=ExtResource("6_hand")]
+[node name="KillfeedToasts" parent="SafeArea/Layout" instance=ExtResource("9_feed")]
+unique_name_in_owner = true
+layout_mode = 0
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+grow_horizontal = 1
+grow_vertical = 1
+
+[node name="PeekCatcher" type="Control" parent="SafeArea/Layout"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+
+[node name="HandTray" type="Control" parent="SafeArea/Layout"]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+
+[node name="SupplyCounter" type="PanelContainer" parent="SafeArea/Layout/HandTray"]
+unique_name_in_owner = true
+layout_mode = 0
+theme_type_variation = &"HudPanelDark"
+
+[node name="Row" type="HBoxContainer" parent="SafeArea/Layout/HandTray/SupplyCounter"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Caption" type="Label" parent="SafeArea/Layout/HandTray/SupplyCounter/Row"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "SUPPLY"
+vertical_alignment = 1
+
+[node name="SupplyPips" type="HBoxContainer" parent="SafeArea/Layout/HandTray/SupplyCounter/Row"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="SupplyValue" type="Label" parent="SafeArea/Layout/HandTray/SupplyCounter/Row" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudNumber"
+text = "0/0"
+
+[node name="HandArea" parent="SafeArea/Layout/HandTray" instance=ExtResource("6_hand")]
 unique_name_in_owner = true
 layout_mode = 0
 
-[node name="RightRail" type="VBoxContainer" parent="SafeArea/Layout"]
+[node name="FeedBox" type="VBoxContainer" parent="SafeArea/Layout/HandTray"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 0
 mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="TopBar" type="HBoxContainer" parent="SafeArea/Layout/RightRail"]
+[node name="StepHeader" type="Label" parent="SafeArea/Layout/HandTray/FeedBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 6
-alignment = 2
+theme_type_variation = &"HudHeader"
+text = "FIREFIGHT"
+clip_text = true
 
-[node name="UndoButton" type="Button" parent="SafeArea/Layout/RightRail/TopBar" groups=["tap_target"]]
+[node name="KillfeedSlot" type="VBoxContainer" parent="SafeArea/Layout/HandTray/FeedBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(88, 64)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Killfeed" parent="SafeArea/Layout/HandTray/FeedBox/KillfeedSlot" instance=ExtResource("9_feed")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HandTab" type="Button" parent="SafeArea/Layout/HandTray" groups=["tap_target"]]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+theme_type_variation = &"HudButton"
+text = "HAND · 0"
+alignment = 0
+
+[node name="UndoButton" type="Button" parent="SafeArea/Layout/HandTray" groups=["tap_target"]]
+unique_name_in_owner = true
+layout_mode = 0
 theme_type_variation = &"HudButton"
 disabled = true
 text = "UNDO"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="MenuButton" type="Button" parent="SafeArea/Layout/RightRail/TopBar" groups=["tap_target"]]
+[node name="ReadyButton" type="Button" parent="SafeArea/Layout/HandTray" groups=["tap_target"]]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 64)
-layout_mode = 2
-theme_type_variation = &"HudButton"
-text = "MENU"
-
-[node name="PreviewButton" type="Button" parent="SafeArea/Layout/RightRail" groups=["tap_target"]]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-tooltip_text = "Forecast each column from what you can see (P)"
-theme_type_variation = &"PreviewToggle"
-toggle_mode = true
-text = "PREVIEW OFF"
-
-[node name="Minimap" parent="SafeArea/Layout/RightRail" instance=ExtResource("3_minimap")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="KillfeedSlot" type="VBoxContainer" parent="SafeArea/Layout/RightRail"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 0
-
-[node name="Killfeed" parent="SafeArea/Layout/RightRail/KillfeedSlot" instance=ExtResource("9_feed")]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="RightSpacer" type="Control" parent="SafeArea/Layout/RightRail"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-
-[node name="SupplyCounter" type="PanelContainer" parent="SafeArea/Layout/RightRail"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudPanelDark"
-
-[node name="Column" type="VBoxContainer" parent="SafeArea/Layout/RightRail/SupplyCounter"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="Top" type="HBoxContainer" parent="SafeArea/Layout/RightRail/SupplyCounter/Column"]
-layout_mode = 2
-
-[node name="Caption" type="Label" parent="SafeArea/Layout/RightRail/SupplyCounter/Column/Top"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudSubtle"
-text = "SUPPLY"
-vertical_alignment = 1
-
-[node name="SupplyValue" type="Label" parent="SafeArea/Layout/RightRail/SupplyCounter/Column/Top" groups=["key_number"]]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudNumber"
-text = "0/0"
-
-[node name="SupplyPips" type="HBoxContainer" parent="SafeArea/Layout/RightRail/SupplyCounter/Column"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="ReadyButton" type="Button" parent="SafeArea/Layout/RightRail" groups=["tap_target"]]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
+layout_mode = 0
 theme_type_variation = &"ReadyButton"
 text = "READY"
+
+[node name="SpeedButton" type="Button" parent="SafeArea/Layout/HandTray" groups=["tap_target"]]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+tooltip_text = "Play the firefight at double speed"
+theme_type_variation = &"HudButton"
+toggle_mode = true
+text = "SPEED x1"
 
 [node name="OutcomePreview" parent="." instance=ExtResource("12_prev")]
 unique_name_in_owner = true
@@ -242,6 +254,95 @@ layout_mode = 2
 theme_type_variation = &"HudHeader"
 text = "Not enough Supply"
 horizontal_alignment = 1
+
+[node name="Flyout" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FlyoutScrim" type="ColorRect" parent="Flyout"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0117647, 0.0196078, 0.0313726, 0.45)
+
+[node name="FlyoutPanel" type="PanelContainer" parent="Flyout"]
+unique_name_in_owner = true
+layout_mode = 0
+theme_type_variation = &"HudPanelDark"
+
+[node name="FlyoutColumn" type="VBoxContainer" parent="Flyout/FlyoutPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FlyoutTitle" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "OPERATOR"
+
+[node name="ScoreBar" parent="Flyout/FlyoutPanel/FlyoutColumn" instance=ExtResource("2_score")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="OperatorPanel" parent="Flyout/FlyoutPanel/FlyoutColumn" instance=ExtResource("5_op")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Minimap" parent="Flyout/FlyoutPanel/FlyoutColumn" instance=ExtResource("3_minimap")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="DeckBox" type="PanelContainer" parent="Flyout/FlyoutPanel/FlyoutColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudPanelDark"
+
+[node name="DeckRow" type="HBoxContainer" parent="Flyout/FlyoutPanel/FlyoutColumn/DeckBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="DeckCaption" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn/DeckBox/DeckRow"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "DECK"
+vertical_alignment = 1
+
+[node name="DeckValue" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn/DeckBox/DeckRow" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudNumber"
+text = "0"
+
+[node name="UsedCaption" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn/DeckBox/DeckRow"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "USED"
+vertical_alignment = 1
+
+[node name="UsedValue" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn/DeckBox/DeckRow" groups=["key_number"]]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudNumber"
+text = "0"
+
+[node name="FlyoutHint" type="Label" parent="Flyout/FlyoutPanel/FlyoutColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "Long-press for the rules · tap outside to close"
+autowrap_mode = 3
 
 [node name="DragLayer" type="Control" parent="."]
 unique_name_in_owner = true

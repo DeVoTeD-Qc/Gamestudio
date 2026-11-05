@@ -16,9 +16,11 @@ signal lane_long_pressed(zone: int, slot_side: StringName, uid: int)
 
 
 var metrics: Dictionary = {}
-## Desktop hover zoom (board-and-cards-ux.md §3.7): the banner at 512 px wide after 120 ms.
+## Desktop hover zoom (board-and-cards-ux.md §3.7): the banner at 2x after 120 ms (kc-board2: 608 px
+## wide for the 304 px desktop banner).
 const HOVER_DELAY: float = 0.12
 const ZOOM_SIZE: Vector2 = Vector2(512, 128)
+var _zoom_size: Vector2 = ZOOM_SIZE
 var hover_zoom_enabled: bool = true
 var _zoom: BannerView = null
 var _zoom_label: Label = null
@@ -59,7 +61,7 @@ func _on_hovered(slot: Node) -> void:
 	_hover_slot = slot
 	_hover_id += 1
 	var my_id: int = _hover_id
-	if slot == null or not hover_zoom_enabled or metrics.get("bh", 64.0) < 56.0:
+	if slot == null or not hover_zoom_enabled or bool(metrics.get("compact", metrics.get("bh", 64.0) < 56.0)):
 		_hide_zoom()
 		return
 	get_tree().create_timer(HOVER_DELAY).timeout.connect(func() -> void:
@@ -73,21 +75,22 @@ func _show_zoom(slot: Node) -> void:
 	if get_viewport().gui_get_hovered_control() != lane:
 		return
 	var r: Rect2 = (slot as Control).get_global_rect()
+	_zoom_size = Vector2(maxf(ZOOM_SIZE.x, r.size.x * 2.0), maxf(ZOOM_SIZE.y, r.size.y * 2.0))
 	var local: Vector2 = get_global_transform().affine_inverse() * r.get_center()
-	_zoom.size = ZOOM_SIZE
+	_zoom.size = _zoom_size
 	_zoom.show_unit(slot.entry, slot.side, slot.row == 0)
 	# Grow in place, over the objective side, kept inside the board.
-	var pos: Vector2 = local - ZOOM_SIZE * 0.5
-	pos.y += (ZOOM_SIZE.y - r.size.y) * 0.5 * (1.0 if slot.side == &"enemy" else -1.0)
-	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - ZOOM_SIZE.x))
-	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - ZOOM_SIZE.y))
+	var pos: Vector2 = local - _zoom_size * 0.5
+	pos.y += (_zoom_size.y - r.size.y) * 0.5 * (1.0 if slot.side == &"enemy" else -1.0)
+	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - _zoom_size.x))
+	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - _zoom_size.y))
 	_zoom.position = pos
 	var zoom_name: String = String(slot.entry.get("art_title", slot.entry.get("name", "")))
 	_zoom_label.text = "%s · %s" % [zoom_name, String(slot.entry.get("cls", "")).capitalize()]
 	_zoom_label.reset_size()
-	var below: bool = pos.y + ZOOM_SIZE.y + _zoom_label.size.y <= size.y
-	_zoom_label.position = Vector2(pos.x + (ZOOM_SIZE.x - _zoom_label.size.x) * 0.5,
-			pos.y + ZOOM_SIZE.y if below else pos.y - _zoom_label.size.y)
+	var below: bool = pos.y + _zoom_size.y + _zoom_label.size.y <= size.y
+	_zoom_label.position = Vector2(pos.x + (_zoom_size.x - _zoom_label.size.x) * 0.5,
+			pos.y + _zoom_size.y if below else pos.y - _zoom_label.size.y)
 	_zoom_label.visible = true
 	_zoom.visible = true
 	_zoom.set_focus(true)

@@ -69,6 +69,8 @@ func _ready() -> void:
 	controller.round_resolved.connect(_on_round_resolved)
 	controller.round_presented.connect(_on_round_presented)
 	controller.selection_changed.connect(_refresh_spotlight)
+	if match_screen.has_signal(&"flyout_changed"):
+		match_screen.flyout_changed.connect(func(_k: StringName) -> void: _refresh_spotlight())
 	_coach.next_pressed.connect(_on_next)
 	_coach.skip_confirmed.connect(skip)
 	_coach.done_pressed.connect(_exit.bind(true))
@@ -260,7 +262,11 @@ func spotlight_rects() -> Array:
 	var lane_rect: Rect2 = _lane_rect(st.zone)
 	match hl:
 		&"operator":
-			var op: Rect2 = match_screen.get_operator_panel().get_global_rect()
+			# kc-board2: the OPERATOR badge is the Operator's handle while it can deploy.
+			var handle: Control = match_screen.get_operator_panel()
+			if not handle.is_visible_in_tree() and match_screen.has_method(&"get_operator_handle"):
+				handle = match_screen.get_operator_handle()
+			var op: Rect2 = handle.get_global_rect()
 			holes.append(op)
 			if st.advance_on == &"place_operator" and st.zone >= 0:
 				holes.append(lane_rect)
@@ -295,12 +301,19 @@ func spotlight_rects() -> Array:
 			holes.append(r)
 		&"killstreak":
 			var b: Button = match_screen.get_operator_panel().get_item_button(st.item_id)
-			if b != null:
+			if b != null and not b.is_visible_in_tree() and match_screen.has_method(&"get_badge"):
+				# kc-board2: the tiles live in the STREAK flyout; point at its badge first.
+				var badge: Rect2 = match_screen.get_badge(&"streak").get_global_rect()
+				frames.append(badge)
+				holes.append(badge)
+			elif b != null:
 				frames.append(b.get_global_rect())
 				holes.append(b.get_global_rect())
 		&"streak":
 			var arc: Control = match_screen.get_operator_panel().get_streak_arc()
-			if arc != null:
+			if arc != null and not arc.is_visible_in_tree() and match_screen.has_method(&"get_badge"):
+				frames.append(match_screen.get_badge(&"streak").get_global_rect())
+			elif arc != null:
 				frames.append(arc.get_global_rect())
 		&"minimap", &"score":
 			var key: String = "minimap" if hl == &"minimap" else "score_bar"

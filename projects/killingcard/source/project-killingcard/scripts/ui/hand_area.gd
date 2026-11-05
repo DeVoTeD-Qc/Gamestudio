@@ -1,5 +1,9 @@
 # hand_area.gd
-# Purpose: The hand row under the board (kc-board, board-and-cards-ux.md §3.4, option A approved).
+# Purpose: The hand (kc-board, board-and-cards-ux.md §3.4, option A approved). kc-board2
+#   (board-layout-v2.md): a grid in the side tray (phone 3 columns of 104x130, desktop 2 of 108x136;
+#   BoardMetrics), filled left to right, top to bottom, newest last; past the grid's rows the rows
+#   overlap upward. The selected card shifts 14 px toward the board (a rise would cover the card
+#   above). read_only (the tray's PEEK outside Deploy): a tap inspects instead of selecting, no drag.
 #   Each card: an art window on top (the art's 2:3 hand column, BannerArtDB.portrait_texture, cropped
 #   to fill), the cost hex over its top-left corner, the chassis name on one line (ellipsis: the full
 #   name is one long-press away), and a bottom row: units show Firepower, up to 2 keyword glyphs and
@@ -30,8 +34,8 @@ const CARD_SIZE: Vector2 = Vector2(108, 140)
 const CARD_SIZE_COMPACT: Vector2 = Vector2(78, 98)
 const CARD_GAP: int = 8
 const SHIMMER: Shader = preload("res://assets/shaders/banner_shimmer.gdshader")
-## Selected card lift (board-and-cards-ux.md §3.7), share of the card height.
-const SELECTED_LIFT: float = 0.14
+## kc-board2 §4.2: the selected card shifts this far toward the board.
+const SELECTED_SHIFT: float = 14.0
 ## f04 icon sizes and cost hex (pointy-top, as on CardView).
 const ICON_PX: float = 20.0
 const ICON_PX_COMPACT: float = 18.0
@@ -45,6 +49,11 @@ var compact: bool = false
 var _card_size_override: Vector2 = Vector2.ZERO
 var _gap: float = CARD_GAP
 var _cards_data: Array = []
+## Grid columns (BoardMetrics hand_cols) and the side the board is on (-1 left, +1 right).
+var columns: int = 3
+var board_side: float = -1.0
+## PEEK: cards can be inspected, not played (tap = inspect, no drag).
+var read_only: bool = false
 ## Rules uid of the selected card, -1 = none.
 var selected_uid: int = -1
 ## uid of the card being dragged (its chip is hidden while the ghost follows the pointer).
@@ -69,14 +78,28 @@ func set_compact(value: bool) -> void:
 	set_hand(_cards_data)
 
 
-## Card size and gap from BoardMetrics (the hand row is exactly one card tall).
-func set_card_size(card: Vector2, gap: float) -> void:
+## Card size, gap and grid columns from BoardMetrics; board_dir -1: the board is to the left.
+func set_card_size(card: Vector2, gap: float, cols: int = columns, board_dir: float = board_side) -> void:
 	_caption.visible = false
-	if card == _card_size_override and gap == _gap:
+	if card == _card_size_override and gap == _gap and cols == columns and board_dir == board_side:
 		return
+	var rebuild: bool = card != _card_size_override
 	_card_size_override = card
 	_gap = gap
-	set_hand(_cards_data)
+	columns = maxi(1, cols)
+	board_side = board_dir
+	if rebuild:
+		set_hand(_cards_data)
+	else:
+		_fit_cards()
+
+
+func set_read_only(value: bool) -> void:
+	read_only = value
+	for chip: Node in _row.get_children():
+		var tag: Control = chip.find_child("NextTag", true, false) as Control
+		if tag != null:
+			tag.visible = value
 
 
 ## cards: Array of {name, type, cost, fp?, armor?, text, card_type?, weapon_class?, keywords?, elite?}
@@ -155,11 +178,21 @@ func _wire(chip: Control, uid: int) -> void:
 	chip.gui_input.connect(func(e: InputEvent) -> void:
 		if g.handle(e):
 			chip.accept_event())
-	g.tapped.connect(func(_p: Vector2) -> void: card_tapped.emit(uid))
+	g.tapped.connect(func(_p: Vector2) -> void:
+		if read_only:
+			card_inspected.emit(uid)
+		else:
+			card_tapped.emit(uid))
 	g.long_pressed.connect(func(_p: Vector2) -> void: card_inspected.emit(uid))
-	g.drag_started.connect(func(p: Vector2) -> void: card_drag_started.emit(uid, p))
-	g.drag_moved.connect(func(p: Vector2) -> void: card_drag_moved.emit(uid, p))
-	g.drag_ended.connect(func(p: Vector2) -> void: card_drag_ended.emit(uid, p))
+	g.drag_started.connect(func(p: Vector2) -> void:
+		if not read_only:
+			card_drag_started.emit(uid, p))
+	g.drag_moved.connect(func(p: Vector2) -> void:
+		if not read_only:
+			card_drag_moved.emit(uid, p))
+	g.drag_ended.connect(func(p: Vector2) -> void:
+		if not read_only:
+			card_drag_ended.emit(uid, p))
 
 
 ## Labels whose whole text must stay visible (cost, name, stats; the rules line may trim).
@@ -185,20 +218,23 @@ func _fit_cards() -> void:
 	_row.custom_minimum_size = Vector2(card_size.x, card_size.y)
 	if n == 0:
 		return
-	var pitch: float = card_size.x + _gap
-	if n > 1:
-		pitch = minf(pitch, (_row.size.x - card_size.x) / (n - 1))
-	var total: float = card_size.x + pitch * (n - 1)
-	var x: float = maxf(0.0, (_row.size.x - total) * 0.5)
-	for card: Node in cards:
-		var c: Control = card
+	var cols: int = maxi(1, columns)
+	var rows: int = ceili(float(n) / cols)
+	var pitch_x: float = card_size.x + _gap
+	var pitch_y: float = card_size.y + _gap
+	if rows > 1:
+		# More cards than the grid holds: the rows overlap upward (the step shrinks).
+		pitch_y = minf(pitch_y, (_row.size.y - card_size.y) / (rows - 1))
+	var grid_w: float = card_size.x + pitch_x * (cols - 1)
+	var x0: float = maxf(0.0, (_row.size.x - grid_w) * 0.5)
+	for i: int in n:
+		var c: Control = cards[i]
 		c.size = card_size
-		var y: float = roundf((_row.size.y - card_size.y) * 0.5)
-		# kc-polish: the selected card rises by 14% of its height (over the board's bottom gap).
+		var x: float = x0 + (i % cols) * pitch_x
+		# kc-board2 §4.2: the selected card shifts 14 px toward the board.
 		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
-			y -= roundf(card_size.y * SELECTED_LIFT)
-		c.position = Vector2(roundf(x), y)
-		x += pitch
+			x += SELECTED_SHIFT * board_side
+		c.position = Vector2(roundf(x), roundf((i / cols) * pitch_y))
 
 
 func _make_card(card: Dictionary) -> Control:
@@ -258,6 +294,16 @@ func _make_card(card: Dictionary) -> Control:
 			BannerView.draw_star(star, star.size * 0.5, star.size.x * 0.4, get_theme_color(&"elite", &"Hud")))
 		face.add_child(star)
 		panel.sort_children.connect(func() -> void: star.position = Vector2(face.size.x - star.size.x - 2.0, 2.0))
+	var next_tag: Label = _label("NEXT DEPLOY", &"HudTag", false)
+	next_tag.name = "NextTag"
+	next_tag.add_theme_font_size_override(&"font_size", 16)
+	next_tag.visible = read_only
+	var tag_box := StyleBoxFlat.new()
+	tag_box.bg_color = Color(0.05, 0.06, 0.07, 0.85)
+	tag_box.set_content_margin_all(2)
+	next_tag.add_theme_stylebox_override(&"normal", tag_box)
+	next_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	next_tag.clip_text = true
 	var title: Label = _label(String(card.get("name", "")), &"UnitName", false)
 	title.name = "NameLabel"
 	title.add_theme_font_size_override(&"font_size", 16)
@@ -294,6 +340,10 @@ func _make_card(card: Dictionary) -> Control:
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		glyph.draw.connect(_draw_type_glyph.bind(glyph, ctype == "equipment", accent))
 		bottom.add_child(glyph)
+	face.add_child(next_tag)
+	panel.sort_children.connect(func() -> void:
+		next_tag.size = Vector2(face.size.x, next_tag.get_combined_minimum_size().y)
+		next_tag.position = Vector2(0, art_h * 0.5 - next_tag.size.y * 0.5))
 	panel.sort_children.connect(_fit_face.bind(panel, face, art, hex, title, bottom, art_h))
 	return panel
 

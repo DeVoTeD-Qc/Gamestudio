@@ -1,9 +1,10 @@
 # objective_tile.gd
 # Purpose: The objective tile in the middle of a column (board-and-cards-ux.md §3.2, field-cards.md
-#   model B). Left: rival column Firepower (top) and yours (bottom). Centre: the column letter in a
-#   control mark (yours: teal circle, rival: red diamond, contested: grey dashed square, open: grey
-#   ring). Right: the rival's Field chip (top band), the range and control words (middle), your
-#   Field chip (bottom band); kc-polish made the tile taller so chips never cover the words.
+#   model B), laid out sideways since kc-board2 (board-layout-v2.md §4.6; phone 228x52, desktop
+#   304x96). Left: rival column Firepower over yours. Then the column letter in a control mark
+#   (yours: teal circle, rival: red diamond, even: grey dashed square, open: grey ring), the range
+#   word over the control word (YOURS / RIVAL / EVEN / OPEN), and the Field chips at the right edge
+#   (the rival's top-right, yours bottom-right; phone 70x22, desktop 96x28).
 #   A Field chip is a 4:1 slice of the Field's banner art with a stake glyph. Your hidden trap shows as a dashed chip (the rival never
 #   sees yours, you never see theirs). A queued Field shows PLAN. A Field the enemy controls the
 #   column of (field_view overrun_risk) gets a pulsing red OVERRUN tab: it is torn down at the end
@@ -70,56 +71,58 @@ func _draw() -> void:
 	draw_rect(r, Color("#232A31"))
 	draw_rect(r, Color("#3A444D"), false, 1.0)
 	var h: float = size.y
-	var m: Dictionary = BannerView.metrics(h * 0.82)
-	var fs: int = maxi(16, int(m["number"]))
+	# kc-board2 (board-layout-v2.md §4.6): laid out sideways. Left to right: the FP pair (rival over
+	# yours), the control mark with the column letter, the range word over the control word, and the
+	# Field chips at the right edge (rival top-right, yours bottom-right).
+	var fs: int = 16 if compact else 20
 	var font: Font = get_theme_font(&"font", &"HudNumber")
 	var word_font: Font = get_theme_font(&"font", &"HudHeader")
-	# Column Firepower: rival top-left, yours bottom-left (crosshair ring + number).
-	var pad: float = 6.0 if compact else 10.0
-	_fp_line(font, fs, Vector2(pad, h * 0.25), fp_enemy, _col(&"enemy"))
-	_fp_line(font, fs, Vector2(pad, h * 0.75), fp_player, _col(&"friend"))
-	# Control mark with the letter.
-	var mark_r: float = h * 0.36
-	var cx: float = size.x * (0.36 if compact else 0.4)
-	var c: Vector2 = Vector2(cx, h * 0.5)
+	var pad: float = 6.0
+	_fp_line(font, fs, Vector2(pad, h * 0.5 - fs * 0.62), fp_enemy, _col(&"enemy"))
+	_fp_line(font, fs, Vector2(pad, h * 0.5 + fs * 0.62), fp_player, _col(&"friend"))
+	var mm: float = minf(roundf(h * 0.76), 64.0)
+	var mark_x: float = 44.0 if compact else 58.0
+	var mark_r: float = mm * 0.5
+	var c: Vector2 = Vector2(mark_x + mark_r, h * 0.5)
 	match control:
 		&"player":
 			draw_circle(c, mark_r, Color("#14524D"))
 			draw_arc(c, mark_r, 0, TAU, 32, _col(&"friend"), 2.5)
 		&"enemy":
-			var pts: PackedVector2Array = [c + Vector2(0, -mark_r * 1.12), c + Vector2(mark_r * 1.12, 0), c + Vector2(0, mark_r * 1.12), c + Vector2(-mark_r * 1.12, 0)]
+			var e: float = mark_r * 0.98
+			var pts: PackedVector2Array = [c + Vector2(0, -e), c + Vector2(e, 0), c + Vector2(0, e), c + Vector2(-e, 0)]
 			draw_colored_polygon(pts, Color("#5A1A1C"))
 			pts.append(pts[0])
 			draw_polyline(pts, _col(&"enemy"), 2.5)
 		&"contested":
-			var sq: Rect2 = Rect2(c - Vector2(mark_r, mark_r) * 0.9, Vector2(mark_r, mark_r) * 1.8)
+			var sq: Rect2 = Rect2(c - Vector2(mark_r, mark_r) * 0.82, Vector2(mark_r, mark_r) * 1.64)
 			draw_rect(sq, Color("#2E3439"))
 			BannerView._dashed_rect(self, sq, Color("#B9C2C9"), 2.0)
 		_:
-			draw_arc(c, mark_r, 0, TAU, 32, Color("#59636C"), 2.0)
-	var lfs: int = int(fs * 1.35)
+			draw_arc(c, mark_r - 1.0, 0, TAU, 32, Color("#59636C"), 2.0)
+	var lfs: int = int(roundf(mm * 0.55))
 	var lsz: Vector2 = word_font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs)
 	draw_string(word_font, Vector2(c.x - lsz.x * 0.5, c.y + (word_font.get_ascent(lfs) - word_font.get_descent(lfs)) * 0.5), letter,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, Color.WHITE)
-	# Right region (kc-polish, B2), three bands: the rival's Field chip on top, the range and
-	# control words in the middle, your Field chip at the bottom, so chips never cover the words.
+	# Field chips at the right edge.
 	_chip_rects.clear()
-	var rx: float = c.x + mark_r * 1.25 + 4.0
-	var rw: float = size.x - rx - 4.0
-	var wfs: int = 16 if compact else 18
-	var line_h: float = float(wfs) + 1.0
-	var chip_h: float = clampf(floorf((h - 2.0 * line_h - 4.0) * 0.5), 12.0, rw / 4.0)
+	var chip: Vector2 = Vector2(70, 22) if compact else Vector2(96, 28)
+	var cx: float = size.x - chip.x - 4.0
 	var top_fields: Array = fields.get("enemy", [])
 	var bottom_fields: Array = fields.get("player", [])
 	if not top_fields.is_empty():
-		_chip(Rect2(rx, 1.0, rw, chip_h), &"enemy", top_fields[0])
+		_chip(Rect2(cx, 3.0, chip.x, chip.y), &"enemy", top_fields[0])
 	if not bottom_fields.is_empty():
-		_chip(Rect2(rx, h - chip_h - 1.0, rw, chip_h), &"player", bottom_fields[0])
+		_chip(Rect2(cx, h - chip.y - 3.0, chip.x, chip.y), &"player", bottom_fields[0])
+	# Range word over the control word (EVEN, not CONTESTED: 9 characters don't fit at 16 px).
+	var wx: float = mark_x + mm + (8.0 if compact else 14.0)
+	var ww: float = maxf(0.0, cx - 4.0 - wx)
+	var line_h: float = float(fs) + 2.0
 	var mid_top: float = (h - 2.0 * line_h) * 0.5
-	_word(word_font, wfs, range_word, Rect2(rx, mid_top, rw, line_h), Color("#9AA5AE"))
-	var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "CONTESTED"}.get(control, "OPEN")
+	_word(word_font, fs, range_word, Rect2(wx, mid_top, ww, line_h), Color("#9AA5AE"))
+	var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "EVEN"}.get(control, "OPEN")
 	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
-	_word(word_font, wfs, word, Rect2(rx, mid_top + line_h, rw, line_h), wc)
+	_word(word_font, fs, word, Rect2(wx, mid_top + line_h, ww, line_h), wc)
 
 
 func _fp_line(font: Font, fs: int, at: Vector2, value: int, c: Color) -> void:
@@ -134,8 +137,7 @@ func _fp_line(font: Font, fs: int, at: Vector2, value: int, c: Color) -> void:
 func _word(font: Font, fs: int, text: String, rr: Rect2, c: Color) -> void:
 	if text.is_empty():
 		return
-	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-	var x: float = rr.position.x + maxf(0.0, (rr.size.x - sz.x) * 0.5)
+	var x: float = rr.position.x
 	draw_string(font, Vector2(x, rr.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5), text,
 			HORIZONTAL_ALIGNMENT_LEFT, rr.size.x, fs, c)
 
@@ -174,6 +176,9 @@ func _tag(rr: Rect2, text: String, fg: Color, bg: Color) -> void:
 	var font: Font = get_theme_font(&"font", &"HudHeader")
 	var fs: int = clampi(int(rr.size.y) - 1, 12, 16)
 	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	while fs > 12 and sz.x + 6.0 > rr.size.x:
+		fs -= 1
+		sz = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var box: Rect2 = Rect2(rr.get_center() - Vector2(sz.x * 0.5 + 3.0, rr.size.y * 0.5), Vector2(sz.x + 6.0, rr.size.y))
 	if bg.a > 0.0:
 		draw_rect(box, bg)
