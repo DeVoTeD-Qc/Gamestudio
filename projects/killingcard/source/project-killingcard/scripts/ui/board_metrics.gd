@@ -6,8 +6,10 @@
 #     tray_w = W - strip_w - side_gap - board_w - tray_gap
 #   If the tray would get narrower than tray_min, the banners shrink (keeping 4:1) until it fits.
 #   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57, strip 6..68, columns
-#     76 / 318 / 560, tray 800..1162, hand cards 104x130 in a 3x3 grid.
-#   16:9 phone (canvas 960x540): banners 208x52, tray 214 wide, a 2-column hand.
+#     76 / 318 / 560, tray 800..1162, hand cards 99x124 in a 3x3 grid (kc-ui3: the Supply row grows
+#     to 64 px to hold the 3 killstreak tiles; the Operator card takes the grid's first cell).
+#   16:9 phone (canvas 960x540): banners 208x52, tray 214 wide, killstreaks in their own row, a
+#     3-column hand of 66x83.
 #   Desktop 1440x900 (canvas 1280x800): banners 304x76, columns 86 / 410 / 734, tray 1050..1274,
 #     hand cards 108x136 in a 2x4 grid.
 # Usage: var m: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true)   # pure, tested
@@ -16,21 +18,32 @@ extends RefCounted
 
 const COLUMNS: int = 3
 const ROWS: int = 4
-## The hand grid is sized for this many cards (run_config.hand_cap; more overlap upward).
-const HAND_SLOTS: int = 7
+## The hand grid is sized for this many cards (run_config.hand_cap 7 + the Operator card, kc-ui3;
+## more overlap upward).
+const HAND_SLOTS: int = 8
+## kc-ui3: killstreak tiles at the top of the tray (3 per loadout). On a wide tray (phone 844x390)
+## they share the Supply row, which grows to ks_h; on a narrow one (desktop, 16:9 phone) they get
+## their own row under it.
+const KS_SLOTS: int = 3
+const KS_GAP: float = 4.0
+## Supply text + pips need this much of a shared row.
+const SUPPLY_MIN_W: float = 150.0
 ## Hand cards keep about the option A proportions (104x130).
 const CARD_RATIO: float = 0.8
 const PHONE: Dictionary = {"pad_y": 4.0, "row_gap": 3.0, "mid_gap": 3.0, "obj_h": 52.0, "gutter": 14.0,
 		"strip_w": 62.0, "badge_h": 64.0, "badge_gap": 5.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 210.0,
-		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0}
+		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0,
+		"ks_h": 64.0, "ks_w": 62.0}
 const DESKTOP: Dictionary = {"pad_y": 12.0, "row_gap": 6.0, "mid_gap": 6.0, "obj_h": 96.0, "gutter": 20.0,
 		"strip_w": 68.0, "badge_h": 64.0, "badge_gap": 8.0, "side_gap": 12.0, "tray_gap": 12.0, "tray_min": 224.0,
-		"tray_pad": 12.0, "card_max": Vector2(108, 136), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 72.0, "tab_h": 64.0}
+		"tray_pad": 12.0, "card_max": Vector2(108, 136), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 72.0, "tab_h": 64.0,
+		"ks_h": 64.0, "ks_w": 62.0}
 
 
 ## area: the safe-area size the match screen lays out in. mirror: tray left, strip right.
 ## Returns {bh, bw, ...PHONE/DESKTOP values, compact, mirror, board: Rect2, strip: Rect2, tray: Rect2,
-## col_x: [x of A, B, C] (board-local), half_h, card: Vector2, hand_cols, grid: Rect2 (tray-local)}.
+## col_x: [x of A, B, C] (board-local), half_h, card: Vector2, hand_cols, grid: Rect2 (tray-local),
+## supply: Rect2, ks: Rect2 (killstreak tiles), ks_inline: bool (tray-local; supply_h = the top block)}.
 ## Rects are area-local.
 static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dictionary:
 	var p: Dictionary = (PHONE if compact else DESKTOP).duplicate()
@@ -68,8 +81,24 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	p["strip"] = strip
 	p["tray"] = tray
 	p["col_x"] = [0.0, bw + p["gutter"], 2.0 * (bw + p["gutter"])]
+	_ks_rows(p, tray.size)
 	_hand_grid(p, tray.size)
 	return p
+
+
+## kc-ui3: the Supply row and the killstreak tiles. supply_h becomes the height of the whole top block.
+static func _ks_rows(p: Dictionary, tray: Vector2) -> void:
+	var ks_w: float = KS_SLOTS * p["ks_w"] + (KS_SLOTS - 1) * KS_GAP
+	var inline: bool = tray.x >= ks_w + 8.0 + SUPPLY_MIN_W
+	p["ks_inline"] = inline
+	if inline:
+		p["supply"] = Rect2(0, 0, tray.x - ks_w - 8.0, p["ks_h"])
+		p["ks"] = Rect2(tray.x - ks_w, 0, ks_w, p["ks_h"])
+		p["supply_h"] = p["ks_h"]
+	else:
+		p["supply"] = Rect2(0, 0, tray.x, p["supply_h"])
+		p["ks"] = Rect2(0, p["supply_h"] + 6.0, tray.x, p["ks_h"])
+		p["supply_h"] = p["supply_h"] + 6.0 + p["ks_h"]
 
 
 ## The hand grid inside the tray: between the Supply row and the UNDO / READY row. Picks 3 or 2

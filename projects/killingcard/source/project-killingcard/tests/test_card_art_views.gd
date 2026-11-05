@@ -182,16 +182,14 @@ func test_mulligan_shows_art() -> void:
 			{"uid": 2, "name": "No Art", "cost": 0, "type": "TACTIC"}])
 	await tree.process_frame
 	var buttons: Array[Node] = panel.get_card_buttons()
-	var art: Node = buttons[0].find_child("ArtUnderlay", true, false)
-	assert_not_null(art, "mulligan card shows art")
-	if art != null:
-		assert_true((art as CanvasItem).show_behind_parent, "art behind the button text")
-	assert_true(buttons[1].find_child("ArtUnderlay", true, false) == null, "no id: plain button")
-	# Toggle keeps the see-through style of the new variation (PUT BACK look).
+	# kc-ui3: each mulligan card is the full CardView (its art window included).
+	assert_true(panel.has_full_card(buttons[0]), "mulligan card shows the full card")
+	var view: Control = buttons[0].get_meta(&"card_view")
+	assert_true(view is CardView and String((view as CardView).data.get("name", "")) == "Rifleman", "the card's own face")
+	assert_true(buttons[1].get_meta(&"card_view") != null, "no id: still a card face (placeholder art)")
 	(buttons[0] as Button).button_pressed = true
-	var sb: StyleBox = (buttons[0] as Button).get_theme_stylebox(&"normal")
-	assert_true(sb is StyleBoxFlat and (sb as StyleBoxFlat).bg_color.a <= panel.ART_FILL_ALPHA + 0.001, "see-through over art")
-	assert_eq((buttons[0] as Button).theme_type_variation, &"KillstreakButton", "put-back look kept")
+	assert_eq((buttons[0] as Button).theme_type_variation, &"KillstreakButton", "put-back look")
+	assert_true((buttons[0].get_node("PutBack") as Control).visible, "PUT BACK plate")
 	panel.queue_free()
 	await tree.process_frame
 	_reset()

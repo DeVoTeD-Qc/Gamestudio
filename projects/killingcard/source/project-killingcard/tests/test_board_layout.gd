@@ -315,6 +315,24 @@ func test_mock_content_shown() -> void:
 
 
 ## Logical canvas size for a screen case (window px = points * pixel ratio).
+static func _in_scroll(c: Node, root: Node) -> bool:
+	var p: Node = c.get_parent()
+	while p != null and p != root:
+		if p is ScrollContainer:
+			return true
+		p = p.get_parent()
+	return false
+
+
+static func _in_card_view(c: Node, root: Node) -> bool:
+	var p: Node = c.get_parent()
+	while p != null and p != root:
+		if p is CardView:
+			return true
+		p = p.get_parent()
+	return false
+
+
 static func logical_size(screen: Dictionary) -> Vector2:
 	var px: Vector2 = screen["pt"] * float(screen["ratio"])
 	return ScreenProfile.logical_size(px, ScreenProfile.base_size(px, screen["ratio"]))
@@ -438,7 +456,9 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 				"%s tap target %s is %s px = %.1f pt (< %d pt)" % [label, match_node.get_path_to(c), r.size, side_px * k, MIN_TAP_PT])
 		if is_desktop_profile:
 			assert_true(side_px >= MIN_TAP_DESKTOP_PX, "%s tap target %s is %s (< %d px)" % [label, match_node.get_path_to(c), r.size, MIN_TAP_DESKTOP_PX])
-		assert_true(screen_rect.encloses(r), "%s tap target %s off screen" % [label, match_node.get_path_to(c)])
+		# kc-ui3: a card in a sideways-scrolling row (the mulligan) may sit past the edge until swiped.
+		if not _in_scroll(c, match_node):
+			assert_true(screen_rect.encloses(r), "%s tap target %s off screen" % [label, match_node.get_path_to(c)])
 
 	# Text sizes in effective points.
 	var min_body: float = INF
@@ -450,12 +470,22 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 		var text: String = c.text
 		if text.strip_edges().is_empty():
 			continue
+		# kc-ui3: a full CardView (mulligan) is checked like the inspector's: name, cost and stats at
+		# its scale (get_min_effective_font_size, below); its rules text is one long-press away.
+		if _in_card_view(c, match_node):
+			continue
 		var pt: float = c.get_theme_font_size(&"font_size") * k
 		min_body = minf(min_body, pt)
 		assert_true(pt >= MIN_BODY_PT - 0.01, "%s text '%s' (%s) is %.1f pt (< %d pt)" % [label, text, match_node.get_path_to(c), pt, MIN_BODY_PT])
 		if c.is_in_group(&"key_number"):
 			min_number = minf(min_number, pt)
 			assert_true(pt >= MIN_NUMBER_PT - 0.01, "%s number '%s' (%s) is %.1f pt (< %d pt)" % [label, text, match_node.get_path_to(c), pt, MIN_NUMBER_PT])
+
+	for n: Node in match_node.find_children("*", "CardView", true, false):
+		var cv: CardView = n
+		if cv.is_visible_in_tree() and not match_node.get_inspector().is_ancestor_of(cv):
+			var cv_pt: float = cv.get_min_effective_font_size(PackedStringArray(["NameLabel", "CostLabel", "FirepowerLabel", "ArmorLabel"])) * k
+			assert_true(cv_pt >= MIN_BODY_PT - 0.01, "%s card %s name / stats %.1f pt" % [label, match_node.get_path_to(cv), cv_pt])
 
 	# Important labels show their whole text.
 	for l: Label in match_node.get_important_labels():

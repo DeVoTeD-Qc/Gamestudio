@@ -333,7 +333,7 @@ static func _placeholder(art_id: StringName, hint: Dictionary) -> BannerArt:
 		# Full-size bitmap (the band is ~888 px wide, shown at <= 512 logical px).
 		var path: String = CardArt.card_path(art_id)
 		art.texture = CardArt.bitmap(path) if CardArt.has_bitmap(path) else CardArt.card_texture(art_id, 2.0)
-		art.source_note = "Placeholder: Killstreak card art, cropped to 4:1."
+		art.source_note = "Placeholder: the project's painted card art, cropped to 4:1."
 	if art.texture == null:
 		art.texture = _generated(art_id, hint)
 		art.banner_y = 0.40

@@ -26,6 +26,8 @@ var line_cap: int = MAX_LINES
 var centered: bool = false
 ## Lines start at the left edge (the tray's killfeed log).
 var left_aligned: bool = false
+## kc-ui3: each line takes two rows (ATTACKER over VICTIM) so names keep their letters (desktop log).
+var two_line: bool = false
 ## A second feed every push() is copied to (the log's toasts), or null.
 var mirror: Control = null
 var _entries: Array[Control] = []
@@ -49,6 +51,7 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 	var line: Control = KillfeedEntry.new()
 	line.centered = centered
 	line.left_aligned = left_aligned
+	line.two_line = two_line
 	line.setup(data)
 	var keep: int = max_lines() - 1
 	while _entries.size() > keep:
@@ -56,11 +59,16 @@ func push(data: Dictionary, timing: RefCounted = null) -> Control:
 	_entries.append(line)
 	line.expired.connect(_on_expired.bind(line))
 	add_child(line)
-	line.size = Vector2(size.x, KillfeedEntry.ROW_HEIGHT)
+	line.size = Vector2(size.x, _line_h())
 	line.position = _row_position(_entries.size() - 1)
 	_layout(true)
 	line.start(timing, -1.0 if persistent else life_scale)
 	return line
+
+
+## Height of one line (one row, or two with two_line).
+func _line_h() -> float:
+	return KillfeedEntry.ROW_HEIGHT * (2.0 if two_line else 1.0)
 
 
 ## Lines that are still on screen (oldest first).
@@ -72,7 +80,7 @@ func get_entries() -> Array[Control]:
 func max_lines() -> int:
 	if size.y <= 0.0:
 		return line_cap
-	return clampi(int(floor((size.y + 0.5) / KillfeedEntry.ROW_HEIGHT)), 1, line_cap)
+	return clampi(int(floor((size.y + 0.5) / _line_h())), 1, line_cap)
 
 
 ## Fast-forward: finish every enter animation (lines keep their remaining life).
@@ -98,15 +106,15 @@ func _on_expired(line: Control) -> void:
 ## toasts stack from the top instead.
 func _row_position(index: int) -> Vector2:
 	var shown: int = mini(_entries.size(), max_lines())
-	var top: float = 0.0 if persistent or centered else (size.y - shown * KillfeedEntry.ROW_HEIGHT) * 0.5
+	var top: float = 0.0 if persistent or centered else (size.y - shown * _line_h()) * 0.5
 	var row: int = index - (_entries.size() - shown)
-	return Vector2(0, top + row * KillfeedEntry.ROW_HEIGHT)
+	return Vector2(0, top + row * _line_h())
 
 
 func _layout(animate: bool) -> void:
 	for i: int in _entries.size():
 		var line: Control = _entries[i]
-		line.size = Vector2(size.x, KillfeedEntry.ROW_HEIGHT)
+		line.size = Vector2(size.x, _line_h())
 		var target: Vector2 = _row_position(i)
 		if animate and not _reduced and line.is_inside_tree() and line.position != target:
 			line.create_tween().tween_property(line, ^"position", target, SHIFT_TIME) \

@@ -262,7 +262,7 @@ func spotlight_rects() -> Array:
 	var lane_rect: Rect2 = _lane_rect(st.zone)
 	match hl:
 		&"operator":
-			# kc-board2: the OPERATOR badge is the Operator's handle while it can deploy.
+			# kc-ui3: the Operator card at the start of the hand tray is its handle.
 			var handle: Control = match_screen.get_operator_panel()
 			if not handle.is_visible_in_tree() and match_screen.has_method(&"get_operator_handle"):
 				handle = match_screen.get_operator_handle()
@@ -301,7 +301,12 @@ func spotlight_rects() -> Array:
 			holes.append(r)
 		&"killstreak":
 			var b: Button = match_screen.get_operator_panel().get_item_button(st.item_id)
-			if b != null and not b.is_visible_in_tree() and match_screen.has_method(&"get_badge"):
+			# kc-ui3: a killstreak's tile at the top of the tray is its handle.
+			var tile: Control = match_screen.get_killstreak_tile(st.item_id) if match_screen.has_method(&"get_killstreak_tile") else null
+			if tile != null and tile.is_visible_in_tree():
+				frames.append(tile.get_global_rect())
+				holes.append(tile.get_global_rect())
+			elif b != null and not b.is_visible_in_tree() and match_screen.has_method(&"get_badge"):
 				# kc-board2: the tiles live in the STREAK flyout; point at its badge first.
 				var badge: Rect2 = match_screen.get_badge(&"streak").get_global_rect()
 				frames.append(badge)

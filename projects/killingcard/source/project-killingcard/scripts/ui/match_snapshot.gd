@@ -243,12 +243,23 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 	var planned: int = state.projected_operator_zone(side.index)
 	if planned != MatchState.NO_ZONE and planned != op.zone:
 		zone_text = "TO " + ZONE_LABELS[planned]
-	return {
+	var e: Dictionary = {
 		"name": unit_name(op, side), "cls": "OPERATOR",
 		"fp": state.firepower_of(op) if op.is_on_board() else op.base_firepower,
 		"armor": op.armor if op.is_on_board() else op.base_max_armor,
 		"armor_max": op.max_armor(state.round_number), "zone": zone_text,
+		# kc-ui3: the Operator card in the hand tray (match_screen.gd operator_card_entry()).
+		"on_board": op.is_on_board(),
+		"zone_label": ZONE_LABELS[op.zone] if op.is_on_board() else "",
+		"row": side.lines[op.zone].find(op) + 1 if op.is_on_board() else 0,
+		"planned_zone": ZONE_LABELS[planned] if planned != MatchState.NO_ZONE and planned != op.zone else "",
+		"can_deploy": side.operator_can_deploy, "respawns": state.respawn_enabled,
+		"keywords": CardInfo.icon_keywords(CardInfo.operator_keywords(op)),
 	}
+	var banner: Dictionary = {"operator": true}
+	_banner_fields(banner, null, op, side)
+	e["banner"] = banner["banner"]
+	return e
 
 
 static func _abilities(state: MatchState, side: RulesSide) -> Array:

@@ -7,12 +7,16 @@
 #   never completed or skipped, and no run is saved) also shows "New here? Play the 3-minute
 #   drill." with PLAY DRILL / NOT NOW; NOT NOW records a skip so it is not offered again.
 #   v01: Port Vasel key art (card_art.gd) behind a left-hand menu column, with a dark scrim.
+#   kc-ui3: CODEX (beside TUTORIAL) opens the card codex over the title (codex_view.gd).
 # Dependencies: run_screen.gd, RunState, SceneRouter (via RunFlow), tutorial_progress.gd, card_art.gd.
 # Author: Mechanics Developer Agent (placeholder); run flow: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
 
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
+const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
+var _codex_button: Button = null
+var _codex: Control = null
 
 var _key_art_scale: float = 0.0
 
@@ -51,6 +55,30 @@ func _build() -> void:
 	_tutorial_button.pressed.connect(open_tutorial)
 	_play_drill_button.pressed.connect(open_tutorial)
 	_not_now_button.pressed.connect(_on_not_now_pressed)
+	_codex_button = Button.new()
+	_codex_button.name = "CodexButton"
+	_codex_button.text = "CODEX"
+	_codex_button.theme_type_variation = &"HudButton"
+	_codex_button.tooltip_text = "Browse every card and killstreak"
+	_codex_button.custom_minimum_size = Vector2(0, _tutorial_button.custom_minimum_size.y)
+	_codex_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_codex_button.focus_mode = Control.FOCUS_ALL
+	_codex_button.add_to_group(&"tap_target")
+	# TUTORIAL and CODEX share a row (the phone column has no room for another one).
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "TutorialRow"
+	row.add_theme_constant_override(&"separation", 10)
+	var at: int = _tutorial_button.get_index()
+	_column.remove_child(_tutorial_button)
+	_column.add_child(row)
+	_column.move_child(row, at)
+	row.add_child(_tutorial_button)
+	_tutorial_button.owner = self  # keeps %TutorialButton resolvable after the move
+	_tutorial_button.unique_name_in_owner = true
+	_tutorial_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tutorial_button.custom_minimum_size.x = 0
+	row.add_child(_codex_button)
+	_codex_button.pressed.connect(open_codex)
 	resized.connect(_update_key_art)
 	_update_key_art()
 	refresh()
@@ -86,6 +114,8 @@ func _apply_compact() -> void:
 	_continue_button.custom_minimum_size.y = h
 	_start_button.custom_minimum_size.y = h
 	_tutorial_button.custom_minimum_size.y = h
+	if _codex_button != null:
+		_codex_button.custom_minimum_size.y = h
 	_column.add_theme_constant_override(&"separation", 10 if compact else 14)
 	_wordmark.add_theme_font_size_override(&"font_size", 64 if compact else 84)
 
@@ -123,6 +153,25 @@ func _hide_confirm() -> void:
 func _show_warning(text: String) -> void:
 	_warning_label.text = text
 	_warning_panel.visible = text != ""
+
+
+## kc-ui3: CODEX opens the card codex over the title.
+func open_codex() -> Control:
+	if _codex != null and is_instance_valid(_codex):
+		return _codex
+	_codex = CodexView.open_over(self)
+	_codex.closed.connect(func() -> void:
+		_codex = null
+		_codex_button.grab_focus())
+	return _codex
+
+
+func get_codex() -> Control:
+	return _codex if _codex != null and is_instance_valid(_codex) else null
+
+
+func get_codex_button() -> Button:
+	return _codex_button
 
 
 ## TUTORIAL / PLAY DRILL: opens the p15 drill.

@@ -69,6 +69,11 @@ var _prev_rows: Dictionary = {}   # uid -> [side, row]
 var _has_prev: bool = false
 var _ghost_row: int = -1
 var _ghost: BannerView = null
+## kc-ui3: the column's location art (the map's lane backdrop: containers / cranes / offices), low
+## opacity and darkened behind the slots so banners stay readable. Public project art only.
+var _backing: TextureRect = null
+var _backing_key: StringName = &""
+const BACKING_TINT: Color = Color(0.62, 0.68, 0.72, 0.34)
 
 @onready var _enemy_row: Control = %EnemyRow
 @onready var _friendly_row: Control = %FriendlyRow
@@ -89,6 +94,14 @@ func _ready() -> void:
 	_ghost.name = "Ghost"
 	_ghost.visible = false
 	_slots.add_child(_ghost)
+	_backing = TextureRect.new()
+	_backing.name = "Backing"
+	_backing.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backing.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backing.self_modulate = BACKING_TINT
+	_backing.clip_contents = true
+	add_child(_backing)
+	move_child(_backing, 0)
 	for n: Node in find_children("*", "Control", true, false):
 		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -159,6 +172,8 @@ func _layout() -> void:
 	_tile.size = Vector2(bw, metrics["obj_h"])
 	_enemy_row.position = Vector2.ZERO
 	_enemy_row.size = Vector2(bw, metrics["half_h"])
+	_backing.position = Vector2.ZERO
+	_backing.size = Vector2(bw, size.y if size.y > 0.0 else metrics["half_h"] * 2.0 + metrics["obj_h"])
 	_friendly_row.position = Vector2(0, BoardMetrics.row_y(metrics, &"player", 0))
 	_friendly_row.size = Vector2(bw, metrics["half_h"])
 	_place_badge()
@@ -300,6 +315,7 @@ func _slot_hit(global_pos: Vector2, inspect: bool = false) -> Array:
 func set_lane(lane: Dictionary) -> void:
 	lane_data = lane
 	zone_id = lane.get("id", &"")
+	_set_backing(CardArt.lane_key(String(lane.get("name", "")), zone_id))
 	if _ghost_shift:
 		_ghost_shift = false
 		for slot: Node in _friendly_slots:
@@ -313,6 +329,20 @@ func set_lane(lane: Dictionary) -> void:
 	_animate_changes(enemy, friendly)
 	_place_badge()
 	_decor.queue_redraw()
+
+
+## The column's location art (kc-ui3), by CardArt lane key; loaded once per key.
+func _set_backing(key: StringName) -> void:
+	if key == _backing_key:
+		return
+	_backing_key = key
+	_backing.texture = CardArt.lane_texture(key, 1.0)
+	_backing.set_meta(&"lane_key", key)
+
+
+## The location art behind the column (tests / QA): the TextureRect, or null when it has none.
+func get_backing() -> TextureRect:
+	return _backing if _backing != null and _backing.texture != null else null
 
 
 ## Phone layout flag (the board passes metrics; this keeps the p08 API).

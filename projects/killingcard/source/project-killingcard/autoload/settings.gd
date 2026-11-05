@@ -1,6 +1,8 @@
 # settings.gd
 # Purpose: Settings autoload. Player options (fast animations, UI scale, sound).
-#   Persistence to user://settings.cfg arrives with the options screen.
+#   kc-ui3: the options in PERSISTED_KEYS (mirror layout, SPEED x2, fast animations) are saved to
+#   user://settings.cfg on every set_value() and loaded at startup (not in headless runs, so the
+#   tests never read a player's file; tests call load_from() / save_to() with their own path).
 #   Also owns the screen profile: at startup and on every window resize it sets the root's
 #   canvas base size from the real screen (scripts/ui/screen_profile.gd, f01) so phones get
 #   readable text and >= 44 pt tap targets. ui_scale feeds into that rule.
@@ -26,6 +28,15 @@ var show_outcome_preview: bool = true
 ## kc-board2: mirror the match layout (hand tray on the left, icon strip on the right) for
 ## left-handed players. The board itself is symmetric.
 var mirror_layout: bool = false
+## kc-ui3: the tray's SPEED x2 toggle (the round's feedback at double speed), kept between sessions.
+var speed_x2: bool = false
+
+const SAVE_PATH: String = "user://settings.cfg"
+const SECTION: String = "options"
+## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
+const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"fast_animations"]
+## Save on set_value() (true once the startup load ran; off in headless tests).
+var persist: bool = false
 
 
 func _ready() -> void:
@@ -33,6 +44,8 @@ func _ready() -> void:
 	# Headless runs (tests, exports) have no real screen; tests check ScreenProfile directly.
 	if DisplayServer.get_name() == "headless":
 		return
+	load_from(SAVE_PATH)
+	persist = true
 	var root: Window = get_tree().root
 	# kc-board: browser smoke tests (?qa=1) read window.kcQa (scripts/qa/qa_bridge.gd).
 	var qa: GDScript = load("res://scripts/qa/qa_bridge.gd") as GDScript
@@ -68,4 +81,26 @@ func set_value(key: StringName, value: Variant) -> void:
 		push_error("Settings: unknown key %s" % key)
 		return
 	set(key, value)
+	if persist and PERSISTED_KEYS.has(key):
+		save_to(SAVE_PATH)
 	settings_changed.emit()
+
+
+## Writes PERSISTED_KEYS to a ConfigFile. Returns the Error code.
+func save_to(path: String) -> Error:
+	var cfg := ConfigFile.new()
+	for key: StringName in PERSISTED_KEYS:
+		cfg.set_value(SECTION, String(key), get(key))
+	return cfg.save(path)
+
+
+## Reads PERSISTED_KEYS from a ConfigFile (missing file or keys keep their values). True if read.
+func load_from(path: String) -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(path) != OK:
+		return false
+	for key: StringName in PERSISTED_KEYS:
+		var v: Variant = cfg.get_value(SECTION, String(key), get(key))
+		if typeof(v) == typeof(get(key)):
+			set(key, v)
+	return true

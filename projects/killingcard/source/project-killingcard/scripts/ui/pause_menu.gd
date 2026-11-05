@@ -4,6 +4,8 @@
 #   kc-board2: hand tray on the left for left-handed players; applied at once), FORFEIT MATCH (asks first: it counts as
 #   a loss) and QUIT TO TITLE (a run stays saved; the match restarts with the same seed next
 #   time). It only collects the choice and emits a signal; MatchController acts on it.
+#   kc-ui3: CODEX (beside RESUME) opens the card codex over the sheet (codex_view.gd); closing it
+#   returns here.
 #   The match is not paused underneath (no get_tree().paused): the sheet blocks taps, and a
 #   round that is already playing finishes behind it.
 #   Phone sizes: every text >= 16 px and every tap target >= 64 px tall.
@@ -20,6 +22,9 @@ signal forfeit_confirmed
 signal quit_pressed
 
 var compact: bool = false
+const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
+var _codex_button: Button = null
+var _codex: Control = null
 
 @onready var _title: Label = %PauseTitle
 @onready var _hint: Label = %PauseHint
@@ -44,6 +49,27 @@ func _ready() -> void:
 	_forfeit_no.pressed.connect(_show_main)
 	_forfeit_yes.pressed.connect(func() -> void: forfeit_confirmed.emit())
 	_quit.pressed.connect(func() -> void: quit_pressed.emit())
+	# kc-ui3: RESUME and CODEX share the first row (the phone sheet has no room for a 6th row).
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "ResumeRow"
+	row.add_theme_constant_override(&"separation", 8)
+	_main.add_child(row)
+	_main.move_child(row, _resume.get_index())
+	_main.remove_child(_resume)
+	row.add_child(_resume)
+	_resume.owner = self  # keeps %ResumeButton resolvable after the move
+	_resume.unique_name_in_owner = true
+	_resume.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_codex_button = Button.new()
+	_codex_button.name = "CodexButton"
+	_codex_button.text = "CODEX"
+	_codex_button.theme_type_variation = &"HudButton"
+	_codex_button.tooltip_text = "Browse every card and killstreak"
+	_codex_button.custom_minimum_size = Vector2(140, 64)
+	_codex_button.focus_mode = Control.FOCUS_ALL
+	_codex_button.add_to_group(&"tap_target")
+	_codex_button.pressed.connect(open_codex)
+	row.add_child(_codex_button)
 
 
 ## info: {context ("MATCH 1 OF 5 · ROUND 3"), hint (what QUIT does), can_forfeit,
@@ -67,6 +93,8 @@ func open(info: Dictionary = {}) -> void:
 
 
 func close() -> void:
+	if get_codex() != null:
+		_codex.close()
 	hide()
 
 
@@ -83,16 +111,39 @@ func set_compact(value: bool) -> void:
 	var w: float = 360.0 if compact else 400.0
 	for b: Button in [_resume, _fast, _mirror, _forfeit, _quit]:
 		b.custom_minimum_size = Vector2(w, 64)
+	_resume.custom_minimum_size.x = w - 148.0
 	for b: Button in [_forfeit_yes, _forfeit_no]:
 		b.custom_minimum_size = Vector2(176 if compact else 196, 64)
 
 
 ## Esc: back out of the confirmation, else resume.
 func back() -> void:
+	if get_codex() != null:
+		return  # the codex handles Esc itself
 	if _confirm.visible:
 		_show_main()
 	else:
 		resume_pressed.emit()
+
+
+## kc-ui3: opens the codex over the sheet (and the match).
+func open_codex() -> Control:
+	if _codex != null and is_instance_valid(_codex):
+		return _codex
+	_codex = CodexView.open_over(self)
+	_codex.closed.connect(func() -> void:
+		_codex = null
+		if visible:
+			_resume.grab_focus())
+	return _codex
+
+
+func get_codex() -> Control:
+	return _codex if _codex != null and is_instance_valid(_codex) else null
+
+
+func get_codex_button() -> Button:
+	return _codex_button
 
 
 func get_resume_button() -> Button:

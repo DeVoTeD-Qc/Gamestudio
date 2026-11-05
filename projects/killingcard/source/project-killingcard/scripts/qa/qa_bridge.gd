@@ -64,6 +64,20 @@ func snapshot(scene: Node = null) -> Dictionary:
 	var ctrl: Node = scene.get_node_or_null("%MatchController") if scene.has_node("%MatchController") else null
 	if ctrl != null and ctrl.get(&"state") != null:
 		out["match"] = _match(scene, ctrl)
+	# kc-ui3: an open codex (Title or MENU): what it shows, and the inspector over it.
+	for n: Node in scene.find_children("Codex", "Control", true, false):
+		var codex: Control = n
+		if codex.is_visible_in_tree() and codex.has_method(&"get_tiles"):
+			var tiles: Array = []
+			for t: Node in codex.get_tiles():
+				var e: Dictionary = t.get_meta(&"entry", {})
+				tiles.append({"key": String(e.get("key", "")), "name": String(e.get("name", "")), "kind": String(e.get("kind", "")),
+						"rect": _css(t)})
+			var insp: Control = codex.get_inspector()
+			out["codex"] = {"count": String((codex.get(&"_count") as Label).text), "tiles": tiles,
+					"type": String(codex.type_filter), "cls": String(codex.class_filter), "all_arts": codex.all_arts,
+					"inspector_open": insp.is_open(),
+					"inspector_title": String((insp.get_node("%TitleLabel") as Label).text) if insp.is_open() else ""}
 	return out
 
 
@@ -123,10 +137,31 @@ static func _layout_v2(scene: Node) -> Dictionary:
 	for line: Control in scene.get_killfeed_toasts().get_entries():
 		toasts.append(_css(line))
 	var log_lines: int = scene.get_killfeed().get_entries().size()
+	# kc-ui3: the Operator card, the killstreak tiles and the columns' location art.
+	var op_card: Dictionary = {}
+	var hand: Control = scene.get_hand()
+	if hand.has_method(&"get_operator_card") and hand.get_operator_card() != null:
+		var oc: Control = hand.get_operator_card()
+		op_card = {"rect": _css(oc), "visible": oc.is_visible_in_tree(), "state": String(hand.operator_entry.get("state", "")),
+				"status": String(hand.operator_entry.get("status", "")).replace("\n", " "), "selected": hand.operator_selected}
+	var ks: Array = []
+	if scene.has_method(&"get_killstreak_row"):
+		var row: Control = scene.get_killstreak_row()
+		for t: Control in row.get_tiles():
+			var e: Dictionary = t.get_meta(&"entry", {})
+			ks.append({"id": String(e.get("id", "")), "word": row.word_for(e), "ready": row.is_ready(e),
+					"selected": StringName(e.get("id", &"")) == row.selected_id, "rect": _css(t), "visible": t.is_visible_in_tree()})
+	var backing: Array = []
+	for lane: Node in scene.get_board().get_lanes():
+		var b: TextureRect = lane.get_backing() if lane.has_method(&"get_backing") else null
+		backing.append({"key": String(b.get_meta(&"lane_key", "")) if b != null else "", "alpha": b.self_modulate.a if b != null else 0.0,
+				"rect": _css(b) if b != null else []})
 	return {"tray": String(scene.get(&"tray_state")), "tray_rect": _css(scene.get_tray()),
 			"flyout": String(scene.get(&"flyout_key")), "mirror": bool(scene.get(&"mirror")),
 			"banner": [m.get("bw", 0.0), m.get("bh", 0.0)], "card": [m.get("card", Vector2.ZERO).x, m.get("card", Vector2.ZERO).y],
-			"hand_tab": _css(scene.get_hand_tab()), "badges": badges, "toasts": toasts, "log_lines": log_lines}
+			"hand_tab": _css(scene.get_hand_tab()), "badges": badges, "toasts": toasts, "log_lines": log_lines,
+			"operator_card": op_card, "killstreaks": ks, "backing": backing,
+			"speed_x2": scene.get_speed_button().button_pressed}
 
 
 ## kc-cod2: which art a BannerView shows (art id, licensed, animated, flipbook playing now).

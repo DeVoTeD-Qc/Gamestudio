@@ -26,8 +26,12 @@ var life: float = 0.0
 var centered: bool = false
 ## kc-board2 tray log: the row starts at the left edge (set before setup()).
 var left_aligned: bool = false
+## kc-ui3 (desktop tray log, 224 px): two rows, [marker] ATTACKER [icon] over VICTIM [ZONE], so the
+## names keep up to MAX_NAME letters instead of being cut to 8 (set before setup()).
+var two_line: bool = false
 
 var _row: HBoxContainer = null
+var _row2: HBoxContainer = null
 var _enter: Tween = null
 var _life_tween: Tween = null
 var _gone: bool = false
@@ -86,16 +90,38 @@ func setup(data: Dictionary) -> void:
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon.modulate = FxStyle.CYAN if data.get("killstreak", false) else FxStyle.FOG
 		_row.add_child(icon)
-	_row.add_child(_name_label(String(data.get("victim", "")), victim_side))
+	var victim_row: HBoxContainer = _row
+	if two_line:
+		_row.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		_row.offset_bottom = ROW_HEIGHT
+		_row2 = HBoxContainer.new()
+		_row2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_row2.add_theme_constant_override(&"separation", 6)
+		add_child(_row2)
+		_row2.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		_row2.offset_top = ROW_HEIGHT
+		_row2.offset_bottom = ROW_HEIGHT * 2.0
+		_row2.offset_right = -6.0
+		var indent: Control = Control.new()
+		indent.custom_minimum_size = Vector2(20, ROW_HEIGHT)
+		indent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_row2.add_child(indent)
+		victim_row = _row2
+	victim_row.add_child(_name_label(String(data.get("victim", "")), victim_side))
 	var zone: String = String(data.get("zone", "")).to_upper()
 	if zone != "":
 		var tag: Label = Label.new()
 		tag.theme_type_variation = &"HudTag"
 		tag.text = zone
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_row.add_child(tag)
+		victim_row.add_child(tag)
 		_zone_tag = tag
 	resized.connect(_fit)
+
+
+## Height of this line: one row, or two with two_line.
+func line_height() -> float:
+	return ROW_HEIGHT * (2.0 if two_line else 1.0)
 
 
 ## Starts enter + life + fade. timing: FxTiming (null = Settings). life_scale shortens the life
@@ -148,19 +174,28 @@ func _fit() -> void:
 	if _row == null or size.x <= 0.0:
 		return
 	var room: float = size.x - 12.0
+	var rows: Array[HBoxContainer] = [_row]
+	if _row2 != null:
+		rows.append(_row2)
 	# Start from the full names each time: a line laid out narrow first (before its slot got its
 	# final width) must grow back (bug p18-005).
-	for child: Node in _row.get_children():
-		if child is Label and child != _zone_tag and child.has_meta(&"full"):
-			(child as Label).text = String(child.get_meta(&"full"))
+	for r: HBoxContainer in rows:
+		for child: Node in r.get_children():
+			if child is Label and child != _zone_tag and child.has_meta(&"full"):
+				(child as Label).text = String(child.get_meta(&"full"))
+	var too_wide: Callable = func() -> bool:
+		return rows.any(func(r: HBoxContainer) -> bool: return r.get_combined_minimum_size().x > room)
 	if _zone_tag != null:
 		_zone_tag.visible = true
-		if _row.get_combined_minimum_size().x > room:
+		if too_wide.call():
 			_zone_tag.visible = false
 	for limit: int in [MAX_NAME, 10, 8, 6]:
-		if _row.get_combined_minimum_size().x <= room:
+		if not too_wide.call():
 			break
-		for child: Node in _row.get_children():
+		var names: Array[Node] = []
+		for r: HBoxContainer in rows:
+			names.append_array(r.get_children())
+		for child: Node in names:
 			if child is Label and child != _zone_tag:
 				var full: String = String(child.get_meta(&"full", (child as Label).text))
 				child.set_meta(&"full", full)

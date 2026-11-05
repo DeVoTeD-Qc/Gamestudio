@@ -14,6 +14,12 @@
 #   Input (p09): each card runs a PressGesture: tap = select, drag = drag to a column,
 #   long-press / right-click = inspect. The hand only reports gestures with the card's rules uid;
 #   match_controller.gd decides what they mean.
+#   kc-ui3 (head: "we still need to see our operator card close to hand since we can deploy it"): the
+#   OPERATOR card sits first in the grid (set_operator). While it can deploy it is a full card with an
+#   amber glow and a DEPLOY tag (tap = select, drag = drag to a column, as any card); placed this
+#   Deploy it reads PLAN · B; on the board it dims to a status card ("ON BOARD" / "B · ROW 2", tap =
+#   select to Rotate); down it reads "DOWN" / "BACK NEXT ROUND". Long-press = the Operator's rules.
+#   It reports operator_* signals; get_cards() never includes it (hand cards only).
 # Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
 #   HudNumber, HudTag), press_gesture.gd, cost_hex.gd, icon_sheet.gd, BannerArtDB.
 # Author: UI/UX Agent (p08-f04), Mechanics Developer Agent (kc-board: option A cards)
@@ -24,6 +30,12 @@ signal card_inspected(uid: int)
 signal card_drag_started(uid: int, pos: Vector2)
 signal card_drag_moved(uid: int, pos: Vector2)
 signal card_drag_ended(uid: int, pos: Vector2)
+## kc-ui3: the Operator card at the start of the tray.
+signal operator_tapped
+signal operator_inspected
+signal operator_drag_started(pos: Vector2)
+signal operator_drag_moved(pos: Vector2)
+signal operator_drag_ended(pos: Vector2)
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
@@ -58,6 +70,14 @@ var read_only: bool = false
 var selected_uid: int = -1
 ## uid of the card being dragged (its chip is hidden while the ghost follows the pointer).
 var dragging_uid: int = -1
+## kc-ui3: the Operator card's entry ({} = no Operator card): {name, fp, armor, armor_max, banner,
+## state (&"deploy" / &"planned" / &"board" / &"down" / &"none"), status (tag text), keywords, active}.
+var operator_entry: Dictionary = {}
+var operator_selected: bool = false
+var _op_chip: Control = null
+## Uid meta of the Operator chip (never a rules card uid).
+const OPERATOR_UID: int = -2
+const AMBER: Color = Color(0.961, 0.722, 0.239)
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _row: Control = %CardRow
@@ -96,7 +116,7 @@ func set_card_size(card: Vector2, gap: float, cols: int = columns, board_dir: fl
 
 func set_read_only(value: bool) -> void:
 	read_only = value
-	for chip: Node in _row.get_children():
+	for chip: Node in get_cards():
 		var tag: Control = chip.find_child("NextTag", true, false) as Control
 		if tag != null:
 			tag.visible = value
@@ -109,6 +129,10 @@ func set_hand(cards: Array) -> void:
 	for child: Node in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
+	_op_chip = null
+	if not operator_entry.is_empty():
+		_op_chip = _make_operator_card(operator_entry)
+		_row.add_child(_op_chip)
 	for card: Dictionary in cards:
 		var chip: Control = _make_card(card)
 		_wire(chip, int(card.get("uid", -1)))
@@ -119,12 +143,34 @@ func set_hand(cards: Array) -> void:
 
 
 func get_cards() -> Array[Node]:
-	return _row.get_children()
+	var out: Array[Node] = _row.get_children()
+	if _op_chip != null:
+		out.erase(_op_chip)
+	return out
+
+
+## kc-ui3: stores the Operator card's entry (shown first from the next set_hand(); {} = none).
+func set_operator(entry: Dictionary) -> void:
+	operator_entry = entry
+
+
+## The Operator card at the start of the tray, or null.
+func get_operator_card() -> Control:
+	return _op_chip
+
+
+## The Operator is selected (it takes the selected style and shifts toward the board).
+func set_operator_selected(on: bool) -> void:
+	if on == operator_selected:
+		return
+	operator_selected = on
+	_apply_styles()
+	_fit_cards()
 
 
 ## The chip showing the card with this rules uid, or null.
 func get_card(uid: int) -> Control:
-	for chip: Node in _row.get_children():
+	for chip: Node in get_cards():
 		if int(chip.get_meta(&"uid", -1)) == uid:
 			return chip
 	return null
@@ -145,7 +191,8 @@ func set_dragging(uid: int) -> void:
 
 
 func _apply_styles() -> void:
-	for chip: Node in _row.get_children():
+	_style_operator()
+	for chip: Node in get_cards():
 		var uid: int = int(chip.get_meta(&"uid", -1))
 		var playable: bool = bool(chip.get_meta(&"playable", true))
 		var variation: StringName = &"HandCard" if playable else &"HandCardDim"
@@ -198,7 +245,7 @@ func _wire(chip: Control, uid: int) -> void:
 ## Labels whose whole text must stay visible (cost, name, stats; the rules line may trim).
 func get_important_labels() -> Array[Label]:
 	var out: Array[Label] = []
-	for card: Node in get_cards():
+	for card: Node in _row.get_children():
 		for label: Node in card.find_children("*", "Label", true, false):
 			if label.has_meta(&"important"):
 				out.append(label)
@@ -232,7 +279,7 @@ func _fit_cards() -> void:
 		c.size = card_size
 		var x: float = x0 + (i % cols) * pitch_x
 		# kc-board2 §4.2: the selected card shifts 14 px toward the board.
-		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
+		if (int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0) or (c == _op_chip and operator_selected):
 			x += SELECTED_SHIFT * board_side
 		c.position = Vector2(roundf(x), roundf((i / cols) * pitch_y))
 
@@ -346,6 +393,129 @@ func _make_card(card: Dictionary) -> Control:
 		next_tag.position = Vector2(0, art_h * 0.5 - next_tag.size.y * 0.5))
 	panel.sort_children.connect(_fit_face.bind(panel, face, art, hex, title, bottom, art_h))
 	return panel
+
+
+# =============================================================================
+# kc-ui3: the Operator card
+# =============================================================================
+
+func _make_operator_card(op: Dictionary) -> Control:
+	var state: StringName = StringName(String(op.get("state", "none")))
+	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR", "cost": 0,
+			"fp": op.get("fp", 0), "armor": op.get("armor", 0), "keywords": op.get("keywords", []),
+			"banner": op.get("banner", ""), "id": op.get("banner", ""), "playable": true}
+	var panel: Control = _make_card(card)
+	panel.name = "OperatorCard"
+	panel.set_meta(&"uid", OPERATOR_UID)
+	panel.set_meta(&"operator", true)
+	panel.tooltip_text = "Your Operator: %s" % String(op.get("name", ""))
+	var next_tag: Node = panel.find_child("NextTag", true, false)
+	if next_tag != null:
+		(next_tag as Control).visible = false
+	# No cost: the hex reads OP.
+	for hex: Node in panel.find_children("*", "", true, false):
+		if hex is CostHex:
+			(hex as CostHex).set_text("OP")
+			(hex as CostHex).label.add_theme_font_size_override(&"font_size", 16)
+	var armor_text: String = "%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", op.get("armor", 0)))]
+	var bottom: Node = panel.find_child("Bottom", true, false)
+	if bottom != null and bottom.get_child_count() > 0:
+		var last: Node = bottom.get_child(bottom.get_child_count() - 1)
+		if last is Label:
+			(last as Label).text = armor_text
+	# Status plate over the art: DEPLOY / PLAN · B / ON BOARD + B · ROW 2 / DOWN + BACK NEXT ROUND.
+	var status: Label = _label(String(op.get("status", "")), &"HudTag", true)
+	status.name = "OperatorStatus"
+	status.add_theme_font_size_override(&"font_size", 16)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = Color(0.05, 0.06, 0.07, 0.86)
+	plate.set_content_margin_all(2)
+	if state == &"deploy":
+		plate.bg_color = AMBER
+		status.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
+	elif state == &"down":
+		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
+	else:
+		status.add_theme_color_override(&"font_color", get_theme_color(&"friend", &"Hud"))
+	status.add_theme_stylebox_override(&"normal", plate)
+	status.visible = status.text != ""
+	var face: Control = panel.get_node("Face")
+	face.add_child(status)
+	# Under the OP hex and the name (they stay readable), over the art.
+	var art_node: Node = face.get_node_or_null("Art")
+	if art_node != null:
+		face.move_child(status, art_node.get_index() + 1)
+	panel.sort_children.connect(func() -> void:
+		var h: float = status.get_combined_minimum_size().y
+		status.size = Vector2(face.size.x, h)
+		var art: Control = face.get_node_or_null("Art")
+		var art_bottom: float = art.position.y + art.size.y if art != null else face.size.y * 0.5
+		status.position = Vector2(0, maxf(0.0, art_bottom - h)))
+	# Amber glow while it can deploy (the head: "highlight what you can do now").
+	var glow: Control = Control.new()
+	glow.name = "Glow"
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.visible = state == &"deploy"
+	panel.add_child(glow)
+	glow.draw.connect(func() -> void:
+		glow.draw_rect(Rect2(Vector2(-3, -3), glow.size + Vector2(6, 6)), Color(AMBER, 0.95), false, 3.0)
+		glow.draw_rect(Rect2(Vector2(-6, -6), glow.size + Vector2(12, 12)), Color(AMBER, 0.35), false, 3.0))
+	panel.sort_children.connect(func() -> void:
+		glow.position = Vector2.ZERO
+		glow.size = panel.size
+		glow.queue_redraw())
+	if glow.visible and not _reduced_motion():
+		var tw: Tween = glow.create_tween().set_loops()
+		tw.tween_property(glow, "modulate:a", 0.45, 0.7).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	_wire_operator(panel, bool(op.get("active", false)), bool(op.get("draggable", false)))
+	return panel
+
+
+func _wire_operator(chip: Control, active: bool, draggable: bool) -> void:
+	var g: RefCounted = PressGesture.new(chip)
+	g.drag_enabled = draggable
+	chip.set_meta(&"gesture", g)
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(e: InputEvent) -> void:
+		if g.handle(e):
+			chip.accept_event())
+	g.tapped.connect(func(_p: Vector2) -> void:
+		if read_only or not active:
+			operator_inspected.emit()
+		else:
+			operator_tapped.emit())
+	g.long_pressed.connect(func(_p: Vector2) -> void: operator_inspected.emit())
+	g.drag_started.connect(func(p: Vector2) -> void:
+		if not read_only:
+			operator_drag_started.emit(p))
+	g.drag_moved.connect(func(p: Vector2) -> void:
+		if not read_only:
+			operator_drag_moved.emit(p))
+	g.drag_ended.connect(func(p: Vector2) -> void:
+		if not read_only:
+			operator_drag_ended.emit(p))
+
+
+## Selected = the selected card style; off the board and unable to act (down) = dimmed.
+func _style_operator() -> void:
+	if _op_chip == null:
+		return
+	var state: StringName = StringName(String(operator_entry.get("state", "none")))
+	_op_chip.theme_type_variation = &"HandCardSelected" if operator_selected else &"HandCard"
+	_op_chip.modulate.a = 1.0
+	var art: TextureRect = _op_chip.find_child("Art", true, false) as TextureRect
+	if art != null:
+		# On the board / down: the card dims (it is a status card now); deployable: full colour.
+		var dim: bool = state == &"board" or state == &"down" or state == &"planned"
+		art.self_modulate = Color(0.45, 0.45, 0.48) if dim and not operator_selected else Color.WHITE
+
+
+func _reduced_motion() -> bool:
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	return settings != null and bool(settings.get(&"reduced_motion"))
 
 
 func _number(text: String, big: bool) -> Label:

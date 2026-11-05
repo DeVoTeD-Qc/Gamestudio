@@ -36,9 +36,11 @@ func test_metrics_match_the_spec() -> void:
 	assert_eq(BoardMetrics.objective_y(m) + by, 244.0, "objective at y 244")
 	assert_eq(BoardMetrics.row_y(m, &"player", 0) + by, 299.0, "your front row at y 299")
 	assert_eq(BoardMetrics.row_y(m, &"player", 3) + by + 57.0, 536.0, "your back row ends at y 536")
-	assert_eq([m["card"], m["hand_cols"]], [Vector2(104, 130), 3], "phone hand: 3 columns of 104x130")
+	assert_eq([m["card"], m["hand_cols"]], [Vector2(99, 124), 3], "phone hand: 3 columns of 99x124 (kc-ui3: killstreak tiles in the Supply row)")
+	assert_true(bool(m["ks_inline"]), "phone: the killstreak tiles share the Supply row")
+	assert_eq([(m["ks"] as Rect2).size, (m["supply"] as Rect2).size.x], [Vector2(194, 64), 160.0], "phone killstreak tiles 3x62 + Supply 160")
 	var grid: Rect2 = m["grid"]
-	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [817.0, 60.0], "hand grid at x 817, y 60")
+	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [824.0, 76.0], "hand grid at x 824, y 76")
 	var badges: Array[Rect2] = BoardMetrics.badge_rects(m)
 	assert_eq(badges.map(func(r: Rect2) -> float: return r.position.y + 4.0), [4.0, 73.0, 142.0, 211.0, 280.0, 349.0, 472.0], "badge rows")
 	assert_eq(badges[0].size, Vector2(62, 64), "badge 62x64")
@@ -46,7 +48,8 @@ func test_metrics_match_the_spec() -> void:
 	var w: Dictionary = BoardMetrics.compute(Vector2(960 - 12, 540), true)
 	assert_eq([w["bw"], w["bh"]], [208.0, 52.0], "16:9 banner 208x52")
 	assert_eq((w["tray"] as Rect2).size.x, 214.0, "16:9 tray 214 wide")
-	assert_eq(w["hand_cols"], 2, "16:9: a 2-column hand")
+	assert_false(bool(w["ks_inline"]), "16:9: the killstreak tiles get their own row")
+	assert_eq(w["hand_cols"], 3, "16:9: a 3-column hand")
 	# Desktop 1440x900 (canvas 1280x800).
 	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 12, 800), false)
 	var dx: float = (d["board"] as Rect2).position.x + 6.0
@@ -57,6 +60,7 @@ func test_metrics_match_the_spec() -> void:
 	assert_eq(d["obj_h"], 96.0, "desktop objective tile 96 px")
 	assert_eq([(d["tray"] as Rect2).position.x + 6.0, (d["tray"] as Rect2).size.x], [1050.0, 224.0], "desktop tray 1050..1274")
 	assert_eq([d["card"], d["hand_cols"]], [Vector2(108, 136), 2], "desktop hand: 2 columns of 108x136")
+	assert_eq([(d["ks"] as Rect2).position.y, (d["ks"] as Rect2).size], [54.0, Vector2(224, 64)], "desktop killstreak row under the Supply row")
 	# Mirror: the tray on the left, the strip on the right, the same board.
 	var mm: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true, true)
 	assert_eq((mm["tray"] as Rect2).position.x, 0.0, "mirrored tray at the left edge")
@@ -111,7 +115,7 @@ func test_live_layout_columns_and_rows() -> void:
 		var hand: Control = m.get_hand()
 		assert_true(hand.get_global_rect().position.x >= m.get_board().get_global_rect().end.x - EPS, "%s hand right of the board" % label)
 		var card: Control = hand.get_cards()[0]
-		var want: Vector2 = Vector2(104, 130) if m.compact else Vector2(108, 136)
+		var want: Vector2 = Vector2(99, 124) if m.compact else Vector2(108, 136)
 		assert_true(card.size.distance_to(want) < 1.0, "%s hand card %s" % [label, card.size])
 		print("     [%s] banner %s, objective %s, hand card %s, tray %s" % [label, (lanes[0].get_friendly_slots()[0] as Control).size,
 				(lanes[0].get_objective_tile() as Control).size, card.size, m.get_tray().get_global_rect()])
@@ -249,7 +253,7 @@ func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
 	assert_eq(m.get_badge(&"rival").get_text(), str(st.sides[1].hand.size()), "RIVAL badge: hand count")
 	assert_eq(m.get_badge(&"deck").get_text(), str(st.sides[0].deck.size()), "DECK badge: deck count")
 	assert_eq(m.get_badge(&"operator").get_text(), "DEPLOY", "OPERATOR badge says DEPLOY in Round 1")
-	assert_true(m.get_badge(&"operator").hot, "and glows")
+	assert_false(m.get_badge(&"operator").hot, "kc-ui3: the badge is info only (the hand's Operator card glows)")
 	var flyouts: Dictionary = {&"score": "%ScoreBar", &"rival": "%Minimap", &"deck": "%DeckBox", &"streak": "%OperatorPanel"}
 	for key: StringName in flyouts:
 		m.get_badge(key).tapped.emit()
@@ -284,11 +288,13 @@ func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
 	await tree.process_frame
 	assert_true(insp.is_open(), "OPERATOR badge inspects the Operator")
 	insp.close()
-	# While it can deploy, the OPERATOR badge is its handle.
+	# kc-ui3: the OPERATOR badge is info only: a tap opens its flyout, never selects.
 	m.get_badge(&"operator").tapped.emit()
 	await tree.process_frame
-	assert_eq(c.selection.get("kind"), &"operator", "OPERATOR badge tap selects the Operator")
-	c.clear_selection()
+	await tree.process_frame
+	assert_eq(m.flyout_key, &"operator", "OPERATOR badge tap opens its flyout")
+	assert_true(c.selection.is_empty(), "and selects nothing")
+	m.close_flyout()
 	# Killfeed: a push shows a toast over the board's top centre AND a line in the tray log.
 	var toasts: Control = m.get_killfeed_toasts()
 	toasts.push({"attacker": "Demolitions Expert", "attacker_side": &"player", "victim": "Kestrel AR-7",

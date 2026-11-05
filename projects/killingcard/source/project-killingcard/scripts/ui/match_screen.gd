@@ -12,6 +12,11 @@
 #     SPEED x2 (CLOSED: Reveal, Firefight, Score). PEEK shows the hand read-only outside Deploy.
 #   - killfeed TOASTS at the top centre of the board (2 at most, 2.5 s, no input) + the tray log.
 #   Settings.mirror_layout swaps the strip and the tray (left-handed players).
+#   kc-ui3: the Operator is a card at the start of the hand grid (deploy it like any card; on the
+#   board it reads ON BOARD / B · ROW 2, down it reads DOWN / NEXT ROUND); the OPERATOR badge is info
+#   only (tap = its flyout). The KILLSTREAK tiles sit at the top of the tray (killstreak_row.gd):
+#   always visible with their charge, amber glow + a one-time toast when one is ready, tap = use,
+#   long-press = rules (item_inspected).
 #   Filled from a snapshot Dictionary. No game rules here: match_controller.gd (child node
 #   MatchController) owns the MatchState, turns input into intents and calls show_snapshot();
 #   with autostart off (tests) the screen shows mock_match_data.gd.
@@ -35,6 +40,8 @@ signal rail_inspected(key: StringName)
 signal tray_state_changed(state: StringName)
 ## A strip flyout opened (its key) or closed (&"").
 signal flyout_changed(key: StringName)
+## kc-ui3: long-press / right-click on a killstreak tile (its loadout item id).
+signal item_inspected(item_id: StringName)
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
@@ -42,6 +49,7 @@ const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const KillfeedEntry: GDScript = preload("res://scripts/fx/killfeed_entry.gd")
+const KillstreakRow: GDScript = preload("res://scripts/ui/killstreak_row.gd")
 const TRAY_OPEN: StringName = &"open"
 const TRAY_CLOSED: StringName = &"closed"
 const TRAY_PEEK: StringName = &"peek"
@@ -130,6 +138,11 @@ var flyout_key: StringName = &""
 var _operator_can_deploy: bool = false
 var _flyout_dragging: bool = false
 var _streak_callout_shown: bool = false
+## kc-ui3: the killstreak tiles at the top of the tray, and the killstreaks already announced ready.
+var _ks_row: Control = null
+var _ks_announced: Dictionary = {}
+var _supply_stacked: bool = false
+var _supply_stack: VBoxContainer = null
 
 
 func _ready() -> void:
@@ -159,6 +172,10 @@ func _ready() -> void:
 	if settings != null:
 		mirror = bool(settings.get(&"mirror_layout"))
 		settings.settings_changed.connect(_on_settings_changed)
+	_ks_row = KillstreakRow.new()
+	_ks_row.name = "KillstreakRow"
+	_tray.add_child(_ks_row)
+	_tray.move_child(_ks_row, _supply_box.get_index() + 1)
 	_update_profile()
 	resized.connect(_update_profile)
 	_layout.resized.connect(_layout_regions)
@@ -184,7 +201,9 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_minimap.set_rival_hand(int(snapshot.get("enemy_hand", 0)))
 	_deck_value.text = str(int(snapshot.get("deck_count", 0)))
 	_used_value.text = str(int(snapshot.get("discard_count", 0)))
+	_hand.set_operator(operator_card_entry(snapshot))
 	_hand.set_hand(snapshot.get("hand", []))
+	_ks_row.set_killstreaks(snapshot.get("killstreaks", []), int(snapshot.get("streak", 0)))
 	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
 	_set_actions(snapshot)
 	_set_badges(snapshot)
@@ -200,9 +219,58 @@ func get_operator_panel() -> Control:
 	return _operator_panel
 
 
-## The OPERATOR badge: the Operator's handle while it can deploy (QA, tests, the tutorial).
+## The Operator's handle (QA, tests, the tutorial): kc-ui3 the Operator card in the hand tray (the
+## OPERATOR badge when the tray hides the hand).
 func get_operator_handle() -> Control:
-	return _operator_badge
+	var card: Control = _hand.get_operator_card()
+	return card if card != null and card.is_visible_in_tree() else _operator_badge
+
+
+## kc-ui3: the killstreak tiles at the top of the tray.
+func get_killstreak_row() -> Control:
+	return _ks_row
+
+
+## The tile of one killstreak (loadout item id), or null.
+func get_killstreak_tile(item_id: StringName) -> Control:
+	return _ks_row.get_tile(item_id) if _ks_row != null else null
+
+
+## kc-ui3: shows what is selected outside the hand cards: the Operator card and the killstreak tile
+## being targeted (match_controller.gd _show_selection()).
+func show_selection_state(operator_selected: bool, item_id: StringName) -> void:
+	_hand.set_operator_selected(operator_selected)
+	_ks_row.set_selected(item_id)
+
+
+## kc-ui3: the hand tray's Operator card from a snapshot ({} = no Operator). state: &"deploy" (it can
+## be placed now), &"planned" (placed this Deploy), &"board", &"down" (off the board, not placeable),
+## &"none"; status = the words on the card; active = a tap selects it (else a tap inspects).
+static func operator_card_entry(snapshot: Dictionary) -> Dictionary:
+	var op: Dictionary = snapshot.get("operator", {})
+	if op.is_empty() or String(op.get("name", "")) in ["", "NO OPERATOR"]:
+		return {}
+	var open: bool = bool(snapshot.get("deploy_open", false)) and StringName(snapshot.get("result", &"")) == &""
+	var e: Dictionary = op.duplicate()
+	var on_board: bool = bool(op.get("on_board", String(op.get("zone", "OFF BOARD")) != "OFF BOARD"))
+	var planned: String = String(op.get("planned_zone", ""))
+	if bool(snapshot.get("operator_can_deploy", false)):
+		e["state"] = &"deploy"
+		e["status"] = "DEPLOY"
+	elif planned != "":
+		e["state"] = &"planned"
+		e["status"] = "PLAN · %s" % planned
+	elif on_board:
+		e["state"] = &"board"
+		var where: String = String(op.get("zone_label", ""))
+		e["status"] = "ON BOARD\n%s · ROW %d" % [where, int(op.get("row", 1))] if where != "" else "ON BOARD"
+	else:
+		e["state"] = &"down"
+		e["status"] = "DOWN\n%s" % ("NEXT ROUND" if bool(op.get("respawns", true)) else "NO RESPAWN")
+	# Tap selects it in Deploy (place, or Rotate from the board); otherwise a tap shows its rules.
+	e["active"] = open and e["state"] != &"down"
+	e["draggable"] = e["active"]
+	return e
 
 
 ## Strip badge by key: &"menu", &"score", &"operator", &"streak", &"rival", &"preview", &"deck".
@@ -343,6 +411,8 @@ func get_key_controls() -> Dictionary:
 	}
 	if tray_state == TRAY_OPEN:
 		out.merge({"hand": _hand, "undo": _undo_button, "ready": _ready_button})
+		if not _ks_row.get_tiles().is_empty():
+			out["killstreaks"] = _ks_row
 	else:
 		out.merge({"hand_tab": _hand_tab, "speed": _speed_button})
 		if tray_state == TRAY_PEEK:
@@ -382,6 +452,8 @@ func _update_profile() -> void:
 	_mulligan.set_compact(compact)
 	_end_banner.set_compact(compact)
 	_pause_menu.set_compact(compact)
+	# kc-ui3: the desktop tray (224 px) wraps each log line to two rows instead of cutting names.
+	_killfeed_fx.two_line = not compact
 	_supply_pips.add_theme_constant_override(&"separation", 3)
 	_apply_safe_area()
 	_layout_regions.call_deferred()
@@ -443,8 +515,10 @@ func _layout_tray() -> void:
 	var h: float = _tray.size.y
 	var btn_h: float = metrics["btn_h"]
 	var tab_h: float = metrics["tab_h"]
+	_set_supply_stacked(bool(metrics.get("ks_inline", false)))
+	_place(_supply_box, metrics.get("supply", Rect2(0, 0, w, metrics["supply_h"])))
+	_place(_ks_row, metrics.get("ks", Rect2()))
 	_fit_pips()
-	_place(_supply_box, Rect2(0, 0, w, metrics["supply_h"]))
 	var grid: Rect2 = metrics["grid"]
 	_place(_hand, grid)
 	_hand.set_card_size(metrics["card"], metrics["card_gap"], int(metrics["hand_cols"]), 1.0 if mirror else -1.0)
@@ -476,18 +550,19 @@ func _setup_strip() -> void:
 			close_flyout()
 			rail_inspected.emit({&"rival": &"intel"}.get(key, key)))
 	# OPERATOR: the Operator's handle while it can deploy, else its flyout.
-	_operator_badge.tapped.connect(func() -> void:
-		if _operator_can_deploy:
-			close_flyout()
-			_operator_panel.operator_tapped.emit()
-		else:
-			toggle_flyout(&"operator"))
+	# kc-ui3: the OPERATOR badge is info only (tap = its flyout); the Operator deploys from its card
+	# at the start of the hand tray, which forwards to the Operator panel's signals (the controller's).
+	_operator_badge.tapped.connect(func() -> void: toggle_flyout(&"operator"))
 	_operator_badge.inspected.connect(func() -> void:
 		close_flyout()
 		_operator_panel.operator_inspected.emit())
-	_operator_badge.drag_started.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_started.emit(p))
-	_operator_badge.drag_moved.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_moved.emit(p))
-	_operator_badge.drag_ended.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_ended.emit(p))
+	_hand.operator_tapped.connect(func() -> void:
+		close_flyout()
+		_operator_panel.operator_tapped.emit())
+	_hand.operator_inspected.connect(func() -> void: _operator_panel.operator_inspected.emit())
+	_hand.operator_drag_started.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_started.emit(p))
+	_hand.operator_drag_moved.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_moved.emit(p))
+	_hand.operator_drag_ended.connect(func(p: Vector2) -> void: _operator_panel.operator_drag_ended.emit(p))
 	# MENU and PREVIEW are real buttons; right-click / long-press opens their rules.
 	_wire_button_inspect(_menu_button, &"menu")
 	_wire_button_inspect(_preview_button, &"preview")
@@ -662,16 +737,20 @@ func _set_badges(snapshot: Dictionary) -> void:
 	elif op.has("armor") and String(op.get("zone", "OFF BOARD")) != "OFF BOARD":
 		op_text = "%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", 0))]
 	_operator_badge.font_size = 20
-	_operator_badge.set_value([[[op_text, text_c]]], _operator_can_deploy)
-	_operator_badge.set_drag_enabled(_operator_can_deploy)
+	_operator_badge.set_value([[[op_text, text_c]]], false)
+	_operator_badge.set_drag_enabled(false)
 	var ready_ks: bool = false
 	for ks: Dictionary in snapshot.get("killstreaks", []):
 		ready_ks = ready_ks or (bool(ks.get("earned", false)) and bool(ks.get("ready", false)))
 	_streak_badge.set_value([[[str(int(snapshot.get("streak", 0))), text_c]]], ready_ks)
-	# A one-time callout the first time a killstreak is ready (board-layout-v2.md §6).
-	if ready_ks and not _streak_callout_shown and bool(snapshot.get("deploy_open", false)):
-		_streak_callout_shown = true
-		show_toast.call_deferred("Killstreak ready: tap the STREAK badge")
+	# kc-ui3: a one-time toast when each killstreak first becomes ready (its tile glows in the tray).
+	if bool(snapshot.get("deploy_open", false)):
+		for ks: Dictionary in snapshot.get("killstreaks", []):
+			var id: StringName = StringName(ks.get("id", &""))
+			if KillstreakRow.is_ready(ks) and not _ks_announced.has(id):
+				_ks_announced[id] = true
+				_streak_callout_shown = true
+				show_toast.call_deferred("%s ready: tap it at the top of your hand" % String(ks.get("full_name", ks.get("name", "A killstreak"))))
 	_rival_badge.set_value([[[str(int(snapshot.get("enemy_hand", 0))), Color("#ffb3b5")]]])
 	_deck_badge.set_value([[[str(int(snapshot.get("deck_count", 0))), text_c]]])
 
@@ -697,6 +776,13 @@ func _wire_box(box: Control, key: StringName) -> void:
 
 func _setup_tray() -> void:
 	_wire_box(_supply_box, &"supply")
+	# kc-ui3: killstreak tiles: tap = use (the controller selects / calls it in), long-press = rules.
+	_ks_row.killstreak_tapped.connect(func(id: StringName) -> void:
+		close_flyout()
+		_operator_panel.killstreak_pressed.emit(id))
+	_ks_row.killstreak_inspected.connect(func(id: StringName) -> void:
+		close_flyout()
+		item_inspected.emit(id))
 	_feed_box.mouse_filter = Control.MOUSE_FILTER_PASS
 	_wire_box(_feed_box, &"killfeed")
 	_hand_tab.pressed.connect(func() -> void:
@@ -709,7 +795,15 @@ func _setup_tray() -> void:
 			set_tray_state(TRAY_CLOSED))
 	_speed_button.toggled.connect(func(on: bool) -> void:
 		_speed_button.text = "SPEED x2" if on else "SPEED x1"
+		var st: Node = get_node_or_null(^"/root/Settings")
+		if st != null and bool(st.get(&"speed_x2")) != on:
+			st.set_value(&"speed_x2", on)
 		_apply_speed(_fx.is_playing() if _fx.has_method(&"is_playing") else false))
+	# kc-ui3: SPEED x2 is kept between sessions (Settings.speed_x2).
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	var fast: bool = settings != null and bool(settings.get(&"speed_x2"))
+	_speed_button.set_pressed_no_signal(fast)
+	_speed_button.text = "SPEED x2" if fast else "SPEED x1"
 	_apply_tray_state(false)
 
 
@@ -812,7 +906,9 @@ func get_killfeed_rect() -> Rect2:
 ## Supply pips: as wide as the tray's Supply row allows for the current Supply (6..14 px).
 func _pip_size() -> Vector2:
 	var n: int = maxi(1, _supply_pips.get_child_count())
-	var room: float = (_tray.size.x if _tray != null and _tray.size.x > 0.0 else 300.0) - 150.0
+	var box_w: float = _supply_box.size.x if _supply_box != null and _supply_box.size.x > 0.0 else 300.0
+	# kc-ui3: stacked (pips under SUPPLY 3/4) the pips get the whole row; in one row, what the words leave.
+	var room: float = box_w - (28.0 if _supply_stacked else 150.0)
 	var w: float = clampf(floorf(room / n) - 3.0, 6.0, 14.0)
 	return Vector2(w, 18 if compact else 20)
 
@@ -828,6 +924,39 @@ func _set_supply(supply: int, supply_max: int) -> void:
 		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_supply_pips.add_child(pip)
 	_fit_pips()
+
+
+## kc-ui3: when the killstreak tiles share the Supply row (phone), the pips go under SUPPLY 3/4.
+func _set_supply_stacked(on: bool) -> void:
+	if on == _supply_stacked:
+		return
+	_supply_stacked = on
+	var row: HBoxContainer = _supply_pips.get_parent() as HBoxContainer if not on else _supply_value.get_parent() as HBoxContainer
+	if on:
+		if _supply_stack == null:
+			_supply_stack = VBoxContainer.new()
+			_supply_stack.name = "SupplyStack"
+			_supply_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_supply_stack.alignment = BoxContainer.ALIGNMENT_CENTER
+			_supply_stack.add_theme_constant_override(&"separation", 4)
+		_supply_box.remove_child(row)
+		_supply_box.add_child(_supply_stack)
+		_supply_stack.add_child(row)
+		row.remove_child(_supply_pips)
+		_supply_stack.add_child(_supply_pips)
+		_supply_pips.size_flags_horizontal = Control.SIZE_FILL
+	else:
+		_supply_stack.remove_child(_supply_pips)
+		row = _supply_stack.get_child(0) as HBoxContainer
+		row.add_child(_supply_pips)
+		row.move_child(_supply_pips, 1)
+		_supply_pips.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_supply_stack.remove_child(row)
+		_supply_box.remove_child(_supply_stack)
+		_supply_box.add_child(row)
+	# Stacked: SUPPLY on the left, the value on the right of the top line.
+	var caption: Control = row.get_child(0) as Control
+	caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL if on else Control.SIZE_FILL
 
 
 func _fit_pips() -> void:

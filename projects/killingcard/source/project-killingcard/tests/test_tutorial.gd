@@ -157,14 +157,23 @@ func _play_through(screen: Dictionary, fast_forward: bool) -> void:
 				await _tap(vp, _row_point(d, st.zone))
 				taps += 2
 			&"use_item":
-				# kc-board2: the tiles live in the STREAK flyout; the coach points at its badge first.
-				await _tap(vp, d.match_screen.get_badge(&"streak").get_global_rect().get_center())
-				await _frames(2)
-				var b: Button = d.match_screen.get_operator_panel().get_item_button(st.item_id)
-				assert_false(b.disabled, "%s %s is ready in the tray" % [label, st.item_id])
-				assert_true(b.is_visible_in_tree(), "%s %s shows in the STREAK flyout" % [label, st.item_id])
-				await _tap(vp, b.get_global_rect().get_center())
-				taps += 2
+				# kc-ui3: a killstreak's tile sits at the top of the hand tray (one tap); other loadout
+				# items still live in the STREAK flyout (the coach points at its badge first).
+				var tile: Control = d.match_screen.get_killstreak_tile(st.item_id)
+				if tile != null:
+					assert_true(tile.is_visible_in_tree(), "%s %s tile shows in the tray" % [label, st.item_id])
+					var fr: Array = d.spotlight_rects()[0]
+					assert_true(not fr.is_empty() and fr[0] == tile.get_global_rect(), "%s the coach frames the tile" % label)
+					await _tap(vp, tile.get_global_rect().get_center())
+					taps += 1
+				else:
+					await _tap(vp, d.match_screen.get_badge(&"streak").get_global_rect().get_center())
+					await _frames(2)
+					var b: Button = d.match_screen.get_operator_panel().get_item_button(st.item_id)
+					assert_false(b.disabled, "%s %s is ready in the tray" % [label, st.item_id])
+					assert_true(b.is_visible_in_tree(), "%s %s shows in the STREAK flyout" % [label, st.item_id])
+					await _tap(vp, b.get_global_rect().get_center())
+					taps += 2
 			&"ready":
 				if not st.lock_input:
 					await _free_play(vp, d)
@@ -379,6 +388,6 @@ func _row_point(d: Control, zone: int) -> Vector2:
 	return (lane.get_node("%FriendlyRow") as Control).get_global_rect().get_center()
 
 
-## The Operator's handle: kc-board2's OPERATOR strip badge while it can deploy.
+## The Operator's handle: kc-ui3's Operator card at the start of the hand tray.
 func _op_point(d: Control) -> Vector2:
 	return d.match_screen.get_operator_handle().get_global_rect().get_center()

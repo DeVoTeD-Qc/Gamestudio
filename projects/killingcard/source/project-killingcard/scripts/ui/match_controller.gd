@@ -159,9 +159,13 @@ func _on_screen_ready() -> void:
 	_screen.ready_pressed.connect(press_ready, d)
 	if _screen.has_signal(&"rail_inspected"):
 		_screen.rail_inspected.connect(_on_rail_inspected, d)
+	if _screen.has_signal(&"item_inspected"):
+		_screen.item_inspected.connect(open_item_inspector, d)
 	_screen.undo_pressed.connect(undo, d)
 	if _screen.has_method(&"get_mulligan_panel"):
 		_screen.get_mulligan_panel().confirmed.connect(_on_mulligan_confirmed, d)
+		if _screen.get_mulligan_panel().has_signal(&"card_inspected"):
+			_screen.get_mulligan_panel().card_inspected.connect(_on_card_inspected, d)
 	if not _is_tutorial():
 		_screen.menu_pressed.connect(open_pause_menu, d)
 		var banner: Control = _end_banner()
@@ -430,7 +434,7 @@ func _begin_deploy() -> void:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[PLAYER]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator, then a column." % state.round_number)
+		_screen.show_toast("Round %d: tap your Operator (first card of your hand), then a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 
@@ -662,7 +666,13 @@ func is_mulligan_open() -> bool:
 func open_mulligan() -> void:
 	var entries: Array = []
 	for rc: RulesCard in state.sides[PLAYER].hand:
-		entries.append({"uid": rc.uid, "id": rc.card.id, "name": rc.card.display_name, "cost": rc.card.cost,
+		# kc-ui3: the full card face (CardView), with its own licensed art and title when it has one.
+		var view: Dictionary = CardInfo.view_dict(rc.card, "friend")
+		var art: BannerArt = BannerArtDB.get_art(StringName(String(state.art_by_uid.get(rc.uid, rc.card.id))))
+		if BannerArtDB.is_card_art(art):
+			view["licensed_art"] = String(art.id)
+			view["name"] = art.title
+		entries.append({"uid": rc.uid, "id": rc.card.id, "name": String(view["name"]), "cost": rc.card.cost, "view": view,
 				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
 	clear_selection()
 	_mulligan_panel().open(entries)
@@ -933,6 +943,9 @@ func _show_selection() -> void:
 	_screen.get_hand().set_selected(int(selection.get("uid", -1)) if selection.get("kind") == &"card" else -1)
 	_screen.get_operator_panel().set_selected(selection.get("kind") == &"operator")
 	_screen.get_operator_panel().set_selected_item(StringName(selection.get("id", &"")) if selection.get("kind") == &"item" else &"")
+	if _screen.has_method(&"show_selection_state"):
+		_screen.show_selection_state(selection.get("kind") == &"operator",
+				StringName(selection.get("id", &"")) if selection.get("kind") == &"item" else &"")
 	if selection.is_empty() or state == null:
 		board.show_targets([])
 		board.set_unit_targets([])
@@ -1327,6 +1340,37 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 		status = "OVERRUN RISK: the %s controls this column now. If it still does at the end of the round, this Field is destroyed." % ("rival" if side == PLAYER else "you")
 	status += " Removed by: Overrun, Sabotage, or a newer Field of the same side here."
 	open_card_inspector(rc.card, "friend" if side == PLAYER else "enemy", status, {}, side)
+
+
+## kc-ui3: a loadout item's rules (long-press on a killstreak tile): its card, threshold, what it does
+## and, in plain words, whether you can call it in now.
+func open_item_inspector(item_id: StringName) -> void:
+	if state == null:
+		return
+	var item: LoadoutItem = state.find_item(PLAYER, item_id)
+	if item == null:
+		return
+	var me: RulesSide = state.sides[PLAYER]
+	var is_ks: bool = item.slot == DataEnums.LoadoutSlot.KILLSTREAK
+	var threshold: int = StreakTracker.threshold_for(state, PLAYER, item) if is_ks else 0
+	var check: Dictionary = state.check_use(PLAYER, item_id)
+	var status: String = ""
+	if check["ok"]:
+		status = "Ready: tap its tile, then a target, to call it in." if is_ks else "Ready to use."
+	elif is_ks and not me.streak_tray.has(item.id):
+		status = "Streak %d of %d: %d more elimination%s to earn it." % [me.streak, threshold, maxi(0, threshold - me.streak),
+				"" if threshold - me.streak == 1 else "s"]
+	else:
+		status = String(PlayText.describe(check, _item_ctx(item))["reason"])
+	var icon: String = String({&"recon_drone": "ks_recon_drone", &"mortar_barrage": "ks_mortar", &"sentry_turret": "ks_sentry",
+			&"attack_helo": "ks_attack_helo", &"gunship": "ks_gunship"}.get(item.id, ""))
+	var view: Dictionary = {"name": item.display_name, "type": "killstreak" if is_ks else "tactic", "threshold": threshold,
+			"cost": item.supply_cost, "art_icon": icon, "id": String(item.id), "text": item.text, "side": "friend"}
+	var type_text: String = ("killstreak · earned at streak %d" % threshold) if is_ks else "loadout item"
+	if item.supply_cost > 0:
+		type_text += " · cost %d" % item.supply_cost
+	_screen.get_inspector().open({"view": view, "title": item.display_name, "type": type_text, "text": item.text,
+			"keywords": [], "status": status, "side": PLAYER})
 
 
 func _open_operator(side: int) -> void:

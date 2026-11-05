@@ -437,7 +437,7 @@ func export_log() -> Dictionary:
 ## Short plain-text summary a tester can paste into a form or message (no personal data).
 func summary_text() -> String:
 	var lines: PackedStringArray = []
-	lines.append("Killstreak playtest summary (log v%d)" % SCHEMA_VERSION)
+	lines.append("KillingCard playtest summary (log v%d)" % SCHEMA_VERSION)
 	lines.append("Session: %s  Date: %s" % [session_id, Time.get_date_string_from_system(true)])
 	var info: Dictionary = _device_info()
 	lines.append("Device: %s / %s / %s, %s, input %s" % [info["device_class"], info["os_family"],
