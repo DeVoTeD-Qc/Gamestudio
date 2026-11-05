@@ -20,6 +20,7 @@ const match = opt('match') || 'aware-aware';
 const force = opt('force');
 if (opt('flat') || argv.includes('nosyn')) { WD.TUNE.squadCap = 0; WD.TUNE.rally = []; }
 if (opt('set')) for (const kv of String(opt('set')).split(',')) { const [k, v] = kv.split(':'); WD.TUNE[k] = isNaN(+v) ? (v === 'true' ? true : v === 'false' ? false : v) : +v; }
+if (opt('ai')) for (const kv of String(opt('ai')).split(',')) { const [k, v] = kv.split(':'); WD.AI_PYL[k] = +v; } // AI knobs (WD.AI_PYL), e.g. --ai=pushRisk:0.5
 const [aiA, aiB] = match.split('-');
 
 const avg = a => a.length ? +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : null;

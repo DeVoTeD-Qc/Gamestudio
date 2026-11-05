@@ -16,14 +16,14 @@ All card, gun and location art was made by the studio head with ChatGPT image ge
 
 ## Re-encoding (DESIGN_REVIEW Q4)
 
-The build budget is **1.5 MB** for the whole single file (D8: it must stay one file). The art was 3.4 MB of base64 in a 4.09 MB build. It is now about 0.82 MB of base64 in a 1.47 MB build.
+The build budget is **2 MB** for the whole single file (D8: it must stay one file; the head raised it from 1.5 MB on 2026-11-05, wb-pyl-impl). The art was 3.4 MB of base64 in a 4.09 MB build. It is now about 0.82 MB of base64 in a 1.47 MB build.
 
 `reencode_art.py` writes every file in this folder from the **originals in git** (commit `9610a97`, the import). It never re-encodes its own output, so it can be run again safely:
 
 ```bash
 python3 src/webart/reencode_art.py --check   # sizes only
 python3 src/webart/reencode_art.py           # rewrite src/webart/** (needs Pillow with WebP, numpy)
-npm run build && npm test                     # the build test fails if the file goes over 1.5 MB
+npm run build && npm test                     # the build test fails if the file goes over 2 MB
 ```
 
 **Adding or changing art:** without `--from`, the script re-encodes the files already in this folder from their git originals, so a new picture needs its own original. Make a folder laid out like this one (cards at the top, `guns/`, `locs/`) holding the full-size WebP originals of every picture, old and new (`git show 9610a97:<path>` gives the old ones), and run the script with `--from` that folder. It encodes every `.webp` it finds there. Keep the widths: the build test checks them (cards and guns 280 px, locations 336 px) and the total size.

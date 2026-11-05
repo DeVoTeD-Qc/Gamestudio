@@ -57,10 +57,10 @@ test('inlineImages() reads one folder, sorted, keyed by file name', () => {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
 
-// ---------- size (DESIGN_REVIEW Q4: single file <= 1.5 MB, first load < 2 s on 4G) ----------
-test('the build stays under the 1.5 MB budget', () => {
+// ---------- size (DESIGN_REVIEW Q4: single file, first load < 2 s on 4G; budget raised from 1.5 MB to 2 MB by the head, wb-pyl-impl) ----------
+test('the build stays under the 2 MB budget', () => {
   const bytes = Buffer.byteLength(html);
-  assert.ok(bytes <= 1500000, `build/index.html is ${bytes.toLocaleString('en-US')} bytes; budget 1,500,000. Re-encode new art with src/webart/reencode_art.py`);
+  assert.ok(bytes <= 2000000, `build/index.html is ${bytes.toLocaleString('en-US')} bytes; budget 2,000,000. Re-encode new art with src/webart/reencode_art.py`);
 });
 
 test('web art is sized to display (WebP, capped widths)', () => {

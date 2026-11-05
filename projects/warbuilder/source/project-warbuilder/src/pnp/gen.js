@@ -69,13 +69,14 @@ function tacCard(d, v = (process.env.TACV || 0) * 1) {
   if (v) return tacCardV(d, v);
   const hmCol = Array.from({ length: d.hit_markers }, () => ic('hm')).join('');
   return `<div class="card tac nl ${grey ? 'grey' : ''}" style="--rc:${r ? r.color : '#B9BCAE'}">
-    <div class="band"><div class="bhm" title="${d.hit_markers} Hit Marker${d.hit_markers === 1 ? '' : 's'}">${hmCol}</div>
+    <div class="band"><div class="bhm" title="${d.hit_markers} Hit Marker${d.hit_markers === 1 ? '' : 's'}">${hmCol}${d.jam ? `<span class="bjam" title="Jam">${ic('jam', '#D8402E')}</span>` : ''}</div>
       <div class="bid">${r && !/^K/.test(d.id) ? rank(d.tier, 'bchev') : ''}${/^K/.test(d.id) ? `<svg class="shp bshape bpara" data-icon="para" viewBox="0 0 24 24"><use href="#i-para"/></svg>` : ''}${r ? shapeSvg(d.archetype, 'bshape') : `<svg class="shp bshape" data-icon="para" viewBox="0 0 24 24"><path d="M2.5 11a9.5 8 0 0 1 19 0c-1.6-1.1-3.1-1.1-4.75 0-1.6-1.1-3.15-1.1-4.75 0-1.6-1.1-3.15-1.1-4.75 0-1.65-1.1-3.15-1.1-4.75 0z" fill="currentColor"/><path d="M3 11.4 10.6 18.5M21 11.4l-7.6 7.1M12 11.4v6.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.4"/><rect x="9.6" y="17.6" width="4.8" height="4.4" rx="1.2" fill="currentColor"/></svg>`}</div></div>
     <div class="cin"><div class="txt">
       <div class="top"><span class="nm">${esc(d.name)}</span>${d.intel_cost ? `<span class="costb">${ic('intel', RES.intel)}<b>${d.intel_cost}</b></span>` : ''}</div>
       <div class="main">${fx(d.text)}</div>
       ${squadBox(d)}
       ${d.reaction ? `<div class="react"><b>${ic('def')} REACTION</b> In your hand when hit: −${d.reaction} damage, then discard it.</div>` : ''}
+      ${d.jam ? `<div class="jamline">${ic('jam', '#D8402E')}<span><b>JAM</b> when flipped in a shot: −Recoil ${ic('prec', RES.prec)}. 2nd Jam in a shot: miss.</span></div>` : ''}
       </div>${artFor(d) ? `<div class="art"><img src="${artFor(d)}" alt=""></div>` : ''}
     </div></div>`;
 }
@@ -110,12 +111,6 @@ function gunCard(id, tierBack) {
   const dmgUp = g.ladder[0][1] > b.ladder[0][1], hmUp = g.ladder[0][0] < b.ladder[0][0];
   const onBand = (on, top) => on ? ` style="color:${sec !== !!top ? RTXT[g.tier] : RLITE[g.tier]}"` : '';
   const onText = on => on ? ` style="color:${RTXT[g.tier]}"` : '';
-  if (g.melee) { const dUp = g.ladder[0][1] > b.ladder[0][1];
-    const art2 = fs.existsSync(path.join(ART_DIR, 'guns', id + '.jpg')) ? `art/guns/${id}.jpg` : GUN_ART[g.cls] && fs.existsSync(path.join(ART_DIR, GUN_ART[g.cls] + '.jpg')) ? `art/${GUN_ART[g.cls]}.jpg` : null;
-    return `<div class="card gunL" style="--gb:${GUN_BG[0]}"><div class="gband"><div class="gsteps"><div class="gst1 top"><span class="auto">AUTO</span><b${dUp ? ` style="color:${RLITE[g.tier]}"` : ''}>${g.ladder[0][1]}</b></div></div><div class="gid">${tierBack ? rank(tierBack, 'bchev') : ''}</div></div>
-    <div class="gmain"><div class="gtop"><div class="gtl"><span class="nm">${esc(g.name.replace(/ “.*”/, ''))}</span><div class="gsub"><span class="ttag">Melee</span><span class="rtag" style="background:${RAR[g.tier]}">${RARN[g.tier]}</span></div></div><span class="costb">${ic('intel', RES.intel)}${g.intel_cost}</span></div>
-      <div class="gart">${art2 ? `<img src="${art2}" alt="">` : ''}</div>
-      <div class="gbot"><div class="gstats"><div><b>0</b><span>${ic('rng')}Range</span></div><div><b>1</b><span>Per turn</span></div></div><div class="gcombo">${g.gcombo ? `${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span>` : 'Always hits'}</div></div></div></div>`; }
   const steps = g.ladder.map(([h, d], i) => `<div class="gst1 ${isTop(i) ? 'top' : ''}"><span class="hg"${onBand(hmUp, isTop(i))}>${Array.from({ length: h }, () => ic('hm')).join('')}</span><b${onBand(dmgUp, isTop(i))}>${d}</b></div>`).join('');
   const stats = [[`${g.band[0]}–${g.band[1]}`, 'rng', 'Range', false], [g.magazine_capacity, 'ammo', 'Shots', g.magazine_capacity > b.magazine_capacity]].concat([[g.recoil, 'rcl', 'Recoil', g.recoil < b.recoil]]);
   // a file named after the exact gun (art/guns/smg-2.jpg) wins; otherwise a placeholder from a matching card
@@ -125,7 +120,7 @@ function gunCard(id, tierBack) {
     <div class="gmain"><div class="gtop"><div class="gtl"><span class="nm">${esc(g.name.replace(/ “.*”/, ''))}</span><div class="gsub"><span class="ttag">${esc(g.cls === 'Marksman Rifle' ? 'Marksman' : g.cls)}</span><span class="rtag" style="background:${RAR[g.tier]}">${RARN[g.tier]}</span></div></div><span class="costb">${ic('intel', RES.intel)}${g.intel_cost}</span></div>
       <div class="gart">${art ? `<img src="${art}" alt="">` : ''}</div>
       <div class="gbot"><div class="gstats">${stats.map(([v, i, l, on]) => `<div><b${onText(on)}>${v}</b><span>${ic(i)}${l}</span></div>`).join('')}</div>
-      ${g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo none">Reveal 1 card per ${ic('prec', RES.prec)}</div>`}</div>
+      ${g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo jambox"><span>Flip: 1 ${ic('prec', RES.prec)}</span><span class="jb">${ic('jam', '#D8402E')}<i></i><i></i></span></div>`}</div>
     </div></div>`;
 }
 function gunBack(label, sub, bg, dark) { return `<div class="card gunL gback" style="--gb:${bg};color:${dark ? '#1C2017' : '#fff'}"><div class="bk"><div class="bl">${label}</div><div class="bs">${sub}</div></div></div>`; }
@@ -159,13 +154,13 @@ const refTurn = () => `<div class="card ref"><div class="phead dark"><span>YOUR 
   <li><b>Play</b> cards (any order). Squad lines pay for each other card of their squad in play.</li>
   <li><b>Move once</b>: 1 ${ic('move', RES.move)} per space.</li>
   <li><b>Loot</b>: up to ${T.buyCap} buys: top card here (next door +1 ${ic('intel', RES.intel)}) or the Buy Station (${T.supplyCost} ${ic('intel', RES.intel)}). Cycle: 1 ${ic('intel', RES.intel)} or 1 ${ic('move', RES.move)}.</li>
-  <li><b>Fire</b>: commit ${ic('prec', RES.prec)}, reveal that many cards, count ${ic('hm')}. Spend what you committed, then Recoil more ${ic('prec', RES.prec)}.</li>
+  <li><b>Fire</b>: flip cards one at a time (1 ${ic('prec', RES.prec)} each), add up ${ic('hm')}. On a ladder step: STOP for its damage, or flip on. ${ic('jam', '#D8402E')} Jam: −Recoil ${ic('prec', RES.prec)}; 2nd Jam = miss (final circle: 1st).</li>
   <li><b>End</b>: unused ${ic('move', RES.move)} → ${ic('def', '#475827')} (max ${T.digIn}). Discard all but the Loadout, draw 5.</li></ol></div></div>`;
 const refSquad = () => `<div class="card ref"><div class="phead dark"><span>SQUAD &amp; RALLY</span><span>reference</span></div><div class="cin small2">
   <p><b>Squad</b>: a Squad line pays once for <b>each other</b> card of its squad in play this turn, up to ×${T.squadCap}. Loadout cards count.</p>
   <p><b>Rally</b> at ${T.rally.join(' and ')} cards of one squad in play, once per turn each:</p>
   ${WD.SQUADS.map(a => `<p>${roleB(a, true)} 3: ${fx(WD.RALLY_TEXT[a][3])} · 5: ${fx(WD.RALLY_TEXT[a][5])}</p>`).join('')}
-  <p><small><b>Mark</b>: next shot needs 1 fewer ${ic('hm')} per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: each shot reveals 1 more card free.</small></p></div></div>`;
+  <p><small><b>Mark</b>: next shot needs 1 fewer ${ic('hm')} per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: cancel a Jam.</small></p></div></div>`;
 const hpCard = (who, col) => `<div class="card hp" style="--rc:${col}"><div class="phead" style="background:${col}"><span>${ic('heart', '#fff')} HEALTH</span><span>${who}</span></div><div class="cin"><div class="hpgrid">${Array.from({ length: T.hp }, (_, i) => `<span>${T.hp - i}</span>`).join('')}</div><div class="small">Start at ${T.hp}. Mark damage with a paperclip. Off the track = eliminated.</div></div></div>`;
 const OPFACE = {
   me: `<svg viewBox="0 0 64 64" class="opface" aria-hidden="true"><defs><clipPath id="ofA"><circle cx="32" cy="32" r="30"/></clipPath></defs><g clip-path="url(#ofA)"><rect width="64" height="64" fill="#16343A"/><path d="M4 70c2-14 12-20 28-20s26 6 28 20z" fill="#2C3A2A"/><path d="M20 52l12 6 12-6 2 8H18z" fill="#3E4E36"/><path d="M22 40c0 7 4 12 10 12s10-5 10-12v-6H22z" fill="#C49A74"/><path d="M24 44c2 4 5 6 8 6s6-2 8-6c-2 2-5 3-8 3s-6-1-8-3z" fill="#9C7556"/><path d="M15 31c0-11 8-19 17-19s17 8 17 19v3H15z" fill="#4A5A3A"/><path d="M15 31h34v4H15z" fill="#3A4730"/><rect x="18" y="27" width="28" height="9" rx="4.5" fill="#101614"/><rect x="20" y="28.5" width="11" height="6" rx="3" fill="#1FB0C4"/><rect x="33" y="28.5" width="11" height="6" rx="3" fill="#1FB0C4"/><path d="M21 30h5" stroke="#B9F1F8" stroke-width="1.4" stroke-linecap="round"/><path d="M34 30h5" stroke="#B9F1F8" stroke-width="1.4" stroke-linecap="round"/><path d="M46 36c3 1 4 4 3 8l-6 3" fill="none" stroke="#101614" stroke-width="2"/><circle cx="43" cy="47" r="1.8" fill="#101614"/></g><circle cx="32" cy="32" r="30" fill="none" stroke="#1FB0C4" stroke-width="4"/></svg>`,
@@ -229,15 +224,17 @@ const RULES = `
 <h2>Firing</h2>
 <ol><li>You carry <b>one gun</b>. Buying a gun replaces yours (the old one goes under that stack).</li>
 <li>Your rival must be within the gun’s <b>Range</b> (spaces between you; same location = 0). Every gun can fire at 0.</li>
-<li><b>Commit</b> Precision: reveal one card from your deck per Precision committed, and count the ${ic('hm')} Hit Markers. <b>Steady</b>: each shot reveals 1 more card for free.</li>
-<li><b>Recoil</b>: the shot spends the Precision you committed, then the gun's Recoil costs that much more (down to 0). Plan your shots: big commits are sure, small ones leave Precision for the next shot.</li>
-<li>Read the <b>damage ladder</b>: reach the first step to hit, the second for a big hit. <b>Mark</b>: your next shot needs 1 fewer ${ic('hm')} on every step. Cover at the target's location: −1 damage (<b>Pierce</b> ignores it). <b>Close quarters</b> (distance 0): ignore cover and Armor. Reaction cards in hand, then Armor, reduce damage. A hit deals at least 1.</li>
-<li>Each gun fires up to its <b>Shots</b> per turn, plus any ${ic('ammo', RES.ammo)} extra shots. <b>Combat Knife</b>: distance 0 only, always hits.</li>
-<li>Revealed cards go to your discard. Whenever your deck is empty, shuffle your discard to form a new deck.</li></ol>
+<li><b>FIRE.</b> Flip cards off the top of your deck one at a time. Each flip costs 1 ${ic('prec', RES.prec)} Precision. Add up the ${ic('hm')} Hit Markers.</li>
+<li>When your total reaches a step on your gun's <b>ladder</b>, you may <b>STOP</b> and deal that step's damage, or flip on for the next step. The top step stops by itself.</li>
+<li>A card with the ${ic('jam', '#D8402E')} <b>Jam</b> icon (Sprint, Scout) is a Jam. It costs your gun's <b>Recoil</b> in Precision, and your <b>second Jam</b> in one shot is a miss. <b>In the final circle, your first Jam is a miss.</b> Mark the two Jam boxes on the gun card as you flip.</li>
+<li>If you run out of Precision before the first step, you miss (on a step, that step counts). <b>Steady:</b> cancel a Jam. <b>Mark:</b> your next shot needs 1 fewer ${ic('hm')} on every step.</li>
+<li>Damage: cover at the target's location: −1 damage (<b>Pierce</b> ignores it). <b>Close quarters</b> (distance 0): ignore cover and Armor. Reaction cards in hand, then Armor, reduce damage. A hit deals at least 1.</li>
+<li>Each gun fires up to its <b>Shots</b> per turn, plus any ${ic('ammo', RES.ammo)} extra shots. <b>Combat Knife</b>: distance 0 only; it flips like any gun.</li>
+<li>Flipped cards go to your discard when the shot ends. If your deck runs out mid-shot, shuffle your discard in (the cards of this shot stay out).</li></ol>
 <h2>The circle</h2>
 <ul><li>At the end of rounds ${T.closeAfter.join(', ')} one end location closes (alternating ends): ${T.zones} → 1 location, the <b>final circle</b>, after round ${T.closeAfter[T.closeAfter.length - 1]}.</li>
 <li>Its loot is lost. Caught outside: ${T.gasDmg} damage +1 per extra space, then move to the nearest safe location.</li>
-<li>Final circle: at each round end the storm hits both for ${T.finalStorm.join(', ')}. <b>Hard end</b> after round ${T.hardEnd}: the most Health wins.</li>
+<li>Final circle: at each round end the storm hits both for ${T.finalStorm.join(', ')}. <b>Final circle: your first Jam in a shot is a miss.</b> <b>Hard end</b> after round ${T.hardEnd}: the most Health wins.</li>
 <li>Every round end: each safe stack gets 1 fresh card on top (tier › rounds 1–3, ›› rounds 4–7, ››› after); a stack over ${T.stackSize} loses its bottom card. Supply crates: after rounds ${T.crateRounds.join(' and ')}, 3 tier ››› items (a gun first) go on top of the middle stack.</li>
 <li>The first player alternates each round.</li></ul>
 <h2>Winning</h2><p>Reduce your rival to 0 Health. If both fall at once, the higher Health wins; equal is a draw.</p>
@@ -292,6 +289,9 @@ svg.rank.inl { display: inline-block; width: 13px; height: auto; vertical-align:
 .tac.nl.grey .band { width: 0.3in; }
 .bhm { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #fff; }
 .bhm svg.i { width: 20px; height: 20px; margin: 0; }
+.bjam { display: flex; background: #fff; border-radius: 50%; padding: 2px; } .bjam svg.i { width: 17px; height: 17px; }
+.jamline { display: flex; gap: 5px; align-items: flex-start; border: 1.4px solid #D8402E; border-radius: 6px; padding: 4px 6px; font-size: var(--fc); line-height: 1.3; font-weight: 600; color: #1C2017; } .jamline > svg.i { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 1px; } .jamline b { color: #D8402E; }
+.gcombo.jambox { justify-content: space-between; } .gcombo .jb { display: inline-flex; gap: 3px; align-items: center; } .gcombo .jb i { width: 11px; height: 11px; border: 1.4px solid #D8402E; border-radius: 2px; display: inline-block; }
 .tac.grey .bhm, .tac.grey .bid { color: #1C2017; }
 .bid { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; }
 .tac.nl .cin { padding-bottom: 0.04in; }
