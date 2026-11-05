@@ -11,7 +11,7 @@ const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const ROOT = path.join(__dirname, '..', '..');
-const BUILD = path.join(ROOT, 'source', 'project-warbuilder', 'build', 'index.html');
+const BUILD = process.env.HUD_BUILD || path.join(ROOT, 'source', 'project-warbuilder', 'build', 'index.html'); // HUD_BUILD: another build (e.g. the pre-change UI for the before set)
 const OUT = path.join(ROOT, 'qa', 'screenshots', 'hud');
 const TAG = process.argv[2] || 'after';
 const WARM = +process.argv[3] || 7;
@@ -55,10 +55,6 @@ const SEED_NOW = +process.env.HUD_SEED || 140; // seed 140: an Engineer deck wit
       const end = await page.$('[data-act="endturn"]:not([disabled])'); if (end) await end.click();
       await page.waitForTimeout(200);
     }
-    // the rival's turn as it plays out (the rival overlay on the map)
-    for (let g = 0; g < 40; g++) { const p = await page.evaluate(() => !!WZ.ui.play); if (p) break; await page.waitForTimeout(100); }
-    await page.waitForTimeout(1600);
-    if (await page.evaluate(() => !!WZ.ui.play)) await shot('rival-turn');
     if (!(await waitMine())) { await shot('over'); await ctx.close(); continue; }
     await page.waitForTimeout(250); await shot('turn-start');
     await page.waitForTimeout(1600); await closeSheets(); await shot('ready');
@@ -75,6 +71,10 @@ const SEED_NOW = +process.env.HUD_SEED || 140; // seed 140: an Engineer deck wit
     if (fire) { await fire.click(); await page.waitForTimeout(1800); await shot('fire-report'); await closeSheets(); }
     const end = await page.$('[data-act="endturn"]:not([disabled])');
     if (end) { await end.click(); await page.waitForTimeout(350); await shot('turn-end'); }
+    // the rival's turn as it plays out (the rival overlay on the map): wait until it has played a few cards
+    for (let g = 0; g < 150; g++) { const k = await page.evaluate(() => WZ.ui.play ? (WZ.G.players[1 - WZ.ui.me].play || []).length : -1); if (k >= 3) break; await page.waitForTimeout(100); }
+    await page.evaluate(() => { if (WZ.ui.sheet && WZ.ui.sheet.type !== 'over') { WZ.ui.sheet = null; WZ.renderLayer(); } });
+    await page.waitForTimeout(500); if (await page.evaluate(() => !!WZ.ui.play)) await shot('rival-turn');
     await waitMine();
     await page.waitForTimeout(1800); await closeSheets(); await shot('next-turn');
     await page.evaluate(() => { WZ.ui.sheet = { type: 'rules' }; WZ.renderLayer(); });
