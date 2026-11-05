@@ -4,7 +4,7 @@
 // DESIGN_REVIEW.md. Out-of-band numbers print a WARN line; the exit code is 0 unless the sim breaks.
 //
 //   npm run sim                 → 2000 seeded AI-vs-AI matches
-//   npm run sim -- 500 recon    → 500 matches, player 1 ablated (see ai_sim.js for the options)
+//   npm run sim -- 500 --match=aware-blind   → 500 matches, combo-aware vs combo-blind (see ai_sim.js for the options)
 //   npm run sim -- --json       → the raw ai_sim.js JSON only
 'use strict';
 const path = require('path');
@@ -32,11 +32,11 @@ function report(r) {
     const ok = v >= lo && v <= hi; if (!ok) warn++;
     lines.push(`${ok ? '  ok ' : 'WARN '} ${label.padEnd(28)} ${String(v).padStart(6)}   target ${lo}–${hi}`);
   };
-  lines.push(`Balance report: ${r.games} matches${r.ablate ? `, player 1 ablated: ${r.ablate}` : ''} (qa/tools/ai_sim.js)`);
+  lines.push(`Balance report: ${r.games} matches, ${r.match}${r.force ? `, forced ${r.force}` : ''} (qa/tools/ai_sim.js)`);
   if (r.errors || r.stuck || r.invariantFailures) { lines.push(`FAIL  errors ${r.errors}, stuck ${r.stuck}, invariant failures ${r.invariantFailures}`); warn++; }
   for (const [label, get, lo, hi] of BANDS) row(label, get(r), lo, hi);
   for (const [gun, txt] of Object.entries(r.winRateByGunHeldAtEnd || {})) row(`win rate holding ${gun}`, parseFloat(txt), GUN_BAND[0], GUN_BAND[1]);
-  lines.push(`      hit rate ${r.hitRate}, shots per match ${r.shotsPerGame}, draws ${r.draws}, P1 win rate ${r.p1WinRate}`);
+  lines.push(`      hit rate ${r.hitRate} (${r.hitRateExclMelee} without the knife; head's target 0.60–0.70), final circle ${r.finalCircleReached}, shots per match ${r.shotsPerGame}, draws ${r.draws}, P1 win rate ${r.p1WinRate}${r.awareWinRate != null && /blind/.test(r.match) ? `, combo-aware ${r.awareWinRate} (target ≥ 0.55)` : ''}`);
   lines.push(warn ? `${warn} number(s) outside the target bands (report only, not a failure).` : 'All numbers inside the target bands.');
   return { text: lines.join('\n'), warn };
 }

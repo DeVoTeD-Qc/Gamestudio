@@ -354,13 +354,13 @@ describe('end of turn and round', () => {
     assert.ok(s.players[p].hp === 40 || s.players[p].pos < B.lo);
     assert.ok(o === 1 - p);
   });
-  test('final circle: once one location is left the storm hits both for 2, then 3, 4, 5', () => {
+  test('final circle: once one location is left the storm hits both for 3, then 4, 5, 6', () => {
     const { s, me, them } = scenario(27);
     const w = me.pos; them.pos = w; s.round = 9;
     for (const e of s.envs) if (e.w !== w) e.state = 'gas';
     const hp = () => [me.hp, them.hp];
-    toRound(s, 10); assert.deepEqual(hp(), [38, 38]);
-    toRound(s, 11); assert.deepEqual(hp(), [35, 35]);
+    toRound(s, 10); assert.deepEqual(hp(), [37, 37]);
+    toRound(s, 11); assert.deepEqual(hp(), [33, 33]);
     assert.equal(s.over, false);
   });
   test('hard end after round 11: most Health wins (equal is a draw)', () => {

@@ -12,6 +12,8 @@
 //     --set=force:A                                          make the aware AI play one family only (A, R, S or E)
 //     --set=key:value,key:value                              override any CFG value, e.g. --set=hp:28,needPlus:1
 //     --curve                                                print the per-round curves as a table as well as JSON
+//     --rules                                                wb-rules package as shipped (spend aim + Recoil, Steady = free reveal, Rally,
+//                                                            gun and card retune); combine with --set=dodge:true to test Dodge on top
 'use strict';
 const path = require('path');
 const WD = require(path.join(__dirname, '..', '..', 'source', 'project-warbuilder', 'src', 'engine.js'));

@@ -11,7 +11,7 @@
 | `npm run build` | Writes `build/index.html`: `src/shell.html` with the CSS, icon sprite, engine, UI, art (base64) and card faces inlined. |
 | `npm test` | Rules unit tests, seeded determinism + golden replays, full-match invariants, AI-vs-AI smoke, print-and-play consistency, build smoke (`node:test`). `WB_MATCHES=2000 npm test` for more invariant matches. |
 | `npm run test:update-golden` | Re-records `test/golden/replays.json` after an intended rules or AI change. |
-| `npm run sim` | Balance report: `qa/tools/ai_sim.js` (2000 AI matches) against the target bands. Warns, never fails. `npm run sim -- 500 recon` passes arguments through. |
+| `npm run sim` | Balance report: `qa/tools/ai_sim.js` (2000 AI matches) against the target bands. Warns, never fails. `npm run sim -- 500 --match=aware-blind` passes arguments through (see qa/tools/ai_sim.js). |
 | `npm run pnp` / `npm run pnp:pdf` | Print-and-play sheet `src/pnp/pnp.html`, and the PDF next to it (needs Playwright and Chromium, found in this project or the global npm root). |
 
 ## Setup (once)
