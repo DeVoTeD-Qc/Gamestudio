@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_xefhe"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_h66p7"]
+
+[resource]
+script = ExtResource("2_h66p7")
+id = &"sentry"
+display_name = "Sentry"
+card_type = 0
+is_elite = false
+text = "Cover 1. Ignored for control; no elimination credit for destroying it."
+cost = 0
+weapon_class = 0
+firepower = 2
+armor = 4
+first_shot = false
+pick = false
+flank = false
+cover = 1
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = false
+grants_elimination_credit = false
+collectible = false
+effects = Array[ExtResource("1_xefhe")]([])

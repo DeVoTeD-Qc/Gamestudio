@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_2qyrw"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_at1w4"]
+
+[sub_resource type="Resource" id="Resource_4oykl"]
+script = ExtResource("1_2qyrw")
+trigger = 1
+kind = 9
+target = 2
+zone_scope = 6
+target_class = 0
+amount = 2
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_at1w4")
+id = &"ammo_resupply"
+display_name = "Ammo Resupply"
+card_type = 1
+is_elite = false
+text = "Resolves immediately: draw 2."
+cost = 1
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_2qyrw")]([SubResource("Resource_4oykl")])

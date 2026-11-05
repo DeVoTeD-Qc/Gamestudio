@@ -1,0 +1,401 @@
+# match_screen.gd
+# Purpose: Match screen (p08 layout). Composes the score bar, minimap intel strip,
+#   killfeed area, board (3 lanes), Operator panel, hand area, Supply counter and
+#   READY button with containers only (no hard-coded positions), and fills them
+#   from a snapshot Dictionary. No game rules here: match_controller.gd (child node
+#   MatchController, p09) owns the MatchState, turns input into intents and calls
+#   show_snapshot(); with autostart off (tests) the screen shows mock_match_data.gd.
+#   Buttons only emit signals. p09 view helpers: lane target states, the selected card /
+#   Operator, a drag ghost, a short toast for refusals and hints, and the card inspector.
+#
+# Look: the project theme (assets/ui/hud_theme.tres, set in project.godot gui/theme/custom)
+#   styles every theme_type_variation used here; nothing is styled in code.
+#
+# Layout (canvas_items + expand; the base is 1280x720 on desktop and drops to 960x540 on
+#   phones, see scripts/ui/screen_profile.gd, so an 844x390 phone gets a 1168x540 canvas):
+#   [SCORE BAR]        [INTEL MINIMAP]   [KILLFEED][PREVIEW][MENU]
+#   [ LEFT lane       ][ MID lane       ][ RIGHT lane      ]
+#   [OPERATOR PANEL][        HAND        ][SUPPLY / READY]
+#   Below COMPACT_HEIGHT (640) logical px the compact profile tightens bars, slots and buttons.
+#   f04: on the phone the killfeed shows in the top bar over INTEL + the free slot (2 lines,
+#   only while it has lines); it never covers the hand, the lanes or a button.
+# Dependencies: scenes in scenes/match/, screen_profile.gd, mock_match_data.gd.
+# Author: UI/UX Agent
+extends Control
+
+signal ready_pressed
+signal menu_pressed
+signal undo_pressed
+## After every show_snapshot() (p12: the outcome preview recomputes on it).
+signal snapshot_shown(snapshot: Dictionary)
+
+const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
+const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
+const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
+const BASE_MARGIN: Vector2 = Vector2(16, 12)
+const BASE_MARGIN_COMPACT: Vector2 = Vector2(12, 8)
+const KILLFEED_LINES: int = 3
+const TOAST_SECONDS: float = 2.2
+
+## Fill the screen with the mock snapshot on _ready (off once p04 drives the match).
+@export var use_mock_data: bool = true
+
+@onready var _safe_area: MarginContainer = %SafeArea
+@onready var _score_bar: Control = %ScoreBar
+@onready var _minimap: Control = %Minimap
+@onready var _killfeed: VBoxContainer = %KillfeedSlot
+@onready var _board: Control = %Board
+@onready var _operator_panel: Control = %OperatorPanel
+@onready var _hand: Control = %HandArea
+@onready var _supply_value: Label = %SupplyValue
+@onready var _supply_pips: HBoxContainer = %SupplyPips
+@onready var _ready_button: Button = %ReadyButton
+@onready var _menu_button: Button = %MenuButton
+@onready var _layout: VBoxContainer = %Layout
+@onready var _top_bar: HBoxContainer = %TopBar
+@onready var _bottom_bar: HBoxContainer = %BottomBar
+@onready var _action_panel: VBoxContainer = %ActionPanel
+@onready var _undo_button: Button = %UndoButton
+@onready var _action_buttons: VBoxContainer = %Buttons
+@onready var _toast: PanelContainer = %Toast
+@onready var _toast_label: Label = %ToastLabel
+@onready var _drag_layer: Control = %DragLayer
+@onready var _inspector: Control = %Inspector
+@onready var _fx: Control = %FeedbackDirector
+@onready var _killfeed_fx: Control = %Killfeed
+@onready var _killfeed_overlay: PanelContainer = %KillfeedOverlay
+@onready var _mulligan: Control = %MulliganPanel
+@onready var _preview_button: Button = %PreviewButton
+@onready var _preview: Control = %OutcomePreview
+@onready var _end_banner: Control = %MatchEndBanner
+@onready var _pause_menu: Control = %PauseMenu
+
+## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
+var compact: bool = false
+## Safe rect in canvas px (inside get_viewport_rect()); tests set it to simulate a notched
+## phone. Empty = read DisplayServer.get_display_safe_area() on mobile.
+var safe_area_override: Rect2 = Rect2()
+var _profile_set: bool = false
+var _ghost: Control = null
+var _toast_id: int = 0
+
+
+func _ready() -> void:
+	# p14 combat feedback (documentation/production/p14-fx-wiring.md): the director finds unit
+	# slots by uid on the board, the killfeed and the streak arc live in the HUD.
+	_fx.locator = BoardFxLocator.new(_board)
+	_fx.locator.anchors[&"score"] = _score_bar
+	_fx.locator.anchors[&"streak"] = _operator_panel
+	_fx.killfeed = _killfeed_fx
+	_fx.streak_arc = _operator_panel.get_streak_arc()
+	_top_bar.resized.connect(_layout_killfeed_overlay)
+	_minimap.resized.connect(_layout_killfeed_overlay)
+	_update_profile()
+	resized.connect(_update_profile)
+	get_viewport().size_changed.connect(_apply_safe_area)
+	_ready_button.pressed.connect(func() -> void: ready_pressed.emit())
+	_menu_button.pressed.connect(func() -> void: menu_pressed.emit())
+	_undo_button.pressed.connect(func() -> void: undo_pressed.emit())
+	if use_mock_data:
+		show_snapshot(MockMatchData.round_3_sample())
+
+
+## Renders a full match snapshot (shape: mock_match_data.gd).
+func show_snapshot(snapshot: Dictionary) -> void:
+	_score_bar.set_score(snapshot)
+	_minimap.set_intel(snapshot.get("lanes", []))
+	_board.set_lanes(snapshot.get("lanes", []))
+	_operator_panel.set_operator(snapshot)
+	_hand.set_hand(snapshot.get("hand", []))
+	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
+	_set_killfeed(snapshot.get("killfeed", []))
+	_set_actions(snapshot)
+	snapshot_shown.emit(snapshot)
+
+
+func get_hand() -> Control:
+	return _hand
+
+
+func get_operator_panel() -> Control:
+	return _operator_panel
+
+
+func get_inspector() -> Control:
+	return _inspector
+
+
+## p14 FeedbackDirector (plays the engine's events after READY).
+func get_fx() -> Control:
+	return _fx
+
+
+## f02 Round 1 mulligan panel.
+func get_mulligan_panel() -> Control:
+	return _mulligan
+
+
+## p12 outcome preview overlay (scenes/match/OutcomePreview.tscn) and its top-bar toggle.
+func get_preview() -> Control:
+	return _preview
+
+
+func get_preview_button() -> Button:
+	return _preview_button
+
+
+## f03 match result banner (scenes/match/MatchEndBanner.tscn).
+func get_end_banner() -> Control:
+	return _end_banner
+
+
+## f03 pause sheet opened by MENU (scenes/match/PauseMenu.tscn).
+func get_pause_menu() -> Control:
+	return _pause_menu
+
+
+func get_menu_button() -> Button:
+	return _menu_button
+
+
+func get_undo_button() -> Button:
+	return _undo_button
+
+
+func get_ready_button() -> Button:
+	return _ready_button
+
+
+## Short message over the board (refusal reasons, hints). Hides itself after TOAST_SECONDS.
+func show_toast(text: String) -> void:
+	_toast_id += 1
+	var my_id: int = _toast_id
+	_toast_label.text = text
+	_toast.show()
+	_toast.reset_size()
+	_toast.position.x = (size.x - _toast.size.x) * 0.5
+	get_tree().create_timer(TOAST_SECONDS).timeout.connect(func() -> void:
+		if my_id == _toast_id:
+			_toast.hide())
+
+
+func get_toast_text() -> String:
+	return _toast_label.text if _toast.visible else ""
+
+
+## A copy of `source` (a hand chip, or the Operator panel's name) that follows the pointer.
+func begin_drag_ghost(source: Control, pos: Vector2) -> void:
+	end_drag_ghost()
+	var ghost: Control = source.duplicate(0) as Control
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for n: Node in ghost.find_children("*", "Control", true, false):
+		(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.modulate = Color(1, 1, 1, 0.9)
+	ghost.size = source.size
+	_drag_layer.add_child(ghost)
+	_ghost = ghost
+	move_drag_ghost(pos)
+
+
+func move_drag_ghost(pos: Vector2) -> void:
+	if _ghost != null:
+		# Centred on the finger, a little above it so the finger doesn't hide the card.
+		_ghost.position = pos - Vector2(_ghost.size.x * 0.5, _ghost.size.y * 0.8)
+
+
+func end_drag_ghost() -> void:
+	if _ghost != null:
+		_ghost.queue_free()
+		_ghost = null
+
+
+func has_drag_ghost() -> bool:
+	return _ghost != null
+
+
+func _set_actions(snapshot: Dictionary) -> void:
+	var open: bool = bool(snapshot.get("deploy_open", true))
+	_ready_button.disabled = not open
+	var result: StringName = snapshot.get("result", &"")
+	if result != &"":
+		_ready_button.text = {&"player": "WON", &"enemy": "LOST"}.get(result, "DRAW")
+	else:
+		_ready_button.text = "READY" if open else "WAIT"
+	_undo_button.disabled = not bool(snapshot.get("can_undo", false))
+	var label: String = String(snapshot.get("undo_label", ""))
+	# The phone's UNDO is too narrow for the play's name (the toast names it after undoing).
+	_undo_button.text = "UNDO" if compact or _undo_button.disabled or label.is_empty() else "UNDO\n%s" % label
+
+
+## The controls that must stay on screen and never overlap (used by tests and QA).
+func get_key_controls() -> Dictionary:
+	return {
+		"menu": _menu_button, "score_bar": _score_bar, "minimap": _minimap,
+		"killfeed": _killfeed, "board": _board, "operator_panel": _operator_panel,
+		"hand": _hand, "supply": %SupplyCounter, "undo": _undo_button, "ready": _ready_button,
+		"preview": _preview_button,
+	}
+
+
+func get_board() -> Control:
+	return _board
+
+
+## Labels whose whole text must stay on screen (no clipping or ellipsis), for tests and QA.
+func get_important_labels() -> Array[Label]:
+	var out: Array[Label] = [_supply_value]
+	out.append_array(_score_bar.get_important_labels())
+	out.append_array(_minimap.get_important_labels())
+	for lane: Node in _board.get_lanes():
+		out.append_array(lane.get_important_labels())
+	out.append_array(_operator_panel.get_important_labels())
+	out.append_array(_hand.get_important_labels())
+	return out
+
+
+## Switches between the desktop and compact (phone) layout from the logical height.
+func _update_profile() -> void:
+	var want: bool = size.y > 0.0 and size.y < ScreenProfile.COMPACT_HEIGHT
+	if want == compact and _profile_set:
+		return
+	_profile_set = true
+	compact = want
+	_layout.add_theme_constant_override(&"separation", 6 if compact else 8)
+	_top_bar.custom_minimum_size.y = 64 if compact else 72
+	_menu_button.custom_minimum_size = Vector2(80, 64) if compact else Vector2(80, 72)
+	_preview_button.custom_minimum_size = Vector2(88, 64) if compact else Vector2(96, 72)
+	_bottom_bar.custom_minimum_size.y = 0 if compact else 212
+	_action_panel.custom_minimum_size.x = 140 if compact else 200
+	_ready_button.custom_minimum_size = Vector2(140, 64) if compact else Vector2(200, 96)
+	_place_undo_button()
+	_place_killfeed()
+	_board.set_compact(compact)
+	_operator_panel.set_compact(compact)
+	_hand.set_compact(compact)
+	_minimap.set_compact(compact)
+	_mulligan.set_compact(compact)
+	_end_banner.set_compact(compact)
+	_pause_menu.set_compact(compact)
+	_supply_pips.add_theme_constant_override(&"separation", 2 if compact else 4)
+	for pip: Node in _supply_pips.get_children():
+		(pip as Control).custom_minimum_size = _pip_size()
+	_apply_safe_area()
+
+
+## Desktop: UNDO sits above READY. Phone: there is no height for it there (the bottom bar would
+## push the board below 540 px) and no width beside READY (a 7-card hand would overlap below
+## 44 pt), so it moves to the top bar next to MENU, where the killfeed column has spare width.
+func _place_undo_button() -> void:
+	var parent: Node = _menu_button.get_parent() if compact else _action_buttons
+	if _undo_button.get_parent() != parent:
+		_undo_button.reparent(parent, false)
+	if compact:
+		parent.move_child(_undo_button, _menu_button.get_index())
+		_undo_button.custom_minimum_size = Vector2(88, 64)
+	else:
+		parent.move_child(_undo_button, 0)
+		_undo_button.custom_minimum_size = Vector2(200, 64)
+
+
+## Bug p18-005 / f04: the phone's top bar leaves the killfeed slot only ~130 px, which cut lines
+## to "BREACH ▸ KES"; v01 then moved it over the hand, which players still read as covering it.
+## Now, on the phone, the killfeed shows in the top bar over the INTEL strip plus the free slot
+## beside it (~450 px, 2 lines): eliminations happen in the firefight, after Reveal, when the
+## red-dot counts are spent, and it hides again as soon as its last line fades (lines live
+## COMPACT_FEED_LIFE of the usual time). It never covers the hand, the lanes or any button.
+## Desktop keeps it in its top-bar slot (3 lines).
+const COMPACT_FEED_LIFE: float = 0.75
+
+
+func _place_killfeed() -> void:
+	var parent: Node = _killfeed_overlay if compact else _killfeed
+	if _killfeed_fx.get_parent() != parent:
+		_killfeed_fx.reparent(parent, false)
+	_killfeed_fx.custom_minimum_size = Vector2.ZERO
+	_killfeed_fx.life_scale = COMPACT_FEED_LIFE if compact else 1.0
+	_layout_killfeed_overlay()
+
+
+## Phone: the overlay spans from the INTEL strip's left edge to the killfeed slot's right edge
+## (the PREVIEW button's left), top bar height.
+func _layout_killfeed_overlay() -> void:
+	_killfeed_overlay.visible = compact
+	if not compact:
+		return
+	var root: Transform2D = get_global_transform().affine_inverse()
+	var a: Rect2 = _minimap.get_global_rect()
+	var b: Rect2 = _killfeed.get_global_rect()
+	var bar: Rect2 = _top_bar.get_global_rect()
+	var top_left: Vector2 = root * Vector2(a.position.x, bar.position.y)
+	var bottom_right: Vector2 = root * Vector2(b.end.x, bar.end.y)
+	_killfeed_overlay.position = top_left
+	_killfeed_overlay.size = bottom_right - top_left
+
+
+## The killfeed lines' node (tests: p18-005 lines must fit it at 844x390).
+func get_killfeed() -> Control:
+	return _killfeed_fx
+
+
+## Where the killfeed draws, in global (canvas) coordinates: the phone overlay or the desktop
+## top-bar slot. Empty while the phone overlay is hidden (tests: f04 must never meet the hand
+## or a tap target).
+func get_killfeed_rect() -> Rect2:
+	if compact:
+		return _killfeed_overlay.get_global_rect() if _killfeed_overlay.modulate.a > 0.0 else Rect2()
+	return _killfeed_fx.get_global_rect()
+
+
+## Phone: the overlay stays laid out (so the feed knows its 2-line height before the first push)
+## and is only see-through while it has no lines.
+func _process(_delta: float) -> void:
+	if compact:
+		var show: bool = not _killfeed_fx.get_entries().is_empty()
+		if show:
+			_layout_killfeed_overlay()
+		_killfeed_overlay.modulate.a = 1.0 if show else 0.0
+
+
+## Supply pips: narrower on the phone so a 10-Supply bar fits the 140 px action column.
+func _pip_size() -> Vector2:
+	return Vector2(10, 16) if compact else Vector2(18, 20)
+
+
+func _set_supply(supply: int, supply_max: int) -> void:
+	_supply_value.text = "%d/%d" % [supply, supply_max]
+	for child: Node in _supply_pips.get_children():
+		_supply_pips.remove_child(child)
+		child.queue_free()
+	for i: int in supply_max:
+		var pip: Panel = Panel.new()
+		pip.theme_type_variation = &"SupplyPip" if i < supply else &"SupplyPipSpent"
+		pip.custom_minimum_size = _pip_size()
+		_supply_pips.add_child(pip)
+
+
+## p14: the Killfeed (scenes/fx/Killfeed.tscn in %KillfeedSlot) is fed by FeedbackDirector as
+## eliminations play, so the snapshot's killfeed list is no longer drawn here.
+func _set_killfeed(_lines: Array) -> void:
+	pass
+
+
+## Keeps the HUD clear of phone notches / home indicator (Xogot on iPhone, mobile web).
+func _apply_safe_area() -> void:
+	var margin_lt: Vector2 = BASE_MARGIN_COMPACT if compact else BASE_MARGIN
+	var margin_rb: Vector2 = margin_lt
+	var on_phone: bool = OS.has_feature("mobile") or OS.has_feature("web_ios") or OS.has_feature("web_android")
+	if on_phone or safe_area_override.has_area():
+		var window: Vector2 = Vector2(DisplayServer.window_get_size())
+		var safe: Rect2 = Rect2(DisplayServer.get_display_safe_area())
+		if safe_area_override.has_area():
+			window = get_viewport_rect().size
+			safe = safe_area_override
+		if window.x > 0.0 and window.y > 0.0 and safe.size.x > 0.0:
+			var to_canvas: Vector2 = get_viewport_rect().size / window
+			margin_lt = margin_lt.max(safe.position * to_canvas)
+			margin_rb = margin_rb.max((window - safe.end) * to_canvas)
+	_safe_area.add_theme_constant_override(&"margin_left", int(margin_lt.x))
+	_safe_area.add_theme_constant_override(&"margin_top", int(margin_lt.y))
+	_safe_area.add_theme_constant_override(&"margin_right", int(margin_rb.x))
+	_safe_area.add_theme_constant_override(&"margin_bottom", int(margin_rb.y))
+	_inspector.set_safe_margins(margin_lt, margin_rb)

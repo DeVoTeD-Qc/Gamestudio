@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="SquadData" load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_l37uv"]
+[ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="2_830u0"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_xfd3u"]
+[ext_resource type="Resource" path="res://data/cards/point_man.tres" id="4_4cof5"]
+[ext_resource type="Resource" path="res://data/cards/breacher.tres" id="5_8x67f"]
+[ext_resource type="Resource" path="res://data/cards/flanker.tres" id="6_i4fxk"]
+[ext_resource type="Resource" path="res://data/cards/rifleman.tres" id="7_yirca"]
+[ext_resource type="Resource" path="res://data/cards/shieldman.tres" id="8_mytj2"]
+[ext_resource type="Resource" path="res://data/cards/combat_medic.tres" id="9_i0jqt"]
+[ext_resource type="Resource" path="res://data/cards/callout.tres" id="10_ttm0t"]
+[ext_resource type="Resource" path="res://data/cards/flank_route.tres" id="11_w2tgs"]
+[ext_resource type="Resource" path="res://data/cards/breach_and_clear.tres" id="12_63hpi"]
+[ext_resource type="Resource" path="res://data/cards/ammo_resupply.tres" id="13_v3h67"]
+[ext_resource type="Resource" path="res://data/cards/tripwire_charge.tres" id="14_acsng"]
+[ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="15_yp70b"]
+[ext_resource type="Resource" path="res://data/loadout/sentry_turret.tres" id="16_p6wnc"]
+[ext_resource type="Resource" path="res://data/loadout/frag_grenade.tres" id="17_2w26x"]
+[ext_resource type="Resource" path="res://data/loadout/wasp_9.tres" id="18_l5u13"]
+[ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="19_dl83j"]
+[ext_resource type="Resource" path="res://data/loadout/p12_sidearm.tres" id="20_bw8vc"]
+[ext_resource type="Resource" path="res://data/loadout/flashbang.tres" id="21_jf062"]
+
+[resource]
+script = ExtResource("19_dl83j")
+id = &"squad_rusher"
+display_name = "SandViper_07"
+clan_tag = "DSRT"
+personality = 0
+deck = Array[ExtResource("3_xfd3u")]([ExtResource("4_4cof5"), ExtResource("4_4cof5"), ExtResource("4_4cof5"), ExtResource("5_8x67f"), ExtResource("5_8x67f"), ExtResource("5_8x67f"), ExtResource("6_i4fxk"), ExtResource("6_i4fxk"), ExtResource("7_yirca"), ExtResource("7_yirca"), ExtResource("8_mytj2"), ExtResource("9_i0jqt"), ExtResource("10_ttm0t"), ExtResource("11_w2tgs"), ExtResource("11_w2tgs"), ExtResource("12_63hpi"), ExtResource("13_v3h67"), ExtResource("14_acsng")])
+primary = ExtResource("18_l5u13")
+attachments = Array[ExtResource("1_l37uv")]([ExtResource("2_830u0")])
+secondary = ExtResource("20_bw8vc")
+lethal = ExtResource("17_2w26x")
+tactical = ExtResource("21_jf062")
+perks = Array[ExtResource("1_l37uv")]([])
+killstreaks = Array[ExtResource("1_l37uv")]([ExtResource("15_yp70b"), ExtResource("16_p6wnc")])
+weight_damage_dealt = 1.5
+weight_damage_taken = 0.5
+weight_zone_control = 2.0
+weight_deny_streak = 3.0
+second_best_chance = 0.15
+preferred_ranges = Array[int]([0])

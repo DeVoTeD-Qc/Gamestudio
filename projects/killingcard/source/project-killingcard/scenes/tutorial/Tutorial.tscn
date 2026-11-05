@@ -1,0 +1,140 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/tutorial/tutorial_director.gd" id="1_dir"]
+[ext_resource type="Script" path="res://scripts/ui/tutorial/coach_overlay.gd" id="2_coach"]
+
+[node name="Tutorial" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_dir")
+
+[node name="MatchSlot" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CoachOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_coach")
+
+[node name="CoachCard" type="PanelContainer" parent="CoachOverlay"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_right = 560.0
+offset_bottom = 160.0
+mouse_filter = 2
+theme_type_variation = &"ToastPanel"
+
+[node name="Column" type="VBoxContainer" parent="CoachOverlay/CoachCard"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="CoachOverlay/CoachCard/Column"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="StepTitle" type="Label" parent="CoachOverlay/CoachCard/Column/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudAccent"
+text = "TRAINING DRILL"
+
+[node name="StepCount" type="Label" parent="CoachOverlay/CoachCard/Column/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "1 / 17"
+
+[node name="Body" type="Label" parent="CoachOverlay/CoachCard/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Coach text"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="CoachOverlay/CoachCard/Column"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="SkipButton" type="Button" parent="CoachOverlay/CoachCard/Column/Buttons" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "SKIP TUTORIAL"
+
+[node name="NextButton" type="Button" parent="CoachOverlay/CoachCard/Column/Buttons" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 64)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "NEXT"
+
+[node name="EndPanel" type="PanelContainer" parent="CoachOverlay"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+offset_right = 560.0
+offset_bottom = 240.0
+theme_type_variation = &"ToastPanel"
+
+[node name="Column" type="VBoxContainer" parent="CoachOverlay/EndPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EndTitle" type="Label" parent="CoachOverlay/EndPanel/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"RunTitle"
+text = "DRILL COMPLETE"
+horizontal_alignment = 1
+
+[node name="EndText" type="Label" parent="CoachOverlay/EndPanel/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Summary"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="CoachOverlay/EndPanel/Column"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="ReplayButton" type="Button" parent="CoachOverlay/EndPanel/Column/Buttons" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "REPLAY"
+
+[node name="DoneButton" type="Button" parent="CoachOverlay/EndPanel/Column/Buttons" groups=["tap_target"]]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "DONE"

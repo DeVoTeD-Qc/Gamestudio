@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_0ax05"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_jr87e"]
+
+[sub_resource type="Resource" id="Resource_hrk3m"]
+script = ExtResource("1_0ax05")
+trigger = 1
+kind = 11
+target = 2
+zone_scope = 5
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 2
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_7o0ju"]
+script = ExtResource("1_0ax05")
+trigger = 1
+kind = 5
+target = 7
+zone_scope = 5
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 2
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_jr87e")
+id = &"recon_drone"
+display_name = "Recon Drone"
+slot = 6
+text = "This round and next: enemy deployments are shown face-up during Deploy, and enemy units lose Cover."
+weapon_class = 0
+operator_firepower = 0
+operator_armor = 0
+rotations_per_round = 1
+attachments = Array[Resource]([])
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+cooldown_rounds = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 2
+effects = Array[ExtResource("1_0ax05")]([SubResource("Resource_hrk3m"), SubResource("Resource_7o0ju")])

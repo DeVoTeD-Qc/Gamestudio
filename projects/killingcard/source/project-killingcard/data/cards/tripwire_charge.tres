@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_7mdf1"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_gqmvq"]
+
+[sub_resource type="Resource" id="Resource_8exy0"]
+script = ExtResource("1_7mdf1")
+trigger = 8
+kind = 1
+target = 11
+zone_scope = 0
+target_class = 0
+amount = 3
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_gqmvq")
+id = &"tripwire_charge"
+display_name = "Tripwire Charge"
+card_type = 2
+is_elite = false
+text = "Hidden in a zone: the next enemy unit to arrive there takes 3 damage."
+cost = 2
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = true
+consumed_on_trigger = true
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_7mdf1")]([SubResource("Resource_8exy0")])

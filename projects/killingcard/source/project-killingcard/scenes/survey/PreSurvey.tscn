@@ -1,0 +1,154 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/survey/pre_survey.gd" id="1_s"]
+[ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
+
+[node name="PreSurvey" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_s")
+
+[node name="Background" type="ColorRect" parent="."]
+material = ExtResource("v01_bg")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0705882, 0.0862745, 0.101961, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(880, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_type_variation = &"HudBig"
+text = "Three quick questions"
+
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Shooter" type="HBoxContainer" parent="Center/Panel/Margin/Body/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Question" type="Label" parent="Center/Panel/Margin/Body/Rows/Shooter"]
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Do you play shooter games most weeks?"
+autowrap_mode = 3
+size_flags_horizontal = 3
+vertical_alignment = 1
+
+[node name="Yes" type="Button" parent="Center/Panel/Margin/Body/Rows/Shooter"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Yes"
+toggle_mode = true
+
+[node name="No" type="Button" parent="Center/Panel/Margin/Body/Rows/Shooter"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "No"
+toggle_mode = true
+
+[node name="Card" type="HBoxContainer" parent="Center/Panel/Margin/Body/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Question" type="Label" parent="Center/Panel/Margin/Body/Rows/Card"]
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Do you play card games most weeks? (digital or tabletop)"
+autowrap_mode = 3
+size_flags_horizontal = 3
+vertical_alignment = 1
+
+[node name="Yes" type="Button" parent="Center/Panel/Margin/Body/Rows/Card"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Yes"
+toggle_mode = true
+
+[node name="No" type="Button" parent="Center/Panel/Margin/Body/Rows/Card"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "No"
+toggle_mode = true
+
+[node name="Deckbuilder" type="HBoxContainer" parent="Center/Panel/Margin/Body/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Question" type="Label" parent="Center/Panel/Margin/Body/Rows/Deckbuilder"]
+layout_mode = 2
+theme_type_variation = &"HudHeader"
+text = "Have you played a deckbuilder? (you build your deck during a run)"
+autowrap_mode = 3
+size_flags_horizontal = 3
+vertical_alignment = 1
+
+[node name="Yes" type="Button" parent="Center/Panel/Margin/Body/Rows/Deckbuilder"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "Yes"
+toggle_mode = true
+
+[node name="No" type="Button" parent="Center/Panel/Margin/Body/Rows/Deckbuilder"]
+custom_minimum_size = Vector2(130, 64)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "No"
+toggle_mode = true
+
+[node name="Footer" type="HBoxContainer" parent="Center/Panel/Margin/Body"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/Body/Footer"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "This only sorts answers into groups. Nobody is identified."
+autowrap_mode = 3
+size_flags_horizontal = 3
+vertical_alignment = 1
+
+[node name="ContinueButton" type="Button" parent="Center/Panel/Margin/Body/Footer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "Continue"

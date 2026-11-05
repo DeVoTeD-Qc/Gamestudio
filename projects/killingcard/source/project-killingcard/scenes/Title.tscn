@@ -1,0 +1,204 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/title.gd" id="1_title"]
+[ext_resource type="Material" path="res://assets/ui/backdrop_material.tres" id="v01_bg"]
+
+[sub_resource type="Gradient" id="Gradient_scrim"]
+offsets = PackedFloat32Array(0, 0.42, 0.78)
+colors = PackedColorArray(0.0705882, 0.0862745, 0.101961, 0.94, 0.0705882, 0.0862745, 0.101961, 0.7, 0.0705882, 0.0862745, 0.101961, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_scrim"]
+gradient = SubResource("Gradient_scrim")
+width = 256
+height = 4
+fill_to = Vector2(1, 0)
+
+[node name="Title" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_title")
+
+[node name="Background" type="ColorRect" parent="."]
+material = ExtResource("v01_bg")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.07, 0.086, 0.102, 1)
+
+[node name="KeyArt" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Scrim" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_scrim")
+expand_mode = 1
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Center" type="HBoxContainer" parent="SafeArea"]
+layout_mode = 2
+
+[node name="LeftGap" type="Control" parent="SafeArea/Center"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Column" type="VBoxContainer" parent="SafeArea/Center"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"TitleWordmark"
+text = "KILLSTREAK"
+
+[node name="SubtitleLabel" type="Label" parent="SafeArea/Center/Column"]
+layout_mode = 2
+theme_type_variation = &"TitleTagline"
+text = "//// TACTICAL CARD ROGUELITE · PROTOTYPE"
+
+[node name="Gap" type="Control" parent="SafeArea/Center/Column"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="ContinueButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"ReadyButton"
+text = "CONTINUE RUN"
+
+[node name="StartButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "START NEW RUN"
+
+[node name="TutorialButton" type="Button" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 72)
+layout_mode = 2
+theme_type_variation = &"HudButton"
+text = "TUTORIAL"
+
+[node name="OfferPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="OfferColumn" type="VBoxContainer" parent="SafeArea/Center/Column/OfferPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OfferLabel" type="Label" parent="SafeArea/Center/Column/OfferPanel/OfferColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "New here? Play the 3-minute drill."
+autowrap_mode = 3
+
+[node name="OfferRow" type="HBoxContainer" parent="SafeArea/Center/Column/OfferPanel/OfferColumn"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PlayDrillButton" type="Button" parent="SafeArea/Center/Column/OfferPanel/OfferColumn/OfferRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"ReadyButton"
+text = "PLAY DRILL"
+
+[node name="NotNowButton" type="Button" parent="SafeArea/Center/Column/OfferPanel/OfferColumn/OfferRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "NOT NOW"
+
+[node name="ConfirmPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="ConfirmColumn" type="VBoxContainer" parent="SafeArea/Center/Column/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ConfirmLabel" type="Label" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = "Start over? Your saved run will be replaced."
+autowrap_mode = 3
+
+[node name="ConfirmRow" type="HBoxContainer" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ReplaceButton" type="Button" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn/ConfirmRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "REPLACE"
+
+[node name="KeepButton" type="Button" parent="SafeArea/Center/Column/ConfirmPanel/ConfirmColumn/ConfirmRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudButton"
+text = "KEEP IT"
+
+[node name="WarningPanel" type="PanelContainer" parent="SafeArea/Center/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"NoticePanel"
+
+[node name="WarningLabel" type="Label" parent="SafeArea/Center/Column/WarningPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+text = ""
+autowrap_mode = 3

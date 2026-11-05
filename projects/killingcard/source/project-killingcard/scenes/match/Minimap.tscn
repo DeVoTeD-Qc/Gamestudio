@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="1_minimap"]
+
+[node name="Minimap" type="PanelContainer"]
+theme_type_variation = &"HudPanelDark"
+script = ExtResource("1_minimap")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Row"]
+layout_mode = 2
+theme_type_variation = &"HudSubtle"
+text = "INTEL"
+vertical_alignment = 1
+
+[node name="Cells" type="HBoxContainer" parent="Row"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4

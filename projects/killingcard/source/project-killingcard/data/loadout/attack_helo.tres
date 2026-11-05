@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_d8f8c"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_4v1cj"]
+
+[sub_resource type="Resource" id="Resource_8u4h6"]
+script = ExtResource("1_d8f8c")
+trigger = 6
+kind = 1
+target = 5
+zone_scope = 5
+target_class = 0
+amount = 2
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 2
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_4v1cj")
+id = &"attack_helo"
+display_name = "Attack Helo"
+slot = 6
+text = "Start of this round's and next round's firefights: 2 damage to the enemy point man in every zone."
+weapon_class = 0
+operator_firepower = 0
+operator_armor = 0
+rotations_per_round = 1
+attachments = Array[Resource]([])
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+cooldown_rounds = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 5
+effects = Array[ExtResource("1_d8f8c")]([SubResource("Resource_8u4h6")])

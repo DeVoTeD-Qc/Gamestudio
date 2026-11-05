@@ -1,0 +1,50 @@
+{
+  "project": {
+    "name": "KillingCard",
+    "concept": "Killstreak's lane card battler rebuilt on vertical columns, where every card is a wide calling-card banner: the art decides whether it's a unit or a tactic, and many arts share one gameplay card.",
+    "genre": "Strategy",
+    "platform": "Web",
+    "audience": "Core",
+    "timeline": "Short",
+    "engine": "Godot",
+    "engine_version": "4.4.1",
+    "mode": "prototype",
+    "competitors": "2",
+    "unique_selling_point": "Killstreak, Marvel Snap, Gwent",
+    "version": "1.0.0",
+    "created": "2026-11-05T18:03:54.436568",
+    "phase": "Market Analysis",
+    "status": "active",
+    "based_on": "killstreak (copied source; Killstreak and CallingCard stay untouched as backups)"
+  },
+  "development_rules": [
+    "Calling cards finally get a purpose: every banner you collect is a playable card, with shared gameplay and alternate art."
+  ],
+  "team": {
+    "active_agents": [
+      "master_orchestrator",
+      "producer_agent",
+      "market_analyst",
+      "data_scientist",
+      "sr_game_designer",
+      "mechanics_developer",
+      "qa_agent"
+    ],
+    "lead_agent": "producer_agent",
+    "orchestrator": "master_orchestrator"
+  },
+  "milestones": [],
+  "metrics": {
+    "velocity_target": "10 tasks/week",
+    "bug_threshold": "5 critical, 20 minor",
+    "performance_target": "60 FPS, < 3s load"
+  },
+  "risks": [
+    {
+      "risk": "Scope creep",
+      "probability": "Medium",
+      "impact": "High",
+      "mitigation": "Strict feature freeze after design phase"
+    }
+  ]
+}

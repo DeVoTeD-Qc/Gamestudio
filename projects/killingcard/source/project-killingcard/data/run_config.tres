@@ -1,0 +1,135 @@
+[gd_resource type="Resource" script_class="RunConfig" load_steps=46 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_ev4kb"]
+[ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="2_t8ugb"]
+[ext_resource type="Resource" path="res://data/loadout/mortar_barrage.tres" id="3_2tsgs"]
+[ext_resource type="Resource" path="res://data/loadout/sentry_turret.tres" id="4_l3f5s"]
+[ext_resource type="Resource" path="res://data/loadout/attack_helo.tres" id="5_gkcsc"]
+[ext_resource type="Script" path="res://scripts/data/run_match_data.gd" id="6_hk2hf"]
+[ext_resource type="Resource" path="res://data/maps/port_vasel.tres" id="7_aw1hj"]
+[ext_resource type="Resource" path="res://data/squads/squad_rusher.tres" id="8_mbgj7"]
+[ext_resource type="Resource" path="res://data/squads/squad_anchor.tres" id="9_vimp0"]
+[ext_resource type="Resource" path="res://data/squads/squad_black_meridian.tres" id="10_jr484"]
+[ext_resource type="Resource" path="res://data/loadout/streak_discipline.tres" id="11_sexiq"]
+[ext_resource type="Resource" path="res://data/loadout/field_salvage.tres" id="12_vn4hk"]
+[ext_resource type="Resource" path="res://data/loadout/grit.tres" id="13_1oiq7"]
+[ext_resource type="Resource" path="res://data/loadout/objective_focus.tres" id="14_nob16"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="15_qok0a"]
+[ext_resource type="Resource" path="res://data/cards/flanker.tres" id="16_sl0n6"]
+[ext_resource type="Resource" path="res://data/cards/demolitions_expert.tres" id="17_d00ys"]
+[ext_resource type="Resource" path="res://data/cards/breach_and_clear.tres" id="18_cbmx1"]
+[ext_resource type="Resource" path="res://data/cards/comms_relay.tres" id="19_yu1f1"]
+[ext_resource type="Resource" path="res://data/cards/okafor_anvil.tres" id="20_757h7"]
+[ext_resource type="Resource" path="res://data/cards/halek_wren.tres" id="21_yt66f"]
+[ext_resource type="Resource" path="res://data/cards/point_man.tres" id="22_gmig0"]
+[ext_resource type="Resource" path="res://data/cards/marksman.tres" id="23_84r8d"]
+[ext_resource type="Resource" path="res://data/cards/combat_medic.tres" id="24_4l4qd"]
+[ext_resource type="Resource" path="res://data/cards/breacher.tres" id="25_2fo86"]
+[ext_resource type="Resource" path="res://data/cards/gunner.tres" id="26_1qn3b"]
+[ext_resource type="Resource" path="res://data/cards/shieldman.tres" id="27_gia51"]
+[ext_resource type="Resource" path="res://data/cards/recon_specialist.tres" id="28_1pqw0"]
+[ext_resource type="Resource" path="res://data/cards/callout.tres" id="29_epug7"]
+[ext_resource type="Resource" path="res://data/cards/ammo_resupply.tres" id="30_vxiig"]
+[ext_resource type="Resource" path="res://data/cards/flank_route.tres" id="31_re5x2"]
+[ext_resource type="Resource" path="res://data/cards/suppressing_fire.tres" id="32_1daox"]
+[ext_resource type="Resource" path="res://data/cards/hold_the_line.tres" id="33_gt2np"]
+[ext_resource type="Resource" path="res://data/cards/tripwire_charge.tres" id="34_upcpp"]
+[ext_resource type="Script" path="res://scripts/data/run_config.gd" id="35_yqpqb"]
+[ext_resource type="Resource" path="res://data/cards/rifleman.tres" id="36_y1ak3"]
+[ext_resource type="Resource" path="res://data/loadout/frag_grenade.tres" id="37_1w2cq"]
+[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="38_7m22p"]
+[ext_resource type="Resource" path="res://data/loadout/p12_sidearm.tres" id="39_13yh0"]
+[ext_resource type="Resource" path="res://data/loadout/flashbang.tres" id="40_13mxe"]
+
+[sub_resource type="Resource" id="Resource_gwq4b"]
+script = ExtResource("6_hk2hf")
+bracket = 1
+is_rival = false
+squad = ExtResource("8_mbgj7")
+mode = 0
+map = ExtResource("7_aw1hj")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 0
+
+[sub_resource type="Resource" id="Resource_ggcg5"]
+script = ExtResource("6_hk2hf")
+bracket = 1
+is_rival = false
+squad = ExtResource("9_vimp0")
+mode = 0
+map = ExtResource("7_aw1hj")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 0
+
+[sub_resource type="Resource" id="Resource_83mpb"]
+script = ExtResource("6_hk2hf")
+bracket = 2
+is_rival = false
+squad = ExtResource("8_mbgj7")
+mode = 1
+map = ExtResource("7_aw1hj")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 1
+
+[sub_resource type="Resource" id="Resource_nnndg"]
+script = ExtResource("6_hk2hf")
+bracket = 2
+is_rival = false
+squad = ExtResource("9_vimp0")
+mode = 1
+map = ExtResource("7_aw1hj")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 1
+
+[sub_resource type="Resource" id="Resource_f68of"]
+script = ExtResource("6_hk2hf")
+bracket = 2
+is_rival = true
+squad = ExtResource("10_jr484")
+mode = 0
+map = ExtResource("7_aw1hj")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 1
+
+[resource]
+script = ExtResource("35_yqpqb")
+id = &"run_default"
+display_name = "Prototype Run"
+matches = Array[ExtResource("6_hk2hf")]([SubResource("Resource_gwq4b"), SubResource("Resource_ggcg5"), SubResource("Resource_83mpb"), SubResource("Resource_nnndg"), SubResource("Resource_f68of")])
+tickets = 3
+supply_drop_choices = 3
+weapon_level_after_matches = PackedInt32Array(1, 3, 4)
+attachment_choices = 2
+perk_offer_after_matches = PackedInt32Array(2, 4)
+perk_choices = 2
+starter_deck = Array[ExtResource("15_qok0a")]([ExtResource("36_y1ak3"), ExtResource("36_y1ak3"), ExtResource("36_y1ak3"), ExtResource("22_gmig0"), ExtResource("22_gmig0"), ExtResource("23_84r8d"), ExtResource("23_84r8d"), ExtResource("24_4l4qd"), ExtResource("24_4l4qd"), ExtResource("29_epug7"), ExtResource("29_epug7"), ExtResource("25_2fo86"), ExtResource("25_2fo86"), ExtResource("26_1qn3b"), ExtResource("27_gia51"), ExtResource("30_vxiig"), ExtResource("31_re5x2"), ExtResource("32_1daox"), ExtResource("33_gt2np"), ExtResource("34_upcpp")])
+starter_primary = ExtResource("38_7m22p")
+starter_secondary = ExtResource("39_13yh0")
+starter_lethal = ExtResource("37_1w2cq")
+starter_tactical = ExtResource("40_13mxe")
+starter_killstreaks = Array[ExtResource("1_ev4kb")]([ExtResource("2_t8ugb"), ExtResource("3_2tsgs"), ExtResource("5_gkcsc")])
+reward_pool = Array[ExtResource("15_qok0a")]([ExtResource("16_sl0n6"), ExtResource("16_sl0n6"), ExtResource("17_d00ys"), ExtResource("17_d00ys"), ExtResource("18_cbmx1"), ExtResource("18_cbmx1"), ExtResource("19_yu1f1"), ExtResource("19_yu1f1"), ExtResource("20_757h7"), ExtResource("21_yt66f"), ExtResource("22_gmig0"), ExtResource("23_84r8d"), ExtResource("24_4l4qd"), ExtResource("25_2fo86"), ExtResource("26_1qn3b"), ExtResource("27_gia51"), ExtResource("28_1pqw0"), ExtResource("29_epug7"), ExtResource("30_vxiig"), ExtResource("31_re5x2"), ExtResource("32_1daox"), ExtResource("33_gt2np"), ExtResource("34_upcpp")])
+killstreak_pool = Array[ExtResource("1_ev4kb")]([ExtResource("2_t8ugb"), ExtResource("3_2tsgs"), ExtResource("4_l3f5s"), ExtResource("5_gkcsc")])
+perk_pool = Array[ExtResource("1_ev4kb")]([ExtResource("11_sexiq"), ExtResource("12_vn4hk"), ExtResource("13_1oiq7"), ExtResource("14_nob16")])
+perk_slots = 3
+killstreak_slots = 3
+deck_size = 20
+opening_hand = 4
+round1_extra_draw = 1
+free_mulligans = 1
+draws_per_round = 2
+hand_cap = 7
+supply_round_offset = 1
+supply_cap = 7
+zone_capacity = 4
+default_cooldown = 3
+zone_control_target = 6
+firefight_target = 7
+round_cap = 8
+overtime_draw_round = 10
+detonator_arm_rounds = 2
+range_bonus_smg = PackedInt32Array(1, 0, 0)
+range_bonus_shotgun = PackedInt32Array(2, 0, -1)
+range_bonus_ar = PackedInt32Array(0, 1, 0)
+range_bonus_sniper = PackedInt32Array(-1, 0, 2)
+range_bonus_lmg = PackedInt32Array(0, 0, 0)

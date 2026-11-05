@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_1i8gn"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_ala0a"]
+
+[sub_resource type="Resource" id="Resource_plpms"]
+script = ExtResource("1_1i8gn")
+trigger = 4
+kind = 14
+target = 2
+zone_scope = 6
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_ala0a")
+id = &"halek_wren"
+display_name = "Lt. Halek \"Wren\""
+card_type = 0
+is_elite = true
+text = "Pick. Her eliminations give +1 extra streak."
+cost = 5
+weapon_class = 4
+firepower = 4
+armor = 3
+first_shot = false
+pick = true
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+effects = Array[ExtResource("1_1i8gn")]([SubResource("Resource_plpms")])

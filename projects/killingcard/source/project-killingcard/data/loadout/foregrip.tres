@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_altpx"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_1us4h"]
+
+[resource]
+script = ExtResource("2_1us4h")
+id = &"foregrip"
+display_name = "Foregrip"
+slot = 1
+text = "Cover 1."
+weapon_class = 0
+operator_firepower = 0
+operator_armor = 0
+rotations_per_round = 1
+attachments = Array[Resource]([])
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = false
+pick = false
+flank = false
+cover = 1
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+cooldown_rounds = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 0
+effects = Array[ExtResource("1_altpx")]([])

@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/board.gd" id="1_board"]
+[ext_resource type="PackedScene" path="res://scenes/match/Lane.tscn" id="2_lane"]
+
+[node name="Board" type="HBoxContainer"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+script = ExtResource("1_board")
+
+[node name="LaneLeft" parent="." instance=ExtResource("2_lane")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LaneMid" parent="." instance=ExtResource("2_lane")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LaneRight" parent="." instance=ExtResource("2_lane")]
+unique_name_in_owner = true
+layout_mode = 2
