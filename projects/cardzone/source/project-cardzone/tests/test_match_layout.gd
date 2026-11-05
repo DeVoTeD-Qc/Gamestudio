@@ -166,7 +166,10 @@ func test_layout_tablet_uses_the_room() -> void:
 	var setup: Array = await _spawn(TABLET, MockMatchData.mid_state())
 	var m: Control = setup[1]
 	assert_true(m.tablet, "iPad uses the tablet layout")
-	assert_true(m.card_px.y >= d_card.y * 1.1, "iPad cards %s are above the desktop's %s" % [m.card_px, d_card])
+	# cz-clarity: a 5-card hand sits side by side on every screen (the fan hid the cards' numbers), so
+	# the iPad's cards are capped by the right column's width instead of growing above the desktop's.
+	assert_true(m.card_px.y >= 164.0, "iPad cards %s stay at least the phone's" % [m.card_px])
+	assert_true(5.0 * m.card_px.x + 4.0 * 8.0 <= (m.get_node("%HandCards") as Control).size.x + EPS, "a 5-card hand fits side by side on the iPad (%s)" % [m.card_px])
 	var map: CzMap = m.get_map()
 	assert_true(map.px_per_pt() >= d_map * 1.08, "iPad map scale %.2f vs desktop %.2f" % [map.px_per_pt(), d_map])
 	# Empty band in the left column: the map's unused height (drawn centred) plus any slack.
