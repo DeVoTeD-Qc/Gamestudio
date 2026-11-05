@@ -1,14 +1,15 @@
 // Warbuilder "Engine & Synergy" rules prototype + AI-vs-AI simulator (studio QA tool, board task wb-syn, 2026-11-05).
 // Spec: projects/warbuilder/documentation/design/engine-synergy-spec.md
 //
-// A standalone, seeded model of the PROPOSED rules (Squad / Loadout / Streak / Mark / Pierce / Scrap, fixed 7-location map that
-// closes from both ends, escalating final circle, hard end, close quarters, +1 on the first ladder step). It only READS the shipped
+// A standalone, seeded model of the PROPOSED rules (Squad / Loadout / Steady / Mark / Pierce / Scrap / Reaction, Hot Drop, a fixed 7-location
+// map that closes from both ends, escalating final circle, hard end, close quarters, +1 on every ladder step). It only READS the shipped
 // engine for gun, location and gun-set data; it never changes the game source, and ai_sim.js is untouched.
 //
 //   node projects/warbuilder/qa/tools/ai_sim_syn.js [games=2000] [options]
 //     --match=aware-blind | aware-aware | blind-blind      who plays (default aware-blind; seats alternate every game)
-//     --flat                                                 switch Squad and Streak off (the "no synergy" control)
-//     --spec                                                 also switch on Specialist ranks (optional rule, see spec §3.4)
+//     --flat                                                 switch Squad off (the "no synergy" control)
+//     --spec                                                 also switch on Specialist ranks (optional rule, see spec)
+//     --set=force:A                                          make the aware AI play one family only (A, R, S or E)
 //     --set=key:value,key:value                              override any CFG value, e.g. --set=hp:28,needPlus:1
 //     --curve                                                print the per-round curves as a table as well as JSON
 'use strict';
@@ -17,27 +18,34 @@ const WD = require(path.join(__dirname, '..', '..', 'source', 'project-warbuilde
 
 // ---------------- configuration (every number the spec names) ----------------
 const CFG = {
-  hp: 30, hand: 5, lowHp: 10, lowHpDraw: 1,
-  buyCap: 2,                 // buys per turn (loot + Buy Station together)
+  // ---- proposed rules (spec defaults) ----
+  hp: 40, hand: 5, lowHp: 10, lowHpDraw: 1,
+  buyCap: 2,                 // buys per turn (loot stacks + Buy Station together); Engineer "+1 Buy" raises it
   loadoutSlots: 2,           // Loadout row size
-  needPlus: 1,               // +1 Hit Marker on every ladder step (shot odds 60-70%)
-  closeQuarters: true,       // distance 0: ignore cover and Armor
+  needPlus: 1,               // +1 Hit Marker on every ladder step (M2)
+  closeQuarters: true,       // distance 0: ignore cover and Armor (M3)
+  pointBlank: true,          // every gun may fire at distance 0 (long guns no longer locked out of the final circle)
+  gunTweaks: true,           // SMG first step -1 Hit Marker and Recoil -1, Knife 2 stabs, Breacher first step -1 and +1 damage
   digIn: 2,                  // unused Movement -> Armor, max 2
   gasDmg: 3,                 // caught outside: 3 (+1 per extra space), pushed back in
-  closeAfter: { 2: 1, 4: 1, 6: 1, 8: 1, 9: 1, 10: 1 }, // end of these rounds: one edge location closes (7 -> 1)
-  finalStorm: [2, 3, 4],     // end of each round with 1 safe location: storm damage to both (escalates)
-  hardEnd: 12,               // end of this round: most Health wins
-  stationCost: 2, stationCopies: 6,
-  stackSize: 3, affinityShare: 2 / 3,
-  stationScrap: 1, gunTweaks: true, pointBlank: true, evasion: false, revealCap: 99, coverNeed: false, aim: 'recoil', aiCommitP: 0.65,
-  famBias: 1, supplyRow: false, rowExtra: 0, gunSquad: true, force: null, squadMult: 1, squad: true, streak: true, loadout: true, specialist: false,
-  specRanks: [4, 7],
-  minDeck: 7,
-  aiFireP: 0.40, aiFireEV: 1.6, mcTrials: 80,
+  closeAfter: { 2: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1 }, // end of these rounds one edge location closes: 7 -> 1 safe after round 8
+  finalStorm: [2, 3, 4, 5],  // end of rounds 8, 9, 10, 11 (1 safe location): storm hits both (escalates)
+  hardEnd: 11,               // end of round 11: most Health wins
+  stationCost: 2, stationCopies: 6, stationScrap: 1, // Buy Station: family basics for 2 Intel; Scrap a Sprint for 1 Intel
+  stackSize: 3, affinityShare: 2 / 3,                // location stacks: 3 deep, 2 in 3 refills match the location's family
+  squad: true, squadCap: 3, squadAllEach: true, gunSquad: false, // Squad: its line once per OTHER card of the family in play or in the Loadout row
+  streak: false, loadout: true, specialist: false, specRanks: [4, 7], // Streak (2nd+ hits hit harder): tested and cut, 2.4% of damage
+  minDeck: 7, hotDrop: 3,             // Hot Drop: in rounds 1-3, cards you gain go on top of your deck
+  // ---- tested alternatives (off by default; see spec §8-9) ----
+  aim: 'recoil', aiCommitP: 0.65,            // 'commit': Precision is spent per shot instead of Recoil
+  dodge: false, dodgeCQ: false, dodgeArmor: false, // target flips 1 (or 1 + Armor) card(s); their Hit Markers raise the need
+  evasion: false, coverNeed: false, revealCap: 99, supplyRow: false, rowExtra: 0, squadMult: 1, sched: null,
+  // ---- AI ----
+  famBias: 0, force: null, aiFireP: 0.40, aiFireEV: 1.6, mcTrials: 80,
 };
 
 // gun tweaks proposed by the spec (applied to this process's in-memory copy of the engine's gun table only)
-const GUN_TWEAKS = { smg: { need0: -1 }, burst: { recoil: 1 } };
+const GUN_TWEAKS = { smg: { need0: -1, recoil: -1 }, knife: { shots: 1 }, shotgun: { need0: -1, dmg: 1 } };
 function applyGunTweaks() {
   if (!CFG.gunTweaks) return;
   for (const id in WD.WEAPONS) { const g = WD.WEAPONS[id]; const t = GUN_TWEAKS[g.gunClass]; if (!t || g._tw) continue; g._tw = true;
@@ -47,10 +55,11 @@ function applyGunTweaks() {
 
 // ---------------- cards ----------------
 // effect keys: m Movement, p Precision, i Intel, a Armor, s extra shot, d draw, k Mark (next shot needs 1 fewer Hit Marker),
-//              x Pierce (shots ignore cover this turn), sc Scrap, cy free cycle
+//              x Pierce (shots ignore cover this turn), sc Scrap, cy free cycle, g your hits deal +1 damage this turn,
+//              st Steady (your shots ignore 1 Recoil this turn), b +1 Buy this turn. Squad lines repeat once per OTHER family card in play.
 const FAM = { A: 'Assault', R: 'Recon', S: 'Support', E: 'Engineer' };
 const CARDS = {};
-function C(id, name, fam, tier, h, c, base, o = {}) { CARDS[id] = Object.assign({ id, name, fam, tier, h, c, base, squad: null, streak: 0, ready: null, reaction: 0, copies: 2 }, o); }
+function C(id, name, fam, tier, h, c, base, o = {}) { CARDS[id] = Object.assign({ id, name, fam, tier, h, c, base, squad: null, ready: null, reaction: 0, copies: 2 }, o); }
 // starter (10): unchanged
 C('T001', 'Sprint', null, 0, 0, 0, { m: 1 }, { copies: 3 });
 C('T002', 'Scout', null, 0, 0, 0, { i: 1 }, { copies: 3 });
@@ -62,45 +71,45 @@ C('K04', 'Focus', 'R', 1, 2, 2, { p: 2 }, { copies: 0 });
 C('K05', 'Spare Rounds', 'S', 1, 2, 2, { p: 1, s: 1 }, { copies: 0 });
 C('K03', 'Dead Drop', 'E', 1, 1, 2, { i: 2 }, { copies: 0 });
 // Every family card helps you shoot (Precision); its family decides what else it does and what its Squad line pays.
-// ASSAULT: hits hit harder. Movement, +damage on hits (g), Streak (2nd+ hits this turn).
-C('A11', 'Breach', 'A', 1, 2, 1, { m: 1, p: 2 }, { squad: { g: 1 } });
-C('A12', 'Slide Cancel', 'A', 1, 2, 1, { m: 2, p: 1, sc: 1 }, { squad: { d: 1 } });
-C('A13', 'Hip Fire', 'A', 1, 2, 2, { m: 1, p: 2 }, { squad: { p: 2 }, streak: 1 });
-C('A21', 'Rush the Door', 'A', 2, 2, 3, { m: 1, p: 3, x: 1 }, { squad: { g: 1 } });
-C('A22', 'Flank', 'A', 2, 2, 3, { m: 2, p: 2, d: 1 }, { squad: { d: 1 } });
-C('A23', 'Run and Gun', 'A', 2, 2, 3, { m: 1, p: 2, s: 1 }, { squad: { st: 1 }, streak: 2 });
-C('A31', 'Blitz', 'A', 3, 3, 5, { m: 2, p: 3, g: 1 }, { squad: { p: 1 }, squadEach: true });
-C('A32', 'Breaching Charge', 'A', 3, 3, 4, { m: 1, p: 3, x: 1 }, { squad: { s: 1 }, streak: 3 });
+// ASSAULT: hits hit harder. Movement, "your hits deal +1 damage this turn" (g), Pierce.
+C('A11', 'Breach', 'A', 1, 2, 1, { m: 1, p: 2 }, { squad: { g: 1, p: 1 } });
+C('A12', 'Slide Cancel', 'A', 1, 2, 1, { m: 2, p: 1, sc: 1 }, { squad: { d: 1, p: 1 } });
+C('A13', 'Hip Fire', 'A', 1, 2, 2, { m: 1, p: 2 }, { squad: { p: 3 } });
+C('A21', 'Rush the Door', 'A', 2, 2, 3, { m: 1, p: 3, x: 1 }, { squad: { g: 1, p: 2 } });
+C('A22', 'Flank', 'A', 2, 2, 3, { m: 2, p: 2, d: 1 }, { squad: { d: 1, p: 2 } });
+C('A23', 'Run and Gun', 'A', 2, 2, 3, { m: 1, p: 2, s: 1 }, { squad: { st: 1, p: 2 } });
+C('A31', 'Blitz', 'A', 3, 3, 5, { m: 2, p: 3, g: 1 }, { squad: { p: 2 }, squadEach: true });
+C('A32', 'Breaching Charge', 'A', 3, 3, 4, { m: 1, p: 3, x: 1, g: 1 }, { squad: { s: 1, st: 1 } });
 C('L1A', 'Tac Vest', 'A', 2, 1, 3, {}, { ready: { p: 1, g: 1 }, tiers: [1, 2, 2] });
 // RECON: aim. Precision, the most Hit Markers, Mark.
-C('R11', 'Mark Target', 'R', 1, 2, 1, { p: 2 }, { squad: { k: 1 } });
-C('R12', 'Steady Breath', 'R', 1, 3, 1, { p: 2 }, { squad: { p: 1 } });
-C('R13', 'Snapshot', 'R', 1, 2, 2, { p: 2, i: 1 }, { squad: { i: 2 } });
-C('R21', 'Heartbeat Sensor', 'R', 2, 2, 3, { p: 2, d: 1 }, { squad: { p: 2 } });
-C('R22', 'Spotter Scope', 'R', 2, 3, 3, { p: 3 }, { squad: { k: 1 } });
-C('R23', 'Thermal Optic', 'R', 2, 2, 3, { p: 3, x: 1 }, { squad: { i: 2 } });
-C('R31', 'UAV', 'R', 3, 3, 4, { p: 3, i: 1, x: 1 }, { squad: { d: 1, k: 1 } });
-C('R32', 'Headhunter', 'R', 3, 3, 5, { p: 4, k: 1 }, { squad: { p: 1 }, squadEach: true });
+C('R11', 'Mark Target', 'R', 1, 2, 1, { p: 2 }, { squad: { k: 1, p: 1 } });
+C('R12', 'Steady Breath', 'R', 1, 3, 1, { p: 2 }, { squad: { p: 2 } });
+C('R13', 'Snapshot', 'R', 1, 2, 2, { p: 2, i: 1 }, { squad: { i: 2, p: 1 } });
+C('R21', 'Heartbeat Sensor', 'R', 2, 2, 3, { p: 2, d: 1 }, { squad: { p: 4 } });
+C('R22', 'Spotter Scope', 'R', 2, 3, 3, { p: 3 }, { squad: { k: 1, p: 2 } });
+C('R23', 'Thermal Optic', 'R', 2, 2, 3, { p: 3, x: 1 }, { squad: { i: 2, p: 2 } });
+C('R31', 'UAV', 'R', 3, 3, 4, { p: 3, i: 1, x: 1 }, { squad: { d: 1, k: 1, p: 1 } });
+C('R32', 'Headhunter', 'R', 3, 3, 5, { p: 4, k: 1 }, { squad: { p: 2 }, squadEach: true });
 C('L1R', 'Recon Post', 'R', 2, 1, 3, {}, { ready: { p: 2 }, tiers: [1, 2, 2] });
 // SUPPORT: sustained fire. Extra shots, Steady (shots ignore 1 Recoil), Armor.
-C('S11', 'Ammo Box', 'S', 1, 2, 2, { p: 2, s: 1, sc: 1 }, { squad: { st: 1 } });
-C('S12', 'Suppressing Fire', 'S', 1, 2, 2, { p: 2, a: 1 }, { squad: { s: 1 } });
-C('S13', 'Bandolier', 'S', 1, 2, 2, { p: 1, s: 1, a: 1, st: 1 }, { squad: { p: 2 } });
-C('S21', 'Steady Grip', 'S', 2, 2, 3, { p: 2, s: 1, st: 1 }, { squad: { p: 2 } });
-C('S22', 'Resupply', 'S', 2, 2, 3, { p: 1, i: 1, s: 1, d: 1 }, { squad: { st: 1, i: 1 } });
-C('S23', 'Covering Fire', 'S', 2, 2, 3, { p: 3, a: 2 }, { squad: { s: 1, st: 1 } });
-C('S31', 'Overwatch', 'S', 3, 3, 5, { p: 4, s: 1, a: 2 }, { squad: { p: 1, a: 1 }, squadEach: true });
-C('S32', 'Munitions Drop', 'S', 3, 3, 4, { p: 3, s: 2, st: 1 }, { squad: { s: 1 }, streak: 1 });
+C('S11', 'Ammo Box', 'S', 1, 2, 2, { p: 2, s: 1, sc: 1 }, { squad: { st: 1, p: 2 } });
+C('S12', 'Suppressing Fire', 'S', 1, 2, 2, { p: 2, a: 1 }, { squad: { s: 1, a: 1 } });
+C('S13', 'Bandolier', 'S', 1, 2, 2, { p: 1, s: 1, a: 1, st: 1 }, { squad: { p: 3 } });
+C('S21', 'Steady Grip', 'S', 2, 2, 3, { p: 2, s: 1, st: 1 }, { squad: { p: 3 } });
+C('S22', 'Resupply', 'S', 2, 2, 3, { p: 1, i: 1, s: 1, d: 1 }, { squad: { st: 1, i: 2 } });
+C('S23', 'Covering Fire', 'S', 2, 2, 3, { p: 3, a: 2 }, { squad: { s: 1, st: 1, a: 1 } });
+C('S31', 'Overwatch', 'S', 3, 3, 5, { p: 4, s: 1, a: 2 }, { squad: { p: 2, a: 1 }, squadEach: true });
+C('S32', 'Munitions Drop', 'S', 3, 3, 4, { p: 3, s: 2, st: 1 }, { squad: { s: 1, p: 1 } });
 C('L1S', 'Field Pack', 'S', 2, 1, 3, {}, { ready: { p: 1, s: 1 }, tiers: [1, 2, 2] });
 // ENGINEER: economy. Intel, extra Buys (b), draw, Scrap (thinning), cycles.
-C('E11', 'Scrounge', 'E', 1, 1, 2, { p: 1, i: 2, sc: 1 }, { squad: { i: 2 } });
-C('E12', 'Deployable Cover', 'E', 1, 1, 2, { p: 1, i: 2 }, { squad: { b: 1 }, reaction: 3 });
-C('E13', 'Ping', 'E', 1, 1, 1, { p: 1, i: 1, cy: 1 }, { squad: { d: 1 } });
-C('E21', 'Munitions Box', 'E', 2, 2, 3, { p: 2, i: 2 }, { squad: { s: 1, p: 1 } });
-C('E22', 'Field Kit', 'E', 2, 2, 3, { p: 1, i: 2, d: 1 }, { squad: { p: 2 } });
-C('E23', 'Salvage', 'E', 2, 2, 3, { p: 1, i: 2, sc: 1, cy: 2 }, { squad: { i: 2, b: 1 } });
-C('E31', 'Field Workshop', 'E', 3, 2, 4, { p: 2, i: 2, d: 1, sc: 2 }, { squad: { p: 2 } });
-C('E32', 'Black Market', 'E', 3, 2, 5, { p: 2, i: 4, d: 1, b: 1 }, { squad: { i: 1, p: 1 }, squadEach: true });
+C('E11', 'Scrounge', 'E', 1, 1, 2, { p: 1, i: 2, sc: 1 }, { squad: { i: 3 } });
+C('E12', 'Deployable Cover', 'E', 1, 1, 2, { p: 1, i: 2 }, { squad: { b: 1, i: 1 }, reaction: 3 });
+C('E13', 'Ping', 'E', 1, 1, 1, { p: 1, i: 1, cy: 1 }, { squad: { d: 1, i: 1 } });
+C('E21', 'Munitions Box', 'E', 2, 2, 3, { p: 2, i: 2 }, { squad: { s: 1, p: 2 } });
+C('E22', 'Field Kit', 'E', 2, 2, 3, { p: 1, i: 2, d: 1 }, { squad: { p: 3 } });
+C('E23', 'Salvage', 'E', 2, 2, 3, { p: 1, i: 2, sc: 1, cy: 2 }, { squad: { i: 3, b: 1 } });
+C('E31', 'Field Workshop', 'E', 3, 2, 4, { p: 2, i: 2, d: 1, sc: 2 }, { squad: { p: 3, d: 1 } });
+C('E32', 'Black Market', 'E', 3, 2, 5, { p: 2, i: 4, d: 1, b: 1 }, { squad: { i: 1, p: 2 }, squadEach: true });
 C('L1E', 'Bounty Contract', 'E', 2, 1, 3, {}, { ready: { i: 2 }, tiers: [1, 2, 2] });
 const STATION = ['K02', 'K04', 'K05', 'K03'];
 
@@ -147,7 +156,7 @@ function newGame(seed, ais) {
   s.decks[1].push(...guns1);
   // drop: second player picks first (sim: fixed 1 and 5, seats random)
   const a = r() < 0.5; s.players[0].pos = a ? 1 : 5; s.players[1].pos = a ? 5 : 1;
-  s.first = r() < 0.5 ? 0 : 1;
+  s.first = r() < 0.5 ? 0 : 1; s.first0 = s.first;
   s.closeSide = r() < 0.5 ? 'L' : 'R';
   for (const pl of s.players) draw(s, pl, CFG.hand);
   if (CFG.supplyRow) refillRow(s);
@@ -224,7 +233,7 @@ function checkSquads(s, pl) {
   const present = {}; for (const x of [...pl.play, ...pl.loadout]) { const f = def(x).fam; if (f) present[f] = (present[f] || 0) + 1; }
   if (CFG.gunSquad) { const gf = GUNFAM[W(pl.gun.def).gunClass]; present[gf] = (present[gf] || 0) + 1; }
   for (const x of pl.play) { const d = def(x); if (!d.squad || pl.squadDone.has(x.uid)) continue;
-    if ((present[d.fam] || 0) - 1 >= 1) { pl.squadDone.add(x.uid); const k = d.squadEach ? present[d.fam] - 1 : 1; for (let j = 0; j < k * CFG.squadMult; j++) gain(s, pl, d.squad); pl.st.squads++; pl.turnSquads++; } }
+    if ((present[d.fam] || 0) - 1 >= 1) { pl.squadDone.add(x.uid); const k = Math.min(CFG.squadCap, (d.squadEach || CFG.squadAllEach) ? present[d.fam] - 1 : 1); for (let j = 0; j < k * CFG.squadMult; j++) gain(s, pl, d.squad); pl.st.squads++; pl.turnSquads++; } }
 }
 
 // ---------------- shooting ----------------
@@ -243,14 +252,18 @@ function stepProbs(s, p, si) {
   if (si.G.melee) return si.steps.map(() => 1);
   const pl = s.players[p]; const [dk, dc] = hmSeq(pl); const n = si.reveal; if (n <= 0) return si.steps.map(() => 0);
   const cnt = si.steps.map(() => 0); const r = mkRng(pl.res.p * 31 + dk.length * 7 + s.round);
+  const o = s.players[1 - p]; const dodgePool = (o.deck.length ? o.deck : o.discard).map(c => def(c).h);
   for (let t = 0; t < CFG.mcTrials; t++) {
     const a = shuffle(r, dk.slice()); let sum = 0, k = 0;
     for (; k < Math.min(n, a.length); k++) sum += a[k];
     if (k < n) { const b = shuffle(r, dc.slice()); for (let j = 0; j < Math.min(n - k, b.length); j++) sum += b[j]; }
-    si.steps.forEach(([h], i) => { if (sum >= h) cnt[i]++; });
+    let dg = 0; if (dodgeOn(si)) for (let q = 0; q < dodgeN(o); q++) dg += dodgePool[Math.floor(r() * dodgePool.length)] || 0;
+    si.steps.forEach(([h], i) => { if (sum >= h + dg) cnt[i]++; });
   }
   return cnt.map(c => c / CFG.mcTrials);
 }
+const dodgeOn = si => CFG.dodge && !si.G.melee && (CFG.dodgeCQ || !si.cq);
+const dodgeN = o => CFG.dodgeArmor ? 1 + Math.min(2, o.armor) : 1;
 function netDmg(s, p, si, dm, streakOn) {
   const o = s.players[1 - p]; let d = Math.max(1, dm + s.players[p].dmgUp + (streakOn ? s.players[p].streakSum : 0) - si.cover);
   if (!si.cq) d -= Math.min(o.armor, d - 1);
@@ -274,7 +287,10 @@ function fire(s, p, commit) {
   const total = revealed.reduce((t, c) => t + def(c).h, 0);
   pl.discard.push(...revealed);
   pl.st.shots++;
-  const hitStep = si.steps.filter(([h]) => total >= h).length - 1;
+  // Dodge: the target flips the top card of their deck; its Hit Markers raise what this shot needs (not at close quarters)
+  let dg = 0; if (dodgeOn(si)) for (let q = dodgeN(o); q > 0; q--) { if (!o.deck.length && o.discard.length) { o.deck = shuffle(s.r, o.discard); o.discard = []; } const dc = o.deck.pop(); if (dc) { dg += def(dc).h; o.discard.push(dc); } }
+  const hitStep = si.steps.filter(([h]) => total >= h + dg).length - 1;
+  const kind = si.G.melee ? 'melee' : si.cq ? 'cq' : 'ranged'; pl.st.byKind = pl.st.byKind || {}; const bk = pl.st.byKind[kind] = pl.st.byKind[kind] || [0, 0]; bk[0]++; if (hitStep >= 0) bk[1]++;
   if (CFG.aim === 'commit') pl.res.p = Math.max(0, pl.res.p - (si.G.melee ? 0 : si.reveal)); else pl.res.p = Math.max(0, pl.res.p - Math.max(0, si.G.recoil - pl.steady));
   pl.mark = 0;
   if (hitStep < 0) return false;
@@ -299,9 +315,11 @@ function aiFireCommit(s, p) {
     const P = probsByCommit(s, p, si, pool);
     const evOf = c => { let ev = 0; si.steps.forEach(([, dm], i) => { ev += (P[c][i] - (P[c][i + 1] || 0)) * netDmg(s, p, si, dm, streakOn); }); return ev; };
     if (first) pl.st.oppP.push(P[pool][0]);
+    if (dodgeOn(si)) { /* probsByCommit ignores Dodge; commit mode is tested without it */ }
     let c;
-    if (si.left === 1) c = pool; // last shot: everything on it
-    else { c = 0; for (let k = 1; k <= pool; k++) if (P[k][0] >= CFG.aiCommitP) { c = k; break; } if (!c) c = pool; }
+    // smallest commit that reaches the target odds; on the last shot, try for the big step first
+    const minFor = (st) => { for (let k = 1; k <= pool; k++) if ((P[k][st] || 0) >= CFG.aiCommitP) return k; return 0; };
+    c = (si.left === 1 && si.steps.length > 1 && minFor(1)) || minFor(0) || pool;
     if (P[c][0] < CFG.aiFireP && evOf(c) < CFG.aiFireEV) break;
     if (first) { pl.st.firstShotP.push(P[c][0]); first = false; }
     pl.st.commitP = pl.st.commitP || []; pl.st.commitP.push(P[c][0]);
@@ -332,7 +350,7 @@ function cardScore(s, pl, d) {
     const fc = famCounts(pl); const n = owned(pl) + 1; const f = (fc[d.fam] + 1) / n;
     const lo = pl.loadout.some(c => def(c).fam === d.fam) || (CFG.gunSquad && GUNFAM[W(pl.gun.def).gunClass] === d.fam) ? 1 : 0;
     const pSquad = lo ? 1 : 1 - Math.pow(1 - f, CFG.hand - 1);
-    if (d.squad && CFG.squad) v += pSquad * val(d.squad) * (d.squadEach ? Math.max(1, (fc[d.fam] + 1) * CFG.hand / n) : 1);
+    if (d.squad && CFG.squad) v += pSquad * val(d.squad) * ((d.squadEach || CFG.squadAllEach) ? Math.max(1, (fc[d.fam] + 1) * CFG.hand / n) : 1);
     if (d.streak && CFG.streak) { const G = W(pl.gun.def); v += d.streak * (G.magazine_capacity >= 2 ? 0.8 : 0.35); }
     const mf = mainFam(pl); if (mf && d.fam === mf) v += 1.2 * CFG.famBias; else if (mf && (fc[mf] >= 3 || CFG.force)) v -= CFG.force ? 4 : CFG.famBias;
     // a family card also switches on the Squad text of cards already owned
@@ -361,11 +379,12 @@ function aiBuy(s, p) {
     const ok = opts.filter(o => o.cost <= pl.res.i && o.sc >= (o.it && o.it.kind === 'gun' ? 0 : MIN_SCORE)).sort((a, b) => (b.sc - 0.35 * b.cost) - (a.sc - 0.35 * a.cost));
     const o = ok[0]; if (!o) break;
     pl.res.i -= o.cost; pl.buys++; pl.st.buys++;
-    if (o.station) { s.stationLeft[o.station]--; pl.discard.push({ uid: s.uid++, id: o.station }); continue; }
-    if (o.rowFam) { s.row[o.rowFam] = null; refillRow(s); pl.discard.push(o.it.c); continue; }
+    const gain_ = c => { if (CFG.hotDrop && s.round <= CFG.hotDrop) pl.deck.push(c); else pl.discard.push(c); }; // Hot Drop: early buys go on top of your deck
+    if (o.station) { s.stationLeft[o.station]--; gain_({ uid: s.uid++, id: o.station }); continue; }
+    if (o.rowFam) { s.row[o.rowFam] = null; refillRow(s); gain_(o.it.c); continue; }
     o.L.stack.shift();
     if (o.it.kind === 'gun') { const old = pl.gun.def; pl.gun = { def: o.it.g }; pl.gunShots = 0; o.L.stack.push({ kind: 'gun', g: old }); }
-    else pl.discard.push(o.it.c);
+    else gain_(o.it.c);
   }
 }
 function stationScore(s, pl, id) {
@@ -476,18 +495,19 @@ if (require.main === module) {
   if (opt('flat')) { CFG.squad = false; CFG.streak = false; }
   if (opt('spec')) CFG.specialist = true;
   if (opt('set')) for (const kv of String(opt('set')).split(',')) { const [k, v] = kv.split(':'); CFG[k] = isNaN(+v) ? (v === 'true' ? true : v === 'false' ? false : v) : +v; }
-  if (CFG.gunTweaks === false) { /* reload untweaked */ }
+  const SCHED = { fast: { 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1 }, mid: { 2: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1 }, slow: { 2: 1, 4: 1, 6: 1, 8: 1, 9: 1, 10: 1 } };
+  if (CFG.sched) CFG.closeAfter = SCHED[CFG.sched];
   const [aiA, aiB] = match.split('-');
-  const R = { games: N, match, flat: !!opt('flat'), specialist: CFG.specialist, errors: 0, wins: { A: 0, B: 0, draw: 0 }, firstWins: 0, decided: 0, rounds: [], endBy: {}, finalReached: 0,
-    shots: 0, hits: 0, big: 0, firstP: [], oppP: [], dmg: 0, gas: 0, streakDmg: 0, squads: 0, turns: 0, gun: {}, byRound: {}, topFamShare: { [aiA]: [], [aiB + '_']: [] }, loadouts: 0, deckEnd: [], winnerHpEnd: [], fam: {} };
+  const R = { games: N, match, flat: !!opt('flat'), specialist: CFG.specialist, errors: 0, seat0: 0, wins: { A: 0, B: 0, draw: 0 }, firstWins: 0, decided: 0, rounds: [], endBy: {}, finalReached: 0,
+    shots: 0, hits: 0, big: 0, firstP: [], oppP: [], dmg: 0, gas: 0, streakDmg: 0, squads: 0, turns: 0, gun: {}, byRound: {}, topFamShare: { [aiA]: [], [aiB + '_']: [] }, loadouts: 0, deckEnd: [], winnerHpEnd: [], fam: {}, kind: {} };
   for (let i = 0; i < N; i++) {
     const aSeat = i % 2; const ais = aSeat === 0 ? [aiA, aiB] : [aiB, aiA];
     let s; try { s = playGame(i + 1, ais); } catch (e) { R.errors++; if (R.errors < 4) console.error('seed', i + 1, e.message); continue; }
     R.rounds.push(s.round); R.endBy[s.endBy] = (R.endBy[s.endBy] || 0) + 1; if (s.finalReached) R.finalReached++;
-    if (s.winner === 'draw') R.wins.draw++; else { R.decided++; if (s.winner === aSeat) R.wins.A++; else R.wins.B++; }
+    if (s.winner === 'draw') R.wins.draw++; else { R.decided++; if (s.winner === aSeat) R.wins.A++; else R.wins.B++; if (s.winner === s.first0) R.firstWins++; if (s.winner === 0) R.seat0++; }
     R.gas += s.gas;
     for (const pl of s.players) {
-      const st = pl.st; R.shots += st.shots; R.hits += st.hits; R.big += st.big; R.firstP.push(...st.firstShotP); R.oppP.push(...st.oppP); R.dmg += st.dmg; R.streakDmg += st.streakDmg; R.squads += st.squads; R.turns += st.turns.length; R.loadouts += st.loadouts; R.deckEnd.push(owned(pl));
+      const st = pl.st; for (const k in st.byKind || {}) { R.kind[k] = R.kind[k] || [0, 0]; R.kind[k][0] += st.byKind[k][0]; R.kind[k][1] += st.byKind[k][1]; } R.shots += st.shots; R.hits += st.hits; R.big += st.big; R.firstP.push(...st.firstShotP); R.oppP.push(...st.oppP); R.dmg += st.dmg; R.streakDmg += st.streakDmg; R.squads += st.squads; R.turns += st.turns.length; R.loadouts += st.loadouts; R.deckEnd.push(owned(pl));
       const g = W(pl.gun.def).gunClass; R.gun[g] = R.gun[g] || [0, 0]; R.gun[g][1]++; if (s.winner === pl.idx) R.gun[g][0]++;
       const fc = st.famAtEnd; const tot = Object.values(fc).reduce((a, b) => a + b, 0); const key = pl.idx === aSeat ? aiA : aiB + '_';
       if (tot) R.topFamShare[key].push(Math.max(...Object.values(fc)) / tot);
@@ -502,9 +522,9 @@ if (require.main === module) {
   const curve = Object.keys(R.byRound).map(Number).sort((a, b) => a - b).map(r => { const b = R.byRound[r]; return { round: r, turns: b.n, turnPower: +(b.tp / b.n).toFixed(1), squads: +(b.squads / b.n).toFixed(2), dmg: +(b.dmg / b.n).toFixed(2), deck: +(b.deck / b.n).toFixed(1), loadouts: +(b.lo / b.n).toFixed(2), byAI: Object.fromEntries(Object.entries(b.ai).map(([k, v]) => [k, { tp: +(v[0] / v[1]).toFixed(1), squads: +(v[2] / v[1]).toFixed(2), dmg: +(v[3] / v[1]).toFixed(2) }])) }; });
   const out = {
     games: N, match, flat: R.flat, specialist: R.specialist, set: opt('set') || null, completed: done, errors: R.errors,
-    [`${aiA}WinRate`]: +(R.wins.A / Math.max(1, R.decided)).toFixed(3), draws: R.wins.draw,
+    [`${aiA}WinRate`]: +(R.wins.A / Math.max(1, R.decided)).toFixed(3), firstPlayerWinRate: +(R.firstWins / Math.max(1, R.decided)).toFixed(3), seat0WinRate: +(R.seat0 / Math.max(1, R.decided)).toFixed(3), draws: R.wins.draw,
     avgRounds: avg(R.rounds), maxRound: Math.max(...R.rounds), endBy: R.endBy, finalCircleReached: +(R.finalReached / done).toFixed(3),
-    hitRate: +(R.hits / R.shots).toFixed(3), avgFirstShotOdds: avg(R.firstP), avgOddsWhenInRange: avg(R.oppP), shotOddsBands: (() => { const b = [0, 0, 0, 0, 0]; for (const x of R.oppP) b[Math.min(4, Math.floor(x * 5))]++; return b.map(x => +(x / R.oppP.length).toFixed(2)); })(), bigHitShare: +(R.big / R.hits).toFixed(3), shotsPerGame: +(R.shots / done).toFixed(1),
+    hitRate: +(R.hits / R.shots).toFixed(3), shotsByKind: Object.fromEntries(Object.entries(R.kind).map(([k, v]) => [k, `${(v[1] / v[0]).toFixed(2)} hit, ${(v[0] / done).toFixed(1)}/game`])), avgFirstShotOdds: avg(R.firstP), avgOddsWhenInRange: avg(R.oppP), shotOddsBands: (() => { const b = [0, 0, 0, 0, 0]; for (const x of R.oppP) b[Math.min(4, Math.floor(x * 5))]++; return b.map(x => +(x / R.oppP.length).toFixed(2)); })(), bigHitShare: +(R.big / R.hits).toFixed(3), shotsPerGame: +(R.shots / done).toFixed(1),
     gasShareOfDamage: +(R.gas / (R.gas + R.dmg)).toFixed(3), streakShareOfDamage: +(R.streakDmg / R.dmg).toFixed(3), squadsPerTurn: +(R.squads / R.turns).toFixed(2), loadoutsPerPlayer: +(R.loadouts / (2 * done)).toFixed(2),
     topFamilyShareAtEnd: Object.fromEntries(Object.entries(R.topFamShare).map(([k, v]) => [k, avg(v)])), deckSizeAtEnd: avg(R.deckEnd), winnerHpAtEnd: avg(R.winnerHpEnd),
     winRateByGunHeldAtEnd: Object.fromEntries(Object.entries(R.gun).sort().map(([k, v]) => [k, `${(v[0] / v[1]).toFixed(2)} (n=${v[1]})`])),
