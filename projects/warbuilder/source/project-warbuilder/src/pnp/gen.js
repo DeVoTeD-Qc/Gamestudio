@@ -158,7 +158,7 @@ const refTurn = () => `<div class="card ref"><div class="phead dark"><span>YOUR 
   <li><b>End</b>: unused ${ic('move', RES.move)} → ${ic('def', '#475827')} (max ${T.digIn}). Discard all, draw 5.</li></ol></div></div>`;
 const refSquad = () => `<div class="card ref"><div class="phead dark"><span>SQUAD</span><span>combos</span></div><div class="cin small2">
   <div class="square"><div>${roleB('assault')} Assault<br><small>Movement</small></div><div>${roleB('recon')} Recon<br><small>Precision</small></div><div>${roleB('support')} Support<br><small>Ammo</small></div><div>${roleB('engineer')} Engineer<br><small>Intel</small></div></div>
-  <p>Each <b>combo line</b> shows one role. It fires if you play <b>another card of that role</b> this turn (any order). Uncommon: 1 line · Rare: 2 · Epic: 3 (incl. own role).</p>
+  <p>Each <b>combo line</b> shows one role. It fires if you play <b>another card of that role</b> this turn (any order). Common: 1 line · Rare: 2 · Epic: 3 (incl. own role).</p>
   <p><b>SQUAD</b> — 3 roles this turn: ${esc(WD.SQUAD_TEXT[3])}.<br><b>FULL SQUAD</b> — all 4: ${esc(WD.SQUAD_TEXT[4])}.<br><small>Your primary gun counts as one squad member (its combo role).</small></p></div></div>`;
 const hpCard = (who, col) => `<div class="card hp" style="--rc:${col}"><div class="phead" style="background:${col}"><span>${ic('heart', '#fff')} HEALTH</span><span>${who}</span></div><div class="cin"><div class="hpgrid">${Array.from({ length: T.hp }, (_, i) => `<span>${T.hp - i}</span>`).join('')}</div><div class="small">Start at ${T.hp}. Mark damage with a paperclip. Off the track = eliminated.</div></div></div>`;
 const OPFACE = {

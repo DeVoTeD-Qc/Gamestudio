@@ -33,6 +33,7 @@
   "scripts": {
     "init": "python scripts/init_project.py",
     "manage": "python scripts/project_manager.py",
-    "test": "python scripts/test_project_workflow.py && python scripts/test_engine_system.py"
+    "test": "python scripts/test_project_workflow.py && python scripts/test_engine_system.py && npm run test:warbuilder",
+    "test:warbuilder": "npm --prefix projects/warbuilder/source/project-warbuilder test"
   }
 }
