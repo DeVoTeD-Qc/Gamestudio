@@ -1,13 +1,13 @@
 {
  "note": "Regenerate with `npm run test:update-golden` after an intended rules or AI change.",
  "seeds": {
-  "1": {"ai":{"hash":"7a295e022292910e","winner":0,"rounds":9,"hp":[12,0]},"scripted":{"hash":"c1095b07c1edeea5","winner":"draw","rounds":11,"hp":[16,16],"actions":53}},
-  "2": {"ai":{"hash":"5f63d3a7e083fd1b","winner":0,"rounds":9,"hp":[11,-2]},"scripted":{"hash":"972a7cccef7f9090","winner":"draw","rounds":11,"hp":[16,16],"actions":50}},
-  "3": {"ai":{"hash":"ecaea2804d97d210","winner":0,"rounds":9,"hp":[24,-3]},"scripted":{"hash":"bff12d0d5879a2b9","winner":"draw","rounds":11,"hp":[16,16],"actions":52}},
-  "7": {"ai":{"hash":"74bb09fe80689995","winner":0,"rounds":8,"hp":[21,-3]},"scripted":{"hash":"18616b39479c4fc6","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
-  "42": {"ai":{"hash":"342ef3f64ee4c24e","winner":0,"rounds":9,"hp":[27,-3]},"scripted":{"hash":"cf666496912191e5","winner":"draw","rounds":11,"hp":[16,16],"actions":54}},
-  "99": {"ai":{"hash":"45251637c77a9dbd","winner":1,"rounds":8,"hp":[0,28]},"scripted":{"hash":"0979f8a7f616d1de","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
-  "1234": {"ai":{"hash":"488f4e049f3248bf","winner":1,"rounds":6,"hp":[-1,38]},"scripted":{"hash":"3bf09b5cf546d9a8","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
-  "20261104": {"ai":{"hash":"4437acae7304d11a","winner":0,"rounds":9,"hp":[26,0]},"scripted":{"hash":"abcbfbf7b9fb78bf","winner":"draw","rounds":11,"hp":[16,16],"actions":54}}
+  "1": {"ai":{"hash":"b57a15052260359e","winner":0,"rounds":9,"hp":[7,-1]},"scripted":{"hash":"c1095b07c1edeea5","winner":"draw","rounds":11,"hp":[16,16],"actions":53}},
+  "2": {"ai":{"hash":"152fc39763a6153b","winner":0,"rounds":8,"hp":[27,-3]},"scripted":{"hash":"972a7cccef7f9090","winner":"draw","rounds":11,"hp":[16,16],"actions":50}},
+  "3": {"ai":{"hash":"9f2fe557bd630833","winner":1,"rounds":8,"hp":[-3,9]},"scripted":{"hash":"bff12d0d5879a2b9","winner":"draw","rounds":11,"hp":[16,16],"actions":52}},
+  "7": {"ai":{"hash":"166028b985faaae8","winner":1,"rounds":9,"hp":[-1,1]},"scripted":{"hash":"18616b39479c4fc6","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
+  "42": {"ai":{"hash":"51dd2f687f5a7302","winner":1,"rounds":9,"hp":[0,11]},"scripted":{"hash":"cf666496912191e5","winner":"draw","rounds":11,"hp":[16,16],"actions":54}},
+  "99": {"ai":{"hash":"5e76b14998cf578d","winner":1,"rounds":8,"hp":[-4,20]},"scripted":{"hash":"0979f8a7f616d1de","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
+  "1234": {"ai":{"hash":"7ff4af8ae8daf38e","winner":1,"rounds":6,"hp":[-1,38]},"scripted":{"hash":"3bf09b5cf546d9a8","winner":"draw","rounds":11,"hp":[16,16],"actions":51}},
+  "20261104": {"ai":{"hash":"723bb551f0b5e268","winner":0,"rounds":9,"hp":[1,-2]},"scripted":{"hash":"abcbfbf7b9fb78bf","winner":"draw","rounds":11,"hp":[16,16],"actions":54}}
  }
 }

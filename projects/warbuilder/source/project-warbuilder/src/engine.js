@@ -497,8 +497,9 @@ function fire(s, p, gi, o) {
   pl.stats.shots++;
   let dealt = 0, notes = [], lvl = -1;
   if (hit) { pl.stats.hits++; pl.stats.hitsBy[W.def] = (pl.stats.hitsBy[W.def] || 0) + 1; lvl = d.melee ? 0 : sp.steps.filter(([h]) => total >= h).length - 1; if (lvl > 0) pl.stats.big++;
+    // applyHit's notes may already say 'close quarters: Armor ignored': the bare 'close quarters' tag is added only if not
     const r = applyHit(s, 1 - p, sp.steps[lvl][1], sp.cq); if (lvl > 0) notes.push(lvl === 1 && d.gunClass === 'sniper' ? 'HEADSHOT' : `step ${lvl + 1}`); dealt = r.dealt; notes = notes.concat(r.notes);
-    if (sp.cover) notes.unshift(`cover −${sp.cover}`); if (sp.cq) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt; }
+    if (sp.cover) notes.unshift(`cover −${sp.cover}`); if (sp.cq && !notes.some(n => n.startsWith('close quarters'))) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt; }
   pl.discard.push(...revealed);
   s.lastFire = { p, weapon: d.name, bullet: null, req: sp.need, steps: sp.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < sp.reveal, recoil: before - pl.res.prec, commit: sp.commit, free: sp.free };
   log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.free ? ` + ${sp.free} Steady` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
@@ -593,18 +594,27 @@ function stepOdds(s, p, steps, max, trials = 120) {
 }
 function expDmg(s, p, sp) { if (sp.melee) return sp.steps[0][1]; const o = stepOdds(s, p, sp.steps, sp.reveal)[sp.reveal] || sp.steps.map(() => 0); let ev = 0; sp.steps.forEach(([, dm], i) => { ev += (o[i] - (o[i + 1] || 0)) * dm; }); return ev; }
 // Best Precision to commit to the next shot: a small dynamic programme over the shots left this turn (expected damage, Armor ignored).
+// V(q, l, first): best expected damage with q Precision and l shots still allowed. The model behind it:
+// - every shot is optional: a shot that cannot add damage is simply not fired, so the plan never burns Precision on a dud shot
+//   just to reach a later one (it used to: with spare shots it suggested a 0% commit-1 shot first);
+// - Mark (nextFire.reqMod) helps only the next shot; Steady (+reveal) and +damage last the whole turn;
+// - ties go to the larger commit: the surer shot now, and Precision left at End turn is worth nothing.
+// The planner re-runs after every shot, so later shots are re-planned with the cards actually left.
 function suggestCommit(s, p, gi) {
   const pl = P(s, p); const sp = shotPreview(s, p, gi, 0); if (!sp || sp.melee) return { commit: 0, ev: sp ? sp.steps[0][1] : 0, p: 1 };
   const pool = pl.res.prec, fr = pl.revealPlus, rc = sp.recoil; if (pool + fr < 1) return { commit: 0, ev: 0, p: 0 };
-  const odds = stepOdds(s, p, sp.steps, pool + fr);
-  const oddsAt = c => odds[Math.min(odds.length - 1, c + fr)] || sp.steps.map(() => 0);
-  const evAt = c => { if (c + fr <= 0) return 0; const o = oddsAt(c); let e = 0; sp.steps.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * dm; }); return e; };
-  const EV = Array.from({ length: pool + 1 }, (_, c) => evAt(c)); const memo = {};
-  const V = (q, l) => { if (l <= 0) return [0, 0]; const k = q * 16 + l; if (memo[k]) return memo[k]; let best = [0, -1];
-    for (let c = fr > 0 ? 0 : 1; c <= q; c++) { const v = EV[c] + V(Math.max(0, q - c - rc), l - 1)[0]; if (v > best[0] + 1e-9) best = [v, c]; } return (memo[k] = best); };
-  const [, c] = V(pool, Math.min(sp.left, 6));
+  const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
+  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus), sp.steps[i][1]]) : sp.steps;
+  const odds = stepOdds(s, p, sp.steps.concat(later), pool + fr, 300); // one pass, same samples for both ladders
+  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, c + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * dm; }); return e; };
+  const EV = [0, 1].map(k => Array.from({ length: pool + 1 }, (_, c) => evOf(c, k))); const memo = {};
+  const V = (q, l, first) => { if (l <= 0) return [0, -1]; const key = (q * 16 + l) * 2 + (first ? 1 : 0); if (memo[key]) return memo[key];
+    let best = V(q, l - 1, first); // leave one shot unfired
+    for (let c = q; c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
+    return (memo[key] = best); };
+  const [, c] = V(pool, Math.min(sp.left, 6), true);
   if (c < 0) return { commit: 0, ev: 0, p: 0 };
-  return { commit: c, ev: EV[c], p: oddsAt(c)[0] };
+  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, c + fr)][0] };
 }
 
 // ---------- AI ----------

@@ -154,6 +154,36 @@ describe('firing (Precision is spent: commit + Recoil)', () => {
     const sg = WD.suggestCommit(s, p, 0);
     assert.ok(sg.commit >= 1 && sg.commit <= me.res.prec); assert.ok(sg.p > 0 && sg.p <= 1);
   });
+  // wb-fix1: decks where every card has the same Hit Markers make the odds exact, so the best plan can be checked by hand.
+  const plan = (o) => { const d = duel(Object.assign({ posThem: 2, types: { 2: 'E01' } }, o)); d.me.shot = (o.shots || 1) - WD.shotsLeft(d.s, d.p, 0); return d; };
+  test('suggestCommit: on ties it takes the surer, bigger commit (Breacher, 12 Precision, 2 shots)', () => {
+    // 1 Hit Marker per card; Breacher steps 2+ → 3, 6+ → 6; Recoil 3. Plans 2 + 7, 6 + 3 and 7 + 2 all make 9: fire a sure 6-damage
+    // shot first (the old planner took the cheapest tie, commit 2, and showed it on FIRE).
+    const { s, p } = plan({ gun: 'shotgun-0', prec: 12, shots: 2, deck: Array(14).fill('T004') });
+    const sg = WD.suggestCommit(s, p, 0);
+    assert.ok(sg.commit >= 6 && sg.commit <= 7, `commit ${sg.commit}`); assert.equal(sg.p, 1); assert.equal(sg.ev, 6);
+  });
+  test('suggestCommit never spends Precision on a shot that cannot hit just to reach a later one', () => {
+    // Ranger needs 3; 1 Hit Marker per card; 10 Precision, 4 shots, Recoil 1. A commit of 1 or 2 is a sure miss.
+    const { s, p } = plan({ gun: 'dmr-0', posThem: 3, types: { 3: 'E01' }, prec: 10, shots: 4, deck: Array(14).fill('T004') });
+    const sg = WD.suggestCommit(s, p, 0);
+    assert.ok(sg.commit >= 3, `commit ${sg.commit}`); assert.equal(sg.p, 1);
+  });
+  test('suggestCommit: a Mark helps only the next shot, so the plan does not save Precision for a marked second shot', () => {
+    // Sidearm needs 2 (Mark 1: 1), steps 3+ → 3 with the Mark; Recoil 2; 4 Precision, 2 shots; 1 Hit Marker per card.
+    // Commit 1 hits for 2 but leaves 1 Precision for an unmarked shot that needs 2 (a miss). All 4 now hits for 3.
+    const { s, p, me } = plan({ gun: 'pistol-0', prec: 4, shots: 2, deck: Array(14).fill('T004') }); me.nextFire.reqMod = 1;
+    assert.equal(WD.suggestCommit(s, p, 0).commit, 4);
+  });
+  test('the fire report says "close quarters" once', () => {
+    const big = { prec: 4, deck: ['T004', 'T004', 'T004', 'T004'], posThem: 2, types: { 2: 'E01' } };
+    let d = duel(big); d.them.def = 5;
+    let notes = WD.fire(d.s, d.p, 0).result.notes;
+    assert.equal(notes.filter(n => /close quarters/.test(n)).length, 1, notes.join(' · ')); assert.ok(notes.includes('close quarters: Armor ignored'));
+    d = duel(big); // no Armor to ignore: the plain tag
+    notes = WD.fire(d.s, d.p, 0).result.notes;
+    assert.equal(notes.filter(n => /close quarters/.test(n)).length, 1, notes.join(' · ')); assert.ok(notes.includes('close quarters'));
+  });
 });
 
 describe('Squad lines and Rally', () => {
