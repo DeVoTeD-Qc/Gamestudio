@@ -389,7 +389,7 @@ function gunPanel(me, gi) {
     if (e.magazine_capacity !== def.magazine_capacity) ch.push(`Mag ${e.magazine_capacity}`); if (e.recoil !== def.recoil) ch.push(`Recoil ${e.recoil}`); if (e.band[0] !== def.band[0] || e.band[1] !== def.band[1]) ch.push(`Range ${e.band[0]}–${e.band[1]}`);
     const lit = def.gcombo && me.gunCombo === G.turnNo;
     return `<div data-flip="g${iid}" class="gpf ${gi ? 'sec' : ''} ${cur ? 'cur' : ''} ${t && !ok ? 'dim' : ''} ${lit ? 'lit' : ''}" data-act="pickgunb" data-id="${gi}" role="button" tabindex="0" aria-label="${escA(wnm(def))}" data-prev="gun:${iid}">${pf('gun_' + def.id)}
-      <div class="gpf-bar"><span class="gpf-shots" title="Shots left this turn">${Array.from({ length: e.magazine_capacity }, (_, i) => `<i class="${i < left ? '' : 'e'}"></i>`).join('')}</span>${ch.length ? `<span class="gpf-mod">${ch.join(' · ')}</span>` : ''}${lit ? '<span class="gpf-combo">COMBO</span>' : ''}${t ? (ok ? `<span class="gpf-odds">${fo.pct >= 1 ? fo.pct + '%' : 'long shot'}</span>` : `<span class="gpf-odds no">${escA(shortErr(fo && fo.err))}</span>`) : ''}</div></div>`;
+      <div class="gpf-bar"><span class="gpf-shots" title="Shots left this turn">${Array.from({ length: e.magazine_capacity }, (_, i) => `<i class="${i < left ? '' : 'e'}"></i>`).join('')}</span>${ch.length ? `<span class="gpf-mod">${ch.join(' · ')}</span>` : ''}${lit ? '<span class="gpf-combo">COMBO</span>' : ''}${t ? (ok ? `<span class="gpf-odds">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</span>` : `<span class="gpf-odds no">${escA(shortErr(fo && fo.err))}</span>`) : ''}</div></div>`;
   }
   const m = k => e[k] !== def[k] ? ` class="up r${def.tier}"` : '';
   const L = def.ladder; const gc = def.gcombo; const lit = gc && me.gunCombo === G.turnNo;
@@ -408,7 +408,7 @@ function hudBtns(me) {
   const same = me.pos === OP().pos; const canPunch = WD.TUNE.punch && t && same && !me.punched && !ok;
   const pc = WD.plateCost(G, ui.me);
   const fireBtn = canPunch ? `<button class="hb-fire" data-act="dofists" data-tip="No gun can fire: punch your rival for 1 damage.">PUNCH · 1</button>`
-    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? `Fire the ${wnm(wdef(me.guns[gi]))}: reveal ${fo.sp.reveal} cards, need ${fo.sp.need}+ Hit Markers for the first damage step.` : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}">FIRE${ok ? ` · ${fo.pct >= 1 ? fo.pct + '%' : 'long shot'}` : ''}</button>`;
+    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? `Fire the ${wnm(wdef(me.guns[gi]))}: reveal ${fo.sp.reveal} cards, need ${fo.sp.need}+ Hit Markers for the first damage step.` : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}">FIRE${ok ? ` · ${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}` : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>`;
   return `${fireBtn}
     <button class="hb-swap" data-act="swapgun" ${me.guns[0] && me.guns[1] ? '' : 'disabled'}>Swap gun</button>
     <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="Buy Station: always open. Buy as many as you can afford; they go to your discard pile.">${ic('para')} Buy Station <small>${ic('intel')}${pc} each</small></button>
@@ -428,7 +428,7 @@ function codexItems() {
   for (const id in WD.CARDS) { const c = WD.CARDS[id]; const n = 'card_' + id; if (!hasFace(n)) continue;
     const station = /^K/.test(id); const starter = c.archetype === 'starter';
     const copies = starter ? (stCopies[id] || 0) * 2 : station ? T.stationCopies : c.copies; if (!copies) continue;
-    out.push({ n, kind: 'card', role: starter ? 'starter' : c.archetype, src: starter ? 'starter' : station ? 'station' : 'loot', rar: starter || station ? 0 : c.tier, copies, name: c.name, text: `${c.name} ${c.text} ${(c.combos || []).map(x => x.text).join(' ')}`.toLowerCase() }); }
+    out.push({ n, kind: 'card', role: starter ? 'starter' : c.archetype, src: starter ? 'starter' : station ? 'station' : 'loot', rar: starter || station || c.tier === 1 ? 0 : c.tier, copies, name: c.name, text: `${c.name} ${c.text} ${(c.combos || []).map(x => x.text).join(' ')}`.toLowerCase() }); }
   for (const id in gunCount) { const g = WD.WEAPONS[id]; const n = 'gun_' + id; if (!g || !hasFace(n)) continue;
     out.push({ n, kind: 'gun', role: (g.gcombo && g.gcombo.role) || g.archetype, src: id === 'pistol-0' ? 'starter' : 'loot', rar: g.tier, copies: gunCount[id], name: g.name, text: `${g.name} ${g.cls} ${(g.gcombo && g.gcombo.text) || ''}`.toLowerCase() }); }
   const seen = {}; WD.LOCSET.forEach((L, i) => { const n = 'loc_L' + String(i + 1).padStart(2, '0'); if (!hasFace(n)) return; const e = WD.ENVS[L.def];
@@ -552,6 +552,7 @@ function gunArt(def) {
 function lootBack(kind, tier) {
   return `<span class="lb ${kind === 'weapon' ? 'lb-gun' : 'lb-card'} lt${tier}" aria-hidden="true"><span class="lb-in">${kind === 'weapon' ? `<b class="lb-big">LOOT</b><b class="lb-sub">GUN</b>` : `${ic('para')}<b>LOOT</b>`}${chev(tier)}</span></span>`;
 }
+const STACK_TIER = ['', 'tier I (Common guns and cards)', 'tier II (Uncommon–Rare guns, Rare cards)', 'tier III (Epic–Legendary guns, Epic cards)'];
 function stackHTML(e, live, plan, printed) {
   const up = e.cache.searched; const items = up ? e.loot : (plan || []);
   const n = items.length;
@@ -562,11 +563,16 @@ function stackHTML(e, live, plan, printed) {
   const layers = Array.from({ length: under }, (_, i) => `<span class="ls-under" style="--i:${under - i}">${lootBack(up ? (items[under - i] || {}).kind : items[under - i], e.tier)}</span>`).join('');
   let top = up ? (ui.newTop === e.w ? lootFace(items[0], e, live).replace('class="lf ', 'class="lf fx-newtop ') : lootFace(items[0], e, live)) : lootBack(items[0], e.tier);
   if (printed) {
-    if (up) { const fn = itemFace(items[0]); if (fn) { const cost = shownCost(items[0], e); top = `<${live ? 'button' : 'div'} data-flip="t${items[0].iid}" class="lf-p ${ui.newTop === e.w ? 'fx-newtop' : ''}" ${live ? `data-act="item" data-id="${items[0].iid}"` : ''} data-prev="it:${items[0].iid}" aria-label="${escA(WD.itemDef(G, items[0]).name)}">${pf(fn)}${cost !== WD.itemDef(G, items[0]).intel_cost ? `<span class="lf-cost now">${ic('intel')}${cost}</span>` : ''}</${live ? 'button' : 'div'}>`; } }
+    if (up) { const fn = itemFace(items[0]); if (fn) { const cost = shownCost(items[0], e); top = `<${live ? 'button' : 'div'} data-flip="t${items[0].iid}" class="lf-p ${ui.newTop === e.w ? 'fx-newtop' : ''}" ${live ? `data-act="item" data-id="${items[0].iid}"` : ''} data-prev="it:${items[0].iid}" aria-label="${escA(WD.itemDef(G, items[0]).name)}">${pf(fn)}${cost !== WD.itemDef(G, items[0]).intel_cost ? `<span class="lf-cost now">${ic('intel')}${cost}</span>` : ''}${items[0].kind === 'weapon' ? gunCompact(WD.itemDef(G, items[0]), cost) : ''}</${live ? 'button' : 'div'}>`; } }
     else if (items[0] !== 'weapon') { const bn = 'back_loot_tier' + e.tier; if (hasFace(bn)) top = `<span class="lf-p back">${pf(bn)}</span>`; }
   }
-  const tip = up ? `${n - 1} more face down under it. Cycle to dig.` : `Face-down loot stack, ${['', 'green (Common–Uncommon)', 'blue (Rare–Epic)', 'purple (Epic–Legendary)'][e.tier]}: ${items.map((k, i) => `${i === 0 ? 'top' : i + 1}: ${k === 'weapon' ? 'gun' : 'card'}`).join(', ')}. It flips face up when someone stands here.`;
+  const tip = up ? `${n - 1} more face down under it. Cycle to dig.` : `Face-down loot stack, ${STACK_TIER[e.tier]}: ${items.map((k, i) => `${i === 0 ? 'top' : i + 1}: ${k === 'weapon' ? 'gun' : 'card'}`).join(', ')}. It flips face up when someone stands here.`;
   return `<span class="lstack s-${shape}" style="--u:${under}"><span class="ls-layers">${layers}</span><span class="ls-top">${top}</span>${n > 1 || !up ? `<span class="ls-n" data-tip="${escA(tip)}">${n}</span>` : ''}</span>`;
+}
+// upright, small-screen gun card for a face-up loot stack; CSS shows it instead of the printed (landscape) face when the stack is narrow
+function gunCompact(def, cost) {
+  const a = gunArt(def);
+  return `<span class="lf-gc r${def.tier}" aria-hidden="true"><span class="gc-top"><b class="gc-nm">${def.name}</b><span class="gc-cls">${escA(GSHORT[def.cls] || def.cls)}</span></span>${a ? `<img class="gc-art" src="${a}" alt="">` : '<span class="gc-art"></span>'}<span class="gc-st"><span>${ic('rng')}${def.band[0]}–${def.band[1]}</span><span>${ic('dmg')}${def.ladder.map(([h, d]) => d).join('·')}</span></span><span class="gc-ft"><span class="gc-cost">${ic('intel')}${cost}</span><span class="rar r${def.tier}">${def.rarityName}</span></span></span>`;
 }
 function lootFace(it, e, live) {
   const def = WD.itemDef(G, it); const cost = shownCost(it, e);
@@ -604,8 +610,8 @@ function fieldHTML() {
     const st = cl.includes(e.w) ? 'warn' : drop ? 'drop' : 'safe';
     const stLabel = cl.includes(e.w) ? 'Gas next' : drop ? 'Supply crate' : final ? 'Final circle' : e.fresh && !e.cache.searched ? 'New ground' : e.hot ? 'Centre' : 'Safe';
     const plan = !e.cache.searched ? WD.stackPlan(G, e) : null;
-    const cache = plan ? `<span class="stackic ct${e.tier}" data-tip="${escA(`Face-down loot stack, ${['', 'green (Common–Uncommon)', 'blue (Rare–Epic)', 'purple (Epic–Legendary)'][e.tier]}: ${plan.map((k, i) => `${i === 0 ? 'top' : i + 1}: ${k === 'weapon' ? 'gun' : 'card'}`).join(', ')}. It flips face up when someone stands here. Only the top card can be bought.`)}">${plan.map(k => `<i class="${k === 'weapon' ? 'sg' : 'sc'}">${k === 'weapon' ? ic('ammo') : ''}</i>`).join('')}${chev(e.tier)}</span>` : '';
-    const cacheOld = !e.cache.searched ? `<span class="cache ct${e.tier}" data-tip="Hidden cache, ${['', 'Common–Uncommon guns and Uncommon cards', 'Rare–Epic guns and Rare cards', 'Epic–Legendary guns and Epic cards'][e.tier]}: Search here (once per turn) to flip ${e.cache.reveal} loot cards face up, then buy. Whatever you leave stays here for anyone.">${ic('search')} ${e.cache.reveal} · ${['', 'green', 'blue', 'purple+'][e.tier]}</span>` : '';
+    const cache = plan ? `<span class="stackic ct${e.tier}" data-tip="${escA(`Face-down loot stack, ${STACK_TIER[e.tier]}: ${plan.map((k, i) => `${i === 0 ? 'top' : i + 1}: ${k === 'weapon' ? 'gun' : 'card'}`).join(', ')}. It flips face up when someone stands here. Only the top card can be bought.`)}">${plan.map(k => `<i class="${k === 'weapon' ? 'sg' : 'sc'}">${k === 'weapon' ? ic('ammo') : ''}</i>`).join('')}${chev(e.tier)}</span>` : '';
+    const cacheOld = !e.cache.searched ? `<span class="cache ct${e.tier}" data-tip="Hidden cache, ${['', 'Common guns and cards', 'Uncommon–Rare guns and Rare cards', 'Epic–Legendary guns and Epic cards'][e.tier]}: Search here (once per turn) to flip ${e.cache.reveal} loot cards face up, then buy. Whatever you leave stays here for anyone.">${ic('search')} ${e.cache.reveal} · ${['', 'green', 'blue', 'purple+'][e.tier]}</span>` : '';
     const crate = drop ? `<span class="cache crate" data-tip="Supply crate: Search it to flip ${WD.TUNE.crate[0]} items (${WD.TUNE.crate[1]} guns).">Crate ${WD.TUNE.crate[0]}</span>` : '';
     const cover = d.cover ? `<span class="${d.cover > 1 ? 'cover-hard' : ''}">${d.cover > 1 ? 'Hard' : 'Cover'} −${d.cover}</span>` : '<span>No cover</span>';
     const bonusTxt = d.bonusText ? `<span class="bon">${fx(d.bonusText)}</span>` : '';
@@ -677,7 +683,8 @@ const SHAPE = {
   engineer: '<path fill-rule="evenodd" d="M18.62 9.71 L18.64 9.80 L21.91 9.58 L21.91 14.42 L18.64 14.20 L18.62 14.29 L18.29 15.06 L18.26 15.14 L20.72 17.29 L17.29 20.72 L15.14 18.26 L15.06 18.29 L14.29 18.62 L14.20 18.64 L14.42 21.91 L9.58 21.91 L9.80 18.64 L9.71 18.62 L8.94 18.29 L8.86 18.26 L6.71 20.72 L3.28 17.29 L5.74 15.14 L5.71 15.06 L5.38 14.29 L5.36 14.20 L2.09 14.42 L2.09 9.58 L5.36 9.80 L5.38 9.71 L5.71 8.94 L5.74 8.86 L3.28 6.71 L6.71 3.28 L8.86 5.74 L8.94 5.71 L9.71 5.38 L9.80 5.36 L9.58 2.09 L14.42 2.09 L14.20 5.36 L14.29 5.38 L15.06 5.71 L15.14 5.74 L17.29 3.28 L20.72 6.71 L18.26 8.86 L18.29 8.94Z M12 9.2 a2.8 2.8 0 1 0 0.001 0Z" fill="currentColor"/>',
 };
 const shapeSvg = r => `<svg class="shp" viewBox="0 0 24 24" aria-hidden="true">${SHAPE[r] || ''}</svg>`;
-function chev(t) { return t ? `<svg class="rank" viewBox="0 0 24 ${6 + 7 * t}" role="img" aria-label="${['', 'Uncommon', 'Rare', 'Epic'][t] || ''}"><title>${['', 'Uncommon', 'Rare', 'Epic'][t] || ''}</title>${Array.from({ length: t }, (_, i) => `<path d="M3 ${11 + 7 * i} 12 ${4 + 7 * i} 21 ${11 + 7 * i}" fill="none" stroke="currentColor" stroke-width="3.6"/>`).join('')}</svg>` : ''; }
+const TIER_WORD = ['', 'Common', 'Rare', 'Epic']; // tier-1 loot is Common, like the tier-1 guns in it
+function chev(t) { return t ? `<svg class="rank" viewBox="0 0 24 ${6 + 7 * t}" role="img" aria-label="${TIER_WORD[t] || ''}"><title>${TIER_WORD[t] || ''}</title>${Array.from({ length: t }, (_, i) => `<path d="M3 ${11 + 7 * i} 12 ${4 + 7 * i} 21 ${11 + 7 * i}" fill="none" stroke="currentColor" stroke-width="3.6"/>`).join('')}</svg>` : ''; }
 function roleB(r, on) { return `<span class="roleb ${on === false ? 'dim' : ''}" style="--arch:var(${ARCH_VAR[r]})" title="${ARCH_SHORT[r]}">${shapeSvg(r)}</span>`; }
 const ARCH_VAR = { assault: '--ro-a', support: '--ro-s', recon: '--ro-r', engineer: '--ro-e' };
 const RES_IC = { move: 'move', prec: 'prec', intel: 'intel', def: 'def' };
@@ -887,7 +894,7 @@ function sheetHTML() {
       <div class="rp-sum" style="--d:${nC}"><span class="rp-got"><small>Hit Markers</small><b>${f.total}</b><i>/ ${f.req} needed</i></span>${f.steps ? ladderHTML(f.steps, f.level) : ''}</div>
       <div class="verdict2 ${f.hit ? 'hit' : 'miss'}" style="--d:${nC}">${f.hit ? `HIT <span>−${f.dealt}</span>` : f.jam ? 'JAMMED' : 'MISS'}</div>
       ${(f.notes && f.notes.length) || f.recoil ? `<div class="rp-notes">${(f.notes || []).concat(f.recoil ? [`Recoil −${f.recoil} Precision`] : []).join(' · ')}</div>` : ''}
-      <div class="row rp-btns">${more ? `<button class="btn ${fireOdds(S.gi).pct >= 10 ? 'sig' : 'alt'}" data-act="fireagain">Fire again · ${WD.shotsLeft(G, ui.me, S.gi)} left · ${fireOdds(S.gi).pct >= 1 ? fireOdds(S.gi).pct + '%' : 'long shot'}</button>` : ''}<button class="btn ${more && fireOdds(S.gi).pct >= 10 ? 'alt' : 'sig'}" data-act="close">Continue</button></div>`;
+      <div class="row rp-btns">${more ? `<button class="btn ${fireOdds(S.gi).pct >= 10 ? 'sig' : 'alt'}" data-act="fireagain">Fire again · ${WD.shotsLeft(G, ui.me, S.gi)} left · ${fireOdds(S.gi).pct >= 1 ? fireOdds(S.gi).pct + '%' : '&lt;1%'}</button>` : ''}<button class="btn ${more && fireOdds(S.gi).pct >= 10 ? 'alt' : 'sig'}" data-act="close">Continue</button></div>`;
   }
   if (S.type === 'rivalturn') {
     const lines = S.lines;
@@ -952,7 +959,7 @@ const RULES = `<h4>Goal</h4><ul><li>Bring your rival from ${WD.TUNE.hp} Health t
 <li>The <b>damage ladder</b> has 2 steps: reach the first to hit, the second for a big hit. Cover at the target’s location: −1. Armor and Reaction cards reduce it more.</li>
 <li>A gun fires up to its <b>Shots</b> per turn, plus extra shots from cards.</li>
 <li><b>Combat Knife</b>: same location only, always hits.</li></ul>
-<h4>Roles and combos</h4><ul><li>${roleB('assault')} Assault: Movement · ${roleB('recon')} Recon: Precision · ${roleB('support')} Support: shots and Armor · ${roleB('engineer')} Engineer: Intel and Scrap.</li><li><b>Combo box</b>: if you play <b>another card</b> of a role shown in the box this turn (before or after, any order), you also get the box. Uncommon cards combo with their own role; Rare and Epic cards with their own role <b>or</b> a second one.</li><li><b>Gun combo</b>: once per turn, when you play a card of the role on your gun.</li></ul>
+<h4>Roles and combos</h4><ul><li>${roleB('assault')} Assault: Movement · ${roleB('recon')} Recon: Precision · ${roleB('support')} Support: shots and Armor · ${roleB('engineer')} Engineer: Intel and Scrap.</li><li><b>Combo box</b>: if you play <b>another card</b> of a role shown in the box this turn (before or after, any order), you also get the box. Common cards combo with their own role; Rare and Epic cards with their own role <b>or</b> a second one.</li><li><b>Gun combo</b>: once per turn, when you play a card of the role on your gun.</li></ul>
 <h4>The circle</h4><ul>
 <li>After each round the gas takes 1 location from the right and 1 new location appears on the left. When no new ground is left, the circle shrinks.</li>
 <li>In the gas at round end: ${WD.TUNE.gasDmg} damage (+1 per extra space), then you are pushed back in.</li></ul>`;

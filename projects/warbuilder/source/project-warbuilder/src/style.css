@@ -2353,3 +2353,40 @@ button.lf-p:hover { box-shadow: 0 0 0 2px #F2CC4A, 1px 2px 0 rgba(0,0,0,.45); }
 .sc-pick:not(:disabled):hover pnp-face { transform: translateY(-5px); box-shadow: 0 0 0 3px #EE8438, 0 10px 20px rgba(0,0,0,.5); }
 .sc-pick:disabled { opacity: .45; cursor: not-allowed; }
 @media (orientation: portrait), (orientation: landscape) and (max-height: 540px) { .h-btns .hb-scrap { order: 1; grid-column: span 2 !important; } }
+
+/* =====================================================================
+   v9 · Q5/Q6 polish (playtest B8, B9, B10)
+   ===================================================================== */
+/* B10 · FIRE always says why it cannot fire */
+.hb-fire .hb-why { display: block; margin-top: 2px; font: 700 11px/1.1 var(--f-body); letter-spacing: .04em; text-transform: none; opacity: .9; }
+/* B8 · location names wrap to two lines instead of being cut off */
+.lp-name { white-space: normal !important; text-overflow: clip !important; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.1; text-wrap: balance; }
+@media (orientation: landscape) and (max-height: 540px), (orientation: portrait) and (max-width: 699px) {
+  .hud .lp-name { min-height: 2.2em; font-size: 11px; letter-spacing: 0; }
+}
+/* B8 · narrow stacks: a face-up gun shows an upright compact card instead of the sideways printed face */
+.lf-gc { display: none; }
+@container (max-width: 140px) {
+  .lc-stack .lstack.s-gun .ls-top > .lf-p { left: 0; top: 0; width: 100%; height: 100%; transform: none; }
+  .lc-stack .lstack.s-gun .ls-top > .lf-p > pnp-face, .lc-stack .lstack.s-gun .ls-top > .lf-p > .lf-cost { display: none; }
+  .lc-stack .lstack.s-gun .ls-top > .lf-p > .lf-gc { display: flex; }
+}
+.lf-gc { position: absolute; inset: 0; flex-direction: column; background: #F3F4EB; color: #1C2017; border-top: 5px solid var(--r0); border-radius: 4px; text-align: left; overflow: hidden; font-family: var(--f-body); }
+.lf-gc.r1 { border-top-color: var(--r1); } .lf-gc.r2 { border-top-color: var(--r2); } .lf-gc.r3 { border-top-color: var(--r3); } .lf-gc.r4 { border-top-color: var(--r4); }
+.gc-top { flex: none; display: flex; flex-direction: column; gap: 1px; padding: 3px 14px 0 5px; }
+.gc-nm { font-size: 10.5px; font-weight: 800; line-height: 1.05; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.gc-cls { font: 700 8px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: #5B6152; }
+.gc-art { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: contain; padding: 1px 3px; box-sizing: border-box; }
+.gc-st { flex: none; display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 4px; padding: 0 5px; font: 800 10.5px/1.25 var(--f-mono); }
+.gc-st > span { display: inline-flex; align-items: center; gap: 1px; white-space: nowrap; }
+.gc-st svg.i { width: 10px !important; height: 10px !important; color: #5B6152; }
+.gc-ft { flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 5px 4px; }
+.gc-ft .rar { font-size: 7.5px; padding: 0 3px; line-height: 1.5; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-cost { flex: none; display: inline-flex; align-items: center; gap: 1px; font: 900 11px/1 var(--f-mono); color: #8A6A0A; }
+.gc-cost svg.i { width: 10px !important; height: 10px !important; }
+/* B9 · desktop: the map row only takes what the location cards need; the dock (hand, gun, buttons) gets the rest */
+@media (orientation: landscape) and (min-height: 760px) and (min-width: 1100px) {
+  .hud { grid-template-rows: auto minmax(0, 1fr) clamp(260px, 37vh, 350px) !important; }
+  .hud .h-hand .hh-row { padding-left: 30px !important; }
+  .hud .h-hand .hh-row .hslot { --hh: min(calc(100cqh - 4px), 300px, calc((100cqw + (var(--n) - 1) * 28px - 14px) / var(--n) * 1.4)) !important; --ww: calc(var(--hh) / 1.4) !important; }
+}

@@ -723,7 +723,7 @@ function endRound(s) {
     const names = [];
     for (const w of list) { const ge = envAt(s, w); names.push(ENVS[ge.def].name + (ge.loot.length || !ge.cache.searched ? ' (with its loot)' : '')); ge.loot = []; ge.state = 'gas'; ge.crate = null; }
     log(s, `Round ${s.round} ends. Gas swallows ${names.join(', ')}.`, 'gas');
-    let phaseUp = false;
+    let phaseUp = false; const ph0 = s.phase;
     if (drifting) {
       const added = [];
       for (let i = 0; i < list.length && s.envDeck.length; i++) {
@@ -735,7 +735,7 @@ function endRound(s) {
       }
       log(s, `New ground revealed on the left: ${added.join(', ')}${s.envDeck.length ? ` (${s.envDeck.length} more to come)` : ' — the last new ground. From now on the circle shrinks.'}.`, 'fx');
       if (!s.envDeck.length) s.closeSide = 'right';
-      if (phaseUp) { log(s, `PHASE ${s.phase}: the gas speeds up to ${TUNE.phaseGas[s.phase - 1]} location${TUNE.phaseGas[s.phase - 1] > 1 ? 's' : ''} per round. Both operators draft a new perk.`, 'round'); for (const q of [0, 1]) dealPerks(s, q); }
+      if (phaseUp) { const g = TUNE.phaseGas[s.phase - 1]; log(s, `PHASE ${s.phase} begins.${g > TUNE.phaseGas[ph0 - 1] ? ` The gas speeds up to ${g} location${g > 1 ? 's' : ''} per round.` : ''}${TUNE.perks ? ' Both operators draft a new perk.' : ''}`, 'round'); for (const q of [0, 1]) dealPerks(s, q); }
     } else s.closeSide = s.closeSide === 'right' ? 'left' : 'right';
     const B2 = safeBounds(s); s.envs = s.envs.filter(e => e.state === 'safe' || (e.w >= B2.lo - 1 && e.w <= B2.hi + 1) || s.players.some(q => q.pos === e.w));
   }
