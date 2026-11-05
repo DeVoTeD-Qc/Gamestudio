@@ -224,3 +224,10 @@ The card-system doc's promise holds: **the prototype needs no rules logic change
 1. **Model:** (a) **B, Fields on your half of the objective, can't be shot, one per column, torn down by Overrun** (recommended), (b) A, Emplacements that take a row and can be shot, or (c) keep Equipment as small chips and send emblems to tactics as today.
 2. **Name of the type:** (a) **Field** (recommended: short, says "on the field", fits the icon), (b) Emplacement, (c) Standard (but our art can't show flags).
 3. **Prototype scope:** (a) **the zero-rules-code slice: rename + strips + Listening Post and Mortar Pit** (recommended), (b) the full model (auras, one-per-column, Overrun) in the prototype, or (c) no Fields until after the first playtest.
+
+---
+
+## Head's decisions (2026-11-05, task kc-field)
+- **F1:** Model **B**: a Field sits on your half of the objective, can't be shot, **one per side per column**.
+- **F2:** the type is called **Field**.
+- **F3:** the **full model goes into the first prototype**: auras from Fields, the one-per-column limit, **Overrun**, Aid Station (heal), plus the data-only cards. Use timers only if the balance sim shows Fields snowballing.

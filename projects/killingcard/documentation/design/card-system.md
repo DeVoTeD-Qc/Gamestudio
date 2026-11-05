@@ -422,3 +422,4 @@ Gameplay power comes only from **chassis**, which you earn through run rewards j
 - **S3 New chassis** (Brawler, Smoke Screen, Blackout, Sabotage): **reward pool only, after a balance sim**.
 - **S4 Operator:** **unit art only** for now. The Operator is a deployable unit with stronger stats. Idea to explore next: Operators use **weapon-mastery style banners** that the player grinds for **camo variants** (alt-art tiers of the same Operator), because the Operator is the card you see every game.
 - From kc-art: invented faces OK in stylised styles; flat emblems are tactics (a third "field card" type is being explored in `field-cards.md`, task kc-field); new weapon types map onto the existing 6 classes.
+- From kc-field: a third card type, **Field** (model B, full model in the first prototype). Curator rule: "Fighter or gun → Unit. Symbol or building → Field. A moment → Tactic." See `field-cards.md`.
