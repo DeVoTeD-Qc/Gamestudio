@@ -53,3 +53,8 @@ archive/
 dist/
 build/
 *.egg-info/
+# Licensed third-party art: PRIVATE pitch prototype only. This repo is PUBLIC.
+# Never commit these images, their Godot .import sidecars, or fetch caches.
+projects/*/source/**/assets/licensed/
+projects/*/assets/licensed/
+**/licensed_cache/
