@@ -1,0 +1,25 @@
+file,style,kind,subject,weapon_class,element,mood,violence,setting,palette,verb,count,card,alt_group,animated,banner_y,portrait_x,status,effect_hint
+kc_b_rifleman_dusk.png,cine,unit,soldier,ar,none,heroic,v2,urban_ruins,orange,attacking,solo,Rifleman,alt_rifleman,no,0.47,0.50,prompted,"baseline attacker, no extra effect"
+kc_b_rifleman_comic.png,ink,unit,soldier,ar,none,heroic,v2,urban_ruins,red,attacking,solo,Rifleman,alt_rifleman,no,0.47,0.50,prompted,same card as kc_b_rifleman_dusk
+kc_b_marksman_snow.png,paint,unit,soldier,sniper,ice,stealthy,v1,arctic,blue,aiming,solo,Marksman,alt_marksman,no,0.47,0.50,prompted,Pick (sniper); ice could add a slow/freeze variant later
+kc_b_marksman_neon.png,neon,unit,soldier,sniper,neon,stealthy,v1,night_city,magenta,aiming,solo,Marksman,alt_marksman,yes,0.47,0.50,prompted,same card as kc_b_marksman_snow; animated: sun shimmer + laser flicker
+kc_b_point_man_bazaar.png,retro,unit,soldier,smg,none,aggressive,v1,market_town,sand,rushing,solo,Point Man,,no,0.47,0.50,prompted,First Shot / speed
+kc_b_breacher_doorkick.png,ink,unit,soldier,shotgun,explosive,aggressive,v2,interior,yellow,breaching,solo,Breacher,,no,0.47,0.50,prompted,close-range burst; door/breach theme
+kc_b_gunner_inferno.png,paint,unit,soldier,lmg,fire,menacing,v2,industrial,orange,suppressing,solo,Gunner,,yes,0.47,0.50,prompted,fire: burn/damage-over-time hook; animated: embers + heat haze
+kc_b_shieldman_sparks.png,retro,unit,soldier,sidearm,none,defiant,v1,urban_street,teal,guarding,solo,Shieldman,,no,0.47,0.50,prompted,Protector / guard
+kc_b_medic_goldengrass.png,cine,unit,soldier,ar,none,calm,v0,grassland,gold,healing,solo,Combat Medic,,no,0.47,0.50,prompted,Patch / heal
+kc_b_frost_wolf.png,paint,unit,animal,natural,ice,menacing,v1,arctic,blue,charging,solo,(designer) fast flanker or new beast unit,,no,0.47,0.50,prompted,ice: freeze/slow; charging: move/flank
+kc_b_leviathan_lighthouse.png,paint,unit,creature,natural,water,eerie,v1,sea,teal,emerging,solo,(designer) new heavy creature unit,,later,0.47,0.50,prompted,"water/night: hidden until revealed, big body"
+kc_b_storm_ronin.png,wood,unit,soldier,melee,wind,stoic,v1,mythic,indigo,dueling,solo,(designer) new melee unit,,later,0.47,0.50,prompted,melee: strike the frontline only
+kc_b_sentry_walker.png,ink,unit,robot,lmg,electric,menacing,v1,industrial,cyan,guarding,solo,Sentry,,no,0.47,0.50,prompted,Protector / guard; electric: chain hit
+kc_b_gilded_launcher.png,cine,unit,weapon_only,launcher,explosive,luxurious,v1,studio_void,gold,showcase,solo,Demolitions Expert (or new launcher card),,later,0.47,0.50,prompted,launcher: splash damage to a column
+kc_b_callout_ping.png,emblem,tactic,emblem,none,electric,tactical,v0,abstract,red,revealing,none,Callout,,yes,0.47,0.50,prompted,reveal; animated: ring pulse (shader only)
+kc_b_suppress_tracers.png,retro,tactic,landscape,none,fire,chaotic,v2,desert,rust,suppressing,none,Suppressing Fire,,no,0.47,0.50,prompted,suppress: lower enemy power
+kc_b_flank_route_alley.png,paint,tactic,landscape,none,none,stealthy,v0,old_town,green,flanking,none,Flank Route,alt_flank_route,no,0.47,0.50,prompted,move/flank
+kc_b_flank_route_emblem.png,emblem,tactic,emblem,none,none,stealthy,v0,abstract,olive,flanking,none,Flank Route,alt_flank_route,no,0.47,0.50,prompted,same card as kc_b_flank_route_alley
+kc_b_hold_seawall.png,wood,tactic,landscape,none,water,defiant,v0,sea,indigo,holding,none,Hold the Line,,no,0.47,0.50,prompted,hold: shield/fortify a column
+kc_b_breach_burst.png,ink,tactic,object,none,explosive,chaotic,v2,interior,orange,breaching,none,Breach and Clear,,no,0.47,0.50,prompted,breach: damage frontline
+kc_b_supply_drop.png,cine,tactic,object,none,none,calm,v0,desert,sand,resupplying,none,Ammo Resupply,,no,0.47,0.50,prompted,resupply: draw/refresh
+kc_b_firestorm_city.png,paint,tactic,landscape,none,fire,apocalyptic,v1,city_skyline,orange,burning,none,(designer) new fire tactic,,later,0.47,0.50,prompted,fire: damage every unit in a column
+kc_b_blackout_street.png,neon,tactic,landscape,none,electric,eerie,v0,night_city,cyan,disabling,none,(designer) new Blackout tactic,,yes,0.47,0.50,prompted,electric/night: silence or hide; animated: neon flicker
+kc_b_toxic_bog.png,neon,tactic,landscape,none,toxic,eerie,v0,swamp,green,poisoning,none,(designer) new Gas Cloud tactic,,later,0.47,0.50,prompted,toxic: weaken power over time
