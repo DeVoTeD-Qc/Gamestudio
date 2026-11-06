@@ -305,7 +305,7 @@ func test_player_setup_carries_deck_loadout_and_rewards() -> void:
 
 func test_enemy_bonuses_by_bracket() -> void:
 	var r: RunProgress = _new_run()
-	var expect: Array[int] = [0, 0, 1, 1, 1]
+	var expect: Array[int] = [0, 0, 0, 1, 1]  # kc-fight-impl: match 3 (Rusher+) Armor bonus 1 -> 0
 	for i: int in 5:
 		var md: RunMatchData = r.current_match()
 		var e: SideSetup = r.enemy_setup()

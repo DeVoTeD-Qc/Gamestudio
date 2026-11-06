@@ -347,7 +347,7 @@ func test_personalities_keep_their_positions() -> void:
 		var slot: RunMatchData = _slot(slot_index)
 		var zones: Array[int] = [0, 0, 0]
 		var op_zones: Array[int] = [0, 0, 0]
-		for s: int in 12:  # kc-syn: 12 seeds (5 was too noisy for the zone shares)
+		for s: int in 16:  # kc-syn: 12 seeds (5 was too noisy); kc-fight-impl: 16 (the beat order evens the zone shares out)
 			var m: MatchState = Sim.match_for(_config(), slot, 500 + s)
 			var ai: AiPlayer = AiPlayer.for_squad(slot.squad)
 			while m.phase != MatchState.Phase.ENDED and m.round_number <= 12:

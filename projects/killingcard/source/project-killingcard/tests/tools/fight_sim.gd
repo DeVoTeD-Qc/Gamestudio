@@ -296,6 +296,10 @@ func _count_events(m: MatchState, from: int) -> void:
 				pace["hits"] = int(pace.get("hits", 0)) + 1
 		elif t == RulesEvent.FIREFIGHT_STEP:
 			pace["steps"] = int(pace.get("steps", 0)) + 1
+		elif t == RulesEvent.FIREFIGHT_BEAT:  # kc-fight-impl: the shipped order's beats
+			pace["beats"] = int(pace.get("beats", 0)) + 1
+		elif t == RulesEvent.LINE_ADVANCED:
+			pace["advances"] = int(pace.get("advances", 0)) + 1
 		elif t == RulesEvent.FIREFIGHT_STARTED:
 			pace["columns"] = int(pace.get("columns", 0)) + 1
 		elif t == RulesEvent.UNIT_ELIMINATED:
@@ -310,6 +314,11 @@ func _pace() -> void:
 			float(pace.get("columns", 0)) / r, float(pace.get("shots", 0)) / r, float(pace.get("hits", 0)) / r,
 			float(pace.get("elims", 0)) / r, float(fo.get("beats", 0)) / r, float(fo.get("advances", 0)) / r,
 			float(pace.get("steps", 0)) / r])
+	if int(pace.get("beats", 0)) > 0:
+		var secs: float = FirefightResolver.PLAYBACK_COLUMN_S * float(pace.get("columns", 0)) \
+				+ FirefightResolver.PLAYBACK_BEAT_S * float(pace.get("beats", 0)) + FirefightResolver.PLAYBACK_ADVANCE_S * float(pace.get("advances", 0))
+		print("shipped order: beats %.2f  advances %.2f per round  playback at x1 %.1f s per round (x2 %.1f s)" % [
+				float(pace["beats"]) / r, float(pace.get("advances", 0)) / r, secs / r, secs / r / 2.0])
 	if int(fo.get("rounds", 0)) > 0:
 		var hist: Array = []
 		var cum: int = 0

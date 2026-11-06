@@ -54,9 +54,15 @@ const RED_DOTS_REVEALED: StringName = &"red_dots_revealed"    ## side (viewer), 
 const EFFECT_APPLIED: StringName = &"effect_applied"          ## side, source_id, kind, target_uid, amount
 const EFFECT_WASTED: StringName = &"effect_wasted"            ## side, source_id, kind, reason
 const FIREFIGHT_STARTED: StringName = &"firefight_started"    ## zone
-const FIREFIGHT_STEP: StringName = &"firefight_step"          ## zone, step (&"first_shot" / &"main")
+const FIREFIGHT_STEP: StringName = &"firefight_step"          ## (no longer emitted: the old First Shot / Main steps; kc-fight-impl uses FIREFIGHT_BEAT)
+## kc-fight-impl (firefight-order.md, Implementation notes): one beat of a column. shooters = uids firing
+## in it (1 or 2); exchange 0 = together, 1 = the First Shot half of a split, 2 = its partner's reply.
+const FIREFIGHT_BEAT: StringName = &"firefight_beat"          ## zone, beat (1-based in the column), shooters [uid], exchange, first_shot_split
+const PIERCE_CARRIED: StringName = &"pierce_carried"          ## side (shooter's), shooter_uid, from_uid, target_uid, carried (damage left before Cover), damage, zone, beat
+const LINE_ADVANCED: StringName = &"line_advanced"            ## side, zone, moves [{uid, from_row, to_row}] (after removals: the line closed up)
+const FIREFIGHT_COLUMN_ENDED: StringName = &"firefight_column_ended" ## zone, beats (after Patch)
 const SUPPRESSED: StringName = &"suppressed"                  ## side (suppressor's), uid (shooter), target_uid, amount
-const SHOT_FIRED: StringName = &"shot_fired"                  ## side, shooter_uid, target_uid (-1 = wasted), zone, damage, step
+const SHOT_FIRED: StringName = &"shot_fired"                  ## side, shooter_uid, target_uid (-1 = no target), zone, damage, step (&"first_shot" if the shooter has First Shot, else &"beat"), beat, overkill, pierce
 const DAMAGE_DEALT: StringName = &"damage_dealt"              ## target_uid, side (target's), amount, remaining, source_id
 const SURVIVED_LETHAL: StringName = &"survived_lethal"        ## side, uid, armor
 const UNIT_ELIMINATED: StringName = &"unit_eliminated"        ## victim_uid, victim_side, by_uid, by_side, zone, source_kind, by_killstreak, credit

@@ -60,10 +60,10 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		c["playable"] = rc.card.cost <= me.supply
 		_hand_synergy(c, state, viewer, rc)
 		c["banner"] = String(state.art_by_uid.get(rc.uid, rc.card.id))
-		var title: String = BannerArtDB.art_title(StringName(String(c["banner"])))
-		if title != "":
-			c["chassis"] = c.get("name", "")
-			c["name"] = title  # kc-cod2: the calling card's own title (private pitch art only)
+		# kc-ui4 (head naming): the name stays the chassis; the art's own name is the subname.
+		var sub: String = BannerArtDB.subname(StringName(String(c["banner"])))
+		if sub != "":
+			c["subname"] = sub
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -204,9 +204,9 @@ static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: Ru
 	if state != null and uid >= 0 and state.art_by_uid.has(uid):
 		id = state.art_by_uid[uid]
 	e["banner"] = String(id)
-	var title: String = BannerArtDB.art_title(id)
-	if title != "":
-		e["art_title"] = title
+	var sub: String = BannerArtDB.subname(id)
+	if sub != "":
+		e["subname"] = sub
 	e["bolt"] = card != null and not card.effects.is_empty()
 	e["front_kw"] = card != null and card.arrives_front
 	e["elite"] = card != null and card.is_elite

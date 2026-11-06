@@ -219,6 +219,7 @@ static func _unit_record(state, u) -> Dictionary:
 	r["pick"] = bool(u.pick)
 	r["flank"] = bool(u.flank)
 	r["suppress"] = bool(u.suppress)
+	r["pierce"] = bool(u.pierce)
 	r["patch"] = int(u.patch)
 	r["holder"] = bool(u.holder)
 	r["control"] = bool(u.counts_for_control)
@@ -275,7 +276,7 @@ static func new_record() -> Dictionary:
 	return {
 		"uid": -1, "id": &"", "class": 0, "is_op": false, "new": false, "card_unit": false,
 		"fp": 0, "armor": 1, "armor0": 1, "max_armor": 1, "cover": 0,
-		"first_shot": false, "pick": false, "flank": false, "suppress": false, "patch": 0,
+		"first_shot": false, "pick": false, "flank": false, "suppress": false, "pierce": false, "patch": 0,
 		"holder": false, "control": true, "credit": true, "untargetable": false, "survive": 0,
 		"aura": 0, "on_down_damage": 0, "arrives_front": false,
 		"kw": &"", "trait": &"", "level": 1, "syn_fp": 0, "syn_cover": 0, "syn_fs": false, "fs_native": false,
@@ -319,6 +320,7 @@ func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules
 	r["pick"] = card.pick
 	r["flank"] = card.flank
 	r["suppress"] = card.suppress
+	r["pierce"] = card.pierce
 	r["patch"] = card.patch
 	r["holder"] = card.holder
 	r["control"] = card.counts_for_control

@@ -40,6 +40,9 @@ const MAX_TEXT_LENGTH: int = 100
 ## Cover N: each hit on this unit deals N less damage (0 = no Cover).
 @export_range(0, 5) var cover: int = 0
 @export var suppress: bool = false
+## Pierce (kc-fight-impl, firefight-order.md §3): damage beyond what the target needs carries on to
+## the next enemy behind it (that unit's Cover applies). Printed: Recruit copies keep it.
+@export var pierce: bool = false
 ## Patch N: after the firefight restore N Armor to the most damaged other friendly here.
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
@@ -128,7 +131,7 @@ func validate(v: DataValidator) -> void:
 			v.invalid("firepower", "only units have Firepower/Armor (got %d/%d)" % [firepower, armor])
 		if weapon_class != DataEnums.WeaponClass.NONE:
 			v.invalid("weapon_class", "only units have a weapon class")
-		if first_shot or pick or flank or cover > 0 or suppress or patch > 0 or holder or arrives_front:
+		if first_shot or pick or flank or cover > 0 or suppress or pierce or patch > 0 or holder or arrives_front:
 			v.invalid("keywords", "keywords and arrives_front are for units only")
 		if is_elite:
 			v.invalid("is_elite", "only units can be elite")

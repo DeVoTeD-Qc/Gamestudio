@@ -1007,6 +1007,7 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.flank = card.flank
 	u.cover = card.cover
 	u.suppress = card.suppress
+	u.pierce = card.pierce
 	u.patch = card.patch
 	u.holder = card.holder
 	u.arrives_front = card.arrives_front

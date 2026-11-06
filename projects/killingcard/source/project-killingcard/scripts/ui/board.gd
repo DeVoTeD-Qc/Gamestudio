@@ -234,7 +234,9 @@ func _show_zoom(slot: Node) -> void:
 	pos.x = clampf(pos.x, 0.0, maxf(0.0, size.x - _zoom_size.x))
 	pos.y = clampf(pos.y, 0.0, maxf(0.0, size.y - _zoom_size.y))
 	_zoom.position = pos
-	var zoom_name: String = String(slot.entry.get("art_title", slot.entry.get("name", "")))
+	var zoom_name: String = String(slot.entry.get("name", ""))
+	if String(slot.entry.get("subname", "")) != "":
+		zoom_name += " “%s”" % String(slot.entry["subname"])
 	_zoom_label.text = "%s · %s" % [zoom_name, String(slot.entry.get("cls", "")).capitalize()]
 	_zoom_label.reset_size()
 	var below: bool = pos.y + _zoom_size.y + _zoom_label.size.y <= size.y

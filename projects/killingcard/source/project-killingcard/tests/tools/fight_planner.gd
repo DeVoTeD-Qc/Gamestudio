@@ -4,6 +4,8 @@
 #   front duel; First Shot pass or exchange; Pierce), so the AI plans for the order it plays
 #   under. Everything except step 2 of _eval_zone is the shipped estimator, copied verbatim.
 # Dependencies: AiPlanner, fight_order.gd.
+#   kc-fight-impl: the order is shipped (FirefightResolver / AiPlanner._fight); order=now now
+#   means the shipped beat order and this class defers to it.
 # Author: Sr Game Designer Agent (kc-fight)
 extends AiPlanner
 
@@ -115,6 +117,9 @@ func _eval_zone(p: AiPlanner.Plan, z: int) -> float:
 ## Step 2 of the estimator in the prototype order. Arrays are indexed by line position.
 func _fight(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, fs: Array, survive: Array,
 		front_fp: Array[int], front_cover: Array[int]) -> void:
+	if FightOrder.order == &"now":  # kc-fight-impl: the shipped estimator now plays the beat order
+		super._fight(sides, n, armor, fp, cover, fs, survive, front_fp, front_cover)
+		return
 	var fired: Array = [[], []]
 	for si: int in 2:
 		for i: int in n[si]:
@@ -156,6 +161,9 @@ func _fight(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, 
 
 func _beat(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, survive: Array,
 		front_fp: Array[int], front_cover: Array[int], fired: Array, shooters: Array) -> void:
+	if FightOrder.order == &"now":
+		super._beat(sides, n, armor, fp, cover, survive, front_fp, front_cover, fired, shooters)
+		return
 	var dmg: Array = [[], []]
 	for si: int in 2:
 		for i: int in n[si]:

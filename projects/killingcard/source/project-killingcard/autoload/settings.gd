@@ -30,11 +30,19 @@ var show_outcome_preview: bool = true
 var mirror_layout: bool = false
 ## kc-ui3: the tray's SPEED x2 toggle (the round's feedback at double speed), kept between sessions.
 var speed_x2: bool = false
+## kc-ui4 (head: "select them to see alternate art and equip the alternate art I want"): chassis id
+## (String) -> equipped art id (String), set in the Codex. Every copy of that card you play wears
+## it; a card with no entry keeps the per-copy variety.
+var equipped_arts: Dictionary = {}
+## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
+## New runs and the quick match start with it.
+var operator_primary: String = ""
 
 const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
-const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"fast_animations"]
+const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"fast_animations",
+		&"equipped_arts", &"operator_primary"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 
@@ -84,6 +92,22 @@ func set_value(key: StringName, value: Variant) -> void:
 	if persist and PERSISTED_KEYS.has(key):
 		save_to(SAVE_PATH)
 	settings_changed.emit()
+
+
+## kc-ui4: equips `art_id` on every copy of `chassis` (&"" or the chassis' default art clears it:
+## the card goes back to the per-copy variety). Saved like any persisted option.
+func equip_art(chassis: StringName, art_id: StringName) -> void:
+	var d: Dictionary = equipped_arts.duplicate()
+	if art_id == &"":
+		d.erase(String(chassis))
+	else:
+		d[String(chassis)] = String(art_id)
+	set_value(&"equipped_arts", d)
+
+
+## The art equipped on `chassis` (&"" = none: per-copy variety).
+func equipped_art(chassis: StringName) -> StringName:
+	return StringName(String(equipped_arts.get(String(chassis), "")))
 
 
 ## Writes PERSISTED_KEYS to a ConfigFile. Returns the Error code.

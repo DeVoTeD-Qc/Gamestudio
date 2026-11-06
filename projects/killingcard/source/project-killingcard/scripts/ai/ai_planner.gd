@@ -10,8 +10,9 @@
 #           + w_deny  * deny-the-player's-streak (down their Operator, don't feed kills)
 #           + personality habits (preferred zones, pushing, Operator home, keep costs)
 #   The board after a plan is scored with a small deterministic firefight estimator
-#   (_eval_zone: Attack Helo, Suppress, First Shot / Main steps with Pick / Flank / Cover,
-#   On Down damage, Patch, control with Holder) that mirrors FirefightResolver on the
+#   (_eval_zone: Attack Helo, Suppress, beats front to back with the First Shot exchange,
+#   Pick / Flank / Cover / Pierce, On Down damage, Patch, control with Holder; kc-fight-impl)
+#   that mirrors FirefightResolver on the
 #   public board. The player's response is unknown, so it is not predicted.
 #   Search: the Operator placement is forced first (free and always useful), then
 #   greedy: add the candidate (card x zone, Rotation, Secondary / Lethal / Tactical,
@@ -854,54 +855,8 @@ func _eval_zone(p: Plan, z: int) -> float:
 					var pm: int = _first_alive(armor[1 - si])
 					if pm >= 0:
 						fp[1 - si][pm] = int(fp[1 - si][pm]) - 2
-		# 2. First Shot step, then Main step.
-		var fired: Array = [[], []]
-		for si: int in 2:
-			for i: int in n[si]:
-				fired[si].append(false)
-		for step: int in 2:
-			var dmg: Array = [[], []]
-			for si: int in 2:
-				for i: int in n[si]:
-					dmg[si].append(0)
-			var any: bool = false
-			var front: Array[int] = [_first_alive(armor[ME]), _first_alive(armor[FOE])]
-			for si: int in 2:
-				var o: int = 1 - si
-				var assigned: Array[int] = []
-				assigned.resize(n[o])
-				for i: int in n[si]:
-					if armor[si][i] <= 0 or fired[si][i] or (step == 0 and not fs[si][i]):
-						continue
-					fired[si][i] = true
-					any = true
-					var t: int = _target(sides[si][i], sides[o], armor[o], assigned)
-					if t < 0:
-						continue
-					var shot: int = int(fp[si][i]) + (front_fp[si] if i == front[si] else 0)
-					var d: int = maxi(0, maxi(0, shot) - int(cover[o][t]) - (front_cover[o] if t == front[o] else 0))
-					assigned[t] += d
-					dmg[o][t] = int(dmg[o][t]) + d
-			if not any:
-				continue
-			var died: Array = [[], []]
-			for si: int in 2:
-				for i: int in n[si]:
-					if int(dmg[si][i]) <= 0 or armor[si][i] <= 0:
-						continue
-					armor[si][i] = int(armor[si][i]) - int(dmg[si][i])
-					if armor[si][i] <= 0:
-						if survive[si][i] > 0:
-							armor[si][i] = survive[si][i]
-							survive[si][i] = 0
-						else:
-							died[si].append(i)
-			# On Down damage (Demolitions Expert) on the enemy point man.
-			for si: int in 2:
-				for i: int in died[si]:
-					var od: int = int(sides[si][i]["on_down_damage"])
-					if od > 0:
-						_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], od, front_cover[1 - si])
+		# 2. Beats front to back, First Shot exchange, Pierce (FirefightResolver._run_beats).
+		_fight(sides, n, armor, fp, cover, fs, survive, front_fp, front_cover)
 		# 3. Patch.
 		for si: int in 2:
 			for i: int in n[si]:
@@ -936,6 +891,89 @@ func _eval_zone(p: Plan, z: int) -> float:
 				armor[si][best] = int(armor[si][best]) + mini(int(au["eor_heal"]), best_missing)
 	return _zone_value(p, z, sides, armor, foe_present_at_start)
 
+
+## Step 2 of the estimator: FirefightResolver's beat order on records (firefight-order.md §2.2-2.3).
+## Each beat the front-most living unfired unit of each side fires; when exactly one of the two has
+## First Shot it fires first and a partner it kills never fires. Damage lands after every beat;
+## Pierce carries overkill down the line. Arrays are indexed by line position.
+func _fight(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, fs: Array, survive: Array,
+		front_fp: Array[int], front_cover: Array[int]) -> void:
+	var fired: Array = [[], []]
+	for si: int in 2:
+		for i: int in n[si]:
+			fired[si].append(false)
+	var guard: int = 0
+	while guard < 16:
+		guard += 1
+		if not (_any_alive(armor[ME]) and _any_alive(armor[FOE])):
+			return
+		var shooters: Array = []
+		for si: int in 2:
+			for i: int in n[si]:
+				if armor[si][i] > 0 and not fired[si][i]:
+					shooters.append([si, i])
+					break
+		if shooters.is_empty():
+			return
+		if shooters.size() == 2 and bool(fs[0][shooters[0][1]]) != bool(fs[1][shooters[1][1]]):
+			var a: Array = shooters[0] if bool(fs[0][shooters[0][1]]) else shooters[1]
+			var b: Array = shooters[1] if a == shooters[0] else shooters[0]
+			_beat(sides, n, armor, fp, cover, survive, front_fp, front_cover, fired, [a])
+			if int(armor[b[0]][b[1]]) > 0 and _any_alive(armor[a[0]]):
+				_beat(sides, n, armor, fp, cover, survive, front_fp, front_cover, fired, [b])
+			continue
+		_beat(sides, n, armor, fp, cover, survive, front_fp, front_cover, fired, shooters)
+
+
+## One beat on records: the shooters fire at once, then damage lands (Grit), then On Down.
+func _beat(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, survive: Array,
+		front_fp: Array[int], front_cover: Array[int], fired: Array, shooters: Array) -> void:
+	var dmg: Array = [[], []]
+	for si: int in 2:
+		for i: int in n[si]:
+			dmg[si].append(0)
+	var front: Array[int] = [_first_alive(armor[ME]), _first_alive(armor[FOE])]
+	for sh: Array in shooters:
+		var si: int = sh[0]
+		var i: int = sh[1]
+		var o: int = 1 - si
+		fired[si][i] = true
+		var assigned: Array[int] = []
+		assigned.resize(n[o])
+		var t: int = _target(sides[si][i], sides[o], armor[o], assigned)
+		if t < 0:
+			continue
+		var shot: int = int(fp[si][i]) + (front_fp[si] if i == front[si] else 0)
+		var d: int = maxi(0, maxi(0, shot) - int(cover[o][t]) - (front_cover[o] if t == front[o] else 0))
+		dmg[o][t] = int(dmg[o][t]) + d
+		if bool(sides[si][i].get("pierce", false)):
+			var left: int = d - int(armor[o][t])
+			var j: int = t
+			while left > 0 and j + 1 < n[o]:
+				j += 1
+				if int(armor[o][j]) <= 0:
+					continue
+				var d2: int = mini(maxi(0, left - int(cover[o][j])), int(armor[o][j]))
+				dmg[o][j] = int(dmg[o][j]) + d2
+				left -= int(cover[o][j]) + int(armor[o][j])
+	var died: Array = [[], []]
+	for si: int in 2:
+		for i: int in n[si]:
+			if int(dmg[si][i]) <= 0 or armor[si][i] <= 0:
+				continue
+			armor[si][i] = int(armor[si][i]) - int(dmg[si][i])
+			if armor[si][i] <= 0:
+				if survive[si][i] > 0:
+					armor[si][i] = survive[si][i]
+					survive[si][i] = 0
+				else:
+					died[si].append(i)
+	# On Down damage (Demolitions Expert) on the enemy point man as it stands now.
+	for si: int in 2:
+		for i: int in died[si]:
+			var od: int = int(sides[si][i]["on_down_damage"])
+			if od > 0:
+				_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], od, front_cover[1 - si])
 
 func _zone_value(p: Plan, z: int, sides: Array, armor: Array, foe_present_at_start: bool) -> float:
 	var P: AiPersonality = personality
@@ -1172,7 +1210,7 @@ func _any_alive(armor: Array) -> bool:
 	return _first_alive(armor) >= 0
 
 
-## FirefightResolver.pick_target on records: skip doomed units; Pick = lowest remaining
+## FirefightResolver.pick_target on records: skip doomed units (none in the beat order); Pick = lowest remaining
 ## Armor (ties front-most), Flank = back-most, both skip untargetable units.
 func _target(shooter: Dictionary, foes: Array, armor: Array, assigned: Array[int]) -> int:
 	var first: int = -1

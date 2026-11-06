@@ -98,8 +98,8 @@ func test_suppress_makes_first_shot_non_lethal() -> void:
 	m.firefight()
 	assert_eq(t.armor, 1, "3 < 4: the point man survives")
 	assert_eq(F.events_of(m, RulesEvent.SUPPRESSED).size(), 1, "Suppress logged")
-	assert_true(_shots_by(m, t.uid).size() == 1 and _shots_by(m, t.uid)[0]["step"] == FirefightResolver.STEP_MAIN,
-			"the surviving point man fires in Main")
+	assert_true(_shots_by(m, t.uid).size() == 1 and _shots_by(m, t.uid)[0]["step"] == FirefightResolver.STEP_BEAT,
+			"the surviving point man replies in the next beat")
 	assert_false(b.is_alive() and b.armor == 4, "the Breacher was hit")
 
 
@@ -116,7 +116,7 @@ func test_next_enemy_unit_shoots_in_main_not_the_dead_one() -> void:
 	var hits: Array[Dictionary] = _hits_on(m, b.uid)
 	assert_eq(hits.size(), 1, "one hit on the Breacher")
 	assert_eq(int(hits[0]["shooter_uid"]), back.uid, "from the NEXT unit in line")
-	assert_eq(hits[0]["step"], FirefightResolver.STEP_MAIN, "in the Main step")
+	assert_eq(hits[0]["step"], FirefightResolver.STEP_BEAT, "in a later beat (no First Shot)")
 	assert_eq(b.armor, 2, "4 - 2")
 
 
@@ -172,7 +172,7 @@ func test_enemy_flashbang_strips_first_shot_so_target_fires_back() -> void:
 	assert_true(m.submit(E, RulesIntent.use_item(&"flashbang", F.LEFT))["ok"], "enemy Flashbang on Left")
 	m.resolve_round()
 	assert_false(t.is_alive(), "3 still kills it")
-	assert_eq(_shots_by(m, b.uid)[0]["step"], FirefightResolver.STEP_MAIN, "but the Breacher fired in Main")
+	assert_eq(_shots_by(m, b.uid)[0]["step"], FirefightResolver.STEP_BEAT, "but the Breacher fired without First Shot")
 	assert_eq(b.armor, 2, "so the target shot back")
 
 

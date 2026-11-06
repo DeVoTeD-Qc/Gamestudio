@@ -78,7 +78,7 @@ squad = ExtResource("8_nob16")
 mode = 1
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
-enemy_armor_bonus = 1
+enemy_armor_bonus = 0
 
 [sub_resource type="Resource" id="Resource_akxjf"]
 script = ExtResource("6_vn4hk")

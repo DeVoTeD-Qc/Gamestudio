@@ -3,7 +3,8 @@
 #   orders of documentation/design/firefight-order.md, run on the real MatchState through
 #   tests/tools/fight_state.gd. The shipped resolver (scripts/rules/firefight_resolver.gd) is
 #   untouched; FightState calls this instead when `order` is not &"now".
-#     now    the shipped resolver (First Shot step, Main step, everyone in a step at once).
+#     now    the shipped resolver. kc-fight-impl: that IS the beat order now ("seq" + fs=exchange,
+#            Pierce from the card data), so `now` is the shipped game and `seq` the prototype copy.
 #     seq    "Front to back" (recommended): columns A -> B -> C. In a column, beats: each beat
 #            the front-most unit of each side that has not fired yet fires; the two shots of a
 #            beat are simultaneous, then damage lands, the dead are removed and the lines close

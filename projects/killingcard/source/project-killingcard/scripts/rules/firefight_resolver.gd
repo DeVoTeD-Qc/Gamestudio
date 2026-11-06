@@ -1,17 +1,31 @@
 # firefight_resolver.gd
-# Purpose: The Firefight phase (core-rules §2.4, Rulings 5/6/8), stateless and
-#   deterministic (no randomness at all):
-#   0. START_OF_FIREFIGHT effects registered earlier (Attack Helo) hit first, in
-#      every zone their scope covers, then the dead are removed.
-#   For every zone with units from both sides (left -> mid -> right):
-#   1. Suppress: each Suppress unit gives the enemy point man -2 FP this round.
-#   2. First Shot step, then Main step. In a step all shooters fire at the same time:
-#      each side assigns its shots in line order; a shot hits the enemy point man
-#      unless the damage already assigned this step kills it, then the next unit in
-#      line (Pick: lowest remaining Armor, ties front-most; Flank: back-most). Damage
-#      over what a unit needs is wasted. Damage lands at the end of the step, then
-#      eliminations and their On Down triggers resolve.
-#   3. Patch N: the most damaged other friendly unit in the zone heals N.
+# Purpose: The Firefight phase (core-rules §2.4, Rulings 5/6/8, firefight-order.md §2), stateless
+#   and deterministic (no randomness at all):
+#   0. START_OF_FIREFIGHT effects registered earlier (Attack Helo) hit first, in every zone their
+#      scope covers, then the dead are removed and the lines close up.
+#   1. Columns resolve in order A (left) -> B (mid) -> C (right); a column fights only when both
+#      sides have units in it. In a column:
+#      a. Suppress: each Suppress unit gives the enemy front unit -2 FP this round (it pins that
+#         unit, not the slot).
+#      b. Beats until the column is resolved. In a beat the front-most living unit of each side
+#         that has not fired this round shoots; the two shots are simultaneous. First Shot
+#         exchange (head's answer O2): when exactly one of the two has First Shot, it fires first
+#         in its own beat and its damage lands at once; a partner it kills never fires.
+#         Each shot picks its target at that moment (front unit; Pick: lowest Armor, ties
+#         front-most; Flank: back-most; untargetable units skipped by Pick / Flank). Damage =
+#         FP - target Cover (both read live, so links / auras / sets follow the board). Damage
+#         beyond what the target needs is lost, unless the shooter has Pierce: then it carries to
+#         the next enemy behind the target (that unit's Cover applies) while any is left.
+#         Damage lands, the dead are removed (On Down resolves on the board as it is then) and the
+#         lines move up. Every unit fires at most once per round (`RulesUnit.fired`; moving up
+#         never resets it). The column ends when one side has no units left in it, or no unit on
+#         either side can still fire.
+#      c. Patch N: each living Medic heals the most damaged other friendly unit in the column.
+#   Event stream (playback; firefight-order.md "Implementation notes"):
+#     FIREFIGHT_STARTED {zone}, SUPPRESSED, then per beat FIREFIGHT_BEAT {zone, beat, shooters,
+#     exchange}, SHOT_FIRED (step &"beat" / &"first_shot"), PIERCE_CARRIED, DAMAGE_DEALT,
+#     SURVIVED_LETHAL, UNIT_ELIMINATED (+ On Down events), LINE_ADVANCED; then PATCHED and
+#     FIREFIGHT_COLUMN_ENDED {zone, beats}.
 # Dependencies: DataEnums, RulesUnit, RulesSide, RulesEvent, EffectResolver (MatchState passed in).
 # Author: Mechanics Developer Agent
 class_name FirefightResolver
@@ -19,15 +33,35 @@ extends RefCounted
 
 ## Firepower the enemy point man loses per Suppress unit (core-rules §1).
 const SUPPRESS_AMOUNT: int = 2
+## SHOT_FIRED.step values. STEP_FIRST_SHOT: the shooter has First Shot (it fires before a partner
+## without it, or trades at once with a partner that also has it); STEP_BEAT: any other shot.
+## STEP_MAIN is no longer emitted (the old two-step resolver); kept so older playback code reads.
+const STEP_BEAT: StringName = &"beat"
 const STEP_FIRST_SHOT: StringName = &"first_shot"
 const STEP_MAIN: StringName = &"main"
+## FIREFIGHT_BEAT.exchange values.
+const EXCHANGE_TOGETHER: int = 0   ## both shooters fire at once (or only one side has a shooter)
+const EXCHANGE_FIRST_SHOT: int = 1 ## the First Shot beat of a split exchange
+const EXCHANGE_REPLY: int = 2      ## its partner's reply (only if it survived)
+## A column has at most 4 units a side, so at most 8 beats; this is only a loop guard.
+const MAX_BEATS: int = 16
+## Playback (head's answer O4, for the UI): x1 for the first runs (until the tutorial is done),
+## x2 after; tap-to-skip always allowed. Timing model at x1 (firefight-order.md §5).
+const PLAYBACK_SPEED_FIRST_RUNS: float = 1.0
+const PLAYBACK_SPEED_AFTER_TUTORIAL: float = 2.0
+const PLAYBACK_TAP_TO_SKIP: bool = true
+const PLAYBACK_COLUMN_S: float = 0.4
+const PLAYBACK_BEAT_S: float = 0.8
+const PLAYBACK_ADVANCE_S: float = 0.35
 
 
 static func resolve(state) -> void:
+	var rows: Dictionary = _rows(state)
 	for f: Dictionary in state.firefight_effects.duplicate():
 		if int(f["until_round"]) >= state.round_number:
 			EffectResolver.resolve_effect(state, f["effect"], f["ctx"])
 	state.process_eliminations()
+	_emit_advances(state, rows)
 	for z: int in state.ZONE_COUNT:
 		if has_firefight(state, z):
 			resolve_zone(state, z)
@@ -44,9 +78,9 @@ static func has_firefight(state, z: int) -> bool:
 static func resolve_zone(state, z: int) -> void:
 	state.emit_event(RulesEvent.FIREFIGHT_STARTED, {"zone": state.zone_name(z)})
 	_suppress(state, z)
-	_step(state, z, true)
-	_step(state, z, false)
+	var beats: int = _run_beats(state, z)
 	_patch(state, z)
+	state.emit_event(RulesEvent.FIREFIGHT_COLUMN_ENDED, {"zone": state.zone_name(z), "beats": beats})
 
 
 static func _suppress(state, z: int) -> void:
@@ -63,52 +97,122 @@ static func _suppress(state, z: int) -> void:
 					"target_uid": target.uid, "amount": SUPPRESS_AMOUNT, "zone": state.zone_name(z)})
 
 
-static func _step(state, z: int, first_shot_step: bool) -> void:
-	var shooters: Array = [[], []]
-	var any: bool = false
-	for si: int in 2:
-		for u: RulesUnit in state.sides[si].line(z):
-			if u.is_alive() and not u.fired and (not first_shot_step or state.has_first_shot(u)):
-				shooters[si].append(u)
-				any = true
-	if not any:
-		return
-	var step: StringName = STEP_FIRST_SHOT if first_shot_step else STEP_MAIN
-	state.emit_event(RulesEvent.FIREFIGHT_STEP, {"zone": state.zone_name(z), "step": step})
-	# hits[target_uid] = {target, total, killer}; target order = first hit order.
-	var hits: Dictionary = {}
-	var hit_order: Array[RulesUnit] = []
-	for si: int in state.side_order():
+## Next shooter of side si in column z: the front-most living unit that has not fired (null = none).
+static func next_shooter(state, si: int, z: int) -> RulesUnit:
+	for u: RulesUnit in state.sides[si].line(z):
+		if u.is_alive() and not u.fired:
+			return u
+	return null
+
+
+## Runs the beats of column z (§2.2 / §2.3). Returns the number of beats played.
+static func _run_beats(state, z: int) -> int:
+	var beat: int = 0
+	while beat < MAX_BEATS:
+		if not has_firefight(state, z):
+			break
+		var shooters: Array[RulesUnit] = []
+		for si: int in state.side_order():
+			var u: RulesUnit = next_shooter(state, si, z)
+			if u != null:
+				shooters.append(u)
+		if shooters.is_empty():
+			break
+		if shooters.size() == 2 and state.has_first_shot(shooters[0]) != state.has_first_shot(shooters[1]):
+			var first: RulesUnit = shooters[0] if state.has_first_shot(shooters[0]) else shooters[1]
+			var second: RulesUnit = shooters[1] if first == shooters[0] else shooters[0]
+			beat += 1
+			_beat(state, z, beat, [first], EXCHANGE_FIRST_SHOT)
+			if second.is_alive() and second.zone == z and has_firefight(state, z):
+				beat += 1
+				_beat(state, z, beat, [second], EXCHANGE_REPLY)
+			continue
+		beat += 1
+		_beat(state, z, beat, shooters, EXCHANGE_TOGETHER)
+	return beat
+
+
+## One beat: the shooters fire at once (targets and damage read now), then damage lands,
+## the dead are removed and the lines move up.
+static func _beat(state, z: int, beat: int, shooters: Array, exchange: int) -> void:
+	var uids: Array[int] = []
+	for u: RulesUnit in shooters:
+		uids.append(u.uid)
+	state.emit_event(RulesEvent.FIREFIGHT_BEAT, {"zone": state.zone_name(z), "beat": beat, "shooters": uids,
+			"exchange": exchange, "first_shot_split": exchange != EXCHANGE_TOGETHER})
+	var rows: Dictionary = _rows(state)
+	var hits: Array = []  # [target, damage, src], in shot order
+	for u: RulesUnit in shooters:
+		u.fired = true
+		var si: int = u.side
+		var step: StringName = STEP_FIRST_SHOT if state.has_first_shot(u) else STEP_BEAT
 		var foe_line: Array = state.sides[1 - si].line(z)
-		var assigned: Dictionary = {}
-		for u: RulesUnit in shooters[si]:
-			u.fired = true
-			var fp: int = state.firepower_of(u)
-			var target: RulesUnit = pick_target(state, u, foe_line, assigned)
-			if target == null:
-				state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
-						"target_uid": -1, "zone": state.zone_name(z), "damage": 0, "step": step})
-				continue
-			var dmg: int = maxi(0, fp - state.cover_of(target))
-			var before: int = int(assigned.get(target.uid, 0))
-			assigned[target.uid] = before + dmg
-			if not hits.has(target.uid):
-				hits[target.uid] = {"target": target, "total": 0, "killer": {}, "first": _source(state, si, u)}
-				hit_order.append(target)
-			var h: Dictionary = hits[target.uid]
-			h["total"] = int(h["total"]) + dmg
-			if (h["killer"] as Dictionary).is_empty() and before < target.armor and before + dmg >= target.armor:
-				h["killer"] = _source(state, si, u)
+		var target: RulesUnit = pick_target(state, u, foe_line, {})
+		if target == null:
 			state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
-					"target_uid": target.uid, "zone": state.zone_name(z), "damage": dmg, "step": step})
-	# Damage lands at the end of the step.
-	for t: RulesUnit in hit_order:
-		var h: Dictionary = hits[t.uid]
-		var src: Dictionary = h["killer"]
-		if src.is_empty():
-			src = h["first"]  # not lethal: credit the first shooter for the damage log
-		state.deal_damage(t, int(h["total"]), src, false)
+					"target_uid": -1, "zone": state.zone_name(z), "damage": 0, "step": step, "beat": beat,
+					"overkill": 0, "pierce": u.pierce})
+			continue
+		var src: Dictionary = _source(state, si, u)
+		var dmg: int = maxi(0, state.firepower_of(u) - state.cover_of(target))
+		hits.append([target, dmg, src])
+		state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
+				"target_uid": target.uid, "zone": state.zone_name(z), "damage": dmg, "step": step, "beat": beat,
+				"overkill": maxi(0, dmg - target.armor), "pierce": u.pierce})
+		if u.pierce:
+			_pierce(state, z, beat, u, src, foe_line, target, dmg - target.armor, hits)
+	for h: Array in hits:
+		state.deal_damage(h[0], int(h[1]), h[2], false)
 	state.process_eliminations()
+	_emit_advances(state, rows)
+
+
+## Pierce: `left` damage beyond what `from` needs carries down the enemy line (Cover applies).
+static func _pierce(state, z: int, beat: int, u: RulesUnit, src: Dictionary, foe_line: Array,
+		from: RulesUnit, left: int, hits: Array) -> void:
+	var idx: int = foe_line.find(from)
+	var prev: RulesUnit = from
+	while left > 0 and idx + 1 < foe_line.size():
+		idx += 1
+		var nxt: RulesUnit = foe_line[idx]
+		if not nxt.is_alive():
+			continue
+		var cov: int = state.cover_of(nxt)
+		var d2: int = mini(maxi(0, left - cov), nxt.armor)
+		state.emit_event(RulesEvent.PIERCE_CARRIED, {"side": state.side_name(u.side), "shooter_uid": u.uid,
+				"from_uid": prev.uid, "target_uid": nxt.uid, "carried": left, "damage": d2,
+				"zone": state.zone_name(z), "beat": beat})
+		if d2 > 0:
+			hits.append([nxt, d2, src])
+		left -= cov + nxt.armor
+		prev = nxt
+
+
+## {uid: [side, zone, row]} for every unit on the board (to report line advances).
+static func _rows(state) -> Dictionary:
+	var out: Dictionary = {}
+	for si: int in 2:
+		for z: int in state.ZONE_COUNT:
+			var line: Array = state.sides[si].line(z)
+			for i: int in line.size():
+				out[(line[i] as RulesUnit).uid] = [si, z, i]
+	return out
+
+
+## LINE_ADVANCED {side, zone, moves: [{uid, from_row, to_row}]} for each line whose survivors moved up.
+static func _emit_advances(state, before: Dictionary) -> void:
+	for si: int in state.side_order():
+		for z: int in state.ZONE_COUNT:
+			var line: Array = state.sides[si].line(z)
+			var moves: Array[Dictionary] = []
+			for i: int in line.size():
+				var u: RulesUnit = line[i]
+				var was: Array = before.get(u.uid, [])
+				if was.size() == 3 and int(was[0]) == si and int(was[1]) == z and int(was[2]) > i:
+					moves.append({"uid": u.uid, "from_row": int(was[2]), "to_row": i})
+			if not moves.is_empty():
+				state.emit_event(RulesEvent.LINE_ADVANCED, {"side": state.side_name(si), "zone": state.zone_name(z),
+						"moves": moves})
 
 
 static func _source(state, si: int, u: RulesUnit) -> Dictionary:
@@ -116,8 +220,8 @@ static func _source(state, si: int, u: RulesUnit) -> Dictionary:
 			"source_kind": state.SRC_OPERATOR if u.is_operator else state.SRC_UNIT}
 
 
-## Target of one shot, given damage already assigned this step (uid -> damage).
-## Null when every enemy is already doomed or there is none (the shot is wasted).
+## Target of one shot. `assigned` (uid -> damage already promised) skips doomed units; in the beat
+## order damage lands before the next shot, so the resolver passes {}. Null when there is no enemy.
 static func pick_target(state, shooter: RulesUnit, foe_line: Array, assigned: Dictionary) -> RulesUnit:
 	var candidates: Array[RulesUnit] = []
 	for u: RulesUnit in foe_line:
@@ -154,3 +258,19 @@ static func _patch(state, z: int) -> void:
 			best.armor += healed
 			state.emit_event(RulesEvent.PATCHED, {"side": state.side_name(si), "uid": medic.uid,
 					"target_uid": best.uid, "amount": healed, "zone": state.zone_name(z)})
+
+
+## Default Firefight playback speed for the UI (O4); a saved player setting overrides it.
+static func default_playback_speed(tutorial_done: bool) -> float:
+	return PLAYBACK_SPEED_AFTER_TUTORIAL if tutorial_done else PLAYBACK_SPEED_FIRST_RUNS
+
+
+## Seconds a slice of the event stream takes at x1 under the timing model (banners, beats, advances).
+static func playback_seconds(events: Array) -> float:
+	var s: float = 0.0
+	for e: Dictionary in events:
+		match e.get("type", &""):
+			RulesEvent.FIREFIGHT_STARTED: s += PLAYBACK_COLUMN_S
+			RulesEvent.FIREFIGHT_BEAT: s += PLAYBACK_BEAT_S
+			RulesEvent.LINE_ADVANCED: s += PLAYBACK_ADVANCE_S
+	return s

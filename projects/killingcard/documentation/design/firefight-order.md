@@ -1,6 +1,6 @@
 # KillingCard: Firefight Activation Order (columns left to right, front to back, one shot each)
 
-*Author: Sr Game Designer Agent · 2026-11-06 · Board task kc-fight · Status: **proposal, waiting for the head's answers (§9)** · No rules, UI, scene or data file was changed. The prototype lives in `source/project-killingcard/tests/tools/` (`fight_order.gd`, `fight_state.gd`, `fight_planner.gd`, `fight_sim.gd`), on the real engine and the real AI.*
+*Author: Sr Game Designer Agent · 2026-11-06 · Board task kc-fight · Status: **approved by the head (answers in §10); implemented in rules / AI / data by kc-fight-impl (§10)** · No rules, UI, scene or data file was changed. The prototype lives in `source/project-killingcard/tests/tools/` (`fight_order.gd`, `fight_state.gd`, `fight_planner.gd`, `fight_sim.gd`), on the real engine and the real AI.*
 *Inputs: `scripts/rules/firefight_resolver.gd` (today's resolver), `core-rules` §2.4 and Rulings 5/6/8, `card-system.md`, `field-cards.md`, `synergy-system.md` (incl. §11 implementation and §12 paused tuning), the AI estimator in `scripts/ai/ai_planner.gd`.*
 *The head (verbatim): "the resolution of the fight goes too fast. I think we need to have a defined order of activation, and we should probably go with the leftmost zone towards the right, and then have the units on the front line activate first, and then if the damage is beyond, it stops there unless they have a keyword like we need to add a new one for damage to pass through to the second opponent on the line. And then yeah, they should shoot each other, and then if someone dies, they move closer to frontline and then keep activating the card."*
 
@@ -191,3 +191,77 @@ Number fixes (data only, to be finished in the v1.2 tuning after approval): **Pr
 2. **First Shot:** (a) **"fires first in its exchange"** (recommended: purely front to back, makes position decisive, synergy planning reaches 55%), or (b) its own pass before the normal beats (today's balance kept almost exactly, but a back-row First Shot unit fires before the front line).
 3. **Pierce:** (a) **on the Marksman and the Ace ★** (recommended: snipers, the weakest trait, a small effect), (b) also on the Gunner (thematic, almost no effect), or (c) on the Breacher (strong, but it feeds Vanguard, already the top trait).
 4. **Playback default:** (a) **×1 for the first runs and ×2 after the tutorial, with tap-to-skip always available** (recommended: ~4 s vs ~2 s per round), or (b) ×2 from the start.
+
+## 10. Implementation notes (kc-fight-impl, Mechanics Developer, 2026-11-06)
+**Head's answers:** O1 every unit fires once per round, front to back, in beats, column A then B then C. O2 First Shot fires first in its own exchange, and a partner it kills never fires. O3 Pierce goes to the **LMG units** (the Gunner chassis and every other LMG-class unit, so the Gunner and the Demolitions Expert), **not** the Marksman or the Ace. O4 playback ×1 for the first runs, ×2 after the tutorial, tap to skip always.
+
+### 10.1 What shipped
+| Item | Where |
+|---|---|
+| Beat loop (§2.2, §2.3), Pierce carry, line-advance and column-end events | `scripts/rules/firefight_resolver.gd` (`_run_beats`, `_beat`, `_pierce`, `_emit_advances`) |
+| `CardData.pierce` (validated as a unit-only keyword), `RulesUnit.pierce`, copied in `MatchState.create_unit` | `scripts/data/card_data.gd`, `scripts/rules/rules_unit.gd`, `match_state.gd` |
+| New event types | `scripts/rules/rules_event.gd` |
+| AI estimator step 2 = the same beat order on records (First Shot exchange, Pierce, On Down per beat); `pierce` on AI records | `scripts/ai/ai_planner.gd` (`_fight`, `_beat`), `scripts/ai/ai_view.gd` |
+| Data: Gunner "Suppress. Pierce", Demolitions Expert "Pierce. On Down: ...", Protector cost 3 → 4 and no Guard (keeps Cover 1, the slide and Vanguard), slot 3 (Rusher+) `enemy_armor_bonus` 1 → 0 | `data/cards/gunner.tres`, `demolitions_expert.tres`, `shieldman.tres`, `data/run_config.tres` (+ `tests/tools/gen_content.gd`) |
+| Playback flags for the UI (O4): `FirefightResolver.PLAYBACK_SPEED_FIRST_RUNS = 1.0`, `PLAYBACK_SPEED_AFTER_TUTORIAL = 2.0`, `PLAYBACK_TAP_TO_SKIP = true`, `default_playback_speed(tutorial_done)`; the §5 timing model as `PLAYBACK_COLUMN_S / BEAT_S / ADVANCE_S` and `playback_seconds(events)`. A saved player speed setting overrides the default. | `firefight_resolver.gd` |
+| Tests: `tests/test_rules_fight_order.gd` (23): A → B → C; front first and simultaneous; once per round after moving up; First Shot kill prevents return fire; surviving partner replies; both First Shot together; a back-row First Shot waits for its beat; overkill lost without Pierce; Pierce carry through Cover and stopped by Cover; Suppress pins the unit; Pick and Flank choose at their beat; On Down hits the new front; a Guard death and a Fireteam death in column A change later beats / column B; Patch after the column; event order; a 40-board soak (no shot after death, one shot per unit, every shot has a target); AI estimator; AI records; LMG-only Pierce data; Protector package and slide; playback flags | `tests/` |
+
+Rules details fixed while implementing:
+- **A column ends** when either side has no unit left in it, or neither side has an unfired living unit. A lone survivor never fires at nothing, so there are no more "wasted" shots (`target_uid = -1` can't happen in a column fight).
+- **Exchange:** the split happens only when **both** sides have a shooter and exactly one has First Shot (read live: Spec Ops tier 3, GRANT / REMOVE_FIRST_SHOT). The reply beat runs only if the partner is still alive and the column still has both sides.
+- **Pierce:** the carry is the shot's damage (after the target's Cover) minus the target's Armor at that moment. Each next unit behind takes `min(carry - its Cover, its Armor)`, and the carry drops by `its Cover + its Armor`. A carry that Cover eats is still logged (damage 0). All of a beat's damage lands together after the shots, then eliminations.
+- **Grit** (survive lethal) is applied when the damage lands, as before. A Pierce carry is computed from the Armor the target had, so Grit doesn't stop the carry.
+- **Line advances** are also reported after the Attack Helo removals at the start of the firefight.
+- The synergy cache is keyed on the board signature, so it rebuilds on every removal inside a beat. Links, sets and frontline auras are live per shot (tested with Guard and Fireteam).
+
+### 10.2 Event stream (for the UI playback)
+Every event is a `RulesEvent` dictionary `{type, round, ...}` appended to `MatchState.events` in this order. Units are integer uids, sides `&"player"` / `&"enemy"`, zones `&"left"` / `&"mid"` / `&"right"` (columns A / B / C).
+```
+FIREFIGHT phase (PHASE_CHANGED phase=firefight)
+  [Attack Helo: EFFECT_APPLIED / DAMAGE_DEALT / UNIT_ELIMINATED ..., then LINE_ADVANCED per line that closed up]
+  for each column with units on both sides, A -> B -> C:
+    FIREFIGHT_STARTED       {zone}                                    column banner
+    SUPPRESSED*             {side, uid, target_uid, amount, zone}
+    per beat:
+      FIREFIGHT_BEAT        {zone, beat, shooters: [uid], exchange, first_shot_split}
+                            beat = 1-based within the column; exchange 0 = together (or one side alone),
+                            1 = the First Shot half of a split, 2 = the partner's reply
+      SHOT_FIRED*           {side, shooter_uid, target_uid, zone, damage, step, beat, overkill, pierce}
+                            one per shooter, initiative side first; step = &"first_shot" if the shooter has
+                            First Shot, else &"beat"; damage is after the target's Cover; overkill = damage
+                            beyond the target's Armor (lost unless pierce)
+      PIERCE_CARRIED*       {side, shooter_uid, from_uid, target_uid, carried, damage, zone, beat}
+                            right after its SHOT_FIRED: carried = damage left before this unit's Cover
+      DAMAGE_DEALT*         {target_uid, side, amount, remaining, source_id, by_side}   damage lands
+      SURVIVED_LETHAL*      {side, uid, armor}                                         (Grit)
+      UNIT_ELIMINATED*      {victim_uid, victim_side, by_uid, by_side, zone, ...}      death
+        (+ CARD_DISCARDED / OPERATOR_DOWN, then On Down / On Eliminate effects and their events)
+      LINE_ADVANCED*        {side, zone, moves: [{uid, from_row, to_row}]}              line moves up
+    PATCHED*                {side, uid, target_uid, amount, zone}
+    FIREFIGHT_COLUMN_ENDED  {zone, beats}                             end of column
+  SYNERGY_CHANGED*          (links / sets after the firefight)
+```
+(`*` = zero or more.) Columns with no fight emit nothing: grey them out and skip. `FIREFIGHT_STEP` is no longer emitted. The constant and `FirefightResolver.STEP_MAIN` are kept so older playback code still reads. Playback should follow `FIREFIGHT_BEAT` boundaries: one beat = the shooters lift, their tracers (+ the Pierce tracer continuing behind the target), damage numbers, deaths, then the slide of `LINE_ADVANCED`.
+
+**Current UI (unchanged by this task):** the feedback director plays the new stream as is. New event types cost no time, tracers and damage numbers play as before, and an other-side shooter with `step = first_shot` still gets its "FIRST SHOT" tag. The "FIRST SHOT" / "MAIN" step labels are gone, because their event is gone. Two FX tests were updated to the new order: `tests/test_fx_first_shot.gd`.
+
+### 10.3 Sims on the shipped engine (late decks, Port Vasel, real AI planning the new order)
+`synergy_check.gd` (now the shipped order) and `balance_sim.gd`. Package as approved (Pierce on the LMG units).
+| Check (target) | Before (shipped 2-step) | **Shipped beat order + package** | Prototype package (§6.2, Pierce on Marksman + Ace) | n |
+|---|---|---|---|---|
+| Seat 0, aware mirror (45–55%) | 51.8% | **51.9%** | 51.6% | 1000 |
+| Aware vs blind (≥ 55%) | 52.0% | **56.4%** | 55.4% | 800 |
+| Control, synergy off | 46.0% | 48.0% | 48.5% | 800 |
+| Trait round robin V / SO / H / U (40–60%) | 67.3 / 42.3 / 47.7 / 42.1 | **63.5 / 40.0 / 56.5 / 40.0** | 63.1 / 42.9 / 54.0 / 39.4 | 480 each |
+| Campaign, all slots (~38–40%) | 37.5% | **35.2%** | 39.8% | 400 |
+| Campaign per slot (Rusher / Anchor / Rusher+ / Anchor+ / Rival) | 64 / 70 / 18 / 30 / 6 | **51 / 62.5 / 36 / 22.5 / 4** | 52 / 74 / 39 / 29 / 5 | 80 each |
+| Campaign, squads blind | — | 38.5% | — | 400 |
+| AI turn time (aware) | 9.4–10.3 ms | 8.8–10.8 ms | | |
+
+- **Cross-check:** the same build with Pierce moved to the Marksman and the Ace gives exactly the prototype's campaign (39.8%, 52 / 74 / 39 / 29 / 5). The engine matches the prototype, and the whole campaign gap comes from O3. With no Pierce at all the campaign is 37.5% (51 / 69 / 38 / 26 / 4).
+- **Pierce on the LMG units is a buff to the Anchor squads** (they run the Gunner and the Demolitions Expert): Anchor slots −7 to −11 points against the prototype package, campaign −4.6 points. Heavy rises to 56.5% in the round robin, still inside the band.
+- **Match 3 is no longer a spike:** Rusher+ goes 18 → 36%. The hardest non-Rival slot is now match 4 (Anchor+, 22.5%).
+- **Not met:** the campaign (35.2%, below ~38–40%), Vanguard 63.5 (above 60) and Undead 40.0 (at the edge). These are for the kc-syn-tune pass on the new order. Levers: the Anchor squads' `enemy_armor_bonus` or deck (one Gunner fewer) to pay back the LMG Pierce, plus the Vanguard and Undead levers in synergy-system §12.
+- **Full runs** (`balance_sim.gd`, competent proxy, 40 runs, offers taken): run win 32% (before 40%), in-run match wins M1–M5 78 / 100 / 22 / 32 / 35% (before 98 / 98 / 20 / 28 / 41%), est. run length 24.1 min (unchanged). These are 40 runs (±7 points), so read them as a direction.
+- **Pace** (`fight_sim.gd exp=mirror order=now`, 500 matches): 6.61 rounds per match, per round 1.66 columns fought, 3.33 beats, 1.16 line advances, 4.83 shots → **3.7 s per round at ×1, 1.9 s at ×2** (§5 model).
+- The prototype harness (`tests/tools/fight_order.gd`, `fight_state.gd`, `fight_planner.gd`, `fight_sim.gd`) still runs. `order=now` now means the shipped beat order, and `seq` is the prototype copy.

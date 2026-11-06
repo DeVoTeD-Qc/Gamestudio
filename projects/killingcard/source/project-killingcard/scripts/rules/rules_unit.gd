@@ -34,6 +34,8 @@ var pick: bool = false
 var flank: bool = false
 var cover: int = 0
 var suppress: bool = false
+## kc-fight-impl: damage beyond what the target needs carries to the next enemy behind it.
+var pierce: bool = false
 var patch: int = 0
 var holder: bool = false
 var arrives_front: bool = false

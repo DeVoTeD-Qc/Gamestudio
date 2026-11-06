@@ -302,7 +302,9 @@ func _play(m: MatchState, squad: SquadData) -> void:
 
 ## kc-cod2: per-copy banner art (display only). With the private licensed art present, every copy
 ## of a chassis, on both sides, wears a different banner; without it deck_arts stays empty.
-static func _assign_copy_arts(m: MatchState) -> void:
+## kc-ui4: a card with an art equipped in the Codex (Settings.equipped_arts) wears that art on every
+## copy YOU play (public variants too); the rival keeps the variety.
+static func _assign_copy_arts(m: MatchState, equipped: Dictionary = _equipped_arts()) -> void:
 	var decks: Array = []
 	for s: RulesSide in m.sides:
 		var ids: Array = []
@@ -313,8 +315,23 @@ static func _assign_copy_arts(m: MatchState) -> void:
 	for i: int in m.sides.size():
 		var setup: SideSetup = m.sides[i].setup
 		setup.deck_arts.clear()
-		if BannerArtDB.has_licensed():
-			setup.deck_arts.assign(arts[i])
+		var list: Array[StringName] = []
+		var any: bool = BannerArtDB.has_licensed()
+		for j: int in setup.deck.size():
+			var art: StringName = arts[i][j] if any else &""
+			var card: CardData = setup.deck[j]
+			if i == PLAYER and card != null and equipped.has(String(card.id)):
+				art = StringName(String(equipped[String(card.id)]))
+				any = true
+			list.append(art)
+		if any:
+			setup.deck_arts.assign(list)
+
+
+static func _equipped_arts() -> Dictionary:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var settings: Node = tree.root.get_node_or_null(^"/root/Settings") if tree != null else null
+	return (settings.get(&"equipped_arts") as Dictionary) if settings != null else {}
 
 
 func _ai_turn(st: MatchState) -> void:
@@ -676,9 +693,14 @@ func open_mulligan() -> void:
 		# kc-ui3: the full card face (CardView), with its own licensed art and title when it has one.
 		var view: Dictionary = CardInfo.view_dict(rc.card, "friend")
 		var art: BannerArt = BannerArtDB.get_art(StringName(String(state.art_by_uid.get(rc.uid, rc.card.id))))
+		# kc-ui4 (head naming): the name stays the card's (chassis) name; the art's name is its subname.
 		if BannerArtDB.is_card_art(art):
 			view["licensed_art"] = String(art.id)
-			view["name"] = art.title
+		elif not art.is_default:
+			view["art_id"] = String(art.id)
+		var sub: String = BannerArtDB.subname(art.id)
+		if sub != "":
+			view["subname"] = sub
 		entries.append({"uid": rc.uid, "id": rc.card.id, "name": String(view["name"]), "cost": rc.card.cost, "view": view,
 				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
 	clear_selection()
@@ -1371,12 +1393,17 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	if card.is_field():
 		text = _join(text, FIELD_RULE)
 	var view: Dictionary = CardInfo.view_dict(card, side)
+	# kc-ui4 (head naming): the title is the card's name; the art's subname leads the type line.
 	if BannerArtDB.is_card_art(art):
 		view["licensed_art"] = String(art.id)
-		view["name"] = art.title
+	elif not art.is_default:
+		view["art_id"] = String(art.id)
+	var sub: String = BannerArtDB.subname(art.id)
+	if sub != "":
+		view["subname"] = sub
 	_screen.get_inspector().open({
-		"view": view, "title": art.title if BannerArtDB.is_card_art(art) else card.display_name,
-		"type": (card.display_name + " · " + type_text) if BannerArtDB.is_card_art(art) else type_text,
+		"view": view, "title": card.display_name,
+		"type": ("“%s” · %s" % [sub, type_text]) if sub != "" else type_text,
 		"text": text, "keywords": keywords, "status": status,
 		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
 		"art_line": _art_line(art), "is_unit": card.is_unit(),
@@ -1396,7 +1423,9 @@ func _art_line(art: BannerArt) -> String:
 		var n: int = maxi(1, pool.find(art.id) + 1)
 		return "Banner: %s · %s %d of %d · MW3 calling card (reference art, private pitch)" % [what,
 				"mastery tier" if art.mastery_tier > 0 else "art", n, maxi(1, pool.size())]
-	return "Banner: %s%s · alternate art 1 of 1" % [what, " (placeholder)" if art.placeholder else ""]
+	var alts: Array[StringName] = BannerArtDB.alt_arts(art.card_id)
+	return "Banner: %s%s · alternate art %d of %d (equip one in the Codex)" % [what, " (placeholder)" if art.placeholder else "",
+			maxi(1, alts.find(art.id) + 1), maxi(1, alts.size())]
 
 
 ## Inspector for something that is not a card in hand (objective tile, incoming back, rails).

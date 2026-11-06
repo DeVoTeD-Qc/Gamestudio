@@ -406,7 +406,7 @@ func test_ai_pays_the_operator_cost() -> void:
 func test_shipped_chassis_keywords_traits_and_numbers() -> void:
 	var want: Dictionary = {
 		&"rifleman": [&"fireteam", &""], &"point_man": [&"fireteam", &"vanguard"], &"breacher": [&"guard", &"vanguard"],
-		&"shieldman": [&"guard", &"vanguard"], &"flanker": [&"", &"specops"], &"recon_specialist": [&"spotter", &"specops"],
+		&"shieldman": [&"", &"vanguard"], &"flanker": [&"", &"specops"], &"recon_specialist": [&"spotter", &"specops"],
 		&"marksman": [&"spotter", &"specops"], &"halek_wren": [&"", &"specops"], &"gunner": [&"overwatch", &"heavy"],
 		&"demolitions_expert": [&"", &"heavy"], &"okafor_anvil": [&"", &"heavy"], &"brawler": [&"fireteam", &"undead"],
 		&"combat_medic": [&"", &"undead"], &"bulwark": [&"", &"vanguard"], &"sniper_perch": [&"", &"specops"],

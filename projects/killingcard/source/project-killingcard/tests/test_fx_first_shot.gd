@@ -98,11 +98,13 @@ func test_next_unit_return_fire_comes_from_its_own_slot_and_dead_unit_is_veiled(
 	m.firefight()
 	var veiled_mid_sequence: Array = [false]
 	_director.event_started.connect(func(ev: Dictionary) -> void:
-		if ev["type"] == RulesEvent.SHOT_FIRED and ev["step"] == &"main":
+		if ev["type"] == RulesEvent.SHOT_FIRED and ev["step"] == FirefightResolver.STEP_BEAT:
 			veiled_mid_sequence[0] = _director.veiled_uids().has(front.uid))
 	await _director.play(m.events_since(start))
-	assert_eq(_texts(&"step"), ["FIRST SHOT", "MAIN"] as Array[String], "both steps labelled, in order")
-	assert_true(veiled_mid_sequence[0], "the dead point man is veiled before the Main step fires")
+	# kc-fight-impl: the beat order replaced the First Shot / Main steps (no FIREFIGHT_STEP labels;
+	# beat banners are the UI's next task, firefight-order.md §8).
+	assert_eq(_texts(&"step"), [] as Array[String], "no step labels in the beat order")
+	assert_true(veiled_mid_sequence[0], "the dead point man is veiled before the next beat fires")
 	# The Main-step tracer onto the Breacher starts at the back unit's slot.
 	var loc: LineLocator = _director.locator
 	var tracers: Array = _nodes.filter(func(n: Dictionary) -> bool: return n["kind"] == &"tracer")
@@ -125,7 +127,7 @@ func test_enemy_first_shot_unit_is_tagged_and_named_in_killfeed() -> void:
 	var start: int = m.events.size()
 	m.firefight()
 	await _director.play(m.events_since(start))
-	assert_eq(_texts(&"step"), ["FIRST SHOT"] as Array[String], "only the First Shot step happens")
+	assert_eq(_texts(&"step"), [] as Array[String], "no step labels in the beat order")
 	assert_eq(_texts(&"tag").filter(func(t: String) -> bool: return t == "FIRST SHOT").size(), 1,
 			"the enemy Point Man is tagged FIRST SHOT: it fired at the same time")
 	var feed: Control = _director.killfeed

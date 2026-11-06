@@ -1,10 +1,13 @@
 # banner_view.gd
 # Purpose: Draws one 4:1 calling-card banner (board-and-cards-ux.md §3.2-3.3): the art's 4:1 band
-#   (BannerArtDB) plus the icon slots in the left / right ~15% columns. Your banner has its numbers
-#   on the INNER edge (top: the objective is above it); a rival banner is mirrored top to bottom.
-#     inner-left  Firepower in this column (teal circle = yours, red diamond = rival)
-#     inner-right Armor (grey shield; amber when damaged)
-#     outer-left  weapon-class pip      outer-right  effect: up to 2 keyword glyphs, or a bolt
+#   (BannerArtDB) plus the icon slots in the left / right ~15% columns. kc-ui4: ONE layout for both
+#   sides (the head: attack and health icons in the same place on my cards and the rival's):
+#     bottom-left  Firepower in this column (teal circle = yours, red diamond = rival)
+#     bottom-right Armor (grey shield; amber when damaged); Cover chip left of it
+#     bottom-mid   the card name (the chassis) over the art's subname
+#     top-left     weapon-class pip, Elite star, trait   top-right  effects (keyword glyphs / bolt)
+#   The camo / level band runs along the top edge. Hand and codex cards are this same banner
+#   (taller, with a cost hex in `lead`); see layout() / stat_rects().
 #   Spine on the left edge (side colour + pattern), frontline outline (row 1), back rows at 74%,
 #   PLAN tag (your queued card), Operator mastery frame (brass border, camo band on the OUTER
 #   edge, dog-tag plate in the effect slot), INCOMING back (rival hidden play), landing ghost
@@ -63,6 +66,16 @@ var is_target: bool = false
 var dim_back: bool = true
 ## INCOMING: the revealed name behind the back (Recon / Callout), "" = unknown.
 var revealed: String = ""
+## kc-ui4: the card's name (the chassis) and, under it, the art's subname (licensed calling-card
+## title or our variant name) drawn between the FP and Armor badges. Off for the inspector's big
+## banner (its title says it).
+var show_name: bool = true
+## kc-ui4: px kept free at the top-left for a hand / codex card's cost hex (the plate row starts
+## after it).
+var lead: float = 0.0
+## kc-ui4: badge / plate sizes follow this height instead of the banner's own (hand cards are
+## taller than 4:1 but keep the board's icon sizes). 0 = the banner's height.
+var metric_h: float = 0.0
 var _art: TextureRect
 var _overlay: Control
 var _shimmer_until: float = -1.0
@@ -296,7 +309,7 @@ func _draw_incoming_back(r: Rect2) -> void:
 
 func _draw_overlay() -> void:
 	var o: Control = _overlay
-	var m: Dictionary = metrics(size.y)
+	var m: Dictionary = metrics(minf(size.y, metric_h) if metric_h > 0.0 else size.y)
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
 	if mode == Mode.EMPTY:
 		return
@@ -320,44 +333,53 @@ func _draw_overlay() -> void:
 		else:
 			o.draw_line(Vector2(0, k + spine), Vector2(spine, k), INK, 1.5)
 		k += spine * 2.0
-	# Operator: camo band on the OUTER edge (bottom for you, top for the rival) + brass frame.
+	# kc-ui4 (head: "attack and health icons at the same place for both my cards and opponent
+	# cards"): ONE layout for every banner, both sides. Top edge: the Operator's camo / the copy
+	# level's band, then the plate row (class, Elite, trait on the left; effects, keyword pip on the
+	# right). Bottom row: Firepower bottom-left, Armor bottom-right, the name between them. Side
+	# identity stays in the spine pattern, the badge shapes and the colours.
 	var band_h: float = 6.0 if size.y < 100.0 else 10.0
 	if op:
-		var band: Rect2 = Rect2(spine, size.y - band_h if mine else 0.0, size.x - spine, band_h)
-		_draw_camo(o, band, StringName(String(entry.get("camo", "base"))))
+		_draw_camo(o, Rect2(spine, 0.0, size.x - spine, band_h), StringName(String(entry.get("camo", "base"))))
 		var fr: Rect2 = r.grow(-1.5)
 		o.draw_rect(fr.grow(1.0), INK, false, 1.0)
 		o.draw_rect(fr, BRASS, false, 3.0)
 	elif bool(entry.get("elite", false)):
 		o.draw_rect(r.grow(-1.0), BRASS, false, 1.5)
-	# kc-syn-ui: the copy level's camo band on the OUTER edge (Trained Gilded, Veteran Forged,
-	# Elite Priceless; a Recruit keeps the plain frame).
+	# kc-syn-ui: the copy level's camo band (Trained Gilded, Veteran Forged, Elite Priceless; a
+	# Recruit keeps the plain frame).
 	var lvl_band: StringName = StringName(String(entry.get("band", "")))
 	var lband_h: float = 0.0
 	if not op and lvl_band != &"":
 		lband_h = 4.0 if size.y < 100.0 else 8.0
-		SynergyGlyphs.draw_band(o, Rect2(spine, size.y - lband_h if mine else 0.0, size.x - spine, lband_h), lvl_band)
-	var inner_y: float = m["pad"] if mine else size.y - m["pad"] - m["badge"]
-	var outer_y: float = size.y - m["pad"] - m["plate"] - (band_h if op and mine else lband_h if mine else 0.0) if mine \
-			else m["pad"] + (band_h if op else lband_h)
-	var left_x: float = spine + m["pad"]
+		SynergyGlyphs.draw_band(o, Rect2(spine, 0.0, size.x - spine, lband_h), lvl_band)
+	var lay: Dictionary = layout(size, m, op, lband_h, lead)
+	var outer_y: float = lay["plate_y"]
+	var left_x: float = lay["left_x"]
+	var stat_x0: float = left_x
+	var stat_x1: float = size.x - m["pad"]
 	if entry.has("fp"):
-		# Firepower (inner-left): teal circle (yours) / red notched diamond (rival).
-		var fp_rect: Rect2 = Rect2(left_x, inner_y, m["badge"], m["badge"])
+		# Firepower (bottom-left): teal circle (yours) / red notched diamond (rival).
+		var fp_rect: Rect2 = lay["fp"]
 		_draw_fp(o, fp_rect, int(entry.get("fp", 0)), mine, m)
 		_draw_trend(o, fp_rect, int(entry.get("fp_trend", 0)), mine)
-		# Armor (inner-right): grey shield, amber when damaged.
+		# Armor (bottom-right): grey shield, amber when damaged.
 		var armor: int = int(entry.get("armor", 0))
 		var damaged: bool = armor < int(entry.get("armor_max", armor))
-		var ar_rect: Rect2 = Rect2(size.x - m["pad"] - m["badge"], inner_y, m["badge"], m["badge"] * 1.08)
+		var ar_rect: Rect2 = lay["armor"]
 		_draw_armor(o, ar_rect, armor, damaged, m)
+		stat_x0 = fp_rect.end.x + 4.0
+		stat_x1 = ar_rect.position.x - 4.0
 		# kc-syn-ui: Cover now (printed + effects + links + sets), left of the Armor badge.
 		var cov: int = int(entry.get("cover", 0))
 		if cov > 0:
 			var cs: float = roundf(m["badge"] * 0.78)
-			var cr: Rect2 = Rect2(ar_rect.position.x - cs - 3.0, inner_y + (m["badge"] - cs) * 0.5, cs, cs)
+			var cr: Rect2 = Rect2(ar_rect.position.x - cs - 3.0, fp_rect.position.y + (m["badge"] - cs) * 0.5, cs, cs)
 			_draw_cover_chip(o, cr, cov, int(entry.get("cover_trend", 0)), m)
-	# Class pip (outer-left).
+			stat_x1 = cr.position.x - 3.0
+	if show_name and mode in [Mode.UNIT, Mode.GHOST]:
+		_draw_name(o, stat_x0, stat_x1, size.y - m["pad"], m["badge"], entry.has("fp"))
+	# Class pip (top-left).
 	var cls: String = String(entry.get("cls", "")).to_upper()
 	if CLASS_ICONS.has(cls) and not op:
 		_draw_plate_icon(o, Rect2(left_x, outer_y, m["plate"], m["plate"]), IconSheet.get_icon(CLASS_ICONS[cls]), _col(&"text"))
@@ -416,6 +438,62 @@ func _draw_overlay() -> void:
 		_draw_reticle(o, r)
 
 
+## kc-ui4: where the badges sit on a banner of `sz` (the same for both sides): the plate row's y and
+## first x (after the spine, the top band and `lead_px`), and the FP / Armor badge rects.
+static func layout(sz: Vector2, m: Dictionary, op: bool = false, level_band: float = 0.0, lead_px: float = 0.0) -> Dictionary:
+	var top_band: float = (6.0 if sz.y < 100.0 else 10.0) if op else level_band
+	var x0: float = m["spine"] + m["pad"]
+	var ar_h: float = m["badge"] * 1.08
+	var fp_y: float = sz.y - m["pad"] - m["badge"]
+	return {
+		"plate_y": m["pad"] + top_band, "left_x": x0 + lead_px,
+		"fp": Rect2(x0, fp_y, m["badge"], m["badge"]),
+		"armor": Rect2(sz.x - m["pad"] - m["badge"], sz.y - m["pad"] - ar_h, m["badge"], ar_h),
+	}
+
+
+## The FP and Armor badge rects of this banner as drawn now (tests, FX anchors).
+func stat_rects() -> Dictionary:
+	var m: Dictionary = metrics(minf(size.y, metric_h) if metric_h > 0.0 else size.y)
+	var lband: float = (4.0 if size.y < 100.0 else 8.0) if String(entry.get("band", "")) != "" and not bool(entry.get("operator", false)) else 0.0
+	var lay: Dictionary = layout(size, m, bool(entry.get("operator", false)), lband, lead)
+	return {"fp": lay["fp"], "armor": lay["armor"]}
+
+
+## Name sizes for a banner height (phone 57: 16 / 13; desktop 76: 18 / 14).
+static func name_sizes(h: float) -> Vector2i:
+	return Vector2i(clampi(int(roundf(h * 0.24)), 16, 18), clampi(int(roundf(h * 0.19)), 13, 14))
+
+
+## kc-ui4 (head naming): the card's name (always the chassis, so a card keeps its name whatever art
+## it wears) and the art's subname under it, smaller, in the free space between the stat badges.
+func _draw_name(o: Control, x0: float, x1: float, bottom: float, row_h: float, stats: bool) -> void:
+	var nm: String = String(entry.get("name", "")).replace("★", "").strip_edges().to_upper()
+	if nm == "" or x1 - x0 < 24.0:
+		return
+	var sub: String = String(entry.get("subname", entry.get("art_title", ""))).to_upper()
+	if sub == "" and not stats:
+		sub = String(entry.get("kind_word", ""))
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var fs: Vector2i = name_sizes(metric_h if metric_h > 0.0 else size.y)
+	var w: float = x1 - x0
+	var nfs: int = fs.x
+	while nfs > 13 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > w:
+		nfs -= 1
+	var sub_h: float = (fs.y + 1.0) if sub != "" else 0.0
+	var line_h: float = font.get_ascent(nfs) + font.get_descent(nfs)
+	var block: float = line_h + sub_h
+	var top: float = bottom - maxf(block, row_h) + maxf(0.0, (row_h - block) * 0.5)
+	var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER if stats else HORIZONTAL_ALIGNMENT_LEFT
+	var base: Vector2 = Vector2(x0, top + font.get_ascent(nfs))
+	o.draw_string_outline(font, base, nm, align, w, nfs, 4, INK)
+	o.draw_string(font, base, nm, align, w, nfs, Color.WHITE)
+	if sub != "":
+		var sb: Vector2 = Vector2(x0, top + line_h + font.get_ascent(fs.y))
+		o.draw_string_outline(font, sb, sub, align, w, fs.y, 3, INK)
+		o.draw_string(font, sb, sub, align, w, fs.y, Color("#F3D36B") if entry.has("subname") or entry.has("art_title") else Color("#B9C2C9"))
+
+
 ## Art doc safety net: a black gradient (SAFETY_A at the edge to 0) over each side's icon column.
 func _draw_safety_net(o: Control) -> void:
 	var w: float = size.x * SAFETY_W
@@ -467,7 +545,7 @@ func _draw_trend(o: Control, rr: Rect2, trend: int, mine: bool) -> void:
 		return
 	var c: Color = SynergyGlyphs.UP if trend > 0 else SynergyGlyphs.DOWN
 	var s: float = maxf(7.0, rr.size.x * 0.34)
-	var base: Vector2 = Vector2(rr.end.x - s * 0.2, rr.position.y + (rr.size.y - s * 0.2 if mine else s * 0.2))
+	var base: Vector2 = Vector2(rr.end.x - s * 0.2, rr.position.y + s * 0.2)
 	var pts: PackedVector2Array
 	if trend > 0:
 		pts = [base + Vector2(0, -s * 0.5), base + Vector2(s * 0.5, s * 0.4), base + Vector2(-s * 0.5, s * 0.4)]
@@ -581,7 +659,7 @@ func _draw_tag(o: Control, text: String, c: Color, mine: bool, m: Dictionary) ->
 	var font: Font = get_theme_font(&"font", &"HudHeader")
 	var fs: int = maxi(11, int(m["number"]) - 4)
 	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-	var rr: Rect2 = Rect2(Vector2((size.x - sz.x) * 0.5 - 4.0, 0.0 if mine else size.y - fs - 2.0), Vector2(sz.x + 8.0, fs + 2.0))
+	var rr: Rect2 = Rect2(Vector2((size.x - sz.x) * 0.5 - 4.0, 0.0), Vector2(sz.x + 8.0, fs + 2.0))
 	o.draw_rect(rr, c)
 	o.draw_string(font, Vector2(rr.position.x + 4.0, rr.position.y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, INK)
 

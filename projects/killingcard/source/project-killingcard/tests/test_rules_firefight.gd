@@ -56,8 +56,9 @@ func test_first_shot_units_on_both_sides_fire_together() -> void:
 	var b: RulesUnit = F.place(m, E, F.unit("b", 3, 3, F.W.NONE, {"first_shot": true}), F.MID)
 	m.firefight()
 	assert_false(a.is_alive() or b.is_alive(), "both First Shot units die in the same step")
-	var steps: Array[Dictionary] = F.events_of(m, RulesEvent.FIREFIGHT_STEP)
-	assert_eq(steps.size(), 1, "no Main step needed (nobody left)")
+	var beats: Array[Dictionary] = F.events_of(m, RulesEvent.FIREFIGHT_BEAT)
+	assert_eq(beats.size(), 1, "one simultaneous beat, nobody left after it")
+	assert_eq(int(beats[0]["exchange"]), FirefightResolver.EXCHANGE_TOGETHER, "both First Shot: no split")
 
 
 func test_unit_killed_in_main_step_still_fires() -> void:
@@ -176,14 +177,15 @@ func test_damage_persists_across_rounds() -> void:
 	assert_eq(tank.armor, 2, "round 2 damage stacks")
 
 
-func test_no_legal_target_wastes_the_shot() -> void:
+func test_lone_survivor_has_no_target_and_the_column_ends() -> void:
 	var m: MatchState = F.new_match()
 	F.place(m, P, F.unit("fs", 5, 9, F.W.NONE, {"first_shot": true}), F.MID)
 	F.place(m, P, F.unit("late", 2, 9), F.MID)
 	F.place(m, E, F.unit("only", 0, 1), F.MID)
 	m.firefight()
 	var wasted: Array = F.events_of(m, RulesEvent.SHOT_FIRED).filter(func(e: Dictionary) -> bool: return e["target_uid"] == -1)
-	assert_eq(wasted.size(), 1, "the Main step shot has no target")
+	assert_eq(wasted.size(), 0, "kc-fight-impl: the column is over once one side is empty, no wasted shot")
+	assert_eq(F.events_of(m, RulesEvent.SHOT_FIRED).size(), 1, "only the First Shot unit fired")
 
 
 func test_edge_dead_shieldman_lets_next_unit_be_point_man_same_step() -> void:
@@ -366,7 +368,6 @@ func test_survive_lethal_keeps_unit_at_given_armor() -> void:
 	var tough: RulesUnit = F.place(m, P, F.unit("tough", 0, 3), F.MID)
 	tough.survive_lethal = 1
 	F.place(m, E, F.unit("a", 5, 9), F.MID)
-	F.place(m, E, F.unit("b", 5, 9), F.MID)
 	m.firefight()
-	assert_eq(tough.armor, 1, "survived the step's lethal damage with 1 Armor")
+	assert_eq(tough.armor, 1, "survived the beat's lethal damage with 1 Armor")
 	assert_eq(tough.survive_lethal, 0, "used up")

@@ -61,6 +61,18 @@ const GEN_TOKENS: Dictionary = {
 	&"war_standard": &"shield", &"sniper_perch": &"sniper", &"aid_station": &"shield",
 }
 
+## kc-ui4: our own alternate arts for the public build (no licensed art): "<chassis>~<variant>" ids,
+## made from the chassis' placeholder art with a different grade and crop. The default art is the
+## chassis id itself ("STANDARD"). [suffix, subname, overlay colour (alpha = strength), brightness,
+## saturation, banner_y shift, mirrored].
+const VARIANTS: Array = [
+	["night", "Night Ops", Color(0.10, 0.22, 0.55, 0.42), 0.78, 0.45, -0.08, false],
+	["dust", "Sandstorm", Color(0.85, 0.55, 0.18, 0.34), 1.02, 0.70, 0.08, false],
+	["flip", "Flipside", Color(0.0, 0.0, 0.0, 0.0), 0.95, 1.15, 0.0, true],
+]
+const VARIANT_SEP: String = "~"
+const DEFAULT_SUBNAME: String = "Standard"
+
 ## Off: never read data/banners (tests check the placeholder path); a kill switch too.
 static var drop_in_enabled: bool = true
 ## Off: ignore the licensed folder even when present (tests, public builds).
@@ -85,6 +97,8 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 		art = load(path) as BannerArt
 	if art == null and licensed_enabled:
 		art = _licensed_art(art_id)
+	if art == null and String(art_id).contains(VARIANT_SEP):
+		art = _variant(art_id, hint)
 	if art == null:
 		art = _placeholder(art_id, hint)
 	_arts[art_id] = art
@@ -152,6 +166,58 @@ static func art_title(art_id: StringName) -> String:
 		return ""
 	var art: BannerArt = get_art(art_id)
 	return art.title if is_card_art(art) else ""
+
+
+## kc-ui4: every art a card can wear, default first: the licensed pool in the pitch build (calling
+## cards), else the chassis id + our VARIANTS. The Codex lists these; Settings.equipped_arts holds the
+## pick per chassis.
+static func alt_arts(chassis: StringName) -> Array[StringName]:
+	var pool: Array[StringName] = licensed_pool(chassis)
+	if not pool.is_empty():
+		return pool
+	var out: Array[StringName] = [chassis]
+	for v: Array in VARIANTS:
+		out.append(StringName("%s%s%s" % [chassis, VARIANT_SEP, v[0]]))
+	return out
+
+
+## kc-ui4 (head naming): the art's own name, shown UNDER the card name (the card keeps its chassis
+## name whatever it wears): a licensed calling card's title, or our variant's name. "" for the
+## chassis' default placeholder art and for the Operator's mastery cards.
+static func subname(art_id: StringName) -> String:
+	if art_id == &"":
+		return ""
+	var t: String = art_title(art_id)
+	if t != "":
+		return t
+	var parts: PackedStringArray = String(art_id).split(VARIANT_SEP)
+	if parts.size() == 2:
+		for v: Array in VARIANTS:
+			if v[0] == parts[1]:
+				return String(v[1])
+	return ""
+
+
+## The chassis an art id belongs to (a variant's base, a licensed row's card), else the id itself.
+static func chassis_of(art_id: StringName) -> StringName:
+	var parts: PackedStringArray = String(art_id).split(VARIANT_SEP)
+	if parts.size() == 2:
+		return StringName(parts[0])
+	if has_licensed():
+		licensed_rows()
+		var row: Dictionary = _licensed_by_id.get(art_id, {})
+		if not row.is_empty():
+			return StringName(String(row.get("card", row.get("chassis", art_id))))
+	return art_id
+
+
+## kc-ui4 (coming next: alternate arts give different traits): the trait an art carries when the
+## manifest names one (column "trait"), else &"" (the Codex shows an empty trait slot).
+static func art_trait(art_id: StringName) -> StringName:
+	if art_id == &"":
+		return &""
+	var art: BannerArt = get_art(art_id)
+	return StringName(String(art.tags.get("trait", ""))) if art != null else &""
 
 
 ## Licensed art ids for a chassis (or an Operator weapon's mastery ladder, tier order), [] without.
@@ -236,6 +302,8 @@ static func _licensed_art(art_id: StringName) -> BannerArt:
 		art.frame_ms = maxi(30, int(row.get("frame_ms", "80"))) if String(row.get("frame_ms", "")).is_valid_int() else 80
 		art.animated = &"yes"
 	art.mastery_family = StringName(String(row.get("mastery_family", "")))
+	if String(row.get("trait", "")) != "":
+		art.tags = {"trait": String(row["trait"])}
 	art.mastery_tier = int(row.get("tier_rank", "0")) if String(row.get("tier_rank", "")).is_valid_int() else 0
 	art.licence = "Activision. NOT LICENSED: private pitch prototype only, never ship or publish."
 	art.source_note = "Licensed reference art (private pitch build): " + path.get_file()
@@ -317,6 +385,51 @@ static func _crop(art_id: StringName, kind: StringName, hint: Dictionary) -> Tex
 	atlas.filter_clip = true
 	_crops[key] = atlas
 	return atlas
+
+
+## kc-ui4: a public alternate art ("<chassis>~<variant>"): the chassis' art regraded (overlay,
+## brightness, saturation), re-cropped and optionally mirrored. Null for an unknown variant.
+static func _variant(art_id: StringName, hint: Dictionary) -> BannerArt:
+	var parts: PackedStringArray = String(art_id).split(VARIANT_SEP)
+	if parts.size() != 2:
+		return null
+	var spec: Array = []
+	for v: Array in VARIANTS:
+		if v[0] == parts[1]:
+			spec = v
+	if spec.is_empty():
+		return null
+	var base: BannerArt = get_art(StringName(parts[0]), hint)
+	var tex: Texture2D = master_texture(base)
+	var art := BannerArt.new()
+	art.id = art_id
+	art.card_id = base.card_id
+	art.placeholder = true
+	art.is_default = false
+	art.title = String(spec[1])
+	art.banner_y = clampf(base.banner_y + float(spec[5]), 0.1, 0.9)
+	art.portrait_x = clampf(1.0 - base.portrait_x if bool(spec[6]) else base.portrait_x, 0.0, 1.0)
+	art.source_note = "Placeholder alternate art (%s): the chassis art regraded." % spec[1]
+	if tex == null:
+		return art
+	var img: Image = tex.get_image()
+	if img == null or img.is_empty():
+		art.texture = tex
+		return art
+	img = img.duplicate()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	img.adjust_bcs(float(spec[3]), 1.08, float(spec[4]))
+	var tint: Color = spec[2]
+	if tint.a > 0.0:
+		var over: Image = Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
+		over.fill(tint)
+		img.blend_rect(over, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
+	if bool(spec[6]):
+		img.flip_x()
+	art.texture = ImageTexture.create_from_image(img)
+	return art
 
 
 ## hint: {cls (unit class word), type ("unit" / "tactic" / "field" / "operator")}.
