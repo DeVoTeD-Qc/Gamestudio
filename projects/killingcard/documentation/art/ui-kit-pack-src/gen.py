@@ -29,7 +29,8 @@ BG_STYLE = ("Original stylized 2D duotone painting for a mobile card game screen
 LUMA_TAIL = ("Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. "
              "Centred, filling about 70% of the canvas, with even empty margin on all sides. "
              "Perfectly flat pure black #000000 background.")
-ICON_TAIL = ("Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. " + LUMA_TAIL +
+ICON_TAIL = ("Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, "
+             "simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. " + LUMA_TAIL +
              " Square 1:1.")
 ALPHA_TAIL = ("Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF "
               "background with no shadow, no gradient and no magenta inside the asset.")
@@ -65,6 +66,9 @@ ALPHA_CSV = {"luma": "yes (luma key)", "alpha": "yes (alpha or magenta key)", "a
 def prompt(s):
     cat, a = s["cat"], s["alpha"]
     shape = SHAPE[s["gen"]]
+    if cat == "plate":
+        return (f"{ICON_STYLE} Draw one number plate (the game prints the number inside it later): {s['subj']}. "
+                "No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. " + LUMA_TAIL + " Square 1:1.")
     if cat == "icon":
         return f"{ICON_STYLE} Draw exactly one icon: {s['subj']}. {ICON_TAIL}"
     if cat == "background":
@@ -89,17 +93,17 @@ def prompt(s):
 
 
 def avoid(s):
-    base = s["cat"] if s["cat"] in ("icon", "background", "band") else {"luma": "luma", "add": "add", "opaque": "opaque"}.get(s["alpha"], "part")
+    base = "luma" if s["cat"] == "plate" else s["cat"] if s["cat"] in ("icon", "background", "band") else {"luma": "luma", "add": "add", "opaque": "opaque"}.get(s["alpha"], "part")
     extra = s.get("avoid") or ""
     return AVOID[base] + (", " + extra if extra else "") + "."
 
 
 CAT_TITLE = OrderedDict([
-    ("icon", "Icons"), ("button", "Buttons and controls"), ("panel", "Panels, trays, rings and strips"),
+    ("icon", "Icons"), ("plate", "Number plates"), ("button", "Buttons and controls"), ("panel", "Panels, trays, rings and strips"),
     ("background", "Backgrounds"), ("tile", "Objective and Field tile backers"), ("frame", "Card frame parts"),
     ("band", "Camo bands"), ("fx", "Glows, outlines and overlays"),
 ])
-CAT_FOLDER = {"icon": "assets/ui/kit/icons/", "button": "assets/ui/kit/buttons/", "panel": "assets/ui/kit/panels/",
+CAT_FOLDER = {"icon": "assets/ui/kit/icons/", "plate": "assets/ui/kit/plates/", "button": "assets/ui/kit/buttons/", "panel": "assets/ui/kit/panels/",
               "background": "assets/ui/backgrounds/", "tile": "assets/ui/kit/tiles/", "frame": "assets/ui/kit/frames/",
               "band": "assets/ui/kit/bands/", "fx": "assets/ui/kit/fx/"}
 
@@ -145,6 +149,8 @@ o(open(sys.argv[5]).read().replace("{ICON_STYLE}", ICON_STYLE).replace("{FX_STYL
 
 # ---------------------------------------------------------------- prompts
 o("## 4. Prompts")
+o("")
+o("**Since batch 1** (Technical Artist feedback, `ui-kit-import-log.md`): every icon and number-plate prompt now asks for strokes and gaps of at least 1/10 of the canvas, no detail smaller than 1/8, and a compact, roughly square silhouette. Keywords stay off circles and reticles: Guard is a block wall, Spotter binoculars, Overwatch a visor slit. The 10 batch-1 icons were made with the older 1/12 wording and are accepted as they are.")
 o("")
 o("Every grey box is complete: copy it as is. Entries are grouped the way they should be generated: **one ChatGPT chat per group** "
   "(heading level 4), so the set shares a look. After the first image in a group, you can shorten the next ones to "
@@ -196,17 +202,21 @@ o("")
 o("Each batch is about 10 images (10 to 15 minutes) and one upload. Keep a group (a level-4 heading in section 4) in one ChatGPT chat; when a batch crosses into the next group, start a new chat there.")
 o("")
 batches = []
-order = ["icon", "frame", "band", "fx", "button", "panel", "tile", "background"]
+order = ["icon", "plate", "frame", "band", "fx", "button", "panel", "tile", "background"]
 for pri in ("P1", "P2", "P3"):
     for c in order:
         group = [s for s in S if s["pri"] == pri and s["cat"] == c]
         for i in range(0, len(group), 10):
             batches.append((pri, CAT_TITLE[c], group[i:i + 10]))
+# Batch 1 (first 10 P1 icons) is imported; the head asked for the P1 number plates next, as batch 2.
+plates = [b for b in batches if b[0] == "P1" and b[1] == "Number plates"]
+batches = [batches[0]] + plates + [b for b in batches[1:] if b not in plates]
 o("| Batch | Priority | Group | Images | Files |")
 o("|---|---|---|---|---|")
 for i, (pri, title, g) in enumerate(batches, 1):
     files = ", ".join(f"`{s['file'][:-4]}`" for s in g)
-    o(f"| {i} | {pri} | {title} | {len(g)} | {files} |")
+    done = " (imported, see `ui-kit-import-log.md`)" if i == 1 else ""
+    o(f"| {i} | {pri} | {title}{done} | {len(g)} | {files} |")
 o("")
 p1_batches = sum(1 for b in batches if b[0] == "P1")
 o(f"P1 is batches 1 to {p1_batches} ({by_pri['P1']} images). At about a minute per image plus a check, that is roughly "

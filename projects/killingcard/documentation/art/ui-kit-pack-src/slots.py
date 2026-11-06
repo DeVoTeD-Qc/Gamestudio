@@ -88,14 +88,16 @@ icon(sec, "kw_protector", "Banner effect slot, TAKES THE FRONT preview, Protecto
 icon(sec, "kw_hidden", "Hidden Field traps (Tripwire), hide-from-intel effects, dashed TRAP chip", "P2",
      "an almond eye shape with its lid half closed and one thick diagonal slash across it")
 icon(sec, "kw_guard", "Keyword pip on Trained banners and hand cards, link preview, inspector", "P1",
-     "a plain wide shield shape with a flat top and a pointed bottom, thick and solid, empty face", notes=kwnote,
-     avoid="an arrow (the game adds it), any emblem on the shield")
+     "a short solid wall made of two rows of thick rectangular blocks, two blocks in the bottom row and one centred block on top, compact and square", notes=kwnote + " Not a shield: the shield shape is Armor.",
+     avoid="an arrow (the game adds it), a shield shape, a circle")
 icon(sec, "kw_spotter", "Keyword pip, link preview, inspector", "P1",
-     "a wide open eye: an almond outline with a solid round pupil, simple and bold", notes=kwnote, avoid="an arrow (the game adds it), eyelashes, eyebrows")
+     "a pair of binoculars seen from the front, drawn as two thick upright rectangular barrels side by side joined by a short solid bridge, compact and square", notes=kwnote + " Not an eye: the eye is the PREVIEW toggle.",
+     avoid="an arrow (the game adds it), an eye, round lenses or circles")
 icon(sec, "kw_fireteam", "Keyword pip, link preview, inspector", "P1",
      "two thick open chevrons pointing away from each other, one pointing left and one pointing right, with a small gap between them")
 icon(sec, "kw_overwatch", "Keyword pip, link preview, inspector", "P1",
-     "a gun-sight ring with a centre dot and short ticks at top and bottom, with one solid triangular arrowhead on each side pointing outward left and right")
+     "a short thick horizontal bar like a visor slit with a solid square in its middle, and one solid triangular arrowhead on each side pointing outward left and right, compact",
+     avoid="a circle, a ring, a reticle or crosshair")
 icon(sec, "trig_on_deploy", "'On deploy' effect line and banner effect slot", "P2",
      "a solid downward arrow landing on a flat bar, with two short impact lines on each side of the bar")
 icon(sec, "trig_on_down", "'On down' effect line and banner effect slot", "P2",
@@ -103,7 +105,8 @@ icon(sec, "trig_on_down", "'On down' effect line and banner effect slot", "P2",
 icon(sec, "effect_bolt", "Banner effect slot for triggered or aura text (with a dot if more), Field auras", "P1",
      "a bold lightning bolt with three straight segments, thick and angular")
 icon(sec, "kw_aura", "Field aura marker on banners in a Field's column, objective tile chip", "P2",
-     "a solid dot surrounded by two concentric broken rings, like a signal spreading outward")
+     "a small solid square with four short thick bars radiating from its four sides, like a signal spreading outward",
+     avoid="circles, rings, a reticle")
 
 # ---------------------------------------------------------------- icons: traits
 sec = "Traits"
@@ -439,8 +442,8 @@ part("tile", sec, "tile_slot_empty", "tile_slot_empty.png", "Empty row slot in a
 # ================================================================ CARD FRAME PARTS
 sec = "Board banner frame (4:1)"
 part("frame", sec, "frm_banner", "frm_banner.png", "Every board banner (228x57 phone, 304x76 desktop, 512x128 inspector): the steel frame around the art", "P1",
-     "a very wide thin picture frame, four times wider than tall: a 3-pixel dark steel #3A444D border with a 1-pixel lighter top-left bevel, small 45-degree chamfers at all four corners, a tiny plain square rivet in each corner, the inside of the frame completely empty",
-     gen="1536x1024", ship="512x128", nine="16,16,16,16", states="normal / selected (fx_outline_teal) / now firing (fx_outline_side) / damaged (code) / dimmed (code)",
+     "a very wide thin picture frame, four times wider than tall: a 3-pixel dark steel #3A444D border with a 1-pixel lighter top-left bevel, small 45-degree chamfers at the top-right, bottom-left and bottom-right corners, a hexagon-shaped notch cut into the top-left corner (for the cost plate), the inside of the frame completely empty",
+     gen="1536x1024", ship="512x128", nine="40,32,16,16", states="normal / selected (fx_outline_teal) / now firing (fx_outline_side) / damaged (code) / dimmed (code)",
      notes="Ask for the frame across the whole width of the canvas; the TA crops a 4:1 band. The middle must be transparent: the art shows through.")
 part("frame", sec, "frm_spine_you", "frm_spine_you.png", "Side edge strip on your banners (outer long edge, away from the objective)", "P1",
      "a long thin horizontal strip: solid teal #2EC4B6 with a slightly darker #1E8C82 lower half and a fine row of small square notches along its top edge, both ends cut at 45 degrees",
@@ -458,25 +461,9 @@ part("frame", sec, "frm_incoming", "frm_incoming.png", "INCOMING face-down rival
      "a seamless dark card-back pattern for a very wide card: diagonal hazard-free fine chevron weave in gunmetal #232A31 on slate #12161A, a slightly brighter abstract arrow pattern pointing down repeated evenly, low contrast",
      gen="1536x1024", ship="512x128 (crop a 4:1 band)", alpha="opaque", states="normal / pulse (code)",
      avoid="emblems, a central logo, letters, a skull")
-part("frame", sec, "frm_cost_hex", "frm_cost_hex.png", "Cost hex on hand cards (26x30), Codex tiles (28x32), inspector; number drawn by code", "P1",
-     "a single upright hexagon plate: signal amber #FFB020 face with a darker amber inner bevel and a thin dark #12161A outline, plain flat face",
-     ship="104x120", states="affordable (normal) / can't pay (code grey + red outline) / OP (Operator: frm_supply_plate instead)")
 part("frame", sec, "frm_supply_plate", "frm_supply_plate.png", "Operator card '1 SUPPLY' plate in place of the cost hex; red when you can't pay", "P2",
      "a small horizontal brass plate with rounded corners and two tiny rivets at the ends, brass #C9A227 face with darker #5A4512 edges",
      ship="160x48", nine="16,12,16,12", states="normal / can't pay (code tint red)")
-part("frame", sec, "frm_badge_fp_you", "frm_badge_fp_you.png", "FP badge on your banners and cards (28 px phone, 34 desktop): teal circle", "P1",
-     "a single round badge disk: solid deep teal #14524D face, a thick teal #2EC4B6 rim and a fine inner ring, slight inner bevel, plain centre",
-     ship="96x96", states="normal / buffed (code: number green + up marker) / lowered (red + down marker)")
-part("frame", sec, "frm_badge_fp_rival", "frm_badge_fp_rival.png", "FP badge on rival banners: red notched diamond", "P1",
-     "a single diamond-shaped badge with a small notch cut into each corner: deep red #5A1A1C face, a thick red #E5383B rim, slight inner bevel, plain centre",
-     ship="96x96", states="normal / buffed / lowered (code)")
-part("frame", sec, "frm_badge_armor", "frm_badge_armor.png", "Armor badge on every banner and card", "P1",
-     "a single plate-shaped badge (flat top, sides tapering to a rounded point at the bottom): dark steel #2E3439 face, a thick light steel #B9C2C9 rim, slight inner bevel, plain centre",
-     ship="96x96", states="normal / damaged (code: face #4A3412, rim amber #F2A33A) / healed (flash)",
-     avoid="an emblem or cross on the plate")
-part("frame", sec, "frm_chip_cover", "frm_chip_cover.png", "Cover chip left of the Armor badge", "P2",
-     "a small rounded-rectangle chip plate, dark steel face, a thin light steel outline, plain",
-     ship="64x48", nine="12,12,12,12", states="normal / buffed (code green)")
 part("frame", sec, "frm_socket", "frm_socket.png", "Socket for keyword pip, trait pip, class pip and effect glyph (22 px phone, 26 desktop)", "P1",
      "a small square socket plate with chamfered corners: near-black #0F1316 recessed face, a thin steel #3A444D rim, plain",
      ship="64x64", nine="", states="idle (grey rim) / lit (code tints the rim: keyword accent, trait colour)")
@@ -532,7 +519,7 @@ part("frame", sec, "frm_hand_name", "frm_hand_name.png", "Name band across the m
      "a long low bar plate, near-black face, a thin steel top edge line, both ends square",
      gen="1536x1024", ship="256x48", nine="12,8,12,8", states="normal")
 part("frame", sec, "frm_codex_tile", "frm_codex_tile.png", "Codex tile (120x156 compact): art, cost hex, name, chassis line", "P2",
-     "an upright collectible tile frame: dark gunmetal border with a thin steel outline, chamfered top-left and bottom-right corners, an art window in the upper 55%, a slightly lighter lower plate for two lines of caption",
+     "an upright collectible tile frame: dark gunmetal border with a thin steel outline, a hexagon-shaped notch cut into the top-left corner for the cost plate, a chamfered bottom-right corner, an art window in the upper 55%, a slightly lighter lower plate for two lines of caption",
      gen="1024x1536", ship="240x312", nine="32,32,32,72", states="normal / hover (+10%) / pressed / locked (overlay ico_ui_lock + code dim) / equipped (frm_equipped)")
 part("frame", sec, "frm_equipped", "frm_equipped.png", "EQUIPPED corner mark on the Codex tile of the art your Operator / copies wear (word drawn by code)", "P2",
      "a corner ribbon that wraps the top-right corner of a card diagonally: a solid brass #C9A227 band with darker edges and a tiny dog-tag shape hanging from it, plain, the rest transparent",
@@ -601,3 +588,33 @@ for _s in S:
         _s["pri"] = "P2"
     if _s["id"] in _NEW_HOOK:
         _s["notes"] = (_s.get("notes", "") + " " + _NEW_HOOK[_s["id"]]).strip()
+
+
+# ---------------------------------------------------------------- number plates (head, kc-ui-art follow-up): icon with the number inside
+sec = "Number plates (the game prints the number inside)"
+platenote = ("One shape per concept everywhere: the plate is the same silhouette as the concept's icon. "
+             "TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top.")
+for size, ship, used_at, rim in (("s", "128x128", "22-34 px: board banners, hand banner cards, Codex tiles", "very thick rim, about one sixth of the plate width"),
+                                 ("l", "256x256", "48-128 px: inspector, reward and pick tiles, Operator flyout, After-Action", "thick rim, about one tenth of the plate width, with one thin inner line just inside it")):
+    tag = "small" if size == "s" else "large"
+    S.append(dict(id=f"plate_fp_{size}", file=f"plate_fp_{size}.png", cat="plate", sec=sec, gen="1024x1024", ship=ship, alpha="luma", nine="",
+                  states="you (rim teal, fill #14524D) / rival (rim red, fill #5A1A1C) / buffed (number green + up marker) / lowered (red + down marker)",
+                  used=f"Firepower number plate, bottom right of every card, left of Armor ({tag}: {used_at})", pri="P1",
+                  subj=f"a firepower number plate shaped like a gun-sight ring: a {rim}, broken by four short square gaps at top, bottom, left and right, the centre completely empty and large enough for a two-digit number (at least 55% of the plate width)",
+                  avoid="a centre dot, a cross, any number, a second ring", notes=platenote))
+    S.append(dict(id=f"plate_armor_{size}", file=f"plate_armor_{size}.png", cat="plate", sec=sec, gen="1024x1024", ship=ship, alpha="luma", nine="",
+                  states="normal (rim light steel, fill #2E3439) / damaged (rim amber #F2A33A, fill #4A3412) / healed (flash)",
+                  used=f"Armor number plate, bottom right of every card, right of FP ({tag}: {used_at})", pri="P1",
+                  subj=f"an armor number plate: a plate shape with a flat top and sides tapering to a rounded point at the bottom, drawn as a {rim}, the inside completely empty and large enough for a two-digit number (at least 55% of the plate width), roughly as wide as it is tall",
+                  avoid="a cross, a crest, a star, any mark or number inside", notes=platenote))
+    S.append(dict(id=f"plate_cost_{size}", file=f"plate_cost_{size}.png", cat="plate", sec=sec, gen="1024x1024", ship=ship, alpha="luma", nine="",
+                  states="affordable (fill amber #FFB020, number slate) / can't pay (fill grey, rim red) / Operator (frm_supply_plate instead)",
+                  used=f"Cost plate, top left of every card ({tag}: {used_at}); the hexagon is the Supply shape everywhere (pips, Supply row)", pri="P1",
+                  subj=f"a cost number plate: an upright hexagon drawn as a {rim}, the inside completely empty and large enough for a two-digit number",
+                  avoid="a number, a crate, a second hexagon",
+                  notes=platenote + " Replaces frm_cost_hex (which baked the amber in)."))
+    S.append(dict(id=f"plate_cover_{size}", file=f"plate_cover_{size}.png", cat="plate", sec=sec, gen="1024x1024", ship=ship, alpha="luma", nine="",
+                  states="normal (rim light steel) / buffed (rim green #7CF29A)",
+                  used=f"Cover number plate, bottom right, left of FP, only when Cover > 0 ({tag}: {used_at})", pri="P1" if size == "s" else "P2",
+                  subj=f"a cover number plate shaped like a low concrete barrier block seen from the front: a wide trapezoid, wider at the bottom with a flat top, drawn as a {rim}, the inside completely empty and large enough for a one-digit number, compact (no wider than one and a half times its height)",
+                  avoid="a number, an arc or arrow, cracks", notes=platenote + " Optional: Cover can stay a small icon chip if the bottom-right corner gets crowded on the 57 px phone banner."))

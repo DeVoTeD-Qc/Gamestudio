@@ -14,7 +14,7 @@
 - [ ] A weapon, drone or aircraft that is clearly a real model, or has markings?
 - [ ] Looks like an icon, frame or menu from an existing shooter?
 - [ ] **Icons:** not pure white on pure black? Grey shading, a coloured outline, a badge or circle behind the glyph, or two icons in one image?
-- [ ] **Icons:** squint test at 32 px fails (shrink it on the phone: is it still obvious)? Strokes thinner than about 1/12 of the canvas?
+- [ ] **Icons:** squint test at 24 px fails (shrink it on the phone: is it still obvious)? Strokes or gaps thinner than 1/10 of the canvas, or any detail smaller than 1/8? A long, flat silhouette instead of a compact, roughly square one?
 - [ ] **Icons:** looks too much like another icon in the set (Pick vs FP reticle, Spotter vs PREVIEW eye: the code adds context, but the shapes must still differ)?
 - [ ] **9-slice plates:** a rivet, notch or ornament in the **middle** of an edge (it would smear when stretched)? Edges not straight and even?
 - [ ] **Plates:** a painted checkerboard instead of transparency, a cast shadow, or a perspective tilt?
@@ -30,6 +30,7 @@
 | Prefix | Final folder | Notes |
 |---|---|---|
 | raw drops | `assets/incoming/ui/` | already ignored (`assets/incoming/.gdignore`); never imported |
+| `plate_*` | `assets/ui/kit/plates/` | rim `plate_<x>_<s or l>.png` + a flood-filled `_fill` copy; same export sizes as icons |
 | `ico_*` | `assets/ui/kit/icons/` | 256 masters; plus the packed atlas `assets/ui/kit/icons/kit_icons.png` (see 7.3) |
 | `btn_*`, `tgl_*`, `sld_*` | `assets/ui/kit/buttons/` | |
 | `pnl_*`, `ring_*`, `pip_*`, `order_*`, `runmap_*` | `assets/ui/kit/panels/` | |
@@ -43,6 +44,7 @@
 
 ### 7.2 Processing (per kind, from the raw PNG)
 - **luma** (icons, rings, pips, nodes, arrows, path, crack): `magick in.png -colorspace gray -level 8%,92% -alpha copy -fill white -colorize 100 -trim +repage -gravity center -background none -extent <square with 8% padding> -resize 256x256 out.png`. The `-level` crushes JPEG-ish noise near black and white.
+- **plate** (number plates): process as luma, then make `_fill` by flood-filling the inside of the rim with white, so the code draws `_fill` tinted dark, then the number, then the rim tinted bright. Keep each plate centred on the same square canvas as its icon, so `ico_stat_firepower` and `plate_fp` line up when swapped.
 - **alpha** (plates): if the PNG has real alpha, keep it. If it has a magenta field: `magick in.png -fuzz 12% -transparent "#FF00FF" ...` then despill the edge (shift magenta-tinted edge pixels to the neighbouring colour, or a 1 px alpha erode). Then crop to the plate, resize to the ship size **with the border thickness in mind**: the border should be 4-6 px at ship size.
 - **add** (glows): keep RGB, drop alpha, crop with the glow falloff intact, resize. Import as normal; draw with a `CanvasItemMaterial` (`blend_mode = BLEND_MODE_ADD`).
 - **9-slice check:** after resizing, confirm the manifest margins fall outside every corner detail. If a corner ornament is bigger, raise the margin in the manifest (and the `.tres`), not the image.
@@ -85,3 +87,4 @@ Each imported batch is logged in `ui-kit-import-log.md`: what shipped, where, an
 1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?
 2. **Backgrounds: replace or keep?** The title, run map and Supply Drop already have Killstreak-era paintings. **Recommended:** regenerate them in this pack (P1) so the KillingCard screens match; keep the old files as the fallback until the new ones are approved.
 3. **Icon look.** All icons are solid white pictograms tinted in code (cheapest, reads best at 22 px). The alternative is coloured, bevelled metal icons with the colour baked in, which look richer at 64 px but cost a second image per side and state. **Recommended:** white pictograms now; if you want richer killstreak tiles later, those 4 can get a painted P3 version.
+4. **Rival stats position.** Number plates bottom-right on every card, rival banners included, instead of mirrored toward the objective (`card-system.md` §3.4)? **Recommended:** yes. One fixed anatomy is easier to learn, and the side tint and spine show whose card it is.

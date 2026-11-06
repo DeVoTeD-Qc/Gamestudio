@@ -4,7 +4,7 @@
 *For: the studio head (generates in ChatGPT on the phone) and the Technical Artist (cuts, keys, imports).*
 *Companion file: `ui-kit-manifest.csv` (one row per image: id, file, category, size, transparency, 9-slice margins, states, where used, priority, final folder).*
 
-**201 images: P1 97, P2 84, P3 20.** This pack covers the UI kit around the card art: every icon, button backer, panel, background, and every part needed to build the card frames. The card art itself is not in this pack: the private pitch uses licensed calling cards, the public build uses the banner pack (`banner-art-direction.md`). **Everything here is original**: no logos, brands, franchise insignia, real weapon trademarks, and no text baked in. The game draws every word and number.
+**204 images: P1 100, P2 84, P3 20.** This pack covers the UI kit around the card art: every icon, button backer, panel, background, and every part needed to build the card frames. The card art itself is not in this pack: the private pitch uses licensed calling cards, the public build uses the banner pack (`banner-art-direction.md`). **Everything here is original**: no logos, brands, franchise insignia, real weapon trademarks, and no text baked in. The game draws every word and number.
 
 What the UI draws today (survey, 2026-11-06): almost all of it is drawn in code. `icon_sheet.svg` holds 34 white line icons (placeholder), `hud_theme.tres` and `card_theme.tres` use flat StyleBoxes, and `banner_view.gd`, `synergy_glyphs.gd`, `strip_badge.gd`, `objective_tile.gd`, `killstreak_row.gd`, `hand_area.gd` and `board.gd` draw badges, plates, bands, ticks and glyphs with `draw_*` calls. The only bitmaps are the Killstreak-era paintings (`title_key_art`, `bg_run`, `bg_supply_drop`, `fx_callin_tablet`, 4 perk patches, 3 square lane backdrops, card art). This pack replaces the code drawing with images where an image looks better, and **keeps the code drawing as the fallback** for every slot.
 
@@ -14,14 +14,15 @@ What the UI draws today (survey, 2026-11-06): almost all of it is drawn in code.
 | Category | Images | P1 | P2 | P3 |
 |---|---|---|---|---|
 | Icons | 104 | 48 | 43 | 13 |
+| Number plates | 8 | 7 | 1 | 0 |
 | Buttons and controls | 14 | 7 | 5 | 2 |
 | Panels, trays, rings and strips | 24 | 10 | 13 | 1 |
 | Backgrounds | 12 | 7 | 4 | 1 |
 | Objective and Field tile backers | 4 | 2 | 2 | 0 |
-| Card frame parts | 27 | 16 | 10 | 1 |
+| Card frame parts | 22 | 12 | 9 | 1 |
 | Camo bands | 5 | 2 | 3 | 0 |
 | Glows, outlines and overlays | 11 | 5 | 4 | 2 |
-| **Total** | **201** | **97** | **84** | **20** |
+| **Total** | **204** | **100** | **84** | **20** |
 
 ## 1. How to use it (on the phone)
 
@@ -38,7 +39,7 @@ What the UI draws today (survey, 2026-11-06): almost all of it is drawn in code.
 
 A **tactical equipment** look: matte gunmetal and slate plates, thin steel rims with 45-degree chamfered corners, one soft top-left bevel highlight, a faint brushed grain and nothing else. No grunge, rust, scratches, stencil lettering or fake screws along edges. Colour comes only from the game's tokens: **side colours** (teal you, red rival), **amber** for "act now" (READY, primary buttons, ready killstreaks, cost), **brass** for the Operator, **trait colours** on trait pips, **green / red** for buffs and debuffs. Icons are **bold white pictograms** that the code tints, so one icon serves every state and both sides. Backgrounds are the same **duotone dusk paintings** as the Killstreak art (title, run map), kept dark and calm so cards and white text read on top.
 
-Readability at phone size is the rule: a keyword pip is **22 px** (16 pt), an FP badge 28 px, a strip badge 62x64, a hand banner card 177x73 (kc-ui4). Every icon must read at **32 px**; plates must look right with their border at 2 to 3 logical px.
+Readability at phone size is the rule: a keyword pip is **22 px** (16 pt), an FP badge 28 px, a strip badge 62x64, a hand banner card 177x73 (kc-ui4). Every icon must read at **24 px**; plates must look right with their border at 2 to 3 logical px.
 
 ### 2.2 Colour tokens (from the current code: keep in sync)
 
@@ -77,18 +78,18 @@ Rule: **tintable pieces are generated white or neutral**, and the code applies t
 
 | Thing on screen | Built from | Why |
 |---|---|---|
-| **Board banner** (4:1) | licensed / banner art + `frm_banner` (9-slice) + `frm_spine_you` or `_rival` + `frm_badge_fp_*` + `frm_badge_armor` + `frm_chip_cover` + 2-4 `frm_socket` with icons + `band_*` strip + `frm_front_tab` / `frm_plan_plate` + overlays (`fx_outline_*`, `fx_glow_amber`) | The banner is 228x57 to 512x128 and its numbers, pips and states change every beat. Baking any of it into one image would need hundreds of variants. |
+| **Board banner** (4:1) | licensed / banner art + `frm_banner` (9-slice) + `frm_spine_you` or `_rival` + `plate_cost_s` + `plate_fp_s` + `plate_armor_s` (+ `plate_cover_s`) + 2-4 `frm_socket` with icons + `band_*` strip + `frm_front_tab` / `frm_plan_plate` + overlays (`fx_outline_*`, `fx_glow_amber`) | The banner is 228x57 to 512x128 and its numbers, pips and states change every beat. Baking any of it into one image would need hundreds of variants. |
 | **Operator banner** | art + `frm_operator_banner` + `band_*` (camo tier) + `frm_dogtag_plate` + the same badges | The camo tier and brass frame change independently. |
-| **Hand card** | art + `frm_hand_card` (9-slice, cost notch) + `frm_cost_hex` + `frm_hand_name` + badges + sockets + `band_*` | Same parts as the banner, so the hand reads as "the same card". |
+| **Hand card** | art + `frm_hand_card` (9-slice, cost notch) + `plate_cost_s` + `frm_hand_name` + number plates + sockets + `band_*` | Same parts as the banner, so the hand reads as "the same card". |
 | **Operator card / mini card** | art + `frm_operator_card` or `frm_operator_mini` + `frm_supply_plate` | |
-| **Codex tile** | art + `frm_codex_tile` + `frm_cost_hex` + optional `frm_equipped`, `ico_ui_lock` | |
+| **Codex tile** | art + `frm_codex_tile` + `plate_cost_s` + optional `frm_equipped`, `ico_ui_lock` | |
 | **Objective tile** | `tile_objective` + `ico_ctl_*` + 2 `tile_field_chip` + words (code) | |
 | **Buttons** | one 9-slice plate per family + pressed plate + overlays; label is code text | |
 | **Killstreak tile** | `pnl_ks_tile` + `ring_track` + `ring_fill` (radial progress) + `ico_ks_*` + `fx_glow_amber` | |
 | **Order strip A > B > C** | `pnl_order_strip` + 3 `order_node` + 2 `order_arrow` + letters (code) + `ico_ui_check` | |
 | One image | backgrounds, column backdrops, `frm_incoming`, card backs, camo bands (tiled) | Nothing on them changes. |
 
-**9-slice pieces** (all margins in the manifest, at ship size): every `btn_*` (except `tgl_knob`), `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_tooltip`, `pnl_modal`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `pnl_rail_chip`, `pnl_callout`, `pnl_pick_tile`, `pnl_coach`, `pnl_result`, `tile_objective`, `tile_field_chip(_trap)`, `tile_slot_empty`, `frm_banner`, `frm_elite`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini`, `frm_hand_card`, `frm_hand_name`, `frm_codex_tile`, `frm_spine_*`, `frm_front_tab`, `frm_plan_plate`, `frm_supply_plate`, `frm_chip_cover`, `frm_band_edge`, `frm_ghost`, `fx_outline_*`, `fx_glow_*`. Bands **tile** horizontally instead.
+**9-slice pieces** (all margins in the manifest, at ship size): every `btn_*` (except `tgl_knob`), `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_tooltip`, `pnl_modal`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `pnl_rail_chip`, `pnl_callout`, `pnl_pick_tile`, `pnl_coach`, `pnl_result`, `tile_objective`, `tile_field_chip(_trap)`, `tile_slot_empty`, `frm_banner`, `frm_elite`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini`, `frm_hand_card`, `frm_hand_name`, `frm_codex_tile`, `frm_spine_*`, `frm_front_tab`, `frm_plan_plate`, `frm_supply_plate`, `frm_band_edge`, `frm_ghost`, `fx_outline_*`, `fx_glow_*`. Bands **tile** horizontally instead.
 
 ### 2.4 Icons: one pipeline for all of them
 
@@ -96,7 +97,7 @@ Rule: **tintable pieces are generated white or neutral**, and the code applies t
 - **The TA turns brightness into alpha** (white = opaque, black = clear), so edges stay smooth, then trims to the glyph with 8% padding and ships a **256x256 master**, plus 128 / 64 / 48 / 32 exports or one atlas (section 7).
 - **The code tints** (modulate): teal or red by side, amber when ready, trait colour when lit, `#7E8890` when idle, `#FF6B6B` / `#7CF29A` for trends. A dark 1-2 px outline for icons over bright licensed art is added in code (shadow or outline shader), not in the image.
 - **Arrows that depend on the side** (Guard points behind, Spotter points ahead) stay code-drawn on top of the base icon, because the rival's banners are mirrored.
-- On-screen sizes: keyword / trait / class pips 22 px phone, 26 px desktop; FP / Armor badge glyph inside a 28 / 34 px badge; strip badge glyphs ~32 px; killstreak tiles 61 px (icon ~36 px in the ring); Codex filters 24 px; menu icons 28-36 px.
+- On-screen sizes: keyword / trait / class pips 22 px phone, 26 px desktop; FP / Armor / Cover / cost number plates 22-32 px on cards, 48-52 px in the inspector (section 2.8); strip badge glyphs ~32 px; killstreak tiles 61 px (icon ~36 px in the ring); Codex filters 24 px; menu icons 28-36 px.
 
 ### 2.5 Transparent PNGs from ChatGPT
 
@@ -135,7 +136,7 @@ Each prompt = **style block + subject + background tail**, already joined. There
 Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems.
 ```
 
-Icon tail: `Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.`
+Icon tail: `Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.`
 
 **UI parts style** (buttons, panels, tiles, frames, bands)
 
@@ -159,12 +160,56 @@ Tail: `Only light, on a perfectly flat pure black #000000 background: it is adde
 Original stylized 2D duotone painting for a mobile card game screen background, modern private-military theme. Flat graphic shapes, light film grain, soft atmospheric haze. Palette: slate black #12161A, gunmetal #232A31, fog white #D8DEE3, olive #5B6B3A, sand #C2A878, concrete #7A828A, with one small accent of signal amber #FFB020. Dusk or night, sodium-floodlight rim light, deep soft shadows. Dark and low contrast overall, most of the image between slate and gunmetal, so white text and cards stay readable on top. No text, letters, numbers, logos, insignia, flags, emblems or brand marks. No visible faces. No gore.
 ```
 
+### 2.8 Card anatomy (every card face: board banner, hand banner card, Codex tile, inspector, pick tiles)
+
+The head's rule: **the same icon for a concept everywhere, in the same corner on every card.** Stats are **number plates**: a plate in the concept's icon shape (a white image, tinted in code), with the number printed inside by the game.
+
+```
+ Board banner 4:1 (228x57 phone, 304x76 desktop, 512x128 inspector)
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST)                                          [TRAIT] |   top-left: cost plate (hexagon = Supply)
+ |                                                        |   top-right: trait icon in a socket
+ |              art: middle 70% (focal zone)              |
+ |                                                        |
+ |[KW][KW][bolt]                     (COV) (FP) (AR)      |   bottom-left to centre: abilities
+ \________________________________________________________/   bottom-right: FP + Armor side by side
+   level camo band + side spine along the outer long edge
+
+ Hand banner card (177x73 phone, 224x64 desktop, 103x78 on 16:9): the same corners
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST)  NAME (code text)  [TRAIT] |
+ |            art band              |
+ |[KW][bolt]          (FP) (AR)     |
+ \__________________________________/
+```
+
+| Corner | What | Part | Phone banner | Desktop banner | Hand card | Inspector / tiles |
+|---|---|---|---|---|---|---|
+| Top-left | Cost (Supply) | `plate_cost_s` / `_l`, sitting in the frame's hexagon notch | 22 px | 26 px | 26 px | 48 px (`_l`) |
+| Top-right | Trait | `ico_trait_*` in `frm_socket` (lit at tier 2, `fx_ring_tier3` at tier 3) | 22 px | 26 px | 22 px | 40 px |
+| Bottom-left to centre | Abilities: printed keyword, neighbour keyword (the arrow is drawn by code), the bolt for effect text, class pip | `ico_kw_*`, `ico_effect_bolt`, `ico_class_*` in `frm_socket`, 2 px gaps, left to right | 22 px each | 26 px | 22 px | 40 px |
+| Bottom-right | Cover (only when above 0), Firepower, Armor, side by side, Armor outermost | `plate_cover_s`, `plate_fp_s`, `plate_armor_s` | 26 px | 32 px | 28 px | 52 px (`_l`) |
+| Outer long edge | Level camo band, side spine | `band_*`, `frm_spine_*` | 3 px / 2 px | 4 px / 3 px | band only | 6 px |
+
+Rules that keep the parts lined up:
+- **The frames leave these corners free:** `frm_banner`, `frm_hand_card` and `frm_codex_tile` have the hexagon notch top-left and calm, plain bottom-right corners. Their 9-slice margins (manifest) are at least as large as the cost plate.
+- **Art safe zones (banner pack):** keep the top-left and top-right ~15% calm, and the bottom ~45% of the left and right ~25%. A 35% dark gradient scrim under the bottom row (the existing safety net) keeps plates readable on bright licensed art.
+- **One silhouette per concept:**
+  - FP is the broken gun-sight ring (`ico_stat_firepower` matches `plate_fp`).
+  - Armor is the armor plate (`ico_stat_armor` matches `plate_armor`).
+  - Cover is the barrier block.
+  - Cost and Supply are the hexagon (the cost plate, Supply pips and the Supply row). The crate icon `ico_stat_supply` (batch 1) becomes the Supply Drop and reward icon.
+  - Guard is a block wall and Spotter is binoculars, so no keyword reuses the shield (Armor) or the eye (PREVIEW).
+- **Side colours are tints, not shapes:** your plates are teal and the rival's are red. The colour-blind side cue moves to the spine (square notches for you, diamond notches for the rival) and to the half of the board the card is on. This replaces the old FP badges (a teal circle for you, a red notched diamond for the rival).
+- **Rival banners on the board** use the same corners (not mirrored), so a number is always bottom-right. Only the neighbour-link arrows flip. This changes the "stats face the objective" rule in `card-system.md` §3.4 (question 4).
+
 ## 3. Size key
 
 | Kind | Generate | Ship to the TA | In game |
 |---|---|---|---|
 | Icon | 1024x1024 square | 256x256 master, trimmed + 8% padding; exports 128/64/48/32 | 22-64 px |
-| Small part (badge, socket, pip, hex, knob) | 1024x1024 | 64-128 px (manifest) | 22-61 px |
+| Number plate (`plate_*`) | 1024x1024 | `_s` 128x128 (22-34 px on screen), `_l` 256x256 (48-128 px); rim + flood-filled `_fill` | 22-128 px |
+| Small part (socket, pip, knob) | 1024x1024 | 64-128 px (manifest) | 22-61 px |
 | Plate / panel / button (9-slice) | 1536x1024 or 1024x1536 | 2x the largest on-screen size, borders 4-6 px at ship size (manifest) | drawn at 0.5x scale (see 7.4) |
 | Banner frame parts (4:1) | 1536x1024; TA crops a 4:1 band | 512x128 (2x desktop, 2.25x phone) | 228x57 / 304x76 / 512x128 |
 | Hand banner card frame | 1536x1024 | 448x184 | 177x73 phone, 224x64 desktop, 103x78 16:9 |
@@ -175,6 +220,8 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 
 ## 4. Prompts
+
+**Since batch 1** (Technical Artist feedback, `ui-kit-import-log.md`): every icon and number-plate prompt now asks for strokes and gaps of at least 1/10 of the canvas, no detail smaller than 1/8, and a compact, roughly square silhouette. Keywords stay off circles and reticles: Guard is a block wall, Spotter binoculars, Overwatch a visor slit. The 10 batch-1 icons were made with the older 1/12 wording and are accepted as they are.
 
 Every grey box is complete: copy it as is. Entries are grouped the way they should be generated: **one ChatGPT chat per group** (heading level 4), so the set shares a look. After the first image in a group, you can shorten the next ones to "Same style, next one: <the part after 'Draw exactly one icon:'>", but if the style drifts, paste the full box again.
 
@@ -189,7 +236,7 @@ Every grey box is complete: copy it as is. Entries are grouped the way they shou
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a gun-sight reticle: a thick circle broken by four short gaps at top, bottom, left and right, with a solid dot in the centre. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a gun-sight reticle: a thick circle broken by four short gaps at top, bottom, left and right, with a solid dot in the centre. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -201,7 +248,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a plain armor plate: a tall rounded-bottom plate shape with a thick rim and a smaller solid inner plate, the face completely empty. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a plain armor plate: a tall rounded-bottom plate shape with a thick rim and a smaller solid inner plate, the face completely empty. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, crest, emblem, cross, star or any mark on the plate.
@@ -213,7 +260,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a low concrete road barrier block seen from the front (wide trapezoid base, flat top), with one short curved arc bouncing off its top edge. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a low concrete road barrier block seen from the front (wide trapezoid base, flat top), with one short curved arc bouncing off its top edge. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -225,7 +272,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a squat supply crate seen straight on, with one strap across the middle and a small solid triangle pointing up above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a squat supply crate seen straight on, with one strap across the middle and a small solid triangle pointing up above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -237,7 +284,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three playing-card rectangles stacked with a small diagonal offset, the top card plain. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three playing-card rectangles stacked with a small diagonal offset, the top card plain. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -249,7 +296,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two playing-card rectangles fanned apart with a curved arrow running underneath them from right to left. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two playing-card rectangles fanned apart with a curved arrow running underneath them from right to left. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -261,7 +308,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three playing-card rectangles held in a tight fan, spreading upward from one corner. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three playing-card rectangles held in a tight fan, spreading upward from one corner. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -274,7 +321,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** Replaces intel_contact in the old sheet (keep the id alias).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a radar sweep: a quarter-circle wedge with two thin concentric arcs inside it and one solid dot near the outer arc. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a radar sweep: a quarter-circle wedge with two thin concentric arcs inside it and one solid dot near the outer arc. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -286,7 +333,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: one thick chevron pointing right next to a short vertical post. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: one thick chevron pointing right next to a short vertical post. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -298,7 +345,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick chevrons pointing right next to a short vertical post. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick chevrons pointing right next to a short vertical post. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -310,7 +357,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three thick chevrons pointing right next to a short vertical post. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three thick chevrons pointing right next to a short vertical post. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -322,7 +369,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a rising zig-zag line of three steps that ends in a solid arrowhead pointing up and to the right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a rising zig-zag line of three steps that ends in a solid arrowhead pointing up and to the right. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -334,7 +381,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a minimal stylised skull seen from the front: rounded cranium, two hollow eye shapes, a short row of square teeth; no crossbones, no helmet, no wings. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a minimal stylised skull seen from the front: rounded cranium, two hollow eye shapes, a short row of square teeth; no crossbones, no helmet, no wings. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, crossbones, bones, a helmet, wings, flames, any badge or emblem shape around it.
@@ -346,7 +393,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a ticket stub with a perforated edge down one side and a round notch cut out of each end. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a ticket stub with a perforated edge down one side and a round notch cut out of each end. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -358,7 +405,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a stopwatch: a circle with a small button on top and a single hand pointing to one o'clock. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a stopwatch: a circle with a small button on top and a single hand pointing to one o'clock. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -371,7 +418,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** NEW: the fired pip is a firefight-order.md UI need, not built yet.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single spent rifle cartridge case lying on its side, open end to the right, no bullet in it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single spent rifle cartridge case lying on its side, open end to the right, no bullet in it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -383,7 +430,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a plus sign made of two thick bars with rounded ends, centred inside a thin rounded square outline. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a plus sign made of two thick bars with rounded ends, centred inside a thin rounded square outline. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a red cross, a red crescent, any medical emblem; the icon is pure white and is tinted green in game.
@@ -395,7 +442,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an impact burst: a small solid centre with four sharp triangular shards flying outward diagonally. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an impact burst: a small solid centre with four sharp triangular shards flying outward diagonally. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -407,7 +454,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a triangular pennant on a short vertical pole planted in a flat base line, the pennant plain with no pattern. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a triangular pennant on a short vertical pole planted in a flat base line, the pennant plain with no pattern. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, any national flag pattern, stripes, stars, emblem on the pennant.
@@ -421,7 +468,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single bullet flying to the right, pointed tip, with three straight horizontal speed lines trailing behind it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single bullet flying to the right, pointed tip, with three straight horizontal speed lines trailing behind it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -433,7 +480,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a sniper scope view: a thick circle with a thin cross inside it, and a small solid square bracket around one point in the lower right quadrant. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a sniper scope view: a thick circle with a thin cross inside it, and a small solid square bracket around one point in the lower right quadrant. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -445,7 +492,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick curved arrow that leaves from the left, swings around the top of a small solid square, and hooks down into the right side. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick curved arrow that leaves from the left, swings around the top of a small solid square, and hooks down into the right side. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -457,7 +504,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a straight arrow pointing down that passes through the middle of a thick chevron (the chevron opens downward), the arrow shaft visible above and below it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a straight arrow pointing down that passes through the middle of a thick chevron (the chevron opens downward), the arrow shaft visible above and below it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -469,7 +516,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three short parallel diagonal tracer lines coming down from the upper left onto a thick horizontal bar, pressing it down. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three short parallel diagonal tracer lines coming down from the upper left onto a thick horizontal bar, pressing it down. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -481,7 +528,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a field bandage roll seen from the side with a strip unrolling from it in a loose curl. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a field bandage roll seen from the side with a strip unrolling from it in a loose curl. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a cross, plus sign or any medical emblem on the bandage.
@@ -493,7 +540,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid triangular marker pennant on a short post driven into a flat ground line, with a small arc of ground around the base. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid triangular marker pennant on a short post driven into a flat ground line, with a small arc of ground around the base. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, national flag patterns, emblems on the pennant.
@@ -505,7 +552,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tall solid riot-shield shape with a small rectangular viewport slot, standing in front of a smaller rounded helmet outline that is half hidden behind it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tall solid riot-shield shape with a small rectangular viewport slot, standing in front of a smaller rounded helmet outline that is half hidden behind it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -517,7 +564,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an almond eye shape with its lid half closed and one thick diagonal slash across it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an almond eye shape with its lid half closed and one thick diagonal slash across it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -527,26 +574,26 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Used in:** Keyword pip on Trained banners and hand cards, link preview, inspector.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256 master (export 128/64/48/32). **Background:** white on black: TA converts brightness to alpha.
 - **States:** normal / lit (tint) / idle grey (tint).
-- **Note:** Neighbour-link arrows (Guard down, Spotter up) are drawn by the code so they can flip for the rival; the icon is only the base shape.
+- **Note:** Neighbour-link arrows (Guard down, Spotter up) are drawn by the code so they can flip for the rival; the icon is only the base shape. Not a shield: the shield shape is Armor.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a plain wide shield shape with a flat top and a pointed bottom, thick and solid, empty face. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a short solid wall made of two rows of thick rectangular blocks, two blocks in the bottom row and one centred block on top, compact and square. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
-**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, an arrow (the game adds it), any emblem on the shield.
+**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, an arrow (the game adds it), a shield shape, a circle.
 
 ##### 30. `ico_kw_spotter.png` · P1
 
 - **Used in:** Keyword pip, link preview, inspector.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256 master (export 128/64/48/32). **Background:** white on black: TA converts brightness to alpha.
 - **States:** normal / lit (tint) / idle grey (tint).
-- **Note:** Neighbour-link arrows (Guard down, Spotter up) are drawn by the code so they can flip for the rival; the icon is only the base shape.
+- **Note:** Neighbour-link arrows (Guard down, Spotter up) are drawn by the code so they can flip for the rival; the icon is only the base shape. Not an eye: the eye is the PREVIEW toggle.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a wide open eye: an almond outline with a solid round pupil, simple and bold. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a pair of binoculars seen from the front, drawn as two thick upright rectangular barrels side by side joined by a short solid bridge, compact and square. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
-**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, an arrow (the game adds it), eyelashes, eyebrows.
+**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, an arrow (the game adds it), an eye, round lenses or circles.
 
 ##### 31. `ico_kw_fireteam.png` · P1
 
@@ -555,7 +602,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick open chevrons pointing away from each other, one pointing left and one pointing right, with a small gap between them. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick open chevrons pointing away from each other, one pointing left and one pointing right, with a small gap between them. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -567,10 +614,10 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a gun-sight ring with a centre dot and short ticks at top and bottom, with one solid triangular arrowhead on each side pointing outward left and right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a short thick horizontal bar like a visor slit with a solid square in its middle, and one solid triangular arrowhead on each side pointing outward left and right, compact. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
-**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
+**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a circle, a ring, a reticle or crosshair.
 
 ##### 33. `ico_trig_on_deploy.png` · P2
 
@@ -579,7 +626,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid downward arrow landing on a flat bar, with two short impact lines on each side of the bar. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid downward arrow landing on a flat bar, with two short impact lines on each side of the bar. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -591,7 +638,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle tipping over to the right with a small motion arc beside it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle tipping over to the right with a small motion arc beside it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -603,7 +650,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bold lightning bolt with three straight segments, thick and angular. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bold lightning bolt with three straight segments, thick and angular. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -615,10 +662,10 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid dot surrounded by two concentric broken rings, like a signal spreading outward. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small solid square with four short thick bars radiating from its four sides, like a signal spreading outward. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
-**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
+**Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, circles, rings, a reticle.
 
 #### Traits (4)
 
@@ -629,7 +676,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick stacked upward chevrons, one above the other, like a rank stripe pointing up. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two thick stacked upward chevrons, one above the other, like a rank stripe pointing up. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a rank insignia layout, stars, laurels.
@@ -641,7 +688,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a face mask seen from the front: a wide band shape with two narrow rectangular eye slits cut out of it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a face mask seen from the front: a wide band shape with two narrow rectangular eye slits cut out of it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a skull, a face, any emblem.
@@ -653,7 +700,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a heavy machine gear: a thick ring with eight short square teeth around it and a solid hub in the centre. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a heavy machine gear: a thick ring with eight short square teeth around it and a solid hub in the centre. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -665,7 +712,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bony hand with four fingers reaching up out of a flat ground line, only the hand and wrist visible. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bony hand with four fingers reaching up out of a flat ground line, only the hand and wrist visible. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, blood, rot, a skull, gore.
@@ -679,7 +726,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: the head-and-shoulders silhouette of a soldier in a rounded helmet seen from the front, no face details. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: the head-and-shoulders silhouette of a soldier in a rounded helmet seen from the front, no face details. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -691,7 +738,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tactical plan: a curved dashed arrow from a small circle to a small X. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tactical plan: a curved dashed arrow from a small circle to a small X. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -704,7 +751,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** Was type_equipment in the old sheet (keep the id alias).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small fortified position: a low sandbag wall arc of four rounded bags with a short pole standing behind it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small fortified position: a low sandbag wall arc of four rounded bags with a short pole standing behind it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -716,7 +763,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a chevron-shaped aircraft silhouette seen from above with two short contrails behind it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a chevron-shaped aircraft silhouette seen from above with two short contrails behind it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real aircraft shape, roundels, markings.
@@ -728,7 +775,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single military dog tag with rounded corners, a hole near the top and a short ball chain looping from it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a single military dog tag with rounded corners, a hole near the top and a short ball chain looping from it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, engraved letters or numbers on the tag.
@@ -740,7 +787,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bold five-pointed star with slightly rounded points. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a bold five-pointed star with slightly rounded points. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a circle or badge around the star, wreaths.
@@ -752,7 +799,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tripwire: a thin taut line between two short stakes with a small solid box charge clipped to the middle. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a tripwire: a thin taut line between two short stakes with a small solid box charge clipped to the middle. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -764,7 +811,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small face-down card rectangle with a solid dot in its centre and a short down arrow above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small face-down card rectangle with a solid dot in its centre and a short down arrow above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -778,7 +825,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a generic compact assault rifle pointing right: straight magazine, short rail on top, folding stock. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a generic compact assault rifle pointing right: straight magazine, short rail on top, folding stock. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -790,7 +837,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a short boxy submachine gun pointing right, long straight magazine, stubby barrel, small stock. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a short boxy submachine gun pointing right, long straight magazine, stubby barrel, small stock. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -802,7 +849,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a pump shotgun pointing right, long tube under the barrel, a ridged pump grip, solid stock. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a pump shotgun pointing right, long tube under the barrel, a ridged pump grip, solid stock. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -814,7 +861,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a long bolt-action rifle pointing right with a long scope on top and a folded bipod under the barrel. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a long bolt-action rifle pointing right with a long scope on top and a folded bipod under the barrel. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -826,7 +873,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a heavy belt-fed machine gun pointing right, a box under the middle, a carry handle on top, bipod folded forward. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a heavy belt-fed machine gun pointing right, a box under the middle, a carry handle on top, bipod folded forward. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -839,7 +886,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** Not a card class in data (WeaponClass has 5). The 6th class icon is for the Operator's secondary.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a plain compact pistol pointing right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a plain compact pistol pointing right. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real gun model or brand, engravings, markings, a scope brand.
@@ -853,7 +900,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** charging grey / ready amber / used dim (tint) + ring.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small quadcopter drone seen from the front, four rotor discs, with a downward cone of three short lines under it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small quadcopter drone seen from the front, four rotor discs, with a downward cone of three short lines under it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real drone, helicopter or aircraft model, roundels, markings, numbers.
@@ -865,7 +912,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** charging / ready / used (tint) + ring.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three falling mortar shells in a row, nose down, each with a short curved trail above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three falling mortar shells in a row, nose down, each with a short curved trail above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real drone, helicopter or aircraft model, roundels, markings, numbers.
@@ -877,7 +924,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** charging / ready / used (tint) + ring.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a fictional slim attack helicopter flying right, one main rotor line on top, a stub wing, a nose turret. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a fictional slim attack helicopter flying right, one main rotor line on top, a stub wing, a nose turret. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real drone, helicopter or aircraft model, roundels, markings, numbers.
@@ -889,7 +936,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** charging / ready / used (tint) + ring.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a compact automated gun turret on a tripod, a boxy head with one short barrel pointing right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a compact automated gun turret on a tripod, a boxy head with one short barrel pointing right. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real drone, helicopter or aircraft model, roundels, markings, numbers.
@@ -901,7 +948,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a fictional heavy four-engine propeller plane flying right with a side gun barrel under the wing. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: side-profile silhouette of a fictional heavy four-engine propeller plane flying right with a side gun barrel under the wing. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, a real drone, helicopter or aircraft model, roundels, markings, numbers.
@@ -913,7 +960,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** ready / cooldown dim (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a round fragmentation grenade with a lever on its side and a pull ring on top, no pattern on the body. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a round fragmentation grenade with a lever on its side and a pull ring on top, no pattern on the body. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -925,7 +972,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** ready / cooldown dim (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a short cylindrical stun grenade with a lever and ring, three short burst lines radiating from its top. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a short cylindrical stun grenade with a lever and ring, three short burst lines radiating from its top. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -937,7 +984,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small open holographic gun sight seen from the side: a rectangular window frame on a short base, a dot inside the window. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small open holographic gun sight seen from the side: a rectangular window frame on a short base, a dot inside the window. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -949,7 +996,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a vertical gun foregrip seen from the side: a ridged handle hanging from a short rail section. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a vertical gun foregrip seen from the side: a ridged handle hanging from a short rail section. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -961,7 +1008,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a long curved rifle magazine seen from the side, slightly longer than normal, with a small base plate. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a long curved rifle magazine seen from the side, slightly longer than normal, with a small base plate. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -973,7 +1020,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a hexagonal ceramic tile pattern of seven small hexagons forming a plate. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a hexagonal ceramic tile pattern of seven small hexagons forming a plate. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -985,7 +1032,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a round stitched patch outline with a small four-pointed spark in the middle. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a round stitched patch outline with a small four-pointed spark in the middle. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -999,7 +1046,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint teal).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick solid ring with a solid dot in the centre. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick solid ring with a solid dot in the centre. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1011,7 +1058,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint red).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid diamond with a small notch cut into each of its four corners. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid diamond with a small notch cut into each of its four corners. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1023,7 +1070,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint grey).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a square drawn as a thick dashed outline, eight dashes, empty inside. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a square drawn as a thick dashed outline, eight dashes, empty inside. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1035,7 +1082,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal (tint grey).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thin plain circle outline, empty, with four tiny ticks pointing inward. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thin plain circle outline, empty, with four tiny ticks pointing inward. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1047,7 +1094,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / warning pulse (tint red).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a low sandbag wall broken in the middle with two thick arrows crashing through the gap from above. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a low sandbag wall broken in the middle with two thick arrows crashing through the gap from above. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1059,7 +1106,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a dashed rounded rectangle with a small plus sign in the centre. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a dashed rounded rectangle with a small plus sign in the centre. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1073,7 +1120,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle sliding down into a slot, a short down arrow above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle sliding down into a slot, a short down arrow above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1085,7 +1132,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle turning over, half of it shown as a thin edge, with two short spark lines. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle turning over, half of it shown as a thin edge, with two short spark lines. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1097,7 +1144,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two short bullets pointing at each other from left and right with a small burst between them. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two short bullets pointing at each other from left and right with a small burst between them. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1109,7 +1156,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a pennant on a pole next to a short rising stepped line. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a pennant on a pole next to a short rising stepped line. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1121,7 +1168,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three small circles in a row joined by a line, the middle one solid. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three small circles in a row joined by a line, the middle one solid. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1133,7 +1180,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two crossed straight tracer lines with a small dot where they cross. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two crossed straight tracer lines with a small dot where they cross. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, crossed rifles, crossed swords, a badge.
@@ -1145,7 +1192,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small explosive charge block with a short antenna and a curled wire. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a small explosive charge block with a short antenna and a curled wire. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black, numbers on a timer, text.
@@ -1157,7 +1204,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a helmeted head silhouette in profile facing left with a small notched diamond beside it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a helmeted head silhouette in profile facing left with a small notched diamond beside it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1171,7 +1218,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / pressed (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three thick horizontal bars of equal length stacked with equal gaps. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: three thick horizontal bars of equal length stacked with equal gaps. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1183,7 +1230,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a simple cog wheel with six rounded teeth and a round hole in the middle. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a simple cog wheel with six rounded teeth and a round hole in the middle. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1195,7 +1242,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / disabled (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick curved arrow that loops back to the left, like a U-turn pointing left. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick curved arrow that loops back to the left, like a U-turn pointing left. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1207,7 +1254,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** off / on amber (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two solid triangles pointing right, touching tip to base, like fast-forward. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two solid triangles pointing right, touching tip to base, like fast-forward. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1219,7 +1266,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid triangle pointing right followed by a thick vertical bar. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid triangle pointing right followed by a thick vertical bar. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1231,7 +1278,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open binder with three card rectangles fanned out of it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open binder with three card rectangles fanned out of it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1243,7 +1290,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two half-rectangles facing each other across a dashed vertical line, with a small two-way arrow on top. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: two half-rectangles facing each other across a dashed vertical line, with a small two-way arrow on top. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1256,7 +1303,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** NEW: there is no sound setting yet.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a speaker cone shape with two curved sound waves on its right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a speaker cone shape with two curved sound waves on its right. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1269,7 +1316,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **Note:** NEW: there is no sound setting yet.
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a speaker cone shape with a small X on its right. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a speaker cone shape with a small X on its right. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1281,7 +1328,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick X with squared ends. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick X with squared ends. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1293,7 +1340,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick chevron pointing left with a short horizontal tail. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick chevron pointing left with a short horizontal tail. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1305,7 +1352,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid circle with a cut-out tall bar and a cut-out dot above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a solid circle with a cut-out tall bar and a cut-out dot above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1317,7 +1364,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** on (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open almond eye with a solid round pupil. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open almond eye with a solid round pupil. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1329,7 +1376,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** off (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open almond eye outline with one thick diagonal slash across it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: an open almond eye outline with one thick diagonal slash across it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1341,7 +1388,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a funnel shape made of three horizontal bars getting shorter downward. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a funnel shape made of three horizontal bars getting shorter downward. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1353,7 +1400,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick tick mark with squared ends. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick tick mark with squared ends. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1365,7 +1412,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a closed padlock with a round shackle and a keyhole. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a closed padlock with a round shackle and a keyhole. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1377,7 +1424,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick chevron pointing right with a short horizontal tail. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a thick chevron pointing right with a short horizontal tail. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1389,7 +1436,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle sliding out to the right with a small curved arrow, a faint outline left behind. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle sliding out to the right with a small curved arrow, a faint outline left behind. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1401,7 +1448,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle with one thick upward chevron above it. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a playing-card rectangle with one thick upward chevron above it. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1413,7 +1460,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a supply crate hanging from a small parachute canopy by three lines. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a supply crate hanging from a small parachute canopy by three lines. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1425,7 +1472,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a phone rectangle with a curved arrow going around one corner. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a phone rectangle with a curved arrow going around one corner. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1437,7 +1484,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a clipboard with three short lines and a tick on the top line. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a clipboard with three short lines and a tick on the top line. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
@@ -1449,16 +1496,124 @@ Original pictogram for the interface of a modern military-tactical card game pla
 - **States:** normal / lit (tint) / idle grey (tint).
 
 ```
-Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a whistle seen from the side with a short cord loop. Thick strokes, at least one twelfth of the canvas wide, simple enough to read at 32 pixels. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw exactly one icon: a whistle seen from the side with a short cord loop. Thick strokes and gaps, at least one tenth of the canvas wide, no detail smaller than one eighth of the canvas, simple enough to read at 24 pixels. Compact, roughly square silhouette that fills about 70% of the canvas in both width and height. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
 ```
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
 
-### 4.2 Buttons and controls (14)
+### 4.2 Number plates (8)
+
+#### Number plates (the game prints the number inside) (8)
+
+##### 105. `plate_fp_s.png` · P1
+
+- **Used in:** Firepower number plate, bottom right of every card, left of Armor (small: 22-34 px: board banners, hand banner cards, Codex tiles).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
+- **States:** you (rim teal, fill #14524D) / rival (rim red, fill #5A1A1C) / buffed (number green + up marker) / lowered (red + down marker).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a firepower number plate shaped like a gun-sight ring: a very thick rim, about one sixth of the plate width, broken by four short square gaps at top, bottom, left and right, the centre completely empty and large enough for a two-digit number (at least 55% of the plate width). No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a centre dot, a cross, any number, a second ring.
+
+##### 106. `plate_armor_s.png` · P1
+
+- **Used in:** Armor number plate, bottom right of every card, right of FP (small: 22-34 px: board banners, hand banner cards, Codex tiles).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
+- **States:** normal (rim light steel, fill #2E3439) / damaged (rim amber #F2A33A, fill #4A3412) / healed (flash).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): an armor number plate: a plate shape with a flat top and sides tapering to a rounded point at the bottom, drawn as a very thick rim, about one sixth of the plate width, the inside completely empty and large enough for a two-digit number (at least 55% of the plate width), roughly as wide as it is tall. No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a cross, a crest, a star, any mark or number inside.
+
+##### 107. `plate_cost_s.png` · P1
+
+- **Used in:** Cost plate, top left of every card (small: 22-34 px: board banners, hand banner cards, Codex tiles); the hexagon is the Supply shape everywhere (pips, Supply row).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
+- **States:** affordable (fill amber #FFB020, number slate) / can't pay (fill grey, rim red) / Operator (frm_supply_plate instead).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top. Replaces frm_cost_hex (which baked the amber in).
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a cost number plate: an upright hexagon drawn as a very thick rim, about one sixth of the plate width, the inside completely empty and large enough for a two-digit number. No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a number, a crate, a second hexagon.
+
+##### 108. `plate_cover_s.png` · P1
+
+- **Used in:** Cover number plate, bottom right, left of FP, only when Cover > 0 (small: 22-34 px: board banners, hand banner cards, Codex tiles).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
+- **States:** normal (rim light steel) / buffed (rim green #7CF29A).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top. Optional: Cover can stay a small icon chip if the bottom-right corner gets crowded on the 57 px phone banner.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a cover number plate shaped like a low concrete barrier block seen from the front: a wide trapezoid, wider at the bottom with a flat top, drawn as a very thick rim, about one sixth of the plate width, the inside completely empty and large enough for a one-digit number, compact (no wider than one and a half times its height). No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a number, an arc or arrow, cracks.
+
+##### 109. `plate_fp_l.png` · P1
+
+- **Used in:** Firepower number plate, bottom right of every card, left of Armor (large: 48-128 px: inspector, reward and pick tiles, Operator flyout, After-Action).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** white on black: TA converts brightness to alpha.
+- **States:** you (rim teal, fill #14524D) / rival (rim red, fill #5A1A1C) / buffed (number green + up marker) / lowered (red + down marker).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a firepower number plate shaped like a gun-sight ring: a thick rim, about one tenth of the plate width, with one thin inner line just inside it, broken by four short square gaps at top, bottom, left and right, the centre completely empty and large enough for a two-digit number (at least 55% of the plate width). No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a centre dot, a cross, any number, a second ring.
+
+##### 110. `plate_armor_l.png` · P1
+
+- **Used in:** Armor number plate, bottom right of every card, right of FP (large: 48-128 px: inspector, reward and pick tiles, Operator flyout, After-Action).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** white on black: TA converts brightness to alpha.
+- **States:** normal (rim light steel, fill #2E3439) / damaged (rim amber #F2A33A, fill #4A3412) / healed (flash).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): an armor number plate: a plate shape with a flat top and sides tapering to a rounded point at the bottom, drawn as a thick rim, about one tenth of the plate width, with one thin inner line just inside it, the inside completely empty and large enough for a two-digit number (at least 55% of the plate width), roughly as wide as it is tall. No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a cross, a crest, a star, any mark or number inside.
+
+##### 111. `plate_cost_l.png` · P1
+
+- **Used in:** Cost plate, top left of every card (large: 48-128 px: inspector, reward and pick tiles, Operator flyout, After-Action); the hexagon is the Supply shape everywhere (pips, Supply row).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** white on black: TA converts brightness to alpha.
+- **States:** affordable (fill amber #FFB020, number slate) / can't pay (fill grey, rim red) / Operator (frm_supply_plate instead).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top. Replaces frm_cost_hex (which baked the amber in).
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a cost number plate: an upright hexagon drawn as a thick rim, about one tenth of the plate width, with one thin inner line just inside it, the inside completely empty and large enough for a two-digit number. No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a number, a crate, a second hexagon.
+
+##### 112. `plate_cover_l.png` · P2
+
+- **Used in:** Cover number plate, bottom right, left of FP, only when Cover > 0 (large: 48-128 px: inspector, reward and pick tiles, Operator flyout, After-Action).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** white on black: TA converts brightness to alpha.
+- **States:** normal (rim light steel) / buffed (rim green #7CF29A).
+- **Note:** One shape per concept everywhere: the plate is the same silhouette as the concept's icon. TA: the rim ships as `plate_<x>_<s|l>.png`; a filled copy (`_fill`) is made by flood-filling the inside, so the code can draw a dark tinted fill under the number and a bright tinted rim on top. Optional: Cover can stay a small icon chip if the bottom-right corner gets crowded on the 57 px phone banner.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one number plate (the game prints the number inside it later): a cover number plate shaped like a low concrete barrier block seen from the front: a wide trapezoid, wider at the bottom with a flat top, drawn as a thick rim, about one tenth of the plate width, with one thin inner line just inside it, the inside completely empty and large enough for a one-digit number, compact (no wider than one and a half times its height). No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a number, an arc or arrow, cracks.
+
+### 4.3 Buttons and controls (14)
 
 #### Buttons (14)
 
-##### 105. `btn_primary.png` · P1
+##### 113. `btn_primary.png` · P1
 
 - **Used in:** Primary actions: CONTINUE, BEGIN RUN, TAP TO TAKE, DEPLOY (run map), PLAY HERE confirm.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1470,7 +1625,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 106. `btn_primary_pressed.png` · P1
+##### 114. `btn_primary_pressed.png` · P1
 
 - **Used in:** Pressed state of btn_primary.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1483,7 +1638,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 107. `btn_secondary.png` · P1
+##### 115. `btn_secondary.png` · P1
 
 - **Used in:** Secondary actions: BACK, SKIP, DETAILS, DECK, CODEX, pause menu rows, Codex filter bar buttons.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1495,7 +1650,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 108. `btn_secondary_pressed.png` · P1
+##### 116. `btn_secondary_pressed.png` · P1
 
 - **Used in:** Pressed state of btn_secondary.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1507,7 +1662,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 109. `btn_danger.png` · P2
+##### 117. `btn_danger.png` · P2
 
 - **Used in:** Danger / leave actions: BACK TO TITLE, abandon run, NEW RUN confirm.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1519,7 +1674,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 110. `btn_ready.png` · P1
+##### 118. `btn_ready.png` · P1
 
 - **Used in:** READY in the tray (245x64 phone, 149x72 desktop): the main button of every round.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1532,7 +1687,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 111. `btn_ready_pressed.png` · P1
+##### 119. `btn_ready_pressed.png` · P1
 
 - **Used in:** Pressed state of READY.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1544,7 +1699,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 112. `btn_badge.png` · P1
+##### 120. `btn_badge.png` · P1
 
 - **Used in:** Icon strip badges 62x64 (MENU, SCORE, OPERATOR, STREAK, RIVAL, PREVIEW, DECK), SPEED, UNDO square.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1556,7 +1711,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 113. `btn_chip.png` · P2
+##### 121. `btn_chip.png` · P2
 
 - **Used in:** Small pill buttons: Codex filters (ALL / UNITS / AR...), tabs on narrow screens, toggles in the deck view.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1568,7 +1723,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 114. `btn_chip_on.png` · P2
+##### 122. `btn_chip_on.png` · P2
 
 - **Used in:** Selected filter chip / active tab.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1580,7 +1735,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 115. `btn_tab.png` · P3
+##### 123. `btn_tab.png` · P3
 
 - **Used in:** Tabs: SETS flyout (RIVAL / YOU), score sheet, Codex kind tabs on desktop.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x80. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1592,7 +1747,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 116. `tgl_track.png` · P2
+##### 124. `tgl_track.png` · P2
 
 - **Used in:** Settings toggles: MIRROR LAYOUT, SPEED x2, FAST ANIMATIONS, PREVIEW.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 128x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1604,7 +1759,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 117. `tgl_knob.png` · P2
+##### 125. `tgl_knob.png` · P2
 
 - **Used in:** Toggle knob, slider knob.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1616,7 +1771,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 118. `sld_track.png` · P3
+##### 126. `sld_track.png` · P3
 
 - **Used in:** Slider track (volume, Deploy timer setting) and progress bars (run tickets).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x32. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1628,11 +1783,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-### 4.3 Panels, trays, rings and strips (24)
+### 4.4 Panels, trays, rings and strips (24)
 
 #### Panels, trays and overlays (24)
 
-##### 119. `pnl_tray.png` · P1
+##### 127. `pnl_tray.png` · P1
 
 - **Used in:** Hand tray (362x532 phone, 224x776 desktop): background of the hand grid, killfeed log, step header.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x512. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1644,7 +1799,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 120. `pnl_flyout.png` · P1
+##### 128. `pnl_flyout.png` · P1
 
 - **Used in:** Strip badge flyouts: SCORE, OPERATOR, STREAK, RIVAL, DECK, SETS.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x256. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1656,7 +1811,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 121. `pnl_flyout_pointer.png` · P2
+##### 129. `pnl_flyout_pointer.png` · P2
 
 - **Used in:** The little pointer that joins a flyout to its badge.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1668,7 +1823,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 122. `pnl_toast.png` · P1
+##### 130. `pnl_toast.png` · P1
 
 - **Used in:** Killfeed toasts (top centre, 2 max, 92% opacity), one-time callouts, 'Not enough Supply' toasts.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1680,7 +1835,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 123. `pnl_inspector.png` · P1
+##### 131. `pnl_inspector.png` · P1
 
 - **Used in:** Card inspector (512x128 banner + text panel, scrolls), item inspector, long-press rules.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1692,7 +1847,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 124. `pnl_tooltip.png` · P2
+##### 132. `pnl_tooltip.png` · P2
 
 - **Used in:** Tooltips (desktop hover), long-press rule bubbles, Supply Drop twin preview.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 192x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1704,7 +1859,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 125. `pnl_modal.png` · P1
+##### 133. `pnl_modal.png` · P1
 
 - **Used in:** Pause menu, match end (VICTORY / DEFEAT), Retire picker, score sheet, consent and surveys.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1716,7 +1871,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 126. `pnl_header.png` · P2
+##### 134. `pnl_header.png` · P2
 
 - **Used in:** Screen title bars: SUPPLY DROP, CODEX, RUN SUMMARY, PAUSED, STARTER KIT.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1728,7 +1883,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 127. `pnl_hand_tab.png` · P2
+##### 135. `pnl_hand_tab.png` · P2
 
 - **Used in:** HAND · n PEEK tab (362x64) in the closed tray.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x80. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1740,7 +1895,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 128. `pnl_ks_tile.png` · P1
+##### 136. `pnl_ks_tile.png` · P1
 
 - **Used in:** Killstreak tile backer (61 px) at the top of the tray and in the STREAK flyout.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1752,7 +1907,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 129. `ring_track.png` · P1
+##### 137. `ring_track.png` · P1
 
 - **Used in:** Killstreak charge ring (empty track); TextureProgressBar under.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1764,7 +1919,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 130. `ring_fill.png` · P1
+##### 138. `ring_fill.png` · P1
 
 - **Used in:** Killstreak charge ring fill; TextureProgressBar radial (tinted amber / cyan).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
@@ -1777,7 +1932,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 131. `pip_supply.png` · P1
+##### 139. `pip_supply.png` · P1
 
 - **Used in:** Supply pips (up to 10) in the tray.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
@@ -1789,7 +1944,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 132. `pnl_counter.png` · P2
+##### 140. `pnl_counter.png` · P2
 
 - **Used in:** Small number bubble: hand count, deck count on badges, '+n more', unread log.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1801,7 +1956,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 133. `pnl_order_strip.png` · P2
+##### 141. `pnl_order_strip.png` · P2
 
 - **Used in:** Firefight order strip A -> B -> C over the board.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1814,7 +1969,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 134. `order_node.png` · P2
+##### 142. `order_node.png` · P2
 
 - **Used in:** One column node on the order strip (letter drawn by code).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
@@ -1827,7 +1982,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 135. `order_arrow.png` · P2
+##### 143. `order_arrow.png` · P2
 
 - **Used in:** Connector between order nodes.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x32. **Background:** white on black: TA converts brightness to alpha.
@@ -1840,7 +1995,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 136. `pnl_rail_chip.png` · P2
+##### 144. `pnl_rail_chip.png` · P2
 
 - **Used in:** Trait rail chips (62x49 phone) and SETS flyout rows.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1852,7 +2007,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 137. `pnl_callout.png` · P2
+##### 145. `pnl_callout.png` · P2
 
 - **Used in:** Set callouts ('VANGUARD 2: ...'), column banner 'COLUMN A', FIRST SHOT tag, DEPLOY / PLAY HERE chips.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1864,7 +2019,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 138. `pnl_pick_tile.png` · P1
+##### 146. `pnl_pick_tile.png` · P1
 
 - **Used in:** Reward pick tiles (Supply Drop cards, Retire, Doctrine, Promotion, Perk Offer), Loadout picks.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1876,7 +2031,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 139. `pnl_coach.png` · P2
+##### 147. `pnl_coach.png` · P2
 
 - **Used in:** Tutorial coach bubbles over the objective row.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1888,7 +2043,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 140. `pnl_result.png` · P2
+##### 148. `pnl_result.png` · P2
 
 - **Used in:** Match end and run end headline plate behind VICTORY / DEFEAT / DRAW.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 768x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1900,7 +2055,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in, wings with feathers, eagles, stars, laurels, a crest.
 
-##### 141. `runmap_node.png` · P2
+##### 149. `runmap_node.png` · P2
 
 - **Used in:** Run map match nodes (NEXT / UPCOMING / done).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 96x96. **Background:** white on black: TA converts brightness to alpha.
@@ -1912,7 +2067,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 142. `runmap_path.png` · P3
+##### 150. `runmap_path.png` · P3
 
 - **Used in:** Path between run map nodes (tiled).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x16. **Background:** white on black: TA converts brightness to alpha.
@@ -1924,11 +2079,11 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-### 4.4 Backgrounds (12)
+### 4.5 Backgrounds (12)
 
 #### Screen backgrounds (9)
 
-##### 143. `bg_title.png` · P1
+##### 151. `bg_title.png` · P1
 
 - **Used in:** Title screen (KillingCard wordmark drawn by code on the left third).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -1941,7 +2096,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 144. `bg_menu.png` · P3
+##### 152. `bg_menu.png` · P3
 
 - **Used in:** Pause menu backdrop behind pnl_modal, settings, consent and survey screens.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -1954,7 +2109,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 145. `bg_run_map.png` · P1
+##### 153. `bg_run_map.png` · P1
 
 - **Used in:** Run map (5 matches, tickets, DEPLOY).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -1967,7 +2122,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 146. `bg_supply_drop.png` · P1
+##### 154. `bg_supply_drop.png` · P1
 
 - **Used in:** Supply Drop / Weapon Level / Perk Offer / Promotion / Doctrine / Regroup reward screens.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -1980,7 +2135,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 147. `bg_after_action.png` · P2
+##### 155. `bg_after_action.png` · P2
 
 - **Used in:** After-Action report (VICTORY / DEFEAT, stats, Honor Roll), run end.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -1992,7 +2147,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 148. `bg_codex.png` · P2
+##### 156. `bg_codex.png` · P2
 
 - **Used in:** Codex (filters + tile grid).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2004,7 +2159,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 149. `bg_loadout.png` · P2
+##### 157. `bg_loadout.png` · P2
 
 - **Used in:** Starter deck / Loadout screen (STARTER KIT, picks, BEGIN RUN).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2016,7 +2171,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 150. `bg_loading.png` · P2
+##### 158. `bg_loading.png` · P2
 
 - **Used in:** Loading screen / web shell splash, boot (wordmark and bar drawn by code).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2029,7 +2184,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 151. `bg_match.png` · P1
+##### 159. `bg_match.png` · P1
 
 - **Used in:** Match backdrop behind the strip, the 3 columns and the tray.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2044,7 +2199,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 #### Column location backdrops (Port Vasel) (3)
 
-##### 152. `col_containers.png` · P1
+##### 160. `col_containers.png` · P1
 
 - **Used in:** Column backing: containers.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2057,7 +2212,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 153. `col_cranes.png` · P1
+##### 161. `col_cranes.png` · P1
 
 - **Used in:** Column backing: cranes.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2070,7 +2225,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 154. `col_offices.png` · P1
+##### 162. `col_offices.png` · P1
 
 - **Used in:** Column backing: offices.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2083,11 +2238,11 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-### 4.5 Objective and Field tile backers (4)
+### 4.6 Objective and Field tile backers (4)
 
 #### Objective and Field tile backers (4)
 
-##### 155. `tile_objective.png` · P1
+##### 163. `tile_objective.png` · P1
 
 - **Used in:** Objective tile between the fronts (228x52 phone, 304x96 desktop): FP pair, control mark, words, Field chips.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 456x112. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2099,7 +2254,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 156. `tile_field_chip.png` · P1
+##### 164. `tile_field_chip.png` · P1
 
 - **Used in:** Field chip on the objective tile (70x22 phone, 96x28 desktop), one per side.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2111,7 +2266,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 157. `tile_field_chip_trap.png` · P2
+##### 165. `tile_field_chip_trap.png` · P2
 
 - **Used in:** Your hidden trap chip (dashed, only you see it).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2123,7 +2278,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 158. `tile_slot_empty.png` · P2
+##### 166. `tile_slot_empty.png` · P2
 
 - **Used in:** Empty row slot in a column (your landing slots, rival back rows).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 456x114. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2135,24 +2290,24 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-### 4.6 Card frame parts (27)
+### 4.7 Card frame parts (22)
 
-#### Board banner frame (4:1) (14)
+#### Board banner frame (4:1) (9)
 
-##### 159. `frm_banner.png` · P1
+##### 167. `frm_banner.png` · P1
 
 - **Used in:** Every board banner (228x57 phone, 304x76 desktop, 512x128 inspector): the steel frame around the art.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / selected (fx_outline_teal) / now firing (fx_outline_side) / damaged (code) / dimmed (code). **9-slice (L,T,R,B at ship size):** 16,16,16,16.
+- **States:** normal / selected (fx_outline_teal) / now firing (fx_outline_side) / damaged (code) / dimmed (code). **9-slice (L,T,R,B at ship size):** 40,32,16,16.
 - **Note:** Ask for the frame across the whole width of the canvas; the TA crops a 4:1 band. The middle must be transparent: the art shows through.
 
 ```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A very wide thin picture frame, four times wider than tall: a 3-pixel dark steel #3A444D border with a 1-pixel lighter top-left bevel, small 45-degree chamfers at all four corners, a tiny plain square rivet in each corner, the inside of the frame completely empty. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Landscape 3:2.
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A very wide thin picture frame, four times wider than tall: a 3-pixel dark steel #3A444D border with a 1-pixel lighter top-left bevel, small 45-degree chamfers at the top-right, bottom-left and bottom-right corners, a hexagon-shaped notch cut into the top-left corner (for the cost plate), the inside of the frame completely empty. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Landscape 3:2.
 ```
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 160. `frm_spine_you.png` · P1
+##### 168. `frm_spine_you.png` · P1
 
 - **Used in:** Side edge strip on your banners (outer long edge, away from the objective).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x16. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2164,7 +2319,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 161. `frm_spine_rival.png` · P1
+##### 169. `frm_spine_rival.png` · P1
 
 - **Used in:** Side edge strip on rival banners (shape differs from yours for colour-blind players).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x16. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2176,7 +2331,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 162. `frm_front_tab.png` · P1
+##### 170. `frm_front_tab.png` · P1
 
 - **Used in:** FRONT tab (48x13 phone, 64x15 desktop) on the front-row card; word drawn by code.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x32. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2188,7 +2343,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 163. `frm_plan_plate.png` · P1
+##### 171. `frm_plan_plate.png` · P1
 
 - **Used in:** PLAN tag on your planned cards (inner-edge centre) and PLAN · B on the Operator card.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x40. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2200,7 +2355,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 164. `frm_incoming.png` · P1
+##### 172. `frm_incoming.png` · P1
 
 - **Used in:** INCOMING face-down rival banner (back pattern, fills the whole 4:1 banner).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128 (crop a 4:1 band). **Background:** opaque, no transparency.
@@ -2212,19 +2367,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt, emblems, a central logo, letters, a skull.
 
-##### 165. `frm_cost_hex.png` · P1
-
-- **Used in:** Cost hex on hand cards (26x30), Codex tiles (28x32), inspector; number drawn by code.
-- **Generate:** 1024x1024 (square 1:1). **Ship:** 104x120. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** affordable (normal) / can't pay (code grey + red outline) / OP (Operator: frm_supply_plate instead).
-
-```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A single upright hexagon plate: signal amber #FFB020 face with a darker amber inner bevel and a thin dark #12161A outline, plain flat face. One element only, centred, filling about 80% of the canvas. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
-```
-
-**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
-
-##### 166. `frm_supply_plate.png` · P2
+##### 173. `frm_supply_plate.png` · P2
 
 - **Used in:** Operator card '1 SUPPLY' plate in place of the cost hex; red when you can't pay.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 160x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2236,55 +2379,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 167. `frm_badge_fp_you.png` · P1
-
-- **Used in:** FP badge on your banners and cards (28 px phone, 34 desktop): teal circle.
-- **Generate:** 1024x1024 (square 1:1). **Ship:** 96x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / buffed (code: number green + up marker) / lowered (red + down marker).
-
-```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A single round badge disk: solid deep teal #14524D face, a thick teal #2EC4B6 rim and a fine inner ring, slight inner bevel, plain centre. One element only, centred, filling about 80% of the canvas. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
-```
-
-**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
-
-##### 168. `frm_badge_fp_rival.png` · P1
-
-- **Used in:** FP badge on rival banners: red notched diamond.
-- **Generate:** 1024x1024 (square 1:1). **Ship:** 96x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / buffed / lowered (code).
-
-```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A single diamond-shaped badge with a small notch cut into each corner: deep red #5A1A1C face, a thick red #E5383B rim, slight inner bevel, plain centre. One element only, centred, filling about 80% of the canvas. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
-```
-
-**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
-
-##### 169. `frm_badge_armor.png` · P1
-
-- **Used in:** Armor badge on every banner and card.
-- **Generate:** 1024x1024 (square 1:1). **Ship:** 96x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / damaged (code: face #4A3412, rim amber #F2A33A) / healed (flash).
-
-```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A single plate-shaped badge (flat top, sides tapering to a rounded point at the bottom): dark steel #2E3439 face, a thick light steel #B9C2C9 rim, slight inner bevel, plain centre. One element only, centred, filling about 80% of the canvas. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
-```
-
-**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in, an emblem or cross on the plate.
-
-##### 170. `frm_chip_cover.png` · P2
-
-- **Used in:** Cover chip left of the Armor badge.
-- **Generate:** 1024x1024 (square 1:1). **Ship:** 64x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / buffed (code green). **9-slice (L,T,R,B at ship size):** 12,12,12,12.
-
-```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A small rounded-rectangle chip plate, dark steel face, a thin light steel outline, plain. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
-```
-
-**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
-
-##### 171. `frm_socket.png` · P1
+##### 174. `frm_socket.png` · P1
 
 - **Used in:** Socket for keyword pip, trait pip, class pip and effect glyph (22 px phone, 26 desktop).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2296,7 +2391,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 172. `fx_ring_tier3.png` · P2
+##### 175. `fx_ring_tier3.png` · P2
 
 - **Used in:** White ring around a trait pip at set tier 3 (banner, rail).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2310,7 +2405,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 #### Level camo bands and Operator mastery ladder (1)
 
-##### 173. `frm_band_edge.png` · P2
+##### 176. `frm_band_edge.png` · P2
 
 - **Used in:** Thin metal edge that caps a camo band strip top and bottom.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x8. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2324,7 +2419,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Elite and Operator frames (5)
 
-##### 174. `frm_elite.png` · P2
+##### 177. `frm_elite.png` · P2
 
 - **Used in:** Elite chassis banner and hand card frame (gold frame + star).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2336,7 +2431,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 175. `frm_operator_banner.png` · P1
+##### 178. `frm_operator_banner.png` · P1
 
 - **Used in:** The Operator's banner on the board (brass frame, camo band on the outer edge, dog-tag plate).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2348,7 +2443,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 176. `frm_operator_card.png` · P1
+##### 179. `frm_operator_card.png` · P1
 
 - **Used in:** Operator card pinned first in the tray (99x124 phone, 108x136 desktop).
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x320. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2360,7 +2455,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in, engraved letters or numbers on the tag.
 
-##### 177. `frm_operator_mini.png` · P1
+##### 180. `frm_operator_mini.png` · P1
 
 - **Used in:** Mini Operator card (half height, ON BOARD / C · ROW 1) while the Operator is on the board.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2372,7 +2467,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 178. `frm_dogtag_plate.png` · P2
+##### 181. `frm_dogtag_plate.png` · P2
 
 - **Used in:** Callsign / dog-tag plate on the Operator banner (in place of the effect glyph).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 96x40. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2386,7 +2481,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Hand card, Codex and mulligan (5)
 
-##### 179. `frm_hand_card.png` · P1
+##### 182. `frm_hand_card.png` · P1
 
 - **Used in:** Hand banner card frame in the tray (kc-ui4 board-form: 177x73 phone, 224x64 desktop, 103x78 on 16:9), mulligan cards, Supply Drop picks.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 448x184. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2399,7 +2494,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 180. `frm_hand_name.png` · P2
+##### 183. `frm_hand_name.png` · P2
 
 - **Used in:** Name band across the middle of a narrow hand banner card (16:9 phones), stats row.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2411,19 +2506,19 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 181. `frm_codex_tile.png` · P2
+##### 184. `frm_codex_tile.png` · P2
 
 - **Used in:** Codex tile (120x156 compact): art, cost hex, name, chassis line.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 240x312. **Background:** transparent PNG (magenta #FF00FF key if it fails).
 - **States:** normal / hover (+10%) / pressed / locked (overlay ico_ui_lock + code dim) / equipped (frm_equipped). **9-slice (L,T,R,B at ship size):** 32,32,32,72.
 
 ```
-Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. An upright collectible tile frame: dark gunmetal border with a thin steel outline, chamfered top-left and bottom-right corners, an art window in the upper 55%, a slightly lighter lower plate for two lines of caption. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Portrait 2:3.
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. An upright collectible tile frame: dark gunmetal border with a thin steel outline, a hexagon-shaped notch cut into the top-left corner for the cost plate, a chamfered bottom-right corner, an art window in the upper 55%, a slightly lighter lower plate for two lines of caption. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Portrait 2:3.
 ```
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 182. `frm_equipped.png` · P2
+##### 185. `frm_equipped.png` · P2
 
 - **Used in:** EQUIPPED corner mark on the Codex tile of the art your Operator / copies wear (word drawn by code).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2436,7 +2531,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 183. `frm_put_back.png` · P1
+##### 186. `frm_put_back.png` · P1
 
 - **Used in:** Mulligan PUT BACK plate on marked cards (word drawn by code).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x320. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2450,7 +2545,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Card backs (2)
 
-##### 184. `card_back_banner.png` · P2
+##### 187. `card_back_banner.png` · P2
 
 - **Used in:** Face-down KillingCard back (4:1): deck pile, deal animation, rival hand, INCOMING alternative.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128 (crop a 4:1 band). **Background:** opaque, no transparency.
@@ -2463,7 +2558,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt, letters, a logo, a skull, wings, stars, eagles, any badge or unit-crest look.
 
-##### 185. `card_back_hand.png` · P3
+##### 188. `card_back_hand.png` · P3
 
 - **Used in:** Face-down hand-size back (deck view, mulligan replacements).
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x320. **Background:** opaque, no transparency.
@@ -2476,11 +2571,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt.
 
-### 4.7 Camo bands (5)
+### 4.8 Camo bands (5)
 
 #### Level camo bands and Operator mastery ladder (5)
 
-##### 186. `band_base.png` · P1
+##### 189. `band_base.png` · P1
 
 - **Used in:** Operator base camo tier (OPERATOR badge swatch, Operator frame band); optional Recruit swatch in the deck view.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2493,7 +2588,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 187. `band_gilded.png` · P1
+##### 190. `band_gilded.png` · P1
 
 - **Used in:** Trained copies (Gilded band under the art and on the outer edge), Operator gold tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2506,7 +2601,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 188. `band_forged.png` · P2
+##### 191. `band_forged.png` · P2
 
 - **Used in:** Veteran copies (Forged band), Operator forged tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2519,7 +2614,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 189. `band_priceless.png` · P2
+##### 192. `band_priceless.png` · P2
 
 - **Used in:** Elite copies (Priceless band), Operator priceless tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2532,7 +2627,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 190. `band_interstellar.png` · P2
+##### 193. `band_interstellar.png` · P2
 
 - **Used in:** Operator top mastery tier only.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2545,11 +2640,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-### 4.8 Glows, outlines and overlays (11)
+### 4.9 Glows, outlines and overlays (11)
 
 #### Glows, outlines, links and previews (additive overlays) (11)
 
-##### 191. `fx_outline_teal.png` · P1
+##### 194. `fx_outline_teal.png` · P1
 
 - **Used in:** Selected card / badge outline (teal), valid-target slot.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x160. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2561,7 +2656,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 192. `fx_outline_side.png` · P1
+##### 195. `fx_outline_side.png` · P1
 
 - **Used in:** Now-firing outline in the owner's colour (tinted teal / red), lift on shot.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x160. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2573,7 +2668,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 193. `fx_glow_amber.png` · P1
+##### 196. `fx_glow_amber.png` · P1
 
 - **Used in:** Ready glow: killstreak tile READY, Operator DEPLOY, READY button pulse, order node current.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2585,7 +2680,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 194. `fx_glow_red.png` · P2
+##### 197. `fx_glow_red.png` · P2
 
 - **Used in:** Overrun risk pulse, can't-pay flash, set OFF.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2597,7 +2692,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 195. `fx_link_tick.png` · P1
+##### 198. `fx_link_tick.png` · P1
 
 - **Used in:** Link ticks: vertical (Guard, Spotter) across the row gap, horizontal (Fireteam, Overwatch) across the gutter; tinted by owner.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2610,7 +2705,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 196. `fx_link_tick_ghost.png` · P2
+##### 199. `fx_link_tick_ghost.png` · P2
 
 - **Used in:** Dashed amber ghost ticks for links a placement would make.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2622,7 +2717,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 197. `frm_ghost.png` · P1
+##### 200. `frm_ghost.png` · P1
 
 - **Used in:** Ghost / placement preview frame in each valid column (PLAY HERE).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2634,7 +2729,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 198. `fx_hit_flash.png` · P2
+##### 201. `fx_hit_flash.png` · P2
 
 - **Used in:** Hit flash on a banner when damage lands.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2646,7 +2741,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 199. `fx_tracer.png` · P2
+##### 202. `fx_tracer.png` · P2
 
 - **Used in:** Tracer line from shooter to target (stretched along the path), Pick / Flank curve, Pierce through.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x16. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2658,7 +2753,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 200. `fx_crack.png` · P3
+##### 203. `fx_crack.png` · P3
 
 - **Used in:** Red crack for 2 s when a set switches off (trait rail chip), banner break.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
@@ -2670,7 +2765,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 201. `fx_sheen.png` · P3
+##### 204. `fx_sheen.png` · P3
 
 - **Used in:** Frame sheen sweep on animated finishes and hover.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2690,41 +2785,43 @@ Each batch is about 10 images (10 to 15 minutes) and one upload. Keep a group (a
 
 | Batch | Priority | Group | Images | Files |
 |---|---|---|---|---|
-| 1 | P1 | Icons | 10 | `ico_stat_firepower`, `ico_stat_armor`, `ico_stat_cover`, `ico_stat_supply`, `ico_stat_deck`, `ico_stat_intel`, `ico_streak`, `ico_score`, `ico_kw_first_shot`, `ico_kw_pick` |
-| 2 | P1 | Icons | 10 | `ico_kw_flank`, `ico_kw_pierce`, `ico_kw_suppress`, `ico_kw_patch`, `ico_kw_protector`, `ico_kw_guard`, `ico_kw_spotter`, `ico_kw_fireteam`, `ico_kw_overwatch`, `ico_effect_bolt` |
-| 3 | P1 | Icons | 10 | `ico_trait_vanguard`, `ico_trait_specops`, `ico_trait_heavy`, `ico_trait_undead`, `ico_type_unit`, `ico_type_tactic`, `ico_type_field`, `ico_class_ar`, `ico_class_smg`, `ico_class_shotgun` |
-| 4 | P1 | Icons | 10 | `ico_class_sniper`, `ico_class_lmg`, `ico_ks_recon_drone`, `ico_ks_mortar`, `ico_ks_attack_helo`, `ico_ks_sentry`, `ico_ctl_yours`, `ico_ctl_rival`, `ico_ctl_even`, `ico_overrun` |
-| 5 | P1 | Icons | 8 | `ico_ui_menu`, `ico_ui_undo`, `ico_ui_speed`, `ico_ui_close`, `ico_ui_back`, `ico_ui_eye`, `ico_ui_eye_off`, `ico_ui_check` |
-| 6 | P1 | Card frame parts | 10 | `frm_banner`, `frm_spine_you`, `frm_spine_rival`, `frm_front_tab`, `frm_plan_plate`, `frm_incoming`, `frm_cost_hex`, `frm_badge_fp_you`, `frm_badge_fp_rival`, `frm_badge_armor` |
-| 7 | P1 | Card frame parts | 6 | `frm_socket`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini`, `frm_hand_card`, `frm_put_back` |
-| 8 | P1 | Camo bands | 2 | `band_base`, `band_gilded` |
-| 9 | P1 | Glows, outlines and overlays | 5 | `fx_outline_teal`, `fx_outline_side`, `fx_glow_amber`, `fx_link_tick`, `frm_ghost` |
-| 10 | P1 | Buttons and controls | 7 | `btn_primary`, `btn_primary_pressed`, `btn_secondary`, `btn_secondary_pressed`, `btn_ready`, `btn_ready_pressed`, `btn_badge` |
-| 11 | P1 | Panels, trays, rings and strips | 10 | `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_modal`, `pnl_ks_tile`, `ring_track`, `ring_fill`, `pip_supply`, `pnl_pick_tile` |
-| 12 | P1 | Objective and Field tile backers | 2 | `tile_objective`, `tile_field_chip` |
-| 13 | P1 | Backgrounds | 7 | `bg_title`, `bg_run_map`, `bg_supply_drop`, `bg_match`, `col_containers`, `col_cranes`, `col_offices` |
-| 14 | P2 | Icons | 10 | `ico_stat_discard`, `ico_stat_hand`, `ico_eliminated`, `ico_tickets`, `ico_fired`, `ico_heal`, `ico_damage`, `ico_kw_holder`, `ico_kw_hidden`, `ico_trig_on_deploy` |
-| 15 | P2 | Icons | 10 | `ico_trig_on_down`, `ico_kw_aura`, `ico_type_killstreak`, `ico_type_operator`, `ico_elite_star`, `ico_trap`, `ico_plan_mark`, `ico_class_sidearm`, `ico_eq_frag`, `ico_eq_flash` |
-| 16 | P2 | Icons | 10 | `ico_ctl_open`, `ico_field_slot`, `ico_ph_deploy`, `ico_ph_reveal`, `ico_ph_firefight`, `ico_ph_score`, `ico_mode_zone_control`, `ico_mode_firefight`, `ico_mode_detonator`, `ico_mode_rival` |
-| 17 | P2 | Icons | 10 | `ico_ui_settings`, `ico_ui_skip`, `ico_ui_codex`, `ico_ui_mirror`, `ico_ui_sound_on`, `ico_ui_sound_off`, `ico_ui_info`, `ico_ui_filter`, `ico_ui_lock`, `ico_ui_continue` |
-| 18 | P2 | Icons | 3 | `ico_ui_retire`, `ico_ui_promote`, `ico_ui_reward` |
-| 19 | P2 | Card frame parts | 10 | `frm_supply_plate`, `frm_chip_cover`, `fx_ring_tier3`, `frm_band_edge`, `frm_elite`, `frm_dogtag_plate`, `frm_hand_name`, `frm_codex_tile`, `frm_equipped`, `card_back_banner` |
-| 20 | P2 | Camo bands | 3 | `band_forged`, `band_priceless`, `band_interstellar` |
-| 21 | P2 | Glows, outlines and overlays | 4 | `fx_glow_red`, `fx_link_tick_ghost`, `fx_hit_flash`, `fx_tracer` |
-| 22 | P2 | Buttons and controls | 5 | `btn_danger`, `btn_chip`, `btn_chip_on`, `tgl_track`, `tgl_knob` |
-| 23 | P2 | Panels, trays, rings and strips | 10 | `pnl_flyout_pointer`, `pnl_tooltip`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `order_node`, `order_arrow`, `pnl_rail_chip`, `pnl_callout` |
-| 24 | P2 | Panels, trays, rings and strips | 3 | `pnl_coach`, `pnl_result`, `runmap_node` |
-| 25 | P2 | Objective and Field tile backers | 2 | `tile_field_chip_trap`, `tile_slot_empty` |
-| 26 | P2 | Backgrounds | 4 | `bg_after_action`, `bg_codex`, `bg_loadout`, `bg_loading` |
-| 27 | P3 | Icons | 10 | `ico_range_close`, `ico_range_mid`, `ico_range_long`, `ico_round`, `ico_ks_gunship`, `ico_att_optic`, `ico_att_grip`, `ico_att_mag`, `ico_att_lining`, `ico_perk_slot` |
-| 28 | P3 | Icons | 3 | `ico_ui_rotate`, `ico_ui_survey`, `ico_ui_tutorial` |
-| 29 | P3 | Card frame parts | 1 | `card_back_hand` |
-| 30 | P3 | Glows, outlines and overlays | 2 | `fx_crack`, `fx_sheen` |
-| 31 | P3 | Buttons and controls | 2 | `btn_tab`, `sld_track` |
-| 32 | P3 | Panels, trays, rings and strips | 1 | `runmap_path` |
-| 33 | P3 | Backgrounds | 1 | `bg_menu` |
+| 1 | P1 | Icons (imported, see `ui-kit-import-log.md`) | 10 | `ico_stat_firepower`, `ico_stat_armor`, `ico_stat_cover`, `ico_stat_supply`, `ico_stat_deck`, `ico_stat_intel`, `ico_streak`, `ico_score`, `ico_kw_first_shot`, `ico_kw_pick` |
+| 2 | P1 | Number plates | 7 | `plate_fp_s`, `plate_armor_s`, `plate_cost_s`, `plate_cover_s`, `plate_fp_l`, `plate_armor_l`, `plate_cost_l` |
+| 3 | P1 | Icons | 10 | `ico_kw_flank`, `ico_kw_pierce`, `ico_kw_suppress`, `ico_kw_patch`, `ico_kw_protector`, `ico_kw_guard`, `ico_kw_spotter`, `ico_kw_fireteam`, `ico_kw_overwatch`, `ico_effect_bolt` |
+| 4 | P1 | Icons | 10 | `ico_trait_vanguard`, `ico_trait_specops`, `ico_trait_heavy`, `ico_trait_undead`, `ico_type_unit`, `ico_type_tactic`, `ico_type_field`, `ico_class_ar`, `ico_class_smg`, `ico_class_shotgun` |
+| 5 | P1 | Icons | 10 | `ico_class_sniper`, `ico_class_lmg`, `ico_ks_recon_drone`, `ico_ks_mortar`, `ico_ks_attack_helo`, `ico_ks_sentry`, `ico_ctl_yours`, `ico_ctl_rival`, `ico_ctl_even`, `ico_overrun` |
+| 6 | P1 | Icons | 8 | `ico_ui_menu`, `ico_ui_undo`, `ico_ui_speed`, `ico_ui_close`, `ico_ui_back`, `ico_ui_eye`, `ico_ui_eye_off`, `ico_ui_check` |
+| 7 | P1 | Card frame parts | 10 | `frm_banner`, `frm_spine_you`, `frm_spine_rival`, `frm_front_tab`, `frm_plan_plate`, `frm_incoming`, `frm_socket`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini` |
+| 8 | P1 | Card frame parts | 2 | `frm_hand_card`, `frm_put_back` |
+| 9 | P1 | Camo bands | 2 | `band_base`, `band_gilded` |
+| 10 | P1 | Glows, outlines and overlays | 5 | `fx_outline_teal`, `fx_outline_side`, `fx_glow_amber`, `fx_link_tick`, `frm_ghost` |
+| 11 | P1 | Buttons and controls | 7 | `btn_primary`, `btn_primary_pressed`, `btn_secondary`, `btn_secondary_pressed`, `btn_ready`, `btn_ready_pressed`, `btn_badge` |
+| 12 | P1 | Panels, trays, rings and strips | 10 | `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_modal`, `pnl_ks_tile`, `ring_track`, `ring_fill`, `pip_supply`, `pnl_pick_tile` |
+| 13 | P1 | Objective and Field tile backers | 2 | `tile_objective`, `tile_field_chip` |
+| 14 | P1 | Backgrounds | 7 | `bg_title`, `bg_run_map`, `bg_supply_drop`, `bg_match`, `col_containers`, `col_cranes`, `col_offices` |
+| 15 | P2 | Icons | 10 | `ico_stat_discard`, `ico_stat_hand`, `ico_eliminated`, `ico_tickets`, `ico_fired`, `ico_heal`, `ico_damage`, `ico_kw_holder`, `ico_kw_hidden`, `ico_trig_on_deploy` |
+| 16 | P2 | Icons | 10 | `ico_trig_on_down`, `ico_kw_aura`, `ico_type_killstreak`, `ico_type_operator`, `ico_elite_star`, `ico_trap`, `ico_plan_mark`, `ico_class_sidearm`, `ico_eq_frag`, `ico_eq_flash` |
+| 17 | P2 | Icons | 10 | `ico_ctl_open`, `ico_field_slot`, `ico_ph_deploy`, `ico_ph_reveal`, `ico_ph_firefight`, `ico_ph_score`, `ico_mode_zone_control`, `ico_mode_firefight`, `ico_mode_detonator`, `ico_mode_rival` |
+| 18 | P2 | Icons | 10 | `ico_ui_settings`, `ico_ui_skip`, `ico_ui_codex`, `ico_ui_mirror`, `ico_ui_sound_on`, `ico_ui_sound_off`, `ico_ui_info`, `ico_ui_filter`, `ico_ui_lock`, `ico_ui_continue` |
+| 19 | P2 | Icons | 3 | `ico_ui_retire`, `ico_ui_promote`, `ico_ui_reward` |
+| 20 | P2 | Number plates | 1 | `plate_cover_l` |
+| 21 | P2 | Card frame parts | 9 | `frm_supply_plate`, `fx_ring_tier3`, `frm_band_edge`, `frm_elite`, `frm_dogtag_plate`, `frm_hand_name`, `frm_codex_tile`, `frm_equipped`, `card_back_banner` |
+| 22 | P2 | Camo bands | 3 | `band_forged`, `band_priceless`, `band_interstellar` |
+| 23 | P2 | Glows, outlines and overlays | 4 | `fx_glow_red`, `fx_link_tick_ghost`, `fx_hit_flash`, `fx_tracer` |
+| 24 | P2 | Buttons and controls | 5 | `btn_danger`, `btn_chip`, `btn_chip_on`, `tgl_track`, `tgl_knob` |
+| 25 | P2 | Panels, trays, rings and strips | 10 | `pnl_flyout_pointer`, `pnl_tooltip`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `order_node`, `order_arrow`, `pnl_rail_chip`, `pnl_callout` |
+| 26 | P2 | Panels, trays, rings and strips | 3 | `pnl_coach`, `pnl_result`, `runmap_node` |
+| 27 | P2 | Objective and Field tile backers | 2 | `tile_field_chip_trap`, `tile_slot_empty` |
+| 28 | P2 | Backgrounds | 4 | `bg_after_action`, `bg_codex`, `bg_loadout`, `bg_loading` |
+| 29 | P3 | Icons | 10 | `ico_range_close`, `ico_range_mid`, `ico_range_long`, `ico_round`, `ico_ks_gunship`, `ico_att_optic`, `ico_att_grip`, `ico_att_mag`, `ico_att_lining`, `ico_perk_slot` |
+| 30 | P3 | Icons | 3 | `ico_ui_rotate`, `ico_ui_survey`, `ico_ui_tutorial` |
+| 31 | P3 | Card frame parts | 1 | `card_back_hand` |
+| 32 | P3 | Glows, outlines and overlays | 2 | `fx_crack`, `fx_sheen` |
+| 33 | P3 | Buttons and controls | 2 | `btn_tab`, `sld_track` |
+| 34 | P3 | Panels, trays, rings and strips | 1 | `runmap_path` |
+| 35 | P3 | Backgrounds | 1 | `bg_menu` |
 
-P1 is batches 1 to 13 (97 images). At about a minute per image plus a check, that is roughly two hours, best split into three or four sittings. After batch 1 (the first icons) and the first frame batch, pause and let the Technical Artist drop them into the build: if the style needs a tweak, it is cheaper to change the style block then than after 150 images.
+P1 is batches 1 to 14 (100 images). At about a minute per image plus a check, that is roughly two hours, best split into three or four sittings. After batch 1 (the first icons) and the first frame batch, pause and let the Technical Artist drop them into the build: if the style needs a tweak, it is cheaper to change the style block then than after 150 images.
 
 ## 6. Reject checklist and IP rules
 
@@ -2742,7 +2839,7 @@ P1 is batches 1 to 13 (97 images). At about a minute per image plus a check, tha
 - [ ] A weapon, drone or aircraft that is clearly a real model, or has markings?
 - [ ] Looks like an icon, frame or menu from an existing shooter?
 - [ ] **Icons:** not pure white on pure black? Grey shading, a coloured outline, a badge or circle behind the glyph, or two icons in one image?
-- [ ] **Icons:** squint test at 32 px fails (shrink it on the phone: is it still obvious)? Strokes thinner than about 1/12 of the canvas?
+- [ ] **Icons:** squint test at 24 px fails (shrink it on the phone: is it still obvious)? Strokes or gaps thinner than 1/10 of the canvas, or any detail smaller than 1/8? A long, flat silhouette instead of a compact, roughly square one?
 - [ ] **Icons:** looks too much like another icon in the set (Pick vs FP reticle, Spotter vs PREVIEW eye: the code adds context, but the shapes must still differ)?
 - [ ] **9-slice plates:** a rivet, notch or ornament in the **middle** of an edge (it would smear when stretched)? Edges not straight and even?
 - [ ] **Plates:** a painted checkerboard instead of transparency, a cast shadow, or a perspective tilt?
@@ -2758,6 +2855,7 @@ P1 is batches 1 to 13 (97 images). At about a minute per image plus a check, tha
 | Prefix | Final folder | Notes |
 |---|---|---|
 | raw drops | `assets/incoming/ui/` | already ignored (`assets/incoming/.gdignore`); never imported |
+| `plate_*` | `assets/ui/kit/plates/` | rim `plate_<x>_<s or l>.png` + a flood-filled `_fill` copy; same export sizes as icons |
 | `ico_*` | `assets/ui/kit/icons/` | 256 masters; plus the packed atlas `assets/ui/kit/icons/kit_icons.png` (see 7.3) |
 | `btn_*`, `tgl_*`, `sld_*` | `assets/ui/kit/buttons/` | |
 | `pnl_*`, `ring_*`, `pip_*`, `order_*`, `runmap_*` | `assets/ui/kit/panels/` | |
@@ -2771,6 +2869,7 @@ P1 is batches 1 to 13 (97 images). At about a minute per image plus a check, tha
 
 ### 7.2 Processing (per kind, from the raw PNG)
 - **luma** (icons, rings, pips, nodes, arrows, path, crack): `magick in.png -colorspace gray -level 8%,92% -alpha copy -fill white -colorize 100 -trim +repage -gravity center -background none -extent <square with 8% padding> -resize 256x256 out.png`. The `-level` crushes JPEG-ish noise near black and white.
+- **plate** (number plates): process as luma, then make `_fill` by flood-filling the inside of the rim with white, so the code draws `_fill` tinted dark, then the number, then the rim tinted bright. Keep each plate centred on the same square canvas as its icon, so `ico_stat_firepower` and `plate_fp` line up when swapped.
 - **alpha** (plates): if the PNG has real alpha, keep it. If it has a magenta field: `magick in.png -fuzz 12% -transparent "#FF00FF" ...` then despill the edge (shift magenta-tinted edge pixels to the neighbouring colour, or a 1 px alpha erode). Then crop to the plate, resize to the ship size **with the border thickness in mind**: the border should be 4-6 px at ship size.
 - **add** (glows): keep RGB, drop alpha, crop with the glow falloff intact, resize. Import as normal; draw with a `CanvasItemMaterial` (`blend_mode = BLEND_MODE_ADD`).
 - **9-slice check:** after resizing, confirm the manifest margins fall outside every corner detail. If a corner ornament is bigger, raise the margin in the manifest (and the `.tres`), not the image.
@@ -2813,4 +2912,5 @@ Each imported batch is logged in `ui-kit-import-log.md`: what shipped, where, an
 1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?
 2. **Backgrounds: replace or keep?** The title, run map and Supply Drop already have Killstreak-era paintings. **Recommended:** regenerate them in this pack (P1) so the KillingCard screens match; keep the old files as the fallback until the new ones are approved.
 3. **Icon look.** All icons are solid white pictograms tinted in code (cheapest, reads best at 22 px). The alternative is coloured, bevelled metal icons with the colour baked in, which look richer at 64 px but cost a second image per side and state. **Recommended:** white pictograms now; if you want richer killstreak tiles later, those 4 can get a painted P3 version.
+4. **Rival stats position.** Number plates bottom-right on every card, rival banners included, instead of mirrored toward the objective (`card-system.md` §3.4)? **Recommended:** yes. One fixed anatomy is easier to learn, and the side tint and spine show whose card it is.
 
