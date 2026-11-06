@@ -424,3 +424,44 @@ func test_kit_slots_fall_back_to_code_drawing() -> void:
 	assert_eq(BannerArtDB.get_art(&"si_grunt").placeholder, true, "no kc_b_si_grunt yet: the placeholder art stays")
 	UiKit.piece_dirs = saved
 	UiKit.clear_cache()
+
+
+# =============================================================================
+# 5. kc-hand-dim: hand / board art dimmed behind the rows, the inspector at full strength
+# =============================================================================
+
+func test_hand_and_board_art_dimmed_inspector_full_strength() -> void:
+	_save_profile()
+	var s: Array = await _spawn(Layout.PHONE)
+	var vp: SubViewport = s[0]
+	var m: Control = s[1]
+	var c: Node = s[2]
+	var checked: int = 0
+	for card: Node in m.get_hand().get_cards():
+		var bv: BannerView = BannerCard.banner_of(card)
+		if bv == null or not bv.has_art():
+			continue
+		assert_true(bv.readability, "hand card %s: readability scrim on" % card.name)
+		var mod: Color = bv.get_art_modulate()
+		assert_true(mod.r <= 1.0 - BannerView.ART_DIM + 0.01 and mod.r >= 0.4, "hand art darkened about 20%% (%.2f)" % mod.r)
+		checked += 1
+		if card.get_meta(&"playable", true) == false:
+			assert_true(mod.r < (1.0 - BannerView.ART_DIM) * 0.7, "an unplayable card stays darker (%.2f)" % mod.r)
+	assert_true(checked >= 3, "checked %d hand cards" % checked)
+	for lane: Node in m.get_board().find_children("*", "Control", true, false):
+		if lane.has_method(&"get_friendly_slots"):
+			for slot: Node in lane.get_friendly_slots() + lane.get_enemy_slots():
+				assert_true((slot.get(&"banner") as BannerView).readability, "board banner: same treatment")
+	assert_false((m.get_board().get(&"_zoom") as BannerView).readability, "hover zoom: full-strength art")
+	# The inspector's big banner shows the art at full strength.
+	var me: RulesSide = c.state.sides[0]
+	c._on_card_inspected(me.hand[0].uid)
+	await _frames(2)
+	var big: BannerView = m.get_inspector().get_banner()
+	if big != null:
+		assert_false(big.readability, "inspector banner: no scrim")
+		assert_true(big.get_art_modulate().r > 0.99, "inspector art at full strength")
+	m.get_inspector().close()
+	_despawn(vp)
+	await tree.process_frame
+	_restore_profile()

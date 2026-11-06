@@ -38,6 +38,7 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 	bv.show_name = false
 	bv.dim_back = false
 	bv.metric_h = metric_h
+	bv.readability = true  # kc-hand-dim: dim the art so cost, name, icons and plates read
 	face.add_child(bv)
 	var m: Dictionary = BannerView.metrics(minf(card_size.y, metric_h))
 	var has_cost: bool = entry.has("cost") and str(entry.get("cost", "")) != ""

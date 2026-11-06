@@ -93,6 +93,7 @@ func _ready() -> void:
 	_ghost = BannerView.new()
 	_ghost.name = "Ghost"
 	_ghost.show_name = false  # kc-onboard-ui (head W1): board banners carry no name
+	_ghost.readability = true
 	_ghost.visible = false
 	_slots.add_child(_ghost)
 	_backing = TextureRect.new()
@@ -578,6 +579,7 @@ func _fade_out_copy(s_side: StringName, row: int, entry: Dictionary) -> void:
 		return
 	var copy := BannerView.new()
 	copy.show_name = false
+	copy.readability = true
 	_fx_layer.add_child(copy)
 	copy.position = Vector2(0, BoardMetrics.row_y(metrics, s_side, row))
 	copy.size = Vector2(metrics["bw"], metrics["bh"])

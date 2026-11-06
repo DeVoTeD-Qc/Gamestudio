@@ -35,6 +35,7 @@ func _init() -> void:
 	# kc-onboard-ui (head W1): board banners show the cost but not the name (hand, Codex and the
 	# inspector keep cost + name; the hover zoom names it).
 	banner.show_name = false
+	banner.readability = true  # kc-hand-dim: the same dimmed art as the hand cards
 	add_child(banner)
 	resized.connect(_fit)
 

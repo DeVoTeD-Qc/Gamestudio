@@ -216,7 +216,10 @@ func _apply_styles() -> void:
 		(chip as Control).self_modulate = Color.WHITE
 		var art: TextureRect = chip.find_child("Art", true, false) as TextureRect
 		if art != null:
-			art.self_modulate = Color(0.6, 0.6, 0.6) if not playable and uid != selected_uid else Color.WHITE
+			# kc-hand-dim: the art is always ~22% darker (BannerView.ART_DIM) so the icons read; can't
+			# afford it: darker still (0.6 of that), and the chip fades (alpha 0.55), so it stays distinct.
+			var k: float = 1.0 - BannerView.ART_DIM
+			art.self_modulate = Color(0.6 * k, 0.6 * k, 0.6 * k) if not playable and uid != selected_uid else Color(k, k, k)
 			var on: bool = uid == selected_uid and uid >= 0
 			if on and art.material == null:
 				var mat := ShaderMaterial.new()
@@ -640,7 +643,8 @@ func _style_operator() -> void:
 	if art != null:
 		# On the board / down: the card dims (it is a status card now); deployable: full colour.
 		var dim: bool = state == &"board" or state == &"down" or state == &"planned"
-		art.self_modulate = Color(0.45, 0.45, 0.48) if dim and not operator_selected else Color.WHITE
+		var k: float = 1.0 - BannerView.ART_DIM  # kc-hand-dim
+		art.self_modulate = Color(0.45 * k, 0.45 * k, 0.48 * k) if dim and not operator_selected else Color(k, k, k)
 
 
 func _reduced_motion() -> bool:

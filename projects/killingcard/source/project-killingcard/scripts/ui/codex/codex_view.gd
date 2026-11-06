@@ -829,6 +829,7 @@ func _fill_art_panel() -> void:
 	var prev: PanelContainer = BannerCard.build(_card_entry(art_entry, selected_art), Vector2(10, 10),
 			METRIC_H_COMPACT if compact else METRIC_H)
 	prev.name = "PreviewCard"
+	BannerCard.banner_of(prev).readability = false  # kc-hand-dim: the art panel shows the art at full strength
 	prev.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_art_preview_holder.add_child(prev)
 	prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -76,6 +76,22 @@ var lead: float = 0.0:
 		lead = value
 		if _overlay != null:
 			_overlay.queue_redraw()
+## kc-hand-dim (head: "dim down the image so that we can better read all icons and the card name"):
+## a dark gradient behind the top name / ability row and the bottom trait / FP / Armor row, plus the
+## art darkened by ART_DIM. On for hand / Codex / list cards and board banners; off for the
+## inspector's big banner and the hover zoom (the art at full strength).
+var readability: bool = false:
+	set(value):
+		readability = value
+		if _art != null:
+			_refresh()
+## Overall darken of the art under `readability` (0.2 = 20% darker).
+const ART_DIM: float = 0.22
+## Peak opacity of the top / bottom scrims, and the share of the height each covers.
+const SCRIM_TOP_A: float = 0.78
+const SCRIM_BOTTOM_A: float = 0.82
+const SCRIM_TOP_H: float = 0.52
+const SCRIM_BOTTOM_H: float = 0.58
 ## kc-ui4: badge / plate sizes follow this height instead of the banner's own (hand cards are
 ## taller than 4:1 but keep the board's icon sizes). 0 = the banner's height.
 var metric_h: float = 0.0
@@ -277,6 +293,9 @@ func _refresh() -> void:
 		tint = BACK_ROW_TINT
 	if mode == Mode.GHOST or bool(entry.get("pending", false)):
 		tint.a = 0.55 if mode == Mode.GHOST else 0.85
+	if readability:
+		var k: float = 1.0 - ART_DIM
+		tint = Color(tint.r * k, tint.g * k, tint.b * k, tint.a)
 	_art.self_modulate = tint
 	_art.visible = mode in [Mode.UNIT, Mode.GHOST]
 	set_process(mode == Mode.INCOMING or _shimmer_until > 0.0)
@@ -326,6 +345,8 @@ func _draw_overlay() -> void:
 	var pending: bool = bool(entry.get("pending", false))
 	if _banner_art != null and _banner_art.licensed and has_art():
 		_draw_safety_net(o)
+	if readability and has_art() and mode in [Mode.UNIT, Mode.GHOST]:
+		_draw_readability_scrim(o)
 	# Spine: side colour + pattern (chevrons for you, hazard stripes for the rival).
 	var spine: float = m["spine"]
 	o.draw_rect(Rect2(0, 0, spine, size.y), side_c)
@@ -618,6 +639,31 @@ func _draw_safety_net(o: Control) -> void:
 			PackedColorArray([edge, clear, clear, edge]))
 	o.draw_polygon(PackedVector2Array([Vector2(size.x - w, 0), Vector2(size.x, 0), Vector2(size.x, size.y), Vector2(size.x - w, size.y)]),
 			PackedColorArray([clear, edge, edge, clear]))
+
+
+## kc-hand-dim: black gradients behind the top row (cost, name, abilities) and the bottom row (trait,
+## weapon pip, FP / Armor plates), fading to clear toward the middle of the art.
+func _draw_readability_scrim(o: Control) -> void:
+	var a_mul: float = _art.self_modulate.a if mode == Mode.GHOST else 1.0
+	var top_h: float = size.y * SCRIM_TOP_H
+	var bot_h: float = size.y * SCRIM_BOTTOM_H
+	var dark_t: Color = Color(0, 0, 0, SCRIM_TOP_A * a_mul)
+	var dark_b: Color = Color(0, 0, 0, SCRIM_BOTTOM_A * a_mul)
+	var clear: Color = Color(0, 0, 0, 0)
+	# Solid behind the row itself (the first 45% of each band), then a fade to clear.
+	var t_solid: float = top_h * 0.45
+	var b_solid: float = size.y - bot_h * 0.45
+	o.draw_rect(Rect2(0, 0, size.x, t_solid), dark_t)
+	o.draw_polygon(PackedVector2Array([Vector2(0, t_solid), Vector2(size.x, t_solid), Vector2(size.x, top_h), Vector2(0, top_h)]),
+			PackedColorArray([dark_t, dark_t, clear, clear]))
+	o.draw_polygon(PackedVector2Array([Vector2(0, size.y - bot_h), Vector2(size.x, size.y - bot_h), Vector2(size.x, b_solid), Vector2(0, b_solid)]),
+			PackedColorArray([clear, clear, dark_b, dark_b]))
+	o.draw_rect(Rect2(0, b_solid, size.x, size.y - b_solid), dark_b)
+
+
+## The art's colour multiplier now (tests: dimmed hand / board art, full-strength inspector).
+func get_art_modulate() -> Color:
+	return _art.self_modulate
 
 
 func _draw_incoming_text(o: Control, r: Rect2, m: Dictionary) -> void:
