@@ -934,8 +934,8 @@ function c1pRender(c, side, opts = {}) {
     h += `<div class="slotbox p-dmg" style="left:${gap[1]}px;top:${BH - 2}px;width:${BW - gap[1]}px;height:2px;background:${col("--g-dmg")}"></div>`;
     h += `<div class="g p-dmg p-crack" style="left:3px;top:3px"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M1 2l6 5-2 4 6 3-1 5M7 7l5-2" fill="none" stroke="rgba(10,12,14,.75)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 2l6 5-2 4 6 3-1 5M7 7l5-2" fill="none" stroke="${col("--g-dmg")}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
   }
-  // Top-left (peek): cost, then the weapon pill next to it.
-  h += `<div class="g hid" style="left:4px;top:3px;display:flex;gap:3px;align-items:center;padding:1px 3px 1px 1px;background:rgba(10,12,14,.86);border-radius:3px 10px 10px 3px">${cost(c, 20)}${weaponTag(c, 18)}</div>`;
+  // Top-left (peek; always in the hand): cost, level coin, weapon pill (round 6: level between cost and weapon).
+  h += `<div class="g hid" style="left:4px;top:3px;display:flex;gap:3px;align-items:center;padding:1px 3px 1px 1px;background:rgba(10,12,14,.86);border-radius:3px 10px 10px 3px">${cost(c, 20)}${levelCoin(c, 17)}${weaponTag(c, 18)}</div>`;
   // Top-right (always): abilities, effects, Recruit locks.
   const k = kwIcons(c, P_KW, "own").replace(/<span class="stencil"[\s\S]*?<\/span>/, "");
   if (k) h += rrow(2, 2, chip(k, "gap:2px"));
@@ -944,11 +944,6 @@ function c1pRender(c, side, opts = {}) {
   const tl = traitList(c);
   const bl = tl.map((t) => pTraitChip(c, t, act.includes(t))).join("");
   if (bl) h += `<div class="g" style="left:5px;top:${BH - 23}px;display:flex;gap:2px">${bl}</div>`;
-  // Bottom border, centred (peek; always in the hand): the tiny level coin, straddling the edge.
-  if (hasLevel) {
-    const L = ["R", "T", "V", "E"][c.level], rim = c.level === 0 ? "#B9C2C9" : "#F3D36B";
-    h += `<div class="g p-level ${opts.coinInside ? "" : "hid"}" title="Level: ${["Recruit", "Trained", "Veteran", "Elite"][c.level]}" style="left:${coinX}px;top:${opts.coinInside ? BH - 16 : BH - 10}px;width:14px;height:14px;border-radius:50%;background:#14181C;border:1.5px solid ${rim};color:${rim};display:grid;place-items:center;font:9px/1 var(--f-mono);z-index:2">${L}</div>`;
-  }
   // Bottom-right (always): reticle FP in the team colour; armor plate steel grey, amber when damaged.
   h += rrow(2, BH - 28, chip(pFp(c, P_STAT + 2, side) + pAr(c, P_STAT + 1, side), "gap:3px"));
   h += outline(c, side, 0, 0, BW, BH);
@@ -1070,8 +1065,7 @@ function pLegend() {
     ${item(arPlateB(5, 25, false, "A", "") + arPlateB(2, 25, true, "A", ""), "Armor", "steel-grey plate on both sides; amber = damaged, the number is what's left")}
     ${item(`<span style="display:inline-flex;gap:3px;background:#0b0e10;padding:2px">${svg("pick", col("--g-amber"), 18)}${svg("spotter", col("--g-amber"), 18)}</span>`, "Abilities", "always on, top-right (a padlock = locked on a Recruit)")}
     ${item(tchip("vanguard", true) + " " + tchip("specops", false), "Traits", "bottom-left, always; lit = bonus ON, faint = no bonus yet")}
-    ${item(cost(u("breacher"), 22) + weaponTag(u("marksman"), 18), "Cost + Weapon", "top-left, on peek; the weapon by name: AR, SMG, LMG, Shotgun, Sniper")}
-    ${item(coin("R", "#B9C2C9") + coin("T", "#F3D36B") + coin("V", "#F3D36B") + coin("E", "#F3D36B"), "Level", "(R Recruit · T Trained · V Veteran · E Elite): tiny coin on the bottom border, on peek (always shown in the hand)")}
+    ${item(cost(u("breacher"), 22) + coin("R", "#B9C2C9") + coin("T", "#F3D36B") + weaponTag(u("marksman"), 18), "Cost + Level + Weapon", "top-left, on peek (always shown in the hand). Level: R Recruit · T Trained · V Veteran · E Elite (R grey). Weapon by name: AR, SMG, LMG, Shotgun, Sniper")}
   </div>`;
 }
 function pSheet() {
@@ -1101,7 +1095,7 @@ function c1plusSection() {
   const avg = (f) => (NB.reduce((a, c) => a + f(c), 0) / NB.length).toFixed(1);
   return `<article class="opt c1plus" id="opt-C1P" data-key="C1+">
     <div class="opt-head"><span class="opt-letter">C1+</span><span class="opt-title">Progressive disclosure</span><span class="pick">The head's direction</span>
-      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, a reticle FP in the team colour (teal yours, red the rival's, as the objective tiles), a steel-grey armor plate on both sides (amber when damaged), the weapon by name next to the cost and a tiny level coin on the bottom border (both on peek), and no serial plate. <b>Try it:</b> hover a card to peek at its cost and weapon (top-left) and its level (bottom border); hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
+      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, a reticle FP in the team colour (teal yours, red the rival's, as the objective tiles), a steel-grey armor plate on both sides (amber when damaged), the cost, level coin and weapon name together top-left (on peek), and no serial plate. <b>Try it:</b> hover a card to peek at its cost, level and weapon (top-left); hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
     <div class="cmp" style="text-transform:none"><label class="tog" for="p-all"><input type="checkbox" id="p-all"> Show everything (game setting: Settings &gt; Cards &gt; Always show all card info)</label></div>
     <div class="frames">
       ${fitBox(1168, 540, `<div class="p-board" id="p-board">${pBoard()}</div>`, "Phone 844x390 · C1+ live board · hand tray: 5+ (full info in hand)")}
@@ -1116,7 +1110,7 @@ function c1plusSection() {
         <tfoot><tr><td>Average</td><td>${avg(countC1)}</td><td>${avg(countC1p)}</td><td></td></tr></tfoot></table></div>
         <p class="hint">A mark = one icon, plate or badge (FP and Armor count as 2). At rest a C1+ card shows its abilities, its stats and its traits; a faint (inactive) trait counts as half.</p></div>
       <div class="con"><h3>Trade-offs</h3><ul>
-        <li>Cost, weapon and level need a hover / hold; traits are always there (faint until their bonus is on), so set planning needs no hover.</li>
+        <li>Cost, level and weapon (top-left) need a hover / hold; traits are always there (faint until their bonus is on), so set planning needs no hover.</li>
         <li>No side bar on cards: the side is the position and the reticle colour (teal / red, as the objective tiles); Armor is steel grey on both sides and amber when damaged.</li>
         <li>Touch peek is a hold, which competes with drag on own cards in Deploy (the hold peeks only when the finger doesn't move).</li>
         <li>Hand: recommend <b>5+, full info in hand</b> (the hand is where you decide what to play; cost and traits matter there), so the quiet rule applies to the board only.</li>
