@@ -96,10 +96,15 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 		var sr: Dictionary = stat_rects(face.size, bh)
 		var narrow: bool = bool(sr["narrow"])
 		bv.show_abilities = not narrow
+		bv.peek_extras = not narrow
 		# Narrow plates (16:9 phones) wrap a long name onto a second line instead of cutting it.
 		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if narrow else TextServer.AUTOWRAP_OFF
 		title.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING if narrow else TextServer.OVERRUN_TRIM_ELLIPSIS
 		title.max_lines_visible = 2 if narrow else -1
+		title.clip_text = not narrow
+		# The cost hex: 27 px on the phone's 44 px banner, as big as a narrow banner allows.
+		var want_cost: float = minf(27.0, bh - 4.0)
+		bv.cost_scale = want_cost / (24.0 * bh / 57.0)
 		title.add_theme_constant_override(&"line_spacing", -4 if narrow else 0)
 		title.position = Vector2(6, 0)
 		title.size = Vector2(maxf(8.0, name_w), plate.size.y)

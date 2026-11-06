@@ -87,6 +87,8 @@ var cost_scale: float = 1.0
 var draw_stats: bool = true
 ## Ability icon size override (px; 0 = 20 x k). Hand cards use a smaller row so FP / Armor fit under it.
 var ability_px: float = 0.0
+## Narrow hand cards: the level coin and weapon pill go to the docked preview too.
+var peek_extras: bool = true
 ## Narrow hand cards (16:9 phones) leave the abilities to the docked preview (FP / Armor take the room).
 var show_abilities: bool = true:
 	set(value):
@@ -390,7 +392,17 @@ func trait_lit() -> bool:
 	return int(entry.get("trait_tier", 0)) >= 2
 
 
+## kc-readability: the soft dark backings drawn on this banner now (tests): one per badge group.
+var backing_rects: Array[Rect2] = []
+
+
+func _backing(o: Control, r: Rect2, radius: float = 3.0) -> void:
+	backing_rects.append(r)
+	CardLook.draw_chip(o, r, radius)
+
+
 func _draw_overlay() -> void:
+	backing_rects.clear()
 	var o: Control = _overlay
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
 	if mode == Mode.EMPTY:
@@ -423,7 +435,7 @@ func _draw_overlay() -> void:
 	if not abil.is_empty():
 		var first: Rect2 = abil[-1][1]
 		var last: Rect2 = abil[0][1]
-		CardLook.draw_chip(o, Rect2(first.position - Vector2(2, 2) * k, Vector2(last.end.x - first.position.x, last.size.y) + Vector2(4, 4) * k), 3.0 * k)
+		_backing(o, Rect2(first.position - Vector2(2, 2) * k, Vector2(last.end.x - first.position.x, last.size.y) + Vector2(4, 4) * k), 3.0 * k)
 	for ab: Array in abil:
 		var kind: Variant = ab[0]
 		var rr: Rect2 = ab[1]
@@ -449,7 +461,7 @@ func _draw_overlay() -> void:
 		var ar_rect: Rect2 = an["armor"]
 		var cov: Rect2 = an.get("cover", Rect2())
 		var chip_l: float = cov.position.x if cov.size.x > 0.0 else fp_rect.position.x
-		CardLook.draw_chip(o, Rect2(Vector2(chip_l - 2.0 * k, minf(fp_rect.position.y, ar_rect.position.y) - 1.0 * k),
+		_backing(o, Rect2(Vector2(chip_l - 2.0 * k, minf(fp_rect.position.y, ar_rect.position.y) - 1.0 * k),
 				Vector2(ar_rect.end.x - chip_l + 4.0 * k, maxf(fp_rect.size.y, ar_rect.size.y) + 2.0 * k)), 4.0 * k)
 		CardLook.draw_reticle(o, fp_rect, int(entry.get("fp", 0)), side, int(entry.get("fp_trend", 0)))
 		CardLook.draw_armor(o, ar_rect, armor, damaged)
@@ -459,7 +471,8 @@ func _draw_overlay() -> void:
 	# highlight every card shows its trait at full and the matching cards ring it. The Operator: its dog tag.
 	if an.has("trait"):
 		# kc-readability: a soft dark backing behind the trait chip too.
-		CardLook.draw_chip(o, (an["trait"] as Rect2).grow(2.0 * k), 3.0 * k)
+		if op or not trait_list().is_empty():
+			_backing(o, (an["trait"] as Rect2).grow(2.0 * k), 3.0 * k)
 		if op:
 			_draw_dog_tag(o, an["trait"])
 		else:
@@ -472,15 +485,15 @@ func _draw_overlay() -> void:
 		# kc-readability: one soft dark backing behind the cost / level / weapon group.
 		var grp: Rect2 = an["cost"]
 		for key: String in ["level", "class"]:
-			if an.has(key):
+			if an.has(key) and peek_extras:
 				grp = grp.merge(an[key]) if grp.has_area() else an[key]
 		if grp.has_area():
-			CardLook.draw_chip(o, grp.grow(2.0 * k), 5.0 * k)
+			_backing(o, grp.grow(2.0 * k), 5.0 * k)
 		if lead <= 0.0 and (an["cost"] as Rect2).size.x > 0.0:
 			CardLook.draw_cost(o, an["cost"], str(entry.get("cost", "")), bool(entry.get("cant_pay", false)))
-		if an.has("level"):
+		if an.has("level") and peek_extras:
 			CardLook.draw_level_coin(o, an["level"], int(entry.get("level", 1)))
-		if an.has("class"):
+		if an.has("class") and peek_extras:
 			CardLook.draw_weapon_pill(o, an["class"], String(entry.get("cls", "")).to_upper())
 	if not entry.has("fp"):
 		_draw_kind_word(o, an)
