@@ -1,0 +1,1568 @@
+<title>Calling Card Tiles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&family=Saira+Stencil+One&display=swap">
+<style>
+:root{
+  /* Layout: a field dossier. One header file, then one tabbed "file" per concept:
+     the brief on the left, the phone screen on the right; everything stacks to one column on phones. */
+  --bg:#DCE0D6; --paper:#EDEFE8; --paper-2:#E3E7DC; --ink:#1A1E19; --muted:#4F574C;
+  --line:#AEB5A6; --line-2:#C8CDC0;
+  --accent:#E3B014; --accent-ink:#5E4700; --accent-soft:#F1E3AE; --on-accent:#1A1E19;
+  --stamp:#A3252F; --stamp-2:#2C5A87; --focus:#1F5FBF;
+  --screen:#1C221E; --screen-2:#252C27; --screen-3:#313932; --screen-ink:#E8ECE2;
+  --screen-muted:#A2AC9E; --screen-line:#465046; --bezel:#0D100E;
+  --cell:#29302A; --cell-line:#3B443C; --floor:#B0965A;
+  --ok:#43C474; --bad:#E5573F; --good-ink:#1E6B3E; --bad-ink:#A3252F;
+  --land:#46A0E0; --port:#EA7A3E;
+  --em-diamond:#2F7DE1; --em-disc:#E2A300; --em-peak:#2F9A5C; --em-cross:#D2413A;
+  --plate:#F6F5EF; --plate-ink:#141714;
+  --art-hi:#FFFFFF; --art-sil:#0A0D0B; --card-edge:#0A0D0B;
+  --s1a:#141C33; --s1b:#3A6EA5;  /* Night Raid */
+  --s2a:#22414C; --s2b:#86B3AC;  /* Iron Coast */
+  --s3a:#4E180F; --s3b:#E2803A;  /* Ember Ridge */
+  --s4a:#7A5A26; --s4b:#EBCB8C;  /* Glass Desert */
+  --s5a:#38586A; --s5b:#D5E4EA;  /* Frost Line */
+  --s6a:#3F0C11; --s6b:#C93A3F;  /* Red Signal */
+  --gold-a:#5E4100; --gold-b:#F4C534;
+  --font-display:"Saira Stencil One","Stencil Std","Arial Black",Impact,sans-serif;
+  --font-label:"Saira Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --font-body:"Barlow","Segoe UI",Roboto,system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111412; --paper:#191E1B; --paper-2:#1F2521; --ink:#E3E7DE; --muted:#9EA798;
+    --line:#3A443D; --line-2:#2A312C;
+    --accent:#F0C230; --accent-ink:#F0C230; --accent-soft:#3B3315; --on-accent:#14170F;
+    --stamp:#EE6E76; --stamp-2:#86B8EA; --focus:#86B8EA;
+    --screen:#0E120F; --screen-2:#161B18; --screen-3:#222924; --screen-line:#3A433B; --bezel:#040605;
+    --cell:#1E2520; --cell-line:#323A33;
+    --good-ink:#73D69D; --bad-ink:#F2907F;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#111412; --paper:#191E1B; --paper-2:#1F2521; --ink:#E3E7DE; --muted:#9EA798;
+    --line:#3A443D; --line-2:#2A312C;
+    --accent:#F0C230; --accent-ink:#F0C230; --accent-soft:#3B3315; --on-accent:#14170F;
+    --stamp:#EE6E76; --stamp-2:#86B8EA; --focus:#86B8EA;
+    --screen:#0E120F; --screen-2:#161B18; --screen-3:#222924; --screen-line:#3A433B; --bezel:#040605;
+    --cell:#1E2520; --cell-line:#323A33;
+    --good-ink:#73D69D; --bad-ink:#F2907F;
+    color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55;margin:0}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px;display:grid;gap:40px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.1}
+h1{font-family:var(--font-display);font-weight:400;font-size:clamp(2.6rem,8vw,5.2rem);letter-spacing:.01em}
+h2{font-family:var(--font-display);font-weight:400;font-size:clamp(1.8rem,4.6vw,2.7rem);letter-spacing:.01em}
+h3{font-family:var(--font-label);font-weight:700;font-size:1.02rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+p{margin:0}
+ul,ol{margin:0;padding-left:1.15em}
+li+li{margin-top:.3em}
+a{color:inherit}
+b,strong{font-weight:600}
+.mono,.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--font-label);font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:.8rem;color:var(--muted)}
+.prose{display:grid;gap:12px;max-width:66ch;min-width:0}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+button{font:inherit;color:inherit}
+.btn{font-family:var(--font-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.86rem;
+  border:1.5px solid var(--screen-line);background:var(--screen-3);color:var(--screen-ink);border-radius:6px;padding:8px 12px;min-height:40px;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.quiet{background:transparent}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-paper{border-color:var(--line);background:var(--paper);color:var(--ink)}
+
+/* ---------- Header file ---------- */
+.hero{display:grid;gap:18px;border-top:6px solid var(--ink);padding-top:18px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline}
+.hero .lede{font-size:clamp(1.08rem,2.2vw,1.3rem);max-width:60ch}
+.classified{display:inline-block;font-family:var(--font-label);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:.78rem;color:var(--stamp);border:2px solid var(--stamp);padding:2px 8px;border-radius:3px;transform:rotate(-2deg)}
+.toc{display:flex;flex-wrap:wrap;gap:8px}
+.toc a{font-family:var(--font-label);font-weight:600;letter-spacing:.05em;text-decoration:none;border:1.5px solid var(--line);background:var(--paper);padding:5px 10px;border-radius:4px;font-size:.92rem}
+.toc a .n{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);margin-right:6px}
+.toc a.playable{border-color:var(--ink)}
+.note{font-size:.92rem;color:var(--muted);max-width:70ch}
+
+/* ---------- Generic file ---------- */
+.file{background:var(--paper);border:1.5px solid var(--line);border-radius:4px 10px 10px 10px;position:relative;margin-top:22px;padding:22px clamp(14px,3vw,30px) 26px;display:grid;gap:22px}
+.file-tab{position:absolute;left:-1.5px;top:-30px;height:30px;display:flex;align-items:center;gap:10px;background:var(--paper);border:1.5px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;padding:0 12px}
+.file-no{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.06em}
+.stamp{font-family:var(--font-label);font-weight:700;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;border:1.5px solid currentColor;padding:0 6px;border-radius:2px;line-height:1.5}
+.stamp.play{color:var(--stamp)}
+.stamp.story{color:var(--stamp-2)}
+.file-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:28px;align-items:start}
+.file-text{display:grid;gap:18px;min-width:0}
+.genre{font-family:var(--font-label);font-weight:600;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;font-size:.9rem}
+.hook{font-size:1.2rem;font-style:italic;border-left:4px solid var(--accent);padding-left:12px;max-width:56ch}
+.loop{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;counter-reset:step}
+.loop li{margin:0;background:var(--paper-2);border:1px solid var(--line-2);border-radius:6px;padding:10px 10px 10px 40px;position:relative;font-size:.94rem;line-height:1.35;counter-increment:step}
+.loop li::before{content:counter(step);position:absolute;left:10px;top:9px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);font-family:var(--font-mono);font-size:.78rem;display:grid;place-items:center}
+.loop li.repeat::before{content:"↺"}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.facts>div{display:grid;gap:8px;align-content:start;min-width:0}
+.aha{background:var(--accent-soft);border-radius:6px;padding:12px 14px;max-width:70ch}
+.aha .label{color:var(--accent-ink)}
+.pull{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pips{display:inline-flex;gap:3px;vertical-align:middle}
+.pips i{width:12px;height:12px;border:1.5px solid var(--ink);border-radius:2px;display:block}
+.pips i.on{background:var(--ink)}
+.findings{border-top:1.5px dashed var(--line);padding-top:16px;display:grid;gap:12px}
+.tbl-wrap{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:.92rem;min-width:100%}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+th{font-family:var(--font-label);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;color:var(--muted);white-space:nowrap}
+td.num,th.num{text-align:right}
+tr.hl td{background:var(--accent-soft)}
+.howto{font-size:.94rem;max-width:400px}
+.howto b{font-family:var(--font-label);text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- Phone frame ---------- */
+.file-demo{display:grid;gap:12px;justify-items:center;min-width:0}
+.phone{width:100%;max-width:400px;background:var(--bezel);border-radius:30px;padding:12px 10px 16px;box-shadow:0 1px 0 var(--line),0 14px 30px -18px rgba(0,0,0,.6)}
+.phone-bar{display:flex;justify-content:space-between;align-items:center;color:var(--screen-muted);font-family:var(--font-mono);font-size:.7rem;padding:0 14px 6px}
+.phone-bar .app{font-family:var(--font-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--screen-ink)}
+.screen{background:var(--screen);color:var(--screen-ink);border-radius:20px;padding:12px 10px 14px;display:grid;gap:10px;overflow:hidden}
+.hud{display:flex;gap:6px;flex-wrap:wrap}
+.hud>div{background:var(--screen-2);border:1px solid var(--screen-line);border-radius:6px;padding:4px 8px;display:grid;min-width:0;flex:1 1 60px}
+.hud .k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-label);font-weight:600;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--screen-muted)}
+.hud .v{font-family:var(--font-mono);font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.screen canvas{display:block;margin:0 auto;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border-radius:6px;max-width:100%}
+.status{font-size:.88rem;line-height:1.4;min-height:2.8em;color:var(--screen-ink);background:var(--screen-2);border-left:3px solid var(--accent);padding:6px 9px;border-radius:0 6px 6px 0}
+.status .warn{color:var(--bad)}
+.status .good{color:var(--ok)}
+.ctrls{display:flex;flex-wrap:wrap;gap:6px}
+.ctrls .btn{flex:1 1 auto;padding:7px 8px;font-size:.8rem}
+.subtle{font-size:.78rem;color:var(--screen-muted)}
+.objective{font-size:.82rem;color:var(--screen-muted);display:flex;gap:8px;align-items:flex-start}
+.objective .chip{flex:none}
+.chip{font-family:var(--font-label);font-weight:700;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--screen-line);padding:1px 6px;border-radius:3px;color:var(--screen-ink);background:var(--screen-3)}
+.chip.met{background:var(--ok);border-color:var(--ok);color:var(--plate-ink)}
+.market{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.mkt{background:var(--screen-2);border:2px solid var(--screen-line);border-radius:8px;padding:6px 4px 4px;cursor:pointer;display:grid;gap:4px;justify-items:center;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;min-width:0}
+.mkt canvas{width:100%;height:auto}
+.mkt .nm{font-family:var(--font-label);font-weight:600;font-size:.72rem;letter-spacing:.04em;color:var(--screen-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mkt[aria-pressed="true"]{border-color:var(--accent);background:var(--screen-3)}
+.mkt[aria-pressed="true"] .nm{color:var(--accent)}
+.mkt[disabled]{opacity:.4;cursor:default}
+.rotline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.84rem;color:var(--screen-muted)}
+.rotline .embs{display:inline-flex;gap:2px;vertical-align:middle}
+.breakdown{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:4px;font-size:.78rem}
+.breakdown div{background:var(--screen-2);border-radius:5px;padding:3px 6px;display:grid}
+.breakdown .k{color:var(--screen-muted);font-family:var(--font-label);letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+.breakdown .v{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.medal-track{position:relative;height:22px;background:var(--screen-2);border-radius:4px;overflow:hidden}
+.medal-track .fill{position:absolute;inset:0 auto 0 0;background:var(--accent);opacity:.85;width:0}
+.medal-track .tick{position:absolute;top:0;bottom:0;width:2px;background:var(--screen-ink)}
+.medal-track .tl{position:absolute;top:2px;font-family:var(--font-label);font-size:.66rem;font-weight:700;letter-spacing:.06em;color:var(--screen-ink);transform:translateX(5px);text-transform:uppercase;white-space:nowrap}
+.movelist{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
+.movelist .btn{font-size:.74rem;text-align:left;text-transform:none;letter-spacing:.02em;font-family:var(--font-body);font-weight:600}
+.seg{display:inline-flex;border:1.5px solid var(--screen-line);border-radius:6px;overflow:hidden}
+.seg .btn{border:0;border-radius:0;min-height:36px}
+.turnstrip{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-family:var(--font-mono);font-size:.78rem}
+.turnstrip span{padding:1px 6px;border-radius:3px;border:1px solid var(--screen-line);color:var(--screen-muted)}
+.turnstrip span.now{border-color:var(--accent);color:var(--screen-ink);background:var(--screen-3)}
+.who{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
+.who.L{background:var(--land)} .who.P{background:var(--port)}
+.check{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--screen-muted)}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+
+/* ---------- Explorer + storyboard panels ---------- */
+.panel{background:var(--screen);color:var(--screen-ink);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.panel .readout{font-size:.92rem;line-height:1.45}
+.panel .readout b{color:var(--accent);font-family:var(--font-mono);font-size:1.1rem}
+.story-cap{font-size:.9rem;line-height:1.4;min-height:4.2em;background:var(--screen-2);border-radius:6px;padding:7px 10px}
+.story-cap .step{font-family:var(--font-mono);font-size:.74rem;color:var(--accent);display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+svg.em{width:18px;height:18px;flex:none;vertical-align:-4px}
+
+/* ---------- Collection pillar ---------- */
+.flow{list-style:none;padding:0;display:grid;gap:6px;counter-reset:f}
+.flow li{margin:0;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;counter-increment:f}
+.flow li::before{content:counter(f);font-family:var(--font-mono);font-size:.8rem;border:1.5px solid var(--ink);border-radius:50%;width:24px;height:24px;display:grid;place-items:center}
+.setrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.setcard{background:var(--screen-2);border:1.5px solid var(--screen-line);border-radius:6px;padding:5px;display:grid;gap:4px;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;min-width:0}
+.setcard canvas{width:100%;height:auto}
+.setcard .nm{font-family:var(--font-label);font-size:.72rem;color:var(--screen-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setcard.new{border-color:var(--accent)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+
+/* ---------- Compare / recommend / questions ---------- */
+.section{display:grid;gap:16px}
+.week{display:grid;gap:0;border-top:1.5px solid var(--ink)}
+.week>div{display:grid;grid-template-columns:70px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2)}
+.week .d{font-family:var(--font-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.week code,.prose code,td code{font-family:var(--font-mono);font-size:.85em;background:var(--paper-2);padding:0 4px;border-radius:3px}
+.qs{display:grid;gap:14px;counter-reset:q}
+.q{background:var(--paper);border:1.5px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:8px}
+.q h3{color:var(--ink);text-transform:none;letter-spacing:0;font-size:1.1rem;font-family:var(--font-body);font-weight:600}
+.q ol{list-style:lower-alpha}
+.rec-tag{font-family:var(--font-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.7rem;background:var(--accent);color:var(--on-accent);padding:1px 6px;border-radius:3px;margin-left:6px;white-space:nowrap}
+footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);padding-top:14px;display:grid;gap:6px}
+
+/* ---------- Inspect + tip ---------- */
+.insp-back{position:fixed;inset:0;background:rgba(5,7,6,.62);z-index:50;display:grid;place-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.insp{width:min(520px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--screen);color:var(--screen-ink);border:1.5px solid var(--screen-line);border-radius:12px;padding:14px 16px 18px;display:grid;gap:10px}
+.insp-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.insp-kicker{font-family:var(--font-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.74rem;color:var(--accent)}
+.insp h3{color:var(--screen-ink);text-transform:none;letter-spacing:.01em;font-family:var(--font-display);font-weight:400;font-size:1.6rem}
+.insp canvas{width:100%;height:auto;display:block;border-radius:6px}
+.insp-body{display:grid;gap:8px;font-size:.94rem}
+.insp-body dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.insp-body dt{font-family:var(--font-label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:.74rem;color:var(--screen-muted);padding-top:2px}
+.insp-body dd{margin:0}
+.tip{position:fixed;z-index:60;max-width:min(300px,calc(100vw - 32px));background:var(--ink);color:var(--paper);font-size:.86rem;line-height:1.4;padding:8px 10px;border-radius:6px;box-shadow:0 8px 20px -10px rgba(0,0,0,.6)}
+[data-tip]{-webkit-touch-callout:none}
+
+@media (max-width:860px){
+  .file-grid,.two{grid-template-columns:minmax(0,1fr)}
+  .file-demo{justify-items:stretch}
+  .phone{margin:0 auto}
+}
+@media (max-width:440px){
+  .phone{border-radius:22px;padding:8px 5px 10px}
+  .screen{border-radius:16px;padding:10px 7px 12px}
+  .file{padding-left:12px;padding-right:12px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="hero-meta">
+    <span class="label">Concept dossier · project cctiles · 6 Nov 2026</span>
+    <span class="classified" data-tip="This page explains the Sr Game Designer's concept exploration (board task cct-ideas). It is a side project, separate from KillingCard.">Side exploration</span>
+  </div>
+  <h1>Calling Card Tiles</h1>
+  <p class="lede">Seven game ideas built on one shape: the 4:1 calling-card banner. Three were paper-prototyped and are playable on this page. The other four are shown as step-through storyboards.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#shape"><span class="n">1</span>The shape</a>
+    <a href="#collection"><span class="n">2</span>Collection</a>
+    <a class="playable" href="#running-bond"><span class="n">3.1</span>Running Bond</a>
+    <a class="playable" href="#pivot"><span class="n">3.2</span>Pivot</a>
+    <a class="playable" href="#crosswise"><span class="n">3.3</span>Crosswise</a>
+    <a href="#broadside"><span class="n">3.4</span>Broadside</a>
+    <a href="#banner-keep"><span class="n">3.5</span>Banner Keep</a>
+    <a href="#tilt-stack"><span class="n">3.6</span>Tilt Stack</a>
+    <a href="#panorama"><span class="n">3.7</span>Panorama Patience</a>
+    <a href="#compare"><span class="n">5</span>Compare</a>
+    <a href="#recommend"><span class="n">5</span>Recommendation</a>
+    <a href="#questions"><span class="n">6</span>Questions</a>
+  </nav>
+  <p class="note">All tile art here is generated on the page: gradients, simple silhouettes and four original emblems. No calling-card art from any game is used. Right-click (desktop) or long-press (touch) any tile, cell, chip or button to see what it is.</p>
+</header>
+
+<!-- ============ 1. The shape ============ -->
+<section class="file" id="shape" aria-labelledby="shape-h">
+  <div class="file-tab"><span class="file-no">FILE 1</span><span class="stamp story" data-tip="Interactive: rotate the tile and switch the bond to see how its neighbours change.">Try it</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <h2 id="shape-h">One banner, four cells, ten edges</h2>
+      <p class="prose" style="display:block">A calling card is a 4:1 banner. On a unit grid it covers a strip of <b>1×4</b> cells: a bar. That simple shape has more going on than a square tile.</p>
+      <div class="facts">
+        <div>
+          <h3>Four real rotations</h3>
+          <p>Turning the bar 90° stands it upright. Turning it 180° keeps the footprint but reverses the order of its cells. When the four cells carry different emblems, all four rotations are different moves.</p>
+        </div>
+        <div>
+          <h3>Ten edge segments</h3>
+          <p>Two long sides of 4 segments and two ends of 1. Laid flat in a stack it touches 4 tiles. In a running bond (each course offset by 2 cells) it touches 6. Stood upright across four courses it can touch 10, one per segment.</p>
+        </div>
+        <div>
+          <h3>Rotation changes connectivity</h3>
+          <p>A flat tile is a quiet brick. An upright tile is a hub that ties four courses together. So choosing a rotation is a strategy call, not just a fitting problem.</p>
+        </div>
+        <div>
+          <h3>Packing is a design dial</h3>
+          <p>1×4 bars can fill an a×b board perfectly only if 4 divides a or b. So 8×8 and 8×9 can be filled; 7×7 and 9×9 never can. A solitaire wants a fillable board. A versus game wants leftovers to fight over.</p>
+        </div>
+        <div>
+          <h3>Art reads across tiles</h3>
+          <p>Two flat tiles end to end make an 8:1 strip, four make a 16:1 panorama. Four stacked make a square picture. Upright tiles show their art sideways; inspecting a tile always shows it upright and full size.</p>
+        </div>
+        <div>
+          <h3>Phones fit it</h3>
+          <p>A portrait iPhone is about 390pt wide. An 8-column board gives 48pt cells and 192×48pt tiles, which are easy to tap. Ten columns is the practical limit.</p>
+        </div>
+      </div>
+      <div class="legend" aria-label="Emblems">
+        <span data-tip="Diamond emblem. Blue, four-pointed. Emblems match only with the same shape."><i class="emb" data-e="0"></i>Diamond</span>
+        <span data-tip="Disc emblem. Amber circle."><i class="emb" data-e="1"></i>Disc</span>
+        <span data-tip="Peak emblem. Green triangle."><i class="emb" data-e="2"></i>Peak</span>
+        <span data-tip="Cross emblem. Red plus shape."><i class="emb" data-e="3"></i>Cross</span>
+        <span class="note">Shape and colour both differ, so the emblems stay readable for colour-blind players.</span>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="panel" id="ex-panel" style="width:100%;max-width:400px">
+        <div class="label" style="color:var(--screen-muted)">Tile explorer</div>
+        <canvas id="ex-canvas" tabindex="0" aria-label="A small wall with the gold-outlined calling card in the middle. Its 10 edge segments are numbered; the tiles they touch are lit."></canvas>
+        <p class="readout" id="ex-readout" aria-live="polite"></p>
+        <div class="ctrls">
+          <button class="btn primary" id="ex-rotate" data-tip="Rotates the highlighted tile a quarter turn: 0°, 90°, 180°, 270°.">Rotate 90°</button>
+          <div class="seg" role="group" aria-label="Bond">
+            <button class="btn" id="ex-running" aria-pressed="true" data-tip="Running bond: each course is offset by half a tile, so every joint is bridged.">Running</button>
+            <button class="btn" id="ex-stack" aria-pressed="false" data-tip="Stack bond: tiles sit directly on top of each other, joint on joint.">Stack</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. Collection ============ -->
+<section class="file" id="collection" aria-labelledby="col-h">
+  <div class="file-tab"><span class="file-no">FILE 2</span><span class="stamp story" data-tip="Applies to all seven concepts.">Pillar</span></div>
+  <div class="two">
+    <div class="prose">
+      <h2 id="col-h">A big collection should feel exciting, never pay-to-win</h2>
+      <p>Every owned card becomes a tile skin. A bigger collection gives variety, sets to complete, foil tiles and a wall to show off. Gameplay values never come from the art: each card's emblems come from a fixed, balanced table of 16 patterns, so a starter player has every pattern in the game.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Lever</th><th>What it gives</th><th>Power?</th></tr></thead>
+          <tbody>
+            <tr><td>Tile variety</td><td>Every owned card is a skin and a slot in your deck or pool.</td><td>None</td></tr>
+            <tr><td>Series sets</td><td>Cards from one challenge series placed in a line complete set objectives: stars, badges, a set frame.</td><td>Objectives only, never ranked</td></tr>
+            <tr><td>Rarity tiers</td><td>Animated or premium cards become foil tiles.</td><td>Cosmetic</td></tr>
+            <tr><td>Panorama sets</td><td>Original sets that line up into one picture. Some are earned in this game.</td><td>Cosmetic + objective</td></tr>
+            <tr><td>Daily "your cards"</td><td>Same daily layout for everyone, skinned with your cards, with a bonus naming one of your series.</td><td>Optional bonus stars</td></tr>
+            <tr><td>Mastery tracks</td><td>Cards and series level up with use, Bronze to Gold frame. Breadth badges, not spending.</td><td>Cosmetic</td></tr>
+            <tr><td>Wall of Fame</td><td>A finished wall is shareable. Opponents can inspect your banners.</td><td>Cosmetic</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Fairness</h3>
+      <ul>
+        <li>A starter set of 48 original cards (12 series of 4, 3 panorama sets) covers every pattern. A player who never links has the whole game.</li>
+        <li>Crosswise and any ranked mode use a neutral pool; your collection only skins your side.</li>
+        <li>The daily leaderboard ranks the base score. Set bonus stars go on a separate, personal track. Matchmaking ignores collection size.</li>
+      </ul>
+    </div>
+    <div class="prose">
+      <h3>The loop with Call of Duty (hypothetical account link)</h3>
+      <ol class="flow">
+        <li><span>A player unlocks a calling card in Call of Duty: a challenge, mastery, battle pass or event.</span></li>
+        <li><span>It shows up here as a new tile the next time the hypothetical link syncs.</span></li>
+        <li><span>It opens a set objective, a mastery track or a daily bonus.</span></li>
+        <li><span>The set screen says "2 of 4". Missing cards show as silhouettes with their unlock hint.</span></li>
+        <li><span>The player goes back to Call of Duty with a concrete card to chase.</span></li>
+      </ol>
+      <div class="panel">
+        <div class="label" style="color:var(--screen-muted)">Set screen mock · Night Raid series</div>
+        <div class="setrow" id="set-row"></div>
+        <p class="readout" id="set-readout" aria-live="polite"></p>
+        <div class="ctrls">
+          <button class="btn primary" id="set-unlock" data-tip="Simulates the mock unlock feed: one locked card in the series becomes owned. Nothing here talks to a real game.">Simulate an unlock</button>
+          <button class="btn" id="set-reset" data-tip="Puts the set back to 2 of 4.">Reset set</button>
+        </div>
+      </div>
+      <p class="note">Nothing here claims a real partnership or API. Card data access, art rights, account linking and series metadata are all unconfirmed. Until there is an agreement every prototype uses original art and a fake unlock feed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3.1 Running Bond ============ -->
+<section class="file" id="running-bond" aria-labelledby="rb-h">
+  <div class="file-tab"><span class="file-no">FILE 3.1</span><span class="stamp play" data-tip="Paper-prototyped and playable on this page. This is the recommended first prototype.">Playable · Recommended</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="rb-h">Running Bond</h2><p class="genre">Tile-laying solitaire with a daily variant · 8–10 min</p></div>
+      <p class="hook">"Build a wall out of your calling cards. Bridge every joint, match the emblems, and finish the course."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="The market always shows 3 face-up tiles from the deck.">Pick 1 of 3 tiles from the market.</li>
+        <li data-tip="0° and 180° lay it flat, 90° and 270° stand it upright. 180° and 270° reverse the emblem order.">Rotate it 4 ways.</li>
+        <li data-tip="Flat tiles need 2 of 4 cells supported. Upright tiles need their bottom cell supported.">Lay it in the 8×8 wall, under gravity.</li>
+        <li class="repeat" data-tip="Match, bond and course points score at once. After 16 tiles the wall is scored.">Score, then repeat 16 times.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3>
+          <ul><li>Flat tiles are cheap bricks. Upright tiles are hubs that touch up to 10 neighbours but leave tall gaps.</li>
+          <li>A 180° turn reverses the emblem order, which often turns +0 into +2.</li>
+          <li>The wall never rotates, so it reads the same in portrait and landscape.</li></ul></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 5 of 5: very high." aria-label="Collection pull 5 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span>Very high</span></div>
+          <ul><li>The finished wall is a gallery of your cards: the Wall of Fame.</li>
+          <li>Series objectives like "3 Sniper Mastery cards in one course: +4 stars" point straight at unlocks.</li>
+          <li>Foil tiles shimmer, and panorama sets line up across a course.</li></ul></div>
+        <div><h3>Risks</h3>
+          <ul><li>It can read as falling blocks without the falling. Answer: a slower, planned feel and no line clears.</li>
+          <li>Score math must stay legible, so every scoring edge pops its own number.</li>
+          <li>The "mason's insert" (sliding a tile under an overhang) is physically odd and needs a player test.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>A tile stood upright in a gap ties four courses together and scores 5 or more contacts at once. Then you notice that greedy scoring leaves holes, and a perfect wall needs planning.</p>
+      <div class="findings">
+        <h3>Paper prototype (200 games per row)</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Emblem kinds</th><th class="num">Random player</th><th class="num">Greedy player</th><th class="num">Perfect walls</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td class="num">35 avg (max 55)</td><td class="num">52 avg (max 74)</td><td class="num">29% / 13%</td></tr>
+            <tr class="hl"><td>4 (used here)</td><td class="num">32 avg (max 51)</td><td class="num">47 avg (max 66)</td><td class="num">35% / 14%</td></tr>
+            <tr><td>5</td><td class="num">28 avg (max 48)</td><td class="num">41 avg (max 61)</td><td class="num">33% / 9%</td></tr>
+          </tbody></table></div>
+        <p>Greedy scoring cuts the perfect-wall rate from 35% to 14%: grabbing points leaves holes. Gold at 70 is only reachable with planning. About 1 game in 8 ran out of fitting tiles late, which the refresh-once rule covers.</p>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone" id="rb-phone">
+        <div class="phone-bar"><span>9:41</span><span class="app">Running Bond</span><span id="rb-deal">Daily</span></div>
+        <div class="screen" id="rb-screen">
+          <div class="hud">
+            <div data-tip="Your score so far: match + bond + course points. End bonuses are added when the wall is done."><span class="k">Score</span><span class="v" id="rb-score">0</span></div>
+            <div data-tip="Tiles laid out of 16."><span class="k">Tiles</span><span class="v" id="rb-count">0/16</span></div>
+            <div data-tip="Tiles left in the deck after the market."><span class="k">Deck</span><span class="v" id="rb-decks">21</span></div>
+            <div data-tip="Medals: Bronze 40, Silver 55, Gold 70."><span class="k">Medal</span><span class="v" id="rb-medal">–</span></div>
+          </div>
+          <p class="objective" id="rb-obj"></p>
+          <canvas id="rb-canvas" tabindex="0" aria-label="The wall, 8 by 8 cells. The bottom row is the floor."></canvas>
+          <p class="status" id="rb-status" aria-live="polite"></p>
+          <div class="market" id="rb-market" aria-label="Market"></div>
+          <div class="rotline"><button class="btn primary" id="rb-rotate" data-tip="Turns the selected tile 90°. Keyboard: R.">Rotate 90°</button><span id="rb-rot"></span></div>
+          <div class="ctrls">
+            <button class="btn" id="rb-place" disabled data-tip="Lays the previewed tile. You can also tap the preview again.">Place</button>
+            <button class="btn" id="rb-undo" disabled data-tip="Takes back your last tile and its points.">Undo</button>
+            <button class="btn" id="rb-reset" data-tip="Starts this deal again from the first tile.">Restart</button>
+            <button class="btn" id="rb-new" data-tip="Shuffles a new deck and a new objective.">New deck</button>
+          </div>
+          <div class="breakdown" id="rb-break"></div>
+          <div class="medal-track" id="rb-track" data-tip="Score against the medal lines: Bronze 40, Silver 55, Gold 70."><div class="fill" id="rb-fill"></div></div>
+        </div>
+      </div>
+      <p class="howto"><b>How to play:</b> tap a market tile, rotate it, tap the wall to preview it, then tap the preview again (or Place). With a mouse one click lays it. Keyboard: 1–3 pick, R rotates, arrows move, Enter places.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3.2 Pivot ============ -->
+<section class="file" id="pivot" aria-labelledby="pv-h">
+  <div class="file-tab"><span class="file-no">FILE 3.2</span><span class="stamp play" data-tip="Paper-prototyped and playable on this page. Planned as the app's daily mode.">Playable</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="pv-h">Pivot</h2><p class="genre">Daily rotation puzzle · 2–5 min</p></div>
+      <p class="hook">"Swing the banners. Get your card to the exit."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Each daily is a 7×7 board with about 6 bars and one exit cell on the edge.">Read a 7×7 board of about 6 bars.</li>
+        <li data-tip="Slide 1 cell along the bar's length into empty cells.">Slide any bar 1 cell along its length…</li>
+        <li data-tip="The bar sweeps a quarter-disc of 13 cells. All of them must be empty and on the board.">…or swing it 90° around either end.</li>
+        <li data-tip="Par is the solver's optimum. Stars for par, par+3 and any solve.">Get the gold key bar onto the exit.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3>
+          <ul><li>The whole puzzle is rotation. The swing's swept wedge is what makes it hard.</li>
+          <li>The board is square, so portrait and landscape look identical.</li></ul></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 3 of 5: medium." aria-label="Collection pull 3 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span>Medium</span></div>
+          <ul><li>The key bar is your featured card; all bars are skinned from your collection.</li>
+          <li>"Series week": owning that week's series unlocks a bonus 4th-star puzzle. An extra puzzle, not an easier one.</li></ul></div>
+        <div><h3>Risks</h3>
+          <ul><li>Needs a generator plus solver; the solver exists, quality filtering takes time.</li>
+          <li>The wedge must be shown: a preview on press plus the inspect view.</li>
+          <li>Steer clear of the traffic-puzzle "car to the exit" framing and its piece set.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>"I have to swing that bar out of the way, which frees the corner, which lets mine swing round."</p>
+      <div class="findings">
+        <h3>Paper prototype (BFS solver, random layouts, exit in a corner)</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Variant</th><th class="num">Solvable</th><th class="num">Optimal moves (mean / max)</th></tr></thead>
+          <tbody>
+            <tr><td>6×6, swings only, 3–5 bars</td><td class="num">1–2%</td><td class="num">1 / 1</td></tr>
+            <tr><td>7×7, swings only, 4 bars</td><td class="num">8%</td><td class="num">4 / 8</td></tr>
+            <tr><td>7×7, no wedge check, 6 bars, slides</td><td class="num">85%</td><td class="num">4.5 / 7</td></tr>
+            <tr class="hl"><td>7×7, wedge + slides, 6 bars</td><td class="num">55%</td><td class="num">10.8 / 25</td></tr>
+            <tr><td>6×6, wedge + slides, 5 bars</td><td class="num">23%</td><td class="num">8.0 / 31</td></tr>
+          </tbody></table></div>
+        <p>The wedge is the game: without it the hardest puzzle is 7 moves; with it, 25-move solutions appear. Swings alone are broken, because a swing jumps a bar 3 cells. Slides are required.</p>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone" id="pv-phone">
+        <div class="phone-bar"><span>9:41</span><span class="app">Pivot</span><span>Pack of 3</span></div>
+        <div class="screen" id="pv-screen">
+          <div class="seg" role="group" aria-label="Puzzle" style="width:100%">
+            <button class="btn" id="pv-p0" style="flex:1" data-tip="Puzzle 1: four bars, par 4. Teaches the swing.">Puzzle 1</button>
+            <button class="btn" id="pv-p1" style="flex:1" data-tip="Puzzle 2: five bars, par 8.">Puzzle 2</button>
+            <button class="btn" id="pv-p2" style="flex:1" data-tip="Puzzle 3: six bars, par 12. A daily-strength puzzle.">Puzzle 3</button>
+          </div>
+          <div class="hud">
+            <div data-tip="Moves you have made. Each slide or swing counts as one."><span class="k">Moves</span><span class="v" id="pv-moves">0</span></div>
+            <div data-tip="The fewest moves the solver found."><span class="k">Par</span><span class="v" id="pv-par">4</span></div>
+            <div data-tip="Three stars at par, two at par+3, one for any solve."><span class="k">Stars</span><span class="v" id="pv-stars">–</span></div>
+          </div>
+          <canvas id="pv-canvas" tabindex="0" aria-label="Pivot board, 7 by 7. The exit is the marked corner cell."></canvas>
+          <p class="status" id="pv-status" aria-live="polite"></p>
+          <div class="movelist" id="pv-movelist" aria-label="Moves for the selected bar"></div>
+          <div class="ctrls">
+            <button class="btn" id="pv-hint" data-tip="Asks the solver for the best next move from where you are.">Hint</button>
+            <button class="btn" id="pv-undo" disabled data-tip="Takes back your last move.">Undo</button>
+            <button class="btn" id="pv-reset" data-tip="Puts every bar back where the puzzle started.">Reset</button>
+          </div>
+        </div>
+      </div>
+      <p class="howto"><b>How to play:</b> tap a bar to see its moves. Round handles are swings, with the swept wedge shaded; square handles are slides. Tap a handle (or a move button) to move. Get any cell of the gold key bar onto the exit.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3.3 Crosswise ============ -->
+<section class="file" id="crosswise" aria-labelledby="cw-h">
+  <div class="file-tab"><span class="file-no">FILE 3.3</span><span class="stamp play" data-tip="Paper-prototyped and playable here as hot-seat for two. Planned as the app's versus mode.">Playable · 2 players</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="cw-h">Crosswise</h2><p class="genre">Versus, Landscape against Portrait · 5–8 min</p></div>
+      <p class="hook">"One of you can only lay banners across, the other only down. Hold the phone your way."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="9 rows by 8 columns, 11 star cells in a mirrored pattern.">Share a 9×8 board with 11 stars.</li>
+        <li data-tip="Turn order L, PP, LL, PP… Landscape lays across, Portrait lays down.">Place bars in your direction: 1, then 2 per turn.</li>
+        <li data-tip="Each star a bar covers scores 1. A player who can't place is out; the other keeps going.">Cover stars; block the other side.</li>
+        <li data-tip="Most stars wins. A tie goes to the last player to place.">Most stars wins.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3>
+          <ul><li>Your orientation is your side.</li>
+          <li>In pass-and-play, Portrait holds the phone upright and Landscape turns it sideways, so each reads their own banners upright.</li>
+          <li>Board shape is the balance lever: wide boards favour Landscape, tall boards favour Portrait.</li></ul></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 2 of 5: medium-low." aria-label="Collection pull 2 of 5"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span><span>Medium-low</span></div>
+          <ul><li>Gameplay uses a neutral pool, so the pull is pure flex: your banners and their mastery frames, for the opponent to inspect.</li></ul></div>
+        <div><h3>Risks</h3>
+          <ul><li>Can feel solved at small sizes; randomised star layouts per match are needed.</li>
+          <li>First-player advantage needs tuning, and solo play needs a good AI.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>"One down-bar there kills three of their across-moves." A pure territory game, learned in 30 seconds.</p>
+      <div class="findings">
+        <h3>Paper prototype</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Setup</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>8×8, last to move wins, no stars</td><td>Second player wins 100% (the board fills perfectly). Broken.</td></tr>
+            <tr><td>7×10 wide vs 10×7 tall, no stars</td><td>Wide: Landscape 100%. Tall: Portrait 100%.</td></tr>
+            <tr><td>9×9, stars, alternating 1-1</td><td>First player wins 72%</td></tr>
+            <tr><td>8×8 / 9×9, stars, 1-2-2</td><td>First player wins 60% / 65%</td></tr>
+            <tr class="hl"><td>9 rows × 8 cols, stars, 1-2-2</td><td>50% / 50% (80 games)</td></tr>
+          </tbody></table></div>
+        <p>These come from a 1-ply greedy AI and are noisy. Balance needs a search AI before anyone calls it fair.</p>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone" id="cw-phone">
+        <div class="phone-bar"><span>9:41</span><span class="app">Crosswise</span><span>Pass &amp; play</span></div>
+        <div class="screen" id="cw-screen">
+          <div class="hud">
+            <div data-tip="Landscape lays bars across. Stars covered so far."><span class="k"><i class="who L"></i>Landscape</span><span class="v" id="cw-sL">0</span></div>
+            <div data-tip="Portrait lays bars down. Stars covered so far."><span class="k"><i class="who P"></i>Portrait</span><span class="v" id="cw-sP">0</span></div>
+            <div data-tip="Stars still open on the board."><span class="k">Open stars</span><span class="v" id="cw-open">11</span></div>
+          </div>
+          <div class="turnstrip" id="cw-strip" aria-label="Turn order"></div>
+          <canvas id="cw-canvas" tabindex="0" aria-label="Crosswise board, 9 rows by 8 columns, with star cells."></canvas>
+          <p class="status" id="cw-status" aria-live="polite"></p>
+          <div class="ctrls">
+            <button class="btn primary" id="cw-place" disabled data-tip="Lays the previewed bar. You can also tap the preview again.">Place</button>
+            <button class="btn" id="cw-turn" data-tip="Turns the board a quarter turn, the way the Portrait player would hold the phone, so their banners read upright.">Turn board</button>
+            <button class="btn" id="cw-undo" disabled data-tip="Takes back the last bar.">Undo</button>
+            <button class="btn" id="cw-reset" data-tip="Clears the board and keeps the star pattern.">Reset</button>
+            <button class="btn" id="cw-stars" data-tip="Deals a new mirrored pattern of 11 stars and restarts.">New stars</button>
+          </div>
+          <label class="check" for="cw-auto"><input type="checkbox" id="cw-auto"> Turn the board for whoever is placing</label>
+        </div>
+      </div>
+      <p class="howto"><b>How to play:</b> pass the phone. Tap a cell to preview your bar there, then tap the preview again (or Place). Landscape lays across, Portrait lays down. With a mouse one click places.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3.4 – 3.7 storyboards ============ -->
+<section class="file" id="broadside" aria-labelledby="bs-h">
+  <div class="file-tab"><span class="file-no">FILE 3.4</span><span class="stamp story" data-tip="Not prototyped. Shown as a step-through storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="bs-h">Broadside</h2><p class="genre">Tactics · 15–20 min</p></div>
+      <p class="hook">"Every calling card is a warship 4 cells long. Fire from the long sides, ram with a swing."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Each side fields 4 bars on a 10×10 sea.">Field 4 ships on a 10×10 sea.</li>
+        <li data-tip="Advance: slide 1 along the length. Swing: pivot 90° about an end; enemies in the wedge are rammed.">Spend 2 actions per ship: advance or swing.</li>
+        <li data-tip="A broadside hits up to 3 cells out from a long side; a bow shot hits a line of 5 from an end.">Fire a broadside or a bow shot.</li>
+        <li data-tip="Damage marks edge segments: 10 per ship. Ends take double.">Sink the flagship or 3 ships.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3><p>Facing is everything. A long broadside also shows the enemy a long, hittable side. Turning end-on is safe, but your fire is weak.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 3 of 5: medium." aria-label="Collection pull 3 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span>Medium</span></div>
+          <p>Your fleet is skinned from your cards and series fleets fly a cosmetic flag. Unit types come from the neutral table.</p></div>
+        <div><h3>Risks</h3><ul><li>Heavier rules, an AI cost, and the longest session.</li><li>Avoid hidden-grid guessing in the Battleship style.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>"Swing to ram, and end the turn showing them only your 1-segment bow."</p>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Broadside</span><span>Storyboard</span></div>
+        <div class="screen" data-story="broadside"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="banner-keep" aria-labelledby="bk-h">
+  <div class="file-tab"><span class="file-no">FILE 3.5</span><span class="stamp story" data-tip="Not prototyped. Shown as a step-through storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="bk-h">Banner Keep</h2><p class="genre">Deck-building roguelite · 25–40 min run, 5-min fights</p></div>
+      <p class="hook">"Your deck is your calling cards. Their edges are sockets. Place them so the effects chain."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Draw 5 cards each fight turn.">Draw 5, place 3 on a 6×6 keep.</li>
+        <li data-tip="A long-side effect triggers neighbours along the sides; an end effect triggers the tile at the tip.">Each card fires its sides and its tip.</li>
+        <li data-tip="Chains produce Guard and Power against the wave's threat.">Resolve chains into Guard and Power.</li>
+        <li data-tip="About 12 fights over 3 acts on a branching map.">Win, draft a card, move on the map.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3><p>Rotation decides which neighbours a card triggers. The best turns rotate one card so it chains the whole board.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 4 of 5: high." aria-label="Collection pull 4 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span>High</span></div>
+          <p>Your collection seeds the draft pool's skins and unlocks series relics (cosmetic plus objective). The pool of effects is the same for everyone.</p></div>
+        <div><h3>Risks</h3><ul><li>A crowded genre that needs lots of content and balance.</li><li>Must stay clear of KillingCard's lanes and columns.</li><li>Biggest scope of the seven.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>"Rotate the Spark card upright and its end effect fires the Doubler, which fires everything."</p>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Banner Keep</span><span>Storyboard</span></div>
+        <div class="screen" data-story="keep"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="tilt-stack" aria-labelledby="ts-h">
+  <div class="file-tab"><span class="file-no">FILE 3.6</span><span class="stamp story" data-tip="Not prototyped. Shown as a step-through storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="ts-h">Tilt Stack</h2><p class="genre">Real-time stacking · 3-min rounds</p></div>
+      <p class="hook">"Banners fall wherever down is, and down is wherever you turn your phone."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="An 8×12 well.">Banners fall into an 8×12 well.</li>
+        <li data-tip="Turn a banner while it falls.">Rotate them in flight.</li>
+        <li data-tip="Three of one series touching along long sides cash in and vanish. No line clears.">Touch 3 of a series to cash in.</li>
+        <li data-tip="Every 30 seconds, or on the rotate button, gravity turns 90°.">Gravity turns; everything loose slides.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3><p>Device orientation drives gravity, with an on-screen button for orientation lock and PC. Piece rotation is a must.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 3 of 5: medium." aria-label="Collection pull 3 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span>Medium</span></div>
+          <p>Series matching uses your cards. More series means more series colours, not power, which is not obviously exciting.</p></div>
+        <div><h3>Risks</h3><ul><li>Highest trademark risk: no line clears, no tetromino set, no borrowed well proportions or terms.</li><li>Orientation lock and motion fatigue on phones.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>Setting up a stack that cashes in only after the gravity turn.</p>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Tilt Stack</span><span>Storyboard</span></div>
+        <div class="screen" data-story="tilt"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="panorama" aria-labelledby="pp-h">
+  <div class="file-tab"><span class="file-no">FILE 3.7</span><span class="stamp story" data-tip="Not prototyped. Shown as a step-through storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="pp-h">Panorama Patience</h2><p class="genre">Solitaire · 5–8 min</p></div>
+      <p class="hook">"Deal the strips. Rebuild the pictures."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Four square pictures, each cut into four 4:1 strips.">Deal 16 strips into 4 columns.</li>
+        <li data-tip="Build each picture from top to bottom.">Move strips to rebuild each picture.</li>
+        <li data-tip="Sideways strips are blocked until turned. Each turn costs 1 of 3 tokens.">Spend a token to turn a sideways strip.</li>
+        <li data-tip="Win by completing all 4 pictures.">Complete all 4 pictures.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3><p>Sideways strips are blocked until turned. In portrait a picture is a square column; in landscape the 4 squares sit in a row.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull: low for existing cards, high for original panorama sets." aria-label="Collection pull low to high"><i class="on"></i><i></i><i></i><i></i><i></i></span><span>Low for existing cards, high for original panorama sets</span></div>
+          <p>It needs art authored as cut squares, so it can't use existing calling cards. It works better as a reward inside Running Bond.</p></div>
+        <div><h3>Risks</h3><ul><li>Thin as a game: only 4 ranks per suit, close to classic patience.</li><li>Avoid Klondike-style layout and foundation rules.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>The moment a picture snaps together.</p>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Panorama</span><span>Storyboard</span></div>
+        <div class="screen" data-story="panorama"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Compare ============ -->
+<section class="section" id="compare" aria-labelledby="cmp-h">
+  <h2 id="cmp-h">Side by side</h2>
+  <p class="note">Scores 1–5, 5 is best. Build cost is 5 when the prototype is cheapest. Total = rotation + orientation + fun + collection + build cost.</p>
+  <div class="tbl-wrap">
+    <table id="cmp-table">
+      <thead><tr>
+        <th>Concept</th>
+        <th data-tip="How strong the fun and the aha moment looked on paper.">Fun / aha</th>
+        <th data-tip="5 = cheapest to prototype. Pivot needs a puzzle generator, Crosswise needs an AI.">Build cost</th>
+        <th data-tip="How much a bigger calling-card collection adds, without adding power.">Collection pull</th>
+        <th data-tip="How much tile rotation matters.">Rotation</th>
+        <th data-tip="How much phone orientation is used as a mechanic or mode.">Orientation</th>
+        <th data-tip="Trademark and look-alike risk against existing games.">Risk</th>
+        <th>Session</th>
+        <th class="num">Total</th>
+      </tr></thead>
+      <tbody id="cmp-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ Recommendation ============ -->
+<section class="file" id="recommend" aria-labelledby="rec-h">
+  <div class="file-tab"><span class="file-no">FILE 5</span><span class="stamp play" data-tip="The Sr Game Designer's recommendation. The head decides on the board.">Recommendation</span></div>
+  <div class="two">
+    <div class="prose">
+      <h2 id="rec-h">Prototype Running Bond first</h2>
+      <ul>
+        <li>It is the tiling game the head asked for, and its rules fit on one card.</li>
+        <li>The simulation shows real tension between scoring now and a clean wall.</li>
+        <li>It has the strongest collection pull: the finished wall is your collection on display, and series objectives point at unlocks.</li>
+        <li>It plays the same in portrait and landscape, on iPhone and on PC.</li>
+        <li>It is the cheapest to build: no AI and no puzzle generator.</li>
+      </ul>
+      <p>The collection requirement moved it clearly ahead; before that it was tied with Pivot. Pivot and Crosswise stay on as the daily and versus modes of the same app, sharing the tile renderer, the inspect view and the collection.</p>
+      <p class="note">Out of scope for the week: real Call of Duty data, online play, the Pivot and Crosswise modes, and final art.</p>
+    </div>
+    <div class="prose">
+      <h3>One week in Godot 4.4.1</h3>
+      <div class="week">
+        <div><span class="d">Day 1</span><span><code>Wall.tscn</code> (8×8 grid in a Control, responsive for portrait and landscape), <code>tile.gd</code> with emblems, series and rotation as typed data, <code>tile_data.tres</code> resources. 24 placeholder tiles: 6 series × 4.</span></div>
+        <div><span class="d">Day 2</span><span>Placement: drag or tap, rotate by button, R key or two-finger twist, ghost preview with legal or illegal tint. Support rules and the mason's insert.</span></div>
+        <div><span class="d">Day 3</span><span>Scoring with per-edge popups: match, bond, course, holes, perfect wall. A score breakdown panel.</span></div>
+        <div><span class="d">Day 4</span><span>Inspect on right click and long press: the card upright, its emblems, series, set progress and why it scored. Market refresh, end screen, medals.</span></div>
+        <div><span class="d">Day 5</span><span>Three objective card types. A daily seed (same deck for everyone) with the score stored locally.</span></div>
+        <div><span class="d">Day 6</span><span>Mock collection link: a fake unlock feed, the set screen with silhouettes and hints, set objectives. A foil shader for 2 animated tiles.</span></div>
+        <div><span class="d">Day 7</span><span>Web export, iPhone portrait and landscape pass, PC pass, QA, and a balance log (CSV of placements and scores).</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Questions ============ -->
+<section class="section" id="questions" aria-labelledby="q-h">
+  <h2 id="q-h">Three questions for the head</h2>
+  <p class="note">Shown for reference only. Answer them on the Studio Floor board, on task cct-ideas.</p>
+  <div class="qs">
+    <div class="q"><h3>1. Which concept do we prototype first?</h3>
+      <ol><li>Running Bond, the tiling solitaire with the strongest collection pull. <span class="rec-tag">Recommended</span></li><li>Pivot daily puzzle.</li><li>Crosswise versus.</li><li>Banner Keep roguelite, the biggest scope.</li></ol></div>
+    <div class="q"><h3>2. Which orientation leads the design?</h3>
+      <ol><li>Portrait-first phone layout, with landscape and PC fully supported. <span class="rec-tag">Recommended</span></li><li>Landscape-first.</li><li>Orientation as a gameplay mode from day one (Crosswise "home turf", Tilt Stack gravity).</li></ol></div>
+    <div class="q"><h3>3. How do we show the collection link in the prototype?</h3>
+      <ol><li>A mock unlock feed with original art and fake series. It tests the excitement loop with no legal exposure. <span class="rec-tag">Recommended</span></li><li>Let the head import his own 4:1 images as tiles, for a personal test only, never published.</li><li>No collection features until the core is proven fun.</li></ol></div>
+  </div>
+</section>
+
+<footer>
+  <p>Source: <code>studio/concepts/calling-card-tiles/concepts.md</code> (Sr Game Designer, task cct-ideas). Explainer by the UI/UX agent, task cct-ux.</p>
+  <p>Call of Duty is named only to describe a hypothetical pitch. No partnership, API or art rights are implied.</p>
+</footer>
+</div>
+
+<div class="insp-back" id="insp" hidden>
+  <div class="insp" role="dialog" aria-modal="true" aria-labelledby="insp-title">
+    <div class="insp-head"><span class="insp-kicker" id="insp-kicker"></span><button class="btn" id="insp-close">Close</button></div>
+    <h3 id="insp-title"></h3>
+    <canvas id="insp-canvas" hidden></canvas>
+    <div class="insp-body" id="insp-body"></div>
+  </div>
+</div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script>
+(()=>{
+'use strict';
+/* ================= Core: tokens, rng, cards, drawing ================= */
+const $=id=>document.getElementById(id);
+const RM=matchMedia('(prefers-reduced-motion: reduce)');
+const reduced=()=>RM.matches;
+const TOKS=['cell','cell-line','floor','screen','screen-2','screen-3','screen-ink','screen-muted','screen-line','ok','bad','land','port','accent','em-diamond','em-disc','em-peak','em-cross','plate','plate-ink','art-hi','art-sil','card-edge','s1a','s1b','s2a','s2b','s3a','s3b','s4a','s4b','s5a','s5b','s6a','s6b','gold-a','gold-b'];
+const TK={};
+function readTokens(){const cs=getComputedStyle(document.documentElement);for(const n of TOKS)TK[n]=cs.getPropertyValue('--'+n).trim()||'#888';}
+readTokens();
+const redraws=[];
+function themeChanged(){readTokens();redraws.forEach(f=>{try{f();}catch(e){console.error(e);}});}
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',themeChanged);}catch(e){}
+new MutationObserver(themeChanged).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(themeChanged).catch(()=>{});
+
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const FONT_L='"Saira Condensed","Arial Narrow",sans-serif';
+const FONT_M='"IBM Plex Mono",ui-monospace,Menlo,monospace';
+
+const EM_NAMES=['Diamond','Disc','Peak','Cross'];
+const EM_TOK=['em-diamond','em-disc','em-peak','em-cross'];
+const SERIES=[
+  {id:'nr',name:'Night Raid',a:'s1a',b:'s1b',sil:'skyline'},
+  {id:'ic',name:'Iron Coast',a:'s2a',b:'s2b',sil:'waves'},
+  {id:'er',name:'Ember Ridge',a:'s3a',b:'s3b',sil:'ridge'},
+  {id:'gd',name:'Glass Desert',a:'s4a',b:'s4b',sil:'dunes'},
+  {id:'fl',name:'Frost Line',a:'s5a',b:'s5b',sil:'pines'},
+  {id:'rs',name:'Red Signal',a:'s6a',b:'s6b',sil:'towers'},
+  {id:'key',name:'Featured card',a:'gold-a',b:'gold-b',sil:'chevrons'}
+];
+const CARD_NAMES=[
+  ['Blackout','Low Moon','Rooftops','Last Light'],
+  ['Breakwater','Harbor Gun','Salt Spray','Tidewatch'],
+  ['Ash Fall','Ridgeline','Hot Zone','Cinder'],
+  ['Mirage','Dune Sea','Sunstrike','Long Road'],
+  ['Whiteout','Pinewall','Cold Front','Ice Shelf'],
+  ['Broadcast','Antenna','Static','Callsign']
+];
+const PATTERNS=(()=>{const r=rng(1606);const pool=[];for(let e=0;e<4;e++)for(let k=0;k<16;k++)pool.push(e);shuffle(pool,r);const p=[];for(let i=0;i<16;i++)p.push(pool.slice(i*4,i*4+4));return p;})();
+const CARDS=[];
+SERIES.slice(0,6).forEach((s,si)=>CARD_NAMES[si].forEach((n,k)=>{const id=s.id+'-'+(k+1);
+  CARDS.push({id,name:n,s:si,num:k+1,emb:PATTERNS[hashStr(id)%16],seed:hashStr(id),foil:(si===2&&k===0)||(si===5&&k===3),pattern:hashStr(id)%16});}));
+const KEY_CARD={id:'key-1',name:'Gold Key',s:6,num:1,emb:null,seed:77,foil:true,pattern:null};
+
+function rr(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+
+function silhouette(ctx,type,w,h,r){
+  const x0=-w/2,x1=w/2,yb=h/2+1;ctx.beginPath();ctx.moveTo(x0,yb);
+  if(type==='skyline'){let x=x0;while(x<x1){const bw=h*(0.22+r()*0.4),bh=h*(0.18+r()*0.42);ctx.lineTo(x,yb-bh);if(r()<0.3){ctx.lineTo(x+bw*0.45,yb-bh);ctx.lineTo(x+bw*0.48,yb-bh-h*0.18);ctx.lineTo(x+bw*0.52,yb-bh);}ctx.lineTo(x+bw,yb-bh);x+=bw;ctx.lineTo(x,yb-h*0.1);}}
+  else if(type==='waves'){const ph=r()*6;for(let x=x0;x<=x1+2;x+=2){ctx.lineTo(x,yb-h*(0.2+0.06*Math.sin(x/h*4+ph)+0.03*Math.sin(x/h*9)));}
+    ctx.lineTo(x1,yb);ctx.lineTo(x0,yb);const sx=x0+w*(0.3+0.4*r());ctx.moveTo(sx,yb-h*0.24);ctx.lineTo(sx+h*0.9,yb-h*0.24);ctx.lineTo(sx+h*0.75,yb-h*0.38);ctx.lineTo(sx+h*0.5,yb-h*0.38);ctx.lineTo(sx+h*0.45,yb-h*0.5);ctx.lineTo(sx+h*0.38,yb-h*0.38);ctx.lineTo(sx+h*0.12,yb-h*0.38);ctx.closePath();}
+  else if(type==='ridge'){let x=x0;ctx.lineTo(x0,yb-h*0.3);while(x<x1){x+=h*(0.25+r()*0.35);ctx.lineTo(x,yb-h*(0.18+r()*0.5));}}
+  else if(type==='dunes'){let x=x0;ctx.lineTo(x0,yb-h*0.25);while(x<x1){const nx=x+h*(0.9+r()*0.8);ctx.quadraticCurveTo((x+nx)/2,yb-h*(0.35+r()*0.25),nx,yb-h*(0.18+r()*0.1));x=nx;}}
+  else if(type==='pines'){const base=yb-h*0.12;ctx.lineTo(x0,base);let x=x0;while(x<x1){const tw=h*(0.22+r()*0.2),th=h*(0.3+r()*0.45);ctx.lineTo(x,base);ctx.lineTo(x+tw/2,base-th);ctx.lineTo(x+tw,base);x+=tw*(0.7+r()*0.6);}ctx.lineTo(x1,base);}
+  else if(type==='towers'){const base=yb-h*0.12;ctx.lineTo(x0,base);let x=x0+h*0.2;while(x<x1){ctx.lineTo(x,base);if(r()<0.45){const th=h*(0.45+r()*0.4),tw=h*0.16;ctx.lineTo(x+tw/2,base-th);ctx.lineTo(x+tw,base);x+=tw;}else{const bw=h*(0.2+r()*0.3),bh=h*(0.08+r()*0.12);ctx.lineTo(x,base-bh);ctx.lineTo(x+bw,base-bh);ctx.lineTo(x+bw,base);x+=bw;}x+=h*0.1;}ctx.lineTo(x1,base);}
+  else if(type==='chevrons'){ctx.lineTo(x0,yb-h*0.2);ctx.lineTo(x1,yb-h*0.2);}
+  ctx.lineTo(x1,yb);ctx.closePath();ctx.fill();
+}
+function drawArt(ctx,w,h,card){
+  const s=SERIES[card.s],r=rng(card.seed);
+  const g=ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);g.addColorStop(0,TK[s.a]);g.addColorStop(1,TK[s.b]);
+  ctx.fillStyle=g;ctx.fillRect(-w/2,-h/2,w,h);
+  ctx.globalAlpha=0.5;ctx.fillStyle=TK['art-hi'];ctx.beginPath();ctx.arc(-w/2+w*(0.12+0.76*r()),-h/2+h*(0.28+0.12*r()),h*0.2,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=0.09;ctx.strokeStyle=TK['art-hi'];ctx.lineWidth=Math.max(1,h*0.05);
+  for(let x=-w/2-h;x<w/2+h;x+=h*0.38){ctx.beginPath();ctx.moveTo(x,h/2);ctx.lineTo(x+h,-h/2);ctx.stroke();}
+  if(s.sil==='chevrons'){ctx.globalAlpha=0.35;ctx.fillStyle=TK['art-hi'];for(let x=-w/2;x<w/2;x+=h*0.7){ctx.beginPath();ctx.moveTo(x,-h*0.3);ctx.lineTo(x+h*0.3,0);ctx.lineTo(x,h*0.3);ctx.lineTo(x+h*0.14,h*0.3);ctx.lineTo(x+h*0.44,0);ctx.lineTo(x+h*0.14,-h*0.3);ctx.closePath();ctx.fill();}}
+  ctx.globalAlpha=0.82;ctx.fillStyle=TK['art-sil'];silhouette(ctx,s.sil,w,h,r);
+  if(card.foil){ctx.globalAlpha=0.28;const f=ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);f.addColorStop(0.25,'rgba(0,0,0,0)');f.addColorStop(0.45,TK['art-hi']);f.addColorStop(0.55,TK['art-hi']);f.addColorStop(0.75,'rgba(0,0,0,0)');ctx.fillStyle=f;ctx.fillRect(-w/2,-h/2,w,h);}
+  ctx.globalAlpha=1;
+}
+function drawEmblem(ctx,x,y,s,e,alpha){
+  ctx.save();ctx.globalAlpha=alpha==null?1:alpha;ctx.translate(x,y);
+  ctx.fillStyle=TK.plate;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=Math.max(1,s*0.06);
+  ctx.beginPath();rr(ctx,-s/2,-s/2,s,s,s*0.22);ctx.fill();ctx.stroke();
+  const g=s*0.34;ctx.fillStyle=TK[EM_TOK[e]];ctx.beginPath();
+  if(e===0){ctx.moveTo(0,-g);ctx.lineTo(g,0);ctx.lineTo(0,g);ctx.lineTo(-g,0);ctx.closePath();}
+  else if(e===1){ctx.arc(0,0,g*0.86,0,Math.PI*2);}
+  else if(e===2){ctx.moveTo(0,-g);ctx.lineTo(g,g*0.8);ctx.lineTo(-g,g*0.8);ctx.closePath();}
+  else{const a=g*0.36;ctx.moveTo(-a,-g);ctx.lineTo(a,-g);ctx.lineTo(a,-a);ctx.lineTo(g,-a);ctx.lineTo(g,a);ctx.lineTo(a,a);ctx.lineTo(a,g);ctx.lineTo(-a,g);ctx.lineTo(-a,a);ctx.lineTo(-g,a);ctx.lineTo(-g,-a);ctx.lineTo(-a,-a);ctx.closePath();}
+  ctx.fill();ctx.lineWidth=Math.max(0.8,s*0.05);ctx.stroke();ctx.restore();
+}
+/* Draw a calling-card banner, len cells long, centred at (cx,cy), turned by ang radians. Emblems stay upright on screen. */
+function drawBanner(ctx,cx,cy,ang,u,card,o){
+  o=o||{};const len=o.len||4,pad=o.pad!=null?o.pad:Math.max(1,u*0.05);
+  const w=len*u-pad*2,h=u-pad*2,rad=Math.min(6,u*0.16);
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(ang);ctx.globalAlpha=o.alpha==null?1:o.alpha;
+  ctx.save();ctx.beginPath();rr(ctx,-w/2,-h/2,w,h,rad);ctx.clip();
+  if(card.missing){ctx.fillStyle=TK['screen-3'];ctx.fillRect(-w/2,-h/2,w,h);ctx.globalAlpha=(o.alpha==null?1:o.alpha)*0.5;ctx.fillStyle=TK['art-sil'];silhouette(ctx,SERIES[card.s].sil,w,h,rng(card.seed));}
+  else{const a=ctx.globalAlpha;drawArt(ctx,w,h,card);ctx.globalAlpha=a;}
+  ctx.restore();
+  ctx.beginPath();rr(ctx,-w/2,-h/2,w,h,rad);ctx.lineWidth=Math.max(1,u*0.045);ctx.strokeStyle=card.missing?TK['screen-muted']:TK['card-edge'];
+  if(card.missing)ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+  if(o.outline){ctx.beginPath();rr(ctx,-w/2-1,-h/2-1,w+2,h+2,rad+1);ctx.lineWidth=o.outlineW||3;ctx.strokeStyle=o.outline;ctx.stroke();}
+  ctx.restore();
+  const al=o.alpha==null?1:o.alpha;
+  if(o.emblems!==false&&len===4&&card.emb&&!card.missing){
+    const cs=Math.cos(ang),sn=Math.sin(ang),ps=o.plate||u*0.5;
+    for(let i=0;i<4;i++){const lx=(-1.5+i)*u;drawEmblem(ctx,cx+cs*lx,cy+sn*lx,ps,card.emb[i],al);}
+  }
+  if(o.label){ctx.save();ctx.globalAlpha=al;const vert=Math.abs(Math.sin(ang))>0.5,maxW=vert?u*0.94:len*u*0.8;let fs=Math.max(8,u*0.36);ctx.font='700 '+fs+'px '+FONT_L;while(fs>7&&ctx.measureText(o.label).width+fs*0.6>maxW){fs-=0.5;ctx.font='700 '+fs+'px '+FONT_L;}const tw=ctx.measureText(o.label).width+fs*0.6;
+    ctx.fillStyle=TK.plate;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1;ctx.beginPath();rr(ctx,cx-tw/2,cy-fs*0.75,tw,fs*1.5,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle=TK['plate-ink'];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.label,cx,cy+1);ctx.restore();}
+  if(card.missing&&o.qmark!==false){ctx.save();ctx.globalAlpha=al;ctx.fillStyle=TK['screen-ink'];ctx.font='700 '+(u*0.6)+'px '+FONT_L;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('?',cx,cy);ctx.restore();}
+}
+function setupCanvas(cv,w,h){const d=Math.min(2,window.devicePixelRatio||1);const W=Math.round(w*d),H=Math.round(h*d);if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;cv.style.width=w+'px';cv.style.height=h+'px';const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return ctx;}
+function canvasPoint(cv,e,logicalW){const r=cv.getBoundingClientRect();const s=logicalW/r.width;return{x:(e.clientX-r.left)*s,y:(e.clientY-r.top)*s};}
+function embSvg(e,size){const S=size||18,c=`var(--${EM_TOK[e]})`;let p='';
+  if(e===0)p='<path d="M9 2.5 15.5 9 9 15.5 2.5 9Z"/>';else if(e===1)p='<circle cx="9" cy="9" r="5.6"/>';else if(e===2)p='<path d="M9 3 15.2 14.2H2.8Z"/>';else p='<path d="M7 3h4v4h4v4h-4v4H7v-4H3V7h4Z"/>';
+  return `<svg class="em" viewBox="0 0 18 18" width="${S}" height="${S}" aria-hidden="true"><rect x="0.6" y="0.6" width="16.8" height="16.8" rx="3.6" fill="var(--plate)" stroke="var(--plate-ink)" stroke-width="1"/><g fill="${c}" stroke="var(--plate-ink)" stroke-width="0.9">${p}</g></svg>`;}
+function embRow(arr){return '<span class="embs">'+arr.map(e=>embSvg(e,16)).join('')+'</span>';}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+document.querySelectorAll('i.emb').forEach(el=>{el.outerHTML=embSvg(+el.dataset.e,18);});
+function ro(el,fn){let last=-1;const run=()=>{const w=el.clientWidth;if(w!==last){last=w;fn(w);}};if('ResizeObserver' in window)new ResizeObserver(run).observe(el);else addEventListener('resize',run);run();}
+
+/* ================= Inspect (right click / long press) ================= */
+let inspLastFocus=null;
+function openInspect(o){
+  inspLastFocus=document.activeElement;
+  $('insp-kicker').textContent=o.kicker||'Inspect';$('insp-title').textContent=o.title||'';
+  $('insp-body').innerHTML=o.html||'';
+  const cv=$('insp-canvas');
+  $('insp').hidden=false;
+  if(o.card||o.draw){cv.hidden=false;const W=Math.min(488,cv.parentElement.clientWidth);
+    if(o.card){const u=W/4;const ctx=setupCanvas(cv,W,u+2);ctx.clearRect(0,0,W,u+2);drawBanner(ctx,W/2,u/2+1,0,u,o.card,{plate:u*0.42,emblems:o.emblems!==false});}
+    else{const H=o.h?o.h(W):W*0.5;const ctx=setupCanvas(cv,W,H);ctx.clearRect(0,0,W,H);o.draw(ctx,W,H);}
+  }else cv.hidden=true;
+  $('insp-close').focus();
+}
+function closeInspect(){$('insp').hidden=true;if(inspLastFocus&&inspLastFocus.focus)try{inspLastFocus.focus({preventScroll:true});}catch(e){}}
+$('insp-close').addEventListener('click',closeInspect);
+$('insp').addEventListener('click',e=>{if(e.target===$('insp'))closeInspect();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('insp').hidden)closeInspect();hideTip();}});
+function cardHtml(card,extra){
+  if(card.missing)return extra||'';
+  const s=SERIES[card.s];
+  let h='<dl>';
+  h+=`<dt>Series</dt><dd>${esc(s.name)}${card.s<6?` · card ${card.num} of 4`:''}</dd>`;
+  if(card.emb)h+=`<dt>Emblems</dt><dd>${embRow(card.emb)} ${card.emb.map(e=>EM_NAMES[e]).join(', ')} (as printed, left to right)</dd>`;
+  if(card.pattern!=null)h+=`<dt>Pattern</dt><dd>Pattern ${card.pattern+1} of 16, set by the card's ID. Every player has every pattern, so owning this card gives variety, not power.</dd>`;
+  if(card.foil)h+=`<dt>Rarity</dt><dd>Foil tile (cosmetic shimmer).</dd>`;
+  h+='</dl>';return h+(extra||'');
+}
+
+/* Long press + right click helper for elements with their own inspect content. */
+function pressable(el,opt){
+  el.dataset.ownInspect='1';
+  let timer=null,sx=0,sy=0,fired=false,lastInspect=0,lastType='mouse';
+  el.addEventListener('pointerdown',e=>{lastType=e.pointerType||'mouse';if(e.button!==0)return;fired=false;sx=e.clientX;sy=e.clientY;
+    if(e.pointerType!=='mouse'){clearTimeout(timer);const pt={clientX:sx,clientY:sy};timer=setTimeout(()=>{timer=null;fired=true;lastInspect=Date.now();opt.onInspect(pt);},480);}});
+  el.addEventListener('pointermove',e=>{if(timer&&Math.hypot(e.clientX-sx,e.clientY-sy)>10){clearTimeout(timer);timer=null;}if(opt.onHover&&e.pointerType==='mouse')opt.onHover(e);});
+  const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+  el.addEventListener('pointerup',clear);el.addEventListener('pointercancel',clear);
+  el.addEventListener('pointerleave',e=>{clear();if(opt.onLeave&&e.pointerType==='mouse')opt.onLeave(e);});
+  el.addEventListener('click',e=>{if(fired||Date.now()-lastInspect<650){e.preventDefault();e.stopPropagation();fired=false;return;}
+    const type=e.detail===0?'keyboard':(e.pointerType||lastType||'mouse');if(opt.onTap)opt.onTap(e,type);});
+  el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();clear();if(Date.now()-lastInspect<650)return;lastInspect=Date.now();opt.onInspect(e);});
+}
+
+/* Generic tooltip for [data-tip] elements. */
+const tip=$('tip');let tipTimer=null,tipFired=0,tipSX=0,tipSY=0;
+function showTip(el){tip.textContent=el.dataset.tip;tip.hidden=false;const r=el.getBoundingClientRect();const tw=tip.offsetWidth,th=tip.offsetHeight;
+  let x=Math.min(Math.max(8,r.left+r.width/2-tw/2),innerWidth-tw-8);let y=r.top-th-8;if(y<8)y=r.bottom+8;tip.style.left=x+'px';tip.style.top=y+'px';}
+function hideTip(){tip.hidden=true;}
+document.addEventListener('contextmenu',e=>{const el=e.target.closest('[data-tip]');if(!el||e.target.closest('[data-own-inspect]'))return;e.preventDefault();if(Date.now()-tipFired<650)return;tipFired=Date.now();showTip(el);});
+document.addEventListener('pointerdown',e=>{if(!tip.hidden&&!e.target.closest('#tip'))hideTip();const el=e.target.closest('[data-tip]');if(!el||e.pointerType==='mouse'||e.target.closest('[data-own-inspect]'))return;
+  tipSX=e.clientX;tipSY=e.clientY;clearTimeout(tipTimer);tipTimer=setTimeout(()=>{tipTimer=null;tipFired=Date.now();showTip(el);},480);},true);
+document.addEventListener('pointermove',e=>{if(tipTimer&&Math.hypot(e.clientX-tipSX,e.clientY-tipSY)>10){clearTimeout(tipTimer);tipTimer=null;}},true);
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(tipTimer){clearTimeout(tipTimer);tipTimer=null;}},true));
+document.addEventListener('click',e=>{if(Date.now()-tipFired<650&&e.target.closest('[data-tip]')){e.preventDefault();e.stopPropagation();}},true);
+addEventListener('scroll',hideTip,{passive:true});
+document.addEventListener('keydown',e=>{if((e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10'))&&document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.tip&&!document.activeElement.dataset.ownInspect){e.preventDefault();showTip(document.activeElement);}});
+
+const colName=x=>'abcdefghij'[x];
+
+/* ================= 1. Tile explorer ================= */
+(function explorer(){
+  const cv=$('ex-canvas');const ST={rot:0,bond:'running',u:40};
+  const FOCUS=CARDS[8]; // Ember Ridge "Ash Fall", foil
+  function layout(){
+    const P=[];let id=0;const add=(x,y,len)=>P.push({id:id++,x,y,len,card:CARDS[(id*7+3)%24]});
+    let focus;
+    if(ST.rot%2===0){focus={x:2,y:2,v:false};
+      for(let y=0;y<6;y++){const off=ST.bond==='stack'||y%2===0;
+        if(off){add(0,y,2);if(y!==2)add(2,y,4);add(6,y,2);}else{add(0,y,4);add(4,y,4);}}}
+    else{focus={x:3,y:1,v:true};add(0,0,4);add(4,0,4);for(let y=1;y<=4;y++){add(0,y,3);add(4,y,4);}add(0,5,2);add(2,5,4);add(6,5,2);}
+    const map={};P.forEach(p=>{for(let i=0;i<p.len;i++)map[(p.x+i)+','+p.y]=p.id;});
+    const segs=[];const f=focus;
+    if(!f.v){for(let i=0;i<4;i++){segs.push({side:'top',cx:f.x+i,cy:f.y,nx:f.x+i,ny:f.y-1});}for(let i=0;i<4;i++){segs.push({side:'bottom',cx:f.x+i,cy:f.y,nx:f.x+i,ny:f.y+1});}
+      segs.push({side:'end',cx:f.x,cy:f.y,nx:f.x-1,ny:f.y});segs.push({side:'end',cx:f.x+3,cy:f.y,nx:f.x+4,ny:f.y});}
+    else{for(let i=0;i<4;i++)segs.push({side:'left',cx:f.x,cy:f.y+i,nx:f.x-1,ny:f.y+i});for(let i=0;i<4;i++)segs.push({side:'right',cx:f.x,cy:f.y+i,nx:f.x+1,ny:f.y+i});
+      segs.push({side:'end',cx:f.x,cy:f.y,nx:f.x,ny:f.y-1});segs.push({side:'end',cx:f.x,cy:f.y+3,nx:f.x,ny:f.y+4});}
+    segs.forEach(s=>{s.id=map[s.nx+','+s.ny];});
+    const touched=new Set(segs.filter(s=>s.id!=null).map(s=>s.id));
+    return{P,focus,segs,touched};
+  }
+  function draw(){
+    const u=ST.u,W=8*u,H=6*u,ctx=setupCanvas(cv,W,H);const L=layout();
+    ctx.fillStyle=TK['cell'];ctx.fillRect(0,0,W,H);
+    L.P.forEach(p=>{const on=L.touched.has(p.id);drawBanner(ctx,(p.x+p.len/2)*u,(p.y+0.5)*u,0,u,p.card,{len:p.len,alpha:on?1:0.32,emblems:false,outline:on?TK.accent:null,outlineW:2});});
+    const f=L.focus,ang=ST.rot*Math.PI/2;
+    const cx=f.v?(f.x+0.5)*u:(f.x+2)*u,cy=f.v?(f.y+2)*u:(f.y+0.5)*u;
+    drawBanner(ctx,cx,cy,ang,u,FOCUS,{outline:TK['art-hi'],outlineW:3,plate:u*0.46});
+    ctx.font='700 '+Math.round(u*0.3)+'px '+FONT_M;ctx.textAlign='center';ctx.textBaseline='middle';
+    L.segs.forEach((s,i)=>{const mx=((s.cx+s.nx)/2+0.5)*u,my=((s.cy+s.ny)/2+0.5)*u;const horiz=s.cy!==s.ny;
+      ctx.strokeStyle=TK.accent;ctx.lineWidth=4;ctx.beginPath();if(horiz){ctx.moveTo(mx-u*0.38,my);ctx.lineTo(mx+u*0.38,my);}else{ctx.moveTo(mx,my-u*0.38);ctx.lineTo(mx,my+u*0.38);}ctx.stroke();
+      const r=u*0.2;ctx.fillStyle=TK.accent;ctx.beginPath();ctx.arc(mx,my,r,0,Math.PI*2);ctx.fill();ctx.fillStyle=TK['plate-ink'];ctx.fillText(String(i+1),mx,my+0.5);});
+    const n=L.touched.size;const ord=ST.rot>=2?'reversed':'as printed';
+    const desc=f=>!f.v?(ST.bond==='running'?'Flat in a running bond: 2 tiles above, 2 below and 1 at each end.':'Flat in a stack bond: 1 tile above, 1 below and 1 at each end. Joints sit on joints.'):'Upright across four courses: 4 tiles on each long side and 1 at each end. It ties four courses together.';
+    $('ex-readout').innerHTML=`<b>${ST.rot*90}°</b> · its 10 edge segments touch <b>${n}</b> different tiles. ${desc(f)} Emblem order: ${embRow(ST.rot>=2?FOCUS.emb.slice().reverse():FOCUS.emb)} ${f.v?'top to bottom':'left to right'}, ${ord}.`;
+    $('ex-stack').disabled=f.v;$('ex-running').disabled=f.v;
+  }
+  ro(cv.parentElement,w=>{ST.u=Math.max(28,Math.min(46,Math.floor((w-28)/8)));draw();});
+  redraws.push(draw);
+  $('ex-rotate').addEventListener('click',()=>{ST.rot=(ST.rot+1)%4;draw();});
+  const setBond=b=>{ST.bond=b;$('ex-running').setAttribute('aria-pressed',b==='running');$('ex-stack').setAttribute('aria-pressed',b==='stack');draw();};
+  $('ex-running').addEventListener('click',()=>setBond('running'));$('ex-stack').addEventListener('click',()=>setBond('stack'));
+  pressable(cv,{onTap:(e)=>{const p=canvasPoint(cv,e,8*ST.u);const L=layout();const cx=Math.floor(p.x/ST.u),cy=Math.floor(p.y/ST.u);const f=L.focus;
+      const inF=f.v?(cx===f.x&&cy>=f.y&&cy<f.y+4):(cy===f.y&&cx>=f.x&&cx<f.x+4);if(inF){ST.rot=(ST.rot+1)%4;draw();}},
+    onInspect:(e)=>{const p=canvasPoint(cv,e,8*ST.u);const L=layout();const cx=Math.floor(p.x/ST.u),cy=Math.floor(p.y/ST.u);const f=L.focus;
+      const inF=f.v?(cx===f.x&&cy>=f.y&&cy<f.y+4):(cy===f.y&&cx>=f.x&&cx<f.x+4);
+      if(inF){openInspect({kicker:'Calling card · highlighted tile',title:FOCUS.name,card:FOCUS,html:cardHtml(FOCUS,`<p>Turned ${ST.rot*90}°. Its 10 edge segments touch ${L.touched.size} different tiles here. Tap the tile or use Rotate to turn it.</p>`)});return;}
+      const pc=L.P.find(q=>cy===q.y&&cx>=q.x&&cx<q.x+q.len);if(!pc)return;
+      openInspect({kicker:pc.len===4?'Calling card · wall tile':'Cut piece · wall filler',title:pc.card.name,card:pc.card,emblems:false,html:`<p>${L.touched.has(pc.id)?'This tile touches the highlighted card, so it counts as one of its neighbours.':'This tile does not touch the highlighted card.'}${pc.len<4?' It is cut to '+pc.len+' cells to fill the course, as real walls use half bricks.':''}</p>`});}});
+  cv.addEventListener('keydown',e=>{if(e.key==='r'||e.key==='R'||e.key==='Enter'||e.key===' '){e.preventDefault();ST.rot=(ST.rot+1)%4;draw();}});
+})();
+
+/* ================= 2. Set screen mock ================= */
+(function setScreen(){
+  const row=$('set-row');const SER=0;let owned=[true,true,false,false];let fresh=-1;
+  const hints=['Owned','Owned','Locked: hypothetical unlock hint "Win 25 matches at night on any map."','Locked: hypothetical unlock hint "Finish the Night Raid challenge series."'];
+  const els=[];
+  for(let k=0;k<4;k++){const b=document.createElement('button');b.className='setcard';b.id='set-c'+k;b.innerHTML='<canvas></canvas><span class="nm"></span>';row.appendChild(b);els.push(b);
+    pressable(b,{onTap:()=>info(k,true),onInspect:()=>info(k,true)});}
+  function cardOf(k){const c=CARDS[SER*4+k];return owned[k]?c:Object.assign({},c,{missing:true});}
+  function info(k,open){const c=cardOf(k);if(!open)return;openInspect({kicker:owned[k]?'Owned calling card':'Locked calling card',title:owned[k]?c.name:'Unknown card '+(k+1)+' of 4',card:c,
+    html:owned[k]?cardHtml(c,'<p>Owned cards are tiles in every mode. Placing set members in a line completes set objectives.</p>'):`<p>${esc(hints[k])}</p><p>Locked cards show as silhouettes so the player knows what to chase.</p>`});}
+  function draw(){const n=owned.filter(Boolean).length;els.forEach((b,k)=>{const cv=b.querySelector('canvas');const w=Math.max(40,b.clientWidth-10);const u=w/4;const ctx=setupCanvas(cv,w,u);ctx.clearRect(0,0,w,u);
+      drawBanner(ctx,w/2,u/2,0,u,cardOf(k),{plate:u*0.48});b.querySelector('.nm').textContent=owned[k]?CARDS[k].name:'Locked';b.classList.toggle('new',k===fresh);
+      b.setAttribute('aria-label',owned[k]?CARDS[k].name+', owned':'Locked card '+(k+1));});
+    $('set-readout').innerHTML=n===4?`<b>4 of 4</b> · Night Raid set complete. The set frame is unlocked and a Gold set badge shows on your profile.`:
+      (fresh>=0?`New card: <b>${esc(CARDS[fresh].name)}</b>. Night Raid is now <b>${n} of 4</b>, which opens the objective "3 Night Raid cards in one course: +4 stars".`:`Night Raid: <b>${n} of 4</b> owned. The two silhouettes are the cards still to chase.`);
+    $('set-unlock').disabled=n===4;}
+  ro(row,draw);redraws.push(draw);
+  $('set-unlock').addEventListener('click',()=>{const k=owned.indexOf(false);if(k<0)return;owned[k]=true;fresh=k;draw();});
+  $('set-reset').addEventListener('click',()=>{owned=[true,true,false,false];fresh=-1;draw();});
+})();
+
+/* ================= 3.1 Running Bond ================= */
+(function runningBond(){
+  const N=8,cv=$('rb-canvas');
+  const OBJ=[
+    {id:'pair',text:'Series pair: two tiles of the same series end to end in one course.',pts:4},
+    {id:'hub',text:'Hub: one upright tile touching 6 or more other tiles.',pts:4},
+    {id:'pillars',text:'Pillars: stand 3 tiles upright.',pts:4}
+  ];
+  let S=null,u=40,hoverCell=null,popAnim=null;
+  const today=new Date();const DAILY=today.getUTCFullYear()*10000+(today.getUTCMonth()+1)*100+today.getUTCDate();
+  function fresh(seed,daily){const r=rng(seed);const deck=shuffle([...Array(24).keys()],r);
+    const s={seed,daily,deck,pos:0,grid:Array.from({length:N},()=>Array(N).fill(null)),placed:[],market:[],sel:null,rot:0,ghost:null,cursor:{x:3,y:0},refreshUsed:false,ended:false,final:null,obj:OBJ[Math.floor(r()*3)],parts:{match:0,bond:0,course:0},hist:[],pops:[],msg:''};
+    for(let i=0;i<3;i++)s.market.push(s.deck[s.pos++]);return s;}
+  const draw1=s=>s.pos<s.deck.length?s.deck[s.pos++]:null;
+  function cellsOf(rot,x,y){const v=rot%2===1;const c=[];for(let i=0;i<4;i++)c.push(v?[x,y+i]:[x+i,y]);return c;}
+  function embAt(card,rot,i){const e=card.emb;if(rot===0)return e[i];if(rot===2)return e[3-i];if(rot===1)return e[3-i];return e[i];}
+  function check(s,rot,x,y){const c=cellsOf(rot,x,y);
+    if(c.some(([cx,cy])=>cx<0||cy<0||cx>=N||cy>=N))return{ok:false,why:'That runs off the wall.'};
+    if(c.some(([cx,cy])=>s.grid[cy][cx]))return{ok:false,why:'Those cells are already taken.'};
+    if(rot%2===0){const sup=c.filter(([cx,cy])=>cy===0||s.grid[cy-1][cx]).length;if(sup<2)return{ok:false,why:'Not supported: a flat tile needs at least 2 of its 4 cells resting on the floor or on a tile.'};}
+    else{const[bx,by]=c[0];if(!(by===0||s.grid[by-1][bx]))return{ok:false,why:'Not supported: an upright tile’s bottom cell must rest on the floor or on a tile.'};}
+    return{ok:true};}
+  function candidate(s,rot,cx,cy){const opts=rot%2===0?[[cx-1,cy],[cx,cy],[cx-2,cy],[cx-3,cy]]:[[cx,cy],[cx,cy-1],[cx,cy-2],[cx,cy-3]];
+    let first=null;for(const[x,y]of opts){const r=check(s,rot,x,y);if(r.ok)return{x,y,rot,ok:true};if(!first&&cellsOf(rot,x,y).every(([a,b])=>a>=0&&b>=0&&a<N&&b<N))first={x,y,rot,ok:false,why:r.why};}
+    if(first)return first;const x=rot%2===0?Math.max(0,Math.min(N-4,cx-1)):cx,y=rot%2===0?cy:Math.max(0,Math.min(N-4,cy));const r=check(s,rot,x,y);return{x,y,rot,ok:r.ok,why:r.why};}
+  function fits(s,ci){for(const rot of[0,1])for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(check(s,rot,x,y).ok)return true;return false;}
+  function scoreFor(s,card,rot,x,y){const c=cellsOf(rot,x,y);const id=-1;const own={};c.forEach(([cx,cy],i)=>own[cx+','+cy]=embAt(card,rot,i));
+    const at=(cx,cy)=>{if(own[cx+','+cy]!=null)return{t:id,e:own[cx+','+cy]};if(cx<0||cy<0||cx>=N||cy>=N)return null;return s.grid[cy][cx];};
+    const segs=[];c.forEach(([cx,cy],i)=>{const e=own[cx+','+cy];[[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{const nx=cx+dx,ny=cy+dy;if(own[nx+','+ny]!=null)return;const n=at(nx,ny);segs.push({cx,cy,nx,ny,match:!!(n&&n.t!==id&&n.e===e),nb:n?n.t:null});});});
+    const match=segs.filter(q=>q.match).length;
+    let bond=0;if(rot%2===0&&y>0){const set=new Set(c.map(([cx])=>s.grid[y-1][cx]).filter(Boolean).map(g=>g.t));if(set.size>=2)bond=2;}
+    const rows=rot%2===0?[y]:[y,y+1,y+2,y+3];let course=0;const done=[];rows.forEach(ry=>{let full=true;for(let rx=0;rx<N;rx++)if(!(own[rx+','+ry]!=null||s.grid[ry][rx]))full=false;if(full){course+=3;done.push(ry);}});
+    const nbs=new Set(segs.filter(q=>q.nb!=null).map(q=>q.nb));
+    return{match,bond,course,total:match+bond+course,segs,doneRows:done,neighbours:nbs.size};}
+  function neighboursOf(s,p){const c=cellsOf(p.rot,p.x,p.y);const own=new Set(c.map(([a,b])=>a+','+b));const set=new Set();
+    c.forEach(([cx,cy])=>[[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{const nx=cx+dx,ny=cy+dy;if(own.has(nx+','+ny)||nx<0||ny<0||nx>=N||ny>=N)return;const g=s.grid[ny][nx];if(g)set.add(g.t);}));return set.size;}
+  function objMet(s){const P=s.placed;
+    if(s.obj.id==='pair'){for(const a of P)for(const b of P)if(a!==b&&a.rot%2===0&&b.rot%2===0&&a.y===b.y&&a.x+4===b.x&&CARDS[a.card].s===CARDS[b.card].s)return true;return false;}
+    if(s.obj.id==='hub')return P.some(p=>p.rot%2===1&&neighboursOf(s,p)>=6);
+    return P.filter(p=>p.rot%2===1).length>=3;}
+  function holes(s){let h=0;for(let x=0;x<N;x++){let above=false;for(let y=N-1;y>=0;y--){if(s.grid[y][x])above=true;else if(above)h++;}}return h;}
+  function filled(s){let n=0;for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(s.grid[y][x])n++;return n;}
+  const snap=s=>JSON.stringify({...s,hist:[],pops:[]});
+  function place(g){const s=S;if(s.sel==null||!g||!g.ok)return;
+    s.hist.push(snap(s));const ci=s.market[s.sel],card=CARDS[ci];const sc=scoreFor(s,card,g.rot,g.x,g.y);const id=s.placed.length;
+    cellsOf(g.rot,g.x,g.y).forEach(([cx,cy],i)=>{s.grid[cy][cx]={t:id,e:embAt(card,g.rot,i)};});
+    s.placed.push({card:ci,rot:g.rot,x:g.x,y:g.y,match:sc.match,bond:sc.bond,course:sc.course,neighbours:sc.neighbours});
+    s.parts.match+=sc.match;s.parts.bond+=sc.bond;s.parts.course+=sc.course;
+    s.pops=sc.segs.filter(q=>q.match).map(q=>({x:(q.cx+q.nx)/2+0.5,y:(q.cy+q.ny)/2+0.5,t:'+1'}));
+    const cx=g.rot%2===0?g.x+2:g.x+0.5,cy=g.rot%2===0?g.y+0.5:g.y+2;
+    if(sc.bond)s.pops.push({x:cx,y:cy+0.02,t:'BOND +2',big:true});
+    sc.doneRows.forEach(ry=>s.pops.push({x:4,y:ry+0.5,t:'COURSE +3',big:true}));
+    s.market[s.sel]=draw1(s);const where=g.rot%2===0?`flat on course ${g.y+1}`:`upright on courses ${g.y+1}–${g.y+4}`;
+    const parts=[`${sc.match} match`];if(sc.bond)parts.push('2 bond');if(sc.course)parts.push(sc.course+' course');
+    s.sel=null;s.ghost=null;s.rot=0;
+    let msg=`Laid <b>${esc(card.name)}</b> ${where}: <span class="good">+${sc.total}</span> (${parts.join(', ')}).`;
+    if(s.placed.length>=16){msg+=' '+finish(s);}
+    else{const any=s.market.some(m=>m!=null&&fits(s,m));
+      if(!any){msg+=' No tile fits anywhere in the wall now, so the game ends. '+finish(s);}
+      else msg+=' Pick the next tile.';}
+    s.msg=msg;startPops();render();}
+  function finish(s){s.ended=true;s.sel=null;s.ghost=null;const full=filled(s)===64;const h=holes(s);const om=objMet(s);
+    const base=s.parts.match+s.parts.bond+s.parts.course;const total=base+(full?10:0)-h+(om?s.obj.pts:0);
+    s.final={perfect:full?10:0,holes:h,obj:om?s.obj.pts:0,total};const md=medal(total);
+    return `<b>Wall finished.</b> ${full?'Perfect wall +10. ':''}${h?`${h} hole${h>1?'s':''} −${h}. `:'No holes. '}Objective ${om?'met +'+s.obj.pts:'missed'}. Final score <b>${total}</b>${md?', '+md:''}. Restart or deal a new deck.`;}
+  function medal(t){return t>=70?'Gold':t>=55?'Silver':t>=40?'Bronze':'';}
+  /* ---- render ---- */
+  function render(){const s=S,W=N*u,H=N*u,ctx=setupCanvas(cv,W,H);
+    ctx.fillStyle=TK['cell'];ctx.fillRect(0,0,W,H);ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;
+    for(let i=1;i<N;i++){ctx.beginPath();ctx.moveTo(i*u+0.5,0);ctx.lineTo(i*u+0.5,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*u+0.5);ctx.lineTo(W,i*u+0.5);ctx.stroke();}
+    ctx.fillStyle=TK.floor;ctx.fillRect(0,H-3,W,3);
+    s.placed.forEach((p,i)=>{const c=CARDS[p.card];const cx=p.rot%2===0?(p.x+2)*u:(p.x+0.5)*u,cy=p.rot%2===0?(N-p.y-0.5)*u:(N-p.y-2)*u;
+      drawBanner(ctx,cx,cy,p.rot*Math.PI/2,u,c,{outline:i===s.placed.length-1&&!s.ended?TK.accent:null,outlineW:2});});
+    if(s.ended){const h=[];for(let x=0;x<N;x++){let above=false;for(let y=N-1;y>=0;y--){if(s.grid[y][x])above=true;else if(above)h.push([x,y]);}}
+      h.forEach(([x,y])=>{ctx.strokeStyle=TK.bad;ctx.lineWidth=2;const px=x*u,py=(N-1-y)*u;ctx.beginPath();ctx.moveTo(px+u*0.25,py+u*0.25);ctx.lineTo(px+u*0.75,py+u*0.75);ctx.moveTo(px+u*0.75,py+u*0.25);ctx.lineTo(px+u*0.25,py+u*0.75);ctx.stroke();});}
+    const g=s.ghost;if(g&&s.sel!=null){const c=CARDS[s.market[s.sel]];const cx=g.rot%2===0?(g.x+2)*u:(g.x+0.5)*u,cy=g.rot%2===0?(N-g.y-0.5)*u:(N-g.y-2)*u;
+      drawBanner(ctx,cx,cy,g.rot*Math.PI/2,u,c,{alpha:0.62,outline:g.ok?TK.ok:TK.bad,outlineW:3});}
+    if(document.activeElement===cv&&!s.ended){const k=s.cursor;ctx.setLineDash([4,3]);ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=2;ctx.strokeRect(k.x*u+2,(N-1-k.y)*u+2,u-4,u-4);ctx.setLineDash([]);}
+    drawPops(ctx);
+    $('rb-score').textContent=s.final?s.final.total:(s.parts.match+s.parts.bond+s.parts.course);
+    $('rb-count').textContent=s.placed.length+'/16';$('rb-decks').textContent=s.deck.length-s.pos;
+    const tot=s.final?s.final.total:(s.parts.match+s.parts.bond+s.parts.course);$('rb-medal').textContent=medal(tot)||'–';
+    $('rb-deal').textContent=s.daily?'Daily deal':'Deal #'+(s.seed%1000);
+    const met=objMet(s);$('rb-obj').innerHTML=`<span class="chip${met?' met':''}" data-tip="${met?'Objective met: +4 at the end.':'Objective not met yet. It scores +4 at the end if met.'}">${met?'Met +4':'Objective'}</span><span>${esc(s.obj.text)} +${s.obj.pts}</span>`;
+    $('rb-status').innerHTML=s.msg;
+    renderMarket();renderRot();
+    $('rb-place').disabled=!(g&&g.ok&&s.sel!=null);$('rb-undo').disabled=!s.hist.length;$('rb-rotate').disabled=s.sel==null;
+    const b=s.parts;const f=s.final;
+    $('rb-break').innerHTML=[['Match',b.match],['Bond',b.bond],['Course',b.course],['Perfect',f?'+'+f.perfect:'–'],['Holes',f?(f.holes?'−'+f.holes:'0'):'–'],['Objective',f?'+'+f.obj:'–']].map(([k,v])=>`<div><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    const max=80;$('rb-fill').style.width=Math.min(100,Math.max(0,tot)/max*100)+'%';
+    $('rb-track').querySelectorAll('.tick,.tl').forEach(n=>n.remove());
+    [[40,'Bronze'],[55,'Silver'],[70,'Gold']].forEach(([v,n])=>{const t=document.createElement('div');t.className='tick';t.style.left=(v/max*100)+'%';$('rb-track').appendChild(t);const l=document.createElement('div');l.className='tl';l.style.left=(v/max*100)+'%';l.textContent=n[0]+' '+v;$('rb-track').appendChild(l);});
+  }
+  function drawPops(ctx){const s=S;if(!s.pops.length)return;const now=performance.now();let a=1,lift=0;
+    if(popAnim&&!reduced()){const age=now-popAnim;a=age<1100?1:Math.max(0,1-(age-1100)/500);lift=Math.min(1,age/400)*u*0.12;}
+    if(a<=0)return;ctx.save();ctx.globalAlpha=a;ctx.textAlign='center';ctx.textBaseline='middle';
+    s.pops.forEach(p=>{const px=p.x*u,py=(N-p.y)*u-lift;const fs=p.big?Math.round(u*0.32):Math.round(u*0.3);ctx.font='700 '+fs+'px '+FONT_M;const tw=ctx.measureText(p.t).width+8;
+      ctx.fillStyle=TK.ok;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.5;ctx.beginPath();rr(ctx,px-tw/2,py-fs*0.7,tw,fs*1.4,fs*0.4);ctx.fill();ctx.stroke();ctx.fillStyle=TK['plate-ink'];ctx.fillText(p.t,px,py+0.5);});
+    ctx.restore();}
+  function startPops(){popAnim=performance.now();if(reduced())return;const tick=()=>{if(!popAnim)return;const age=performance.now()-popAnim;render();if(age<1650)requestAnimationFrame(tick);else{S.pops=[];popAnim=null;render();}};requestAnimationFrame(tick);}
+  function renderMarket(){const m=$('rb-market');const s=S;
+    if(m.children.length!==3){m.innerHTML='';for(let i=0;i<3;i++){const b=document.createElement('button');b.className='mkt';b.id='rb-m'+i;b.innerHTML='<canvas></canvas><span class="nm"></span>';m.appendChild(b);
+      pressable(b,{onTap:()=>select(i),onInspect:()=>inspectMarket(i)});}}
+    [...m.children].forEach((b,i)=>{const ci=s.market[i];const cvs=b.querySelector('canvas');const w=Math.max(40,b.clientWidth-12),uu=w/4;const ctx=setupCanvas(cvs,w,uu);ctx.clearRect(0,0,w,uu);
+      b.disabled=ci==null||s.ended;b.setAttribute('aria-pressed',s.sel===i);
+      if(ci==null){b.querySelector('.nm').textContent='Empty';b.setAttribute('aria-label','Empty market slot');return;}
+      const c=CARDS[ci];drawBanner(ctx,w/2,uu/2,0,uu,c,{plate:uu*0.52});b.querySelector('.nm').textContent=c.name;
+      b.setAttribute('aria-label',`Market tile ${i+1}: ${c.name}, ${SERIES[c.s].name}, emblems ${c.emb.map(e=>EM_NAMES[e]).join(' ')}`);});}
+  function renderRot(){const s=S;if(s.sel==null){$('rb-rot').innerHTML=s.ended?'The wall is finished.':'Pick a tile to rotate it.';return;}
+    const c=CARDS[s.market[s.sel]];const order=[0,1,2,3].map(i=>embAt(c,s.rot,i));const v=s.rot%2===1;
+    $('rb-rot').innerHTML=`${s.rot*90}° · ${v?'upright':'flat'} · ${embRow(v?order.slice().reverse():order)} ${v?'top to bottom':'left to right'}`;}
+  function select(i){const s=S;if(s.ended||s.market[i]==null)return;if(s.sel===i){s.sel=null;s.ghost=null;s.msg='Tile put back. Pick a market tile.';render();return;}
+    s.sel=i;s.rot=0;const c=CARDS[s.market[i]];s.ghost=hoverCell?candidate(s,s.rot,hoverCell.x,hoverCell.y):null;
+    s.msg=`Selected <b>${esc(c.name)}</b>. Rotate it if you like, then tap the wall where it should go.`;render();}
+  function rotate(){const s=S;if(s.sel==null||s.ended)return;s.rot=(s.rot+1)%4;
+    if(s.ghost){const a=s.lastCell||{x:s.ghost.x,y:s.ghost.y};s.ghost=candidate(s,s.rot,a.x,a.y);previewMsg();}
+    else s.msg=`Turned to ${s.rot*90}°: ${s.rot%2?'upright':'flat'}${s.rot>=2?', emblem order reversed':''}.`;render();}
+  function previewMsg(){const s=S,g=s.ghost;if(!g)return;if(!g.ok){s.msg=`<span class="warn">Can't go there.</span> ${g.why}`;return;}
+    const sc=scoreFor(s,CARDS[s.market[s.sel]],g.rot,g.x,g.y);const parts=[`${sc.match} match`];if(sc.bond)parts.push('2 bond');if(sc.course)parts.push(sc.course+' course');
+    s.msg=`Preview: +${sc.total} here (${parts.join(', ')}). Tap the preview again or press Place.`;}
+  function cellAt(e){const p=canvasPoint(cv,e,N*u);const x=Math.floor(p.x/u),y=N-1-Math.floor(p.y/u);if(x<0||y<0||x>=N||y>=N)return null;return{x,y};}
+  function inGhost(c){const g=S.ghost;return g&&cellsOf(g.rot,g.x,g.y).some(([a,b])=>a===c.x&&b===c.y);}
+  function tap(c,type){const s=S;if(!c)return;s.cursor={x:c.x,y:c.y};
+    if(s.ended){s.msg='The wall is finished. Restart or deal a new deck.';render();return;}
+    if(s.sel==null){const g=s.grid[c.y][c.x];s.msg=g?`That's <b>${esc(CARDS[s.placed[g.t].card].name)}</b>. Long-press or right-click to inspect it. Pick a market tile to lay a new one.`:'Pick a tile from the market first.';render();return;}
+    if(type==='mouse'){s.lastCell=c;const g=candidate(s,s.rot,c.x,c.y);if(g.ok){place(g);return;}s.ghost=g;previewMsg();render();return;}
+    if(s.ghost&&s.ghost.ok&&inGhost(c)){place(s.ghost);return;}
+    s.lastCell=c;s.ghost=candidate(s,s.rot,c.x,c.y);previewMsg();render();}
+  function inspectCell(c){const s=S;if(!c)return;const g=s.grid[c.y][c.x];
+    if(g){const p=s.placed[g.t],card=CARDS[p.card];const n=neighboursOf(s,p);
+      openInspect({kicker:`Wall tile ${g.t+1} of ${s.placed.length}`,title:card.name,card,html:cardHtml(card,`<dl><dt>Placed</dt><dd>${p.rot*90}° · ${p.rot%2?`upright, courses ${p.y+1}–${p.y+4}, column ${colName(p.x)}`:`flat, course ${p.y+1}, columns ${colName(p.x)}–${colName(p.x+3)}`}</dd>
+        <dt>Scored</dt><dd>+${p.match+p.bond+p.course}: ${p.match} emblem match${p.match===1?'':'es'}${p.bond?', +2 bond (it bridges a joint)':''}${p.course?`, +${p.course} for completing a course`:''}.</dd><dt>Touches</dt><dd>${n} other tile${n===1?'':'s'} now.</dd></dl>`)});return;}
+    if(inGhost(c)&&s.sel!=null){inspectMarket(s.sel);return;}
+    let above=false;for(let y=c.y+1;y<N;y++)if(s.grid[y][c.x])above=true;
+    openInspect({kicker:'Empty cell',title:`Course ${c.y+1}, column ${colName(c.x)}`,html:`<p>${c.y===0?'This is the floor course.':`Course ${c.y+1} from the floor.`} ${above?'<b>A tile sits above it, so it is a hole: −1 at the end unless you fill it.</b> You can still slide a tile in under the overhang (the mason’s insert).':'Nothing above it yet.'}</p><p>A flat tile needs 2 of its 4 cells supported; an upright tile needs its bottom cell supported.</p>`});}
+  function inspectMarket(i){const s=S,ci=s.market[i];if(ci==null)return;const c=CARDS[ci];const inWall=s.placed.filter(p=>CARDS[p.card].s===c.s).length;
+    openInspect({kicker:`Market tile ${i+1} of 3`,title:c.name,card:c,html:cardHtml(c,`<p>${inWall} ${SERIES[c.s].name} card${inWall===1?' is':'s are'} already in this wall. Pick it, then rotate: 0° and 180° lay it flat, 90° and 270° stand it upright; 180° and 270° reverse the emblem order.</p>`)});}
+  pressable(cv,{onTap:(e,type)=>tap(cellAt(e),type),onInspect:e=>inspectCell(cellAt(e)),
+    onHover:e=>{const c=cellAt(e);hoverCell=c;if(S.sel==null||S.ended||!c)return;if(S.ghost&&S.lastCell&&S.lastCell.x===c.x&&S.lastCell.y===c.y)return;S.lastCell=c;S.ghost=candidate(S,S.rot,c.x,c.y);previewMsg();render();},
+    onLeave:()=>{hoverCell=null;}});
+  cv.addEventListener('focus',()=>render());cv.addEventListener('blur',()=>render());
+  $('rb-screen').addEventListener('keydown',e=>{const s=S;if(e.target.closest('button')&&!(e.key==='r'||e.key==='R'||/^[1-3]$/.test(e.key)))return;
+    if(e.key==='r'||e.key==='R'){e.preventDefault();rotate();return;}
+    if(/^[1-3]$/.test(e.key)){e.preventDefault();select(+e.key-1);return;}
+    if(e.target!==cv)return;const k=s.cursor;let moved=false;
+    if(e.key==='ArrowLeft'){k.x=Math.max(0,k.x-1);moved=true;}else if(e.key==='ArrowRight'){k.x=Math.min(N-1,k.x+1);moved=true;}
+    else if(e.key==='ArrowUp'){k.y=Math.min(N-1,k.y+1);moved=true;}else if(e.key==='ArrowDown'){k.y=Math.max(0,k.y-1);moved=true;}
+    else if(e.key==='Enter'||e.key===' '){e.preventDefault();if(s.ghost&&s.ghost.ok&&inGhost(k))place(s.ghost);else tap({x:k.x,y:k.y},'keyboard');return;}
+    else if(e.key==='i'||e.key==='I'){inspectCell(k);return;}
+    if(moved){e.preventDefault();if(s.sel!=null&&!s.ended){s.lastCell={x:k.x,y:k.y};s.ghost=candidate(s,s.rot,k.x,k.y);previewMsg();}render();}});
+  $('rb-rotate').addEventListener('click',rotate);
+  $('rb-place').addEventListener('click',()=>place(S.ghost));
+  $('rb-undo').addEventListener('click',()=>{const s=S;if(!s.hist.length)return;const h=s.hist.slice(0,-1);const prev=JSON.parse(s.hist[s.hist.length-1]);S=Object.assign(prev,{hist:h,pops:[],msg:'Took back the last tile and its points.'});popAnim=null;render();});
+  $('rb-reset').addEventListener('click',()=>{S=fresh(S.seed,S.daily);S.msg='Restarted this deal. Pick a tile from the market.';popAnim=null;render();});
+  $('rb-new').addEventListener('click',()=>{S=fresh((Math.random()*1e9)>>>0,false);S.msg='New deck shuffled. Pick a tile from the market.';popAnim=null;render();});
+  S=fresh(DAILY,true);S.msg='Daily deal: everyone gets this deck today. Pick one of the 3 market tiles below.';
+  ro($('rb-screen'),w=>{u=Math.max(30,Math.min(48,Math.floor((w-20)/N)));render();});
+  redraws.push(render);
+  window.__cct=window.__cct||{};window.__cct.rb={get:()=>S,check:(r,x,y)=>check(S,r,x,y),place:(r,x,y)=>{S.ghost={x,y,rot:r,ok:check(S,r,x,y).ok};S.rot=r;place(S.ghost);},select};
+})();
+
+/* ================= 3.2 Pivot ================= */
+(function pivot(){
+  const N=7,EX={x:6,y:6},cv=$('pv-canvas');
+  const PUZ=[
+    {par:4,bars:[[5,2,0],[1,6,1],[6,2,0],[2,1,1]]},
+    {par:8,bars:[[0,2,0],[2,2,0],[3,1,0],[4,3,0],[3,0,1]]},
+    {par:12,bars:[[1,5,1],[3,1,1],[0,3,1],[0,2,1],[6,2,0],[3,6,1]]}
+  ];
+  const SKINS=[CARDS[1],CARDS[5],CARDS[13],CARDS[18],CARDS[22],CARDS[10]];
+  const LET='KABCDE';
+  let S=null,u=44,anim=null;
+  const cellsOf=b=>{const r=[];for(let i=0;i<4;i++)r.push(b.h?[b.x+i,b.y]:[b.x,b.y+i]);return r;};
+  const inb=(x,y)=>x>=0&&y>=0&&x<N&&y<N;
+  function occ(bars,skip){const g=new Array(N*N).fill(-1);bars.forEach((b,i)=>{if(i===skip)return;cellsOf(b).forEach(([x,y])=>g[y*N+x]=i);});return g;}
+  function endName(b,end){return b.h?(end===0?'left':'right'):(end===0?'top':'bottom');}
+  function moves(bars,i,withBlocked){const b=bars[i],g=occ(bars,i),out=[],blocked=[];
+    const free=(x,y)=>inb(x,y)&&g[y*N+x]<0;
+    for(const s of[-1,1]){const nb={x:b.x,y:b.y,h:b.h};if(b.h)nb.x+=s;else nb.y+=s;
+      const enter=b.h?(s<0?[nb.x,nb.y]:[nb.x+3,nb.y]):(s<0?[nb.x,nb.y]:[nb.x,nb.y+3]);
+      const label='Slide '+(b.h?(s<0?'left':'right'):(s<0?'up':'down'));
+      if(free(enter[0],enter[1]))out.push({type:'slide',dir:s,bar:nb,handle:enter,label});
+      else if(withBlocked)blocked.push(label+': '+(inb(enter[0],enter[1])?'cell '+colName(enter[0])+(enter[1]+1)+' is taken by Bar '+LET[g[enter[1]*N+enter[0]]]:'the board edge is in the way')+'.');}
+    const c=cellsOf(b);
+    for(const end of[0,3]){const P=c[end],o=c[3-end];const d=[Math.sign(o[0]-P[0]),Math.sign(o[1]-P[1])];
+      for(const cw of[true,false]){const dp=cw?[-d[1],d[0]]:[d[1],-d[0]];let ok=true,why='';const wedge=[];
+        for(let a=0;a<4;a++)for(let q=0;q<4;q++){if(a*a+q*q>12.25)continue;const x=P[0]+a*d[0]+q*dp[0],y=P[1]+a*d[1]+q*dp[1];wedge.push([x,y]);
+          if(ok&&!free(x,y)){ok=false;why=inb(x,y)?'the wedge hits Bar '+LET[g[y*N+x]]+' at '+colName(x)+(y+1):'the wedge leaves the board';}}
+        const ex=P[0]+3*dp[0],ey=P[1]+3*dp[1];
+        const label=`Swing ${cw?'clockwise':'anticlockwise'} about the ${endName(b,end)} end`;
+        if(ok)out.push({type:'swing',end,cw,bar:{h:dp[1]===0,x:Math.min(P[0],ex),y:Math.min(P[1],ey)},handle:[ex,ey],pivot:P,dir:d,wedge,label});
+        else if(withBlocked)blocked.push(label+': '+why+'.');}}
+    return withBlocked?{out,blocked}:out;}
+  const key=bars=>bars.map(b=>b.x+','+b.y+(b.h?'h':'v')).join('|');
+  const solvedBars=bars=>cellsOf(bars[0]).some(([x,y])=>x===EX.x&&y===EX.y);
+  function solve(start){const seen=new Map();const q=[start];seen.set(key(start),null);let h=0;
+    while(h<q.length){const s=q[h++];if(solvedBars(s)){const path=[];let k=key(s);while(seen.get(k)){const p=seen.get(k);path.push(p.m);k=p.prev;}return path.reverse();}
+      if(seen.size>60000)return null;const ks=key(s);
+      for(let i=0;i<s.length;i++)for(const m of moves(s,i)){const ns=s.slice();ns[i]={x:m.bar.x,y:m.bar.y,h:m.bar.h};const k=key(ns);if(!seen.has(k)){seen.set(k,{prev:ks,m:{i,m}});q.push(ns);}}}
+    return null;}
+  function load(p){const P=PUZ[p];S={p,bars:P.bars.map(([x,y,h],i)=>({x,y,h:!!h,ang:h?0:90,card:i===0?KEY_CARD:SKINS[i-1]})),moves:0,hist:[],sel:null,solved:false,msg:'',hint:null};
+    S.msg=p===0?'Tap the gold key bar to see its moves. Swings sweep a quarter-circle that must be empty.':'Get any cell of the gold key bar onto the exit.';
+    for(let i=0;i<3;i++)$('pv-p'+i).setAttribute('aria-pressed',i===p);$('pv-par').textContent=P.par;render();}
+  const plain=bars=>bars.map(b=>({x:b.x,y:b.y,h:b.h}));
+  function stars(){const par=PUZ[S.p].par;return S.moves<=par?3:S.moves<=par+3?2:1;}
+  function doMove(i,m){if(S.solved||anim)return;S.hist.push(JSON.stringify({bars:S.bars.map(b=>({x:b.x,y:b.y,h:b.h,ang:b.ang})),moves:S.moves}));
+    const b=S.bars[i];const finish=()=>{anim=null;b.x=m.bar.x;b.y=m.bar.y;b.h=m.bar.h;if(m.type==='swing')b.ang=((b.ang+(m.cw?90:-90))%360+360)%360;S.moves++;S.hint=null;
+      if(solvedBars(S.bars)){S.solved=true;S.sel=null;const st=stars();S.msg=`<span class="good"><b>Solved</b></span> in ${S.moves} moves (par ${PUZ[S.p].par}): ${'★'.repeat(st)}${'☆'.repeat(3-st)}. ${S.p<2?'Try the next puzzle.':'That was the hardest of the pack.'}`;}
+      else{S.msg=`Bar ${LET[i]}: ${m.label.toLowerCase()}. ${S.moves} move${S.moves===1?'':'s'} so far.`;}
+      render();};
+    if(reduced()){finish();return;}
+    const t0=performance.now(),dur=m.type==='swing'?320:160;anim={i,m,t:0,from:{x:b.x,y:b.y,h:b.h,ang:b.ang}};
+    const step=()=>{const t=Math.min(1,(performance.now()-t0)/dur);anim.t=t;render();if(t<1)requestAnimationFrame(step);else finish();};requestAnimationFrame(step);}
+  function barGeom(b){return{cx:b.h?(b.x+2)*u:(b.x+0.5)*u,cy:b.h?(b.y+0.5)*u:(b.y+2)*u};}
+  function render(){if(!S)return;const W=N*u,ctx=setupCanvas(cv,W,W);ctx.fillStyle=TK.cell;ctx.fillRect(0,0,W,W);ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;
+    for(let i=1;i<N;i++){ctx.beginPath();ctx.moveTo(i*u+0.5,0);ctx.lineTo(i*u+0.5,W);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*u+0.5);ctx.lineTo(W,i*u+0.5);ctx.stroke();}
+    const ex=EX.x*u,ey=EX.y*u;ctx.fillStyle=TK.accent;ctx.globalAlpha=0.28;ctx.fillRect(ex,ey,u,u);ctx.globalAlpha=1;ctx.strokeStyle=TK.accent;ctx.lineWidth=3;ctx.strokeRect(ex+1.5,ey+1.5,u-3,u-3);
+    ctx.fillStyle=TK.accent;ctx.font='700 '+Math.round(u*0.28)+'px '+FONT_L;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('EXIT',ex+u/2,ey+u/2);
+    let mv=[];if(S.sel!=null&&!anim&&!S.solved)mv=moves(plain(S.bars),S.sel);
+    mv.filter(m=>m.type==='swing').forEach(m=>{ctx.fillStyle=TK.accent;ctx.globalAlpha=0.16;m.wedge.forEach(([x,y])=>ctx.fillRect(x*u+1,y*u+1,u-2,u-2));ctx.globalAlpha=1;
+      const P=m.pivot;ctx.strokeStyle=TK.accent;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);const a0=Math.atan2(m.dir[1],m.dir[0]);ctx.beginPath();ctx.arc((P[0]+0.5)*u,(P[1]+0.5)*u,3.5*u,a0,a0+(m.cw?Math.PI/2:-Math.PI/2),!m.cw);ctx.stroke();ctx.setLineDash([]);
+      const nb={...m.bar};const g=barGeom(nb);drawBanner(ctx,g.cx,g.cy,nb.h?0:Math.PI/2,u,S.bars[S.sel].card,{alpha:0.28,emblems:false});});
+    S.bars.forEach((b,i)=>{let cx,cy,ang=b.ang*Math.PI/180;
+      if(anim&&anim.i===i){const m=anim.m,t=easeIO(anim.t);
+        if(m.type==='slide'){const g0=barGeom(anim.from),g1=barGeom(m.bar);cx=g0.cx+(g1.cx-g0.cx)*t;cy=g0.cy+(g1.cy-g0.cy)*t;}
+        else{const P=m.pivot,a0=Math.atan2(m.dir[1],m.dir[0]),da=(m.cw?1:-1)*Math.PI/2*t;const a=a0+da;cx=(P[0]+0.5)*u+Math.cos(a)*1.5*u;cy=(P[1]+0.5)*u+Math.sin(a)*1.5*u;ang=anim.from.ang*Math.PI/180+da;}}
+      else{const g=barGeom(b);cx=g.cx;cy=g.cy;}
+      const sel=S.sel===i;drawBanner(ctx,cx,cy,ang,u,b.card,{emblems:false,outline:sel?TK['art-hi']:(i===0?TK.accent:null),outlineW:sel?3:2,label:i===0?'KEY':'Bar '+LET[i]});});
+    ctx.strokeStyle=TK.accent;ctx.lineWidth=3;ctx.setLineDash([5,3]);ctx.strokeRect(ex+1.5,ey+1.5,u-3,u-3);ctx.setLineDash([]);if(barAt(EX.x,EX.y)>0){sbTag(ctx,'EXIT',ex+u/2,ey+u*0.84);}
+    mv.forEach(m=>{const[hx,hy]=m.handle;const px=(hx+0.5)*u,py=(hy+0.5)*u,r=u*0.3;const isHint=S.hint&&S.hint.i===S.sel&&S.hint.m.label===m.label;
+      ctx.fillStyle=isHint?TK.ok:TK.accent;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.5;ctx.beginPath();
+      if(m.type==='swing')ctx.arc(px,py,r,0,Math.PI*2);else rr(ctx,px-r,py-r,r*2,r*2,4);ctx.fill();ctx.stroke();
+      ctx.strokeStyle=TK['plate-ink'];ctx.fillStyle=TK['plate-ink'];ctx.lineWidth=2;
+      if(m.type==='swing'){ctx.beginPath();const a0=m.cw?-2.4:-0.7,a1=m.cw?0.9:-4.0;ctx.arc(px,py,r*0.52,a0,a1,!m.cw);ctx.stroke();const ax=px+Math.cos(a1)*r*0.52,ay=py+Math.sin(a1)*r*0.52;const tg=a1+(m.cw?Math.PI/2:-Math.PI/2);
+        ctx.beginPath();ctx.moveTo(ax+Math.cos(tg)*r*0.32,ay+Math.sin(tg)*r*0.32);ctx.lineTo(ax+Math.cos(tg+2.3)*r*0.28,ay+Math.sin(tg+2.3)*r*0.28);ctx.lineTo(ax+Math.cos(tg-2.3)*r*0.28,ay+Math.sin(tg-2.3)*r*0.28);ctx.closePath();ctx.fill();}
+      else{const b=S.bars[S.sel];const dx=b.h?m.dir:0,dy=b.h?0:m.dir;ctx.beginPath();ctx.moveTo(px+dx*r*0.6,py+dy*r*0.6);ctx.lineTo(px-dx*r*0.3+dy*r*0.45,py-dy*r*0.3+dx*r*0.45);ctx.lineTo(px-dx*r*0.3-dy*r*0.45,py-dy*r*0.3-dx*r*0.45);ctx.closePath();ctx.fill();}});
+    if(document.activeElement===cv&&S.sel==null&&!S.solved){ctx.setLineDash([4,3]);ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=2;ctx.strokeRect(2,2,W-4,W-4);ctx.setLineDash([]);}
+    $('pv-moves').textContent=S.moves;$('pv-stars').textContent=S.solved?'★'.repeat(stars()):'–';$('pv-status').innerHTML=S.msg;$('pv-undo').disabled=!S.hist.length||!!anim;$('pv-hint').disabled=S.solved;
+    const ml=$('pv-movelist');const mk=(S.solved?'x':S.sel)+'|'+mv.map(m=>m.label).join(',')+'|'+S.moves;if(ml.dataset.key===mk)return;ml.dataset.key=mk;ml.innerHTML='';
+    if(S.sel!=null&&!S.solved){
+      mv.forEach((m,k)=>{const bt=document.createElement('button');bt.className='btn';bt.id='pv-move-'+k;bt.textContent=(S.sel===0?'Key':'Bar '+LET[S.sel])+': '+m.label;bt.addEventListener('click',()=>doMove(S.sel,m));ml.appendChild(bt);});}}
+  function sbTag(ctx,t,x,y){const fs=Math.round(u*0.22);ctx.font='700 '+fs+'px '+FONT_L;const w=ctx.measureText(t).width+6;ctx.fillStyle=TK.accent;ctx.fillRect(x-w/2,y-fs*0.6,w,fs*1.2);ctx.fillStyle=TK['plate-ink'];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y+0.5);}
+  const easeIO=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  function barAt(x,y){return S.bars.findIndex(b=>cellsOf(b).some(([a,c])=>a===x&&c===y));}
+  function tap(e){if(anim)return;const p=canvasPoint(cv,e,N*u);const x=Math.floor(p.x/u),y=Math.floor(p.y/u);if(!inb(x,y))return;
+    if(S.solved){S.msg='Solved. Reset to play again, or pick another puzzle.';render();return;}
+    if(S.sel!=null){const m=moves(plain(S.bars),S.sel).find(m=>m.handle[0]===x&&m.handle[1]===y);if(m){doMove(S.sel,m);return;}}
+    const i=barAt(x,y);if(i<0||i===S.sel){S.sel=null;S.msg=i<0?'Tap a bar to see its moves.':'Bar put down. Tap a bar to see its moves.';render();return;}
+    selectBar(i);}
+  function selectBar(i){S.sel=i;const r=moves(plain(S.bars),i,true);const b=S.bars[i];
+    S.msg=`${i===0?'Key bar':'Bar '+LET[i]} selected: ${r.out.length} legal move${r.out.length===1?'':'s'}. ${r.out.some(m=>m.type==='swing')?'Shaded cells are the wedge a swing sweeps.':'No swing is clear right now.'}`;render();}
+  function inspect(e){const p=canvasPoint(cv,e,N*u);const x=Math.floor(p.x/u),y=Math.floor(p.y/u);if(!inb(x,y))return;const i=barAt(x,y);
+    if(i<0){if(x===EX.x&&y===EX.y){openInspect({kicker:'Board cell',title:'Exit',html:'<p>Get any cell of the gold key bar onto this cell to solve the puzzle.</p>'});return;}
+      openInspect({kicker:'Board cell',title:'Empty cell '+colName(x)+(y+1),html:'<p>Bars can slide or swing through empty cells. A swing needs every cell of its quarter-circle wedge empty: 13 cells of the 4×4 square at the pivot whose centres lie within 3.5 cells of it.</p>',
+        draw:(ctx,W,H)=>{const uu=Math.min(W/5,H/5)*0.95;const ox=(W-4*uu)/2,oy=(H-4*uu)/2;for(let a=0;a<4;a++)for(let q=0;q<4;q++){const inW=a*a+q*q<=12.25;ctx.fillStyle=inW?TK.accent:TK['screen-3'];ctx.globalAlpha=inW?0.55:1;ctx.fillRect(ox+a*uu+1,oy+q*uu+1,uu-2,uu-2);}ctx.globalAlpha=1;
+          ctx.strokeStyle=TK['screen-ink'];ctx.setLineDash([4,3]);ctx.beginPath();ctx.arc(ox+uu/2,oy+uu/2,3.5*uu,0,Math.PI/2);ctx.stroke();ctx.setLineDash([]);drawBanner(ctx,ox+2*uu,oy+uu/2,0,uu,SKINS[0],{emblems:false,alpha:0.9});ctx.fillStyle=TK['screen-ink'];ctx.font='600 13px '+FONT_L;ctx.textAlign='left';ctx.fillText('Pivot',ox+4,oy+uu+14);},h:W=>Math.min(260,W*0.62)});return;}
+    const b=S.bars[i];const r=moves(plain(S.bars),i,true);const c=cellsOf(b);
+    openInspect({kicker:i===0?'Key bar · your featured card':'Bar '+LET[i],title:b.card.name,card:b.card,emblems:false,
+      html:`<dl><dt>Position</dt><dd>${b.h?'Across':'Down'}, ${colName(c[0][0])}${c[0][1]+1}–${colName(c[3][0])}${c[3][1]+1}</dd><dt>Legal now</dt><dd>${r.out.length?r.out.map(m=>esc(m.label)).join('; '):'None'}</dd>${r.blocked.length?`<dt>Blocked</dt><dd>${r.blocked.map(esc).join('<br>')}</dd>`:''}</dl>${i===0?'<p>Solve by covering the exit with any cell of this bar.</p>':''}`});}
+  pressable(cv,{onTap:tap,onInspect:inspect});
+  cv.addEventListener('focus',()=>render());cv.addEventListener('blur',()=>render());
+  cv.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();selectBar(S.sel==null?0:(S.sel+1)%S.bars.length);}
+    else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();selectBar(S.sel==null?S.bars.length-1:(S.sel+S.bars.length-1)%S.bars.length);}
+    else if(e.key==='Enter'){const b=$('pv-move-0');if(b){e.preventDefault();b.focus();}}
+    else if(e.key==='i'||e.key==='I'){if(S.sel!=null){const c=cellsOf(S.bars[S.sel])[0];const r=cv.getBoundingClientRect();const s=r.width/(N*u);inspect({clientX:r.left+(c[0]+0.5)*u*s,clientY:r.top+(c[1]+0.5)*u*s});}}});
+  for(let i=0;i<3;i++)$('pv-p'+i).addEventListener('click',()=>load(i));
+  $('pv-reset').addEventListener('click',()=>{load(S.p);S.msg='Reset. Every bar is back at the start.';render();});
+  $('pv-undo').addEventListener('click',()=>{if(!S.hist.length||anim)return;const h=JSON.parse(S.hist.pop());h.bars.forEach((b,i)=>Object.assign(S.bars[i],b));S.moves=h.moves;S.solved=false;S.hint=null;S.msg='Took back the last move.';render();});
+  $('pv-hint').addEventListener('click',()=>{if(S.solved||anim)return;const path=solve(plain(S.bars));if(!path){S.msg='No solution from here. Undo or reset.';render();return;}
+    const h=path[0];S.hint=h;S.sel=h.i;S.msg=`Hint: ${h.i===0?'the key bar':'Bar '+LET[h.i]}, ${h.m.label.toLowerCase()} (green handle). The solver needs ${path.length} more move${path.length===1?'':'s'} from here.`;render();});
+  ro($('pv-screen'),w=>{u=Math.max(30,Math.min(50,Math.floor((w-20)/N)));render();});
+  redraws.push(()=>render());
+  load(0);
+  window.__cct=window.__cct||{};window.__cct.pv={get:()=>S,solve:()=>solve(plain(S.bars)),moves:i=>moves(plain(S.bars),i),doMove:(i,m)=>doMove(i,m),pars:()=>PUZ.map(p=>{const bars=p.bars.map(([x,y,h])=>({x,y,h:!!h}));const s=solve(bars);return s?s.length:-1;})};
+})();
+
+/* ================= 3.3 Crosswise ================= */
+(function crosswise(){
+  const R=9,C=8,cv=$('cw-canvas');
+  const DEF=[[5,0],[1,1],[4,2],[7,3],[2,3]];
+  const LSK=[CARDS[4],CARDS[16],CARDS[6],CARDS[18],CARDS[5],CARDS[17]],PSK=[CARDS[8],CARDS[20],CARDS[10],CARDS[22],CARDS[9],CARDS[21]];
+  let S=null,u=38,view=0,stars0=null,hover=null;
+  const NAME={L:'Landscape',P:'Portrait'};
+  function mirrored(pairs,mid){const s=new Set();pairs.forEach(([x,y])=>{s.add(x+','+y);s.add(x+','+(R-1-y));});s.add(mid+','+4);return[...s];}
+  function newStars(){const r=rng((Math.random()*1e9)>>>0);const pairs=[];const used=new Set();while(pairs.length<5){const x=Math.floor(r()*C),y=Math.floor(r()*4);if(used.has(x+','+y))continue;used.add(x+','+y);pairs.push([x,y]);}return mirrored(pairs,Math.floor(r()*C));}
+  function fresh(stars){return{grid:Array.from({length:R},()=>Array(C).fill(-1)),bars:[],stars:new Set(stars),cur:'L',left:1,out:{L:false,P:false},score:{L:0,P:0},last:null,ended:false,ghost:null,hist:[],cursor:{x:3,y:4},msg:'',turn:1};}
+  const cellsOf=(p,x,y)=>{const c=[];for(let i=0;i<4;i++)c.push(p==='L'?[x+i,y]:[x,y+i]);return c;};
+  function legal(s,p,x,y){return cellsOf(p,x,y).every(([a,b])=>a>=0&&b>=0&&a<C&&b<R&&s.grid[b][a]<0);}
+  function hasMove(s,p){for(let y=0;y<R;y++)for(let x=0;x<C;x++)if(legal(s,p,x,y))return true;return false;}
+  function candidate(s,p,cx,cy){const offs=[1,0,2,3];let first=null;for(const k of offs){const x=p==='L'?cx-k:cx,y=p==='L'?cy:cy-k;const ok=legal(s,p,x,y);const inb=cellsOf(p,x,y).every(([a,b])=>a>=0&&b>=0&&a<C&&b<R);
+      if(ok)return{x,y,p,ok:true};if(!first&&inb)first={x,y,p,ok:false};}
+    return first||{x:p==='L'?Math.max(0,Math.min(C-4,cx-1)):cx,y:p==='L'?cy:Math.max(0,Math.min(R-4,cy-1)),p,ok:false};}
+  const starsIn=(s,p,x,y)=>cellsOf(p,x,y).filter(([a,b])=>s.stars.has(a+','+b)).length;
+  const other=p=>p==='L'?'P':'L';
+  function place(g){const s=S;if(!g||!g.ok||s.ended||g.p!==s.cur)return;
+    s.hist.push(JSON.stringify({...s,stars:[...s.stars],hist:[]}));
+    const id=s.bars.length,p=s.cur,got=starsIn(s,p,g.x,g.y);cellsOf(p,g.x,g.y).forEach(([a,b])=>s.grid[b][a]=id);
+    s.bars.push({p,x:g.x,y:g.y,turn:s.turn,stars:got,card:(p==='L'?LSK:PSK)[s.bars.filter(b=>b.p===p).length%6]});s.score[p]+=got;s.last=p;s.left--;s.ghost=null;
+    let msg=`${NAME[p]} placed a bar${got?` and covered <span class="good">${got} star${got>1?'s':''}</span>`:''}. `;
+    s.out.L=!hasMove(s,'L');s.out.P=!hasMove(s,'P');
+    if(s.out.L&&s.out.P){s.ended=true;const{L,P}=s.score;const w=L>P?'L':P>L?'P':s.last;
+      msg+=`<b>Game over.</b> ${L===P?`Tied ${L}–${P}; ${NAME[w]} placed last, so ${NAME[w]} wins.`:`${NAME[w]} wins ${Math.max(L,P)}–${Math.min(L,P)}.`} Reset or deal new stars.`;}
+    else{const o=other(p);
+      if(s.out[p]){s.cur=o;s.left=2;s.turn++;msg+=`${NAME[p]} has no space left and is out. ${NAME[o]} keeps placing until stuck.`;}
+      else if(s.left<=0){if(!s.out[o]){s.cur=o;s.left=2;s.turn++;msg+=`${NAME[o]}'s turn: place 2 bars ${o==='L'?'across':'down'}.`;}else{s.left=2;msg+=`${NAME[o]} is out, so ${NAME[p]} keeps placing.`;}}
+      else msg+=`${NAME[p]} places 1 more.`;}
+    s.msg=msg;if($('cw-auto').checked)view=s.cur==='P'?1:0;render();}
+  /* view mapping: view 0 = as Landscape holds it; view 1 = turned a quarter for Portrait */
+  const DW=()=>view?R:C,DH=()=>view?C:R;
+  function toD(x,y){return view?{dx:R-1-y,dy:x}:{dx:x,dy:y};}
+  function fromD(dx,dy){return view?{x:dy,y:R-1-dx}:{x:dx,y:dy};}
+  function barDisp(p,x,y){const cs=cellsOf(p,x,y).map(([a,b])=>toD(a,b));const xs=cs.map(c=>c.dx),ys=cs.map(c=>c.dy);const minx=Math.min(...xs),miny=Math.min(...ys);const horiz=xs[0]!==xs[1];
+    return{cx:horiz?(minx+2)*u:(minx+0.5)*u,cy:horiz?(miny+0.5)*u:(miny+2)*u,ang:horiz?0:Math.PI/2};}
+  function star(ctx,x,y,r,fill,stroke){ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr2=i%2?r*0.45:r;ctx.lineTo(x+Math.cos(a)*rr2,y+Math.sin(a)*rr2);}ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}}
+  function render(){if(!S)return;const s=S,W=DW()*u,H=DH()*u,ctx=setupCanvas(cv,W,H);ctx.fillStyle=TK.cell;ctx.fillRect(0,0,W,H);ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;
+    for(let i=1;i<DW();i++){ctx.beginPath();ctx.moveTo(i*u+0.5,0);ctx.lineTo(i*u+0.5,H);ctx.stroke();}for(let i=1;i<DH();i++){ctx.beginPath();ctx.moveTo(0,i*u+0.5);ctx.lineTo(W,i*u+0.5);ctx.stroke();}
+    s.stars.forEach(k=>{const[x,y]=k.split(',').map(Number);if(s.grid[y][x]>=0)return;const d=toD(x,y);star(ctx,(d.dx+0.5)*u,(d.dy+0.5)*u,u*0.32,null,TK.accent);});
+    s.bars.forEach((b,i)=>{const g=barDisp(b.p,b.x,b.y);drawBanner(ctx,g.cx,g.cy,g.ang,u,b.card,{emblems:false,outline:TK[b.p==='L'?'land':'port'],outlineW:i===s.bars.length-1?4:2.5});});
+    s.bars.forEach(b=>cellsOf(b.p,b.x,b.y).forEach(([a,c])=>{if(!s.stars.has(a+','+c))return;const d=toD(a,c);const px=(d.dx+0.5)*u,py=(d.dy+0.5)*u;ctx.fillStyle=TK.plate;ctx.beginPath();ctx.arc(px,py,u*0.3,0,Math.PI*2);ctx.fill();star(ctx,px,py,u*0.24,TK[b.p==='L'?'land':'port'],TK['plate-ink']);}));
+    const g=s.ghost;if(g&&!s.ended){const d=barDisp(g.p,g.x,g.y);drawBanner(ctx,d.cx,d.cy,d.ang,u,(g.p==='L'?LSK:PSK)[s.bars.filter(b=>b.p===g.p).length%6],{emblems:false,alpha:0.55,outline:g.ok?TK.ok:TK.bad,outlineW:3});}
+    if(document.activeElement===cv&&!s.ended){const d=toD(s.cursor.x,s.cursor.y);ctx.setLineDash([4,3]);ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=2;ctx.strokeRect(d.dx*u+2,d.dy*u+2,u-4,u-4);ctx.setLineDash([]);}
+    $('cw-sL').textContent=s.score.L;$('cw-sP').textContent=s.score.P;let open=0;s.stars.forEach(k=>{const[x,y]=k.split(',').map(Number);if(s.grid[y][x]<0)open++;});$('cw-open').textContent=open;
+    const seq=[];for(let t=1;t<=Math.max(6,s.turn+2);t++){const p=t%2?'L':'P';seq.push({t,p,n:t===1?1:2});}
+    $('cw-strip').innerHTML='<span class="subtle" style="border:0;padding:0">Turns</span>'+seq.slice(Math.max(0,s.turn-3),Math.max(0,s.turn-3)+6).map(q=>{const now=q.t===s.turn&&!s.ended;const sym=q.p.repeat(q.n);return `<span class="${now?'now':''}" data-tip="Turn ${q.t}: ${NAME[q.p]} places ${q.n} bar${q.n>1?'s':''}.">${now?`<i class="who ${q.p}"></i>`:''}${sym}${now?` · ${s.left} left`:''}</span>`;}).join('');
+    if(s.out.L||s.out.P)$('cw-strip').innerHTML+=`<span class="now">${s.out.L&&s.out.P?'Both out':NAME[s.out.L?'L':'P']+' out'}</span>`;
+    $('cw-status').innerHTML=s.msg;$('cw-place').disabled=!(g&&g.ok&&!s.ended);$('cw-undo').disabled=!s.hist.length;
+    $('cw-turn').textContent=view?'Turn board back':'Turn board';$('cw-turn').setAttribute('aria-pressed',view===1);}
+  function cellAt(e){const p=canvasPoint(cv,e,DW()*u);const dx=Math.floor(p.x/u),dy=Math.floor(p.y/u);if(dx<0||dy<0||dx>=DW()||dy>=DH())return null;return fromD(dx,dy);}
+  function inGhost(c){const g=S.ghost;return g&&cellsOf(g.p,g.x,g.y).some(([a,b])=>a===c.x&&b===c.y);}
+  function previewMsg(){const s=S,g=s.ghost;if(!g)return;s.msg=g.ok?`${NAME[s.cur]} preview: covers ${starsIn(s,g.p,g.x,g.y)} star${starsIn(s,g.p,g.x,g.y)===1?'':'s'}. Tap it again or press Place.`:`<span class="warn">No room there.</span> A ${NAME[s.cur]} bar needs 4 empty cells ${s.cur==='L'?'across':'down'}.`;}
+  function tap(c,type){const s=S;if(!c)return;s.cursor={x:c.x,y:c.y};if(s.ended){s.msg='Game over. Reset or deal new stars to play again.';render();return;}
+    if(type==='mouse'){const g=candidate(s,s.cur,c.x,c.y);if(g.ok){place(g);return;}s.ghost=g;previewMsg();render();return;}
+    if(s.ghost&&s.ghost.ok&&inGhost(c)){place(s.ghost);return;}
+    s.ghost=candidate(s,s.cur,c.x,c.y);previewMsg();render();}
+  function inspect(e){const c=cellAt(e);if(!c)return;const s=S,id=s.grid[c.y][c.x];
+    if(id>=0){const b=s.bars[id],cs=cellsOf(b.p,b.x,b.y);openInspect({kicker:`${NAME[b.p]} bar · turn ${b.turn}`,title:b.card.name,card:b.card,emblems:false,
+      html:`<dl><dt>Side</dt><dd>${NAME[b.p]} (${b.p==='L'?'across':'down'})</dd><dt>Covers</dt><dd>${colName(cs[0][0])}${cs[0][1]+1}–${colName(cs[3][0])}${cs[3][1]+1}</dd><dt>Stars</dt><dd>${b.stars}</dd></dl><p>Gameplay uses a neutral pool. The art is the placing player's skin, so the opponent can inspect it but it gives no advantage.</p>`});return;}
+    const isStar=s.stars.has(c.x+','+c.y);const can=p=>{for(let k=0;k<4;k++){const x=p==='L'?c.x-k:c.x,y=p==='L'?c.y:c.y-k;if(legal(s,p,x,y))return true;}return false;};
+    openInspect({kicker:'Board cell',title:`Column ${colName(c.x)}, row ${c.y+1}`,html:`<dl><dt>Star</dt><dd>${isStar?'Yes: covering it scores 1':'No'}</dd><dt>Landscape</dt><dd>${can('L')?'Can still cover it':'Can no longer reach it'}</dd><dt>Portrait</dt><dd>${can('P')?'Can still cover it':'Can no longer reach it'}</dd></dl>`});}
+  pressable(cv,{onTap:(e,t)=>tap(cellAt(e),t),onInspect:inspect,onHover:e=>{const c=cellAt(e);if(!c||S.ended)return;if(hover&&hover.x===c.x&&hover.y===c.y)return;hover=c;S.ghost=candidate(S,S.cur,c.x,c.y);previewMsg();render();},onLeave:()=>{hover=null;}});
+  cv.addEventListener('focus',()=>render());cv.addEventListener('blur',()=>render());
+  cv.addEventListener('keydown',e=>{const s=S,k=s.cursor;let d=toD(k.x,k.y),moved=true;
+    if(e.key==='ArrowLeft')d.dx=Math.max(0,d.dx-1);else if(e.key==='ArrowRight')d.dx=Math.min(DW()-1,d.dx+1);else if(e.key==='ArrowUp')d.dy=Math.max(0,d.dy-1);else if(e.key==='ArrowDown')d.dy=Math.min(DH()-1,d.dy+1);
+    else if(e.key==='Enter'||e.key===' '){e.preventDefault();tap({x:k.x,y:k.y},'keyboard');return;}else moved=false;
+    if(moved){e.preventDefault();s.cursor=fromD(d.dx,d.dy);if(!s.ended){s.ghost=candidate(s,s.cur,s.cursor.x,s.cursor.y);previewMsg();}render();}});
+  $('cw-place').addEventListener('click',()=>place(S.ghost));
+  $('cw-turn').addEventListener('click',()=>{view=view?0:1;S.ghost=null;S.msg=view?'Board turned for Portrait: down-bars now read upright.':'Board turned back for Landscape: across-bars read upright.';render();});
+  $('cw-auto').addEventListener('change',()=>{if($('cw-auto').checked)view=S.cur==='P'?1:0;render();});
+  $('cw-undo').addEventListener('click',()=>{if(!S.hist.length)return;const h=S.hist;const prev=JSON.parse(h[h.length-1]);prev.stars=new Set(prev.stars);prev.hist=h.slice(0,-1);prev.ghost=null;prev.msg='Took back the last bar.';S=prev;if($('cw-auto').checked)view=S.cur==='P'?1:0;render();});
+  function start(msg){S=fresh(stars0);S.msg=msg;if($('cw-auto').checked)view=0;render();}
+  $('cw-reset').addEventListener('click',()=>start('Board cleared. Landscape opens with 1 bar across.'));
+  $('cw-stars').addEventListener('click',()=>{stars0=newStars();start('New mirrored star pattern dealt. Landscape opens with 1 bar across.');});
+  stars0=mirrored(DEF,3);
+  ro($('cw-screen'),w=>{u=Math.max(26,Math.min(44,Math.floor((w-20)/R)));render();});
+  redraws.push(()=>render());
+  start('Landscape opens with 1 bar across. Then each side places 2 per turn. Tap a cell to preview.');
+  window.__cct=window.__cct||{};window.__cct.cw={get:()=>S,place:(x,y)=>{S.ghost={x,y,p:S.cur,ok:legal(S,S.cur,x,y)};place(S.ghost);},legal:(p,x,y)=>legal(S,p,x,y)};
+})();
+
+/* ================= Storyboards (3.4 – 3.7) ================= */
+const SW=320,SH=440;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp01=t=>Math.max(0,Math.min(1,t));
+const seg=(t,a,b)=>clamp01((t-a)/(b-a));
+const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function sbGrid(ctx,ox,oy,cols,rows,u,fill){ctx.fillStyle=fill||TK.cell;ctx.fillRect(ox,oy,cols*u,rows*u);ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;
+  for(let i=0;i<=cols;i++){ctx.beginPath();ctx.moveTo(ox+i*u+0.5,oy);ctx.lineTo(ox+i*u+0.5,oy+rows*u);ctx.stroke();}
+  for(let j=0;j<=rows;j++){ctx.beginPath();ctx.moveTo(ox,oy+j*u+0.5);ctx.lineTo(ox+cols*u,oy+j*u+0.5);ctx.stroke();}}
+function sbHud(ctx,l,r){ctx.fillStyle=TK['screen-2'];ctx.fillRect(0,0,SW,34);ctx.fillStyle=TK['screen-ink'];ctx.font='700 14px '+FONT_L;ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText(l,12,17);ctx.textAlign='right';ctx.fillStyle=TK['screen-muted'];ctx.font='500 12px '+FONT_M;ctx.fillText(r,SW-12,17);}
+function sbText(ctx,t,x,y,col,size,align,weight){ctx.fillStyle=col||TK['screen-ink'];ctx.font=(weight||700)+' '+(size||13)+'px '+FONT_L;ctx.textAlign=align||'center';ctx.textBaseline='middle';ctx.fillText(t,x,y);}
+function sbPill(ctx,t,x,y,col){ctx.font='700 12px '+FONT_M;const w=ctx.measureText(t).width+12;ctx.fillStyle=col||TK.ok;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.2;ctx.beginPath();rr(ctx,x-w/2,y-10,w,20,6);ctx.fill();ctx.stroke();ctx.fillStyle=TK['plate-ink'];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y+0.5);}
+function sbX(ctx,x,y,s){ctx.strokeStyle=TK.bad;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x-s,y-s);ctx.lineTo(x+s,y+s);ctx.moveTo(x+s,y-s);ctx.lineTo(x-s,y+s);ctx.stroke();}
+function sbArrow(ctx,x1,y1,x2,y2,col,w){ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w||2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();const a=Math.atan2(y2-y1,x2-x1),h=7;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-h*Math.cos(a-0.45),y2-h*Math.sin(a-0.45));ctx.lineTo(x2-h*Math.cos(a+0.45),y2-h*Math.sin(a+0.45));ctx.closePath();ctx.fill();}
+function barC(b,u,ox,oy){return{cx:ox+(b.h?(b.x+2):(b.x+0.5))*u,cy:oy+(b.h?(b.y+0.5):(b.y+2))*u,ang:b.h?0:Math.PI/2};}
+
+function storyboard(host,name,title,frames){
+  host.innerHTML=`<canvas id="sb-${name}-cv" tabindex="0" aria-label="${esc(title)} storyboard"></canvas><p class="story-cap" id="sb-${name}-cap" aria-live="polite"></p>
+  <div class="ctrls"><button class="btn" id="sb-${name}-prev" data-tip="Previous step.">Back</button><button class="btn primary" id="sb-${name}-play" data-tip="Plays the steps in a loop. Press again to pause.">Play</button><button class="btn" id="sb-${name}-next" data-tip="Next step.">Next</button><button class="btn" id="sb-${name}-reset" data-tip="Back to step 1.">Reset</button></div>`;
+  const cv=$(`sb-${name}-cv`);let i=0,t=1,w=300,raf=0,timer=0;
+  function draw(){const sc=w/SW,ctx=setupCanvas(cv,w,Math.round(SH*sc));ctx.save();ctx.scale(sc,sc);ctx.fillStyle=TK.screen;ctx.fillRect(0,0,SW,SH);try{frames[i].draw(ctx,ease(t));}catch(e){console.error(e);}ctx.restore();
+    $(`sb-${name}-cap`).innerHTML=`<span class="step">Step ${i+1} of ${frames.length}</span>${frames[i].cap}`;}
+  function go(n){i=(n+frames.length)%frames.length;cancelAnimationFrame(raf);if(reduced()){t=1;draw();return;}t=0;const t0=performance.now(),dur=frames[i].dur||1400;
+    const step=()=>{t=Math.min(1,(performance.now()-t0)/dur);draw();if(t<1)raf=requestAnimationFrame(step);};raf=requestAnimationFrame(step);}
+  function stop(){clearInterval(timer);timer=0;$(`sb-${name}-play`).textContent='Play';$(`sb-${name}-play`).setAttribute('aria-pressed','false');}
+  $(`sb-${name}-prev`).addEventListener('click',()=>{stop();go(i-1);});
+  $(`sb-${name}-next`).addEventListener('click',()=>{stop();go(i+1);});
+  $(`sb-${name}-reset`).addEventListener('click',()=>{stop();go(0);});
+  $(`sb-${name}-play`).addEventListener('click',()=>{if(timer){stop();return;}$(`sb-${name}-play`).textContent='Pause';$(`sb-${name}-play`).setAttribute('aria-pressed','true');go(i+1);timer=setInterval(()=>go(i+1),3400);});
+  cv.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();stop();go(i+1);}else if(e.key==='ArrowLeft'){e.preventDefault();stop();go(i-1);}});
+  pressable(cv,{onTap:()=>{stop();go(i+1);},onInspect:()=>openInspect({kicker:title+' · storyboard',title:'Step '+(i+1)+' of '+frames.length,html:`<p>${frames[i].cap}</p><ol>${frames.map((f,k)=>`<li${k===i?' style="font-weight:600"':''}>${f.cap}</li>`).join('')}</ol><p>Tap the picture or use Next to step through. This concept is not prototyped yet.</p>`})});
+  ro(host,ww=>{w=Math.max(200,Math.min(SW+40,ww-20));draw();});redraws.push(draw);
+  draw();
+  return{go:n=>{stop();go(n);},get:()=>i};
+}
+
+/* ---- Broadside ---- */
+(function(){const u=29,ox=15,oy=64;
+  const BL=[{x:1,y:7,h:1,c:CARDS[4]},{x:3,y:3,h:0,c:CARDS[5]},{x:0,y:1,h:1,c:CARDS[16]},{x:0,y:9,h:1,c:CARDS[17]}];
+  const RD=[{x:5,y:1,h:1,c:CARDS[20]},{x:9,y:5,h:0,c:CARDS[21]},{x:5,y:4,h:1,c:CARDS[12]},{x:5,y:9,h:1,c:CARDS[13]}];
+  function ship(ctx,b,side,o){const g=barC(b,u,ox,oy);drawBanner(ctx,o&&o.cx!=null?o.cx:g.cx,o&&o.cy!=null?o.cy:g.cy,o&&o.ang!=null?o.ang:g.ang,u,b.c,{emblems:false,outline:TK[side],outlineW:2.5,alpha:o&&o.alpha});}
+  function base(ctx,skip){sbHud(ctx,'BROADSIDE','TURN 3 · 2 ACTIONS');sbGrid(ctx,ox,oy,10,10,u);
+    BL.forEach((b,k)=>{if(!skip||!skip.includes('b'+k))ship(ctx,b,'land');});RD.forEach((b,k)=>{if(!skip||!skip.includes('r'+k))ship(ctx,b,'port');});
+    sbText(ctx,'Blue fleet',ox,oy+10*u+18,TK.land,13,'left');sbText(ctx,'Red fleet',ox+10*u,oy+10*u+18,TK.port,13,'right');}
+  const cell=(x,y)=>({x:ox+(x+0.5)*u,y:oy+(y+0.5)*u});
+  const frames=[
+    {cap:'Each side fields 4 ships on a 10×10 sea. Every calling card is a ship 4 cells long.',draw:(ctx,t)=>{base(ctx);}},
+    {cap:'<b>Advance:</b> a ship slides 1 cell along its length. That costs 1 of its 2 actions.',draw:(ctx,t)=>{base(ctx,['b0']);const b=BL[0];const g=barC(b,u,ox,oy);ship(ctx,b,'land',{cx:g.cx+u*t});if(t>0.9)sbPill(ctx,'ADVANCE',g.cx+u,g.cy-u*0.95,TK.accent);}},
+    {cap:'<b>Swing:</b> pivot 90° about an end. Any enemy inside the quarter-circle wedge is rammed.',draw:(ctx,t)=>{base(ctx,['b1']);const P=cell(3,6);
+      ctx.fillStyle=TK.accent;ctx.globalAlpha=0.18;for(let a=0;a<4;a++)for(let q=0;q<4;q++)if(a*a+q*q<=12.25)ctx.fillRect(ox+(3+q)*u+1,oy+(6-a)*u+1,u-2,u-2);ctx.globalAlpha=1;
+      const a0=-Math.PI/2,a=a0+Math.PI/2*t;ship(ctx,BL[1],'land',{cx:P.x+Math.cos(a)*1.5*u,cy:P.y+Math.sin(a)*1.5*u,ang:Math.PI/2+Math.PI/2*t});
+      if(t>0.75){const c=cell(5,4);sbX(ctx,c.x,c.y,7);sbPill(ctx,'RAMMED',c.x+u*1.2,c.y-u*0.9,TK.bad);}}},
+    {cap:'<b>Broadside:</b> each segment of a long side fires up to 3 cells out. Two shots land on the red ship.',draw:(ctx,t)=>{base(ctx,['b1']);ship(ctx,{x:3,y:6,h:1,c:BL[1].c},'land');
+      for(let x=3;x<=6;x++){const s=cell(x,6),e=cell(x,3);const yEnd=lerp(s.y-u*0.5,e.y-u*0.4,seg(t,0,0.6));ctx.strokeStyle=TK.accent;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(s.x,s.y-u*0.5);ctx.lineTo(s.x,yEnd);ctx.stroke();ctx.setLineDash([]);}
+      if(t>0.6){[5,6].forEach(x=>{const c=cell(x,4);sbX(ctx,c.x,c.y+u*0.42,6);});sbPill(ctx,'2 HITS',cell(7,4).x,cell(7,3).y,TK.bad);}}},
+    {cap:'<b>Bow shot:</b> an end fires a line of 5. It hits the red ship’s 1-segment end, which takes double damage.',draw:(ctx,t)=>{base(ctx);const s=cell(3,1);const e=cell(8,1);ctx.strokeStyle=TK.accent;ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(s.x+u*0.5,s.y);ctx.lineTo(lerp(s.x+u*0.5,e.x+u*0.4,seg(t,0,0.6)),s.y);ctx.stroke();ctx.setLineDash([]);
+      if(t>0.6){const c=cell(5,1);sbX(ctx,c.x-u*0.45,c.y,7);sbPill(ctx,'END ×2',c.x,c.y+u*0.95,TK.bad);}}},
+    {cap:'Damage marks the ship’s <b>10 edge segments</b>: 4 per long side and 1 per end. Ends are weak points and take double.',draw:(ctx,t)=>{sbHud(ctx,'BROADSIDE','INSPECT SHIP');const U=62,cx=SW/2,cy=200;drawBanner(ctx,cx,cy,0,U,RD[0].c,{emblems:false,outline:TK.port,outlineW:3});
+      const segs=[];for(let i=0;i<4;i++){segs.push([cx+(-1.5+i)*U,cy-U/2,0]);}for(let i=0;i<4;i++){segs.push([cx+(-1.5+i)*U,cy+U/2,0]);}segs.push([cx-2*U,cy,1]);segs.push([cx+2*U,cy,1]);
+      const hit=[2,3,8];segs.forEach(([x,y,v],k)=>{const on=hit.includes(k)&&t>k/12;ctx.strokeStyle=on?TK.bad:TK.accent;ctx.lineWidth=5;ctx.beginPath();if(v){ctx.moveTo(x,y-U*0.38);ctx.lineTo(x,y+U*0.38);}else{ctx.moveTo(x-U*0.38,y);ctx.lineTo(x+U*0.38,y);}ctx.stroke();
+        ctx.fillStyle=on?TK.bad:TK.accent;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();sbText(ctx,String(k+1),x,y+0.5,TK['plate-ink'],12);});
+      sbText(ctx,'×2',cx-2*U-22,cy,TK.bad,16);sbText(ctx,'×2',cx+2*U+22,cy,TK.bad,16);
+      sbText(ctx,'Hull: 3 hits = 4 damage (the end counts double)',SW/2,cy+90,TK['screen-ink'],14,'center',600);}},
+    {cap:'<b>The aha:</b> end the turn end-on. Lying broadside you would take 4 hits; facing them, only your 1-segment bow is in range.',draw:(ctx,t)=>{sbHud(ctx,'BROADSIDE','ENEMY TURN');sbGrid(ctx,ox,oy,10,10,u);const red={x:3,y:2,h:1,c:RD[2].c};ship(ctx,red,'port');
+      const ghost={x:3,y:5,h:1,c:BL[1].c};const g=barC(ghost,u,ox,oy);drawBanner(ctx,g.cx,g.cy,0,u,ghost.c,{emblems:false,alpha:0.3,outline:TK.bad,outlineW:2});sbText(ctx,'4 hits if broadside-on',g.cx,g.cy+u*0.95,TK.bad,12);
+      const blue={x:8,y:3,h:0,c:BL[1].c};ship(ctx,{x:5,y:5,h:0,c:BL[1].c},'land');
+      for(let x=3;x<=6;x++){const s=cell(x,2);const reach=s.y+3*u;ctx.strokeStyle=TK.bad;ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(s.x,s.y+u*0.5);ctx.lineTo(s.x,lerp(s.y+u*0.5,reach+u*0.4,seg(t,0,0.6)));ctx.stroke();ctx.setLineDash([]);}
+      if(t>0.6){const c=cell(5,5);sbX(ctx,c.x,c.y-u*0.4,6);sbPill(ctx,'1 HIT',cell(7,5).x+4,c.y,TK.ok);}}}
+  ];
+  storyboard(document.querySelector('[data-story="broadside"]'),'broadside','Broadside',frames);
+})();
+
+/* ---- Banner Keep ---- */
+(function(){const u=46,ox=22,oy=56;
+  const DBL={x:2,y:5,h:1,c:CARDS[22],l:'DOUBLER'},G1={x:3,y:1,h:0,c:CARDS[4],l:'GUARD'},G2={x:4,y:1,h:0,c:CARDS[5],l:'GUARD'},PW={x:5,y:1,h:0,c:CARDS[14],l:'POWER'};
+  const SPK={c:CARDS[9],l:'SPARK'};const HAND=[SPK,{c:CARDS[0],l:'WALL'},{c:CARDS[19],l:'LENS'},{c:CARDS[15],l:'GUARD'},{c:CARDS[3],l:'POWER'}];
+  const placed=[DBL,G1,G2,PW];
+  function card(ctx,b,o){const g=barC(b,u,ox,oy);drawBanner(ctx,o&&o.cx!=null?o.cx:g.cx,o&&o.cy!=null?o.cy:g.cy,o&&o.ang!=null?o.ang:g.ang,u,b.c,{emblems:false,label:b.l,alpha:o&&o.alpha,outline:o&&o.glow?TK.accent:null,outlineW:4});}
+  function base(ctx,opts){opts=opts||{};sbHud(ctx,'BANNER KEEP','ACT 1 · FIGHT 3');sbGrid(ctx,ox,oy,6,6,u);placed.forEach(b=>card(ctx,b,{glow:opts.glow&&opts.glow.includes(b.l+b.x)}));
+    const hy=oy+6*u+36;sbText(ctx,opts.handLabel||'Hand: draw 5, place 3',ox,hy-18,TK['screen-muted'],12,'left',600);
+    HAND.forEach((h,k)=>{if(opts.noSpark&&k===0)return;drawBanner(ctx,ox+28+k*58,hy+8,0,14,h.c,{emblems:false,outline:k===0&&!opts.noSpark?TK.accent:null,outlineW:2});sbText(ctx,h.l,ox+28+k*58,hy+26,TK['screen-ink'],10);});}
+  const cc=(x,y)=>({x:ox+(x+0.5)*u,y:oy+(y+0.5)*u});
+  const flat={cx:ox+2*u,cy:oy+0.5*u,ang:0},up={cx:ox+2.5*u,cy:oy+3*u,ang:Math.PI/2};
+  const frames=[
+    {cap:'Draw 5 calling cards each turn and place 3 of them on the 6×6 keep. Earlier cards stay where they were placed.',draw:(ctx)=>{base(ctx);}},
+    {cap:'Every card has a <b>side effect</b>, fired along its long sides, and an <b>end effect</b>, fired at its tip. The Doubler fires each side neighbour twice.',draw:(ctx,t)=>{base(ctx,{glow:['DOUBLER2']});
+      for(let i=0;i<4;i++){const c=cc(2+i,5);sbArrow(ctx,c.x,c.y-u*0.45,c.x,c.y-u*0.45-lerp(4,u*0.5,t),TK.accent,2.5);}const l=cc(2,5),r=cc(5,5);sbArrow(ctx,l.x-u*0.5,l.y,l.x-u*0.5-lerp(4,u*0.45,t),l.y,TK['screen-ink'],2.5);sbArrow(ctx,r.x+u*0.5,r.y,r.x+u*0.5+lerp(4,u*0.4,t),r.y,TK['screen-ink'],2.5);
+      sbText(ctx,'sides',cc(3.5,4).x,cc(3.5,4).y+u*0.1,TK.accent,13);sbText(ctx,'end',cc(0.9,5).x,cc(0.9,5).y-u*0.55,TK['screen-ink'],12);}},
+    {cap:'Placed flat in the top corner, Spark’s tip points at an empty cell. Its side only reaches one Guard: +2 Guard.',draw:(ctx,t)=>{base(ctx,{noSpark:true});const hy=oy+6*u+44;drawBanner(ctx,lerp(ox+28,flat.cx,t),lerp(hy,flat.cy,t),0,lerp(14,u,t),SPK.c,{emblems:false,label:t>0.6?SPK.l:null});
+      if(t>0.8){const c=cc(4,0);ctx.strokeStyle=TK.bad;ctx.setLineDash([4,3]);ctx.lineWidth=2;ctx.strokeRect(c.x-u/2+3,c.y-u/2+3,u-6,u-6);ctx.setLineDash([]);sbText(ctx,'nothing',c.x,c.y,TK.bad,12);sbArrow(ctx,cc(3,0).x,cc(3,0).y+u*0.4,cc(3,0).x,cc(3,1).y-u*0.2,TK.ok,2.5);sbPill(ctx,'+2 GUARD',cc(1.5,1).x,cc(1.5,1).y+4);}}},
+    {cap:'Rotate Spark upright and set it in column c. Its bottom tip now touches the Doubler.',draw:(ctx,t)=>{base(ctx,{noSpark:true});drawBanner(ctx,lerp(flat.cx,up.cx,t),lerp(flat.cy,up.cy,t),lerp(0,Math.PI/2,t),u,SPK.c,{emblems:false,label:SPK.l,outline:TK.accent,outlineW:3});
+      if(t>0.9){const c=cc(2,4);sbArrow(ctx,c.x,c.y+u*0.35,c.x,c.y+u*0.8,TK.accent,3);}}},
+    {cap:'Spark fires the Doubler. The Doubler fires every card along its long side twice: <b>Guard 8, Power 6</b>. One rotation chained the whole keep.',dur:2200,draw:(ctx,t)=>{const glow=[];if(t<0.3)glow.push('SPARK');if(t>=0.25)glow.push('DOUBLER2');base(ctx,{noSpark:true,glow:t>=0.25?['DOUBLER2']:[]});
+      drawBanner(ctx,up.cx,up.cy,up.ang,u,SPK.c,{emblems:false,label:SPK.l,outline:t<0.35?TK.accent:null,outlineW:4});
+      if(t>0.15){const c=cc(2,4);sbArrow(ctx,c.x,c.y+u*0.35,c.x,c.y+u*0.8,TK.accent,3);}
+      if(t>0.45){[3,4,5].forEach(x=>{const c=cc(x,5);sbArrow(ctx,c.x,c.y-u*0.45,c.x,c.y-u*1.1,TK.ok,3);});}
+      if(t>0.6){sbPill(ctx,'+4 GUARD',cc(3,2).x,cc(3,2).y);sbPill(ctx,'+4 GUARD',cc(4,3.2).x,cc(4,3.2).y);sbPill(ctx,'+6 POWER',cc(5,1.6).x-6,cc(5,1.6).y);}}},
+    {cap:'Guard 8 + Power 6 = 14 beats the wave’s threat of 12. Win the fight, draft 1 of 3 new cards, then pick the next node on the map.',draw:(ctx,t)=>{sbHud(ctx,'BANNER KEEP','FIGHT WON');
+      const y0=90;sbText(ctx,'Wave threat',30,y0,TK['screen-muted'],13,'left');ctx.fillStyle=TK.bad;ctx.fillRect(30,y0+12,lerp(0,12*18,t),16);sbText(ctx,'12',30+12*18+18,y0+20,TK['screen-ink'],13);
+      sbText(ctx,'Your chain',30,y0+50,TK['screen-muted'],13,'left');ctx.fillStyle=TK.ok;ctx.fillRect(30,y0+62,lerp(0,14*18,t),16);sbText(ctx,'14',30+14*18+18,y0+70,TK['screen-ink'],13);
+      sbText(ctx,'Draft 1 of 3',30,y0+120,TK['screen-muted'],13,'left');[CARDS[11],CARDS[17],CARDS[23]].forEach((c,k)=>drawBanner(ctx,70+k*90,y0+150,0,20,c,{emblems:false,outline:k===1?TK.accent:null,outlineW:2}));
+      sbText(ctx,'Map',30,y0+200,TK['screen-muted'],13,'left');const nodes=[[50,y0+240],[130,y0+225],[130,y0+275],[210,y0+250],[285,y0+250]];ctx.strokeStyle=TK['screen-line'];ctx.lineWidth=2;
+      [[0,1],[0,2],[1,3],[2,3],[3,4]].forEach(([a,b])=>{ctx.beginPath();ctx.moveTo(...nodes[a]);ctx.lineTo(...nodes[b]);ctx.stroke();});nodes.forEach(([x,y],k)=>{ctx.fillStyle=k===0?TK.accent:k===1&&t>0.7?TK.ok:TK['screen-3'];ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=1.5;ctx.stroke();});}}
+  ];
+  storyboard(document.querySelector('[data-story="keep"]'),'keep','Banner Keep',frames);
+})();
+
+/* ---- Tilt Stack ---- */
+(function(){const u=22,C=8,R=12,ox=(SW-8*22)/2,oy=60;
+  const NR=CARDS[1],FL=CARDS[17],ER=CARDS[9],ER2=CARDS[10],ER3=CARDS[11],FL2=CARDS[18],FL3=CARDS[19];
+  function piece(ctx,p,o){const g=barC(p,u,ox,oy);drawBanner(ctx,o&&o.cx!=null?o.cx:g.cx,o&&o.cy!=null?o.cy:g.cy,o&&o.ang!=null?o.ang:g.ang,u,p.c,{emblems:false,alpha:o&&o.alpha,outline:o&&o.glow?TK.accent:null,outlineW:3});}
+  function well(ctx,label,grav){sbHud(ctx,'TILT STACK',label||'1:42 · TURN IN 12 s');sbGrid(ctx,ox,oy,C,R,u);ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox,oy+R*u);ctx.lineTo(ox+C*u,oy+R*u);ctx.lineTo(ox+C*u,oy);ctx.stroke();
+    const gx=SW-34,gy=oy+40,a=grav==null?Math.PI/2:grav;ctx.fillStyle=TK['screen-2'];ctx.beginPath();ctx.arc(gx,gy,20,0,Math.PI*2);ctx.fill();sbArrow(ctx,gx-Math.cos(a)*12,gy-Math.sin(a)*12,gx+Math.cos(a)*13,gy+Math.sin(a)*13,TK.accent,3);sbText(ctx,'DOWN',gx,gy+32,TK['screen-muted'],10);
+    ctx.fillStyle=TK['screen-3'];ctx.beginPath();rr(ctx,SW-58,oy+R*u-36,48,36,6);ctx.fill();sbText(ctx,'↻',SW-34,oy+R*u-18,TK['screen-ink'],20);}
+  const pile=[{x:0,y:11,h:1,c:NR},{x:4,y:11,h:1,c:FL},{x:1,y:10,h:1,c:ER}];
+  function slideLeft(pcs){const occ=new Set();const cells=p=>{const r=[];for(let i=0;i<4;i++)r.push(p.h?[p.x+i,p.y]:[p.x,p.y+i]);return r;};
+    const out=pcs.map(p=>({...p}));out.sort((a,b)=>a.x-b.x);out.forEach(p=>{while(p.x>0&&cells({...p,x:p.x-1}).every(([x,y])=>!occ.has(x+','+y)))p.x--;cells(p).forEach(([x,y])=>occ.add(x+','+y));});return out;}
+  const frames=[
+    {cap:'Banners fall into an 8×12 well. There are no line clears here; the pile is only cleared by cash-ins.',draw:(ctx,t)=>{well(ctx);pile.forEach(p=>piece(ctx,p));const f={x:2,y:9,h:1,c:ER2};const g=barC(f,u,ox,oy);piece(ctx,f,{cy:lerp(oy-u,g.cy,t)});}},
+    {cap:'Rotate a banner while it falls, with a tap, the R key or the button.',draw:(ctx,t)=>{well(ctx);pile.forEach(p=>piece(ctx,p));const cx=ox+4*u,cy=lerp(oy+2*u,oy+6*u,t);drawBanner(ctx,cx,cy,Math.PI/2*seg(t,0.2,0.7),u,FL2,{emblems:false,outline:TK.accent,outlineW:2});}},
+    {cap:'Three banners of one series touching along their long sides <b>cash in</b> and vanish. Here, three Ember Ridge cards.',dur:2000,draw:(ctx,t)=>{well(ctx);const fall=seg(t,0,0.4),glow=t>0.4&&t<0.8,fade=1-seg(t,0.75,1);
+      piece(ctx,pile[0]);piece(ctx,pile[1]);const e1=pile[2],e2={x:2,y:9,h:1,c:ER2},e3={x:0,y:8,h:1,c:ER3};piece(ctx,e1,{alpha:fade,glow});piece(ctx,e2,{alpha:fade,glow});const g=barC(e3,u,ox,oy);piece(ctx,e3,{cy:lerp(oy,g.cy,fall),alpha:fade,glow});
+      if(t>0.5)sbPill(ctx,'CASH IN +300',SW/2,oy+7*u,TK.accent);}},
+    {cap:'Every 30 seconds, or on the rotate button, gravity turns 90°. Everything loose slides toward the new down.',dur:1800,draw:(ctx,t)=>{const pcs=[{x:4,y:11,h:1,c:NR},{x:6,y:7,h:0,c:FL},{x:2,y:11,h:0,c:ER},{x:3,y:3,h:1,c:FL3}];const pcs2=slideLeft(pcs);
+      well(ctx,'GRAVITY TURN',lerp(Math.PI/2,Math.PI,seg(t,0,0.35)));const k=ease(seg(t,0.35,1));pcs.forEach((p,i)=>{const a=barC(p,u,ox,oy),b=barC(pcs2[i],u,ox,oy);piece(ctx,p,{cx:lerp(a.cx,b.cx,k)});});}},
+    {cap:'<b>The aha:</b> line up a cash-in that only connects after the turn. Two Frost Line cards slide left into the third: cash in.',dur:2000,draw:(ctx,t)=>{const pcs=[{x:0,y:8,h:0,c:FL},{x:5,y:8,h:0,c:FL2},{x:6,y:8,h:0,c:FL3}];const pcs2=slideLeft(pcs);
+      well(ctx,'GRAVITY TURN',lerp(Math.PI/2,Math.PI,seg(t,0,0.25)));const k=ease(seg(t,0.25,0.7));const glow=t>0.72;pcs.forEach((p,i)=>{const a=barC(p,u,ox,oy),b=barC(pcs2[i],u,ox,oy);piece(ctx,p,{cx:lerp(a.cx,b.cx,k),glow});});
+      if(glow)sbPill(ctx,'CASH IN +300',SW/2,oy+5*u,TK.accent);}}
+  ];
+  storyboard(document.querySelector('[data-story="tilt"]'),'tilt','Tilt Stack',frames);
+})();
+
+/* ---- Panorama Patience ---- */
+(function(){const S=64,SH4=S/4,fy=60,ty=190,step=40,gap=10,ox0=(SW-(4*S+3*gap))/2;
+  const fx=k=>ox0+k*(S+gap);
+  const PIC=[{a:'s3a',b:'s3b',sil:'ridge',seed:11},{a:'s2a',b:'s2b',sil:'waves',seed:22},{a:'s5a',b:'s5b',sil:'pines',seed:33},{a:'s1a',b:'s1b',sil:'skyline',seed:44}];
+  function picture(ctx,x,y,s,k){const p=PIC[k];const g=ctx.createLinearGradient(0,y,0,y+s);g.addColorStop(0,TK[p.a]);g.addColorStop(1,TK[p.b]);ctx.fillStyle=g;ctx.fillRect(x,y,s,s);
+    ctx.fillStyle=TK['art-hi'];ctx.globalAlpha=0.6;ctx.beginPath();ctx.arc(x+s*0.68,y+s*0.3,s*0.13,0,Math.PI*2);ctx.fill();ctx.globalAlpha=0.85;ctx.fillStyle=TK['art-sil'];
+    ctx.save();ctx.translate(x+s/2,y+s/2);silhouette(ctx,p.sil,s,s*0.9,rng(p.seed));ctx.restore();ctx.globalAlpha=1;}
+  function strip(ctx,k,i,cx,cy,ang,o){ctx.save();ctx.translate(cx,cy);ctx.rotate(ang||0);ctx.globalAlpha=o&&o.alpha!=null?o.alpha:1;ctx.beginPath();ctx.rect(-S/2,-SH4/2,S,SH4);ctx.save();ctx.clip();picture(ctx,-S/2,-SH4/2-i*SH4,S,k);ctx.restore();
+    ctx.strokeStyle=o&&o.hl?TK.accent:o&&o.blocked?TK.port:TK['card-edge'];ctx.lineWidth=o&&(o.hl||o.blocked)?2.5:1;ctx.strokeRect(-S/2,-SH4/2,S,SH4);ctx.restore();}
+  const DEAL=[[[2,1],[1,2],[3,3],[0,0]],[[3,0],[2,2],[1,1],[0,1,1]],[[1,3],[3,1,1],[2,0],[0,2]],[[2,3],[1,0,1],[3,2],[0,3]]];
+  function colPos(c,r){return{x:fx(c)+S/2,y:ty+r*step+SH4/2};}
+  function frameBox(ctx,k,filled){const x=fx(k);ctx.strokeStyle=TK['screen-line'];ctx.setLineDash([4,3]);ctx.lineWidth=1.5;ctx.strokeRect(x,fy,S,S);ctx.setLineDash([]);
+    for(let i=0;i<4;i++){if(filled&&filled.includes(i))strip(ctx,k,i,x+S/2,fy+i*SH4+SH4/2,0);}}
+  function base(ctx,o){o=o||{};sbHud(ctx,'PANORAMA PATIENCE','TOKENS '+(o.tokens==null?3:o.tokens)+' / 3');sbText(ctx,'Pictures',ox0,fy-12,TK['screen-muted'],12,'left',600);sbText(ctx,'Tableau',ox0,ty-14,TK['screen-muted'],12,'left',600);
+    for(let k=0;k<4;k++)frameBox(ctx,k,k===0?o.f0:null);
+    for(const pass of[0,1])DEAL.forEach((col,c)=>col.forEach(([k,i,side],r)=>{if(o.hide&&o.hide.includes(c+':'+r))return;const p=colPos(c,r);const sideNow=side&&!(o.upright&&o.upright.includes(c+':'+r));if((pass===1)!==!!sideNow)return;strip(ctx,k,i,p.x,p.y,sideNow?Math.PI/2:0,{hl:o.hl===c+':'+r,blocked:sideNow});}));
+    sbText(ctx,'Sideways strips (orange edge) are blocked until turned.',SW/2,ty+3*step+64,TK['screen-muted'],12,'center',500);}
+  function move(ctx,from,slot,t){const[c,r]=from;const[k,i]=DEAL[c][r];const a=colPos(c,r),b={x:fx(0)+S/2,y:fy+slot*SH4+SH4/2};strip(ctx,k,i,lerp(a.x,b.x,t),lerp(a.y,b.y,t),0,{hl:true});}
+  const frames=[
+    {cap:'Four square pictures are each cut into 4 strips. The 16 strips are dealt into 4 columns, and some land sideways.',draw:(ctx)=>{base(ctx);}},
+    {cap:'Move a free strip onto its picture frame. Each picture is built from the top strip down.',draw:(ctx,t)=>{base(ctx,{hide:['0:3']});move(ctx,[0,3],0,t);}},
+    {cap:'A sideways strip is blocked. Spend 1 of your 3 tokens to turn it upright.',draw:(ctx,t)=>{base(ctx,{hide:['0:3','1:3'],f0:[0],tokens:t>0.5?2:3});const p=colPos(1,3);strip(ctx,0,1,p.x,p.y,lerp(Math.PI/2,0,t),{hl:true});if(t>0.5)sbPill(ctx,'−1 TOKEN',p.x,p.y-30,TK.accent);}},
+    {cap:'The last strips land and the picture snaps together. Complete all four pictures to win.',dur:2200,draw:(ctx,t)=>{const a=seg(t,0,0.3),b=seg(t,0.3,0.6),c=seg(t,0.6,0.9);
+      const f0=[0];if(a>=1)f0.push(1);if(b>=1)f0.push(2);if(c>=1)f0.push(3);base(ctx,{hide:['0:3','1:3',...(b>0?['2:3']:[]),...(c>0?['3:3']:[])],f0,tokens:2,upright:['1:3']});
+      if(a<1)move(ctx,[1,3],1,a);else if(b<1)move(ctx,[2,3],2,b);else if(c<1)move(ctx,[3,3],3,c);
+      if(t>0.9){ctx.strokeStyle=TK.accent;ctx.lineWidth=3;ctx.strokeRect(fx(0)-2,fy-2,S+4,S+4);sbPill(ctx,'PICTURE 1 OF 4',fx(0)+S/2+50,fy+S+14,TK.accent);}}},
+    {cap:'In portrait a picture is a square column of 4 strips. In landscape the 4 finished squares sit side by side in a row.',draw:(ctx,t)=>{sbHud(ctx,'PANORAMA PATIENCE','ORIENTATION');
+      ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=2;ctx.beginPath();rr(ctx,26,60,100,180,12);ctx.stroke();sbText(ctx,'Portrait',76,256,TK['screen-muted'],12);for(let i=0;i<4;i++){ctx.save();ctx.translate(76,104+i*16);ctx.scale(1,1);ctx.restore();strip(ctx,0,i,76,110+i*SH4+SH4/2,0);}
+      ctx.beginPath();rr(ctx,150,92,156,96,12);ctx.stroke();sbText(ctx,'Landscape',228,204,TK['screen-muted'],12);for(let k=0;k<4;k++){ctx.save();ctx.translate(160+k*36,124);ctx.scale(0.5,0.5);picture(ctx,0,0,S,k);ctx.restore();ctx.strokeStyle=TK['card-edge'];ctx.lineWidth=1;ctx.strokeRect(160+k*36,124,32,32);}
+      sbText(ctx,'Works best as a reward inside Running Bond:',SW/2,300,TK['screen-ink'],13,'center',600);sbText(ctx,'original panorama sets that line up across a course.',SW/2,320,TK['screen-ink'],13,'center',500);}}
+  ];
+  storyboard(document.querySelector('[data-story="panorama"]'),'panorama','Panorama Patience',frames);
+})();
+
+/* ================= Comparison table ================= */
+(function(){const rows=[
+  ['Running Bond','running-bond','Tile-laying solitaire + daily',4,5,5,5,3,'Low','10 min',22],
+  ['Pivot','pivot','Daily puzzle',4,4,3,5,2,'Medium','3 min',18],
+  ['Crosswise','crosswise','Versus',3,4,2,4,5,'Low','6 min',18],
+  ['Banner Keep','banner-keep','Deck-building roguelite',4,2,4,4,2,'Medium','30 min',16],
+  ['Broadside','broadside','Tactics',4,2,3,5,2,'Low','18 min',16],
+  ['Tilt Stack','tilt-stack','Real-time',3,3,3,3,4,'High','3 min',16],
+  ['Panorama Patience','panorama','Solitaire',2,4,3,2,3,'Medium','6 min',14]];
+  const cols=['Fun / aha','Build cost','Collection pull','Rotation','Orientation'];
+  const pips=(n,label,name)=>`<td data-tip="${esc(name)}: ${label} ${n} of 5."><span class="pips" aria-label="${n} of 5">${[1,2,3,4,5].map(k=>`<i class="${k<=n?'on':''}"></i>`).join('')}</span> <span class="num">${n}</span></td>`;
+  $('cmp-body').innerHTML=rows.map((r,i)=>`<tr class="${i===0?'hl':''}"><td><a href="#${r[1]}"><b>${r[0]}</b></a><br><span class="note">${r[2]}</span></td>${[3,4,5,6,7].map((c,k)=>pips(r[c],cols[k],r[0])).join('')}<td data-tip="Trademark and look-alike risk: ${r[8].toLowerCase()}.">${r[8]}</td><td>${r[9]}</td><td class="num"><b>${r[10]}</b></td></tr>`).join('');
+})();
+})();
+</script>
