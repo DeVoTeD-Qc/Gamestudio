@@ -191,7 +191,7 @@ static func options(card: CardData, equipped: StringName = &"") -> Array[Diction
 		return out
 	var choices: Array[StringName] = card.trait_choices()
 	if choices.is_empty() and card.is_unit() and card.collectible:
-		choices = [&""] as Array[StringName]
+		choices.append(&"")
 	for t: StringName in choices:
 		var fam: StringName = family_for_trait(t)
 		var arts: Array[StringName] = arts_with_trait(card, t) if card.has_trait_choice() else arts_for(card)

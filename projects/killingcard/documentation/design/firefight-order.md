@@ -265,3 +265,33 @@ FIREFIGHT phase (PHASE_CHANGED phase=firefight)
 - **Full runs** (`balance_sim.gd`, competent proxy, 40 runs, offers taken): run win 32% (before 40%), in-run match wins M1–M5 78 / 100 / 22 / 32 / 35% (before 98 / 98 / 20 / 28 / 41%), est. run length 24.1 min (unchanged). These are 40 runs (±7 points), so read them as a direction.
 - **Pace** (`fight_sim.gd exp=mirror order=now`, 500 matches): 6.61 rounds per match, per round 1.66 columns fought, 3.33 beats, 1.16 line advances, 4.83 shots → **3.7 s per round at ×1, 1.9 s at ×2** (§5 model).
 - The prototype harness (`tests/tools/fight_order.gd`, `fight_state.gd`, `fight_planner.gd`, `fight_sim.gd`) still runs. `order=now` now means the shipped beat order, and `seq` is the prototype copy.
+
+### 10.4 Step-by-step playback on screen (kc-fight-ui, UI/UX Agent, 2026-11-06)
+The head, after playing the first build of the beat order: *"The resolving of fight action is way too fast, I can't understand what happens."* So x1 is now deliberately slower than the §5 model, and every shot is said in words. Rules and data unchanged (no file in `scripts/rules`, `scripts/ai` or `data` was edited).
+
+| Piece | What | Where |
+|---|---|---|
+| Order strip | `A > B > C` under the tray header while the round plays: the column being fought is an amber box with a pointer, finished ones get a tick, columns with no fight are greyed with a strike, "TAP TO SKIP" at the right. The header reads `FIREFIGHT · A · BEAT 2 · FIRST SHOT` / `· REPLY`. | `scripts/fx/order_strip.gd`, `match_screen.gd` (`prepare_fight`, `_on_fx_event`) |
+| Column | "COLUMN A" over the column (0.8 s); the other two columns dim under a slate veil. At its end: "COLUMN A: 2 KILLS · 1 LOST" (0.5 s). | `feedback_director.gd`, `scripts/fx/fight_overlay.gd` |
+| Now firing | The beat's shooters get a thick side-coloured frame with white corner brackets, and the banner lifts 5 px toward the enemy (0.25 s) before the tracer leaves. The First Shot half of a split exchange tags its shooter "FIRST SHOT". | `fight_overlay.gd`, `feedback_director.gd` (`_on_beat`, `_lift`) |
+| Tracer + numbers | Tracer 0.3 s; damage numbers held ~0.5 s (1.1 s with the fade). No damage: "-0" + "COVER" (the target has Cover) or "NO DAMAGE". | `feedback_director.gd`, `fx_timing.gd` |
+| Pierce | A thinner tracer leaves the target when the first one lands and runs to the unit behind; its number is smaller and named ("-1 PIERCE"). | `feedback_director.gd` (`_on_pierce`), `tracer_fx.gd` (`start_delay`) |
+| Caption | One plain line per shot of the beat, under the strip: "Gunner (A1) hits Rival Rifleman for 2 — destroyed; Pierce 1 into Rival Point Man", "Rival Point Man (A1) hits Gunner for 3", "... — Cover stops it", "... — it holds (Grit)". Read from the shot and the events after it in the same beat. | `feedback_director.gd` (`shot_caption`, `caption_changed`), `match_screen.gd` (`FightCaption`) |
+| Deaths and the line | The stamp and veil as before (0.45 s), then after 0.35 s the board redraws: the dead leave and the line slides up (lane shift 450 ms, was 320). Link ticks, the trait rail and set callouts / cracks follow the board at every redraw. | `scripts/ui/fight_playback.gd`, `match_controller.gd`, `match_screen.gd` (`show_fight_board`), `lane.gd` |
+| Fired token | A dark disc with a brass ring and a spent cartridge, centred on the inner edge of every banner that has fired this round. Cleared at the Score step. | `fight_overlay.gd` |
+| Reveal | The rival's cards turn over one at a time (0.7 s each, "Rival reveals Point Man: column B"); the ones still to come stay face-down INCOMING. Your own arrivals show at once (0.25 s each). | `match_controller.gd` (`_reveal_lanes`), `feedback_director.gd` (`_on_arrived`) |
+| Speed | **x1 everywhere** for now (head, 2026-11-06), with SPEED x2 and tap-to-skip always. The O4 "x2 after the tutorial" default is kept behind `MatchScreen.FOLLOW_TUTORIAL_DEFAULT = false`. A speed picked with the toggle (`Settings.speed_chosen`, saved) wins; an older save's SPEED x2 is ignored. | `match_screen.gd` (`default_speed_x2`), `autoload/settings.gd` |
+| Skip | A tap (or F) ends the round at once: no per-beat redraws, no dim / outline / tokens, and the board is the live state's final board. | `feedback_director.gd` (`skip`), `match_controller.gd` |
+
+**How the board follows the beats.** The controller still resolves the whole round at once. `fight_playback.gd` keeps a `MatchClone` copy of the state as the firefight starts and applies each event as the director lands it (`event_landed`, after its wait): `SHOT_FIRED` marks the shooter fired, `DAMAGE_DEALT` sets Armor to `remaining`, `UNIT_ELIMINATED` takes the victim out of its line, `PATCHED` / `UNIT_HEALED` / `SURVIVED_LETHAL` restore Armor. The board redraws from `MatchSnapshot.build()` of that copy at `LINE_ADVANCED`, at the next beat / the column end, and at Grit / Patch, so links and sets are the real synergy code's answer at that moment. On Down buffs and summons are not replayed on the copy; they appear when the round ends and the live board is shown. Cost: clone 1-4 ms, snapshot 1-2 ms (headless).
+
+**Measured playback (real rounds through the match screen, greedy deploys, headless real time, 14 fought rounds, seeds 101 / 303 / 7):**
+
+| | Firefight alone, per round | Whole round (Reveal + Firefight + Score) | §5 model at x1 |
+|---|---|---|---|
+| **x1** | **7.4 s** (3.0 – 15.1) | 10.4 s | 3.1 s |
+| x2 | 3.8 s (1.5 – 7.7) | 5.3 s | |
+
+In the browser (software rendering, 8-10 fps on the phone viewport) x1 rounds took 7.1 – 10.2 s of firefight; the desktop viewport ran at 2-5 fps in the smoke machine, so its times are not representative.
+
+**QA.** `tests/test_fight_ui.gd` (9): events land in the stream's order and beats are paced; Pierce tracer and "-n PIERCE"; column banner and summary; outline while firing, fired tokens, cleared at the end; captions per shot; the playback board applies the events in order and redraws at the line advance, not at the elimination; on the match screen an eliminated unit is still on the board when it lands, and after `LINE_ADVANCED` the moved units are in their new rows; the strip greys the skipped column and ticks the fought ones; a skip lands on the live final board; rival cards turn over one at a time; speed defaults and choice; the phone strip (below); the Deploy glow; Pierce glossary / glyph and the First Shot line. Browser smoke (`?qa=1&seed=101` / `303`, 844x390 and 1440x900, public and pitch builds): mid-beat, Pierce carry, line advance, column summary, captions, SPEED x2, tap-to-skip; no console errors. QA-only `window.kcQaCmd = "stage_fight"` puts a Pierce carry and a line advance in column A. Screenshots (public art, WebP): `qa/screenshots/fight-ui/`.

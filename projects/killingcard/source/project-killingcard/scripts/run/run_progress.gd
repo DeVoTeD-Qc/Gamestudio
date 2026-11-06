@@ -527,6 +527,7 @@ func reissue_card(index: int, new_trait: StringName) -> String:
 		return "no Re-issue option %d" % index
 	var row: Dictionary = list[index]
 	var at: int = int(row["index"])
+	_pad()
 	var c: CardData = _card(at)
 	if new_trait == trait_choice(at) or not c.can_carry(new_trait):
 		return "%s can't be re-issued as %s" % [c.display_name, ArtTraits.trait_name(new_trait)]
@@ -541,6 +542,7 @@ func reissue_card(index: int, new_trait: StringName) -> String:
 func set_copy_art(i: int, art: StringName) -> String:
 	if i < 0 or i >= deck.size():
 		return "no deck copy %d" % i
+	_pad()
 	var c: CardData = _card(i)
 	if not ArtTraits.belongs(art, c):
 		return "'%s' is not an art of %s" % [art, c.display_name]
@@ -642,7 +644,22 @@ func _equipped(c: CardData) -> StringName:
 	return eq if ArtTraits.belongs(eq, c) else &""
 
 
+## Pads deck_levels / deck_traits / deck_arts to the deck (tests and old code append to deck only).
+func _pad() -> void:
+	while deck_levels.size() < deck.size():
+		deck_levels.append(SynergyRules.LEVEL_TRAINED)
+	while deck_traits.size() < deck.size():
+		var c: CardData = _card(deck_traits.size())
+		deck_traits.append(c.card_trait if c != null else &"")
+	while deck_arts.size() < deck.size():
+		deck_arts.append(&"")
+	for list: Array in [deck_levels, deck_traits, deck_arts]:
+		if list.size() > deck.size():
+			list.resize(deck.size())
+
+
 func _append_copy(id: StringName, level: int, t: StringName, art: StringName) -> void:
+	_pad()
 	deck.append(id)
 	deck_levels.append(level)
 	deck_traits.append(t)
@@ -661,6 +678,7 @@ func _remove_copy(at: int) -> void:
 ## Trains Recruit copy i (Recruit -> Trained) into `t` (TRAIT_DEFAULT = its pre-selected art's
 ## trait). The art stays when it gives that trait, else the option's default art. "" or the reason.
 func _train(i: int, t: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
+	_pad()
 	var c: CardData = _card(i)
 	var pick: StringName = trait_choice(i) if t == SynergyRules.TRAIT_DEFAULT else t
 	if c.has_trait_choice():
@@ -688,7 +706,9 @@ func train_choices(i: int) -> Array[Dictionary]:
 	var c: CardData = _card(i)
 	var counts: Dictionary = trait_counts()
 	var pre: StringName = trait_choice(i) if c.can_carry(trait_choice(i)) else c.card_trait
-	var choices: Array[StringName] = c.trait_choices() if c.has_trait_choice() else ([c.card_trait] as Array[StringName])
+	var choices: Array[StringName] = c.trait_choices()
+	if not c.has_trait_choice():
+		choices.assign([c.card_trait])
 	for t: StringName in choices:
 		var art: StringName = art_of(i) if t == pre and ArtTraits.trait_of(art_of(i), c) == t else ArtTraits.default_art(c, t, _equipped(c))
 		var now: int = int(counts.get(t, 0)) if t != &"" else 0
@@ -975,6 +995,7 @@ func resource(id: StringName) -> Resource:
 # =============================================================================
 
 func to_dict() -> Dictionary:
+	_pad()
 	var offers: Array = []
 	for o: Dictionary in pending_offers:
 		var od: Dictionary = {"kind": String(o["kind"]), "match": int(o["match"]), "options": _strings(o["options"])}

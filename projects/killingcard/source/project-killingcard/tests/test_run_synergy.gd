@@ -75,12 +75,13 @@ func test_main_trait_and_the_on_trait_slot() -> void:
 		rng.seed = 100 + n
 		var picks: Array[StringName] = RewardOffers.supply_drop_on_trait(r.config, &"undead", rng)
 		assert_eq(picks.size(), 3, "3 cards")
-		assert_eq((r.resource(picks[0]) as CardData).card_trait, &"undead", "slot 1 on trait: %s" % str(picks))
+		assert_true((r.resource(picks[0]) as CardData).can_carry(&"undead"), "slot 1 can carry the trait: %s" % str(picks))
 		assert_eq(picks.size(), {picks[0]: 0, picks[1]: 0, picks[2]: 0}.size(), "3 different designs")
 	r.record_result(&"player")
 	var drop: Dictionary = r.current_offer()
 	assert_eq(drop.get("on_trait", &""), &"heavy", "the run's Supply Drop marks the on-trait slot")
-	assert_eq((r.resource(drop["options"][0]) as CardData).card_trait, &"heavy", "and it is slot 1")
+	assert_true((r.resource(drop["options"][0]) as CardData).can_carry(&"heavy"), "and it is slot 1")
+	assert_eq(drop["traits"][0], &"heavy", "slot 1 comes in the main trait's art (kc-art-traits)")
 
 
 func test_doctrine_after_match_one_goes_into_the_match() -> void:
@@ -232,7 +233,7 @@ func test_save_v2_round_trip_and_v1_migration() -> void:
 	r.choose_offer(0)  # Doctrine
 	r.deck_levels[0] = 3
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 2, "save version 2")
+	assert_eq(int(d["version"]), 3, "save version 3 (kc-art-traits)")
 	var back: Dictionary = RunProgress.from_dict(r.config, d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]

@@ -6,6 +6,9 @@
 #   synergy_check.gd; a re-traited copy is a sim-only duplicate of the CardData with
 #   `card_trait` changed and id "<chassis>~<trait>" (so the planner's per-design dedup keeps two
 #   Marksmen with different traits apart). Fields keep their printed trait (doc §2.4).
+#   kc-art-traits-impl: opts=game (the default) reads the shipped CardData.trait_options and plays
+#   the per-copy trait through the real path (SideSetup.deck_traits -> RulesCard.chosen_trait, no
+#   duplicates); squads use their shipped SquadData.identity_trait (squadtraits=identity by default).
 #   opts=fixed|v1|v2|v3|all  the option table: fixed = today's chassis traits only (control);
 #                            v1-v3 = limited options per chassis (v3 recommended, doc §4); all = any unit, any trait
 #   opt=chassis:t1/t2,...    override rows of the table (e.g. opt=gunner:heavy/undead,rifleman:-)
@@ -88,9 +91,9 @@ var config: RunConfig = null
 var n: int = 40
 var experiment: String = "traits"
 var squads_aware: bool = true
-var squad_traits: String = "native"
+var squad_traits: String = "identity"
 var future_weight: float = 1.5
-var opts_name: String = "v1"
+var opts_name: String = "game"
 var options: Dictionary = {}
 var variants: Dictionary = {}
 var decks: Array[String] = ["vanguard", "specops", "heavy", "undead"]
@@ -99,6 +102,9 @@ var drafts: int = 200
 var ontrait: bool = false
 ## pkg= overrides of PACKAGES.
 var pkg_overrides: Dictionary = {}
+## swap= / slots= (campaign tuning).
+var swapped: Dictionary = {}
+var only_slots: Array[int] = []
 ## Set-activity counters for the last pairing set: side-rounds with tier 2 / tier 3 active.
 var activity: Dictionary = {}
 
@@ -144,6 +150,22 @@ func _main() -> void:
 				var tk: PackedStringArray = tv[0].split(".")
 				var val: Variant = str_to_var(tv[1]) if str_to_var(tv[1]) != null else tv[1]
 				(SynergyRules.trait_bonus[StringName(tk[0])][int(tk[1])] as Dictionary)[tk[2]] = val
+			"swap":  # swap=squad_anchor:gunner/rifleman (one copy, in memory; kc-art-traits-impl F1 tuning)
+				var sw: PackedStringArray = kv[1].split(":")
+				var ab: PackedStringArray = sw[1].split("/")
+				for md: RunMatchData in config.matches:
+					if String(md.squad.id) == sw[0] and not swapped.has(sw[0] + sw[1]):
+						swapped[sw[0] + sw[1]] = true
+						var dk: Array[CardData] = md.squad.deck
+						var at: int = dk.find(_card(ab[0]))
+						if at >= 0:
+							dk[at] = _card(ab[1])
+			"armor":  # armor=4:0 (slot 4's enemy Armor bonus, in memory)
+				var av: PackedStringArray = kv[1].split(":")
+				config.matches[int(av[0]) - 1].enemy_armor_bonus = int(av[1])
+			"slots":
+				for sl: String in kv[1].split(","):
+					only_slots.append(int(sl))
 			_: push_error("art_traits_sim: unknown option " + arg)
 	_build_options(overrides)
 	var t0: int = Time.get_ticks_msec()
@@ -169,6 +191,13 @@ func _build_options(overrides: Array[String]) -> void:
 				if t not in row:
 					row.append(t)
 			options[id] = row
+	elif opts_name == "game":
+		for c: CardData in _all_cards():
+			if c.is_unit() and not c.trait_choices().is_empty():
+				var row: Array = []
+				for t: StringName in c.trait_choices():
+					row.append(String(t))
+				options[String(c.id)] = row
 	else:
 		options = (TABLES[opts_name] as Dictionary).duplicate(true)
 	for o: String in overrides:
@@ -183,6 +212,19 @@ func _build_options(overrides: Array[String]) -> void:
 func _print_table() -> void:
 	for id: String in options:
 		print("%-20s %s" % [id, options[id]])
+
+
+func _all_cards() -> Array[CardData]:
+	var out: Array[CardData] = []
+	for f: String in DirAccess.get_files_at("res://data/cards/"):
+		if f.ends_with(".tres"):
+			out.append(load("res://data/cards/" + f) as CardData)
+	return out
+
+
+## opts=game: per-copy traits go through SideSetup.deck_traits (d[2]); other tables use duplicates.
+func _real() -> bool:
+	return opts_name == "game"
 
 
 func _card(id: String) -> CardData:
@@ -225,7 +267,14 @@ func _late_base() -> Array:
 				cards.remove_at(i)
 				levels.remove_at(i)
 				break
-	return [cards, levels]
+	return [cards, levels, _default_traits(cards)]
+
+
+func _default_traits(cards: Array) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for c: CardData in cards:
+		out.append(SynergyRules.TRAIT_DEFAULT)
+	return out
 
 
 ## Promote `count` Recruits: fixed mode uses PROMOTE_ORDER; art mode prefers Recruits that can
@@ -262,7 +311,7 @@ func assign(d: Array, main: String = "") -> String:
 	for i: int in cards.size():
 		if levels[i] >= 1 and (cards[i] as CardData).is_unit() and opts_for(cards[i]).size() > 0:
 			free.append(i)
-		elif (cards[i] as CardData).is_unit():
+		elif (cards[i] as CardData).is_unit() and not _real():
 			cards[i] = _card(_base_id(cards[i]))
 	var fields: Dictionary = {}
 	for i: int in cards.size():
@@ -287,23 +336,34 @@ func assign(d: Array, main: String = "") -> String:
 		var rest: Array[int] = []
 		for i: int in free:
 			if pick in opts_for(cards[i]):
-				cards[i] = variant(cards[i], pick)
+				_put(d, i, pick)
 			else:
 				rest.append(i)
 		free = rest
 	for i: int in free:  # nothing fits: the chassis' default art
-		cards[i] = variant(cards[i], opts_for(cards[i])[0])
+		_put(d, i, opts_for(cards[i])[0])
 	return chosen
+
+
+## Copy i wears an art of trait t: the real path (deck_traits) or a sim-only duplicate.
+func _put(d: Array, i: int, t: String) -> void:
+	if _real():
+		while d.size() < 3:
+			d.append(_default_traits(d[0]))
+		d[2][i] = StringName(t)
+	else:
+		d[0][i] = variant(d[0][i], t)
 
 
 ## [cards, levels] of the late deck for a package; art mode: on-trait promotions + deckbuilder.
 func deck_for(pkg: String, main: String = "") -> Array:
 	var d: Array = _late_base()
 	if pkg == "starter":
-		return [config.starter_deck.duplicate(), config.starter_levels()]
+		return [config.starter_deck.duplicate(), config.starter_levels(), _default_traits(config.starter_deck)]
 	for id: String in pkg_overrides.get(pkg, PACKAGES[pkg]):
 		d[0].append(_card(id))
 		d[1].append(1)
+		d[2].append(SynergyRules.TRAIT_DEFAULT)
 	var target: String = main if main != "" else (pkg if pkg in TRAITS else "")
 	if opts_name == "fixed":
 		_promote(d, target if ontrait else "", 2)
@@ -333,6 +393,8 @@ func _setup(d: Array, name: String) -> SideSetup:
 	s.display_name = name
 	s.deck.assign(d[0])
 	s.deck_levels.assign(d[1])
+	if d.size() > 2:
+		s.deck_traits.assign(d[2])
 	return s
 
 
@@ -404,8 +466,9 @@ func _describe(d: Array) -> String:
 	var counts: Dictionary = {}
 	for i: int in d[0].size():
 		var c: CardData = d[0][i]
-		if (d[1][i] >= 1 or c.is_field()) and c.card_trait != &"":
-			counts[String(c.card_trait)] = int(counts.get(String(c.card_trait), 0)) + 1
+		var t: StringName = SynergyRules.trait_at(c, d[1][i], d[2][i] if d.size() > 2 and i < (d[2] as Array).size() else SynergyRules.TRAIT_DEFAULT)
+		if t != &"":
+			counts[String(t)] = int(counts.get(String(t), 0)) + 1
 	return str(counts)
 
 
@@ -489,15 +552,17 @@ func _draft() -> void:
 			var best_c: CardData = offer[0]
 			var best_s: float = -1.0
 			for c: CardData in offer:
-				var trial: Array = [d[0].duplicate(), d[1].duplicate()]
+				var trial: Array = [d[0].duplicate(), d[1].duplicate(), d[2].duplicate()]
 				trial[0].append(c)
 				trial[1].append(1)
+				trial[2].append(SynergyRules.TRAIT_DEFAULT)
 				var s: float = _set_score(trial) + rng.randf() * 0.05 + (0.3 if c.is_unit() else 0.0)
 				if s > best_s:
 					best_s = s
 					best_c = c
 			d[0].append(best_c)
 			d[1].append(1)
+			d[2].append(SynergyRules.TRAIT_DEFAULT)
 		var main: String = _best_trait(d)
 		_promote(d, main, 2)
 		main = assign(d, "") if opts_name != "fixed" else _best_trait(d)
@@ -583,18 +648,22 @@ const SQUAD_TRAIT: Dictionary = {"squad_rusher": "vanguard", "squad_anchor": "he
 
 
 func _squad_setup(slot: RunMatchData, idx: int) -> SideSetup:
-	var s: SideSetup = SideSetup.from_squad(slot.squad, slot)
+	var s: SideSetup = SideSetup.from_squad(slot.squad, slot)  # applies the shipped identity_trait
 	if squad_traits == "native":
+		s.deck_traits.clear()
+		return s
+	if squad_traits == "identity" and _real():
 		return s
 	var levels: Array[int] = []
 	for i: int in s.deck.size():
 		levels.append(s.level_of(i))
-	var d: Array = [s.deck.duplicate(), levels]
+	var d: Array = [s.deck.duplicate(), levels, _default_traits(s.deck)]
 	var main: String = String(SQUAD_TRAIT.get(String(slot.squad.id), ""))
 	if squad_traits == "undead3" and idx == 2:
 		main = "undead"
 	assign(d, main)
 	s.deck.assign(d[0])
+	s.deck_traits.assign(d[2])
 	return s
 
 
@@ -602,12 +671,15 @@ func _campaign() -> void:
 	print("\n== campaign: aware player, Recruit starter, vs squads (%s, traits %s, opts=%s) ==" % ["aware" if squads_aware else "blind", squad_traits, opts_name])
 	var tot: Array = [0, 0]
 	for i: int in config.matches.size():
+		if not only_slots.is_empty() and (i + 1) not in only_slots:
+			continue
 		var slot: RunMatchData = config.matches[i]
 		var w: int = 0
 		var sq: SideSetup = _squad_setup(slot, i)
-		var desc: Array = [sq.deck, []]
+		var desc: Array = [sq.deck, [], []]
 		for k2: int in sq.deck.size():
 			desc[1].append(sq.level_of(k2))
+			desc[2].append(sq.trait_of(k2))
 		for k: int in n:
 			var mode: int = DataEnums.GameMode.ZONE_CONTROL if k % 2 == 0 else DataEnums.GameMode.FIREFIGHT
 			var hooks: MatchHooks = MatchHooks.new()

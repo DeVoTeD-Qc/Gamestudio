@@ -135,6 +135,16 @@ static func active_tier(t: StringName, count: int) -> int:
 	return tier
 
 
+## The next set size that gives `t` a bonus above active tier `tier` (0 = none left). Heavy at 0 -> 3.
+static func next_tier(t: StringName, tier: int) -> int:
+	var tb: Array = trait_bonus.get(t, [])
+	if tier < TIER2 and tb.size() >= 1 and not _empty_bonus(tb[0]):
+		return TIER2
+	if tier < TIER3:
+		return TIER3
+	return 0
+
+
 static func _empty_bonus(b: Variant) -> bool:
 	if typeof(b) != TYPE_DICTIONARY:
 		return true

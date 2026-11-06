@@ -43,11 +43,11 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 	var has_cost: bool = entry.has("cost") and str(entry.get("cost", "")) != ""
 	var hex: Control = CostHex.new()
 	hex.name = "CostHex"
-	var hs: Vector2 = Vector2(roundf(m["plate"] * 1.15), roundf(m["plate"] * 1.3))
-	# A short card (desktop tray, 64 px): the hex shrinks to the plate row so it clears the FP badge.
-	var room_h: float = card_size.y - 4.0 - m["badge"] - 2.0 * m["pad"] - 1.0
-	if hs.y > room_h:
-		hs = Vector2(roundf(maxf(20.0, room_h) * 0.9), roundf(maxf(20.0, room_h)))
+	# The hex sits in the top-left corner, clear of the ability plates under it.
+	var room_h: float = card_size.y - 4.0 - 2.0 * m["pad"] - m["badge"] + (m["badge"] - m["plate"]) * 0.5 - 2.0 \
+			- (4.0 if String(entry.get("band", "")) != "" else 0.0)
+	var hh: float = clampf(roundf(m["plate"] * 1.3), 20.0, maxf(20.0, room_h))
+	var hs: Vector2 = Vector2(roundf(hh * 0.9), hh)
 	hex.custom_minimum_size = hs
 	hex.size = hs
 	hex.label.add_theme_font_size_override(&"font_size", maxi(16, int(roundf(hs.y * 0.62))))
@@ -81,42 +81,22 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 		bv.position = Vector2.ZERO
 		bv.size = face.size
 		var mm: Dictionary = BannerView.metrics(minf(face.size.y, metric_h))
-		var top_band: float = 4.0 if String(entry.get("band", "")) != "" and not bool(entry.get("operator", false)) else 0.0
-		hex.position = Vector2(mm["spine"] + 1.0, mm["pad"] + top_band)
-		var lay: Dictionary = BannerView.layout(face.size, mm, bool(entry.get("operator", false)), top_band, bv.lead)
-		var x0: float = mm["spine"] + mm["pad"]
-		var x1: float = face.size.x - mm["pad"]
-		if stats:
-			x0 = (lay["fp"] as Rect2).end.x + 3.0
-			x1 = (lay["armor"] as Rect2).position.x - 3.0
-			if int(entry.get("cover", 0)) > 0:
-				x1 -= roundf(mm["badge"] * 0.78) + 3.0
-		var w: float = maxf(8.0, x1 - x0)
+		var an: Dictionary = BannerView.anatomy(face.size, mm, bv.entry, bv.lead if bv.lead > 0.0 else -1.0)
+		# Cost top-left (the anatomy's cost slot), the name top-centre, the subname in the middle band
+		# when the card has the room, else bottom-centre between the abilities and the stats.
+		var cr: Rect2 = an["cost"]
+		hex.position = Vector2(cr.position.x, cr.position.y)
+		var nr: Rect2 = an["name"]
 		var th: float = title.get_combined_minimum_size().y
-		var sh: float = sub.get_combined_minimum_size().y if sub.visible else 0.0
-		var block: float = th + sh - (4.0 if sub.visible else 0.0)
-		var row_h: float = mm["badge"]
-		var bottom: float = face.size.y - mm["pad"]
-		var top: float = bottom - maxf(block, row_h) + maxf(0.0, (row_h - block) * 0.5)
-		# A narrow card (16:9 phone tray): no room between the badges, so the name takes the band
-		# between the plate row and the stat row, full width.
-		var mid_top: float = float(lay["plate_y"]) + mm["plate"]
-		var mid_h: float = (lay["fp"] as Rect2).position.y - mid_top if stats else 0.0
-		if stats and w < 72.0 and mid_h >= th - 6.0:
-			x0 = mm["spine"] + mm["pad"]
-			w = face.size.x - x0 - mm["pad"]
-			top = mid_top + maxf(-4.0, (mid_h - block) * 0.5)
-		if not stats and hex.visible and top < hex.position.y + hex.size.y:
-			# No stat row (tactics, Fields): the name block starts right of the cost hex.
-			var shift: float = hex.position.x + hex.size.x + 4.0 - x0
-			x0 += shift
-			w -= shift
-		title.position = Vector2(x0, top)
-		title.size = Vector2(w, th)
-		sub.position = Vector2(x0, top + th - 4.0)
-		sub.size = Vector2(w, sh)
-		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if stats else HORIZONTAL_ALIGNMENT_LEFT
-		sub.horizontal_alignment = title.horizontal_alignment
+		title.position = Vector2(nr.position.x, nr.position.y + (nr.size.y - th) * 0.5)
+		title.size = Vector2(maxf(8.0, nr.size.x), th)
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var sh: float = sub.get_combined_minimum_size().y
+		var mid: Rect2 = an["mid"]
+		var sr: Rect2 = mid if mid.size.y >= sh - 4.0 else an["sub"]
+		sub.position = Vector2(sr.position.x, sr.position.y + (sr.size.y - sh) * 0.5)
+		sub.size = Vector2(maxf(8.0, sr.size.x), sh)
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	panel.sort_children.connect(place)
 	bv.show_unit(entry, side, false)
 	return panel

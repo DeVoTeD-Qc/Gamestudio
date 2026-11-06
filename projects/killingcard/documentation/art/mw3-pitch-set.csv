@@ -1,113 +1,130 @@
-card,id,title,kind,animated,mastery_family,tier_rank,source_file,why
-rifleman,kc_mw3_banner_waves,Banner Waves,unit,yes,,,BannerWaves_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_crosshairs,Crosshairs,unit,yes,,,Crosshairs_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_imbued,Imbued,unit,no,,,Imbued_CallingCard_MWIII.png,operator with an assault rifle
-rifleman,kc_mw3_god_ray,God Ray,unit,no,,,GodRay_CallingCard_MWIII.png,operator with an assault rifle
-rifleman,kc_mw3_beta_tester,Beta Tester,unit,yes,,,BetaTester_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_friends_dont_let_friends_fire_alone,Friends Don't Let Friends Fire Alone,unit,no,,,FriendsDontLetFriendsFireAlone_CallingCard_MWIII.png,operator with an assault rifle
-rifleman,kc_mw3_fireproof,Fireproof,unit,yes,,,Fireproof_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_no_effs_given,No Effs Given,unit,yes,,,NoEffsGiven_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_glowing_eyes,Glowing Eyes,unit,no,,,GlowingEyes_CallingCard_MWIII.png,operator with an assault rifle
-point_man,kc_mw3_smoking_guns,Smoking Guns,unit,yes,,,SmokingGuns_CallingCard_MWIII.gif,"operator with an SMG or pistol, close in"
-point_man,kc_mw3_non_business,Non-Business,unit,no,,,NonBusiness_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-point_man,kc_mw3_close_quarters,Close Quarters,unit,no,,,CloseQuarters_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-point_man,kc_mw3_dual_sm_gs,Dual SMGs,unit,no,,,DualSMGs_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-point_man,kc_mw3_nades_and_guns,Nades And Guns,unit,no,,,NadesAndGuns_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-point_man,kc_mw3_bang_2,Bang!,unit,no,,,Bang_CallingCard_MWIII.png,"operator with an SMG or pistol, close in"
-point_man,kc_mw3_standoff,Standoff,unit,no,,,Standoff_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-flanker,kc_mw3_urban_tech,Urban Tech,unit,yes,,,UrbanTech_CallingCard_MWIII.gif,Spec Ops trait: operator-bundle card (kc-syn S1)
-flanker,kc_mw3_operation_azure,Operation Azure,unit,no,,,OperationAzure_CallingCard_MWIII.png,stealthy operator moving or infiltrating
-flanker,kc_mw3_cant_catch_me,Can't Catch Me,unit,yes,,,CantCatchMe_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
-flanker,kc_mw3_operator_infil,Operator Infil,unit,yes,,,OperatorInfil_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
-flanker,kc_mw3_gift_giver,Gift Giver,unit,no,,,GiftGiver_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-gunner,kc_mw3_pulemyot762_mastery_gilded,Pulemyot 762 Mastery: Gilded,unit,yes,,,Pulemyot762_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_dg58_lsw_mastery_gilded,DG-58 LSW Mastery: Gilded,unit,yes,,,DG58LSW_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_holger26_mastery_gilded,Holger 26 Mastery: Gilded,unit,yes,,,Holger26_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_bruen_mk9_mastery_gilded,Bruen Mk9 Mastery: Gilded,unit,yes,,,BruenMk9_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_taq_eradicator_mastery_gilded,TAQ Eradicator Mastery: Gilded,unit,yes,,,TAQEradicator_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-marksman,kc_mw3_battle_highlights,Battle Highlights,unit,no,,,BattleHighlights_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-marksman,kc_mw3_stained_memory,Stained Memory,unit,no,,,StainedMemory_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-marksman,kc_mw3_trophy_collector,Trophy Collector,unit,no,,,TrophyCollector_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-marksman,kc_mw3_winters_silence,Winter's Silence,unit,no,,,WintersSilence_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-marksman,kc_mw3_snow_snipers,Snow Snipers,unit,no,,,SnowSnipers_CallingCard_MWIII.png,sniper rifle / scope
-marksman,kc_mw3_art_of_disguise,Art Of Disguise,unit,yes,,,ArtOfDisguise_CallingCard_MWIII.gif,sniper rifle / scope
-halek_wren,kc_mw3_big_game_hunter,Big Game Hunter,unit,no,,,BigGameHunter_CallingCard_MWIII.png,"lone sniper hunting (Ace, sniper elite)"
-shieldman,kc_mw3_keeping_these,Keeping These,unit,yes,,,KeepingThese_CallingCard_MWIII.gif,riot shield / armoured defender (Protector)
-shieldman,kc_mw3_shields_above_all,Shields Above All,unit,no,,,ShieldsAboveAll_CallingCard_MWIII.png,riot shield / armoured defender (Protector)
-shieldman,kc_mw3_resolved_eyes,Resolved Eyes,unit,no,,,ResolvedEyes_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-breacher,kc_mw3_broken_walls,Broken Walls,unit,yes,,,BrokenWalls_CallingCard_MWIII.gif,shotgun at close quarters / room entry
-breacher,kc_mw3_lethal_patience,Lethal Patience,unit,no,,,LethalPatience_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-breacher,kc_mw3_behind_the_door,Behind The Door,unit,no,,,BehindTheDoor_CallingCard_MWIII.png,shotgun at close quarters / room entry
-breacher,kc_mw3_fast_acting,Fast Acting,unit,no,,,FastActing_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-demolitions_expert,kc_mw3_rgl80_mastery_gilded,RGL-80 Mastery: Gilded,unit,yes,,,RGL80_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_stormender_mastery_gilded,Stormender Mastery: Gilded,unit,yes,,,Stormender_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_pila_mastery_golden_ivory,PILA Mastery: Golden Ivory,unit,yes,,,PILA_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_strela_p_mastery_golden_ivory,Strela-P Mastery: Golden Ivory,unit,yes,,,StrelaP_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-recon_specialist,kc_mw3_dark_patrol,Dark Patrol,unit,no,,,DarkPatrol_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-recon_specialist,kc_mw3_infiltration,Infiltration,unit,no,,,Infiltration_CallingCard_MWIII.png,"night vision, optics, scouting"
-recon_specialist,kc_mw3_dont_look_back_store,Don't Look Back,unit,no,,,DontLookBack_Store_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-recon_specialist,kc_mw3_power_and_poise,Power And Poise,unit,no,,,PowerAndPoise_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-combat_medic,kc_mw3_drink_up_2,Start Packing!,unit,no,,,DrinkUp_2_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
-combat_medic,kc_mw3_stocking_up,Refreshing!,unit,no,,,StockingUp_CallingCard_MWIII.png,medical or stim gear
-combat_medic,kc_mw3_drink_up,Drink Up,unit,no,,,DrinkUp_CallingCard_MWIII.png,medical or stim gear
-okafor_anvil,kc_mw3_golden_throne,Golden Throne,unit,no,,,GoldenThrone_CallingCard_MWIII.png,commander on a throne (Elite)
-okafor_anvil,kc_mw3_long_arms,King Of It All,unit,no,,,LongArms_CallingCard_MWIII.png,commander on a throne (Elite)
-war_standard,kc_mw3_bullet_pro,Bullet Pro,field,yes,,,BulletPro_CallingCard_MWIII.gif,text-free skull / helmet crest
-war_standard,kc_mw3_turning_tide,Turning Tide,field,yes,,,TurningTide_CallingCard_MWIII.gif,text-free skull / helmet crest
-war_standard,kc_mw3_warmonger,Warmonger,field,yes,,,Warmonger_CallingCard_MWIII.gif,text-free skull / helmet crest
-ammo_resupply,kc_mw3_mythical_crate,Mythical Crate,tactic,no,,,MythicalCrate_CallingCard_MWIII.png,supply crate / loot
-ammo_resupply,kc_mw3_the_heist,The Heist,tactic,yes,,,TheHeist_CallingCard_MWIII.gif,supply crate / loot
-ammo_resupply,kc_mw3_making_bank,Making Bank,tactic,no,,,MakingBank_CallingCard_MWIII.png,supply crate / loot
-breach_and_clear,kc_mw3_ruptured_world,Ruptured World,tactic,no,,,RupturedWorld_CallingCard_MWIII.png,explosion (damage tactic)
-breach_and_clear,kc_mw3_scorched_beginnings,Scorched Beginnings,tactic,yes,,,ScorchedBeginnings_CallingCard_MWIII.gif,explosion (damage tactic)
-breach_and_clear,kc_mw3_going_down_2,Going Down,tactic,no,,,GoingDown_CallingCard_MWIII.png,explosion (damage tactic)
-callout,kc_mw3_specter_vision,Specter Vision,tactic,yes,,,SpecterVision_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
-callout,kc_mw3_primal_instinct,Primal Instinct,tactic,yes,,,PrimalInstinct_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
-callout,kc_mw3_hes_watching,He's Watching,tactic,no,,,HesWatching_CallingCard_MWIII.png,intel: a figure watching from the dark
-listening_post,kc_mw3_geometric_resonance,Geometric Resonance,field,no,,,GeometricResonance_CallingCard_MWIII.png,emblem (skull sigil)
-listening_post,kc_mw3_bursting_calling_card_prestige_mwiii,Bursting,field,no,,,Bursting_CallingCard_Prestige_MWIII.png,emblem (skull sigil)
-comms_relay,kc_mw3_redeploy,Redeploy,field,no,,,Redeploy_CallingCard_MWIII.png,parachute insignia (comms / redeploy)
-comms_relay,kc_mw3_golden_parachute,Golden Parachute,field,no,,,GoldenParachute_CallingCard_MWIII.png,parachute insignia (comms / redeploy)
-flank_route,kc_mw3_gotta_go_fast,Gotta Go Fast,tactic,yes,,,GottaGoFast_CallingCard_MWIII.gif,fast vehicle on the move
-flank_route,kc_mw3_night_driving,Night Driving,tactic,no,,,NightDriving_CallingCard_MWIII.png,fast vehicle on the move
-mortar_pit,kc_mw3_fire_banisher,Fire Banisher,field,no,,,FireBanisher_CallingCard_MWIII.png,winged fire emblem
-suppressing_fire,kc_mw3_lead_salad,Lead Salad,tactic,no,,,LeadSalad_CallingCard_MWIII.png,hail of bullets / city on fire
-suppressing_fire,kc_mw3_city_on_fire,City On Fire,tactic,no,,,CityOnFire_CallingCard_MWIII.png,hail of bullets / city on fire
-tripwire_charge,kc_mw3_mind_your_feet,Mind Your Feet,field,no,,,MindYourFeet_CallingCard_MWIII.png,tripwire mine
-bulwark,kc_mw3_eternal_guardian,Eternal Guardian,field,no,,,EternalGuardian_CallingCard_MWIII.png,stone guardian crest
-attack_helo,kc_mw3_sunset_assault,Sunset Assault,killstreak,no,,,SunsetAssault_CallingCard_MWIII.png,attack helicopter
-recon_drone,kc_mw3_eyes_in_the_sky,Eyes in the Sky,killstreak,yes,,,EyesInTheSky_CallingCard_MWIII.gif,drone in the sky
-sentry_turret,kc_mw3_ground_to_air,Ground To Air,killstreak,no,,,GroundToAir_CallingCard_MWIII.png,automated turret firing
-mortar_barrage,kc_mw3_lethal_payload,Lethal Payload,killstreak,no,,,LethalPayload_CallingCard_MWIII.png,missile / bombs / fireworks barrage
-mortar_barrage,kc_mw3_payload_inbound,Payload Inbound,killstreak,no,,,PayloadInbound_CallingCard_MWIII.png,missile / bombs / fireworks barrage
-mortar_barrage,kc_mw3_dragons_glow,Dragon's Glow,killstreak,no,,,DragonsGlow_CallingCard_MWIII.png,missile / bombs / fireworks barrage
-hold_the_line,kc_mw3_shield_day,Shield Day,tactic,no,,,ShieldDay_CallingCard_MWIII.png,shield wall / holding the flag
-hold_the_line,kc_mw3_protect_the_flag,Protect The Flag,tactic,no,,,ProtectTheFlag_CallingCard_MWIII.png,shield wall / holding the flag
-brawler,kc_mw3_fwoom,FWOOM!,unit,no,,,FWOOM_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
-brawler,kc_mw3_power_and_pain,Power And Pain,unit,no,,,PowerAndPain_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
-brawler,kc_mw3_blade_is_mightier,Blade Is Mightier,unit,no,,,BladeIsMightier_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
-brawler,kc_mw3_ride_and_die,Ride And Die,unit,no,,,RideAndDie_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
-brawler,kc_mw3_knuckle_bros,Knuckle Bros,unit,no,,,KnuckleBros_CallingCard_MWIII.png,"melee: blade, fists, bat"
-brawler,kc_mw3_raging,Raging,unit,no,,,Raging_CallingCard_MWIII.png,"melee: blade, fists, bat"
-brawler,kc_mw3_baseball_fan,Baseball Fan,unit,no,,,BaseballFan_CallingCard_MWIII.png,"melee: blade, fists, bat"
-blackout,kc_mw3_close_your_eyes,Close Your Eyes,tactic,no,,,CloseYourEyes_CallingCard_MWIII.png,flashbang / blinding / hacked screens
-blackout,kc_mw3_zapped,Zapped,tactic,no,,,Zapped_CallingCard_MWIII.png,"electrocuted, blinded skeletons"
-smoke_screen,kc_mw3_tales_of_the_night,Tales Of The Night,tactic,yes,,,TalesOfTheNight_CallingCard_MWIII.gif,night cover
-sabotage,kc_mw3_detonated,Detonated,tactic,no,,,Detonated_CallingCard_MWIII.png,detonator in hand: blowing up enemy gear
-sabotage,kc_mw3_fireworks_show,Fireworks Show,tactic,no,,,FireworksShow_CallingCard_MWIII.png,planted charge with a timer
-kestrel_ar7,kc_mw3_mcw_mastery_gilded,MCW Mastery: Gilded,operator,yes,wm_mcw,1,MCW_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-kestrel_ar7,kc_mw3_mcw_mastery_forged,MCW Mastery: Forged,operator,yes,wm_mcw,2,MCW_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-kestrel_ar7,kc_mw3_mcw_mastery_priceless,MCW Mastery: Priceless,operator,yes,wm_mcw,3,MCW_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-kestrel_ar7,kc_mw3_mcw_mastery_interstellar,MCW Mastery: Interstellar,operator,yes,wm_mcw,4,MCW_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-longreach_338,kc_mw3_kattamr_mastery_gilded,KATT-AMR Mastery: Gilded,operator,yes,wm_katt_amr,1,KATTAMR_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-longreach_338,kc_mw3_kattamr_mastery_forged,KATT-AMR Mastery: Forged,operator,yes,wm_katt_amr,2,KATTAMR_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-longreach_338,kc_mw3_kattamr_mastery_priceless,KATT-AMR Mastery: Priceless,operator,yes,wm_katt_amr,3,KATTAMR_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-longreach_338,kc_mw3_kattamr_mastery_interstellar,KATT-AMR Mastery: Interstellar,operator,yes,wm_katt_amr,4,KATTAMR_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-wasp_9,kc_mw3_wsp9_mastery_gilded,WSP-9 Mastery: Gilded,operator,yes,wm_wsp_9,1,WSP9_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-wasp_9,kc_mw3_wsp9_mastery_forged,WSP-9 Mastery: Forged,operator,yes,wm_wsp_9,2,WSP9_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-wasp_9,kc_mw3_wsp9_mastery_priceless,WSP-9 Mastery: Priceless,operator,yes,wm_wsp_9,3,WSP9_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-wasp_9,kc_mw3_wsp9_mastery_interstellar,WSP-9 Mastery: Interstellar,operator,yes,wm_wsp_9,4,WSP9_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-p12_sidearm,kc_mw3_cor45_mastery_gilded,COR-45 Mastery: Gilded,operator,yes,wm_cor_45,1,COR45_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-p12_sidearm,kc_mw3_cor45_mastery_forged,COR-45 Mastery: Forged,operator,yes,wm_cor_45,2,COR45_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-p12_sidearm,kc_mw3_cor45_mastery_priceless,COR-45 Mastery: Priceless,operator,yes,wm_cor_45,3,COR45_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
-p12_sidearm,kc_mw3_cor45_mastery_interstellar,COR-45 Mastery: Interstellar,operator,yes,wm_cor_45,4,COR45_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+card,id,title,kind,animated,mastery_family,tier_rank,family,source_file,why
+rifleman,kc_mw3_banner_waves,Banner Waves,unit,yes,,,honors,BannerWaves_CallingCard_MWIII.gif,operator with an assault rifle
+rifleman,kc_mw3_crosshairs,Crosshairs,unit,yes,,,honors,Crosshairs_CallingCard_MWIII.gif,operator with an assault rifle
+rifleman,kc_mw3_imbued,Imbued,unit,no,,,horde,Imbued_CallingCard_MWIII.png,operator with an assault rifle
+rifleman,kc_mw3_god_ray,God Ray,unit,no,,,operators,GodRay_CallingCard_MWIII.png,operator with an assault rifle
+rifleman,kc_mw3_beta_tester,Beta Tester,unit,yes,,,standard,BetaTester_CallingCard_MWIII.gif,operator with an assault rifle
+rifleman,kc_mw3_friends_dont_let_friends_fire_alone,Friends Don't Let Friends Fire Alone,unit,no,,,honors,FriendsDontLetFriendsFireAlone_CallingCard_MWIII.png,operator with an assault rifle
+rifleman,kc_mw3_fireproof,Fireproof,unit,yes,,,operators,Fireproof_CallingCard_MWIII.gif,operator with an assault rifle
+rifleman,kc_mw3_no_effs_given,No Effs Given,unit,yes,,,operators,NoEffsGiven_CallingCard_MWIII.gif,operator with an assault rifle
+rifleman,kc_mw3_glowing_eyes,Glowing Eyes,unit,no,,,honors,GlowingEyes_CallingCard_MWIII.png,operator with an assault rifle
+rifleman,kc_mw3_helo_exfil,Helo Exfil,unit,no,,,horde,HeloExfil_CallingCard_MWIII.png,"Rifleman alternate: Undead (Horde family), operator on an exfil (kc-art-traits)"
+rifleman,kc_mw3_in_trouble,In Trouble,unit,no,,,horde,InTrouble_CallingCard_MWIII.png,"Rifleman alternate: Undead (Horde family), operator with a rifle (kc-art-traits)"
+rifleman,kc_mw3_solid_tactics,Solid Tactics,unit,no,,,operators,SolidTactics_CallingCard_MWIII.png,"Rifleman alternate: Spec Ops (Operators family, Warzone), operator with an assault rifle (kc-art-traits)"
+rifleman,kc_mw3_swamp_guys,Swamp Guys,unit,no,,,operators,SwampGuys_CallingCard_MWIII.png,"Rifleman alternate: Spec Ops (Operators family, Warzone), squad with assault rifles (kc-art-traits)"
+point_man,kc_mw3_smoking_guns,Smoking Guns,unit,yes,,,honors,SmokingGuns_CallingCard_MWIII.gif,"operator with an SMG or pistol, close in"
+point_man,kc_mw3_non_business,Non-Business,unit,no,,,honors,NonBusiness_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_close_quarters,Close Quarters,unit,no,,,honors,CloseQuarters_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_dual_sm_gs,Dual SMGs,unit,no,,,honors,DualSMGs_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_nades_and_guns,Nades And Guns,unit,no,,,honors,NadesAndGuns_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_bang_2,Bang!,unit,no,,,honors,Bang_CallingCard_MWIII.png,"operator with an SMG or pistol, close in"
+point_man,kc_mw3_standoff,Standoff,unit,no,,,honors,Standoff_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_violent_vortex,Violent Vortex,unit,no,,,horde,ViolentVortex_CallingCard_MWIII.png,"Point Man alternate: Undead (Horde family), operator with a pistol (kc-art-traits)"
+point_man,kc_mw3_wolves_wasted,Wolves Wasted,unit,no,,,horde,WolvesWasted_CallingCard_MWIII.png,"Point Man alternate: Undead (Horde family), operator with a pistol (kc-art-traits)"
+flanker,kc_mw3_urban_tech,Urban Tech,unit,yes,,,operators,UrbanTech_CallingCard_MWIII.gif,Spec Ops trait: operator-bundle card (kc-syn S1)
+flanker,kc_mw3_operation_azure,Operation Azure,unit,no,,,operators,OperationAzure_CallingCard_MWIII.png,stealthy operator moving or infiltrating
+flanker,kc_mw3_cant_catch_me,Can't Catch Me,unit,yes,,,operators,CantCatchMe_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
+flanker,kc_mw3_operator_infil,Operator Infil,unit,yes,,,operators,OperatorInfil_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
+flanker,kc_mw3_gift_giver,Gift Giver,unit,no,,,operators,GiftGiver_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+gunner,kc_mw3_pulemyot762_mastery_gilded,Pulemyot 762 Mastery: Gilded,unit,yes,,,mastery,Pulemyot762_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_dg58_lsw_mastery_gilded,DG-58 LSW Mastery: Gilded,unit,yes,,,mastery,DG58LSW_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_holger26_mastery_gilded,Holger 26 Mastery: Gilded,unit,yes,,,mastery,Holger26_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_bruen_mk9_mastery_gilded,Bruen Mk9 Mastery: Gilded,unit,yes,,,mastery,BruenMk9_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_taq_eradicator_mastery_gilded,TAQ Eradicator Mastery: Gilded,unit,yes,,,mastery,TAQEradicator_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_lead_rain,Lead Rain,unit,yes,,,operators,LeadRain_CallingCard_MWIII.gif,"Gunner alternate: Spec Ops (Operators family), operator with an LMG (kc-art-traits)"
+gunner,kc_mw3_download_complete,Download Complete,unit,no,,,operators,DownloadComplete_CallingCard_MWIII.png,"Gunner alternate: Spec Ops (Operators family), operator-bundle robot (kc-art-traits)"
+marksman,kc_mw3_battle_highlights,Battle Highlights,unit,no,,,operators,BattleHighlights_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+marksman,kc_mw3_stained_memory,Stained Memory,unit,no,,,operators,StainedMemory_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+marksman,kc_mw3_trophy_collector,Trophy Collector,unit,no,,,operators,TrophyCollector_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+marksman,kc_mw3_winters_silence,Winter's Silence,unit,no,,,operators,WintersSilence_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+marksman,kc_mw3_snow_snipers,Snow Snipers,unit,no,,,honors,SnowSnipers_CallingCard_MWIII.png,sniper rifle / scope
+marksman,kc_mw3_art_of_disguise,Art Of Disguise,unit,yes,,,operators,ArtOfDisguise_CallingCard_MWIII.gif,sniper rifle / scope
+marksman,kc_mw3_kvd_enforcer_mastery_gilded,KVD Enforcer Mastery: Gilded,unit,yes,,,mastery,KVDEnforcer_MasteryGilded_CallingCard_MWIII.gif,"Marksman alternate: Heavy (Mastery family), marksman rifle mastery (kc-art-traits)"
+marksman,kc_mw3_mcw68_mastery_gilded,MCW 6.8 Mastery: Gilded,unit,yes,,,mastery,MCW68_MasteryGilded_CallingCard_MWIII.gif,"Marksman alternate: Heavy (Mastery family), marksman rifle mastery (kc-art-traits)"
+halek_wren,kc_mw3_big_game_hunter,Big Game Hunter,unit,no,,,honors,BigGameHunter_CallingCard_MWIII.png,"lone sniper hunting (Ace, sniper elite)"
+shieldman,kc_mw3_keeping_these,Keeping These,unit,yes,,,honors,KeepingThese_CallingCard_MWIII.gif,riot shield / armoured defender (Protector)
+shieldman,kc_mw3_shields_above_all,Shields Above All,unit,no,,,honors,ShieldsAboveAll_CallingCard_MWIII.png,riot shield / armoured defender (Protector)
+shieldman,kc_mw3_resolved_eyes,Resolved Eyes,unit,no,,,honors,ResolvedEyes_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+shieldman,kc_mw3_surrounded,Surrounded,unit,no,,,horde,Surrounded_CallingCard_MWIII.png,"Protector alternate: Undead (Horde family), holding out against a horde (kc-art-traits)"
+breacher,kc_mw3_broken_walls,Broken Walls,unit,yes,,,honors,BrokenWalls_CallingCard_MWIII.gif,shotgun at close quarters / room entry
+breacher,kc_mw3_lethal_patience,Lethal Patience,unit,no,,,honors,LethalPatience_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+breacher,kc_mw3_behind_the_door,Behind The Door,unit,no,,,honors,BehindTheDoor_CallingCard_MWIII.png,shotgun at close quarters / room entry
+breacher,kc_mw3_fast_acting,Fast Acting,unit,no,,,honors,FastActing_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+breacher,kc_mw3_lockwood680_mastery_gilded,Lockwood 680 Mastery: Gilded,unit,yes,,,mastery,Lockwood680_MasteryGilded_CallingCard_MWIII.gif,"Breacher alternate: Heavy (Mastery family), shotgun mastery (kc-art-traits)"
+breacher,kc_mw3_haymaker_mastery_gilded,Haymaker Mastery: Gilded,unit,yes,,,mastery,Haymaker_MasteryGilded_CallingCard_MWIII.gif,"Breacher alternate: Heavy (Mastery family), shotgun mastery (kc-art-traits)"
+demolitions_expert,kc_mw3_rgl80_mastery_gilded,RGL-80 Mastery: Gilded,unit,yes,,,mastery,RGL80_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
+demolitions_expert,kc_mw3_stormender_mastery_gilded,Stormender Mastery: Gilded,unit,yes,,,mastery,Stormender_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
+demolitions_expert,kc_mw3_pila_mastery_golden_ivory,PILA Mastery: Golden Ivory,unit,yes,,,mastery,PILA_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
+demolitions_expert,kc_mw3_strela_p_mastery_golden_ivory,Strela-P Mastery: Golden Ivory,unit,yes,,,mastery,StrelaP_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
+demolitions_expert,kc_mw3_objective_destroyed,Objective Destroyed,unit,no,,,horde,ObjectiveDestroyed_CallingCard_MWIII.png,"Demolitions Expert alternate: Undead (Horde family), explosion (kc-art-traits)"
+demolitions_expert,kc_mw3_boom_and_gloom,Boom And Gloom,unit,no,,,horde,BoomAndGloom_CallingCard_MWIII.png,"Demolitions Expert alternate: Undead (Horde family), explosion (kc-art-traits)"
+recon_specialist,kc_mw3_dark_patrol,Dark Patrol,unit,no,,,operators,DarkPatrol_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+recon_specialist,kc_mw3_infiltration,Infiltration,unit,no,,,operators,Infiltration_CallingCard_MWIII.png,"night vision, optics, scouting"
+recon_specialist,kc_mw3_dont_look_back_store,Don't Look Back,unit,no,,,operators,DontLookBack_Store_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+recon_specialist,kc_mw3_power_and_poise,Power And Poise,unit,no,,,operators,PowerAndPoise_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
+recon_specialist,kc_mw3_seal_time,Seal Time,unit,no,,,horde,SealTime_CallingCard_MWIII.png,"Recon Specialist alternate: Undead (Horde family), scout in the water (kc-art-traits)"
+combat_medic,kc_mw3_drink_up_2,Start Packing!,unit,no,,,horde,DrinkUp_2_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
+combat_medic,kc_mw3_stocking_up,Refreshing!,unit,no,,,horde,StockingUp_CallingCard_MWIII.png,medical or stim gear
+combat_medic,kc_mw3_drink_up,Drink Up,unit,no,,,horde,DrinkUp_CallingCard_MWIII.png,medical or stim gear
+okafor_anvil,kc_mw3_golden_throne,Golden Throne,unit,no,,,operators,GoldenThrone_CallingCard_MWIII.png,commander on a throne (Elite)
+okafor_anvil,kc_mw3_long_arms,King Of It All,unit,no,,,horde,LongArms_CallingCard_MWIII.png,commander on a throne (Elite)
+war_standard,kc_mw3_bullet_pro,Bullet Pro,field,yes,,,horde,BulletPro_CallingCard_MWIII.gif,text-free skull / helmet crest
+war_standard,kc_mw3_turning_tide,Turning Tide,field,yes,,,horde,TurningTide_CallingCard_MWIII.gif,text-free skull / helmet crest
+war_standard,kc_mw3_warmonger,Warmonger,field,yes,,,horde,Warmonger_CallingCard_MWIII.gif,text-free skull / helmet crest
+ammo_resupply,kc_mw3_mythical_crate,Mythical Crate,tactic,no,,,operators,MythicalCrate_CallingCard_MWIII.png,supply crate / loot
+ammo_resupply,kc_mw3_the_heist,The Heist,tactic,yes,,,operators,TheHeist_CallingCard_MWIII.gif,supply crate / loot
+ammo_resupply,kc_mw3_making_bank,Making Bank,tactic,no,,,horde,MakingBank_CallingCard_MWIII.png,supply crate / loot
+breach_and_clear,kc_mw3_ruptured_world,Ruptured World,tactic,no,,,operators,RupturedWorld_CallingCard_MWIII.png,explosion (damage tactic)
+breach_and_clear,kc_mw3_scorched_beginnings,Scorched Beginnings,tactic,yes,,,operators,ScorchedBeginnings_CallingCard_MWIII.gif,explosion (damage tactic)
+breach_and_clear,kc_mw3_going_down_2,Going Down,tactic,no,,,horde,GoingDown_CallingCard_MWIII.png,explosion (damage tactic)
+callout,kc_mw3_specter_vision,Specter Vision,tactic,yes,,,operators,SpecterVision_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
+callout,kc_mw3_primal_instinct,Primal Instinct,tactic,yes,,,operators,PrimalInstinct_CallingCard_MWIII.gif,"intel: eye, scanner, dossier"
+callout,kc_mw3_hes_watching,He's Watching,tactic,no,,,operators,HesWatching_CallingCard_MWIII.png,intel: a figure watching from the dark
+listening_post,kc_mw3_geometric_resonance,Geometric Resonance,field,no,,,operators,GeometricResonance_CallingCard_MWIII.png,emblem (skull sigil)
+listening_post,kc_mw3_bursting_calling_card_prestige_mwiii,Bursting,field,no,,,horde,Bursting_CallingCard_Prestige_MWIII.png,emblem (skull sigil)
+comms_relay,kc_mw3_redeploy,Redeploy,field,no,,,operators,Redeploy_CallingCard_MWIII.png,parachute insignia (comms / redeploy)
+comms_relay,kc_mw3_golden_parachute,Golden Parachute,field,no,,,operators,GoldenParachute_CallingCard_MWIII.png,parachute insignia (comms / redeploy)
+flank_route,kc_mw3_gotta_go_fast,Gotta Go Fast,tactic,yes,,,operators,GottaGoFast_CallingCard_MWIII.gif,fast vehicle on the move
+flank_route,kc_mw3_night_driving,Night Driving,tactic,no,,,operators,NightDriving_CallingCard_MWIII.png,fast vehicle on the move
+mortar_pit,kc_mw3_fire_banisher,Fire Banisher,field,no,,,horde,FireBanisher_CallingCard_MWIII.png,winged fire emblem
+suppressing_fire,kc_mw3_lead_salad,Lead Salad,tactic,no,,,operators,LeadSalad_CallingCard_MWIII.png,hail of bullets / city on fire
+suppressing_fire,kc_mw3_city_on_fire,City On Fire,tactic,no,,,honors,CityOnFire_CallingCard_MWIII.png,hail of bullets / city on fire
+tripwire_charge,kc_mw3_mind_your_feet,Mind Your Feet,field,no,,,honors,MindYourFeet_CallingCard_MWIII.png,tripwire mine
+bulwark,kc_mw3_eternal_guardian,Eternal Guardian,field,no,,,operators,EternalGuardian_CallingCard_MWIII.png,stone guardian crest
+attack_helo,kc_mw3_sunset_assault,Sunset Assault,killstreak,no,,,horde,SunsetAssault_CallingCard_MWIII.png,attack helicopter
+recon_drone,kc_mw3_eyes_in_the_sky,Eyes in the Sky,killstreak,yes,,,operators,EyesInTheSky_CallingCard_MWIII.gif,drone in the sky
+sentry_turret,kc_mw3_ground_to_air,Ground To Air,killstreak,no,,,honors,GroundToAir_CallingCard_MWIII.png,automated turret firing
+mortar_barrage,kc_mw3_lethal_payload,Lethal Payload,killstreak,no,,,honors,LethalPayload_CallingCard_MWIII.png,missile / bombs / fireworks barrage
+mortar_barrage,kc_mw3_payload_inbound,Payload Inbound,killstreak,no,,,honors,PayloadInbound_CallingCard_MWIII.png,missile / bombs / fireworks barrage
+mortar_barrage,kc_mw3_dragons_glow,Dragon's Glow,killstreak,no,,,operators,DragonsGlow_CallingCard_MWIII.png,missile / bombs / fireworks barrage
+hold_the_line,kc_mw3_shield_day,Shield Day,tactic,no,,,honors,ShieldDay_CallingCard_MWIII.png,shield wall / holding the flag
+hold_the_line,kc_mw3_protect_the_flag,Protect The Flag,tactic,no,,,honors,ProtectTheFlag_CallingCard_MWIII.png,shield wall / holding the flag
+brawler,kc_mw3_fwoom,FWOOM!,unit,no,,,horde,FWOOM_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
+brawler,kc_mw3_power_and_pain,Power And Pain,unit,no,,,horde,PowerAndPain_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
+brawler,kc_mw3_blade_is_mightier,Blade Is Mightier,unit,no,,,horde,BladeIsMightier_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
+brawler,kc_mw3_ride_and_die,Ride And Die,unit,no,,,horde,RideAndDie_CallingCard_MWIII.png,Undead trait: Zombies card (kc-syn S1)
+brawler,kc_mw3_knuckle_bros,Knuckle Bros,unit,no,,,horde,KnuckleBros_CallingCard_MWIII.png,"melee: blade, fists, bat"
+brawler,kc_mw3_raging,Raging,unit,no,,,horde,Raging_CallingCard_MWIII.png,"melee: blade, fists, bat"
+brawler,kc_mw3_baseball_fan,Baseball Fan,unit,no,,,horde,BaseballFan_CallingCard_MWIII.png,"melee: blade, fists, bat"
+brawler,kc_mw3_big_sword,Big Sword,unit,no,,,operators,BigSword_CallingCard_MWIII.png,"Brawler alternate: Spec Ops (Operators family), operator-bundle melee (kc-art-traits)"
+blackout,kc_mw3_close_your_eyes,Close Your Eyes,tactic,no,,,honors,CloseYourEyes_CallingCard_MWIII.png,flashbang / blinding / hacked screens
+blackout,kc_mw3_zapped,Zapped,tactic,no,,,horde,Zapped_CallingCard_MWIII.png,"electrocuted, blinded skeletons"
+smoke_screen,kc_mw3_tales_of_the_night,Tales Of The Night,tactic,yes,,,operators,TalesOfTheNight_CallingCard_MWIII.gif,night cover
+sabotage,kc_mw3_detonated,Detonated,tactic,no,,,horde,Detonated_CallingCard_MWIII.png,detonator in hand: blowing up enemy gear
+sabotage,kc_mw3_fireworks_show,Fireworks Show,tactic,no,,,honors,FireworksShow_CallingCard_MWIII.png,planted charge with a timer
+kestrel_ar7,kc_mw3_mcw_mastery_gilded,MCW Mastery: Gilded,operator,yes,wm_mcw,1,mastery,MCW_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+kestrel_ar7,kc_mw3_mcw_mastery_forged,MCW Mastery: Forged,operator,yes,wm_mcw,2,mastery,MCW_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+kestrel_ar7,kc_mw3_mcw_mastery_priceless,MCW Mastery: Priceless,operator,yes,wm_mcw,3,mastery,MCW_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+kestrel_ar7,kc_mw3_mcw_mastery_interstellar,MCW Mastery: Interstellar,operator,yes,wm_mcw,4,mastery,MCW_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+longreach_338,kc_mw3_kattamr_mastery_gilded,KATT-AMR Mastery: Gilded,operator,yes,wm_katt_amr,1,mastery,KATTAMR_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+longreach_338,kc_mw3_kattamr_mastery_forged,KATT-AMR Mastery: Forged,operator,yes,wm_katt_amr,2,mastery,KATTAMR_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+longreach_338,kc_mw3_kattamr_mastery_priceless,KATT-AMR Mastery: Priceless,operator,yes,wm_katt_amr,3,mastery,KATTAMR_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+longreach_338,kc_mw3_kattamr_mastery_interstellar,KATT-AMR Mastery: Interstellar,operator,yes,wm_katt_amr,4,mastery,KATTAMR_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+wasp_9,kc_mw3_wsp9_mastery_gilded,WSP-9 Mastery: Gilded,operator,yes,wm_wsp_9,1,mastery,WSP9_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+wasp_9,kc_mw3_wsp9_mastery_forged,WSP-9 Mastery: Forged,operator,yes,wm_wsp_9,2,mastery,WSP9_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+wasp_9,kc_mw3_wsp9_mastery_priceless,WSP-9 Mastery: Priceless,operator,yes,wm_wsp_9,3,mastery,WSP9_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+wasp_9,kc_mw3_wsp9_mastery_interstellar,WSP-9 Mastery: Interstellar,operator,yes,wm_wsp_9,4,mastery,WSP9_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+p12_sidearm,kc_mw3_cor45_mastery_gilded,COR-45 Mastery: Gilded,operator,yes,wm_cor_45,1,mastery,COR45_MasteryGilded_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+p12_sidearm,kc_mw3_cor45_mastery_forged,COR-45 Mastery: Forged,operator,yes,wm_cor_45,2,mastery,COR45_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+p12_sidearm,kc_mw3_cor45_mastery_priceless,COR-45 Mastery: Priceless,operator,yes,wm_cor_45,3,mastery,COR45_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+p12_sidearm,kc_mw3_cor45_mastery_interstellar,COR-45 Mastery: Interstellar,operator,yes,wm_cor_45,4,mastery,COR45_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon

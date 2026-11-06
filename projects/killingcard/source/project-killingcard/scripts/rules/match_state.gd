@@ -1340,7 +1340,7 @@ func synergy_view(_viewer: int = PLAYER) -> Dictionary:
 			if n > 0:
 				var tier: int = int(sv["tiers"].get(t, 0))
 				rail.append({"trait": t, "name": SynergyRules.TRAIT_NAMES[t], "count": n, "tier": tier,
-						"next": SynergyRules.TIER2 if tier < 2 else (SynergyRules.TIER3 if tier < 3 else 0),
+						"next": SynergyRules.next_tier(t, tier),
 						"doctrine": t == sides[si].setup.doctrine})
 		out[side_name(si)] = {"counts": sv["counts"].duplicate(), "tiers": sv["tiers"].duplicate(),
 				"doctrine": sides[si].setup.doctrine, "links": sv["links"].duplicate(true), "rail": rail}

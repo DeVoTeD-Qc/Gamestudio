@@ -7,7 +7,9 @@ except this script and the id list (documentation/art/mw3-pitch-set.csv).
 
 Input:
   documentation/art/mw3-pitch-set.csv   curated list: card (chassis / Operator weapon id), id,
-                                        title, kind, animated, mastery_family, tier_rank, source_file
+                                        title, kind, animated, mastery_family, tier_rank, family
+                                        (kc-art-traits: honors / operators / mastery / horde /
+                                        standard, from the MW3 manifest section), source_file
   <src>/images/<source_file>            originals from tools/fetch_mw3_calling_cards.py
 Output (<out>, default source/project-killingcard/assets/licensed/mw3_pitch/):
   <id>.webp           still, 4:1 at --still-width (first GIF frame composited, or the PNG)
@@ -17,7 +19,9 @@ Output (<out>, default source/project-killingcard/assets/licensed/mw3_pitch/):
   *.webp.import       "keep" importer: Godot ships the WebP bytes as is (decoded at runtime,
                       like CardArt's bitmaps), so the export carries only these small files
   manifest.csv        (+ a "keep" .import) rows BannerArtDB reads: file, kind, card, title, id, animated,
-                      frames_file, frames, frame_ms, mastery_family, tier_rank
+                      frames_file, frames, frame_ms, mastery_family, tier_rank, family, trait
+                      (kc-art-traits: the trait the art gives that chassis, "" = plain or printed;
+                      ArtTraits in the game derives the same from family + CardData.trait_options)
 Usage:
   python3 tools/build_mw3_pitch_set.py [--src DIR] [--out DIR] [--still-width 512]
          [--frame-width 384] [--max-frames 16] [--quality 80]
@@ -37,6 +41,33 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 PROJ = os.path.join(ROOT, "source", "project-killingcard")
 KEEP_IMPORT = '[remap]\n\nimporter="keep"\n'
+
+# kc-art-traits (documentation/design/art-traits.md §1.2 / §4): the list's `family` column was set
+# from the MW3 manifest section with SECTION_FAMILY (documented here). Keep in sync with
+# scripts/data/art_traits.gd (SECTION_FAMILY, FAMILY_TRAIT) and the cards' trait_options.
+SECTION_FAMILY = {
+    "Prestige Mastery / Multiplayer": "honors", "Challenges / Multiplayer": "honors",
+    "Challenges / General": "honors", "Ranked Play / Multiplayer": "honors",
+    "Standard / Store": "operators", "Standard / Battle Pass": "operators",
+    "Standard / Armory Unlocks": "operators", "Standard / Events": "operators",
+    "Warzone": "operators", "Ranked Play / Warzone": "operators", "Challenges / Warzone": "operators",
+    "Weapon Mastery": "mastery",
+    "Challenges / Zombies": "horde", "Prestige Mastery / Zombies": "horde", "Zombies": "horde",
+    "Standard / Default": "standard", "Standard / Miscellaneous": "standard", "Campaign": "standard",
+}
+FAMILY_TRAIT = {"standard": "", "honors": "vanguard", "operators": "specops", "mastery": "heavy", "horde": "undead"}
+# Units whose copies choose their trait through the art (CardData.trait_options); others print it.
+TRAIT_OPTIONS = {
+    "rifleman": ["", "specops", "undead"], "point_man": ["vanguard", "undead"], "breacher": ["vanguard", "heavy"],
+    "shieldman": ["vanguard", "undead"], "flanker": ["specops", "undead"], "recon_specialist": ["specops", "undead"],
+    "marksman": ["specops", "heavy"], "gunner": ["heavy", "specops"], "demolitions_expert": ["heavy", "undead"],
+    "brawler": ["undead", "specops"], "combat_medic": ["undead", "specops"],
+}
+
+
+def trait_for(card: str, family: str) -> str:
+    t = FAMILY_TRAIT.get(family, "")
+    return t if t in TRAIT_OPTIONS.get(card, [None]) else ""
 
 
 def is_ignored(path: str) -> bool:
@@ -97,7 +128,8 @@ def main() -> int:
         rid = r["id"]
         row = {"file": rid + ".webp", "kind": r["kind"], "card": r["card"], "title": r["title"], "id": rid,
                "animated": "no", "frames_file": "", "frames": "", "frame_ms": "",
-               "mastery_family": r.get("mastery_family", ""), "tier_rank": r.get("tier_rank", "")}
+               "mastery_family": r.get("mastery_family", ""), "tier_rank": r.get("tier_rank", ""),
+               "family": r.get("family", ""), "trait": trait_for(r["card"], r.get("family", ""))}
         if src.lower().endswith(".gif"):
             frames, durs = gif_frames(src)
         else:

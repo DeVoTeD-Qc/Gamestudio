@@ -442,9 +442,18 @@ func _make_operator_card(op: Dictionary) -> Control:
 	plate_l.add_theme_stylebox_override(&"normal", tag_sb)
 	var face0: Control = panel.get_node("Face")
 	face0.add_child(plate_l)
+	var obv: BannerView = BannerCard.banner_of(panel)
 	panel.sort_children.connect(func() -> void:
 		plate_l.size = plate_l.get_combined_minimum_size()
-		plate_l.position = Vector2(3, 3))
+		var mm: Dictionary = BannerView.metrics(minf(face0.size.y, _metric_h if _metric_h > 0.0 else face0.size.y))
+		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, maxf(1.0, obv.lead))
+		plate_l.position = Vector2((an["cost"] as Rect2).position.x, (an["cost"] as Rect2).position.y + ((an["cost"] as Rect2).size.y - plate_l.size.y) * 0.5)
+		# kc-ui4: the Supply plate takes the cost slot (top-left); the name starts after it.
+		var want: float = plate_l.size.x + 4.0
+		if obv != null and absf(obv.lead - want) > 0.5:
+			obv.lead = want
+			obv.queue_redraw()
+			panel.queue_sort())
 	if short:
 		op = op.duplicate()
 		op["status"] = "NEED %d SUPPLY" % cost
@@ -473,26 +482,6 @@ func _make_operator_card(op: Dictionary) -> Control:
 		status.add_theme_color_override(&"font_color", get_theme_color(&"friend", &"Hud"))
 	status.add_theme_stylebox_override(&"normal", plate)
 	status.visible = status.text != ""
-	# A short banner card (desktop 64 px): the name keeps the stat row; the status moves up into the
-	# plate row between the Supply plate and the dog tag (hidden when it can't fit: the red plate and
-	# the tooltip say it then).
-	var title_l: Label = panel.find_child("NameLabel", true, false) as Label
-	var shown: bool = status.visible
-	panel.sort_children.connect(func() -> void:
-		var f: Control = panel.get_node("Face")
-		if f.size.y >= 72.0:
-			return
-		var mm: Dictionary = BannerView.metrics(minf(f.size.y, _metric_h if _metric_h > 0.0 else f.size.y))
-		var row_h: float = mm["badge"]
-		var th: float = title_l.get_combined_minimum_size().y
-		title_l.position.y = f.size.y - mm["pad"] - row_h + (row_h - th) * 0.5
-		var x0: float = plate_l.position.x + plate_l.get_combined_minimum_size().x + 4.0
-		var room: float = f.size.x - x0 - mm["plate"] - mm["pad"] - 4.0
-		var need: float = status.get_combined_minimum_size().x
-		status.visible = shown and need <= room
-		status.size = Vector2(need, status.get_combined_minimum_size().y)
-		var sh: float = status.get_combined_minimum_size().y
-		status.position = Vector2(x0 + (room - need) * 0.5, maxf(0.0, mm["pad"] + (mm["plate"] - sh) * 0.5)))
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
 	glow.name = "Glow"

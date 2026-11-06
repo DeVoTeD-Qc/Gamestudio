@@ -87,9 +87,12 @@ func is_unit() -> bool:
 ## kc-art-traits: every trait a copy can carry, default first ([card_trait] for printed cards, []
 ## for cards that never have a trait).
 func trait_choices() -> Array[StringName]:
+	var out: Array[StringName] = []
 	if not trait_options.is_empty():
-		return trait_options.duplicate()
-	return [card_trait] as Array[StringName] if card_trait != &"" else [] as Array[StringName]
+		out.assign(trait_options)
+	elif card_trait != &"":
+		out.append(card_trait)
+	return out
 
 
 ## True when copies of this card can differ in trait (more than one option).

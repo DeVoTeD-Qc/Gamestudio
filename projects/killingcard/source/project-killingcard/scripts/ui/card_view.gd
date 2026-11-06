@@ -31,8 +31,10 @@ const EDGE_H: float = 14.0
 const NOTCH_W: float = 56.0
 const NOTCH_DEPTH: float = 14.0
 const COST_RECT: Rect2 = Rect2(16, 10, 46, 46)
-const FP_RECT: Rect2 = Rect2(16, 296, 74, 36)
-const ARMOR_RECT: Rect2 = Rect2(162, 296, 74, 36)
+## kc-ui4 card anatomy (the head): FP and Armor side by side in the BOTTOM-RIGHT, each a plate with
+## its number inside (FP: teal circle / red diamond, Armor: shield), as on every banner.
+const FP_RECT: Rect2 = Rect2(126, 294, 52, 42)
+const ARMOR_RECT: Rect2 = Rect2(184, 292, 50, 46)
 const KEYWORD_ROW_W: float = 222.0
 const BODY_TOP: float = 228.0
 const BODY_BOTTOM_UNIT: float = 274.0
@@ -247,6 +249,20 @@ func _refresh() -> void:
 		_range_icon.texture = IconSheet.get_icon(StringName("range_" + RANGE_NAMES[best].to_lower()) if best >= 0 else &"range_mid")
 	_fp_badge.visible = _has_stats()
 	_armor_badge.visible = _has_stats()
+	# kc-ui4: the number sits inside its plate (drawn in _draw); the old side icons are off.
+	_fp_badge.position = FP_RECT.position
+	_fp_badge.size = FP_RECT.size
+	_armor_badge.position = ARMOR_RECT.position
+	_armor_badge.size = ARMOR_RECT.size
+	_fp_icon.visible = false
+	_armor_icon.visible = false
+	for pair: Array in [[_fp_label, FP_RECT], [_armor_label, Rect2(ARMOR_RECT.position, Vector2(ARMOR_RECT.size.x, ARMOR_RECT.size.y * 0.86))]]:
+		var l: Label = pair[0]
+		l.position = Vector2.ZERO
+		l.size = (pair[1] as Rect2).size
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		l.set_meta(&"slot_size", l.size)
 	_fp_label.text = str(int(data.get("firepower", 0)))
 	_armor_label.text = str(int(data.get("armor", 0)))
 	_tint_icons()
@@ -457,12 +473,22 @@ func _draw() -> void:
 		var hex: PackedVector2Array = _hex(COST_RECT)
 		draw_colored_polygon(hex, badge_color)
 		draw_polyline(_closed(hex), badge_color.darkened(0.35), 2.0, true)
-	# Stat plates.
+	# Stat plates (kc-ui4): FP and Armor side by side bottom-right, the number inside each.
 	if _has_stats():
-		for r: Rect2 in [FP_RECT, ARMOR_RECT]:
-			var plate: PackedVector2Array = _chamfer_rect(r, [6.0, 6.0, 6.0, 6.0])
-			draw_colored_polygon(plate, bg)
-			draw_polyline(_closed(plate), Color(frame, 0.8), 1.5, true)
+		var c: Vector2 = FP_RECT.get_center()
+		var rad: float = minf(FP_RECT.size.x, FP_RECT.size.y) * 0.5
+		if is_friend:
+			draw_circle(c, rad, Color("#14524D"))
+			draw_arc(c, rad - 1.0, 0, TAU, 32, side_color, 2.5, true)
+		else:
+			var d: PackedVector2Array = [c + Vector2(0, -rad), c + Vector2(rad, 0), c + Vector2(0, rad), c + Vector2(-rad, 0)]
+			draw_colored_polygon(d, Color("#5A1A1C"))
+			draw_polyline(_closed(d), side_color, 2.5, true)
+		var a: Rect2 = ARMOR_RECT
+		var sh: PackedVector2Array = [a.position, a.position + Vector2(a.size.x, 0), a.position + Vector2(a.size.x, a.size.y * 0.55),
+				a.position + Vector2(a.size.x * 0.5, a.size.y), a.position + Vector2(0, a.size.y * 0.55)]
+		draw_colored_polygon(sh, Color("#2E3439"))
+		draw_polyline(_closed(sh), Color("#B9C2C9"), 2.0, true)
 
 
 func _outline(type_name: String, is_friend: bool) -> PackedVector2Array:

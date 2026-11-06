@@ -294,3 +294,15 @@ The head: "the cards in hand and on the codex should be closer to their form on 
 **Deviations / open.** The public build's alternate arts are regrades of the chassis' placeholder (night / sand / mirrored), clearly placeholders. Board banners now also print the card name (the same as the hand card); the rival FRONT tab sits on the name line of the rival's front row. Hand cards are wide banners, so the licensed 4:1 art is cropped less than in the old 2:3 window but more than on the board (about 2.4:1 on the phone). The tray's mini Operator card keeps the card's height (banner cards are short already).
 
 **QA.** `tests/test_ui4.gd` (6 tests: identical FP / Armor rects for both sides on 4 banner sizes and the live board, hand banner badges and chassis name; codex ART panel -> EQUIP -> saved and reloaded -> every Rifleman copy in a match wears it, the rival and other cards don't; the starter panel groups the deck, the Operator pick reaches the run, the save, the match and the next run / quick match, the rival unchanged, no change after the run began; the codex STARTER button; every keyword / neighbor keyword / trait in the data has a glossary entry and icon; the glossary from MENU and the inspector "?"). Updated: board metrics, hand art 4:1, codex tap = ART panel, loadout opens on the starter panel, the tutorial's chip rect for a grid. Browser smoke (`?qa=1&seed=101`, 844x390 and 1440x900, public and pitch). Screenshots (public art, WebP): `qa/screenshots/ui4/`.
+
+---
+
+## Implementation notes (kc-fight-ui, UI/UX Agent, 2026-11-06)
+The step-by-step firefight is described in `../design/firefight-order.md` §10.4. Layout changes here:
+
+| Piece | What | Where |
+|---|---|---|
+| **Phone strip: RIVAL folds into SCORE** (head's kc-syn-ui answer) | On the phone the SCORE badge has three lines: `R1`, `0-0` and the rival's hand (a small red card glyph + count). Its flyout is "SCORE · RIVAL HAND" (score bar + the rival intel). PREVIEW moves up into RIVAL's slot, so the trait rail gets a whole badge slot more: 62x118 px (45x85 pt, was 62x49). Desktop keeps the RIVAL badge. | `match_screen.gd` (`rival_in_score`, `_layout_regions`, `_set_badges`, `open_flyout`), `strip_badge.gd` (inline glyph) |
+| **Tray during the round** | Under the header: the A > B > C order strip (34 px), then the shot caption (17 px, wraps to 2-5 lines), then the killfeed log. | `match_screen.gd`, `scripts/fx/order_strip.gd` |
+| **Deploy glow** (head's kc-syn-ui answer) | At the start of each Deploy, every hand card that would switch a trait bonus on this round glows twice in its trait's colour (1.6 s, white inner line; reduced motion: one steady frame). | `scripts/fx/hand_glow_fx.gd`, `match_screen.gd` (`glow_set_cards`) |
+| **Pierce glyph** | An arrow through a chevron, pointing down the enemy column, drawn (no sheet icon): banner effect slot, Codex glossary. | `synergy_glyphs.gd` (`draw_pierce_icon`), `banner_view.gd`, `codex/glossary.gd`, `card_info.gd` |

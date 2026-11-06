@@ -205,6 +205,9 @@ static func _banner_fields(e: Dictionary, card: CardData, u: RulesUnit, side: Ru
 	var sub: String = BannerArtDB.subname(id)
 	if sub != "":
 		e["subname"] = sub
+	# kc-ui4 card anatomy: the cost sits top-left on every card form, the board banner included.
+	if card != null:
+		e["cost"] = card.cost
 	e["bolt"] = card != null and not card.effects.is_empty()
 	e["front_kw"] = card != null and card.arrives_front
 	e["elite"] = card != null and card.is_elite

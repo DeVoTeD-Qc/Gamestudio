@@ -36,7 +36,7 @@ func _reset_settings() -> void:
 # =============================================================================
 
 func test_stat_icons_same_place_for_both_sides() -> void:
-	var entry: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 4, "armor_max": 4, "banner": "rifleman",
+	var entry: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 4, "armor_max": 4, "banner": "rifleman", "cost": 2,
 			"keywords": [{"id": &"pick"}], "trait": "vanguard", "kw": "spotter", "band": "gilded"}
 	for sz: Vector2 in [Vector2(228, 57), Vector2(304, 76), Vector2(208, 52), Vector2(512, 128)]:
 		var mine: BannerView = BannerView.new()
@@ -49,9 +49,11 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 		var a: Dictionary = mine.stat_rects()
 		var e: Dictionary = theirs.stat_rects()
 		assert_eq([a["fp"], a["armor"]], [e["fp"], e["armor"]], "%s: FP and Armor badges at the same place on both sides" % sz)
-		assert_true((a["fp"] as Rect2).position.x < sz.x * 0.25 and (a["fp"] as Rect2).end.y >= sz.y - 6.0, "%s: FP bottom-left" % sz)
-		assert_true((a["armor"] as Rect2).end.x > sz.x * 0.75 and (a["armor"] as Rect2).end.y >= sz.y - 6.0, "%s: Armor bottom-right" % sz)
+		_check_anatomy(mine, "%s player" % sz)
+		_check_anatomy(theirs, "%s rival" % sz)
+		assert_eq(mine.anatomy_now(), theirs.anatomy_now(), "%s: every slot identical on both sides" % sz)
 		var op: Dictionary = entry.duplicate()
+		op.erase("cost")
 		op["operator"] = true
 		mine.show_unit(op, &"player", true)
 		theirs.show_unit(op, &"enemy", true)
@@ -92,8 +94,9 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 		if unit_chip != null:
 			var hb: BannerView = hand.get_banner(unit_chip)
 			var hr: Dictionary = hb.stat_rects()
-			assert_true((hr["fp"] as Rect2).position.x < hb.size.x * 0.25 and (hr["fp"] as Rect2).end.y >= hb.size.y - 6.0, "%s hand: FP bottom-left" % label)
-			assert_true((hr["armor"] as Rect2).end.x > hb.size.x * 0.75, "%s hand: Armor bottom-right" % label)
+			_check_anatomy(hb, "%s hand card" % label)
+			var hex: Control = unit_chip.find_child("CostHex", true, false)
+			assert_true(hex.position.x < hb.size.x * 0.2 and hex.position.y < hb.size.y * 0.3, "%s hand: cost top-left" % label)
 			assert_true(absf((hr["fp"] as Rect2).size.x - (a2["fp"] as Rect2).size.x) < 1.0 or hb.size.y < fr.banner.size.y,
 					"%s hand badges are the board's size" % label)
 			var name_l: Label = unit_chip.find_child("NameLabel", true, false)
@@ -102,8 +105,32 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 				if rc.uid == int(unit_chip.get_meta(&"uid")):
 					rc_name = rc.card.display_name
 			assert_eq(name_l.text, rc_name, "%s hand card named by its chassis" % label)
+		# Board banners show the cost top-left too (anatomy on every form); the inspector banner.
+		_check_anatomy(fr.banner, "%s board (yours)" % label)
+		_check_anatomy(er.banner, "%s board (rival)" % label)
 		_despawn(s[0])
 		await tree.process_frame
+	# Full card face (inspector / mulligan CardView): FP and Armor side by side, bottom-right.
+	assert_true(CardView.FP_RECT.position.x > CardView.BASE_SIZE.x * 0.4 and CardView.ARMOR_RECT.position.x > CardView.FP_RECT.end.x - 1.0,
+			"CardView: FP then Armor, bottom-right")
+	assert_true(CardView.FP_RECT.end.y > CardView.BASE_SIZE.y * 0.8 and CardView.ARMOR_RECT.end.y > CardView.BASE_SIZE.y * 0.8, "CardView: on the bottom")
+
+
+## The head's card anatomy on one banner: FP + Armor side by side bottom-right, cost top-left,
+## trait top-right, abilities bottom-left.
+func _check_anatomy(b: BannerView, label: String) -> void:
+	var a: Dictionary = b.anatomy_now()
+	var sz: Vector2 = b.size
+	var fp: Rect2 = a["fp"]
+	var ar: Rect2 = a["armor"]
+	assert_true(fp.position.x > sz.x * 0.5 and ar.position.x >= fp.end.x and ar.end.x > sz.x - 8.0, "%s: FP then Armor in the bottom-right (%s / %s)" % [label, fp, ar])
+	assert_true(fp.end.y >= sz.y - 8.0 and ar.end.y >= sz.y - 8.0, "%s: stats on the bottom edge" % label)
+	if (a["cost"] as Rect2).size.x > 0.0:
+		assert_true((a["cost"] as Rect2).position.x < sz.x * 0.15 and (a["cost"] as Rect2).position.y < sz.y * 0.3, "%s: cost top-left" % label)
+	if a.has("trait"):
+		assert_true((a["trait"] as Rect2).end.x > sz.x - 8.0 and (a["trait"] as Rect2).position.y < sz.y * 0.3, "%s: trait top-right" % label)
+	for ab: Array in a["abilities"]:
+		assert_true((ab[1] as Rect2).position.x < sz.x * 0.5 and (ab[1] as Rect2).end.y > sz.y * 0.6, "%s: abilities bottom-left" % label)
 
 
 # =============================================================================
@@ -162,11 +189,15 @@ func test_codex_equip_persists_and_the_match_uses_it() -> void:
 			assert_not_null(n.find_child("EquippedTag", true, false), "the grid tile shows EQUIPPED")
 			var bv: BannerView = BannerCard.banner_of(n.get_child(0))
 			assert_eq(StringName(String(bv.entry.get("banner", ""))), pick, "the grid tile wears the equipped art")
+			_check_anatomy(bv, "codex tile")
 	# Long-press (right-click) = the inspector, named by the chassis with the subname in the type line.
 	codex.open_entry(rifle, pick)
 	assert_eq(String((codex.get_inspector().get_node("%TitleLabel") as Label).text), "Rifleman", "inspector title is the card name")
 	assert_true(String((codex.get_inspector().get_node("%TypeLabel") as Label).text).contains(BannerArtDB.subname(pick).to_upper()),
 			"inspector type line has the subname")
+	var ib: BannerView = codex.get_inspector().get_banner()
+	if ib != null:
+		_check_anatomy(ib, "inspector banner")
 	codex.get_inspector().close()
 	_despawn(vp)
 	await tree.process_frame

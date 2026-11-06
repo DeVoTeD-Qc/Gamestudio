@@ -72,7 +72,11 @@ var revealed: String = ""
 var show_name: bool = true
 ## kc-ui4: px kept free at the top-left for a hand / codex card's cost hex (the plate row starts
 ## after it).
-var lead: float = 0.0
+var lead: float = 0.0:
+	set(value):
+		lead = value
+		if _overlay != null:
+			_overlay.queue_redraw()
 ## kc-ui4: badge / plate sizes follow this height instead of the banner's own (hand cards are
 ## taller than 4:1 but keep the board's icon sizes). 0 = the banner's height.
 var metric_h: float = 0.0
@@ -353,84 +357,51 @@ func _draw_overlay() -> void:
 	if not op and lvl_band != &"":
 		lband_h = 4.0 if size.y < 100.0 else 8.0
 		SynergyGlyphs.draw_band(o, Rect2(spine, 0.0, size.x - spine, lband_h), lvl_band)
-	var lay: Dictionary = layout(size, m, op, lband_h, lead)
-	var outer_y: float = lay["plate_y"]
-	var left_x: float = lay["left_x"]
-	var stat_x0: float = left_x
-	var stat_x1: float = size.x - m["pad"]
-	if entry.has("fp"):
-		# Firepower (bottom-left): teal circle (yours) / red notched diamond (rival).
-		var fp_rect: Rect2 = lay["fp"]
-		_draw_fp(o, fp_rect, int(entry.get("fp", 0)), mine, m)
-		_draw_trend(o, fp_rect, int(entry.get("fp_trend", 0)), mine)
-		# Armor (bottom-right): grey shield, amber when damaged.
-		var armor: int = int(entry.get("armor", 0))
-		var damaged: bool = armor < int(entry.get("armor_max", armor))
-		var ar_rect: Rect2 = lay["armor"]
-		_draw_armor(o, ar_rect, armor, damaged, m)
-		stat_x0 = fp_rect.end.x + 4.0
-		stat_x1 = ar_rect.position.x - 4.0
-		# kc-syn-ui: Cover now (printed + effects + links + sets), left of the Armor badge.
-		var cov: int = int(entry.get("cover", 0))
-		if cov > 0:
-			var cs: float = roundf(m["badge"] * 0.78)
-			var cr: Rect2 = Rect2(ar_rect.position.x - cs - 3.0, fp_rect.position.y + (m["badge"] - cs) * 0.5, cs, cs)
-			_draw_cover_chip(o, cr, cov, int(entry.get("cover_trend", 0)), m)
-			stat_x1 = cr.position.x - 3.0
-	if show_name and mode in [Mode.UNIT, Mode.GHOST]:
-		_draw_name(o, stat_x0, stat_x1, size.y - m["pad"], m["badge"], entry.has("fp"))
-	# Class pip (top-left).
+	var an: Dictionary = anatomy(size, m, entry, lead if lead > 0.0 else -1.0)
+	# Cost (top-left): drawn here on the board; hand / codex cards place a CostHex node in `lead`.
+	if lead <= 0.0 and (an["cost"] as Rect2).size.x > 0.0:
+		_draw_cost(o, an["cost"], str(entry.get("cost", "")))
+	# Class pip and Elite star (top-left, after the cost).
 	var cls: String = String(entry.get("cls", "")).to_upper()
-	if CLASS_ICONS.has(cls) and not op:
-		_draw_plate_icon(o, Rect2(left_x, outer_y, m["plate"], m["plate"]), IconSheet.get_icon(CLASS_ICONS[cls]), _col(&"text"))
-	if bool(entry.get("elite", false)):
-		# Elite (Commander / Ace): a gold star plate next to the class pip (the fonts have no star glyph).
-		var sr: Rect2 = Rect2(left_x + m["plate"] + 2.0, outer_y, m["plate"], m["plate"])
+	if an.has("class"):
+		_draw_plate_icon(o, an["class"], IconSheet.get_icon(CLASS_ICONS[cls]), _col(&"text"))
+	if an.has("elite"):
+		var sr: Rect2 = an["elite"]
 		o.draw_rect(sr, Color(INK, 0.82))
 		draw_star(o, sr.get_center(), sr.size.x * 0.42, BRASS)
-	# kc-syn-ui: trait icon (outer-left, after the class pip / Elite star): lit at tier 2, ring at 3.
-	var tr: StringName = StringName(String(entry.get("trait", "")))
-	if tr != &"" and not op:
-		var slot_i: int = 1 + (1 if bool(entry.get("elite", false)) else 0)
-		var trr: Rect2 = Rect2(left_x + slot_i * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"])
-		var tier: int = int(entry.get("trait_tier", 0))
-		SynergyGlyphs.draw_trait_plate(o, trr, tr, tier >= 2, tier >= 3)
-	# Effect (outer-right): Operator dog tag, else up to 2 keyword glyphs, else a bolt.
-	var ex: float = size.x - m["pad"] - m["plate"]
-	if op:
-		_draw_dog_tag(o, Rect2(ex, outer_y, m["plate"], m["plate"]))
-	else:
-		var icons: Array = []
-		for kw: Dictionary in entry.get("keywords", []):
-			var key: StringName = IconSheet.KEYWORD_ICONS.get(StringName(kw.get("id", &"")), &"")
-			if key != &"" and IconSheet.has_icon(key):
-				icons.append(key)
-			elif StringName(kw.get("id", &"")) == &"pierce":
-				icons.append(&"pierce")  # kc-fight-ui: drawn glyph (no sheet icon)
-		if bool(entry.get("front_kw", false)):
-			icons.push_front(&"protector")
-		var bolt: bool = bool(entry.get("bolt", false)) or icons.size() > 2
-		var shown: int = 0
-		for key: StringName in icons:
-			if shown >= (1 if bolt else 2):
-				break
-			var rr: Rect2 = Rect2(ex - shown * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"])
-			if key == &"protector":
-				_draw_protector_glyph(o, rr)
-			elif key == &"pierce":
-				SynergyGlyphs.draw_pierce_plate(o, rr, _col(&"accent"), not mine)
-			else:
-				_draw_plate_icon(o, rr, IconSheet.get_icon(key), _col(&"accent"))
-			shown += 1
-		if bolt:
-			_draw_bolt(o, Rect2(ex - shown * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"]), icons.size() > 2)
-			shown += 1
-		# kc-syn-ui: the neighbour keyword pip (its arrow points at the neighbours it uses), lit while
-		# the link is on, grey while idle.
-		var kw: StringName = StringName(String(entry.get("kw", "")))
-		if kw != &"":
-			var kr: Rect2 = Rect2(ex - shown * (m["plate"] + 2.0) - 2.0, outer_y, m["plate"], m["plate"])
-			SynergyGlyphs.draw_keyword_plate(o, kr, kw, bool(entry.get("kw_active", false)), side_c, mine)
+	# Trait (top-right): lit at tier 2, ring at 3. The Operator: its dog tag.
+	if an.has("trait"):
+		if op:
+			_draw_dog_tag(o, an["trait"])
+		else:
+			var tier: int = int(entry.get("trait_tier", 0))
+			SynergyGlyphs.draw_trait_plate(o, an["trait"], StringName(String(entry.get("trait", ""))), tier >= 2, tier >= 3)
+	# Abilities (bottom-left).
+	for ab: Array in an["abilities"]:
+		var kind: Variant = ab[0]
+		var rr: Rect2 = ab[1]
+		if kind is Array:
+			SynergyGlyphs.draw_keyword_plate(o, rr, kind[1], bool(entry.get("kw_active", false)), side_c, mine)
+		elif kind == &"protector":
+			_draw_protector_glyph(o, rr)
+		elif kind == &"pierce":
+			SynergyGlyphs.draw_pierce_plate(o, rr, _col(&"accent"), not mine)
+		elif kind == &"bolt" or kind == &"bolt_more":
+			_draw_bolt(o, rr, kind == &"bolt_more")
+		else:
+			_draw_plate_icon(o, rr, IconSheet.get_icon(kind), _col(&"accent"))
+	# FP and Armor (bottom-right), each a plate with its number inside; Cover chip left of them.
+	if entry.has("fp"):
+		var fp_rect: Rect2 = an["fp"]
+		_draw_fp(o, fp_rect, int(entry.get("fp", 0)), mine, m)
+		_draw_trend(o, fp_rect, int(entry.get("fp_trend", 0)), mine)
+		var armor: int = int(entry.get("armor", 0))
+		var damaged: bool = armor < int(entry.get("armor_max", armor))
+		_draw_armor(o, an["armor"], armor, damaged, m)
+		if an.has("cover"):
+			_draw_cover_chip(o, an["cover"], int(entry.get("cover", 0)), int(entry.get("cover_trend", 0)), m)
+	if show_name and mode in [Mode.UNIT, Mode.GHOST]:
+		_draw_names(o, an)
 	if pending:
 		_draw_tag(o, "PLAN", _col(&"accent"), mine, m)
 		_dashed_rect(o, r.grow(-1.0), _col(&"accent"), 2.0)
@@ -442,26 +413,107 @@ func _draw_overlay() -> void:
 		_draw_reticle(o, r)
 
 
-## kc-ui4: where the badges sit on a banner of `sz` (the same for both sides): the plate row's y and
-## first x (after the spine, the top band and `lead_px`), and the FP / Armor badge rects.
+## kc-ui4 card anatomy (the head, one layout for every card form and both sides):
+##   top-left     cost (hex), then the class pip and the Elite star
+##   top-right    trait (the Operator: its dog tag)
+##   top-centre   the card name (the chassis)
+##   bottom-left  abilities: Protector, up to 2 keyword glyphs or the effect bolt, the neighbor keyword
+##   bottom-right FP and Armor side by side, each a plate with its number inside (Cover chip left)
+##   bottom-centre the art's subname (or the middle band when the card is tall enough)
+## Rects for a banner of `sz`. `entry` decides how many ability plates; `lead_px` > 0 = a cost hex
+## owned by the caller (hand / codex cards); else the banner draws the cost itself when `entry` has one.
+static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = -1.0) -> Dictionary:
+	var op: bool = bool(e.get("operator", false))
+	var band: float = (6.0 if sz.y < 100.0 else 10.0) if op else ((4.0 if sz.y < 100.0 else 8.0) if String(e.get("band", "")) != "" else 0.0)
+	var pad: float = m["pad"]
+	var plate: float = m["plate"]
+	var badge: float = m["badge"]
+	var x0: float = m["spine"] + pad
+	var top: float = pad + band
+	var out: Dictionary = {"plate_y": top, "band": band}
+	var has_cost: bool = str(e.get("cost", "")) != "" and not op
+	var cost_w: float = lead_px if lead_px > 0.0 else (roundf(plate * 1.05) + 2.0 if has_cost else 0.0)
+	out["cost"] = Rect2(x0, top, maxf(0.0, cost_w - 2.0), plate) if has_cost or lead_px > 0.0 else Rect2()
+	var lx: float = x0 + cost_w
+	if CLASS_ICONS.has(String(e.get("cls", "")).to_upper()) and not op:
+		out["class"] = Rect2(lx, top, plate, plate)
+		lx += plate + 2.0
+	if bool(e.get("elite", false)):
+		out["elite"] = Rect2(lx, top, plate, plate)
+		lx += plate + 2.0
+	var rx: float = sz.x - pad - plate
+	if op or String(e.get("trait", "")) != "":
+		out["trait"] = Rect2(rx, top, plate, plate)
+	else:
+		rx = sz.x - pad + 2.0
+	out["name"] = Rect2(lx + 2.0, top, maxf(0.0, rx - 4.0 - lx), plate)
+	# Bottom-right: Armor at the corner, FP left of it (each a plate with the number inside).
+	var ar_h: float = badge * 1.08
+	var armor: Rect2 = Rect2(sz.x - pad - badge, sz.y - pad - ar_h, badge, ar_h)
+	var fp: Rect2 = Rect2(armor.position.x - 3.0 - badge, sz.y - pad - badge, badge, badge)
+	out["armor"] = armor
+	out["fp"] = fp
+	var stat_x: float = fp.position.x if e.has("fp") else sz.x - pad
+	if e.has("fp") and int(e.get("cover", 0)) > 0:
+		var cs: float = roundf(badge * 0.78)
+		out["cover"] = Rect2(fp.position.x - cs - 3.0, fp.position.y + (badge - cs) * 0.5, cs, cs)
+		stat_x = (out["cover"] as Rect2).position.x
+	# Bottom-left: ability plates, centred on the stat row.
+	var ky: float = sz.y - pad - badge + (badge - plate) * 0.5 if e.has("fp") else sz.y - pad - plate
+	var kinds: Array = ability_kinds(e)
+	var kws: Array = []
+	var kx: float = x0
+	for k: Variant in kinds:
+		kws.append([k, Rect2(kx, ky, plate, plate)])
+		kx += plate + 2.0
+	out["abilities"] = kws
+	out["sub"] = Rect2(kx + 2.0, sz.y - pad - badge, maxf(0.0, stat_x - kx - 6.0), badge)
+	out["mid"] = Rect2(x0, top + plate + 1.0, sz.x - x0 - pad, maxf(0.0, (sz.y - pad - badge) - (top + plate + 1.0)))
+	return out
+
+
+## The ability plates of an entry in order: [&"protector"?, keyword icon ids (max 2, 1 with a bolt),
+## &"bolt"?, [&"kw", keyword]?]. The Operator shows its keywords too.
+static func ability_kinds(e: Dictionary) -> Array:
+	var icons: Array = []
+	for kw: Dictionary in e.get("keywords", []):
+		var id: StringName = StringName(kw.get("id", &""))
+		var key: StringName = IconSheet.KEYWORD_ICONS.get(id, &"")
+		if key != &"" and IconSheet.has_icon(key):
+			icons.append(key)
+		elif id == &"pierce":
+			icons.append(&"pierce")  # kc-fight-ui: drawn glyph (no sheet icon)
+	if bool(e.get("front_kw", false)):
+		icons.push_front(&"protector")
+	var bolt: bool = bool(e.get("bolt", false)) or icons.size() > 2
+	var out: Array = icons.slice(0, 1 if bolt else 2)
+	if bolt:
+		out.append(&"bolt_more" if icons.size() > 2 else &"bolt")
+	if String(e.get("kw", "")) != "":
+		out.append([&"kw", StringName(String(e["kw"]))])
+	return out
+
+
+## Kept for callers: the plate row's y / first x and the FP / Armor rects (anatomy()).
 static func layout(sz: Vector2, m: Dictionary, op: bool = false, level_band: float = 0.0, lead_px: float = 0.0) -> Dictionary:
-	var top_band: float = (6.0 if sz.y < 100.0 else 10.0) if op else level_band
-	var x0: float = m["spine"] + m["pad"]
-	var ar_h: float = m["badge"] * 1.08
-	var fp_y: float = sz.y - m["pad"] - m["badge"]
-	return {
-		"plate_y": m["pad"] + top_band, "left_x": x0 + lead_px,
-		"fp": Rect2(x0, fp_y, m["badge"], m["badge"]),
-		"armor": Rect2(sz.x - m["pad"] - m["badge"], sz.y - m["pad"] - ar_h, m["badge"], ar_h),
-	}
+	var e: Dictionary = {"operator": op, "band": "x" if level_band > 0.0 else "", "fp": 0}
+	var a: Dictionary = anatomy(sz, m, e, lead_px if lead_px > 0.0 else -1.0)
+	return {"plate_y": a["plate_y"], "left_x": m["spine"] + m["pad"] + maxf(0.0, lead_px), "fp": a["fp"], "armor": a["armor"]}
 
 
 ## The FP and Armor badge rects of this banner as drawn now (tests, FX anchors).
 func stat_rects() -> Dictionary:
-	var m: Dictionary = metrics(minf(size.y, metric_h) if metric_h > 0.0 else size.y)
-	var lband: float = (4.0 if size.y < 100.0 else 8.0) if String(entry.get("band", "")) != "" and not bool(entry.get("operator", false)) else 0.0
-	var lay: Dictionary = layout(size, m, bool(entry.get("operator", false)), lband, lead)
-	return {"fp": lay["fp"], "armor": lay["armor"]}
+	var a: Dictionary = anatomy(size, _metrics_now(), entry, lead if lead > 0.0 else -1.0)
+	return {"fp": a["fp"], "armor": a["armor"]}
+
+
+## Every slot of this banner as drawn now (tests: cost, class, trait, name, abilities, sub...).
+func anatomy_now() -> Dictionary:
+	return anatomy(size, _metrics_now(), entry, lead if lead > 0.0 else -1.0)
+
+
+func _metrics_now() -> Dictionary:
+	return metrics(minf(size.y, metric_h) if metric_h > 0.0 else size.y)
 
 
 ## Name sizes for a banner height (phone 57: 16 / 16; desktop 76: 18 / 16): 16 px is the phone's
@@ -470,33 +522,49 @@ static func name_sizes(h: float) -> Vector2i:
 	return Vector2i(clampi(int(roundf(h * 0.24)), 16, 18), 16)
 
 
-## kc-ui4 (head naming): the card's name (always the chassis, so a card keeps its name whatever art
-## it wears) and the art's subname under it, smaller, in the free space between the stat badges.
-func _draw_name(o: Control, x0: float, x1: float, bottom: float, row_h: float, stats: bool) -> void:
+## kc-ui4 (head naming): the card's name (always the chassis) top-centre, and the art's subname
+## bottom-centre (or in the middle band when it has the room), smaller and amber.
+func _draw_names(o: Control, a: Dictionary) -> void:
 	var nm: String = String(entry.get("name", "")).replace("★", "").strip_edges().to_upper()
-	if nm == "" or x1 - x0 < 24.0:
-		return
-	var sub: String = String(entry.get("subname", entry.get("art_title", ""))).to_upper()
-	if sub == "" and not stats:
-		sub = String(entry.get("kind_word", ""))
 	var font: Font = get_theme_font(&"font", &"HudHeader")
 	var fs: Vector2i = name_sizes(metric_h if metric_h > 0.0 else size.y)
-	var w: float = x1 - x0
-	var nfs: int = fs.x
-	while nfs > 13 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > w:
-		nfs -= 1
-	var sub_h: float = (fs.y + 1.0) if sub != "" else 0.0
-	var line_h: float = font.get_ascent(nfs) + font.get_descent(nfs)
-	var block: float = line_h + sub_h
-	var top: float = bottom - maxf(block, row_h) + maxf(0.0, (row_h - block) * 0.5)
-	var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER if stats else HORIZONTAL_ALIGNMENT_LEFT
-	var base: Vector2 = Vector2(x0, top + font.get_ascent(nfs))
-	o.draw_string_outline(font, base, nm, align, w, nfs, 4, INK)
-	o.draw_string(font, base, nm, align, w, nfs, Color.WHITE)
-	if sub != "":
-		var sb: Vector2 = Vector2(x0, top + line_h + font.get_ascent(fs.y))
-		o.draw_string_outline(font, sb, sub, align, w, fs.y, 3, INK)
-		o.draw_string(font, sb, sub, align, w, fs.y, Color("#F3D36B") if entry.has("subname") or entry.has("art_title") else Color("#B9C2C9"))
+	var nr: Rect2 = a["name"]
+	if nm != "" and nr.size.x >= 24.0:
+		var nfs: int = fs.x
+		while nfs > 13 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > nr.size.x:
+			nfs -= 1
+		var base: Vector2 = Vector2(nr.position.x, nr.position.y + (nr.size.y + font.get_ascent(nfs) - font.get_descent(nfs)) * 0.5)
+		o.draw_string_outline(font, base, nm, HORIZONTAL_ALIGNMENT_CENTER, nr.size.x, nfs, 4, INK)
+		o.draw_string(font, base, nm, HORIZONTAL_ALIGNMENT_CENTER, nr.size.x, nfs, Color.WHITE)
+	var sub: String = String(entry.get("subname", "")).to_upper()
+	if sub == "" and not entry.has("fp"):
+		sub = String(entry.get("kind_word", ""))
+	if sub == "":
+		return
+	var sr: Rect2 = a["mid"] if (a["mid"] as Rect2).size.y >= fs.y + 2.0 else a["sub"]
+	if sr.size.x < 24.0:
+		return
+	var sb: Vector2 = Vector2(sr.position.x, sr.position.y + (sr.size.y + font.get_ascent(fs.y) - font.get_descent(fs.y)) * 0.5)
+	var c: Color = Color("#F3D36B") if entry.has("subname") else Color("#B9C2C9")
+	o.draw_string_outline(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs.y, 3, INK)
+	o.draw_string(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs.y, c)
+
+
+## A cost hex (board banners; hand / codex cards place their own CostHex node).
+func _draw_cost(o: Control, rr: Rect2, text: String) -> void:
+	var c: Vector2 = rr.get_center()
+	var rad: float = minf(rr.size.x, rr.size.y * 1.1) * 0.5
+	var pts: PackedVector2Array = []
+	for i: int in 6:
+		pts.append(c + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * rad)
+	o.draw_colored_polygon(pts, _col(&"accent"))
+	pts.append(pts[0])
+	o.draw_polyline(pts, _col(&"accent").darkened(0.4), 1.5)
+	var font: Font = get_theme_font(&"font", &"HudNumber")
+	var fs: int = maxi(12, int(rr.size.y * 0.7))
+	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	o.draw_string(font, Vector2(c.x - sz.x * 0.5, c.y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, INK)
 
 
 ## Art doc safety net: a black gradient (SAFETY_A at the edge to 0) over each side's icon column.

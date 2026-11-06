@@ -3,7 +3,7 @@
 **PRIVATE PITCH ONLY.** The images are Activision's and are not licensed to us. This file lists titles and ids only; the images live in the git-ignored `source/project-killingcard/assets/licensed/` and only the "Web (private pitch)" export carries them. Never commit, publish or reuse them.
 
 ## 1. What the set is
-- **96 calling cards** on 32 chassis, plus **16 Operator mastery cards** (4 weapons x 4 multiplayer tiers): 112 arts, 47 animated (kc-syn-impl: 31 unit arts re-picked to their trait family, §1.1).
+- **113 calling cards** on 32 chassis, plus **16 Operator mastery cards** (4 weapons x 4 multiplayer tiers): 129 arts, 52 animated (kc-syn-impl: 31 unit arts re-picked to their trait family, §1.1; kc-art-traits-impl: 17 alternate-trait arts added, §1.2).
 - By kind: 60 units, 20 tactics, 10 Fields, 6 killstreaks.
 - Spread: no chassis above 9 cards (9.4% of the card arts; guard rail 12%).
 - Every pick is `review = no` in `mw3-calling-cards-manifest.csv` and was checked by eye on contact sheets: no third-party IP, no real-looking celebrities, no blood or gore, little or no side text over the icon columns. Cards the classifier had missed were flagged `review = yes` while curating (Gundam x3, Homelander, Toronto Ultra, Carolina Royal Ravens, Xolos de Tijuana, Rojinegros, Little Caesars "Hot-N-Ready"; kc-cod3: ten 2024 Call of Duty League team cards, The Boys, Monster Energy, Gallos Blancos).
@@ -23,6 +23,26 @@ Traits live on the chassis (synergy-system.md §4.1) and each traited chassis we
 - 19 of the set's traited unit / Field arts already matched; **31 were re-picked** (`review = no` only, never an id already in the set, no duplicate title) and checked by eye on contact sheets. Rejected on sight: Smoke And Blood, Cut And Gutted, Green Glow, Pure Rage, Chest Cavity Cave In, Room Cleared (blood), Too Much Speed (no weapon), Going Down and Bursting (titles already in the set).
 - **Kept as they were:** the Elites (Ace: Big Game Hunter, Commander: Golden Throne / King Of It All), Bulwark and Mortar Pit (no family art fits a crest), and one Marksman (Snow Snipers: the Spec Ops family has only four usable sniper arts). The rule is the trait icon, not the art.
 - Heavy units use weapon-mastery cards with the unit's own weapon type (LMGs on the Gunner, launchers on the Demolitions Expert) and keep `mastery_family` empty, so BannerArtDB never mistakes them for the Operator's mastery ladder.
+
+### 1.2 Alternate-trait arts (kc-art-traits-impl, head T1)
+The art now gives the trait (`documentation/design/art-traits.md`): a copy's trait is its art's **family** (`family` column of `mw3-pitch-set.csv`, from the manifest `section`: Honors -> Vanguard, Operators -> Spec Ops, Mastery -> Heavy, Horde -> Undead, Standard -> none), if that trait is one of the chassis' options. The builder writes `family` and the resolved `trait` into the pitch manifest. Each chassis' home-family arts stay first (the first row is the default art); the alternates follow:
+| Option | Added (all `review = no`, checked by eye on a contact sheet) |
+|---|---|
+| Rifleman · Undead | Helo Exfil, In Trouble |
+| Rifleman · Spec Ops | Solid Tactics, Swamp Guys (Warzone) |
+| Point Man · Undead | Violent Vortex, Wolves Wasted |
+| Breacher · Heavy | Lockwood 680 Mastery: Gilded, Haymaker Mastery: Gilded |
+| Protector · Undead | Surrounded |
+| Recon Specialist · Undead | Seal Time |
+| Marksman · Heavy | KVD Enforcer Mastery: Gilded, MCW 6.8 Mastery: Gilded |
+| Gunner · Spec Ops | Lead Rain, Download Complete |
+| Demolitions Expert · Undead | Objective Destroyed, Boom And Gloom |
+| Brawler · Spec Ops | Big Sword |
+| Flanker · Undead, Combat Medic · Spec Ops | **none usable**: these options wear our placeholder option art (`flanker~horde`, `combat_medic~operators`, ArtTraits.OPTION_VARIANTS), so every option still has a free default art |
+
+- **Rejected on sight:** Still Standing (blood on the face), Quiet Kill (head shot with blood: Flanker · Undead has no MW3 art now), Charging... (UI text across the art, branded look). Not needed (one or two per option is enough): Random Rewards, Loot At Me, Mayhem On Wheels, Riveter Mastery, Longbow Mastery.
+- **Crossover IP flagged (never use; tagged `review = no` in the manifest by mistake):** Cadia Stands! (Warhammer 40,000), Char's Laugh (Gundam), Here Comes The A-Train (The Boys). The manifest should mark them `review = yes` (Technical Artist). Any Store bundle card with a third-party character needs the same eye check before it enters the set.
+- **Plain arts kept:** the four Honors Riflemen (Vanguard is not a Rifleman option) and Snow Snipers on the Marksman play as plain copies when they are worn; they stay as looks.
 
 ## 2. Mapping: title -> chassis, and why
 | # | Calling card | Chassis | Kind | Anim. | Why (what the image shows) |
@@ -123,6 +143,23 @@ Traits live on the chassis (synergy-system.md §4.1) and each traited chassis we
 | 94 | Tales Of The Night | Smoke Screen | tactic | yes | night cover |
 | 95 | Detonated | Sabotage | tactic |  | detonator in hand: blowing up enemy gear |
 | 96 | Fireworks Show | Sabotage | tactic |  | planted charge with a timer |
+| 97 | Helo Exfil | Rifleman | unit |  | alternate: Undead (Horde family) |
+| 98 | In Trouble | Rifleman | unit |  | alternate: Undead (Horde family) |
+| 99 | Solid Tactics | Rifleman | unit |  | alternate: Spec Ops (Operators family, Warzone) |
+| 100 | Swamp Guys | Rifleman | unit |  | alternate: Spec Ops (Operators family, Warzone) |
+| 101 | Violent Vortex | Point Man | unit |  | alternate: Undead (Horde family) |
+| 102 | Wolves Wasted | Point Man | unit |  | alternate: Undead (Horde family) |
+| 103 | Lockwood 680 Mastery: Gilded | Breacher | unit | yes | alternate: Heavy (shotgun mastery) |
+| 104 | Haymaker Mastery: Gilded | Breacher | unit | yes | alternate: Heavy (shotgun mastery) |
+| 105 | Surrounded | Protector | unit |  | alternate: Undead (Horde family) |
+| 106 | Seal Time | Recon Specialist | unit |  | alternate: Undead (Horde family) |
+| 107 | KVD Enforcer Mastery: Gilded | Marksman | unit | yes | alternate: Heavy (marksman rifle mastery) |
+| 108 | MCW 6.8 Mastery: Gilded | Marksman | unit | yes | alternate: Heavy (marksman rifle mastery) |
+| 109 | Lead Rain | Gunner | unit | yes | alternate: Spec Ops (operator with an LMG) |
+| 110 | Download Complete | Gunner | unit |  | alternate: Spec Ops (operator-bundle robot) |
+| 111 | Objective Destroyed | Demolitions Expert | unit |  | alternate: Undead (Horde family) |
+| 112 | Boom And Gloom | Demolitions Expert | unit |  | alternate: Undead (Horde family) |
+| 113 | Big Sword | Brawler | unit |  | alternate: Spec Ops (operator-bundle melee) |
 
 ### 2.1 Operator mastery ladder
 The Operator wears the weapon-mastery card of its primary weapon. Tier 1 (Gilded) is the **Base** camo for both sides (head, B3); higher tiers are a dev preview only.
@@ -151,6 +188,6 @@ python3 tools/fetch_mw3_calling_cards.py              # step 1: download (git-ig
 python3 tools/build_mw3_pitch_set.py                  # step 2: stills + frame sheets -> assets/licensed/mw3_pitch/
 bash tools/package_artifact_build.sh <godot> <out-dir> --pitch   # out-dir outside the repo or git-ignored
 ```
-- The pitch set is about 5.5 MB of WebP; the packaged `game.pck.wasm` is about 9.6 MB (artifact limit 16 MB per file).
+- The pitch set is about 7.1 MB of WebP (kc-art-traits-impl: 129 arts; was 5.5 MB); the packaged `game.pck.wasm` is about 9.6 MB (artifact limit 16 MB per file).
 - The default "Web" preset still excludes `assets/licensed/*`, and the default package run does not even copy that folder into its build tree. The script refuses a pitch output folder inside the repo unless git ignores it; `.gitignore` covers `projects/*/builds/pitch/` and any `web-pitch/` folder.
 - Tests never use the licensed folder (`run_tests.gd` switches it off); they pass with the folder present or absent.
