@@ -31,6 +31,7 @@
 |---|---|---|
 | raw drops | `assets/incoming/ui/` | already ignored (`assets/incoming/.gdignore`); never imported |
 | `plate_*` | `assets/ui/kit/plates/` | rim `plate_<x>_<s or l>.png` + a flood-filled `_fill` copy; same export sizes as icons |
+| `kc_b_si_*` | `assets/sprites/banners/` + `data/banners/<id>.tres` | banner pipeline (`banner-art-direction.md` 3.2), curator sets `banner_y` / `portrait_x` |
 | `ico_*` | `assets/ui/kit/icons/` | 256 masters; plus the packed atlas `assets/ui/kit/icons/kit_icons.png` (see 7.3) |
 | `btn_*`, `tgl_*`, `sld_*` | `assets/ui/kit/buttons/` | |
 | `pnl_*`, `ring_*`, `pip_*`, `order_*`, `runmap_*` | `assets/ui/kit/panels/` | |
@@ -87,4 +88,5 @@ Each imported batch is logged in `ui-kit-import-log.md`: what shipped, where, an
 1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?
 2. **Backgrounds: replace or keep?** The title, run map and Supply Drop already have Killstreak-era paintings. **Recommended:** regenerate them in this pack (P1) so the KillingCard screens match; keep the old files as the fallback until the new ones are approved.
 3. **Icon look.** All icons are solid white pictograms tinted in code (cheapest, reads best at 22 px). The alternative is coloured, bevelled metal icons with the colour baked in, which look richer at 64 px but cost a second image per side and state. **Recommended:** white pictograms now; if you want richer killstreak tiles later, those 4 can get a painted P3 version.
-4. **Rival stats position.** Number plates bottom-right on every card, rival banners included, instead of mirrored toward the objective (`card-system.md` §3.4)? **Recommended:** yes. One fixed anatomy is easier to learn, and the side tint and spine show whose card it is.
+4. ~~Rival stats position~~: answered by card anatomy v3 (kc-trait-ui): one rule for every banner, both sides.
+5. **Standard Issue lettering.** The doc asks for stencil lettering on Standard Issue cards. The game has no stencil font (Barlow, Share Tech Mono). **Recommended:** add one OFL stencil font for the Standard Issue NAME and serial plate only; the alternative is plain Barlow Condensed in olive.

@@ -4,7 +4,7 @@
 *For: the studio head (generates in ChatGPT on the phone) and the Technical Artist (cuts, keys, imports).*
 *Companion file: `ui-kit-manifest.csv` (one row per image: id, file, category, size, transparency, 9-slice margins, states, where used, priority, final folder).*
 
-**204 images: P1 100, P2 84, P3 20.** This pack covers the UI kit around the card art: every icon, button backer, panel, background, and every part needed to build the card frames. The card art itself is not in this pack: the private pitch uses licensed calling cards, the public build uses the banner pack (`banner-art-direction.md`). **Everything here is original**: no logos, brands, franchise insignia, real weapon trademarks, and no text baked in. The game draws every word and number.
+**215 images: P1 112, P2 82, P3 21.** This pack covers the UI kit around the card art: every icon, button backer, panel, background, and every part needed to build the card frames. The card art itself is not in this pack: the private pitch uses licensed calling cards, the public build uses the banner pack (`banner-art-direction.md`). **Everything here is original**: no logos, brands, franchise insignia, real weapon trademarks, and no text baked in. The game draws every word and number.
 
 What the UI draws today (survey, 2026-11-06): almost all of it is drawn in code. `icon_sheet.svg` holds 34 white line icons (placeholder), `hud_theme.tres` and `card_theme.tres` use flat StyleBoxes, and `banner_view.gd`, `synergy_glyphs.gd`, `strip_badge.gd`, `objective_tile.gd`, `killstreak_row.gd`, `hand_area.gd` and `board.gd` draw badges, plates, bands, ticks and glyphs with `draw_*` calls. The only bitmaps are the Killstreak-era paintings (`title_key_art`, `bg_run`, `bg_supply_drop`, `fx_callin_tablet`, 4 perk patches, 3 square lane backdrops, card art). This pack replaces the code drawing with images where an image looks better, and **keeps the code drawing as the fallback** for every slot.
 
@@ -13,16 +13,17 @@ What the UI draws today (survey, 2026-11-06): almost all of it is drawn in code.
 
 | Category | Images | P1 | P2 | P3 |
 |---|---|---|---|---|
-| Icons | 104 | 48 | 43 | 13 |
+| Icons | 104 | 49 | 42 | 13 |
 | Number plates | 8 | 7 | 1 | 0 |
+| Standard Issue card art | 5 | 5 | 0 | 0 |
 | Buttons and controls | 14 | 7 | 5 | 2 |
-| Panels, trays, rings and strips | 24 | 10 | 13 | 1 |
+| Panels, trays, rings and strips | 26 | 12 | 13 | 1 |
 | Backgrounds | 12 | 7 | 4 | 1 |
 | Objective and Field tile backers | 4 | 2 | 2 | 0 |
-| Card frame parts | 22 | 12 | 9 | 1 |
+| Card frame parts | 26 | 16 | 8 | 2 |
 | Camo bands | 5 | 2 | 3 | 0 |
 | Glows, outlines and overlays | 11 | 5 | 4 | 2 |
-| **Total** | **204** | **100** | **84** | **20** |
+| **Total** | **215** | **112** | **82** | **21** |
 
 ## 1. How to use it (on the phone)
 
@@ -126,9 +127,9 @@ ChatGPT cannot redraw the same plate five times identically, so states are built
 | glow / ready | `fx_glow_amber` on top, alpha pulse 0.4 to 1.0 |
 | side | tint (teal / red) for white pieces; separate images only for the spines and FP badges, which also differ in shape for colour-blind players |
 
-### 2.7 The four style blocks (already inside every prompt)
+### 2.7 The five style blocks (already inside every prompt)
 
-Each prompt = **style block + subject + background tail**, already joined. There are four blocks: icon (also used for the white parts: rings, pips, nodes), UI parts, light effects, and backgrounds. They are listed here so the set can be tuned in one place; if one changes, edit `ui-kit-pack-src/` and regenerate this file and the manifest: `cd documentation/art/ui-kit-pack-src && python3 -I gen.py . ../ui-kit-prompt-pack.md ../ui-kit-manifest.csv head.md style.md tail.md` (slots live in `slots.py`).
+Each prompt = **style block + subject + background tail**, already joined. There are five blocks (the fifth, Standard Issue art, is below the background block): icon (also used for the white parts: rings, pips, nodes), UI parts, light effects, and backgrounds. They are listed here so the set can be tuned in one place; if one changes, edit `ui-kit-pack-src/` and regenerate this file and the manifest: `cd documentation/art/ui-kit-pack-src && python3 -I gen.py . ../ui-kit-prompt-pack.md ../ui-kit-manifest.csv head.md style.md tail.md` (slots live in `slots.py`).
 
 **Icon style** (all `ico_*`, plus the white `luma` parts)
 
@@ -160,54 +161,65 @@ Tail: `Only light, on a perfectly flat pure black #000000 background: it is adde
 Original stylized 2D duotone painting for a mobile card game screen background, modern private-military theme. Flat graphic shapes, light film grain, soft atmospheric haze. Palette: slate black #12161A, gunmetal #232A31, fog white #D8DEE3, olive #5B6B3A, sand #C2A878, concrete #7A828A, with one small accent of signal amber #FFB020. Dusk or night, sodium-floodlight rim light, deep soft shadows. Dark and low contrast overall, most of the image between slate and gunmetal, so white text and cards stay readable on top. No text, letters, numbers, logos, insignia, flags, emblems or brand marks. No visible faces. No gore.
 ```
 
-### 2.8 Card anatomy (every card face: board banner, hand banner card, Codex tile, inspector, pick tiles)
+**Standard Issue art style** (the 5 `kc_b_si_*` starter arts; rules tail included)
 
-The head's rule: **the same icon for a concept everywhere, in the same corner on every card.** Stats are **number plates**: a plate in the concept's icon shape (a white image, tinted in code), with the number printed inside by the game.
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic.
+```
+
+Tail: `Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.`
+
+### 2.8 Card anatomy v3 (every banner form, both sides: board banner, hand banner card, Codex tile)
+
+The head's rules: **the same icon for a concept everywhere, in the same corner on every card.** Since kc-trait-ui, one rule (`BannerView.anatomy()`) applies to both sides, with no mirroring. Stats are **number plates**: a plate in the concept's icon shape (a white image, tinted in code), with the number printed inside by the game.
 
 ```
  Board banner 4:1 (228x57 phone, 304x76 desktop, 512x128 inspector)
- /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
- |(COST)                                          [TRAIT] |   top-left: cost plate (hexagon = Supply)
- |                                                        |   top-right: trait icon in a socket
- |              art: middle 70% (focal zone)              |
- |                                                        |
- |[KW][KW][bolt]                     (COV) (FP) (AR)      |   bottom-left to centre: abilities
- \________________________________________________________/   bottom-right: FP + Armor side by side
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST) NAME (code text)                   [KW][KW][bolt] |   top-left: cost plate + name (Elite star between)
+ |                                                         |   top-right: abilities, right-aligned from the corner
+ |              art: middle 70% (focal zone)               |
+ |                                                         |
+ |[TRAIT][CLASS]                        (COV) (FP) (AR)    |   bottom-left: trait (Operator: dog tag) + weapon pip
+ \_________________________________________________________/   bottom-right: FP + Armor plates, Cover left of them
    level camo band + side spine along the outer long edge
 
- Hand banner card (177x73 phone, 224x64 desktop, 103x78 on 16:9): the same corners
- /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
- |(COST)  NAME (code text)  [TRAIT] |
- |            art band              |
- |[KW][bolt]          (FP) (AR)     |
- \__________________________________/
+ Standard Issue card: the same corners, in frm_standard_issue
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST) GRUNT (stencil-style code text)        [SI-01]    |   top-right: serial plate (no abilities)
+ |            plain olive two-tone figure                  |
+ |[ - - ][ - - ]                             (FP) (AR)     |   bottom-left: empty dashed sockets (no trait, no class)
+ \_________________________________________________________/   no camo band, no foil
+
+ Hand banner card (177x73 phone, 224x64 desktop, 103x78 on 16:9): the same corners, smaller
 ```
 
 | Corner | What | Part | Phone banner | Desktop banner | Hand card | Inspector / tiles |
 |---|---|---|---|---|---|---|
-| Top-left | Cost (Supply) | `plate_cost_s` / `_l`, sitting in the frame's hexagon notch | 22 px | 26 px | 26 px | 48 px (`_l`) |
-| Top-right | Trait | `ico_trait_*` in `frm_socket` (lit at tier 2, `fx_ring_tier3` at tier 3) | 22 px | 26 px | 22 px | 40 px |
-| Bottom-left to centre | Abilities: printed keyword, neighbour keyword (the arrow is drawn by code), the bolt for effect text, class pip | `ico_kw_*`, `ico_effect_bolt`, `ico_class_*` in `frm_socket`, 2 px gaps, left to right | 22 px each | 26 px | 22 px | 40 px |
+| Top-left | Cost (Supply), then the NAME (code text; long names shrink to 13 px, then end in "…") | `plate_cost_s` / `_l` in the frame's hexagon notch | 22 px | 26 px | 26 px | 48 px (`_l`) |
+| Top-right | Abilities: printed keyword, neighbour keyword (arrow drawn by code), the bolt for effect text; locked ones greyed with `frm_socket_locked`; Standard Issue: `frm_serial_plate` | `ico_kw_*`, `ico_effect_bolt` in `frm_socket`, 2 px gaps, right-aligned | 22 px each | 26 px | 22 px | 40 px |
+| Bottom-left | Trait (Operator: dog tag) + weapon-type pip; empty: `frm_socket_empty` | `ico_trait_*`, `ico_class_*` in `frm_socket` (lit at tier 2, `fx_ring_tier3` at tier 3) | 22 px | 26 px | 22 px | 40 px |
 | Bottom-right | Cover (only when above 0), Firepower, Armor, side by side, Armor outermost | `plate_cover_s`, `plate_fp_s`, `plate_armor_s` | 26 px | 32 px | 28 px | 52 px (`_l`) |
-| Outer long edge | Level camo band, side spine | `band_*`, `frm_spine_*` | 3 px / 2 px | 4 px / 3 px | band only | 6 px |
+| Outer long edge | Level camo band, side spine (not on Standard Issue cards) | `band_*`, `frm_spine_*` | 3 px / 2 px | 4 px / 3 px | band only | 6 px |
 
 Rules that keep the parts lined up:
-- **The frames leave these corners free:** `frm_banner`, `frm_hand_card` and `frm_codex_tile` have the hexagon notch top-left and calm, plain bottom-right corners. Their 9-slice margins (manifest) are at least as large as the cost plate.
-- **Art safe zones (banner pack):** keep the top-left and top-right ~15% calm, and the bottom ~45% of the left and right ~25%. A 35% dark gradient scrim under the bottom row (the existing safety net) keeps plates readable on bright licensed art.
+- **The frames leave these corners free:** `frm_banner`, `frm_standard_issue`, `frm_hand_card` and `frm_codex_tile` all have the hexagon notch top-left and calm, plain corners elsewhere. Their 9-slice margins (manifest) are at least as large as the cost plate.
+- **Art safe zones:** all four corners of the 4:1 band stay calm (about 30% of the width by 40% of the height at each end), which is stricter than the banner pack's 15% side zones. A 35% dark gradient scrim under the top and bottom rows (the existing safety net) keeps plates readable on bright licensed art.
 - **One silhouette per concept:**
   - FP is the broken gun-sight ring (`ico_stat_firepower` matches `plate_fp`).
   - Armor is the armor plate (`ico_stat_armor` matches `plate_armor`).
   - Cover is the barrier block.
   - Cost and Supply are the hexagon (the cost plate, Supply pips and the Supply row). The crate icon `ico_stat_supply` (batch 1) becomes the Supply Drop and reward icon.
   - Guard is a block wall and Spotter is binoculars, so no keyword reuses the shield (Armor) or the eye (PREVIEW).
-- **Side colours are tints, not shapes:** your plates are teal and the rival's are red. The colour-blind side cue moves to the spine (square notches for you, diamond notches for the rival) and to the half of the board the card is on. This replaces the old FP badges (a teal circle for you, a red notched diamond for the rival).
-- **Rival banners on the board** use the same corners (not mirrored), so a number is always bottom-right. Only the neighbour-link arrows flip. This changes the "stats face the objective" rule in `card-system.md` §3.4 (question 4).
+- **Side colours are tints, not shapes:** your plates are teal and the rival's are red. The colour-blind cue is the spine (square notches for you, diamond notches for the rival) and the half of the board the card is on.
+- **Standard Issue reads as basic kit:** olive two-tone art, a grey-green painted frame, a serial plate, empty dashed trait and class sockets, no band, no glow and no animation. The first calling card (art, banner frame, lit trait) should look clearly better next to it.
 
 ## 3. Size key
 
 | Kind | Generate | Ship to the TA | In game |
 |---|---|---|---|
 | Icon | 1024x1024 square | 256x256 master, trimmed + 8% padding; exports 128/64/48/32 | 22-64 px |
+| Standard Issue card art (`kc_b_si_*`) | 1536x1024 | 1152x768 master (banner pipeline, `banner-art-direction.md` 3.2) | banners and hand cards |
 | Number plate (`plate_*`) | 1024x1024 | `_s` 128x128 (22-34 px on screen), `_l` 256x256 (48-128 px); rim + flood-filled `_fill` | 22-128 px |
 | Small part (socket, pip, knob) | 1024x1024 | 64-128 px (manifest) | 22-61 px |
 | Plate / panel / button (9-slice) | 1536x1024 or 1024x1536 | 2x the largest on-screen size, borders 4-6 px at ship size (manifest) | drawn at 0.5x scale (see 7.4) |
@@ -1405,9 +1417,9 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, a second icon, an outline in another colour, grey shading, an extra badge or frame around the glyph, a background that is not pure black.
 
-##### 97. `ico_ui_lock.png` · P2
+##### 97. `ico_ui_lock.png` · P1
 
-- **Used in:** Locked Codex art, not-yet-unlocked reward.
+- **Used in:** Locked keyword pip badge (frm_socket_locked), locked Codex art, NOT FOUND YET.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256 master (export 128/64/48/32). **Background:** white on black: TA converts brightness to alpha.
 - **States:** normal / lit (tint) / idle grey (tint).
 
@@ -1609,11 +1621,80 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a number, an arc or arrow, cracks.
 
-### 4.3 Buttons and controls (14)
+### 4.3 Standard Issue card art (5)
+
+#### Standard Issue card art (starter, our own art) (5)
+
+##### 113. `kc_b_si_grunt.png` · P1
+
+- **Used in:** Grunt (cost 1, 2/2): Grunt x5 in the starter, TrainingBot and the M1 / M2 Standard Issue squads.
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1152x768 master (banner band 1152x288, hand column 512x768). **Background:** opaque, no transparency.
+- **States:** normal (no animation, no foil).
+- **Note:** Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres.
+
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic. A basic infantry soldier in a plain round helmet and simple fatigues standing at ease, a generic rifle held diagonally across the chest, three-quarter side view, two plain wooden supply crates stacked behind. Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.
+```
+
+**Avoid:** text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner, markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure.
+
+##### 114. `kc_b_si_trooper.png` · P1
+
+- **Used in:** Trooper (cost 2, 2/3): Trooper x6 in the starter, Standard Issue squads.
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1152x768 master (banner band 1152x288, hand column 512x768). **Background:** opaque, no transparency.
+- **States:** normal (no animation, no foil).
+- **Note:** Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres.
+
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic. A soldier in a plain helmet and a simple padded vest walking forward mid-stride, a generic rifle held low in both hands, side view, a plain canvas tent wall behind. Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.
+```
+
+**Avoid:** text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner, markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure.
+
+##### 115. `kc_b_si_sergeant.png` · P1
+
+- **Used in:** Sergeant (cost 3, 3/3): Sergeant x4 in the starter, Standard Issue squads.
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1152x768 master (banner band 1152x288, hand column 512x768). **Background:** opaque, no transparency.
+- **States:** normal (no animation, no foil).
+- **Note:** Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres.
+
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic. A soldier in a plain helmet with one arm stretched forward pointing the way, a generic rifle in the other hand, side view, one boot up on a low wooden crate, a plain canvas backdrop. Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.
+```
+
+**Avoid:** text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner, markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure.
+
+##### 116. `kc_b_si_armored.png` · P1
+
+- **Used in:** Armored Trooper (cost 4, 2/5): Armored Trooper x3 in the starter (the first card to send home), Standard Issue squads.
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1152x768 master (banner band 1152x288, hand column 512x768). **Background:** opaque, no transparency.
+- **States:** normal (no animation, no foil).
+- **Note:** Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres.
+
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic. A heavy soldier in bulky plain body armour and a full helmet with a dark visor, standing square and slow, a generic rifle held low, front three-quarter view, a low wall of plain sandbags behind. Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.
+```
+
+**Avoid:** text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner, markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure.
+
+##### 117. `kc_b_si_ammo_resupply.png` · P1
+
+- **Used in:** Ammo Resupply (tactic, Draw 2): Ammo Resupply x2 in the starter (Standard Issue art for the existing card).
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1152x768 master (banner band 1152x288, hand column 512x768). **Background:** opaque, no transparency.
+- **States:** normal (no animation, no foil).
+- **Note:** Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres. Tactic: no character is the subject (kind rule).
+
+```
+Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, only a faint canvas weave as texture. Deliberately modest and basic. Two plain ammunition boxes and a canvas bag of rifle magazines on a wooden pallet, one gloved hand lifting a box lid, no person in view beyond the hand and forearm, side view. Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. Invented people only, faces simple or shaded by the helmet. No blood.
+```
+
+**Avoid:** text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner, markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure.
+
+### 4.4 Buttons and controls (14)
 
 #### Buttons (14)
 
-##### 113. `btn_primary.png` · P1
+##### 118. `btn_primary.png` · P1
 
 - **Used in:** Primary actions: CONTINUE, BEGIN RUN, TAP TO TAKE, DEPLOY (run map), PLAY HERE confirm.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1625,7 +1706,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 114. `btn_primary_pressed.png` · P1
+##### 119. `btn_primary_pressed.png` · P1
 
 - **Used in:** Pressed state of btn_primary.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1638,7 +1719,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 115. `btn_secondary.png` · P1
+##### 120. `btn_secondary.png` · P1
 
 - **Used in:** Secondary actions: BACK, SKIP, DETAILS, DECK, CODEX, pause menu rows, Codex filter bar buttons.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1650,7 +1731,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 116. `btn_secondary_pressed.png` · P1
+##### 121. `btn_secondary_pressed.png` · P1
 
 - **Used in:** Pressed state of btn_secondary.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1662,7 +1743,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 117. `btn_danger.png` · P2
+##### 122. `btn_danger.png` · P2
 
 - **Used in:** Danger / leave actions: BACK TO TITLE, abandon run, NEW RUN confirm.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1674,7 +1755,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 118. `btn_ready.png` · P1
+##### 123. `btn_ready.png` · P1
 
 - **Used in:** READY in the tray (245x64 phone, 149x72 desktop): the main button of every round.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1687,7 +1768,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 119. `btn_ready_pressed.png` · P1
+##### 124. `btn_ready_pressed.png` · P1
 
 - **Used in:** Pressed state of READY.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1699,7 +1780,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 120. `btn_badge.png` · P1
+##### 125. `btn_badge.png` · P1
 
 - **Used in:** Icon strip badges 62x64 (MENU, SCORE, OPERATOR, STREAK, RIVAL, PREVIEW, DECK), SPEED, UNDO square.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1711,7 +1792,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 121. `btn_chip.png` · P2
+##### 126. `btn_chip.png` · P2
 
 - **Used in:** Small pill buttons: Codex filters (ALL / UNITS / AR...), tabs on narrow screens, toggles in the deck view.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1723,7 +1804,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 122. `btn_chip_on.png` · P2
+##### 127. `btn_chip_on.png` · P2
 
 - **Used in:** Selected filter chip / active tab.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1735,7 +1816,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 123. `btn_tab.png` · P3
+##### 128. `btn_tab.png` · P3
 
 - **Used in:** Tabs: SETS flyout (RIVAL / YOU), score sheet, Codex kind tabs on desktop.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x80. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1747,7 +1828,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 124. `tgl_track.png` · P2
+##### 129. `tgl_track.png` · P2
 
 - **Used in:** Settings toggles: MIRROR LAYOUT, SPEED x2, FAST ANIMATIONS, PREVIEW.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 128x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1759,7 +1840,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 125. `tgl_knob.png` · P2
+##### 130. `tgl_knob.png` · P2
 
 - **Used in:** Toggle knob, slider knob.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1771,7 +1852,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 126. `sld_track.png` · P3
+##### 131. `sld_track.png` · P3
 
 - **Used in:** Slider track (volume, Deploy timer setting) and progress bars (run tickets).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x32. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1783,11 +1864,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-### 4.4 Panels, trays, rings and strips (24)
+### 4.5 Panels, trays, rings and strips (26)
 
 #### Panels, trays and overlays (24)
 
-##### 127. `pnl_tray.png` · P1
+##### 132. `pnl_tray.png` · P1
 
 - **Used in:** Hand tray (362x532 phone, 224x776 desktop): background of the hand grid, killfeed log, step header.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x512. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1799,7 +1880,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 128. `pnl_flyout.png` · P1
+##### 133. `pnl_flyout.png` · P1
 
 - **Used in:** Strip badge flyouts: SCORE, OPERATOR, STREAK, RIVAL, DECK, SETS.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x256. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1811,7 +1892,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 129. `pnl_flyout_pointer.png` · P2
+##### 134. `pnl_flyout_pointer.png` · P2
 
 - **Used in:** The little pointer that joins a flyout to its badge.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1823,7 +1904,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 130. `pnl_toast.png` · P1
+##### 135. `pnl_toast.png` · P1
 
 - **Used in:** Killfeed toasts (top centre, 2 max, 92% opacity), one-time callouts, 'Not enough Supply' toasts.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1835,7 +1916,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 131. `pnl_inspector.png` · P1
+##### 136. `pnl_inspector.png` · P1
 
 - **Used in:** Card inspector (512x128 banner + text panel, scrolls), item inspector, long-press rules.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1847,7 +1928,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 132. `pnl_tooltip.png` · P2
+##### 137. `pnl_tooltip.png` · P2
 
 - **Used in:** Tooltips (desktop hover), long-press rule bubbles, Supply Drop twin preview.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 192x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1859,7 +1940,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 133. `pnl_modal.png` · P1
+##### 138. `pnl_modal.png` · P1
 
 - **Used in:** Pause menu, match end (VICTORY / DEFEAT), Retire picker, score sheet, consent and surveys.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1871,7 +1952,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 134. `pnl_header.png` · P2
+##### 139. `pnl_header.png` · P2
 
 - **Used in:** Screen title bars: SUPPLY DROP, CODEX, RUN SUMMARY, PAUSED, STARTER KIT.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1883,7 +1964,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 135. `pnl_hand_tab.png` · P2
+##### 140. `pnl_hand_tab.png` · P2
 
 - **Used in:** HAND · n PEEK tab (362x64) in the closed tray.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x80. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1895,7 +1976,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 136. `pnl_ks_tile.png` · P1
+##### 141. `pnl_ks_tile.png` · P1
 
 - **Used in:** Killstreak tile backer (61 px) at the top of the tray and in the STREAK flyout.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1907,7 +1988,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 137. `ring_track.png` · P1
+##### 142. `ring_track.png` · P1
 
 - **Used in:** Killstreak charge ring (empty track); TextureProgressBar under.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1919,7 +2000,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 138. `ring_fill.png` · P1
+##### 143. `ring_fill.png` · P1
 
 - **Used in:** Killstreak charge ring fill; TextureProgressBar radial (tinted amber / cyan).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
@@ -1932,7 +2013,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 139. `pip_supply.png` · P1
+##### 144. `pip_supply.png` · P1
 
 - **Used in:** Supply pips (up to 10) in the tray.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
@@ -1944,7 +2025,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 140. `pnl_counter.png` · P2
+##### 145. `pnl_counter.png` · P2
 
 - **Used in:** Small number bubble: hand count, deck count on badges, '+n more', unread log.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1956,7 +2037,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 141. `pnl_order_strip.png` · P2
+##### 146. `pnl_order_strip.png` · P2
 
 - **Used in:** Firefight order strip A -> B -> C over the board.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -1969,7 +2050,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 142. `order_node.png` · P2
+##### 147. `order_node.png` · P2
 
 - **Used in:** One column node on the order strip (letter drawn by code).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
@@ -1982,7 +2063,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 143. `order_arrow.png` · P2
+##### 148. `order_arrow.png` · P2
 
 - **Used in:** Connector between order nodes.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x32. **Background:** white on black: TA converts brightness to alpha.
@@ -1995,7 +2076,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 144. `pnl_rail_chip.png` · P2
+##### 149. `pnl_rail_chip.png` · P2
 
 - **Used in:** Trait rail chips (62x49 phone) and SETS flyout rows.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x96. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2007,7 +2088,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 145. `pnl_callout.png` · P2
+##### 150. `pnl_callout.png` · P2
 
 - **Used in:** Set callouts ('VANGUARD 2: ...'), column banner 'COLUMN A', FIRST SHOT tag, DEPLOY / PLAY HERE chips.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2019,7 +2100,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 146. `pnl_pick_tile.png` · P1
+##### 151. `pnl_pick_tile.png` · P1
 
 - **Used in:** Reward pick tiles (Supply Drop cards, Retire, Doctrine, Promotion, Perk Offer), Loadout picks.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2031,7 +2112,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 147. `pnl_coach.png` · P2
+##### 152. `pnl_coach.png` · P2
 
 - **Used in:** Tutorial coach bubbles over the objective row.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2043,7 +2124,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 148. `pnl_result.png` · P2
+##### 153. `pnl_result.png` · P2
 
 - **Used in:** Match end and run end headline plate behind VICTORY / DEFEAT / DRAW.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 768x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2055,7 +2136,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in, wings with feathers, eagles, stars, laurels, a crest.
 
-##### 149. `runmap_node.png` · P2
+##### 154. `runmap_node.png` · P2
 
 - **Used in:** Run map match nodes (NEXT / UPCOMING / done).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 96x96. **Background:** white on black: TA converts brightness to alpha.
@@ -2067,7 +2148,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 150. `runmap_path.png` · P3
+##### 155. `runmap_path.png` · P3
 
 - **Used in:** Path between run map nodes (tiled).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x16. **Background:** white on black: TA converts brightness to alpha.
@@ -2079,11 +2160,38 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-### 4.5 Backgrounds (12)
+#### First-time explainer (New: X) (2)
+
+##### 156. `pnl_new_card.png` · P1
+
+- **Used in:** 'New: X' one-time explainer card (half screen: icon, one sentence, mini example, GOT IT), queued one per screen.
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x320. **Background:** transparent PNG (magenta #FF00FF key if it fails).
+- **States:** normal / enter (code: slide + fade). **9-slice (L,T,R,B at ship size):** 96,48,40,40.
+- **Note:** The tab sits inside the left and top 9-slice margins. GOT IT uses btn_primary.
+
+```
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A large explainer card panel: dark gunmetal #232A31 face with a soft lighter centre, a 2-pixel steel #4A535B outline, 45-degree chamfered corners, a short solid amber #FFB020 flag tab hanging from the top-left corner (plain, for a word the game adds), a thin amber line running along the top edge from the tab. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Landscape 3:2.
+```
+
+**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
+
+##### 157. `pnl_new_inset.png` · P1
+
+- **Used in:** Mini example well inside the New: card (a mini board grid, a card, a trait counter).
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
+- **States:** normal. **9-slice (L,T,R,B at ship size):** 20,20,20,20.
+
+```
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A recessed rectangular well: near-black #0F1316 face sunk into the metal, a thin dark inner shadow along the top and left edges and a 1-pixel light steel line along the bottom and right edges, small chamfered corners. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Landscape 3:2.
+```
+
+**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
+
+### 4.6 Backgrounds (12)
 
 #### Screen backgrounds (9)
 
-##### 151. `bg_title.png` · P1
+##### 158. `bg_title.png` · P1
 
 - **Used in:** Title screen (KillingCard wordmark drawn by code on the left third).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2096,7 +2204,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 152. `bg_menu.png` · P3
+##### 159. `bg_menu.png` · P3
 
 - **Used in:** Pause menu backdrop behind pnl_modal, settings, consent and survey screens.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2109,7 +2217,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 153. `bg_run_map.png` · P1
+##### 160. `bg_run_map.png` · P1
 
 - **Used in:** Run map (5 matches, tickets, DEPLOY).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2122,7 +2230,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 154. `bg_supply_drop.png` · P1
+##### 161. `bg_supply_drop.png` · P1
 
 - **Used in:** Supply Drop / Weapon Level / Perk Offer / Promotion / Doctrine / Regroup reward screens.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2135,7 +2243,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 155. `bg_after_action.png` · P2
+##### 162. `bg_after_action.png` · P2
 
 - **Used in:** After-Action report (VICTORY / DEFEAT, stats, Honor Roll), run end.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2147,7 +2255,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 156. `bg_codex.png` · P2
+##### 163. `bg_codex.png` · P2
 
 - **Used in:** Codex (filters + tile grid).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2159,7 +2267,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 157. `bg_loadout.png` · P2
+##### 164. `bg_loadout.png` · P2
 
 - **Used in:** Starter deck / Loadout screen (STARTER KIT, picks, BEGIN RUN).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2171,7 +2279,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 158. `bg_loading.png` · P2
+##### 165. `bg_loading.png` · P2
 
 - **Used in:** Loading screen / web shell splash, boot (wordmark and bar drawn by code).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2184,7 +2292,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 159. `bg_match.png` · P1
+##### 166. `bg_match.png` · P1
 
 - **Used in:** Match backdrop behind the strip, the 3 columns and the tray.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 1536x864 (crop 80 px top and bottom). **Background:** opaque, no transparency.
@@ -2199,7 +2307,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 #### Column location backdrops (Port Vasel) (3)
 
-##### 160. `col_containers.png` · P1
+##### 167. `col_containers.png` · P1
 
 - **Used in:** Column backing: containers.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2212,7 +2320,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 161. `col_cranes.png` · P1
+##### 168. `col_cranes.png` · P1
 
 - **Used in:** Column backing: cranes.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2225,7 +2333,7 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-##### 162. `col_offices.png` · P1
+##### 169. `col_offices.png` · P1
 
 - **Used in:** Column backing: offices.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 512x1216 (crop the middle 648x1536, resize). **Background:** opaque, no transparency.
@@ -2238,11 +2346,11 @@ Original stylized 2D duotone painting for a mobile card game screen background, 
 
 **Avoid:** text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre.
 
-### 4.6 Objective and Field tile backers (4)
+### 4.7 Objective and Field tile backers (4)
 
 #### Objective and Field tile backers (4)
 
-##### 163. `tile_objective.png` · P1
+##### 170. `tile_objective.png` · P1
 
 - **Used in:** Objective tile between the fronts (228x52 phone, 304x96 desktop): FP pair, control mark, words, Field chips.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 456x112. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2254,7 +2362,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 164. `tile_field_chip.png` · P1
+##### 171. `tile_field_chip.png` · P1
 
 - **Used in:** Field chip on the objective tile (70x22 phone, 96x28 desktop), one per side.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2266,7 +2374,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 165. `tile_field_chip_trap.png` · P2
+##### 172. `tile_field_chip_trap.png` · P2
 
 - **Used in:** Your hidden trap chip (dashed, only you see it).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 192x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2278,7 +2386,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 166. `tile_slot_empty.png` · P2
+##### 173. `tile_slot_empty.png` · P2
 
 - **Used in:** Empty row slot in a column (your landing slots, rival back rows).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 456x114. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2290,11 +2398,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-### 4.7 Card frame parts (22)
+### 4.8 Card frame parts (26)
 
 #### Board banner frame (4:1) (9)
 
-##### 167. `frm_banner.png` · P1
+##### 174. `frm_banner.png` · P1
 
 - **Used in:** Every board banner (228x57 phone, 304x76 desktop, 512x128 inspector): the steel frame around the art.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2307,7 +2415,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 168. `frm_spine_you.png` · P1
+##### 175. `frm_spine_you.png` · P1
 
 - **Used in:** Side edge strip on your banners (outer long edge, away from the objective).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x16. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2319,7 +2427,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 169. `frm_spine_rival.png` · P1
+##### 176. `frm_spine_rival.png` · P1
 
 - **Used in:** Side edge strip on rival banners (shape differs from yours for colour-blind players).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x16. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2331,7 +2439,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 170. `frm_front_tab.png` · P1
+##### 177. `frm_front_tab.png` · P1
 
 - **Used in:** FRONT tab (48x13 phone, 64x15 desktop) on the front-row card; word drawn by code.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x32. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2343,7 +2451,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 171. `frm_plan_plate.png` · P1
+##### 178. `frm_plan_plate.png` · P1
 
 - **Used in:** PLAN tag on your planned cards (inner-edge centre) and PLAN · B on the Operator card.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x40. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2355,7 +2463,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 172. `frm_incoming.png` · P1
+##### 179. `frm_incoming.png` · P1
 
 - **Used in:** INCOMING face-down rival banner (back pattern, fills the whole 4:1 banner).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128 (crop a 4:1 band). **Background:** opaque, no transparency.
@@ -2367,7 +2475,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt, emblems, a central logo, letters, a skull.
 
-##### 173. `frm_supply_plate.png` · P2
+##### 180. `frm_supply_plate.png` · P2
 
 - **Used in:** Operator card '1 SUPPLY' plate in place of the cost hex; red when you can't pay.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 160x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2379,7 +2487,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 174. `frm_socket.png` · P1
+##### 181. `frm_socket.png` · P1
 
 - **Used in:** Socket for keyword pip, trait pip, class pip and effect glyph (22 px phone, 26 desktop).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2391,7 +2499,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 175. `fx_ring_tier3.png` · P2
+##### 182. `fx_ring_tier3.png` · P2
 
 - **Used in:** White ring around a trait pip at set tier 3 (banner, rail).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2405,7 +2513,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 #### Level camo bands and Operator mastery ladder (1)
 
-##### 176. `frm_band_edge.png` · P2
+##### 183. `frm_band_edge.png` · P2
 
 - **Used in:** Thin metal edge that caps a camo band strip top and bottom.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x8. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2419,7 +2527,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Elite and Operator frames (5)
 
-##### 177. `frm_elite.png` · P2
+##### 184. `frm_elite.png` · P2
 
 - **Used in:** Elite chassis banner and hand card frame (gold frame + star).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2431,7 +2539,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 178. `frm_operator_banner.png` · P1
+##### 185. `frm_operator_banner.png` · P1
 
 - **Used in:** The Operator's banner on the board (brass frame, camo band on the outer edge, dog-tag plate).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2443,7 +2551,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 179. `frm_operator_card.png` · P1
+##### 186. `frm_operator_card.png` · P1
 
 - **Used in:** Operator card pinned first in the tray (99x124 phone, 108x136 desktop).
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x320. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2455,7 +2563,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in, engraved letters or numbers on the tag.
 
-##### 180. `frm_operator_mini.png` · P1
+##### 187. `frm_operator_mini.png` · P1
 
 - **Used in:** Mini Operator card (half height, ON BOARD / C · ROW 1) while the Operator is on the board.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2467,7 +2575,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 181. `frm_dogtag_plate.png` · P2
+##### 188. `frm_dogtag_plate.png` · P2
 
 - **Used in:** Callsign / dog-tag plate on the Operator banner (in place of the effect glyph).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 96x40. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2481,7 +2589,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Hand card, Codex and mulligan (5)
 
-##### 182. `frm_hand_card.png` · P1
+##### 189. `frm_hand_card.png` · P1
 
 - **Used in:** Hand banner card frame in the tray (kc-ui4 board-form: 177x73 phone, 224x64 desktop, 103x78 on 16:9), mulligan cards, Supply Drop picks.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 448x184. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2494,7 +2602,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 183. `frm_hand_name.png` · P2
+##### 190. `frm_hand_name.png` · P2
 
 - **Used in:** Name band across the middle of a narrow hand banner card (16:9 phones), stats row.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2506,7 +2614,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 184. `frm_codex_tile.png` · P2
+##### 191. `frm_codex_tile.png` · P2
 
 - **Used in:** Codex tile (120x156 compact): art, cost hex, name, chassis line.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 240x312. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2518,12 +2626,12 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 185. `frm_equipped.png` · P2
+##### 192. `frm_equipped.png` · P3
 
-- **Used in:** EQUIPPED corner mark on the Codex tile of the art your Operator / copies wear (word drawn by code).
+- **Used in:** FOUND / EQUIPPED corner mark on Codex tiles (word drawn by code); kc-trait-ui removed EQUIP, so it now marks FOUND arts.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
 - **States:** normal.
-- **Note:** NEW: the Codex has no EQUIPPED state yet; needs a small hook in codex_view.gd.
+- **Note:** kc-trait-ui (head B): no EQUIP in runs; the Codex shows FOUND marks instead, so this is optional polish.
 
 ```
 Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A corner ribbon that wraps the top-right corner of a card diagonally: a solid brass #C9A227 band with darker edges and a tiny dog-tag shape hanging from it, plain, the rest transparent. One element only, centred, filling about 80% of the canvas. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
@@ -2531,7 +2639,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 186. `frm_put_back.png` · P1
+##### 193. `frm_put_back.png` · P1
 
 - **Used in:** Mulligan PUT BACK plate on marked cards (word drawn by code).
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x320. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2545,7 +2653,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 #### Card backs (2)
 
-##### 187. `card_back_banner.png` · P2
+##### 194. `card_back_banner.png` · P2
 
 - **Used in:** Face-down KillingCard back (4:1): deck pile, deal animation, rival hand, INCOMING alternative.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128 (crop a 4:1 band). **Background:** opaque, no transparency.
@@ -2558,7 +2666,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt, letters, a logo, a skull, wings, stars, eagles, any badge or unit-crest look.
 
-##### 188. `card_back_hand.png` · P3
+##### 195. `card_back_hand.png` · P3
 
 - **Used in:** Face-down hand-size back (deck view, mulligan replacements).
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x320. **Background:** opaque, no transparency.
@@ -2571,11 +2679,63 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, a cast shadow, a perspective tilt.
 
-### 4.8 Camo bands (5)
+#### Standard Issue frame and plates (4)
+
+##### 196. `frm_standard_issue.png` · P1
+
+- **Used in:** Standard Issue frame on every Standard Issue card: board banners, hand banner cards, mulligan, Muster out list (no camo band, no foil).
+- **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
+- **States:** normal / selected (fx_outline_teal) / now firing (fx_outline_side) / dimmed (code). **9-slice (L,T,R,B at ship size):** 40,32,16,16.
+- **Note:** Same 9-slice margins as frm_banner, so every anatomy slot lines up; the same image frames the hand banner card. The stencil-style NAME is code text (needs a stencil font: question 5).
+
+```
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A very wide thin card frame, four times wider than tall, made of matte grey-green #5E6B5A painted sheet steel with slightly worn flat paint: a 4-pixel border, a hexagon-shaped notch cut into the top-left corner (for the cost plate), square plain corners elsewhere, one small flat-head screw in each of the other three corners, no shine, no foil, the inside completely empty. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Landscape 3:2.
+```
+
+**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
+
+##### 197. `frm_serial_plate.png` · P1
+
+- **Used in:** Serial plate SI-01 to SI-04 (code text) in the empty abilities slot, top right; red-tinted on enemy Standard Issue squads.
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 128x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
+- **States:** yours (normal) / enemy squad (code tint red #E5383B). **9-slice (L,T,R,B at ship size):** 16,12,16,12.
+
+```
+Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A small rectangular stamped metal tag with a slightly raised rim and one round rivet at each end, flat light grey steel #B9C2C9, the face plain and empty. One element only, centred, filling about 80% of the canvas. Built for 9-slice stretching: keep every corner detail inside the corners, and make the four straight edges identical along their whole length (no rivets, marks or ornaments in the middle of an edge) so it can stretch to any size. Transparent background PNG. If transparency is not possible, put it on a perfectly flat solid magenta #FF00FF background with no shadow, no gradient and no magenta inside the asset. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
+
+##### 198. `frm_socket_empty.png` · P1
+
+- **Used in:** Empty trait / weapon slot, bottom left (Standard Issue cards; NO TRAIT arts in the Codex).
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
+- **States:** normal (code tint grey #7E8890 at 60%).
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one UI element: a small square socket outline with 45-degree chamfered corners drawn as a dashed rim of eight thick dashes, the inside completely empty. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a solid rim, anything inside the square.
+
+##### 199. `frm_socket_locked.png` · P1
+
+- **Used in:** Locked keyword pip on Recruit calling cards (the 'Trains: First Shot - Guard' teaser) and in the inspector.
+- **Generate:** 1024x1024 (square 1:1). **Ship:** 64x64. **Background:** white on black: TA converts brightness to alpha.
+- **States:** locked (code: socket grey, keyword icon tinted #7E8890 at 45%, this overlay on top) / unlocks (overlay fades, socket lights, New: Keywords).
+- **Note:** The keyword icon itself is drawn inside by the code, greyed.
+
+```
+Original pictogram for the interface of a modern military-tactical card game played on phones. Bold geometric glyph language: straight cuts, 45-degree chamfers, chunky even stroke weight, no fine detail, no realism. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. Draw one UI element: a small square socket rim with 45-degree chamfered corners and a compact solid padlock shape sitting over its bottom-right corner, the padlock about one third of the socket's width, the inside of the socket empty. Solid pure white #FFFFFF flat fill only: no outline in another colour, no gradient, no shading, no glow, no 3D. Centred, filling about 70% of the canvas, with even empty margin on all sides. Perfectly flat pure black #000000 background. Square 1:1.
+```
+
+**Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black, a keyword symbol inside, a keyhole too small to see.
+
+### 4.9 Camo bands (5)
 
 #### Level camo bands and Operator mastery ladder (5)
 
-##### 189. `band_base.png` · P1
+##### 200. `band_base.png` · P1
 
 - **Used in:** Operator base camo tier (OPERATOR badge swatch, Operator frame band); optional Recruit swatch in the deck view.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2588,7 +2748,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 190. `band_gilded.png` · P1
+##### 201. `band_gilded.png` · P1
 
 - **Used in:** Trained copies (Gilded band under the art and on the outer edge), Operator gold tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2601,7 +2761,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 191. `band_forged.png` · P2
+##### 202. `band_forged.png` · P2
 
 - **Used in:** Veteran copies (Forged band), Operator forged tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2614,7 +2774,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 192. `band_priceless.png` · P2
+##### 203. `band_priceless.png` · P2
 
 - **Used in:** Elite copies (Priceless band), Operator priceless tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2627,7 +2787,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-##### 193. `band_interstellar.png` · P2
+##### 204. `band_interstellar.png` · P2
 
 - **Used in:** Operator top mastery tier only.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
@@ -2640,11 +2800,11 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-### 4.9 Glows, outlines and overlays (11)
+### 4.10 Glows, outlines and overlays (11)
 
 #### Glows, outlines, links and previews (additive overlays) (11)
 
-##### 194. `fx_outline_teal.png` · P1
+##### 205. `fx_outline_teal.png` · P1
 
 - **Used in:** Selected card / badge outline (teal), valid-target slot.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x160. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2656,7 +2816,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 195. `fx_outline_side.png` · P1
+##### 206. `fx_outline_side.png` · P1
 
 - **Used in:** Now-firing outline in the owner's colour (tinted teal / red), lift on shot.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x160. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2668,7 +2828,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 196. `fx_glow_amber.png` · P1
+##### 207. `fx_glow_amber.png` · P1
 
 - **Used in:** Ready glow: killstreak tile READY, Operator DEPLOY, READY button pulse, order node current.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2680,7 +2840,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 197. `fx_glow_red.png` · P2
+##### 208. `fx_glow_red.png` · P2
 
 - **Used in:** Overrun risk pulse, can't-pay flash, set OFF.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2692,7 +2852,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 198. `fx_link_tick.png` · P1
+##### 209. `fx_link_tick.png` · P1
 
 - **Used in:** Link ticks: vertical (Guard, Spotter) across the row gap, horizontal (Fireteam, Overwatch) across the gutter; tinted by owner.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2705,7 +2865,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 199. `fx_link_tick_ghost.png` · P2
+##### 210. `fx_link_tick_ghost.png` · P2
 
 - **Used in:** Dashed amber ghost ticks for links a placement would make.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 32x64. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2717,7 +2877,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 200. `frm_ghost.png` · P1
+##### 211. `frm_ghost.png` · P1
 
 - **Used in:** Ghost / placement preview frame in each valid column (PLAY HERE).
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** transparent PNG (magenta #FF00FF key if it fails).
@@ -2729,7 +2889,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, letters, numbers, logos, ornaments in the middle of an edge, a cast shadow, a perspective tilt, a checkerboard pattern painted in.
 
-##### 201. `fx_hit_flash.png` · P2
+##### 212. `fx_hit_flash.png` · P2
 
 - **Used in:** Hit flash on a banner when damage lands.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x128. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2741,7 +2901,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 202. `fx_tracer.png` · P2
+##### 213. `fx_tracer.png` · P2
 
 - **Used in:** Tracer line from shooter to target (stretched along the path), Pick / Flank curve, Pierce through.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x16. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2753,7 +2913,7 @@ Original light effect for the interface of a modern military-tactical card game 
 
 **Avoid:** text, an object or surface, colours other than the one asked, a background that is not pure black.
 
-##### 203. `fx_crack.png` · P3
+##### 214. `fx_crack.png` · P3
 
 - **Used in:** Red crack for 2 s when a set switches off (trait rail chip), banner break.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 128x128. **Background:** white on black: TA converts brightness to alpha.
@@ -2765,7 +2925,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 **Avoid:** text, letters, numbers, colour, grey shading, a background that is not pure black.
 
-##### 204. `fx_sheen.png` · P3
+##### 215. `fx_sheen.png` · P3
 
 - **Used in:** Frame sheen sweep on animated finishes and hover.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256. **Background:** glow on black: additive blend in game, no alpha needed.
@@ -2787,41 +2947,42 @@ Each batch is about 10 images (10 to 15 minutes) and one upload. Keep a group (a
 |---|---|---|---|---|
 | 1 | P1 | Icons (imported, see `ui-kit-import-log.md`) | 10 | `ico_stat_firepower`, `ico_stat_armor`, `ico_stat_cover`, `ico_stat_supply`, `ico_stat_deck`, `ico_stat_intel`, `ico_streak`, `ico_score`, `ico_kw_first_shot`, `ico_kw_pick` |
 | 2 | P1 | Number plates | 7 | `plate_fp_s`, `plate_armor_s`, `plate_cost_s`, `plate_cover_s`, `plate_fp_l`, `plate_armor_l`, `plate_cost_l` |
-| 3 | P1 | Icons | 10 | `ico_kw_flank`, `ico_kw_pierce`, `ico_kw_suppress`, `ico_kw_patch`, `ico_kw_protector`, `ico_kw_guard`, `ico_kw_spotter`, `ico_kw_fireteam`, `ico_kw_overwatch`, `ico_effect_bolt` |
-| 4 | P1 | Icons | 10 | `ico_trait_vanguard`, `ico_trait_specops`, `ico_trait_heavy`, `ico_trait_undead`, `ico_type_unit`, `ico_type_tactic`, `ico_type_field`, `ico_class_ar`, `ico_class_smg`, `ico_class_shotgun` |
-| 5 | P1 | Icons | 10 | `ico_class_sniper`, `ico_class_lmg`, `ico_ks_recon_drone`, `ico_ks_mortar`, `ico_ks_attack_helo`, `ico_ks_sentry`, `ico_ctl_yours`, `ico_ctl_rival`, `ico_ctl_even`, `ico_overrun` |
-| 6 | P1 | Icons | 8 | `ico_ui_menu`, `ico_ui_undo`, `ico_ui_speed`, `ico_ui_close`, `ico_ui_back`, `ico_ui_eye`, `ico_ui_eye_off`, `ico_ui_check` |
-| 7 | P1 | Card frame parts | 10 | `frm_banner`, `frm_spine_you`, `frm_spine_rival`, `frm_front_tab`, `frm_plan_plate`, `frm_incoming`, `frm_socket`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini` |
-| 8 | P1 | Card frame parts | 2 | `frm_hand_card`, `frm_put_back` |
-| 9 | P1 | Camo bands | 2 | `band_base`, `band_gilded` |
-| 10 | P1 | Glows, outlines and overlays | 5 | `fx_outline_teal`, `fx_outline_side`, `fx_glow_amber`, `fx_link_tick`, `frm_ghost` |
-| 11 | P1 | Buttons and controls | 7 | `btn_primary`, `btn_primary_pressed`, `btn_secondary`, `btn_secondary_pressed`, `btn_ready`, `btn_ready_pressed`, `btn_badge` |
-| 12 | P1 | Panels, trays, rings and strips | 10 | `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_modal`, `pnl_ks_tile`, `ring_track`, `ring_fill`, `pip_supply`, `pnl_pick_tile` |
-| 13 | P1 | Objective and Field tile backers | 2 | `tile_objective`, `tile_field_chip` |
-| 14 | P1 | Backgrounds | 7 | `bg_title`, `bg_run_map`, `bg_supply_drop`, `bg_match`, `col_containers`, `col_cranes`, `col_offices` |
-| 15 | P2 | Icons | 10 | `ico_stat_discard`, `ico_stat_hand`, `ico_eliminated`, `ico_tickets`, `ico_fired`, `ico_heal`, `ico_damage`, `ico_kw_holder`, `ico_kw_hidden`, `ico_trig_on_deploy` |
-| 16 | P2 | Icons | 10 | `ico_trig_on_down`, `ico_kw_aura`, `ico_type_killstreak`, `ico_type_operator`, `ico_elite_star`, `ico_trap`, `ico_plan_mark`, `ico_class_sidearm`, `ico_eq_frag`, `ico_eq_flash` |
-| 17 | P2 | Icons | 10 | `ico_ctl_open`, `ico_field_slot`, `ico_ph_deploy`, `ico_ph_reveal`, `ico_ph_firefight`, `ico_ph_score`, `ico_mode_zone_control`, `ico_mode_firefight`, `ico_mode_detonator`, `ico_mode_rival` |
-| 18 | P2 | Icons | 10 | `ico_ui_settings`, `ico_ui_skip`, `ico_ui_codex`, `ico_ui_mirror`, `ico_ui_sound_on`, `ico_ui_sound_off`, `ico_ui_info`, `ico_ui_filter`, `ico_ui_lock`, `ico_ui_continue` |
-| 19 | P2 | Icons | 3 | `ico_ui_retire`, `ico_ui_promote`, `ico_ui_reward` |
-| 20 | P2 | Number plates | 1 | `plate_cover_l` |
-| 21 | P2 | Card frame parts | 9 | `frm_supply_plate`, `fx_ring_tier3`, `frm_band_edge`, `frm_elite`, `frm_dogtag_plate`, `frm_hand_name`, `frm_codex_tile`, `frm_equipped`, `card_back_banner` |
-| 22 | P2 | Camo bands | 3 | `band_forged`, `band_priceless`, `band_interstellar` |
-| 23 | P2 | Glows, outlines and overlays | 4 | `fx_glow_red`, `fx_link_tick_ghost`, `fx_hit_flash`, `fx_tracer` |
-| 24 | P2 | Buttons and controls | 5 | `btn_danger`, `btn_chip`, `btn_chip_on`, `tgl_track`, `tgl_knob` |
-| 25 | P2 | Panels, trays, rings and strips | 10 | `pnl_flyout_pointer`, `pnl_tooltip`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `order_node`, `order_arrow`, `pnl_rail_chip`, `pnl_callout` |
-| 26 | P2 | Panels, trays, rings and strips | 3 | `pnl_coach`, `pnl_result`, `runmap_node` |
-| 27 | P2 | Objective and Field tile backers | 2 | `tile_field_chip_trap`, `tile_slot_empty` |
-| 28 | P2 | Backgrounds | 4 | `bg_after_action`, `bg_codex`, `bg_loadout`, `bg_loading` |
-| 29 | P3 | Icons | 10 | `ico_range_close`, `ico_range_mid`, `ico_range_long`, `ico_round`, `ico_ks_gunship`, `ico_att_optic`, `ico_att_grip`, `ico_att_mag`, `ico_att_lining`, `ico_perk_slot` |
-| 30 | P3 | Icons | 3 | `ico_ui_rotate`, `ico_ui_survey`, `ico_ui_tutorial` |
-| 31 | P3 | Card frame parts | 1 | `card_back_hand` |
-| 32 | P3 | Glows, outlines and overlays | 2 | `fx_crack`, `fx_sheen` |
-| 33 | P3 | Buttons and controls | 2 | `btn_tab`, `sld_track` |
-| 34 | P3 | Panels, trays, rings and strips | 1 | `runmap_path` |
-| 35 | P3 | Backgrounds | 1 | `bg_menu` |
+| 3 | P1 | Standard Issue starter (art, frame, plates, New: card) | 12 | `ico_ui_lock`, `kc_b_si_grunt`, `kc_b_si_trooper`, `kc_b_si_sergeant`, `kc_b_si_armored`, `kc_b_si_ammo_resupply`, `frm_standard_issue`, `frm_serial_plate`, `frm_socket_empty`, `frm_socket_locked`, `pnl_new_card`, `pnl_new_inset` |
+| 4 | P1 | Icons | 10 | `ico_kw_flank`, `ico_kw_pierce`, `ico_kw_suppress`, `ico_kw_patch`, `ico_kw_protector`, `ico_kw_guard`, `ico_kw_spotter`, `ico_kw_fireteam`, `ico_kw_overwatch`, `ico_effect_bolt` |
+| 5 | P1 | Icons | 10 | `ico_trait_vanguard`, `ico_trait_specops`, `ico_trait_heavy`, `ico_trait_undead`, `ico_type_unit`, `ico_type_tactic`, `ico_type_field`, `ico_class_ar`, `ico_class_smg`, `ico_class_shotgun` |
+| 6 | P1 | Icons | 10 | `ico_class_sniper`, `ico_class_lmg`, `ico_ks_recon_drone`, `ico_ks_mortar`, `ico_ks_attack_helo`, `ico_ks_sentry`, `ico_ctl_yours`, `ico_ctl_rival`, `ico_ctl_even`, `ico_overrun` |
+| 7 | P1 | Icons | 8 | `ico_ui_menu`, `ico_ui_undo`, `ico_ui_speed`, `ico_ui_close`, `ico_ui_back`, `ico_ui_eye`, `ico_ui_eye_off`, `ico_ui_check` |
+| 8 | P1 | Card frame parts | 10 | `frm_banner`, `frm_spine_you`, `frm_spine_rival`, `frm_front_tab`, `frm_plan_plate`, `frm_incoming`, `frm_socket`, `frm_operator_banner`, `frm_operator_card`, `frm_operator_mini` |
+| 9 | P1 | Card frame parts | 2 | `frm_hand_card`, `frm_put_back` |
+| 10 | P1 | Camo bands | 2 | `band_base`, `band_gilded` |
+| 11 | P1 | Glows, outlines and overlays | 5 | `fx_outline_teal`, `fx_outline_side`, `fx_glow_amber`, `fx_link_tick`, `frm_ghost` |
+| 12 | P1 | Buttons and controls | 7 | `btn_primary`, `btn_primary_pressed`, `btn_secondary`, `btn_secondary_pressed`, `btn_ready`, `btn_ready_pressed`, `btn_badge` |
+| 13 | P1 | Panels, trays, rings and strips | 10 | `pnl_tray`, `pnl_flyout`, `pnl_toast`, `pnl_inspector`, `pnl_modal`, `pnl_ks_tile`, `ring_track`, `ring_fill`, `pip_supply`, `pnl_pick_tile` |
+| 14 | P1 | Objective and Field tile backers | 2 | `tile_objective`, `tile_field_chip` |
+| 15 | P1 | Backgrounds | 7 | `bg_title`, `bg_run_map`, `bg_supply_drop`, `bg_match`, `col_containers`, `col_cranes`, `col_offices` |
+| 16 | P2 | Icons | 10 | `ico_stat_discard`, `ico_stat_hand`, `ico_eliminated`, `ico_tickets`, `ico_fired`, `ico_heal`, `ico_damage`, `ico_kw_holder`, `ico_kw_hidden`, `ico_trig_on_deploy` |
+| 17 | P2 | Icons | 10 | `ico_trig_on_down`, `ico_kw_aura`, `ico_type_killstreak`, `ico_type_operator`, `ico_elite_star`, `ico_trap`, `ico_plan_mark`, `ico_class_sidearm`, `ico_eq_frag`, `ico_eq_flash` |
+| 18 | P2 | Icons | 10 | `ico_ctl_open`, `ico_field_slot`, `ico_ph_deploy`, `ico_ph_reveal`, `ico_ph_firefight`, `ico_ph_score`, `ico_mode_zone_control`, `ico_mode_firefight`, `ico_mode_detonator`, `ico_mode_rival` |
+| 19 | P2 | Icons | 10 | `ico_ui_settings`, `ico_ui_skip`, `ico_ui_codex`, `ico_ui_mirror`, `ico_ui_sound_on`, `ico_ui_sound_off`, `ico_ui_info`, `ico_ui_filter`, `ico_ui_continue`, `ico_ui_retire` |
+| 20 | P2 | Icons | 2 | `ico_ui_promote`, `ico_ui_reward` |
+| 21 | P2 | Number plates | 1 | `plate_cover_l` |
+| 22 | P2 | Card frame parts | 8 | `frm_supply_plate`, `fx_ring_tier3`, `frm_band_edge`, `frm_elite`, `frm_dogtag_plate`, `frm_hand_name`, `frm_codex_tile`, `card_back_banner` |
+| 23 | P2 | Camo bands | 3 | `band_forged`, `band_priceless`, `band_interstellar` |
+| 24 | P2 | Glows, outlines and overlays | 4 | `fx_glow_red`, `fx_link_tick_ghost`, `fx_hit_flash`, `fx_tracer` |
+| 25 | P2 | Buttons and controls | 5 | `btn_danger`, `btn_chip`, `btn_chip_on`, `tgl_track`, `tgl_knob` |
+| 26 | P2 | Panels, trays, rings and strips | 10 | `pnl_flyout_pointer`, `pnl_tooltip`, `pnl_header`, `pnl_hand_tab`, `pnl_counter`, `pnl_order_strip`, `order_node`, `order_arrow`, `pnl_rail_chip`, `pnl_callout` |
+| 27 | P2 | Panels, trays, rings and strips | 3 | `pnl_coach`, `pnl_result`, `runmap_node` |
+| 28 | P2 | Objective and Field tile backers | 2 | `tile_field_chip_trap`, `tile_slot_empty` |
+| 29 | P2 | Backgrounds | 4 | `bg_after_action`, `bg_codex`, `bg_loadout`, `bg_loading` |
+| 30 | P3 | Icons | 10 | `ico_range_close`, `ico_range_mid`, `ico_range_long`, `ico_round`, `ico_ks_gunship`, `ico_att_optic`, `ico_att_grip`, `ico_att_mag`, `ico_att_lining`, `ico_perk_slot` |
+| 31 | P3 | Icons | 3 | `ico_ui_rotate`, `ico_ui_survey`, `ico_ui_tutorial` |
+| 32 | P3 | Card frame parts | 2 | `frm_equipped`, `card_back_hand` |
+| 33 | P3 | Glows, outlines and overlays | 2 | `fx_crack`, `fx_sheen` |
+| 34 | P3 | Buttons and controls | 2 | `btn_tab`, `sld_track` |
+| 35 | P3 | Panels, trays, rings and strips | 1 | `runmap_path` |
+| 36 | P3 | Backgrounds | 1 | `bg_menu` |
 
-P1 is batches 1 to 14 (100 images). At about a minute per image plus a check, that is roughly two hours, best split into three or four sittings. After batch 1 (the first icons) and the first frame batch, pause and let the Technical Artist drop them into the build: if the style needs a tweak, it is cheaper to change the style block then than after 150 images.
+P1 is batches 1 to 15 (112 images). At about a minute per image plus a check, that is roughly two hours, best split into three or four sittings. After batch 1 (the first icons) and the first frame batch, pause and let the Technical Artist drop them into the build: if the style needs a tweak, it is cheaper to change the style block then than after 150 images.
 
 ## 6. Reject checklist and IP rules
 
@@ -2856,6 +3017,7 @@ P1 is batches 1 to 14 (100 images). At about a minute per image plus a check, th
 |---|---|---|
 | raw drops | `assets/incoming/ui/` | already ignored (`assets/incoming/.gdignore`); never imported |
 | `plate_*` | `assets/ui/kit/plates/` | rim `plate_<x>_<s or l>.png` + a flood-filled `_fill` copy; same export sizes as icons |
+| `kc_b_si_*` | `assets/sprites/banners/` + `data/banners/<id>.tres` | banner pipeline (`banner-art-direction.md` 3.2), curator sets `banner_y` / `portrait_x` |
 | `ico_*` | `assets/ui/kit/icons/` | 256 masters; plus the packed atlas `assets/ui/kit/icons/kit_icons.png` (see 7.3) |
 | `btn_*`, `tgl_*`, `sld_*` | `assets/ui/kit/buttons/` | |
 | `pnl_*`, `ring_*`, `pip_*`, `order_*`, `runmap_*` | `assets/ui/kit/panels/` | |
@@ -2912,5 +3074,6 @@ Each imported batch is logged in `ui-kit-import-log.md`: what shipped, where, an
 1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?
 2. **Backgrounds: replace or keep?** The title, run map and Supply Drop already have Killstreak-era paintings. **Recommended:** regenerate them in this pack (P1) so the KillingCard screens match; keep the old files as the fallback until the new ones are approved.
 3. **Icon look.** All icons are solid white pictograms tinted in code (cheapest, reads best at 22 px). The alternative is coloured, bevelled metal icons with the colour baked in, which look richer at 64 px but cost a second image per side and state. **Recommended:** white pictograms now; if you want richer killstreak tiles later, those 4 can get a painted P3 version.
-4. **Rival stats position.** Number plates bottom-right on every card, rival banners included, instead of mirrored toward the objective (`card-system.md` §3.4)? **Recommended:** yes. One fixed anatomy is easier to learn, and the side tint and spine show whose card it is.
+4. ~~Rival stats position~~: answered by card anatomy v3 (kc-trait-ui): one rule for every banner, both sides.
+5. **Standard Issue lettering.** The doc asks for stencil lettering on Standard Issue cards. The game has no stencil font (Barlow, Share Tech Mono). **Recommended:** add one OFL stencil font for the Standard Issue NAME and serial plate only; the alternative is plain Barlow Condensed in olive.
 

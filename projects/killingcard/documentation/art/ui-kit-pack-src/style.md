@@ -100,9 +100,9 @@ ChatGPT cannot redraw the same plate five times identically, so states are built
 | glow / ready | `fx_glow_amber` on top, alpha pulse 0.4 to 1.0 |
 | side | tint (teal / red) for white pieces; separate images only for the spines and FP badges, which also differ in shape for colour-blind players |
 
-### 2.7 The four style blocks (already inside every prompt)
+### 2.7 The five style blocks (already inside every prompt)
 
-Each prompt = **style block + subject + background tail**, already joined. There are four blocks: icon (also used for the white parts: rings, pips, nodes), UI parts, light effects, and backgrounds. They are listed here so the set can be tuned in one place; if one changes, edit `ui-kit-pack-src/` and regenerate this file and the manifest: `cd documentation/art/ui-kit-pack-src && python3 -I gen.py . ../ui-kit-prompt-pack.md ../ui-kit-manifest.csv head.md style.md tail.md` (slots live in `slots.py`).
+Each prompt = **style block + subject + background tail**, already joined. There are five blocks (the fifth, Standard Issue art, is below the background block): icon (also used for the white parts: rings, pips, nodes), UI parts, light effects, and backgrounds. They are listed here so the set can be tuned in one place; if one changes, edit `ui-kit-pack-src/` and regenerate this file and the manifest: `cd documentation/art/ui-kit-pack-src && python3 -I gen.py . ../ui-kit-prompt-pack.md ../ui-kit-manifest.csv head.md style.md tail.md` (slots live in `slots.py`).
 
 **Icon style** (all `ico_*`, plus the white `luma` parts)
 
@@ -134,54 +134,65 @@ Tail: `{ADD_TAIL}`
 {BG_STYLE}
 ```
 
-### 2.8 Card anatomy (every card face: board banner, hand banner card, Codex tile, inspector, pick tiles)
+**Standard Issue art style** (the 5 `kc_b_si_*` starter arts; rules tail included)
 
-The head's rule: **the same icon for a concept everywhere, in the same corner on every card.** Stats are **number plates**: a plate in the concept's icon shape (a white image, tinted in code), with the number printed inside by the game.
+```
+{SI_STYLE}
+```
+
+Tail: `{SI_RULES}`
+
+### 2.8 Card anatomy v3 (every banner form, both sides: board banner, hand banner card, Codex tile)
+
+The head's rules: **the same icon for a concept everywhere, in the same corner on every card.** Since kc-trait-ui, one rule (`BannerView.anatomy()`) applies to both sides, with no mirroring. Stats are **number plates**: a plate in the concept's icon shape (a white image, tinted in code), with the number printed inside by the game.
 
 ```
  Board banner 4:1 (228x57 phone, 304x76 desktop, 512x128 inspector)
- /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
- |(COST)                                          [TRAIT] |   top-left: cost plate (hexagon = Supply)
- |                                                        |   top-right: trait icon in a socket
- |              art: middle 70% (focal zone)              |
- |                                                        |
- |[KW][KW][bolt]                     (COV) (FP) (AR)      |   bottom-left to centre: abilities
- \________________________________________________________/   bottom-right: FP + Armor side by side
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST) NAME (code text)                   [KW][KW][bolt] |   top-left: cost plate + name (Elite star between)
+ |                                                         |   top-right: abilities, right-aligned from the corner
+ |              art: middle 70% (focal zone)               |
+ |                                                         |
+ |[TRAIT][CLASS]                        (COV) (FP) (AR)    |   bottom-left: trait (Operator: dog tag) + weapon pip
+ \_________________________________________________________/   bottom-right: FP + Armor plates, Cover left of them
    level camo band + side spine along the outer long edge
 
- Hand banner card (177x73 phone, 224x64 desktop, 103x78 on 16:9): the same corners
- /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
- |(COST)  NAME (code text)  [TRAIT] |
- |            art band              |
- |[KW][bolt]          (FP) (AR)     |
- \__________________________________/
+ Standard Issue card: the same corners, in frm_standard_issue
+ /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+ |(COST) GRUNT (stencil-style code text)        [SI-01]    |   top-right: serial plate (no abilities)
+ |            plain olive two-tone figure                  |
+ |[ - - ][ - - ]                             (FP) (AR)     |   bottom-left: empty dashed sockets (no trait, no class)
+ \_________________________________________________________/   no camo band, no foil
+
+ Hand banner card (177x73 phone, 224x64 desktop, 103x78 on 16:9): the same corners, smaller
 ```
 
 | Corner | What | Part | Phone banner | Desktop banner | Hand card | Inspector / tiles |
 |---|---|---|---|---|---|---|
-| Top-left | Cost (Supply) | `plate_cost_s` / `_l`, sitting in the frame's hexagon notch | 22 px | 26 px | 26 px | 48 px (`_l`) |
-| Top-right | Trait | `ico_trait_*` in `frm_socket` (lit at tier 2, `fx_ring_tier3` at tier 3) | 22 px | 26 px | 22 px | 40 px |
-| Bottom-left to centre | Abilities: printed keyword, neighbour keyword (the arrow is drawn by code), the bolt for effect text, class pip | `ico_kw_*`, `ico_effect_bolt`, `ico_class_*` in `frm_socket`, 2 px gaps, left to right | 22 px each | 26 px | 22 px | 40 px |
+| Top-left | Cost (Supply), then the NAME (code text; long names shrink to 13 px, then end in "…") | `plate_cost_s` / `_l` in the frame's hexagon notch | 22 px | 26 px | 26 px | 48 px (`_l`) |
+| Top-right | Abilities: printed keyword, neighbour keyword (arrow drawn by code), the bolt for effect text; locked ones greyed with `frm_socket_locked`; Standard Issue: `frm_serial_plate` | `ico_kw_*`, `ico_effect_bolt` in `frm_socket`, 2 px gaps, right-aligned | 22 px each | 26 px | 22 px | 40 px |
+| Bottom-left | Trait (Operator: dog tag) + weapon-type pip; empty: `frm_socket_empty` | `ico_trait_*`, `ico_class_*` in `frm_socket` (lit at tier 2, `fx_ring_tier3` at tier 3) | 22 px | 26 px | 22 px | 40 px |
 | Bottom-right | Cover (only when above 0), Firepower, Armor, side by side, Armor outermost | `plate_cover_s`, `plate_fp_s`, `plate_armor_s` | 26 px | 32 px | 28 px | 52 px (`_l`) |
-| Outer long edge | Level camo band, side spine | `band_*`, `frm_spine_*` | 3 px / 2 px | 4 px / 3 px | band only | 6 px |
+| Outer long edge | Level camo band, side spine (not on Standard Issue cards) | `band_*`, `frm_spine_*` | 3 px / 2 px | 4 px / 3 px | band only | 6 px |
 
 Rules that keep the parts lined up:
-- **The frames leave these corners free:** `frm_banner`, `frm_hand_card` and `frm_codex_tile` have the hexagon notch top-left and calm, plain bottom-right corners. Their 9-slice margins (manifest) are at least as large as the cost plate.
-- **Art safe zones (banner pack):** keep the top-left and top-right ~15% calm, and the bottom ~45% of the left and right ~25%. A 35% dark gradient scrim under the bottom row (the existing safety net) keeps plates readable on bright licensed art.
+- **The frames leave these corners free:** `frm_banner`, `frm_standard_issue`, `frm_hand_card` and `frm_codex_tile` all have the hexagon notch top-left and calm, plain corners elsewhere. Their 9-slice margins (manifest) are at least as large as the cost plate.
+- **Art safe zones:** all four corners of the 4:1 band stay calm (about 30% of the width by 40% of the height at each end), which is stricter than the banner pack's 15% side zones. A 35% dark gradient scrim under the top and bottom rows (the existing safety net) keeps plates readable on bright licensed art.
 - **One silhouette per concept:**
   - FP is the broken gun-sight ring (`ico_stat_firepower` matches `plate_fp`).
   - Armor is the armor plate (`ico_stat_armor` matches `plate_armor`).
   - Cover is the barrier block.
   - Cost and Supply are the hexagon (the cost plate, Supply pips and the Supply row). The crate icon `ico_stat_supply` (batch 1) becomes the Supply Drop and reward icon.
   - Guard is a block wall and Spotter is binoculars, so no keyword reuses the shield (Armor) or the eye (PREVIEW).
-- **Side colours are tints, not shapes:** your plates are teal and the rival's are red. The colour-blind side cue moves to the spine (square notches for you, diamond notches for the rival) and to the half of the board the card is on. This replaces the old FP badges (a teal circle for you, a red notched diamond for the rival).
-- **Rival banners on the board** use the same corners (not mirrored), so a number is always bottom-right. Only the neighbour-link arrows flip. This changes the "stats face the objective" rule in `card-system.md` §3.4 (question 4).
+- **Side colours are tints, not shapes:** your plates are teal and the rival's are red. The colour-blind cue is the spine (square notches for you, diamond notches for the rival) and the half of the board the card is on.
+- **Standard Issue reads as basic kit:** olive two-tone art, a grey-green painted frame, a serial plate, empty dashed trait and class sockets, no band, no glow and no animation. The first calling card (art, banner frame, lit trait) should look clearly better next to it.
 
 ## 3. Size key
 
 | Kind | Generate | Ship to the TA | In game |
 |---|---|---|---|
 | Icon | 1024x1024 square | 256x256 master, trimmed + 8% padding; exports 128/64/48/32 | 22-64 px |
+| Standard Issue card art (`kc_b_si_*`) | 1536x1024 | 1152x768 master (banner pipeline, `banner-art-direction.md` 3.2) | banners and hand cards |
 | Number plate (`plate_*`) | 1024x1024 | `_s` 128x128 (22-34 px on screen), `_l` 256x256 (48-128 px); rim + flood-filled `_fill` | 22-128 px |
 | Small part (socket, pip, knob) | 1024x1024 | 64-128 px (manifest) | 22-61 px |
 | Plate / panel / button (9-slice) | 1536x1024 or 1024x1536 | 2x the largest on-screen size, borders 4-6 px at ship size (manifest) | drawn at 0.5x scale (see 7.4) |

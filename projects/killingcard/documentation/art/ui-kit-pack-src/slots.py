@@ -521,7 +521,7 @@ part("frame", sec, "frm_hand_name", "frm_hand_name.png", "Name band across the m
 part("frame", sec, "frm_codex_tile", "frm_codex_tile.png", "Codex tile (120x156 compact): art, cost hex, name, chassis line", "P2",
      "an upright collectible tile frame: dark gunmetal border with a thin steel outline, a hexagon-shaped notch cut into the top-left corner for the cost plate, a chamfered bottom-right corner, an art window in the upper 55%, a slightly lighter lower plate for two lines of caption",
      gen="1024x1536", ship="240x312", nine="32,32,32,72", states="normal / hover (+10%) / pressed / locked (overlay ico_ui_lock + code dim) / equipped (frm_equipped)")
-part("frame", sec, "frm_equipped", "frm_equipped.png", "EQUIPPED corner mark on the Codex tile of the art your Operator / copies wear (word drawn by code)", "P2",
+part("frame", sec, "frm_equipped", "frm_equipped.png", "FOUND / EQUIPPED corner mark on Codex tiles (word drawn by code); kc-trait-ui removed EQUIP, so it now marks FOUND arts", "P3",
      "a corner ribbon that wraps the top-right corner of a card diagonally: a solid brass #C9A227 band with darker edges and a tiny dog-tag shape hanging from it, plain, the rest transparent",
      ship="128x128", states="normal")
 part("frame", sec, "frm_put_back", "frm_put_back.png", "Mulligan PUT BACK plate on marked cards (word drawn by code)", "P1",
@@ -618,3 +618,62 @@ for size, ship, used_at, rim in (("s", "128x128", "22-34 px: board banners, hand
                   used=f"Cover number plate, bottom right, left of FP, only when Cover > 0 ({tag}: {used_at})", pri="P1" if size == "s" else "P2",
                   subj=f"a cover number plate shaped like a low concrete barrier block seen from the front: a wide trapezoid, wider at the bottom with a flat top, drawn as a {rim}, the inside completely empty and large enough for a one-digit number, compact (no wider than one and a half times its height)",
                   avoid="a number, an arc or arrow, cracks", notes=platenote + " Optional: Cover can stay a small icon chip if the bottom-right corner gets crowded on the 57 px phone banner."))
+
+
+# ---------------------------------------------------------------- Standard Issue starter (onboarding-progression.md, head-approved): batch 3
+sec = "Standard Issue card art (starter, our own art)"
+SI_NOTE = ("Standard Issue starter art (onboarding-progression.md section 2.2): deliberately plain, so the first calling card pops. "
+           "Banner pipeline: the curator sets banner_y / portrait_x, the TA ships the 1152x768 master and a data/banners/<id>.tres.")
+for sid, card, used, subj in [
+    ("si_grunt", "Grunt (cost 1, 2/2)", "Grunt x5 in the starter, TrainingBot and the M1 / M2 Standard Issue squads",
+     "a basic infantry soldier in a plain round helmet and simple fatigues standing at ease, a generic rifle held diagonally across the chest, three-quarter side view, two plain wooden supply crates stacked behind"),
+    ("si_trooper", "Trooper (cost 2, 2/3)", "Trooper x6 in the starter, Standard Issue squads",
+     "a soldier in a plain helmet and a simple padded vest walking forward mid-stride, a generic rifle held low in both hands, side view, a plain canvas tent wall behind"),
+    ("si_sergeant", "Sergeant (cost 3, 3/3)", "Sergeant x4 in the starter, Standard Issue squads",
+     "a soldier in a plain helmet with one arm stretched forward pointing the way, a generic rifle in the other hand, side view, one boot up on a low wooden crate, a plain canvas backdrop"),
+    ("si_armored", "Armored Trooper (cost 4, 2/5)", "Armored Trooper x3 in the starter (the first card to send home), Standard Issue squads",
+     "a heavy soldier in bulky plain body armour and a full helmet with a dark visor, standing square and slow, a generic rifle held low, front three-quarter view, a low wall of plain sandbags behind"),
+    ("si_ammo_resupply", "Ammo Resupply (tactic, Draw 2)", "Ammo Resupply x2 in the starter (Standard Issue art for the existing card)",
+     "two plain ammunition boxes and a canvas bag of rifle magazines on a wooden pallet, one gloved hand lifting a box lid, no person in view beyond the hand and forearm, side view"),
+]:
+    S.append(dict(id=sid, file=f"kc_b_{sid}.png", cat="card_art", sec=sec, gen="1536x1024",
+                  ship="1152x768 master (banner band 1152x288, hand column 512x768)", alpha="opaque", nine="",
+                  states="normal (no animation, no foil)", used=f"{card}: {used}", pri="P1", subj=subj, batch3=True,
+                  avoid="markings or stencils on crates, boxes or gear, glow, light beams, dramatic lighting, a second figure",
+                  notes=SI_NOTE + (" Tactic: no character is the subject (kind rule)." if sid == "si_ammo_resupply" else "")))
+
+sec = "Standard Issue frame and plates"
+part("frame", sec, "frm_standard_issue", "frm_standard_issue.png", "Standard Issue frame on every Standard Issue card: board banners, hand banner cards, mulligan, Muster out list (no camo band, no foil)", "P1",
+     "a very wide thin card frame, four times wider than tall, made of matte grey-green #5E6B5A painted sheet steel with slightly worn flat paint: a 4-pixel border, a hexagon-shaped notch cut into the top-left corner (for the cost plate), square plain corners elsewhere, one small flat-head screw in each of the other three corners, no shine, no foil, the inside completely empty",
+     gen="1536x1024", ship="512x128", nine="40,32,16,16", states="normal / selected (fx_outline_teal) / now firing (fx_outline_side) / dimmed (code)",
+     notes="Same 9-slice margins as frm_banner, so every anatomy slot lines up; the same image frames the hand banner card. The stencil-style NAME is code text (needs a stencil font: question 5).")
+part("frame", sec, "frm_serial_plate", "frm_serial_plate.png", "Serial plate SI-01 to SI-04 (code text) in the empty abilities slot, top right; red-tinted on enemy Standard Issue squads", "P1",
+     "a small rectangular stamped metal tag with a slightly raised rim and one round rivet at each end, flat light grey steel #B9C2C9, the face plain and empty",
+     ship="128x48", nine="16,12,16,12", states="yours (normal) / enemy squad (code tint red #E5383B)")
+S.append(dict(id="frm_socket_empty", file="frm_socket_empty.png", cat="frame", sec=sec, gen="1024x1024", ship="64x64", alpha="luma", nine="",
+              states="normal (code tint grey #7E8890 at 60%)", used="Empty trait / weapon slot, bottom left (Standard Issue cards; NO TRAIT arts in the Codex)", pri="P1",
+              subj="a small square socket outline with 45-degree chamfered corners drawn as a dashed rim of eight thick dashes, the inside completely empty",
+              avoid="a solid rim, anything inside the square", notes="", batch3=True))
+S.append(dict(id="frm_socket_locked", file="frm_socket_locked.png", cat="frame", sec=sec, gen="1024x1024", ship="64x64", alpha="luma", nine="",
+              states="locked (code: socket grey, keyword icon tinted #7E8890 at 45%, this overlay on top) / unlocks (overlay fades, socket lights, New: Keywords)",
+              used="Locked keyword pip on Recruit calling cards (the 'Trains: First Shot - Guard' teaser) and in the inspector", pri="P1",
+              subj="a small square socket rim with 45-degree chamfered corners and a compact solid padlock shape sitting over its bottom-right corner, the padlock about one third of the socket's width, the inside of the socket empty",
+              avoid="a keyword symbol inside, a keyhole too small to see", notes="The keyword icon itself is drawn inside by the code, greyed.", batch3=True))
+
+sec = "First-time explainer (New: X)"
+part("panel", sec, "pnl_new_card", "pnl_new_card.png", "'New: X' one-time explainer card (half screen: icon, one sentence, mini example, GOT IT), queued one per screen", "P1",
+     "a large explainer card panel: dark gunmetal #232A31 face with a soft lighter centre, a 2-pixel steel #4A535B outline, 45-degree chamfered corners, a short solid amber #FFB020 flag tab hanging from the top-left corner (plain, for a word the game adds), a thin amber line running along the top edge from the tab",
+     gen="1536x1024", ship="512x320", nine="96,48,40,40", states="normal / enter (code: slide + fade)",
+     notes="The tab sits inside the left and top 9-slice margins. GOT IT uses btn_primary.")
+part("panel", sec, "pnl_new_inset", "pnl_new_inset.png", "Mini example well inside the New: card (a mini board grid, a card, a trait counter)", "P1",
+     "a recessed rectangular well: near-black #0F1316 face sunk into the metal, a thin dark inner shadow along the top and left edges and a 1-pixel light steel line along the bottom and right edges, small chamfered corners",
+     gen="1536x1024", ship="256x160", nine="20,20,20,20", states="normal")
+
+for _s in S:
+    if _s["id"] in ("frm_standard_issue", "frm_serial_plate", "pnl_new_card", "pnl_new_inset", "ui_lock"):
+        _s["batch3"] = True
+    if _s["id"] == "ui_lock":
+        _s["pri"] = "P1"
+        _s["used"] = "Locked keyword pip badge (frm_socket_locked), locked Codex art, NOT FOUND YET"
+    if _s["id"] == "frm_equipped":
+        _s["notes"] = "kc-trait-ui (head B): no EQUIP in runs; the Codex shows FOUND marks instead, so this is optional polish."

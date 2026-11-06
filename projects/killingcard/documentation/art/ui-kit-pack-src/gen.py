@@ -39,6 +39,16 @@ NINE_TAIL = ("Built for 9-slice stretching: keep every corner detail inside the 
 ADD_TAIL = ("Only light, on a perfectly flat pure black #000000 background: it is added on top of the game, so there is no "
             "object, no surface and no frame, just the glow.")
 OPAQUE_PART_TAIL = "Fill the whole canvas edge to edge, flat front-on view."
+SI_STYLE = ("Original plain two-tone illustration for the basic starter cards of a modern military card game. One flat simple figure "
+            "in olive drab #4B5320 and khaki #C3B091 against a muted grey-green #5E6B5A canvas or plain wooden supply-crate background. "
+            "Flat shapes like a training-manual print, matte, low contrast, soft even light, no glow, no light effects, no dramatic lighting, "
+            "only a faint canvas weave as texture. Deliberately modest and basic.")
+SI_RULES = ("Wide 3:2 landscape that will be cropped to a thin 4:1 strip across the middle (30% to 66% of the height) and a tall 2:3 column "
+            "in the centre. Put the figure in the exact centre, head and hands between 30% and 65% of the height, inside the middle 60% of the width. "
+            "The four corners of that strip stay empty, flat and calm, because the game puts the cost and name top left, abilities top right, "
+            "the trait and weapon bottom left and the number plates bottom right. Above and below, continue the plain background. "
+            "No text, letters, numbers, stencils, serial numbers, logos, insignia, flags, badges, patches or symbols on clothing, gear or crates. "
+            "Invented people only, faces simple or shaded by the helmet. No blood.")
 FX_STYLE = ("Original light effect for the interface of a modern military-tactical card game played on phones. "
             "Clean, soft, even glow with a smooth falloff and no noise. No text, letters, numbers, logos or symbols.")
 
@@ -49,6 +59,7 @@ AVOID = {
     "add": "text, an object or surface, colours other than the one asked, a background that is not pure black",
     "background": "text, numbers, logos, insignia, flags, real weapon or vehicle models, recognizable places or people, gore, a bright or busy centre",
     "opaque": "text, letters, numbers, logos, a cast shadow, a perspective tilt",
+    "card_art": "text, letters, numbers, logos, insignia, flags, badges, real weapon models, recognizable people, gore, a busy or bright corner",
     "band": "text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named",
 }
 
@@ -66,6 +77,8 @@ ALPHA_CSV = {"luma": "yes (luma key)", "alpha": "yes (alpha or magenta key)", "a
 def prompt(s):
     cat, a = s["cat"], s["alpha"]
     shape = SHAPE[s["gen"]]
+    if cat == "card_art":
+        return f"{SI_STYLE} {s['subj'][0].upper() + s['subj'][1:]}. {SI_RULES}"
     if cat == "plate":
         return (f"{ICON_STYLE} Draw one number plate (the game prints the number inside it later): {s['subj']}. "
                 "No number, letter or mark inside it. Thick strokes and gaps, no detail smaller than one eighth of the canvas. " + LUMA_TAIL + " Square 1:1.")
@@ -93,17 +106,17 @@ def prompt(s):
 
 
 def avoid(s):
-    base = "luma" if s["cat"] == "plate" else s["cat"] if s["cat"] in ("icon", "background", "band") else {"luma": "luma", "add": "add", "opaque": "opaque"}.get(s["alpha"], "part")
+    base = "luma" if s["cat"] == "plate" else s["cat"] if s["cat"] in ("icon", "background", "band", "card_art") else {"luma": "luma", "add": "add", "opaque": "opaque"}.get(s["alpha"], "part")
     extra = s.get("avoid") or ""
     return AVOID[base] + (", " + extra if extra else "") + "."
 
 
 CAT_TITLE = OrderedDict([
-    ("icon", "Icons"), ("plate", "Number plates"), ("button", "Buttons and controls"), ("panel", "Panels, trays, rings and strips"),
+    ("icon", "Icons"), ("plate", "Number plates"), ("card_art", "Standard Issue card art"), ("button", "Buttons and controls"), ("panel", "Panels, trays, rings and strips"),
     ("background", "Backgrounds"), ("tile", "Objective and Field tile backers"), ("frame", "Card frame parts"),
     ("band", "Camo bands"), ("fx", "Glows, outlines and overlays"),
 ])
-CAT_FOLDER = {"icon": "assets/ui/kit/icons/", "plate": "assets/ui/kit/plates/", "button": "assets/ui/kit/buttons/", "panel": "assets/ui/kit/panels/",
+CAT_FOLDER = {"icon": "assets/ui/kit/icons/", "plate": "assets/ui/kit/plates/", "card_art": "assets/sprites/banners/ (+ data/banners/<id>.tres)", "button": "assets/ui/kit/buttons/", "panel": "assets/ui/kit/panels/",
               "background": "assets/ui/backgrounds/", "tile": "assets/ui/kit/tiles/", "frame": "assets/ui/kit/frames/",
               "band": "assets/ui/kit/bands/", "fx": "assets/ui/kit/fx/"}
 
@@ -143,7 +156,7 @@ for c, t in CAT_TITLE.items():
     o(f"| {t} | {by_cat[c]} | {by_cat_pri[(c, 'P1')]} | {by_cat_pri[(c, 'P2')]} | {by_cat_pri[(c, 'P3')]} |")
 o(f"| **Total** | **{total}** | **{by_pri['P1']}** | **{by_pri['P2']}** | **{by_pri['P3']}** |")
 o("")
-o(open(sys.argv[5]).read().replace("{ICON_STYLE}", ICON_STYLE).replace("{FX_STYLE}", FX_STYLE).replace("{UI_STYLE}", UI_STYLE).replace("{BG_STYLE}", BG_STYLE)
+o(open(sys.argv[5]).read().replace("{ICON_STYLE}", ICON_STYLE).replace("{FX_STYLE}", FX_STYLE).replace("{SI_STYLE}", SI_STYLE).replace("{SI_RULES}", SI_RULES).replace("{UI_STYLE}", UI_STYLE).replace("{BG_STYLE}", BG_STYLE)
   .replace("{ICON_TAIL}", ICON_TAIL).replace("{ALPHA_TAIL}", ALPHA_TAIL).replace("{NINE_TAIL}", NINE_TAIL)
   .replace("{ADD_TAIL}", ADD_TAIL).replace("{LUMA_TAIL}", LUMA_TAIL))
 
@@ -202,7 +215,7 @@ o("")
 o("Each batch is about 10 images (10 to 15 minutes) and one upload. Keep a group (a level-4 heading in section 4) in one ChatGPT chat; when a batch crosses into the next group, start a new chat there.")
 o("")
 batches = []
-order = ["icon", "plate", "frame", "band", "fx", "button", "panel", "tile", "background"]
+order = ["icon", "plate", "card_art", "frame", "band", "fx", "button", "panel", "tile", "background"]
 for pri in ("P1", "P2", "P3"):
     for c in order:
         group = [s for s in S if s["pri"] == pri and s["cat"] == c]
@@ -210,7 +223,16 @@ for pri in ("P1", "P2", "P3"):
             batches.append((pri, CAT_TITLE[c], group[i:i + 10]))
 # Batch 1 (first 10 P1 icons) is imported; the head asked for the P1 number plates next, as batch 2.
 plates = [b for b in batches if b[0] == "P1" and b[1] == "Number plates"]
-batches = [batches[0]] + plates + [b for b in batches[1:] if b not in plates]
+# Batch 3 (head, Standard Issue starter): the 5 arts plus the frame, plates and New: card parts, pulled out of their groups.
+b3 = [s for s in S if s.get("batch3")]
+rest = []
+for pri, title, g_ in batches[1:]:
+    if (pri, title, g_) in plates:
+        continue
+    left = [s for s in g_ if not s.get("batch3")]
+    if left:
+        rest.append((pri, title, left))
+batches = [batches[0]] + plates + [("P1", "Standard Issue starter (art, frame, plates, New: card)", b3)] + rest
 o("| Batch | Priority | Group | Images | Files |")
 o("|---|---|---|---|---|")
 for i, (pri, title, g) in enumerate(batches, 1):
