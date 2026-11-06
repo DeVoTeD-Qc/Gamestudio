@@ -160,6 +160,32 @@ static func draw_keyword_icon(ci: CanvasItem, r: Rect2, kw: StringName, c: Color
 				ci.draw_colored_polygon(PackedVector2Array([tip, tip + Vector2(-dx * s * 0.16, -s * 0.11), tip + Vector2(-dx * s * 0.16, s * 0.11)]), c)
 
 
+## kc-fight-ui: the Pierce glyph (firefight-order.md §3): an arrow through a chevron, pointing down
+## the enemy column (toward the rival's back row: up on your banners, down on theirs; down_dir false
+## points it up). Drawn, not from the icon sheet.
+static func draw_pierce_icon(ci: CanvasItem, r: Rect2, c: Color, down_dir: bool = true) -> void:
+	var s: float = minf(r.size.x, r.size.y)
+	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
+	var w: float = maxf(2.0, s * 0.15)
+	var d: float = 1.0 if down_dir else -1.0
+	var y0: float = s * (0.5 - d * 0.46)
+	var y1: float = s * (0.5 + d * 0.18)
+	# Shaft through the chevron, then a wide head.
+	ci.draw_line(o + Vector2(s * 0.5, y0), o + Vector2(s * 0.5, y1), c, w)
+	var tip: Vector2 = o + Vector2(s * 0.5, s * (0.5 + d * 0.48))
+	ci.draw_colored_polygon(PackedVector2Array([tip, o + Vector2(s * 0.24, y1), o + Vector2(s * 0.76, y1)]), c)
+	var cy: float = s * (0.5 - d * 0.12)
+	ci.draw_polyline(PackedVector2Array([o + Vector2(s * 0.1, cy - d * s * 0.22), o + Vector2(s * 0.5, cy + d * s * 0.08),
+			o + Vector2(s * 0.9, cy - d * s * 0.22)]), c, w)
+
+
+## Pierce glyph on a dark plate (banner effect slot, glossary).
+static func draw_pierce_plate(ci: CanvasItem, r: Rect2, c: Color, down_dir: bool = true) -> void:
+	ci.draw_rect(r, Color(INK, 0.82))
+	ci.draw_rect(r, Color(1, 1, 1, 0.18), false, 1.0)
+	draw_pierce_icon(ci, r.grow(-r.size.x * 0.12), c, down_dir)
+
+
 static func _flip_y(pts: PackedVector2Array, o: Vector2, s: float, flip: float) -> void:
 	if flip > 0.0:
 		return

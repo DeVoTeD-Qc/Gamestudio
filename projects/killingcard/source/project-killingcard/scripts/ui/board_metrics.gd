@@ -6,12 +6,13 @@
 #     tray_w = W - strip_w - side_gap - board_w - tray_gap
 #   If the tray would get narrower than tray_min, the banners shrink (keeping 4:1) until it fits.
 #   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57, strip 6..68, columns
-#     76 / 318 / 560, tray 800..1162, hand cards 99x124 in a 3x3 grid (kc-ui3: the Supply row grows
-#     to 64 px to hold the 3 killstreak tiles; the Operator card takes the grid's first cell).
+#     76 / 318 / 560, tray 800..1162 (kc-ui3: the Supply row grows to 64 px to hold the 3 killstreak
+#     tiles; the Operator card takes the grid's first cell). kc-ui4: hand cards are banner cards,
+#     2 columns of 177x73.
 #   16:9 phone (canvas 960x540): banners 208x52, tray 214 wide, killstreaks in their own row, a
-#     3-column hand of 66x83.
+#     2-column hand of 103x78 banner cards (name in the middle band).
 #   Desktop 1440x900 (canvas 1280x800): banners 304x76, columns 86 / 410 / 734, tray 1050..1274,
-#     hand cards 108x136 in a 2x4 grid.
+#     hand cards 224x64 banner cards in one column.
 # Usage: var m: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true)   # pure, tested
 # Author: Mechanics Developer Agent (kc-board, kc-board2)
 extends RefCounted
@@ -28,8 +29,12 @@ const KS_SLOTS: int = 3
 const KS_GAP: float = 4.0
 ## Supply text + pips need this much of a shared row.
 const SUPPLY_MIN_W: float = 150.0
-## Hand cards keep about the option A proportions (104x130).
-const CARD_RATIO: float = 0.8
+## kc-ui4: hand cards are banners: at least this tall (plate row + stat row) and wide, and at most
+## this square (width / height) in wide / narrow cells.
+const CARD_MIN_H: float = 64.0
+const CARD_MIN_W: float = 96.0
+const CARD_RATIO_WIDE: float = 2.4
+const CARD_RATIO_MIN: float = 1.3
 const PHONE: Dictionary = {"pad_y": 4.0, "row_gap": 3.0, "mid_gap": 3.0, "obj_h": 52.0, "gutter": 14.0,
 		"strip_w": 62.0, "badge_h": 64.0, "badge_gap": 5.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 210.0,
 		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0,
@@ -101,23 +106,30 @@ static func _ks_rows(p: Dictionary, tray: Vector2) -> void:
 		p["supply_h"] = p["supply_h"] + 6.0 + p["ks_h"]
 
 
-## The hand grid inside the tray: between the Supply row and the UNDO / READY row. Picks 3 or 2
-## columns, whichever gives the larger card (cards up to card_max, HAND_SLOTS cards without overlap).
+## The hand grid inside the tray: between the Supply row and the UNDO / READY row. kc-ui4 (head:
+## hand cards "closer to their form on the board"): the cards are banners, so the grid picks 1, 2 or
+## 3 columns, whichever gives the larger card that still holds the banner's plate row and stat row
+## (h >= CARD_MIN_H) and is no squarer than CARD_RATIO_MIN (wide cells: CARD_RATIO_WIDE, the
+## licensed 4:1 art keeps most of its width). HAND_SLOTS cards fit without overlap.
 static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
 	var gap: float = p["card_gap"]
 	var grid_top: float = p["supply_h"] + 8.0
 	var grid_h: float = tray.y - grid_top - p["btn_h"] - 6.0
-	var cmax: Vector2 = p["card_max"]
 	var best: Vector2 = Vector2.ZERO
 	var best_cols: int = 2
-	for cols: int in [3, 2]:
+	for cols: int in [1, 2, 3]:
 		var rows: int = ceili(float(HAND_SLOTS) / cols)
-		var h: float = minf(cmax.y, floorf((grid_h - (rows - 1) * gap) / rows))
-		var w: float = minf(cmax.x, minf(floorf(h * CARD_RATIO), floorf((tray.x - (cols - 1) * gap) / cols)))
-		h = minf(h, roundf(w * 1.26))
+		var w: float = floorf((tray.x - (cols - 1) * gap) / cols)
+		var h: float = floorf((grid_h - (rows - 1) * gap) / rows)
+		var ratio: float = CARD_RATIO_WIDE if w >= 150.0 else CARD_RATIO_MIN
+		if w < CARD_MIN_W or h < CARD_MIN_H:
+			continue
+		h = clampf(floorf(minf(p["bh"] * 1.4, w / ratio)), CARD_MIN_H, h)
 		if w * h > best.x * best.y:
 			best = Vector2(w, h)
 			best_cols = cols
+	if best == Vector2.ZERO:
+		best = Vector2(floorf((tray.x - gap) / 2.0), CARD_MIN_H)
 	var grid_w: float = best_cols * best.x + (best_cols - 1) * gap
 	p["card"] = best
 	p["hand_cols"] = best_cols

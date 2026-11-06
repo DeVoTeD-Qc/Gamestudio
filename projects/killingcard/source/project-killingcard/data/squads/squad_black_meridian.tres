@@ -51,3 +51,4 @@ weight_zone_control = 2.5
 weight_deny_streak = 3.0
 second_best_chance = 0.05
 preferred_ranges = Array[int]([])
+identity_trait = &"specops"

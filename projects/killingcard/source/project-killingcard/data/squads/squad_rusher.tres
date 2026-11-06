@@ -42,3 +42,4 @@ weight_zone_control = 2.0
 weight_deny_streak = 3.0
 second_best_chance = 0.15
 preferred_ranges = Array[int]([0])
+identity_trait = &"vanguard"

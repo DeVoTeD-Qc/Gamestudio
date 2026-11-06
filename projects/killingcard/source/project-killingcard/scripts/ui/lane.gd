@@ -47,7 +47,7 @@ const LIFT_MS: float = 220.0
 const SLIDE_BASE_MS: float = 180.0
 const SLIDE_PER_ROW_MS: float = 70.0
 const PROTECTOR_PAUSE_MS: float = 160.0
-const SHIFT_MS: float = 320.0
+const SHIFT_MS: float = 450.0  # kc-fight-ui: readable line slides (was 320)
 const SHIFT_STAGGER_MS: float = 60.0
 const FADE_MS: float = 500.0
 

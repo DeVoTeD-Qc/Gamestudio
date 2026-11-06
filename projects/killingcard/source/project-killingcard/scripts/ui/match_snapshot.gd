@@ -59,11 +59,9 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		var c: Dictionary = CardInfo.chip(rc.uid, rc.card)
 		c["playable"] = rc.card.cost <= me.supply
 		_hand_synergy(c, state, viewer, rc)
-		c["banner"] = String(state.art_by_uid.get(rc.uid, rc.card.id))
-		# kc-ui4 (head naming): the name stays the chassis; the art's own name is the subname.
-		var sub: String = BannerArtDB.subname(StringName(String(c["banner"])))
-		if sub != "":
-			c["subname"] = sub
+		# kc-ui4: the board banner's fields (art, subname, effect bolt, Protector, Elite): the hand card
+		# is the same banner. The name stays the chassis; the art's own name is the subname.
+		_banner_fields(c, rc.card, null, null, state, rc.uid)
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready

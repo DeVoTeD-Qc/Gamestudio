@@ -44,3 +44,4 @@ grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_bx53g")]([SubResource("Resource_g1a56")])
 card_trait = &"heavy"
+trait_options = Array[StringName]([&"heavy", &"undead"])

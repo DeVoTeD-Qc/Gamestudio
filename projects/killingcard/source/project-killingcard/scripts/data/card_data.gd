@@ -53,7 +53,13 @@ const MAX_TEXT_LENGTH: int = 100
 @export var neighbor_keyword: StringName = &""
 ## Trait of the chassis (§4): &"vanguard", &"specops", &"heavy", &"undead" or &"" (none). Units and
 ## Fields only. Recruit copies don't count for or receive set bonuses.
+## kc-art-traits: this is the DEFAULT trait (= trait_options[0] when trait_options is set): a copy's
+## trait comes from the art it wears, chosen from trait_options (SynergyRules.trait_at).
 @export var card_trait: StringName = &""
+## kc-art-traits (art-traits.md §4, head T1): the traits a copy of this unit can carry through its
+## art, default first (&"" = the plain "no trait" option, the Rifleman's home). Units only: home +
+## one alternate. Empty = the printed trait only (Elites, Fields: card_trait; tactics, tokens: none).
+@export var trait_options: Array[StringName] = []
 
 @export_group("Special rules")
 ## Always arrives at the front of the line (Shieldman).
@@ -76,6 +82,24 @@ const MAX_TEXT_LENGTH: int = 100
 
 func is_unit() -> bool:
 	return card_type == DataEnums.CardType.UNIT
+
+
+## kc-art-traits: every trait a copy can carry, default first ([card_trait] for printed cards, []
+## for cards that never have a trait).
+func trait_choices() -> Array[StringName]:
+	if not trait_options.is_empty():
+		return trait_options.duplicate()
+	return [card_trait] as Array[StringName] if card_trait != &"" else [] as Array[StringName]
+
+
+## True when copies of this card can differ in trait (more than one option).
+func has_trait_choice() -> bool:
+	return trait_options.size() > 1
+
+
+## True when trait `t` is one of this card's options (&"" counts only when it is an option).
+func can_carry(t: StringName) -> bool:
+	return t in trait_choices()
 
 
 ## Field = CardType.EQUIPMENT (the engine's internal name).
@@ -123,6 +147,20 @@ func validate(v: DataValidator) -> void:
 		v.invalid("card_trait", "unknown trait '%s' (one of %s)" % [card_trait, SynergyRules.TRAITS])
 	if card_trait != &"" and card_type == DataEnums.CardType.TACTIC:
 		v.invalid("card_trait", "only units and Fields have a trait")
+	if not trait_options.is_empty():
+		var seen: Dictionary = {}
+		for t: StringName in trait_options:
+			if t != &"" and t not in SynergyRules.TRAITS:
+				v.invalid("trait_options", "unknown trait '%s' (one of %s or \"\")" % [t, SynergyRules.TRAITS])
+			if seen.has(t):
+				v.invalid("trait_options", "trait '%s' is listed twice" % t)
+			seen[t] = true
+		if trait_options[0] != card_trait:
+			v.invalid("trait_options", "the first option must be the default trait card_trait ('%s')" % card_trait)
+		if card_type == DataEnums.CardType.TACTIC:
+			v.invalid("trait_options", "tactics never have a trait")
+		if trait_options.size() > 1 and (not is_unit() or is_elite or not collectible):
+			v.invalid("trait_options", "only non-Elite units can choose a trait (Elites and Fields print theirs)")
 	if is_unit():
 		v.check_range("firepower", firepower, 0, 10)
 		v.check_range("armor", armor, 1, 20)

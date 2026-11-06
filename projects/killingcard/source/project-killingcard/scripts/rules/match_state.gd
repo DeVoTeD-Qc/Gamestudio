@@ -119,7 +119,7 @@ func _init(p_config: RunConfig = null, p_map: MapData = null, player: SideSetup 
 func start_match() -> void:
 	for s: RulesSide in sides:
 		for i: int in s.setup.deck.size():
-			var rc: RulesCard = RulesCard.new(new_uid(), s.setup.deck[i], s.setup.level_of(i))
+			var rc: RulesCard = RulesCard.new(new_uid(), s.setup.deck[i], s.setup.level_of(i), s.setup.trait_of(i))
 			if i < s.setup.deck_arts.size() and s.setup.deck_arts[i] != &"":
 				art_by_uid[rc.uid] = s.setup.deck_arts[i]
 			s.deck.append(rc)
@@ -697,7 +697,7 @@ func _arrive(si: int, play: Dictionary) -> bool:
 				return false
 			var rc: RulesCard = play["card"]
 			emit_event(RulesEvent.CARD_REVEALED, {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id, "zone": zone_name(zone)})
-			var u: RulesUnit = create_unit(si, rc.card, rc.uid, rc.level)
+			var u: RulesUnit = create_unit(si, rc.card, rc.uid, rc.level, rc.chosen_trait)
 			put_in_line(u, zone)
 			_apply_arrival_buff(si, u)
 			var ctx: Dictionary = make_ctx(si, SRC_UNIT, u.source_id, u.uid, zone, play["target_uid"], play["dest_zone"])
@@ -964,7 +964,7 @@ func _record_elimination(u: RulesUnit, zone: int) -> Dictionary:
 		emit_event(RulesEvent.OPERATOR_DOWN, {"side": side_name(u.side), "uid": u.uid})
 		hooks.on_operator_down(self, u.side)
 	elif u.card != null and u.card.collectible:
-		s.discard.append(RulesCard.new(u.uid, u.card, u.level))
+		s.discard.append(RulesCard.new(u.uid, u.card, u.level, u.chosen_trait))
 		emit_event(RulesEvent.CARD_DISCARDED, {"side": side_name(u.side), "card_uid": u.uid, "card_id": u.card.id})
 	hooks.on_elimination(self, rec)
 	return rec
@@ -986,8 +986,10 @@ func _find_unit_anywhere(uid: int, extra: Array[RulesUnit]) -> RulesUnit:
 # =============================================================================
 
 ## level (kc-syn §5.2): Recruit copies get no neighbor keyword and no trait; Veteran +1 Armor,
-## Elite +1 Armor +1 FP.
-func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyRules.LEVEL_TRAINED) -> RulesUnit:
+## Elite +1 Armor +1 FP. chosen_trait (kc-art-traits): the trait the copy's art gives it
+## (SynergyRules.trait_at checks it against the card's options; TRAIT_DEFAULT = the default).
+func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyRules.LEVEL_TRAINED,
+		chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> RulesUnit:
 	var u: RulesUnit = RulesUnit.new()
 	u.uid = uid if uid >= 0 else new_uid()
 	u.side = side
@@ -996,7 +998,8 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.weapon_class = card.weapon_class
 	u.level = level
 	u.neighbor_keyword = SynergyRules.keyword_at(card, level)
-	u.synergy_trait = SynergyRules.trait_at(card, level)
+	u.chosen_trait = chosen_trait
+	u.synergy_trait = SynergyRules.trait_at(card, level, chosen_trait)
 	var lv: Dictionary = SynergyRules.level_stats(level)
 	var setup: SideSetup = sides[side].setup
 	u.base_firepower = card.firepower + setup.firepower_bonus + int(lv["fp"])
@@ -1007,7 +1010,8 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.flank = card.flank
 	u.cover = card.cover
 	u.suppress = card.suppress
-	u.pierce = card.pierce
+	# kc-art-traits / head F2: every LMG has Pierce (printed on the Gunner and the Demolitions Expert).
+	u.pierce = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
 	u.patch = card.patch
 	u.holder = card.holder
 	u.arrives_front = card.arrives_front
@@ -1044,6 +1048,8 @@ func _build_operator(side: int, setup: SideSetup) -> RulesUnit:
 		u.patch += p.patch
 		u.holder = u.holder or p.holder
 		u.effects.append_array(p.effects)
+	# Head F2 (kc-fight-impl answers): any LMG weapon has Pierce, an Operator's LMG primary too.
+	u.pierce = primary.weapon_class == DataEnums.WeaponClass.LMG
 	u.base_firepower = maxi(0, fp)
 	u.base_max_armor = maxi(1, ar)
 	u.armor = u.base_max_armor

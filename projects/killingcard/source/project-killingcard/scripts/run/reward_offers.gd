@@ -10,6 +10,9 @@
 #   &"regroup" (options = card ids with a parallel `levels` array: each option is the first copy
 #   of that design at that level). A Supply Drop may carry `on_trait` (slot 1's trait) and
 #   `retire: true` (Retire is its 4th option). RunProgress builds and resolves them.
+#   kc-art-traits: a Supply Drop also carries `traits` + `arts` (parallel to options: the trait and
+#   art each card comes in) and `reissue: true` (Re-issue next to Retire); Promotion / Regroup carry
+#   `traits` (each option's trait choice) and Regroup `reissue: true`.
 # Dependencies: RunConfig, CardData, LoadoutItem.
 # Author: Mechanics Developer Agent
 class_name RewardOffers
@@ -35,7 +38,8 @@ static func supply_drop(config: RunConfig, rng: RandomNumberGenerator) -> Array[
 	return weighted_distinct(ids, config.supply_drop_choices, rng)
 
 
-## kc-syn §5.2 Supply Drop with an on-trait slot: slot 1 is a card of `main_trait` (weighted by its
+## kc-syn §5.2 Supply Drop with an on-trait slot: slot 1 is a card that CAN carry `main_trait`
+## (kc-art-traits: one of its trait options; RunProgress dresses it in that trait's art) (weighted by its
 ## copies in the pool), slots 2-3 are weighted random among the other designs. No on-trait card in
 ## the pool (or no main trait) -> a plain supply_drop().
 static func supply_drop_on_trait(config: RunConfig, main_trait: StringName, rng: RandomNumberGenerator) -> Array[StringName]:
@@ -43,7 +47,7 @@ static func supply_drop_on_trait(config: RunConfig, main_trait: StringName, rng:
 		return supply_drop(config, rng)
 	var on: Array[StringName] = []
 	for card: CardData in config.reward_pool:
-		if card != null and card.collectible and card.card_trait == main_trait:
+		if card != null and card.collectible and card.can_carry(main_trait):
 			on.append(card.id)
 	if on.is_empty():
 		return supply_drop(config, rng)

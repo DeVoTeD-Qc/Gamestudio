@@ -236,7 +236,7 @@ func _show_zoom(slot: Node) -> void:
 	_zoom.position = pos
 	var zoom_name: String = String(slot.entry.get("name", ""))
 	if String(slot.entry.get("subname", "")) != "":
-		zoom_name += " “%s”" % String(slot.entry["subname"])
+		zoom_name += " · %s" % String(slot.entry["subname"])
 	_zoom_label.text = "%s · %s" % [zoom_name, String(slot.entry.get("cls", "")).capitalize()]
 	_zoom_label.reset_size()
 	var below: bool = pos.y + _zoom_size.y + _zoom_label.size.y <= size.y

@@ -54,6 +54,7 @@ func set_drag_enabled(on: bool) -> void:
 
 
 ## rows: [[[text, Color], ...], ...]; one Array of coloured segments per row, top to bottom.
+## kc-fight-ui: a segment [text, Color, &"cards_rival"] draws that small glyph before its text.
 func set_value(rows: Array, is_hot: bool = false) -> void:
 	var parts: Array = rows
 	lines = parts
@@ -103,6 +104,9 @@ func _draw() -> void:
 		for seg: Array in row:
 			var text: String = String(seg[0])
 			var c: Color = seg[1] if seg.size() > 1 else text_c
+			if seg.size() > 2:
+				_draw_mini_glyph(Rect2(Vector2(x, y + 1.0), Vector2(fs, fs)), StringName(seg[2]), c)
+				x += fs + 2.0
 			draw_string(font, Vector2(x, y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
 			x += font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		y += line_h
@@ -112,10 +116,26 @@ func _row_width(row: Array, font: Font, fs: int) -> float:
 	var w: float = 0.0
 	for seg: Array in row:
 		w += font.get_string_size(String(seg[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		if seg.size() > 2:
+			w += fs + 2.0
 	return w
 
 
+## A glyph inside a value row (kc-fight-ui: the rival's hand on the phone SCORE badge).
+func _draw_mini_glyph(gr: Rect2, g: StringName, c: Color) -> void:
+	var s: float = gr.size.x
+	if g == &"cards_rival" or g == &"cards":
+		draw_rect(Rect2(gr.position + Vector2(s * 0.08, s * 0.28), Vector2(s * 0.5, s * 0.64)), c, false, 1.8)
+		draw_polyline(PackedVector2Array([gr.position + Vector2(s * 0.3, s * 0.12), gr.position + Vector2(s * 0.8, s * 0.12),
+				gr.position + Vector2(s * 0.8, s * 0.74)]), c, 1.8)
+
+
 func _draw_glyph(gr: Rect2, c: Color) -> void:
+	# kc-ui-import: the UI kit pictogram when imported (UiKit.STRIP_GLYPHS), else the drawn glyph below.
+	var kit_c: Color = ((AMBER if hot else Color("#8fd8f0")) if glyph == &"streak"
+			else Color("#ff8a8d") if glyph == &"cards_rival" else c)
+	if UiKit.draw_icon(self, UiKit.STRIP_GLYPHS.get(glyph, &""), gr, kit_c):
+		return
 	var ctr: Vector2 = gr.get_center()
 	var s: float = gr.size.x
 	match glyph:

@@ -282,6 +282,7 @@ More arts go to the most-played chassis, so alternate art shows up within a sing
 The 6 animated are the artist's 4 "yes" (marksman_neon, gunner_inferno, callout_ping, blackout_street) plus 2 from later batches (a Rifleman and the Commander). Two passes still work: first one art for every chassis (8 missing, see §2.5), then the remaining alternates.
 
 ### 3.4 Stats on the banner: icon slots
+> **kc-ui4 (head, 2026-11-06): superseded placement.** "Attack and health icons must be in the same place for my cards and the opponent's." Every banner, both sides, now uses ONE layout: **FP bottom-left, Armor bottom-right** (Cover chip left of it), the card name (always the chassis) over the art's subname between them, the plate row (class, Elite, trait; effects, keyword pip) along the top, the camo / level band on the top edge. Side identity stays in the spine pattern, the FP badge shape (teal circle / red diamond) and the colours. Hand cards and Codex tiles are this same banner (with a cost hex); see `ux/board-layout-v2.md`, kc-ui4 notes. The text below is the original proposal.
 This follows the artist's safe zones: **the art's left and right ~15% stay calm for icons**, and the subject stays in the middle 70%. Icons sit on the **inner edge**, the edge that faces the objective. That's the top edge for your cards and the bottom edge for enemy cards. Across each objective, the two front cards' numbers face each other, so the fight reads at a glance: "my 3 vs their 2".
 
 ```

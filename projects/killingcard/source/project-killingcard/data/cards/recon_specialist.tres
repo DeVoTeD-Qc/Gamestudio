@@ -44,3 +44,4 @@ collectible = true
 effects = Array[ExtResource("1_ibo1h")]([SubResource("Resource_tvlmb")])
 neighbor_keyword = &"spotter"
 card_trait = &"specops"
+trait_options = Array[StringName]([&"specops", &"undead"])

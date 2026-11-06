@@ -129,7 +129,7 @@ static func capture(state, p_side: int) -> AiView:
 
 	v.supply = int(me.supply)
 	for c in me.hand:
-		v.hand.append({"uid": int(c.uid), "card": c.card, "level": int(c.level)})
+		v.hand.append({"uid": int(c.uid), "card": c.card, "level": int(c.level), "trait": c.chosen_trait})
 	v.my_doctrine = me.setup.doctrine
 	v.operator_cost = int(state.operator_cost())
 	v.mulligans_left = int(me.mulligans_left)
@@ -298,7 +298,8 @@ static func _read_effects(r: Dictionary, effects: Array) -> void:
 
 ## Record for a unit card I would deploy into zone z (stats as the engine would build it,
 ## including the copy's kc-syn level: Recruits carry no keyword or trait).
-func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules.LEVEL_TRAINED) -> Dictionary:
+func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules.LEVEL_TRAINED,
+		chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
 	var r: Dictionary = new_record()
 	var lv: Dictionary = SynergyRules.level_stats(level)
 	r["uid"] = uid
@@ -307,7 +308,7 @@ func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules
 	r["card_unit"] = true
 	r["class"] = int(card.weapon_class)
 	r["kw"] = SynergyRules.keyword_at(card, level)
-	r["trait"] = SynergyRules.trait_at(card, level)
+	r["trait"] = SynergyRules.trait_at(card, level, chosen_trait)
 	r["level"] = level
 	r["fs_native"] = card.first_shot
 	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]) + int(range_bonus[int(card.weapon_class)][z]))
@@ -320,7 +321,7 @@ func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules
 	r["pick"] = card.pick
 	r["flank"] = card.flank
 	r["suppress"] = card.suppress
-	r["pierce"] = card.pierce
+	r["pierce"] = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
 	r["patch"] = card.patch
 	r["holder"] = card.holder
 	r["control"] = card.counts_for_control

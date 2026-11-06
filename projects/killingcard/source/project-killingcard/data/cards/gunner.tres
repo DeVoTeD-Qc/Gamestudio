@@ -31,3 +31,4 @@ collectible = true
 effects = Array[ExtResource("1_uv53w")]([])
 neighbor_keyword = &"overwatch"
 card_trait = &"heavy"
+trait_options = Array[StringName]([&"heavy", &"specops"])

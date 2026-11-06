@@ -219,6 +219,10 @@ func _new_run_to_map() -> Control:
 	assert_eq(_routes.back() if not _routes.is_empty() else "", RunFlow.SCENE_LOADOUT, "START -> Loadout")
 	_rs.run.seed_value = SEED
 	var loadout: Control = await _open(RunFlow.SCENE_LOADOUT)
+	# kc-ui4: the loadout opens on STARTING SQUAD; NEXT goes on to the killstreaks.
+	await _frames(2)
+	if loadout.get_starter() != null:
+		await _tap(_button(loadout.get_starter(), "NEXT"))
 	_routes.clear()
 	await _tap(_button(loadout, "BEGIN RUN"))
 	assert_eq(_routes.back() if not _routes.is_empty() else "", RunFlow.SCENE_RUN_MAP, "BEGIN RUN -> RunMap")

@@ -2,7 +2,10 @@
 # Purpose: Lookup for the single original placeholder icon sheet (res://assets/ui/icons/icon_sheet.svg).
 #   Icons are white line art in 64 px cells, 8 columns, row-major. Tint them with modulate or
 #   self_modulate. IconSheet.get_icon(&"kw_pick") returns a cached AtlasTexture.
-# Dependencies: assets/ui/icons/icon_sheet.svg
+#   kc-ui-import: get_icon() / has_icon() ask UiKit first, so a generated kit pictogram
+#   (assets/ui/kit/icons/) replaces the sheet cell wherever the game already draws it; the sheet
+#   (get_sheet_icon) is the fallback when the kit lacks an id.
+# Dependencies: assets/ui/icons/icon_sheet.svg, ui_kit.gd (UiKit)
 # Author: Technical Artist Agent (p13)
 class_name IconSheet
 extends RefCounted
@@ -34,13 +37,22 @@ static var _cache: Dictionary = {}
 static var _sheet: Texture2D = null
 
 
-## True when the sheet has an icon with this name.
+## True when the sheet (or the UI kit) has an icon with this name.
 static func has_icon(icon_name: StringName) -> bool:
-	return NAMES.has(String(icon_name))
+	return NAMES.has(String(icon_name)) or UiKit.has_kit(icon_name)
 
 
-## Returns the icon as an AtlasTexture, or null for an unknown name.
+## Returns the icon as an AtlasTexture (the UI kit image when imported, else the sheet cell),
+## or null for an unknown name.
 static func get_icon(icon_name: StringName) -> AtlasTexture:
+	var kit: AtlasTexture = UiKit.kit_atlas(icon_name)
+	if kit != null:
+		return kit
+	return get_sheet_icon(icon_name)
+
+
+## The placeholder sheet cell only (UiKit's fallback), or null for an unknown name.
+static func get_sheet_icon(icon_name: StringName) -> AtlasTexture:
 	if _cache.has(icon_name):
 		return _cache[icon_name]
 	var index: int = NAMES.find(String(icon_name))

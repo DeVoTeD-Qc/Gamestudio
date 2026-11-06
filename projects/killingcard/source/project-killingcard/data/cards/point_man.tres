@@ -30,3 +30,4 @@ collectible = true
 effects = Array[ExtResource("1_don3a")]([])
 neighbor_keyword = &"fireteam"
 card_trait = &"vanguard"
+trait_options = Array[StringName]([&"vanguard", &"undead"])

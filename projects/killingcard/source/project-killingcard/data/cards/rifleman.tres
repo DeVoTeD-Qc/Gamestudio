@@ -29,3 +29,4 @@ grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_7g4g3")]([])
 neighbor_keyword = &"fireteam"
+trait_options = Array[StringName]([&"", &"specops", &"undead"])

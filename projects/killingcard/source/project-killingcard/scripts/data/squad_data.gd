@@ -22,6 +22,12 @@ const MAX_DECK: int = 20
 ## 15-20 card references; add the same card several times for copies.
 @export var deck: Array[CardData] = []
 
+## kc-art-traits §7 (head T4): the squad's fixed art identity. Its deck is dressed in arts of this
+## trait's family, so every copy that can carry the trait does; the rest go to the trait most of
+## them share (SideSetup.identity_traits). &"" = every copy on its default trait. Recruit copies
+## (Bracket 1) show no trait either way.
+@export var identity_trait: StringName = &""
+
 @export_group("Loadout")
 @export var primary: LoadoutItem = null
 ## Attachments the squad's Operator already has (from primary.attachments).
@@ -53,6 +59,8 @@ func validate(v: DataValidator, perk_slots: int = 3, killstreak_slots: int = 3) 
 		for i: int in deck.size():
 			if deck[i] != null and not deck[i].collectible:
 				v.invalid("deck[%d]" % i, "'%s' is a token (collectible = false) and can't be in a deck" % deck[i].id)
+	if identity_trait != &"" and identity_trait not in SynergyRules.TRAITS:
+		v.invalid("identity_trait", "unknown trait '%s' (one of %s)" % [identity_trait, SynergyRules.TRAITS])
 	v.check_slot_ref("primary", primary, DataEnums.LoadoutSlot.PRIMARY, true)
 	v.check_slot_ref("secondary", secondary, DataEnums.LoadoutSlot.SECONDARY, true)
 	v.check_slot_ref("lethal", lethal, DataEnums.LoadoutSlot.LETHAL, true)

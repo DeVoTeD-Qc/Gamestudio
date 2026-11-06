@@ -34,6 +34,8 @@ const SPECOPS: StringName = &"specops"
 const HEAVY: StringName = &"heavy"
 const UNDEAD: StringName = &"undead"
 const TRAITS: Array[StringName] = [VANGUARD, SPECOPS, HEAVY, UNDEAD]
+## Sentinel for "the chassis' default trait" (a missing SideSetup.deck_traits entry, kc-art-traits).
+const TRAIT_DEFAULT: StringName = &"~default"
 const TRAIT_NAMES: Dictionary = {VANGUARD: "Vanguard", SPECOPS: "Spec Ops", HEAVY: "Heavy", UNDEAD: "Undead"}
 
 ## Per-copy levels (§5.2; the camo band shows them: plain / Gilded / Forged / Priceless).
@@ -53,13 +55,14 @@ const OVERWATCH_COVER: int = 1
 ## Set thresholds.
 const TIER2: int = 2
 const TIER3: int = 3
-## Trait bonuses (v1.1): [tier 2, tier 3], each {fp, cover, fs, heal, where}. where: "all" or
-## "front" (row 1 only). Tier 3 includes tier 2.
+## Trait bonuses (v1.2, kc-art-traits §5, head T3): [tier 2, tier 3], each {fp, cover, fs, heal,
+## where}. where: "all" or "front" (row 1 only). Tier 3 includes tier 2. An empty entry = no bonus at
+## that tier (Heavy is a "full crew" set: nothing at 2, Cover +1 and +1 FP at 3).
 const TRAIT_BONUS: Dictionary = {
 	VANGUARD: [{"fp": 1, "where": "front"}, {"cover": 1, "where": "all"}],
 	SPECOPS: [{"fp": 1, "where": "all"}, {"fs": true, "where": "all"}],
-	HEAVY: [{"cover": 1, "where": "all"}, {"fp": 1, "where": "all"}],
-	UNDEAD: [{"heal": 1, "where": "all"}, {"fp": 1, "where": "all"}],
+	HEAVY: [{}, {"cover": 1, "fp": 1, "where": "all"}],
+	UNDEAD: [{"heal": 1, "where": "all"}, {"fp": 1, "cover": 1, "where": "all"}],
 }
 ## The table compute() reads (balance tools may tune a copy in memory; the game uses TRAIT_BONUS).
 static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
@@ -67,8 +70,8 @@ static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
 const TIER_TEXT: Dictionary = {
 	VANGUARD: ["Vanguard in row 1 get +1 FP", "Vanguard get Cover +1"],
 	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops have First Shot"],
-	HEAVY: ["Heavy units have Cover +1", "Heavy units get +1 FP"],
-	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP"],
+	HEAVY: ["No bonus yet: Heavy needs 3", "Heavy units get Cover +1 and +1 FP"],
+	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
 }
 const KEYWORD_TEXT: Dictionary = {
 	GUARD: "Guard: the card behind this one has Cover +1.",
@@ -98,8 +101,18 @@ static func keyword_at(card: CardData, level: int) -> StringName:
 	return card.neighbor_keyword if card != null and level >= LEVEL_TRAINED else &""
 
 
-static func trait_at(card: CardData, level: int) -> StringName:
-	return card.card_trait if card != null and level >= LEVEL_TRAINED else &""
+## kc-art-traits (art-traits.md §1, head T1/T2): the trait a copy carries. `chosen` is the copy's
+## trait as picked through its art (SideSetup.deck_traits / RulesCard.chosen_trait); TRAIT_DEFAULT =
+## the chassis' default (CardData.card_trait = trait_options[0]). A chosen trait that is not on the
+## chassis' option list makes the copy plain (&""). Printed cards (one option or none: Elites,
+## Fields, tactics, the Sentry) always carry their printed trait, whatever is chosen. Recruits carry
+## none. The rules never read arts: the run / UI layer resolves art -> trait (ArtTraits).
+static func trait_at(card: CardData, level: int, chosen: StringName = TRAIT_DEFAULT) -> StringName:
+	if card == null or level < LEVEL_TRAINED:
+		return &""
+	if chosen == TRAIT_DEFAULT or not card.has_trait_choice():
+		return card.card_trait
+	return chosen if card.can_carry(chosen) else &""
 
 
 static func tier_for(count: int) -> int:
@@ -108,6 +121,25 @@ static func tier_for(count: int) -> int:
 	if count >= TIER2:
 		return 2
 	return 0
+
+
+## kc-art-traits §5: the tier of trait `t` that gives a bonus at `count` in play (Heavy at 2 = 0:
+## its tier 2 is empty). This is what compute() reports in `tiers`.
+static func active_tier(t: StringName, count: int) -> int:
+	var tier: int = tier_for(count)
+	var tb: Array = trait_bonus.get(t, [])
+	if tier == TIER3 and (tb.size() < 2 or _empty_bonus(tb[1])):
+		tier = TIER2
+	if tier == TIER2 and (tb.size() < 1 or _empty_bonus(tb[0])):
+		tier = 0
+	return tier
+
+
+static func _empty_bonus(b: Variant) -> bool:
+	if typeof(b) != TYPE_DICTIONARY:
+		return true
+	var d: Dictionary = b
+	return int(d.get("fp", 0)) == 0 and int(d.get("cover", 0)) == 0 and int(d.get("heal", 0)) == 0 and not bool(d.get("fs", false))
 
 
 ## Trait counts of one side: units in the lines plus visible Trained Fields, + Doctrine.
@@ -137,7 +169,7 @@ static func compute(lines: Array, field_traits: Array = [], doctrine: StringName
 	var counts: Dictionary = trait_counts(lines, field_traits, doctrine) if enabled else {}
 	var tiers: Dictionary = {}
 	for t: StringName in counts:
-		tiers[t] = tier_for(int(counts[t]))
+		tiers[t] = active_tier(t, int(counts[t]))
 	var zones: Array = [[], [], []]
 	var pairs: Array[Dictionary] = []
 	for z: int in 3:
@@ -183,7 +215,7 @@ static func compute(lines: Array, field_traits: Array = [], doctrine: StringName
 					if tier < [TIER2, TIER3][k]:
 						continue
 					var b: Dictionary = tb[k]
-					if String(b.get("where", "all")) == "front" and i != 0:
+					if _empty_bonus(b) or (String(b.get("where", "all")) == "front" and i != 0):
 						continue
 					r["fp"] += int(b.get("fp", 0))
 					r["cover"] += int(b.get("cover", 0))

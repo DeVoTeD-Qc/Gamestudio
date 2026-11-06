@@ -29,3 +29,4 @@ grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_cwa80")]([])
 card_trait = &"specops"
+trait_options = Array[StringName]([&"specops", &"undead"])

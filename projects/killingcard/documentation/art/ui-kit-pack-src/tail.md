@@ -77,6 +77,9 @@ Budget: kit icons ~0.5 MB, plates and frames ~1.2 MB (PNG at the ship sizes), ba
 - Real-time effects that are shaders today (scanlines, banner shimmer, tactical backdrop).
 - "Steady" from the brief: there is no Steady keyword in the data or rules today. The real list used here is First Shot, Pick, Flank, Pierce, Cover, Suppress, Patch, Holder, Protector (arrives front), Hidden, the triggers On Deploy / On Down, the ⚡ effect bolt, and the neighbour keywords Guard, Spotter, Fireteam, Overwatch. A new keyword is one more icon prompt in the same group.
 
+### 7.6 Import log and batch feedback
+Each imported batch is logged in `ui-kit-import-log.md`: what shipped, where, and style notes for the next batches. **After batch 1:** strokes and gaps should be at least 1/10 of the canvas, with no detail smaller than 1/8 (First Shot's speed lines, Pick's inner bracket mark and Cover's thin arrow blur at 32 px). Keep silhouettes compact and roughly square, because wide glyphs come out small after the trim. Icons ship as a 256 master plus 128/64/48/32 exports, and `UiKit` picks the export by on-screen size (canvas items don't sample mipmaps). Tools: `tools/ui_kit_icons.py`, `scripts/ui/ui_kit.gd`.
+
 ## 8. Questions for the head
 
 1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?

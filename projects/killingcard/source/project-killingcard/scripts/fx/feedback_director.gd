@@ -20,6 +20,20 @@
 #   Everything else costs no time. No rules logic: it reads the event fields and nothing else.
 #   Events with `private_to` another side are skipped.
 #
+#   kc-fight-ui, step-by-step firefight (firefight-order.md §8 / §10.2), paced on the §5 model:
+#     FIREFIGHT_STARTED       "COLUMN A" at the column, it stays bright and the others dim (0.4 s)
+#     FIREFIGHT_BEAT          the beat's shooters lift (banner nudged toward the enemy) with a thick
+#                             side-coloured outline; the First Shot half of a split exchange tags
+#                             its shooter "FIRST SHOT"; each beat lasts at least fight_beat (0.8 s)
+#     SHOT_FIRED              tracer (0.35 s travel inside a beat); the shooter gets a "fired" pip
+#     PIERCE_CARRIED          a thinner tracer continues from the target to the unit behind once
+#                             the first one lands; its damage number is smaller ("-1 PIERCE")
+#     DAMAGE_DEALT (amount 0) "-0" + "COVER" (the hit was absorbed)
+#     LINE_ADVANCED           waits for the stamp, then the board slides (the controller refreshes
+#                             the board on event_landed), 0.35 s
+#     FIREFIGHT_COLUMN_ENDED  column summary ("COLUMN A: 2 KILLS · 1 LOST")
+#   The overlay (fight_overlay.gd) holds the dim, the outlines and the pips; pips clear at Score.
+#
 # Options: Settings.fast_animations halves every duration and beat; Settings.reduced_motion
 #   removes shake, hit-stop and travel (see fx_timing.gd). Read at the start of each play().
 #
@@ -46,6 +60,13 @@ signal sequence_started(count: int)
 signal event_started(event: Dictionary)
 ## The queue is empty and the last beat has passed.
 signal sequence_finished
+## kc-fight-ui: this event lands now (after its pre-wait, before its effects): the controller applies
+## it to the playback board here (a LINE_ADVANCED refresh slides the line after the stamp was read).
+signal event_landed(event: Dictionary)
+## kc-fight-ui (head: "way too fast, I can't understand what happens"): the plain-words caption of
+## what is happening now, one line per shot of the beat ("Gunner (A1) hits Rival Rifleman for 2 —
+## destroyed"), or the rival card being revealed. [] = nothing to say.
+signal caption_changed(lines: Array)
 ## An effect started: kind (&"tracer", &"hit_marker", &"damage_number", &"stamp", &"popup",
 ## &"killfeed", &"streak", &"shatter", &"takeover", &"shake", &"hitstop", &"tag"), node or null.
 signal fx_started(kind: StringName, node: Object, duration: float)
@@ -59,6 +80,10 @@ const ElimStampFx: GDScript = preload("res://scripts/fx/elim_stamp_fx.gd")
 const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
 const CallInScene: PackedScene = preload("res://scenes/fx/CallInTakeover.tscn")
 const CallInTakeover: GDScript = preload("res://scripts/fx/call_in_takeover.gd")
+const FightOverlay: GDScript = preload("res://scripts/fx/fight_overlay.gd")
+const ZONE_LETTERS: Dictionary = {&"left": "A", &"mid": "B", &"right": "C"}
+## Px a shooter's banner lifts toward the enemy while it fires.
+const LIFT_PX: float = 5.0
 
 const GROUP_TRANSIENT: StringName = &"fx_transient"
 ## Killstreak ids, used when CardDB cannot say (tests, previews without data).
@@ -111,6 +136,16 @@ var _hitstop_on: bool = false
 var _step: StringName = &""       # current firefight step (FIREFIGHT_STEP.step)
 var _tagged_first_shot: Dictionary = {}  # uid -> true: "FIRST SHOT" tag already shown
 var _veils: Dictionary = {}       # victim uid -> DownVeil over its slot (this sequence)
+## kc-fight-ui: uid -> &"player" / &"enemy" (the controller fills it before play; shots add to it).
+var unit_sides: Dictionary = {}
+## Dim / now-firing outline / fired pips (fight_overlay.gd), created in _ready.
+var overlay: Control = null
+var _beat_t0: float = -1.0        # _clock when the current beat started (-1 = not in a beat)
+var _lifted: Dictionary = {}      # uid -> BannerView nudged toward the enemy
+var _pierce_hit: Dictionary = {}  # target uid -> true: its next DAMAGE_DEALT is a Pierce carry
+var _summary: Dictionary = {}     # current column: {kills, lost}
+## The caption lines on screen now (caption_changed).
+var captions: Array[String] = []
 
 
 ## Dark cover over an eliminated unit's slot. Not transient: it stays until the sequence ends
@@ -151,6 +186,10 @@ func _ready() -> void:
 		streak_arc = get_node_or_null(streak_arc_path)
 	takeover = CallInScene.instantiate()
 	add_child(takeover)
+	overlay = FightOverlay.new()
+	overlay.name = "FightOverlay"
+	add_child(overlay)
+	move_child(overlay, 0)
 	_timing = _make_timing()
 
 
@@ -182,6 +221,14 @@ func play(events: Array) -> void:
 	_hit_count.clear()
 	_tagged_first_shot.clear()
 	_step = &""
+	_beat_t0 = -1.0
+	_pierce_hit.clear()
+	if overlay != null:
+		overlay.clear()
+		overlay.locator = locator
+		overlay.viewer_side = viewer_side
+	set_meta(&"qa_seen", [])
+	_set_captions([])
 	sequence_started.emit(_queue.size())
 	while not _queue.is_empty():
 		var ev: Dictionary = _queue.pop_front()
@@ -192,13 +239,32 @@ func play(events: Array) -> void:
 		var pre: float = _pre_wait(ev)
 		if pre > 0.0 and not _skipping:
 			await _wait(pre)
+		_before_land(ev)
+		_qa_note(ev)
+		event_landed.emit(ev)
 		var beat: float = _handle(ev)
 		if beat > 0.0 and not _skipping:
 			await _wait(beat)
 	_playing = false
 	_skipping = false
+	_end_fight()
 	clear_veils()
+	_set_captions([])
 	sequence_finished.emit()
+
+
+## QA (?qa=1 smoke tests read it through qa_bridge.gd): the last event landed and the types seen.
+func _qa_note(ev: Dictionary) -> void:
+	var t: String = String(ev.get("type", &""))
+	set_meta(&"qa_last", t)
+	var seen: Array = get_meta(&"qa_seen", [])
+	if not seen.has(t):
+		seen.append(t)
+
+
+## True while skip() fast-forwards the rest of the sequence (the board is not refreshed per beat).
+func is_skipping() -> bool:
+	return _skipping
 
 
 ## Fast-forward: ends every running effect, plays the rest of the queue without waits or
@@ -207,6 +273,9 @@ func skip() -> void:
 	_skipping = true
 	_end_hitstop()
 	_stop_shake()
+	_unlift(true)
+	if overlay != null:
+		overlay.clear()
 	for node: Node in get_tree().get_nodes_in_group(GROUP_TRANSIENT):
 		if is_ancestor_of(node):
 			node.finish()
@@ -244,10 +313,25 @@ func logged_duration(kind: StringName) -> float:
 # --- event handlers --------------------------------------------------------------------
 
 func _pre_wait(ev: Dictionary) -> float:
-	if ev.get("type") == RulesEvent.DAMAGE_DEALT:
-		var uid: int = int(ev.get("target_uid", -1))
-		return maxf(0.0, float(_arrival.get(uid, 0.0)) - _clock)
+	match ev.get("type"):
+		RulesEvent.DAMAGE_DEALT:
+			var uid: int = int(ev.get("target_uid", -1))
+			return maxf(0.0, float(_arrival.get(uid, 0.0)) - _clock)
+		RulesEvent.FIREFIGHT_BEAT, RulesEvent.FIREFIGHT_COLUMN_ENDED:
+			# A beat lasts at least fight_beat: what its effects did not use is waited here.
+			if _beat_t0 >= 0.0:
+				return maxf(0.0, _beat_t0 + _timing.get_value(&"fight_beat") + _timing.get_value(&"fight_beat_gap") - _clock)
+		RulesEvent.LINE_ADVANCED:
+			return _timing.get_value(&"fight_advance_hold")
 	return 0.0
+
+
+## Before an event lands: a new beat, a line advance or the column end puts the lifted banners
+## back at once (the board may refresh and slide them right after).
+func _before_land(ev: Dictionary) -> void:
+	match ev.get("type"):
+		RulesEvent.FIREFIGHT_BEAT, RulesEvent.LINE_ADVANCED, RulesEvent.FIREFIGHT_COLUMN_ENDED:
+			_unlift(true)
 
 
 ## Starts the effects for one event; returns the beat (seconds) before the next event.
@@ -256,14 +340,26 @@ func _handle(ev: Dictionary) -> float:
 	match ev.get("type", &""):
 		RulesEvent.UNIT_ARRIVED:
 			var card_id: StringName = ev.get("card_id", &"")
-			if card_id != &"":
+			if card_id != &"" and not unit_names.has(int(ev.get("uid", -1))):
 				unit_names[int(ev.get("uid", -1))] = _display_name(card_id)
 			_zone_of[int(ev.get("uid", -1))] = ev.get("zone", &"")
-			return 0.0
+			unit_sides[int(ev.get("uid", -1))] = ev.get("side", &"")
+			return _on_arrived(ev, t)
 		RulesEvent.FIREFIGHT_STARTED:
-			_current_zone = ev.get("zone", &"")
-			_step = &""
-			return t.get_value(&"step_pause")
+			return _on_column_started(ev, t)
+		RulesEvent.FIREFIGHT_BEAT:
+			return _on_beat(ev, t)
+		RulesEvent.PIERCE_CARRIED:
+			return _on_pierce(ev, t)
+		RulesEvent.LINE_ADVANCED:
+			return t.get_value(&"fight_advance")
+		RulesEvent.FIREFIGHT_COLUMN_ENDED:
+			return _on_column_ended(ev, t)
+		RulesEvent.PHASE_CHANGED:
+			# The fired pips clear at the Score step.
+			if StringName(ev.get("phase", &"")) != &"firefight":
+				_end_fight()
+			return 0.0
 		RulesEvent.FIREFIGHT_STEP:
 			return _on_step(ev, t)
 		RulesEvent.SHOT_FIRED:
@@ -338,6 +434,16 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 	var shooter: int = int(ev.get("shooter_uid", -1))
 	var target: int = int(ev.get("target_uid", -1))
 	_zone_of[shooter] = zone
+	unit_sides[shooter] = side
+	if target >= 0:
+		unit_sides[target] = foe
+	var in_beat: bool = _beat_t0 >= 0.0
+	if overlay != null and not _skipping:
+		overlay.mark_fired(shooter)
+	if in_beat and not _skipping:
+		var lines: Array[String] = captions.duplicate()
+		lines.append(shot_caption(ev))
+		_set_captions(lines)
 	var from: Vector2 = _unit_point(shooter, side, zone)
 	var to: Vector2 = _unit_point(target, foe, zone) if target >= 0 else _zone_point(zone, foe)
 	if not _skipping:
@@ -348,6 +454,8 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 		var fx: Control = TracerFx.new()
 		fx.from = from + dir * 18.0 + lane_off
 		fx.to = to - dir * 6.0 + lane_off
+		if in_beat:
+			fx.travel_key = &"fight_tracer"
 		# kc-board: a shot that skips the frontline (Pick, Flank) runs OUTSIDE the column, down the
 		# gutter, so it visibly passes the cards in front of its target.
 		var skipped: int = _row_of(target)
@@ -417,17 +525,26 @@ func _on_damage(ev: Dictionary, t: RefCounted) -> float:
 	_arrival.erase(uid)
 	if _skipping:
 		return 0.0
+	# The shots of the beat have all left: the shooters settle back.
+	_unlift(false)
+	var pierced: bool = _pierce_hit.has(uid)
+	_pierce_hit.erase(uid)
 	var rect: Rect2 = _unit_rect_local(uid, target_side)
 	var marker: Control = HitMarkerFx.new()
 	marker.center = rect.get_center()
 	marker.color = FxStyle.side_color(_other(target_side))
 	marker.lethal = lethal
-	marker.radius = clampf(minf(rect.size.x, rect.size.y) * 0.32, 12.0, 24.0)
+	marker.radius = clampf(minf(rect.size.x, rect.size.y) * (0.24 if pierced else 0.32), 10.0, 24.0)
 	_start(marker, &"hit_marker", ev)
-	if amount > 0:
+	if pierced:
+		# kc-fight-ui: the carried damage is drawn smaller and named.
+		_number(uid, "-%d PIERCE" % amount, FxStyle.FOG, false, ev, FxStyle.MIN_NUMBER_PX)
+	elif amount > 0:
 		_number(uid, "-%d" % amount, FxStyle.FOG, lethal, ev)
 	else:
-		_tag(uid, "BLOCKED", FxStyle.FOG_DIM, ev)
+		# No damage: "-0" and why (Cover when the target has some, else the hit was too weak).
+		_number(uid, "-0", FxStyle.FOG_DIM, false, ev)
+		_tag(uid, "COVER" if int(_slot_entry(uid).get("cover", 0)) > 0 else "NO DAMAGE", FxStyle.FOG_DIM, ev)
 	return 0.05 * t.scale()
 
 
@@ -438,6 +555,10 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	var is_operator: bool = bool(ev.get("is_operator", false))
 	if ev.has("zone"):
 		_zone_of[victim] = ev["zone"]
+	if not _summary.is_empty():
+		_summary["lost" if victim_side == viewer_side else "kills"] = int(_summary["lost" if victim_side == viewer_side else "kills"]) + 1
+	if overlay != null:
+		overlay.shooters.erase(victim)
 	# Killfeed first: it persists, so it also runs while skipping.
 	if killfeed != null:
 		var line: Control = killfeed.push(_killfeed_entry(ev), _timing)
@@ -464,7 +585,7 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	_hitstop(t.get_value(&"hitstop"), ev)
 	_shake(t.get_value(&"shake_px_big" if is_operator or bool(ev.get("by_killstreak", false)) else &"shake_px"),
 			t.get_value(&"shake"), ev)
-	return t.get_value(&"elim_beat")
+	return t.get_value(&"fight_elim" if _beat_t0 >= 0.0 else &"elim_beat")
 
 
 func _on_streak(ev: Dictionary, t: RefCounted) -> float:
@@ -497,6 +618,241 @@ func _on_item_revealed(ev: Dictionary, t: RefCounted) -> float:
 	return t.get_value(&"popup_beat")
 
 
+# --- step-by-step firefight (kc-fight-ui) --------------------------------------------------
+
+func _on_column_started(ev: Dictionary, t: RefCounted) -> float:
+	_current_zone = ev.get("zone", &"")
+	_step = &""
+	_beat_t0 = -1.0
+	_summary = {"zone": _current_zone, "kills": 0, "lost": 0}
+	if _skipping:
+		return 0.0
+	_set_captions(["Column %s fights: front to back, one shot each." % ZONE_LETTERS.get(_current_zone, "?")])
+	if overlay != null:
+		overlay.set_active_zone(_current_zone)
+		overlay.set_shooters({})
+	var r: Rect2 = _zone_rect(_current_zone)
+	if r.has_area():
+		# Over the rival's back row (the objective tile keeps its own words).
+		_popup_at(_to_local(Vector2(r.get_center().x, r.position.y + minf(30.0, r.size.y * 0.1))),
+				"COLUMN %s" % ZONE_LETTERS.get(_current_zone, "?"), &"heading", 22, FxStyle.AMBER, ev, &"column")
+	return t.get_value(&"fight_column")
+
+
+func _on_beat(ev: Dictionary, t: RefCounted) -> float:
+	_current_zone = ev.get("zone", _current_zone)
+	_beat_t0 = _clock
+	if _skipping:
+		return 0.0
+	_set_captions([])
+	var by_uid: Dictionary = {}
+	for uid_v: Variant in ev.get("shooters", []):
+		var uid: int = int(uid_v)
+		var side: StringName = _side_of_uid(uid)
+		by_uid[uid] = side
+		_lift(uid, side)
+	if overlay != null:
+		overlay.set_shooters(by_uid)
+	# The First Shot half of a split exchange: say why this one fires alone.
+	if int(ev.get("exchange", 0)) == 1:
+		for uid: int in by_uid:
+			if _tagged_first_shot.has(uid):
+				continue
+			_tagged_first_shot[uid] = true
+			var side2: StringName = by_uid[uid]
+			_popup_at(_unit_point(uid, side2, _current_zone) + Vector2(0, -22.0), "FIRST SHOT", &"heading", 16,
+					FxStyle.side_color(side2), ev, &"beat_tag")
+	return t.get_value(&"fight_lift")
+
+
+func _on_pierce(ev: Dictionary, _t: RefCounted) -> float:
+	var side: StringName = ev.get("side", &"player")
+	var zone: StringName = ev.get("zone", _current_zone)
+	var src: int = int(ev.get("from_uid", -1))
+	var target: int = int(ev.get("target_uid", -1))
+	if target < 0:
+		return 0.0
+	unit_sides[target] = _other(side)
+	_zone_of[target] = zone
+	if int(ev.get("damage", 0)) > 0:
+		_pierce_hit[target] = true
+	if _skipping:
+		return 0.0
+	var from: Vector2 = _unit_point(src, _other(side), zone)
+	var to: Vector2 = _unit_point(target, _other(side), zone)
+	var dir: Vector2 = (to - from).normalized() if to != from else Vector2.UP
+	var fx: Control = TracerFx.new()
+	fx.from = from
+	fx.to = to - dir * 6.0
+	fx.width = 2.0
+	fx.color = FxStyle.side_color(side)
+	# It leaves when the shot it continues reaches its first target.
+	fx.start_delay = maxf(0.0, float(_arrival.get(src, _clock)) - _clock)
+	_start(fx, &"pierce_tracer", ev)
+	_arrival[target] = maxf(float(_arrival.get(target, 0.0)), _clock + fx.arrival_time())
+	return 0.0
+
+
+func _on_column_ended(ev: Dictionary, t: RefCounted) -> float:
+	_beat_t0 = -1.0
+	var zone: StringName = ev.get("zone", _current_zone)
+	if overlay != null:
+		overlay.set_shooters({})
+	if _skipping:
+		return 0.0
+	var kills: int = int(_summary.get("kills", 0))
+	var lost: int = int(_summary.get("lost", 0))
+	var parts: PackedStringArray = []
+	if kills > 0:
+		parts.append("%d %s" % [kills, "KILL" if kills == 1 else "KILLS"])
+	if lost > 0:
+		parts.append("%d LOST" % lost)
+	var text: String = "COLUMN %s: %s" % [ZONE_LETTERS.get(zone, "?"), " · ".join(parts) if not parts.is_empty() else "NO LOSSES"]
+	var r: Rect2 = _zone_rect(zone)
+	if r.has_area():
+		_popup_at(_to_local(r.get_center()), text, &"heading", 18, FxStyle.FOG, ev, &"summary")
+	_set_captions([text])
+	return t.get_value(&"fight_summary")
+
+
+func _set_captions(lines: Array) -> void:
+	var out: Array[String] = []
+	for l: Variant in lines:
+		out.append(String(l))
+	if out == captions:
+		return
+	captions = out
+	set_meta(&"qa_caption", " / ".join(out))
+	caption_changed.emit(out.duplicate())
+
+
+## A rival card turned over at Reveal: one at a time, named ("Rival reveals Point Man: column B").
+func _on_arrived(ev: Dictionary, t: RefCounted) -> float:
+	if _skipping:
+		return 0.0
+	var uid: int = int(ev.get("uid", -1))
+	var side: StringName = ev.get("side", &"")
+	var letter: String = ZONE_LETTERS.get(StringName(ev.get("zone", &"")), "?")
+	var nm: String = String(unit_names.get(uid, _display_name(ev.get("card_id", &""))))
+	if side != viewer_side:
+		_set_captions(["Rival reveals %s: column %s" % [nm, letter]])
+		return t.get_value(&"reveal_rival")
+	_set_captions(["%s arrives in column %s" % [nm, letter]])
+	return t.get_value(&"reveal_own")
+
+
+## One shot in plain words, from this SHOT_FIRED and what follows it in the same beat (the queue):
+## "Gunner (A1) hits Rival Rifleman for 2 — destroyed; Pierce 1 into Rival Point Man".
+func shot_caption(ev: Dictionary) -> String:
+	var side: StringName = ev.get("side", &"player")
+	var shooter: int = int(ev.get("shooter_uid", -1))
+	var target: int = int(ev.get("target_uid", -1))
+	var zone: StringName = ev.get("zone", _current_zone)
+	var who: String = _caption_name(shooter, side)
+	var row: int = _row_of(shooter)
+	var at: String = "%s%s" % [ZONE_LETTERS.get(zone, ""), str(row + 1) if row >= 0 else ""]
+	if target < 0:
+		return "%s (%s) has no target" % [who, at]
+	var dmg: int = int(ev.get("damage", 0))
+	var text: String = "%s (%s) hits %s for %d" % [who, at, _caption_name(target, _other(side)), dmg]
+	var dead: Dictionary = {}
+	var held: Dictionary = {}
+	var pierce: Array[String] = []
+	for nx: Dictionary in _queue:
+		var nt: StringName = nx.get("type", &"")
+		if nt == RulesEvent.FIREFIGHT_BEAT or nt == RulesEvent.FIREFIGHT_COLUMN_ENDED:
+			break
+		if nt == RulesEvent.UNIT_ELIMINATED:
+			dead[int(nx.get("victim_uid", -1))] = true
+		elif nt == RulesEvent.SURVIVED_LETHAL:
+			held[int(nx.get("uid", -1))] = true
+		elif nt == RulesEvent.PIERCE_CARRIED and int(nx.get("shooter_uid", -1)) == shooter and int(nx.get("damage", 0)) > 0:
+			pierce.append("%d|%d" % [int(nx.get("damage", 0)), int(nx.get("target_uid", -1))])
+	if dmg <= 0:
+		text += " — Cover stops it" if int(_slot_entry(target).get("cover", 0)) > 0 else " — no damage"
+	elif dead.has(target):
+		text += " — destroyed"
+	elif held.has(target):
+		text += " — it holds (Grit)"
+	for p: String in pierce:
+		var parts: PackedStringArray = p.split("|")
+		var pu: int = int(parts[1])
+		text += "; Pierce %s into %s%s" % [parts[0], _caption_name(pu, _other(side)), " — destroyed" if dead.has(pu) else ""]
+	return text
+
+
+func _caption_name(uid: int, side: StringName) -> String:
+	var nm: String = String(unit_names.get(uid, "Unit"))
+	return nm if side == viewer_side else "Rival " + nm
+
+
+## The firefight is over (Score, the end of the sequence, or a skip): no dim, no outline, no pips.
+func _end_fight() -> void:
+	_unlift(true)
+	_beat_t0 = -1.0
+	if overlay != null:
+		overlay.clear()
+
+
+func _side_of_uid(uid: int) -> StringName:
+	if unit_sides.has(uid):
+		return StringName(unit_sides[uid])
+	if locator != null and locator.has_method(&"find_slot"):
+		var slot: Control = locator.find_slot(uid)
+		if slot != null and "side" in slot:
+			return StringName(slot.get(&"side"))
+	return viewer_side
+
+
+## Nudges a shooter's banner toward the enemy (the viewer's rows sit under the objective: up).
+func _lift(uid: int, side: StringName) -> void:
+	if reduced_motion or locator == null or not locator.has_method(&"find_slot"):
+		return
+	var slot: Control = locator.find_slot(uid)
+	if slot == null or not "banner" in slot:
+		return
+	var b: Control = slot.get(&"banner") as Control
+	if b == null:
+		return
+	# Leave a banner alone while the column still moves it (arrival / slide).
+	if b.has_meta(&"motion"):
+		var mt: Tween = b.get_meta(&"motion") as Tween
+		if mt != null and mt.is_valid() and mt.is_running():
+			return
+	var dy: float = -LIFT_PX if side == viewer_side else LIFT_PX
+	var tw: Tween = b.create_tween()
+	tw.tween_property(b, "position:y", dy, maxf(0.05, _timing.get_value(&"fight_lift") * 0.7)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	b.set_meta(&"lift", tw)
+	_lifted[uid] = b
+
+
+## Puts lifted banners back: at once (snap) or with a short ease.
+func _unlift(snap: bool) -> void:
+	for uid: Variant in _lifted.keys():
+		var b: Control = _lifted[uid] as Control
+		if b == null or not is_instance_valid(b):
+			continue
+		if b.has_meta(&"lift"):
+			var old: Tween = b.get_meta(&"lift") as Tween
+			if old != null and old.is_valid():
+				old.kill()
+			b.remove_meta(&"lift")
+		if snap or reduced_motion:
+			b.position.y = 0.0
+		else:
+			var tw: Tween = b.create_tween()
+			tw.tween_property(b, "position:y", 0.0, 0.1)
+			b.set_meta(&"lift", tw)
+	# Settling banners stay listed so a snap (before the board refreshes) can stop their ease.
+	if snap:
+		_lifted.clear()
+
+
+## Uids whose banners are lifted right now (tests).
+func lifted_uids() -> Array:
+	return _lifted.keys()
+
+
 # --- effect helpers -------------------------------------------------------------------------
 
 func _start(fx: Control, kind: StringName, ev: Dictionary) -> void:
@@ -509,17 +865,17 @@ func _start(fx: Control, kind: StringName, ev: Dictionary) -> void:
 	_log(kind, fx, fx.duration, ev)
 
 
-func _number(uid: int, text: String, color: Color, big: bool, ev: Dictionary) -> void:
+func _number(uid: int, text: String, color: Color, big: bool, ev: Dictionary, font_px: int = 0) -> void:
 	if _skipping:
 		return
 	var rect: Rect2 = _unit_rect_local(uid, _side_of_target(ev))
 	var n: int = int(_hit_count.get(uid, 0))
 	_hit_count[uid] = n + 1
 	var fx: Control = FloatTextFx.new()
-	fx.setup(text, &"numeric", 30 if big else 26, color, &"damage_number")
+	fx.setup(text, &"numeric", font_px if font_px > 0 else (30 if big else 26), color, &"damage_number")
 	fx.anchor = rect.get_center() + Vector2(rect.size.x * 0.22 + n * 6.0, -rect.size.y * 0.18 - n * 14.0)
 	fx.rise_key = &"damage_rise"
-	fx.duration_key = &"damage_number"
+	fx.duration_key = &"fight_number" if _beat_t0 >= 0.0 else &"damage_number"
 	_start(fx, &"damage_number", ev)
 
 

@@ -54,6 +54,9 @@ const KillfeedEntry: GDScript = preload("res://scripts/fx/killfeed_entry.gd")
 const KillstreakRow: GDScript = preload("res://scripts/ui/killstreak_row.gd")
 const TraitRail: GDScript = preload("res://scripts/ui/trait_rail.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const OrderStrip: GDScript = preload("res://scripts/fx/order_strip.gd")
+const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
+const HandGlowFx: GDScript = preload("res://scripts/fx/hand_glow_fx.gd")
 ## kc-syn-ui: a set callout stays this long before it folds into the rail.
 const SET_CALLOUT_S: float = 1.2
 const TRAY_OPEN: StringName = &"open"
@@ -158,6 +161,12 @@ var _syn_doctrine: Dictionary = {&"player": &"", &"enemy": &""}
 var _syn_snapshot: Dictionary = {}
 var _set_callouts: Dictionary = {}
 var _last_callout_text: String = ""
+## kc-fight-ui: the A -> B -> C order strip under the tray header while the round plays.
+var _order_strip: Control = null
+## kc-fight-ui (head, kc-syn-ui answers): the round whose Deploy already glowed its set-completing cards.
+var _glow_round: int = -1
+var _last_glow: Array[int] = []
+var _fight_caption: Label = null
 
 
 func _ready() -> void:
@@ -181,7 +190,28 @@ func _ready() -> void:
 	if _fx.has_signal(&"sequence_started"):
 		_fx.sequence_started.connect(func(_n: int) -> void: _apply_speed(true))
 	if _fx.has_signal(&"sequence_finished"):
-		_fx.sequence_finished.connect(func() -> void: _apply_speed(false))
+		_fx.sequence_finished.connect(func() -> void:
+			_apply_speed(false)
+			if _order_strip != null:
+				_order_strip.finish())
+	_order_strip = OrderStrip.new()
+	_order_strip.name = "OrderStrip"
+	_feed_box.add_child(_order_strip)
+	_feed_box.move_child(_order_strip, _step_header.get_index() + 1)
+	_order_strip.visible = false
+	# kc-fight-ui (head): one plain line per shot of the beat, under the strip.
+	_fight_caption = Label.new()
+	_fight_caption.name = "FightCaption"
+	_fight_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_fight_caption.add_theme_font_override(&"font", preload("res://assets/fonts/Barlow-Medium.ttf"))
+	_fight_caption.add_theme_font_size_override(&"font_size", 17)
+	_fight_caption.add_theme_color_override(&"font_color", Color("#F2F5F7"))
+	_fight_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_feed_box.add_child(_fight_caption)
+	_feed_box.move_child(_fight_caption, _order_strip.get_index() + 1)
+	_fight_caption.visible = false
+	if _fx.has_signal(&"caption_changed"):
+		_fx.caption_changed.connect(_on_fight_caption)
 	tree_exiting.connect(func() -> void: Engine.time_scale = 1.0)
 	var settings: Node = get_node_or_null(^"/root/Settings")
 	if settings != null:
@@ -301,8 +331,15 @@ static func operator_card_entry(snapshot: Dictionary) -> Dictionary:
 
 ## Strip badge by key: &"menu", &"score", &"operator", &"streak", &"rival", &"preview", &"deck".
 func get_badge(key: StringName) -> Control:
+	if key == &"rival" and rival_in_score():
+		return _score_badge
 	return {&"menu": _menu_button, &"score": _score_badge, &"operator": _operator_badge, &"streak": _streak_badge,
 			&"rival": _rival_badge, &"preview": _preview_button, &"deck": _deck_badge, &"traits": _trait_rail}.get(key, null)
+
+
+## kc-fight-ui: the phone strip has no RIVAL badge; SCORE carries the rival's hand count and intel.
+func rival_in_score() -> bool:
+	return compact
 
 
 ## kc-syn-ui: the trait rail in the icon strip.
@@ -314,9 +351,9 @@ func get_trait_rail() -> Control:
 func get_set_callouts() -> PackedStringArray:
 	var out: PackedStringArray = []
 	for k: Variant in _set_callouts:
-		var c: Control = _set_callouts[k]
-		if is_instance_valid(c) and c.visible:
-			out.append(String((c.get_child(0) as Label).text))
+		var c: Variant = _set_callouts[k]
+		if is_instance_valid(c) and (c as Control).visible:
+			out.append(String(((c as Control).get_child(0) as Label).text))
 	return out
 
 
@@ -384,9 +421,10 @@ func on_synergy_event(ev: Dictionary) -> void:
 
 ## Set callout beside the trait rail (one per side at a time; ~1.2 s, then it folds into the rail).
 func show_set_callout(side: StringName, text: String, on: bool) -> void:
-	var old: Control = _set_callouts.get(side, null)
-	if old != null and is_instance_valid(old):
-		old.queue_free()
+	# (Variant: a callout that already folded away is a freed instance; a typed var would refuse it.)
+	var old: Variant = _set_callouts.get(side, null)
+	if is_instance_valid(old):
+		(old as Node).queue_free()
 	var panel := PanelContainer.new()
 	panel.name = "SetCallout_%s" % side
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -593,6 +631,10 @@ func get_key_controls() -> Dictionary:
 		"streak": _streak_badge, "minimap": _rival_badge, "preview": _preview_button, "deck": _deck_badge,
 		"board": _board, "supply": _supply_box,
 	}
+	if rival_in_score():
+		# kc-fight-ui: the phone's SCORE badge carries the rival hand; the trait rail takes the slot.
+		out.erase("minimap")
+		out["traits"] = _trait_rail
 	if tray_state == TRAY_OPEN:
 		out.merge({"hand": _hand, "undo": _undo_button, "ready": _ready_button})
 		if not _ks_row.get_tiles().is_empty():
@@ -674,13 +716,24 @@ func _layout_regions() -> void:
 	_strip.size = strip.size
 	var rects: Array[Rect2] = BoardMetrics.badge_rects(metrics)
 	var badges: Array[Control] = [_menu_button, _score_badge, _operator_badge, _streak_badge, _rival_badge, _preview_button, _deck_badge]
+	# kc-fight-ui (head, kc-syn-ui answers): on the phone RIVAL folds into SCORE (its hand count is the
+	# SCORE badge's third line, its intel is in the SCORE flyout); PREVIEW moves up into its slot, so
+	# the trait rail gets a whole badge slot more (>= 44 pt).
+	var merged: bool = rival_in_score()
+	_rival_badge.visible = not merged
 	for i: int in badges.size():
-		badges[i].position = rects[i].position
-		badges[i].size = rects[i].size
-		badges[i].custom_minimum_size = rects[i].size
+		var ri: int = i
+		if merged and badges[i] == _preview_button:
+			ri = 4
+		badges[i].position = rects[ri].position
+		badges[i].size = rects[ri].size
+		badges[i].custom_minimum_size = rects[ri].size
 		badges[i].queue_redraw()
 	# kc-syn-ui: the trait rail fills the strip between PREVIEW and DECK.
 	var rail_r: Rect2 = BoardMetrics.rail_rect(metrics)
+	if merged:
+		var top: float = rects[4].end.y + float(metrics["badge_gap"])
+		rail_r = Rect2(0, top, rail_r.size.x, maxf(0.0, rects[6].position.y - float(metrics["badge_gap"]) - top))
 	_trait_rail.position = rail_r.position
 	_trait_rail.size = rail_r.size
 	_trait_rail.visible = rail_r.size.y >= 30.0
@@ -711,7 +764,7 @@ func _layout_tray() -> void:
 	_fit_pips()
 	var grid: Rect2 = metrics["grid"]
 	_place(_hand, grid)
-	_hand.set_card_size(metrics["card"], metrics["card_gap"], int(metrics["hand_cols"]), 1.0 if mirror else -1.0)
+	_hand.set_card_size(metrics["card"], metrics["card_gap"], int(metrics["hand_cols"]), 1.0 if mirror else -1.0, float(metrics["bh"]))
 	var undo_w: float = roundf(w * 0.3)
 	_place(_undo_button, Rect2(0, h - btn_h, undo_w, btn_h))
 	_place(_ready_button, Rect2(undo_w + 8.0, h - btn_h, w - undo_w - 8.0, btn_h))
@@ -863,11 +916,12 @@ func open_flyout(key: StringName) -> void:
 	_flyout_dragging = false
 	_flyout.modulate.a = 1.0
 	_flyout_scrim.mouse_filter = Control.MOUSE_FILTER_STOP
-	_score_bar.visible = key == &"score"
+	var merged: bool = rival_in_score() and key in [&"score", &"rival"]
+	_score_bar.visible = key == &"score" or merged
 	_operator_panel.visible = key == &"operator" or key == &"streak"
 	if _operator_panel.visible:
 		_operator_panel.set_section(key)
-	_minimap.visible = key == &"rival"
+	_minimap.visible = key == &"rival" or merged
 	_deck_box.visible = key == &"deck"
 	if _sets_box == null:
 		_sets_box = VBoxContainer.new()
@@ -880,6 +934,8 @@ func open_flyout(key: StringName) -> void:
 		_fill_sets_box()
 	_flyout_title.text = {&"score": "SCORE", &"operator": "OPERATOR", &"streak": "KILLSTREAKS", &"rival": "RIVAL HAND",
 			&"deck": "DECK", &"traits": "SETS"}[key]
+	if merged:
+		_flyout_title.text = "SCORE · RIVAL HAND"
 	_flyout_hint.text = {
 		&"operator": "Tap the Operator here to select it, then a column · long-press for rules",
 		&"streak": "Tap a ready streak to arm it · long-press for rules",
@@ -926,8 +982,13 @@ func _set_badges(snapshot: Dictionary) -> void:
 	var muted: Color = Color("#9AA5AE")
 	var friend: Color = get_theme_color(&"friend", &"Hud")
 	var enemy: Color = get_theme_color(&"enemy", &"Hud")
-	_score_badge.set_value([[["R%d" % int(snapshot.get("round", 1)), muted]],
-			[[str(int(snapshot.get("score_player", 0))), friend], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy]]])
+	var score_rows: Array = [[["R%d" % int(snapshot.get("round", 1)), muted]],
+			[[str(int(snapshot.get("score_player", 0))), friend], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy]]]
+	if rival_in_score():
+		# kc-fight-ui: the rival's hand (a red card glyph + count) as the third line.
+		score_rows.append([["", Color("#ff8a8d"), &"cards_rival"], [str(int(snapshot.get("enemy_hand", 0))), Color("#ffb3b5")]])
+	_score_badge.font_size = 18 if rival_in_score() else 20
+	_score_badge.set_value(score_rows)
 	var op: Dictionary = snapshot.get("operator", {})
 	_operator_can_deploy = bool(snapshot.get("operator_can_deploy", false))
 	var op_text: String = "OFF"
@@ -995,12 +1056,16 @@ func _setup_tray() -> void:
 	_speed_button.toggled.connect(func(on: bool) -> void:
 		_speed_button.text = "SPEED x2" if on else "SPEED x1"
 		var st: Node = get_node_or_null(^"/root/Settings")
-		if st != null and bool(st.get(&"speed_x2")) != on:
-			st.set_value(&"speed_x2", on)
+		if st != null:
+			# kc-fight-ui: the player's own choice now overrides the x1 / x2 default.
+			if "speed_chosen" in st and not bool(st.get(&"speed_chosen")):
+				st.set_value(&"speed_chosen", true)
+			if bool(st.get(&"speed_x2")) != on:
+				st.set_value(&"speed_x2", on)
 		_apply_speed(_fx.is_playing() if _fx.has_method(&"is_playing") else false))
-	# kc-ui3: SPEED x2 is kept between sessions (Settings.speed_x2).
-	var settings: Node = get_node_or_null(^"/root/Settings")
-	var fast: bool = settings != null and bool(settings.get(&"speed_x2"))
+	# kc-ui3: SPEED x2 is kept between sessions (Settings.speed_x2). kc-fight-ui: until the player
+	# picks a speed with this toggle, it starts at x1 (default_speed_x2).
+	var fast: bool = playback_speed_x2()
 	_speed_button.set_pressed_no_signal(fast)
 	_speed_button.text = "SPEED x2" if fast else "SPEED x1"
 	_apply_tray_state(false)
@@ -1021,9 +1086,41 @@ func _follow_phase(snapshot: Dictionary) -> void:
 		_step_header.text = phase if phase != "" else "FIREFIGHT"
 	if open and not _deploy_open:
 		_killfeed_fx.clear()
+	if open and int(snapshot.get("round", 1)) != _glow_round:
+		_glow_round = int(snapshot.get("round", 1))
+		glow_set_cards.call_deferred(snapshot.get("hand", []))
 	_deploy_open = open
 	_phase = phase
 	_update_tab_text()
+
+
+## kc-fight-ui (head, kc-syn-ui answers): at the start of Deploy, the hand cards that would switch a
+## trait bonus on this round (match_snapshot `completes_tier`) glow briefly in their trait's colour.
+## Returns the uids that glow (tests, QA).
+func glow_set_cards(hand: Array) -> Array[int]:
+	var out: Array[int] = []
+	if _fx == null or not is_inside_tree():
+		return out
+	for c: Dictionary in hand:
+		if String(c.get("completes_tier", "")) == "":
+			continue
+		var card: Control = _hand.get_card(int(c.get("uid", -1))) if _hand.has_method(&"get_card") else null
+		if card == null:
+			continue
+		var g: Control = HandGlowFx.new()
+		g.target = card
+		g.color = SynergyGlyphs.trait_color(StringName(String(c.get("trait", ""))))
+		g.add_to_group(&"fx_transient")
+		_fx.add_child(g)
+		g.play(_fx.get_timing() if _fx.has_method(&"get_timing") else null)
+		out.append(int(c.get("uid", -1)))
+	_last_glow = out
+	return out
+
+
+## The hand cards that glowed at the start of this Deploy (tests, QA).
+func get_last_glow() -> Array[int]:
+	return _last_glow
 
 
 func set_tray_state(value: StringName) -> void:
@@ -1073,20 +1170,110 @@ func _apply_speed(playing: bool) -> void:
 	Engine.time_scale = 2.0 if playing and _speed_button.button_pressed else 1.0
 
 
-## The tray header names the firefight step as it plays (FIREFIGHT · B · FIRST SHOT).
+## kc-fight-ui: the playback speed. The player's own pick with the SPEED toggle wins
+## (Settings.speed_chosen + speed_x2). Otherwise x1: the head (2026-11-06) wants x1 everywhere for
+## now, so the resolver's "x2 after the tutorial" default (O4) is off until he says otherwise
+## (FOLLOW_TUTORIAL_DEFAULT). An older save's SPEED x2 without a pick made with this toggle is ignored.
+const FOLLOW_TUTORIAL_DEFAULT: bool = false
+
+
+static func default_speed_x2(speed_x2: bool, speed_chosen: bool, tutorial_done: bool) -> bool:
+	if speed_chosen:
+		return speed_x2
+	if FOLLOW_TUTORIAL_DEFAULT:
+		return FirefightResolver.default_playback_speed(tutorial_done) >= 2.0
+	return false
+
+
+func playback_speed_x2() -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st == null:
+		return default_speed_x2(false, false, false)
+	var chosen: bool = "speed_chosen" in st and bool(st.get(&"speed_chosen"))
+	return default_speed_x2(bool(st.get(&"speed_x2")), chosen, _tutorial_done(st))
+
+
+## The tutorial record (user://tutorial.cfg); headless test runs (Settings not persisting) read it as
+## not done, so a dev machine's record never changes what the tests see.
+static func _tutorial_done(st: Node) -> bool:
+	if st == null or not bool(st.get(&"persist")):
+		return false
+	return TutorialProgress.is_completed()
+
+
+## kc-fight-ui: the round is about to play. The order strip greys the columns with no fight.
+func prepare_fight(events: Array) -> void:
+	var zones: Array = []
+	for ev: Dictionary in events:
+		if ev.get("type") == RulesEvent.FIREFIGHT_STARTED:
+			zones.append(StringName(ev.get("zone", &"")))
+	if _order_strip != null:
+		_order_strip.begin(zones)
+		_order_strip.visible = true
+
+
+## kc-fight-ui: the board as the firefight playback stands (fight_playback.gd snapshot): the columns
+## (the dead leave, the line slides up), and the links and trait rail of that board, with the set
+## callouts / cracks of what switched on or off.
+func show_fight_board(snapshot: Dictionary) -> void:
+	_board.set_lanes(snapshot.get("lanes", []))
+	var syn: Dictionary = snapshot.get("synergy", {})
+	for side: String in ["player", "enemy"]:
+		var block: Dictionary = syn.get(side, {})
+		if block.is_empty():
+			continue
+		on_synergy_event({"side": StringName(side), "counts": block.get("counts", {}), "sets": block.get("tiers", {}),
+				"links": block.get("links", [])})
+
+
+func _on_fight_caption(lines: Array) -> void:
+	if _fight_caption == null:
+		return
+	var text: String = "\n".join(PackedStringArray(lines))
+	_fight_caption.text = text
+	_fight_caption.visible = text != ""
+
+
+## The caption under the order strip (tests, QA).
+func get_fight_caption() -> String:
+	return _fight_caption.text if _fight_caption != null and _fight_caption.visible else ""
+
+
+## kc-fight-ui: the columns only (the Reveal turns the rival's cards over one at a time).
+func show_lanes(lanes: Array) -> void:
+	_board.set_lanes(lanes)
+
+
+func get_order_strip() -> Control:
+	return _order_strip
+
+
+## The tray header names the firefight beat as it plays (FIREFIGHT · B · BEAT 2 · FIRST SHOT), and
+## the order strip lights the column being fought.
 func _on_fx_event(ev: Dictionary) -> void:
 	var t: StringName = ev.get("type", &"")
+	var letter: String = ZONE_LETTERS.get(StringName(ev.get("zone", &"")), "")
 	if t == RulesEvent.FIREFIGHT_STARTED:
-		_step_header.text = "FIREFIGHT · %s" % ZONE_LETTERS.get(StringName(ev.get("zone", &"")), "")
+		_step_header.text = "FIREFIGHT · %s" % letter
+		if _order_strip != null:
+			_order_strip.set_active(StringName(ev.get("zone", &"")))
+	elif t == RulesEvent.FIREFIGHT_BEAT:
+		var tag: String = {1: " · FIRST SHOT", 2: " · REPLY"}.get(int(ev.get("exchange", 0)), "")
+		_step_header.text = "FIREFIGHT · %s · BEAT %d%s" % [letter, int(ev.get("beat", 1)), tag]
+	elif t == RulesEvent.FIREFIGHT_COLUMN_ENDED:
+		if _order_strip != null:
+			_order_strip.set_done(StringName(ev.get("zone", &"")))
 	elif t == RulesEvent.FIREFIGHT_STEP:
 		var step: String = {&"first_shot": "FIRST SHOT", &"main": "MAIN STEP"}.get(StringName(ev.get("step", &"")), "")
-		_step_header.text = "FIREFIGHT · %s · %s" % [ZONE_LETTERS.get(StringName(ev.get("zone", &"")), ""), step]
+		_step_header.text = "FIREFIGHT · %s · %s" % [letter, step]
 	elif t == RulesEvent.SYNERGY_CHANGED:
 		on_synergy_event(ev)
 	elif t == RulesEvent.PHASE_CHANGED:
 		var ph: String = String(ev.get("phase", "")).to_upper()
 		if ph != "" and ph != "FIREFIGHT":
 			_step_header.text = ph
+			if _order_strip != null and ph != "REVEAL":
+				_order_strip.finish()
 
 
 ## The killfeed log in the tray (tests: lines must fit it).

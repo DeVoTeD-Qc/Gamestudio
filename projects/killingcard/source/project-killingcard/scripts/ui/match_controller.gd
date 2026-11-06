@@ -61,6 +61,7 @@ const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const FightPlayback: GDScript = preload("res://scripts/ui/fight_playback.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
 const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
@@ -113,6 +114,18 @@ var forfeited: bool = false
 ## The result banner was shown for this match / its button was acted on (finish called once).
 var _end_shown: bool = false
 var _finished: bool = false
+## kc-fight-ui: the board as the firefight playback stands (fight_playback.gd), null between rounds.
+var fight_playback: RefCounted = null
+## kc-fight-ui: how many times the board was redrawn from the playback board this round (tests).
+var fight_refreshes: int = 0
+## kc-fight-ui: the last round's playback: the §5 model at x1 (FirefightResolver.playback_seconds of its
+## events) and the measured wall-clock time of the whole round's feedback (ms), and whether it was skipped.
+var last_playback_model_s: float = 0.0
+var last_playback_ms: int = 0
+var last_playback_skipped: bool = false
+## kc-fight-ui: wall-clock ms of the Firefight part alone (PHASE_CHANGED firefight -> score).
+var last_fight_ms: int = 0
+var _fight_t0: int = 0
 
 
 func _ready() -> void:
@@ -243,6 +256,10 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	# kc-syn §11.4: the quick match plays the run's starter as it is (plain Recruits).
 	player.deck_levels.assign(config.starter_levels())
 	player.primary = config.starter_primary
+	# kc-ui4: the Operator picked on the starter screen (Settings.operator_primary), when valid.
+	var pick: LoadoutItem = _picked_operator(config)
+	if pick != null:
+		player.primary = pick
 	player.secondary = config.starter_secondary
 	player.lethal = config.starter_lethal
 	player.tactical = config.starter_tactical
@@ -328,6 +345,19 @@ static func _assign_copy_arts(m: MatchState, equipped: Dictionary = _equipped_ar
 			setup.deck_arts.assign(list)
 
 
+## kc-ui4: the starter screen's Operator pick (one of RunProgress.operator_options), else null.
+static func _picked_operator(config: RunConfig) -> LoadoutItem:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var settings: Node = tree.root.get_node_or_null(^"/root/Settings") if tree != null else null
+	var id: String = String(settings.get(&"operator_primary")) if settings != null else ""
+	if id == "":
+		return null
+	for item: LoadoutItem in RunProgress.operator_options(config):
+		if String(item.id) == id:
+			return item
+	return null
+
+
 static func _equipped_arts() -> Dictionary:
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	var settings: Node = tree.root.get_node_or_null(^"/root/Settings") if tree != null else null
@@ -347,6 +377,7 @@ func is_busy() -> bool:
 func skip_feedback() -> void:
 	var fx: Control = _fx()
 	if fx != null and fx.is_playing():
+		last_playback_skipped = true
 		fx.skip()
 
 
@@ -375,9 +406,20 @@ func press_ready() -> void:
 	# MatchState.resolve_round(), split so the board can show the units that arrived at Reveal
 	# when the firefight starts.
 	var start: int = state.events.size()
+	# kc-fight-ui: the units already on the board before Reveal (the rival's new cards turn over one
+	# by one while the Reveal plays, see _reveal_lanes()).
+	var pre_uids: Dictionary = {}
+	for s: RulesSide in state.sides:
+		for u: RulesUnit in s.units_on_board():
+			pre_uids[u.uid] = true
 	state.reveal()
 	var after_reveal: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)
 	after_reveal["phase"] = "FIREFIGHT"
+	# kc-fight-ui: a copy of the board as the firefight starts; the playback applies the events to it
+	# as they land, so units leave and lines slide up beat by beat.
+	var playback: RefCounted = FightPlayback.start(state, map, PLAYER) if fx != null else null
+	fight_playback = playback
+	fight_refreshes = 0
 	state.firefight()
 	state.score()
 	var resolved: Array[Dictionary] = state.events_since(start)
@@ -387,13 +429,45 @@ func press_ready() -> void:
 	round_resolved.emit(resolved)
 	if fx != null:
 		_busy = true
+		fx.unit_sides = _unit_sides(playback.state if playback != null else state)
+		if _screen.has_method(&"prepare_fight"):
+			_screen.prepare_fight(resolved)
+		var in_fight: Array = [false]
 		var on_event: Callable = func(ev: Dictionary) -> void:
-			if ev.get("type") == RulesEvent.PHASE_CHANGED and StringName(ev.get("phase", "")) == &"firefight":
-				_screen.show_snapshot(after_reveal)
+			if ev.get("type") == RulesEvent.PHASE_CHANGED:
+				var was_fight: bool = in_fight[0]
+				in_fight[0] = StringName(ev.get("phase", "")) == &"firefight"
+				if in_fight[0]:
+					_fight_t0 = Time.get_ticks_msec()
+					_screen.show_snapshot(after_reveal)
+				elif was_fight:
+					last_fight_ms = Time.get_ticks_msec() - _fight_t0
 			_board_callout(ev)
+		# kc-fight-ui: each event lands on the playback board; the screen follows it (not while skipping:
+		# the final board comes from the live state when the round ends).
+		var arrived: Dictionary = {}
+		var on_land: Callable = func(ev: Dictionary) -> void:
+			if ev.get("type") == RulesEvent.UNIT_ARRIVED and not in_fight[0] and not fx.is_skipping() \
+					and _screen.has_method(&"show_lanes"):
+				arrived[int(ev.get("uid", -1))] = true
+				_screen.show_lanes(_reveal_lanes(after_reveal, pre_uids, arrived, resolved))
+				return
+			if playback == null or not in_fight[0]:
+				return
+			if playback.apply(ev) and not fx.is_skipping() and _screen.has_method(&"show_fight_board"):
+				fight_refreshes += 1
+				_screen.show_fight_board(playback.snapshot())
 		fx.event_started.connect(on_event)
+		fx.event_landed.connect(on_land)
+		last_playback_model_s = FirefightResolver.playback_seconds(resolved)
+		last_playback_skipped = false
+		last_fight_ms = 0
+		var t0: int = Time.get_ticks_msec()
 		await fx.play(resolved)
+		last_playback_ms = Time.get_ticks_msec() - t0
 		fx.event_started.disconnect(on_event)
+		fx.event_landed.disconnect(on_land)
+		fight_playback = null
 		_busy = false
 	if state.phase == MatchState.Phase.ENDED:
 		refresh()
@@ -481,6 +555,40 @@ func _fx() -> Control:
 
 func _mulligan_panel() -> Control:
 	return _screen.get_mulligan_panel() if _screen != null and _screen.has_method(&"get_mulligan_panel") else null
+
+
+## kc-fight-ui (head: make the rival's reveals readable): the post-Reveal columns with only the rival
+## units already revealed (or on the board before Reveal); the rest stay face-down INCOMING in their
+## column. Your own arrivals show at once.
+static func _reveal_lanes(after: Dictionary, pre: Dictionary, arrived: Dictionary, events: Array) -> Array:
+	var pending: Dictionary = {}
+	for ev: Dictionary in events:
+		if ev.get("type") == RulesEvent.PHASE_CHANGED and StringName(ev.get("phase", "")) == &"firefight":
+			break
+		if ev.get("type") == RulesEvent.UNIT_ARRIVED and StringName(ev.get("side", &"")) == MatchState.SIDE_NAMES[ENEMY] \
+				and not arrived.has(int(ev.get("uid", -1))):
+			var z: StringName = StringName(ev.get("zone", &""))
+			pending[z] = int(pending.get(z, 0)) + 1
+	var lanes: Array = (after.get("lanes", []) as Array).duplicate(true)
+	for lane: Dictionary in lanes:
+		var keep: Array = []
+		for e: Dictionary in lane.get("enemy", []):
+			var uid: int = int(e.get("uid", -1))
+			if pre.has(uid) or arrived.has(uid):
+				keep.append(e)
+		lane["enemy"] = keep
+		lane["incoming"] = int(pending.get(StringName(lane.get("id", &"")), 0))
+		lane["revealed"] = []
+	return lanes
+
+
+## kc-fight-ui: uid -> &"player" / &"enemy" of every unit on the board (the playback's shooters).
+func _unit_sides(of: MatchState) -> Dictionary:
+	var out: Dictionary = {}
+	for si: int in of.sides.size():
+		for u: RulesUnit in of.sides[si].units_on_board():
+			out[u.uid] = MatchState.SIDE_NAMES[si]
+	return out
 
 
 ## uid -> display name of every unit / Operator on the board or queued (killfeed lines).
@@ -1403,7 +1511,7 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 		view["subname"] = sub
 	_screen.get_inspector().open({
 		"view": view, "title": card.display_name,
-		"type": ("“%s” · %s" % [sub, type_text]) if sub != "" else type_text,
+		"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,
 		"text": text, "keywords": keywords, "status": status,
 		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
 		"art_line": _art_line(art), "is_unit": card.is_unit(),

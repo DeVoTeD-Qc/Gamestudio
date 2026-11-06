@@ -61,6 +61,8 @@ const HAND_CAP: int = 7
 static var STAT_PLATE: StyleBoxFlat = ArtUnderlay.plate()
 
 var compact: bool = false
+## kc-ui4: the board's banner height; hand banner cards use its badge / plate sizes.
+var _metric_h: float = 0.0
 var _card_size_override: Vector2 = Vector2.ZERO
 var _gap: float = CARD_GAP
 var _cards_data: Array = []
@@ -102,11 +104,14 @@ func set_compact(value: bool) -> void:
 
 
 ## Card size, gap and grid columns from BoardMetrics; board_dir -1: the board is to the left.
-func set_card_size(card: Vector2, gap: float, cols: int = columns, board_dir: float = board_side) -> void:
+## metric_h (kc-ui4): the board's banner height (the cards' icon sizes); 0 keeps the current one.
+func set_card_size(card: Vector2, gap: float, cols: int = columns, board_dir: float = board_side, metric_h: float = 0.0) -> void:
 	_caption.visible = false
-	if card == _card_size_override and gap == _gap and cols == columns and board_dir == board_side:
+	var mh: float = metric_h if metric_h > 0.0 else _metric_h
+	if card == _card_size_override and gap == _gap and cols == columns and board_dir == board_side and mh == _metric_h:
 		return
-	var rebuild: bool = card != _card_size_override
+	var rebuild: bool = card != _card_size_override or mh != _metric_h
+	_metric_h = mh
 	_card_size_override = card
 	_gap = gap
 	columns = maxi(1, cols)
@@ -301,69 +306,27 @@ func _fit_cards() -> void:
 
 
 ## Height of the mini Operator card: half a hand card, at least 64 px (a 44 pt tap target on the
-## phone, 64 px on desktop; three 16 px lines fit).
+## phone, 64 px on desktop; three 16 px lines fit). kc-ui4: banner cards are already short, so below
+## 128 px the status card keeps the card's height.
 func mini_height() -> float:
-	return maxf(64.0, roundf(_card_size().y * 0.5))
+	var h: float = _card_size().y
+	return h if h < 128.0 else maxf(64.0, roundf(h * 0.5))
 
 
 func _make_card(card: Dictionary) -> Control:
-	var panel: PanelContainer = PanelContainer.new()
-	panel.theme_type_variation = &"HandCard"
-	panel.custom_minimum_size = _card_size()
+	# kc-ui4 (head: hand cards "closer to their form on the board"): the board's banner (same art band,
+	# plate row, FP bottom-left / Armor bottom-right, keyword / trait icons, level band) with the cost
+	# hex and the name (chassis) over the art's subname. Rules text is one long-press away.
+	var ctype: String = MiniIcons.card_type(card)
+	var entry: Dictionary = banner_entry(card)
+	var metric: float = _metric_h if _metric_h > 0.0 else _card_size().y
+	var panel: PanelContainer = BannerCard.build(entry, _card_size(), metric)
 	panel.add_to_group(&"tap_target")
 	panel.set_meta(&"playable", bool(card.get("playable", true)))
-	panel.tooltip_text = String(card.get("name", ""))
-	var ctype: String = MiniIcons.card_type(card)
-	# The face ignores the panel's content margins: it is placed over the whole card (fit below).
-	var face: Control = Control.new()
-	face.name = "Face"
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.clip_contents = true
-	panel.add_child(face)
-	var big: bool = _card_size().x >= 100.0
-	var art_h: float = roundf(_card_size().y * (82.0 / 140.0 if big else 56.0 / 98.0))
-	var art := TextureRect.new()
-	art.name = "Art"
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var art_id: StringName = StringName(String(card.get("banner", card.get("id", ""))))
-	art.texture = BannerArtDB.portrait_texture(art_id, {"cls": card.get("type", ""), "type": ctype}) if art_id != &"" else null
-	# kc-cod2: licensed art (private pitch) is a 4:1 strip with no room for a 2:3 crop, so the card
-	# shows the WHOLE strip at the bottom of its art window over a dimmed, cover-cropped copy of it.
-	var strip: bool = art_id != &"" and BannerArtDB.get_art(art_id).licensed and art.texture != null
-	if strip:
-		var back := TextureRect.new()
-		back.name = "ArtBack"
-		back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		back.texture = art.texture
-		back.self_modulate = Color(0.42, 0.42, 0.45, 1.0)
-		face.add_child(back)
-		art.stretch_mode = TextureRect.STRETCH_SCALE
-		art.set_meta(&"strip", back)
-	face.add_child(art)
-	var hex: Control = CostHex.new()
-	hex.custom_minimum_size = HEX_SIZE if big else HEX_SIZE_COMPACT
-	hex.size = hex.custom_minimum_size
-	hex.label.add_theme_font_size_override(&"font_size", 20 if big else 16)
-	hex.set_text(str(card.get("cost", 0)))
-	hex.label.set_meta(&"important", true)
-	face.add_child(hex)
-	_add_synergy_overlay(panel, face, hex, card, art_h, big)
-	if bool(card.get("elite", false)):
-		# Elite (Commander / Ace): gold star over the art's top-right corner.
-		var star: Control = Control.new()
-		star.name = "EliteStar"
-		star.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		star.custom_minimum_size = Vector2(18, 18) if not big else Vector2(22, 22)
-		star.size = star.custom_minimum_size
-		star.draw.connect(func() -> void:
-			star.draw_circle(star.size * 0.5, star.size.x * 0.5, Color(0.05, 0.06, 0.07, 0.85))
-			BannerView.draw_star(star, star.size * 0.5, star.size.x * 0.4, get_theme_color(&"elite", &"Hud")))
-		face.add_child(star)
-		panel.sort_children.connect(func() -> void: star.position = Vector2(face.size.x - star.size.x - 2.0, 2.0))
+	panel.set_meta(&"ctype", ctype)
+	panel.tooltip_text = String(card.get("name", "")) + ((" · %s" % String(card["subname"])) if String(card.get("subname", "")) != "" else "")
+	var face: Control = panel.get_node("Face")
+	_add_synergy_overlay(panel, face, card)
 	var next_tag: Label = _label("NEXT DEPLOY", &"HudTag", false)
 	next_tag.name = "NextTag"
 	next_tag.add_theme_font_size_override(&"font_size", 16)
@@ -374,54 +337,42 @@ func _make_card(card: Dictionary) -> Control:
 	next_tag.add_theme_stylebox_override(&"normal", tag_box)
 	next_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	next_tag.clip_text = true
-	var title: Label = _label(String(card.get("name", "")), &"UnitName", false)
-	title.name = "NameLabel"
-	title.add_theme_font_size_override(&"font_size", 16)
-	title.clip_text = true
-	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	face.add_child(title)
-	var bottom: HBoxContainer = HBoxContainer.new()
-	bottom.name = "Bottom"
-	bottom.add_theme_constant_override(&"separation", 2)
-	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.add_child(bottom)
-	var text_color: Color = get_theme_color(&"text", &"Hud")
-	var accent: Color = get_theme_color(&"accent", &"Hud")
-	var icon_px: float = 16.0 if big else 14.0
-	if card.has("fp"):
-		bottom.add_child(MiniIcons.icon(&"stat_firepower", icon_px, text_color))
-		bottom.add_child(_number(str(card.get("fp", 0)), big))
-		var mid: HBoxContainer = MiniIcons.keyword_row((card.get("keywords", []) as Array).slice(0, 2), icon_px, accent, false)
-		for c: Node in mid.get_children():
-			if c is Label:
-				(c as Label).add_theme_font_size_override(&"font_size", 16)
-		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		mid.alignment = BoxContainer.ALIGNMENT_CENTER
-		bottom.add_child(mid)
-		bottom.add_child(MiniIcons.icon(&"stat_armor", icon_px, text_color))
-		bottom.add_child(_number(str(card.get("armor", 0)), big))
-	else:
-		var word: Label = _label("FIELD" if ctype == "equipment" else "TACTIC", &"HudTag", false)
-		word.add_theme_color_override(&"font_color", accent)
-		word.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bottom.add_child(word)
-		var glyph: Control = Control.new()
-		glyph.custom_minimum_size = Vector2(icon_px, icon_px)
-		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		glyph.draw.connect(_draw_type_glyph.bind(glyph, ctype == "equipment", accent))
-		bottom.add_child(glyph)
 	face.add_child(next_tag)
 	panel.sort_children.connect(func() -> void:
 		next_tag.size = Vector2(face.size.x, next_tag.get_combined_minimum_size().y)
-		next_tag.position = Vector2(0, art_h * 0.5 - next_tag.size.y * 0.5))
-	panel.sort_children.connect(_fit_face.bind(panel, face, art, hex, title, bottom, art_h))
+		next_tag.position = Vector2(0, face.size.y * 0.5 - next_tag.size.y * 0.5))
 	return panel
 
 
-## kc-syn-ui: a Trained card's trait icon and keyword pip next to the cost hex, its level's camo
-## band under the art (Recruits: plain), and a dot when playing it this round would switch a set
-## tier on (completes_tier, e.g. "Vanguard 2").
-func _add_synergy_overlay(panel: Control, face: Control, hex: Control, card: Dictionary, art_h: float, big: bool) -> void:
+## kc-ui4: the board banner entry of a hand chip (card_info.gd chip() + match_snapshot hand fields).
+static func banner_entry(card: Dictionary) -> Dictionary:
+	var ctype: String = MiniIcons.card_type(card)
+	var e: Dictionary = {"name": card.get("name", ""), "cost": card.get("cost", 0),
+			"cls": String(card.get("weapon_class", "")).to_upper(), "keywords": card.get("keywords", []),
+			"elite": bool(card.get("elite", false)), "bolt": bool(card.get("bolt", false)),
+			"front_kw": bool(card.get("front_kw", false)),
+			"banner": String(card.get("banner", card.get("id", "")))}
+	for k: String in ["subname", "trait", "kw", "band", "fp_trend", "cover", "armor_max", "operator", "camo"]:
+		if card.has(k) and str(card[k]) != "":
+			e[k] = card[k]
+	if card.has("fp"):
+		e["fp"] = card["fp"]
+		e["armor"] = card.get("armor", 0)
+	else:
+		e["kind_word"] = "FIELD" if ctype == "equipment" else "TACTIC"
+	if String(card.get("kw", "")) != "":
+		e["kw_active"] = true
+	return e
+
+
+## The BannerView of a hand card (null for the mini Operator card).
+func get_banner(chip: Node) -> BannerView:
+	return BannerCard.banner_of(chip)
+
+
+## kc-syn-ui / kc-ui4: the trait icon, keyword pip and level band are on the banner itself; this adds
+## the dot when playing the card this round would switch a set tier on (completes_tier).
+func _add_synergy_overlay(panel: Control, face: Control, card: Dictionary) -> void:
 	var t: StringName = StringName(String(card.get("trait", "")))
 	var kw: StringName = StringName(String(card.get("kw", "")))
 	var band: StringName = StringName(String(card.get("band", "")))
@@ -436,20 +387,10 @@ func _add_synergy_overlay(panel: Control, face: Control, hex: Control, card: Dic
 	syn.set_meta(&"band", band)
 	syn.set_meta(&"completes_tier", completes)
 	face.add_child(syn)
-	var px: float = 20.0 if big else 18.0
-	var accent: Color = get_theme_color(&"friend", &"Hud")
 	syn.draw.connect(func() -> void:
-		var x: float = hex.position.x + hex.size.x + 3.0
-		if band != &"":
-			SynergyGlyphs.draw_band(syn, Rect2(0, art_h - 6.0, syn.size.x, 4.0), band)
-		if t != &"":
-			SynergyGlyphs.draw_trait_plate(syn, Rect2(x, 3.0, px, px), t, false, false)
-			x += px + 2.0
-		if kw != &"":
-			SynergyGlyphs.draw_keyword_plate(syn, Rect2(x, 3.0, px, px), kw, true, accent, true)
 		if completes != "":
-			var dx: float = syn.size.x - (30.0 if bool(card.get("elite", false)) else 9.0)
-			SynergyGlyphs.draw_dot(syn, Vector2(dx, 9.0), 5.0, SynergyGlyphs.trait_color(t)))
+			var mm: Dictionary = BannerView.metrics(minf(syn.size.y, _metric_h if _metric_h > 0.0 else syn.size.y))
+			SynergyGlyphs.draw_dot(syn, Vector2(syn.size.x * 0.5, mm["pad"] + mm["plate"] * 0.5 + 4.0), 5.0, SynergyGlyphs.trait_color(t)))
 	panel.sort_children.connect(func() -> void:
 		syn.position = Vector2.ZERO
 		syn.size = face.size
@@ -464,8 +405,14 @@ func _add_synergy_overlay(panel: Control, face: Control, hex: Control, card: Dic
 
 func _make_operator_card(op: Dictionary) -> Control:
 	var state: StringName = StringName(String(op.get("state", "none")))
-	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR", "cost": 0,
-			"fp": op.get("fp", 0), "armor": op.get("armor", 0), "keywords": op.get("keywords", []),
+	var cost0: int = int(op.get("cost", 0))
+	var short0: bool = state == &"deploy" and not bool(op.get("can_afford", true))
+	var status0: String = ("NEED %d SUPPLY" % cost0) if short0 else String(op.get("status", "")).replace("\n", " · ")
+	# kc-ui4: the status (DEPLOY / PLAN · B / DOWN · NEXT ROUND) is the line under the name, where a
+	# deck card shows its art's subname, so it never covers the name or the badges.
+	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR", "cost": "", "subname": status0,
+			"fp": op.get("fp", 0), "armor": op.get("armor", 0), "armor_max": op.get("armor_max", op.get("armor", 0)),
+			"keywords": op.get("keywords", []), "operator": true, "camo": op.get("camo", "base"),
 			"banner": op.get("banner", ""), "id": op.get("banner", ""), "playable": true}
 	var panel: Control = _make_card(card)
 	panel.name = "OperatorCard"
@@ -503,21 +450,17 @@ func _make_operator_card(op: Dictionary) -> Control:
 		op["status"] = "NEED %d SUPPLY" % cost
 	panel.set_meta(&"operator_short", short)
 	_apply_operator_frame(panel)
-	var armor_text: String = "%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", op.get("armor", 0)))]
-	var bottom: Node = panel.find_child("Bottom", true, false)
-	if bottom != null and bottom.get_child_count() > 0:
-		var last: Node = bottom.get_child(bottom.get_child_count() - 1)
-		if last is Label:
-			(last as Label).text = armor_text
-	# Status plate over the art: DEPLOY / PLAN · B / ON BOARD + B · ROW 2 / DOWN + BACK NEXT ROUND.
-	var status: Label = _label(String(op.get("status", "")), &"HudTag", true)
+	# Status line (BannerCard's SubLabel): DEPLOY / PLAN · B / DOWN · NEXT ROUND / NEED 1 SUPPLY.
+	var status: Label = panel.find_child("SubLabel", true, false) as Label
 	status.name = "OperatorStatus"
-	status.add_theme_font_size_override(&"font_size", 16)
-	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status.set_meta(&"important", true)
+	status.clip_text = false
+	status.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	var plate := StyleBoxFlat.new()
 	plate.bg_color = Color(0.05, 0.06, 0.07, 0.86)
-	plate.set_content_margin_all(2)
+	plate.set_corner_radius_all(4)
+	plate.content_margin_left = 4
+	plate.content_margin_right = 4
 	if state == &"deploy":
 		plate.bg_color = AMBER
 		status.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
@@ -526,22 +469,30 @@ func _make_operator_card(op: Dictionary) -> Control:
 		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
 	elif state == &"down":
 		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
-	else:
+	elif state != &"deploy":
 		status.add_theme_color_override(&"font_color", get_theme_color(&"friend", &"Hud"))
 	status.add_theme_stylebox_override(&"normal", plate)
 	status.visible = status.text != ""
-	var face: Control = panel.get_node("Face")
-	face.add_child(status)
-	# Under the OP hex and the name (they stay readable), over the art.
-	var art_node: Node = face.get_node_or_null("Art")
-	if art_node != null:
-		face.move_child(status, art_node.get_index() + 1)
+	# A short banner card (desktop 64 px): the name keeps the stat row; the status moves up into the
+	# plate row between the Supply plate and the dog tag (hidden when it can't fit: the red plate and
+	# the tooltip say it then).
+	var title_l: Label = panel.find_child("NameLabel", true, false) as Label
+	var shown: bool = status.visible
 	panel.sort_children.connect(func() -> void:
-		var h: float = status.get_combined_minimum_size().y
-		status.size = Vector2(face.size.x, h)
-		var art: Control = face.get_node_or_null("Art")
-		var art_bottom: float = art.position.y + art.size.y if art != null else face.size.y * 0.5
-		status.position = Vector2(0, maxf(0.0, art_bottom - h)))
+		var f: Control = panel.get_node("Face")
+		if f.size.y >= 72.0:
+			return
+		var mm: Dictionary = BannerView.metrics(minf(f.size.y, _metric_h if _metric_h > 0.0 else f.size.y))
+		var row_h: float = mm["badge"]
+		var th: float = title_l.get_combined_minimum_size().y
+		title_l.position.y = f.size.y - mm["pad"] - row_h + (row_h - th) * 0.5
+		var x0: float = plate_l.position.x + plate_l.get_combined_minimum_size().x + 4.0
+		var room: float = f.size.x - x0 - mm["plate"] - mm["pad"] - 4.0
+		var need: float = status.get_combined_minimum_size().x
+		status.visible = shown and need <= room
+		status.size = Vector2(need, status.get_combined_minimum_size().y)
+		var sh: float = status.get_combined_minimum_size().y
+		status.position = Vector2(x0 + (room - need) * 0.5, maxf(0.0, mm["pad"] + (mm["plate"] - sh) * 0.5)))
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
 	glow.name = "Glow"
@@ -694,46 +645,6 @@ func _number(text: String, big: bool) -> Label:
 	v.add_theme_font_size_override(&"font_size", 18 if big else 16)
 	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	return v
-
-
-## The face covers the card inside its border: art window on top, name, then the stat row.
-func _fit_face(panel: PanelContainer, face: Control, art: Control, hex: Control, title: Control, bottom: Control, art_h: float) -> void:
-	var sb: StyleBox = panel.get_theme_stylebox(&"panel")
-	var inset: float = 2.0
-	if sb is StyleBoxFlat:
-		inset = float((sb as StyleBoxFlat).border_width_left)
-	face.position = Vector2(inset, inset)
-	face.size = panel.size - Vector2(inset, inset) * 2.0
-	art.position = Vector2.ZERO
-	art.size = Vector2(face.size.x, art_h - inset)
-	if art.has_meta(&"strip"):
-		var back: Control = art.get_meta(&"strip")
-		back.position = Vector2.ZERO
-		back.size = art.size
-		var strip_h: float = roundf(face.size.x / BannerArt.BANNER_RATIO)
-		art.position = Vector2(0.0, art.size.y - strip_h)
-		art.size = Vector2(face.size.x, strip_h)
-	hex.position = Vector2(2, 2)
-	var pad: float = 4.0
-	var bottom_h: float = bottom.get_combined_minimum_size().y
-	bottom.position = Vector2(pad, face.size.y - bottom_h - 1.0)
-	bottom.size = Vector2(face.size.x - pad * 2.0, bottom_h)
-	var title_h: float = title.get_combined_minimum_size().y
-	var free_top: float = art.position.y + art.size.y
-	title.position = Vector2(pad, free_top + maxf(0.0, (bottom.position.y - free_top - title_h) * 0.5))
-	title.size = Vector2(face.size.x - pad * 2.0, title_h)
-
-
-## Bolt (tactic) or stake (Field) glyph in the hand card's bottom row.
-func _draw_type_glyph(c: Control, field: bool, col: Color) -> void:
-	var s: float = c.size.x
-	if field:
-		c.draw_line(Vector2(s * 0.5, s * 0.1), Vector2(s * 0.5, s * 0.95), col, 2.0)
-		c.draw_line(Vector2(s * 0.2, s * 0.35), Vector2(s * 0.8, s * 0.35), col, 2.0)
-		c.draw_line(Vector2(s * 0.28, s * 0.6), Vector2(s * 0.72, s * 0.6), col, 2.0)
-	else:
-		c.draw_colored_polygon(PackedVector2Array([Vector2(s * 0.58, 0), Vector2(s * 0.2, s * 0.56), Vector2(s * 0.46, s * 0.56),
-				Vector2(s * 0.36, s), Vector2(s * 0.8, s * 0.42), Vector2(s * 0.54, s * 0.42)]), col)
 
 
 func _label(text: String, variation: StringName, important: bool) -> Label:

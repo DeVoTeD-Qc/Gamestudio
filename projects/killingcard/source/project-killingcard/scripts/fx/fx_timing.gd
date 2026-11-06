@@ -19,6 +19,22 @@ const BASE: Dictionary = {
 	&"tracer_travel": 0.12,
 	&"tracer_fade": 0.16,
 	&"step_pause": 0.12,        # between First Shot and Main steps / zones
+	# kc-fight-ui: step-by-step firefight playback. The head (2026-11-06, after playing): "way too
+	# fast, I can't understand what happens", so x1 is slower than the §5 model: per beat the
+	# shooter lifts 0.25 s, the tracer flies 0.3 s, the damage number is held ~0.5 s, then a 0.6 s
+	# pause before the next beat; 0.8 s for each column banner.
+	&"fight_column": 0.8,       # "COLUMN A" banner; the column brightens, the others dim
+	&"fight_beat": 1.1,         # a beat's body: lift + tracer + damage numbers (minimum)
+	&"fight_beat_gap": 0.6,     # the pause after a beat, before the next one
+	&"fight_lift": 0.25,        # the shooter lifts before its tracer leaves
+	&"fight_tracer": 0.3,       # tracer travel inside a beat (the Pierce tracer continues after it)
+	&"fight_number": 1.1,       # damage numbers in the firefight (held ~0.5 s, then they fade)
+	&"fight_elim": 0.45,        # after an elimination stamp, before the next event
+	&"fight_advance_hold": 0.35, # the stamp is read before the line moves
+	&"fight_advance": 0.5,      # the line slides up after an elimination
+	&"fight_summary": 0.5,      # column summary before the next column
+	&"reveal_rival": 0.7,       # each rival card revealed at Reveal (one at a time)
+	&"reveal_own": 0.25,        # each of your own arrivals
 	&"hit_marker": 0.32,
 	&"damage_number": 0.75,
 	&"damage_rise": 26.0,

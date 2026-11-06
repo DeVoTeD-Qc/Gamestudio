@@ -25,6 +25,8 @@ var compact: bool = false
 const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
 var _codex: Control = null
+var _glossary_button: Button = null
+var _glossary: Control = null
 
 @onready var _title: Label = %PauseTitle
 @onready var _hint: Label = %PauseHint
@@ -70,6 +72,17 @@ func _ready() -> void:
 	_codex_button.add_to_group(&"tap_target")
 	_codex_button.pressed.connect(open_codex)
 	row.add_child(_codex_button)
+	# kc-ui4: GLOSSARY (every keyword, synergy icon and stat mark) beside CODEX.
+	_glossary_button = Button.new()
+	_glossary_button.name = "GlossaryButton"
+	_glossary_button.text = "GLOSSARY"
+	_glossary_button.theme_type_variation = &"HudButton"
+	_glossary_button.tooltip_text = "Every keyword, synergy icon and stat mark in plain words"
+	_glossary_button.custom_minimum_size = Vector2(150, 64)
+	_glossary_button.focus_mode = Control.FOCUS_ALL
+	_glossary_button.add_to_group(&"tap_target")
+	_glossary_button.pressed.connect(open_glossary)
+	row.add_child(_glossary_button)
 
 
 ## info: {context ("MATCH 1 OF 5 · ROUND 3"), hint (what QUIT does), can_forfeit,
@@ -95,6 +108,8 @@ func open(info: Dictionary = {}) -> void:
 func close() -> void:
 	if get_codex() != null:
 		_codex.close()
+	if get_glossary() != null:
+		_glossary.close()
 	hide()
 
 
@@ -118,8 +133,8 @@ func set_compact(value: bool) -> void:
 
 ## Esc: back out of the confirmation, else resume.
 func back() -> void:
-	if get_codex() != null:
-		return  # the codex handles Esc itself
+	if get_codex() != null or get_glossary() != null:
+		return  # the codex / glossary handles Esc itself
 	if _confirm.visible:
 		_show_main()
 	else:
@@ -140,6 +155,25 @@ func open_codex() -> Control:
 
 func get_codex() -> Control:
 	return _codex if _codex != null and is_instance_valid(_codex) else null
+
+
+## kc-ui4: the glossary over the sheet (and the match).
+func open_glossary() -> Control:
+	if _glossary != null and is_instance_valid(_glossary):
+		return _glossary
+	_glossary = (load("res://scripts/ui/codex/glossary.gd") as GDScript).call(&"open_over", self, &"")
+	_glossary.closed.connect(func() -> void:
+		_glossary = null
+		_glossary_button.grab_focus())
+	return _glossary
+
+
+func get_glossary() -> Control:
+	return _glossary if _glossary != null and is_instance_valid(_glossary) else null
+
+
+func get_glossary_button() -> Button:
+	return _glossary_button
 
 
 func get_codex_button() -> Button:

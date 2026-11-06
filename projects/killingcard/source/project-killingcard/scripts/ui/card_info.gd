@@ -19,9 +19,11 @@ const TYPE_WORDS: Dictionary = {
 }
 ## Keyword rules, worded for the inspector (core-rules.md section 1 and Rulings).
 const KEYWORD_RULES: Dictionary = {
-	&"first_shot": ["First Shot", "Fires in the First Shot step, before other units."],
+	&"first_shot": ["First Shot", "Fires first in its exchange; a partner it kills doesn't fire back."],
 	&"pick": ["Pick", "Shoots the enemy with the lowest current Armor (ties: front-most)."],
 	&"flank": ["Flank", "Shoots the back-most enemy in the line."],
+	# kc-fight-ui (firefight-order.md §3; head's O3: the LMG units).
+	&"pierce": ["Pierce", "Damage beyond what its target needs carries on to the next enemy behind it (that unit's Cover applies)."],
 	&"cover": ["Cover %d", "Each hit on this unit deals %d less damage (minimum 0)."],
 	&"suppress": ["Suppress", "At the start of the firefight, the enemy point man here gets -2 Firepower."],
 	&"patch": ["Patch %d", "After the firefight, restores %d Armor to the most damaged other friendly unit here."],
@@ -36,8 +38,10 @@ const KEYWORD_RULES: Dictionary = {
 
 
 ## Keyword / trigger ids that have an icon in IconSheet (the full CardView shows these).
+## kc-fight-ui: Pierce has no sheet icon; it is drawn (SynergyGlyphs.draw_pierce_icon, an arrow
+## through a chevron pointing down the enemy column) wherever keyword glyphs are drawn.
 const ICON_KEYWORDS: Array[StringName] = [
-	&"first_shot", &"pick", &"flank", &"cover", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down",
+	&"first_shot", &"pick", &"flank", &"pierce", &"cover", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down",
 ]
 
 
@@ -82,7 +86,7 @@ static func short_text(card: CardData) -> String:
 	if card.is_unit():
 		var names: PackedStringArray = []
 		for k: Dictionary in keywords(card):
-			if k["id"] in [&"first_shot", &"pick", &"flank", &"cover", &"suppress", &"patch", &"holder"]:
+			if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"cover", &"suppress", &"patch", &"holder"]:
 				names.append(k["name"])
 		if not names.is_empty():
 			return ", ".join(names)
@@ -93,7 +97,7 @@ static func short_text(card: CardData) -> String:
 static func view_dict(card: CardData, side: String = "friend") -> Dictionary:
 	var kw: Array = []
 	for k: Dictionary in keywords(card):
-		if k["id"] in [&"first_shot", &"pick", &"flank", &"suppress", &"holder", &"on_deploy", &"on_down"]:
+		if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"suppress", &"holder", &"on_deploy", &"on_down"]:
 			kw.append(String(k["id"]))
 		elif k["id"] in [&"cover", &"patch"]:
 			kw.append({"id": String(k["id"]), "value": k["value"]})
@@ -109,7 +113,7 @@ static func view_dict(card: CardData, side: String = "friend") -> Dictionary:
 static func keywords(card: CardData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if card.is_unit():
-		for id: StringName in [&"first_shot", &"pick", &"flank"]:
+		for id: StringName in [&"first_shot", &"pick", &"flank", &"pierce"]:
 			if card.get(id):
 				out.append(_entry(id))
 		if card.cover > 0:
@@ -155,7 +159,7 @@ static func operator_view_dict(op: RulesUnit, display_name: String) -> Dictionar
 
 static func operator_keywords(op: RulesUnit) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for id: StringName in [&"first_shot", &"pick", &"flank"]:
+	for id: StringName in [&"first_shot", &"pick", &"flank", &"pierce"]:
 		if op.get(id):
 			out.append(_entry(id))
 	if op.cover > 0:
@@ -187,3 +191,26 @@ static func _entry(id: StringName, value: int = 0) -> Dictionary:
 		title = title % value
 		text = text % value
 	return {"id": id, "name": title, "text": text, "value": value}
+
+
+## kc-ui4 GLOSSARY: the plain-words entries that are not card keywords (KEYWORD_RULES holds those;
+## SynergyRules holds the neighbor keywords, traits and levels). [name, text]. The Codex glossary
+## (scripts/ui/codex/glossary.gd) reads these three tables only, so the wording lives in one place.
+const GLOSSARY_EXTRA: Dictionary = {
+	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots. The number on the banner is the RESULT now (range, effects, links and sets included); the inspector lists the sum."],
+	&"armor": ["Armor", "Health. Each hit takes Armor away; at 0 the unit is eliminated. Amber = damaged."],
+	&"cover_stat": ["Cover (chip)", "The Cover this unit has now (printed + effects + links + sets): each hit on it deals that much less."],
+	&"supply": ["Supply", "What you spend in Deploy. The hex on a card is its cost; you get more Supply each round."],
+	&"stat_colours": ["Green up / red down", "A green number with an up triangle is raised by something right now; red with a down triangle is lowered. White = the printed value."],
+	&"field": ["Field / Overrun", "A Field stays in its column and keeps working. Overrun: at the end of each round, if the enemy controls this column, the Field is destroyed (hidden traps are exempt)."],
+	&"control": ["Column control", "After the firefight, a side with units left in a column and the rival with none controls it. Both sides there: EVEN (contested), unless only one side has a Holder."],
+	&"objective": ["Objective tile", "The middle row: both sides' Firepower here, who controls it and the column's range (close / mid / long)."],
+	&"range": ["Range", "Each column has a range. Weapon classes fight better at some ranges: SMG +1 close, Shotgun +2 close / -1 long, AR +1 mid, Sniper -1 close / +2 long."],
+	&"operator": ["Operator", "Your hero card (brass frame): never drawn or discarded. It costs Supply to place and comes back after it goes down."],
+	&"killstreak": ["Killstreak", "Eliminations build your streak; at its number a killstreak is ready (amber glow) and you tap it to call it in."],
+	&"incoming": ["Incoming", "A rival card played face-down this Deploy: it lands here at Reveal."],
+	&"link_tick": ["Link tick", "A short glowing bar between two of your banners: a neighbor keyword link is on between them."],
+	&"set_callout": ["Set callout", "When a trait set switches on (2 or 3 in play) its bonus is announced beside the trait rail, then folds into it. A red crack: a set switched off."],
+	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play."],
+	&"level_band": ["Level band", "The camo strip on a card shows its level: Recruit plain, Trained Gilded, Veteran Forged, Elite Priceless."],
+}

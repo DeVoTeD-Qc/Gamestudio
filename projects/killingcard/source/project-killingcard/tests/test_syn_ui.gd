@@ -184,7 +184,9 @@ func test_operator_card_is_its_own_card() -> void:
 		assert_true(bool(card.get_meta(&"mini", false)), "%s mini card on the board" % label)
 		assert_eq(card.get_index(), 0, "%s pinned first" % label)
 		var full: Vector2 = (hand.get_cards()[0] as Control).size
-		assert_true(card.size.y <= full.y * 0.55 + 6.0 and card.size.y >= 64.0 - 0.5, "%s half height (%s vs %s)" % [label, card.size, full])
+		# kc-ui4: banner hand cards are short already; the status card folds to half only from 128 px.
+		var want_h: float = full.y if full.y < 128.0 else maxf(64.0, roundf(full.y * 0.5))
+		assert_true(absf(card.size.y - want_h) <= 0.5, "%s mini height (%s vs %s)" % [label, card.size, full])
 		var k: float = Layout.points_per_px(screen)
 		assert_true(card.size.y * k >= 44.0 - 0.1, "%s still a 44 pt tap target" % label)
 		var below: Control = hand.get_cards()[hand.columns - 1] as Control if hand.get_cards().size() >= hand.columns else null

@@ -7,7 +7,8 @@
 #   these, saves it and emits EventBus signals; screens (p11) read it through RunState.
 #
 #   Flow (phase):
-#     loadout  -> pick killstreaks (set_killstreaks), then begin()
+#     loadout  -> pick killstreaks (set_killstreaks), kc-ui4: optionally the starting Operator
+#                 (set_primary, one of operator_options), then begin()
 #     match    -> build the match (create_match / player_setup / enemy_setup), play it,
 #                 then record_match(m) or record_result(result)
 #     rewards  -> pending offers in order: Supply Drop (after a win), weapon level
@@ -24,6 +25,14 @@
 #   (retire_card) and Regroup (a free Retire) after a loss. Retiring a Recruit while a second
 #   Recruit of that chassis is in the deck trains the twin ("two become one"). Retire never
 #   takes the deck below RunConfig.deck_floor. Retired cards go to the Honor Roll (honor_roll).
+#   kc-art-traits (art-traits.md, approved T1-T4): every copy also has a trait choice and an art
+#   (deck_traits / deck_arts, parallel to deck). The art gives the trait (ArtTraits), chosen from the
+#   chassis' options when the copy trains: Supply Drop offers carry a trait + art per card (slot 1
+#   on the main trait, slots 2-3 home 60% / alternate 40%), Promotion and twin training take a trait
+#   (choose_offer(i, trait) / retire_card(i, twin_trait); default = the copy's pre-selected art),
+#   Re-issue (reissue_card) changes a Trained copy's trait as a Supply Drop option next to Retire, or on
+#   Regroup, and same-trait art swaps are free (set_copy_art). Codex EQUIP (equipped_arts, from
+#   Settings via RunState) dresses the starter's Recruits and pre-selects new copies' arts.
 #   Results: a loss costs 1 ticket, a draw costs none and gives no Supply Drop
 #   (Ruling 12). After any result the run goes on to the next match (no replays);
 #   it ends at 0 tickets or after the Rival (the last match), with no offers then.
@@ -38,8 +47,9 @@ class_name RunProgress
 extends RefCounted
 
 ## 2 = kc-syn (deck_levels, doctrine, honor roll, synergy offers). Version 1 saves still load
-## (every copy Trained, as they were).
-const SAVE_VERSION: int = 2
+## (every copy Trained, as they were). 3 = kc-art-traits (deck_traits, deck_arts, offer traits /
+## arts, reissue); version 2 saves load with every copy on its default trait and art.
+const SAVE_VERSION: int = 3
 const OLDEST_SAVE_VERSION: int = 1
 
 const PHASE_LOADOUT: StringName = &"loadout"
@@ -71,6 +81,15 @@ var weapon_level: int = 0
 var deck: Array[StringName] = []
 ## kc-syn: level of each copy, parallel to `deck` (SynergyRules.LEVEL_*).
 var deck_levels: Array[int] = []
+## kc-art-traits: each copy's trait choice, parallel to `deck` (a Recruit's = the trait it will
+## train into, pre-selected from its art; &"" = a plain art). The rules apply level and options.
+var deck_traits: Array[StringName] = []
+## kc-art-traits: each copy's art id, parallel to `deck` (display; see ArtTraits for the id forms).
+var deck_arts: Array[StringName] = []
+## kc-art-traits: Codex EQUIP per chassis (chassis id -> art id), from Settings (not saved here).
+var equipped_arts: Dictionary = {}
+## Odds that a Supply Drop slot 2-3 card comes in an alternate option's art (§2.2: 60 / 40).
+const ALT_OFFER_CHANCE: float = 0.4
 ## kc-syn Doctrine trait of this run (&"" until picked).
 var doctrine: StringName = &""
 ## kc-syn: trait of the last card taken from a Supply Drop (main-trait tie-break).
@@ -115,6 +134,8 @@ static func create(p_config: RunConfig, p_seed: int) -> RunProgress:
 		if card != null:
 			r.deck.append(card.id)
 			r.deck_levels.append(levels[i])
+			r.deck_traits.append(card.card_trait)
+			r.deck_arts.append(ArtTraits.default_art(card, card.card_trait))
 	r.primary = _id_of(p_config.starter_primary)
 	r.secondary = _id_of(p_config.starter_secondary)
 	r.lethal = _id_of(p_config.starter_lethal)
@@ -151,6 +172,38 @@ func set_killstreaks(ids: Array) -> String:
 			return "'%s' is not in the killstreak pool" % id
 		picks.append(id)
 	killstreaks = picks
+	return ""
+
+
+## kc-ui4 (head: "maybe choose a starting operator/gun"): the Primary weapons a run can start with
+## (each defines the Operator): the config's starter Primary first, then every other Primary in
+## CardDB (when the autoload is there), by name. The rival's side is not touched.
+static func operator_options(cfg: RunConfig) -> Array[LoadoutItem]:
+	var out: Array[LoadoutItem] = []
+	if cfg != null and cfg.starter_primary != null:
+		out.append(cfg.starter_primary)
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var db: Node = tree.root.get_node_or_null(^"/root/CardDB") if tree != null else null
+	if db == null:
+		return out
+	var more: Array[LoadoutItem] = db.loadout_items_by_slot(DataEnums.LoadoutSlot.PRIMARY)
+	more.sort_custom(func(a: LoadoutItem, b: LoadoutItem) -> bool: return a.display_name < b.display_name)
+	for item: LoadoutItem in more:
+		if item != null and not out.any(func(o: LoadoutItem) -> bool: return o.id == item.id):
+			out.append(item)
+	return out
+
+
+## kc-ui4: start the run with another Operator (a Primary from operator_options). Only before the
+## first match; the Primary's attachments are earned during the run as before. "" or the reason.
+func set_primary(id: StringName) -> String:
+	if phase != PHASE_LOADOUT:
+		return "the Operator is picked before the first match"
+	var item: LoadoutItem = _index.get(id) as LoadoutItem
+	if item == null or item.slot != DataEnums.LoadoutSlot.PRIMARY:
+		return "'%s' is not an Operator you can start with" % id
+	primary = id
+	attachments.clear()
 	return ""
 
 
@@ -200,6 +253,8 @@ func player_setup() -> SideSetup:
 	for i: int in deck.size():
 		s.deck.append(_index[deck[i]] as CardData)
 		s.deck_levels.append(level_of(i))
+		s.deck_traits.append(trait_choice(i))
+		s.deck_arts.append(art_of(i))
 	s.doctrine = doctrine
 	s.primary = _index.get(primary) as LoadoutItem
 	s.secondary = _index.get(secondary) as LoadoutItem
@@ -304,10 +359,13 @@ func _queue_offers(n: int, won: bool) -> void:
 		_add_offer(RewardOffers.KIND_SUPPLY_DROP, n, cards)
 		if not pending_offers.is_empty() and pending_offers.back()["kind"] == RewardOffers.KIND_SUPPLY_DROP:
 			var drop: Dictionary = pending_offers.back()
-			if main != &"" and not cards.is_empty() and (_index.get(cards[0]) as CardData).card_trait == main:
+			var on: bool = main != &"" and not cards.is_empty() and (_index.get(cards[0]) as CardData).can_carry(main)
+			if on:
 				drop["on_trait"] = main
+			_dress_drop(drop, main if on else &"", _rng("supply_art", n))
 			if syn:
 				drop["retire"] = true
+				drop["reissue"] = true
 	if syn and n in config.doctrine_after_matches and doctrine == &"":
 		_add_offer(RewardOffers.KIND_DOCTRINE, n,
 				RewardOffers.doctrine(_doctrine_best(), config.doctrine_choices, _rng("doctrine", n)))
@@ -321,6 +379,30 @@ func _queue_offers(n: int, won: bool) -> void:
 		_add_offer(RewardOffers.KIND_PERK, n, RewardOffers.perks(config, perks, _rng("perk", n)))
 
 
+## kc-art-traits §2.2: a trait and an art per Supply Drop card. Slot 1 on `on_trait` (when set),
+## the others in the home option (60%) or a random alternate (40%); arts = the option's default
+## (the equipped art when it gives that trait).
+func _dress_drop(drop: Dictionary, on_trait: StringName, rng: RandomNumberGenerator) -> void:
+	var traits: Array[StringName] = []
+	var arts: Array[StringName] = []
+	var opts: Array = drop["options"]
+	for k: int in opts.size():
+		var c: CardData = _index.get(opts[k]) as CardData
+		var t: StringName = c.card_trait if c != null else &""
+		var roll: float = rng.randf()
+		if c != null and c.has_trait_choice():
+			if k == 0 and on_trait != &"":
+				t = on_trait
+			elif roll < ALT_OFFER_CHANCE:
+				var alts: Array[StringName] = c.trait_choices()
+				alts.erase(c.card_trait)
+				t = alts[rng.randi() % alts.size()]
+		traits.append(t)
+		arts.append(ArtTraits.default_art(c, t, _equipped(c)))
+	drop["traits"] = traits
+	drop["arts"] = arts
+
+
 func _add_offer(kind: StringName, n: int, options: Array[StringName]) -> void:
 	if not options.is_empty():
 		pending_offers.append({"kind": kind, "match": n, "options": options})
@@ -329,7 +411,10 @@ func _add_offer(kind: StringName, n: int, options: Array[StringName]) -> void:
 ## Promotion / Regroup: the options depend on the deck, so they are (re)built when the offer
 ## becomes the current one (_refresh_current) as well.
 func _add_synergy_offer(kind: StringName, n: int) -> void:
-	var offer: Dictionary = {"kind": kind, "match": n, "options": [] as Array[StringName], "levels": [] as Array[int]}
+	var offer: Dictionary = {"kind": kind, "match": n, "options": [] as Array[StringName], "levels": [] as Array[int],
+			"traits": [] as Array[StringName]}
+	if kind == RewardOffers.KIND_REGROUP:
+		offer["reissue"] = true
 	_fill_copy_options(offer)
 	if not (offer["options"] as Array).is_empty():
 		pending_offers.append(offer)
@@ -339,11 +424,14 @@ func _fill_copy_options(offer: Dictionary) -> void:
 	var list: Array[Dictionary] = promotion_options() if offer["kind"] == RewardOffers.KIND_PROMOTION else retire_options()
 	var ids: Array[StringName] = []
 	var levels: Array[int] = []
+	var traits: Array[StringName] = []
 	for o: Dictionary in list:
 		ids.append(o["id"])
 		levels.append(int(o["level"]))
+		traits.append(StringName(o["trait_choice"]))
 	offer["options"] = ids
 	offer["levels"] = levels
+	offer["traits"] = traits
 
 
 func _last_result() -> StringName:
@@ -359,8 +447,10 @@ func current_offer() -> Dictionary:
 	return pending_offers[0] if not pending_offers.is_empty() else {}
 
 
-## Takes option `index` of the current offer. Returns "" or the reason.
-func choose_offer(index: int) -> String:
+## Takes option `index` of the current offer. Returns "" or the reason. kc-art-traits: for a
+## Promotion that trains a Recruit, `trait_pick` is the trait it trains into (one of
+## train_choices(); TRAIT_DEFAULT = its pre-selected art's trait). Other offers ignore it.
+func choose_offer(index: int, trait_pick: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 	if phase != PHASE_REWARDS or pending_offers.is_empty():
 		return "no offer to choose from"
 	var offer: Dictionary = pending_offers[0]
@@ -370,9 +460,13 @@ func choose_offer(index: int) -> String:
 	var id: StringName = options[index]
 	match offer["kind"]:
 		RewardOffers.KIND_SUPPLY_DROP:
-			deck.append(id)
-			deck_levels.append(SynergyRules.LEVEL_TRAINED)  # reward cards come Trained
-			var t: StringName = (_index.get(id) as CardData).card_trait
+			var c: CardData = _index.get(id) as CardData
+			var traits: Array = offer.get("traits", [])
+			var arts: Array = offer.get("arts", [])
+			var pick_t: StringName = StringName(traits[index]) if index < traits.size() else c.card_trait
+			var pick_a: StringName = StringName(arts[index]) if index < arts.size() else ArtTraits.default_art(c, pick_t, _equipped(c))
+			_append_copy(id, SynergyRules.LEVEL_TRAINED, pick_t, pick_a)  # reward cards come Trained
+			var t: StringName = copy_trait(deck.size() - 1)
 			if t != &"":
 				last_pick_trait = t
 		RewardOffers.KIND_ATTACHMENT:
@@ -382,12 +476,17 @@ func choose_offer(index: int) -> String:
 		RewardOffers.KIND_DOCTRINE:
 			doctrine = id
 		RewardOffers.KIND_PROMOTION:
-			var at: int = _find_copy(id, int(offer["levels"][index]))
+			var at: int = _find_copy(id, int(offer["levels"][index]), _offer_trait(offer, index))
 			if at < 0:
 				return "that copy is no longer in the deck"
-			deck_levels[at] = mini(SynergyRules.LEVEL_MAX, level_of(at) + 1)
+			if level_of(at) == SynergyRules.LEVEL_RECRUIT:
+				var err: String = _train(at, trait_pick)
+				if err != "":
+					return err
+			else:
+				deck_levels[at] = mini(SynergyRules.LEVEL_MAX, level_of(at) + 1)
 		RewardOffers.KIND_REGROUP:
-			var err: String = _retire_copy(id, int(offer["levels"][index]))
+			var err: String = _retire_copy(id, int(offer["levels"][index]), _offer_trait(offer, index), trait_pick)
 			if err != "":
 				return err
 	_pop_offer()
@@ -396,7 +495,8 @@ func choose_offer(index: int) -> String:
 
 ## kc-syn §5.4: Retire option `index` of retire_options() as this offer's choice: the 4th option
 ## of a Supply Drop (instead of a card) or the Regroup offer. Returns "" or the reason.
-func retire_card(index: int) -> String:
+## kc-art-traits: `twin_trait` = the trait the trained twin takes (TRAIT_DEFAULT = its pre-selected art).
+func retire_card(index: int, twin_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 	if phase != PHASE_REWARDS or pending_offers.is_empty():
 		return "no offer to choose from"
 	var offer: Dictionary = pending_offers[0]
@@ -406,10 +506,52 @@ func retire_card(index: int) -> String:
 	var list: Array[Dictionary] = retire_options()
 	if index < 0 or index >= list.size():
 		return "no Retire option %d" % index
-	var err: String = _retire_copy(list[index]["id"], int(list[index]["level"]))
+	var err: String = _retire_copy(list[index]["id"], int(list[index]["level"]), StringName(list[index]["trait_choice"]), twin_trait)
 	if err != "":
 		return err
 	_pop_offer()
+	return ""
+
+
+## kc-art-traits §2.2 (head T2): Re-issue option `index` of reissue_options() into trait `new_trait`
+## (one of that row's `options`) as this offer's choice: the Supply Drop's Re-issue option (next to
+## Retire) or the Regroup offer. The copy keeps its level; it wears the new option's default art.
+func reissue_card(index: int, new_trait: StringName) -> String:
+	if phase != PHASE_REWARDS or pending_offers.is_empty():
+		return "no offer to choose from"
+	var offer: Dictionary = pending_offers[0]
+	if not offer.get("reissue", false):
+		return "this offer has no Re-issue option"
+	var list: Array[Dictionary] = reissue_options()
+	if index < 0 or index >= list.size():
+		return "no Re-issue option %d" % index
+	var row: Dictionary = list[index]
+	var at: int = int(row["index"])
+	var c: CardData = _card(at)
+	if new_trait == trait_choice(at) or not c.can_carry(new_trait):
+		return "%s can't be re-issued as %s" % [c.display_name, ArtTraits.trait_name(new_trait)]
+	deck_traits[at] = new_trait
+	deck_arts[at] = ArtTraits.default_art(c, new_trait, _equipped(c))
+	_pop_offer()
+	return ""
+
+
+## kc-art-traits §2.2: swap copy i's art. Free at any time when the art keeps the copy's trait (a
+## Trained copy) or for a Recruit (its art pre-selects the trait it trains into). "" or the reason.
+func set_copy_art(i: int, art: StringName) -> String:
+	if i < 0 or i >= deck.size():
+		return "no deck copy %d" % i
+	var c: CardData = _card(i)
+	if not ArtTraits.belongs(art, c):
+		return "'%s' is not an art of %s" % [art, c.display_name]
+	var t: StringName = ArtTraits.trait_of(art, c)
+	if c.has_trait_choice():
+		if level_of(i) >= SynergyRules.LEVEL_TRAINED:
+			if t != trait_choice(i):
+				return "that art gives %s: change the trait with Re-issue" % ArtTraits.trait_name(t)
+		else:
+			deck_traits[i] = t if c.can_carry(t) else c.card_trait
+	deck_arts[i] = art
 	return ""
 
 
@@ -455,14 +597,172 @@ func _card(i: int) -> CardData:
 	return _index.get(deck[i]) as CardData
 
 
-## Trained copies per trait in the deck (units and Fields): {trait: n}.
+## kc-art-traits: copy i's trait choice (a Recruit's = the one it will train into). Default trait
+## when unknown.
+func trait_choice(i: int) -> StringName:
+	if i >= 0 and i < deck_traits.size():
+		return deck_traits[i]
+	var c: CardData = _card(i) if i >= 0 and i < deck.size() else null
+	return c.card_trait if c != null else &""
+
+
+## kc-art-traits: the trait copy i carries in a match (none on a Recruit; plain if not an option).
+func copy_trait(i: int) -> StringName:
+	return SynergyRules.trait_at(_card(i), level_of(i), trait_choice(i))
+
+
+## kc-art-traits: copy i's art id. A stored art that is no longer available (the licensed folder is
+## absent) shows the option's default art instead; the trait never changes with it.
+func art_of(i: int) -> StringName:
+	var c: CardData = _card(i)
+	var a: StringName = deck_arts[i] if i >= 0 and i < deck_arts.size() else &""
+	if a != &"" and ArtTraits.belongs(a, c):
+		return a
+	return ArtTraits.default_art(c, trait_choice(i) if c != null and c.can_carry(trait_choice(i)) else (c.card_trait if c != null else &""), _equipped(c))
+
+
+## kc-art-traits: Codex EQUIP (chassis id -> art id, Settings.equipped_arts). The starter's Recruits
+## still in the deck put the equipped art on (pre-selecting the trait they train into); Trained
+## copies keep theirs. New copies are pre-selected in the equipped art when it gives their trait.
+func set_equipped_arts(equipped: Dictionary) -> void:
+	equipped_arts = {}
+	for k: Variant in equipped:
+		equipped_arts[StringName(String(k))] = StringName(String(equipped[k]))
+	for i: int in deck.size():
+		var c: CardData = _card(i)
+		var eq: StringName = _equipped(c)
+		if eq != &"" and level_of(i) == SynergyRules.LEVEL_RECRUIT:
+			set_copy_art(i, eq)
+
+
+func _equipped(c: CardData) -> StringName:
+	if c == null:
+		return &""
+	var eq: StringName = StringName(String(equipped_arts.get(c.id, equipped_arts.get(String(c.id), ""))))
+	return eq if ArtTraits.belongs(eq, c) else &""
+
+
+func _append_copy(id: StringName, level: int, t: StringName, art: StringName) -> void:
+	deck.append(id)
+	deck_levels.append(level)
+	deck_traits.append(t)
+	deck_arts.append(art)
+
+
+func _remove_copy(at: int) -> void:
+	deck.remove_at(at)
+	deck_levels.remove_at(at)
+	if at < deck_traits.size():
+		deck_traits.remove_at(at)
+	if at < deck_arts.size():
+		deck_arts.remove_at(at)
+
+
+## Trains Recruit copy i (Recruit -> Trained) into `t` (TRAIT_DEFAULT = its pre-selected art's
+## trait). The art stays when it gives that trait, else the option's default art. "" or the reason.
+func _train(i: int, t: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
+	var c: CardData = _card(i)
+	var pick: StringName = trait_choice(i) if t == SynergyRules.TRAIT_DEFAULT else t
+	if c.has_trait_choice():
+		if not c.can_carry(pick):
+			return "%s can't train as %s" % [c.display_name, ArtTraits.trait_name(pick)]
+		deck_traits[i] = pick
+		if ArtTraits.trait_of(art_of(i), c) != pick:
+			deck_arts[i] = ArtTraits.default_art(c, pick, _equipped(c))
+	deck_levels[i] = SynergyRules.LEVEL_TRAINED
+	return ""
+
+
+func _offer_trait(offer: Dictionary, index: int) -> StringName:
+	var traits: Array = offer.get("traits", [])
+	return StringName(traits[index]) if index < traits.size() else SynergyRules.TRAIT_DEFAULT
+
+
+## UI hook (Promotion / twin training picker, §2.2): the options deck copy i can train into, each
+## {trait, name, art (pre-selected art of that option), subname, preselected: bool, count_from,
+## count_to (Trained copies of that trait now -> after)}. One row for printed cards.
+func train_choices(i: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if i < 0 or i >= deck.size():
+		return out
+	var c: CardData = _card(i)
+	var counts: Dictionary = trait_counts()
+	var pre: StringName = trait_choice(i) if c.can_carry(trait_choice(i)) else c.card_trait
+	var choices: Array[StringName] = c.trait_choices() if c.has_trait_choice() else ([c.card_trait] as Array[StringName])
+	for t: StringName in choices:
+		var art: StringName = art_of(i) if t == pre and ArtTraits.trait_of(art_of(i), c) == t else ArtTraits.default_art(c, t, _equipped(c))
+		var now: int = int(counts.get(t, 0)) if t != &"" else 0
+		out.append({"trait": t, "name": ArtTraits.trait_name(t), "art": art, "subname": ArtTraits.subname(art),
+				"preselected": t == pre, "count_from": now, "count_to": now + (1 if t != &"" else 0)})
+	return out
+
+
+## UI hook: the arts deck copy i may swap to for free (`same`: same trait, or any art for a
+## Recruit / printed card) and the ones that need a Re-issue (`other`, greyed: "change trait with
+## Re-issue"). {same: Array[StringName], other: Array[StringName]}.
+func art_choices(i: int) -> Dictionary:
+	var same: Array[StringName] = []
+	var other: Array[StringName] = []
+	if i < 0 or i >= deck.size():
+		return {"same": same, "other": other}
+	var c: CardData = _card(i)
+	var locked: bool = c.has_trait_choice() and level_of(i) >= SynergyRules.LEVEL_TRAINED
+	for a: StringName in ArtTraits.arts_for(c):
+		if not locked or ArtTraits.trait_of(a, c) == trait_choice(i):
+			same.append(a)
+		else:
+			other.append(a)
+	return {"same": same, "other": other}
+
+
+## Re-issue choices (§2.2), one per design, level and trait: Trained (or better) copies of chassis
+## with more than one option. Each: {index (first copy), id, level, trait, art, subname, options:
+## [{trait, name, art}] (the other traits it can take)}. Recruits can't be re-issued (they choose
+## when they train).
+func reissue_options() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var seen: Dictionary = {}
+	for i: int in deck.size():
+		var c: CardData = _card(i)
+		var lv: int = level_of(i)
+		if c == null or lv < SynergyRules.LEVEL_TRAINED or not c.has_trait_choice():
+			continue
+		var key: String = "%s@%d@%s" % [deck[i], lv, trait_choice(i)]
+		if seen.has(key):
+			continue
+		seen[key] = true
+		var opts: Array[Dictionary] = []
+		for t: StringName in c.trait_choices():
+			if t != trait_choice(i):
+				var a: StringName = ArtTraits.default_art(c, t, _equipped(c))
+				opts.append({"trait": t, "name": ArtTraits.trait_name(t), "art": a})
+		out.append({"index": i, "id": deck[i], "level": lv, "trait": trait_choice(i), "art": art_of(i),
+				"subname": ArtTraits.subname(art_of(i)), "options": opts})
+	return out
+
+
+## UI hook: every trait option of a card design with its arts ({trait, name, family, family_name,
+## default_art, arts}, ArtTraits.options), the equipped art pre-selected.
+func trait_options_of(id: StringName) -> Array[Dictionary]:
+	var c: CardData = _index.get(id) as CardData
+	return ArtTraits.options(c, _equipped(c)) if c != null else [] as Array[Dictionary]
+
+
+## Trained copies per trait in the deck (units and Fields): {trait: n}. kc-art-traits: per copy
+## (two Marksmen can count for different traits). trained_only = false also counts the trait each
+## Recruit is pre-selected to train into.
 func trait_counts(trained_only: bool = true) -> Dictionary:
 	var counts: Dictionary = {}
 	for i: int in deck.size():
 		var c: CardData = _card(i)
-		if c == null or c.card_trait == &"" or (trained_only and level_of(i) < SynergyRules.LEVEL_TRAINED):
+		if c == null:
 			continue
-		counts[c.card_trait] = int(counts.get(c.card_trait, 0)) + 1
+		var t: StringName = copy_trait(i)
+		if t == &"" and not trained_only and level_of(i) == SynergyRules.LEVEL_RECRUIT:
+			t = SynergyRules.trait_at(c, SynergyRules.LEVEL_TRAINED, trait_choice(i))
+		if t == &"":
+			continue
+		counts[t] = int(counts.get(t, 0)) + 1
 	return counts
 
 
@@ -508,7 +808,7 @@ func engine_summary() -> Dictionary:
 		var c: CardData = _card(i)
 		if c == null:
 			continue
-		if level_of(i) == SynergyRules.LEVEL_RECRUIT and (c.neighbor_keyword != &"" or c.card_trait != &""):
+		if level_of(i) == SynergyRules.LEVEL_RECRUIT and (c.neighbor_keyword != &"" or not c.trait_choices().is_empty()):
 			recruits += 1
 		var kw: StringName = SynergyRules.keyword_at(c, level_of(i))
 		if kw != &"":
@@ -517,15 +817,20 @@ func engine_summary() -> Dictionary:
 			"doctrine": doctrine, "deck_size": deck.size(), "floor": config.deck_floor}
 
 
-## One row per deck copy: {index, id, level, level_name, band, keyword, trait}.
+## One row per deck copy: {index, id, level, level_name, band, keyword, trait (what it carries in
+## a match; none on Recruits), trait_choice (its art's trait; a Recruit trains into it by default),
+## art, subname, trait_options (every option, default first; "Trains as" for Recruits),
+## can_reissue}.
 func deck_view() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for i: int in deck.size():
 		var c: CardData = _card(i)
 		var lv: int = level_of(i)
+		var art: StringName = art_of(i)
 		out.append({"index": i, "id": deck[i], "level": lv, "level_name": SynergyRules.LEVEL_NAMES[lv],
 				"band": SynergyRules.LEVEL_BANDS[lv], "keyword": SynergyRules.keyword_at(c, lv),
-				"trait": SynergyRules.trait_at(c, lv)})
+				"trait": copy_trait(i), "trait_choice": trait_choice(i), "art": art, "subname": ArtTraits.subname(art),
+				"trait_options": c.trait_choices(), "can_reissue": lv >= SynergyRules.LEVEL_TRAINED and c.has_trait_choice()})
 	return out
 
 
@@ -544,14 +849,14 @@ func retire_options() -> Array[Dictionary]:
 	var seen: Dictionary = {}
 	var groups: Array = [[], [], []]
 	for i: int in deck.size():
-		var key: String = "%s@%d" % [deck[i], level_of(i)]
+		var key: String = _copy_key(i)
 		if seen.has(key):
 			continue
 		seen[key] = true
 		var c: CardData = _card(i)
 		var lv: int = level_of(i)
-		var row: Dictionary = {"index": i, "id": deck[i], "level": lv, "cost": c.cost, "trait": c.card_trait,
-				"twin_index": _twin_of(i)}
+		var row: Dictionary = {"index": i, "id": deck[i], "level": lv, "cost": c.cost, "trait": copy_trait(i),
+				"trait_choice": trait_choice(i), "art": art_of(i), "twin_index": _twin_of(i)}
 		groups[0 if lv == SynergyRules.LEVEL_RECRUIT else (1 if c.cost <= 1 else 2)].append(row)
 	for g: Array in groups:
 		out.append_array(g)
@@ -571,22 +876,33 @@ func promotion_options() -> Array[Dictionary]:
 			continue
 		if c.is_field() and (lv >= SynergyRules.LEVEL_TRAINED or c.card_trait == &""):
 			continue
-		var key: String = "%s@%d" % [deck[i], lv]
+		var key: String = _copy_key(i)
 		if seen.has(key):
 			continue
 		seen[key] = true
-		groups[mini(lv, 2)].append({"index": i, "id": deck[i], "level": lv, "next_level": lv + 1})
+		groups[mini(lv, 2)].append({"index": i, "id": deck[i], "level": lv, "next_level": lv + 1,
+				"trait": copy_trait(i), "trait_choice": trait_choice(i), "art": art_of(i),
+				"trains": lv == SynergyRules.LEVEL_RECRUIT and c.has_trait_choice()})
 	var out: Array[Dictionary] = []
 	for g: Array in groups:
 		out.append_array(g)
 	return out
 
 
+## Grouping key of copy i in the Retire / Promotion lists: design and level, plus the trait for
+## Trained copies of chassis with options (two Marksmen with different traits are two choices).
+func _copy_key(i: int) -> String:
+	var c: CardData = _card(i)
+	if level_of(i) >= SynergyRules.LEVEL_TRAINED and c != null and c.has_trait_choice():
+		return "%s@%d@%s" % [deck[i], level_of(i), trait_choice(i)]
+	return "%s@%d" % [deck[i], level_of(i)]
+
+
 ## Another Recruit copy of the same chassis that retiring copy i would train ("two become one"),
 ## or -1. Only for chassis that have something to train (a neighbor keyword or a trait).
 func _twin_of(i: int) -> int:
 	var c: CardData = _card(i)
-	if level_of(i) != SynergyRules.LEVEL_RECRUIT or c == null or (c.neighbor_keyword == &"" and c.card_trait == &""):
+	if level_of(i) != SynergyRules.LEVEL_RECRUIT or c == null or (c.neighbor_keyword == &"" and c.trait_choices().is_empty()):
 		return -1
 	for j: int in deck.size():
 		if j != i and deck[j] == deck[i] and level_of(j) == SynergyRules.LEVEL_RECRUIT:
@@ -594,25 +910,34 @@ func _twin_of(i: int) -> int:
 	return -1
 
 
-func _find_copy(id: StringName, level: int) -> int:
+## First copy of `id` at `level` (and, for Trained copies of chassis with options, trait choice
+## `t`; TRAIT_DEFAULT = any trait).
+func _find_copy(id: StringName, level: int, t: StringName = SynergyRules.TRAIT_DEFAULT) -> int:
 	for i: int in deck.size():
 		if deck[i] == id and level_of(i) == level:
-			return i
+			var c: CardData = _card(i)
+			if t == SynergyRules.TRAIT_DEFAULT or level < SynergyRules.LEVEL_TRAINED or not c.has_trait_choice() or trait_choice(i) == t:
+				return i
 	return -1
 
 
-func _retire_copy(id: StringName, level: int) -> String:
+func _retire_copy(id: StringName, level: int, t: StringName = SynergyRules.TRAIT_DEFAULT,
+		twin_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 	if not can_retire():
 		return "the deck can't go below %d cards" % config.deck_floor
-	var at: int = _find_copy(id, level)
+	var at: int = _find_copy(id, level, t)
 	if at < 0:
 		return "that copy is no longer in the deck"
 	var twin: int = _twin_of(at)
 	if twin >= 0:
-		deck_levels[twin] = SynergyRules.LEVEL_TRAINED
-	honor_roll.append({"id": id, "level": level, "match": match_index, "trained_twin": twin >= 0})
-	deck.remove_at(at)
-	deck_levels.remove_at(at)
+		var c: CardData = _card(twin)
+		var pick: StringName = trait_choice(twin) if twin_trait == SynergyRules.TRAIT_DEFAULT else twin_trait
+		if c.has_trait_choice() and not c.can_carry(pick):
+			return "%s can't train as %s" % [c.display_name, ArtTraits.trait_name(pick)]
+		_train(twin, pick)
+	honor_roll.append({"id": id, "level": level, "match": match_index, "trained_twin": twin >= 0,
+			"trait": copy_trait(at), "art": art_of(at)})
+	_remove_copy(at)
 	return ""
 
 
@@ -659,6 +984,11 @@ func to_dict() -> Dictionary:
 			od["on_trait"] = String(o["on_trait"])
 		if o.get("retire", false):
 			od["retire"] = true
+		if o.get("reissue", false):
+			od["reissue"] = true
+		for key: String in ["traits", "arts"]:
+			if o.has(key):
+				od[key] = _strings(o[key])
 		offers.append(od)
 	return {
 		"version": SAVE_VERSION,
@@ -671,10 +1001,13 @@ func to_dict() -> Dictionary:
 		"weapon_level": weapon_level,
 		"deck": _strings(deck),
 		"deck_levels": deck_levels.duplicate(),
+		"deck_traits": _strings(deck_traits),
+		"deck_arts": _strings(deck_arts),
 		"doctrine": String(doctrine),
 		"last_pick_trait": String(last_pick_trait),
 		"honor_roll": honor_roll.map(func(h: Dictionary) -> Dictionary:
-			return {"id": String(h["id"]), "level": int(h["level"]), "match": int(h["match"]), "trained_twin": bool(h["trained_twin"])}),
+			return {"id": String(h["id"]), "level": int(h["level"]), "match": int(h["match"]), "trained_twin": bool(h["trained_twin"]),
+					"trait": String(h.get("trait", "")), "art": String(h.get("art", ""))}),
 		"loadout": {
 			"primary": String(primary), "secondary": String(secondary),
 			"lethal": String(lethal), "tactical": String(tactical),
@@ -746,6 +1079,28 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 			if typeof(lv) not in [TYPE_INT, TYPE_FLOAT] or int(lv) < 0 or int(lv) > SynergyRules.LEVEL_MAX:
 				return "bad deck level"
 			deck_levels.append(int(lv))
+	# kc-art-traits (v3): per-copy trait choice and art; v1 / v2 copies take their defaults.
+	var raw_traits: Variant = d.get("deck_traits", null)
+	var raw_arts: Variant = d.get("deck_arts", null)
+	if raw_traits == null:
+		for id: StringName in deck:
+			deck_traits.append((_index[id] as CardData).card_trait)
+	else:
+		if typeof(raw_traits) != TYPE_ARRAY or (raw_traits as Array).size() != deck.size():
+			return "deck_traits don't match the deck"
+		for t: Variant in raw_traits:
+			if StringName(str(t)) != &"" and StringName(str(t)) not in SynergyRules.TRAITS:
+				return "unknown trait '%s' in deck_traits" % str(t)
+			deck_traits.append(StringName(str(t)))
+	if raw_arts == null:
+		for i: int in deck.size():
+			var c: CardData = _index[deck[i]] as CardData
+			deck_arts.append(ArtTraits.default_art(c, deck_traits[i] if c.can_carry(deck_traits[i]) else c.card_trait))
+	else:
+		if typeof(raw_arts) != TYPE_ARRAY or (raw_arts as Array).size() != deck.size():
+			return "deck_arts don't match the deck"
+		for a: Variant in raw_arts:
+			deck_arts.append(StringName(str(a)))
 	doctrine = StringName(str(d.get("doctrine", "")))
 	if doctrine != &"" and doctrine not in SynergyRules.TRAITS:
 		return "unknown doctrine '%s'" % doctrine
@@ -757,7 +1112,8 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 		if typeof(entry) != TYPE_DICTIONARY:
 			return "bad honor_roll entry"
 		honor_roll.append({"id": StringName(str(entry.get("id", ""))), "level": int(entry.get("level", 0)),
-				"match": int(entry.get("match", 0)), "trained_twin": bool(entry.get("trained_twin", false))})
+				"match": int(entry.get("match", 0)), "trained_twin": bool(entry.get("trained_twin", false)),
+				"trait": StringName(str(entry.get("trait", ""))), "art": StringName(str(entry.get("art", "")))})
 	var lo: Variant = d.get("loadout")
 	if typeof(lo) != TYPE_DICTIONARY:
 		return "no loadout"
@@ -810,6 +1166,21 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 			offer["on_trait"] = StringName(str(o["on_trait"]))
 		if bool(o.get("retire", false)):
 			offer["retire"] = true
+		if bool(o.get("reissue", false)):
+			offer["reissue"] = true
+		for key: String in ["traits", "arts"]:
+			if o.has(key):
+				var raw: Variant = o[key]
+				if typeof(raw) != TYPE_ARRAY or (raw as Array).size() != opts.size():
+					return "offer %s don't match its options" % key
+				var list: Array[StringName] = []
+				for v2: Variant in raw:
+					list.append(StringName(str(v2)))
+				offer[key] = list
+		if kind == RewardOffers.KIND_SUPPLY_DROP and not offer.has("traits"):
+			_dress_drop(offer, StringName(offer.get("on_trait", &"")), _rng("supply_art", int(offer["match"])))
+		if int(v) < 3 and (kind == RewardOffers.KIND_REGROUP or offer.get("retire", false)):
+			offer["reissue"] = true
 		pending_offers.append(offer)
 	if (phase == PHASE_REWARDS) != (not pending_offers.is_empty()):
 		return "pending offers don't match phase %s" % phase
@@ -869,8 +1240,10 @@ static func build_index(cfg: RunConfig) -> Dictionary:
 		add.call(c)
 	for item: LoadoutItem in [cfg.starter_primary, cfg.starter_secondary, cfg.starter_lethal, cfg.starter_tactical]:
 		add.call(item)
-	if cfg.starter_primary != null:
-		for att: LoadoutItem in cfg.starter_primary.attachments:
+	# kc-ui4: every Operator a run can start with, and its attachments.
+	for prim: LoadoutItem in operator_options(cfg):
+		add.call(prim)
+		for att: LoadoutItem in prim.attachments:
 			add.call(att)
 	for list: Array in [cfg.starter_killstreaks, cfg.killstreak_pool, cfg.perk_pool]:
 		for item: LoadoutItem in list:

@@ -176,11 +176,12 @@ func test_codex_entries_and_filters() -> void:
 	var ks: int = CardDB.loadout_items_by_slot(DataEnums.LoadoutSlot.KILLSTREAK).size()
 	assert_eq(base.size(), cards + ks, "one entry per collectible card + per killstreak")
 	assert_true(ks >= 3, "killstreaks listed (%d)" % ks)
-	var with_arts: Array[Dictionary] = CodexView.build_entries(true)
-	if BannerArtDB.has_licensed():
-		assert_true(with_arts.size() > base.size(), "pitch build: alternate arts add tiles (%d > %d)" % [with_arts.size(), base.size()])
-	else:
-		assert_eq(with_arts.size(), base.size(), "public build: one art per card")
+	# kc-ui4: one tile per unique card; its alternate arts are listed in the entry (ART panel).
+	var ids: Dictionary = {}
+	for e: Dictionary in base:
+		ids[e["id"]] = true
+		assert_true((e["arts"] as Array).size() >= 1, "%s lists its arts" % e["id"])
+	assert_eq(ids.size(), base.size(), "one entry per unique card")
 	var setup: Array = await _spawn_title(Layout.PHONE)
 	var vp: SubViewport = setup[0]
 	var title: Control = setup[1]
@@ -197,7 +198,7 @@ func test_codex_entries_and_filters() -> void:
 	var k: float = Layout.points_per_px(Layout.PHONE)
 	var screen_r: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS)
 	for b: Button in [codex.get_back_button(), codex.get_type_button(&"killstreak"), codex.get_class_button(&"sniper"),
-			codex.get_class_button(&"ar"), codex.get_chassis_picker(), codex.get_arts_button()]:
+			codex.get_class_button(&"ar"), codex.get_chassis_picker(), codex.get_starter_button()]:
 		assert_true(minf(b.size.x, b.size.y) * k >= 44.0 - EPS, "%s is 44 pt+ (%s)" % [b.name, b.size])
 	for b: Button in [codex.get_back_button(), codex.get_chassis_picker()]:
 		assert_true(screen_r.encloses(b.get_global_rect()), "%s on screen" % b.name)
@@ -225,11 +226,17 @@ func test_codex_entries_and_filters() -> void:
 	codex.clear_filters()
 	await _frames(2)
 	assert_eq(codex.get_tiles().size(), codex.filtered().size(), "cleared")
-	# Tap = inspector.
+	# kc-ui4: tap a card = its ART panel; long-press / right-click = the inspector.
 	var tile: Control = codex.get_tiles()[0]
 	await _tap(vp, tile.get_global_rect().get_center())
 	await _frames(2)
-	assert_true(codex.get_inspector().is_open(), "tap opens the inspector")
+	assert_true(codex.is_art_panel_open(), "tap opens the ART panel")
+	codex.close_arts()
+	await _frames(2)
+	tile = codex.get_tiles()[0]
+	codex.open_entry(tile.get_meta(&"entry"))
+	await _frames(2)
+	assert_true(codex.get_inspector().is_open(), "inspect opens the inspector")
 	assert_eq(String((codex.get_inspector().get_node("%TitleLabel") as Label).text), String(tile.get_meta(&"entry")["name"]), "inspector title = tile name")
 	var qa: Dictionary = _qa(vp, title)
 	assert_true(qa.has("codex") and bool(qa["codex"]["inspector_open"]), "QA bridge reports the codex")
@@ -353,6 +360,8 @@ func test_settings_save_mirror_and_speed() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# The match screen's SPEED toggle starts from the setting and writes it back.
 	Settings.mirror_layout = false
+	var was_chosen: bool = Settings.speed_chosen
+	Settings.speed_chosen = true  # kc-fight-ui: a speed picked with the toggle (else x1 by default)
 	var s: Array = await _spawn(Layout.DESKTOP)
 	var vp: SubViewport = s[0]
 	var m: Control = s[1]
@@ -364,6 +373,7 @@ func test_settings_save_mirror_and_speed() -> void:
 	await tree.process_frame
 	Settings.mirror_layout = was[0]
 	Settings.speed_x2 = was[1]
+	Settings.speed_chosen = was_chosen
 	Settings.fast_animations = was[2]
 
 

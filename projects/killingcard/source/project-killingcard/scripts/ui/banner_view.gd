@@ -405,6 +405,8 @@ func _draw_overlay() -> void:
 			var key: StringName = IconSheet.KEYWORD_ICONS.get(StringName(kw.get("id", &"")), &"")
 			if key != &"" and IconSheet.has_icon(key):
 				icons.append(key)
+			elif StringName(kw.get("id", &"")) == &"pierce":
+				icons.append(&"pierce")  # kc-fight-ui: drawn glyph (no sheet icon)
 		if bool(entry.get("front_kw", false)):
 			icons.push_front(&"protector")
 		var bolt: bool = bool(entry.get("bolt", false)) or icons.size() > 2
@@ -415,6 +417,8 @@ func _draw_overlay() -> void:
 			var rr: Rect2 = Rect2(ex - shown * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"])
 			if key == &"protector":
 				_draw_protector_glyph(o, rr)
+			elif key == &"pierce":
+				SynergyGlyphs.draw_pierce_plate(o, rr, _col(&"accent"), not mine)
 			else:
 				_draw_plate_icon(o, rr, IconSheet.get_icon(key), _col(&"accent"))
 			shown += 1
@@ -460,9 +464,10 @@ func stat_rects() -> Dictionary:
 	return {"fp": lay["fp"], "armor": lay["armor"]}
 
 
-## Name sizes for a banner height (phone 57: 16 / 13; desktop 76: 18 / 14).
+## Name sizes for a banner height (phone 57: 16 / 16; desktop 76: 18 / 16): 16 px is the phone's
+## 11 pt floor, so the subname differs by colour and weight, not size.
 static func name_sizes(h: float) -> Vector2i:
-	return Vector2i(clampi(int(roundf(h * 0.24)), 16, 18), clampi(int(roundf(h * 0.19)), 13, 14))
+	return Vector2i(clampi(int(roundf(h * 0.24)), 16, 18), 16)
 
 
 ## kc-ui4 (head naming): the card's name (always the chassis, so a card keeps its name whatever art

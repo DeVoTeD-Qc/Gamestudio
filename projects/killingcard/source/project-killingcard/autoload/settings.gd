@@ -30,6 +30,9 @@ var show_outcome_preview: bool = true
 var mirror_layout: bool = false
 ## kc-ui3: the tray's SPEED x2 toggle (the round's feedback at double speed), kept between sessions.
 var speed_x2: bool = false
+## kc-fight-ui: the player picked a speed with the SPEED toggle. Until then the firefight plays at the
+## resolver's default (x1 for the first runs, x2 once the tutorial is done; match_screen.gd).
+var speed_chosen: bool = false
 ## kc-ui4 (head: "select them to see alternate art and equip the alternate art I want"): chassis id
 ## (String) -> equipped art id (String), set in the Codex. Every copy of that card you play wears
 ## it; a card with no entry keeps the per-copy variety.
@@ -41,7 +44,7 @@ var operator_primary: String = ""
 const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
-const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"fast_animations",
+const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_animations",
 		&"equipped_arts", &"operator_primary"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false

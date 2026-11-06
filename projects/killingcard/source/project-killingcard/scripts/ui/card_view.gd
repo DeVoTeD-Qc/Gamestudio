@@ -197,6 +197,10 @@ func _refresh() -> void:
 	var tag: String = type_name.to_upper()
 	if weapon != &"":
 		tag += " · " + String(weapon).to_upper()
+	# kc-ui4 (head naming): the art's own name (calling-card title / our variant) leads the type line;
+	# the card's name above stays the chassis.
+	if String(data.get("subname", "")) != "":
+		tag = "%s · %s" % [String(data["subname"]).to_upper(), tag]
 	_type_label.text = tag
 	_type_label.set_meta(&"slot_size", Vector2(238.0 - (name_left + 20.0) - 12.0, 20.0))
 	_range_label.set_meta(&"slot_size", Vector2(200.0, 18.0))
@@ -211,6 +215,8 @@ func _refresh() -> void:
 	var licensed: Texture2D = null
 	if String(data.get("licensed_art", "")) != "":
 		licensed = BannerArtDB.banner_texture(StringName(String(data["licensed_art"])))
+	elif String(data.get("art_id", "")) != "":
+		licensed = BannerArtDB.portrait_texture(StringName(String(data["art_id"])))
 	if licensed != null:
 		_art_key = &""
 		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -315,7 +321,8 @@ func _best_band(weapon: StringName) -> int:
 func _tint_icons() -> void:
 	var text_dim: Color = get_theme_color(&"text_dim", &"Card")
 	var art_tint: Color = get_theme_color(&"special", &"Card") if _card_type() == "killstreak" else get_theme_color(&"concrete", &"Card")
-	_art_icon.modulate = Color.WHITE if _art_key != &"" or String(data.get("licensed_art", "")) != "" else Color(art_tint, 0.55)
+	_art_icon.modulate = Color.WHITE if _art_key != &"" or String(data.get("licensed_art", "")) != "" \
+			or String(data.get("art_id", "")) != "" else Color(art_tint, 0.55)
 	_type_icon.modulate = get_theme_color(&"text", &"Card")
 	_range_icon.modulate = text_dim
 	_fp_icon.modulate = get_theme_color(&"text", &"Card")

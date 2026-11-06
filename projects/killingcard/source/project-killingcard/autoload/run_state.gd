@@ -68,6 +68,13 @@ func start_run(seed_value: int = -1) -> RunProgress:
 		rng.randomize()
 		s = rng.randi()
 	run = RunProgress.create(_config(), s)
+	# kc-ui4: the Operator last picked on the starter screen (Settings.operator_primary) is the default.
+	var st: Node = get_node_or_null(^"/root/Settings")
+	var pref: String = String(st.get(&"operator_primary")) if st != null else ""
+	if pref != "" and pref != String(run.primary):
+		run.set_primary(StringName(pref))
+	# kc-art-traits: the starter's Recruits wear the Codex EQUIP arts (Settings.equipped_arts).
+	run.set_equipped_arts(_equipped_arts())
 	_session_start_ms = Time.get_ticks_msec()
 	last_load_warning = ""
 	_changed()
@@ -89,6 +96,9 @@ func continue_run() -> bool:
 		run_changed.emit()
 		return false
 	run = loaded["run"]
+	run.equipped_arts = {}
+	for k: Variant in _equipped_arts():
+		run.equipped_arts[StringName(String(k))] = StringName(String(_equipped_arts()[k]))
 	last_load_warning = ""
 	_session_start_ms = Time.get_ticks_msec()
 	run_changed.emit()
@@ -133,6 +143,16 @@ func set_killstreaks(ids: Array) -> String:
 	if run == null:
 		return "no run"
 	var err: String = run.set_killstreaks(ids)
+	if err == "":
+		_changed()
+	return err
+
+
+## kc-ui4: the starting Operator (a Primary id from RunProgress.operator_options), loadout only.
+func set_primary(id: StringName) -> String:
+	if run == null:
+		return "no run"
+	var err: String = run.set_primary(id)
 	if err == "":
 		_changed()
 	return err
@@ -196,11 +216,13 @@ func current_offer() -> Dictionary:
 	return run.current_offer() if run != null else {}
 
 
-func choose_offer(index: int) -> String:
+## kc-art-traits: `trait_pick` = the trait a Recruit trains into on a Promotion (one of
+## run.train_choices(copy)); TRAIT_DEFAULT = its pre-selected art's trait.
+func choose_offer(index: int, trait_pick: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 	if run == null:
 		return "no run"
 	var offer: Dictionary = run.current_offer()
-	var err: String = run.choose_offer(index)
+	var err: String = run.choose_offer(index, trait_pick)
 	if err == "":
 		EventBus.reward_picked.emit(offer["kind"], offer["options"][index])
 		_changed()
@@ -210,15 +232,39 @@ func choose_offer(index: int) -> String:
 
 ## kc-syn §5.4: Retire option `index` of run.retire_options() as the current offer's choice
 ## (the Supply Drop's 4th option or Regroup). Returns "" or the reason.
-func retire_card(index: int) -> String:
+func retire_card(index: int, twin_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 	if run == null:
 		return "no run"
 	var options: Array[Dictionary] = run.retire_options()
-	var err: String = run.retire_card(index)
+	var err: String = run.retire_card(index, twin_trait)
 	if err == "":
 		EventBus.reward_picked.emit(&"retire", options[index]["id"])
 		_changed()
 		_announce_offer()
+	return err
+
+
+## kc-art-traits §2.2: Re-issue option `index` of run.reissue_options() into `new_trait` as the
+## current offer's choice (the Supply Drop's Re-issue next to Retire, or Regroup). "" or the reason.
+func reissue_card(index: int, new_trait: StringName) -> String:
+	if run == null:
+		return "no run"
+	var options: Array[Dictionary] = run.reissue_options()
+	var err: String = run.reissue_card(index, new_trait)
+	if err == "":
+		EventBus.reward_picked.emit(&"reissue", options[index]["id"])
+		_changed()
+		_announce_offer()
+	return err
+
+
+## kc-art-traits §2.2: free same-trait art swap of deck copy `i` (deck view). "" or the reason.
+func set_copy_art(i: int, art: StringName) -> String:
+	if run == null:
+		return "no run"
+	var err: String = run.set_copy_art(i, art)
+	if err == "":
+		_changed()
 	return err
 
 
@@ -245,6 +291,13 @@ func _announce_offer() -> void:
 # =============================================================================
 # Internals
 # =============================================================================
+
+## Settings.equipped_arts (chassis -> art), {} without the autoload.
+func _equipped_arts() -> Dictionary:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	var eq: Variant = st.get(&"equipped_arts") if st != null else null
+	return eq if typeof(eq) == TYPE_DICTIONARY else {}
+
 
 func _changed() -> void:
 	if autosave and run != null:

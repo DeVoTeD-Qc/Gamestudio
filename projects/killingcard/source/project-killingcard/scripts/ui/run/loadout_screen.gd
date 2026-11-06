@@ -4,6 +4,9 @@
 #   pick it, tap a picked one to drop it; exactly RunConfig.killstreak_slots must be picked before
 #   BEGIN RUN works (the starter three are pre-picked). BEGIN RUN calls RunState.set_killstreaks()
 #   and begin_run(), then opens the run map.
+#   kc-ui4: the screen opens on the STARTING SQUAD panel (starter_panel.gd: pick the Operator, see
+#   the starter deck grouped with counts); NEXT: KILLSTREAKS closes it, OPERATOR & DECK on the kit
+#   panel reopens it.
 # Dependencies: run_screen.gd, pick_tile.gd, RunState, RunFlow.
 # Author: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
@@ -17,6 +20,9 @@ var _back_button: Button = null
 var _kit_panel: PanelContainer = null
 var _grid: GridContainer = null
 var _error: Label = null
+var _starter: Control = null
+var _squad_button: Button = null
+var _kit: VBoxContainer = null
 
 @onready var _header: HBoxContainer = %Header
 @onready var _subtitle: Label = %SubtitleLabel
@@ -53,23 +59,12 @@ func _build() -> void:
 	kit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kit.add_theme_constant_override(&"separation", 6)
 	scroll.add_child(kit)
-	kit.add_child(make_label("STARTER KIT", &"HudAccent"))
-	if r != null:
-		for slot: String in ["primary", "secondary", "lethal", "tactical"]:
-			var item: LoadoutItem = r.resource(r.get(slot)) as LoadoutItem
-			if item == null:
-				continue
-			var line: String = "%s  ·  %s" % [String(RunFlow.SLOT_WORDS.get(item.slot, slot)).to_upper(), item.display_name]
-			kit.add_child(make_label(line, &"UnitName", true))
-			# Primary: class and Operator stats. Others: their rules text (it already names cost
-			# and cooldown), the stat line only when there is no text.
-			var detail: String = item.text
-			if item.slot == DataEnums.LoadoutSlot.PRIMARY or detail == "":
-				detail = RunFlow.item_effect_line(item)
-			if detail != "":
-				kit.add_child(make_label(detail, &"HudSubtle", true))
-		kit.add_child(make_label("DECK  ·  %d cards" % r.deck.size(), &"UnitName"))
-		kit.add_child(make_label(RunFlow.deck_summary(r), &"HudSubtle", true))
+	_kit = kit
+	_squad_button = make_button("OPERATOR & DECK", &"HudButton", 200)
+	_squad_button.name = "SquadButton"
+	_squad_button.tooltip_text = "Pick your starting Operator and see the starter deck"
+	_squad_button.pressed.connect(open_starter)
+	_fill_kit()
 	# Killstreak pool.
 	var right: VBoxContainer = VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -115,6 +110,61 @@ func _build() -> void:
 			_grid.add_child(tile)
 			_tiles[item.id] = tile
 	_refresh()
+	if r != null:
+		open_starter.call_deferred()
+
+
+## The kit list (rebuilt when the Operator changes).
+func _fill_kit() -> void:
+	var r: RunProgress = run()
+	for c: Node in _kit.get_children():
+		if c != _squad_button:
+			_kit.remove_child(c)
+			c.queue_free()
+	if _squad_button.get_parent() == null:
+		_kit.add_child(_squad_button)
+	var kit: VBoxContainer = _kit
+	kit.add_child(make_label("STARTER KIT", &"HudAccent"))
+	kit.move_child(_squad_button, kit.get_child_count() - 1)
+	if r != null:
+		for slot: String in ["primary", "secondary", "lethal", "tactical"]:
+			var item: LoadoutItem = r.resource(r.get(slot)) as LoadoutItem
+			if item == null:
+				continue
+			var line: String = "%s  ·  %s" % [String(RunFlow.SLOT_WORDS.get(item.slot, slot)).to_upper(), item.display_name]
+			kit.add_child(make_label(line, &"UnitName", true))
+			# Primary: class and Operator stats. Others: their rules text (it already names cost
+			# and cooldown), the stat line only when there is no text.
+			var detail: String = item.text
+			if item.slot == DataEnums.LoadoutSlot.PRIMARY or detail == "":
+				detail = RunFlow.item_effect_line(item)
+			if detail != "":
+				kit.add_child(make_label(detail, &"HudSubtle", true))
+		kit.add_child(make_label("DECK  ·  %d cards" % r.deck.size(), &"UnitName"))
+		kit.add_child(make_label(RunFlow.deck_summary(r), &"HudSubtle", true))
+	_kit.move_child(_squad_button, _kit.get_child_count() - 1)
+
+
+## kc-ui4: the STARTING SQUAD panel over the screen (Operator pick + starter deck).
+func open_starter() -> Control:
+	if _starter != null:
+		return _starter
+	var script: GDScript = load("res://scripts/ui/run/starter_panel.gd") as GDScript
+	_starter = script.new()
+	_starter.name = "Starter"
+	add_child(_starter)
+	_starter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_starter.call(&"setup", run(), compact, "NEXT: KILLSTREAKS")
+	_starter.connect(&"operator_picked", func(_id: StringName) -> void: _fill_kit())
+	_starter.connect(&"closed", func() -> void:
+		if _starter != null:
+			_starter.queue_free()
+			_starter = null)
+	return _starter
+
+
+func get_starter() -> Control:
+	return _starter
 
 
 func _apply_compact() -> void:

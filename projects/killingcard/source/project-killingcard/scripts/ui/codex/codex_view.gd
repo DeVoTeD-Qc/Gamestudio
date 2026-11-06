@@ -1,14 +1,17 @@
 # codex_view.gd
 # Purpose: kc-ui3 CODEX (head: "We'll need a codex view"). A full-screen overlay that browses every
 #   collectible card and every killstreak, opened from MENU (pause sheet) and from the Title screen.
-#   Top bar: BACK, the title with the count shown, the chassis picker and (private pitch build only,
-#   when licensed art is loaded) ARTS: ALL / ONE. Filter row: type chips (ALL / UNITS / TACTICS /
-#   FIELDS / KILLSTREAKS) and weapon-class chips (ANY / AR / SMG / SHOTGUN / SNIPER / LMG). Below, a
-#   scrolling grid of card tiles (art window, cost hex or streak threshold, name, type line). With
-#   ARTS: ALL every licensed alternate art of a chassis is its own tile, named by its calling-card
-#   title with the chassis under it. Tap (or long-press / right-click) a tile = the card inspector,
-#   the same one the match uses. Every control is 64 px+ tall (44 pt on a phone).
-#   Display only: reads CardDB and BannerArtDB, changes nothing.
+#   Top bar: BACK, the title with the count shown, the chassis picker and STARTER (the starter deck
+#   and the Operator pick, starter_panel.gd). Filter row: type chips (ALL / UNITS / TACTICS / FIELDS /
+#   KILLSTREAKS) and weapon-class chips (ANY / AR / SMG / SHOTGUN / SNIPER / LMG). Below, a scrolling
+#   grid with ONE tile per unique card (kc-ui4): the card as it looks on the board (BannerCard: the
+#   banner with its cost hex, name and the equipped art's subname), an "n ARTS" chip and an
+#   EQUIPPED tag when you picked an art. Long-press / right-click / hover = the card inspector (the
+#   match's). Tap = the ART panel: every alternate art of the card (licensed calling cards in the
+#   pitch build, our own variants in the public build) with its subname and a trait slot (coming:
+#   arts that give a trait), a big preview, EQUIP (saved in user://settings.cfg; every copy you play
+#   wears it) and USE VARIETY (back to a different art per copy). Every control is 64 px+ tall
+#   (44 pt on a phone). Reads CardDB and BannerArtDB; writes only Settings.equipped_arts.
 # Usage: var codex := CodexView.open_over(parent_control)   # adds itself full-rect and opens
 # Dependencies: CardDB, BannerArtDB, CardInfo, cost_hex.gd, scenes/match/CardInspector.tscn,
 #   hud_theme.tres (HudPanelDark, HudButton, HandCard, UnitName, HudTag, HudHeader, HudSubtle, Scrim).
@@ -18,6 +21,8 @@ extends Control
 signal closed
 
 const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
+const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const MatchSnapshot: GDScript = preload("res://scripts/ui/match_snapshot.gd")
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
@@ -29,16 +34,20 @@ const TYPE_WORDS: Dictionary = {&"all": "ALL", &"unit": "UNITS", &"tactic": "TAC
 const CLASS_FILTERS: Array[StringName] = [&"any", &"ar", &"smg", &"shotgun", &"sniper", &"lmg"]
 const KS_ICONS: Dictionary = {&"recon_drone": "ks_recon_drone", &"mortar_barrage": "ks_mortar",
 		&"sentry_turret": "ks_sentry", &"attack_helo": "ks_attack_helo", &"gunship": "ks_gunship"}
-const TILE: Vector2 = Vector2(144, 184)
-const TILE_COMPACT: Vector2 = Vector2(120, 156)
+const TILE: Vector2 = Vector2(240, 96)
+const TILE_COMPACT: Vector2 = Vector2(216, 86)
+## The board's banner heights (desktop / phone): codex cards use the board's icon sizes.
+const METRIC_H: float = 76.0
+const METRIC_H_COMPACT: float = 57.0
+const AMBER: Color = Color(0.961, 0.722, 0.239)
 const BAR_H: float = 64.0
 
 var type_filter: StringName = &"all"
 var class_filter: StringName = &"any"
 ## Chassis (card / killstreak id) filter, &"" = all.
 var chassis_filter: StringName = &""
-## Private pitch: show every licensed alternate art as its own tile.
-var all_arts: bool = true
+## kc-ui4: always one tile per card (the alternate arts live in the ART panel). Kept for the QA bridge.
+var all_arts: bool = false
 var compact: bool = false
 ## Every entry: {key, id, kind (&"unit"/&"tactic"/&"field"/&"killstreak"), cls (&"ar"...), name,
 ## chassis (display name), art (art id), card (CardData) | item (LoadoutItem)}.
@@ -56,6 +65,24 @@ var _class_buttons: Dictionary = {}
 var _inspector: Control = null
 var _top: HBoxContainer = null
 var _filters: HBoxContainer = null
+var _starter_button: Button = null
+var _glossary_button: Button = null
+var _glossary: Control = null
+var _starter: Control = null
+## kc-ui4 ART panel: the entry shown, its art ids, the art previewed.
+var art_entry: Dictionary = {}
+var art_ids: Array[StringName] = []
+var selected_art: StringName = &""
+var _art_panel: Control = null
+var _art_title: Label = null
+var _art_preview_holder: Control = null
+var _art_info: Label = null
+var _art_trait: Label = null
+var _art_grid: GridContainer = null
+var _equip_button: Button = null
+var _variety_button: Button = null
+var _art_inspect: Button = null
+var _art_back: Button = null
 
 
 ## Adds a codex over `parent` (full rect) and opens it. Frees itself when closed.
@@ -79,8 +106,7 @@ func _ready() -> void:
 
 func open() -> void:
 	if entries.is_empty():
-		entries = build_entries(BannerArtDB.has_licensed())
-	_arts_button.visible = BannerArtDB.has_licensed()
+		entries = build_entries(false)
 	_on_resized()
 	refresh()
 	show()
@@ -90,6 +116,9 @@ func open() -> void:
 func close() -> void:
 	if _inspector != null and _inspector.is_open():
 		_inspector.close()
+	if _starter != null:
+		_starter.queue_free()
+		_starter = null
 	hide()
 	closed.emit()
 
@@ -114,8 +143,65 @@ func get_chassis_picker() -> OptionButton:
 	return _chassis
 
 
+## kc-ui4: gone (one tile per card; the arts are in the ART panel). Null.
 func get_arts_button() -> Button:
 	return _arts_button
+
+
+func get_starter_button() -> Button:
+	return _starter_button
+
+
+## The ART panel (kc-ui4), its art tiles, EQUIP / USE VARIETY / INSPECT / BACK.
+func get_art_panel() -> Control:
+	return _art_panel
+
+
+func is_art_panel_open() -> bool:
+	return _art_panel != null and _art_panel.visible
+
+
+func get_art_tiles() -> Array[Node]:
+	return _art_grid.get_children()
+
+
+func get_equip_button() -> Button:
+	return _equip_button
+
+
+func get_variety_button() -> Button:
+	return _variety_button
+
+
+func get_art_inspect_button() -> Button:
+	return _art_inspect
+
+
+func get_art_back_button() -> Button:
+	return _art_back
+
+
+func get_glossary_button() -> Button:
+	return _glossary_button
+
+
+## kc-ui4: the glossary over the codex (scrolled to `focus` when given).
+func open_glossary(focus: StringName = &"") -> Control:
+	if _glossary != null and is_instance_valid(_glossary):
+		_glossary.call(&"scroll_to", focus)
+		return _glossary
+	_glossary = (load("res://scripts/ui/codex/glossary.gd") as GDScript).call(&"open_over", self, focus)
+	_glossary.closed.connect(func() -> void: _glossary = null)
+	return _glossary
+
+
+func get_glossary() -> Control:
+	return _glossary if _glossary != null and is_instance_valid(_glossary) else null
+
+
+## The starter-deck panel over the codex (null while closed).
+func get_starter() -> Control:
+	return _starter
 
 
 ## Tiles shown now (after the filters), in order.
@@ -127,9 +213,10 @@ func get_tiles() -> Array[Node]:
 # Entries and filters
 # =============================================================================
 
-## Every collectible card (one entry per chassis, or one per licensed alternate art when `arts`)
-## and every killstreak, sorted by type, then cost / threshold, then name.
-static func build_entries(arts: bool) -> Array[Dictionary]:
+## Every collectible card (one entry per chassis: kc-ui4 shows the alternate arts in the ART panel,
+## listed in the entry's "arts") and every killstreak, sorted by type, then cost / threshold, then
+## name. `arts` is ignored (kept for callers).
+static func build_entries(_arts: bool = false) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var tree: SceneTree = Engine.get_main_loop() as SceneTree
 	var db: Node = tree.root.get_node_or_null(^"/root/CardDB") if tree != null else null
@@ -140,36 +227,35 @@ static func build_entries(arts: bool) -> Array[Dictionary]:
 			continue
 		var kind: StringName = &"unit" if card.is_unit() else (&"field" if card.is_field() else &"tactic")
 		var cls: StringName = StringName(String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_lower())
-		var base: Dictionary = {"id": card.id, "kind": kind, "cls": cls, "chassis": card.display_name, "card": card,
-				"cost": card.cost, "name": card.display_name, "art": card.id, "alt": 0, "alts": 1}
-		var pool: Array[StringName] = BannerArtDB.licensed_pool(card.id) if arts else ([] as Array[StringName])
-		if pool.is_empty():
-			base["key"] = String(card.id)
-			out.append(base)
-			continue
-		for i: int in pool.size():
-			var e: Dictionary = base.duplicate()
-			e["art"] = pool[i]
-			e["key"] = String(pool[i])
-			e["alt"] = i + 1
-			e["alts"] = pool.size()
-			var title: String = BannerArtDB.art_title(pool[i])
-			if title != "":
-				e["name"] = title
-			out.append(e)
+		var arts: Array[StringName] = BannerArtDB.alt_arts(card.id)
+		out.append({"key": String(card.id), "id": card.id, "kind": kind, "cls": cls, "chassis": card.display_name,
+				"card": card, "cost": card.cost, "name": card.display_name, "art": arts[0], "arts": arts,
+				"alt": 1, "alts": arts.size()})
 	for item: LoadoutItem in db.loadout_items_by_slot(DataEnums.LoadoutSlot.KILLSTREAK):
 		out.append({"key": String(item.id), "id": item.id, "kind": &"killstreak", "cls": &"", "chassis": item.display_name,
-				"item": item, "cost": item.streak_threshold, "name": item.display_name, "art": item.id, "alt": 0, "alts": 1})
+				"item": item, "cost": item.streak_threshold, "name": item.display_name, "art": item.id,
+				"arts": [item.id] as Array[StringName], "alt": 1, "alts": 1})
 	var order: Dictionary = {&"unit": 0, &"tactic": 1, &"field": 2, &"killstreak": 3}
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		if a["kind"] != b["kind"]:
 			return int(order[a["kind"]]) < int(order[b["kind"]])
-		if a["chassis"] != b["chassis"]:
-			if int(a["cost"]) != int(b["cost"]):
-				return int(a["cost"]) < int(b["cost"])
-			return String(a["chassis"]) < String(b["chassis"])
-		return int(a["alt"]) < int(b["alt"]))
+		if int(a["cost"]) != int(b["cost"]):
+			return int(a["cost"]) < int(b["cost"])
+		return String(a["chassis"]) < String(b["chassis"]))
 	return out
+
+
+## The art a card wears in the codex and in your matches: the equipped one, else its default.
+static func shown_art(e: Dictionary) -> StringName:
+	var eq: StringName = equipped_of(StringName(e["id"]))
+	return eq if eq != &"" and eq in (e.get("arts", []) as Array) else StringName(String(e["art"]))
+
+
+## Settings.equipped_arts for a chassis (&"" = none: per-copy variety).
+static func equipped_of(chassis: StringName) -> StringName:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var st: Node = tree.root.get_node_or_null(^"/root/Settings") if tree != null else null
+	return st.equipped_art(chassis) if st != null else &""
 
 
 ## The entries the current filters let through.
@@ -227,8 +313,6 @@ func refresh() -> void:
 		(_type_buttons[k] as Button).set_pressed_no_signal(k == type_filter)
 	for k: StringName in _class_buttons:
 		(_class_buttons[k] as Button).set_pressed_no_signal(k == class_filter)
-	_arts_button.set_pressed_no_signal(all_arts)
-	_arts_button.text = "ARTS: ALL" if all_arts else "ARTS: ONE"
 	_fill_chassis()
 	for child: Node in _grid.get_children():
 		_grid.remove_child(child)
@@ -242,10 +326,7 @@ func refresh() -> void:
 		if not seen.has(e["id"]):
 			seen[e["id"]] = true
 			chassis_count += 1
-	if all_arts and list.size() > chassis_count:
-		_count.text = "CODEX · %d CARDS · %d ARTS" % [chassis_count, list.size()]
-	else:
-		_count.text = "CODEX · %d CARDS" % chassis_count
+	_count.text = "CODEX · %d CARDS" % chassis_count
 	_empty.visible = list.is_empty()
 	_scroll.visible = not list.is_empty()
 	_scroll.scroll_vertical = 0
@@ -280,7 +361,7 @@ func _fill_chassis() -> void:
 # =============================================================================
 
 ## The card inspector's info for an entry (the match's open_card_inspector, without a match).
-static func inspector_info(e: Dictionary) -> Dictionary:
+static func inspector_info(e: Dictionary, art_override: StringName = &"") -> Dictionary:
 	if e["kind"] == &"killstreak":
 		var item: LoadoutItem = e["item"]
 		return {"view": {"name": item.display_name, "type": "killstreak", "threshold": item.streak_threshold,
@@ -304,7 +385,7 @@ static func inspector_info(e: Dictionary) -> Dictionary:
 	for k: Dictionary in keywords:
 		names.append(String(k["name"]).to_lower())
 	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else card.text
-	var art_id: StringName = StringName(String(e["art"]))
+	var art_id: StringName = art_override if art_override != &"" else shown_art(e)
 	var banner: Dictionary = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 			"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
 			"keywords": CardInfo.icon_keywords(keywords)}
@@ -312,25 +393,41 @@ static func inspector_info(e: Dictionary) -> Dictionary:
 	banner["banner"] = String(art_id)
 	var art: BannerArt = BannerArtDB.get_art(art_id)
 	var view: Dictionary = CardInfo.view_dict(card, "friend")
-	var licensed: bool = BannerArtDB.is_card_art(art)
-	if licensed:
+	# kc-ui4 (head naming): the title is the card's name; the art's own name is its subname.
+	var sub: String = BannerArtDB.subname(art_id)
+	if BannerArtDB.is_card_art(art):
 		view["licensed_art"] = String(art.id)
-		view["name"] = art.title
-		banner["art_title"] = art.title
-	var art_line: String = ""
-	if art.licensed:
-		art_line = "Banner: %s · art %d of %d · MW3 calling card (reference art, private pitch)" % [
-				art.title if art.title != "" else String(art.id), int(e.get("alt", 1)), int(e.get("alts", 1))]
+	elif not art.is_default:
+		view["art_id"] = String(art.id)
+	if sub != "":
+		view["subname"] = sub
+		banner["subname"] = sub
+	var arts: Array = e.get("arts", [])
+	var n: int = maxi(1, arts.find(art_id) + 1)
+	var art_line: String = "Banner: %s · art %d of %d%s" % [sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME, n, maxi(1, arts.size()),
+			" · MW3 calling card (reference art, private pitch)" if art.licensed else ""]
+	if equipped_of(StringName(e["id"])) == art_id:
+		art_line += " · EQUIPPED: every copy you play wears it"
 	if card.is_field():
 		text = (text + " " if text != "" else "") + "Overrun: at the end of each round, if the enemy controls this column, this Field is destroyed (hidden traps are exempt)."
-	return {"view": view, "title": art.title if licensed else card.display_name,
-			"type": (card.display_name + " · " + type_text) if licensed else type_text,
+	return {"view": view, "title": card.display_name,
+			"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,
 			"text": text, "keywords": keywords, "status": "In the reward pool" if card.is_elite else "",
 			"banner": banner, "side": 0, "art_line": art_line, "is_unit": card.is_unit()}
 
 
-func open_entry(e: Dictionary) -> void:
-	_inspector.open(inspector_info(e))
+## Long-press / right-click / INSPECT: the card inspector (the art previewed in the ART panel).
+func open_entry(e: Dictionary, art_override: StringName = &"") -> void:
+	_inspector.open(inspector_info(e, art_override))
+
+
+## Tap on a tile: the ART panel for units, tactics and Fields; killstreaks have one art, so the
+## inspector.
+func tap_entry(e: Dictionary) -> void:
+	if e["kind"] == &"killstreak" or (e.get("arts", []) as Array).size() <= 1:
+		open_entry(e)
+	else:
+		open_arts(e)
 
 
 # =============================================================================
@@ -385,12 +482,18 @@ func _build() -> void:
 	popup.add_theme_font_size_override(&"font_size", 22)
 	popup.add_theme_constant_override(&"v_separation", 34)
 	_top.add_child(_chassis)
-	_arts_button = _button("ARTS: ALL", &"HudButton")
-	_arts_button.toggle_mode = true
-	_arts_button.custom_minimum_size.x = 150
-	_arts_button.tooltip_text = "Every alternate art of each card (calling cards, private pitch)"
-	_arts_button.toggled.connect(set_all_arts)
-	_top.add_child(_arts_button)
+	_starter_button = _button("STARTER", &"HudButton")
+	_starter_button.name = "StarterButton"
+	_starter_button.custom_minimum_size.x = 150
+	_starter_button.tooltip_text = "The starter deck and your starting Operator"
+	_starter_button.pressed.connect(open_starter)
+	_top.add_child(_starter_button)
+	_glossary_button = _button("GLOSSARY", &"HudButton")
+	_glossary_button.name = "GlossaryButton"
+	_glossary_button.custom_minimum_size.x = 150
+	_glossary_button.tooltip_text = "Every keyword, synergy icon and stat mark in plain words"
+	_glossary_button.pressed.connect(func() -> void: open_glossary())
+	_top.add_child(_glossary_button)
 	# Filter row (scrolls sideways on narrow screens).
 	var filter_scroll: ScrollContainer = ScrollContainer.new()
 	filter_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -438,6 +541,7 @@ func _build() -> void:
 	clear.custom_minimum_size.x = 240
 	clear.pressed.connect(clear_filters)
 	_empty.add_child(clear)
+	_build_art_panel()
 	# Inspector on top.
 	_inspector = INSPECTOR_SCENE.instantiate()
 	add_child(_inspector)
@@ -456,6 +560,7 @@ func _on_resized() -> void:
 	_chassis.custom_minimum_size.x = 220.0 if compact else 280.0
 	for t: Node in _grid.get_children():
 		(t as Control).custom_minimum_size = tile
+	_layout_art_panel()
 
 
 func _button(text: String, variation: StringName) -> Button:
@@ -483,94 +588,333 @@ func _make_tile(e: Dictionary) -> Control:
 	b.flat = true
 	b.custom_minimum_size = tile_size
 	b.focus_mode = Control.FOCUS_ALL
-	b.button_mask = MOUSE_BUTTON_MASK_LEFT | MOUSE_BUTTON_MASK_RIGHT
-	b.mouse_filter = Control.MOUSE_FILTER_PASS
+	b.mouse_filter = Control.MOUSE_FILTER_STOP
 	b.add_to_group(&"tap_target")
 	b.set_meta(&"entry", e)
-	b.tooltip_text = "%s · %s" % [String(e["name"]), String(e["chassis"])]
-	b.pressed.connect(open_entry.bind(e))
-	var panel: PanelContainer = PanelContainer.new()
-	panel.theme_type_variation = &"HandCard"
+	var arts: Array = e.get("arts", [])
+	var eq: StringName = equipped_of(StringName(e["id"]))
+	b.tooltip_text = "%s · tap: %s · long-press / right-click: rules" % [String(e["name"]),
+			"its %d arts" % arts.size() if arts.size() > 1 else "rules"]
+	_wire_press(b, tap_entry.bind(e), open_entry.bind(e, &""))
+	var ce: Dictionary = _card_entry(e, shown_art(e))
+	if eq != &"" and eq in arts:
+		ce["subname"] = ("%s · EQUIPPED" % ce["subname"]) if String(ce.get("subname", "")) != "" else "%s · EQUIPPED" % BannerArtDB.DEFAULT_SUBNAME
+	var panel: PanelContainer = BannerCard.build(ce, tile_size, METRIC_H_COMPACT if compact else METRIC_H)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var face: Control = Control.new()
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.clip_contents = true
-	panel.add_child(face)
-	var art_h: float = roundf(tile_size.y * 0.56)
-	var art_id: StringName = StringName(String(e["art"]))
-	var kind: StringName = e["kind"]
-	var tex: Texture2D = null
-	var licensed: bool = false
-	if kind == &"killstreak":
-		tex = CardArt.card_texture(CardArt.card_key({"id": String(e["id"]), "type": "killstreak",
-				"art_icon": String(KS_ICONS.get(e["id"], ""))}), 1.0)
-	else:
-		var art: BannerArt = BannerArtDB.get_art(art_id)
-		licensed = art != null and art.licensed
-		tex = BannerArtDB.banner_texture(art_id) if licensed else BannerArtDB.portrait_texture(art_id, {"type": String(kind)})
-	if licensed:
-		var back: TextureRect = _art_rect(tex)
-		back.self_modulate = Color(0.42, 0.42, 0.45)
-		back.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		face.add_child(back)
-		back.set_meta(&"rect", Rect2(0, 0, tile_size.x, art_h))
-	var art_rect: TextureRect = _art_rect(tex)
-	art_rect.name = "Art"
-	art_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if licensed else TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	face.add_child(art_rect)
-	var hex: Control = CostHex.new()
-	hex.custom_minimum_size = Vector2(28, 32)
-	hex.size = hex.custom_minimum_size
-	hex.label.add_theme_font_size_override(&"font_size", 18)
-	hex.set_text(("%d" % int(e["cost"])) if kind != &"killstreak" else "%d" % int(e["cost"]))
-	hex.tooltip_text = "Cost" if kind != &"killstreak" else "Streak to earn it"
-	face.add_child(hex)
-	var title: Label = Label.new()
-	title.theme_type_variation = &"UnitName"
-	title.text = String(e["name"])
-	title.add_theme_font_size_override(&"font_size", 16)
-	title.clip_text = true
-	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.add_child(title)
-	var sub: Label = Label.new()
-	sub.theme_type_variation = &"HudTag"
-	sub.add_theme_font_size_override(&"font_size", 16)
-	sub.text = _sub_line(e)
-	sub.clip_text = true
-	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sub.add_theme_color_override(&"font_color", Color(0.961, 0.722, 0.239) if kind == &"killstreak" else Color("#9AA5AE"))
-	face.add_child(sub)
-	panel.sort_children.connect(func() -> void:
-		face.position = Vector2(2, 2)
-		face.size = panel.size - Vector2(4, 4)
-		var ah: float = art_h - 2.0
-		for n: Node in face.get_children():
-			if n is TextureRect:
-				(n as TextureRect).position = Vector2.ZERO
-				(n as TextureRect).size = Vector2(face.size.x, ah)
-		hex.position = Vector2(2, 2)
-		var lh: float = title.get_combined_minimum_size().y
-		title.position = Vector2(5, ah + 4.0)
-		title.size = Vector2(face.size.x - 10.0, lh)
-		sub.position = Vector2(5, ah + 6.0 + lh)
-		sub.size = Vector2(face.size.x - 10.0, sub.get_combined_minimum_size().y))
+	var face: Control = panel.get_node("Face")
+	# Clarity over information: the tile only adds the EQUIPPED mark (an amber frame and the word
+	# after the art's subname); the number of arts is in the tooltip and the ART panel.
+	if eq != &"" and eq in arts:
+		var frame: Control = Control.new()
+		frame.name = "EquippedTag"
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face.add_child(frame)
+		frame.draw.connect(func() -> void: frame.draw_rect(Rect2(Vector2.ZERO, frame.size).grow(-1.0), AMBER, false, 3.0))
+		panel.sort_children.connect(func() -> void:
+			frame.position = Vector2.ZERO
+			frame.size = face.size
+			frame.queue_redraw())
 	return b
 
 
-## The line under the name: the chassis for an alternate art, else type and class.
-func _sub_line(e: Dictionary) -> String:
+## The BannerCard entry of a codex entry wearing `art`.
+static func _card_entry(e: Dictionary, art: StringName) -> Dictionary:
 	if e["kind"] == &"killstreak":
-		return "STREAK %d" % int(e["cost"])
-	if String(e["name"]) != String(e["chassis"]):
-		return String(e["chassis"]).to_upper()
-	var word: String = {&"unit": "UNIT", &"tactic": "TACTIC", &"field": "FIELD"}.get(e["kind"], "")
-	if e["cls"] != &"":
-		word = String(e["cls"]).to_upper()
-	return word
+		var item: LoadoutItem = e["item"]
+		return {"name": item.display_name, "cost": item.streak_threshold, "banner": String(item.id),
+				"kind_word": "STREAK %d" % item.streak_threshold, "bolt": true}
+	return BannerCard.entry_for_card(e["card"], art)
+
+
+func _tag_label(text: String, bg: Color, fg: Color) -> Label:
+	var tag: Label = Label.new()
+	tag.text = text
+	tag.theme_type_variation = &"HudTag"
+	tag.add_theme_font_size_override(&"font_size", 16)
+	tag.add_theme_color_override(&"font_color", fg)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(4)
+	sb.set_content_margin_all(1)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	tag.add_theme_stylebox_override(&"normal", sb)
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tag
+
+
+## Tap = on_tap, long-press / right-click = on_inspect (PressGesture, mouse and touch alike).
+func _wire_press(b: Control, on_tap: Callable, on_inspect: Callable) -> void:
+	var g: RefCounted = PressGesture.new(b)
+	g.drag_enabled = false
+	b.set_meta(&"gesture", g)
+	b.gui_input.connect(func(ev: InputEvent) -> void:
+		if g.handle(ev):
+			b.accept_event())
+	g.tapped.connect(func(_p: Vector2) -> void: on_tap.call())
+	g.long_pressed.connect(func(_p: Vector2) -> void: on_inspect.call())
+	if b is Button:
+		# Keyboard / controller: Enter = tap.
+		(b as Button).pressed.connect(func() -> void:
+			if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not g.pressed:
+				on_tap.call())
+
+
+# =============================================================================
+# kc-ui4: the ART panel (alternate arts, EQUIP)
+# =============================================================================
+
+func _build_art_panel() -> void:
+	_art_panel = Control.new()
+	_art_panel.name = "ArtPanel"
+	_art_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_art_panel.visible = false
+	add_child(_art_panel)
+	_art_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var bg: ColorRect = ColorRect.new()
+	bg.color = Color(0.045, 0.055, 0.065, 0.99)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art_panel.add_child(bg)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var margin: MarginContainer = MarginContainer.new()
+	_art_panel.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side: String in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 10)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override(&"separation", 8)
+	margin.add_child(col)
+	var top: HBoxContainer = HBoxContainer.new()
+	top.add_theme_constant_override(&"separation", 8)
+	col.add_child(top)
+	_art_back = _button("BACK", &"ReadyButton")
+	_art_back.name = "ArtBack"
+	_art_back.custom_minimum_size.x = 120
+	_art_back.tooltip_text = "Back to every card"
+	_art_back.pressed.connect(close_arts)
+	top.add_child(_art_back)
+	_art_title = Label.new()
+	_art_title.theme_type_variation = &"HudHeader"
+	_art_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_art_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_art_title.clip_text = true
+	top.add_child(_art_title)
+	_art_inspect = _button("RULES", &"HudButton")
+	_art_inspect.name = "ArtInspect"
+	_art_inspect.custom_minimum_size.x = 120
+	_art_inspect.tooltip_text = "The card's rules, wearing this art"
+	_art_inspect.pressed.connect(func() -> void: open_entry(art_entry, selected_art))
+	top.add_child(_art_inspect)
+	var body: HBoxContainer = HBoxContainer.new()
+	body.name = "Body"
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override(&"separation", 12)
+	col.add_child(body)
+	var left: VBoxContainer = VBoxContainer.new()
+	left.name = "Preview"
+	left.add_theme_constant_override(&"separation", 6)
+	body.add_child(left)
+	_art_preview_holder = Control.new()
+	_art_preview_holder.name = "PreviewHolder"
+	_art_preview_holder.mouse_filter = Control.MOUSE_FILTER_STOP
+	_art_preview_holder.tooltip_text = "Long-press / right-click: the rules"
+	left.add_child(_art_preview_holder)
+	_wire_press(_art_preview_holder, func() -> void: pass, func() -> void: open_entry(art_entry, selected_art))
+	_art_info = Label.new()
+	_art_info.theme_type_variation = &"UnitName"
+	_art_info.add_theme_font_size_override(&"font_size", 18)
+	_art_info.add_theme_color_override(&"font_color", BannerCard.SUB_COLOUR)
+	_art_info.clip_text = true
+	left.add_child(_art_info)
+	_art_trait = Label.new()
+	_art_trait.name = "ArtTrait"
+	_art_trait.theme_type_variation = &"HudSubtle"
+	_art_trait.add_theme_font_size_override(&"font_size", 16)
+	_art_trait.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	left.add_child(_art_trait)
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.add_theme_constant_override(&"separation", 8)
+	left.add_child(buttons)
+	_equip_button = _button("EQUIP", &"ReadyButton")
+	_equip_button.name = "EquipButton"
+	_equip_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_equip_button.pressed.connect(func() -> void: equip(selected_art))
+	buttons.add_child(_equip_button)
+	_variety_button = _button("USE VARIETY", &"HudButton")
+	_variety_button.name = "VarietyButton"
+	_variety_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_variety_button.tooltip_text = "No equipped art: each copy wears a different one"
+	_variety_button.pressed.connect(func() -> void: equip(&""))
+	buttons.add_child(_variety_button)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "ArtScroll"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(scroll)
+	_art_grid = GridContainer.new()
+	_art_grid.name = "ArtGrid"
+	_art_grid.add_theme_constant_override(&"h_separation", 8)
+	_art_grid.add_theme_constant_override(&"v_separation", 8)
+	scroll.add_child(_art_grid)
+
+
+## Opens the ART panel for a codex entry, previewing its equipped (else default) art.
+func open_arts(e: Dictionary) -> void:
+	art_entry = e
+	art_ids.assign(e.get("arts", [e["art"]]))
+	selected_art = shown_art(e)
+	_art_panel.visible = true
+	_fill_art_panel()
+	_art_back.grab_focus.call_deferred()
+
+
+func close_arts() -> void:
+	_art_panel.visible = false
+	art_entry = {}
+	refresh()
+
+
+## Previews `art` (one of the open card's arts).
+func select_art(art: StringName) -> void:
+	if art in art_ids:
+		selected_art = art
+		_fill_art_panel()
+
+
+## EQUIP: every copy of the card you play wears `art` (&"" = USE VARIETY: none equipped). Saved.
+func equip(art: StringName) -> void:
+	if art_entry.is_empty():
+		return
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null:
+		st.equip_art(StringName(art_entry["id"]), art)
+	if art != &"":
+		selected_art = art
+	_fill_art_panel()
+
+
+func _fill_art_panel() -> void:
+	if art_entry.is_empty():
+		return
+	var eq: StringName = equipped_of(StringName(art_entry["id"]))
+	_art_title.text = "%s · %d ARTS" % [String(art_entry["name"]).to_upper(), art_ids.size()]
+	for c: Node in _art_preview_holder.get_children():
+		_art_preview_holder.remove_child(c)
+		c.queue_free()
+	var prev: PanelContainer = BannerCard.build(_card_entry(art_entry, selected_art), Vector2(10, 10),
+			METRIC_H_COMPACT if compact else METRIC_H)
+	prev.name = "PreviewCard"
+	prev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_art_preview_holder.add_child(prev)
+	prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var sub: String = BannerArtDB.subname(selected_art)
+	var n: int = art_ids.find(selected_art) + 1
+	_art_info.text = "%s · ART %d OF %d" % [(sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME).to_upper(), n, art_ids.size()]
+	var tr: StringName = BannerArtDB.art_trait(selected_art)
+	var tr_name: String = String(SynergyRules.TRAIT_NAMES.get(tr, String(tr).capitalize())) if tr != &"" else ""
+	_art_trait.text = ("Gives the %s trait." % tr_name) if tr != &"" \
+			else "Same card, same rules: the art is your look. Every copy you play wears the equipped art."
+	var on: bool = eq == selected_art
+	_equip_button.text = "EQUIPPED" if on else ("EQUIP · GIVES %s" % tr_name.to_upper() if tr != &"" else "EQUIP")
+	_equip_button.disabled = on
+	_equip_button.tooltip_text = "Every copy of %s you play wears this art" % String(art_entry["name"])
+	_variety_button.disabled = eq == &""
+	_variety_button.text = "VARIETY ON" if eq == &"" else "USE VARIETY"
+	for c: Node in _art_grid.get_children():
+		_art_grid.remove_child(c)
+		c.queue_free()
+	for art: StringName in art_ids:
+		_art_grid.add_child(_make_art_tile(art, art == eq, art == selected_art))
+	_layout_art_panel()
+
+
+func _make_art_tile(art: StringName, equipped: bool, selected: bool) -> Control:
+	var tile_size: Vector2 = TILE_COMPACT if compact else TILE
+	var b: Button = Button.new()
+	b.name = "Art_%s" % String(art).replace("~", "_")
+	b.flat = true
+	b.custom_minimum_size = tile_size
+	b.focus_mode = Control.FOCUS_ALL
+	b.add_to_group(&"tap_target")
+	b.set_meta(&"art", art)
+	b.set_meta(&"equipped", equipped)
+	var sub: String = BannerArtDB.subname(art)
+	b.tooltip_text = "%s · tap: preview · long-press / right-click: rules" % (sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME)
+	_wire_press(b, select_art.bind(art), open_entry.bind(art_entry, art))
+	var entry: Dictionary = _card_entry(art_entry, art)
+	if not entry.has("subname"):
+		entry["subname"] = BannerArtDB.DEFAULT_SUBNAME
+	var panel: PanelContainer = BannerCard.build(entry, tile_size, METRIC_H_COMPACT if compact else METRIC_H)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.theme_type_variation = &"HandCardSelected" if selected else &"HandCard"
+	b.add_child(panel)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var face: Control = panel.get_node("Face")
+	# Trait slot (coming: arts that give a trait): the trait's plate when the art carries one, else
+	# an empty dashed slot, centred in the plate row.
+	var tr: StringName = BannerArtDB.art_trait(art)
+	var slot: Control = Control.new()
+	slot.name = "TraitSlot"
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.set_meta(&"trait", tr)
+	face.add_child(slot)
+	slot.draw.connect(func() -> void:
+		if tr != &"":
+			SynergyGlyphs.draw_trait_plate(slot, Rect2(Vector2.ZERO, slot.size), tr, true, false)
+		else:
+			BannerView._dashed_rect(slot, Rect2(Vector2.ZERO, slot.size).grow(-1.0), Color(1, 1, 1, 0.35), 1.0))
+	var tag: Label = null
+	if equipped:
+		tag = _tag_label("EQUIPPED", AMBER, Color(0.07, 0.08, 0.1))
+		tag.name = "EquippedTag"
+		face.add_child(tag)
+	panel.sort_children.connect(func() -> void:
+		var mm: Dictionary = BannerView.metrics(minf(face.size.y, METRIC_H_COMPACT if compact else METRIC_H))
+		var ps: float = mm["plate"]
+		slot.size = Vector2(ps, ps)
+		slot.position = Vector2(roundf(face.size.x * 0.5 - ps * 0.5) + (40.0 if tag != null else 0.0), mm["pad"])
+		slot.queue_redraw()
+		if tag != null:
+			tag.size = tag.get_combined_minimum_size()
+			tag.position = Vector2(slot.position.x - tag.size.x - 6.0, mm["pad"]))
+	return b
+
+
+func _layout_art_panel() -> void:
+	if _art_panel == null or _art_preview_holder == null:
+		return
+	var w: float = maxf(300.0, roundf(size.x * (0.42 if compact else 0.4)))
+	var h: float = roundf(minf(w / 2.4, size.y * 0.42))
+	_art_preview_holder.custom_minimum_size = Vector2(w, h)
+	(_art_preview_holder.get_parent() as Control).custom_minimum_size.x = w
+	var tile: Vector2 = TILE_COMPACT if compact else TILE
+	var room: float = size.x - 20.0 - 12.0 - w - 16.0
+	_art_grid.columns = maxi(1, int(floorf((room + 8.0) / (tile.x + 8.0))))
+
+
+# =============================================================================
+# kc-ui4: STARTER (the starter deck and the Operator pick)
+# =============================================================================
+
+## Opens the starter panel over the codex (the Operator you pick is saved as the next run's default).
+func open_starter() -> Control:
+	if _starter != null:
+		return _starter
+	var script: GDScript = load("res://scripts/ui/run/starter_panel.gd") as GDScript
+	_starter = script.new()
+	_starter.name = "Starter"
+	add_child(_starter)
+	move_child(_starter, _inspector.get_index())
+	_starter.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_starter.call(&"setup", null, compact)
+	_starter.connect(&"closed", func() -> void:
+		if _starter != null:
+			_starter.queue_free()
+			_starter = null)
+	return _starter
 
 
 func _art_rect(tex: Texture2D) -> TextureRect:
@@ -583,8 +927,14 @@ func _art_rect(tex: Texture2D) -> TextureRect:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed(&"ui_cancel"):
+		if get_glossary() != null:
+			return  # the glossary closes itself
 		if _inspector.is_open():
 			_inspector.close()
+		elif _starter != null:
+			_starter.call(&"close")
+		elif is_art_panel_open():
+			close_arts()
 		else:
 			close()
 		get_viewport().set_input_as_handled()

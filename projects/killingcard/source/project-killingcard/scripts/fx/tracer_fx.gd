@@ -14,6 +14,10 @@ var to: Vector2 = Vector2.ZERO
 var color: Color = FxStyle.TEAL
 var wasted: bool = false
 var width: float = 3.0
+## kc-fight-ui: timing key of the travel (&"fight_tracer" inside a firefight beat) and a delay
+## before the head leaves (a Pierce tracer starts when the shot it continues reaches its target).
+var travel_key: StringName = &"tracer_travel"
+var start_delay: float = 0.0
 
 var _head: float = 0.0
 var _tail: float = 0.0
@@ -27,23 +31,28 @@ func _ready() -> void:
 
 
 func _build(t: Tween, timing: RefCounted) -> void:
-	_travel = maxf(0.01, timing.get_value(&"tracer_travel"))
+	_travel = maxf(0.01, timing.get_value(travel_key))
 	_fade = maxf(0.01, timing.get_value(&"tracer_fade"))
 	if wasted:
 		to = from.lerp(to, 0.5)
+	var d: float = maxf(0.0, start_delay)
+	if d > 0.0:
+		_alpha = 0.0
 	t.set_parallel(true)
-	t.tween_method(_set_head, 0.0, 1.0, _travel).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	t.tween_method(_set_tail, 0.0, 1.0, _travel + _fade * 0.6).set_delay(_travel * 0.35)
-	t.tween_method(_set_alpha, 1.0, 0.0, _fade).set_delay(_travel)
+	if d > 0.0:
+		t.tween_method(_set_alpha, 1.0, 1.0, 0.01).set_delay(d)
+	t.tween_method(_set_head, 0.0, 1.0, _travel).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT).set_delay(d)
+	t.tween_method(_set_tail, 0.0, 1.0, _travel + _fade * 0.6).set_delay(d + _travel * 0.35)
+	t.tween_method(_set_alpha, 1.0, 0.0, _fade).set_delay(d + _travel)
 
 
 func _planned_duration(_timing: RefCounted) -> float:
-	return _travel + _fade
+	return start_delay + _travel + _fade
 
 
 ## Seconds until the head reaches the target (the hit marker waits for this).
 func arrival_time() -> float:
-	return _travel
+	return start_delay + _travel
 
 
 func _set_head(v: float) -> void:

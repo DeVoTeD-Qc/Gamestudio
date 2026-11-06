@@ -364,7 +364,10 @@ func _chip_visible_rect(chip: Control) -> Rect2:
 	var cards: Array[Node] = match_screen.get_hand().get_cards()
 	var i: int = cards.find(chip)
 	if i >= 0 and i + 1 < cards.size():
-		r.size.x = minf(r.size.x, (cards[i + 1] as Control).get_global_rect().position.x - r.position.x)
+		# kc-ui4: the hand is a grid; only a next card on the same row, to the right, can cover it.
+		var nr: Rect2 = (cards[i + 1] as Control).get_global_rect()
+		if absf(nr.position.y - r.position.y) < 1.0 and nr.position.x > r.position.x:
+			r.size.x = minf(r.size.x, nr.position.x - r.position.x)
 	return r
 
 

@@ -44,6 +44,9 @@ var counts_for_control: bool = true
 var level: int = 1
 var neighbor_keyword: StringName = &""
 var synergy_trait: StringName = &""
+## kc-art-traits: the copy's chosen trait as it came from its RulesCard (kept so the card that goes
+## back to the discard pile keeps it; synergy_trait is the resolved value).
+var chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT
 var grants_elimination_credit: bool = true
 
 ## Effects carried by this unit (card effects; Primary + attachment effects for the Operator).

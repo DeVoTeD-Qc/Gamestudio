@@ -115,7 +115,7 @@ func test_board_shows_art() -> void:
 			assert_true(absf(tex_size.x / tex_size.y - 4.0) < 0.05, "banner crop is 4:1 (%s)" % tex_size)
 			assert_true(Rect2(Vector2.ZERO, (slot as Control).size).grow(0.5).encloses(Rect2(slot.banner.position, slot.banner.size)), "banner inside the slot")
 	assert_eq(units, 24, "every unit slot checked")
-	# Hand cards (option A): the art window shows the art's 2:3 column, inside the card.
+	# kc-ui4: hand cards are the board's banner: the same 4:1 art band (cover-cropped), inside the card.
 	var chips: Array[Node] = match_node.get_hand().get_cards()
 	assert_eq(chips.size(), HAND_IDS.size(), "full hand")
 	for chip: Node in chips:
@@ -125,7 +125,7 @@ func test_board_shows_art() -> void:
 			continue
 		assert_not_null(art2.texture, "card art visible")
 		var ts: Vector2 = art2.texture.get_size()
-		assert_true(absf(ts.x / ts.y - 2.0 / 3.0) < 0.02, "hand art is the 2:3 column (%s)" % ts)
+		assert_true(absf(ts.x / ts.y - 4.0) < 0.05, "hand art is the banner's 4:1 band (%s)" % ts)
 		assert_true((chip as Control).get_global_rect().grow(0.5).encloses(art2.get_global_rect()), "art window inside the card")
 	_reset()
 	layout._despawn(viewport)

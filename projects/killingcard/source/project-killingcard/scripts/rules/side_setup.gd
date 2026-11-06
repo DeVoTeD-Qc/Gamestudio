@@ -15,6 +15,10 @@ var deck_arts: Array[StringName] = []
 ## kc-syn §5.2: per-copy level, parallel to `deck` (SynergyRules.LEVEL_*: 0 Recruit, 1 Trained,
 ## 2 Veteran, 3 Elite). A missing entry = Trained (the full chassis).
 var deck_levels: Array[int] = []
+## kc-art-traits (art-traits.md §2): the trait each copy's art gives it, parallel to `deck`
+## (SynergyRules.TRAIT_DEFAULT or a missing entry = the chassis' default trait; &"" = a plain art).
+## Resolved by the run / UI layer (ArtTraits.trait_of); the rules only check it against the option list.
+var deck_traits: Array[StringName] = []
 ## kc-syn §5.2 Doctrine: this trait's set count is +1 while the side has a member in play (&"" = none).
 var doctrine: StringName = &""
 ## Defines the Operator (class, FP, Armor, keywords). Null = no Operator (tests only).
@@ -51,7 +55,49 @@ static func from_squad(squad: SquadData, match_data: RunMatchData = null) -> Sid
 		if match_data.enemy_recruits:
 			for c: CardData in s.deck:
 				s.deck_levels.append(SynergyRules.LEVEL_RECRUIT if c != null and c.is_unit() else SynergyRules.LEVEL_TRAINED)
+	# kc-art-traits §7 (head T4): the squad's fixed art identity.
+	s.deck_traits = identity_traits(s.deck, squad.identity_trait)
 	return s
+
+
+## kc-art-traits §7: per-copy traits of a squad deck with art identity `identity`: every copy whose
+## options include it carries it; the rest go to the trait most of them can share (TRAITS order on a
+## tie); copies that fit neither keep their default. &"" identity = every copy on its default.
+static func identity_traits(deck: Array[CardData], identity: StringName) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for c: CardData in deck:
+		out.append(SynergyRules.TRAIT_DEFAULT)
+	if identity == &"":
+		return out
+	var rest: Array[int] = []
+	for i: int in deck.size():
+		var c: CardData = deck[i]
+		if c == null or not c.has_trait_choice():
+			continue
+		if c.can_carry(identity):
+			out[i] = identity
+		else:
+			rest.append(i)
+	var best: StringName = &""
+	var best_n: int = 0
+	for t: StringName in SynergyRules.TRAITS:
+		var cnt: int = 0
+		for i: int in rest:
+			if deck[i].can_carry(t):
+				cnt += 1
+		if t != identity and cnt > best_n:
+			best_n = cnt
+			best = t
+	if best != &"":
+		for i: int in rest:
+			if deck[i].can_carry(best):
+				out[i] = best
+	return out
+
+
+## Chosen trait of deck entry i (TRAIT_DEFAULT when deck_traits has no entry for it).
+func trait_of(i: int) -> StringName:
+	return deck_traits[i] if i >= 0 and i < deck_traits.size() else SynergyRules.TRAIT_DEFAULT
 
 
 ## Level of deck entry i (Trained when deck_levels has no entry for it).

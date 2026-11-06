@@ -30,3 +30,4 @@ collectible = true
 effects = Array[ExtResource("1_gpvni")]([])
 neighbor_keyword = &"fireteam"
 card_trait = &"undead"
+trait_options = Array[StringName]([&"undead", &"specops"])

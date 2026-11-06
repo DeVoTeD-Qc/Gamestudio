@@ -246,6 +246,16 @@ func _full_run(screen: Dictionary) -> void:
 	assert_not_null(_rs.run, "%s: Start began a run" % label)
 	_rs.run.seed_value = SEED  # deterministic offers below
 
+	# kc-ui4: the loadout opens on STARTING SQUAD (Operator pick + the starter deck by card).
+	await _frames(2)
+	var starter: Control = loadout.get_starter()
+	assert_not_null(starter, "%s: the starter panel opens first" % label)
+	_check(loadout, screen, "loadout starter")
+	assert_eq(starter.get_deck_tiles().map(func(t: Control) -> int: return int(t.get_meta(&"count"))).reduce(func(a: int, b: int) -> int: return a + b, 0),
+			_rs.run.deck.size(), "%s: the grouped starter adds up to the deck" % label)
+	await _tap(_button(starter, "NEXT: KILLSTREAKS"))
+	await _frames(2)
+	assert_true(loadout.get_starter() == null, "%s: NEXT closes it" % label)
 	# Loadout: starter kit shown, starter killstreaks pre-picked; swap Mortar for Sentry.
 	_check(loadout, screen, "loadout")
 	var text: String = _all_text(loadout)
@@ -585,6 +595,10 @@ func test_loadout_slot_limit() -> void:
 	_setup()
 	_rs.start_run(SEED)
 	var loadout: Control = await _open(RunFlow.SCENE_LOADOUT, DESKTOP)
+	await _frames(2)
+	if loadout.get_starter() != null:
+		loadout.get_starter().close()
+		await _frames(2)
 	_check(loadout, DESKTOP, "loadout desktop")
 	var sentry: Button = loadout.get_node("%Body").find_child("Killstreak_sentry_turret", true, false)
 	await _tap(sentry)

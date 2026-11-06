@@ -66,6 +66,7 @@ func _ready() -> void:
 	_banner = BannerView.new()
 	_banner.name = "Banner"
 	_banner.dim_back = false
+	_banner.show_name = false  # kc-ui4: the title above names it
 	_banner.size = BANNER_SIZE
 	_banner_holder.add_child(_banner)
 	_close.pressed.connect(close)
@@ -107,6 +108,7 @@ func open(info: Dictionary) -> void:
 		name_label.theme_type_variation = &"KeywordName"
 		name_label.text = String(k.get("name", ""))
 		_keywords.add_child(name_label)
+		_add_glossary_link(name_label, StringName(String(k.get("id", ""))))
 		var text_label: Label = Label.new()
 		text_label.text = String(k.get("text", ""))
 		text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -128,6 +130,38 @@ func open(info: Dictionary) -> void:
 		if not visible:
 			return
 		_fit()
+
+
+## kc-ui4: a "?" at the end of a keyword line opens the glossary at that entry (over the inspector).
+## The label keeps its place in KeywordList (the button is its child).
+func _add_glossary_link(label: Label, id: StringName) -> void:
+	var G: GDScript = load("res://scripts/ui/codex/glossary.gd") as GDScript
+	var key: StringName = G.call(&"key_for", id) if id != &"" else &""
+	if key == &"":
+		return
+	var q: Button = Button.new()
+	q.name = "GlossaryLink"
+	q.text = "?"
+	q.theme_type_variation = &"HudButton"
+	q.tooltip_text = "Glossary: %s" % label.text
+	q.custom_minimum_size = Vector2(64, 64)
+	q.focus_mode = Control.FOCUS_ALL
+	q.add_to_group(&"tap_target")
+	q.set_meta(&"glossary_key", key)
+	label.add_child(q)
+	label.custom_minimum_size.y = 64
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.resized.connect(func() -> void: q.position = Vector2(label.size.x - q.size.x, (label.size.y - q.size.y) * 0.5))
+	q.pressed.connect(func() -> void: open_glossary(key))
+
+
+## Opens the glossary over the inspector at `key`.
+func open_glossary(key: StringName = &"") -> Control:
+	var existing: Node = get_node_or_null(^"Glossary")
+	if existing != null:
+		existing.call(&"scroll_to", key)
+		return existing
+	return (load("res://scripts/ui/codex/glossary.gd") as GDScript).call(&"open_over", self, key)
 
 
 func get_banner() -> BannerView:

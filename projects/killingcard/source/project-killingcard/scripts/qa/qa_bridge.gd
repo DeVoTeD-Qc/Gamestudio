@@ -77,6 +77,28 @@ func run_command(cmd: String) -> String:
 			st.sides[0].supply = maxi(st.sides[0].supply, 6)
 			ctrl.refresh()
 			return ""
+		"stage_fight":
+			# kc-fight-ui: column A gets a Pierce carry and a line advance this round: your Gunner (Pierce)
+			# at the front, against a rival point man down to 1 Armor with a Point Man behind it.
+			var ctrl2: Node = scene.get_node_or_null("%MatchController") if scene != null and scene.has_node("%MatchController") else null
+			if ctrl2 == null or ctrl2.get(&"state") == null:
+				return "no match"
+			var st2: MatchState = ctrl2.state
+			var gun: RulesUnit = st2.create_unit(0, CardDB.get_card(&"gunner"), -1, SynergyRules.LEVEL_TRAINED)
+			st2.put_in_line(gun, 0)
+			st2.sides[0].line(0).erase(gun)
+			st2.sides[0].line(0).push_front(gun)
+			var back: RulesUnit = st2.create_unit(1, CardDB.get_card(&"point_man"), -1, SynergyRules.LEVEL_RECRUIT)
+			st2.put_in_line(back, 0)
+			st2.sides[1].line(0).erase(back)
+			st2.sides[1].line(0).push_front(back)
+			var weak: RulesUnit = st2.create_unit(1, CardDB.get_card(&"rifleman"), -1, SynergyRules.LEVEL_RECRUIT)
+			weak.armor = 1
+			st2.put_in_line(weak, 0)
+			st2.sides[1].line(0).erase(weak)
+			st2.sides[1].line(0).push_front(weak)
+			ctrl2.refresh()
+			return ""
 	return "unknown command"
 
 
@@ -123,10 +145,28 @@ func snapshot(scene: Node = null) -> Dictionary:
 				tiles.append({"key": String(e.get("key", "")), "name": String(e.get("name", "")), "kind": String(e.get("kind", "")),
 						"rect": _css(t)})
 			var insp: Control = codex.get_inspector()
+			var arts: Array = []
+			if codex.has_method(&"is_art_panel_open") and codex.is_art_panel_open():
+				for a: Node in codex.get_art_tiles():
+					arts.append({"art": String(a.get_meta(&"art")), "equipped": bool(a.get_meta(&"equipped")), "rect": _css(a)})
+			out["codex_arts"] = {"open": arts.size() > 0, "arts": arts,
+					"selected": String(codex.get(&"selected_art")) if arts.size() > 0 else ""}
 			out["codex"] = {"count": String((codex.get(&"_count") as Label).text), "tiles": tiles,
 					"type": String(codex.type_filter), "cls": String(codex.class_filter), "all_arts": codex.all_arts,
 					"inspector_open": insp.is_open(),
 					"inspector_title": String((insp.get_node("%TitleLabel") as Label).text) if insp.is_open() else ""}
+	# kc-ui4: the STARTING SQUAD panel (Loadout or Codex): Operator tiles and the grouped deck.
+	for n: Node in scene.find_children("Starter", "Control", true, false):
+		if (n as Control).is_visible_in_tree() and n.has_method(&"get_operator_tiles"):
+			var ops: Array = []
+			var tiles_d: Dictionary = n.get_operator_tiles()
+			for id: Variant in tiles_d:
+				ops.append({"id": String(id), "rect": _css(tiles_d[id]), "selected": StringName(id) == n.get(&"picked")})
+			out["starter"] = {"operators": ops, "deck_groups": (n.get_deck_tiles() as Array).size(),
+					"picked": String(n.get(&"picked"))}
+	for n: Node in scene.find_children("Glossary", "Control", true, false):
+		if (n as Control).is_visible_in_tree() and n.has_method(&"get_rows"):
+			out["glossary"] = {"rows": (n.filtered() as Array).size(), "category": String(n.get(&"category"))}
 	return out
 
 
@@ -170,7 +210,7 @@ func _match(scene: Node, ctrl: Node) -> Dictionary:
 			"inspector_title": String((insp.get_node("%TitleLabel") as Label).text) if insp.is_open() else "",
 			"toast": scene.get_toast_text(), "fx_skips": skips, "inspector_art": _art_info(insp_banner),
 			"mastery_override": BannerArtDB.operator_tier_override,
-			"fx_playing": fx != null and fx.is_playing()}.merged(_layout_v2(scene))
+			"fx_playing": fx != null and fx.is_playing(), "fight": _fight(scene, fx)}.merged(_layout_v2(scene))
 
 
 ## kc-board2: tray state, flyout, mirror, banner / card sizes and the badges' rects.
@@ -246,3 +286,29 @@ static func _css(c: Control) -> Array:
 	var e: Vector2 = xf * c.size
 	var dpr: float = maxf(1.0, DisplayServer.screen_get_scale())
 	return [snappedf(p.x / dpr, 0.1), snappedf(p.y / dpr, 0.1), snappedf((e.x - p.x) / dpr, 0.1), snappedf((e.y - p.y) / dpr, 0.1)]
+
+
+## kc-fight-ui: the step-by-step firefight as it plays: the order strip ("A*>B->C"), the tray header,
+## the units outlined as firing / lifted / pipped as fired, the speed and the last event landed.
+static func _fight(scene: Node, fx: Node) -> Dictionary:
+	var strip: Node = scene.call(&"get_order_strip") if scene.has_method(&"get_order_strip") else null
+	var ov: Node = fx.get(&"overlay") if fx != null else null
+	return {"strip": String(strip.call(&"describe")) if strip != null and (strip as Control).is_visible_in_tree() else "",
+			"header": String((scene.get_node("%StepHeader") as Label).text) if scene.has_node("%StepHeader") else "",
+			"shooters": (ov.get(&"shooters") as Dictionary).size() if ov != null else 0,
+			"fired": (ov.get(&"fired") as Dictionary).size() if ov != null else 0,
+			"lifted": (fx.call(&"lifted_uids") as Array).size() if fx != null and fx.has_method(&"lifted_uids") else 0,
+			"last": String(fx.get_meta(&"qa_last", "")) if fx != null else "",
+			"seen": (fx.get_meta(&"qa_seen", []) as Array).duplicate() if fx != null else [],
+			"glow": (scene.call(&"get_last_glow") as Array).size() if scene.has_method(&"get_last_glow") else 0,
+			"speed_x2": scene.get_speed_button().button_pressed if scene.has_method(&"get_speed_button") else false,
+			"model_s": float(ctrl_of(scene).get(&"last_playback_model_s")) if ctrl_of(scene) != null else 0.0,
+			"played_ms": int(ctrl_of(scene).get(&"last_playback_ms")) if ctrl_of(scene) != null else 0,
+			"skipped": bool(ctrl_of(scene).get(&"last_playback_skipped")) if ctrl_of(scene) != null else false,
+			"fight_ms": int(ctrl_of(scene).get(&"last_fight_ms")) if ctrl_of(scene) != null else 0,
+			"fps": Engine.get_frames_per_second(),
+			"caption": String(scene.call(&"get_fight_caption")) if scene.has_method(&"get_fight_caption") else ""}
+
+
+static func ctrl_of(scene: Node) -> Node:
+	return scene.get_node_or_null("%MatchController") if scene != null and scene.has_node("%MatchController") else null
