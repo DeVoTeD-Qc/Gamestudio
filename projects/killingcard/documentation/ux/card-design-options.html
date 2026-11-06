@@ -163,13 +163,18 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
 .yl { display: flex; gap: 5px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .yl b { color: #F2F5F7; font-weight: 700; }
 .yl.locked { color: #8C969E; } .yl.locked b { color: #A9B2B9; }
-.yl.flavour { font-style: italic; color: #9AA5AE; }
+.yl.flavour { font-style: italic; font-weight: 500; color: #8A949C; margin-top: auto; white-space: normal; }
 .yl svg { flex: none; }
 
 
 .ytag.tac { color: #F2C66B; border-color: #B8913A; }
 .ytext.wrap .yl { white-space: normal; }
 .h-live .h-card, .h-live .h-slot, .h-live .h-cancel { cursor: pointer; }
+.l3-live .l3-card, .l3-live .l3-slot, .l3-live .l3-cancel, .l3-live .l3-focus, .l3-live .l3-rail { cursor: pointer; }
+.l3-live .l3-card { transition: top .12s ease-out; }
+.l3-pair { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .l3-pair { grid-template-columns: 1fr; } }
+.l3-scroll::-webkit-scrollbar { height: 6px; }
 .h-sel > .card-hit { filter: drop-shadow(0 0 8px rgba(255,176,32,.8)); }
 .h-sel .slotbox:first-child { border-color: var(--g-amber) !important; }
 
@@ -177,6 +182,7 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
 .insp { position: fixed; inset: 0; background: rgba(6,8,10,.72); display: grid; place-items: center; z-index: 50;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .insp[hidden] { display: none !important; }
+section.view[hidden] { display: none !important; }
 .insp-card { width: min(560px, 100%); background: var(--g-gun); color: var(--g-fog); border: 1px solid var(--g-edge); border-radius: 8px; overflow: hidden; font-family: var(--f-body); }
 .insp-art { width: 100%; aspect-ratio: 4 / 1; background-size: cover; background-position: center 40%; max-width: 100%; }
 .insp-body { padding: 14px 16px 16px; display: grid; gap: 6px; }
@@ -203,6 +209,7 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
     <div class="seg" role="group" aria-label="Section">
       <button type="button" id="tab-board" data-tab="board" aria-pressed="true">On the board</button>
       <button type="button" id="tab-elsewhere" data-tab="elsewhere" aria-pressed="false">Everywhere else</button>
+      <button type="button" id="tab-layout" data-tab="layout" aria-pressed="false">Layout v3</button>
     </div>
     <div class="cmp">
       <label class="tog" for="cmp-on"><input type="checkbox" id="cmp-on"> Compare</label>
@@ -235,6 +242,10 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
     </div>
     <div class="options" id="opts-elsewhere"></div>
     <details class="earlier"><summary>Earlier options 1-5 (before C1+)</summary><div class="options" id="opts-else-old"></div></details>
+  </section>
+
+  <section class="view" id="view-layout" aria-labelledby="h-layout" hidden>
+    <div id="l3-root"></div>
   </section>
 
   <div class="reco" id="reco" style="margin-top:40px">
@@ -293,6 +304,9 @@ const U = {
   ammo: { name: "Ammo Resupply", art: "ammo_resupply", y: 40, cost: 1, tactic: true, siArt: true, text: "Draw 2." },
 };
 const u = (id, o = {}) => Object.assign({ id }, U[id], o);
+// kc-hand-y2: lore lines for cards with no effect (the game's CardLore table).
+const LORE_MOCK = { grunt: "Signed for one rifle, one helmet, no questions.", trooper: "Third tour, same boots. The boots are holding up better.",
+  armored: "The plate is older than he is. Both still stop rounds." };
 // The board: own and rival columns A, B, C; row 0 = front (nearest the objective).
 const BOARD = {
   own: [[u("armored", { ar: 3, st: "damaged" }), u("grunt")], [u("breacher", { st: "selected" }), u("trooper"), u("marksman")], [u("gunner", { st: "cant" }), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" })]],
@@ -1395,7 +1409,7 @@ function yTextLines(c) {
   for (const k of c.kws || []) out.push(`<div class="yl">${svg(k, col("--g-amber"), 16)}<b>${KW[k][0]}</b> ${SHORT[k] || ""}</div>`);
   if ((c.locked || []).length) out.push(`<div class="yl locked">${svg("lock", "#8C969E", 15, 2.6)}<b>Trains:</b> ${(c.locked || []).map((k) => KW[k][0]).join(" · ")}</div>`);
   if (c.text) out.push(`<div class="yl">${c.text}</div>`);
-  if (c.si && !out.length) out.push(`<div class="yl flavour">Basic kit: no abilities.</div>`);
+  if (!out.length && !c.operator) out.push(`<div class="yl flavour">${LORE_MOCK[c.id] || "Another name on the roster. Make it count."}</div>`);
   if (c.operator) out.push(`<div class="yl flavour">Respawns if it goes down.</div>`);
   return out.join("");
 }
@@ -1771,6 +1785,361 @@ document.getElementById("opts-elsewhere").innerHTML =
   + X_OPTS.map(xBlock).join("") + operatorBlock();
 document.getElementById("opts-else-old").innerHTML = ELSE_OPTS.map((o) => optBlock(o, "else")).join("");
 
+// ---------------------------------------------------------------- Layout v3: hand at the bottom centre (kc-layout-v3)
+// The head: "Can we try designs of the game where the cards are at the bottom centered? It feels more
+// natural for card game players. Let's make multiple designs of that. It would also work better for
+// iPhone portrait." Four layouts, each in landscape (844x390 pt = 1168x540 canvas) and iPhone portrait
+// (390x844 pt = 540x1168 canvas). Hand cards are Y2+ cards (the mulligan / Codex form). Units no longer
+// link (kc-pos-cut): no link ticks, no neighbour keywords.
+const PT = 844 / 1168;  // pt per canvas px
+const NO_LINK = ["guard", "spotter", "fireteam", "overwatch"];
+const lu = (id, o = {}) => {
+  const c = u(id, o);
+  c.kws = (c.kws || []).filter((k) => !NO_LINK.includes(k));
+  c.locked = (c.locked || []).filter((k) => !NO_LINK.includes(k));
+  if (!c.locked.length) delete c.locked;
+  return c;
+};
+const L3_HAND = [lu("armored"), lu("recon", { locked: ["deploy"] }), lu("trooper"), lu("ammo"), lu("breacher", { locked: ["fs"] }), lu("gunner"), lu("grunt"), lu("medic")];
+const L3_OWN = [[lu("grunt")], [lu("trooper"), lu("marksman")], [lu("gunner", { activeT: ["heavy"] })]];
+const L3_RIVAL = [[lu("flanker")], [lu("grunt"), lu("medic")], [lu("trooper", { ar: 1 })]];
+const l3State = (o = {}) => Object.assign({ hand: L3_HAND.slice(), sel: null, placed: [], focus: 1 }, o);
+const ptOf = (px) => Math.round(px * PT);
+
+// --- pieces ---------------------------------------------------------------------------------
+function l3Banner(c, side, x, y, bw) {
+  const k = bw / BW;
+  return place(x, y, `<div class="g" style="left:0;top:0;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${cardP(c, side)}</div>`);
+}
+// A narrow side-column banner (L3 portrait): an art slice with FP / Armor kept at a readable size.
+function l3Mini(c, side, x, y, w, h) {
+  const id = "c" + (uid++);
+  REG[id] = { c, side };
+  let s = `<div class="slotbox" style="left:0;top:0;width:${w}px;height:${h}px;background:#1C2228;border:1px solid ${side === "rival" ? col("--g-enemy") : col("--g-friend")};border-radius:2px;overflow:hidden"></div>`;
+  s += `<div class="art" style="left:1px;top:1px;width:${w - 2}px;height:${h - 2}px;background-image:url(${ART[c.art]});background-position:center ${c.y || 40}%;${side === "rival" ? "transform:scaleX(-1);" : ""}"></div>`;
+  s += rrow(2, Math.max(1, (h - 24) / 2), chip(fpCross(c.fp, 22, !!c.up, "B", side === "rival" ? "rival" : "own") + arPlateB(c.ar, 21, c.ar < c.max, "A", ""), "gap:2px"));
+  return place(x, y, `<div class="g card-hit" data-card="${id}" tabindex="0" role="button" aria-label="${c.name}: long press to inspect" style="left:0;top:0;width:${w}px;height:${h}px">${s}</div>`);
+}
+const l3Btn = (x, y, w, h, html, cls, extra = "") => `<div class="g ${cls}" role="button" tabindex="0" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:6px;display:grid;place-items:center;text-align:center;${extra}">${html}</div>`;
+const UNDO_SVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D8DEE3" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>`;
+function l3Ready(x, y, w, h, round = false) {
+  return l3Btn(x, y, w, h, `<span style="font:700 22px var(--f-cond);letter-spacing:.08em;color:#1A1305">READY</span>`, "l3-ready", `background:${col("--g-amber")};${round ? "border-radius:50%;" : ""}`);
+}
+function l3Undo(x, y, w, h, round = false) {
+  return l3Btn(x, y, w, h, UNDO_SVG, "l3-undo", `background:${col("--g-gun")};border:1px solid ${col("--g-edge")};${round ? "border-radius:50%;" : ""}`) ;
+}
+const l3Pill = (x, y, w, h, html, extra = "") => `<div class="g mono" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};border-radius:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:15px;color:${col("--g-fog")};${extra}">${html}</div>`;
+const l3Supply = (x, y, w, h) => l3Pill(x, y, w, h, `SUPPLY <b style="color:#fff">3/4</b><span style="letter-spacing:2px;color:${col("--g-amber")}">■■■</span><span style="color:#555">■</span>`);
+const l3Score = (x, y, w, h) => l3Pill(x, y, w, h, `R2 <b style="color:#fff">1-3</b> <span style="color:${col("--g-friend")}">&#9873; 1ST YOU</span>`);
+const l3Deck = (x, y, w, h) => l3Pill(x, y, w, h, `DECK <b style="color:#fff">11</b>`);
+const l3Menu = (x, y, w, h) => l3Pill(x, y, w, h, `<span style="font-size:22px">&#9776;</span>`);
+function l3Ks(x, y, w, h, vertical = false) {
+  const n = 3, gap = 4;
+  let s = "";
+  const names = [["UAV", "2/3"], ["AIR", "0/4"], ["SNTRY", "0/6"]];
+  for (let i = 0; i < n; i++) {
+    const cw = vertical ? w : (w - gap * (n - 1)) / n, chh = vertical ? (h - gap * (n - 1)) / n : h;
+    const cx = vertical ? x : x + i * (cw + gap), cy = vertical ? y + i * (chh + gap) : y;
+    s += l3Pill(cx, cy, cw, chh, `<span style="display:grid;line-height:1.05;font-size:12px">${names[i][0]}<b style="color:#fff;font-size:14px">${names[i][1]}</b></span>`, i === 0 ? `border-color:${col("--g-amber")};` : "");
+  }
+  return s;
+}
+// The sets rail: one chip per trait in play (tap pins the highlight on the board, as in C1+).
+function l3Rail(x, y, w, h, vertical) {
+  const list = P_RAIL;
+  let s = "";
+  const gap = 4;
+  list.forEach((r, i) => {
+    const tr = TRAITS[r.t];
+    const cw = vertical ? w : (w - gap * (list.length - 1)) / list.length, chh = vertical ? (h - gap * (list.length - 1)) / list.length : h;
+    const cx = vertical ? x : x + i * (cw + gap), cy = vertical ? y + i * (chh + gap) : y;
+    s += `<div class="g l3-rail" data-trait="${r.t}" role="button" tabindex="0" aria-label="${r.text}" style="left:${cx}px;top:${cy}px;width:${cw}px;height:${chh}px;background:${col("--g-gun")};border:1px solid ${r.on ? col(tr[1]) : col("--g-edge")};border-radius:6px;display:flex;align-items:center;justify-content:center;gap:4px">${svg(r.t, r.on ? col(tr[1]) : "rgba(216,222,227,.55)", 18, 2.6)}<span class="mono" style="font-size:13px;color:${r.on ? "#fff" : col("--g-muted")}">${r.you}/${r.on ? 3 : 2}</span></div>`;
+  });
+  return s;
+}
+
+// The board: 3 columns of 4 rows per side, the objective tiles between. bw = banner width (4:1).
+// mini: {focus, w} narrows the non-focused columns (L3 portrait). Returns {html, h}.
+function l3Board(x0, y0, bw, gut, st, mini = null) {
+  const bh = Math.round(bw / 4), rg = 3, mg = 3, objH = Math.max(34, Math.round(bh * 0.85));
+  const half = 4 * bh + 3 * rg;
+  let s = "";
+  const sel = st.sel !== null && st.sel !== undefined ? st.hand[st.sel] : null;
+  let x = x0;
+  for (let z = 0; z < 3; z++) {
+    const narrow = mini && z !== st.focus;
+    const w = narrow ? mini.w : bw;
+    const h = narrow ? Math.round(bh * 0.92) : bh;
+    s += `<div class="g l3-col" data-z="${z}" style="left:${x}px;top:${y0}px;width:${w}px;height:${2 * half + 2 * mg + objH}px;background:linear-gradient(${["#1c2420", "#1d2125", "#22201b"][z]}, #121619)"></div>`;
+    for (let r = 0; r < 4; r++) {
+      const ry = y0 + (3 - r) * (bh + rg), oy = y0 + half + 2 * mg + objH + r * (bh + rg);
+      s += `<div class="g" style="left:${x}px;top:${ry}px;width:${w}px;height:${h}px;border:1px dashed rgba(216,222,227,.10)"></div>`;
+      s += `<div class="g" style="left:${x}px;top:${oy}px;width:${w}px;height:${h}px;border:1px dashed rgba(216,222,227,.10)"></div>`;
+      const rc = L3_RIVAL[z][r];
+      if (rc) s += narrow ? l3Mini(rc, "rival", x, ry, w, h) : l3Banner(rc, "rival", x, ry, bw);
+    }
+    const own = L3_OWN[z].concat(st.placed.filter((p) => p.z === z).map((p) => Object.assign({}, p.c, { pending: true })));
+    own.forEach((c, r) => {
+      if (r > 3) return;
+      const oy = y0 + half + 2 * mg + objH + r * (bh + rg);
+      s += narrow ? l3Mini(c, "own", x, oy, w, h) : l3Banner(c, "own", x, oy, bw);
+      if (c.pending) s += place(x, oy, `<div class="g" style="left:0;top:0;width:${w}px;height:${h}px;border:2px dashed ${col("--g-amber")}"></div><div class="g mono" style="left:${w / 2 - 22}px;top:-1px;padding:0 6px;background:${col("--g-amber")};color:#1A1305;font-size:12px">PLAN</div>`);
+    });
+    const oy = y0 + half + mg;
+    const ctl = ["RIVAL", "YOURS", "EVEN"][z], cc = [col("--g-enemy"), col("--g-friend"), col("--g-muted")][z];
+    s += `<div class="g" style="left:${x}px;top:${oy}px;width:${w}px;height:${objH}px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};display:flex;align-items:center;gap:8px;padding:0 8px;overflow:hidden"><span class="mono" style="display:grid;place-items:center;width:${objH - 12}px;height:${objH - 12}px;border:2px solid ${cc};border-radius:${z === 1 ? "50%" : "2px"};color:${cc};font-size:16px">${"ABC"[z]}</span>${narrow ? "" : `<span class="mono" style="font-size:13px;line-height:1.1;color:${col("--g-muted")}">${["CLOSE", "MID", "LONG"][z]}<br><b style="color:${cc}">${ctl}</b></span>`}</div>`;
+    if (sel && own.length < 4) {
+      const ly = y0 + half + 2 * mg + objH + own.length * (bh + rg);
+      s += `<div class="g l3-slot" data-z="${z}" role="button" tabindex="0" aria-label="Place in column ${"ABC"[z]}" style="left:${x}px;top:${ly}px;width:${w}px;height:${Math.max(h, 44)}px;border:2px dashed ${col("--g-amber")};background:rgba(255,176,32,.16);display:grid;place-items:center;font:700 ${narrow ? 14 : 16}px var(--f-cond);letter-spacing:.06em;color:${col("--g-amber")}">${narrow ? "PLAY · " + "ABC"[z] : "PLAY HERE · " + "ABC"[z]}</div>`;
+    }
+    if (narrow) s += `<div class="g l3-focus" data-z="${z}" role="button" tabindex="0" aria-label="Show column ${"ABC"[z]} full size" style="left:${x}px;top:${oy}px;width:${w}px;height:${objH}px"></div>`;
+    x += w + gut;
+  }
+  return { html: s, h: 2 * half + 2 * mg + objH, w: x - gut - x0 };
+}
+
+// The hand: 8 Y2+ cards. kind: "fan" (overlapping row, the top `show` px visible), "row" (title strips,
+// no overlap), "arc" (a rotated fan), "grid" (2 rows of 4 strips). The selected card is lifted and
+// outlined; its full face shows in the layout's well.
+function l3Hand(st, g, cards = null, offset = 0) {
+  const hand = cards || st.hand;
+  const n = hand.length;
+  let s = "";
+  const W = g.cardW;
+  hand.forEach((c, i) => {
+    const sel = st.sel !== null && st.sel !== undefined && st.sel + offset === i;
+    let x, y, rot = 0;
+    if (g.kind === "grid") {
+      const cols = 4, cw = W;
+      x = g.x + (i % cols) * (cw + g.gap);
+      y = g.y + Math.floor(i / cols) * (g.show + g.gap);
+    } else {
+      const span = (n - 1) * g.step + W;
+      x = g.cx - span / 2 + i * g.step;
+      y = g.y;
+      if (g.kind === "arc") {
+        const t = i - (n - 1) / 2;
+        rot = t * g.rot;
+        y = g.y + t * t * g.drop;
+      }
+    }
+    if (sel) y -= 14;
+    const clip = g.kind === "row" || g.kind === "grid" ? `height:${g.show}px;overflow:hidden;` : "";
+    const html = c.operatorCard ? opCard(W, Math.round(W * 0.82), "deploy") : yCard("Y2T1", c, W).html;
+    s += `<div class="g l3-card${sel ? " l3-sel" : ""}" data-i="${i}" style="left:${x}px;top:${y}px;width:${W}px;${clip}transform:rotate(${rot}deg);transform-origin:50% 140%;z-index:${sel ? 40 : 10 + i};${sel ? `filter:drop-shadow(0 0 8px rgba(255,176,32,.9));` : ""}">${html}</div>`;
+  });
+  return s;
+}
+function l3Well(st, w) {
+  const sel = st.sel !== null && st.sel !== undefined ? st.hand[st.sel] : null;
+  let s = `<div class="g" style="left:${w.x}px;top:${w.y}px;width:${w.w}px;height:${w.h}px;border:1px dashed ${sel ? col("--g-amber") : "rgba(216,222,227,.18)"};border-radius:8px;background:rgba(10,12,14,.5)"></div>`;
+  if (!sel) return s + `<div class="g mono" style="left:${w.x}px;top:${w.y + w.h / 2 - 20}px;width:${w.w}px;text-align:center;font-size:14px;line-height:1.4;color:${col("--g-muted")}">TAP A CARD<br>TO RAISE IT</div>`;
+  const cw = Math.min(w.cardW, w.w - 12);
+  s += place(w.x + (w.w - cw) / 2, w.y + 6, yCard("Y2T1", sel, cw).html);
+  const ch = yH("Y2T1", cw);
+  if (w.h - ch - 12 >= 50) s += l3Btn(w.x + 6, w.y + ch + 12, w.w - 12, Math.min(64, w.h - ch - 18), `<span style="font:600 16px var(--f-cond);letter-spacing:.06em">CANCEL</span>`, "l3-cancel", `background:${col("--g-gun")};border:1px solid ${col("--g-edge")}`);
+  return s;
+}
+// A raised card standing in place over the hand (L2 / L3): full face plus CANCEL beside it.
+function l3Raise(st, x, y, cw, cancelAt) {
+  const sel = st.sel !== null && st.sel !== undefined ? st.hand[st.sel] : null;
+  if (!sel) return "";
+  let s = `<div class="g" style="left:${x - 6}px;top:${y - 6}px;width:${cw + 12}px;height:${yH("Y2T1", cw) + 12}px;background:rgba(10,12,14,.82);border:2px solid ${col("--g-amber")};border-radius:10px;z-index:60"></div>`;
+  s += `<div class="g" style="left:${x}px;top:${y}px;z-index:61">${yCard("Y2T1", sel, cw).html}</div>`;
+  s += `<div class="g" style="z-index:62;left:0;top:0">${l3Btn(cancelAt[0], cancelAt[1], cancelAt[2], 64, `<span style="font:600 16px var(--f-cond);letter-spacing:.06em">CANCEL</span>`, "l3-cancel", `background:${col("--g-gun")};border:1px solid ${col("--g-edge")}`)}</div>`;
+  return s;
+}
+
+// --- the four layouts ---------------------------------------------------------------------------
+// Each returns the stage HTML for (orient, state). Sizes are canvas px; the pitch states them in pt.
+const L3 = {
+  // L1: overlapping fan at the bottom, a preview well beside the board, HUD in the side strip.
+  L1: {
+    land(st) {
+      let s = "";
+      s += l3Menu(6, 6, 62, 62) + l3Score(6, 74, 62, 64).replace("R2 ", "R2<br>").replace("display:flex", "display:grid") + l3Rail(6, 146, 62, 220, true) + l3Deck(6, 374, 62, 56);
+      const b = l3Board(80, 6, 184, 12, st);
+      s += b.html;
+      s += l3Well(st, { x: 670, y: 6, w: 270, h: 296, cardW: 250 });
+      s += l3Supply(948, 6, 214, 44) + l3Ks(948, 56, 214, 62);
+      s += place(948, 126, opCard(214, 176, "deploy"));
+      s += l3Undo(948, 310, 70, 120) + l3Ready(1026, 310, 136, 120);
+      s += l3Hand(st, { kind: "fan", cx: 584, y: 444, cardW: 150, step: 84 });
+      return s;
+    },
+    port(st) {
+      let s = "";
+      s += l3Menu(8, 8, 62, 62) + l3Score(78, 8, 200, 62) + l3Supply(286, 8, 246, 62);
+      s += l3Rail(8, 78, 300, 52, false) + l3Ks(316, 78, 216, 52);
+      const b = l3Board(8, 140, 169, 8, st);
+      s += b.html;
+      const wy = 140 + b.h + 8;
+      const hy = 1168 - 238;
+      s += l3Well(st, { x: 8, y: wy, w: 300, h: hy - wy - 8, cardW: 288 });
+      s += place(316, wy, opCard(216, 200, "deploy"));
+      s += l3Undo(316, wy + 208, 70, hy - wy - 216) + l3Ready(394, wy + 208, 138, hy - wy - 216);
+      s += `<div class="g l3-scroll" style="left:8px;top:${hy}px;width:524px;height:216px;overflow-x:auto;overflow-y:hidden">` + l3Hand(st, { kind: "fan", cx: (7 * 64 + 150) / 2, y: 20, cardW: 150, step: 64 }) + `</div>`;
+      s += `<div class="g mono" style="left:8px;top:1146px;width:524px;text-align:center;font-size:12px;color:${col("--g-muted")}">SWIPE THE FAN FOR THE LAST CARDS · DECK 11</div>`;
+      return s;
+    },
+    sizes: { land: [184, "board 184x46 (133x33 pt) · hand: 8 Y2+ at 150 px, 84 px of each showing (61 pt tap strips)"], port: [169, "board 169x42 (122x30 pt) · hand: 8 Y2+ at 150 px, 64 px apart (46 pt) in a swipeable fan"] },
+  },
+  // L2: flat row of title strips (no overlap), raise in place; HUD in a top bar.
+  L2: {
+    land(st) {
+      let s = "";
+      s += l3Menu(6, 6, 62, 44) + l3Score(76, 6, 196, 44) + l3Supply(280, 6, 210, 44) + l3Ks(498, 6, 260, 44) + l3Rail(766, 6, 300, 44, false) + l3Deck(1074, 6, 88, 44);
+      const b = l3Board(206, 56, 176, 14, st);
+      s += b.html;
+      s += place(6, 56, opCard(190, 150, "deploy"));
+      s += l3Undo(6, 214, 190, 64) + l3Ready(6, 286, 190, 120);
+      s += l3Hand(st, { kind: "row", cx: 584, y: 474, cardW: 140, step: 144, show: 66 });
+      const i = st.sel;
+      if (i !== null && i !== undefined) {
+        const x = Math.min(1168 - 256, Math.max(6, 584 - (8 * 144 - 4) / 2 + i * 144 - 55));
+        s += l3Raise(st, x, 540 - 216 - 74, 250, [x < 584 ? x + 262 : x - 104, 540 - 216 - 74, 92]);
+      }
+      return s;
+    },
+    port(st) {
+      let s = "";
+      s += l3Menu(8, 8, 62, 62) + l3Score(78, 8, 200, 62) + l3Supply(286, 8, 246, 62);
+      s += l3Rail(8, 78, 300, 52, false) + l3Ks(316, 78, 216, 52) ;
+      const b = l3Board(8, 140, 169, 8, st);
+      s += b.html;
+      const show = 100;
+      const hy = 1168 - 8 - 2 * show - 4;
+      s += l3Hand(st, { kind: "grid", x: 8, y: hy, cardW: 128, gap: 4, show });
+      const oy = hy - 8 - 150;
+      s += place(8, oy, opCard(300, 150, "deploy"));
+      s += l3Undo(316, oy, 70, 150) + l3Ready(394, oy, 138, 150);
+      s += l3Deck(8, 140 + b.h + 8, 62, 52);
+      const i = st.sel;
+      if (i !== null && i !== undefined) s += l3Raise(st, 82, 140 + b.h + 8, 250, [344, 140 + b.h + 8, 188]);
+      return s;
+    },
+    sizes: { land: [176, "board 176x44 (127x32 pt) · hand: 8 title strips 140x66 (101x48 pt), no overlap"], port: [169, "board 169x42 (122x30 pt) · hand: 2 rows of 4 strips 128x100 (92x72 pt) at the bottom; the raised card fills the gap under the board"] },
+  },
+  // L3: arc fan (a held hand) + a focus column in portrait (one column full size, two narrow).
+  L3: {
+    land(st) {
+      let s = "";
+      s += l3Menu(6, 6, 62, 62) + l3Score(6, 74, 62, 64).replace("R2 ", "R2<br>").replace("display:flex", "display:grid") + l3Rail(6, 146, 62, 200, true) + l3Deck(6, 354, 62, 56);
+      const b = l3Board(80, 6, 188, 12, st);
+      s += b.html;
+      s += l3Supply(680, 6, 230, 44) + l3Ks(918, 6, 244, 44);
+      s += place(680, 58, opCard(230, 180, "deploy"));
+      s += l3Undo(918, 58, 244, 64) + l3Ready(918, 130, 244, 108);
+      s += l3Hand(st, { kind: "arc", cx: 584, y: 438, cardW: 160, step: 86, rot: 4, drop: 2.2 });
+      const i = st.sel;
+      if (i !== null && i !== undefined) s += l3Raise(st, 680 + 4, 248, 250, [940, 248, 222]);
+      return s;
+    },
+    port(st) {
+      let s = "";
+      s += l3Menu(8, 8, 62, 62) + l3Score(78, 8, 200, 62) + l3Supply(286, 8, 246, 62);
+      s += l3Rail(8, 78, 300, 52, false) + l3Ks(316, 78, 216, 52);
+      const b = l3Board(8, 140, 236, 8, st, { w: 136 });
+      s += b.html;
+      s += `<div class="g mono" style="left:8px;top:${140 + b.h + 4}px;width:524px;text-align:center;font-size:12px;color:${col("--g-muted")}">TAP A NARROW COLUMN TO OPEN IT · THE OPEN COLUMN IS FULL SIZE</div>`;
+      const oy = 140 + b.h + 26;
+      s += place(8, oy, opCard(300, 140, "deploy"));
+      s += l3Undo(316, oy, 70, 140) + l3Ready(394, oy, 138, 140);
+      s += l3Hand(st, { kind: "arc", cx: 270, y: oy + 160, cardW: 130, step: 61, rot: 4.5, drop: 2.6 });
+      const i = st.sel;
+      if (i !== null && i !== undefined) s += l3Raise(st, 20, oy - 20, 250, [290, oy - 20, 230]);
+      return s;
+    },
+    sizes: { land: [188, "board 188x47 (136x34 pt) · hand: an arc of 8 Y2+ at 160 px, 86 px apart (62 pt)"], port: [236, "focus column 236x59 (171x43 pt) + two narrow columns 136x54 (98x39 pt, art + FP / Armor only) · hand: an arc of 8 at 130 px, 61 px apart (44 pt)"] },
+  },
+  // L4: the Operator is the first card of the hand; READY and UNDO are round thumb buttons.
+  L4: {
+    land(st) {
+      let s = "";
+      s += l3Menu(6, 6, 62, 62) + l3Score(6, 74, 62, 64).replace("R2 ", "R2<br>").replace("display:flex", "display:grid") + l3Rail(6, 146, 62, 200, true) + l3Deck(6, 354, 62, 56);
+      const b = l3Board(80, 6, 184, 12, st);
+      s += b.html;
+      s += l3Supply(670, 6, 230, 44) + l3Ks(670, 56, 230, 56);
+      s += l3Well(st, { x: 670, y: 120, w: 270, h: 300, cardW: 250 });
+      s += l3Undo(1010, 250, 80, 80, true) + l3Ready(966, 340, 170, 90);
+      s += l3Hand(st, { kind: "fan", cx: 584, y: 444, cardW: 140, step: 76 }, l3Hand9(st), 1);
+      return s;
+    },
+    port(st) {
+      let s = "";
+      s += l3Menu(8, 8, 62, 62) + l3Score(78, 8, 200, 62) + l3Supply(286, 8, 246, 62);
+      s += l3Rail(8, 78, 300, 52, false) + l3Ks(316, 78, 216, 52);
+      const b = l3Board(8, 140, 169, 8, st);
+      s += b.html;
+      const wy = 140 + b.h + 8;
+      const hy = 1168 - 210;
+      s += l3Well(st, { x: 8, y: wy, w: 380, h: hy - wy - 10, cardW: 300 });
+      s += l3Undo(420, wy + 20, 90, 90, true) + l3Ready(396, wy + 130, 136, 136);
+      s += l3Hand(st, { kind: "fan", cx: 270, y: hy, cardW: 128, step: 50 }, l3Hand9(st), 1);
+      return s;
+    },
+    sizes: { land: [184, "board 184x46 (133x33 pt) · hand: the Operator + 8 Y2+ at 140 px, 76 px apart (55 pt)"], port: [169, "board 169x42 (122x30 pt) · hand: the Operator + 8 at 128 px, 50 px apart (36 pt: under 44 pt, needs a swipe)"] },
+  },
+};
+// L4: the Operator as card 0 of the hand (it never leaves your hand until deployed).
+function l3Hand9(st) { return [Object.assign({}, OPER, { operatorCard: true })].concat(st.hand); }
+
+const L3_OPTS = [
+  { key: "L1", title: "Fan + preview well", best: true,
+    pitch: "The hand is an overlapping fan along the bottom centre: each card's title bar and a slice of its calling card show, 84 px apart (61 pt strips). Tap a card: it lifts and its full Y2+ face appears in the preview well beside the board; the legal slots say PLAY HERE. The HUD keeps today's side strip in landscape and becomes two top bars in portrait, where the well sits between the board and the hand.",
+    pros: ["The board is never covered: the preview has its own place", "Portrait is natural: board, preview, hand top to bottom, thumbs on the hand", "Operator and READY / UNDO keep the O2 layout the head approved"],
+    cons: ["Landscape banners shrink from 228x57 to 184x46 (133x33 pt)", "Portrait fan needs a swipe for the last 1-2 cards (64 px steps)", "The well is empty space until you tap a card"] },
+  { key: "L2", title: "Title-strip row + top bar",
+    pitch: "No overlap: the hand is a row of title strips (cost, name, a slice of art), each a whole tap target. Tap one and the full card rises in place over the bottom of the board, with CANCEL beside it. The HUD is one top bar (menu, score, supply, killstreaks, sets, deck); the Operator and READY sit at the left.",
+    pros: ["Every card is a full, separate 140x66 target (101x48 pt)", "Portrait fits 8 cards in 2 rows with no swipe", "Very calm: one strip per card, like a menu"],
+    cons: ["Strips show no stats: you raise a card to read it", "The raised card covers part of your back rows", "Smallest landscape banners (176x44)"] },
+  { key: "L3", title: "Arc fan + focus column",
+    pitch: "A held hand: an arc of rotated cards (the card-game look the head asked for), raised to full size on tap. In portrait the board keeps one column full size (236x59) and folds the other two to narrow art + FP / Armor columns; tap a narrow column to open it.",
+    pros: ["Most 'card game' feel: an arc you hold", "Portrait focus column keeps one column readable at 171x43 pt", "Raised card stands beside the arc, the board stays visible"],
+    cons: ["Rotated cards are harder to read (titles tilt up to 16 deg)", "Focus column: you can only read one column's abilities at a time", "More motion to animate (arc, raise, column swap)"] },
+  { key: "L4", title: "Operator in hand + thumb buttons",
+    pitch: "The Operator becomes the first card of the hand (9 cards), so everything you can play is in one fan. READY and UNDO become round thumb buttons at the bottom-right. Tap a card to raise it into the preview well.",
+    pros: ["One place for everything you can deploy", "READY sits under the right thumb in both orientations", "No separate Operator row: more room for the board"],
+    cons: ["9 cards: portrait steps drop to 50 px (36 pt, under the 44 pt floor)", "The Operator loses its distinct spot (only its brass frame marks it)", "Round buttons waste corner space"] },
+];
+function l3Frame(key, orient, st) {
+  const [w, h] = orient === "land" ? [1168, 540] : [540, 1168];
+  return `<div class="l3-inner" style="position:absolute;left:0;top:0;width:${w}px;height:${h}px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%, #26302b, #0d1012)">${L3[key][orient](st)}</div>`;
+}
+function l3Block(opt) {
+  const k = opt.key;
+  const live = (orient) => {
+    const [w, h] = orient === "land" ? [1168, 540] : [540, 1168];
+    return `<div><p class="frame-cap">${orient === "land" ? "Landscape 844x390 pt" : "iPhone portrait 390x844 pt"} · ${L3[k].sizes[orient][1]}</p><div class="fit l3-live" data-layout="${k}" data-orient="${orient}" data-w="${w}" data-h="${h}" style="aspect-ratio:${w}/${h}${orient === "port" ? ";max-width:420px;margin:0 auto" : ""}"><div class="stage" style="width:${w}px;height:${h}px">${l3Frame(k, orient, l3State())}</div></div></div>`;
+  };
+  return `<article class="opt" id="opt-${k}" data-key="${k}">
+    <div class="opt-head"><span class="opt-letter">${k}</span><span class="opt-title">${opt.title}</span>${opt.best ? '<span class="pick">Recommended</span>' : ""}<p class="opt-pitch">${opt.pitch} <b>Try it:</b> tap a card, then a PLAY HERE slot (tap the card again, CANCEL or the empty board to cancel; long press = the inspector).</p></div>
+    <div class="frames l3-pair">${live("land")}${live("port")}</div>
+    <div class="pc"><div class="pro"><h3>Pros</h3><ul>${opt.pros.map((p) => `<li>${p}</li>`).join("")}</ul></div><div class="con"><h3>Cons</h3><ul>${opt.cons.map((p) => `<li>${p}</li>`).join("")}</ul></div></div>
+  </article>`;
+}
+function l3Table() {
+  const rows = L3_OPTS.map((o) => {
+    const L = L3[o.key].sizes;
+    return `<tr><td><b>${o.key}</b> ${o.title}</td><td>${L.land[1]}</td><td>${L.port[1]}</td></tr>`;
+  }).join("");
+  return `<div style="overflow-x:auto"><table class="nb"><thead><tr><th>Layout</th><th>Landscape (844x390 pt)</th><th>Portrait (390x844 pt)</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="hint">Today (H1): board banners 228x57 px (165x41 pt), X1 hand banners 177x44 px. Column width vs readability: the C1+ banner's abilities and FP / Armor scale with the banner; at 169 px wide (portrait) they are 16 / 19 px (12 / 14 pt), still readable; at 136 px (L3's narrow columns) only the art, FP and Armor are kept. Rotating banners 90 deg in portrait was rejected: the calling card would read sideways and the board would need horizontal columns.</p>`;
+}
+function l3Section() {
+  return `<div class="section-head"><h2>Layout v3: hand at the bottom centre</h2><p>The head: <q>Can we try designs of the game where the cards are at the bottom centered? It feels more natural for card game players. Let's make multiple designs of that. It would also work better for iPhone portrait.</q> Four layouts, each live in landscape and iPhone portrait. Rules: hand cards are the Y2+ card (as at the mulligan and in the Codex); 8 cards; tap a card to raise it to full size, tap a PLAY HERE slot to place it, tap it again / CANCEL / the empty board to cancel; long press = the inspector; nothing on hover; tap targets 44 pt+ (61 px). Units no longer link (no link ticks, no neighbour keywords).</p></div>
+  ${l3Table()}
+  <div class="options" id="opts-layout-list">${L3_OPTS.map(l3Block).join("")}</div>
+  <div class="reco"><h2>Recommendation: L1, fan + preview well</h2>
+    <p>L1 keeps the board fully visible while you choose (the raised card has its own place), keeps the head's O2 Operator + READY / UNDO, and becomes the most natural portrait layout: board, preview, then the hand under the thumbs. Its 61 pt tap strips meet the floor in landscape; in portrait the fan is swipeable (64 px steps, 46 pt). If the head wants the held-hand look, take L3's arc for the hand only and keep L1's well.</p>
+    <p><b>Questions for the head</b> (recommended first):</p>
+    <ol><li>Is shrinking the landscape banners from 228x57 to 184x46 (133x33 pt) acceptable to make room for the hand at the bottom? (Recommended: yes; the peek and the inspector carry the detail.)</li>
+    <li>In portrait, show all three columns at 169x42 (L1 / L2 / L4) or one focused column at 236x59 with two narrow ones (L3)? (Recommended: all three; the focus column hides the rival's abilities.)</li>
+    <li>Should the Operator stay beside READY (L1, the approved O2) or join the hand as its first card (L4)? (Recommended: stay beside READY.)</li></ol></div>`;
+}
+
+document.getElementById("l3-root").innerHTML = l3Section();
+
 // ---------------------------------------------------------------- scaling + name fitting
 function scaleAll() {
   for (const f of document.querySelectorAll(".fit")) {
@@ -1795,7 +2164,7 @@ fitNames();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitNames(); scaleAll(); checkTitles(); });
 
 // ---------------------------------------------------------------- tabs, compare, theme
-const views = { board: document.getElementById("view-board"), elsewhere: document.getElementById("view-elsewhere") };
+const views = { board: document.getElementById("view-board"), elsewhere: document.getElementById("view-elsewhere"), layout: document.getElementById("view-layout") };
 let tab = "board";
 function setTab(t) {
   tab = t in views ? t : "board";
@@ -1806,7 +2175,7 @@ function setTab(t) {
   scaleAll();
 }
 const cmpOn = document.getElementById("cmp-on"), cmpA = document.getElementById("cmp-a"), cmpB = document.getElementById("cmp-b");
-function opts() { return tab === "board" ? BOARD_OPTS : H_OPTS.concat(Y_OPTS, X_OPTS); }
+function opts() { return tab === "board" ? BOARD_OPTS : (tab === "layout" ? L3_OPTS : H_OPTS.concat(Y_OPTS, X_OPTS)); }
 function fillCompare() {
   const list = opts();
   const best = list.find((o) => o.best) || list[0];
@@ -1817,7 +2186,7 @@ function fillCompare() {
   }
 }
 function applyCompare() {
-  const box = document.getElementById(tab === "board" ? "opts-board" : "opts-elsewhere");
+  const box = document.getElementById(tab === "board" ? "opts-board" : (tab === "layout" ? "opts-layout-list" : "opts-elsewhere"));
   const on = cmpOn.checked;
   box.classList.toggle("compare", on);
   cmpA.disabled = cmpB.disabled = !on;
@@ -1950,6 +2319,42 @@ for (const ev of ["pointerup", "pointercancel", "pointermove"]) document.addEven
     } else if (e.target.closest(".h-reset")) {
       states.set(f, hState());
     } else if (cancel || e.target.closest(".h-live-inner")) {
+      st.sel = null;
+    }
+    redraw(f);
+  });
+})();
+
+// ---------------------------------------------------------------- Layout v3: live frames
+(function () {
+  const states = new WeakMap();
+  for (const f of document.querySelectorAll(".l3-live")) states.set(f, l3State());
+  function redraw(f) {
+    const sc = f.querySelector(".l3-scroll");
+    const keep = sc ? sc.scrollLeft : 0;
+    f.querySelector(".stage").innerHTML = l3Frame(f.dataset.layout, f.dataset.orient, states.get(f));
+    const sc2 = f.querySelector(".l3-scroll");
+    if (sc2) sc2.scrollLeft = keep;
+  }
+  document.addEventListener("click", (e) => {
+    const f = e.target.closest && e.target.closest(".l3-live");
+    if (!f || !insp.hidden) return;
+    const st = states.get(f);
+    const hc = e.target.closest(".l3-card"), slot = e.target.closest(".l3-slot"), cancel = e.target.closest(".l3-cancel");
+    const focus = e.target.closest(".l3-focus"), rail = e.target.closest(".l3-rail");
+    const L4 = f.dataset.layout === "L4";
+    if (rail) return;
+    if (slot && st.sel !== null) {
+      st.placed.push({ z: Number(slot.dataset.z), c: st.hand[st.sel] });
+      st.hand.splice(st.sel, 1);
+      st.sel = null;
+    } else if (focus) {
+      st.focus = Number(focus.dataset.z);
+    } else if (hc) {
+      let i = Number(hc.dataset.i);
+      if (L4) { if (i === 0) { st.sel = null; redraw(f); return; } i -= 1; }
+      st.sel = st.sel === i ? null : i;
+    } else if (cancel || e.target.closest(".l3-inner")) {
       st.sel = null;
     }
     redraw(f);
