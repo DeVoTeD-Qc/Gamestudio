@@ -677,3 +677,289 @@ for _s in S:
         _s["used"] = "Locked keyword pip badge (frm_socket_locked), locked Codex art, NOT FOUND YET"
     if _s["id"] == "frm_equipped":
         _s["notes"] = "kc-trait-ui (head B): no EQUIP in runs; the Codex shows FOUND marks instead, so this is optional polish."
+
+
+# =============================================================================================
+# kc-ui-art2 (Sr Game Artist, 2026-11-06): re-based on the card design now in the game
+# (kc-cards-impl: C1+ board card, Y2+ card with the T1 orders frame, H1 hand, O2 Operator card;
+# documentation/ux/board-layout-v2.md "Implementation notes (kc-cards-impl)" and
+# documentation/ux/card-design-options.html). Every slot gets:
+#   status   "imported (batch 1)" / "active" / "revised (kc-ui-art2)" / "new (kc-ui-art2)" / "RETIRED: <reason>"
+#   code     the id the code asks UiKit / IconSheet for, and whether that lookup exists today
+#   fallback whether the code-drawn version is good enough without the image
+#   batch    the batch it is generated in (section 5)
+# Rows are never deleted: retired slots stay in the manifest with their reason.
+# =============================================================================================
+
+IMPORTED = {"stat_firepower", "stat_armor", "stat_cover", "stat_supply", "stat_deck", "stat_intel", "streak", "score",
+            "kw_first_shot", "kw_pick"}
+
+RETIRED = {}
+for _id in ("plate_fp_s", "plate_fp_l"):
+    RETIRED[_id] = ("C1+ / Y2+ draw FP as the reticle ring in team colour (CardLook.draw_reticle); the optional painted "
+                    "finish is plate_fp_reticle.")
+for _id in ("plate_armor_s", "plate_armor_l"):
+    RETIRED[_id] = ("Armor is now the grey ballistic plate with clipped top corners (CardLook.draw_armor), not the pointed "
+                    "plate; the optional painted finish is plate_armor_ballistic.")
+for _id in ("plate_cost_s", "plate_cost_l"):
+    RETIRED[_id] = "The cost hex is drawn in code (CardLook.draw_cost: amber, red when you can't pay); no frame notch to sit in any more."
+for _id in ("plate_cover_s", "plate_cover_l"):
+    RETIRED[_id] = "Cover stays the small chip with the stat_cover icon left of FP (banner_view._draw_cover_chip); no Cover number plate."
+RETIRED.update({
+    "frm_serial_plate": "No serial plate on cards any more (kc-cards-impl: the Standard Issue frame says it, the inspector names it).",
+    "frm_spine_you": "C1+ has no side spine (the side is told by the board half and the FP reticle colour).",
+    "frm_spine_rival": "C1+ has no side spine (the side is told by the board half and the FP reticle colour).",
+    "eq_frag": "Frag / flashbang Operator equipment is gone from the game.",
+    "eq_flash": "Frag / flashbang Operator equipment is gone from the game.",
+    "class_sidearm": "The sidearm / Operator secondary is gone from the game.",
+    "kw_pick": ("Imported in batch 1, but Pick is no longer a crosshair (it clashed with the FP reticle). IconSheet now asks "
+                "for kw_pick_v2 (a shield with a down arrow) and never loads ico_kw_pick.png; the file can be removed."),
+    "frm_banner": ("C1+ shows the full calling-card art with only a thin code keyline, so the steel frame with a cost-hex notch "
+                   "has nothing left to frame."),
+    "frm_socket": "Trait chips are code-drawn squares (faint 45% / lit with a glow) and abilities sit on one dark code chip; no per-pip socket.",
+    "fx_ring_tier3": "Trait chips only have two states now (faint / lit); there is no tier-3 ring.",
+    "frm_band_edge": "Cards no longer carry a camo / level band (the level is the level coin), so nothing caps a band strip.",
+    "frm_operator_banner": "The Operator's board banner is the C1+ card with a brass code keyline and the dog tag; no brass frame or camo band.",
+    "frm_operator_card": "O2 replaced the dog-tag card: the Operator card is the Y2+ brass card (frm_y2_operator) with an OPERATOR tag.",
+    "frm_operator_mini": "The half-height mini Operator card is gone (O2 keeps one Operator card bottom-left of the tray).",
+    "frm_supply_plate": "The Operator card uses the standard cost hex, red when you are short of Supply.",
+    "frm_elite": "Elite is a brass keyline on the board (code) and a gold rim on the Y2+ card; no separate frame image.",
+    "frm_hand_card": "The X1 hand card is the C1+ banner (full art) plus a code name plate; no notched hand frame.",
+    "frm_hand_name": "The X1 name plate is code (26 px, the one title style).",
+    "frm_codex_tile": "The Codex shows Y2+ cards (frm_y2_unit / frm_y2_operator / frm_t1_orders).",
+    "frm_equipped": "Codex tiles are Y2+ cards now (NOT FOUND YET veil in code); there is no EQUIPPED / FOUND corner mark.",
+})
+
+# Old slots the new design keeps but uses differently.
+_DEMOTE3 = {"band_base": "Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands, and those are drawn in code (SynergyGlyphs.draw_band).",
+            "band_gilded": "Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands (SynergyGlyphs.draw_band).",
+            "band_forged": "As band_gilded.", "band_priceless": "As band_gilded.", "band_interstellar": "As band_gilded.",
+            "frm_socket_empty": "Still drawn by StandardIssueLook.draw_empty_socket in the reward screen; the C1+ board shows nothing in an empty trait slot."}
+_REUSE = {
+    "class_ar": "Cards show the weapon as a text pill now; class icons remain for the killfeed source icon, the art fallback and the Codex filters.",
+    "class_smg": "As class_ar.", "class_shotgun": "As class_ar.", "class_sniper": "As class_ar.", "class_lmg": "As class_ar.",
+    "stat_firepower": "Imported (batch 1). Its broken ring matches the new reticle; used by the tray mini stats and the killfeed.",
+    "stat_armor": "Imported (batch 1). Used by the tray mini stats; its pointed plate differs a little from the new clipped-corner plate (fine at 14 px; redo as stat_armor_v2 only if the head wants it to match).",
+}
+for _s in S:
+    if _s["id"] in _DEMOTE3:
+        _s["pri"] = "P3"
+        _s["notes"] = (_s.get("notes", "") + " kc-ui-art2: " + _DEMOTE3[_s["id"]]).strip()
+    if _s["id"] in ("class_ar", "class_smg", "class_shotgun", "class_sniper", "class_lmg"):
+        _s["pri"] = "P2"
+    if _s["id"] in _REUSE:
+        _s["notes"] = (_s.get("notes", "") + " kc-ui-art2: " + _REUSE[_s["id"]]).strip()
+    if _s["id"] == "frm_standard_issue":
+        # kc-cards-impl keeps the Standard Issue frame, but the cost is no longer in a frame notch.
+        _s["subj"] = ("a very wide thin card frame, four times wider than tall, made of matte grey-green #5E6B5A painted sheet steel "
+                      "with slightly worn flat paint: an even 4-pixel border, small square corners, one small flat-head screw in each "
+                      "of the four corners, no shine, no foil, the inside completely empty")
+        _s["nine"] = "16,16,16,16"
+        _s["used"] = "Standard Issue board card (C1+, full art inside it), the X1 hand card and the New: explainers (no camo band, no foil, no serial plate)"
+        _s["notes"] = ("kc-ui-art2: revised, the hexagon notch is gone (the cost now sits in the peek chip). Code: ui_kit.gd PIECE_MARGINS "
+                       "still says 40,32,16,16 for it; change to 16,16,16,16.")
+    if _s["id"] == "pnl_rail_chip":
+        _s["states"] = _s["states"].replace(" / ring tier 3 (fx_ring_tier3)", "")
+    if _s["id"] == "frm_socket_locked":
+        _s["used"] = "Recruit padlock in the top-right abilities chip on C1+ cards (StandardIssueLook.draw_locked_keyword) and the Y2+ text box"
+    if _s["cat"] == "card_art":
+        _s["notes"] = (_s.get("notes", "") + " kc-ui-art2: still valid; on C1+ the art is never dimmed or cropped, and Y2+ shows the same 4:1 band.").strip()
+
+# ---------------------------------------------------------------- new slots (kc-ui-art2)
+NEW_IDS = []
+
+
+def new(cat, sec, id_, file, used, pri, subj, **kw):
+    part(cat, sec, id_, file, used, pri, subj, **kw)
+    NEW_IDS.append(id_)
+
+
+icon("Keywords", "kw_pick_v2", "Pick everywhere: C1+ abilities chip, Y2+ text box, glossary, inspector, Pick tracer tag", "P1",
+     "a heater shield seen from the front (a flat top edge, straight sides that curve inward to one point at the bottom), drawn as a thick outline, "
+     "with one thick arrow inside it pointing straight down, from the upper third of the shield to just above its bottom point, with a wide open arrowhead",
+     avoid="a crosshair, a circle, a ring, a reticle, a cross, a star, a crest or any mark on the shield besides the arrow",
+     notes="Replaces kw_pick (crosshair). Pick shoots the lowest Armor: the shield is Armor, the arrow is 'the lowest'. Same shape as the built-in glyph (IconSheet.PICK_SVG), so the switch is invisible except for the finish.")
+NEW_IDS.append("kw_pick_v2")
+
+sec = "Y2+ card frames and the T1 orders frame"
+Y2_NOTE = ("The Y2+ card is laid out at its own width (172 to 330 px, height (W - 8) / 4 + 155; 250x216 in the inspector and the hand dock). "
+           "The code draws the title bar, the 4:1 art window, the type line, the text box and the stats bar on top of this frame, so the face must be plain. "
+           "Shipped at 2x (500x432) and drawn at 0.5 scale.")
+new("frame", sec, "frm_y2_unit", "frm_y2_unit.png",
+    "Every unit, Field and killstreak card off the board (Y2+): mulligan, Supply Drop / Salvage / Muster out picks, Codex grid, deck lists, inspector, hand dock", "P1",
+    "an upright playing-card frame a little wider than it is tall (about 7 to 6): a 3-pixel steel #4A5560 rim with small softly rounded corners (rounded, not chamfered), "
+    "one soft top-left bevel highlight on the rim, and a dark gunmetal #1B2126 face filling the whole inside, flat and even with a very faint brushed grain, "
+    "the face completely plain",
+    gen="1024x1024", ship="500x432", nine="24,24,24,24",
+    states="normal / marked or selected (code: amber rim glow) / killstreak (code tints the rim cyan #5BC0EB) / Elite (code gold rim, or frm_y2_operator) / not found (code veil over the art)",
+    avoid="45-degree chamfered corners, a window, a title bar or any inner panel drawn in, a notch, rivets in the middle of an edge",
+    notes=Y2_NOTE)
+new("frame", sec, "frm_y2_operator", "frm_y2_operator.png",
+    "The Operator's Y2+ card and the O2 Operator card bottom-left of the tray (OPERATOR tag, cost hex, state chip drawn by code)", "P1",
+    "an upright playing-card frame a little wider than it is tall (about 7 to 6): a 3-pixel polished brass #C9A227 rim with small softly rounded corners (rounded, not chamfered), "
+    "one soft top-left highlight on the rim, and a very dark brass-brown #1E1A10 face filling the whole inside, flat and even with a faint fine brushed grain, "
+    "the face completely plain",
+    gen="1024x1024", ship="500x432", nine="24,24,24,24",
+    states="normal / can deploy (code: amber glow) / planned / on board / down (code dim) / need Supply (code: red cost hex)",
+    avoid="45-degree chamfered corners, a dog-tag shape, a chain or hole, ornaments, engraving, a window drawn in",
+    notes=Y2_NOTE + " The O2 tray card (hand_area._make_operator_card) can use the same 9-slice.")
+new("frame", sec, "frm_y2_standard_issue", "frm_y2_standard_issue.png",
+    "Standard Issue cards off the board (Y2+): starter list, mulligan, Muster out, Codex", "P1",
+    "an upright playing-card frame a little wider than it is tall (about 7 to 6): a 3-pixel rim of matte grey-green #5E6B5A painted sheet steel with "
+    "slightly worn flat paint and small softly rounded corners (rounded, not chamfered), one tiny flat-head screw in each corner, and a dark #1B2126 face filling the whole inside, "
+    "flat and plain, no shine, no foil",
+    gen="1024x1024", ship="500x432", nine="24,24,24,24",
+    states="normal / marked (code amber rim)",
+    avoid="45-degree chamfered corners, stencils, serial numbers, a window drawn in, rivets in the middle of an edge",
+    notes=Y2_NOTE + " Same paint as frm_standard_issue (the board card), so a Standard Issue card reads the same everywhere.")
+new("frame", sec, "frm_t1_orders", "frm_t1_orders.png",
+    "Every Tactic card off the board (Y2+ with the T1 orders frame): mulligan, rewards, Codex, inspector, hand dock", "P1",
+    "an upright field-orders sheet shaped like a playing card a little wider than it is tall (about 7 to 6): a 3-pixel khaki #B8913A rim, "
+    "the top-right corner cut off by one straight 45-degree cut about one fourteenth of the width, the other three corners slightly rounded, "
+    "a dark olive-brown #2B2716 face with a faint matte paper fibre grain, and a slightly lighter khaki-tinted strip running along the whole top edge "
+    "for the top seventh of the height; matte paper, not metal",
+    gen="1024x1024", ship="500x432", nine="24,64,48,24",
+    states="normal / marked (code amber rim) / not found (code veil over the art)",
+    avoid="writing, stamps, a seal, folds, coffee stains, a second cut corner, a curled page, rivets",
+    notes=Y2_NOTE + " The chevron cut (18 px at 1x) sits inside the top-right 9-slice corner; the khaki strip sits inside the top margin, so it stretches cleanly. No stats bar on Tactics: the text box takes its room.")
+new("frame", sec, "tex_orders_paper", "tex_orders_paper.png",
+    "Paper grain tiled over the T1 face and text box (about 60% opacity), so the orders frame reads as paper at any card width", "P2",
+    "a seamless tileable texture of dark olive-brown #2B2716 field-order paper: a faint fibre grain and very soft mottling, low contrast, even all over, "
+    "no folds, no stains, no edges, no writing",
+    gen="1024x1024", ship="256x256 tile", alpha="opaque", nine="tiles in both directions",
+    states="one state (code: draw tiled with texture_repeat, 60% alpha)",
+    avoid="text, stamps, creases, a border, a visible seam, bright spots",
+    notes="Code fallback (flat colour) is fine; this only adds the paper feel the 9-slice face can't keep when it stretches.")
+
+sec = "C1+ board card overlays"
+new("fx", sec, "fx_glow_rail", "fx_glow_rail.png",
+    "Rail highlight: tap or hover a SETS chip and every matching card glows in the trait colour (board 4:1 cards and X1 hand cards)", "P1",
+    "a soft white glow around an empty, very wide rectangle four times wider than tall: a bright thin white line traces the rectangle with slightly rounded corners, "
+    "and a smooth soft white halo fades outward from it, the inside of the rectangle staying black",
+    gen="1536x1024", ship="576x192", alpha="add", nine="48,48,48,48",
+    states="tinted by the trait colour (code) / optional slow pulse (code alpha)",
+    avoid="colour, an object or frame, sparkles, noise, a glow that fills the inside",
+    notes="TA: process as luma (brightness to alpha) rather than additive, so banner_view can draw it with a normal blend and tint it per trait. Ask for the glow across the whole canvas width; crop a 4:1 band with 32 px of halo on each side.")
+new("fx", sec, "fx_crack_damage", "fx_crack_damage.png",
+    "Damaged card: the corner crack, top-left, on C1+ board cards and hand cards (with the code's amber bottom edge)", "P2",
+    "a small jagged crack that starts exactly at the top-left corner and runs down and to the right in four sharp zig-zag bends, with one short branch splitting off to the right near the top, every line thick",
+    gen="1024x1024", ship="64x64", alpha="luma",
+    states="damaged (code: a dark copy 1 px wider underneath, then this tinted amber #F2A33A) / healed (hidden)",
+    avoid="glass shards, a shattered pane, more than one branch, hairline cracks, a frame or corner bracket",
+    notes="Code fallback (CardLook.draw_crack, five-point polyline) is acceptable; the image gives a hand-drawn, less mechanical crack.")
+
+sec = "C1+ stat badges (optional painted finish)"
+STAT_NOTE = ("Optional. The code already draws the decided shape (flat colours, the number on top). This image only adds a metal finish. "
+             "It is generated neutral steel and the code modulates it, so one image serves both teams and the damaged state.")
+new("frame", sec, "plate_fp_reticle", "plate_fp_reticle.png",
+    "FP reticle bottom-right of every C1+ card (26 px phone), the Y2+ stats bar (28 px) and the inspector (up to 52 px); the number is code text", "P2",
+    "a round gun-sight ring badge for a number: a thick light steel #C9D1D8 metal ring broken by four short square gaps at the top, bottom, left and right, "
+    "around a dark #2A3238 recessed disc, the disc plain and empty and at least 70% of the badge width so a two-digit number fits; one soft top-left highlight on the ring",
+    gen="1024x1024", ship="128x128",
+    states="yours (modulate teal #2EC4B6) / rival (modulate red #FF5A5D) / buffed (code: green number) / lowered (code: red number)",
+    avoid="a number, a centre dot, a cross, tick marks, a second ring",
+    notes=STAT_NOTE)
+new("frame", sec, "plate_armor_ballistic", "plate_armor_ballistic.png",
+    "Armor plate right of FP on every C1+ card, the Y2+ stats bar and the inspector; only the number left is shown (code text)", "P2",
+    "a ballistic armour plate badge for a number: a rounded rectangle about as wide as it is tall, with its two top corners clipped off at 45 degrees and softly rounded bottom corners, "
+    "a thick light steel #C9D1D8 rim and a dark #2A3238 face, the face plain and empty and big enough for a two-digit number; faint brushed grain, one soft top-left highlight",
+    gen="1024x1024", ship="128x128",
+    states="normal (as is, both sides) / damaged (modulate amber #F2A33A; number #FFC067 in code)",
+    avoid="a number, a crest, a cross, a star, rivets, a pointed bottom, straps",
+    notes=STAT_NOTE + " Never red when damaged: red means the rival.")
+new("frame", sec, "coin_level", "coin_level.png",
+    "Level coin in the C1+ peek group (17 px) and on the Y2+ type line (16 px): R / T / V / E is code text", "P3",
+    "a small round coin badge: a thick light steel #C9D1D8 rim and a dark #14181C face, plain and empty for one letter; one soft top-left highlight",
+    gen="1024x1024", ship="64x64",
+    states="Recruit R (as is) / Trained, Veteran, Elite (modulate brass #F3D36B)",
+    avoid="a letter, a star, laurels, engraving, a ribbon",
+    notes="Optional, like the stat badges: at 16-17 px the code coin (CardLook.draw_level_coin) reads the same.")
+
+for _s in S:
+    if _s["id"] in ("frm_t1_orders", "tex_orders_paper"):
+        _s["style"] = "paper"
+    if _s["id"] == "fx_glow_rail":
+        _s["alpha_note"] = "glow on black: the TA turns brightness into alpha (white glow, tinted per trait in code)"
+
+# ---------------------------------------------------------------- code ids and hooks
+# Kit ids that a UiKit / IconSheet lookup already asks for today (the image shows up as soon as it is imported).
+WIRED_ICONS = {"range_close", "range_mid", "range_long", "type_unit", "type_tactic", "type_field", "type_killstreak", "type_operator",
+               "class_smg", "class_shotgun", "class_ar", "class_sniper", "class_lmg", "kw_first_shot", "kw_flank", "stat_cover",
+               "kw_suppress", "kw_patch", "kw_holder", "trig_on_deploy", "trig_on_down", "stat_firepower", "stat_armor", "streak",
+               "stat_supply", "ks_recon_drone", "ks_mortar", "ks_sentry", "ks_attack_helo", "ks_gunship", "stat_intel", "elite_star",
+               "eliminated", "stat_deck", "score", "ui_lock"}
+WIRED_PIECES = {"frm_standard_issue": "StandardIssueLook.draw_frame", "frm_socket_empty": "StandardIssueLook.draw_empty_socket",
+                "frm_socket_locked": "StandardIssueLook.draw_locked_socket", "pnl_new_card": "new_card.gd", "pnl_new_inset": "new_card.gd"}
+CODE_HOOK = {
+    "kw_pick_v2": "wired: IconSheet.get_icon(&\"kw_pick\") asks UiKit for kw_pick_v2 (glossary, inspector, Y2+ text box). Board: banner_view.gd draws kind &\"kw_pick\" with CardLook.draw_pick_icon directly; change it to UiKit.draw_icon(o, &\"kw_pick_v2\", rr, ...) first",
+    "frm_y2_unit": "needs code: CardView._draw() -> UiKit.draw_piece(self, &\"frm_y2_unit\", rect) before its polygons, + PIECE_MARGINS",
+    "frm_y2_operator": "needs code: CardView._draw() (operator) and hand_area._make_operator_card -> UiKit.draw_piece(&\"frm_y2_operator\")",
+    "frm_y2_standard_issue": "needs code: CardView._draw() (standard_issue) -> UiKit.draw_piece(&\"frm_y2_standard_issue\")",
+    "frm_t1_orders": "needs code: CardView._draw() (tactic) -> UiKit.draw_piece(&\"frm_t1_orders\") instead of the outline polygons and the khaki band",
+    "tex_orders_paper": "needs code: CardView._draw() (tactic) -> draw UiKit.piece(&\"tex_orders_paper\") tiled over the face at 60% alpha",
+    "fx_glow_rail": "needs code: banner_view.gd rail highlight (two draw_rect calls) -> UiKit.draw_piece(o, &\"fx_glow_rail\", r.grow(8 * k), trait colour)",
+    "fx_crack_damage": "needs code: CardLook.draw_crack -> UiKit.draw_piece(&\"fx_crack_damage\") (dark copy, then amber)",
+    "plate_fp_reticle": "needs code: CardLook.draw_reticle -> UiKit.draw_piece(&\"plate_fp_reticle\", r, team colour), then the number",
+    "plate_armor_ballistic": "needs code: CardLook.draw_armor -> UiKit.draw_piece(&\"plate_armor_ballistic\", r, grey or amber), then the number",
+    "coin_level": "needs code: CardLook.draw_level_coin -> UiKit.draw_piece(&\"coin_level\", r, steel or brass), then the letter",
+}
+FALLBACK_OK = {"tex_orders_paper", "fx_crack_damage", "plate_fp_reticle", "plate_armor_ballistic", "coin_level"}
+IMAGE_BEATS_CODE = {"frm_y2_unit", "frm_y2_operator", "frm_y2_standard_issue", "frm_t1_orders", "fx_glow_rail", "kw_pick_v2"}
+
+for _s in S:
+    i = _s["id"]
+    if i in RETIRED:
+        _s["status"] = "RETIRED: " + RETIRED[i]
+    elif i in NEW_IDS:
+        _s["status"] = "new (kc-ui-art2)"
+    elif i == "frm_standard_issue":
+        _s["status"] = "revised (kc-ui-art2)"
+    elif i in IMPORTED:
+        _s["status"] = "imported (batch 1)"
+    else:
+        _s["status"] = "active"
+    if _s["cat"] == "card_art":
+        _s["code_id"] = _s["file"][:-4]
+    elif _s["cat"] == "icon":
+        _s["code_id"] = i
+    else:
+        _s["code_id"] = i
+    if i in CODE_HOOK:
+        _s["hook"] = CODE_HOOK[i]
+    elif i in RETIRED:
+        _s["hook"] = "-"
+    elif _s["cat"] == "icon" and i in WIRED_ICONS:
+        _s["hook"] = "wired: IconSheet.get_icon / UiKit lookup"
+    elif _s["cat"] == "background":
+        _s["hook"] = "replaces a bitmap (TA swaps the file the screen loads today, or adds the path)"
+    elif _s["cat"] == "card_art":
+        _s["hook"] = "wired: BannerArtDB (UiKit.piece(&\"%s\"))" % _s["code_id"]
+    elif i in WIRED_PIECES:
+        _s["hook"] = "wired: UiKit.draw_piece in " + WIRED_PIECES[i]
+    else:
+        _s["hook"] = "needs code (no UiKit lookup yet)"
+    if i in RETIRED:
+        _s["fallback"] = "-"
+    elif i in IMAGE_BEATS_CODE:
+        _s["fallback"] = "code fallback works, but the image clearly beats it"
+    elif i in FALLBACK_OK:
+        _s["fallback"] = "code fallback is fine (image optional)"
+    elif _s["cat"] in ("background", "card_art"):
+        _s["fallback"] = "image needed (code has only a placeholder)"
+    else:
+        _s["fallback"] = "code fallback kept"
+
+# ---------------------------------------------------------------- batch plan (kc-ui-art2), by visual impact
+# Batch 1 is imported. Batches 2-5 are hand-picked; the rest are filled by gen.py (P1, then P2, then P3, groups of up to 10).
+BATCHES = [
+    ("P1", "New card look: Pick icon, Y2+ and T1 frames, rail glow, crack",
+     ["kw_pick_v2", "frm_y2_unit", "frm_y2_operator", "frm_t1_orders", "tex_orders_paper", "fx_glow_rail", "fx_crack_damage"]),
+    ("P1", "Standard Issue starter: the 5 arts and their frames",
+     ["si_grunt", "si_trooper", "si_sergeant", "si_armored", "si_ammo_resupply", "frm_standard_issue", "frm_y2_standard_issue",
+      "frm_socket_locked", "ui_lock"]),
+    ("P1", "Keyword icons on every card (abilities chip, Y2+ text box)",
+     ["kw_flank", "kw_pierce", "kw_suppress", "kw_patch", "kw_protector", "kw_guard", "kw_spotter", "kw_fireteam", "kw_overwatch", "effect_bolt"]),
+    ("P1", "Trait chips, the painted stat badges and the New: explainer",
+     ["trait_vanguard", "trait_specops", "trait_heavy", "trait_undead", "plate_fp_reticle", "plate_armor_ballistic", "coin_level",
+      "pnl_new_card", "pnl_new_inset"]),
+]
