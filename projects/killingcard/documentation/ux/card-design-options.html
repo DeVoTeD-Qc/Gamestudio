@@ -883,7 +883,7 @@ function arPlateB(v, s, dmg = false, variant = "A", team = "") {
 }
 const teamOf = (c, side) => ((c.side || side) === "rival" ? "rival" : "own");
 const pFp = (c, s, side) => fpCross(c.fp, s, !!c.up, "B", teamOf(c, side));
-const pAr = (c, s, side) => arPlateB(c.ar, s, c.ar < c.max, "A", teamOf(c, side));
+const pAr = (c, s, side) => arPlateB(c.ar, s, c.ar < c.max, "A", "");  // round 5: steel grey for both sides, amber when damaged
 // Peek-only tags, a different shape family from the square trait chips: weapon = a rounded steel pill
 // with a tiny silhouette + letters, level = a round brass / grey coin.
 const WEAPON_GLYPH = {
@@ -892,8 +892,9 @@ const WEAPON_GLYPH = {
   SMG: '<path d="M3 6h10v2.5H8l-1 3H5.5l1-3H3z"/>',
 };
 function weaponTag(c, s) {
+  // Round 5 (head): text only, the weapon type's name (full words fit at peek size).
   if (!c.cls) return "";
-  return `<span title="Weapon: ${CLS[c.cls]}" style="display:inline-flex;align-items:center;gap:3px;height:${s}px;padding:0 5px 0 4px;border-radius:${s}px;background:#3A444D;border:1px solid #8C969E;color:#E6EBEF;font:${Math.round(s * .58)}px var(--f-mono)"><svg width="${Math.round(s * 1.05)}" height="${Math.round(s * .66)}" viewBox="0 0 19 12" fill="#E6EBEF" aria-hidden="true">${WEAPON_GLYPH[c.cls] || ""}</svg>${c.cls}</span>`;
+  return `<span title="Weapon: ${CLS[c.cls]}" style="display:inline-flex;align-items:center;height:${s}px;padding:0 7px;border-radius:${s}px;background:#3A444D;border:1px solid #8C969E;color:#E6EBEF;font:600 ${Math.round(s * .7)}px/1 var(--f-cond);letter-spacing:.05em">${CLS[c.cls].toUpperCase()}</span>`;
 }
 function levelCoin(c, s) {
   if (c.level === undefined || c.si) return "";
@@ -928,13 +929,13 @@ function c1pRender(c, side, opts = {}) {
   const coinX = BW / 2 - 7;
   if (dmg) {
     // Damaged cue: a 2 px amber bottom edge (broken around the level coin) and a small crack top-left.
-    const gap = hasLevel && !opts.coinInside ? [coinX - 4, coinX + 18] : [BW / 2, BW / 2];
+    const gap = [BW / 2, BW / 2];  // round 5: the level coin is peek-only, so the edge runs unbroken
     h += `<div class="slotbox p-dmg" style="left:0;top:${BH - 2}px;width:${gap[0]}px;height:2px;background:linear-gradient(90deg, rgba(242,163,58,.25), ${col("--g-dmg")})"></div>`;
     h += `<div class="slotbox p-dmg" style="left:${gap[1]}px;top:${BH - 2}px;width:${BW - gap[1]}px;height:2px;background:${col("--g-dmg")}"></div>`;
     h += `<div class="g p-dmg p-crack" style="left:3px;top:3px"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M1 2l6 5-2 4 6 3-1 5M7 7l5-2" fill="none" stroke="rgba(10,12,14,.75)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 2l6 5-2 4 6 3-1 5M7 7l5-2" fill="none" stroke="${col("--g-dmg")}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
   }
   // Top-left (peek): cost, then the weapon pill next to it.
-  h += `<div class="g hid" style="left:4px;top:3px;display:flex;gap:3px;align-items:center;padding:1px 3px 1px 1px;background:rgba(10,12,14,.86);border-radius:3px 10px 10px 3px">${cost(c, 20)}${weaponTag(c, 16)}</div>`;
+  h += `<div class="g hid" style="left:4px;top:3px;display:flex;gap:3px;align-items:center;padding:1px 3px 1px 1px;background:rgba(10,12,14,.86);border-radius:3px 10px 10px 3px">${cost(c, 20)}${weaponTag(c, 18)}</div>`;
   // Top-right (always): abilities, effects, Recruit locks.
   const k = kwIcons(c, P_KW, "own").replace(/<span class="stencil"[\s\S]*?<\/span>/, "");
   if (k) h += rrow(2, 2, chip(k, "gap:2px"));
@@ -943,12 +944,12 @@ function c1pRender(c, side, opts = {}) {
   const tl = traitList(c);
   const bl = tl.map((t) => pTraitChip(c, t, act.includes(t))).join("");
   if (bl) h += `<div class="g" style="left:5px;top:${BH - 23}px;display:flex;gap:2px">${bl}</div>`;
-  // Bottom border, centred (always): the tiny level coin, straddling the edge (inside it in the hand).
+  // Bottom border, centred (peek; always in the hand): the tiny level coin, straddling the edge.
   if (hasLevel) {
     const L = ["R", "T", "V", "E"][c.level], rim = c.level === 0 ? "#B9C2C9" : "#F3D36B";
-    h += `<div class="g p-level" title="Level: ${["Recruit", "Trained", "Veteran", "Elite"][c.level]}" style="left:${coinX}px;top:${opts.coinInside ? BH - 16 : BH - 10}px;width:14px;height:14px;border-radius:50%;background:#14181C;border:1.5px solid ${rim};color:${rim};display:grid;place-items:center;font:9px/1 var(--f-mono);z-index:2">${L}</div>`;
+    h += `<div class="g p-level ${opts.coinInside ? "" : "hid"}" title="Level: ${["Recruit", "Trained", "Veteran", "Elite"][c.level]}" style="left:${coinX}px;top:${opts.coinInside ? BH - 16 : BH - 10}px;width:14px;height:14px;border-radius:50%;background:#14181C;border:1.5px solid ${rim};color:${rim};display:grid;place-items:center;font:9px/1 var(--f-mono);z-index:2">${L}</div>`;
   }
-  // Bottom-right (always): reticle FP + armor plate, team colour; damaged Armor amber on both sides.
+  // Bottom-right (always): reticle FP in the team colour; armor plate steel grey, amber when damaged.
   h += rrow(2, BH - 28, chip(pFp(c, P_STAT + 2, side) + pAr(c, P_STAT + 1, side), "gap:3px"));
   h += outline(c, side, 0, 0, BW, BH);
   return h;
@@ -1027,7 +1028,7 @@ function handPlus(c, W = 177, H = 70) {
 const P_STATES = [
   ["At rest: faint trait", u("marksman"), ""], ["Hover / hold: peek", u("marksman"), "peek"],
   ["Trait bonus ON (shown, lit)", u("breacher", { activeT: ["vanguard"] }), ""], ["Recruit: locks always on", u("recon", { locked: ["deploy", "spotter"] }), ""],
-  ["Rival healthy (red)", u("flanker", { side: "rival" }), ""], ["Rival damaged (amber)", u("flanker", { ar: 1, side: "rival" }), ""],
+  ["Rival healthy (red reticle)", u("flanker", { side: "rival" }), ""], ["Rival damaged (amber Armor)", u("flanker", { ar: 1, side: "rival" }), ""],
   ["Damaged: 3 left, edge + crack", u("gunner", { ar: 3, activeT: ["heavy"] }), ""], ["Can't act", u("medic", { st: "cant" }), ""],
   ["Rail hover Heavy: 2 traits, match", u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy", activeT: ["heavy"] }), "synhit"],
 ];
@@ -1057,7 +1058,7 @@ function pBeforeAfter() {
 }
 // Noise budget: separate marks a card shows.
 function countC1(c) { return traitList(c).length + (traitList(c).length || c.si ? 0 : 0) + (c.cls ? 1 : 0) + (c.level === 0 ? 1 : 0) + (c.kws || []).length + (c.locked || []).length + (c.si ? 2 : 0) + 1 + 2; }
-function countC1p(c) { const act = (c.activeT || []).length; return (c.kws || []).length + (c.locked || []).length + 2 + act + 0.5 * (traitList(c).length - act) + (c.level !== undefined && !c.si ? 0.5 : 0); }
+function countC1p(c) { const act = (c.activeT || []).length; return (c.kws || []).length + (c.locked || []).length + 2 + act + 0.5 * (traitList(c).length - act) ; }
 
 
 function pLegend() {
@@ -1065,12 +1066,12 @@ function pLegend() {
   const tchip = (t, on) => `<span style="display:inline-grid;place-items:center;width:22px;height:22px;background:#0b0e10;border:1.5px solid ${col(TRAITS[t][1])};opacity:${on ? 1 : .45}${on ? `;box-shadow:0 0 6px ${col(TRAITS[t][1])}` : ""}">${svg(t, col(TRAITS[t][1]), 16, 2.6)}</span>`;
   const coin = (L, rim) => `<span style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#14181C;border:1.5px solid ${rim};color:${rim};font:11px/1 var(--f-mono)">${L}</span>`;
   return `<div class="legend" aria-label="Icon legend">
-    ${item(fpCross(4, 26, false, "B", "own") + fpCross(4, 26, false, "B", "rival"), "Firepower", "reticle; teal yours, red the rival's (as the objective tiles); green number = buffed")}
-    ${item(arPlateB(5, 25, false, "A", "own") + arPlateB(5, 25, false, "A", "rival") + arPlateB(2, 25, true, "A", "rival"), "Armor", "plate in the team colour; amber on either side = damaged, the number is what's left")}
+    ${item(fpCross(4, 26, false, "B", "own") + fpCross(4, 26, false, "B", "rival"), "Firepower", "reticle, the only plate in team colour: teal yours, red the rival's (as the objective tiles); green number = buffed")}
+    ${item(arPlateB(5, 25, false, "A", "") + arPlateB(2, 25, true, "A", ""), "Armor", "steel-grey plate on both sides; amber = damaged, the number is what's left")}
     ${item(`<span style="display:inline-flex;gap:3px;background:#0b0e10;padding:2px">${svg("pick", col("--g-amber"), 18)}${svg("spotter", col("--g-amber"), 18)}</span>`, "Abilities", "always on, top-right (a padlock = locked on a Recruit)")}
     ${item(tchip("vanguard", true) + " " + tchip("specops", false), "Traits", "bottom-left, always; lit = bonus ON, faint = no bonus yet")}
-    ${item(cost(u("breacher"), 22) + weaponTag(u("marksman"), 18), "Cost + Weapon", "top-left, on peek")}
-    ${item(coin("R", "#B9C2C9") + coin("T", "#F3D36B") + coin("V", "#F3D36B") + coin("E", "#F3D36B"), "Level", "(R Recruit · T Trained · V Veteran · E Elite): tiny coin on the bottom border (4 px over the edge, clear of the next row), always shown")}
+    ${item(cost(u("breacher"), 22) + weaponTag(u("marksman"), 18), "Cost + Weapon", "top-left, on peek; the weapon by name: AR, SMG, LMG, Shotgun, Sniper")}
+    ${item(coin("R", "#B9C2C9") + coin("T", "#F3D36B") + coin("V", "#F3D36B") + coin("E", "#F3D36B"), "Level", "(R Recruit · T Trained · V Veteran · E Elite): tiny coin on the bottom border, on peek (always shown in the hand)")}
   </div>`;
 }
 function pSheet() {
@@ -1079,8 +1080,8 @@ function pSheet() {
   const rowsDef = [
     ["FP · reticle · yours", (v, z) => fpCross(v, z, false, "B", "own")], ["FP · reticle · rival", (v, z) => fpCross(v, z, false, "B", "rival")],
     ["FP · reticle · buffed", (v, z) => fpCross(v, z, true, "B", "own")],
-    ["Armor · plate · yours", (v, z) => arPlateB(v, z, false, "A", "own")], ["Armor · plate · rival", (v, z) => arPlateB(v, z, false, "A", "rival")],
-    ["Armor · damaged (any side)", (v, z) => arPlateB(v, z, true, "A", "rival")],
+    ["Armor · plate (both sides)", (v, z) => arPlateB(v, z, false, "A", "")],
+    ["Armor · damaged (both sides)", (v, z) => arPlateB(v, z, true, "A", "")],
     ["Not chosen · FP crosshair", (v, z) => fpCross(v, z, false, "A", "own")], ["Not chosen · Armor shield", (v, z) => arPlateB(v, z, false, "B", "own")],
   ];
   const colW = 3 * 40;
@@ -1100,23 +1101,23 @@ function c1plusSection() {
   const avg = (f) => (NB.reduce((a, c) => a + f(c), 0) / NB.length).toFixed(1);
   return `<article class="opt c1plus" id="opt-C1P" data-key="C1+">
     <div class="opt-head"><span class="opt-letter">C1+</span><span class="opt-title">Progressive disclosure</span><span class="pick">The head's direction</span>
-      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, a reticle FP and an armor-plate Armor in the team colour (teal yours, red the rival's, as the objective tiles; amber = damaged on either side), the weapon next to the cost on peek, a tiny level coin on the bottom border, and no serial plate. <b>Try it:</b> hover a card to peek at its cost and weapon (top-left); hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
+      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, a reticle FP in the team colour (teal yours, red the rival's, as the objective tiles), a steel-grey armor plate on both sides (amber when damaged), the weapon by name next to the cost and a tiny level coin on the bottom border (both on peek), and no serial plate. <b>Try it:</b> hover a card to peek at its cost and weapon (top-left) and its level (bottom border); hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
     <div class="cmp" style="text-transform:none"><label class="tog" for="p-all"><input type="checkbox" id="p-all"> Show everything (game setting: Settings &gt; Cards &gt; Always show all card info)</label></div>
     <div class="frames">
       ${fitBox(1168, 540, `<div class="p-board" id="p-board">${pBoard()}</div>`, "Phone 844x390 · C1+ live board · hand tray: 5+ (full info in hand)")}
       ${pLegend()}
       ${fitBox(16 * 4 + BW * 2 * 3, 14 + 3 * (BH * 2 + 50) + 8, `<div class="p-board p-static">${pStates()}</div>`, "States at 2x")}
-      ${fitBox(760, 38 + 8 * 44 + 8, pSheet(), "Plate sheet · values 1, 4, 10 at 16 / 20 / 24 / 32 px · chosen: reticle FP + armor plate, team colours, amber damage")}
+      ${fitBox(760, 38 + 7 * 44 + 8, pSheet(), "Plate sheet · values 1, 4, 10 at 16 / 20 / 24 / 32 px · chosen: team-coloured reticle FP, steel-grey armor plate, amber damage")}
       ${fitBox(48 + BW * 4, 14 + 3 * (BH * 2 + 40), `<div class="p-board p-static">${pBeforeAfter()}</div>`, "Before (C1) / after (C1+ at rest)")}
     </div>
     <div class="pc">
       <div class="pro"><h3>Noise budget (marks per card)</h3>
         <div style="overflow-x:auto"><table class="nb"><thead><tr><th>Card</th><th>C1</th><th>C1+ at rest</th><th>Less</th></tr></thead><tbody>${rows}</tbody>
         <tfoot><tr><td>Average</td><td>${avg(countC1)}</td><td>${avg(countC1p)}</td><td></td></tr></tfoot></table></div>
-        <p class="hint">A mark = one icon, plate or badge (FP and Armor count as 2). At rest a C1+ card shows its abilities, its stats and its traits; a faint (inactive) trait and the tiny level coin count as half.</p></div>
+        <p class="hint">A mark = one icon, plate or badge (FP and Armor count as 2). At rest a C1+ card shows its abilities, its stats and its traits; a faint (inactive) trait counts as half.</p></div>
       <div class="con"><h3>Trade-offs</h3><ul>
         <li>Cost, weapon and level need a hover / hold; traits are always there (faint until their bonus is on), so set planning needs no hover.</li>
-        <li>No side bar on cards: the side is the position and the plate colour (teal / red, as the objective tiles); the plate shapes are identical, and damage is amber on both sides.</li>
+        <li>No side bar on cards: the side is the position and the reticle colour (teal / red, as the objective tiles); Armor is steel grey on both sides and amber when damaged.</li>
         <li>Touch peek is a hold, which competes with drag on own cards in Deploy (the hold peeks only when the finger doesn't move).</li>
         <li>Hand: recommend <b>5+, full info in hand</b> (the hand is where you decide what to play; cost and traits matter there), so the quiet rule applies to the board only.</li>
       </ul></div>
