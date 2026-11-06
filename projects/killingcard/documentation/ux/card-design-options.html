@@ -155,6 +155,17 @@ article.c1plus { border-top: 3px solid var(--accent); }
 details.earlier { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-spacing: .04em; text-transform: uppercase; min-height: 44px; display: flex; align-items: center; }
 
+
+.ytype { display: flex; flex-wrap: nowrap; gap: 5px; align-items: center; overflow: hidden; height: 20px; }
+.ytag { font: 600 13px/18px var(--f-cond); letter-spacing: .06em; color: #C9D1D8; border: 1px solid #5A646C; border-radius: 9px; padding: 0 6px; white-space: nowrap; }
+.ytag.op { color: #F3D36B; border-color: #C9A227; }
+.ytext { font: 500 16px/19px var(--f-cond); color: #C9D1D8; overflow: hidden; }
+.yl { display: flex; gap: 5px; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yl b { color: #F2F5F7; font-weight: 700; }
+.yl.locked { color: #8C969E; } .yl.locked b { color: #A9B2B9; }
+.yl.flavour { font-style: italic; color: #9AA5AE; }
+.yl svg { flex: none; }
+
 /* inspector */
 .insp { position: fixed; inset: 0; background: rgba(6,8,10,.72); display: grid; place-items: center; z-index: 50;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
@@ -221,6 +232,7 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
 
   <div class="reco" id="reco" style="margin-top:40px">
     <h2>Recommendation</h2>
+    <p><b>Classic cards (Y family): Y2, the wide 4:1 calling card,</b> as the big card form (mulligan, reward, deck view, Codex): it shows the same picture as the board, nothing drawn over the art, and the roomiest text box. In the hand keep <b>X1</b> (8 cards + the Operator fit); a fan of Y cards works for Y2 but cuts or crowds the taller Y1 / Y3 / Y4.</p>
     <p><b>Everywhere else (rebuilt on C1+): X1 in the hand tray, X2 at mulligan / reward / Codex / deck view / Muster out,</b> with one title style everywhere (Barlow Condensed 700, 16 px = 11.6 pt, uppercase). The Operator sits next to READY in layout <b>O2</b>.</p>
     <p><b>The head's direction: C1+, progressive disclosure.</b> Build C1+ on the board and keep <b>X1 (the C1+ banner with everything shown, plus a name plate)</b> in the hand, because the hand is where you decide and the cost and traits matter there. At rest a board card shows 3-5 marks instead of 6-9. Ship "Show everything" as a setting (Settings &gt; Cards), on for players who want it.</p>
     <p><b>Pure calling card (C family): C1, corner badges.</b> The full art, uncropped, with exactly the head's anatomy in the four corners: trait top-left, keywords top-right, FP / Armor bottom-right on 20 px plates, and the cost bottom-left (drop it and nothing else moves). It shows every required piece at a readable size and keeps the middle 60% of the art clear. Runner-up: C2, border frame, if the board should look most like a framed calling card and can live without the cost. Pairs with <b>5, the C1 twin</b>, in the hand tray (the card you hold is the card that lands) and with <b>2, banner over panel</b>, at mulligan / reward / Codex size.</p>
@@ -1356,13 +1368,178 @@ function operatorBlock() {
   </article>`;
 }
 
+// ---------------------------------------------------------------- Y family: classic cards (round 9)
+// Top to bottom: title bar (cost hex + name, the standard title), the art with NOTHING over it, a type
+// line (weapon · level · traits, lit / faint), the text box (keyword icon + bold name + short rule,
+// effects, greyed "Trains:" on a Recruit), and a stats bar (FP reticle in team colour + grey Armor).
+const SHORT = { fs: "fires first", pick: "hits the lowest Armor", flank: "hits the back-most", suppress: "-2 FP to their front",
+  pierce: "overkill carries on", patch: "+1 Armor to a friend", guard: "Cover +1 behind", spotter: "+1 FP in front", deploy: "when it arrives" };
+const Y_DEF = {
+  Y1: { art: (W) => Math.round(W / 1.6), lines: 2, name: "Straight classic" },
+  Y2: { art: (W) => Math.round(W / 4), lines: 3, name: "Wide 4:1 calling card" },
+  Y3: { art: (W) => Math.round(W / 1.1), lines: 2, name: "Tall art" },
+  Y4: { art: (W) => Math.round(W / 1.8), lines: 2, name: "Dossier frame" },
+};
+const Y_TITLE = 30, Y_TYPE = 22, Y_BAR = 32, Y_LINE = 19;
+const yH = (v, W) => 2 + Y_TITLE + Y_DEF[v].art(W) + Y_TYPE + Y_DEF[v].lines * Y_LINE + 10 + Y_BAR + 2;
+function yTextLines(c) {
+  const out = [];
+  for (const k of c.kws || []) out.push(`<div class="yl">${svg(k, col("--g-amber"), 16)}<b>${KW[k][0]}</b> ${SHORT[k] || ""}</div>`);
+  if ((c.locked || []).length) out.push(`<div class="yl locked">${svg("lock", "#8C969E", 15, 2.6)}<b>Trains:</b> ${(c.locked || []).map((k) => KW[k][0]).join(" · ")}</div>`);
+  if (c.text) out.push(`<div class="yl">${c.text}</div>`);
+  if (c.si && !out.length) out.push(`<div class="yl flavour">Basic kit: no abilities.</div>`);
+  if (c.operator) out.push(`<div class="yl flavour">Respawns if it goes down.</div>`);
+  return out.join("");
+}
+function yType(c) {
+  const bits = [];
+  if (c.operator) bits.push(`<span class="ytag op">OPERATOR</span>`);
+  if (c.si) bits.push(`<span class="ytag">STANDARD ISSUE</span>`);
+  if (c.tactic) bits.push(`<span class="ytag">TACTIC</span>`);
+  if (c.cls) bits.push(`<span class="ytag">${CLS[c.cls].toUpperCase()}</span>`);
+  if (c.level !== undefined && !c.si && !c.operator) bits.push(levelCoin(c, 16));
+  const act = c.activeT || [];
+  for (const t of traitList(c)) {
+    const on = act.includes(t), tr = TRAITS[t];
+    bits.push(`<span title="${tr[0]}${on ? ": bonus ON" : ""}" style="display:inline-flex;gap:3px;align-items:center;opacity:${on ? 1 : .5}"><span style="display:grid;place-items:center;width:17px;height:17px;border:1.5px solid ${col(tr[1])};${on ? `box-shadow:0 0 5px ${col(tr[1])};` : ""}">${svg(t, col(tr[1]), 12, 2.6)}</span><span class="ytag" style="color:${col(tr[1])};border-color:transparent;padding:0">${tr[0].toUpperCase()}</span></span>`);
+  }
+  return bits.join("");
+}
+// opts: {count, notFound, marked, side}
+function yCard(v, c, W, opts = {}) {
+  const side = opts.side || "own";
+  const aH = Y_DEF[v].art(W), H = yH(v, W);
+  const dossier = v === "Y4";
+  const frame = dossier ? "#5C543C" : (c.operator ? "#C9A227" : (c.si ? col("--g-si") : col("--g-edge")));
+  const face = dossier ? "#25231A" : (c.operator ? "#1E1A10" : col("--g-gun"));
+  let h = `<div class="slotbox" style="left:0;top:0;width:${W}px;height:${H}px;background:${face};border:${dossier ? 2 : 1.5}px solid ${opts.marked ? col("--g-amber") : frame};border-radius:${dossier ? "3px 12px 3px 3px" : "6px"};${opts.marked ? "box-shadow:0 0 10px rgba(255,176,32,.5);" : ""}"></div>`;
+  if (dossier) h += `<div class="slotbox" style="left:${W - 64}px;top:-7px;width:56px;height:9px;background:${face};border:2px solid ${frame};border-bottom:0;border-radius:4px 4px 0 0"></div>`;
+  // 1. Title bar.
+  h += row(5, 4, cost(c, 22));
+  h += xTitle(c, 32, 8, W - 40);
+  if (opts.count) h += `<div class="g" style="right:7px;top:9px"><span class="xcount">×${opts.count}</span></div>`;
+  // 2. Art: nothing over it.
+  const ay = 2 + Y_TITLE;
+  h += `<div class="art" style="left:4px;top:${ay}px;width:${W - 8}px;height:${aH}px;border-radius:2px;background-image:url(${ART[c.art]});background-position:center ${c.y || 40}%;${c.st === "cant" ? "filter:grayscale(1) brightness(.6);" : ""}"></div>`;
+  if (opts.notFound) {
+    h += `<div class="slotbox" style="left:4px;top:${ay}px;width:${W - 8}px;height:${aH}px;background:rgba(10,12,14,.78)"></div>`;
+    h += `<div class="g mono" style="left:0;top:${ay + aH / 2 - 10}px;width:${W}px;display:flex;gap:6px;justify-content:center;align-items:center;font-size:15px">${svg("lock", "#C2C9CF", 16, 2.6)}NOT FOUND YET</div>`;
+  }
+  // 3. Type line.
+  const ty = ay + aH + 3;
+  h += `<div class="g ytype" style="left:6px;top:${ty}px;width:${W - 12}px">${yType(c)}</div>`;
+  // 4. Text box.
+  const by = ty + Y_TYPE;
+  const lines = Y_DEF[v].lines;
+  h += `<div class="slotbox" style="left:4px;top:${by}px;width:${W - 8}px;height:${lines * Y_LINE + 8}px;background:${dossier ? "#1A1913" : "rgba(10,12,14,.55)"};border-radius:2px;${dossier ? "border-left:3px solid #8A7E58;" : ""}"></div>`;
+  h += `<div class="g ytext" style="left:${dossier ? 11 : 8}px;top:${by + 4}px;width:${W - (dossier ? 19 : 16)}px;max-height:${lines * Y_LINE}px">${yTextLines(c)}</div>`;
+  // 5. Stats bar.
+  const sy = by + lines * Y_LINE + 10;
+  if (!c.tactic) {
+    const fp = fpCross(c.fp, 28, !!c.up, "B", side === "rival" ? "rival" : "own"), ar = arPlateB(c.ar, 27, c.ar < c.max, "A", "");
+    if (dossier) {
+      h += `<div class="g" style="left:-2px;top:${sy - 2}px;padding:2px 6px 2px 4px;background:${face};border:2px solid ${frame};border-left:0;border-radius:0 8px 0 3px">${fp}</div>`;
+      h += `<div class="g" style="right:-2px;top:${sy - 2}px;padding:2px 4px 2px 6px;background:${face};border:2px solid ${frame};border-right:0;border-radius:8px 0 3px 0">${ar}</div>`;
+    } else {
+      h += rrow(6, sy, fp + ar, 4);
+    }
+  } else {
+    h += `<div class="g mono" style="right:8px;top:${sy + 7}px;font-size:13px;color:${col("--g-muted")};letter-spacing:.08em">NO STATS</div>`;
+  }
+  return { h: H, html: card(c, side, W, H, h) };
+}
+const OPER_Y = () => Object.assign({}, OPER, { text: "" });
+const YCTX = {
+  mulligan(v) {
+    const list = [u("armored"), u("recon", { locked: ["deploy", "spotter"] }), u("gunner", { activeT: ["heavy"] }), u("ammo"), u("marksman")];
+    let s = ctxBg + ctxHead("OPENING HAND", "Tap the cards to put back, then KEEP. Long press any card for its rules.");
+    const W = 196, gap = 12, tot = 5 * W + 4 * gap, x0 = Math.round((1168 - tot) / 2);
+    list.forEach((c, i) => { s += place(x0 + i * (W + gap), 88, yCard(v, c, W).html); });
+    s += `<div class="g mono" style="left:${x0 + W / 2 - 48}px;top:${88 + 2 + Y_TITLE + Y_DEF[v].art(W) / 2 - 12}px;padding:2px 8px;background:rgba(229,56,59,.92);color:#fff;font-size:14px;letter-spacing:.08em">PUT BACK</div>`;
+    const kb = Math.min(540 - 62, 88 + yH(v, W) + 10);
+    s += `<div class="g" style="left:${1168 / 2 - 120}px;top:${kb}px;width:240px;height:56px;border-radius:4px;background:${col("--g-amber")};display:grid;place-items:center;font:700 20px var(--f-cond);letter-spacing:.08em;color:#1A1305">KEEP 4 · DRAW 1</div>`;
+    return s;
+  },
+  reward(v) {
+    const list = [u("marksman"), u("flanker"), u("medic"), u("ammo")];
+    let s = ctxBg + ctxHead("SUPPLY DROP · PICK 2 OF 4", "Tap 2 cards to add them to your deck (21 cards now). Then Muster out.");
+    const W = 212, gap = 16, tot = 4 * W + 3 * gap, x0 = Math.round((1168 - tot) / 2), ch = yH(v, W);
+    list.forEach((c, i) => {
+      const x = x0 + i * (W + gap);
+      s += place(x, 88, yCard(v, c, W, { marked: i === 1 }).html);
+      s += `<div class="g mono" style="left:${x}px;top:${88 + ch + 8}px;width:${W}px;text-align:center;font-size:15px;color:${i === 1 ? col("--g-friend") : col("--g-amber")}">${i === 1 ? "TAKEN · 1 OF 2" : "TAP TO TAKE"}</div>`;
+    });
+    return s;
+  },
+  deck(v) {
+    const list = [[OPER_Y(), 1], [u("grunt"), 5], [u("trooper"), 6], [u("armored"), 3], [u("ammo"), 2]];
+    let s = ctxBg + ctxHead("STARTING SQUAD · 20 CARDS + YOUR OPERATOR", "One card per design with its count. Long press for the rules.");
+    const W = 196, gap = 12, tot = 5 * W + 4 * gap, x0 = Math.round((1168 - tot) / 2);
+    list.forEach(([c, n], i) => { s += place(x0 + i * (W + gap), 88, yCard(v, c, W, { count: c.operator ? 0 : n }).html); });
+    return s;
+  },
+  codex(v) {
+    const list = [u("marksman"), u("gunner"), u("flanker"), u("medic"), u("recon"), u("breacher")];
+    let s = ctxBg + ctxHead("CODEX · UNITS", "Every card you can find. Long press a card for its rules and arts.");
+    const W = 172, gap = 10, tot = 6 * W + 5 * gap, x0 = Math.round((1168 - tot) / 2);
+    list.forEach((c, i) => { s += place(x0 + i * (W + gap), 88, yCard(v, c, W, { notFound: c.id === "recon" }).html); });
+    return s;
+  },
+};
+// Hand tray as a fan: each column is a cascade showing every card's title bar (cost + name); the
+// front card of each column is whole. The Operator keeps its row next to READY (O2).
+function yFanTray(v) {
+  const x0 = 8, y0 = 4, Wt = 362, Hh = 532;
+  let s = `<div class="g" style="left:${x0}px;top:${y0}px;width:${Wt}px;height:${Hh}px;background:${col("--g-slate")};border:1px solid ${col("--g-edge")};border-radius:4px"></div>`;
+  s += `<div class="g mono" style="left:${x0 + 8}px;top:${y0 + 10}px;font-size:16px;color:${col("--g-muted")}">SUPPLY <b style="color:#fff">3/4</b> · FAN</div>`;
+  const W = 175, rowH = 120, top = y0 + 38, bottom = y0 + Hh - rowH - 12;
+  const cols = [HAND.slice(0, 4), HAND.slice(4, 7)];
+  cols.forEach((list, ci) => {
+    const ch = yH(v, W), n = list.length;
+    const step = Math.max(Y_TITLE + 2, Math.min(60, Math.floor((bottom - top - ch) / Math.max(1, n - 1))));
+    const fits = top + (n - 1) * step + ch <= bottom;
+    list.forEach((c, i) => {
+      const y = top + i * step;
+      if (!fits && i === n - 1) return;
+      s += place(x0 + 4 + ci * (W + 4), y, yCard(v, c, W).html);
+    });
+    if (!fits) s += `<div class="g mono" style="left:${x0 + 6 + ci * (W + 4)}px;top:${bottom - 20}px;padding:1px 6px;background:rgba(10,12,14,.92);border:1px solid ${col("--g-amber")};font-size:13px;color:${col("--g-amber")}">TOO TALL: 1 CARD HIDDEN</div>`;
+  });
+  const by = y0 + Hh - rowH - 4;
+  s += place(x0 + 4, by, opCard(208, rowH, "deploy"));
+  s += `<div class="g" style="left:${x0 + 218}px;top:${by}px;width:140px;height:44px;border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;background:${col("--g-gun")};font:600 16px var(--f-cond);letter-spacing:.06em">UNDO</div>`;
+  s += `<div class="g" style="left:${x0 + 218}px;top:${by + 50}px;width:140px;height:${rowH - 50}px;border-radius:4px;background:${col("--g-amber")};display:grid;place-items:center;font:700 22px var(--f-cond);letter-spacing:.08em;color:#1A1305">READY</div>`;
+  return s;
+}
+const Y_OPTS = [
+  { key: "Y1", title: "Straight classic", pitch: "The plain trading-card order: title bar, a 1.6:1 art window, type line, a 2-line text box, the stats bar.", pros: ["Reads as 'a card' instantly", "Balanced: decent art, enough text for one ability + a lock line", "Easy to scale to every context"], cons: ["The calling card is cropped from 4:1 to 1.6:1", "Two text lines: a third ability needs the inspector", "Tall in the hand (fan only)"] },
+  { key: "Y2", title: "Wide 4:1 calling card", best: true, pitch: "The art window keeps the calling card's own 4:1 shape (wide, short), so it is the same picture as on the board, and the text box gets 3 lines.", pros: ["The art is the exact calling card from the board: hand, reward and board match", "Shortest card: best for 5 across at mulligan and in the fan", "3 text lines: every ability plus the Recruit lock fits"], cons: ["Smallest art area", "Feels less like a classic TCG card than Y1 / Y3", "Wide art + tall text box: the card is more 'text' than 'picture'"] },
+  { key: "Y3", title: "Tall art", pitch: "A near-square 1.1:1 art window for drama, and a compact 2-line text box.", pros: ["The most dramatic: the art dominates", "Strongest for the Codex and rewards (collecting)", "Classic premium-card feel"], cons: ["Crops the 4:1 calling card hardest (to 1.1:1)", "Tallest: 5 across at mulligan barely fits; the fan cuts the front card", "Two text lines"] },
+  { key: "Y4", title: "Dossier frame", pitch: "A military dossier: a khaki folder frame with a file tab, a ruled text box, and FP / Armor as tabs on the bottom corners.", pros: ["A distinct identity: reads as 'files on your squad'", "Stats as corner tabs: the classic attack-left / defence-right card reading", "Stencil-free titles, same title style as everywhere"], cons: ["A new frame colour family (khaki) next to the game's steel", "FP left / Armor right differs from the board (both bottom-right)", "The folder tab adds height"] },
+];
+function yBlock(opt) {
+  const k = opt.key;
+  const f = (w, h, inner, cap) => fitBox(w, h, inner, cap);
+  return `<article class="opt" id="opt-${k}" data-key="${k}">
+    <div class="opt-head"><span class="opt-letter">${k}</span><span class="opt-title">${opt.title}</span>${opt.best ? '<span class="pick">Recommended (Y family)</span>' : ""}<p class="opt-pitch">${opt.pitch} Card sizes: mulligan 196x${yH(k, 196)}, reward 212x${yH(k, 212)}, deck 196x${yH(k, 196)}, Codex 172x${yH(k, 172)}, hand fan 175x${yH(k, 175)}.</p></div>
+    <div class="frames two">${f(378, 540, yFanTray(k), "Hand tray as a fan (cost + name of every card visible)")}${f(1168, 540, YCTX.mulligan(k), "Mulligan (Standard Issue, Recruit, Tactic)")}</div>
+    <div class="frames two-even">${f(1168, 540, YCTX.reward(k), "Reward / Supply Drop")}${f(1168, 540, YCTX.deck(k), "Pre-game deck view (with the Operator)")}</div>
+    <div class="frames two-even">${f(1168, 540, YCTX.codex(k), "Codex (with a NOT FOUND YET card)")}<div></div></div>
+    <div class="pc"><div class="pro"><h3>Pros</h3><ul>${opt.pros.map((p) => `<li>${p}</li>`).join("")}</ul></div><div class="con"><h3>Cons</h3><ul>${opt.cons.map((p) => `<li>${p}</li>`).join("")}</ul></div></div>
+  </article>`;
+}
+
 document.getElementById("c1p-root").innerHTML = c1plusSection();
 document.getElementById("opts-board").innerHTML = BOARD_OPTS.filter((o) => !o.family).map((o) => optBlock(o, "board")).join("")
   + `<div class="subhead section-head" id="c-family"><h2>C family · pure calling card</h2><p>The head: "I want more version of C, pure calling Card ... showcase full art and add only important info in corners or along the borders. We need stats, icons for keyword, traits. Cost is optionnal." In every C variant the art fills the whole 228x57 slot, uncropped and undimmed; only a 1.5-2 px edge marks Standard Issue (grey-green) or the side (C2). Each pitch says whether it shows the cost.</p></div>`
   + BOARD_OPTS.filter((o) => o.family === "C").map((o) => optBlock(o, "board")).join("")
   + `<div class="subhead section-head" id="b-family"><h2>B family · side rails</h2><p>The head: "The B Side rails also have potential, but the design shown in the documents has problems. There is some weird overlap when we have multiple traits. We also lose some space above and below the calling card which is annoying." Fixes: in every B variant the art fills the full 57 px height, and each rail is a fixed grid of cells (one item per cell, '+n' when full), so two traits, the weapon, the Recruit level and locked keywords can never collide. The states add a 2-trait card (Heavy Doctrine + Undead), a Recruit with 2 locked keywords, and a Standard Issue serial. The original B stays above for comparison; each pitch gives the art's visible size and crop.</p></div>`
   + BOARD_OPTS.filter((o) => o.family === "B").map((o) => optBlock(o, "board")).join("");
-document.getElementById("opts-elsewhere").innerHTML = X_OPTS.map(xBlock).join("") + operatorBlock();
+document.getElementById("opts-elsewhere").innerHTML =
+  `<div class="subhead section-head" id="y-family"><h2>Y family · classic card</h2><p>The head: "Maybe we can design cards that look more like actual cards when not played. Like having the cost and name at the top, the full image with nothing over it after the title, then the text effect section with weapon type, traits, then keyword, Attack and defense at the bottom, etc. Make multiple versions for this." Every Y card, top to bottom: title bar (cost hex + name, the standard title), the art with nothing over it, a type line (weapon · level · traits, lit / faint), the text box (keyword icon + bold name + short rule; a Recruit's greyed "Trains:"; effects), and the stats bar (FP reticle in team colour + grey Armor plate, amber when damaged). Shown: a Standard Issue card ("Basic kit"), a Tactic (no stats), the Operator (deck view). In the hand: a fan that keeps every card's cost and name visible; the recommendation is X1 in the tray and the Y card as the big form.</p></div>`
+  + Y_OPTS.map(yBlock).join("")
+  + `<div class="subhead section-head" id="x-family"><h2>X family · banner cards</h2><p>The C1+ banner with an info area under it (earlier round).</p></div>`
+  + X_OPTS.map(xBlock).join("") + operatorBlock();
 document.getElementById("opts-else-old").innerHTML = ELSE_OPTS.map((o) => optBlock(o, "else")).join("");
 
 // ---------------------------------------------------------------- scaling + name fitting
@@ -1400,7 +1577,7 @@ function setTab(t) {
   scaleAll();
 }
 const cmpOn = document.getElementById("cmp-on"), cmpA = document.getElementById("cmp-a"), cmpB = document.getElementById("cmp-b");
-function opts() { return tab === "board" ? BOARD_OPTS : X_OPTS; }
+function opts() { return tab === "board" ? BOARD_OPTS : Y_OPTS.concat(X_OPTS); }
 function fillCompare() {
   const list = opts();
   const best = list.find((o) => o.best) || list[0];
