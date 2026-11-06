@@ -40,6 +40,9 @@ var _profile_set: bool = false
 
 
 func _ready() -> void:
+	# kc-onboard-ui: run screens reveal systems step by step (RevealGate; back to "show all" on exit).
+	RevealGate.active = true
+	tree_exiting.connect(func() -> void: RevealGate.active = false)
 	_add_backdrop()
 	_build()
 	resized.connect(_on_resized)

@@ -73,19 +73,19 @@ func test_scripted_match_on_the_engine() -> void:
 	m.start_match()
 	var me: RulesSide = m.sides[0]
 	var hand_ids: Array = me.hand.map(func(rc: RulesCard) -> StringName: return rc.card.id)
-	assert_eq(hand_ids, [&"rifleman", &"point_man", &"marksman", &"rifleman", &"combat_medic"], "stacked opening hand")
-	# Round 1: Operator + Rifleman in Left vs their Rifleman.
+	assert_eq(hand_ids, [&"si_grunt", &"si_trooper", &"si_sergeant", &"si_grunt", &"si_trooper"], "stacked opening hand (kc-onboard-ui: Standard Issue)")
+	# Round 1: Operator + Grunt in Left vs their Grunt (kc-onboard-ui: Standard Issue on both sides).
 	Controller.play_scripted_enemy(t, m)
 	assert_eq(m.red_dots(0), PackedInt32Array([1, 0, 0]), "one red dot in Left")
 	assert_true(m.submit(0, RulesIntent.place_operator(0))["ok"], "place Operator Left")
-	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"rifleman"), 0))["ok"], "Rifleman Left")
+	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_grunt"), 0))["ok"], "Grunt Left")
 	_resolve(m)
 	assert_eq(me.streak, 1, "R1 elimination: streak 1")
 	assert_true(me.operator_unit.is_on_board(), "Operator survives")
-	# Round 2: Point Man (First Shot) Right vs their Marksman.
+	# Round 2: Sergeant (3 FP) Right vs their Trooper (2/3): the beat order, no First Shot.
 	m.begin_round()
 	Controller.play_scripted_enemy(t, m)
-	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"point_man"), 2))["ok"], "Point Man Right")
+	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_sergeant"), 2))["ok"], "Sergeant Right")
 	_resolve(m)
 	assert_eq(me.streak, 2, "R2 elimination: streak 2")
 	assert_true(&"recon_drone" in me.streak_tray, "Recon Drone earned by the scripted firefight")
@@ -204,7 +204,7 @@ func _play_through(screen: Dictionary, fast_forward: bool) -> void:
 		return e["type"] == RulesEvent.ITEM_REVEALED and e.get("item_id") == &"recon_drone")
 	assert_true(revealed, "%s the drone resolved at Reveal" % label)
 	assert_eq(c.state.result, &"player", "%s the drill is won" % label)
-	assert_true(intel.contains("Combat Medic and Rifleman to Mid"), "%s drone intel lists the face-up Mid cards: %s" % [label, intel])
+	assert_true(intel.contains("Armored Trooper and Grunt to Mid"), "%s drone intel lists the face-up Mid cards: %s" % [label, intel])
 	var refused: Array = c.intent_log.filter(func(e: Dictionary) -> bool: return not e["result"]["ok"])
 	assert_eq(refused.size(), 0, "%s no engine refusals: %s" % [label, refused])
 	if not fast_forward:

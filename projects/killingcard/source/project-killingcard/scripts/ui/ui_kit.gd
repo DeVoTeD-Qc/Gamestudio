@@ -168,3 +168,83 @@ static func tint(side: StringName = &"", state: StringName = &"normal") -> Color
 static func clear_cache() -> void:
 	_tex.clear()
 	_atlas.clear()
+	_pieces.clear()
+
+
+# =============================================================================
+# kc-onboard-ui: non-icon kit pieces (frames, panels, plates, arts) by file id
+# =============================================================================
+
+## Folders searched for a kit piece "<id>.png" / "<id>.webp", in order (ui-kit-manifest.csv column
+## "dir"; arts = the banner pipeline's public drop folder for the kc_b_si_* starter arts).
+const PIECE_DIRS: PackedStringArray = ["res://assets/ui/kit/frames/", "res://assets/ui/kit/panels/",
+		"res://assets/ui/kit/plates/", "res://assets/ui/kit/icons/", "res://assets/ui/kit/arts/",
+		"res://assets/sprites/banners/"]
+## The new art slots of kc-onboard-ui (they arrive later; every caller has a code-drawn fallback).
+const ONBOARD_PIECES: Array[StringName] = [&"frm_standard_issue", &"frm_serial_plate", &"frm_socket_empty",
+		&"frm_socket_locked", &"ico_ui_lock", &"pnl_new_card", &"pnl_new_inset", &"kc_b_si_grunt", &"kc_b_si_trooper",
+		&"kc_b_si_sergeant", &"kc_b_si_armored", &"kc_b_si_ammo_resupply"]
+## 9-slice margins (L, T, R, B at ship size, ui-kit-prompt-pack.md §4) of the onboarding pieces.
+const PIECE_MARGINS: Dictionary = {
+	&"frm_standard_issue": Vector4(40, 32, 16, 16), &"frm_serial_plate": Vector4(16, 12, 16, 12),
+	&"pnl_new_card": Vector4(96, 48, 40, 40), &"pnl_new_inset": Vector4(20, 20, 20, 20),
+}
+## Tests point this elsewhere (or at a missing folder) to prove the fallbacks.
+static var piece_dirs: PackedStringArray = PIECE_DIRS
+static var _pieces: Dictionary = {}  # id -> Texture2D or null
+
+
+## A kit piece by its file id (&"frm_standard_issue", &"pnl_new_card", &"kc_b_si_grunt", ...), or
+## null while the kit doesn't have it. &"ico_<x>" ids also resolve through kit_texture(&"<x>").
+static func piece(id: StringName) -> Texture2D:
+	if not enabled or id == &"":
+		return null
+	if _pieces.has(id):
+		return _pieces[id]
+	var tex: Texture2D = null
+	for d: String in piece_dirs:
+		for ext: String in [".png", ".webp"]:
+			var path: String = d + String(id) + ext
+			if ResourceLoader.exists(path):
+				tex = load(path) as Texture2D
+				break
+		if tex != null:
+			break
+	if tex == null and String(id).begins_with("ico_"):
+		tex = kit_texture(StringName(String(id).trim_prefix("ico_")))
+	_pieces[id] = tex
+	return tex
+
+
+## True when the kit has this piece.
+static func has_piece(id: StringName) -> bool:
+	return piece(id) != null
+
+
+## Draws a kit piece into rect, 9-sliced with PIECE_MARGINS (scaled to the rect when it is smaller
+## than the ship size). Returns false and draws nothing while the piece is missing, so the caller
+## draws its code fallback.
+static func draw_piece(ci: CanvasItem, id: StringName, rect: Rect2, tint_color: Color = Color.WHITE) -> bool:
+	var tex: Texture2D = piece(id)
+	if ci == null or tex == null:
+		return false
+	var m: Vector4 = PIECE_MARGINS.get(id, Vector4.ZERO)
+	if m == Vector4.ZERO:
+		ci.draw_texture_rect(tex, rect, false, tint_color)
+		return true
+	var k: float = minf(1.0, minf(rect.size.x / maxf(1.0, m.x + m.z), rect.size.y / maxf(1.0, m.y + m.w)))
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = m.x
+	sb.texture_margin_top = m.y
+	sb.texture_margin_right = m.z
+	sb.texture_margin_bottom = m.w
+	sb.modulate_color = tint_color
+	if k < 1.0:
+		# Shrink the corners with the rect: draw the box at the ship size, scaled down.
+		ci.draw_set_transform(rect.position, 0.0, Vector2(k, k))
+		ci.draw_style_box(sb, Rect2(Vector2.ZERO, rect.size / k))
+		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		ci.draw_style_box(sb, rect)
+	return true

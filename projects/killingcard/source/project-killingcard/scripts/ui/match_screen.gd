@@ -155,6 +155,12 @@ var _supply_stack: VBoxContainer = null
 ## kc-syn-ui: the trait rail (icon strip), the SETS flyout body, the last known tiers per side
 ## (set callouts fire when a tier switches on / off) and the callouts on screen.
 var _trait_rail: Control = null
+## kc-onboard-ui: the initiative chip, the "New: X" explainer, and the progressive reveal of this board
+## (match_snapshot.reveal_info: trait rail / links / bands shown?).
+var _initiative: InitiativeChip = null
+var _new_card: NewCard = null
+var _reveal: Dictionary = {}
+var _rail_area: Rect2 = Rect2()
 var _sets_box: VBoxContainer = null
 var _syn_tiers: Dictionary = {&"player": {}, &"enemy": {}}
 var _syn_doctrine: Dictionary = {&"player": &"", &"enemy": &""}
@@ -221,6 +227,17 @@ func _ready() -> void:
 	_ks_row.name = "KillstreakRow"
 	_tray.add_child(_ks_row)
 	_tray.move_child(_ks_row, _supply_box.get_index() + 1)
+	# kc-onboard-ui: who holds initiative this round (and why), above the trait rail.
+	_initiative = InitiativeChip.new()
+	_strip.add_child(_initiative)
+	_initiative.tapped.connect(func() -> void:
+		close_flyout()
+		rail_inspected.emit(&"initiative"))
+	_initiative.inspected.connect(func() -> void:
+		close_flyout()
+		rail_inspected.emit(&"initiative"))
+	_new_card = NewCard.new()
+	add_child(_new_card)
 	_trait_rail = TraitRail.new()
 	_trait_rail.name = "TraitRail"
 	_strip.add_child(_trait_rail)
@@ -262,6 +279,9 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
 	_set_actions(snapshot)
 	_set_badges(snapshot)
+	_reveal = snapshot.get("reveal", {})
+	if _initiative != null:
+		_initiative.set_info(snapshot.get("initiative", {}))
 	_set_synergy(snapshot.get("synergy", {}))
 	_follow_phase(snapshot)
 	snapshot_shown.emit(snapshot)
@@ -371,8 +391,13 @@ func _set_synergy(syn: Dictionary) -> void:
 	_syn_snapshot = syn
 	var me: Dictionary = syn.get("player", {})
 	var foe: Dictionary = syn.get("enemy", {})
-	_board.set_links({&"player": me.get("links", []), &"enemy": foe.get("links", [])})
-	_trait_rail.set_rails(me.get("rail", []), foe.get("rail", []), not compact)
+	# kc-onboard-ui: link ticks and the trait rail appear once met, or while something in play uses them.
+	var links_on: bool = bool(_reveal.get("links", true))
+	var rail_on: bool = bool(_reveal.get("trait_rail", true))
+	_board.set_links({&"player": me.get("links", []), &"enemy": foe.get("links", [])} if links_on else {})
+	_trait_rail.set_rails(me.get("rail", []) if rail_on else [], foe.get("rail", []) if rail_on else [], not compact)
+	_trait_rail.set_meta(&"revealed", rail_on)
+	_layout_strip_extras()
 	for pair: Array in [[&"player", me], [&"enemy", foe]]:
 		_syn_tiers[pair[0]] = (pair[1].get("tiers", {}) as Dictionary).duplicate()
 		_syn_doctrine[pair[0]] = StringName(pair[1].get("doctrine", &""))
@@ -634,7 +659,13 @@ func get_key_controls() -> Dictionary:
 	if rival_in_score():
 		# kc-fight-ui: the phone's SCORE badge carries the rival hand; the trait rail takes the slot.
 		out.erase("minimap")
-		out["traits"] = _trait_rail
+		# kc-onboard-ui: the slot holds the initiative chip until a trait is in play, then the rail.
+		if _initiative != null and _initiative.visible:
+			out["initiative"] = _initiative
+		if _trait_rail.visible or not out.has("initiative"):
+			out["traits"] = _trait_rail
+	elif _initiative != null and _initiative.visible:
+		out["initiative"] = _initiative
 	if tray_state == TRAY_OPEN:
 		out.merge({"hand": _hand, "undo": _undo_button, "ready": _ready_button})
 		if not _ks_row.get_tiles().is_empty():
@@ -734,9 +765,8 @@ func _layout_regions() -> void:
 	if merged:
 		var top: float = rects[4].end.y + float(metrics["badge_gap"])
 		rail_r = Rect2(0, top, rail_r.size.x, maxf(0.0, rects[6].position.y - float(metrics["badge_gap"]) - top))
-	_trait_rail.position = rail_r.position
-	_trait_rail.size = rail_r.size
-	_trait_rail.visible = rail_r.size.y >= 30.0
+	_rail_area = rail_r
+	_layout_strip_extras()
 	_trait_rail.set_rails(_trait_rail.rails.get(&"player", []), _trait_rail.rails.get(&"enemy", []), not compact)
 	# Killfeed toasts: top centre of the board, over the rival's back row.
 	var tw: float = minf(board_rect.size.x - 16.0, 460.0)
@@ -749,6 +779,44 @@ func _layout_regions() -> void:
 	_peek_catcher.position = Vector2.ZERO
 	_peek_catcher.size = area
 	_layout_tray()
+
+
+## kc-onboard-ui: the initiative chip takes the top of the rail's area (one badge slot: phone 62x64,
+## desktop 68x64); the trait rail fills the rest. On the phone the rail's area holds one of them: the
+## chip while no trait is in play / revealed (M1), the rail after (the SCORE flag keeps initiative).
+func _layout_strip_extras() -> void:
+	var r: Rect2 = _rail_area
+	if _initiative == null or r.size.y <= 0.0:
+		return
+	var ch: float = float(metrics.get("badge_h", 64.0))
+	var gap: float = float(metrics.get("badge_gap", 5.0))
+	var in_use: bool = not (_trait_rail.rails.get(&"player", []) as Array).is_empty() or not (_trait_rail.rails.get(&"enemy", []) as Array).is_empty()
+	var rail_on: bool = bool(_trait_rail.get_meta(&"revealed", true)) and in_use
+	_initiative.position = r.position
+	_initiative.size = Vector2(r.size.x, minf(ch, r.size.y))
+	# The phone strip has no room for both (the head's kc-fight-ui answer gives the rail a full badge
+	# slot): once the rail is in use the SCORE badge's flag carries initiative (tap SCORE for why).
+	_initiative.visible = not _initiative.info.is_empty() and (r.size.y >= 2.0 * ch + gap or not rail_on)
+	var top: float = r.position.y + (ch + gap if _initiative.visible else 0.0)
+	_trait_rail.position = Vector2(r.position.x, top)
+	_trait_rail.size = Vector2(r.size.x, maxf(0.0, r.end.y - top))
+	_trait_rail.visible = _trait_rail.size.y >= 30.0 and bool(_trait_rail.get_meta(&"revealed", true))
+	_initiative.queue_redraw()
+
+
+## The initiative chip (tests, QA).
+func get_initiative_chip() -> InitiativeChip:
+	return _initiative
+
+
+## The "New: X" explainer (tests, QA).
+func get_new_card() -> NewCard:
+	return _new_card
+
+
+## Shows the first pending "New:" explainer among `relevant` (one per round: key "round<n>").
+func offer_explainer(relevant: Array, key: String) -> StringName:
+	return _new_card.offer(relevant, key) if _new_card != null else &""
 
 
 func _layout_tray() -> void:
@@ -982,7 +1050,13 @@ func _set_badges(snapshot: Dictionary) -> void:
 	var muted: Color = Color("#9AA5AE")
 	var friend: Color = get_theme_color(&"friend", &"Hud")
 	var enemy: Color = get_theme_color(&"enemy", &"Hud")
-	var score_rows: Array = [[["R%d" % int(snapshot.get("round", 1)), muted]],
+	# kc-onboard-ui: the initiative flag (holder's colour and shape) leads the round line.
+	var ini: Dictionary = snapshot.get("initiative", {})
+	var round_row: Array = [["R%d" % int(snapshot.get("round", 1)), muted]]
+	if not ini.is_empty():
+		var mine_i: bool = bool(ini.get("mine", true))
+		round_row.push_front(["", friend if mine_i else enemy, &"flag" if mine_i else &"flag_rival"])
+	var score_rows: Array = [round_row,
 			[[str(int(snapshot.get("score_player", 0))), friend], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy]]]
 	if rival_in_score():
 		# kc-fight-ui: the rival's hand (a red card glyph + count) as the third line.

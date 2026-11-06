@@ -3,7 +3,8 @@
 #   any run screen can open (DECK button). Top: the engine in one look: Trained cards per trait
 #   (trait icon + count + what the deck can switch on: "2 in play: tier 2"), neighbour keyword
 #   counts, how many Recruits are still waiting to be trained, Doctrine, deck size over the 15-card
-#   floor. Below: every design in the deck, one row each, with its copies by level (camo band chip:
+#   floor (kc-onboard-ui: the Engine part shows from the first Promotion, RevealGate; Standard Issue
+#   rows carry the stencil name and serial plate, Recruit rows their greyed "Trains:" line). Below: every design in the deck, one row each, with its copies by level (camo band chip:
 #   plain Recruit, Gilded Trained, Forged Veteran, Priceless Elite), its trait and keyword glyphs.
 #   Each row can be long-pressed / right-clicked for its card's full rules (row_inspected); CLOSE or
 #   a tap on the scrim closes it.
@@ -106,6 +107,18 @@ func open(r: RunProgress) -> void:
 	_gestures.clear()
 	var e: Dictionary = r.engine_summary()
 	_title.text = "YOUR DECK  ·  %d CARDS (FLOOR %d)" % [int(e["deck_size"]), int(e["floor"])]
+	# kc-onboard-ui: the Engine part arrives with the first Promotion (§5.2: RevealGate ENGINE_PANEL);
+	# before that the deck view is the plain list, with the Standard Issue / calling-card split.
+	var si_n: int = int(e.get("standard_issue", 0))
+	_list.add_child(_line("Standard Issue: %d of %d cards (basic kit; Muster out sends it home). Calling cards: %d." % [
+			si_n, int(e["deck_size"]), int(e["deck_size"]) - si_n]))
+	if not RevealGate.shown(RevealFlags.ENGINE_PANEL):
+		_list.add_child(_section("CARDS"))
+		_add_rows(r)
+		show()
+		_fit()
+		_close.grab_focus.call_deferred()
+		return
 	_list.add_child(_section("ENGINE"))
 	var traits: Dictionary = e["traits"]
 	var row := HFlowContainer.new()
@@ -120,14 +133,21 @@ func open(r: RunProgress) -> void:
 		if int(kws.get(kw, 0)) > 0:
 			kw_bits.append("%s %d" % [SynergyGlyphs.keyword_name(kw), int(kws[kw])])
 	_list.add_child(_line("Neighbour keywords (Trained): %s." % (", ".join(kw_bits) if not kw_bits.is_empty() else "none yet")))
-	_list.add_child(_line("Recruits waiting to be trained: %d (Promotion trains one; retiring a Recruit trains its twin)." % int(e["recruits"])))
+	_list.add_child(_line("Recruits waiting to be trained: %d (Promotion trains one and unlocks its keywords)." % int(e["recruits"])))
 	var doc: StringName = StringName(e["doctrine"])
-	_list.add_child(_line("Doctrine: %s." % ("%s (its sets count +1 in every match)" % SynergyGlyphs.trait_name(doc) if doc != &"" else "not picked yet (after match 1)")))
+	_list.add_child(_line("Doctrine: %s." % ("%s (its sets count +1 in every match)" % SynergyGlyphs.trait_name(doc) if doc != &"" else "not set yet (your first calling card sets it)")))
 	var main: StringName = StringName(e["main_trait"])
 	if main != &"":
 		_list.add_child(_line("Main trait: %s. Supply Drops always offer one %s card first." % [SynergyGlyphs.trait_name(main), SynergyGlyphs.trait_name(main)]))
 	_list.add_child(_section("CARDS"))
-	# One row per design: copies by level.
+	_add_rows(r)
+	show()
+	_fit()
+	_close.grab_focus.call_deferred()
+
+
+## One row per design: copies by level.
+func _add_rows(r: RunProgress) -> void:
 	var order: Array[StringName] = []
 	var by_id: Dictionary = {}
 	for d: Dictionary in r.deck_view():
@@ -138,9 +158,6 @@ func open(r: RunProgress) -> void:
 		(by_id[id] as Array).append(d)
 	for id: StringName in order:
 		_list.add_child(_card_row(r, id, by_id[id]))
-	show()
-	_fit()
-	_close.grab_focus.call_deferred()
 
 
 func _section(text: String) -> Label:
@@ -190,7 +207,22 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	name_l.text = "%s  x%d" % [card.display_name if card != null else String(id), copies.size()]
 	name_l.custom_minimum_size.x = 250
 	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var si: bool = card != null and card.standard_issue
+	if si:
+		# kc-onboard-ui: the Standard Issue name in the stencil font, with its serial.
+		name_l.text = "%s  x%d" % [card.display_name.to_upper(), copies.size()]
+		name_l.add_theme_font_override(&"font", StandardIssueLook.stencil())
+		name_l.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
 	row.add_child(name_l)
+	if si:
+		var plate := Control.new()
+		plate.name = "SerialPlate"
+		var serial: String = RunProgress.standard_issue_serial(card)
+		plate.custom_minimum_size = Vector2(StandardIssueLook.serial_width(serial, 24.0), 24)
+		plate.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		plate.draw.connect(func() -> void: StandardIssueLook.draw_serial_plate(plate, Rect2(Vector2.ZERO, plate.size), serial))
+		row.add_child(plate)
 	var cost_l := Label.new()
 	cost_l.theme_type_variation = &"HudSubtle"
 	cost_l.text = "cost %d" % card.cost if card != null else ""
@@ -205,11 +237,25 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	for d: Dictionary in copies:
 		if StringName(d["keyword"]) != &"":
 			trained_kw = d["keyword"]
-	var has_syn: bool = card != null and (card.card_trait != &"" or card.neighbor_keyword != &"")
-	for lv: int in [0, 1, 2, 3]:
-		if not levels.has(lv):
-			continue
-		row.add_child(_level_chip(lv, int(levels[lv]), has_syn))
+	var has_syn: bool = card != null and not card.standard_issue and (card.card_trait != &"" or card.neighbor_keyword != &"" or card.has_trait_choice())
+	if not si:
+		for lv: int in [0, 1, 2, 3]:
+			if not levels.has(lv):
+				continue
+			row.add_child(_level_chip(lv, int(levels[lv]), has_syn))
+	# kc-onboard-ui: a Recruit's locked keywords ("Trains: First Shot · Guard", greyed).
+	var trains: String = ""
+	for d: Dictionary in copies:
+		if String(d.get("trains", "")) != "":
+			trains = String(d["trains"])
+	if trains != "":
+		var tr := Label.new()
+		tr.name = "TrainsLine"
+		tr.theme_type_variation = &"HudSubtle"
+		tr.text = trains
+		tr.add_theme_color_override(&"font_color", Color("#8C969E"))
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(tr)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -233,7 +279,7 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 		if int(pr[0]) > 0:
 			words.append("%s %d" % [nm, int(pr[0])])
 		if int(pr[1]) > 0:
-			words.append("trains %s %d" % [nm if tc == &"" else "as " + nm, int(pr[1])])
+			words.append("%s %d (Recruit)" % [nm, int(pr[1])])
 	if not words.is_empty():
 		var tl := Label.new()
 		tl.name = "CopyTraits"
@@ -261,8 +307,9 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 		if kw != &"":
 			SynergyGlyphs.draw_keyword_plate(glyphs, Rect2(x, 0, 24, 24), kw, trained_kw != &"", Color("#2EC4B6"), true))
 	row.add_child(glyphs)
-	panel.tooltip_text = "%s: %s. Each copy keeps the art it was found with; the art decides its trait. Long-press / right-click: rules." % [
-			card.display_name if card != null else String(id), " · ".join(words) if not words.is_empty() else "no trait"]
+	panel.tooltip_text = ("%s: Standard Issue %s, basic kit with no trait. Long-press / right-click: rules." % [card.display_name, RunProgress.standard_issue_serial(card)]) if si else \
+			("%s: %s. Each copy keeps the art it was found with; the art decides its trait. Long-press / right-click: rules." % [
+			card.display_name if card != null else String(id), " · ".join(words) if not words.is_empty() else "no trait"])
 	var g: RefCounted = PressGesture.new(panel)
 	g.drag_enabled = false
 	_gestures.append(g)

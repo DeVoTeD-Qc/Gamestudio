@@ -356,7 +356,11 @@ func test_phone_strip_folds_rival_into_score() -> void:
 			assert_true(score.get_text().ends_with(str(hand_n)), "%s SCORE shows the rival hand (%s)" % [label, score.get_text()])
 			var rail: Control = m.get_trait_rail()
 			var badge_h: float = float(m.metrics["badge_h"])
-			assert_true(rail.size.y >= badge_h, "%s the trait rail has a full badge slot (%.0f >= %.0f px)" % [label, rail.size.y, badge_h])
+			# kc-onboard-ui: the slot holds the initiative chip while no trait is in play (a full
+			# badge), the trait rail once one is (a full badge slot or more).
+			var chip: Control = m.get_initiative_chip()
+			var holder: Control = chip if chip.visible else rail
+			assert_true(holder.size.y >= badge_h, "%s the %s has a full badge slot (%.0f >= %.0f px)" % [label, holder.name, holder.size.y, badge_h])
 			assert_true(m.get_badge(&"preview").position.y < rail.position.y, "%s PREVIEW sits above the rail" % label)
 			m.toggle_flyout(&"score")
 			await _frames(2)

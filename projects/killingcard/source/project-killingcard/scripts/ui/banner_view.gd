@@ -349,6 +349,9 @@ func _draw_overlay() -> void:
 		o.draw_rect(fr, BRASS, false, 3.0)
 	elif bool(entry.get("elite", false)):
 		o.draw_rect(r.grow(-1.0), BRASS, false, 1.5)
+	elif StandardIssueLook.is_si(entry):
+		# kc-onboard-ui: the plain Standard Issue frame (no band, no foil, low contrast).
+		StandardIssueLook.draw_frame(o, r, 0.85 if mode == Mode.GHOST else 1.0)
 	# kc-syn-ui: the copy level's camo band (Trained Gilded, Veteran Forged, Elite Priceless; a
 	# Recruit keeps the plain frame).
 	var lvl_band: StringName = StringName(String(entry.get("band", "")))
@@ -375,11 +378,20 @@ func _draw_overlay() -> void:
 		elif String(entry.get("trait", "")) != "":
 			var tier: int = int(entry.get("trait_tier", 0))
 			SynergyGlyphs.draw_trait_plate(o, an["trait"], StringName(String(entry.get("trait", ""))), tier >= 2, tier >= 3)
+		elif StandardIssueLook.is_si(entry):
+			StandardIssueLook.draw_empty_socket(o, an["trait"])
+	# kc-onboard-ui: the copy level badge (R / T / V / E) after the trait and class pips.
+	if an.has("level"):
+		StandardIssueLook.draw_level_badge(o, an["level"], int(entry.get("level", 0)), get_theme_font(&"font", &"HudNumber"))
 	# Abilities (top-right).
 	for ab: Array in an["abilities"]:
 		var kind: Variant = ab[0]
 		var rr: Rect2 = ab[1]
-		if kind is Array:
+		if kind is Array and kind[0] == &"serial":
+			StandardIssueLook.draw_serial_plate(o, rr, String(kind[1]), not mine)
+		elif kind is Array and kind[0] == &"locked":
+			StandardIssueLook.draw_locked_keyword(o, rr, String(kind[1]))
+		elif kind is Array:
 			SynergyGlyphs.draw_keyword_plate(o, rr, kind[1], bool(entry.get("kw_active", false)), side_c, mine)
 		elif kind == &"protector":
 			_draw_protector_glyph(o, rr)
@@ -444,7 +456,10 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 	var kws: Array = []
 	var kx: float = sz.x - pad - plate
 	for k: Variant in kinds:
-		kws.append([k, Rect2(kx, top, plate, plate)])
+		# kc-onboard-ui: a Standard Issue card's serial plate is wider than a socket.
+		var w: float = StandardIssueLook.serial_width(String(k[1]), plate) if k is Array and k[0] == &"serial" else plate
+		kx += plate - w
+		kws.append([k, Rect2(kx, top, w, plate)])
 		kx -= plate + 2.0
 	out["abilities"] = kws
 	var name_end: float = kx + plate - 2.0 if not kinds.is_empty() else sz.x - pad
@@ -468,6 +483,10 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 		bx += plate + 2.0
 	if CLASS_ICONS.has(String(e.get("cls", "")).to_upper()) and not op:
 		out["class"] = Rect2(bx, by, plate, plate)
+		bx += plate + 2.0
+	# kc-onboard-ui: the copy level badge (Recruits always: the "Trains:" teaser; others once met).
+	if bool(e.get("level_badge", false)) and not op and e.has("fp"):
+		out["level"] = Rect2(bx, by, plate, plate)
 		bx += plate + 2.0
 	out["sub"] = Rect2(bx + 2.0, sz.y - pad - badge, maxf(0.0, stat_x - bx - 6.0), badge)
 	out["mid"] = Rect2(x0, top + plate + 1.0, sz.x - x0 - pad, maxf(0.0, (sz.y - pad - badge) - (top + plate + 1.0)))
@@ -493,6 +512,15 @@ static func ability_kinds(e: Dictionary) -> Array:
 		out.append(&"bolt_more" if icons.size() > 2 else &"bolt")
 	if String(e.get("kw", "")) != "":
 		out.append([&"kw", StringName(String(e["kw"]))])
+	# kc-onboard-ui: a Recruit's locked keywords (greyed, padlock; at most 2, the neighbor keyword
+	# last), and a Standard Issue card's serial plate in the otherwise empty abilities slot.
+	var locked: Array = e.get("locked", [])
+	if not locked.is_empty():
+		var shown: Array = locked.slice(0, 1) + [locked[-1]] if locked.size() > 2 else locked
+		for name: Variant in shown:
+			out.append([&"locked", String(name)])
+	if String(e.get("serial", "")) != "":
+		out.append([&"serial", String(e["serial"])])
 	return out
 
 
@@ -530,16 +558,18 @@ static func name_sizes(h: float) -> Vector2i:
 func _draw_names(o: Control, a: Dictionary) -> void:
 	var nm: String = String(entry.get("name", "")).replace("★", "").strip_edges().to_upper()
 	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var si: bool = StandardIssueLook.is_si(entry)
+	var name_font: Font = StandardIssueLook.stencil() if si else font
 	var fs: Vector2i = name_sizes(metric_h if metric_h > 0.0 else size.y)
 	var nr: Rect2 = a["name"]
 	if nm != "" and nr.size.x >= 16.0:
 		var nfs: int = fs.x
-		while nfs > 13 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > nr.size.x:
+		while nfs > 13 and name_font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > nr.size.x:
 			nfs -= 1
-		nm = fit_text(nm, font, nfs, nr.size.x)
-		var base: Vector2 = Vector2(nr.position.x, nr.position.y + (nr.size.y + font.get_ascent(nfs) - font.get_descent(nfs)) * 0.5)
-		o.draw_string_outline(font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, 4, INK)
-		o.draw_string(font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, Color.WHITE)
+		nm = fit_text(nm, name_font, nfs, nr.size.x, "." if si else "…")
+		var base: Vector2 = Vector2(nr.position.x, nr.position.y + (nr.size.y + name_font.get_ascent(nfs) - name_font.get_descent(nfs)) * 0.5)
+		o.draw_string_outline(name_font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, 4, INK)
+		o.draw_string(name_font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, StandardIssueLook.NAME if si else Color.WHITE)
 	if entry.has("fp"):
 		return
 	var sub: String = String(entry.get("kind_word", ""))
@@ -552,13 +582,13 @@ func _draw_names(o: Control, a: Dictionary) -> void:
 
 
 ## `text` cut to `width` at font size `fs`, ending in "…" when cut.
-static func fit_text(text: String, font: Font, fs: int, width: float) -> String:
+static func fit_text(text: String, font: Font, fs: int, width: float, ellipsis: String = "…") -> String:
 	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= width:
 		return text
 	var t: String = text
-	while t.length() > 1 and font.get_string_size(t + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+	while t.length() > 1 and font.get_string_size(t + ellipsis, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
 		t = t.substr(0, t.length() - 1)
-	return t.strip_edges() + "…"
+	return t.strip_edges() + ellipsis
 
 
 ## A cost hex (board banners; hand / codex cards place their own CostHex node).

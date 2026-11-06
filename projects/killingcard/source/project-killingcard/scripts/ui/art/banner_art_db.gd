@@ -103,8 +103,26 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 		art = _variant(art_id, hint)
 	if art == null:
 		art = _placeholder(art_id, hint)
+	_apply_si_art(art_id, art)
 	_arts[art_id] = art
 	return art
+
+
+## kc-onboard-ui (onboarding §2.2, head Z2): the Sr Game Artist's Standard Issue starter arts arrive
+## as kit pieces kc_b_si_<card> (UiKit.piece: assets/ui/kit/arts/ or assets/sprites/banners/). When one
+## is there it replaces the placeholder of that Standard Issue art id (si_grunt, si_ammo_resupply ...).
+static func _apply_si_art(art_id: StringName, art: BannerArt) -> void:
+	if art == null or not String(art_id).begins_with("si_"):
+		return
+	var tex: Texture2D = UiKit.piece(StringName("kc_b_" + String(art_id)))
+	if tex == null:
+		return
+	art.texture = tex
+	art.image_path = tex.resource_path
+	art.placeholder = false
+	art.source_note = "Standard Issue art (kit piece kc_b_%s)." % art_id
+	_crops.erase("%s/banner" % art_id)
+	_crops.erase("%s/portrait" % art_id)
 
 
 ## Rows of the optional licensed manifest, keyed by chassis id ({} when the folder is absent).

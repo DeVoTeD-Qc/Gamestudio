@@ -26,6 +26,7 @@ const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
 var _codex: Control = null
 var _glossary_button: Button = null
+var _reset_tips_button: Button = null
 var _glossary: Control = null
 
 @onready var _title: Label = %PauseTitle
@@ -83,6 +84,39 @@ func _ready() -> void:
 	_glossary_button.add_to_group(&"tap_target")
 	_glossary_button.pressed.connect(open_glossary)
 	row.add_child(_glossary_button)
+	# kc-onboard-ui (§5.1): RESET TIPS beside MIRROR LAYOUT: every "New: X" explainer shows again and
+	# the systems hide until met (Settings.reset_tips).
+	var row2: HBoxContainer = HBoxContainer.new()
+	row2.name = "MirrorRow"
+	row2.add_theme_constant_override(&"separation", 8)
+	_main.add_child(row2)
+	_main.move_child(row2, _mirror.get_index())
+	_main.remove_child(_mirror)
+	row2.add_child(_mirror)
+	_mirror.owner = self
+	_mirror.unique_name_in_owner = true
+	_reset_tips_button = Button.new()
+	_reset_tips_button.name = "ResetTipsButton"
+	_reset_tips_button.text = "RESET TIPS"
+	_reset_tips_button.theme_type_variation = &"HudButton"
+	_reset_tips_button.tooltip_text = "Show the one-time \"New:\" tips again"
+	_reset_tips_button.custom_minimum_size = Vector2(150, 64)
+	_reset_tips_button.focus_mode = Control.FOCUS_ALL
+	_reset_tips_button.add_to_group(&"tap_target")
+	_reset_tips_button.pressed.connect(reset_tips)
+	row2.add_child(_reset_tips_button)
+
+
+## RESET TIPS: Settings.reset_tips() (every explainer again; systems hide until met).
+func reset_tips() -> void:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null and st.has_method(&"reset_tips"):
+		st.reset_tips()
+	_reset_tips_button.text = "TIPS RESET"
+
+
+func get_reset_tips_button() -> Button:
+	return _reset_tips_button
 
 
 ## info: {context ("MATCH 1 OF 5 · ROUND 3"), hint (what QUIT does), can_forfeit,
@@ -100,6 +134,8 @@ func open(info: Dictionary = {}) -> void:
 	_update_fast_text()
 	var settings: Node = get_node_or_null(^"/root/Settings")
 	_mirror.set_pressed_no_signal(settings != null and bool(settings.get(&"mirror_layout")))
+	if _reset_tips_button != null:
+		_reset_tips_button.text = "RESET TIPS"
 	_update_mirror_text()
 	_show_main()
 	show()

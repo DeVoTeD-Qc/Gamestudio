@@ -352,7 +352,9 @@ static func banner_entry(card: Dictionary) -> Dictionary:
 			"elite": bool(card.get("elite", false)), "bolt": bool(card.get("bolt", false)),
 			"front_kw": bool(card.get("front_kw", false)),
 			"banner": String(card.get("banner", card.get("id", "")))}
-	for k: String in ["subname", "trait", "kw", "band", "fp_trend", "cover", "armor_max", "operator", "camo"]:
+	# kc-onboard-ui: the Standard Issue / Recruit keys (StandardIssueLook.dress in match_snapshot).
+	for k: String in ["subname", "trait", "kw", "band", "fp_trend", "cover", "armor_max", "operator", "camo",
+			"standard_issue", "serial", "locked", "trains", "level", "level_badge", "reserve_trait"]:
 		if card.has(k) and str(card[k]) != "":
 			e[k] = card[k]
 	if card.has("fp"):

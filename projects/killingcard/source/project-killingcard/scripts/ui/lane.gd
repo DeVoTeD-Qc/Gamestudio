@@ -92,6 +92,7 @@ func _ready() -> void:
 		_friendly_slots.append(_make_slot(&"player", i))
 	_ghost = BannerView.new()
 	_ghost.name = "Ghost"
+	_ghost.show_name = false  # kc-onboard-ui (head W1): board banners carry no name
 	_ghost.visible = false
 	_slots.add_child(_ghost)
 	_backing = TextureRect.new()
@@ -576,6 +577,7 @@ func _fade_out_copy(s_side: StringName, row: int, entry: Dictionary) -> void:
 	if row < 0 or row >= ROWS:
 		return
 	var copy := BannerView.new()
+	copy.show_name = false
 	_fx_layer.add_child(copy)
 	copy.position = Vector2(0, BoardMetrics.row_y(metrics, s_side, row))
 	copy.size = Vector2(metrics["bw"], metrics["bh"])

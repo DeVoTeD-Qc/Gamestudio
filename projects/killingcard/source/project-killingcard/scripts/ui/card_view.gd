@@ -192,6 +192,13 @@ func _refresh() -> void:
 	_elite_icon.visible = bool(data.get("elite", false))
 	# Name and type line.
 	_name_label.text = String(data.get("name", "")).replace("★", "").strip_edges()
+	# kc-onboard-ui: a Standard Issue card's name in the stencil font, low contrast.
+	if bool(data.get("standard_issue", false)):
+		_name_label.add_theme_font_override(&"font", StandardIssueLook.stencil())
+		_name_label.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
+	else:
+		_name_label.remove_theme_font_override(&"font")
+		_name_label.remove_theme_color_override(&"font_color")
 	var name_right: float = 206.0 if type_name == "equipment" else 238.0
 	var name_left: float = 20.0 if type_name == "operator" else 70.0
 	_set_slot(_name_label, Rect2(name_left, 12, name_right - name_left, 26))
@@ -312,6 +319,18 @@ func _rebuild_keywords() -> void:
 		_keyword_row.add_child(label)
 	# With 3+ keywords, icons carry the meaning and labels shorten to fit the row.
 	_keyword_row.add_theme_constant_override(&"separation", 4 if keywords.size() > 1 else 6)
+	# kc-onboard-ui: a Recruit's keywords are locked until it trains: greyed, behind a padlock.
+	var locked: bool = bool(data.get("locked", false)) and not keywords.is_empty()
+	_keyword_row.modulate = Color(0.62, 0.66, 0.7, 0.55) if locked else Color.WHITE
+	if locked:
+		var lock := Control.new()
+		lock.name = "LockIcon"
+		lock.custom_minimum_size = Vector2(18, 22)
+		lock.draw.connect(func() -> void: StandardIssueLook.draw_lock(lock, Rect2(1, 2, 16, 18), Color("#D8DEE3")))
+		_keyword_row.add_child(lock)
+		_keyword_row.move_child(lock, 0)
+	if _body_label != null:
+		_body_label.modulate = Color(0.62, 0.66, 0.7, 0.7) if bool(data.get("locked", false)) else Color.WHITE
 
 
 func _range_text(weapon: StringName) -> String:
@@ -432,6 +451,10 @@ func _draw() -> void:
 	var frame: Color = get_theme_color(&"frame_standard", &"Card")
 	if bool(data.get("elite", false)):
 		frame = get_theme_color(&"elite", &"Card")
+	elif bool(data.get("standard_issue", false)):
+		# kc-onboard-ui: the Standard Issue frame: plain matte grey-green, low contrast.
+		frame = StandardIssueLook.FRAME
+		face = face.lerp(Color("#2B312A"), 0.55)
 	elif type_name == "killstreak":
 		frame = get_theme_color(&"special", &"Card")
 	var outline: PackedVector2Array = _outline(type_name, is_friend)
@@ -466,7 +489,11 @@ func _draw() -> void:
 		draw_colored_polygon(band, Color(side_color, 0.85))
 	else:
 		_draw_hazard(band, side_color, bg, 11.0)
-	draw_polyline(_closed(outline), frame, 3.0 if type_name == "killstreak" or bool(data.get("elite", false)) else 2.0, true)
+	draw_polyline(_closed(outline), frame, 3.0 if type_name == "killstreak" or bool(data.get("elite", false)) or bool(data.get("standard_issue", false)) else 2.0, true)
+	if bool(data.get("standard_issue", false)) and String(data.get("serial", "")) != "":
+		# The serial plate under the art, right side (the stencil font: Standard Issue only).
+		var sw: float = StandardIssueLook.serial_width(String(data["serial"]), 24.0)
+		StandardIssueLook.draw_serial_plate(self, Rect2(BASE_SIZE.x - 14.0 - sw, 168.0, sw, 24.0), String(data["serial"]), side == "enemy")
 	# Cost / threshold hex badge.
 	if type_name != "operator":
 		var badge_color: Color = get_theme_color(&"special" if type_name == "killstreak" else &"accent", &"Card")

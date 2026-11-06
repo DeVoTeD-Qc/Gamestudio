@@ -32,6 +32,9 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner = BannerView.new()
 	banner.name = "Banner"
+	# kc-onboard-ui (head W1): board banners show the cost but not the name (hand, Codex and the
+	# inspector keep cost + name; the hover zoom names it).
+	banner.show_name = false
 	add_child(banner)
 	resized.connect(_fit)
 

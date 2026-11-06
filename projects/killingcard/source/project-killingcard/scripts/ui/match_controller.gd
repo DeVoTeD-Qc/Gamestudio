@@ -293,6 +293,11 @@ func start_run_match(m: MatchState) -> bool:
 ## Wires the screen to m (not started), starts it and opens the first Deploy.
 func _play(m: MatchState, squad: SquadData) -> void:
 	state = m
+	# kc-onboard-ui: run matches and the tutorial reveal systems step by step; a quick match and the
+	# pitch build show everything (RevealGate).
+	RevealGate.active = (is_run_match or _is_tutorial()) and not PitchDecks.active()
+	if not tree_exiting.is_connected(_reveal_off):
+		tree_exiting.connect(_reveal_off)
 	# The enemy AI (p07): deterministic, its only randomness is seeded from the match seed.
 	if enemy_ai and (_default_planner or not enemy_planner.is_valid()):
 		enemy_ai_player = AiPlayer.for_squad(squad) if squad != null else null
@@ -537,11 +542,37 @@ func _begin_deploy() -> void:
 		var dots: PackedInt32Array = state.red_dots(PLAYER)
 		for z: int in dots.size():
 			EventBus.intel_updated.emit(MapData.ZONE_IDS[z], dots[z])
+	var met_now: Array[StringName] = note_board_systems()
 	refresh()
 	if offer_mulligan and state.round_number == 1 and state.can_mulligan(PLAYER)["ok"] and _mulligan_panel() != null:
 		open_mulligan()
 		return
 	_deploy_hint()
+	if _screen.has_method(&"offer_explainer") and not _is_tutorial():
+		_screen.offer_explainer(met_now, "round%d" % state.round_number)
+
+
+func _reveal_off() -> void:
+	RevealGate.active = false
+
+
+## kc-onboard-ui (§5): the systems this board puts in play are met (RunState.note_systems, from
+## RevealFlags.match_triggers after each Reveal / Firefight, plus the Operator's Lethal / Tactical and
+## a killstreak the first time one is ready), and at the start of each Deploy one pending "New: X"
+## explainer of those shows over the board.
+func note_board_systems() -> Array[StringName]:
+	var flags: Array[StringName] = RevealFlags.match_triggers(state)
+	var me: RulesSide = state.sides[PLAYER]
+	for pair: Array in [[me.setup.lethal, RevealFlags.LETHAL], [me.setup.tactical, RevealFlags.TACTICAL]]:
+		var item: LoadoutItem = pair[0]
+		if item != null and bool(state.check_use(PLAYER, item.id).get("ok", false)):
+			flags.append(pair[1])
+	if not me.streak_tray.is_empty():
+		flags.append(RevealFlags.KILLSTREAKS)
+	var rs: Node = get_node_or_null(^"/root/RunState")
+	if rs != null and rs.has_method(&"note_systems"):
+		rs.note_systems(flags)
+	return flags
 
 
 func _deploy_hint() -> void:
@@ -1197,9 +1228,11 @@ func _ghost_for_zone(ghost: Dictionary, z: int) -> Dictionary:
 		for l2: Dictionary in pv.get("new_links", []):
 			if int(l2["from_uid"]) == uid and StringName(l2["kind"]) != SynergyRules.FIRETEAM:
 				gives += 1
-		if gives > 0:
+		# kc-onboard-ui (§5.2): the link part of the preview arrives with Links (met, or a link in play now).
+		var links_on: bool = RevealGate.shown(RevealFlags.LINKS, RevealFlags.match_triggers(state))
+		if gives > 0 and links_on:
 			bits.append("LINKS %d" % gives)
-		out["links"] = pv.get("new_links", [])
+		out["links"] = pv.get("new_links", []) if links_on else []
 	out["entry"] = e
 	out["chips"] = " · ".join(bits.slice(0, 2))
 	return out
@@ -1473,8 +1506,7 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
 	var t: StringName = SynergyRules.trait_at(card, level, chosen)
 	if t == &"" and card.has_trait_choice():
 		var tc: StringName = card.card_trait if chosen == SynergyRules.TRAIT_DEFAULT else chosen
-		out.append({"name": "Trait: none", "text": ("A Recruit carries no trait. Trained, it becomes %s (its art)." % ArtTraits.trait_name(tc)) \
-				if level < SynergyRules.LEVEL_TRAINED and tc != &"" else "Its art is a plain art: this copy joins no set. Can be: %s." % _options_text(card)})
+		out.append({"name": "Trait: none", "text": "Its art is a plain art: this copy joins no set. Can be: %s." % _options_text(card)})
 	if t != &"":
 		var sv: Dictionary = state.synergy_side(side)
 		var n: int = int((sv["counts"] as Dictionary).get(t, 0))
@@ -1487,14 +1519,20 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
 			# art-traits §8: "Trait: Heavy (from the art: Mastery family)".
 			parts.insert(0, "From the art: %s family. Can be: %s." % [ArtTraits.FAMILY_NAMES[ArtTraits.family_for_trait(t)], _options_text(card)])
 		out.append({"name": "%s (trait)" % SynergyGlyphs.trait_name(t), "text": " ".join(parts)})
+	if card.standard_issue:
+		# kc-onboard-ui: Standard Issue kit: never trains; Muster out / Retire sends it home.
+		out.append({"name": "Standard Issue %s" % RunProgress.standard_issue_serial(card),
+				"text": "Basic kit: no keyword, no trait, no weapon class. It never trains; Muster out or Retire sends it home."})
+		return out
 	if card.is_unit() or card.is_field():
+		var trains: String = SynergyRules.trains_text(card, level)
 		var lv_text: Array[String] = [
-			"Recruit (plain frame): no neighbour keyword and no trait yet. Promote it, or Retire its twin, to train it.",
-			"Trained (Gilded band): it has its chassis' keyword and trait.",
+			"Recruit (plain frame, R badge): its trait is on; its keywords are locked until it trains (Promotion)%s." % ((". " + trains) if trains != "" else ""),
+			"Trained (Gilded band): its keywords and trait are on.",
 			"Veteran (Forged band): Trained, +1 Armor.",
 			"Elite (Priceless band): Trained, +1 Armor and +1 FP.",
 		]
-		if card.neighbor_keyword != &"" or card.card_trait != &"" or level >= SynergyRules.LEVEL_VETERAN:
+		if card.neighbor_keyword != &"" or card.card_trait != &"" or card.has_trait_choice() or level >= SynergyRules.LEVEL_VETERAN or trains != "":
 			out.append({"name": "Level: %s" % SynergyGlyphs.level_name(level), "text": lv_text[clampi(level, 0, 3)]})
 	return out
 
@@ -1585,8 +1623,11 @@ func _on_rail_inspected(key: StringName) -> void:
 	match key:
 		&"score":
 			var goal: String = String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") else ""
+			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, PLAYER)
 			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
-					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal], "status": "Each round you score the columns you control."})
+					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal],
+					"status": "Each round you score the columns you control. Initiative (the flag): %s %s" % [
+						"you go first." if bool(ini_s.get("mine", true)) else "the rival goes first.", String(ini_s.get("reason", ""))]})
 		&"deck":
 			_open_info({"title": "Your deck", "type": "deck · discard",
 					"text": "%d cards left to draw, %d used (discard pile). You draw at the start of each round; the hand holds up to 7." % [me.deck.size(), me.discard.size()],
@@ -1619,8 +1660,13 @@ func _on_rail_inspected(key: StringName) -> void:
 					"text": "Every elimination of the round, oldest first. Short toasts also show at the top of the board.", "status": ""})
 		&"traits":
 			_open_info({"title": "Sets (traits)", "type": "trait rail · yours%s" % ("" if _screen.compact else " and the rival's"),
-					"text": "Trained units and Fields share a trait (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Recruits have no trait.",
+					"text": "Calling cards (Recruits too) and Fields share a trait (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Standard Issue cards have no trait.",
 					"status": "Tap the rail for every tier text. Long-press a chip for that trait."})
+		&"initiative":
+			var ini: Dictionary = MatchSnapshot.initiative_info(state, PLAYER)
+			_open_info({"title": "Initiative", "type": "round %d · %s first" % [state.round_number, "you go" if bool(ini.get("mine", true)) else "the rival goes"],
+					"text": "%s %s" % [String(ini.get("reason", "")), String(ini.get("effect", ""))],
+					"status": "Initiative goes to the side behind on score; %s. The flag on SCORE shows who has it." % String(MatchSnapshot.TIE_RULE_WORDS.get(ini.get("tie_rule", &"player"), "the tie rule decides a tie"))})
 		&"hand_tab":
 			_open_info({"title": "Your hand", "type": "%d cards" % me.hand.size(),
 					"text": "The hand tray opens on its own in Deploy. Outside Deploy, PEEK shows your cards read-only (NEXT DEPLOY); long-press a card for its rules.", "status": ""})

@@ -127,20 +127,22 @@ func snapshot(scene: Node = null) -> Dictionary:
 	if ctrl != null and ctrl.get(&"state") != null:
 		out["match"] = _match(scene, ctrl)
 	# kc-syn-ui: the reward screen's offer (kind, Retire option / picker, list tiles, deck view).
+	# kc-onboard-ui: picks / taken / level of a drop, Muster out marks, the "New:" card (head Z1: the
+	# Re-issue / TRAIN AS fields are gone).
 	if scene.has_method(&"show_offer") and scene.get(&"offer") != null:
 		var off: Dictionary = scene.get(&"offer")
-		var rt: Variant = scene.get(&"retire_tile")
+		var rb: Variant = scene.get(&"retire_button")
 		var ev: Control = scene.get_engine_view() if scene.has_method(&"get_engine_view") else null
+		var nc: Variant = scene.get(&"new_card")
 		out["reward"] = {"kind": String(off.get("kind", "")), "on_trait": String(off.get("on_trait", "")),
 				"retire": bool(off.get("retire", false)), "retire_mode": bool(scene.get(&"retire_mode")),
-				"retire_tile": _css(rt) if rt is Control else [], "list_tiles": (scene.get(&"list_tiles") as Array).size(),
+				"retire_button": _css(rb) if rb is Control and (rb as Control).is_visible_in_tree() else [],
+				"list_tiles": (scene.get(&"list_tiles") as Array).size(),
 				"deck_view": ev != null and ev.visible,
-				# kc-trait-ui: per-card traits / arts, Re-issue and TRAIN AS state.
 				"traits": _strs(off.get("traits", [])), "arts": _strs(off.get("arts", [])),
-				"reissue": bool(off.get("reissue", false)), "reissue_mode": bool(scene.get(&"reissue_mode")),
-				"reissue_row": int(scene.get(&"reissue_row")), "train_pick": String((scene.get(&"train_pick") as Dictionary).get("kind", "")),
-				"pick_tiles": (scene.get(&"pick_tiles") as Array).map(func(t: Control) -> Dictionary:
-					return {"name": String(t.name), "trait": String(t.get_meta(&"trait", "")), "pre": bool(t.get_meta(&"preselected", false)), "rect": _css(t)})}
+				"picks": int(off.get("picks", 1)), "taken": (off.get("taken", []) as Array).size(), "level": int(off.get("level", 1)),
+				"muster_marks": (scene.get(&"muster_marks") as Dictionary).size() if scene.get(&"muster_marks") != null else 0,
+				"new_card": String(nc.flag) if nc is NewCard and (nc as NewCard).is_open() else ""}
 	# kc-ui3: an open codex (Title or MENU): what it shows, and the inspector over it.
 	for n: Node in scene.find_children("Codex", "Control", true, false):
 		var codex: Control = n

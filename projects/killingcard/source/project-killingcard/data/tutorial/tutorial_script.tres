@@ -1,55 +1,52 @@
-[gd_resource type="Resource" script_class="TutorialScript" load_steps=39 format=3]
+[gd_resource type="Resource" script_class="TutorialScript" load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/card_data.gd" id="1_c2y0l"]
-[ext_resource type="Resource" path="res://data/cards/rifleman.tres" id="2_e28vj"]
-[ext_resource type="Resource" path="res://data/cards/marksman.tres" id="3_woslx"]
-[ext_resource type="Resource" path="res://data/cards/point_man.tres" id="4_u672f"]
-[ext_resource type="Resource" path="res://data/cards/combat_medic.tres" id="5_3vxd6"]
 [ext_resource type="Script" path="res://scripts/data/tutorial_enemy_play.gd" id="6_tyh01"]
 [ext_resource type="Resource" path="res://data/maps/port_vasel.tres" id="7_wq8xx"]
-[ext_resource type="Resource" path="res://data/cards/shieldman.tres" id="8_hd6hy"]
-[ext_resource type="Resource" path="res://data/cards/gunner.tres" id="9_8g4yy"]
-[ext_resource type="Resource" path="res://data/cards/breacher.tres" id="10_m8v3a"]
-[ext_resource type="Resource" path="res://data/cards/callout.tres" id="11_3xboe"]
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="12_qfvru"]
 [ext_resource type="Script" path="res://scripts/data/tutorial_script.gd" id="13_gabgp"]
 [ext_resource type="Resource" path="res://data/squads/squad_tutorial.tres" id="14_xl8rj"]
 [ext_resource type="Script" path="res://scripts/data/tutorial_step.gd" id="15_qx8xj"]
+[ext_resource type="Resource" path="res://data/cards/si_grunt.tres" id="16_sigr"]
+[ext_resource type="Resource" path="res://data/cards/si_trooper.tres" id="17_sitr"]
+[ext_resource type="Resource" path="res://data/cards/si_sergeant.tres" id="18_sisg"]
+[ext_resource type="Resource" path="res://data/cards/si_armored.tres" id="19_siar"]
+[ext_resource type="Resource" path="res://data/cards/ammo_resupply.tres" id="20_ammo"]
 
 [sub_resource type="Resource" id="Resource_2itl3"]
 script = ExtResource("6_tyh01")
 round_number = 1
-card = ExtResource("2_e28vj")
+card = ExtResource("16_sigr")
 zone = 0
 
 [sub_resource type="Resource" id="Resource_kt1yq"]
 script = ExtResource("6_tyh01")
 round_number = 2
-card = ExtResource("3_woslx")
+card = ExtResource("17_sitr")
 zone = 2
 
 [sub_resource type="Resource" id="Resource_a4e86"]
 script = ExtResource("6_tyh01")
 round_number = 3
-card = ExtResource("4_u672f")
+card = ExtResource("17_sitr")
 zone = 1
 
 [sub_resource type="Resource" id="Resource_y131t"]
 script = ExtResource("6_tyh01")
 round_number = 3
-card = ExtResource("2_e28vj")
+card = ExtResource("16_sigr")
 zone = 1
 
 [sub_resource type="Resource" id="Resource_dhd5w"]
 script = ExtResource("6_tyh01")
 round_number = 4
-card = ExtResource("5_3vxd6")
+card = ExtResource("19_siar")
 zone = 1
 
 [sub_resource type="Resource" id="Resource_auso3"]
 script = ExtResource("6_tyh01")
 round_number = 4
-card = ExtResource("2_e28vj")
+card = ExtResource("16_sigr")
 zone = 1
 
 [sub_resource type="Resource" id="Resource_ax6i0"]
@@ -99,10 +96,10 @@ script = ExtResource("15_qx8xj")
 index = 4
 round_number = 1
 title = "DEPLOY"
-text = "Tap Rifleman, then tap Left. It costs 1 Supply."
+text = "Tap Grunt, then tap Left. It costs 1 Supply."
 advance_on = &"play_card"
 highlight = &"auto"
-card_id = &"rifleman"
+card_id = &"si_grunt"
 zone = 0
 item_id = &""
 lock_input = true
@@ -127,7 +124,7 @@ script = ExtResource("15_qx8xj")
 index = 6
 round_number = 1
 title = "FIREFIGHT"
-text = "Units shoot the enemy at the front of the line. Tap to speed up."
+text = "In each column the front cards trade shots. Tap to speed up."
 advance_on = &"round_end"
 highlight = &"auto"
 card_id = &""
@@ -154,11 +151,11 @@ grant_killstreak = &""
 script = ExtResource("15_qx8xj")
 index = 8
 round_number = 2
-title = "FIRST SHOT"
-text = "Point Man has First Shot: it fires before the others. Deploy it to Right."
+title = "BEAT ORDER"
+text = "Sergeant hits for 3. Deploy it to Right, against their Trooper."
 advance_on = &"play_card"
 highlight = &"auto"
-card_id = &"point_man"
+card_id = &"si_sergeant"
 zone = 2
 item_id = &""
 lock_input = true
@@ -183,7 +180,7 @@ script = ExtResource("15_qx8xj")
 index = 10
 round_number = 2
 title = "FIREFIGHT"
-text = "Watch Right: your Point Man shoots before their Marksman can."
+text = "Front cards trade shots; when one falls, the card behind steps up. Your Sergeant wins Right."
 advance_on = &"round_end"
 highlight = &"auto"
 card_id = &""
@@ -300,8 +297,8 @@ mode = 0
 round_cap = 4
 score_target = 20
 seed_value = 15
-player_deck = Array[ExtResource("1_c2y0l")]([ExtResource("2_e28vj"), ExtResource("4_u672f"), ExtResource("3_woslx"), ExtResource("2_e28vj"), ExtResource("5_3vxd6"), ExtResource("2_e28vj"), ExtResource("8_hd6hy"), ExtResource("3_woslx"), ExtResource("4_u672f"), ExtResource("9_8g4yy"), ExtResource("2_e28vj"), ExtResource("5_3vxd6"), ExtResource("10_m8v3a"), ExtResource("2_e28vj"), ExtResource("11_3xboe"), ExtResource("4_u672f")])
+player_deck = Array[ExtResource("1_c2y0l")]([ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("18_sisg"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("18_sisg"), ExtResource("17_sitr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("18_sisg"), ExtResource("16_sigr"), ExtResource("20_ammo"), ExtResource("17_sitr")])
 player_killstreaks = Array[ExtResource("12_qfvru")]([])
-enemy_deck = Array[ExtResource("1_c2y0l")]([ExtResource("2_e28vj"), ExtResource("3_woslx"), ExtResource("4_u672f"), ExtResource("2_e28vj"), ExtResource("5_3vxd6"), ExtResource("2_e28vj"), ExtResource("4_u672f"), ExtResource("2_e28vj"), ExtResource("5_3vxd6"), ExtResource("2_e28vj"), ExtResource("2_e28vj"), ExtResource("3_woslx"), ExtResource("2_e28vj"), ExtResource("4_u672f"), ExtResource("2_e28vj")])
+enemy_deck = Array[ExtResource("1_c2y0l")]([ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr")])
 enemy_plays = Array[ExtResource("6_tyh01")]([SubResource("Resource_2itl3"), SubResource("Resource_kt1yq"), SubResource("Resource_a4e86"), SubResource("Resource_y131t"), SubResource("Resource_dhd5w"), SubResource("Resource_auso3")])
 steps = Array[ExtResource("15_qx8xj")]([SubResource("Resource_ax6i0"), SubResource("Resource_55k1i"), SubResource("Resource_qiyll"), SubResource("Resource_4nlpg"), SubResource("Resource_fk3um"), SubResource("Resource_nwhuq"), SubResource("Resource_04jdi"), SubResource("Resource_y4jtj"), SubResource("Resource_n2osb"), SubResource("Resource_u6i1l"), SubResource("Resource_8flmk"), SubResource("Resource_8xobc"), SubResource("Resource_elr7n"), SubResource("Resource_27x55"), SubResource("Resource_t7vcc"), SubResource("Resource_uh74r"), SubResource("Resource_w7rf7")])

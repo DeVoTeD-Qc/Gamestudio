@@ -62,6 +62,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		# kc-ui4: the board banner's fields (art, subname, effect bolt, Protector, Elite): the hand card
 		# is the same banner. The name stays the chassis; the art's own name is the subname.
 		_banner_fields(c, rc.card, null, null, state, rc.uid)
+		StandardIssueLook.dress(c, rc.card, rc.level, StringName(c.get("banner", "")))
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -91,6 +92,9 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"result": state.result,
 		# kc-syn-ui: links, trait rail and set tiers of both sides (viewer-relative keys).
 		"synergy": synergy_block(state, viewer),
+		# kc-onboard-ui: who holds initiative this round and why; what the progressive reveal shows.
+		"initiative": initiative_info(state, viewer),
+		"reveal": reveal_info(state),
 	}
 	var ks: Array = []
 	var top: int = 0
@@ -122,6 +126,9 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 	}
 	_banner_fields(e, u.card, u, side, state, u.uid)
 	_unit_synergy(e, state, u, side)
+	if u.card != null:
+		# kc-onboard-ui: Standard Issue frame + serial plate, a Recruit's locked keywords and level badge.
+		StandardIssueLook.dress(e, u.card, u.level, StringName(e.get("banner", "")), true)
 	return e
 
 
@@ -408,3 +415,64 @@ static func _ids(items: Array[LoadoutItem]) -> Array:
 static func _short(display_name: String) -> String:
 	var word: String = display_name.split(" ", false)[0] if not display_name.is_empty() else "?"
 	return word.to_upper() if word.length() <= 7 else word.to_upper().left(5)
+
+
+# =============================================================================
+# kc-onboard-ui: initiative this round, progressive reveal
+# =============================================================================
+
+## Words for the initiative tie rule (ModeRules.tiebreak; another agent may tune it).
+const TIE_RULE_WORDS: Dictionary = {
+	&"player": "ties go to you", &"enemy": "ties go to the rival",
+	&"alt": "ties alternate: odd rounds you, even rounds the rival",
+	&"other": "ties go to whoever didn't have it last round (round 1: you)",
+	&"coin": "round 1 is a coin flip, then ties go to whoever didn't have it last round",
+	&"random": "ties are a coin flip each round",
+}
+
+
+## Who holds initiative this round (read-only: during Deploy the side the rules will pick at Reveal,
+## afterwards the side that has it) and why. {side: &"player" / &"enemy" (viewer-relative), mine,
+## round, why: &"behind" / &"tie", score_player, score_enemy, tie_rule (id), short ("YOU" / "RIVAL"),
+## reason ("You're behind 2-4: the side behind on score goes first."), effect (what it does)}.
+static func initiative_info(state: MatchState, viewer: int = MatchState.PLAYER) -> Dictionary:
+	if state == null:
+		return {}
+	var holder: int = state.initiative
+	var planning: bool = state.phase in [MatchState.Phase.SETUP, MatchState.Phase.BRIEFING, MatchState.Phase.DEPLOY]
+	if planning and state.hooks != null:
+		holder = int(state.hooks.initiative_side(state))
+	var me: int = state.sides[viewer].score
+	var foe: int = state.sides[1 - viewer].score
+	var mr: Variant = state.hooks.mode_rules if state.hooks != null else null
+	if state.phase in [MatchState.Phase.SCORE, MatchState.Phase.ENDED] and mr != null:
+		# The reason is the score as it was at Reveal (this round's points came after).
+		var gain: Variant = (mr as Object).get(&"last_gain")
+		if gain is Array and (gain as Array).size() == 2:
+			me -= int(gain[viewer])
+			foe -= int(gain[1 - viewer])
+	var mine: bool = holder == viewer
+	var tie: bool = me == foe
+	var rule: StringName = &"player"
+	if mr != null and (mr as Object).get(&"tiebreak") != null:
+		rule = StringName((mr as Object).get(&"tiebreak"))
+	var reason: String = ""
+	if tie:
+		reason = "Tied %d-%d: %s." % [me, foe, String(TIE_RULE_WORDS.get(rule, "the tie rule decides"))]
+	elif mine:
+		reason = "You're behind %d-%d: the side behind on score goes first." % [me, foe]
+	else:
+		reason = "The rival is behind %d-%d: the side behind on score goes first." % [foe, me]
+	return {"side": &"player" if mine else &"enemy", "mine": mine, "round": state.round_number,
+			"why": &"tie" if tie else &"behind", "score_player": me, "score_enemy": foe, "tie_rule": rule,
+			"short": "YOU" if mine else "RIVAL", "reason": reason,
+			"effect": "%s first this round: at Reveal %s cards arrive and %s effects resolve first, and in each firefight beat %s shots go first." % [
+				"You go" if mine else "The rival goes", "your" if mine else "its", "your" if mine else "its", "your" if mine else "its"]}
+
+
+## What the progressive reveal shows on this board (RevealGate: the systems met, or in use now on
+## either side): {now: [RevealFlags ids in play], trait_rail, links, bands, initiative: bool}.
+static func reveal_info(state: MatchState) -> Dictionary:
+	var now: Array[StringName] = RevealFlags.match_triggers(state)
+	return {"now": now, "trait_rail": RevealGate.shown(RevealFlags.TRAIT_RAIL, now),
+			"links": RevealGate.shown(RevealFlags.LINKS, now), "bands": RevealGate.shown(RevealFlags.PROMOTION, now)}

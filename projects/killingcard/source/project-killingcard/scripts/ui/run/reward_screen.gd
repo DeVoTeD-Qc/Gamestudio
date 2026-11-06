@@ -1,35 +1,44 @@
 # reward_screen.gd
 # Purpose: Reward offers between matches (p11, scenes/run/Reward.tscn). Shows RunState's current
 #   offer and resolves it with one tap, then the next offer (same screen) or the run map:
-#   - Supply Drop (after a win): RunConfig.supply_drop_choices cards as CardView (fed by
-#     card_info.view_dict) with a readable rules line under each. Tap a card to add it to the
-#     deck. DETAILS opens the card inspector (full rules and keywords) without choosing.
-#   - Weapon level: attachments for the Primary (stat changes, keywords, rules text).
-#   - Perk offer: Perks you don't own (slots used / total in the subtitle).
+#   - Supply Drop (after a win) / Salvage (after a loss, kc-onboard §4.3): the offered cards as
+#     CardView with a readable rules line under each. Tap a card to add it to the deck. A drop can
+#     ask for more than one card ("PICK 2 OF 4": offer `picks`; a taken card leaves the row and is
+#     listed in the subtitle; the drop stays until its picks are used or SKIP). DETAILS (or a long
+#     press / right-click on the card) opens the inspector without choosing.
+#     A Recruit calling card (offer `level` 0, M1) shows its trait and, instead of its rules, the
+#     greyed "[lock] RECRUIT · TRAINS: FIRST SHOT · GUARD" line (the keywords unlock at Promotion),
+#     and an R level badge on its trait line.
+#   - Muster out (kc-onboard §4.3): every Standard Issue copy as a tile (its Standard Issue banner,
+#     serial plate, cost and stats); the most expensive are pre-selected (GOING HOME), tap to keep
+#     one or send another, up to the offer's count; the deck never goes under the floor. SEND n HOME
+#     commits (RunState.muster_out), KEEP ALL skips.
+#   - Weapon level: attachments for the Primary. Perk offer: Perks you don't own.
+#   - Doctrine / Promotion / Regroup (kc-syn; Doctrine and Regroup only from older configs / saves).
+#   RETIRE (header, "instead of a card", only once Retire is met: RevealGate) opens the Retire list.
+#   One "New: X" explainer per offer (NewCard) when the offer brings a system for the first time.
 #   SKIP declines any offer. Each offer announces EventBus.screen_shown(&"reward_<kind>").
-#   kc-trait-ui (art-traits.md §2.2, the head's 2026-11-06 direction): every Supply Drop card is a
-#   concrete copy: "MARKSMAN · [icon] HEAVY" over its own art, "HEAVY 3 > 4", the on-trait slot
-#   marked (the art's subname is in DETAILS only). Next to RETIRE: RE-ISSUE (also on Regroup, header
-#   button): pick a Trained copy, then another of its trait options (preview: now -> after, counts),
-#   it comes with a RANDOM art of that trait. Promotion of a Recruit and twin training (Retire a
-#   Recruit with a twin) open the TRAIN AS picker (run.train_choices): one tile per trait option
-#   with its icon, the pre-selected one marked, "Heavy 2 > 3: bonus ON", "you'll get a random Heavy
-#   art"; the tap commits (RunState.choose_offer(i, trait) / retire_card(i, twin_trait)).
-#   Phone: cards scale 0.8-1.3x to the room left (>= 0.8x keeps name / cost / stats >= 11 pt).
+#   kc-onboard-ui (head Z1): the TRAIN AS picker, Re-issue (tile, header button, flow) and the
+#   twin-training path are gone: a card keeps the trait of the art it was found with.
+#   Phone: cards scale 0.8-1.3x to the room left (>= 0.8x keeps name / cost / stats >= 11 pt);
+#   4 cards fit across the 844x390 canvas at 0.8x now that Retire moved to the header.
 # Dependencies: run_screen.gd, pick_tile.gd, CardView.tscn, CardInspector.tscn, card_info.gd,
-#   RunState, RunFlow, RewardOffers.
-# Author: UI/UX Agent (p11)
+#   RunState, RunFlow, RewardOffers, RevealGate, RevealFlags, NewCard, StandardIssueLook, BannerCard.
+# Author: UI/UX Agent (p11; kc-onboard-ui)
 extends "res://scripts/ui/run/run_screen.gd"
 
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 const INSPECTOR_SCENE: PackedScene = preload("res://scenes/match/CardInspector.tscn")
+const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MIN_CARD_SCALE: float = 0.8
 const MAX_CARD_SCALE: float = 1.3
 ## Perk patch texture width (px) on a Perk offer tile.
 const PERK_PATCH_PX: int = 320
 const KIND_TITLES: Dictionary = {
 	RewardOffers.KIND_SUPPLY_DROP: "SUPPLY DROP",
+	RewardOffers.KIND_SALVAGE: "SALVAGE",
+	RewardOffers.KIND_MUSTER_OUT: "MUSTER OUT",
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
 	RewardOffers.KIND_PERK: "PERK OFFER",
 	RewardOffers.KIND_DOCTRINE: "DOCTRINE",
@@ -38,44 +47,39 @@ const KIND_TITLES: Dictionary = {
 }
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const EnginePanel: GDScript = preload("res://scripts/ui/run/engine_panel.gd")
-## kc-syn-ui: width of the Supply Drop's 4th tile (Retire a card).
-const RETIRE_TILE_W: float = 210.0
+## Banner size of a Muster out tile (keeps the board's 57 px icon metrics).
+const MUSTER_BANNER_H: float = 57.0
+const LOCK_GREY: Color = Color("#8C969E")
 
 ## The offer on screen ({kind, match, options}); {} when none.
 var offer: Dictionary = {}
 ## Option tiles in offer order (PickTile).
 var tiles: Array[PickTile] = []
 var detail_buttons: Array[Button] = []
-## CardView per Supply Drop option.
+## CardView per Supply Drop / Salvage option.
 var card_views: Array[Control] = []
+## kc-onboard-ui: RETIRE in the header (hidden when the offer has none or Retire isn't met yet).
+var retire_button: Button = null
+## The list tiles of a Promotion / Retire / Muster out pick (option order = the RunProgress list).
+var list_tiles: Array[PickTile] = []
+var retire_mode: bool = false
+## kc-onboard-ui Muster out: deck index -> true for the copies marked GOING HOME, and the commit button.
+var muster_marks: Dictionary = {}
+var send_button: Button = null
+## The "New: X" explainer over this screen.
+var new_card: NewCard = null
 
 var _skip_button: Button = null
 var _options: HBoxContainer = null
 var _inspector: Control = null
 var _card_holders: Array[Control] = []
 var _rules_labels: Array[Label] = []
-## kc-syn-ui: the Supply Drop's 4th option (null when the offer has none), the list tiles of a
-## Promotion / Retire pick (option order = the RunProgress list), the Retire picker state and the
-## deck view.
-var retire_tile: PickTile = null
-var list_tiles: Array[PickTile] = []
-var retire_mode: bool = false
 var _list_scroll: ScrollContainer = null
 var _list_grid: GridContainer = null
 var _center: CenterContainer = null
 var _deck_button: Button = null
 var _engine: Control = null
 var _trait_lines: bool = false
-## kc-trait-ui: the Supply Drop's Re-issue option tile (null when the offer has none), the Re-issue
-## flow (reissue_mode; reissue_row = the picked reissue_options() row, -1 = pick a copy), the TRAIN
-## AS picker (train_pick = {kind: &"promote" / &"twin", option, copy, id}; {} = closed) and its
-## tiles (pick_tiles, in run.train_choices / reissue options order).
-var reissue_tile: PickTile = null
-var reissue_mode: bool = false
-var reissue_row: int = -1
-var train_pick: Dictionary = {}
-var pick_tiles: Array[PickTile] = []
-var _reissue_button: Button = null
 
 @onready var _header: HBoxContainer = %Header
 @onready var _title: Label = %TitleLabel
@@ -99,16 +103,24 @@ func _build() -> void:
 	# kc-syn-ui: DECK opens the deck view (Engine panel) from any offer.
 	_deck_button = make_button("DECK", &"HudButton", 120)
 	_deck_button.name = "DeckButton"
+	_deck_button.tooltip_text = "Your deck: every card and its level"
 	_deck_button.pressed.connect(open_deck)
 	_header.add_child(_deck_button)
 	_header.move_child(_deck_button, _skip_button.get_index())
-	# kc-trait-ui: Regroup's Re-issue (the Supply Drop has a tile next to Retire instead).
-	_reissue_button = make_button("RE-ISSUE", &"HudButton", 150)
-	_reissue_button.name = "ReissueButton"
-	_reissue_button.tooltip_text = "Change one Trained card to another of its traits (instead of retiring one)"
-	_reissue_button.pressed.connect(open_reissue)
-	_header.add_child(_reissue_button)
-	_header.move_child(_reissue_button, _deck_button.get_index())
+	# kc-onboard-ui: Retire "under More" (§5.2): a header button, so the 4 cards of a drop fit the phone.
+	retire_button = make_button("RETIRE", &"HudButton", 150)
+	retire_button.name = "RetireButton"
+	retire_button.tooltip_text = "Remove one card from your deck instead of taking one"
+	retire_button.pressed.connect(open_retire_picker)
+	_header.add_child(retire_button)
+	_header.move_child(retire_button, _deck_button.get_index())
+	send_button = make_button("SEND HOME", &"HudButton", 200)
+	send_button.name = "SendHomeButton"
+	send_button.tooltip_text = "Send the marked Standard Issue cards home"
+	send_button.pressed.connect(confirm_muster_out)
+	_header.add_child(send_button)
+	for b: Button in [_skip_button, _deck_button, retire_button, send_button]:
+		_wire_inspect(b, _inspect_header.bind(b))
 	var center: CenterContainer = CenterContainer.new()
 	_center = center
 	_body.add_child(center)
@@ -135,6 +147,8 @@ func _build() -> void:
 	_engine.row_inspected.connect(_inspect_card_id)
 	_inspector = INSPECTOR_SCENE.instantiate()
 	add_child(_inspector)
+	new_card = NewCard.new()
+	add_child(new_card)
 	resized.connect(_fit_cards)
 	resized.connect(_fit_list)
 	show_offer()
@@ -150,6 +164,7 @@ func _apply_compact() -> void:
 ## Rebuilds the options for RunState's current offer.
 func show_offer() -> void:
 	var r: RunProgress = run()
+	var prev_key: String = "%s|%s" % [offer.get("kind", ""), offer.get("match", 0)]
 	offer = r.current_offer() if r != null else {}
 	clear(_options)
 	tiles.clear()
@@ -157,30 +172,35 @@ func show_offer() -> void:
 	card_views.clear()
 	_card_holders.clear()
 	_rules_labels.clear()
-	retire_tile = null
-	reissue_tile = null
 	list_tiles.clear()
-	pick_tiles.clear()
 	clear(_list_grid)
 	_trait_lines = false
 	_center.visible = true
 	_list_scroll.visible = false
-	if _reissue_button != null:
-		_reissue_button.visible = false
+	retire_button.visible = false
+	send_button.visible = false
 	if offer.is_empty():
 		_title.text = "NO REWARD"
 		_subtitle.text = ""
 		_skip_button.text = "CONTINUE"
 		return
+	var key: String = "%s|%s" % [offer.get("kind", ""), offer.get("match", 0)]
+	if key != prev_key:
+		muster_marks.clear()
 	var kind: StringName = offer["kind"]
 	var pending: int = r.pending_offers.size()
 	_title.text = String(KIND_TITLES.get(kind, "REWARD"))
-	if pending > 1:
+	var picks: int = int(offer.get("picks", 1))
+	var taken: Array = offer.get("taken", [])
+	if kind in RewardOffers.CARD_DROPS and picks + taken.size() > 1:
+		# kc-onboard: "SUPPLY DROP · PICK 2 OF 4" (taken cards leave the row).
+		_title.text += "  ·  PICK %d OF %d" % [picks + taken.size(), (offer["options"] as Array).size() + taken.size()]
+	elif pending > 1:
 		_title.text += "  ·  1 OF %d REWARDS" % pending
 	_skip_button.text = "SKIP"
 	match kind:
-		RewardOffers.KIND_SUPPLY_DROP:
-			_subtitle.text = "Tap a card to add it to your deck (%d cards now)." % r.deck.size()
+		RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_SALVAGE:
+			_subtitle.text = _drop_subtitle(r)
 		RewardOffers.KIND_ATTACHMENT:
 			var primary: String = RunFlow.names_of(r, [r.primary], "your weapon")
 			_subtitle.text = "%s levelled up to level %d. Tap an attachment to fit it. Fitted: %s." % [
@@ -191,29 +211,27 @@ func show_offer() -> void:
 		RewardOffers.KIND_DOCTRINE:
 			_subtitle.text = "Pick a trait: its sets count +1 for the rest of the run."
 		RewardOffers.KIND_PROMOTION:
-			_subtitle.text = "Tap a card to promote one copy by one level."
+			_subtitle.text = "Tap a card to promote one copy by one level. A Recruit's locked keywords unlock."
 		RewardOffers.KIND_REGROUP:
 			_subtitle.text = "After a loss: retire one card for free (deck %d, floor %d)." % [r.deck.size(), r.config.deck_floor]
-	_skip_button.text = "SKIP"
-	if not train_pick.is_empty():
-		_build_train_picker(r)
-		_announce()
+	if kind in RewardOffers.CARD_DROPS and bool(offer.get("retire", false)) and RevealGate.shown(RevealFlags.RETIRE) and not retire_mode:
+		retire_button.visible = true
+		retire_button.disabled = not r.can_retire()
+		retire_button.text = "RETIRE" if r.can_retire() else "AT FLOOR"
+	if kind == RewardOffers.KIND_MUSTER_OUT:
+		_build_muster_out(r)
+		_after_build(key)
 		return
-	if reissue_mode:
-		_build_reissue(r)
-		_announce()
-		return
-	if kind == RewardOffers.KIND_REGROUP and bool(offer.get("reissue", false)):
-		_reissue_button.visible = true
 	if retire_mode or kind == RewardOffers.KIND_REGROUP:
-		_build_retire_list(r, kind == RewardOffers.KIND_SUPPLY_DROP)
-		_announce()
+		_build_retire_list(r, kind != RewardOffers.KIND_REGROUP)
+		_after_build(key)
 		return
 	if kind == RewardOffers.KIND_PROMOTION:
 		_build_promotion_list(r)
-		_announce()
+		_after_build(key)
 		return
 	var options: Array = offer["options"]
+	var drop: bool = kind in RewardOffers.CARD_DROPS
 	for i: int in options.size():
 		if kind == RewardOffers.KIND_DOCTRINE:
 			var dt: PickTile = _doctrine_tile(r, StringName(options[i]))
@@ -223,39 +241,112 @@ func show_offer() -> void:
 			tiles.append(dt)
 			continue
 		var res: Resource = r.resource(StringName(options[i]))
-		var tile: PickTile = _card_tile(res as CardData, offer_art(r, i) if kind == RewardOffers.KIND_SUPPLY_DROP else &"") if res is CardData else _item_tile(res as LoadoutItem)
+		var tile: PickTile = _card_tile(res as CardData, offer_art(r, i) if drop else &"") if res is CardData else _item_tile(res as LoadoutItem)
 		tile.name = "Option%d" % i
 		tile.pressed.connect(choose.bind(i))
+		if res is CardData:
+			_wire_inspect(tile, open_details.bind(i))
+		else:
+			_wire_inspect(tile, _inspect_item.bind(res as LoadoutItem))
 		_options.add_child(tile)
 		tiles.append(tile)
-	if kind == RewardOffers.KIND_SUPPLY_DROP:
+	if drop:
 		_mark_trait_lines(r)
-		if bool(offer.get("retire", false)) or bool(offer.get("reissue", false)):
-			# kc-trait-ui: Retire and Re-issue share the 4th column (two half-height tiles).
-			var pivot := VBoxContainer.new()
-			pivot.name = "PivotColumn"
-			pivot.add_theme_constant_override(&"separation", 8)
-			_options.add_child(pivot)
-			if bool(offer.get("retire", false)):
-				retire_tile = _retire_option_tile(r)
-				retire_tile.size_flags_vertical = Control.SIZE_EXPAND_FILL
-				pivot.add_child(retire_tile)
-			if bool(offer.get("reissue", false)):
-				reissue_tile = _reissue_option_tile(r)
-				reissue_tile.size_flags_vertical = Control.SIZE_EXPAND_FILL
-				pivot.add_child(reissue_tile)
 	_fit_cards()
 	# Keyboard / controller start on the first option; on touch screens a focus frame on one
 	# option would read as "already picked".
 	if not tiles.is_empty() and not DisplayServer.is_touchscreen_available():
 		tiles[0].grab_focus.call_deferred()
+	_after_build(key)
+
+
+func _after_build(key: String) -> void:
 	_announce()
+	var r: RunProgress = run()
+	if new_card != null and r != null:
+		new_card.offer(RevealFlags.run_triggers(r), key)
+
+
+## "Tap 2 cards to add them to your deck (20 cards now). Taken: Breacher." (Salvage: "After a loss
+## you still salvage a card.").
+func _drop_subtitle(r: RunProgress) -> String:
+	var picks: int = int(offer.get("picks", 1))
+	var taken: Array = offer.get("taken", [])
+	var head: String = "After a loss you still salvage a card. " if offer["kind"] == RewardOffers.KIND_SALVAGE else ""
+	var what: String = ""
+	if taken.is_empty():
+		what = "Tap a card to add it to your deck" if picks <= 1 else "Tap %d cards to add them to your deck" % picks
+	else:
+		what = "Tap 1 more card" if picks <= 1 else "Tap %d more cards" % picks
+	var s: String = "%s%s (%d cards now)." % [head, what, r.deck.size()]
+	if not taken.is_empty():
+		var names: PackedStringArray = []
+		for t: Dictionary in taken:
+			var c: CardData = r.resource(StringName(t.get("id", ""))) as CardData
+			names.append(c.display_name if c != null else String(t.get("id", "")))
+		s += " Taken: %s." % ", ".join(names)
+	if offer_level() == SynergyRules.LEVEL_RECRUIT:
+		s += " Recruits: trait on, keywords unlock when they train."
+	if r.config.muster_out_after(int(offer.get("match", 0))):
+		s += " Then Muster out."
+	return s
 
 
 func _announce() -> void:
 	var bus: Node = RunFlow.event_bus()
 	if bus != null and is_node_ready():
 		bus.screen_shown.emit(screen_id())
+
+
+# =============================================================================
+# Inspect (studio rule: every tile and button opens a tooltip or zoom on long press / right click)
+# =============================================================================
+
+## A long press (touch) or right click on a Button calls on_inspect instead of pressing it.
+func _wire_inspect(b: BaseButton, on_inspect: Callable) -> void:
+	var st: Dictionary = {"id": 0, "fired": false}
+	b.gui_input.connect(func(e: InputEvent) -> void:
+		if not e is InputEventMouseButton:
+			return
+		var mb: InputEventMouseButton = e
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			b.accept_event()
+			on_inspect.call()
+		elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			st["id"] = int(st["id"]) + 1
+			st["fired"] = false
+			var my_id: int = st["id"]
+			get_tree().create_timer(PressGesture.LONG_PRESS_S).timeout.connect(func() -> void:
+				if is_instance_valid(b) and int(st["id"]) == my_id and b.is_inside_tree() \
+						and b.get_global_rect().has_point(b.get_global_mouse_position()):
+					st["fired"] = true
+					on_inspect.call())
+		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			st["id"] = int(st["id"]) + 1
+			if bool(st["fired"]):
+				# The hold opened the inspector: swallow the release so the tile doesn't press.
+				st["fired"] = false
+				b.accept_event())
+	b.set_meta(&"inspectable", true)
+
+
+func _inspect_header(b: Button) -> void:
+	var floor_n: int = run().config.deck_floor if run() != null else 15
+	var texts: Dictionary = {
+		"SkipButton": ["Skip", "Declines this offer: nothing is added or removed. A drop with picks left ends here; on Muster out (KEEP ALL) every Standard Issue card stays."],
+		"DeckButton": ["Deck", "Your deck: every card, its copies and their level."],
+		"RetireButton": ["Retire", "Instead of taking a card, remove one from your deck for good (it goes on the Honor Roll). The deck never goes under %d cards." % floor_n],
+		"SendHomeButton": ["Muster out", "Sends the Standard Issue cards marked GOING HOME back to the quartermaster. The rest stay in your deck (never under %d cards)." % floor_n],
+	}
+	var t: Array = texts.get(String(b.name), [b.text.capitalize(), b.tooltip_text])
+	_inspector.open({"title": String(t[0]), "type": "button", "text": String(t[1]), "status": ""})
+
+
+func _inspect_item(item: LoadoutItem) -> void:
+	if item == null:
+		return
+	_inspector.open({"title": item.display_name, "type": String(RunFlow.SLOT_WORDS.get(item.slot, "item")),
+			"text": item.text, "status": RunFlow.item_effect_line(item)})
 
 
 # =============================================================================
@@ -275,8 +366,31 @@ func _inspect_card_id(id: StringName, level: int) -> void:
 	var card: CardData = run().resource(id) as CardData
 	if card == null:
 		return
-	_inspector.open({"view": CardInfo.view_dict(card), "title": card.display_name, "type": CardInfo.type_line(card),
-			"text": card.text, "keywords": CardInfo.keywords(card) + _syn_lines(card, level), "status": "Copy level: %s." % SynergyGlyphs.level_name(level)})
+	_inspector.open({"view": _view_dict(card, level), "title": card.display_name, "type": CardInfo.type_line(card),
+			"banner": BannerCard.entry_for_card(card, &"", level), "is_unit": card.is_unit(),
+			"text": card.text, "keywords": CardInfo.keywords(card) + _syn_lines(card, level), "status": _level_status(card, level)})
+
+
+## "Copy level: Recruit. Trains: First Shot · Guard (locked ...)." / "Standard Issue SI-02: ..." (inspector).
+static func _level_status(card: CardData, level: int) -> String:
+	if card.standard_issue:
+		return "Standard Issue %s: basic kit. It never trains; Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
+	var s: String = "Copy level: %s." % SynergyGlyphs.level_name(level)
+	var tr: String = SynergyRules.trains_text(card, level)
+	if tr != "":
+		s += " %s (locked until it trains)." % tr
+	return s
+
+
+## CardView dictionary of a copy at `level` (a Recruit's keywords drawn locked; Standard Issue look).
+static func _view_dict(card: CardData, level: int, art: StringName = &"") -> Dictionary:
+	var vd: Dictionary = CardInfo.view_dict(card)
+	if not SynergyRules.locked_keywords(card, level).is_empty():
+		vd["locked"] = true
+	if card.standard_issue or (art != &"" and ArtTraits.is_standard_issue_art(art, card)):
+		vd["standard_issue"] = true
+		vd["serial"] = RunProgress.standard_issue_serial(card)
+	return vd
 
 
 ## Keyword / trait lines for the inspector (what this copy has at `level`).
@@ -284,11 +398,11 @@ func _syn_lines(card: CardData, level: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var kw: StringName = card.neighbor_keyword
 	if kw != &"":
-		out.append({"name": "%s (neighbour keyword)%s" % [SynergyGlyphs.keyword_name(kw), "" if level >= 1 else ": once Trained"],
+		out.append({"name": "%s (neighbour keyword)%s" % [SynergyGlyphs.keyword_name(kw), "" if level >= 1 else ": locked until it trains"],
 				"text": String(SynergyRules.KEYWORD_TEXT[kw])})
 	var t: StringName = card.card_trait
-	if t != &"":
-		out.append({"name": "%s (trait)%s" % [SynergyGlyphs.trait_name(t), "" if level >= 1 else ": once Trained"],
+	if t != &"" and not card.standard_issue:
+		out.append({"name": "%s (trait)" % SynergyGlyphs.trait_name(t),
 				"text": "2 in play: %s. 3 in play: %s." % [SynergyRules.TIER_TEXT[t][0], SynergyRules.TIER_TEXT[t][1]]})
 	return out
 
@@ -308,12 +422,18 @@ func offer_art(r: RunProgress, i: int) -> StringName:
 	return StringName(arts[i]) if i < arts.size() and StringName(arts[i]) != &"" else StringName(offer["options"][i])
 
 
-## Supply Drop: each option is a concrete copy: a head line "MARKSMAN · [icon] HEAVY" and what it does
-## to your engine ("HEAVY 3 > 4"); slot 1 on your main trait is marked ON-TRAIT. The art's subname is
-## in DETAILS (head: no subname on cards).
+## The level the drop's units come at (0 = Recruit calling cards after match 1).
+func offer_level() -> int:
+	return int(offer.get("level", SynergyRules.LEVEL_TRAINED))
+
+
+## Supply Drop: each option is a concrete copy: a head line "[icon] ON-TRAIT · HEAVY 3 > 4" and what it
+## does to your engine; slot 1 on your main trait is marked ON-TRAIT; the copy level badge (R / T)
+## at the end of the line.
 func _mark_trait_lines(r: RunProgress) -> void:
-	var counts: Dictionary = r.trait_counts()
+	var counts: Dictionary = r.trait_counts(false)
 	var on_trait: StringName = StringName(offer.get("on_trait", &""))
+	var lv: int = offer_level()
 	for i: int in tiles.size():
 		var card: CardData = r.resource(StringName(offer["options"][i])) as CardData
 		if card == null or not card.is_unit():
@@ -331,17 +451,31 @@ func _mark_trait_lines(r: RunProgress) -> void:
 			line2 = "ON-TRAIT · " + line2
 			tiles[i].set_meta(&"on_trait", true)
 		tiles[i].set_meta(&"trait", t)
-		# One line (the CardView under it names the card): [icon] ON-TRAIT · HEAVY 3 > 4: BONUS ON.
 		var head: Control = _trait_head(line2.to_upper(), "", t, on)
 		head.tooltip_text = "%s · %s" % [card.display_name, line2]
 		head.name = "TraitLine"
+		head.add_child(_level_badge(lv))
 		tiles[i].content.add_child(head)
 		tiles[i].content.move_child(head, 0)
 		_trait_lines = true
 
 
+## The copy level badge (R / T / V / E) as a small node with its words in the tooltip.
+func _level_badge(level: int) -> Control:
+	var b := Control.new()
+	b.name = "LevelBadge"
+	b.custom_minimum_size = Vector2(22, 22)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.set_meta(&"level", level)
+	b.tooltip_text = StandardIssueLook.level_text(level)
+	b.draw.connect(func() -> void:
+		StandardIssueLook.draw_level_badge(b, Rect2(Vector2.ZERO, b.size), level, b.get_theme_font(&"font", &"HudNumber")))
+	return b
+
+
 ## "Heavy 2 > 3: bonus ON" / "Vanguard 0 > 1 (bonus at 2)" / "Heavy 3 > 4 (full set)" for a trait
-## count going from `from` to `to` Trained copies in the deck. `short` (Supply Drop tiles): only
+## count going from `from` to `to` copies in the deck. `short` (Supply Drop tiles): only
 ## "Heavy 2 > 3", plus ": bonus ON" / ": bonus OFF" when a bonus switches.
 static func count_text(t: StringName, from: int, to: int, short: bool = false) -> String:
 	if t == &"":
@@ -375,7 +509,7 @@ func _trait_head(line1: String, line2: String, t: StringName, on: bool = false) 
 		if t != &"":
 			SynergyGlyphs.draw_trait_plate(icon, rr, t, on, false)
 		else:
-			BannerView._dashed_rect(icon, rr.grow(-1.0), Color(1, 1, 1, 0.45), 1.0))
+			StandardIssueLook.draw_empty_socket(icon, rr.grow(-1)))
 	row.add_child(icon)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override(&"separation", 0)
@@ -401,224 +535,7 @@ func _trait_head(line1: String, line2: String, t: StringName, on: bool = false) 
 	return row
 
 
-## The Supply Drop's 4th option: Retire a card instead of taking one (greyed at the floor).
-func _retire_option_tile(r: RunProgress) -> PickTile:
-	var tile: PickTile = make_tile()
-	tile.name = "RetireOption"
-	tile.custom_minimum_size.x = RETIRE_TILE_W
-	tile.min_height = 96 if bool(offer.get("reissue", false)) else 200
-	tile.add_line("RETIRE", &"TileName")
-	tile.add_line("INSTEAD OF A CARD", &"HudTag", false)
-	var ok: bool = r.can_retire()
-	var why: Label = tile.add_line("Remove one card for good (deck %d > %d). A Recruit's twin trains for free." % [r.deck.size(), r.deck.size() - 1] if ok \
-			else "Your deck is at the %d-card floor: nothing can be retired." % r.config.deck_floor)
-	why.name = "RetireText"
-	tile.add_spacer()
-	tile.add_status("TAP TO PICK A CARD" if ok else "AT THE FLOOR")
-	tile.disabled = not ok
-	tile.pressed.connect(open_retire_picker)
-	return tile
-
-
-## kc-trait-ui: the Supply Drop's Re-issue option (under Retire): change a Trained copy's trait.
-func _reissue_option_tile(r: RunProgress) -> PickTile:
-	var tile: PickTile = make_tile()
-	tile.name = "ReissueOption"
-	tile.custom_minimum_size.x = RETIRE_TILE_W
-	tile.min_height = 96
-	tile.add_line("RE-ISSUE", &"TileName")
-	tile.add_line("INSTEAD OF A CARD", &"HudTag", false)
-	var n: int = r.reissue_options().size()
-	tile.add_line("Switch one Trained card to another trait (a random art of it)." if n > 0 \
-			else "No Trained card with another trait option yet.")
-	tile.add_spacer()
-	tile.add_status("TAP TO PICK A CARD" if n > 0 else "NOTHING TO RE-ISSUE")
-	tile.disabled = n == 0
-	tile.pressed.connect(open_reissue)
-	return tile
-
-
-## RE-ISSUE (Supply Drop tile / Regroup header button): the copies you can re-issue.
-func open_reissue() -> void:
-	var r: RunProgress = run()
-	if r == null or not bool(offer.get("reissue", false)):
-		return
-	reissue_mode = true
-	reissue_row = -1
-	show_offer()
-
-
-## Re-issue step 1 (pick a copy) or step 2 (pick its new trait, with the now -> after preview).
-func _build_reissue(r: RunProgress) -> void:
-	_center.visible = false
-	_list_scroll.visible = true
-	_skip_button.text = "BACK"
-	var rows: Array[Dictionary] = r.reissue_options()
-	var counts: Dictionary = r.trait_counts()
-	if reissue_row < 0 or reissue_row >= rows.size():
-		reissue_row = -1
-		_title.text = "RE-ISSUE A CARD"
-		_subtitle.text = "Pick a Trained card to switch to another trait. It keeps its level and gets a random art of the new trait. BACK: the offer."
-		if rows.is_empty():
-			var t0: PickTile = make_tile()
-			t0.add_line("NOTHING TO RE-ISSUE", &"TileName")
-			t0.add_line("Only Trained copies of cards with two or more trait options can be re-issued (Recruits pick when they train).")
-			t0.disabled = true
-			_list_grid.add_child(t0)
-		for i: int in rows.size():
-			var row: Dictionary = rows[i]
-			var card: CardData = r.resource(row["id"]) as CardData
-			var tile: PickTile = make_tile()
-			tile.name = "Reissue%d" % i
-			tile.min_height = 96
-			var t: StringName = StringName(row["trait"])
-			tile.content.add_child(_trait_head("%s · %s" % [card.display_name.to_upper(), ArtTraits.trait_name(t).to_upper()],
-					"%s · %s now" % [SynergyGlyphs.level_name(int(row["level"])), ArtTraits.trait_name(t)], t, false))
-			var names: PackedStringArray = []
-			for o: Dictionary in row["options"]:
-				names.append(String(o["name"]))
-			tile.add_line("Can become: %s." % " or ".join(names))
-			_add_band_strip(tile, int(row["level"]), -1)
-			tile.pressed.connect(func() -> void:
-				reissue_row = i
-				show_offer())
-			_list_grid.add_child(tile)
-			list_tiles.append(tile)
-		_fit_list()
-		return
-	var row2: Dictionary = rows[reissue_row]
-	var card2: CardData = r.resource(row2["id"]) as CardData
-	var now_t: StringName = StringName(row2["trait"])
-	_title.text = "RE-ISSUE %s" % card2.display_name.to_upper()
-	_subtitle.text = "Pick its new trait. It keeps its level (%s); the art decides the trait, so it gets a random art of the new trait. BACK: the cards." % \
-			SynergyGlyphs.level_name(int(row2["level"]))
-	# NOW: the copy as it is.
-	var now_tile: PickTile = make_tile()
-	now_tile.name = "ReissueNow"
-	now_tile.min_height = 96
-	now_tile.disabled = true
-	now_tile.add_line("NOW", &"HudTag", false)
-	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(200, 64)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	now_tile.content.add_child(holder)
-	var prev: PanelContainer = BannerCard.build(BannerCard.entry_for_card(card2, StringName(row2["art"]), int(row2["level"]), now_t), Vector2(200, 64), 57.0)
-	prev.name = "NowCard"
-	prev.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	holder.add_child(prev)
-	prev.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	now_tile.content.add_child(_trait_head(ArtTraits.trait_name(now_t).to_upper(), "", now_t, false))
-	_list_grid.add_child(now_tile)
-	for o: Dictionary in row2["options"]:
-		var t2: StringName = StringName(o["trait"])
-		var tile2: PickTile = make_tile()
-		tile2.name = "ReissueAs_%s" % (String(t2) if t2 != &"" else "plain")
-		tile2.min_height = 96
-		tile2.set_meta(&"trait", t2)
-		var lose: String = count_text(now_t, int(counts.get(now_t, 0)), maxi(0, int(counts.get(now_t, 0)) - 1)) if now_t != &"" else ""
-		var gain: String = count_text(t2, int(counts.get(t2, 0)), int(counts.get(t2, 0)) + 1)
-		tile2.content.add_child(_trait_head("RE-ISSUE AS %s" % ArtTraits.trait_name(t2).to_upper(), gain, t2, false))
-		if lose != "":
-			var ll: Label = tile2.add_line(lose.to_upper(), &"HudTag", false)
-			ll.name = "LoseLine"
-		var rl: Label = tile2.add_line("You'll get a random %s art." % ArtTraits.trait_name(t2) if t2 != &"" else "You'll get a random plain art.", &"FriendlyLabel")
-		rl.name = "RandomArtLine"
-		tile2.add_spacer()
-		tile2.add_status("TAP TO RE-ISSUE")
-		tile2.pressed.connect(reissue.bind(reissue_row, t2))
-		_list_grid.add_child(tile2)
-		pick_tiles.append(tile2)
-	_fit_list()
-
-
-## Re-issue row `row` of RunProgress.reissue_options() as `t`. Returns "" or RunState's reason.
-func reissue(row: int, t: StringName) -> String:
-	var err: String = RunFlow.run_state().reissue_card(row, t)
-	if err == "":
-		reissue_mode = false
-		reissue_row = -1
-		_next.call_deferred()
-	return err
-
-
-## kc-trait-ui: TRAIN AS: one tile per trait option of the copy (run.train_choices), the
-## pre-selected one marked, the count change and "you'll get a random X art".
-func _build_train_picker(r: RunProgress) -> void:
-	_center.visible = false
-	_list_scroll.visible = true
-	_skip_button.text = "BACK"
-	var card: CardData = r.resource(StringName(train_pick["id"])) as CardData
-	var twin: bool = train_pick["kind"] == &"twin"
-	_title.text = ("TWIN TRAINS AS" if twin else "TRAIN AS") + " · " + card.display_name.to_upper()
-	_subtitle.text = ("Retiring the Recruit trains its twin. " if twin else "Recruit > Trained. ") + \
-			"Pick its trait: the art decides it, so it gets a random art of that trait. BACK: the list."
-	var choices: Array[Dictionary] = r.train_choices(int(train_pick["copy"]))
-	for c: Dictionary in choices:
-		var t: StringName = StringName(c["trait"])
-		var tile: PickTile = make_tile()
-		tile.name = "TrainAs_%s" % (String(t) if t != &"" else "plain")
-		tile.min_height = 120
-		tile.set_meta(&"trait", t)
-		tile.set_meta(&"preselected", bool(c["preselected"]))
-		tile.content.add_child(_trait_head(ArtTraits.trait_name(t).to_upper(), count_text(t, int(c["count_from"]), int(c["count_to"])), t, bool(c["preselected"])))
-		if bool(c["preselected"]):
-			var pl: Label = tile.add_line("PRE-SELECTED (its art)", &"HudAccent", false)
-			pl.name = "PreselectedLine"
-		if t != &"":
-			var tb: Array = SynergyRules.TIER_TEXT.get(t, ["", ""])
-			tile.add_line("2: %s. 3: %s." % [tb[0], tb[1]])
-		var rl: Label = tile.add_line(("You'll get a random %s art." % ArtTraits.trait_name(t) if t != &"" else "You'll get a random plain art.") \
-				if bool(c.get("random", false)) else "Keeps its art (it already gives this).", &"FriendlyLabel")
-		rl.name = "RandomArtLine"
-		tile.add_spacer()
-		tile.add_status("TAP TO TRAIN")
-		tile.pressed.connect(train_as.bind(t))
-		_list_grid.add_child(tile)
-		pick_tiles.append(tile)
-	_fit_list()
-
-
-## Commits the TRAIN AS pick: Promotion -> choose_offer(option, t); twin -> retire_card(option, t).
-func train_as(t: StringName) -> String:
-	if train_pick.is_empty():
-		return "no training open"
-	var err: String = ""
-	if train_pick["kind"] == &"twin":
-		err = RunFlow.run_state().retire_card(int(train_pick["option"]), t)
-	else:
-		err = RunFlow.run_state().choose_offer(int(train_pick["option"]), t)
-	if err == "":
-		train_pick = {}
-		retire_mode = false
-		_next.call_deferred()
-	return err
-
-
-## A Promotion tile: a Recruit with more than one trait option opens TRAIN AS; others promote now.
-func _on_promote(i: int) -> void:
-	var r: RunProgress = run()
-	var opts: Array[Dictionary] = r.promotion_options()
-	if i < opts.size() and bool(opts[i]["trains"]) and (r.resource(opts[i]["id"]) as CardData).trait_choices().size() > 1:
-		train_pick = {"kind": &"promote", "option": i, "copy": int(opts[i]["index"]), "id": opts[i]["id"]}
-		show_offer()
-		return
-	choose(i)
-
-
-## A Retire tile: a Recruit whose twin will train (and can pick a trait) opens TRAIN AS for the twin.
-func _on_retire(i: int) -> void:
-	var r: RunProgress = run()
-	var opts: Array[Dictionary] = r.retire_options()
-	if i < opts.size() and int(opts[i]["twin_index"]) >= 0:
-		var card: CardData = r.resource(opts[i]["id"]) as CardData
-		if card != null and card.trait_choices().size() > 1:
-			train_pick = {"kind": &"twin", "option": i, "copy": int(opts[i]["twin_index"]), "id": opts[i]["id"]}
-			show_offer()
-			return
-	retire(i)
-
-
-## Supply Drop > RETIRE: the list of cards to retire (BACK returns to the three cards).
+## Supply Drop > RETIRE: the list of cards to retire (BACK returns to the cards).
 func open_retire_picker() -> void:
 	var r: RunProgress = run()
 	if r == null or not r.can_retire():
@@ -627,14 +544,14 @@ func open_retire_picker() -> void:
 	show_offer()
 
 
-## Retire list (Supply Drop 4th option or Regroup): one tile per design and level, Recruits
-## first, with what retiring it does (twin training, Honor Roll).
+## Retire list (Supply Drop / Salvage RETIRE, or Regroup): one tile per design and level,
+## Standard Issue first, with its cost, level and trait.
 func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	_center.visible = false
 	_list_scroll.visible = true
 	_title.text = "RETIRE A CARD" if from_drop else _title.text
 	if from_drop:
-		_subtitle.text = "Pick the card to retire (deck %d, floor %d). BACK: the cards." % [r.deck.size(), r.config.deck_floor]
+		_subtitle.text = "Pick the card to retire instead of taking one (deck %d, floor %d). BACK: the cards." % [r.deck.size(), r.config.deck_floor]
 		_skip_button.text = "BACK"
 	var opts: Array[Dictionary] = r.retire_options()
 	if opts.is_empty():
@@ -651,26 +568,22 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 		var tile: PickTile = make_tile()
 		tile.name = "Retire%d" % i
 		tile.min_height = 96
-		tile.add_line(card.display_name.to_upper() if card != null else String(o["id"]), &"TileName")
+		var si: bool = card != null and card.standard_issue
+		var nm: Label = tile.add_line(card.display_name.to_upper() if card != null else String(o["id"]), &"TileName")
+		if si:
+			nm.add_theme_font_override(&"font", StandardIssueLook.stencil())
 		var lv: int = int(o["level"])
-		var tag: String = "%s · COST %d" % [SynergyGlyphs.level_name(lv).to_upper() if (card != null and (card.card_trait != &"" or card.neighbor_keyword != &"")) or lv >= 2 else "PLAIN", int(o["cost"])]
+		var tag: String = ("STANDARD ISSUE %s · COST %d" % [RunProgress.standard_issue_serial(card), int(o["cost"])]) if si else \
+				("%s · COST %d" % [SynergyGlyphs.level_name(lv).to_upper(), int(o["cost"])])
 		if StringName(o["trait"]) != &"":
 			tag += " · " + SynergyGlyphs.trait_name(o["trait"]).to_upper()
 		tile.add_line(tag, &"HudTag", false)
-		if int(o["twin_index"]) >= 0:
-			var gains: PackedStringArray = []
-			if card.neighbor_keyword != &"":
-				gains.append(SynergyGlyphs.keyword_name(card.neighbor_keyword))
-			if card.trait_choices().size() > 1:
-				gains.append("a trait you pick next")
-			elif card.card_trait != &"":
-				gains.append(SynergyGlyphs.trait_name(card.card_trait))
-			var tw: Label = tile.add_line("TWIN TRAINED: %s > GILDED (gains %s)" % [card.display_name, " and ".join(gains)], &"FriendlyLabel")
-			tw.name = "TwinLine"
-		else:
-			tile.add_line("Removed from the deck (Honor Roll).")
-		_add_band_strip(tile, lv, 1 if int(o["twin_index"]) >= 0 else -1)
-		tile.pressed.connect(_on_retire.bind(i))
+		tile.add_line("Removed from the deck (Honor Roll).")
+		if not si:
+			_add_band_strip(tile, lv, -1)
+		tile.pressed.connect(retire.bind(i))
+		if card != null:
+			_wire_inspect(tile, _inspect_card_id.bind(card.id, lv))
 		_list_grid.add_child(tile)
 		list_tiles.append(tile)
 	_fit_list()
@@ -685,10 +598,12 @@ func retire(i: int) -> String:
 	return err
 
 
-## Promotion: one tile per design and level below Elite: the band now > next, and what it gains.
+## Promotion: one tile per design and level below Elite: the band now > next, and what it gains
+## (a Recruit: its locked keywords unlock, "Unlocks First Shot and Guard.").
 func _build_promotion_list(r: RunProgress) -> void:
 	_center.visible = false
 	_list_scroll.visible = true
+	var rows: Array[Dictionary] = r.promotion_options()
 	var options: Array = offer["options"]
 	var levels: Array = offer.get("levels", [])
 	for i: int in options.size():
@@ -703,25 +618,121 @@ func _build_promotion_list(r: RunProgress) -> void:
 		var gain: String = ""
 		match lv + 1:
 			SynergyRules.LEVEL_TRAINED:
-				var bits: PackedStringArray = []
-				if card.neighbor_keyword != &"":
-					bits.append(SynergyGlyphs.keyword_name(card.neighbor_keyword))
-				if card.trait_choices().size() > 1:
-					bits.append("a trait (pick next: %s)" % " / ".join(PackedStringArray(card.trait_choices().map(func(x: StringName) -> String: return ArtTraits.trait_name(x)))))
-				elif card.card_trait != &"":
-					bits.append(SynergyGlyphs.trait_name(card.card_trait))
-				gain = "Gains %s." % " and ".join(bits) if not bits.is_empty() else "Trained."
+				var unlocks: Array = rows[i].get("unlocks", []) if i < rows.size() else SynergyRules.locked_keywords(card, lv)
+				gain = ("Unlocks %s." % " and ".join(PackedStringArray(unlocks))) if not unlocks.is_empty() else "Trained."
 			SynergyRules.LEVEL_VETERAN:
-				gain = "+1 Armor (%d > %d)." % [card.armor, card.armor + 1] if card.is_unit() else "+1 Armor."
+				gain = ("+1 Armor (%d > %d)." % [card.armor, card.armor + 1]) if card.is_unit() else "+1 Armor."
 			SynergyRules.LEVEL_ELITE:
-				gain = "+1 FP (%d > %d)." % [card.firepower, card.firepower + 1] if card.is_unit() else "+1 FP."
+				gain = ("+1 FP (%d > %d)." % [card.firepower, card.firepower + 1]) if card.is_unit() else "+1 FP."
 		var gl: Label = tile.add_line(gain, &"FriendlyLabel")
 		gl.name = "GainLine"
 		_add_band_strip(tile, lv, lv + 1)
-		tile.pressed.connect(_on_promote.bind(i))
+		tile.pressed.connect(choose.bind(i))
+		if card != null:
+			_wire_inspect(tile, _inspect_card_id.bind(card.id, lv))
 		_list_grid.add_child(tile)
 		list_tiles.append(tile)
 	_fit_list()
+
+
+# =============================================================================
+# kc-onboard-ui: Muster out
+# =============================================================================
+
+## How many Standard Issue cards this Muster out may send home (RunProgress.muster_out_count).
+func muster_count() -> int:
+	var r: RunProgress = run()
+	return r.muster_out_count() if r != null else 0
+
+
+## Muster out: one tile per Standard Issue copy (most expensive first), the pre-selection marked
+## GOING HOME; tap toggles (up to the count); SEND n HOME commits, KEEP ALL skips.
+func _build_muster_out(r: RunProgress) -> void:
+	_center.visible = false
+	_list_scroll.visible = true
+	var rows: Array[Dictionary] = r.muster_out_options()
+	var n: int = muster_count()
+	if muster_marks.is_empty():
+		for row: Dictionary in rows:
+			if bool(row["preselected"]):
+				muster_marks[int(row["index"])] = true
+	_skip_button.text = "KEEP ALL"
+	send_button.visible = true
+	for row: Dictionary in rows:
+		var idx: int = int(row["index"])
+		var card: CardData = r.resource(row["id"]) as CardData
+		var tile: PickTile = make_tile()
+		tile.name = "Muster%d" % idx
+		tile.set_meta(&"index", idx)
+		tile.set_meta(&"serial", String(row["serial"]))
+		var holder := Control.new()
+		holder.name = "CardHolder"
+		holder.custom_minimum_size = Vector2(3.6 * MUSTER_BANNER_H, MUSTER_BANNER_H + 8.0)
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.content.add_child(holder)
+		var bc: PanelContainer = BannerCard.build(BannerCard.entry_for_card(card, StringName(row["art"]), SynergyRules.LEVEL_RECRUIT),
+				holder.custom_minimum_size, MUSTER_BANNER_H)
+		bc.name = "Card"
+		holder.add_child(bc)
+		bc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_ignore_mouse(bc)
+		var st: Label = tile.add_status("")
+		st.name = "MusterStatus"
+		tile.pressed.connect(toggle_muster.bind(idx))
+		_wire_inspect(tile, _inspect_muster.bind(idx))
+		_list_grid.add_child(tile)
+		list_tiles.append(tile)
+	_refresh_muster(r, n)
+	_fit_list()
+
+
+func _refresh_muster(r: RunProgress, n: int, note: String = "") -> void:
+	var marked: int = muster_marks.size()
+	for t: PickTile in list_tiles:
+		var on: bool = muster_marks.has(int(t.get_meta(&"index", -1)))
+		t.set_selected(on, "GOING HOME", "STAYS")
+	send_button.text = ("SEND %d HOME" % marked) if marked > 0 else "SEND NONE"
+	_subtitle.text = note if note != "" else \
+			"The quartermaster takes back Standard Issue kit: up to %d of your %d go home, deck %d > %d (floor %d). The most expensive are marked; tap a card to keep it or send it." % [
+				n, r.standard_issue_count(), r.deck.size(), r.deck.size() - marked, r.config.deck_floor]
+
+
+## Tap on a Muster out tile: mark / unmark that copy (never more than the count). Returns "" or why not.
+func toggle_muster(idx: int) -> String:
+	var r: RunProgress = run()
+	if r == null:
+		return "no run"
+	var n: int = muster_count()
+	if muster_marks.has(idx):
+		muster_marks.erase(idx)
+	elif muster_marks.size() >= n:
+		_refresh_muster(r, n, "Only %d can go home this time: tap a marked card first to keep it." % n)
+		return "full"
+	else:
+		muster_marks[idx] = true
+	_refresh_muster(r, n)
+	return ""
+
+
+## SEND n HOME: RunState.muster_out(marked deck indices). Returns "" or RunState's reason.
+func confirm_muster_out() -> String:
+	var idx: Array = muster_marks.keys()
+	var err: String = RunFlow.run_state().muster_out(idx)
+	if err == "":
+		muster_marks.clear()
+		_next.call_deferred()
+	return err
+
+
+func _inspect_muster(idx: int) -> void:
+	var r: RunProgress = run()
+	if r == null or idx < 0 or idx >= r.deck.size():
+		return
+	var card: CardData = r.resource(r.deck[idx]) as CardData
+	_inspector.open({"view": _view_dict(card, 0, r.art_of(idx)), "banner": BannerCard.entry_for_card(card, r.art_of(idx), 0),
+			"title": card.display_name, "type": "Standard Issue %s · %s" % [RunProgress.standard_issue_serial(card), CardInfo.type_line(card)],
+			"text": "Basic kit: cost %d, %d FP, %d Armor, no keyword, no trait." % [card.cost, card.firepower, card.armor],
+			"status": "Marked GOING HOME: it leaves your deck when you tap SEND HOME." if muster_marks.has(idx) else "Stays in your deck."})
 
 
 ## A strip of camo swatches on a tile: the level now, and (to >= 0) the level it becomes.
@@ -748,7 +759,7 @@ static func _swatch(ci: CanvasItem, r: Rect2, band: StringName) -> void:
 		SynergyGlyphs.draw_band(ci, r, band)
 
 
-## Doctrine: a trait emblem, its tier texts and how many Trained cards of it the deck has.
+## Doctrine: a trait emblem, its tier texts and how many cards of it the deck has.
 func _doctrine_tile(r: RunProgress, t: StringName) -> PickTile:
 	var tile: PickTile = make_tile()
 	tile.custom_minimum_size.x = 380
@@ -771,6 +782,9 @@ func _doctrine_tile(r: RunProgress, t: StringName) -> PickTile:
 	tile.add_line("Its sets count +1 all run. 2: %s. 3: %s." % [SynergyRules.TIER_TEXT[t][0], SynergyRules.TIER_TEXT[t][1]])
 	tile.add_spacer()
 	tile.add_status("TAP TO PICK")
+	_wire_inspect(tile, func() -> void:
+		_inspector.open({"title": SynergyGlyphs.trait_name(t) + " Doctrine", "type": "trait",
+				"text": "Its sets count +1 for the rest of the run. 2 in play: %s. 3 in play: %s." % [SynergyRules.TIER_TEXT[t][0], SynergyRules.TIER_TEXT[t][1]], "status": ""}))
 	return tile
 
 
@@ -796,19 +810,9 @@ func choose(i: int) -> String:
 	return err
 
 
-## SKIP: declines the current offer. Returns "" or RunState's reason.
+## SKIP (KEEP ALL on Muster out; BACK in the Retire list): declines the current offer. Returns ""
+## or RunState's reason.
 func skip() -> String:
-	if not train_pick.is_empty():
-		train_pick = {}
-		show_offer()
-		return ""
-	if reissue_mode:
-		if reissue_row >= 0:
-			reissue_row = -1
-		else:
-			reissue_mode = false
-		show_offer()
-		return ""
 	if retire_mode:
 		retire_mode = false
 		show_offer()
@@ -824,12 +828,16 @@ func skip() -> String:
 
 func open_details(i: int) -> void:
 	var r: RunProgress = run()
+	if i < 0 or i >= (offer.get("options", []) as Array).size():
+		return
 	var card: CardData = r.resource(StringName(offer["options"][i])) as CardData
 	if card == null:
 		return
-	var art: StringName = offer_art(r, i) if offer["kind"] == RewardOffers.KIND_SUPPLY_DROP else card.id
-	var t: StringName = offer_trait(r, i) if offer["kind"] == RewardOffers.KIND_SUPPLY_DROP else card.card_trait
-	var vd: Dictionary = CardInfo.view_dict(card)
+	var drop: bool = offer["kind"] in RewardOffers.CARD_DROPS
+	var art: StringName = offer_art(r, i) if drop else card.id
+	var t: StringName = offer_trait(r, i) if drop else card.card_trait
+	var lv: int = offer_level() if drop and card.is_unit() else SynergyRules.LEVEL_TRAINED
+	var vd: Dictionary = _view_dict(card, lv, art)
 	var sub: String = BannerArtDB.subname(art)
 	var ba: BannerArt = BannerArtDB.get_art(art)
 	if BannerArtDB.is_card_art(ba):
@@ -839,16 +847,24 @@ func open_details(i: int) -> void:
 	if sub != "":
 		vd["subname"] = sub
 	var lines: Array[Dictionary] = CardInfo.keywords(card)
+	var trains: String = SynergyRules.trains_text(card, lv)
+	if trains != "":
+		for k: Dictionary in lines:
+			k["name"] = "%s (locked: unlocks when it trains)" % String(k["name"])
 	if card.is_unit() and card.has_trait_choice():
 		# The more-info view: the art's name and the trait it gives this copy (art-traits §8).
 		lines.push_front({"name": "Trait: %s" % ArtTraits.trait_name(t),
-				"text": "From the art%s (%s family). This copy comes with it; the art decides the trait. Can be: %s." % [
-					(" \"%s\"" % sub) if sub != "" else "", ArtTraits.FAMILY_NAMES[ArtTraits.family_of(art, card)],
-					" · ".join(PackedStringArray(card.trait_choices().map(func(x: StringName) -> String: return ArtTraits.trait_name(x)))) ]})
+				"text": "From the art%s (%s family). This copy comes with it; the art decides the trait." % [
+					(" \"%s\"" % sub) if sub != "" else "", ArtTraits.FAMILY_NAMES[ArtTraits.family_of(art, card)]]})
+	var text: String = card.text
+	if trains != "":
+		text = ("%s\n" % card.text if card.text != "" else "") + "%s: locked until it trains (Promotion)." % trains
+	var status: String = "%s: close this, then tap the card to add it to your deck." % String(KIND_TITLES.get(offer["kind"], "SUPPLY DROP")).capitalize()
+	if card.is_unit():
+		status = "%s %s" % [_level_status(card, lv), status]
 	_inspector.open({
 		"view": vd, "title": card.display_name, "type": ("%s · %s" % [sub.to_upper(), CardInfo.type_line(card)]) if sub != "" else CardInfo.type_line(card),
-		"text": card.text, "keywords": lines,
-		"status": "Supply Drop: close this, then tap the card to add it to your deck.",
+		"text": text, "keywords": lines, "status": status,
 	})
 
 
@@ -856,10 +872,11 @@ func get_inspector() -> Control:
 	return _inspector
 
 
+func get_new_card() -> NewCard:
+	return new_card
+
+
 func _next() -> void:
-	train_pick = {}
-	reissue_mode = false
-	reissue_row = -1
 	var r: RunProgress = run()
 	if r != null and r.phase == RunProgress.PHASE_REWARDS:
 		show_offer()
@@ -868,6 +885,8 @@ func _next() -> void:
 
 
 ## kc-trait-ui: `art` = the art this copy comes with (CardView shows it; its name is in DETAILS).
+## kc-onboard-ui: a Recruit (offer level 0) shows the greyed "[lock] RECRUIT · TRAINS: ..." line in
+## place of its rules (they are locked) and its keywords greyed on the card.
 func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	var tile: PickTile = make_tile()
 	var holder: Control = Control.new()
@@ -877,7 +896,8 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	tile.content.add_child(holder)
 	var view: Control = CARD_VIEW_SCENE.instantiate()
 	holder.add_child(view)
-	var vd: Dictionary = CardInfo.view_dict(card)
+	var lv: int = offer_level() if card.is_unit() else SynergyRules.LEVEL_TRAINED
+	var vd: Dictionary = _view_dict(card, lv, art)
 	if art != &"" and art != card.id:
 		var ba: BannerArt = BannerArtDB.get_art(art)
 		if BannerArtDB.is_card_art(ba):
@@ -886,13 +906,18 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 			vd["art_id"] = String(art)
 	view.set_card_data(vd)
 	_ignore_mouse(view)
-	var rules: String = card.text
-	if rules == "":
-		var kws: Array[Dictionary] = CardInfo.keywords(card)
-		rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
-	var label: Label = tile.add_line(rules)
-	label.name = "RulesLabel"
-	label.set_meta(&"full_text", rules)
+	var trains: String = SynergyRules.trains_text(card, lv)
+	var label: Label = null
+	if trains != "":
+		label = _trains_line(tile, trains)
+	else:
+		var rules: String = card.text
+		if rules == "":
+			var kws: Array[Dictionary] = CardInfo.keywords(card)
+			rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
+		label = tile.add_line(rules)
+		label.name = "RulesLabel"
+		label.set_meta(&"full_text", rules)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 8)
 	tile.content.add_child(row)
@@ -904,12 +929,42 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	var details: Button = make_button("DETAILS", &"HudButton", 110)
 	details.name = "DetailsButton"
 	details.pressed.connect(open_details.bind(card_views.size()))
+	_wire_inspect(details, open_details.bind(card_views.size()))
 	row.add_child(details)
 	detail_buttons.append(details)
 	card_views.append(view)
 	_card_holders.append(holder)
 	_rules_labels.append(label)
 	return tile
+
+
+## The greyed Recruit line: a padlock, then "RECRUIT · TRAINS: FIRST SHOT · GUARD" (the rules text is
+## locked until the copy trains). The Label is named RulesLabel (it takes the rules line's place).
+func _trains_line(tile: PickTile, trains: String) -> Label:
+	var row := HBoxContainer.new()
+	row.name = "TrainsLine"
+	row.add_theme_constant_override(&"separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lock := Control.new()
+	lock.name = "LockIcon"
+	lock.custom_minimum_size = Vector2(18, 20)
+	lock.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lock.draw.connect(func() -> void: StandardIssueLook.draw_lock(lock, Rect2(1, 1, 16, 18), LOCK_GREY))
+	row.add_child(lock)
+	var text: String = "RECRUIT · " + trains.to_upper()
+	var l: Label = make_label(text, &"HudTag")
+	l.name = "RulesLabel"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.add_theme_color_override(&"font_color", LOCK_GREY)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.set_meta(&"full_text", text)
+	l.set_meta(&"lock_w", 24.0)
+	l.set_meta(&"trains", trains)
+	row.add_child(l)
+	tile.content.add_child(row)
+	return l
 
 
 func _item_tile(item: LoadoutItem) -> PickTile:
@@ -968,8 +1023,13 @@ func _fit_cards() -> void:
 		max_lines -= 1
 		by_h = (room.y - (28.0 + extra_h + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
 	var n: int = card_views.size()
-	var extra_w: float = (RETIRE_TILE_W + 16.0) if retire_tile != null else 0.0
-	var by_w: float = (room.x - extra_w - 16.0 * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
+	var gap: float = 16.0
+	var by_w: float = (room.x - gap * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
+	if by_w < MIN_CARD_SCALE and n > 1:
+		# kc-onboard-ui: four cards on a narrow screen: tighten the gap before going under 0.8x.
+		gap = clampf((room.x - 28.0 * n - CardView.BASE_SIZE.x * MIN_CARD_SCALE * n) / (n - 1), 6.0, 16.0)
+		by_w = (room.x - gap * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
+	_options.add_theme_constant_override(&"separation", int(gap))
 	var s: float = clampf(minf(by_h, by_w), MIN_CARD_SCALE, MAX_CARD_SCALE)
 	for i: int in n:
 		var view: Control = card_views[i]
@@ -977,8 +1037,9 @@ func _fit_cards() -> void:
 		view.scale = Vector2(s, s)
 		view.position = Vector2.ZERO
 		_card_holders[i].custom_minimum_size = CardView.BASE_SIZE * s
-		_rules_labels[i].custom_minimum_size.x = CardView.BASE_SIZE.x * s
-		_fit_rules(_rules_labels[i], CardView.BASE_SIZE.x * s, max_lines)
+		var lw: float = CardView.BASE_SIZE.x * s - float(_rules_labels[i].get_meta(&"lock_w", 0.0))
+		_rules_labels[i].custom_minimum_size.x = lw
+		_fit_rules(_rules_labels[i], lw, max_lines)
 		# Same height for every rules block, so the TAKE / DETAILS rows line up.
 		_rules_labels[i].custom_minimum_size.y = ceilf(line_h * max_lines)
 		detail_buttons[i].custom_minimum_size.y = row_h
@@ -996,7 +1057,7 @@ func _fit_rules(label: Label, width: float, max_lines: int) -> void:
 	var text: String = full
 	while words.size() > 1 and _line_count(text, font, font_size, width) > max_lines:
 		words.remove_at(words.size() - 1)
-		text = " ".join(words).trim_suffix(",").trim_suffix(";").trim_suffix(":") + "..."
+		text = " ".join(words).trim_suffix(",").trim_suffix(";").trim_suffix(":").trim_suffix("·").strip_edges() + "..."
 	label.text = text
 	label.max_lines_visible = max_lines
 

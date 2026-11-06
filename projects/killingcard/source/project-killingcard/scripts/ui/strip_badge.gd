@@ -124,6 +124,14 @@ func _row_width(row: Array, font: Font, fs: int) -> float:
 ## A glyph inside a value row (kc-fight-ui: the rival's hand on the phone SCORE badge).
 func _draw_mini_glyph(gr: Rect2, g: StringName, c: Color) -> void:
 	var s: float = gr.size.x
+	if g == &"flag" or g == &"flag_rival":
+		# kc-onboard-ui: the initiative flag on the SCORE badge (the rival's has a hazard notch).
+		draw_line(gr.position + Vector2(s * 0.2, s * 0.08), gr.position + Vector2(s * 0.2, s * 0.95), c, 2.0)
+		draw_colored_polygon(PackedVector2Array([gr.position + Vector2(s * 0.26, s * 0.08), gr.position + Vector2(s * 0.92, s * 0.3),
+				gr.position + Vector2(s * 0.26, s * 0.55)]), c)
+		if g == &"flag_rival":
+			draw_line(gr.position + Vector2(s * 0.36, s * 0.45), gr.position + Vector2(s * 0.56, s * 0.15), Color(0.05, 0.06, 0.07), 1.5)
+		return
 	if g == &"cards_rival" or g == &"cards":
 		draw_rect(Rect2(gr.position + Vector2(s * 0.08, s * 0.28), Vector2(s * 0.5, s * 0.64)), c, false, 1.8)
 		draw_polyline(PackedVector2Array([gr.position + Vector2(s * 0.3, s * 0.12), gr.position + Vector2(s * 0.8, s * 0.12),

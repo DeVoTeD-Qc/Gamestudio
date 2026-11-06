@@ -104,7 +104,8 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 			for rc: RulesCard in st.sides[0].hand:
 				if rc.uid == int(unit_chip.get_meta(&"uid")):
 					rc_name = rc.card.display_name
-			assert_eq(name_l.text, rc_name, "%s hand card named by its chassis" % label)
+			# kc-onboard-ui: a Standard Issue name is stencil capitals; still the chassis name.
+			assert_eq(name_l.text.to_upper(), rc_name.to_upper(), "%s hand card named by its chassis" % label)
 		# Board banners show the cost top-left too (anatomy on every form); the inspector banner.
 		_check_anatomy(fr.banner, "%s board (yours)" % label)
 		_check_anatomy(er.banner, "%s board (rival)" % label)

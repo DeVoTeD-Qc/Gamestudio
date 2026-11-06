@@ -60,6 +60,13 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 	var fs: Vector2i = BannerView.name_sizes(metric_h)
 	var title: Label = _label(String(entry.get("name", "")).replace("★", "").strip_edges(), &"UnitName", fs.x)
 	title.name = "NameLabel"
+	if StandardIssueLook.is_si(entry):
+		# kc-onboard-ui: a Standard Issue card's name in the stencil font, low contrast.
+		title.add_theme_font_override(&"font", StandardIssueLook.stencil())
+		title.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
+		title.text = title.text.to_upper()
+		if "ellipsis_char" in title:
+			title.set(&"ellipsis_char", ".")  # the stencil font has no "…" glyph
 	face.add_child(title)
 	# kc-trait-ui (head): no art subname on cards; the label only carries a statless card's kind word.
 	# The Operator's brass card keeps its status line (DEPLOY / PLAN · B / NEED 1 SUPPLY) in that slot.
@@ -143,7 +150,8 @@ static func entry_for_card(card: CardData, art_id: StringName = &"", level: int 
 		e["kw"] = String(kw)
 	if level != SynergyRules.LEVEL_RECRUIT:
 		e["band"] = String(SynergyRules.LEVEL_BANDS[clampi(level, 0, 3)])
-	return e
+	# kc-onboard-ui: Standard Issue frame / serial, a Recruit's locked keywords, the level badge.
+	return StandardIssueLook.dress(e, card, level, art)
 
 
 static func _label(text: String, variation: StringName, font_size: int) -> Label:
