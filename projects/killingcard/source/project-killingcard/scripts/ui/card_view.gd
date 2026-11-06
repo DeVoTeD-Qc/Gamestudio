@@ -372,7 +372,7 @@ func _refresh() -> void:
 	_cost_label.text = str(int(data.get("threshold", 0))) if type_name == "killstreak" else str(int(data.get("cost", 0)))
 	_cost_label.visible = _has_cost_badge()
 	_cost_label.add_theme_color_override(&"font_color", Color("#FF9A9A") if bool(data.get("cant_pay", false)) else CardLook.INK)
-	_set_slot(_cost_label, COST_RECT)
+	_set_slot(_cost_label, _num_slot(_cost_label, COST_RECT))
 	_cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_name_label.text = String(data.get("name", "")).replace("★", "").strip_edges()
@@ -435,8 +435,9 @@ func _refresh() -> void:
 	_armor_badge.size = (rg["armor"] as Rect2).size
 	for pair: Array in [[_fp_label, rg["fp"]], [_armor_label, rg["armor"]]]:
 		var l: Label = pair[0]
-		l.position = Vector2.ZERO
-		l.size = (pair[1] as Rect2).size
+		var ns: Rect2 = _num_slot(l, Rect2(Vector2.ZERO, (pair[1] as Rect2).size))
+		l.position = ns.position
+		l.size = ns.size
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		l.set_meta(&"slot_size", l.size)
@@ -638,6 +639,15 @@ func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
 
 
 # --- Text sizes ---------------------------------------------------------------------------
+
+## kc-readability: a number label's slot is its badge, grown (centred) to the number face's line
+## height: Oswald's line box (ascent + descent) is taller than the badge, its digits are not.
+func _num_slot(label: Label, badge: Rect2) -> Rect2:
+	var h: float = label.get_theme_font(&"font").get_height(label.get_theme_font_size(&"font_size"))
+	if h <= badge.size.y:
+		return badge
+	return Rect2(badge.position.x, badge.get_center().y - h * 0.5, badge.size.x, h)
+
 
 func _set_slot(label: Label, rect: Rect2) -> void:
 	label.position = rect.position

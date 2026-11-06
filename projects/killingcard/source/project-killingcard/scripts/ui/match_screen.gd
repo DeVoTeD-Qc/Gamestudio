@@ -271,7 +271,7 @@ func _ready() -> void:
 	_add_glyph(_undo_button, &"undo")
 	# kc-readability: the Supply count in the cards' number face, bigger.
 	_supply_value.add_theme_font_override(&"font", CardLook.NUM_FONT)
-	_supply_value.add_theme_font_size_override(&"font_size", 26)
+	_supply_value.add_theme_font_size_override(&"font_size", 22)
 	_supply_value.add_theme_constant_override(&"outline_size", CardLook.NUM_OUTLINE)
 	_supply_value.add_theme_color_override(&"font_outline_color", CardLook.INK)
 	# kc-cards-impl (O2): READY / UNDO fit the narrow column next to the Operator card.
@@ -1581,9 +1581,11 @@ func _pip_size() -> Vector2:
 	var box_w: float = _supply_box.size.x if _supply_box != null and _supply_box.size.x > 0.0 else 300.0
 	# kc-ui3: stacked (pips under SUPPLY 3/4) the pips get the whole row; in one row, what the words leave.
 	var room: float = box_w - (28.0 if _supply_stacked else 150.0)
-	# kc-readability: the pips are cost hexes (the cards' Supply icon), up to 22 px.
-	var w: float = clampf(floorf(room / n) - 3.0, 10.0, 22.0)
-	return Vector2(w, w + 2.0)
+	# kc-readability: the pips are cost hexes (the cards' Supply icon), up to 18 px; the row keeps its
+	# old height (18 / 20) so the Supply box does not grow into the killstreak row or the hand.
+	var h: float = 18.0 if compact else 20.0
+	var w: float = clampf(floorf(room / n) - 3.0, 10.0, h - 2.0)
+	return Vector2(w, h)
 
 
 func _set_supply(supply: int, supply_max: int) -> void:
@@ -1631,7 +1633,7 @@ func _set_supply_stacked(on: bool) -> void:
 			_supply_stack.name = "SupplyStack"
 			_supply_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			_supply_stack.alignment = BoxContainer.ALIGNMENT_CENTER
-			_supply_stack.add_theme_constant_override(&"separation", 4)
+			_supply_stack.add_theme_constant_override(&"separation", 2)  # kc-readability: the taller number face
 		_supply_box.remove_child(row)
 		_supply_box.add_child(_supply_stack)
 		_supply_stack.add_child(row)

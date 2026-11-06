@@ -277,7 +277,7 @@ static func _syn(scene: Node) -> Dictionary:
 	for lane: Node in scene.get_board().get_lanes():
 		chips.append(String(lane.get_target_chips()) if lane.has_method(&"get_target_chips") else "")
 	return {"rail_rect": _css(rail), "rail_player": Array(rail.chip_texts(&"player")), "rail_enemy": Array(rail.chip_texts(&"enemy")),
-			"ticks": scene.get_board().get_drawn_ticks().size(), "ghost_ticks": scene.get_board().get_ghost_ticks().size(),
+			"ticks": scene.get_board().get_drawn_ticks().size() if scene.get_board().has_method(&"get_drawn_ticks") else 0, "ghost_ticks": scene.get_board().get_ghost_ticks().size(),
 			"chips": chips, "callout": scene.get_last_set_callout(), "callouts_visible": Array(scene.get_set_callouts())}
 
 
