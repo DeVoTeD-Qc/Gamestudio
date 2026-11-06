@@ -847,39 +847,46 @@ func _make_art_tile(art: StringName, equipped: bool, selected: bool) -> Control:
 	var entry: Dictionary = _card_entry(art_entry, art)
 	if not entry.has("subname"):
 		entry["subname"] = BannerArtDB.DEFAULT_SUBNAME
+	# The art's trait slot is the anatomy's top-right trait slot (coming: arts that give a trait).
+	var tr: StringName = BannerArtDB.art_trait(art)
+	if tr != &"":
+		entry["trait"] = String(tr)
+	entry["reserve_trait"] = true
+	if equipped:
+		entry["subname"] = "%s · EQUIPPED" % entry["subname"]
 	var panel: PanelContainer = BannerCard.build(entry, tile_size, METRIC_H_COMPACT if compact else METRIC_H)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.theme_type_variation = &"HandCardSelected" if selected else &"HandCard"
 	b.add_child(panel)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var face: Control = panel.get_node("Face")
-	# Trait slot (coming: arts that give a trait): the trait's plate when the art carries one, else
-	# an empty dashed slot, centred in the plate row.
-	var tr: StringName = BannerArtDB.art_trait(art)
+	# Trait slot: the art's trait plate (drawn by the banner, top-right) or an empty dashed slot there.
 	var slot: Control = Control.new()
 	slot.name = "TraitSlot"
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slot.set_meta(&"trait", tr)
 	face.add_child(slot)
 	slot.draw.connect(func() -> void:
-		if tr != &"":
-			SynergyGlyphs.draw_trait_plate(slot, Rect2(Vector2.ZERO, slot.size), tr, true, false)
-		else:
+		if tr == &"":
 			BannerView._dashed_rect(slot, Rect2(Vector2.ZERO, slot.size).grow(-1.0), Color(1, 1, 1, 0.35), 1.0))
-	var tag: Label = null
 	if equipped:
-		tag = _tag_label("EQUIPPED", AMBER, Color(0.07, 0.08, 0.1))
-		tag.name = "EquippedTag"
-		face.add_child(tag)
+		var frame: Control = Control.new()
+		frame.name = "EquippedTag"
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face.add_child(frame)
+		frame.draw.connect(func() -> void: frame.draw_rect(Rect2(Vector2.ZERO, frame.size).grow(-1.0), AMBER, false, 3.0))
+		panel.sort_children.connect(func() -> void:
+			frame.position = Vector2.ZERO
+			frame.size = face.size
+			frame.queue_redraw())
+	var bv2: BannerView = BannerCard.banner_of(panel)
 	panel.sort_children.connect(func() -> void:
 		var mm: Dictionary = BannerView.metrics(minf(face.size.y, METRIC_H_COMPACT if compact else METRIC_H))
-		var ps: float = mm["plate"]
-		slot.size = Vector2(ps, ps)
-		slot.position = Vector2(roundf(face.size.x * 0.5 - ps * 0.5) + (40.0 if tag != null else 0.0), mm["pad"])
-		slot.queue_redraw()
-		if tag != null:
-			tag.size = tag.get_combined_minimum_size()
-			tag.position = Vector2(slot.position.x - tag.size.x - 6.0, mm["pad"]))
+		var an: Dictionary = BannerView.anatomy(face.size, mm, bv2.entry, bv2.lead if bv2.lead > 0.0 else -1.0)
+		var tr_rect: Rect2 = an["trait"]
+		slot.position = tr_rect.position
+		slot.size = tr_rect.size
+		slot.queue_redraw())
 	return b
 
 

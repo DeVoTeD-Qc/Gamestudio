@@ -373,7 +373,7 @@ func _draw_overlay() -> void:
 	if an.has("trait"):
 		if op:
 			_draw_dog_tag(o, an["trait"])
-		else:
+		elif String(entry.get("trait", "")) != "":
 			var tier: int = int(entry.get("trait_tier", 0))
 			SynergyGlyphs.draw_trait_plate(o, an["trait"], StringName(String(entry.get("trait", ""))), tier >= 2, tier >= 3)
 	# Abilities (bottom-left).
@@ -442,7 +442,7 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 		out["elite"] = Rect2(lx, top, plate, plate)
 		lx += plate + 2.0
 	var rx: float = sz.x - pad - plate
-	if op or String(e.get("trait", "")) != "":
+	if op or String(e.get("trait", "")) != "" or bool(e.get("reserve_trait", false)):
 		out["trait"] = Rect2(rx, top, plate, plate)
 	else:
 		rx = sz.x - pad + 2.0
