@@ -20,10 +20,30 @@ func _config() -> RunConfig:
 	return load("res://data/run_config.tres") as RunConfig
 
 
+## The offer schedule these tests pin is the classic one (Supply Drop / weapon level / Perk). The
+## shipped config also queues the kc-syn offers (synergy_offers, kc-syn-ui); they are covered by
+## test_shipped_schedule_adds_the_synergy_offers and test_run_synergy.gd.
+func _classic_config() -> RunConfig:
+	var cfg: RunConfig = _config().duplicate() as RunConfig
+	cfg.synergy_offers = false
+	return cfg
+
+
 func _new_run(seed_value: int = SEED) -> RunProgress:
-	var r: RunProgress = RunProgress.create(_config(), seed_value)
+	var r: RunProgress = RunProgress.create(_classic_config(), seed_value)
 	r.begin()
 	return r
+
+
+## kc-syn-ui: with the shipped run_config.tres the schedule gains Doctrine after match 1, Promotion
+## after matches 2 and 4, and Regroup after a loss.
+func test_shipped_schedule_adds_the_synergy_offers() -> void:
+	var r: RunProgress = RunProgress.create(_config(), SEED)
+	r.begin()
+	assert_true(r.config.synergy_offers, "synergy offers are on in run_config.tres")
+	assert_eq(_play_forced(r, &"player"), [SUPPLY, RewardOffers.KIND_DOCTRINE, ATTACH] as Array[StringName], "after match 1")
+	assert_eq(_play_forced(r, &"player"), [SUPPLY, RewardOffers.KIND_PROMOTION, PERK] as Array[StringName], "after match 2")
+	assert_eq(_play_forced(r, &"enemy"), [RewardOffers.KIND_REGROUP, ATTACH] as Array[StringName], "after a loss (match 3)")
 
 
 ## Records `match_result` and takes option 0 of every offer. Returns the offer kinds seen.
@@ -331,7 +351,7 @@ func test_seed_is_deterministic() -> void:
 # --- Save / load -------------------------------------------------------------------------
 
 func test_save_reload_continue_produces_the_same_state() -> void:
-	var cfg: RunConfig = _config()
+	var cfg: RunConfig = _classic_config()
 	var r: RunProgress = _new_run(9001)
 	_play_forced(r, &"player")
 	r.record_result(&"enemy")  # leaves the Perk offer pending
@@ -446,6 +466,10 @@ func test_run_state_flow_saves_and_continues() -> void:
 	assert_not_null(m, "match built")
 	rs.record_result(&"enemy")
 	assert_eq(rs.tickets, 2, "ticket lost")
+	# kc-syn-ui: the shipped schedule puts Regroup and Doctrine before the weapon level.
+	assert_eq(rs.current_offer()["kind"], RewardOffers.KIND_REGROUP, "Regroup after a loss")
+	while not rs.current_offer().is_empty() and rs.current_offer()["kind"] != ATTACH:
+		rs.skip_offer()
 	assert_eq(rs.current_offer()["kind"], ATTACH, "weapon level offer")
 	var before: String = _json(rs.run)
 	rs.reset()

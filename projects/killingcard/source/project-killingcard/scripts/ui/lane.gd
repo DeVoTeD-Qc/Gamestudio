@@ -183,9 +183,10 @@ func _layout() -> void:
 
 
 ## Shows whether the selected card / Operator can go here (TARGET_*), with a short badge text.
-func set_target(state: StringName, text: String = "") -> void:
+func set_target(state: StringName, text: String = "", chips: String = "") -> void:
 	target_state = state
 	target_text = text
+	_set_chips(state != TARGET_NONE and state != TARGET_INVALID and not chips.is_empty(), chips)
 	_badge.visible = state != TARGET_NONE and not text.is_empty()
 	_badge.theme_type_variation = &"TargetBadgeBad" if state == TARGET_INVALID else &"TargetBadge"
 	_badge_text.text = text
@@ -251,6 +252,40 @@ func _place_ghost() -> void:
 	_slots.move_child(_ghost, -1)
 
 
+## kc-syn-ui: the placement preview's chips under the column badge ("VANGUARD 3 ON · +1 FP").
+var _chip: PanelContainer = null
+var _chip_text: Label = null
+var target_chips: String = ""
+
+
+func _set_chips(on: bool, text: String) -> void:
+	if _chip == null:
+		_chip = PanelContainer.new()
+		_chip.name = "SynergyChips"
+		_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_chip.theme_type_variation = &"TargetBadge"
+		_chip_text = Label.new()
+		_chip_text.theme_type_variation = &"TargetText"
+		_chip_text.add_theme_color_override(&"font_color", Color("#7CF29A"))
+		_chip.add_child(_chip_text)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.05, 0.06, 0.07, 0.9)
+		sb.border_color = Color("#7CF29A")
+		sb.set_border_width_all(1)
+		sb.set_content_margin_all(3)
+		_chip.add_theme_stylebox_override(&"panel", sb)
+		_fx_layer.add_child(_chip)
+	target_chips = text if on else ""
+	_chip.visible = on
+	_chip_text.text = text
+	_place_badge.call_deferred()
+
+
+## The chips text shown now ("" = none; tests / QA).
+func get_target_chips() -> String:
+	return target_chips if _chip != null and _chip.visible else ""
+
+
 ## The badge sits in your half, over the first empty row (clear of the landing ghost).
 func _place_badge() -> void:
 	if metrics.is_empty() or _badge == null:
@@ -262,6 +297,12 @@ func _place_badge() -> void:
 		row = mini(row + 1, ROWS - 1) if row < ROWS - 1 else maxi(row - 1, 0)
 	var y: float = BoardMetrics.row_y(metrics, &"player", row) + (metrics["bh"] - _badge.size.y) * 0.5
 	_badge.position = Vector2(roundf((size.x - _badge.size.x) * 0.5), roundf(y))
+	if _chip != null and _chip.visible:
+		_chip.reset_size()
+		var cy: float = _badge.position.y + _badge.size.y + 2.0
+		if cy + _chip.size.y > size.y:
+			cy = _badge.position.y - _chip.size.y - 2.0
+		_chip.position = Vector2(roundf((size.x - _chip.size.x) * 0.5), roundf(cy))
 
 
 ## Frames the units whose uid is in `uids` as pickable targets (empty clears).

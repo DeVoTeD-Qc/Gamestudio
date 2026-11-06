@@ -4,7 +4,11 @@
 #   scene with its text and CSS-pixel rect, and on the match screen the hand (name, id, cost,
 #   playable, rect), the columns (rect, your / rival line names, Fields), the phase, round,
 #   inspector state and the toast. Playwright clicks those rects instead of guessing pixels.
-#   Never active outside ?qa=1; nothing here changes the game.
+#   Never active outside ?qa=1; nothing here changes the game, except the QA-only commands a smoke
+#   test can send through window.kcQaCmd (kc-syn-ui, ?qa=1 only): "win" / "lose" end the current run
+#   match at once (SceneRouter.finish_run_match_forced), "stage_synergy" puts Trained cards on your
+#   board and in your hand so links, sets and the placement preview can be shot without playing a
+#   whole run.
 # Dependencies: JavaScriptBridge (web only). Added by Settings (autoload) when enabled().
 # Author: Mechanics Developer Agent (kc-board)
 extends Node
@@ -36,8 +40,44 @@ func _process(delta: float) -> void:
 	if _t < PERIOD:
 		return
 	_t = 0.0
+	var cmd: Variant = JavaScriptBridge.eval("(function(){var c = window.kcQaCmd || ''; window.kcQaCmd = ''; return c;})()", true)
+	if String(cmd) != "":
+		run_command(String(cmd))
 	var data: Dictionary = snapshot()
 	JavaScriptBridge.eval("window.kcQa = %s;" % JSON.stringify(data), true)
+
+
+## kc-syn-ui QA-only commands (see the header). Returns "" or why nothing happened.
+func run_command(cmd: String) -> String:
+	var scene: Node = get_tree().current_scene
+	var router: Node = get_node_or_null(^"/root/SceneRouter")
+	match cmd:
+		"win", "lose":
+			if router == null or scene == null or not scene.has_node("%MatchController"):
+				return "no match"
+			router.finish_run_match_forced(&"player" if cmd == "win" else &"enemy",
+					{"reason": &"target", "rounds": 4, "player_score": 6 if cmd == "win" else 2, "enemy_score": 2 if cmd == "win" else 6},
+					{"best_streak": 2, "player_eliminations": 4, "enemy_eliminations": 2})
+			return ""
+		"stage_synergy":
+			var ctrl: Node = scene.get_node_or_null("%MatchController") if scene != null and scene.has_node("%MatchController") else null
+			if ctrl == null or ctrl.get(&"state") == null:
+				return "no match"
+			var st: MatchState = ctrl.state
+			# Point Man (Fireteam, Vanguard) in A1, Marksman (Spotter, Spec Ops) in B1; in hand a Trained
+			# Breacher (Guard, Vanguard: Vanguard 2 when it lands) and a Trained Recon Specialist.
+			for pair: Array in [[&"point_man", 0], [&"marksman", 1]]:
+				var card: CardData = CardDB.get_card(pair[0])
+				if card != null and st.projected_occupancy(0, int(pair[1])) < st.config.zone_capacity:
+					st.put_in_line(st.create_unit(0, card, -1, SynergyRules.LEVEL_TRAINED), int(pair[1]))
+			for id: StringName in [&"breacher", &"recon_specialist"]:
+				var c2: CardData = CardDB.get_card(id)
+				if c2 != null:
+					st.sides[0].hand.push_front(RulesCard.new(st.new_uid(), c2, SynergyRules.LEVEL_TRAINED))
+			st.sides[0].supply = maxi(st.sides[0].supply, 6)
+			ctrl.refresh()
+			return ""
+	return "unknown command"
 
 
 ## The published Dictionary (also callable from tests).
@@ -64,6 +104,15 @@ func snapshot(scene: Node = null) -> Dictionary:
 	var ctrl: Node = scene.get_node_or_null("%MatchController") if scene.has_node("%MatchController") else null
 	if ctrl != null and ctrl.get(&"state") != null:
 		out["match"] = _match(scene, ctrl)
+	# kc-syn-ui: the reward screen's offer (kind, Retire option / picker, list tiles, deck view).
+	if scene.has_method(&"show_offer") and scene.get(&"offer") != null:
+		var off: Dictionary = scene.get(&"offer")
+		var rt: Variant = scene.get(&"retire_tile")
+		var ev: Control = scene.get_engine_view() if scene.has_method(&"get_engine_view") else null
+		out["reward"] = {"kind": String(off.get("kind", "")), "on_trait": String(off.get("on_trait", "")),
+				"retire": bool(off.get("retire", false)), "retire_mode": bool(scene.get(&"retire_mode")),
+				"retire_tile": _css(rt) if rt is Control else [], "list_tiles": (scene.get(&"list_tiles") as Array).size(),
+				"deck_view": ev != null and ev.visible}
 	# kc-ui3: an open codex (Title or MENU): what it shows, and the inspector over it.
 	for n: Node in scene.find_children("Codex", "Control", true, false):
 		var codex: Control = n
@@ -143,6 +192,7 @@ static func _layout_v2(scene: Node) -> Dictionary:
 	if hand.has_method(&"get_operator_card") and hand.get_operator_card() != null:
 		var oc: Control = hand.get_operator_card()
 		op_card = {"rect": _css(oc), "visible": oc.is_visible_in_tree(), "state": String(hand.operator_entry.get("state", "")),
+				"mini": bool(oc.get_meta(&"mini", false)), "short": bool(oc.get_meta(&"operator_short", false)),
 				"status": String(hand.operator_entry.get("status", "")).replace("\n", " "), "selected": hand.operator_selected}
 	var ks: Array = []
 	if scene.has_method(&"get_killstreak_row"):
@@ -160,8 +210,21 @@ static func _layout_v2(scene: Node) -> Dictionary:
 			"flyout": String(scene.get(&"flyout_key")), "mirror": bool(scene.get(&"mirror")),
 			"banner": [m.get("bw", 0.0), m.get("bh", 0.0)], "card": [m.get("card", Vector2.ZERO).x, m.get("card", Vector2.ZERO).y],
 			"hand_tab": _css(scene.get_hand_tab()), "badges": badges, "toasts": toasts, "log_lines": log_lines,
-			"operator_card": op_card, "killstreaks": ks, "backing": backing,
+			"operator_card": op_card, "killstreaks": ks, "backing": backing, "syn": _syn(scene),
 			"speed_x2": scene.get_speed_button().button_pressed}
+
+
+## kc-syn-ui: trait rail, link ticks, the placement preview and set callouts.
+static func _syn(scene: Node) -> Dictionary:
+	if not scene.has_method(&"get_trait_rail"):
+		return {}
+	var rail: Control = scene.get_trait_rail()
+	var chips: Array = []
+	for lane: Node in scene.get_board().get_lanes():
+		chips.append(String(lane.get_target_chips()) if lane.has_method(&"get_target_chips") else "")
+	return {"rail_rect": _css(rail), "rail_player": Array(rail.chip_texts(&"player")), "rail_enemy": Array(rail.chip_texts(&"enemy")),
+			"ticks": scene.get_board().get_drawn_ticks().size(), "ghost_ticks": scene.get_board().get_ghost_ticks().size(),
+			"chips": chips, "callout": scene.get_last_set_callout(), "callouts_visible": Array(scene.get_set_callouts())}
 
 
 ## kc-cod2: which art a BannerView shows (art id, licensed, animated, flipbook playing now).

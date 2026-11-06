@@ -24,6 +24,7 @@ extends Control
 enum Mode { EMPTY, UNIT, INCOMING, GHOST }
 
 const SHIMMER: Shader = preload("res://assets/shaders/banner_shimmer.gdshader")
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const CLASS_ICONS: Dictionary = {
 	"SMG": &"class_smg", "SHOTGUN": &"class_shotgun", "AR": &"class_ar", "SNIPER": &"class_sniper",
 	"LMG": &"class_lmg", "OPERATOR": &"type_operator",
@@ -329,17 +330,33 @@ func _draw_overlay() -> void:
 		o.draw_rect(fr, BRASS, false, 3.0)
 	elif bool(entry.get("elite", false)):
 		o.draw_rect(r.grow(-1.0), BRASS, false, 1.5)
+	# kc-syn-ui: the copy level's camo band on the OUTER edge (Trained Gilded, Veteran Forged,
+	# Elite Priceless; a Recruit keeps the plain frame).
+	var lvl_band: StringName = StringName(String(entry.get("band", "")))
+	var lband_h: float = 0.0
+	if not op and lvl_band != &"":
+		lband_h = 4.0 if size.y < 100.0 else 8.0
+		SynergyGlyphs.draw_band(o, Rect2(spine, size.y - lband_h if mine else 0.0, size.x - spine, lband_h), lvl_band)
 	var inner_y: float = m["pad"] if mine else size.y - m["pad"] - m["badge"]
-	var outer_y: float = size.y - m["pad"] - m["plate"] - (band_h if op and mine else 0.0) if mine \
-			else m["pad"] + (band_h if op else 0.0)
+	var outer_y: float = size.y - m["pad"] - m["plate"] - (band_h if op and mine else lband_h if mine else 0.0) if mine \
+			else m["pad"] + (band_h if op else lband_h)
 	var left_x: float = spine + m["pad"]
 	if entry.has("fp"):
 		# Firepower (inner-left): teal circle (yours) / red notched diamond (rival).
-		_draw_fp(o, Rect2(left_x, inner_y, m["badge"], m["badge"]), int(entry.get("fp", 0)), mine, m)
+		var fp_rect: Rect2 = Rect2(left_x, inner_y, m["badge"], m["badge"])
+		_draw_fp(o, fp_rect, int(entry.get("fp", 0)), mine, m)
+		_draw_trend(o, fp_rect, int(entry.get("fp_trend", 0)), mine)
 		# Armor (inner-right): grey shield, amber when damaged.
 		var armor: int = int(entry.get("armor", 0))
 		var damaged: bool = armor < int(entry.get("armor_max", armor))
-		_draw_armor(o, Rect2(size.x - m["pad"] - m["badge"], inner_y, m["badge"], m["badge"] * 1.08), armor, damaged, m)
+		var ar_rect: Rect2 = Rect2(size.x - m["pad"] - m["badge"], inner_y, m["badge"], m["badge"] * 1.08)
+		_draw_armor(o, ar_rect, armor, damaged, m)
+		# kc-syn-ui: Cover now (printed + effects + links + sets), left of the Armor badge.
+		var cov: int = int(entry.get("cover", 0))
+		if cov > 0:
+			var cs: float = roundf(m["badge"] * 0.78)
+			var cr: Rect2 = Rect2(ar_rect.position.x - cs - 3.0, inner_y + (m["badge"] - cs) * 0.5, cs, cs)
+			_draw_cover_chip(o, cr, cov, int(entry.get("cover_trend", 0)), m)
 	# Class pip (outer-left).
 	var cls: String = String(entry.get("cls", "")).to_upper()
 	if CLASS_ICONS.has(cls) and not op:
@@ -349,6 +366,13 @@ func _draw_overlay() -> void:
 		var sr: Rect2 = Rect2(left_x + m["plate"] + 2.0, outer_y, m["plate"], m["plate"])
 		o.draw_rect(sr, Color(INK, 0.82))
 		draw_star(o, sr.get_center(), sr.size.x * 0.42, BRASS)
+	# kc-syn-ui: trait icon (outer-left, after the class pip / Elite star): lit at tier 2, ring at 3.
+	var tr: StringName = StringName(String(entry.get("trait", "")))
+	if tr != &"" and not op:
+		var slot_i: int = 1 + (1 if bool(entry.get("elite", false)) else 0)
+		var trr: Rect2 = Rect2(left_x + slot_i * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"])
+		var tier: int = int(entry.get("trait_tier", 0))
+		SynergyGlyphs.draw_trait_plate(o, trr, tr, tier >= 2, tier >= 3)
 	# Effect (outer-right): Operator dog tag, else up to 2 keyword glyphs, else a bolt.
 	var ex: float = size.x - m["pad"] - m["plate"]
 	if op:
@@ -374,6 +398,13 @@ func _draw_overlay() -> void:
 			shown += 1
 		if bolt:
 			_draw_bolt(o, Rect2(ex - shown * (m["plate"] + 2.0), outer_y, m["plate"], m["plate"]), icons.size() > 2)
+			shown += 1
+		# kc-syn-ui: the neighbour keyword pip (its arrow points at the neighbours it uses), lit while
+		# the link is on, grey while idle.
+		var kw: StringName = StringName(String(entry.get("kw", "")))
+		if kw != &"":
+			var kr: Rect2 = Rect2(ex - shown * (m["plate"] + 2.0) - 2.0, outer_y, m["plate"], m["plate"])
+			SynergyGlyphs.draw_keyword_plate(o, kr, kw, bool(entry.get("kw_active", false)), side_c, mine)
 	if pending:
 		_draw_tag(o, "PLAN", _col(&"accent"), mine, m)
 		_dashed_rect(o, r.grow(-1.0), _col(&"accent"), 2.0)
@@ -426,7 +457,42 @@ func _draw_fp(o: Control, rr: Rect2, value: int, mine: bool, m: Dictionary) -> v
 		o.draw_colored_polygon(pts, Color("#5A1A1C"))
 		pts.append(pts[0])
 		o.draw_polyline(pts, _col(&"enemy"), 2.0)
-	_draw_number(o, rr, str(value), Color.WHITE, m)
+	var trend: int = int(entry.get("fp_trend", 0))
+	_draw_number(o, rr, str(value), SynergyGlyphs.UP if trend > 0 else (SynergyGlyphs.DOWN if trend < 0 else Color.WHITE), m)
+
+
+## Buffed (green, up triangle) / lowered (red, down triangle) marker on a stat badge's outer corner.
+func _draw_trend(o: Control, rr: Rect2, trend: int, mine: bool) -> void:
+	if trend == 0:
+		return
+	var c: Color = SynergyGlyphs.UP if trend > 0 else SynergyGlyphs.DOWN
+	var s: float = maxf(7.0, rr.size.x * 0.34)
+	var base: Vector2 = Vector2(rr.end.x - s * 0.2, rr.position.y + (rr.size.y - s * 0.2 if mine else s * 0.2))
+	var pts: PackedVector2Array
+	if trend > 0:
+		pts = [base + Vector2(0, -s * 0.5), base + Vector2(s * 0.5, s * 0.4), base + Vector2(-s * 0.5, s * 0.4)]
+	else:
+		pts = [base + Vector2(0, s * 0.5), base + Vector2(s * 0.5, -s * 0.4), base + Vector2(-s * 0.5, -s * 0.4)]
+	var outline: PackedVector2Array = pts.duplicate()
+	outline.append(pts[0])
+	o.draw_colored_polygon(pts, c)
+	o.draw_polyline(outline, INK, 1.5)
+
+
+func _draw_cover_chip(o: Control, rr: Rect2, value: int, trend: int, m: Dictionary) -> void:
+	o.draw_rect(rr, Color(INK, 0.86))
+	var c: Color = SynergyGlyphs.UP if trend > 0 else Color("#B9C2C9")
+	o.draw_rect(rr, c, false, 1.5)
+	var tex: Texture2D = IconSheet.get_icon(&"kw_cover") if IconSheet.has_icon(&"kw_cover") else null
+	if tex != null:
+		o.draw_texture_rect(tex, Rect2(rr.position + Vector2(1, 1), rr.size * 0.55), false, c)
+	var font: Font = get_theme_font(&"font", &"HudNumber")
+	var fs: int = maxi(11, int(rr.size.y * 0.62))
+	var txt: String = str(value)
+	var sz: Vector2 = font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var pos: Vector2 = Vector2(rr.end.x - sz.x - 2.0, rr.end.y - font.get_descent(fs) - 1.0)
+	o.draw_string_outline(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, INK)
+	o.draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
 
 
 func _draw_armor(o: Control, rr: Rect2, value: int, damaged: bool, m: Dictionary) -> void:

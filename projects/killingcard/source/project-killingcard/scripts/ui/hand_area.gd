@@ -40,6 +40,9 @@ signal operator_drag_ended(pos: Vector2)
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
 const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const BRASS: Color = Color("#C9A227")
+const BRASS_DARK: Color = Color("#3A2D0B")
 
 ## Desktop / phone card size (board-and-cards-ux.md §3.4); set_card_size() follows BoardMetrics.
 const CARD_SIZE: Vector2 = Vector2(108, 140)
@@ -131,7 +134,9 @@ func set_hand(cards: Array) -> void:
 		child.queue_free()
 	_op_chip = null
 	if not operator_entry.is_empty():
-		_op_chip = _make_operator_card(operator_entry)
+		# kc-syn-ui (head): on the board the Operator card folds to a half-height mini card.
+		var on_board: bool = StringName(String(operator_entry.get("state", ""))) == &"board"
+		_op_chip = _make_operator_mini(operator_entry) if on_board else _make_operator_card(operator_entry)
 		_row.add_child(_op_chip)
 	for card: Dictionary in cards:
 		var chip: Control = _make_card(card)
@@ -274,14 +279,31 @@ func _fit_cards() -> void:
 		pitch_y = minf(pitch_y, (_row.size.y - card_size.y) / (rows - 1))
 	var grid_w: float = card_size.x + pitch_x * (cols - 1)
 	var x0: float = maxf(0.0, (_row.size.x - grid_w) * 0.5)
+	# kc-syn-ui: the mini Operator card is half a card tall; the cards under it in the first column
+	# move up by the half it frees, so that column holds more before the rows start to overlap.
+	var mini: bool = _op_chip != null and bool(_op_chip.get_meta(&"mini", false))
+	var mini_h: float = mini_height()
+	var lift: float = (card_size.y - mini_h) if mini else 0.0
+	if mini and rows > 1:
+		var pitch_y0: float = minf(card_size.y + _gap, (_row.size.y - card_size.y + lift) / (rows - 1))
+		pitch_y = minf(card_size.y + _gap, maxf(pitch_y, pitch_y0))
 	for i: int in n:
 		var c: Control = cards[i]
-		c.size = card_size
+		c.size = card_size if not (mini and c == _op_chip) else Vector2(card_size.x, mini_h)
 		var x: float = x0 + (i % cols) * pitch_x
 		# kc-board2 §4.2: the selected card shifts 14 px toward the board.
 		if (int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0) or (c == _op_chip and operator_selected):
 			x += SELECTED_SHIFT * board_side
-		c.position = Vector2(roundf(x), roundf((i / cols) * pitch_y))
+		var y: float = (i / cols) * pitch_y
+		if mini and i % cols == 0 and i > 0:
+			y -= lift
+		c.position = Vector2(roundf(x), roundf(y))
+
+
+## Height of the mini Operator card: half a hand card, at least 64 px (a 44 pt tap target on the
+## phone, 64 px on desktop; three 16 px lines fit).
+func mini_height() -> float:
+	return maxf(64.0, roundf(_card_size().y * 0.5))
 
 
 func _make_card(card: Dictionary) -> Control:
@@ -329,6 +351,7 @@ func _make_card(card: Dictionary) -> Control:
 	hex.set_text(str(card.get("cost", 0)))
 	hex.label.set_meta(&"important", true)
 	face.add_child(hex)
+	_add_synergy_overlay(panel, face, hex, card, art_h, big)
 	if bool(card.get("elite", false)):
 		# Elite (Commander / Ace): gold star over the art's top-right corner.
 		var star: Control = Control.new()
@@ -395,6 +418,46 @@ func _make_card(card: Dictionary) -> Control:
 	return panel
 
 
+## kc-syn-ui: a Trained card's trait icon and keyword pip next to the cost hex, its level's camo
+## band under the art (Recruits: plain), and a dot when playing it this round would switch a set
+## tier on (completes_tier, e.g. "Vanguard 2").
+func _add_synergy_overlay(panel: Control, face: Control, hex: Control, card: Dictionary, art_h: float, big: bool) -> void:
+	var t: StringName = StringName(String(card.get("trait", "")))
+	var kw: StringName = StringName(String(card.get("kw", "")))
+	var band: StringName = StringName(String(card.get("band", "")))
+	var completes: String = String(card.get("completes_tier", ""))
+	if t == &"" and kw == &"" and band == &"" and completes == "":
+		return
+	var syn: Control = Control.new()
+	syn.name = "Synergy"
+	syn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	syn.set_meta(&"trait", t)
+	syn.set_meta(&"kw", kw)
+	syn.set_meta(&"band", band)
+	syn.set_meta(&"completes_tier", completes)
+	face.add_child(syn)
+	var px: float = 20.0 if big else 18.0
+	var accent: Color = get_theme_color(&"friend", &"Hud")
+	syn.draw.connect(func() -> void:
+		var x: float = hex.position.x + hex.size.x + 3.0
+		if band != &"":
+			SynergyGlyphs.draw_band(syn, Rect2(0, art_h - 6.0, syn.size.x, 4.0), band)
+		if t != &"":
+			SynergyGlyphs.draw_trait_plate(syn, Rect2(x, 3.0, px, px), t, false, false)
+			x += px + 2.0
+		if kw != &"":
+			SynergyGlyphs.draw_keyword_plate(syn, Rect2(x, 3.0, px, px), kw, true, accent, true)
+		if completes != "":
+			var dx: float = syn.size.x - (30.0 if bool(card.get("elite", false)) else 9.0)
+			SynergyGlyphs.draw_dot(syn, Vector2(dx, 9.0), 5.0, SynergyGlyphs.trait_color(t)))
+	panel.sort_children.connect(func() -> void:
+		syn.position = Vector2.ZERO
+		syn.size = face.size
+		syn.queue_redraw())
+	if completes != "":
+		panel.tooltip_text = "%s · playing it now turns %s on" % [panel.tooltip_text, completes]
+
+
 # =============================================================================
 # kc-ui3: the Operator card
 # =============================================================================
@@ -412,11 +475,34 @@ func _make_operator_card(op: Dictionary) -> Control:
 	var next_tag: Node = panel.find_child("NextTag", true, false)
 	if next_tag != null:
 		(next_tag as Control).visible = false
-	# No cost: the hex reads OP.
+	# kc-syn-ui (head B): not a deck card. No cost hex: a brass dog-tag plate with its Supply cost
+	# ("1 SUPPLY"; red when you can't pay it), a brass frame with cut corners (operator_frame()).
 	for hex: Node in panel.find_children("*", "", true, false):
 		if hex is CostHex:
-			(hex as CostHex).set_text("OP")
-			(hex as CostHex).label.add_theme_font_size_override(&"font_size", 16)
+			(hex as CostHex).visible = false
+	var cost: int = int(op.get("cost", 0))
+	var short: bool = state == &"deploy" and not bool(op.get("can_afford", true))
+	var plate_l: Label = _label("%d SUPPLY" % cost if cost > 0 else "OPERATOR", &"HudTag", true)
+	plate_l.name = "OperatorPlate"
+	plate_l.add_theme_font_size_override(&"font_size", 16)
+	plate_l.add_theme_color_override(&"font_color", Color.WHITE if short else Color(0.07, 0.08, 0.1))
+	var tag_sb := StyleBoxFlat.new()
+	tag_sb.bg_color = get_theme_color(&"enemy", &"Hud") if short else BRASS
+	tag_sb.set_corner_radius_all(6)
+	tag_sb.set_content_margin_all(2)
+	tag_sb.content_margin_left = 6
+	tag_sb.content_margin_right = 6
+	plate_l.add_theme_stylebox_override(&"normal", tag_sb)
+	var face0: Control = panel.get_node("Face")
+	face0.add_child(plate_l)
+	panel.sort_children.connect(func() -> void:
+		plate_l.size = plate_l.get_combined_minimum_size()
+		plate_l.position = Vector2(3, 3))
+	if short:
+		op = op.duplicate()
+		op["status"] = "NEED %d SUPPLY" % cost
+	panel.set_meta(&"operator_short", short)
+	_apply_operator_frame(panel)
 	var armor_text: String = "%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", op.get("armor", 0)))]
 	var bottom: Node = panel.find_child("Bottom", true, false)
 	if bottom != null and bottom.get_child_count() > 0:
@@ -435,6 +521,9 @@ func _make_operator_card(op: Dictionary) -> Control:
 	if state == &"deploy":
 		plate.bg_color = AMBER
 		status.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
+	if state == &"deploy" and bool(panel.get_meta(&"operator_short", false)):
+		plate.bg_color = Color(0.05, 0.06, 0.07, 0.9)
+		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
 	elif state == &"down":
 		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
 	else:
@@ -457,7 +546,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 	var glow: Control = Control.new()
 	glow.name = "Glow"
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.visible = state == &"deploy"
+	glow.visible = state == &"deploy" and not bool(panel.get_meta(&"operator_short", false))
 	panel.add_child(glow)
 	glow.draw.connect(func() -> void:
 		glow.draw_rect(Rect2(Vector2(-3, -3), glow.size + Vector2(6, 6)), Color(AMBER, 0.95), false, 3.0)
@@ -470,6 +559,87 @@ func _make_operator_card(op: Dictionary) -> Control:
 		var tw: Tween = glow.create_tween().set_loops()
 		tw.tween_property(glow, "modulate:a", 0.45, 0.7).set_trans(Tween.TRANS_SINE)
 		tw.tween_property(glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	_wire_operator(panel, bool(op.get("active", false)), bool(op.get("draggable", false)))
+	return panel
+
+
+## The Operator's own frame (head B): brass border, dark brass fill, cut (rounded) corners like a
+## dog tag; teal border while selected. Never the deck cards' HandCard style.
+func _apply_operator_frame(panel: Control) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = BRASS_DARK
+	sb.border_color = get_theme_color(&"friend", &"Hud") if operator_selected else BRASS
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(10)
+	sb.corner_detail = 2
+	sb.set_content_margin_all(3)
+	panel.add_theme_stylebox_override(&"panel", sb)
+
+
+## kc-syn-ui (head): the half-height Operator card while it is on the board: brass dog-tag frame,
+## its art dimmed behind, where it stands ("ON BOARD" / "B · ROW 2") and FP / Armor. Tap selects it
+## to Rotate (in Deploy), long-press = its rules.
+func _make_operator_mini(op: Dictionary) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "OperatorCard"
+	panel.set_meta(&"uid", OPERATOR_UID)
+	panel.set_meta(&"operator", true)
+	panel.set_meta(&"mini", true)
+	panel.add_to_group(&"tap_target")
+	panel.tooltip_text = "Your Operator: %s (on the board)" % String(op.get("name", ""))
+	var face: Control = Control.new()
+	face.name = "Face"
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.clip_contents = true
+	panel.add_child(face)
+	var art := TextureRect.new()
+	art.name = "Art"
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art_id: StringName = StringName(String(op.get("banner", "")))
+	art.texture = BannerArtDB.banner_texture(art_id, {"cls": "OPERATOR", "type": "unit"}) if art_id != &"" else null
+	art.self_modulate = Color(0.38, 0.38, 0.4)
+	face.add_child(art)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.name = "MiniColumn"
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override(&"separation", -2)
+	face.add_child(col)
+	var where: String = String(op.get("zone_label", ""))
+	var top: Label = _label("ON BOARD", &"HudTag", true)
+	top.name = "OperatorStatus"
+	top.add_theme_font_size_override(&"font_size", 16)
+	top.add_theme_color_override(&"font_color", BRASS)
+	col.add_child(top)
+	var pos_l: Label = _label("%s · ROW %d" % [where, int(op.get("row", 1))] if where != "" else "", &"HudTag", true)
+	pos_l.name = "OperatorWhere"
+	pos_l.add_theme_font_size_override(&"font_size", 16)
+	pos_l.add_theme_color_override(&"font_color", get_theme_color(&"friend", &"Hud"))
+	col.add_child(pos_l)
+	var stats: HBoxContainer = HBoxContainer.new()
+	stats.name = "Bottom"
+	stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stats.add_theme_constant_override(&"separation", 2)
+	var text_color: Color = get_theme_color(&"text", &"Hud")
+	stats.add_child(MiniIcons.icon(&"stat_firepower", 14.0, text_color))
+	stats.add_child(_number(str(int(op.get("fp", 0))), false))
+	var sp: Control = Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stats.add_child(sp)
+	stats.add_child(MiniIcons.icon(&"stat_armor", 14.0, text_color))
+	stats.add_child(_number("%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", op.get("armor", 0)))], false))
+	col.add_child(stats)
+	panel.sort_children.connect(func() -> void:
+		var inset: float = 3.0
+		face.position = Vector2(inset, inset)
+		face.size = panel.size - Vector2(inset, inset) * 2.0
+		art.position = Vector2.ZERO
+		art.size = face.size
+		col.position = Vector2(4, 0)
+		col.size = Vector2(face.size.x - 8.0, face.size.y))
+	_apply_operator_frame(panel)
 	_wire_operator(panel, bool(op.get("active", false)), bool(op.get("draggable", false)))
 	return panel
 
@@ -505,6 +675,7 @@ func _style_operator() -> void:
 		return
 	var state: StringName = StringName(String(operator_entry.get("state", "none")))
 	_op_chip.theme_type_variation = &"HandCardSelected" if operator_selected else &"HandCard"
+	_apply_operator_frame(_op_chip)
 	_op_chip.modulate.a = 1.0
 	var art: TextureRect = _op_chip.find_child("Art", true, false) as TextureRect
 	if art != null:

@@ -264,10 +264,11 @@ func _full_run(screen: Dictionary) -> void:
 
 	# Match 1 through the real hand-off: RunMap DEPLOY -> pending MatchState -> finish_run_match.
 	var plan: Array = [
-		[&"player", {"reason": &"target", "rounds": 6, "player_score": 6, "enemy_score": 3}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_ATTACHMENT]],
-		[&"player", {"reason": &"round_cap", "rounds": 8, "player_score": 7, "enemy_score": 5}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_PERK]],
-		[&"enemy", {"reason": &"target", "rounds": 5, "player_score": 2, "enemy_score": 6}, [RewardOffers.KIND_ATTACHMENT]],
-		[&"draw", {"reason": &"overtime_draw", "rounds": 10, "player_score": 5, "enemy_score": 5}, [RewardOffers.KIND_ATTACHMENT, RewardOffers.KIND_PERK]],
+		# kc-syn-ui: synergy offers on (Doctrine after M1, Promotion after M2 / M4, Regroup after a loss).
+		[&"player", {"reason": &"target", "rounds": 6, "player_score": 6, "enemy_score": 3}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_DOCTRINE, RewardOffers.KIND_ATTACHMENT]],
+		[&"player", {"reason": &"round_cap", "rounds": 8, "player_score": 7, "enemy_score": 5}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_PROMOTION, RewardOffers.KIND_PERK]],
+		[&"enemy", {"reason": &"target", "rounds": 5, "player_score": 2, "enemy_score": 6}, [RewardOffers.KIND_REGROUP, RewardOffers.KIND_ATTACHMENT]],
+		[&"draw", {"reason": &"overtime_draw", "rounds": 10, "player_score": 5, "enemy_score": 5}, [RewardOffers.KIND_ATTACHMENT, RewardOffers.KIND_PROMOTION, RewardOffers.KIND_PERK]],
 		[&"player", {"reason": &"target", "rounds": 7, "player_score": 6, "enemy_score": 4}, []],
 	]
 	for i: int in plan.size():
@@ -369,9 +370,20 @@ func _full_run(screen: Dictionary) -> void:
 				assert_eq(_rs.run.deck.size(), deck, "%s: DETAILS doesn't pick" % label)
 				await _tap(reward.get_inspector().get_node("%CloseButton"))
 				assert_false(reward.get_inspector().is_open(), "%s: CLOSE shuts the inspector" % label)
+				assert_not_null(reward.retire_tile, "%s: Supply Drop has the Retire option" % label)
 				if i == 1:
-					await _tap(reward._skip_button)
-					assert_eq(_rs.run.deck.size(), deck, "%s: SKIP adds nothing" % label)
+					# kc-syn-ui: the 4th option: Retire a card (a Recruit with a twin trains the twin).
+					await _tap(reward.retire_tile)
+					await _frames(2)
+					assert_true(reward.retire_mode and not reward.list_tiles.is_empty(), "%s: Retire lists the deck" % label)
+					_check(reward, screen, "retire picker m%d" % (i + 1))
+					var opt: Dictionary = _rs.run.retire_options()[0]
+					var honor: int = _rs.run.honor_roll.size()
+					if int(opt["twin_index"]) >= 0:
+						assert_true(reward.list_tiles[0].find_child("TwinLine", true, false) != null, "%s: twin-training preview" % label)
+					await _tap(reward.list_tiles[0])
+					assert_eq(_rs.run.deck.size(), deck - 1, "%s: Retire removes a card" % label)
+					assert_eq(_rs.run.honor_roll.size(), honor + 1, "%s: retired card on the Honor Roll" % label)
 				else:
 					var want: StringName = reward.offer["options"][1]
 					await _tap(reward.tiles[1])
@@ -388,6 +400,27 @@ func _full_run(screen: Dictionary) -> void:
 					await _tap(reward.tiles[0])
 					assert_eq(_rs.run.attachments.size(), atts + 1, "%s: attachment fitted" % label)
 					assert_eq(_rs.run.attachments[-1], want_att, "%s: the tapped attachment" % label)
+			elif kind == RewardOffers.KIND_DOCTRINE:
+				assert_eq(reward.tiles.size(), 2, "%s: 2 Doctrine emblems" % label)
+				var want_doc: StringName = reward.offer["options"][0]
+				await _tap(reward.tiles[0])
+				assert_eq(_rs.run.doctrine, want_doc, "%s: Doctrine picked" % label)
+			elif kind == RewardOffers.KIND_PROMOTION:
+				assert_eq(reward.list_tiles.size(), (reward.offer["options"] as Array).size(), "%s: one tile per promotion option" % label)
+				var pid: StringName = reward.offer["options"][0]
+				var plv: int = int(reward.offer["levels"][0])
+				var before_up: int = 0
+				for d: Dictionary in _rs.run.deck_view():
+					before_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
+				await _tap(reward.list_tiles[0])
+				var after_up: int = 0
+				for d: Dictionary in _rs.run.deck_view():
+					after_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
+				assert_eq(after_up, before_up + 1, "%s: one copy promoted" % label)
+			elif kind == RewardOffers.KIND_REGROUP:
+				assert_false(reward.list_tiles.is_empty(), "%s: Regroup lists cards to retire" % label)
+				await _tap(reward.list_tiles[0])
+				assert_eq(_rs.run.deck.size(), deck - 1, "%s: Regroup retires a card" % label)
 			else:
 				assert_eq(reward.tiles.size(), 2, "%s: 2 perks" % label)
 				var want_perk: StringName = reward.offer["options"][1]

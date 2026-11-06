@@ -146,3 +146,12 @@ static func badge_rects(m: Dictionary) -> Array[Rect2]:
 		out.append(Rect2(0, i * (h + m["badge_gap"]), strip.size.x, h))
 	out.append(Rect2(0, strip.size.y - h, strip.size.x, h))
 	return out
+
+
+## kc-syn-ui: the trait rail's rect (strip-local) between the PREVIEW badge and DECK.
+static func rail_rect(m: Dictionary) -> Rect2:
+	var rects: Array[Rect2] = badge_rects(m)
+	var gap: float = m["badge_gap"]
+	var top: float = rects[5].end.y + gap
+	var bottom: float = rects[6].position.y - gap
+	return Rect2(0, top, (m["strip"] as Rect2).size.x, maxf(0.0, bottom - top))

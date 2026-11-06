@@ -17,6 +17,7 @@ extends RefCounted
 
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
+const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
 ## kc-board: the columns are A / B / C (zones Left / Mid / Right).
 const ZONE_LABELS: PackedStringArray = ["A", "B", "C"]
 const RANGE_LABELS: PackedStringArray = ["CLOSE", "MID", "LONG"]
@@ -57,6 +58,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	for rc: RulesCard in me.hand:
 		var c: Dictionary = CardInfo.chip(rc.uid, rc.card)
 		c["playable"] = rc.card.cost <= me.supply
+		_hand_synergy(c, state, viewer, rc)
 		c["banner"] = String(state.art_by_uid.get(rc.uid, rc.card.id))
 		var title: String = BannerArtDB.art_title(StringName(String(c["banner"])))
 		if title != "":
@@ -89,6 +91,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"can_undo": deploy_open and not me.plays.is_empty() and not bool(me.plays.back()["immediate_done"]),
 		"undo_label": play_name(state, me, me.plays.back()) if not me.plays.is_empty() else "",
 		"result": state.result,
+		# kc-syn-ui: links, trait rail and set tiers of both sides (viewer-relative keys).
+		"synergy": synergy_block(state, viewer),
 	}
 	var ks: Array = []
 	var top: int = 0
@@ -119,7 +123,69 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 		"art": art_key(u, side),
 	}
 	_banner_fields(e, u.card, u, side, state, u.uid)
+	_unit_synergy(e, state, u, side)
 	return e
+
+
+## kc-syn-ui: the synergy / stat fields of a unit entry: fp_base / fp_trend (1 buffed, -1 lowered:
+## the badge colour), cover / cover_trend, kw + kw_active (the keyword pip lights while its link is
+## on), trait + trait_tier (icon lit at 2, ring at 3), level / band (camo band), fs_syn, heal.
+static func _unit_synergy(e: Dictionary, state: MatchState, u: RulesUnit, side: RulesSide) -> void:
+	var b: Dictionary = StatBreakdown.of_unit(state, u)
+	e["fp"] = int(b["fp"]["total"])
+	e["fp_base"] = int(b["fp"]["base"])
+	e["fp_trend"] = StatBreakdown.trend(b["fp"])
+	e["cover"] = int(b["cover"]["total"])
+	e["cover_trend"] = StatBreakdown.trend(b["cover"])
+	e["fs_syn"] = bool(b["fs"])
+	if bool(b["fs"]) and not state.has_first_shot(u, false):
+		# Spec Ops 3 gives First Shot: show its glyph like a printed one (the inspector names the source).
+		var kws: Array = (e.get("keywords", []) as Array).duplicate()
+		kws.push_front({"id": &"first_shot", "value": 0, "name": "First Shot"})
+		e["keywords"] = kws
+	e["heal"] = int(b["heal"])
+	e["kw"] = String(u.neighbor_keyword)
+	e["trait"] = String(u.synergy_trait)
+	e["level"] = u.level if u.card != null else -1
+	e["band"] = String(SynergyRules.LEVEL_BANDS[clampi(u.level, 0, 3)]) if u.card != null else ""
+	var sv: Dictionary = state.synergy_side(side.index)
+	e["trait_tier"] = int((sv.get("tiers", {}) as Dictionary).get(u.synergy_trait, 0)) if u.synergy_trait != &"" else 0
+	var active: bool = false
+	for l: Dictionary in sv.get("links", []):
+		if StringName(l["kind"]) == SynergyRules.FIRETEAM:
+			active = active or (int(l["to_uid"]) == u.uid and u.neighbor_keyword == SynergyRules.FIRETEAM)
+		elif int(l["from_uid"]) == u.uid:
+			active = true
+	e["kw_active"] = active
+
+
+## Hand chip synergy fields: kw / trait / level / band (Recruits: none) and completes_tier (a dot:
+## playing it this round would switch a set tier on, in at least one column).
+static func _hand_synergy(c: Dictionary, state: MatchState, viewer: int, rc: RulesCard) -> void:
+	c["kw"] = String(rc.neighbor_keyword())
+	c["trait"] = String(rc.card_trait())
+	c["level"] = rc.level
+	c["band"] = String(SynergyRules.LEVEL_BANDS[clampi(rc.level, 0, 3)])
+	var completes: String = ""
+	if rc.card_trait() != &"" and rc.card.card_type != DataEnums.CardType.TACTIC:
+		for z: int in MatchState.ZONE_COUNT:
+			var pv: Dictionary = state.preview_synergy(viewer, rc.uid, z)
+			if not bool(pv.get("ok", false)):
+				continue
+			var t: StringName = rc.card_trait()
+			var before: int = int((pv["tiers_before"] as Dictionary).get(t, 0))
+			var after: int = int((pv["tiers_after"] as Dictionary).get(t, 0))
+			if after > before:
+				completes = "%s %d" % [String(SynergyRules.TRAIT_NAMES.get(t, t)), after]
+				break
+	c["completes_tier"] = completes
+
+
+## {player: SIDE, enemy: SIDE} from MatchState.synergy_view, keyed relative to the viewer.
+static func synergy_block(state: MatchState, viewer: int) -> Dictionary:
+	var view: Dictionary = state.synergy_view(viewer)
+	return {"player": view.get(MatchState.SIDE_NAMES[viewer], {}), "enemy": view.get(MatchState.SIDE_NAMES[1 - viewer], {}),
+			"operator_cost": state.operator_cost()}
 
 
 ## kc-board banner fields of a unit entry: art id, effect bolt, Protector glyph, Elite frame, camo.
@@ -220,6 +286,10 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 						"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor,
 						"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card)), "art": art_key_of_card(rc.card)}
 				_banner_fields(entry, rc.card, null, side, state, rc.uid)
+				entry["kw"] = String(rc.neighbor_keyword())
+				entry["trait"] = String(rc.card_trait())
+				entry["level"] = rc.level
+				entry["band"] = String(SynergyRules.LEVEL_BANDS[clampi(rc.level, 0, 3)])
 			&"place", &"rotate":
 				var op: RulesUnit = side.operator_unit
 				entry = {"uid": op.uid, "name": unit_name(op, side), "cls": "OPERATOR", "operator": true,
@@ -254,6 +324,8 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 		"row": side.lines[op.zone].find(op) + 1 if op.is_on_board() else 0,
 		"planned_zone": ZONE_LABELS[planned] if planned != MatchState.NO_ZONE and planned != op.zone else "",
 		"can_deploy": side.operator_can_deploy, "respawns": state.respawn_enabled,
+		# kc-syn §6.3: placing the Operator costs Supply (deploy and every respawn).
+		"cost": state.operator_cost(), "can_afford": state.operator_cost() <= side.supply,
 		"keywords": CardInfo.icon_keywords(CardInfo.operator_keywords(op)),
 	}
 	var banner: Dictionary = {"operator": true}

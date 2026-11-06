@@ -282,6 +282,17 @@ func _handle(ev: Dictionary) -> float:
 			var uid: int = int(ev.get("target_uid", -1))
 			_number(uid, "+%d" % int(ev.get("amount", 0)), FxStyle.TEAL, false, ev)
 			return t.get_value(&"popup_beat")
+		RulesEvent.UNIT_HEALED:
+			# kc-syn-ui: the Undead set heal (and Aid Station): a green +n on the unit, named.
+			var huid: int = int(ev.get("target_uid", -1))
+			var undead: bool = StringName(ev.get("source_id", &"")) == &"trait_undead"
+			_number(huid, "+%d" % int(ev.get("amount", 0)), Color("#8EDB6A") if undead else FxStyle.TEAL, false, ev)
+			if undead:
+				_tag(huid, "UNDEAD HEAL", Color("#8EDB6A"), ev)
+			return t.get_value(&"popup_beat")
+		RulesEvent.SYNERGY_CHANGED:
+			# The match screen calls the set out over the trait rail; give it a beat to be read.
+			return t.get_value(&"popup_beat") * 0.5
 		RulesEvent.STREAK_CHANGED:
 			return _on_streak(ev, t)
 		RulesEvent.KILLSTREAK_EARNED:
@@ -755,7 +766,7 @@ func _side_of_target(ev: Dictionary) -> StringName:
 	match ev.get("type", &""):
 		RulesEvent.DAMAGE_DEALT, RulesEvent.SURVIVED_LETHAL:
 			return ev.get("side", &"enemy")
-		RulesEvent.PATCHED:
+		RulesEvent.PATCHED, RulesEvent.UNIT_HEALED:
 			return ev.get("side", viewer_side)
 		RulesEvent.SUPPRESSED, RulesEvent.EQUIPMENT_TRIGGERED:
 			return _other(ev.get("side", viewer_side))

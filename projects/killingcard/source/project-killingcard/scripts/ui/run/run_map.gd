@@ -70,6 +70,15 @@ func _build() -> void:
 	_loadout_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_loadout_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	footer.add_child(_loadout_label)
+	# kc-syn-ui: DECK opens the deck view (levels, traits, the Engine panel).
+	var deck_b: Button = make_button("DECK", &"HudButton", 120)
+	deck_b.name = "DeckButton"
+	_deck_view = load("res://scripts/ui/run/engine_panel.gd").new()
+	_deck_view.name = "EngineView"
+	add_child(_deck_view)
+	deck_b.pressed.connect(func() -> void: _deck_view.open(run()))
+	footer.add_child(deck_b)
+	_deck_button = deck_b
 	_quit_button = make_button("SAVE & QUIT", &"HudButton", 170)
 	_quit_button.name = "QuitButton"
 	_quit_button.pressed.connect(func() -> void: goto(RunFlow.SCENE_TITLE))
@@ -78,8 +87,16 @@ func _build() -> void:
 	_deploy_button.grab_focus.call_deferred()
 
 
+var _deck_view: Control = null
+var _deck_button: Button = null
+
+
+func get_engine_view() -> Control:
+	return _deck_view
+
+
 func _apply_compact() -> void:
-	for b: Button in [_deploy_button, _quit_button]:
+	for b: Button in [_deploy_button, _quit_button, _deck_button]:
 		if b != null:
 			b.custom_minimum_size.y = button_height()
 	if _layout != null:

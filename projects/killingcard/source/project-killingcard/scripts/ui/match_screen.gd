@@ -42,6 +42,8 @@ signal tray_state_changed(state: StringName)
 signal flyout_changed(key: StringName)
 ## kc-ui3: long-press / right-click on a killstreak tile (its loadout item id).
 signal item_inspected(item_id: StringName)
+## kc-syn-ui: long-press / right-click on a trait rail chip (&"player" / &"enemy", trait id).
+signal trait_inspected(side: StringName, trait_id: StringName)
 
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
@@ -50,6 +52,10 @@ const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const KillfeedEntry: GDScript = preload("res://scripts/fx/killfeed_entry.gd")
 const KillstreakRow: GDScript = preload("res://scripts/ui/killstreak_row.gd")
+const TraitRail: GDScript = preload("res://scripts/ui/trait_rail.gd")
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+## kc-syn-ui: a set callout stays this long before it folds into the rail.
+const SET_CALLOUT_S: float = 1.2
 const TRAY_OPEN: StringName = &"open"
 const TRAY_CLOSED: StringName = &"closed"
 const TRAY_PEEK: StringName = &"peek"
@@ -143,6 +149,15 @@ var _ks_row: Control = null
 var _ks_announced: Dictionary = {}
 var _supply_stacked: bool = false
 var _supply_stack: VBoxContainer = null
+## kc-syn-ui: the trait rail (icon strip), the SETS flyout body, the last known tiers per side
+## (set callouts fire when a tier switches on / off) and the callouts on screen.
+var _trait_rail: Control = null
+var _sets_box: VBoxContainer = null
+var _syn_tiers: Dictionary = {&"player": {}, &"enemy": {}}
+var _syn_doctrine: Dictionary = {&"player": &"", &"enemy": &""}
+var _syn_snapshot: Dictionary = {}
+var _set_callouts: Dictionary = {}
+var _last_callout_text: String = ""
 
 
 func _ready() -> void:
@@ -176,6 +191,16 @@ func _ready() -> void:
 	_ks_row.name = "KillstreakRow"
 	_tray.add_child(_ks_row)
 	_tray.move_child(_ks_row, _supply_box.get_index() + 1)
+	_trait_rail = TraitRail.new()
+	_trait_rail.name = "TraitRail"
+	_strip.add_child(_trait_rail)
+	_trait_rail.tapped.connect(func() -> void: toggle_flyout(&"traits"))
+	_trait_rail.inspected.connect(func() -> void:
+		close_flyout()
+		rail_inspected.emit(&"traits"))
+	_trait_rail.chip_inspected.connect(func(side: StringName, t: StringName) -> void:
+		close_flyout()
+		trait_inspected.emit(side, t))
 	_update_profile()
 	resized.connect(_update_profile)
 	_layout.resized.connect(_layout_regions)
@@ -207,6 +232,7 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_set_supply(int(snapshot.get("supply", 0)), int(snapshot.get("supply_max", 0)))
 	_set_actions(snapshot)
 	_set_badges(snapshot)
+	_set_synergy(snapshot.get("synergy", {}))
 	_follow_phase(snapshot)
 	snapshot_shown.emit(snapshot)
 
@@ -276,7 +302,165 @@ static func operator_card_entry(snapshot: Dictionary) -> Dictionary:
 ## Strip badge by key: &"menu", &"score", &"operator", &"streak", &"rival", &"preview", &"deck".
 func get_badge(key: StringName) -> Control:
 	return {&"menu": _menu_button, &"score": _score_badge, &"operator": _operator_badge, &"streak": _streak_badge,
-			&"rival": _rival_badge, &"preview": _preview_button, &"deck": _deck_badge}.get(key, null)
+			&"rival": _rival_badge, &"preview": _preview_button, &"deck": _deck_badge, &"traits": _trait_rail}.get(key, null)
+
+
+## kc-syn-ui: the trait rail in the icon strip.
+func get_trait_rail() -> Control:
+	return _trait_rail
+
+
+## Set callouts on screen now (tests / QA): their texts.
+func get_set_callouts() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for k: Variant in _set_callouts:
+		var c: Control = _set_callouts[k]
+		if is_instance_valid(c) and c.visible:
+			out.append(String((c.get_child(0) as Label).text))
+	return out
+
+
+## The last set callout text shown (stays after it faded; tests / QA).
+func get_last_set_callout() -> String:
+	return _last_callout_text
+
+
+## Links, rail and tiers from a snapshot's synergy block (kc-syn-ui).
+func _set_synergy(syn: Dictionary) -> void:
+	if syn.is_empty():
+		_board.set_links({})
+		_trait_rail.set_rails([], [], not compact)
+		return
+	_syn_snapshot = syn
+	var me: Dictionary = syn.get("player", {})
+	var foe: Dictionary = syn.get("enemy", {})
+	_board.set_links({&"player": me.get("links", []), &"enemy": foe.get("links", [])})
+	_trait_rail.set_rails(me.get("rail", []), foe.get("rail", []), not compact)
+	for pair: Array in [[&"player", me], [&"enemy", foe]]:
+		_syn_tiers[pair[0]] = (pair[1].get("tiers", {}) as Dictionary).duplicate()
+		_syn_doctrine[pair[0]] = StringName(pair[1].get("doctrine", &""))
+	if flyout_key == &"traits":
+		_fill_sets_box()
+
+
+## A SYNERGY_CHANGED event while the round plays: update the rail and the ticks, and call out each
+## tier that switched on ("UNDEAD 2: Undead heal 1 at the end of the round") or off (crack tick).
+func on_synergy_event(ev: Dictionary) -> void:
+	var side: StringName = StringName(ev.get("side", &"player"))
+	var counts: Dictionary = ev.get("counts", {})
+	var sets: Dictionary = ev.get("sets", {})
+	var rail: Array = []
+	for t: StringName in SynergyRules.TRAITS:
+		var n: int = int(counts.get(t, 0))
+		if n <= 0:
+			continue
+		var tier: int = int(sets.get(t, 0))
+		rail.append({"trait": t, "name": SynergyGlyphs.trait_name(t), "count": n, "tier": tier,
+				"next": SynergyRules.TIER2 if tier < 2 else (SynergyRules.TIER3 if tier < 3 else 0),
+				"doctrine": t == _syn_doctrine.get(side, &"")})
+	var rails: Dictionary = _trait_rail.rails.duplicate(true)
+	rails[side] = rail
+	_trait_rail.set_rails(rails[&"player"], rails[&"enemy"], not compact)
+	var links: Dictionary = _board._link_data.duplicate(true)
+	links[side] = ev.get("links", [])
+	_board.set_links(links)
+	var before: Dictionary = _syn_tiers.get(side, {})
+	var best_on: Array = []
+	for t: StringName in SynergyRules.TRAITS:
+		var was: int = int(before.get(t, 0))
+		var now: int = int(sets.get(t, 0))
+		if now > was and now >= 2:
+			best_on = [t, now]
+		elif now < was:
+			_trait_rail.crack(side, t)
+			if best_on.is_empty():
+				show_set_callout(side, "%s %d OFF" % [SynergyGlyphs.trait_name(t).to_upper(), was], false)
+	if not best_on.is_empty():
+		var t2: StringName = best_on[0]
+		show_set_callout(side, "%s %d: %s" % [SynergyGlyphs.trait_name(t2).to_upper(), int(best_on[1]),
+				String(SynergyRules.TIER_TEXT[t2][0 if int(best_on[1]) <= 2 else 1])], true)
+	_syn_tiers[side] = sets.duplicate()
+
+
+## Set callout beside the trait rail (one per side at a time; ~1.2 s, then it folds into the rail).
+func show_set_callout(side: StringName, text: String, on: bool) -> void:
+	var old: Control = _set_callouts.get(side, null)
+	if old != null and is_instance_valid(old):
+		old.queue_free()
+	var panel := PanelContainer.new()
+	panel.name = "SetCallout_%s" % side
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.theme_type_variation = &"TargetBadgeBad" if side == &"enemy" else &"TargetBadge"
+	var l := Label.new()
+	l.theme_type_variation = &"TargetText"
+	l.text = text if on else text
+	if not on:
+		l.add_theme_color_override(&"font_color", Color("#C8D0D6"))
+	panel.add_child(l)
+	add_child(panel)
+	panel.reset_size()
+	_last_callout_text = text
+	_set_callouts[side] = panel
+	# Beside the rail, over the board's outer edge; the rival's sits higher (its rail is on top).
+	var rr: Rect2 = _trait_rail.get_global_rect()
+	var board_r: Rect2 = _board.get_global_rect()
+	var x: float = rr.end.x + 6.0 if not mirror else rr.position.x - 6.0 - panel.size.x
+	var y: float = rr.position.y + (rr.size.y - panel.size.y) * 0.5
+	if side == &"enemy":
+		y = board_r.position.y + board_r.size.y * 0.28
+	elif not compact:
+		y = rr.end.y - panel.size.y
+	panel.position = Vector2(clampf(x, 0.0, maxf(0.0, size.x - panel.size.x)), clampf(y, 0.0, maxf(0.0, size.y - panel.size.y)))
+	if _reduced_motion():
+		panel.modulate.a = 1.0
+	else:
+		panel.modulate.a = 0.0
+		panel.scale = Vector2(0.9, 0.9)
+	var tw: Tween = panel.create_tween()
+	tw.tween_property(panel, "modulate:a", 1.0, 0.12)
+	tw.parallel().tween_property(panel, "scale", Vector2.ONE, 0.12)
+	tw.tween_interval(SET_CALLOUT_S)
+	# Folds into the rail: shrinks toward it and fades.
+	tw.tween_property(panel, "position", Vector2(rr.position.x, rr.get_center().y), 0.25)
+	tw.parallel().tween_property(panel, "scale", Vector2(0.3, 0.3), 0.25)
+	tw.parallel().tween_property(panel, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(panel.queue_free)
+
+
+## SETS flyout: both sides' traits in play, their tier texts and what the next threshold gives.
+func _fill_sets_box() -> void:
+	if _sets_box == null:
+		return
+	for c: Node in _sets_box.get_children():
+		_sets_box.remove_child(c)
+		c.queue_free()
+	var rails: Dictionary = _trait_rail.rails
+	for side: StringName in [&"player", &"enemy"]:
+		var head := Label.new()
+		head.theme_type_variation = &"KeywordName"
+		head.text = "YOUR SETS" if side == &"player" else "RIVAL SETS"
+		head.add_theme_color_override(&"font_color", get_theme_color(&"friend" if side == &"player" else &"enemy", &"Hud"))
+		_sets_box.add_child(head)
+		var list: Array = rails.get(side, [])
+		if list.is_empty():
+			_sets_box.add_child(_flyout_line("No traits in play. Trained units and Fields with the same trait count together: 2 in play turn tier 2 on, 3 turn tier 3 on."))
+		for e: Dictionary in list:
+			var t: StringName = StringName(e["trait"])
+			var tier: int = int(e.get("tier", 0))
+			var bits: PackedStringArray = ["%s %d in play%s" % [SynergyGlyphs.trait_name(t), int(e["count"]), " (Doctrine +1)" if bool(e.get("doctrine", false)) else ""]]
+			if tier >= 2:
+				bits.append("ON: " + SynergyGlyphs.tier_line(t, tier))
+			if int(e.get("next", 0)) > 0:
+				bits.append("at %d: %s" % [int(e["next"]), String(SynergyRules.TIER_TEXT[t][0 if int(e["next"]) <= 2 else 1])])
+			_sets_box.add_child(_flyout_line(". ".join(bits) + "."))
+
+
+func _flyout_line(text: String) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = (FLYOUT_W if compact else FLYOUT_W_DESKTOP) - 24.0
+	return l
 
 
 func get_inspector() -> Control:
@@ -495,6 +679,12 @@ func _layout_regions() -> void:
 		badges[i].size = rects[i].size
 		badges[i].custom_minimum_size = rects[i].size
 		badges[i].queue_redraw()
+	# kc-syn-ui: the trait rail fills the strip between PREVIEW and DECK.
+	var rail_r: Rect2 = BoardMetrics.rail_rect(metrics)
+	_trait_rail.position = rail_r.position
+	_trait_rail.size = rail_r.size
+	_trait_rail.visible = rail_r.size.y >= 30.0
+	_trait_rail.set_rails(_trait_rail.rails.get(&"player", []), _trait_rail.rails.get(&"enemy", []), not compact)
 	# Killfeed toasts: top centre of the board, over the rival's back row.
 	var tw: float = minf(board_rect.size.x - 16.0, 460.0)
 	_toasts.position = Vector2(board_rect.position.x + (board_rect.size.x - tw) * 0.5, board_rect.position.y + 4.0)
@@ -679,8 +869,17 @@ func open_flyout(key: StringName) -> void:
 		_operator_panel.set_section(key)
 	_minimap.visible = key == &"rival"
 	_deck_box.visible = key == &"deck"
+	if _sets_box == null:
+		_sets_box = VBoxContainer.new()
+		_sets_box.name = "SetsBox"
+		_sets_box.add_theme_constant_override(&"separation", 6)
+		_flyout_hint.get_parent().add_child(_sets_box)
+		_flyout_hint.get_parent().move_child(_sets_box, _flyout_hint.get_index())
+	_sets_box.visible = key == &"traits"
+	if key == &"traits":
+		_fill_sets_box()
 	_flyout_title.text = {&"score": "SCORE", &"operator": "OPERATOR", &"streak": "KILLSTREAKS", &"rival": "RIVAL HAND",
-			&"deck": "DECK"}[key]
+			&"deck": "DECK", &"traits": "SETS"}[key]
 	_flyout_hint.text = {
 		&"operator": "Tap the Operator here to select it, then a column · long-press for rules",
 		&"streak": "Tap a ready streak to arm it · long-press for rules",
@@ -882,6 +1081,8 @@ func _on_fx_event(ev: Dictionary) -> void:
 	elif t == RulesEvent.FIREFIGHT_STEP:
 		var step: String = {&"first_shot": "FIRST SHOT", &"main": "MAIN STEP"}.get(StringName(ev.get("step", &"")), "")
 		_step_header.text = "FIREFIGHT · %s · %s" % [ZONE_LETTERS.get(StringName(ev.get("zone", &"")), ""), step]
+	elif t == RulesEvent.SYNERGY_CHANGED:
+		on_synergy_event(ev)
 	elif t == RulesEvent.PHASE_CHANGED:
 		var ph: String = String(ev.get("phase", "")).to_upper()
 		if ph != "" and ph != "FIREFIGHT":

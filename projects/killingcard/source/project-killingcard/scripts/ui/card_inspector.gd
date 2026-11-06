@@ -35,9 +35,34 @@ const BANNER_SIZE: Vector2 = Vector2(512, 128)
 @onready var _close: Button = %CloseButton
 @onready var _banner_holder: Control = %BannerHolder
 var _banner: BannerView = null
+## kc-syn-ui: rules, keyword lines and status scroll inside the text panel when they would make it
+## taller than the room (the phone inspector of a Protector was 1 px too tall, and the synergy
+## lines add more). Title, type and CLOSE always stay visible.
+var _body: ScrollContainer = null
+var _body_col: VBoxContainer = null
 
 
 func _ready() -> void:
+	var info: VBoxContainer = _rules.get_parent() as VBoxContainer
+	_body = ScrollContainer.new()
+	_body.name = "Body"
+	_body.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_body.mouse_filter = Control.MOUSE_FILTER_PASS
+	_body_col = VBoxContainer.new()
+	_body_col.name = "BodyColumn"
+	_body_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body_col.add_theme_constant_override(&"separation", info.get_theme_constant(&"separation"))
+	_body.add_child(_body_col)
+	info.add_child(_body)
+	info.move_child(_body, _rules.get_index())
+	_body.owner = self
+	_body_col.owner = self
+	for n: Control in [_rules, _keywords, _status]:
+		n.reparent(_body_col, false)
+		n.owner = self
+		n.unique_name_in_owner = true
 	_banner = BannerView.new()
 	_banner.name = "Banner"
 	_banner.dim_back = false
@@ -92,10 +117,17 @@ func open(info: Dictionary) -> void:
 		_status.text = (_status.text + "\n" + art_line).strip_edges()
 	_status.visible = not _status.text.is_empty()
 	show()
+	_body.scroll_vertical = 0
 	_fit()
 	if _banner_holder.visible:
 		_banner.set_focus(true)
 	_close.grab_focus.call_deferred()
+	# Wrapped labels know their height only once the panel has its width: measure again after layout.
+	for i: int in 2:
+		await get_tree().process_frame
+		if not visible:
+			return
+		_fit()
 
 
 func get_banner() -> BannerView:
@@ -152,6 +184,13 @@ func _fit() -> void:
 	_card.position = Vector2.ZERO
 	_card.scale = Vector2(s, s)
 	_holder.custom_minimum_size = CardView.BASE_SIZE * s
+	# The text panel may be as tall as the room under the banner; its body scrolls past that.
+	var info_max: float = room.y - banner_h - 4.0
+	_body_col.custom_minimum_size.x = info_w - 32.0
+	var content_h: float = _body_col.get_combined_minimum_size().y
+	_body.custom_minimum_size.y = 0.0
+	var fixed_h: float = _info_panel.get_combined_minimum_size().y
+	_body.custom_minimum_size.y = clampf(content_h, 0.0, maxf(48.0, info_max - fixed_h))
 
 
 func _gui_input(event: InputEvent) -> void:

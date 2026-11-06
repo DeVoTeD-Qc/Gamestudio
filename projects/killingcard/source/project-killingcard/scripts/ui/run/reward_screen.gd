@@ -24,7 +24,14 @@ const KIND_TITLES: Dictionary = {
 	RewardOffers.KIND_SUPPLY_DROP: "SUPPLY DROP",
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
 	RewardOffers.KIND_PERK: "PERK OFFER",
+	RewardOffers.KIND_DOCTRINE: "DOCTRINE",
+	RewardOffers.KIND_PROMOTION: "PROMOTION",
+	RewardOffers.KIND_REGROUP: "REGROUP",
 }
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const EnginePanel: GDScript = preload("res://scripts/ui/run/engine_panel.gd")
+## kc-syn-ui: width of the Supply Drop's 4th tile (Retire a card).
+const RETIRE_TILE_W: float = 210.0
 
 ## The offer on screen ({kind, match, options}); {} when none.
 var offer: Dictionary = {}
@@ -39,6 +46,18 @@ var _options: HBoxContainer = null
 var _inspector: Control = null
 var _card_holders: Array[Control] = []
 var _rules_labels: Array[Label] = []
+## kc-syn-ui: the Supply Drop's 4th option (null when the offer has none), the list tiles of a
+## Promotion / Retire pick (option order = the RunProgress list), the Retire picker state and the
+## deck view.
+var retire_tile: PickTile = null
+var list_tiles: Array[PickTile] = []
+var retire_mode: bool = false
+var _list_scroll: ScrollContainer = null
+var _list_grid: GridContainer = null
+var _center: CenterContainer = null
+var _deck_button: Button = null
+var _engine: Control = null
+var _trait_lines: bool = false
 
 @onready var _header: HBoxContainer = %Header
 @onready var _title: Label = %TitleLabel
@@ -59,16 +78,40 @@ func _build() -> void:
 	_skip_button.name = "SkipButton"
 	_skip_button.pressed.connect(skip)
 	_header.add_child(_skip_button)
+	# kc-syn-ui: DECK opens the deck view (Engine panel) from any offer.
+	_deck_button = make_button("DECK", &"HudButton", 120)
+	_deck_button.name = "DeckButton"
+	_deck_button.pressed.connect(open_deck)
+	_header.add_child(_deck_button)
+	_header.move_child(_deck_button, _skip_button.get_index())
 	var center: CenterContainer = CenterContainer.new()
+	_center = center
 	_body.add_child(center)
 	_options = HBoxContainer.new()
 	_options.name = "Options"
 	_options.add_theme_constant_override(&"separation", 16)
 	center.add_child(_options)
+	_list_scroll = ScrollContainer.new()
+	_list_scroll.name = "ListScroll"
+	_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_list_scroll.visible = false
+	_body.add_child(_list_scroll)
+	_list_grid = GridContainer.new()
+	_list_grid.name = "ListGrid"
+	_list_grid.columns = 3
+	_list_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list_grid.add_theme_constant_override(&"h_separation", 12)
+	_list_grid.add_theme_constant_override(&"v_separation", 10)
+	_list_scroll.add_child(_list_grid)
 	_header.resized.connect(_fit_cards)
+	_engine = EnginePanel.new()
+	_engine.name = "EngineView"
+	add_child(_engine)
+	_engine.row_inspected.connect(_inspect_card_id)
 	_inspector = INSPECTOR_SCENE.instantiate()
 	add_child(_inspector)
 	resized.connect(_fit_cards)
+	resized.connect(_fit_list)
 	show_offer()
 
 
@@ -76,6 +119,7 @@ func _apply_compact() -> void:
 	if _skip_button != null:
 		_skip_button.custom_minimum_size.y = button_height()
 	_fit_cards()
+	_fit_list()
 
 
 ## Rebuilds the options for RunState's current offer.
@@ -88,6 +132,12 @@ func show_offer() -> void:
 	card_views.clear()
 	_card_holders.clear()
 	_rules_labels.clear()
+	retire_tile = null
+	list_tiles.clear()
+	clear(_list_grid)
+	_trait_lines = false
+	_center.visible = true
+	_list_scroll.visible = false
 	if offer.is_empty():
 		_title.text = "NO REWARD"
 		_subtitle.text = ""
@@ -109,22 +159,294 @@ func show_offer() -> void:
 		RewardOffers.KIND_PERK:
 			_subtitle.text = "Tap a Perk to take it. Perk slots: %d of %d used (%s)." % [
 					r.perks.size(), r.config.perk_slots, RunFlow.names_of(r, r.perks)]
+		RewardOffers.KIND_DOCTRINE:
+			_subtitle.text = "Pick a trait: its sets count +1 for the rest of the run."
+		RewardOffers.KIND_PROMOTION:
+			_subtitle.text = "Tap a card to promote one copy by one level."
+		RewardOffers.KIND_REGROUP:
+			_subtitle.text = "After a loss: retire one card for free (deck %d, floor %d)." % [r.deck.size(), r.config.deck_floor]
+	_skip_button.text = "SKIP"
+	if retire_mode or kind == RewardOffers.KIND_REGROUP:
+		_build_retire_list(r, kind == RewardOffers.KIND_SUPPLY_DROP)
+		_announce()
+		return
+	if kind == RewardOffers.KIND_PROMOTION:
+		_build_promotion_list(r)
+		_announce()
+		return
 	var options: Array = offer["options"]
 	for i: int in options.size():
+		if kind == RewardOffers.KIND_DOCTRINE:
+			var dt: PickTile = _doctrine_tile(r, StringName(options[i]))
+			dt.name = "Option%d" % i
+			dt.pressed.connect(choose.bind(i))
+			_options.add_child(dt)
+			tiles.append(dt)
+			continue
 		var res: Resource = r.resource(StringName(options[i]))
 		var tile: PickTile = _card_tile(res as CardData) if res is CardData else _item_tile(res as LoadoutItem)
 		tile.name = "Option%d" % i
 		tile.pressed.connect(choose.bind(i))
 		_options.add_child(tile)
 		tiles.append(tile)
+	if kind == RewardOffers.KIND_SUPPLY_DROP:
+		_mark_trait_lines(r)
+		if bool(offer.get("retire", false)):
+			retire_tile = _retire_option_tile(r)
+			_options.add_child(retire_tile)
 	_fit_cards()
 	# Keyboard / controller start on the first option; on touch screens a focus frame on one
 	# option would read as "already picked".
 	if not tiles.is_empty() and not DisplayServer.is_touchscreen_available():
 		tiles[0].grab_focus.call_deferred()
+	_announce()
+
+
+func _announce() -> void:
 	var bus: Node = RunFlow.event_bus()
 	if bus != null and is_node_ready():
 		bus.screen_shown.emit(screen_id())
+
+
+# =============================================================================
+# kc-syn-ui: Doctrine, Promotion, Retire / Regroup, on-trait slot, deck view
+# =============================================================================
+
+## DECK: the deck view with the Engine panel.
+func open_deck() -> void:
+	_engine.open(run())
+
+
+func get_engine_view() -> Control:
+	return _engine
+
+
+func _inspect_card_id(id: StringName, level: int) -> void:
+	var card: CardData = run().resource(id) as CardData
+	if card == null:
+		return
+	_inspector.open({"view": CardInfo.view_dict(card), "title": card.display_name, "type": CardInfo.type_line(card),
+			"text": card.text, "keywords": CardInfo.keywords(card) + _syn_lines(card, level), "status": "Copy level: %s." % SynergyGlyphs.level_name(level)})
+
+
+## Keyword / trait lines for the inspector (what this copy has at `level`).
+func _syn_lines(card: CardData, level: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var kw: StringName = card.neighbor_keyword
+	if kw != &"":
+		out.append({"name": "%s (neighbour keyword)%s" % [SynergyGlyphs.keyword_name(kw), "" if level >= 1 else ": once Trained"],
+				"text": String(SynergyRules.KEYWORD_TEXT[kw])})
+	var t: StringName = card.card_trait
+	if t != &"":
+		out.append({"name": "%s (trait)%s" % [SynergyGlyphs.trait_name(t), "" if level >= 1 else ": once Trained"],
+				"text": "2 in play: %s. 3 in play: %s." % [SynergyRules.TIER_TEXT[t][0], SynergyRules.TIER_TEXT[t][1]]})
+	return out
+
+
+## Supply Drop: every traited option says what it does to your engine ("VANGUARD 3 > 4"); slot 1
+## on your main trait is marked ON-TRAIT.
+func _mark_trait_lines(r: RunProgress) -> void:
+	var counts: Dictionary = r.trait_counts()
+	var on_trait: StringName = StringName(offer.get("on_trait", &""))
+	for i: int in tiles.size():
+		var card: CardData = r.resource(StringName(offer["options"][i])) as CardData
+		if card == null or card.card_trait == &"":
+			continue
+		var n: int = int(counts.get(card.card_trait, 0))
+		var text: String = "%s %d > %d" % [SynergyGlyphs.trait_name(card.card_trait).to_upper(), n, n + 1]
+		if i == 0 and on_trait != &"" and card.card_trait == on_trait:
+			text = "ON-TRAIT · " + text
+			tiles[i].set_meta(&"on_trait", true)
+		var l: Label = make_label(text, &"HudTag")
+		l.name = "TraitLine"
+		l.add_theme_color_override(&"font_color", SynergyGlyphs.trait_color(card.card_trait))
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tiles[i].content.add_child(l)
+		tiles[i].content.move_child(l, 0)
+		_trait_lines = true
+
+
+## The Supply Drop's 4th option: Retire a card instead of taking one (greyed at the floor).
+func _retire_option_tile(r: RunProgress) -> PickTile:
+	var tile: PickTile = make_tile()
+	tile.name = "RetireOption"
+	tile.custom_minimum_size.x = RETIRE_TILE_W
+	tile.min_height = 200
+	tile.add_line("RETIRE", &"TileName")
+	tile.add_line("INSTEAD OF A CARD", &"HudTag", false)
+	var ok: bool = r.can_retire()
+	tile.add_line("Remove one card for good (deck %d > %d). Retire a Recruit that has a twin and the twin is Trained for free." % [r.deck.size(), r.deck.size() - 1] if ok \
+			else "Your deck is at the %d-card floor: nothing can be retired." % r.config.deck_floor)
+	tile.add_spacer()
+	tile.add_status("TAP TO PICK A CARD" if ok else "AT THE FLOOR")
+	tile.disabled = not ok
+	tile.pressed.connect(open_retire_picker)
+	return tile
+
+
+## Supply Drop > RETIRE: the list of cards to retire (BACK returns to the three cards).
+func open_retire_picker() -> void:
+	var r: RunProgress = run()
+	if r == null or not r.can_retire():
+		return
+	retire_mode = true
+	show_offer()
+
+
+## Retire list (Supply Drop 4th option or Regroup): one tile per design and level, Recruits
+## first, with what retiring it does (twin training, Honor Roll).
+func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
+	_center.visible = false
+	_list_scroll.visible = true
+	_title.text = "RETIRE A CARD" if from_drop else _title.text
+	if from_drop:
+		_subtitle.text = "Pick the card to retire (deck %d, floor %d). BACK: the cards." % [r.deck.size(), r.config.deck_floor]
+		_skip_button.text = "BACK"
+	var opts: Array[Dictionary] = r.retire_options()
+	if opts.is_empty():
+		var t0: PickTile = make_tile()
+		t0.add_line("AT THE FLOOR", &"TileName")
+		t0.add_line("Your deck is at %d cards, the floor. Nothing can be retired." % r.config.deck_floor)
+		t0.disabled = true
+		_list_grid.add_child(t0)
+		_fit_list()
+		return
+	for i: int in opts.size():
+		var o: Dictionary = opts[i]
+		var card: CardData = r.resource(o["id"]) as CardData
+		var tile: PickTile = make_tile()
+		tile.name = "Retire%d" % i
+		tile.min_height = 96
+		tile.add_line(card.display_name.to_upper() if card != null else String(o["id"]), &"TileName")
+		var lv: int = int(o["level"])
+		var tag: String = "%s · COST %d" % [SynergyGlyphs.level_name(lv).to_upper() if (card != null and (card.card_trait != &"" or card.neighbor_keyword != &"")) or lv >= 2 else "PLAIN", int(o["cost"])]
+		if StringName(o["trait"]) != &"":
+			tag += " · " + SynergyGlyphs.trait_name(o["trait"]).to_upper()
+		tile.add_line(tag, &"HudTag", false)
+		if int(o["twin_index"]) >= 0:
+			var gains: PackedStringArray = []
+			if card.neighbor_keyword != &"":
+				gains.append(SynergyGlyphs.keyword_name(card.neighbor_keyword))
+			if card.card_trait != &"":
+				gains.append(SynergyGlyphs.trait_name(card.card_trait))
+			var tw: Label = tile.add_line("TWIN TRAINED: %s > GILDED (gains %s)" % [card.display_name, " and ".join(gains)], &"FriendlyLabel")
+			tw.name = "TwinLine"
+		else:
+			tile.add_line("Removed from the deck (Honor Roll).")
+		_add_band_strip(tile, lv, 1 if int(o["twin_index"]) >= 0 else -1)
+		tile.pressed.connect(retire.bind(i))
+		_list_grid.add_child(tile)
+		list_tiles.append(tile)
+	_fit_list()
+
+
+## Retire option i of RunProgress.retire_options(). Returns "" or RunState's reason.
+func retire(i: int) -> String:
+	var err: String = RunFlow.run_state().retire_card(i)
+	if err == "":
+		retire_mode = false
+		_next.call_deferred()
+	return err
+
+
+## Promotion: one tile per design and level below Elite: the band now > next, and what it gains.
+func _build_promotion_list(r: RunProgress) -> void:
+	_center.visible = false
+	_list_scroll.visible = true
+	var options: Array = offer["options"]
+	var levels: Array = offer.get("levels", [])
+	for i: int in options.size():
+		var card: CardData = r.resource(StringName(options[i])) as CardData
+		var lv: int = int(levels[i]) if i < levels.size() else 1
+		var tile: PickTile = make_tile()
+		tile.name = "Promote%d" % i
+		tile.min_height = 96
+		tile.add_line(card.display_name.to_upper() if card != null else String(options[i]), &"TileName")
+		tile.add_line("%s > %s · %s" % [SynergyGlyphs.level_name(lv).to_upper(), SynergyGlyphs.level_name(lv + 1).to_upper(),
+				String(SynergyGlyphs.BAND_NAMES.get(SynergyGlyphs.band_of(lv + 1), "")).to_upper()], &"HudTag", false)
+		var gain: String = ""
+		match lv + 1:
+			SynergyRules.LEVEL_TRAINED:
+				var bits: PackedStringArray = []
+				if card.neighbor_keyword != &"":
+					bits.append(SynergyGlyphs.keyword_name(card.neighbor_keyword))
+				if card.card_trait != &"":
+					bits.append(SynergyGlyphs.trait_name(card.card_trait))
+				gain = "Gains %s." % " and ".join(bits) if not bits.is_empty() else "Trained."
+			SynergyRules.LEVEL_VETERAN:
+				gain = "+1 Armor (%d > %d)." % [card.armor, card.armor + 1] if card.is_unit() else "+1 Armor."
+			SynergyRules.LEVEL_ELITE:
+				gain = "+1 FP (%d > %d)." % [card.firepower, card.firepower + 1] if card.is_unit() else "+1 FP."
+		var gl: Label = tile.add_line(gain, &"FriendlyLabel")
+		gl.name = "GainLine"
+		_add_band_strip(tile, lv, lv + 1)
+		tile.pressed.connect(choose.bind(i))
+		_list_grid.add_child(tile)
+		list_tiles.append(tile)
+	_fit_list()
+
+
+## A strip of camo swatches on a tile: the level now, and (to >= 0) the level it becomes.
+func _add_band_strip(tile: PickTile, from_lv: int, to_lv: int) -> void:
+	var strip := Control.new()
+	strip.name = "Bands"
+	strip.custom_minimum_size = Vector2(0, 12)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.draw.connect(func() -> void:
+		var w: float = 70.0
+		_swatch(strip, Rect2(0, 2, w, 8), SynergyGlyphs.band_of(from_lv))
+		if to_lv >= 0:
+			strip.draw_line(Vector2(w + 6, 6), Vector2(w + 22, 6), Color("#C8D0D6"), 2.0)
+			strip.draw_colored_polygon(PackedVector2Array([Vector2(w + 28, 6), Vector2(w + 20, 1), Vector2(w + 20, 11)]), Color("#C8D0D6"))
+			_swatch(strip, Rect2(w + 34, 2, w, 8), SynergyGlyphs.band_of(to_lv)))
+	tile.content.add_child(strip)
+
+
+static func _swatch(ci: CanvasItem, r: Rect2, band: StringName) -> void:
+	if band == &"":
+		ci.draw_rect(r, Color("#2A3036"))
+		ci.draw_rect(r, Color("#8A949C"), false, 1.0)
+	else:
+		SynergyGlyphs.draw_band(ci, r, band)
+
+
+## Doctrine: a trait emblem, its tier texts and how many Trained cards of it the deck has.
+func _doctrine_tile(r: RunProgress, t: StringName) -> PickTile:
+	var tile: PickTile = make_tile()
+	tile.custom_minimum_size.x = 380
+	tile.min_height = 280
+	var emblem := Control.new()
+	emblem.name = "Emblem"
+	emblem.custom_minimum_size = Vector2(0, 72)
+	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	emblem.draw.connect(func() -> void:
+		var s: float = 68.0
+		var rr: Rect2 = Rect2((emblem.size.x - s) * 0.5, 2, s, s)
+		emblem.draw_circle(rr.get_center(), s * 0.52, Color(0.05, 0.06, 0.07))
+		emblem.draw_arc(rr.get_center(), s * 0.5, 0, TAU, 40, SynergyGlyphs.trait_color(t), 3.0)
+		SynergyGlyphs.draw_trait_icon(emblem, rr.grow(-14), t, SynergyGlyphs.trait_color(t)))
+	tile.content.add_child(emblem)
+	var name_l: Label = tile.add_line(SynergyGlyphs.trait_name(t).to_upper() + " DOCTRINE", &"TileName")
+	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var n: int = int(r.trait_counts().get(t, 0))
+	tile.add_line("Your deck: %d Trained %s card%s." % [n, SynergyGlyphs.trait_name(t), "" if n == 1 else "s"], &"HudTag", false)
+	tile.add_line("Its sets count +1 all run. 2: %s. 3: %s." % [SynergyRules.TIER_TEXT[t][0], SynergyRules.TIER_TEXT[t][1]])
+	tile.add_spacer()
+	tile.add_status("TAP TO PICK")
+	return tile
+
+
+func _fit_list() -> void:
+	if _list_grid == null:
+		return
+	# From the screen, not _body.size (the tiles would hold the body at its old width).
+	var w: float = maxf(300.0, size.x - _safe_area.get_theme_constant(&"margin_left") - _safe_area.get_theme_constant(&"margin_right") - 24.0)
+	var cols: int = 3 if w >= 900.0 else 2
+	_list_grid.columns = cols
+	var tile_w: float = floorf((w - 12.0 * (cols - 1) - 8.0) / cols)
+	for c: Node in _list_grid.get_children():
+		(c as Control).custom_minimum_size.x = tile_w
+	_list_scroll.custom_minimum_size = Vector2(0, 0)
 
 
 ## Takes option i of the current offer (one tap). Returns "" or RunState's reason.
@@ -138,6 +460,10 @@ func choose(i: int) -> String:
 
 ## SKIP: declines the current offer. Returns "" or RunState's reason.
 func skip() -> String:
+	if retire_mode:
+		retire_mode = false
+		show_offer()
+		return ""
 	if offer.is_empty():
 		goto(RunFlow.scene_for(run()))
 		return ""
@@ -239,6 +565,7 @@ func _item_tile(item: LoadoutItem) -> PickTile:
 
 func _safe_area_changed() -> void:
 	_fit_cards()
+	_fit_list()
 
 
 ## Card scale for the Supply Drop: as big as the body allows, 0.8x-1.3x.
@@ -256,12 +583,15 @@ func _fit_cards() -> void:
 			_safe_area.get_theme_constant(&"margin_top") + _safe_area.get_theme_constant(&"margin_bottom")
 			+ maxf(_header.size.y, button_height()) + %Layout.get_theme_constant(&"separation"))
 	var max_lines: int = 3
-	var by_h: float = (room.y - (28.0 + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
-	if by_h < MIN_CARD_SCALE:
-		max_lines = 2
-		by_h = (room.y - (28.0 + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
+	var extra_h: float = (line_h + 4.0) if _trait_lines else 0.0
+	var by_h: float = (room.y - (28.0 + extra_h + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
+	while by_h < MIN_CARD_SCALE and max_lines > 1:
+		# kc-syn-ui: the trait line ("VANGUARD 3 > 4") can cost a rules line on the phone; DETAILS has it all.
+		max_lines -= 1
+		by_h = (room.y - (28.0 + extra_h + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
 	var n: int = card_views.size()
-	var by_w: float = (room.x - 16.0 * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
+	var extra_w: float = (RETIRE_TILE_W + 16.0) if retire_tile != null else 0.0
+	var by_w: float = (room.x - extra_w - 16.0 * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
 	var s: float = clampf(minf(by_h, by_w), MIN_CARD_SCALE, MAX_CARD_SCALE)
 	for i: int in n:
 		var view: Control = card_views[i]

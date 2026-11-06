@@ -20,7 +20,13 @@ const OFFER_WORDS: Dictionary = {
 	RewardOffers.KIND_SUPPLY_DROP: "SUPPLY DROP",
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
 	RewardOffers.KIND_PERK: "PERK OFFER",
+	RewardOffers.KIND_DOCTRINE: "DOCTRINE",
+	RewardOffers.KIND_PROMOTION: "PROMOTION",
+	RewardOffers.KIND_REGROUP: "REGROUP",
 }
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+## Honor Roll entries shown before "+ n more".
+const HONOR_SHOWN: int = 5
 
 var report: Dictionary = {}
 
@@ -84,6 +90,7 @@ func _build() -> void:
 	_stat("ELIMINATIONS", _num(report["player_eliminations"]) + "-" + _num(report["enemy_eliminations"]), "you - enemy")
 	_stat("BEST STREAK", _num(report["best_streak"]))
 	_tickets_stat(int(report["tickets_before"]), int(report["tickets_after"]), r.config.tickets)
+	_honor_roll(col, r)
 	_continue_button.text = continue_text()
 
 
@@ -151,3 +158,47 @@ func _tickets_stat(before: int, after: int, total: int) -> void:
 	var n: Label = make_label("-%d (was %d)" % [before - after, before] if before > after else "no change", &"HudSubtle")
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(n)
+
+
+## kc-syn-ui: the Honor Roll album page (cosmetic): every card retired this run, with its level,
+## the match it left after and whether it trained its twin. Long-press shows the full list.
+func _honor_roll(col: VBoxContainer, r: RunProgress) -> void:
+	if r.honor_roll.is_empty():
+		return
+	var box: VBoxContainer = VBoxContainer.new()
+	box.name = "HonorRoll"
+	box.add_theme_constant_override(&"separation", 4)
+	col.add_child(box)
+	col.move_child(box, _continue_button.get_index())
+	var head: Label = make_label("HONOR ROLL  ·  %d RETIRED" % r.honor_roll.size(), &"HudTag")
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(head)
+	var row: HFlowContainer = HFlowContainer.new()
+	row.alignment = FlowContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"h_separation", 8)
+	row.add_theme_constant_override(&"v_separation", 4)
+	box.add_child(row)
+	var start: int = maxi(0, r.honor_roll.size() - HONOR_SHOWN)
+	for i: int in range(start, r.honor_roll.size()):
+		var h: Dictionary = r.honor_roll[i]
+		var card: CardData = r.resource(StringName(h["id"])) as CardData
+		var p: PanelContainer = PanelContainer.new()
+		p.theme_type_variation = &"HudPanelDark"
+		var hb: HBoxContainer = HBoxContainer.new()
+		hb.add_theme_constant_override(&"separation", 6)
+		p.add_child(hb)
+		var sw: Control = Control.new()
+		sw.custom_minimum_size = Vector2(14, 24)
+		var band: StringName = SynergyGlyphs.band_of(int(h["level"]))
+		sw.draw.connect(func() -> void:
+			if band == &"":
+				sw.draw_rect(Rect2(Vector2.ZERO, sw.size), Color("#2A3036"))
+			else:
+				SynergyGlyphs.draw_band(sw, Rect2(Vector2.ZERO, sw.size), band))
+		hb.add_child(sw)
+		var words: String = "%s · after M%d%s" % [card.display_name if card != null else String(h["id"]), maxi(1, int(h["match"])),
+				" · twin trained" if bool(h.get("trained_twin", false)) else ""]
+		hb.add_child(make_label(words))
+		row.add_child(p)
+	if start > 0:
+		row.add_child(make_label("+ %d more" % start, &"HudSubtle"))
