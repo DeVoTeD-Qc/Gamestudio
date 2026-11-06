@@ -17,6 +17,11 @@ extends RefCounted
 
 const SUB_COLOUR: Color = Color("#F3D36B")
 const PLATE_COLOUR: Color = Color("#1E252B")
+## kc-readability: hand card badge sizes (canvas px): the FP reticle / Armor plate, and the cost hex boost.
+const STAT_PX: float = 32.0
+const HAND_COST_SCALE: float = 1.5
+## Ability icons on hand cards (the row above FP / Armor in the banner's right corner).
+const HAND_ABILITY_PX: float = 14.0
 
 
 ## The X1 card panel (PanelContainer, theme variation HandCard): Face > Banner (BannerView, its art
@@ -37,6 +42,11 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 	bv.show_name = false
 	bv.dim_back = false
 	bv.full_info = true
+	# kc-readability (the head: hand cards "too hard to read"): a bigger cost hex, and FP / Armor drawn
+	# big over the banner's bottom-right corner and the name plate (STAT_PX), on a dark backing.
+	bv.cost_scale = HAND_COST_SCALE
+	bv.draw_stats = false
+	bv.ability_px = HAND_ABILITY_PX
 	face.add_child(bv)
 	var plate: Panel = Panel.new()
 	plate.name = "NamePlate"
@@ -48,6 +58,20 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 	var title: Label = CardLook.title_label(String(entry.get("name", "")))
 	title.name = "NameLabel"
 	plate.add_child(title)
+	var stats: Control = Control.new()
+	stats.name = "Stats"
+	stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stats.visible = entry.has("fp")
+	face.add_child(stats)
+	stats.draw.connect(func() -> void:
+		var e: Dictionary = bv.entry
+		var r: Dictionary = stat_rects(stats.size)
+		var fr: Rect2 = r["fp"]
+		var ar: Rect2 = r["armor"]
+		CardLook.draw_chip(stats, Rect2(fr.position - Vector2(2, 1), Vector2(ar.end.x - fr.position.x + 4.0, fr.size.y + 2.0)), 6.0)
+		CardLook.draw_reticle(stats, fr, int(e.get("fp", 0)), bv.side, int(e.get("fp_trend", 0)))
+		var armor: int = int(e.get("armor", 0))
+		CardLook.draw_armor(stats, ar, armor, armor < int(e.get("armor_max", armor))))
 	var sub: Label = Label.new()
 	sub.name = "SubLabel"
 	sub.visible = false
@@ -65,11 +89,38 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 		bv.size = Vector2(face.size.x, bh)
 		plate.position = Vector2(0, bh)
 		plate.size = Vector2(face.size.x, face.size.y - bh)
+		stats.position = Vector2.ZERO
+		stats.size = face.size
+		stats.queue_redraw()
+		var name_w: float = plate.size.x - 12.0
+		var sr: Dictionary = stat_rects(face.size, bh)
+		var narrow: bool = bool(sr["narrow"])
+		bv.show_abilities = not narrow
+		# Narrow plates (16:9 phones) wrap a long name onto a second line instead of cutting it.
+		title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if narrow else TextServer.AUTOWRAP_OFF
+		title.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING if narrow else TextServer.OVERRUN_TRIM_ELLIPSIS
+		title.max_lines_visible = 2 if narrow else -1
+		title.add_theme_constant_override(&"line_spacing", -4 if narrow else 0)
 		title.position = Vector2(6, 0)
-		title.size = Vector2(maxf(8.0, plate.size.x - 12.0), plate.size.y)
+		title.size = Vector2(maxf(8.0, name_w), plate.size.y)
 	panel.sort_children.connect(place)
 	bv.show_unit(entry, side, false)
 	return panel
+
+
+## kc-readability: the X1 card's FP reticle and Armor plate rects (face-local), bottom-right: inside the
+## banner under the ability row when it is tall enough (the phone's 44 px banner: 26 px badges), else
+## at the right of the name plate. bh = the banner's height.
+static func stat_rects(face: Vector2, bh: float = -1.0) -> Dictionary:
+	if bh < 0.0:
+		bh = minf(roundf(face.x / 4.0), maxf(24.0, face.y - 18.0))
+	# Narrow cards (a 26 px banner on a 16:9 phone): no ability row, the badges take the banner's height.
+	var narrow: bool = bh - HAND_ABILITY_PX - 3.0 < 24.0
+	var s: float = minf(STAT_PX, bh - 2.0) if narrow else minf(STAT_PX, bh - HAND_ABILITY_PX - 3.0)
+	var bottom: float = bh - 1.0
+	var ar: Rect2 = Rect2(face.x - 3.0 - s + 1.0, bottom - s, s - 1.0, s)
+	var fr: Rect2 = Rect2(ar.position.x - 2.0 - s, bottom - s, s, s)
+	return {"fp": fr, "armor": ar, "in_banner": true, "narrow": narrow}
 
 
 ## The BannerView inside a card built by build() (null for anything else).

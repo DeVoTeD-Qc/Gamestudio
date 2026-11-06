@@ -638,8 +638,9 @@ func _make_operator_card(op: Dictionary) -> Control:
 		var ah: float = art.size.y
 		var x: float = 5.0
 		if cost > 0:
-			CardLook.draw_cost(ink, Rect2(x, 5, 22, 22), str(cost), short)
-			x += 26.0
+			CardLook.draw_chip(ink, Rect2(x - 2, 3, 30, 30), 5.0)
+			CardLook.draw_cost(ink, Rect2(x, 5, 26, 26), str(cost), short)
+			x += 30.0
 		var narrow: bool = ink.size.x < 150.0
 		var tag: Rect2 = Rect2(x, 7, 58.0 if narrow else 70.0, 18)
 		var tsb := StyleBoxFlat.new()
@@ -664,9 +665,10 @@ func _make_operator_card(op: Dictionary) -> Control:
 				else:
 					ink.draw_texture_rect(IconSheet.get_icon(k), Rect2(kx + 2, 7, 16, 16), false, AMBER)
 				kx -= 22.0
-		var ar: Rect2 = Rect2(ink.size.x - 4.0 - 25.0, ah - 28.0, 25, 26)
-		var fr: Rect2 = Rect2(ar.position.x - 3.0 - 26.0, ah - 28.0, 26, 26)
-		CardLook.draw_chip(ink, Rect2(fr.position - Vector2(2, 1), Vector2(ar.end.x - fr.position.x + 4.0, 28)), 4.0)
+		# kc-readability: FP / Armor as big as on the hand cards.
+		var ar: Rect2 = Rect2(ink.size.x - 4.0 - 31.0, ah - 34.0, 31, 32)
+		var fr: Rect2 = Rect2(ar.position.x - 3.0 - 32.0, ah - 34.0, 32, 32)
+		CardLook.draw_chip(ink, Rect2(fr.position - Vector2(3, 2), Vector2(ar.end.x - fr.position.x + 6.0, 36)), 6.0)
 		CardLook.draw_reticle(ink, fr, fp, &"player", 0)
 		CardLook.draw_armor(ink, ar, armor, armor < armor_max))
 	panel.sort_children.connect(func() -> void:

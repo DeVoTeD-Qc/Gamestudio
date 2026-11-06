@@ -23,7 +23,12 @@ const RULE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-SemiBold
 ## kc-hand-y2: lore lines (cards with no effect): Barlow Condensed Medium Italic, dark grey.
 const LORE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-MediumItalic.ttf")
 const LORE_COLOR: Color = Color("#8A949C")
-const NUM_FONT: FontFile = preload("res://assets/fonts/ShareTechMono-Regular.ttf")
+## kc-readability (the head: "the cost icon and number as well as stats icon and number need to be
+## bigger / more readable. We can use a better font"): every card number (cost, FP, Armor, the Supply
+## counter) uses one bold condensed display face with tabular digits and a dark outline.
+const NUM_FONT: Font = preload("res://assets/fonts/card_numbers_oswald.tres")
+## Outline width (px) of card numbers drawn over art.
+const NUM_OUTLINE: int = 4
 ## The title spec (every card off the board): 16 px canvas = 11.6 pt on the 844x390 phone.
 const TITLE_PX: int = 16
 const TITLE_COLOR: Color = Color("#F2F5F7")
@@ -118,8 +123,8 @@ static func draw_reticle(ci: CanvasItem, r: Rect2, value: int, team: StringName 
 		return
 	var num: Color = trend_color(trend)
 	var txt: String = str(value)
-	var fs: int = maxi(12, int(roundf(rad * (1.05 if txt.length() > 1 else 1.25))))
-	_text_center(ci, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), txt, fs, num, NUM_FONT, 2)
+	var fs: int = maxi(14, int(roundf(rad * (1.2 if txt.length() > 1 else 1.4))))
+	_text_center(ci, Rect2(c - Vector2(rad, rad + rad * 0.06), Vector2(rad, rad) * 2.0), txt, fs, num, NUM_FONT, NUM_OUTLINE)
 
 
 ## Armor: a ballistic plate (clipped top corners, rounded bottom), steel grey; amber when damaged.
@@ -146,8 +151,8 @@ static func draw_armor(ci: CanvasItem, r: Rect2, value: int, damaged: bool = fal
 	if not with_number:
 		return
 	var txt: String = str(value)
-	var fs: int = maxi(12, int(roundf(w * (0.52 if txt.length() > 1 else 0.62))))
-	_text_center(ci, Rect2(p + Vector2(0, h * 0.04), Vector2(w, h * 0.96)), txt, fs, AR_DMG_NUM if damaged else Color.WHITE, NUM_FONT, 2)
+	var fs: int = maxi(14, int(roundf(w * (0.62 if txt.length() > 1 else 0.74))))
+	_text_center(ci, Rect2(p + Vector2(0, -h * 0.02), Vector2(w, h * 0.96)), txt, fs, AR_DMG_NUM if damaged else Color.WHITE, NUM_FONT, NUM_OUTLINE)
 
 
 ## The FP number's colour: green when buffed, red when lowered, else white.
@@ -211,15 +216,24 @@ static func draw_cost(ci: CanvasItem, r: Rect2, value: String, cant_pay: bool = 
 	ci.draw_colored_polygon(pts, Color("#4A1A1C") if cant_pay else AMBER)
 	pts.append(pts[0])
 	ci.draw_polyline(pts, Color("#FF5A5D") if cant_pay else AMBER.darkened(0.45), 1.5, true)
-	_text_center(ci, r, value, maxi(10, int(r.size.y * 0.7)), Color("#FF9A9A") if cant_pay else INK)
+	# kc-readability: a bigger digit in the number face (dark on amber reads without an outline).
+	_text_center(ci, Rect2(r.position - Vector2(0, r.size.y * 0.04), r.size), value, maxi(12, int(r.size.y * 0.8)), Color("#FF9A9A") if cant_pay else INK, NUM_FONT, 0)
 
 
-## A small dark backing behind one group of icons (never a band across the art).
+## A small dark backing behind one group of icons (never a band across the art). kc-readability: soft
+## edged (a feathered shadow around a ~80% black rounded plate) so the badges read on bright art.
 static func draw_chip(ci: CanvasItem, r: Rect2, radius: float = 3.0) -> void:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = CHIP
-	sb.set_corner_radius_all(int(radius))
+	sb.bg_color = BACKING
+	sb.set_corner_radius_all(int(maxf(radius, 4.0)))
+	sb.shadow_color = Color(0, 0, 0, 0.55)
+	sb.shadow_size = int(maxf(3.0, r.size.y * 0.14))
+	sb.anti_aliasing = true
 	ci.draw_style_box(sb, r)
+
+
+## The backing's colour (tests).
+const BACKING: Color = Color(0.03, 0.035, 0.04, 0.8)
 
 
 ## The damage crack (amber over a dark stroke), top-left corner.

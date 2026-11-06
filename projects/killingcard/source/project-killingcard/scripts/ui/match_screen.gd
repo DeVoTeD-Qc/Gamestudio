@@ -269,6 +269,11 @@ func _ready() -> void:
 		menu_pressed.emit())
 	_undo_button.pressed.connect(func() -> void: undo_pressed.emit())
 	_add_glyph(_undo_button, &"undo")
+	# kc-readability: the Supply count in the cards' number face, bigger.
+	_supply_value.add_theme_font_override(&"font", CardLook.NUM_FONT)
+	_supply_value.add_theme_font_size_override(&"font_size", 26)
+	_supply_value.add_theme_constant_override(&"outline_size", CardLook.NUM_OUTLINE)
+	_supply_value.add_theme_color_override(&"font_outline_color", CardLook.INK)
 	# kc-cards-impl (O2): READY / UNDO fit the narrow column next to the Operator card.
 	_ready_button.clip_text = true
 	_undo_button.clip_text = true
@@ -1576,8 +1581,9 @@ func _pip_size() -> Vector2:
 	var box_w: float = _supply_box.size.x if _supply_box != null and _supply_box.size.x > 0.0 else 300.0
 	# kc-ui3: stacked (pips under SUPPLY 3/4) the pips get the whole row; in one row, what the words leave.
 	var room: float = box_w - (28.0 if _supply_stacked else 150.0)
-	var w: float = clampf(floorf(room / n) - 3.0, 6.0, 14.0)
-	return Vector2(w, 18 if compact else 20)
+	# kc-readability: the pips are cost hexes (the cards' Supply icon), up to 22 px.
+	var w: float = clampf(floorf(room / n) - 3.0, 10.0, 22.0)
+	return Vector2(w, w + 2.0)
 
 
 func _set_supply(supply: int, supply_max: int) -> void:
@@ -1587,10 +1593,30 @@ func _set_supply(supply: int, supply_max: int) -> void:
 		child.queue_free()
 	for i: int in supply_max:
 		var pip: Panel = Panel.new()
-		pip.theme_type_variation = &"SupplyPip" if i < supply else &"SupplyPipSpent"
+		var full: bool = i < supply
+		pip.theme_type_variation = &"SupplyPip" if full else &"SupplyPipSpent"
 		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# kc-readability (the head: "the supply count at top should use same iconography as supply cost
+		# of cards"): each pip is the cards' cost hex, amber while available, an empty outline when spent.
+		pip.add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
+		pip.set_meta(&"hex", true)
+		pip.draw.connect(func() -> void: _draw_supply_hex(pip, full))
 		_supply_pips.add_child(pip)
 	_fit_pips()
+
+
+func _draw_supply_hex(pip: Control, full: bool) -> void:
+	var r: Rect2 = Rect2(Vector2.ZERO, pip.size)
+	if full:
+		CardLook.draw_cost(pip, r, "")
+		return
+	var c: Vector2 = r.get_center()
+	var rad: float = minf(r.size.x, r.size.y * 1.1) * 0.5 - 1.0
+	var pts: PackedVector2Array = []
+	for i: int in 7:
+		pts.append(c + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * rad)
+	pip.draw_colored_polygon(pts.slice(0, 6), Color(0.04, 0.05, 0.055, 0.9))
+	pip.draw_polyline(pts, Color(CardLook.AMBER, 0.55), 1.5, true)
 
 
 ## kc-ui3: when the killstreak tiles share the Supply row (phone), the pips go under SUPPLY 3/4.

@@ -40,10 +40,10 @@ const LINES: int = 3
 const BAR_H: float = 32.0
 ## T1 orders frame: the chevron cut of the top-right corner.
 const T1_CUT: float = 18.0
-const COST_RECT: Rect2 = Rect2(5, 4, 24, 24)
+const COST_RECT: Rect2 = Rect2(4, 3, 26, 26)
 ## FP reticle and Armor plate at 250 px (bottom-right of the stats bar).
-const FP_RECT: Rect2 = Rect2(185, 182, 28, 28)
-const ARMOR_RECT: Rect2 = Rect2(217, 182, 27, 28)
+const FP_RECT: Rect2 = Rect2(181, 182, 30, 30)
+const ARMOR_RECT: Rect2 = Rect2(215, 182, 29, 30)
 const FRAME_UNIT: Color = Color("#4A5560")
 const FACE_UNIT: Color = Color("#1B2126")
 const FRAME_T1: Color = Color("#B8913A")
@@ -215,10 +215,10 @@ func _ready() -> void:
 	_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_name_label.set_meta(&"title_style", true)
 	_cost_label.add_theme_font_override(&"font", CardLook.NUM_FONT)
-	_cost_label.add_theme_font_size_override(&"font_size", 17)
+	_cost_label.add_theme_font_size_override(&"font_size", 21)  # kc-readability
 	for l: Label in [_fp_label, _armor_label]:
 		l.add_theme_font_override(&"font", CardLook.NUM_FONT)
-		l.add_theme_font_size_override(&"font_size", 17)
+		l.add_theme_font_size_override(&"font_size", 21)  # kc-readability
 		l.add_theme_constant_override(&"outline_size", 4)
 		l.add_theme_color_override(&"font_outline_color", CardLook.INK)
 	_type_label.theme_type_variation = &""
@@ -354,7 +354,7 @@ func regions() -> Dictionary:
 		"title": Rect2(0, 0, w, 2.0 + TITLE_H), "cost": COST_RECT, "art": art,
 		"type": Rect2(6, ty, w - 12.0, TYPE_H), "text": Rect2(4, by, w - 8.0, box_h),
 		"bar": Rect2(4, sy, w - 8.0, BAR_H) if stats else Rect2(),
-		"fp": Rect2(w - 6.0 - 27.0 - 4.0 - 28.0, sy, 28, 28), "armor": Rect2(w - 6.0 - 27.0, sy, 27, 28),
+		"fp": Rect2(w - 6.0 - 29.0 - 4.0 - 30.0, sy - 1.0, 30, 30), "armor": Rect2(w - 6.0 - 29.0, sy - 1.0, 29, 30),
 		"traits": Rect2(6, sy + 4.0, 22, 22),
 	}
 
