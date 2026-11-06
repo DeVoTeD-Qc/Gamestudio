@@ -73,16 +73,16 @@ func test_several_suppress_stack_with_a_floor_of_zero() -> void:
 	assert_eq(m.firepower_of(pm2), 1, "two Suppress stack: 5 - 4")
 
 
-func test_frag_second_hit_reads_the_line_as_it_was() -> void:
+func test_second_in_line_hit_reads_the_line_as_it_was() -> void:
 	# Rulings 2 #7: the point man dies to the 2, but "1 to the next enemy" is still the 2nd unit.
 	var p: SideSetup = F.setup([], F.kestrel())
-	p.lethal = F.frag()
 	var m: MatchState = F.new_match(p)
+	F.grant(m, P, F.point_strike())
 	F.place_operator(m, P, F.MID)
 	var pm: RulesUnit = F.place(m, E, F.unit("pm", 0, 2), F.MID)
 	var second: RulesUnit = F.place(m, E, F.unit("second", 0, 5), F.MID)
 	var third: RulesUnit = F.place(m, E, F.unit("third", 0, 5), F.MID)
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "frag")
+	assert_true(m.submit(P, RulesIntent.use_item(&"point_strike", F.MID))["ok"], "point strike")
 	m.reveal()
 	assert_false(pm.is_alive(), "point man down")
 	assert_eq([second.armor, third.armor], [4, 5], "the 1 went to the original 2nd unit")

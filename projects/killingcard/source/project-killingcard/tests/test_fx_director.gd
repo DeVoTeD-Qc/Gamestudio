@@ -169,10 +169,10 @@ func test_killstreak_reveal_plays_takeover_and_other_items_do_not() -> void:
 	_setup(true)
 	var take: Control = _director.takeover
 	_director.play([
-		_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"frag_grenade", "zone": &"mid"}),
+		_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"some_item", "zone": &"mid"}),
 		_ev(RulesEvent.ITEM_REVEALED, {"side": &"enemy", "item_id": &"mortar_barrage", "zone": &"left"}),
 	])
-	assert_eq(_director.logged_kinds(), [&"tag"] as Array[StringName], "frag grenade: name tag only")
+	assert_eq(_director.logged_kinds(), [&"tag"] as Array[StringName], "a non-killstreak item: name tag only")
 	await _director.sequence_finished
 	assert_eq(_director.logged_kinds(), [&"tag", &"takeover"] as Array[StringName], "mortar: takeover")
 	assert_true(String(take.last_data.get("name", "")).to_lower().contains("mortar"), "takeover names the killstreak")

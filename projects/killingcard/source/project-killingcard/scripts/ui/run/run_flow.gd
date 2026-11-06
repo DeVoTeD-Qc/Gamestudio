@@ -40,8 +40,7 @@ const END_WORDS: Dictionary = {
 }
 const SLOT_WORDS: Dictionary = {
 	DataEnums.LoadoutSlot.PRIMARY: "Primary", DataEnums.LoadoutSlot.ATTACHMENT: "Attachment",
-	DataEnums.LoadoutSlot.SECONDARY: "Secondary", DataEnums.LoadoutSlot.LETHAL: "Lethal",
-	DataEnums.LoadoutSlot.TACTICAL: "Tactical", DataEnums.LoadoutSlot.PERK: "Perk",
+	DataEnums.LoadoutSlot.PERK: "Perk",
 	DataEnums.LoadoutSlot.KILLSTREAK: "Killstreak",
 }
 const CLASS_WORDS: Dictionary = {
@@ -283,8 +282,6 @@ static func item_effect_line(item: LoadoutItem) -> String:
 		parts.append("Holder")
 	if item.supply_cost > 0:
 		parts.append("%d Supply" % item.supply_cost)
-	if item.cooldown_rounds > 0:
-		parts.append("Cooldown %d" % item.cooldown_rounds)
 	return " · ".join(parts)
 
 

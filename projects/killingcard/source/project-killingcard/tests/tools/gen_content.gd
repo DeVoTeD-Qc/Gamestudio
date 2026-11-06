@@ -189,20 +189,7 @@ func _gen() -> void:
 	item("longreach_338", "Longreach .338", DataEnums.LoadoutSlot.PRIMARY, "Sniper. Pick.",
 		{"weapon_class": W.SNIPER, "operator_firepower": 3, "operator_armor": 5, "rotations_per_round": 1, "pick": true,
 		 "attachments": [ext_mag, foregrip, holo, ceramic]})
-	var sidearm := item("p12_sidearm", "P-12 Sidearm", DataEnums.LoadoutSlot.SECONDARY,
-		"1 Supply: 1 damage to an enemy in your Operator's zone. Once per round.",
-		{"supply_cost": 1, "uses_per_round": 1},
-		[fx(T.ON_PLAY, K.DAMAGE, TG.CHOSEN_ENEMY, Z.OPERATOR_ZONE, 1)])
-	var frag := item("frag_grenade", "Frag Grenade", DataEnums.LoadoutSlot.LETHAL,
-		"2 damage to the point man and 1 to the next enemy, in your Operator's or an adjacent zone. Cooldown 3.",
-		{"supply_cost": 0, "cooldown_rounds": 3},
-		[fx(T.ON_PLAY, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.OPERATOR_OR_ADJACENT, 2),
-		 fx(T.ON_PLAY, K.DAMAGE, TG.ENEMY_SECOND_IN_LINE, Z.OPERATOR_OR_ADJACENT, 1)])
-	var flash := item("flashbang", "Flashbang", DataEnums.LoadoutSlot.TACTICAL,
-		"Enemy units in your Operator's or an adjacent zone get -2 FP and lose First Shot this round. Cooldown 3.",
-		{"supply_cost": 0, "cooldown_rounds": 3},
-		[fx(T.ON_PLAY, K.MODIFY_FIREPOWER, TG.ALL_ENEMIES, Z.OPERATOR_OR_ADJACENT, -2, {"duration_rounds": 1}),
-		 fx(T.ON_PLAY, K.REMOVE_FIRST_SHOT, TG.ALL_ENEMIES, Z.OPERATOR_OR_ADJACENT, 0, {"duration_rounds": 1})])
+	# kc-loadout-cut: the P-12 Sidearm, Frag Grenade and Flashbang are gone.
 	var p_disc := item("streak_discipline", "Streak Discipline", DataEnums.LoadoutSlot.PERK, "Your killstreak thresholds -1 (min 1).", {},
 		[fx(T.PASSIVE, K.STREAK_THRESHOLD_MOD, TG.OWNER, Z.ANY, -1)])
 	var p_salv := item("field_salvage", "Field Salvage", DataEnums.LoadoutSlot.PERK, "The first time each round you eliminate an enemy, draw 1.",
@@ -237,23 +224,23 @@ func _gen() -> void:
 	var rusher := squad("squad_rusher", "SandViper_07", "DSRT", DataEnums.Personality.RUSHER,
 		cards_list([[point_man, 3], [breacher, 3], [flanker, 2], [rifleman, 2], [shieldman, 1], [medic, 1],
 			[callout, 1], [flank_route, 2], [bac, 1], [ammo, 1], [tripwire, 1]]),
-		wasp, [ext_mag], sidearm, frag, flash, [], [recon, sentry_ks],  # p19: Mortar -> Sentry (balance-log B2)
+		wasp, [ext_mag], [], [recon, sentry_ks],  # p19: Mortar -> Sentry (balance-log B2)
 		[1.5, 0.5, 2.0, 3.0], 0.15, [DataEnums.RangeTag.CLOSE])
 	# kc-art-traits-impl (head F1): one Gunner -> Hold the Line (campaign shortfall from LMG Pierce).
 	# SquadData.identity_trait and CardData.trait_options were added to the .tres files directly.
 	var anchor := squad("squad_anchor", "Bulwark_Nine", "QUAY", DataEnums.Personality.ANCHOR,
 		cards_list([[gunner, 2], [shieldman, 2], [rifleman, 3], [medic, 2], [demo, 2], [marksman, 1],
 			[hold, 3], [supp_fire, 2], [comms, 1]]),
-		kestrel, [foregrip], sidearm, frag, flash, [], [recon, sentry_ks],
+		kestrel, [foregrip], [], [recon, sentry_ks],
 		[1.0, 1.5, 3.0, 3.0], 0.10, [])
 	var rival := squad("squad_black_meridian", "Meridian_Six", "BKMRD", DataEnums.Personality.ANCHOR,
 		cards_list([[anvil, 1], [wren, 1], [gunner, 2], [shieldman, 2], [marksman, 2], [breacher, 1], [medic, 2],
 			[demo, 1], [rifleman, 2], [hold, 1], [supp_fire, 1], [bac, 1], [comms, 1], [callout, 1], [ammo, 1]]),
-		kestrel, [foregrip, ceramic, ext_mag], sidearm, frag, flash, [p_grit, p_obj], [recon, mortar, sentry_ks],  # p19: + Extended Mag (B4)
+		kestrel, [foregrip, ceramic, ext_mag], [p_grit, p_obj], [recon, mortar, sentry_ks],  # p19: + Extended Mag (B4)
 		[1.2, 1.2, 2.5, 3.0], 0.05, [])
 	squad("squad_tutorial", "TrainingBot_01", "DRILL", DataEnums.Personality.RUSHER,
 		cards_list([[rifleman, 8], [point_man, 3], [marksman, 2], [medic, 2]]),
-		kestrel, [], sidearm, frag, flash, [], [],
+		kestrel, [], [], [],
 		[1.0, 1.0, 2.0, 3.0], 0.0, [])
 
 	# --- Run config ------------------------------------------------------------
@@ -285,9 +272,6 @@ func _gen() -> void:
 	run.starter_deck = cards_list([[rifleman, 3], [point_man, 4], [breacher, 3], [marksman, 2], [medic, 2],
 		[gunner, 1], [shieldman, 1], [ammo, 2], [hold, 2]])
 	run.starter_primary = kestrel
-	run.starter_secondary = sidearm
-	run.starter_lethal = frag
-	run.starter_tactical = flash
 	run.starter_killstreaks = items([recon, mortar, helo])
 	run.reward_pool = cards_list([[flanker, 2], [demo, 2], [bac, 2], [comms, 2], [anvil, 1], [wren, 1],
 		[point_man, 1], [marksman, 1], [medic, 1], [breacher, 1], [gunner, 1], [shieldman, 1], [recon_spec, 1],
@@ -299,7 +283,7 @@ func _gen() -> void:
 	run.perk_slots = 3; run.killstreak_slots = 3
 	run.deck_size = 20; run.opening_hand = 4; run.round1_extra_draw = 1; run.free_mulligans = 1
 	run.draws_per_round = 2; run.hand_cap = 7; run.supply_round_offset = 1; run.supply_cap = 7
-	run.zone_capacity = 4; run.default_cooldown = 3
+	run.zone_capacity = 4
 	run.zone_control_target = 6; run.firefight_target = 7; run.round_cap = 8; run.overtime_draw_round = 10
 	run.detonator_arm_rounds = 2
 	run.range_bonus_smg = PackedInt32Array([1, 0, 0])
@@ -312,11 +296,11 @@ func _gen() -> void:
 
 
 func squad(id: String, tag: String, clan: String, pers: int, deck: Array[CardData], primary: LoadoutItem, atts: Array,
-		sec: LoadoutItem, leth: LoadoutItem, tac: LoadoutItem, perks: Array, ks: Array, w: Array, sb: float, ranges: Array) -> SquadData:
+		perks: Array, ks: Array, w: Array, sb: float, ranges: Array) -> SquadData:
 	var s := SquadData.new()
 	s.id = StringName(id); s.display_name = tag; s.clan_tag = clan; s.personality = pers
 	s.deck = deck; s.primary = primary; s.attachments = items(atts)
-	s.secondary = sec; s.lethal = leth; s.tactical = tac; s.perks = items(perks); s.killstreaks = items(ks)
+	s.perks = items(perks); s.killstreaks = items(ks)
 	s.weight_damage_dealt = w[0]; s.weight_damage_taken = w[1]; s.weight_zone_control = w[2]; s.weight_deny_streak = w[3]
 	s.second_best_chance = sb
 	var r: Array[DataEnums.RangeTag] = []

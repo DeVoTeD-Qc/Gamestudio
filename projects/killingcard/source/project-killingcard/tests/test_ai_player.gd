@@ -305,24 +305,6 @@ func _used(ai: AiPlayer, item_id: StringName) -> Array[Dictionary]:
 	return out
 
 
-func test_frag_and_sidearm_finish_weak_enemies_near_the_operator() -> void:
-	var m: MatchState = _staged("squad_anchor")
-	F.place_operator(m, E, 1)
-	var a: RulesUnit = F.place(m, P, load("res://data/cards/rifleman.tres"), 1)
-	var b: RulesUnit = F.place(m, P, load("res://data/cards/rifleman.tres"), 1)
-	a.armor = 2
-	b.armor = 1
-	F.place(m, P, load("res://data/cards/rifleman.tres"), 2).armor = 1
-	var ai: AiPlayer = AiPlayer.for_squad(_squad("squad_anchor"))
-	ai.take_turn(m, E)
-	var frag: Array[Dictionary] = _used(ai, &"frag_grenade")
-	assert_eq(frag.size(), 1, "Frag used: %s" % str(ai.last_intents))
-	assert_true(ai.last_rejected.is_empty(), "all intents accepted")
-	m.set_ready(P)
-	m.resolve_round()
-	assert_true(m.sides[P].units_on_board().size() <= 1, "the Frag (and fire) took out the weak units")
-
-
 func test_killstreak_from_tray_hits_the_crowded_zone() -> void:
 	# The Rival carries Mortar Barrage (p19 moved the Rusher to Recon Drone + Sentry Turret).
 	var m: MatchState = _staged("squad_black_meridian")

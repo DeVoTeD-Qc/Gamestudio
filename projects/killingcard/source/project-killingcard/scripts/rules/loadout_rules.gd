@@ -1,14 +1,12 @@
 # loadout_rules.gd
-# Purpose: Rules for the activated loadout (Secondary, Lethal, Tactical, killstreaks)
-#   and the Perks (core-rules §3, Ruling 4, Rulings part 2 #13). Stateless and static;
-#   state lives in RulesSide (cooldowns, uses_this_round / _match, streak_tray,
-#   item_undo, survive_lethal_armed). MatchHooks delegates to it.
-#   - Cooldown N: an item used in round N is ready again in round N+3 for Cooldown 3
-#     (the counter ticks 3 -> 2 -> 1 -> 0 at the next three Briefings). COOLDOWN_MOD
-#     perks (Quick Hands, post-prototype) change N, never below 0.
-#   - uses_per_round / uses_per_match (0 = unlimited): Sidearm once per round.
+# Purpose: Rules for the activated loadout (killstreaks) and the Perks (core-rules §3,
+#   Ruling 4, Rulings part 2 #13). Stateless and static; state lives in RulesSide
+#   (uses_this_round / _match, streak_tray, item_undo, survive_lethal_armed).
+#   MatchHooks delegates to it.
+#   kc-loadout-cut: the Secondary / Lethal / Tactical items and their cooldowns are gone.
+#   - uses_per_round / uses_per_match (0 = unlimited) on items and perks.
 #   - Killstreaks: usable only from the Streak Tray; using one takes it out of the tray.
-#   - Undo of a queued item gives back its cooldown, use counts and tray entry.
+#   - Undo of a queued item gives back its use counts and tray entry.
 #   - Perks: Streak Discipline (StreakTracker.threshold_for), Field Salvage (perk
 #     ON_ELIMINATE, uses_per_round), Grit (PASSIVE SURVIVE_LETHAL on the Operator,
 #     uses_per_match), Objective Focus (END_OF_ROUND, already resolved by MatchState).
@@ -32,17 +30,9 @@ const PERK_ON_ELIMINATE_NEEDS_STREAK_KILL: bool = true
 # Briefing
 # =============================================================================
 
-## Briefing: tick cooldowns, reset per-round uses, (re)arm survive-lethal perks.
+## Briefing: reset per-round uses, (re)arm survive-lethal perks.
 static func on_briefing(state, side: int) -> void:
 	var s: RulesSide = state.sides[side]
-	for id: Variant in s.cooldowns.keys():
-		var left: int = int(s.cooldowns[id])
-		if left <= 0:
-			continue
-		left -= 1
-		s.cooldowns[id] = left
-		if left == 0:
-			state.emit_event(RulesEvent.ITEM_READY, {"side": state.side_name(side), "item_id": id})
 	s.uses_this_round.clear()
 	s.item_undo.clear()
 	_update_survive_lethal(state, side)
@@ -52,41 +42,17 @@ static func on_briefing(state, side: int) -> void:
 # Activated items
 # =============================================================================
 
-## Rounds left before the item can be used again (0 = ready).
-static func cooldown_left(state, side: int, item: LoadoutItem) -> int:
-	return int(state.sides[side].cooldowns.get(item.id, 0))
-
-
-## Cooldown length after a use: printed cooldown + COOLDOWN_MOD perks (min 0).
-## Items without a printed cooldown (Sidearm, killstreaks) never get one.
-static func cooldown_for(state, side: int, item: LoadoutItem) -> int:
-	if item.cooldown_rounds <= 0:
-		return 0
-	var n: int = item.cooldown_rounds
-	for perk: LoadoutItem in state.sides[side].setup.perks:
-		if perk == null:
-			continue
-		for e: EffectData in perk.effects:
-			if e != null and e.kind == K.COOLDOWN_MOD and e.trigger == DataEnums.Trigger.PASSIVE:
-				n += e.amount
-	return maxi(0, n)
-
-
 ## "" if the side may use the item now, else the reason (Supply is checked by MatchState).
 static func can_use_item(state, side: int, item: LoadoutItem) -> String:
 	return String(check_item(state, side, item).get("reason", ""))
 
 
 ## {} if the side may use the item now, else {code, reason, data} with a stable code:
-## not_in_tray (killstreak not earned yet), on_cooldown {rounds}, no_uses_left {per: round|match}.
+## not_in_tray (killstreak not earned yet), no_uses_left {per: round|match}.
 static func check_item(state, side: int, item: LoadoutItem) -> Dictionary:
 	var s: RulesSide = state.sides[side]
 	if item.slot == S.KILLSTREAK and item.id not in s.streak_tray:
 		return {"code": &"not_in_tray", "reason": "killstreak not earned", "data": {}}
-	var left: int = cooldown_left(state, side, item)
-	if left > 0:
-		return {"code": &"on_cooldown", "reason": "on cooldown (ready in %d round%s)" % [left, "" if left == 1 else "s"],
-				"data": {"rounds": left}}
 	if item.uses_per_round > 0 and int(s.uses_this_round.get(item.id, 0)) >= item.uses_per_round:
 		return {"code": &"no_uses_left", "reason": "already used this round", "data": {"per": &"round"}}
 	if item.uses_per_match > 0 and int(s.uses_this_match.get(item.id, 0)) >= item.uses_per_match:
@@ -101,13 +67,10 @@ static func uses_left_this_round(state, side: int, item: LoadoutItem) -> int:
 	return maxi(0, item.uses_per_round - int(state.sides[side].uses_this_round.get(item.id, 0)))
 
 
-## The item was accepted in Deploy: start its cooldown, count the use, take it from the tray.
+## The item was accepted in Deploy: count the use, take it from the tray.
 static func on_item_used(state, side: int, item: LoadoutItem) -> void:
 	var s: RulesSide = state.sides[side]
-	var undo: Dictionary = {"id": item.id, "cooldown_before": s.cooldowns.get(item.id, 0), "from_tray": -1}
-	var cd: int = cooldown_for(state, side, item)
-	if cd > 0:
-		s.cooldowns[item.id] = cd
+	var undo: Dictionary = {"id": item.id, "from_tray": -1}
 	_count_use(s, item.id, 1)
 	if item.slot == S.KILLSTREAK:
 		var at: int = s.streak_tray.find(item.id)
@@ -118,7 +81,7 @@ static func on_item_used(state, side: int, item: LoadoutItem) -> void:
 	s.item_undo.append(undo)
 
 
-## A queued item was taken back: restore cooldown, use counts and the tray entry.
+## A queued item was taken back: restore use counts and the tray entry.
 static func on_item_undone(state, side: int, item: LoadoutItem) -> void:
 	var s: RulesSide = state.sides[side]
 	for i: int in range(s.item_undo.size() - 1, -1, -1):
@@ -126,7 +89,6 @@ static func on_item_undone(state, side: int, item: LoadoutItem) -> void:
 		if undo["id"] != item.id:
 			continue
 		s.item_undo.remove_at(i)
-		s.cooldowns[item.id] = undo["cooldown_before"]
 		_count_use(s, item.id, -1)
 		var at: int = int(undo["from_tray"])
 		if at >= 0 and item.id not in s.streak_tray:

@@ -15,9 +15,6 @@ static func player_setup(config: RunConfig) -> SideSetup:
 	s.deck = config.starter_deck.duplicate()
 	s.deck_levels = config.starter_levels()  # kc-syn: the starter plays Recruit copies
 	s.primary = config.starter_primary
-	s.secondary = config.starter_secondary
-	s.lethal = config.starter_lethal
-	s.tactical = config.starter_tactical
 	s.killstreaks = config.starter_killstreaks.duplicate()
 	return s
 
@@ -66,9 +63,6 @@ static func _greedy_deploy(m: MatchState, side: int) -> void:
 				if own >= 0:
 					var target: RulesUnit = s.line(own)[0]
 					m.submit(side, RulesIntent.play_card(c.uid, own, target.uid, (own + 1) % 3 if own != 1 else 0))
-	for it: LoadoutItem in [s.setup.lethal, s.setup.tactical, s.setup.secondary]:
-		if it != null:
-			m.submit(side, RulesIntent.use_item(it.id, _hottest_zone(m, side)))
 
 
 ## Zones ordered: contested-by-enemy first, then empty, then already ours.

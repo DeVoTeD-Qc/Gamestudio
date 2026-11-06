@@ -51,12 +51,10 @@ var operator_down_this_round: bool = false
 var streak_tray: Array[StringName] = []
 ## Killstreak ids earned during the current life (each once per life); cleared on reset.
 var earned_this_life: Array[StringName] = []
-## Rounds left before a Lethal / Tactical (or any item with a cooldown) is ready: id -> int.
-var cooldowns: Dictionary = {}
 ## Uses of loadout items and perks: id -> count (round counts reset at Briefing).
 var uses_this_round: Dictionary = {}
 var uses_this_match: Dictionary = {}
-## Undo records of this Deploy's item uses: {id, cooldown_before, from_tray}.
+## Undo records of this Deploy's item uses: {id, from_tray}.
 var item_undo: Array[Dictionary] = []
 ## Perk id whose survive-lethal (Grit) is armed on the Operator right now, or &"".
 var survive_lethal_armed: StringName = &""

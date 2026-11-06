@@ -12,10 +12,10 @@
 #     can't take it (NEED 3 SUPPLY, COLUMN FULL, WAIT ...); a refused play shows a toast with
 #     the reason and changes nothing
 #   - Flank Route style cards (CHOSEN_FRIENDLY): tap / drop on one of your units, then a lane
-#   - f02 loadout: tap Sidearm / Frag / Flashbang or a killstreak in the tray, then tap what it
-#     needs (an enemy unit for the Sidearm, a lane for Frag / Flashbang / Mortar / Sentry);
-#     items that need nothing (Recon Drone, Attack Helo) are queued at once. Blocked buttons
-#     are disabled and a tap on them toasts why (cooldown, used, not earned, no Operator)
+#   - f02 loadout: tap a killstreak in the tray, then tap what it needs (a lane for Mortar /
+#     Sentry); killstreaks that need nothing (Recon Drone, Attack Helo) are queued at once.
+#     Blocked buttons are disabled and a tap on them toasts why (used, not earned, no Operator).
+#     kc-loadout-cut: the Sidearm / Frag Grenade / Flashbang buttons are gone.
 #   - long-press (touch) or right-click (mouse) a hand card, a unit or the Operator: inspector
 #   - UNDO takes back the last play of this Deploy; READY locks the plan in, the round resolves
 #     and FeedbackDirector (p14) plays it over the pre-resolve board (taps / F fast-forward)
@@ -27,7 +27,7 @@
 #   play_text.gd. The enemy is the p07 AI (AiPlayer for the squad, seeded by the match seed),
 #   plugged in as `enemy_planner`; it commits before the player's Deploy.
 #   p16: gameplay signals go to EventBus (match / round start and end, round_summary,
-#   card_deployed, killstreak_earned / _used, ability_used, eliminations, Operator downs).
+#   card_deployed, killstreak_earned / _used, eliminations, Operator downs).
 #
 #   f03, the run match (SceneRouter "Run match hand-off", p11): on load the controller asks
 #   SceneRouter.take_pending_match(). A MatchState there (made by RunState.create_match() for
@@ -94,7 +94,7 @@ var state: MatchState = null
 var map: MapData = null
 ## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
 var selection: Dictionary = {}
-## Unit picked for a play that needs one (Flank Route, Sidearm), -1 = none yet.
+## Unit picked for a play that needs one (Flank Route), -1 = none yet.
 var target_uid: int = -1
 var killfeed: Array = []
 ## Every intent sent to the engine with its result (tests, playtest log).
@@ -166,7 +166,6 @@ func _on_screen_ready() -> void:
 	op.operator_drag_started.connect(_on_operator_drag_started, d)
 	op.operator_drag_moved.connect(func(pos: Vector2) -> void: _on_drag_moved(-1, pos), d)
 	op.operator_drag_ended.connect(_on_drag_ended, d)
-	op.ability_pressed.connect(_on_item_pressed, d)
 	op.killstreak_pressed.connect(_on_item_pressed, d)
 	var board: Control = _screen.get_board()
 	board.lane_tapped.connect(_on_lane_tapped, d)
@@ -260,9 +259,6 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	var pick: LoadoutItem = _picked_operator(config)
 	if pick != null:
 		player.primary = pick
-	player.secondary = config.starter_secondary
-	player.lethal = config.starter_lethal
-	player.tactical = config.starter_tactical
 	player.killstreaks.assign(config.starter_killstreaks)
 	var enemy: SideSetup = SideSetup.from_squad(squad)
 	var hooks: MatchHooks = MatchHooks.new()
@@ -557,16 +553,12 @@ func _reveal_off() -> void:
 
 
 ## kc-onboard-ui (§5): the systems this board puts in play are met (RunState.note_systems, from
-## RevealFlags.match_triggers after each Reveal / Firefight, plus the Operator's Lethal / Tactical and
-## a killstreak the first time one is ready), and at the start of each Deploy one pending "New: X"
+## RevealFlags.match_triggers after each Reveal / Firefight, plus a killstreak the first time one
+## is ready), and at the start of each Deploy one pending "New: X"
 ## explainer of those shows over the board.
 func note_board_systems() -> Array[StringName]:
 	var flags: Array[StringName] = RevealFlags.match_triggers(state)
 	var me: RulesSide = state.sides[PLAYER]
-	for pair: Array in [[me.setup.lethal, RevealFlags.LETHAL], [me.setup.tactical, RevealFlags.TACTICAL]]:
-		var item: LoadoutItem = pair[0]
-		if item != null and bool(state.check_use(PLAYER, item.id).get("ok", false)):
-			flags.append(pair[1])
 	if not me.streak_tray.is_empty():
 		flags.append(RevealFlags.KILLSTREAKS)
 	var rs: Node = get_node_or_null(^"/root/RunState")
@@ -925,7 +917,7 @@ func select_operator() -> void:
 		_screen.show_toast("Not enough Supply: your Operator costs %d, you have %d." % [state.operator_cost(), s.supply])
 
 
-## Sidearm / Lethal / Tactical / killstreak button: select it for targeting, or queue it at
+## Killstreak button: select it for targeting, or queue it at
 ## once when it needs no choice. A blocked item only toasts why. Returns the engine's check.
 func select_item(item_id: StringName) -> Dictionary:
 	if state == null:
@@ -1023,7 +1015,7 @@ func _badge(kind: StringName) -> String:
 			var item: LoadoutItem = state.find_item(PLAYER, selection["id"])
 			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 				return "CALL IN HERE"
-			return "THROW HERE" if item != null and item.slot == DataEnums.LoadoutSlot.LETHAL else "TARGET COLUMN"
+			return "TARGET COLUMN"
 	var card: CardData = state.sides[PLAYER].find_in_hand(int(selection["uid"])).card
 	match card.card_type:
 		DataEnums.CardType.UNIT:
@@ -1648,7 +1640,7 @@ func _on_rail_inspected(key: StringName) -> void:
 				if item != null:
 					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, PLAYER, item)])
 			_open_info({"title": "Killstreaks", "type": "streak %d" % me.streak,
-					"text": "Eliminations build your streak; each killstreak is earned at its threshold (%s) and called in from this badge. Your loadout items (sidearm, lethal, tactical) are here too." % ", ".join(names),
+					"text": "Eliminations build your streak; each killstreak is earned at its threshold (%s) and called in from this badge." % ", ".join(names),
 					"status": "The badge glows amber when one is ready."})
 		&"menu":
 			_open_info({"title": "Menu", "type": "pause", "text": "Pause the match: fast animations, mirror layout (tray on the left), forfeit, quit to title.", "status": ""})
@@ -1783,6 +1775,7 @@ func _open_operator(side: int) -> void:
 		op_lines.append({"name": "Firepower now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)
 	view["side"] = "friend" if side == PLAYER else "enemy"
+	view["cost"] = cost  # kc-loadout-cut: the Supply cost in the card's cost badge, like a deck card
 	var op_art: BannerArt = BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))
 	if op_art.licensed:
 		view["licensed_art"] = String(op_art.id)  # kc-cod3: the mastery card in the card picture too
@@ -1893,8 +1886,6 @@ func _emit(e: Dictionary) -> void:
 				var item: LoadoutItem = state.find_item(PLAYER, item_id)
 				if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 					EventBus.killstreak_used.emit(item_id, r)
-				else:
-					EventBus.ability_used.emit(item_id, StringName(e.get("zone", &"")))
 		RulesEvent.OPERATOR_PLACED:
 			if r > 1:
 				EventBus.operator_respawned.emit(StringName(e.get("side", &"")))

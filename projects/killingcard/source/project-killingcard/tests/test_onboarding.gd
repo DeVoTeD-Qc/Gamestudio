@@ -41,6 +41,10 @@ func _count(r: RunProgress, id: StringName) -> int:
 	return r.deck.count(id)
 
 
+func _in_deck(deck: Array[CardData], id: StringName) -> int:
+	return deck.filter(func(c: CardData) -> bool: return c.id == id).size()
+
+
 ## Resolves every offer after the current drop(s) by skipping.
 func _skip_all(r: RunProgress) -> void:
 	while not r.current_offer().is_empty():
@@ -182,7 +186,13 @@ func test_squads_along_the_ladder() -> void:
 			heavy += 1
 	assert_eq([s2.deck.size(), heavy], [18, 3], "M2: 18 cards with 3 Heavy Recruit Gunners")
 	var s3: SideSetup = SideSetup.from_squad(md[2].squad, md[2])
-	assert_eq(s3.deck, md[2].squad.deck, "M3: the shipped Rusher deck")
+	# kc-syn-tune (synergy-system.md §12): M3 = the Rusher deck with its Breach and Clear swapped
+	# for a Standard Issue Sergeant; M4 = the Anchor deck with 2 Demolitions + the Marksman swapped
+	# for 2 Armored Troopers + a Sergeant.
+	assert_eq(s3.deck.size(), 18, "M3: 18 cards")
+	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"si_sergeant"),
+			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 1, 6],
+			"M3: Rusher deck, Breach and Clear swapped for a Sergeant")
 	var vanguard: int = 0
 	for i: int in s3.deck.size():
 		if s3.deck[i].is_unit():
@@ -192,6 +202,9 @@ func test_squads_along_the_ladder() -> void:
 	assert_true(vanguard >= 6, "M3: Vanguard calling cards (%d)" % vanguard)
 	var s4: SideSetup = SideSetup.from_squad(md[3].squad, md[3])
 	assert_true(s4.deck_levels.is_empty(), "M4: Trained")
+	assert_eq([s4.deck.size(), _in_deck(s4.deck, &"demolitions_expert"), _in_deck(s4.deck, &"marksman"),
+			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [18, 0, 0, 2, 1],
+			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue")
 	assert_eq([md[0].crew_label, md[2].crew_label], ["Standard Issue crew", "Honors crew"], "crew labels")
 	var db: Node = Engine.get_main_loop().root.get_node_or_null(^"/root/CardDB")
 	if db != null:
@@ -373,7 +386,7 @@ func test_save_v4_round_trip_mid_drop_and_muster_out() -> void:
 	r.record_result(&"player")
 	r.choose_offer(2)
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 4, "save version 4")
+	assert_eq(int(d["version"]), RunProgress.SAVE_VERSION, "current save version (5 since kc-loadout-cut)")
 	var back: Dictionary = RunProgress.from_dict(_config(), d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]

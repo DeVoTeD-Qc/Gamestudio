@@ -315,6 +315,38 @@ func test_initiative_follows_mode_score() -> void:
 	assert_eq(m.initiative, P, "tie -> player")
 
 
+## kc-syn-tune what-if tie rules (ModeRules.tiebreak, balance tools only; the game ships &"player").
+func test_initiative_tie_rules() -> void:
+	assert_eq(ModeRules.tiebreak, &"player", "shipped tie rule: the player")
+	var m: MatchState = _match(ZC)
+	var got: Dictionary = {}
+	for rule: StringName in [&"player", &"enemy", &"alt", &"other", &"coin", &"random"]:
+		ModeRules.tiebreak = rule
+		var seq: Array = []
+		m.initiative = P
+		for rnd: int in [1, 2, 3]:
+			m.round_number = rnd
+			var side: int = m.hooks.initiative_side(m)
+			seq.append(side)
+			m.initiative = side
+		got[rule] = seq
+	ModeRules.tiebreak = &"player"
+	assert_eq(got[&"player"], [P, P, P], "player: every tie")
+	assert_eq(got[&"enemy"], [E, E, E], "enemy: every tie")
+	assert_eq(got[&"alt"], [P, E, P], "alt: odd rounds player, even rounds enemy")
+	assert_eq(got[&"other"], [P, E, P], "other: round 1 player, then whoever did not have it")
+	var c: int = ModeRules.coin(m, 1)
+	assert_eq(got[&"coin"], [c, 1 - c, c], "coin: round 1 coin flip, then it swaps")
+	assert_true(int(got[&"random"][0]) in [P, E], "random: a side")
+	m.round_number = 2
+	m.sides[P].score = 3
+	m.sides[E].score = 1
+	for rule: StringName in [&"enemy", &"coin"]:
+		ModeRules.tiebreak = rule
+		assert_eq(m.hooks.initiative_side(m), E, "%s: no tie -> the side behind" % rule)
+	ModeRules.tiebreak = &"player"
+
+
 func test_hooks_without_mode_never_end() -> void:
 	var m: MatchState = F.new_match()
 	F.place(m, P, _holder_unit(), F.LEFT)

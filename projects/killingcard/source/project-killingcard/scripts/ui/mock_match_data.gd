@@ -53,11 +53,6 @@ static func round_3_sample() -> Dictionary:
 		"streak_max": 5,
 		"perks": [],
 		"perk_slots": 3,
-		"abilities": [
-			{"id": &"sidearm", "name": "P-12", "state": "1 SUP"},
-			{"id": &"lethal", "name": "FRAG", "state": "READY"},
-			{"id": &"tactical", "name": "FLASH", "state": "READY"},
-		],
 		"killstreaks": [
 			{"id": &"recon_drone", "name": "RECON", "threshold": 2, "earned": false},
 			{"id": &"mortar_barrage", "name": "MORTAR", "threshold": 3, "earned": false},

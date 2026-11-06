@@ -1,9 +1,8 @@
 # test_rules_loadout.gd
-# Purpose: p05 activated loadout and Operator respawn (LoadoutRules): P-12 Sidearm,
-#   Frag Grenade and Flashbang from real data (Supply, uses per round, Cooldown 3 =
-#   ready again in round N+3, undo refunds), COOLDOWN_MOD, uses per match, Operator
-#   down / respawn, and the Rulings part 2 engine changes (Tripwire armed before
-#   arrivals, full zone returns the card, Flank Route fizzles, negative Armor change).
+# Purpose: p05 activated loadout and Operator respawn (LoadoutRules): uses per match, Operator
+#   down / respawn, and the Rulings part 2 engine changes (Tripwire armed before arrivals, full
+#   zone returns the card, Flank Route fizzles, negative Armor change). kc-loadout-cut: the
+#   P-12 Sidearm, Frag Grenade, Flashbang and their cooldowns are gone (their tests too).
 # Author: Mechanics Developer Agent
 extends "res://tests/test_case.gd"
 
@@ -17,11 +16,7 @@ static func _load(id: String) -> LoadoutItem:
 
 
 func _kit() -> SideSetup:
-	var p: SideSetup = F.setup([], F.kestrel())
-	p.secondary = _load("p12_sidearm")
-	p.lethal = _load("frag_grenade")
-	p.tactical = _load("flashbang")
-	return p
+	return F.setup([], F.kestrel())
 
 
 func _next_round(m: MatchState) -> void:
@@ -29,137 +24,44 @@ func _next_round(m: MatchState) -> void:
 	m.begin_round()
 
 
-# --- Secondary -------------------------------------------------------------------------------
-
-func test_sidearm_one_supply_one_damage_once_per_round_counts_for_streak() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.MID)
-	var a: RulesUnit = F.place(m, E, F.unit("a", 0, 1), F.MID)
-	var b: RulesUnit = F.place(m, E, F.unit("b", 0, 9), F.MID)
-	assert_true(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, a.uid))["ok"], "Sidearm on a")
-	assert_eq(m.sides[P].supply, 1, "costs 1 Supply")
-	var r: Dictionary = m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, b.uid))
-	assert_eq([r["ok"], r["reason"]], [false, "already used this round"], "once per round")
-	m.reveal()
-	assert_false(a.is_alive(), "1 damage")
-	var rec: Dictionary = F.events_of(m, RulesEvent.UNIT_ELIMINATED)[0]
-	assert_eq(rec["source_kind"], MatchState.SRC_SECONDARY, "Secondary kill")
-	m.firefight()
-	m.score()
-	assert_eq(m.sides[P].streak, 1, "counts for the streak")
-	m.begin_round()
-	assert_true(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, b.uid))["ok"], "next round again (no cooldown)")
-
-
-func test_sidearm_needs_supply_and_undo_refunds_the_use() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.MID)
-	var a: RulesUnit = F.place(m, E, F.unit("a", 0, 9), F.MID)
-	m.sides[P].supply = 0
-	assert_eq(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, a.uid))["reason"], "not enough Supply", "Supply")
-	m.sides[P].supply = 1
-	assert_true(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, a.uid))["ok"], "used")
-	assert_true(m.undo_last(P)["ok"], "undo")
-	assert_eq(m.sides[P].supply, 1, "Supply back")
-	assert_true(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, a.uid))["ok"], "use back")
-
-
-func test_sidearm_wasted_if_target_not_in_operator_zone() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.MID)
-	var far: RulesUnit = F.place(m, E, F.unit("far", 0, 9), F.LEFT)
-	m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, far.uid))
-	m.reveal()
-	assert_eq(far.armor, 9, "only an enemy in the Operator's zone")
-
-
-# --- Lethal / Tactical cooldowns --------------------------------------------------------------
-
-func test_frag_cooldown_ready_again_in_round_n_plus_3() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.LEFT)
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "round 1: used")
-	assert_eq(m.sides[P].supply, 2, "0 Supply")
-	_next_round(m)
-	assert_eq(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["reason"], "on cooldown (ready in 2 rounds)", "round 2")
-	_next_round(m)
-	assert_eq(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["reason"], "on cooldown (ready in 1 round)", "round 3")
-	_next_round(m)
-	assert_eq(F.events_of(m, RulesEvent.ITEM_READY).size(), 1, "ready event at round 4 Briefing")
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "round 4 = N+3: ready")
-
-
-func test_flashbang_cooldown_independent_of_frag_and_undo_refunds() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.MID)
-	assert_true(m.submit(P, RulesIntent.use_item(&"flashbang", F.MID))["ok"], "Flashbang")
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "Frag the same round")
-	assert_true(m.undo_last(P)["ok"], "undo Frag")
-	assert_eq(LoadoutRules.cooldown_left(m, P, _load("frag_grenade")), 0, "Frag cooldown refunded")
-	assert_eq(LoadoutRules.cooldown_left(m, P, _load("flashbang")), 3, "Flashbang still on Cooldown 3")
-	_next_round(m)
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "Frag usable round 2")
-	assert_false(m.submit(P, RulesIntent.use_item(&"flashbang", F.MID))["ok"], "Flashbang not")
-
-
-func test_frag_and_flashbang_real_data_effects() -> void:
-	var m: MatchState = F.new_match(_kit())
-	F.place_operator(m, P, F.LEFT)
-	var pm: RulesUnit = F.place(m, E, F.unit("pm", 0, 2), F.MID)
-	var second: RulesUnit = F.place(m, E, F.unit("second", 5, 5, F.W.NONE, {"first_shot": true}), F.MID)
-	m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))
-	m.submit(P, RulesIntent.use_item(&"flashbang", F.MID))
-	m.reveal()
-	assert_eq([pm.is_alive(), second.armor], [false, 4], "Frag 2 + 1")
-	assert_eq([m.firepower_of(second), m.has_first_shot(second)], [3, false], "Flashbang -2 FP, no First Shot")
-	assert_eq(m.sides[P].streak, 0, "streak only moves in the Score step")
-	m.firefight()
-	m.score()
-	assert_eq(m.sides[P].streak, 1, "the Lethal kill counts")
-
-
-func test_cooldown_mod_perk_shortens_cooldowns() -> void:
-	var p: SideSetup = _kit()
-	var quick: LoadoutItem = F.item("quick_hands", DataEnums.LoadoutSlot.PERK,
-			[F.eff(F.TR.PASSIVE, F.K.COOLDOWN_MOD, F.T.OWNER, F.Z.ANY, -1)])
-	p.perks.append(quick)
-	var m: MatchState = F.new_match(p)
-	F.place_operator(m, P, F.MID)
-	assert_eq(LoadoutRules.cooldown_for(m, P, _load("frag_grenade")), 2, "3 - 1")
-	assert_eq(LoadoutRules.cooldown_for(m, P, _load("p12_sidearm")), 0, "no cooldown stays none")
-	m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))
-	_next_round(m)
-	assert_false(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "round 2: cooling")
-	_next_round(m)
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "round 3 = N+2 with the perk")
+func test_removed_loadout_items_are_gone() -> void:
+	for id: String in ["p12_sidearm", "frag_grenade", "flashbang"]:
+		assert_false(ResourceLoader.exists("res://data/loadout/%s.tres" % id), "%s.tres deleted" % id)
+	var s: SideSetup = SideSetup.new()
+	for field: String in ["secondary", "lethal", "tactical"]:
+		assert_false(field in s, "SideSetup has no %s" % field)
+		assert_false(field in SquadData.new(), "SquadData has no %s" % field)
+	assert_false("cooldowns" in RulesSide.new(), "no cooldown state")
+	assert_false("cooldown_rounds" in LoadoutItem.new(), "no cooldown field")
 
 
 func test_uses_per_match() -> void:
 	var p: SideSetup = _kit()
-	var once: LoadoutItem = F.item("one_shot", DataEnums.LoadoutSlot.SECONDARY,
+	var once: LoadoutItem = F.item("one_shot", DataEnums.LoadoutSlot.KILLSTREAK,
 			[F.eff(F.TR.ON_PLAY, F.K.DRAW, F.T.OWNER, F.Z.ANY, 1)])
 	once.uses_per_match = 1
-	p.secondary = once
 	var m: MatchState = F.new_match(p)
+	F.grant(m, P, once)
 	assert_true(m.submit(P, RulesIntent.use_item(&"one_shot"))["ok"], "first use")
 	_next_round(m)
+	F.grant(m, P, once)  # earned again
 	assert_eq(m.submit(P, RulesIntent.use_item(&"one_shot"))["reason"], "already used this match", "once per match")
 
 
 # --- Operator down & respawn ------------------------------------------------------------------
 
-func test_operator_down_then_respawn_free_full_armor_any_zone_keeps_cooldowns() -> void:
+func test_operator_down_then_respawn_free_full_armor_any_zone() -> void:
 	var m: MatchState = F.new_match(_kit())
 	var op: RulesUnit = F.place_operator(m, P, F.MID)
-	m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))
 	F.place(m, E, F.unit("big", 20, 20), F.MID)
 	m.resolve_round()
 	assert_false(op.is_on_board(), "down")
 	assert_eq(F.events_of(m, RulesEvent.OPERATOR_DOWN).size(), 1, "logged")
 	assert_eq(m.sides[E].eliminations, 1, "the enemy gets +1 elimination")
 	m.begin_round()
-	assert_false(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.LEFT))["ok"], "cooldowns survive going down")
-	assert_eq(m.submit(P, RulesIntent.use_item(&"p12_sidearm", -1, 0))["reason"], "Operator is not on the board", "no Sidearm while down")
+	F.grant(m, P, F.point_strike())
+	assert_eq(m.submit(P, RulesIntent.use_item(&"point_strike", F.LEFT))["reason"], "Operator is not on the board",
+			"no Operator-range item while down")
 	var supply: int = m.sides[P].supply
 	assert_true(m.submit(P, RulesIntent.place_operator(F.RIGHT))["ok"], "respawn in any zone")
 	assert_eq(m.sides[P].supply, supply, "for free")

@@ -32,9 +32,6 @@ const MAX_DECK: int = 20
 @export var primary: LoadoutItem = null
 ## Attachments the squad's Operator already has (from primary.attachments).
 @export var attachments: Array[LoadoutItem] = []
-@export var secondary: LoadoutItem = null
-@export var lethal: LoadoutItem = null
-@export var tactical: LoadoutItem = null
 @export var perks: Array[LoadoutItem] = []
 @export var killstreaks: Array[LoadoutItem] = []
 
@@ -62,9 +59,6 @@ func validate(v: DataValidator, perk_slots: int = 3, killstreak_slots: int = 3) 
 	if identity_trait != &"" and identity_trait not in SynergyRules.TRAITS:
 		v.invalid("identity_trait", "unknown trait '%s' (one of %s)" % [identity_trait, SynergyRules.TRAITS])
 	v.check_slot_ref("primary", primary, DataEnums.LoadoutSlot.PRIMARY, true)
-	v.check_slot_ref("secondary", secondary, DataEnums.LoadoutSlot.SECONDARY, true)
-	v.check_slot_ref("lethal", lethal, DataEnums.LoadoutSlot.LETHAL, true)
-	v.check_slot_ref("tactical", tactical, DataEnums.LoadoutSlot.TACTICAL, true)
 	v.check_slot_array("attachments", attachments, DataEnums.LoadoutSlot.ATTACHMENT, 0, 4)
 	v.check_slot_array("perks", perks, DataEnums.LoadoutSlot.PERK, 0, perk_slots)
 	v.check_slot_array("killstreaks", killstreaks, DataEnums.LoadoutSlot.KILLSTREAK, 0, killstreak_slots)

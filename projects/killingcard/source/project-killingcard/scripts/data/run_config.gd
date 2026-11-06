@@ -72,9 +72,6 @@ extends Resource
 ## Exactly deck_size card references (copies = repeated entries).
 @export var starter_deck: Array[CardData] = []
 @export var starter_primary: LoadoutItem = null
-@export var starter_secondary: LoadoutItem = null
-@export var starter_lethal: LoadoutItem = null
-@export var starter_tactical: LoadoutItem = null
 ## Killstreaks pre-selected on the loadout screen (the player may change them).
 @export var starter_killstreaks: Array[LoadoutItem] = []
 
@@ -105,8 +102,6 @@ extends Resource
 ## kc-syn §6.3: Supply to place the Operator (round 1 and every respawn), both sides, all modes.
 ## 0 = free (RunConfig.new() default, so hand-built test configs keep the old rule).
 @export_range(0, 3) var operator_cost: int = 0
-## Lethal/Tactical cooldown used when an item leaves cooldown_rounds at 0.
-@export_range(0, 10) var default_cooldown: int = 3
 
 @export_group("Mode targets")
 @export_range(1, 20) var zone_control_target: int = 6
@@ -240,9 +235,6 @@ func validate(v: DataValidator) -> void:
 			if starter_deck[i] != null and starter_deck[i].is_token():
 				v.invalid("starter_deck[%d]" % i, "'%s' is a token and can't be in a deck" % starter_deck[i].id)
 	v.check_slot_ref("starter_primary", starter_primary, DataEnums.LoadoutSlot.PRIMARY, true)
-	v.check_slot_ref("starter_secondary", starter_secondary, DataEnums.LoadoutSlot.SECONDARY, true)
-	v.check_slot_ref("starter_lethal", starter_lethal, DataEnums.LoadoutSlot.LETHAL, true)
-	v.check_slot_ref("starter_tactical", starter_tactical, DataEnums.LoadoutSlot.TACTICAL, true)
 	v.check_slot_array("starter_killstreaks", starter_killstreaks, DataEnums.LoadoutSlot.KILLSTREAK, killstreak_slots, killstreak_slots)
 	# Pools
 	if v.check_ref_array("reward_pool", reward_pool, CardData, supply_drop_choices, 200):
@@ -268,7 +260,6 @@ func validate(v: DataValidator) -> void:
 	v.check_range("supply_round_offset", supply_round_offset, 0, 5)
 	v.check_range("supply_cap", supply_cap, 1, 15)
 	v.check_range("zone_capacity", zone_capacity, 1, 6)
-	v.check_range("default_cooldown", default_cooldown, 0, 10)
 	v.check_range("zone_control_target", zone_control_target, 1, 20)
 	v.check_range("firefight_target", firefight_target, 1, 20)
 	v.check_range("round_cap", round_cap, 1, 20)

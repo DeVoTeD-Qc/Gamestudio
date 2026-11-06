@@ -7,7 +7,7 @@
 #                 of ~20 planner settings swept in p19. A solid player who reads the board.
 #     casual    - the same planner, less sharp (dealt 1.5 / taken 0.8 / deny 1), plays its
 #                 second-best plan 60% of the time, values cards in hand more and holds
-#                 Lethal / Tactical / killstreaks longer. A new or sloppy player.
+#                 killstreaks longer. A new or sloppy player.
 #     greedy    - tests/mode_sim.gd's greedy policy (the old reference; weak).
 #   Reports, per proxy: win rate per run slot x mode (both modes for every slot, with
 #   the starter kit), rounds per match, end reasons, unspent Supply per round, streaks,
@@ -220,7 +220,6 @@ func _player_ai(proxy: String, mode: int = -1) -> AiPlayer:
 		p.push_bonus = 0.3
 		p.second_best_chance = 0.6
 		p.card_keep_cost = 0.6
-		p.cooldown_keep_cost = 1.0
 		p.killstreak_keep_cost = 1.2
 		p.weight_deny_streak = 1.0
 	for key: String in [proxy, "%s@%d" % [proxy, mode]]:

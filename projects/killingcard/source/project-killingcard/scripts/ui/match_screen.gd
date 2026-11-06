@@ -951,8 +951,7 @@ func _setup_flyout() -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			_flyout_scrim.accept_event()
 			close_flyout())
-	for sig: StringName in [&"ability_pressed", &"killstreak_pressed"]:
-		_operator_panel.connect(sig, func(_id: StringName) -> void: close_flyout.call_deferred())
+	_operator_panel.killstreak_pressed.connect(func(_id: StringName) -> void: close_flyout.call_deferred())
 	_operator_panel.operator_tapped.connect(func() -> void: close_flyout.call_deferred())
 	_operator_panel.operator_inspected.connect(close_flyout)
 	# Dragging the Operator out of its flyout: the flyout fades but keeps the gesture alive.

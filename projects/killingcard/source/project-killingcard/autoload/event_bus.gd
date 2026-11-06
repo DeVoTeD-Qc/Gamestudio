@@ -48,11 +48,10 @@ signal unit_eliminated(victim_uid: int, by_uid: int, zone: StringName, by_killst
 signal operator_down(side: StringName, round_number: int)
 signal operator_respawned(side: StringName)
 
-# --- Streaks, killstreaks, abilities --------------------------------------------
+# --- Streaks, killstreaks -------------------------------------------------------
 signal streak_changed(streak: int)
 signal killstreak_earned(killstreak_id: StringName, round_number: int)
 signal killstreak_used(killstreak_id: StringName, round_number: int)
-signal ability_used(ability_id: StringName, zone: StringName)
 
 # --- Rewards --------------------------------------------------------------
 signal reward_offered(kind: StringName, offered_ids: Array[StringName])

@@ -41,9 +41,6 @@ const SRC_UNIT: StringName = &"unit"
 const SRC_OPERATOR: StringName = &"operator"
 const SRC_TACTIC: StringName = &"tactic"
 const SRC_EQUIPMENT: StringName = &"equipment"
-const SRC_SECONDARY: StringName = &"secondary"
-const SRC_LETHAL: StringName = &"lethal"
-const SRC_TACTICAL: StringName = &"tactical"
 const SRC_KILLSTREAK: StringName = &"killstreak"
 const SRC_PERK: StringName = &"perk"
 ## On Down triggers (Demolitions Expert); counts for the streak (StreakTracker rule).
@@ -131,7 +128,7 @@ func start_match() -> void:
 
 
 ## Briefing of the next round: Supply, draws (Round 1: opening hand + 1, then a free
-## mulligan), hooks (cooldowns), delayed effects. Ends in the Deploy phase.
+## mulligan), hooks (per-round uses, Grit), delayed effects. Ends in the Deploy phase.
 func begin_round() -> void:
 	if phase == Phase.ENDED:
 		return
@@ -263,7 +260,7 @@ func submit(side: int, intent: Dictionary) -> Dictionary:
 ##   operator_not_placed, out_of_range {operator_zone}           (Operator-zone effects)
 ##   no_target {want: &"enemy"|&"friendly"}, target_out_of_range {operator_zone}
 ##   same_zone, not_adjacent {from_zone}                         (moves, Rotations)
-##   not_in_loadout, not_in_tray, on_cooldown {rounds},
+##   not_in_loadout, not_in_tray,
 ##   no_uses_left {per: &"round"|&"match"}                       (loadout items)
 ##   no_operator, cant_place, already_placed, no_rotations_left {allowed}   (Operator)
 ##   item_blocked (a MatchHooks subclass refused the item with its own reason)
@@ -286,7 +283,7 @@ func legal_targets(side: int, what: Variant) -> Array[Dictionary]:
 
 
 ## Can `what` (as in legal_targets) be used at all right now? {ok, code, reason, data}: ok when
-## some target is legal; otherwise the refusal every candidate shares (e.g. on_cooldown,
+## some target is legal; otherwise the refusal every candidate shares (e.g. not_in_tray,
 ## not_enough_supply, operator_not_placed), else &"no_legal_target". For buttons / hand dimming.
 func check_use(side: int, what: Variant) -> Dictionary:
 	var codes: Dictionary = {}  # code -> first result with it
@@ -494,7 +491,7 @@ func _check_targets(side: int, effects: Array[EffectData], play: Dictionary, zon
 				var foe_unit: RulesUnit = sides[1 - side].find_unit(target_uid)
 				if foe_unit == null:
 					return _fail("pick an enemy unit", &"no_target", {"want": &"enemy"})
-				# Sidearm: the shot only lands on an enemy in the Operator's zone.
+				# An OPERATOR_ZONE shot only lands on an enemy in the Operator's zone.
 				if zone_from_effects and e.zone_scope == DataEnums.ZoneScope.OPERATOR_ZONE \
 						and foe_unit.zone != projected_operator_zone(side):
 					return _fail("pick an enemy in your Operator's zone", &"target_out_of_range",
@@ -1579,9 +1576,7 @@ func projected_operator_zone(side: int) -> int:
 
 func find_item(side: int, item_id: StringName) -> LoadoutItem:
 	var setup: SideSetup = sides[side].setup
-	var items: Array[LoadoutItem] = [setup.secondary, setup.lethal, setup.tactical]
-	items.append_array(setup.killstreaks)
-	for item: LoadoutItem in items:
+	for item: LoadoutItem in setup.killstreaks:
 		if item != null and item.id == item_id:
 			return item
 	return null
@@ -1660,12 +1655,6 @@ func unit_ctx(u: RulesUnit) -> Dictionary:
 
 func source_kind_for_item(item: LoadoutItem) -> StringName:
 	match item.slot:
-		DataEnums.LoadoutSlot.SECONDARY:
-			return SRC_SECONDARY
-		DataEnums.LoadoutSlot.LETHAL:
-			return SRC_LETHAL
-		DataEnums.LoadoutSlot.TACTICAL:
-			return SRC_TACTICAL
 		DataEnums.LoadoutSlot.KILLSTREAK:
 			return SRC_KILLSTREAK
 		DataEnums.LoadoutSlot.PERK:

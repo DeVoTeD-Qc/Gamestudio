@@ -398,10 +398,68 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 
 ---
 
-## 12. Tuning v1.2 (paused)
-*Sr Game Designer Agent · 2026-11-06 · board task kc-syn-tune · **Paused** by the head's new priority (kc-fight, `firefight-order.md`): a new firefight activation order changes balance, so this tuning is redone after that is approved. **No data file was changed.** Every number below is a what-if on scratch copies (`synergy_check.gd`, aware vs aware or aware vs blind, Port Vasel, seats and modes alternating).*
+## 12. Tuning v1.2 (done)
+*Sr Game Designer Agent · 2026-11-06 · board task kc-syn-tune · resumed after the firefight order (kc-fight) and the onboarding ladder (6d17ea1) landed · **Status: done, not committed** (the lead commits). Changed: `data/run_config.tres` (the M3 and M4 crews), `scripts/rules/mode_rules.gd` (an initiative tie-rule switch for balance tools; the shipped rule is unchanged), the new tool `tests/tools/tune_check.gd`, and tests `test_rules_modes.gd` (tie rules) and `test_onboarding.gd` (the M3 / M4 decks). No trait bonus, card, squad file, UI or loadout file was changed.*
+*§12.7–12.8 below are the paused pass on the old deck model (d154893), kept for the record.*
 
-### 12.1 Baselines reproduced (shipped data, d154893)
+### 12.1 Tool
+`tests/tools/tune_check.gd` plays the **real** run like `onboarding_check.gd` (shipped `run_config.tres`, real `RunProgress` offers, balance_sim's competent / casual proxies and offer rule), keeps the M5 decks, and runs every target on them: trait round robin (end-of-run decks grouped by `main_trait()`), aware vs blind, and the seat-0 mirror with initiative statistics. What-ifs in memory: `tiebreak=` / `mtie=` (tie rule), `set=card.prop=v`, `slot=N.prop=v`, `sdeck=N:card*n,...`, `cfg=prop=v`, `tune=trait.tier.key=v`.
+`godot --headless --path . -s res://tests/tools/tune_check.gd -- runs=400 late=160 mirror=1920 tn=160`
+
+### 12.2 What changed (numbers only)
+| Slot | Before | After | Why |
+|---|---|---|---|
+| M3 (SandViper_07, Honors crew, Firefight, Recruits) | the shipped Rusher deck | the Rusher deck with its **Breach and Clear → 1 Standard Issue Sergeant** (`enemy_deck`) | Breach and Clear (2 damage to every enemy unit in a column, 3 at Close) wipes a Standard Issue line, and in Firefight every kill scores. This one card was the M3 cliff: taking it out moves M3 from 37.5% to 54% (also taking out the 2 Flank Routes: 74%) |
+| M4 (Bulwark_Nine, Mastery crew, Firefight, Trained) | the shipped Anchor deck | the Anchor deck with **2 Demolitions Experts + the Marksman → 2 Armored Troopers + 1 Sergeant** (`enemy_deck`) | Smaller step than Recruits (which gave 54%, above M3). Lands M4 between M3 and the Rival |
+| M1, M2, M5, traits, cards, reward pools | — | unchanged | Already on target (see the table) |
+
+The enemy now "climbs one step behind you" in the deck too: a few Standard Issue cards remain in the M3 / M4 crews, as in the player's own M3 / M4 deck.
+
+### 12.3 Before / after (shipped 6d17ea1 → this pass; 400 real runs per proxy, same seeds)
+| Check (target) | Before | After | n | Tool |
+|---|---|---|---|---|
+| New player (casual) M1 (65–75%) | 69.8% | **69.8%** (M1 untouched) | 400 | tune_check, onboarding_check |
+| Competent full run (38–43%) | 41.0% | **39.2%** (±2.4) | 400 | all three tools agree |
+| Competent per match M1–M5 (smooth ramp) | 95.5 / 97.8 / **37.5** / 38.8 / 42.2 | 95.5 / 97.8 / **54.0** / 42.8 / 39.8 | 400 | |
+| Casual full run · per match | 23.5% · 69.8 / 71.8 / 55.5 / 36.1 / 30.4 | 20.5% · 69.8 / 71.8 / 64.8 / 41.9 / 24.6 | 400 | |
+| Traits, end-of-run decks by main trait (40–60% each) | Undead 50.8 · Vanguard 48.8 · Heavy 45.4 · Spec Ops 55.0 | Undead 51.7 · Vanguard 49.6 · Heavy 46.7 · Spec Ops 52.1 | 480 per trait | tune_check |
+| Traits, old deck model (synergy_check late) | Vanguard 67.3 (d154893) | Vanguard 53.3 · Spec Ops 44.6 · Heavy 54.6 · Undead 47.3 (no squad in this check) | 480 per trait | synergy_check |
+| Aware vs blind, end-of-run decks (≥ 55%) | 55.9% | **57.7%** | 640 | tune_check, onboarding_check |
+| End-of-run deck vs the starter | 74.7% | 77.3% | 640 | onboarding_check |
+| Seat 0, end-of-run deck mirror (45–55%) | 61.6% (n = 320) · **53.8%** (n = 1860) | **51.0%** | 1920 | tune_check |
+| Seat 0, Standard Issue starter mirror (45–55%) | 53.5% (n = 1000) · 52.1% (n = 1920) | 52.1% (unchanged: no data it uses changed) | 1920 | |
+
+- Every target is met. The 61.6% "watch" number of the onboarding notes was a small sample (n = 320, ±2.7): with the same tool at n = 1860 the shipped build reads 53.8%, and 51.0% after this pass.
+- The ramp no longer has a 60-point cliff after M2. It now goes easy, easy, then about a coin flip, then a bit harder each match up to the Rival. M2 stays easy on purpose (see §12.6 Q2).
+- Rejected levers: M3 / M4 Armor −1 (M3 62.5%, M4 67%: overshoots, and −1 marks a slot as the green squad), M4 Recruits (M4 54% > M3), M3 in Zone Control (competent 64–79% but new player 46%, and Firefight would first appear at M4), M2 Armor +1 or Trained Gunners (competent 85 / 73.5% but new player 47 / 44.5%), a 4th Gunner in M2 (no effect), `firefight_target` 6 or 8 (±3 points, both slots move together).
+
+### 12.4 Initiative ("What do you mean first player? Cards are revealed at the same time.")
+Both sides commit face down and their cards are revealed together. There is no first player for committing. But the Reveal still has to resolve one side's plays before the other's, and that side holds **initiative**: the side behind on the mode score, and on a tie the player (`ModeRules.initiative_side`; the board's initiative banner). Initiative orders four things: (1) Reveal (Equipment placed, units arriving, then tactics and loadout items, the initiative side first in each step), (2) removing the dead, (3) the firefight's per-side loops, (4) the Score step (Undead heal, end-of-round effects, Overrun, streaks).
+**What it is worth (sim, aware mirror, n ≈ 1900 per row; scratch copy with a per-step order switch):**
+| Test | Late decks | Starter |
+|---|---|---|
+| Shipped: ties → player | 53.8% | 52.1% |
+| Ties → enemy (seat 0 holds initiative only 22% of rounds) | 52.8% | 48.5% |
+| Ties alternate by round · ties swap (round 1 player) · coin flip in round 1 then swap · coin flip every tie | 56.6 · 53.5 · 53.5 · 56.5% (the 56% values are n = 620) | 53.4 · 51.6 · 50.7 · 51.7% |
+| Seat 1 forced first in every step (vs only in Reveal) | 51.5% (identical) | 48.8% (identical) |
+| No Frag Grenade / Flashbang / secondary (kc-loadout-cut preview): ties → player · ties → enemy | 52.3 · 52.1% | 49.7 · 49.8% |
+- **Only the Reveal order matters.** Forcing seat 1 first in deaths, the firefight and the Score step changed no result at all (the beats are simultaneous and removal is order-free). Ties come up in about 53% of rounds (always in round 1).
+- **The tie edge is the loadout items.** Ties → player is worth ~3.6 points in the starter mirror, ~1 point on late decks. Without the grenade, flashbang and secondary it is worth **0** (49.7 vs 49.8%): resolving first matters when your Frag Grenade / Flashbang hits before the other side's plays resolve. Once kc-loadout-cut lands, the tie rule will no longer move the seat numbers.
+- The other ~2 points of seat 0 on late decks are the sim's turn order (the player-seat AI commits after the enemy AI; with the player AI first: 50.1%). A human gets this too, by design: the enemy commits first so your red dots are complete (Ruling 13).
+- **Recommendation: keep "ties → you".** It is in band (51–54%), it is the shortest sentence for a player ("Behind on score? You resolve first. Tied? You do."), and in a PvE game the edge goes to the player. After the loadout cut it is worth nothing in the mirror anyway. "Ties swap" is ready behind `ModeRules.tiebreak` (`&"other"` / `&"coin"`; tested in `test_rules_modes.gd::test_initiative_tie_rules`) if a PvP mode ever needs it.
+
+### 12.5 Depends on the loadout cut (kc-loadout-cut, in progress)
+The head removed the Frag Grenade, Flashbang and secondary. Every run number above uses the old loadout, so they move when the cut lands. Re-check with the command in §12.1 and `onboarding_check.gd -- runs=400 late=160 mirror=1000`.
+- **Initiative tie edge:** comes from those items (above). Expect the starter mirror to go from ~52 to ~50%.
+- **Run and per-match win rates:** the player and every squad lose the items. M1 (new player 69.8%) and M5 (the Rival has the most loadout) are the most likely to move. If M1 leaves 65–75%, the lever is the M1 squad's Armor (−1 now) or its deck.
+- **Aware vs blind (57.7%) and traits:** the AI's item plays are a small share of these, so they should move only a little; worth a look.
+
+### 12.6 Questions for the head (recommended option first)
+1. **Initiative ties.** (a) Keep "ties → you" (51–54%, simplest, PvE-friendly; worth 0 after the loadout cut). (b) Ties swap (round 1 you, then whoever didn't have it): 51.6 / 53.5%. (c) Coin flip in round 1, then swap: 50.7 / 53.5%, fairest but adds a coin flip to explain.
+2. **M2 stays easy for a solid player (98%).** (a) Keep it: M1–M2 are the learning matches and the new player wins M2 72%. (b) M2 squad Armor +1: solid 85%, but the new player drops to 47%.
+3. **M3 mode.** (a) Keep Firefight with the trimmed Rusher deck (54%). (b) Make M3 Zone Control: solid 64–72%, a smoother ramp, but the new player drops to 46–55% and Firefight first appears at M4 (with the Elites).
+
+### 12.7 Baselines reproduced (paused pass, shipped data, d154893)
 | Check (target) | Result | n |
 |---|---|---|
 | Trait round robin, late decks (40-60% each) | Vanguard **67.3**, Spec Ops 42.3, Heavy 47.7, Undead 42.1 | 480 per trait |
@@ -409,7 +467,7 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 | Seat 0, aware mirror (45-55%) | 51.8% | 1000 |
 | Full runs, competent proxy (balance_sim) | run win **40%**; M1 83 / M2 95 / **M3 19** / M4 25 / M5 47 | 300 runs |
 
-### 12.2 Findings so far (n = 120 per pairing, 360 per trait: about ±2.6 points SE per trait)
+### 12.8 Findings of the paused pass (old deck model; n = 120 per pairing, 360 per trait: about ±2.6 points SE per trait)
 **Vanguard's lead is the card package, not its set bonus.**
 | What-if | Vanguard | Spec Ops | Heavy | Undead |
 |---|---|---|---|---|

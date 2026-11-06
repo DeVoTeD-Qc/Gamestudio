@@ -323,7 +323,7 @@ func _equipped_arts() -> Dictionary:
 # =============================================================================
 
 ## Records systems the player meets (RevealFlags ids, e.g. RevealFlags.match_triggers(m) after a
-## Reveal, or &"lethal" when the Lethal button is first ready). Emits system_met for each new one
+## Reveal, or &"killstreaks" when the first killstreak is earned). Emits system_met for each new one
 ## and returns them. Without the Settings autoload nothing is stored.
 func note_systems(flags: Array) -> Array[StringName]:
 	var st: Node = get_node_or_null(^"/root/Settings")

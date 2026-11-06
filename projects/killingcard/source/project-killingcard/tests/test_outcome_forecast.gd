@@ -57,7 +57,7 @@ func _fingerprint(m: MatchState) -> String:
 		parts.append([s.supply, s.score, s.streak, s.eliminations, s.plays.size(), s.ready, s.rotations_used,
 				s.hand.map(func(c: RulesCard) -> int: return c.uid), s.discard.size(), s.deck.size(),
 				s.arrival_buffs.size(), s.equipment.map(func(l: Array) -> int: return l.size()),
-				s.uses_this_round.duplicate(), s.cooldowns.duplicate(), s.streak_tray.duplicate()])
+				s.uses_this_round.duplicate(), s.streak_tray.duplicate()])
 		var units: Array = s.units_on_board()
 		if s.operator_unit != null and not s.operator_unit.is_on_board():
 			units.append(s.operator_unit)
@@ -111,11 +111,11 @@ func test_keywords_and_three_zones_match_real_round() -> void:
 
 
 func test_tactics_items_and_moves_match_real_round() -> void:
-	# Reveal-step effects count too: Breach and Clear damage, a Frag from the Operator, and
+	# Reveal-step effects count too: Breach and Clear damage, an Operator-range strike (point_strike), and
 	# Flank Route moving a unit into another zone before the firefight.
 	var p: SideSetup = F.setup([F.breach_and_clear(), F.flank_route(), F.rifleman()], F.kestrel())
-	p.lethal = F.frag()
 	var m: MatchState = F.new_match(p, F.setup([], F.kestrel()), F.map())
+	F.grant(m, P, F.point_strike())
 	_supply(m)
 	F.place_operator(m, P, F.MID)
 	var mover: RulesUnit = F.place(m, P, F.breacher(), F.LEFT)
@@ -125,7 +125,7 @@ func test_tactics_items_and_moves_match_real_round() -> void:
 	F.place(m, E, F.marksman(), F.MID)
 	F.place(m, E, F.combat_medic(), F.RIGHT)
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "breach_and_clear"), F.LEFT))["ok"], "breach")
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "frag")
+	assert_true(m.submit(P, RulesIntent.use_item(&"point_strike", F.MID))["ok"], "point strike")
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "flank_route"), F.MID, mover.uid, F.MID))["ok"], "flank route")
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "rifleman"), F.RIGHT))["ok"], "rifleman")
 	var res: Array = _check_matches(m, "reveal effects")
@@ -164,15 +164,15 @@ func test_forecast_never_changes_the_live_match() -> void:
 		var hooks: MatchHooks = MatchHooks.new()
 		hooks.mode_rules = ModeRules.create(DataEnums.GameMode.ZONE_CONTROL)
 		var p: SideSetup = F.setup([F.breach_and_clear(), F.point_man(), F.combat_medic(), F.rifleman(), F.marksman(), F.anvil()], F.kestrel())
-		p.lethal = F.frag()
 		var m: MatchState = F.new_match(p, F.setup([F.rifleman(), F.gunner(), F.breacher(), F.flanker(), F.rifleman()], F.kestrel()), F.map(), 77, hooks)
+		F.grant(m, P, F.point_strike())
 		_supply(m)
 		F.place_operator(m, P, F.LEFT)
 		F.place(m, E, F.gunner(), F.LEFT)
 		F.place(m, E, F.rifleman(), F.MID)
 		m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "point_man"), F.LEFT))
 		m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "breach_and_clear"), F.MID))
-		m.submit(P, RulesIntent.use_item(&"frag_grenade", F.LEFT))
+		m.submit(P, RulesIntent.use_item(&"point_strike", F.LEFT))
 		m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "breacher"), F.LEFT))
 		m.submit(E, RulesIntent.place_operator(F.MID))
 		return m

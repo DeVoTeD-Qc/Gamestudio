@@ -255,7 +255,7 @@ FP = Firepower, AR = Armor. "KS" means the value comes straight from Killstreak'
 |---|---|---|---|
 | Brawler | No effects. Shotgun class gives +2 FP at Close and −1 at Long. | A home for melee, beasts, creatures and myth (`melee`/`natural`/`exotic` art), which are very common in calling cards. It's a sidegrade of Point Man: more damage at Close (4 vs 3), no First Shot, weak at Long. | Compare with Point Man in the harness. |
 | Smoke Screen | ON_PLAY · UNTARGETABLE_BY_PICK_FLANK · ALL_FRIENDLIES · CHOSEN_ZONE · duration 1 | The deck-card version of the post-prototype Smoke Canister. It counters Marksman, Ace and Flanker. | Narrow, so cost 1. |
-| Blackout | ON_PLAY · REMOVE_FIRST_SHOT · ALL_ENEMIES · CHOSEN_ZONE · duration 1 | Half of the Flashbang as a deck card. It counters Point Man and Breacher rushes, the Rusher squad's plan. | Narrow, so cost 1. |
+| Blackout | ON_PLAY · REMOVE_FIRST_SHOT · ALL_ENEMIES · CHOSEN_ZONE · duration 1 | Half of the (since removed, kc-loadout-cut) Flashbang as a deck card. It counters Point Man and Breacher rushes, the Rusher squad's plan. | Narrow, so cost 1. |
 | Sabotage | ON_PLAY · DESTROY_EQUIPMENT amount 1 · CHOSEN_ZONE, then ON_PLAY · DAMAGE 1 · ALL_ENEMIES · CHOSEN_ZONE | The deck-card version of the post-prototype Breaching Charge. It answers Tripwire and Comms Relay and chips the backline. | Cheaper and weaker than Breach and Clear (2 dmg for 3). |
 
 All four are **provisional**: the mechanics developer runs `tests/tools/balance_sim.gd` with them added to the reward pool before the prototype ships. Nothing in the starter kit changes, so Killstreak's p19 balance numbers still describe the starter experience.
@@ -344,12 +344,13 @@ In `scripts/rules/`, each side has `lines[zone]`: an array ordered **front first
 6. **Flank Route / Rotate:** the unit leaves its column, and the rows behind it close up. It enters the adjacent column **from the outer edge**, at the back (a Protector still slides to the front, Ruling 10).
 7. **Sentry token:** enters from the outer edge at the back and never slides to the front (`allow_front = false`, unchanged).
 8. **Operator:** a banner unit wearing **your equipped calling card**, with a callsign plate. It enters at the back like any unit, also on respawn and Rotate.
+   **Removed (kc-loadout-cut):** the Operator's Lethal (Frag Grenade), Tactical (Flashbang) and secondary weapon (P-12 Sidearm) are gone, so Frag no longer reaches the frontline / second row (§4.4). The Operator is a unit card with its Primary weapon and its Supply cost (1 Supply in the shipped run), and its card shows that cost in the same cost hex as every deck card (no brass "1 SUPPLY" plate). The full Operator card redesign comes later.
 
 ### 4.4 Frontline and backline
 | Position | What reaches it |
 |---|---|
-| **Frontline** (row 1) | Every normal shot (until enough damage is assigned to kill it, then shots go to the next row), **Suppress** (−2 FP), Attack Helo, Frag (2), Demolitions Expert's On Down. |
-| **Second row** | Overflow shots, Frag's 1 damage to the "second in line". |
+| **Frontline** (row 1) | Every normal shot (until enough damage is assigned to kill it, then shots go to the next row), **Suppress** (−2 FP), Attack Helo, Demolitions Expert's On Down. |
+| **Second row** | Overflow shots. |
 | **Backline** (rows 2–4) | Only **Pick** (the lowest remaining Armor anywhere in the column; ties go to the card nearest the objective), **Flank** (the outermost card), and column-wide effects (Breach and Clear, Mortar Barrage, Sabotage's 1 damage, Suppressing Fire). Smoke Screen shuts out Pick and Flank. |
 
 So the vertical board makes Killstreak's best decisions visible: put a sturdy card in front, keep the medic and sniper behind, and use Pick or Flank to reach past the wall. Shots draw as tracers from the shooter's row to the target's row. A Pick shot visibly skips the frontline.

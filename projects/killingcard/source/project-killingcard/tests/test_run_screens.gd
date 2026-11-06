@@ -274,8 +274,10 @@ func _full_run(screen: Dictionary) -> void:
 	# Loadout: starter kit shown, starter killstreaks pre-picked; swap Mortar for Sentry.
 	_check(loadout, screen, "loadout")
 	var text: String = _all_text(loadout)
-	for word: String in ["Kestrel AR-7", "P-12 Sidearm", "Frag Grenade", "Flashbang", "20 cards"]:
+	for word: String in ["Kestrel AR-7", "20 cards"]:
 		assert_true(word in text, "%s: loadout shows %s" % [label, word])
+	for word: String in ["P-12 Sidearm", "Frag Grenade", "Flashbang", "SECONDARY", "LETHAL", "TACTICAL"]:
+		assert_false(word in text, "%s: kc-loadout-cut, no %s on the loadout" % [label, word])
 	assert_eq(loadout.picked.size(), 3, "%s: starter killstreaks pre-picked" % label)
 	var begin: Button = _button(loadout, "BEGIN RUN")
 	await _tap(loadout.get_node("%Body").find_child("Killstreak_mortar_barrage", true, false))

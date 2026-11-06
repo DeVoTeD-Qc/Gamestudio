@@ -76,8 +76,9 @@ func test_enemy_operator_down_gives_one_and_resets_their_streak() -> void:
 	assert_eq(m.sides[E].streak, 0, "their streak resets")
 
 
-func test_operator_kill_sources_count_lethal_secondary_tactic_equipment_on_down() -> void:
-	# Rulings part 2 #14: units (incl. On Down), Operator, Secondary, Lethal, Tactics, Equipment.
+func test_kill_sources_count_equipment_and_on_down() -> void:
+	# Rulings part 2 #14: units (incl. On Down), Operator, Tactics, Equipment (kc-loadout-cut: no
+	# Secondary / Lethal any more).
 	assert_true(StreakTracker.EQUIPMENT_AND_ON_DOWN_COUNT_FOR_STREAK, "the p03 open question is ruled YES")
 	var p: SideSetup = F.setup([F.tripwire()], F.kestrel())
 	var e: SideSetup = F.setup([F.unit("walker", 0, 3)])

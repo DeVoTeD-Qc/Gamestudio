@@ -17,11 +17,26 @@ static func _load(id: String) -> LoadoutItem:
 
 func _kit(deck: Array = []) -> SideSetup:
 	var p: SideSetup = F.setup(deck, F.kestrel())
-	p.secondary = _load("p12_sidearm")
-	p.lethal = _load("frag_grenade")
-	p.tactical = _load("flashbang")
 	p.killstreaks.assign([_load("recon_drone"), _load("mortar_barrage")])
 	return p
+
+
+## kc-loadout-cut: the Sidearm / Frag Grenade are gone. Their effects live on as test-only
+## killstreaks already in the tray, so the generic item codes (Operator range, unit target,
+## Supply, uses per round) stay covered: point_strike (zone in the Operator's or an adjacent
+## zone) and snap_shot (1 Supply, an enemy in the Operator's zone, once per round).
+static func _snap_shot() -> LoadoutItem:
+	var it: LoadoutItem = F.item("snap_shot", DataEnums.LoadoutSlot.KILLSTREAK, [
+			F.eff(F.TR.ON_PLAY, F.K.DAMAGE, F.T.CHOSEN_ENEMY, F.Z.OPERATOR_ZONE, 1)], 1)
+	it.uses_per_round = 1
+	return it
+
+
+func _new(deck: Array = []) -> MatchState:
+	var m: MatchState = F.new_match(_kit(deck))
+	F.grant(m, P, F.point_strike())
+	F.grant(m, P, _snap_shot())
+	return m
 
 
 ## can_submit gives `code`, changes nothing, and submit() then refuses with the same result.
@@ -101,29 +116,28 @@ func test_tactic_zone_and_target_codes() -> void:
 # --- Items -----------------------------------------------------------------------------------
 
 func test_item_codes_operator_range_target() -> void:
-	var m: MatchState = F.new_match(_kit())
+	var m: MatchState = _new()
 	var a: RulesUnit = F.place(m, E, F.unit("a", 0, 9), F.MID)
 	var far: RulesUnit = F.place(m, E, F.unit("far", 0, 9), F.RIGHT)
 	_expect(m, RulesIntent.use_item(&"gunship"), &"not_in_loadout", "not in loadout")
-	_expect(m, RulesIntent.use_item(&"frag_grenade", F.MID), &"operator_not_placed", "Frag without an Operator")
-	_expect(m, RulesIntent.use_item(&"p12_sidearm", -1, a.uid), &"operator_not_placed", "Sidearm without an Operator")
+	_expect(m, RulesIntent.use_item(&"point_strike", F.MID), &"operator_not_placed", "Point strike without an Operator")
+	_expect(m, RulesIntent.use_item(&"snap_shot", -1, a.uid), &"operator_not_placed", "Snap shot without an Operator")
 	F.place_operator(m, P, F.LEFT)
-	_expect(m, RulesIntent.use_item(&"frag_grenade", -1), &"no_zone", "Frag needs a zone")
-	var c: Dictionary = _expect(m, RulesIntent.use_item(&"frag_grenade", F.RIGHT), &"out_of_range", "Frag two zones away")
+	_expect(m, RulesIntent.use_item(&"point_strike", -1), &"no_zone", "Point strike needs a zone")
+	var c: Dictionary = _expect(m, RulesIntent.use_item(&"point_strike", F.RIGHT), &"out_of_range", "Point strike two zones away")
 	assert_eq(c["data"]["operator_zone"], F.LEFT, "operator_zone data")
-	_expect(m, RulesIntent.use_item(&"p12_sidearm", -1, -1), &"no_target", "Sidearm without a target")
-	_expect(m, RulesIntent.use_item(&"p12_sidearm", -1, far.uid), &"target_out_of_range", "Sidearm at Right from Left")
-	_expect(m, RulesIntent.use_item(&"p12_sidearm", -1, a.uid), &"target_out_of_range", "Sidearm at Mid from Left")
+	_expect(m, RulesIntent.use_item(&"snap_shot", -1, -1), &"no_target", "Snap shot without a target")
+	_expect(m, RulesIntent.use_item(&"snap_shot", -1, far.uid), &"target_out_of_range", "Snap shot at Right from Left")
+	_expect(m, RulesIntent.use_item(&"snap_shot", -1, a.uid), &"target_out_of_range", "Snap shot at Mid from Left")
 	var near: RulesUnit = F.place(m, E, F.unit("near", 0, 9), F.LEFT)
 	m.sides[P].supply = 0
-	c = _expect(m, RulesIntent.use_item(&"p12_sidearm", -1, near.uid), &"not_enough_supply", "Sidearm costs 1")
+	c = _expect(m, RulesIntent.use_item(&"snap_shot", -1, near.uid), &"not_enough_supply", "Snap shot costs 1")
 	m.sides[P].supply = 3
-	_expect_ok(m, RulesIntent.use_item(&"p12_sidearm", -1, near.uid), "Sidearm in the Operator's zone")
-	c = _expect(m, RulesIntent.use_item(&"p12_sidearm", -1, near.uid), &"no_uses_left", "once per round")
+	_expect_ok(m, RulesIntent.use_item(&"snap_shot", -1, near.uid), "Snap shot in the Operator's zone")
+	F.grant(m, P, m.find_item(P, &"snap_shot"))  # back in the tray: the per-round limit still holds
+	c = _expect(m, RulesIntent.use_item(&"snap_shot", -1, near.uid), &"no_uses_left", "once per round")
 	assert_eq(c["data"]["per"], &"round", "per round")
-	_expect_ok(m, RulesIntent.use_item(&"frag_grenade", F.MID), "Frag adjacent")
-	c = _expect(m, RulesIntent.use_item(&"frag_grenade", F.LEFT), &"on_cooldown", "Frag again")
-	assert_eq(c["data"]["rounds"], 3, "ready in 3 rounds")
+	_expect_ok(m, RulesIntent.use_item(&"point_strike", F.MID), "Point strike adjacent")
 
 
 func test_killstreak_not_in_tray_then_called_in() -> void:
@@ -138,15 +152,15 @@ func test_killstreak_not_in_tray_then_called_in() -> void:
 
 
 func test_uses_per_match_code() -> void:
-	var once: LoadoutItem = F.item("one_shot", DataEnums.LoadoutSlot.LETHAL, [
+	var once: LoadoutItem = F.item("one_shot", DataEnums.LoadoutSlot.KILLSTREAK, [
 			F.eff(F.TR.ON_PLAY, F.K.DAMAGE, F.T.ALL_ENEMIES, F.Z.CHOSEN_ZONE, 1)])
 	once.uses_per_match = 1
-	var p: SideSetup = F.setup()
-	p.lethal = once
-	var m: MatchState = F.new_match(p)
+	var m: MatchState = F.new_match(F.setup())
+	F.grant(m, P, once)
 	_expect_ok(m, RulesIntent.use_item(&"one_shot", F.MID), "first use")
 	m.resolve_round()
 	m.begin_round()
+	F.grant(m, P, once)  # earned again
 	var c: Dictionary = _expect(m, RulesIntent.use_item(&"one_shot", F.MID), &"no_uses_left", "second use")
 	assert_eq([c["data"]["per"], c["reason"]], [&"match", "already used this match"], "per match")
 
@@ -178,21 +192,21 @@ func test_operator_codes() -> void:
 # --- legal_targets / check_use / needs_unit_target ---------------------------------------------
 
 func test_legal_targets_match_submit() -> void:
-	var m: MatchState = F.new_match(_kit([F.rifleman(), F.flank_route(), F.ammo_resupply()]))
+	var m: MatchState = _new([F.rifleman(), F.flank_route(), F.ammo_resupply()])
 	m.sides[P].supply = 9
 	var a: RulesUnit = F.place(m, E, F.unit("a", 0, 9), F.MID)
 	F.place(m, E, F.unit("b", 0, 9), F.RIGHT)
-	assert_eq(m.legal_targets(P, &"frag_grenade"), [] as Array[Dictionary], "no Operator: Frag has no target")
-	assert_eq(m.check_use(P, &"frag_grenade")["code"], &"operator_not_placed", "check_use says why")
+	assert_eq(m.legal_targets(P, &"point_strike"), [] as Array[Dictionary], "no Operator: Point strike has no target")
+	assert_eq(m.check_use(P, &"point_strike")["code"], &"operator_not_placed", "check_use says why")
 	F.place_operator(m, P, F.MID)
-	var zones: Array = m.legal_targets(P, &"frag_grenade").map(func(t: Dictionary) -> int: return t["zone"])
-	assert_eq(zones, [0, 1, 2], "Mid Operator: Frag reaches every zone")
-	var sidearm: Array[Dictionary] = m.legal_targets(P, &"p12_sidearm")
-	assert_eq(sidearm.map(func(t: Dictionary) -> int: return t["target_uid"]).filter(func(u: int) -> bool: return u != a.uid), [],
-			"Sidearm: only the enemy in the Operator's zone")
-	assert_false(sidearm.is_empty(), "Sidearm has a target")
-	assert_eq(m.needs_unit_target(P, &"p12_sidearm"), &"enemy", "Sidearm needs an enemy")
-	assert_eq(m.needs_unit_target(P, &"frag_grenade"), &"", "Frag needs a zone only")
+	var zones: Array = m.legal_targets(P, &"point_strike").map(func(t: Dictionary) -> int: return t["zone"])
+	assert_eq(zones, [0, 1, 2], "Mid Operator: Point strike reaches every zone")
+	var snap: Array[Dictionary] = m.legal_targets(P, &"snap_shot")
+	assert_eq(snap.map(func(t: Dictionary) -> int: return t["target_uid"]).filter(func(u: int) -> bool: return u != a.uid), [],
+			"Snap shot: only the enemy in the Operator's zone")
+	assert_false(snap.is_empty(), "Snap shot has a target")
+	assert_eq(m.needs_unit_target(P, &"snap_shot"), &"enemy", "Snap shot needs an enemy")
+	assert_eq(m.needs_unit_target(P, &"point_strike"), &"", "Point strike needs a zone only")
 	var rifle: int = F.hand_uid(m, P, "rifleman")
 	assert_eq(m.legal_targets(P, rifle).map(func(t: Dictionary) -> int: return t["zone"]), [0, 1, 2], "unit: any zone")
 	var draw: Array[Dictionary] = m.legal_targets(P, F.hand_uid(m, P, "ammo_resupply"))
@@ -206,23 +220,23 @@ func test_legal_targets_match_submit() -> void:
 	var moves: Array = m.legal_targets(P, flank).filter(func(t: Dictionary) -> bool: return t["target_uid"] == rifle)
 	assert_eq(moves, [{"zone": 1, "target_uid": rifle}], "queued Rifleman can move Left -> Mid only")
 	# Every legal target is accepted by submit().
-	for t: Dictionary in m.legal_targets(P, &"frag_grenade"):
-		assert_true(m.can_submit(P, RulesIntent.use_item(&"frag_grenade", t["zone"], t["target_uid"]))["ok"], "legal -> ok %s" % t)
+	for t: Dictionary in m.legal_targets(P, &"point_strike"):
+		assert_true(m.can_submit(P, RulesIntent.use_item(&"point_strike", t["zone"], t["target_uid"]))["ok"], "legal -> ok %s" % t)
 	assert_eq(m.legal_targets(P, &"operator").map(func(t: Dictionary) -> int: return t["zone"]), [0, 2], "Rotation targets")
 
 
 func test_check_use_reports_shared_refusal() -> void:
-	var m: MatchState = F.new_match(_kit())
+	var m: MatchState = _new()
 	F.place_operator(m, P, F.MID)
 	m.sides[P].supply = 0
-	assert_eq(m.check_use(P, &"p12_sidearm")["code"], &"not_enough_supply", "Sidearm without Supply")
+	assert_eq(m.check_use(P, &"snap_shot")["code"], &"not_enough_supply", "Snap shot without Supply")
 	assert_eq(m.check_use(P, &"recon_drone")["code"], &"not_in_tray", "Recon Drone not earned")
 	m.sides[P].supply = 2
-	assert_eq(m.check_use(P, &"p12_sidearm")["code"], &"no_target", "no enemy on the board")
+	assert_eq(m.check_use(P, &"snap_shot")["code"], &"no_target", "no enemy on the board")
 	F.place(m, E, F.unit("w", 0, 9), F.LEFT)
-	assert_eq(m.check_use(P, &"p12_sidearm")["code"], &"target_out_of_range", "only an enemy outside the Operator's zone")
+	assert_eq(m.check_use(P, &"snap_shot")["code"], &"target_out_of_range", "only an enemy outside the Operator's zone")
 	F.place(m, E, F.unit("x", 0, 9), F.MID)
-	assert_true(m.check_use(P, &"p12_sidearm")["ok"], "an enemy in Mid")
+	assert_true(m.check_use(P, &"snap_shot")["ok"], "an enemy in Mid")
 	StreakTracker.grant(m, P, &"recon_drone")
 	assert_eq(m.legal_targets(P, &"recon_drone").size(), 4, "Recon Drone: no target needed (any zone value works)")
 

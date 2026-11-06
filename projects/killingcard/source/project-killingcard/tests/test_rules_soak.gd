@@ -170,9 +170,6 @@ func test_ai_vs_ai_every_slot_many_seeds_keeps_invariants() -> void:
 			for i: int in s % 4:
 				setup.deck.append(cfg.reward_pool[rng.randi() % cfg.reward_pool.size()])
 			setup.primary = cfg.starter_primary
-			setup.secondary = cfg.starter_secondary
-			setup.lethal = cfg.starter_lethal
-			setup.tactical = cfg.starter_tactical
 			var pool: Array[LoadoutItem] = all_ks.duplicate()
 			pool.remove_at(s % pool.size())
 			setup.killstreaks = pool.slice(0, cfg.killstreak_slots)

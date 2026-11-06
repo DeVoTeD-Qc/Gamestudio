@@ -282,7 +282,8 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	row.offset_bottom = -4
 	var entry: Dictionary = {"name": item.display_name, "fp": item.operator_firepower, "armor": item.operator_armor,
 			"armor_max": item.operator_armor, "operator": true, "camo": String(BannerArtDB.camo_for_tier(1)),
-			"banner": String(BannerArtDB.operator_art_id(item.id, 1)), "keywords": _op_keywords(item)}
+			"banner": String(BannerArtDB.operator_art_id(item.id, 1)), "keywords": _op_keywords(item),
+			"cost": _op_cost_text()}
 	var card: PanelContainer = BannerCard.build(entry, _tile_size(), _metric())
 	card.name = "OperatorBanner"
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -376,6 +377,12 @@ func _op_keywords(item: LoadoutItem) -> Array:
 	return out
 
 
+## kc-loadout-cut (head): the Operator's Supply cost in the deck cards' cost hex ("" = free, no hex).
+func _op_cost_text() -> String:
+	var c: int = _config.operator_cost if _config != null else 0
+	return str(c) if c > 0 else ""
+
+
 ## The inspector's info for an Operator option.
 func operator_info(item: LoadoutItem) -> Dictionary:
 	var kws: Array[Dictionary] = []
@@ -384,7 +391,7 @@ func operator_info(item: LoadoutItem) -> Dictionary:
 	var entry: Dictionary = {"name": item.display_name, "fp": item.operator_firepower, "armor": item.operator_armor,
 			"armor_max": item.operator_armor, "operator": true, "camo": String(BannerArtDB.camo_for_tier(1)),
 			"banner": String(BannerArtDB.operator_art_id(item.id, 1)), "keywords": _op_keywords(item),
-			"cls": "OPERATOR"}
+			"cls": "OPERATOR", "cost": _op_cost_text()}
 	return {"title": item.display_name, "type": "Operator · " + RunFlowScript.item_effect_line(item),
 			"text": "%s Your Operator is never drawn or discarded: it costs Supply to place and comes back after it goes down." % item.text,
 			"keywords": kws, "banner": entry, "side": 0, "is_unit": true,

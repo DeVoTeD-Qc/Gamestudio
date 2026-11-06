@@ -139,7 +139,7 @@ Smoke Screen, Blackout and Sabotage (card-system §3.1) are not in the shipped p
 | UI / rule | Hidden until | "New:" card text (one sentence) |
 |---|---|---|
 | Hand, Supply, columns, red dots, Operator, streak arc, Recon Drone | always on (tutorial) | — |
-| Lethal / Tactical buttons | always on; a coach mark the first time each is ready in M1 | "New: Frag Grenade. Your Operator's grenade: 2 damage at the front. It recharges." |
+| ~~Lethal / Tactical buttons~~ | **Removed (kc-loadout-cut):** the head cut the Frag Grenade, Flashbang and secondary weapon; no buttons, no coach mark, no `lethal` / `tactical` reveal flags | — |
 | Killstreak choice on the Loadout screen | run 2 (run 1 uses the defaults: Recon Drone, Mortar Barrage, Attack Helo, and skips the Loadout screen) | "New: Loadout. Pick your three killstreaks before a run." |
 | Trait icon on cards, the subname with the art title | the first calling card offered | **New: Calling cards.** "Calling cards bring a trait. 2 or 3 of a trait in play give a bonus. Your first one's trait is your Doctrine: it counts +1." |
 | Doctrine emblem on the Operator plate | the first calling card picked | (in the same card) |
@@ -180,11 +180,12 @@ Run: `godot --headless --path . -s res://tests/tools/onboarding_sim.gd -- exp=sl
 | … with that deck and a sloppier squad AI (second-best chance 0.35) | 30.8% | 70.0% | 120 |
 | … with a thin squad deck (6 Grunts, 4 Troopers, 6 tactics) | 56.2% | 83.8% | 160 |
 | … with a stronger starter (Trooper 2/4, Sergeant 3/4) | 46.9% | 79.4% | 160 |
-| … without Lethal / Tactical, Recon Drone only, both sides (M1–M2 "lite") | 15.8% | 40.0% | 120 |
+| … without Lethal / Tactical, Recon Drone only, both sides (M1–M2 "lite"; measured before kc-loadout-cut) | 15.8% | 40.0% | 120 |
 | **Recommended: the squad at Armor −1** | **68.8%** (in-run 70.2%) | 90.6% (in-run 94.8%) | 160 / 400 runs |
 
 - **A vanilla mirror is a skill test.** With equal decks, the squad AI (close to competent) beats the casual proxy two games out of three, and a vanilla board has no swingy card for a weaker player to lean on. So M1 needs a real handicap on the squad, not a weaker player deck. **−1 Armor** is the cleanest one: it uses the existing `enemy_armor_bonus` (Ruling 11 already scales squads that way), and the run map can show it as "green squad".
 - **Keep the Operator kit in M1.** Removing Lethal, Tactical and two killstreaks from both sides hurts the player badly, because the player proxy uses its kit better than the squads do. Teach the kit with coach marks instead (§5.2).
+  - **Removed (kc-loadout-cut):** the head later cut the Lethal (Frag Grenade), Tactical (Flashbang) and secondary (P-12 Sidearm) for both sides, to lower complexity. The Operator keeps its Primary, perks and killstreaks. Before / after numbers of that cut: §6.6.
 - M1 rounds: 5.0–5.2 per match with the −1 Armor squad (today 5.6–5.7). The first match is slightly shorter.
 
 ### 6.2 The run: per-match win rates (target: competent run 38–40%, a smooth ramp)
@@ -242,6 +243,25 @@ Run: `godot --headless --path . -s res://tests/tools/onboarding_sim.gd -- exp=sl
 
 ### 6.5 What the sim doesn't cover
 The real `RunProgress` (this loop reimplements the offers with balance_sim's pick rule), Re-issue, Retire as a separate option, Veteran / Elite beyond the M4 Promotion, a chosen Doctrine (the sim takes the first pick's trait), maps other than Port Vasel, and human learning (M1 is the first match only for the first run). `balance_sim.gd` must be re-run once §8 lands.
+
+### 6.6 Removed (kc-loadout-cut): before / after
+The head cut the Operator's Frag Grenade (Lethal), Flashbang (Tactical) and P-12 Sidearm (secondary) for both sides (2026-11-06). No numbers were retuned (the Sr Game Designer tunes in kc-syn-tune). `onboarding_check.gd -- runs=400` (late 80, mirror 400) on the shipped data, same tree before and after:
+
+| Metric (target) | Before | After |
+|---|---|---|
+| New player M1, casual proxy (65–75%) | 69.8% | **77.8%** (above the band) |
+| Competent run (38–43%) | 39.2% | 41.8% |
+| Casual run | 20.5% | 23.5% |
+| Competent per match M1 · M2 · M3 · M4 · M5 | 95.5 · 97.8 · 54.0 · 42.8 · 39.8% | 91.5 · 99.0 · **36.8** · 41.2 · 43.0% |
+| Casual per match M1 · M2 · M3 · M4 · M5 | 69.8 · 71.8 · 64.8 · 41.9 · 24.6% | 77.8 · 80.0 · **29.2** · 34.0 · 29.5% |
+| Aware vs blind, late decks (≥ 55%) | 56.6% | 55.0% (at the floor) |
+| Seat-0 mirror, Standard Issue starter | 53.5% | **46.2%** |
+| Seat-0 mirror, late decks | 49.4% | 49.4% |
+
+`balance_sim.gd` (defaults, 40 runs per proxy): competent run 38% → 30%, casual run 32% → 35%, plays per round 3.26 → 2.57 (competent), match length 3.6 → 3.2 min.
+- **M1 / M2 got easier, M3 much harder.** Every squad lost the same kit, but the Bracket-1 squads leaned on it less than the player did in M1, and the Bracket-2 Rusher (M3) less than the player there. The M3 drop is the biggest single change.
+- **The starter mirror moved to seat 1** (46%). The "ties → you" edge came from the items (synergy-system.md §12.4 predicted ~50% after the cut); 46% (n 400) is lower than that and needs a bigger run to confirm.
+- Matches are shorter and have fewer plays per round (one less decision per round).
 
 ## 7. Risks and levers
 | Risk | Sign in playtests | Lever (in order) |

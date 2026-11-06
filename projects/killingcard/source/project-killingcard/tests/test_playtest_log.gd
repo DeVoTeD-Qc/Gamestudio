@@ -63,7 +63,6 @@ func _play_sample(bus: Node) -> void:
 	bus.round_ended.emit(1, 2, 1)
 	bus.round_started.emit(2)
 	bus.killstreak_used.emit(&"recon_drone", 2)
-	bus.ability_used.emit(&"frag", &"left")
 	bus.preview_toggled.emit(false)
 	bus.round_ended.emit(2, 4, 1)
 	bus.round_summary.emit(2, 0, 3)
@@ -154,7 +153,7 @@ func test_events_become_lines_with_schema_fields() -> void:
 		last_t = int(e["t_ms"])
 	for event_name: String in ["screen", "run_start", "tutorial_step", "match_start", "card_played",
 			"elimination", "killstreak_earned", "operator_down", "round_end", "round_stats",
-			"killstreak_used", "ability_used", "preview_toggled", "match_end", "offer_shown",
+			"killstreak_used", "preview_toggled", "match_end", "offer_shown",
 			"reward_pick", "perk_pick", "next_match_clicked", "tickets", "run_end"]:
 		assert_true(names.has(event_name), "logged %s" % event_name)
 

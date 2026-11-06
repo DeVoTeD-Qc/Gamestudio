@@ -64,7 +64,6 @@ const SCHEMA: Dictionary = {
 	"operator_down": ["side", "round"],
 	"killstreak_earned": ["id", "round", "streak"],
 	"killstreak_used": ["id", "round"],
-	"ability_used": ["id", "zone", "round"],
 	"match_end": ["result", "rounds", "duration_s", "match", "max_streak", "killstreaks_earned",
 			"killstreaks_used", "cards_played", "operator_downs"],
 	"next_match_clicked": ["seconds_after_end"],
@@ -480,7 +479,7 @@ func _connect_bus() -> void:
 		"card_deployed": _on_card_deployed, "unit_eliminated": _on_unit_eliminated,
 		"operator_down": _on_operator_down, "streak_changed": _on_streak_changed,
 		"killstreak_earned": _on_killstreak_earned, "killstreak_used": _on_killstreak_used,
-		"ability_used": _on_ability_used, "reward_offered": _on_reward_offered,
+		"reward_offered": _on_reward_offered,
 		"reward_picked": _on_reward_picked, "preview_toggled": _on_preview_toggled,
 		"tutorial_step": _on_tutorial_step, "next_match_requested": _on_next_match_requested,
 		"screen_shown": _on_screen_shown,
@@ -619,10 +618,6 @@ func _on_killstreak_used(killstreak_id: StringName, round_number: int) -> void:
 	stats["killstreaks_used"] += 1
 	_match["killstreaks_used"] = int(_match.get("killstreaks_used", 0)) + 1
 	_write("killstreak_used", {"id": killstreak_id, "round": round_number})
-
-
-func _on_ability_used(ability_id: StringName, zone: StringName) -> void:
-	_write("ability_used", {"id": ability_id, "zone": zone, "round": _round})
 
 
 func _on_reward_offered(kind: StringName, offered_ids: Array[StringName]) -> void:

@@ -62,9 +62,6 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 		&"not_in_tray":
 			var t: int = int(ctx.get("threshold", 0))
 			return _t("LOCKED", "%s is not earned yet: reach a streak of %d." % [label, t] if t > 0 else "%s is not earned yet." % label)
-		&"on_cooldown":
-			var n: int = int(data.get("rounds", 1))
-			return _t("CD %d" % n, "%s is on cooldown: ready in %d round%s." % [label, n, "" if n == 1 else "s"])
 		&"no_uses_left":
 			return _t("USED", "%s was already used this %s." % [label, String(data.get("per", &"round"))])
 		&"nothing_to_undo":
@@ -84,8 +81,6 @@ static func button_state(check: Dictionary, item: LoadoutItem, uses_left: int = 
 		return "%d LEFT" % uses_left if uses_left > 0 else "READY"
 	var data: Dictionary = check.get("data", {})
 	match check.get("code", &""):
-		&"on_cooldown":
-			return "CD %d" % int(data.get("rounds", 1))
 		&"no_uses_left":
 			return "USED"
 		&"not_enough_supply":

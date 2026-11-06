@@ -57,7 +57,7 @@ var foe_cover_removed: bool = false
 ## A START_OF_FIREFIGHT effect of mine is active this round (Attack Helo): damage per zone.
 var my_firefight_damage: int = 0
 var foe_firefight_damage: int = 0
-## [{item: LoadoutItem, ready: bool}] for Secondary, Lethal, Tactical, then tray killstreaks.
+## [{item: LoadoutItem, ready: bool}] for the killstreaks in the tray.
 var items: Array[Dictionary] = []
 var tray: Array[StringName] = []
 ## Card ids of my Equipment (Fields) per zone.
@@ -151,9 +151,6 @@ static func capture(state, p_side: int) -> AiView:
 		else:
 			v.foe_firefight_damage += e.amount
 	var setup = me.setup
-	for item: LoadoutItem in [setup.secondary, setup.lethal, setup.tactical]:
-		if item != null:
-			v.items.append({"item": item, "ready": LoadoutRules.can_use_item(state, p_side, item) == ""})
 	for ks: LoadoutItem in setup.killstreaks:
 		if ks != null and ks.id in me.streak_tray:
 			v.items.append({"item": ks, "ready": LoadoutRules.can_use_item(state, p_side, ks) == ""})

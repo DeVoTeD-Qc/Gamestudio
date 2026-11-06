@@ -54,9 +54,6 @@ static func build_state(script: TutorialScript) -> MatchState:
 		player.deck_levels.append(lv)
 	player.keep_deck_order = true
 	player.primary = config.starter_primary
-	player.secondary = config.starter_secondary
-	player.lethal = config.starter_lethal
-	player.tactical = config.starter_tactical
 	player.killstreaks.assign(script.player_killstreaks if not script.player_killstreaks.is_empty() else config.starter_killstreaks)
 	var enemy: SideSetup = SideSetup.from_squad(script.squad)
 	if not script.enemy_deck.is_empty():

@@ -15,8 +15,8 @@
 #   that mirrors FirefightResolver on the
 #   public board. The player's response is unknown, so it is not predicted.
 #   Search: the Operator placement is forced first (free and always useful), then
-#   greedy: add the candidate (card x zone, Rotation, Secondary / Lethal / Tactical,
-#   killstreak) with the best gain until nothing gains. A second plan starts from the
+#   greedy: add the candidate (card x zone, Rotation, killstreak) with the best gain
+#   until nothing gains. A second plan starts from the
 #   second-best first step; with `second_best_chance` (seeded) that one is played.
 #   Each zone's score is cached and only zones an action touches are re-simulated.
 #   Fields (kc-field-impl): the estimator applies Field auras by position (frontline auras go
@@ -355,7 +355,7 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 					a["uid"] = uid
 					a["level"] = level
 					out.append(a)
-	# Loadout items and earned killstreaks.
+	# Earned killstreaks.
 	for entry: Dictionary in _view.items:
 		var item: LoadoutItem = entry["item"]
 		if not entry["ready"] or p.used_items.has(item.id) or item.supply_cost > p.supply:
@@ -546,8 +546,6 @@ func _apply(p: Plan, a: Dictionary) -> void:
 				if item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 					var left: float = clampf(float(_view.round_cap - _view.round_number) / maxf(1.0, _view.round_cap), 0.0, 1.0)
 					p.flat -= personality.killstreak_keep_cost * left
-				elif item.cooldown_rounds > 0:
-					p.flat -= personality.cooldown_keep_cost
 			if a["op_bound"]:
 				p.op_locked = true
 	if synergy_aware and (a["zones"] as Array).size() == 3 and a["kind"] in [&"place", &"rotate", &"unit", &"equipment", &"tactic"]:

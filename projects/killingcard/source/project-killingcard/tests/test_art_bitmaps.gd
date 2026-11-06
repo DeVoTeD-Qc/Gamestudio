@@ -9,9 +9,10 @@
 extends "res://tests/test_case.gd"
 
 const Data: GDScript = preload("res://scripts/ui/art/card_art_data.gd")
-## The 48 images approved: 47 from assets/incoming/batch1, fx_callin_tablet from batch2.
+## The 48 images approved: 47 from assets/incoming/batch1, fx_callin_tablet from batch2 (kc-loadout-cut
+## removed the 3 gear arts: Frag Grenade, Flashbang, P-12 Sidearm).
 const APPROVED: Dictionary = {
-	"res://assets/sprites/cards/": 37,  # 32 card art + 4 run map modes + card back
+	"res://assets/sprites/cards/": 34,  # 29 card art + 4 run map modes + card back (kc-loadout-cut: -3 gear)
 	"res://assets/sprites/board/": 3,
 	"res://assets/ui/backgrounds/": 4,  # title key art, bg_run, bg_supply_drop, fx_callin_tablet
 	"res://assets/ui/perks/": 4,

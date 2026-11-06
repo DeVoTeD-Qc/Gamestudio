@@ -415,7 +415,10 @@ func _make_operator_card(op: Dictionary) -> Control:
 	var status0: String = ("NEED %d SUPPLY" % cost0) if short0 else String(op.get("status", "")).replace("\n", " · ")
 	# kc-ui4: the status (DEPLOY / PLAN · B / DOWN · NEXT ROUND) is the line under the name, where a
 	# deck card shows its art's subname, so it never covers the name or the badges.
-	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR", "cost": "", "subname": status0,
+	# kc-loadout-cut (head): the Operator shows its Supply cost in the same cost hex as every deck
+	# card (BannerCard's CostHex, top-left); 0 = no hex.
+	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR",
+			"cost": str(cost0) if cost0 > 0 else "", "subname": status0,
 			"fp": op.get("fp", 0), "armor": op.get("armor", 0), "armor_max": op.get("armor_max", op.get("armor", 0)),
 			"keywords": op.get("keywords", []), "operator": true, "camo": op.get("camo", "base"),
 			"banner": op.get("banner", ""), "id": op.get("banner", ""), "playable": true}
@@ -427,40 +430,16 @@ func _make_operator_card(op: Dictionary) -> Control:
 	var next_tag: Node = panel.find_child("NextTag", true, false)
 	if next_tag != null:
 		(next_tag as Control).visible = false
-	# kc-syn-ui (head B): not a deck card. No cost hex: a brass dog-tag plate with its Supply cost
-	# ("1 SUPPLY"; red when you can't pay it), a brass frame with cut corners (operator_frame()).
-	for hex: Node in panel.find_children("*", "", true, false):
-		if hex is CostHex:
-			(hex as CostHex).visible = false
-	var cost: int = int(op.get("cost", 0))
-	var short: bool = state == &"deploy" and not bool(op.get("can_afford", true))
-	var plate_l: Label = _label("%d SUPPLY" % cost if cost > 0 else "OPERATOR", &"HudTag", true)
-	plate_l.name = "OperatorPlate"
-	plate_l.add_theme_font_size_override(&"font_size", 16)
-	plate_l.add_theme_color_override(&"font_color", Color.WHITE if short else Color(0.07, 0.08, 0.1))
-	var tag_sb := StyleBoxFlat.new()
-	tag_sb.bg_color = get_theme_color(&"enemy", &"Hud") if short else BRASS
-	tag_sb.set_corner_radius_all(6)
-	tag_sb.set_content_margin_all(2)
-	tag_sb.content_margin_left = 6
-	tag_sb.content_margin_right = 6
-	plate_l.add_theme_stylebox_override(&"normal", tag_sb)
+	# A brass frame with cut corners (operator_frame()); the cost is the deck cards' hex (above).
+	var cost: int = cost0
+	var short: bool = short0
 	var face0: Control = panel.get_node("Face")
-	face0.add_child(plate_l)
 	var obv: BannerView = BannerCard.banner_of(panel)
 	panel.sort_children.connect(func() -> void:
-		plate_l.size = plate_l.get_combined_minimum_size()
 		var mm: Dictionary = BannerView.metrics(minf(face0.size.y, _metric_h if _metric_h > 0.0 else face0.size.y))
-		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, plate_l.size.x + 4.0)
-		plate_l.position = Vector2((an["cost"] as Rect2).position.x, (an["cost"] as Rect2).position.y + ((an["cost"] as Rect2).size.y - plate_l.size.y) * 0.5)
-		# kc-ui4: the Supply plate takes the cost slot (top-left). The plate row is too short for the
-		# weapon's name, so on the Operator card the name takes the subname slot and the status
-		# (DEPLOY / PLAN · B) the top centre (when it fits; the tooltip and the red plate say it too).
-		var want: float = plate_l.size.x + 4.0
-		if obv != null and absf(obv.lead - want) > 0.5:
-			obv.lead = want
-			obv.queue_redraw()
-			panel.queue_sort()
+		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, obv.lead if obv.lead > 0.0 else -1.0)
+		# kc-ui4: on the Operator card the name takes the subname slot and the status
+		# (DEPLOY / PLAN · B) the top centre (when it fits; the tooltip and the red status say it too).
 		var tl: Label = face0.find_child("NameLabel", false, false) as Label
 		var stl: Label = face0.find_child("OperatorStatus", false, false) as Label
 		if tl == null or stl == null:

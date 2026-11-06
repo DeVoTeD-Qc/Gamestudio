@@ -49,7 +49,7 @@ func test_valid_set_loads_and_indexes() -> void:
 	assert_true(db.is_valid(), "valid set has errors:\n" + "\n".join(db.get_errors()))
 	var report: Dictionary = db.get_report()
 	assert_eq(report["counts"]["cards"], 5, "cards indexed (incl. Sentry token)")
-	assert_eq(report["counts"]["loadout"], 11, "loadout items indexed")
+	assert_eq(report["counts"]["loadout"], 8, "loadout items indexed")
 	assert_eq(report["counts"]["squads"], 1, "squads")
 	assert_eq(report["counts"]["maps"], 1, "maps")
 	assert_eq(report["counts"]["run_configs"], 1, "run configs")
@@ -86,14 +86,14 @@ func test_rejects_missing_required_fields() -> void:
 	var data: Dictionary = _valid_set()
 	data["cards/rifleman"].display_name = ""
 	data["squads/squad_test"].primary = null
-	data["loadout/frag"].effects.clear()
+	data["loadout/mortar"].effects.clear()
 	var nameless: CardData = _unit(&"", 1, 1, 1)
 	data["cards/nameless"] = nameless
 	var db: Node = _load_case(data)
 	assert_false(db.is_valid(), "missing fields accepted")
 	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "rifleman", "display_name"), "empty display_name")
 	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "squad_test", "primary"), "squad without primary")
-	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "frag_grenade", "effects"), "lethal without effects")
+	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "mortar_barrage", "effects"), "killstreak without effects")
 	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "", "id"), "card without id")
 	db.free()
 
@@ -142,12 +142,12 @@ func test_rejects_wrong_reference_types() -> void:
 	var data: Dictionary = _valid_set()
 	data["squads/squad_test"].primary = data["loadout/mortar"]          # killstreak in primary slot
 	data["run"].starter_killstreaks[0] = data["loadout/perk"]           # perk in killstreak slot
-	data["loadout/kestrel"].attachments.assign([data["loadout/frag"]])  # lethal as attachment
+	data["loadout/kestrel"].attachments.assign([data["loadout/mortar"]])  # killstreak as attachment
 	var db: Node = _load_case(data)
 	assert_false(db.is_valid(), "wrong types accepted")
 	assert_true(db.has_issue(DataValidator.WRONG_TYPE, "squad_test", "primary"), "killstreak as primary")
 	assert_true(db.has_issue(DataValidator.WRONG_TYPE, "run_default", "starter_killstreaks[0]"), "perk as killstreak")
-	assert_true(db.has_issue(DataValidator.INVALID_VALUE, "kestrel_ar7", "attachments[0]"), "lethal as attachment")
+	assert_true(db.has_issue(DataValidator.INVALID_VALUE, "kestrel_ar7", "attachments[0]"), "killstreak as attachment")
 	db.free()
 
 
@@ -158,7 +158,7 @@ func test_rejects_invalid_values_and_effects() -> void:
 	var tactic: CardData = data["cards/hold"]
 	tactic.firepower = 2                                         # stats on a tactic
 	tactic.effects[0].kind = DataEnums.EffectKind.NONE
-	data["loadout/frag"].effects[0].amount = 0                   # DAMAGE 0
+	data["loadout/mortar"].effects[0].amount = 0                 # DAMAGE 0
 	data["loadout/sentry"].effects[0].summon_card = null         # SUMMON without unit
 	var db: Node = _load_case(data)
 	assert_false(db.is_valid(), "invalid values accepted")
@@ -167,8 +167,21 @@ func test_rejects_invalid_values_and_effects() -> void:
 	assert_true(db.has_issue(V, "Point-Man", "id"), "bad id format")
 	assert_true(db.has_issue(V, "hold_the_line", "firepower"), "tactic with FP")
 	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "hold_the_line", "effects[0].kind"), "effect kind NONE")
-	assert_true(db.has_issue(DataValidator.OUT_OF_RANGE, "frag_grenade", "effects[0].amount"), "damage 0")
+	assert_true(db.has_issue(DataValidator.OUT_OF_RANGE, "mortar_barrage", "effects[0].amount"), "damage 0")
 	assert_true(db.has_issue(DataValidator.MISSING_FIELD, "sentry_turret", "effects[0].summon_card"), "summon without card")
+	db.free()
+
+
+## kc-loadout-cut: the Secondary (2), Lethal (3) and Tactical (4) slots and COOLDOWN_MOD are gone.
+func test_rejects_removed_slots_and_cooldown_mod() -> void:
+	assert_eq(DataEnums.LoadoutSlot.values(), [0, 1, 5, 6], "Primary, Attachment, Perk, Killstreak keep their numbers")
+	var data: Dictionary = _valid_set()
+	data["loadout/perk"].slot = 3 as DataEnums.LoadoutSlot          # the old LETHAL
+	data["loadout/perk2"].effects[0].kind = DataEnums.EffectKind.COOLDOWN_MOD
+	var db: Node = _load_case(data)
+	assert_false(db.is_valid(), "a removed slot / COOLDOWN_MOD accepted")
+	assert_true(db.has_issue(DataValidator.INVALID_VALUE, "streak_discipline", "slot"), "slot 3 (Lethal) rejected")
+	assert_true(db.has_issue(DataValidator.INVALID_VALUE, "grit", "effects[0].kind"), "COOLDOWN_MOD rejected")
 	db.free()
 
 
@@ -229,23 +242,6 @@ func _valid_set() -> Dictionary:
 	kestrel.operator_firepower = 3
 	kestrel.operator_armor = 7
 	kestrel.attachments = [ext_mag, foregrip]
-	var sidearm: LoadoutItem = _item(&"p12_sidearm", DataEnums.LoadoutSlot.SECONDARY)
-	sidearm.supply_cost = 1
-	sidearm.uses_per_round = 1
-	sidearm.effects = [_effect(DataEnums.EffectKind.DAMAGE, 1, DataEnums.Target.CHOSEN_ENEMY)]
-	sidearm.effects[0].zone_scope = DataEnums.ZoneScope.OPERATOR_ZONE
-	var frag: LoadoutItem = _item(&"frag_grenade", DataEnums.LoadoutSlot.LETHAL)
-	frag.cooldown_rounds = 3
-	frag.effects = [
-		_effect(DataEnums.EffectKind.DAMAGE, 2, DataEnums.Target.ENEMY_POINT_MAN),
-		_effect(DataEnums.EffectKind.DAMAGE, 1, DataEnums.Target.ENEMY_SECOND_IN_LINE),
-	]
-	var flash: LoadoutItem = _item(&"flashbang", DataEnums.LoadoutSlot.TACTICAL)
-	flash.cooldown_rounds = 3
-	flash.effects = [
-		_effect(DataEnums.EffectKind.MODIFY_FIREPOWER, -2, DataEnums.Target.ALL_ENEMIES, 1),
-		_effect(DataEnums.EffectKind.REMOVE_FIRST_SHOT, 0, DataEnums.Target.ALL_ENEMIES, 1),
-	]
 	var recon: LoadoutItem = _item(&"recon_drone", DataEnums.LoadoutSlot.KILLSTREAK)
 	recon.streak_threshold = 2
 	recon.effects = [_effect(DataEnums.EffectKind.REVEAL_DEPLOYMENTS, 0, DataEnums.Target.OWNER, 2)]
@@ -261,15 +257,14 @@ func _valid_set() -> Dictionary:
 	perk.effects = [_effect(DataEnums.EffectKind.STREAK_THRESHOLD_MOD, -1, DataEnums.Target.OWNER)]
 	perk.effects[0].trigger = DataEnums.Trigger.PASSIVE
 	perk.effects[0].zone_scope = DataEnums.ZoneScope.ANY
-	var perk2: LoadoutItem = _item(&"quick_hands", DataEnums.LoadoutSlot.PERK)
-	perk2.effects = [_effect(DataEnums.EffectKind.COOLDOWN_MOD, -1, DataEnums.Target.OWNER)]
+	var perk2: LoadoutItem = _item(&"grit", DataEnums.LoadoutSlot.PERK)
+	perk2.uses_per_match = 1
+	perk2.effects = [_effect(DataEnums.EffectKind.SURVIVE_LETHAL, 1, DataEnums.Target.OPERATOR)]
 	perk2.effects[0].trigger = DataEnums.Trigger.PASSIVE
+	perk2.effects[0].zone_scope = DataEnums.ZoneScope.ANY
 	d["loadout/extended_mag"] = ext_mag
 	d["loadout/foregrip"] = foregrip
 	d["loadout/kestrel"] = kestrel
-	d["loadout/sidearm"] = sidearm
-	d["loadout/frag"] = frag
-	d["loadout/flash"] = flash
 	d["loadout/recon_drone"] = recon
 	d["loadout/mortar"] = mortar
 	d["loadout/sentry"] = sentry
@@ -291,9 +286,6 @@ func _valid_set() -> Dictionary:
 	squad.deck = _repeat([rifleman, point_man, medic], 15)
 	squad.primary = kestrel
 	squad.attachments = [ext_mag]
-	squad.secondary = sidearm
-	squad.lethal = frag
-	squad.tactical = flash
 	squad.perks = [perk]
 	squad.killstreaks = [recon, mortar]
 	squad.preferred_ranges = [DataEnums.RangeTag.CLOSE]
@@ -312,9 +304,6 @@ func _valid_set() -> Dictionary:
 		run.matches.append(m)
 	run.starter_deck = _repeat([rifleman, point_man, medic, hold], 20)
 	run.starter_primary = kestrel
-	run.starter_secondary = sidearm
-	run.starter_lethal = frag
-	run.starter_tactical = flash
 	run.starter_killstreaks = [recon, mortar, sentry]
 	run.killstreak_pool = [recon, mortar, sentry]
 	run.perk_pool = [perk, perk2]

@@ -3,7 +3,8 @@
 #   keyword pips / trait icons / camo bands / buffed-stat colours, link ticks between linked banners,
 #   the trait rail and set callouts, the placement preview (ghost with the RESULTING stats, ghost
 #   ticks, chips; matches the board after Reveal), the inspector's "FP 4 = 2 base +1 Spotter ..."
-#   lines, the Operator's own card (brass plate with "1 SUPPLY", NEED SUPPLY state, half-height mini
+#   lines, the Operator's own card (its Supply cost in the deck cards' cost hex since kc-loadout-cut,
+#   NEED SUPPLY state, half-height mini
 #   card on the board), Undead heal feedback, quick match on the Recruit starter, the inspector fix.
 #   Runs with or without the git-ignored licensed art folder.
 # Author: UI/UX Agent (kc-syn-ui)
@@ -154,12 +155,20 @@ func test_operator_card_is_its_own_card() -> void:
 		var me: RulesSide = st.sides[0]
 		var hand: Control = m.get_hand()
 		var card: Control = hand.get_operator_card()
-		var plate: Label = card.find_child("OperatorPlate", true, false) as Label
-		assert_not_null(plate, "%s brass plate instead of a cost hex" % label)
-		assert_eq(plate.text, "%d SUPPLY" % st.operator_cost(), "%s plate shows its Supply cost" % label)
-		for n: Node in card.find_children("*", "", true, false):
-			if n is CostHex:
-				assert_false((n as Control).visible, "%s no deck-card cost hex" % label)
+		# kc-loadout-cut (head): the Supply cost sits in the same cost hex as every deck card.
+		assert_true(card.find_child("OperatorPlate", true, false) == null, "%s no brass Supply plate any more" % label)
+		var hexes: Array = card.find_children("*", "", true, false).filter(func(n: Node) -> bool: return n is CostHex)
+		assert_eq(hexes.size(), 1, "%s one cost hex" % label)
+		if hexes.size() == 1:
+			var hex: Control = hexes[0]
+			assert_true(hex.visible, "%s the cost hex shows" % label)
+			assert_eq(String(hex.get(&"label").text), str(st.operator_cost()), "%s hex shows its Supply cost" % label)
+			var deck_hex: Control = null
+			for n: Node in (hand.get_cards()[1] as Control).find_children("*", "", true, false):
+				if n is CostHex:
+					deck_hex = n
+			if deck_hex != null:
+				assert_eq(hex.size, deck_hex.size, "%s same hex as a deck card" % label)
 		var sb: StyleBox = card.get_theme_stylebox(&"panel")
 		assert_true(sb is StyleBoxFlat and (sb as StyleBoxFlat).border_color.is_equal_approx(Color("#C9A227")), "%s brass frame" % label)
 		# Not enough Supply: red plate, NEED 1 SUPPLY, no glow.

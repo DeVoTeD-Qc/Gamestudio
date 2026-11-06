@@ -8,7 +8,7 @@
 #     `dest_zone` = destination of a MOVE_UNIT (Flank Route).
 #   - place_operator: place an off-board Operator (Round 1, respawn).
 #   - rotate: move the Operator to an adjacent zone (back of the line).
-#   - use_item: activate a Secondary / Lethal / Tactical / killstreak by its id.
+#   - use_item: call in a killstreak by its id.
 # Dependencies: none.
 # Author: Mechanics Developer Agent
 class_name RulesIntent

@@ -174,6 +174,12 @@ func _card_type() -> String:
 	return String(data.get("type", "unit"))
 
 
+## kc-loadout-cut (head): the Operator shows its Supply cost in the same hex badge as every other
+## card (none when it is free); every other type always has its cost / threshold badge.
+func _has_cost_badge() -> bool:
+	return _card_type() != "operator" or int(data.get("cost", 0)) > 0
+
+
 func _has_stats() -> bool:
 	return _card_type() in ["unit", "operator"]
 
@@ -188,7 +194,7 @@ func _refresh() -> void:
 	else:
 		_cost_label.text = str(int(data.get("cost", 0)))
 		_cost_label.theme_type_variation = &"CardCost"
-	_cost_label.visible = type_name != "operator"
+	_cost_label.visible = _has_cost_badge()
 	_elite_icon.visible = bool(data.get("elite", false))
 	# Name and type line.
 	_name_label.text = String(data.get("name", "")).replace("★", "").strip_edges()
@@ -200,7 +206,7 @@ func _refresh() -> void:
 		_name_label.remove_theme_font_override(&"font")
 		_name_label.remove_theme_color_override(&"font_color")
 	var name_right: float = 206.0 if type_name == "equipment" else 238.0
-	var name_left: float = 20.0 if type_name == "operator" else 70.0
+	var name_left: float = 70.0 if _has_cost_badge() else 20.0
 	_set_slot(_name_label, Rect2(name_left, 12, name_right - name_left, 26))
 	_type_icon.texture = IconSheet.get_icon(StringName("type_" + type_name))
 	var tag: String = type_name.to_upper()
@@ -495,7 +501,7 @@ func _draw() -> void:
 		var sw: float = StandardIssueLook.serial_width(String(data["serial"]), 24.0)
 		StandardIssueLook.draw_serial_plate(self, Rect2(BASE_SIZE.x - 14.0 - sw, 168.0, sw, 24.0), String(data["serial"]), side == "enemy")
 	# Cost / threshold hex badge.
-	if type_name != "operator":
+	if _has_cost_badge():
 		var badge_color: Color = get_theme_color(&"special" if type_name == "killstreak" else &"accent", &"Card")
 		var hex: PackedVector2Array = _hex(COST_RECT)
 		draw_colored_polygon(hex, badge_color)

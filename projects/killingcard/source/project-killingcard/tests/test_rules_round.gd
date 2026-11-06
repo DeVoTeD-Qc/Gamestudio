@@ -259,30 +259,32 @@ func test_breach_and_clear_extra_damage_if_close() -> void:
 	assert_eq([close_a.armor, close_b.armor, mid.armor], [2, 2, 3], "3 each in Close, 2 in Mid")
 
 
-func test_frag_grenade_point_man_and_next_in_operator_or_adjacent_zone() -> void:
+func test_point_man_and_second_in_line_damage_in_operator_or_adjacent_zone() -> void:
+	# kc-loadout-cut: the Frag Grenade's effects on a test-only killstreak (generic effect paths).
 	var p: SideSetup = F.setup([], F.kestrel())
-	p.lethal = F.frag()
 	var m: MatchState = F.new_match(p)
+	F.grant(m, P, F.point_strike())
 	F.place_operator(m, P, F.LEFT)
 	var pm: RulesUnit = F.place(m, E, F.marksman(), F.MID)
 	var nxt: RulesUnit = F.place(m, E, F.unit("next", 0, 4), F.MID)
-	var r: Dictionary = m.submit(P, RulesIntent.use_item(&"frag_grenade", F.RIGHT))
+	var r: Dictionary = m.submit(P, RulesIntent.use_item(&"point_strike", F.RIGHT))
 	assert_false(r["ok"], "Right is not adjacent to Left")
-	assert_true(m.submit(P, RulesIntent.use_item(&"frag_grenade", F.MID))["ok"], "adjacent Mid")
+	assert_true(m.submit(P, RulesIntent.use_item(&"point_strike", F.MID))["ok"], "adjacent Mid")
 	m.reveal()
 	assert_false(pm.is_alive(), "2 to the point man")
 	assert_eq(nxt.armor, 3, "1 to the next enemy")
 	var rec: Dictionary = F.events_of(m, RulesEvent.UNIT_ELIMINATED)[0]
-	assert_eq([rec["source_kind"], rec["by_id"], rec["credit"]], [&"lethal", &"frag_grenade", true], "Lethal kill counts")
+	assert_eq([rec["source_kind"], rec["by_id"], rec["credit"]], [&"killstreak", &"point_strike", true], "the kill is credited")
 
 
-func test_flashbang_minus_two_and_no_first_shot_this_round() -> void:
+func test_timed_minus_two_fp_and_no_first_shot_this_round() -> void:
+	# kc-loadout-cut: the old Flashbang's effects on a test-only killstreak.
 	var p: SideSetup = F.setup([], F.kestrel())
-	p.tactical = F.flashbang()
 	var m: MatchState = F.new_match(p)
+	F.grant(m, P, F.blind_strike())
 	F.place_operator(m, P, F.MID)
 	var b: RulesUnit = F.place(m, E, F.breacher(), F.LEFT)
-	m.submit(P, RulesIntent.use_item(&"flashbang", F.LEFT))
+	m.submit(P, RulesIntent.use_item(&"blind_strike", F.LEFT))
 	m.reveal()
 	assert_eq(m.firepower_of(b), 3 - 2 + 0, "Breacher 3 -2 (Left is Mid range on flat map)")
 	assert_false(m.has_first_shot(b), "lost First Shot")

@@ -89,7 +89,8 @@ func test_new_run_reads_everything_from_run_config() -> void:
 	assert_eq(r.tickets, 3, "3 tickets")
 	assert_eq(r.deck.size(), 20, "starter deck")
 	assert_eq(r.primary, &"kestrel_ar7", "starter primary")
-	assert_eq([r.secondary, r.lethal, r.tactical], [&"p12_sidearm", &"frag_grenade", &"flashbang"], "starter kit")
+	for gone: String in ["secondary", "lethal", "tactical"]:
+		assert_false(gone in r, "kc-loadout-cut: no %s slot" % gone)
 	assert_eq(r.killstreaks, [&"recon_drone", &"mortar_barrage", &"attack_helo"] as Array[StringName], "starter killstreaks")
 	assert_true(r.perks.is_empty() and r.attachments.is_empty(), "no perks / attachments at start")
 	var brackets: Array = []
@@ -300,7 +301,7 @@ func test_player_setup_carries_deck_loadout_and_rewards() -> void:
 	assert_eq(s.primary.id, &"kestrel_ar7", "primary")
 	assert_eq(s.attachments.size(), 1, "attachment")
 	assert_eq(s.attachments[0].id, r.attachments[0], "attachment id")
-	assert_eq([s.secondary.id, s.lethal.id, s.tactical.id], [&"p12_sidearm", &"frag_grenade", &"flashbang"], "kit")
+	assert_false("lethal" in s, "kc-loadout-cut: no Secondary / Lethal / Tactical in the side setup")
 	assert_eq(s.firepower_bonus + s.armor_bonus, 0, "no bonus for the player")
 	var m: MatchState = r.create_match()
 	m.start_match()
@@ -431,6 +432,32 @@ func test_bad_saves_are_rejected() -> void:
 		var res: Dictionary = RunProgress.from_dict(cfg, cases[label])
 		assert_true(res["run"] == null and res["error"] != "", "%s is rejected" % label)
 	assert_eq(RunProgress.from_dict(cfg, good)["error"], "", "the good save loads")
+
+
+## kc-loadout-cut: a v4 save still carries loadout.secondary / lethal / tactical (Sidearm, Frag
+## Grenade, Flashbang); it loads with those fields dropped, and the next save is v5 without them.
+func test_v4_save_with_the_removed_loadout_slots_loads() -> void:
+	var cfg: RunConfig = _config()
+	var r: RunProgress = _new_run()
+	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
+	assert_eq(int(d["version"]), 5, "saves are v5")
+	assert_false((d["loadout"] as Dictionary).has("lethal"), "no lethal field any more")
+	var old: Dictionary = d.duplicate(true)
+	old["version"] = 4
+	old["loadout"]["secondary"] = "p12_sidearm"
+	old["loadout"]["lethal"] = "frag_grenade"
+	old["loadout"]["tactical"] = "flashbang"
+	var back: Dictionary = RunProgress.from_dict(cfg, old)
+	assert_eq(back["error"], "", "the v4 save loads")
+	if back["run"] != null:
+		var again: Dictionary = (back["run"] as RunProgress).to_dict()
+		assert_eq(int(again["version"]), 5, "saved again as v5")
+		assert_eq((again["loadout"] as Dictionary).keys(), ["primary", "attachments", "perks", "killstreaks"],
+				"the removed slots are dropped")
+		assert_eq(String(again["loadout"]["primary"]), String(r.primary), "the Operator is kept")
+	var bad: Dictionary = old.duplicate(true)
+	bad["loadout"]["primary"] = "frag_grenade"
+	assert_true(RunProgress.from_dict(cfg, bad)["run"] == null, "an unknown primary is still rejected")
 
 
 func _with(d: Dictionary, key: String, value: Variant) -> Dictionary:

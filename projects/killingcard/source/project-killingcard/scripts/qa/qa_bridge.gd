@@ -13,6 +13,7 @@
 # Author: Mechanics Developer Agent (kc-board)
 extends Node
 
+const CostHexScript: GDScript = preload("res://scripts/ui/cost_hex.gd")
 const PERIOD: float = 0.25
 var _t: float = 0.0
 
@@ -244,7 +245,9 @@ static func _layout_v2(scene: Node) -> Dictionary:
 		var oc: Control = hand.get_operator_card()
 		op_card = {"rect": _css(oc), "visible": oc.is_visible_in_tree(), "state": String(hand.operator_entry.get("state", "")),
 				"mini": bool(oc.get_meta(&"mini", false)), "short": bool(oc.get_meta(&"operator_short", false)),
-				"status": String(hand.operator_entry.get("status", "")).replace("\n", " "), "selected": hand.operator_selected}
+				"status": String(hand.operator_entry.get("status", "")).replace("\n", " "), "selected": hand.operator_selected,
+				# kc-loadout-cut: the Supply cost shows in the deck cards' cost hex ("" = none shown).
+				"cost": _op_cost_text(oc)}
 	var ks: Array = []
 	if scene.has_method(&"get_killstreak_row"):
 		var row: Control = scene.get_killstreak_row()
@@ -331,3 +334,11 @@ static func _fight(scene: Node, fx: Node) -> Dictionary:
 
 static func ctrl_of(scene: Node) -> Node:
 	return scene.get_node_or_null("%MatchController") if scene != null and scene.has_node("%MatchController") else null
+
+
+## kc-loadout-cut: the text of the Operator card's visible cost hex ("" when it shows none).
+static func _op_cost_text(card: Control) -> String:
+	for n: Node in card.find_children("*", "", true, false):
+		if n.get_script() == CostHexScript and (n as Control).visible:
+			return String((n.get(&"label") as Label).text)
+	return ""

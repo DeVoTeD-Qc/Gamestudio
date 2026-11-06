@@ -383,83 +383,23 @@ func test_undo_then_ready_phone() -> void:
 
 # --- f02: loadout items ------------------------------------------------------------------------
 
-func test_frag_targets_a_lane_then_goes_on_cooldown_phone() -> void:
+## kc-loadout-cut: the Sidearm / Frag Grenade / Flashbang buttons are gone; the panel's buttons are
+## the run's killstreaks only.
+func test_operator_panel_has_only_killstreak_buttons_phone() -> void:
 	var s: Array = await _spawn(Layout.PHONE)
 	var vp: SubViewport = s[0]
 	var m: Control = s[1]
 	var c: Node = s[2]
 	var panel: Control = m.get_operator_panel()
-	var frag: Button = panel.get_item_button(&"frag_grenade")
-	assert_not_null(frag, "Frag button")
-	assert_true(frag.disabled, "Frag disabled while the Operator is off the board")
-	assert_true(frag.text.contains("NO OP"), "button says why: %s" % frag.text)
-	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
-	assert_true(m.get_toast_text().contains("Operator is not on the board"), "tap on a disabled button toasts the reason: %s" % m.get_toast_text())
-	assert_true(c.selection.is_empty(), "nothing selected")
-	c.select_operator()
-	c.play_at(1)
-	await _frames(2)
-	frag = panel.get_item_button(&"frag_grenade")
-	assert_false(frag.disabled, "Frag usable with the Operator planned in Mid")
-	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
-	assert_eq(c.selection, {"kind": &"item", "id": &"frag_grenade"}, "tap selects Frag for targeting")
-	assert_true(panel.get_item_button(&"frag_grenade").button_pressed, "Frag button shows as pressed")
-	for lane: Node in m.get_board().get_lanes():
-		assert_eq([lane.target_state, lane.target_text], [&"valid", "THROW HERE"], "%s offers the throw (Mid Operator reaches all)" % lane.zone_id)
-	await _tap(vp, _row_point(m.get_board().get_lanes()[2]))
-	var last: Dictionary = c.intent_log.back() if not c.intent_log.is_empty() else {}
-	assert_eq(last.get("intent", {}), RulesIntent.use_item(&"frag_grenade", 2), "engine got use_item(frag, right)")
-	assert_true(last.get("result", {}).get("ok", false), "accepted")
-	assert_true(m.get_toast_text().contains("Frag Grenade queued on column C"), "toast: %s" % m.get_toast_text())
-	frag = panel.get_item_button(&"frag_grenade")
-	assert_true(frag.disabled, "Frag now on cooldown")
-	assert_true(frag.text.contains("CD 3"), "cooldown shown: %s" % frag.text)
-	await _tap(vp, await _item_point(vp, m, &"frag_grenade"))
-	assert_true(m.get_toast_text().contains("cooldown: ready in 3 rounds"), "toast: %s" % m.get_toast_text())
-	# UNDO gives the cooldown back.
-	c.undo()
-	await _frames(2)
-	assert_false(panel.get_item_button(&"frag_grenade").disabled, "undo refunds the cooldown")
-	_despawn(vp)
-
-
-func test_sidearm_taps_an_enemy_in_the_operator_zone_desktop() -> void:
-	var s: Array = await _spawn(Layout.DESKTOP)
-	var vp: SubViewport = s[0]
-	var m: Control = s[1]
-	var c: Node = s[2]
-	var st: MatchState = c.state
-	var foe_card: CardData = CardDB.get_card(&"rifleman")
-	var near: RulesUnit = st.create_unit(1, foe_card)
-	st.put_in_line(near, 0)
-	var far: RulesUnit = st.create_unit(1, foe_card)
-	st.put_in_line(far, 2)
-	st.sides[0].supply += st.operator_cost()  # kc-syn: the Operator's placement costs Supply
-	c.select_operator()
-	c.play_at(0)
-	await _frames(2)
-	var panel: Control = m.get_operator_panel()
-	var sidearm: Button = panel.get_item_button(&"p12_sidearm")
-	assert_false(sidearm.disabled, "Sidearm usable: an enemy in the Operator's zone")
-	assert_true(sidearm.text.contains("1 SUP"), "costs 1 Supply: %s" % sidearm.text)
-	await _tap(vp, await _item_point(vp, m, &"p12_sidearm"))
-	assert_eq(c.selection.get("id"), &"p12_sidearm", "Sidearm selected")
-	var left: Node = m.get_board().get_lanes()[0]
-	var right: Node = m.get_board().get_lanes()[2]
-	var near_slot: Node = _find_slot(left.get_enemy_slots(), near.uid)
-	var far_slot: Node = _find_slot(right.get_enemy_slots(), far.uid)
-	assert_true(near_slot != null and near_slot.is_target, "the enemy in Left is pickable")
-	assert_true(far_slot != null and not far_slot.is_target, "the enemy in Right is out of range")
-	if far_slot != null:
-		await _tap(vp, (far_slot as Control).get_global_rect().get_center())
-		assert_eq(c.intent_log.size(), 1, "tapping an out-of-range enemy sends nothing (only the placement)")
-	if near_slot != null:
-		await _tap(vp, (near_slot as Control).get_global_rect().get_center())
-	var last: Dictionary = c.intent_log.back()
-	assert_eq(last["intent"], RulesIntent.use_item(&"p12_sidearm", -1, near.uid), "engine got use_item(sidearm, target)")
-	assert_true(last["result"]["ok"], "Sidearm accepted")
-	sidearm = panel.get_item_button(&"p12_sidearm")
-	assert_true(sidearm.disabled and sidearm.text.contains("USED"), "once per round: %s" % sidearm.text)
+	var ids: Array = []
+	for b: Node in panel.get_buttons():
+		ids.append(b.get_meta(&"item_id", &""))
+	var want: Array = []
+	for ks: LoadoutItem in c.state.sides[0].setup.killstreaks:
+		want.append(ks.id)
+	assert_eq(ids, want, "one button per killstreak, nothing else")
+	for gone: StringName in [&"p12_sidearm", &"frag_grenade", &"flashbang"]:
+		assert_true(panel.get_item_button(gone) == null, "%s button removed" % gone)
 	_despawn(vp)
 
 

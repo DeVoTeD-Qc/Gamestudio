@@ -4,14 +4,14 @@
 #   happens (condition), how much (amount + bonus), then the kind itself.
 #   Damage never removes units here: units at 0 Armor stay in line until the caller
 #   runs MatchState.process_eliminations(), so all effects of one play see the same
-#   line (Frag Grenade: 2 to the point man and 1 to the unit behind it).
+#   line (e.g. 2 to the point man and 1 to the unit behind it).
 #
 #   Kinds implemented in p04: DAMAGE, MODIFY_FIREPOWER, MODIFY_ARMOR, GRANT_COVER,
 #   REMOVE_COVER, GRANT_FIRST_SHOT, REMOVE_FIRST_SHOT, UNTARGETABLE_BY_PICK_FLANK, DRAW,
 #   REVEAL_RED_DOTS, REVEAL_DEPLOYMENTS / HIDE_FROM_INTEL (side flags), MOVE_UNIT,
 #   STREAK_BONUS (counted by MatchHooks.apply_streak), DESTROY_EQUIPMENT, SUMMON_UNIT,
-#   SURVIVE_LETHAL, HEAL (kc-field-impl: Aid Station). STREAK_THRESHOLD_MOD and COOLDOWN_MOD only log an event: p05
-#   reads them from the perks when it builds the Streak Tray / cooldowns.
+#   SURVIVE_LETHAL, HEAL (kc-field-impl: Aid Station). STREAK_THRESHOLD_MOD only logs an event: p05
+#   reads it from the perks when it builds the Streak Tray. COOLDOWN_MOD is retired (kc-loadout-cut).
 # Dependencies: DataEnums, EffectData, RulesUnit, RulesSide, RulesEvent (MatchState passed in).
 # Author: Mechanics Developer Agent
 class_name EffectResolver

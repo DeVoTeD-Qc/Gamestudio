@@ -267,7 +267,7 @@ func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
 		var panel: Rect2 = m.get_node("%FlyoutPanel").get_global_rect()
 		assert_true(Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS).encloses(panel), "%s flyout on screen %s" % [key, panel])
 		assert_true(panel.position.x >= m.get_badge(key).get_global_rect().end.x, "%s flyout beside the strip" % key)
-	assert_eq(m.get_operator_panel().get_buttons().size(), 6, "STREAK flyout: 6 tiles")
+	assert_eq(m.get_operator_panel().get_buttons().size(), 3, "STREAK flyout: the 3 killstreak tiles (kc-loadout-cut)")
 	assert_true((m.get_operator_panel().get_buttons()[0] as Control).is_visible_in_tree(), "tiles visible")
 	m.get_badge(&"score").tapped.emit()
 	await tree.process_frame

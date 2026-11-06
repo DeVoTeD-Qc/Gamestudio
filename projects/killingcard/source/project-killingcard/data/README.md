@@ -8,7 +8,7 @@ never reaches a playtest unnoticed.
 | Folder | Class (script) | One file per |
 |---|---|---|
 | `cards/` | `CardData` (`scripts/data/card_data.gd`) | card design (units, tactics, equipment, tokens) |
-| `loadout/` | `LoadoutItem` (`loadout_item.gd`) | Primary, attachment, Secondary, Lethal, Tactical, Perk, Killstreak |
+| `loadout/` | `LoadoutItem` (`loadout_item.gd`) | Primary, attachment, Perk, Killstreak |
 | `squads/` | `SquadData` (`squad_data.gd`) | enemy squad |
 | `maps/` | `MapData` (`map_data.gd`) | map |
 | `run_config.tres` | `RunConfig` (`run_config.gd`), id `run_default` | the run and all tunable numbers |
@@ -51,14 +51,13 @@ tables below for the order). Never reorder enum values in `data_enums.gd`, only 
 | `card_trait` | kc-syn: `vanguard`, `specops`, `heavy`, `undead` or empty. Units and Fields only. Copies count for sets only when Trained (level 1+). |
 
 ## LoadoutItem
-`slot`: `PRIMARY`(0), `ATTACHMENT`(1), `SECONDARY`(2), `LETHAL`(3), `TACTICAL`(4), `PERK`(5), `KILLSTREAK`(6).
+`slot`: `PRIMARY`(0), `ATTACHMENT`(1), `PERK`(5), `KILLSTREAK`(6). (kc-loadout-cut: Secondary 2, Lethal 3 and Tactical 4 are removed; the numbers are not reused.)
 Fill only the group for that slot; anything else set is an error.
 
 | Slot | Fields |
 |---|---|
 | PRIMARY | `weapon_class` (not NONE), `operator_firepower` 0–10, `operator_armor` 1–20, `rotations_per_round` 1–3 (Wasp-9: 2), keywords (Wasp-9 First Shot, Longreach Pick), `attachments` = the level-up pool (ATTACHMENT items) |
 | ATTACHMENT | `firepower_bonus` −5..5, `armor_bonus` −5..10, keywords (Foregrip: `cover` 1), and/or effects. Must change something. |
-| SECONDARY / LETHAL / TACTICAL | `supply_cost` 0–10, `cooldown_rounds` 0–10 (Lethal/Tactical: 3), `uses_per_round` / `uses_per_match` (0 = unlimited; Sidearm 1 per round), effects (≥ 1) |
 | PERK | effects (≥ 1), `uses_per_round` / `uses_per_match` (Field Salvage 1 per round, Grit 1 per match) |
 | KILLSTREAK | `streak_threshold` 1–15, `supply_cost` must be 0, effects (≥ 1) |
 
@@ -70,8 +69,8 @@ All effects of one play share the player's choices (the chosen zone / unit) and 
 | Field | Values |
 |---|---|
 | `trigger` | `ON_PLAY` resolves at Reveal · `IMMEDIATE` "Resolves immediately" in Deploy · `ON_DEPLOY` · `ON_DOWN` (units) · `ON_ELIMINATE` (this unit's kills on a unit card; any of yours on a perk) · `PASSIVE` · `START_OF_FIREFIGHT` · `END_OF_ROUND` · `ON_ENEMY_ARRIVE` (equipment traps) |
-| `kind` | `DAMAGE`, `MODIFY_FIREPOWER` (± amount), `MODIFY_ARMOR`, `GRANT_COVER`, `REMOVE_COVER`, `GRANT_FIRST_SHOT`, `REMOVE_FIRST_SHOT`, `UNTARGETABLE_BY_PICK_FLANK`, `DRAW`, `REVEAL_RED_DOTS`, `REVEAL_DEPLOYMENTS`, `HIDE_FROM_INTEL`, `MOVE_UNIT`, `STREAK_BONUS`, `STREAK_THRESHOLD_MOD`, `COOLDOWN_MOD`, `DESTROY_EQUIPMENT`, `SUMMON_UNIT` (needs `summon_card`, a UNIT), `SURVIVE_LETHAL`, `HEAL` (each target regains up to amount lost Armor) |
-| `target` | `SELF`, `OPERATOR`, `OWNER` (your side: draw, streak, cooldowns), `CHOSEN_ENEMY`, `CHOSEN_FRIENDLY`, `ENEMY_POINT_MAN`, `ENEMY_SECOND_IN_LINE`, `ALL_ENEMIES`, `ALL_FRIENDLIES`, `OTHER_FRIENDLIES`, `NEXT_FRIENDLY_ARRIVING`, `ARRIVING_ENEMY`, `ENEMY_EQUIPMENT`, `FRIENDLY_POINT_MAN` (your frontline unit; as a PASSIVE it follows the line), `MOST_DAMAGED_FRIENDLY` (Patch's rule: most lost Armor, ties front-most) |
+| `kind` | `DAMAGE`, `MODIFY_FIREPOWER` (± amount), `MODIFY_ARMOR`, `GRANT_COVER`, `REMOVE_COVER`, `GRANT_FIRST_SHOT`, `REMOVE_FIRST_SHOT`, `UNTARGETABLE_BY_PICK_FLANK`, `DRAW`, `REVEAL_RED_DOTS`, `REVEAL_DEPLOYMENTS`, `HIDE_FROM_INTEL`, `MOVE_UNIT`, `STREAK_BONUS`, `STREAK_THRESHOLD_MOD`, `COOLDOWN_MOD` (retired, rejected), `DESTROY_EQUIPMENT`, `SUMMON_UNIT` (needs `summon_card`, a UNIT), `SURVIVE_LETHAL`, `HEAL` (each target regains up to amount lost Armor) |
+| `target` | `SELF`, `OPERATOR`, `OWNER` (your side: draw, streak), `CHOSEN_ENEMY`, `CHOSEN_FRIENDLY`, `ENEMY_POINT_MAN`, `ENEMY_SECOND_IN_LINE`, `ALL_ENEMIES`, `ALL_FRIENDLIES`, `OTHER_FRIENDLIES`, `NEXT_FRIENDLY_ARRIVING`, `ARRIVING_ENEMY`, `ENEMY_EQUIPMENT`, `FRIENDLY_POINT_MAN` (your frontline unit; as a PASSIVE it follows the line), `MOST_DAMAGED_FRIENDLY` (Patch's rule: most lost Armor, ties front-most) |
 | `target_class` | Only units of this weapon class (`NONE` = any). Overwatch Training: `SNIPER`. |
 | `zone_scope` | `THIS_ZONE`, `CHOSEN_ZONE`, `OPERATOR_ZONE`, `OPERATOR_OR_ADJACENT`, `ADJACENT_ZONE`, `ALL_ZONES`, `ANY` (not zone-bound) |
 | `condition`, `bonus_condition` | `ALWAYS`, `ZONE_IS_CLOSE`, `ZONE_IS_MID`, `ZONE_IS_LONG`, `YOU_CONTROL_ZONE`, `YOU_CONTROL_2_PLUS_ZONES` |
@@ -86,7 +85,7 @@ Examples: *Breach and Clear* = ON_PLAY DAMAGE 2, ALL_ENEMIES, CHOSEN_ZONE, bonus
 
 ## SquadData (enemy squads)
 `display_name` (gamertag), `clan_tag` (≤ 5 chars), `personality` `RUSHER`(0) / `ANCHOR`(1) / `SNIPER_NEST`(2),
-`deck` 15–20 card references, `primary`, `secondary`, `lethal`, `tactical` (required, right slot),
+`deck` 15–20 card references, `primary` (required, PRIMARY slot),
 `attachments` (from the primary's pool), `perks` ≤ 3, `killstreaks` ≤ 3,
 AI weights `weight_damage_dealt` / `weight_damage_taken` / `weight_zone_control` / `weight_deny_streak` (0–10; defaults 1/1/2/3),
 `second_best_chance` 0–1, `preferred_ranges` (CLOSE/MID/LONG).
@@ -96,10 +95,10 @@ AI weights `weight_damage_dealt` / `weight_damage_taken` / `weight_zone_control`
 
 ## RunConfig (`run_config.tres`)
 - **Run:** `matches` (in order; each a RunMatchData: `bracket`, `is_rival`, `squad`, `mode` ZONE_CONTROL/FIREFIGHT/DETONATOR, `map`, `enemy_firepower_bonus`, `enemy_armor_bonus`), `tickets` (3), `supply_drop_choices` (3), `weapon_level_after_matches` ([1, 3, 4] per core-rules Ruling 1; the script default is also [1, 3, 4]), `attachment_choices` (2), `perk_offer_after_matches` ([2, 4]), `perk_choices` (2).
-- **Starter kit:** `starter_deck` (exactly `deck_size` = 20 entries), `starter_primary/secondary/lethal/tactical`, `starter_killstreaks` (exactly `killstreak_slots`, all in `killstreak_pool`).
+- **Starter kit:** `starter_deck` (exactly `deck_size` = 20 entries), `starter_primary`, `starter_killstreaks` (exactly `killstreak_slots`, all in `killstreak_pool`).
 - **Pools:** `reward_pool`, `killstreak_pool`, `perk_pool`.
 - **Synergy run layer (kc-syn §5):** `starter_recruits` (starter copies are Recruits), `supply_drop_on_trait` (Supply Drop slot 1 on the deck's main trait), `synergy_offers` (Doctrine after `doctrine_after_matches`, Promotion after `promotion_after_matches`, Retire as the Supply Drop's 4th option, Regroup after a loss; off until the UI screens exist), `doctrine_choices` 2, `deck_floor` 15, `operator_cost` (Supply to place the Operator, 1 in the shipped run). RunMatchData `enemy_recruits`: that squad plays Recruit copies (slots 1-2).
-- **Match rules (core-rules §10):** `deck_size`, `opening_hand` 4, `round1_extra_draw` 1, `free_mulligans` 1, `draws_per_round` 2, `hand_cap` 7, `supply_round_offset` 1 + `supply_cap` 7 (Round N gives N+1, max 7), `zone_capacity` 4, `default_cooldown` 3, `zone_control_target` 6, `firefight_target` 7, `round_cap` 8, `overtime_draw_round` 10, `detonator_arm_rounds` 2, `perk_slots` 3, `killstreak_slots` 3.
+- **Match rules (core-rules §10):** `deck_size`, `opening_hand` 4, `round1_extra_draw` 1, `free_mulligans` 1, `draws_per_round` 2, `hand_cap` 7, `supply_round_offset` 1 + `supply_cap` 7 (Round N gives N+1, max 7), `zone_capacity` 4, `zone_control_target` 6, `firefight_target` 7, `round_cap` 8, `overtime_draw_round` 10, `detonator_arm_rounds` 2, `perk_slots` 3, `killstreak_slots` 3.
 - **Range bonuses:** `range_bonus_smg/shotgun/ar/sniper/lmg`, 3 numbers each (Close, Mid, Long), −5..5.
 
 ## Error codes
@@ -118,7 +117,7 @@ The steps and enemy plays are sub-resources inside the file (`TutorialStep`, `Tu
 | `score_target` | Early-win score. Keep it high (20) so the drill runs to `round_cap`. |
 | `seed_value` | Match seed (draws are stacked, so it only matters for reshuffles). |
 | `player_deck` | 8-40 cards, **drawn in list order** (no shuffle): Round 1 draws the first 5, then 2 per round. |
-| `player_killstreaks` | Empty = the run config's starter killstreaks. Primary, Secondary, Lethal, Tactical are always the starter ones. |
+| `player_killstreaks` | Empty = the run config's starter killstreaks. The Primary is always the starter one. |
 | `enemy_deck` | Stacked enemy draws (empty = the squad's deck in list order). |
 | `enemy_plays` | `TutorialEnemyPlay`: `round_number`, `card` (a unit; empty = place the enemy Operator), `zone` 0 Left / 1 Mid / 2 Right. Committed at the start of that round's Deploy, before the player acts. A card not drawn yet is pulled from the deck. |
 | `steps` | `TutorialStep` list, in order (below). The last step must advance on `match_end`. |

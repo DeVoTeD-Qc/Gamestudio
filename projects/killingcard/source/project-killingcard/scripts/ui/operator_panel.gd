@@ -1,11 +1,11 @@
 # operator_panel.gd
 # Purpose: Operator panel (bottom-left): Operator name, zone, Firepower/Armor,
 #   a segmented streak meter next to the streak number (placeholder for the StreakArc of p14; taller
-#   segments mark killstreak thresholds), 3 Perk slots, and two rows of tap buttons:
-#   Secondary / Lethal / Tactical, then the 3 killstreaks (locked until earned,
-#   threshold printed on the button so nothing is hover-only).
+#   segments mark killstreak thresholds), 3 Perk slots, and a row of tap buttons: the 3
+#   killstreaks (locked until earned, threshold printed on the button so nothing is hover-only).
+#   kc-loadout-cut: the Secondary / Lethal / Tactical buttons are gone.
 #   Buttons only emit signals. f02: the entries come from the engine (match_snapshot.item_entry):
-#   the second line shows the state (1 SUP, CD 2, USED, NO OP, AT 3, CALL IN), a blocked item's
+#   the second line shows the state (USED, NO OP, AT 3, CALL IN), a blocked item's
 #   button is disabled and a tap on it still emits its signal so the controller can say why;
 #   the item being targeted stays pressed (set_selected_item). p14: StreakArc replaces the
 #   segment row (configure() on every snapshot; FeedbackDirector animates it during Reveal).
@@ -17,7 +17,6 @@
 # Author: UI/UX Agent
 extends PanelContainer
 
-signal ability_pressed(ability_id: StringName)
 signal killstreak_pressed(killstreak_id: StringName)
 signal operator_tapped
 signal operator_inspected
@@ -83,7 +82,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 ## kc-board2 flyouts (board-layout-v2.md §3): &"operator" shows the Operator's info (name, FP / AR,
-## position, streak, perks), &"streak" the streak meter and the 6 item / killstreak tiles,
+## position, streak, perks), &"streak" the streak meter and the killstreak tiles,
 ## &"all" everything (the v1 rail panel).
 func set_section(value: StringName) -> void:
 	section = value
@@ -137,7 +136,7 @@ func set_operator(snapshot: Dictionary) -> void:
 		thresholds.append(int(ks.get("threshold", 0)))
 	_arc.configure(int(snapshot.get("streak_max", 5)), thresholds, streak)
 	_build_perks(snapshot.get("perks", []), int(snapshot.get("perk_slots", 3)))
-	_build_buttons(snapshot.get("abilities", []), snapshot.get("killstreaks", []))
+	_build_buttons(snapshot.get("killstreaks", []))
 	_pass_through()
 
 
@@ -210,14 +209,8 @@ func _build_perks(perks: Array, slots: int) -> void:
 		_perk_row.add_child(slot)
 
 
-func _build_buttons(abilities: Array, killstreaks: Array) -> void:
+func _build_buttons(killstreaks: Array) -> void:
 	_clear(_buttons)
-	for ability: Dictionary in abilities:
-		var ability_id: StringName = ability.get("id", &"")
-		var b: Button = _make_button("%s\n%s" % [ability.get("name", ""), ability.get("state", "")], &"HudButton")
-		_wire(b, ability_id, not bool(ability.get("ready", true)), String(ability.get("reason", "")),
-				func() -> void: ability_pressed.emit(ability_id))
-		_buttons.add_child(b)
 	for ks: Dictionary in killstreaks:
 		var earned: bool = ks.get("earned", false)
 		var ks_id: StringName = ks.get("id", &"")

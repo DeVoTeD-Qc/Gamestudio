@@ -1,7 +1,7 @@
 # loadout_screen.gd
-# Purpose: Loadout pick (p11, scenes/run/Loadout.tscn). Shows the starter kit (Primary,
-#   Secondary, Lethal, Tactical, the 20-card deck) and the killstreak pool as tiles. Tap a tile to
-#   pick it, tap a picked one to drop it; exactly RunConfig.killstreak_slots must be picked before
+# Purpose: Loadout pick (p11, scenes/run/Loadout.tscn). Shows the starter kit (the Operator's
+#   Primary, the 20-card deck) and the killstreak pool as tiles (kc-loadout-cut: no Secondary /
+#   Lethal / Tactical rows any more). Tap a tile to pick it, tap a picked one to drop it; exactly RunConfig.killstreak_slots must be picked before
 #   BEGIN RUN works (the starter three are pre-picked). BEGIN RUN calls RunState.set_killstreaks()
 #   and begin_run(), then opens the run map.
 #   kc-ui4: the screen opens on the STARTING SQUAD panel (starter_panel.gd: pick the Operator, see
@@ -127,17 +127,12 @@ func _fill_kit() -> void:
 	kit.add_child(make_label("STARTER KIT", &"HudAccent"))
 	kit.move_child(_squad_button, kit.get_child_count() - 1)
 	if r != null:
-		for slot: String in ["primary", "secondary", "lethal", "tactical"]:
-			var item: LoadoutItem = r.resource(r.get(slot)) as LoadoutItem
-			if item == null:
-				continue
-			var line: String = "%s  ·  %s" % [String(RunFlow.SLOT_WORDS.get(item.slot, slot)).to_upper(), item.display_name]
+		var item: LoadoutItem = r.resource(r.primary) as LoadoutItem
+		if item != null:
+			var line: String = "%s  ·  %s" % [String(RunFlow.SLOT_WORDS.get(item.slot, "primary")).to_upper(), item.display_name]
 			kit.add_child(make_label(line, &"UnitName", true))
-			# Primary: class and Operator stats. Others: their rules text (it already names cost
-			# and cooldown), the stat line only when there is no text.
-			var detail: String = item.text
-			if item.slot == DataEnums.LoadoutSlot.PRIMARY or detail == "":
-				detail = RunFlow.item_effect_line(item)
+			# The Primary's class and Operator stats.
+			var detail: String = RunFlow.item_effect_line(item)
 			if detail != "":
 				kit.add_child(make_label(detail, &"HudSubtle", true))
 		kit.add_child(make_label("DECK  ·  %d cards" % r.deck.size(), &"UnitName"))

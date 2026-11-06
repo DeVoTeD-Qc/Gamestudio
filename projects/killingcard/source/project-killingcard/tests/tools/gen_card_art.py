@@ -427,10 +427,7 @@ def cards():
     out['sentry_turret'] = ks_sentry()
     out['attack_helo'] = ks_helo()
     out['gunship'] = ks_gunship()
-    # Gear (loadout items) and Operator weapons
-    out['frag_grenade'] = gear_grenade(False)
-    out['flashbang'] = gear_grenade(True)
-    out['p12_sidearm'] = gear_weapon('pistol')
+    # Operator weapons (kc-loadout-cut: the Frag Grenade / Flashbang / P-12 gear art is gone)
     out['kestrel_ar7'] = operator_card('ar')
     out['wasp_9'] = operator_card('smg')
     out['longreach_338'] = operator_card('sniper')
@@ -743,32 +740,6 @@ def ks_gunship():
         o.append(tracer(150, 40, 112, 78, AMBER, 1.2, 0.7) + tracer(146, 44, 72, 84, AMBER, 1.0, 0.5))
         return ''.join(o)
     return ks_wrap(c)
-
-
-def gear_grenade(flash):
-    def c(defs):
-        o = [glow(110, 66, 60, '#FFFFFF' if flash else AMBER, 0.45 if flash else 0.3, defs)]
-        if flash:
-            o.append('<rect x="92" y="44" width="38" height="58" rx="6" fill="#1A1714"/>')
-            for y in (54, 66, 78, 90):
-                o.append('<rect x="92" y="%g" width="38" height="3" fill="#2E2822"/>' % y)
-            o.append('<rect x="100" y="34" width="22" height="10" fill="#1A1714"/>')
-        else:
-            o.append('<ellipse cx="111" cy="78" rx="24" ry="28" fill="#1A1714"/>')
-            o.append('<path d="M92 66 H130 M90 80 H132 M92 94 H130 M104 52 V104 M118 52 V104" stroke="#2E2822" stroke-width="2"/>')
-            o.append('<rect x="102" y="40" width="18" height="12" fill="#1A1714"/>')
-        o.append('<path d="M120 42 C138 40 142 58 130 70" fill="none" stroke="#1A1714" stroke-width="4"/>')
-        o.append('<circle cx="98" cy="38" r="7" fill="none" stroke="%s" stroke-width="2.2"/>' % SAND)
-        return ''.join(o)
-    return equip_wrap(c)
-
-
-def gear_weapon(kind):
-    def c(defs):
-        o = [glow(111, 66, 70, SODIUM, 0.3, defs)]
-        o.append('<g fill="#1A1714">%s</g>' % weapon(kind, 66 if kind == 'pistol' else 24, 40, 4.6 if kind == 'pistol' else 2.6))
-        return ''.join(o)
-    return equip_wrap(c)
 
 
 def operator_card(kind):

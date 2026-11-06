@@ -36,7 +36,7 @@ const _NEEDS_POSITIVE_AMOUNT: Array[int] = [
 ]
 const _NEEDS_NONZERO_AMOUNT: Array[int] = [
 	DataEnums.EffectKind.MODIFY_FIREPOWER, DataEnums.EffectKind.MODIFY_ARMOR,
-	DataEnums.EffectKind.STREAK_THRESHOLD_MOD, DataEnums.EffectKind.COOLDOWN_MOD,
+	DataEnums.EffectKind.STREAK_THRESHOLD_MOD,
 ]
 
 
@@ -55,6 +55,8 @@ func validate(v: DataValidator, prefix: String) -> void:
 	v.check_range(prefix + ".delay_rounds", delay_rounds, 0, 3)
 	if kind == DataEnums.EffectKind.NONE:
 		v.missing(prefix + ".kind", "effect kind is NONE; pick what the effect does")
+	if kind == DataEnums.EffectKind.COOLDOWN_MOD:
+		v.invalid(prefix + ".kind", "COOLDOWN_MOD is retired (kc-loadout-cut: no item has a cooldown)")
 	if kind in _NEEDS_POSITIVE_AMOUNT and amount <= 0:
 		v.out_of_range(prefix + ".amount", "%s needs amount >= 1 (got %d)" % [DataEnums.key_of(DataEnums.EffectKind, kind), amount])
 	if kind in _NEEDS_NONZERO_AMOUNT and amount == 0:

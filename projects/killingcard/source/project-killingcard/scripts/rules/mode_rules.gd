@@ -97,7 +97,39 @@ func configure(p_mode: int, config: RunConfig = null) -> void:
 
 ## Default initiative (core-rules §2.3): the side behind on the mode score; ties -> player.
 func initiative_side(state) -> int:
-	return 1 if state.sides[1].score < state.sides[0].score else 0
+	var p: int = state.sides[0].score
+	var e: int = state.sides[1].score
+	if p != e:
+		return 1 if e < p else 0
+	return tie_initiative(state)
+
+
+## Initiative tie rule (kc-syn-tune what-if; balance tools set it, see synergy-system.md §12).
+##   player: the player; enemy: the enemy; alt: odd rounds the player, even rounds the enemy;
+##   other: whoever did not hold it last round (round 1: the player); coin: round 1 a seeded
+##   coin flip, then whoever did not hold it last round; random: a seeded coin flip every tie.
+static var tiebreak: StringName = &"player"
+
+
+func tie_initiative(state) -> int:
+	var rnd: int = int(state.round_number)
+	match tiebreak:
+		&"enemy":
+			return 1
+		&"alt":
+			return 0 if rnd % 2 == 1 else 1
+		&"other":
+			return 0 if rnd <= 1 else 1 - int(state.initiative)
+		&"coin":
+			return coin(state, 1) if rnd <= 1 else 1 - int(state.initiative)
+		&"random":
+			return coin(state, rnd)
+	return 0
+
+
+## Seeded coin flip (0 or 1) for `round`; does not touch the match RNG, so draws stay the same.
+static func coin(state, rnd: int) -> int:
+	return hash([int(state.seed_value), rnd, &"initiative"]) & 1
 
 
 ## Score step: add this round's mode points. `control` = control_of() per zone,

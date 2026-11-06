@@ -39,7 +39,8 @@ var operator_home_bonus: float = 0.4
 var sturdy_bonus: float = 0.0
 ## Value of keeping a card in hand (opportunity cost of playing it), per card.
 var card_keep_cost: float = 0.35
-## Value of keeping a ready Lethal / Tactical for a better moment.
+## Retired (kc-loadout-cut: the Lethal / Tactical and their cooldowns are gone); the planner no
+## longer reads it. Kept so tool scripts that still set it (tests/tools/tune_check.gd) run.
 var cooldown_keep_cost: float = 0.6
 ## Value of keeping an earned killstreak in the tray at the start of a match; it falls
 ## to 0 by the round cap (an unused killstreak is worth nothing once the match ends).

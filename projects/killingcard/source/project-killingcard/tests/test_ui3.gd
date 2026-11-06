@@ -99,6 +99,11 @@ func test_operator_card_deploys_from_the_hand() -> void:
 			assert_eq(String(hand.operator_entry["state"]), "deploy", "%s down in Round 1: respawns now" % label)
 		var qa: Dictionary = _qa(vp, m)
 		assert_false((qa["match"]["operator_card"] as Dictionary).is_empty(), "%s QA bridge reports the card" % label)
+		# kc-loadout-cut: the card's Supply cost is the cost hex text (the run config's operator_cost);
+		# the mini card on the board has no cost to show.
+		var qa_op: Dictionary = qa["match"]["operator_card"]
+		var want_cost: String = str(c.state.operator_cost()) if c.state.operator_cost() > 0 and not bool(qa_op.get("mini", false)) else ""
+		assert_eq(String((qa["match"]["operator_card"] as Dictionary).get("cost", "?")), want_cost, "%s QA bridge: cost hex" % label)
 		_despawn(vp)
 		await tree.process_frame
 

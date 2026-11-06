@@ -68,7 +68,9 @@ extends RefCounted
 ## 4 = kc-onboard (offer picks / taken / level / count, Salvage, Muster out, mustered_out; Recruits
 ## mean "trait on, keywords locked"): v1-v3 Recruit copies load as Trained (their old meaning had the
 ## keywords on), Re-issue flags are dropped.
-const SAVE_VERSION: int = 4
+## 5 = kc-loadout-cut: no loadout.secondary / lethal / tactical (the Sidearm, Frag Grenade and
+## Flashbang are gone). v1-v4 saves load with those three fields dropped; nothing else changes.
+const SAVE_VERSION: int = 5
 const OLDEST_SAVE_VERSION: int = 1
 
 const PHASE_LOADOUT: StringName = &"loadout"
@@ -123,9 +125,6 @@ var mustered_out: int = 0
 ## kc-syn Honor Roll: retired copies in order {id, level, match, trained_twin: bool}.
 var honor_roll: Array[Dictionary] = []
 var primary: StringName = &""
-var secondary: StringName = &""
-var lethal: StringName = &""
-var tactical: StringName = &""
 var attachments: Array[StringName] = []
 var perks: Array[StringName] = []
 var killstreaks: Array[StringName] = []
@@ -164,9 +163,6 @@ static func create(p_config: RunConfig, p_seed: int) -> RunProgress:
 			# kc-onboard (head Z2): starter cards wear their one Standard Issue art, never a random one.
 			r.deck_arts.append(ArtTraits.starter_art(card))
 	r.primary = _id_of(p_config.starter_primary)
-	r.secondary = _id_of(p_config.starter_secondary)
-	r.lethal = _id_of(p_config.starter_lethal)
-	r.tactical = _id_of(p_config.starter_tactical)
 	for ks: LoadoutItem in p_config.starter_killstreaks:
 		if ks != null:
 			r.killstreaks.append(ks.id)
@@ -272,8 +268,8 @@ func match_seed() -> int:
 	return derive_seed(seed_value, "match", match_number())
 
 
-## The player's side for the current match: deck, Primary + attachments, Secondary /
-## Lethal / Tactical, owned Perks and the picked killstreaks.
+## The player's side for the current match: deck, Primary + attachments, owned Perks and
+## the picked killstreaks.
 func player_setup() -> SideSetup:
 	var s: SideSetup = SideSetup.new()
 	s.display_name = "Player"
@@ -284,9 +280,6 @@ func player_setup() -> SideSetup:
 		s.deck_arts.append(art_of(i))
 	s.doctrine = doctrine
 	s.primary = _index.get(primary) as LoadoutItem
-	s.secondary = _index.get(secondary) as LoadoutItem
-	s.lethal = _index.get(lethal) as LoadoutItem
-	s.tactical = _index.get(tactical) as LoadoutItem
 	for id: StringName in attachments:
 		s.attachments.append(_index[id] as LoadoutItem)
 	for id: StringName in perks:
@@ -1159,8 +1152,7 @@ func to_dict() -> Dictionary:
 			return {"id": String(h["id"]), "level": int(h["level"]), "match": int(h["match"]), "trained_twin": bool(h["trained_twin"]),
 					"trait": String(h.get("trait", "")), "art": String(h.get("art", ""))}),
 		"loadout": {
-			"primary": String(primary), "secondary": String(secondary),
-			"lethal": String(lethal), "tactical": String(tactical),
+			"primary": String(primary),
 			"attachments": _strings(attachments), "perks": _strings(perks),
 			"killstreaks": _strings(killstreaks),
 		},
@@ -1269,11 +1261,11 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 	var lo: Variant = d.get("loadout")
 	if typeof(lo) != TYPE_DICTIONARY:
 		return "no loadout"
-	for slot: String in ["primary", "secondary", "lethal", "tactical"]:
-		var id: StringName = StringName(str(lo.get(slot, "")))
-		if not (_index.get(id) is LoadoutItem):
-			return "unknown %s '%s'" % [slot, id]
-		set(slot, id)
+	# kc-loadout-cut: v1-v4 saves also hold loadout.secondary / lethal / tactical; they are ignored.
+	var prim: StringName = StringName(str(lo.get("primary", "")))
+	if not (_index.get(prim) is LoadoutItem):
+		return "unknown primary '%s'" % prim
+	primary = prim
 	for field: String in ["attachments", "perks", "killstreaks"]:
 		var list: Array[StringName] = get(field)
 		e = _read_ids(lo.get(field), list, LoadoutItem, "loadout." + field)
@@ -1421,8 +1413,7 @@ static func build_index(cfg: RunConfig) -> Dictionary:
 	# kc-onboard: cards only older saves hold (the kc-syn starter's Rifleman).
 	for c: CardData in cfg.legacy_cards:
 		add.call(c)
-	for item: LoadoutItem in [cfg.starter_primary, cfg.starter_secondary, cfg.starter_lethal, cfg.starter_tactical]:
-		add.call(item)
+	add.call(cfg.starter_primary)
 	# kc-ui4: every Operator a run can start with, and its attachments.
 	for prim: LoadoutItem in operator_options(cfg):
 		add.call(prim)

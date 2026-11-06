@@ -416,7 +416,7 @@ func test_save_v3_round_trip_and_v2_migration() -> void:
 	_add(r, &"marksman", 1, &"heavy")
 	r.record_result(&"player")
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 4, "version 4 (kc-onboard)")
+	assert_eq(int(d["version"]), RunProgress.SAVE_VERSION, "current save version (5 since kc-loadout-cut)")
 	var back: Dictionary = RunProgress.from_dict(r.config, d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]

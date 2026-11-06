@@ -2,7 +2,7 @@
 # Purpose: Extension points of the rules engine. MatchState calls these at fixed
 #   moments of the round loop; the defaults implement the p04 baseline. Later tasks
 #   subclass (or replace) it instead of editing MatchState:
-#   - p05 streaks / killstreaks / abilities / respawn: on_briefing (cooldown ticks),
+#   - p05 streaks / killstreaks / respawn: on_briefing (per-round uses, Grit),
 #     can_use_item / on_item_resolved, on_elimination, on_operator_down,
 #     operator_can_deploy (respawn rules), apply_streak (trays, once-per-life).
 #   - p06 modes: set `mode_rules` (ModeRules.create(mode, config)); the default
@@ -31,13 +31,13 @@ func initiative_side(state) -> int:
 	return 1 if e < p else 0
 
 
-## Briefing, after Supply and draws: cooldowns tick, per-round uses reset, Grit arms (p05).
+## Briefing, after Supply and draws: per-round uses reset, Grit arms (p05).
 func on_briefing(state, side: int) -> void:
 	LoadoutRules.on_briefing(state, side)
 
 
 ## Can `side` use a loadout item this Deploy? Return "" if yes, else the reason.
-## Supply is checked by MatchState. p05: cooldowns, uses per round/match, the Streak Tray.
+## Supply is checked by MatchState. p05: uses per round/match, the Streak Tray.
 func can_use_item(state, side: int, item: LoadoutItem) -> String:
 	return LoadoutRules.can_use_item(state, side, item)
 
@@ -56,12 +56,12 @@ func check_item(state, side: int, item: LoadoutItem) -> Dictionary:
 	return {"code": &"item_blocked", "reason": why, "data": {}}
 
 
-## A loadout item was accepted in Deploy (p05: start cooldown, count the use, take from tray).
+## A loadout item was accepted in Deploy (p05: count the use, take from tray).
 func on_item_used(state, side: int, item: LoadoutItem) -> void:
 	LoadoutRules.on_item_used(state, side, item)
 
 
-## A queued loadout item was taken back with undo_last (p05: refund cooldown / uses / tray).
+## A queued loadout item was taken back with undo_last (p05: refund uses / tray).
 func on_item_undone(state, side: int, item: LoadoutItem) -> void:
 	LoadoutRules.on_item_undone(state, side, item)
 

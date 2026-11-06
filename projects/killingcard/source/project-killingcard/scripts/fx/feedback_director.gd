@@ -90,7 +90,6 @@ const GROUP_TRANSIENT: StringName = &"fx_transient"
 const KNOWN_KILLSTREAKS: Array[StringName] = [&"recon_drone", &"mortar_barrage", &"sentry_turret", &"attack_helo", &"gunship"]
 const SOURCE_ICONS: Dictionary = {
 	&"operator": &"type_operator", &"tactic": &"type_tactic", &"equipment": &"type_equipment",
-	&"secondary": &"stat_firepower", &"lethal": &"stat_firepower", &"tactical": &"type_tactic",
 	&"on_down": &"trig_on_down", &"perk": &"elite", &"killstreak": &"type_killstreak",
 }
 const CLASS_ICONS: Array[StringName] = [&"stat_firepower", &"class_smg", &"class_shotgun", &"class_ar", &"class_sniper", &"class_lmg"]
@@ -1069,8 +1068,6 @@ func _killfeed_entry(ev: Dictionary) -> Dictionary:
 		icon = _class_icon(by_id)
 	elif kind == &"killstreak":
 		icon = CallInTakeover.ICONS.get(by_id, &"type_killstreak")
-	elif kind in [&"lethal", &"secondary", &"tactical"] and by_uid >= 0 and unit_names.has(by_uid):
-		attacker = unit_names[by_uid]
 	return {
 		"attacker": attacker, "attacker_side": ev.get("by_side", &"player"),
 		"victim": unit_names.get(victim, _display_name(ev.get("victim_id", &""))),

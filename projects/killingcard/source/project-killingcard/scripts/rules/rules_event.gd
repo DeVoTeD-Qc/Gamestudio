@@ -79,7 +79,6 @@ const STREAK_CHANGED: StringName = &"streak_changed"          ## side, streak, b
 const KILLSTREAK_EARNED: StringName = &"killstreak_earned"    ## side, item_id, streak, threshold (into the Streak Tray)
 
 # --- Loadout (p05) -------------------------------------------------------------------
-const ITEM_READY: StringName = &"item_ready"                  ## side, item_id: cooldown reached 0 at Briefing
 const PERK_TRIGGERED: StringName = &"perk_triggered"          ## side, item_id (Field Salvage ...)
 const CARD_RETURNED: StringName = &"card_returned"            ## side, card_uid, card_id, zone, reason: zone still full at Reveal
 

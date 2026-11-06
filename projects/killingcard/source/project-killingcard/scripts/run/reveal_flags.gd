@@ -43,9 +43,8 @@ const FIELDS: StringName = &"fields"
 const ELITES: StringName = &"elites"
 ## The killstreak choice on the Loadout screen (from run 2: run 1 keeps the defaults).
 const LOADOUT: StringName = &"loadout"
-## Coach marks the first time the Operator's Lethal / Tactical is ready.
-const LETHAL: StringName = &"lethal"
-const TACTICAL: StringName = &"tactical"
+## kc-loadout-cut: the "lethal" / "tactical" flags are gone with the Frag Grenade and Flashbang. Old
+## profiles may still hold them in met_flags / seen_flags; nothing reads them any more.
 ## A killstreak earned (the streak arc's first payoff; taught in the tutorial).
 const KILLSTREAKS: StringName = &"killstreaks"
 ## Per-keyword first-play tips: "kw_" + the keyword id (kw_first_shot, kw_pick, kw_flank, kw_cover,
@@ -54,10 +53,10 @@ const KW_PREFIX: String = "kw_"
 
 ## Order of the "New:" queue when several trigger at once (one per screen, §5.1).
 const ORDER: Array[StringName] = [CALLING_CARDS, DOCTRINE, TRAIT_RAIL, KEYWORDS, PROMOTION, ENGINE_PANEL, MUSTER_OUT,
-		SALVAGE, MULTI_PICK, RETIRE, FIELDS, LINKS, ELITES, LOADOUT, LETHAL, TACTICAL, KILLSTREAKS]
+		SALVAGE, MULTI_PICK, RETIRE, FIELDS, LINKS, ELITES, LOADOUT, KILLSTREAKS]
 ## Flags that open with a "New:" card (the others just appear). Keyword tips have their own text.
 const EXPLAINED: Array[StringName] = [CALLING_CARDS, TRAIT_RAIL, KEYWORDS, PROMOTION, MUSTER_OUT, SALVAGE, FIELDS,
-		LINKS, ELITES, LOADOUT, LETHAL, TACTICAL]
+		LINKS, ELITES, LOADOUT]
 ## "New: X" texts (§5.2): {title, text}. The UI adds the icon and the mini example.
 const TEXTS: Dictionary = {
 	CALLING_CARDS: {"title": "New: Calling cards", "text": "Calling cards bring a trait. 2 or 3 of a trait in play give a bonus. Your first one's trait is your Doctrine: it counts +1."},
@@ -70,8 +69,6 @@ const TEXTS: Dictionary = {
 	LINKS: {"title": "New: Links", "text": "Some keywords link neighbors: Guard gives the card behind it Cover +1."},
 	ELITES: {"title": "New: Elites", "text": "One of a kind, with a printed trait."},
 	LOADOUT: {"title": "New: Loadout", "text": "Pick your three killstreaks before a run."},
-	LETHAL: {"title": "New: Frag Grenade", "text": "Your Operator's grenade: 2 damage at the front. It recharges."},
-	TACTICAL: {"title": "New: Tactical", "text": "Your Operator's tactical gear is ready. It recharges after use."},
 }
 ## Keyword tip ids -> the player-facing keyword (CardData.trained_keyword_names) they explain.
 const KEYWORD_TIPS: Dictionary = {
@@ -188,8 +185,8 @@ static func run_triggers(run: RunProgress) -> Array[StringName]:
 
 
 ## Flags the board implies right now (either side): a traited unit in play (TRAIT_RAIL), a neighbor
-## link (LINKS), a visible Field (FIELDS), every keyword a unit in play has (kw_* tips). LETHAL /
-## TACTICAL / KILLSTREAKS are fed by the UI itself (it knows when a button is first ready).
+## link (LINKS), a visible Field (FIELDS), every keyword a unit in play has (kw_* tips).
+## KILLSTREAKS is fed by the UI itself (it knows when a button is first ready).
 static func match_triggers(state: MatchState) -> Array[StringName]:
 	var out: Array[StringName] = []
 	if state == null:

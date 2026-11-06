@@ -27,7 +27,6 @@ suppress = false
 patch = 0
 holder = false
 supply_cost = 0
-cooldown_rounds = 0
 uses_per_round = 0
 uses_per_match = 0
 streak_threshold = 0

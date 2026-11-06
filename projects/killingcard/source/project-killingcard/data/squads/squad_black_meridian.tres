@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="SquadData" load_steps=31 format=3]
+[gd_resource type="Resource" script_class="SquadData" load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_d5qdy"]
 [ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_lxm5e"]
@@ -22,14 +22,11 @@
 [ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="20_42rs3"]
 [ext_resource type="Resource" path="res://data/loadout/mortar_barrage.tres" id="21_25dpc"]
 [ext_resource type="Resource" path="res://data/loadout/sentry_turret.tres" id="22_bt3vx"]
-[ext_resource type="Resource" path="res://data/loadout/frag_grenade.tres" id="23_axcul"]
 [ext_resource type="Resource" path="res://data/loadout/grit.tres" id="24_tkwhh"]
 [ext_resource type="Resource" path="res://data/loadout/objective_focus.tres" id="25_b5k2s"]
 [ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="26_v3aog"]
 [ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="27_gu06b"]
-[ext_resource type="Resource" path="res://data/loadout/p12_sidearm.tres" id="28_rgkm0"]
 [ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="31_xmag1"]
-[ext_resource type="Resource" path="res://data/loadout/flashbang.tres" id="29_pcj2s"]
 
 [resource]
 script = ExtResource("27_gu06b")
@@ -40,9 +37,6 @@ personality = 1
 deck = Array[ExtResource("4_43tsh")]([ExtResource("5_htb8s"), ExtResource("6_qa6te"), ExtResource("7_tjfhw"), ExtResource("7_tjfhw"), ExtResource("8_1iqr2"), ExtResource("8_1iqr2"), ExtResource("9_s2fwu"), ExtResource("9_s2fwu"), ExtResource("10_aa33n"), ExtResource("11_d71gn"), ExtResource("11_d71gn"), ExtResource("12_4x623"), ExtResource("13_mps2m"), ExtResource("13_mps2m"), ExtResource("14_e0iax"), ExtResource("15_1o7lb"), ExtResource("16_mboh2"), ExtResource("17_tbtwn"), ExtResource("18_fdty8"), ExtResource("19_h37hx")])
 primary = ExtResource("26_v3aog")
 attachments = Array[ExtResource("1_d5qdy")]([ExtResource("2_lxm5e"), ExtResource("3_ygymm"), ExtResource("31_xmag1")])
-secondary = ExtResource("28_rgkm0")
-lethal = ExtResource("23_axcul")
-tactical = ExtResource("29_pcj2s")
 perks = Array[ExtResource("1_d5qdy")]([ExtResource("24_tkwhh"), ExtResource("25_b5k2s")])
 killstreaks = Array[ExtResource("1_d5qdy")]([ExtResource("20_42rs3"), ExtResource("21_25dpc"), ExtResource("22_bt3vx")])
 weight_damage_dealt = 1.2

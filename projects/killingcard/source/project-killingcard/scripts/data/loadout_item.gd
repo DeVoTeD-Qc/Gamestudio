@@ -1,15 +1,17 @@
 # loadout_item.gd
 # Purpose: One loadout item (core-rules §3): Primary weapon, weapon attachment,
-#   Secondary, Lethal, Tactical, Perk or Killstreak. `slot` decides which fields apply;
+#   Perk or Killstreak. `slot` decides which fields apply;
 #   the others must stay at their defaults (validation says which).
 #   One item = one .tres in res://data/loadout/.
+#   kc-loadout-cut: the Secondary (P-12 Sidearm), Lethal (Frag Grenade) and Tactical (Flashbang)
+#   slots are gone, and with them cooldowns (cooldown_rounds).
 # Dependencies: DataEnums, EffectData, DataValidator.
 # Author: Mechanics Developer Agent
 class_name LoadoutItem
 extends Resource
 
 @export_group("Identity")
-## Unique id, lowercase snake_case (e.g. kestrel_ar7, frag_grenade, recon_drone).
+## Unique id, lowercase snake_case (e.g. kestrel_ar7, grit, recon_drone).
 @export var id: StringName = &""
 @export var display_name: String = ""
 @export var slot: DataEnums.LoadoutSlot = DataEnums.LoadoutSlot.PRIMARY
@@ -42,11 +44,9 @@ var attachments: Array[Resource] = []
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
 
-@export_group("Use (Secondary / Lethal / Tactical / Killstreak)")
+@export_group("Use (Killstreak / Perk)")
 @export_range(0, 10) var supply_cost: int = 0
-## Rounds before it can be used again (Lethal/Tactical: 3). 0 = no cooldown.
-@export_range(0, 10) var cooldown_rounds: int = 0
-## 0 = unlimited. Sidearm 1; Field Salvage 1 ("first time each round").
+## 0 = unlimited. Field Salvage 1 ("first time each round").
 @export_range(0, 5) var uses_per_round: int = 0
 ## 0 = unlimited. Underbarrel Launcher 1, Grit 1.
 @export_range(0, 5) var uses_per_match: int = 0
@@ -58,10 +58,7 @@ var attachments: Array[Resource] = []
 @export_group("Effects")
 @export var effects: Array[EffectData] = []
 
-const _ACTIVATED_SLOTS: Array[int] = [
-	DataEnums.LoadoutSlot.SECONDARY, DataEnums.LoadoutSlot.LETHAL,
-	DataEnums.LoadoutSlot.TACTICAL, DataEnums.LoadoutSlot.KILLSTREAK,
-]
+const _ACTIVATED_SLOTS: Array[int] = [DataEnums.LoadoutSlot.KILLSTREAK]
 
 
 func has_keywords() -> bool:
@@ -76,7 +73,6 @@ func validate(v: DataValidator) -> void:
 	v.check_range("cover", cover, 0, 5)
 	v.check_range("patch", patch, 0, 5)
 	v.check_range("supply_cost", supply_cost, 0, 10)
-	v.check_range("cooldown_rounds", cooldown_rounds, 0, 10)
 	v.check_range("uses_per_round", uses_per_round, 0, 5)
 	v.check_range("uses_per_match", uses_per_match, 0, 5)
 	var is_primary: bool = slot == DataEnums.LoadoutSlot.PRIMARY
@@ -122,8 +118,8 @@ func validate(v: DataValidator) -> void:
 	if slot in _ACTIVATED_SLOTS or slot == DataEnums.LoadoutSlot.PERK:
 		if effects.is_empty():
 			v.missing("effects", "a %s needs at least one effect" % slot_name)
-	if slot not in _ACTIVATED_SLOTS and (supply_cost != 0 or cooldown_rounds != 0):
-		v.invalid("supply_cost", "supply_cost / cooldown_rounds are for activated items only (this is %s)" % slot_name)
+	if slot not in _ACTIVATED_SLOTS and supply_cost != 0:
+		v.invalid("supply_cost", "supply_cost is for activated items only (this is %s)" % slot_name)
 
 	for i: int in effects.size():
 		var effect: EffectData = effects[i]

@@ -3,7 +3,7 @@
 #   killstreak icons at the top of the hand tray, always visible: one tile per killstreak of the
 #   loadout, its icon (IconSheet ks_*) inside a charge ring that fills with the streak toward its
 #   threshold, and one plain word under it: "1/3" while charging, READY when it can be called in
-#   (amber glow, pulsing), its state (USED, CD 2, 1 SUP...) when earned but blocked. The killstreak
+#   (amber glow, pulsing), its state (USED, NO OP...) when earned but blocked. The killstreak
 #   being targeted is filled amber.
 #   Tap = use (the controller selects it, as the flyout's buttons did); long-press / right-click =
 #   its rules. Display + gestures only: match_screen.gd forwards the signals.
@@ -77,7 +77,7 @@ static func is_ready(e: Dictionary) -> bool:
 	return bool(e.get("earned", false)) and bool(e.get("ready", false))
 
 
-## The word under the icon: 1/3 (charging), READY, or the blocked state (USED, CD 2...).
+## The word under the icon: 1/3 (charging), READY, or the blocked state (USED, NO OP...).
 func word_for(e: Dictionary) -> String:
 	if is_ready(e):
 		return "READY"

@@ -25,8 +25,9 @@ enum WeaponClass { NONE, SMG, SHOTGUN, AR, SNIPER, LMG }
 ## Range tag of a zone (core-rules §1).
 enum RangeTag { CLOSE, MID, LONG }
 
-## Which loadout slot a LoadoutItem fills (core-rules §3).
-enum LoadoutSlot { PRIMARY, ATTACHMENT, SECONDARY, LETHAL, TACTICAL, PERK, KILLSTREAK }
+## Which loadout slot a LoadoutItem fills (core-rules §3). kc-loadout-cut: Secondary (2), Lethal (3)
+## and Tactical (4) are gone; the values stay fixed so the saved .tres slot numbers keep their meaning.
+enum LoadoutSlot { PRIMARY = 0, ATTACHMENT = 1, PERK = 5, KILLSTREAK = 6 }
 
 ## Match win condition (core-rules §4).
 enum GameMode { ZONE_CONTROL, FIREFIGHT, DETONATOR }
@@ -37,7 +38,7 @@ enum Personality { RUSHER, ANCHOR, SNIPER_NEST }
 ## When an effect fires. The owner decides the context: on a unit card ON_ELIMINATE
 ## means "when THIS unit eliminates"; on a perk it means "when any of your units/Operator eliminates".
 enum Trigger {
-	ON_PLAY,            ## Played/activated in Deploy, resolves at Reveal (tactics, Lethal, killstreaks...).
+	ON_PLAY,            ## Played/activated in Deploy, resolves at Reveal (tactics, killstreaks...).
 	IMMEDIATE,          ## "Resolves immediately" during Deploy (intel, draw).
 	ON_DEPLOY,          ## Unit revealed/arrives.
 	ON_DOWN,            ## Unit eliminated.
@@ -66,7 +67,7 @@ enum EffectKind {
 	MOVE_UNIT,                  ## Move target to a zone (zone_scope says where).
 	STREAK_BONUS,               ## Owner's streak +amount.
 	STREAK_THRESHOLD_MOD,       ## Owner's killstreak thresholds +amount (min 1).
-	COOLDOWN_MOD,               ## Owner's Lethal/Tactical cooldowns +amount (min 0).
+	COOLDOWN_MOD,               ## Retired (kc-loadout-cut: no item has a cooldown); kept so later values keep their numbers.
 	DESTROY_EQUIPMENT,          ## Destroy amount enemy Equipment card(s) in the zone.
 	SUMMON_UNIT,                ## Place summon_card as a unit.
 	SURVIVE_LETHAL,             ## Target survives lethal damage with amount Armor.
@@ -78,7 +79,7 @@ enum EffectKind {
 enum Target {
 	SELF,                    ## The unit / Operator that owns the effect.
 	OPERATOR,                ## Owner's Operator.
-	OWNER,                   ## The owning side itself (draw, streak, cooldowns).
+	OWNER,                   ## The owning side itself (draw, streak).
 	CHOSEN_ENEMY,
 	CHOSEN_FRIENDLY,
 	ENEMY_POINT_MAN,
@@ -101,7 +102,7 @@ enum ZoneScope {
 	OPERATOR_OR_ADJACENT, ## Player picks the Operator's zone or one adjacent to it.
 	ADJACENT_ZONE,        ## Player picks a zone adjacent to the target's zone (MOVE_UNIT).
 	ALL_ZONES,
-	ANY,                  ## Not zone-bound (draw, streak, cooldowns, thresholds).
+	ANY,                  ## Not zone-bound (draw, streak, thresholds).
 }
 
 ## Gate for an effect (condition) or for its bonus_amount (bonus_condition).

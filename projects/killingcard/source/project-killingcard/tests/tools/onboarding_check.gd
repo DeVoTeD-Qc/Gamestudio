@@ -64,7 +64,6 @@ func _ai(proxy: String, aware: bool = true) -> AiPlayer:
 		p.push_bonus = 0.3
 		p.second_best_chance = 0.6
 		p.card_keep_cost = 0.6
-		p.cooldown_keep_cost = 1.0
 		p.killstreak_keep_cost = 1.2
 		p.weight_deny_streak = 1.0
 	var ai: AiPlayer = AiPlayer.new(p)
@@ -174,7 +173,7 @@ func _duel(sa: SideSetup, aware_a: bool, sb: SideSetup, aware_b: bool, seed_valu
 
 func _copy(s: SideSetup) -> SideSetup:
 	var c: SideSetup = SideSetup.new()
-	for f: String in ["display_name", "primary", "secondary", "lethal", "tactical", "doctrine"]:
+	for f: String in ["display_name", "primary", "doctrine"]:
 		c.set(f, s.get(f))
 	c.deck = s.deck.duplicate()
 	c.deck_levels = s.deck_levels.duplicate()

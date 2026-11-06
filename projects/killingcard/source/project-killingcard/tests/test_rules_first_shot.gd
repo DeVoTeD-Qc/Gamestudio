@@ -160,16 +160,16 @@ func test_full_round_breacher_from_hand_vs_point_man() -> void:
 	assert_eq(b.armor, 4, "Breacher untouched after a full round")
 
 
-func test_enemy_flashbang_strips_first_shot_so_target_fires_back() -> void:
-	# Every prototype enemy squad carries a Flashbang: -2 FP and no First Shot this round, in
-	# the chosen zone. The player's Breacher then fires in Main with 3, simultaneously.
+func test_enemy_blind_strike_strips_first_shot_so_target_fires_back() -> void:
+	# kc-loadout-cut: the old Flashbang's effects on a test-only killstreak: -2 FP and no First Shot
+	# this round, in the chosen zone. The player's Breacher then fires in Main with 3, simultaneously.
 	var e: SideSetup = F.setup([], F.kestrel())
-	e.tactical = F.flashbang()
 	var m: MatchState = F.new_match(null, e, F.map())
-	F.place_operator(m, E, F.MID)  # Flashbang reaches Left (adjacent); no firefight in Mid
+	F.grant(m, E, F.blind_strike())
+	F.place_operator(m, E, F.MID)  # the strike reaches Left (adjacent); no firefight in Mid
 	var b: RulesUnit = F.place(m, P, F.breacher(), F.LEFT)  # 3 + 2 Close = 5, -2 = 3
 	var t: RulesUnit = F.place(m, E, F.unit("front", 2, 3), F.LEFT)
-	assert_true(m.submit(E, RulesIntent.use_item(&"flashbang", F.LEFT))["ok"], "enemy Flashbang on Left")
+	assert_true(m.submit(E, RulesIntent.use_item(&"blind_strike", F.LEFT))["ok"], "enemy strike on Left")
 	m.resolve_round()
 	assert_false(t.is_alive(), "3 still kills it")
 	assert_eq(_shots_by(m, b.uid)[0]["step"], FirefightResolver.STEP_BEAT, "but the Breacher fired without First Shot")

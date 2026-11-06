@@ -272,15 +272,26 @@ static func sentry() -> CardData:
 static func kestrel() -> LoadoutItem:
 	return primary("kestrel_ar7", 3, 7, W.AR)
 
-static func frag() -> LoadoutItem:
-	return item("frag_grenade", DataEnums.LoadoutSlot.LETHAL, [
+## kc-loadout-cut: the Frag Grenade / Flashbang are gone from the game. These test-only killstreaks
+## keep their effects, so the effect engine paths they used (ENEMY_SECOND_IN_LINE,
+## OPERATOR_OR_ADJACENT, timed -FP / REMOVE_FIRST_SHOT) stay covered. Give one with grant().
+static func point_strike() -> LoadoutItem:
+	return item("point_strike", DataEnums.LoadoutSlot.KILLSTREAK, [
 		eff(TR.ON_PLAY, K.DAMAGE, T.ENEMY_POINT_MAN, Z.OPERATOR_OR_ADJACENT, 2),
 		eff(TR.ON_PLAY, K.DAMAGE, T.ENEMY_SECOND_IN_LINE, Z.OPERATOR_OR_ADJACENT, 1)])
 
-static func flashbang() -> LoadoutItem:
-	return item("flashbang", DataEnums.LoadoutSlot.TACTICAL, [
+static func blind_strike() -> LoadoutItem:
+	return item("blind_strike", DataEnums.LoadoutSlot.KILLSTREAK, [
 		eff(TR.ON_PLAY, K.MODIFY_FIREPOWER, T.ALL_ENEMIES, Z.OPERATOR_OR_ADJACENT, -2, {"duration_rounds": 1}),
 		eff(TR.ON_PLAY, K.REMOVE_FIRST_SHOT, T.ALL_ENEMIES, Z.OPERATOR_OR_ADJACENT, 0, {"duration_rounds": 1})])
+
+## Puts a killstreak in the side's loadout and its Streak Tray (as if earned), ready to use.
+static func grant(m: MatchState, side: int, ks: LoadoutItem) -> void:
+	var s: RulesSide = m.sides[side]
+	if ks not in s.setup.killstreaks:
+		s.setup.killstreaks.append(ks)
+	if ks.id not in s.streak_tray:
+		s.streak_tray.append(ks.id)
 
 static func mortar() -> LoadoutItem:
 	return item("mortar_barrage", DataEnums.LoadoutSlot.KILLSTREAK, [

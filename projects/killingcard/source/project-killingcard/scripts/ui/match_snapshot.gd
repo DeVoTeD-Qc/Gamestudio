@@ -6,8 +6,8 @@
 #   - hand entries: uid, id, playable (cost <= Supply)
 #   - can_undo, undo_label (name of the last play), deploy_open (Deploy and not READY yet),
 #     result (&"" while running; &"player" / &"enemy" / &"draw" at the end)
-#   f02: abilities / killstreaks entries carry {id, name, state, ready, reason, code, slot,
-#     cooldown, uses_left, in_tray, needs_target} from the engine (MatchState.check_use,
+#   f02: killstreak entries carry {id, name, state, ready, reason, code, slot,
+#     uses_left, in_tray, needs_target} from the engine (MatchState.check_use,
 #     LoadoutRules, StreakTracker); `ready` false = the button is disabled and `reason` says why.
 #   Enemy face-down plays never leak: the enemy only shows units on the board plus red-dot counts.
 # Dependencies: MatchState, RulesSide, RulesUnit, RulesCard, MapData, StreakTracker, LoadoutRules,
@@ -81,7 +81,6 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"operator": _operator_entry(state, me),
 		"streak": me.streak,
 		"perks": _ids(me.setup.perks), "perk_slots": state.config.perk_slots,
-		"abilities": _abilities(state, me),
 		"hand": hand,
 		"killfeed": killfeed,
 		"deploy_open": deploy_open,
@@ -342,15 +341,7 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 	return e
 
 
-static func _abilities(state: MatchState, side: RulesSide) -> Array:
-	var out: Array = []
-	for item: LoadoutItem in [side.setup.secondary, side.setup.lethal, side.setup.tactical]:
-		if item != null:
-			out.append(item_entry(state, side.index, item))
-	return out
-
-
-## Button entry for one activated loadout item, straight from the engine's checks.
+## Button entry for one activated loadout item (a killstreak), straight from the engine's checks.
 static func item_entry(state: MatchState, viewer: int, item: LoadoutItem, ctx: Dictionary = {}) -> Dictionary:
 	var check: Dictionary = state.check_use(viewer, item.id)
 	var uses_left: int = LoadoutRules.uses_left_this_round(state, viewer, item)
@@ -365,7 +356,7 @@ static func item_entry(state: MatchState, viewer: int, item: LoadoutItem, ctx: D
 		"slot": item.slot, "ready": bool(check["ok"]), "code": check["code"],
 		"state": PlayText.button_state(check, item, uses_left),
 		"reason": "" if check["ok"] else String(PlayText.describe(check, text_ctx)["reason"]),
-		"cooldown": LoadoutRules.cooldown_left(state, viewer, item), "uses_left": uses_left,
+		"uses_left": uses_left,
 		"in_tray": state.sides[viewer].streak_tray.has(item.id),
 		"needs_target": state.needs_unit_target(viewer, item.id),
 	}
@@ -411,7 +402,7 @@ static func _ids(items: Array[LoadoutItem]) -> Array:
 
 
 ## First word, upper case, for the 64 px loadout buttons ("Recon Drone" -> "RECON");
-## words over 7 letters keep their first 5 ("Flashbang" -> "FLASH").
+## words over 7 letters keep their first 5.
 static func _short(display_name: String) -> String:
 	var word: String = display_name.split(" ", false)[0] if not display_name.is_empty() else "?"
 	return word.to_upper() if word.length() <= 7 else word.to_upper().left(5)

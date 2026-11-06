@@ -31,8 +31,8 @@
 #            squad_ai=P (second-best chance of the slot 1-2 squads) picks=N picks_from=N replace=0|1
 #            replace_from=N replace_min=N replace_order=armored,sergeant,trooper,grunt loss_drop=N
 #            thin=N thin_from=N (free Retires of Standard Issue cards per drop) kit=0|1 retire=never|bonus|always
-#            retire_min=N cc=0|1 (M1 rewards as Recruit calling cards) lite=1 (slots 1-2: no Lethal / Tactical,
-#            Recon Drone only, both sides) opcost=N set=card.prop=value (in memory)
+#            retire_min=N cc=0|1 (M1 rewards as Recruit calling cards) lite=1 (slots 1-2: Recon Drone
+#            only, both sides; kc-loadout-cut: there is no Lethal / Tactical any more) opcost=N set=card.prop=value (in memory)
 #   Recommended package (onboarding-progression.md §6):
 #     exp=runs runs=400 n=80 slotset=1.enemy_armor_bonus=-1 slotset=4.enemy_armor_bonus=0 picks=2 thin=1
 #     enemy=si,si+cc,cc,shipped,shipped replace_order=armored,sergeant,trooper,grunt
@@ -293,8 +293,6 @@ func player_setup(deck: Array, st: Dictionary = {}, slot: int = -1) -> SideSetup
 
 
 func _lite(s: SideSetup) -> void:
-	s.lethal = null
-	s.tactical = null
 	var ks: Array[LoadoutItem] = []
 	for k: LoadoutItem in s.killstreaks:
 		if k != null and k.id == &"recon_drone":
@@ -362,7 +360,6 @@ func _ai(proxy: String, aware: bool = true) -> AiPlayer:
 		p.push_bonus = 0.3
 		p.second_best_chance = 0.6
 		p.card_keep_cost = 0.6
-		p.cooldown_keep_cost = 1.0
 		p.killstreak_keep_cost = 1.2
 		p.weight_deny_streak = 1.0
 	var ai: AiPlayer = AiPlayer.new(p)
