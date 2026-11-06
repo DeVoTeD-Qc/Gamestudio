@@ -1192,26 +1192,28 @@ const xH = (key, W) => Math.round(BH * W / BW) + X_DEF[key].info;
 
 // ---------------------------------------------------------------- the Operator card (bigger, anchored next to READY)
 const OPER = { id: "operator", name: "Kestrel AR-7", art: "kestrel_ar7", y: 45, cost: 1, fp: 3, ar: 7, max: 7, cls: "AR", operator: true,
-  ability: "Frag Grenade: 2 dmg at the front", kws: ["fs"] };
-const OP_STATES = { deploy: ["DEPLOY", "--g-amber"], plan: ["PLAN · B", "--g-amber"], board: ["ON BOARD B1", "--g-fog"], down: ["DOWN", "--g-enemy"], pay: ["NEED SUPPLY", "--g-enemy"] };
-const OP_STATE_WORDS = { deploy: "Deploy: tap it, then a column", plan: "Planned for column B this Deploy", board: "On the board: column B, row 1", down: "Down: respawns at your next Deploy", pay: "Can't pay: it costs 1 Supply, you have 0" };
+  kws: ["fs"] };  // kc-loadout-cut: no lethal / tactical / secondary; the primary weapon's keyword only
+const OP_STATES = { deploy: ["DEPLOY", "--g-amber"], board: ["ON BOARD B1", "--g-fog"], down: ["DOWN", "--g-enemy"], pay: ["", "--g-enemy"] };
+const OP_STATE_WORDS = { deploy: "Deploy: tap it, then a column", board: "On the board: column B, row 1", down: "Down: respawns at your next Deploy", pay: "Need supply: red cost hex (1, you have 0)" };
 function opCard(W, H, state = "deploy") {
   const c = Object.assign({}, OPER, { ar: state === "down" ? 0 : OPER.ar });
   const artH = Math.round(H * 0.5);
-  const dim = state === "board" || state === "down";
+  const dim = state === "board" || state === "down" || state === "pay";
   const st = OP_STATES[state];
   let h = `<div class="slotbox" style="left:0;top:0;width:${W}px;height:${H}px;background:#1E1A10;border:2px solid ${state === "deploy" ? col("--g-amber") : "#C9A227"};border-radius:6px;${state === "deploy" ? "box-shadow:0 0 12px rgba(255,176,32,.55);" : ""}"></div>`;
-  h += `<div class="art" style="left:2px;top:2px;width:${W - 4}px;height:${artH}px;border-radius:4px 4px 0 0;background-image:url(${ART[c.art]});background-position:center ${c.y}%;${dim ? "filter:grayscale(" + (state === "down" ? 1 : .4) + ") brightness(.6);" : ""}"></div>`;
-  // Top-left: the supply plate (the Operator's cost) + OPERATOR tag; top-right: its ability.
+  h += `<div class="art" style="left:2px;top:2px;width:${W - 4}px;height:${artH}px;border-radius:4px 4px 0 0;background-image:url(${ART[c.art]});background-position:center ${c.y}%;${dim ? "filter:grayscale(" + (state === "down" ? 1 : .4) + ") brightness(" + (state === "pay" ? .75 : .6) + ");" : ""}"></div>`;
+  // Top-left: the cost in the same hex as every card (red when you can't pay) + the OPERATOR tag.
   const payRed = state === "pay";
-  h += row(5, 5, `<span class="mono" style="display:grid;place-items:center;height:20px;padding:0 6px;background:${payRed ? "#4A1A1C" : "#C9A227"};color:${payRed ? "#FF9A9A" : "#1A1305"};border:1px solid ${payRed ? col("--g-enemy") : "#7A5E12"};border-radius:3px;font-size:13px">1 SUPPLY</span><span class="mono" style="display:grid;place-items:center;height:20px;padding:0 6px;background:rgba(10,12,14,.86);color:#F3D36B;border:1px solid #C9A227;border-radius:10px;font-size:12px;letter-spacing:.06em">${W < 190 ? "OP" : "OPERATOR"}</span>`, 4);
-  h += rrow(4, 4, chip(svg("fs", col("--g-amber"), 18) + `<span style="display:grid;place-items:center;width:20px;height:20px">${svg("deploy", col("--g-amber"), 17)}</span>`, "gap:2px"));
-  h += rrow(4, artH - 26, chip(fpCross(c.fp, 26, false, "B", "own") + arPlateB(c.ar, 25, state === "down", "A", ""), "gap:3px"));
-  // State chip, centred on the art.
-  h += `<div class="g mono" style="left:6px;top:${artH - 24}px"><span style="display:inline-block;padding:2px 8px;background:rgba(10,12,14,.9);border:1px solid ${col(st[1])};color:${col(st[1])};font-size:14px;letter-spacing:.06em">${st[0]}</span></div>`;
-  h += xTitle(c, 8, artH + 6, W - 16);
-  h += `<div class="g xrules" style="left:8px;top:${artH + 27}px;width:${W - 16}px;-webkit-line-clamp:1;max-height:19px">${c.ability}</div>`;
-  return card(Object.assign({}, c, { text: c.ability }), "own", W, H, h);
+  const hex = payRed ? cost(c, 22).replace(/fill="var\(--g-amber\)" stroke="#7a5200"/, 'fill="#4A1A1C" stroke="#FF5A5D"').replace('fill="#14100a"', 'fill="#FF9A9A"') : cost(c, 22);
+  h += row(5, 4, chip(hex) + `<span class="mono" style="display:grid;place-items:center;height:20px;padding:0 7px;background:rgba(10,12,14,.86);color:#F3D36B;border:1px solid #C9A227;border-radius:10px;font-size:12px;letter-spacing:.06em">OPERATOR</span>`, 4);
+  // Top-right: the primary weapon's keyword(s), as on every card.
+  h += rrow(4, 4, chip(kwIcons(c, 20, "own"), "gap:2px"));
+  h += rrow(4, artH - 27, chip(fpCross(c.fp, 26, false, "B", "own") + arPlateB(c.ar, 25, state === "down", "A", ""), "gap:3px"));
+  if (st[0]) h += `<div class="g mono" style="left:6px;top:${artH - 25}px"><span style="display:inline-block;padding:2px 8px;background:rgba(10,12,14,.9);border:1px solid ${col(st[1])};color:${col(st[1])};font-size:14px;letter-spacing:.06em">${st[0]}</span></div>`;
+  const rule = "First Shot: fires first in its exchange.";  // the short form; the inspector has the full rule
+  h += xTitle(c, 8, artH + 5, W - 16);
+  h += `<div class="g xrules" style="left:8px;top:${artH + 25}px;width:${W - 16}px;-webkit-line-clamp:1;max-height:19px">${rule}</div>`;
+  return card(Object.assign({}, c, { text: "Your Operator: always in your hand at the start of a Deploy, never drawn or discarded. If it goes down, it respawns at your next Deploy." }), "own", W, H, h);
 }
 // The tray: hand grid (option key) + the bottom row with the Operator. variant "O1": one row
 // [UNDO icon | Operator | READY]; "O2": the Operator left, UNDO over READY on the right.
@@ -1219,7 +1221,7 @@ function xTray(x0, y0, key, variant = "O2", n = 7) {
   const W = 362, Hh = 532;
   let s = `<div class="g" style="left:${x0}px;top:${y0}px;width:${W}px;height:${Hh}px;background:${col("--g-slate")};border:1px solid ${col("--g-edge")};border-radius:4px"></div>`;
   s += `<div class="g mono" style="left:${x0 + 8}px;top:${y0 + 10}px;font-size:16px;color:${col("--g-muted")}">SUPPLY <b style="color:#fff">3/4</b> <span style="letter-spacing:2px;color:${col("--g-amber")}">■■■</span><span style="color:#555">■</span></div>`;
-  const rowH = variant === "O1" ? 84 : 116;
+  const rowH = variant === "O1" ? 92 : 120;
   const gridTop = y0 + 40, gridBottom = y0 + Hh - rowH - 10;
   const cw = 177, ch = xH(key, cw), gap = 8;
   let shown = 0;
@@ -1238,7 +1240,7 @@ function xTray(x0, y0, key, variant = "O2", n = 7) {
     s += place(x0 + 70, by, opCard(170, rowH, "deploy"));
     s += place(x0 + 246, by, ready(112, rowH));
   } else {
-    s += place(x0 + 4, by, opCard(208, rowH, "deploy"));
+    s += place(x0 + 4, by, opCard(208, rowH, "deploy"));  // 208x120 vs a 177x70 hand card
     s += place(x0 + 218, by, undoIcon(140, 44));
     s += place(x0 + 218, by + 50, ready(140, rowH - 50));
   }
@@ -1246,7 +1248,7 @@ function xTray(x0, y0, key, variant = "O2", n = 7) {
 }
 function opStates() {
   let s = "";
-  const k = 1.5, W = 208, H = 116;
+  const k = 1.5, W = 208, H = 120;
   Object.keys(OP_STATES).forEach((st, i) => {
     const x = 16 + (i % 3) * (W * k + 24), y = 12 + Math.floor(i / 3) * (H * k + 40);
     s += `<div class="g mono" style="left:${x}px;top:${y}px;font-size:15px;color:${col("--g-muted")}">${OP_STATE_WORDS[st].toUpperCase()}</div>`;
@@ -1346,11 +1348,11 @@ function xBlock(opt) {
 function operatorBlock() {
   return `<article class="opt" id="opt-OP" data-key="OP">
     <div class="opt-head"><span class="opt-letter">OP</span><span class="opt-title">The Operator card, anchored next to READY</span><span class="pick">The head's ask</span>
-      <p class="opt-pitch">The Operator leaves the hand grid and sits in the bottom row of the tray, bigger than a hand card (208x116 vs 177x70): art, name (same title style) with an OPERATOR tag, its 1 SUPPLY plate, FP / Armor, its ability in words, and its state. UNDO becomes an icon button. Two layouts:</p></div>
+      <p class="opt-pitch">The Operator leaves the hand grid and sits in the bottom row of the tray, bigger than a hand card (208x120 vs 177x70): art, its cost in the same hex as every card (red when you can't pay), the name in the title style with an OPERATOR tag, FP / Armor, its primary weapon's keyword with a rules line, and its state. No grenade or secondary (cut). UNDO becomes an icon button. Two layouts:</p></div>
     <div class="frames two-even">${fitBox(378, 540, xTray(8, 4, "X1", "O1"), "O1 · one row: UNDO icon · Operator · READY")}${fitBox(378, 540, xTray(8, 4, "X1", "O2"), "O2 (recommended) · Operator left, UNDO over READY")}</div>
-    ${fitBox(16 * 2 + 3 * 208 * 1.5 + 2 * 24, 12 + 2 * (116 * 1.5 + 40), opStates(), "Operator states at 1.5x: DEPLOY · PLAN · ON BOARD · DOWN · NEED SUPPLY (long press: the Operator's rules)")}
-    <div class="pc"><div class="pro"><h3>O2 (recommended)</h3><ul><li>The biggest Operator (208x116) and the biggest READY (140x66)</li><li>UNDO stays a 140x44 target above READY, away from the Operator</li><li>Hand grid keeps 4 rows: 8 X1 cards</li></ul></div>
-    <div class="con"><h3>O1</h3><ul><li>One flat row: UNDO icon (60), Operator (170x84), READY (112)</li><li>Leaves one more row of room, but the Operator is smaller and READY narrower</li><li>UNDO sits next to the Operator: easy to hit by mistake</li></ul></div></div>
+    ${fitBox(16 * 2 + 3 * 208 * 1.5 + 2 * 24, 12 + 2 * (120 * 1.5 + 40), opStates(), "Operator states at 1.5x: DEPLOY · ON BOARD · DOWN · NEED SUPPLY (red cost hex) · long press: its rules")}
+    <div class="pc"><div class="pro"><h3>O2 (recommended)</h3><ul><li>The biggest Operator (208x120) and the biggest READY (140x70)</li><li>UNDO stays a 140x44 target above READY, away from the Operator</li><li>Hand grid keeps 4 rows: 8 X1 cards</li></ul></div>
+    <div class="con"><h3>O1</h3><ul><li>One flat row: UNDO icon (60), Operator (170x92), READY (112)</li><li>Leaves one more row of room, but the Operator is smaller and READY narrower</li><li>UNDO sits next to the Operator: easy to hit by mistake</li></ul></div></div>
   </article>`;
 }
 
