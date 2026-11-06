@@ -5,7 +5,8 @@
 # Author: Technical Artist Agent (kc-ui-import)
 extends "res://tests/test_case.gd"
 
-const BATCH1: Array[StringName] = [&"kw_first_shot", &"kw_pick", &"score", &"stat_armor", &"stat_cover",
+## Batch 1 as shipped (kc-ui-hooks: kw_pick retired and deleted; Pick is kw_pick_v2 now).
+const BATCH1: Array[StringName] = [&"kw_first_shot", &"score", &"stat_armor", &"stat_cover",
 		&"stat_deck", &"stat_firepower", &"stat_intel", &"stat_supply", &"streak"]
 
 

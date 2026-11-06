@@ -11,7 +11,9 @@
 #   Pure static drawing on any CanvasItem; sizes are passed in, so the board (57 / 76 px banners),
 #   the hand (X1), the Y2+ card and the inspector share it.
 # Dependencies: SynergyGlyphs (trait icons, band colours), SynergyRules (names), UiKit.
-# Author: UI/UX Agent (kc-cards-impl)
+#   kc-ui-hooks: the reticle, the Armor plate, the level coin, the crack and the Pick glyph ask the
+#   UI kit first (UiKit.draw_piece / draw_icon) and keep this code drawing as the fallback.
+# Author: UI/UX Agent (kc-cards-impl); kit hooks: Technical Artist Agent (kc-ui-hooks)
 class_name CardLook
 extends RefCounted
 
@@ -45,6 +47,12 @@ const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
 ## Trait chip opacity while its set bonus is off.
 const TRAIT_FAINT: float = 0.45
 const LEVEL_LETTERS: Array[String] = ["R", "T", "V", "E"]
+## kc-ui-hooks: the v2 kit slots these badges ask UiKit for (prompt pack §7.4b); the code shape is the
+## fallback and the numbers / letters always draw on top in code.
+const PLATE_FP: StringName = &"plate_fp_reticle"
+const PLATE_ARMOR: StringName = &"plate_armor_ballistic"
+const COIN_LEVEL: StringName = &"coin_level"
+const FX_CRACK: StringName = &"fx_crack_damage"
 const WEAPON_NAMES: Dictionary = {"AR": "AR", "SMG": "SMG", "LMG": "LMG", "SHOTGUN": "SHOTGUN", "SNIPER": "SNIPER"}
 
 
@@ -95,12 +103,14 @@ static func draw_reticle(ci: CanvasItem, r: Rect2, value: int, team: StringName 
 	var cols: Array = TEAM.get(team_of(team), TEAM[&"player"])
 	var c: Vector2 = r.get_center()
 	var rad: float = minf(r.size.x, r.size.y) * 0.5
-	var w: float = maxf(1.6, rad * 0.17)
-	ci.draw_circle(c, rad - w * 0.4, cols[1])
-	# Four arcs with gaps at the cardinal points (the reticle).
-	var gap: float = 0.32
-	for i: int in 4:
-		ci.draw_arc(c, rad - w * 0.5, i * PI * 0.5 + gap * 0.5, (i + 1) * PI * 0.5 - gap * 0.5, 10, cols[0], w, true)
+	# kc-ui-hooks: the painted steel badge (plate_fp_reticle), modulated to the team colour; else drawn.
+	if not UiKit.draw_piece(ci, PLATE_FP, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), cols[0]):
+		var w: float = maxf(1.6, rad * 0.17)
+		ci.draw_circle(c, rad - w * 0.4, cols[1])
+		# Four arcs with gaps at the cardinal points (the reticle).
+		var gap: float = 0.32
+		for i: int in 4:
+			ci.draw_arc(c, rad - w * 0.5, i * PI * 0.5 + gap * 0.5, (i + 1) * PI * 0.5 - gap * 0.5, 10, cols[0], w, true)
 	if not with_number:
 		return
 	var num: Color = trend_color(trend)
@@ -114,20 +124,22 @@ static func draw_armor(ci: CanvasItem, r: Rect2, value: int, damaged: bool = fal
 	var w: float = r.size.x
 	var h: float = r.size.y
 	var p: Vector2 = r.position
-	var cut: float = w * 0.22
-	var rr: float = w * 0.14
-	var pts: PackedVector2Array = [p + Vector2(cut, 1), p + Vector2(w - cut, 1), p + Vector2(w - 1, cut), p + Vector2(w - 1, h - rr - 1)]
-	for i: int in 5:
-		var a: float = i * PI * 0.5 / 4.0
-		pts.append(p + Vector2(w - 1 - rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
-	for i: int in 5:
-		var a: float = PI * 0.5 + i * PI * 0.5 / 4.0
-		pts.append(p + Vector2(1 + rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
-	pts.append(p + Vector2(1, cut))
-	ci.draw_colored_polygon(pts, AR_DMG_FILL if damaged else AR_FILL)
-	var outline: PackedVector2Array = pts.duplicate()
-	outline.append(pts[0])
-	ci.draw_polyline(outline, AR_DMG_EDGE if damaged else AR_EDGE, maxf(1.5, w * 0.075), true)
+	# kc-ui-hooks: the painted steel plate (plate_armor_ballistic), as is; amber when damaged. Else drawn.
+	if not UiKit.draw_piece(ci, PLATE_ARMOR, r, AR_DMG_EDGE if damaged else Color.WHITE):
+		var cut: float = w * 0.22
+		var rr: float = w * 0.14
+		var pts: PackedVector2Array = [p + Vector2(cut, 1), p + Vector2(w - cut, 1), p + Vector2(w - 1, cut), p + Vector2(w - 1, h - rr - 1)]
+		for i: int in 5:
+			var a: float = i * PI * 0.5 / 4.0
+			pts.append(p + Vector2(w - 1 - rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
+		for i: int in 5:
+			var a: float = PI * 0.5 + i * PI * 0.5 / 4.0
+			pts.append(p + Vector2(1 + rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
+		pts.append(p + Vector2(1, cut))
+		ci.draw_colored_polygon(pts, AR_DMG_FILL if damaged else AR_FILL)
+		var outline: PackedVector2Array = pts.duplicate()
+		outline.append(pts[0])
+		ci.draw_polyline(outline, AR_DMG_EDGE if damaged else AR_EDGE, maxf(1.5, w * 0.075), true)
 	if not with_number:
 		return
 	var txt: String = str(value)
@@ -160,8 +172,10 @@ static func draw_level_coin(ci: CanvasItem, r: Rect2, level: int) -> void:
 	var rim: Color = Color("#B9C2C9") if lv == 0 else BRASS
 	var c: Vector2 = r.get_center()
 	var rad: float = minf(r.size.x, r.size.y) * 0.5
-	ci.draw_circle(c, rad, Color("#14181C"))
-	ci.draw_arc(c, rad - 1.0, 0, TAU, 20, rim, maxf(1.4, rad * 0.16), true)
+	# kc-ui-hooks: the painted coin (coin_level): steel for R as is, brass-modulated for T / V / E.
+	if not UiKit.draw_piece(ci, COIN_LEVEL, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), Color.WHITE if lv == 0 else BRASS):
+		ci.draw_circle(c, rad, Color("#14181C"))
+		ci.draw_arc(c, rad - 1.0, 0, TAU, 20, rim, maxf(1.4, rad * 0.16), true)
 	_text_center(ci, r, LEVEL_LETTERS[lv], maxi(9, int(rad * 1.15)), rim)
 
 
@@ -207,6 +221,11 @@ static func draw_chip(ci: CanvasItem, r: Rect2, radius: float = 3.0) -> void:
 
 ## The damage crack (amber over a dark stroke), top-left corner.
 static func draw_crack(ci: CanvasItem, origin: Vector2, s: float) -> void:
+	# kc-ui-hooks: the painted crack (fx_crack_damage, white + alpha): a dark copy 1 px larger, then amber.
+	if UiKit.has_piece(FX_CRACK):
+		UiKit.draw_piece(ci, FX_CRACK, Rect2(origin, Vector2(s, s)).grow(1.0), Color(0.04, 0.05, 0.06, 0.75))
+		UiKit.draw_piece(ci, FX_CRACK, Rect2(origin, Vector2(s, s)), AR_DMG_EDGE)
+		return
 	var k: float = s / 22.0
 	var pts: PackedVector2Array = [Vector2(1, 2), Vector2(7, 7), Vector2(5, 11), Vector2(11, 14), Vector2(10, 19)]
 	var br: PackedVector2Array = [Vector2(7, 7), Vector2(12, 5)]
@@ -229,9 +248,13 @@ static func draw_damage_edge(ci: CanvasItem, r: Rect2, thickness: float = 2.0) -
 
 ## The new Pick glyph (kc-cards-impl): a shield with a downward arrow ("hits the lowest Armor"), so it
 ## is never a crosshair like the FP reticle. White, tint it.
-static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color) -> void:
+## kc-ui-hooks: the kit's painted Pick (ico_kw_pick_v2, IconSheet.PICK_KIT_ID) wins when imported, so
+## every caller (board banners, the O2 tray card, the Y2+ text box) picks it up; code_only skips it.
+static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color, code_only: bool = false) -> void:
 	var s: float = minf(r.size.x, r.size.y)
 	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
+	if not code_only and UiKit.draw_icon(ci, IconSheet.PICK_KIT_ID, Rect2(o, Vector2(s, s)), c):
+		return
 	var w: float = maxf(1.5, s * 0.1)
 	var pts: PackedVector2Array = [Vector2(0.5, 0.1), Vector2(0.85, 0.22), Vector2(0.85, 0.5), Vector2(0.72, 0.75), Vector2(0.5, 0.92),
 			Vector2(0.28, 0.75), Vector2(0.15, 0.5), Vector2(0.15, 0.22), Vector2(0.5, 0.1)]

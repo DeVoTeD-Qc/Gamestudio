@@ -209,20 +209,11 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var si: bool = card != null and card.standard_issue
 	if si:
-		# kc-onboard-ui: the Standard Issue name in the stencil font, with its serial.
+		# kc-cards-impl: the one title style (UPPERCASE, Barlow Condensed Bold). kc-ui-hooks: the retired
+		# serial plate and stencil-coloured name are gone (prompt pack §7.4b).
 		name_l.text = "%s  x%d" % [card.display_name.to_upper(), copies.size()]
-		name_l.add_theme_font_override(&"font", CardLook.TITLE_FONT)  # kc-cards-impl: one title style
-		name_l.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
+		name_l.add_theme_font_override(&"font", CardLook.TITLE_FONT)
 	row.add_child(name_l)
-	if si:
-		var plate := Control.new()
-		plate.name = "SerialPlate"
-		var serial: String = RunProgress.standard_issue_serial(card)
-		plate.custom_minimum_size = Vector2(StandardIssueLook.serial_width(serial, 24.0), 24)
-		plate.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		plate.draw.connect(func() -> void: StandardIssueLook.draw_serial_plate(plate, Rect2(Vector2.ZERO, plate.size), serial))
-		row.add_child(plate)
 	var cost_l := Label.new()
 	cost_l.theme_type_variation = &"HudSubtle"
 	cost_l.text = "cost %d" % card.cost if card != null else ""

@@ -79,6 +79,8 @@ var dragging_uid: int = -1
 ## state (&"deploy" / &"planned" / &"board" / &"down" / &"none"), status (tag text), keywords, active}.
 var operator_entry: Dictionary = {}
 var operator_selected: bool = false
+## kc-ui-hooks: the UI kit frame of the O2 Operator card (prompt pack §7.4b).
+const OPERATOR_FRAME_PIECE: StringName = &"frm_y2_operator"
 var _op_chip: Control = null
 ## kc-cards-impl (H1 + O2): the card grid's rect and the Operator card's rect (HandArea-local; the
 ## HandArea covers the grid and the Operator row under it). Empty = the whole row.
@@ -575,7 +577,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 		ability.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ink.queue_redraw())
-	_apply_operator_frame(panel)
+	_apply_operator_frame(panel, true)
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
 	glow.name = "Glow"
@@ -599,7 +601,23 @@ func _make_operator_card(op: Dictionary) -> Control:
 
 ## The Operator's own frame (head B): brass border, dark brass fill, cut (rounded) corners like a
 ## dog tag; teal border while selected. Never the deck cards' HandCard style.
-func _apply_operator_frame(panel: Control) -> void:
+func _apply_operator_frame(panel: Control, kit: bool = false) -> void:
+	# kc-ui-hooks: the painted Y2+ Operator frame (frm_y2_operator, a scaled 9-slice drawn by the panel
+	# itself; StyleBoxTexture can't scale its rims) when the kit has it; teal keyline while selected.
+	# kit = the O2 tray card only (the on-board mini keeps the drawn dog tag).
+	if kit and UiKit.has_piece(OPERATOR_FRAME_PIECE):
+		var empty := StyleBoxEmpty.new()
+		empty.set_content_margin_all(3)
+		panel.add_theme_stylebox_override(&"panel", empty)
+		panel.set_meta(&"kit_frame", OPERATOR_FRAME_PIECE)
+		if not panel.has_meta(&"kit_frame_drawn"):
+			panel.set_meta(&"kit_frame_drawn", true)
+			panel.draw.connect(func() -> void:
+				UiKit.draw_piece(panel, OPERATOR_FRAME_PIECE, Rect2(Vector2.ZERO, panel.size))
+				if operator_selected:
+					panel.draw_rect(Rect2(Vector2.ZERO, panel.size).grow(-1.0), get_theme_color(&"friend", &"Hud"), false, 2.0))
+		panel.queue_redraw()
+		return
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = BRASS_DARK
 	sb.border_color = get_theme_color(&"friend", &"Hud") if operator_selected else BRASS
@@ -709,7 +727,7 @@ func _style_operator() -> void:
 		return
 	var state: StringName = StringName(String(operator_entry.get("state", "none")))
 	_op_chip.theme_type_variation = &"HandCardSelected" if operator_selected else &"HandCard"
-	_apply_operator_frame(_op_chip)
+	_apply_operator_frame(_op_chip, not bool(_op_chip.get_meta(&"mini", false)))
 	_op_chip.modulate.a = 1.0
 	var art: TextureRect = _op_chip.find_child("Art", true, false) as TextureRect
 	if art != null:

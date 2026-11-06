@@ -17,6 +17,8 @@
 #   time: BannerView.focus_owner); an animated licensed art plays its frame sheet while focused.
 #   The layout works with any 4:1 art (the pitch build swaps in its own art at runtime).
 # Dependencies: BannerArtDB, IconSheet, CardLook, hud_theme.tres colours (Hud: friend, enemy, accent).
+#   kc-ui-hooks: the rail highlight asks the UI kit for fx_glow_rail first (keylines = fallback); the
+#   crack, badges and Pick glyph go through CardLook, which asks the kit.
 # Author: Mechanics Developer Agent (kc-board); C1+: UI/UX Agent (kc-cards-impl)
 class_name BannerView
 extends Control
@@ -31,6 +33,8 @@ const CLASS_ICONS: Dictionary = {
 }
 ## kc-cards-impl: kept for callers; the board no longer dims back rows (full-strength art).
 const BACK_ROW_TINT: Color = Color(1.0, 1.0, 1.0, 1.0)
+## kc-ui-hooks: the UI kit glow of the rail highlight (prompt pack §7.4b).
+const RAIL_GLOW_PIECE: StringName = &"fx_glow_rail"
 ## Art brightness of a card that does not match the synergy rail's highlighted trait.
 const SYN_DIM: float = 0.45
 const BRASS: Color = Color("#C9A227")
@@ -464,8 +468,10 @@ func _draw_overlay() -> void:
 	if syn_focus != &"" and mode == Mode.UNIT:
 		if _matches_focus():
 			var tc: Color = SynergyGlyphs.trait_color(syn_focus)
-			o.draw_rect(r.grow(-1.5), tc, false, 3.0)
-			o.draw_rect(r.grow(-4.0), Color(tc, 0.35), false, 3.0)
+			# kc-ui-hooks: the painted glow (fx_glow_rail, white luma, tinted per trait); else two keylines.
+			if not UiKit.draw_piece(o, RAIL_GLOW_PIECE, r.grow(8.0 * k), tc):
+				o.draw_rect(r.grow(-1.5), tc, false, 3.0)
+				o.draw_rect(r.grow(-4.0), Color(tc, 0.35), false, 3.0)
 		else:
 			o.draw_rect(r, Color(0, 0, 0, 0.35))
 	if pending:

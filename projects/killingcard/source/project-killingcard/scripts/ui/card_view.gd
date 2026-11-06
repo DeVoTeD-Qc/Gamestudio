@@ -20,8 +20,10 @@
 #   level (-1 none), standard_issue, trait, trait_lit, locked (bool: the keywords are locked; or an
 #   Array of locked keyword names), trains ("Trains: ..."), not_found (Codex), count (deck views:
 #   "x5"), cant_pay (red cost hex), marked (amber frame: taken / selected).
+#   kc-ui-hooks: the frame asks the UI kit first (frame_piece(): frm_y2_unit / frm_y2_operator /
+#   frm_y2_standard_issue / frm_t1_orders, + tex_orders_paper on Tactics); the drawn frame is the fallback.
 # Dependencies: CardLook, BannerArtDB, IconSheet, CardArt (fallback art), StandardIssueLook,
-#   synergy_glyphs.gd, assets/ui/card_theme.tres.
+#   synergy_glyphs.gd, assets/ui/card_theme.tres, UiKit (optional kit frames).
 # Author: Technical Artist Agent (p13); Y2+ rebuild: UI/UX Agent (kc-cards-impl)
 class_name CardView
 extends Control
@@ -49,6 +51,8 @@ const FACE_T1: Color = Color("#2B2716")
 const FRAME_OP: Color = Color("#C9A227")
 const FACE_OP: Color = Color("#1E1A10")
 const FRAME_STREAK: Color = Color("#5BC0EB")
+## kc-ui-hooks: the T1 orders paper grain (UiKit piece, tiled).
+const PAPER_PIECE: StringName = &"tex_orders_paper"
 const AMBER: Color = Color("#FFB020")
 const MUTED: Color = Color("#8C969E")
 
@@ -648,6 +652,29 @@ func _frame_colors() -> Array:
 	return [frame, face]
 
 
+## kc-ui-hooks: the UI kit frame for this card (prompt pack §7.4b): frm_t1_orders (Tactics),
+## frm_y2_operator, frm_y2_standard_issue, else frm_y2_unit (units, fields, killstreaks).
+func frame_piece() -> StringName:
+	if is_tactic():
+		return &"frm_t1_orders"
+	if _card_type() == "operator":
+		return &"frm_y2_operator"
+	if bool(data.get("standard_issue", false)):
+		return &"frm_y2_standard_issue"
+	return &"frm_y2_unit"
+
+
+## The frame colour of the card's kind without its state (marked / Elite / killstreak tint).
+func _base_frame_color() -> Color:
+	if _card_type() == "operator":
+		return FRAME_OP
+	if is_tactic():
+		return FRAME_T1
+	if bool(data.get("standard_issue", false)):
+		return StandardIssueLook.FRAME
+	return FRAME_UNIT
+
+
 ## The card's outline in rect r: rounded corners; `cut` > 0 chevron-cuts the top-right corner (T1).
 static func outline(r: Rect2, cut: float) -> PackedVector2Array:
 	var rad: float = 6.0
@@ -675,10 +702,22 @@ func _draw() -> void:
 		var glow: PackedVector2Array = outline(Rect2(-2, -2, w + 4, h + 4), cut + 1.0)
 		glow.append(glow[0])
 		draw_polyline(glow, Color(AMBER, 0.45), 3.0, true)
-	draw_colored_polygon(outer, cols[0])
-	draw_colored_polygon(outline(Rect2(1.5, 1.5, w - 3.0, h - 3.0), maxf(0.0, cut - 1.0)), cols[1])
+	# kc-ui-hooks: the painted Y2+ / T1 frame (frame_piece()) replaces the outline polygons and the
+	# khaki band; a state colour (marked amber, Elite gold, killstreak cyan) still rings its rim.
+	var kit_frame: bool = UiKit.draw_piece(self, frame_piece(), Rect2(0, 0, w, h))
+	if kit_frame:
+		if cols[0] != _base_frame_color():
+			var rim: PackedVector2Array = outline(Rect2(0.75, 0.75, w - 1.5, h - 1.5), maxf(0.0, cut - 0.5))
+			rim.append(rim[0])
+			draw_polyline(rim, cols[0], 1.5, true)
+	else:
+		draw_colored_polygon(outer, cols[0])
+		draw_colored_polygon(outline(Rect2(1.5, 1.5, w - 3.0, h - 3.0), maxf(0.0, cut - 1.0)), cols[1])
 	var rg: Dictionary = regions()
 	if tac:
+		# The orders paper grain (tex_orders_paper, tiled at 60%) over the face under the title.
+		UiKit.draw_tiled(self, PAPER_PIECE, Rect2(3, TITLE_H, w - 6.0, h - TITLE_H - 3.0), Color(1, 1, 1, 0.6))
+	if tac and not kit_frame:
 		# The orders paper: a khaki band behind the title.
 		var band: PackedVector2Array = [Vector2(1.5, 1.5), Vector2(w - 1.5 - (cut - 1.0), 1.5), Vector2(w - 1.5, cut + 0.5),
 				Vector2(w - 1.5, TITLE_H), Vector2(1.5, TITLE_H)]

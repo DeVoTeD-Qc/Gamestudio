@@ -311,7 +311,7 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	var texts: String = "\n".join(panel.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text))
 	assert_false(texts.contains("ENGINE"), "no Engine section before Promotion")
 	assert_true(texts.contains("Standard Issue: 18 of 20"), "the deck view counts the Standard Issue cards: %s" % texts.substr(0, 120))
-	assert_not_null(panel.find_child("SerialPlate", true, false), "Standard Issue rows carry the serial plate")
+	assert_true(panel.find_child("SerialPlate", true, false) == null, "kc-ui-hooks: the retired serial plate is gone from the deck rows")
 	tree.root.get_node("Settings").met_flags = {"engine_panel": true}
 	panel.open(r)
 	await _frames(1)
