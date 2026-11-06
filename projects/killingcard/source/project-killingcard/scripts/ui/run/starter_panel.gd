@@ -16,6 +16,8 @@
 # Author: UI/UX Agent (kc-ui4)
 extends Control
 
+const CodexViewScript: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
+
 signal closed
 signal operator_picked(id: StringName)
 
@@ -254,8 +256,9 @@ func _build() -> void:
 	_refresh_ops()
 
 
+## kc-cards-impl: deck list cards are Y2+ cards (the mock-up's deck card is 196 wide).
 func _tile_size() -> Vector2:
-	return Vector2(216, 86) if compact else Vector2(240, 96)
+	return CardView.size_for(172.0 if compact else 196.0)
 
 
 func _metric() -> float:
@@ -284,10 +287,11 @@ func _operator_tile(item: LoadoutItem) -> Button:
 			"armor_max": item.operator_armor, "operator": true, "camo": String(BannerArtDB.camo_for_tier(1)),
 			"banner": String(BannerArtDB.operator_art_id(item.id, 1)), "keywords": _op_keywords(item),
 			"cost": _op_cost_text()}
-	var card: PanelContainer = BannerCard.build(entry, _tile_size(), _metric())
+	var view: Dictionary = {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
+			"armor": item.operator_armor, "banner": entry["banner"], "keywords": _op_keywords(item),
+			"text": "Your Operator: respawns if it goes down.", "cost": int(_op_cost_text()) if _op_cost_text().is_valid_int() else 0}
+	var card: CardView = CodexViewScript.make_card_view(view, _tile_size().x)
 	card.name = "OperatorBanner"
-	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.custom_minimum_size = _tile_size()
 	row.add_child(card)
 	var text: VBoxContainer = VBoxContainer.new()
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -332,31 +336,10 @@ func _deck_tile(card: CardData, count: int, level: int) -> Control:
 			"id": card.id, "art": card.id, "arts": BannerArtDB.alt_arts(card.id), "name": card.display_name}
 	var info: Callable = func() -> void: _inspector.open(load("res://scripts/ui/codex/codex_view.gd").call(&"inspector_info", e))
 	_wire(b, info, info)
-	var panel: PanelContainer = BannerCard.build(BannerCard.entry_for_card(card, _equipped(card.id), level), _tile_size(), _metric())
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var view: Dictionary = CardView.view_for_card(card, _equipped(card.id), level)
+	view["count"] = count
+	var panel: CardView = CodexViewScript.make_card_view(view, _tile_size().x)
 	b.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var face: Control = panel.get_node("Face")
-	var n: Label = _text("x%d" % count, &"HudNumber", 22)
-	n.name = "CountLabel"
-	n.clip_text = false
-	n.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-	n.set_meta(&"important", true)
-	n.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = AMBER
-	sb.set_corner_radius_all(6)
-	sb.content_margin_left = 7
-	sb.content_margin_right = 7
-	n.add_theme_stylebox_override(&"normal", sb)
-	face.add_child(n)
-	var bv: BannerView = BannerCard.banner_of(panel)
-	panel.sort_children.connect(func() -> void:
-		# The count sits in the bottom-centre slot (between the abilities and the stats).
-		n.size = n.get_combined_minimum_size()
-		var mm: Dictionary = BannerView.metrics(minf(face.size.y, _metric()))
-		var sr: Rect2 = BannerView.anatomy(face.size, mm, bv.entry, bv.lead if bv.lead > 0.0 else -1.0)["sub"]
-		n.position = Vector2(roundf(sr.position.x + (sr.size.x - n.size.x) * 0.5), roundf(sr.position.y + (sr.size.y - n.size.y) * 0.5)))
 	return b
 
 

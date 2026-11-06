@@ -197,8 +197,13 @@ static func _entry(id: StringName, value: int = 0) -> Dictionary:
 ## SynergyRules holds the neighbor keywords, traits and levels). [name, text]. The Codex glossary
 ## (scripts/ui/codex/glossary.gd) reads these three tables only, so the wording lives in one place.
 const GLOSSARY_EXTRA: Dictionary = {
-	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots. The number on the banner is the RESULT now (range, effects, links and sets included); the inspector lists the sum."],
-	&"armor": ["Armor", "Health. Each hit takes Armor away; at 0 the unit is eliminated. Amber = damaged."],
+	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots: the number in the reticle ring, bottom-right (teal ring yours, red the rival's; a green number is buffed). It is the RESULT now (range, effects, links and sets included); the inspector lists the sum."],
+	&"armor": ["Armor", "Health: the number on the grey ballistic plate at the bottom-right corner (both sides). Each hit takes Armor away and the plate shows what is left; at 0 the unit is eliminated. Amber plate = damaged."],
+	&"card_peek": ["Card at rest / peek", "On the board a card shows its abilities (top-right), FP and Armor (bottom-right) and its traits (bottom-left). Hover it (touch: hold it) to peek at its cost, level coin and weapon (top-left). Hand cards always show everything; Settings > ALL CARD INFO shows it on the board too."],
+	&"damaged": ["Damaged", "A thin amber line along the bottom edge, a crack in the top-left corner and an amber Armor plate: the unit has lost Armor."],
+	&"card_frames": ["Card frames", "Off the board every card is a classic card: cost and name on top, the calling card, its type line, its rules, then traits and FP / Armor. Tactics are orders: khaki paper with a cut top-right corner and no stats."],
+	&"trait_chip": ["Trait chip", "Bottom-left on every card: faint while its set bonus is off, lit with a glow while it is on (2 or 3 in play)."],
+	&"rail_highlight": ["Sets rail highlight", "Hover, focus or tap a row of the SETS rail to pin it: every card shows that trait, the matching cards glow and the rest dim. Tap it again to unpin."],
 	&"cover_stat": ["Cover (chip)", "The Cover this unit has now (printed + effects + links + sets): each hit on it deals that much less."],
 	&"supply": ["Supply", "What you spend in Deploy. The hex on a card is its cost; you get more Supply each round."],
 	&"stat_colours": ["Green up / red down", "A green number with an up triangle is raised by something right now; red with a down triangle is lowered. White = the printed value."],
@@ -212,5 +217,5 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"link_tick": ["Link tick", "A short glowing bar between two of your banners: a neighbor keyword link is on between them."],
 	&"set_callout": ["Set callout", "When a trait set switches on (2 or 3 in play) its bonus is announced beside the trait rail, then folds into it. A red crack: a set switched off."],
 	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play."],
-	&"level_band": ["Level band", "The camo strip on a card shows its level: Recruit plain, Trained Gilded, Veteran Forged, Elite Priceless."],
+	&"level_band": ["Level coin", "A card's level is its coin, next to the cost (on peek, in the hand and on the type line off the board): R grey = Recruit, T / V / E brass = Trained, Veteran, Elite."],
 }

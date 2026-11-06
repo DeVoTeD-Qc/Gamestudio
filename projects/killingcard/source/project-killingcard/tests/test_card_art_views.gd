@@ -165,7 +165,7 @@ func test_no_art_falls_back() -> void:
 	var chip: Node = hand.get_cards()[0]
 	var art: TextureRect = chip.find_child("Art", true, false)
 	assert_true(art == null or art.texture == null, "no art for a card without an id")
-	var names: Array = chip.find_children("*", "Label", true, false).filter(func(l: Label) -> bool: return l.text == "Odd")
+	var names: Array = chip.find_children("*", "Label", true, false).filter(func(l: Label) -> bool: return l.text.to_upper() == "ODD")  # kc-cards-impl: the title style is UPPERCASE
 	assert_eq(names.size(), 1, "name kept without art")
 	hand.queue_free()
 	await tree.process_frame

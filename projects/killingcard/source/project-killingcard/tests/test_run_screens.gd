@@ -448,8 +448,9 @@ func _full_run(screen: Dictionary) -> void:
 					var cost: int = (_rs.run.resource(_rs.run.deck[int(t.get_meta(&"index"))]) as CardData).cost
 					(marked_costs if reward.muster_marks.has(int(t.get_meta(&"index"))) else other_costs).append(cost)
 					assert_true(String(t.get_meta(&"serial")).begins_with("SI-"), "%s: serial plate %s" % [label, t.get_meta(&"serial")])
-					var bv: BannerView = BannerCard.banner_of(t.find_child("Card", true, false))
-					assert_true(bv != null and StandardIssueLook.is_si(bv.entry), "%s: Standard Issue banner" % label)
+					# kc-cards-impl: Muster out shows the Y2+ card (Standard Issue on its type line).
+					var cv: CardView = t.find_child("Card", true, false) as CardView
+					assert_true(cv != null and bool(cv.data.get("standard_issue", false)), "%s: Standard Issue card" % label)
 				if not other_costs.is_empty():
 					assert_true(marked_costs.min() >= other_costs.max(), "%s: most expensive pre-selected (%s vs %s)" % [label, marked_costs, other_costs])
 				assert_true(reward.send_button.is_visible_in_tree() and ("SEND %d HOME" % n) in reward.send_button.text, "%s: SEND %d HOME" % [label, n])

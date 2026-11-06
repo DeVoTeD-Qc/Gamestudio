@@ -60,9 +60,9 @@ const EXPLAINED: Array[StringName] = [CALLING_CARDS, TRAIT_RAIL, KEYWORDS, PROMO
 ## "New: X" texts (§5.2): {title, text}. The UI adds the icon and the mini example.
 const TEXTS: Dictionary = {
 	CALLING_CARDS: {"title": "New: Calling cards", "text": "Calling cards bring a trait. 2 or 3 of a trait in play give a bonus. Your first one's trait is your Doctrine: it counts +1."},
-	TRAIT_RAIL: {"title": "New: Traits", "text": "Traits in play add up. The rail shows each set and its next bonus."},
+	TRAIT_RAIL: {"title": "New: Traits", "text": "Traits in play add up. The rail shows each set and its next bonus; tap a set to light its cards on the board."},
 	KEYWORDS: {"title": "New: Keywords", "text": "Trained cards have keywords. A Recruit's keywords unlock when it trains."},
-	PROMOTION: {"title": "New: Promotion", "text": "Promotion trains a card. Gilded > Forged > Priceless."},
+	PROMOTION: {"title": "New: Promotion", "text": "Promotion trains a card: its level coin goes R > T > V > E."},
 	MUSTER_OUT: {"title": "New: Muster out", "text": "The quartermaster takes back Standard Issue kit: one card per new card, plus one."},
 	SALVAGE: {"title": "New: Salvage", "text": "Lost a match? You still salvage a card from the field."},
 	FIELDS: {"title": "New: Fields", "text": "Fields sit on the objective and change the whole column."},

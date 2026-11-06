@@ -211,13 +211,16 @@ func _fit() -> void:
 	var info_w: float = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
 	_info_panel.custom_minimum_size.x = info_w
 	var banner_h: float = BANNER_SIZE.y + 8.0 if _banner_holder.visible else 0.0
-	var by_height: float = (room.y - 2.0 * MARGIN - banner_h) / CardView.BASE_SIZE.y
-	var by_width: float = (room.x - 2.0 * MARGIN - info_w - 24.0) / CardView.BASE_SIZE.x
-	var s: float = clampf(minf(by_height, by_width), MIN_SCALE, MAX_SCALE)
+	# kc-cards-impl: the Y2+ card at its own width (never scaled): as wide as the room allows, 220..330.
+	var by_height: float = (room.y - 2.0 * MARGIN - banner_h - (CardView.height_for(0.0) - 0.0)) * 4.0 + 8.0
+	var by_width: float = room.x - 2.0 * MARGIN - info_w - 24.0
+	var w: float = clampf(floorf(minf(by_height, by_width)), 220.0, 330.0)
 	_card.pivot_offset = Vector2.ZERO
 	_card.position = Vector2.ZERO
-	_card.scale = Vector2(s, s)
-	_holder.custom_minimum_size = CardView.BASE_SIZE * s
+	_card.scale = Vector2.ONE
+	if _card.has_method(&"set_card_width"):
+		_card.set_card_width(w)
+	_holder.custom_minimum_size = CardView.size_for(w)
 	# The text panel may be as tall as the room under the banner; its body scrolls past that.
 	var info_max: float = room.y - banner_h - 4.0
 	_body_col.custom_minimum_size.x = info_w - 32.0

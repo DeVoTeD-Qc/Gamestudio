@@ -28,6 +28,8 @@ var _codex: Control = null
 var _glossary_button: Button = null
 var _reset_tips_button: Button = null
 var _glossary: Control = null
+## kc-cards-impl: Settings > Cards > "Always show all card info" (beside FAST ANIMATIONS).
+var _card_info_button: Button = null
 
 @onready var _title: Label = %PauseTitle
 @onready var _hint: Label = %PauseHint
@@ -105,6 +107,28 @@ func _ready() -> void:
 	_reset_tips_button.add_to_group(&"tap_target")
 	_reset_tips_button.pressed.connect(reset_tips)
 	row2.add_child(_reset_tips_button)
+	# kc-cards-impl: CARDS · ALL INFO beside FAST ANIMATIONS (Settings.show_all_card_info).
+	var row3: HBoxContainer = HBoxContainer.new()
+	row3.name = "FastRow"
+	row3.add_theme_constant_override(&"separation", 8)
+	_main.add_child(row3)
+	_main.move_child(row3, _fast.get_index())
+	_main.remove_child(_fast)
+	row3.add_child(_fast)
+	_fast.owner = self
+	_fast.unique_name_in_owner = true
+	_fast.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_card_info_button = Button.new()
+	_card_info_button.name = "CardInfoButton"
+	_card_info_button.toggle_mode = true
+	_card_info_button.theme_type_variation = &"HudButton"
+	_card_info_button.tooltip_text = "Cards: always show all card info (cost, level and weapon on every board card)"
+	_card_info_button.custom_minimum_size = Vector2(150, 64)
+	_card_info_button.focus_mode = Control.FOCUS_ALL
+	_card_info_button.add_to_group(&"tap_target")
+	_card_info_button.toggled.connect(_on_card_info_toggled)
+	row3.add_child(_card_info_button)
+	_update_card_info_text()
 
 
 ## RESET TIPS: Settings.reset_tips() (every explainer again; systems hide until met).
@@ -137,6 +161,8 @@ func open(info: Dictionary = {}) -> void:
 	if _reset_tips_button != null:
 		_reset_tips_button.text = "RESET TIPS"
 	_update_mirror_text()
+	_card_info_button.set_pressed_no_signal(settings != null and bool(settings.get(&"show_all_card_info")))
+	_update_card_info_text()
 	_show_main()
 	show()
 
@@ -268,6 +294,21 @@ func _on_mirror_toggled(on: bool) -> void:
 	var settings: Node = get_node_or_null(^"/root/Settings")
 	if settings != null:
 		settings.set_value(&"mirror_layout", on)
+
+
+func _on_card_info_toggled(on: bool) -> void:
+	_update_card_info_text()
+	var settings: Node = get_node_or_null(^"/root/Settings")
+	if settings != null:
+		settings.set_value(&"show_all_card_info", on)
+
+
+func _update_card_info_text() -> void:
+	_card_info_button.text = "ALL CARD INFO: %s" % ("ON" if _card_info_button.button_pressed else "OFF")
+
+
+func get_card_info_button() -> Button:
+	return _card_info_button
 
 
 func _update_mirror_text() -> void:

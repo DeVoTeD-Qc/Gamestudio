@@ -1,0 +1,242 @@
+# card_look.gd
+# Purpose: kc-cards-impl (the head's picks on the card design page, documentation/ux/
+#   card-design-options.html): the shared drawing language of the new cards, in one place.
+#     - C1+ board card pieces: the FP reticle ring (team colour: teal yours, red the rival's; green
+#       number when buffed), the Armor ballistic plate (steel grey on both sides, amber when damaged,
+#       showing only what is left), trait chips (45% faint, lit with a glow while their set bonus is
+#       on), the level coin (R grey, T / V / E brass), the weapon pill (its name), the cost hex (red
+#       when you can't pay), the damage crack, chip backings.
+#     - The one title style off the board: Barlow Condensed Bold, 16 px canvas, UPPERCASE, #F2F5F7
+#       (title_label()); rules lines Barlow Condensed SemiBold 16 px #C9D1D8.
+#   Pure static drawing on any CanvasItem; sizes are passed in, so the board (57 / 76 px banners),
+#   the hand (X1), the Y2+ card and the inspector share it.
+# Dependencies: SynergyGlyphs (trait icons, band colours), SynergyRules (names), UiKit.
+# Author: UI/UX Agent (kc-cards-impl)
+class_name CardLook
+extends RefCounted
+
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const TITLE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-Bold.ttf")
+const RULE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-SemiBold.ttf")
+const NUM_FONT: FontFile = preload("res://assets/fonts/ShareTechMono-Regular.ttf")
+## The title spec (every card off the board): 16 px canvas = 11.6 pt on the 844x390 phone.
+const TITLE_PX: int = 16
+const TITLE_COLOR: Color = Color("#F2F5F7")
+const RULE_PX: int = 16
+const RULE_COLOR: Color = Color("#C9D1D8")
+const LOCKED_COLOR: Color = Color("#8C969E")
+## FP reticle: team colours (the objective tiles' teal / red), the only plate in team colour.
+const TEAM: Dictionary = {
+	&"player": [Color("#2EC4B6"), Color("#0F2F2C")],
+	&"enemy": [Color("#FF5A5D"), Color("#341113")],
+}
+## Armor plate: steel grey for both sides; amber when damaged (never red: red is the rival).
+const AR_EDGE: Color = Color("#B9C2C9")
+const AR_FILL: Color = Color("#2A3238")
+const AR_DMG_EDGE: Color = Color("#F2A33A")
+const AR_DMG_FILL: Color = Color("#4A3412")
+const AR_DMG_NUM: Color = Color("#FFC067")
+const UP: Color = Color("#7CF29A")
+const DOWN: Color = Color("#FF6B6B")
+const AMBER: Color = Color("#FFB020")
+const BRASS: Color = Color("#F3D36B")
+const CHIP: Color = Color(0.04, 0.05, 0.055, 0.86)
+const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
+## Trait chip opacity while its set bonus is off.
+const TRAIT_FAINT: float = 0.45
+const LEVEL_LETTERS: Array[String] = ["R", "T", "V", "E"]
+const WEAPON_NAMES: Dictionary = {"AR": "AR", "SMG": "SMG", "LMG": "LMG", "SHOTGUN": "SHOTGUN", "SNIPER": "SNIPER"}
+
+
+## A Label in the title style (Barlow Condensed Bold 16 px, UPPERCASE, #F2F5F7, one line).
+static func title_label(text: String) -> Label:
+	var l := Label.new()
+	l.text = text.replace("★", "").strip_edges().to_upper()
+	l.add_theme_font_override(&"font", TITLE_FONT)
+	l.add_theme_font_size_override(&"font_size", TITLE_PX)
+	l.add_theme_color_override(&"font_color", TITLE_COLOR)
+	l.add_theme_constant_override(&"outline_size", 0)
+	l.clip_text = true
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.set_meta(&"title_style", true)
+	return l
+
+
+## A rules line Label (Barlow Condensed SemiBold 16 px).
+static func rule_label(text: String, bold: bool = false, color: Color = RULE_COLOR) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_override(&"font", TITLE_FONT if bold else RULE_FONT)
+	l.add_theme_font_size_override(&"font_size", RULE_PX)
+	l.add_theme_color_override(&"font_color", TITLE_COLOR if bold else color)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return l
+
+
+## The team of a banner side (&"player" / &"enemy"; anything else = &"player").
+static func team_of(side: StringName) -> StringName:
+	return &"enemy" if side == &"enemy" or side == &"rival" else &"player"
+
+
+static func _text_center(ci: CanvasItem, r: Rect2, text: String, fs: int, c: Color, font: Font = NUM_FONT, outline: int = 0) -> void:
+	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var pos: Vector2 = Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
+	if outline > 0:
+		ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, outline, INK)
+	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+
+
+## FP: a reticle ring with four gaps (team colour), a dark fill, the number on top. trend > 0 = buffed
+## (green), < 0 = lowered (red).
+static func draw_reticle(ci: CanvasItem, r: Rect2, value: int, team: StringName = &"player", trend: int = 0, with_number: bool = true) -> void:
+	var cols: Array = TEAM.get(team_of(team), TEAM[&"player"])
+	var c: Vector2 = r.get_center()
+	var rad: float = minf(r.size.x, r.size.y) * 0.5
+	var w: float = maxf(1.6, rad * 0.17)
+	ci.draw_circle(c, rad - w * 0.4, cols[1])
+	# Four arcs with gaps at the cardinal points (the reticle).
+	var gap: float = 0.32
+	for i: int in 4:
+		ci.draw_arc(c, rad - w * 0.5, i * PI * 0.5 + gap * 0.5, (i + 1) * PI * 0.5 - gap * 0.5, 10, cols[0], w, true)
+	if not with_number:
+		return
+	var num: Color = trend_color(trend)
+	var txt: String = str(value)
+	var fs: int = maxi(12, int(roundf(rad * (1.05 if txt.length() > 1 else 1.25))))
+	_text_center(ci, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), txt, fs, num, NUM_FONT, 2)
+
+
+## Armor: a ballistic plate (clipped top corners, rounded bottom), steel grey; amber when damaged.
+static func draw_armor(ci: CanvasItem, r: Rect2, value: int, damaged: bool = false, with_number: bool = true) -> void:
+	var w: float = r.size.x
+	var h: float = r.size.y
+	var p: Vector2 = r.position
+	var cut: float = w * 0.22
+	var rr: float = w * 0.14
+	var pts: PackedVector2Array = [p + Vector2(cut, 1), p + Vector2(w - cut, 1), p + Vector2(w - 1, cut), p + Vector2(w - 1, h - rr - 1)]
+	for i: int in 5:
+		var a: float = i * PI * 0.5 / 4.0
+		pts.append(p + Vector2(w - 1 - rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
+	for i: int in 5:
+		var a: float = PI * 0.5 + i * PI * 0.5 / 4.0
+		pts.append(p + Vector2(1 + rr, h - 1 - rr) + Vector2(cos(a), sin(a)) * rr)
+	pts.append(p + Vector2(1, cut))
+	ci.draw_colored_polygon(pts, AR_DMG_FILL if damaged else AR_FILL)
+	var outline: PackedVector2Array = pts.duplicate()
+	outline.append(pts[0])
+	ci.draw_polyline(outline, AR_DMG_EDGE if damaged else AR_EDGE, maxf(1.5, w * 0.075), true)
+	if not with_number:
+		return
+	var txt: String = str(value)
+	var fs: int = maxi(12, int(roundf(w * (0.52 if txt.length() > 1 else 0.62))))
+	_text_center(ci, Rect2(p + Vector2(0, h * 0.04), Vector2(w, h * 0.96)), txt, fs, AR_DMG_NUM if damaged else Color.WHITE, NUM_FONT, 2)
+
+
+## The FP number's colour: green when buffed, red when lowered, else white.
+static func trend_color(trend: int) -> Color:
+	return UP if trend > 0 else (DOWN if trend < 0 else Color.WHITE)
+
+
+## A trait chip: the trait's icon in a square; lit = its set bonus is on (full colour + glow), else
+## faint (TRAIT_FAINT). focus = the synergy rail highlights it (full + white ring).
+static func draw_trait(ci: CanvasItem, r: Rect2, t: StringName, lit: bool, focus: bool = false, alpha: float = -1.0) -> void:
+	if t == &"":
+		return
+	var tc: Color = SynergyGlyphs.trait_color(t)
+	var a: float = alpha if alpha >= 0.0 else (1.0 if lit or focus else TRAIT_FAINT)
+	if lit or focus:
+		ci.draw_rect(r.grow(2.5), Color(tc if not focus else Color.WHITE, 0.32 * a))
+	ci.draw_rect(r, Color(0.04, 0.05, 0.06, 0.92 * maxf(a, 0.6)))
+	ci.draw_rect(r, Color(tc if not focus else Color.WHITE, a), false, maxf(1.2, r.size.x * 0.07))
+	SynergyGlyphs.draw_trait_icon(ci, r.grow(-r.size.x * 0.17), t, Color(tc, a))
+
+
+## The level coin: R (Recruit, grey) / T / V / E (brass).
+static func draw_level_coin(ci: CanvasItem, r: Rect2, level: int) -> void:
+	var lv: int = clampi(level, 0, 3)
+	var rim: Color = Color("#B9C2C9") if lv == 0 else BRASS
+	var c: Vector2 = r.get_center()
+	var rad: float = minf(r.size.x, r.size.y) * 0.5
+	ci.draw_circle(c, rad, Color("#14181C"))
+	ci.draw_arc(c, rad - 1.0, 0, TAU, 20, rim, maxf(1.4, rad * 0.16), true)
+	_text_center(ci, r, LEVEL_LETTERS[lv], maxi(9, int(rad * 1.15)), rim)
+
+
+## The weapon pill (the weapon type's name, text only). Returns its width at height h.
+static func weapon_pill_width(text: String, h: float) -> float:
+	var fs: int = maxi(10, int(roundf(h * 0.7)))
+	return ceilf(TITLE_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + h * 0.8)
+
+
+static func draw_weapon_pill(ci: CanvasItem, r: Rect2, text: String) -> void:
+	var rad: float = r.size.y * 0.5
+	var c: Color = Color("#3A444D")
+	ci.draw_circle(r.position + Vector2(rad, rad), rad, c)
+	ci.draw_circle(r.position + Vector2(r.size.x - rad, rad), rad, c)
+	ci.draw_rect(Rect2(r.position + Vector2(rad, 0), Vector2(r.size.x - 2.0 * rad, r.size.y)), c)
+	ci.draw_arc(r.position + Vector2(rad, rad), rad - 0.5, PI * 0.5, PI * 1.5, 10, Color("#8C969E"), 1.0, true)
+	ci.draw_arc(r.position + Vector2(r.size.x - rad, rad), rad - 0.5, -PI * 0.5, PI * 0.5, 10, Color("#8C969E"), 1.0, true)
+	ci.draw_line(r.position + Vector2(rad, 0.5), r.position + Vector2(r.size.x - rad, 0.5), Color("#8C969E"), 1.0)
+	ci.draw_line(r.position + Vector2(rad, r.size.y - 0.5), r.position + Vector2(r.size.x - rad, r.size.y - 0.5), Color("#8C969E"), 1.0)
+	_text_center(ci, r, text, maxi(10, int(roundf(r.size.y * 0.7))), Color("#E6EBEF"), TITLE_FONT)
+
+
+## The cost hex (amber; can't pay = dark red with a red rim and number).
+static func draw_cost(ci: CanvasItem, r: Rect2, value: String, cant_pay: bool = false) -> void:
+	var c: Vector2 = r.get_center()
+	var rad: float = minf(r.size.x, r.size.y * 1.1) * 0.5
+	var pts: PackedVector2Array = []
+	for i: int in 6:
+		pts.append(c + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * rad)
+	ci.draw_colored_polygon(pts, Color("#4A1A1C") if cant_pay else AMBER)
+	pts.append(pts[0])
+	ci.draw_polyline(pts, Color("#FF5A5D") if cant_pay else AMBER.darkened(0.45), 1.5, true)
+	_text_center(ci, r, value, maxi(10, int(r.size.y * 0.7)), Color("#FF9A9A") if cant_pay else INK)
+
+
+## A small dark backing behind one group of icons (never a band across the art).
+static func draw_chip(ci: CanvasItem, r: Rect2, radius: float = 3.0) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = CHIP
+	sb.set_corner_radius_all(int(radius))
+	ci.draw_style_box(sb, r)
+
+
+## The damage crack (amber over a dark stroke), top-left corner.
+static func draw_crack(ci: CanvasItem, origin: Vector2, s: float) -> void:
+	var k: float = s / 22.0
+	var pts: PackedVector2Array = [Vector2(1, 2), Vector2(7, 7), Vector2(5, 11), Vector2(11, 14), Vector2(10, 19)]
+	var br: PackedVector2Array = [Vector2(7, 7), Vector2(12, 5)]
+	for i: int in pts.size():
+		pts[i] = origin + pts[i] * k
+	for i: int in br.size():
+		br[i] = origin + br[i] * k
+	ci.draw_polyline(pts, Color(0.04, 0.05, 0.06, 0.75), 3.0 * k, true)
+	ci.draw_polyline(br, Color(0.04, 0.05, 0.06, 0.75), 3.0 * k, true)
+	ci.draw_polyline(pts, AR_DMG_EDGE, 1.4 * k, true)
+	ci.draw_polyline(br, AR_DMG_EDGE, 1.4 * k, true)
+
+
+## The damaged bottom edge: a thin amber line along the bottom, fading in from the left.
+static func draw_damage_edge(ci: CanvasItem, r: Rect2, thickness: float = 2.0) -> void:
+	var y: float = r.end.y - thickness
+	ci.draw_polygon(PackedVector2Array([Vector2(r.position.x, y), Vector2(r.end.x, y), Vector2(r.end.x, r.end.y), Vector2(r.position.x, r.end.y)]),
+			PackedColorArray([Color(AR_DMG_EDGE, 0.25), AR_DMG_EDGE, AR_DMG_EDGE, Color(AR_DMG_EDGE, 0.25)]))
+
+
+## The new Pick glyph (kc-cards-impl): a shield with a downward arrow ("hits the lowest Armor"), so it
+## is never a crosshair like the FP reticle. White, tint it.
+static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color) -> void:
+	var s: float = minf(r.size.x, r.size.y)
+	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
+	var w: float = maxf(1.5, s * 0.1)
+	var pts: PackedVector2Array = [Vector2(0.5, 0.1), Vector2(0.85, 0.22), Vector2(0.85, 0.5), Vector2(0.72, 0.75), Vector2(0.5, 0.92),
+			Vector2(0.28, 0.75), Vector2(0.15, 0.5), Vector2(0.15, 0.22), Vector2(0.5, 0.1)]
+	for i: int in pts.size():
+		pts[i] = o + pts[i] * s
+	ci.draw_polyline(pts, c, w, true)
+	ci.draw_line(o + Vector2(0.5, 0.32) * s, o + Vector2(0.5, 0.68) * s, c, w, true)
+	ci.draw_polyline(PackedVector2Array([o + Vector2(0.36, 0.55) * s, o + Vector2(0.5, 0.69) * s, o + Vector2(0.64, 0.55) * s]), c, w, true)

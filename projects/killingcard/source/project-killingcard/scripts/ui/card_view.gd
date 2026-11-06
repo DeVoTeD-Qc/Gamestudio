@@ -1,54 +1,73 @@
 # card_view.gd
-# Purpose: Reusable placeholder card face (scenes/match/CardView.tscn). Shows cost (or killstreak
-#   threshold), name, type/class, keyword icons, one rules line, range strip and FP/Armor badges.
-#   The frame is drawn in _draw() as flat vector shapes, so it stays crisp at any scale:
-#     unit = ID badge with lanyard slot; tactic = cut corners + "radio order" header bar;
-#     equipment = gear tag with clipped corner and eyelet; killstreak = cyan tablet + scanlines;
-#     operator = dog tag (round corners, chain hole).
-#   Friend / enemy is shown by SHAPE as well as colour (colour-blind safe):
-#     friend = chevron spine on the left edge + chevron notch cut into the bottom edge (teal);
-#     enemy  = hazard-stripe spine on the left edge + hazard-stripe band along the bottom (red).
-#   Text auto-shrinks to fit its slot; at 50% scale the readouts are cost, name, stats and
-#   keyword icons, and full text is for the inspector (long-press).
-# Usage:
-#   var card := preload("res://scenes/match/CardView.tscn").instantiate()
-#   card.set_card_data({"name": "Breacher", "type": "unit", "weapon_class": "shotgun", "cost": 3,
-#       "firepower": 3, "armor": 4, "keywords": [{"id": "first_shot"}], "side": "friend"})
-#   card.set_card(card_resource)  # reads the same field names from a Resource (see _from_resource)
-#   v01: the art window shows an original vector illustration per card (scripts/ui/art/card_art.gd),
-#   rasterised at the card's on-screen scale; the icon silhouette stays as the fallback.
-# Dependencies: assets/ui/card_theme.tres, scripts/ui/icon_sheet.gd, assets/shaders/scanlines.gdshader,
-#   scripts/ui/art/card_art.gd
-# Author: Technical Artist Agent (p13); illustrations: Sr Game Artist Agent (v01)
+# Purpose: The full card face off the board (scenes/match/CardView.tscn). kc-cards-impl: the head's
+#   Y2+ card (documentation/ux/card-design-options.html), used by the mulligan, the Supply Drop /
+#   Salvage / Muster out picks, the deck views, the Codex, the hand's docked preview and the
+#   inspector. Top to bottom:
+#     title bar  cost hex + NAME (the one title style: Barlow Condensed Bold 16 px, UPPERCASE, #F2F5F7)
+#     art        the calling card at 4:1 ((W - 8) / 4 tall), nothing over it
+#     type line  OPERATOR / STANDARD ISSUE / TACTIC tag, the weapon by name, the level coin
+#     text box   per keyword: its icon + bold name + a short rule; a Recruit's greyed "Trains: ...";
+#                the effect text
+#     stats bar  traits bottom-left (faint / lit), the FP reticle (team colour) + Armor plate
+#                bottom-right
+#   Tactics use the T1 "orders" frame: khaki paper, a chevron-cut top-right corner, no stats bar, the
+#   text box takes its room. Fields / killstreaks: the steel frame without a stats bar.
+#   The card lays out at its own width (set_card_width; height_for()); text sizes are fixed canvas px,
+#   so a 172 px Codex card and a 250 px preview read the same. Callers that scale it still work.
+#   Data keys (set_card_data): name, type (unit|tactic|equipment|killstreak|operator), weapon_class,
+#   cost, firepower, armor, armor_max?, fp_trend?, keywords (ids or {id, value}), text, side
+#   (friend|enemy), elite, threshold (killstreaks), id / banner / licensed_art / art_id (the 4:1 art),
+#   level (-1 none), standard_issue, trait, trait_lit, locked (bool: the keywords are locked; or an
+#   Array of locked keyword names), trains ("Trains: ..."), not_found (Codex), count (deck views:
+#   "x5"), cant_pay (red cost hex), marked (amber frame: taken / selected).
+# Dependencies: CardLook, BannerArtDB, IconSheet, CardArt (fallback art), StandardIssueLook,
+#   synergy_glyphs.gd, assets/ui/card_theme.tres.
+# Author: Technical Artist Agent (p13); Y2+ rebuild: UI/UX Agent (kc-cards-impl)
 class_name CardView
 extends Control
 
 signal card_changed
 
-const BASE_SIZE: Vector2 = Vector2(250, 350)
-const SPINE_W: float = 10.0
-const EDGE_H: float = 14.0
-const NOTCH_W: float = 56.0
-const NOTCH_DEPTH: float = 14.0
-const COST_RECT: Rect2 = Rect2(16, 10, 46, 46)
-## kc-ui4 card anatomy (the head): FP and Armor side by side in the BOTTOM-RIGHT, each a plate with
-## its number inside (FP: teal circle / red diamond, Armor: shield), as on every banner.
-const FP_RECT: Rect2 = Rect2(126, 294, 52, 42)
-const ARMOR_RECT: Rect2 = Rect2(184, 292, 50, 46)
-const KEYWORD_ROW_W: float = 222.0
-const BODY_TOP: float = 228.0
-const BODY_BOTTOM_UNIT: float = 274.0
-const BODY_BOTTOM_OTHER: float = 330.0
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+## The Y2+ card at 250 px (the inspector / dock size); height_for() gives other widths.
+const BASE_SIZE: Vector2 = Vector2(250, 216)
+const TITLE_H: float = 30.0
+const TYPE_H: float = 22.0
+const LINE_H: float = 19.0
+const LINES: int = 3
+const BAR_H: float = 32.0
+## T1 orders frame: the chevron cut of the top-right corner.
+const T1_CUT: float = 18.0
+const COST_RECT: Rect2 = Rect2(5, 4, 24, 24)
+## FP reticle and Armor plate at 250 px (bottom-right of the stats bar).
+const FP_RECT: Rect2 = Rect2(185, 182, 28, 28)
+const ARMOR_RECT: Rect2 = Rect2(217, 182, 27, 28)
+const FRAME_UNIT: Color = Color("#4A5560")
+const FACE_UNIT: Color = Color("#1B2126")
+const FRAME_T1: Color = Color("#B8913A")
+const FACE_T1: Color = Color("#2B2716")
+const FRAME_OP: Color = Color("#C9A227")
+const FACE_OP: Color = Color("#1E1A10")
+const FRAME_STREAK: Color = Color("#5BC0EB")
+const AMBER: Color = Color("#FFB020")
+const MUTED: Color = Color("#8C969E")
 
 ## Weapon class -> [close, mid, long] Firepower modifiers (core-rules.md §1).
 const RANGE_MODS: Dictionary = {
 	&"smg": [1, 0, 0], &"shotgun": [2, 0, -1], &"ar": [0, 1, 0], &"sniper": [-1, 0, 2], &"lmg": [0, 0, 0],
 }
 const RANGE_NAMES: PackedStringArray = ["CLOSE", "MID", "LONG"]
-const KEYWORD_LABELS: Dictionary = {
-	&"first_shot": "FIRST SHOT", &"pick": "PICK", &"flank": "FLANK", &"cover": "COVER",
-	&"suppress": "SUPPRESS", &"patch": "PATCH", &"holder": "HOLDER",
-	&"on_deploy": "ON DEPLOY", &"on_down": "ON DOWN",
+## The text box's keyword names and short rules (the inspector has the full ones, CardInfo.KEYWORD_RULES).
+const KEYWORD_NAMES: Dictionary = {
+	&"first_shot": "First Shot", &"pick": "Pick", &"flank": "Flank", &"suppress": "Suppress", &"pierce": "Pierce",
+	&"patch": "Patch %d", &"cover": "Cover %d", &"holder": "Holder", &"on_deploy": "On Deploy", &"on_down": "On Down",
+}
+const SHORT_RULES: Dictionary = {
+	&"first_shot": "fires first in its exchange", &"pick": "shoots the lowest-Armor enemy",
+	&"flank": "shoots the back-most enemy", &"suppress": "their point man gets -2 FP",
+	&"pierce": "extra damage carries on", &"patch": "restores %d Armor to a friend here",
+	&"cover": "each hit deals %d less", &"holder": "holds a contested zone",
+	&"on_deploy": "happens when it arrives", &"on_down": "happens when it goes down",
 }
 
 ## Placeholder shown in the editor and when no data is set.
@@ -57,7 +76,7 @@ const PLACEHOLDER: Dictionary = {
 	"armor": 4, "keywords": [{"id": "first_shot"}], "text": "", "side": "friend",
 }
 
-## "friend" or "enemy". Drives the shape cues and the spine colour.
+## "friend" or "enemy". Drives the FP reticle's team colour.
 @export_enum("friend", "enemy") var side: String = "friend":
 	set(value):
 		side = value
@@ -66,6 +85,11 @@ const PLACEHOLDER: Dictionary = {
 var data: Dictionary = {}
 var _art_key: StringName = &""
 var _art_scale: float = 0.0
+var _width: float = BASE_SIZE.x
+var _text_box: VBoxContainer = null
+var _count_label: Label = null
+var _not_found: Label = null
+var _lines: Array[Control] = []
 
 @onready var _cost_label: Label = %CostLabel
 @onready var _elite_icon: TextureRect = %EliteIcon
@@ -77,8 +101,6 @@ var _art_scale: float = 0.0
 @onready var _keyword_row: HBoxContainer = %KeywordRow
 @onready var _body_label: Label = %BodyLabel
 @onready var _range_row: HBoxContainer = %RangeRow
-@onready var _range_icon: TextureRect = %RangeIcon
-@onready var _range_label: Label = %RangeLabel
 @onready var _fp_badge: Control = %FirepowerBadge
 @onready var _fp_label: Label = %FirepowerLabel
 @onready var _fp_icon: TextureRect = %FirepowerIcon
@@ -87,10 +109,110 @@ var _art_scale: float = 0.0
 @onready var _armor_icon: TextureRect = %ArmorIcon
 
 
+## The Y2+ card's height at width w (tactics and units share it).
+static func height_for(w: float) -> float:
+	return 2.0 + TITLE_H + roundf((w - 8.0) / 4.0) + TYPE_H + LINES * LINE_H + 10.0 + BAR_H + 2.0
+
+
+## The card's size at width w.
+static func size_for(w: float) -> Vector2:
+	return Vector2(w, height_for(w))
+
+
+## kc-cards-impl: the Y2+ data of a deck card wearing `art` at copy `level` (the art's trait,
+## the level coin, a Recruit's locks, Standard Issue).
+static func view_for_card(card: CardData, art: StringName = &"", level: int = 1, chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
+	var CardInfo: GDScript = load("res://scripts/ui/card_info.gd")
+	var vd: Dictionary = CardInfo.view_dict(card)
+	var a: StringName = art if art != &"" else card.id
+	vd["banner"] = String(a)
+	var e: Dictionary = BannerCard.entry_for_card(card, art, level, chosen)
+	for k: String in ["standard_issue", "locked", "trains", "level", "trait"]:
+		if e.has(k) and str(e[k]) != "":
+			vd[k] = e[k]
+	if e.has("locked"):
+		vd["keywords"] = []
+	if not card.is_unit():
+		vd.erase("level")
+	return vd
+
+
 func _ready() -> void:
-	_fp_icon.texture = IconSheet.get_icon(&"stat_firepower")
-	_armor_icon.texture = IconSheet.get_icon(&"stat_armor")
 	_elite_icon.texture = IconSheet.get_icon(&"elite")
+	_type_icon.visible = false
+	_fp_icon.visible = false
+	_armor_icon.visible = false
+	_range_row.visible = false
+	_keyword_row.visible = false
+	var chip: Control = _type_label.get_parent() as Control
+	if chip is PanelContainer:
+		(chip as PanelContainer).add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
+	(get_node("ArtPanel") as PanelContainer).add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
+	_text_box = VBoxContainer.new()
+	_text_box.name = "TextBox"
+	_text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text_box.add_theme_constant_override(&"separation", 0)
+	_text_box.clip_contents = true
+	add_child(_text_box)
+	remove_child(_body_label)
+	_text_box.add_child(_body_label)
+	_body_label.owner = self
+	_count_label = Label.new()
+	_count_label.name = "CountLabel"
+	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_count_label.add_theme_font_override(&"font", CardLook.NUM_FONT)
+	_count_label.add_theme_font_size_override(&"font_size", 16)
+	_count_label.add_theme_color_override(&"font_color", Color.WHITE)
+	var cb := StyleBoxFlat.new()
+	cb.bg_color = Color(0.04, 0.05, 0.055, 0.9)
+	cb.border_color = MUTED
+	cb.set_border_width_all(1)
+	cb.set_corner_radius_all(3)
+	cb.content_margin_left = 4
+	cb.content_margin_right = 4
+	_count_label.add_theme_stylebox_override(&"normal", cb)
+	add_child(_count_label)
+	_not_found = Label.new()
+	_not_found.name = "NotFoundLabel"
+	_not_found.text = "NOT FOUND YET"
+	_not_found.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_not_found.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_not_found.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_not_found.add_theme_font_override(&"font", CardLook.TITLE_FONT)
+	_not_found.add_theme_font_size_override(&"font_size", 16)
+	_not_found.add_theme_color_override(&"font_color", Color("#C2C9CF"))
+	var veil := StyleBoxFlat.new()
+	veil.bg_color = Color(0.04, 0.05, 0.055, 0.78)
+	_not_found.add_theme_stylebox_override(&"normal", veil)
+	add_child(_not_found)
+	for l: Label in [_name_label, _cost_label, _type_label]:
+		l.add_theme_constant_override(&"outline_size", 0)
+	# The one title style (CardLook.title_label's spec) on the card's name.
+	_name_label.theme_type_variation = &""
+	_name_label.add_theme_font_override(&"font", CardLook.TITLE_FONT)
+	_name_label.add_theme_font_size_override(&"font_size", CardLook.TITLE_PX)
+	_name_label.add_theme_color_override(&"font_color", CardLook.TITLE_COLOR)
+	_name_label.uppercase = true
+	_name_label.clip_text = true
+	_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_name_label.set_meta(&"title_style", true)
+	_cost_label.add_theme_font_override(&"font", CardLook.NUM_FONT)
+	_cost_label.add_theme_font_size_override(&"font_size", 17)
+	for l: Label in [_fp_label, _armor_label]:
+		l.add_theme_font_override(&"font", CardLook.NUM_FONT)
+		l.add_theme_font_size_override(&"font_size", 17)
+		l.add_theme_constant_override(&"outline_size", 4)
+		l.add_theme_color_override(&"font_outline_color", CardLook.INK)
+	_type_label.theme_type_variation = &""
+	_type_label.add_theme_font_override(&"font", CardLook.TITLE_FONT)
+	_type_label.add_theme_font_size_override(&"font_size", 16)
+	_type_label.add_theme_color_override(&"font_color", Color("#B9C2C9"))
+	_type_label.uppercase = true
+	_body_label.theme_type_variation = &""
+	_body_label.add_theme_font_override(&"font", CardLook.RULE_FONT)
+	_body_label.add_theme_font_size_override(&"font_size", 16)
+	_body_label.add_theme_color_override(&"font_color", CardLook.RULE_COLOR)
+	_body_label.add_theme_constant_override(&"line_spacing", -3)
 	if data.is_empty():
 		data = PLACEHOLDER.duplicate(true)
 	set_notify_transform(true)
@@ -102,9 +224,21 @@ func _notification(what: int) -> void:
 		_update_art_texture()
 
 
-## Shows a card from a plain Dictionary. Keys: name, type (unit|tactic|equipment|killstreak|operator),
-## weapon_class (smg|shotgun|ar|sniper|lmg|""), cost, firepower, armor, keywords (Array of ids or
-## {id, value}), text, side (friend|enemy), elite (bool), threshold (killstreaks), art_icon (icon name).
+## Lays the card out at width w (height = height_for(w)); the card is not scaled.
+func set_card_width(w: float) -> void:
+	_width = maxf(120.0, roundf(w))
+	custom_minimum_size = size_for(_width)
+	size = custom_minimum_size
+	pivot_offset = size * 0.5
+	if is_node_ready():
+		_refresh()
+
+
+func get_card_width() -> float:
+	return _width
+
+
+## Shows a card from a plain Dictionary (keys: see the header).
 func set_card_data(card: Dictionary) -> void:
 	data = card.duplicate(true)
 	side = String(data.get("side", side))
@@ -119,22 +253,17 @@ func set_card(card: Resource, card_side: String = "friend") -> void:
 	set_card_data(d)
 
 
-## Names of labels whose text does not fit inside its slot (empty = everything fits).
+## Names of labels whose text does not fit inside its slot (empty = everything fits). Labels that
+## end in an ellipsis by design (name, rules lines) are left out.
 func get_overflowing_labels() -> PackedStringArray:
 	var out: PackedStringArray = []
-	for label: Label in _text_labels():
+	for label: Label in [_cost_label, _fp_label, _armor_label]:
 		if not label.is_visible_in_tree() or label.text.is_empty():
 			continue
 		var slot: Vector2 = label.get_meta(&"slot_size", label.size)
 		var need: Vector2 = _text_size(label)
 		if need.x > slot.x + 0.5 or need.y > slot.y + 0.5:
 			out.append("%s (%s needs %s, slot %s)" % [label.name, label.text, need, slot])
-	var labels: Array[Label] = []
-	for child: Node in _keyword_row.get_children():
-		if child is Label:
-			labels.append(child)
-	if _keyword_row_width(labels) > KEYWORD_ROW_W + 0.5 or _keyword_row.size.x > KEYWORD_ROW_W + 0.5:
-		out.append("KeywordRow (%d px > %d px)" % [maxf(_keyword_row_width(labels), _keyword_row.size.x), KEYWORD_ROW_W])
 	return out
 
 
@@ -174,102 +303,119 @@ func _card_type() -> String:
 	return String(data.get("type", "unit"))
 
 
+## Tactics wear the T1 orders frame.
+func is_tactic() -> bool:
+	return _card_type() == "tactic"
+
+
 ## kc-loadout-cut (head): the Operator shows its Supply cost in the same hex badge as every other
 ## card (none when it is free); every other type always has its cost / threshold badge.
 func _has_cost_badge() -> bool:
 	return _card_type() != "operator" or int(data.get("cost", 0)) > 0
 
 
-func _has_stats() -> bool:
+func has_stats_bar() -> bool:
 	return _card_type() in ["unit", "operator"]
 
 
+func _art_h() -> float:
+	return roundf((_width - 8.0) / 4.0)
+
+
+## Rects of every region at the current width (tests / layout): title, cost, art, type, text, bar,
+## fp, armor, traits.
+func regions() -> Dictionary:
+	var w: float = _width
+	var art: Rect2 = Rect2(4, 2.0 + TITLE_H, w - 8.0, _art_h())
+	var ty: float = art.end.y + 3.0
+	var by: float = ty + TYPE_H
+	var stats: bool = has_stats_bar()
+	var box_h: float = LINES * LINE_H + 8.0 + (0.0 if stats else BAR_H + 2.0)
+	var sy: float = by + LINES * LINE_H + 10.0
+	return {
+		"title": Rect2(0, 0, w, 2.0 + TITLE_H), "cost": COST_RECT, "art": art,
+		"type": Rect2(6, ty, w - 12.0, TYPE_H), "text": Rect2(4, by, w - 8.0, box_h),
+		"bar": Rect2(4, sy, w - 8.0, BAR_H) if stats else Rect2(),
+		"fp": Rect2(w - 6.0 - 27.0 - 4.0 - 28.0, sy, 28, 28), "armor": Rect2(w - 6.0 - 27.0, sy, 27, 28),
+		"traits": Rect2(6, sy + 4.0, 22, 22),
+	}
+
+
 func _refresh() -> void:
+	if _text_box == null:
+		return
+	custom_minimum_size = size_for(_width)
+	size = custom_minimum_size
 	var type_name: String = _card_type()
 	var weapon: StringName = StringName(String(data.get("weapon_class", "")).to_lower())
-	# Cost or threshold badge.
-	if type_name == "killstreak":
-		_cost_label.text = str(int(data.get("threshold", 0)))
-		_cost_label.theme_type_variation = &"CardThreshold"
-	else:
-		_cost_label.text = str(int(data.get("cost", 0)))
-		_cost_label.theme_type_variation = &"CardCost"
+	var rg: Dictionary = regions()
+	var tac: bool = is_tactic()
+	# Title bar: cost hex (or killstreak threshold) + the name.
+	_cost_label.text = str(int(data.get("threshold", 0))) if type_name == "killstreak" else str(int(data.get("cost", 0)))
 	_cost_label.visible = _has_cost_badge()
-	_elite_icon.visible = bool(data.get("elite", false))
-	# Name and type line.
+	_cost_label.add_theme_color_override(&"font_color", Color("#FF9A9A") if bool(data.get("cant_pay", false)) else CardLook.INK)
+	_set_slot(_cost_label, COST_RECT)
+	_cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_name_label.text = String(data.get("name", "")).replace("★", "").strip_edges()
-	# kc-onboard-ui: a Standard Issue card's name in the stencil font, low contrast.
-	if bool(data.get("standard_issue", false)):
-		_name_label.add_theme_font_override(&"font", StandardIssueLook.stencil())
-		_name_label.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
-	else:
-		_name_label.remove_theme_font_override(&"font")
-		_name_label.remove_theme_color_override(&"font_color")
-	var name_right: float = 206.0 if type_name == "equipment" else 238.0
-	var name_left: float = 70.0 if _has_cost_badge() else 20.0
-	_set_slot(_name_label, Rect2(name_left, 12, name_right - name_left, 26))
-	_type_icon.texture = IconSheet.get_icon(StringName("type_" + type_name))
-	var tag: String = type_name.to_upper()
-	if weapon != &"":
-		tag += " · " + String(weapon).to_upper()
-	# kc-ui4 (head naming): the art's own name (calling-card title / our variant) leads the type line;
-	# the card's name above stays the chassis.
-	if String(data.get("subname", "")) != "":
-		tag = "%s · %s" % [String(data["subname"]).to_upper(), tag]
-	_type_label.text = tag
-	_type_label.set_meta(&"slot_size", Vector2(238.0 - (name_left + 20.0) - 12.0, 20.0))
-	_range_label.set_meta(&"slot_size", Vector2(200.0, 18.0))
-	_type_icon.position.x = name_left
-	var chip: Control = _type_label.get_parent()
-	chip.position.x = name_left + 20
-	chip.size = Vector2.ZERO  # shrink the chip back to its text
-	# Art window silhouette: killstreak/class/type icon.
-	_art_key = CardArt.card_key(data)
-	_art_scale = 0.0
-	# kc-cod3: a copy wearing licensed MW3 art (private pitch build) shows that art in the window.
-	var licensed: Texture2D = null
-	if String(data.get("licensed_art", "")) != "":
-		licensed = BannerArtDB.banner_texture(StringName(String(data["licensed_art"])))
-	elif String(data.get("art_id", "")) != "":
-		licensed = BannerArtDB.portrait_texture(StringName(String(data["art_id"])))
-	if licensed != null:
-		_art_key = &""
-		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		_art_icon.texture = licensed
-	elif not CardArt.has_card(_art_key):
-		var art: StringName = StringName(String(data.get("art_icon", "")))
-		if art == &"" or not IconSheet.has_icon(art):
-			art = StringName("class_" + String(weapon)) if weapon != &"" else StringName("type_" + type_name)
-		_art_key = &""
-		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		_art_icon.texture = IconSheet.get_icon(art)
-	else:
-		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		_update_art_texture()
+	var name_left: float = (COST_RECT.end.x + 4.0) if _has_cost_badge() else 8.0
+	var count: int = int(data.get("count", 0))
+	_count_label.visible = count > 0
+	_count_label.text = "×%d" % count
+	var right: float = _width - 8.0 - (T1_CUT + 2.0 if tac else 0.0)
+	if count > 0:
+		var cw: float = _count_label.get_combined_minimum_size().x
+		_count_label.size = Vector2(cw, 22)
+		_count_label.position = Vector2(right - cw, 6)
+		right -= cw + 4.0
+	_elite_icon.visible = bool(data.get("elite", false))
+	if _elite_icon.visible:
+		_elite_icon.position = Vector2(right - 18.0, 8)
+		_elite_icon.size = Vector2(18, 18)
+		right -= 20.0
+	_set_slot(_name_label, Rect2(name_left, 2, right - name_left, TITLE_H))
+	_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# Art (4:1, nothing over it).
+	var art_panel: Control = get_node("ArtPanel") as Control
+	art_panel.position = (rg["art"] as Rect2).position
+	art_panel.size = (rg["art"] as Rect2).size
+	_set_art()
 	_scanlines.visible = type_name == "killstreak"
-	# Keywords.
-	_rebuild_keywords()
-	# Body text.
-	_body_label.text = String(data.get("text", ""))
-	var body_bottom: float = BODY_BOTTOM_UNIT if _has_stats() else BODY_BOTTOM_OTHER
-	var body_top: float = BODY_TOP if _keyword_row.get_child_count() > 0 else 204.0
-	_set_slot(_body_label, Rect2(16, body_top, 222, body_bottom - body_top))
-	# Range strip and stats.
-	_range_row.visible = _has_stats() and RANGE_MODS.has(weapon)
-	if _range_row.visible:
-		_range_label.text = _range_text(weapon)
-		var best: int = _best_band(weapon)
-		_range_icon.texture = IconSheet.get_icon(StringName("range_" + RANGE_NAMES[best].to_lower()) if best >= 0 else &"range_mid")
-	_fp_badge.visible = _has_stats()
-	_armor_badge.visible = _has_stats()
-	# kc-ui4: the number sits inside its plate (drawn in _draw); the old side icons are off.
-	_fp_badge.position = FP_RECT.position
-	_fp_badge.size = FP_RECT.size
-	_armor_badge.position = ARMOR_RECT.position
-	_armor_badge.size = ARMOR_RECT.size
-	_fp_icon.visible = false
-	_armor_icon.visible = false
-	for pair: Array in [[_fp_label, FP_RECT], [_armor_label, Rect2(ARMOR_RECT.position, Vector2(ARMOR_RECT.size.x, ARMOR_RECT.size.y * 0.86))]]:
+	_not_found.visible = bool(data.get("not_found", false))
+	_not_found.position = (rg["art"] as Rect2).position
+	_not_found.size = (rg["art"] as Rect2).size
+	# Type line.
+	var bits: PackedStringArray = []
+	if type_name == "operator":
+		bits.append("OPERATOR")
+	if bool(data.get("standard_issue", false)):
+		bits.append("STANDARD ISSUE")
+	if tac:
+		bits.append("TACTIC")
+	elif type_name == "equipment":
+		bits.append("FIELD")
+	elif type_name == "killstreak":
+		bits.append("STREAK %d" % int(data.get("threshold", 0)))
+	if weapon != &"":
+		bits.append(String(weapon).to_upper())
+	if bits.is_empty():
+		bits.append("UNIT")
+	_type_label.text = "  ".join(bits)
+	var chip: Control = _type_label.get_parent() as Control
+	chip.position = (rg["type"] as Rect2).position
+	chip.size = Vector2(0, TYPE_H)
+	_type_label.set_meta(&"slot_size", Vector2((rg["type"] as Rect2).size.x - 22.0, TYPE_H))
+	# Text box: keyword lines, the Trains line, the effect text.
+	_rebuild_text(rg["text"])
+	# Stats (the reticle and plate are drawn; the numbers are the labels).
+	var stats: bool = has_stats_bar()
+	_fp_badge.visible = stats
+	_armor_badge.visible = stats
+	_fp_badge.position = (rg["fp"] as Rect2).position
+	_fp_badge.size = (rg["fp"] as Rect2).size
+	_armor_badge.position = (rg["armor"] as Rect2).position
+	_armor_badge.size = (rg["armor"] as Rect2).size
+	for pair: Array in [[_fp_label, rg["fp"]], [_armor_label, rg["armor"]]]:
 		var l: Label = pair[0]
 		l.position = Vector2.ZERO
 		l.size = (pair[1] as Rect2).size
@@ -277,14 +423,45 @@ func _refresh() -> void:
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		l.set_meta(&"slot_size", l.size)
 	_fp_label.text = str(int(data.get("firepower", 0)))
+	_fp_label.add_theme_color_override(&"font_color", CardLook.trend_color(int(data.get("fp_trend", 0))))
 	_armor_label.text = str(int(data.get("armor", 0)))
-	_tint_icons()
-	_fit_all()
+	_armor_label.add_theme_color_override(&"font_color", CardLook.AR_DMG_NUM if _damaged() else Color.WHITE)
 	queue_redraw()
 	card_changed.emit()
 
 
-## Rasterises the illustration for the scale the card is shown at (bucketed, cached).
+func _damaged() -> bool:
+	return int(data.get("armor", 0)) < int(data.get("armor_max", data.get("armor", 0)))
+
+
+## The 4:1 calling card: licensed art, the copy's art, the card's own banner, else the illustration.
+func _set_art() -> void:
+	_art_key = &""
+	_art_scale = 0.0
+	_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_art_icon.modulate = Color.WHITE
+	var hint: Dictionary = {"cls": String(data.get("weapon_class", "")).to_upper(), "type": _card_type()}
+	var tex: Texture2D = null
+	for key: String in ["licensed_art", "art_id", "banner", "id"]:
+		if String(data.get(key, "")) != "":
+			tex = BannerArtDB.banner_texture(StringName(String(data[key])), hint)
+			if tex != null:
+				break
+	if tex == null:
+		_art_key = CardArt.card_key(data)
+		if CardArt.has_card(_art_key):
+			_update_art_texture()
+			return
+		_art_key = &""
+		var weapon: String = String(data.get("weapon_class", ""))
+		tex = IconSheet.get_icon(StringName("class_" + weapon) if weapon != "" else StringName("type_" + _card_type()))
+		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_art_icon.modulate = Color(0.6, 0.65, 0.7, 0.55)
+	_art_icon.texture = tex
+	_art_icon.flip_h = side == "enemy"
+
+
+## Rasterises the illustration fallback for the scale the card is shown at (bucketed, cached).
 func _update_art_texture() -> void:
 	if _art_key == &"" or _art_icon == null:
 		return
@@ -295,83 +472,136 @@ func _update_art_texture() -> void:
 	_art_icon.texture = CardArt.card_texture(_art_key, s)
 
 
-func _rebuild_keywords() -> void:
-	for child: Node in _keyword_row.get_children():
-		_keyword_row.remove_child(child)
-		child.queue_free()
-	var keywords: Array = data.get("keywords", [])
-	for entry: Variant in keywords:
-		var id: StringName
-		var value: int = 0
+## Keyword entries as [id, value].
+func _keyword_entries() -> Array:
+	var out: Array = []
+	for entry: Variant in data.get("keywords", []):
 		if entry is Dictionary:
-			id = StringName(String(entry.get("id", "")))
-			value = int(entry.get("value", 0))
+			out.append([StringName(String(entry.get("id", ""))), int(entry.get("value", 0))])
 		else:
-			id = StringName(String(entry))
-		var icon_rect := TextureRect.new()
-		icon_rect.texture = IconSheet.get_keyword_icon(id)
-		icon_rect.custom_minimum_size = Vector2(22, 22)
-		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon_rect.modulate = get_theme_color(&"accent", &"Card")
-		_keyword_row.add_child(icon_rect)
-		var label := Label.new()
-		label.name = "Keyword%d" % _keyword_row.get_child_count()
-		label.theme_type_variation = &"CardKeyword"
-		label.text = String(KEYWORD_LABELS.get(id, String(id).to_upper()))
-		if value > 0:
-			label.text += " %d" % value
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		_keyword_row.add_child(label)
-	# With 3+ keywords, icons carry the meaning and labels shorten to fit the row.
-	_keyword_row.add_theme_constant_override(&"separation", 4 if keywords.size() > 1 else 6)
-	# kc-onboard-ui: a Recruit's keywords are locked until it trains: greyed, behind a padlock.
-	var locked: bool = bool(data.get("locked", false)) and not keywords.is_empty()
-	_keyword_row.modulate = Color(0.62, 0.66, 0.7, 0.55) if locked else Color.WHITE
+			out.append([StringName(String(entry)), 0])
+	return out
+
+
+func _locked_names() -> Array:
+	var l: Variant = data.get("locked", false)
+	return l if l is Array else []
+
+
+## The text box's lines now (tests): [{id, name, rule, locked}], then the effect text.
+func get_text_lines() -> Array:
+	var out: Array = []
+	for row: Control in _lines:
+		out.append({"id": row.get_meta(&"kw"), "name": (row.get_node("KeywordName") as Label).text,
+				"rule": (row.get_node("KeywordRule") as Label).text, "locked": bool(row.get_meta(&"locked"))})
+	return out
+
+
+func _rebuild_text(box: Rect2) -> void:
+	for c: Control in _lines:
+		_text_box.remove_child(c)
+		c.queue_free()
+	_lines.clear()
+	# Release the old width first, or the box keeps a wider card's minimum (a later set_card_width).
+	_body_label.custom_minimum_size = Vector2.ZERO
+	_text_box.position = box.position + Vector2(4, 4)
+	_text_box.size = box.size - Vector2(8, 8)
+	var lock_all: bool = data.get("locked", false) is bool and bool(data.get("locked", false))
+	var rows: int = 0
+	var names_seen: PackedStringArray = []
+	for kw: Array in _keyword_entries():
+		var id: StringName = kw[0]
+		var value: int = kw[1]
+		var nm: String = String(KEYWORD_NAMES.get(id, String(id).capitalize()))
+		var rule: String = String(SHORT_RULES.get(id, ""))
+		if nm.contains("%d"):
+			nm = nm % maxi(1, value)
+		if rule.contains("%d"):
+			rule = rule % maxi(1, value)
+		_add_line(id, nm, rule, lock_all)
+		names_seen.append(nm.to_lower())
+		rows += 1
+	var locked: Array = _locked_names()
+	for ln: Variant in locked:
+		names_seen.append(String(ln).to_lower())
+	var trains: String = String(data.get("trains", ""))
+	if not locked.is_empty() or trains != "":
+		var names: String = trains.trim_prefix("Trains:").strip_edges() if trains != "" else " · ".join(PackedStringArray(locked))
+		_add_line(&"lock", "Trains:", names, true)
+		rows += 1
+	var text: String = _effect_text(names_seen)
+	if text == "" and bool(data.get("standard_issue", false)) and rows == 0:
+		text = "Basic kit. The quartermaster wants it back."
+	_body_label.text = text
+	_body_label.visible = text != ""
+	_body_label.modulate = Color(0.62, 0.66, 0.7, 0.7) if lock_all else Color.WHITE
+	_text_box.move_child(_body_label, -1)
+	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Autowrap + an ellipsis collapses a Label to one line: no trimming; the text box clips.
+	_body_label.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	var room: float = _text_box.size.y - rows * LINE_H
+	_body_label.max_lines_visible = maxi(1, int(floorf(room / LINE_H)))
+	_body_label.custom_minimum_size = Vector2(_text_box.size.x, maxf(LINE_H, floorf(room / LINE_H) * LINE_H))
+	_body_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_body_label.set_meta(&"slot_size", Vector2(_text_box.size.x, maxf(LINE_H, room)))
+
+
+## The effect text, minus a rules text that only lists keywords already on their own lines
+## ("Patch 2", "First Shot, Pick").
+func _effect_text(names: PackedStringArray) -> String:
+	var text: String = String(data.get("text", "")).strip_edges()
+	if text == "":
+		return ""
+	var only_names: bool = true
+	for part: String in text.trim_suffix(".").split(","):
+		var p: String = part.strip_edges().to_lower()
+		if p != "" and not names.has(p):
+			only_names = false
+	return "" if only_names else text
+
+
+## One text-box line: the keyword's icon, its bold name, the short rule (greyed + padlock when locked).
+func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "Line%d" % _lines.size()
+	row.set_meta(&"kw", id)
+	row.set_meta(&"locked", locked)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override(&"separation", 4)
+	row.custom_minimum_size = Vector2(0, LINE_H)
+	var icon: Control = Control.new()
+	icon.custom_minimum_size = Vector2(16, LINE_H)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tint: Color = MUTED if locked else AMBER
+	icon.draw.connect(func() -> void:
+		var r: Rect2 = Rect2(0, (LINE_H - 16.0) * 0.5, 16, 16)
+		if id == &"lock":
+			StandardIssueLook.draw_lock(icon, r.grow(-1.0), MUTED)
+		elif id == &"pick":
+			CardLook.draw_pick_icon(icon, r, tint)
+		elif id == &"pierce":
+			SynergyGlyphs.draw_pierce_icon(icon, r, tint)
+		else:
+			var tex: Texture2D = IconSheet.get_keyword_icon(id)
+			if tex != null:
+				icon.draw_texture_rect(tex, r, false, tint))
+	row.add_child(icon)
+	var b: Label = CardLook.rule_label(nm, true)
+	b.name = "KeywordName"
 	if locked:
-		var lock := Control.new()
-		lock.name = "LockIcon"
-		lock.custom_minimum_size = Vector2(18, 22)
-		lock.draw.connect(func() -> void: StandardIssueLook.draw_lock(lock, Rect2(1, 2, 16, 18), Color("#D8DEE3")))
-		_keyword_row.add_child(lock)
-		_keyword_row.move_child(lock, 0)
-	if _body_label != null:
-		_body_label.modulate = Color(0.62, 0.66, 0.7, 0.7) if bool(data.get("locked", false)) else Color.WHITE
+		b.add_theme_color_override(&"font_color", MUTED)
+	row.add_child(b)
+	var t: Label = CardLook.rule_label(rule, false, MUTED if locked else CardLook.RULE_COLOR)
+	t.name = "KeywordRule"
+	t.clip_text = true
+	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(t)
+	_text_box.add_child(row)
+	_lines.append(row)
 
 
-func _range_text(weapon: StringName) -> String:
-	var mods: Array = RANGE_MODS[weapon]
-	var parts: PackedStringArray = []
-	for i: int in 3:
-		if int(mods[i]) != 0:
-			parts.append("%s %s%d" % [RANGE_NAMES[i], "+" if int(mods[i]) > 0 else "−", absi(int(mods[i]))])
-	return "NO RANGE MOD" if parts.is_empty() else " · ".join(parts)
-
-
-func _best_band(weapon: StringName) -> int:
-	var mods: Array = RANGE_MODS[weapon]
-	var best: int = -1
-	var best_value: int = 0
-	for i: int in 3:
-		if int(mods[i]) > best_value:
-			best_value = int(mods[i])
-			best = i
-	return best
-
-
-func _tint_icons() -> void:
-	var text_dim: Color = get_theme_color(&"text_dim", &"Card")
-	var art_tint: Color = get_theme_color(&"special", &"Card") if _card_type() == "killstreak" else get_theme_color(&"concrete", &"Card")
-	_art_icon.modulate = Color.WHITE if _art_key != &"" or String(data.get("licensed_art", "")) != "" \
-			or String(data.get("art_id", "")) != "" else Color(art_tint, 0.55)
-	_type_icon.modulate = get_theme_color(&"text", &"Card")
-	_range_icon.modulate = text_dim
-	_fp_icon.modulate = get_theme_color(&"text", &"Card")
-	_armor_icon.modulate = get_theme_color(&"text", &"Card")
-	_elite_icon.modulate = get_theme_color(&"elite", &"Card")
-
-
-# --- Text fitting -------------------------------------------------------------------------
+# --- Text sizes ---------------------------------------------------------------------------
 
 func _set_slot(label: Label, rect: Rect2) -> void:
 	label.position = rect.position
@@ -380,10 +610,11 @@ func _set_slot(label: Label, rect: Rect2) -> void:
 
 
 func _text_labels() -> Array[Label]:
-	var out: Array[Label] = [_cost_label, _name_label, _type_label, _body_label, _range_label, _fp_label, _armor_label]
-	for child: Node in _keyword_row.get_children():
-		if child is Label:
-			out.append(child)
+	var out: Array[Label] = [_cost_label, _name_label, _type_label, _body_label, _fp_label, _armor_label]
+	for row: Control in _lines:
+		for l: Node in row.get_children():
+			if l is Label:
+				out.append(l)
 	return out
 
 
@@ -391,251 +622,94 @@ func _text_size(label: Label) -> Vector2:
 	var font: Font = label.get_theme_font(&"font")
 	var font_size: int = label.get_theme_font_size(&"font_size")
 	var text: String = label.text.to_upper() if label.uppercase else label.text
-	if label.autowrap_mode != TextServer.AUTOWRAP_OFF:
-		var slot: Vector2 = label.get_meta(&"slot_size", label.size)
-		var s: Vector2 = font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, slot.x, font_size)
-		var lines: int = maxi(1, roundi(s.y / font.get_height(font_size)))
-		return Vector2(s.x, lines * (font.get_height(font_size) + label.get_theme_constant(&"line_spacing")))
 	return Vector2(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x, font.get_height(font_size))
-
-
-func _fit(label: Label, min_size: int) -> void:
-	label.remove_theme_font_size_override(&"font_size")
-	var font_size: int = label.get_theme_font_size(&"font_size")
-	var slot: Vector2 = label.get_meta(&"slot_size", label.size)
-	while font_size > min_size:
-		var need: Vector2 = _text_size(label)
-		if need.x <= slot.x and need.y <= slot.y:
-			break
-		font_size -= 1
-		label.add_theme_font_size_override(&"font_size", font_size)
-
-
-func _fit_all() -> void:
-	_fit(_name_label, 13)
-	_fit(_type_label, 10)
-	_fit(_body_label, 10)
-	# Keyword row: shrink labels together until the row fits its width.
-	var labels: Array[Label] = []
-	for child: Node in _keyword_row.get_children():
-		if child is Label:
-			labels.append(child)
-			child.remove_theme_font_size_override(&"font_size")
-	var font_size: int = 15
-	while font_size > 10 and _keyword_row_width(labels) > KEYWORD_ROW_W:
-		font_size -= 1
-		for l: Label in labels:
-			l.add_theme_font_size_override(&"font_size", font_size)
-	# Still too wide: icons carry the meaning, labels hide (full text lives in the inspector).
-	if _keyword_row_width(labels) > KEYWORD_ROW_W:
-		for l: Label in labels:
-			l.visible = false
-	for l: Label in labels:
-		l.set_meta(&"slot_size", Vector2(_text_size(l).x, _keyword_row.size.y))
-
-
-func _keyword_row_width(labels: Array[Label]) -> float:
-	var sep: int = _keyword_row.get_theme_constant(&"separation")
-	var w: float = 0.0
-	if labels.is_empty():
-		return 0.0
-	for l: Label in labels:
-		w += 22.0 + sep
-		if l.visible:
-			w += _text_size(l).x + sep
-	return w - sep
 
 
 # --- Frame drawing ------------------------------------------------------------------------
 
-func _draw() -> void:
+func _frame_colors() -> Array:
 	var type_name: String = _card_type()
-	var is_friend: bool = side != "enemy"
-	var side_color: Color = get_theme_color(&"friend" if is_friend else &"enemy", &"Card")
-	var bg: Color = get_theme_color(&"background", &"Card")
-	var face: Color = get_theme_color(StringName("face_" + type_name), &"Card")
-	var frame: Color = get_theme_color(&"frame_standard", &"Card")
-	if bool(data.get("elite", false)):
-		frame = get_theme_color(&"elite", &"Card")
-	elif bool(data.get("standard_issue", false)):
-		# kc-onboard-ui: the Standard Issue frame: plain matte grey-green, low contrast.
-		frame = StandardIssueLook.FRAME
-		face = face.lerp(Color("#2B312A"), 0.55)
+	var frame: Color = FRAME_UNIT
+	var face: Color = FACE_UNIT
+	if type_name == "operator":
+		frame = FRAME_OP
+		face = FACE_OP
+	elif is_tactic():
+		frame = FRAME_T1
+		face = FACE_T1
 	elif type_name == "killstreak":
-		frame = get_theme_color(&"special", &"Card")
-	var outline: PackedVector2Array = _outline(type_name, is_friend)
-	draw_colored_polygon(outline, face)
-	# Type decorations.
-	match type_name:
-		"tactic":
-			var header: PackedVector2Array = _clip(outline, Rect2(0, 0, BASE_SIZE.x, 58))
-			draw_colored_polygon(header, face.lightened(0.08))
-			_draw_waveform(Rect2(150, 40, 86, 14), Color(get_theme_color(&"text", &"Card"), 0.25))
-		"equipment":
-			draw_rect(Rect2(16, 199, 222, 4), get_theme_color(&"sand", &"Card"))  # solid tape (not hazard)
-			draw_circle(Vector2(224, 22), 7.0, bg)
-			draw_arc(Vector2(224, 22), 7.0, 0, TAU, 20, frame, 2.0, true)
-		"unit":
-			_draw_slot(Rect2(BASE_SIZE.x * 0.5 - 18, 3, 36, 6), bg)
-		"operator":
-			draw_circle(Vector2(BASE_SIZE.x * 0.5, 9), 4.0, bg)
-	# Side cue: spine on the left edge.
-	var spine: PackedVector2Array = _clip(outline, Rect2(0, 0, SPINE_W, BASE_SIZE.y))
-	if is_friend:
-		draw_colored_polygon(spine, side_color)
-		var y: float = 66.0
-		while y < BASE_SIZE.y - 40.0:
-			draw_polyline(PackedVector2Array([Vector2(1.5, y + 6), Vector2(SPINE_W * 0.5, y), Vector2(SPINE_W - 1.5, y + 6)]), bg, 2.0, true)
-			y += 22.0
-	else:
-		_draw_hazard(spine, side_color, bg, 9.0)
-	# Side cue: bottom edge (friend = notch, the outline already has it; enemy = hazard band).
-	var band: PackedVector2Array = _clip(outline, Rect2(0, BASE_SIZE.y - EDGE_H, BASE_SIZE.x, EDGE_H))
-	if is_friend:
-		draw_colored_polygon(band, Color(side_color, 0.85))
-	else:
-		_draw_hazard(band, side_color, bg, 11.0)
-	draw_polyline(_closed(outline), frame, 3.0 if type_name == "killstreak" or bool(data.get("elite", false)) or bool(data.get("standard_issue", false)) else 2.0, true)
-	if bool(data.get("standard_issue", false)) and String(data.get("serial", "")) != "":
-		# The serial plate under the art, right side (the stencil font: Standard Issue only).
-		var sw: float = StandardIssueLook.serial_width(String(data["serial"]), 24.0)
-		StandardIssueLook.draw_serial_plate(self, Rect2(BASE_SIZE.x - 14.0 - sw, 168.0, sw, 24.0), String(data["serial"]), side == "enemy")
-	# Cost / threshold hex badge.
-	if _has_cost_badge():
-		var badge_color: Color = get_theme_color(&"special" if type_name == "killstreak" else &"accent", &"Card")
-		var hex: PackedVector2Array = _hex(COST_RECT)
-		draw_colored_polygon(hex, badge_color)
-		draw_polyline(_closed(hex), badge_color.darkened(0.35), 2.0, true)
-	# Stat plates (kc-ui4): FP and Armor side by side bottom-right, the number inside each.
-	if _has_stats():
-		var c: Vector2 = FP_RECT.get_center()
-		var rad: float = minf(FP_RECT.size.x, FP_RECT.size.y) * 0.5
-		if is_friend:
-			draw_circle(c, rad, Color("#14524D"))
-			draw_arc(c, rad - 1.0, 0, TAU, 32, side_color, 2.5, true)
-		else:
-			var d: PackedVector2Array = [c + Vector2(0, -rad), c + Vector2(rad, 0), c + Vector2(0, rad), c + Vector2(-rad, 0)]
-			draw_colored_polygon(d, Color("#5A1A1C"))
-			draw_polyline(_closed(d), side_color, 2.5, true)
-		var a: Rect2 = ARMOR_RECT
-		var sh: PackedVector2Array = [a.position, a.position + Vector2(a.size.x, 0), a.position + Vector2(a.size.x, a.size.y * 0.55),
-				a.position + Vector2(a.size.x * 0.5, a.size.y), a.position + Vector2(0, a.size.y * 0.55)]
-		draw_colored_polygon(sh, Color("#2E3439"))
-		draw_polyline(_closed(sh), Color("#B9C2C9"), 2.0, true)
+		frame = FRAME_STREAK
+	elif bool(data.get("standard_issue", false)):
+		frame = StandardIssueLook.FRAME
+	if bool(data.get("elite", false)) and type_name != "operator":
+		frame = Color("#C9A227")
+	if bool(data.get("marked", false)):
+		frame = AMBER
+	return [frame, face]
 
 
-func _outline(type_name: String, is_friend: bool) -> PackedVector2Array:
-	var r := Rect2(Vector2.ZERO, BASE_SIZE)
-	var pts: PackedVector2Array
-	match type_name:
-		"tactic":
-			pts = _chamfer_rect(r, [20.0, 20.0, 20.0, 20.0])
-		"equipment":
-			pts = _chamfer_rect(r, [6.0, 34.0, 6.0, 6.0])
-		"killstreak":
-			pts = _chamfer_rect(r, [4.0, 4.0, 4.0, 4.0])
-		"operator":
-			pts = _rounded_rect(r, 30.0)
-		_:
-			pts = _chamfer_rect(r, [8.0, 8.0, 8.0, 8.0])
-	if is_friend:
-		pts = _with_notch(pts)
-	return pts
-
-
-## Rectangle with cut corners. Corner order: top-left, top-right, bottom-right, bottom-left.
-func _chamfer_rect(r: Rect2, c: Array) -> PackedVector2Array:
-	var a: Vector2 = r.position
-	var b: Vector2 = r.end
-	return PackedVector2Array([
-		Vector2(a.x + c[0], a.y), Vector2(b.x - c[1], a.y), Vector2(b.x, a.y + c[1]),
-		Vector2(b.x, b.y - c[2]), Vector2(b.x - c[2], b.y), Vector2(a.x + c[3], b.y),
-		Vector2(a.x, b.y - c[3]), Vector2(a.x, a.y + c[0]),
-	])
-
-
-func _rounded_rect(r: Rect2, radius: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	var centers: Array[Vector2] = [
-		r.position + Vector2(radius, radius), Vector2(r.end.x - radius, r.position.y + radius),
-		r.end - Vector2(radius, radius), Vector2(r.position.x + radius, r.end.y - radius),
-	]
+## The card's outline in rect r: rounded corners; `cut` > 0 chevron-cuts the top-right corner (T1).
+static func outline(r: Rect2, cut: float) -> PackedVector2Array:
+	var rad: float = 6.0
+	var pts: PackedVector2Array = []
+	var corners: Array = [[r.position + Vector2(rad, rad), PI], [Vector2(r.end.x - rad, r.position.y + rad), PI * 1.5],
+			[r.end - Vector2(rad, rad), 0.0], [Vector2(r.position.x + rad, r.end.y - rad), PI * 0.5]]
 	for i: int in 4:
-		var start: float = PI + i * PI * 0.5
-		for s: int in 9:
-			pts.append(centers[i] + Vector2.from_angle(start + s * PI * 0.5 / 8.0) * radius)
+		if i == 1 and cut > 0.0:
+			pts.append(Vector2(r.end.x - cut, r.position.y))
+			pts.append(Vector2(r.end.x, r.position.y + cut))
+			continue
+		for s: int in 5:
+			pts.append((corners[i][0] as Vector2) + Vector2.from_angle(float(corners[i][1]) + s * PI * 0.5 / 4.0) * rad)
 	return pts
 
 
-## Inserts the friendly chevron notch into the bottom edge of a clockwise outline.
-func _with_notch(pts: PackedVector2Array) -> PackedVector2Array:
-	var bottom: float = BASE_SIZE.y
-	var cx: float = BASE_SIZE.x * 0.5
-	var notch := PackedVector2Array([
-		Vector2(cx + NOTCH_W * 0.5, bottom), Vector2(cx, bottom - NOTCH_DEPTH), Vector2(cx - NOTCH_W * 0.5, bottom),
-	])
-	var out := PackedVector2Array()
-	var inserted: bool = false
-	for i: int in pts.size():
-		out.append(pts[i])
-		var nxt: Vector2 = pts[(i + 1) % pts.size()]
-		if not inserted and absf(pts[i].y - bottom) < 0.01 and absf(nxt.y - bottom) < 0.01 \
-				and pts[i].x > cx and nxt.x < cx:
-			out.append_array(notch)
-			inserted = true
-	return out
+func _draw() -> void:
+	var w: float = _width
+	var h: float = height_for(w)
+	var cols: Array = _frame_colors()
+	var tac: bool = is_tactic()
+	var cut: float = T1_CUT if tac else 0.0
+	var outer: PackedVector2Array = outline(Rect2(0, 0, w, h), cut)
+	if bool(data.get("marked", false)):
+		var glow: PackedVector2Array = outline(Rect2(-2, -2, w + 4, h + 4), cut + 1.0)
+		glow.append(glow[0])
+		draw_polyline(glow, Color(AMBER, 0.45), 3.0, true)
+	draw_colored_polygon(outer, cols[0])
+	draw_colored_polygon(outline(Rect2(1.5, 1.5, w - 3.0, h - 3.0), maxf(0.0, cut - 1.0)), cols[1])
+	var rg: Dictionary = regions()
+	if tac:
+		# The orders paper: a khaki band behind the title.
+		var band: PackedVector2Array = [Vector2(1.5, 1.5), Vector2(w - 1.5 - (cut - 1.0), 1.5), Vector2(w - 1.5, cut + 0.5),
+				Vector2(w - 1.5, TITLE_H), Vector2(1.5, TITLE_H)]
+		draw_polygon(band, PackedColorArray([Color(FRAME_T1, 0.35), Color(FRAME_T1, 0.08), Color(FRAME_T1, 0.08),
+				Color(FRAME_T1, 0.08), Color(FRAME_T1, 0.35)]))
+	# Cost hex (the number is CostLabel).
+	if _has_cost_badge():
+		CardLook.draw_cost(self, COST_RECT, "", bool(data.get("cant_pay", false)))
+	draw_rect(rg["art"], Color("#0C0F11"))
+	# Type line: the level coin after the words.
+	var lv: int = int(data.get("level", -1))
+	if lv >= 0 and has_stats_bar() and _card_type() != "operator" and not bool(data.get("standard_issue", false)):
+		var tw: float = CardLook.TITLE_FONT.get_string_size(_type_label.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var tr: Rect2 = rg["type"]
+		CardLook.draw_level_coin(self, Rect2(tr.position.x + tw + 8.0, tr.position.y + 3.0, 16, 16), lv)
+	# Text box.
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.07, 0.03, 0.6) if tac else Color(0.04, 0.05, 0.055, 0.55)
+	sb.set_corner_radius_all(2)
+	draw_style_box(sb, rg["text"])
+	# Stats bar: traits bottom-left, FP reticle + Armor plate bottom-right.
+	if has_stats_bar():
+		var t: String = String(data.get("trait", ""))
+		if t != "":
+			CardLook.draw_trait(self, rg["traits"], StringName(t), bool(data.get("trait_lit", false)))
+		CardLook.draw_reticle(self, rg["fp"], 0, &"enemy" if side == "enemy" else &"player", 0, false)
+		CardLook.draw_armor(self, rg["armor"], 0, _damaged(), false)
 
 
-func _hex(r: Rect2) -> PackedVector2Array:
-	var c: Vector2 = r.get_center()
-	var rad: float = r.size.x * 0.5
-	var pts := PackedVector2Array()
-	for i: int in 6:
-		pts.append(c + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * rad)
-	return pts
-
-
-func _clip(poly: PackedVector2Array, r: Rect2) -> PackedVector2Array:
-	var rect_poly := PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
-	var result: Array[PackedVector2Array] = Geometry2D.intersect_polygons(poly, rect_poly)
-	return result[0] if not result.is_empty() else PackedVector2Array()
-
-
-func _closed(pts: PackedVector2Array) -> PackedVector2Array:
-	var out := pts.duplicate()
-	if not pts.is_empty():
-		out.append(pts[0])
-	return out
-
-
-func _draw_hazard(area: PackedVector2Array, stripe: Color, gap: Color, pitch: float) -> void:
-	if area.is_empty():
-		return
-	draw_colored_polygon(area, stripe)
-	var bounds := Rect2(area[0], Vector2.ZERO)
-	for p: Vector2 in area:
-		bounds = bounds.expand(p)
-	var x: float = bounds.position.x - bounds.size.y
-	while x < bounds.end.x:
-		var band := PackedVector2Array([
-			Vector2(x, bounds.end.y), Vector2(x + pitch * 0.5, bounds.end.y),
-			Vector2(x + pitch * 0.5 + bounds.size.y, bounds.position.y), Vector2(x + bounds.size.y, bounds.position.y),
-		])
-		for piece: PackedVector2Array in Geometry2D.intersect_polygons(area, band):
-			draw_colored_polygon(piece, gap)
-		x += pitch
-
-
-func _draw_slot(r: Rect2, color: Color) -> void:
-	draw_rect(Rect2(r.position + Vector2(r.size.y * 0.5, 0), r.size - Vector2(r.size.y, 0)), color)
-	draw_circle(r.position + Vector2(r.size.y * 0.5, r.size.y * 0.5), r.size.y * 0.5, color)
-	draw_circle(r.position + Vector2(r.size.x - r.size.y * 0.5, r.size.y * 0.5), r.size.y * 0.5, color)
-
-
-func _draw_waveform(r: Rect2, color: Color) -> void:
-	var pts := PackedVector2Array()
-	for i: int in 25:
-		var t: float = i / 24.0
-		var amp: float = sin(t * PI) * (0.5 if i % 2 == 0 else -0.5) * (0.4 + 0.6 * absf(sin(i * 1.7)))
-		pts.append(Vector2(r.position.x + t * r.size.x, r.get_center().y + amp * r.size.y))
-	draw_polyline(pts, color, 1.5, true)
+## The level coin's rect on the type line (tests).
+func level_coin_rect() -> Rect2:
+	var tw: float = CardLook.TITLE_FONT.get_string_size(_type_label.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+	var tr: Rect2 = regions()["type"]
+	return Rect2(tr.position.x + tw + 8.0, tr.position.y + 3.0, 16, 16)

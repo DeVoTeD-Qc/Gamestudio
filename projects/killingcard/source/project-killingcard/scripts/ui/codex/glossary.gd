@@ -27,10 +27,12 @@ const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt"
 		&"range": &"range", &"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
 		&"link_tick": &"tick", &"set_callout": &"callout", &"doctrine": &"doctrine", &"level_band": &"band",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
-		&"supply": &"hex", &"pierce": &"pierce"}
-const STATS_KEYS: Array[StringName] = [&"firepower", &"armor", &"cover_stat", &"stat_colours", &"supply", &"range",
+		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
+		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames"}
+## kc-cards-impl: the card-anatomy entries (C1+ board card, Y2+ / T1 frames) lead the STATS & BOARD group.
+const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames", &"range",
 		&"objective", &"control", &"field", &"operator", &"killstreak", &"incoming"]
-const SYNERGY_EXTRA: Array[StringName] = [&"link_tick", &"set_callout", &"doctrine", &"level_band"]
+const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"link_tick", &"set_callout", &"doctrine", &"level_band"]
 
 var category: StringName = &"all"
 var query: String = ""
@@ -338,14 +340,32 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 	var font: Font = get_theme_font(&"font", &"HudNumber")
 	match StringName(e["drawn"]):
 		&"fp":
-			c.draw_circle(r.get_center(), s * 0.45, Color("#14524D"))
-			c.draw_arc(r.get_center(), s * 0.45, 0, TAU, 28, friend, 2.0)
-			c.draw_string(font, Vector2(0, s * 0.68), "3", HORIZONTAL_ALIGNMENT_CENTER, s, 22, Color.WHITE)
+			# kc-cards-impl: the FP reticle (yours teal, the rival's red).
+			CardLook.draw_reticle(c, Rect2(1, 6, s * 0.62, s * 0.62), 3, &"player")
+			CardLook.draw_reticle(c, Rect2(s * 0.5, s * 0.36, s * 0.5, s * 0.5), 2, &"enemy")
 		&"armor":
-			var pts: PackedVector2Array = [Vector2(4, 4), Vector2(s - 4, 4), Vector2(s - 4, s * 0.55), Vector2(s * 0.5, s - 2), Vector2(4, s * 0.55), Vector2(4, 4)]
-			c.draw_colored_polygon(pts, Color("#2E3439"))
-			c.draw_polyline(pts, Color("#B9C2C9"), 2.0)
-			c.draw_string(font, Vector2(0, s * 0.62), "5", HORIZONTAL_ALIGNMENT_CENTER, s, 22, Color.WHITE)
+			CardLook.draw_armor(c, Rect2(4, 2, s * 0.62, s * 0.66), 5, false)
+		&"damaged":
+			c.draw_rect(Rect2(0, 4, s, s * 0.6), Color("#2A3036"))
+			CardLook.draw_crack(c, Vector2(3, 7), 20.0)
+			CardLook.draw_damage_edge(c, Rect2(0, 4, s, s * 0.6), 2.0)
+			CardLook.draw_armor(c, Rect2(s * 0.5, s * 0.36, s * 0.48, s * 0.56), 2, true)
+		&"peek":
+			CardLook.draw_cost(c, Rect2(0, 12, 18, 18), "2")
+			CardLook.draw_level_coin(c, Rect2(19, 13, 15, 15), 1)
+			CardLook.draw_weapon_pill(c, Rect2(4, 32, 36, 12), "AR")
+		&"trait_chip":
+			CardLook.draw_trait(c, Rect2(1, 12, 20, 20), &"vanguard", false)
+			CardLook.draw_trait(c, Rect2(23, 12, 20, 20), &"vanguard", true)
+		&"rail":
+			c.draw_rect(Rect2(2, 4, s - 4, s - 8), Color(SynergyGlyphs.trait_color(&"heavy"), 0.22))
+			c.draw_rect(Rect2(2, 4, s - 4, s - 8), Color.WHITE, false, 2.0)
+			SynergyGlyphs.draw_trait_icon(c, Rect2(10, 10, s - 20, s - 20), &"heavy", SynergyGlyphs.trait_color(&"heavy"))
+		&"frames":
+			var unit: PackedVector2Array = CardView.outline(Rect2(1, 6, s * 0.44, s * 0.62), 0.0)
+			c.draw_colored_polygon(unit, CardView.FRAME_UNIT)
+			var t1: PackedVector2Array = CardView.outline(Rect2(s * 0.52, 6, s * 0.46, s * 0.62), 7.0)
+			c.draw_colored_polygon(t1, CardView.FRAME_T1)
 		&"cover_chip":
 			c.draw_rect(r.grow(-6.0), Color(ink, 0.86))
 			c.draw_rect(r.grow(-6.0), Color("#B9C2C9"), false, 1.5)
@@ -360,9 +380,9 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			c.draw_colored_polygon(hx, accent)
 			c.draw_string(font, Vector2(0, s * 0.66), "2", HORIZONTAL_ALIGNMENT_CENTER, s, 20, ink)
 		&"band":
-			SynergyGlyphs.draw_band(c, Rect2(2, s * 0.35, s - 4, s * 0.3), StringName(e.get("band", &"gilded")))
-			if StringName(e.get("band", &"gilded")) == &"":
-				c.draw_rect(Rect2(2, s * 0.35, s - 4, s * 0.3), Color("#7A828A"), false, 1.5)
+			# kc-cards-impl: a copy's level is its coin (R grey, T / V / E brass), shown on peek.
+			var lv: int = maxi(0, SynergyRules.LEVEL_BANDS.find(StringName(e.get("band", &"gilded"))))
+			CardLook.draw_level_coin(c, Rect2(s * 0.18, s * 0.18, s * 0.64, s * 0.64), lv)
 		&"tick":
 			c.draw_rect(Rect2(0, 6, s * 0.9, s * 0.35), Color("#1C2228"))
 			c.draw_rect(Rect2(0, s * 0.6, s * 0.9, s * 0.35), Color("#1C2228"))

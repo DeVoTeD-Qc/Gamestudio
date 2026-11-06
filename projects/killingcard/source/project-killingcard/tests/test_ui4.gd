@@ -95,8 +95,9 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 			var hb: BannerView = hand.get_banner(unit_chip)
 			var hr: Dictionary = hb.stat_rects()
 			_check_anatomy(hb, "%s hand card" % label)
-			var hex: Control = unit_chip.find_child("CostHex", true, false)
-			assert_true(hex.position.x < hb.size.x * 0.2 and hex.position.y < hb.size.y * 0.3, "%s hand: cost top-left" % label)
+			# kc-cards-impl (X1): the banner draws the cost hex top-left (always shown in the hand).
+			var hc: Rect2 = hb.anatomy_now()["cost"]
+			assert_true(hb.full_info and hc.position.x < hb.size.x * 0.2 and hc.position.y < hb.size.y * 0.3, "%s hand: cost top-left" % label)
 			assert_true(absf((hr["fp"] as Rect2).size.x - (a2["fp"] as Rect2).size.x) < 1.0 or hb.size.y < fr.banner.size.y,
 					"%s hand badges are the board's size" % label)
 			var name_l: Label = unit_chip.find_child("NameLabel", true, false)
@@ -119,23 +120,26 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 
 ## The head's card anatomy on one banner (kc-trait-ui, 2026-11-06): cost + name top-left, abilities
 ## top-right, trait + weapon-type bottom-left, FP + Armor side by side bottom-right.
+## kc-cards-impl: the head's C1+ anatomy on one banner: the peek group top-left (cost -> level coin
+## -> weapon), abilities top-right, traits bottom-left, FP reticle + Armor plate bottom-right; no name.
 func _check_anatomy(b: BannerView, label: String) -> void:
 	var a: Dictionary = b.anatomy_now()
 	var sz: Vector2 = b.size
 	var fp: Rect2 = a["fp"]
 	var ar: Rect2 = a["armor"]
-	assert_true(fp.position.x > sz.x * 0.5 and ar.position.x >= fp.end.x and ar.end.x > sz.x - 8.0, "%s: FP then Armor in the bottom-right (%s / %s)" % [label, fp, ar])
-	assert_true(fp.end.y >= sz.y - 8.0 and ar.end.y >= sz.y - 8.0, "%s: stats on the bottom edge" % label)
-	if (a["cost"] as Rect2).size.x > 0.0:
-		assert_true((a["cost"] as Rect2).position.x < sz.x * 0.15 and (a["cost"] as Rect2).position.y < sz.y * 0.3, "%s: cost top-left" % label)
-	var nr: Rect2 = a["name"]
-	assert_true(nr.position.x < sz.x * 0.4 and nr.position.y < sz.y * 0.3, "%s: name top-left, next to the cost (%s)" % [label, nr])
-	for key: String in ["trait", "class"]:
-		if a.has(key):
-			assert_true((a[key] as Rect2).position.x < sz.x * 0.5 and (a[key] as Rect2).end.y > sz.y * 0.6, "%s: %s bottom-left" % [label, key])
+	assert_true(fp.position.x > sz.x * 0.5 and ar.position.x >= fp.end.x and ar.end.x > sz.x * 0.95, "%s: FP then Armor in the bottom-right (%s / %s)" % [label, fp, ar])
+	assert_true(fp.end.y >= sz.y * 0.88 and ar.end.y >= sz.y * 0.88, "%s: stats on the bottom edge" % label)
+	for key: String in ["cost", "level", "class"]:
+		if a.has(key) and (a[key] as Rect2).size.x > 0.0:
+			assert_true((a[key] as Rect2).position.x < sz.x * 0.5 and (a[key] as Rect2).position.y < sz.y * 0.3, "%s: %s top-left" % [label, key])
+	assert_eq((a["name"] as Rect2).size.x, 0.0, "%s: no name on the banner" % label)
+	if a.has("trait"):
+		assert_true((a["trait"] as Rect2).position.x < sz.x * 0.5 and (a["trait"] as Rect2).end.y > sz.y * 0.6, "%s: trait bottom-left" % label)
 	for ab: Array in a["abilities"]:
 		assert_true((ab[1] as Rect2).end.x > sz.x * 0.5 and (ab[1] as Rect2).position.y < sz.y * 0.4, "%s: abilities top-right" % label)
-		assert_true(nr.end.x <= (ab[1] as Rect2).position.x + 0.5, "%s: the name stops before the abilities" % label)
+		if a.has("class"):
+			assert_true((a["class"] as Rect2).end.x <= (ab[1] as Rect2).position.x + 0.5 or (ab[1] as Rect2).position.x > sz.x * 0.6,
+					"%s: the peek group stops before the abilities" % label)
 
 
 # =============================================================================
@@ -173,8 +177,9 @@ func test_codex_is_a_viewer_with_trait_slots() -> void:
 		if n.get_meta(&"entry")["id"] == &"marksman":
 			tile = n
 	assert_not_null(tile, "a Marksman tile")
-	var bv0: BannerView = BannerCard.banner_of(tile.get_child(0))
-	assert_false(bv0.entry.has("subname") and (tile.find_child("SubLabel", true, false) as Label).visible, "no subname on the codex tile")
+	# kc-cards-impl: Codex tiles are Y2+ cards (no art subname on them).
+	var cv0: CardView = tile.find_child("Card", true, false) as CardView
+	assert_true(cv0 != null and not cv0.data.has("subname"), "a Y2+ card without the subname")
 	var k: float = Layout.points_per_px(Layout.PHONE)
 	await _tap(vp, tile.get_global_rect().get_center())
 	await _frames(2)
@@ -186,10 +191,10 @@ func test_codex_is_a_viewer_with_trait_slots() -> void:
 		var slot: Node = at.find_child("TraitSlot", true, false)
 		assert_not_null(slot, "every art tile has a trait slot")
 		assert_eq(slot.get_meta(&"trait"), ArtTraits.trait_of(art, card), "%s: the slot shows the trait the art gives" % art)
-		var bv: BannerView = BannerCard.banner_of(at.get_child(0))
-		assert_eq(StringName(String(bv.entry.get("trait", ""))), ArtTraits.trait_of(art, card), "%s: the banner's trait plate" % art)
+		var cv: CardView = at.find_child("Card", true, false) as CardView
+		assert_eq(StringName(String(cv.data.get("trait", ""))), ArtTraits.trait_of(art, card), "%s: the card's trait chip" % art)
+		assert_eq(bool(cv.data.get("not_found", false)), not codex.is_found(codex.art_entry, art), "%s: NOT FOUND YET when not found" % art)
 		assert_true(minf((at as Control).size.x, (at as Control).size.y) * k >= 44.0 - EPS, "art tile 44 pt+")
-		_check_anatomy(bv, "codex art %s" % art)
 	# Preview the Heavy art: GIVES HEAVY; the subname is in the more-info line, not on the card.
 	for at: Node in codex.get_art_tiles():
 		if at.get_meta(&"art") == heavy_art:

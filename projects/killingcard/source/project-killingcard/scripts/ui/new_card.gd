@@ -304,20 +304,18 @@ static func draw_example(ci: CanvasItem, r: Rect2, f: StringName, icon: bool) ->
 				ci.draw_rect(br, Color("#2EC4B6"), false, 1.5)
 			SynergyGlyphs.draw_tick(ci, Vector2(x + w * 0.36, r.position.y + h - 2.0), Vector2(x + w * 0.36, r.position.y + h + 14.0), Color("#2EC4B6"), 4.0)
 		RevealFlags.PROMOTION, RevealFlags.ENGINE_PANEL:
-			var bw2: float = minf(r.size.x * 0.4, 120.0)
-			var y: float = r.get_center().y - 8.0
-			ci.draw_rect(Rect2(r.position.x + (0.0 if not icon else 2.0), y, bw2, 16), Color("#2A3036"))
-			ci.draw_rect(Rect2(r.position.x, y, bw2, 16), Color("#8A949C"), false, 1.0)
-			SynergyGlyphs.draw_band(ci, Rect2(r.position.x + bw2 + 24.0, y, bw2, 16), &"gilded")
-			ci.draw_line(Vector2(r.position.x + bw2 + 4.0, y + 8), Vector2(r.position.x + bw2 + 18.0, y + 8), fog, 2.0)
+			# kc-cards-impl: the level coin R > T (the camo band is retired).
+			var cs: float = minf(r.size.y - 4.0, 30.0)
+			var y: float = r.get_center().y - cs * 0.5
+			CardLook.draw_level_coin(ci, Rect2(r.position.x, y, cs, cs), 0)
+			ci.draw_line(Vector2(r.position.x + cs + 4.0, y + cs * 0.5), Vector2(r.position.x + cs + 18.0, y + cs * 0.5), fog, 2.0)
+			CardLook.draw_level_coin(ci, Rect2(r.position.x + cs + 22.0, y, cs, cs), 1)
 		RevealFlags.MUSTER_OUT:
 			var bw3: float = minf(r.size.x * (0.9 if icon else 0.45), r.size.y * 3.2)
 			var bh3: float = bw3 / 4.0
 			var c: Rect2 = Rect2(r.position + Vector2(0.0, (r.size.y - bh3) * 0.5), Vector2(bw3, bh3))
 			ci.draw_rect(c, Color("#2B312A"))
 			StandardIssueLook.draw_frame(ci, c)
-			var ps: float = bh3 * 0.42
-			StandardIssueLook.draw_serial_plate(ci, Rect2(c.end.x - ps * 2.6 - 4.0, c.position.y + 4.0, ps * 2.6, ps), "SI-04")
 			if not icon:
 				var ax: float = c.end.x + 14.0
 				ci.draw_line(Vector2(ax, c.get_center().y), Vector2(ax + 40.0, c.get_center().y), AMBER, 3.0)

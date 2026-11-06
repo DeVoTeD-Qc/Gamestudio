@@ -11,12 +11,12 @@ shader_parameter/line_count = 46.0
 shader_parameter/scroll_speed = 0.25
 
 [node name="CardView" type="Control"]
-custom_minimum_size = Vector2(250, 350)
+custom_minimum_size = Vector2(250, 216)
 layout_mode = 3
 anchors_preset = 0
 offset_right = 250.0
-offset_bottom = 350.0
-pivot_offset = Vector2(125, 175)
+offset_bottom = 216.0
+pivot_offset = Vector2(125, 108)
 mouse_filter = 1
 texture_filter = 5
 theme = ExtResource("2_theme")

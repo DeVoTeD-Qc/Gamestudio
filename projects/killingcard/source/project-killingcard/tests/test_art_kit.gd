@@ -53,7 +53,7 @@ func test_card_view_instantiates() -> void:
 	assert_eq(card.name, &"CardView", "root name")
 	tree.root.add_child(card)
 	await tree.process_frame
-	assert_eq(card.size, Vector2(250, 350), "base size")
+	assert_eq(card.size, CardView.BASE_SIZE, "base size (kc-cards-impl: the Y2+ card at 250 px)")
 	assert_false((card.get_node("%NameLabel") as Label).text.is_empty(), "placeholder name shown")
 	assert_true((card.get_node("%FirepowerBadge") as Control).visible, "placeholder shows stats")
 	card.queue_free()
@@ -73,8 +73,10 @@ func test_card_text_fits_at_full_and_half_scale() -> void:
 	var previous_oversampling: float = _real_font_metrics()
 	var card: Control = (load(CARD_SCENE) as PackedScene).instantiate()
 	tree.root.add_child(card)
+	# kc-cards-impl: the Y2+ card is laid out at its width (never scaled): the preview's 250 and the
+	# Codex's 172 px keep the same text sizes.
 	for scale: float in [1.0, 0.5]:
-		card.scale = Vector2(scale, scale)
+		card.set_card_width(250.0 if scale == 1.0 else 172.0)
 		for side: String in ["friend", "enemy"]:
 			for data: Dictionary in SAMPLES.CARDS:
 				var d: Dictionary = data.duplicate(true)
@@ -95,15 +97,18 @@ func test_card_text_fits_at_full_and_half_scale() -> void:
 	TextServerManager.get_primary_interface().font_set_global_oversampling(previous_oversampling)
 
 
+## kc-cards-impl (Y2+): the side shows in the FP reticle's team colour (teal / red) and the rival's
+## art faces the other way; Tactics are the only cut-corner frame (T1).
 func test_friend_and_enemy_differ_by_shape() -> void:
-	var card: Control = (load(CARD_SCENE) as PackedScene).instantiate()
+	var card: CardView = (load(CARD_SCENE) as PackedScene).instantiate()
 	tree.root.add_child(card)
 	await tree.process_frame
+	assert_true((CardLook.TEAM[&"player"] as Array)[0] != (CardLook.TEAM[&"enemy"] as Array)[0], "team reticles differ")
+	card.set_card_data({"name": "X", "type": "unit", "side": "enemy", "id": "rifleman"})
+	assert_true((card.get_node("%ArtIcon") as TextureRect).flip_h, "the rival's art is mirrored")
 	for type_name: String in ["unit", "tactic", "equipment", "killstreak", "operator"]:
 		card.set_card_data({"name": "X", "type": type_name, "side": "friend"})
-		var friend_outline: PackedVector2Array = card.call("_outline", type_name, true)
-		var enemy_outline: PackedVector2Array = card.call("_outline", type_name, false)
-		# Friend outline has the chevron notch (3 extra points, one well above the bottom edge).
-		assert_eq(friend_outline.size(), enemy_outline.size() + 3, "%s notch points" % type_name)
+		assert_eq(card.is_tactic(), type_name == "tactic", "%s: T1 frame only on tactics" % type_name)
+		assert_eq(card.has_stats_bar(), type_name in ["unit", "operator"], "%s: stats bar" % type_name)
 	card.queue_free()
 	await tree.process_frame

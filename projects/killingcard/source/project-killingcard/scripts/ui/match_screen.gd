@@ -31,6 +31,8 @@ extends Control
 signal ready_pressed
 signal menu_pressed
 signal undo_pressed
+## kc-cards-impl (H1): CANCEL on the docked card preview.
+signal dock_cancel_pressed
 ## After every show_snapshot() (p12: the outcome preview recomputes on it).
 signal snapshot_shown(snapshot: Dictionary)
 ## Long-press / right-click on a strip badge or tray box: &"score", &"deck", &"intel", &"supply",
@@ -242,6 +244,8 @@ func _ready() -> void:
 	_trait_rail.name = "TraitRail"
 	_strip.add_child(_trait_rail)
 	_trait_rail.tapped.connect(func() -> void: toggle_flyout(&"traits"))
+	# kc-cards-impl: the rail highlight shows that trait on every board card.
+	_trait_rail.focus_changed.connect(func(t: StringName) -> void: get_board().set_syn_focus(t))
 	_trait_rail.inspected.connect(func() -> void:
 		close_flyout()
 		rail_inspected.emit(&"traits"))
@@ -260,6 +264,12 @@ func _ready() -> void:
 		close_flyout()
 		menu_pressed.emit())
 	_undo_button.pressed.connect(func() -> void: undo_pressed.emit())
+	_add_glyph(_undo_button, &"undo")
+	# kc-cards-impl (O2): READY / UNDO fit the narrow column next to the Operator card.
+	_ready_button.clip_text = true
+	_undo_button.clip_text = true
+	_undo_button.tooltip_text = "Undo the last play"
+	_setup_dock()
 	if use_mock_data:
 		show_snapshot(MockMatchData.round_3_sample())
 
@@ -594,6 +604,10 @@ func show_toast(text: String) -> void:
 	var board_r: Rect2 = _board.get_global_rect()
 	var cx: float = board_r.get_center().x if board_r.has_area() else size.x * 0.5
 	_toast.position.x = clampf(cx - _toast.size.x * 0.5, 0.0, maxf(0.0, size.x - _toast.size.x))
+	# kc-cards-impl: at the board's bottom edge (your back row), never over the objective row; the
+	# killfeed toasts keep the top edge.
+	if board_r.has_area():
+		_toast.global_position.y = board_r.end.y - _toast.size.y - 4.0
 	get_tree().create_timer(TOAST_SECONDS).timeout.connect(func() -> void:
 		if my_id == _toast_id:
 			_toast.hide())
@@ -643,8 +657,8 @@ func _set_actions(snapshot: Dictionary) -> void:
 		_ready_button.text = "READY" if open else "WAIT"
 	_undo_button.disabled = not bool(snapshot.get("can_undo", false))
 	var label: String = String(snapshot.get("undo_label", ""))
-	# The tray's UNDO is too narrow for the play's name (the toast names it after undoing).
-	_undo_button.text = "UNDO"
+	# kc-cards-impl (O2): UNDO is an icon (a curved back arrow) over READY; the tooltip names the play.
+	_undo_button.text = ""
 	_undo_button.tooltip_text = "Undo %s" % label if not label.is_empty() else ""
 
 
@@ -830,17 +844,128 @@ func _layout_tray() -> void:
 	_place(_supply_box, metrics.get("supply", Rect2(0, 0, w, metrics["supply_h"])))
 	_place(_ks_row, metrics.get("ks", Rect2()))
 	_fit_pips()
+	# kc-cards-impl (H1 + O2): the HandArea covers the card grid and the Operator row under it; the
+	# Operator card sits bottom-left, UNDO (icon) over READY bottom-right.
+	var hr: Rect2 = metrics["hand_rect"]
+	_place(_hand, hr)
 	var grid: Rect2 = metrics["grid"]
-	_place(_hand, grid)
+	_hand.set_grid_rect(Rect2(grid.position - hr.position, grid.size), Rect2((metrics["op_card"] as Rect2).position - hr.position, (metrics["op_card"] as Rect2).size))
 	_hand.set_card_size(metrics["card"], metrics["card_gap"], int(metrics["hand_cols"]), 1.0 if mirror else -1.0, float(metrics["bh"]))
-	var undo_w: float = roundf(w * 0.3)
-	_place(_undo_button, Rect2(0, h - btn_h, undo_w, btn_h))
-	_place(_ready_button, Rect2(undo_w + 8.0, h - btn_h, w - undo_w - 8.0, btn_h))
+	_place(_undo_button, metrics["undo"])
+	_place(_ready_button, metrics["ready"])
+	_layout_dock()
 	_place(_speed_button, Rect2(0, h - btn_h, w, btn_h))
 	var tab_y: float = h - btn_h - 8.0 - tab_h
 	_place(_hand_tab, Rect2(0, tab_y, w, tab_h))
 	var feed_top: float = float(metrics["supply_h"]) + 8.0
 	_place(_feed_box, Rect2(0, feed_top, w, maxf(0.0, tab_y - 8.0 - feed_top)))
+
+
+# =============================================================================
+# kc-cards-impl (H1): the selected card's Y2+ preview docked over the top of the tray
+# =============================================================================
+
+const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
+var _dock: Control = null
+var _dock_card: CardView = null
+var _dock_cancel: Button = null
+var _dock_hint: Label = null
+
+
+func _setup_dock() -> void:
+	_dock = Panel.new()
+	_dock.name = "CardDock"
+	_dock.mouse_filter = Control.MOUSE_FILTER_STOP
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.04, 0.05, 0.055, 0.94)
+	sb.border_color = Color("#FFB020")
+	sb.border_width_bottom = 2
+	_dock.add_theme_stylebox_override(&"panel", sb)
+	_dock.visible = false
+	_dock.tooltip_text = "The selected card: tap it (or CANCEL) to put it back; long press for its rules"
+	# The dock IS the selected card: a tap on it = "tap the card again" (cancel); long press = rules.
+	var g: RefCounted = PressGesture.new(_dock)
+	g.drag_enabled = false
+	_dock.gui_input.connect(func(e: InputEvent) -> void:
+		if g.handle(e):
+			_dock.accept_event())
+	g.tapped.connect(func(_p: Vector2) -> void: dock_cancel_pressed.emit())
+	g.long_pressed.connect(func(_p: Vector2) -> void:
+		var uid: int = int(_hand.selected_uid)
+		if uid >= 0:
+			_hand.card_inspected.emit(uid))
+	_tray.add_child(_dock)
+	_dock_card = CARD_VIEW_SCENE.instantiate() as CardView
+	_dock_card.name = "DockCard"
+	_dock_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dock.add_child(_dock_card)
+	_dock_cancel = Button.new()
+	_dock_cancel.name = "DockCancel"
+	_dock_cancel.text = "CANCEL"
+	_dock_cancel.theme_type_variation = &"HudButton"
+	_dock_cancel.tooltip_text = "Put the card back (or tap it again, or the empty board)"
+	_dock_cancel.focus_mode = Control.FOCUS_ALL
+	_dock_cancel.add_to_group(&"tap_target")
+	_dock_cancel.pressed.connect(func() -> void: dock_cancel_pressed.emit())
+	_dock.add_child(_dock_cancel)
+	_dock_hint = Label.new()
+	_dock_hint.name = "DockHint"
+	_dock_hint.text = "TAP A\nPLAY HERE\nSLOT"
+	_dock_hint.theme_type_variation = &"HudTag"
+	_dock_hint.add_theme_font_size_override(&"font_size", 16)
+	_dock_hint.add_theme_color_override(&"font_color", Color("#FFB020"))
+	_dock_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dock.add_child(_dock_hint)
+
+
+## Shows the selected card's Y2+ face over the top of the tray (view = CardView data; {} hides it).
+func show_card_dock(view: Dictionary) -> void:
+	if _dock == null:
+		return
+	if view.is_empty():
+		_dock.visible = false
+		return
+	_dock_card.set_card_data(view)
+	_dock.visible = true
+	_layout_dock()
+	_tray.move_child(_dock, -1)
+
+
+func get_card_dock() -> Control:
+	return _dock if _dock != null and _dock.visible else null
+
+
+func get_dock_card() -> CardView:
+	return _dock_card
+
+
+func get_dock_cancel_button() -> Button:
+	return _dock_cancel
+
+
+func _layout_dock() -> void:
+	if _dock == null or metrics.is_empty():
+		return
+	var w: float = _tray.size.x
+	var wide: bool = w >= 330.0
+	var cancel_w: float = 92.0 if wide else w - 12.0
+	var card_w: float = minf(250.0, w - 12.0 - (cancel_w + 8.0 if wide else 0.0))
+	_dock_card.set_card_width(card_w)
+	var card_h: float = _dock_card.size.y
+	var h: float = 6.0 + card_h + 8.0 + (0.0 if wide else 64.0 + 8.0)
+	_dock.position = Vector2(0, 0)
+	_dock.size = Vector2(w, h)
+	_dock_card.position = Vector2(6, 6)
+	if wide:
+		_dock_cancel.position = Vector2(6.0 + card_w + 8.0, 6.0)
+		_dock_cancel.size = Vector2(w - card_w - 20.0, 64.0)
+		_dock_hint.visible = true
+		_dock_hint.position = Vector2(_dock_cancel.position.x, 78.0)
+		_dock_hint.size = Vector2(_dock_cancel.size.x, 80.0)
+	else:
+		_dock_cancel.position = Vector2(6.0, 6.0 + card_h + 8.0)
+		_dock_cancel.size = Vector2(cancel_w, 64.0)
+		_dock_hint.visible = false
 
 
 func _place(c: Control, r: Rect2) -> void:
@@ -925,6 +1050,19 @@ func _add_glyph(b: Button, kind: StringName) -> void:
 		var c: Color = b.get_theme_color(&"font_color")
 		var s: float = 24.0
 		var o: Vector2 = Vector2((b.size.x - s) * 0.5, (b.size.y - s) * 0.5 if kind == &"menu" else 6.0)
+		if kind == &"undo":
+			# A curved back arrow (UNDO is an icon over READY, kc-cards-impl O2).
+			var k2: float = 26.0 / 24.0
+			var u0: Vector2 = Vector2((b.size.x - 26.0) * 0.5, (b.size.y - 26.0) * 0.5)
+			var col: Color = c if not b.disabled else Color(c, 0.4)
+			g.draw_polyline(PackedVector2Array([u0 + Vector2(9, 14) * k2, u0 + Vector2(4, 9) * k2, u0 + Vector2(9, 4) * k2]), col, 2.6, true)
+			var arc: PackedVector2Array = [u0 + Vector2(4, 9) * k2, u0 + Vector2(14, 9) * k2]
+			for i: int in 13:
+				var t: float = -PI * 0.5 + PI * i / 12.0
+				arc.append(u0 + (Vector2(14, 15) + Vector2(cos(t), sin(t)) * 6.0) * k2)
+			arc.append(u0 + Vector2(11, 21) * k2)
+			g.draw_polyline(arc, col, 2.6, true)
+			return
 		if kind == &"menu":
 			for i: int in 3:
 				var y: float = o.y + 5.0 + i * 7.0
@@ -1214,6 +1352,8 @@ func _apply_tray_state(animate: bool) -> void:
 	_feed_box.visible = tray_state == TRAY_CLOSED
 	_hand_tab.visible = not open
 	_speed_button.visible = not open
+	if _dock != null and not open:
+		_dock.visible = false
 	_peek_catcher.visible = peek
 	_update_tab_text()
 	if animate and not _reduced_motion():
@@ -1224,7 +1364,7 @@ func _apply_tray_state(animate: bool) -> void:
 				var tw: Tween = c.create_tween()
 				tw.tween_property(c, "modulate:a", 1.0, TRAY_FADE)
 		if _hand.visible and not metrics.is_empty():
-			var to_x: float = (metrics["grid"] as Rect2).position.x
+			var to_x: float = (metrics["hand_rect"] as Rect2).position.x
 			_hand.position.x = to_x + (-24.0 if mirror else 24.0)
 			_hand.create_tween().tween_property(_hand, "position:x", to_x, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 

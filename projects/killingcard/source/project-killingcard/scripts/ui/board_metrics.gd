@@ -106,34 +106,63 @@ static func _ks_rows(p: Dictionary, tray: Vector2) -> void:
 		p["supply_h"] = p["supply_h"] + 6.0 + p["ks_h"]
 
 
-## The hand grid inside the tray: between the Supply row and the UNDO / READY row. kc-ui4 (head:
-## hand cards "closer to their form on the board"): the cards are banners, so the grid picks 1, 2 or
-## 3 columns, whichever gives the larger card that still holds the banner's plate row and stat row
-## (h >= CARD_MIN_H) and is no squarer than CARD_RATIO_MIN (wide cells: CARD_RATIO_WIDE, the
-## licensed 4:1 art keeps most of its width). HAND_SLOTS cards fit without overlap.
+## kc-cards-impl (the head's H1 + O2): the hand grid holds X1 cards (the C1+ banner at 4:1 plus a
+## name plate, X1_PLATE_H) between the Supply row and the Operator row. The Operator row at the
+## bottom: the Operator card on the left, UNDO (icon) stacked over READY on the right (each
+## btn_h tall, >= 44 pt). The grid picks 1 or 2 columns, whichever gives the wider card while
+## HAND_SLOTS cards fit (1 column: HAND_SLOTS - 1, the 8th overlaps). Keys: card, hand_cols, grid
+## (the cards' rect), hand_rect (the HandArea's rect = the grid; the Operator card is placed below
+## it, in the Operator row), op_card, undo,
+## ready, op_h (tray-local).
+const X1_PLATE_H: float = 26.0
+const X1_MIN_W: float = 80.0
+## X1 cards are at least this tall (a 44 pt tap target on the smallest phone, the SE at 0.695 pt/px):
+## narrow cards grow their plate. Desktop (1 pt/px) needs 44 px; its 1-column cards are taller anyway.
+const X1_MIN_H: float = 64.0
+const X1_MIN_H_DESKTOP: float = 48.0
+
+
+## The X1 hand card's size at width w (the banner at 4:1 plus the name plate, >= min_h).
+static func x1_size(w: float, min_h: float = X1_MIN_H) -> Vector2:
+	return Vector2(w, maxf(min_h, roundf(w / 4.0) + X1_PLATE_H))
+
+
 static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
 	var gap: float = p["card_gap"]
+	var btn_h: float = p["btn_h"]
+	var op_h: float = 2.0 * btn_h + 6.0
 	var grid_top: float = p["supply_h"] + 8.0
-	var grid_h: float = tray.y - grid_top - p["btn_h"] - 6.0
-	var best: Vector2 = Vector2.ZERO
+	var grid_h: float = tray.y - grid_top - op_h - 8.0
+	var best_w: float = 0.0
 	var best_cols: int = 2
-	for cols: int in [1, 2, 3]:
-		var rows: int = ceili(float(HAND_SLOTS) / cols)
-		var w: float = floorf((tray.x - (cols - 1) * gap) / cols)
-		var h: float = floorf((grid_h - (rows - 1) * gap) / rows)
-		var ratio: float = CARD_RATIO_WIDE if w >= 150.0 else CARD_RATIO_MIN
-		if w < CARD_MIN_W or h < CARD_MIN_H:
-			continue
-		h = clampf(floorf(minf(p["bh"] * 1.4, w / ratio)), CARD_MIN_H, h)
-		if w * h > best.x * best.y:
-			best = Vector2(w, h)
+	# Room for the selected card's lift (HandArea.SELECTED_LIFT) at the top of the grid.
+	var room_h: float = grid_h - 6.0
+	var min_h: float = X1_MIN_H if bool(p.get("compact", true)) else X1_MIN_H_DESKTOP
+	for cols: int in [2, 1, 3]:
+		var cell_w: float = floorf((tray.x - (cols - 1) * gap) / cols)
+		var fit_rows: int = ceili(float(HAND_SLOTS) / cols) if cols != 1 else HAND_SLOTS - 1
+		var h_max: float = floorf((room_h - (fit_rows - 1) * gap) / fit_rows)
+		var w: float = minf(cell_w, floorf((h_max - X1_PLATE_H) * 4.0))
+		var h: float = x1_size(w, min_h).y
+		if w >= X1_MIN_W and fit_rows * h + (fit_rows - 1) * gap <= room_h and w > best_w:
+			best_w = w
 			best_cols = cols
-	if best == Vector2.ZERO:
-		best = Vector2(floorf((tray.x - gap) / 2.0), CARD_MIN_H)
-	var grid_w: float = best_cols * best.x + (best_cols - 1) * gap
-	p["card"] = best
+	if best_w <= 0.0:
+		# A short tray: two columns at the cell width; the rows overlap upward a little.
+		best_cols = 2
+		best_w = floorf((tray.x - gap) / 2.0)
+	var card: Vector2 = x1_size(best_w, min_h)
+	var grid_w: float = best_cols * best_w + (best_cols - 1) * gap
+	p["card"] = card
 	p["hand_cols"] = best_cols
 	p["grid"] = Rect2(floorf((tray.x - grid_w) * 0.5), grid_top, grid_w, grid_h)
+	p["op_h"] = op_h
+	p["hand_rect"] = p["grid"]
+	var bcol: float = 140.0 if bool(p.get("compact", true)) else 132.0
+	bcol = minf(bcol, floorf(tray.x * 0.52))
+	p["op_card"] = Rect2(0, tray.y - op_h, tray.x - bcol - 8.0, op_h)
+	p["undo"] = Rect2(tray.x - bcol, tray.y - op_h, bcol, btn_h)
+	p["ready"] = Rect2(tray.x - bcol, tray.y - btn_h, bcol, btn_h)
 
 
 ## Column-local y of a row slot. side &"enemy": row 0 (front) is nearest the objective (above it).

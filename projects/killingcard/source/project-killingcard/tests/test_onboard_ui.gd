@@ -109,19 +109,16 @@ func test_standard_issue_card_look_and_serial_plate() -> void:
 	var card: PanelContainer = BannerCard.build(e, Vector2(228, 73), 57.0)
 	tree.root.add_child(card)
 	await _frames(2)
+	# kc-cards-impl (the head's C1+ / Y2+): no serial plate on cards; the Standard Issue frame and the
+	# STANDARD ISSUE tag say it; the name is in the one title style (no stencil).
 	var bv: BannerView = BannerCard.banner_of(card)
 	var a: Dictionary = bv.anatomy_now()
-	var serial_rect: Rect2 = Rect2()
 	for ab: Array in a["abilities"]:
-		if ab[0] is Array and ab[0][0] == &"serial":
-			serial_rect = ab[1]
-	assert_true(serial_rect.size.x > (BannerView.metrics(57.0)["plate"] as float), "the serial plate is wider than a socket (%s)" % serial_rect)
-	assert_true(serial_rect.end.x > bv.size.x - 8.0 and serial_rect.position.y < bv.size.y * 0.4, "serial plate top-right (%s)" % serial_rect)
-	assert_true((a["name"] as Rect2).end.x <= serial_rect.position.x + 0.5, "the name stops before the plate")
+		assert_false(ab[0] is Array and ab[0][0] == &"serial", "no serial plate on the card")
 	assert_true(a.has("trait"), "an empty trait socket bottom-left")
 	var name_l: Label = card.find_child("NameLabel", true, false)
-	assert_eq(name_l.get_theme_font(&"font"), StandardIssueLook.stencil(), "Standard Issue name in the stencil font")
-	assert_eq(name_l.text, "TROOPER", "stencil name in capitals")
+	assert_eq(name_l.get_theme_font(&"font"), CardLook.TITLE_FONT, "Standard Issue name in the title style")
+	assert_eq(name_l.text, "TROOPER", "name in capitals")
 	card.queue_free()
 	# A calling card never uses the stencil font.
 	var bk: CardData = _card(&"breacher")
@@ -139,7 +136,8 @@ func test_standard_issue_card_look_and_serial_plate() -> void:
 	view.set_card_data({"name": "Grunt", "type": "unit", "cost": 1, "firepower": 2, "armor": 2, "keywords": [],
 			"standard_issue": true, "serial": "SI-01"})
 	await _frames(1)
-	assert_eq((view.get_node("%NameLabel") as Label).get_theme_font(&"font"), StandardIssueLook.stencil(), "CardView: stencil name")
+	assert_eq((view.get_node("%NameLabel") as Label).get_theme_font(&"font"), CardLook.TITLE_FONT, "CardView: the title style")
+	assert_true((view.get_node("%TypeLabel") as Label).text.contains("STANDARD ISSUE"), "CardView: STANDARD ISSUE tag")
 	view.queue_free()
 	_restore_profile()
 
@@ -202,7 +200,7 @@ func test_board_banners_cost_without_name_and_si_hand_cards() -> void:
 			si_cards += 1
 			var nl: Label = card.find_child("NameLabel", true, false)
 			assert_true(nl.visible and nl.text != "", "hand card keeps its name")
-			assert_eq(nl.get_theme_font(&"font"), StandardIssueLook.stencil(), "stencil name on a Standard Issue hand card")
+			assert_eq(nl.get_theme_font(&"font"), CardLook.TITLE_FONT, "a Standard Issue hand card's name in the title style (kc-cards-impl)")
 	assert_true(si_cards >= 3, "the starter hand is Standard Issue (%d)" % si_cards)
 	# Play one: on the board it has the cost but no name, and a serial plate.
 	var me: RulesSide = c.state.sides[0]
@@ -430,7 +428,9 @@ func test_kit_slots_fall_back_to_code_drawing() -> void:
 # 5. kc-hand-dim: hand / board art dimmed behind the rows, the inspector at full strength
 # =============================================================================
 
-func test_hand_and_board_art_dimmed_inspector_full_strength() -> void:
+## kc-cards-impl retired kc-hand-dim (the head's C1+: "full calling-card art, uncropped and undimmed"):
+## hand and board art at full strength; an unplayable hand card is still darker (the can't-act cue).
+func test_hand_and_board_art_full_strength() -> void:
 	_save_profile()
 	var s: Array = await _spawn(Layout.PHONE)
 	var vp: SubViewport = s[0]
@@ -441,18 +441,18 @@ func test_hand_and_board_art_dimmed_inspector_full_strength() -> void:
 		var bv: BannerView = BannerCard.banner_of(card)
 		if bv == null or not bv.has_art():
 			continue
-		assert_true(bv.readability, "hand card %s: readability scrim on" % card.name)
 		var mod: Color = bv.get_art_modulate()
-		assert_true(mod.r <= 1.0 - BannerView.ART_DIM + 0.01 and mod.r >= 0.4, "hand art darkened about 20%% (%.2f)" % mod.r)
 		checked += 1
 		if card.get_meta(&"playable", true) == false:
-			assert_true(mod.r < (1.0 - BannerView.ART_DIM) * 0.7, "an unplayable card stays darker (%.2f)" % mod.r)
+			assert_true(mod.r < 0.7, "an unplayable card stays darker (%.2f)" % mod.r)
+		else:
+			assert_true(mod.r > 0.99, "hand art at full strength (%.2f)" % mod.r)
 	assert_true(checked >= 3, "checked %d hand cards" % checked)
 	for lane: Node in m.get_board().find_children("*", "Control", true, false):
 		if lane.has_method(&"get_friendly_slots"):
 			for slot: Node in lane.get_friendly_slots() + lane.get_enemy_slots():
-				assert_true((slot.get(&"banner") as BannerView).readability, "board banner: same treatment")
-	assert_false((m.get_board().get(&"_zoom") as BannerView).readability, "hover zoom: full-strength art")
+				var bm: Color = (slot.get(&"banner") as BannerView).get_art_modulate()
+				assert_true(bm.r > 0.99, "board banner: full-strength art (%.2f)" % bm.r)
 	# The inspector's big banner shows the art at full strength.
 	var me: RulesSide = c.state.sides[0]
 	c._on_card_inspected(me.hand[0].uid)

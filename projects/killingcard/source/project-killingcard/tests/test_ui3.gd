@@ -62,10 +62,9 @@ func test_operator_card_deploys_from_the_hand() -> void:
 			continue
 		assert_true(card.is_visible_in_tree(), "%s it shows in Deploy" % label)
 		assert_eq(m.get_operator_handle(), card, "%s the card is the Operator's handle" % label)
-		assert_eq(card.get_index(), 0, "%s it is the first card of the grid" % label)
 		assert_eq(hand.get_cards().size(), c.state.sides[0].hand.size(), "%s get_cards() lists hand cards only" % label)
-		var first: Control = hand.get_cards()[0]
-		assert_true(card.size.distance_to(first.size) < 1.0, "%s same size as a hand card %s" % [label, card.size])
+		# kc-cards-impl (O2): the Operator card sits in the bottom row, left of UNDO / READY.
+		assert_true(card.get_global_rect().end.x <= m.get_ready_button().get_global_rect().position.x + EPS, "%s left of READY" % label)
 		assert_true(m.get_tray().get_global_rect().grow(EPS).encloses(card.get_global_rect()), "%s inside the tray" % label)
 		assert_eq(String(hand.operator_entry["status"]), "DEPLOY", "%s Round 1: DEPLOY" % label)
 		assert_true((card.get_node("Glow") as Control).visible, "%s and it glows" % label)
@@ -206,7 +205,7 @@ func test_codex_entries_and_filters() -> void:
 			codex.get_class_button(&"ar"), codex.get_chassis_picker(), codex.get_starter_button()]:
 		assert_true(minf(b.size.x, b.size.y) * k >= 44.0 - EPS, "%s is 44 pt+ (%s)" % [b.name, b.size])
 	for b: Button in [codex.get_back_button(), codex.get_chassis_picker()]:
-		assert_true(screen_r.encloses(b.get_global_rect()), "%s on screen" % b.name)
+		assert_true(screen_r.encloses(b.get_global_rect()), "%s on screen %s / %s" % [b.name, b.get_global_rect(), screen_r])
 	assert_eq(codex.get_tiles().size(), codex.filtered().size(), "a tile per entry")
 	var first: Control = codex.get_tiles()[0]
 	assert_true(first.size.y * k >= 44.0 and screen_r.encloses(first.get_global_rect()), "tiles are big enough and on screen")

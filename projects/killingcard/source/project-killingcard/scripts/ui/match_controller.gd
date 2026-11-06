@@ -178,6 +178,13 @@ func _on_screen_ready() -> void:
 	if _screen.has_signal(&"trait_inspected"):
 		_screen.trait_inspected.connect(open_trait_inspector, d)
 	_screen.undo_pressed.connect(undo, d)
+	# kc-cards-impl (H1): CANCEL on the docked preview, or a tap on the empty board, cancels.
+	if _screen.has_signal(&"dock_cancel_pressed"):
+		_screen.dock_cancel_pressed.connect(clear_selection, d)
+	if board.has_signal(&"empty_tapped"):
+		board.empty_tapped.connect(func() -> void:
+			if not selection.is_empty() and not _busy:
+				clear_selection(), d)
 	if _screen.has_method(&"get_mulligan_panel"):
 		_screen.get_mulligan_panel().confirmed.connect(_on_mulligan_confirmed, d)
 		if _screen.get_mulligan_panel().has_signal(&"card_inspected"):
@@ -570,7 +577,7 @@ func note_board_systems() -> Array[StringName]:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[PLAYER]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator (first card of your hand), then a column." % state.round_number)
+		_screen.show_toast("Round %d: tap your Operator (bottom-left of your hand), then a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 
@@ -837,7 +844,9 @@ func open_mulligan() -> void:
 	var entries: Array = []
 	for rc: RulesCard in state.sides[PLAYER].hand:
 		# kc-ui3: the full card face (CardView), with its own licensed art and title when it has one.
-		var view: Dictionary = CardInfo.view_dict(rc.card, "friend")
+		# kc-cards-impl: the Y2+ face (art, level, trait, Standard Issue tag, a Recruit's Trains line).
+		var view: Dictionary = card_view_for(rc)
+		view.erase("cant_pay")
 		var art: BannerArt = BannerArtDB.get_art(StringName(String(state.art_by_uid.get(rc.uid, rc.card.id))))
 		# kc-ui4 (head naming): the name stays the card's (chassis) name; the art's name is its subname.
 		if BannerArtDB.is_card_art(art):
@@ -1118,6 +1127,8 @@ func _show_selection() -> void:
 		return
 	var board: Control = _screen.get_board()
 	_screen.get_hand().set_selected(int(selection.get("uid", -1)) if selection.get("kind") == &"card" else -1)
+	if _screen.has_method(&"show_card_dock"):
+		_screen.show_card_dock(_dock_view())
 	_screen.get_operator_panel().set_selected(selection.get("kind") == &"operator")
 	_screen.get_operator_panel().set_selected_item(StringName(selection.get("id", &"")) if selection.get("kind") == &"item" else &"")
 	if _screen.has_method(&"show_selection_state"):
@@ -1284,6 +1295,34 @@ func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
 	if state == null or _swallow_tap() or selection.is_empty():
 		return
 	_pick_or_play(zone, slot_side, uid)
+
+
+## kc-cards-impl (H1): the Y2+ face of the selected hand card for the tray's dock ({} = none).
+func _dock_view() -> Dictionary:
+	if state == null or selection.get("kind") != &"card":
+		return {}
+	var rc: RulesCard = state.sides[PLAYER].find_in_hand(int(selection.get("uid", -1)))
+	return card_view_for(rc) if rc != null else {}
+
+
+## kc-cards-impl: the Y2+ CardView data of a card in your hand (its art, level, trait, a Recruit's
+## locked keywords, Standard Issue, can't pay).
+func card_view_for(rc: RulesCard) -> Dictionary:
+	var view: Dictionary = CardInfo.view_dict(rc.card, "friend")
+	var art_id: StringName = StringName(String(state.art_by_uid.get(rc.uid, rc.card.id)))
+	view["banner"] = String(art_id)
+	view["level"] = rc.level
+	var t: StringName = rc.card_trait()
+	if t != &"":
+		view["trait"] = String(t)
+	var e: Dictionary = StandardIssueLook.dress({}, rc.card, rc.level, art_id)
+	for k: String in ["standard_issue", "locked", "trains"]:
+		if e.has(k):
+			view[k] = e[k]
+	if e.has("locked"):
+		view["keywords"] = []
+	view["cant_pay"] = rc.card.cost > state.sides[PLAYER].supply
+	return view
 
 
 ## A loadout / killstreak button: tap again to deselect.
@@ -1570,6 +1609,17 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	var sub: String = BannerArtDB.subname(art.id)
 	if sub != "":
 		view["subname"] = sub
+	# kc-cards-impl: the Y2+ face shows the copy's art, level, trait (lit while its set is on), locks.
+	view["banner"] = String(art.id)
+	for k: String in ["level", "trait", "standard_issue", "locked", "trains", "armor_max", "fp_trend"]:
+		if banner.has(k) and str(banner[k]) != "":
+			view[k] = banner[k]
+	if banner.has("fp"):
+		view["firepower"] = int(banner["fp"])
+		view["armor"] = int(banner.get("armor", view.get("armor", 0)))
+	if banner.has("locked"):
+		view["keywords"] = []
+	view["trait_lit"] = int(banner.get("trait_tier", 0)) >= 2
 	_screen.get_inspector().open({
 		"view": view, "title": card.display_name,
 		"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,

@@ -11,6 +11,8 @@ extends Control
 ## slot_side / uid: the unit slot that was hit (&"" / -1 for empty space or an empty slot).
 signal lane_tapped(zone: int, slot_side: StringName, uid: int)
 signal lane_long_pressed(zone: int, slot_side: StringName, uid: int)
+## kc-cards-impl (H1): a tap on the board outside the columns (cancels a selected card).
+signal empty_tapped
 
 @onready var _lanes: Array[Node] = [%LaneLeft, %LaneMid, %LaneRight]
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
@@ -29,7 +31,15 @@ var _hover_slot: Node = null
 var _hover_id: int = 0
 
 
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT \
+			and not (event as InputEventMouseButton).pressed:
+		empty_tapped.emit()
+
+
 func _ready() -> void:
+	if mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		mouse_filter = Control.MOUSE_FILTER_PASS
 	for i: int in _lanes.size():
 		var zone: int = i
 		_lanes[i].tapped.connect(func(_id: StringName, slot_side: StringName, uid: int) -> void:
@@ -42,6 +52,7 @@ func _ready() -> void:
 	_zoom = BannerView.new()
 	_zoom.name = "HoverZoom"
 	_zoom.dim_back = false
+	_zoom.full_info = true  # kc-cards-impl: the zoom is a peek (cost, level, weapon)
 	_zoom.z_index = 20
 	_zoom.visible = false
 	add_child(_zoom)
@@ -252,6 +263,16 @@ func _hide_zoom() -> void:
 		_zoom.set_focus(false)
 		_zoom.visible = false
 		_zoom_label.visible = false
+
+
+## kc-cards-impl: the synergy rail's highlight (a trait id, &"" = off) on every banner.
+func set_syn_focus(t: StringName) -> void:
+	syn_focus = t
+	for lane: Node in _lanes:
+		lane.set_syn_focus(t)
+
+
+var syn_focus: StringName = &""
 
 
 func get_hover_zoom() -> BannerView:

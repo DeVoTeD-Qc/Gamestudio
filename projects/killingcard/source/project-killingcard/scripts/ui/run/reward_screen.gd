@@ -49,6 +49,11 @@ const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const EnginePanel: GDScript = preload("res://scripts/ui/run/engine_panel.gd")
 ## Banner size of a Muster out tile (keeps the board's 57 px icon metrics).
 const MUSTER_BANNER_H: float = 57.0
+## kc-cards-impl: Muster out / list cards are Y2+ cards this wide.
+const MUSTER_CARD_W: float = 172.0
+## kc-cards-impl: the Supply Drop / Salvage Y2+ card width range (the mock-up's reward card is 212).
+const MIN_CARD_W: float = 172.0
+const MAX_CARD_W: float = 240.0
 const LOCK_GREY: Color = Color("#8C969E")
 
 ## The offer on screen ({kind, match, options}); {} when none.
@@ -385,11 +390,21 @@ static func _level_status(card: CardData, level: int) -> String:
 ## CardView dictionary of a copy at `level` (a Recruit's keywords drawn locked; Standard Issue look).
 static func _view_dict(card: CardData, level: int, art: StringName = &"") -> Dictionary:
 	var vd: Dictionary = CardInfo.view_dict(card)
-	if not SynergyRules.locked_keywords(card, level).is_empty():
-		vd["locked"] = true
+	var locked: Array[String] = SynergyRules.locked_keywords(card, level)
+	if not locked.is_empty():
+		vd["locked"] = locked
+		vd["keywords"] = []
+		vd["trains"] = SynergyRules.trains_text(card, level)
 	if card.standard_issue or (art != &"" and ArtTraits.is_standard_issue_art(art, card)):
 		vd["standard_issue"] = true
 		vd["serial"] = RunProgress.standard_issue_serial(card)
+	# kc-cards-impl (Y2+): the copy's 4:1 art, level coin and trait.
+	vd["banner"] = String(art if art != &"" else card.id)
+	if card.is_unit():
+		vd["level"] = level
+	var t: StringName = SynergyRules.trait_at(card, level, ArtTraits.trait_of(art, card) if art != &"" and card.has_trait_choice() else SynergyRules.TRAIT_DEFAULT)
+	if t != &"":
+		vd["trait"] = String(t)
 	return vd
 
 
@@ -571,7 +586,7 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 		var si: bool = card != null and card.standard_issue
 		var nm: Label = tile.add_line(card.display_name.to_upper() if card != null else String(o["id"]), &"TileName")
 		if si:
-			nm.add_theme_font_override(&"font", StandardIssueLook.stencil())
+			nm.add_theme_font_override(&"font", CardLook.TITLE_FONT)  # kc-cards-impl: one title style
 		var lv: int = int(o["level"])
 		var tag: String = ("STANDARD ISSUE %s · COST %d" % [RunProgress.standard_issue_serial(card), int(o["cost"])]) if si else \
 				("%s · COST %d" % [SynergyGlyphs.level_name(lv).to_upper(), int(o["cost"])])
@@ -667,14 +682,16 @@ func _build_muster_out(r: RunProgress) -> void:
 		tile.set_meta(&"serial", String(row["serial"]))
 		var holder := Control.new()
 		holder.name = "CardHolder"
-		holder.custom_minimum_size = Vector2(3.6 * MUSTER_BANNER_H, MUSTER_BANNER_H + 8.0)
+		# kc-cards-impl: the Y2+ card (172 px, the Codex size).
+		holder.custom_minimum_size = CardView.size_for(MUSTER_CARD_W)
+		holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tile.content.add_child(holder)
-		var bc: PanelContainer = BannerCard.build(BannerCard.entry_for_card(card, StringName(row["art"]), SynergyRules.LEVEL_RECRUIT),
-				holder.custom_minimum_size, MUSTER_BANNER_H)
+		var bc: CardView = CARD_VIEW_SCENE.instantiate() as CardView
 		bc.name = "Card"
 		holder.add_child(bc)
-		bc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bc.set_card_data(_view_dict(card, SynergyRules.LEVEL_RECRUIT, StringName(row["art"])))
+		bc.set_card_width(MUSTER_CARD_W)
 		_ignore_mouse(bc)
 		var st: Label = tile.add_status("")
 		st.name = "MusterStatus"
@@ -1017,34 +1034,37 @@ func _fit_cards() -> void:
 			+ maxf(_header.size.y, button_height()) + %Layout.get_theme_constant(&"separation"))
 	var max_lines: int = 3
 	var extra_h: float = (maxf(line_h, 22.0) + 4.0) if _trait_lines else 0.0
-	var by_h: float = (room.y - (28.0 + extra_h + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
-	while by_h < MIN_CARD_SCALE and max_lines > 1:
+	# kc-cards-impl: the Y2+ card at its own width (never scaled): card height = w / 4 + 153.
+	var room_card_h: float = room.y - (28.0 + extra_h + line_h * max_lines + row_h)
+	var by_h: float = (room_card_h - (CardView.height_for(8.0) - 0.0)) * 4.0 + 8.0
+	while by_h < MIN_CARD_W and max_lines > 1:
 		# kc-syn-ui: the trait line ("VANGUARD 3 > 4") can cost a rules line on the phone; DETAILS has it all.
 		max_lines -= 1
-		by_h = (room.y - (28.0 + extra_h + line_h * max_lines + row_h)) / CardView.BASE_SIZE.y
+		room_card_h = room.y - (28.0 + extra_h + line_h * max_lines + row_h)
+		by_h = (room_card_h - CardView.height_for(8.0)) * 4.0 + 8.0
 	var n: int = card_views.size()
 	var gap: float = 16.0
-	var by_w: float = (room.x - gap * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
-	if by_w < MIN_CARD_SCALE and n > 1:
-		# kc-onboard-ui: four cards on a narrow screen: tighten the gap before going under 0.8x.
-		gap = clampf((room.x - 28.0 * n - CardView.BASE_SIZE.x * MIN_CARD_SCALE * n) / (n - 1), 6.0, 16.0)
-		by_w = (room.x - gap * (n - 1) - 28.0 * n) / (CardView.BASE_SIZE.x * n)
+	var by_w: float = (room.x - gap * (n - 1) - 28.0 * n) / n
+	if by_w < MIN_CARD_W and n > 1:
+		gap = clampf((room.x - 28.0 * n - MIN_CARD_W * n) / (n - 1), 6.0, 16.0)
+		by_w = (room.x - gap * (n - 1) - 28.0 * n) / n
 	_options.add_theme_constant_override(&"separation", int(gap))
-	var s: float = clampf(minf(by_h, by_w), MIN_CARD_SCALE, MAX_CARD_SCALE)
+	var cw: float = clampf(floorf(minf(by_h, by_w)), MIN_CARD_W, MAX_CARD_W)
 	for i: int in n:
 		var view: Control = card_views[i]
-		view.pivot_offset = Vector2.ZERO  # CardView pivots on its centre; scale from the corner
-		view.scale = Vector2(s, s)
+		view.pivot_offset = Vector2.ZERO
+		view.scale = Vector2.ONE
 		view.position = Vector2.ZERO
-		_card_holders[i].custom_minimum_size = CardView.BASE_SIZE * s
-		var lw: float = CardView.BASE_SIZE.x * s - float(_rules_labels[i].get_meta(&"lock_w", 0.0))
+		(view as CardView).set_card_width(cw)
+		_card_holders[i].custom_minimum_size = CardView.size_for(cw)
+		var lw: float = cw - float(_rules_labels[i].get_meta(&"lock_w", 0.0))
 		_rules_labels[i].custom_minimum_size.x = lw
 		_fit_rules(_rules_labels[i], lw, max_lines)
 		# Same height for every rules block, so the TAKE / DETAILS rows line up.
 		_rules_labels[i].custom_minimum_size.y = ceilf(line_h * max_lines)
 		detail_buttons[i].custom_minimum_size.y = row_h
 	for tile: PickTile in tiles:
-		tile.custom_minimum_size.x = CardView.BASE_SIZE.x * s + 28.0
+		tile.custom_minimum_size.x = cw + 28.0
 
 
 ## Cuts the rules line to max_lines at this width, ending a cut text in "..." (DETAILS has it all).
@@ -1073,6 +1093,11 @@ static func _line_count(text: String, font: Font, font_size: int, width: float) 
 ## Card scale in use (tests).
 func get_card_scale() -> float:
 	return card_views[0].scale.x if not card_views.is_empty() else 0.0
+
+
+## The Y2+ card width in use (tests).
+func get_card_width() -> float:
+	return (card_views[0] as CardView).get_card_width() if not card_views.is_empty() else 0.0
 
 
 static func _ignore_mouse(node: Node) -> void:

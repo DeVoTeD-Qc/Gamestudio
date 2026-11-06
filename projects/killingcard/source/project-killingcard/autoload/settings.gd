@@ -48,12 +48,21 @@ var seen_flags: Dictionary = {}
 ## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
 ## New runs and the quick match start with it.
 var operator_primary: String = ""
+## kc-cards-impl: Settings > Cards > "Always show all card info": board cards always show their cost,
+## level and weapon (else only on hover / hold). Mirrored into BannerView.show_all.
+var show_all_card_info: bool = false:
+	set(value):
+		show_all_card_info = value
+		BannerView.show_all = value
+		if is_inside_tree():
+			BannerView.refresh_all(get_tree())
 
 const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_animations",
-		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags"]
+		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags",
+		&"show_all_card_info"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 

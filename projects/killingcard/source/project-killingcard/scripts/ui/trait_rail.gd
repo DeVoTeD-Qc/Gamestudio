@@ -5,8 +5,11 @@
 #   plate lights at tier 2 and gets a white ring at tier 3; the Doctrine trait has a small emblem
 #   notch; a set that just switched off shows a crack for a moment. Desktop has room for both sides
 #   (rival on top in red, yours below in teal); the phone shows yours (the rival's is in the flyout).
-#   Tap = the SETS flyout (both sides, every tier text); long-press / right-click on a chip = that
-#   trait's rules (chip_inspected), elsewhere = the rail's rules (inspected).
+#   kc-cards-impl (C1+ rail highlight): hover, keyboard focus or tap a chip to pin its trait: every
+#   board card shows its trait, the matching cards glow, the rest dim (focus_changed). Tap the pinned
+#   chip again to unpin; a tap away from the chips = the SETS flyout (both sides, every tier text);
+#   long-press / right-click on a chip = that trait's rules (chip_inspected), elsewhere = the rail's
+#   rules (inspected).
 # Dependencies: press_gesture.gd, synergy_glyphs.gd, hud_theme.tres (Hud colours, HudNumber font).
 # Author: UI/UX Agent (kc-syn-ui)
 extends Control
@@ -14,6 +17,8 @@ extends Control
 signal tapped
 signal inspected
 signal chip_inspected(side: StringName, trait_id: StringName)
+## kc-cards-impl: the highlighted trait changed (&"" = none).
+signal focus_changed(trait_id: StringName)
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
@@ -26,6 +31,10 @@ var _cracks: Dictionary = {}
 var _gesture: RefCounted = null
 ## Last drawn chip rects: [{rect, side, trait}].
 var _chips: Array = []
+## kc-cards-impl: the trait pinned by a tap / keyboard focus, and the one under the mouse.
+var pinned: StringName = &""
+var _hovered: StringName = &""
+var _focus_shown: StringName = &""
 
 
 func _ready() -> void:
@@ -33,7 +42,16 @@ func _ready() -> void:
 	clip_contents = true
 	_gesture = PressGesture.new(self)
 	_gesture.drag_enabled = false
-	_gesture.tapped.connect(func(_p: Vector2) -> void: tapped.emit())
+	focus_mode = Control.FOCUS_ALL
+	_gesture.tapped.connect(func(p: Vector2) -> void:
+		var hit: Dictionary = chip_at(get_global_transform().affine_inverse() * p)
+		if hit.is_empty():
+			tapped.emit()
+		else:
+			pin(&"" if pinned == hit["trait"] else StringName(hit["trait"])))
+	focus_exited.connect(func() -> void:
+		if pinned != &"" and not has_focus():
+			_emit_focus())
 	_gesture.long_pressed.connect(func(p: Vector2) -> void:
 		var hit: Dictionary = chip_at(get_global_transform().affine_inverse() * p)
 		if hit.is_empty():
@@ -44,8 +62,57 @@ func _ready() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		var hit: Dictionary = chip_at((event as InputEventMouseMotion).position)
+		_hovered = StringName(hit.get("trait", &""))
+		_emit_focus()
+	elif event.is_action_pressed(&"ui_down") or event.is_action_pressed(&"ui_up"):
+		_step_pin(1 if event.is_action_pressed(&"ui_down") else -1)
+		accept_event()
+		return
+	elif event.is_action_pressed(&"ui_cancel") and pinned != &"":
+		pin(&"")
+		accept_event()
+		return
 	if _gesture.handle(event):
 		accept_event()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT and _hovered != &"":
+		_hovered = &""
+		_emit_focus()
+	elif what == NOTIFICATION_FOCUS_ENTER and pinned == &"" and not _chips.is_empty():
+		pin(StringName(_chips[-1]["trait"]))
+
+
+## Pins a trait's highlight (&"" unpins).
+func pin(t: StringName) -> void:
+	pinned = t
+	_emit_focus()
+
+
+## The trait highlighted now: under the mouse, else the pinned one.
+func focused_trait() -> StringName:
+	return _hovered if _hovered != &"" else pinned
+
+
+func _step_pin(d: int) -> void:
+	if _chips.is_empty():
+		return
+	var i: int = -1
+	for j: int in _chips.size():
+		if _chips[j]["trait"] == pinned:
+			i = j
+	pin(StringName(_chips[posmod(i + d, _chips.size())]["trait"]))
+
+
+func _emit_focus() -> void:
+	var t: StringName = focused_trait()
+	if t != _focus_shown:
+		_focus_shown = t
+		queue_redraw()
+		focus_changed.emit(t)
 
 
 func set_rails(player_rail: Array, enemy_rail: Array, with_enemy: bool) -> void:
@@ -155,4 +222,7 @@ func _draw() -> void:
 			if int(_cracks.get(ck, 0)) > Time.get_ticks_msec():
 				draw_line(ir.position + Vector2(ir.size.x * 0.2, 0), ir.position + Vector2(ir.size.x * 0.55, ir.size.y * 0.5), SynergyGlyphs.DOWN, 2.0)
 				draw_line(ir.position + Vector2(ir.size.x * 0.55, ir.size.y * 0.5), ir.position + Vector2(ir.size.x * 0.35, ir.size.y), SynergyGlyphs.DOWN, 2.0)
+			if t == _focus_shown:
+				draw_rect(chip, Color(SynergyGlyphs.trait_color(t), 0.22))
+				draw_rect(chip, Color.WHITE if t == pinned else SynergyGlyphs.trait_color(t), false, 2.0)
 			_chips.append({"rect": chip, "side": side, "trait": t})

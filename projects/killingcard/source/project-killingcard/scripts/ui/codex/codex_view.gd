@@ -35,8 +35,10 @@ const TYPE_WORDS: Dictionary = {&"all": "ALL", &"unit": "UNITS", &"tactic": "TAC
 const CLASS_FILTERS: Array[StringName] = [&"any", &"ar", &"smg", &"shotgun", &"sniper", &"lmg"]
 const KS_ICONS: Dictionary = {&"recon_drone": "ks_recon_drone", &"mortar_barrage": "ks_mortar",
 		&"sentry_turret": "ks_sentry", &"attack_helo": "ks_attack_helo", &"gunship": "ks_gunship"}
-const TILE: Vector2 = Vector2(240, 96)
-const TILE_COMPACT: Vector2 = Vector2(216, 86)
+## kc-cards-impl: Codex tiles are Y2+ cards (the mock-up's Codex card is 172 wide).
+const TILE: Vector2 = Vector2(196, 202)
+const TILE_COMPACT: Vector2 = Vector2(172, 196)
+const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 ## The board's banner heights (desktop / phone): codex cards use the board's icon sizes.
 const METRIC_H: float = 76.0
 const METRIC_H_COMPACT: float = 57.0
@@ -636,11 +638,32 @@ func _make_tile(e: Dictionary) -> Control:
 	b.tooltip_text = "%s · tap: %s · long-press / right-click: rules" % [String(e["name"]),
 			"its %d arts (%d found)" % [arts.size(), found] if arts.size() > 1 else "rules"]
 	_wire_press(b, tap_entry.bind(e), open_entry.bind(e, &""))
-	var panel: PanelContainer = BannerCard.build(_card_entry(e, shown_art(e)), tile_size, METRIC_H_COMPACT if compact else METRIC_H)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var cv: CardView = make_card_view(_card_view(e, shown_art(e)), tile_size.x)
+	b.custom_minimum_size = CardView.size_for(tile_size.x)
+	b.add_child(cv)
 	return b
+
+
+## kc-cards-impl: a Y2+ card at width w that ignores the mouse (the tile button takes the taps).
+static func make_card_view(view: Dictionary, w: float) -> CardView:
+	var cv: CardView = CARD_VIEW_SCENE.instantiate() as CardView
+	cv.name = "Card"
+	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cv.set_card_data(view)
+	cv.set_card_width(w)
+	cv.ready.connect(func() -> void:
+		for c: Node in cv.find_children("*", "Control", true, false):
+			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE)
+	return cv
+
+
+## The Y2+ data of a codex entry wearing `art`.
+static func _card_view(e: Dictionary, art: StringName) -> Dictionary:
+	if e["kind"] == &"killstreak":
+		var item: LoadoutItem = e["item"]
+		return {"name": item.display_name, "type": "killstreak", "threshold": item.streak_threshold, "banner": String(item.id),
+				"text": item.text}
+	return CardView.view_for_card(e["card"], art)
 
 
 ## The BannerCard entry of a codex entry wearing `art`.
@@ -887,30 +910,27 @@ func _make_art_tile(art: StringName, _equipped: bool, selected: bool) -> Control
 	else:
 		entry.erase("trait")
 	entry["reserve_trait"] = card != null and card.is_unit()
-	var panel: PanelContainer = BannerCard.build(entry, tile_size, METRIC_H_COMPACT if compact else METRIC_H)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.theme_type_variation = &"HandCardSelected" if selected else &"HandCard"
-	if not found:
-		panel.modulate = Color(0.62, 0.62, 0.62, 1.0)
-	b.add_child(panel)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var face: Control = panel.get_node("Face")
+	var view: Dictionary = _card_view(art_entry, art)
+	if tr != &"":
+		view["trait"] = String(tr)
+	else:
+		view.erase("trait")
+	view["not_found"] = not found
+	view["marked"] = selected
+	var cv: CardView = make_card_view(view, tile_size.x)
+	b.custom_minimum_size = CardView.size_for(tile_size.x)
+	b.add_child(cv)
 	var slot: Control = Control.new()
 	slot.name = "TraitSlot"
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slot.set_meta(&"trait", tr)
-	face.add_child(slot)
+	cv.add_child(slot)
+	var tr_rect: Rect2 = cv.regions()["traits"]
+	slot.position = tr_rect.position
+	slot.size = tr_rect.size
 	slot.draw.connect(func() -> void:
 		if tr == &"" and bool(entry["reserve_trait"]):
 			BannerView._dashed_rect(slot, Rect2(Vector2.ZERO, slot.size).grow(-1.0), Color(1, 1, 1, 0.35), 1.0))
-	var bv2: BannerView = BannerCard.banner_of(panel)
-	panel.sort_children.connect(func() -> void:
-		var mm: Dictionary = BannerView.metrics(minf(face.size.y, METRIC_H_COMPACT if compact else METRIC_H))
-		var an: Dictionary = BannerView.anatomy(face.size, mm, bv2.entry, bv2.lead if bv2.lead > 0.0 else -1.0)
-		var tr_rect: Rect2 = an.get("trait", Rect2())
-		slot.position = tr_rect.position
-		slot.size = tr_rect.size
-		slot.queue_redraw())
 	return b
 
 

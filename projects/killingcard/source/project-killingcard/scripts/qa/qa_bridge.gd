@@ -338,6 +338,9 @@ static func ctrl_of(scene: Node) -> Node:
 
 ## kc-loadout-cut: the text of the Operator card's visible cost hex ("" when it shows none).
 static func _op_cost_text(card: Control) -> String:
+	# kc-cards-impl (O2): the Operator card draws its hex; its cost is the card's meta.
+	if card.has_meta(&"cost"):
+		return str(int(card.get_meta(&"cost"))) if int(card.get_meta(&"cost")) > 0 else ""
 	for n: Node in card.find_children("*", "", true, false):
 		if n.get_script() == CostHexScript and (n as Control).visible:
 			return String((n.get(&"label") as Label).text)

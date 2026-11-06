@@ -211,7 +211,7 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	if si:
 		# kc-onboard-ui: the Standard Issue name in the stencil font, with its serial.
 		name_l.text = "%s  x%d" % [card.display_name.to_upper(), copies.size()]
-		name_l.add_theme_font_override(&"font", StandardIssueLook.stencil())
+		name_l.add_theme_font_override(&"font", CardLook.TITLE_FONT)  # kc-cards-impl: one title style
 		name_l.add_theme_color_override(&"font_color", StandardIssueLook.NAME)
 	row.add_child(name_l)
 	if si:

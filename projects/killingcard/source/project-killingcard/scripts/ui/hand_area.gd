@@ -80,6 +80,12 @@ var dragging_uid: int = -1
 var operator_entry: Dictionary = {}
 var operator_selected: bool = false
 var _op_chip: Control = null
+## kc-cards-impl (H1 + O2): the card grid's rect and the Operator card's rect (HandArea-local; the
+## HandArea covers the grid and the Operator row under it). Empty = the whole row.
+var _grid_rect: Rect2 = Rect2()
+var _op_rect: Rect2 = Rect2()
+## kc-cards-impl (H1): the selected card lifts this far.
+const SELECTED_LIFT: float = 6.0
 ## Uid meta of the Operator chip (never a rules card uid).
 const OPERATOR_UID: int = -2
 const AMBER: Color = Color(0.961, 0.722, 0.239)
@@ -122,8 +128,27 @@ func set_card_size(card: Vector2, gap: float, cols: int = columns, board_dir: fl
 		_fit_cards()
 
 
+## kc-cards-impl: the grid's rect and the Operator card's rect (HandArea-local).
+func set_grid_rect(grid: Rect2, op_rect: Rect2) -> void:
+	if grid == _grid_rect and op_rect == _op_rect:
+		return
+	var rebuild: bool = op_rect.size != _op_rect.size
+	_grid_rect = grid
+	_op_rect = op_rect
+	if rebuild and not operator_entry.is_empty():
+		set_hand(_cards_data)
+	else:
+		_fit_cards()
+
+
+func get_grid_rect() -> Rect2:
+	return _grid_rect
+
+
 func set_read_only(value: bool) -> void:
 	read_only = value
+	if _op_chip != null:
+		_op_chip.visible = not value  # PEEK: the tray's tab and SPEED take the Operator row
 	for chip: Node in get_cards():
 		var tag: Control = chip.find_child("NextTag", true, false) as Control
 		if tag != null:
@@ -139,9 +164,10 @@ func set_hand(cards: Array) -> void:
 		child.queue_free()
 	_op_chip = null
 	if not operator_entry.is_empty():
-		# kc-syn-ui (head): on the board the Operator card folds to a half-height mini card.
-		var on_board: bool = StringName(String(operator_entry.get("state", ""))) == &"board"
-		_op_chip = _make_operator_mini(operator_entry) if on_board else _make_operator_card(operator_entry)
+		# kc-cards-impl (O2): the Operator card sits bottom-left of the tray, next to UNDO / READY,
+		# in every state (Deploy / On board / Down / Need supply).
+		_op_chip = _make_operator_card(operator_entry)
+		_op_chip.visible = not read_only
 		_row.add_child(_op_chip)
 	for card: Dictionary in cards:
 		var chip: Control = _make_card(card)
@@ -218,8 +244,7 @@ func _apply_styles() -> void:
 		if art != null:
 			# kc-hand-dim: the art is always ~22% darker (BannerView.ART_DIM) so the icons read; can't
 			# afford it: darker still (0.6 of that), and the chip fades (alpha 0.55), so it stays distinct.
-			var k: float = 1.0 - BannerView.ART_DIM
-			art.self_modulate = Color(0.6 * k, 0.6 * k, 0.6 * k) if not playable and uid != selected_uid else Color(k, k, k)
+			art.self_modulate = Color(0.6, 0.6, 0.6) if not playable and uid != selected_uid else Color.WHITE
 			var on: bool = uid == selected_uid and uid >= 0
 			if on and art.material == null:
 				var mat := ShaderMaterial.new()
@@ -272,39 +297,36 @@ func _card_size() -> Vector2:
 
 
 func _fit_cards() -> void:
-	var cards: Array[Node] = _row.get_children()
+	var cards: Array[Node] = get_cards()
 	var n: int = cards.size()
 	var card_size: Vector2 = _card_size()
 	_row.custom_minimum_size = Vector2(card_size.x, card_size.y)
+	var grid: Rect2 = _grid_rect if _grid_rect.size != Vector2.ZERO else Rect2(Vector2.ZERO, _row.size)
+	if _op_chip != null:
+		var orr: Rect2 = _op_rect if _op_rect.size != Vector2.ZERO else Rect2(Vector2(0, grid.end.y + _gap), Vector2(grid.size.x, 120))
+		_op_chip.position = orr.position + Vector2(0, -SELECTED_LIFT if operator_selected else 0.0)
+		_op_chip.size = orr.size
 	if n == 0:
 		return
 	var cols: int = maxi(1, columns)
 	var rows: int = ceili(float(n) / cols)
 	var pitch_x: float = card_size.x + _gap
 	var pitch_y: float = card_size.y + _gap
+	# The top SELECTED_LIFT px stay free for the selected card's lift.
+	grid = Rect2(grid.position + Vector2(0, SELECTED_LIFT), grid.size - Vector2(0, SELECTED_LIFT))
 	if rows > 1:
 		# More cards than the grid holds: the rows overlap upward (the step shrinks).
-		pitch_y = minf(pitch_y, (_row.size.y - card_size.y) / (rows - 1))
+		pitch_y = minf(pitch_y, (grid.size.y - card_size.y) / (rows - 1))
 	var grid_w: float = card_size.x + pitch_x * (cols - 1)
-	var x0: float = maxf(0.0, (_row.size.x - grid_w) * 0.5)
-	# kc-syn-ui: the mini Operator card is half a card tall; the cards under it in the first column
-	# move up by the half it frees, so that column holds more before the rows start to overlap.
-	var mini: bool = _op_chip != null and bool(_op_chip.get_meta(&"mini", false))
-	var mini_h: float = mini_height()
-	var lift: float = (card_size.y - mini_h) if mini else 0.0
-	if mini and rows > 1:
-		var pitch_y0: float = minf(card_size.y + _gap, (_row.size.y - card_size.y + lift) / (rows - 1))
-		pitch_y = minf(card_size.y + _gap, maxf(pitch_y, pitch_y0))
+	var x0: float = grid.position.x + maxf(0.0, (grid.size.x - grid_w) * 0.5)
 	for i: int in n:
 		var c: Control = cards[i]
-		c.size = card_size if not (mini and c == _op_chip) else Vector2(card_size.x, mini_h)
+		c.size = card_size
 		var x: float = x0 + (i % cols) * pitch_x
-		# kc-board2 §4.2: the selected card shifts 14 px toward the board.
-		if (int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0) or (c == _op_chip and operator_selected):
-			x += SELECTED_SHIFT * board_side
-		var y: float = (i / cols) * pitch_y
-		if mini and i % cols == 0 and i > 0:
-			y -= lift
+		var y: float = grid.position.y + (i / cols) * pitch_y
+		# kc-cards-impl (H1): the selected card lifts.
+		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
+			y -= SELECTED_LIFT
 		c.position = Vector2(roundf(x), roundf(y))
 
 
@@ -408,86 +430,157 @@ func _add_synergy_overlay(panel: Control, face: Control, card: Dictionary) -> vo
 # kc-ui3: the Operator card
 # =============================================================================
 
+## kc-cards-impl (the head's O2): the Operator card at the bottom-left of the tray, next to UNDO over
+## READY: the art on top (dimmed on the board, grey when down), the cost in the standard hex (red
+## when you can't pay), the OPERATOR tag, its abilities top-right, FP / Armor bottom-right of the art,
+## a state chip on the art (DEPLOY / PLAN · B / ON BOARD · B1 / DOWN), then its name in the title
+## style and its ability line. Tap = select (Deploy / Rotate), drag = drag to a column, long press =
+## its rules.
 func _make_operator_card(op: Dictionary) -> Control:
 	var state: StringName = StringName(String(op.get("state", "none")))
-	var cost0: int = int(op.get("cost", 0))
-	var short0: bool = state == &"deploy" and not bool(op.get("can_afford", true))
-	var status0: String = ("NEED %d SUPPLY" % cost0) if short0 else String(op.get("status", "")).replace("\n", " · ")
-	# kc-ui4: the status (DEPLOY / PLAN · B / DOWN · NEXT ROUND) is the line under the name, where a
-	# deck card shows its art's subname, so it never covers the name or the badges.
-	# kc-loadout-cut (head): the Operator shows its Supply cost in the same cost hex as every deck
-	# card (BannerCard's CostHex, top-left); 0 = no hex.
-	var card: Dictionary = {"name": op.get("name", "Operator"), "type": "OPERATOR",
-			"cost": str(cost0) if cost0 > 0 else "", "subname": status0,
-			"fp": op.get("fp", 0), "armor": op.get("armor", 0), "armor_max": op.get("armor_max", op.get("armor", 0)),
-			"keywords": op.get("keywords", []), "operator": true, "camo": op.get("camo", "base"),
-			"banner": op.get("banner", ""), "id": op.get("banner", ""), "playable": true}
-	var panel: Control = _make_card(card)
+	var cost: int = int(op.get("cost", 0))
+	var short: bool = state == &"deploy" and not bool(op.get("can_afford", true))
+	var panel: PanelContainer = PanelContainer.new()
 	panel.name = "OperatorCard"
 	panel.set_meta(&"uid", OPERATOR_UID)
 	panel.set_meta(&"operator", true)
-	panel.tooltip_text = "Your Operator: %s" % String(op.get("name", ""))
-	var next_tag: Node = panel.find_child("NextTag", true, false)
-	if next_tag != null:
-		(next_tag as Control).visible = false
-	# A brass frame with cut corners (operator_frame()); the cost is the deck cards' hex (above).
-	var cost: int = cost0
-	var short: bool = short0
-	var face0: Control = panel.get_node("Face")
-	var obv: BannerView = BannerCard.banner_of(panel)
-	panel.sort_children.connect(func() -> void:
-		var mm: Dictionary = BannerView.metrics(minf(face0.size.y, _metric_h if _metric_h > 0.0 else face0.size.y))
-		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, obv.lead if obv.lead > 0.0 else -1.0)
-		# kc-ui4: on the Operator card the name takes the subname slot and the status
-		# (DEPLOY / PLAN · B) the top centre (when it fits; the tooltip and the red status say it too).
-		var tl: Label = face0.find_child("NameLabel", false, false) as Label
-		var stl: Label = face0.find_child("OperatorStatus", false, false) as Label
-		if tl == null or stl == null:
-			return
-		var th: float = tl.get_combined_minimum_size().y
-		var mid: Rect2 = an["mid"]
-		var sr: Rect2 = mid if mid.size.y >= th - 4.0 else an["sub"]
-		tl.position = Vector2(sr.position.x, sr.position.y + (sr.size.y - th) * 0.5)
-		tl.size = Vector2(maxf(8.0, sr.size.x), th)
-		var nr: Rect2 = an["name"]
-		var need: Vector2 = stl.get_combined_minimum_size()
-		stl.visible = stl.text != "" and need.x <= nr.size.x
-		stl.size = need
-		stl.position = Vector2(nr.position.x + (nr.size.x - need.x) * 0.5, nr.position.y + (nr.size.y - need.y) * 0.5))
-	if short:
-		op = op.duplicate()
-		op["status"] = "NEED %d SUPPLY" % cost
 	panel.set_meta(&"operator_short", short)
-	_apply_operator_frame(panel)
-	# Status line (BannerCard's SubLabel): DEPLOY / PLAN · B / DOWN · NEXT ROUND / NEED 1 SUPPLY.
-	var status: Label = panel.find_child("SubLabel", true, false) as Label
+	panel.set_meta(&"state", state)
+	panel.set_meta(&"cost", cost)
+	panel.add_to_group(&"tap_target")
+	panel.tooltip_text = "Your Operator: %s" % String(op.get("name", ""))
+	var face: Control = Control.new()
+	face.name = "Face"
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.clip_contents = true
+	panel.add_child(face)
+	var art := TextureRect.new()
+	art.name = "Art"
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art_id: StringName = StringName(String(op.get("banner", "")))
+	art.texture = BannerArtDB.banner_texture(art_id, {"cls": "OPERATOR", "type": "unit"}) if art_id != &"" else null
+	face.add_child(art)
+	var status_text: String = ""
+	var status_col: Color = get_theme_color(&"text", &"Hud")
+	match state:
+		&"deploy":
+			status_text = "NEED %d SUPPLY" % cost if short else "DEPLOY"
+			status_col = get_theme_color(&"enemy", &"Hud") if short else AMBER
+		&"planned":
+			status_text = String(op.get("status", "PLAN")).replace("\n", " · ")
+			status_col = AMBER
+		&"board":
+			var where: String = String(op.get("zone_label", ""))
+			status_text = "ON BOARD · %s%d" % [where, int(op.get("row", 1))] if where != "" else "ON BOARD"
+			status_col = Color("#D8DEE3")
+		&"down":
+			status_text = "DOWN"
+			status_col = get_theme_color(&"enemy", &"Hud")
+		_:
+			status_text = String(op.get("status", "")).replace("\n", " · ")
+	var status: Label = _label(status_text, &"HudTag", true)
 	status.name = "OperatorStatus"
-	status.set_meta(&"important", true)
-	status.clip_text = false
-	status.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-	status.tooltip_text = status.text
+	status.add_theme_font_override(&"font", CardLook.TITLE_FONT)
+	status.add_theme_font_size_override(&"font_size", 16)
+	status.add_theme_color_override(&"font_color", status_col)
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var plate := StyleBoxFlat.new()
-	plate.bg_color = Color(0.05, 0.06, 0.07, 0.86)
-	plate.set_corner_radius_all(4)
-	plate.content_margin_left = 4
-	plate.content_margin_right = 4
-	if state == &"deploy":
-		plate.bg_color = AMBER
-		status.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
-	if state == &"deploy" and bool(panel.get_meta(&"operator_short", false)):
-		plate.bg_color = Color(0.05, 0.06, 0.07, 0.9)
-		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
-	elif state == &"down":
-		status.add_theme_color_override(&"font_color", get_theme_color(&"enemy", &"Hud"))
-	elif state != &"deploy":
-		status.add_theme_color_override(&"font_color", get_theme_color(&"friend", &"Hud"))
+	plate.bg_color = Color(0.04, 0.05, 0.055, 0.9)
+	plate.border_color = status_col
+	plate.set_border_width_all(1)
+	plate.content_margin_left = 6
+	plate.content_margin_right = 6
 	status.add_theme_stylebox_override(&"normal", plate)
-	status.visible = status.text != ""
+	status.visible = status_text != ""
+	status.tooltip_text = status_text
+	face.add_child(status)
+	var title: Label = CardLook.title_label(String(op.get("name", "Operator")))
+	title.name = "NameLabel"
+	title.set_meta(&"important", true)
+	face.add_child(title)
+	var names: PackedStringArray = []
+	for kw: Dictionary in op.get("keywords", []):
+		var nm: String = String(kw.get("name", ""))
+		if nm != "":
+			names.append(nm)
+	var ability: Label = CardLook.rule_label(", ".join(names) if not names.is_empty() else "Respawns at your next Deploy if it goes down.")
+	ability.name = "AbilityLine"
+	ability.clip_text = true
+	ability.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	face.add_child(ability)
+	# The drawn layer: cost hex, OPERATOR tag, abilities, FP / Armor.
+	var ink: Control = Control.new()
+	ink.name = "Ink"
+	ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.add_child(ink)
+	face.move_child(status, -1)
+	var entry: Dictionary = {"keywords": op.get("keywords", []), "operator": true}
+	var fp: int = int(op.get("fp", 0))
+	var armor: int = 0 if state == &"down" else int(op.get("armor", 0))
+	var armor_max: int = int(op.get("armor_max", op.get("armor", 0)))
+	ink.draw.connect(func() -> void:
+		var ah: float = art.size.y
+		var x: float = 5.0
+		if cost > 0:
+			CardLook.draw_cost(ink, Rect2(x, 5, 22, 22), str(cost), short)
+			x += 26.0
+		var narrow: bool = ink.size.x < 150.0
+		var tag: Rect2 = Rect2(x, 7, 58.0 if narrow else 70.0, 18)
+		var tsb := StyleBoxFlat.new()
+		tsb.bg_color = Color(0.04, 0.05, 0.055, 0.86)
+		tsb.border_color = BRASS
+		tsb.set_border_width_all(1)
+		tsb.set_corner_radius_all(9)
+		ink.draw_style_box(tsb, tag)
+		var f: Font = CardLook.TITLE_FONT
+		var tfs: int = 12 if narrow else 14
+		var tw: float = f.get_string_size("OPERATOR", HORIZONTAL_ALIGNMENT_LEFT, -1, tfs).x
+		ink.draw_string(f, Vector2(tag.position.x + (tag.size.x - tw) * 0.5, tag.position.y + 13.0 + (tfs - 12) * 0.5), "OPERATOR", HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, Color("#F3D36B"))
+		var kinds: Array = BannerView.ability_kinds(entry)
+		var kx: float = ink.size.x - 4.0 - 20.0
+		for k: Variant in kinds:
+			if kx < tag.end.x + 2.0:
+				break
+			if k is StringName and IconSheet.has_icon(k):
+				ink.draw_rect(Rect2(kx, 5, 20, 20), Color(0.04, 0.05, 0.055, 0.86))
+				if k == &"kw_pick":
+					CardLook.draw_pick_icon(ink, Rect2(kx + 2, 7, 16, 16), AMBER)
+				else:
+					ink.draw_texture_rect(IconSheet.get_icon(k), Rect2(kx + 2, 7, 16, 16), false, AMBER)
+				kx -= 22.0
+		var ar: Rect2 = Rect2(ink.size.x - 4.0 - 25.0, ah - 28.0, 25, 26)
+		var fr: Rect2 = Rect2(ar.position.x - 3.0 - 26.0, ah - 28.0, 26, 26)
+		CardLook.draw_chip(ink, Rect2(fr.position - Vector2(2, 1), Vector2(ar.end.x - fr.position.x + 4.0, 28)), 4.0)
+		CardLook.draw_reticle(ink, fr, fp, &"player", 0)
+		CardLook.draw_armor(ink, ar, armor, armor < armor_max))
+	panel.sort_children.connect(func() -> void:
+		var inset: float = 3.0
+		face.position = Vector2(inset, inset)
+		face.size = panel.size - Vector2(inset, inset) * 2.0
+		var ah: float = roundf(face.size.y * 0.5)
+		art.position = Vector2.ZERO
+		art.size = Vector2(face.size.x, ah)
+		ink.position = Vector2.ZERO
+		ink.size = face.size
+		var need: Vector2 = status.get_combined_minimum_size()
+		status.size = Vector2(minf(need.x, face.size.x - 8.0), need.y)
+		status.position = Vector2((face.size.x - status.size.x) * 0.5, maxf(28.0, ah * 0.5 - need.y * 0.5))
+		var ty: float = ah + 2.0
+		title.position = Vector2(6, ty)
+		title.size = Vector2(face.size.x - 12.0, 22)
+		ability.position = Vector2(6, ty + 22.0)
+		ability.size = Vector2(face.size.x - 12.0, maxf(18.0, face.size.y - ty - 24.0))
+		ability.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ink.queue_redraw())
+	_apply_operator_frame(panel)
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
 	glow.name = "Glow"
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.visible = state == &"deploy" and not bool(panel.get_meta(&"operator_short", false))
+	glow.visible = state == &"deploy" and not short
 	panel.add_child(glow)
 	glow.draw.connect(func() -> void:
 		glow.draw_rect(Rect2(Vector2(-3, -3), glow.size + Vector2(6, 6)), Color(AMBER, 0.95), false, 3.0)
@@ -622,8 +715,9 @@ func _style_operator() -> void:
 	if art != null:
 		# On the board / down: the card dims (it is a status card now); deployable: full colour.
 		var dim: bool = state == &"board" or state == &"down" or state == &"planned"
-		var k: float = 1.0 - BannerView.ART_DIM  # kc-hand-dim
-		art.self_modulate = Color(0.45 * k, 0.45 * k, 0.48 * k) if dim and not operator_selected else Color(k, k, k)
+		art.self_modulate = Color(0.45, 0.45, 0.48) if dim and not operator_selected else Color.WHITE
+		if state == &"down":
+			art.self_modulate = Color(0.3, 0.3, 0.32)
 
 
 func _reduced_motion() -> bool:

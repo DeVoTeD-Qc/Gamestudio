@@ -141,14 +141,51 @@ func _gui_input(event: InputEvent) -> void:
 		if slot != _hover_slot:
 			_hover_slot = slot
 			hovered.emit(slot)
+		# kc-cards-impl (C1+ peek): the hovered card shows its cost, level and weapon (a held finger
+		# keeps the card it pressed until it lifts).
+		if (event as InputEventMouseMotion).button_mask == 0:
+			set_peek(slot)
+	elif event is InputEventMouseButton and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		var mb: InputEventMouseButton = event
+		if mb.pressed:
+			var held: Node = slot_at(get_global_transform() * mb.position)
+			set_peek(held if held != null and held.kind == held.Kind.UNIT else null)
+		elif mb.device == InputEvent.DEVICE_ID_EMULATION:
+			set_peek(null)  # touch: the peek lasts while the finger holds the card
 	if _gesture != null and _gesture.handle(event):
 		accept_event()
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_MOUSE_EXIT and _hover_slot != null:
-		_hover_slot = null
-		hovered.emit(null)
+	if what == NOTIFICATION_MOUSE_EXIT:
+		set_peek(null)
+		if _hover_slot != null:
+			_hover_slot = null
+			hovered.emit(null)
+
+
+var _peek_slot: Node = null
+
+
+## kc-cards-impl: the card that peeks (hover / hold), null = none.
+func set_peek(slot: Node) -> void:
+	if slot == _peek_slot:
+		return
+	if _peek_slot != null and is_instance_valid(_peek_slot):
+		(_peek_slot.get(&"banner") as BannerView).peek = false
+	_peek_slot = slot
+	if slot != null:
+		(slot.get(&"banner") as BannerView).peek = true
+
+
+func get_peek_slot() -> Node:
+	return _peek_slot if _peek_slot != null and is_instance_valid(_peek_slot) else null
+
+
+## kc-cards-impl: the synergy rail's highlighted trait on every banner of this column.
+func set_syn_focus(t: StringName) -> void:
+	for slot: Node in _enemy_slots + _friendly_slots:
+		(slot.get(&"banner") as BannerView).syn_focus = t
 
 
 func set_metrics(m: Dictionary) -> void:
@@ -214,6 +251,7 @@ func show_ghost(entry: Dictionary, front: bool = false) -> void:
 		return
 	_ghost.show_ghost(entry)
 	_ghost.visible = true
+	_show_play_here()
 	# kc-polish (B1): a Protector's ghost takes row 1 and your cards preview their shift back one
 	# row, so the ghost never covers your current front card.
 	_shift_for_ghost(front and line > 0)
@@ -236,6 +274,39 @@ func _shift_for_ghost(on: bool) -> void:
 		var b: BannerView = slot.banner
 		var tw: Tween = _motion(b)
 		tw.tween_property(b, "position:y", pitch if on else 0.0, _ms(140.0) / 1000.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+var _play_here: Label = null
+
+
+## kc-cards-impl (H1): the legal landing slot says PLAY HERE (over the card's ghost).
+func _show_play_here() -> void:
+	if _play_here == null:
+		_play_here = Label.new()
+		_play_here.name = "PlayHere"
+		_play_here.text = "PLAY HERE"
+		_play_here.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_play_here.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_play_here.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_play_here.add_theme_font_override(&"font", CardLook.TITLE_FONT)
+		_play_here.add_theme_font_size_override(&"font_size", 18)
+		_play_here.add_theme_color_override(&"font_color", Color("#FFB020"))
+		_play_here.add_theme_constant_override(&"outline_size", 4)
+		_play_here.add_theme_color_override(&"font_outline_color", Color(0.05, 0.06, 0.07))
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(1.0, 0.69, 0.13, 0.16)
+		sb.border_color = Color("#FFB020")
+		sb.set_border_width_all(2)
+		_play_here.add_theme_stylebox_override(&"normal", sb)
+		_ghost.add_child(_play_here)
+	_play_here.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_play_here.text = "PLAY HERE · %s" % String(lane_data.get("label", "")) if String(lane_data.get("label", "")) != "" else "PLAY HERE"
+	_play_here.visible = true
+
+
+## The PLAY HERE label of this column's landing slot (null when no card is selected).
+func get_play_here() -> Label:
+	return _play_here if _play_here != null and _ghost.visible and _play_here.visible else null
 
 
 func is_ghost_shift() -> bool:
@@ -607,18 +678,24 @@ func _draw_decor() -> void:
 	if metrics.is_empty():
 		return
 	var oy: float = BoardMetrics.objective_y(metrics)
-	# FRONT tabs: linking each side's row 1 to the objective tile.
+	# FRONT tabs: each side's row 1 meets the objective tile. kc-cards-impl: the tab sits INSIDE the
+	# tile's top (rival) / bottom (yours) margin, clear of the banners and of the tile's labels:
+	# desktop keeps the FRONT word (the 96 px tile has a 26 px margin), the phone's 52 px tile has a
+	# 6 px margin, so there it is a side-coloured bar (no word).
 	var font: Font = get_theme_font(&"font", &"HudHeader")
-	var tab: Vector2 = Vector2(48, 13) if compact else Vector2(64, 15)  # kc-board2 §2.1
-	var fs: int = 11 if compact else 13
+	var obj_h: float = metrics["obj_h"]
+	var tab: Vector2 = Vector2(48, 5) if compact else Vector2(64, 15)
+	var fs: int = 13
 	for pair: Array in [[&"enemy", _enemy_slots], [&"player", _friendly_slots]]:
 		var slot: Node = pair[1][0]
 		if slot.kind != slot.Kind.UNIT or slot.pending:
 			continue
 		var side_c: Color = get_theme_color(&"friend" if pair[0] == &"player" else &"enemy", &"Hud")
-		var y: float = oy - tab.y * 0.5 if pair[0] == &"enemy" else oy + metrics["obj_h"] - tab.y * 0.5
+		var y: float = oy + 1.0 if pair[0] == &"enemy" else oy + obj_h - 1.0 - tab.y
 		var r: Rect2 = Rect2(Vector2((size.x - tab.x) * 0.5, y), tab)
 		_decor.draw_rect(r, side_c)
+		if compact:
+			continue
 		var sz: Vector2 = font.get_string_size("FRONT", HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		_decor.draw_string(font, Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5),
 				"FRONT", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.05, 0.06, 0.07))
@@ -638,3 +715,20 @@ func _draw_decor() -> void:
 			_decor.draw_rect(full, border, false, w)
 			if target_state == TARGET_HOVER:
 				_decor.draw_rect(_friendly_row.get_rect(), Color(border, 0.14))
+
+
+## The FRONT tab rects (lane-local) drawn now (tests): {&"enemy": Rect2, &"player": Rect2} for the
+## sides with a front unit.
+func front_tab_rects() -> Dictionary:
+	var out: Dictionary = {}
+	if metrics.is_empty():
+		return out
+	var oy: float = BoardMetrics.objective_y(metrics)
+	var tab: Vector2 = Vector2(48, 5) if compact else Vector2(64, 15)
+	for pair: Array in [[&"enemy", _enemy_slots], [&"player", _friendly_slots]]:
+		var slot: Node = pair[1][0]
+		if slot.kind != slot.Kind.UNIT or slot.pending:
+			continue
+		var y: float = oy + 1.0 if pair[0] == &"enemy" else oy + float(metrics["obj_h"]) - 1.0 - tab.y
+		out[pair[0]] = Rect2(Vector2((size.x - tab.x) * 0.5, y), tab)
+	return out

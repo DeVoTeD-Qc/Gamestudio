@@ -52,7 +52,11 @@ func test_aliases_and_icon_sheet_hook() -> void:
 	assert_eq(UiKit.kit_id(&"supply"), &"stat_supply", "supply alias")
 	assert_eq(UiKit.kit_id(&"kw_cover"), &"stat_cover", "cover alias")
 	# Old sheet callers now get the kit image (wrapped as an AtlasTexture).
-	for name: StringName in [&"stat_firepower", &"stat_armor", &"kw_pick", &"kw_first_shot", &"streak", &"kw_cover", &"supply"]:
+	# kc-cards-impl: kw_pick is the new (non-crosshair) Pick glyph: the kit's kw_pick_v2 when shipped,
+	# else the built-in one (IconSheet.pick_glyph), never the old crosshair.
+	var pick: AtlasTexture = IconSheet.get_icon(&"kw_pick")
+	assert_true(pick == UiKit.kit_atlas(IconSheet.PICK_KIT_ID) if UiKit.has_kit(IconSheet.PICK_KIT_ID) else pick == IconSheet.pick_glyph(), "the new Pick icon")
+	for name: StringName in [&"stat_firepower", &"stat_armor", &"kw_first_shot", &"streak", &"kw_cover", &"supply"]:
 		var a: AtlasTexture = IconSheet.get_icon(name)
 		assert_not_null(a, "IconSheet %s" % name)
 		if a != null:

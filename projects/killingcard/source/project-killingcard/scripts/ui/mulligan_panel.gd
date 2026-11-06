@@ -23,8 +23,11 @@ signal card_inspected(uid: int)
 
 const CARD_VIEW: PackedScene = preload("res://scenes/match/CardView.tscn")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
-## CardView base size and the largest scale used.
-const VIEW_BASE: Vector2 = Vector2(250, 350)
+## kc-cards-impl: the Y2+ card is laid out at its own width (CardView.set_card_width): 172..220 px
+## (the mock-up's mulligan card is 196), never scaled.
+const VIEW_BASE: Vector2 = CardView.BASE_SIZE
+const MIN_W: float = 172.0
+const MAX_W: float = 220.0
 const MAX_SCALE: float = 1.0
 const MIN_FIT: float = 0.84
 const CARD_PAD: float = 4.0
@@ -67,8 +70,9 @@ func open(hand: Array) -> void:
 	var n: int = maxi(1, hand.size())
 	_cards.columns = n
 	_ensure_scroll()
-	var s: float = card_scale(n)
-	var view_size: Vector2 = (VIEW_BASE * s).floor()
+	var cw: float = card_width(n)
+	var s: float = cw
+	var view_size: Vector2 = CardView.size_for(cw)
 	var sep: float = float(_cards.get_theme_constant(&"h_separation"))
 	var total_w: float = n * (view_size.x + CARD_PAD * 2.0) + (n - 1) * sep
 	var area: Vector2 = size if size.x > 0.0 else get_viewport_rect().size
@@ -99,13 +103,20 @@ func open(hand: Array) -> void:
 ## CardView scale for n cards: all of them across the panel when that keeps the card at >= MIN_FIT
 ## (the inspector's own floor: name, cost and stats >= 11 pt on a phone), at most as tall as the panel
 ## allows and MAX_SCALE. Below MIN_FIT the cards stay at MIN_FIT and the row scrolls sideways.
-func card_scale(n: int) -> float:
+func card_scale(_n: int) -> float:
+	return 1.0
+
+
+## kc-cards-impl: the Y2+ card width for n cards: all across the panel between MIN_W and MAX_W (and
+## no taller than the panel allows); below MIN_W the row scrolls sideways.
+func card_width(n: int) -> float:
 	var area: Vector2 = size if size.x > 0.0 else get_viewport_rect().size
-	var room_h: float = area.y - (CHROME_H if compact else CHROME_H_DESKTOP)
-	var by_h: float = (room_h - CARD_PAD * 2.0 - 12.0) / VIEW_BASE.y
+	var room_h: float = area.y - (CHROME_H if compact else CHROME_H_DESKTOP) - CARD_PAD * 2.0 - 12.0
 	var room_w: float = area.x - 36.0 - (n - 1) * float(_cards.get_theme_constant(&"h_separation"))
-	var by_w: float = (room_w / n - CARD_PAD * 2.0) / VIEW_BASE.x
-	return clampf(minf(by_h, maxf(by_w, MIN_FIT)), 0.4, MAX_SCALE)
+	var w: float = floorf(room_w / n - CARD_PAD * 2.0)
+	while w > MIN_W and CardView.height_for(w) > room_h:
+		w -= 4.0
+	return clampf(w, MIN_W, MAX_W)
 
 
 ## The card grid lives in a sideways ScrollContainer (made once, keeps %Cards resolvable).
@@ -138,7 +149,7 @@ func get_card_scroll() -> ScrollContainer:
 
 
 ## The full card face inside its toggle, plus the PUT BACK plate (hidden until marked).
-func _add_card_view(b: Button, entry: Dictionary, s: float) -> void:
+func _add_card_view(b: Button, entry: Dictionary, cw: float) -> void:
 	var view: Dictionary = entry.get("view", {})
 	if view.is_empty():
 		view = {"id": String(entry.get("id", "")), "name": entry.get("name", "?"), "cost": int(entry.get("cost", 0)),
@@ -148,9 +159,8 @@ func _add_card_view(b: Button, entry: Dictionary, s: float) -> void:
 	b.add_child(card)
 	card.pivot_offset = Vector2.ZERO  # CardView scales about its centre by default
 	card.position = Vector2(CARD_PAD, CARD_PAD)
-	card.size = VIEW_BASE
-	card.scale = Vector2(s, s)
 	card.set_card_data(view)
+	card.set_card_width(cw)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for c: Node in card.find_children("*", "Control", true, false):
 		(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE

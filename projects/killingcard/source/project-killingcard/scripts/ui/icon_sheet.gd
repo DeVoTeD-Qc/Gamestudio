@@ -45,10 +45,34 @@ static func has_icon(icon_name: StringName) -> bool:
 ## Returns the icon as an AtlasTexture (the UI kit image when imported, else the sheet cell),
 ## or null for an unknown name.
 static func get_icon(icon_name: StringName) -> AtlasTexture:
+	if icon_name == &"kw_pick":
+		# kc-cards-impl: Pick is no longer a crosshair (the FP reticle is one): a shield with a down
+		# arrow ("shoots the lowest Armor"). A UI kit piece kw_pick_v2 wins; else the built-in glyph.
+		var v2: AtlasTexture = UiKit.kit_atlas(PICK_KIT_ID)
+		return v2 if v2 != null else pick_glyph()
 	var kit: AtlasTexture = UiKit.kit_atlas(icon_name)
 	if kit != null:
 		return kit
 	return get_sheet_icon(icon_name)
+
+
+## The UI kit id of the new Pick icon (assets/ui/kit/icons/ico_kw_pick_v2.png when the artist ships it).
+const PICK_KIT_ID: StringName = &"kw_pick_v2"
+## The built-in Pick glyph's SVG (64 px, white; tint it): the same shape as CardLook.draw_pick_icon.
+const PICK_SVG: String = """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6.4L54.4 14V32L46 48L32 58.9L18 48L9.6 32V14Z"/><path d="M32 20.5V43.5"/><path d="M23 35.2L32 44L41 35.2"/></svg>"""
+static var _pick: AtlasTexture = null
+
+
+## The new Pick icon (built-in, cached).
+static func pick_glyph() -> AtlasTexture:
+	if _pick == null:
+		var img := Image.new()
+		img.load_svg_from_string(PICK_SVG, 1.0)
+		var at := AtlasTexture.new()
+		at.atlas = ImageTexture.create_from_image(img)
+		at.region = Rect2(0, 0, img.get_width(), img.get_height())
+		_pick = at
+	return _pick
 
 
 ## The placeholder sheet cell only (UiKit's fallback), or null for an unknown name.
