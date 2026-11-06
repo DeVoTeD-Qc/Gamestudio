@@ -446,14 +446,30 @@ func _make_operator_card(op: Dictionary) -> Control:
 	panel.sort_children.connect(func() -> void:
 		plate_l.size = plate_l.get_combined_minimum_size()
 		var mm: Dictionary = BannerView.metrics(minf(face0.size.y, _metric_h if _metric_h > 0.0 else face0.size.y))
-		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, maxf(1.0, obv.lead))
+		var an: Dictionary = BannerView.anatomy(face0.size, mm, obv.entry, plate_l.size.x + 4.0)
 		plate_l.position = Vector2((an["cost"] as Rect2).position.x, (an["cost"] as Rect2).position.y + ((an["cost"] as Rect2).size.y - plate_l.size.y) * 0.5)
-		# kc-ui4: the Supply plate takes the cost slot (top-left); the name starts after it.
+		# kc-ui4: the Supply plate takes the cost slot (top-left). The plate row is too short for the
+		# weapon's name, so on the Operator card the name takes the subname slot and the status
+		# (DEPLOY / PLAN · B) the top centre (when it fits; the tooltip and the red plate say it too).
 		var want: float = plate_l.size.x + 4.0
 		if obv != null and absf(obv.lead - want) > 0.5:
 			obv.lead = want
 			obv.queue_redraw()
-			panel.queue_sort())
+			panel.queue_sort()
+		var tl: Label = face0.find_child("NameLabel", false, false) as Label
+		var stl: Label = face0.find_child("OperatorStatus", false, false) as Label
+		if tl == null or stl == null:
+			return
+		var th: float = tl.get_combined_minimum_size().y
+		var mid: Rect2 = an["mid"]
+		var sr: Rect2 = mid if mid.size.y >= th - 4.0 else an["sub"]
+		tl.position = Vector2(sr.position.x, sr.position.y + (sr.size.y - th) * 0.5)
+		tl.size = Vector2(maxf(8.0, sr.size.x), th)
+		var nr: Rect2 = an["name"]
+		var need: Vector2 = stl.get_combined_minimum_size()
+		stl.visible = stl.text != "" and need.x <= nr.size.x
+		stl.size = need
+		stl.position = Vector2(nr.position.x + (nr.size.x - need.x) * 0.5, nr.position.y + (nr.size.y - need.y) * 0.5))
 	if short:
 		op = op.duplicate()
 		op["status"] = "NEED %d SUPPLY" % cost
@@ -465,6 +481,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 	status.set_meta(&"important", true)
 	status.clip_text = false
 	status.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	status.tooltip_text = status.text
 	var plate := StyleBoxFlat.new()
 	plate.bg_color = Color(0.05, 0.06, 0.07, 0.86)
 	plate.set_corner_radius_all(4)

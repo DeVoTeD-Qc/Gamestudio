@@ -324,3 +324,17 @@ Squads don't choose. Each squad's deck is authored with arts from one family, so
 - **Needed in `scripts/ui` (later UI task):** (1) `MatchController._assign_copy_arts` should take the player's arts from `RunProgress.player_setup().deck_arts` (and dress enemy copies with `ArtTraits.default_art(card, setup.trait_of(i))`), not cycle the licensed pool, or the pitch may show an Undead art on a Vanguard copy; (2) `BannerArtDB._variant` / `subname` / `alt_arts` should know the `<chassis>~<family>` option ids (`ArtTraits.OPTION_VARIANTS`: tint + emblem; today they fall back to the generated gradient placeholder) and list `ArtTraits.arts_for(card)`; (3) the Heavy rail chip "2/3" uses `next` (now 3 for Heavy at 2).
 
 ### 11.3 Sims after implementation (real path, shipped data)
+`art_traits_sim.gd` default `opts=game` (shipped option lists and squad identities, per-copy traits through `deck_traits`), §5 numbers in `SynergyRules`, Port Vasel, 2026-11-06 working tree (incl. the UI agents' WIP, which doesn't touch the rules).
+
+| Check (target) | Result | Design-doc sim (§6, duplicates) |
+|---|---|---|
+| Trait round robin, late decks, aware vs aware (40-60% each), n = 160 per pairing | **Vanguard 49.4 · Spec Ops 47.7 · Heavy 52.7 · Undead 50.2** | 49.4 / 47.7 / 52.7 / 50.2 (identical seeds: the real path reproduces the prototype exactly) |
+| Aware vs blind, same late deck (≥ 55%), n = 400 per deck | **57.2%** (V 51.5, SO 59.8, H 59.5, U 58.0) | 55.9% |
+| Seat 0, aware mirror (45-55%), n = 600 per deck | **53.2%** (starter 50.3, V 53.7, SO 56.7, H 50.0, U 55.2) | 52.9% |
+| Campaign, Recruit starter vs the squads (~38-40%), n = 200 per slot, before the Anchor fix | 37.6% (57.0 / 65.0 / 36.5 / 26.5 / 3.0) | 35.8% |
+| **Campaign after the Anchor fix** | **39.6%** (57.0 / 67.5 / 36.5 / 34.0 / 3.0) | |
+| Full runs (`balance_sim.gd`, competent proxy, 40 runs) | run win 35%; in-run slots 78 / 100 / 40 / 20 / 38%, no slot spikes | earlier runs on this tree: 32-40% |
+
+- **F1, the Anchor fix:** one of the Anchor's 3 Gunners became a 3rd Hold the Line (`squad_anchor.tres`, mirrored in `gen_content.gd`). Paired seeds, n = 500 per slot: slot 2 63.4 -> 65.2%, slot 4 26.0 -> 30.8% (whole campaign about +1.3 points). Alternatives measured: Gunner -> Suppressing Fire (65 / 30%, the same), Gunner -> Rifleman (73 / 21.5%: the Rifleman joins the Anchor's Undead set and slot 4 gets harder), Gunner -> Marksman (68 / 23.5%), no Armor bonus in slot 4 (slot 4 49.5%: overshoots, campaign about 42%).
+- **Spec Ops' seat 0 (56.7%)** stays the one high cell, as in §6.4 (First Shot and initiative ties): a firefight-order item.
+- Aware-vs-blind and seat checks have ±1.2-1.8 points SE; campaign ±1.5 overall.

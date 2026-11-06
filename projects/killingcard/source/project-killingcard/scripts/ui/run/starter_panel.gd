@@ -304,6 +304,7 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	var tag: Label = _text("SELECTED", &"HudTag", 16)
 	tag.name = "SelectedTag"
 	tag.clip_text = false
+	tag.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	tag.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = AMBER
@@ -338,6 +339,7 @@ func _deck_tile(card: CardData, count: int, level: int) -> Control:
 	var n: Label = _text("x%d" % count, &"HudNumber", 22)
 	n.name = "CountLabel"
 	n.clip_text = false
+	n.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	n.set_meta(&"important", true)
 	n.add_theme_color_override(&"font_color", Color(0.07, 0.08, 0.1))
 	var sb := StyleBoxFlat.new()
@@ -347,9 +349,13 @@ func _deck_tile(card: CardData, count: int, level: int) -> Control:
 	sb.content_margin_right = 7
 	n.add_theme_stylebox_override(&"normal", sb)
 	face.add_child(n)
+	var bv: BannerView = BannerCard.banner_of(panel)
 	panel.sort_children.connect(func() -> void:
+		# The count sits in the bottom-centre slot (between the abilities and the stats).
 		n.size = n.get_combined_minimum_size()
-		n.position = Vector2(roundf((face.size.x - n.size.x) * 0.5), 2.0))
+		var mm: Dictionary = BannerView.metrics(minf(face.size.y, _metric()))
+		var sr: Rect2 = BannerView.anatomy(face.size, mm, bv.entry, bv.lead if bv.lead > 0.0 else -1.0)["sub"]
+		n.position = Vector2(roundf(sr.position.x + (sr.size.x - n.size.x) * 0.5), roundf(sr.position.y + (sr.size.y - n.size.y) * 0.5)))
 	return b
 
 

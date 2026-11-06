@@ -239,9 +239,11 @@ func _gen() -> void:
 			[callout, 1], [flank_route, 2], [bac, 1], [ammo, 1], [tripwire, 1]]),
 		wasp, [ext_mag], sidearm, frag, flash, [], [recon, sentry_ks],  # p19: Mortar -> Sentry (balance-log B2)
 		[1.5, 0.5, 2.0, 3.0], 0.15, [DataEnums.RangeTag.CLOSE])
+	# kc-art-traits-impl (head F1): one Gunner -> Hold the Line (campaign shortfall from LMG Pierce).
+	# SquadData.identity_trait and CardData.trait_options were added to the .tres files directly.
 	var anchor := squad("squad_anchor", "Bulwark_Nine", "QUAY", DataEnums.Personality.ANCHOR,
-		cards_list([[gunner, 3], [shieldman, 2], [rifleman, 3], [medic, 2], [demo, 2], [marksman, 1],
-			[hold, 2], [supp_fire, 2], [comms, 1]]),
+		cards_list([[gunner, 2], [shieldman, 2], [rifleman, 3], [medic, 2], [demo, 2], [marksman, 1],
+			[hold, 3], [supp_fire, 2], [comms, 1]]),
 		kestrel, [foregrip], sidearm, frag, flash, [], [recon, sentry_ks],
 		[1.0, 1.5, 3.0, 3.0], 0.10, [])
 	var rival := squad("squad_black_meridian", "Meridian_Six", "BKMRD", DataEnums.Personality.ANCHOR,

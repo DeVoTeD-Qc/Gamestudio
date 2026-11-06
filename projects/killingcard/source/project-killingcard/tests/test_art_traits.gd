@@ -488,3 +488,27 @@ func test_run_state_reissue_and_art_swap() -> void:
 	rs.abandon_run()
 	rs.save_path = saved_path
 	rs.config = saved_cfg
+
+
+func test_pitch_deck_swaps_keep_traits_parallel() -> void:
+	var cfg: RunConfig = load("res://data/run_config.tres") as RunConfig
+	var s: SideSetup = SideSetup.new()
+	s.deck = cfg.starter_deck.duplicate()
+	for c: CardData in s.deck:
+		s.deck_traits.append(&"undead" if c.can_carry(&"undead") else SynergyRules.TRAIT_DEFAULT)
+	var before: Array[StringName] = s.deck_traits.duplicate()
+	PitchDecks.forced = true
+	PitchDecks.apply_setup(s)
+	PitchDecks.forced = false
+	assert_eq(s.deck_traits.size(), s.deck.size(), "traits stay parallel")
+	for i: int in s.deck.size():
+		var swapped: bool = s.deck[i] != cfg.starter_deck[i]
+		assert_eq(s.deck_traits[i], SynergyRules.TRAIT_DEFAULT if swapped else before[i], "a swapped-in card takes its default, the rest keep theirs")
+
+
+func test_anchor_runs_one_gunner_fewer() -> void:
+	# Head F1: the campaign shortfall from LMG Pierce is fixed on the Anchor squad: one Gunner became a
+	# Hold the Line (art_traits_sim campaign, slots 2 and 4, kc-art-traits-impl §11.3).
+	var sq: SquadData = load("res://data/squads/squad_anchor.tres") as SquadData
+	var ids: Array = sq.deck.map(func(c: CardData) -> StringName: return c.id)
+	assert_eq([ids.count(&"gunner"), ids.count(&"hold_the_line"), ids.size()], [2, 3, 18], "2 Gunners, 3 Hold the Line, 18 cards")
