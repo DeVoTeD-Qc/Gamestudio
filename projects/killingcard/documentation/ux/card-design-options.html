@@ -166,6 +166,13 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
 .yl.flavour { font-style: italic; color: #9AA5AE; }
 .yl svg { flex: none; }
 
+
+.ytag.tac { color: #F2C66B; border-color: #B8913A; }
+.ytext.wrap .yl { white-space: normal; }
+.h-live .h-card, .h-live .h-slot, .h-live .h-cancel { cursor: pointer; }
+.h-sel > .card-hit { filter: drop-shadow(0 0 8px rgba(255,176,32,.8)); }
+.h-sel .slotbox:first-child { border-color: var(--g-amber) !important; }
+
 /* inspector */
 .insp { position: fixed; inset: 0; background: rgba(6,8,10,.72); display: grid; place-items: center; z-index: 50;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
@@ -232,6 +239,7 @@ details.earlier summary { cursor: pointer; font: 700 18px var(--f-cond); letter-
 
   <div class="reco" id="reco" style="margin-top:40px">
     <h2>Recommendation</h2>
+    <p><b>The head's pick, refined: Y2+ with the T1 orders frame for Tactics</b> (traits bottom-left on the stats bar, as on the board). <b>Hand on mobile: H1</b>, X1 banners in the tray with the Y2+ card docking over the tray when you tap one: 2 taps per play (card, slot) or one drag, nothing on hover, 8 cards + the Operator fit.</p>
     <p><b>Classic cards (Y family): Y2, the wide 4:1 calling card,</b> as the big card form (mulligan, reward, deck view, Codex): it shows the same picture as the board, nothing drawn over the art, and the roomiest text box. In the hand keep <b>X1</b> (8 cards + the Operator fit); a fan of Y cards works for Y2 but cuts or crowds the taller Y1 / Y3 / Y4.</p>
     <p><b>Everywhere else (rebuilt on C1+): X1 in the hand tray, X2 at mulligan / reward / Codex / deck view / Muster out,</b> with one title style everywhere (Barlow Condensed 700, 16 px = 11.6 pt, uppercase). The Operator sits next to READY in layout <b>O2</b>.</p>
     <p><b>The head's direction: C1+, progressive disclosure.</b> Build C1+ on the board and keep <b>X1 (the C1+ banner with everything shown, plus a name plate)</b> in the hand, because the hand is where you decide and the cost and traits matter there. At rest a board card shows 3-5 marks instead of 6-9. Ship "Show everything" as a setting (Settings &gt; Cards), on for players who want it.</p>
@@ -1407,6 +1415,7 @@ function yType(c) {
 }
 // opts: {count, notFound, marked, side}
 function yCard(v, c, W, opts = {}) {
+  if (v === "Y2T1" || v === "Y2T2") return yCard2(v, c, W, opts);
   const side = opts.side || "own";
   const aH = Y_DEF[v].art(W), H = yH(v, W);
   const dossier = v === "Y4";
@@ -1529,6 +1538,223 @@ function yBlock(opt) {
   </article>`;
 }
 
+// ---------------------------------------------------------------- Y2+ (round 10, the head's pick refined)
+// Traits move to the stats bar's left (as on the board card); the type line keeps weapon + level.
+// Tactics: no stats bar, the text box takes its place, and a distinct frame: T1 "orders" (khaki-amber
+// paper, chevron-cut top-right corner) or T2 (steel frame + an amber TACTIC ribbon on the corner).
+Y_DEF.Y2T1 = { art: (W) => Math.round(W / 4), lines: 3, name: "Y2+ · T1 orders frame" };
+Y_DEF.Y2T2 = { art: (W) => Math.round(W / 4), lines: 3, name: "Y2+ · T2 ribbon frame" };
+function yType2(c) {
+  const bits = [];
+  if (c.operator) bits.push(`<span class="ytag op">OPERATOR</span>`);
+  if (c.si) bits.push(`<span class="ytag">STANDARD ISSUE</span>`);
+  if (c.tactic) bits.push(`<span class="ytag tac">TACTIC</span>`);
+  if (c.cls) bits.push(`<span class="ytag">${CLS[c.cls].toUpperCase()}</span>`);
+  if (c.level !== undefined && !c.si && !c.operator) bits.push(levelCoin(c, 16));
+  return bits.join("");
+}
+function yTraitsBar(c) {
+  const act = c.activeT || [];
+  return traitList(c).map((t) => {
+    const on = act.includes(t), tr = TRAITS[t];
+    return `<span title="${tr[0]}${on ? ": bonus ON" : ""}" style="display:grid;place-items:center;width:22px;height:22px;background:#0b0e10;border:1.5px solid ${col(tr[1])};opacity:${on ? 1 : .45};${on ? `box-shadow:0 0 6px ${col(tr[1])};` : ""}">${svg(t, col(tr[1]), 16, 2.6)}</span>`;
+  }).join("");
+}
+function yCard2(v, c, W, opts = {}) {
+  const tf = v === "Y2T2" ? "T2" : "T1";
+  const side = opts.side || "own";
+  const aH = Y_DEF[v].art(W), H = yH(v, W);
+  const tac = !!c.tactic;
+  let frame = c.operator ? "#C9A227" : (c.si ? col("--g-si") : col("--g-edge"));
+  let face = c.operator ? "#1E1A10" : col("--g-gun");
+  let clip = "";
+  if (tac && tf === "T1") { frame = "#B8913A"; face = "#2B2716"; clip = "clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);"; }
+  if (opts.marked) frame = col("--g-amber");
+  let h = `<div class="slotbox" style="left:0;top:0;width:${W}px;height:${H}px;background:${frame};border-radius:6px;${clip}${opts.marked ? "box-shadow:0 0 10px rgba(255,176,32,.5);" : ""}"></div>`;
+  h += `<div class="slotbox" style="left:1.5px;top:1.5px;width:${W - 3}px;height:${H - 3}px;background:${face};border-radius:5px;${tac && tf === "T1" ? "clip-path:polygon(0 0,calc(100% - 17px) 0,100% 17px,100% 100%,0 100%);" : ""}"></div>`;
+  if (tac && tf === "T1") h += `<div class="slotbox" style="left:1.5px;top:1.5px;width:${W - 3}px;height:${Y_TITLE - 2}px;background:linear-gradient(90deg, rgba(184,145,58,.35), rgba(184,145,58,.08));clip-path:polygon(0 0,calc(100% - 17px) 0,100% 17px,100% 100%,0 100%)"></div>`;
+  if (tac && tf === "T2") h += `<div class="g" style="right:-1px;top:-1px;width:62px;height:62px;overflow:hidden;border-radius:0 6px 0 0"><div class="mono" style="position:absolute;right:-26px;top:12px;width:110px;text-align:center;transform:rotate(45deg);background:${col("--g-amber")};color:#1A1305;font-size:11px;letter-spacing:.1em;line-height:15px">TACTIC</div></div>`;
+  h += row(5, 4, cost(c, 22));
+  h += xTitle(c, 32, 8, W - 40 - (tac ? 22 : 0));
+  if (opts.count) h += `<div class="g" style="right:${tac ? 26 : 7}px;top:9px"><span class="xcount">×${opts.count}</span></div>`;
+  const ay = 2 + Y_TITLE;
+  h += `<div class="art" style="left:4px;top:${ay}px;width:${W - 8}px;height:${aH}px;border-radius:2px;background-image:url(${ART[c.art]});background-position:center ${c.y || 40}%"></div>`;
+  if (opts.notFound) {
+    h += `<div class="slotbox" style="left:4px;top:${ay}px;width:${W - 8}px;height:${aH}px;background:rgba(10,12,14,.78)"></div>`;
+    h += `<div class="g mono" style="left:0;top:${ay + aH / 2 - 10}px;width:${W}px;display:flex;gap:6px;justify-content:center;align-items:center;font-size:15px">${svg("lock", "#C2C9CF", 16, 2.6)}NOT FOUND YET</div>`;
+  }
+  const ty = ay + aH + 3;
+  h += `<div class="g ytype" style="left:6px;top:${ty}px;width:${W - 12}px">${yType2(c)}</div>`;
+  const by = ty + Y_TYPE;
+  const lines = Y_DEF[v].lines;
+  const boxH = lines * Y_LINE + 8 + (tac ? Y_BAR : 0);
+  h += `<div class="slotbox" style="left:4px;top:${by}px;width:${W - 8}px;height:${boxH}px;background:${tac && tf === "T1" ? "rgba(20,18,8,.6)" : "rgba(10,12,14,.55)"};border-radius:2px"></div>`;
+  h += `<div class="g ytext${tac ? " wrap" : ""}" style="left:8px;top:${by + 4}px;width:${W - 16}px;max-height:${boxH - 8}px">${yTextLines(c)}</div>`;
+  if (!tac) {
+    const sy = by + lines * Y_LINE + 10;
+    h += row(6, sy + 4, yTraitsBar(c), 3);
+    h += rrow(6, sy, fpCross(c.fp, 28, !!c.up, "B", side === "rival" ? "rival" : "own") + arPlateB(c.ar, 27, c.ar < c.max, "A", ""), 4);
+  }
+  return { h: H, html: card(c, side, W, H, h) };
+}
+const Y2_OPTS = [{ key: "Y2T1", title: "Y2+ with the T1 orders frame", best: true }, { key: "Y2T2", title: "Y2+ with the T2 ribbon frame" }];
+function tacticCompare() {
+  let s = ctxBg + ctxHead("TACTIC FRAMES · T1 vs T2", "The same 5 cards in each frame: tactics must stand out at a glance from units.");
+  const list = [u("marksman"), u("ammo"), u("armored"), u("ammo", { name: "Suppressing Fire", art: "ammo_resupply", text: "Enemy units in a column get -1 FP this round." }), u("gunner", { activeT: ["heavy"] })];
+  ["Y2T1", "Y2T2"].forEach((v, r) => {
+    const W = 186, gap = 12, x0 = 150;
+    s += `<div class="g" style="left:40px;top:${100 + r * 220 + 90}px;font:700 26px var(--f-cond);color:${col("--g-amber")}">${v === "Y2T1" ? "T1" : "T2"}</div>`;
+    list.forEach((c, i) => { s += place(x0 + i * (W + gap), 92 + r * 222, yCard(v, c, W).html); });
+  });
+  return s;
+}
+
+// ---------------------------------------------------------------- Hand on mobile (H1-H3)
+// A small live board: own columns stack front-first; a unit goes to the next free row of a column.
+const HAND8 = [u("armored"), u("recon", { locked: ["deploy", "spotter"] }), u("trooper"), u("ammo"), u("breacher"), u("gunner"), u("grunt"), u("medic")];
+const H_OWN = [[u("grunt")], [u("trooper"), u("breacher")], []];
+const H_RIVAL = [[u("flanker")], [u("grunt"), u("medic")], [u("trooper", { ar: 1 })]];
+function hBoard(st) {
+  let s = pStrip().replace(/class="g p-rail"/g, 'class="g"');
+  const colX = [76, 318, 560], rivalY = [184, 124, 64, 4], ownY = [299, 359, 419, 479];
+  const sel = st.sel !== undefined && st.sel !== null ? st.hand[st.sel] : null;
+  for (let z = 0; z < 3; z++) {
+    s += `<div class="g h-col" data-z="${z}" style="left:${colX[z]}px;top:0;width:228px;height:540px;background:linear-gradient(${["#1c2420", "#1d2125", "#22201b"][z]}, #121619)"></div>`;
+    for (let r = 0; r < 4; r++) {
+      s += `<div class="g" style="left:${colX[z]}px;top:${rivalY[r]}px;width:228px;height:57px;border:1px dashed rgba(216,222,227,.10)"></div>`;
+      s += `<div class="g" style="left:${colX[z]}px;top:${ownY[r]}px;width:228px;height:57px;border:1px dashed rgba(216,222,227,.10)"></div>`;
+      if (H_RIVAL[z][r]) s += place(colX[z], rivalY[r], `<div class="g c1p" style="left:0;top:0;width:228px;height:57px">${c1pRender(H_RIVAL[z][r], "rival")}</div>`);
+    }
+    const own = H_OWN[z].concat(st.placed.filter((p) => p.z === z).map((p) => Object.assign({}, p.c, { pending: true })));
+    own.forEach((c, r) => {
+      if (r > 3) return;
+      s += place(colX[z], ownY[r], `<div class="g c1p" style="left:0;top:0;width:228px;height:57px">${c1pRender(c, "own")}</div>`);
+      if (c.pending) s += place(colX[z], ownY[r], `<div class="g" style="left:0;top:0;width:228px;height:57px;border:2px dashed ${col("--g-amber")}"></div><div class="g mono" style="left:90px;top:-1px;padding:0 6px;background:${col("--g-amber")};color:#1A1305;font-size:12px">PLAN</div>`);
+    });
+    s += `<div class="g" style="left:${colX[z]}px;top:244px;width:228px;height:52px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};display:flex;align-items:center;gap:10px;padding:0 10px"><span class="mono" style="display:grid;place-items:center;width:32px;height:32px;border:2px solid ${col("--g-muted")};color:${col("--g-muted")};font-size:18px">${"ABC"[z]}</span></div>`;
+    if (sel && own.length < 4) {
+      const y = ownY[own.length];
+      s += `<div class="g h-slot" data-z="${z}" role="button" tabindex="0" aria-label="Place in column ${"ABC"[z]}" style="left:${colX[z]}px;top:${y}px;width:228px;height:57px;border:2px dashed ${col("--g-amber")};background:rgba(255,176,32,.14);display:grid;place-items:center;font:700 18px var(--f-cond);letter-spacing:.08em;color:${col("--g-amber")};cursor:pointer">PLAY HERE · ${"ABC"[z]}</div>`;
+    }
+  }
+  return s;
+}
+function hOpRow(x0, y0) {
+  const rowH = 120, by = y0 + 532 - rowH - 4;
+  return place(x0 + 4, by, opCard(208, rowH, "deploy"))
+    + `<div class="g" style="left:${x0 + 218}px;top:${by}px;width:140px;height:44px;border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;background:${col("--g-gun")};font:600 16px var(--f-cond);letter-spacing:.06em">UNDO</div>`
+    + `<div class="g" style="left:${x0 + 218}px;top:${by + 50}px;width:140px;height:${rowH - 50}px;border-radius:4px;background:${col("--g-amber")};display:grid;place-items:center;font:700 22px var(--f-cond);letter-spacing:.08em;color:#1A1305">READY</div>`;
+}
+const handCard = (i, html, sel) => `<div class="g h-card${sel ? " h-sel" : ""}" data-i="${i}" style="left:0;top:0">${html}</div>`;
+function hTray(variant, st) {
+  const x0 = 800, y0 = 4, Wt = 362, Hh = 532;
+  let s = `<div class="g" style="left:${x0}px;top:${y0}px;width:${Wt}px;height:${Hh}px;background:${col("--g-slate")};border:1px solid ${col("--g-edge")};border-radius:4px"></div>`;
+  s += `<div class="g mono" style="left:${x0 + 8}px;top:${y0 + 10}px;font-size:16px;color:${col("--g-muted")}">SUPPLY <b style="color:#fff">4/4</b> · HAND ${st.hand.length}/8</div>`;
+  const top = y0 + 38;
+  if (variant === "H1") {
+    st.hand.forEach((c, i) => {
+      const x = x0 + 3 + (i % 2) * 185, y = top + Math.floor(i / 2) * 78 - (st.sel === i ? 6 : 0);
+      s += place(x, y, handCard(i, xCard("X1", c, 177).html, st.sel === i));
+    });
+    if (st.sel !== null && st.sel !== undefined) {
+      // The big Y2+ preview docks over the top of the tray (the other cards stay tappable below it).
+      const pc = st.hand[st.sel];
+      s += `<div class="g" style="left:${x0}px;top:${top - 4}px;width:${Wt}px;height:${yH("Y2T1", 250) + 16}px;background:rgba(10,12,14,.9);border-bottom:2px solid ${col("--g-amber")}"></div>`;
+      s += place(x0 + 6, top + 4, yCard("Y2T1", pc, 250).html);
+      s += `<div class="g h-cancel" role="button" tabindex="0" style="left:${x0 + 264}px;top:${top + 4}px;width:92px;height:64px;border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;text-align:center;font:600 15px/1.1 var(--f-cond);background:${col("--g-gun")};cursor:pointer">CANCEL</div>`;
+      s += `<div class="g mono" style="left:${x0 + 264}px;top:${top + 78}px;width:92px;font-size:12px;line-height:1.3;color:${col("--g-amber")}">TAP A<br>HIGHLIGHTED<br>SLOT</div>`;
+    }
+  } else if (variant === "H2") {
+    const W = 175, ch = yH("Y2T1", W), bottom = y0 + Hh - 132;
+    [[0, 4], [4, 8]].forEach(([a, b], ci) => {
+      const list = st.hand.slice(a, b), n = list.length;
+      const step = Math.max(Y_TITLE + 2, Math.min(60, Math.floor((bottom - top - ch) / Math.max(1, n - 1))));
+      list.forEach((c, k) => {
+        const i = a + k;
+        const raised = st.sel === i;
+        const y = top + k * step;
+        s += `<div class="g" style="left:${x0 + 4 + ci * (W + 4)}px;top:${y}px;z-index:${raised ? 30 : k}">${handCard(i, yCard("Y2T1", c, W).html, raised)}</div>`;
+      });
+    });
+  } else {
+    // H3: a detail strip (the selected card, always shown) + a 3x3 grid of chips (cost + name).
+    const pc = st.sel !== null && st.sel !== undefined ? st.hand[st.sel] : null;
+    const dH = 156;
+    s += `<div class="g" style="left:${x0 + 4}px;top:${top}px;width:${Wt - 8}px;height:${dH}px;background:${col("--g-gun")};border:1px solid ${pc ? col("--g-amber") : col("--g-edge")};border-radius:6px"></div>`;
+    if (pc) {
+      s += `<div class="art" style="left:${x0 + 8}px;top:${top + 4}px;width:${Wt - 16}px;height:${Math.round((Wt - 16) / 4)}px;border-radius:3px;background-image:url(${ART[pc.art]});background-position:center ${pc.y || 40}%"></div>`;
+      const ay = top + 4 + Math.round((Wt - 16) / 4);
+      s += row(x0 + 8, ay + 4, cost(pc, 22)) + xTitle(pc, x0 + 36, ay + 7, 200);
+      s += `<div class="g ytype" style="left:${x0 + 240}px;top:${ay + 6}px;width:112px;justify-content:flex-end">${yType2(pc)}</div>`;
+      s += `<div class="g ytext" style="left:${x0 + 10}px;top:${ay + 30}px;width:${pc.tactic ? 330 : 230}px;max-height:38px">${yTextLines(pc)}</div>`;
+      if (!pc.tactic) s += rrow(1168 - x0 - Wt + 12, ay + 28, fpCross(pc.fp, 28, false, "B", "own") + arPlateB(pc.ar, 27, pc.ar < pc.max, "A", ""), 4).replace(`right:${1168 - x0 - Wt + 12}px`, `left:${x0 + 280}px`);
+    } else {
+      s += `<div class="g mono" style="left:${x0 + 4}px;top:${top + 64}px;width:${Wt - 8}px;text-align:center;font-size:15px;color:${col("--g-muted")}">TAP A CARD: ITS DETAILS SHOW HERE</div>`;
+    }
+    const gy = top + dH + 8, cw = 114, chh = 62;
+    st.hand.forEach((c, i) => {
+      const x = x0 + 4 + (i % 3) * (cw + 4), y = gy + Math.floor(i / 3) * (chh + 4);
+      const selb = st.sel === i;
+      const inner = `<div class="slotbox" style="left:0;top:0;width:${cw}px;height:${chh}px;background:${c.tactic ? "#2B2716" : col("--g-gun")};border:${selb ? 2 : 1}px solid ${selb ? col("--g-amber") : (c.tactic ? "#B8913A" : c.si ? col("--g-si") : col("--g-edge"))};border-radius:4px"></div>`
+        + `<div class="art" style="left:3px;top:3px;width:${cw - 6}px;height:22px;border-radius:2px;background-image:url(${ART[c.art]});background-position:center ${c.y || 40}%"></div>`
+        + row(4, 29, cost(c, 18)) + `<div class="g xtitle" style="left:25px;top:28px;width:${cw - 29}px;font-size:16px;white-space:normal;line-height:16px;height:32px">${c.name}</div>`;
+      s += place(x, y, handCard(i, card(c, "own", cw, chh, inner), selb));
+    });
+  }
+  s += hOpRow(x0, y0);
+  return s;
+}
+function hFrame(variant, st) {
+  let s = `<div class="h-live-inner">${hBoard(st)}${hTray(variant, st)}`;
+  if (st.note) s += `<div class="g" style="left:180px;top:250px;padding:8px 14px;background:rgba(10,12,14,.92);border:1px solid ${col("--g-amber")};border-radius:4px;font:600 18px var(--f-cond);letter-spacing:.04em;color:${col("--g-amber")}">${st.note}</div>`;
+  s += `<div class="g h-reset" role="button" tabindex="0" style="left:700px;top:4px;padding:6px 10px;min-height:30px;background:rgba(10,12,14,.85);border:1px solid ${col("--g-edge")};border-radius:4px;font:600 14px var(--f-cond);letter-spacing:.06em;cursor:pointer">RESET</div>`;
+  return s + `</div>`;
+}
+const hState = (o = {}) => Object.assign({ hand: HAND8.slice(), sel: null, placed: [] }, o);
+const H_OPTS = [
+  { key: "H1", title: "Banner hand + docked preview", best: true,
+    pitch: "The tray keeps X1 banner cards (8 fit). Tap a card: it lifts, its full Y2+ card docks over the top of the tray, and the legal slots light up on the board. Tap a slot to place, CANCEL (or the card again, or the empty board) to cancel.",
+    taps: "Play a card: 2 taps (card, slot) or 1 drag. Read it: 0 extra (the preview opens on select). Cancel: 1 tap.",
+    pros: ["8 cards and the Operator fit without scrolling", "Reading and placing are the same tap: no hover anywhere", "The board stays fully visible while you choose a slot"],
+    cons: ["The preview covers the top half of the hand while a card is selected", "Two card forms on screen (banner + Y2+)", "Switching cards: tap another card under the preview"] },
+  { key: "H2", title: "Fanned Y2+ hand",
+    pitch: "The hand is a cascade of Y2+ cards in two columns: every card's cost and name stay visible, the front card of each column is whole. Tap a card to raise it to the front, then tap a highlighted slot or drag it there.",
+    taps: "Play a card: 2 taps (raise, slot) or 1 drag. Read it: raising it shows the whole card. Cancel: tap it again (1 tap).",
+    pros: ["One card form everywhere: the hand is the real card", "Every name and cost visible at once", "Feels like holding cards"],
+    cons: ["Only 2 cards are fully readable at a time", "Overlaps need precise taps on 30 px title bars (44 pt holds only because the whole visible strip is the target)", "8 cards make the cascade tight"] },
+  { key: "H3", title: "Chip grid + detail strip",
+    pitch: "A fixed detail strip at the top of the tray always shows the selected card (art, name, type, rules, stats); the hand is a 3x3 grid of chips (cost, name, a slice of art).",
+    taps: "Play a card: 2 taps (chip, slot). Read it: 0 extra. Cancel: tap the chip again (1 tap).",
+    pros: ["The detail never covers anything: it has its own place", "The most cards visible at once (9 chips)", "Calm: chips are small and uniform"],
+    cons: ["Chips show no stats or abilities: you must select to compare", "The detail strip is empty until you tap", "A third card form (chips)"] },
+];
+function hBlock(opt) {
+  const k = opt.key;
+  const s1 = hState(), s2 = hState({ sel: 1 }), s3 = hState({ hand: HAND8.filter((_, i) => i !== 1), placed: [{ z: 2, c: HAND8[1] }] }), s4 = hState({ note: "Tapped the card again (or the board): back to the hand, nothing played" });
+  const caps = ["1 · See the hand (8 cards + the Operator)", "2 · Tap a card: it is picked, readable, and the legal slots light up", "3 · Tap a slot: placed as PLAN (UNDO takes it back)", "4 · Cancel: tap the card again or the empty board"];
+  const sb = [s1, s2, s3, s4].map((st, i) => fitBox(1168, 540, hFrame(k, st), caps[i])).join("");
+  return `<article class="opt" id="opt-${k}" data-key="${k}">
+    <div class="opt-head"><span class="opt-letter">${k}</span><span class="opt-title">${opt.title}</span>${opt.best ? '<span class="pick">Recommended</span>' : ""}<p class="opt-pitch">${opt.pitch} <b>${opt.taps}</b></p></div>
+    <div><p class="frame-cap">Try it: tap a card, then a highlighted slot (tap the card again or the board to cancel; long press = inspector)</p>
+      <div class="fit h-live" data-variant="${k}" data-w="1168" data-h="540" style="aspect-ratio:1168/540"><div class="stage" style="width:1168px;height:540px">${hFrame(k, hState())}</div></div></div>
+    <div class="frames two-even">${sb}</div>
+    <div class="pc"><div class="pro"><h3>Pros</h3><ul>${opt.pros.map((p) => `<li>${p}</li>`).join("")}</ul></div><div class="con"><h3>Cons</h3><ul>${opt.cons.map((p) => `<li>${p}</li>`).join("")}</ul></div></div>
+  </article>`;
+}
+function y2Block() {
+  const f = (w, h, inner, cap) => fitBox(w, h, inner, cap);
+  const k = "Y2T1";
+  return `<article class="opt" id="opt-Y2P" data-key="Y2+">
+    <div class="opt-head"><span class="opt-letter">Y2+</span><span class="opt-title">Y2 refined</span><span class="pick">The head's pick</span>
+      <p class="opt-pitch">Traits now sit bottom-left on the stats bar (lit / faint), as on the board card; the type line keeps the weapon and level. Tactics drop the stats bar: their text box grows into that space, and they get their own frame. <b>T1 (recommended): an "orders" frame</b>, khaki-amber paper with a chevron-cut top-right corner; <b>T2:</b> the unit's steel frame with an amber TACTIC ribbon across the corner. Card sizes as Y2.</p></div>
+    ${f(1168, 540, tacticCompare(), "T1 vs T2 next to units")}
+    <div class="frames two-even">${f(1168, 540, YCTX.mulligan(k), "Mulligan")}${f(1168, 540, YCTX.reward(k), "Reward / Supply Drop")}</div>
+    <div class="frames two-even">${f(1168, 540, YCTX.deck(k), "Pre-game deck view")}${f(1168, 540, YCTX.codex(k), "Codex")}</div>
+    <div class="pc"><div class="pro"><h3>T1 orders frame (recommended)</h3><ul><li>Colour + shape: the cut corner reads even in greyscale</li><li>The khaki paper says "orders", not "soldier"</li><li>Nothing covers the title</li></ul></div>
+    <div class="con"><h3>T2 ribbon</h3><ul><li>Keeps the steel family, so tactics blend in more</li><li>The ribbon sits on the title bar's corner (shorter title room)</li><li>Colour-only cue at small sizes</li></ul></div></div>
+  </article>`;
+}
+
 document.getElementById("c1p-root").innerHTML = c1plusSection();
 document.getElementById("opts-board").innerHTML = BOARD_OPTS.filter((o) => !o.family).map((o) => optBlock(o, "board")).join("")
   + `<div class="subhead section-head" id="c-family"><h2>C family · pure calling card</h2><p>The head: "I want more version of C, pure calling Card ... showcase full art and add only important info in corners or along the borders. We need stats, icons for keyword, traits. Cost is optionnal." In every C variant the art fills the whole 228x57 slot, uncropped and undimmed; only a 1.5-2 px edge marks Standard Issue (grey-green) or the side (C2). Each pitch says whether it shows the cost.</p></div>`
@@ -1536,7 +1762,10 @@ document.getElementById("opts-board").innerHTML = BOARD_OPTS.filter((o) => !o.fa
   + `<div class="subhead section-head" id="b-family"><h2>B family · side rails</h2><p>The head: "The B Side rails also have potential, but the design shown in the documents has problems. There is some weird overlap when we have multiple traits. We also lose some space above and below the calling card which is annoying." Fixes: in every B variant the art fills the full 57 px height, and each rail is a fixed grid of cells (one item per cell, '+n' when full), so two traits, the weapon, the Recruit level and locked keywords can never collide. The states add a 2-trait card (Heavy Doctrine + Undead), a Recruit with 2 locked keywords, and a Standard Issue serial. The original B stays above for comparison; each pitch gives the art's visible size and crop.</p></div>`
   + BOARD_OPTS.filter((o) => o.family === "B").map((o) => optBlock(o, "board")).join("");
 document.getElementById("opts-elsewhere").innerHTML =
-  `<div class="subhead section-head" id="y-family"><h2>Y family · classic card</h2><p>The head: "Maybe we can design cards that look more like actual cards when not played. Like having the cost and name at the top, the full image with nothing over it after the title, then the text effect section with weapon type, traits, then keyword, Attack and defense at the bottom, etc. Make multiple versions for this." Every Y card, top to bottom: title bar (cost hex + name, the standard title), the art with nothing over it, a type line (weapon · level · traits, lit / faint), the text box (keyword icon + bold name + short rule; a Recruit's greyed "Trains:"; effects), and the stats bar (FP reticle in team colour + grey Armor plate, amber when damaged). Shown: a Standard Issue card ("Basic kit"), a Tactic (no stats), the Operator (deck view). In the hand: a fan that keeps every card's cost and name visible; the recommendation is X1 in the tray and the Y card as the big form.</p></div>`
+  y2Block()
+  + `<div class="subhead section-head" id="h-mobile"><h2>Hand on mobile</h2><p>The head: "we need to define how we show hands, It needs to be playable on Mobile, so the hover is slow." Three ways to see, read, place and cancel with touch only. Rules for all three: long press = the full inspector, nothing relies on hover, every touch target is at least 44 pt (61 px on the phone canvas), 8 cards shown, legal slots highlighted (PLAY HERE). Each storyboard is 4 frames, and the live board above it is clickable.</p></div>`
+  + H_OPTS.map(hBlock).join("")
+  + `<div class="subhead section-head" id="y-family"><h2>Y family · classic card</h2><p>The head: "Maybe we can design cards that look more like actual cards when not played. Like having the cost and name at the top, the full image with nothing over it after the title, then the text effect section with weapon type, traits, then keyword, Attack and defense at the bottom, etc. Make multiple versions for this." Every Y card, top to bottom: title bar (cost hex + name, the standard title), the art with nothing over it, a type line (weapon · level · traits, lit / faint), the text box (keyword icon + bold name + short rule; a Recruit's greyed "Trains:"; effects), and the stats bar (FP reticle in team colour + grey Armor plate, amber when damaged). Shown: a Standard Issue card ("Basic kit"), a Tactic (no stats), the Operator (deck view). In the hand: a fan that keeps every card's cost and name visible; the recommendation is X1 in the tray and the Y card as the big form.</p></div>`
   + Y_OPTS.map(yBlock).join("")
   + `<div class="subhead section-head" id="x-family"><h2>X family · banner cards</h2><p>The C1+ banner with an info area under it (earlier round).</p></div>`
   + X_OPTS.map(xBlock).join("") + operatorBlock();
@@ -1577,7 +1806,7 @@ function setTab(t) {
   scaleAll();
 }
 const cmpOn = document.getElementById("cmp-on"), cmpA = document.getElementById("cmp-a"), cmpB = document.getElementById("cmp-b");
-function opts() { return tab === "board" ? BOARD_OPTS : Y_OPTS.concat(X_OPTS); }
+function opts() { return tab === "board" ? BOARD_OPTS : H_OPTS.concat(Y_OPTS, X_OPTS); }
 function fillCompare() {
   const list = opts();
   const best = list.find((o) => o.best) || list[0];
@@ -1699,5 +1928,31 @@ for (const ev of ["pointerup", "pointercancel", "pointermove"]) document.addEven
   for (const c of document.querySelectorAll(".p-static .c1p")) if (c.classList.contains("peek")) c.dataset.keep = "1";
   document.addEventListener("pointerup", () => { for (const c of document.querySelectorAll('.p-static .c1p[data-keep="1"]')) c.classList.add("peek"); });
   for (const c of document.querySelectorAll(".p-static .c1p.hit")) for (const p of c.querySelectorAll(".p-trait")) p.classList.toggle("match", p.dataset.trait === "heavy");
+})();
+
+// ---------------------------------------------------------------- Hand on mobile: live storyboards
+(function () {
+  const states = new WeakMap();
+  for (const f of document.querySelectorAll(".h-live")) states.set(f, hState());
+  function redraw(f) { f.querySelector(".stage").innerHTML = hFrame(f.dataset.variant, states.get(f)); }
+  document.addEventListener("click", (e) => {
+    const f = e.target.closest && e.target.closest(".h-live");
+    if (!f) return;
+    const st = states.get(f);
+    const hc = e.target.closest(".h-card"), slot = e.target.closest(".h-slot"), cancel = e.target.closest(".h-cancel");
+    if (slot && st.sel !== null) {
+      st.placed.push({ z: Number(slot.dataset.z), c: st.hand[st.sel] });
+      st.hand.splice(st.sel, 1);
+      st.sel = null;
+    } else if (hc) {
+      const i = Number(hc.dataset.i);
+      st.sel = st.sel === i ? null : i;
+    } else if (e.target.closest(".h-reset")) {
+      states.set(f, hState());
+    } else if (cancel || e.target.closest(".h-live-inner")) {
+      st.sel = null;
+    }
+    redraw(f);
+  });
 })();
 </script>
