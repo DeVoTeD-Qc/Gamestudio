@@ -228,7 +228,7 @@ FP = Firepower, AR = Armor. "KS" means the value comes straight from Killstreak'
 | 2 | Point Man | `point_man` | Unit | SMG | 2 | 2/3 | First Shot | KS | First Shot |
 | 3 | Combat Medic | `combat_medic` | Unit | AR | 2 | 1/3 | Patch 2 | KS | Patch |
 | 4 | Recon Specialist | `recon_specialist` | Unit | AR | 2 | 1/2 | On Deploy: next round, enemy red dots in this zone are revealed. | KS | ⚡ |
-| 5 | **Brawler** | `brawler` | Unit | Shotgun | 2 | 2/3 | — | **NEW** | — |
+| 5 | **Brawler** | `brawler` | Unit | Shotgun | 2 | 3/3 (was 2/3 before kc-pos-cut, §8) | — | **NEW** | — |
 | 6 | Breacher | `breacher` | Unit | Shotgun | 3 | 3/4 | First Shot | KS | First Shot |
 | 7 | Marksman | `marksman` | Unit | Sniper | 3 | 2/2 | Pick | KS | Pick |
 | 8 | Flanker | `flanker` | Unit | SMG | 3 | 2/3 | Flank | KS | Flank |
@@ -426,3 +426,11 @@ Gameplay power comes only from **chassis**, which you earn through run rewards j
 - From kc-art: invented faces OK in stylised styles; flat emblems are tactics (a third "field card" type is being explored in `field-cards.md`, task kc-field); new weapon types map onto the existing 6 classes.
 - From kc-field: a third card type, **Field** (model B, full model in the first prototype). Curator rule: "Fighter or gun → Unit. Symbol or building → Field. A moment → Tactic." See `field-cards.md`.
 - **Private pitch build (2026-11-05, task kc-cod):** for a prototype shown only to Activision, the head chose to use the real Modern Warfare III calling cards. They are downloaded by `tools/fetch_mw3_calling_cards.py` into a **git-ignored** folder and are never committed (this repository is public) or published anywhere public. A clean checkout falls back to placeholder/original art. Any public or commercial use still needs original art or a licence.
+
+
+## 8. Position cut (kc-pos-cut, 2026-11-06)
+*The head: "Remove the position based effect. It's too much. We'll keep that for tactics." Full spec and numbers: `synergy-system.md` §13.*
+- **A unit's stats no longer depend on its row or column.** Gone from units: the neighbour keywords (Guard, Spotter, Fireteam, Overwatch), the row-1 condition on trait bonuses, and the **range bonus by column** (the weapon-class table of §3.4 and §2.2: SMG +1 Close, Shotgun +2 Close / −1 Long, AR +1 Mid, Sniper −1 Close / +2 Long).
+- **Weapon class stays** on every chassis as a tag: the art mapping of §2.2, Sniper Perch ("your Sniper units"), and LMG Pierce still read it. The banner's weapon-class pip (§3.4) is flavour now; the Firepower number in the corner is the same in every column.
+- **Kept:** Pick, Flank, Pierce, First Shot, Suppress, Cover, Patch, Holder, the Protector's slide to the front, the Anvil's "your other units here" aura, column Fields, and every Tactic's position words (Hold the Line, Callout, Breach and Clear "3 if Close", Flank Route, Smoke Screen…).
+- **Card changes:** Breacher, Point Man, Gunner, Marksman, Recon Specialist and Rifleman lose their neighbour keyword and nothing else. **Brawler 2/3 → 3/3** (it lost both Fireteam and Shotgun +2 at Close, and would otherwise equal the Standard Issue Trooper).

@@ -93,6 +93,7 @@ var _width: float = BASE_SIZE.x
 var _text_box: VBoxContainer = null
 var _count_label: Label = null
 var _not_found: Label = null
+var _lore: Label = null
 var _lines: Array[Control] = []
 
 @onready var _cost_label: Label = %CostLabel
@@ -176,6 +177,19 @@ func _ready() -> void:
 	cb.content_margin_right = 4
 	_count_label.add_theme_stylebox_override(&"normal", cb)
 	add_child(_count_label)
+	# kc-hand-y2: the lore line (cards with no effect), bottom of the text box.
+	_lore = Label.new()
+	_lore.name = "LoreLabel"
+	_lore.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_lore.add_theme_font_override(&"font", CardLook.LORE_FONT)
+	_lore.add_theme_font_size_override(&"font_size", 16)
+	_lore.add_theme_color_override(&"font_color", CardLook.LORE_COLOR)
+	_lore.add_theme_constant_override(&"line_spacing", -3)
+	_lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lore.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_lore.max_lines_visible = 3  # bounds the autowrap minimum height (lore is one or two lines)
+	_lore.visible = false
+	add_child(_lore)
 	_not_found = Label.new()
 	_not_found.name = "NotFoundLabel"
 	_not_found.text = "NOT FOUND YET"
@@ -492,6 +506,11 @@ func _locked_names() -> Array:
 	return l if l is Array else []
 
 
+## The lore line shown now ("" when the card has an effect).
+func get_lore_text() -> String:
+	return _lore.text if _lore != null and _lore.visible else ""
+
+
 ## The text box's lines now (tests): [{id, name, rule, locked}], then the effect text.
 func get_text_lines() -> Array:
 	var out: Array = []
@@ -534,8 +553,21 @@ func _rebuild_text(box: Rect2) -> void:
 		_add_line(&"lock", "Trains:", names, true)
 		rows += 1
 	var text: String = _effect_text(names_seen)
-	if text == "" and bool(data.get("standard_issue", false)) and rows == 0:
-		text = "Basic kit. The quartermaster wants it back."
+	# kc-hand-y2: no effect at all: a lore line, italic dark grey, at the bottom of the box.
+	var lore: String = ""
+	if text == "" and rows == 0:
+		lore = String(data.get("lore", ""))
+		if lore == "":
+			lore = CardLore.line(StringName(String(data.get("id", ""))), bool(data.get("standard_issue", false)), has_stats_bar())
+	_lore.text = lore
+	_lore.visible = lore != ""
+	_lore.position = box.position + Vector2(6, 4)
+	# Width first: an autowrap Label measured at a narrower width keeps a huge minimum height.
+	_lore.custom_minimum_size = Vector2(box.size.x - 12.0, 0)
+	_lore.size = Vector2(box.size.x - 12.0, 0)
+	_lore.size = box.size - Vector2(12, 8)
+	# Bottom-aligned text: keep the label's bottom on the box's bottom whatever its minimum height.
+	_lore.position.y = box.end.y - 4.0 - _lore.size.y
 	_body_label.text = text
 	_body_label.visible = text != ""
 	_body_label.modulate = Color(0.62, 0.66, 0.7, 0.7) if lock_all else Color.WHITE

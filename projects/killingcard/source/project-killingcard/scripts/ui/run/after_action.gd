@@ -34,7 +34,7 @@ var _continue_button: Button = null
 var _stats: HBoxContainer = null
 var _result_label: Label = null
 
-@onready var _header: HBoxContainer = %Header
+@onready var _header: BoxContainer = %Header
 @onready var _title: Label = %TitleLabel
 @onready var _subtitle: Label = %SubtitleLabel
 @onready var _body: MarginContainer = %Body

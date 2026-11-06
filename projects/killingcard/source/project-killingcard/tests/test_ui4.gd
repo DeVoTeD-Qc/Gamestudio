@@ -373,11 +373,12 @@ func test_every_keyword_in_data_has_a_glossary_entry_and_icon() -> void:
 		assert_true(e["icon"] != &"" or e["drawn"] != &"" or e.has("kw") or e.has("trait"), "%s has an icon" % id)
 	for k: StringName in CardInfo.KEYWORD_RULES:
 		assert_true(by_key.has(k), "KEYWORD_RULES %s is in the glossary" % k)
+	# kc-pos-cut: the neighbour keywords are retired: none in the glossary.
 	for kw: StringName in SynergyRules.KEYWORDS:
-		assert_true(by_key.has(StringName("kw_" + String(kw))), "neighbor keyword %s" % kw)
+		assert_false(by_key.has(StringName("kw_" + String(kw))), "no neighbor keyword %s" % kw)
 	for tr: StringName in SynergyRules.TRAITS:
 		assert_true(String(by_key[StringName("trait_" + String(tr))]["text"]).contains(SynergyRules.TIER_TEXT[tr][1]), "trait %s tier texts" % tr)
-	for k: StringName in [&"firepower", &"armor", &"cover_stat", &"supply", &"stat_colours", &"control", &"link_tick", &"set_callout", &"doctrine"]:
+	for k: StringName in [&"firepower", &"armor", &"cover_stat", &"supply", &"stat_colours", &"control", &"set_callout", &"doctrine"]:
 		assert_true(by_key.has(k), "%s entry" % k)
 
 
@@ -404,8 +405,8 @@ func test_glossary_from_menu_codex_and_inspector() -> void:
 		g.set_category(&"synergy")
 		assert_true(g.filtered().size() < n_all and g.filtered().size() >= 8, "SYNERGY category")
 		g.set_category(&"all")
-		g.set_query("spotter")
-		assert_true(g.filtered().size() >= 1 and g.get_row(&"kw_spotter") != null, "search finds Spotter")
+		g.set_query("pick")
+		assert_true(g.filtered().size() >= 1 and g.get_row(&"pick") != null, "search finds Pick")
 		g.close()
 		await _frames(2)
 	c.close_pause_menu()

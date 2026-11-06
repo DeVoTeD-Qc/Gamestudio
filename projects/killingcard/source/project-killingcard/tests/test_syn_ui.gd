@@ -1,8 +1,8 @@
 # test_syn_ui.gd
 # Purpose: kc-syn-ui, the synergy layer on screen (synergy-system.md §9 / §11.3-11.4): banner
-#   keyword pips / trait icons / camo bands / buffed-stat colours, link ticks between linked banners,
-#   the trait rail and set callouts, the placement preview (ghost with the RESULTING stats, ghost
-#   ticks, chips; matches the board after Reveal), the inspector's "FP 4 = 2 base +1 Spotter ..."
+#   trait icons / buffed-stat colours (kc-pos-cut: no neighbour keywords, no link ticks),
+#   the trait rail and set callouts, the placement preview (ghost with the RESULTING stats,
+#   chips; matches the board after Reveal), the inspector's "FP 4 = 3 base +1 Vanguard 2 ..."
 #   lines, the Operator's own card (its Supply cost in the deck cards' cost hex since kc-loadout-cut,
 #   NEED SUPPLY state, half-height mini
 #   card on the board), Undead heal feedback, quick match on the Recruit starter, the inspector fix.
@@ -19,9 +19,8 @@ const MATCH_SCENE: String = "res://scenes/Match.tscn"
 var _saved_root_size: Vector2i = Vector2i.ZERO
 
 
-## Breacher (Guard, Vanguard) in B1 with a Marksman (Spotter, Spec Ops) behind it, a Point Man
-## (Fireteam, Vanguard) in A1: Spotter +1 FP and Guard Cover +1 in B, Fireteam +1 FP in A1,
-## Vanguard 2 (row 1 +1 FP). Returns {breacher, marksman, point_man}.
+## Breacher (Vanguard) in B1 with a Marksman (Spec Ops) behind it, a Point Man (Vanguard) in A1:
+## Vanguard 2 (+1 FP to every Vanguard since kc-pos-cut; no neighbour links). Returns {breacher, marksman, point_man}.
 func _stage(st: MatchState) -> Dictionary:
 	var out: Dictionary = {}
 	for pair: Array in [[&"breacher", 1], [&"marksman", 1], [&"point_man", 0]]:
@@ -50,20 +49,8 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		assert_true(m.get_trait_rail().is_visible_in_tree(), "%s rail visible in the strip" % label)
 		var strip_r: Rect2 = m.get_badge(&"deck").get_parent().get_global_rect().grow(0.6)
 		assert_true(strip_r.encloses(m.get_trait_rail().get_global_rect()), "%s rail inside the icon strip" % label)
-		# Link ticks: Spotter (B2 > B1), Guard (B1 > B2), Fireteam (A1 beside B1).
-		var ticks: Array = m.get_board().get_drawn_ticks()
-		var kinds: Array = []
-		for t: Dictionary in ticks:
-			kinds.append(t["kind"])
-		for kw: StringName in [&"spotter", &"guard", &"fireteam"]:
-			assert_true(kw in kinds, "%s %s tick drawn (%s)" % [label, kw, kinds])
-		for t: Dictionary in ticks:
-			var a: Vector2 = t["a"]
-			var b: Vector2 = t["b"]
-			if t["kind"] in [&"guard", &"spotter"]:
-				assert_true(absf(a.x - b.x) < 0.5, "%s %s tick is vertical" % [label, t["kind"]])
-			else:
-				assert_true(absf(a.y - b.y) < 0.5, "%s %s tick is horizontal" % [label, t["kind"]])
+		# kc-pos-cut: the board draws no link ticks any more.
+		assert_false(m.get_board().has_method(&"get_drawn_ticks"), "%s no link ticks" % label)
 		# Banner entries: buffed FP marked, keyword pip lit, trait tier, camo band.
 		var b_entry: Dictionary = {}
 		var m_entry: Dictionary = {}
@@ -74,9 +61,9 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 				m_entry = e
 		assert_eq(int(b_entry["fp"]), st.firepower_of(u[&"breacher"]), "%s banner FP = the engine's" % label)
 		assert_true(int(b_entry["fp"]) > int(b_entry["fp_base"]) and int(b_entry["fp_trend"]) == 1, "%s Breacher FP buffed (%d > %d)" % [label, b_entry["fp"], b_entry["fp_base"]])
-		assert_true(bool(b_entry["kw_active"]) and String(b_entry["kw"]) == "guard", "%s Guard pip lit" % label)
+		assert_eq(String(b_entry.get("kw", "")), "", "%s kc-pos-cut: no neighbour keyword pip" % label)
 		assert_eq([String(b_entry["trait"]), int(b_entry["trait_tier"]), String(b_entry["band"])], ["vanguard", 2, "gilded"], "%s Vanguard 2 icon + Gilded band" % label)
-		assert_true(int(m_entry["cover"]) >= 1 and int(m_entry["cover_trend"]) == 1, "%s Marksman shows its Guard Cover" % label)
+		assert_eq(int(m_entry["cover"]), 0, "%s kc-pos-cut: no Guard Cover on the Marksman" % label)
 		# Inspector: where the number comes from.
 		c._on_lane_long_pressed(1, &"player", (u[&"breacher"] as RulesUnit).uid)
 		await _frames(3)
@@ -84,8 +71,8 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		var words: String = ""
 		for n: Node in insp.get_node("%KeywordList").get_children():
 			words += (n as Label).text + "\n"
-		assert_true("base" in words and "Spotter (Marksman, behind)" in words and "Vanguard 2" in words, "%s FP breakdown in the inspector: %s" % [label, words])
-		assert_true("Link ON" in words, "%s Guard link state" % label)
+		assert_true("base" in words and "Vanguard 2" in words, "%s FP breakdown in the inspector: %s" % [label, words])
+		assert_false("Spotter" in words or "Link ON" in words, "%s kc-pos-cut: no link lines" % label)
 		var screen_r: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(0.6)
 		assert_true(screen_r.encloses(insp.get_node("%InfoPanel").get_global_rect()), "%s inspector text panel on screen" % label)
 		insp.close()
@@ -121,11 +108,9 @@ func test_placement_preview_shows_the_result() -> void:
 	assert_not_null(ghost, "ghost in column A")
 	var want: Dictionary = StatBreakdown.of_ghost(st, 0, rc.uid, 0)
 	assert_eq(int(ghost.entry["fp"]), int(want["fp"]["total"]), "ghost shows the resulting FP")
-	assert_eq(String(ghost.entry["kw"]), "spotter", "ghost keyword pip")
-	assert_true(bool(ghost.entry["kw_active"]), "ghost Spotter pip lit (Point Man in front)")
-	assert_true("LINKS 1" in lane_a.get_target_chips(), "column A chip names the link: %s" % lane_a.get_target_chips())
-	var gticks: Array = m.get_board().get_ghost_ticks()
-	assert_false(gticks.is_empty(), "ghost link ticks drawn")
+	assert_eq(String(ghost.entry.get("kw", "")), "", "kc-pos-cut: no neighbour keyword pip on the ghost")
+	# kc-pos-cut: the placement preview names no links and draws no ghost ticks.
+	assert_false("LINKS" in lane_a.get_target_chips(), "no link part in the preview: %s" % lane_a.get_target_chips())
 	assert_eq(lane_a.target_text, "PLAY HERE", "the column badge keeps its words")
 	# Play it there; after Reveal the board matches the preview.
 	var res: Dictionary = c.play_at(0)
@@ -140,7 +125,7 @@ func test_placement_preview_shows_the_result() -> void:
 	assert_not_null(mu, "Marksman arrived in A")
 	if mu != null:
 		assert_eq(int(st.synergy_of(mu).get("fp", 0)), int((want["preview"]["card"] as Dictionary).get("fp", 0)), "its own link bonus as previewed")
-		assert_eq(st.firepower_of(pm), pm_fp_before + 1, "the Point Man in front gets the Spotter +1")
+		assert_eq(st.firepower_of(pm), pm_fp_before, "kc-pos-cut: no Spotter +1 for the Point Man")
 	_despawn(vp)
 
 

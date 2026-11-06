@@ -1125,11 +1125,11 @@ func shuffle(list: Array) -> void:
 # Queries (board-dependent stats, control, intel)
 # =============================================================================
 
-## Firepower now: printed + range bonus (RunConfig) + modifiers + passives, never below 0.
+## Firepower now: printed + modifiers + passives + set bonus, never below 0 (kc-pos-cut: no range
+## bonus by column any more).
 func firepower_of(u: RulesUnit) -> int:
 	var fp: int = u.base_firepower + u.mod_total(DataEnums.EffectKind.MODIFY_FIREPOWER, round_number)
 	if u.zone >= 0:
-		fp += config.range_bonus(u.weapon_class, zone_ranges[u.zone])
 		fp += passive_total(u, DataEnums.EffectKind.MODIFY_FIREPOWER)
 		fp += int(synergy_of(u).get("fp", 0))  # kc-syn links and set bonuses
 	return maxi(0, fp)

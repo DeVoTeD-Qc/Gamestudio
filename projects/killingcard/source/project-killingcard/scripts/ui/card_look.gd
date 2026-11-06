@@ -20,6 +20,9 @@ extends RefCounted
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const TITLE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-Bold.ttf")
 const RULE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-SemiBold.ttf")
+## kc-hand-y2: lore lines (cards with no effect): Barlow Condensed Medium Italic, dark grey.
+const LORE_FONT: FontFile = preload("res://assets/fonts/BarlowCondensed-MediumItalic.ttf")
+const LORE_COLOR: Color = Color("#8A949C")
 const NUM_FONT: FontFile = preload("res://assets/fonts/ShareTechMono-Regular.ttf")
 ## The title spec (every card off the board): 16 px canvas = 11.6 pt on the 844x390 phone.
 const TITLE_PX: int = 16

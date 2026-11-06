@@ -149,20 +149,20 @@ func test_firepower_never_below_zero() -> void:
 	assert_eq(m.sides[P].line(F.MID)[0].armor, 6, "a 0 FP shot deals nothing")
 
 
-func test_range_bonuses_come_from_run_config() -> void:
+func test_no_range_bonus_by_column() -> void:
+	# kc-pos-cut (synergy-system.md §13): weapon classes no longer change FP by column, even with an
+	# old RunConfig that still carries range values.
 	var m: MatchState = F.new_match(null, null, F.map([F.R.CLOSE, F.R.LONG, F.R.MID]))
 	var sniper: RulesUnit = F.place(m, P, F.marksman(), F.MID)
 	var shotgun: RulesUnit = F.place(m, P, F.breacher(), F.LEFT)
 	var shotgun_long: RulesUnit = F.place(m, E, F.breacher(), F.MID)
 	var ar: RulesUnit = F.place(m, E, F.rifleman(), F.RIGHT)
-	assert_eq(m.firepower_of(sniper), 4, "Sniper +2 at Long")
-	assert_eq(m.firepower_of(shotgun), 5, "Shotgun +2 at Close")
-	assert_eq(m.firepower_of(shotgun_long), 2, "Shotgun -1 at Long")
-	assert_eq(m.firepower_of(ar), 3, "AR +1 at Mid")
+	assert_eq([m.firepower_of(sniper), m.firepower_of(shotgun), m.firepower_of(shotgun_long), m.firepower_of(ar)],
+			[2, 3, 3, 2], "printed FP everywhere")
 	var cfg: RunConfig = RunConfig.new()
 	cfg.range_bonus_sniper = PackedInt32Array([0, 0, 5])
 	var m2: MatchState = F.new_match(null, null, F.map([F.R.CLOSE, F.R.LONG, F.R.MID]), 1, null, cfg)
-	assert_eq(m2.firepower_of(F.place(m2, P, F.marksman(), F.MID)), 7, "tuned RunConfig value used")
+	assert_eq(m2.firepower_of(F.place(m2, P, F.marksman(), F.MID)), 2, "old range fields are ignored")
 
 
 func test_damage_persists_across_rounds() -> void:
@@ -263,7 +263,7 @@ func test_anvil_aura_gives_other_units_plus_one() -> void:
 	var far: RulesUnit = F.place(m, P, F.unit("far", 2, 2), F.RIGHT)
 	assert_eq(m.firepower_of(buddy), 3, "+1 in Anvil's zone")
 	assert_eq(m.firepower_of(far), 2, "not in other zones")
-	assert_eq(m.firepower_of(anvil), 4, "no aura on herself (3 + 1 AR at Mid)")
+	assert_eq(m.firepower_of(anvil), 3, "no aura on herself (3; no range bonus since kc-pos-cut)")
 
 
 func test_patch_heals_most_damaged_other_friendly() -> void:

@@ -577,7 +577,7 @@ func note_board_systems() -> Array[StringName]:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[PLAYER]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator (bottom-left of your hand), then a column." % state.round_number)
+		_screen.show_toast("Round %d: tap your Operator (next to READY), then a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 
@@ -1138,8 +1138,6 @@ func _show_selection() -> void:
 		board.show_targets([])
 		board.set_unit_targets([])
 		board.show_ghosts([])
-		if board.has_method(&"set_ghost_links"):
-			board.set_ghost_links([])
 		return
 	var kind: StringName = _unit_target_kind()
 	if kind != &"" and target_uid < 0:
@@ -1158,7 +1156,6 @@ func _show_selection() -> void:
 	# (row 1 for a Protector, whose badge reads TAKES THE FRONT).
 	var ghost: Dictionary = _ghost_entry()
 	var ghosts: Array = []
-	var ghost_links: Array = []
 	for z: int in MatchState.ZONE_COUNT:
 		var ok: bool = (targets[z] as Dictionary)["state"] != &"invalid" and not ghost.is_empty()
 		var entry: Dictionary = ghost
@@ -1169,8 +1166,6 @@ func _show_selection() -> void:
 			var g: Dictionary = _ghost_for_zone(ghost, z)
 			entry = g["entry"]
 			chips = String(g["chips"])
-			if not (g["links"] as Array).is_empty():
-				ghost_links.append({"zone": z, "uid": int(ghost.get("uid", -1)), "links": g["links"]})
 		ghosts.append({"entry": entry, "front": bool(ghost.get("front_kw", false))} if ok else {})
 		if ok and bool(ghost.get("front_kw", false)):
 			targets[z]["text"] = "TAKES THE FRONT"
@@ -1178,8 +1173,6 @@ func _show_selection() -> void:
 			targets[z]["chips"] = chips
 	board.show_targets(targets)
 	board.show_ghosts(ghosts)
-	if board.has_method(&"set_ghost_links"):
-		board.set_ghost_links(ghost_links)
 	board.set_unit_targets([target_uid] if target_uid >= 0 else [])
 
 
@@ -1226,16 +1219,7 @@ func _ghost_for_zone(ghost: Dictionary, z: int) -> Dictionary:
 			bits.append("+%d FP" % int(syn["fp"]))
 		if int(syn.get("cover", 0)) > 0:
 			bits.append("COVER +%d" % int(syn["cover"]))
-		# Links the arrival gives to cards already there (Spotter / Guard / Overwatch).
-		var gives: int = 0
-		for l2: Dictionary in pv.get("new_links", []):
-			if int(l2["from_uid"]) == uid and StringName(l2["kind"]) != SynergyRules.FIRETEAM:
-				gives += 1
-		# kc-onboard-ui (§5.2): the link part of the preview arrives with Links (met, or a link in play now).
-		var links_on: bool = RevealGate.shown(RevealFlags.LINKS, RevealFlags.match_triggers(state))
-		if gives > 0 and links_on:
-			bits.append("LINKS %d" % gives)
-		out["links"] = pv.get("new_links", []) if links_on else []
+		# kc-pos-cut: no link part in the preview any more (units no longer link).
 	out["entry"] = e
 	out["chips"] = " · ".join(bits.slice(0, 2))
 	return out

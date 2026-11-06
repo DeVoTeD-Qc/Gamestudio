@@ -515,3 +515,80 @@ Notes: the competent M3 (58.8%) now sits above M4 (42.5%), and a casual player w
 - Most promising combination for v1.2 (not yet run): **Protector cost 4 + Guard off the Protector** (it keeps Cover 1 and the slide), possibly with a stronger Bulwark so the Vanguard Field is worth picking.
 - **Aware vs blind:** larger Spec Ops / Heavy / Undead tier-2 bonuses (Undead heal 2, Heavy tier 2 + 1 FP, Spec Ops tier 2 + Cover 1) left the duel unchanged (49-50% on those decks; identical seeds give identical results), so sets rarely form in the late decks. A set-activity count confirms it (aware side, n = 100 per deck): a tier 2 is active in only **9-18% of side-rounds** (Vanguard 18, Undead 13, Spec Ops 11, Heavy 9) and a tier 3 in 1-8%. The levers left are the number of Trained cards (all-Trained decks: 62%), keyword counts on chassis that have none (Flanker, Demolitions, Medic), and the Operator cost (cost 0: 55%). The measurement's own late deck promotes Point Man and Breacher in every deck (`PROMOTE_ORDER`), which feeds Vanguard into the other trait decks; an on-trait promotion rule would be a fairer proxy.
 - **Difficulty curve (M3 19%):** not tested yet. First levers to try: slot 3 `enemy_armor_bonus` 1 → 0, or slot 3 `enemy_recruits = true`.
+
+---
+
+## 13. Position cut (kc-pos-cut)
+*Sr Game Designer Agent · 2026-11-06 · board task kc-pos-cut · **implemented, not committed** · the head, verbatim: "Remove the position based effect. It's too much. We'll keep that for tactics." The head picked three things to remove from **units**: neighbour links, row-based trait bonuses, and range bonuses by column. Kept: Pick, Flank and Pierce (targeting), every position effect on **Tactics**, and the column-scoped Fields (they are cards you place in a column, not unit keywords).*
+
+### 13.1 The rule after the cut
+**A unit's numbers don't depend on where it stands.** Its FP and Cover are what is printed, plus its level, plus modifiers from Tactics, Fields and auras, plus its trait set bonus. Where you put a unit still matters for **who it fights** (the column) and **who it shields** (the front unit is shot first; Pick and Flank reach past it). The board doesn't give or take stats by row or column any more.
+
+### 13.2 What each affected thing becomes
+| Thing | Before | After | Why |
+|---|---|---|---|
+| **Guard** (Breacher) | the card behind gets Cover +1 | **removed** | Breacher keeps First Shot. The effect lives on as a Tactic: **Hold the Line** (Cover 1 to your units in a column) |
+| **Spotter** (Marksman, Recon Specialist) | the card in front gets +1 FP | **removed** | Marksman keeps Pick, Recon keeps its intel. Tactic version: **Callout** (+1 FP to your next arrival in a column) |
+| **Fireteam** (Point Man, Rifleman, Brawler) | +1 FP while a friend is beside it | **removed** | Point Man keeps First Shot. Rifleman is a legacy card. **Brawler 2/3 → 3/3** so it stays better than the Standard Issue Trooper (it also lost Shotgun +2 at Close) |
+| **Overwatch** (Gunner) | cards beside it get Cover +1 | **removed** | Gunner keeps Suppress and Pierce |
+| **Vanguard tier 2** | +1 FP to Vanguard in row 1 | **+1 FP to every Vanguard** | whole-set |
+| **Spec Ops tier 2** | +1 FP to Spec Ops in row 1 | **+1 FP to every Spec Ops** | whole-set |
+| **Range bonus by column** (SMG +1 Close, Shotgun +2 Close / −1 Long, AR +1 Mid, Sniper −1 Close / +2 Long) | on every unit and the Operator | **removed** (0 everywhere) | Weapon class stays on the card as flavour and for Sniper Perch / LMG Pierce. Tactics keep their own column words (Breach and Clear: 3 if Close) |
+| Link ticks, link preview, "New: Links" explainer, keyword pips | shown | gone (UI/UX agent, in parallel) | nothing to show |
+| "Trains:" line | e.g. "First Shot · Guard" | e.g. "First Shot" | only printed keywords train now. Riflemen and Brawlers have nothing to train |
+
+### 13.3 Trait set bonuses (whole set, every unit of the trait, anywhere)
+| Trait | 2 in play | 3 in play (includes 2) |
+|---|---|---|
+| **Vanguard** | +1 FP | Cover +1 |
+| **Spec Ops** | +1 FP | First Shot |
+| **Heavy** | — | Cover +1 and +1 FP |
+| **Undead** | heal 1 at the end of the round | +1 FP and Cover +1 |
+Tested and rejected: Vanguard 2 = Cover +1, 3 = +1 FP (the swap: Spec Ops 62%, Undead 41%).
+
+### 13.4 Retune (numbers only)
+| What | v1.3 | v2.0 (after the cut) | Why |
+|---|---|---|---|
+| Brawler (Undead / Spec Ops chassis) | 2/3, Shotgun, Fireteam | **3/3**, Shotgun, no keyword | It lost +2 at Close and Fireteam; 2/3 would equal the Standard Issue Trooper |
+| M1 crew (still −1 Armor, the green squad) | Grunt 6 · Trooper 7 · Sergeant 2 · Armored 1 · Ammo 2 | **Grunt 9 · Trooper 6** · Armored 1 · Ammo 2 | Without the Operator's range bonus the M1 crew got weaker (new player 82%). Cheap bodies hold zones |
+| M4 crew (Bulwark_Nine, Firefight) | Trained | **Recruits** (keywords locked, trait on) | Without range and links, Trained Gunners / Medics made M4 a wall (31%) |
+| M5 Rival crew (`enemy_deck`, new) | the Black Meridian deck | the same deck with **2 Marksmen → 2 Gunners** | The Rival got easier (48%): its Snipers lost +2 at Long, and Gunners are now its best units. Armor +2 or +1 FP overshot (21%) |
+| Trait bonuses | row 1 conditions | whole set (§13.3) | the cut |
+| M2, M3, reward pools, run config | — | unchanged | |
+
+Rejected on the way: Rival Armor +2 or FP +1 (M5 21%), Rival Breachers for Riflemen (M5 49–54%: Breachers are worse without the Shotgun bonus), M4 deck trims while Trained (M4 36–42%), M3 with its 2 Flank Routes back (new player 37.5%), Marksman 2/2 → 3/2 (Spec Ops 59%).
+
+### 13.5 Before / after (tune_check, 400 real runs per player type, late = 160 decks, mirror n = 1920, traits n = 480; onboarding_check agrees on the runs and the duel)
+| Check (target) | v1.3 (HEAD 1c67de4) | Cut only, v1.3 numbers | v2.0 |
+|---|---|---|---|
+| New player M1 (65–75%) | 73.0% | 82.2% | **71.2%** |
+| Competent run (38–43%) | 40.0% | 46.5% | **38.8%** |
+| Competent M1–M5 | 88.2 / 99.0 / 58.8 / 42.5 / 41.1 | 97.8 / 99.0 / 74.2 / **31.0** / 47.1 | 94.8 / 99.0 / 74.0 / 54.5 / 39.5 |
+| Casual run · M1–M5 | 26.0% · 73.0 / 81.0 / 44.8 / 35.1 / 31.8 | 28.8% · 82.2 / 81.0 / 46.0 / **17.6** / 35.1 | 25.0% · 71.2 / 81.8 / 46.5 / 48.3 / 29.8 |
+| Traits (40–60% each) | U 51.9 · H 45.4 · V 52.1 · S 50.6 | U 43.3 · H 48.3 · V 52.5 · S 55.8 | U 45.6 · H 45.2 · V 52.5 · S 56.7 |
+| Aware vs blind (≥ 55%) | 58.6% | 56.1% | **59.5%** |
+| End-of-run deck vs the starter | 80.9% | — | 75.3% |
+| Seat 0, late mirror (45–55%) | 49.3% | 50.9% (n = 640) | 49.9% |
+| Seat 0, starter mirror (45–55%) | 49.7% | 46.7% (n = 640) | 49.9% |
+| Ties → enemy instead (late · starter) | 49.2 · 49.8% | — | 50.4 · 50.1% (the tie rule still changes nothing) |
+
+- **Every target is met.** The aware edge didn't fall with the links gone: sets are now easy to read and to build, and the aware planner still completes them (59.5%).
+- The ramp has no wall: easy, easy, then 74 / 55 / 40 for a solid player and 47 / 48 / 30 for a new one. The steepest step is the Rival, which is meant to be the peak.
+
+### 13.6 Implementation (rules and data; the UI/UX agent removes the link visuals in parallel)
+| Where | Change |
+|---|---|
+| `scripts/rules/synergy_rules.gd` | `TRAIT_BONUS` whole-set (no `where`), `TIER_TEXT` updated; `compute()` makes no links (`links` always `[]`); `keyword_at()` always `&""`. `KEYWORDS` / `KEYWORD_TEXT` kept (marked retired) until the UI drops them |
+| `scripts/rules/match_state.gd` | `firepower_of()` no longer adds a range bonus |
+| `scripts/data/run_config.gd` | `range_bonus()` returns 0; the `range_bonus_*` fields stay (old `.tres` load) with zero defaults, marked retired |
+| `scripts/ai/ai_view.gd`, `ai_planner.gd` | no range bonus in hand records, Operator-by-zone or Flank Route moves |
+| `scripts/data/card_data.gd` | the validator rejects any `neighbor_keyword` |
+| `data/cards/*` | `neighbor_keyword` removed from Breacher, Point Man, Gunner, Marksman, Recon Specialist, Rifleman, Brawler; Brawler FP 3 |
+| `data/run_config.tres` | range rows removed; M1 crew, M4 Recruits, M5 Rival `enemy_deck` |
+| `data/README.md` | `neighbor_keyword` marked retired |
+| Tests | Rules: the link / range tests are replaced by `test_neighbor_keywords_are_retired`, `test_no_range_bonus_by_column` (×2), `test_set_member_death_in_a_switches_off_the_set_before_b` and `test_aware_planner_completes_a_set`; the tier, First Shot, Callout, Anvil, Mortar Barrage, onboarding, run-synergy and data tests now use the new numbers. The UI tests (`test_syn_ui`, `test_ui4`) are the UI/UX agent's |
+
+### 13.7 Questions for the head (recommended option first)
+1. **Brawler 2/3 → 3/3.** (a) Approve: it stays a clear upgrade on the Trooper. (b) Keep 2/3 and give it a non-positional keyword instead (e.g. Cover 1; untested).
+2. **M3 is now easier than M4 for a solid player (74 vs 55%).** (a) Keep: it's the new player's hardest early match (47%) and the step after it is gentle. (b) Put the Rusher's 2 Flank Routes back in M3: solid 68.5%, but the new player drops to 37.5%.
+3. **Other placement-based unit text that the cut didn't name.** These are the Protector's slide to the front, the Anvil's "your other units here get +1 FP", and the Demolitions Expert's On Down "3 damage to the enemy point man here". (a) Keep them: they decide which column and who gets shot, not stats by row or neighbour. (b) Cut them too, for units with no position words at all (needs one more pass).

@@ -242,7 +242,6 @@ static func _unit_record(state, u) -> Dictionary:
 static func _operator_in_zone(state, op, z: int, v: AiView) -> Dictionary:
 	var r: Dictionary = _unit_record(state, op)
 	var fp: int = int(op.base_firepower) + int(op.mod_total(DataEnums.EffectKind.MODIFY_FIREPOWER, state.round_number))
-	fp += int(v.range_bonus[int(op.weapon_class)][z])
 	var first_shot: bool = bool(op.first_shot)
 	for e: EffectData in op.effects:
 		if e == null or e.trigger != DataEnums.Trigger.PASSIVE:
@@ -310,7 +309,7 @@ func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules
 	# kc-onboard §3: a Recruit's rules text is locked (SynergyRules.keywords_on), as in create_unit.
 	var kw_on: bool = SynergyRules.keywords_on(card, level)
 	r["fs_native"] = card.first_shot and kw_on
-	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]) + int(range_bonus[int(card.weapon_class)][z]))
+	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]))
 	var armor: int = maxi(1, card.armor + my_armor_bonus + int(lv["armor"]))
 	r["armor"] = armor
 	r["armor0"] = armor

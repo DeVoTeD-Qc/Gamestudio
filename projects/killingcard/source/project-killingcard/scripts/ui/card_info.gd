@@ -214,7 +214,6 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"operator": ["Operator", "Your hero card (brass frame): never drawn or discarded. It costs Supply to place and comes back after it goes down."],
 	&"killstreak": ["Killstreak", "Eliminations build your streak; at its number a killstreak is ready (amber glow) and you tap it to call it in."],
 	&"incoming": ["Incoming", "A rival card played face-down this Deploy: it lands here at Reveal."],
-	&"link_tick": ["Link tick", "A short glowing bar between two of your banners: a neighbor keyword link is on between them."],
 	&"set_callout": ["Set callout", "When a trait set switches on (2 or 3 in play) its bonus is announced beside the trait rail, then folds into it. A red crack: a set switched off."],
 	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play."],
 	&"level_band": ["Level coin", "A card's level is its coin, next to the cost (on peek, in the hand and on the type line off the board): R grey = Recruit, T / V / E brass = Trained, Veteran, Elite."],

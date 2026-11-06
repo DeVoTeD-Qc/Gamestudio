@@ -24,7 +24,7 @@ var _starter: Control = null
 var _squad_button: Button = null
 var _kit: VBoxContainer = null
 
-@onready var _header: HBoxContainer = %Header
+@onready var _header: BoxContainer = %Header
 @onready var _subtitle: Label = %SubtitleLabel
 @onready var _body: MarginContainer = %Body
 
@@ -42,9 +42,10 @@ func _build() -> void:
 	_begin_button = make_button("BEGIN RUN", &"ReadyButton", 220)
 	_begin_button.pressed.connect(begin)
 	_header.add_child(_begin_button)
-	var row: HBoxContainer = HBoxContainer.new()
+	var row: BoxContainer = BoxContainer.new()  # kc-portrait: turns vertical in portrait
 	row.add_theme_constant_override(&"separation", 16)
 	_body.add_child(row)
+	portrait_boxes.append(row)  # kc-portrait: the starter kit over the killstreak pool
 	# Starter kit (scrolls if a long rules text doesn't fit a short screen).
 	_kit_panel = PanelContainer.new()
 	_kit_panel.theme_type_variation = &"HudPanelDark"

@@ -112,11 +112,13 @@ extends Resource
 ## Detonator: rounds the Charge must stay armed.
 @export_range(1, 5) var detonator_arm_rounds: int = 2
 
-@export_group("Range bonuses (Firepower by zone range: Close, Mid, Long)")
-@export var range_bonus_smg: PackedInt32Array = PackedInt32Array([1, 0, 0])
-@export var range_bonus_shotgun: PackedInt32Array = PackedInt32Array([2, 0, -1])
-@export var range_bonus_ar: PackedInt32Array = PackedInt32Array([0, 1, 0])
-@export var range_bonus_sniper: PackedInt32Array = PackedInt32Array([-1, 0, 2])
+## Retired (kc-pos-cut, synergy-system.md §13): no Firepower bonus by column range any more. The
+## fields stay so older .tres files load; the rules no longer read them and range_bonus() is 0.
+@export_group("Range bonuses (retired)")
+@export var range_bonus_smg: PackedInt32Array = PackedInt32Array([0, 0, 0])
+@export var range_bonus_shotgun: PackedInt32Array = PackedInt32Array([0, 0, 0])
+@export var range_bonus_ar: PackedInt32Array = PackedInt32Array([0, 0, 0])
+@export var range_bonus_sniper: PackedInt32Array = PackedInt32Array([0, 0, 0])
 @export var range_bonus_lmg: PackedInt32Array = PackedInt32Array([0, 0, 0])
 
 const _RANGE_FIELDS: Dictionary = {
@@ -128,12 +130,9 @@ const _RANGE_FIELDS: Dictionary = {
 }
 
 
-## Firepower modifier for a weapon class in a zone of the given range (0 for NONE).
-func range_bonus(weapon_class: DataEnums.WeaponClass, range_tag: DataEnums.RangeTag) -> int:
-	if not _RANGE_FIELDS.has(weapon_class):
-		return 0
-	var row: PackedInt32Array = get(_RANGE_FIELDS[weapon_class])
-	return row[range_tag]
+## Retired (kc-pos-cut): always 0. Kept for callers (UI) until they drop the range display.
+func range_bonus(_weapon_class: DataEnums.WeaponClass, _range_tag: DataEnums.RangeTag) -> int:
+	return 0
 
 
 ## Supply gained in round `round_number` (1-based).

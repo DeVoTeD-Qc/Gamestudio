@@ -206,10 +206,10 @@ func test_mortar_barrage_two_damage_to_each_enemy_in_one_zone() -> void:
 	m.begin_round()
 	var a: RulesUnit = F.place(m, E, F.rifleman(), F.RIGHT)
 	var b: RulesUnit = F.place(m, E, F.gunner(), F.RIGHT)
-	var other: RulesUnit = F.place(m, E, F.unit("other", 0, 4), F.LEFT)
+	var other: RulesUnit = F.place(m, E, F.unit("other", 0, 3), F.LEFT)  # kc-pos-cut: the Operator has no range bonus
 	assert_true(m.submit(P, RulesIntent.use_item(&"mortar_barrage", F.RIGHT))["ok"], "call in on Right")
 	m.reveal()
-	assert_eq([a.is_alive(), b.armor, other.armor], [false, 4, 4], "2 to each enemy there only")
+	assert_eq([a.is_alive(), b.armor, other.armor], [false, 4, 3], "2 to each enemy there only")
 	m.firefight()
 	m.score()
 	assert_eq(m.sides[P].streak, 3 + 1, "only the Operator's firefight kill in Left adds streak")

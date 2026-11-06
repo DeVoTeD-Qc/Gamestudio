@@ -9,7 +9,7 @@
 <!--
   KillingCard web shell (p17, Technical Artist; kc-ui3: the game is called KillingCard everywhere).
   Godot 4.4.1 custom HTML shell: branded loading screen, progress from Engine onProgress,
-  feature/error notice, and a rotate-to-landscape prompt on portrait phones.
+  feature/error notice (kc-portrait: the rotate-to-landscape prompt is retired; portrait has its own layout).
   No external fonts, images or CDNs. Palette from documentation/art/style-guides/art-direction.md.
 -->
 <style>
@@ -145,10 +145,7 @@ body {
 }
 #ks-rotate .ks-r1 span { color: var(--amber); }
 #ks-rotate .ks-r2 { margin-top: 10px; font: 400 13px/1.5 var(--mono); color: var(--fog-dim); max-width: 280px; }
-@media (orientation: portrait) and (max-width: 820px) and (pointer: coarse),
-       (orientation: portrait) and (max-width: 600px) {
-	#ks-rotate { display: flex; }
-}
+/* kc-portrait: the game has a portrait layout now, so the rotate prompt never shows (kept, unused). */
 @media (prefers-reduced-motion: reduce) {
 	#ks-rotate svg, .ks-bar.ks-indet .ks-fill, .ks-tag .ks-live::before { animation: none; }
 }
@@ -168,7 +165,7 @@ $GODOT_HEAD_INCLUDE
 		<div class="ks-bar ks-indet" id="ks-bar"><div class="ks-fill" id="ks-fill"></div></div>
 		<div class="ks-status"><span id="ks-text">Establishing link&hellip;</span><span id="ks-pct"></span></div>
 		<div class="ks-error" id="ks-error"></div>
-		<div class="ks-hint">Best on desktop, or on a phone held in landscape.</div>
+		<div class="ks-hint">Plays on desktop, and on a phone in landscape or portrait.</div>
 	</div>
 </div>
 

@@ -47,7 +47,7 @@ tables below for the order). Never reorder enum values in `data_enums.gd`, only 
 | `hidden`, `consumed_on_trigger` | Equipment only: stays hidden after Reveal; discarded after it fires (Tripwire). |
 | `counts_for_control`, `grants_elimination_credit`, `collectible` | Leave on for normal cards. Tokens (the Sentry) set all three off. A non-collectible card can't be in a deck or a reward pool. |
 | `effects` | List of EffectData (below). Tactics and equipment need at least one. |
-| `neighbor_keyword` | kc-syn: `guard`, `spotter`, `fireteam`, `overwatch` or empty. Units only. Recruit copies (level 0) don't have it. |
+| `neighbor_keyword` | Retired (kc-pos-cut, synergy-system.md §13): must be empty. The validator rejects any value. |
 | `card_trait` | kc-syn: `vanguard`, `specops`, `heavy`, `undead` or empty. Units and Fields only. Copies count for sets only when Trained (level 1+). |
 
 ## LoadoutItem

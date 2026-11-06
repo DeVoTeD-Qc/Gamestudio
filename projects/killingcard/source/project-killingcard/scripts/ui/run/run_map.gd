@@ -19,7 +19,7 @@ var _tickets_label: Label = null
 var _tickets_row: HBoxContainer = null
 var _loadout_label: Label = null
 
-@onready var _header: HBoxContainer = %Header
+@onready var _header: BoxContainer = %Header
 @onready var _title: Label = %TitleLabel
 @onready var _subtitle: Label = %SubtitleLabel
 @onready var _body: MarginContainer = %Body
@@ -53,10 +53,18 @@ func _build() -> void:
 	_deploy_button.pressed.connect(deploy)
 	_header.add_child(_deploy_button)
 	# Match cards.
-	var row: HBoxContainer = HBoxContainer.new()
+	var row: BoxContainer = BoxContainer.new()  # kc-portrait: turns vertical in portrait
 	row.name = "Matches"
 	row.add_theme_constant_override(&"separation", 8)
-	_body.add_child(row)
+	# kc-portrait: the match cards stack as rows, in a scroll (landscape: one row, no scroll needed).
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "MatchesScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(scroll)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(row)
+	portrait_boxes.append(row)
 	if r != null:
 		for i: int in r.config.matches.size():
 			var node: PanelContainer = _match_node(r, i)
@@ -65,6 +73,7 @@ func _build() -> void:
 	# Footer: loadout summary and SAVE & QUIT.
 	var footer: HBoxContainer = HBoxContainer.new()
 	footer.add_theme_constant_override(&"separation", 16)
+	footer.name = "Footer"
 	_layout.add_child(footer)
 	_loadout_label = make_label("", &"HudSubtle", true)
 	_loadout_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL

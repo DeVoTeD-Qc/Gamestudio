@@ -234,27 +234,18 @@ func test_on_down_hits_the_front_as_it_stands_then() -> void:
 	assert_eq(e2.armor, 6, "On Down hit e2, the front after e1 was removed")
 
 
-func test_guard_death_removes_its_cover_in_later_beats() -> void:
+func test_set_member_death_in_a_switches_off_the_set_before_b() -> void:
+	# kc-pos-cut: synergy is the trait set only, still read live: Vanguard 2 (+1 FP) ends when the
+	# Vanguard in column A dies, before column B fires.
 	var m: MatchState = F.new_match()
-	F.place(m, P, _u("guard", 0, 2, {"neighbor_keyword": &"guard"}), M)
-	var behind: RulesUnit = F.place(m, P, _u("behind", 0, 9), M)
-	assert_eq(m.cover_of(behind), 1, "Guard covers the card behind")
-	F.place(m, E, _u("e1", 5, 9), M)
-	F.place(m, E, _u("e2", 2, 9), M)
-	m.firefight()
-	assert_eq(behind.armor, 7, "beat 2: the Guard is dead, so the full 2 lands")
-
-
-func test_fireteam_death_in_a_switches_off_the_link_before_b() -> void:
-	var m: MatchState = F.new_match()
-	var a: RulesUnit = F.place(m, P, _u("ft_a", 2, 2, {"neighbor_keyword": &"fireteam"}), L)
-	var b: RulesUnit = F.place(m, P, _u("ft_b", 2, 9, {"neighbor_keyword": &"fireteam"}), M)
-	assert_eq(m.firepower_of(b), 3, "linked before the firefight")
+	var a: RulesUnit = F.place(m, P, _u("v_a", 2, 2, {"card_trait": &"vanguard"}), L)
+	var b: RulesUnit = F.place(m, P, _u("v_b", 2, 9, {"card_trait": &"vanguard"}), M)
+	assert_eq(m.firepower_of(b), 3, "Vanguard 2 before the firefight")
 	F.place(m, E, _u("killer", 5, 9), L)
 	var target: RulesUnit = F.place(m, E, _u("target", 0, 3), M)
 	m.firefight()
-	assert_false(a.is_alive(), "A's Fireteam died in column A")
-	assert_eq(target.armor, 1, "column B: the link is off, 2 lands instead of 3")
+	assert_false(a.is_alive(), "the Vanguard in column A died")
+	assert_eq(target.armor, 1, "column B: the set is off, 2 lands instead of 3")
 
 
 func test_patch_after_the_column() -> void:

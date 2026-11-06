@@ -59,7 +59,7 @@ map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = -1
 enemy_recruits = true
-enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("51_siar"), ExtResource("30_y1ak3"), ExtResource("30_y1ak3")])
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("51_siar"), ExtResource("30_y1ak3"), ExtResource("30_y1ak3")])
 crew_label = "Standard Issue crew"
 
 [sub_resource type="Resource" id="Resource_8e67x"]
@@ -98,6 +98,7 @@ map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 0
 enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("33_13yh0"), ExtResource("33_13yh0"), ExtResource("33_13yh0"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("27_gt2np"), ExtResource("24_vxiig"), ExtResource("24_vxiig"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("32_7m22p"), ExtResource("32_7m22p"), ExtResource("50_sisg"), ExtResource("19_2fo86")])
+enemy_recruits = true
 crew_label = "Mastery crew"
 
 [sub_resource type="Resource" id="Resource_1sehu"]
@@ -109,6 +110,7 @@ mode = 0
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 1
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("27_gt2np"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("24_vxiig"), ExtResource("24_vxiig"), ExtResource("20_1qn3b"), ExtResource("21_gia51"), ExtResource("25_re5x2"), ExtResource("17_84r8d"), ExtResource("33_13yh0"), ExtResource("32_7m22p"), ExtResource("18_4l4qd"), ExtResource("19_2fo86"), ExtResource("29_yqpqb"), ExtResource("30_y1ak3")])
 crew_label = "Operator crew"
 
 [resource]
@@ -163,8 +165,3 @@ firefight_target = 7
 round_cap = 8
 overtime_draw_round = 10
 detonator_arm_rounds = 2
-range_bonus_smg = PackedInt32Array(1, 0, 0)
-range_bonus_shotgun = PackedInt32Array(2, 0, -1)
-range_bonus_ar = PackedInt32Array(0, 1, 0)
-range_bonus_sniper = PackedInt32Array(-1, 0, 2)
-range_bonus_lmg = PackedInt32Array(0, 0, 0)

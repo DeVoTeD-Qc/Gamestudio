@@ -31,6 +31,8 @@ extends Control
 signal ready_pressed
 signal menu_pressed
 signal undo_pressed
+## kc-portrait: the layout switched (rotate / resize); the match state is untouched.
+signal portrait_changed(on: bool)
 ## kc-cards-impl (H1): CANCEL on the docked card preview.
 signal dock_cancel_pressed
 ## After every show_snapshot() (p12: the outcome preview recomputes on it).
@@ -129,6 +131,8 @@ const ZONE_LETTERS: Dictionary = {&"left": "A", &"mid": "B", &"right": "C"}
 
 ## True while the phone layout is active (logical height < ScreenProfile.COMPACT_HEIGHT).
 var compact: bool = false
+## kc-portrait: the portrait layout is on (the screen is taller than wide).
+var portrait: bool = false
 ## Safe rect in canvas px (inside get_viewport_rect()); tests set it to simulate a notched
 ## phone. Empty = read DisplayServer.get_display_safe_area() on mobile.
 var safe_area_override: Rect2 = Rect2()
@@ -395,16 +399,14 @@ func get_last_set_callout() -> String:
 ## Links, rail and tiers from a snapshot's synergy block (kc-syn-ui).
 func _set_synergy(syn: Dictionary) -> void:
 	if syn.is_empty():
-		_board.set_links({})
 		_trait_rail.set_rails([], [], not compact)
 		return
 	_syn_snapshot = syn
 	var me: Dictionary = syn.get("player", {})
 	var foe: Dictionary = syn.get("enemy", {})
-	# kc-onboard-ui: link ticks and the trait rail appear once met, or while something in play uses them.
-	var links_on: bool = bool(_reveal.get("links", true))
+	# kc-onboard-ui: the trait rail appears once met, or while something in play uses it.
+	# (kc-pos-cut: no link ticks any more.)
 	var rail_on: bool = bool(_reveal.get("trait_rail", true))
-	_board.set_links({&"player": me.get("links", []), &"enemy": foe.get("links", [])} if links_on else {})
 	_trait_rail.set_rails(me.get("rail", []) if rail_on else [], foe.get("rail", []) if rail_on else [], not compact)
 	_trait_rail.set_meta(&"revealed", rail_on)
 	_layout_strip_extras()
@@ -433,9 +435,6 @@ func on_synergy_event(ev: Dictionary) -> void:
 	var rails: Dictionary = _trait_rail.rails.duplicate(true)
 	rails[side] = rail
 	_trait_rail.set_rails(rails[&"player"], rails[&"enemy"], not compact)
-	var links: Dictionary = _board._link_data.duplicate(true)
-	links[side] = ev.get("links", [])
-	_board.set_links(links)
 	var before: Dictionary = _syn_tiers.get(side, {})
 	var best_on: Array = []
 	for t: StringName in SynergyRules.TRAITS:
@@ -711,11 +710,19 @@ func get_important_labels() -> Array[Label]:
 
 ## Switches between the desktop and compact (phone) layout from the logical height.
 func _update_profile() -> void:
-	var want: bool = size.y > 0.0 and size.y < ScreenProfile.COMPACT_HEIGHT
-	if want == compact and _profile_set:
+	# kc-portrait: a tall screen uses the portrait layout (phone sizes, top bars, the fan hand).
+	var tall: bool = size.x > 0.0 and BoardMetrics.is_portrait(size)
+	var want: bool = (size.y > 0.0 and size.y < ScreenProfile.COMPACT_HEIGHT) or tall
+	if want == compact and tall == portrait and _profile_set:
 		return
 	_profile_set = true
+	var turned: bool = tall != portrait
+	portrait = tall
 	compact = want
+	if turned:
+		close_flyout()
+		_hand.set_fan(portrait)
+		portrait_changed.emit(portrait)
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
 	_hand.set_compact(compact)
@@ -776,7 +783,7 @@ func _layout_regions() -> void:
 		badges[i].queue_redraw()
 	# kc-syn-ui: the trait rail fills the strip between PREVIEW and DECK.
 	var rail_r: Rect2 = BoardMetrics.rail_rect(metrics)
-	if merged:
+	if merged and not bool(metrics.get("portrait", false)):
 		var top: float = rects[4].end.y + float(metrics["badge_gap"])
 		rail_r = Rect2(0, top, rail_r.size.x, maxf(0.0, rects[6].position.y - float(metrics["badge_gap"]) - top))
 	_rail_area = rail_r
@@ -847,6 +854,9 @@ func _layout_tray() -> void:
 	# kc-cards-impl (H1 + O2): the HandArea covers the card grid and the Operator row under it; the
 	# Operator card sits bottom-left, UNDO (icon) over READY bottom-right.
 	var hr: Rect2 = metrics["hand_rect"]
+	# kc-portrait: the fan hand (Y2+ cards) in portrait, the X1 grid otherwise.
+	_hand.fan_step = float(metrics.get("fan_step", 68.0))
+	_hand.set_fan(bool(metrics.get("fan", false)))
 	_place(_hand, hr)
 	var grid: Rect2 = metrics["grid"]
 	_hand.set_grid_rect(Rect2(grid.position - hr.position, grid.size), Rect2((metrics["op_card"] as Rect2).position - hr.position, (metrics["op_card"] as Rect2).size))
@@ -931,6 +941,45 @@ func show_card_dock(view: Dictionary) -> void:
 	_tray.move_child(_dock, -1)
 
 
+## kc-portrait: the empty preview well ("TAP A CARD TO RAISE IT"), shown while nothing is raised.
+var _well: Panel = null
+
+
+func _layout_well() -> void:
+	var on: bool = bool(metrics.get("portrait", false))
+	if _well == null:
+		if not on:
+			return
+		_well = Panel.new()
+		_well.name = "PreviewWell"
+		_well.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.04, 0.05, 0.055, 0.5)
+		sb.border_color = Color(0.85, 0.87, 0.89, 0.18)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(8)
+		_well.add_theme_stylebox_override(&"panel", sb)
+		var hint := Label.new()
+		hint.name = "WellHint"
+		hint.text = "TAP A CARD\nTO RAISE IT"
+		hint.theme_type_variation = &"HudTag"
+		hint.add_theme_font_size_override(&"font_size", 16)
+		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_well.add_child(hint)
+		hint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_tray.add_child(_well)
+		_tray.move_child(_well, 0)
+	_well.visible = on and _hand.visible and not _hand.read_only
+	if on:
+		_place(_well, metrics["well"])
+
+
+func get_preview_well() -> Control:
+	return _well if _well != null and _well.visible else null
+
+
 func get_card_dock() -> Control:
 	return _dock if _dock != null and _dock.visible else null
 
@@ -945,6 +994,21 @@ func get_dock_cancel_button() -> Button:
 
 func _layout_dock() -> void:
 	if _dock == null or metrics.is_empty():
+		return
+	_layout_well()
+	if bool(metrics.get("portrait", false)):
+		# kc-portrait: the raised card fills the preview well (left of the Operator), CANCEL under it.
+		var wr: Rect2 = metrics["well"]
+		var cw: float = minf(wr.size.x - 12.0, CardView.size_for(wr.size.x).x)
+		while cw > 140.0 and CardView.height_for(cw) + 6.0 + 8.0 + 64.0 + 6.0 > wr.size.y:
+			cw -= 4.0
+		_dock_card.set_card_width(cw)
+		_dock.position = wr.position
+		_dock.size = wr.size
+		_dock_card.position = Vector2((wr.size.x - cw) * 0.5, 6.0)
+		_dock_cancel.position = Vector2(6.0, minf(wr.size.y - 70.0, 6.0 + _dock_card.size.y + 8.0))
+		_dock_cancel.size = Vector2(wr.size.x - 12.0, 64.0)
+		_dock_hint.visible = false
 		return
 	var w: float = _tray.size.x
 	var wide: bool = w >= 330.0
@@ -1347,6 +1411,8 @@ func _apply_tray_state(animate: bool) -> void:
 	var peek: bool = tray_state == TRAY_PEEK
 	_hand.visible = open or peek
 	_hand.set_read_only(peek)
+	if _well != null:
+		_layout_well()
 	_undo_button.visible = open
 	_ready_button.visible = open
 	_feed_box.visible = tray_state == TRAY_CLOSED

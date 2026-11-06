@@ -126,7 +126,7 @@ func test_recruit_has_its_trait_but_no_keywords() -> void:
 	assert_eq([rb.synergy_trait, rb.neighbor_keyword, rb.first_shot], [&"heavy", &"", false], "Recruit Breacher: Heavy, no Guard, no First Shot")
 	assert_eq([rb.base_firepower, rb.base_max_armor, rb.weapon_class], [3, 4, DataEnums.WeaponClass.SHOTGUN], "keeps FP, Armor, class")
 	var tb: RulesUnit = m.create_unit(P, _card("breacher"), -1, 1, &"heavy")
-	assert_eq([tb.synergy_trait, tb.neighbor_keyword, tb.first_shot], [&"heavy", &"guard", true], "Trained: all on")
+	assert_eq([tb.synergy_trait, tb.neighbor_keyword, tb.first_shot], [&"heavy", &"", true], "Trained: all on (no Guard since kc-pos-cut)")
 	var gun: RulesUnit = m.create_unit(P, _card("gunner"), -1, 0)
 	assert_eq([gun.synergy_trait, gun.suppress, gun.pierce], [&"heavy", false, false], "Recruit Gunner: no Suppress, no LMG Pierce")
 	var sh: RulesUnit = m.create_unit(P, _card("shieldman"), -1, 0)
@@ -140,14 +140,14 @@ func test_recruit_has_its_trait_but_no_keywords() -> void:
 
 
 func test_trains_line_names_the_locked_keywords() -> void:
-	assert_eq(SynergyRules.trains_text(_card("breacher"), 0), "Trains: First Shot · Guard", "the doc's example")
+	assert_eq(SynergyRules.trains_text(_card("breacher"), 0), "Trains: First Shot", "the doc's example (no Guard since kc-pos-cut)")
 	assert_eq(SynergyRules.trains_text(_card("breacher"), 1), "", "nothing locked once Trained")
-	assert_eq(SynergyRules.locked_keywords(_card("gunner"), 0), ["Suppress", "Pierce", "Overwatch"] as Array[String], "Gunner")
+	assert_eq(SynergyRules.locked_keywords(_card("gunner"), 0), ["Suppress", "Pierce"] as Array[String], "Gunner")
 	assert_eq(SynergyRules.locked_keywords(_card("shieldman"), 0), ["Cover 1", "Front line"] as Array[String], "Protector")
 	assert_eq(SynergyRules.trains_text(_card("si_grunt"), 0), "", "Standard Issue: no line")
 	assert_eq(SynergyRules.trains_text(_card("callout"), 0), "", "tactics: no line")
 	var rc: RulesCard = RulesCard.new(1, _card("marksman"), 0, &"specops")
-	assert_eq([rc.trains_text(), rc.card_trait(), rc.keywords_on()], ["Trains: Pick · Spotter", &"specops", false], "RulesCard hook")
+	assert_eq([rc.trains_text(), rc.card_trait(), rc.keywords_on()], ["Trains: Pick", &"specops", false], "RulesCard hook")
 
 
 func test_recruit_in_a_match_and_in_the_ai_record() -> void:
@@ -203,7 +203,12 @@ func test_squads_along_the_ladder() -> void:
 				vanguard += 1
 	assert_true(vanguard >= 6, "M3: Vanguard calling cards (%d)" % vanguard)
 	var s4: SideSetup = SideSetup.from_squad(md[3].squad, md[3])
-	assert_true(s4.deck_levels.is_empty(), "M4: Trained")
+	for i: int in s4.deck.size():
+		if s4.deck[i].is_unit():
+			assert_eq(s4.level_of(i), 0, "M4 units are Recruits (kc-pos-cut)")
+	var s5: SideSetup = SideSetup.from_squad(md[4].squad, md[4])
+	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman"), s5.deck_levels.is_empty()], [20, 4, 0, true],
+			"M5: the Rival's crew, Marksmen swapped for Gunners (kc-pos-cut), Trained")
 	assert_eq([s4.deck.size(), _in_deck(s4.deck, &"demolitions_expert"), _in_deck(s4.deck, &"marksman"),
 			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [18, 0, 0, 2, 1],
 			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue")
@@ -360,10 +365,10 @@ func test_promotion_trains_keywords_and_there_is_no_trait_choice() -> void:
 	r.pending_offers = [{"kind": RewardOffers.KIND_PROMOTION, "match": 2, "options": [&"breacher"] as Array[StringName],
 			"levels": [0] as Array[int], "traits": [&"heavy"] as Array[StringName]}]
 	r.phase = RunProgress.PHASE_REWARDS
-	assert_eq(r.promotion_options()[0]["unlocks"], ["First Shot", "Guard"] as Array[String], "the Promotion row says what unlocks")
+	assert_eq(r.promotion_options()[0]["unlocks"], ["First Shot"] as Array[String], "the Promotion row says what unlocks")
 	assert_eq(r.choose_offer(0, &"vanguard"), "", "promote (the trait argument is ignored)")
 	assert_eq([r.level_of(at), r.copy_trait(at), r.art_of(at)], [1, &"heavy", art], "Trained, same trait, same art")
-	assert_eq(r.deck_view()[at]["keyword"], &"guard", "keywords on")
+	assert_eq([r.deck_view()[at]["keyword"], r.deck_view()[at]["trains"]], [&"", ""], "keywords on (no neighbor keyword since kc-pos-cut)")
 	assert_eq(k >= -1, true, "")
 
 
@@ -453,8 +458,8 @@ func test_reveal_flags_from_the_run_and_the_board() -> void:
 	m.put_in_line(m.create_unit(P, _card("breacher"), -1, 1), 0)
 	m.put_in_line(m.create_unit(P, _card("point_man"), -1, 1), 1)
 	var mt: Array[StringName] = RevealFlags.match_triggers(m)
-	assert_true(RevealFlags.TRAIT_RAIL in mt and RevealFlags.LINKS in mt, "traited units and a Guard link: %s" % str(mt))
-	assert_true(&"kw_first_shot" in mt and &"kw_guard" in mt, "keyword tips")
+	assert_true(RevealFlags.TRAIT_RAIL in mt and not (RevealFlags.LINKS in mt), "traited units, no links (kc-pos-cut): %s" % str(mt))
+	assert_true(&"kw_first_shot" in mt and not (&"kw_guard" in mt), "keyword tips")
 	var m2: MatchState = F.new_match()
 	m2.put_in_line(m2.create_unit(P, _card("breacher"), -1, 0), 0)
 	var mt2: Array[StringName] = RevealFlags.match_triggers(m2)

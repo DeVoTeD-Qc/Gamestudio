@@ -88,6 +88,12 @@ var _grid_rect: Rect2 = Rect2()
 var _op_rect: Rect2 = Rect2()
 ## kc-cards-impl (H1): the selected card lifts this far.
 const SELECTED_LIFT: float = 6.0
+## kc-portrait: the hand is a swipeable fan of Y2+ cards (CardView) along the bottom.
+var fan: bool = false
+## Px between fanned cards (>= 61 px: 44 pt), and the fan's scroll (0 = the first card at the left).
+var fan_step: float = 68.0
+var fan_scroll: float = 0.0
+const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 ## Uid meta of the Operator chip (never a rules card uid).
 const OPERATOR_UID: int = -2
 const AMBER: Color = Color(0.961, 0.722, 0.239)
@@ -145,6 +151,42 @@ func set_grid_rect(grid: Rect2, op_rect: Rect2) -> void:
 
 func get_grid_rect() -> Rect2:
 	return _grid_rect
+
+
+## kc-portrait: the fan hand on / off (rebuilds the cards).
+func set_fan(on: bool) -> void:
+	if on == fan:
+		return
+	fan = on
+	fan_scroll = 0.0
+	set_hand(_cards_data)
+
+
+## The most the fan can scroll (0 when every card fits).
+func fan_scroll_max() -> float:
+	var n: int = get_cards().size()
+	var grid: Rect2 = _grid_rect if _grid_rect.size != Vector2.ZERO else Rect2(Vector2.ZERO, _row.size)
+	return maxf(0.0, (n - 1) * fan_step + _card_size().x - grid.size.x)
+
+
+## Scrolls the fan by dx px (a swipe), clamped.
+func scroll_fan(dx: float) -> void:
+	fan_scroll = clampf(fan_scroll - dx, 0.0, fan_scroll_max())
+	_fit_cards()
+
+
+## Scrolls the fan so this card's strip is fully visible.
+func reveal_card(uid: int) -> void:
+	var cards: Array[Node] = get_cards()
+	for i: int in cards.size():
+		if int(cards[i].get_meta(&"uid", -1)) == uid:
+			var grid: Rect2 = _grid_rect if _grid_rect.size != Vector2.ZERO else Rect2(Vector2.ZERO, _row.size)
+			var x: float = i * fan_step
+			if x - fan_scroll < 0.0:
+				fan_scroll = x
+			elif x + fan_step - fan_scroll > grid.size.x:
+				fan_scroll = minf(fan_scroll_max(), x + fan_step - grid.size.x)
+			_fit_cards()
 
 
 func set_read_only(value: bool) -> void:
@@ -220,6 +262,8 @@ func set_selected(uid: int) -> void:
 	_apply_styles()
 	if changed:
 		_fit_cards()
+		if fan and uid >= 0:
+			reveal_card(uid)
 
 
 ## Hides the chip being dragged (-1 shows all again).
@@ -236,7 +280,16 @@ func _apply_styles() -> void:
 		var variation: StringName = &"HandCard" if playable else &"HandCardDim"
 		if uid == selected_uid and uid >= 0:
 			variation = &"HandCardSelected"
-		(chip as Control).theme_type_variation = variation
+		if chip is CardView:
+			# kc-portrait: the fan's Y2+ card marks the selection with its amber frame.
+			var cv: CardView = chip
+			var on: bool = uid == selected_uid and uid >= 0
+			if bool(cv.data.get("marked", false)) != on:
+				var d: Dictionary = cv.data.duplicate()
+				d["marked"] = on
+				cv.set_card_data(d)
+		else:
+			(chip as Control).theme_type_variation = variation
 		# Unaffordable chips fade so the playable ones stand out; the dragged one fades more.
 		var alpha: float = 1.0 if playable or uid == selected_uid else 0.55
 		(chip as Control).modulate.a = 0.35 if uid == dragging_uid and uid >= 0 else alpha
@@ -271,14 +324,20 @@ func _wire(chip: Control, uid: int) -> void:
 		else:
 			card_tapped.emit(uid))
 	g.long_pressed.connect(func(_p: Vector2) -> void: card_inspected.emit(uid))
+	var last: Array = [Vector2.ZERO]
 	g.drag_started.connect(func(p: Vector2) -> void:
-		if not read_only:
+		if fan:
+			last[0] = p  # kc-portrait: a swipe on the fan scrolls it (place with a tap instead)
+		elif not read_only:
 			card_drag_started.emit(uid, p))
 	g.drag_moved.connect(func(p: Vector2) -> void:
-		if not read_only:
+		if fan:
+			scroll_fan(p.x - (last[0] as Vector2).x)
+			last[0] = p
+		elif not read_only:
 			card_drag_moved.emit(uid, p))
 	g.drag_ended.connect(func(p: Vector2) -> void:
-		if not read_only:
+		if not fan and not read_only:
 			card_drag_ended.emit(uid, p))
 
 
@@ -309,6 +368,17 @@ func _fit_cards() -> void:
 		_op_chip.position = orr.position + Vector2(0, -SELECTED_LIFT if operator_selected else 0.0)
 		_op_chip.size = orr.size
 	if n == 0:
+		return
+	if fan:
+		# kc-portrait: one overlapping row (each card shows fan_step px; the last one whole), scrolled
+		# by a swipe; the selected card rises above the others (the raised face is in the well).
+		fan_scroll = clampf(fan_scroll, 0.0, fan_scroll_max())
+		for i: int in n:
+			var c: Control = cards[i]
+			c.size = card_size
+			var sel: bool = int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0
+			c.position = Vector2(roundf(grid.position.x + i * fan_step - fan_scroll), roundf(grid.position.y + (0.0 if sel else 10.0)))
+			c.z_index = 10 if sel else 0
 		return
 	var cols: int = maxi(1, columns)
 	var rows: int = ceili(float(n) / cols)
@@ -341,6 +411,48 @@ func mini_height() -> float:
 
 
 func _make_card(card: Dictionary) -> Control:
+	if fan:
+		return _make_fan_card(card)
+	return _make_banner_card(card)
+
+
+## kc-portrait: a hand card in the fan: the Y2+ card (CardView), the mulligan / Codex form.
+func _make_fan_card(card: Dictionary) -> Control:
+	var cv: CardView = CARD_VIEW_SCENE.instantiate() as CardView
+	cv.set_card_data(fan_view(card))
+	cv.set_card_width(_card_size().x)
+	cv.add_to_group(&"tap_target")
+	cv.set_meta(&"playable", bool(card.get("playable", true)))
+	cv.set_meta(&"ctype", MiniIcons.card_type(card))
+	cv.set_meta(&"fan_card", true)
+	cv.tooltip_text = String(card.get("name", ""))
+	cv.ready.connect(func() -> void:
+		for n: Node in cv.find_children("*", "Control", true, false):
+			(n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE)
+	return cv
+
+
+## The Y2+ data of a hand chip (card_info.gd chip() + the snapshot's hand fields).
+static func fan_view(card: Dictionary) -> Dictionary:
+	var ctype: String = MiniIcons.card_type(card)
+	var v: Dictionary = {"name": card.get("name", ""), "type": {"equipment": "equipment", "tactic": "tactic"}.get(ctype, "unit"),
+			"weapon_class": String(card.get("weapon_class", "")).to_lower(), "cost": int(card.get("cost", 0)),
+			"firepower": int(card.get("fp", 0)), "armor": int(card.get("armor", 0)), "text": String(card.get("text", "")),
+			"id": String(card.get("id", "")), "banner": String(card.get("banner", card.get("id", ""))), "side": "friend"}
+	var kws: Array = []
+	for k: Dictionary in card.get("keywords", []):
+		kws.append({"id": String(k.get("id", "")), "value": int(k.get("value", 0))})
+	v["keywords"] = kws
+	for k: String in ["level", "trait", "standard_issue", "locked", "trains", "elite"]:
+		if card.has(k) and str(card[k]) != "":
+			v[k] = card[k]
+	if card.has("locked") and (card["locked"] is Array) and not (card["locked"] as Array).is_empty():
+		v["keywords"] = []
+	v["cant_pay"] = not bool(card.get("playable", true))
+	return v
+
+
+func _make_banner_card(card: Dictionary) -> Control:
 	# kc-ui4 (head: hand cards "closer to their form on the board"): the board's banner (same art band,
 	# plate row, FP bottom-left / Armor bottom-right, keyword / trait icons, level band) with the cost
 	# hex and the name (chassis) over the art's subname. Rules text is one long-press away.

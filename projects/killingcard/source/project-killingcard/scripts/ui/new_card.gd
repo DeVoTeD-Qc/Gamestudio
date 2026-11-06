@@ -133,6 +133,9 @@ func offer(relevant: Array, screen_key: String = "") -> StringName:
 	if rs == null:
 		return &""
 	for f: StringName in rs.pending_explainers():
+		# kc-pos-cut: units no longer link; the "New: Links" card is never offered.
+		if f == RevealFlags.LINKS:
+			continue
 		if f in relevant and not RevealFlags.text_of(f).is_empty():
 			_shown_for = screen_key
 			show_flag(f)
@@ -294,15 +297,6 @@ static func draw_example(ci: CanvasItem, r: Rect2, f: StringName, icon: bool) ->
 					SynergyGlyphs.trait_color(trait_id))
 		RevealFlags.KEYWORDS:
 			_draw_unlock(ci, r if not icon else sq, icon, &"first_shot")
-		RevealFlags.LINKS:
-			var w: float = minf(r.size.x * (0.8 if icon else 0.5), r.size.y * 1.6)
-			var h: float = (r.size.y - 12.0) * 0.5
-			var x: float = r.position.x + (r.size.x - w) * 0.5
-			for k: int in 2:
-				var br: Rect2 = Rect2(x, r.position.y + k * (h + 12.0), w, h)
-				ci.draw_rect(br, Color("#1C2228"))
-				ci.draw_rect(br, Color("#2EC4B6"), false, 1.5)
-			SynergyGlyphs.draw_tick(ci, Vector2(x + w * 0.36, r.position.y + h - 2.0), Vector2(x + w * 0.36, r.position.y + h + 14.0), Color("#2EC4B6"), 4.0)
 		RevealFlags.PROMOTION, RevealFlags.ENGINE_PANEL:
 			# kc-cards-impl: the level coin R > T (the camo band is retired).
 			var cs: float = minf(r.size.y - 4.0, 30.0)

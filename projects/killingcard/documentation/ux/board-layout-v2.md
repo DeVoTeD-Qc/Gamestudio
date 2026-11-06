@@ -389,3 +389,26 @@ The head: "Let's implement my pick with latest version updated, directly in the 
 
 **Follow-up (coordinator review).** The mulligan now uses the same Y2+ data as the dock (`MatchController.card_view_for`), so Standard Issue cards show their STANDARD ISSUE tag and text; a unit with no weapon or tag reads UNIT. The text box releases its width when a card is laid out narrower. FRONT tabs now sit inside the objective tile's top / bottom margin, clear of the banners and the tile's labels (desktop: the FRONT word in the 26 px margin; phone: a 5 px side-coloured bar). The move toast ("Round 1: tap your Operator (bottom-left of your hand) ...") sits at the board's bottom edge, never over the objective row; killfeed toasts keep the top edge. The board screenshots in `qa/screenshots/cards-v2/` were taken mid-slide before; the tool now waits for the slides to finish. 536 tests pass.
 
+
+## Implementation notes (kc-portrait, UI/UX Agent, 2026-11-06)
+The head: "the default one on PC and landscape should have the cards in the hand on the side", and "investigate the fan cards at the bottom for the portrait version of iPhone". Landscape and PC are unchanged: the H1 side tray, X1 cards, and the O2 Operator with UNDO over READY. Portrait follows the L1 portrait mock-up (card-design-options.html, Layout v3).
+
+| Piece | What | Where |
+|---|---|---|
+| **Canvas** | `ScreenProfile.base_size` turns its rule 90° for a tall window: a 9:16 base, 540..720 px wide. 390x844 pt gives a 540x1168 canvas (0.72 pt per px, as in landscape). 360x780 gives 540x1170 (0.67 pt/px). 430x932 gives 573x1242 (0.75 pt/px). | `screen_profile.gd` |
+| **Switch** | Height > width means portrait (`BoardMetrics.is_portrait`). `MatchScreen._update_profile` runs on every resize, so rotating or resizing switches live (`portrait_changed`). The match state is untouched; the hand rebuilds as a fan or as X1 cards. Portrait uses the phone (compact) sizes. | `match_screen.gd`, `board_metrics.gd` |
+| **Portrait match** | **Top bars:** the 7 badges in a row, then the sets rail (the initiative chip shares it). **Board:** stacked under the bars, 3 columns of 4:1 banners at 168x42 on the 540 px canvas (180x45 at 430 pt), 8 px gutters. **Tray:** the Supply + killstreak row; the preview well (left) with the Operator card, UNDO and READY (right; 68 px = 44 pt on a 360 pt phone); a fan of Y2+ hand cards at the bottom (150 px cards, 68 px apart = 44 pt+). | `BoardMetrics.compute_portrait`, `match_screen.gd` (`_layout_well`, `_layout_dock`) |
+| **Portrait hand** | Tap a fan card: it rises and gets the amber frame, and its full Y2+ face fills the preview well with CANCEL. Legal slots say PLAY HERE; tap one to place. Cancel with the card again, the raised card, CANCEL or the empty board. Long press opens the inspector. A horizontal swipe scrolls the fan; there is no drag-to-place in portrait (tap to place), and selecting a card scrolls it into view. The empty well reads "TAP A CARD TO RAISE IT". | `hand_area.gd` (`set_fan`, `fan_view`, `scroll_fan`, `reveal_card`) |
+| **Run screens** | `RunScreen` gets `portrait`. The `%Header` (now a `BoxContainer`) stacks its title over a row of its buttons. Rows registered in `portrait_boxes` turn vertical: run map matches (in a scroll), loadout kit over the killstreak pool. The Supply Drop / Salvage options sit two per row in a scroll. Codex: the top bar's count folds away and its buttons shrink. Starter panel: 124 px cards. The mulligan, pause menu and title already fit. | `run/run_screen.gd`, `run_map.gd`, `loadout_screen.gd`, `reward_screen.gd`, `starter_panel.gd`, `codex/codex_view.gd`, `scenes/run/*.tscn` (Header type) |
+| **Project / web** | `window/handheld/orientation` 4 (sensor landscape) → 6 (sensor), so mobile exports can rotate. Web: the shell's "Rotate to landscape" prompt is retired and the loading hint updated; `progressive_web_app/orientation` 1 → 0 (any). The stretch mode (canvas_items + expand) and the web canvas resize policy (adaptive) are unchanged: the canvas already follows the window. | `project.godot`, `export_presets.cfg`, `web/shell.html` |
+| **Also** | The move toast sits at the board's bottom edge, and its text says the Operator is next to READY. The lore label is bottom-anchored in its text box (an autowrap height fix). | `match_screen.gd`, `match_controller.gd`, `card_view.gd` |
+
+**QA.** New `tests/test_portrait.gd` (6 tests):
+- the portrait canvas at three sizes;
+- the live switch and back, with the match state kept;
+- portrait select / place / cancel / swipe;
+- no overlap between the bars, board, well, Operator, UNDO, READY and fan at 390x844, 360x780 and 430x932, with 44 pt steps and buttons;
+- landscape keeps the side tray;
+- title, loadout, run map, Codex, Supply Drop and the pause menu keep every button and label on screen in portrait.
+
+Screenshots (390x844, public art only) are in `qa/screenshots/portrait/`: the match at rest, a raised card, PLAY HERE (2x), mulligan, Supply Drop, run map, title, Codex, loadout. The tool is `tests/tools/shot_portrait.gd`.

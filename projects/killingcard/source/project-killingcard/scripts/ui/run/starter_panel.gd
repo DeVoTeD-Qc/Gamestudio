@@ -258,6 +258,9 @@ func _build() -> void:
 
 ## kc-cards-impl: deck list cards are Y2+ cards (the mock-up's deck card is 196 wide).
 func _tile_size() -> Vector2:
+	var vr: Vector2 = get_viewport_rect().size if is_inside_tree() else size
+	if vr.y > vr.x and vr.x > 0.0:
+		return CardView.size_for(124.0)  # kc-portrait: narrow cards so both columns fit
 	return CardView.size_for(172.0 if compact else 196.0)
 
 
@@ -398,7 +401,7 @@ func _layout() -> void:
 	if _deck_grid == null:
 		return
 	var left: Control = _op_list.get_parent().get_parent() as Control
-	var lw: float = roundf(size.x * (0.47 if compact else 0.42))
+	var lw: float = roundf(size.x * (0.52 if size.y > size.x else (0.47 if compact else 0.42)))
 	left.custom_minimum_size.x = lw
 	var tile: Vector2 = _tile_size()
 	var room: float = size.x - 20.0 - 14.0 - lw - 12.0

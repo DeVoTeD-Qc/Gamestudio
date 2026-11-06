@@ -597,6 +597,18 @@ func _on_resized() -> void:
 	var room: float = size.x - 20.0 - 16.0  # margins + the scroll bar
 	_grid.columns = maxi(1, int(floorf((room + 8.0) / (tile.x + 8.0))))
 	_chassis.custom_minimum_size.x = 220.0 if compact else 280.0
+	# kc-portrait: a narrow screen: the count label folds away and the bar's buttons shrink.
+	var tall: bool = size.y > size.x
+	_count.visible = not tall
+	if tall:
+		_chassis.custom_minimum_size.x = 130.0
+		_back.custom_minimum_size.x = 90.0
+		_starter_button.custom_minimum_size.x = 110.0
+		_glossary_button.custom_minimum_size.x = 120.0
+	else:
+		_back.custom_minimum_size.x = 120.0
+		_starter_button.custom_minimum_size.x = 150.0
+		_glossary_button.custom_minimum_size.x = 150.0
 	for t: Node in _grid.get_children():
 		(t as Control).custom_minimum_size = tile
 	_layout_art_panel()

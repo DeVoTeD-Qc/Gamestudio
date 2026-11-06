@@ -42,6 +42,5 @@ counts_for_control = true
 grants_elimination_credit = true
 collectible = true
 effects = Array[ExtResource("1_ibo1h")]([SubResource("Resource_tvlmb")])
-neighbor_keyword = &"spotter"
 card_trait = &"specops"
 trait_options = Array[StringName]([&"specops", &"undead"])

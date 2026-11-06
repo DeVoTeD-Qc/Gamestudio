@@ -8,6 +8,8 @@
 #   - 1280x720 desktop window: base stays 1280x720 (scale 1.0, unchanged).
 #   - 844x390 iPhone landscape: base 960x540 -> logical canvas 1168x540, 0.722 pt per logical px.
 #   The match screen switches to its compact layout when the logical height is below 640.
+#   kc-portrait: a portrait window (taller than wide) gets a 9:16 base by the same rule (390x844
+#   iPhone portrait: base 540x960, logical canvas 540x1168) and the match screen's portrait layout.
 #   Points = physical px / DisplayServer.screen_get_scale() (devicePixelRatio on the web,
 #   the UIScreen scale on iOS / Xogot, 2 on a Retina Mac, 1 on most desktops).
 # Usage: Settings applies it at startup and on every window resize (ScreenProfile.apply(root)).
@@ -29,6 +31,12 @@ const COMPACT_HEIGHT: float = 640.0
 ## Canvas base size for a window of window_px physical pixels on a screen with this scale.
 static func base_size(window_px: Vector2, screen_scale: float = 1.0, ui_scale: float = 1.0) -> Vector2:
 	var pts: Vector2 = window_px / maxf(screen_scale, 0.01)
+	if pts.y > pts.x:
+		# kc-portrait: a tall window gets the same rule turned 90 degrees (a 9:16 base, 540..720 wide):
+		# a 390x844 iPhone in portrait -> base 540x960 -> logical canvas 540x1168, 0.722 pt per px.
+		var fitted_w: float = minf(pts.x, pts.y * DESIGN_SIZE.y / DESIGN_SIZE.x)
+		var bw: float = roundf(clampf(fitted_w / (MIN_POINTS_PER_PX * maxf(ui_scale, 0.1)), MIN_BASE_HEIGHT, DESIGN_SIZE.y))
+		return Vector2(bw, roundf(bw * DESIGN_SIZE.x / DESIGN_SIZE.y))
 	# Height the 16:9 design box gets on this screen (narrow screens are limited by width).
 	var fitted_h: float = minf(pts.y, pts.x * DESIGN_SIZE.y / DESIGN_SIZE.x)
 	var h: float = clampf(fitted_h / (MIN_POINTS_PER_PX * maxf(ui_scale, 0.1)), MIN_BASE_HEIGHT, DESIGN_SIZE.y)

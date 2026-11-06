@@ -497,9 +497,39 @@ func test_mulligan_faces_show_type_and_text() -> void:
 		assert_true(tl.text != "", "%s: a type line" % rc.card.display_name)
 		if rc.card.standard_issue:
 			assert_true(tl.text.contains("STANDARD ISSUE"), "%s: STANDARD ISSUE tag" % rc.card.display_name)
+			assert_true(cv.get_lore_text() != "", "%s: a vanilla card shows its lore line" % rc.card.display_name)
 		var body: Label = cv.find_child("BodyLabel", true, false)
-		var has_text: bool = (body.visible and body.text != "" and body.size.y >= 16.0) or not cv.get_text_lines().is_empty()
+		var has_text: bool = (body.visible and body.text != "" and body.size.y >= 16.0) or not cv.get_text_lines().is_empty() \
+				or cv.get_lore_text() != ""
 		assert_true(has_text, "%s: the text box says something" % rc.card.display_name)
 		cv.free()
 	_despawn(vp)
 	await tree.process_frame
+
+
+# =============================================================================
+# kc-hand-y2: lore for cards with no effect
+# =============================================================================
+
+func test_lore_line_only_without_effect() -> void:
+	var grunt: CardView = _card_view(CardView.view_for_card(CardDB.get_card(&"si_grunt")), 196)
+	await _frames(1)
+	assert_eq(grunt.get_lore_text(), CardLore.line(&"si_grunt"), "a vanilla Standard Issue card: its lore line")
+	var lore: Label = grunt.find_child("LoreLabel", true, false)
+	assert_eq(lore.get_theme_font(&"font"), CardLook.LORE_FONT, "Barlow Condensed Medium Italic")
+	assert_eq(lore.get_theme_color(&"font_color"), Color("#8A949C"), "dark grey")
+	assert_eq(lore.vertical_alignment, VERTICAL_ALIGNMENT_BOTTOM, "at the bottom of the text box")
+	var box: Rect2 = grunt.regions()["text"]
+	var lr: Rect2 = Rect2(lore.position, lore.size)
+	assert_true(lr.end.y <= box.end.y + 0.5 and lr.position.x >= box.position.x and lr.end.x <= box.end.x, "bottom of the text box (%s in %s)" % [lr, box])
+	assert_false(grunt.find_child("BodyLabel", true, false).visible, "no effect text")
+	var mk: CardView = _card_view(CardView.view_for_card(CardDB.get_card(&"marksman")), 196)
+	var tac: CardView = _card_view(CardView.view_for_card(CardDB.get_card(&"ammo_resupply")), 196)
+	await _frames(1)
+	assert_eq(mk.get_lore_text(), "", "a card with a keyword: no lore")
+	assert_eq(tac.get_lore_text(), "", "a Tactic with an effect: no lore")
+	for id: StringName in CardLore.LINES:
+		assert_true(CardDB.get_card(id) != null, "%s: a real card" % id)
+		assert_true(String(CardLore.LINES[id]).length() <= 70, "%s: short" % id)
+	for v: CardView in [grunt, mk, tac]:
+		v.free()

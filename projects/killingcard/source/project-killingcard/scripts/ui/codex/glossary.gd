@@ -4,7 +4,7 @@
 #   card inspector's "?" on any keyword line (it opens scrolled to that entry). Grouped by category
 #   (chips ALL / KEYWORDS / SYNERGY / STATS & BOARD) and searchable (a search box filters names and
 #   texts). Each row: the icon as the game draws it, the name, the rules text.
-#   Single source: card keywords from CardInfo.KEYWORD_RULES, neighbor keywords / traits / levels
+#   Single source: card keywords from CardInfo.KEYWORD_RULES, traits / levels
 #   from SynergyRules (KEYWORD_TEXT, TRAIT_NAMES, TIER_TEXT, LEVEL_NAMES, level_stats) and the rest
 #   from CardInfo.GLOSSARY_EXTRA, so a text never drifts from what the inspector says.
 # Usage: var g := Glossary.open_over(parent, &"pick")   # adds itself full-rect, scrolled to Pick
@@ -25,14 +25,14 @@ const ICON: float = 44.0
 const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt", &"hidden": &"hidden",
 		&"no_control": &"no_control", &"field": &"field", &"control": &"control", &"objective": &"objective",
 		&"range": &"range", &"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
-		&"link_tick": &"tick", &"set_callout": &"callout", &"doctrine": &"doctrine", &"level_band": &"band",
+		&"set_callout": &"callout", &"doctrine": &"doctrine", &"level_band": &"band",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
 		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
 		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames"}
 ## kc-cards-impl: the card-anatomy entries (C1+ board card, Y2+ / T1 frames) lead the STATS & BOARD group.
 const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames", &"range",
 		&"objective", &"control", &"field", &"operator", &"killstreak", &"incoming"]
-const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"link_tick", &"set_callout", &"doctrine", &"level_band"]
+const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"set_callout", &"doctrine", &"level_band"]
 
 var category: StringName = &"all"
 var query: String = ""
@@ -66,13 +66,7 @@ static func entries() -> Array[Dictionary]:
 		var tx: String = String(row[1]).replace("%d", "N")
 		out.append(_entry(id, &"keyword", nm, tx))
 	out.append(_entry(&"field", &"keyword", CardInfo.GLOSSARY_EXTRA[&"field"][0], CardInfo.GLOSSARY_EXTRA[&"field"][1]))
-	for kw: StringName in SynergyRules.KEYWORDS:
-		var t: String = String(SynergyRules.KEYWORD_TEXT.get(kw, ""))
-		var e: Dictionary = _entry(StringName("kw_" + String(kw)), &"synergy", SynergyGlyphs.keyword_name(kw),
-				t.substr(t.find(":") + 2) if t.contains(":") else t)
-		e["kw"] = kw
-		e["text"] += " (A Trained card's keyword; it counts once per card that receives it.)"
-		out.append(e)
+	# kc-pos-cut: no neighbour keywords (Guard / Spotter / Fireteam / Overwatch) any more.
 	for tr: StringName in SynergyRules.TRAITS:
 		var tiers: Array = SynergyRules.TIER_TEXT.get(tr, ["", ""])
 		var e: Dictionary = _entry(StringName("trait_" + String(tr)), &"synergy", String(SynergyRules.TRAIT_NAMES.get(tr, tr)),
@@ -83,9 +77,9 @@ static func entries() -> Array[Dictionary]:
 		var st: Dictionary = SynergyRules.level_stats(lvl)
 		var gains: PackedStringArray = []
 		if lvl == SynergyRules.LEVEL_RECRUIT:
-			gains.append("no neighbor keyword and no trait yet (plain band)")
+			gains.append("its trait; its keywords are locked until it trains")
 		else:
-			gains.append("its neighbor keyword and trait")
+			gains.append("its trait and keywords")
 			if int(st["armor"]) > 0:
 				gains.append("+%d Armor" % int(st["armor"]))
 			if int(st["fp"]) > 0:
@@ -298,7 +292,7 @@ func _row(e: Dictionary) -> Control:
 	row.add_child(h)
 	var icon: Control = Control.new()
 	icon.name = "Icon"
-	icon.custom_minimum_size = Vector2(ICON * (2.0 if e["key"] in [&"link_tick", &"kw_guard", &"kw_spotter", &"kw_fireteam", &"kw_overwatch"] else 1.0), ICON)
+	icon.custom_minimum_size = Vector2(ICON * 1.0, ICON)
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	icon.set_meta(&"has_icon", e["icon"] != &"" or e["drawn"] != &"" or e.has("trait") or e.has("kw"))
@@ -328,10 +322,6 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 	var ink: Color = Color(0.05, 0.06, 0.07)
 	if e.has("trait"):
 		SynergyGlyphs.draw_trait_plate(c, r, e["trait"], true, false)
-		return
-	if e.has("kw"):
-		SynergyGlyphs.draw_keyword_plate(c, r, e["kw"], true, friend, true)
-		_draw_neighbors(c, Rect2(s + 4.0, 0, s - 4.0, s), e["kw"], friend)
 		return
 	if e["icon"] != &"":
 		c.draw_rect(r, Color(ink, 0.85))
@@ -383,10 +373,6 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			# kc-cards-impl: a copy's level is its coin (R grey, T / V / E brass), shown on peek.
 			var lv: int = maxi(0, SynergyRules.LEVEL_BANDS.find(StringName(e.get("band", &"gilded"))))
 			CardLook.draw_level_coin(c, Rect2(s * 0.18, s * 0.18, s * 0.64, s * 0.64), lv)
-		&"tick":
-			c.draw_rect(Rect2(0, 6, s * 0.9, s * 0.35), Color("#1C2228"))
-			c.draw_rect(Rect2(0, s * 0.6, s * 0.9, s * 0.35), Color("#1C2228"))
-			SynergyGlyphs.draw_tick(c, Vector2(s * 0.45, s * 0.3), Vector2(s * 0.45, s * 0.7), friend, 4.0)
 		&"bolt", &"killstreak":
 			c.draw_colored_polygon(PackedVector2Array([Vector2(s * 0.58, 4), Vector2(s * 0.26, s * 0.56), Vector2(s * 0.48, s * 0.56),
 					Vector2(s * 0.38, s - 4), Vector2(s * 0.74, s * 0.42), Vector2(s * 0.52, s * 0.42)]), accent if e["drawn"] == &"bolt" else Color("#5BC0EB"))
@@ -431,25 +417,6 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			c.draw_rect(r, Color(ink, 0.85))
 			c.draw_rect(r, Color(1, 1, 1, 0.3), false, 1.0)
 			c.draw_string(font, Vector2(0, s * 0.68), String(e["name"]).left(1), HORIZONTAL_ALIGNMENT_CENTER, s, 24, accent)
-
-
-## The small neighbor diagram: which slots a neighbor keyword uses (a 3x3 mini board, this card
-## in the middle; the cells it counts are lit).
-func _draw_neighbors(c: Control, r: Rect2, kw: StringName, col: Color) -> void:
-	var cell: float = floorf(r.size.y / 3.0) - 1.0
-	var lit: Array[Vector2i] = []
-	match kw:
-		SynergyRules.GUARD:
-			lit = [Vector2i(1, 2)]   # the card behind
-		SynergyRules.SPOTTER:
-			lit = [Vector2i(1, 0)]   # the card in front
-		SynergyRules.FIRETEAM, SynergyRules.OVERWATCH:
-			lit = [Vector2i(0, 1), Vector2i(2, 1)]   # beside
-	for x: int in 3:
-		for y: int in 3:
-			var cr: Rect2 = Rect2(r.position + Vector2(x * (cell + 1.0), y * (cell + 1.0)), Vector2(cell, cell))
-			var me: bool = x == 1 and y == 1
-			c.draw_rect(cr, col if me else (Color(col, 0.55) if Vector2i(x, y) in lit else Color(1, 1, 1, 0.08)))
 
 
 func _button(text: String, variation: StringName) -> Button:

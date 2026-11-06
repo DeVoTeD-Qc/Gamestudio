@@ -96,7 +96,7 @@ func test_callout_buffs_a_unit_played_before_it() -> void:
 	assert_true(m.submit(P, RulesIntent.play_card(r_uid, F.RIGHT))["ok"], "unit first")
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "callout"), F.RIGHT))["ok"], "then Callout")
 	m.reveal()
-	assert_eq(m.firepower_of(m.sides[P].find_unit(r_uid)), 4, "2 + 1 (AR in Mid) + 1 from the later Callout")
+	assert_eq(m.firepower_of(m.sides[P].find_unit(r_uid)), 3, "2 + 1 from the later Callout (kc-pos-cut: no AR range bonus)")
 
 
 func test_patch_tie_goes_to_the_front_most() -> void:

@@ -51,6 +51,9 @@ const DESKTOP: Dictionary = {"pad_y": 12.0, "row_gap": 6.0, "mid_gap": 6.0, "obj
 ## supply: Rect2, ks: Rect2 (killstreak tiles), ks_inline: bool (tray-local; supply_h = the top block)}.
 ## Rects are area-local.
 static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dictionary:
+	# kc-portrait: a tall screen (height > width) gets the portrait layout.
+	if is_portrait(area):
+		return compute_portrait(area)
 	var p: Dictionary = (PHONE if compact else DESKTOP).duplicate()
 	var fixed_h: float = 2.0 * p["pad_y"] + 2.0 * p["mid_gap"] + p["obj_h"] + 6.0 * p["row_gap"]
 	var bh: float = floorf((area.y - fixed_h) / 8.0)
@@ -183,6 +186,13 @@ static func badge_rects(m: Dictionary) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	var strip: Rect2 = m["strip"]
 	var h: float = m["badge_h"]
+	if bool(m.get("portrait", false)):
+		# kc-portrait: the strip is a top bar: the 7 badges in one row (MENU ... DECK).
+		var gap: float = m["badge_gap"]
+		var bw: float = floorf((strip.size.x - 6.0 * gap) / 7.0)
+		for i: int in 7:
+			out.append(Rect2(i * (bw + gap), 0, bw, h))
+		return out
 	for i: int in 6:
 		out.append(Rect2(0, i * (h + m["badge_gap"]), strip.size.x, h))
 	out.append(Rect2(0, strip.size.y - h, strip.size.x, h))
@@ -191,8 +201,83 @@ static func badge_rects(m: Dictionary) -> Array[Rect2]:
 
 ## kc-syn-ui: the trait rail's rect (strip-local) between the PREVIEW badge and DECK.
 static func rail_rect(m: Dictionary) -> Rect2:
+	if bool(m.get("portrait", false)):
+		var top0: float = float(m["badge_h"]) + float(m["badge_gap"])
+		return Rect2(0, top0, (m["strip"] as Rect2).size.x, maxf(0.0, (m["strip"] as Rect2).size.y - top0))
 	var rects: Array[Rect2] = badge_rects(m)
 	var gap: float = m["badge_gap"]
 	var top: float = rects[5].end.y + gap
 	var bottom: float = rects[6].position.y - gap
 	return Rect2(0, top, (m["strip"] as Rect2).size.x, maxf(0.0, bottom - top))
+
+
+# =============================================================================
+# kc-portrait: the iPhone portrait layout (the head: "investigate the fan cards at the bottom for the
+# portrait version"; landscape and PC keep the side tray). From the L1 portrait mock-up
+# (card-design-options.html, Layout v3): top bars (the 7 badges, then the sets rail), the board
+# stacked under them (3 columns, 4:1 banners ~169x42 on a 540 px wide canvas), then the tray: the
+# Supply / killstreak row, the preview well (left) with the Operator and UNDO / READY (right), and a
+# swipeable fan of Y2+ hand cards at the bottom.
+# =============================================================================
+
+## Fan card width and the step between cards: 68 px = 44 pt down to a 360 pt wide phone (0.667 pt/px).
+const FAN_CARD_W: float = 150.0
+const FAN_STEP: float = 68.0
+## Button height in portrait (44 pt on a 360 pt wide phone).
+const PORTRAIT_BTN_H: float = 68.0
+const PORTRAIT_GUTTER: float = 8.0
+const PORTRAIT_PAD: float = 8.0
+const PORTRAIT_RIGHT_W: float = 216.0
+
+
+static func is_portrait(area: Vector2) -> bool:
+	return area.y > area.x
+
+
+## Same keys as compute() plus portrait (true), fan (true), well (tray-local Rect2), fan_step.
+static func compute_portrait(area: Vector2) -> Dictionary:
+	var p: Dictionary = PHONE.duplicate()
+	p["portrait"] = true
+	p["fan"] = true
+	p["btn_h"] = PORTRAIT_BTN_H
+	p["compact"] = true
+	p["mirror"] = false
+	var pad: float = PORTRAIT_PAD
+	p["gutter"] = PORTRAIT_GUTTER
+	var w: float = area.x - 2.0 * pad
+	var rail_h: float = 52.0
+	var strip: Rect2 = Rect2(pad, 6.0, w, p["badge_h"] + p["badge_gap"] + rail_h)
+	var bh: float = floorf((w - 2.0 * PORTRAIT_GUTTER) / 3.0 / 4.0)
+	var bw: float = bh * 4.0
+	var board_w: float = COLUMNS * bw + (COLUMNS - 1) * PORTRAIT_GUTTER
+	var half_h: float = ROWS * bh + (ROWS - 1) * p["row_gap"]
+	var board_h: float = 2.0 * half_h + 2.0 * p["mid_gap"] + p["obj_h"]
+	var board: Rect2 = Rect2(floorf((area.x - board_w) * 0.5), strip.end.y + 8.0, board_w, board_h)
+	var tray: Rect2 = Rect2(pad, board.end.y + 8.0, w, maxf(0.0, area.y - board.end.y - 8.0 - 4.0))
+	p["bh"] = bh
+	p["bw"] = bw
+	p["half_h"] = half_h
+	p["board"] = board
+	p["strip"] = strip
+	p["tray"] = tray
+	p["col_x"] = [0.0, bw + PORTRAIT_GUTTER, 2.0 * (bw + PORTRAIT_GUTTER)]
+	_ks_rows(p, tray.size)
+	var card: Vector2 = Vector2(FAN_CARD_W, CardView.height_for(FAN_CARD_W))
+	var fan_y: float = tray.size.y - card.y - 10.0
+	var fan: Rect2 = Rect2(0, fan_y, tray.size.x, card.y + 10.0)
+	p["card"] = card
+	p["hand_cols"] = HAND_SLOTS
+	p["fan_step"] = FAN_STEP
+	p["grid"] = fan
+	p["hand_rect"] = fan
+	var y0: float = float(p["supply_h"]) + 8.0
+	var y1: float = fan_y - 8.0
+	var mid_h: float = maxf(0.0, y1 - y0)
+	var rx: float = tray.size.x - PORTRAIT_RIGHT_W
+	var btn_h: float = p["btn_h"]
+	p["op_h"] = mid_h
+	p["well"] = Rect2(0, y0, rx - 8.0, mid_h)
+	p["op_card"] = Rect2(rx, y0, PORTRAIT_RIGHT_W, maxf(btn_h, mid_h - btn_h - 8.0))
+	p["undo"] = Rect2(rx, y1 - btn_h, 70.0, btn_h)
+	p["ready"] = Rect2(rx + 78.0, y1 - btn_h, PORTRAIT_RIGHT_W - 78.0, btn_h)
+	return p

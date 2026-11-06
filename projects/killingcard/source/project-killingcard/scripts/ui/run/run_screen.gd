@@ -35,6 +35,11 @@ var safe_area_override: Rect2 = Rect2():
 			_apply_safe_area()
 
 var _profile_set: bool = false
+## kc-portrait: the screen is taller than wide (iPhone portrait). The header stacks its title over a
+## row of its buttons, and the boxes in portrait_boxes turn vertical (subclasses register them).
+var portrait: bool = false
+var portrait_boxes: Array[BoxContainer] = []
+var _header_buttons: HBoxContainer = null
 
 @onready var _safe_area: MarginContainer = %SafeArea
 
@@ -115,12 +120,58 @@ func goto(path: String) -> void:
 
 
 func _on_resized() -> void:
-	var want: bool = size.y > 0.0 and size.y < ScreenProfile.COMPACT_HEIGHT
-	if want != compact or not _profile_set:
+	var tall: bool = size.x > 0.0 and size.y > size.x
+	var want: bool = (size.y > 0.0 and size.y < ScreenProfile.COMPACT_HEIGHT) or tall
+	var turned: bool = tall != portrait
+	if want != compact or not _profile_set or turned:
 		compact = want
+		portrait = tall
 		_profile_set = true
+		if turned:
+			_apply_portrait()
 		_apply_compact()
 	_apply_safe_area()
+
+
+## kc-portrait: reflows the shared parts for portrait / landscape; subclasses add their own after
+## calling super.
+func _apply_portrait() -> void:
+	for b: BoxContainer in portrait_boxes:
+		if is_instance_valid(b):
+			b.vertical = portrait
+	var header: BoxContainer = get_node_or_null(^"%Header") as BoxContainer
+	if header == null:
+		return
+	if portrait:
+		header.vertical = true
+		if _header_buttons == null:
+			_header_buttons = HBoxContainer.new()
+			_header_buttons.name = "HeaderButtons"
+			_header_buttons.add_theme_constant_override(&"separation", 8)
+		if _header_buttons.get_parent() == null:
+			header.add_child(_header_buttons)
+		for c: Node in header.get_children():
+			if c is Button:
+				c.set_meta(&"header_index", c.get_index())
+				c.set_meta(&"header_flags", (c as Button).size_flags_horizontal)
+				c.set_meta(&"header_min_w", (c as Button).custom_minimum_size.x)
+				(c as Button).custom_minimum_size.x = 0.0
+				(c as Button).clip_text = true
+				header.remove_child(c)
+				_header_buttons.add_child(c)
+				(c as Button).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		header.vertical = false
+		if _header_buttons != null and _header_buttons.get_parent() == header:
+			var moved: Array[Node] = _header_buttons.get_children()
+			for c: Node in moved:
+				_header_buttons.remove_child(c)
+				header.add_child(c)
+				header.move_child(c, mini(int(c.get_meta(&"header_index", header.get_child_count() - 1)), header.get_child_count() - 1))
+				(c as Button).size_flags_horizontal = int(c.get_meta(&"header_flags", Control.SIZE_FILL))
+				(c as Button).custom_minimum_size.x = float(c.get_meta(&"header_min_w", 0.0))
+				(c as Button).clip_text = false
+			header.remove_child(_header_buttons)
 
 
 func _apply_safe_area() -> void:

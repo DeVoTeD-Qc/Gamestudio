@@ -1,6 +1,7 @@
 # synergy_rules.gd
-# Purpose: The synergy layer of documentation/design/synergy-system.md (kc-syn, approved): neighbor
-#   keywords (Guard, Spotter, Fireteam, Overwatch, §3) and trait set bonuses (Vanguard, Spec Ops,
+# Purpose: The synergy layer of documentation/design/synergy-system.md (kc-syn, approved): trait set
+#   bonuses (whole-set since kc-pos-cut §13; the neighbor keywords Guard, Spotter, Fireteam, Overwatch
+#   of §3 are retired and compute() returns no links) and trait set bonuses (Vanguard, Spec Ops,
 #   Heavy, Undead at 2 / 3 in play, §4), plus the per-copy levels (Recruit / Trained / Veteran /
 #   Elite, §5.2; kc-onboard: a Recruit has its trait but its keywords are locked). Pure and static: it works on plain "slot" dictionaries, so MatchState (real units)
 #   and AiPlanner (its projected records) read exactly the same numbers. The reference model was
@@ -55,24 +56,26 @@ const OVERWATCH_COVER: int = 1
 ## Set thresholds.
 const TIER2: int = 2
 const TIER3: int = 3
-## Trait bonuses (v1.3: kc-art-traits §5, head T3; kc-syn-tune2 Spec Ops tier 2 row 1 only): [tier 2, tier 3], each {fp, cover, fs, heal,
-## where}. where: "all" or "front" (row 1 only). Tier 3 includes tier 2. An empty entry = no bonus at
-## that tier (Heavy is a "full crew" set: nothing at 2, Cover +1 and +1 FP at 3).
+## Trait bonuses (v2.0, kc-pos-cut, synergy-system.md §13): [tier 2, tier 3], each {fp, cover, fs, heal}.
+## Whole-set bonuses: every unit of the trait gets them, wherever it stands (no row or column
+## condition any more). Tier 3 includes tier 2. An empty entry = no bonus at that tier.
 const TRAIT_BONUS: Dictionary = {
-	VANGUARD: [{"fp": 1, "where": "front"}, {"cover": 1, "where": "all"}],
-	SPECOPS: [{"fp": 1, "where": "front"}, {"fs": true, "where": "all"}],  # v1.3 (kc-syn-tune2): tier 2 row 1 only
-	HEAVY: [{}, {"cover": 1, "fp": 1, "where": "all"}],
-	UNDEAD: [{"heal": 1, "where": "all"}, {"fp": 1, "cover": 1, "where": "all"}],
+	VANGUARD: [{"fp": 1}, {"cover": 1}],
+	SPECOPS: [{"fp": 1}, {"fs": true}],
+	HEAVY: [{}, {"cover": 1, "fp": 1}],
+	UNDEAD: [{"heal": 1}, {"fp": 1, "cover": 1}],
 }
 ## The table compute() reads (balance tools may tune a copy in memory; the game uses TRAIT_BONUS).
 static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
 ## One-line tier texts for callouts / the inspector.
 const TIER_TEXT: Dictionary = {
-	VANGUARD: ["Vanguard in row 1 get +1 FP", "Vanguard get Cover +1"],
-	SPECOPS: ["Spec Ops in row 1 get +1 FP", "Spec Ops have First Shot"],
+	VANGUARD: ["Vanguard get +1 FP", "Vanguard get Cover +1"],
+	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops have First Shot"],
 	HEAVY: ["No bonus yet: Heavy needs 3", "Heavy units get Cover +1 and +1 FP"],
 	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
 }
+## kc-pos-cut (§13): the four neighbor keywords are retired (no card carries one, compute() makes no
+## links). The names and texts stay until the UI drops its link views.
 const KEYWORD_TEXT: Dictionary = {
 	GUARD: "Guard: the card behind this one has Cover +1.",
 	SPOTTER: "Spotter: the card in front of this one gets +1 FP.",
@@ -98,8 +101,9 @@ static func level_stats(level: int) -> Dictionary:
 
 ## Neighbor keyword a copy of `card` carries at `level` (Recruits have none: it's locked until
 ## the copy trains).
-static func keyword_at(card: CardData, level: int) -> StringName:
-	return card.neighbor_keyword if card != null and level >= LEVEL_TRAINED else &""
+## kc-pos-cut (§13): neighbor keywords are retired, so no copy carries one (always &"").
+static func keyword_at(_card: CardData, _level: int) -> StringName:
+	return &""
 
 
 ## kc-onboard §3 (head N1): a Recruit calling card (level 0) has its trait ON but none of its rules
@@ -203,12 +207,6 @@ static func trait_counts(lines: Array, field_traits: Array, doctrine: StringName
 	return counts
 
 
-static func _at(lines: Array, z: int, i: int) -> Dictionary:
-	if z < 0 or z > 2 or i < 0 or i >= (lines[z] as Array).size():
-		return {}
-	return lines[z][i]
-
-
 ## Synergy of one side's whole board (see the header for the shapes).
 static func compute(lines: Array, field_traits: Array = [], doctrine: StringName = &"") -> Dictionary:
 	var counts: Dictionary = trait_counts(lines, field_traits, doctrine) if enabled else {}
@@ -216,41 +214,14 @@ static func compute(lines: Array, field_traits: Array = [], doctrine: StringName
 	for t: StringName in counts:
 		tiers[t] = active_tier(t, int(counts[t]))
 	var zones: Array = [[], [], []]
-	var pairs: Array[Dictionary] = []
+	var pairs: Array[Dictionary] = []  # kc-pos-cut: no neighbor links any more (always empty)
 	for z: int in 3:
 		for i: int in (lines[z] as Array).size():
 			var me: Dictionary = lines[z][i]
-			var uid: int = int(me.get("uid", -1))
 			var r: Dictionary = {"fp": 0, "cover": 0, "fs": false, "heal": 0, "links": [], "sets": []}
 			if not enabled:
 				zones[z].append(r)
 				continue
-			# Spotter behind me: +1 FP to me (the card in front of the Spotter).
-			var back: Dictionary = _at(lines, z, i + 1)
-			if not back.is_empty() and back.get("kw", &"") == SPOTTER:
-				r["fp"] += SPOTTER_FP
-				_link(r, pairs, SPOTTER, int(back.get("uid", -1)), uid)
-			# Guard in front of me: Cover +1 to me (the card behind the Guard).
-			var front: Dictionary = _at(lines, z, i - 1)
-			if not front.is_empty() and front.get("kw", &"") == GUARD:
-				r["cover"] += GUARD_COVER
-				_link(r, pairs, GUARD, int(front.get("uid", -1)), uid)
-			var left: Dictionary = _at(lines, z - 1, i)
-			var right: Dictionary = _at(lines, z + 1, i)
-			# Fireteam: +1 FP to itself while a friendly card is beside it (max +1).
-			if me.get("kw", &"") == FIRETEAM and not (left.is_empty() and right.is_empty()):
-				r["fp"] += FIRETEAM_FP
-				var mate: Dictionary = left if not left.is_empty() else right
-				_link(r, pairs, FIRETEAM, int(mate.get("uid", -1)), uid)
-			# Overwatch beside me: Cover +1 to me (max +1 even with two).
-			var ow: Dictionary = {}
-			if not left.is_empty() and left.get("kw", &"") == OVERWATCH:
-				ow = left
-			elif not right.is_empty() and right.get("kw", &"") == OVERWATCH:
-				ow = right
-			if not ow.is_empty():
-				r["cover"] += OVERWATCH_COVER
-				_link(r, pairs, OVERWATCH, int(ow.get("uid", -1)), uid)
 			# Trait set bonus.
 			var t: StringName = me.get("trait", &"")
 			if t != &"" and trait_bonus.has(t):
@@ -260,7 +231,7 @@ static func compute(lines: Array, field_traits: Array = [], doctrine: StringName
 					if tier < [TIER2, TIER3][k]:
 						continue
 					var b: Dictionary = tb[k]
-					if _empty_bonus(b) or (String(b.get("where", "all")) == "front" and i != 0):
+					if _empty_bonus(b):
 						continue
 					r["fp"] += int(b.get("fp", 0))
 					r["cover"] += int(b.get("cover", 0))
@@ -270,11 +241,6 @@ static func compute(lines: Array, field_traits: Array = [], doctrine: StringName
 					r["sets"].append([t, [TIER2, TIER3][k]])
 			zones[z].append(r)
 	return {"zones": zones, "counts": counts, "tiers": tiers, "links": pairs}
-
-
-static func _link(r: Dictionary, pairs: Array[Dictionary], kind: StringName, from_uid: int, to_uid: int) -> void:
-	r["links"].append({"kind": kind, "from_uid": from_uid})
-	pairs.append({"kind": kind, "from_uid": from_uid, "to_uid": to_uid})
 
 
 ## Sum of a compute() result as one number per bonus point (the AI's future value).

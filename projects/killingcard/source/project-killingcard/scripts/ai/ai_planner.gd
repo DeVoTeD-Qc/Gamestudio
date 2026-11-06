@@ -707,8 +707,6 @@ func _apply_effect(p: Plan, e: EffectData, z: int, amount: int, foes: Array, tar
 					line.remove_at(i)
 					rec["moved"] = true
 					p.moved_out[from] += 1
-					var fp_shift: int = int(_view.range_bonus[_class_of(rec)][dest_zone]) - int(_view.range_bonus[_class_of(rec)][from])
-					rec["fp"] = maxi(0, int(rec["fp"]) + fp_shift)
 					if rec["arrives_front"]:
 						p.lines[ME][dest_zone].insert(0, rec)
 					else:

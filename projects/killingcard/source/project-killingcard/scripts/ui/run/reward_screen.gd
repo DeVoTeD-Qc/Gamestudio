@@ -75,7 +75,7 @@ var send_button: Button = null
 var new_card: NewCard = null
 
 var _skip_button: Button = null
-var _options: HBoxContainer = null
+var _options: GridContainer = null
 var _inspector: Control = null
 var _card_holders: Array[Control] = []
 var _rules_labels: Array[Label] = []
@@ -86,7 +86,7 @@ var _deck_button: Button = null
 var _engine: Control = null
 var _trait_lines: bool = false
 
-@onready var _header: HBoxContainer = %Header
+@onready var _header: BoxContainer = %Header
 @onready var _title: Label = %TitleLabel
 @onready var _subtitle: Label = %SubtitleLabel
 @onready var _body: MarginContainer = %Body
@@ -128,10 +128,19 @@ func _build() -> void:
 		_wire_inspect(b, _inspect_header.bind(b))
 	var center: CenterContainer = CenterContainer.new()
 	_center = center
-	_body.add_child(center)
-	_options = HBoxContainer.new()
+	# kc-portrait: the options sit in a vertical scroll (two per row in portrait; one row in landscape).
+	var opt_scroll: ScrollContainer = ScrollContainer.new()
+	opt_scroll.name = "OptionsScroll"
+	opt_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_body.add_child(opt_scroll)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	opt_scroll.add_child(center)
+	_options = GridContainer.new()
 	_options.name = "Options"
-	_options.add_theme_constant_override(&"separation", 16)
+	_options.columns = 4
+	_options.add_theme_constant_override(&"h_separation", 16)
+	_options.add_theme_constant_override(&"v_separation", 12)
 	center.add_child(_options)
 	_list_scroll = ScrollContainer.new()
 	_list_scroll.name = "ListScroll"
@@ -146,6 +155,7 @@ func _build() -> void:
 	_list_grid.add_theme_constant_override(&"v_separation", 10)
 	_list_scroll.add_child(_list_grid)
 	_header.resized.connect(_fit_cards)
+	_body.resized.connect(_fit_cards)  # kc-portrait: the body settles after the header reflows
 	_engine = EnginePanel.new()
 	_engine.name = "EngineView"
 	add_child(_engine)
@@ -181,6 +191,7 @@ func show_offer() -> void:
 	clear(_list_grid)
 	_trait_lines = false
 	_center.visible = true
+	_center.get_parent().visible = true
 	_list_scroll.visible = false
 	retire_button.visible = false
 	send_button.visible = false
@@ -563,6 +574,7 @@ func open_retire_picker() -> void:
 ## Standard Issue first, with its cost, level and trait.
 func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	_center.visible = false
+	_center.get_parent().visible = false
 	_list_scroll.visible = true
 	_title.text = "RETIRE A CARD" if from_drop else _title.text
 	if from_drop:
@@ -617,6 +629,7 @@ func retire(i: int) -> String:
 ## (a Recruit: its locked keywords unlock, "Unlocks First Shot and Guard.").
 func _build_promotion_list(r: RunProgress) -> void:
 	_center.visible = false
+	_center.get_parent().visible = false
 	_list_scroll.visible = true
 	var rows: Array[Dictionary] = r.promotion_options()
 	var options: Array = offer["options"]
@@ -664,6 +677,7 @@ func muster_count() -> int:
 ## GOING HOME; tap toggles (up to the count); SEND n HOME commits, KEEP ALL skips.
 func _build_muster_out(r: RunProgress) -> void:
 	_center.visible = false
+	_center.get_parent().visible = false
 	_list_scroll.visible = true
 	var rows: Array[Dictionary] = r.muster_out_options()
 	var n: int = muster_count()
@@ -1043,12 +1057,17 @@ func _fit_cards() -> void:
 		room_card_h = room.y - (28.0 + extra_h + line_h * max_lines + row_h)
 		by_h = (room_card_h - CardView.height_for(8.0)) * 4.0 + 8.0
 	var n: int = card_views.size()
+	# kc-portrait: two cards per row (the options scroll); the height is no limit there.
+	var per_row: int = mini(n, 2) if portrait else maxi(1, n)
+	_options.columns = maxi(1, per_row)
+	if portrait:
+		by_h = MAX_CARD_W
 	var gap: float = 16.0
-	var by_w: float = (room.x - gap * (n - 1) - 28.0 * n) / n
-	if by_w < MIN_CARD_W and n > 1:
-		gap = clampf((room.x - 28.0 * n - MIN_CARD_W * n) / (n - 1), 6.0, 16.0)
-		by_w = (room.x - gap * (n - 1) - 28.0 * n) / n
-	_options.add_theme_constant_override(&"separation", int(gap))
+	var by_w: float = (room.x - gap * (per_row - 1) - 28.0 * per_row) / per_row
+	if by_w < MIN_CARD_W and per_row > 1:
+		gap = clampf((room.x - 28.0 * per_row - MIN_CARD_W * per_row) / (per_row - 1), 6.0, 16.0)
+		by_w = (room.x - gap * (per_row - 1) - 28.0 * per_row) / per_row
+	_options.add_theme_constant_override(&"h_separation", int(gap))
 	var cw: float = clampf(floorf(minf(by_h, by_w)), MIN_CARD_W, MAX_CARD_W)
 	for i: int in n:
 		var view: Control = card_views[i]

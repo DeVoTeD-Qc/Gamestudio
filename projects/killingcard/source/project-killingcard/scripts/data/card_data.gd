@@ -190,10 +190,8 @@ func validate(v: DataValidator) -> void:
 		v.out_of_range("text", "rules text is %d characters (max %d, one line)" % [text.length(), MAX_TEXT_LENGTH])
 	if text.contains("\n"):
 		v.invalid("text", "rules text must be one line")
-	if neighbor_keyword != &"" and neighbor_keyword not in SynergyRules.KEYWORDS:
-		v.invalid("neighbor_keyword", "unknown neighbor keyword '%s' (one of %s)" % [neighbor_keyword, SynergyRules.KEYWORDS])
-	if neighbor_keyword != &"" and not is_unit():
-		v.invalid("neighbor_keyword", "only units have a neighbor keyword")
+	if neighbor_keyword != &"":
+		v.invalid("neighbor_keyword", "neighbor keywords are retired (kc-pos-cut, synergy-system.md §13); '%s' has no effect" % neighbor_keyword)
 	if card_trait != &"" and card_trait not in SynergyRules.TRAITS:
 		v.invalid("card_trait", "unknown trait '%s' (one of %s)" % [card_trait, SynergyRules.TRAITS])
 	if card_trait != &"" and card_type == DataEnums.CardType.TACTIC:
