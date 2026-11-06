@@ -297,7 +297,7 @@ static func _read_effects(r: Dictionary, effects: Array) -> void:
 
 
 ## Record for a unit card I would deploy into zone z (stats as the engine would build it,
-## including the copy's kc-syn level: Recruits carry no keyword or trait).
+## including the copy's level: kc-onboard Recruits carry their trait but no keyword).
 func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules.LEVEL_TRAINED,
 		chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
 	var r: Dictionary = new_record()
@@ -310,24 +310,26 @@ func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules
 	r["kw"] = SynergyRules.keyword_at(card, level)
 	r["trait"] = SynergyRules.trait_at(card, level, chosen_trait)
 	r["level"] = level
-	r["fs_native"] = card.first_shot
+	# kc-onboard §3: a Recruit's rules text is locked (SynergyRules.keywords_on), as in create_unit.
+	var kw_on: bool = SynergyRules.keywords_on(card, level)
+	r["fs_native"] = card.first_shot and kw_on
 	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]) + int(range_bonus[int(card.weapon_class)][z]))
 	var armor: int = maxi(1, card.armor + my_armor_bonus + int(lv["armor"]))
 	r["armor"] = armor
 	r["armor0"] = armor
 	r["max_armor"] = armor
-	r["cover"] = 0 if my_cover_removed else card.cover
-	r["first_shot"] = card.first_shot
-	r["pick"] = card.pick
-	r["flank"] = card.flank
-	r["suppress"] = card.suppress
-	r["pierce"] = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
-	r["patch"] = card.patch
-	r["holder"] = card.holder
+	r["cover"] = 0 if my_cover_removed or not kw_on else card.cover
+	r["first_shot"] = card.first_shot and kw_on
+	r["pick"] = card.pick and kw_on
+	r["flank"] = card.flank and kw_on
+	r["suppress"] = card.suppress and kw_on
+	r["pierce"] = (card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG) and kw_on
+	r["patch"] = card.patch if kw_on else 0
+	r["holder"] = card.holder and kw_on
 	r["control"] = card.counts_for_control
 	r["credit"] = card.grants_elimination_credit
-	r["arrives_front"] = card.arrives_front
-	_read_effects(r, card.effects)
+	r["arrives_front"] = card.arrives_front and kw_on
+	_read_effects(r, SynergyRules.effects_at(card, level))
 	return r
 
 

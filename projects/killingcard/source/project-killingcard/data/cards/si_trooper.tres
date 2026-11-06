@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_7g4g3"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_csl0q"]
+
+[resource]
+script = ExtResource("2_csl0q")
+id = &"si_trooper"
+display_name = "Trooper"
+card_type = 0
+is_elite = false
+text = ""
+cost = 2
+weapon_class = 0
+firepower = 2
+armor = 3
+counts_for_control = true
+grants_elimination_credit = true
+collectible = false
+standard_issue = true
+effects = Array[ExtResource("1_7g4g3")]([])

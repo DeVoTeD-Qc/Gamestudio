@@ -73,8 +73,13 @@ const MAX_TEXT_LENGTH: int = 100
 @export var counts_for_control: bool = true
 ## The enemy earns elimination/streak credit for killing it (false for the Sentry).
 @export var grants_elimination_credit: bool = true
-## Can appear in decks and Supply Drops. False for tokens (Sentry).
+## Can appear in decks and Supply Drops. False for tokens (Sentry) and Standard Issue cards.
 @export var collectible: bool = true
+## kc-onboard (onboarding-progression.md §2, approved N1-N4): a Standard Issue starter card. Plain
+## by design: no keyword, no trait, no weapon class, no effects; never trains, is never Promoted and
+## never offered (collectible = false, but it IS a deck card: it counts for control and gives
+## elimination credit). It leaves the deck through Muster out or Retire only.
+@export var standard_issue: bool = false
 
 @export_group("Effects")
 @export var effects: Array[EffectData] = []
@@ -103,6 +108,49 @@ func has_trait_choice() -> bool:
 ## True when trait `t` is one of this card's options (&"" counts only when it is an option).
 func can_carry(t: StringName) -> bool:
 	return t in trait_choices()
+
+
+## A token (the Sentry): never a deck card. Standard Issue cards are deck cards though not collectible.
+func is_token() -> bool:
+	return not collectible and not standard_issue
+
+
+## kc-onboard §3: printed rules a copy only has once Trained (a Recruit shows them greyed as
+## "Trains: ..."): keywords, the neighbor keyword, LMG Pierce, arrives-front and On Deploy / On Down
+## / passive effects. Player-facing names in card order. Units only ([] otherwise).
+func trained_keyword_names() -> Array[String]:
+	var out: Array[String] = []
+	if not is_unit():
+		return out
+	if first_shot:
+		out.append("First Shot")
+	if pick:
+		out.append("Pick")
+	if flank:
+		out.append("Flank")
+	if cover > 0:
+		out.append("Cover %d" % cover)
+	if suppress:
+		out.append("Suppress")
+	if pierce or weapon_class == DataEnums.WeaponClass.LMG:
+		out.append("Pierce")
+	if patch > 0:
+		out.append("Patch %d" % patch)
+	if holder:
+		out.append("Holder")
+	if arrives_front:
+		out.append("Front line")
+	var seen: Dictionary = {}
+	for e: EffectData in effects:
+		if e == null:
+			continue
+		var n: String = {DataEnums.Trigger.ON_DEPLOY: "On Deploy", DataEnums.Trigger.ON_DOWN: "On Down"}.get(e.trigger, "Aura")
+		if not seen.has(n):
+			seen[n] = true
+			out.append(n)
+	if neighbor_keyword != &"":
+		out.append(String(neighbor_keyword).capitalize())
+	return out
 
 
 ## Field = CardType.EQUIPMENT (the engine's internal name).
@@ -180,8 +228,19 @@ func validate(v: DataValidator) -> void:
 			v.missing("effects", "a %s needs at least one effect" % DataEnums.key_of(DataEnums.CardType, card_type))
 	if card_type != DataEnums.CardType.EQUIPMENT and (hidden or consumed_on_trigger):
 		v.invalid("hidden", "hidden / consumed_on_trigger are for Fields only")
-	if collectible and not (counts_for_control and grants_elimination_credit):
+	if (collectible or standard_issue) and not (counts_for_control and grants_elimination_credit):
 		v.invalid("collectible", "collectible cards must count for control and give elimination credit (tokens: collectible = false)")
+	if standard_issue:
+		if collectible:
+			v.invalid("standard_issue", "Standard Issue cards are never offered (collectible = false)")
+		if card_trait != &"" or not trait_options.is_empty():
+			v.invalid("standard_issue", "Standard Issue cards never have a trait")
+		if neighbor_keyword != &"" or not trained_keyword_names().is_empty() or not effects.is_empty():
+			v.invalid("standard_issue", "Standard Issue cards have no keyword and no effect")
+		if weapon_class != DataEnums.WeaponClass.NONE:
+			v.invalid("standard_issue", "Standard Issue cards have no weapon class")
+		if is_elite:
+			v.invalid("standard_issue", "Standard Issue cards can't be Elite")
 	for i: int in effects.size():
 		var effect: EffectData = effects[i]
 		var field: String = "effects[%d]" % i

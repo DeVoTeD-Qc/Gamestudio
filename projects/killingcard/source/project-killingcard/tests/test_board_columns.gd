@@ -500,7 +500,9 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 ## kc-cod2: the private pitch build's deck swaps (Units, Tactics and Fields all shown, new chassis in),
 ## off by default so the public game and every other test keep the real decks.
 func test_pitch_decks_swaps_only_when_active() -> void:
-	var cfg: RunConfig = load("res://data/run_config.tres")
+	# kc-onboard-impl: pinned on the kc-syn Recruit starter (14 units); the Standard Issue starter has
+	# 18 units, which the swap rule turns into 12 / 5 / 3.
+	var cfg: RunConfig = preload("res://tests/legacy_starter.gd").config()
 	var starter: Array[CardData] = cfg.starter_deck
 	assert_false(PitchDecks.active(), "off outside the pitch export")
 	assert_eq(PitchDecks.apply(starter), starter, "inactive: unchanged")

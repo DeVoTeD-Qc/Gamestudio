@@ -395,7 +395,7 @@ func _check_card(side: int, intent: Dictionary) -> Dictionary:
 	var play: Dictionary = _draft_play(kind, zone, intent)
 	play["card"] = rc
 	play["cost"] = card.cost
-	var why: Dictionary = _check_targets(side, card.effects, play, card.card_type == DataEnums.CardType.TACTIC)
+	var why: Dictionary = _check_targets(side, SynergyRules.effects_at(card, rc.level), play, card.card_type == DataEnums.CardType.TACTIC)
 	if not why.is_empty():
 		return why
 	return _ok_play(play)
@@ -564,7 +564,7 @@ func _effects_of(side: int, what: Variant) -> Array[EffectData]:
 	if typeof(what) == TYPE_INT:
 		var rc: RulesCard = sides[side].find_in_hand(int(what))
 		if rc != null:
-			return rc.card.effects
+			return SynergyRules.effects_at(rc.card, rc.level)
 	elif StringName(what) != &"operator":
 		var item: LoadoutItem = find_item(side, StringName(what))
 		if item != null:
@@ -598,7 +598,7 @@ func _commit_card(side: int, play: Dictionary) -> void:
 		"side": side_name(side), "card_uid": rc.uid, "card_id": card.id,
 		"zone": zone_name(play["zone"]), "private_to": side_name(side),
 	})
-	_resolve_immediate(side, card.effects, play, _source_kind_for_card(card), card.id, rc.uid)
+	_resolve_immediate(side, SynergyRules.effects_at(card, rc.level), play, _source_kind_for_card(card), card.id, rc.uid)
 
 
 func _commit_item(side: int, play: Dictionary) -> void:
@@ -963,7 +963,7 @@ func _record_elimination(u: RulesUnit, zone: int) -> Dictionary:
 		u.survive_lethal = 0
 		emit_event(RulesEvent.OPERATOR_DOWN, {"side": side_name(u.side), "uid": u.uid})
 		hooks.on_operator_down(self, u.side)
-	elif u.card != null and u.card.collectible:
+	elif u.card != null and not u.card.is_token():
 		s.discard.append(RulesCard.new(u.uid, u.card, u.level, u.chosen_trait))
 		emit_event(RulesEvent.CARD_DISCARDED, {"side": side_name(u.side), "card_uid": u.uid, "card_id": u.card.id})
 	hooks.on_elimination(self, rec)
@@ -985,7 +985,8 @@ func _find_unit_anywhere(uid: int, extra: Array[RulesUnit]) -> RulesUnit:
 # Board operations (used by the resolvers)
 # =============================================================================
 
-## level (kc-syn §5.2): Recruit copies get no neighbor keyword and no trait; Veteran +1 Armor,
+## level (kc-syn §5.2, kc-onboard §3): Recruit copies get their trait but no keyword, no neighbor
+## keyword and no effect; Veteran +1 Armor,
 ## Elite +1 Armor +1 FP. chosen_trait (kc-art-traits): the trait the copy's art gives it
 ## (SynergyRules.trait_at checks it against the card's options; TRAIT_DEFAULT = the default).
 func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyRules.LEVEL_TRAINED,
@@ -1005,6 +1006,12 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.base_firepower = card.firepower + setup.firepower_bonus + int(lv["fp"])
 	u.base_max_armor = maxi(1, card.armor + setup.armor_bonus + int(lv["armor"]))
 	u.armor = u.base_max_armor
+	u.counts_for_control = card.counts_for_control
+	u.grants_elimination_credit = card.grants_elimination_credit
+	# kc-onboard §3 (head N1): a Recruit keeps its trait, cost, FP, Armor and weapon class, but its
+	# rules text is locked until it trains (SynergyRules.keywords_on).
+	if not SynergyRules.keywords_on(card, level):
+		return u
 	u.first_shot = card.first_shot
 	u.pick = card.pick
 	u.flank = card.flank
@@ -1015,8 +1022,6 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.patch = card.patch
 	u.holder = card.holder
 	u.arrives_front = card.arrives_front
-	u.counts_for_control = card.counts_for_control
-	u.grants_elimination_credit = card.grants_elimination_credit
 	u.effects = card.effects.duplicate()
 	return u
 
@@ -1389,7 +1394,7 @@ func preview_synergy(side: int, card_uid: int, zone: int) -> Dictionary:
 	for p: Dictionary in s.plays:  # queued arrivals (play order; capacity as at Reveal)
 		if p["kind"] == &"unit":
 			var prc: RulesCard = p["card"]
-			_preview_insert(lines[int(p["zone"])], SynergyRules.slot(prc.uid, prc.neighbor_keyword(), prc.card_trait()), prc.card.arrives_front)
+			_preview_insert(lines[int(p["zone"])], SynergyRules.slot(prc.uid, prc.neighbor_keyword(), prc.card_trait()), prc.arrives_front())
 		elif p["kind"] == &"place" and s.operator_unit != null:
 			_preview_insert(lines[int(p["zone"])], SynergyRules.slot(s.operator_unit.uid), false)
 		elif p["kind"] == &"equipment" and (p["card"] as RulesCard).card.is_visible_field():
@@ -1400,7 +1405,7 @@ func preview_synergy(side: int, card_uid: int, zone: int) -> Dictionary:
 	var after_lines: Array = [(lines[0] as Array).duplicate(), (lines[1] as Array).duplicate(), (lines[2] as Array).duplicate()]
 	var after_fields: Array[StringName] = fields.duplicate()
 	if rc.card.is_unit():
-		_preview_insert(after_lines[zone], SynergyRules.slot(rc.uid, rc.neighbor_keyword(), rc.card_trait()), rc.card.arrives_front)
+		_preview_insert(after_lines[zone], SynergyRules.slot(rc.uid, rc.neighbor_keyword(), rc.card_trait()), rc.arrives_front())
 	elif rc.card.is_visible_field() and rc.card_trait() != &"":
 		var standing: RulesCard = visible_field(side, zone)
 		if standing != null and standing.card_trait() != &"":

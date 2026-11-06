@@ -40,7 +40,7 @@ func _note(ok: bool, what: String) -> void:
 func _card_count(s: RulesSide) -> int:
 	var n: int = s.deck.size() + s.hand.size() + s.discard.size()
 	for u: RulesUnit in s.units_on_board():
-		if not u.is_operator and u.card != null and u.card.collectible:
+		if not u.is_operator and u.card != null and not u.card.is_token():
 			n += 1
 	for z: int in 3:
 		n += (s.equipment[z] as Array).size()

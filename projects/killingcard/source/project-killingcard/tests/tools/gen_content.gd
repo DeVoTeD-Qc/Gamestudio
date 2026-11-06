@@ -279,6 +279,9 @@ func _gen() -> void:
 	run.perk_choices = 2
 	# p19 (balance-log B1): Recon Specialist -> a second Breacher.
 	# kc-syn §5.1: the plain v3 Recruit starter (run.starter_recruits = true in the shipped data).
+	# kc-onboard: the shipped starter is now the 20 Standard Issue cards (data/cards/si_*.tres), with
+	# the run ladder fields, the slot 1-2 enemy decks and legacy_cards edited in run_config.tres
+	# directly (like trait_options / identity_trait); this generator still writes the kc-syn data.
 	run.starter_deck = cards_list([[rifleman, 3], [point_man, 4], [breacher, 3], [marksman, 2], [medic, 2],
 		[gunner, 1], [shieldman, 1], [ammo, 2], [hold, 2]])
 	run.starter_primary = kestrel

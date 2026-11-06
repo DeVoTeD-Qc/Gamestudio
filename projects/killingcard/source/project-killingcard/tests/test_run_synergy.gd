@@ -10,10 +10,10 @@ extends "res://tests/test_case.gd"
 const SEED: int = 777
 
 
+## kc-onboard: these tests pin the kc-syn / kc-art-traits mechanics on the old Recruit starter with
+## the onboarding ladder off (tests/legacy_starter.gd); the shipped ladder is test_onboarding.gd's.
 func _config(offers: bool = true) -> RunConfig:
-	var c: RunConfig = (load("res://data/run_config.tres") as RunConfig).duplicate() as RunConfig
-	c.synergy_offers = offers
-	return c
+	return preload("res://tests/legacy_starter.gd").config(offers)
 
 
 func _run(offers: bool = true, seed_value: int = SEED) -> RunProgress:
@@ -60,8 +60,14 @@ func test_starter_is_recruits_and_rewards_come_trained() -> void:
 
 
 func test_main_trait_and_the_on_trait_slot() -> void:
-	var r: RunProgress = _run(false)
-	assert_eq(r.main_trait(), &"", "Recruits only: no main trait")
+	# kc-onboard: Recruits carry their trait now, so this starts from the shipped Standard Issue deck
+	# (no trait at all) with the ladder off.
+	var plain: RunConfig = (load("res://data/run_config.tres") as RunConfig).duplicate() as RunConfig
+	plain.synergy_offers = false
+	plain.reward_rungs = PackedInt32Array()
+	var r: RunProgress = RunProgress.create(plain, SEED)
+	r.begin()
+	assert_eq(r.main_trait(), &"", "Standard Issue only: no main trait")
 	r.deck.append(&"gunner")
 	r.deck_levels.append(1)
 	assert_eq(r.main_trait(), &"heavy", "one Trained Gunner")
@@ -96,7 +102,7 @@ func test_doctrine_after_match_one_goes_into_the_match() -> void:
 	assert_eq(r.choose_offer(1), "", "pick the other")
 	assert_eq(r.doctrine, doc["options"][1], "doctrine set")
 	assert_eq(r.player_setup().doctrine, r.doctrine, "into the match")
-	assert_eq(r.main_trait(), r.doctrine, "no Trained cards: the main trait falls back to the Doctrine")
+	assert_eq(r.main_trait(), &"vanguard", "kc-onboard: the Recruits' own traits count (mostly Vanguard)")
 	_skip_all(r)
 	r.record_result(&"player")
 	assert_false(RewardOffers.KIND_DOCTRINE in _kinds(r), "only once")
@@ -149,7 +155,7 @@ func test_retire_floor_twin_training_and_honor_roll() -> void:
 	for j: int in opts.size():
 		if opts[j]["id"] == &"point_man":
 			pm = j
-	assert_true(opts[pm]["twin_index"] >= 0, "a second Recruit Point Man would be trained")
+	assert_eq(opts[pm]["twin_index"], -1, "kc-onboard: twin training is retired")
 	var before: int = r.deck.size()
 	assert_eq(r.retire_card(pm), "", "retire a Point Man instead of a card")
 	assert_eq(r.deck.size(), before - 1, "one card fewer")
@@ -157,9 +163,9 @@ func test_retire_floor_twin_training_and_honor_roll() -> void:
 	for i: int in r.deck.size():
 		if r.deck[i] == &"point_man" and r.level_of(i) == 1:
 			trained += 1
-	assert_eq(trained, 1, "two become one: the twin is Trained")
+	assert_eq(trained, 0, "no twin is trained")
 	assert_eq(r.honor_roll.size(), 1, "Honor Roll")
-	assert_eq([r.honor_roll[0]["id"], r.honor_roll[0]["trained_twin"]], [&"point_man", true], "Honor Roll entry")
+	assert_eq([r.honor_roll[0]["id"], r.honor_roll[0]["trained_twin"]], [&"point_man", false], "Honor Roll entry")
 	assert_true(r.current_offer().get("kind", &"") != RewardOffers.KIND_SUPPLY_DROP, "the Supply Drop is resolved")
 	# A Recruit tactic has nothing to train; a lone Recruit has no twin.
 	for o: Dictionary in r.retire_options():
@@ -218,7 +224,7 @@ func test_engine_summary_and_deck_view() -> void:
 	r.deck.append(&"brawler")
 	r.deck_levels.append(2)
 	var e: Dictionary = r.engine_summary()
-	assert_eq(e["traits"], {&"undead": 1}, "Trained trait counts")
+	assert_eq(e["traits"], {&"vanguard": 8, &"specops": 2, &"undead": 3, &"heavy": 1}, "trait counts (kc-onboard: Recruits count)")
 	assert_eq(e["keywords"], {&"fireteam": 1}, "Trained keyword counts")
 	assert_eq(e["recruits"], 16, "Recruits with something to train (tactics left out)")
 	var dv: Array[Dictionary] = r.deck_view()
@@ -233,7 +239,7 @@ func test_save_v2_round_trip_and_v1_migration() -> void:
 	r.choose_offer(0)  # Doctrine
 	r.deck_levels[0] = 3
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 3, "save version 3 (kc-art-traits)")
+	assert_eq(int(d["version"]), 4, "save version 4 (kc-onboard)")
 	var back: Dictionary = RunProgress.from_dict(r.config, d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]

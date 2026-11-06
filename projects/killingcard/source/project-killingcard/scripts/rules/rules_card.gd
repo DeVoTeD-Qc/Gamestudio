@@ -9,7 +9,8 @@ extends RefCounted
 
 var uid: int = 0
 var card: CardData = null
-## Per-copy level (kc-syn §5.2, SynergyRules.LEVEL_*): 0 Recruit (no neighbor keyword, no trait),
+## Per-copy level (kc-syn §5.2, SynergyRules.LEVEL_*): 0 Recruit (kc-onboard: its trait, but no
+## keyword, no neighbor keyword and no effect until it trains),
 ## 1 Trained (the full chassis), 2 Veteran (+1 Armor), 3 Elite (+1 Armor, +1 FP).
 var level: int = SynergyRules.LEVEL_TRAINED
 ## kc-art-traits: the trait this copy's art gives it (SideSetup.deck_traits; TRAIT_DEFAULT = the
@@ -32,6 +33,21 @@ func neighbor_keyword() -> StringName:
 
 func card_trait() -> StringName:
 	return SynergyRules.trait_at(card, level, chosen_trait)
+
+
+## kc-onboard §3: true when this copy has its rules text (false on a Recruit unit).
+func keywords_on() -> bool:
+	return SynergyRules.keywords_on(card, level)
+
+
+## Arrives at the front of the line (Shieldman), only once Trained.
+func arrives_front() -> bool:
+	return card != null and card.arrives_front and keywords_on()
+
+
+## UI hook: the greyed "Trains: First Shot · Guard" line of a Recruit ("" otherwise).
+func trains_text() -> String:
+	return SynergyRules.trains_text(card, level)
 
 
 func id() -> StringName:

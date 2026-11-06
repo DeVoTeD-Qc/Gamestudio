@@ -201,22 +201,22 @@ func test_fields_count_for_sets_and_recruits_do_not() -> void:
 	F.place_field(m, P, _field("bulwark_t", &"vanguard"), R)
 	assert_eq(m.firepower_of(br), 4, "Bulwark + Breacher = Vanguard 2 (the Field gets nothing, it has no stats)")
 	assert_eq(int(m.synergy_side(P)["counts"][&"vanguard"]), 2, "count includes the Field")
-	# A Recruit copy of a traited chassis neither counts nor links.
+	# kc-onboard (N1): a Recruit copy of a traited chassis counts for its trait but has no keyword.
 	var m2: MatchState = _match()
 	var card: CardData = _u("pm", 2, 3, &"fireteam", &"vanguard")
 	var t1: RulesUnit = F.place(m2, P, card, L)
 	var rec: RulesUnit = m2.create_unit(P, card, -1, SynergyRules.LEVEL_RECRUIT)
 	m2.put_in_line(rec, M)
-	assert_eq([rec.neighbor_keyword, rec.synergy_trait], [&"", &""], "a Recruit has no keyword and no trait")
-	assert_eq(int(m2.synergy_side(P)["counts"].get(&"vanguard", 0)), 1, "the Recruit doesn't count")
-	assert_eq(m2.firepower_of(t1), 3, "the Trained copy still links with the Recruit beside it (any friendly card)")
-	assert_eq(m2.firepower_of(rec), 2, "the Recruit itself gets no Fireteam bonus")
-	# A Recruit Field doesn't count either; hidden traps never do.
+	assert_eq([rec.neighbor_keyword, rec.synergy_trait], [&"", &"vanguard"], "a Recruit: its trait, no keyword")
+	assert_eq(int(m2.synergy_side(P)["counts"].get(&"vanguard", 0)), 2, "the Recruit counts for Vanguard")
+	assert_eq(m2.firepower_of(t1), 4, "the Trained copy links with the Recruit beside it (+1 Fireteam) and Vanguard 2 (+1 front)")
+	assert_eq(m2.firepower_of(rec), 3, "the Recruit gets the set bonus but no Fireteam bonus")
+	# A Field's trait counts at any level; hidden traps never do.
 	var m3: MatchState = _match()
 	var lone: RulesUnit = F.place(m3, P, _u("v", 2, 3, &"", &"vanguard"), L)
 	var rf: RulesCard = RulesCard.new(m3.new_uid(), _field("bulwark_r", &"vanguard"), SynergyRules.LEVEL_RECRUIT)
 	m3.sides[P].equipment[R].append({"card": rf, "round": 0})
-	assert_eq(m3.firepower_of(lone), 2, "a Recruit Field doesn't count")
+	assert_eq(m3.firepower_of(lone), 3, "a Field counts (kc-onboard: the level never removes a trait)")
 
 
 func test_undead_heal_at_end_of_round_capped_and_logged() -> void:
@@ -440,10 +440,10 @@ func test_shipped_starter_squads_and_pool() -> void:
 	var counts: Dictionary = {}
 	for c: CardData in cfg.starter_deck:
 		counts[c.id] = int(counts.get(c.id, 0)) + 1
-	assert_eq(counts, {&"rifleman": 3, &"point_man": 4, &"breacher": 3, &"marksman": 2, &"combat_medic": 2,
-			&"gunner": 1, &"shieldman": 1, &"ammo_resupply": 2, &"hold_the_line": 2}, "plain v3 starter (§5.1)")
-	assert_true(cfg.starter_recruits, "starter copies are Recruits")
-	assert_eq(cfg.matches.map(func(md: RunMatchData) -> bool: return md.enemy_recruits), [true, true, false, false, false], "bracket-1 squads are Recruits")
+	# kc-onboard §2.1: the Standard Issue starter replaced the kc-syn Recruit starter.
+	assert_eq(counts, {&"si_grunt": 5, &"si_trooper": 6, &"si_sergeant": 4, &"si_armored": 3, &"ammo_resupply": 2}, "Standard Issue starter")
+	assert_false(cfg.starter_recruits, "no Recruit starter")
+	assert_eq(cfg.matches.map(func(md: RunMatchData) -> bool: return md.enemy_recruits), [true, true, true, false, false], "slots 1-3 play Recruits (kc-onboard §4.4)")
 	var pool: Dictionary = {}
 	for c: CardData in cfg.reward_pool:
 		pool[c.id] = int(pool.get(c.id, 0)) + 1
@@ -452,12 +452,12 @@ func test_shipped_starter_squads_and_pool() -> void:
 	var es: SideSetup = SideSetup.from_squad(cfg.matches[0].squad, cfg.matches[0])
 	for i: int in es.deck.size():
 		assert_eq(es.level_of(i), 0 if es.deck[i].is_unit() else 1, "slot 1 squad: units are Recruits")
-	var es3: SideSetup = SideSetup.from_squad(cfg.matches[2].squad, cfg.matches[2])
-	assert_true(es3.deck_levels.is_empty(), "slot 3 squad: Trained")
+	var es4: SideSetup = SideSetup.from_squad(cfg.matches[3].squad, cfg.matches[3])
+	assert_true(es4.deck_levels.is_empty(), "slot 4 squad: Trained")
 
 
 func test_pitch_setup_keeps_levels_parallel_and_trains() -> void:
-	var cfg: RunConfig = load("res://data/run_config.tres") as RunConfig
+	var cfg: RunConfig = preload("res://tests/legacy_starter.gd").config()  # kc-onboard: a starter of real chassis
 	var s: SideSetup = SideSetup.new()
 	s.deck = cfg.starter_deck.duplicate()
 	s.deck_levels = cfg.starter_levels()

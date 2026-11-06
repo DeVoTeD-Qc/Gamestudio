@@ -26,6 +26,11 @@ func _config() -> RunConfig:
 func _classic_config() -> RunConfig:
 	var cfg: RunConfig = _config().duplicate() as RunConfig
 	cfg.synergy_offers = false
+	# kc-onboard: the ladder's extra offers (2 picks of 4, Muster out, Salvage) are covered by
+	# test_shipped_schedule_adds_the_synergy_offers and test_onboarding.gd.
+	cfg.multi_pick_from_match = 0
+	cfg.muster_out_from_match = 0
+	cfg.salvage_after_loss = false
 	return cfg
 
 
@@ -35,15 +40,17 @@ func _new_run(seed_value: int = SEED) -> RunProgress:
 	return r
 
 
-## kc-syn-ui: with the shipped run_config.tres the schedule gains Doctrine after match 1, Promotion
-## after matches 2 and 4, and Regroup after a loss.
+## kc-syn-ui / kc-onboard: with the shipped run_config.tres the drop after match 2 is 2 picks of 4
+## followed by Muster out, Promotion comes after matches 2 and 4, a loss gives Salvage (+ Muster out
+## from match 2), and the Doctrine comes from the first calling card (no Doctrine offer).
 func test_shipped_schedule_adds_the_synergy_offers() -> void:
 	var r: RunProgress = RunProgress.create(_config(), SEED)
 	r.begin()
 	assert_true(r.config.synergy_offers, "synergy offers are on in run_config.tres")
-	assert_eq(_play_forced(r, &"player"), [SUPPLY, RewardOffers.KIND_DOCTRINE, ATTACH] as Array[StringName], "after match 1")
-	assert_eq(_play_forced(r, &"player"), [SUPPLY, RewardOffers.KIND_PROMOTION, PERK] as Array[StringName], "after match 2")
-	assert_eq(_play_forced(r, &"enemy"), [RewardOffers.KIND_REGROUP, ATTACH] as Array[StringName], "after a loss (match 3)")
+	assert_eq(_play_forced(r, &"player"), [SUPPLY, ATTACH] as Array[StringName], "after match 1")
+	assert_true(r.doctrine != &"", "the first calling card set the Doctrine")
+	assert_eq(_play_forced(r, &"player"), [SUPPLY, SUPPLY, RewardOffers.KIND_MUSTER_OUT, RewardOffers.KIND_PROMOTION, PERK] as Array[StringName], "after match 2 (pick 2)")
+	assert_eq(_play_forced(r, &"enemy"), [RewardOffers.KIND_SALVAGE, RewardOffers.KIND_MUSTER_OUT, ATTACH] as Array[StringName], "after a loss (match 3)")
 
 
 ## Records `match_result` and takes option 0 of every offer. Returns the offer kinds seen.
@@ -305,7 +312,9 @@ func test_player_setup_carries_deck_loadout_and_rewards() -> void:
 
 func test_enemy_bonuses_by_bracket() -> void:
 	var r: RunProgress = _new_run()
-	var expect: Array[int] = [0, 0, 0, 1, 1]  # kc-fight-impl: match 3 (Rusher+) Armor bonus 1 -> 0
+	# kc-fight-impl: match 3 (Rusher+) Armor bonus 1 -> 0; kc-onboard N4: match 1 "green squad" -1,
+	# match 4 (Anchor+) 1 -> 0.
+	var expect: Array[int] = [-1, 0, 0, 0, 1]
 	for i: int in 5:
 		var md: RunMatchData = r.current_match()
 		var e: SideSetup = r.enemy_setup()
@@ -466,8 +475,8 @@ func test_run_state_flow_saves_and_continues() -> void:
 	assert_not_null(m, "match built")
 	rs.record_result(&"enemy")
 	assert_eq(rs.tickets, 2, "ticket lost")
-	# kc-syn-ui: the shipped schedule puts Regroup and Doctrine before the weapon level.
-	assert_eq(rs.current_offer()["kind"], RewardOffers.KIND_REGROUP, "Regroup after a loss")
+	# kc-onboard: the shipped schedule puts Salvage (replacing Regroup) before the weapon level.
+	assert_eq(rs.current_offer()["kind"], RewardOffers.KIND_SALVAGE, "Salvage after a loss")
 	while not rs.current_offer().is_empty() and rs.current_offer()["kind"] != ATTACH:
 		rs.skip_offer()
 	assert_eq(rs.current_offer()["kind"], ATTACH, "weapon level offer")

@@ -56,6 +56,8 @@ The family is shown in the pitch's trait tooltip ("Undead · Zombies card"). The
 
 ## 2. Choice and acquisition
 
+> **Superseded in part by the head's Z1 answer (kc-trait-ui, 2026-11-06): "No choice at all: the trait comes only from the art you find."** A copy keeps the trait of the art it was found with (Supply Drop / Salvage card, or the squad's identity); there is **no trait choice** at Promotion or twin training, and **Re-issue is removed** (no offers, `reissue_options()` returns [], `reissue_card()` refuses; old saves load with their Re-issue flags dropped). Twin training itself is retired by onboarding-progression.md §4.3, and Codex EQUIP never reaches a run. Starter cards wear one fixed Standard Issue art (head Z2). §2.2's "Promotion / twin training / Re-issue" rows and §2.3's walk-through describe the old design. Implemented in kc-onboard-impl (onboarding-progression.md, Implementation notes).
+
 ### 2.1 Codex EQUIP: the default, global per card name (head's ask, kept)
 - In the Codex, each card name has one **equipped art**. It's what the starter's Recruits wear, what the quick match and tutorial decks wear, and the **pre-selected** art whenever a copy of that card trains in a run.
 - The Codex groups a card's arts by trait: "Marksman: **Spec Ops** (5 arts) · **Heavy** (10 arts)", with the trait icon on every tile. Plain arts sit in a third group, "No trait". The EQUIP button names the result: "EQUIP · Heavy".

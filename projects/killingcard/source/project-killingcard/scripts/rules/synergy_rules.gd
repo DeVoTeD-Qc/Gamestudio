@@ -2,7 +2,7 @@
 # Purpose: The synergy layer of documentation/design/synergy-system.md (kc-syn, approved): neighbor
 #   keywords (Guard, Spotter, Fireteam, Overwatch, §3) and trait set bonuses (Vanguard, Spec Ops,
 #   Heavy, Undead at 2 / 3 in play, §4), plus the per-copy levels (Recruit / Trained / Veteran /
-#   Elite, §5.2). Pure and static: it works on plain "slot" dictionaries, so MatchState (real units)
+#   Elite, §5.2; kc-onboard: a Recruit has its trait but its keywords are locked). Pure and static: it works on plain "slot" dictionaries, so MatchState (real units)
 #   and AiPlanner (its projected records) read exactly the same numbers. The reference model was
 #   the designer's sim (tests/tools/synergy_rules.gd); the numbers here are its v1.1.
 #
@@ -96,19 +96,54 @@ static func level_stats(level: int) -> Dictionary:
 	return {"fp": 1 if level >= LEVEL_ELITE else 0, "armor": 1 if level >= LEVEL_VETERAN else 0}
 
 
-## Keyword / trait a copy of `card` carries at `level` (Recruits have neither).
+## Neighbor keyword a copy of `card` carries at `level` (Recruits have none: it's locked until
+## the copy trains).
 static func keyword_at(card: CardData, level: int) -> StringName:
 	return card.neighbor_keyword if card != null and level >= LEVEL_TRAINED else &""
+
+
+## kc-onboard §3 (head N1): a Recruit calling card (level 0) has its trait ON but none of its rules
+## text: no printed keyword (First Shot, Pick, Flank, Cover, Suppress, Pierce, Patch, Holder),
+## no arrive-front, no On Deploy / On Down / passive effect, no LMG Pierce and no neighbor keyword.
+## It keeps cost, FP, Armor and weapon class. True when a copy at `level` has its rules text.
+## Fields and tactics always have theirs (only units are ever Recruits in play).
+static func keywords_on(card: CardData, level: int) -> bool:
+	return card == null or not card.is_unit() or level >= LEVEL_TRAINED
+
+
+## The effects a copy at `level` brings (none on a Recruit unit; see keywords_on).
+static func effects_at(card: CardData, level: int) -> Array[EffectData]:
+	if card == null or not keywords_on(card, level):
+		var none: Array[EffectData] = []
+		return none
+	return card.effects
+
+
+## kc-onboard §3 UI hook: the keywords a Recruit copy unlocks when it trains, player-facing names
+## (["First Shot", "Guard"]); [] once Trained or when the card has none (Standard Issue cards).
+static func locked_keywords(card: CardData, level: int) -> Array[String]:
+	if card == null or keywords_on(card, level) or card.standard_issue:
+		var none: Array[String] = []
+		return none
+	return card.trained_keyword_names()
+
+
+## The greyed line on a Recruit: "Trains: First Shot · Guard" ("" when nothing is locked).
+static func trains_text(card: CardData, level: int) -> String:
+	var kws: Array[String] = locked_keywords(card, level)
+	return "" if kws.is_empty() else "Trains: " + " · ".join(kws)
 
 
 ## kc-art-traits (art-traits.md §1, head T1/T2): the trait a copy carries. `chosen` is the copy's
 ## trait as picked through its art (SideSetup.deck_traits / RulesCard.chosen_trait); TRAIT_DEFAULT =
 ## the chassis' default (CardData.card_trait = trait_options[0]). A chosen trait that is not on the
 ## chassis' option list makes the copy plain (&""). Printed cards (one option or none: Elites,
-## Fields, tactics, the Sentry) always carry their printed trait, whatever is chosen. Recruits carry
-## none. The rules never read arts: the run / UI layer resolves art -> trait (ArtTraits).
+## Fields, tactics, the Sentry) always carry their printed trait, whatever is chosen. kc-onboard
+## (head N1): Recruits carry their trait too (the art brings the trait first; only the keywords wait
+## for training). `level` is kept for callers; every level carries the trait now. The rules never
+## read arts: the run / UI layer resolves art -> trait (ArtTraits).
 static func trait_at(card: CardData, level: int, chosen: StringName = TRAIT_DEFAULT) -> StringName:
-	if card == null or level < LEVEL_TRAINED:
+	if card == null or card.standard_issue:
 		return &""
 	if chosen == TRAIT_DEFAULT or not card.has_trait_choice():
 		return card.card_trait

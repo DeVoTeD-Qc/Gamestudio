@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BannerArt" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/banner_art.gd" id="1_bart"]
+
+[resource]
+script = ExtResource("1_bart")
+id = &"si_ammo_resupply"
+title = "Standard Issue"
+card_id = &"ammo_resupply"
+image_path = "res://assets/sprites/cards/card_ammo_resupply.webp"
+banner_y = 0.40
+portrait_x = 0.42
+is_default = true
+artist = "KillingCard studio (Killstreak card art)"
+licence = "studio-owned"
+source_note = "PLACEHOLDER (kc-onboard §2.2 / §8.7): the ammo_resupply placeholder art stands in until the Sr Game Artist's Standard Issue art arrives. Never licensed MW3 art."
+placeholder = true

@@ -76,29 +76,23 @@ func test_run_copies_keep_the_art_they_were_found_with() -> void:
 		var c2: CardData = r.resource(drop["options"][k]) as CardData
 		if c2.has_trait_choice():
 			assert_eq(ArtTraits.trait_of(drop["arts"][k], c2), drop["traits"][k], "offer %d: the art gives the offered trait" % k)
-	# No swaps; Re-issue draws a random art of the new trait.
+	# No swaps; no Re-issue (head Z1): the copy keeps the art (and trait) it was found with.
 	var g: int = r.deck.size()
 	r._append_copy(&"gunner", 1, &"heavy", r._random_art(_card("gunner"), &"heavy"))
 	assert_true(r.set_copy_art(g, &"gunner~operators") != "", "no art swaps in a run")
-	var rows: Array[Dictionary] = r.reissue_options()
-	var row: int = rows.map(func(o: Dictionary) -> StringName: return o["id"]).find(&"gunner")
 	var draws: int = r.art_draws
-	assert_eq(r.reissue_card(row, &"specops"), "", "re-issued")
-	var at: int = int(rows[row]["index"])
-	assert_eq(ArtTraits.trait_of(r.art_of(at), _card("gunner")), &"specops", "its new art gives Spec Ops")
-	assert_eq(r.art_draws, draws + 1, "one random draw")
+	assert_true(r.reissue_card(0, &"specops") != "", "no Re-issue")
+	assert_eq([r.copy_trait(g), r.art_draws], [&"heavy", draws], "no new art drawn")
+	r.choose_offer(0)
+	assert_true(r.art_draws > 0, "Supply Drop cards drew random arts")
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
 	var back: RunProgress = RunProgress.from_dict(r.config, saved)["run"]
 	assert_eq(back.art_draws, r.art_draws, "the draw counter is saved")
-	# train_choices says which options draw a random art.
-	var rec: int = -1
-	for i: int in r.deck.size():
-		if r.level_of(i) == SynergyRules.LEVEL_RECRUIT and (r.resource(r.deck[i]) as CardData).trait_choices().size() > 1:
-			rec = i
-			break
-	assert_true(rec >= 0, "a Recruit with options")
+	# Training keeps the art: train_choices has one row, never a random draw.
+	var rec: int = r.deck.size() - 1
+	assert_eq(r.level_of(rec), SynergyRules.LEVEL_RECRUIT, "the M1 drop gave a Recruit")
 	for o: Dictionary in r.train_choices(rec):
-		assert_eq(bool(o["random"]), not bool(o["preselected"]), "%s: random art unless it already gives it" % o["name"])
+		assert_false(bool(o["random"]), "%s: training keeps the art" % o["name"])
 
 
 func test_per_copy_art_and_trait_reach_the_board() -> void:
@@ -139,7 +133,7 @@ func test_banner_entry_trait_follows_the_art() -> void:
 	assert_eq(BannerCard.entry_for_card(mk, &"marksman~mastery")["trait"], "heavy", "Mastery art: Heavy")
 	assert_false(BannerCard.entry_for_card(mk, &"marksman~horde").has("trait"), "a plain art: no trait plate")
 	assert_eq(BannerCard.entry_for_card(mk, &"marksman", 1, &"heavy")["trait"], "heavy", "an explicit copy trait wins")
-	assert_false(BannerCard.entry_for_card(mk, &"marksman~mastery", 0).has("trait"), "Recruits show no trait")
+	assert_eq(BannerCard.entry_for_card(mk, &"marksman~mastery", 0).get("trait", ""), "heavy", "kc-onboard (N1): Recruits show their trait")
 	# Anatomy: trait + weapon-type bottom-left, abilities top-right, name top-left (both sides alike).
 	var e: Dictionary = BannerCard.entry_for_card(mk, &"marksman~mastery")
 	var m: Dictionary = BannerView.metrics(57.0)

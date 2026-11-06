@@ -517,7 +517,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			var card: CardData = a["card"]
 			var rec: Dictionary = _view.record_for_card(card, a["uid"], z, int(a.get("level", SynergyRules.LEVEL_TRAINED)),
 					a.get("trait", SynergyRules.TRAIT_DEFAULT))
-			if card.arrives_front:
+			if bool(rec["arrives_front"]):
 				p.lines[ME][z].insert(0, rec)
 			else:
 				p.lines[ME][z].append(rec)

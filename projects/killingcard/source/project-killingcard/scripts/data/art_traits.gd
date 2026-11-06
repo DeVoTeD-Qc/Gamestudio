@@ -62,6 +62,11 @@ const OPTION_VARIANTS: Dictionary = {
 	STANDARD: ["Standard Issue", Color(0.0, 0.0, 0.0, 0.0), &""],
 }
 
+## kc-onboard §2.2 (head Z2): the one Standard Issue art each starter card wears (never random, never
+## licensed MW3 art). Standard Issue units wear their own id (data/banners/si_*.tres; PLACEHOLDER
+## drop-ins until the Sr Game Artist's 5 arts arrive); the starter's tactic wears "si_<id>".
+const STANDARD_ISSUE_ARTS: Dictionary = {&"ammo_resupply": &"si_ammo_resupply"}
+
 ## Licensed manifest index (id -> {card, family, title}), chassis -> ids; reloaded when the folder
 ## settings change.
 static var _rows: Dictionary = {}
@@ -140,6 +145,9 @@ static func arts_for(card: CardData) -> Array[StringName]:
 	var out: Array[StringName] = []
 	if card == null:
 		return out
+	if card.standard_issue:
+		out.append(card.id)  # kc-onboard: one plain art, no variants, never licensed
+		return out
 	out.append_array(licensed_ids(card.id))
 	if out.is_empty():
 		out.append(card.id)
@@ -178,8 +186,27 @@ static func belongs(art_id: StringName, card: CardData) -> bool:
 		return false
 	if art_id in arts_for(card):
 		return true
+	if STANDARD_ISSUE_ARTS.get(card.id, &"") == art_id:
+		return true
+	if card.standard_issue:
+		return false
 	var s: String = String(art_id)
 	return s.contains(SEP) and StringName(s.get_slice(SEP, 0)) == card.id
+
+
+## kc-onboard (head Z2): the art a starter copy of `card` wears: the Standard Issue art (one per
+## card, no random draw), else the card's default art.
+static func starter_art(card: CardData) -> StringName:
+	if card == null:
+		return &""
+	if STANDARD_ISSUE_ARTS.has(card.id):
+		return STANDARD_ISSUE_ARTS[card.id]
+	return card.id if card.standard_issue else default_art(card, card.card_trait)
+
+
+## True for a Standard Issue art (a Standard Issue unit's art or a starter tactic's "si_" art).
+static func is_standard_issue_art(art_id: StringName, card: CardData) -> bool:
+	return card != null and (card.standard_issue or STANDARD_ISSUE_ARTS.get(card.id, &"") == art_id)
 
 
 ## UI hook: one row per trait option of `card`, default first:
@@ -212,6 +239,8 @@ static func subname(art_id: StringName) -> String:
 	var s: String = String(art_id)
 	if art_id == &"":
 		return ""
+	if s.begins_with("si_"):
+		return "Standard Issue"  # kc-onboard §2.2: the details subname of every Standard Issue card
 	if s.contains(SEP):
 		var suffix: String = s.get_slice(SEP, 1)
 		if OPTION_VARIANTS.has(StringName(suffix)):

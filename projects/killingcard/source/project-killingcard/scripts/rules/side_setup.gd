@@ -40,7 +40,8 @@ var keep_deck_order: bool = false
 static func from_squad(squad: SquadData, match_data: RunMatchData = null) -> SideSetup:
 	var s: SideSetup = SideSetup.new()
 	s.display_name = squad.display_name
-	s.deck = squad.deck.duplicate()
+	s.deck = match_data.deck_for_squad() if match_data != null else squad.deck.duplicate()
+	s.deck = s.deck.duplicate()
 	s.primary = squad.primary
 	s.attachments = squad.attachments.duplicate()
 	s.secondary = squad.secondary
@@ -51,7 +52,8 @@ static func from_squad(squad: SquadData, match_data: RunMatchData = null) -> Sid
 	if match_data != null:
 		s.firepower_bonus = match_data.enemy_firepower_bonus
 		s.armor_bonus = match_data.enemy_armor_bonus
-		# kc-syn §5.1: Bracket-1 squads play Recruit copies of their units (Fields stay Trained).
+		# kc-syn §5.1 / kc-onboard §4.4: Recruit copies of the units (trait on, keywords locked;
+		# Fields stay Trained).
 		if match_data.enemy_recruits:
 			for c: CardData in s.deck:
 				s.deck_levels.append(SynergyRules.LEVEL_RECRUIT if c != null and c.is_unit() else SynergyRules.LEVEL_TRAINED)

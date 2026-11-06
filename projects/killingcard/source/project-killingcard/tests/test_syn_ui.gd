@@ -204,11 +204,16 @@ func test_quick_match_plays_the_recruit_starter() -> void:
 	var setup: SideSetup = c.state.sides[0].setup
 	var cfg: RunConfig = CardDB.get_run_config()
 	assert_eq(setup.deck_levels.size(), setup.deck.size(), "levels parallel to the deck")
-	var want: int = SynergyRules.LEVEL_TRAINED if PitchDecks.active() else (SynergyRules.LEVEL_RECRUIT if cfg.starter_recruits else SynergyRules.LEVEL_TRAINED)
-	for lv: int in setup.deck_levels:
-		assert_eq(lv, want, "starter copies are %s" % SynergyRules.LEVEL_NAMES[want])
+	# kc-onboard: Standard Issue copies are level 0 (they never train), the rest per starter_recruits.
+	var want_of: Callable = func(card: CardData) -> int:
+		if PitchDecks.active():
+			return SynergyRules.LEVEL_TRAINED
+		return SynergyRules.LEVEL_RECRUIT if cfg.starter_recruits or card.standard_issue else SynergyRules.LEVEL_TRAINED
+	for i: int in setup.deck_levels.size():
+		var want: int = want_of.call(setup.deck[i])
+		assert_eq(setup.deck_levels[i], want, "starter copies are %s" % SynergyRules.LEVEL_NAMES[want])
 	for rc: RulesCard in c.state.sides[0].hand:
-		assert_eq(rc.level, want, "hand copy level")
+		assert_eq(rc.level, want_of.call(rc.card), "hand copy level")
 	_despawn(s[0])
 
 

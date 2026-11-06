@@ -41,6 +41,10 @@ var equipped_arts: Dictionary = {}
 ## copy in one of your runs has worn (the starter, Supply Drops, training, Re-issue). Default arts
 ## count as found. The Codex marks them FOUND.
 var found_arts: Dictionary = {}
+## kc-onboard §5 (progressive reveal, RevealFlags): systems the player has met (flag String -> true)
+## and the "New: X" explainers they have dismissed. Per profile, never per run; "Reset tips" clears both.
+var met_flags: Dictionary = {}
+var seen_flags: Dictionary = {}
 ## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
 ## New runs and the quick match start with it.
 var operator_primary: String = ""
@@ -49,7 +53,7 @@ const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_animations",
-		&"equipped_arts", &"operator_primary", &"found_arts"]
+		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 
@@ -124,6 +128,44 @@ func mark_found(arts: Array) -> bool:
 	if added:
 		set_value(&"found_arts", d)
 	return added
+
+
+## kc-onboard §5: records systems the player meets (RevealFlags ids). Returns the newly met ones
+## (saved when there is one).
+func meet(flags: Array) -> Array[StringName]:
+	var d: Dictionary = met_flags.duplicate()
+	var added: Array[StringName] = []
+	for f: Variant in flags:
+		var k: String = String(f)
+		if k != "" and not d.has(k):
+			d[k] = true
+			added.append(StringName(k))
+	if not added.is_empty():
+		set_value(&"met_flags", d)
+	return added
+
+
+func has_met(flag: StringName) -> bool:
+	return met_flags.has(String(flag))
+
+
+## kc-onboard §5: the player dismissed the "New:" card of `flag` ("Got it").
+func mark_seen(flag: StringName) -> void:
+	if not seen_flags.has(String(flag)):
+		var d: Dictionary = seen_flags.duplicate()
+		d[String(flag)] = true
+		set_value(&"seen_flags", d)
+
+
+func is_seen(flag: StringName) -> bool:
+	return seen_flags.has(String(flag))
+
+
+## kc-onboard §5.1: "Reset tips" in Settings: every system hidden again, every explainer shown again.
+func reset_tips() -> void:
+	met_flags = {}
+	set_value(&"seen_flags", {})
+	set_value(&"met_flags", {})
 
 
 ## True when `art_id` has been found in a run (or is a chassis' default art: `default_art`).

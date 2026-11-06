@@ -62,7 +62,7 @@ func validate(v: DataValidator) -> void:
 	v.check_range("score_target", score_target, 1, 99)
 	if v.check_ref_array("player_deck", player_deck, CardData, MIN_DECK, MAX_DECK):
 		for i: int in player_deck.size():
-			if not player_deck[i].collectible:
+			if player_deck[i].is_token():
 				v.invalid("player_deck[%d]" % i, "'%s' is a token and can't be in a deck" % player_deck[i].id)
 	if not enemy_deck.is_empty():
 		v.check_ref_array("enemy_deck", enemy_deck, CardData, MIN_DECK, MAX_DECK)

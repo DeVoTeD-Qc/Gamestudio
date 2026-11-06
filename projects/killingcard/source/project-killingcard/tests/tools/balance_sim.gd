@@ -503,9 +503,11 @@ func _median(list: Array) -> float:
 ## weapon level and Perk = option 0. Same rule for every proxy (offers are seeded).
 ## kc-syn: the Supply Drop takes its on-trait slot 1 when that is a unit or a Field; Doctrine takes
 ## the deck's best trait (option 0), Promotion and Regroup their first option (Recruits first).
+## kc-onboard: Salvage is picked like a Supply Drop; a 2-of-4 drop asks twice (the taken card leaves
+## the options); Muster out takes option 0 = the pre-selection (most expensive Standard Issue first).
 func _choose(r: RunProgress) -> int:
 	var offer: Dictionary = r.current_offer()
-	if offer["kind"] != RewardOffers.KIND_SUPPLY_DROP:
+	if offer["kind"] not in RewardOffers.CARD_DROPS:
 		return 0
 	if offer.has("on_trait"):
 		var c0: CardData = r.resource(offer["options"][0]) as CardData

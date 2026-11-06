@@ -57,7 +57,7 @@ func validate(v: DataValidator, perk_slots: int = 3, killstreak_slots: int = 3) 
 		v.out_of_range("clan_tag", "clan tag is %d characters (max 5)" % clan_tag.length())
 	if v.check_ref_array("deck", deck, CardData, MIN_DECK, MAX_DECK):
 		for i: int in deck.size():
-			if deck[i] != null and not deck[i].collectible:
+			if deck[i] != null and deck[i].is_token():
 				v.invalid("deck[%d]" % i, "'%s' is a token (collectible = false) and can't be in a deck" % deck[i].id)
 	if identity_trait != &"" and identity_trait not in SynergyRules.TRAITS:
 		v.invalid("identity_trait", "unknown trait '%s' (one of %s)" % [identity_trait, SynergyRules.TRAITS])

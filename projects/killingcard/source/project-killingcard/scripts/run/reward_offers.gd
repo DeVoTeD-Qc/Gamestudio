@@ -12,7 +12,10 @@
 #   `retire: true` (Retire is its 4th option). RunProgress builds and resolves them.
 #   kc-art-traits: a Supply Drop also carries `traits` + `arts` (parallel to options: the trait and
 #   art each card comes in) and `reissue: true` (Re-issue next to Retire); Promotion / Regroup carry
-#   `traits` (each option's trait choice) and Regroup `reissue: true`.
+#   `traits` (each option's trait choice). (Re-issue was removed by the head's Z1 answer.)
+#   kc-onboard: Supply Drop / Salvage options come from the match's rung (RunConfig.reward_rungs) and
+#   carry `level` (0 Recruit calling cards after match 1), `picks` (cards still to take) and `taken`
+#   ([{id, trait, art}] already taken; they leave `options`); &"salvage" (after a loss) and &"muster_out" ({count}) are new kinds.
 # Dependencies: RunConfig, CardData, LoadoutItem.
 # Author: Mechanics Developer Agent
 class_name RewardOffers
@@ -23,41 +26,56 @@ const KIND_ATTACHMENT: StringName = &"attachment"
 const KIND_PERK: StringName = &"perk"
 const KIND_DOCTRINE: StringName = &"doctrine"
 const KIND_PROMOTION: StringName = &"promotion"
+## kc-syn Regroup (a free Retire after a loss). kc-onboard: replaced by Salvage when
+## RunConfig.salvage_after_loss; kept so older saves and configs still work.
 const KIND_REGROUP: StringName = &"regroup"
-const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK, KIND_DOCTRINE, KIND_PROMOTION, KIND_REGROUP]
+## kc-onboard §4.3 (head N2): Salvage = a small Supply Drop after a loss (salvage_choices cards,
+## pick 1; same keys as a Supply Drop: traits, arts, level, picks, taken).
+const KIND_SALVAGE: StringName = &"salvage"
+## kc-onboard §4.3 (head N2): Muster out = Standard Issue cards go home after a Supply Drop /
+## Salvage (`count` copies at most; options = the Standard Issue designs in the deck).
+const KIND_MUSTER_OUT: StringName = &"muster_out"
+const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK, KIND_DOCTRINE, KIND_PROMOTION, KIND_REGROUP,
+		KIND_SALVAGE, KIND_MUSTER_OUT]
+## Offers that hand out cards (Supply Drop screens).
+const CARD_DROPS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_SALVAGE]
 
 
-## Supply Drop: `config.supply_drop_choices` different designs, each design's chance
-## proportional to its copies in reward_pool (picked one after another without
-## replacement). Fewer designs in the pool than choices -> all of them.
-static func supply_drop(config: RunConfig, rng: RandomNumberGenerator) -> Array[StringName]:
+## Supply Drop: `count` (default `config.supply_drop_choices`) different designs, each design's
+## chance proportional to its copies in reward_pool (picked one after another without
+## replacement). Fewer designs in the pool than choices -> all of them. kc-onboard: `rung` filters
+## the pool (RunConfig.in_rung; RUNG_FULL = all).
+static func supply_drop(config: RunConfig, rng: RandomNumberGenerator, rung: int = RunConfig.RUNG_FULL,
+		count: int = -1) -> Array[StringName]:
 	var ids: Array[StringName] = []
 	for card: CardData in config.reward_pool:
-		if card != null and card.collectible:
+		if card != null and card.collectible and RunConfig.in_rung(card, rung):
 			ids.append(card.id)
-	return weighted_distinct(ids, config.supply_drop_choices, rng)
+	return weighted_distinct(ids, config.supply_drop_choices if count < 0 else count, rng)
 
 
 ## kc-syn §5.2 Supply Drop with an on-trait slot: slot 1 is a card that CAN carry `main_trait`
 ## (kc-art-traits: one of its trait options; RunProgress dresses it in that trait's art) (weighted by its
 ## copies in the pool), slots 2-3 are weighted random among the other designs. No on-trait card in
 ## the pool (or no main trait) -> a plain supply_drop().
-static func supply_drop_on_trait(config: RunConfig, main_trait: StringName, rng: RandomNumberGenerator) -> Array[StringName]:
+static func supply_drop_on_trait(config: RunConfig, main_trait: StringName, rng: RandomNumberGenerator,
+		rung: int = RunConfig.RUNG_FULL, count: int = -1) -> Array[StringName]:
+	var n: int = config.supply_drop_choices if count < 0 else count
 	if main_trait == &"":
-		return supply_drop(config, rng)
+		return supply_drop(config, rng, rung, n)
 	var on: Array[StringName] = []
 	for card: CardData in config.reward_pool:
-		if card != null and card.collectible and card.can_carry(main_trait):
+		if card != null and card.collectible and RunConfig.in_rung(card, rung) and card.can_carry(main_trait):
 			on.append(card.id)
 	if on.is_empty():
-		return supply_drop(config, rng)
+		return supply_drop(config, rng, rung, n)
 	var first: Array[StringName] = weighted_distinct(on, 1, rng)
 	var rest: Array[StringName] = []
 	for card: CardData in config.reward_pool:
-		if card != null and card.collectible and card.id != first[0]:
+		if card != null and card.collectible and RunConfig.in_rung(card, rung) and card.id != first[0]:
 			rest.append(card.id)
 	var picks: Array[StringName] = first
-	picks.append_array(weighted_distinct(rest, config.supply_drop_choices - 1, rng))
+	picks.append_array(weighted_distinct(rest, n - 1, rng))
 	return picks
 
 

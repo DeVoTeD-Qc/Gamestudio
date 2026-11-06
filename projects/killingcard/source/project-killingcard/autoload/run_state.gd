@@ -18,6 +18,10 @@ extends Node
 
 ## Emitted after every change to the run (start, picks, results, offers, end, reset).
 signal run_changed
+## kc-onboard §5: a system the player meets for the first time (RevealFlags id). The UI reveals the
+## element and, when RevealFlags.is_explained(flag), queues its one-time "New: X" card
+## (pending_explainers() / ack_explainer()).
+signal system_met(flag: StringName)
 
 const SAVE_PATH: String = "user://run_save.json"
 const RUN_CONFIG_PATH: String = "res://data/run_config.tres"
@@ -221,9 +225,12 @@ func choose_offer(index: int, trait_pick: StringName = SynergyRules.TRAIT_DEFAUL
 	if run == null:
 		return "no run"
 	var offer: Dictionary = run.current_offer()
+	var kind: StringName = offer.get("kind", &"")
+	var opts: Array = offer.get("options", [])
+	var chosen: StringName = StringName(opts[index]) if index >= 0 and index < opts.size() else &""
 	var err: String = run.choose_offer(index, trait_pick)
 	if err == "":
-		EventBus.reward_picked.emit(offer["kind"], offer["options"][index])
+		EventBus.reward_picked.emit(kind, chosen)
 		_changed()
 		_announce_offer()
 	return err
@@ -267,6 +274,19 @@ func set_copy_art(i: int, art: StringName) -> String:
 	return err
 
 
+## kc-onboard §4.3: sends Standard Issue copies `indices` (deck indices, see
+## run.muster_out_options()) home as the current Muster out's choice. "" or the reason.
+func muster_out(indices: Array) -> String:
+	if run == null:
+		return "no run"
+	var err: String = run.muster_out(indices)
+	if err == "":
+		EventBus.reward_picked.emit(RewardOffers.KIND_MUSTER_OUT, &"")
+		_changed()
+		_announce_offer()
+	return err
+
+
 func skip_offer() -> String:
 	if run == null:
 		return "no run"
@@ -298,9 +318,51 @@ func _equipped_arts() -> Dictionary:
 	return eq if typeof(eq) == TYPE_DICTIONARY else {}
 
 
+# =============================================================================
+# kc-onboard §5: progressive reveal (profile flags in Settings, RevealFlags)
+# =============================================================================
+
+## Records systems the player meets (RevealFlags ids, e.g. RevealFlags.match_triggers(m) after a
+## Reveal, or &"lethal" when the Lethal button is first ready). Emits system_met for each new one
+## and returns them. Without the Settings autoload nothing is stored.
+func note_systems(flags: Array) -> Array[StringName]:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	var added: Array[StringName] = []
+	if st == null or not st.has_method(&"meet"):
+		return added
+	added = st.meet(flags)
+	for f: StringName in added:
+		system_met.emit(f)
+	return added
+
+
+## True once the player has met `flag` (the UI shows the element; RevealFlags.visible adds "in use now").
+func has_met(flag: StringName) -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	return st != null and st.has_method(&"has_met") and st.has_met(flag)
+
+
+## The "New: X" cards still to show, in order (show one per screen; RevealFlags.text_of(flag)).
+func pending_explainers() -> Array[StringName]:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st == null or not st.has_method(&"meet"):
+		var none: Array[StringName] = []
+		return none
+	return RevealFlags.pending_explainers(st.met_flags, st.seen_flags)
+
+
+## The player tapped "Got it" on the "New:" card of `flag`.
+func ack_explainer(flag: StringName) -> void:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null and st.has_method(&"mark_seen"):
+		st.mark_seen(flag)
+
+
 func _changed() -> void:
 	if autosave and run != null:
 		save_run()
+	if run != null:
+		note_systems(RevealFlags.run_triggers(run))
 	# kc-trait-ui: every art a copy of the run wears is FOUND in the Codex (Settings.found_arts).
 	var st: Node = get_node_or_null(^"/root/Settings")
 	if run != null and st != null and st.has_method(&"mark_found"):

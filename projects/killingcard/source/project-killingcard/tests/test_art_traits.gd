@@ -31,10 +31,10 @@ func _card(id: String) -> CardData:
 	return load("res://data/cards/%s.tres" % id) as CardData
 
 
+## kc-onboard: these tests pin the kc-syn / kc-art-traits mechanics on the old Recruit starter with
+## the onboarding ladder off (tests/legacy_starter.gd); the shipped ladder is test_onboarding.gd's.
 func _config(offers: bool = true) -> RunConfig:
-	var c: RunConfig = (load("res://data/run_config.tres") as RunConfig).duplicate() as RunConfig
-	c.synergy_offers = offers
-	return c
+	return preload("res://tests/legacy_starter.gd").config(offers)
 
 
 func _run(offers: bool = true, seed_value: int = SEED) -> RunProgress:
@@ -59,7 +59,7 @@ func test_trait_at_options_plain_recruit_and_default() -> void:
 	assert_eq(SynergyRules.trait_at(mk, 1, &"heavy"), &"heavy", "an option")
 	assert_eq(SynergyRules.trait_at(mk, 1, &"vanguard"), &"", "not an option: plain")
 	assert_eq(SynergyRules.trait_at(mk, 1, &""), &"", "a plain art")
-	assert_eq(SynergyRules.trait_at(mk, 0, &"heavy"), &"", "Recruits carry no trait")
+	assert_eq(SynergyRules.trait_at(mk, 0, &"heavy"), &"heavy", "kc-onboard (N1): Recruits carry their art's trait")
 	assert_eq(SynergyRules.trait_at(mk, 3, &"heavy"), &"heavy", "Elite level keeps it")
 	var rifle: CardData = _card("rifleman")
 	assert_eq([SynergyRules.trait_at(rifle, 1), SynergyRules.trait_at(rifle, 1, &"undead")], [&"", &"undead"], "Rifleman: none by default")
@@ -104,7 +104,7 @@ func test_two_copies_count_for_different_traits() -> void:
 	var tiers: Dictionary = m.synergy_side(P)["tiers"]
 	assert_eq(int(tiers[&"heavy"]), 3, "a Heavy Breacher makes the 3-set")
 	var rec: RulesUnit = m.create_unit(P, mk, -1, 0, &"heavy")
-	assert_eq(rec.synergy_trait, &"", "a Recruit with a Heavy art has no trait yet")
+	assert_eq([rec.synergy_trait, rec.neighbor_keyword], [&"heavy", &""], "kc-onboard: a Recruit with a Heavy art is Heavy, keywords locked")
 
 
 func test_ai_planner_keeps_copies_with_different_traits_apart() -> void:
@@ -304,7 +304,7 @@ func test_supply_drop_offers_carry_trait_and_art() -> void:
 	var drop: Dictionary = r.current_offer()
 	assert_eq(drop["kind"], RewardOffers.KIND_SUPPLY_DROP, "Supply Drop")
 	assert_eq([drop["traits"].size(), drop["arts"].size()], [drop["options"].size(), drop["options"].size()], "a trait and an art per card")
-	assert_true(drop.get("reissue", false) and drop.get("retire", false), "Re-issue next to Retire")
+	assert_true(drop.get("retire", false) and not drop.get("reissue", false), "Retire; no Re-issue (head Z1)")
 	if drop.get("on_trait", &"") == &"heavy":
 		assert_eq(drop["traits"][0], &"heavy", "slot 1 in the main trait")
 	for k: int in drop["options"].size():
@@ -334,64 +334,46 @@ func test_supply_drop_alternates_are_about_forty_percent() -> void:
 	assert_true(share > 0.32 and share < 0.48, "alternate share %.2f (target 0.40)" % share)
 
 
-func test_promotion_trains_a_recruit_into_the_chosen_trait() -> void:
+func test_promotion_trains_a_recruit_keeping_its_trait() -> void:
+	# Head Z1 (kc-trait-ui): "No choice at all: the trait comes only from the art you find."
 	var r: RunProgress = _run()
 	var pm: int = r.deck.find(&"point_man")
+	var art: StringName = r.art_of(pm)
 	var choices: Array[Dictionary] = r.train_choices(pm)
-	assert_eq(choices.map(func(o: Dictionary) -> StringName: return o["trait"]), [&"vanguard", &"undead"], "Point Man trains as Vanguard or Undead")
-	assert_true(choices[0]["preselected"], "the equipped / default art is pre-selected")
-	assert_eq([choices[1]["count_from"], choices[1]["count_to"]], [0, 1], "Undead 0 -> 1")
+	assert_eq(choices.map(func(o: Dictionary) -> StringName: return o["trait"]), [&"vanguard"], "one row: the copy's own trait")
+	assert_true(choices[0]["preselected"] and not choices[0]["random"], "pre-selected, keeps its art")
 	r.pending_offers = [{"kind": RewardOffers.KIND_PROMOTION, "match": 1, "options": [] as Array[StringName], "levels": [] as Array[int]}]
 	r.phase = RunProgress.PHASE_REWARDS
 	r._fill_copy_options(r.pending_offers[0])
 	var at: int = (r.pending_offers[0]["options"] as Array).find(&"point_man")
-	assert_true(r.choose_offer(at, &"heavy") != "", "Heavy isn't a Point Man option")
-	assert_eq(r.choose_offer(at, &"undead"), "", "train as Undead")
-	assert_eq([r.level_of(pm), r.trait_choice(pm), r.copy_trait(pm)], [1, &"undead", &"undead"], "Trained Undead")
-	assert_eq(ArtTraits.trait_of(r.art_of(pm), r.resource(&"point_man") as CardData), &"undead", "wearing an Undead art")
-	assert_eq(int(r.trait_counts().get(&"undead", 0)), 1, "counted per copy")
-	assert_eq(int(r.trait_counts().get(&"vanguard", 0)), 0, "not as Vanguard")
+	assert_eq(r.choose_offer(at, &"undead"), "", "train (the trait argument is ignored)")
+	assert_eq([r.level_of(pm), r.trait_choice(pm), r.copy_trait(pm), r.art_of(pm)], [1, &"vanguard", &"vanguard", art], "Trained, same trait and art")
 
 
-func test_twin_training_takes_a_trait() -> void:
+func test_twin_training_is_retired() -> void:
 	var r: RunProgress = _run()
 	r.record_result(&"player")
 	var list: Array[Dictionary] = r.retire_options()
-	var idx: int = -1
-	for i: int in list.size():
-		if list[i]["id"] == &"breacher" and int(list[i]["twin_index"]) >= 0:
-			idx = i
-	assert_true(idx >= 0, "a Recruit Breacher with a twin")
-	var twin: int = int(list[idx]["twin_index"])
-	assert_true(r.retire_card(idx, &"undead") != "", "Undead isn't a Breacher option")
-	assert_eq(r.retire_card(idx, &"heavy"), "", "retire one, the twin trains Heavy")
+	assert_true(list.all(func(o: Dictionary) -> bool: return int(o["twin_index"]) == -1), "no twins (kc-onboard §4.3)")
+	var idx: int = list.map(func(o: Dictionary) -> StringName: return o["id"]).find(&"breacher")
+	var levels: Array[int] = r.deck_levels.duplicate()
+	assert_eq(r.retire_card(idx, &"heavy"), "", "retire a Breacher")
 	var b: int = r.deck.find(&"breacher")
-	assert_eq([r.level_of(b), r.copy_trait(b)], [1, &"heavy"], "the twin is a Heavy Breacher")
-	assert_eq(twin >= 0, true, "twin index was known")
+	assert_eq([r.level_of(b), r.copy_trait(b)], [0, &"vanguard"], "the other Breacher is untouched")
+	assert_eq(r.deck_levels.size(), levels.size() - 1, "one card fewer")
 
 
-func test_reissue_changes_a_trained_copy() -> void:
+func test_reissue_is_removed() -> void:
 	var r: RunProgress = _run()
 	var g: int = _add(r, &"gunner", 2, &"heavy")
 	r.record_result(&"player")
-	var rows: Array[Dictionary] = r.reissue_options()
-	assert_true(rows.all(func(o: Dictionary) -> bool: return int(o["level"]) >= 1), "Recruits choose when they train, not by Re-issue")
-	var i: int = -1
-	for k: int in rows.size():
-		if rows[k]["id"] == &"gunner":
-			i = k
-	assert_eq(rows[i]["options"].map(func(o: Dictionary) -> StringName: return o["trait"]), [&"specops"], "the Gunner's other option")
-	assert_true(r.reissue_card(i, &"heavy") != "", "same trait: no Re-issue")
-	assert_true(r.reissue_card(i, &"undead") != "", "not an option")
-	var drop_before: int = r.pending_offers.size()
-	assert_eq(r.reissue_card(i, &"specops"), "", "re-issue as Spec Ops")
-	assert_eq([r.level_of(g), r.trait_choice(g), r.copy_trait(g)], [2, &"specops", &"specops"], "keeps its level, changes its trait")
-	assert_eq(r.art_of(g), &"gunner~operators", "and wears the new option's art")
-	assert_eq(r.pending_offers.size(), drop_before - 1, "it used the Supply Drop pick")
-	assert_true(r.reissue_card(0, &"specops") != "", "the next offer has no Re-issue")
+	assert_eq(r.reissue_options(), [] as Array[Dictionary], "no Re-issue choices")
+	assert_true(r.reissue_card(0, &"specops").begins_with("Re-issue was removed"), "reissue_card refuses")
+	assert_eq(r.copy_trait(g), &"heavy", "the Gunner keeps its trait")
+	assert_eq(r.current_offer()["kind"], RewardOffers.KIND_SUPPLY_DROP, "the drop is still open")
 	var r2: RunProgress = _run()
 	r2.record_result(&"enemy")
-	assert_true(r2.current_offer().get("reissue", false), "Regroup allows Re-issue too")
+	assert_false(r2.current_offer().get("reissue", false), "Regroup has no Re-issue either")
 
 
 func test_same_trait_art_swaps_are_free() -> void:
@@ -405,12 +387,12 @@ func test_same_trait_art_swaps_are_free() -> void:
 	assert_eq(r.art_choices(g)["other"], [&"gunner~operators"] as Array[StringName], "other traits greyed")
 	assert_eq(r.set_copy_art(g, &"gunner~night"), "", "free swap")
 	assert_eq([r.art_of(g), r.copy_trait(g)], [&"gunner~night", &"heavy"], "same trait")
-	assert_true(r.set_copy_art(g, &"gunner~operators").contains("Re-issue"), "another trait needs a Re-issue")
+	assert_true(r.set_copy_art(g, &"gunner~operators").contains("keeps the trait"), "never into another trait (head Z1)")
 	assert_true(r.set_copy_art(g, &"marksman~night") != "", "not an art of this card")
 	var rec: int = r.deck.find(&"marksman")
-	assert_eq(r.set_copy_art(rec, &"marksman~mastery"), "", "a Recruit can wear any of its arts")
-	assert_eq([r.trait_choice(rec), r.copy_trait(rec)], [&"heavy", &""], "it pre-selects Heavy, no trait until it trains")
-	assert_eq(r.train_choices(rec).filter(func(o: Dictionary) -> bool: return o["preselected"])[0]["trait"], &"heavy", "pre-selected in training")
+	assert_true(r.set_copy_art(rec, &"marksman~mastery") != "", "a Recruit can't change its trait through its art either")
+	assert_eq(r.set_copy_art(rec, &"marksman~night"), "", "a same-trait look is fine")
+	assert_eq([r.trait_choice(rec), r.copy_trait(rec)], [&"specops", &"specops"], "Spec Ops, carried as a Recruit")
 
 
 func test_codex_equip_dresses_recruits_and_new_copies() -> void:
@@ -421,8 +403,8 @@ func test_codex_equip_dresses_recruits_and_new_copies() -> void:
 	r.random_copy_arts = false  # the kc-art-traits behaviour (tools)
 	r.set_equipped_arts({"point_man": "point_man~horde", "gunner": "gunner~dust", "marksman": "not_an_art"})
 	var pm: Array = r.deck_view().filter(func(row: Dictionary) -> bool: return row["id"] == &"point_man")
-	assert_true(pm.all(func(row: Dictionary) -> bool: return row["art"] == &"point_man~horde" and row["trait_choice"] == &"undead" and row["trait"] == &""),
-			"the starter's Point Men wear the equipped art and will train Undead")
+	assert_true(pm.all(func(row: Dictionary) -> bool: return row["trait"] == &"vanguard" and ArtTraits.trait_of(row["art"], _card("point_man")) == &"vanguard"),
+			"head Z1: an equipped art of another trait never changes a copy's trait")
 	assert_eq(r._equipped(_card("marksman")), &"", "an unknown art is ignored")
 	var drop: Dictionary = {"options": [&"gunner", &"gunner"] as Array[StringName]}
 	r._dress_drop(drop, &"heavy", r._rng("eq", 1))
@@ -434,7 +416,7 @@ func test_save_v3_round_trip_and_v2_migration() -> void:
 	_add(r, &"marksman", 1, &"heavy")
 	r.record_result(&"player")
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 3, "version 3")
+	assert_eq(int(d["version"]), 4, "version 4 (kc-onboard)")
 	var back: Dictionary = RunProgress.from_dict(r.config, d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]
@@ -455,7 +437,7 @@ func test_save_v3_round_trip_and_v2_migration() -> void:
 	var mk: int = r3.deck.rfind(&"marksman")
 	assert_eq(r3.copy_trait(mk), &"specops", "v2 copies take their default trait")
 	assert_eq(r3.deck_arts.size(), r3.deck.size(), "and an art each")
-	assert_true(r3.current_offer().has("traits") and r3.current_offer().get("reissue", false), "the pending Supply Drop is dressed, with Re-issue")
+	assert_true(r3.current_offer().has("traits") and not r3.current_offer().get("reissue", false), "the pending Supply Drop is dressed (no Re-issue: head Z1)")
 	var bad: Dictionary = d.duplicate(true)
 	bad["deck_traits"][0] = "robots"
 	assert_true(RunProgress.from_dict(r.config, bad)["error"] != "", "unknown trait")
@@ -474,7 +456,7 @@ func test_missing_art_shows_the_default_and_keeps_the_trait() -> void:
 	assert_eq([s.deck_traits[m], s.deck_arts[m]], [&"heavy", &"marksman~mastery"], "the match gets the copy's trait and art")
 	var row: Dictionary = r.deck_view()[m]
 	assert_eq([row["trait"], row["trait_choice"], row["subname"], row["can_reissue"], row["trait_options"]],
-			[&"heavy", &"heavy", "Field Camo", true, [&"specops", &"heavy"] as Array[StringName]], "deck view row")
+			[&"heavy", &"heavy", "Field Camo", false, [&"specops", &"heavy"] as Array[StringName]], "deck view row (no Re-issue)")
 	assert_eq(r.trait_options_of(&"marksman").size(), 2, "trait options hook")
 
 
@@ -489,10 +471,8 @@ func test_run_state_reissue_and_art_swap() -> void:
 	var g: int = _add(rs.run, &"gunner", 1, &"heavy")
 	assert_true(rs.set_copy_art(g, &"gunner~flip") != "", "RunState.set_copy_art: no swaps in a run (head)")
 	rs.record_result(&"player")
-	var rows: Array[Dictionary] = rs.run.reissue_options()
-	var i: int = rows.map(func(o: Dictionary) -> StringName: return o["id"]).find(&"gunner")
-	assert_eq(rs.reissue_card(i, &"specops"), "", "RunState.reissue_card")
-	assert_eq(rs.run.copy_trait(g), &"specops", "re-issued")
+	assert_true(rs.reissue_card(0, &"specops") != "", "RunState.reissue_card refuses (head Z1)")
+	assert_eq(rs.run.copy_trait(g), &"heavy", "the trait stays")
 	rs.abandon_run()
 	rs.save_path = saved_path
 	rs.config = saved_cfg

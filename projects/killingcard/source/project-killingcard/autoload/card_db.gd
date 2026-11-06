@@ -251,7 +251,8 @@ func _find_data_files(dir: String) -> PackedStringArray:
 		if (name.ends_with(".tres") or name.ends_with(".res")) and not result.has(dir.path_join(name)):
 			result.append(dir.path_join(name))
 	for sub: String in DirAccess.get_directories_at(dir):
-		if not sub.begins_with("."):
+		# data/banners holds display-only BannerArt drop-ins (BannerArtDB), not game data.
+		if not sub.begins_with(".") and dir.path_join(sub) != "res://data/banners":
 			result.append_array(_find_data_files(dir.path_join(sub)))
 	result.sort()
 	return result

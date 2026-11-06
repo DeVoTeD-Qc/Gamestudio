@@ -39,7 +39,11 @@ func _setup() -> void:
 	_router = tree.root.get_node("SceneRouter")
 	var plog: Node = tree.root.get_node("PlaytestLog")
 	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run,
-			"plog_enabled": plog.enabled}
+			"plog_enabled": plog.enabled, "config": _rs.config}
+	# kc-onboard-impl: these screens are pinned on the kc-syn Recruit starter with the onboarding
+	# ladder off (tests/legacy_starter.gd) until kc-onboard-ui builds the Muster out / Salvage /
+	# pick-2-of-4 screens and re-points this suite at the shipped config.
+	_rs.config = preload("res://tests/legacy_starter.gd").config()
 	plog.enabled = false
 	var dir: String = "user://test_run_screens/s%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -73,6 +77,7 @@ func _teardown() -> void:
 	_router.active_match = null
 	_router.last_match_report = {}
 	tree.root.get_node("PlaytestLog").enabled = _saved["plog_enabled"]
+	_rs.config = _saved["config"]
 	tree.root.size = _saved_root_size
 
 
@@ -699,7 +704,8 @@ func test_trait_ui_reward_flows() -> void:
 		var r: RunProgress = _rs.run
 		var mk: CardData = r.resource(&"marksman") as CardData
 		var at: int = r.deck.size()
-		r._append_copy(&"marksman", 1, &"specops", r._random_art(mk, &"specops"))
+		# kc-onboard (head Z1): a copy keeps the trait of the art it was found with; no Re-issue.
+		r._append_copy(&"marksman", 1, &"heavy", r._random_art(mk, &"heavy"))
 		_rs.record_result(&"player")
 		var reward: Control = await _open(RunFlow.SCENE_REWARD, screen)
 		assert_eq(reward.offer["kind"], RewardOffers.KIND_SUPPLY_DROP, "%s: Supply Drop" % label)
@@ -716,32 +722,11 @@ func test_trait_ui_reward_flows() -> void:
 		await _tap(reward.detail_buttons[0])
 		assert_true(reward.get_inspector().is_open(), "%s: DETAILS" % label)
 		await _tap(reward.get_inspector().get_node("%CloseButton"))
-		# RE-ISSUE next to RETIRE: pick the Marksman, then Heavy.
-		assert_not_null(reward.reissue_tile, "%s: Re-issue option" % label)
+		# Head Z1: Re-issue is gone (the UI drops its tile in kc-onboard-ui); Retire stays.
+		assert_true(reward.reissue_tile == null, "%s: no Re-issue option" % label)
 		assert_not_null(reward.retire_tile, "%s: Retire option still there" % label)
-		await _tap(reward.reissue_tile)
-		assert_true(reward.reissue_mode and not reward.list_tiles.is_empty(), "%s: Re-issue lists copies" % label)
-		_check(reward, screen, "reissue copies")
-		var rows: Array[Dictionary] = r.reissue_options()
-		var ri: int = rows.map(func(o: Dictionary) -> int: return int(o["index"])).find(at)
-		assert_true(ri >= 0, "%s: the Marksman is listed" % label)
-		await _tap(reward.list_tiles[ri])
-		assert_eq(reward.reissue_row, ri, "%s: copy picked" % label)
-		assert_not_null(reward.find_child("NowCard", true, false), "%s: preview of the copy now" % label)
-		_check(reward, screen, "reissue traits")
-		var heavy: Control = null
-		for t: Control in reward.pick_tiles:
-			if t.get_meta(&"trait") == &"heavy":
-				heavy = t
-		assert_not_null(heavy, "%s: a Heavy tile" % label)
-		assert_true((heavy.find_child("RandomArtLine", true, false) as Label).text.contains("random Heavy art"), "%s: says the art is random" % label)
-		var deck: int = r.deck.size()
-		await _tap(heavy)
-		await _frames(2)
-		assert_eq(r.copy_trait(at), &"heavy", "%s: re-issued as Heavy" % label)
-		assert_eq(ArtTraits.trait_of(r.art_of(at), mk), &"heavy", "%s: wearing a Heavy art" % label)
-		assert_eq(r.deck.size(), deck, "%s: no card added" % label)
-		# Promotion of a Recruit: TRAIN AS with counts and the pre-selected option.
+		assert_eq(r.reissue_options().size(), 0, "%s: nothing to re-issue" % label)
+		# Promotion of a Recruit: training keeps the trait (TRAIN AS shows only the copy's own trait).
 		r.pending_offers.clear()
 		r.phase = RunProgress.PHASE_REWARDS
 		r._add_synergy_offer(RewardOffers.KIND_PROMOTION, 1)
@@ -755,46 +740,23 @@ func test_trait_ui_reward_flows() -> void:
 				break
 		assert_true(pi >= 0, "%s: a Recruit to train" % label)
 		var copy: int = int(popts[pi]["index"])
-		var pid: StringName = popts[pi]["id"]
+		var keep_t: StringName = r.copy_trait(copy)
+		var keep_a: StringName = r.art_of(copy)
 		await _tap(reward.list_tiles[pi])
-		assert_false(reward.train_pick.is_empty(), "%s: TRAIN AS opened" % label)
-		_check(reward, screen, "train as")
-		var choices: Array[Dictionary] = r.train_choices(copy)
-		assert_eq(reward.pick_tiles.size(), choices.size(), "%s: one tile per option" % label)
-		var alt: Control = null
-		for t: Control in reward.pick_tiles:
-			assert_true((t.find_child("CountLine", true, false) as Label).text.contains(">") or t.get_meta(&"trait") == &"", "%s: count change" % label)
-			if not bool(t.get_meta(&"preselected")):
-				alt = t
-		assert_eq(reward.pick_tiles.filter(func(t: Control) -> bool: return bool(t.get_meta(&"preselected"))).size(), 1, "%s: one pre-selected" % label)
-		var alt_t: StringName = alt.get_meta(&"trait")
-		await _tap(alt)
+		if not reward.train_pick.is_empty():
+			assert_eq(reward.pick_tiles.size(), 1, "%s: one tile, the copy's own trait" % label)
+			await _tap(reward.pick_tiles[0])
 		await _frames(2)
 		assert_eq(r.level_of(copy), SynergyRules.LEVEL_TRAINED, "%s: trained" % label)
-		assert_eq(r.copy_trait(copy), alt_t, "%s: into the picked trait" % label)
-		assert_eq(ArtTraits.trait_of(r.art_of(copy), r.resource(pid) as CardData), alt_t, "%s: with an art of it" % label)
-		# Regroup: RE-ISSUE in the header; a Recruit with a twin opens TRAIN AS for the twin.
+		assert_eq([r.copy_trait(copy), r.art_of(copy)], [keep_t, keep_a], "%s: same trait, same art" % label)
+		# Regroup: no RE-ISSUE in the header.
 		r.pending_offers.clear()
 		r.phase = RunProgress.PHASE_REWARDS
 		r._add_synergy_offer(RewardOffers.KIND_REGROUP, 1)
 		reward.show_offer()
 		await _frames(2)
-		assert_true(reward.get_node("%Header").find_child("ReissueButton", true, false).visible, "%s: Regroup offers Re-issue" % label)
+		assert_false(reward.get_node("%Header").find_child("ReissueButton", true, false).visible, "%s: Regroup has no Re-issue" % label)
 		_check(reward, screen, "regroup")
-		var ropts: Array[Dictionary] = r.retire_options()
-		var ti: int = -1
-		for i: int in ropts.size():
-			if int(ropts[i]["twin_index"]) >= 0 and (r.resource(ropts[i]["id"]) as CardData).trait_choices().size() > 1:
-				ti = i
-				break
-		if ti >= 0:
-			var deck2: int = r.deck.size()
-			await _tap(reward.list_tiles[ti])
-			assert_eq(reward.train_pick.get("kind", &""), &"twin", "%s: twin TRAIN AS" % label)
-			var pre: Control = reward.pick_tiles.filter(func(t: Control) -> bool: return bool(t.get_meta(&"preselected")))[0]
-			await _tap(pre)
-			await _frames(2)
-			assert_eq(r.deck.size(), deck2 - 1, "%s: retired, twin trained" % label)
 		# The deck view names each design's copy traits.
 		r.pending_offers.clear()
 		reward.open_deck()
