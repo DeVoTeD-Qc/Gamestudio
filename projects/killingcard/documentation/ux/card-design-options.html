@@ -79,6 +79,7 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
 .opt-letter { font-family: var(--f-display); font-size: 34px; line-height: 1; color: var(--accent); min-width: 1.2em; }
 .subhead { border-top: 3px solid var(--accent); padding-top: 18px; }
 .subhead[hidden] { display: none !important; }
+.insp[hidden] { display: none !important; }
 .opt-title { font: 700 21px var(--f-cond); letter-spacing: .03em; text-transform: uppercase; }
 .opt-pitch { margin: 0; color: var(--muted); flex-basis: 100%; max-width: 72ch; }
 .pick { font: 600 12px var(--f-mono); letter-spacing: .08em; background: var(--good); color: var(--bg); padding: 2px 8px; border-radius: 3px; text-transform: uppercase; }
@@ -111,6 +112,27 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
 .nm { white-space: nowrap; overflow: hidden; }
 .stencil { font-family: "Stardos Stencil", var(--f-cond); font-weight: 700; letter-spacing: .03em; }
 .mono { font-family: var(--f-mono); }
+
+
+/* C1+ progressive disclosure */
+.c1p .hid, .c1p .p-trait:not(.active) { opacity: 0; transition: opacity .15s ease-out; }
+.c1p:hover .hid, .c1p:hover .p-trait, .c1p.peek .hid, .c1p.peek .p-trait, .c1p:focus-visible .hid, .c1p:focus-visible .p-trait,
+.c1p.all .hid, .c1p.all .p-trait, .p-board.all .hid, .p-board.all .p-trait, .synmode .c1p .p-trait { opacity: 1; }
+.p-board.all .c1p .hid { transition: none; }
+.c1p { transition: filter .15s ease-out; }
+.synmode .c1p:not(.hit) { filter: brightness(.42) saturate(.6); }
+.synmode .c1p.hit { box-shadow: 0 0 0 2px var(--g-amber), 0 0 12px rgba(255,176,32,.7); }
+.synmode .c1p:not(.hit) .p-trait { opacity: .35; }
+.synmode .c1p.hit .p-trait.match { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px #fff; }
+.p-trait { transition: opacity .15s ease-out, transform .15s ease-out; }
+.p-tick { opacity: 0; transition: opacity .15s; }
+.synmode.syn-specops .p-tick { opacity: 1; }
+.p-rail:hover, .p-rail.on, .p-rail:focus-visible { outline: 2px solid var(--g-amber); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .c1p, .c1p .hid, .p-trait, .p-tick { transition: none; } }
+table.nb { border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 6px; font-size: 14px; }
+table.nb th, table.nb td { text-align: left; padding: 3px 12px 3px 0; border-bottom: 1px solid var(--line); }
+table.nb th { font: 600 13px var(--f-cond); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+article.c1plus { border-top: 3px solid var(--accent); }
 
 /* inspector */
 .insp { position: fixed; inset: 0; background: rgba(6,8,10,.72); display: grid; place-items: center; z-index: 50;
@@ -161,6 +183,7 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
       <h2 id="h-board">On the board</h2>
       <p><a href="#c-family" style="color:var(--accent)">Jump to the C family (pure calling card, C1-C5)</a> · <a href="#b-family" style="color:var(--accent)">the B family (side rails, B1-B4)</a>. Each banner slot is 228x57 px on the phone canvas (165x41 pt). The art is the calling card itself: no bands and no dimming on it. Each option moves the gameplay info to a different place. Under each board: the states (damaged, Recruit, selected, can't act, enemy Standard Issue) at 2x.</p>
     </div>
+    <div class="options" id="c1p-root"></div>
     <div class="options" id="opts-board"></div>
   </section>
 
@@ -174,6 +197,7 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
 
   <div class="reco" id="reco" style="margin-top:40px">
     <h2>Recommendation</h2>
+    <p><b>The head's direction: C1+, progressive disclosure.</b> Build C1+ on the board and keep <b>5+ (the C1+ banner with everything shown, plus a name plate)</b> in the hand, because the hand is where you decide and the cost and traits matter there. At rest a board card shows 3-5 marks instead of 6-9. Ship "Show everything" as a setting (Settings &gt; Cards), on for players who want it.</p>
     <p><b>Pure calling card (C family): C1, corner badges.</b> The full art, uncropped, with exactly the head's anatomy in the four corners: trait top-left, keywords top-right, FP / Armor bottom-right on 20 px plates, and the cost bottom-left (drop it and nothing else moves). It shows every required piece at a readable size and keeps the middle 60% of the art clear. Runner-up: C2, border frame, if the board should look most like a framed calling card and can live without the cost. Pairs with <b>5, the C1 twin</b>, in the hand tray (the card you hold is the card that lands) and with <b>2, banner over panel</b>, at mulligan / reward / Codex size.</p>
     <p><b>Side rails (B family): B4, one right rail,</b> is the best B: the art runs full height and nothing ever covers it, and all gameplay sits in one right-hand grid that cannot collide (2 traits, weapon, Recruit level, keywords, '+n' when full). It does <b>not</b> beat C1: it crops 30% of the calling card's width, while C1 keeps the whole calling card and still shows every required icon. Pick B4 over C1 only if a clean, uncovered art matters more than seeing the whole calling card. B4 pairs with 2 (banner over panel) everywhere else; a "B4 twin" for the tray would be the B4 banner plus a name plate, as option 4 is for B.</p>
     <p><b>If the head keeps the A-D set: B, side rails.</b> The calling card stays a true, untouched 4:1 banner; cost, trait and weapon ride a slim left rail, FP and Armor a right rail, both on solid ground, so the numbers read at a glance on any art (16-20 px plates, 11.6-14.5 pt). Abilities sit in one small tab on the art's top-right edge.</p>
@@ -818,6 +842,169 @@ function optBlock(opt, kind) {
   </article>`;
 }
 
+// ---------------------------------------------------------------- C1+ (progressive disclosure): the head's direction
+// Always on: keywords / effects / Recruit locks (top-right, 21 px) and FP / Armor (bottom-right, 24 px).
+// Hidden until the card is hovered (touch: held): cost (top-left), traits, weapon, level (bottom-left),
+// the Standard Issue serial. A trait whose set tier is ON stays shown, lit. Hovering a row of the
+// synergy rail shows every trait icon on the board and highlights that trait's cards.
+const P_KW = 21, P_STAT = 24;
+function pTraitChip(c, t, active) {
+  const tr = TRAITS[t];
+  return `<span class="p-trait${active ? " active" : ""}" data-trait="${t}" title="${tr[0]}${active ? ": bonus ON" : ""}" style="display:grid;place-items:center;width:20px;height:20px;background:rgba(10,12,14,.9);border:1.5px solid ${col(tr[1])}${active ? `;box-shadow:0 0 6px ${col(tr[1])}` : ""}">${svg(t, col(tr[1]), 15, 2.6)}</span>`;
+}
+function c1pRender(c, side) {
+  let h = fullArt(c, side) + siEdge(c);
+  // Top-left (hidden): cost.
+  h += row(4, 3, chip(cost(c, 20)), 0, "").replace('class="g"', 'class="g hid"');
+  // Top-right (always): abilities, effects, Recruit locks, bigger.
+  const k = kwIcons(c, P_KW, side).replace(/<span class="stencil"[\s\S]*?<\/span>/, "");
+  if (k) h += rrow(2, 2, chip(k, "gap:2px"));
+  // Bottom-left: traits (shown when active, else hidden), then weapon + level (hidden), serial (hidden).
+  const act = c.activeT || [];
+  const tl = traitList(c);
+  let bl = tl.map((t) => pTraitChip(c, t, act.includes(t))).join("");
+  if (bl) h += `<div class="g" style="left:5px;top:${BH - 23}px;display:flex;gap:2px">${bl}</div>`;
+  const rest = clsPip(c, 16) + levelBadge(c, 16) + (c.si ? serial(c, side, 16) : "");
+  if (rest) h += `<div class="g hid" style="left:${5 + tl.length * 22}px;top:${BH - 21}px">${chip(rest, "gap:2px")}</div>`;
+  // Bottom-right (always): FP + Armor, bigger.
+  h += rrow(2, BH - 27, chip(fpPlate(c, side, P_STAT) + arPlate(c, P_STAT - 1), "gap:2px"));
+  h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+  return h;
+}
+function cardP(c, side, extra = "") {
+  const id = "c" + (uid++);
+  REG[id] = { c, side };
+  return `<div class="g card-hit c1p ${extra}" data-card="${id}" data-traits="${traitList(c).join(" ")}" tabindex="0" role="button" aria-label="${c.name}: hover or hold to peek, long press or right click to inspect" style="left:0;top:0;width:${BW}px;height:${BH}px">${c1pRender(c, side)}</div>`;
+}
+// The C1+ board: own Vanguard 2 and Heavy 2 are ON (their trait icons show at rest).
+const PB = {
+  own: [[u("armored", { ar: 3 }), u("grunt")],
+    [u("breacher", { activeT: ["vanguard"] }), u("flanker", { activeT: ["vanguard"] }), u("marksman")],
+    [u("gunner", { activeT: ["heavy"] }), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy", activeT: ["heavy"], st: "cant" })]],
+  rival: [[u("flanker")], [u("grunt"), u("medic")], [u("trooper", { ar: 1 }), u("recon")]],
+};
+const P_RAIL = [
+  { t: "vanguard", you: 2, rival: 1, on: true, text: "Vanguard 2: Vanguard in row 1 get +1 FP" },
+  { t: "heavy", you: 2, rival: 0, on: true, text: "Heavy 2: Heavy units get +1 Armor" },
+  { t: "specops", you: 1, rival: 1, on: false, text: "Spec Ops 1/2: no bonus yet" },
+  { t: "undead", you: 1, rival: 1, on: false, text: "Undead 1/2: no bonus yet" },
+];
+function pStrip() {
+  let s = "";
+  [["MENU", 4], [`<span style="color:${col("--g-friend")}">&#9873;</span> R2<br>1-3`, 73], ["OPERATOR", 142]].forEach(([t, y]) => {
+    s += `<div class="g mono" style="left:6px;top:${y}px;width:62px;height:64px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;text-align:center;font-size:13px;line-height:1.15;color:${col("--g-muted")}">${t}</div>`;
+  });
+  s += `<div class="g mono" style="left:6px;top:211px;width:62px;font-size:12px;letter-spacing:.06em;color:${col("--g-muted")};text-align:center">SETS</div>`;
+  P_RAIL.forEach((r, i) => {
+    const tr = TRAITS[r.t];
+    s += `<div class="g p-rail" data-trait="${r.t}" tabindex="0" role="button" aria-label="${r.text}. Hover to show this trait on every card." title="${r.text}" style="left:6px;top:${228 + i * 58}px;width:62px;height:54px;background:${col("--g-gun")};border:1px solid ${r.on ? col(tr[1]) : col("--g-edge")};border-radius:4px;display:grid;justify-items:center;align-content:center;gap:1px;cursor:pointer">`
+      + `${svg(r.t, r.on ? col(tr[1]) : "rgba(216,222,227,.55)", 20, 2.6)}<span class="mono" style="font-size:14px;line-height:1;color:${r.on ? "#fff" : col("--g-muted")}">${r.you}/${r.on ? 3 : 2}${r.on ? " ON" : ""}</span><span class="mono" style="font-size:11px;line-height:1;color:#ff9a9c">R ${r.rival}</span></div>`;
+  });
+  s += `<div class="g mono" style="left:6px;top:472px;width:62px;height:64px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;font-size:13px;color:${col("--g-muted")}">DECK<br>11</div>`;
+  return s;
+}
+function pBoard() {
+  let s = pStrip();
+  const colX = [76, 318, 560];
+  const rivalY = [184, 124, 64, 4], ownY = [299, 359, 419, 479];
+  for (let z = 0; z < 3; z++) {
+    s += `<div class="g" style="left:${colX[z]}px;top:0;width:228px;height:540px;background:linear-gradient(${["#1c2420", "#1d2125", "#22201b"][z]}, #121619)"></div>`;
+    for (let r = 0; r < 4; r++) {
+      for (const [ys, side, list] of [[rivalY, "rival", PB.rival[z]], [ownY, "own", PB.own[z]]]) {
+        const c = list[r];
+        s += `<div class="g" style="left:${colX[z]}px;top:${ys[r]}px;width:228px;height:57px;border:1px dashed rgba(216,222,227,.10)"></div>`;
+        if (c) s += place(colX[z], ys[r], cardP(c, side));
+      }
+    }
+    const ctl = ["RIVAL", "YOURS", "EVEN"][z], cc = [col("--g-enemy"), col("--g-friend"), col("--g-muted")][z];
+    s += `<div class="g" style="left:${colX[z]}px;top:244px;width:228px;height:52px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};display:flex;align-items:center;gap:10px;padding:0 10px"><span class="mono" style="display:grid;place-items:center;width:32px;height:32px;border:2px solid ${cc};border-radius:${z === 1 ? "50%" : "2px"};color:${cc};font-size:18px">${"ABC"[z]}</span><span class="mono" style="font-size:14px;line-height:1.1;color:${col("--g-muted")}">${["CLOSE", "LONG", "MID"][z]}<br><span style="color:${cc}">${ctl}</span></span></div>`;
+  }
+  // Spotter link (Marksman, B row 3, gives +1 FP to the Flanker in front): shown with Spec Ops.
+  s += `<div class="g p-tick" data-trait="specops" style="left:${318 + 82}px;top:${ownY[1] + 52}px;width:4px;height:14px;background:${col("--g-friend")};box-shadow:0 0 8px ${col("--g-friend")}"></div>`;
+  // The hand tray: 5+, the C1+ banner with everything shown + a name plate.
+  const W = 362, Hh = 532, x0 = 800, y0 = 4;
+  s += `<div class="g" style="left:${x0}px;top:${y0}px;width:${W}px;height:${Hh}px;background:${col("--g-slate")};border:1px solid ${col("--g-edge")};border-radius:4px"></div>`;
+  s += `<div class="g mono" style="left:${x0 + 8}px;top:${y0 + 8}px;font-size:16px;color:${col("--g-muted")}">SUPPLY <b style="color:#fff">3/4</b> · <span style="color:${col("--g-amber")}">HAND SHOWS EVERYTHING</span></div>`;
+  HAND.slice(0, 6).forEach((c, i) => {
+    const cx = x0 + 4 + (i % 2) * 181, cy = y0 + 40 + Math.floor(i / 2) * 78;
+    s += place(cx, cy, card(c, "own", 177, 70, handPlus(c)));
+  });
+  s += `<div class="g" style="left:${x0 + 4}px;top:${y0 + Hh - 68}px;width:105px;height:64px;border:1px solid ${col("--g-edge")};border-radius:4px;display:grid;place-items:center;font:600 18px var(--f-cond);letter-spacing:.08em;color:${col("--g-fog")}">UNDO</div>`;
+  s += `<div class="g" style="left:${x0 + 117}px;top:${y0 + Hh - 68}px;width:241px;height:64px;border-radius:4px;background:${col("--g-amber")};display:grid;place-items:center;font:700 22px var(--f-cond);letter-spacing:.08em;color:#1A1305">READY</div>`;
+  return s;
+}
+// 5+: hand card = the C1+ banner with everything pinned on, plus a name plate.
+function handPlus(c, W = 177, H = 70) {
+  const k = W / BW, bh = Math.round(BH * k);
+  let h = `<div class="slotbox" style="left:0;top:0;width:${W}px;height:${H}px;background:${col("--g-gun")};border:1px solid ${c.si || c.siArt ? col("--g-si") : col("--g-edge")};border-radius:4px;overflow:hidden"></div>`;
+  h += `<div class="g c1p all" style="left:0;top:0;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${c1pRender(c, "own")}</div>`;
+  h += `<div class="slotbox" style="left:0;top:${bh}px;width:${W}px;height:${H - bh}px;background:${col("--g-panel")}"></div>`;
+  h += nameEl(c, 6, bh + 1, W - 12, 15, { min: 13 });
+  return h;
+}
+const P_STATES = [
+  ["At rest (quiet)", u("marksman"), ""], ["Hover / hold: peek", u("marksman"), "peek"],
+  ["Trait bonus ON (shown, lit)", u("breacher", { activeT: ["vanguard"] }), ""], ["Recruit: locks always on", u("recon", { locked: ["deploy", "spotter"] }), ""],
+  ["Damaged", u("gunner", { ar: 3, activeT: ["heavy"] }), ""], ["Can't act", u("medic", { st: "cant" }), ""],
+  ["Standard Issue at rest", u("armored"), ""], ["Standard Issue peek (cost, serial)", u("armored"), "peek"],
+  ["Rail hover Heavy: 2 traits, match", u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy", activeT: ["heavy"] }), "synhit"],
+];
+function pStates() {
+  let s = "";
+  const k = 2, cw = BW * k;
+  P_STATES.forEach(([label, c, cls], i) => {
+    const x = 16 + (i % 3) * (cw + 16), y = 14 + Math.floor(i / 3) * (BH * k + 50);
+    s += `<div class="g mono" style="left:${x}px;top:${y}px;font-size:16px;letter-spacing:.06em;color:${col("--g-muted")}">${label.toUpperCase()}</div>`;
+    s += `<div class="g ${cls === "synhit" ? "synmode" : ""}" style="left:${x}px;top:${y + 24}px;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${cardP(c, c.side || "own", cls === "synhit" ? "hit" : cls)}</div>`;
+  });
+  return s;
+}
+// Before (C1) / after (C1+ at rest) for three cards.
+const P_BA = [u("marksman"), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" }), u("armored")];
+function pBeforeAfter() {
+  let s = "";
+  const k = 2;
+  P_BA.forEach((c, i) => {
+    const y = 14 + i * (BH * k + 40);
+    s += `<div class="g mono" style="left:16px;top:${y}px;font-size:16px;color:${col("--g-muted")}">C1 (BEFORE) · ${c.name.toUpperCase()} · ${countC1(c)} ICONS</div>`;
+    s += `<div class="g" style="left:16px;top:${y + 22}px;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${card(c, "own", BW, BH, C_OPTS[0].render(c, "own"))}</div>`;
+    s += `<div class="g mono" style="left:${32 + BW * k}px;top:${y}px;font-size:16px;color:${col("--g-amber")}">C1+ AT REST · ${countC1p(c)} ICONS</div>`;
+    s += `<div class="g" style="left:${32 + BW * k}px;top:${y + 22}px;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${cardP(c, "own")}</div>`;
+  });
+  return s;
+}
+// Noise budget: separate marks a card shows.
+function countC1(c) { return traitList(c).length + (traitList(c).length || c.si ? 0 : 0) + (c.cls ? 1 : 0) + (c.level === 0 ? 1 : 0) + (c.kws || []).length + (c.locked || []).length + (c.si ? 2 : 0) + 1 + 2; }
+function countC1p(c) { return (c.kws || []).length + (c.locked || []).length + 2 + (c.activeT || []).length; }
+
+function c1plusSection() {
+  const NB = [u("marksman"), u("breacher", { activeT: ["vanguard"] }), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" }), u("armored"), u("grunt"), u("recon")];
+  const rows = NB.map((c) => `<tr><td>${c.name}${c.activeT ? " (trait ON)" : ""}${c.traits ? " (2 traits)" : ""}</td><td>${countC1(c)}</td><td>${countC1p(c)}</td><td>${countC1(c) - countC1p(c) > 0 ? "-" + (countC1(c) - countC1p(c)) : "0"}</td></tr>`).join("");
+  const avg = (f) => (NB.reduce((a, c) => a + f(c), 0) / NB.length).toFixed(1);
+  return `<article class="opt c1plus" id="opt-C1P" data-key="C1+">
+    <div class="opt-head"><span class="opt-letter">C1+</span><span class="opt-title">Progressive disclosure</span><span class="pick">The head's direction</span>
+      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), and only stats + abilities visible at rest. <b>Try it:</b> hover a card to peek at its cost, traits, weapon, level and serial; hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
+    <div class="cmp" style="text-transform:none"><label class="tog" for="p-all"><input type="checkbox" id="p-all"> Show everything (game setting: Settings &gt; Cards &gt; Always show all card info)</label></div>
+    <div class="frames">
+      ${fitBox(1168, 540, `<div class="p-board" id="p-board">${pBoard()}</div>`, "Phone 844x390 · C1+ live board · hand tray: 5+ (full info in hand)")}
+      ${fitBox(16 * 4 + BW * 2 * 3, 14 + 3 * (BH * 2 + 50) + 8, `<div class="p-board p-static">${pStates()}</div>`, "States at 2x")}
+      ${fitBox(48 + BW * 4, 14 + 3 * (BH * 2 + 40), `<div class="p-board p-static">${pBeforeAfter()}</div>`, "Before (C1) / after (C1+ at rest)")}
+    </div>
+    <div class="pc">
+      <div class="pro"><h3>Noise budget (marks per card)</h3>
+        <div style="overflow-x:auto"><table class="nb"><thead><tr><th>Card</th><th>C1</th><th>C1+ at rest</th><th>Less</th></tr></thead><tbody>${rows}</tbody>
+        <tfoot><tr><td>Average</td><td>${avg(countC1)}</td><td>${avg(countC1p)}</td><td></td></tr></tfoot></table></div>
+        <p class="hint">A mark = one icon, plate or badge (FP and Armor count as 2). At rest a card shows its abilities and stats, plus a trait only while its bonus is ON.</p></div>
+      <div class="con"><h3>Trade-offs</h3><ul>
+        <li>Cost, weapon and inactive traits need a hover / hold: a player planning around a rival's Spec Ops count has to use the rail (one hover shows them all).</li>
+        <li>Touch peek is a hold, which competes with drag on own cards in Deploy (the hold peeks only when the finger doesn't move).</li>
+        <li>Hand: recommend <b>5+, full info in hand</b> (the hand is where you decide what to play; cost and traits matter there), so the quiet rule applies to the board only.</li>
+      </ul></div>
+    </div>
+  </article>`;
+}
+
+document.getElementById("c1p-root").innerHTML = c1plusSection();
 document.getElementById("opts-board").innerHTML = BOARD_OPTS.filter((o) => !o.family).map((o) => optBlock(o, "board")).join("")
   + `<div class="subhead section-head" id="c-family"><h2>C family · pure calling card</h2><p>The head: "I want more version of C, pure calling Card ... showcase full art and add only important info in corners or along the borders. We need stats, icons for keyword, traits. Cost is optionnal." In every C variant the art fills the whole 228x57 slot, uncropped and undimmed; only a 1.5-2 px edge marks Standard Issue (grey-green) or the side (C2). Each pitch says whether it shows the cost.</p></div>`
   + BOARD_OPTS.filter((o) => o.family === "C").map((o) => optBlock(o, "board")).join("")
@@ -940,4 +1127,44 @@ document.addEventListener("pointerdown", (e) => {
 for (const ev of ["pointerup", "pointercancel", "pointermove"]) document.addEventListener(ev, (e) => {
   if (lp && (ev !== "pointermove" || Math.abs(e.movementX) + Math.abs(e.movementY) > 6)) { clearTimeout(lp); lp = null; }
 });
+
+// ---------------------------------------------------------------- C1+ interactions
+(function () {
+  const board = document.getElementById("p-board");
+  if (!board) return;
+  const allBox = document.getElementById("p-all");
+  const apply = () => { for (const b of document.querySelectorAll(".p-board")) b.classList.toggle("all", allBox.checked); };
+  allBox.addEventListener("change", apply);
+  function syn(t) {
+    board.classList.toggle("synmode", !!t);
+    for (const cls of [...board.classList]) if (cls.startsWith("syn-")) board.classList.remove(cls);
+    if (t) board.classList.add("syn-" + t);
+    for (const r of board.querySelectorAll(".p-rail")) r.classList.toggle("on", r.dataset.trait === t);
+    for (const c of board.querySelectorAll(".c1p")) {
+      const hit = !!t && (c.dataset.traits || "").split(" ").includes(t);
+      c.classList.toggle("hit", hit);
+      for (const p of c.querySelectorAll(".p-trait")) p.classList.toggle("match", p.dataset.trait === t);
+    }
+  }
+  let pinned = "";
+  for (const r of board.querySelectorAll(".p-rail")) {
+    r.addEventListener("mouseenter", () => syn(r.dataset.trait));
+    r.addEventListener("mouseleave", () => syn(pinned));
+    r.addEventListener("focus", () => syn(r.dataset.trait));
+    r.addEventListener("blur", () => syn(pinned));
+    r.addEventListener("click", () => { pinned = pinned === r.dataset.trait ? "" : r.dataset.trait; syn(pinned); });
+  }
+  // Touch: hold a card to peek (released = quiet again); the long-press inspector still opens at 450 ms.
+  document.addEventListener("pointerdown", (e) => {
+    const c = e.target.closest && e.target.closest(".c1p");
+    if (c && e.pointerType !== "mouse") c.classList.add("peek");
+  });
+  for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => {
+    for (const c of document.querySelectorAll(".p-board .c1p.peek")) c.classList.remove("peek");
+  });
+  // The static "peek" state stays on in the states panel.
+  for (const c of document.querySelectorAll(".p-static .c1p")) if (c.classList.contains("peek")) c.dataset.keep = "1";
+  document.addEventListener("pointerup", () => { for (const c of document.querySelectorAll('.p-static .c1p[data-keep="1"]')) c.classList.add("peek"); });
+  for (const c of document.querySelectorAll(".p-static .c1p.hit")) for (const p of c.querySelectorAll(".p-trait")) p.classList.toggle("match", p.dataset.trait === "heavy");
+})();
 </script>
