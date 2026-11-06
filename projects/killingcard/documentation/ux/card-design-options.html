@@ -77,6 +77,8 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
 .opt[hidden] { display: none !important; }
 .opt-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 .opt-letter { font-family: var(--f-display); font-size: 34px; line-height: 1; color: var(--accent); min-width: 1.2em; }
+.subhead { border-top: 3px solid var(--accent); padding-top: 18px; }
+.subhead[hidden] { display: none !important; }
 .opt-title { font: 700 21px var(--f-cond); letter-spacing: .03em; text-transform: uppercase; }
 .opt-pitch { margin: 0; color: var(--muted); flex-basis: 100%; max-width: 72ch; }
 .pick { font: 600 12px var(--f-mono); letter-spacing: .08em; background: var(--good); color: var(--bg); padding: 2px 8px; border-radius: 3px; text-transform: uppercase; }
@@ -157,7 +159,7 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
   <section class="view" id="view-board" aria-labelledby="h-board">
     <div class="section-head">
       <h2 id="h-board">On the board</h2>
-      <p>Each banner slot is 228x57 px on the phone canvas (165x41 pt). The art is the calling card itself: no bands and no dimming on it. Each option moves the gameplay info to a different place. Under each board: the states (damaged, Recruit, selected, can't act, enemy Standard Issue) at 2x.</p>
+      <p><a href="#c-family" style="color:var(--accent)">Jump to the C family (pure calling card, C1-C5)</a> · <a href="#b-family" style="color:var(--accent)">the B family (side rails, B1-B4)</a>. Each banner slot is 228x57 px on the phone canvas (165x41 pt). The art is the calling card itself: no bands and no dimming on it. Each option moves the gameplay info to a different place. Under each board: the states (damaged, Recruit, selected, can't act, enemy Standard Issue) at 2x.</p>
     </div>
     <div class="options" id="opts-board"></div>
   </section>
@@ -172,7 +174,9 @@ section.view { display: grid; gap: 34px; margin-top: 22px; }
 
   <div class="reco" id="reco" style="margin-top:40px">
     <h2>Recommendation</h2>
-    <p><b>Board: B, side rails.</b> The calling card stays a true, untouched 4:1 banner; cost, trait and weapon ride a slim left rail, FP and Armor a right rail, both on solid ground, so the numbers read at a glance on any art (16-20 px plates, 11.6-14.5 pt). Abilities sit in one small tab on the art's top-right edge.</p>
+    <p><b>Pure calling card (C family): C1, corner badges.</b> The full art, uncropped, with exactly the head's anatomy in the four corners: trait top-left, keywords top-right, FP / Armor bottom-right on 20 px plates, and the cost bottom-left (drop it and nothing else moves). It shows every required piece at a readable size and keeps the middle 60% of the art clear. Runner-up: C2, border frame, if the board should look most like a framed calling card and can live without the cost. Pairs with <b>5, the C1 twin</b>, in the hand tray (the card you hold is the card that lands) and with <b>2, banner over panel</b>, at mulligan / reward / Codex size.</p>
+    <p><b>Side rails (B family): B4, one right rail,</b> is the best B: the art runs full height and nothing ever covers it, and all gameplay sits in one right-hand grid that cannot collide (2 traits, weapon, Recruit level, keywords, '+n' when full). It does <b>not</b> beat C1: it crops 30% of the calling card's width, while C1 keeps the whole calling card and still shows every required icon. Pick B4 over C1 only if a clean, uncovered art matters more than seeing the whole calling card. B4 pairs with 2 (banner over panel) everywhere else; a "B4 twin" for the tray would be the B4 banner plus a name plate, as option 4 is for B.</p>
+    <p><b>If the head keeps the A-D set: B, side rails.</b> The calling card stays a true, untouched 4:1 banner; cost, trait and weapon ride a slim left rail, FP and Armor a right rail, both on solid ground, so the numbers read at a glance on any art (16-20 px plates, 11.6-14.5 pt). Abilities sit in one small tab on the art's top-right edge.</p>
     <p><b>Everywhere else: 4, the board twin, in the hand tray; 2, banner over panel, at mulligan / reward / Codex size.</b> In the tray the card you hold is the exact banner that lands, plus a name plate, so there is nothing new to learn between hand and board, and 8 cards still fit. At the bigger sizes the full calling card sits on top and a solid panel carries the full name and the icons.</p>
     <p class="hint">Fonts: Barlow Condensed (names), Stardos Stencil (Standard Issue names and serial plates only), Share Tech Mono (numbers), as in the game. Art: our own public placeholder art (Killstreak card art), never the licensed MW3 set.</p>
   </div>
@@ -222,7 +226,7 @@ const U = {
 const u = (id, o = {}) => Object.assign({ id }, U[id], o);
 // The board: own and rival columns A, B, C; row 0 = front (nearest the objective).
 const BOARD = {
-  own: [[u("armored", { ar: 3, st: "damaged" }), u("grunt")], [u("breacher", { st: "selected" }), u("trooper"), u("marksman")], [u("gunner", { st: "cant" })]],
+  own: [[u("armored", { ar: 3, st: "damaged" }), u("grunt")], [u("breacher", { st: "selected" }), u("trooper"), u("marksman")], [u("gunner", { st: "cant" }), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" })]],
   rival: [[u("flanker")], [u("grunt"), u("medic")], [u("trooper", { ar: 1, st: "damaged" }), u("recon")]],
 };
 const HAND = [u("armored"), u("recon"), u("trooper"), u("ammo"), u("breacher"), u("gunner"), u("grunt")];
@@ -338,7 +342,7 @@ const BOARD_OPTS = [
     key: "B", title: "Side rails", best: true,
     pitch: "A true, untouched 4:1 calling card in the middle; a slim rail on each side holds the gameplay: cost and trait on the left, FP and Armor on the right.",
     pros: ["The art is the exact 4:1 calling card, never cropped or covered", "Plates on solid rails: 20 px numbers (14.5 pt), the most readable", "Left = card identity, right = combat: the head's 'gameplay on the right' rule"],
-    cons: ["Art shrinks to 172x43 (75% of the slot width)", "Abilities need a small tab on the art's top-right edge", "Weapon pip shares the left rail with the trait (stacked)"],
+    cons: ["Art shrinks to 172x43: 7 px lost above and below (the head's note)", "A second trait or the Recruit badge collides with the weapon pip in the left rail (the head's note; fixed in the B family)", "Abilities need a small tab on the art's top-right edge"],
     render(c, side) {
       const lw = 26, rw = 30, aw = BW - lw - rw, ah = Math.round(aw / 4), ay = Math.round((BH - ah) / 2);
       let h = `<div class="slotbox" style="left:0;top:0;width:${BW}px;height:${BH}px;background:${col("--g-gun")}"></div>`;
@@ -476,6 +480,244 @@ const ELSE_OPTS = [
   },
 ];
 
+
+// ---------------------------------------------------------------- C family: pure calling card (art fills 228x57)
+// A small dark backing for one badge only (never a band across the art).
+const chip = (html, extra = "") => `<span style="display:flex;gap:1px;align-items:center;padding:1px;background:rgba(10,12,14,.86);border-radius:3px;${extra}">${html}</span>`;
+function kwIcons(c, s, side) { return abilityPips(c, s, side).replace(/background:rgba\(10,12,14,\.9\);/g, "background:transparent;"); }
+function fullArt(c, side) { return artDiv(c, 0, 0, BW, BH, side); }
+function siEdge(c) { return (c.si || c.siArt) ? `<div class="slotbox" style="left:0;top:0;width:${BW}px;height:${BH}px;box-shadow:inset 0 0 0 1.5px ${col("--g-si")}"></div>` : ""; }
+const C_OPTS = [
+  {
+    key: "C1", title: "Corner badges", family: "C", best: true,
+    pitch: "The art fills the slot; four small badges own the four corners: trait (and weapon) top-left, keywords top-right, cost bottom-left, FP and Armor bottom-right. Cost: shown.",
+    pros: ["Exactly the head's anatomy, one concept per corner, on every card", "Each badge has its own small backing, so it reads on any art", "The middle 60% of the art is always clear"],
+    cons: ["Four dark patches per card: busier than C2 / C4", "Keyword badge grows with a third ability (it caps at 2 + a bolt)", "Cost badge adds a little noise; it can be dropped (C1 without cost = C1-)"],
+    render(c, side) {
+      let h = fullArt(c, side) + siEdge(c);
+      h += row(5, 2, chip(traitPip(c, 15) + clsPip(c, 15) + levelBadge(c, 15)));
+      const k = kwIcons(c, 15, side);
+      if (k) h += rrow(2, 2, chip(k));
+      h += row(5, BH - 21, chip(cost(c, 18)));
+      h += rrow(2, BH - 23, chip(fpPlate(c, side, 20) + arPlate(c, 19), "gap:2px"));
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "C2", title: "Border frame", family: "C",
+    pitch: "A thin frame in the side colour drawn into the card's own border, like a calling card frame: keywords sit in a notch in the top edge, FP and Armor in a notch in the right edge, the trait in the left edge. Cost: none.",
+    pros: ["Looks most like a real calling card: a frame, not stickers", "Side colour is the whole frame: you and rival read at a glance", "Two notches only; the art's centre and left are open"],
+    cons: ["No cost on the board (hand and inspector have it)", "Notches are 14-18 px: keywords at 10 pt", "The frame takes 2 px of the art's edge"],
+    render(c, side) {
+      const fc = (c.si || c.siArt) ? col("--g-si") : (isRival(c, side) ? col("--g-enemy") : col("--g-friend"));
+      let h = fullArt(c, side);
+      h += `<div class="slotbox" style="left:0;top:0;width:${BW}px;height:${BH}px;box-shadow:inset 0 0 0 2px ${fc}"></div>`;
+      const k = kwIcons(c, 14, side);
+      if (k) h += rrow(36, 0, k, 1, `padding:0 3px 1px;background:${col("--g-gun")};border:2px solid ${fc};border-top:0;border-radius:0 0 4px 4px`);
+      h += `<div class="g" style="right:0;top:6px;width:30px;height:${BH - 12}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:${col("--g-gun")};border:2px solid ${fc};border-right:0;border-radius:4px 0 0 4px">${fpPlate(c, side, 19)}${arPlate(c, 18)}</div>`;
+      h += row(0, BH - 22, traitPip(c, 14) + levelBadge(c, 14), 1, `padding:2px 3px 2px 4px;background:${col("--g-gun")};border:2px solid ${fc};border-left:0;border-radius:0 4px 4px 0`);
+      h += outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "C3", title: "Cut-corner tabs", family: "C",
+    pitch: "The art is untouched; tabs sit half outside it, in the column gutters: the trait tab on the left edge, the FP / Armor tab on the right edge, keywords in a cut top-right corner. Cost: none.",
+    pros: ["The art is covered least of all: tabs are half in the gutter", "Big stat numbers (20 px) on a tab that can't hide art", "Clear silhouette: a card with two side tabs"],
+    cons: ["Needs the 14 px column gutters (7 px each side); the desktop 20 px gutter is fine", "Neighbouring tabs in one gutter sit 0-2 px apart", "No cost on the board"],
+    render(c, side) {
+      let h = fullArt(c, side) + siEdge(c);
+      h += `<div class="g" style="left:-8px;top:${BH / 2 - 17}px;width:18px;height:34px;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};clip-path:polygon(0 4px,4px 0,100% 0,100% 100%,4px 100%,0 calc(100% - 4px))">${traitPip(c, 14)}${c.level === 0 ? levelBadge(c, 14) : clsPip(c, 14)}</div>`;
+      h += `<div class="g" style="right:-8px;top:2px;width:24px;height:${BH - 4}px;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};clip-path:polygon(0 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%)">${fpPlate(c, side, 20)}${arPlate(c, 19)}</div>`;
+      const k = kwIcons(c, 14, side);
+      if (k) h += rrow(18, 0, k, 1, `padding:1px 3px 1px 10px;background:rgba(10,12,14,.88);clip-path:polygon(0 0,100% 0,100% 100%,9px 100%)`);
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "C4", title: "Bottom micro-bar", family: "C",
+    pitch: "One translucent 11 px bar hugs the bottom edge: cost, trait and keywords along it, and a stats pill rises out of it at the right. The top 80% of the art is untouched. Cost: shown.",
+    pros: ["The top 46 px of every card is pure art: the board reads as a wall of calling cards", "All info in one line, left to right, easy to scan", "Lowest-noise option that still shows keywords"],
+    cons: ["Icons along the bar are 11 px (8 pt): readable only as shapes", "Locked keywords and the serial are tiny", "A bottom band, even if thin and translucent"],
+    render(c, side) {
+      let h = fullArt(c, side) + siEdge(c);
+      h += `<div class="slotbox" style="left:0;top:${BH - 11}px;width:${BW}px;height:11px;background:rgba(10,12,14,.66)"></div>`;
+      h += row(5, BH - 11, `<span class="mono" style="font-size:11px;line-height:11px;color:${col("--g-amber")}">${c.cost}</span>` + traitPip(c, 10) + levelBadge(c, 10) + kwIcons(c, 10, side), 3);
+      h += rrow(2, BH - 22, chip(fpPlate(c, side, 19) + arPlate(c, 18), "gap:2px;border-radius:4px 4px 0 0"));
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "C5", title: "Trait medal + stat chevrons", family: "C",
+    pitch: "A round trait medal pinned on the top-left corner and two stat chevrons (FP, then Armor) hanging on the right border, pointing into the card; keywords line up under the chevrons' tips. Cost: none.",
+    pros: ["Strong, game-like silhouette: medal left, chevrons right", "Gameplay all on the right (stats + keywords)", "The trait reads as a badge of the calling card's family"],
+    cons: ["The chevrons cover the art's right 14%", "Two new shapes (medal, chevron) next to the plates used elsewhere", "No cost on the board"],
+    render(c, side) {
+      let h = fullArt(c, side) + siEdge(c);
+      const r = isRival(c, side);
+      const plateBg = r ? "#5A1A1C" : "#14524D", edge = r ? col("--g-enemy") : col("--g-friend");
+      const chev = (html, y, bg, ed) => `<div class="g" style="right:0;top:${y}px;width:34px;height:26px;display:grid;place-items:center;padding-left:6px;background:${bg};border-top:2px solid ${ed};border-bottom:2px solid ${ed};clip-path:polygon(9px 0,100% 0,100% 100%,9px 100%,0 50%)">${html}</div>`;
+      h += chev(`<span class="mono" style="font-size:18px;color:${c.up ? col("--g-up") : "#fff"}">${c.fp}</span>`, 1, plateBg, edge);
+      const dmg = c.ar < c.max;
+      h += chev(`<span class="mono" style="font-size:18px;color:${dmg ? col("--g-dmg") : "#fff"}">${c.ar}</span>`, 29, dmg ? "#4A3412" : "#2E3439", dmg ? col("--g-dmg") : "#B9C2C9");
+      const k = kwIcons(c, 14, side);
+      if (k) h += rrow(36, 2, chip(k));
+      const t = c.trait ? TRAITS[c.trait] : null;
+      const medal = t ? `<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:rgba(10,12,14,.9);border:2px solid ${col(t[1])}">${svg(c.trait, col(t[1]), 15, 2.4)}</span>`
+        : `<span style="display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:rgba(10,12,14,.9);border:1.5px dashed ${col("--g-lock")}"></span>`;
+      h += row(5, 2, medal + (c.level === 0 ? levelBadge(c, 13) : ""), 2);
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+];
+BOARD_OPTS.push(...C_OPTS);
+
+// A fifth everywhere-else option: the C1 twin.
+ELSE_OPTS.push({
+  key: "5", title: "C1 twin + name plate", best: false,
+  pitch: "Option 4's idea for the C family: the hand card is the C1 corner-badge banner, full art, with a name plate under it.",
+  pros: ["Pairs with board C1: the card you hold is the card that lands", "Full calling card art in the tray, untouched", "177x70: 8 cards fit, names whole"],
+  cons: ["Corner badges are small at tray scale (0.78x)", "Same art size as 4 (177x44)", "Only makes sense if the board is C1"],
+  tray: { w: 177, h: 70, cols: 2 }, big: { k: 1.45 }, pb: [0.5, 0.3],
+  render(c, side, W = 177, H = 70) {
+    const k = W / BW, bh = Math.round(BH * k);
+    let h = `<div class="slotbox" style="left:0;top:0;width:${W}px;height:${H}px;background:${col("--g-gun")};border:1px solid ${c.si || c.siArt ? col("--g-si") : col("--g-edge")};border-radius:4px;overflow:hidden"></div>`;
+    h += `<div class="g" style="left:0;top:0;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${C_OPTS[0].render(Object.assign({}, c, { st: c.st === "selected" ? "" : c.st }), side)}</div>`;
+    h += `<div class="slotbox" style="left:0;top:${bh}px;width:${W}px;height:${H - bh}px;background:${col("--g-panel")}"></div>`;
+    h += nameEl(c, 6, bh + 1, W - 12, 15, { min: 13 });
+    h += outline(c, side, 0, 0, W, H);
+    return h;
+  },
+});
+
+
+// ---------------------------------------------------------------- B family: side rails, art at full height
+// Items a rail may hold. Every item is one cell (or `span` cells) of a fixed grid, so nothing can
+// overlap: cost, each trait (a Doctrine trait gets a white corner notch), weapon, Recruit level,
+// keywords (locked ones greyed with the padlock), the Standard Issue serial (2 cells).
+function traitList(c) { return c.traits || (c.trait ? [c.trait] : []); }
+function traitCell(c, t, s) {
+  const tr = TRAITS[t];
+  const notch = c.doctrine === t ? `<span style="position:absolute;right:-1px;top:-1px;width:0;height:0;border-left:${Math.round(s * .4)}px solid transparent;border-top:${Math.round(s * .4)}px solid #fff"></span>` : "";
+  return `<span title="${tr[0]}${c.doctrine === t ? " (Doctrine)" : ""}" style="position:relative;display:grid;place-items:center;width:${s}px;height:${s}px;background:rgba(10,12,14,.9);border:1px solid ${col(tr[1])}">${svg(t, col(tr[1]), s - 4, 2.4)}${notch}</span>`;
+}
+function railItems(c, side, s, groups) {
+  const out = [];
+  const add = (html, span = 1) => out.push({ html, span });
+  for (const g of groups) {
+    if (g === "cost") add(cost(c, s + 2));
+    if (g === "traits") { const tl = traitList(c); if (tl.length) tl.forEach((t) => add(traitCell(c, t, s))); else if (c.si || c.siArt) add(traitPip(c, s)); }
+    if (g === "weapon" && c.cls) add(clsPip(c, s));
+    if (g === "level" && c.level === 0) add(levelBadge(c, s));
+    if (g === "kws") {
+      for (const k of c.kws || []) add(`<span title="${KW[k][0]}" style="display:grid;place-items:center;width:${s}px;height:${s}px;background:rgba(10,12,14,.9);border:1px solid rgba(255,255,255,.2)">${svg(k, col("--g-amber"), s - 4)}</span>`);
+      for (const k of c.locked || []) add(`<span title="${KW[k][0]} (locked)" style="position:relative;display:grid;place-items:center;width:${s}px;height:${s}px;background:rgba(10,12,14,.9);border:1px solid ${col("--g-lock")}">${svg(k, "rgba(126,136,144,.55)", s - 4)}<span style="position:absolute;right:-1px;bottom:-1px">${svg("lock", "#C2C9CF", Math.round(s * .5), 2.6)}</span></span>`);
+      if (c.tactic) add(`<span style="display:grid;place-items:center;width:${s}px;height:${s}px;background:rgba(10,12,14,.9);border:1px solid rgba(255,255,255,.2)">${svg("tactic", col("--g-amber"), s - 4)}</span>`);
+    }
+    if (g === "serial" && c.si) add(serial(c, side, s), 2);
+  }
+  return out;
+}
+// Lays items out on a cols x rows grid of `s` px cells (gap 2) at (x, y); the last cell turns into
+// "+n" when there are more items than cells. Returns the HTML.
+function railGrid(items, x, y, cols, rows, s, gap = 2) {
+  let h = "", cell = 0;
+  const cap = cols * rows;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.span > cols) continue;
+    if (it.span > 1 && cell % cols + it.span > cols) cell += cols - (cell % cols);
+    const left = items.length - i;
+    if (cell + it.span > cap || (cell === cap - 1 && left > 1)) {
+      if (cell < cap) h += `<div class="g mono" style="left:${x + (cell % cols) * (s + gap)}px;top:${y + Math.floor(cell / cols) * (s + gap)}px;width:${s}px;height:${s}px;display:grid;place-items:center;font-size:${Math.round(s * .62)}px;background:rgba(10,12,14,.9);color:${col("--g-amber")};border:1px solid rgba(255,255,255,.2)">+${left}</div>`;
+      break;
+    }
+    h += `<div class="g" style="left:${x + (cell % cols) * (s + gap)}px;top:${y + Math.floor(cell / cols) * (s + gap)}px">${it.html}</div>`;
+    cell += it.span;
+  }
+  return h;
+}
+const statCol = (c, side, x, w, s = 22) => `<div class="g" style="left:${x}px;top:0;width:${w}px;height:${BH}px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center">${fpPlate(c, side, s)}${arPlate(c, s - 1)}</div>`;
+const railBg = (x, w, a = 1) => `<div class="slotbox" style="left:${x}px;top:0;width:${w}px;height:${BH}px;background:${a < 1 ? `rgba(18,22,26,${a})` : col("--g-gun")}"></div>`;
+const B_OPTS = [
+  {
+    key: "B1", title: "Narrow rails, full height", family: "B",
+    pitch: "Two narrow solid rails (20 px left, 26 px right) and the art at the full 57 px height between them. Left rail: cost over up to two traits. Right rail: FP over Armor. Keywords, weapon and level sit in two small corner chips on the art. Art 182x57 (3.2:1, the 4:1 calling card loses 20% of its width, nothing above or below).",
+    pros: ["No space lost above or below: the art is full height", "The rails are fixed grids: a second trait just takes the next cell", "Narrowest rails, so the most art of the B family"],
+    cons: ["Keywords, weapon and level still sit on the art's corners (small chips)", "20 px rail fits one 15 px icon column: a third trait would need '+1'", "The calling card is cropped 20% (10% each side)"],
+    render(c, side) {
+      const lw = 20, rw = 26;
+      let h = artDiv(c, lw, 0, BW - lw - rw, BH, side) + railBg(0, lw) + railBg(BW - rw, rw);
+      h += railGrid(railItems(c, side, 15, ["cost", "traits"]), 2, 2, 1, 3, 15, 3);
+      h += statCol(c, side, BW - rw, rw, 21);
+      const k = railItems(c, side, 14, ["kws", "serial"]).map((i) => i.html).join("");
+      if (k) h += rrow(rw + 2, 2, chip(k));
+      const lw2 = railItems(c, side, 14, ["weapon", "level"]).map((i) => i.html).join("");
+      if (lw2) h += row(lw + 2, BH - 17, chip(lw2));
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "B2", title: "Grid rails", family: "B",
+    pitch: "A 36 px left rail that is a 2-column grid (cost; trait, trait; weapon, level) and a 28 px right rail with FP over Armor; keywords in one tab on the art's top-right. Art 164x57 (2.9:1, the calling card loses 28% of its width).",
+    pros: ["Two traits, weapon and Recruit level all fit the left rail side by side: no collision possible", "Rails are solid, so every icon reads on any art", "Closest to the original B (same left / right split)"],
+    cons: ["The widest left rail: the art crops 28% (14% each side)", "Keywords still need a tab over the art's top-right", "Two rails + a tab: the busiest B"],
+    render(c, side) {
+      const lw = 36, rw = 28;
+      let h = artDiv(c, lw, 0, BW - lw - rw, BH, side) + railBg(0, lw) + railBg(BW - rw, rw);
+      h += row(3, 2, cost(c, 17));
+      h += railGrid(railItems(c, side, 15, ["traits", "weapon", "level", "serial"]), 2, 21, 2, 2, 15, 2);
+      h += statCol(c, side, BW - rw, rw, 21);
+      const k = railItems(c, side, 14, ["kws"]).map((i) => i.html).join("");
+      if (k) h += rrow(rw + 2, 2, chip(k));
+      h += spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "B3", title: "Glass rails on full art", family: "B",
+    pitch: "The full 4:1 calling card fills the slot (228x57, uncropped); the two rails are translucent glass laid over its left and right ends, with the same grids as B2 and the keywords inside the right rail's top. Art 228x57 (4:1 whole; the outer 16% / 13% sit under glass).",
+    pros: ["The calling card is whole: no crop and no lost space", "Rails keep their grid: traits, weapon, level and keywords never collide", "Keywords live in a rail, nothing floats over the art's middle"],
+    cons: ["The art's two ends are behind 72% glass", "Glass rails read a little less crisply than solid ones on bright art", "Right rail is 48 px wide (keywords + stats)"],
+    render(c, side) {
+      const lw = 36, rw = 48;
+      let h = artDiv(c, 0, 0, BW, BH, side) + railBg(0, lw, .72) + railBg(BW - rw, rw, .72);
+      h += row(3, 2, cost(c, 17));
+      h += railGrid(railItems(c, side, 15, ["traits", "weapon", "level", "serial"]), 2, 21, 2, 2, 15, 2);
+      h += railGrid(railItems(c, side, 15, ["kws"]), BW - rw + 2, 3, 1, 3, 15, 3);
+      h += statCol(c, side, BW - rw + 17, rw - 17, 21);
+      h += siEdge(c) + spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+  {
+    key: "B4", title: "One right rail", family: "B", bbest: true,
+    pitch: "The art sits flush left at full height; ONE solid right rail carries all the gameplay: a 2x3 icon grid (cost, traits, weapon, level, keywords) and FP over Armor beside it. Nothing ever covers the art. Art 160x57 (2.8:1, the calling card loses 30% of its width).",
+    pros: ["Nothing at all on the art: it is clean edge to edge, top to bottom", "All gameplay on the right, in one place, as one grid: no collision, '+n' when full", "Easiest to scan down a column: every number at the same x"],
+    cons: ["The biggest crop of the B family (30%)", "6 cells: cost + 2 traits + weapon + level + 2 keywords shows '+1'", "The card reads less as 'a calling card' than C1"],
+    render(c, side) {
+      const rw = 68, aw = BW - rw;
+      let h = artDiv(c, 4, 0, aw - 4, BH, side) + railBg(aw, rw);
+      h += `<div class="slotbox" style="left:${aw}px;top:0;width:1px;height:${BH}px;background:${col("--g-edge")}"></div>`;
+      h += railGrid(railItems(c, side, 15, ["cost", "traits", "weapon", "level", "kws", "serial"]), aw + 3, 3, 2, 3, 15, 2);
+      h += statCol(c, side, aw + 36, rw - 36, 21);
+      h += siEdge(c) + spine(c, side, 0, 0, BH) + outline(c, side, 0, 0, BW, BH);
+      return h;
+    },
+  },
+];
+BOARD_OPTS.push(...B_OPTS);
+const STATES_B = STATES.concat([
+  ["2 traits · Heavy Doctrine", u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" })],
+  ["Recruit · 2 locked", u("recon", { locked: ["deploy", "spotter"], trait: "specops" })],
+  ["Standard Issue · serial", u("trooper")],
+]);
+
 // ---------------------------------------------------------------- frames
 let uid = 0;
 function card(c, side, w, h, body) {
@@ -510,7 +752,7 @@ function boardFrame(opt) {
     const ctl = ["RIVAL", "YOURS", "EVEN"][z], cc = [col("--g-enemy"), col("--g-friend"), col("--g-muted")][z];
     s += `<div class="g" style="left:${colX[z]}px;top:244px;width:228px;height:52px;background:${col("--g-gun")};border:1px solid ${col("--g-edge")};display:flex;align-items:center;gap:10px;padding:0 10px"><span class="mono" style="display:grid;place-items:center;width:32px;height:32px;border:2px solid ${cc};border-radius:${z === 1 ? "50%" : "2px"};color:${cc};font-size:18px">${"ABC"[z]}</span><span class="mono" style="font-size:14px;line-height:1.1;color:${col("--g-muted")}">${["CLOSE", "LONG", "MID"][z]}<br><span style="color:${cc}">${ctl}</span></span></div>`;
   }
-  s += trayFrameInner(800, 4, ELSE_OPTS[3], 6, "own");
+  s += trayFrameInner(800, 4, opt.family === "C" ? ELSE_OPTS[4] : ELSE_OPTS[3], 6, "own");
   return s;
 }
 function trayFrameInner(x0, y0, opt, n, side) {
@@ -530,10 +772,12 @@ function trayFrameInner(x0, y0, opt, n, side) {
   s += `<div class="g" style="left:${x0 + 117}px;top:${y0 + Hh - 68}px;width:241px;height:64px;border-radius:4px;background:${col("--g-amber")};display:grid;place-items:center;font:700 22px var(--f-cond);letter-spacing:.08em;color:#1A1305">READY</div>`;
   return s;
 }
+const statesList = (opt) => opt.family === "B" ? STATES_B : STATES;
+const statesH = (opt) => 14 + Math.ceil(statesList(opt).length / 3) * (BH * 2 + 50) + 8;
 function statesFrame(opt) {
   let s = "";
   const k = 2, cw = BW * k, gx = 16, gy = 44;
-  STATES.forEach(([label, c], i) => {
+  statesList(opt).forEach(([label, c], i) => {
     const x = 16 + (i % 3) * (cw + gx), y = 14 + Math.floor(i / 3) * (BH * k + gy + 6);
     s += `<div class="g mono" style="left:${x}px;top:${y}px;font-size:16px;letter-spacing:.06em;color:${col("--g-muted")}">${label.toUpperCase()}</div>`;
     s += `<div class="g" style="left:${x}px;top:${y + 24}px;width:${BW}px;height:${BH}px;transform:scale(${k});transform-origin:0 0">${card(c, c.side || "own", BW, BH, opt.render(c, c.side || "own"))}</div>`;
@@ -565,16 +809,20 @@ function fitBox(w, h, inner, label) {
 }
 function optBlock(opt, kind) {
   const frames = kind === "board"
-    ? fitBox(1168, 540, boardFrame(opt), `Phone 844x390 · board option ${opt.key} · hand tray shown with option 4`) + fitBox(16 * 4 + BW * 2 * 3, 14 + 2 * (BH * 2 + 50) + 8, statesFrame(opt), "States at 2x")
+    ? fitBox(1168, 540, boardFrame(opt), `Phone 844x390 · board option ${opt.key} · hand tray shown with option ${opt.family === "C" ? 5 : 4}`) + fitBox(16 * 4 + BW * 2 * 3, statesH(opt), statesFrame(opt), "States at 2x")
     : `<div class="frames two">${fitBox(378, 540, trayOnly(opt), "Phone hand tray (362 px)")}${fitBox(1168, 540, mulliganFrame(opt), "Phone 844x390 · mulligan / reward size")}</div>`;
   return `<article class="opt" id="opt-${opt.key}" data-key="${opt.key}">
-    <div class="opt-head"><span class="opt-letter">${opt.key}</span><span class="opt-title">${opt.title}</span>${opt.best ? '<span class="pick">Recommended</span>' : ""}<p class="opt-pitch">${opt.pitch}</p></div>
+    <div class="opt-head"><span class="opt-letter">${opt.key}</span><span class="opt-title">${opt.title}</span>${opt.best ? '<span class="pick">Recommended</span>' : ""}${opt.bbest ? '<span class="pick">Best of B</span>' : ""}<p class="opt-pitch">${opt.pitch}</p></div>
     <div class="frames">${frames}</div>
     <div class="pc"><div class="pro"><h3>Pros</h3><ul>${opt.pros.map((p) => `<li>${p}</li>`).join("")}</ul></div><div class="con"><h3>Cons</h3><ul>${opt.cons.map((p) => `<li>${p}</li>`).join("")}</ul></div></div>
   </article>`;
 }
 
-document.getElementById("opts-board").innerHTML = BOARD_OPTS.map((o) => optBlock(o, "board")).join("");
+document.getElementById("opts-board").innerHTML = BOARD_OPTS.filter((o) => !o.family).map((o) => optBlock(o, "board")).join("")
+  + `<div class="subhead section-head" id="c-family"><h2>C family · pure calling card</h2><p>The head: "I want more version of C, pure calling Card ... showcase full art and add only important info in corners or along the borders. We need stats, icons for keyword, traits. Cost is optionnal." In every C variant the art fills the whole 228x57 slot, uncropped and undimmed; only a 1.5-2 px edge marks Standard Issue (grey-green) or the side (C2). Each pitch says whether it shows the cost.</p></div>`
+  + BOARD_OPTS.filter((o) => o.family === "C").map((o) => optBlock(o, "board")).join("")
+  + `<div class="subhead section-head" id="b-family"><h2>B family · side rails</h2><p>The head: "The B Side rails also have potential, but the design shown in the documents has problems. There is some weird overlap when we have multiple traits. We also lose some space above and below the calling card which is annoying." Fixes: in every B variant the art fills the full 57 px height, and each rail is a fixed grid of cells (one item per cell, '+n' when full), so two traits, the weapon, the Recruit level and locked keywords can never collide. The states add a 2-trait card (Heavy Doctrine + Undead), a Recruit with 2 locked keywords, and a Standard Issue serial. The original B stays above for comparison; each pitch gives the art's visible size and crop.</p></div>`
+  + BOARD_OPTS.filter((o) => o.family === "B").map((o) => optBlock(o, "board")).join("");
 document.getElementById("opts-elsewhere").innerHTML = ELSE_OPTS.map((o) => optBlock(o, "else")).join("");
 
 // ---------------------------------------------------------------- scaling + name fitting
@@ -626,6 +874,7 @@ function applyCompare() {
   const on = cmpOn.checked;
   box.classList.toggle("compare", on);
   cmpA.disabled = cmpB.disabled = !on;
+  for (const sh of box.querySelectorAll(".subhead")) sh.hidden = on;
   for (const a of box.querySelectorAll(".opt")) {
     a.hidden = on && a.dataset.key !== cmpA.value && a.dataset.key !== cmpB.value;
     a.style.order = on ? (a.dataset.key === cmpA.value ? 0 : 1) : "";
