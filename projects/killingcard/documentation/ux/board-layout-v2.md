@@ -422,3 +422,69 @@ Screenshots (390x844, public art only) are in `qa/screenshots/portrait/`: the ma
 - **Tactics:** the T1 cut corner no longer shortens the title slot, so BREACH AND CLEAR fits at 172 px.
 - **Test:** `test_portrait::test_portrait_cards_show_whole_names_and_lore` checks at 390x844 and 360x780 that no Y2+ title or lore line is cut on these screens: starter squad, Codex, Supply Drop, every card at the 172 px Muster out / Salvage width, mulligan, hand fan. A 124 px probe confirms the check catches a cut name.
 - **Totals:** 547 tests pass. Screenshots re-shot, including `10_starter_squad.png`.
+
+## Implementation notes (kc-readability, UI/UX Agent, 2026-11-06)
+The head, playing on an iPhone in landscape: the hand cards were too hard to read, the cost and stat
+icons and numbers needed to be bigger, the font could be better, the Supply counter should use the
+cards' cost iconography, and the icons needed a dark backing over the card art.
+
+- **Number face.** All card numbers (cost, FP, Armor, on every card size) and the Supply counter use
+  Oswald Bold with tabular digits (`assets/fonts/card_numbers_oswald.tres`, a FontVariation of
+  `Oswald-Variable.ttf`, wght 700, tnum). Its licence is in `OFL-Oswald.txt`. Numbers drawn over art
+  have a 4 px dark outline (`CardLook.NUM_OUTLINE`). The runner-up was Barlow Condensed ExtraBold
+  (`card_numbers_barlow.tres`); see `qa/screenshots/readability/font_candidates.png`.
+- **Backings.** Each corner badge group sits on its own soft dark plate: `CardLook.BACKING`, 80%
+  near-black, rounded, with a soft shadow edge. The groups are the cost (with the level and class
+  when peeked), the stats and the trait. A plate is never a band across the card, so the art stays
+  visible between the badges. BannerView records the plates it drew in `backing_rects` for the tests.
+  The trait plate is drawn only when a trait exists.
+- **Hand X1 at 844x390** (1168x540 canvas, 0.722 pt/px):
+
+  | Badge | Before | After | Digits after |
+  |---|---|---|---|
+  | Cost hex | about 15 px | 27 px (`HAND_COST_SCALE`) | about 21 px, 15 pt |
+  | FP / Armor | 20 / 19 px | 32 px, drawn by the card (`BannerCard.stat_rects`) | about 20–22 px, 14–16 pt |
+
+  - The ability row shrinks to 14 px icons (`HAND_ABILITY_PX`) and sits above the stats.
+  - The name keeps the full plate width.
+  - Narrow cards, when the stats would drop below 24 px (the iPhone SE / 16:9 tray), switch to a
+    narrow mode:
+    - the abilities, level coin and weapon pill are hidden (all still in inspect);
+    - the stats take the banner height;
+    - the name wraps to two lines.
+- **Board banners (C1+).** Badge sizes at k = banner height / 57:
+
+  | Badge | Before | After |
+  |---|---|---|
+  | Reticle | 26k | 30k |
+  | Armor | 25k × 26k | 29k × 30k |
+  | Cost | 20k | 24k |
+  | Ability icons | 21k | 20k |
+
+  The board's FP / Armor digits go from about 16 px to about 20 px (14.4 pt).
+- **Operator card (O2) and Y2+ cards.**
+  - The O2 card ink gets a 26 px cost hex and 32 / 31 px stats, on backings.
+  - The CardView number labels go from 17 to 21 px.
+  - A number label's slot is its badge, grown and centred to Oswald's line height, because Oswald's
+    line box is taller than the badge but its digits are not (`CardView._num_slot`).
+- **Supply counter.** The pips are the cards' cost hex: amber while available, a dark hex with an
+  amber outline once spent. This applies in the landscape HUD and in the portrait Supply row.
+  - The value is in the number face at 22 px, with an outline.
+  - The pip row keeps its old 18 / 20 px height, and the stacked gap is 2 px, so the box does not
+    grow into the hand or the killstreak row.
+  - Long press / right click still opens the Supply inspect.
+- **Tests and screenshots.**
+  - `tests/test_readability.gd` checks:
+    - the number face and its licence;
+    - the hand and board digit sizes in pt, with a 13 pt floor at 844x390 and 11 pt at 667x375;
+    - that the backings are plates, not bands;
+    - the Supply hex pips and number face;
+    - the Y2+ labels.
+  - Screenshots are in `qa/screenshots/readability/`:
+    - before / after at 844 and 667: full screen, tray at 2x, board at 2x, Supply at 3x;
+    - after only, for portrait and desktop;
+    - the font candidates sheet.
+  - Shot tool: `tests/tools/shot_readability.gd`.
+- **Open questions.**
+  - On the 16:9 SE the hand digits reach about 11 pt, not 13. The tray is narrow there.
+  - The hand abilities shrink to 14 px. The alternative is to move them to inspect only.
