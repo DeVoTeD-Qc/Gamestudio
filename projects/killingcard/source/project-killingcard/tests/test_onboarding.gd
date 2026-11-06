@@ -186,13 +186,15 @@ func test_squads_along_the_ladder() -> void:
 			heavy += 1
 	assert_eq([s2.deck.size(), heavy], [18, 3], "M2: 18 cards with 3 Heavy Recruit Gunners")
 	var s3: SideSetup = SideSetup.from_squad(md[2].squad, md[2])
-	# kc-syn-tune (synergy-system.md §12): M3 = the Rusher deck with its Breach and Clear swapped
-	# for a Standard Issue Sergeant; M4 = the Anchor deck with 2 Demolitions + the Marksman swapped
-	# for 2 Armored Troopers + a Sergeant.
+	# kc-syn-tune / kc-syn-tune2 (synergy-system.md §12): M3 = the Rusher's units with its tactics
+	# and Equipment (Breach and Clear, 2 Flank Routes, Callout, Tripwire) swapped for Standard Issue
+	# (3 Troopers, a Grunt, a Sergeant); M4 = the Anchor deck with 2 Demolitions + the Marksman
+	# swapped for 2 Armored Troopers + a Sergeant.
 	assert_eq(s3.deck.size(), 18, "M3: 18 cards")
 	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"si_sergeant"),
 			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 1, 6],
 			"M3: Rusher deck, Breach and Clear swapped for a Sergeant")
+	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 3], "M3: Flank Routes swapped for Troopers")
 	var vanguard: int = 0
 	for i: int in s3.deck.size():
 		if s3.deck[i].is_unit():

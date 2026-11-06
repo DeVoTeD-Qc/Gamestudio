@@ -176,7 +176,7 @@ func test_specops_heavy_undead_tiers() -> void:
 	var s1: RulesUnit = F.place(m, P, _u("s1", 2, 3, &"", &"specops"), L)
 	F.place(m, P, _plain("pad"), M)
 	var s2: RulesUnit = F.place(m, P, _u("s2", 2, 3, &"", &"specops"), M)
-	assert_eq([m.firepower_of(s1), m.firepower_of(s2)], [3, 3], "Spec Ops 2: +1 FP to all Spec Ops (v1.1)")
+	assert_eq([m.firepower_of(s1), m.firepower_of(s2)], [3, 2], "Spec Ops 2: +1 FP to Spec Ops in row 1 only (v1.3, kc-syn-tune2)")
 	assert_false(m.has_first_shot(s1), "no First Shot at 2")
 	var h: MatchState = _match()
 	var h1: RulesUnit = F.place(h, P, _u("h1", 2, 6, &"", &"heavy"), L)

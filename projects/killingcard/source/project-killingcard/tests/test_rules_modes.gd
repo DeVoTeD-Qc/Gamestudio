@@ -220,7 +220,7 @@ func test_firefight_operator_down_counts_and_both_operators_down_same_step() -> 
 	assert_eq(m.result, &"", "1-1: no winner")
 
 
-## Lets any loadout item be used (the Streak Tray / cooldowns are p05's, tested there).
+## Lets any loadout item be used (the Streak Tray is p05's, tested there).
 class AnyItemHooks extends MatchHooks:
 	func can_use_item(_state, _side: int, _item: LoadoutItem) -> String:
 		return ""

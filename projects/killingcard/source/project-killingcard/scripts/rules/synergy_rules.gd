@@ -55,12 +55,12 @@ const OVERWATCH_COVER: int = 1
 ## Set thresholds.
 const TIER2: int = 2
 const TIER3: int = 3
-## Trait bonuses (v1.2, kc-art-traits §5, head T3): [tier 2, tier 3], each {fp, cover, fs, heal,
+## Trait bonuses (v1.3: kc-art-traits §5, head T3; kc-syn-tune2 Spec Ops tier 2 row 1 only): [tier 2, tier 3], each {fp, cover, fs, heal,
 ## where}. where: "all" or "front" (row 1 only). Tier 3 includes tier 2. An empty entry = no bonus at
 ## that tier (Heavy is a "full crew" set: nothing at 2, Cover +1 and +1 FP at 3).
 const TRAIT_BONUS: Dictionary = {
 	VANGUARD: [{"fp": 1, "where": "front"}, {"cover": 1, "where": "all"}],
-	SPECOPS: [{"fp": 1, "where": "all"}, {"fs": true, "where": "all"}],
+	SPECOPS: [{"fp": 1, "where": "front"}, {"fs": true, "where": "all"}],  # v1.3 (kc-syn-tune2): tier 2 row 1 only
 	HEAVY: [{}, {"cover": 1, "fp": 1, "where": "all"}],
 	UNDEAD: [{"heal": 1, "where": "all"}, {"fp": 1, "cover": 1, "where": "all"}],
 }
@@ -69,7 +69,7 @@ static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
 ## One-line tier texts for callouts / the inspector.
 const TIER_TEXT: Dictionary = {
 	VANGUARD: ["Vanguard in row 1 get +1 FP", "Vanguard get Cover +1"],
-	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops have First Shot"],
+	SPECOPS: ["Spec Ops in row 1 get +1 FP", "Spec Ops have First Shot"],
 	HEAVY: ["No bonus yet: Heavy needs 3", "Heavy units get Cover +1 and +1 FP"],
 	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
 }

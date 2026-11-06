@@ -398,7 +398,7 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 
 ---
 
-## 12. Tuning v1.2 (done)
+## 12. Tuning v1.2 (done) and v1.3 (after the loadout cut, §12.5b)
 *Sr Game Designer Agent · 2026-11-06 · board task kc-syn-tune · resumed after the firefight order (kc-fight) and the onboarding ladder (6d17ea1) landed · **Status: done, not committed** (the lead commits). Changed: `data/run_config.tres` (the M3 and M4 crews), `scripts/rules/mode_rules.gd` (an initiative tie-rule switch for balance tools; the shipped rule is unchanged), the new tool `tests/tools/tune_check.gd`, and tests `test_rules_modes.gd` (tie rules) and `test_onboarding.gd` (the M3 / M4 decks). No trait bonus, card, squad file, UI or loadout file was changed.*
 *§12.7–12.8 below are the paused pass on the old deck model (d154893), kept for the record.*
 
@@ -448,16 +448,42 @@ Both sides commit face down and their cards are revealed together. There is no f
 - The other ~2 points of seat 0 on late decks are the sim's turn order (the player-seat AI commits after the enemy AI; with the player AI first: 50.1%). A human gets this too, by design: the enemy commits first so your red dots are complete (Ruling 13).
 - **Recommendation: keep "ties → you".** It is in band (51–54%), it is the shortest sentence for a player ("Behind on score? You resolve first. Tied? You do."), and in a PvE game the edge goes to the player. After the loadout cut it is worth nothing in the mirror anyway. "Ties swap" is ready behind `ModeRules.tiebreak` (`&"other"` / `&"coin"`; tested in `test_rules_modes.gd::test_initiative_tie_rules`) if a PvP mode ever needs it.
 
-### 12.5 Depends on the loadout cut (kc-loadout-cut, in progress)
+### 12.5 Depends on the loadout cut (kc-loadout-cut; landed in 1bf3b22, re-tuned in §12.5b)
 The head removed the Frag Grenade, Flashbang and secondary. Every run number above uses the old loadout, so they move when the cut lands. Re-check with the command in §12.1 and `onboarding_check.gd -- runs=400 late=160 mirror=1000`.
 - **Initiative tie edge:** comes from those items (above). Expect the starter mirror to go from ~52 to ~50%.
 - **Run and per-match win rates:** the player and every squad lose the items. M1 (new player 69.8%) and M5 (the Rival has the most loadout) are the most likely to move. If M1 leaves 65–75%, the lever is the M1 squad's Armor (−1 now) or its deck.
 - **Aware vs blind (57.7%) and traits:** the AI's item plays are a small share of these, so they should move only a little; worth a look.
 
-### 12.6 Questions for the head (recommended option first)
-1. **Initiative ties.** (a) Keep "ties → you" (51–54%, simplest, PvE-friendly; worth 0 after the loadout cut). (b) Ties swap (round 1 you, then whoever didn't have it): 51.6 / 53.5%. (c) Coin flip in round 1, then swap: 50.7 / 53.5%, fairest but adds a coin flip to explain.
-2. **M2 stays easy for a solid player (98%).** (a) Keep it: M1–M2 are the learning matches and the new player wins M2 72%. (b) M2 squad Armor +1: solid 85%, but the new player drops to 47%.
-3. **M3 mode.** (a) Keep Firefight with the trimmed Rusher deck (54%). (b) Make M3 Zone Control: solid 64–72%, a smoother ramp, but the new player drops to 46–55% and Firefight first appears at M4 (with the Elites).
+### 12.5b v1.3: retune after the loadout cut (kc-syn-tune2, 2026-11-06, not committed)
+The cut (1bf3b22) moved the numbers as §12.5 expected: the new player won M1 too often, the M3 Rusher became a wall again, and Spec Ops (whose Recon / Marksman decks lost nothing) rose to 61.9%. All three fixes are data / balance constants:
+| What | v1.2 | v1.3 | Why |
+|---|---|---|---|
+| M1 crew (`enemy_deck`, still −1 Armor, still the green squad) | Grunt 5 · Trooper 7 · Sergeant 3 · Armored 1 · Ammo 2 | **Grunt 6 · Trooper 7 · Sergeant 2** · Armored 1 · Ammo 2 | Cheap bodies fill the columns and hold zones. Armor −1 → 0 overshoots: new player 23%. Fewer Grunts (more Sergeants) makes M1 easier (87%) |
+| M3 crew (`enemy_deck`, Recruits, Firefight) | the Rusher units + 2 Flank Routes, Callout, Tripwire, a Sergeant | the Rusher units (3 Point Man, 3 Breacher, 2 Flanker, 2 Rifleman, Shieldman, Medic) + **3 Troopers, a Grunt, a Sergeant**, Ammo Resupply | Without your grenade, the Rusher's tactics and its Tripwire decided M3. Only swapping the Flank Routes: 42–44% |
+| Spec Ops tier 2 (`SynergyRules.TRAIT_BONUS`) | +1 FP to all Spec Ops | **+1 FP to Spec Ops in row 1** (like Vanguard tier 2); tier 3 (First Shot for all) unchanged | Spec Ops 61.9% → 50.6%. Giving Heavy a tier-2 bonus instead brought Heavy up but pushed the run to 43–44% |
+| `AiPersonality.cooldown_keep_cost` | retired field, still set by tune_check | **removed** (field and tool use) | Cleanup after the cut |
+
+**Before / after (tune_check, 400 real runs per proxy, late = 160 decks, mirror n = 1920, traits n = 480; onboarding_check agrees on runs and duel)**
+| Check (target) | After the cut, v1.2 data | v1.3 |
+|---|---|---|
+| New player M1 (65–75%) | **77.8%** | **73.0%** |
+| Competent run (38–43%) | 41.8% | **40.0%** |
+| Competent M1–M5 | 91.5 / 99.0 / **36.8** / 41.2 / 43.0 | 88.2 / 99.0 / **58.8** / 42.5 / 41.1 |
+| Casual run · M1–M5 | 23.5% · 77.8 / 80.0 / **29.2** / 34.0 / 29.5 | 26.0% · 73.0 / 81.0 / **44.8** / 35.1 / 31.8 |
+| Traits (40–60% each) | Undead 50.0 · Heavy 40.8 · Vanguard 47.3 · **Spec Ops 61.9** | Undead 51.9 · Heavy 45.4 · Vanguard 52.1 · Spec Ops 50.6 |
+| Aware vs blind, late decks (≥ 55%) | 55.8% | **58.6%** (n = 640) |
+| End-of-run deck vs the starter | — | 80.9% |
+| Seat 0, late mirror (45–55%) | 51.8% | 49.3% |
+| Seat 0, starter mirror (45–55%) | 49.7% | 49.7% |
+
+**Initiative after the cut (confirms §12.4's preview).** Same 160 late decks, n = 1848–1920 per row. Ties → player: 49.3% late / 49.7% starter. Ties → enemy: 49.2 / 49.8%. Coin flip in round 1, then swap: 49.1 / 49.8%. **The tie rule is now worth nothing**: seat 0 is ~50% under every rule, so "ties → you" stays and costs no fairness. Seat 0 still holds initiative in 78% of rounds (ties happen in 55–57% of rounds), but with the grenade, flashbang and secondary gone, resolving first no longer changes results.
+
+Notes: the competent M3 (58.8%) now sits above M4 (42.5%), and a casual player wins M2 (81%) more often than M1 (73%). Both are small bumps, not cliffs. M2 is the easiest match for everyone (Q2 below).
+
+### 12.6 Questions for the head (recommended option first; updated for v1.3)
+1. **Spec Ops tier 2 becomes "Spec Ops in row 1 get +1 FP"** (players see this text; it mirrors Vanguard's tier 2). (a) Approve: Spec Ops 61.9% → 50.6%, aware edge up to 58.6%. (b) Keep the old text and trim a Spec Ops card instead (untested; Recon Specialist / Marksman are the candidates).
+2. **M2 is the easiest match** (solid player 99%, new player 81%, above M1's 73%). (a) Keep it: a breather after the first calling cards. (b) M2 squad Armor +1: with the old loadout it gave the solid player 85% and the new player 47%, too harsh.
+3. **Initiative ties** (from v1.2; now settled by data). (a) Keep "ties → you": after the cut every tie rule gives seat 0 ~49–50%, so it costs nothing. (b) Ties swap / coin flip: same numbers, one more rule to explain.
 
 ### 12.7 Baselines reproduced (paused pass, shipped data, d154893)
 | Check (target) | Result | n |
