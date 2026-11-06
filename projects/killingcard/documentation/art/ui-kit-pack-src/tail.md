@@ -1,0 +1,84 @@
+## 6. Reject checklist and IP rules
+
+### 6.1 IP rules (binding, same as the banner pack)
+- **All original.** No logos, emblems, icons, HUD styling, camo patterns or menus copied from any game, film or brand. The licensed calling cards appear only as card art in the private pitch; nothing in this kit may imitate their frames or the franchise's UI.
+- **Never name a franchise, game, studio or artist in a prompt**, even as "not like". The prompts describe looks in plain visual words. Keep it that way when you reword one.
+- **No real military marks:** no national or unit insignia, rank badges, roundels, flags, red cross or red crescent. Heal and Patch icons are plain white shapes, tinted green or teal in game, never a red cross.
+- **No real products:** weapon and vehicle silhouettes are generic, with no shape that is clearly one real model and no brand marks.
+- **No baked text.** The game draws all words and numbers (READY, FRONT, PLAN, A / B / C, EQUIPPED, PUT BACK, costs, stats). Any letter or digit in an image, even fake writing, means regenerate.
+- The level names in code (Gilded, Forged, Priceless, Interstellar) are internal ids. The band images are described only by their look (gold leaf, white steel, blue crystal, violet nebula) and must not copy any existing camo pattern.
+
+### 6.2 Reject checklist (any "yes" = regenerate; two tries, then skip and note it)
+- [ ] Any letters, numbers, fake writing, a logo or a stamp?
+- [ ] A flag, insignia, rank mark, crest, roundel, wings, laurels, a red cross or crescent?
+- [ ] A weapon, drone or aircraft that is clearly a real model, or has markings?
+- [ ] Looks like an icon, frame or menu from an existing shooter?
+- [ ] **Icons:** not pure white on pure black? Grey shading, a coloured outline, a badge or circle behind the glyph, or two icons in one image?
+- [ ] **Icons:** squint test at 32 px fails (shrink it on the phone: is it still obvious)? Strokes thinner than about 1/12 of the canvas?
+- [ ] **Icons:** looks too much like another icon in the set (Pick vs FP reticle, Spotter vs PREVIEW eye: the code adds context, but the shapes must still differ)?
+- [ ] **9-slice plates:** a rivet, notch or ornament in the **middle** of an edge (it would smear when stretched)? Edges not straight and even?
+- [ ] **Plates:** a painted checkerboard instead of transparency, a cast shadow, or a perspective tilt?
+- [ ] **Glows:** an object or surface instead of pure light, or a background that is not pure black?
+- [ ] **Bands:** an obvious centre or a hard edge that won't tile?
+- [ ] **Backgrounds:** a bright or busy centre, people in the foreground, recognisable real places? Key shapes in the top or bottom 10% (they get cropped)?
+- [ ] **Column backdrops:** strong contrast or a focal point (it fights the cards)?
+- [ ] Off palette: saturated colours that are not one of the tokens in 2.2?
+
+## 7. Technical Artist hand-off
+
+### 7.1 Folders
+| Prefix | Final folder | Notes |
+|---|---|---|
+| raw drops | `assets/incoming/ui/` | already ignored (`assets/incoming/.gdignore`); never imported |
+| `ico_*` | `assets/ui/kit/icons/` | 256 masters; plus the packed atlas `assets/ui/kit/icons/kit_icons.png` (see 7.3) |
+| `btn_*`, `tgl_*`, `sld_*` | `assets/ui/kit/buttons/` | |
+| `pnl_*`, `ring_*`, `pip_*`, `order_*`, `runmap_*` | `assets/ui/kit/panels/` | |
+| `tile_*` | `assets/ui/kit/tiles/` | |
+| `frm_*`, `card_back_*` | `assets/ui/kit/frames/` | |
+| `band_*` | `assets/ui/kit/bands/` | |
+| `fx_*` | `assets/ui/kit/fx/` | |
+| StyleBoxTexture resources | `assets/ui/kit/styles/<id>.tres` | built from the manifest margins |
+| `bg_*` | `assets/ui/backgrounds/` | replaces `title_key_art`, `bg_run`, `bg_supply_drop` (keep the old files until approved) |
+| `col_*` | `assets/sprites/board/` | next to the old `lane_*` |
+
+### 7.2 Processing (per kind, from the raw PNG)
+- **luma** (icons, rings, pips, nodes, arrows, path, crack): `magick in.png -colorspace gray -level 8%,92% -alpha copy -fill white -colorize 100 -trim +repage -gravity center -background none -extent <square with 8% padding> -resize 256x256 out.png`. The `-level` crushes JPEG-ish noise near black and white.
+- **alpha** (plates): if the PNG has real alpha, keep it. If it has a magenta field: `magick in.png -fuzz 12% -transparent "#FF00FF" ...` then despill the edge (shift magenta-tinted edge pixels to the neighbouring colour, or a 1 px alpha erode). Then crop to the plate, resize to the ship size **with the border thickness in mind**: the border should be 4-6 px at ship size.
+- **add** (glows): keep RGB, drop alpha, crop with the glow falloff intact, resize. Import as normal; draw with a `CanvasItemMaterial` (`blend_mode = BLEND_MODE_ADD`).
+- **9-slice check:** after resizing, confirm the manifest margins fall outside every corner detail. If a corner ornament is bigger, raise the margin in the manifest (and the `.tres`), not the image.
+- **Bands:** cut a 512x32 strip, make it seamless (offset by half the width, clone the seam, or mirror-tile), set `texture_repeat` on.
+- **Backgrounds:** crop as in the size key, export WebP lossy q85.
+
+### 7.3 Import settings (Godot 4.4.1, web, Compatibility)
+| Kind | Compress | Mipmaps | Filter | Other |
+|---|---|---|---|---|
+| Icons (atlas) | Lossless | **On** | Linear Mipmap | `fix_alpha_border` on, `premult_alpha` off. Pack all P1/P2 icons at 128 px cells into one atlas (`kit_icons.png`, 16 columns), like `icon_sheet.svg` today: ~120 icons = 2048x1024, ~500 KB. |
+| Plates, frames, buttons, tiles | Lossless | Off | Linear | `fix_alpha_border` on |
+| Glows (`fx_*`) | Lossless | Off | Linear | material blend Add |
+| Bands | Lossless | Off | Linear | repeat enabled |
+| Backgrounds, column backdrops | Lossy (WebP q85) | Off | Linear | not VRAM Compressed (bands gradients on web) |
+
+Budget: kit icons ~0.5 MB, plates and frames ~1.2 MB (PNG at the ship sizes), bands ~0.3 MB, backgrounds and columns ~2 MB WebP. **About 4 MB total**, inside the art budget; P3 can wait if the web build grows.
+
+### 7.4 How the code picks them up (proposal; keep the procedural art as the fallback)
+1. **`scripts/ui/ui_kit.gd` (`class_name UiKit`)**, the same pattern as `IconSheet`:
+   - `UiKit.icon(id) -> Texture2D`: the atlas region for `id` if the kit has it, else `IconSheet.get_icon(alias)`. Aliases: `stat_intel` > `intel_contact`, `type_field` > `type_equipment`, `elite_star` > `elite`, `ks_mortar` (same), `trait_<t>` and `kw_guard / spotter / fireteam / overwatch` > nothing (today `synergy_glyphs.gd` draws them, so keep that branch as the fallback).
+   - `UiKit.style(id) -> StyleBox`: `assets/ui/kit/styles/<id>.tres` if present, else null (the caller keeps its StyleBoxFlat).
+   - `UiKit.has(id)`: lets `_draw` code choose between `draw_texture_rect` and its current `draw_*` path.
+2. **Themes:** swap `hud_theme.tres` and `card_theme.tres` StyleBoxFlats for StyleBoxTextures (`texture_margin_*` from the manifest, `content_margin_*` as today). Buttons get `normal / hover / pressed / disabled / focus` styleboxes: normal and pressed from the images, hover and disabled as the same texture with `modulate_color`. This alone re-skins most screens with no script change.
+3. **Banners and other custom-drawn controls** (`banner_view.gd`, `objective_tile.gd`, `strip_badge.gd`, `killstreak_row.gd`, `trait_rail.gd`, `board.gd` link ticks): add a helper `UiKit.draw_nine(ci, tex, rect, margins, scale := 0.5)` that draws the 9 regions with `draw_texture_rect_region`, with the **margins scaled** (a 16 px ship margin draws as 8 logical px). StyleBoxTexture can't scale its margins, which is why the 2x plates need this helper in `_draw` code and a 0.5 `scale` wrapper (or 1x exports) in theme-driven Controls. Recommended: 2x textures + the helper for banners, 1x exports (`<id>@1x.png`, the TA halves them) for theme styleboxes.
+4. **Ids = file names without `ico_` / extension**, and the manifest is the source of truth: a small `tools/` script can generate the `.tres` styleboxes and the atlas index from `ui-kit-manifest.csv`.
+5. **Tests:** the suite already runs with and without `assets/licensed`; add a run with `assets/ui/kit` missing, so every fallback stays alive.
+
+### 7.5 Not in this pack (on purpose)
+- Card art and banners (separate packs), the perk patches (already shipped), the call-in tablet (`fx_callin_tablet`, already shipped).
+- Fonts (Barlow Condensed, Barlow, Share Tech Mono stay).
+- The rival's mirrored arrows and all numbers and words (code).
+- Real-time effects that are shaders today (scanlines, banner shimmer, tactical backdrop).
+- "Steady" from the brief: there is no Steady keyword in the data or rules today. The real list used here is First Shot, Pick, Flank, Pierce, Cover, Suppress, Patch, Holder, Protector (arrives front), Hidden, the triggers On Deploy / On Down, the ⚡ effect bolt, and the neighbour keywords Guard, Spotter, Fireteam, Overwatch. A new keyword is one more icon prompt in the same group.
+
+## 8. Questions for the head
+
+1. **Hand card frame.** kc-ui4 (in progress in the source) makes hand cards banner cards, between 1.3:1 and 2.4:1 (177x73 on the phone). `frm_hand_card` is drawn for that: the banner frame's steel language with a cost-hex notch, 9-sliced so one image fits every cell. Should hand cards **also wear the side spine and camo band** like the board banner (recommended: the band yes, the spine no, since every hand card is yours), or stay a plain frame?
+2. **Backgrounds: replace or keep?** The title, run map and Supply Drop already have Killstreak-era paintings. **Recommended:** regenerate them in this pack (P1) so the KillingCard screens match; keep the old files as the fallback until the new ones are approved.
+3. **Icon look.** All icons are solid white pictograms tinted in code (cheapest, reads best at 22 px). The alternative is coloured, bevelled metal icons with the colour baked in, which look richer at 64 px but cost a second image per side and state. **Recommended:** white pictograms now; if you want richer killstreak tiles later, those 4 can get a painted P3 version.
