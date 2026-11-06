@@ -412,3 +412,13 @@ The head: "the default one on PC and landscape should have the cards in the hand
 - title, loadout, run map, Codex, Supply Drop and the pause menu keep every button and label on screen in portrait.
 
 Screenshots (390x844, public art only) are in `qa/screenshots/portrait/`: the match at rest, a raised card, PLAY HERE (2x), mulligan, Supply Drop, run map, title, Codex, loadout. The tool is `tests/tools/shot_portrait.gd`.
+
+**Follow-up (review: whole names in portrait).**
+- **Starter squad (Loadout > OPERATOR & DECK):** in portrait the Operators stack above the deck list in one page scroll.
+  - Operator cards are 250 px wide with their info beside them; the info line wraps instead of ending in "...".
+  - Deck cards are two per row, about 250 px wide.
+  - The hint beside the title is hidden in portrait.
+- **Hand fan:** fan cards are 176 px wide.
+- **Tactics:** the T1 cut corner no longer shortens the title slot, so BREACH AND CLEAR fits at 172 px.
+- **Test:** `test_portrait::test_portrait_cards_show_whole_names_and_lore` checks at 390x844 and 360x780 that no Y2+ title or lore line is cut on these screens: starter squad, Codex, Supply Drop, every card at the 172 px Muster out / Salvage width, mulligan, hand fan. A 124 px probe confirms the check catches a cut name.
+- **Totals:** 547 tests pass. Screenshots re-shot, including `10_starter_squad.png`.

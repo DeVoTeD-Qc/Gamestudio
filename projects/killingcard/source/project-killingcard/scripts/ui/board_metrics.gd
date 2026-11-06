@@ -221,7 +221,7 @@ static func rail_rect(m: Dictionary) -> Rect2:
 # =============================================================================
 
 ## Fan card width and the step between cards: 68 px = 44 pt down to a 360 pt wide phone (0.667 pt/px).
-const FAN_CARD_W: float = 150.0
+const FAN_CARD_W: float = 176.0
 const FAN_STEP: float = 68.0
 ## Button height in portrait (44 pt on a 360 pt wide phone).
 const PORTRAIT_BTN_H: float = 68.0

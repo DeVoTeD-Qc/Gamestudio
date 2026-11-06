@@ -313,3 +313,144 @@ func test_run_screens_fit_in_portrait() -> void:
 	_despawn(vp3)
 	tree.root.size = _saved_root_size
 	await tree.process_frame
+
+
+# =============================================================================
+# kc-portrait review: no Y2+ title or lore line is cut in portrait
+# =============================================================================
+
+## Every visible CardView under `root_ctl`: its whole name fits its title slot, its lore line fits
+## the text box. Returns the problems found.
+func _cut_cards(root_ctl: Node) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var nodes: Array[Node] = root_ctl.find_children("*", "Control", true, false)
+	nodes.push_front(root_ctl)
+	for n: Node in nodes:
+		if not (n is CardView) or not (n as CardView).is_visible_in_tree():
+			continue
+		var cv: CardView = n
+		var nl: Label = cv.find_child("NameLabel", true, false)
+		var need: float = CardLook.TITLE_FONT.get_string_size(nl.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, CardLook.TITLE_PX).x
+		if need > nl.size.x + 0.5:
+			out.append("%s: name needs %.0f px, has %.0f (card %.0f)" % [nl.text, need, nl.size.x, cv.get_card_width()])
+		var lore: String = cv.get_lore_text()
+		if lore != "":
+			var box: Rect2 = cv.regions()["text"]
+			var para := TextParagraph.new()
+			para.add_string(lore, CardLook.LORE_FONT, 16)
+			para.width = box.size.x - 12.0
+			var h: float = para.get_line_count() * (CardLook.LORE_FONT.get_height(16) - 3.0)
+			if para.get_line_count() > 3 or h > box.size.y - 4.0:
+				out.append("%s: lore %d lines in %.0f px" % [nl.text, para.get_line_count(), box.size.y])
+	return out
+
+
+func _cut_labels(root_ctl: Node, names: Array[String]) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for n: Node in root_ctl.find_children("*", "Label", true, false):
+		var l: Label = n
+		if not l.is_visible_in_tree() or not (String(l.name) in names):
+			continue
+		if l.autowrap_mode == TextServer.AUTOWRAP_OFF and l.text_overrun_behavior != TextServer.OVERRUN_NO_TRIMMING:
+			var need: float = l.get_theme_font(&"font").get_string_size(l.text.to_upper() if l.uppercase else l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, l.get_theme_font_size(&"font_size")).x
+			if need > l.size.x + 0.5:
+				out.append("%s: '%s' cut" % [l.name, l.text])
+	return out
+
+
+func test_portrait_cards_show_whole_names_and_lore() -> void:
+	var rs: Node = tree.root.get_node("RunState")
+	for screen: Dictionary in [PORTRAIT, PORTRAIT_SMALL]:
+		var label: String = screen["name"]
+		_saved_root_size = tree.root.size
+		tree.root.size = Vector2i(1280, 720)
+		rs.start_run(4242)
+		var vp: SubViewport = SubViewport.new()
+		vp.size = Vector2i(Layout.logical_size(screen))
+		vp.disable_3d = true
+		tree.root.add_child(vp)
+		# Loadout > OPERATOR & DECK (the starter squad).
+		var lo: Control = (load("res://scenes/run/Loadout.tscn") as PackedScene).instantiate()
+		vp.add_child(lo)
+		await _frames(4)
+		lo.open_starter()
+		await _frames(6)
+		var sp: Control = lo.get_starter()
+		var cut: PackedStringArray = _cut_cards(sp)
+		cut.append_array(_cut_labels(sp, ["OperatorLine"]))
+		assert_true(cut.is_empty(), "%s starter squad: %s" % [label, ", ".join(cut)])
+		assert_true(sp.find_children("*", "CardView", true, false).size() >= 6, "%s: the starter's Y2+ cards were checked" % label)
+		# A 124 px card (the old portrait size) would cut names: the check catches it.
+		var probe: CardView = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()
+		vp.add_child(probe)
+		probe.set_card_data(CardView.view_for_card(CardDB.get_card(&"demolitions_expert")))
+		probe.set_card_width(124)
+		await tree.process_frame
+		assert_false(_cut_cards(probe).is_empty(), "%s: the check sees a cut name" % label)
+		probe.free()
+		lo.queue_free()
+		await _frames(2)
+		rs.begin_run()
+		# Codex.
+		var title: Control = (load("res://scenes/Title.tscn") as PackedScene).instantiate()
+		vp.add_child(title)
+		await _frames(4)
+		title.open_codex()
+		await _frames(6)
+		cut = _cut_cards(title.get_codex())
+		assert_true(cut.is_empty(), "%s Codex: %s" % [label, ", ".join(cut)])
+		title.queue_free()
+		await _frames(2)
+		# Supply Drop.
+		rs.record_result(&"player", {"reason": &"target", "rounds": 6, "player_score": 6, "enemy_score": 3})
+		var reward: Control = (load("res://scenes/run/Reward.tscn") as PackedScene).instantiate()
+		vp.add_child(reward)
+		await _frames(8)
+		cut = _cut_cards(reward)
+		assert_true(cut.is_empty(), "%s Supply Drop: %s" % [label, ", ".join(cut)])
+		reward.queue_free()
+		await _frames(2)
+		rs.abandon_run()
+		vp.queue_free()
+		tree.root.size = _saved_root_size
+		await _frames(2)
+		# Muster out / Salvage use the same CardView widths: every chassis at the list width.
+		var mw: float = 172.0
+		for cd: CardData in (CardDB.get("_cards") as Dictionary).values():
+			var v: CardView = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()
+			tree.root.add_child(v)
+			v.set_card_data(CardView.view_for_card(cd))
+			v.set_card_width(mw)
+			await tree.process_frame
+			cut = _cut_cards(v)
+			assert_true(cut.is_empty(), "%s at %.0f px: %s" % [cd.id, mw, ", ".join(cut)])
+			v.free()
+		# The match: mulligan and the hand fan.
+		var s: Array = await _spawn_no_keep(screen)
+		var mvp: SubViewport = s[0]
+		var m: Control = s[1]
+		var c: Node = s[2]
+		if c.is_mulligan_open():
+			cut = _cut_cards(m.get_mulligan_panel())
+			assert_true(cut.is_empty(), "%s mulligan: %s" % [label, ", ".join(cut)])
+			c.keep_hand()
+			await _frames(3)
+		cut = _cut_cards(m.get_hand())
+		assert_true(cut.is_empty(), "%s hand fan: %s" % [label, ", ".join(cut)])
+		_despawn(mvp)
+		await tree.process_frame
+
+
+func _spawn_no_keep(screen: Dictionary) -> Array:
+	_saved_root_size = tree.root.size
+	tree.root.size = Vector2i(1280, 720)
+	await tree.process_frame
+	var vp: SubViewport = SubViewport.new()
+	vp.size = Vector2i(Layout.logical_size(screen))
+	vp.disable_3d = true
+	vp.handle_input_locally = true
+	tree.root.add_child(vp)
+	var m: Control = (load(MATCH_SCENE) as PackedScene).instantiate()
+	vp.add_child(m)
+	await _frames(6)
+	return [vp, m, m.get_node("%MatchController")]

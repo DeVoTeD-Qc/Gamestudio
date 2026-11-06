@@ -179,6 +179,7 @@ func _build() -> void:
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hint.clip_text = true
 	hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	hint.visible = not _tall()  # kc-portrait: no room beside the title; the section labels say it
 	top.add_child(hint)
 	_close = Button.new()
 	_close.name = "StarterClose"
@@ -188,11 +189,20 @@ func _build() -> void:
 	_close.add_to_group(&"tap_target")
 	_close.pressed.connect(close)
 	top.add_child(_close)
-	var body: HBoxContainer = HBoxContainer.new()
+	# kc-portrait: the body is one scroll; in portrait the Operators stack above the deck list and the
+	# inner lists stop scrolling on their own (the page scrolls).
+	var outer: ScrollContainer = ScrollContainer.new()
+	outer.name = "BodyScroll"
+	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(outer)
+	var body: BoxContainer = BoxContainer.new()
 	body.name = "Body"
+	body.vertical = _tall()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override(&"separation", 14)
-	col.add_child(body)
+	outer.add_child(body)
 	# Operators.
 	var left: VBoxContainer = VBoxContainer.new()
 	left.name = "Operators"
@@ -205,6 +215,8 @@ func _build() -> void:
 	var oscroll: ScrollContainer = ScrollContainer.new()
 	oscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	oscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	if _tall():
+		oscroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	left.add_child(oscroll)
 	_op_list = VBoxContainer.new()
 	_op_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -232,6 +244,8 @@ func _build() -> void:
 	var dscroll: ScrollContainer = ScrollContainer.new()
 	dscroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	dscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	if _tall():
+		dscroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	right.add_child(dscroll)
 	_deck_grid = GridContainer.new()
 	_deck_grid.add_theme_constant_override(&"h_separation", 8)
@@ -258,10 +272,24 @@ func _build() -> void:
 
 ## kc-cards-impl: deck list cards are Y2+ cards (the mock-up's deck card is 196 wide).
 func _tile_size() -> Vector2:
-	var vr: Vector2 = get_viewport_rect().size if is_inside_tree() else size
-	if vr.y > vr.x and vr.x > 0.0:
-		return CardView.size_for(124.0)  # kc-portrait: narrow cards so both columns fit
+	if _tall():
+		# kc-portrait: two deck cards per row across the screen (every name and lore line whole).
+		var w: float = (get_viewport_rect().size.x - 20.0 - 8.0) * 0.5
+		return CardView.size_for(clampf(floorf(w), 172.0, 250.0))
 	return CardView.size_for(172.0 if compact else 196.0)
+
+
+## kc-portrait: the Operator card's width (its info beside it).
+func _op_card_w() -> float:
+	if _tall():
+		return clampf(floorf((get_viewport_rect().size.x - 20.0) * 0.48), 172.0, 250.0)
+	return _tile_size().x
+
+
+## kc-portrait: the screen is taller than wide.
+func _tall() -> bool:
+	var vr: Vector2 = get_viewport_rect().size if is_inside_tree() else size
+	return vr.y > vr.x and vr.x > 0.0
 
 
 func _metric() -> float:
@@ -276,7 +304,7 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	b.add_to_group(&"tap_target")
 	b.set_meta(&"id", item.id)
 	b.tooltip_text = "%s: %s" % [item.display_name, RunFlowScript.item_effect_line(item)]
-	b.custom_minimum_size = Vector2(0, _tile_size().y + 8.0)
+	b.custom_minimum_size = Vector2(0, CardView.height_for(_op_card_w()) + 8.0)
 	_wire(b, func() -> void: pick_operator(item.id), func() -> void: _inspector.open(operator_info(item)))
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -293,7 +321,7 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	var view: Dictionary = {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
 			"armor": item.operator_armor, "banner": entry["banner"], "keywords": _op_keywords(item),
 			"text": "Your Operator: respawns if it goes down.", "cost": int(_op_cost_text()) if _op_cost_text().is_valid_int() else 0}
-	var card: CardView = CodexViewScript.make_card_view(view, _tile_size().x)
+	var card: CardView = CodexViewScript.make_card_view(view, _op_card_w())
 	card.name = "OperatorBanner"
 	row.add_child(card)
 	var text: VBoxContainer = VBoxContainer.new()
@@ -304,8 +332,13 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	row.add_child(text)
 	var line: Label = _text(RunFlowScript.item_effect_line(item).to_upper(), &"UnitName", 16)
 	line.name = "OperatorLine"
+	# kc-portrait: the line wraps instead of ending in "...".
+	line.clip_text = false
+	line.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(line)
 	var what: Label = _text(item.text, &"HudSubtle", 16)
+	what.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	what.clip_text = false
 	text.add_child(what)
@@ -401,7 +434,12 @@ func _layout() -> void:
 	if _deck_grid == null:
 		return
 	var left: Control = _op_list.get_parent().get_parent() as Control
-	var lw: float = roundf(size.x * (0.52 if size.y > size.x else (0.47 if compact else 0.42)))
+	if _tall():
+		# kc-portrait: Operators on top, the deck below at full width, two cards per row.
+		left.custom_minimum_size.x = 0.0
+		_deck_grid.columns = 2
+		return
+	var lw: float = roundf(size.x * (0.47 if compact else 0.42))
 	left.custom_minimum_size.x = lw
 	var tile: Vector2 = _tile_size()
 	var room: float = size.x - 20.0 - 14.0 - lw - 12.0

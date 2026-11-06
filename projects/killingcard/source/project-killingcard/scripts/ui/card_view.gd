@@ -380,7 +380,7 @@ func _refresh() -> void:
 	var count: int = int(data.get("count", 0))
 	_count_label.visible = count > 0
 	_count_label.text = "×%d" % count
-	var right: float = _width - 8.0 - (T1_CUT + 2.0 if tac else 0.0)
+	var right: float = _width - 8.0 - (8.0 if tac else 0.0)  # the chevron cut is above the name line
 	if count > 0:
 		var cw: float = _count_label.get_combined_minimum_size().x
 		_count_label.size = Vector2(cw, 22)
