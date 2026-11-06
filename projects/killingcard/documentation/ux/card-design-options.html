@@ -137,6 +137,11 @@ table.nb th, table.nb td { text-align: left; padding: 3px 12px 3px 0; border-bot
 table.nb th { font: 600 13px var(--f-cond); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 article.c1plus { border-top: 3px solid var(--accent); }
 
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.lg { display: flex; gap: 8px; align-items: center; font-size: 14px; min-width: 0; }
+.lg-ic { display: inline-flex; gap: 3px; align-items: center; background: #12161A; padding: 4px; border-radius: 4px; flex: none; }
+
 /* inspector */
 .insp { position: fixed; inset: 0; background: rgba(6,8,10,.72); display: grid; place-items: center; z-index: 50;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
@@ -846,6 +851,52 @@ function optBlock(opt, kind) {
   </article>`;
 }
 
+
+// ---------------------------------------------------------------- C1+ plates (round 3): crosshair FP, armor-plate Armor
+// One colour family each, the same for both sides; minimal shapes that read at 16-32 px with a big
+// number on top. Variant A is used on the board; B is offered in the plate sheet.
+const FP_C = { ring: "#2EC4B6", fill: "#0F2F2C" };
+const AR_C = { edge: "#B9C2C9", fill: "#2A3238", dmgEdge: "#F2A33A", dmgFill: "#4A3412", dmgNum: "#FFC067", redEdge: "#FF6B6B", redFill: "#4A1A1C", redNum: "#FF9A9A" };
+let DMG_RED = false;
+function fpCross(v, s, buffed = false, variant = "A") {
+  const num = buffed ? col("--g-up") : "#fff";
+  const fs = String(v).length > 1 ? 12.5 : 15;
+  const shape = variant === "A"
+    ? `<path d="M14 0.8v4.4M14 22.8v4.4M0.8 14h4.4M22.8 14h4.4" stroke="${FP_C.ring}" stroke-width="2.4" stroke-linecap="round"/><circle cx="14" cy="14" r="9.3" fill="${FP_C.fill}" stroke="${FP_C.ring}" stroke-width="2"/>`
+    : `<circle cx="14" cy="14" r="11.6" fill="${FP_C.fill}"/><circle cx="14" cy="14" r="11.6" fill="none" stroke="${FP_C.ring}" stroke-width="2.4" stroke-dasharray="14.2 4" stroke-dashoffset="2"/>`;
+  return `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 28 28" aria-hidden="true">${shape}<text x="14" y="${14 + fs * 0.36}" text-anchor="middle" font-family="Share Tech Mono, monospace" font-size="${fs}" fill="${num}">${v}</text></svg>`;
+}
+function arPlateB(v, s, dmg = false, variant = "A") {
+  const red = DMG_RED;
+  const edge = dmg ? (red ? AR_C.redEdge : AR_C.dmgEdge) : AR_C.edge;
+  const fill = dmg ? (red ? AR_C.redFill : AR_C.dmgFill) : AR_C.fill;
+  const num = dmg ? (red ? AR_C.redNum : AR_C.dmgNum) : "#fff";
+  const fs = String(v).length > 1 ? 12.5 : 15;
+  const shape = variant === "A"
+    ? `<path d="M7 1.5h12l5 5V22a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V6.5z" fill="${fill}" stroke="${edge}" stroke-width="2" stroke-linejoin="round"/>`
+    : `<path d="M2 4.5Q13 1 24 4.5V14q0 7-11 11.5Q2 21 2 14z" fill="${fill}" stroke="${edge}" stroke-width="2" stroke-linejoin="round"/>`;
+  return `<svg class="ic" width="${s}" height="${s * 27 / 26}" viewBox="0 0 26 27" aria-hidden="true">${shape}<text x="13" y="${(variant === "A" ? 14.5 : 13.5) + fs * 0.36}" text-anchor="middle" font-family="Share Tech Mono, monospace" font-size="${fs}" fill="${num}">${v}</text></svg>`;
+}
+const pFp = (c, s) => fpCross(c.fp, s, !!c.up);
+const pAr = (c, s) => arPlateB(c.ar, s, c.ar < c.max);
+// Peek-only tags, a different shape family from the square trait chips: weapon = a rounded steel pill
+// with a tiny silhouette + letters, level = a round brass / grey coin.
+const WEAPON_GLYPH = {
+  AR: '<path d="M1 7h13l2-2h3v3h-3l-1 1H8l-1 3H5l1-3H1z"/>', SG: '<path d="M1 6h15v2H9l-1 3H6l1-3H1z"/>',
+  SN: '<path d="M1 6.5h17v1.5H10l-1 3H7l1-3H1zM10 4h4v2h-4z"/>', LMG: '<path d="M1 6h16v2.5h-5l-1 3H5l1-3H1zM8 8.5h3v3H8z"/>',
+  SMG: '<path d="M3 6h10v2.5H8l-1 3H5.5l1-3H3z"/>',
+};
+function weaponTag(c, s) {
+  if (!c.cls) return "";
+  return `<span title="Weapon: ${CLS[c.cls]}" style="display:inline-flex;align-items:center;gap:3px;height:${s}px;padding:0 6px 0 4px;border-radius:${s}px;background:#3A444D;border:1px solid #8C969E;color:#E6EBEF;font:${Math.round(s * .58)}px var(--f-mono)"><svg width="${Math.round(s * 1.05)}" height="${Math.round(s * .66)}" viewBox="0 0 19 12" fill="#E6EBEF" aria-hidden="true">${WEAPON_GLYPH[c.cls] || ""}</svg>${c.cls}</span>`;
+}
+function levelCoin(c, s) {
+  if (c.level === undefined || c.si) return "";
+  const L = ["R", "T", "V", "E"][c.level];
+  const rim = c.level === 0 ? "#B9C2C9" : "#F3D36B";
+  return `<span title="Level: ${["Recruit", "Trained", "Veteran", "Elite"][c.level]}" style="display:grid;place-items:center;width:${s}px;height:${s}px;border-radius:50%;background:#1A1F24;border:2px solid ${rim};color:${rim};font:${Math.round(s * .6)}px var(--f-mono)">${L}</span>`;
+}
+
 // ---------------------------------------------------------------- C1+ (progressive disclosure): the head's direction
 // Always on: keywords / effects / Recruit locks (top-right, 21 px) and FP / Armor (bottom-right, 24 px).
 // Hidden until the card is hovered (touch: held): cost (top-left), traits, weapon, level (bottom-left),
@@ -883,10 +934,12 @@ function c1pRender(c, side) {
   const tl = traitList(c);
   const bl = tl.map((t) => pTraitChip(c, t, act.includes(t))).join("");
   if (bl) h += `<div class="g" style="left:5px;top:${BH - 23}px;display:flex;gap:2px">${bl}</div>`;
-  const rest = clsPip(c, 16) + levelBadge(c, 16) + (c.si ? serial(Object.assign({}, c, { side: "own" }), "own", 16) : "");
-  if (rest) h += `<div class="g hid" style="left:${5 + tl.length * 22}px;top:${BH - 21}px">${chip(rest, "gap:2px")}</div>`;
-  // Bottom-right (always): FP + Armor, one look for both sides.
-  h += rrow(2, BH - 27, chip(fpPlate(Object.assign({}, c, { side: "own" }), "own", P_STAT) + pArPlate(c, P_STAT - 1), "gap:2px"));
+  // Peek: weapon pill + level coin (a different shape family from traits), 8 px apart from the traits;
+  // a Standard Issue card: its serial plate. Nothing for "no trait" (an empty corner is fine).
+  const rest = weaponTag(c, 17) + levelCoin(c, 17) + (c.si ? serial(Object.assign({}, c, { side: "own" }), "own", 17) : "");
+  if (rest) h += `<div class="g hid" style="left:${5 + tl.length * 22 + (tl.length ? 6 : 0)}px;top:${BH - 22}px;display:flex;gap:4px;align-items:center;padding:1px;background:rgba(10,12,14,.7);border-radius:9px">${rest}</div>`;
+  // Bottom-right (always): crosshair FP + armor-plate Armor, one look for both sides.
+  h += rrow(2, BH - 28, chip(pFp(c, P_STAT + 2) + pAr(c, P_STAT + 1), "gap:3px"));
   h += outline(c, side, 0, 0, BW, BH);
   return h;
 }
@@ -964,7 +1017,7 @@ function handPlus(c, W = 177, H = 70) {
 const P_STATES = [
   ["At rest: faint trait", u("marksman"), ""], ["Hover / hold: peek", u("marksman"), "peek"],
   ["Trait bonus ON (shown, lit)", u("breacher", { activeT: ["vanguard"] }), ""], ["Recruit: locks always on", u("recon", { locked: ["deploy", "spotter"] }), ""],
-  ["Damaged: 3/6, edge + crack", u("gunner", { ar: 3, activeT: ["heavy"] }), ""], ["Rival, damaged (same plates)", u("trooper", { ar: 1, side: "rival" }), ""],
+  ["Damaged: 3 left, edge + crack", u("gunner", { ar: 3, activeT: ["heavy"] }), ""], ["Rival, damaged (same plates)", u("trooper", { ar: 1, side: "rival" }), ""],
   ["Can't act", u("medic", { st: "cant" }), ""], ["Standard Issue peek (cost, serial)", u("armored"), "peek"],
   ["Rail hover Heavy: 2 traits, match", u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy", activeT: ["heavy"] }), "synhit"],
 ];
@@ -996,17 +1049,55 @@ function pBeforeAfter() {
 function countC1(c) { return traitList(c).length + (traitList(c).length || c.si ? 0 : 0) + (c.cls ? 1 : 0) + (c.level === 0 ? 1 : 0) + (c.kws || []).length + (c.locked || []).length + (c.si ? 2 : 0) + 1 + 2; }
 function countC1p(c) { const act = (c.activeT || []).length; return (c.kws || []).length + (c.locked || []).length + 2 + act + 0.5 * (traitList(c).length - act); }
 
+
+function pLegend() {
+  const item = (icon, label, text) => `<div class="lg"><span class="lg-ic">${icon}</span><span><b>${label}</b> ${text}</span></div>`;
+  const tchip = (t, on) => `<span style="display:inline-grid;place-items:center;width:22px;height:22px;background:#0b0e10;border:1.5px solid ${col(TRAITS[t][1])};opacity:${on ? 1 : .45}${on ? `;box-shadow:0 0 6px ${col(TRAITS[t][1])}` : ""}">${svg(t, col(TRAITS[t][1]), 16, 2.6)}</span>`;
+  return `<div class="legend" aria-label="Icon legend">
+    ${item(fpCross(4, 26), "Firepower", "crosshair; green number = buffed")}
+    ${item(arPlateB(5, 25) + arPlateB(3, 25, true), "Armor", "plate; amber = damaged, the number is what's left")}
+    ${item(`<span style="display:inline-flex;gap:3px;background:#0b0e10;padding:2px">${svg("pick", col("--g-amber"), 18)}${svg("spotter", col("--g-amber"), 18)}</span>`, "Abilities", "always on, top-right (a padlock = locked on a Recruit)")}
+    ${item(tchip("vanguard", true) + " " + tchip("specops", false), "Traits", "square chips, bottom-left; lit = bonus ON, faint = no bonus yet")}
+    ${item(weaponTag(u("marksman"), 18), "Weapon", "steel pill, on peek")}
+    ${item(levelCoin(u("breacher"), 18) + " " + levelCoin(u("marksman"), 18), "Level", "round coin, on peek: R Recruit, T Trained, V Veteran, E Elite")}
+    ${item(serial(u("armored"), "own", 18), "Serial", "Standard Issue kit, on peek")}
+    ${item(cost(u("breacher"), 22), "Cost", "top-left, on peek")}
+  </div>`;
+}
+function pSheet() {
+  const sizes = [16, 20, 24, 32], vals = [1, 4, 10];
+  let s = "";
+  const rowsDef = [
+    ["FP · A crosshair (ticks)", (v, z) => fpCross(v, z, false, "A")], ["FP · A buffed", (v, z) => fpCross(v, z, true, "A")],
+    ["FP · B reticle ring", (v, z) => fpCross(v, z, false, "B")], ["FP · B buffed", (v, z) => fpCross(v, z, true, "B")],
+    ["Armor · A ballistic plate", (v, z) => arPlateB(v, z, false, "A")], ["Armor · A damaged (amber)", (v, z) => arPlateB(v, z, true, "A")],
+    ["Armor · A damaged (red)", (v, z) => { DMG_RED = true; const o = arPlateB(v, z, true, "A"); DMG_RED = false; return o; }],
+    ["Armor · B shield plate", (v, z) => arPlateB(v, z, false, "B")], ["Armor · B damaged (amber)", (v, z) => arPlateB(v, z, true, "B")],
+  ];
+  const colW = 3 * 40;
+  s += `<div class="g mono" style="left:16px;top:10px;font-size:15px;color:${col("--g-muted")}">PLATE</div>`;
+  sizes.forEach((z, i) => { s += `<div class="g mono" style="left:${260 + i * colW}px;top:10px;font-size:15px;color:${col("--g-muted")}">${z} PX</div>`; });
+  rowsDef.forEach(([label, f], r) => {
+    const y = 38 + r * 44;
+    s += `<div class="g mono" style="left:16px;top:${y + 10}px;font-size:15px;color:${col("--g-fog")}">${label.toUpperCase()}</div>`;
+    sizes.forEach((z, i) => vals.forEach((v, j) => { s += `<div class="g" style="left:${260 + i * colW + j * 38}px;top:${y + (34 - z) / 2}px">${f(v, z)}</div>`; }));
+  });
+  return s;
+}
+
 function c1plusSection() {
   const NB = [u("marksman"), u("breacher", { activeT: ["vanguard"] }), u("gunner", { traits: ["heavy", "undead"], doctrine: "heavy" }), u("armored"), u("grunt"), u("recon")];
   const rows = NB.map((c) => `<tr><td>${c.name}${c.activeT ? " (trait ON)" : ""}${c.traits ? " (2 traits)" : ""}</td><td>${countC1(c)}</td><td>${countC1p(c)}</td><td>${countC1(c) - countC1p(c) > 0 ? "-" + (countC1(c) - countC1p(c)) : "0"}</td></tr>`).join("");
   const avg = (f) => (NB.reduce((a, c) => a + f(c), 0) / NB.length).toFixed(1);
   return `<article class="opt c1plus" id="opt-C1P" data-key="C1+">
     <div class="opt-head"><span class="opt-letter">C1+</span><span class="opt-title">Progressive disclosure</span><span class="pick">The head's direction</span>
-      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, one FP / Armor look for both sides, and a damaged cue. <b>Try it:</b> hover a card to peek at its cost, weapon, level and serial; hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
+      <p class="opt-pitch">C1 refined as the head asked: cost and traits swapped (cost top-left, traits bottom-left), bigger combat icons (keywords 21 px, FP / Armor 24 px, from 15 / 20), only stats, abilities and traits visible at rest (a trait is faint until its bonus is on), no side bar, a crosshair FP and an armor-plate Armor that look the same on both sides, and a damaged cue (amber Armor number = what's left). <b>Try it:</b> hover a card to peek at its cost, weapon (steel pill), level (round coin) and serial; hover a row of the <b>SETS</b> rail (left strip) to light that trait on every card; on touch, hold a card to peek (long press opens the inspector) and tap a rail row.</p></div>
     <div class="cmp" style="text-transform:none"><label class="tog" for="p-all"><input type="checkbox" id="p-all"> Show everything (game setting: Settings &gt; Cards &gt; Always show all card info)</label></div>
     <div class="frames">
       ${fitBox(1168, 540, `<div class="p-board" id="p-board">${pBoard()}</div>`, "Phone 844x390 · C1+ live board · hand tray: 5+ (full info in hand)")}
+      ${pLegend()}
       ${fitBox(16 * 4 + BW * 2 * 3, 14 + 3 * (BH * 2 + 50) + 8, `<div class="p-board p-static">${pStates()}</div>`, "States at 2x")}
+      ${fitBox(760, 38 + 9 * 44 + 8, pSheet(), "Plate sheet · values 1, 4, 10 at 16 / 20 / 24 / 32 px · A is used on the board, B is the alternative")}
       ${fitBox(48 + BW * 4, 14 + 3 * (BH * 2 + 40), `<div class="p-board p-static">${pBeforeAfter()}</div>`, "Before (C1) / after (C1+ at rest)")}
     </div>
     <div class="pc">
@@ -1115,8 +1206,10 @@ function openInspect(id) {
   bits.push(isRival(c, side) ? "rival" : "yours");
   document.getElementById("insp-sub").textContent = bits.join(" · ").toUpperCase();
   const rows = [["Cost", `${c.cost} Supply`]];
-  if (!c.tactic) rows.push(["FP / Armor", `${c.fp} / ${c.ar}${c.ar < c.max ? ` (damaged, max ${c.max})` : ""}${c.up ? " (+1 from a Spotter link)" : ""}`]);
-  if (c.trait) rows.push(["Trait", `${TRAITS[c.trait][0]} (from the art)`]);
+  if (!c.tactic) rows.push(["FP / Armor", `${c.fp} / ${c.ar}${c.ar < c.max ? ` (damaged: ${c.ar} left of ${c.max})` : ""}${c.up ? " (+1 from a Spotter link)" : ""}`]);
+  for (const t of (c.traits || (c.trait ? [c.trait] : []))) rows.push(["Trait", `${TRAITS[t][0]} (from the art)${c.doctrine === t ? " · Doctrine" : ""}${(c.activeT || []).includes(t) ? " · bonus ON" : ""}`]);
+  if (c.cls) rows.push(["Weapon", `${CLS[c.cls]} (its range bonus is already in the FP number)`]);
+  if (c.level !== undefined && !c.si) rows.push(["Level", ["Recruit: keywords locked until it trains", "Trained", "Veteran: +1 Armor", "Elite: +1 Armor, +1 FP"][c.level]]);
   if (c.si) rows.push(["Kit", "Basic: no keyword, no trait, no weapon class. Muster out sends it home."]);
   for (const k of c.kws || []) rows.push([KW[k][0], KW[k][1]]);
   for (const k of c.locked || []) rows.push([KW[k][0] + " (locked)", KW[k][1] + " Unlocks when it trains."]);
