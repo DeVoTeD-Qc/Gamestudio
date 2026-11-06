@@ -98,6 +98,8 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 	if art == null and licensed_enabled:
 		art = _licensed_art(art_id)
 	if art == null and String(art_id).contains(VARIANT_SEP):
+		art = _option_variant(art_id, hint)
+	if art == null and String(art_id).contains(VARIANT_SEP):
 		art = _variant(art_id, hint)
 	if art == null:
 		art = _placeholder(art_id, hint)
@@ -170,8 +172,14 @@ static func art_title(art_id: StringName) -> String:
 
 ## kc-ui4: every art a card can wear, default first: the licensed pool in the pitch build (calling
 ## cards), else the chassis id + our VARIANTS. The Codex lists these; Settings.equipped_arts holds the
-## pick per chassis.
+## pick per chassis. kc-trait-ui: for a known card this is ArtTraits.arts_for(card), so the public
+## placeholder art of every trait option ("<chassis>~honors|operators|mastery|horde") is listed too.
 static func alt_arts(chassis: StringName) -> Array[StringName]:
+	var card: CardData = _card_of(chassis)
+	if card != null:
+		var arts: Array[StringName] = ArtTraits.arts_for(card)
+		if not arts.is_empty():
+			return arts
 	var pool: Array[StringName] = licensed_pool(chassis)
 	if not pool.is_empty():
 		return pool
@@ -179,6 +187,13 @@ static func alt_arts(chassis: StringName) -> Array[StringName]:
 	for v: Array in VARIANTS:
 		out.append(StringName("%s%s%s" % [chassis, VARIANT_SEP, v[0]]))
 	return out
+
+
+## The CardData of a chassis id (null without CardDB or for a non-card id).
+static func _card_of(chassis: StringName) -> CardData:
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var db: Node = tree.root.get_node_or_null(^"/root/CardDB") if tree != null else null
+	return db.get_card(chassis) if db != null and db.has_card(chassis) else null
 
 
 ## kc-ui4 (head naming): the art's own name, shown UNDER the card name (the card keeps its chassis
@@ -195,6 +210,10 @@ static func subname(art_id: StringName) -> String:
 		for v: Array in VARIANTS:
 			if v[0] == parts[1]:
 				return String(v[1])
+		# kc-trait-ui: our placeholder art of a trait option (ArtTraits.OPTION_VARIANTS).
+		var fam := StringName(parts[1])
+		if fam != ArtTraits.STANDARD and ArtTraits.OPTION_VARIANTS.has(fam):
+			return String(ArtTraits.OPTION_VARIANTS[fam][0])
 	return ""
 
 
@@ -211,11 +230,15 @@ static func chassis_of(art_id: StringName) -> StringName:
 	return art_id
 
 
-## kc-ui4 (coming next: alternate arts give different traits): the trait an art carries when the
-## manifest names one (column "trait"), else &"" (the Codex shows an empty trait slot).
-static func art_trait(art_id: StringName) -> StringName:
+## kc-ui4 / kc-trait-ui: the trait a copy wearing `art_id` carries (ArtTraits.trait_of: the art's
+## family, limited to the chassis' options; printed cards keep theirs). Without a known card, the
+## licensed manifest's `trait` column, else &"" (the Codex shows an empty trait slot = no trait).
+static func art_trait(art_id: StringName, card: CardData = null) -> StringName:
 	if art_id == &"":
 		return &""
+	var c: CardData = card if card != null else _card_of(chassis_of(art_id))
+	if c != null:
+		return ArtTraits.trait_of(art_id, c)
 	var art: BannerArt = get_art(art_id)
 	return StringName(String(art.tags.get("trait", ""))) if art != null else &""
 
@@ -385,6 +408,155 @@ static func _crop(art_id: StringName, kind: StringName, hint: Dictionary) -> Tex
 	atlas.filter_clip = true
 	_crops[key] = atlas
 	return atlas
+
+
+## kc-trait-ui: the public placeholder art of a trait option ("<chassis>~honors|operators|mastery|
+## horde", ArtTraits.OPTION_VARIANTS): the chassis' art with the family's backdrop tint, a family
+## treatment across the band (Honors: gold rules; Operators: black tape; Mastery: field camo; Horde:
+## drips) and the family emblem in the band's middle right. Our own art, clearly a placeholder. Null
+## for an id that is not an option family.
+static func _option_variant(art_id: StringName, hint: Dictionary) -> BannerArt:
+	var parts: PackedStringArray = String(art_id).split(VARIANT_SEP)
+	if parts.size() != 2:
+		return null
+	var fam := StringName(parts[1])
+	if fam == ArtTraits.STANDARD or not ArtTraits.OPTION_VARIANTS.has(fam):
+		return null
+	var spec: Array = ArtTraits.OPTION_VARIANTS[fam]
+	var base: BannerArt = get_art(StringName(parts[0]), hint)
+	var tex: Texture2D = master_texture(base)
+	var art := BannerArt.new()
+	art.id = art_id
+	art.card_id = base.card_id
+	art.placeholder = true
+	art.is_default = false
+	art.title = String(spec[0])
+	art.banner_y = base.banner_y
+	art.portrait_x = base.portrait_x
+	art.tags = {"family": String(fam), "emblem": String(spec[2])}
+	art.source_note = "Placeholder option art (%s, %s family): the chassis art with the family tint and emblem." % [spec[0], ArtTraits.FAMILY_NAMES[fam]]
+	if tex == null:
+		return art
+	var img: Image = tex.get_image()
+	if img == null or img.is_empty():
+		art.texture = tex
+		return art
+	img = img.duplicate()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	var tint: Color = spec[1]
+	img.adjust_bcs(0.92, 1.06, 0.85)
+	if tint.a > 0.0:
+		var over: Image = Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
+		over.fill(tint)
+		img.blend_rect(over, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
+	var band: Rect2i = Rect2i(art.banner_region(Vector2(img.get_size())))
+	_family_treatment(img, band, fam)
+	var es: int = maxi(16, int(band.size.y * 0.44))
+	var emblem: Image = option_emblem(StringName(String(spec[2])), es)
+	img.blend_rect(emblem, Rect2i(0, 0, es, es),
+			Vector2i(band.position.x + int(band.size.x * 0.64) - es / 2, band.position.y + (band.size.y - es) / 2))
+	art.texture = ImageTexture.create_from_image(img)
+	return art
+
+
+## The family's treatment across the 4:1 band of `img` (in place).
+static func _family_treatment(img: Image, band: Rect2i, fam: StringName) -> void:
+	var h: int = band.size.y
+	match fam:
+		ArtTraits.HONORS:
+			var gold: Color = Color("#E2B84A")
+			var t: int = maxi(2, h / 28)
+			for y0: int in [band.position.y + t * 2, band.end.y - t * 3]:
+				img.fill_rect(Rect2i(band.position.x, y0, band.size.x, t), gold)
+		ArtTraits.OPERATORS:
+			var tape: Color = Color("#121417")
+			var edge: Color = Color("#E8C547")
+			var w: int = maxi(6, h / 6)
+			for x0f: float in [0.10, 0.62]:
+				var x0: int = band.position.x + int(band.size.x * x0f)
+				for y: int in range(band.position.y, band.end.y):
+					var x: int = x0 + (y - band.position.y) / 2
+					img.fill_rect(Rect2i(x, y, w, 1).intersection(Rect2i(Vector2i.ZERO, img.get_size())), tape)
+					img.fill_rect(Rect2i(x - 2, y, 2, 1).intersection(Rect2i(Vector2i.ZERO, img.get_size())), edge)
+		ArtTraits.MASTERY:
+			var cols: Array[Color] = [Color(0.22, 0.27, 0.14, 0.55), Color(0.42, 0.36, 0.22, 0.50), Color(0.10, 0.12, 0.08, 0.55)]
+			var rng := RandomNumberGenerator.new()
+			rng.seed = 4242
+			for i: int in 26:
+				var r: int = maxi(6, int(h * rng.randf_range(0.10, 0.22)))
+				var stamp: Image = _disc(r, cols[i % cols.size()])
+				img.blend_rect(stamp, Rect2i(0, 0, r * 2, r * 2), Vector2i(band.position.x + rng.randi_range(0, band.size.x) - r,
+						band.position.y + rng.randi_range(0, h) - r))
+		ArtTraits.HORDE:
+			var rot: Color = Color("#3E6B22")
+			var rng2 := RandomNumberGenerator.new()
+			rng2.seed = 1313
+			var dw: int = maxi(3, h / 22)
+			img.fill_rect(Rect2i(band.position.x, band.position.y, band.size.x, dw), rot)
+			for i: int in 14:
+				var x: int = band.position.x + rng2.randi_range(0, band.size.x - dw)
+				var l: int = int(h * rng2.randf_range(0.12, 0.45))
+				img.fill_rect(Rect2i(x, band.position.y, dw, l), rot)
+				var d: Image = _disc(dw, rot)
+				img.blend_rect(d, Rect2i(0, 0, dw * 2, dw * 2), Vector2i(x + dw / 2 - dw, band.position.y + l - dw))
+
+
+## A filled disc stamp of radius r (2r x 2r, transparent outside).
+static func _disc(r: int, c: Color) -> Image:
+	var img := Image.create(r * 2, r * 2, false, Image.FORMAT_RGBA8)
+	var ctr: Vector2 = Vector2(r, r)
+	for y: int in r * 2:
+		for x: int in r * 2:
+			if Vector2(x + 0.5, y + 0.5).distance_to(ctr) <= r:
+				img.set_pixel(x, y, c)
+	return img
+
+
+## kc-trait-ui: a family emblem roundel (s x s): dark disc, family-coloured ring and glyph. laurel =
+## a wreath (Honors), tape = crossed tape (Operators), camo = a camo disc (Mastery), rot = three drips
+## (Horde). The Codex and the art itself use it; its shape is distinct from the trait icons.
+static func option_emblem(emblem: StringName, s: int) -> Image:
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	var c: Vector2 = Vector2(s, s) * 0.5
+	var r: float = s * 0.5 - 1.0
+	var ink: Color = Color(0.06, 0.07, 0.08, 0.92)
+	var col: Color = {&"laurel": Color("#E2B84A"), &"tape": Color("#E8C547"), &"camo": Color("#A8B36A"), &"rot": Color("#8EDB6A")}.get(emblem, Color.WHITE)
+	for y: int in s:
+		for x: int in s:
+			var p: Vector2 = Vector2(x + 0.5, y + 0.5) - c
+			var d: float = p.length()
+			if d > r:
+				continue
+			var px: Color = ink
+			if d > r * 0.84:
+				px = col
+			else:
+				var u: Vector2 = p / r
+				match emblem:
+					&"laurel":
+						var a: float = absf(atan2(u.x, -u.y))
+						if d > r * 0.46 and d < r * 0.70 and a > 0.45 and a < 2.7 and fmod(a * 4.0, 1.0) < 0.62:
+							px = col
+						elif d < r * 0.16:
+							px = col
+					&"tape":
+						if absf(u.x - u.y) < 0.20 or absf(u.x + u.y) < 0.20:
+							px = Color("#1A1C1F") if (absf(u.x - u.y) < 0.13 or absf(u.x + u.y) < 0.13) else col
+					&"camo":
+						var n: float = sin(u.x * 7.0) + cos(u.y * 6.0 + u.x * 2.0) + sin((u.x + u.y) * 4.0)
+						px = [Color("#3A4524"), Color("#6B5E38"), Color("#A8B36A"), Color("#1E2414")][clampi(int((n + 3.0) * 0.67), 0, 3)]
+					&"rot":
+						for k: int in 3:
+							var cx: float = -0.42 + 0.42 * k
+							var len: float = [0.55, 0.85, 0.45][k]
+							if absf(u.x - cx) < 0.12 and u.y > -0.7 and u.y < -0.7 + len:
+								px = col
+							elif Vector2(u.x - cx, u.y - (-0.7 + len)).length() < 0.16:
+								px = col
+			img.set_pixel(x, y, px)
+	return img
 
 
 ## kc-ui4: a public alternate art ("<chassis>~<variant>"): the chassis' art regraded (overlay,

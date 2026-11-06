@@ -116,8 +116,8 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 	assert_true(CardView.FP_RECT.end.y > CardView.BASE_SIZE.y * 0.8 and CardView.ARMOR_RECT.end.y > CardView.BASE_SIZE.y * 0.8, "CardView: on the bottom")
 
 
-## The head's card anatomy on one banner: FP + Armor side by side bottom-right, cost top-left,
-## trait top-right, abilities bottom-left.
+## The head's card anatomy on one banner (kc-trait-ui, 2026-11-06): cost + name top-left, abilities
+## top-right, trait + weapon-type bottom-left, FP + Armor side by side bottom-right.
 func _check_anatomy(b: BannerView, label: String) -> void:
 	var a: Dictionary = b.anatomy_now()
 	var sz: Vector2 = b.size
@@ -127,120 +127,111 @@ func _check_anatomy(b: BannerView, label: String) -> void:
 	assert_true(fp.end.y >= sz.y - 8.0 and ar.end.y >= sz.y - 8.0, "%s: stats on the bottom edge" % label)
 	if (a["cost"] as Rect2).size.x > 0.0:
 		assert_true((a["cost"] as Rect2).position.x < sz.x * 0.15 and (a["cost"] as Rect2).position.y < sz.y * 0.3, "%s: cost top-left" % label)
-	if a.has("trait"):
-		assert_true((a["trait"] as Rect2).end.x > sz.x - 8.0 and (a["trait"] as Rect2).position.y < sz.y * 0.3, "%s: trait top-right" % label)
+	var nr: Rect2 = a["name"]
+	assert_true(nr.position.x < sz.x * 0.4 and nr.position.y < sz.y * 0.3, "%s: name top-left, next to the cost (%s)" % [label, nr])
+	for key: String in ["trait", "class"]:
+		if a.has(key):
+			assert_true((a[key] as Rect2).position.x < sz.x * 0.5 and (a[key] as Rect2).end.y > sz.y * 0.6, "%s: %s bottom-left" % [label, key])
 	for ab: Array in a["abilities"]:
-		assert_true((ab[1] as Rect2).position.x < sz.x * 0.5 and (ab[1] as Rect2).end.y > sz.y * 0.6, "%s: abilities bottom-left" % label)
+		assert_true((ab[1] as Rect2).end.x > sz.x * 0.5 and (ab[1] as Rect2).position.y < sz.y * 0.4, "%s: abilities top-right" % label)
+		assert_true(nr.end.x <= (ab[1] as Rect2).position.x + 0.5, "%s: the name stops before the abilities" % label)
 
 
 # =============================================================================
-# 2. Codex: one tile per card, alternate arts, EQUIP (saved), gameplay wears it
+# 2. Codex: one tile per card, its arts with their traits (a viewer: no EQUIP, kc-trait-ui)
 # =============================================================================
 
-func test_codex_equip_persists_and_the_match_uses_it() -> void:
+func test_codex_is_a_viewer_with_trait_slots() -> void:
 	_reset_settings()
 	var entries: Array[Dictionary] = CodexView.build_entries()
-	var rifle: Dictionary = {}
+	var mk: Dictionary = {}
 	for e: Dictionary in entries:
-		if e["id"] == &"rifleman":
-			rifle = e
-	assert_false(rifle.is_empty(), "Rifleman in the codex")
-	var arts: Array = rifle["arts"]
-	assert_true(arts.size() >= 2, "Rifleman has alternate arts (%d)" % arts.size())
-	var pick: StringName = arts[1]
-	assert_true(BannerArtDB.subname(pick) != "", "an alternate art has a subname")
-	assert_eq(BannerArtDB.chassis_of(pick), &"rifleman", "the art belongs to the Rifleman")
-	# The UI: Title > CODEX > tap Rifleman > the ART panel > select > EQUIP.
-	var t: Array = await _spawn_title(Layout.PHONE)
-	var vp: SubViewport = t[0]
-	var title: Control = t[1]
+		if e["id"] == &"marksman":
+			mk = e
+	assert_false(mk.is_empty(), "Marksman in the codex")
+	var card: CardData = CardDB.get_card(&"marksman")
+	var arts: Array = mk["arts"]
+	assert_eq(arts.size(), ArtTraits.arts_for(card).size(), "the codex lists ArtTraits.arts_for")
+	var heavy_art: StringName = ArtTraits.default_art(card, &"heavy")
+	assert_true(heavy_art in arts, "the Heavy option's art is listed (%s)" % heavy_art)
+	# Grouped by the trait they give: the default option first.
+	var seen_alt: bool = false
+	for a: Variant in arts:
+		var t: StringName = ArtTraits.trait_of(StringName(String(a)), card)
+		if t != card.card_trait:
+			seen_alt = true
+		assert_false(seen_alt and t == card.card_trait, "arts grouped by trait (%s)" % a)
+	var t0: Array = await _spawn_title(Layout.PHONE)
+	var vp: SubViewport = t0[0]
+	var title: Control = t0[1]
 	title.open_codex()
 	await _frames(3)
 	var codex: Control = title.get_codex()
 	var tile: Control = null
 	for n: Node in codex.get_tiles():
-		if n.get_meta(&"entry")["id"] == &"rifleman":
+		if n.get_meta(&"entry")["id"] == &"marksman":
 			tile = n
-	assert_not_null(tile, "a Rifleman tile")
+	assert_not_null(tile, "a Marksman tile")
+	var bv0: BannerView = BannerCard.banner_of(tile.get_child(0))
+	assert_false(bv0.entry.has("subname") and (tile.find_child("SubLabel", true, false) as Label).visible, "no subname on the codex tile")
 	var k: float = Layout.points_per_px(Layout.PHONE)
 	await _tap(vp, tile.get_global_rect().get_center())
 	await _frames(2)
 	assert_true(codex.is_art_panel_open(), "tap opens the ART panel")
-	assert_eq(codex.get_art_tiles().size(), arts.size(), "one tile per alternate art")
-	for b: Button in [codex.get_equip_button(), codex.get_variety_button(), codex.get_art_back_button(), codex.get_art_inspect_button()]:
-		assert_true(minf(b.size.x, b.size.y) * k >= 44.0 - EPS, "%s is 44 pt+" % b.name)
+	assert_eq(codex.get_art_tiles().size(), arts.size(), "one tile per art")
+	assert_false(codex.has_method(&"get_equip_button"), "no EQUIP (head: the Codex is a viewer)")
 	for at: Node in codex.get_art_tiles():
-		assert_not_null(at.find_child("TraitSlot", true, false), "every art tile has a trait slot")
+		var art: StringName = at.get_meta(&"art")
+		var slot: Node = at.find_child("TraitSlot", true, false)
+		assert_not_null(slot, "every art tile has a trait slot")
+		assert_eq(slot.get_meta(&"trait"), ArtTraits.trait_of(art, card), "%s: the slot shows the trait the art gives" % art)
+		var bv: BannerView = BannerCard.banner_of(at.get_child(0))
+		assert_eq(StringName(String(bv.entry.get("trait", ""))), ArtTraits.trait_of(art, card), "%s: the banner's trait plate" % art)
 		assert_true(minf((at as Control).size.x, (at as Control).size.y) * k >= 44.0 - EPS, "art tile 44 pt+")
-	var art_tile: Control = codex.get_art_tiles()[1]
-	await _tap(vp, art_tile.get_global_rect().get_center())
+		_check_anatomy(bv, "codex art %s" % art)
+	# Preview the Heavy art: GIVES HEAVY; the subname is in the more-info line, not on the card.
+	for at: Node in codex.get_art_tiles():
+		if at.get_meta(&"art") == heavy_art:
+			await _tap(vp, (at as Control).get_global_rect().get_center())
 	await _frames(2)
-	assert_eq(codex.selected_art, pick, "tap previews that art")
-	await _tap(vp, codex.get_equip_button().get_global_rect().get_center())
+	assert_eq(codex.selected_art, heavy_art, "tap previews that art")
+	assert_eq(codex.get_gives_label().text, "GIVES HEAVY", "the preview says what it gives")
+	assert_true(String((codex.find_child("ArtTrait", true, false) as Label).text).contains("Can be: Spec Ops"), "the options line")
+	for at: Node in codex.get_art_tiles():
+		if ArtTraits.trait_of(at.get_meta(&"art"), card) == &"specops":
+			await _tap(vp, (at as Control).get_global_rect().get_center())
+			break
 	await _frames(2)
-	assert_eq(_settings().equipped_art(&"rifleman"), pick, "EQUIP stores it")
-	assert_eq(codex.get_equip_button().text, "EQUIPPED", "the button says EQUIPPED")
-	assert_true(bool(codex.get_art_tiles()[1].get_meta(&"equipped")), "the art tile is marked")
-	assert_not_null(codex.get_art_tiles()[1].find_child("EquippedTag", true, false), "EQUIPPED tag on the art")
-	codex.close_arts()
-	await _frames(2)
-	for n: Node in codex.get_tiles():
-		if n.get_meta(&"entry")["id"] == &"rifleman":
-			assert_not_null(n.find_child("EquippedTag", true, false), "the grid tile shows EQUIPPED")
-			var bv: BannerView = BannerCard.banner_of(n.get_child(0))
-			assert_eq(StringName(String(bv.entry.get("banner", ""))), pick, "the grid tile wears the equipped art")
-			_check_anatomy(bv, "codex tile")
-	# Long-press (right-click) = the inspector, named by the chassis with the subname in the type line.
-	codex.open_entry(rifle, pick)
-	assert_eq(String((codex.get_inspector().get_node("%TitleLabel") as Label).text), "Rifleman", "inspector title is the card name")
-	assert_true(String((codex.get_inspector().get_node("%TypeLabel") as Label).text).contains(BannerArtDB.subname(pick).to_upper()),
-			"inspector type line has the subname")
-	var ib: BannerView = codex.get_inspector().get_banner()
-	if ib != null:
-		_check_anatomy(ib, "inspector banner")
+	assert_eq(codex.get_gives_label().text, "GIVES SPEC OPS", "the Spec Ops art gives Spec Ops")
+	# Found marks: the default art is found; an art a run copy wore becomes FOUND.
+	assert_true(CodexView.is_found(mk, StringName(String(mk["art"]))), "the default art counts as found")
+	_settings().found_arts = {}
+	assert_false(CodexView.is_found(mk, heavy_art), "not found yet")
+	_settings().mark_found([heavy_art])
+	assert_true(CodexView.is_found(mk, heavy_art), "found after a run copy wore it")
+	_settings().found_arts = {}
+	# The inspector (long-press) names the chassis and carries the subname in its type line.
+	codex.open_entry(mk, heavy_art)
+	assert_eq(String((codex.get_inspector().get_node("%TitleLabel") as Label).text), "Marksman", "inspector title is the card name")
+	var sub: String = BannerArtDB.subname(heavy_art)
+	if sub != "":
+		assert_true(String((codex.get_inspector().get_node("%TypeLabel") as Label).text).contains(sub.to_upper()), "inspector type line has the subname")
 	codex.get_inspector().close()
 	_despawn(vp)
 	await tree.process_frame
-	# Saved and loaded (user:// settings).
-	assert_eq(_settings().save_to(SCRATCH), OK, "settings saved")
-	_settings().equipped_arts = {}
-	assert_true(_settings().load_from(SCRATCH), "settings loaded")
-	assert_eq(_settings().equipped_art(&"rifleman"), pick, "the equipped art survives a restart")
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SCRATCH))
-	# Gameplay: every copy of the Rifleman YOU play wears it; other cards and the rival keep variety.
+	# Codex EQUIP (an old setting) no longer dresses matches: the rival and you wear arts of the copy's trait.
+	_settings().equipped_arts = {"rifleman": "rifleman~night"}
 	var cfg: RunConfig = CardDB.get_run_config()
 	var player: SideSetup = SideSetup.new()
 	for i: int in 3:
 		player.deck.append(CardDB.get_card(&"rifleman"))
-	player.deck.append(CardDB.get_card(&"marksman"))
 	var enemy: SideSetup = SideSetup.new()
-	enemy.deck.append(CardDB.get_card(&"rifleman"))
+	enemy.deck.append(card)
+	enemy.deck_traits.append(&"heavy")
 	var m: MatchState = MatchState.new(cfg, CardDB.get_map(&"port_vasel"), player, enemy, 7)
 	MatchController._assign_copy_arts(m)
-	assert_eq(player.deck_arts.slice(0, 3), [pick, pick, pick] as Array[StringName], "every Rifleman copy wears the equipped art")
-	assert_true(player.deck_arts[3] != pick, "the Marksman keeps its own art")
-	assert_true(enemy.deck_arts.is_empty() or enemy.deck_arts[0] != pick, "the rival is not changed")
-	# Live match: the hand card and the board banner wear it, with the subname under the chassis name.
-	var s: Array = await _spawn(Layout.DESKTOP)
-	var c: Node = s[2]
-	var mm: Control = s[1]
-	var st: MatchState = c.state
-	var found: bool = false
-	for rc: RulesCard in st.sides[0].deck + st.sides[0].hand:
-		if rc.card.id == &"rifleman":
-			assert_eq(StringName(String(st.art_by_uid.get(rc.uid, ""))), pick, "match copy %d wears it" % rc.uid)
-			found = true
-	assert_true(found, "the quick-match deck has Riflemen")
-	for chip: Node in mm.get_hand().get_cards():
-		var bv: BannerView = mm.get_hand().get_banner(chip)
-		if bv != null and String(bv.entry.get("name", "")) == "Rifleman":
-			assert_eq(StringName(String(bv.entry["banner"])), pick, "hand Rifleman wears it")
-			assert_eq((chip.find_child("SubLabel", true, false) as Label).text, BannerArtDB.subname(pick).to_upper(), "hand subname")
-	_despawn(s[0])
-	await tree.process_frame
-	# USE VARIETY clears it.
-	_settings().equip_art(&"rifleman", &"")
-	assert_eq(_settings().equipped_art(&"rifleman"), &"", "variety again")
+	assert_false(&"rifleman~night" in player.deck_arts, "EQUIP is not applied")
+	assert_eq(ArtTraits.trait_of(enemy.deck_arts[0], card), &"heavy", "the rival's Heavy Marksman wears a Heavy art (%s)" % enemy.deck_arts[0])
 	_reset_settings()
 
 

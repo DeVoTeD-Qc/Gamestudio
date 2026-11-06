@@ -317,32 +317,53 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	_begin_deploy()
 
 
-## kc-cod2: per-copy banner art (display only). With the private licensed art present, every copy
-## of a chassis, on both sides, wears a different banner; without it deck_arts stays empty.
-## kc-ui4: a card with an art equipped in the Codex (Settings.equipped_arts) wears that art on every
-## copy YOU play (public variants too); the rival keeps the variety.
-static func _assign_copy_arts(m: MatchState, equipped: Dictionary = _equipped_arts()) -> void:
-	var decks: Array = []
-	for s: RulesSide in m.sides:
-		var ids: Array = []
-		for card: CardData in s.setup.deck:
-			ids.append(card.id if card != null else &"")
-		decks.append(ids)
-	var arts: Array = BannerArtDB.copy_arts(decks)
+## kc-cod2: per-copy banner art (display only). kc-trait-ui (head): every copy wears ITS OWN art,
+## and that art matches the copy's trait (the art gives the trait):
+## - a run's player side already carries the copies' arts (RunProgress.player_setup().deck_arts, the
+##   art each copy was found with): kept as they are;
+## - every other side (rival squads, quick match, tutorial) dresses each copy with an art of its
+##   trait (SideSetup.trait_of: the squad's identity): with the private licensed art, the n-th copy
+##   of a (chassis, trait) across both sides gets the n-th licensed art of that trait (variety);
+##   without it, the home option wears the chassis' default art (&"") and an alternate option our
+##   placeholder option art (ArtTraits.default_art: "<chassis>~mastery" ...).
+## Codex EQUIP no longer reaches matches (head: the Codex is a viewer). `_equipped` is ignored.
+static func _assign_copy_arts(m: MatchState, _equipped: Dictionary = {}) -> void:
+	var used: Dictionary = {}
+	var licensed: bool = BannerArtDB.has_licensed()
 	for i: int in m.sides.size():
 		var setup: SideSetup = m.sides[i].setup
-		setup.deck_arts.clear()
+		if i == PLAYER and setup.deck_arts.size() == setup.deck.size() and setup.deck_arts.any(func(a: StringName) -> bool: return a != &""):
+			continue
 		var list: Array[StringName] = []
-		var any: bool = BannerArtDB.has_licensed()
+		var any: bool = false
 		for j: int in setup.deck.size():
-			var art: StringName = arts[i][j] if any else &""
-			var card: CardData = setup.deck[j]
-			if i == PLAYER and card != null and equipped.has(String(card.id)):
-				art = StringName(String(equipped[String(card.id)]))
-				any = true
+			var art: StringName = _copy_art(setup.deck[j], setup.trait_of(j), used, licensed)
+			any = any or art != &""
 			list.append(art)
+		setup.deck_arts.clear()
 		if any:
 			setup.deck_arts.assign(list)
+
+
+## The art of one copy of `card` whose chosen trait is `chosen` (see _assign_copy_arts).
+static func _copy_art(card: CardData, chosen: StringName, used: Dictionary, licensed: bool) -> StringName:
+	if card == null:
+		return &""
+	var t: StringName = card.card_trait
+	if card.has_trait_choice() and chosen != SynergyRules.TRAIT_DEFAULT:
+		t = chosen if card.can_carry(chosen) else &""
+	var pool: Array[StringName] = []
+	if licensed:
+		var lic: Array[StringName] = BannerArtDB.licensed_pool(card.id)
+		for a: StringName in (ArtTraits.arts_with_trait(card, t) if card.has_trait_choice() else lic):
+			if a in lic:
+				pool.append(a)
+	if pool.is_empty():
+		return &"" if t == card.card_trait else ArtTraits.default_art(card, t)
+	var key: String = "%s@%s" % [card.id, t]
+	var n: int = int(used.get(key, 0))
+	used[key] = n + 1
+	return pool[n % pool.size()]
 
 
 ## kc-ui4: the starter screen's Operator pick (one of RunProgress.operator_options), else null.
@@ -356,12 +377,6 @@ static func _picked_operator(config: RunConfig) -> LoadoutItem:
 		if String(item.id) == id:
 			return item
 	return null
-
-
-static func _equipped_arts() -> Dictionary:
-	var tree: SceneTree = Engine.get_main_loop() as SceneTree
-	var settings: Node = tree.root.get_node_or_null(^"/root/Settings") if tree != null else null
-	return (settings.get(&"equipped_arts") as Dictionary) if settings != null else {}
 
 
 func _ai_turn(st: MatchState) -> void:
@@ -806,9 +821,7 @@ func open_mulligan() -> void:
 			view["licensed_art"] = String(art.id)
 		elif not art.is_default:
 			view["art_id"] = String(art.id)
-		var sub: String = BannerArtDB.subname(art.id)
-		if sub != "":
-			view["subname"] = sub
+		# kc-trait-ui (head): no art subname on the mulligan card (the inspector shows it).
 		entries.append({"uid": rc.uid, "id": rc.card.id, "name": String(view["name"]), "cost": rc.card.cost, "view": view,
 				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
 	clear_selection()
@@ -1361,7 +1374,7 @@ func _on_card_inspected(uid: int) -> void:
 	if rc.card.cost > s.supply:
 		status += " Not enough to play it now."
 	open_card_inspector(rc.card, "friend", _join(status, _range_hint(rc.card)), {}, -1, uid,
-			synergy_lines(rc.card, rc.level, PLAYER, null))
+			synergy_lines(rc.card, rc.level, PLAYER, null, rc.chosen_trait))
 
 
 func _on_operator_inspected() -> void:
@@ -1400,7 +1413,7 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 				" (frontline)" if row == 1 else "", RANGE_WORDS[state.zone_ranges[zone]],
 				state.firepower_of(u), u.armor, u.max_armor(state.round_number)]
 		open_card_inspector(u.card, "friend" if side == PLAYER else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
-				-1, synergy_lines(u.card, u.level, side, u))
+				-1, synergy_lines(u.card, u.level, side, u, u.chosen_trait))
 		return
 	if u != null:
 		# A token without a card (Sentry Turret).
@@ -1424,7 +1437,10 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 ## where its FP / Cover come from ("FP 4 = 2 base +1 Spotter (Marksman, behind) +1 Vanguard 2"),
 ## its neighbour keyword (what it uses, whether the link is on, with whom), its trait (count in
 ## play, tier texts) and its copy level (camo band).
-func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit) -> Array[Dictionary]:
+## kc-trait-ui: `chosen` = the copy's own trait (RulesCard / RulesUnit.chosen_trait): two copies of
+## one card can carry different traits, so the trait line names this copy's and where it comes from.
+func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
+		chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if card == null or state == null:
 		return out
@@ -1454,7 +1470,11 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit) -> Array
 			state_word = (" Link ON with %s." % ", ".join(partners)) if not partners.is_empty() else " Link idle: nobody stands there now."
 		out.append({"name": "%s (neighbour keyword)" % SynergyGlyphs.keyword_name(kw),
 				"text": "%s It uses %s.%s" % [String(SynergyRules.KEYWORD_TEXT[kw]), SynergyGlyphs.KEYWORD_USES[kw], state_word]})
-	var t: StringName = SynergyRules.trait_at(card, level)
+	var t: StringName = SynergyRules.trait_at(card, level, chosen)
+	if t == &"" and card.has_trait_choice():
+		var tc: StringName = card.card_trait if chosen == SynergyRules.TRAIT_DEFAULT else chosen
+		out.append({"name": "Trait: none", "text": ("A Recruit carries no trait. Trained, it becomes %s (its art)." % ArtTraits.trait_name(tc)) \
+				if level < SynergyRules.LEVEL_TRAINED and tc != &"" else "Its art is a plain art: this copy joins no set. Can be: %s." % _options_text(card)})
 	if t != &"":
 		var sv: Dictionary = state.synergy_side(side)
 		var n: int = int((sv["counts"] as Dictionary).get(t, 0))
@@ -1463,6 +1483,9 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit) -> Array
 		var parts: PackedStringArray = ["%d in play%s." % [n, " (Doctrine +1)" if doc else ""]]
 		for k: int in [2, 3]:
 			parts.append("%d: %s%s." % [k, String(SynergyRules.TIER_TEXT[t][k - 2]), " (ON)" if tier >= k else ""])
+		if card.has_trait_choice():
+			# art-traits §8: "Trait: Heavy (from the art: Mastery family)".
+			parts.insert(0, "From the art: %s family. Can be: %s." % [ArtTraits.FAMILY_NAMES[ArtTraits.family_for_trait(t)], _options_text(card)])
 		out.append({"name": "%s (trait)" % SynergyGlyphs.trait_name(t), "text": " ".join(parts)})
 	if card.is_unit() or card.is_field():
 		var lv_text: Array[String] = [
@@ -1474,6 +1497,14 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit) -> Array
 		if card.neighbor_keyword != &"" or card.card_trait != &"" or level >= SynergyRules.LEVEL_VETERAN:
 			out.append({"name": "Level: %s" % SynergyGlyphs.level_name(level), "text": lv_text[clampi(level, 0, 3)]})
 	return out
+
+
+## "Spec Ops · Heavy": the trait options of a chassis (art-traits §3).
+static func _options_text(card: CardData) -> String:
+	var names: PackedStringArray = []
+	for t: StringName in card.trait_choices():
+		names.append(ArtTraits.trait_name(t))
+	return " · ".join(names)
 
 
 func open_card_inspector(card: CardData, side: String, status: String, banner: Dictionary = {}, banner_side: int = -1, card_uid: int = -1,
@@ -1532,7 +1563,8 @@ func _art_line(art: BannerArt) -> String:
 		return "Banner: %s · %s %d of %d · MW3 calling card (reference art, private pitch)" % [what,
 				"mastery tier" if art.mastery_tier > 0 else "art", n, maxi(1, pool.size())]
 	var alts: Array[StringName] = BannerArtDB.alt_arts(art.card_id)
-	return "Banner: %s%s · alternate art %d of %d (equip one in the Codex)" % [what, " (placeholder)" if art.placeholder else "",
+	# kc-trait-ui: each copy comes with its own art (no EQUIP); the Codex shows every art.
+	return "Banner: %s%s · art %d of %d (every art is in the Codex)" % [what, " (placeholder)" if art.placeholder else "",
 			maxi(1, alts.find(art.id) + 1), maxi(1, alts.size())]
 
 

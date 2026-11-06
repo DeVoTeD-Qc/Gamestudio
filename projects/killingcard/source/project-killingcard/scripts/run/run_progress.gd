@@ -33,6 +33,10 @@
 #   Re-issue (reissue_card) changes a Trained copy's trait as a Supply Drop option next to Retire, or on
 #   Regroup, and same-trait art swaps are free (set_copy_art). Codex EQUIP (equipped_arts, from
 #   Settings via RunState) dresses the starter's Recruits and pre-selects new copies' arts.
+#   kc-trait-ui (head): with random_copy_arts (the default) a run's copies keep the art they were
+#   found with: the starter, Supply Drop cards, training into another trait and Re-issue each draw a
+#   RANDOM art of the copy's trait (own RNG stream "copy_art", art_draws counter), art swaps are
+#   refused and Codex EQUIP does not reach the run (set_equipped_arts is ignored).
 #   Results: a loss costs 1 ticket, a draw costs none and gives no Supply Drop
 #   (Ruling 12). After any result the run goes on to the next match (no replays);
 #   it ends at 0 tickets or after the Rival (the last match), with no offers then.
@@ -88,6 +92,11 @@ var deck_traits: Array[StringName] = []
 var deck_arts: Array[StringName] = []
 ## kc-art-traits: Codex EQUIP per chassis (chassis id -> art id), from Settings (not saved here).
 var equipped_arts: Dictionary = {}
+## kc-trait-ui (head): copies keep the art they were found with, drawn at random from their trait's
+## arts; no art swaps, no Codex EQUIP in runs. False = the kc-art-traits behaviour (tests, tools).
+var random_copy_arts: bool = true
+## kc-trait-ui: random arts drawn so far (the "copy_art" RNG stream's position; saved).
+var art_draws: int = 0
 ## Odds that a Supply Drop slot 2-3 card comes in an alternate option's art (§2.2: 60 / 40).
 const ALT_OFFER_CHANCE: float = 0.4
 ## kc-syn Doctrine trait of this run (&"" until picked).
@@ -135,7 +144,7 @@ static func create(p_config: RunConfig, p_seed: int) -> RunProgress:
 			r.deck.append(card.id)
 			r.deck_levels.append(levels[i])
 			r.deck_traits.append(card.card_trait)
-			r.deck_arts.append(ArtTraits.default_art(card, card.card_trait))
+			r.deck_arts.append(r._random_art(card, card.card_trait) if r.random_copy_arts else ArtTraits.default_art(card, card.card_trait))
 	r.primary = _id_of(p_config.starter_primary)
 	r.secondary = _id_of(p_config.starter_secondary)
 	r.lethal = _id_of(p_config.starter_lethal)
@@ -398,7 +407,7 @@ func _dress_drop(drop: Dictionary, on_trait: StringName, rng: RandomNumberGenera
 				alts.erase(c.card_trait)
 				t = alts[rng.randi() % alts.size()]
 		traits.append(t)
-		arts.append(ArtTraits.default_art(c, t, _equipped(c)))
+		arts.append(_random_art(c, t) if random_copy_arts else ArtTraits.default_art(c, t, _equipped(c)))
 	drop["traits"] = traits
 	drop["arts"] = arts
 
@@ -532,7 +541,7 @@ func reissue_card(index: int, new_trait: StringName) -> String:
 	if new_trait == trait_choice(at) or not c.can_carry(new_trait):
 		return "%s can't be re-issued as %s" % [c.display_name, ArtTraits.trait_name(new_trait)]
 	deck_traits[at] = new_trait
-	deck_arts[at] = ArtTraits.default_art(c, new_trait, _equipped(c))
+	deck_arts[at] = _random_art(c, new_trait) if random_copy_arts else ArtTraits.default_art(c, new_trait, _equipped(c))
 	_pop_offer()
 	return ""
 
@@ -546,6 +555,8 @@ func set_copy_art(i: int, art: StringName) -> String:
 	var c: CardData = _card(i)
 	if not ArtTraits.belongs(art, c):
 		return "'%s' is not an art of %s" % [art, c.display_name]
+	if random_copy_arts and art != art_of(i):
+		return "in a run, each copy keeps the art it was found with"
 	var t: StringName = ArtTraits.trait_of(art, c)
 	if c.has_trait_choice():
 		if level_of(i) >= SynergyRules.LEVEL_TRAINED:
@@ -628,6 +639,8 @@ func art_of(i: int) -> StringName:
 ## copies keep theirs. New copies are pre-selected in the equipped art when it gives their trait.
 func set_equipped_arts(equipped: Dictionary) -> void:
 	equipped_arts = {}
+	if random_copy_arts:
+		return  # kc-trait-ui (head): Codex EQUIP never reaches a run
 	for k: Variant in equipped:
 		equipped_arts[StringName(String(k))] = StringName(String(equipped[k]))
 	for i: int in deck.size():
@@ -686,9 +699,22 @@ func _train(i: int, t: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
 			return "%s can't train as %s" % [c.display_name, ArtTraits.trait_name(pick)]
 		deck_traits[i] = pick
 		if ArtTraits.trait_of(art_of(i), c) != pick:
-			deck_arts[i] = ArtTraits.default_art(c, pick, _equipped(c))
+			deck_arts[i] = _random_art(c, pick) if random_copy_arts else ArtTraits.default_art(c, pick, _equipped(c))
 	deck_levels[i] = SynergyRules.LEVEL_TRAINED
 	return ""
+
+
+## kc-trait-ui: a random art of option `t` of `c` (any of its arts for a printed card), drawn from
+## the run's "copy_art" stream (deterministic per run seed and draw count).
+func _random_art(c: CardData, t: StringName) -> StringName:
+	if c == null:
+		return &""
+	var pool: Array[StringName] = ArtTraits.arts_with_trait(c, t) if c.has_trait_choice() else ArtTraits.arts_for(c)
+	if pool.is_empty():
+		return ArtTraits.default_art(c, t)
+	var rng: RandomNumberGenerator = _rng("copy_art", art_draws)
+	art_draws += 1
+	return pool[rng.randi() % pool.size()]
 
 
 func _offer_trait(offer: Dictionary, index: int) -> StringName:
@@ -712,8 +738,10 @@ func train_choices(i: int) -> Array[Dictionary]:
 	for t: StringName in choices:
 		var art: StringName = art_of(i) if t == pre and ArtTraits.trait_of(art_of(i), c) == t else ArtTraits.default_art(c, t, _equipped(c))
 		var now: int = int(counts.get(t, 0)) if t != &"" else 0
+		# kc-trait-ui: "random" = training into this option draws a random art of it (the copy keeps
+		# its art when it already gives that trait).
 		out.append({"trait": t, "name": ArtTraits.trait_name(t), "art": art, "subname": ArtTraits.subname(art),
-				"preselected": t == pre, "count_from": now, "count_to": now + (1 if t != &"" else 0)})
+				"random": random_copy_arts and ArtTraits.trait_of(art_of(i), c) != t, "preselected": t == pre, "count_from": now, "count_to": now + (1 if t != &"" else 0)})
 	return out
 
 
@@ -1040,6 +1068,7 @@ func to_dict() -> Dictionary:
 		"result": String(result),
 		"end_reason": String(end_reason),
 		"play_time_s": play_time_s,
+		"art_draws": art_draws,
 	}
 
 
@@ -1210,6 +1239,7 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 	if (phase == PHASE_ENDED) != (result in [RESULT_VICTORY, RESULT_DEFEAT]):
 		return "result '%s' doesn't match phase %s" % [result, phase]
 	play_time_s = float(d.get("play_time_s", 0.0))
+	art_draws = int(d.get("art_draws", 0)) if typeof(d.get("art_draws", 0)) in [TYPE_INT, TYPE_FLOAT] else 0
 	return ""
 
 

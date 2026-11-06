@@ -359,9 +359,9 @@ func _deck_tile(card: CardData, count: int, level: int) -> Control:
 	return b
 
 
-func _equipped(id: StringName) -> StringName:
-	var st: Node = get_node_or_null(^"/root/Settings")
-	return st.equipped_art(id) if st != null else &""
+## kc-trait-ui (head): no Codex EQUIP; the starter list shows each card's default art.
+func _equipped(_id: StringName) -> StringName:
+	return &""
 
 
 func _op_keywords(item: LoadoutItem) -> Array:

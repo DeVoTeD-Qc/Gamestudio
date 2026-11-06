@@ -37,6 +37,10 @@ var speed_chosen: bool = false
 ## (String) -> equipped art id (String), set in the Codex. Every copy of that card you play wears
 ## it; a card with no entry keeps the per-copy variety.
 var equipped_arts: Dictionary = {}
+## kc-trait-ui (head): the Codex is a collection viewer. Art id (String) -> true for every art a
+## copy in one of your runs has worn (the starter, Supply Drops, training, Re-issue). Default arts
+## count as found. The Codex marks them FOUND.
+var found_arts: Dictionary = {}
 ## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
 ## New runs and the quick match start with it.
 var operator_primary: String = ""
@@ -45,7 +49,7 @@ const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_animations",
-		&"equipped_arts", &"operator_primary"]
+		&"equipped_arts", &"operator_primary", &"found_arts"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 
@@ -106,6 +110,25 @@ func equip_art(chassis: StringName, art_id: StringName) -> void:
 	else:
 		d[String(chassis)] = String(art_id)
 	set_value(&"equipped_arts", d)
+
+
+## kc-trait-ui: marks `arts` (art ids) found (saved when one is new). True if any was new.
+func mark_found(arts: Array) -> bool:
+	var d: Dictionary = found_arts.duplicate()
+	var added: bool = false
+	for a: Variant in arts:
+		var k: String = String(a)
+		if k != "" and not d.has(k):
+			d[k] = true
+			added = true
+	if added:
+		set_value(&"found_arts", d)
+	return added
+
+
+## True when `art_id` has been found in a run (or is a chassis' default art: `default_art`).
+func is_found(art_id: StringName, default_art: StringName = &"") -> bool:
+	return art_id == default_art or found_arts.has(String(art_id))
 
 
 ## The art equipped on `chassis` (&"" = none: per-copy variety).

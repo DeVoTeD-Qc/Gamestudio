@@ -134,7 +134,13 @@ func snapshot(scene: Node = null) -> Dictionary:
 		out["reward"] = {"kind": String(off.get("kind", "")), "on_trait": String(off.get("on_trait", "")),
 				"retire": bool(off.get("retire", false)), "retire_mode": bool(scene.get(&"retire_mode")),
 				"retire_tile": _css(rt) if rt is Control else [], "list_tiles": (scene.get(&"list_tiles") as Array).size(),
-				"deck_view": ev != null and ev.visible}
+				"deck_view": ev != null and ev.visible,
+				# kc-trait-ui: per-card traits / arts, Re-issue and TRAIN AS state.
+				"traits": _strs(off.get("traits", [])), "arts": _strs(off.get("arts", [])),
+				"reissue": bool(off.get("reissue", false)), "reissue_mode": bool(scene.get(&"reissue_mode")),
+				"reissue_row": int(scene.get(&"reissue_row")), "train_pick": String((scene.get(&"train_pick") as Dictionary).get("kind", "")),
+				"pick_tiles": (scene.get(&"pick_tiles") as Array).map(func(t: Control) -> Dictionary:
+					return {"name": String(t.name), "trait": String(t.get_meta(&"trait", "")), "pre": bool(t.get_meta(&"preselected", false)), "rect": _css(t)})}
 	# kc-ui3: an open codex (Title or MENU): what it shows, and the inspector over it.
 	for n: Node in scene.find_children("Codex", "Control", true, false):
 		var codex: Control = n
@@ -148,8 +154,11 @@ func snapshot(scene: Node = null) -> Dictionary:
 			var arts: Array = []
 			if codex.has_method(&"is_art_panel_open") and codex.is_art_panel_open():
 				for a: Node in codex.get_art_tiles():
-					arts.append({"art": String(a.get_meta(&"art")), "equipped": bool(a.get_meta(&"equipped")), "rect": _css(a)})
-			out["codex_arts"] = {"open": arts.size() > 0, "arts": arts,
+					var slot: Node = a.find_child("TraitSlot", true, false)
+					arts.append({"art": String(a.get_meta(&"art")), "equipped": bool(a.get_meta(&"equipped")), "found": bool(a.get_meta(&"found", true)),
+							"trait": String(slot.get_meta(&"trait", "")) if slot != null else "", "rect": _css(a)})
+			var gl: Variant = codex.get_gives_label() if codex.has_method(&"get_gives_label") else null
+			out["codex_arts"] = {"open": arts.size() > 0, "arts": arts, "gives": String((gl as Label).text) if gl is Label and arts.size() > 0 else "",
 					"selected": String(codex.get(&"selected_art")) if arts.size() > 0 else ""}
 			out["codex"] = {"count": String((codex.get(&"_count") as Label).text), "tiles": tiles,
 					"type": String(codex.type_filter), "cls": String(codex.class_filter), "all_arts": codex.all_arts,
@@ -280,6 +289,14 @@ static func _art_info(banner: Variant) -> Dictionary:
 
 
 ## A Control's rect in CSS px of the page (window px / devicePixelRatio).
+static func _strs(a: Variant) -> Array:
+	var out: Array = []
+	if a is Array:
+		for x: Variant in a:
+			out.append(String(x))
+	return out
+
+
 static func _css(c: Control) -> Array:
 	var xf: Transform2D = c.get_viewport().get_screen_transform() * c.get_global_transform_with_canvas()
 	var p: Vector2 = xf * Vector2.ZERO

@@ -397,6 +397,10 @@ func test_reissue_changes_a_trained_copy() -> void:
 func test_same_trait_art_swaps_are_free() -> void:
 	var r: RunProgress = _run()
 	var g: int = _add(r, &"gunner", 1, &"heavy")
+	# kc-trait-ui (head): in a run each copy keeps the art it was found with.
+	assert_true(r.set_copy_art(g, &"gunner~night").contains("found with"), "no art swaps in a run")
+	assert_true(r.set_copy_art(g, r.art_of(g)) == "", "its own art is fine")
+	r.random_copy_arts = false  # the kc-art-traits behaviour (tools)
 	assert_eq(r.art_choices(g)["same"].has(&"gunner~night"), true, "same-trait looks are offered")
 	assert_eq(r.art_choices(g)["other"], [&"gunner~operators"] as Array[StringName], "other traits greyed")
 	assert_eq(r.set_copy_art(g, &"gunner~night"), "", "free swap")
@@ -411,6 +415,10 @@ func test_same_trait_art_swaps_are_free() -> void:
 
 func test_codex_equip_dresses_recruits_and_new_copies() -> void:
 	var r: RunProgress = _run()
+	var before: Array[StringName] = r.deck_arts.duplicate()
+	r.set_equipped_arts({"point_man": "point_man~horde"})
+	assert_eq([r.equipped_arts, r.deck_arts], [{}, before], "kc-trait-ui (head): Codex EQUIP never reaches a run")
+	r.random_copy_arts = false  # the kc-art-traits behaviour (tools)
 	r.set_equipped_arts({"point_man": "point_man~horde", "gunner": "gunner~dust", "marksman": "not_an_art"})
 	var pm: Array = r.deck_view().filter(func(row: Dictionary) -> bool: return row["id"] == &"point_man")
 	assert_true(pm.all(func(row: Dictionary) -> bool: return row["art"] == &"point_man~horde" and row["trait_choice"] == &"undead" and row["trait"] == &""),
@@ -479,7 +487,7 @@ func test_run_state_reissue_and_art_swap() -> void:
 	rs.start_run(SEED)
 	rs.begin_run()
 	var g: int = _add(rs.run, &"gunner", 1, &"heavy")
-	assert_eq(rs.set_copy_art(g, &"gunner~flip"), "", "RunState.set_copy_art")
+	assert_true(rs.set_copy_art(g, &"gunner~flip") != "", "RunState.set_copy_art: no swaps in a run (head)")
 	rs.record_result(&"player")
 	var rows: Array[Dictionary] = rs.run.reissue_options()
 	var i: int = rows.map(func(o: Dictionary) -> StringName: return o["id"]).find(&"gunner")

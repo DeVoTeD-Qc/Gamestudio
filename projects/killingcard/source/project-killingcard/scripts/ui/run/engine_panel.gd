@@ -201,11 +201,8 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	var levels: Dictionary = {}
 	for d: Dictionary in copies:
 		levels[int(d["level"])] = int(levels.get(int(d["level"]), 0)) + 1
-	var trained_trait: StringName = &""
 	var trained_kw: StringName = &""
 	for d: Dictionary in copies:
-		if StringName(d["trait"]) != &"":
-			trained_trait = d["trait"]
 		if StringName(d["keyword"]) != &"":
 			trained_kw = d["keyword"]
 	var has_syn: bool = card != null and (card.card_trait != &"" or card.neighbor_keyword != &"")
@@ -217,19 +214,55 @@ func _card_row(r: RunProgress, id: StringName, copies: Array) -> Control:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(spacer)
+	# kc-trait-ui: per copy, the trait its art gives (two copies of one card can differ). Lit plate =
+	# a Trained copy carries it; dark = Recruits that will train into it. Words next to it.
+	var per: Dictionary = {}   # trait -> [trained, recruits]
+	var order_t: Array[StringName] = []
+	for d: Dictionary in copies:
+		var tc: StringName = StringName(d.get("trait_choice", &""))
+		if card == null or (not card.has_trait_choice() and card.card_trait == &""):
+			break
+		if not per.has(tc):
+			per[tc] = [0, 0]
+			order_t.append(tc)
+		(per[tc] as Array)[0 if int(d["level"]) >= SynergyRules.LEVEL_TRAINED else 1] += 1
+	var words: PackedStringArray = []
+	for tc: StringName in order_t:
+		var pr: Array = per[tc]
+		var nm: String = ArtTraits.trait_name(tc) if tc != &"" else "plain"
+		if int(pr[0]) > 0:
+			words.append("%s %d" % [nm, int(pr[0])])
+		if int(pr[1]) > 0:
+			words.append("trains %s %d" % [nm if tc == &"" else "as " + nm, int(pr[1])])
+	if not words.is_empty():
+		var tl := Label.new()
+		tl.name = "CopyTraits"
+		tl.theme_type_variation = &"HudSubtle"
+		tl.text = " · ".join(words)
+		tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(tl)
+		row.move_child(tl, row.get_child_count() - 2)
 	var glyphs := Control.new()
-	glyphs.custom_minimum_size = Vector2(52, 24)
+	glyphs.name = "Glyphs"
+	glyphs.custom_minimum_size = Vector2(28 * maxi(1, order_t.size()) + 24, 24)
 	glyphs.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var tr: StringName = card.card_trait if card != null else &""
+	glyphs.set_meta(&"traits", order_t)
 	var kw: StringName = card.neighbor_keyword if card != null else &""
 	glyphs.draw.connect(func() -> void:
-		if tr != &"":
-			SynergyGlyphs.draw_trait_plate(glyphs, Rect2(0, 0, 24, 24), tr, false, false)
-			if trained_trait == &"":
-				glyphs.draw_rect(Rect2(0, 0, 24, 24), Color(0, 0, 0, 0.55))
+		var x: float = 0.0
+		for tc: StringName in order_t:
+			if tc != &"":
+				SynergyGlyphs.draw_trait_plate(glyphs, Rect2(x, 0, 24, 24), tc, int((per[tc] as Array)[0]) > 0, false)
+				if int((per[tc] as Array)[0]) == 0:
+					glyphs.draw_rect(Rect2(x, 0, 24, 24), Color(0, 0, 0, 0.45))
+			else:
+				BannerView._dashed_rect(glyphs, Rect2(x, 0, 24, 24).grow(-1.0), Color(1, 1, 1, 0.4), 1.0)
+			x += 28.0
 		if kw != &"":
-			SynergyGlyphs.draw_keyword_plate(glyphs, Rect2(28, 0, 24, 24), kw, trained_kw != &"", Color("#2EC4B6"), true))
+			SynergyGlyphs.draw_keyword_plate(glyphs, Rect2(x, 0, 24, 24), kw, trained_kw != &"", Color("#2EC4B6"), true))
 	row.add_child(glyphs)
+	panel.tooltip_text = "%s: %s. Each copy keeps the art it was found with; the art decides its trait. Long-press / right-click: rules." % [
+			card.display_name if card != null else String(id), " · ".join(words) if not words.is_empty() else "no trait"]
 	var g: RefCounted = PressGesture.new(panel)
 	g.drag_enabled = false
 	_gestures.append(g)

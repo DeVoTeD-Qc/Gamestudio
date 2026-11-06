@@ -2,10 +2,9 @@
 # Purpose: Draws one 4:1 calling-card banner (board-and-cards-ux.md §3.2-3.3): the art's 4:1 band
 #   (BannerArtDB) plus the icon slots in the left / right ~15% columns. kc-ui4: ONE layout for both
 #   sides (the head: attack and health icons in the same place on my cards and the rival's):
-#     bottom-left  Firepower in this column (teal circle = yours, red diamond = rival)
-#     bottom-right Armor (grey shield; amber when damaged); Cover chip left of it
-#     bottom-mid   the card name (the chassis) over the art's subname
-#     top-left     weapon-class pip, Elite star, trait   top-right  effects (keyword glyphs / bolt)
+#     kc-trait-ui (head): top-left cost + NAME, top-right abilities / keywords, bottom-left trait +
+#     weapon-type pip, bottom-right FP + Armor number plates (Cover chip left). No art subname on
+#     cards (the inspector has it). See anatomy().
 #   The camo / level band runs along the top edge. Hand and codex cards are this same banner
 #   (taller, with a cost hex in `lead`); see layout() / stat_rects().
 #   Spine on the left edge (side colour + pattern), frontline outline (row 1), back rows at 74%,
@@ -361,7 +360,7 @@ func _draw_overlay() -> void:
 	# Cost (top-left): drawn here on the board; hand / codex cards place a CostHex node in `lead`.
 	if lead <= 0.0 and (an["cost"] as Rect2).size.x > 0.0:
 		_draw_cost(o, an["cost"], str(entry.get("cost", "")))
-	# Class pip and Elite star (top-left, after the cost).
+	# Weapon-type pip (bottom-left, after the trait) and Elite star (top-left, after the cost).
 	var cls: String = String(entry.get("cls", "")).to_upper()
 	if an.has("class"):
 		_draw_plate_icon(o, an["class"], IconSheet.get_icon(CLASS_ICONS[cls]), _col(&"text"))
@@ -369,14 +368,14 @@ func _draw_overlay() -> void:
 		var sr: Rect2 = an["elite"]
 		o.draw_rect(sr, Color(INK, 0.82))
 		draw_star(o, sr.get_center(), sr.size.x * 0.42, BRASS)
-	# Trait (top-right): lit at tier 2, ring at 3. The Operator: its dog tag.
+	# Trait (bottom-left): lit at tier 2, ring at 3. The Operator: its dog tag.
 	if an.has("trait"):
 		if op:
 			_draw_dog_tag(o, an["trait"])
 		elif String(entry.get("trait", "")) != "":
 			var tier: int = int(entry.get("trait_tier", 0))
 			SynergyGlyphs.draw_trait_plate(o, an["trait"], StringName(String(entry.get("trait", ""))), tier >= 2, tier >= 3)
-	# Abilities (bottom-left).
+	# Abilities (top-right).
 	for ab: Array in an["abilities"]:
 		var kind: Variant = ab[0]
 		var rr: Rect2 = ab[1]
@@ -413,13 +412,15 @@ func _draw_overlay() -> void:
 		_draw_reticle(o, r)
 
 
-## kc-ui4 card anatomy (the head, one layout for every card form and both sides):
-##   top-left     cost (hex), then the class pip and the Elite star
-##   top-right    trait (the Operator: its dog tag)
-##   top-centre   the card name (the chassis)
-##   bottom-left  abilities: Protector, up to 2 keyword glyphs or the effect bolt, the neighbor keyword
+## kc-trait-ui card anatomy (the head, 2026-11-06; one layout for every card form and both sides;
+## the right side is all the fast-read combat info):
+##   top-left     cost (hex), the Elite star, then the card NAME (the chassis) next to it
+##   top-right    abilities: Protector, up to 2 keyword glyphs or the effect bolt, the neighbor
+##                keyword (right-aligned, the first one at the corner)
+##   bottom-left  trait (the Operator: its dog tag), then the weapon-type (class) pip
 ##   bottom-right FP and Armor side by side, each a plate with its number inside (Cover chip left)
-##   bottom-centre the art's subname (or the middle band when the card is tall enough)
+##   bottom-mid   only the kind word of a card without stats ("TACTIC" / "FIELD"); the art's
+##                subname is NOT on cards any more (head): it is in the more-info view (inspector)
 ## Rects for a banner of `sz`. `entry` decides how many ability plates; `lead_px` > 0 = a cost hex
 ## owned by the caller (hand / codex cards); else the banner draws the cost itself when `entry` has one.
 static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = -1.0) -> Dictionary:
@@ -435,18 +436,19 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 	var cost_w: float = lead_px if lead_px > 0.0 else (roundf(plate * 1.05) + 2.0 if has_cost else 0.0)
 	out["cost"] = Rect2(x0, top, maxf(0.0, cost_w - 2.0), plate) if has_cost or lead_px > 0.0 else Rect2()
 	var lx: float = x0 + cost_w
-	if CLASS_ICONS.has(String(e.get("cls", "")).to_upper()) and not op:
-		out["class"] = Rect2(lx, top, plate, plate)
-		lx += plate + 2.0
 	if bool(e.get("elite", false)):
 		out["elite"] = Rect2(lx, top, plate, plate)
 		lx += plate + 2.0
-	var rx: float = sz.x - pad - plate
-	if op or String(e.get("trait", "")) != "" or bool(e.get("reserve_trait", false)):
-		out["trait"] = Rect2(rx, top, plate, plate)
-	else:
-		rx = sz.x - pad + 2.0
-	out["name"] = Rect2(lx + 2.0, top, maxf(0.0, rx - 4.0 - lx), plate)
+	# Top-right: ability plates, right to left from the corner (the first one at the corner).
+	var kinds: Array = ability_kinds(e)
+	var kws: Array = []
+	var kx: float = sz.x - pad - plate
+	for k: Variant in kinds:
+		kws.append([k, Rect2(kx, top, plate, plate)])
+		kx -= plate + 2.0
+	out["abilities"] = kws
+	var name_end: float = kx + plate - 2.0 if not kinds.is_empty() else sz.x - pad
+	out["name"] = Rect2(lx + 2.0, top, maxf(0.0, name_end - lx - 4.0), plate)
 	# Bottom-right: Armor at the corner, FP left of it (each a plate with the number inside).
 	var ar_h: float = badge * 1.08
 	var armor: Rect2 = Rect2(sz.x - pad - badge, sz.y - pad - ar_h, badge, ar_h)
@@ -458,16 +460,16 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 		var cs: float = roundf(badge * 0.78)
 		out["cover"] = Rect2(fp.position.x - cs - 3.0, fp.position.y + (badge - cs) * 0.5, cs, cs)
 		stat_x = (out["cover"] as Rect2).position.x
-	# Bottom-left: ability plates, centred on the stat row.
-	var ky: float = sz.y - pad - badge + (badge - plate) * 0.5 if e.has("fp") else sz.y - pad - plate
-	var kinds: Array = ability_kinds(e)
-	var kws: Array = []
-	var kx: float = x0
-	for k: Variant in kinds:
-		kws.append([k, Rect2(kx, ky, plate, plate)])
-		kx += plate + 2.0
-	out["abilities"] = kws
-	out["sub"] = Rect2(kx + 2.0, sz.y - pad - badge, maxf(0.0, stat_x - kx - 6.0), badge)
+	# Bottom-left: trait (or the Operator's dog tag), then the weapon-type pip, centred on the stat row.
+	var by: float = sz.y - pad - badge + (badge - plate) * 0.5 if e.has("fp") else sz.y - pad - plate
+	var bx: float = x0
+	if op or String(e.get("trait", "")) != "" or bool(e.get("reserve_trait", false)):
+		out["trait"] = Rect2(bx, by, plate, plate)
+		bx += plate + 2.0
+	if CLASS_ICONS.has(String(e.get("cls", "")).to_upper()) and not op:
+		out["class"] = Rect2(bx, by, plate, plate)
+		bx += plate + 2.0
+	out["sub"] = Rect2(bx + 2.0, sz.y - pad - badge, maxf(0.0, stat_x - bx - 6.0), badge)
 	out["mid"] = Rect2(x0, top + plate + 1.0, sz.x - x0 - pad, maxf(0.0, (sz.y - pad - badge) - (top + plate + 1.0)))
 	return out
 
@@ -522,32 +524,41 @@ static func name_sizes(h: float) -> Vector2i:
 	return Vector2i(clampi(int(roundf(h * 0.24)), 16, 18), 16)
 
 
-## kc-ui4 (head naming): the card's name (always the chassis) top-centre, and the art's subname
-## bottom-centre (or in the middle band when it has the room), smaller and amber.
+## kc-trait-ui (head): the card's name (always the chassis) top-left, next to the cost; shrinks to
+## 13 px, then ends in "…". The art's subname is not drawn on cards (inspector only); a card without
+## stats shows its kind word ("TACTIC" / "FIELD") bottom-centre.
 func _draw_names(o: Control, a: Dictionary) -> void:
 	var nm: String = String(entry.get("name", "")).replace("★", "").strip_edges().to_upper()
 	var font: Font = get_theme_font(&"font", &"HudHeader")
 	var fs: Vector2i = name_sizes(metric_h if metric_h > 0.0 else size.y)
 	var nr: Rect2 = a["name"]
-	if nm != "" and nr.size.x >= 24.0:
+	if nm != "" and nr.size.x >= 16.0:
 		var nfs: int = fs.x
 		while nfs > 13 and font.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > nr.size.x:
 			nfs -= 1
+		nm = fit_text(nm, font, nfs, nr.size.x)
 		var base: Vector2 = Vector2(nr.position.x, nr.position.y + (nr.size.y + font.get_ascent(nfs) - font.get_descent(nfs)) * 0.5)
-		o.draw_string_outline(font, base, nm, HORIZONTAL_ALIGNMENT_CENTER, nr.size.x, nfs, 4, INK)
-		o.draw_string(font, base, nm, HORIZONTAL_ALIGNMENT_CENTER, nr.size.x, nfs, Color.WHITE)
-	var sub: String = String(entry.get("subname", "")).to_upper()
-	if sub == "" and not entry.has("fp"):
-		sub = String(entry.get("kind_word", ""))
-	if sub == "":
+		o.draw_string_outline(font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, 4, INK)
+		o.draw_string(font, base, nm, HORIZONTAL_ALIGNMENT_LEFT, nr.size.x, nfs, Color.WHITE)
+	if entry.has("fp"):
 		return
-	var sr: Rect2 = a["mid"] if (a["mid"] as Rect2).size.y >= fs.y + 2.0 else a["sub"]
-	if sr.size.x < 24.0:
+	var sub: String = String(entry.get("kind_word", ""))
+	var sr: Rect2 = a["sub"]
+	if sub == "" or sr.size.x < 24.0:
 		return
 	var sb: Vector2 = Vector2(sr.position.x, sr.position.y + (sr.size.y + font.get_ascent(fs.y) - font.get_descent(fs.y)) * 0.5)
-	var c: Color = Color("#F3D36B") if entry.has("subname") else Color("#B9C2C9")
 	o.draw_string_outline(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs.y, 3, INK)
-	o.draw_string(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs.y, c)
+	o.draw_string(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs.y, Color("#B9C2C9"))
+
+
+## `text` cut to `width` at font size `fs`, ending in "…" when cut.
+static func fit_text(text: String, font: Font, fs: int, width: float) -> String:
+	if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x <= width:
+		return text
+	var t: String = text
+	while t.length() > 1 and font.get_string_size(t + "…", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width:
+		t = t.substr(0, t.length() - 1)
+	return t.strip_edges() + "…"
 
 
 ## A cost hex (board banners; hand / codex cards place their own CostHex node).

@@ -130,6 +130,23 @@ func _mouse(pos: Vector2, pressed: bool) -> void:
 
 
 ## Taps the middle of a control (press, a frame, release), like a finger on the phone.
+## kc-trait-ui: a Promotion of a Recruit / a twin training opens TRAIN AS (one tile per trait option);
+## checks it and taps the pre-selected trait. No-op when no picker opened.
+func _train_pick(reward: Control, label: String, screen: Dictionary) -> void:
+	await _frames(2)
+	if reward.train_pick.is_empty():
+		return
+	assert_false(reward.pick_tiles.is_empty(), "%s: TRAIN AS lists the trait options" % label)
+	_check(reward, screen, "train as")
+	var pre: Control = null
+	for t: Control in reward.pick_tiles:
+		assert_not_null(t.find_child("RandomArtLine", true, false), "%s: says what art it gets" % label)
+		if bool(t.get_meta(&"preselected", false)):
+			pre = t
+	assert_not_null(pre, "%s: one option is pre-selected" % label)
+	await _tap(pre if pre != null else reward.pick_tiles[0])
+
+
 func _tap(ctl: Control) -> void:
 	assert_true(ctl.is_visible_in_tree(), "tap target %s is visible" % ctl.name)
 	var pos: Vector2 = ctl.get_global_rect().get_center()
@@ -392,6 +409,7 @@ func _full_run(screen: Dictionary) -> void:
 					if int(opt["twin_index"]) >= 0:
 						assert_true(reward.list_tiles[0].find_child("TwinLine", true, false) != null, "%s: twin-training preview" % label)
 					await _tap(reward.list_tiles[0])
+					await _train_pick(reward, label, screen)
 					assert_eq(_rs.run.deck.size(), deck - 1, "%s: Retire removes a card" % label)
 					assert_eq(_rs.run.honor_roll.size(), honor + 1, "%s: retired card on the Honor Roll" % label)
 				else:
@@ -423,6 +441,7 @@ func _full_run(screen: Dictionary) -> void:
 				for d: Dictionary in _rs.run.deck_view():
 					before_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
 				await _tap(reward.list_tiles[0])
+				await _train_pick(reward, label, screen)
 				var after_up: int = 0
 				for d: Dictionary in _rs.run.deck_view():
 					after_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
@@ -430,6 +449,7 @@ func _full_run(screen: Dictionary) -> void:
 			elif kind == RewardOffers.KIND_REGROUP:
 				assert_false(reward.list_tiles.is_empty(), "%s: Regroup lists cards to retire" % label)
 				await _tap(reward.list_tiles[0])
+				await _train_pick(reward, label, screen)
 				assert_eq(_rs.run.deck.size(), deck - 1, "%s: Regroup retires a card" % label)
 			else:
 				assert_eq(reward.tiles.size(), 2, "%s: 2 perks" % label)
@@ -664,3 +684,122 @@ func test_match_handoff_contract() -> void:
 	assert_false(_router.is_run_match(m), "hand-off cleared")
 	assert_eq(_router.finish_run_match(m)["ok"], false, "a second finish is refused")
 	_teardown()
+
+
+# =============================================================================
+# kc-trait-ui: Supply Drop copies, Re-issue, TRAIN AS (Promotion / twin), deck view traits
+# =============================================================================
+
+func test_trait_ui_reward_flows() -> void:
+	for screen: Dictionary in [PHONE, DESKTOP]:
+		_setup()
+		var label: String = screen["name"]
+		_rs.start_run(SEED)
+		_rs.begin_run()
+		var r: RunProgress = _rs.run
+		var mk: CardData = r.resource(&"marksman") as CardData
+		var at: int = r.deck.size()
+		r._append_copy(&"marksman", 1, &"specops", r._random_art(mk, &"specops"))
+		_rs.record_result(&"player")
+		var reward: Control = await _open(RunFlow.SCENE_REWARD, screen)
+		assert_eq(reward.offer["kind"], RewardOffers.KIND_SUPPLY_DROP, "%s: Supply Drop" % label)
+		_check(reward, screen, "trait supply drop")
+		# Each card is a concrete copy: the tile carries the trait its art gives, with the icon line.
+		for i: int in reward.tiles.size():
+			var c: CardData = r.resource(reward.offer["options"][i]) as CardData
+			if c.is_unit() and c.has_trait_choice():
+				assert_eq(reward.tiles[i].get_meta(&"trait"), StringName(reward.offer["traits"][i]), "%s: tile %d trait" % [label, i])
+				var head: Node = reward.tiles[i].find_child("TraitLine", true, false)
+				assert_not_null(head, "%s: tile %d trait line" % [label, i])
+				assert_eq((head.find_child("TraitIcon", true, false) as Control).get_meta(&"trait"), StringName(reward.offer["traits"][i]), "%s: icon" % label)
+		# DETAILS (the more-info view) names the art and the trait it gives.
+		await _tap(reward.detail_buttons[0])
+		assert_true(reward.get_inspector().is_open(), "%s: DETAILS" % label)
+		await _tap(reward.get_inspector().get_node("%CloseButton"))
+		# RE-ISSUE next to RETIRE: pick the Marksman, then Heavy.
+		assert_not_null(reward.reissue_tile, "%s: Re-issue option" % label)
+		assert_not_null(reward.retire_tile, "%s: Retire option still there" % label)
+		await _tap(reward.reissue_tile)
+		assert_true(reward.reissue_mode and not reward.list_tiles.is_empty(), "%s: Re-issue lists copies" % label)
+		_check(reward, screen, "reissue copies")
+		var rows: Array[Dictionary] = r.reissue_options()
+		var ri: int = rows.map(func(o: Dictionary) -> int: return int(o["index"])).find(at)
+		assert_true(ri >= 0, "%s: the Marksman is listed" % label)
+		await _tap(reward.list_tiles[ri])
+		assert_eq(reward.reissue_row, ri, "%s: copy picked" % label)
+		assert_not_null(reward.find_child("NowCard", true, false), "%s: preview of the copy now" % label)
+		_check(reward, screen, "reissue traits")
+		var heavy: Control = null
+		for t: Control in reward.pick_tiles:
+			if t.get_meta(&"trait") == &"heavy":
+				heavy = t
+		assert_not_null(heavy, "%s: a Heavy tile" % label)
+		assert_true((heavy.find_child("RandomArtLine", true, false) as Label).text.contains("random Heavy art"), "%s: says the art is random" % label)
+		var deck: int = r.deck.size()
+		await _tap(heavy)
+		await _frames(2)
+		assert_eq(r.copy_trait(at), &"heavy", "%s: re-issued as Heavy" % label)
+		assert_eq(ArtTraits.trait_of(r.art_of(at), mk), &"heavy", "%s: wearing a Heavy art" % label)
+		assert_eq(r.deck.size(), deck, "%s: no card added" % label)
+		# Promotion of a Recruit: TRAIN AS with counts and the pre-selected option.
+		r.pending_offers.clear()
+		r.phase = RunProgress.PHASE_REWARDS
+		r._add_synergy_offer(RewardOffers.KIND_PROMOTION, 1)
+		reward.show_offer()
+		await _frames(2)
+		var popts: Array[Dictionary] = r.promotion_options()
+		var pi: int = -1
+		for i: int in popts.size():
+			if bool(popts[i]["trains"]) and (r.resource(popts[i]["id"]) as CardData).trait_choices().size() > 1:
+				pi = i
+				break
+		assert_true(pi >= 0, "%s: a Recruit to train" % label)
+		var copy: int = int(popts[pi]["index"])
+		var pid: StringName = popts[pi]["id"]
+		await _tap(reward.list_tiles[pi])
+		assert_false(reward.train_pick.is_empty(), "%s: TRAIN AS opened" % label)
+		_check(reward, screen, "train as")
+		var choices: Array[Dictionary] = r.train_choices(copy)
+		assert_eq(reward.pick_tiles.size(), choices.size(), "%s: one tile per option" % label)
+		var alt: Control = null
+		for t: Control in reward.pick_tiles:
+			assert_true((t.find_child("CountLine", true, false) as Label).text.contains(">") or t.get_meta(&"trait") == &"", "%s: count change" % label)
+			if not bool(t.get_meta(&"preselected")):
+				alt = t
+		assert_eq(reward.pick_tiles.filter(func(t: Control) -> bool: return bool(t.get_meta(&"preselected"))).size(), 1, "%s: one pre-selected" % label)
+		var alt_t: StringName = alt.get_meta(&"trait")
+		await _tap(alt)
+		await _frames(2)
+		assert_eq(r.level_of(copy), SynergyRules.LEVEL_TRAINED, "%s: trained" % label)
+		assert_eq(r.copy_trait(copy), alt_t, "%s: into the picked trait" % label)
+		assert_eq(ArtTraits.trait_of(r.art_of(copy), r.resource(pid) as CardData), alt_t, "%s: with an art of it" % label)
+		# Regroup: RE-ISSUE in the header; a Recruit with a twin opens TRAIN AS for the twin.
+		r.pending_offers.clear()
+		r.phase = RunProgress.PHASE_REWARDS
+		r._add_synergy_offer(RewardOffers.KIND_REGROUP, 1)
+		reward.show_offer()
+		await _frames(2)
+		assert_true(reward.get_node("%Header").find_child("ReissueButton", true, false).visible, "%s: Regroup offers Re-issue" % label)
+		_check(reward, screen, "regroup")
+		var ropts: Array[Dictionary] = r.retire_options()
+		var ti: int = -1
+		for i: int in ropts.size():
+			if int(ropts[i]["twin_index"]) >= 0 and (r.resource(ropts[i]["id"]) as CardData).trait_choices().size() > 1:
+				ti = i
+				break
+		if ti >= 0:
+			var deck2: int = r.deck.size()
+			await _tap(reward.list_tiles[ti])
+			assert_eq(reward.train_pick.get("kind", &""), &"twin", "%s: twin TRAIN AS" % label)
+			var pre: Control = reward.pick_tiles.filter(func(t: Control) -> bool: return bool(t.get_meta(&"preselected")))[0]
+			await _tap(pre)
+			await _frames(2)
+			assert_eq(r.deck.size(), deck2 - 1, "%s: retired, twin trained" % label)
+		# The deck view names each design's copy traits.
+		r.pending_offers.clear()
+		reward.open_deck()
+		await _frames(2)
+		var row: Node = reward.get_engine_view().find_child("Row_marksman", true, false)
+		assert_not_null(row, "%s: Marksman row" % label)
+		assert_true((row.find_child("CopyTraits", true, false) as Label).text.contains("Heavy 1"), "%s: copy traits in the deck view" % label)
+		_teardown()

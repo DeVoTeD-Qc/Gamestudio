@@ -96,9 +96,8 @@ func continue_run() -> bool:
 		run_changed.emit()
 		return false
 	run = loaded["run"]
-	run.equipped_arts = {}
-	for k: Variant in _equipped_arts():
-		run.equipped_arts[StringName(String(k))] = StringName(String(_equipped_arts()[k]))
+	# kc-trait-ui (head): with random copy arts the run ignores Codex EQUIP (set_equipped_arts).
+	run.set_equipped_arts(_equipped_arts())
 	last_load_warning = ""
 	_session_start_ms = Time.get_ticks_msec()
 	run_changed.emit()
@@ -302,6 +301,13 @@ func _equipped_arts() -> Dictionary:
 func _changed() -> void:
 	if autosave and run != null:
 		save_run()
+	# kc-trait-ui: every art a copy of the run wears is FOUND in the Codex (Settings.found_arts).
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if run != null and st != null and st.has_method(&"mark_found"):
+		var arts: Array = []
+		for i: int in run.deck.size():
+			arts.append(run.art_of(i))
+		st.mark_found(arts)
 	run_changed.emit()
 
 

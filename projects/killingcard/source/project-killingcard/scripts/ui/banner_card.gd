@@ -3,8 +3,8 @@
 #   board"). One card face for the hand tray, the Codex grid and the starter-deck list: the board's
 #   banner (BannerView: the same art band, spine, plate row, FP bottom-left / Armor bottom-right with
 #   the resulting-stat colours, keyword / trait icons, level band), plus what a card off the board
-#   needs: the cost hex in the top-left corner (the plate row starts after it), and the card name
-#   (always the chassis) over the art's subname in the free space between the stat badges.
+#   needs: the cost hex in the top-left corner with the card name (always the chassis) next to it
+#   (kc-trait-ui, head: no art subname on cards; the inspector shows it).
 #   The banner keeps the board's icon sizes (metric_h = the board's banner height) whatever the
 #   card's own height. Rules text, the stat breakdown and the art credits are one long-press /
 #   right-click / hover away (the callers wire the inspector).
@@ -61,8 +61,10 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 	var title: Label = _label(String(entry.get("name", "")).replace("★", "").strip_edges(), &"UnitName", fs.x)
 	title.name = "NameLabel"
 	face.add_child(title)
-	var sub_text: String = String(entry.get("subname", ""))
-	var is_art_name: bool = sub_text != ""
+	# kc-trait-ui (head): no art subname on cards; the label only carries a statless card's kind word.
+	# The Operator's brass card keeps its status line (DEPLOY / PLAN · B / NEED 1 SUPPLY) in that slot.
+	var sub_text: String = String(entry.get("subname", "")) if bool(entry.get("operator", false)) else ""
+	var is_art_name: bool = false
 	if sub_text == "" and not entry.has("fp"):
 		sub_text = String(entry.get("kind_word", ""))
 	var sub: Label = _label(sub_text.to_upper(), &"HudTag", fs.y)
@@ -82,15 +84,15 @@ static func build(entry: Dictionary, card_size: Vector2, metric_h: float, side: 
 		bv.size = face.size
 		var mm: Dictionary = BannerView.metrics(minf(face.size.y, metric_h))
 		var an: Dictionary = BannerView.anatomy(face.size, mm, bv.entry, bv.lead if bv.lead > 0.0 else -1.0)
-		# Cost top-left (the anatomy's cost slot), the name top-centre, the subname in the middle band
-		# when the card has the room, else bottom-centre between the abilities and the stats.
+		# kc-trait-ui: cost top-left with the name next to it; a statless card's kind word in the middle
+		# band when the card has the room, else bottom-centre.
 		var cr: Rect2 = an["cost"]
 		hex.position = Vector2(cr.position.x, cr.position.y)
 		var nr: Rect2 = an["name"]
 		var th: float = title.get_combined_minimum_size().y
 		title.position = Vector2(nr.position.x, nr.position.y + (nr.size.y - th) * 0.5)
 		title.size = Vector2(maxf(8.0, nr.size.x), th)
-		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		var sh: float = sub.get_combined_minimum_size().y
 		var mid: Rect2 = an["mid"]
 		var sr: Rect2 = mid if mid.size.y >= sh - 4.0 else an["sub"]
@@ -109,7 +111,10 @@ static func banner_of(panel: Node) -> BannerView:
 
 ## The board banner entry for a deck card (codex, starter list): printed stats, class, icon
 ## keywords, effect bolt / Protector / Elite, the trait and keyword (as a Trained copy), the art.
-static func entry_for_card(card: CardData, art_id: StringName = &"", level: int = 1) -> Dictionary:
+## kc-trait-ui: `chosen` = the copy's trait (TRAIT_DEFAULT: the trait the art gives, ArtTraits.trait_of,
+## so an alternate art shows its own trait icon).
+static func entry_for_card(card: CardData, art_id: StringName = &"", level: int = 1,
+		chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
 	var CardInfo: GDScript = load("res://scripts/ui/card_info.gd")
 	var keywords: Array[Dictionary] = CardInfo.keywords(card)
 	var e: Dictionary = {"name": card.display_name, "cost": card.cost,
@@ -127,7 +132,10 @@ static func entry_for_card(card: CardData, art_id: StringName = &"", level: int 
 	var sub: String = BannerArtDB.subname(art)
 	if sub != "":
 		e["subname"] = sub
-	var t: StringName = SynergyRules.trait_at(card, level)
+	var pick: StringName = chosen
+	if pick == SynergyRules.TRAIT_DEFAULT and art_id != &"" and card.has_trait_choice():
+		pick = ArtTraits.trait_of(art_id, card)
+	var t: StringName = SynergyRules.trait_at(card, level, pick)
 	if t != &"":
 		e["trait"] = String(t)
 	var kw: StringName = SynergyRules.keyword_at(card, level)
