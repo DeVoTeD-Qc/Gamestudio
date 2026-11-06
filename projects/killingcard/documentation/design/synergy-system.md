@@ -395,3 +395,39 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 2. `MatchController.start_local_match` and the tutorial build their player setup from `config.starter_deck` without levels, so the quick match and the tutorial play a **Trained** starter (`deck_levels` empty = Trained). Use `config.starter_levels()` for the quick match; the tutorial can stay Trained or go plain (its script was written for today's cards).
 3. `MatchController.start` should call `PitchDecks.apply_setup(s.setup)` instead of `apply(s.setup.deck)` so the pitch decks show links and sets.
 4. The phone inspector of the Protector is 1 px too tall (InfoPanel 135 + 406 = 541 on a 540 canvas): `test_board_layout` (inspector phone ×2) and `test_board_columns::test_inspector_shows_the_512_banner_and_rails_inspect` fail now that the new starter puts a Protector in the first hand of the test seed. Not a rules change; the layout needs a pixel of slack.
+
+---
+
+## 12. Tuning v1.2 (paused)
+*Sr Game Designer Agent · 2026-11-06 · board task kc-syn-tune · **Paused** by the head's new priority (kc-fight, `firefight-order.md`): a new firefight activation order changes balance, so this tuning is redone after that is approved. **No data file was changed.** Every number below is a what-if on scratch copies (`synergy_check.gd`, aware vs aware or aware vs blind, Port Vasel, seats and modes alternating).*
+
+### 12.1 Baselines reproduced (shipped data, d154893)
+| Check (target) | Result | n |
+|---|---|---|
+| Trait round robin, late decks (40-60% each) | Vanguard **67.3**, Spec Ops 42.3, Heavy 47.7, Undead 42.1 | 480 per trait |
+| Aware vs blind, late decks (>= 55%) | **52.0%** (60.0 / 49.0 / 50.5 / 48.5) | 800 |
+| Seat 0, aware mirror (45-55%) | 51.8% | 1000 |
+| Full runs, competent proxy (balance_sim) | run win **40%**; M1 83 / M2 95 / **M3 19** / M4 25 / M5 47 | 300 runs |
+
+### 12.2 Findings so far (n = 120 per pairing, 360 per trait: about ±2.6 points SE per trait)
+**Vanguard's lead is the card package, not its set bonus.**
+| What-if | Vanguard | Spec Ops | Heavy | Undead |
+|---|---|---|---|---|
+| Vanguard tier 2 removed | 68.3 | 44.7 | 46.1 | 39.7 |
+| Vanguard tiers 2 and 3 removed | 65.8 | 44.7 | 46.7 | 41.7 |
+| Tier 2 = Cover +1 row 1, tier 3 = +1 FP row 1 (swap) | 68.9 | 45.0 | 45.6 | 40.0 |
+| Breacher Armor 4 → 3 (all copies) | 71.4 | 39.2 | 49.4 | 39.2 |
+| Bulwark cost 3 → 4 | 68.6 | 43.3 | 45.3 | 42.2 |
+| Vanguard adds without the Point Man (a Rifleman instead) | 63.6 | 42.2 | 48.1 | 45.3 |
+| ... without the **Breacher** | **58.1** | 45.3 | 49.4 | 46.4 |
+| ... without the **Protector** | **59.7** | 46.1 | 49.2 | 44.7 |
+| ... without Bulwark (a Rifleman is *better*) | 70.6 | 43.1 | 47.2 | 38.9 |
+| Guard removed from Breacher and Protector | 63.1 | 45.8 | 47.5 | 43.1 |
+| Guard removed from the Protector only | 63.9 | 45.6 | 46.7 | 43.3 |
+| Protector cost 3 → 4 (all copies) | 62.2 | 41.1 | 52.2 | 44.2 |
+| Breacher Guard → Fireteam | 67.2 | 41.4 | 49.2 | 41.7 |
+
+- Taking the Vanguard bonuses away entirely leaves Vanguard at ~66%. The edge sits in the **Trained Breacher and Protector** (each worth ~8 points) and in **Guard** (Cover is strong in this engine). Breacher stat cuts backfire, because every deck carries Recruit Breachers. **Bulwark is a weak card** (a Rifleman does better in its slot).
+- Most promising combination for v1.2 (not yet run): **Protector cost 4 + Guard off the Protector** (it keeps Cover 1 and the slide), possibly with a stronger Bulwark so the Vanguard Field is worth picking.
+- **Aware vs blind:** larger Spec Ops / Heavy / Undead tier-2 bonuses (Undead heal 2, Heavy tier 2 + 1 FP, Spec Ops tier 2 + Cover 1) left the duel unchanged (49-50% on those decks; identical seeds give identical results), so sets rarely form in the late decks. A set-activity count confirms it (aware side, n = 100 per deck): a tier 2 is active in only **9-18% of side-rounds** (Vanguard 18, Undead 13, Spec Ops 11, Heavy 9) and a tier 3 in 1-8%. The levers left are the number of Trained cards (all-Trained decks: 62%), keyword counts on chassis that have none (Flanker, Demolitions, Medic), and the Operator cost (cost 0: 55%). The measurement's own late deck promotes Point Man and Breacher in every deck (`PROMOTE_ORDER`), which feeds Vanguard into the other trait decks; an on-trait promotion rule would be a fairer proxy.
+- **Difficulty curve (M3 19%):** not tested yet. First levers to try: slot 3 `enemy_armor_bonus` 1 → 0, or slot 3 `enemy_recruits = true`.
