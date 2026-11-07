@@ -525,3 +525,43 @@ The head played on an iPad in landscape. The hand was one narrow column of five 
 - `compare_top_*` (abilities top-right).
 
 Each set has full, tray (2x), board (2x) and dock.
+
+## Implementation notes (kc-abc-labels, UI/UX Agent, 2026-11-07)
+The head: "Remove them; just A / B / C" (the CLOSE / MID / LONG range words). Also: "remove the firepower total on locations, it doesn't do much, just keep the location letter and leave more space for field card".
+
+- **Objective tile:**
+  - **Kept:** the column letter in its control mark (teal circle yours, red diamond rival, dashed square even, grey ring open). The shape still carries control at a glance.
+  - **Removed:** the range word and both Firepower totals.
+  - **Field chips:** the rest of the tile is now the Field chips with the Field's name (rival's on top, yours below). On the phone they are about 170 x 21; on desktop / iPad about 222 x 43. The chip's glyph is the Field type icon.
+  - **No Field on the tile:** the control word (YOURS / RIVAL / EVEN / OPEN) fills that space at 20 / 26 px.
+  - **Inspect:** long press / right click still opens the column inspector, which gives both sides' Firepower and the Fields.
+  - **Code:** `objective_tile.gd` (`field_area`, `chip_rects`, `control_word`).
+- **FRONT tabs:** they now sit over the letter mark, in its top / bottom margin, so they never cover a Field chip (`lane.gd`, `front_tab_x`).
+- **Texts:**
+  - The snapshot drops the lane `range` key.
+  - The column inspector's type reads "objective · column B".
+  - Glossary: the Objective tile entry is rewritten, and "range" is gone from the Firepower entry.
+  - The stat breakdown never names a range.
+  - Tutorial texts and the drone intel say "column A / B / C" instead of Left / Mid / Right (`data/tutorial/tutorial_script.tres`, `tutorial_director.gd`).
+  - The rules keep their internal range ids.
+- **QA:**
+  - `test_ipad_cards::test_objective_tile_letter_and_big_fields`.
+  - `test_cards_v2`: the FRONT tabs stay off the Field area.
+  - `test_tutorial`: the drone intel now reads "column B".
+  - Shots: `qa/screenshots/ipad-cards/after_abc_844x390_*`, `after_abc_1024x768_*`.
+
+## Implementation notes (kc-deck-match, UI/UX Agent, 2026-11-07)
+The head: "The starting deck shown when we start campaign doesn't match what I draw in game 1. Make sure we use the correct starting deck with mostly units and one kind of tactics. Tactic and Field cards should have a different icon."
+
+- **Cause:** in the private pitch build, `MatchController._play` ran `PitchDecks.apply_setup()` on both sides of every match. That included run matches and the tutorial, so match 1 drew Brawler, Fields and extra Tactics that the Loadout starter did not show. In the public build the decks already matched: `RunProgress.create` copies `RunConfig.starter_deck`, and the starter panel lists the same array.
+- **Fix:** `MatchController.pitch_swaps_apply()` is true only for the pitch build's Quick Match. Run matches and the tutorial never swap, on either side. `PitchDecks` itself is unchanged.
+- **Starter:** Grunt x5, Trooper x6, Sergeant x4, Armored Trooper x3 and Ammo Resupply x2: 18 units, one Tactic kind, no Field.
+- **Type icons:**
+  - **Glyphs:** `CardLook.draw_type_icon(kind)` asks the UI kit first (`type_tactic` / `type_field`, files `ico_type_tactic.png` / `ico_type_field.png`, already in the prompt pack, now with their motifs). The code fallbacks are an orders sheet with a bolt (Tactic, khaki) and a flag planted on ground (Field, green).
+  - **Where:** the Y2+ type line, the X1 hand card's kind badge, a statless board / inspector banner's kind word, the objective tile's Field chips, the glossary (new Tactic entry beside Field / Overrun) and the Codex TACTICS / FIELDS chips.
+  - **Codex:** the weapon-class filter chips are gone; `set_class_filter` stays as API.
+- **QA:**
+  - New `tests/test_deck_match.gd`: the starter has one Tactic kind and no Field; in both the public and the pitch-active build, the first run match's deck + hand equals the starter shown; the type icons and their placement are checked.
+  - `test_ui3`: the TACTICS / FIELDS chips have icons and there are no class chips.
+  - Shot: `after_abc_1024x768_tray_2x.png` (TACTIC and FIELD badges) and `after_abc_1024x768_dock.png` (Field type line).
+- **Totals:** 557 pass, 0 fail.

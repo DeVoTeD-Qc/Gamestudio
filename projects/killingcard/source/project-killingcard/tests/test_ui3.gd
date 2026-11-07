@@ -202,7 +202,7 @@ func test_codex_entries_and_filters() -> void:
 	var k: float = Layout.points_per_px(Layout.PHONE)
 	var screen_r: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS)
 	# kc-deck-match: no weapon-class chips on screen (the head: "leave out the gun type").
-	assert_null(codex.get_class_button(&"sniper"), "no weapon-class filter chip")
+	assert_true(codex.get_class_button(&"sniper") == null, "no weapon-class filter chip")
 	assert_true(codex.get_type_button(&"tactic").has_meta(&"type_icon") and codex.get_type_button(&"field").has_meta(&"type_icon"),
 			"TACTICS / FIELDS chips carry their type icons")
 	for b: Button in [codex.get_back_button(), codex.get_type_button(&"killstreak"), codex.get_type_button(&"tactic"),

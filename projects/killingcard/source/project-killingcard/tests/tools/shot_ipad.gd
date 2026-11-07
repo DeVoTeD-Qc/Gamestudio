@@ -73,6 +73,9 @@ func _run() -> void:
 				st.sides[int(fz[0])].equipment[int(fz[1])].append({"card": RulesCard.new(st.new_uid(), fc), "round": 1})
 	# Calling cards first (the Marksman, the Gunner ...), then the starter's cards, n_hand in all.
 	var extra: Array[StringName] = [&"marksman", &"gunner", &"breacher", &"combat_medic", &"flanker"]
+	if with_fields:
+		# kc-deck-match: a Field in hand too (its type icon next to the starter's Tactic).
+		extra = [&"war_standard", &"ammo_resupply", &"marksman", &"gunner", &"breacher"]
 	var hand: Array = st.sides[0].hand
 	var starters: Array = hand.duplicate()
 	hand.clear()
@@ -94,6 +97,10 @@ func _run() -> void:
 	for rc: RulesCard in hand:
 		if rc.card.is_unit() and (pick == null or rc.card.id == &"marksman"):
 			pick = rc
+	if with_fields:
+		for rc: RulesCard in hand:
+			if rc.card.is_field():
+				pick = rc
 	if pick != null:
 		c.select_card(pick.uid)
 	await _frames(20)

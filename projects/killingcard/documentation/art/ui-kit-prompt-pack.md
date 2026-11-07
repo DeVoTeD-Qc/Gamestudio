@@ -592,6 +592,7 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 256x256 master (export 128/64/48/32). **Background:** white on black: TA converts brightness to alpha.
 - **States:** normal / lit (tint) / idle grey (tint).
 - **Code id:** `type_tactic` (wired: IconSheet.get_icon / UiKit lookup). **Fallback:** code fallback kept.
+- **Motif (kc-deck-match, the head: "Tactic and Field cards should have a different icon"):** an orders sheet (folded corner) with a lightning bolt on it. Must read differently from the Field flag at 18 px. Code fallback: `CardLook.draw_type_icon`.
 
 ##### `ico_type_field.png` · P1 · Batch 6.3
 
@@ -600,6 +601,7 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 - **States:** normal / lit (tint) / idle grey (tint).
 - **Code id:** `type_field` (wired: IconSheet.get_icon / UiKit lookup). **Fallback:** code fallback kept.
 - **Note:** Was type_equipment in the old sheet (keep the id alias).
+- **Motif (kc-deck-match):** a flag on a short pole planted on a strip of ground (terrain / zone), never a bolt. Also used on the objective tile's Field chips. Code fallback: `CardLook.draw_type_icon`.
 
 ##### `ico_type_killstreak.png` · P2 · Batch 13.3
 
