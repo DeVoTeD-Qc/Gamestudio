@@ -21,6 +21,9 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun, selected: bool) -> D
 	var lines: Array = []
 	var badge: String = ""
 	var badge_color: Color = DDUi.WARN
+	## dd-polish (head F1 a): the rules block part of this card's use this turn -> darken its art,
+	## keep the number bright. Still selectable.
+	var dim_art: bool = false
 	match c.kind:
 		DDCard.ZOMBIE:
 			var pb: Dictionary = run.preview(i, DDRun.BARE)
@@ -30,16 +33,19 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun, selected: bool) -> D
 				if bool(pw["enabled"]):
 					lines.append([_loss_text(DDText.weapon_name(run.weapon), pw), DDUi.GOOD, DDUi.FONT_S])
 				else:
-					lines.append(["Weapon: " + str(pw["reason"]), DDUi.TEXT_DIM, DDUi.FONT_S])
+					dim_art = true
+					lines.append(["Bare hands only", DDUi.WARN, DDUi.FONT_S])
 		DDCard.WEAPON:
 			lines.append(["Equip or Scrap", DDUi.TEXT_DIM, DDUi.FONT_S])
 		DDCard.MEDKIT:
 			var pm: Dictionary = run.preview(i, DDRun.USE)
 			if bool(pm["wasted"]):
+				dim_art = true
 				badge = "WON'T HEAL"
 				lines.append(["won't heal", DDUi.WARN, DDUi.FONT_S])
 			elif int(pm["heal"]) <= 0:
 				# dd-feel: at full HP a medkit heals nothing - say so instead of "+0 HP"
+				dim_art = true
 				badge = "FULL HP"
 				lines.append(["full HP: heals 0", DDUi.WARN, DDUi.FONT_S])
 			else:
@@ -55,7 +61,7 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun, selected: bool) -> D
 		badge_color = DDUi.TEXT_DIM
 	return {"kind": "F" if c.is_finale() else c.kind, "tag": DDText.kind_label(c.kind), "badge": badge,
 		"badge_color": badge_color, "big": str(c.value), "title": DDText.card_name(c), "lines": lines,
-		"selected": selected, "payload": card(c, run)}
+		"selected": selected, "art_dim": dim_art, "payload": card(c, run)}
 
 
 static func _loss_text(label: String, p: Dictionary) -> String:

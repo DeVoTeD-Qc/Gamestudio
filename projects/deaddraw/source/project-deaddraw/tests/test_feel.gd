@@ -239,3 +239,43 @@ func test_medkit_at_full_hp_warns() -> void:
 	var label: String = m.call("_choice_label", r, r.street[i], DDRun.USE, pr)
 	check(label.contains("full HP") and not label.contains("+0"), "button says full HP, not +0 (%s)" % label)
 	m.free()
+
+
+# dd-polish (head F1 a): a zombie the equipped weapon can't hit (notch rule) is darkened, its
+# number stays bright, the name bar says bare hands only, and it is still selectable.
+func test_blocked_zombie_is_darkened() -> void:
+	var r: DDRun = plain_run(["W6", "Z5", "Z4", "Z9"] + filler(8))
+	r.resolve(idx(r, "W6"), DDRun.EQUIP)
+	r.resolve(idx(r, "Z5"), DDRun.WEAPON)   # notch 5: now only zombies < 5
+	eq(r.notch, 5, "notched at 5")
+	r.setup_street(["Z7", "Z3", "B2", "B2"] + filler(8), [], true)
+	var hi: int = idx(r, "Z7")
+	var lo: int = idx(r, "Z3")
+	var blocked: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
+	var fine: Dictionary = DDPayloads.street_card_spec(r.street[lo], lo, r, false)
+	check(bool(blocked["art_dim"]), "zombie above the notch is darkened")
+	check(not bool(fine["art_dim"]), "zombie the weapon can hit is not")
+	var texts: Array = []
+	for ln: Variant in blocked["lines"]:
+		texts.append(str(ln[0]))
+	check(texts.has("Bare hands only"), "name bar says bare hands only (%s)" % str(texts))
+	check(r.choices_for(hi).has(DDRun.BARE), "still playable bare-handed")
+	# with art: the art window is at 45%, the number badge at full brightness
+	var tex: Texture2D = Art.texture_for(Art.card_keys(r.street[hi]))
+	if tex == null:
+		var img: Image = Image.create(8, 6, false, Image.FORMAT_RGB8)
+		tex = ImageTexture.create_from_image(img)
+	blocked["art"] = tex
+	var v: DDCardView = DDCardView.new()
+	v.setup(blocked)
+	check(v.art_rect != null and v.art_rect.self_modulate.r < 0.5, "art darkened to 45%")
+	check(v.big_label != null and v.big_label.text == "7", "number shown")
+	check(v.big_label.modulate == Color.WHITE and v.big_label.self_modulate == Color.WHITE, "number at full brightness")
+	v.free()
+	# no art: the tile background darkens instead
+	var plain: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
+	var pv: DDCardView = DDCardView.new()
+	pv.setup(plain)
+	var st: StyleBoxFlat = pv.get_theme_stylebox("panel") as StyleBoxFlat
+	check(st != null and st.bg_color.get_luminance() < DDUi.card_bg("Z").get_luminance(), "plain tile darkened")
+	pv.free()

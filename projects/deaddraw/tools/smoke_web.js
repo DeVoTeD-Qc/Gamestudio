@@ -106,11 +106,11 @@ function find(s, pred, what) {
       s = await waitFor(page, (x) => x.inspect, 'weapon inspect'); await shot('8_inspect_weapon_rightclick');
       await page.mouse.click(vp.width / 2, 20);
       // other screens via the smoke query
-      for (const q of ['screen=safehouse', 'screen=end', 'screen=street&survivor=imani&select=0&seed=3']) {
+      for (const q of ['screen=safehouse', 'screen=end', 'screen=street&survivor=imani&select=0&seed=3', 'screen=street&seed=7&notch=3', 'screen=map']) {
         await page.goto(URL + '?' + q, { waitUntil: 'load' });
         s = await waitFor(page, (x) => x.screen !== 'TITLE', q, 90000);
         await sleep(500);
-        await shot('9_' + q.split('&')[0].replace('screen=', '') + (q.includes('imani') ? '_imani' : ''));
+        await shot('9_' + q.split('&')[0].replace('screen=', '') + (q.includes('imani') ? '_imani' : '') + (q.includes('notch') ? '_notched' : ''));
         log(`${q} -> ${s.screen}`);
       }
     } catch (e) {

@@ -37,6 +37,7 @@ var line_labels: Array[Label] = []
 var art_rect: TextureRect = null
 var has_art: bool = false
 var _frame: bool = false
+var _art_dim: bool = false
 var _badge_panel: PanelContainer = null
 var _corner_chip: Control = null
 
@@ -50,13 +51,15 @@ const BONE: Color = Color("ece6d6")
 ## spec keys: kind, tag (top-left small), badge (top-right), big, title, lines: [[text, color]...],
 ## big_size, compact, selected, dim, payload.
 ## dd-feel art keys: art (Texture2D), art_fit ("cover" | "contain" for icons), art_dim (darken the
-## art window to 45%: won't heal / no effect), holdover (corner tab), bg_art (Texture2D banner behind
+## art window to 45% while the number stays bright: the rules block part of the card's use, e.g. a
+## zombie the weapon can't hit or a medkit that won't heal), holdover (corner tab), bg_art (Texture2D banner behind
 ## a "district" tile, which then shows `art` as a small finale card with the number badge).
 func setup(spec: Dictionary) -> DDCardView:
 	kind = str(spec.get("kind", "D"))
 	payload = spec.get("payload", {})
 	_selected = bool(spec.get("selected", false))
 	_dim = bool(spec.get("dim", false))
+	_art_dim = bool(spec.get("art_dim", false))
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var compact: bool = bool(spec.get("compact", false))
 	var art: Variant = spec.get("art", null)
@@ -82,7 +85,7 @@ func _build_plain(spec: Dictionary, art: Variant, compact: bool) -> void:
 	if art != null:
 		_add_art(self, art, "cover")
 		var scrim: ColorRect = ColorRect.new()
-		scrim.color = Color(DDUi.card_bg(kind), 0.55)
+		scrim.color = Color(DDUi.card_bg(kind), float(spec.get("art_tint", 0.55)))
 		add_child(scrim)
 	_box = DDUi.vbox(2 if compact else 4)
 	add_child(_box)
@@ -202,10 +205,10 @@ func _build_district(spec: Dictionary) -> void:
 	h.add_child(_box)
 	var top: HBoxContainer = DDUi.hbox(4)
 	_box.add_child(top)
-	var tl: Label = DDUi.label(str(spec.get("tag", "")), DDUi.FONT_S, DDUi.accent(kind))
+	# dd-polish: long district names ("St. Agnes Hospital") wrap instead of being cut off
+	var tl: Label = DDUi.label(str(spec.get("tag", "")), DDUi.FONT_S, DDUi.accent(kind), HORIZONTAL_ALIGNMENT_LEFT, true)
 	_outline(tl, 6)
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tl.clip_text = true
 	top.add_child(tl)
 	_add_badge(top, spec)
 	var spacer: Control = Control.new()
@@ -300,6 +303,8 @@ func set_selected(v: bool) -> void:
 
 func _apply_style() -> void:
 	var bg: Color = DDUi.card_bg(kind)
+	if _art_dim and not has_art:
+		bg = bg.darkened(0.45)
 	var border: Color = DDUi.SELECT if _selected else DDUi.accent(kind)
 	var st: StyleBoxFlat = DDUi.box(bg, border, 5 if _selected else (3 if _frame else 2), 14 if not _frame else 12, 10 if not _frame else 3)
 	if _selected:

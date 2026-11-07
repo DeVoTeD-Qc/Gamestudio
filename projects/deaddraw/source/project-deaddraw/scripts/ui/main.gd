@@ -429,9 +429,6 @@ func _build_street() -> void:
 		spec["holdover"] = c.holdover and str(spec.get("badge", "")) == "HOLDOVER"
 		if spec["holdover"]:
 			spec["badge"] = ""
-		if c.kind == DDCard.MEDKIT and run.preview(i, DDRun.USE).get("enabled", false):
-			var pm: Dictionary = run.preview(i, DDRun.USE)
-			spec["art_dim"] = bool(pm["wasted"]) or int(pm["heal"]) <= 0
 		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
 		cv.index = i
 		cv.tapped.connect(_on_card_tapped)
@@ -455,6 +452,7 @@ func _build_street() -> void:
 	var ds: Dictionary = DDPayloads.deck_spec(run)
 	ds["big_size"] = big_s
 	ds["art_keys"] = Art.back_keys()
+	ds["art_tint"] = 0.82   # dd-polish: the card back is busy; the count must read
 	var dv: DDCardView = _view(ds)
 	dv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_deck_anchor = dv
@@ -889,7 +887,8 @@ func _build_end() -> void:
 
 
 # ================================================================ test / smoke hooks
-## Web only: ?screen=street&seed=5&select=0 jumps to a screen with a seeded run (QA screenshots).
+## Web only: ?screen=street&seed=5&select=0 jumps to a screen with a seeded run (QA screenshots);
+## &notch=3[&weapon=6] gives the run a notched weapon.
 func _apply_smoke_query() -> void:
 	if not OS.has_feature("web"):
 		return
@@ -924,6 +923,10 @@ func _apply_smoke_query() -> void:
 			last_event = Game.run.resolve(0, DDRun.BARE)
 			Game.sync_profile()
 			screen = Screen.END
+	if args.has("notch"):
+		# dd-polish QA: ?screen=street&notch=3 -> a notched weapon, so stronger zombies show darkened
+		Game.run.weapon = int(args.get("weapon", "6"))
+		Game.run.notch = int(args["notch"])
 	if args.has("inspect"):
 		var what: String = str(args["inspect"])
 		if what == "deck":
