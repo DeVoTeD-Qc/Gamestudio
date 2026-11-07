@@ -82,6 +82,14 @@ const KILLSTREAK_EARNED: StringName = &"killstreak_earned"    ## side, item_id, 
 const PERK_TRIGGERED: StringName = &"perk_triggered"          ## side, item_id (Field Salvage ...)
 const CARD_RETURNED: StringName = &"card_returned"            ## side, card_uid, card_id, zone, reason: zone still full at Reveal
 
+# --- Run v2 (kc-v2-impl) ----------------------------------------------------------------
+## A Terrain did something (Minefield damage, Field Hospital heal, Comms Tower streak, Supply Cache Supply,
+## Hot Zone point). `what` is a ready log line ("Minefield: Grunt takes 1").
+const TERRAIN_TRIGGERED: StringName = &"terrain_triggered"    ## terrain, zone, side, uid?, amount?, what
+## The boss rule did something (Reinforcements Supply, a Horde Shambler, Dug In's pits at the start).
+const BOSS_RULE_TRIGGERED: StringName = &"boss_rule_triggered" ## rule, side, amount?, uid?, zone?, card_uid?, what
+## (ITEM_USED / ITEM_REVEALED of an Operator ability carry `ability: true`.)
+
 
 static func make(type: StringName, round_number: int, fields: Dictionary = {}) -> Dictionary:
 	var event: Dictionary = {"type": type, "round": round_number}

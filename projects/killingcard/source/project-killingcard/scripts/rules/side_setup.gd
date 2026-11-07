@@ -29,6 +29,9 @@ var firepower_bonus: int = 0
 var armor_bonus: int = 0
 ## Tests: skip the shuffle and draw the deck in list order (deck[0] is drawn first).
 var keep_deck_order: bool = false
+## kc-v2-impl (run-v2.md §7): the Primary's kit is on: its passive (Pierce, opening hand) and its
+## once-per-match ability. Off by default (enemies, quick matches, the first run's F1, old tests).
+var operator_kit: bool = false
 
 
 ## Enemy side from a squad and the match's scaling.

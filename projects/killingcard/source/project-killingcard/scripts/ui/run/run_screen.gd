@@ -349,6 +349,84 @@ static func wire_inspect_button(b: BaseButton, on_inspect: Callable) -> void:
 	b.set_meta(&"inspectable", true)
 
 
+# =============================================================================
+# kc-v2-ui: shared by the Event / Shop / Rest screens
+# =============================================================================
+
+var _v2_inspector: Control = null
+var _v2_feedback: PanelContainer = null
+var _v2_feedback_label: Label = null
+
+
+## The screen's card inspector (made on first use, over everything).
+func inspector() -> Control:
+	if _v2_inspector == null:
+		_v2_inspector = (load("res://scenes/match/CardInspector.tscn") as PackedScene).instantiate()
+		_v2_inspector.name = "Inspector"
+		add_child(_v2_inspector)
+		_v2_inspector.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_v2_inspector.hide()
+	return _v2_inspector
+
+
+## A card by id: the run's resource, else the CardDB autoload.
+func card_by_id(id: StringName) -> CardData:
+	var r: RunProgress = run()
+	var res: Resource = r.resource(id) if r != null else null
+	if res is CardData:
+		return res
+	var db: Node = get_tree().root.get_node_or_null("CardDB") if is_inside_tree() else null
+	return db.get_card(id) as CardData if db != null else null
+
+
+## CardInspector info for a card (full card, banner, keywords).
+static func card_inspect_info(card: CardData, status: String = "") -> Dictionary:
+	if card == null:
+		return {}
+	var vd: Dictionary = CardInfo.view_dict(card)
+	vd["banner"] = String(card.id)
+	return {"view": vd, "title": card.display_name, "type": CardInfo.type_line(card), "banner": BannerCard.entry_for_card(card),
+			"is_unit": card.is_unit(), "text": card.text, "keywords": CardInfo.keywords(card), "status": status}
+
+
+## "What just happened" line (studio rule): a panel at the bottom of the layout that names the
+## result with the numbers that changed. It flashes on every new line and plays a cue.
+func show_feedback(text: String, cue: StringName = &"reward") -> void:
+	if _v2_feedback == null:
+		_v2_feedback = PanelContainer.new()
+		_v2_feedback.name = "Feedback"
+		_v2_feedback.theme_type_variation = &"ToastPanel"
+		_v2_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_v2_feedback_label = make_label("", &"HudHeader", true)
+		_v2_feedback_label.name = "FeedbackText"
+		_v2_feedback.add_child(_v2_feedback_label)
+		var layout: Node = get_node_or_null(^"%Layout")
+		if layout != null:
+			layout.add_child(_v2_feedback)
+	_v2_feedback_label.text = text
+	_v2_feedback.show()
+	_v2_feedback.modulate = Color(1.6, 1.5, 1.1, 1.0)
+	if is_inside_tree():
+		var tw: Tween = create_tween()
+		tw.tween_property(_v2_feedback, "modulate", Color.WHITE, 0.35)
+	if cue != &"":
+		(load("res://scripts/fx/sfx_bank.gd") as GDScript).call(&"cue", cue)
+
+
+func feedback_text() -> String:
+	return _v2_feedback_label.text if _v2_feedback_label != null and _v2_feedback.visible else ""
+
+
+## A quick scale punch on a chip whose number changed (REQ, tickets). Colour stays.
+func punch(c: Control) -> void:
+	if c == null or not c.is_inside_tree():
+		return
+	c.pivot_offset = c.size * 0.5
+	var tw: Tween = create_tween()
+	tw.tween_property(c, "scale", Vector2(1.15, 1.15), 0.08)
+	tw.tween_property(c, "scale", Vector2.ONE, 0.16)
+
+
 ## Ticket tags: filled for tickets left, hollow for spent ones (shape, not colour only).
 static func make_tickets(left: int, total: int, pip: Vector2 = Vector2(18, 26)) -> HBoxContainer:
 	var row: HBoxContainer = HBoxContainer.new()

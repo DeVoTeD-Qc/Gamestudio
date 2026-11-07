@@ -59,6 +59,17 @@ var item_undo: Array[Dictionary] = []
 ## Perk id whose survive-lethal (Grit) is armed on the Operator right now, or &"".
 var survive_lethal_armed: StringName = &""
 
+# --- kc-v2-impl: the Operator kit (run-v2.md §7) ---------------------------------------------
+## True when this side's Operator passive and ability are on (SideSetup.operator_kit).
+var kit_on: bool = false
+## The Operator's once-per-match ability (an ABILITY LoadoutItem), or null. Used = uses_this_match.
+var ability: LoadoutItem = null
+
+
+## True once the ability was used this match (or is queued this Deploy).
+func ability_used() -> bool:
+	return ability != null and int(uses_this_match.get(ability.id, 0)) >= maxi(1, ability.uses_per_match)
+
 
 func line(zone: int) -> Array:
 	return lines[zone]

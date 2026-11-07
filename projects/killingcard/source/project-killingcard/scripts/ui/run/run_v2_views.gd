@@ -384,22 +384,29 @@ static func boss_view(state: Object) -> Dictionary:
 ## Calls `method` on RunState (preferred: it saves and announces), else on the run. "" = done,
 ## else the refusal in words. With a preview override on, the call is only logged.
 static func act(run: Object, method: StringName, args: Array = []) -> String:
+	var r: Dictionary = act_result(run, method, args)
+	return "" if bool(r["ok"]) else String(r["reason"])
+
+
+## act() with the whole answer: {ok, reason, text (what happened, when the rules say), data}.
+static func act_result(run: Object, method: StringName, args: Array = []) -> Dictionary:
 	if not override_map.is_empty() or not override_shop.is_empty() or not override_event.is_empty() or not override_rest.is_empty():
 		act_log.append([method, args])
-		return ""
+		return {"ok": true, "reason": "", "text": "", "data": {}}
 	var rs: Node = _run_state()
 	var target: Object = rs if rs != null and rs.has_method(method) else run
 	if target == null or not target.has_method(method):
-		return "This needs the Run v2 rules (%s)." % method
+		return {"ok": false, "reason": "This needs the Run v2 rules (%s)." % method, "text": "", "data": {}}
 	var res: Variant = target.callv(method, args)
 	if res is String:
-		return res
+		return {"ok": res == "", "reason": res, "text": "", "data": {}}
 	if res is Dictionary:
 		var d: Dictionary = res
-		return "" if bool(d.get("ok", true)) else String(d.get("reason", "Not possible."))
+		return {"ok": bool(d.get("ok", true)), "reason": String(d.get("reason", "Not possible.")),
+				"text": String(d.get("text", d.get("result", ""))), "data": d}
 	if res is bool:
-		return "" if res else "Not possible."
-	return ""
+		return {"ok": res, "reason": "" if res else "Not possible.", "text": "", "data": {}}
+	return {"ok": true, "reason": "", "text": "", "data": {}}
 
 
 static func _call(obj: Object, method: StringName, args: Array = []) -> Variant:
