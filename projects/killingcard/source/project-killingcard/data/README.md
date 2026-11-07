@@ -137,3 +137,15 @@ The steps and enemy plays are sub-resources inside the file (`TutorialStep`, `Tu
 Changing the script: keep the enemy plays and the player's stacked draws in step with the steps (the
 `test_tutorial.gd` engine test checks that Round 1 and 2 each give an elimination and that the Recon Drone
 is earned by Round 2). Run the tests after any change.
+
+## Run v2 (kc-v2-impl, documentation/design/run-v2.md)
+
+| Folder / file | What |
+|---|---|
+| `terrain/<id>.tres` | `TerrainData`: `id` (= the rule id in `TerrainRules.ALL`), `display_name`, `text` (one line, printed on the column band; never says "Field": the player-facing word is **Terrain**), `detail` (inspect), `zone_control_only` (Hot Zone). The rule itself is code (`scripts/rules/terrain_rules.gd`). |
+| `events/<id>.tres` | `EventData`: `title`, `scene` (two lines), 2-3 `options` `{id, label, detail (exact result, odds printed), effect (a `RunEvents.EFFECTS` id), amount, cost_req, needs ("" / deck_card / calling_card / terrain), card}`. |
+| `loadout/ab_*.tres` | Operator abilities: slot `ABILITY` (7), 0 Supply, `uses_per_match = 1`. A Primary points at its own with `ability`, and carries `passive_name` / `passive_text`, `pierce`, `opening_hand_bonus` and `unlock` (RunProfile id). |
+| `loadout/bastion_60.tres` | The fourth Operator (LMG 2/8, Cover 1, Covering Fire). `wasp_9_crew.tres` = the enemy crews' pre-v2 Wasp-9 (Armor 6, `crew_only`, never offered to the player). |
+| `cards/shambler.tres` | The Hollow Choir's token (1/2, no control, Pick / Flank ignore it). |
+| `squads/squad_hollow_choir.tres` | The third boss crew (Undead, 20 cards). |
+| `run_config.tres` | `run_map = true`, `bosses` (Meridian_Six / Bulwark Prime / The Hollow Choir: `boss_id`, `boss_rule`, `boss_rule_name`, `boss_rule_text`, `boss_card`, `unlock`), REQ and shop prices, Terrain counts, the first-run numbers, the boss rule numbers. `matches[0..3]` are F1-F4. |

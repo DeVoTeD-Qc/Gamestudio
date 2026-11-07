@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=6 format=3]
+
+[ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="1_kmnr8"]
+[ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_fdwuw"]
+[ext_resource type="Resource" path="res://data/loadout/ceramic_lining.tres" id="3_d57gb"]
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="4_cwk3l"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="5_1lnu3"]
+
+[resource]
+script = ExtResource("5_1lnu3")
+id = &"wasp_9_crew"
+display_name = "Wasp-9"
+slot = 0
+text = "SMG. First Shot. May Rotate twice per round."
+weapon_class = 1
+operator_firepower = 2
+operator_armor = 6
+rotations_per_round = 2
+attachments = Array[Resource]([ExtResource("1_kmnr8"), ExtResource("2_fdwuw"), ExtResource("3_d57gb")])
+crew_only = true
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = true
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 0
+effects = Array[ExtResource("4_cwk3l")]([])

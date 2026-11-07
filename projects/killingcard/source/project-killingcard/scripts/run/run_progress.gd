@@ -225,7 +225,7 @@ static func operator_options(cfg: RunConfig) -> Array[LoadoutItem]:
 	var more: Array[LoadoutItem] = db.loadout_items_by_slot(DataEnums.LoadoutSlot.PRIMARY)
 	more.sort_custom(func(a: LoadoutItem, b: LoadoutItem) -> bool: return a.display_name < b.display_name)
 	for item: LoadoutItem in more:
-		if item != null and not out.any(func(o: LoadoutItem) -> bool: return o.id == item.id):
+		if item != null and not item.crew_only and not out.any(func(o: LoadoutItem) -> bool: return o.id == item.id):
 			out.append(item)
 	return out
 
@@ -1481,9 +1481,15 @@ func move_to(id: StringName) -> String:
 	return ""
 
 
-## Leaves a shop (the only node you leave by hand). "" or the reason.
+## Leaves a shop, or a rest / event without taking an option (always allowed at a rest; at an event
+## only when none of its options is available, e.g. Memorial Wall with full tickets and no calling
+## card). "" or the reason.
 func leave_node() -> String:
-	if phase != PHASE_SHOP:
+	if phase == PHASE_EVENT:
+		for o: Dictionary in RunEvents.view(self).get("options", []):
+			if o["available"]:
+				return "pick one of the options"
+	elif phase != PHASE_SHOP and phase != PHASE_REST:
 		return "nothing to leave"
 	shop = {}
 	finish_node(false)

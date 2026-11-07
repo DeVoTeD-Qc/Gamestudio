@@ -121,6 +121,8 @@ func test_flow_fight_offers_req_and_the_map() -> void:
 	assert_eq(r.map.reachable(), [&"s1_m"] as Array[StringName], "F1 only")
 	assert_eq(r.move_to(&"s1_m"), "", "move")
 	assert_eq(r.phase, RunProgress.PHASE_MATCH, "a fight")
+	assert_eq(r.map_view()["nodes"].size(), r.map.nodes.size(), "map_view works outside the map phase (UI bug report)")
+	assert_false(r.node_view(&"s1_m")["reachable"], "nothing reachable mid-fight")
 	var m: MatchState = r.create_match()
 	m.start_match()
 	assert_eq(m.terrain, r.map.node(&"s1_m")["fight"]["terrain"], "the node's Terrain is on the board")

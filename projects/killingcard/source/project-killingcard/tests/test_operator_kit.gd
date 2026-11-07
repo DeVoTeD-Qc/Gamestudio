@@ -80,6 +80,10 @@ func test_dig_in_cover_in_a_column_once_per_match_with_undo() -> void:
 	m.begin_round()
 	assert_eq(m.cover_of(a), 0, "this round only")
 	assert_false(m.ability_view(P)["ready"], "once per match")
+	m.set_ready(P)
+	assert_eq(m.ability_view(P)["used"], true, "ability_view still answers when it can't be used (UI bug report)")
+	m.resolve_round()
+	assert_eq(m.ability_view(P)["code"], &"wrong_phase", "outside Deploy")
 
 
 func test_marked_shot_needs_the_operator_and_hits_its_column() -> void:

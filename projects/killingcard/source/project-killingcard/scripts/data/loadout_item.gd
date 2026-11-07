@@ -45,6 +45,9 @@ var attachments: Array[Resource] = []
 var ability: Resource = null
 ## Profile unlock of this Operator (RunProfile.OPERATOR_UNLOCKS keys: &"" = from the start).
 @export var unlock: StringName = &""
+## An enemy crew's Primary only (never offered as the player's Operator): wasp_9_crew keeps the pre-v2
+## Wasp-9 (Armor 6) on SandViper / the Choir, so head V2's player buff doesn't toughen the crews.
+@export var crew_only: bool = false
 
 @export_group("Attachment stat changes")
 @export_range(-5, 5) var firepower_bonus: int = 0

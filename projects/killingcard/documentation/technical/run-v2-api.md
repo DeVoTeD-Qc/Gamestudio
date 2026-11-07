@@ -1,7 +1,10 @@
 # KillingCard Run v2: public API for the screens (kc-v2-impl -> kc-v2-ui)
 
 *Owner: Mechanics Developer Agent (kc-v2-impl). Readers: UI/UX agent (kc-v2-ui). Spec: `documentation/design/run-v2.md`.*
-*Status: **live**. This file is kept accurate while the rules land; a section marked (planned) is not wired yet.*
+*Status: **implemented** (kc-v2-impl). Everything below is wired and covered by tests (test_terrain, test_bosses, test_operator_kit, test_run_map, test_shop_events).*
+
+Implementation map: rules `scripts/rules/terrain_rules.gd`, `boss_rules.gd`, `match_state.gd` (views); run `scripts/run/run_map.gd`, `run_events.gd`, `run_shop.gd`, `run_modifiers.gd`, `run_profile.gd`, `run_progress.gd`; data `data/terrain/`, `data/events/`, `data/loadout/ab_*.tres`, `bastion_60.tres`, `data/cards/shambler.tres`, `data/squads/squad_hollow_choir.tres`, `data/run_config.tres` (`run_map`, `bosses`, REQ / prices / Terrain counts). Lower-level calls the RunState wrappers use are public too: `RunEvents.view/choose(run, ...)`, `RunShop.view/buy/.../rest_view/rest_choose(run, ...)`, `run.move_to / leave_node / map_view / node_view / boss_view / configure_match`.
+Screen tests on the old 5-match ladder set `RunState.run_map_enabled = false`.
 
 Rules of the road:
 - The screens call **`RunState`** (autoload) and read **`RunState.run`** (a `RunProgress`) and the **`MatchState`** they are handed. They never write fields directly.
@@ -73,6 +76,8 @@ TERRAIN = {zone: int, zone_name: StringName (&"left"|&"mid"|&"right"), id: Strin
 ### Actions
 - `RunState.move_to(node_id: StringName) -> String`: phase `map`, node reachable. Fight / elite / boss -> phase `match` (then `RunState.create_match()` as today). Event -> `event`, Shop -> `shop`, Rest -> `rest`. Emits `node_entered`.
 - `RunState.current_node() -> Dictionary`: the NODE you are on ({} before F1).
+- `map_view()` works in every phase (nodes are `reachable` only in phase `map`).
+- A screen that builds its own MatchState for the current node calls `RunState.run.configure_match(m)` before `m.start_match()` (create_match already does).
 
 ## 4. Event / Shop / Rest
 
@@ -98,7 +103,7 @@ OPTION = {index, id, label (button text), detail (exact result, odds printed: "5
  restock:    {price: 1, can: bool, reason},
  deck_size, floor}
 ```
-Actions (each `-> String`): `shop_buy(slot)`, `shop_buy_perk(index)`, `shop_muster_out(deck_index)`, `shop_discharge(deck_index)`, `shop_restock()`, `leave_node()` (back to `map`). Prices (V5): unit 4, tactic 3, Field 3, Elite card 7, Muster out 2, Discharge 3, Perk 6, restock 1. Floor 15 for removals.
+Actions (each `-> String`): `shop_buy(slot)`, `shop_buy_perk(index)`, `shop_muster_out(deck_index)`, `shop_discharge(deck_index)`, `shop_restock()`, `leave_node()` (back to `map`). `leave_node()` also leaves a Rest without a choice, and an Event when none of its options is available (show a LEAVE button then). Prices (V5): unit 4, tactic 3, Field 3, Elite card 7, Muster out 2, Discharge 3, Perk 6, restock 1. Floor 15 for removals.
 
 ### Rest: `RunState.rest_view() -> Dictionary`
 ```
@@ -133,7 +138,8 @@ Actions (each `-> String`): `shop_buy(slot)`, `shop_buy_perk(index)`, `shop_must
 `{id: &"meridian"|&"prime"|&"choir", name, rule_id: &"reinforcements"|&"dug_in"|&"horde", rule_name, rule_text, crew, mode, mode_name, armor_bonus, deck: [card ids]}`. Shown on the map from step 1 and on the Loadout screen.
 
 ## 7. After a match / run end
-- `RunProgress.record_result` summary gains `req_gained: int` and `elite: bool`; an elite win's Supply Drop has `elite_cache: true` on the offer (header "Elite Cache").
+- `RunProgress.record_result` summary gains `req_gained: int` and `elite: bool`; an elite win's Supply Drop has `elite_cache: true` on the offer (header "Elite Cache"); map-run drops also carry `ladder` (the F number whose rung they use).
+- History rows of map runs add `node`, `label` ("F2", "Elite I", "Boss"), `elite`, `terrain`, `req_gained`.
 - `RunState.run.req`, `RunState.run.threat()`, `RunState.run.modifiers`.
 - `RunState.unlocked(items)` after the run ends (profile updated in Settings.run_profile).
 
