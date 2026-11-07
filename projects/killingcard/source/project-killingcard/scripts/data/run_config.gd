@@ -61,6 +61,48 @@ extends Resource
 ## Cards only older saves can still hold (the kc-syn starter's Rifleman): loadable, never offered.
 @export var legacy_cards: Array[CardData] = []
 
+@export_group("Run v2 map (kc-v2-impl, run-v2.md)")
+## True: a run is the v2 map (9 steps, 3 lanes, events / shops / rests / elites, a boss). The fights
+## F1-F4 use matches[0..3]; the boss comes from `bosses`. False: the old linear ladder of `matches`.
+@export var run_map: bool = false
+## The three bosses (RunMatchData with boss_id / boss_rule), Meridian_Six first.
+@export var bosses: Array[RunMatchData] = []
+## Added to matches[k].enemy_armor_bonus for fight F(k+1) on the map (F4 +1, §2.4).
+@export var fight_armor_bonus: PackedInt32Array = PackedInt32Array([0, 0, 0, 1])
+## Elites: the next fight's crew at this extra Armor, with elite_terrain Terrains.
+@export_range(0, 3) var elite_armor_bonus: int = 1
+## Requisition (REQ, §2.3).
+@export_range(0, 20) var req_start: int = 0
+@export_range(0, 10) var req_win: int = 3
+@export_range(0, 10) var req_elite: int = 5
+@export_range(0, 10) var req_loss: int = 1
+@export_range(0, 10) var req_draw: int = 1
+## Shop prices (§2.3; head V5: Muster out 2).
+@export_range(0, 20) var price_unit: int = 4
+@export_range(0, 20) var price_tactic: int = 3
+@export_range(0, 20) var price_field: int = 3
+@export_range(0, 20) var price_elite_card: int = 7
+@export_range(0, 20) var price_muster_out: int = 2
+@export_range(0, 20) var price_discharge: int = 3
+@export_range(0, 20) var price_perk: int = 6
+@export_range(0, 20) var price_restock: int = 1
+@export_range(1, 5) var shop_cards: int = 3
+@export_range(1, 3) var shop_perks: int = 2
+## Terrain per fight F1..F4 (§6.2); F3 gets one more with terrain_f3_extra_chance. Elites: elite_terrain.
+@export var terrain_per_fight: PackedInt32Array = PackedInt32Array([1, 1, 1, 2])
+@export_range(0.0, 1.0) var terrain_f3_extra_chance: float = 0.5
+@export_range(0, 3) var elite_terrain: int = 2
+## The first run (§2.5): Terrain per fight F1..F4 and on Elite I; the Operator kit from this fight.
+@export var first_run_terrain: PackedInt32Array = PackedInt32Array([0, 0, 1, 1])
+@export_range(0, 3) var first_run_elite_terrain: int = 1
+@export_range(1, 5) var first_run_kit_from_fight: int = 2
+## Boss rule numbers (§4): Meridian's extra Supply and the round it starts, the Choir's first Shambler round.
+@export_range(1, 12) var meridian_supply_from: int = 4
+@export_range(0, 3) var meridian_supply: int = 1
+@export_range(1, 12) var choir_from_round: int = 2
+## Columns that start with a Mortar Pit for Bulwark Prime (0 = A, 1 = B, 2 = C).
+@export var prime_pit_zones: PackedInt32Array = PackedInt32Array([0, 1, 2])
+
 @export_group("Starter kit")
 ## Exactly deck_size card references (copies = repeated entries).
 @export var starter_deck: Array[CardData] = []
@@ -187,6 +229,18 @@ func validate(v: DataValidator) -> void:
 		else:
 			matches[i].validate(v, "matches[%d]" % i)
 	v.check_range("tickets", tickets, 1, 10)
+	if run_map:
+		if matches.size() < 4:
+			v.missing("matches", "the v2 map needs matches[0..3] for F1-F4")
+		if bosses.is_empty():
+			v.missing("bosses", "the v2 map needs at least one boss")
+		for i: int in bosses.size():
+			if bosses[i] == null:
+				v.broken_reference("bosses[%d]" % i, "empty boss slot")
+			else:
+				bosses[i].validate(v, "bosses[%d]" % i)
+				if bosses[i].boss_id == &"" or bosses[i].boss_rule == &"":
+					v.missing("bosses[%d].boss_id" % i, "a boss slot needs boss_id and boss_rule")
 	v.check_range("supply_drop_choices", supply_drop_choices, 1, 5)
 	v.check_range("attachment_choices", attachment_choices, 1, 4)
 	v.check_range("perk_choices", perk_choices, 1, 5)

@@ -19,6 +19,10 @@ const SCENE_MATCH: String = "res://scenes/Match.tscn"
 const SCENE_AFTER_ACTION: String = "res://scenes/run/AfterAction.tscn"
 const SCENE_REWARD: String = "res://scenes/run/Reward.tscn"
 const SCENE_RUN_END: String = "res://scenes/run/RunEnd.tscn"
+## kc-v2-ui: the Run v2 node screens.
+const SCENE_EVENT: String = "res://scenes/run/Event.tscn"
+const SCENE_SHOP: String = "res://scenes/run/Shop.tscn"
+const SCENE_REST: String = "res://scenes/run/Rest.tscn"
 const SCENE_CONSENT: String = "res://scenes/survey/Consent.tscn"
 const SCENE_END_SURVEY: String = "res://scenes/survey/EndSurvey.tscn"
 
@@ -74,6 +78,14 @@ static func playtest_log() -> Node:
 static func scene_for(run: RunProgress) -> String:
 	if run == null:
 		return SCENE_TITLE
+	# kc-v2-ui: a v2 run standing on an unfinished Event / Shop / Rest goes back to that screen.
+	match (load("res://scripts/ui/run/run_v2_views.gd") as GDScript).call(&"pending_screen", run):
+		&"event":
+			return SCENE_EVENT
+		&"shop":
+			return SCENE_SHOP
+		&"rest":
+			return SCENE_REST
 	match run.phase:
 		RunProgress.PHASE_LOADOUT:
 			return SCENE_LOADOUT

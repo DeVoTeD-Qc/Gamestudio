@@ -242,6 +242,113 @@ static func clear(node: Node) -> void:
 		child.queue_free()
 
 
+## kc-v2-ui: the stencil "REQ 7" chip (Requisition, run-v2.md §2.3), next to the tickets on the map,
+## the shop and the reward screens. Long press / right click: what REQ is and how it is earned.
+static func make_req_chip(amount: int) -> PanelContainer:
+	var p: PanelContainer = PanelContainer.new()
+	p.name = "ReqChip"
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = Color("#2B2618")
+	sb.border_color = Color("#C2A878")
+	sb.set_border_width_all(2)
+	sb.set_content_margin_all(6)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	p.add_theme_stylebox_override(&"panel", sb)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.set_meta(&"inspectable", true)
+	p.tooltip_text = "Requisition: earned in fights (+3, elites +5, a loss +1) and events; spent in shops."
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+	var tag: Label = make_label("REQ", &"HudTag")
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(tag)
+	var n: Label = make_label(str(amount), &"HudNumber")
+	n.name = "ReqValue"
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	n.add_theme_color_override(&"font_color", Color("#E8D3A4"))
+	row.add_child(n)
+	return p
+
+
+## kc-v2-ui: "THREAT 2" chip for the run's modifiers (hidden by the caller when none is on).
+static func make_threat_chip(threat: int, mod_names: PackedStringArray) -> PanelContainer:
+	var p: PanelContainer = PanelContainer.new()
+	p.name = "ThreatChip"
+	var sb: StyleBoxFlat = StyleBoxFlat.new()
+	sb.bg_color = Color("#2A1416")
+	sb.border_color = Color("#E5383B")
+	sb.set_border_width_all(2)
+	sb.set_content_margin_all(6)
+	sb.content_margin_left = 10
+	sb.content_margin_right = 10
+	p.add_theme_stylebox_override(&"panel", sb)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.set_meta(&"inspectable", true)
+	p.tooltip_text = "Modifiers: %s" % ", ".join(mod_names)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override(&"separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
+	var tag: Label = make_label("THREAT", &"HudTag")
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(tag)
+	var n: Label = make_label(str(threat), &"HudNumber")
+	n.name = "ThreatValue"
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	n.add_theme_color_override(&"font_color", Color("#FF8A8C"))
+	row.add_child(n)
+	return p
+
+
+## kc-v2-ui: long press / right click on any Control (not a Button) calls on_inspect; a tap too when
+## tap_inspects (chips and plates that do nothing else).
+static func wire_inspect_control(c: Control, on_inspect: Callable, tap_inspects: bool = true) -> void:
+	var g: RefCounted = (load("res://scripts/ui/press_gesture.gd") as GDScript).new(c)
+	g.drag_enabled = false
+	g.long_pressed.connect(func(_p: Vector2) -> void: on_inspect.call())
+	if tap_inspects:
+		g.tapped.connect(func(_p: Vector2) -> void: on_inspect.call())
+	c.mouse_filter = Control.MOUSE_FILTER_STOP
+	c.set_meta(&"inspectable", true)
+	c.set_meta(&"gesture", g)
+	c.gui_input.connect(func(e: InputEvent) -> void:
+		if g.handle(e):
+			c.accept_event())
+
+
+## kc-v2-ui: long press (touch) or right click on a Button calls on_inspect instead of pressing it
+## (same rule as reward_screen.gd _wire_inspect).
+static func wire_inspect_button(b: BaseButton, on_inspect: Callable) -> void:
+	var st: Dictionary = {"id": 0, "fired": false}
+	b.gui_input.connect(func(e: InputEvent) -> void:
+		if not e is InputEventMouseButton:
+			return
+		var mb: InputEventMouseButton = e
+		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			b.accept_event()
+			on_inspect.call()
+		elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			st["id"] = int(st["id"]) + 1
+			st["fired"] = false
+			var my_id: int = st["id"]
+			b.get_tree().create_timer(0.4).timeout.connect(func() -> void:
+				if is_instance_valid(b) and int(st["id"]) == my_id and b.is_inside_tree() \
+						and b.get_global_rect().has_point(b.get_global_mouse_position()):
+					st["fired"] = true
+					on_inspect.call())
+		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+			st["id"] = int(st["id"]) + 1
+			if bool(st["fired"]):
+				st["fired"] = false
+				b.accept_event())
+	b.set_meta(&"inspectable", true)
+
+
 ## Ticket tags: filled for tickets left, hollow for spent ones (shape, not colour only).
 static func make_tickets(left: int, total: int, pip: Vector2 = Vector2(18, 26)) -> HBoxContainer:
 	var row: HBoxContainer = HBoxContainer.new()

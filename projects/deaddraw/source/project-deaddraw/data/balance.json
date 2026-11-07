@@ -7,6 +7,7 @@
   "safehouse_heal": 12,
   "perk_choices": 3,
   "fire_axe_power": 7,
+  "triage_heal_bonus": 1,
   "weapon_scrap": true,
   "retreat_mode": "bottom",
   "districts": [
@@ -41,7 +42,7 @@
   "survivors": {
     "rosa": {"name": "Rosa Vance", "role": "Mechanic", "passive": "steady_hands", "unlocked": true},
     "imani": {"name": "Dr. Imani Hale", "role": "Medic", "passive": "triage", "unlocked": true},
-    "theo": {"name": "Theo Park", "role": "Courier", "passive": "slip_away", "unlocked": false, "hp": 22}
+    "theo": {"name": "Theo Park", "role": "Courier", "passive": "slip_away", "unlocked": false, "hp": 24}
   },
   "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "sandbags", "scrounger"],
   "perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "tripwire", "sandbags", "second_wind", "scrounger"],

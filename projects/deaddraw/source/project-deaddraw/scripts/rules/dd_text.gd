@@ -147,9 +147,9 @@ static func passive_text(passive: String, bal: DDBalance) -> String:
 		"steady_hands":
 			return "Her weapons can also hit zombies EQUAL to the last notch, not only weaker ones."
 		"triage":
-			return "%d medkits can heal per street instead of %d." % [bal.rule("triage_medkits_per_street"), bal.rule("medkits_per_street")]
+			return "%d medkits can heal per street instead of %d, and every medkit heals +%d." % [bal.rule("triage_medkits_per_street"), bal.rule("medkits_per_street"), bal.num("triage_heal_bonus")]
 		"slip_away":
-			return "May Retreat after resolving 1 card of a street (the other 3 go back). Still no two retreats in a row."
+			return "May Retreat after resolving 1 card of a street (the other 3 go to the bottom of the deck). Still no two retreats in a row."
 	return ""
 
 

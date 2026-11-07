@@ -32,7 +32,7 @@ const DEFAULT_EXTRA: Dictionary = {
 
 const DEFAULT_TOP: Dictionary = {
 	"start_hp": 20, "max_hp": 20, "street_size": 4, "resolve_per_street": 3,
-	"safehouse_heal": 12, "perk_choices": 3, "fire_axe_power": 7,
+	"safehouse_heal": 12, "perk_choices": 3, "fire_axe_power": 7, "triage_heal_bonus": 1,
 	"weapon_scrap": true, "retreat_mode": "bottom",
 }
 

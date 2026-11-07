@@ -9,6 +9,13 @@
 # Author: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
 
+const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
+const MapV2View: GDScript = preload("res://scripts/ui/run/map_v2_view.gd")
+const INSPECTOR_SCENE: PackedScene = preload("res://scenes/match/CardInspector.tscn")
+
+## kc-v2-ui: a node was stepped on (tests, previews: with a preview override nothing routes).
+signal node_chosen(id: String)
+
 ## Hooks passed to RunState.create_match (null = plain MatchHooks).
 var match_hooks: MatchHooks = null
 
@@ -32,6 +39,10 @@ func screen_id() -> StringName:
 
 func _build() -> void:
 	var r: RunProgress = run()
+	# kc-v2-ui: a run with the v2 map (RunProgress.map_view, or a preview) gets the lanes-and-steps map.
+	if RunV2Views.is_v2(r):
+		_build_v2(r)
+		return
 	# Tickets block in the header: TICKETS, tags, n / total.
 	var tickets: VBoxContainer = VBoxContainer.new()
 	tickets.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -110,6 +121,158 @@ func _apply_compact() -> void:
 			b.custom_minimum_size.y = button_height()
 	if _layout != null:
 		_layout.add_theme_constant_override(&"separation", 8 if compact else 12)
+
+
+# =============================================================================
+# kc-v2-ui: the Run v2 map (run-v2.md §2, §9)
+# =============================================================================
+
+var _v2: Control = null
+var _map_v2: Dictionary = {}
+var _inspector: Control = null
+var _req_chip: Control = null
+var _threat_chip: Control = null
+
+
+func _build_v2(r: RunProgress) -> void:
+	_map_v2 = RunV2Views.map_view(r)
+	var m: Dictionary = _map_v2
+	_title.text = "RUN MAP  ·  STEP %d OF %d" % [mini(int(m.get("step", 0)) + 1, int(m["steps"])), int(m["steps"])]
+	_subtitle.text = "Pick your next step on a lit path. Long-press or right-click any node for the full brief."
+	# Header: tickets, REQ, Threat (when a modifier is on), in one row (portrait: under the title).
+	var chips: HBoxContainer = HBoxContainer.new()
+	chips.name = "HeaderChips"
+	chips.add_theme_constant_override(&"separation", 12)
+	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_header.add_child(chips)
+	var tickets: VBoxContainer = VBoxContainer.new()
+	tickets.name = "Tickets"
+	tickets.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tickets.add_theme_constant_override(&"separation", 2)
+	var t_title: Label = make_label("TICKETS", &"HudTag")
+	t_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tickets.add_child(t_title)
+	var t_row: HBoxContainer = HBoxContainer.new()
+	t_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	t_row.add_theme_constant_override(&"separation", 8)
+	tickets.add_child(t_row)
+	var tl: int = int(m.get("tickets", r.tickets if r != null else 3))
+	var tm: int = int(m.get("tickets_max", r.config.tickets if r != null else 3))
+	_tickets_row = make_tickets(tl, tm)
+	t_row.add_child(_tickets_row)
+	_tickets_label = make_label("%d/%d" % [tl, tm], &"HudNumber")
+	t_row.add_child(_tickets_label)
+	chips.add_child(tickets)
+	wire_inspect_control(tickets, func() -> void: _inspector.open({"title": "Reinforcement Tickets", "type": "run",
+			"text": "A lost fight costs 1 ticket. The run ends at 0. Rests and two events give tickets back (max %d). The shop never sells them." % tm,
+			"status": "You have %d of %d." % [tl, tm]}))
+	_req_chip = make_req_chip(int(m.get("req", 0)))
+	chips.add_child(_req_chip)
+	wire_inspect_control(_req_chip, func() -> void: _inspector.open({"title": "Requisition (REQ)", "type": "currency",
+			"text": "Earned, never bought: win a fight +3, win an elite +5, lose a fight +1 (with the Salvage), events +1 to +3. Spent in shops.",
+			"status": "You have %d REQ." % int(m.get("req", 0))}))
+	var mods: Array = m.get("modifiers", [])
+	var names: PackedStringArray = []
+	for md: Dictionary in mods:
+		if bool(md.get("on", true)):
+			names.append(String(md.get("name", "")))
+	if not names.is_empty():
+		_threat_chip = make_threat_chip(int(m.get("threat", RunV2Views.threat_of(mods))), names)
+		chips.add_child(_threat_chip)
+		wire_inspect_control(_threat_chip, func() -> void: _inspector.open(modifiers_info(mods)))
+	# Body: the map and the node brief.
+	_v2 = MapV2View.new()
+	_body.add_child(_v2)
+	_v2.node_chosen.connect(choose_node)
+	_v2.inspect_requested.connect(func(info: Dictionary) -> void:
+		if not info.is_empty():
+			_inspector.open(info))
+	# Footer: deck summary, DECK, SAVE & QUIT.
+	var footer: HBoxContainer = HBoxContainer.new()
+	footer.add_theme_constant_override(&"separation", 16)
+	footer.name = "Footer"
+	_layout.add_child(footer)
+	_loadout_label = make_label("", &"HudSubtle", true)
+	_loadout_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_loadout_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	footer.add_child(_loadout_label)
+	if r != null:
+		_loadout_label.text = "Deck %d cards  ·  %s" % [r.deck.size(), RunFlow.names_of(r, [r.primary], "")]
+	var deck_b: Button = make_button("DECK", &"HudButton", 120)
+	deck_b.name = "DeckButton"
+	_deck_view = load("res://scripts/ui/run/engine_panel.gd").new()
+	_deck_view.name = "EngineView"
+	add_child(_deck_view)
+	deck_b.pressed.connect(func() -> void:
+		if run() != null:
+			_deck_view.open(run()))
+	footer.add_child(deck_b)
+	_deck_button = deck_b
+	_quit_button = make_button("SAVE & QUIT", &"HudButton", 170)
+	_quit_button.name = "QuitButton"
+	_quit_button.pressed.connect(func() -> void: goto(RunFlow.SCENE_TITLE))
+	footer.add_child(_quit_button)
+	_inspector = INSPECTOR_SCENE.instantiate()
+	add_child(_inspector)
+	_inspector.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_inspector.hide()
+	_refresh_v2()
+
+
+func _refresh_v2() -> void:
+	if _v2 == null:
+		return
+	var keep: String = _v2.selected_id
+	_v2.selected_id = keep
+	_v2.setup(_map_v2, portrait, compact)
+	_v2.get_go_button().grab_focus.call_deferred()
+
+
+func _apply_portrait() -> void:
+	super()
+	if _v2 != null:
+		_refresh_v2()
+
+
+func get_map_view() -> Control:
+	return _v2
+
+
+func get_inspector() -> Control:
+	return _inspector
+
+
+## Steps on node `id` (it must be reachable): the rules record the choice (choose_node), then the
+## screen for the node opens: a fight / elite / boss deploys, an event / shop / rest opens its screen.
+func choose_node(id: String) -> String:
+	var n: Dictionary = RunV2Views.node_by_id(_map_v2, id)
+	if n.is_empty() or not bool(n.get("reachable", false)):
+		return "Not on your path."
+	var err: String = RunV2Views.act(run(), &"choose_node", [id])
+	if err != "":
+		return err
+	node_chosen.emit(id)
+	if not RunV2Views.override_map.is_empty():
+		return ""
+	match n["type"]:
+		&"fight", &"elite", &"boss":
+			deploy()
+		&"event":
+			goto(RunFlow.SCENE_EVENT)
+		&"shop":
+			goto(RunFlow.SCENE_SHOP)
+		&"rest":
+			goto(RunFlow.SCENE_REST)
+	return ""
+
+
+static func modifiers_info(mods: Array) -> Dictionary:
+	var kws: Array[Dictionary] = []
+	for md: Dictionary in mods:
+		if bool(md.get("on", true)):
+			kws.append({"name": "%s · Threat %d" % [md.get("name", ""), int(md.get("threat", 0))], "text": String(md.get("text", ""))})
+	return {"title": "Run modifiers", "type": "threat %d" % RunV2Views.threat_of(mods), "text": "Picked on the Loadout screen before the run. Winning at a Threat level unlocks cosmetics, never power.",
+			"keywords": kws, "status": ""}
 
 
 ## DEPLOY: start the next match. Returns the MatchState handed to Match.tscn (null if none).

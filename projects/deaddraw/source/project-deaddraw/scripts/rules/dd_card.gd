@@ -18,6 +18,8 @@ var boss_trait: String = ""
 var finale_name: String = ""
 ## True while the card sits on the street as last street's Holdover.
 var holdover: bool = false
+## True while the card sits in the deck after a Retreat sent it to the bottom (known information).
+var retreated: bool = false
 
 
 static func make(k: String, v: int, t: String = "", fname: String = "") -> DDCard:

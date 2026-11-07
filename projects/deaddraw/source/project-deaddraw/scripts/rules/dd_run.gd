@@ -163,7 +163,9 @@ func _as_card(c: Variant) -> DDCard:
 func _begin_street() -> void:
 	var size: int = bal.num("street_size")
 	while street.size() < size and not deck.is_empty():
-		street.append(deck.pop_back())
+		var dealt: DDCard = deck.pop_back()
+		dealt.retreated = false
+		street.append(dealt)
 	if deck.is_empty() and not finale_in and street.size() <= 1:
 		street.append_array(finale_cards())
 		finale_in = true
@@ -337,6 +339,8 @@ func preview(index: int, choice: String) -> Dictionary:
 		DDCard.MEDKIT:
 			if medkit_would_heal():
 				var heal: int = c.value + (bal.rule("field_kit_bonus") if has_perk("field_kit") else 0)
+				if passive == "triage":
+					heal += bal.num("triage_heal_bonus")
 				var after_h: int = mini(max_hp, hp + heal)
 				r["heal"] = after_h - hp
 				r["hp_after"] = after_h
@@ -464,6 +468,8 @@ func _send_back(label: String) -> Dictionary:
 		_log("%s: %d cards shuffled back into the deck." % [label, back.size()])
 	else:
 		# bottom of the deck = the front of the array (we deal from the back)
+		for c: DDCard in back:
+			c.retreated = true
 		var nd: Array[DDCard] = back.duplicate()
 		nd.append_array(deck)
 		deck = nd
@@ -564,6 +570,15 @@ func deck_counts() -> Dictionary:
 		(out[c.kind] as Array).append(c.value)
 	for k: String in out:
 		(out[k] as Array).sort()
+	return out
+
+
+## Retreated cards waiting at the bottom of the deck, next-to-come first (bottom mode only).
+func bottom_cards() -> Array[DDCard]:
+	var out: Array[DDCard] = []
+	for k: int in range(deck.size() - 1, -1, -1):
+		if deck[k].retreated:
+			out.append(deck[k])
 	return out
 
 

@@ -27,7 +27,9 @@ enum RangeTag { CLOSE, MID, LONG }
 
 ## Which loadout slot a LoadoutItem fills (core-rules §3). kc-loadout-cut: Secondary (2), Lethal (3)
 ## and Tactical (4) are gone; the values stay fixed so the saved .tres slot numbers keep their meaning.
-enum LoadoutSlot { PRIMARY = 0, ATTACHMENT = 1, PERK = 5, KILLSTREAK = 6 }
+## kc-v2-impl (run-v2.md §7): ABILITY = an Operator's once-per-match ability (LoadoutItem.ability of a
+## Primary; free, usable from round 1, never in the Streak Tray).
+enum LoadoutSlot { PRIMARY = 0, ATTACHMENT = 1, PERK = 5, KILLSTREAK = 6, ABILITY = 7 }
 
 ## Match win condition (core-rules §4).
 enum GameMode { ZONE_CONTROL, FIREFIGHT, DETONATOR }

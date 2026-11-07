@@ -31,6 +31,21 @@ extends Resource
 @export_custom(PROPERTY_HINT_TYPE_STRING, "24/17:LoadoutItem")  # TYPE_OBJECT / PROPERTY_HINT_RESOURCE_TYPE
 var attachments: Array[Resource] = []
 
+@export_group("Operator kit (Primary; kc-v2-impl, run-v2.md §7)")
+## The passive's name and one line ("Quartermaster" / "Your opening hand has 1 more card.").
+@export var passive_name: String = ""
+@export_multiline var passive_text: String = ""
+## Passive: the Operator has Pierce (Longreach "Overpenetration"). Every LMG has Pierce anyway.
+@export var pierce: bool = false
+## Passive: cards added to the opening hand (Kestrel "Quartermaster": 1).
+@export_range(0, 3) var opening_hand_bonus: int = 0
+## The once-per-match ability (an ABILITY LoadoutItem). Resource, not LoadoutItem: a script
+## self-reference leaks at exit (see attachments). Null = no ability.
+@export_custom(PROPERTY_HINT_RESOURCE_TYPE, "LoadoutItem")
+var ability: Resource = null
+## Profile unlock of this Operator (RunProfile.OPERATOR_UNLOCKS keys: &"" = from the start).
+@export var unlock: StringName = &""
+
 @export_group("Attachment stat changes")
 @export_range(-5, 5) var firepower_bonus: int = 0
 @export_range(-5, 10) var armor_bonus: int = 0
@@ -58,7 +73,7 @@ var attachments: Array[Resource] = []
 @export_group("Effects")
 @export var effects: Array[EffectData] = []
 
-const _ACTIVATED_SLOTS: Array[int] = [DataEnums.LoadoutSlot.KILLSTREAK]
+const _ACTIVATED_SLOTS: Array[int] = [DataEnums.LoadoutSlot.KILLSTREAK, DataEnums.LoadoutSlot.ABILITY]
 
 
 func has_keywords() -> bool:
@@ -96,6 +111,16 @@ func validate(v: DataValidator) -> void:
 			v.invalid("weapon_class", "weapon class, Operator stats and attachments are for PRIMARY only (this is %s)" % slot_name)
 		if rotations_per_round != 1:
 			v.invalid("rotations_per_round", "rotations_per_round is for PRIMARY only")
+		if pierce or opening_hand_bonus != 0 or ability != null or passive_text != "":
+			v.invalid("passive_text", "the Operator kit (passive, Pierce, opening hand, ability) is for PRIMARY only")
+	if is_primary and ability != null:
+		if not (ability is LoadoutItem) or (ability as LoadoutItem).slot != DataEnums.LoadoutSlot.ABILITY:
+			v.invalid("ability", "a Primary's ability must be an ABILITY LoadoutItem")
+	if slot == DataEnums.LoadoutSlot.ABILITY:
+		if uses_per_match != 1:
+			v.invalid("uses_per_match", "an ability is once per match (uses_per_match = 1)")
+		if supply_cost != 0:
+			v.out_of_range("supply_cost", "abilities cost 0 Supply (got %d)" % supply_cost)
 
 	if is_attachment:
 		v.check_range("firepower_bonus", firepower_bonus, -5, 5)
