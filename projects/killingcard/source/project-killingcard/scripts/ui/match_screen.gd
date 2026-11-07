@@ -157,6 +157,12 @@ var _streak_callout_shown: bool = false
 var _ks_row: Control = null
 var _ks_announced: Dictionary = {}
 var _supply_stacked: bool = false
+## kc-juice: the Supply shown last ([supply, supply_max]), to burst the hexes just spent.
+var _last_supply: Vector2i = Vector2i(-1, -1)
+## kc-juice: pip indices burst by the last _set_supply() (tests).
+var last_supply_spent: Array[int] = []
+const SupplySpendFx: GDScript = preload("res://scripts/fx/supply_spend_fx.gd")
+const SfxBankScript: GDScript = preload("res://scripts/fx/sfx_bank.gd")
 var _supply_stack: VBoxContainer = null
 ## kc-syn-ui: the trait rail (icon strip), the SETS flyout body, the last known tiers per side
 ## (set callouts fire when a tier switches on / off) and the callouts on screen.
@@ -1624,6 +1630,25 @@ func _set_supply(supply: int, supply_max: int) -> void:
 		pip.draw.connect(func() -> void: _draw_supply_hex(pip, full))
 		_supply_pips.add_child(pip)
 	_fit_pips()
+	_supply_spend_fx(supply, supply_max)
+
+
+## kc-juice: a play spent Supply (same max, fewer left): each hex just spent bursts and fades over its
+## now-empty pip (supply_spend_fx.gd) with a "supply" tick, higher for each hex.
+func _supply_spend_fx(supply: int, supply_max: int) -> void:
+	last_supply_spent.clear()
+	var was: Vector2i = _last_supply
+	_last_supply = Vector2i(supply, supply_max)
+	if was.y != supply_max or supply >= was.x or not is_inside_tree():
+		return
+	for i: int in range(supply, mini(was.x, _supply_pips.get_child_count())):
+		var pip: Control = _supply_pips.get_child(i) as Control
+		var fx: Control = SupplySpendFx.new()
+		pip.add_child(fx)
+		fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		fx.play()
+		last_supply_spent.append(i)
+	SfxBankScript.cue(&"supply", 1.0 + 0.05 * float(last_supply_spent.size() - 1))
 
 
 func _draw_supply_hex(pip: Control, full: bool) -> void:

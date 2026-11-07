@@ -263,6 +263,9 @@ func show_offer() -> void:
 	# option would read as "already picked".
 	if not tiles.is_empty() and not DisplayServer.is_touchscreen_available():
 		tiles[0].grab_focus.call_deferred()
+	# kc-juice: a new offer's cards fade in one after the other (reward_reveal_fx.gd).
+	if key != prev_key:
+		(load("res://scripts/fx/reward_reveal_fx.gd") as GDScript).call(&"reveal", tiles)
 	_after_build(key)
 
 

@@ -5,7 +5,8 @@
 #   - Settings.reduced_motion: no screen shake, no hit-stop, no travel (pop-ups and stamps fade
 #     in place, the StreakArc fades instead of flying apart, the takeover cross-fades and its
 #     scanlines stand still). Colour and text feedback stay, so nothing is lost, only motion.
-#   An FxTiming instance is a snapshot of those two options; FX components take one in play().
+#   - Settings.screen_shake (kc-juice, default on): off = no screen shake (hit-stop and flashes stay).
+#   An FxTiming instance is a snapshot of those options; FX components take one in play().
 # Dependencies: Settings autoload (read through the scene tree, optional).
 # Author: Game Feel Engineer Agent (p14)
 extends RefCounted
@@ -41,10 +42,26 @@ const BASE: Dictionary = {
 	# Eliminations
 	&"elim_beat": 0.30,
 	&"stamp": 0.95,
+	# kc-juice: hit-stop by importance (60-90 ms): a unit, a killstreak kill, the Operator.
 	&"hitstop": 0.06,
+	&"hitstop_mid": 0.075,
+	&"hitstop_big": 0.09,
 	&"shake": 0.18,
 	&"shake_px": 3.0,           # art direction: 2-4 px
 	&"shake_px_big": 4.0,
+	# kc-juice: a big hit that does not kill (Damage >= BIG_HIT, or on the Operator): a smaller nudge.
+	&"shake_hit": 0.14,
+	&"shake_hit_px": 2.0,
+	# kc-juice: the calling-card stamp when a card lands (scale punch + flash, < 250 ms).
+	&"land_punch_in": 0.06,
+	&"land_punch_out": 0.14,
+	&"land_flash": 0.16,
+	&"land_scale": 1.07,
+	# kc-juice: small wins.
+	&"supply_spend": 0.28,      # a spent Supply hex bursts and fades
+	&"column_win": 0.5,         # your column at the Score step: a sweeping outline
+	&"reward_stagger": 0.07,    # reward cards fade in one after the other
+	&"reward_fade": 0.18,
 	# Streak
 	&"streak_beat": 0.35,
 	&"streak_fill": 0.14,       # per segment
@@ -64,20 +81,28 @@ const BASE: Dictionary = {
 	&"takeover_out": 0.16,
 }
 ## Values that are distances, not times: never scaled by fast animations.
-const DISTANCES: Array[StringName] = [&"damage_rise", &"shake_px", &"shake_px_big", &"popup_rise"]
-## Motion that reduced motion removes entirely (returns 0).
-const MOTION_ONLY: Array[StringName] = [&"hitstop", &"shake", &"shake_px", &"shake_px_big"]
+const DISTANCES: Array[StringName] = [&"damage_rise", &"shake_px", &"shake_px_big", &"shake_hit_px", &"popup_rise", &"land_scale"]
+## Motion that reduced motion removes entirely (returns 0). kc-juice: the card-land punch and flash too.
+const MOTION_ONLY: Array[StringName] = [&"hitstop", &"hitstop_mid", &"hitstop_big", &"shake", &"shake_px", &"shake_px_big",
+		&"shake_hit", &"shake_hit_px", &"land_punch_in", &"land_punch_out", &"land_flash", &"land_scale"]
+## kc-juice: what Settings.screen_shake = false removes.
+const SHAKE_KEYS: Array[StringName] = [&"shake", &"shake_px", &"shake_px_big", &"shake_hit", &"shake_hit_px"]
+## kc-juice: the largest shake offset ever applied (px), whatever the caller asks.
+const SHAKE_CAP_PX: float = 4.0
 ## Travel distances that reduced motion removes (the element fades in place instead).
 const TRAVEL: Array[StringName] = [&"damage_rise", &"popup_rise"]
 
 var fast: bool = false
 var reduced_motion: bool = false
+## kc-juice: Settings.screen_shake.
+var shake_on: bool = true
 
 
-static func create(fast_animations: bool, reduce_motion: bool) -> RefCounted:
+static func create(fast_animations: bool, reduce_motion: bool, shake: bool = true) -> RefCounted:
 	var t: RefCounted = (load("res://scripts/fx/fx_timing.gd") as GDScript).new()
 	t.fast = fast_animations
 	t.reduced_motion = reduce_motion
+	t.shake_on = shake
 	return t
 
 
@@ -89,13 +114,16 @@ static func from_settings() -> RefCounted:
 		settings = (loop as SceneTree).root.get_node_or_null(^"Settings")
 	var fast_on: bool = settings != null and bool(settings.get(&"fast_animations"))
 	var reduced: bool = settings != null and "reduced_motion" in settings and bool(settings.get(&"reduced_motion"))
-	return create(fast_on, reduced)
+	var shake: bool = settings == null or not "screen_shake" in settings or bool(settings.get(&"screen_shake"))
+	return create(fast_on, reduced, shake)
 
 
 ## Duration / delay / amplitude for a key, after both options.
 func get_value(key: StringName) -> float:
 	var v: float = float(BASE.get(key, 0.0))
 	if reduced_motion and (key in MOTION_ONLY or key in TRAVEL):
+		return 0.0
+	if not shake_on and key in SHAKE_KEYS:
 		return 0.0
 	if fast and not key in DISTANCES:
 		v *= FAST_SCALE

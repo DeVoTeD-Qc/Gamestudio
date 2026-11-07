@@ -21,8 +21,14 @@ var fast_animations: bool = false
 var reduced_motion: bool = false
 ## Extra UI scale (0.8 - 1.5): raises the minimum on-screen size of one logical px.
 var ui_scale: float = 1.0
-## Master volume, linear 0.0 - 1.0.
+## Master volume, linear 0.0 - 1.0 (kc-juice: applied to the Master bus by scripts/fx/sfx_bank.gd).
 var master_volume: float = 0.8
+## kc-juice: sound effects volume, linear 0.0 - 1.0 (the SFX bus).
+var sfx_volume: float = 0.8
+## kc-juice: Settings "Screen shake" (default on). Off, or reduced_motion on: no shake at all.
+var screen_shake: bool = true
+## kc-juice: the player set REDUCE MOTION themselves (then it is saved; else it follows the browser).
+var motion_chosen: bool = false
 ## Show the firefight outcome preview by default.
 var show_outcome_preview: bool = true
 ## kc-board2: mirror the match layout (hand tray on the left, icon strip on the right) for
@@ -62,17 +68,23 @@ const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_animations",
 		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags",
-		&"show_all_card_info"]
+		&"show_all_card_info", &"master_volume", &"sfx_volume", &"screen_shake", &"reduced_motion", &"motion_chosen"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 
 
 func _ready() -> void:
 	reduced_motion = _system_prefers_reduced_motion()
+	# kc-juice: the sound effects bank (/root/Settings/Sfx), in every scene and in the tests.
+	var bank: Node = (load("res://scripts/fx/sfx_bank.gd") as GDScript).new()
+	bank.name = "Sfx"
+	add_child(bank)
 	# Headless runs (tests, exports) have no real screen; tests check ScreenProfile directly.
 	if DisplayServer.get_name() == "headless":
 		return
 	load_from(SAVE_PATH)
+	if not motion_chosen:
+		reduced_motion = _system_prefers_reduced_motion()
 	persist = true
 	var root: Window = get_tree().root
 	# kc-board: browser smoke tests (?qa=1) read window.kcQa (scripts/qa/qa_bridge.gd).

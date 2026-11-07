@@ -34,8 +34,24 @@
 #     FIREFIGHT_COLUMN_ENDED  column summary ("COLUMN A: 2 KILLS · 1 LOST")
 #   The overlay (fight_overlay.gd) holds the dim, the outlines and the pips; pips clear at Score.
 #
+#   kc-juice (the head's "8. Juice pass"):
+#     hit-stop            on every elimination, by importance: a unit 60 ms, a killstreak kill 75 ms,
+#                         the Operator 90 ms. It pauses this overlay only (its waits, tracers and
+#                         numbers), so the playback is late by exactly that much and never more; the
+#                         timer follows Engine.time_scale (SPEED x2) and fast animations halve it.
+#     screen shake        directional (along the shot that caused it), capped at 4 px: eliminations
+#                         (3 px; Operator / killstreak 4 px) and big hits that do not kill (Damage
+#                         >= BIG_HIT or on the Operator: 2 px). Settings.screen_shake off: none.
+#     sound cues          (sfx_bank.gd) each round step (Reveal / Firefight / Score: step_1..3,
+#                         rising), each beat of a column (beat_1..4: a minor third higher and one
+#                         more layer per beat; beats past 4 keep rising in pitch), hit / hit_big /
+#                         kill / block (Cover or no damage), column_win. `sfx_log` lists them.
+#     column-win flourish ZONE_CONTROL for the viewer: an outline sweeps out of the column
+#                         (column_flourish_fx.gd) under the "+50 ZONE SECURED" pop-up.
+#
 # Options: Settings.fast_animations halves every duration and beat; Settings.reduced_motion
-#   removes shake, hit-stop and travel (see fx_timing.gd). Read at the start of each play().
+#   removes shake, hit-stop and travel (see fx_timing.gd); Settings.screen_shake off removes the
+#   shake. Read at the start of each play().
 #
 # Use (match controller):
 #   director.locator = BoardFxLocator.new(board)   # or any object with unit_rect/zone_rect/anchor_rect
@@ -81,6 +97,12 @@ const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
 const CallInScene: PackedScene = preload("res://scenes/fx/CallInTakeover.tscn")
 const CallInTakeover: GDScript = preload("res://scripts/fx/call_in_takeover.gd")
 const FightOverlay: GDScript = preload("res://scripts/fx/fight_overlay.gd")
+const ColumnFlourishFx: GDScript = preload("res://scripts/fx/column_flourish_fx.gd")
+const SfxBank: GDScript = preload("res://scripts/fx/sfx_bank.gd")
+## kc-juice: a hit of at least this much Damage that does not kill shakes the screen a little.
+const BIG_HIT: int = 4
+## kc-juice: round step -> its cue (rising: Reveal, Firefight, Score).
+const STEP_CUES: Dictionary = {&"reveal": &"step_1", &"firefight": &"step_2", &"score": &"step_3"}
 const ZONE_LETTERS: Dictionary = {&"left": "A", &"mid": "B", &"right": "C"}
 ## Px a shooter's banner lifts toward the enemy while it fires.
 const LIFT_PX: float = 5.0
@@ -108,6 +130,12 @@ const CLASS_ICONS: Array[StringName] = [&"stat_firepower", &"class_smg", &"class
 var _skip_called: Dictionary = {}
 var fast: bool = false
 var reduced_motion: bool = false
+## kc-juice: Settings.screen_shake (read with the others in _make_timing()).
+var screen_shake: bool = true
+## kc-juice: tests turn hit-stop off to measure what it costs; the game always has it on.
+var hitstop_enabled: bool = true
+## kc-juice: the cues this director asked for since clear_log() (also when the SFX bank is missing).
+var sfx_log: Array[StringName] = []
 ## Object with unit_rect(uid) / zone_rect(zone) / anchor_rect(name) -> Rect2 (global canvas px).
 var locator: RefCounted = null
 var killfeed: Node = null
@@ -143,6 +171,7 @@ var _beat_t0: float = -1.0        # _clock when the current beat started (-1 = n
 var _lifted: Dictionary = {}      # uid -> BannerView nudged toward the enemy
 var _pierce_hit: Dictionary = {}  # target uid -> true: its next DAMAGE_DEALT is a Pierce carry
 var _summary: Dictionary = {}     # current column: {kills, lost}
+var _shot_dir: Dictionary = {}    # kc-juice: target uid -> screen direction of the last shot at it
 ## The caption lines on screen now (caption_changed).
 var captions: Array[String] = []
 
@@ -290,6 +319,7 @@ func skip() -> void:
 
 func clear_log() -> void:
 	fx_log.clear()
+	sfx_log.clear()
 
 
 ## Kinds started since clear_log(), in order.
@@ -358,6 +388,9 @@ func _handle(ev: Dictionary) -> float:
 			# The fired pips clear at the Score step.
 			if StringName(ev.get("phase", &"")) != &"firefight":
 				_end_fight()
+			var step_cue: StringName = STEP_CUES.get(StringName(ev.get("phase", &"")), &"")
+			if step_cue != &"":
+				_sfx(step_cue)
 			return 0.0
 		RulesEvent.FIREFIGHT_STEP:
 			return _on_step(ev, t)
@@ -411,6 +444,7 @@ func _handle(ev: Dictionary) -> float:
 			if ev.get("owner") == viewer_side and int(score_popups.get(&"zone", 0)) > 0:
 				var r: Rect2 = _zone_rect(ev.get("zone", &""))
 				if r.has_area():
+					_column_flourish(Rect2(_to_local(r.position), r.size), ev)
 					_popup_at(_to_local(r.get_center()),
 							"+%d ZONE SECURED" % int(score_popups[&"zone"]), &"heading", 22, FxStyle.AMBER, ev)
 					return t.get_value(&"popup_beat")
@@ -477,6 +511,8 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 		fx.wasted = target < 0
 		_start(fx, &"tracer", ev)
 		if target >= 0:
+			_shot_dir[target] = dir
+		if target >= 0:
 			_zone_of[target] = zone
 			_arrival[target] = maxf(float(_arrival.get(target, 0.0)), _clock + fx.arrival_time())
 	# b01: an other-side unit firing in the First Shot step had First Shot too, so its hit lands
@@ -535,15 +571,24 @@ func _on_damage(ev: Dictionary, t: RefCounted) -> float:
 	marker.lethal = lethal
 	marker.radius = clampf(minf(rect.size.x, rect.size.y) * (0.24 if pierced else 0.32), 10.0, 24.0)
 	_start(marker, &"hit_marker", ev)
+	var on_operator: bool = bool(_slot_entry(uid).get("operator", false))
 	if pierced:
 		# kc-fight-ui: the carried damage is drawn smaller and named.
 		_number(uid, "-%d PIERCE" % amount, FxStyle.FOG, false, ev, FxStyle.MIN_NUMBER_PX)
+		_sfx(&"hit", 1.12, -4.0)
 	elif amount > 0:
 		_number(uid, "-%d" % amount, FxStyle.FOG, lethal, ev)
+		var big: bool = amount >= BIG_HIT or on_operator
+		_sfx(&"hit_big" if big else &"hit", randf_range(0.97, 1.03))
+		# kc-juice: a big hit that does not kill nudges the screen along the shot (a kill shakes on
+		# its own UNIT_ELIMINATED).
+		if big and not lethal:
+			_shake(t.get_value(&"shake_hit_px"), t.get_value(&"shake_hit"), ev, _shot_dir.get(uid, Vector2.ZERO))
 	else:
 		# No damage: "-0" and why (Cover when the target has some, else the hit was too weak).
 		_number(uid, "-0", FxStyle.FOG_DIM, false, ev)
 		_tag(uid, "COVER" if int(_slot_entry(uid).get("cover", 0)) > 0 else "NO DAMAGE", FxStyle.FOG_DIM, ev)
+		_sfx(&"block")
 	return 0.05 * t.scale()
 
 
@@ -581,9 +626,11 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	if by_side == viewer_side and bool(ev.get("credit", true)) and int(score_popups.get(&"elimination", 0)) > 0:
 		_popup_at(rect.get_center() + Vector2(0, -rect.size.y * 0.5 - 6.0),
 				"+%d ELIMINATION" % int(score_popups[&"elimination"]), &"heading", 22, FxStyle.AMBER, ev)
-	_hitstop(t.get_value(&"hitstop"), ev)
-	_shake(t.get_value(&"shake_px_big" if is_operator or bool(ev.get("by_killstreak", false)) else &"shake_px"),
-			t.get_value(&"shake"), ev)
+	var by_ks: bool = bool(ev.get("by_killstreak", false))
+	_sfx(&"kill", 0.86 if is_operator else randf_range(0.97, 1.03))
+	_hitstop(t.get_value(hitstop_key(ev)), ev)
+	_shake(t.get_value(&"shake_px_big" if is_operator or by_ks else &"shake_px"),
+			t.get_value(&"shake"), ev, _shot_dir.get(victim, Vector2.ZERO))
 	return t.get_value(&"fight_elim" if _beat_t0 >= 0.0 else &"elim_beat")
 
 
@@ -644,6 +691,9 @@ func _on_beat(ev: Dictionary, t: RefCounted) -> float:
 	if _skipping:
 		return 0.0
 	_set_captions([])
+	# kc-juice: one tick per beat, rising with the beat (beat_1..4, then the pitch keeps climbing).
+	var beat_n: int = maxi(1, int(ev.get("beat", 1)))
+	_sfx(StringName("beat_%d" % mini(beat_n, 4)), 1.0 + 0.06 * float(maxi(0, beat_n - 4)))
 	var by_uid: Dictionary = {}
 	for uid_v: Variant in ev.get("shooters", []):
 		var uid: int = int(uid_v)
@@ -938,13 +988,23 @@ func _wait(sec: float) -> void:
 	await _wait_tween.finished
 
 
+## kc-juice: the hit-stop of an elimination, by importance (see the header).
+static func hitstop_key(ev: Dictionary) -> StringName:
+	if bool(ev.get("is_operator", false)):
+		return &"hitstop_big"
+	if bool(ev.get("by_killstreak", false)):
+		return &"hitstop_mid"
+	return &"hitstop"
+
+
 func _hitstop(sec: float, ev: Dictionary) -> void:
-	if sec <= 0.0 or _skipping or _hitstop_on:
+	if sec <= 0.0 or _skipping or _hitstop_on or not hitstop_enabled:
 		return
 	_hitstop_on = true
 	process_mode = Node.PROCESS_MODE_DISABLED
 	_log(&"hitstop", null, sec, ev)
-	get_tree().create_timer(sec, true, false, true).timeout.connect(_end_hitstop)
+	# kc-juice: the timer follows Engine.time_scale, so at SPEED x2 the freeze is as short as the rest.
+	get_tree().create_timer(sec, true, false, false).timeout.connect(_end_hitstop)
 
 
 func _end_hitstop() -> void:
@@ -954,7 +1014,11 @@ func _end_hitstop() -> void:
 	process_mode = Node.PROCESS_MODE_INHERIT
 
 
-func _shake(px: float, sec: float, ev: Dictionary) -> void:
+## kc-juice: dir (screen space, the shot's direction) makes the shake a recoil along it: the canvas
+## kicks that way and springs back, with a little sideways jitter. No dir: a random jitter. Never
+## more than FxTiming.SHAKE_CAP_PX, whatever is asked.
+func _shake(px: float, sec: float, ev: Dictionary, dir: Vector2 = Vector2.ZERO) -> void:
+	px = minf(px, FxTiming.SHAKE_CAP_PX)
 	if px <= 0.0 or sec <= 0.0 or _skipping:
 		return
 	var vp: Viewport = get_viewport()
@@ -962,13 +1026,25 @@ func _shake(px: float, sec: float, ev: Dictionary) -> void:
 		_shake_tween.kill()
 	else:
 		_shake_base = vp.canvas_transform
+	var d: Vector2 = dir.normalized() if dir.length() > 0.01 else Vector2.ZERO
 	_shake_tween = create_tween()
 	_shake_tween.tween_method(func(k: float) -> void:
-		var amp: float = px * (1.0 - k)
-		var off: Vector2 = Vector2(randf_range(-amp, amp), randf_range(-amp, amp)).round()
-		vp.canvas_transform = Transform2D(0.0, _shake_base.origin + off), 0.0, 1.0, sec)
+		var off: Vector2 = shake_offset(px, k, d, randf_range(-1.0, 1.0), randf_range(-1.0, 1.0))
+		vp.canvas_transform = Transform2D(0.0, _shake_base.origin + off.round()), 0.0, 1.0, sec)
 	_shake_tween.finished.connect(_stop_shake)
 	_log(&"shake", null, sec, ev)
+	set_meta(&"last_shake", {"px": px, "dir": d})
+
+
+## The shake offset at progress k (0..1) for a peak of px; r1, r2 in -1..1 (the jitter). Its length
+## never exceeds px. dir = ZERO: a random jitter; else a recoil along dir (1.5 swings, decaying)
+## with a sideways jitter of at most 25%.
+static func shake_offset(px: float, k: float, dir: Vector2, r1: float, r2: float) -> Vector2:
+	var amp: float = px * (1.0 - k) * (1.0 - k)
+	if dir == Vector2.ZERO:
+		return Vector2(r1, r2) * amp * 0.7071
+	var along: float = cos(k * TAU * 1.5) * amp * 0.96
+	return dir * along + dir.orthogonal() * r1 * amp * 0.25
 
 
 func _stop_shake() -> void:
@@ -978,6 +1054,25 @@ func _stop_shake() -> void:
 	elif _shake_tween != null:
 		get_viewport().canvas_transform = _shake_base
 	_shake_tween = null
+
+
+## kc-juice: a sound cue (not while skipping). Logged in sfx_log, played by the SFX bank if any.
+func _sfx(id: StringName, pitch: float = 1.0, db: float = 0.0) -> void:
+	if _skipping:
+		return
+	sfx_log.append(id)
+	SfxBank.cue(id, pitch, db)
+
+
+## kc-juice: the column-win flourish over `local_rect` (overlay px). Logged as &"column_win".
+func _column_flourish(local_rect: Rect2, ev: Dictionary) -> void:
+	if _skipping:
+		return
+	_sfx(&"column_win")
+	var fx: Control = ColumnFlourishFx.new()
+	fx.rect = local_rect
+	fx.color = FxStyle.side_color(viewer_side)
+	_start(fx, &"column_win", ev)
 
 
 func _log(kind: StringName, node: Object, dur: float, ev: Dictionary) -> void:
@@ -1135,4 +1230,5 @@ func _make_timing() -> RefCounted:
 		var s: RefCounted = FxTiming.from_settings()
 		fast = s.fast
 		reduced_motion = s.reduced_motion
-	return FxTiming.create(fast, reduced_motion)
+		screen_shake = s.shake_on
+	return FxTiming.create(fast, reduced_motion, screen_shake)

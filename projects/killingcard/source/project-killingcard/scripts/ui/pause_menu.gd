@@ -6,6 +6,8 @@
 #   time). It only collects the choice and emits a signal; MatchController acts on it.
 #   kc-ui3: CODEX (beside RESUME) opens the card codex over the sheet (codex_view.gd); closing it
 #   returns here.
+#   kc-juice: SOUND (beside RESET TIPS) opens SOUND · MOTION over the sheet (sound_motion_panel.gd:
+#   MASTER / SFX volume, SCREEN SHAKE, REDUCE MOTION); BACK returns here.
 #   The match is not paused underneath (no get_tree().paused): the sheet blocks taps, and a
 #   round that is already playing finishes behind it.
 #   Phone sizes: every text >= 16 px and every tap target >= 64 px tall.
@@ -30,6 +32,12 @@ var _reset_tips_button: Button = null
 var _glossary: Control = null
 ## kc-cards-impl: Settings > Cards > "Always show all card info" (beside FAST ANIMATIONS).
 var _card_info_button: Button = null
+## kc-juice: SOUND · MOTION (volumes, screen shake, reduce motion).
+var _sound_button: Button = null
+var _sound_panel: Control = null
+## The width MIRROR LAYOUT gives up so the row with SOUND is no wider than the others.
+const SOUND_ROOM: float = 140.0
+const SoundMotionPanel: GDScript = preload("res://scripts/ui/sound_motion_panel.gd")
 
 @onready var _title: Label = %PauseTitle
 @onready var _hint: Label = %PauseHint
@@ -107,6 +115,18 @@ func _ready() -> void:
 	_reset_tips_button.add_to_group(&"tap_target")
 	_reset_tips_button.pressed.connect(reset_tips)
 	row2.add_child(_reset_tips_button)
+	# kc-juice: SOUND · MOTION beside RESET TIPS (the phone sheet has no room for another row).
+	_sound_button = Button.new()
+	_sound_button.name = "SoundButton"
+	_sound_button.text = "SOUND"
+	_sound_button.theme_type_variation = &"HudButton"
+	_sound_button.tooltip_text = "Sound and motion: volume, screen shake, reduce motion"
+	_sound_button.custom_minimum_size = Vector2(120, 64)
+	_sound_button.focus_mode = Control.FOCUS_ALL
+	_sound_button.add_to_group(&"tap_target")
+	_sound_button.pressed.connect(open_sound)
+	row2.add_child(_sound_button)
+	_mirror.custom_minimum_size.x = _mirror.custom_minimum_size.x - SOUND_ROOM
 	# kc-cards-impl: CARDS · ALL INFO beside FAST ANIMATIONS (Settings.show_all_card_info).
 	var row3: HBoxContainer = HBoxContainer.new()
 	row3.name = "FastRow"
@@ -168,6 +188,8 @@ func open(info: Dictionary = {}) -> void:
 
 
 func close() -> void:
+	if get_sound_panel() != null:
+		_sound_panel.close()
 	if get_codex() != null:
 		_codex.close()
 	if get_glossary() != null:
@@ -189,14 +211,15 @@ func set_compact(value: bool) -> void:
 	for b: Button in [_resume, _fast, _mirror, _forfeit, _quit]:
 		b.custom_minimum_size = Vector2(w, 64)
 	_resume.custom_minimum_size.x = w - 148.0
+	_mirror.custom_minimum_size.x = w - SOUND_ROOM
 	for b: Button in [_forfeit_yes, _forfeit_no]:
 		b.custom_minimum_size = Vector2(176 if compact else 196, 64)
 
 
 ## Esc: back out of the confirmation, else resume.
 func back() -> void:
-	if get_codex() != null or get_glossary() != null:
-		return  # the codex / glossary handles Esc itself
+	if get_codex() != null or get_glossary() != null or get_sound_panel() != null:
+		return  # the codex / glossary / sound panel handles Esc itself
 	if _confirm.visible:
 		_show_main()
 	else:
@@ -213,6 +236,26 @@ func open_codex() -> Control:
 		if visible:
 			_resume.grab_focus())
 	return _codex
+
+
+## kc-juice: SOUND · MOTION over the sheet.
+func open_sound() -> Control:
+	if get_sound_panel() != null:
+		return _sound_panel
+	_sound_panel = SoundMotionPanel.open_over(self)
+	_sound_panel.closed.connect(func() -> void:
+		_sound_panel = null
+		if visible and _sound_button != null:
+			_sound_button.grab_focus())
+	return _sound_panel
+
+
+func get_sound_panel() -> Control:
+	return _sound_panel if _sound_panel != null and is_instance_valid(_sound_panel) and not _sound_panel.is_queued_for_deletion() else null
+
+
+func get_sound_button() -> Button:
+	return _sound_button
 
 
 func get_codex() -> Control:

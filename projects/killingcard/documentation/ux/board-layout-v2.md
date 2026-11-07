@@ -565,3 +565,43 @@ The head: "The starting deck shown when we start campaign doesn't match what I d
   - `test_ui3`: the TACTICS / FIELDS chips have icons and there are no class chips.
   - Shot: `after_abc_1024x768_tray_2x.png` (TACTIC and FIELD badges) and `after_abc_1024x768_dock.png` (Field type line).
 - **Totals:** 557 pass, 0 fail.
+
+## Implementation notes (kc-juice, Game Feel Engineer, 2026-11-07)
+The head picked "8. Juice pass": hit-stop on kills, screen shake on big damage, a sound cue for each initiative step, and a short calling-card stamp when a card lands. No rules or balance change: every effect reads the event stream and nothing else.
+
+| Piece | What | Where |
+|---|---|---|
+| **Hit-stop** | On every elimination, by importance: a unit 60 ms, a killstreak kill 75 ms, the Operator 90 ms. It pauses the feedback overlay only (its waits, tracers, numbers), so the playback is late by exactly that much. The timer follows `Engine.time_scale` (SPEED x2 halves it, like everything else); fast animations halve it too. Reduced motion: none. | `scripts/fx/feedback_director.gd` (`hitstop_key`, `_hitstop`), `fx_timing.gd` (`hitstop`, `hitstop_mid`, `hitstop_big`) |
+| **Screen shake** | Directional: the canvas kicks along the shot that caused it and springs back (1.5 swings, 25% side jitter), capped at 4 px (`FxTiming.SHAKE_CAP_PX`). Kills 3 px (Operator / killstreak 4 px); a hit that does not kill shakes 2 px when it deals 4+ Damage or lands on the Operator (the game has no HQ; the Operator is its commander). | `feedback_director.gd` (`_shake`, `shake_offset`, `BIG_HIT`) |
+| **Sound cues** | All 16 cues are made from code (`scripts/fx/sfx_synth.gd`) and written to `assets/audio/sfx/*.wav` by `tests/tools/gen_sfx.gd`. They are 22 kHz mono, 118 KB in all, and 30 KB once imported. Round steps: `step_1` Reveal, `step_2` Firefight, `step_3` Score, rising a major third each. Firefight beats: `beat_1..4` rise a minor third and add one layer per beat; beat 5+ reuses `beat_4` 6% higher per beat. Also `hit`, `hit_big`, `kill`, `block` (Cover / no damage), `card_land`, `click`, `supply`, `column_win` and `reward`. They play through an 8-voice pool on a new SFX bus, and a repeat of the same cue within 30 ms is dropped. | `scripts/fx/sfx_bank.gd` (`/root/Settings/Sfx`, `SfxBank.cue(id)`), `sfx_synth.gd` |
+| **Calling-card stamp** | When a new banner reaches its slot (your play in Deploy, every card at Reveal): a scale punch to 1.07 (60 ms) and back (140 ms), a white flash with a rim in your side's colour (160 ms) and the stamp sound. It ends within 250 ms and leaves nothing on the banner, so the stats are clear once it settles. Reduced motion: the sound only. | `scripts/fx/card_land_fx.gd`; hook: `lane.gd` `_enter` (one callback after the slide) and its reduced-motion branch |
+| **Supply spend** | Each hex just spent bursts (x1 to x1.6) and fades in 0.28 s over its empty pip, with a `supply` tick. A new round's refill does not burst. Reduced motion: it fades in place. | `scripts/fx/supply_spend_fx.gd`; hook: `match_screen.gd` `_supply_spend_fx` |
+| **Column win** | Your column at the Score step: an outline in your side colour sweeps 8 px out of the column and fades (0.5 s) under "+50 ZONE SECURED", with `column_win`. Reduced motion: it fades in place. | `scripts/fx/column_flourish_fx.gd`, `feedback_director.gd` (`_column_flourish`) |
+| **Reward reveal** | A new offer's cards fade in 70 ms apart (180 ms each), with `reward`. Only the alpha changes, so the cards take taps at once. Reduced motion: they show at once. | `scripts/fx/reward_reveal_fx.gd`; hook: `run/reward_screen.gd` `show_offer` |
+| **Button press** | Every button clicks and brightens for 120 ms on press (`self_modulate`, colour only, no layout change). Meta `no_press_fx` opts a button out. | `sfx_bank.gd` (`press_feedback`, via `SceneTree.node_added`) |
+| **Settings** | Pause sheet > **SOUND** (beside RESET TIPS; MIRROR LAYOUT gives up 140 px so the row is no wider) opens SOUND · MOTION. It has MASTER and SFX sliders (0–100), SCREEN SHAKE: ON/OFF (default on) and REDUCE MOTION: ON/OFF. Reduce motion already existed (from the browser's prefers-reduced-motion) but had no toggle. Once the player picks it, the choice is saved (`motion_chosen`). New keys `sfx_volume`, `screen_shake` and `motion_chosen` are saved with `master_volume` and `reduced_motion`. Reduce motion turns the shake toggle off. | `scripts/ui/sound_motion_panel.gd`, `pause_menu.gd`, `autoload/settings.gd`, `fx_timing.gd` (`shake_on`, `SHAKE_KEYS`) |
+
+**What each option removes:**
+- Screen shake OFF: the shake only.
+- Reduce motion: shake, hit-stop, the stamp's punch and flash, the Supply burst growth and the flourish sweep.
+
+Colour, text and sound feedback stay in both cases.
+
+**QA**
+- New `tests/test_juice.gd` (11 tests):
+  - the cues fire on the right events and in order;
+  - hit-stop is 60 / 75 / 90 ms by importance;
+  - with hit-stop on, the same events land in the same order and the events are never changed;
+  - the measured extra time is within the hit-stop budget (150 ms budget, 159 ms measured over a 3.0 s playback);
+  - the shake follows the shot and is capped at 4 px;
+  - Screen shake OFF and reduce motion remove what they should;
+  - the stamp ends within 250 ms, settles at scale 1 and leaves no flash;
+  - a card landing on the live board stamps once;
+  - the Supply burst, the reward reveal and the button press feedback work;
+  - the SOUND · MOTION panel writes Settings and the audio buses;
+  - every cue file exists, is imported, matches the synth output and stays under the 300 KB budget.
+- Totals: 568 pass, 0 fail.
+- Frames (public art only) are in `qa/screenshots/juice/`, made with `tests/tools/shot_juice.gd`:
+  - `fight_after.mp4`: one round with the juice on;
+  - `fight_calm.mp4`: the same round with reduce motion on, the closest stand-in for "before";
+  - key frames: `after_key_stamp`, `after_key_hitstop`, `after_key_column_win`, `calm_key_*`.

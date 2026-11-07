@@ -33,6 +33,8 @@ const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const UnitSlotScript: GDScript = preload("res://scripts/ui/unit_slot.gd")
 const ObjectiveTile: GDScript = preload("res://scripts/ui/objective_tile.gd")
+## kc-juice: the calling-card stamp when a new banner reaches its slot.
+const CardLandFx: GDScript = preload("res://scripts/fx/card_land_fx.gd")
 ## Target states (set_target).
 const TARGET_NONE: StringName = &"none"
 const TARGET_VALID: StringName = &"valid"
@@ -583,6 +585,8 @@ func _play_motion(now: Dictionary, enemy: Array, friendly: Array) -> void:
 				if not _prev_rows.has(uid) or (_prev_rows[uid] as Array)[1] != i:
 					banner.modulate.a = 0.0
 					banner.create_tween().tween_property(banner, "modulate:a", 1.0, 0.15)
+				if not _prev_rows.has(uid):
+					CardLandFx.stamp(banner, s_side)  # kc-juice: reduced motion: the stamp sound only
 				continue
 			if not _prev_rows.has(uid):
 				if i == protector_row:
@@ -618,6 +622,8 @@ func _enter(slot: Node, s_side: StringName, land_row: int, row: int, protector: 
 	var slide: float = SLIDE_BASE_MS + SLIDE_PER_ROW_MS * float(ROWS - 1 - land_row)
 	tw.tween_property(banner, "position:y", land_y - slot_y, _ms(slide) / 1000.0).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(banner, "scale", Vector2.ONE, _ms(slide) / 1000.0)
+	# kc-juice: the card lands: scale punch + flash + stamp sound (card_land_fx.gd, < 250 ms).
+	tw.tween_callback(func() -> void: CardLandFx.stamp(banner, s_side))
 	if protector:
 		tw.tween_interval(_ms(PROTECTOR_PAUSE_MS) / 1000.0)
 		tw.tween_property(banner, "position:y", 0.0, _ms(SHIFT_MS) / 1000.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
