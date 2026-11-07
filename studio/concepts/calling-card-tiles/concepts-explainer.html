@@ -26,6 +26,7 @@
   --s5a:#38586A; --s5b:#D5E4EA;  /* Frost Line */
   --s6a:#3F0C11; --s6b:#C93A3F;  /* Red Signal */
   --gold-a:#5E4100; --gold-b:#F4C534;
+  --ic-gun:#FFD23F; --ic-blade:#F4F2EA; --ic-shield:#55C7F0;
   --font-display:"Saira Stencil One","Stencil Std","Arial Black",Impact,sans-serif;
   --font-label:"Saira Condensed","Arial Narrow","Roboto Condensed",sans-serif;
   --font-body:"Barlow","Segoe UI",Roboto,system-ui,sans-serif;
@@ -133,7 +134,7 @@ tr.hl td{background:var(--accent-soft)}
 .hud{display:flex;gap:6px;flex-wrap:wrap}
 .hud>div{background:var(--screen-2);border:1px solid var(--screen-line);border-radius:6px;padding:4px 8px;display:grid;min-width:0;flex:1 1 60px}
 .hud .k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-label);font-weight:600;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--screen-muted)}
-.hud .v{font-family:var(--font-mono);font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.hud .v{white-space:nowrap;font-family:var(--font-mono);font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.2}
 .screen canvas{display:block;margin:0 auto;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border-radius:6px;max-width:100%}
 .status{font-size:.88rem;line-height:1.4;min-height:2.8em;color:var(--screen-ink);background:var(--screen-2);border-left:3px solid var(--accent);padding:6px 9px;border-radius:0 6px 6px 0}
 .status .warn{color:var(--bad)}
@@ -208,15 +209,43 @@ svg.em{width:18px;height:18px;flex:none;vertical-align:-4px}
 .rec-tag{font-family:var(--font-label);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.7rem;background:var(--accent);color:var(--on-accent);padding:1px 6px;border-radius:3px;margin-left:6px;white-space:nowrap}
 footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);padding-top:14px;display:grid;gap:6px}
 
+/* ---------- Part 2 ---------- */
+.part-head{display:grid;gap:10px;border-top:6px solid var(--ink);padding-top:16px;margin-top:10px}
+.part-head .lede2{font-size:1.08rem;max-width:66ch}
+.iconlist{list-style:none;padding:0;display:grid;gap:6px}
+.iconlist li{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start;margin:0}
+.subtle2{font-size:.88rem;color:var(--muted)}
+.settings{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center;font-size:.8rem;color:var(--screen-muted);border-top:1px solid var(--screen-line);padding-top:8px}
+.settings select{font:inherit;font-size:.82rem;background:var(--screen-3);color:var(--screen-ink);border:1px solid var(--screen-line);border-radius:5px;padding:6px 4px;min-height:36px;max-width:100%}
+.settings .btn{grid-column:1/-1;min-height:36px;padding:6px 10px;font-size:.78rem}
+.bf-panel{display:grid;gap:8px}
+.battle-panel{background:var(--screen-2);border:1.5px solid var(--accent);border-radius:8px;padding:8px 10px}
+.bt-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-family:var(--font-label);letter-spacing:.04em;font-size:.98rem}
+.bt-head .mono{font-size:.78rem;color:var(--screen-muted)}
+.bt-text{font-size:.86rem;line-height:1.4;min-height:5.6em;display:grid;gap:4px}
+.bt-text ul{margin:0;padding-left:1.1em}
+.bt-text li+li{margin-top:1px}
+.bt-text .subtle{font-size:.8rem}
+.mkt .nm.two{white-space:normal;line-height:1.15;text-align:center}
+.goals{display:flex;flex-wrap:wrap;gap:4px}
+.reclist{display:grid;gap:8px}
+.reclist>div{display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:start}
+.reclist .chip{color:var(--ink);background:var(--paper-2);border-color:var(--line);text-align:center}
+.reclist .chip.met{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+#bf-screen .hud .k{letter-spacing:.04em;font-size:.62rem}
+.insp canvas{max-width:100%}
 /* ---------- Inspect + tip ---------- */
-.insp-back{position:fixed;inset:0;background:rgba(5,7,6,.62);z-index:50;display:grid;place-items:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
-.insp{width:min(520px,100%);max-height:calc(100% - 8px);overflow:auto;background:var(--screen);color:var(--screen-ink);border:1.5px solid var(--screen-line);border-radius:12px;padding:14px 16px 18px;display:grid;gap:10px}
+.insp-back{position:fixed;inset:0;background:rgba(5,7,6,.62);z-index:50;display:grid;place-items:center;grid-template-columns:minmax(0,520px);justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.insp{width:100%;min-width:0;max-height:calc(100% - 8px);overflow:auto;background:var(--screen);color:var(--screen-ink);border:1.5px solid var(--screen-line);border-radius:12px;padding:14px 16px 18px;display:grid;gap:10px}
 .insp-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .insp-kicker{font-family:var(--font-label);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.74rem;color:var(--accent)}
 .insp h3{color:var(--screen-ink);text-transform:none;letter-spacing:.01em;font-family:var(--font-display);font-weight:400;font-size:1.6rem}
 .insp canvas{width:100%;height:auto;display:block;border-radius:6px}
 .insp-body{display:grid;gap:8px;font-size:.94rem}
-.insp-body dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.insp-body dl{display:grid;grid-template-columns:minmax(64px,max-content) minmax(0,1fr);gap:4px 12px;margin:0}
+.insp-body dt{max-width:9em}
+.insp-body dd{min-width:0;overflow-wrap:anywhere}
 .insp-body dt{font-family:var(--font-label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:.74rem;color:var(--screen-muted);padding-top:2px}
 .insp-body dd{margin:0}
 .tip{position:fixed;z-index:60;max-width:min(300px,calc(100vw - 32px));background:var(--ink);color:var(--paper);font-size:.86rem;line-height:1.4;padding:8px 10px;border-radius:6px;box-shadow:0 8px 20px -10px rgba(0,0,0,.6)}
@@ -245,10 +274,14 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
     <span class="classified" data-tip="This page explains the Sr Game Designer's concept exploration (board task cct-ideas). It is a side project, separate from KillingCard.">Side exploration</span>
   </div>
   <h1>Calling Card Tiles</h1>
-  <p class="lede">Seven game ideas built on one shape: the 4:1 calling-card banner. Three were paper-prototyped and are playable on this page. The other four are shown as step-through storyboards.</p>
+  <p class="lede">Game ideas built on one shape: the 4:1 calling-card banner. Part 2 adds four deeper concepts; its pick, <b>Banner Front</b>, is playable here against an AI. Part 1's seven concepts follow, with three more playable demos and four storyboards.</p>
   <nav class="toc" aria-label="Sections">
     <a href="#shape"><span class="n">1</span>The shape</a>
     <a href="#collection"><span class="n">2</span>Collection</a>
+    <a class="playable" href="#banner-front"><span class="n">A</span>Banner Front</a>
+    <a class="playable" href="#muster"><span class="n">B</span>Muster</a>
+    <a href="#spell-rail"><span class="n">C</span>Spell Rail</a>
+    <a href="#front-campaign"><span class="n">D</span>Front Campaign</a>
     <a class="playable" href="#running-bond"><span class="n">3.1</span>Running Bond</a>
     <a class="playable" href="#pivot"><span class="n">3.2</span>Pivot</a>
     <a class="playable" href="#crosswise"><span class="n">3.3</span>Crosswise</a>
@@ -256,9 +289,9 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
     <a href="#banner-keep"><span class="n">3.5</span>Banner Keep</a>
     <a href="#tilt-stack"><span class="n">3.6</span>Tilt Stack</a>
     <a href="#panorama"><span class="n">3.7</span>Panorama Patience</a>
-    <a href="#compare"><span class="n">5</span>Compare</a>
-    <a href="#recommend"><span class="n">5</span>Recommendation</a>
-    <a href="#questions"><span class="n">6</span>Questions</a>
+    <a href="#compare"><span class="n">≡</span>Compare</a>
+    <a href="#recommend"><span class="n">→</span>Recommendation</a>
+    <a href="#questions"><span class="n">?</span>Questions</a>
   </nav>
   <p class="note">All tile art here is generated on the page: gradients, simple silhouettes and four original emblems. No calling-card art from any game is used. Right-click (desktop) or long-press (touch) any tile, cell, chip or button to see what it is.</p>
 </header>
@@ -372,9 +405,254 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
   </div>
 </section>
 
+
+<!-- ============ PART 2 ============ -->
+<section class="part-head" id="part2" aria-labelledby="p2-h">
+  <span class="label">Part 2 · 7 Nov 2026 · task cct-depth</span>
+  <h2 id="p2-h">Deeper concepts</h2>
+  <p class="lede2">The head asked for "a little more depth, even with simple rules". Part 2 adds four concepts with more decisions per turn. They are inspired by the genres of Neuroshima Hex, Might and Magic: Clash of Heroes and Puzzle Quest. Nothing is copied: no names, factions, unit lists, board shapes, icons, terms or art. Each file says what is borrowed as a genre convention and what is new.</p>
+  <p class="note"><b>New recommendation:</b> Banner Front first. Muster is the backup, and Running Bond becomes a later daily mode.</p>
+</section>
+
+<section class="file" id="banner-front" aria-labelledby="bf-h">
+  <div class="file-tab"><span class="file-no">FILE A</span><span class="stamp play" data-tip="Simulated, playable on this page, and now the recommended first prototype.">Playable · Recommended</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="bf-h">Banner Front</h2><p class="genre">Tile-placement battle · solo vs AI or pass-and-play · 8–10 min</p></div>
+      <p class="hook">"Every calling card is a squad four cells long. Guns on one side, a shield on the other. Lay them down, turn them right, and let initiative decide who fires first."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Draw back up to 3 tiles from your 20-tile deck at the start of each turn.">Draw up to 3 tiles.</li>
+        <li data-tip="Any 4 empty cells in a straight line, in any of 4 rotations. Placed units never move.">Play 2: place units, turned 4 ways.</li>
+        <li data-tip="The third tile is discarded. Choosing what to give up is a decision every turn.">Discard the third.</li>
+        <li data-tip="A Battle order, a full board or the final battle triggers a battle. Initiative 3, then 2, 1, 0.">Battles resolve by initiative 3 → 0.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Board and Command</h3><p>An 8 wide × 7 deep grid. Each side starts with a Command banner in the middle of its back row: Blades on all 10 edges, initiative 0, 10 HP. The first player's Command has 11 HP and plays 2 tiles on turn 1 too: the first-player fix.</p></div>
+        <div><h3>Edge icons</h3>
+          <ul class="iconlist">
+            <li><i class="bfi" data-s="G"></i><span><b>Gun</b>: fires straight out and hits the first tile in line. A friendly tile blocks it.</span></li>
+            <li><i class="bfi" data-s="G2"></i><span><b>Heavy Gun</b>: a Gun that deals 2.</span></li>
+            <li><i class="bfi" data-s="M"></i><span><b>Blade</b>: hits the enemy tile touching that edge. Ignores Shields.</span></li>
+            <li><i class="bfi" data-s="S"></i><span><b>Shield</b>: stops Guns arriving at that edge.</span></li>
+          </ul>
+          <p class="subtle2">Each attacker hits each enemy tile at most once per step, with its best hit. A long side spreads damage; an end focuses it.</p></div>
+        <div><h3>Battles and winning</h3><p>A battle happens when someone plays a Battle order, when no free 4-cell line is left, and once more when both decks are empty. Within a step everyone strikes at once; the dead leave before the next step. Destroy the enemy Command, or have more Command HP after the final battle. A tie goes to more unit HP left.</p></div>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Tile</th><th class="num">Copies</th><th class="num">Init.</th><th class="num">HP</th><th>Edges</th></tr></thead>
+        <tbody>
+          <tr><td>Rifles</td><td class="num">5</td><td class="num">2</td><td class="num">1</td><td>Gun on all 4 cells of one long side</td></tr>
+          <tr><td>Lancer</td><td class="num">3</td><td class="num">3</td><td class="num">1</td><td>Heavy Gun on one end, Shield on the other</td></tr>
+          <tr><td>Brawlers</td><td class="num">3</td><td class="num">2</td><td class="num">1</td><td>Blades on both long sides</td></tr>
+          <tr><td>Bastion</td><td class="num">3</td><td class="num">1</td><td class="num">2</td><td>Shields on one long side and both ends; Blades on the other long side</td></tr>
+          <tr><td>Scouts</td><td class="num">3</td><td class="num">3</td><td class="num">1</td><td>Blades on both ends; Guns on the 2 middle cells of one long side</td></tr>
+          <tr><td>Battle order</td><td class="num">3</td><td class="num">–</td><td class="num">–</td><td>Instant: a battle happens now</td></tr>
+        </tbody></table></div>
+      <div class="facts">
+        <div><h3>Decision tensions</h3><ul>
+          <li><b>Tempo vs exposure:</b> a Battle order cashes in now, before the reply; a board-fill battle comes after it.</li>
+          <li><b>Facing:</b> a long side covers 4 lines but shows a 4-segment target; end-on is small and shielded but fires one line.</li>
+          <li><b>Initiative races:</b> Scouts at 3 kill Rifles at 2 before they shoot.</li>
+          <li><b>Lines and blocking:</b> your own tiles block your Guns; an upright tile cuts four enemy lanes.</li>
+          <li><b>Board-fill timing</b> and <b>the discard</b>: every turn you give up one of 3.</li></ul></div>
+        <div><h3>Borrowed vs new</h3>
+          <p><b>Borrowed:</b> draw 3 / play 2 / discard 1, a shared board, units that never move, initiative-stepped battles, a battle trigger tile, a base.</p>
+          <p><b>New:</b> 1×4 units on a square grid, 10-segment edge icons, one hit per target (spread vs focus), friendly line blocking, 4-way rotation of asymmetric bars.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 4 of 5." aria-label="Collection pull 4 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span>High</span></div>
+          <p>Your cards skin your unit types; your favourite card is your Command banner, big and inspectable by the opponent. Series sets unlock army banners; foil cards animate when their unit strikes. Ranked uses the neutral 20-tile deck for everyone.</p></div>
+        <div><h3>Risks</h3><ul><li>Readability of 10 icons per tile on a phone. The battle preview overlay is essential and doubles as the tutorial.</li><li>A Command with Blades on all 10 edges may be strong; test long sides only.</li><li>The genre family is well known, so the originality bar is real.</li></ul></div>
+      </div>
+      <p class="aha"><span class="label">The aha</span><br>Turning one unit upright cuts four enemy lanes and opens four of yours, and your Scouts at initiative 3 kill their Rifles before they ever fire.</p>
+      <div class="findings">
+        <h3>Simulation (front.py)</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Matchup</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>greedy vs random (100 per seat)</td><td>greedy wins 100%</td></tr>
+            <tr><td>greedy mirror, first player plays 1 tile on turn 1</td><td>second player 63%. Broken.</td></tr>
+            <tr><td>greedy mirror, 2 tiles on turn 1</td><td>41% first / 51% second / 9% ties</td></tr>
+            <tr class="hl"><td>greedy mirror, 2 tiles on turn 1 + first Command 11 HP (300)</td><td>48% / 45% / 6% ties: balanced</td></tr>
+            <tr><td>lookahead vs greedy (100 per seat)</td><td>lookahead 55% vs 37% overall</td></tr>
+            <tr><td>greedy (4 rotations) vs greedy limited to 2</td><td>the limited AI wins 19–20%</td></tr>
+          </tbody></table></div>
+        <p>Skill shows at every level, and rotation is load-bearing. Ties run 6–9%, hence the tiebreak.</p>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone" id="bf-phone">
+        <div class="phone-bar"><span>9:41</span><span class="app">Banner Front</span><span id="bf-modelab">vs AI</span></div>
+        <div class="screen" id="bf-screen">
+          <div class="hud">
+            <div data-tip="HP of the top Command banner (HQ). Reduce it to 0 to win."><span class="k" id="bf-k1">AI HQ</span><span class="v" id="bf-hq1">10</span></div>
+            <div data-tip="HP of the bottom Command banner (HQ)."><span class="k" id="bf-k0">Your HQ</span><span class="v" id="bf-hq0">11</span></div>
+            <div data-tip="Tiles left in each deck: bottom · top. When both are empty, the final battle happens."><span class="k">Decks</span><span class="v" id="bf-decks">17 · 20</span></div>
+            <div data-tip="Round number. Each round is one turn per side."><span class="k">Round</span><span class="v" id="bf-turn">1</span></div>
+          </div>
+          <canvas id="bf-canvas" tabindex="0" aria-label="Banner Front board, 8 wide by 7 deep. Your Command is at the bottom, the opponent's at the top."></canvas>
+          <p class="status" id="bf-status" aria-live="polite"></p>
+          <div id="bf-play" class="bf-panel">
+            <div class="market" id="bf-hand" aria-label="Your hand"></div>
+            <div class="rotline"><button class="btn primary" id="bf-rotate" data-tip="Turns the selected unit 90°. Keyboard: R.">Rotate 90°</button><span id="bf-rot"></span></div>
+            <div class="ctrls">
+              <button class="btn" id="bf-place" disabled data-tip="Places the previewed unit. You can also tap the preview again.">Place</button>
+              <button class="btn primary" id="bf-order" hidden data-tip="Plays the selected Battle order: a battle happens now.">Play battle order</button>
+              <button class="btn" id="bf-preview" data-tip="Shows every shot of a battle on the current board, step by step. Nothing changes.">Preview battle</button>
+              <button class="btn" id="bf-undo" disabled data-tip="Takes back a unit you placed this turn. A resolved battle cannot be undone.">Undo</button>
+              <button class="btn" id="bf-end" disabled data-tip="Ends your turn after your 2 plays. Any tile left in your hand is discarded.">End turn</button>
+            </div>
+          </div>
+          <div id="bf-battle" class="bf-panel battle-panel" hidden aria-live="polite">
+            <div class="bt-head"><b id="bf-bt-title"></b><span class="mono" id="bf-bt-step"></span></div>
+            <div id="bf-bt-text" class="bt-text"></div>
+            <div class="ctrls">
+              <button class="btn primary" id="bf-bt-next" data-tip="Shows the next step of the battle. You can also tap the board.">Next</button>
+              <button class="btn" id="bf-bt-all" data-tip="Plays the remaining steps automatically.">Play all</button>
+              <button class="btn" id="bf-bt-skip" data-tip="Jumps to the battle result.">Result</button>
+            </div>
+          </div>
+          <div class="settings">
+            <label for="bf-opp">Opponent</label>
+            <select id="bf-opp"><option value="greedy">AI (greedy)</option><option value="random">AI (easy, random)</option><option value="hot">Pass and play</option></select>
+            <label for="bf-seat">First</label>
+            <select id="bf-seat"><option value="you">Bottom starts</option><option value="ai">Top starts</option></select>
+            <button class="btn" id="bf-new" data-tip="Starts a new game with these settings.">New game</button>
+          </div>
+        </div>
+      </div>
+      <p class="howto"><b>How to play:</b> tap a tile in your hand, rotate it, tap the board to preview, then tap again (or Place). Play 2, then End turn. Use Preview battle at any time to step through every shot. Right-click or long-press any unit to see its edges, initiative and HP.</p>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="muster" aria-labelledby="ms-h">
+  <div class="file-tab"><span class="file-no">FILE B</span><span class="stamp play" data-tip="Simulated; a one-turn interactive slice is on this page. The backup recommendation.">Try a turn · Backup</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="ms-h">Muster</h2><p class="genre">Formation-puzzle combat · 15–20 min (too long yet)</p></div>
+      <p class="hook">"Line up your troops into charges and walls. Your calling-card elite turns the battle: stand it up as a lance, or lay it down as a bulwark."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="Move a back troop to another column, remove a troop, call reinforcements, or deploy an elite.">Spend 3 actions on your 6×6 side.</li>
+        <li data-tip="Three of a colour stacked in a column: a Charge, power 3, fires in 2 turns.">Stack 3 of a colour: a Charge.</li>
+        <li data-tip="Three of a colour side by side: Walls with 2 HP each, at the front. One wall per column, max 4 HP.">Line 3 side by side: Walls.</li>
+        <li data-tip="Charges fire down the facing enemy column: walls absorb, charges clash, idle troops are jumped, the rest hits the hero (12 HP).">Charges fire at the enemy hero.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>The elite: Lance or Bulwark</h3><p>The 4:1 calling card is your elite. <b>Upright, as a Lance</b>, it fills 4 cells at the back of one column; a troop of its colour landing behind it makes a power 8 Charge that fires in 3 turns. <b>Flat, as a Bulwark</b>, it puts 3 HP walls across the front of 4 columns at once. The planner AI split its elites 1:1; the greedy AI chose Bulwark 3:1.</p></div>
+        <div><h3>Decision tensions</h3><ul><li>The same troops are either a Charge or a Wall.</li><li>Charges land later, so you aim at where the enemy will be weak, and wall where theirs will land.</li><li>A Remove that causes a formation, or 2 formations at once, gives +1 action.</li><li>Call timing: refilling costs an action.</li></ul></div>
+        <div><h3>Borrowed vs new</h3><p><b>Borrowed:</b> per-player column grids, vertical attack formations with countdowns, horizontal walls, removal chains, reinforcement calls, an action budget.</p><p><b>New:</b> the 1×4 elite with a rotation choice, a lance triggered by a matching troop behind it, one wall per column with stacking HP, charges jumping idle troops.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 3 of 5." aria-label="Collection pull 3 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span><span>Medium</span></div>
+          <p>Elites are your calling cards (2 per battle, neutral rules). A full series unlocks a troop theme. Foil elites get an animated charge-up.</p></div>
+        <div><h3>Risks</h3><ul><li>Long fights: about half the games reach the turn cap.</li><li>Closest of the four to its genre family.</li><li>Many small pieces on a phone: stack the two sides in portrait.</li></ul></div>
+      </div>
+      <div class="findings">
+        <h3>Simulation (muster.py)</h3>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Matchup</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>greedy vs random (50)</td><td>greedy 100%, in 13 turns</td></tr>
+            <tr><td>greedy mirror (200)</td><td>50.5% / 44.5% / 5% ties: balanced</td></tr>
+            <tr class="hl"><td>planner vs greedy (24 per seat)</td><td>planner 75% vs 21%</td></tr>
+            <tr><td>v1: walls stack freely, idle troops absorb</td><td>100% stalemates. Broken.</td></tr>
+            <tr><td>v2: one wall per column, charges jump troops</td><td>the results above</td></tr>
+          </tbody></table></div>
+        <p>The strongest depth signal of everything simulated. To fix next: Call is a third of all actions (a near-pass). Test hero 10 HP, +1 power per turn a Charge waits, and Call ending your turn.</p>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone" id="ms-phone">
+        <div class="phone-bar"><span>9:41</span><span class="app">Muster</span><span>One turn</span></div>
+        <div class="screen" id="ms-screen">
+          <div class="hud">
+            <div data-tip="Actions left this turn. Chains give +1."><span class="k">Actions</span><span class="v" id="ms-actions">3</span></div>
+            <div data-tip="Turn number. Charge timers tick down when you end a turn."><span class="k">Turn</span><span class="v" id="ms-turn">1</span></div>
+            <div data-tip="Elites left this battle: your calling cards."><span class="k">Elites</span><span class="v" id="ms-elites">2</span></div>
+          </div>
+          <div class="goals" id="ms-goals" aria-label="Goals"></div>
+          <canvas id="ms-canvas" tabindex="0" aria-label="Your Muster side: 6 columns, 6 deep. The front row is at the top, facing the enemy strip."></canvas>
+          <p class="status" id="ms-status" aria-live="polite"></p>
+          <div class="ctrls">
+            <button class="btn" id="ms-remove" disabled data-tip="Deletes the selected troop. If that causes a formation, you get +1 action.">Remove</button>
+            <button class="btn" id="ms-lance" aria-pressed="false" data-tip="Stand your elite upright as a Lance: tap a column with 4 free cells at the back.">Lance (upright)</button>
+            <button class="btn" id="ms-bulwark" aria-pressed="false" data-tip="Lay your elite flat as a Bulwark: tap the leftmost of 4 columns.">Bulwark (flat)</button>
+          </div>
+          <div class="ctrls">
+            <button class="btn primary" id="ms-end" data-tip="Ends the turn: Charge timers tick and Charges at 0 fire.">End turn</button>
+            <button class="btn" id="ms-reset" data-tip="Puts the troops back to the start.">Reset</button>
+          </div>
+        </div>
+      </div>
+      <p class="howto"><b>How to play:</b> tap a back troop, then tap another column to move it there; tap any troop and press Remove to delete it. Try the Lance in column f, then end turns to watch Charges fire. Reset and try the Bulwark against the enemy Charge in column d.</p>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="spell-rail" aria-labelledby="sr-h">
+  <div class="file-tab"><span class="file-no">FILE C</span><span class="stamp story" data-tip="Not simulated. Shown as a step-through storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="sr-h">Spell Rail</h2><p class="genre">Match battle with abilities · 6–10 min per fight</p></div>
+      <p class="hook">"A shared match board, and your calling cards are mounted on its edge. Match next to your banners to charge them, and next to theirs to deny them."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="8 rail slots of 4 cells around the 8×8 board. Players take turns mounting 4 cards each.">Mount 4 ability cards on the rail.</li>
+        <li data-tip="Swap two neighbours to make a line of 3+. Gain mana; Strike emblems deal damage.">Swap to match 3 or more.</li>
+        <li data-tip="Matches in the 4 cells beside a card charge it, whoever made them.">Matches charge the cards beside them.</li>
+        <li data-tip="Cast when charge and mana are both met. Casting uses your turn.">Cast: Sweep, Convert, Drain, Bulwark.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Rotation and orientation</h3><p>A card on the rail borders exactly 4 cells, its own length. Top and bottom rails hold cards flat and read row matches; side rails hold them upright and read columns. Sweep clears the line it borders, so the slot decides what it can destroy. A lighter use of the shape than A or B.</p></div>
+        <div><h3>Decision tensions</h3><ul><li>Denial: each match shapes the board your opponent sees next.</li><li>Rail geography: feed your cards, starve theirs. Mounting order is a mini-draft.</li><li>Mana vs charge, and extra turns from lines of 4 and cascades.</li></ul></div>
+        <div><h3>Borrowed vs new</h3><p><b>Borrowed:</b> a shared swap-to-match grid, mana colours, a damage emblem, mana-cost abilities, extra turns, RPG levelling.</p><p><b>New:</b> ability cards on 4-cell rail slots charged by adjacent matches, slot drafting, rail orientation.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 5 of 5: the strongest of Part 2." aria-label="Collection pull 5 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span>Very high</span></div>
+          <p>Your cards are your spellbook's faces. A full series mounted together gives an aura. Campaign bounties ask for a card from a series you own, always with a starter-set alternative.</p></div>
+        <div><h3>Risks</h3><ul><li>Swap-match genre fatigue and cascade luck.</li><li>The weakest 4:1 hook of the four. Not simulated this round.</li></ul></div>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Spell Rail</span><span>Storyboard</span></div>
+        <div class="screen" data-story="spellrail"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="file" id="front-campaign" aria-labelledby="fc-h">
+  <div class="file-tab"><span class="file-no">FILE D</span><span class="stamp story" data-tip="The long-term solo shape for Banner Front. Shown as a storyboard.">Storyboard</span></div>
+  <div class="file-grid">
+    <div class="file-text">
+      <div><h2 id="fc-h">Banner Front Campaign</h2><p class="genre">Tile battle with a roguelite army draft · 40–60 min run, 8 min per battle</p></div>
+      <p class="hook">"Banner Front's battles, strung into a solo campaign where your army deck grows between fights."</p>
+      <ol class="loop" aria-label="Core loop">
+        <li data-tip="A 12-tile neutral army. Series sets can unlock other balanced starting armies.">Start with a 12-tile army.</li>
+        <li data-tip="Each enemy commander has one special rule, for example its Guns ignore Shields on ends.">Fight a commander with a special rule.</li>
+        <li data-tip="Draft 1 of 3 new neutral tiles: Shift, Mortar, Medic and more.">Win, draft 1 of 3 new tiles.</li>
+        <li data-tip="Camps let you remove a tile. A run is 8 battles.">Trim the army at camps; 8 battles.</li>
+      </ol>
+      <div class="facts">
+        <div><h3>Depth</h3><p>Deck-shaping on top of Banner Front's tactics, plus enemy rules that ask for different facings. New tile types add icons on new edge layouts.</p></div>
+        <div><h3>What more cards add</h3>
+          <div class="pull"><span class="pips" data-tip="Collection pull 4–5 of 5." aria-label="Collection pull 4 to 5 of 5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span>High</span></div>
+          <p>Unlocked cards become the faces of drafted tiles. Series sets unlock starting army themes. The run history is a gallery of the cards that carried you.</p></div>
+        <div><h3>Risks and verdict</h3><p>Heavy content load: enemy rules and new tiles. It comes after Banner Front versus is proven. The best long-term shape, and the solo story for Banner Front, not the first prototype.</p></div>
+      </div>
+    </div>
+    <div class="file-demo">
+      <div class="phone"><div class="phone-bar"><span>9:41</span><span class="app">Front Campaign</span><span>Storyboard</span></div>
+        <div class="screen" data-story="campaign"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="part-head" id="part1" aria-labelledby="p1-h">
+  <span class="label">Part 1 · 6 Nov 2026 · task cct-ideas</span>
+  <h2 id="p1-h">The first seven concepts</h2>
+  <p class="note">Running Bond was Part 1's pick and stays as the planned daily solitaire mode. Pivot and Crosswise remain candidate modes.</p>
+</section>
+
 <!-- ============ 3.1 Running Bond ============ -->
 <section class="file" id="running-bond" aria-labelledby="rb-h">
-  <div class="file-tab"><span class="file-no">FILE 3.1</span><span class="stamp play" data-tip="Paper-prototyped and playable on this page. This is the recommended first prototype.">Playable · Recommended</span></div>
+  <div class="file-tab"><span class="file-no">FILE 3.1</span><span class="stamp play" data-tip="Paper-prototyped and playable on this page. Part 1 recommended it first; Part 2 moves it to a later daily mode.">Playable · Daily mode</span></div>
   <div class="file-grid">
     <div class="file-text">
       <div><h2 id="rb-h">Running Bond</h2><p class="genre">Tile-laying solitaire with a daily variant · 8–10 min</p></div>
@@ -696,6 +974,14 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
 <!-- ============ 5. Compare ============ -->
 <section class="section" id="compare" aria-labelledby="cmp-h">
   <h2 id="cmp-h">Side by side</h2>
+  <h3>Part 2 concepts, with Running Bond</h3>
+  <div class="tbl-wrap">
+    <table id="cmp2-table">
+      <thead><tr><th>Concept</th><th>Depth signal (simulated)</th><th>Rules on one page</th><th data-tip="How well the concept uses the 4:1 shape and rotation, 1–5.">4:1 and rotation fit</th><th>First-player balance</th><th>Session</th><th>Solo AI</th><th data-tip="1–5: how much a bigger collection adds, without power.">Collection pull</th><th>Phone readability</th><th>Originality</th><th>1-week cost</th></tr></thead>
+      <tbody id="cmp2-body"></tbody>
+    </table>
+  </div>
+  <h3>Part 1 scores</h3>
   <p class="note">Scores 1–5, 5 is best. Build cost is 5 when the prototype is cheapest. Total = rotation + orientation + fun + collection + build cost.</p>
   <div class="tbl-wrap">
     <table id="cmp-table">
@@ -717,30 +1003,33 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
 
 <!-- ============ Recommendation ============ -->
 <section class="file" id="recommend" aria-labelledby="rec-h">
-  <div class="file-tab"><span class="file-no">FILE 5</span><span class="stamp play" data-tip="The Sr Game Designer's recommendation. The head decides on the board.">Recommendation</span></div>
+  <div class="file-tab"><span class="file-no">FILE R</span><span class="stamp play" data-tip="The Sr Game Designer's Part 2 recommendation. The head decides on task cct-depth.">Recommendation</span></div>
   <div class="two">
     <div class="prose">
-      <h2 id="rec-h">Prototype Running Bond first</h2>
+      <h2 id="rec-h">Prototype Banner Front first</h2>
       <ul>
-        <li>It is the tiling game the head asked for, and its rules fit on one card.</li>
-        <li>The simulation shows real tension between scoring now and a clean wall.</li>
-        <li>It has the strongest collection pull: the finished wall is your collection on display, and series objectives point at unlocks.</li>
-        <li>It plays the same in portrait and landscape, on iPhone and on PC.</li>
-        <li>It is the cheapest to build: no AI and no puzzle generator.</li>
+        <li>It answers "more depth with simple rules" most directly: a one-page ruleset, 8–10 minute games, and simulated evidence that skill and rotation matter.</li>
+        <li>It keeps the strongest 4:1 identity of all the concepts: edges, 4 rotations, lanes.</li>
+        <li>Its AI is proven cheap, and the same AI gives difficulty levels: random, greedy, lookahead.</li>
       </ul>
-      <p>The collection requirement moved it clearly ahead; before that it was tied with Pivot. Pivot and Crosswise stay on as the daily and versus modes of the same app, sharing the tile renderer, the inspect view and the collection.</p>
-      <p class="note">Out of scope for the week: real Call of Duty data, online play, the Pivot and Crosswise modes, and final art.</p>
+      <div class="reclist">
+        <div><span class="chip met">1st</span><span><b>Banner Front</b>: the first prototype, solo vs AI plus pass-and-play.</span></div>
+        <div><span class="chip">Later</span><span><b>Running Bond</b>: the daily solitaire mode. Still the best daily and the cheapest build; it shares the tile renderer and collection.</span></div>
+        <div><span class="chip">Backup</span><span><b>Muster</b>: if the head prefers separate per-player grids. Needs its session length fixed first.</span></div>
+        <div><span class="chip">Long term</span><span><b>Banner Front Campaign</b>: the solo story once versus is proven.</span></div>
+      </div>
+      <p class="note">Out of scope for the week: online play, the campaign, move or push tiles, real Call of Duty data and final art.</p>
     </div>
     <div class="prose">
-      <h3>One week in Godot 4.4.1</h3>
+      <h3>One week in Godot 4.4.1: Banner Front</h3>
       <div class="week">
-        <div><span class="d">Day 1</span><span><code>Wall.tscn</code> (8×8 grid in a Control, responsive for portrait and landscape), <code>tile.gd</code> with emblems, series and rotation as typed data, <code>tile_data.tres</code> resources. 24 placeholder tiles: 6 series × 4.</span></div>
-        <div><span class="d">Day 2</span><span>Placement: drag or tap, rotate by button, R key or two-finger twist, ghost preview with legal or illegal tint. Support rules and the mason's insert.</span></div>
-        <div><span class="d">Day 3</span><span>Scoring with per-edge popups: match, bond, course, holes, perfect wall. A score breakdown panel.</span></div>
-        <div><span class="d">Day 4</span><span>Inspect on right click and long press: the card upright, its emblems, series, set progress and why it scored. Market refresh, end screen, medals.</span></div>
-        <div><span class="d">Day 5</span><span>Three objective card types. A daily seed (same deck for everyone) with the score stored locally.</span></div>
-        <div><span class="d">Day 6</span><span>Mock collection link: a fake unlock feed, the set screen with silhouettes and hints, set objectives. A foil shader for 2 animated tiles.</span></div>
-        <div><span class="d">Day 7</span><span>Web export, iPhone portrait and landscape pass, PC pass, QA, and a balance log (CSV of placements and scores).</span></div>
+        <div><span class="d">Day 1</span><span><code>Board.tscn</code> (an 8×7 grid in a Control, portrait- and landscape-responsive), <code>unit_def.tres</code> resources (initiative, HP, 10 segment icons), <code>tile.gd</code> (rotation, cells and segments as typed arrays).</span></div>
+        <div><span class="d">Day 2</span><span>Placement: hand of 3, drag or tap, rotate by button, R key or two-finger twist, a ghost preview, the discard.</span></div>
+        <div><span class="d">Day 3</span><span><code>battle_resolver.gd</code>, a port of <code>front.py</code>: initiative steps, Guns, Blades, Shields, one hit per target. The battle preview overlay, shots grouped by initiative step, played as an animation when a battle happens.</span></div>
+        <div><span class="d">Day 4</span><span>AI on a worker thread: random, greedy and lookahead. Turn flow, Battle orders, the board-full trigger and the final battle.</span></div>
+        <div><span class="d">Day 5</span><span>Inspect on right click and long press: the big upright card, its icons explained, initiative, HP, and what this unit will hit. A one-screen tutorial.</span></div>
+        <div><span class="d">Day 6</span><span>Collection mock: original-art starter set, "assign art to unit type", an army-banner set screen, a fake unlock feed. Local pass-and-play.</span></div>
+        <div><span class="d">Day 7</span><span>Web export, iPhone portrait and landscape tests, PC, QA, and a balance log (CSV of win, seat, turns, battles, unit damage).</span></div>
       </div>
     </div>
   </div>
@@ -749,19 +1038,19 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
 <!-- ============ Questions ============ -->
 <section class="section" id="questions" aria-labelledby="q-h">
   <h2 id="q-h">Three questions for the head</h2>
-  <p class="note">Shown for reference only. Answer them on the Studio Floor board, on task cct-ideas.</p>
+  <p class="note">Shown for reference only. Answer them on the Studio Floor board, on task <b>cct-depth</b>. Part 1's questions (task cct-ideas) are replaced by these: question 1 supersedes the earlier choice of first prototype.</p>
   <div class="qs">
-    <div class="q"><h3>1. Which concept do we prototype first?</h3>
-      <ol><li>Running Bond, the tiling solitaire with the strongest collection pull. <span class="rec-tag">Recommended</span></li><li>Pivot daily puzzle.</li><li>Crosswise versus.</li><li>Banner Keep roguelite, the biggest scope.</li></ol></div>
-    <div class="q"><h3>2. Which orientation leads the design?</h3>
-      <ol><li>Portrait-first phone layout, with landscape and PC fully supported. <span class="rec-tag">Recommended</span></li><li>Landscape-first.</li><li>Orientation as a gameplay mode from day one (Crosswise "home turf", Tilt Stack gravity).</li></ol></div>
-    <div class="q"><h3>3. How do we show the collection link in the prototype?</h3>
-      <ol><li>A mock unlock feed with original art and fake series. It tests the excitement loop with no legal exposure. <span class="rec-tag">Recommended</span></li><li>Let the head import his own 4:1 images as tiles, for a personal test only, never published.</li><li>No collection features until the core is proven fun.</li></ol></div>
+    <div class="q"><h3>1. Which first prototype?</h3>
+      <ol><li>Banner Front: the most depth per rule, proven in simulation. <span class="rec-tag">Recommended</span></li><li>Running Bond, as planned in Part 1. Cheapest, solitaire.</li><li>Muster: formation combat, but long sessions until it is tuned.</li></ol></div>
+    <div class="q"><h3>2. First play mode for Banner Front?</h3>
+      <ol><li>Solo against an AI with 3 difficulty levels, plus local pass-and-play. <span class="rec-tag">Recommended</span></li><li>Online versus. Needs a backend.</li><li>The roguelite campaign from the start.</li></ol></div>
+    <div class="q"><h3>3. Complexity budget for version 1?</h3>
+      <ol><li>5 unit types, 4 edge icons, no move or push tiles: the simulated version. <span class="rec-tag">Recommended</span></li><li>Add Shift and Push tiles from day one.</li><li>Asymmetric armies (different decks per side).</li></ol></div>
   </div>
 </section>
 
 <footer>
-  <p>Source: <code>studio/concepts/calling-card-tiles/concepts.md</code> (Sr Game Designer, task cct-ideas). Explainer by the UI/UX agent, task cct-ux.</p>
+  <p>Sources: <code>studio/concepts/calling-card-tiles/concepts.md</code> (Part 1, task cct-ideas) and <code>concepts-depth.md</code> (Part 2, task cct-depth), by the Sr Game Designer. Explainer by the UI/UX agent, tasks cct-ux and cct-ux2.</p>
   <p>Call of Duty is named only to describe a hypothetical pitch. No partnership, API or art rights are implied.</p>
 </footer>
 </div>
@@ -782,7 +1071,7 @@ footer{font-size:.86rem;color:var(--muted);border-top:1.5px solid var(--line);pa
 const $=id=>document.getElementById(id);
 const RM=matchMedia('(prefers-reduced-motion: reduce)');
 const reduced=()=>RM.matches;
-const TOKS=['cell','cell-line','floor','screen','screen-2','screen-3','screen-ink','screen-muted','screen-line','ok','bad','land','port','accent','em-diamond','em-disc','em-peak','em-cross','plate','plate-ink','art-hi','art-sil','card-edge','s1a','s1b','s2a','s2b','s3a','s3b','s4a','s4b','s5a','s5b','s6a','s6b','gold-a','gold-b'];
+const TOKS=['cell','cell-line','floor','screen','screen-2','screen-3','screen-ink','screen-muted','screen-line','ok','bad','land','port','accent','em-diamond','em-disc','em-peak','em-cross','plate','plate-ink','art-hi','art-sil','card-edge','s1a','s1b','s2a','s2b','s3a','s3b','s4a','s4b','s5a','s5b','s6a','s6b','gold-a','gold-b','ic-gun','ic-blade','ic-shield'];
 const TK={};
 function readTokens(){const cs=getComputedStyle(document.documentElement);for(const n of TOKS)TK[n]=cs.getPropertyValue('--'+n).trim()||'#888';}
 readTokens();
@@ -901,7 +1190,7 @@ function openInspect(o){
   $('insp-body').innerHTML=o.html||'';
   const cv=$('insp-canvas');
   $('insp').hidden=false;
-  if(o.card||o.draw){cv.hidden=false;const W=Math.min(488,cv.parentElement.clientWidth);
+  if(o.card||o.draw){cv.hidden=false;const pe=cv.parentElement,ps=getComputedStyle(pe);const W=Math.max(120,Math.min(488,pe.clientWidth-parseFloat(ps.paddingLeft)-parseFloat(ps.paddingRight)));
     if(o.card){const u=W/4;const ctx=setupCanvas(cv,W,u+2);ctx.clearRect(0,0,W,u+2);drawBanner(ctx,W/2,u/2+1,0,u,o.card,{plate:u*0.42,emblems:o.emblems!==false});}
     else{const H=o.h?o.h(W):W*0.5;const ctx=setupCanvas(cv,W,H);ctx.clearRect(0,0,W,H);o.draw(ctx,W,H);}
   }else cv.hidden=true;
@@ -1563,6 +1852,400 @@ function storyboard(host,name,title,frames){
   const cols=['Fun / aha','Build cost','Collection pull','Rotation','Orientation'];
   const pips=(n,label,name)=>`<td data-tip="${esc(name)}: ${label} ${n} of 5."><span class="pips" aria-label="${n} of 5">${[1,2,3,4,5].map(k=>`<i class="${k<=n?'on':''}"></i>`).join('')}</span> <span class="num">${n}</span></td>`;
   $('cmp-body').innerHTML=rows.map((r,i)=>`<tr class="${i===0?'hl':''}"><td><a href="#${r[1]}"><b>${r[0]}</b></a><br><span class="note">${r[2]}</span></td>${[3,4,5,6,7].map((c,k)=>pips(r[c],cols[k],r[0])).join('')}<td data-tip="Trademark and look-alike risk: ${r[8].toLowerCase()}.">${r[8]}</td><td>${r[9]}</td><td class="num"><b>${r[10]}</b></td></tr>`).join('');
+})();
+
+/* ================= Part 2 · A. Banner Front (port of front.py) ================= */
+const BF_W=8,BF_H=7;
+const BF_SEGS=(()=>{const s=[];for(let i=0;i<4;i++){s.push({k:'N'+i,c:[i,0],d:[0,-1]});s.push({k:'S'+i,c:[i,0],d:[0,1]});}s.push({k:'W',c:[0,0],d:[-1,0]});s.push({k:'E',c:[3,0],d:[1,0]});return s;})();
+const allSeg=sym=>{const o={};BF_SEGS.forEach(s=>o[s.k]=sym);return o;};
+const BF_UNITS={
+  rifle:{name:'Rifles',init:2,hp:1,count:5,seg:{N0:'G',N1:'G',N2:'G',N3:'G'},card:CARDS[0],
+    edges:'Guns on all 4 cells of its front long side. The other 6 edges are bare.',face:'N',faceWord:'Guns face'},
+  lancer:{name:'Lancer',init:3,hp:1,count:3,seg:{E:'G2',W:'S'},card:CARDS[8],
+    edges:'A Heavy Gun (2 damage) on its front end and a Shield on its back end.',face:'E',faceWord:'Heavy Gun faces'},
+  brawler:{name:'Brawlers',init:2,hp:1,count:3,seg:{N0:'M',N1:'M',N2:'M',N3:'M',S0:'M',S1:'M',S2:'M',S3:'M'},card:CARDS[20],
+    edges:'Blades on both long sides: it hits everything touching them.',face:'N',faceWord:'Long sides face'},
+  bastion:{name:'Bastion',init:1,hp:2,count:3,seg:{N0:'S',N1:'S',N2:'S',N3:'S',S0:'M',S1:'M',S2:'M',S3:'M',W:'S',E:'S'},card:CARDS[4],
+    edges:'Shields on its front long side and both ends; Blades on its back long side.',face:'N',faceWord:'Shield side faces'},
+  scout:{name:'Scouts',init:3,hp:1,count:3,seg:{W:'M',E:'M',N1:'G',N2:'G'},card:CARDS[16],
+    edges:'Blades on both ends and Guns on the 2 middle cells of its front long side.',face:'N',faceWord:'Guns face'},
+  hq:{name:'Command',init:0,hp:10,seg:allSeg('M'),edges:'A Blade on every one of its 10 edges.',face:'N',faceWord:'Faces'}
+};
+const BF_DECK=[].concat(...['rifle','lancer','brawler','bastion','scout'].map(k=>Array(BF_UNITS[k].count).fill(k)),Array(3).fill('battle'));
+const BF_SYM={G:'Gun',G2:'Heavy Gun',M:'Blade',S:'Shield'};
+function bfRot(x,y,r){for(let k=0;k<r;k++){const t=x;x=-y;y=t;}return[x,y];}
+const BF_OR=[0,1,2,3].map(r=>{const cells=[0,1,2,3].map(i=>bfRot(i,0,r));const mx=Math.min(...cells.map(c=>c[0])),my=Math.min(...cells.map(c=>c[1]));
+  return{cells:cells.map(c=>[c[0]-mx,c[1]-my]),segs:BF_SEGS.map(s=>{const rc=bfRot(s.c[0],s.c[1],r);return{k:s.k,c:[rc[0]-mx,rc[1]-my],d:bfRot(s.d[0],s.d[1],r)};}),w:Math.max(...cells.map(c=>c[0]))-mx,h:Math.max(...cells.map(c=>c[1]))-my};});
+const dirIdx=(dx,dy)=>dx===1?0:dx===-1?1:dy===1?2:3;
+const DIRWORD=(dx,dy)=>dx===1?'right':dx===-1?'left':dy===1?'down':'up';
+let bfNextId=1;
+function bfTile(owner,kind,x,y,r){const spec=BF_UNITS[kind],o=BF_OR[r];
+  return{id:bfNextId++,owner,kind,x,y,r,cells:o.cells.map(([a,b])=>(x+a)+(y+b)*BF_W),
+    segs:o.segs.map(s=>({k:s.k,cx:x+s.c[0],cy:y+s.c[1],dx:s.d[0],dy:s.d[1],sym:spec.seg[s.k]||null})),init:spec.init,hp:spec.hp,maxhp:spec.hp};}
+function bfSlots(occ){const out=[];for(let r=0;r<4;r++){const o=BF_OR[r];for(let x=0;x<BF_W-o.w;x++)for(let y=0;y<BF_H-o.h;y++)if(o.cells.every(([a,b])=>!occ.has((x+a)+(y+b)*BF_W)))out.push([x,y,r]);}return out;}
+function bfHasSlot(occ){for(let y=0;y<BF_H;y++){let run=0;for(let x=0;x<BF_W;x++){run=occ.has(x+y*BF_W)?0:run+1;if(run>=4)return true;}}
+  for(let x=0;x<BF_W;x++){let run=0;for(let y=0;y<BF_H;y++){run=occ.has(x+y*BF_W)?0:run+1;if(run>=4)return true;}}return false;}
+const bfOcc=tiles=>{const o=new Set();tiles.forEach(t=>t.cells.forEach(c=>o.add(c)));return o;};
+/* Battle: initiative 3→0, simultaneous within a step, one hit per attacker per target (its best hit). */
+function bfBattle(tiles,log){let T=tiles.map(t=>Object.assign({},t));const steps=[];
+  for(const step of[3,2,1,0]){const cm=new Array(BF_W*BF_H).fill(null);T.forEach(t=>{if(t.hp>0)t.cells.forEach(c=>cm[c]=t);});
+    const sh=new Set();T.forEach(t=>t.segs.forEach(s=>{if(s.sym==='S')sh.add((s.cx+s.cy*BF_W)*4+dirIdx(s.dx,s.dy));}));
+    const dmg=new Map(),shots=[],blocked=[],attackers=[];
+    for(const t of T){if(t.init!==step||t.hp<=0)continue;attackers.push(t.id);const best=new Map();
+      for(const s of t.segs){if(!s.sym||s.sym==='S')continue;
+        if(s.sym==='M'){const nx=s.cx+s.dx,ny=s.cy+s.dy;if(nx<0||ny<0||nx>=BF_W||ny>=BF_H)continue;const tg=cm[nx+ny*BF_W];
+          if(tg&&tg.owner!==t.owner){const b=best.get(tg);if(!b||1>b.p)best.set(tg,{p:1,s,to:[nx,ny],type:'Blade'});}}
+        else{const p=s.sym==='G2'?2:1;let nx=s.cx+s.dx,ny=s.cy+s.dy;
+          while(nx>=0&&ny>=0&&nx<BF_W&&ny<BF_H){const tg=cm[nx+ny*BF_W];if(tg){if(tg.owner!==t.owner){if(!sh.has((nx+ny*BF_W)*4+dirIdx(-s.dx,-s.dy))){const b=best.get(tg);if(!b||p>b.p)best.set(tg,{p,s,to:[nx,ny],type:p===2?'Heavy Gun':'Gun'});}
+                else if(log)blocked.push({a:t.id,t:tg.id,s,to:[nx,ny]});}break;}nx+=s.dx;ny+=s.dy;}}}
+      best.forEach((v,tg)=>{dmg.set(tg,(dmg.get(tg)||0)+v.p);if(log)shots.push({a:t.id,t:tg.id,p:v.p,s:v.s,to:v.to,type:v.type});});}
+    const before=log?T.map(t=>Object.assign({},t)):null;
+    dmg.forEach((p,tg)=>{tg.hp-=p;});
+    if(log)steps.push({step,attackers,shots,blocked,before,after:T.map(t=>Object.assign({},t)),dmg:[...dmg].map(([tg,p])=>({id:tg.id,p}))});
+    T=T.filter(t=>t.hp>0||t.kind==='hq');}
+  return{tiles:T,steps};}
+const bfHQ=(tiles,o)=>{const t=tiles.find(t=>t.kind==='hq'&&t.owner===o);return t?t.hp:0;};
+function bfEval(tiles,me){const after=bfBattle(tiles).tiles;const side=(ts,o)=>ts.reduce((a,t)=>t.owner===o?a+(t.kind==='hq'?3*t.hp:t.hp):a,0);
+  return(side(after,me)-side(tiles,me))-(side(after,1-me)-side(tiles,1-me));}
+function bfBestPlace(tiles,occ,kind,me){let best=null;for(const[x,y,r]of bfSlots(occ)){const t=bfTile(me,kind,x,y,r);const v=bfEval(tiles.concat([t]),me)+Math.random()*0.01;if(!best||v>best.v)best={v,pos:[x,y,r]};}return best;}
+function perms(n,k){const out=[];const rec=(cur)=>{if(cur.length===k){out.push(cur.slice());return;}for(let i=0;i<n;i++)if(!cur.includes(i)){cur.push(i);rec(cur);cur.pop();}};rec([]);return out;}
+/* Greedy plan, as play_turn('greedy') in front.py: try every ordered choice of tiles from the hand. */
+function bfGreedyPlan(tiles,hand,me,n){let best=null,bv=-1e9;
+  for(const combo of perms(hand.length,Math.min(n,hand.length))){let ts=tiles,occ=bfOcc(ts),plan=[],v=0;
+    for(const idx of combo){const k=hand[idx];
+      if(k==='battle'){v=bfEval(ts,me);plan.push({k,idx});ts=bfBattle(ts).tiles;occ=bfOcc(ts);continue;}
+      const c=bfBestPlace(ts,occ,k,me);if(!c)continue;const t=bfTile(me,k,...c.pos);ts=ts.concat([t]);t.cells.forEach(q=>occ.add(q));plan.push({k,idx,pos:c.pos});}
+    if(!plan.length||plan[plan.length-1].k!=='battle')v=bfEval(ts,me)*(bfHasSlot(occ)?0.6:1);
+    if(v>bv){bv=v;best={combo,plan};}}
+  return best;}
+function bfRandomPlan(tiles,hand,me,n){const order=shuffle(hand.map((k,i)=>i),Math.random).slice(0,n);let occ=bfOcc(tiles);const plan=[];
+  order.forEach(idx=>{const k=hand[idx];if(k==='battle'){plan.push({k,idx});return;}const sl=bfSlots(occ);if(!sl.length)return;const pos=sl[Math.floor(Math.random()*sl.length)];bfTile(me,k,...pos).cells.forEach(c=>occ.add(c));plan.push({k,idx,pos});});
+  return{combo:order,plan};}
+
+/* ---- drawing ---- */
+function bfGlyph(ctx,sym,x,y,ox,oy,s){const px=-oy,py=ox;ctx.save();ctx.lineWidth=Math.max(1,s*0.14);ctx.strokeStyle=TK['plate-ink'];ctx.lineJoin='round';
+  const tri=(bx,by,len,half)=>{ctx.beginPath();ctx.moveTo(bx+ox*len,by+oy*len);ctx.lineTo(bx-ox*len*0.5+px*half,by-oy*len*0.5+py*half);ctx.lineTo(bx-ox*len*0.5-px*half,by-oy*len*0.5-py*half);ctx.closePath();ctx.fill();ctx.stroke();};
+  if(sym==='G'){ctx.fillStyle=TK['ic-gun'];tri(x,y,s*0.75,s*0.5);}
+  else if(sym==='G2'){ctx.fillStyle=TK['ic-gun'];tri(x-ox*s*0.35,y-oy*s*0.35,s*0.7,s*0.6);tri(x+ox*s*0.4,y+oy*s*0.4,s*0.7,s*0.6);}
+  else if(sym==='M'){ctx.fillStyle=TK['ic-blade'];[-1,1].forEach(k=>{const bx=x+px*s*0.32*k+ox*s*0.15,by=y+py*s*0.32*k+oy*s*0.15;ctx.beginPath();ctx.moveTo(bx+ox*s*0.75,by+oy*s*0.75);ctx.lineTo(bx-ox*s*0.4+px*s*0.2,by-oy*s*0.4+py*s*0.2);ctx.lineTo(bx-ox*s*0.4-px*s*0.2,by-oy*s*0.4-py*s*0.2);ctx.closePath();ctx.fill();ctx.stroke();});}
+  else if(sym==='S'){ctx.fillStyle=TK['ic-shield'];const cx=x+ox*s*0.45,cy=y+oy*s*0.45,L=s*0.85,Wd=s*0.28;ctx.beginPath();ctx.moveTo(cx+px*L+ox*Wd,cy+py*L+oy*Wd);ctx.lineTo(cx-px*L+ox*Wd,cy-py*L+oy*Wd);ctx.lineTo(cx-px*L-ox*Wd,cy-py*L-oy*Wd);ctx.lineTo(cx+px*L-ox*Wd,cy+py*L-oy*Wd);ctx.closePath();ctx.fill();ctx.stroke();}
+  ctx.restore();}
+const bfOwnerTok=o=>o===0?'land':'port';
+function bfCard(kind,owner){if(kind==='hq')return owner===0?KEY_CARD:CARDS[23];return BF_UNITS[kind].card;}
+/* Draw a unit with its centre at (cx,cy), turned r quarter turns (or ang radians). */
+function bfDrawUnit(ctx,t,cx,cy,u,o){o=o||{};const ang=o.ang!=null?o.ang:t.r*Math.PI/2,al=o.alpha==null?1:o.alpha;
+  if(t.kind==='battle'){bfDrawOrder(ctx,cx,cy,ang,u,al,o.outline);return;}
+  const owner=t.owner;drawBanner(ctx,cx,cy,ang,u,bfCard(t.kind,owner),{emblems:false,outline:o.outline||(owner==null?null:TK[bfOwnerTok(owner)]),outlineW:o.outlineW||2.5,alpha:al});
+  const cs=Math.cos(ang),sn=Math.sin(ang);ctx.save();ctx.globalAlpha=al*0.42;ctx.translate(cx,cy);ctx.rotate(ang);ctx.fillStyle=TK['art-sil'];ctx.beginPath();rr(ctx,-2*u+2,-u/2+2,4*u-4,u-4,4);ctx.fill();ctx.restore();
+  ctx.save();ctx.globalAlpha=al;const spec=BF_UNITS[t.kind],s=u*0.23;
+  BF_SEGS.forEach(sg=>{const sym=spec.seg[sg.k];if(!sym)return;const lx=sg.k==='W'?-1.5*u:sg.k==='E'?1.5*u:(-1.5+sg.c[0])*u;const ly=0;const lox=sg.d[0],loy=sg.d[1];
+    const ix=lx+lox*u*0.26,iy=ly+loy*u*0.26;const X=cx+cs*ix-sn*iy,Y=cy+sn*ix+cs*iy;bfGlyph(ctx,sym,X,Y,cs*lox-sn*loy,sn*lox+cs*loy,s);});
+  if(t.kind==='hq'){const fs=Math.max(9,u*0.32);ctx.font='700 '+fs+'px '+FONT_L;const txt='COMMAND '+(t.hp!=null?t.hp:spec.hp);const tw=ctx.measureText(txt).width+10;ctx.fillStyle=TK.plate;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1;ctx.beginPath();rr(ctx,cx-tw/2,cy-fs*0.75,tw,fs*1.5,4);ctx.fill();ctx.stroke();ctx.fillStyle=TK['plate-ink'];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
+  else{const r0=u*0.2,hpv=t.hp!=null?t.hp:spec.hp,mh=t.maxhp||spec.hp;ctx.fillStyle=TK.accent;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx-r0*0.95,cy,r0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=TK['plate-ink'];ctx.font='700 '+Math.round(r0*1.3)+'px '+FONT_M;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(spec.init),cx-r0*0.95,cy+0.5);
+    for(let k=0;k<mh;k++){const bx=cx+r0*0.35+k*r0*0.85,by=cy-r0*0.38;ctx.fillStyle=k<hpv?TK.plate:'transparent';ctx.strokeStyle=TK.plate;ctx.lineWidth=1.2;ctx.beginPath();rr(ctx,bx,by,r0*0.66,r0*0.76,2);if(k<hpv)ctx.fill();ctx.stroke();}}
+  ctx.restore();}
+function bfDrawOrder(ctx,cx,cy,ang,u,al,outline){ctx.save();ctx.globalAlpha=al;ctx.translate(cx,cy);ctx.rotate(ang);const w=4*u-4,h=u-4;ctx.fillStyle=TK.accent;ctx.beginPath();rr(ctx,-w/2,-h/2,w,h,5);ctx.fill();ctx.lineWidth=outline?3:1.5;ctx.strokeStyle=outline||TK['plate-ink'];ctx.stroke();
+  ctx.fillStyle=TK['plate-ink'];for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.beginPath();ctx.moveTo(-1.5*u,0);ctx.lineTo(-1.5*u+Math.cos(a)*h*0.42,Math.sin(a)*h*0.42);ctx.lineWidth=2;ctx.strokeStyle=TK['plate-ink'];ctx.stroke();}
+  ctx.font='700 '+Math.max(9,u*0.34)+'px '+FONT_L;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('BATTLE ORDER',u*0.35,1);ctx.restore();}
+function bfCenter(t,u){const o=BF_OR[t.r];const xs=t.cells.map(c=>c%BF_W),ys=t.cells.map(c=>Math.floor(c/BF_W));return{cx:((Math.min(...xs)+Math.max(...xs))/2+0.5)*u,cy:((Math.min(...ys)+Math.max(...ys))/2+0.5)*u};}
+function bfIconSvg(sym){const g={G:'<path d="M14 9 5 4v10Z"/>',G2:'<path d="M10 9 3 4.5v9Z"/><path d="M16 9 9 4.5v9Z"/>',M:'<path d="M15 6 5 4.5 5 7.5Z"/><path d="M15 12 5 10.5 5 13.5Z"/>',S:'<rect x="11" y="2.5" width="4" height="13" rx="1"/>'}[sym];
+  const col={G:'ic-gun',G2:'ic-gun',M:'ic-blade',S:'ic-shield'}[sym];return `<svg class="em" viewBox="0 0 18 18" width="20" height="20" aria-hidden="true"><rect x="0.5" y="0.5" width="17" height="17" rx="3" fill="var(--screen-3)"/><g fill="var(--${col})" stroke="var(--plate-ink)" stroke-width="0.9" stroke-linejoin="round">${g}</g></svg>`;}
+document.querySelectorAll('i.bfi').forEach(el=>{el.outerHTML=bfIconSvg(el.dataset.s);});
+
+(function bannerFront(){
+  const cv=$('bf-canvas');let u=38,G=null,hoverCell=null,auto=false,delay=380;
+  const NAME=o=>G&&G.opp==='hot'?(o===0?'Bottom player':'Top player'):(o===0?'You':'The AI');
+  const nameOf=(o,cap)=>{const n=NAME(o);return cap?n:n.replace(/^The/,'the').replace(/^You/,'you');};
+  function newGame(){bfNextId=1;const opp=$('bf-opp').value,seat=$('bf-seat').value==='ai'?1:0;
+    G={opp,first:seat,tiles:[bfTile(0,'hq',2,6,0),bfTile(1,'hq',2,0,0)],decks:[shuffle(BF_DECK.slice(),Math.random),shuffle(BF_DECK.slice(),Math.random)],hands:[[],[]],
+      cur:seat,turns:0,battles:0,plays:0,need:2,sel:null,rot:0,ghost:null,cursor:{x:3,y:3},undo:[],mode:'play',over:false,winner:null,msg:'',lastAI:[],battle:null};
+    G.tiles.find(t=>t.kind==='hq'&&t.owner===seat).hp+=1;G.tiles.find(t=>t.kind==='hq'&&t.owner===seat).maxhp+=1;
+    startTurn();}
+  const isHuman=o=>G.opp==='hot'||o===0;
+  function startTurn(){const me=G.cur;while(G.hands[me].length<3&&G.decks[me].length)G.hands[me].push(G.decks[me].pop());G.plays=0;G.need=Math.min(2,G.hands[me].length);G.undo=[];G.sel=null;G.ghost=null;G.rot=me===0?0:2;
+    if(isHuman(me)){G.mode='play';const hand=G.hands[me].map(k=>k==='battle'?'Battle order':BF_UNITS[k].name).join(', ');
+      G.msg=(G.turns===0?`${NAME(me)} start${me===0&&G.opp!=='hot'?'':'s'} with Command at 11 HP and play 2 tiles. `:'')+(G.lastAI.length?G.lastAI.join(' ')+' ':'')+`${G.opp==='hot'?NAME(me)+': ':'Your turn: '}play 2 of your 3 tiles (${hand}); the third is discarded.`;G.lastAI=[];render();}
+    else{G.mode='ai';G.msg='The AI is choosing…';render();setTimeout(aiTurn,auto?0:60);}}
+  async function aiTurn(){const g0=G;if(!G||G.mode!=='ai')return;const me=G.cur,hand=G.hands[me];const t0=performance.now();
+    const plan=G.opp==='random'?bfRandomPlan(G.tiles,hand,me,G.need):bfGreedyPlan(G.tiles,hand,me,G.need);G.aiMs=Math.round(performance.now()-t0);
+    G.lastAI=[];for(const st of plan.plan){if(G.over)break;
+      if(st.k==='battle'){G.lastAI.push('The AI played a Battle order.');await runBattle('The AI played a Battle order.');if(G!==g0)return;}
+      else{const t=bfTile(me,st.k,...st.pos);G.tiles.push(t);G.lastFlash=t.id;G.lastAI.push(`The AI placed ${BF_UNITS[st.k].name} at ${cellName(t)} (${facing(t)}).`);G.msg=G.lastAI.join(' ');render();if(!auto){await wait(delay);if(G!==g0)return;}}
+      checkOver();}
+    G.hands[me]=[];endTurn();}
+  const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  function cellName(t){const xs=t.cells.map(c=>c%BF_W),ys=t.cells.map(c=>Math.floor(c/BF_W));const a='abcdefgh'[Math.min(...xs)]+(BF_H-Math.max(...ys)),b='abcdefgh'[Math.max(...xs)]+(BF_H-Math.min(...ys));return a===b?a:a+'–'+b;}
+  function facing(t){const spec=BF_UNITS[t.kind];const seg=t.segs.find(s=>s.k===(spec.face==='E'?'E':'N0'));return spec.faceWord.toLowerCase()+' '+DIRWORD(seg.dx,seg.dy);}
+  function checkOver(){if(G.over)return true;const a=bfHQ(G.tiles,0),b=bfHQ(G.tiles,1);if(a<=0||b<=0){finish(a<=0&&b<=0?'both':'destroyed');return true;}return false;}
+  function finish(how){const a=bfHQ(G.tiles,0),b=bfHQ(G.tiles,1);let w,why;
+    if(how==='destroyed'){w=a>0?0:1;why=`${(1-w)===0&&G.opp!=='hot'?'Your':NAME(1-w)+'\u2019s'} Command was destroyed.`;}
+    else{if(a!==b){w=a>b?0:1;why=`${how==='both'?'Both Commands fell; ':'After the final battle, '}${nameOf(w,false)} ${w===0&&G.opp!=='hot'?'have':'has'} more Command HP (${Math.max(a,b)} to ${Math.min(a,b)}).`;}
+      else{const uh=o=>G.tiles.filter(t=>t.owner===o&&t.kind!=='hq').reduce((s,t)=>s+t.hp,0);const ua=uh(0),ub=uh(1);w=ua===ub?-1:ua>ub?0:1;why=`Commands tied at ${a} HP. Tiebreak on unit HP left: ${ua} to ${ub}.`;}}
+    G.over=true;G.winner=w;G.mode='over';G.msg=`<b>${w<0?'Draw.':(G.opp==='hot'?NAME(w)+' wins.':(w===0?'<span class="good">You win.</span>':'<span class="warn">The AI wins.</span>'))}</b> ${why} Press New game to play again.`;render();}
+  async function endTurn(){if(G.over)return;const g0=G;G.hands[G.cur]=[];G.turns++;
+    if(!bfHasSlot(bfOcc(G.tiles))){await runBattle('The board has no free 4-cell line, so a battle happens.');if(G!==g0||checkOver())return;}
+    if(!G.decks[0].length&&!G.decks[1].length){await runBattle('Both decks are empty: the final battle.');if(G!==g0||checkOver())return;finish('final');return;}
+    G.cur=1-G.cur;startTurn();}
+  /* ---- battle overlay ---- */
+  function runBattle(reason,preview){return new Promise(res=>{const r=bfBattle(G.tiles,true);const frames=[{kind:'intro'}];
+      r.steps.forEach(s=>{if(!s.attackers.length)return;frames.push({kind:'shots',s});frames.push({kind:'dmg',s});});frames.push({kind:'end'});
+      G.battle={reason,preview:!!preview,r,frames,i:0,res,prevMode:G.mode,hq0:[bfHQ(G.tiles,0),bfHQ(G.tiles,1)],units0:G.tiles.length};G.mode='battle';
+      if(auto){closeBattle();return;}showFrame();});}
+  function closeBattle(){const b=G.battle;if(!b)return;clearInterval(b.timer);if(!b.preview){G.tiles=b.r.tiles;G.battles++;G.undo=[];}G.mode=b.prevMode;G.battle=null;
+    $('bf-battle').hidden=true;$('bf-play').hidden=false;render();b.res();}
+  function unitLabel(id,list){const t=list.find(q=>q.id===id);if(!t)return'?';return `${t.owner===0?(G.opp==='hot'?'Bottom':'Your'):(G.opp==='hot'?'Top':'AI')} ${t.kind==='hq'?'Command':BF_UNITS[t.kind].name}`;}
+  function showFrame(){const b=G.battle,f=b.frames[b.i];$('bf-play').hidden=true;$('bf-battle').hidden=false;let title='',html='';
+    if(f.kind==='intro'){const inits=[3,2,1,0].filter(s=>b.r.steps.find(q=>q.step===s).attackers.length);title=b.preview?'Battle preview (nothing changes)':'Battle!';
+      html=`<p>${b.preview?'This shows what would happen if a battle started now.':esc(b.reason)} Units strike by initiative, <b>3 → 2 → 1 → 0</b>. Units on the same step strike at once; damage lands at the end of the step, so a fast unit can kill a slow one before it strikes.</p><p class="subtle">Steps with attackers here: ${inits.join(', ')||'none'}.</p>`;}
+    else if(f.kind==='shots'){const s=f.s;title=`Initiative ${s.step}: ${s.attackers.length} unit${s.attackers.length>1?'s':''} strike`;
+      const lines=s.shots.map(q=>`<li>${esc(unitLabel(q.a,s.before))} → ${esc(unitLabel(q.t,s.before))}: <b>−${q.p}</b> (${q.type})</li>`).concat(s.blocked.map(q=>`<li class="subtle">${esc(unitLabel(q.a,s.before))} → ${esc(unitLabel(q.t,s.before))}: stopped by a Shield</li>`));
+      html=lines.length?`<ul class="shots">${lines.slice(0,7).join('')}${lines.length>7?`<li class="subtle">+${lines.length-7} more</li>`:''}</ul>`:'<p>These units have nothing in range.</p>';}
+    else if(f.kind==='dmg'){const s=f.s;title=`Initiative ${s.step}: damage lands`;const dead=s.after.filter(t=>t.hp<=0&&t.kind!=='hq');
+      html=`<p>${s.dmg.length?s.dmg.map(d=>`${esc(unitLabel(d.id,s.before))} −${d.p}`).join(' · '):'No damage.'}</p>${dead.length?`<p><b>Destroyed:</b> ${dead.map(t=>esc(unitLabel(t.id,s.before))).join(', ')}. They leave before the next step.</p>`:''}`;}
+    else{const a=bfHQ(b.r.tiles,0),c=bfHQ(b.r.tiles,1);const lost=o=>G.tiles.filter(t=>t.owner===o&&t.kind!=='hq').length-b.r.tiles.filter(t=>t.owner===o&&t.kind!=='hq').length;
+      title=b.preview?'Preview result':'Battle over';html=`<p>Commands: ${NAME(0)} ${b.hq0[0]} → <b>${a}</b> · ${NAME(1)} ${b.hq0[1]} → <b>${c}</b>. Units lost: ${NAME(0)} ${lost(0)}, ${NAME(1)} ${lost(1)}.</p>${b.preview?'<p class="subtle">Nothing was changed. Close the preview to keep playing.</p>':''}`;}
+    $('bf-bt-title').textContent=title;$('bf-bt-text').innerHTML=html;$('bf-bt-step').textContent=`${b.i+1} / ${b.frames.length}`;
+    $('bf-bt-next').textContent=b.i===b.frames.length-1?(b.preview?'Close preview':'Continue'):'Next';$('bf-bt-all').disabled=b.i===b.frames.length-1;
+    render();}
+  function bNext(){const b=G.battle;if(!b)return;if(b.i>=b.frames.length-1){closeBattle();return;}b.i++;showFrame();}
+  function bAll(){const b=G.battle;if(!b)return;clearInterval(b.timer);if(reduced()){b.i=b.frames.length-1;showFrame();return;}b.timer=setInterval(()=>{if(!G.battle||G.battle!==b){clearInterval(b.timer);return;}if(b.i>=b.frames.length-1){clearInterval(b.timer);return;}b.i++;showFrame();},850);}
+  /* ---- human play ---- */
+  function candidate(r,cx,cy){const o=BF_OR[r];const occ=bfOcc(G.tiles);const opts=[];const horiz=o.w===3;
+    for(const k of[1,0,2,3]){const x=horiz?cx-k:cx,y=horiz?cy:cy-k;opts.push([x,y]);}
+    let first=null;for(const[x,y]of opts){const inb=x>=0&&y>=0&&x+o.w<BF_W&&y+o.h<BF_H;if(!inb)continue;const ok=o.cells.every(([a,b])=>!occ.has((x+a)+(y+b)*BF_W));if(ok)return{x,y,r,ok:true};if(!first)first={x,y,r,ok:false};}
+    return first||{x:Math.max(0,Math.min(BF_W-1-o.w,cx-(horiz?1:0))),y:Math.max(0,Math.min(BF_H-1-o.h,cy-(horiz?0:1))),r,ok:false};}
+  function previewText(){const g=G.ghost;if(!g)return;const k=G.hands[G.cur][G.sel];if(!g.ok){G.msg='<span class="warn">No room there.</span> A unit needs 4 empty cells in a straight line.';return;}
+    const t=bfTile(G.cur,k,g.x,g.y,g.r);G.msg=`Preview: ${BF_UNITS[k].name}, ${facing(t)}. Tap it again or press Place. Use Preview battle to see every shot first.`;}
+  function selectHand(i){if(G.mode!=='play'||!isHuman(G.cur))return;const k=G.hands[G.cur][i];if(k==null)return;if(G.plays>=G.need){G.msg='You have played 2 tiles. Press End turn.';render();return;}
+    if(G.sel===i){G.sel=null;G.ghost=null;G.msg='Tile put back in your hand.';render();return;}G.sel=i;G.ghost=null;
+    G.msg=k==='battle'?'Battle order selected: press Play battle order to start a battle now, before your opponent can answer.':`${BF_UNITS[k].name} selected (initiative ${BF_UNITS[k].init}, ${BF_UNITS[k].hp} HP). Rotate it, then tap the board.`;render();}
+  function place(g){if(!g||!g.ok||G.sel==null)return;const k=G.hands[G.cur][G.sel];if(k==='battle')return;
+    G.undo.push(JSON.stringify({tiles:G.tiles,hand:G.hands[G.cur],plays:G.plays,next:bfNextId}));
+    const t=bfTile(G.cur,k,g.x,g.y,g.r);G.tiles.push(t);G.hands[G.cur].splice(G.sel,1);G.plays++;G.sel=null;G.ghost=null;G.lastFlash=t.id;
+    G.msg=`${nameOf(G.cur,true)} placed ${BF_UNITS[k].name} at ${cellName(t)} (${facing(t)}). `+(G.plays>=G.need?'Press End turn; the last tile is discarded.':'Play 1 more tile.');render();}
+  async function playOrder(){if(G.sel==null)return;const k=G.hands[G.cur][G.sel];if(k!=='battle')return;G.hands[G.cur].splice(G.sel,1);G.plays++;G.sel=null;G.ghost=null;
+    await runBattle(`${NAME(G.cur)} played a Battle order.`);if(checkOver())return;G.msg='Battle resolved. '+(G.plays>=G.need?'Press End turn.':'Play 1 more tile.');render();}
+  function canPlay(){const h=G.hands[G.cur];if(G.plays>=G.need||!h.length)return false;return h.includes('battle')||bfHasSlot(bfOcc(G.tiles));}
+  function cellAt(e){const p=canvasPoint(cv,e,BF_W*u);const x=Math.floor(p.x/u),y=Math.floor(p.y/u);if(x<0||y<0||x>=BF_W||y>=BF_H)return null;return{x,y};}
+  function tap(c,type){if(!c||!G)return;G.cursor=c;if(G.mode==='battle'){bNext();return;}if(G.mode!=='play'){render();return;}
+    if(G.sel==null){const t=tileAt(c);G.msg=t?`That is ${t.owner===G.cur?'your':'the enemy'} ${t.kind==='hq'?'Command':BF_UNITS[t.kind].name}. Long-press or right-click to inspect it.`:'Pick a tile from your hand first.';render();return;}
+    const k=G.hands[G.cur][G.sel];if(k==='battle'){G.msg='A Battle order is not placed on the board. Press Play battle order.';render();return;}
+    if(type==='mouse'){const g=candidate(G.rot,c.x,c.y);if(g.ok){place(g);return;}G.ghost=g;previewText();render();return;}
+    if(G.ghost&&G.ghost.ok&&bfTile(0,'rifle',G.ghost.x,G.ghost.y,G.ghost.r).cells.includes(c.x+c.y*BF_W)){place(G.ghost);return;}
+    G.ghost=candidate(G.rot,c.x,c.y);G.lastCell=c;previewText();render();}
+  const tileAt=c=>G.tiles.find(t=>t.cells.includes(c.x+c.y*BF_W));
+  function rotate(){if(G.sel==null||G.mode!=='play')return;G.rot=(G.rot+1)%4;const k=G.hands[G.cur][G.sel];if(G.ghost){const a=G.lastCell||{x:G.ghost.x,y:G.ghost.y};G.ghost=candidate(G.rot,a.x,a.y);previewText();}
+    else if(k!=='battle'){const t=bfTile(G.cur,k,0,0,G.rot);G.msg=`Turned ${G.rot*90}°: ${facing(t)}.`;}render();}
+  function inspectUnit(t,live){const spec=BF_UNITS[t.kind];let hits='';
+    if(live){const r=bfBattle(G.tiles,true);const sh=[];r.steps.forEach(s=>s.shots.forEach(q=>{if(q.a===t.id)sh.push(`${esc(unitLabel(q.t,s.before))} −${q.p} (${q.type}, initiative ${s.step})`);}));hits=`<dt>If a battle started now</dt><dd>${sh.length?sh.join('<br>'):'It would hit nothing.'}</dd>`;}
+    const segList=Object.entries(spec.seg).reduce((m,[k,v])=>{(m[v]=m[v]||[]).push(k);return m;},{});
+    openInspect({kicker:`${t.owner==null?'Unit card':(t.owner===0?(G&&G.opp==='hot'?'Bottom player':'Your unit'):(G&&G.opp==='hot'?'Top player':'AI unit'))}${t.kind==='hq'?'':' · '+BF_UNITS[t.kind].name}`,title:t.kind==='hq'?'Command':bfCard(t.kind,t.owner).name,
+      h:W=>Math.round(W/4)+30,draw:(ctx,W,H)=>{const uu=Math.min((W-20)/4,90);bfDrawUnit(ctx,{kind:t.kind,owner:t.owner,r:0,hp:t.hp,maxhp:t.maxhp},W/2,H/2,uu,{ang:0});},
+      html:`<dl><dt>Edges</dt><dd>${esc(spec.edges)}<br>${Object.entries(segList).map(([sym,ks])=>`${bfIconSvg(sym)} ${BF_SYM[sym]} ×${ks.length}`).join(' &nbsp; ')}</dd><dt>Initiative</dt><dd>${spec.init}: ${spec.init===3?'strikes first':spec.init===0?'strikes last':'strikes at step '+spec.init}</dd>
+        <dt>HP</dt><dd>${t.hp!=null?t.hp:spec.hp} of ${t.maxhp||spec.hp}</dd>${t.r!=null&&t.owner!=null?`<dt>Facing</dt><dd>${t.kind==='hq'?'Blades all round':esc(facing(t.segs?t:bfTile(t.owner,t.kind,0,0,t.r)))}${t.segs?'':' (at its current rotation)'}</dd>`:''}${hits}</dl>
+        <p class="subtle">Gun: fires straight out, hits the first tile in line; a friendly tile blocks it. Heavy Gun: 2 damage. Blade: hits the enemy tile touching that edge. Shield: stops Guns arriving at that edge. Each attacker hits each target at most once per step.</p>`});}
+  function inspectAt(c){if(!c)return;const t=tileAt(c);if(t){inspectUnit(t,G.mode!=='battle');return;}
+    openInspect({kicker:'Board cell',title:`Cell ${'abcdefgh'[c.x]}${BF_H-c.y}`,html:`<p>Empty. Rows count from your back row (1) to the AI's back row (7). Units need 4 empty cells in a straight line.</p>`});}
+  /* ---- render ---- */
+  function render(){if(!G)return;const W=BF_W*u,H=BF_H*u,ctx=setupCanvas(cv,W,H);ctx.fillStyle=TK.cell;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle=TK.port;ctx.globalAlpha=0.08;ctx.fillRect(0,0,W,u);ctx.fillStyle=TK.land;ctx.fillRect(0,H-u,W,u);ctx.globalAlpha=1;
+    ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;for(let i=1;i<BF_W;i++){ctx.beginPath();ctx.moveTo(i*u+0.5,0);ctx.lineTo(i*u+0.5,H);ctx.stroke();}for(let j=1;j<BF_H;j++){ctx.beginPath();ctx.moveTo(0,j*u+0.5);ctx.lineTo(W,j*u+0.5);ctx.stroke();}
+    const b=G.battle;let list=G.tiles,f=null;if(b){f=b.frames[b.i];if(f.kind==='shots')list=f.s.before;else if(f.kind==='dmg')list=f.s.after;else if(f.kind==='end')list=b.r.tiles;}
+    const active=f&&(f.kind==='shots')?new Set(f.s.attackers):null;
+    list.forEach(t=>{const c=bfCenter(t,u);const dead=t.hp<=0&&t.kind!=='hq';const dim=active&&!active.has(t.id);
+      bfDrawUnit(ctx,t,c.cx,c.cy,u,{alpha:dead?0.3:dim?0.55:1,outline:active&&active.has(t.id)?TK['art-hi']:(G.lastFlash===t.id&&!b?TK.accent:null),outlineW:active&&active.has(t.id)?3.5:3});
+      if(dead){ctx.strokeStyle=TK.bad;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(c.cx-u*0.4,c.cy-u*0.4);ctx.lineTo(c.cx+u*0.4,c.cy+u*0.4);ctx.moveTo(c.cx+u*0.4,c.cy-u*0.4);ctx.lineTo(c.cx-u*0.4,c.cy+u*0.4);ctx.stroke();}});
+    if(f&&f.kind==='shots'){f.s.blocked.forEach(q=>drawShot(ctx,q,true));f.s.shots.forEach(q=>drawShot(ctx,q,false));}
+    if(f&&f.kind==='dmg'){f.s.dmg.forEach(d=>{const t=f.s.after.find(q=>q.id===d.id);if(!t)return;const c=bfCenter(t,u);sbPillAt(ctx,'−'+d.p,c.cx,c.cy-u*0.62,TK.bad);});}
+    if(b){ctx.fillStyle=TK.accent;ctx.font='700 '+Math.round(u*0.32)+'px '+FONT_L;ctx.textAlign='left';ctx.textBaseline='top';const lab=f.kind==='intro'?'BATTLE':f.kind==='end'?'RESULT':'INITIATIVE '+f.s.step;ctx.fillStyle=TK.screen;const tw=ctx.measureText(lab).width+10;ctx.globalAlpha=0.85;ctx.fillRect(2,2,tw,u*0.42);ctx.globalAlpha=1;ctx.fillStyle=TK.accent;ctx.fillText(lab,7,5);}
+    if(!b&&G.ghost&&G.sel!=null){const k=G.hands[G.cur][G.sel];const t=bfTile(G.cur,k,G.ghost.x,G.ghost.y,G.ghost.r);const c=bfCenter(t,u);bfDrawUnit(ctx,t,c.cx,c.cy,u,{alpha:0.7,outline:G.ghost.ok?TK.ok:TK.bad,outlineW:3});}
+    if(!b&&document.activeElement===cv&&G.mode==='play'){const k=G.cursor;ctx.setLineDash([4,3]);ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=2;ctx.strokeRect(k.x*u+2,k.y*u+2,u-4,u-4);ctx.setLineDash([]);}
+    // HUD + controls
+    $('bf-hq0').textContent=bfHQ(G.tiles,0);$('bf-hq1').textContent=bfHQ(G.tiles,1);$('bf-k0').textContent=G.opp==='hot'?'Bottom HQ':'Your HQ';$('bf-k1').textContent=G.opp==='hot'?'Top HQ':'AI HQ';
+    $('bf-decks').textContent=G.decks[0].length+'/'+G.decks[1].length;$('bf-turn').textContent=Math.floor(G.turns/2)+1;$('bf-modelab').textContent=G.opp==='hot'?'2 players':G.opp==='random'?'vs easy AI':'vs AI';
+    $('bf-status').innerHTML=G.msg;renderHand();
+    const human=isHuman(G.cur)&&G.mode==='play';const k=G.sel!=null?G.hands[G.cur][G.sel]:null;
+    $('bf-rotate').disabled=!human||k==null||k==='battle';$('bf-place').disabled=!human||!(G.ghost&&G.ghost.ok&&k&&k!=='battle');$('bf-order').hidden=k!=='battle';$('bf-place').hidden=k==='battle';$('bf-order').disabled=!human;
+    $('bf-undo').disabled=!human||!G.undo.length;$('bf-end').disabled=!human||canPlay();$('bf-end').classList.toggle('primary',human&&!canPlay());$('bf-preview').disabled=G.mode!=='play';
+    $('bf-rot').innerHTML=k&&k!=='battle'?`${G.rot*90}° · ${esc(facing(bfTile(G.cur,k,0,0,G.rot)))}`:(human?`Plays left this turn: ${G.need-G.plays}`:'');}
+  function sbPillAt(ctx,t,x,y,col){ctx.font='700 '+Math.max(10,Math.round(u*0.3))+'px '+FONT_M;const w=ctx.measureText(t).width+10,h=Math.max(14,u*0.42);ctx.fillStyle=col;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.2;ctx.beginPath();rr(ctx,x-w/2,y-h/2,w,h,5);ctx.fill();ctx.stroke();ctx.fillStyle=TK['plate-ink'];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,x,y+0.5);}
+  function drawShot(ctx,q,blocked){const s=q.s;const sx=(s.cx+0.5+s.dx*0.5)*u,sy=(s.cy+0.5+s.dy*0.5)*u;const ex=(q.to[0]+0.5-s.dx*0.5)*u,ey=(q.to[1]+0.5-s.dy*0.5)*u;
+    const att=G.battle.frames[G.battle.i].s.before.find(t=>t.id===q.a);const col=blocked?TK['screen-muted']:TK[bfOwnerTok(att?att.owner:0)];
+    if(q.type==='Blade'){ctx.strokeStyle=col;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(sx-s.dy*u*0.3-s.dx*u*0.15,sy-s.dx*u*0.3-s.dy*u*0.15);ctx.lineTo(sx+s.dy*u*0.3+s.dx*u*0.15,sy+s.dx*u*0.3+s.dy*u*0.15);ctx.stroke();}
+    else{ctx.setLineDash(blocked?[3,3]:[]);sbArrowW(ctx,sx,sy,ex,ey,col,q.type==='Heavy Gun'?4:2.5);ctx.setLineDash([]);}
+    if(blocked){ctx.fillStyle=TK['ic-shield'];ctx.beginPath();ctx.arc(ex,ey,u*0.14,0,Math.PI*2);ctx.fill();ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1;ctx.stroke();}
+    else sbPillAt(ctx,'−'+q.p,(sx+ex)/2+(q.type==='Blade'?s.dx*u*0.25:0),(sy+ey)/2+(q.type==='Blade'?s.dy*u*0.25:0),TK.bad);}
+  function sbArrowW(ctx,x1,y1,x2,y2,col,w){ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();const a=Math.atan2(y2-y1,x2-x1),h=8;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-h*Math.cos(a-0.45),y2-h*Math.sin(a-0.45));ctx.lineTo(x2-h*Math.cos(a+0.45),y2-h*Math.sin(a+0.45));ctx.closePath();ctx.fill();}
+  function renderHand(){const m=$('bf-hand');if(m.children.length!==3){m.innerHTML='';for(let i=0;i<3;i++){const b=document.createElement('button');b.className='mkt';b.id='bf-h'+i;b.innerHTML='<canvas></canvas><span class="nm"></span>';m.appendChild(b);
+        pressable(b,{onTap:()=>selectHand(i),onInspect:()=>{const k=G.hands[G.cur][i];if(!k)return;if(k==='battle'){openInspect({kicker:'Instant',title:'Battle order',html:'<p>Play it instead of placing a unit: a battle happens at once, before your opponent can reply. It counts as one of your 2 plays.</p><p>Battles also happen when the board has no free 4-cell line left, and once more when both decks are empty.</p>'});return;}inspectUnit({kind:k,owner:G.cur,r:G.sel===i?G.rot:(G.cur===0?0:2),hp:BF_UNITS[k].hp,maxhp:BF_UNITS[k].hp},false);}});}}
+    const show=isHuman(G.cur)?G.cur:(G.opp==='hot'?G.cur:0);const hand=isHuman(G.cur)?G.hands[G.cur]:[];
+    [...m.children].forEach((b,i)=>{const k=hand[i];const c=b.querySelector('canvas');const w=Math.max(40,b.clientWidth-12),uu=w/4;const ctx=setupCanvas(c,w,uu);ctx.clearRect(0,0,w,uu);
+      b.disabled=k==null||G.mode!=='play';b.setAttribute('aria-pressed',G.sel===i);
+      if(k==null){b.querySelector('.nm').textContent=G.mode==='ai'?'AI turn':'–';b.setAttribute('aria-label','Empty hand slot');return;}
+      bfDrawUnit(ctx,{kind:k,owner:show,r:0},w/2,uu/2,uu,{ang:0});const nm=b.querySelector('.nm');nm.classList.add('two');nm.innerHTML=k==='battle'?'Battle order<br>instant':`${BF_UNITS[k].name}<br>Init ${BF_UNITS[k].init} · ${BF_UNITS[k].hp} HP`;
+      b.setAttribute('aria-label',k==='battle'?'Battle order':`${BF_UNITS[k].name}, initiative ${BF_UNITS[k].init}, ${BF_UNITS[k].hp} HP. ${BF_UNITS[k].edges}`);});}
+  pressable(cv,{onTap:(e,t)=>tap(cellAt(e),t),onInspect:e=>inspectAt(cellAt(e)),
+    onHover:e=>{const c=cellAt(e);hoverCell=c;if(!G||G.mode!=='play'||G.sel==null||!c)return;const k=G.hands[G.cur][G.sel];if(k==='battle')return;if(G.lastCell&&G.lastCell.x===c.x&&G.lastCell.y===c.y&&G.ghost)return;G.lastCell=c;G.ghost=candidate(G.rot,c.x,c.y);previewText();render();},onLeave:()=>{hoverCell=null;}});
+  cv.addEventListener('focus',()=>render());cv.addEventListener('blur',()=>render());
+  $('bf-screen').addEventListener('keydown',e=>{if(!G)return;if(e.key==='r'||e.key==='R'){e.preventDefault();rotate();return;}if(/^[1-3]$/.test(e.key)&&!e.target.closest('select')){e.preventDefault();selectHand(+e.key-1);return;}
+    if(e.target!==cv)return;const k=G.cursor;let mv=true;if(e.key==='ArrowLeft')k.x=Math.max(0,k.x-1);else if(e.key==='ArrowRight')k.x=Math.min(BF_W-1,k.x+1);else if(e.key==='ArrowUp')k.y=Math.max(0,k.y-1);else if(e.key==='ArrowDown')k.y=Math.min(BF_H-1,k.y+1);
+    else if(e.key==='Enter'||e.key===' '){e.preventDefault();tap({x:k.x,y:k.y},'keyboard');return;}else if(e.key==='i'||e.key==='I'){inspectAt(k);return;}else mv=false;
+    if(mv){e.preventDefault();if(G.sel!=null&&G.mode==='play'&&G.hands[G.cur][G.sel]!=='battle'){G.lastCell={x:k.x,y:k.y};G.ghost=candidate(G.rot,k.x,k.y);previewText();}render();}});
+  $('bf-rotate').addEventListener('click',rotate);$('bf-place').addEventListener('click',()=>place(G.ghost));$('bf-order').addEventListener('click',playOrder);
+  $('bf-undo').addEventListener('click',()=>{if(!G.undo.length)return;const s=JSON.parse(G.undo.pop());G.tiles=s.tiles;G.hands[G.cur]=s.hand;G.plays=s.plays;bfNextId=s.next;G.sel=null;G.ghost=null;G.msg='Took back your last tile.';render();});
+  $('bf-end').addEventListener('click',()=>{if(G.mode!=='play'||!isHuman(G.cur))return;const left=G.hands[G.cur];G.lastAI=[];if(left.length)G.lastAI.push(`${NAME(G.cur)} discarded ${left.map(k=>k==='battle'?'a Battle order':BF_UNITS[k].name).join(', ')}.`);G.sel=null;G.ghost=null;endTurn();});
+  $('bf-preview').addEventListener('click',()=>{if(G.mode!=='play')return;runBattle('',true);});
+  $('bf-bt-next').addEventListener('click',bNext);$('bf-bt-all').addEventListener('click',bAll);$('bf-bt-skip').addEventListener('click',()=>{const b=G.battle;if(!b)return;clearInterval(b.timer);b.i=b.frames.length-1;showFrame();});
+  $('bf-new').addEventListener('click',()=>{if(G&&G.battle){clearInterval(G.battle.timer);G.battle=null;$('bf-battle').hidden=true;$('bf-play').hidden=false;}newGame();});
+  ro($('bf-screen'),w=>{u=Math.max(28,Math.min(46,Math.floor((w-20)/BF_W)));render();});redraws.push(()=>{render();});
+  newGame();
+  window.__cct=window.__cct||{};window.__cct.bf={get:()=>G,setAuto:v=>{auto=v;},setDelay:v=>{delay=v;},plan:()=>bfGreedyPlan(G.tiles,G.hands[G.cur],G.cur,2),battle:t=>bfBattle(t||G.tiles,true),slots:()=>bfSlots(bfOcc(G.tiles)),
+    select:selectHand,placeAt:(x,y,r)=>{G.rot=r;place({x,y,r,ok:bfSlots(bfOcc(G.tiles)).some(s=>s[0]===x&&s[1]===y&&s[2]===r)});},order:playOrder,end:()=>$('bf-end').click()};
+})();
+
+/* ================= Part 2 · B. Muster mini-demo ================= */
+(function muster(){
+  const C=6,D=6,cv=$('ms-canvas');let u=44,M=null;
+  const ELITE={c:1,card:CARDS[13]}; // Disc-coloured elite, "Dune Sea"
+  const START=[[1,0,2],[0,1,2],[2,1],[1,2,0,2],[0,0,2,0],[2]];
+  const COLN=['a','b','c','d','e','f'];
+  function fresh(){const cols=START.map(col=>col.map(c=>({t:'troop',c})));
+    return{cols,actions:3,turn:1,elites:2,sel:null,mode:null,hero:12,enemy:{hero:12,walls:[0,2,0,0,2,0],charges:[{col:3,power:4,timer:1},{col:0,power:3,timer:3}]},bulwark:null,
+      goals:{charge:false,wall:false,elite:null,fired:false},msg:'Make one Charge (3 of a colour stacked in a column) and one Wall (3 side by side). Tap a back troop, then tap another column to move it there.',log:[]};}
+  /* each column is a list of cells, front first; multi-cell pieces repeat the same object */
+  const pieces=col=>col.filter((p,i)=>col.indexOf(p)===i);
+  function normalize(col){const ps=pieces(col);const order=[...ps.filter(p=>p.t==='wall'),...ps.filter(p=>p.t==='charge'),...ps.filter(p=>p.t!=='wall'&&p.t!=='charge')];const out=[];order.forEach(p=>{for(let k=0;k<(p.size||1);k++)out.push(p);});col.length=0;out.forEach(p=>col.push(p));}
+  function detect(){let made=0,guard=0;const kinds=[];
+    while(guard++<20){let hit=false;
+      for(let ci=0;ci<C&&!hit;ci++){const col=M.cols[ci];for(let i=0;i+2<col.length;i++){const a=col[i],b=col[i+1],c=col[i+2];if(a.t==='troop'&&b.t==='troop'&&c.t==='troop'&&a!==b&&b!==c&&a.c===b.c&&b.c===c.c){const ch={t:'charge',c:a.c,power:3,timer:2,size:3,born:M.turn};col.splice(i,3,ch,ch,ch);normalize(col);made++;kinds.push('charge');hit=true;break;}}}
+      if(hit)continue;
+      for(let d=0;d<D&&!hit;d++)for(let ci=0;ci+2<C&&!hit;ci++){const t=[0,1,2].map(k=>M.cols[ci+k][d]);if(t.every(p=>p&&p.t==='troop')&&t[0].c===t[1].c&&t[1].c===t[2].c){
+          for(let k=0;k<3;k++){const col=M.cols[ci+k];col.splice(d,1);const w=col.find(p=>p.t==='wall');if(w)w.hp=Math.min(4,w.hp+2);else col.unshift({t:'wall',hp:2});normalize(col);}made++;kinds.push('wall');hit=true;}}
+      if(hit)continue;
+      for(let ci=0;ci<C&&!hit;ci++){const col=M.cols[ci];const li=col.findIndex(p=>p.t==='lance');if(li<0)continue;const lp=col[li],after=col[li+4];if(after&&after.t==='troop'&&after.c===lp.c){const ch={t:'charge',c:lp.c,power:8,timer:3,size:4,lance:true,born:M.turn};col.splice(li,5,ch,ch,ch,ch);normalize(col);made++;kinds.push('lance');hit=true;}}
+      if(!hit)break;}
+    kinds.forEach(k=>{if(k==='charge'||k==='lance')M.goals.charge=true;if(k==='wall')M.goals.wall=true;});return{made,kinds};}
+  function spend(res,isRemove){M.actions--;let bonus=(isRemove&&res.made>=1)||res.made>=2;if(bonus)M.actions++;
+    const words=res.kinds.map(k=>k==='charge'?'a Charge (power 3, fires in 2 turns)':k==='lance'?'the Lance Charge (power 8, fires in 3 turns)':'Walls (2 HP each)');
+    return(words.length?' Formed '+words.join(' and ')+'.':'')+(bonus?' <span class="good">Chain: +1 action.</span>':'');}
+  function move(from,to){const a=M.cols[from],b=M.cols[to];const p=a[a.length-1];if(!p||p.t!=='troop'){M.msg='Only a column’s back troop can move.';return;}if(b.length>=D){M.msg=`Column ${COLN[to]} is full.`;return;}
+    a.pop();b.push(p);M.sel=null;const res=detect();M.msg=`Moved a ${EM_NAMES[p.c]} troop from column ${COLN[from]} to the back of column ${COLN[to]}.`+spend(res,false);after();}
+  function remove(){const s=M.sel;if(!s)return;const col=M.cols[s.col];const p=col[s.d];if(!p||p.t!=='troop')return;col.splice(s.d,1);M.sel=null;const res=detect();M.msg=`Removed a ${EM_NAMES[p.c]} troop from column ${COLN[s.col]}; the troops behind it closed up.`+spend(res,true);after();}
+  function deploy(kind,ci){if(M.elites<=0){M.msg='No elites left in this battle.';M.mode=null;return;}
+    if(kind==='lance'){const col=M.cols[ci];if(col.length+4>D){M.msg=`The Lance needs 4 free cells at the back of a column. Column ${COLN[ci]} has only ${D-col.length}.`;return;}
+      const l={t:'lance',c:ELITE.c,size:4};for(let k=0;k<4;k++)col.push(l);M.goals.elite='Lance';M.msg=`Lance stood upright in column ${COLN[ci]}. Put a ${EM_NAMES[ELITE.c]} troop directly behind it to turn it into a power 8 Charge.`;}
+    else{const c0=Math.max(0,Math.min(C-4,ci));for(let k=0;k<4;k++){const col=M.cols[c0+k];const w=col.find(p=>p.t==='wall');if(w)w.hp=Math.min(4,w.hp+3);else{if(col.length>=D)col.pop();col.unshift({t:'wall',hp:3,bul:true});}normalize(col);}M.bulwark=c0;M.goals.elite='Bulwark';
+      M.msg=`Bulwark laid flat across columns ${COLN[c0]}–${COLN[c0+3]}: walls with 3 HP at the front of all four.`;}
+    M.elites--;M.mode=null;const res=detect();M.msg+=spend(res,false);after();}
+  function fire(power,colIdx,defender){let dmg=power;const notes=[];
+    if(defender==='enemy'){const w=M.enemy.walls[colIdx];if(w){const a=Math.min(w,dmg);M.enemy.walls[colIdx]-=a;dmg-=a;notes.push(`enemy wall absorbed ${a}`);}
+      M.enemy.charges.filter(c=>c.col===colIdx&&c.power>0).forEach(c=>{const a=Math.min(c.power,dmg);c.power-=a;dmg-=a;if(a)notes.push(`clashed with an enemy Charge (−${a})`);});
+      M.enemy.hero-=dmg;}
+    else{const col=M.cols[colIdx];const w=col.find(p=>p.t==='wall');if(w){const a=Math.min(w.hp,dmg);w.hp-=a;dmg-=a;notes.push(`your wall absorbed ${a}`);if(w.hp<=0){col.splice(col.indexOf(w),1);normalize(col);}}
+      pieces(col).filter(p=>p.t==='charge').forEach(c=>{if(dmg<=0)return;const a=Math.min(c.power,dmg);c.power-=a;dmg-=a;notes.push(`clashed with your Charge (−${a})`);if(c.power<=0){for(let i=col.length-1;i>=0;i--)if(col[i]===c)col.splice(i,1);}});
+      M.hero-=dmg;}
+    return{dmg,notes};}
+  function endTurn(){const lines=[];
+    M.cols.forEach((col,ci)=>pieces(col).filter(p=>p.t==='charge').forEach(ch=>{ch.timer--;if(ch.timer<=0){for(let i=col.length-1;i>=0;i--)if(col[i]===ch)col.splice(i,1);const r=fire(ch.power,ci,'enemy');M.goals.fired=true;lines.push(`Your ${ch.lance?'Lance ':''}Charge in column ${COLN[ci]} fired for ${ch.power}: ${r.notes.length?r.notes.join(', ')+', ':''}<b>${r.dmg} to the enemy hero</b>.`);}}));
+    M.enemy.charges.forEach(ch=>{if(ch.power<=0||ch.timer<=0)return;ch.timer--;if(ch.timer<=0){const r=fire(ch.power,ch.col,'me');lines.push(`An enemy Charge hit column ${COLN[ch.col]} for ${ch.power}: ${r.notes.length?r.notes.join(', ')+', ':''}<b>${r.dmg} to your hero</b>.`);}});
+    M.turn++;M.actions=3;M.sel=null;M.mode=null;M.msg=`Turn ${M.turn}. `+(lines.length?lines.join(' '):'No Charge fired this turn; their timers ticked down.')+(M.enemy.hero<=0?' <b class="good">Enemy hero defeated.</b>':'');render();}
+  function after(){if(M.actions<=0)M.msg+=' No actions left: press End turn.';render();}
+  /* ---- layout ---- */
+  const top=()=>u*1.7;
+  function cellRect(ci,d){return{x:ci*u,y:top()+d*u};}
+  function render(){if(!M)return;const W=C*u,H=top()+D*u+u*0.5,ctx=setupCanvas(cv,W,H);ctx.fillStyle=TK.screen;ctx.fillRect(0,0,W,H);
+    // enemy strip
+    ctx.fillStyle=TK['screen-2'];ctx.fillRect(0,0,W,u*1.2);sbText(ctx,`ENEMY HERO ${Math.max(0,M.enemy.hero)} / 12`,6,u*0.28,TK.port,Math.round(u*0.27),'left');
+    for(let ci=0;ci<C;ci++){const x=ci*u,y=u*0.52;const w=M.enemy.walls[ci];if(w){ctx.fillStyle=TK.port;ctx.globalAlpha=0.55;ctx.fillRect(x+3,y,u-6,u*0.28);ctx.globalAlpha=1;sbText(ctx,'W'+w,x+u/2,y+u*0.14,TK['screen-ink'],Math.round(u*0.22));}
+      const ch=M.enemy.charges.find(c=>c.col===ci&&c.power>0&&c.timer>0);if(ch){sbText(ctx,`▼${ch.power} in ${ch.timer}`,x+u/2,y+u*0.5,TK.port,Math.round(u*0.22));}}
+    sbText(ctx,'FRONT ▲ faces the enemy',W/2,top()-u*0.22,TK['screen-muted'],Math.round(u*0.24));
+    // grid
+    ctx.fillStyle=TK.cell;ctx.fillRect(0,top(),W,D*u);ctx.strokeStyle=TK['cell-line'];ctx.lineWidth=1;for(let i=0;i<=C;i++){ctx.beginPath();ctx.moveTo(i*u+0.5,top());ctx.lineTo(i*u+0.5,top()+D*u);ctx.stroke();}for(let j=0;j<=D;j++){ctx.beginPath();ctx.moveTo(0,top()+j*u+0.5);ctx.lineTo(W,top()+j*u+0.5);ctx.stroke();}
+    M.cols.forEach((col,ci)=>{pieces(col).forEach(p=>{const d=col.indexOf(p),r=cellRect(ci,d),size=p.size||1;
+      if(p.t==='troop'){drawEmblem(ctx,r.x+u/2,r.y+u/2,u*0.62,p.c);}
+      else if(p.t==='wall'){ctx.fillStyle=TK.floor;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.2;ctx.beginPath();rr(ctx,r.x+3,r.y+u*0.2,u-6,u*0.6,3);ctx.fill();ctx.stroke();ctx.strokeStyle=TK['plate-ink'];ctx.globalAlpha=0.35;ctx.beginPath();ctx.moveTo(r.x+3,r.y+u*0.5);ctx.lineTo(r.x+u-3,r.y+u*0.5);ctx.moveTo(r.x+u/2,r.y+u*0.2);ctx.lineTo(r.x+u/2,r.y+u*0.5);ctx.stroke();ctx.globalAlpha=1;sbText(ctx,p.hp+'HP',r.x+u/2,r.y+u*0.66,TK['plate-ink'],Math.round(u*0.22));}
+      else if(p.t==='charge'){if(p.lance){drawBanner(ctx,r.x+u/2,r.y+size*u/2,Math.PI/2,u,ELITE.card,{emblems:false,outline:TK.accent,outlineW:3});}else{ctx.fillStyle=TK[EM_TOK[p.c]];ctx.globalAlpha=0.8;ctx.beginPath();rr(ctx,r.x+4,r.y+3,u-8,size*u-6,8);ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1.5;ctx.stroke();drawEmblem(ctx,r.x+u/2,r.y+u*0.5,u*0.5,p.c);}
+        const fs=Math.round(u*0.24);ctx.font='700 '+fs+'px '+FONT_M;const t1='⚔'+p.power,t2='in '+p.timer;ctx.fillStyle=TK.plate;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1;const yy=r.y+size*u-u*0.95;ctx.beginPath();rr(ctx,r.x+u*0.12,yy,u*0.76,u*0.72,4);ctx.fill();ctx.stroke();sbText(ctx,String(p.power),r.x+u/2,yy+u*0.2,TK['plate-ink'],Math.round(u*0.3));sbText(ctx,t2,r.x+u/2,yy+u*0.52,TK['plate-ink'],Math.round(u*0.2),'center',600);}
+      else if(p.t==='lance'){drawBanner(ctx,r.x+u/2,r.y+2*u,Math.PI/2,u,ELITE.card,{emblems:false,label:'LANCE'});drawEmblem(ctx,r.x+u/2,r.y+u*3.5,u*0.42,p.c);}});});
+    if(M.bulwark!=null){const w0=M.cols[M.bulwark][0];if(w0&&w0.t==='wall'){drawBanner(ctx,(M.bulwark+2)*u,top()+u/2,0,u,ELITE.card,{emblems:false,alpha:0.5,label:'BULWARK'});}}
+    if(M.sel){const r=cellRect(M.sel.col,M.sel.d);ctx.strokeStyle=TK.accent;ctx.lineWidth=3;ctx.strokeRect(r.x+2,r.y+2,u-4,u-4);}
+    if(M.mode){ctx.fillStyle=TK.accent;ctx.globalAlpha=0.12;ctx.fillRect(0,top(),W,D*u);ctx.globalAlpha=1;}
+    sbText(ctx,`YOUR HERO ${Math.max(0,M.hero)} / 12`,6,top()+D*u+u*0.26,TK.land,Math.round(u*0.27),'left');
+    $('ms-actions').textContent=M.actions;$('ms-turn').textContent=M.turn;$('ms-elites').textContent=M.elites;$('ms-status').innerHTML=M.msg;
+    const g=M.goals;$('ms-goals').innerHTML=[['charge','Make a Charge'],['wall','Make a Wall'],['elite','Deploy your elite'+(g.elite?': '+g.elite:'')],['fired','Fire a Charge (End turn)']].map(([k,t])=>`<span class="chip${g[k]?' met':''}" data-tip="${g[k]?'Done.':'Not done yet.'}">${g[k]?'✓ ':''}${t}</span>`).join(' ');
+    const sp=M.sel&&M.cols[M.sel.col][M.sel.d];$('ms-remove').disabled=!(sp&&sp.t==='troop')||M.actions<=0;
+    $('ms-lance').disabled=M.elites<=0||M.actions<=0;$('ms-bulwark').disabled=M.elites<=0||M.actions<=0;$('ms-lance').setAttribute('aria-pressed',M.mode==='lance');$('ms-bulwark').setAttribute('aria-pressed',M.mode==='bulwark');}
+  function cellAt(e){const W=C*u;const p=canvasPoint(cv,e,W);const ci=Math.floor(p.x/u),d=Math.floor((p.y-top())/u);if(ci<0||ci>=C||d<0||d>=D)return null;return{col:ci,d};}
+  function tap(c){if(!c)return;const col=M.cols[c.col],p=col[c.d];
+    if(M.mode){if(M.actions<=0){M.msg='No actions left: press End turn.';render();return;}deploy(M.mode,c.col);return;}
+    if(M.actions<=0&&!p){M.msg='No actions left: press End turn.';render();return;}
+    if(M.sel&&M.sel.col!==c.col){if(M.actions<=0){M.msg='No actions left: press End turn.';render();return;}const sc=M.cols[M.sel.col];if(M.sel.d!==sc.length-1){M.msg='Only the back troop of a column can move. Use Remove to delete this one.';render();return;}move(M.sel.col,c.col);return;}
+    if(p&&p.t==='troop'){if(M.sel&&M.sel.col===c.col&&M.sel.d===c.d){M.sel=null;M.msg='Troop put down.';render();return;}M.sel={col:c.col,d:c.d};
+      M.msg=c.d===col.length-1?`${EM_NAMES[p.c]} troop selected (back of column ${COLN[c.col]}). Tap another column to move it there, or press Remove.`:`${EM_NAMES[p.c]} troop selected. It is not at the back, so it can only be removed.`;render();return;}
+    if(p){M.msg=p.t==='wall'?`A wall with ${p.hp} HP. It absorbs that much damage from an enemy Charge in this column.`:p.t==='charge'?`A Charge of power ${p.power}. It fires down column ${COLN[c.col]} in ${p.timer} turn${p.timer===1?'':'s'}.`:`Your Lance. A ${EM_NAMES[p.c]} troop landing directly behind it turns it into a power 8 Charge.`;render();return;}
+    M.sel=null;M.msg='Tap a troop to select it.';render();}
+  function inspect(c){if(!c)return;const p=M.cols[c.col][c.d];
+    if(!p){openInspect({kicker:'Muster cell',title:`Column ${COLN[c.col]}, depth ${c.d+1}`,html:'<p>Empty. Pieces close up toward the front, so new troops land at the back.</p>'});return;}
+    if(p.t==='lance'||(p.t==='charge'&&p.lance)){openInspect({kicker:'Elite · your calling card',title:ELITE.card.name,card:ELITE.card,emblems:false,html:`<dl><dt>As Lance</dt><dd>Upright, 4 cells deep in one column. A ${EM_NAMES[ELITE.c]} troop behind it makes a power 8 Charge that fires in 3 turns.</dd><dt>As Bulwark</dt><dd>Flat, instant: walls with 3 HP across the front of 4 columns.</dd>${p.t==='charge'?`<dt>Now</dt><dd>Charge, power ${p.power}, fires in ${p.timer}.</dd>`:''}</dl>`});return;}
+    const html=p.t==='troop'?`<p>A ${EM_NAMES[p.c]} troop. Three of a colour stacked in a column make a Charge; three side by side make Walls.</p>`:p.t==='wall'?`<p>Wall, ${p.hp} HP${p.bul?' (from your Bulwark)':''}. One wall per column; more walls add HP, up to 4.</p>`:`<p>Charge, power ${p.power}. It fires down this column in ${p.timer} turn${p.timer===1?'':'s'}: enemy walls absorb first, enemy Charges clash, idle troops are jumped, the rest hits the hero.</p>`;
+    openInspect({kicker:'Muster piece',title:p.t==='troop'?EM_NAMES[p.c]+' troop':p.t==='wall'?'Wall':'Charge',html,draw:p.t==='troop'?(ctx,W,H)=>drawEmblem(ctx,W/2,H/2,Math.min(80,H*0.8),p.c):null,h:()=>100});}
+  pressable(cv,{onTap:e=>tap(cellAt(e)),onInspect:e=>inspect(cellAt(e))});
+  $('ms-remove').addEventListener('click',()=>{if(M.actions>0)remove();});
+  $('ms-lance').addEventListener('click',()=>{M.mode=M.mode==='lance'?null:'lance';M.sel=null;M.msg=M.mode?'Tap a column to stand your elite upright as a Lance (it needs 4 free cells at the back).':'Lance cancelled.';render();});
+  $('ms-bulwark').addEventListener('click',()=>{M.mode=M.mode==='bulwark'?null:'bulwark';M.sel=null;M.msg=M.mode?'Tap the leftmost of 4 columns to lay your elite flat as a Bulwark.':'Bulwark cancelled.';render();});
+  $('ms-end').addEventListener('click',endTurn);
+  $('ms-reset').addEventListener('click',()=>{M=fresh();render();});
+  M=fresh();ro($('ms-screen'),w=>{u=Math.max(34,Math.min(52,Math.floor((w-20)/C)));render();});redraws.push(()=>render());
+  window.__cct=window.__cct||{};window.__cct.ms={get:()=>M,move,remove:(col,d)=>{M.sel={col,d};remove();},deploy,endTurn};
+})();
+
+/* ---- Spell Rail storyboard ---- */
+(function(){const u=30,ox=(SW-8*30)/2,oy=78;const r=rng(909);const N=8;const board=[];for(let y=0;y<N;y++){board.push([]);for(let x=0;x<N;x++)board[y].push(r()<0.1?4:Math.floor(r()*4));}
+  // make a guaranteed swap: row 5 cols 2,3,5 = 1, col4 = 3 and (4,6)=1 -> swap (4,5)<->(4,6)
+  board[5][2]=1;board[5][3]=1;board[5][4]=3;board[6][4]=1;board[5][5]=2;board[5][1]=0;board[4][4]=2;
+  const RAILS=[{x:0,y:-1,h:1,o:1,card:CARDS[22]},{x:4,y:-1,h:1,o:0,card:CARDS[1]},{x:0,y:8,h:1,o:0,card:CARDS[5]},{x:4,y:8,h:1,o:1,card:CARDS[21]},{x:-1,y:0,h:0,o:0,card:CARDS[13]},{x:-1,y:4,h:0,o:1,card:CARDS[9]},{x:8,y:0,h:0,o:1,card:CARDS[17]},{x:8,y:4,h:0,o:0,card:CARDS[3]}];
+  function gem(ctx,x,y,k,al){const cx=ox+(x+0.5)*u,cy=oy+(y+0.5)*u;if(k<4)drawEmblem(ctx,cx,cy,u*0.7,k,al);else{ctx.save();ctx.globalAlpha=al==null?1:al;ctx.fillStyle=TK.bad;ctx.strokeStyle=TK['plate-ink'];ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,rr2=i%2?u*0.14:u*0.33;ctx.lineTo(cx+Math.cos(a)*rr2,cy+Math.sin(a)*rr2);}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}}
+  function rails(ctx,hl,charge){RAILS.forEach((R,i)=>{const cx=ox+(R.h?(R.x+2):(R.x+0.5))*u,cy=oy+(R.h?(R.y+0.5):(R.y+2))*u;drawBanner(ctx,cx,cy,R.h?0:Math.PI/2,u*0.92,R.card,{emblems:false,outline:TK[R.o?'port':'land'],outlineW:hl===i?4:2});
+      if(charge&&charge[i]!=null){ctx.fillStyle=TK.accent;const w=R.h?3.6*u*charge[i]:u*0.2,h=R.h?u*0.18:3.6*u*charge[i];ctx.fillRect(R.h?cx-1.8*u:cx+u*0.3,R.h?cy+u*0.32*(R.y<0?-1:1)*-1-2:cy-1.8*u,w,h);}});}
+  function base(ctx,o){o=o||{};sbHud(ctx,'SPELL RAIL',o.hud||'YOUR TURN · HERO 30 : 30');sbGrid(ctx,ox,oy,8,8,u);for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(o.skip&&o.skip(x,y))continue;gem(ctx,x,y,board[y][x]);}rails(ctx,o.hl,o.charge);
+    sbText(ctx,'Blue edge: your cards · orange edge: theirs',SW/2,oy+9*u+16,TK['screen-muted'],12,'center',500);}
+  const frames=[
+    {cap:'A shared 8×8 match board. Before the fight each player mounts 4 calling cards on the 8 rail slots, taking turns. Top and bottom rails hold cards flat, the sides hold them upright.',draw:ctx=>base(ctx)},
+    {cap:'Swap two neighbours to make a line of 3 or more. The matched emblems clear, you gain that mana, and new emblems fall in.',draw:(ctx,t)=>{const a=seg(t,0,0.45),cl=seg(t,0.5,0.9);base(ctx,{skip:(x,y)=>(x===4&&(y===5||y===6))||(y===5&&x>=2&&x<=4&&cl>0)});
+      gem(ctx,4,lerp(5,6,a),board[5][4]);gem(ctx,4,lerp(6,5,a),board[6][4]);if(cl>0){[2,3,4].forEach(x=>gem(ctx,x,5,1,1-cl));}if(t>0.85)sbPill(ctx,'+3 DISC MANA',ox+3.5*u,oy+4.4*u,TK.accent);}},
+    {cap:'A match in the 4 cells next to a card charges that card, whoever made it. Match beside your own banners, and avoid feeding theirs.',draw:(ctx,t)=>{base(ctx,{hl:5,charge:{5:0.25+0.5*t,0:0.4}});ctx.fillStyle=TK.accent;ctx.globalAlpha=0.22;for(let y=4;y<8;y++)ctx.fillRect(ox+1,oy+y*u+1,u-2,u-2);ctx.globalAlpha=1;}},
+    {cap:'When a card has its charge and its mana cost, cast it. <b>Sweep</b> clears the whole line the card borders, so where you mounted it decides what it can destroy.',draw:(ctx,t)=>{const cl=seg(t,0.2,0.8);base(ctx,{hl:4,skip:x=>x===0&&cl>0.5});if(cl<=0.5){ctx.fillStyle=TK.accent;ctx.globalAlpha=0.35*Math.sin(cl*Math.PI*2);ctx.fillRect(ox,oy,u,8*u);ctx.globalAlpha=1;}if(t>0.8)sbPill(ctx,'SWEEP: 8 CLEARED',ox+3*u,oy+2*u,TK.accent);}},
+    {cap:'A line of 4, or a chain cascade, gives an extra turn. Every swap also shapes the board your opponent sees next, so setting up their cascade is a blunder.',draw:(ctx,t)=>{base(ctx,{hud:'EXTRA TURN'});if(t>0.4)sbPill(ctx,'LINE OF 4: EXTRA TURN',SW/2,oy+4*u,TK.ok);}}
+  ];
+  storyboard(document.querySelector('[data-story="spellrail"]'),'spellrail','Spell Rail',frames);
+})();
+
+/* ---- Banner Front Campaign storyboard ---- */
+(function(){const kinds=['rifle','rifle','rifle','lancer','lancer','brawler','brawler','bastion','bastion','scout','scout','battle'];
+  function army(ctx,list,y0,uu,hl){list.forEach((k,i)=>{const col=i%3,row=Math.floor(i/3);bfDrawUnit(ctx,{kind:k,owner:0,r:0},28+col*98+2*uu*0.5+20,y0+row*(uu+10),uu,{ang:0,outline:hl===i?TK.accent:null,outlineW:3});});}
+  const frames=[
+    {cap:'A run starts with a 12-tile neutral army. Series sets you own can unlock different starting armies, all balanced against each other.',draw:ctx=>{sbHud(ctx,'FRONT CAMPAIGN','RUN 1 · BATTLE 1/8');sbText(ctx,'Your army',16,56,TK['screen-muted'],12,'left',600);army(ctx,kinds,82,20);}},
+    {cap:'Each stop is a Banner Front battle against a commander with one special rule, for example "its Guns ignore Shields on ends". It asks for different facings.',draw:(ctx,t)=>{sbHud(ctx,'FRONT CAMPAIGN','BATTLE 3/8');const uu=30,ox=(SW-8*uu)/2,oy=70;sbGrid(ctx,ox,oy,8,7,uu);
+      const ts=[bfTile(1,'hq',2,0,0),bfTile(0,'hq',2,6,0),bfTile(1,'rifle',1,2,2),bfTile(0,'bastion',2,4,0),bfTile(0,'lancer',6,1,1),bfTile(1,'scout',2,3,2)];ts.forEach(q=>{const c=bfCenter(q,uu);bfDrawUnit(ctx,q,ox+c.cx,oy+c.cy,uu);});
+      ctx.fillStyle=TK['screen-2'];ctx.fillRect(16,oy+7*uu+16,SW-32,52);sbText(ctx,'Commander rule',26,oy+7*uu+30,TK.port,12,'left');sbText(ctx,'Its Guns ignore Shields on ends.',26,oy+7*uu+52,TK['screen-ink'],14,'left',600);}},
+    {cap:'Win, then draft 1 of 3 new tiles. New neutral types add icons on new edge layouts: Shift moves a unit 1 cell, Mortar arcs over the first tile, Medic heals.',draw:(ctx,t)=>{sbHud(ctx,'FRONT CAMPAIGN','DRAFT');['Shift','Mortar','Medic'].forEach((n,i)=>{const y=90+i*80;const pick=i===1&&t>0.5;drawBanner(ctx,SW/2,y,0,40,[CARDS[2],CARDS[7],CARDS[19]][i],{emblems:false,outline:pick?TK.accent:TK['screen-line'],outlineW:pick?4:2,label:n.toUpperCase()});});
+      sbText(ctx,t>0.5?'Mortar joins your army.':'Pick one.',SW/2,340,TK['screen-ink'],14,'center',600);}},
+    {cap:'At camps you can remove a tile, so the army gets sharper as well as bigger.',draw:(ctx,t)=>{sbHud(ctx,'FRONT CAMPAIGN','CAMP');army(ctx,kinds.concat(['battle']),70,20,10);if(t>0.5){const i=10,col=i%3,row=Math.floor(i/3);sbX(ctx,28+col*98+40,70+row*30,10);sbPill(ctx,'REMOVED',SW/2,330,TK.bad);}}},
+    {cap:'A run is 8 battles, 40–60 minutes, with a save between battles. The run history is a gallery of the calling cards that carried you.',draw:(ctx,t)=>{sbHud(ctx,'FRONT CAMPAIGN','MAP');const pts=[[40,330],[90,270],[60,210],[130,170],[200,200],[240,140],[190,90],[270,70]];ctx.strokeStyle=TK['screen-line'];ctx.lineWidth=2;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.stroke();
+      const done=Math.round(lerp(2,5,t));pts.forEach(([x,y],i)=>{ctx.fillStyle=i<done?TK.ok:i===done?TK.accent:TK['screen-3'];ctx.beginPath();ctx.arc(x,y,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle=TK['screen-ink'];ctx.lineWidth=1.5;ctx.stroke();sbText(ctx,String(i+1),x,y+0.5,TK['plate-ink'],11);});}}
+  ];
+  storyboard(document.querySelector('[data-story="campaign"]'),'campaign','Banner Front Campaign',frames);
+})();
+
+/* ================= Part 2 comparison ================= */
+(function(){const rows=[
+  ['Banner Front','banner-front',['Lookahead +10–15 pts over greedy; 2-rotation AI wins ~20%','Yes','5','Fixed (48/45)','8–10 min','Yes, cheap (greedy and 1-ply)','4','Medium (needs the preview overlay)','Medium-high','Medium'],true],
+  ['Muster','muster',['Planner 75% vs greedy','Yes','4','Fine (50/45)','15–20 min (too long yet)','Yes, cheap','3','Medium (many small pieces)','Medium','Medium']],
+  ['Spell Rail','spell-rail',['Not simulated','Yes','2–3','Unknown','6–10 min','Yes, cheap','5','High','Medium','Medium']],
+  ['Front Campaign','front-campaign',['Inherits Banner Front','Banner Front + 1 paragraph','5','–','40–60 min run','Yes','4–5','Medium','Medium-high','High']],
+  ['Running Bond','running-bond',['Greedy beats random; perfect walls 35%→14%','Yes (simplest)','5','n/a','8–10 min','None','5','High','Medium-high','Low']]];
+  $('cmp2-body').innerHTML=rows.map(r=>`<tr class="${r[3]?'hl':''}"><td><a href="#${r[1]}"><b>${r[0]}</b></a></td>${r[2].map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('');
 })();
 })();
 </script>
