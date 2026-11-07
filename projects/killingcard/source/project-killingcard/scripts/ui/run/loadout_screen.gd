@@ -11,6 +11,9 @@
 # Author: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
 
+const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
+const RunGlyphs: GDScript = preload("res://scripts/ui/run/run_glyphs.gd")
+
 ## Killstreak ids picked so far, in pick order.
 var picked: Array[StringName] = []
 
@@ -136,9 +139,107 @@ func _fill_kit() -> void:
 			var detail: String = RunFlow.item_effect_line(item)
 			if detail != "":
 				kit.add_child(make_label(detail, &"HudSubtle", true))
+			# kc-v2-ui: the Operator's passive and once-per-match ability.
+			var k: Dictionary = RunV2Views.operator_kit(item.id, r)
+			if not k.is_empty():
+				var pl: Label = make_label("P · %s: %s" % [k.get("passive_name", ""), k.get("passive_text", "")], &"", true)
+				pl.name = "KitPassive"
+				kit.add_child(pl)
+				var al: Label = make_label("1x · %s: %s" % [k.get("ability_name", ""), k.get("ability_text", "")], &"HudAccent", true)
+				al.name = "KitAbility"
+				kit.add_child(al)
 		kit.add_child(make_label("DECK  ·  %d cards" % r.deck.size(), &"UnitName"))
 		kit.add_child(make_label(RunFlow.deck_summary(r), &"HudSubtle", true))
 	_kit.move_child(_squad_button, _kit.get_child_count() - 1)
+	_fill_v2(kit, r)
+
+
+# =============================================================================
+# kc-v2-ui: the run's boss (shown before you pick your Operator) and the modifiers with Threat
+# =============================================================================
+
+var _mod_tiles: Dictionary = {}
+var _threat_label: Label = null
+
+
+func _fill_v2(kit: VBoxContainer, r: RunProgress) -> void:
+	_mod_tiles.clear()
+	var bv: Variant = r.call(&"boss_view") if r != null and r.has_method(&"boss_view") else null
+	if bv is Dictionary and not (bv as Dictionary).is_empty():
+		var b: Dictionary = RunV2Views.boss_entry(bv)
+		var plate: PanelContainer = PanelContainer.new()
+		plate.name = "LoadoutBoss"
+		var sb: StyleBoxFlat = StyleBoxFlat.new()
+		sb.bg_color = Color("#2A1416")
+		sb.border_color = Color("#E5383B")
+		sb.set_border_width_all(2)
+		sb.set_content_margin_all(8)
+		plate.add_theme_stylebox_override(&"panel", sb)
+		var row: HBoxContainer = HBoxContainer.new()
+		row.add_theme_constant_override(&"separation", 8)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		plate.add_child(row)
+		row.add_child(RunGlyphs.make(&"node", &"boss", Color("#E5383B"), 36.0))
+		var col: VBoxContainer = VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(col)
+		for pair: Array in [["THIS RUN'S BOSS · %s" % String(b.get("name", "")).to_upper(), &"EnemyLabel"],
+				["%s: %s" % [b.get("rule_name", ""), b.get("rule_text", "")], &""]]:
+			var l: Label = make_label(pair[0], pair[1], true)
+			l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			col.add_child(l)
+		wire_inspect_control(plate, func() -> void: inspector().open((load("res://scripts/ui/run/map_v2_view.gd") as GDScript).call(&"boss_info", b)))
+		kit.add_child(plate)
+	var mods: Array = RunV2Views.modifier_options(r)
+	if mods.is_empty() or mods.all(func(m: Dictionary) -> bool: return bool(m.get("locked", false))) and RunV2Views.operator_choices(r).is_empty():
+		return
+	_threat_label = make_label("", &"HudAccent")
+	_threat_label.name = "ThreatLabel"
+	kit.add_child(_threat_label)
+	for m: Dictionary in mods:
+		var t: PickTile = make_tile()
+		var id: StringName = StringName(str(m.get("id", "")))
+		t.name = "Mod_%s" % id
+		t.min_height = 64.0
+		t.add_line("%s · THREAT %d" % [String(m.get("name", "")).to_upper(), int(m.get("threat", 0))], &"TileName")
+		t.add_line(String(m.get("text", "")), &"", true)
+		var locked: bool = bool(m.get("locked", false))
+		if locked:
+			t.add_status("LOCKED · %s" % String(m.get("unlock", "")).to_upper())
+			t.disabled = true
+		else:
+			t.add_status("TAP TO ADD")
+			t.set_selected(bool(m.get("on", false)), "ON · TAP TO REMOVE", "TAP TO ADD")
+		t.pressed.connect(func() -> void: toggle_modifier(id))
+		wire_inspect_button(t, func() -> void: inspector().open({"title": String(m.get("name", "")), "type": "modifier · threat %d" % int(m.get("threat", 0)),
+				"text": String(m.get("text", "")), "status": ("Locked: %s" % m.get("unlock", "")) if locked else "Optional. Winning at a Threat level unlocks cosmetics, never power."}))
+		kit.add_child(t)
+		_mod_tiles[id] = t
+	_threat_label.text = "MODIFIERS · THREAT %d" % RunV2Views.threat_of(mods)
+
+
+## kc-v2-ui: adds / removes a run modifier (RunState.set_modifiers). Returns "" or the refusal.
+func toggle_modifier(id: StringName) -> String:
+	var on: Array = []
+	for m: Dictionary in RunV2Views.modifier_options(run()):
+		if bool(m.get("on", false)):
+			on.append(StringName(str(m["id"])))
+	if on.has(id):
+		on.erase(id)
+	else:
+		on.append(id)
+	var err: String = RunV2Views.act(run(), &"set_modifiers", [on])
+	if err != "":
+		_error.text = sentence(err)
+		_error.show()
+		return err
+	_fill_kit()
+	return ""
+
+
+func get_modifier_tile(id: StringName) -> Button:
+	return _mod_tiles.get(id)
 
 
 ## kc-ui4: the STARTING SQUAD panel over the screen (Operator pick + starter deck).

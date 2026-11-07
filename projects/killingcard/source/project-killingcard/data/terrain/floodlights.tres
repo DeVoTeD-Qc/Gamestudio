@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"floodlights"
+display_name = "Floodlights"
+text = "Red dots here are shown face-up to both sides."
+detail = "No surprises here: commit where you have the better card."
+zone_control_only = false

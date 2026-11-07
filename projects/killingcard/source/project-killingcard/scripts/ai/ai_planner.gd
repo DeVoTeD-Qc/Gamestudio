@@ -537,7 +537,8 @@ func _apply(p: Plan, a: Dictionary) -> void:
 				_apply_effects(p, item.effects, z, a["target_uid"], a["dest_zone"])
 				p.supply -= item.supply_cost
 				p.used_items[item.id] = true
-				if item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
+				# kc-v2-impl: an Operator ability is kept like a killstreak (once per match).
+				if item.slot in [DataEnums.LoadoutSlot.KILLSTREAK, DataEnums.LoadoutSlot.ABILITY]:
 					var left: float = clampf(float(_view.round_cap - _view.round_number) / maxf(1.0, _view.round_cap), 0.0, 1.0)
 					p.flat -= personality.killstreak_keep_cost * left
 			if a["op_bound"]:

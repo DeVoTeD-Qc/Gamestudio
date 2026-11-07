@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"supply_truck"
+title = "Abandoned Supply Truck"
+scene = "A truck on its rims in a ditch, the tarp still lashed down."
+options = Array[Dictionary]([{
+"id": "crack",
+"label": "Crack the crates",
+"detail": "+3 REQ.",
+"effect": "req",
+"amount": 3,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "radio",
+"label": "Strip the radio",
+"detail": "Add a Comms Relay to your deck.",
+"effect": "add_card",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": "comms_relay"
+}, {
+"id": "leave",
+"label": "Drive on",
+"detail": "Nothing happens.",
+"effect": "nothing",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

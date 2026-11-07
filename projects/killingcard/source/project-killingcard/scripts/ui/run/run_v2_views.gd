@@ -85,14 +85,16 @@ const OPERATOR_KITS: Dictionary = {
 			"target": "the Operator's column", "needs_operator": true, "unlock": "Win a run."},
 }
 
+## Keys are the rules' boss ids (run-v2-api.md §6); &"meridian_six" etc. are accepted as aliases.
+const BOSS_ALIASES: Dictionary = {&"meridian_six": &"meridian", &"bulwark_prime": &"prime", &"hollow_choir": &"choir"}
 const BOSSES: Dictionary = {
-	&"meridian_six": {"name": "Meridian_Six", "crew": "Black Meridian · Spec Ops", "mode": "Zone Control",
+	&"meridian": {"name": "Meridian_Six", "crew": "Black Meridian · Spec Ops", "mode": "Zone Control",
 			"rule_name": "Reinforcements", "rule_text": "From round 4, gains 1 extra Supply every round.", "armor_bonus": 1,
 			"tip": "Win the Supply race before round 4, or hold out."},
-	&"bulwark_prime": {"name": "Bulwark Prime", "crew": "Anchor · Heavy", "mode": "Firefight",
+	&"prime": {"name": "Bulwark Prime", "crew": "Anchor · Heavy", "mode": "Firefight",
 			"rule_name": "Dug In", "rule_text": "Starts the match with a Mortar Pit in every column.", "armor_bonus": 1,
 			"tip": "Take a column to tear its pit down (Overrun)."},
-	&"hollow_choir": {"name": "The Hollow Choir", "crew": "Undead", "mode": "Zone Control",
+	&"choir": {"name": "The Hollow Choir", "crew": "Undead", "mode": "Zone Control",
 			"rule_name": "Horde", "rule_text": "From round 2, a 1/2 Shambler joins the back of its emptiest column every round. Shamblers don't hold ground; Pick and Flank ignore them.",
 			"armor_bonus": 2, "tip": "Fields and Pick still reach the real crew behind the Shamblers."},
 }
@@ -100,8 +102,8 @@ const BOSSES: Dictionary = {
 const MODIFIERS: Array[Dictionary] = [
 	{"id": &"hardcore", "name": "Hardcore", "threat": 3, "text": "Start with 2 tickets; you can never have more than 2.", "unlock": "Win a run."},
 	{"id": &"austerity", "name": "Austerity", "threat": 1, "text": "Supply Drops: take 1 card instead of 2.", "unlock": "Win a run with any 2 Operators."},
-	{"id": &"veteran_crews", "name": "Veteran Crews", "threat": 1, "text": "F4 and the elites get +1 Armor.", "unlock": "Beat all three bosses."},
-	{"id": &"fog_of_war", "name": "Fog of War", "threat": 1, "text": "No red dots for either side.", "unlock": "Win a run with Hardcore."},
+	{"id": &"veterans", "name": "Veteran Crews", "threat": 1, "text": "F4 and the elites get +1 Armor.", "unlock": "Beat all three bosses."},
+	{"id": &"fog", "name": "Fog of War", "threat": 1, "text": "No red dots for either side.", "unlock": "Win a run with Hardcore."},
 	{"id": &"hot_ground", "name": "Hot Ground", "threat": 0, "text": "Every fight has one more Terrain (max 2); the boss gets 1.", "unlock": "Play on all 10 Terrains."},
 ]
 
@@ -151,29 +153,56 @@ static func is_v2(run: Object) -> bool:
 static func map_view(run: Object) -> Dictionary:
 	if not override_map.is_empty():
 		return override_map
-	var v: Variant = _call(run, &"map_view")
-	return normalise_map(v) if v is Dictionary else {}
+	var v: Variant = _ask(run, &"map_view")
+	return normalise_map(v) if v is Dictionary and not (v as Dictionary).is_empty() else {}
 
 
 static func shop_view(run: Object) -> Dictionary:
 	if not override_shop.is_empty():
 		return override_shop
-	var v: Variant = _call(run, &"shop_view")
-	return v if v is Dictionary else {}
+	var v: Variant = _ask(run, &"shop_view")
+	return normalise_shop(v) if v is Dictionary else {}
 
 
 static func event_view(run: Object) -> Dictionary:
 	if not override_event.is_empty():
 		return override_event
-	var v: Variant = _call(run, &"event_view")
-	return v if v is Dictionary else {}
+	var v: Variant = _ask(run, &"event_view")
+	return normalise_event(v) if v is Dictionary else {}
 
 
+## Rest options [{id, title, result, ok, reason}] (+ the Drill rows in drill_rows()).
 static func rest_options(run: Object) -> Array:
 	if not override_rest.is_empty():
 		return override_rest
-	var v: Variant = _call(run, &"rest_options")
+	var v: Variant = _ask(run, &"rest_view")
+	if v is Dictionary:
+		var out: Array = []
+		for o: Dictionary in (v as Dictionary).get("options", []):
+			out.append({"id": StringName(str(o.get("id", ""))), "title": String(o.get("label", o.get("title", ""))),
+					"result": String(o.get("detail", o.get("result", ""))), "ok": bool(o.get("available", o.get("ok", true))),
+					"reason": String(o.get("reason", ""))})
+		return out
+	v = _ask(run, &"rest_options")
 	return v if v is Array else []
+
+
+## Drill candidates [{index, card_id}] (rest_view().drill.rows), [] = let the screen list the deck.
+static func drill_rows(run: Object) -> Array:
+	var v: Variant = _ask(run, &"rest_view") if override_rest.is_empty() else null
+	var out: Array = []
+	if v is Dictionary:
+		for r: Dictionary in ((v as Dictionary).get("drill", {}) as Dictionary).get("rows", []):
+			out.append({"index": int(r.get("index", -1)), "card_id": StringName(str(r.get("id", "")))})
+	return out
+
+
+## Asks RunState (the API's home) first, then the run itself.
+static func _ask(run: Object, method: StringName, args: Array = []) -> Variant:
+	var rs: Node = _run_state()
+	if rs != null and rs.has_method(method) and (run == null or rs.get("run") == run):
+		return rs.callv(method, args)
+	return _call(run, method, args)
 
 
 ## REQ held (0 when the run has none).
@@ -191,17 +220,50 @@ static func pending_screen(run: Object) -> StringName:
 
 
 ## Fills the defaults a screen relies on (ids, words, links) so a partial rules view still draws.
+## Accepts the rules' shape (run-v2-api.md §3: 0-based steps, per-node links, a fight {} with 3 Terrain
+## rows) and the sample shape (1-based steps, terrain already filtered).
 static func normalise_map(v: Dictionary) -> Dictionary:
 	var m: Dictionary = v.duplicate(true)
+	var api: bool = m.has("current") or m.has("max_tickets")
 	m["steps"] = int(m.get("steps", 9))
 	m["lanes"] = int(m.get("lanes", 3))
+	if api:
+		m["step"] = int(m.get("step", -1)) + 1
+		m["tickets_max"] = int(m.get("max_tickets", 3))
 	var nodes: Array = m.get("nodes", [])
+	var links: Array = []
 	for n: Dictionary in nodes:
 		var t: StringName = StringName(str(n.get("type", "fight")))
 		n["type"] = t
+		if api:
+			n["step"] = int(n.get("step", 0)) + 1
+			n["done"] = (bool(n.get("visited", false)) or bool(n.get("done", false))) and not bool(n.get("current", false))
+			var f: Dictionary = n.get("fight", {})
+			if not f.is_empty():
+				var crew: String = String(f.get("crew", ""))
+				if String(f.get("crew_label", "")) != "":
+					crew += " · " + String(f["crew_label"])
+				if int(f.get("armor_bonus", 0)) > 0:
+					crew += " +%d Armor" % int(f["armor_bonus"])
+				n["crew"] = crew
+				n["mode"] = String(f.get("mode_name", ""))
+				n["deck"] = f.get("deck", [])
+				n["terrain"] = (f.get("terrain", []) as Array).filter(func(x: Dictionary) -> bool: return String(x.get("id", "")) != "")
+				var label: String = String(f.get("label", ""))
+				n["fight"] = int(label.substr(1)) if label.begins_with("F") and label.substr(1).is_valid_int() else 0
+				n["fight_label"] = label
+			else:
+				n["fight"] = 0
+			var ev: Dictionary = n.get("event", {}) if n.get("event", {}) is Dictionary else {}
+			if not ev.is_empty():
+				n["event"] = String(ev.get("title", ""))
+			if String(n.get("name", "")) != "" and t != &"fight":
+				n["title"] = String(n["name"]).to_upper()
 		if not n.has("id"):
 			n["id"] = "s%dl%d" % [int(n.get("step", 0)), int(n.get("lane", 0))]
 		n["id"] = String(n["id"])
+		for to: Variant in n.get("links", []):
+			links.append([String(n["id"]), String(to)])
 		var words: Array = NODE_WORDS.get(t, ["", "", ""])
 		if String(n.get("title", "")) == "":
 			n["title"] = words[0]
@@ -214,7 +276,9 @@ static func normalise_map(v: Dictionary) -> Dictionary:
 			ts.append(terrain_entry(tv))
 		n["terrain"] = ts
 	m["nodes"] = nodes
-	if not m.has("links"):
+	if not links.is_empty():
+		m["links"] = links
+	elif not m.has("links"):
 		m["links"] = auto_links(nodes)
 	if m.get("boss", {}) is Dictionary and not (m.get("boss", {}) as Dictionary).is_empty():
 		m["boss"] = boss_entry(m["boss"])
@@ -222,7 +286,55 @@ static func normalise_map(v: Dictionary) -> Dictionary:
 	for mv: Variant in m.get("modifiers", []):
 		mods.append(modifier_entry(mv))
 	m["modifiers"] = mods
+	if not m.has("threat"):
+		m["threat"] = threat_of(mods)
 	return m
+
+
+## The rules' event view (run-v2-api.md §4) in the screen's words: options {index, label, result, ok,
+## reason, needs, choices, cards}.
+static func normalise_event(v: Dictionary) -> Dictionary:
+	var e: Dictionary = v.duplicate(true)
+	var opts: Array = []
+	for o: Dictionary in e.get("options", []):
+		var d: Dictionary = o.duplicate()
+		if not d.has("result"):
+			d["result"] = String(o.get("detail", ""))
+		if not d.has("ok"):
+			d["ok"] = bool(o.get("available", true))
+		opts.append(d)
+	e["options"] = opts
+	return e
+
+
+## The rules' shop view (run-v2-api.md §4) in the screen's words.
+static func normalise_shop(v: Dictionary) -> Dictionary:
+	if v.is_empty() or v.has("muster_price"):
+		return v
+	var s: Dictionary = {"req": int(v.get("req", 0)), "deck_size": int(v.get("deck_size", 0)), "floor": int(v.get("floor", 15)), "api": true}
+	var cards: Array = []
+	for c: Dictionary in v.get("cards", []):
+		cards.append({"index": int(c.get("slot", 0)), "card_id": StringName(str(c.get("id", ""))),
+				"kind": &"elite" if bool(c.get("elite", false)) else StringName(str(c.get("kind", "unit"))),
+				"price": int(c.get("price", 0)), "sold": bool(c.get("sold", false)), "can_buy": bool(c.get("can_buy", true)),
+				"reason": String(c.get("reason", ""))})
+	s["cards"] = cards
+	var mo: Dictionary = v.get("muster_out", {})
+	s["muster_price"] = int(mo.get("price", 2))
+	s["muster_can"] = bool(mo.get("can", true))
+	s["muster_reason"] = String(mo.get("reason", ""))
+	s["muster_candidates"] = (mo.get("rows", []) as Array).map(func(r: Dictionary) -> Dictionary: return {"index": int(r.get("index", -1)), "card_id": StringName(str(r.get("id", "")))})
+	var dc: Dictionary = v.get("discharge", {})
+	s["discharge_price"] = int(dc.get("price", 3))
+	s["discharge_can"] = bool(dc.get("can", true))
+	s["discharge_reason"] = String(dc.get("reason", ""))
+	s["discharge_candidates"] = (dc.get("rows", []) as Array).map(func(r: Dictionary) -> Dictionary: return {"index": int(r.get("index", -1)), "card_id": StringName(str(r.get("id", "")))})
+	var rs: Dictionary = v.get("restock", {})
+	s["restock_price"] = int(rs.get("price", 1))
+	s["restock_can"] = bool(rs.get("can", true))
+	s["restock_reason"] = String(rs.get("reason", ""))
+	s["perks"] = v.get("perks", [])
+	return s
 
 
 ## Links between neighbouring lanes at consecutive steps (the spec's movement rule, §2.1).
@@ -263,7 +375,12 @@ static func terrain_entry(v: Variant) -> Dictionary:
 static func boss_entry(v: Variant) -> Dictionary:
 	var e: Dictionary = (v as Dictionary).duplicate() if v is Dictionary else {"id": StringName(str(v))}
 	var id: StringName = StringName(str(e.get("id", "")))
+	id = BOSS_ALIASES.get(id, id)
 	var base: Dictionary = BOSSES.get(id, {})
+	if String(e.get("mode_name", "")) != "":
+		e["mode"] = e["mode_name"]
+	if String(e.get("rule_text", "")) == "" and String(e.get("text", "")) != "":
+		e["rule_text"] = e["text"]
 	for k: String in base:
 		if not e.has(k) or str(e[k]) == "":
 			e[k] = base[k]
@@ -280,25 +397,25 @@ static func modifier_entry(v: Variant) -> Dictionary:
 	return e
 
 
-## Modifier rows for the Loadout picker: the rules' list (RunProgress / RunState
-## modifier_options()) or the spec's five, all locked except the ones the profile has unlocked.
+## Modifier rows for the Loadout picker: RunState.modifier_choices() (run-v2-api.md §1:
+## {id, name, threat, text, unlocked, unlock_text, on}), else the spec's five, all locked.
 static func modifier_options(run: Object) -> Array:
-	var v: Variant = _call(run, &"modifier_options")
-	if v == null:
-		v = _call(_run_state(), &"modifier_options")
+	var v: Variant = _ask(run, &"modifier_choices")
 	if v is Array and not (v as Array).is_empty():
 		var out: Array = []
 		for e: Variant in v:
-			out.append(modifier_entry(e))
+			var d: Dictionary = modifier_entry(e)
+			if d.has("unlocked"):
+				d["locked"] = not bool(d["unlocked"])
+			if String(d.get("unlock_text", "")) != "":
+				d["unlock"] = d["unlock_text"]
+			out.append(d)
 		return out
 	var rows: Array = []
-	var on: Array = []
-	if run != null and &"modifiers" in run:
-		on = run.get("modifiers")
 	for m: Dictionary in MODIFIERS:
 		var e: Dictionary = m.duplicate()
-		e["on"] = on.has(m["id"])
-		e["locked"] = not e["on"]
+		e["on"] = false
+		e["locked"] = true
 		rows.append(e)
 	return rows
 
@@ -311,28 +428,24 @@ static func threat_of(mods: Array) -> int:
 	return t
 
 
-## The Operator kit of a Primary: passive and ability lines (LoadoutItem fields when they exist,
-## else the spec's text), locked state and its unlock condition.
-static func operator_kit(item: Resource) -> Dictionary:
-	if item == null:
+## Operator rows for the Operator select: RunState.operator_choices() (run-v2-api.md §1), else the
+## spec's kits over the run's Primary options. Each: {id, name, fp, armor, keywords, passive_name,
+## passive_text, ability_id, ability_name, ability_text, unlocked, unlock_text, selected}.
+static func operator_choices(run: Object) -> Array:
+	var v: Variant = _ask(run, &"operator_choices")
+	return v if v is Array else []
+
+
+## The kit of one Operator id: the rules' operator_choices row, else the spec's text.
+static func operator_kit(id: StringName, run: Object = null) -> Dictionary:
+	for row: Dictionary in operator_choices(run):
+		if StringName(str(row.get("id", ""))) == id:
+			return row
+	var k: Dictionary = OPERATOR_KITS.get(id, {})
+	if k.is_empty():
 		return {}
-	var id: StringName = StringName(str(item.get("id")))
-	var k: Dictionary = (OPERATOR_KITS.get(id, {}) as Dictionary).duplicate()
-	if &"passive_text" in item and str(item.get("passive_text")) != "":
-		k["passive"] = str(item.get("passive_text"))
-		if &"passive_name" in item and str(item.get("passive_name")) != "":
-			k["passive_name"] = str(item.get("passive_name"))
-	if &"ability" in item and item.get("ability") != null:
-		var ab: Resource = item.get("ability")
-		k["ability_id"] = StringName(str(ab.get("id")))
-		k["ability_name"] = str(ab.get("display_name"))
-		k["ability"] = str(ab.get("text"))
-	var rs: Node = _run_state()
-	var locked: Variant = _call(rs, &"is_operator_locked", [id])
-	if locked == null:
-		locked = _call(_settings(), &"is_operator_locked", [id])
-	k["locked"] = bool(locked) if locked != null else false
-	return k
+	return {"id": id, "passive_name": k["passive_name"], "passive_text": k["passive"], "ability_id": k["ability_id"],
+			"ability_name": k["ability_name"], "ability_text": k["ability"], "unlocked": true, "unlock_text": k["unlock"]}
 
 
 # =============================================================================
@@ -346,6 +459,8 @@ static func terrain_view(state: Object) -> Array:
 		return []
 	var out: Array = []
 	for t: Variant in v:
+		if t is Dictionary and String((t as Dictionary).get("id", "")) == "":
+			continue
 		out.append(terrain_entry(t))
 	return out
 
@@ -361,13 +476,45 @@ static func terrain_at(terrains: Array, zone: int) -> Dictionary:
 ## The side's Operator ability, normalised; {} when the side has none.
 static func ability_view(state: Object, side: int) -> Dictionary:
 	var v: Variant = _call(state, &"ability_view", [side])
+	if v == null or (v is Dictionary and (v as Dictionary).is_empty()):
+		v = _ability_fallback(state, side)
 	if not v is Dictionary or (v as Dictionary).is_empty():
 		return {}
 	var a: Dictionary = (v as Dictionary).duplicate()
 	a["id"] = StringName(str(a.get("id", "")))
-	a["used"] = bool(a.get("used", not bool(a.get("ready", false)) and String(a.get("reason", "")) == ""))
+	a["used"] = bool(a.get("used", false)) or StringName(str(a.get("code", ""))) == &"no_uses_left"
 	a["ready"] = bool(a.get("ready", false)) and not a["used"]
 	return a
+
+
+## While MatchState.ability_view() can fail (it returned null when the ability is not usable, see the
+## kc-v2-ui report), the button state is rebuilt from the kit view and check_use(); read only.
+static func _ability_fallback(state: Object, side: int) -> Dictionary:
+	if state == null or not state.has_method(&"operator_kit_view") or not state.has_method(&"check_use"):
+		return {}
+	var sides: Array = state.get("sides")
+	if side >= sides.size():
+		return {}
+	var s: Object = sides[side]
+	var ab: Resource = s.get("ability")
+	if ab == null:
+		return {}
+	var kit: Dictionary = state.call(&"operator_kit_view", side)
+	var check: Dictionary = state.call(&"check_use", side, ab.get("id"))
+	var used: bool = bool(s.call(&"ability_used")) if s.has_method(&"ability_used") else false
+	var code: StringName = StringName(str(check.get("code", "")))
+	var words: Dictionary = {&"operator_not_placed": "Deploy your Operator first", &"no_uses_left": "Used this match",
+			&"wrong_phase": "Use it in Deploy", &"already_ready": "You are READY"}
+	return {"id": ab.get("id"), "name": str(ab.get("display_name")), "text": str(ab.get("text")),
+			"operator_name": String(kit.get("operator_name", "")), "passive_name": String(kit.get("passive_name", "")),
+			"passive_text": String(kit.get("passive_text", "")), "ready": bool(check.get("ok", false)), "used": used,
+			"code": code, "reason": String(words.get(code, String(check.get("reason", "")))), "target": &"zone", "targets": []}
+
+
+## The Operator's passive + ability lines in a match (the "P" line), or {}.
+static func operator_kit_view(state: Object, side: int = 0) -> Dictionary:
+	var v: Variant = _call(state, &"operator_kit_view", [side])
+	return v if v is Dictionary else {}
 
 
 static func boss_view(state: Object) -> Dictionary:
@@ -488,8 +635,8 @@ static func sample_map_view(done_to: int = 2, current_lane: int = 0) -> Dictiona
 			n["done"] = true
 		nodes.append(n)
 	var m: Dictionary = {"steps": 9, "lanes": 3, "step": done_to, "lane": current_lane, "req": 7, "tickets": 3, "tickets_max": 3,
-			"nodes": nodes, "boss": {"id": &"meridian_six"},
-			"modifiers": [{"id": &"veteran_crews", "on": true}, {"id": &"hot_ground", "on": true}]}
+			"nodes": nodes, "boss": {"id": &"meridian"},
+			"modifiers": [{"id": &"veterans", "on": true}, {"id": &"hot_ground", "on": true}]}
 	m = normalise_map(m)
 	for n: Dictionary in m["nodes"]:
 		n["reachable"] = false
@@ -507,7 +654,9 @@ static func sample_shop_view() -> Dictionary:
 				{"index": 1, "card_id": &"suppressing_fire", "kind": &"tactic", "price": 3, "sold": false},
 				{"index": 2, "card_id": &"sniper_perch", "kind": &"field", "price": 3, "sold": false}],
 			"muster_price": 2, "discharge_price": 3, "restock_price": 1,
-			"perk": {"price": 6, "options": [&"grit", &"field_salvage"]}, "deck_size": 20, "floor": 15}
+			"perks": [{"index": 0, "id": &"grit", "name": "Grit", "text": "Your Operator survives its first lethal hit each match with 1 Armor.", "price": 6, "can_buy": true},
+				{"index": 1, "id": &"field_salvage", "name": "Field Salvage", "text": "When one of your Fields is torn down, draw a card.", "price": 6, "can_buy": true}],
+			"deck_size": 20, "floor": 15}
 
 
 static func sample_event_view() -> Dictionary:

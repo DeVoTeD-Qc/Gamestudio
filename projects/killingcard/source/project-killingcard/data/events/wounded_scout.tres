@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"wounded_scout"
+title = "Wounded Scout"
+scene = "A scout from another unit, leg splinted with a rifle sling."
+options = Array[Dictionary]([{
+"id": "escort",
+"label": "Escort him back",
+"detail": "Pay 2 REQ: +1 ticket (max 3).",
+"effect": "ticket",
+"amount": 1,
+"cost_req": 2,
+"needs": "",
+"card": ""
+}, {
+"id": "kit",
+"label": "Take his kit",
+"detail": "Add a Recon Specialist to your deck.",
+"effect": "add_card",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": "recon_specialist"
+}])
+first_run_only = false

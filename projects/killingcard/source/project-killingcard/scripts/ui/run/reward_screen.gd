@@ -202,6 +202,9 @@ func show_offer() -> void:
 	var kind: StringName = offer["kind"]
 	var pending: int = r.pending_offers.size()
 	_title.text = String(KIND_TITLES.get(kind, "REWARD"))
+	# kc-v2-ui: an elite win's drop is an Elite Cache (run-v2-api.md §7: offer.elite_cache).
+	if bool(offer.get("elite_cache", false)):
+		_title.text = "ELITE CACHE"
 	var picks: int = int(offer.get("picks", 1))
 	var taken: Array = offer.get("taken", [])
 	if kind in RewardOffers.CARD_DROPS and picks + taken.size() > 1:

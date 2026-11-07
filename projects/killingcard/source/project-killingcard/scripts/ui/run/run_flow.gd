@@ -78,8 +78,10 @@ static func playtest_log() -> Node:
 static func scene_for(run: RunProgress) -> String:
 	if run == null:
 		return SCENE_TITLE
-	# kc-v2-ui: a v2 run standing on an unfinished Event / Shop / Rest goes back to that screen.
-	match (load("res://scripts/ui/run/run_v2_views.gd") as GDScript).call(&"pending_screen", run):
+	# kc-v2-ui: the Run v2 phases (run-v2-api.md §2): the map, and the Event / Shop / Rest steps.
+	match StringName(str(run.phase)):
+		&"map":
+			return SCENE_RUN_MAP
 		&"event":
 			return SCENE_EVENT
 		&"shop":
@@ -172,6 +174,9 @@ static func _report(run: RunProgress, before: Dictionary, summary: Dictionary, s
 	var r: Dictionary = report_from_history(run, h, md)
 	r["tickets_before"] = int(before.get("tickets", run.tickets))
 	r["tickets_after"] = run.tickets
+	# kc-v2-ui: REQ earned and the elite flag (run-v2-api.md §7).
+	r["req_gained"] = int(summary.get("req_gained", -1))
+	r["elite"] = bool(summary.get("elite", false))
 	for key: String in ["best_streak", "player_eliminations", "enemy_eliminations"]:
 		if stats.has(key):
 			r[key] = int(stats[key])

@@ -18,6 +18,8 @@ func _init(p_kind: StringName = &"node", p_id: StringName = &"fight", p_color: C
 	id = p_id
 	color = p_color
 	custom_minimum_size = Vector2(px, px)
+	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 

@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_fx"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_li"]
+
+[sub_resource type="Resource" id="Resource_ab_flashbang_0"]
+script = ExtResource("1_fx")
+trigger = 0
+kind = 7
+target = 7
+zone_scope = 2
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 1
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_ab_flashbang_1"]
+script = ExtResource("1_fx")
+trigger = 0
+kind = 2
+target = 7
+zone_scope = 2
+target_class = 0
+amount = -2
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 1
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_li")
+id = &"ab_flashbang"
+display_name = "Flashbang"
+slot = 7
+text = "Once per match, free: enemies in your Operator's column lose First Shot and get -2 FP this round."
+supply_cost = 0
+uses_per_round = 0
+uses_per_match = 1
+streak_threshold = 0
+effects = Array[ExtResource("1_fx")]([SubResource("Resource_ab_flashbang_0"), SubResource("Resource_ab_flashbang_1")])

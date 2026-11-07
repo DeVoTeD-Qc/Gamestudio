@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="LoadoutItem" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=7 format=3]
 
 [ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="1_kmnr8"]
 [ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_fdwuw"]
 [ext_resource type="Resource" path="res://data/loadout/ceramic_lining.tres" id="3_d57gb"]
 [ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="4_cwk3l"]
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="5_1lnu3"]
+[ext_resource type="Resource" path="res://data/loadout/ab_flashbang.tres" id="9_ab"]
 
 [resource]
 script = ExtResource("5_1lnu3")
@@ -14,9 +15,13 @@ slot = 0
 text = "SMG. First Shot. May Rotate twice per round."
 weapon_class = 1
 operator_firepower = 2
-operator_armor = 6
+operator_armor = 7
 rotations_per_round = 2
 attachments = Array[Resource]([ExtResource("1_kmnr8"), ExtResource("2_fdwuw"), ExtResource("3_d57gb")])
+passive_name = "Run and Gun"
+passive_text = "Your Operator may Rotate twice per round."
+ability = ExtResource("9_ab")
+unlock = &"boss_reached"
 firepower_bonus = 0
 armor_bonus = 0
 first_shot = true

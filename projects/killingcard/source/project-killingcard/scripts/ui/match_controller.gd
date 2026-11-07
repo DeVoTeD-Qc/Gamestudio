@@ -62,6 +62,7 @@ const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const FightPlayback: GDScript = preload("res://scripts/ui/fight_playback.gd")
+const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
 const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
@@ -176,6 +177,10 @@ func _on_screen_ready() -> void:
 		_screen.item_inspected.connect(open_item_inspector, d)
 	if _screen.has_signal(&"trait_inspected"):
 		_screen.trait_inspected.connect(open_trait_inspector, d)
+	# kc-v2-ui: the Operator ability button.
+	if _screen.has_signal(&"ability_pressed"):
+		_screen.ability_pressed.connect(func() -> void: use_ability(), d)
+		_screen.ability_inspected.connect(open_ability_inspector, d)
 	_screen.undo_pressed.connect(undo, d)
 	# kc-cards-impl (H1): CANCEL on the docked preview, or a tap on the empty board, cancels.
 	if _screen.has_signal(&"dock_cancel_pressed"):
@@ -1281,9 +1286,73 @@ func _on_operator_tapped() -> void:
 
 
 func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
-	if state == null or _swallow_tap() or selection.is_empty():
+	if state == null or _swallow_tap():
+		return
+	# kc-v2-ui: a tap on a Terrain chip with nothing selected says its rule; with a card selected the
+	# chip is part of the column (play there).
+	if slot_side == &"terrain":
+		if selection.is_empty():
+			show_terrain_rule(zone)
+			return
+		slot_side = &"objective"
+	if selection.is_empty():
 		return
 	_pick_or_play(zone, slot_side, uid)
+
+
+## kc-v2-ui: the column's Terrain rule as a toast ("Smoke · column B: No Pick or Flank here ...").
+func show_terrain_rule(zone: int) -> void:
+	var t: Dictionary = RunV2Views.terrain_at(RunV2Views.terrain_view(state), zone)
+	if t.is_empty():
+		return
+	_screen.show_toast("%s · column %s: %s Both sides." % [t["name"], MatchSnapshot.ZONE_LABELS[zone], t["text"]])
+
+
+## kc-v2-ui: the Terrain inspector of a column.
+func _open_terrain(zone: int) -> void:
+	var t: Dictionary = RunV2Views.terrain_at(RunV2Views.terrain_view(state), zone)
+	if t.is_empty():
+		_open_objective(zone)
+		return
+	var info: Dictionary = (load("res://scripts/ui/run/map_v2_view.gd") as GDScript).call(&"terrain_info", t)
+	var held: String = String(t.get("held_by", ""))
+	if held != "":
+		info["status"] = "Held at the start of this round by %s." % ("you" if held == "player" else "the rival")
+	_open_info(info)
+
+
+## kc-v2-ui: the Operator ability button (run-v2-api.md §5): select it like a killstreak (targets,
+## preview, Undo); a spent or blocked ability only says why.
+func use_ability() -> Dictionary:
+	if state == null or _swallow_tap():
+		return {"ok": false, "code": &"busy", "reason": "", "data": {}}
+	var a: Dictionary = RunV2Views.ability_view(state, PLAYER)
+	if a.is_empty():
+		return {"ok": false, "code": &"no_ability", "reason": "", "data": {}}
+	if not bool(a.get("ready", false)):
+		var why: String = String(a.get("reason", "Used this match"))
+		_screen.show_toast("%s: %s." % [a.get("name", "Ability"), why.trim_suffix(".")])
+		return {"ok": false, "code": StringName(str(a.get("code", "not_ready"))), "reason": why, "data": {}}
+	if selection.get("kind") == &"item" and StringName(selection.get("id", &"")) == a["id"]:
+		clear_selection()
+		return {"ok": true, "code": &"deselected", "reason": "", "data": {}}
+	return select_item(a["id"])
+
+
+## kc-v2-ui: the ability's inspector (text, targets, once per match).
+func open_ability_inspector() -> void:
+	var a: Dictionary = RunV2Views.ability_view(state, PLAYER) if state != null else {}
+	var k: Dictionary = RunV2Views.operator_kit_view(state, PLAYER) if state != null else {}
+	if a.is_empty() and k.is_empty():
+		return
+	var target_words: Dictionary = {&"zone": "Pick a column.", &"enemy": "Pick an enemy unit in your Operator's column.", &"none": "No target."}
+	var state_line: String = "Ready: free, once per match." if bool(a.get("ready", false)) else ("Used this match." if bool(a.get("used", false)) else String(a.get("reason", "")))
+	_open_info({"title": String(a.get("name", k.get("ability_name", "Ability"))), "type": "operator ability · once per match · 0 supply",
+			"text": String(a.get("text", k.get("ability_text", ""))),
+			"keywords": [{"name": "Targets", "text": String(target_words.get(StringName(str(a.get("target", "zone"))), ""))},
+				{"name": "Passive · %s" % k.get("passive_name", ""), "text": String(k.get("passive_text", ""))},
+				{"name": "Once per match", "text": "Free, played in Deploy like a killstreak, with the same preview and UNDO. It isn't a killstreak: it needs no streak and isn't lost when your Operator goes down."}],
+			"status": state_line})
 
 
 ## kc-cards-impl (H1): the Y2+ face of the selected hand card for the tray's dock ({} = none).
@@ -1438,6 +1507,9 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 	match slot_side:
 		&"objective":
 			_open_objective(zone)
+			return
+		&"terrain":
+			_open_terrain(zone)
 			return
 		&"incoming":
 			_open_info({"banner_back": true, "title": "Incoming rival play",
@@ -1713,6 +1785,9 @@ func _open_objective(zone: int) -> void:
 	var control_text: String = {&"player": "You control it", &"enemy": "The rival controls it",
 			&"contested": "Even (contested): both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
 	var lines: PackedStringArray = []
+	var terr: Dictionary = lane.get("terrain", {})
+	if not terr.is_empty():
+		lines.append("Terrain · %s: %s (both sides)." % [terr["name"], String(terr["text"]).trim_suffix(".")])
 	lines.append("%s. A side controls a column when it has at least one unit there and the other side has none (a Holder breaks a tie)." % control_text)
 	lines.append("Column Firepower: yours %d, rival %d." % [int(lane["fp_player"]), int(lane["fp_enemy"])])
 	for key: String in ["player", "enemy"]:
@@ -1791,6 +1866,16 @@ func _open_operator(side: int) -> void:
 		where += " Placing it costs %d Supply (round 1 and every respawn)%s." % [cost,
 				", you have %d: not enough now" % s.supply if side == PLAYER and s.operator_can_deploy and cost > s.supply else ""]
 	var op_lines: Array[Dictionary] = CardInfo.operator_keywords(op)
+	# kc-v2-ui: the Operator kit (run-v2.md §7): its passive and its once-per-match ability.
+	var kit: Dictionary = RunV2Views.operator_kit_view(state, side)
+	if not kit.is_empty() and String(kit.get("passive_name", "")) != "":
+		op_lines.append({"name": "P · Passive · %s" % kit["passive_name"], "text": String(kit.get("passive_text", ""))})
+	if not kit.is_empty() and String(kit.get("ability_name", "")) != "":
+		var ab: Dictionary = RunV2Views.ability_view(state, side)
+		var ab_state: String = "ready" if bool(ab.get("ready", false)) else ("used" if bool(ab.get("used", false)) else String(ab.get("reason", "not now")).to_lower())
+		op_lines.append({"name": "Ability · %s (once per match, free, %s)" % [kit["ability_name"], ab_state], "text": String(kit.get("ability_text", ""))})
+	if not kit.is_empty() and not bool(kit.get("kit_on", true)):
+		op_lines.append({"name": "Kit off this fight", "text": "The passive and the ability switch on from your second fight."})
 	op_lines.append({"name": "Not from the deck", "text": "Your Operator is always with you: it is never drawn, never discarded, and its card stays pinned at the start of your hand."})
 	if op.is_on_board():
 		op_lines.append({"name": "Firepower now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
@@ -1832,6 +1917,7 @@ func _flush_events() -> void:
 			continue
 		if e["type"] == RulesEvent.UNIT_ELIMINATED:
 			_add_killfeed(e)
+		_add_v2_line(e)
 		if emit_to_event_bus:
 			_emit(e)
 
@@ -1842,6 +1928,43 @@ func _add_killfeed(e: Dictionary) -> void:
 	var victim: String = _name_of(int(e.get("victim_uid", -1))).to_upper()
 	var text: String = "%s  >  %s" % [killer, victim] if killer != "" else "%s DOWN" % victim
 	killfeed.push_front({"text": text, "side": by_side if by_side != &"" else &"enemy"})
+	if killfeed.size() > KILLFEED_KEEP:
+		killfeed.resize(KILLFEED_KEEP)
+
+
+## kc-v2-ui: Terrain triggers, boss rules and Operator abilities go in the log in words, so the
+## player always knows what just happened ("Minefield: Grunt takes 1", "Kestrel: Dig In, column B").
+func _add_v2_line(e: Dictionary) -> void:
+	var t: String = String(e.get("type", ""))
+	var text: String = ""
+	var side: StringName = StringName(str(e.get("side", "")))
+	match t:
+		"terrain_triggered":
+			text = String(e.get("what", ""))
+			if text == "":
+				var td: Dictionary = RunV2Views.terrain_entry(StringName(str(e.get("terrain", ""))))
+				text = "%s: %s" % [td["name"], _name_of(int(e.get("uid", -1)))]
+		"boss_rule_triggered":
+			text = String(e.get("what", ""))
+			if text == "":
+				text = "Boss rule: %s" % String(e.get("rule", "")).capitalize()
+			side = &"enemy"
+		"item_revealed", "item_used":
+			if not bool(e.get("ability", false)) or (t == "item_used" and e.has("private_to")):
+				return
+			if t == "item_used" and side != &"player" and side != &"":
+				return
+			var item: LoadoutItem = state.find_item(PLAYER if side != &"enemy" else ENEMY, StringName(str(e.get("item_id", ""))))
+			var op: String = ""
+			var s2: RulesSide = state.sides[PLAYER if side != &"enemy" else ENEMY]
+			if s2.operator_unit != null:
+				op = MatchSnapshot.unit_name(s2.operator_unit, s2)
+			var z: int = int(e.get("zone", -1))
+			text = "%s: %s%s" % [op if op != "" else "Operator", item.display_name if item != null else "Ability",
+					(", " + ZONE_WORDS[z]) if z >= 0 and z < ZONE_WORDS.size() else ""]
+	if text == "":
+		return
+	killfeed.push_front({"text": text.to_upper(), "side": side if side != &"" else &"player", "kind": StringName(t)})
 	if killfeed.size() > KILLFEED_KEEP:
 		killfeed.resize(KILLFEED_KEEP)
 

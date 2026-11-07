@@ -154,6 +154,7 @@ func points_for_round(state, side: int, control: Array) -> int:
 			for c: int in control:
 				if c == side:
 					n += 1
+			n += TerrainRules.extra_points(state, side, control)  # kc-v2-impl: Hot Zone
 		ScoreSource.ELIMINATIONS:
 			var me: StringName = state.side_name(side)
 			for rec: Dictionary in state.round_eliminations:

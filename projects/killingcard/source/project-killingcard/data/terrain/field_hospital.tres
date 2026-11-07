@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"field_hospital"
+display_name = "Field Hospital"
+text = "End of round: each side's most damaged unit here heals 1."
+detail = "Long fights favour the side with the bigger Armor pool."
+zone_control_only = false

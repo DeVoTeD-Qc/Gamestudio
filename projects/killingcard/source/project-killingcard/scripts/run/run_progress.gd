@@ -63,14 +63,23 @@ extends RefCounted
 ## 6 = kc-no-training: no copy levels. v1-v5 saves load with deck_levels, offer level / levels and
 ## honor roll levels dropped, open Promotion offers removed and a Regroup rebuilt from the deck; every
 ## copy plays with its full keywords. A trait that is not one single trait makes the save invalid.
-const SAVE_VERSION: int = 6
+## 7 = kc-v2-impl (Run v2): the map (nodes, current, visited, done), REQ, modifiers, the boss, the first-run
+## flag, the open shop's stock, offers' ladder / elite_cache. v1-v6 saves load unchanged as old-ladder runs,
+## or, with from_dict(..., {map = true}) (RunState does), continue on a first-run-shaped map at their fight.
+const SAVE_VERSION: int = 7
 const OLDEST_SAVE_VERSION: int = 1
 
 const PHASE_LOADOUT: StringName = &"loadout"
 const PHASE_MATCH: StringName = &"match"
 const PHASE_REWARDS: StringName = &"rewards"
 const PHASE_ENDED: StringName = &"ended"
-const PHASES: Array[StringName] = [PHASE_LOADOUT, PHASE_MATCH, PHASE_REWARDS, PHASE_ENDED]
+## kc-v2-impl map phases: choosing the next node, and on an event / shop / rest node.
+const PHASE_MAP: StringName = &"map"
+const PHASE_EVENT: StringName = &"event"
+const PHASE_SHOP: StringName = &"shop"
+const PHASE_REST: StringName = &"rest"
+const PHASES: Array[StringName] = [PHASE_LOADOUT, PHASE_MATCH, PHASE_REWARDS, PHASE_ENDED, PHASE_MAP, PHASE_EVENT,
+		PHASE_SHOP, PHASE_REST]
 
 const RESULT_VICTORY: StringName = &"victory"
 const RESULT_DEFEAT: StringName = &"defeat"
@@ -129,6 +138,21 @@ var result: StringName = &""
 var end_reason: StringName = &""
 ## Seconds of play, summed across sessions (RunState adds to it).
 var play_time_s: float = 0.0
+
+# --- kc-v2-impl: the Run v2 map (null map = the old linear ladder of config.matches) ---------------
+var map: RunMap = null
+## Requisition: the one run currency (shops; events).
+var req: int = 0
+## RunModifiers ids picked for this run.
+var modifiers: Array[StringName] = []
+## The run's boss (RunMatchData.boss_id in config.bosses), shown from step 1.
+var boss: StringName = &""
+## The fixed first-run map (progressive reveal).
+var first_run: bool = false
+## The open shop's stock (RunShop): {rung, cards: [{id, trait, art, sold}], perks: [ids], restocks}.
+var shop: Dictionary = {}
+## Range Day "Drills": extra cards on the next Supply Drop.
+var next_drop_extra: int = 0
 
 ## id -> Resource for everything a run can own (built from the config).
 var _index: Dictionary = {}
@@ -223,7 +247,7 @@ func set_primary(id: StringName) -> String:
 func begin() -> String:
 	if phase != PHASE_LOADOUT:
 		return "the run has already begun"
-	phase = PHASE_MATCH
+	phase = _idle_phase()
 	return ""
 
 
@@ -242,12 +266,16 @@ func match_number() -> int:
 
 ## The current match slot (null once past the last match).
 func current_match() -> RunMatchData:
+	if map != null:
+		return node_match_data(current_map_node())
 	if match_index < 0 or match_index >= config.matches.size():
 		return null
 	return config.matches[match_index]
 
 
 func is_rival_match() -> bool:
+	if map != null:
+		return current_map_node().get("type", &"") == RunMap.TYPE_BOSS
 	var md: RunMatchData = current_match()
 	return md != null and (md.is_rival or match_index == config.matches.size() - 1)
 
@@ -268,6 +296,7 @@ func player_setup() -> SideSetup:
 		s.deck_arts.append(art_of(i))
 	s.doctrine = doctrine
 	s.primary = _index.get(primary) as LoadoutItem
+	s.operator_kit = operator_kit_on()  # kc-v2-impl
 	for id: StringName in attachments:
 		s.attachments.append(_index[id] as LoadoutItem)
 	for id: StringName in perks:
@@ -293,7 +322,9 @@ func create_match(hooks: MatchHooks = null) -> MatchState:
 		return null
 	var h: MatchHooks = hooks if hooks != null else MatchHooks.new()
 	h.mode_rules = ModeRules.create(md.mode, config)
-	return MatchState.new(config, md.map, player_setup(), enemy_setup(), match_seed(), h)
+	var m: MatchState = MatchState.new(config, md.map, player_setup(), enemy_setup(), match_seed(), h)
+	configure_match(m)  # kc-v2-impl: Terrain, boss rule, modifiers
+	return m
 
 
 # =============================================================================
@@ -316,6 +347,8 @@ func record_result(match_result: StringName, outcome: Dictionary = {}) -> Dictio
 		return {"ok": false, "reason": "no match in progress"}
 	if match_result not in MATCH_RESULTS:
 		return {"ok": false, "reason": "unknown match result '%s'" % match_result}
+	if map != null:
+		return _record_map_result(match_result, outcome)
 	var md: RunMatchData = current_match()
 	var n: int = match_number()
 	var rival: bool = is_rival_match()
@@ -348,7 +381,7 @@ func record_result(match_result: StringName, outcome: Dictionary = {}) -> Dictio
 				_end(RESULT_DEFEAT, END_RIVAL_DRAW)
 	else:
 		_queue_offers(n, match_result == &"player")
-		phase = PHASE_REWARDS if not pending_offers.is_empty() else PHASE_MATCH
+		phase = PHASE_REWARDS if not pending_offers.is_empty() else _idle_phase()
 	return {
 		"ok": true, "reason": "", "ticket_lost": lost, "run_ended": is_over(),
 		"offers": pending_offers.duplicate(true),
@@ -357,25 +390,43 @@ func record_result(match_result: StringName, outcome: Dictionary = {}) -> Dictio
 
 ## Order after a match: Salvage or Regroup (after a loss), Supply Drop (after a win), Muster out
 ## (after either, from muster_out_from_match), Doctrine, weapon level, Perk offer.
-func _queue_offers(n: int, won: bool) -> void:
+## kc-v2-impl: `ladder` = the fight number whose rung / drop size / Muster out / weapon level / Perk
+## the offers follow (-1 = n, the old ladder); an `elite` win is an Elite Cache (its ladder is already
+## one rung ahead) with Muster out and no weapon level / Perk. Map runs: Range Day's Drills add cards to
+## the drop; Austerity takes 1 card instead of 2.
+func _queue_offers(n: int, won: bool, ladder: int = -1, elite: bool = false) -> void:
 	var syn: bool = config.synergy_offers
 	var lost: bool = not won and _last_result() == &"enemy"
 	var dropped: bool = false
+	var L: int = n if ladder < 0 else ladder
 	if lost and config.salvage_after_loss:
-		dropped = _add_drop(RewardOffers.KIND_SALVAGE, n, config.salvage_choices, 1, "salvage")
+		dropped = _add_drop(RewardOffers.KIND_SALVAGE, n, config.salvage_choices, 1, "salvage", config.rung_after(L))
 	elif syn and lost and can_retire():
 		_add_synergy_offer(RewardOffers.KIND_REGROUP, n)
 	if won:
-		var size: Vector2i = config.drop_size_after(n)
-		dropped = _add_drop(RewardOffers.KIND_SUPPLY_DROP, n, size.x, size.y, "supply")
+		var size: Vector2i = config.drop_size_after(L)
+		if map != null:
+			size.x += next_drop_extra
+			next_drop_extra = 0
+			if RunModifiers.AUSTERITY in modifiers:
+				size.y = mini(size.y, 1)
+		dropped = _add_drop(RewardOffers.KIND_SUPPLY_DROP, n, size.x, size.y, "supply", config.rung_after(L))
 		if dropped and syn:
 			pending_offers.back()["retire"] = true
-	if dropped and config.muster_out_after(n):
+		if dropped and elite:
+			pending_offers.back()["elite_cache"] = true
+	if dropped and map != null:
+		pending_offers.back()["ladder"] = L
+	if dropped and config.muster_out_after(L):
 		pending_offers.append({"kind": RewardOffers.KIND_MUSTER_OUT, "match": n,
 				"options": standard_issue_ids(), "count": config.muster_out_extra})
 	if syn and n in config.doctrine_after_matches and doctrine == &"":
 		_add_offer(RewardOffers.KIND_DOCTRINE, n,
 				RewardOffers.doctrine(_doctrine_best(), config.doctrine_choices, _rng("doctrine", n)))
+	if elite:
+		_refresh_current()
+		return
+	n = L if map != null else n
 	if n in config.weapon_level_after_matches:
 		weapon_level += 1
 		_add_offer(RewardOffers.KIND_ATTACHMENT, n,
@@ -388,14 +439,14 @@ func _queue_offers(n: int, won: bool) -> void:
 ## kc-onboard: a card drop (Supply Drop or Salvage) of `choices` cards from the rung after match n,
 ## `picks` to take; slot 1 on the main trait (supply_drop_on_trait). The RNG
 ## streams are "<tag>_drop" / "<tag>_art" ("supply_drop" / "supply_art" as before). True if added.
-func _add_drop(kind: StringName, n: int, choices: int, picks: int, tag: String) -> bool:
+func _add_drop(kind: StringName, n: int, choices: int, picks: int, tag: String, rung: int = -1) -> bool:
 	var main: StringName = main_trait() if config.supply_drop_on_trait else &""
-	var cards: Array[StringName] = RewardOffers.supply_drop_on_trait(config, main, _rng(tag + "_drop", n),
-			config.rung_after(n), choices)
+	var r: int = config.rung_after(n) if rung < 0 else rung
+	var cards: Array[StringName] = RewardOffers.supply_drop_on_trait(config, main, _rng(tag + "_drop", n), r, choices)
 	if cards.is_empty():
 		return false
 	var drop: Dictionary = {"kind": kind, "match": n, "options": cards, "picks": mini(picks, cards.size()),
-			"taken": [] as Array[Dictionary], "rung": config.rung_after(n)}
+			"taken": [] as Array[Dictionary], "rung": r}
 	var on: bool = main != &"" and (_index.get(cards[0]) as CardData).can_carry(main)
 	if on:
 		drop["on_trait"] = main
@@ -671,7 +722,7 @@ func _pop_offer() -> void:
 	pending_offers.remove_at(0)
 	_refresh_current()
 	if pending_offers.is_empty():
-		phase = PHASE_MATCH
+		phase = _idle_phase()
 
 
 ## A Regroup / Muster out that became current lists the deck as it is now (an earlier
@@ -692,7 +743,7 @@ func _refresh_current() -> void:
 			return
 		pending_offers.remove_at(0)
 	if pending_offers.is_empty() and phase == PHASE_REWARDS:
-		phase = PHASE_MATCH
+		phase = _idle_phase()
 
 
 # =============================================================================
@@ -994,7 +1045,9 @@ func to_dict() -> Dictionary:
 			od["on_trait"] = String(o["on_trait"])
 		if o.get("retire", false):
 			od["retire"] = true
-		for key: String in ["picks", "rung", "count"]:
+		if o.get("elite_cache", false):
+			od["elite_cache"] = true
+		for key: String in ["picks", "rung", "count", "ladder"]:
 			if o.has(key):
 				od[key] = int(o[key])
 		if o.has("taken"):
@@ -1033,18 +1086,20 @@ func to_dict() -> Dictionary:
 		"play_time_s": play_time_s,
 		"art_draws": art_draws,
 		"mustered_out": mustered_out,
+		"v2": _map_to_dict(),
 	}
 
 
 ## Rebuilds a run from to_dict() data (e.g. parsed JSON). Returns {run, error}:
 ## run = null and error = why, if the data is not a valid save for this config.
-static func from_dict(p_config: RunConfig, d: Variant) -> Dictionary:
+## opts: {map: bool} = a v1-v6 save continues on a first-run-shaped map (RunState passes it).
+static func from_dict(p_config: RunConfig, d: Variant, opts: Dictionary = {}) -> Dictionary:
 	var r: RunProgress = RunProgress.new()
-	var err: String = r._load(p_config, d)
+	var err: String = r._load(p_config, d, bool(opts.get("map", false)))
 	return {"run": null if err != "" else r, "error": err}
 
 
-func _load(p_config: RunConfig, d: Variant) -> String:
+func _load(p_config: RunConfig, d: Variant, migrate_to_map: bool = false) -> String:
 	if typeof(d) != TYPE_DICTIONARY:
 		return "save is not an object"
 	var v: Variant = d.get("version")
@@ -1070,11 +1125,15 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 	match_index = int(d["match_index"])
 	tickets = int(d["tickets"])
 	weapon_level = int(d["weapon_level"])
-	if match_index < 0 or match_index > config.matches.size():
+	var v2_data: Variant = d.get("v2", {})
+	var has_map: bool = int(v) >= 7 and typeof(v2_data) == TYPE_DICTIONARY and not (v2_data as Dictionary).is_empty()
+	if phase in [PHASE_MAP, PHASE_EVENT, PHASE_SHOP, PHASE_REST] and not has_map:
+		return "phase %s needs a map" % phase
+	if match_index < 0 or match_index > (16 if has_map else config.matches.size()):
 		return "match_index %d out of range" % match_index
 	if tickets < 0 or tickets > config.tickets:
 		return "tickets %d out of range" % tickets
-	if phase in [PHASE_MATCH, PHASE_REWARDS] and (match_index >= config.matches.size() or tickets == 0):
+	if phase in [PHASE_MATCH, PHASE_REWARDS] and ((match_index >= config.matches.size() and not has_map) or tickets == 0):
 		return "phase %s but the run is over" % phase
 	var e: String = _read_ids(d.get("deck"), deck, CardData, "deck")
 	if e != "":
@@ -1168,9 +1227,11 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 			offer["retire"] = true
 		# kc-onboard (v4): drop picks / taken / rung, Muster out count. Older saves: 1 pick. (Re-issue
 		# flags of v3 saves and the v4-v5 drop `level` are dropped: head Z1, kc-no-training.)
-		for key: String in ["picks", "rung", "count"]:
+		for key: String in ["picks", "rung", "count", "ladder"]:
 			if typeof(o.get(key)) in [TYPE_INT, TYPE_FLOAT]:
 				offer[key] = int(o[key])
+		if bool(o.get("elite_cache", false)):
+			offer["elite_cache"] = true
 		if kind in RewardOffers.CARD_DROPS:
 			if not offer.has("picks"):
 				offer["picks"] = 1
@@ -1205,6 +1266,12 @@ func _load(p_config: RunConfig, d: Variant) -> String:
 	end_reason = StringName(str(d.get("end_reason", "")))
 	if (phase == PHASE_ENDED) != (result in [RESULT_VICTORY, RESULT_DEFEAT]):
 		return "result '%s' doesn't match phase %s" % [result, phase]
+	if has_map:
+		var me: String = _map_from_dict(v2_data)
+		if me != "":
+			return me
+	elif migrate_to_map and not config.bosses.is_empty() and config.matches.size() >= 4:
+		_migrate_to_map()
 	play_time_s = float(d.get("play_time_s", 0.0))
 	art_draws = int(d.get("art_draws", 0)) if typeof(d.get("art_draws", 0)) in [TYPE_INT, TYPE_FLOAT] else 0
 	mustered_out = int(d.get("mustered_out", 0)) if typeof(d.get("mustered_out", 0)) in [TYPE_INT, TYPE_FLOAT] else 0
@@ -1255,6 +1322,495 @@ static func _normalise_history(entry: Dictionary) -> Dictionary:
 # =============================================================================
 # Internals
 # =============================================================================
+
+# =============================================================================
+# kc-v2-impl: the Run v2 map (run-v2.md; API: documentation/technical/run-v2-api.md)
+# =============================================================================
+
+## A new v2 map run (loadout phase). opts: {first_run: bool, boss: StringName (&"" = the first boss),
+## modifiers: Array}. The map is generated now (the Loadout screen shows the boss) and rebuilt by
+## set_modifiers().
+static func create_map_run(p_config: RunConfig, p_seed: int, opts: Dictionary = {}) -> RunProgress:
+	var r: RunProgress = create(p_config, p_seed)
+	r.first_run = bool(opts.get("first_run", false))
+	r.boss = StringName(opts.get("boss", &""))
+	if r.boss == &"" and not p_config.bosses.is_empty():
+		r.boss = p_config.bosses[0].boss_id
+	if r.first_run:
+		r.boss = p_config.bosses[0].boss_id if not p_config.bosses.is_empty() else r.boss
+	r.req = p_config.req_start
+	for m: Variant in opts.get("modifiers", []):
+		if StringName(m) in RunModifiers.ALL and not r.first_run:
+			r.modifiers.append(StringName(m))
+	r.tickets = r.max_tickets()
+	r.map = RunMap.generate(p_config, p_seed, r.first_run, r.modifiers)
+	return r
+
+
+func is_map_run() -> bool:
+	return map != null
+
+
+## Tickets you can have at most (Hardcore: 2).
+func max_tickets() -> int:
+	return mini(config.tickets, 2) if RunModifiers.HARDCORE in modifiers else config.tickets
+
+
+func threat() -> int:
+	return RunModifiers.threat_of(modifiers)
+
+
+## Loadout only: the run's modifiers (RunModifiers ids). `allowed` = ids the profile has unlocked
+## (null = all). Rebuilds the map (Hot Ground / Veteran Crews change it). "" or the reason.
+func set_modifiers(ids: Array, allowed: Variant = null) -> String:
+	if phase != PHASE_LOADOUT:
+		return "modifiers are picked before the run"
+	if map == null:
+		return "this run has no map"
+	if first_run and not ids.is_empty():
+		return "the first run has no modifiers"
+	var list: Array[StringName] = []
+	for raw: Variant in ids:
+		var id: StringName = StringName(raw)
+		if id not in RunModifiers.ALL:
+			return "unknown modifier '%s'" % id
+		if allowed != null and id not in allowed:
+			return "%s is locked" % RunModifiers.name_of(id)
+		if id not in list:
+			list.append(id)
+	modifiers = list
+	tickets = max_tickets()
+	map = RunMap.generate(config, seed_value, first_run, modifiers)
+	return ""
+
+
+## The boss slot of this run (a RunMatchData from config.bosses), or null.
+func boss_data() -> RunMatchData:
+	for b: RunMatchData in config.bosses:
+		if b != null and b.boss_id == boss:
+			return b
+	return null
+
+
+## {id, name, rule_id, rule_name, rule_text, crew, mode, mode_name, armor_bonus, deck: [ids]} ({} if none).
+func boss_view() -> Dictionary:
+	var b: RunMatchData = boss_data()
+	if b == null:
+		return {}
+	var deck_ids: Array[StringName] = []
+	for c: CardData in b.deck_for_squad():
+		deck_ids.append(c.id)
+	return {"id": b.boss_id, "name": b.squad.display_name if b.squad != null else "", "rule_id": b.boss_rule,
+			"rule_name": b.boss_rule_name, "rule_text": b.boss_rule_text,
+			"crew": b.squad.display_name if b.squad != null else "", "mode": _mode_id(b.mode), "mode_name": _mode_name(b.mode),
+			"armor_bonus": b.enemy_armor_bonus, "deck": deck_ids}
+
+
+static func _mode_id(mode: int) -> StringName:
+	return &"firefight" if mode == DataEnums.GameMode.FIREFIGHT else &"zone_control"
+
+
+static func _mode_name(mode: int) -> String:
+	return "Firefight" if mode == DataEnums.GameMode.FIREFIGHT else "Zone Control"
+
+
+## The RunMatchData a fight / elite / boss node is played with (a copy of its slot with the node's
+## Armor; the boss slot for the boss). Null for other nodes.
+func node_match_data(n: Dictionary) -> RunMatchData:
+	if n.is_empty() or n["type"] not in RunMap.FIGHT_TYPES:
+		return null
+	var f: Dictionary = n["fight"]
+	if bool(f["boss"]):
+		return boss_data()
+	var slot: int = int(f["slot"])
+	if slot < 0 or slot >= config.matches.size():
+		return null
+	var md: RunMatchData = config.matches[slot].duplicate() as RunMatchData
+	md.enemy_armor_bonus = config.matches[slot].enemy_armor_bonus + int(f["armor"]) + (1 if bool(f.get("challenge", false)) else 0)
+	md.is_rival = false
+	return md
+
+
+## The node the run is on ({} before F1).
+func current_map_node() -> Dictionary:
+	return map.current_node() if map != null else {}
+
+
+func current_event_id() -> StringName:
+	var n: Dictionary = current_map_node()
+	return StringName(n.get("event", &"")) if n.get("type", &"") == RunMap.TYPE_EVENT else &""
+
+
+## Fights F1-F4 played so far (elites don't count).
+func fights_done() -> int:
+	return map.fights_done() if map != null else mini(match_index, 4)
+
+
+## The reward rung you are on (the next fight's): shops and Salvage read it.
+func current_rung() -> int:
+	return config.rung_after(mini(4, fights_done() + 1))
+
+
+## Seeded RNG for a purpose at the current node (stable across reloads).
+func node_rng(tag: String) -> RandomNumberGenerator:
+	return _rng("%s@%s" % [tag, String(map.current) if map != null else ""], match_index)
+
+
+## Moves to a reachable node (phase map). Fight / elite / boss -> match; event / shop / rest -> their
+## phase. "" or the reason.
+func move_to(id: StringName) -> String:
+	if map == null:
+		return "this run has no map"
+	if phase != PHASE_MAP:
+		return "finish this step first"
+	if not map.can_move_to(id):
+		return "you can't reach that node from here"
+	map.move_to(id)
+	var n: Dictionary = map.node(id)
+	match n["type"]:
+		RunMap.TYPE_EVENT:
+			phase = PHASE_EVENT
+		RunMap.TYPE_SHOP:
+			phase = PHASE_SHOP
+			shop = {}
+			RunShop.stock(self)
+		RunMap.TYPE_REST:
+			phase = PHASE_REST
+		_:
+			phase = PHASE_MATCH
+	return ""
+
+
+## Leaves a shop (the only node you leave by hand). "" or the reason.
+func leave_node() -> String:
+	if phase != PHASE_SHOP:
+		return "nothing to leave"
+	shop = {}
+	finish_node(false)
+	return ""
+
+
+## An event / shop / rest node is resolved: back to the map, or to the offers it queued.
+func finish_node(queued: bool) -> void:
+	if map != null and map.current != &"":
+		map.mark_done(map.current)
+	if tickets <= 0:
+		_end(RESULT_DEFEAT, END_NO_TICKETS)
+		return
+	_refresh_current()
+	phase = PHASE_REWARDS if queued and not pending_offers.is_empty() else PHASE_MAP
+
+
+## Puts an offer at the end of the queue (events / rests: Muster out, weapon level).
+func queue_offer(offer: Dictionary) -> void:
+	var o: Dictionary = offer.duplicate()
+	if not o.has("match"):
+		o["match"] = match_index
+	if o["kind"] == RewardOffers.KIND_MUSTER_OUT and not o.has("count"):
+		o["count"] = 0
+	pending_offers.append(o)
+
+
+## Queues a weapon level (Range Day, Field-strip). False when the weapon is fully kitted.
+func queue_weapon_level() -> bool:
+	var opts: Array[StringName] = RewardOffers.attachments(config, _index.get(primary) as LoadoutItem, attachments,
+			node_rng("attachment"))
+	if opts.is_empty():
+		return false
+	weapon_level += 1
+	queue_offer({"kind": RewardOffers.KIND_ATTACHMENT, "options": opts})
+	return true
+
+
+## A deck row for the UI: {index, id, name, trait, art, standard_issue, cost, elite}.
+func copy_row(i: int) -> Dictionary:
+	var c: CardData = _card(i)
+	return {"index": i, "id": deck[i], "name": c.display_name if c != null else String(deck[i]), "trait": copy_trait(i),
+			"art": art_of(i), "standard_issue": c != null and c.standard_issue, "cost": c.cost if c != null else 0,
+			"elite": c != null and c.is_elite, "serial": standard_issue_serial(c)}
+
+
+## Adds a copy of card `id` (event / shop): the trait (TRAIT_DEFAULT = the card's default; an on-trait
+## slot passes its trait) and art (&"" = a random art of that trait). Like a pick: the first calling
+## card sets the Doctrine. Returns the deck index or -1.
+func gain_card(id: StringName, t: StringName = SynergyRules.TRAIT_DEFAULT, art: StringName = &"") -> int:
+	var c: CardData = _index.get(id) as CardData
+	if c == null:
+		return -1
+	var tr: StringName = c.card_trait if t == SynergyRules.TRAIT_DEFAULT or not c.can_carry(t) else t
+	var a: StringName = art
+	if a == &"":
+		a = _random_art(c, tr) if random_copy_arts else ArtTraits.default_art(c, tr, _equipped(c))
+	_append_copy(id, tr, a)
+	var ct: StringName = copy_trait(deck.size() - 1)
+	if ct != &"":
+		last_pick_trait = ct
+		if config.doctrine_from_first_pick and doctrine == &"":
+			doctrine = ct
+	return deck.size() - 1
+
+
+## Memorial Wall: a copy of deck card i with the same trait and art. Returns the new index or -1.
+func copy_deck_card(i: int) -> int:
+	if i < 0 or i >= deck.size():
+		return -1
+	_pad()
+	_append_copy(deck[i], deck_traits[i], deck_arts[i])
+	return deck.size() - 1
+
+
+func remove_copy(i: int) -> void:
+	if i >= 0 and i < deck.size():
+		_remove_copy(i)
+
+
+## Discharge / Drill: copy i leaves the deck for the Honor Roll.
+func retire_copy_at(i: int) -> void:
+	if i < 0 or i >= deck.size():
+		return
+	honor_roll.append({"id": deck[i], "match": match_index, "trait": copy_trait(i), "art": art_of(i)})
+	_remove_copy(i)
+
+
+## Dresses an offer-like dict {options} with traits / arts (as a Supply Drop).
+func dress_offer(drop: Dictionary, on_trait: StringName, rng: RandomNumberGenerator) -> void:
+	_dress_drop(drop, on_trait, rng)
+
+
+## The kit (passive + ability) is on for the current node: always from run 2; in the first run from
+## RunConfig.first_run_kit_from_fight (F2) and on elites.
+func operator_kit_on() -> bool:
+	if map == null:
+		return false
+	if not first_run:
+		return true
+	var f: Dictionary = current_map_node().get("fight", {})
+	return bool(f.get("elite", false)) or bool(f.get("boss", false)) or int(f.get("ladder", 0)) >= config.first_run_kit_from_fight
+
+
+## Puts the node's Terrain, the boss rule and the modifiers on a MatchState built for the current node
+## (create_match does it; a screen that builds its own match calls it before start_match()).
+func configure_match(m: MatchState) -> void:
+	if map == null or m == null:
+		return
+	var n: Dictionary = current_map_node()
+	var f: Dictionary = n.get("fight", {})
+	if not f.is_empty():
+		var ter: Array = f.get("terrain", [])
+		for z: int in mini(3, ter.size()):
+			m.terrain[z] = StringName(ter[z])
+	m.fog_of_war = RunModifiers.FOG in modifiers
+	if bool(f.get("boss", false)):
+		var b: RunMatchData = boss_data()
+		if b != null:
+			m.boss_id = b.boss_id
+			m.boss_rule = b.boss_rule
+			m.boss_rule_name = b.boss_rule_name
+			m.boss_rule_text = b.boss_rule_text
+			m.boss_card = b.boss_card
+			m.boss_name = b.squad.display_name if b.squad != null else ""
+
+
+## The whole map for the Run Map screen (run-v2-api.md §3).
+func map_view() -> Dictionary:
+	if map == null:
+		return {}
+	var reach: Array[StringName] = map.reachable() if phase == PHASE_MAP else [] as Array[StringName]
+	var rows: Array[Dictionary] = []
+	for n: Dictionary in map.nodes:
+		rows.append(_node_view(n, reach))
+	return {"steps": RunMap.STEPS, "lanes": RunMap.LANES, "step": map.current_step(), "current": map.current,
+			"first_run": first_run, "req": req, "tickets": tickets, "max_tickets": max_tickets(),
+			"threat": threat(), "modifiers": modifiers.duplicate(), "boss": boss_view(), "nodes": rows}
+
+
+## One node row of map_view() ({} for an unknown id).
+func node_view(id: StringName) -> Dictionary:
+	if map == null or map.node(id).is_empty():
+		return {}
+	return _node_view(map.node(id), map.reachable() if phase == PHASE_MAP else [] as Array[StringName])
+
+
+func _node_view(n: Dictionary, reach: Array[StringName]) -> Dictionary:
+	var type: StringName = n["type"]
+	var row: Dictionary = {"id": n["id"], "step": n["step"], "lane": n["lane"], "type": type,
+			"name": RunMap.TYPE_NAMES.get(type, ""), "links": (n["links"] as Array).duplicate(),
+			"reachable": n["id"] in reach, "visited": n["id"] in map.visited, "current": n["id"] == map.current,
+			"done": n["id"] in map.done, "fight": {}, "event": {}}
+	var gives: String = ""
+	var risk: String = ""
+	match type:
+		RunMap.TYPE_EVENT:
+			var ev: EventData = RunEvents.data(StringName(n["event"]))
+			row["event"] = {"id": n["event"], "title": ev.title if ev != null else ""}
+			gives = "A choice: REQ, a card, a ticket, card removal or intel"
+			risk = "Some options cost a ticket or REQ (shown)"
+		RunMap.TYPE_SHOP:
+			gives = "Spend REQ: cards, Muster out, Discharge, a Perk"
+			risk = "None"
+		RunMap.TYPE_REST:
+			gives = "Pick one: +1 ticket, Drill (2 cards home) or Field-strip (a weapon level)"
+			risk = "None"
+		_:
+			var f: Dictionary = n["fight"]
+			var md: RunMatchData = node_match_data(n)
+			var deck_ids: Array[StringName] = []
+			if md != null:
+				for c: CardData in md.deck_for_squad():
+					deck_ids.append(c.id)
+			var ter: Array[Dictionary] = []
+			for z: int in 3:
+				ter.append(TerrainRules.row(z, StringName((f["terrain"] as Array)[z])))
+			row["fight"] = {"label": f["label"], "crew": md.squad.display_name if md != null and md.squad != null else "",
+					"crew_label": md.crew_label if md != null else "", "mode": _mode_id(md.mode if md != null else 0),
+					"mode_name": _mode_name(md.mode if md != null else 0), "armor_bonus": md.enemy_armor_bonus if md != null else 0,
+					"green": md != null and md.is_green_squad(), "elite": bool(f["elite"]), "boss": bool(f["boss"]),
+					"challenge": bool(f.get("challenge", false)), "deck": deck_ids, "terrain": ter}
+			if bool(f["boss"]):
+				gives = "Win the run"
+				risk = "The run"
+			elif bool(f["elite"]):
+				gives = "Win: an Elite Cache (a Supply Drop one rung ahead), Muster out, +%d REQ" % config.req_elite
+				risk = "Lose: Salvage, +%d REQ, -1 ticket. A tougher crew (+%d Armor)" % [config.req_loss, int(f["armor"])]
+			else:
+				gives = "Win: a Supply Drop, +%d REQ" % (config.req_elite if bool(f.get("challenge", false)) else config.req_win)
+				risk = "Lose: Salvage, +%d REQ, -1 ticket" % config.req_loss
+	row["gives"] = gives
+	row["risk"] = risk
+	return row
+
+
+## The v2 part of a finished match: REQ, the node done, offers (rung of the fight; an elite's cache one
+## rung ahead with Muster out; weapon level / Perk after F1/F3/F4 and F2/F4 as today), run end.
+func _record_map_result(match_result: StringName, outcome: Dictionary) -> Dictionary:
+	var n: Dictionary = current_map_node()
+	var f: Dictionary = n.get("fight", {})
+	var md: RunMatchData = current_match()
+	var num: int = match_number()
+	var lost: bool = match_result == &"enemy"
+	var won: bool = match_result == &"player"
+	var elite: bool = bool(f.get("elite", false))
+	var is_boss: bool = bool(f.get("boss", false))
+	if lost:
+		tickets = maxi(0, tickets - 1)
+	var gain: int = config.req_draw
+	if won:
+		gain = config.req_elite if elite or bool(f.get("challenge", false)) else config.req_win
+	elif lost:
+		gain = config.req_loss
+	if is_boss:
+		gain = 0
+	req += gain
+	history.append({
+		"match": num, "bracket": md.bracket if md != null else 0, "rival": is_boss,
+		"mode": String(DataEnums.key_of(DataEnums.GameMode, md.mode if md != null else 0)).to_lower(),
+		"result": String(match_result), "reason": String(outcome.get("reason", &"")),
+		"rounds": int(outcome.get("rounds", 0)), "player_score": int(outcome.get("player_score", 0)),
+		"enemy_score": int(outcome.get("enemy_score", 0)), "ticket_lost": lost,
+		"node": String(n.get("id", "")), "label": String(f.get("label", "")), "elite": elite,
+		"terrain": (f.get("terrain", []) as Array).map(func(x: Variant) -> String: return String(x)),
+		"req_gained": gain,
+	})
+	match_index += 1
+	pending_offers.clear()
+	map.mark_done(map.current)
+	if tickets <= 0:
+		_end(RESULT_DEFEAT, END_NO_TICKETS)
+	elif is_boss:
+		match match_result:
+			&"player":
+				_end(RESULT_VICTORY, END_RIVAL_WON)
+			&"enemy":
+				_end(RESULT_DEFEAT, END_RIVAL_LOST)
+			_:
+				_end(RESULT_DEFEAT, END_RIVAL_DRAW)
+	else:
+		_queue_offers(num, won, int(f.get("ladder", num)), elite)
+		phase = PHASE_REWARDS if not pending_offers.is_empty() else PHASE_MAP
+	return {"ok": true, "reason": "", "ticket_lost": lost, "run_ended": is_over(),
+			"offers": pending_offers.duplicate(true), "req_gained": gain, "elite": elite}
+
+
+## Phase when no offer is pending: the map (map runs) or the next match (the old ladder).
+func _idle_phase() -> StringName:
+	return PHASE_MAP if map != null else PHASE_MATCH
+
+
+## kc-v2-impl save part (v7): {} for a run without a map.
+func _map_to_dict() -> Dictionary:
+	if map == null:
+		return {}
+	var sh: Dictionary = {}
+	if not shop.is_empty():
+		var cards: Array = []
+		for c: Dictionary in shop.get("cards", []):
+			cards.append({"id": String(c["id"]), "trait": String(c["trait"]), "art": String(c["art"]), "sold": bool(c["sold"])})
+		sh = {"rung": int(shop.get("rung", 1)), "cards": cards, "restocks": int(shop.get("restocks", 0)),
+				"perks": (shop.get("perks", []) as Array).map(func(x: Variant) -> String: return String(x))}
+	return {"map": map.to_dict(), "req": req, "modifiers": _strings(modifiers), "boss": String(boss),
+			"first_run": first_run, "shop": sh, "next_drop_extra": next_drop_extra}
+
+
+func _map_from_dict(d: Dictionary) -> String:
+	var res: Dictionary = RunMap.from_dict(d.get("map"))
+	if res["map"] == null:
+		return String(res["error"])
+	map = res["map"]
+	req = int(d.get("req", 0))
+	first_run = bool(d.get("first_run", false))
+	boss = StringName(str(d.get("boss", "")))
+	if boss_data() == null:
+		return "unknown boss '%s'" % boss
+	modifiers.clear()
+	for m: Variant in d.get("modifiers", []):
+		if StringName(str(m)) not in RunModifiers.ALL:
+			return "unknown modifier '%s'" % str(m)
+		modifiers.append(StringName(str(m)))
+	next_drop_extra = int(d.get("next_drop_extra", 0))
+	shop = {}
+	var sh: Variant = d.get("shop", {})
+	if typeof(sh) == TYPE_DICTIONARY and not (sh as Dictionary).is_empty():
+		var cards: Array = []
+		for c: Variant in sh.get("cards", []):
+			var id: StringName = StringName(str(c.get("id", "")))
+			if not (_index.get(id) is CardData):
+				return "unknown shop card '%s'" % id
+			cards.append({"id": id, "trait": StringName(str(c.get("trait", ""))), "art": StringName(str(c.get("art", ""))),
+					"sold": bool(c.get("sold", false))})
+		var perks: Array = []
+		for p: Variant in sh.get("perks", []):
+			if not (_index.get(StringName(str(p))) is LoadoutItem):
+				return "unknown shop Perk '%s'" % str(p)
+			perks.append(StringName(str(p)))
+		shop = {"rung": int(sh.get("rung", 1)), "cards": cards, "perks": perks, "restocks": int(sh.get("restocks", 0))}
+	if phase == PHASE_SHOP and shop.is_empty():
+		RunShop.stock(self)
+	return ""
+
+
+## v1-v6 saves (head: no run lost): the run continues on a first-run-shaped map, standing on the fight
+## it was on (match_index 0-3 = F1-F4, 4 = the boss), the fights before it done.
+func _migrate_to_map() -> void:
+	first_run = true
+	boss = config.bosses[0].boss_id if not config.bosses.is_empty() else &""
+	req = config.req_start
+	map = RunMap.generate(config, seed_value, true, [])
+	var fight_steps: Array[int] = [0, 2, 4, 6, 8]
+	var k: int = clampi(match_index, 0, 4)
+	if phase == PHASE_LOADOUT:
+		return
+	for i: int in fight_steps.size():
+		var step: int = fight_steps[i]
+		var target: int = k if phase == PHASE_MATCH else k - 1
+		if i > target:
+			break
+		var node: Dictionary = map.step_nodes(step)[0]
+		map.move_to(node["id"])
+		if i < target or phase != PHASE_MATCH:
+			map.mark_done(node["id"])
+	if phase == PHASE_REWARDS and pending_offers.is_empty():
+		phase = PHASE_MAP
+
 
 func _bind(p_config: RunConfig) -> void:
 	config = p_config

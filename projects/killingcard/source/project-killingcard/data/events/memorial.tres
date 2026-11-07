@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"memorial"
+title = "Memorial Wall"
+scene = "Names in marker on a blast wall, someone's tags hung on a nail."
+options = Array[Dictionary]([{
+"id": "respects",
+"label": "Pay respects",
+"detail": "+1 ticket (max 3).",
+"effect": "ticket",
+"amount": 1,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "tags",
+"label": "Carry their tags",
+"detail": "Copy one calling card in your deck (same trait).",
+"effect": "copy_card",
+"amount": 0,
+"cost_req": 0,
+"needs": "calling_card",
+"card": ""
+}])
+first_run_only = false

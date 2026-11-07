@@ -246,7 +246,8 @@ func test_recon_specialist_reveals_next_round() -> void:
 	assert_eq(m.revealed_red_dots(P, F.LEFT).size(), 0, "other zones not")
 
 
-func test_breach_and_clear_extra_damage_if_close() -> void:
+## kc-abc-labels AB1: Breach and Clear is simply 2 damage to every enemy unit in a column (no Close rule).
+func test_breach_and_clear_two_damage_in_any_column() -> void:
 	var m: MatchState = F.new_match(F.setup([F.breach_and_clear(), F.breach_and_clear()]), null,
 			F.map([F.R.CLOSE, F.R.LONG, F.R.MID]))
 	m.sides[P].supply = 6
@@ -256,7 +257,7 @@ func test_breach_and_clear_extra_damage_if_close() -> void:
 	m.submit(P, RulesIntent.play_card(m.sides[P].hand[0].uid, F.LEFT))
 	m.submit(P, RulesIntent.play_card(m.sides[P].hand[0].uid, F.RIGHT))
 	m.reveal()
-	assert_eq([close_a.armor, close_b.armor, mid.armor], [2, 2, 3], "3 each in Close, 2 in Mid")
+	assert_eq([close_a.armor, close_b.armor, mid.armor], [3, 3, 3], "2 each, in a Close column too")
 
 
 func test_point_man_and_second_in_line_damage_in_operator_or_adjacent_zone() -> void:

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"rooftops"
+display_name = "Rooftops"
+text = "Whoever holds this column at the start of the round has First Shot here."
+detail = "Take it early and keep it: arriving into a held Rooftops is expensive."
+zone_control_only = false

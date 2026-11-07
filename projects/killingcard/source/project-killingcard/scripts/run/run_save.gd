@@ -43,7 +43,8 @@ static func write(path: String, run: RunProgress) -> Error:
 
 ## Reads a run. Returns {run: RunProgress or null, error: String, missing: bool}.
 ## missing = true when there is no save at all (not an error).
-static func read(path: String, config: RunConfig) -> Dictionary:
+## opts go to RunProgress.from_dict ({map: true}: a v1-v6 save continues on a first-run-shaped map).
+static func read(path: String, config: RunConfig, opts: Dictionary = {}) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"run": null, "error": "", "missing": true}
 	var text: String = FileAccess.get_file_as_string(path)
@@ -52,7 +53,7 @@ static func read(path: String, config: RunConfig) -> Dictionary:
 	var json: JSON = JSON.new()
 	if json.parse(text) != OK:
 		return {"run": null, "error": "save is not valid JSON (line %d: %s)" % [json.get_error_line(), json.get_error_message()], "missing": false}
-	var loaded: Dictionary = RunProgress.from_dict(config, json.data)
+	var loaded: Dictionary = RunProgress.from_dict(config, json.data, opts)
 	loaded["missing"] = false
 	return loaded
 

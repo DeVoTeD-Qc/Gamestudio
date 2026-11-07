@@ -420,6 +420,9 @@ func _slot_hit(global_pos: Vector2, inspect: bool = false) -> Array:
 	if slot != null and slot.kind == slot.Kind.INCOMING:
 		return [&"incoming", -1]
 	if (_tile as Control).get_rect().has_point(local):
+		# kc-v2-ui: the Terrain chip is its own target (tap = its rule, long press = its inspector).
+		if _tile.terrain_hit(local - (_tile as Control).position):
+			return [&"terrain", -1]
 		var f: Array = _tile.field_at(local - (_tile as Control).position)
 		if not f.is_empty():
 			return [StringName("field_" + String(f[0])), int((f[1] as Dictionary).get("card_uid", -1))]

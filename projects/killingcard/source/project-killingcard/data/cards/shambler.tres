@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_shfx"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_shcd"]
+
+[sub_resource type="Resource" id="Resource_shdodge"]
+script = ExtResource("1_shfx")
+trigger = 5
+kind = 8
+target = 0
+zone_scope = 0
+target_class = 0
+amount = 0
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_shcd")
+id = &"shambler"
+display_name = "Shambler"
+card_type = 0
+is_elite = false
+text = "Boss token. Doesn't hold ground; Pick and Flank ignore it. Its kill counts for your streak."
+cost = 0
+weapon_class = 0
+firepower = 1
+armor = 2
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+patch = 0
+holder = false
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = false
+grants_elimination_credit = true
+collectible = false
+effects = Array[ExtResource("1_shfx")]([SubResource("Resource_shdodge")])

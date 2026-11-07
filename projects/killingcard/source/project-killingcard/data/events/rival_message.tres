@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"rival_message"
+title = "Old Rival's Message"
+scene = "\"Heard you're good. Prove it.\" A grid reference."
+options = Array[Dictionary]([{
+"id": "accept",
+"label": "Accept",
+"detail": "Your next fight: enemy +1 Armor; a win pays like an elite (+5 REQ).",
+"effect": "challenge",
+"amount": 1,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "ignore",
+"label": "Ignore",
+"detail": "+1 REQ.",
+"effect": "req",
+"amount": 1,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

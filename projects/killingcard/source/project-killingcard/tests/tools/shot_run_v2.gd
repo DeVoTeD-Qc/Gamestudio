@@ -78,5 +78,113 @@ func _run() -> void:
 		await _frames(6)
 		await _shot("03_run_map_inspect_node")
 		await _close(m)
+	if _want("event"):
+		RunV2Views.preview_event(RunV2Views.sample_event_view())
+		var e: Control = await _open("res://scenes/run/Event.tscn")
+		e.pick(0)
+		await _frames(4)
+		await _shot("04_event_picked")
+		e.confirm()
+		await create_timer(0.5).timeout
+		await _shot("05_event_result")
+		await _close(e)
+	if _want("shop"):
+		RunV2Views.preview_shop(RunV2Views.sample_shop_view())
+		var s: Control = await _open("res://scenes/run/Shop.tscn")
+		await _shot("06_shop")
+		s.buy(0)
+		await create_timer(0.5).timeout
+		await _shot("07_shop_bought")
+		s.get_service_tile(&"muster").pressed.emit()
+		await _frames(6)
+		var pk: Control = s.get_picker()
+		var shown: int = 0
+		for idx: int in range(0, 40):
+			if pk.get_tile(idx) != null and shown < 2:
+				pk.toggle(idx)
+				shown += 1
+		await _frames(4)
+		await _shot("08_shop_muster_picker")
+		await _close(s)
+	if _want("rest"):
+		RunV2Views.preview_rest(RunV2Views.sample_rest_options())
+		var rr: Control = await _open("res://scenes/run/Rest.tscn")
+		rr.pick(0)
+		await _frames(4)
+		await _shot("09_rest_picked")
+		await _close(rr)
 	RunV2Views.clear_overrides()
+	if _want("loadout"):
+		var lo: Control = await _open("res://scenes/run/Loadout.tscn")
+		await _frames(6)
+		await _shot("10_loadout_operator_select")
+		var st0: Control = lo.get_starter()
+		if st0 != null:
+			st0.close()
+		await _frames(6)
+		await _shot("11_loadout_modifiers_boss")
+		await _close(lo)
+	if _want("match"):
+		await _match_shots()
 	quit(0)
+
+
+func _match_shots() -> void:
+	var db: Node = root.get_node("CardDB")
+	var m: Control = (load("res://scenes/Match.tscn") as PackedScene).instantiate()
+	root.add_child(m)
+	await _frames(30)
+	await create_timer(1.0).timeout
+	var c: Node = m.get_node("%MatchController")
+	if c.is_mulligan_open():
+		c.keep_hand()
+	var st: MatchState = c.state
+	var own: Array = [[&"breacher", 0], [&"point_man", 0], [&"marksman", 1], [&"gunner", 2]]
+	var rival: Array = [[&"flanker", 0], [&"rifleman", 1], [&"combat_medic", 1], [&"si_grunt", 2]]
+	for side_list: Array in [[0, own], [1, rival]]:
+		for row: Array in side_list[1]:
+			var cd: CardData = db.get_card(row[0])
+			if cd != null:
+				st.put_in_line(st.create_unit(int(side_list[0]), cd), int(row[1]))
+	# Run v2: Terrain on A and C, Kestrel's Dig In, the Meridian_Six boss rule.
+	st.terrain[0] = &"smoke"
+	st.terrain[2] = &"supply_cache"
+	var me: RulesSide = st.sides[0]
+	me.kit_on = true
+	if ResourceLoader.exists("res://data/loadout/ab_dig_in.tres"):
+		me.ability = load("res://data/loadout/ab_dig_in.tres")
+	st.boss_id = &"meridian"
+	st.boss_rule = &"reinforcements"
+	st.boss_name = "Meridian_Six"
+	st.boss_rule_name = "Reinforcements"
+	st.boss_rule_text = "From round 4, gains 1 extra Supply every round."
+	m.intro_node = {"type": &"boss", "crew": "Meridian_Six"}
+	m.set(&"_intro_shown", false)
+	c.refresh()
+	await create_timer(0.8).timeout
+	await _shot("12_match_intro_boss_terrain")
+	m.get_match_intro().close()
+	await create_timer(1.0).timeout
+	await _frames(4)
+	await _shot("13_match_terrain_ability_ready")
+	c.use_ability()
+	await _frames(6)
+	await _shot("14_ability_aim")
+	c.play_at(1)
+	await _frames(6)
+	await _shot("15_ability_planned")
+	c.undo()
+	me.uses_this_match[me.ability.id if me.ability != null else &"x"] = 1
+	c.refresh()
+	await _frames(6)
+	await _shot("16_ability_used")
+	c.call(&"_open_terrain", 0)
+	await _frames(8)
+	await _shot("17_terrain_inspect")
+	m.get_inspector().close()
+	c.open_ability_inspector()
+	await _frames(8)
+	await _shot("18_ability_inspect")
+	m.get_inspector().close()
+	root.remove_child(m)
+	m.queue_free()

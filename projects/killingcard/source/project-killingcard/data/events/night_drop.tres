@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"night_drop"
+title = "Night Drop"
+scene = "A pallet drifts down into the treeline, off target."
+options = Array[Dictionary]([{
+"id": "go",
+"label": "Go get it",
+"detail": "50%: an Elite card. 50%: lose 1 ticket.",
+"effect": "gamble_elite",
+"amount": 50,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "leave",
+"label": "Leave it",
+"detail": "Nothing happens.",
+"effect": "nothing",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

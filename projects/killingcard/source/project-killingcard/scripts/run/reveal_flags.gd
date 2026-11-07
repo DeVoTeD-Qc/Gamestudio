@@ -49,13 +49,27 @@ const KILLSTREAKS: StringName = &"killstreaks"
 ## Per-keyword first-play tips: "kw_" + the keyword id (kw_first_shot, kw_pick, kw_flank, kw_cover,
 ## kw_suppress, kw_pierce, kw_patch, kw_holder, kw_front, kw_on_deploy, kw_on_down, kw_guard, ...).
 const KW_PREFIX: String = "kw_"
+## kc-v2-impl (run-v2.md §9): the Run v2 systems.
+const RUN_MAP: StringName = &"run_map"
+const REQUISITION: StringName = &"requisition"
+const ELITE_FIGHT: StringName = &"elite_fight"
+const OPERATOR_ABILITY: StringName = &"operator_ability"
+const TERRAIN: StringName = &"terrain"
+const BOSS_RULE: StringName = &"boss_rule"
+const EVENT: StringName = &"event"
+const REST: StringName = &"rest"
+const MODIFIERS: StringName = &"modifiers"
+## One tip per Terrain, the first time it is in play: "terrain_" + the Terrain id.
+const TERRAIN_PREFIX: String = "terrain_"
 
 ## Order of the "New:" queue when several trigger at once (one per screen, §5.1).
 const ORDER: Array[StringName] = [CALLING_CARDS, DOCTRINE, TRAIT_RAIL, KEYWORDS, ENGINE_PANEL, MUSTER_OUT,
-		SALVAGE, MULTI_PICK, RETIRE, FIELDS, LINKS, ELITES, LOADOUT, KILLSTREAKS]
+		SALVAGE, MULTI_PICK, RETIRE, FIELDS, LINKS, ELITES, LOADOUT, KILLSTREAKS,
+		RUN_MAP, BOSS_RULE, EVENT, OPERATOR_ABILITY, ELITE_FIGHT, TERRAIN, REQUISITION, REST, MODIFIERS]
 ## Flags that open with a "New:" card (the others just appear). Keyword tips have their own text.
 const EXPLAINED: Array[StringName] = [CALLING_CARDS, TRAIT_RAIL, KEYWORDS, MUSTER_OUT, SALVAGE, FIELDS,
-		LINKS, ELITES, LOADOUT]
+		LINKS, ELITES, LOADOUT, RUN_MAP, REQUISITION, ELITE_FIGHT, OPERATOR_ABILITY, TERRAIN, BOSS_RULE, EVENT, REST,
+		MODIFIERS]
 ## "New: X" texts (§5.2): {title, text}. The UI adds the icon and the mini example.
 const TEXTS: Dictionary = {
 	CALLING_CARDS: {"title": "New: Calling cards", "text": "Calling cards bring a trait. 2 or 3 of a trait in play give a bonus. Your first one's trait is your Doctrine: it counts +1."},
@@ -67,6 +81,15 @@ const TEXTS: Dictionary = {
 	LINKS: {"title": "New: Links", "text": "Some keywords link neighbors: Guard gives the card behind it Cover +1."},
 	ELITES: {"title": "New: Elites", "text": "One of a kind, with a printed trait."},
 	LOADOUT: {"title": "New: Loadout", "text": "Pick your three killstreaks before a run."},
+	RUN_MAP: {"title": "New: The run map", "text": "Pick your path: fights, events, shops and rests lead to the boss. Everything ahead is shown."},
+	REQUISITION: {"title": "New: Requisition", "text": "REQ is earned in fights and events. Spend it here on cards, or to send cards home."},
+	ELITE_FIGHT: {"title": "New: Elite fights", "text": "A tougher crew for a better cache: a drop one rung ahead and +5 REQ. Optional; a loss costs a ticket."},
+	OPERATOR_ABILITY: {"title": "New: Operator ability", "text": "Your Operator has a passive and one free ability per match. Tap the button on the Operator card."},
+	TERRAIN: {"title": "New: Terrain", "text": "Terrain changes one rule in its column, for both sides. Pick where you fight."},
+	BOSS_RULE: {"title": "New: Boss rule", "text": "The boss plays with one extra rule, shown on the map from the start. Plan your run against it."},
+	EVENT: {"title": "New: Events", "text": "Each choice says exactly what it does. Odds are always printed."},
+	REST: {"title": "New: Rest", "text": "Pick one: a ticket back, send 2 cards home, or a weapon level."},
+	MODIFIERS: {"title": "New: Modifiers", "text": "Optional challenges with a Threat number. Winning at Threat unlocks cosmetics, never power."},
 }
 ## Keyword tip ids -> the player-facing keyword (CardData.keyword_names) they explain.
 const KEYWORD_TIPS: Dictionary = {
@@ -82,6 +105,10 @@ const KEYWORD_TIPS: Dictionary = {
 static func text_of(flag: StringName) -> Dictionary:
 	if TEXTS.has(flag):
 		return TEXTS[flag]
+	if String(flag).begins_with(TERRAIN_PREFIX):
+		var tid: StringName = StringName(String(flag).trim_prefix(TERRAIN_PREFIX))
+		if tid in TerrainRules.ALL:
+			return {"title": "New: " + TerrainRules.name_of(tid), "text": TerrainRules.text_of(tid)}
 	if KEYWORD_TIPS.has(flag):
 		var kw: StringName = StringName(String(flag).trim_prefix(KW_PREFIX))
 		return {"title": "New: " + String(KEYWORD_TIPS[flag]), "text": String(SynergyRules.KEYWORD_TEXT.get(kw, ""))}
@@ -90,7 +117,7 @@ static func text_of(flag: StringName) -> Dictionary:
 
 ## True when the flag opens a one-time "New:" explainer.
 static func is_explained(flag: StringName) -> bool:
-	return flag in EXPLAINED or KEYWORD_TIPS.has(flag)
+	return flag in EXPLAINED or KEYWORD_TIPS.has(flag) or String(flag).begins_with(TERRAIN_PREFIX)
 
 
 ## The UI rule (§5.1): an element shows once its system is met, or while something uses it now.
@@ -152,6 +179,20 @@ static func run_triggers(run: RunProgress) -> Array[StringName]:
 		_add(out, DOCTRINE)
 	if run.is_over():
 		_add(out, LOADOUT)
+	if run.map != null and run.phase != RunProgress.PHASE_LOADOUT:
+		_add(out, RUN_MAP)
+		_add(out, BOSS_RULE)
+		match run.phase:
+			RunProgress.PHASE_EVENT:
+				_add(out, EVENT)
+			RunProgress.PHASE_SHOP:
+				_add(out, REQUISITION)
+			RunProgress.PHASE_REST:
+				_add(out, REST)
+			RunProgress.PHASE_MAP:
+				for id: StringName in run.map.reachable():
+					if run.map.node(id).get("type", &"") == RunMap.TYPE_ELITE:
+						_add(out, ELITE_FIGHT)
 	var offer: Dictionary = run.current_offer()
 	if offer.is_empty():
 		return out
@@ -161,7 +202,7 @@ static func run_triggers(run: RunProgress) -> Array[StringName]:
 			_add(out, SALVAGE)
 		if int(offer.get("picks", 1)) > 1 or (offer.get("taken", []) as Array).size() > 0:
 			_add(out, MULTI_PICK)
-		if bool(offer.get("retire", false)) and run.config.muster_out_after(int(offer.get("match", 0))):
+		if bool(offer.get("retire", false)) and run.config.muster_out_after(int(offer.get("ladder", offer.get("match", 0)))):
 			_add(out, RETIRE)
 		for id: Variant in offer["options"]:
 			var c: CardData = run.resource(StringName(id)) as CardData
@@ -204,6 +245,15 @@ static func match_triggers(state: MatchState) -> Array[StringName]:
 		var syn: Dictionary = SynergyRules.compute(state.synergy_lines(si), state.synergy_field_traits(si), side.setup.doctrine)
 		if not (syn["links"] as Array).is_empty():
 			_add(out, LINKS)
+	# kc-v2-impl: Terrain on the board, the boss rule, the player's Operator ability.
+	for z: int in 3:
+		if state.terrain[z] != &"":
+			_add(out, TERRAIN)
+			_add(out, StringName(TERRAIN_PREFIX + String(state.terrain[z])))
+	if state.boss_rule != &"":
+		_add(out, BOSS_RULE)
+	if state.sides[0].ability != null:
+		_add(out, OPERATOR_ABILITY)
 	return out
 
 

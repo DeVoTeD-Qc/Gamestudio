@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"supply_cache"
+display_name = "Supply Cache"
+text = "Hold this column at the end of the round: +1 Supply next round."
+detail = "Tempo: hold it early, spend it late."
+zone_control_only = false

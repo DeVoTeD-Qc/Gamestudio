@@ -151,15 +151,15 @@ static func _beat(state, z: int, beat: int, shooters: Array, exchange: int) -> v
 		if target == null:
 			state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
 					"target_uid": -1, "zone": state.zone_name(z), "damage": 0, "step": step, "beat": beat,
-					"overkill": 0, "pierce": u.pierce})
+					"overkill": 0, "pierce": state.has_pierce(u)})
 			continue
 		var src: Dictionary = _source(state, si, u)
 		var dmg: int = maxi(0, state.firepower_of(u) - state.cover_of(target))
 		hits.append([target, dmg, src])
 		state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
 				"target_uid": target.uid, "zone": state.zone_name(z), "damage": dmg, "step": step, "beat": beat,
-				"overkill": maxi(0, dmg - target.armor), "pierce": u.pierce})
-		if u.pierce:
+				"overkill": maxi(0, dmg - target.armor), "pierce": state.has_pierce(u)})
+		if state.has_pierce(u):  # kc-v2-impl: Breach Point gives Pierce
 			_pierce(state, z, beat, u, src, foe_line, target, dmg - target.armor, hits)
 	for h: Array in hits:
 		state.deal_damage(h[0], int(h[1]), h[2], false)
@@ -229,13 +229,15 @@ static func pick_target(state, shooter: RulesUnit, foe_line: Array, assigned: Di
 			candidates.append(u)
 	if candidates.is_empty():
 		return null
-	if shooter.pick or shooter.flank:
+	# kc-v2-impl: Smoke turns Pick / Flank off in its column (state.can_pick / can_flank).
+	var picks: bool = state.can_pick(shooter)
+	if picks or state.can_flank(shooter):
 		var eligible: Array[RulesUnit] = []
 		for u: RulesUnit in candidates:
 			if not state.is_untargetable_by_pick_flank(u):
 				eligible.append(u)
 		if not eligible.is_empty():
-			if shooter.pick:
+			if picks:
 				var best: RulesUnit = eligible[0]
 				for u: RulesUnit in eligible:
 					if u.armor - int(assigned.get(u.uid, 0)) < best.armor - int(assigned.get(best.uid, 0)):

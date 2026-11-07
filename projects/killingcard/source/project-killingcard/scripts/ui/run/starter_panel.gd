@@ -26,6 +26,7 @@ const INSPECTOR_SCENE: PackedScene = preload("res://scenes/match/CardInspector.t
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const RunFlowScript: GDScript = preload("res://scripts/ui/run/run_flow.gd")
+const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
 const AMBER: Color = Color(0.961, 0.722, 0.239)
 const BAR_H: float = 64.0
 
@@ -222,7 +223,7 @@ func _build() -> void:
 	_op_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_op_list.add_theme_constant_override(&"separation", 8)
 	oscroll.add_child(_op_list)
-	for item: LoadoutItem in RunProgress.operator_options(_config):
+	for item: LoadoutItem in _operator_items():
 		var t: Button = _operator_tile(item)
 		_op_tiles[item.id] = t
 		_op_list.add_child(t)
@@ -265,6 +266,32 @@ func _build() -> void:
 	_refresh_ops()
 
 
+## kc-v2-ui: the Operators to show: RunState.operator_choices() (all four, locked ones too, run-v2-api
+## §1), else the config's options.
+func _operator_items() -> Array[LoadoutItem]:
+	var out: Array[LoadoutItem] = []
+	for row: Dictionary in RunV2Views.operator_choices(run):
+		var id: StringName = StringName(str(row.get("id", "")))
+		var item: LoadoutItem = null
+		for o: LoadoutItem in RunProgress.operator_options(_config):
+			if o.id == id:
+				item = o
+		if item == null and run != null:
+			item = run.resource(id) as LoadoutItem
+		if item == null and ResourceLoader.exists("res://data/loadout/%s.tres" % id):
+			item = load("res://data/loadout/%s.tres" % id) as LoadoutItem
+		if item != null:
+			out.append(item)
+	if out.is_empty():
+		out.assign(RunProgress.operator_options(_config))
+	return out
+
+
+## kc-v2-ui: the Operator's kit row ({} = no kit known).
+func _kit(item: LoadoutItem) -> Dictionary:
+	return RunV2Views.operator_kit(item.id, run)
+
+
 ## kc-cards-impl: deck list cards are Y2+ cards (the mock-up's deck card is 196 wide).
 func _tile_size() -> Vector2:
 	if _tall():
@@ -300,7 +327,12 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	b.set_meta(&"id", item.id)
 	b.tooltip_text = "%s: %s" % [item.display_name, RunFlowScript.item_effect_line(item)]
 	b.custom_minimum_size = Vector2(0, CardView.height_for(_op_card_w()) + 8.0)
-	_wire(b, func() -> void: pick_operator(item.id), func() -> void: _inspector.open(operator_info(item)))
+	_wire(b, func() -> void:
+		var err: String = pick_operator(item.id)
+		if err != "":
+			var info: Dictionary = operator_info(item)
+			info["status"] = err
+			_inspector.open(info), func() -> void: _inspector.open(operator_info(item)))
 	var row: HBoxContainer = HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override(&"separation", 10)
@@ -332,11 +364,46 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	line.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_child(line)
-	var what: Label = _text(item.text, &"HudSubtle", 16)
-	what.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	what.clip_text = false
-	text.add_child(what)
+	# kc-v2-ui (run-v2.md §7): the passive (a "P" chip) and the once-per-match ability, one line each.
+	var kit: Dictionary = _kit(item)
+	if kit.is_empty():
+		var what: Label = _text(item.text, &"HudSubtle", 16)
+		what.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		what.clip_text = false
+		text.add_child(what)
+	else:
+		for pair: Array in [["P", "%s: %s" % [kit.get("passive_name", ""), kit.get("passive_text", "")], "KitPassive"],
+				["1x", "%s: %s" % [kit.get("ability_name", ""), kit.get("ability_text", "")], "KitAbility"]]:
+			var row2: HBoxContainer = HBoxContainer.new()
+			row2.name = pair[2]
+			row2.add_theme_constant_override(&"separation", 6)
+			row2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var chip: Label = _text(pair[0], &"HudTag", 16)
+			chip.clip_text = false
+			var csb := StyleBoxFlat.new()
+			csb.bg_color = Color("#3A444D") if pair[0] == "P" else Color("#5A4410")
+			csb.set_corner_radius_all(3)
+			csb.content_margin_left = 5
+			csb.content_margin_right = 5
+			chip.add_theme_stylebox_override(&"normal", csb)
+			chip.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			row2.add_child(chip)
+			var l2: Label = _text(pair[1], &"", 16)
+			l2.clip_text = false
+			l2.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			l2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			l2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row2.add_child(l2)
+			text.add_child(row2)
+		if not bool(kit.get("unlocked", true)):
+			var lock: Label = _text("LOCKED · %s" % String(kit.get("unlock_text", "")).to_upper(), &"EnemyLabel", 16)
+			lock.name = "LockedTag"
+			lock.clip_text = false
+			lock.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			lock.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			text.add_child(lock)
+			b.set_meta(&"locked", true)
 	var tag: Label = _text("SELECTED", &"HudTag", 16)
 	tag.name = "SelectedTag"
 	tag.clip_text = false
@@ -406,10 +473,16 @@ func operator_info(item: LoadoutItem) -> Dictionary:
 			"armor_max": item.operator_armor, "operator": true, "camo": String(BannerArtDB.camo_for_tier(1)),
 			"banner": String(BannerArtDB.operator_art_id(item.id, 1)), "keywords": _op_keywords(item),
 			"cls": "OPERATOR", "cost": _op_cost_text()}
+	var kit: Dictionary = _kit(item)
+	if not kit.is_empty():
+		kws.append({"name": "P · Passive · %s" % kit.get("passive_name", ""), "text": String(kit.get("passive_text", ""))})
+		kws.append({"name": "Ability · %s (once per match, free)" % kit.get("ability_name", ""),
+				"text": "%s Use it from the button on your Operator card during Deploy, like a killstreak (with the same preview and UNDO)." % kit.get("ability_text", "")})
+	var locked: bool = not kit.is_empty() and not bool(kit.get("unlocked", true))
 	return {"title": item.display_name, "type": "Operator · " + RunFlowScript.item_effect_line(item),
 			"text": "%s Your Operator is never drawn or discarded: it costs Supply to place and comes back after it goes down." % item.text,
 			"keywords": kws, "banner": entry, "side": 0, "is_unit": true,
-			"status": "SELECTED: you start with this Operator" if item.id == picked else "Tap the tile to start with this Operator"}
+			"status": ("LOCKED: %s" % kit.get("unlock_text", "")) if locked else ("SELECTED: you start with this Operator" if item.id == picked else "Tap the tile to start with this Operator")}
 
 
 func _refresh_ops() -> void:
@@ -422,7 +495,7 @@ func _refresh_ops() -> void:
 		var card: PanelContainer = b.find_child("OperatorBanner", true, false) as PanelContainer
 		if card != null:
 			card.theme_type_variation = &"HandCardSelected" if on else &"HandCard"
-		b.modulate = Color.WHITE if on else Color(0.82, 0.82, 0.85)
+		b.modulate = Color.WHITE if on else (Color(0.55, 0.55, 0.58) if bool(b.get_meta(&"locked", false)) else Color(0.82, 0.82, 0.85))
 
 
 func _layout() -> void:

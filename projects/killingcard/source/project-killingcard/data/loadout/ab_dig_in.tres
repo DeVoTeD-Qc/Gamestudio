@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_fx"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="2_li"]
+
+[sub_resource type="Resource" id="Resource_ab_dig_in_0"]
+script = ExtResource("1_fx")
+trigger = 0
+kind = 4
+target = 8
+zone_scope = 1
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 1
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_li")
+id = &"ab_dig_in"
+display_name = "Dig In"
+slot = 7
+text = "Once per match, free: your units in a column have Cover 1 this round."
+supply_cost = 0
+uses_per_round = 0
+uses_per_match = 1
+streak_threshold = 0
+effects = Array[ExtResource("1_fx")]([SubResource("Resource_ab_dig_in_0")])

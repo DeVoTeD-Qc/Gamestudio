@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"audit"
+title = "Quartermaster's Audit"
+scene = "\"Sign here, and here. Kit you don't use goes back on the truck.\""
+options = Array[Dictionary]([{
+"id": "hand_in",
+"label": "Hand in kit",
+"detail": "Muster out 2 Standard Issue cards.",
+"effect": "muster_out",
+"amount": 2,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "forms",
+"label": "Fill in the forms",
+"detail": "+2 REQ.",
+"effect": "req",
+"amount": 2,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SquadData" load_steps=19 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_li"]
+[ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="2_xm"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="3_cd"]
+[ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="4_rd"]
+[ext_resource type="Resource" path="res://data/loadout/sentry_turret.tres" id="5_st"]
+[ext_resource type="Resource" path="res://data/loadout/wasp_9.tres" id="6_w9"]
+[ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="7_sq"]
+[ext_resource type="Resource" path="res://data/cards/brawler.tres" id="10_brawle"]
+[ext_resource type="Resource" path="res://data/cards/point_man.tres" id="11_point_"]
+[ext_resource type="Resource" path="res://data/cards/combat_medic.tres" id="12_combat"]
+[ext_resource type="Resource" path="res://data/cards/flanker.tres" id="13_flanke"]
+[ext_resource type="Resource" path="res://data/cards/shieldman.tres" id="14_shield"]
+[ext_resource type="Resource" path="res://data/cards/demolitions_expert.tres" id="15_demoli"]
+[ext_resource type="Resource" path="res://data/cards/recon_specialist.tres" id="16_recon_"]
+[ext_resource type="Resource" path="res://data/cards/aid_station.tres" id="17_aid_st"]
+[ext_resource type="Resource" path="res://data/cards/war_standard.tres" id="18_war_st"]
+[ext_resource type="Resource" path="res://data/cards/hold_the_line.tres" id="19_hold_t"]
+[ext_resource type="Resource" path="res://data/cards/ammo_resupply.tres" id="20_ammo_r"]
+
+[resource]
+script = ExtResource("7_sq")
+id = &"squad_hollow_choir"
+display_name = "The Hollow Choir"
+clan_tag = "CHOIR"
+personality = 0
+deck = Array[ExtResource("3_cd")]([ExtResource("10_brawle"), ExtResource("10_brawle"), ExtResource("10_brawle"), ExtResource("10_brawle"), ExtResource("11_point_"), ExtResource("11_point_"), ExtResource("11_point_"), ExtResource("12_combat"), ExtResource("12_combat"), ExtResource("13_flanke"), ExtResource("13_flanke"), ExtResource("14_shield"), ExtResource("14_shield"), ExtResource("15_demoli"), ExtResource("15_demoli"), ExtResource("16_recon_"), ExtResource("17_aid_st"), ExtResource("18_war_st"), ExtResource("19_hold_t"), ExtResource("20_ammo_r")])
+primary = ExtResource("6_w9")
+attachments = Array[ExtResource("1_li")]([ExtResource("2_xm")])
+perks = Array[ExtResource("1_li")]([])
+killstreaks = Array[ExtResource("1_li")]([ExtResource("4_rd"), ExtResource("5_st")])
+weight_damage_dealt = 1.5
+weight_damage_taken = 0.5
+weight_zone_control = 2.0
+weight_deny_streak = 3.0
+second_best_chance = 0.15
+preferred_ranges = Array[int]([0])
+identity_trait = &"undead"

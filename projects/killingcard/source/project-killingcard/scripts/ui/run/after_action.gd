@@ -88,6 +88,11 @@ func _build() -> void:
 	_stat("SCORE", score, "target %d" % int(report["target"]) if int(report["target"]) > 0 else "")
 	_stat("ELIMINATIONS", _num(report["player_eliminations"]) + "-" + _num(report["enemy_eliminations"]), "you - enemy")
 	_stat("BEST STREAK", _num(report["best_streak"]))
+	# kc-v2-ui: the Requisition this fight earned, and the run's REQ now.
+	if int(report.get("req_gained", -1)) >= 0:
+		_stat("REQ", "+%d" % int(report["req_gained"]), "now %d" % int(r.get("req")) if &"req" in r else "")
+	if bool(report.get("elite", false)):
+		_title.text += "  ·  ELITE"
 	_tickets_stat(int(report["tickets_before"]), int(report["tickets_after"]), r.config.tickets)
 	_honor_roll(col, r)
 	_continue_button.text = continue_text()

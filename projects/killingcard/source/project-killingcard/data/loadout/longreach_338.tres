@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LoadoutItem" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=8 format=3]
 
 [ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="1_y6o7q"]
 [ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_p1eug"]
@@ -6,18 +6,24 @@
 [ext_resource type="Resource" path="res://data/loadout/ceramic_lining.tres" id="4_ep11t"]
 [ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="5_a1axx"]
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="6_ex3uq"]
+[ext_resource type="Resource" path="res://data/loadout/ab_marked_shot.tres" id="9_ab"]
 
 [resource]
 script = ExtResource("6_ex3uq")
 id = &"longreach_338"
 display_name = "Longreach .338"
 slot = 0
-text = "Sniper. Pick."
+text = "Sniper. Pick. Pierce (Overpenetration)."
 weapon_class = 4
 operator_firepower = 3
-operator_armor = 5
+operator_armor = 6
 rotations_per_round = 1
 attachments = Array[Resource]([ExtResource("1_y6o7q"), ExtResource("2_p1eug"), ExtResource("3_vnomv"), ExtResource("4_ep11t")])
+passive_name = "Overpenetration"
+passive_text = "Your Operator has Pierce."
+pierce = true
+ability = ExtResource("9_ab")
+unlock = &"first_run_done"
 firepower_bonus = 0
 armor_bonus = 0
 first_shot = false

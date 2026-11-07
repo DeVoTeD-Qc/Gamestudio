@@ -242,13 +242,13 @@ func get_inspector() -> Control:
 	return _inspector
 
 
-## Steps on node `id` (it must be reachable): the rules record the choice (choose_node), then the
-## screen for the node opens: a fight / elite / boss deploys, an event / shop / rest opens its screen.
+## Steps on node `id` (it must be reachable): the rules record the choice (move_to), then the
+## screen for the node opens (RunState.move_to, run-v2-api.md §3): a fight / elite / boss deploys, an event / shop / rest opens its screen.
 func choose_node(id: String) -> String:
 	var n: Dictionary = RunV2Views.node_by_id(_map_v2, id)
 	if n.is_empty() or not bool(n.get("reachable", false)):
 		return "Not on your path."
-	var err: String = RunV2Views.act(run(), &"choose_node", [id])
+	var err: String = RunV2Views.act(run(), &"move_to", [StringName(id)])
 	if err != "":
 		return err
 	node_chosen.emit(id)

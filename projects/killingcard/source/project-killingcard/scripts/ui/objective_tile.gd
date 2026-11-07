@@ -13,11 +13,18 @@
 #   column of (field_view overrun_risk) gets a pulsing red OVERRUN tab: it is torn down at the end
 #   of the round unless the column changes hands.
 #   Display only: the column asks field_at() / has_point() for long-press inspection.
-# Dependencies: BannerArtDB, BannerView (number metrics), hud_theme.tres colours.
+#   kc-v2-ui (Run v2 Terrain, run-v2.md §6.3: "a band across the whole objective tile"): a column with
+#   Terrain gets its tint band (a light wash with diagonal hatching and a 3 px stripe on the top and
+#   bottom edges) and a TERRAIN CHIP: with no Field on the tile, the chip fills the Field area (icon +
+#   NAME, and on tall tiles (iPad, desktop) the one-line rule under it); with Fields, a square icon chip
+#   left of the Field chips (the chips shrink by its width). The chip is its own hit area
+#   (terrain_hit): tap = the rule as a toast, long press / right click = the Terrain inspector.
+# Dependencies: BannerArtDB, BannerView (number metrics), hud_theme.tres colours, run_glyphs.gd.
 # Author: Mechanics Developer Agent (kc-board)
 extends Control
 
 const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
+const RunGlyphs: GDScript = preload("res://scripts/ui/run/run_glyphs.gd")
 
 ## &"player" / &"enemy" / &"contested" / &"empty"
 var control: StringName = &"empty"
@@ -28,6 +35,9 @@ var fp_enemy: int = 0
 var fields: Dictionary = {}
 var compact: bool = false
 var _chip_rects: Array = []   # [[Rect2, side, entry]]
+## kc-v2-ui: the column's Terrain ({id, name, text, zone}; {} = none) and its chip rect (tile-local).
+var terrain: Dictionary = {}
+var _terrain_rect: Rect2 = Rect2()
 var _pulse: float = 0.0
 
 
@@ -42,6 +52,7 @@ func set_tile(lane: Dictionary) -> void:
 	fp_player = int(lane.get("fp_player", 0))
 	fp_enemy = int(lane.get("fp_enemy", 0))
 	fields = lane.get("fields", {})
+	terrain = lane.get("terrain", {})
 	var risk: bool = false
 	for s: String in ["player", "enemy"]:
 		for f: Dictionary in fields.get(s, []):
@@ -53,6 +64,16 @@ func set_tile(lane: Dictionary) -> void:
 func _process(_delta: float) -> void:
 	_pulse = 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 5.0)
 	queue_redraw()
+
+
+## kc-v2-ui: true when a local point is on the Terrain chip.
+func terrain_hit(local: Vector2) -> bool:
+	return not terrain.is_empty() and _terrain_rect.grow(2.0).has_point(local)
+
+
+## kc-v2-ui: the Terrain chip's rect (tests; empty = no Terrain).
+func terrain_rect() -> Rect2:
+	return _terrain_rect
 
 
 ## [side (&"player"/&"enemy"), field entry] of the Field chip under a local point, or [].
@@ -70,6 +91,18 @@ func _col(name: StringName) -> Color:
 func _draw() -> void:
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
 	draw_rect(r, Color("#232A31"))
+	_terrain_rect = Rect2()
+	var tint: Color = RunGlyphs.terrain_tint(StringName(str(terrain.get("id", "")))) if not terrain.is_empty() else Color()
+	if not terrain.is_empty():
+		# The Terrain band: a wash, diagonal hatching and an edge stripe top and bottom.
+		draw_rect(r, Color(tint, 0.2))
+		var step: float = 14.0
+		var x: float = -size.y
+		while x < size.x:
+			draw_line(Vector2(x, size.y), Vector2(x + size.y, 0), Color(tint, 0.16), 2.0)
+			x += step
+		draw_rect(Rect2(0, 0, size.x, 3), tint)
+		draw_rect(Rect2(0, size.y - 3, size.x, 3), tint)
 	draw_rect(r, Color("#3A444D"), false, 1.0)
 	var h: float = size.y
 	# kc-abc-labels (the head: "remove the firepower total on locations ... just keep the location
@@ -106,6 +139,16 @@ func _draw() -> void:
 	var area: Rect2 = field_area()
 	var top_fields: Array = fields.get("enemy", [])
 	var bottom_fields: Array = fields.get("player", [])
+	if not terrain.is_empty():
+		if top_fields.is_empty() and bottom_fields.is_empty():
+			_terrain_chip_full(area, tint)
+			return
+		# With Fields: a square icon chip left of the Field chips.
+		var sq: float = area.size.y
+		_terrain_rect = Rect2(area.position, Vector2(sq * 0.62, sq))
+		draw_rect(_terrain_rect, tint)
+		RunGlyphs.draw_terrain(self, Rect2(_terrain_rect.position + Vector2(0, (sq - _terrain_rect.size.x) * 0.5), Vector2(_terrain_rect.size.x, _terrain_rect.size.x)).grow(-3.0), StringName(str(terrain.get("id", ""))), INK)
+		area = Rect2(area.position.x + _terrain_rect.size.x + 4.0, area.position.y, area.size.x - _terrain_rect.size.x - 4.0, area.size.y)
 	if top_fields.is_empty() and bottom_fields.is_empty():
 		# No Field: the control word, big, centred on the tile's height.
 		var word: String = control_word()
@@ -120,6 +163,62 @@ func _draw() -> void:
 		_chip(Rect2(area.position.x, area.position.y, area.size.x, half), &"enemy", top_fields[0])
 	if not bottom_fields.is_empty():
 		_chip(Rect2(area.position.x, area.end.y - half, area.size.x, half), &"player", bottom_fields[0])
+
+
+## kc-v2-ui: the Terrain chip over the whole Field area (no Field on the tile): icon + NAME, the
+## column's control word small under the name, and the one-line rule on tall tiles.
+func _terrain_chip_full(area: Rect2, tint: Color) -> void:
+	_terrain_rect = area
+	var id: StringName = StringName(str(terrain.get("id", "")))
+	var tall: bool = area.size.y >= 70.0
+	var ip: float = minf(area.size.y, 44.0) if not tall else 40.0
+	var icon_r: Rect2 = Rect2(area.position + Vector2(0, (area.size.y - ip) * 0.5 if not tall else 2.0), Vector2(ip, ip))
+	draw_rect(icon_r, tint)
+	RunGlyphs.draw_terrain(self, icon_r.grow(-ip * 0.12), id, INK)
+	var tf: Font = CardLook.TITLE_FONT
+	var tfs: int = 18 if not tall else 20
+	var room: float = area.size.x - ip - 8.0
+	var nm: String = BannerView.fit_text(String(terrain.get("name", "")).to_upper(), tf, tfs, room)
+	var nx: float = icon_r.end.x + 6.0
+	var ny: float = (icon_r.get_center().y if not tall else icon_r.position.y + ip * 0.5) - 2.0
+	var base: Vector2 = Vector2(nx, ny + (tf.get_ascent(tfs) - tf.get_descent(tfs)) * 0.5 - (6.0 if not tall else 0.0))
+	draw_string_outline(tf, base, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, 4, INK)
+	draw_string(tf, base, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, Color("#F2F5F7"))
+	# The control word, small, under the name (the letter mark's shape already says it too).
+	var wf: Font = get_theme_font(&"font", &"HudHeader")
+	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
+	if not tall:
+		draw_string(wf, Vector2(nx, base.y + 16.0), control_word(), HORIZONTAL_ALIGNMENT_LEFT, room, 14, wc)
+		return
+	draw_string(wf, Vector2(area.end.x - wf.get_string_size(control_word(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x, base.y), control_word(),
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, wc)
+	# Tall tiles: the rule, wrapped under the icon row.
+	var rf: Font = get_theme_font(&"font", &"Label")
+	var rule: String = String(terrain.get("text", ""))
+	var rfs: int = 14
+	var ry: float = icon_r.end.y + 2.0 + rf.get_ascent(rfs)
+	var lines: PackedStringArray = _wrap(rf, rule, rfs, area.size.x)
+	for i: int in lines.size():
+		if ry + rf.get_descent(rfs) > area.end.y:
+			break
+		draw_string_outline(rf, Vector2(area.position.x, ry), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, rfs, 3, INK)
+		draw_string(rf, Vector2(area.position.x, ry), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, rfs, Color("#E6EBEF"))
+		ry += rf.get_height(rfs)
+
+
+func _wrap(font: Font, text: String, fs: int, width: float) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var line: String = ""
+	for w: String in text.split(" "):
+		var t: String = w if line == "" else line + " " + w
+		if font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > width and line != "":
+			out.append(line)
+			line = w
+		else:
+			line = t
+	if line != "":
+		out.append(line)
+	return out
 
 
 ## kc-abc-labels: the letter mark's size (phone 52 px tile: 40; desktop 96: 64).

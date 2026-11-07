@@ -222,8 +222,7 @@ static func hold_the_line() -> CardData:
 
 static func breach_and_clear() -> CardData:
 	return tactic("breach_and_clear", 3, [
-		eff(TR.ON_PLAY, K.DAMAGE, T.ALL_ENEMIES, Z.CHOSEN_ZONE, 2,
-			{"bonus_amount": 1, "bonus_condition": DataEnums.Condition.ZONE_IS_CLOSE})])
+		eff(TR.ON_PLAY, K.DAMAGE, T.ALL_ENEMIES, Z.CHOSEN_ZONE, 2)])  # kc-abc-labels AB1: no Close bonus
 
 static func tripwire() -> CardData:
 	return equipment("tripwire_charge", 2, [

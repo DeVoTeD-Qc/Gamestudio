@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LoadoutItem" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=8 format=3]
 
 [ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="1_5wcw0"]
 [ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_fwxt5"]
@@ -6,6 +6,7 @@
 [ext_resource type="Resource" path="res://data/loadout/ceramic_lining.tres" id="4_6led4"]
 [ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="5_up1tf"]
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="6_3gnmc"]
+[ext_resource type="Resource" path="res://data/loadout/ab_dig_in.tres" id="9_ab"]
 
 [resource]
 script = ExtResource("6_3gnmc")
@@ -18,6 +19,11 @@ operator_firepower = 3
 operator_armor = 7
 rotations_per_round = 1
 attachments = Array[Resource]([ExtResource("1_5wcw0"), ExtResource("2_fwxt5"), ExtResource("3_jyr2n"), ExtResource("4_6led4")])
+passive_name = "Quartermaster"
+passive_text = "Your opening hand has 1 more card."
+opening_hand_bonus = 1
+ability = ExtResource("9_ab")
+unlock = &""
 firepower_bonus = 0
 armor_bonus = 0
 first_shot = false

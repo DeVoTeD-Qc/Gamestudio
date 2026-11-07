@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="LoadoutItem" load_steps=8 format=3]
+
+[ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="1_5wcw0"]
+[ext_resource type="Resource" path="res://data/loadout/foregrip.tres" id="2_fwxt5"]
+[ext_resource type="Resource" path="res://data/loadout/holo_sight.tres" id="3_jyr2n"]
+[ext_resource type="Resource" path="res://data/loadout/ceramic_lining.tres" id="4_6led4"]
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="5_up1tf"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="6_3gnmc"]
+[ext_resource type="Resource" path="res://data/loadout/ab_covering_fire.tres" id="9_ab"]
+
+[resource]
+script = ExtResource("6_3gnmc")
+id = &"bastion_60"
+display_name = "Bastion-60"
+slot = 0
+text = "LMG. Pierce. Cover 1 (Sandbagged)."
+weapon_class = 5
+operator_firepower = 2
+operator_armor = 8
+rotations_per_round = 1
+attachments = Array[Resource]([ExtResource("1_5wcw0"), ExtResource("2_fwxt5"), ExtResource("3_jyr2n"), ExtResource("4_6led4")])
+passive_name = "Sandbagged"
+passive_text = "Your Operator has Cover 1."
+ability = ExtResource("9_ab")
+unlock = &"first_win"
+firepower_bonus = 0
+armor_bonus = 0
+first_shot = false
+pick = false
+flank = false
+cover = 1
+suppress = false
+patch = 0
+holder = false
+supply_cost = 0
+uses_per_round = 0
+uses_per_match = 0
+streak_threshold = 0
+effects = Array[ExtResource("5_up1tf")]([])

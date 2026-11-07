@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"smoke"
+display_name = "Smoke"
+text = "No Pick or Flank here: every shot hits the front unit."
+detail = "Put your Marksman elsewhere; a wall in front is safe here."
+zone_control_only = false

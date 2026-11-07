@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TerrainData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/terrain_data.gd" id="1_terr"]
+
+[resource]
+script = ExtResource("1_terr")
+id = &"minefield"
+display_name = "Minefield"
+text = "Each round, the first unit each side brings here takes 1 damage."
+detail = "Lead with a cheap or sturdy card; never drop a 2-Armor Marksman in first."
+zone_control_only = false

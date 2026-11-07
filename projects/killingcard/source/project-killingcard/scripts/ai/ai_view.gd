@@ -36,6 +36,10 @@ var round_cap: int = 8
 var zone_ranges: Array[int] = [0, 1, 2]
 var zone_capacity: int = 4
 var hand_cap: int = 7
+## kc-v2-impl: Terrain id per column (public: both sides see it) and who held each column at the start
+## of the round (Rooftops). Records already carry the Terrain's effect (apply_terrain).
+var terrain: Array[StringName] = [&"", &"", &""]
+var held: Array[int] = [-1, -1, -1]
 ## range_bonus[weapon_class][zone] = Firepower bonus of that class in that zone on this map.
 var range_bonus: Array = []
 
@@ -119,6 +123,10 @@ static func capture(state, p_side: int) -> AiView:
 	for r: int in state.zone_ranges:
 		v.zone_ranges.append(r)
 	v.zone_capacity = int(cfg.zone_capacity)
+	if "terrain" in state:
+		for z: int in ZONES:
+			v.terrain[z] = state.terrain[z]
+			v.held[z] = int(state.held_at_start[z])
 	v.hand_cap = int(cfg.hand_cap)
 	v.range_bonus.clear()
 	for wc: int in DataEnums.WeaponClass.size():
@@ -156,6 +164,9 @@ static func capture(state, p_side: int) -> AiView:
 			v.items.append({"item": ks, "ready": LoadoutRules.can_use_item(state, p_side, ks) == ""})
 	for id: StringName in me.streak_tray:
 		v.tray.append(id)
+	# kc-v2-impl: the Operator's once-per-match ability is listed like an earned killstreak.
+	if me.ability != null and not me.ability_used():
+		v.items.append({"item": me.ability, "ready": LoadoutRules.can_use_item(state, p_side, me.ability) == ""})
 	for z: int in ZONES:
 		for entry: Dictionary in me.equipment[z]:
 			v.my_equipment[z].append(entry["card"].card.id)
@@ -213,10 +224,11 @@ static func _unit_record(state, u) -> Dictionary:
 	r["max_armor"] = int(u.max_armor(state.round_number))
 	r["cover"] = maxi(0, int(state.cover_of(u)) - int(state.field_passive_total(u, DataEnums.EffectKind.GRANT_COVER)))
 	r["first_shot"] = bool(state.has_first_shot(u))
-	r["pick"] = bool(u.pick)
-	r["flank"] = bool(u.flank)
+	# kc-v2-impl: Terrain (Smoke, Breach Point) through the state's helpers.
+	r["pick"] = bool(state.can_pick(u)) if "terrain" in state else bool(u.pick)
+	r["flank"] = bool(state.can_flank(u)) if "terrain" in state else bool(u.flank)
 	r["suppress"] = bool(u.suppress)
-	r["pierce"] = bool(u.pierce)
+	r["pierce"] = bool(state.has_pierce(u)) if "terrain" in state else bool(u.pierce)
 	r["patch"] = int(u.patch)
 	r["holder"] = bool(u.holder)
 	r["control"] = bool(u.counts_for_control)
@@ -263,6 +275,11 @@ static func _operator_in_zone(state, op, z: int, v: AiView) -> Dictionary:
 		r["armor"] = int(op.max_armor(state.round_number))
 		r["armor0"] = r["armor"]
 		r["new"] = true
+	# kc-v2-impl: the Terrain of zone z (not of the zone it stands in now).
+	r["pick"] = bool(op.pick)
+	r["flank"] = bool(op.flank)
+	r["pierce"] = bool(op.pierce)
+	v.apply_terrain(r, z, not op.is_on_board() or int(op.zone) != z)
 	return r
 
 
@@ -321,7 +338,32 @@ func record_for_card(card: CardData, uid: int, z: int,
 	r["credit"] = card.grants_elimination_credit
 	r["arrives_front"] = card.arrives_front
 	_read_effects(r, card.effects)
+	apply_terrain(r, z, true)
 	return r
+
+
+## kc-v2-impl: what the Terrain of column z does to a record of MY side standing / arriving there
+## (as the kc-v2-design sim's V2View): Dust Storm no First Shot, Rooftops First Shot if I held it at
+## the start of the round, Smoke no Pick / Flank, Breach Point Pierce, Minefield -1 Armor on arrival.
+func apply_terrain(r: Dictionary, z: int, arriving: bool) -> void:
+	if z < 0 or z >= ZONES:
+		return
+	match terrain[z]:
+		TerrainRules.DUST_STORM:
+			r["first_shot"] = false
+			r["fs_native"] = false
+		TerrainRules.ROOFTOPS:
+			if held[z] == side:
+				r["first_shot"] = true
+		TerrainRules.SMOKE:
+			r["pick"] = false
+			r["flank"] = false
+		TerrainRules.BREACH_POINT:
+			r["pierce"] = true
+		TerrainRules.MINEFIELD:
+			if arriving:
+				r["armor"] = maxi(1, int(r["armor"]) - 1)
+				r["armor0"] = r["armor"]
 
 
 ## My visible (non-hidden) Field standing in zone z, or null (one per column).

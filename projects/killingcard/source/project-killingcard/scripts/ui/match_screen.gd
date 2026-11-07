@@ -46,6 +46,9 @@ signal tray_state_changed(state: StringName)
 signal flyout_changed(key: StringName)
 ## kc-ui3: long-press / right-click on a killstreak tile (its loadout item id).
 signal item_inspected(item_id: StringName)
+## kc-v2-ui: the Operator ability button was tapped / long-pressed (right-clicked).
+signal ability_pressed
+signal ability_inspected
 ## kc-syn-ui: long-press / right-click on a trait rail chip (&"player" / &"enemy", trait id).
 signal trait_inspected(side: StringName, trait_id: StringName)
 
@@ -58,6 +61,9 @@ const KillfeedEntry: GDScript = preload("res://scripts/fx/killfeed_entry.gd")
 const KillstreakRow: GDScript = preload("res://scripts/ui/killstreak_row.gd")
 const TraitRail: GDScript = preload("res://scripts/ui/trait_rail.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const AbilityButton: GDScript = preload("res://scripts/ui/ability_button.gd")
+const MatchIntro: GDScript = preload("res://scripts/ui/match_intro.gd")
+const BossPlate: GDScript = preload("res://scripts/ui/boss_plate.gd")
 const OrderStrip: GDScript = preload("res://scripts/fx/order_strip.gd")
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const HandGlowFx: GDScript = preload("res://scripts/fx/hand_glow_fx.gd")
@@ -239,6 +245,7 @@ func _ready() -> void:
 	_ks_row.name = "KillstreakRow"
 	_tray.add_child(_ks_row)
 	_tray.move_child(_ks_row, _supply_box.get_index() + 1)
+	_setup_v2()
 	# kc-onboard-ui: who holds initiative this round (and why), above the trait rail.
 	_initiative = InitiativeChip.new()
 	_strip.add_child(_initiative)
@@ -309,6 +316,7 @@ func show_snapshot(snapshot: Dictionary) -> void:
 		_initiative.set_info(snapshot.get("initiative", {}))
 	_set_synergy(snapshot.get("synergy", {}))
 	_follow_phase(snapshot)
+	_set_v2(snapshot)
 	snapshot_shown.emit(snapshot)
 
 
@@ -342,6 +350,8 @@ func get_killstreak_tile(item_id: StringName) -> Control:
 func show_selection_state(operator_selected: bool, item_id: StringName) -> void:
 	_hand.set_operator_selected(operator_selected)
 	_ks_row.set_selected(item_id)
+	_selected_item = item_id
+	_refresh_ability()
 
 
 ## kc-ui3: the hand tray's Operator card from a snapshot ({} = no Operator). state: &"deploy" (it can
@@ -877,6 +887,7 @@ func _layout_tray() -> void:
 	_place(_ready_button, metrics["ready"])
 	fit_button_text(_ready_button)
 	_layout_dock()
+	_layout_ability()
 	_place(_speed_button, Rect2(0, h - btn_h, w, btn_h))
 	var tab_y: float = h - btn_h - 8.0 - tab_h
 	_place(_hand_tab, Rect2(0, tab_y, w, tab_h))
@@ -1451,6 +1462,7 @@ func _apply_tray_state(animate: bool) -> void:
 	if _dock != null and not open:
 		_dock.visible = false
 	_peek_catcher.visible = peek
+	_sync_ability_visible()
 	_update_tab_text()
 	if animate and not _reduced_motion():
 		# 200 ms cross-fade, plus a 160 ms slide on the cards (board-layout-v2.md §4.1).
@@ -1561,6 +1573,7 @@ func get_order_strip() -> Control:
 ## the order strip lights the column being fought.
 func _on_fx_event(ev: Dictionary) -> void:
 	var t: StringName = ev.get("type", &"")
+	_v2_fx_line(ev)
 	var letter: String = ZONE_LETTERS.get(StringName(ev.get("zone", &"")), "")
 	if t == RulesEvent.FIREFIGHT_STARTED:
 		_step_header.text = "FIREFIGHT · %s" % letter
@@ -1723,3 +1736,167 @@ func _apply_safe_area() -> void:
 	_safe_area.add_theme_constant_override(&"margin_right", int(margin_rb.x))
 	_safe_area.add_theme_constant_override(&"margin_bottom", int(margin_rb.y))
 	_inspector.set_safe_margins(margin_lt, margin_rb)
+
+
+# =============================================================================
+# kc-v2-ui: the Operator ability button, the boss plate, the match intro, Terrain / boss / ability
+# lines in the killfeed (run-v2.md §6, §7.1, §9)
+# =============================================================================
+
+var _ability: Control = null
+var _boss_plate: Control = null
+var _intro: Control = null
+var _intro_shown: bool = false
+var _selected_item: StringName = &""
+var _last_ability: Dictionary = {}
+var _ability_planned: bool = false
+var _last_lanes: Array = []
+## The run node of this match (RunState.current_node(), for the intro heading); tests may set it.
+var intro_node: Dictionary = {}
+
+
+func _setup_v2() -> void:
+	_ability = AbilityButton.new()
+	_tray.add_child(_ability)
+	_ability.pressed.connect(func() -> void:
+		close_flyout()
+		ability_pressed.emit())
+	_ability.inspected.connect(func() -> void:
+		close_flyout()
+		ability_inspected.emit())
+	_boss_plate = BossPlate.new()
+	_boss_plate.name = "BossPlate"
+	_layout.add_child(_boss_plate)
+	_boss_plate.inspected.connect(func() -> void:
+		close_flyout()
+		_inspector.open((load("res://scripts/ui/run/map_v2_view.gd") as GDScript).call(&"boss_info", _boss_plate.boss)))
+	_boss_plate.tapped.connect(func() -> void:
+		show_toast("Boss rule · %s: %s" % [_boss_plate.boss.get("rule_name", ""), _boss_plate.boss.get("rule_text", "")]))
+	_intro = MatchIntro.new()
+	add_child(_intro)
+	move_child(_intro, _inspector.get_index())
+	_intro.inspect_requested.connect(func(info: Dictionary) -> void: _inspector.open(info))
+
+
+func get_ability_button() -> Control:
+	return _ability
+
+
+func get_boss_plate() -> Control:
+	return _boss_plate
+
+
+func get_match_intro() -> Control:
+	return _intro
+
+
+func _set_v2(snapshot: Dictionary) -> void:
+	_last_ability = snapshot.get("ability", {})
+	_last_lanes = snapshot.get("lanes", [])
+	_ability_planned = bool(snapshot.get("ability_planned", false))
+	_refresh_ability()
+	var boss: Dictionary = snapshot.get("boss", {})
+	_boss_plate.set_boss((load("res://scripts/ui/run/run_v2_views.gd") as GDScript).call(&"boss_entry", boss) if not boss.is_empty() else {})
+	_layout_boss_plate.call_deferred()
+	var terrain: Array = snapshot.get("terrain", [])
+	if not _intro_shown and int(snapshot.get("round", 1)) <= 1 and MatchIntro.wanted(terrain, boss, intro_node):
+		_intro_shown = true
+		var node: Dictionary = intro_node
+		if node.is_empty():
+			var rs: Node = get_node_or_null(^"/root/RunState")
+			if rs != null and rs.has_method(&"current_node"):
+				var cn: Variant = rs.call(&"current_node")
+				if cn is Dictionary and not (cn as Dictionary).is_empty():
+					var views: GDScript = load("res://scripts/ui/run/run_v2_views.gd") as GDScript
+					var m: Dictionary = views.call(&"normalise_map", {"current": cn.get("id", &""), "nodes": [cn]})
+					node = (m["nodes"] as Array)[0]
+		_intro.compact = compact
+		_intro.open(terrain, boss, node, String(snapshot.get("mode", "")).capitalize())
+
+
+func _refresh_ability() -> void:
+	if _ability == null:
+		return
+	var aiming: bool = not _last_ability.is_empty() and _selected_item != &"" and _selected_item == StringName(str(_last_ability.get("id", "")))
+	_ability.set_ability(_last_ability, aiming, _ability_planned)
+	_sync_ability_visible()
+
+
+func _sync_ability_visible() -> void:
+	if _ability == null:
+		return
+	var card: Control = _hand.get_operator_card()
+	_ability.visible = _ability.state != AbilityButton.State.NONE and tray_state == TRAY_OPEN \
+			and card != null and card.is_visible_in_tree()
+
+
+## The button sits on the Operator card's bottom-right corner (over the end of its name / lore row:
+## the cost, the art's badges and the FP / Armor stay clear).
+func _layout_ability() -> void:
+	if _ability == null or metrics.is_empty() or not metrics.has("op_card"):
+		return
+	var op: Rect2 = metrics["op_card"]
+	var s: float = AbilityButton.SIZE_PX
+	_ability.size = Vector2(s, s)
+	_ability.position = Vector2(op.end.x - s - 2.0, op.end.y - s - 2.0)
+	_sync_ability_visible.call_deferred()
+	_layout_boss_plate.call_deferred()
+
+
+## The boss plate sits on an EMPTY rival back-row slot (row 4): column A's if free, else B's, else C's,
+## so it never covers a card. With all three back rows full it shrinks to a skull tab at the board's
+## top-left corner.
+func _layout_boss_plate() -> void:
+	if _boss_plate == null or not _boss_plate.visible:
+		return
+	var lr: Rect2 = _layout.get_global_rect()
+	_boss_plate.compact = compact
+	var lanes: Array = _board.get_lanes()
+	for z: int in lanes.size():
+		var data: Dictionary = _last_lanes[z] if z < _last_lanes.size() else {}
+		var used: int = (data.get("enemy", []) as Array).size() + (1 if int(data.get("incoming", 0)) > 0 else 0)
+		var slots: Array = lanes[z].get_enemy_slots()
+		if used < slots.size() and slots.size() >= 4:
+			var r: Rect2 = (slots[slots.size() - 1] as Control).get_global_rect()
+			_boss_plate.tab = false
+			_boss_plate.position = r.position - lr.position
+			_boss_plate.size = r.size
+			_boss_plate.queue_redraw()
+			return
+	var br: Rect2 = _board.get_global_rect()
+	_boss_plate.tab = true
+	_boss_plate.size = Vector2(56, 56)
+	_boss_plate.position = br.position - lr.position + Vector2(2, 2)
+	_boss_plate.queue_redraw()
+
+
+## Terrain triggers, boss rules and abilities as killfeed lines (toast over the board + the tray log).
+func _v2_fx_line(ev: Dictionary) -> void:
+	var t: String = String(ev.get("type", ""))
+	var data: Dictionary = {}
+	match t:
+		"terrain_triggered":
+			var views: GDScript = load("res://scripts/ui/run/run_v2_views.gd") as GDScript
+			var td: Dictionary = views.call(&"terrain_entry", StringName(str(ev.get("terrain", ""))))
+			var what: String = String(ev.get("what", ""))
+			var rest: String = what.trim_prefix(String(td["name"]) + ":").strip_edges() if what != "" else ""
+			data = {"attacker": String(td["name"]).to_upper(), "attacker_side": StringName(str(ev.get("side", "player"))),
+					"victim": rest.to_upper(), "victim_side": StringName(str(ev.get("side", "player"))), "icon": &""}
+		"boss_rule_triggered":
+			var what2: String = String(ev.get("what", "Boss rule"))
+			var parts: PackedStringArray = what2.split(":", true, 1)
+			data = {"attacker": parts[0].to_upper(), "attacker_side": &"enemy",
+					"victim": parts[1].strip_edges().to_upper() if parts.size() > 1 else "", "victim_side": &"enemy", "icon": &""}
+		"item_revealed":
+			if not bool(ev.get("ability", false)):
+				return
+			var side: StringName = StringName(str(ev.get("side", "player")))
+			var name: String = String(_last_ability.get("name", "ABILITY")) if side == &"player" else "ABILITY"
+			var zl: String = String(ZONE_LETTERS.get(StringName(str(ev.get("zone", ""))), ""))
+			data = {"attacker": String(_last_ability.get("operator_name", "OPERATOR")).to_upper() if side == &"player" else "RIVAL",
+					"attacker_side": side, "victim": ("%s · %s" % [name, zl] if zl != "" else name).to_upper(), "victim_side": side, "icon": &""}
+			if side == &"player" and _ability != null:
+				_ability.celebrate()
+	if data.is_empty() or _toasts == null:
+		return
+	_toasts.push(data)

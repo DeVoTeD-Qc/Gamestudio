@@ -16,6 +16,8 @@ extends Control
 const ScreenProfile: GDScript = preload("res://scripts/ui/screen_profile.gd")
 const RunFlow: GDScript = preload("res://scripts/ui/run/run_flow.gd")
 const PickTile: GDScript = preload("res://scripts/ui/run/pick_tile.gd")
+## kc-v2-ui: card_info.gd under its own name (reward_screen.gd declares CardInfo itself).
+const CardInfoV2: GDScript = preload("res://scripts/ui/card_info.gd")
 
 const BASE_MARGIN: Vector2 = Vector2(32, 24)
 const BASE_MARGIN_COMPACT: Vector2 = Vector2(16, 10)
@@ -383,10 +385,10 @@ func card_by_id(id: StringName) -> CardData:
 static func card_inspect_info(card: CardData, status: String = "") -> Dictionary:
 	if card == null:
 		return {}
-	var vd: Dictionary = CardInfo.view_dict(card)
+	var vd: Dictionary = CardInfoV2.view_dict(card)
 	vd["banner"] = String(card.id)
-	return {"view": vd, "title": card.display_name, "type": CardInfo.type_line(card), "banner": BannerCard.entry_for_card(card),
-			"is_unit": card.is_unit(), "text": card.text, "keywords": CardInfo.keywords(card), "status": status}
+	return {"view": vd, "title": card.display_name, "type": CardInfoV2.type_line(card), "banner": BannerCard.entry_for_card(card),
+			"is_unit": card.is_unit(), "text": card.text, "keywords": CardInfoV2.keywords(card), "status": status}
 
 
 ## "What just happened" line (studio rule): a panel at the bottom of the layout that names the

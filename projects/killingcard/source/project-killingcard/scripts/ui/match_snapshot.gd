@@ -18,6 +18,7 @@ extends RefCounted
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
+const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
 ## kc-board: the columns are A / B / C (zones Left / Mid / Right).
 const ZONE_LABELS: PackedStringArray = ["A", "B", "C"]
 
@@ -28,6 +29,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var dots: PackedInt32Array = state.red_dots(viewer)
 	var lanes: Array = []
 	var fields: Array[Dictionary] = state.field_view(viewer)
+	# kc-v2-ui: the columns' Terrain (run-v2-api.md §5; [] before the rules land or with none).
+	var terrains: Array = RunV2Views.terrain_view(state)
 	for z: int in MatchState.ZONE_COUNT:
 		var friendly: Array = []
 		for u: RulesUnit in me.lines[z]:
@@ -51,6 +54,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 			"friendly": friendly, "enemy": enemy,
 			"fp_player": fp_me, "fp_enemy": fp_foe,
 			"fields": _fields(state, viewer, z, fields),
+			"terrain": RunV2Views.terrain_at(terrains, z),
 		})
 	var hand: Array = []
 	for rc: RulesCard in me.hand:
@@ -108,6 +112,18 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		ks.append(entry)
 	snap["killstreaks"] = ks
 	snap["streak_max"] = maxi(top, 5)
+	# kc-v2-ui (run-v2-api.md §5): the Operator's once-per-match ability, its passive line and the boss
+	# rule ({} when the match has none).
+	snap["ability"] = RunV2Views.ability_view(state, viewer)
+	snap["ability_planned"] = false
+	if not (snap["ability"] as Dictionary).is_empty():
+		for p: Dictionary in me.plays:
+			var it: Variant = p.get("item")
+			if it is LoadoutItem and (it as LoadoutItem).id == StringName(str(snap["ability"]["id"])):
+				snap["ability_planned"] = true
+	snap["kit"] = RunV2Views.operator_kit_view(state, viewer)
+	snap["boss"] = RunV2Views.boss_view(state)
+	snap["terrain"] = RunV2Views.terrain_view(state)
 	return snap
 
 

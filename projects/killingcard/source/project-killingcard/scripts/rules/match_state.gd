@@ -45,6 +45,8 @@ const SRC_KILLSTREAK: StringName = &"killstreak"
 const SRC_PERK: StringName = &"perk"
 ## On Down triggers (Demolitions Expert); counts for the streak (StreakTracker rule).
 const SRC_ON_DOWN: StringName = &"on_down"
+## kc-v2-impl: an Operator's once-per-match ability (not a killstreak: its kills count for the streak).
+const SRC_ABILITY: StringName = &"ability"
 
 var config: RunConfig = null
 var zone_ranges: Array[int] = [DataEnums.RangeTag.CLOSE, DataEnums.RangeTag.MID, DataEnums.RangeTag.LONG]
@@ -86,6 +88,24 @@ var _syn_sides: Array = [{}, {}]
 var _syn_announced: Array = [SYN_EMPTY_KEY, SYN_EMPTY_KEY]
 const SYN_EMPTY_KEY: String = "|vanguard0,specops0,heavy0,undead0"
 
+# --- kc-v2-impl: Terrain, boss rule, fog (run-v2.md §4-§6; set by the run before start_match) ---------
+## Terrain id per column (&"" = none; TerrainRules ids). Never changes during a match.
+var terrain: Array[StringName] = [&"", &"", &""]
+## Control of each column at this round's Briefing (Rooftops; TerrainRules.on_briefing).
+var held_at_start: Array[int] = [CONTROL_EMPTY, CONTROL_EMPTY, CONTROL_EMPTY]
+## Supply Cache: Supply each side gets on top next round.
+var terrain_supply_next: Array[int] = [0, 0]
+## Modifier Fog of War: no red dots for either side.
+var fog_of_war: bool = false
+## Boss of this match (&"" = none; the enemy is the boss) and its rule (BossRules ids).
+var boss_id: StringName = &""
+var boss_rule: StringName = &""
+var boss_rule_name: String = ""
+var boss_rule_text: String = ""
+var boss_name: String = ""
+## The card the rule uses (Dug In: Mortar Pit, Horde: Shambler).
+var boss_card: CardData = null
+
 var _next_uid: int = 1
 var _play_counter: int = 0
 
@@ -123,7 +143,12 @@ func start_match() -> void:
 		if not s.setup.keep_deck_order:
 			shuffle(s.deck)
 		s.operator_unit = _build_operator(s.index, s.setup)
-	emit_event(RulesEvent.MATCH_STARTED, {"seed": seed_value, "map": map_id})
+		# kc-v2-impl: the Operator kit (passive + once-per-match ability) when the setup switches it on.
+		s.kit_on = s.setup.operator_kit and s.setup.primary != null
+		s.ability = s.setup.primary.ability as LoadoutItem if s.kit_on else null
+	emit_event(RulesEvent.MATCH_STARTED, {"seed": seed_value, "map": map_id, "terrain": terrain.duplicate(),
+			"boss_rule": boss_rule})
+	BossRules.on_match_start(self)
 	begin_round()
 
 
@@ -137,11 +162,14 @@ func begin_round() -> void:
 	emit_event(RulesEvent.ROUND_STARTED, {})
 	_set_phase(Phase.BRIEFING)
 	for s: RulesSide in sides:
-		s.supply = config.supply_for_round(round_number)
-		emit_event(RulesEvent.SUPPLY_GAINED, {"side": side_name(s.index), "supply": s.supply})
+		# kc-v2-impl: + Supply Cache (held last round) + the boss's Reinforcements.
+		var extra: int = terrain_supply_next[s.index] + BossRules.supply_bonus(self, s.index)
+		terrain_supply_next[s.index] = 0
+		s.supply = config.supply_for_round(round_number) + extra
+		emit_event(RulesEvent.SUPPLY_GAINED, {"side": side_name(s.index), "supply": s.supply, "extra": extra})
 		var draws: int = config.draws_per_round
 		if round_number == 1:
-			draws = config.opening_hand + config.round1_extra_draw
+			draws = config.opening_hand + config.round1_extra_draw + opening_hand_bonus(s.index)
 		draw_cards(s.index, draws)
 		s.plays.clear()
 		s.ready = false
@@ -162,6 +190,8 @@ func begin_round() -> void:
 			still_waiting.append(d)
 	delayed_effects = still_waiting
 	process_eliminations()
+	TerrainRules.on_briefing(self)
+	BossRules.on_briefing(self)
 	_set_phase(Phase.DEPLOY)
 
 
@@ -606,7 +636,7 @@ func _commit_item(side: int, play: Dictionary) -> void:
 	hooks.on_item_used(self, side, item)
 	emit_event(RulesEvent.ITEM_USED, {
 		"side": side_name(side), "item_id": item.id, "zone": zone_name(play["zone"]),
-		"private_to": side_name(side),
+		"private_to": side_name(side), "ability": item.slot == DataEnums.LoadoutSlot.ABILITY,
 	})
 	_resolve_immediate(side, item.effects, play, source_kind_for_item(item), item.id, -1)
 
@@ -638,6 +668,7 @@ func _resolve_immediate(side: int, effects: Array[EffectData], play: Dictionary,
 # =============================================================================
 
 func reveal() -> void:
+	var reveal_start: int = events.size()
 	_set_phase(Phase.REVEAL)
 	initiative = hooks.initiative_side(self)
 	emit_event(RulesEvent.INITIATIVE, {"side": side_name(initiative)})
@@ -681,6 +712,7 @@ func reveal() -> void:
 					"reason": "no unit arrived"})
 		s.arrival_buffs.clear()
 		s.plays.clear()
+	TerrainRules.after_reveal(self, reveal_start)  # kc-v2-impl: Minefield
 	announce_synergy()
 
 
@@ -790,7 +822,8 @@ func _reveal_equipment(si: int, play: Dictionary) -> void:
 
 func _reveal_item(si: int, play: Dictionary) -> void:
 	var item: LoadoutItem = play["item"]
-	emit_event(RulesEvent.ITEM_REVEALED, {"side": side_name(si), "item_id": item.id, "zone": zone_name(play["zone"])})
+	emit_event(RulesEvent.ITEM_REVEALED, {"side": side_name(si), "item_id": item.id, "zone": zone_name(play["zone"]),
+			"ability": item.slot == DataEnums.LoadoutSlot.ABILITY})
 	var ctx: Dictionary = make_ctx(si, source_kind_for_item(item), item.id, -1, play["zone"], play["target_uid"], play["dest_zone"])
 	EffectResolver.resolve_play(self, item.effects, ctx)
 	hooks.on_item_resolved(self, si, item)
@@ -841,6 +874,7 @@ func score() -> void:
 		control.append(c)
 		emit_event(RulesEvent.ZONE_CONTROL, {"zone": zone_name(z), "owner": control_name(c)})
 	_synergy_heal()  # kc-syn: Undead tier 2, before the END_OF_ROUND effects
+	TerrainRules.field_hospital(self)  # kc-v2-impl
 	for si: int in side_order():
 		var s: RulesSide = sides[si]
 		for z: int in ZONE_COUNT:
@@ -858,8 +892,10 @@ func score() -> void:
 	_overrun()
 	announce_synergy()
 	for si: int in side_order():
+		TerrainRules.comms_tower(self, si)  # kc-v2-impl: before the streak counts
 		hooks.apply_streak(self, si)
 	hooks.score_round(self, control)
+	TerrainRules.after_mode_score(self, control)
 	for s: RulesSide in sides:
 		for u: RulesUnit in s.units_on_board():
 			u.expire_mods(round_number)
@@ -1044,7 +1080,8 @@ func _build_operator(side: int, setup: SideSetup) -> RulesUnit:
 		u.holder = u.holder or p.holder
 		u.effects.append_array(p.effects)
 	# Head F2 (kc-fight-impl answers): any LMG weapon has Pierce, an Operator's LMG primary too.
-	u.pierce = primary.weapon_class == DataEnums.WeaponClass.LMG
+	# kc-v2-impl: Longreach's passive (Overpenetration) gives Pierce while the kit is on.
+	u.pierce = primary.weapon_class == DataEnums.WeaponClass.LMG or (setup.operator_kit and primary.pierce)
 	u.base_firepower = maxi(0, fp)
 	u.base_max_armor = maxi(1, ar)
 	u.armor = u.base_max_armor
@@ -1138,11 +1175,29 @@ func cover_of(u: RulesUnit) -> int:
 
 
 ## First Shot now. Blackout-style REMOVE_FIRST_SHOT also removes a set-bonus First Shot (none since kc-specops3).
+## kc-v2-impl Terrain: Dust Storm takes it away, Rooftops gives it to the side that held the column
+## at the start of the round.
 func has_first_shot(u: RulesUnit, with_synergy: bool = true) -> bool:
 	if u.has_mod(DataEnums.EffectKind.REMOVE_FIRST_SHOT, round_number) or passive_has(u, DataEnums.EffectKind.REMOVE_FIRST_SHOT):
 		return false
+	var by_terrain: Variant = TerrainRules.first_shot_override(self, u)
+	if by_terrain != null:
+		return bool(by_terrain)
 	return u.first_shot or u.has_mod(DataEnums.EffectKind.GRANT_FIRST_SHOT, round_number) \
 			or passive_has(u, DataEnums.EffectKind.GRANT_FIRST_SHOT) or (with_synergy and bool(synergy_of(u).get("fs", false)))
+
+
+## kc-v2-impl: may this unit's shots Pick / Flank / Pierce right now (Smoke, Breach Point)?
+func can_pick(u: RulesUnit) -> bool:
+	return u.pick and not TerrainRules.blocks_pick_flank(self, u.zone)
+
+
+func can_flank(u: RulesUnit) -> bool:
+	return u.flank and not TerrainRules.blocks_pick_flank(self, u.zone)
+
+
+func has_pierce(u: RulesUnit) -> bool:
+	return u.pierce or TerrainRules.grants_pierce(self, u.zone)
 
 
 func is_untargetable_by_pick_flank(u: RulesUnit) -> bool:
@@ -1497,6 +1552,8 @@ func zones_controlled(side: int) -> int:
 ## (unit cards + Operator placement / Rotation; Ruling 13).
 func red_dots(viewer: int) -> PackedInt32Array:
 	var counts: PackedInt32Array = PackedInt32Array([0, 0, 0])
+	if fog_of_war:
+		return counts  # kc-v2-impl modifier Fog of War
 	var foe: RulesSide = sides[1 - viewer]
 	var op_hidden: bool = foe.has_flag(DataEnums.EffectKind.HIDE_FROM_INTEL, round_number)
 	for play: Dictionary in foe.plays:
@@ -1508,10 +1565,14 @@ func red_dots(viewer: int) -> PackedInt32Array:
 
 ## Card ids behind the red dots of `zone`, if `viewer` revealed that zone this round
 ## (Callout, Recon Specialist) or sees all enemy deployments (Recon Drone); otherwise empty.
+## kc-v2-impl: Floodlights shows a column's red dots face-up to both sides; Fog of War hides them all.
 func revealed_red_dots(viewer: int, zone: int) -> Array[StringName]:
 	var out: Array[StringName] = []
+	if fog_of_war:
+		return out
 	var zones: Array = sides[viewer].intel_reveals.get(round_number, [])
-	if zone not in zones and not sides[viewer].has_flag(DataEnums.EffectKind.REVEAL_DEPLOYMENTS, round_number):
+	if zone not in zones and not sides[viewer].has_flag(DataEnums.EffectKind.REVEAL_DEPLOYMENTS, round_number) \
+			and not TerrainRules.floodlit(self, zone):
 		return out
 	var foe: RulesSide = sides[1 - viewer]
 	for play: Dictionary in foe.plays:
@@ -1549,6 +1610,8 @@ func projected_operator_zone(side: int) -> int:
 
 func find_item(side: int, item_id: StringName) -> LoadoutItem:
 	var setup: SideSetup = sides[side].setup
+	if sides[side].ability != null and sides[side].ability.id == item_id:
+		return sides[side].ability
 	for item: LoadoutItem in setup.killstreaks:
 		if item != null and item.id == item_id:
 			return item
@@ -1561,6 +1624,101 @@ func find_unit(uid: int) -> RulesUnit:
 		if u != null:
 			return u
 	return null
+
+
+# =============================================================================
+# kc-v2-impl: Terrain, Operator kit and boss (UI hooks; documentation/technical/run-v2-api.md §5)
+# =============================================================================
+
+## Terrain id in `zone` (&"" = none).
+func terrain_at(zone: int) -> StringName:
+	return terrain[zone] if is_zone(zone) else &""
+
+
+## Cards the Operator kit adds to `side`'s opening hand (Kestrel's Quartermaster).
+func opening_hand_bonus(side: int) -> int:
+	var s: RulesSide = sides[side]
+	return s.setup.primary.opening_hand_bonus if s.setup.operator_kit and s.setup.primary != null else 0
+
+
+## One row per column: {zone, zone_name, id, name, text, detail, active_for: [&"player", &"enemy"],
+## held_by: side name holding it at the start of this round (Rooftops) or &""}. id &"" = no Terrain.
+func terrain_view(_viewer: int = PLAYER) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for z: int in ZONE_COUNT:
+		var row: Dictionary = TerrainRules.row(z, terrain[z])
+		row["active_for"] = [side_name(PLAYER), side_name(ENEMY)] if terrain[z] != &"" else []
+		var h: int = held_at_start[z]
+		row["held_by"] = side_name(h) if h == PLAYER or h == ENEMY else &""
+		out.append(row)
+	return out
+
+
+## The Operator card's kit: {operator_id, operator_name, passive_name, passive_text, ability_id,
+## ability_name, ability_text, kit_on}. {} without a Primary.
+func operator_kit_view(side: int = PLAYER) -> Dictionary:
+	var s: RulesSide = sides[side]
+	var p: LoadoutItem = s.setup.primary
+	if p == null:
+		return {}
+	var ab: LoadoutItem = p.ability as LoadoutItem
+	return {"operator_id": p.id, "operator_name": p.display_name, "passive_name": p.passive_name,
+			"passive_text": p.passive_text, "ability_id": ab.id if ab != null else &"",
+			"ability_name": ab.display_name if ab != null else "", "ability_text": ab.text if ab != null else "",
+			"kit_on": s.kit_on}
+
+
+## The ability button: {id, name, text, operator_name, passive_name, passive_text, ready, used,
+## needs_operator, operator_on_board, target: &"zone"|&"enemy"|&"none", targets: [{zone, target_uid}],
+## code, reason}. {} when the side has no ability this match.
+func ability_view(side: int = PLAYER) -> Dictionary:
+	var s: RulesSide = sides[side]
+	var ab: LoadoutItem = s.ability
+	if ab == null:
+		return {}
+	var needs_op: bool = false
+	var target: StringName = &"none"
+	for e: EffectData in ab.effects:
+		if e == null:
+			continue
+		if e.zone_scope in [DataEnums.ZoneScope.OPERATOR_ZONE, DataEnums.ZoneScope.OPERATOR_OR_ADJACENT]:
+			needs_op = true
+		if e.target == DataEnums.Target.CHOSEN_ENEMY:
+			target = &"enemy"
+		elif e.zone_scope == DataEnums.ZoneScope.CHOSEN_ZONE and target == &"none":
+			target = &"zone"
+	var check: Dictionary = check_use(side, ab.id)
+	var reason: String = ""
+	if not check["ok"]:
+		match check["code"]:
+			&"operator_not_placed":
+				reason = "Deploy your Operator first"
+			&"no_uses_left":
+				reason = "Used this match"
+			&"wrong_phase":
+				reason = "Use it in Deploy"
+			&"already_ready":
+				reason = "You are READY"
+			&"no_legal_target", &"no_target", &"target_out_of_range":
+				reason = "No enemy in your Operator's column" if target == &"enemy" else "No legal target"
+			_:
+				reason = String(check["reason"])
+	var p: LoadoutItem = s.setup.primary
+	var targets: Array[Dictionary] = legal_targets(side, ab.id) if check["ok"] else [] as Array[Dictionary]
+	return {"id": ab.id, "name": ab.display_name, "text": ab.text,
+			"operator_name": p.display_name if p != null else "",
+			"passive_name": p.passive_name if p != null else "", "passive_text": p.passive_text if p != null else "",
+			"ready": bool(check["ok"]), "used": s.ability_used(), "needs_operator": needs_op,
+			"operator_on_board": projected_operator_zone(side) != NO_ZONE,
+			"target": target, "targets": targets, "code": check["code"], "reason": reason}
+
+
+## The boss plate: {id, rule, name, rule_name, text, active, note}. {} outside boss fights.
+func boss_view() -> Dictionary:
+	if boss_rule == &"":
+		return {}
+	return {"id": boss_id, "rule": boss_rule, "name": boss_name, "rule_name": boss_rule_name,
+			"text": boss_rule_text, "active": BossRules.active(self), "note": BossRules.note(self)}
 
 
 # =============================================================================
@@ -1632,6 +1790,8 @@ func source_kind_for_item(item: LoadoutItem) -> StringName:
 			return SRC_KILLSTREAK
 		DataEnums.LoadoutSlot.PERK:
 			return SRC_PERK
+		DataEnums.LoadoutSlot.ABILITY:
+			return SRC_ABILITY
 	return SRC_OPERATOR
 
 

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"range_day"
+title = "Range Day"
+scene = "A quiet afternoon and a crate of ammo nobody counted."
+options = Array[Dictionary]([{
+"id": "zero",
+"label": "Zero the rifle",
+"detail": "A weapon level now (pick 1 of 2).",
+"effect": "weapon_level",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "drills",
+"label": "Drills",
+"detail": "Your next Supply Drop shows 1 more card.",
+"effect": "drills",
+"amount": 1,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

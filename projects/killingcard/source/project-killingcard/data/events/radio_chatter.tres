@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EventData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_evnt"]
+
+[resource]
+script = ExtResource("1_evnt")
+id = &"radio_chatter"
+title = "Radio Chatter"
+scene = "You catch the next crew's channel."
+options = Array[Dictionary]([{
+"id": "jam",
+"label": "Jam it",
+"detail": "Your next fight has no Terrain.",
+"effect": "jam_terrain",
+"amount": 0,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}, {
+"id": "ground",
+"label": "Pick the ground",
+"detail": "Choose your next fight's Terrain from 3.",
+"effect": "pick_terrain",
+"amount": 3,
+"cost_req": 0,
+"needs": "terrain",
+"card": ""
+}, {
+"id": "sell",
+"label": "Sell the frequency",
+"detail": "+2 REQ.",
+"effect": "req",
+"amount": 2,
+"cost_req": 0,
+"needs": "",
+"card": ""
+}])
+first_run_only = false

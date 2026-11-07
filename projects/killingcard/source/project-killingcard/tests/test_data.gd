@@ -33,7 +33,8 @@ func test_sample_cards_match_core_rules() -> void:
 	assert_not_null(bac, "breach_and_clear sample")
 	if bac != null:
 		assert_eq(bac.card_type, DataEnums.CardType.TACTIC, "B&C type")
-		assert_eq(bac.effects[0].amount + bac.effects[0].bonus_amount, 3, "B&C 3 if Close")
+		assert_eq([bac.effects[0].amount, bac.effects[0].bonus_amount], [2, 0], "B&C 2 damage, no Close bonus (AB1)")
+		assert_eq(bac.text, "2 damage to every enemy unit in a column.", "B&C text (AB1)")
 		assert_true(bac.requires_zone_choice(), "B&C needs a zone")
 	var mortar: LoadoutItem = db.get_loadout_item(&"mortar_barrage")
 	assert_not_null(mortar, "mortar sample")
@@ -174,7 +175,7 @@ func test_rejects_invalid_values_and_effects() -> void:
 
 ## kc-loadout-cut: the Secondary (2), Lethal (3) and Tactical (4) slots and COOLDOWN_MOD are gone.
 func test_rejects_removed_slots_and_cooldown_mod() -> void:
-	assert_eq(DataEnums.LoadoutSlot.values(), [0, 1, 5, 6], "Primary, Attachment, Perk, Killstreak keep their numbers")
+	assert_eq(DataEnums.LoadoutSlot.values(), [0, 1, 5, 6, 7], "Primary, Attachment, Perk, Killstreak keep their numbers (+ kc-v2 Ability 7)")
 	var data: Dictionary = _valid_set()
 	data["loadout/perk"].slot = 3 as DataEnums.LoadoutSlot          # the old LETHAL
 	data["loadout/perk2"].effects[0].kind = DataEnums.EffectKind.COOLDOWN_MOD

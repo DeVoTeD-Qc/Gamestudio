@@ -24,6 +24,8 @@ var _squads: Dictionary = {}       # StringName id -> SquadData
 var _maps: Dictionary = {}         # StringName id -> MapData
 var _run_configs: Dictionary = {}  # StringName id -> RunConfig
 var _tutorials: Dictionary = {}    # StringName id -> TutorialScript (p15)
+var _terrains: Dictionary = {}     # StringName id -> TerrainData (kc-v2-impl)
+var _events: Dictionary = {}       # StringName id -> EventData (kc-v2-impl)
 var _files: Dictionary = {}        # Resource -> file path it was loaded from
 var _issues: Array[Dictionary] = []
 var _root: String = DATA_ROOT
@@ -130,6 +132,16 @@ func get_tutorial_script(id: StringName = &"tutorial_basic") -> TutorialScript:
 
 
 ## Any loaded data resource by id.
+## kc-v2-impl: a Terrain (map Field) by id, or null.
+func get_terrain(id: StringName) -> TerrainData:
+	return _terrains.get(id)
+
+
+## kc-v2-impl: a run-map Event by id, or null.
+func get_event(id: StringName) -> EventData:
+	return _events.get(id)
+
+
 func get_resource(id: StringName) -> Resource:
 	return _by_id.get(String(id))
 
@@ -213,7 +225,7 @@ func get_report() -> Dictionary:
 # --- Internals ----------------------------------------------------------------------
 
 func _clear() -> void:
-	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _tutorials, _files]:
+	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _tutorials, _terrains, _events, _files]:
 		d.clear()
 	_issues = []
 	_files_loaded = 0
@@ -221,7 +233,7 @@ func _clear() -> void:
 
 func _is_data_class(res: Resource) -> bool:
 	return res is CardData or res is LoadoutItem or res is SquadData or res is MapData or res is RunConfig \
-			or res is TutorialScript
+			or res is TutorialScript or res is TerrainData or res is EventData
 
 
 func _bucket_for(res: Resource) -> Dictionary:
@@ -237,6 +249,10 @@ func _bucket_for(res: Resource) -> Dictionary:
 		return _run_configs
 	if res is TutorialScript:
 		return _tutorials
+	if res is TerrainData:
+		return _terrains
+	if res is EventData:
+		return _events
 	return {}
 
 

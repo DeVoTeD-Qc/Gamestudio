@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=54 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=59 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_aw1hj"]
 [ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="2_mbgj7"]
@@ -48,6 +48,8 @@
 [ext_resource type="Resource" path="res://data/cards/si_trooper.tres" id="49_sitr"]
 [ext_resource type="Resource" path="res://data/cards/si_sergeant.tres" id="50_sisg"]
 [ext_resource type="Resource" path="res://data/cards/si_armored.tres" id="51_siar"]
+[ext_resource type="Resource" path="res://data/squads/squad_hollow_choir.tres" id="52_choir"]
+[ext_resource type="Resource" path="res://data/cards/shambler.tres" id="53_shamb"]
 
 [sub_resource type="Resource" id="Resource_erhuq"]
 script = ExtResource("6_vn4hk")
@@ -109,6 +111,57 @@ enemy_armor_bonus = 1
 enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("27_gt2np"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("24_vxiig"), ExtResource("24_vxiig"), ExtResource("20_1qn3b"), ExtResource("21_gia51"), ExtResource("25_re5x2"), ExtResource("17_84r8d"), ExtResource("33_13yh0"), ExtResource("32_7m22p"), ExtResource("18_4l4qd"), ExtResource("19_2fo86"), ExtResource("29_yqpqb"), ExtResource("30_y1ak3")])
 crew_label = "Operator crew"
 
+[sub_resource type="Resource" id="Resource_bmerid"]
+script = ExtResource("6_vn4hk")
+bracket = 2
+is_rival = true
+squad = ExtResource("10_sl0n6")
+mode = 0
+map = ExtResource("7_1oiq7")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 1
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("27_gt2np"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("24_vxiig"), ExtResource("24_vxiig"), ExtResource("20_1qn3b"), ExtResource("21_gia51"), ExtResource("25_re5x2"), ExtResource("17_84r8d"), ExtResource("33_13yh0"), ExtResource("32_7m22p"), ExtResource("18_4l4qd"), ExtResource("19_2fo86"), ExtResource("29_yqpqb"), ExtResource("30_y1ak3")])
+crew_label = "Boss crew"
+boss_id = &"meridian"
+boss_rule = &"reinforcements"
+boss_rule_name = "Reinforcements"
+boss_rule_text = "From round 4, the boss gains 1 extra Supply every round."
+unlock = &""
+
+[sub_resource type="Resource" id="Resource_bprime"]
+script = ExtResource("6_vn4hk")
+bracket = 2
+is_rival = true
+squad = ExtResource("9_qok0a")
+mode = 1
+map = ExtResource("7_1oiq7")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 1
+crew_label = "Boss crew"
+boss_id = &"prime"
+boss_rule = &"dug_in"
+boss_rule_name = "Dug In"
+boss_rule_text = "The boss starts the match with a Mortar Pit in every column. Take a column to tear its pit down."
+boss_card = ExtResource("36_ggcg5")
+unlock = &"first_run_done"
+
+[sub_resource type="Resource" id="Resource_bchoir"]
+script = ExtResource("6_vn4hk")
+bracket = 2
+is_rival = true
+squad = ExtResource("52_choir")
+mode = 0
+map = ExtResource("7_1oiq7")
+enemy_firepower_bonus = 0
+enemy_armor_bonus = 2
+crew_label = "Boss crew"
+boss_id = &"choir"
+boss_rule = &"horde"
+boss_rule_name = "Horde"
+boss_rule_text = "From round 2, a 1/2 Shambler joins the back of the boss's emptiest column every round. Shamblers don't hold ground; Pick and Flank ignore them."
+boss_card = ExtResource("53_shamb")
+unlock = &"first_boss_win"
+
 [resource]
 script = ExtResource("41_0k5m5")
 id = &"run_default"
@@ -134,6 +187,8 @@ muster_out_extra = 1
 salvage_after_loss = true
 salvage_choices = 2
 doctrine_from_first_pick = true
+run_map = true
+bosses = Array[ExtResource("6_vn4hk")]([SubResource("Resource_bmerid"), SubResource("Resource_bprime"), SubResource("Resource_bchoir")])
 legacy_cards = Array[ExtResource("15_yt66f")]([ExtResource("42_ilvsx")])
 starter_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("30_y1ak3"), ExtResource("30_y1ak3")])
 starter_primary = ExtResource("44_ocvin")
