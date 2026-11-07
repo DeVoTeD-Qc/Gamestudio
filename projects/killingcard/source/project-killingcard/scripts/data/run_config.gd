@@ -97,7 +97,7 @@ extends Resource
 @export_range(0, 3) var first_run_elite_terrain: int = 1
 @export_range(1, 5) var first_run_kit_from_fight: int = 2
 ## Boss rule numbers (§4): Meridian's extra Supply and the round it starts, the Choir's first Shambler round.
-@export_range(1, 12) var meridian_supply_from: int = 4
+@export_range(1, 12) var meridian_supply_from: int = 5
 @export_range(0, 3) var meridian_supply: int = 1
 @export_range(1, 12) var choir_from_round: int = 2
 ## Columns that start with a Mortar Pit for Bulwark Prime (0 = A, 1 = B, 2 = C).

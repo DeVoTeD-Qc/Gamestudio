@@ -6,7 +6,7 @@
 
 ## 0. Summary in seven lines
 1. **A run is a map**: one act, 9 steps, 3 lanes. Five fights you must play (F1–F4 and the boss), up to two optional **elites**, and four forks with **Events** (9 written), **Shops** (one currency, **REQ**) and **Rests** (+1 ticket, send 2 cards home, or a weapon level). The match ladder, rungs, 2-of-4 picks, Muster out and Salvage map onto F1–F4 unchanged (§2–3).
-2. **Three bosses**, each a crew plus one rule that uses a system the player already knows: **Meridian_Six** (from round 4, +1 Supply every round), **Bulwark Prime** (starts with a Mortar Pit in every column), **The Hollow Choir** (a Shambler joins it every round from round 2). The run's boss is on the map from step 1 (§4).
+2. **Three bosses**, each a crew plus one rule that uses a system the player already knows: **Meridian_Six** (from round 5, +1 Supply every round; kc-v2-tune, was round 4), **Bulwark Prime** (starts with a Mortar Pit in every column), **The Hollow Choir** (a Shambler joins it every round from round 2). The run's boss is on the map from step 1 (§4).
 3. **Five unlockable modifiers** with a Threat number (Hardcore, Austerity, Veteran Crews, Fog of War, Hot Ground); they unlock cosmetics, never power (§5, §8).
 4. **Terrain (map Fields)**: each fight deals 1–2 of 10 one-line column rules (Rooftops, Smoke, Dust Storm, Breach Point, Floodlights, Comms Tower, Supply Cache, Hot Zone, Minefield, Field Hospital). Both sides get it, it's shown on the map and before the mulligan, and it's never replaced in a match. None of them changes a unit's FP or Cover by where it stands (§6).
 5. **Four Operators** (Kestrel AR-7, Longreach .338, Wasp-9 and the new **Bastion-60** LMG), each with one passive and one free once-per-match ability on a button on the Operator card (§7).
@@ -132,11 +132,11 @@ A boss is a crew plus **one rule**, shown on the boss node from the start of the
 
 | Boss | Squad (deck) | Mode | Scaling | Rule (one line) | Where |
 |---|---|---|---|---|---|
-| **Meridian_Six** (Black Meridian, Spec Ops) | the shipped Rival `enemy_deck` (4 Gunners, 2 Shieldmen, 2 Riflemen, 2 Medics, Anvil, Wren, …) | Zone Control | Armor +1 (as today) | **Reinforcements:** from round 4, gains 1 extra Supply every round. | Step 9. Always in the first run; one of three after that |
+| **Meridian_Six** (Black Meridian, Spec Ops) | the shipped Rival `enemy_deck` (4 Gunners, 2 Shieldmen, 2 Riflemen, 2 Medics, Anvil, Wren, …) | Zone Control | Armor +1 (as today) | **Reinforcements:** from round 5, gains 1 extra Supply every round (kc-v2-tune; was round 4). | Step 9. Always in the first run; one of three after that |
 | **Bulwark Prime** (Anchor, Heavy) | the shipped Bulwark_Nine squad deck (Trained Anchor: Gunners, Protectors, Medics, Hold the Line, Suppressing Fire) | Firefight | Armor +1 | **Dug In:** starts the match with a Mortar Pit in every column. (Overrun tears one down, as for any Field.) | Unlocked after your first run |
 | **The Hollow Choir** (Undead) | a new authored deck: Brawler ×4, Point Man ×3, Combat Medic ×2, Flanker ×2, Shieldman ×2, Demolitions Expert ×2, Recon Specialist, Aid Station, War Standard, Hold the Line, Ammo Resupply (20; Undead identity) | Zone Control | Armor +2 | **Horde:** from round 2, a 1/2 Shambler joins the back of its emptiest column every round. Shamblers don't hold ground, and Pick and Flank ignore them. | Unlocked after your first boss win |
 
-- **Each rule uses an existing system**, so the player already knows how to answer it: Supply (Meridian: win it before round 4 or hold out), Fields and Overrun (Prime: take a column to tear its pit down), and units that don't count for control (Choir; the Sentry token works the same way). Killing a Shambler counts for your streak. Shamblers ignore Pick and Flank so they don't soak every Marksman shot (without that line Longreach won 15% of its Choir fights).
+- **Each rule uses an existing system**, so the player already knows how to answer it: Supply (Meridian: win it before round 5 or hold out), Fields and Overrun (Prime: take a column to tear its pit down), and units that don't count for control (Choir; the Sentry token works the same way). Killing a Shambler counts for your streak. Shamblers ignore Pick and Flank so they don't soak every Marksman shot (without that line Longreach won 15% of its Choir fights).
 - **Rotation:** from run 2, the run's boss is drawn from the unlocked bosses, never the same one twice in a row, and it is shown on the map from step 1, so the whole path can be planned against it (e.g. Fields and Pick against the Choir, Overrun pressure against Prime).
 - Boss fights for the solid proxy: Meridian 40.3%, Prime 40.3%, Choir 45.7% (§10.2). The levers are the rule's numbers (Meridian: the round the Supply starts; Prime: pits in 2 or 3 columns; Choir: the Shambler from round 1 or 2, 1/2 or 2/2) and the boss Armor bonus.
 
@@ -194,7 +194,7 @@ The Operator is still a unit card with its Primary's stats, its keyword and its 
 
 | Operator | Weapon · FP / Armor · keyword | Passive (one line) | Ability: once per match, 0 Supply (one line) | Plays like |
 |---|---|---|---|---|
-| **Kestrel AR-7** | AR · 3 / 7 | **Quartermaster:** your opening hand has 1 more card. | **Dig In:** your units in a column have Cover 1 this round. | the steady all-rounder: more options, one big defensive turn |
+| **Kestrel AR-7** | AR · 3 / 7 | **Quartermaster:** your opening hand has 1 more card (on the map from F2; kc-v2-tune). | **Dig In:** your units in a column have Cover 1 this round. | the steady all-rounder: more options, one big defensive turn |
 | **Longreach .338** | Sniper · 3 / **6** (today 5) · Pick | **Overpenetration:** the Operator has Pierce. | **Marked Shot:** 3 damage to an enemy unit in the Operator's column. | picks off backliners; one guaranteed removal |
 | **Wasp-9** | SMG · 2 / **7** (today 6) · First Shot | **Run and Gun:** may Rotate twice per round (as today). | **Flashbang:** enemies in the Operator's column lose First Shot and get −2 FP this round. | moves to where the fight is and wins the one exchange that matters |
 | **Bastion-60** (new) | LMG · 2 / 8 · Pierce (every LMG) | **Sandbagged:** the Operator has Cover 1. | **Covering Fire:** your units in the Operator's column get +1 FP this round. | holds one column; the anchor for Heavy decks |
@@ -400,3 +400,26 @@ Art (Sr Game Artist, after approval): 10 Terrain icons and band textures, 6 node
 3. **How the boss is chosen from run 2.** (a) **Drawn from the unlocked bosses, never twice in a row, shown on the map from step 1** (recommended: plan the run against it, including the Operator). (b) The player picks the boss. (c) A fixed order Meridian → Prime → Choir.
 4. **The first run's difficulty.** (a) **Keep it as measured (new player 27% run, M1 71.2%; a solid player 40%)**: the first run teaches the map, with a Rest before the boss (recommended). (b) Remove the Rest before the boss in run 1 (closer to today's 21%; not simulated yet).
 5. **The shop's Muster out price.** (a) **2 REQ per Standard Issue card** (recommended: 13.4 of 18 sent home per run, run 40.5%). (b) 1 REQ (the starter is gone by F3; the run gets about 5 points easier). (c) No Muster out in the shop (only after drops, as today).
+
+
+## 14. Shipped measurements and the kc-v2-tune pass (Mechanics Developer, 2026-11-07)
+Measured on the **shipped** code with the ported harness (`tests/tools/run_v2_check.gd`, real RunProgress map runs, 400 runs per row, fixed seeds). Shipped changes beyond §1-§13: enemy crews keep the pre-v2 Wasp-9 (`wasp_9_crew`, Armor 6) so head V2's buff doesn't toughen SandViper / the Choir; the trait pass of head V6 (Vanguard: 2-set +1 FP, no 3-set bonus; Heavy: 2-set Cover +1, 3-set +1 FP).
+
+**Traits on v2 decks (V6, n = 270 each):** Undead 50.4 · Vanguard 51.5 · Heavy 46.3 · Spec Ops 51.9 (before the pass: 51.1 / 63.9 / 37.2 / 47.8).
+
+**kc-v2-tune (head I1 / I2, both answered (a)):** Meridian_Six's Supply from round 5; Kestrel's extra opening card only from F2 on the map (elites and the boss keep it). Bastion-60 stays 2/8 (it measured inside 45-55 against the others).
+
+| Competent, 400 runs per Operator | Run win before | after | vs the others before | after |
+|---|---|---|---|---|
+| Kestrel AR-7 | 43.0 | 44.8 | 55.2 | 55.1 |
+| Longreach .338 | 37.2 | 39.2 | 47.1 | 47.4 |
+| Wasp-9 | 40.5 | 42.0 | 51.8 | 51.3 |
+| Bastion-60 | 36.2 | 38.2 | 45.7 | 46.1 |
+
+| 400 runs, rotation | before | after |
+|---|---|---|
+| Run 2+ competent / casual | 40.8 / 22.0 | 42.5 / 22.8 |
+| Boss fight Meridian / Prime / Choir (competent) | 30.8 / 44.5 / 50.4 | 35.3 / 45.3 / 50.4 |
+| First run competent / casual (new-player F1) | 39.0 / 22.0 (71.2) | 45.0 / 27.0 (71.2) |
+
+Kestrel sits at the edge of the band (55.1, about ±2.5 SE); Meridian is still the hardest boss; the first run got kinder (Meridian is its boss).

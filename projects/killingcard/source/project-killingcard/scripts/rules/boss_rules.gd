@@ -1,6 +1,6 @@
 # boss_rules.gd
 # Purpose: The three boss rules of run-v2.md §4, one line each, each on a system the player knows:
-#     reinforcements  Meridian_Six:     from round meridian_supply_from (4), +meridian_supply (1) Supply every round
+#     reinforcements  Meridian_Six:     from round meridian_supply_from (5; kc-v2-tune, head I2), +meridian_supply (1) Supply every round
 #     dug_in          Bulwark Prime:    starts the match with a Mortar Pit (a real enemy Field) in every column
 #                                       (prime_pit_zones); Overrun tears them down as any Field
 #     horde           The Hollow Choir: from round choir_from_round (2), a 1/2 Shambler (token: no control,
@@ -79,7 +79,7 @@ static func active(state) -> bool:
 	return false
 
 
-## When the rule starts, for the plate ("From round 4").
+## When the rule starts, for the plate ("From round 5").
 static func note(state) -> String:
 	match state.boss_rule:
 		REINFORCEMENTS:

@@ -297,6 +297,10 @@ func player_setup() -> SideSetup:
 	s.doctrine = doctrine
 	s.primary = _index.get(primary) as LoadoutItem
 	s.operator_kit = operator_kit_on()  # kc-v2-impl
+	if map != null and s.primary != null:  # kc-v2-tune: Kestrel's extra card from F2
+		var f: Dictionary = current_map_node().get("fight", {})
+		if not f.is_empty() and not bool(f.get("elite", false)) and not bool(f.get("boss", false)):
+			s.opening_hand_bonus_on = int(f.get("ladder", 0)) >= s.primary.opening_hand_from_fight
 	for id: StringName in attachments:
 		s.attachments.append(_index[id] as LoadoutItem)
 	for id: StringName in perks:

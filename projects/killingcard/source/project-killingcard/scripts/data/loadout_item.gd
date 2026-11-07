@@ -39,6 +39,9 @@ var attachments: Array[Resource] = []
 @export var pierce: bool = false
 ## Passive: cards added to the opening hand (Kestrel "Quartermaster": 1).
 @export_range(0, 3) var opening_hand_bonus: int = 0
+## kc-v2-tune (head I1): on the run map the opening-hand bonus starts at this fight number (F1 = 1;
+## Kestrel 2: not in F1). Elites and the boss always have it. Off the map it always applies.
+@export_range(1, 5) var opening_hand_from_fight: int = 1
 ## The once-per-match ability (an ABILITY LoadoutItem). Resource, not LoadoutItem: a script
 ## self-reference leaks at exit (see attachments). Null = no ability.
 @export_custom(PROPERTY_HINT_RESOURCE_TYPE, "LoadoutItem")

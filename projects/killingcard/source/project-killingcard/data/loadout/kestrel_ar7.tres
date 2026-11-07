@@ -22,6 +22,7 @@ attachments = Array[Resource]([ExtResource("1_5wcw0"), ExtResource("2_fwxt5"), E
 passive_name = "Quartermaster"
 passive_text = "Your opening hand has 1 more card."
 opening_hand_bonus = 1
+opening_hand_from_fight = 2
 ability = ExtResource("9_ab")
 unlock = &""
 firepower_bonus = 0

@@ -1638,7 +1638,9 @@ func terrain_at(zone: int) -> StringName:
 ## Cards the Operator kit adds to `side`'s opening hand (Kestrel's Quartermaster).
 func opening_hand_bonus(side: int) -> int:
 	var s: RulesSide = sides[side]
-	return s.setup.primary.opening_hand_bonus if s.setup.operator_kit and s.setup.primary != null else 0
+	if not s.setup.operator_kit or not s.setup.opening_hand_bonus_on or s.setup.primary == null:
+		return 0
+	return s.setup.primary.opening_hand_bonus
 
 
 ## One row per column: {zone, zone_name, id, name, text, detail, active_for: [&"player", &"enemy"],

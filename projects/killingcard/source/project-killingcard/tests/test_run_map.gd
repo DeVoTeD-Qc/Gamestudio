@@ -193,6 +193,26 @@ func test_first_run_kit_switches_on_at_f2() -> void:
 	assert_true(r.player_setup().operator_kit, "F2: the kit is on")
 
 
+## kc-v2-tune (head I1): Kestrel's extra opening card from F2 on the map (elites and the boss too).
+func test_kestrel_extra_card_from_f2() -> void:
+	var r: RunProgress = _run()
+	r.set_primary(&"kestrel_ar7")
+	r.begin()
+	r.move_to(&"s1_m")
+	var f1: SideSetup = r.player_setup()
+	assert_true(f1.operator_kit and not f1.opening_hand_bonus_on, "F1: kit on, no extra card")
+	var m: MatchState = r.create_match()
+	m.start_match()
+	assert_eq(m.opening_hand_bonus(0), 0, "F1 opening hand without the bonus")
+	r.record_result(&"player")
+	_skip_offers(r)
+	_step(r, RunMap.TYPE_SHOP)
+	r.move_to(_of_type(r, RunMap.TYPE_FIGHT))
+	var m2: MatchState = r.create_match()
+	m2.start_match()
+	assert_eq(m2.opening_hand_bonus(0), 1, "F2: the extra card")
+
+
 func test_modifiers() -> void:
 	var r: RunProgress = _run(false, [RunModifiers.HARDCORE, RunModifiers.HOT_GROUND, RunModifiers.VETERANS, RunModifiers.FOG])
 	assert_eq([r.tickets, r.max_tickets()], [2, 2], "Hardcore: 2 tickets, max 2")

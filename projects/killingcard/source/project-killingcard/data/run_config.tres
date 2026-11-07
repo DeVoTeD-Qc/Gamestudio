@@ -125,7 +125,7 @@ crew_label = "Boss crew"
 boss_id = &"meridian"
 boss_rule = &"reinforcements"
 boss_rule_name = "Reinforcements"
-boss_rule_text = "From round 4, the boss gains 1 extra Supply every round."
+boss_rule_text = "From round 5, the boss gains 1 extra Supply every round."
 unlock = &""
 
 [sub_resource type="Resource" id="Resource_bprime"]
@@ -188,6 +188,7 @@ salvage_after_loss = true
 salvage_choices = 2
 doctrine_from_first_pick = true
 run_map = true
+meridian_supply_from = 5
 bosses = Array[ExtResource("6_vn4hk")]([SubResource("Resource_bmerid"), SubResource("Resource_bprime"), SubResource("Resource_bchoir")])
 legacy_cards = Array[ExtResource("15_yt66f")]([ExtResource("42_ilvsx")])
 starter_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("30_y1ak3"), ExtResource("30_y1ak3")])

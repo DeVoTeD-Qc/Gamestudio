@@ -9,6 +9,10 @@ const P: int = 0
 const E: int = 1
 
 
+func _shipped() -> RunConfig:
+	return load("res://data/run_config.tres") as RunConfig
+
+
 func _boss_match(rule: StringName, card: CardData = null) -> MatchState:
 	var m: MatchState = MatchState.new(null, F.flat_map(), F.setup(), F.setup(), 1, null)
 	m.boss_id = &"test"
@@ -19,16 +23,18 @@ func _boss_match(rule: StringName, card: CardData = null) -> MatchState:
 	return m
 
 
-func test_reinforcements_extra_supply_from_round_4() -> void:
+func test_reinforcements_extra_supply_from_round_5() -> void:
 	var m: MatchState = _boss_match(BossRules.REINFORCEMENTS)
-	for r: int in range(1, 6):
+	assert_eq(_shipped().meridian_supply_from, 5, "shipped: from round 5 (head I2)")
+	for r: int in range(1, 7):
 		var base: int = m.config.supply_for_round(r)
-		var want: int = base + (1 if r >= 4 else 0)
+		var want: int = base + (1 if r >= 5 else 0)
 		assert_eq([m.round_number, m.sides[E].supply, m.sides[P].supply], [r, want, base], "round %d" % r)
 		m.resolve_round()
 		m.begin_round()
 	assert_true(F.events_of(m, RulesEvent.BOSS_RULE_TRIGGERED).size() >= 2, "logged each round")
-	assert_true(m.boss_view()["active"], "the plate is lit from round 4")
+	assert_true(m.boss_view()["active"], "the plate is lit from round 5")
+	assert_eq(m.boss_view()["note"], "From round 5", "plate note")
 
 
 func test_dug_in_pits_in_every_column_and_overrun_tears_one_down() -> void:
