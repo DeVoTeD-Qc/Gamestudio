@@ -426,3 +426,54 @@ func test_real_map_run_from_the_map_screen() -> void:
 	router.dry_run = saved["dry_run"]
 	rs.set(&"run_map_enabled", saved["map"])
 	rs.reset()
+
+
+# =============================================================================
+# LEAVE: an event or a rest with no open option (RunState.leave_node)
+# =============================================================================
+
+func test_leave_when_no_option_is_open() -> void:
+	_setup_run()
+	for screen: Dictionary in _screens():
+		RunV2Views.clear_overrides()
+		RunV2Views.preview_event({"id": &"memorial", "title": "Memorial Wall", "scene": "Names in marker on a blast wall.",
+				"options": [{"index": 0, "label": "PAY RESPECTS", "result": "+1 ticket (max 3).", "ok": false, "reason": "Tickets are full"},
+					{"index": 1, "label": "CARRY THEIR TAGS", "result": "Copy one calling card.", "ok": false, "reason": "No calling card in your deck"}]})
+		var s: Array = await _open("res://scenes/run/Event.tscn", screen)
+		var e: Control = s[1]
+		_check_on_screen(e, s[0], "%s event, nothing open" % screen["name"])
+		assert_eq(e.get_confirm_button().text, "LEAVE", "%s: no open option = LEAVE" % screen["name"])
+		assert_false(e.get_confirm_button().disabled, "%s: LEAVE is on" % screen["name"])
+		assert_true(e.feedback_text().contains("Nothing to do here") and e.feedback_text().contains("tickets are full")
+				and e.feedback_text().contains("back to the map"), "%s: the screen says why (%s)" % [screen["name"], e.feedback_text()])
+		e.confirm()
+		assert_eq(RunV2Views.act_log[-1][0], &"leave_node", "%s: LEAVE calls leave_node" % screen["name"])
+		await _close(s[0])
+		# An event with an open option has no LEAVE.
+		RunV2Views.clear_overrides()
+		RunV2Views.preview_event(RunV2Views.sample_event_view())
+		s = await _open("res://scenes/run/Event.tscn", screen)
+		assert_eq(s[1].get_confirm_button().text, "CONFIRM", "%s: an open option keeps CONFIRM" % screen["name"])
+		await _close(s[0])
+		# Rest.
+		RunV2Views.clear_overrides()
+		var closed: Array = RunV2Views.sample_rest_options().map(func(o: Dictionary) -> Dictionary:
+			var d: Dictionary = o.duplicate()
+			d["ok"] = false
+			d["reason"] = "Not now"
+			return d)
+		RunV2Views.preview_rest(closed)
+		s = await _open("res://scenes/run/Rest.tscn", screen)
+		var rr: Control = s[1]
+		_check_on_screen(rr, s[0], "%s rest, nothing open" % screen["name"])
+		assert_eq(rr.get_confirm_button().text, "LEAVE", "%s: a rest with nothing open = LEAVE" % screen["name"])
+		assert_true(rr.feedback_text().contains("Nothing to do here"), "%s: the rest says why" % screen["name"])
+		rr.confirm()
+		assert_eq(RunV2Views.act_log[-1][0], &"leave_node", "%s: rest LEAVE calls leave_node" % screen["name"])
+		await _close(s[0])
+		RunV2Views.clear_overrides()
+		RunV2Views.preview_rest(RunV2Views.sample_rest_options())
+		s = await _open("res://scenes/run/Rest.tscn", screen)
+		assert_eq(s[1].get_confirm_button().text, "CONFIRM", "%s: an open rest option keeps CONFIRM" % screen["name"])
+		await _close(s[0])
+	_teardown()

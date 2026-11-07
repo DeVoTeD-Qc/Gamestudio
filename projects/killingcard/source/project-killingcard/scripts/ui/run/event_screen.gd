@@ -110,6 +110,9 @@ func _build() -> void:
 		_confirm.text = "CONTINUE"
 		_confirm.disabled = false
 		done = true
+	elif not options.is_empty() and options.all(func(o: Dictionary) -> bool: return not bool(o.get("ok", true))):
+		# kc-v2-ui: no option can be taken (e.g. Memorial Wall with full tickets and no calling card).
+		_set_leave_only(options)
 	_sub = VBoxContainer.new()
 	_sub.name = "SubChoices"
 	_sub.add_theme_constant_override(&"separation", 6)
@@ -216,8 +219,35 @@ func pick(i: int) -> void:
 
 ## CONFIRM: the rules apply the option (event_choose); the screen says what happened. CONTINUE then
 ## leaves. Returns "" or the refusal.
+## kc-v2-ui: every option is closed: CONFIRM becomes LEAVE (RunState.leave_node) and the screen says
+## why ("Nothing to do here: ... Leave: back to the map.").
+var leave_only: bool = false
+
+
+func _set_leave_only(options: Array) -> void:
+	leave_only = true
+	var why: PackedStringArray = []
+	for o: Dictionary in options:
+		var r: String = String(o.get("reason", "")).strip_edges().trim_suffix(".")
+		if r != "" and not why.has(r):
+			why.append(r)
+	_subtitle.text = "None of these options is open to you now."
+	_confirm.text = "LEAVE"
+	_confirm.name = "ConfirmButton"
+	_confirm.disabled = false
+	show_feedback("Nothing to do here%s. Leave: back to the map." % ((": " + "; ".join(why).to_lower()) if not why.is_empty() else ""), &"")
+
+
 func confirm() -> String:
 	if done:
+		_leave()
+		return ""
+	if leave_only:
+		var err: String = RunV2Views.act(run(), &"leave_node", [])
+		if err != "":
+			show_feedback(sentence(err), &"")
+			return err
+		done = true
 		_leave()
 		return ""
 	if picked < 0:

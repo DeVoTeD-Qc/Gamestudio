@@ -63,6 +63,22 @@ func _build() -> void:
 	_picker.confirmed.connect(func(indices: Array) -> void: _commit(indices))
 	if not _tiles.is_empty():
 		_tiles[0].grab_focus.call_deferred()
+	# kc-v2-ui: no rest option is open (full tickets, deck at its floor, no weapon level left): LEAVE.
+	if options.is_empty() or options.all(func(o: Dictionary) -> bool: return not bool(o.get("ok", true))):
+		leave_only = true
+		var why: PackedStringArray = []
+		for o: Dictionary in options:
+			var r: String = String(o.get("reason", "")).strip_edges().trim_suffix(".")
+			if r != "" and not why.has(r):
+				why.append(r)
+		_subtitle.text = "Nothing here you can use now."
+		_confirm.text = "LEAVE"
+		_confirm.disabled = false
+		_confirm.grab_focus.call_deferred()
+		show_feedback("Nothing to do here%s. Leave: back to the map." % ((": " + "; ".join(why).to_lower()) if not why.is_empty() else ""), &"")
+
+
+var leave_only: bool = false
 
 
 func _set_tickets() -> void:
@@ -136,6 +152,15 @@ func pick(i: int) -> void:
 ## CONFIRM: DRILL opens the deck picker first; the others commit at once.
 func confirm() -> String:
 	if done:
+		if RunV2Views.override_rest.is_empty():
+			goto(RunFlow.scene_for(run()))
+		return ""
+	if leave_only:
+		var err: String = RunV2Views.act(run(), &"leave_node", [])
+		if err != "":
+			show_feedback(sentence(err), &"")
+			return err
+		done = true
 		if RunV2Views.override_rest.is_empty():
 			goto(RunFlow.scene_for(run()))
 		return ""
