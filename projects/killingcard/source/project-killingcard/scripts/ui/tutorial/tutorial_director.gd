@@ -29,7 +29,8 @@ const MATCH_SCENE: PackedScene = preload("res://scenes/Match.tscn")
 const TutorialController: GDScript = preload("res://scripts/ui/tutorial/tutorial_match_controller.gd")
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
-const ZONE_WORDS: PackedStringArray = ["Left", "Mid", "Right"]
+## kc-abc-labels (the head: "just A / B / C"): columns by letter, never Left / Mid / Right.
+const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
 const LOCK_HINT: String = "Follow the highlight, or tap SKIP TUTORIAL."
 
 @export var tutorial_id: StringName = &"tutorial_basic"
@@ -193,7 +194,7 @@ func _text_for(st: TutorialStep) -> String:
 	return st.text.replace("{intel}", intel_text())
 
 
-## "Combat Medic and Rifleman to Mid" from the zones the player sees face-up (Recon Drone).
+## "Combat Medic and Rifleman to column B" from the zones the player sees face-up (Recon Drone).
 func intel_text() -> String:
 	var parts: PackedStringArray = []
 	for z: int in MatchState.ZONE_COUNT:

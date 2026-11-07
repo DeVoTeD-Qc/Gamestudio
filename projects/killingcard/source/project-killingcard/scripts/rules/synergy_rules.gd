@@ -48,12 +48,14 @@ const OVERWATCH_COVER: int = 1
 ## Set thresholds.
 const TIER2: int = 2
 const TIER3: int = 3
-## Trait bonuses (v2.0, kc-pos-cut, synergy-system.md §13): [tier 2, tier 3], each {fp, cover, fs, heal}.
+## Trait bonuses (v2.0, kc-pos-cut, synergy-system.md §13; v1.5 kc-specops3: Spec Ops 3 = Cover +1
+## instead of First Shot): [tier 2, tier 3], each {fp, cover, fs, heal}. No trait gives "fs" now; the key stays
+## for balance what-ifs (tune_check tune=...).
 ## Whole-set bonuses: every unit of the trait gets them, wherever it stands (no row or column
 ## condition any more). Tier 3 includes tier 2. An empty entry = no bonus at that tier.
 const TRAIT_BONUS: Dictionary = {
 	VANGUARD: [{"fp": 1}, {"cover": 1}],
-	SPECOPS: [{"fp": 1}, {"fs": true}],
+	SPECOPS: [{"fp": 1}, {"cover": 1}],  # v1.5 (kc-specops3): tier 3 Cover +1 (was First Shot)
 	HEAVY: [{}, {"cover": 1, "fp": 1}],
 	UNDEAD: [{"heal": 1}, {"fp": 1, "cover": 1}],
 }
@@ -62,7 +64,7 @@ static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
 ## One-line tier texts for callouts / the inspector.
 const TIER_TEXT: Dictionary = {
 	VANGUARD: ["Vanguard get +1 FP", "Vanguard get Cover +1"],
-	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops have First Shot"],
+	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops get Cover +1"],
 	HEAVY: ["No bonus yet: Heavy needs 3", "Heavy units get Cover +1 and +1 FP"],
 	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
 }

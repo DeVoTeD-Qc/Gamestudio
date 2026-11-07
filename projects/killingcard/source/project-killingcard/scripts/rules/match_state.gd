@@ -1137,7 +1137,7 @@ func cover_of(u: RulesUnit) -> int:
 			+ passive_total(u, DataEnums.EffectKind.GRANT_COVER) + int(synergy_of(u).get("cover", 0)))
 
 
-## First Shot now. Blackout-style REMOVE_FIRST_SHOT also removes the Spec Ops tier-3 First Shot.
+## First Shot now. Blackout-style REMOVE_FIRST_SHOT also removes a set-bonus First Shot (none since kc-specops3).
 func has_first_shot(u: RulesUnit, with_synergy: bool = true) -> bool:
 	if u.has_mod(DataEnums.EffectKind.REMOVE_FIRST_SHOT, round_number) or passive_has(u, DataEnums.EffectKind.REMOVE_FIRST_SHOT):
 		return false

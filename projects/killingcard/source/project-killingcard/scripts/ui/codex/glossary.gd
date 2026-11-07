@@ -24,7 +24,7 @@ const ICON: float = 44.0
 ## Drawn glyphs for entries without a sheet icon (id -> kind).
 const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt", &"hidden": &"hidden",
 		&"no_control": &"no_control", &"field": &"field", &"control": &"control", &"objective": &"objective",
-		&"range": &"range", &"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
+		&"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
 		&"set_callout": &"callout", &"doctrine": &"doctrine",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
 		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
@@ -373,9 +373,6 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			c.draw_rect(r.grow(-4.0), Color("#1C2228"))
 			c.draw_rect(Rect2(4, 4, (s - 8) * 0.5, s - 8), Color(friend, 0.6))
 			c.draw_rect(r.grow(-4.0), Color("#B9C2C9"), false, 1.5)
-		&"range":
-			for i: int in 3:
-				c.draw_arc(Vector2(4, s * 0.5), s * (0.3 + i * 0.3), -0.6, 0.6, 10, accent, 2.0)
 		&"operator":
 			c.draw_rect(r.grow(-4.0), Color("#3A2D0B"))
 			c.draw_rect(r.grow(-4.0), BannerView.BRASS, false, 3.0)

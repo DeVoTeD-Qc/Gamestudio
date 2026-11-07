@@ -65,7 +65,6 @@ const FightPlayback: GDScript = preload("res://scripts/ui/fight_playback.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
 const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
-const RANGE_WORDS: PackedStringArray = ["Close", "Mid", "Long"]
 const KILLFEED_KEEP: int = 6
 const SCENE_TITLE: String = "res://scenes/Title.tscn"
 ## outcome.reason of a forfeited match (MatchEndBanner / AfterAction wording).
@@ -1493,7 +1492,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 		if int(b["cover"]["total"]) > 0 or not (b["cover"]["parts"] as Array).is_empty():
 			out.append({"name": "Cover now", "text": StatBreakdown.line("Cover", b["cover"])})
 		if bool(b["fs"]):
-			out.append({"name": "First Shot (set)", "text": "Spec Ops 3 gives it First Shot."})
+			out.append({"name": "First Shot (set)", "text": "Its trait set gives it First Shot."})
 		if int(b["heal"]) > 0:
 			out.append({"name": "Undead heal", "text": "At the end of the round it heals %d (never above its max Armor)." % int(b["heal"])})
 	var kw: StringName = SynergyRules.keyword_at(card)
@@ -1711,7 +1710,7 @@ func _open_objective(zone: int) -> void:
 		for f: Dictionary in (lane["fields"] as Dictionary).get(key, []):
 			lines.append("%s Field: %s%s." % ["Your" if key == "player" else "Rival", f["name"], " (hidden trap)" if f.get("hidden", false) else ""])
 	_open_info({"title": "Objective %s · %s" % [String(lane["label"]), String(lane["name"]).capitalize()],
-			"type": "objective · %s" % String(lane["range"]).to_lower(), "text": "\n".join(lines),
+			"type": "objective · column %s" % String(lane["label"]), "text": "\n".join(lines),
 			"status": "Row 1 on each side touches the objective: that card is the frontline."})
 
 

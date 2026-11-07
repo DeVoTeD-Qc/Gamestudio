@@ -107,7 +107,7 @@ Family = the MW3 manifest's `section` (how the card is earned). "Available" coun
 | Trait | 2 in play | 3 in play |
 |---|---|---|
 | **Vanguard** | Your Vanguard in **row 1** get **+1 FP**. | Your Vanguard get **Cover +1**. |
-| **Spec Ops** | Your Spec Ops get **+1 FP**. | Your Spec Ops have **First Shot**. |
+| **Spec Ops** | Your Spec Ops get **+1 FP**. | Your Spec Ops get **Cover +1** (v1.5; was First Shot). |
 | **Heavy** | Your Heavy units have **Cover +1**. | Your Heavy units get **+1 FP**. |
 | **Undead** | **End of round:** each damaged Undead heals 1 (never above max Armor). | Your Undead get **+1 FP**. |
 
@@ -541,7 +541,7 @@ Notes: the competent M3 (58.8%) now sits above M4 (42.5%), and a casual player w
 | Trait | 2 in play | 3 in play (includes 2) |
 |---|---|---|
 | **Vanguard** | +1 FP | Cover +1 |
-| **Spec Ops** | +1 FP | First Shot |
+| **Spec Ops** | +1 FP | Cover +1 (v1.5, kc-specops3; was First Shot) |
 | **Heavy** | — | Cover +1 and +1 FP |
 | **Undead** | heal 1 at the end of the round | +1 FP and Cover +1 |
 Tested and rejected: Vanguard 2 = Cover +1, 3 = +1 FP (the swap: Spec Ops 62%, Undead 41%).

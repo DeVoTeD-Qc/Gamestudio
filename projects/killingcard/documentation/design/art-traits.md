@@ -150,7 +150,7 @@ That's about **16 arts** (the pitch set grows from 96 to about 112 card arts). T
 | Trait | 2 in play | 3 in play |
 |---|---|---|
 | Vanguard | Vanguard in row 1 get +1 FP (unchanged) | Vanguard get Cover +1 (unchanged) |
-| Spec Ops | Spec Ops get +1 FP (unchanged) | Spec Ops have First Shot (unchanged) |
+| Spec Ops | Spec Ops get +1 FP (unchanged) | Spec Ops have First Shot (unchanged; v1.5 kc-specops3: Cover +1, see synergy-system.md) |
 | **Heavy** | **— (no bonus at 2)** | **Heavy get Cover +1 and +1 FP** (was: 2 = Cover +1, 3 = +1 FP) |
 | **Undead** | End of round: each damaged Undead heals 1 (unchanged) | **Undead get +1 FP and Cover +1** (was: +1 FP) |
 

@@ -85,9 +85,31 @@ func test_cover_removal_and_blackout_strip_synergy() -> void:
 	var a: RulesUnit = F.place(m2, P, _u("so_a", 2, 2, &"", &"specops"), L)
 	F.place(m2, P, _u("so_b", 2, 2, &"", &"specops"), M)
 	F.place(m2, P, _u("so_c", 2, 2, &"", &"specops"), R)
-	assert_true(m2.has_first_shot(a), "Spec Ops 3: First Shot")
-	a.add_mod(DataEnums.EffectKind.REMOVE_FIRST_SHOT, 0, m2.round_number)
-	assert_false(m2.has_first_shot(a), "Blackout-style REMOVE_FIRST_SHOT removes it")
+	# v1.5 (kc-specops3): Spec Ops 3 gives Cover +1 (and keeps tier 2's +1 FP), no First Shot.
+	assert_eq([m2.firepower_of(a), m2.cover_of(a), m2.has_first_shot(a)], [3, 1, false], "Spec Ops 3: +1 FP, Cover +1, no First Shot")
+	m2.sides[E].flags[DataEnums.EffectKind.REMOVE_COVER] = m2.round_number
+	assert_eq(m2.cover_of(a), 0, "Cover removal takes the Spec Ops set Cover too")
+	# A set-bonus First Shot (none ships; balance what-ifs can add one) is still removed by Blackout.
+	var keep: Dictionary = SynergyRules.trait_bonus.duplicate(true)
+	SynergyRules.trait_bonus[&"specops"] = [{"fp": 1}, {"fs": true}]
+	var m3: MatchState = _match()
+	var b3: RulesUnit = F.place(m3, P, _u("so_a", 2, 2, &"", &"specops"), L)
+	F.place(m3, P, _u("so_b", 2, 2, &"", &"specops"), M)
+	F.place(m3, P, _u("so_c", 2, 2, &"", &"specops"), R)
+	var had: bool = m3.has_first_shot(b3)
+	b3.add_mod(DataEnums.EffectKind.REMOVE_FIRST_SHOT, 0, m3.round_number)
+	var after: bool = m3.has_first_shot(b3)
+	SynergyRules.trait_bonus = keep
+	assert_eq([had, after], [true, false], "Blackout-style REMOVE_FIRST_SHOT removes a set First Shot")
+
+
+func test_specops_set_table_and_text_v1_5() -> void:
+	assert_eq(SynergyRules.TRAIT_BONUS[&"specops"], [{"fp": 1}, {"cover": 1}], "Spec Ops: 2 = +1 FP, 3 = Cover +1")
+	assert_eq(SynergyRules.TIER_TEXT[&"specops"], ["Spec Ops get +1 FP", "Spec Ops get Cover +1"], "player-facing tier texts")
+	for t: StringName in SynergyRules.TRAITS:
+		for tier: Dictionary in SynergyRules.TRAIT_BONUS[t]:
+			assert_false(bool(tier.get("fs", false)), "%s: no set gives First Shot any more" % t)
+	assert_eq([SynergyRules.active_tier(&"specops", 2), SynergyRules.active_tier(&"specops", 3)], [2, 3], "both tiers active")
 
 
 # --- Traits and sets -------------------------------------------------------------------------

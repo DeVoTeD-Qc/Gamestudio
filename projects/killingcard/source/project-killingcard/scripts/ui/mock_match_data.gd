@@ -26,7 +26,7 @@ static func round_3_sample() -> Dictionary:
 		"deck_count": 14, "discard_count": 5, "enemy_hand": 5,
 		"lanes": [
 			{
-				"id": &"left", "label": "A", "name": "CONTAINER STACKS", "range": "CLOSE",
+				"id": &"left", "label": "A", "name": "CONTAINER STACKS",
 				"control": &"player", "incoming": 1,
 				"friendly": [_unit("Point Man", "SMG", 2, 3, 3)],
 				"enemy": [], "fp_player": 2, "fp_enemy": 0,
@@ -34,13 +34,13 @@ static func round_3_sample() -> Dictionary:
 						"text": "", "hidden": false, "overrun_risk": false}], "enemy": []},
 			},
 			{
-				"id": &"mid", "label": "B", "name": "CRANE YARD", "range": "LONG",
+				"id": &"mid", "label": "B", "name": "CRANE YARD",
 				"control": &"contested", "incoming": 0,
 				"friendly": [_operator()],
 				"enemy": [_unit("Marksman", "SNIPER", 2, 2, 2)], "fp_player": 3, "fp_enemy": 2,
 			},
 			{
-				"id": &"right", "label": "C", "name": "LOADING OFFICES", "range": "MID",
+				"id": &"right", "label": "C", "name": "LOADING OFFICES",
 				"control": &"enemy", "incoming": 1,
 				"friendly": [],
 				"enemy": [_unit("Rifleman", "AR", 2, 2, 2), _unit("Gunner", "LMG", 2, 6, 6)], "fp_player": 0, "fp_enemy": 4,

@@ -20,7 +20,6 @@ const PlayText: GDScript = preload("res://scripts/ui/play_text.gd")
 const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
 ## kc-board: the columns are A / B / C (zones Left / Mid / Right).
 const ZONE_LABELS: PackedStringArray = ["A", "B", "C"]
-const RANGE_LABELS: PackedStringArray = ["CLOSE", "MID", "LONG"]
 
 
 static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAYER, killfeed: Array = []) -> Dictionary:
@@ -46,7 +45,6 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		lanes.append({
 			"id": MapData.ZONE_IDS[z], "label": ZONE_LABELS[z],
 			"name": map.zone_names[z] if map != null and z < map.zone_names.size() else ZONE_LABELS[z],
-			"range": RANGE_LABELS[state.zone_ranges[z]],
 			"control": _control_id(state.control_of(z), viewer),
 			"incoming": dots[z] if z < dots.size() else 0,
 			"revealed": revealed_names(state, viewer, z),
@@ -143,7 +141,7 @@ static func _unit_synergy(e: Dictionary, state: MatchState, u: RulesUnit, side: 
 	e["cover_trend"] = StatBreakdown.trend(b["cover"])
 	e["fs_syn"] = bool(b["fs"])
 	if bool(b["fs"]) and not state.has_first_shot(u, false):
-		# Spec Ops 3 gives First Shot: show its glyph like a printed one (the inspector names the source).
+		# A set bonus gives First Shot (none does since kc-specops3; kept for what-ifs): show its glyph like a printed one (the inspector names the source).
 		var kws: Array = (e.get("keywords", []) as Array).duplicate()
 		kws.push_front({"id": &"first_shot", "value": 0, "name": "First Shot"})
 		e["keywords"] = kws

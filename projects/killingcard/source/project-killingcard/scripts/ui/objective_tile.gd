@@ -2,9 +2,11 @@
 # Purpose: The objective tile in the middle of a column (board-and-cards-ux.md §3.2, field-cards.md
 #   model B), laid out sideways since kc-board2 (board-layout-v2.md §4.6; phone 228x52, desktop
 #   304x96). Left: rival column Firepower over yours. Then the column letter in a control mark
-#   (yours: teal circle, rival: red diamond, even: grey dashed square, open: grey ring), the range
-#   word over the control word (YOURS / RIVAL / EVEN / OPEN), and the Field chips at the right edge
-#   (the rival's top-right, yours bottom-right; phone 70x22, desktop 96x28).
+#   (yours: teal circle, rival: red diamond, even: grey dashed square, open: grey ring), the control
+#   word (YOURS / RIVAL / EVEN / OPEN), and the Field chips at the right edge (the rival's top-right,
+#   yours bottom-right; phone 70x22, desktop 96x28).
+#   kc-abc-labels (the head: "Remove them; just A / B / C"): no CLOSE / MID / LONG range word; the
+#   control word takes its place, one line, bigger (phone 20 px, desktop 26 px), vertically centred.
 #   A Field chip is a 4:1 slice of the Field's banner art with a stake glyph. Your hidden trap shows as a dashed chip (the rival never
 #   sees yours, you never see theirs). A queued Field shows PLAN. A Field the enemy controls the
 #   column of (field_view overrun_risk) gets a pulsing red OVERRUN tab: it is torn down at the end
@@ -19,7 +21,6 @@ const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
 ## &"player" / &"enemy" / &"contested" / &"empty"
 var control: StringName = &"empty"
 var letter: String = "A"
-var range_word: String = ""
 var fp_player: int = 0
 var fp_enemy: int = 0
 ## {player: [field entry], enemy: [field entry]} (MatchState.field_view rows + queued plays).
@@ -37,7 +38,6 @@ func _init() -> void:
 func set_tile(lane: Dictionary) -> void:
 	control = lane.get("control", &"empty")
 	letter = String(lane.get("label", "A"))
-	range_word = String(lane.get("range", ""))
 	fp_player = int(lane.get("fp_player", 0))
 	fp_enemy = int(lane.get("fp_enemy", 0))
 	fields = lane.get("fields", {})
@@ -72,7 +72,7 @@ func _draw() -> void:
 	draw_rect(r, Color("#3A444D"), false, 1.0)
 	var h: float = size.y
 	# kc-board2 (board-layout-v2.md §4.6): laid out sideways. Left to right: the FP pair (rival over
-	# yours), the control mark with the column letter, the range word over the control word, and the
+	# yours), the control mark with the column letter, the control word, and the
 	# Field chips at the right edge (rival top-right, yours bottom-right).
 	var fs: int = 16 if compact else 20
 	var font: Font = get_theme_font(&"font", &"HudNumber")
@@ -114,15 +114,28 @@ func _draw() -> void:
 		_chip(Rect2(cx, 3.0, chip.x, chip.y), &"enemy", top_fields[0])
 	if not bottom_fields.is_empty():
 		_chip(Rect2(cx, h - chip.y - 3.0, chip.x, chip.y), &"player", bottom_fields[0])
-	# Range word over the control word (EVEN, not CONTESTED: 9 characters don't fit at 16 px).
+	# kc-abc-labels: the control word alone (EVEN, not CONTESTED), bigger, centred on the tile's height;
+	# it steps down to fit the room left of the Field chips.
 	var wx: float = mark_x + mm + (8.0 if compact else 14.0)
-	var ww: float = maxf(0.0, cx - 4.0 - wx)
-	var line_h: float = float(fs) + 2.0
-	var mid_top: float = (h - 2.0 * line_h) * 0.5
-	_word(word_font, fs, range_word, Rect2(wx, mid_top, ww, line_h), Color("#9AA5AE"))
+	var right: float = (cx - 4.0) if not (top_fields.is_empty() and bottom_fields.is_empty()) else size.x - 6.0
+	var ww: float = maxf(0.0, right - wx)
 	var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "EVEN"}.get(control, "OPEN")
 	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
-	_word(word_font, fs, word, Rect2(wx, mid_top + line_h, ww, line_h), wc)
+	var wfs: int = control_font_size()
+	while wfs > fs and word_font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, wfs).x > ww:
+		wfs -= 1
+	var line_h: float = float(wfs) + 2.0
+	_word(word_font, wfs, word, Rect2(wx, (h - line_h) * 0.5, ww, line_h), wc)
+
+
+## kc-abc-labels: the control word's size (phone 20 px, desktop 26 px) before it steps down to fit.
+func control_font_size() -> int:
+	return 20 if compact else 26
+
+
+## The word on the tile now (tests): YOURS / RIVAL / EVEN / OPEN.
+func control_word() -> String:
+	return {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "EVEN"}.get(control, "OPEN")
 
 
 func _fp_line(font: Font, fs: int, at: Vector2, value: int, c: Color) -> void:

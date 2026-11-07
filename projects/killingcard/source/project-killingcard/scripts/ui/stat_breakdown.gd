@@ -12,7 +12,6 @@
 extends RefCounted
 
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
-const RANGE_WORDS: PackedStringArray = ["close", "mid", "long"]
 const LINK_WHERE: Dictionary = {&"spotter": "behind", &"guard": "in front", &"fireteam": "beside", &"overwatch": "beside"}
 
 
@@ -59,7 +58,7 @@ static func _build(state: MatchState, u: RulesUnit, syn: Dictionary, zone: int) 
 	if zone >= 0:
 		var rb: int = state.config.range_bonus(u.weapon_class, state.zone_ranges[zone])
 		if rb != 0:
-			fp_parts.append(["%s range" % RANGE_WORDS[clampi(state.zone_ranges[zone], 0, 2)], rb])
+			fp_parts.append(["column", rb])  # kc-abc-labels: never a range word (range_bonus is 0 since kc-pos-cut)
 	var mods: int = u.mod_total(DataEnums.EffectKind.MODIFY_FIREPOWER, state.round_number)
 	if mods != 0:
 		fp_parts.append(["effects", mods])
@@ -124,7 +123,7 @@ static func _sum(base: int, parts: Array) -> int:
 	return maxi(0, n)
 
 
-## "FP 4 = 2 base +1 close range +1 Spotter (Marksman, behind)" (just "FP 2" when unmodified).
+## "FP 4 = 2 base +1 Spotter (Marksman, behind) +1 Vanguard 2" (just "FP 2" when unmodified).
 static func line(stat: String, d: Dictionary) -> String:
 	var parts: Array = d.get("parts", [])
 	if parts.is_empty() and not bool(d.get("removed", false)):
