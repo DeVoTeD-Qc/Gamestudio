@@ -475,7 +475,9 @@ func _without(d: Dictionary, key: String) -> Dictionary:
 # --- RunState autoload -------------------------------------------------------------------
 
 func _run_state() -> Node:
-	return tree.root.get_node("RunState")
+	var rs: Node = tree.root.get_node("RunState")
+	rs.run_map_enabled = false  # kc-v2-impl: these cover the old 5-match ladder (test_run_map.gd covers v2)
+	return rs
 
 
 func test_run_state_flow_saves_and_continues() -> void:
@@ -530,6 +532,7 @@ func test_run_state_flow_saves_and_continues() -> void:
 	rs.abandon_run()
 	assert_false(rs.has_save(), "abandon deletes the save")
 	rs.save_path = old_path
+	rs.run_map_enabled = true
 
 
 func test_corrupt_save_starts_fresh_with_a_warning() -> void:
@@ -553,6 +556,7 @@ func test_corrupt_save_starts_fresh_with_a_warning() -> void:
 	assert_false(rs.continue_run(), "no save: nothing to continue")
 	assert_eq(rs.last_load_warning, "", "a missing save is not a warning")
 	rs.save_path = old_path
+	rs.run_map_enabled = true
 
 
 # --- Full runs with real matches ------------------------------------------------------------

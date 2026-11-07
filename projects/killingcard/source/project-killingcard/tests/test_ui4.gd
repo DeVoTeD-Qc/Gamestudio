@@ -255,6 +255,7 @@ func test_starter_screen_and_operator_choice_used_by_the_run() -> void:
 	var rs: Node = tree.root.get_node("RunState")
 	var saved_autosave: bool = rs.autosave
 	rs.autosave = false
+	rs.run_map_enabled = false  # kc-v2-impl: any Operator on the old ladder (map runs lock them: test_run_map.gd)
 	var run: RunProgress = rs.start_run(4242)
 	var cfg: RunConfig = run.config
 	var options: Array[LoadoutItem] = RunProgress.operator_options(cfg)
@@ -324,6 +325,7 @@ func test_starter_screen_and_operator_choice_used_by_the_run() -> void:
 	await tree.process_frame
 	rs.reset()
 	rs.autosave = saved_autosave
+	rs.run_map_enabled = true
 	_reset_settings()
 
 

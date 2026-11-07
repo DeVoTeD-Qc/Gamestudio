@@ -22,7 +22,7 @@ const CARDS: Array[Dictionary] = [
 	{"name": "Flank Route", "type": "tactic", "cost": 1, "text": "Move a friendly unit to an adjacent zone; it gains First Shot this round."},
 	{"name": "Suppressing Fire", "type": "tactic", "cost": 2, "text": "Enemy units in a zone get −1 FP this round."},
 	{"name": "Hold the Line", "type": "tactic", "cost": 2, "text": "Your units in a zone gain Cover 1 this round."},
-	{"name": "Breach and Clear", "type": "tactic", "cost": 3, "text": "2 damage to each enemy unit in a zone (3 if Close)."},
+	{"name": "Breach and Clear", "type": "tactic", "cost": 3, "text": "2 damage to every enemy unit in a column."},
 	{"name": "Tripwire Charge", "type": "equipment", "cost": 2, "text": "Hidden in a zone: the next enemy unit to arrive there takes 3 damage."},
 	{"name": "Comms Relay", "type": "equipment", "cost": 2, "text": "While you control this zone: streak +1 at end of round."},
 	{"name": "Recon Drone", "type": "killstreak", "threshold": 2, "art_icon": "ks_recon_drone", "text": "This round and next: enemy deployments are shown face-up during Deploy, and enemy units lose Cover."},

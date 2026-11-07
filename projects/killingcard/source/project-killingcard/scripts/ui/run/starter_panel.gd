@@ -266,24 +266,20 @@ func _build() -> void:
 	_refresh_ops()
 
 
-## kc-v2-ui: the Operators to show: RunState.operator_choices() (all four, locked ones too, run-v2-api
-## §1), else the config's options.
+## kc-v2-ui: the Operators to show: the config's options in their order, plus any other one
+## RunState.operator_choices() lists (run-v2-api §1; locked ones are shown with their unlock).
 func _operator_items() -> Array[LoadoutItem]:
 	var out: Array[LoadoutItem] = []
+	out.assign(RunProgress.operator_options(_config))
 	for row: Dictionary in RunV2Views.operator_choices(run):
 		var id: StringName = StringName(str(row.get("id", "")))
-		var item: LoadoutItem = null
-		for o: LoadoutItem in RunProgress.operator_options(_config):
-			if o.id == id:
-				item = o
-		if item == null and run != null:
-			item = run.resource(id) as LoadoutItem
+		if out.any(func(o: LoadoutItem) -> bool: return o.id == id):
+			continue
+		var item: LoadoutItem = run.resource(id) as LoadoutItem if run != null else null
 		if item == null and ResourceLoader.exists("res://data/loadout/%s.tres" % id):
 			item = load("res://data/loadout/%s.tres" % id) as LoadoutItem
 		if item != null:
 			out.append(item)
-	if out.is_empty():
-		out.assign(RunProgress.operator_options(_config))
 	return out
 
 
@@ -381,6 +377,8 @@ func _operator_tile(item: LoadoutItem) -> Button:
 			row2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var chip: Label = _text(pair[0], &"HudTag", 16)
 			chip.clip_text = false
+			chip.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+			chip.add_theme_color_override(&"font_color", Color.WHITE if pair[0] == "P" else Color("#FFD27A"))
 			var csb := StyleBoxFlat.new()
 			csb.bg_color = Color("#3A444D") if pair[0] == "P" else Color("#5A4410")
 			csb.set_corner_radius_all(3)

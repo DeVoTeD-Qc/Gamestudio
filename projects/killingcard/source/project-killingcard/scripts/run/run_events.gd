@@ -108,7 +108,9 @@ static func _calling_cards(run: RunProgress) -> Array[int]:
 ## Radio Chatter's "Pick the ground": `n` Terrains for the next fight (seeded per node; Hot Zone only
 ## when that fight is Zone Control).
 static func terrain_choices(run: RunProgress, n: int) -> Array[StringName]:
-	var nxt: Array[Dictionary] = run.map.next_fight_nodes() if run.map != null else [] as Array[Dictionary]
+	var nxt: Array[Dictionary] = []
+	if run.map != null:
+		nxt = run.map.next_fight_nodes()
 	var mode: int = int(nxt[0]["fight"].get("mode", 0)) if not nxt.is_empty() else DataEnums.GameMode.ZONE_CONTROL
 	var pool: Array[StringName] = []
 	for t: StringName in TerrainRules.ALL:

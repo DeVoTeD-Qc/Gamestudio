@@ -41,11 +41,17 @@ var _reached_end: bool = false
 # Setup
 # =============================================================================
 
+var _saved_map_enabled: bool = true
+
 func _setup() -> void:
 	_rs = tree.root.get_node("RunState")
 	_router = tree.root.get_node("SceneRouter")
 	_settings = tree.root.get_node("Settings")
 	var plog: Node = tree.root.get_node("PlaytestLog")
+	# kc-v2-ui: this suite drives the 5-match ladder screens; the Run v2 map flow is test_run_v2_ui.gd.
+	_saved_map_enabled = bool(_rs.get(&"run_map_enabled")) if &"run_map_enabled" in _rs else false
+	if &"run_map_enabled" in _rs:
+		_rs.set(&"run_map_enabled", false)
 	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run,
 			"plog_enabled": plog.enabled, "root_size": tree.root.size, "fast": _settings.fast_animations}
 	plog.enabled = false
@@ -82,6 +88,8 @@ func _teardown() -> void:
 	TutorialProgress.use_path("")
 	_rs.save_path = _saved["save_path"]
 	_rs.autosave = _saved["autosave"]
+	if &"run_map_enabled" in _rs:
+		_rs.set(&"run_map_enabled", _saved_map_enabled)
 	_rs.reset()
 	_router.dry_run = _saved["dry_run"]
 	_router.pending_match = null

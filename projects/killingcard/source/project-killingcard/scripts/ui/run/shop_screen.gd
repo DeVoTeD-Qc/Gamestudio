@@ -98,7 +98,7 @@ func _apply_portrait() -> void:
 
 func _card_w() -> float:
 	if portrait:
-		return clampf(floorf((get_viewport_rect().size.x - 40.0) / 3.0), 140.0, 196.0)
+		return clampf(floorf((get_viewport_rect().size.x - 72.0) / 3.0), 132.0, 196.0)
 	return 172.0 if compact else 210.0
 
 
@@ -162,7 +162,8 @@ func _offer(c: Dictionary, req: int, w: float) -> Control:
 		var vd: Dictionary = CardInfoV2.view_dict(card)
 		vd["banner"] = String(card.id)
 		var cv: Control = CodexView.make_card_view(vd, w)
-		holder.custom_minimum_size = cv.size
+		cv.size = CardView.size_for(w)
+		holder.custom_minimum_size = CardView.size_for(w)
 		holder.add_child(cv)
 		var info: Callable = func() -> void: inspector().open(card_inspect_info(card, "%s · %d REQ" % [kind.capitalize(), price]))
 		holder.pressed.connect(info)
@@ -185,6 +186,10 @@ func _offer(c: Dictionary, req: int, w: float) -> Control:
 	else:
 		b.text = "BUY · %d REQ" % price
 	b.custom_minimum_size = Vector2(w, button_height())
+	if w < 190.0:
+		# Portrait: three cards across; the price stays whole at 18 px.
+		b.add_theme_font_size_override(&"font_size", 18)
+	b.clip_text = true
 	b.pressed.connect(func() -> void: buy(idx))
 	wire_inspect_button(b, func() -> void: inspector().open({"title": "Buy %s" % (card.display_name if card != null else "card"),
 			"type": "%s · %d REQ" % [kind.to_lower(), price], "text": "Adds the card to your deck for %d REQ (you have %d)." % [price, req], "status": ""}))

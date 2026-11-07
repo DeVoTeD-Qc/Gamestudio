@@ -280,12 +280,13 @@ func deploy() -> MatchState:
 	var r: RunProgress = run()
 	if r == null or r.phase != RunProgress.PHASE_MATCH:
 		return null
-	_deploy_button.disabled = true
+	if _deploy_button != null:
+		_deploy_button.disabled = true
 	var bus: Node = RunFlow.event_bus()
 	if bus != null:
 		bus.next_match_requested.emit()
 	var m: MatchState = RunFlow.router().start_run_match(match_hooks)
-	if m == null:
+	if m == null and _deploy_button != null:
 		_deploy_button.disabled = false
 	return m
 

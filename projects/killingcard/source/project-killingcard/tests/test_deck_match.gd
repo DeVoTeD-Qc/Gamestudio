@@ -53,6 +53,7 @@ func test_first_run_match_plays_the_shown_starter() -> void:
 	rs.config = null
 	rs.autosave = false
 	rs.save_path = "user://test_deck_match/run.json"
+	rs.run_map_enabled = false  # kc-v2-impl: the old ladder
 	router.dry_run = true
 	for pitch: bool in [false, true]:
 		var label: String = "pitch build" if pitch else "public build"
@@ -85,6 +86,7 @@ func test_first_run_match_plays_the_shown_starter() -> void:
 	rs.save_path = saved["save_path"]
 	rs.autosave = saved["autosave"]
 	rs.config = saved["config"]
+	rs.run_map_enabled = true
 	router.dry_run = saved["dry_run"]
 	router.pending_match = null
 	router.active_match = null

@@ -239,6 +239,7 @@ func test_run_state_retire_card() -> void:
 	var saved_path: String = rs.save_path
 	var saved_cfg: RunConfig = rs.config
 	rs.save_path = "user://test_run_synergy_save.json"
+	rs.run_map_enabled = false  # kc-v2-impl: the old ladder
 	rs.config = _config()
 	rs.start_run(SEED)
 	rs.begin_run()
@@ -249,3 +250,4 @@ func test_run_state_retire_card() -> void:
 	rs.abandon_run()
 	rs.save_path = saved_path
 	rs.config = saved_cfg
+	rs.run_map_enabled = true

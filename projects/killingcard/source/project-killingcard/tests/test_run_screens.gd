@@ -39,11 +39,17 @@ var _screens_checked: Dictionary = {}
 # Setup
 # =============================================================================
 
+var _saved_map_enabled: bool = true
+
 func _setup() -> void:
 	_rs = tree.root.get_node("RunState")
 	_router = tree.root.get_node("SceneRouter")
 	var plog: Node = tree.root.get_node("PlaytestLog")
 	var st: Node = tree.root.get_node("Settings")
+	# kc-v2-ui: this suite drives the 5-match ladder screens; the Run v2 map flow is test_run_v2_ui.gd.
+	_saved_map_enabled = bool(_rs.get(&"run_map_enabled")) if &"run_map_enabled" in _rs else false
+	if &"run_map_enabled" in _rs:
+		_rs.set(&"run_map_enabled", false)
 	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run,
 			"plog_enabled": plog.enabled, "config": _rs.config, "met": st.met_flags.duplicate(), "seen": st.seen_flags.duplicate()}
 	# kc-onboard-ui: the shipped config (Standard Issue starter, onboarding ladder) on a fresh profile
@@ -78,6 +84,8 @@ func _teardown() -> void:
 	DirAccess.remove_absolute(dir)
 	_rs.save_path = _saved["save_path"]
 	_rs.autosave = _saved["autosave"]
+	if &"run_map_enabled" in _rs:
+		_rs.set(&"run_map_enabled", _saved_map_enabled)
 	_rs.reset()
 	_router.dry_run = _saved["dry_run"]
 	_router.pending_match = null

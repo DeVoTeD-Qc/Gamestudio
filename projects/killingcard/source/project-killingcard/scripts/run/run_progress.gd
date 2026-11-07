@@ -1615,7 +1615,9 @@ func configure_match(m: MatchState) -> void:
 func map_view() -> Dictionary:
 	if map == null:
 		return {}
-	var reach: Array[StringName] = map.reachable() if phase == PHASE_MAP else [] as Array[StringName]
+	var reach: Array[StringName] = []
+	if phase == PHASE_MAP:
+		reach = map.reachable()
 	var rows: Array[Dictionary] = []
 	for n: Dictionary in map.nodes:
 		rows.append(_node_view(n, reach))
@@ -1628,7 +1630,10 @@ func map_view() -> Dictionary:
 func node_view(id: StringName) -> Dictionary:
 	if map == null or map.node(id).is_empty():
 		return {}
-	return _node_view(map.node(id), map.reachable() if phase == PHASE_MAP else [] as Array[StringName])
+	var reach: Array[StringName] = []
+	if phase == PHASE_MAP:
+		reach = map.reachable()
+	return _node_view(map.node(id), reach)
 
 
 func _node_view(n: Dictionary, reach: Array[StringName]) -> Dictionary:

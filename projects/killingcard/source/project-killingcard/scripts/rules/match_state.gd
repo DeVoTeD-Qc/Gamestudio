@@ -1704,7 +1704,9 @@ func ability_view(side: int = PLAYER) -> Dictionary:
 			_:
 				reason = String(check["reason"])
 	var p: LoadoutItem = s.setup.primary
-	var targets: Array[Dictionary] = legal_targets(side, ab.id) if check["ok"] else [] as Array[Dictionary]
+	var targets: Array[Dictionary] = []
+	if check["ok"]:
+		targets = legal_targets(side, ab.id)
 	return {"id": ab.id, "name": ab.display_name, "text": ab.text,
 			"operator_name": p.display_name if p != null else "",
 			"passive_name": p.passive_name if p != null else "", "passive_text": p.passive_text if p != null else "",

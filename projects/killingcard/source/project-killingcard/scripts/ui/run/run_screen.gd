@@ -258,6 +258,7 @@ static func make_req_chip(amount: int) -> PanelContainer:
 	sb.content_margin_right = 10
 	p.add_theme_stylebox_override(&"panel", sb)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.set_meta(&"inspectable", true)
 	p.tooltip_text = "Requisition: earned in fights (+3, elites +5, a loss +1) and events; spent in shops."
@@ -289,6 +290,7 @@ static func make_threat_chip(threat: int, mod_names: PackedStringArray) -> Panel
 	sb.content_margin_right = 10
 	p.add_theme_stylebox_override(&"panel", sb)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.set_meta(&"inspectable", true)
 	p.tooltip_text = "Modifiers: %s" % ", ".join(mod_names)
