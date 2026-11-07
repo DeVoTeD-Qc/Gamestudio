@@ -431,3 +431,9 @@ Pivot and Crosswise are kept as the **daily** and **versus** modes of the same a
    - **(a) A mock unlock feed with original art and fake series (recommended).** It tests the excitement loop with no legal exposure.
    - (b) Let the head import his own 4:1 images as tiles, for a personal test only and not published.
    - (c) No collection features until the core is proven fun.
+
+---
+
+## Part 2: deeper concepts
+
+The head asked for more depth, in the vein of Neuroshima Hex, Clash of Heroes and Puzzle Quest. Part 2 is in [concepts-depth.md](concepts-depth.md). It adds 4 new concepts (Banner Front, Muster, Spell Rail and the Front Campaign hybrid), simulations of the top 2, and an updated recommendation: **Banner Front** becomes the first prototype, and Running Bond becomes a later daily mode.
