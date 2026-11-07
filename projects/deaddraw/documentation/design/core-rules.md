@@ -212,7 +212,13 @@ python3 projects/deaddraw/tools/sim_deaddraw.py --json
 
 **Results (1500 runs per row, seed 7):**
 
-RESULTS_TABLE
+| Survivor | Core-loop win (clear Maple Row) | Clear D1 in run | Clear D2 in run | **Run win (full pool)** | **Run win (starter pool)** | Run win (no perks) | HP left on a win | Streets / run | Retreats / run |
+|---|---|---|---|---|---|---|---|---|---|
+| Rosa | 90.8% | 89.2% | 74.1% | **40.3%** | **38.3%** | 14.9% | 6.5 | 37.7 | 7.0 |
+| Imani | 86.1% | 86.7% | 64.6% | **32.5%** | **31.9%** | 9.3% | 5.9 | 36.1 | 7.0 |
+| Theo | 90.5% | 90.0% | 66.8% | **35.5%** | (33.3%) | 11.6% | 6.5 | 38.1 | 8.8 |
+
+Sampling error is about +/-2.5 points per figure.
 
 - **Core-loop win** = clear Maple Row from a fresh start.
 - **Run win (full pool)** = all 8 perks unlocked. **Starter pool** = the 6-perk pool on a fresh profile, which is the true first run for Rosa and Imani. Theo can't be played on a first run, so his starter-pool number is for reference only.
@@ -240,5 +246,5 @@ RESULTS_TABLE
    *Recommendation: allow Scrap.* Always equipping caused the most frustrating losses in traces (a good Machete swapped for a Broken Bottle one street before the boss). The cost is a little less tension.
 3. **Theo locked behind "clear Downtown", or all 3 survivors available from the first run?**
    *Recommendation: locked.* It gives the first sessions a concrete goal, and the prototype has very little meta otherwise. If playtests show players bouncing before Downtown, unlock him after 3 runs instead.
-4. **Difficulty target: is about 35-40% win for a strong AI the right first-run target, given humans will likely land at 15-25%?**
+4. **Difficulty target: is about 32-40% win for a strong AI the right first-run target, given humans will likely land at 15-25%?**
    *Recommendation: yes for v1,* tuned through a single knob (safehouse heal, 12 now: 10 is harder, 15 easier). Measure in playtests and add an easier "Daylight" mode later rather than flattening the base game.
