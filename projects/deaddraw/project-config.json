@@ -1,0 +1,53 @@
+{
+  "project": {
+    "name": "DeadDraw",
+    "concept": "A zombie survival solo card-crawl roguelite: each street deals 4 cards (zombies, weapons, medkits), you resolve 3 and carry 1 forward or flee, and runs across a ruined city unlock survivors and perks.",
+    "genre": "Strategy",
+    "platform": "Web",
+    "audience": "Core",
+    "timeline": "Short",
+    "engine": "Godot",
+    "engine_version": "4.4.1",
+    "mode": "prototype",
+    "competitors": "Scoundrel (solitaire card game), Card Crawl, Balatro",
+    "unique_selling_point": "The quick, readable one-deck solitaire crawl rules grown into a zombie roguelite with survivors, perks and a city map, playable in one hand on a phone browser.",
+    "version": "1.0.0",
+    "created": "2026-11-07T16:52:49.554582",
+    "phase": "Market Analysis",
+    "status": "active"
+  },
+  "development_rules": [
+    "Godot 4.4.1 GDScript, exported to Web (HTML5); must run in a phone browser in portrait and landscape",
+    "Typed GDScript, data-driven cards in .tres/JSON",
+    "Every card can be inspected with right click or long press",
+    "Original art and names only; no assets or names copied from existing games",
+    "Headless tests for core rules (tests/run_tests.gd)"
+  ],
+  "team": {
+    "active_agents": [
+      "master_orchestrator",
+      "producer_agent",
+      "market_analyst",
+      "data_scientist",
+      "sr_game_designer",
+      "mechanics_developer",
+      "qa_agent"
+    ],
+    "lead_agent": "producer_agent",
+    "orchestrator": "master_orchestrator"
+  },
+  "milestones": [],
+  "metrics": {
+    "velocity_target": "10 tasks/week",
+    "bug_threshold": "5 critical, 20 minor",
+    "performance_target": "60 FPS, < 3s load"
+  },
+  "risks": [
+    {
+      "risk": "Scope creep",
+      "probability": "Medium",
+      "impact": "High",
+      "mitigation": "Strict feature freeze after design phase"
+    }
+  ]
+}
