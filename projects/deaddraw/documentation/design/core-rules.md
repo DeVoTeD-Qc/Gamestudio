@@ -72,12 +72,12 @@ Cover soaks up damage first, then HP takes the rest. The zombie is defeated eith
 
 ### 1.5 Retreat
 
-- **Before you resolve any card on a street,** you may Retreat: **shuffle all 4 street cards back into the deck**, then deal a fresh street.
+- **Before you resolve any card on a street,** you may Retreat: **put all 4 street cards on the bottom of the deck** (in random order), then deal a fresh street.
 - **You cannot retreat two streets in a row.** After a retreat, you must Search the next street.
 - You cannot retreat from a Finale street.
-- Retreat costs no HP. Its cost is that those cards come back later, possibly at a worse moment.
+- Retreat costs no HP. Its cost is that those cards come back at the end of the district, just before the Finale.
 
-> Design note: shuffling the cards back in, rather than putting them on the bottom, is deliberate. In the sim, the bottom-of-deck version piled every rejected Hulk and junk weapon into the last few streets, right before the boss, and run win rate dropped to about a third. Shuffling in keeps the endgame readable and is our own rule.
+> Design note (studio head decision, 2026-11-07): retreated cards go to the **bottom** of the deck. That makes Retreat a loan against the endgame: what you dodge now is waiting for you right before the Finale. The UI must make this visible: the deck counter shows how many retreated cards are sitting at the bottom, and long-pressing it lists them face up (they are known information).
 
 ### 1.6 Finale
 
@@ -147,8 +147,8 @@ After clearing districts 1 and 2:
 | Survivor | Max HP | Passive | Availability |
 |---|---|---|---|
 | **Rosa Vance**, mechanic | 20 | **Steady Hands:** her weapons can also hit zombies **equal** to the last notch, not only weaker ones. | Starting |
-| **Dr. Imani Hale**, medic | 20 | **Triage:** **two** medkits can heal per street instead of one. | Starting |
-| **Theo Park**, courier | 22 | **Slip Away:** may Retreat **after resolving 1 card** of a street (the other 3 shuffle back). The no-two-retreats-in-a-row rule still applies. | Unlock (2.5) |
+| **Dr. Imani Hale**, medic | 20 | **Triage:** **two** medkits can heal per street instead of one, and every medkit heals **+1**. | Starting |
+| **Theo Park**, courier | 24 | **Slip Away:** may Retreat **after resolving 1 card** of a street (the other 3 go to the bottom of the deck). The no-two-retreats-in-a-row rule still applies. | Unlock (2.5) |
 
 ### 2.4 Perks (8 in v1)
 
@@ -208,7 +208,7 @@ python3 projects/deaddraw/tools/sim_deaddraw.py --runs 1500 --seed 7
 python3 projects/deaddraw/tools/sim_deaddraw.py --json
 ```
 
-**AI (greedy, one street of lookahead):** on each street it tries every ordered choice of 3 cards and every legal weapon/bare and equip/scrap option, then scores the resulting state as `HP + 0.35 x the damage the weapon can still absorb against the zombies left in the deck - 0.5 x the Holdover's zombie strength + small credit for a medkit or weapon Holdover`. From the last 10 cards it also adds a penalty for how badly it would do against the face-up Finale. It Retreats when that scores better (retreated cards are valued like Holdovers, since they come back). Theo also gets his resolve-1-then-retreat option. It picks perks from a fixed priority list. Weights are in `AI` in the script. I swept them (retreat cost, weapon weight, horizon) and kept the best-performing set, so it is a competent player, not a perfect one.
+**AI (greedy, one street of lookahead):** on each street it tries every ordered choice of 3 cards and every legal weapon/bare and equip/scrap option, then scores the resulting state as `HP + 0.35 x the damage the weapon can still absorb against the zombies left in the deck - 0.5 x the Holdover's zombie strength + small credit for a medkit or weapon Holdover`. From the last 10 cards it also adds a penalty for how badly it would do against the face-up Finale. It Retreats when that scores better (retreated cards are valued like Holdovers, since they come back before the Finale). Theo also gets his resolve-1-then-retreat option. It picks perks from a fixed priority list. Weights are in `AI` in the script. I swept them (retreat cost, weapon weight, horizon) and kept the best-performing set, so it is a competent player, not a perfect one.
 
 **Results (1500 runs per row, seed 7):**
 
@@ -230,21 +230,22 @@ Sampling error is about +/-2.5 points per figure.
 - Perks are worth roughly 20-25 points of run win, which means the safehouse choice matters without any single perk being mandatory.
 
 **Tuning history (for the record):** the first pass, with Scoundrel-like weights (forced equip, retreat to the bottom of the deck, harder decks, 6 HP safehouse heal), gave about 0-1% run win and an 8-23% core-loop win (12% or less run win even after the AI fixes). Changes in order of impact:
-1. Retreat shuffles the cards back in instead of putting them on the bottom.
+1. Retreat shuffles the cards back in instead of putting them on the bottom. (The studio head later chose the bottom version; see item 6.)
 2. Weapons can be Scrapped.
 3. Gentler Maple Row deck and a 12 HP safehouse heal.
 4. Perk power evened out (the original "+1 to all weapons" perk was worth +31 points, so it was cut).
 5. Theo's HP raised to 22, because Slip Away alone is worth only about +4 points.
+6. **Retune after the studio head chose bottom-of-deck retreat** (600 runs: starter-pool run win was Rosa 32%, Imani 25%, Theo 29.5%): Imani's Triage now also gives +1 heal on every medkit (`triage_heal_bonus` 0 to 1), and Theo's max HP went from 22 to 24. Decks, perks and the safehouse heal are unchanged (the safehouse heal stays reserved as the later difficulty knob).
 
 ---
 
-## 5. Open questions for the studio head
+## 5. Studio head decisions (2026-11-07)
 
-1. **Retreat: shuffle into the deck, or put on the bottom?**
-   *Recommendation: shuffle in (current rule).* It is our own rule, it avoids a junk pile right before the boss, and in the sim it roughly doubles the core-loop win rate (from 26% to 45% in the first-pass tuning). The bottom version is more punishing and closer to the inspiration.
-2. **Weapons: allow Scrap, or always equip?**
-   *Recommendation: allow Scrap.* Always equipping caused the most frustrating losses in traces (a good Machete swapped for a Broken Bottle one street before the boss). The cost is a little less tension.
-3. **Theo locked behind "clear Downtown", or all 3 survivors available from the first run?**
-   *Recommendation: locked.* It gives the first sessions a concrete goal, and the prototype has very little meta otherwise. If playtests show players bouncing before Downtown, unlock him after 3 runs instead.
-4. **Difficulty target: is about 32-40% win for a strong AI the right first-run target, given humans will likely land at 15-25%?**
-   *Recommendation: yes for v1,* tuned through a single knob (safehouse heal, 12 now: 10 is harder, 15 easier). Measure in playtests and add an easier "Daylight" mode later rather than flattening the base game.
+| # | Question | Options | Recommended | **Decision** |
+|---|---|---|---|---|
+| 1 | Where do retreated cards go? | (a) shuffled into the deck, (b) bottom of the deck | (a) | **(b) bottom of the deck.** The rules (1.5), Theo's passive and the numbers above have been retuned for it. |
+| 2 | Weapons: Equip or Scrap, or always equip? | (a) Equip or Scrap, (b) always equip | (a) | **(a) Equip or Scrap** |
+| 3 | Theo: unlock or available from the start? | (a) unlock on first Downtown clear, (b) available from the start | (a) | **(a) unlocks when you first clear Downtown** |
+| 4 | Difficulty target | (a) keep about 30-42% for the AI and tune later with the safehouse heal, (b) make it easier now | (a) | **(a) keep it.** The safehouse heal (12) is the reserved knob for later tuning. |
+
+No open questions remain for v1.
