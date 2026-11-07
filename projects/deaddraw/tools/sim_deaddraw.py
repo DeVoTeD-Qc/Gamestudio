@@ -35,7 +35,7 @@ CONFIG = {
     "perk_choices": 3,             # offered at each safehouse, pick 1
     "fire_axe_power": 7,           # perk: fresh axe at the start of each later district
     "weapon_scrap": True,          # a resolved weapon may be scrapped instead of equipped
-    "retreat_mode": "shuffle",     # "bottom": street goes under the deck; "shuffle": into it
+    "retreat_mode": "bottom",     # "bottom": street goes under the deck; "shuffle": into it
     "districts": [
         {
             "id": "maple_row",
