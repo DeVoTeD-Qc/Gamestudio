@@ -251,7 +251,7 @@ func _build_title() -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	var w: float = minf(230.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0)
 	# landscape: what is left after the title, the text line and the Start row (+ a bottom gap)
-	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0, 120.0, 176.0)
+	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0, 120.0, 230.0)
 	for sid: String in Game.bal.survivor_ids():
 		var unlocked: bool = Game.profile.survivor_unlocked(sid)
 		var s: Dictionary = Game.bal.survivor(sid)
@@ -353,7 +353,10 @@ func _build_map() -> void:
 		spec["tag"] = "%d  %s" % [di + 1, str(d.get("name", "")).to_upper()]
 		spec["selected"] = di == run.district_index
 		spec["dim"] = di < run.district_index
-		spec["art_keys"] = Art.district_keys(d)
+		var banner: Texture2D = Art.texture_for(Art.district_keys(d))
+		if banner != null:
+			spec["bg_art"] = banner
+		spec["art_keys"] = Art.finale_keys(d)
 		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 150) if portrait else Vector2(minf(300.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 170)
 		var dv: DDCardView = _view(spec, size)
 		if di == run.district_index:
@@ -423,6 +426,12 @@ func _build_street() -> void:
 		var c: DDCard = run.street[i]
 		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run, i == selected)
 		spec["art_keys"] = Art.card_keys(c, str(run.district().get("id", "")))
+		spec["holdover"] = c.holdover and str(spec.get("badge", "")) == "HOLDOVER"
+		if spec["holdover"]:
+			spec["badge"] = ""
+		if c.kind == DDCard.MEDKIT and run.preview(i, DDRun.USE).get("enabled", false):
+			var pm: Dictionary = run.preview(i, DDRun.USE)
+			spec["art_dim"] = bool(pm["wasted"]) or int(pm["heal"]) <= 0
 		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
 		cv.index = i
 		cv.tapped.connect(_on_card_tapped)
@@ -452,7 +461,7 @@ func _build_street() -> void:
 	info.add_child(dv)
 	var fs: Dictionary = DDPayloads.finale_spec(run.district())
 	fs["big_size"] = big_s
-	fs["art_keys"] = Art.district_keys(run.district())
+	fs["art_keys"] = Art.finale_keys(run.district())
 	var fv: DDCardView = _view(fs)
 	fv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_finale_anchor = fv
@@ -794,6 +803,7 @@ func _build_safehouse() -> void:
 		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 130) if portrait else Vector2(minf(320.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 220)
 		var ps: Dictionary = DDPayloads.perk_spec(pid, Game.bal, false, pid == chosen_perk)
 		ps["art_keys"] = Art.perk_keys(pid)
+		ps["art_fit"] = "contain"
 		var cv: DDCardView = _view(ps, size)
 		if pid == chosen_perk and _screen_fx == "" and _pending_fx.is_empty() and _perk_popped != pid:
 			_perk_popped = pid

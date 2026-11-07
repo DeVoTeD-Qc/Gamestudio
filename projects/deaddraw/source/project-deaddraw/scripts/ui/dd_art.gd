@@ -12,9 +12,10 @@
 #   manifest's folder (then its cards/ subfolder).
 #   Lookup keys tried, most specific first (see the *_keys functions): street cards "Z9",
 #   "zombie_9", "zombie9", then "zombie" / "z"; finale cards their name slug, "finale_<trait>",
-#   then the district; survivors "<id>" / "survivor_<id>"; perks "<id>" / "perk_<id>"; districts
-#   "<id>" / "district_<id>"; the card back "card_back" / "back".
-# Dependencies: DDCard.
+#   then the district; survivors "<id>" / "survivor_<id>"; perks "<id>" / "perk_<id>"; district
+#   banners "district_<id>" / "<id>"; a district's finale card finale_keys(); the card back
+#   "card_back" / "back". Also the card's display name (the manifest's by_name group).
+# Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
 
@@ -74,12 +75,14 @@ static func card_keys(c: DDCard, district_id: String = "") -> Array:
 		if c.finale_name != "":
 			out.append(slug(c.finale_name))
 			out.append("finale_" + slug(c.finale_name))
-		out.append("finale_" + c.boss_trait)
 		if district_id != "":
+			out.append("finales_" + district_id)
 			out.append("finale_" + district_id)
-			out.append(district_id + "_finale")
-		out.append("finale")
-	out.append_array([c.code(), "%s_%d" % [w, c.value], "%s%d" % [w, c.value], w, c.kind])
+		out.append("finale_" + c.boss_trait)
+	out.append_array([c.code(), "%s_%d" % [w, c.value], "%s%d" % [w, c.value]])
+	if not c.is_finale():
+		out.append(DDText.card_name(c).to_lower())
+	out.append_array([w, c.kind])
 	return out
 
 
@@ -91,13 +94,21 @@ static func perk_keys(id: String) -> Array:
 	return [id, "perk_" + id, "perk:" + id, "perk"]
 
 
+## The district banner (map node background). Banner first: a bare district id resolves to it
+## because the manifest lists "districts" before "finales".
 static func district_keys(d: Dictionary) -> Array:
 	var id: String = str(d.get("id", ""))
+	return ["district_" + id, "districts_" + id, id]
+
+
+## The district's Finale card art.
+static func finale_keys(d: Dictionary) -> Array:
+	var id: String = str(d.get("id", ""))
 	var fname: String = slug(str((d.get("finale", {}) as Dictionary).get("name", "")))
-	var out: Array = ["finale_" + id, id + "_finale", "district_" + id, id]
+	var out: Array = []
 	if fname != "":
-		out.insert(0, fname)
-		out.insert(1, "finale_" + fname)
+		out.append_array([fname, "finale_" + fname])
+	out.append_array(["finales_" + id, "finale_" + id, id + "_finale"])
 	return out
 
 
