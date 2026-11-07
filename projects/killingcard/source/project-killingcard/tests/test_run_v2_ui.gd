@@ -24,6 +24,7 @@ const PORTRAIT: Dictionary = {"name": "iPhone 390x844 portrait", "pt": Vector2(3
 const IPAD: Dictionary = {"name": "iPad 1180x820", "pt": Vector2(1180, 820), "ratio": 2.0}
 
 var _saved_root_size: Vector2i = Vector2i.ZERO
+var _saved_run: Dictionary = {}
 
 
 func _frames(n: int) -> void:
@@ -57,15 +58,21 @@ func _close(vp: SubViewport) -> void:
 
 func _setup_run() -> void:
 	var rs: Node = tree.root.get_node("RunState")
+	var router: Node = tree.root.get_node("SceneRouter")
+	_saved_run = {"autosave": rs.autosave, "dry_run": router.dry_run}
 	rs.autosave = false
 	if rs.run == null:
 		rs.start_run(4242)
-	tree.root.get_node("SceneRouter").dry_run = true
+	router.dry_run = true
 	RunV2Views.clear_overrides()
 
 
 func _teardown() -> void:
 	RunV2Views.clear_overrides()
+	if not _saved_run.is_empty():
+		tree.root.get_node("RunState").autosave = _saved_run["autosave"]
+		tree.root.get_node("SceneRouter").dry_run = _saved_run["dry_run"]
+		_saved_run = {}
 
 
 ## Every visible Button / Label outside a scroll is inside the viewport.
