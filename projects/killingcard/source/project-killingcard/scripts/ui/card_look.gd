@@ -314,3 +314,65 @@ static func _draw_protector(ci: CanvasItem, rr: Rect2, c: Color, up: bool) -> vo
 
 static func _draw_chevron(ci: CanvasItem, r: Rect2, c: Color, up: bool) -> void:
 	_draw_protector(ci, r, c, up)
+
+
+# =============================================================================
+# kc-deck-match (the head: "Tactic and Field cards should have a different icon"): the card type
+# icons. The UI kit's ico_type_tactic / ico_type_field (UiKit ids type_tactic / type_field) win when
+# imported; the code glyphs below are the fallback: Tactic = an orders sheet with a lightning bolt,
+# Field = a flag planted on a strip of ground. Units keep their look (no type icon).
+# =============================================================================
+
+const ICO_TYPE_TACTIC: StringName = &"type_tactic"
+const ICO_TYPE_FIELD: StringName = &"type_field"
+
+
+## The kit id of a card kind's type icon (&"tactic" / &"field" or &"equipment"); &"" for the rest.
+static func type_icon_id(kind: StringName) -> StringName:
+	match kind:
+		&"tactic":
+			return ICO_TYPE_TACTIC
+		&"field", &"equipment":
+			return ICO_TYPE_FIELD
+	return &""
+
+
+## The kind (&"tactic" / &"field" / &"") from a card's type word ("TACTIC", "FIELD", "equipment" ...).
+static func type_kind(word: String) -> StringName:
+	var w: String = word.to_lower()
+	if w.begins_with("tactic"):
+		return &"tactic"
+	if w.begins_with("field") or w.begins_with("equip"):
+		return &"field"
+	return &""
+
+
+## Draws the type icon of `kind` in r (square, centred), tinted. code_only skips the kit image.
+static func draw_type_icon(ci: CanvasItem, r: Rect2, kind: StringName, tint: Color, code_only: bool = false) -> void:
+	var id: StringName = type_icon_id(kind)
+	if id == &"":
+		return
+	var s: float = minf(r.size.x, r.size.y)
+	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
+	if not code_only and UiKit.draw_icon(ci, id, Rect2(o, Vector2(s, s)), tint):
+		return
+	var w: float = maxf(1.5, s * 0.09)
+	if id == ICO_TYPE_TACTIC:
+		# Orders: a sheet with a folded corner, a lightning bolt on it.
+		var pts: PackedVector2Array = [Vector2(0.18, 0.06), Vector2(0.64, 0.06), Vector2(0.84, 0.26), Vector2(0.84, 0.94),
+				Vector2(0.18, 0.94), Vector2(0.18, 0.06)]
+		for i: int in pts.size():
+			pts[i] = o + pts[i] * s
+		ci.draw_polyline(pts, tint, w, true)
+		ci.draw_polyline(PackedVector2Array([o + Vector2(0.64, 0.06) * s, o + Vector2(0.64, 0.26) * s, o + Vector2(0.84, 0.26) * s]), tint, w * 0.8, true)
+		var bolt: PackedVector2Array = [Vector2(0.56, 0.3), Vector2(0.32, 0.6), Vector2(0.49, 0.6), Vector2(0.42, 0.84), Vector2(0.68, 0.52), Vector2(0.51, 0.52)]
+		for i: int in bolt.size():
+			bolt[i] = o + bolt[i] * s
+		ci.draw_colored_polygon(bolt, tint)
+	else:
+		# Field: a flag on a pole, planted on a strip of ground.
+		ci.draw_line(o + Vector2(0.3, 0.1) * s, o + Vector2(0.3, 0.82) * s, tint, w, true)
+		ci.draw_colored_polygon(PackedVector2Array([o + Vector2(0.33, 0.12) * s, o + Vector2(0.84, 0.25) * s, o + Vector2(0.33, 0.42) * s]), tint)
+		ci.draw_line(o + Vector2(0.08, 0.86) * s, o + Vector2(0.92, 0.86) * s, tint, w * 1.3, true)
+		ci.draw_line(o + Vector2(0.18, 0.94) * s, o + Vector2(0.38, 0.94) * s, tint, w * 0.8, true)
+		ci.draw_line(o + Vector2(0.56, 0.94) * s, o + Vector2(0.8, 0.94) * s, tint, w * 0.8, true)

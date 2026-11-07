@@ -50,6 +50,8 @@ const BANNER_MIN_RATIO: float = 6.0
 ## Name size: 16 px (11.6 pt on the phone; never smaller), then an ellipsis (the dock and the inspector
 ## show the whole name).
 const NAME_PX: int = 16
+## kc-deck-match: the type icon in a Tactic / Field card's kind badge.
+const KIND_ICON_PX: float = 18.0
 const NAME_MIN_PX: int = 16
 
 
@@ -144,7 +146,8 @@ static func layout_for(face: Vector2, e: Dictionary) -> Dictionary:
 	var kinds: Array = BannerView.ability_kinds(e)
 	var n: int = kinds.size()
 	var has_cost: bool = str(e.get("cost", "")) != "" and not bool(e.get("operator", false))
-	var kind_w: float = 0.0 if stats else CardLook.TITLE_FONT.get_string_size(String(e.get("kind_word", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 12.0
+	# kc-deck-match: the kind badge is the type icon (Tactic / Field) + the word.
+	var kind_w: float = 0.0 if stats else CardLook.TITLE_FONT.get_string_size(String(e.get("kind_word", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 12.0 + KIND_ICON_PX + 4.0
 	var plate_h: float = minf(PLATE_H, maxf(16.0, face.y * 0.4))
 	var banner: Rect2 = Rect2(0, 0, w, maxf(8.0, face.y - plate_h))
 	var plate: Rect2 = Rect2(0, banner.end.y, w, face.y - banner.end.y)
@@ -282,9 +285,13 @@ static func draw_badges(ci: CanvasItem, lay: Dictionary, e: Dictionary, side: St
 		var word: String = String(e.get("kind_word", ""))
 		if kr.has_area() and word != "":
 			CardLook.draw_chip(ci, kr, 4.0)
+			var kind: StringName = CardLook.type_kind(word)
+			var ir: Rect2 = Rect2(kr.position.x + 5.0, kr.get_center().y - KIND_ICON_PX * 0.5, KIND_ICON_PX, KIND_ICON_PX)
+			CardLook.draw_type_icon(ci, ir, kind, CardView.FRAME_T1.lightened(0.25) if kind == &"tactic" else CardView.FIELD_TINT)
 			var f: Font = CardLook.TITLE_FONT
-			var base: Vector2 = Vector2(kr.position.x, kr.get_center().y + (f.get_ascent(16) - f.get_descent(16)) * 0.5)
-			ci.draw_string(f, base, word, HORIZONTAL_ALIGNMENT_CENTER, kr.size.x, 16, Color("#B9C2C9"))
+			var tx: float = ir.end.x + 3.0
+			var base: Vector2 = Vector2(tx, kr.get_center().y + (f.get_ascent(16) - f.get_descent(16)) * 0.5)
+			ci.draw_string(f, base, word, HORIZONTAL_ALIGNMENT_CENTER, kr.end.x - tx - 4.0, 16, Color("#B9C2C9"))
 
 
 ## The X1 card's FP reticle and Armor plate rects (face-local) and its layout mode (tests).

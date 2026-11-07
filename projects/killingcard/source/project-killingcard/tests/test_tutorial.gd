@@ -204,7 +204,7 @@ func _play_through(screen: Dictionary, fast_forward: bool) -> void:
 		return e["type"] == RulesEvent.ITEM_REVEALED and e.get("item_id") == &"recon_drone")
 	assert_true(revealed, "%s the drone resolved at Reveal" % label)
 	assert_eq(c.state.result, &"player", "%s the drill is won" % label)
-	assert_true(intel.contains("Armored Trooper and Grunt to Mid"), "%s drone intel lists the face-up Mid cards: %s" % [label, intel])
+	assert_true(intel.contains("Armored Trooper and Grunt to column B"), "%s drone intel lists the face-up column B cards: %s" % [label, intel])
 	var refused: Array = c.intent_log.filter(func(e: Dictionary) -> bool: return not e["result"]["ok"])
 	assert_eq(refused.size(), 0, "%s no engine refusals: %s" % [label, refused])
 	if not fast_forward:

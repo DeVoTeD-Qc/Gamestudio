@@ -23,7 +23,7 @@ const ROW_H: float = 64.0
 const ICON: float = 44.0
 ## Drawn glyphs for entries without a sheet icon (id -> kind).
 const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt", &"hidden": &"hidden",
-		&"no_control": &"no_control", &"field": &"field", &"control": &"control", &"objective": &"objective",
+		&"no_control": &"no_control", &"field": &"field", &"tactic": &"tactic", &"control": &"control", &"objective": &"objective",
 		&"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
 		&"set_callout": &"callout", &"doctrine": &"doctrine",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
@@ -65,6 +65,8 @@ static func entries() -> Array[Dictionary]:
 		var nm: String = String(row[0]).replace(" %d", " N").replace("%d", "N")
 		var tx: String = String(row[1]).replace("%d", "N")
 		out.append(_entry(id, &"keyword", nm, tx))
+	# kc-deck-match: Tactic and Field side by side, each with its own type icon.
+	out.append(_entry(&"tactic", &"keyword", CardInfo.GLOSSARY_EXTRA[&"tactic"][0], CardInfo.GLOSSARY_EXTRA[&"tactic"][1]))
 	out.append(_entry(&"field", &"keyword", CardInfo.GLOSSARY_EXTRA[&"field"][0], CardInfo.GLOSSARY_EXTRA[&"field"][1]))
 	# kc-pos-cut: no neighbour keywords (Guard / Spotter / Fireteam / Overwatch) any more.
 	for tr: StringName in SynergyRules.TRAITS:
@@ -365,10 +367,9 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			c.draw_line(Vector2(s * 0.3, 6), Vector2(s * 0.3, s - 4), accent, 2.5)
 			c.draw_colored_polygon(PackedVector2Array([Vector2(s * 0.3, 6), Vector2(s * 0.8, s * 0.2), Vector2(s * 0.3, s * 0.36)]), Color(accent, 0.6))
 			c.draw_line(Vector2(6, 6), Vector2(s - 6, s - 6), get_theme_color(&"enemy", &"Hud"), 2.5)
-		&"field":
-			c.draw_line(Vector2(s * 0.5, 4), Vector2(s * 0.5, s - 2), accent, 2.5)
-			c.draw_line(Vector2(s * 0.2, s * 0.35), Vector2(s * 0.8, s * 0.35), accent, 2.5)
-			c.draw_line(Vector2(s * 0.28, s * 0.6), Vector2(s * 0.72, s * 0.6), accent, 2.5)
+		&"field", &"tactic":
+			# kc-deck-match: the card type icons (ico_type_field / ico_type_tactic, else drawn).
+			CardLook.draw_type_icon(c, r.grow(-4.0), StringName(e["drawn"]), CardView.FIELD_TINT if e["drawn"] == &"field" else CardView.FRAME_T1.lightened(0.25))
 		&"control", &"objective":
 			c.draw_rect(r.grow(-4.0), Color("#1C2228"))
 			c.draw_rect(Rect2(4, 4, (s - 8) * 0.5, s - 8), Color(friend, 0.6))

@@ -488,8 +488,11 @@ func test_objective_row_clear_of_banners_and_front_tabs() -> void:
 				assert_false(local.intersects(tile), "%s: no banner over the objective tile" % label)
 				for t: Rect2 in tabs.values():
 					assert_false(local.intersects(t), "%s: no FRONT tab over a banner" % label)
+			var fa: Rect2 = (lane.get_objective_tile() as Control).field_area()
+			fa.position += tile.position
 			for t: Rect2 in tabs.values():
 				assert_true(tile.encloses(t), "%s: the FRONT tab sits inside the tile's margin" % label)
+				assert_false(t.intersects(fa), "%s: kc-abc-labels: the FRONT tab stays off the Field chips" % label)
 				# The tile's words / mark live in the middle band; the tab stays in the margin.
 				var mid: float = tile.size.y * 0.5
 				assert_true(absf(t.get_center().y - (tile.position.y + mid)) >= mid - (16.0 if m.compact else 30.0),

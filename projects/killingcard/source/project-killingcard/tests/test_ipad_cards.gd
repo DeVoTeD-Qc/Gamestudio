@@ -202,3 +202,38 @@ func test_y2_card_type_line_and_icon_names_only() -> void:
 	assert_true((cv.get_node("%BodyLabel") as Label).text != "", "a Tactic keeps its effect text")
 	assert_true((cv.get_node("%TypeLabel") as Label).text.contains("TACTIC"), "TACTIC type line")
 	cv.queue_free()
+
+
+## kc-abc-labels (the head: "Remove them; just A / B / C"; "remove the firepower total on locations ...
+## just keep the location letter and leave more space for field card").
+func test_objective_tile_letter_and_big_fields() -> void:
+	var Tile: GDScript = load("res://scripts/ui/objective_tile.gd")
+	for compact: bool in [true, false]:
+		var t: Control = Tile.new()
+		t.compact = compact
+		t.size = Vector2(228, 52) if compact else Vector2(304, 96)
+		tree.root.add_child(t)
+		t.set_tile({"label": "B", "control": &"contested", "fp_player": 3, "fp_enemy": 2, "fields": {}})
+		await _frames(1)
+		assert_eq(t.control_word(), "EVEN", "no Field: the control word fills the tile")
+		assert_false("range_word" in t, "no range word on the tile")
+		var fa: Rect2 = t.field_area()
+		assert_true(fa.size.x >= t.size.x * 0.65, "%s: the Field area takes most of the tile (%s)" % [t.size, fa])
+		var f: Dictionary = {"name": "War Standard", "card_id": &"war_standard", "banner": "war_standard"}
+		t.set_tile({"label": "B", "control": &"player", "fields": {"player": [f], "enemy": [f]}})
+		t.queue_redraw()
+		await _frames(1)
+		var chips: Array = t.chip_rects()
+		assert_eq(chips.size(), 2, "%s: both Field chips" % t.size)
+		for c: Array in chips:
+			var r: Rect2 = c[0]
+			assert_true(r.size.x >= t.size.x * 0.65 and r.size.y >= (20.0 if compact else 40.0), "%s: a big Field chip %s" % [t.size, r])
+			assert_true(fa.grow(0.5).encloses(r), "%s: the chip in the Field area" % t.size)
+		assert_false(chips[0][0].intersects(chips[1][0]), "the rival's and your chips don't overlap")
+		assert_true((chips[0][0] as Rect2).position.y < (chips[1][0] as Rect2).position.y and chips[0][1] == &"enemy", "the rival's on top")
+		t.queue_free()
+	# The texts players see: no range words.
+	var CardInfo: GDScript = load("res://scripts/ui/card_info.gd")
+	for k: StringName in CardInfo.GLOSSARY_EXTRA:
+		var txt: String = String(CardInfo.GLOSSARY_EXTRA[k][1]).to_lower()
+		assert_false(txt.contains("close /") or txt.contains("(close") or txt.contains("range"), "%s: no range words" % k)

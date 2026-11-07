@@ -201,8 +201,12 @@ func test_codex_entries_and_filters() -> void:
 	assert_true(codex.compact, "phone profile")
 	var k: float = Layout.points_per_px(Layout.PHONE)
 	var screen_r: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS)
-	for b: Button in [codex.get_back_button(), codex.get_type_button(&"killstreak"), codex.get_class_button(&"sniper"),
-			codex.get_class_button(&"ar"), codex.get_chassis_picker(), codex.get_starter_button()]:
+	# kc-deck-match: no weapon-class chips on screen (the head: "leave out the gun type").
+	assert_null(codex.get_class_button(&"sniper"), "no weapon-class filter chip")
+	assert_true(codex.get_type_button(&"tactic").has_meta(&"type_icon") and codex.get_type_button(&"field").has_meta(&"type_icon"),
+			"TACTICS / FIELDS chips carry their type icons")
+	for b: Button in [codex.get_back_button(), codex.get_type_button(&"killstreak"), codex.get_type_button(&"tactic"),
+			codex.get_type_button(&"field"), codex.get_chassis_picker(), codex.get_starter_button()]:
 		assert_true(minf(b.size.x, b.size.y) * k >= 44.0 - EPS, "%s is 44 pt+ (%s)" % [b.name, b.size])
 	for b: Button in [codex.get_back_button(), codex.get_chassis_picker()]:
 		assert_true(screen_r.encloses(b.get_global_rect()), "%s on screen %s / %s" % [b.name, b.get_global_rect(), screen_r])
@@ -213,7 +217,7 @@ func test_codex_entries_and_filters() -> void:
 	await _tap(vp, codex.get_type_button(&"killstreak").get_global_rect().get_center())
 	await _frames(2)
 	assert_eq(codex.get_tiles().size(), ks, "KILLSTREAKS shows the killstreaks")
-	# Class filter (switches to units).
+	# Class filter (API only now; switches to units).
 	codex.set_class_filter(&"sniper")
 	await _frames(2)
 	assert_eq(codex.type_filter, &"unit", "a class implies units")

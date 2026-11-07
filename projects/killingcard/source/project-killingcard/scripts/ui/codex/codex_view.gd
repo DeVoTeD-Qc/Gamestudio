@@ -546,15 +546,17 @@ func _build() -> void:
 		b.pressed.connect(set_type_filter.bind(k))
 		_type_buttons[k] = b
 		_filters.add_child(b)
-	var sep: VSeparator = VSeparator.new()
-	sep.custom_minimum_size.x = 10
-	_filters.add_child(sep)
-	for k: StringName in CLASS_FILTERS:
-		var b: Button = _chip("ANY CLASS" if k == &"any" else String(k).to_upper())
-		b.name = "Class_%s" % k
-		b.pressed.connect(set_class_filter.bind(k))
-		_class_buttons[k] = b
-		_filters.add_child(b)
+		# kc-deck-match: TACTICS and FIELDS carry their type icons (an empty icon keeps the room).
+		var kind: StringName = k if k == &"tactic" or k == &"field" else &""
+		if kind != &"":
+			var blank := Image.create(20, 20, false, Image.FORMAT_RGBA8)
+			b.icon = ImageTexture.create_from_image(blank)
+			b.set_meta(&"type_icon", kind)
+			b.draw.connect(func() -> void:
+				var ir: Rect2 = Rect2(Vector2(10, (b.size.y - 20.0) * 0.5), Vector2(20, 20))
+				CardLook.draw_type_icon(b, ir, kind, CardView.FRAME_T1.lightened(0.25) if kind == &"tactic" else CardView.FIELD_TINT))
+	# kc-ipad-cards follow-up (the head: "leave out the gun type"): no weapon-class filter chips
+	# (set_class_filter stays for callers; nothing on screen sets it).
 	# Grid.
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

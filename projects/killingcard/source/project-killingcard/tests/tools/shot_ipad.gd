@@ -4,6 +4,7 @@
 # Usage: xvfb-run -a -s "-screen 0 1024x768x24" godot --path . --rendering-driver opengl3 \
 #          --resolution 1024x768 -s res://tests/tools/shot_ipad.gd -- <out_dir> <prefix> [n_hand] [top]
 #   `top`: board abilities top-right (BannerView.ABILITIES_BOTTOM = false) for the comparison shots.
+#   `fields` (kc-abc-labels): a Field on column B for both sides and one of yours on C, on the tiles.
 # Author: UI/UX Agent (kc-ipad-cards)
 extends SceneTree
 
@@ -38,6 +39,7 @@ func _run() -> void:
 	var n_hand: int = int(args[2]) if args.size() > 2 else 7
 	if args.size() > 3 and args[3] == "top":
 		BannerView.ABILITIES_BOTTOM = false
+	var with_fields: bool = args.size() > 3 and args[3] == "fields"
 	DirAccess.make_dir_recursive_absolute(_out)
 	await process_frame
 	BannerArtDB.licensed_enabled = false
@@ -64,6 +66,11 @@ func _run() -> void:
 				u.synergy_trait = row[2]
 			st.put_in_line(u, int(row[1]))
 	# Calling cards in hand too (the starter is all Standard Issue), up to n_hand cards.
+	if with_fields:
+		for fz: Array in [[0, 1, &"war_standard"], [1, 1, &"bulwark"], [0, 2, &"listening_post"]]:
+			var fc: CardData = db.get_card(fz[2])
+			if fc != null:
+				st.sides[int(fz[0])].equipment[int(fz[1])].append({"card": RulesCard.new(st.new_uid(), fc), "round": 1})
 	# Calling cards first (the Marksman, the Gunner ...), then the starter's cards, n_hand in all.
 	var extra: Array[StringName] = [&"marksman", &"gunner", &"breacher", &"combat_medic", &"flanker"]
 	var hand: Array = st.sides[0].hand

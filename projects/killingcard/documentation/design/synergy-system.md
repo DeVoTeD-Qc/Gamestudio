@@ -601,3 +601,16 @@ Rejected on the way: Rival Armor +2 or FP +1 (M5 21%), Rival Breachers for Rifle
 - **Kept:** traits and set bonuses (§4, §13), Doctrine, Retire / Regroup and the Honor Roll (entries no longer carry a level), the 15-card floor.
 - **One trait per copy:** a copy carries at most one trait (`SynergyRules.trait_at` returns one id; `SynergyRules.is_single_trait`). `CardData.validate` rejects a `card_trait` or trait option that names two traits; `ArtTraits.validate_map()` / `card_problems()` check that each art gives at most one trait; a save whose copy names two traits is refused.
 - Numbers after the removal: `onboarding-progression.md`, "Removed (kc-no-training)".
+
+### v1.5 (kc-specops3, 2026-11-07): Spec Ops 3 = Cover +1
+
+*Head, answer NT1 (a) of kc-no-training.* The Spec Ops 3-set now gives **Cover +1** instead of First Shot; the 2-set's +1 FP stays (tier 3 includes it). `SynergyRules.TRAIT_BONUS` / `TIER_TEXT` ("Spec Ops get Cover +1"); every UI text reads `TIER_TEXT`. No set bonus gives First Shot any more (the `fs` key stays for tune_check what-ifs). Re-measured on the shipped build (400 real runs per proxy):
+
+| | before (v1.4, after kc-no-training) | v1.5 | target |
+|---|---|---|---|
+| Traits overall (Undead / Heavy / Vanguard / Spec Ops) | 44.4 / 42.2 / 46.7 / 66.7 (n=180; 62.0 at n=450) | **47.8 / 43.9 / 52.8 / 55.6** | 40–60 |
+| Competent run (M1–M5) | 40.2% (94.8/93.8/68.5/47.2/41.0) | **40.0%** (94.8/93.8/70.0/47.5/40.7) | 38–43 |
+| New player (casual) M1 | 71.2% | **71.2%** | 65–75 |
+| Aware vs blind | 58.6 / 59.7 | **57.3 / 57.5** | ≥ 55 |
+| Seat 0, late decks (tune / onboarding check) | 53.4 / 55.0 | **54.7 / 58.1** (n=320 / 160) | 45–55 |
+| Seat 0, starter | 46.8 | 46.8 | 45–55 |

@@ -196,7 +196,7 @@ static func _entry(id: StringName, value: int = 0) -> Dictionary:
 ## SynergyRules holds the traits). [name, text]. The Codex glossary
 ## (scripts/ui/codex/glossary.gd) reads these three tables only, so the wording lives in one place.
 const GLOSSARY_EXTRA: Dictionary = {
-	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots: the number in the reticle ring, bottom-right (teal ring yours, red the rival's; a green number is buffed). It is the RESULT now (range, effects, links and sets included); the inspector lists the sum."],
+	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots: the number in the reticle ring, bottom-right (teal ring yours, red the rival's; a green number is buffed). It is the RESULT now (effects, links and sets included); the inspector lists the sum."],
 	&"armor": ["Armor", "Health: the number on the grey ballistic plate at the bottom-right corner (both sides). Each hit takes Armor away and the plate shows what is left; at 0 the unit is eliminated. Amber plate = damaged."],
 	&"card_peek": ["Card at rest / peek", "On the board a card shows its trait (bottom-left), its ability icons (bottom-centre) and FP and Armor (bottom-right), all the same size. Hover it (touch: hold it) to peek at its cost (top-left). Hand cards always show everything; Settings > ALL CARD INFO shows it on the board too. Long press (or right click) any card for what each icon does."],
 	&"damaged": ["Damaged", "A thin amber line along the bottom edge, a crack in the top-left corner and an amber Armor plate: the unit has lost Armor."],
@@ -206,9 +206,10 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"cover_stat": ["Cover (chip)", "The Cover this unit has now (printed + effects + links + sets): each hit on it deals that much less."],
 	&"supply": ["Supply", "What you spend in Deploy. The hex on a card is its cost; you get more Supply each round."],
 	&"stat_colours": ["Green up / red down", "A green number with an up triangle is raised by something right now; red with a down triangle is lowered. White = the printed value."],
+	&"tactic": ["Tactic", "A one-time order (its icon: an orders sheet with a bolt). Play it in Deploy; it resolves at Reveal and goes to the discard."],
 	&"field": ["Field / Overrun", "A Field stays in its column and keeps working. Overrun: at the end of each round, if the enemy controls this column, the Field is destroyed (hidden traps are exempt)."],
 	&"control": ["Column control", "After the firefight, a side with units left in a column and the rival with none controls it. Both sides there: EVEN (contested), unless only one side has a Holder."],
-	&"objective": ["Objective tile", "The middle row: both sides' Firepower here and who controls it."],
+	&"objective": ["Objective tile", "The middle row: the column's letter (A, B, C) in its control mark (teal circle yours, red diamond the rival's, dashed square even, grey ring open) and the Fields there (the rival's on top, yours below). Long press or right click it for both sides' Firepower and the details."],
 	&"operator": ["Operator", "Your hero card (brass frame): never drawn or discarded. It costs Supply to place and comes back after it goes down."],
 	&"killstreak": ["Killstreak", "Eliminations build your streak; at its number a killstreak is ready (amber glow) and you tap it to call it in."],
 	&"incoming": ["Incoming", "A rival card played face-down this Deploy: it lands here at Reveal."],

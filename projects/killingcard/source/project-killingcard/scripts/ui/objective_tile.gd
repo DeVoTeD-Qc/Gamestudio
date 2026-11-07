@@ -1,13 +1,14 @@
 # objective_tile.gd
 # Purpose: The objective tile in the middle of a column (board-and-cards-ux.md §3.2, field-cards.md
 #   model B), laid out sideways since kc-board2 (board-layout-v2.md §4.6; phone 228x52, desktop
-#   304x96). Left: rival column Firepower over yours. Then the column letter in a control mark
-#   (yours: teal circle, rival: red diamond, even: grey dashed square, open: grey ring), the control
-#   word (YOURS / RIVAL / EVEN / OPEN), and the Field chips at the right edge (the rival's top-right,
-#   yours bottom-right; phone 70x22, desktop 96x28).
-#   kc-abc-labels (the head: "Remove them; just A / B / C"): no CLOSE / MID / LONG range word; the
-#   control word takes its place, one line, bigger (phone 20 px, desktop 26 px), vertically centred.
-#   A Field chip is a 4:1 slice of the Field's banner art with a stake glyph. Your hidden trap shows as a dashed chip (the rival never
+#   304x96). kc-abc-labels (the head: "Remove them; just A / B / C" and "remove the firepower total
+#   on locations ... just keep the location letter and leave more space for field card"): no range
+#   word, no Firepower totals. Left: the column letter in its control mark (yours: teal circle, rival:
+#   red diamond, even: grey dashed square, open: grey ring). The rest of the tile is the Field chips,
+#   big, with the Field's name (the rival's on the top half, yours on the bottom half; phone about
+#   170x21, desktop 222x43). With no Field the control word (YOURS / RIVAL / EVEN / OPEN) fills it.
+#   The column inspector (long press / right click) still gives both sides' Firepower and the rest.
+#   A Field chip is a slice of the Field's banner art with a stake glyph. Your hidden trap shows as a dashed chip (the rival never
 #   sees yours, you never see theirs). A queued Field shows PLAN. A Field the enemy controls the
 #   column of (field_view overrun_risk) gets a pulsing red OVERRUN tab: it is torn down at the end
 #   of the round unless the column changes hands.
@@ -71,19 +72,16 @@ func _draw() -> void:
 	draw_rect(r, Color("#232A31"))
 	draw_rect(r, Color("#3A444D"), false, 1.0)
 	var h: float = size.y
-	# kc-board2 (board-layout-v2.md §4.6): laid out sideways. Left to right: the FP pair (rival over
-	# yours), the control mark with the column letter, the control word, and the
-	# Field chips at the right edge (rival top-right, yours bottom-right).
-	var fs: int = 16 if compact else 20
-	var font: Font = get_theme_font(&"font", &"HudNumber")
+	# kc-abc-labels (the head: "remove the firepower total on locations ... just keep the location
+	# letter and leave more space for field card"): left, the column letter in its control mark (yours:
+	# teal circle, rival: red diamond, even: grey dashed square, open: grey ring); the rest of the tile
+	# holds the Field chips, big (the rival's on the top half, yours on the bottom half). With no
+	# Field here, the control word (YOURS / RIVAL / EVEN / OPEN) fills that space instead.
 	var word_font: Font = get_theme_font(&"font", &"HudHeader")
 	var pad: float = 6.0
-	_fp_line(font, fs, Vector2(pad, h * 0.5 - fs * 0.62), fp_enemy, _col(&"enemy"))
-	_fp_line(font, fs, Vector2(pad, h * 0.5 + fs * 0.62), fp_player, _col(&"friend"))
-	var mm: float = minf(roundf(h * 0.76), 64.0)
-	var mark_x: float = 44.0 if compact else 58.0
+	var mm: float = mark_size()
 	var mark_r: float = mm * 0.5
-	var c: Vector2 = Vector2(mark_x + mark_r, h * 0.5)
+	var c: Vector2 = Vector2(pad + mark_r, h * 0.5)
 	match control:
 		&"player":
 			draw_circle(c, mark_r, Color("#14524D"))
@@ -104,28 +102,35 @@ func _draw() -> void:
 	var lsz: Vector2 = word_font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs)
 	draw_string(word_font, Vector2(c.x - lsz.x * 0.5, c.y + (word_font.get_ascent(lfs) - word_font.get_descent(lfs)) * 0.5), letter,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, Color.WHITE)
-	# Field chips at the right edge.
 	_chip_rects.clear()
-	var chip: Vector2 = Vector2(70, 22) if compact else Vector2(96, 28)
-	var cx: float = size.x - chip.x - 4.0
+	var area: Rect2 = field_area()
 	var top_fields: Array = fields.get("enemy", [])
 	var bottom_fields: Array = fields.get("player", [])
+	if top_fields.is_empty() and bottom_fields.is_empty():
+		# No Field: the control word, big, centred on the tile's height.
+		var word: String = control_word()
+		var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
+		var wfs: int = control_font_size()
+		while wfs > 14 and word_font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, wfs).x > area.size.x:
+			wfs -= 1
+		_word(word_font, wfs, word, Rect2(area.position.x, (h - wfs - 2.0) * 0.5, area.size.x, wfs + 2.0), wc)
+		return
+	var half: float = floorf((area.size.y - 3.0) * 0.5)
 	if not top_fields.is_empty():
-		_chip(Rect2(cx, 3.0, chip.x, chip.y), &"enemy", top_fields[0])
+		_chip(Rect2(area.position.x, area.position.y, area.size.x, half), &"enemy", top_fields[0])
 	if not bottom_fields.is_empty():
-		_chip(Rect2(cx, h - chip.y - 3.0, chip.x, chip.y), &"player", bottom_fields[0])
-	# kc-abc-labels: the control word alone (EVEN, not CONTESTED), bigger, centred on the tile's height;
-	# it steps down to fit the room left of the Field chips.
-	var wx: float = mark_x + mm + (8.0 if compact else 14.0)
-	var right: float = (cx - 4.0) if not (top_fields.is_empty() and bottom_fields.is_empty()) else size.x - 6.0
-	var ww: float = maxf(0.0, right - wx)
-	var word: String = {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "EVEN"}.get(control, "OPEN")
-	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
-	var wfs: int = control_font_size()
-	while wfs > fs and word_font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, wfs).x > ww:
-		wfs -= 1
-	var line_h: float = float(wfs) + 2.0
-	_word(word_font, wfs, word, Rect2(wx, (h - line_h) * 0.5, ww, line_h), wc)
+		_chip(Rect2(area.position.x, area.end.y - half, area.size.x, half), &"player", bottom_fields[0])
+
+
+## kc-abc-labels: the letter mark's size (phone 52 px tile: 40; desktop 96: 64).
+func mark_size() -> float:
+	return minf(roundf(size.y * 0.76), 64.0)
+
+
+## kc-abc-labels: where the Field chips go (tile-local): everything right of the letter mark.
+func field_area() -> Rect2:
+	var x: float = 6.0 + mark_size() + (8.0 if compact else 12.0)
+	return Rect2(x, 3.0, maxf(0.0, size.x - x - 4.0), maxf(0.0, size.y - 6.0))
 
 
 ## kc-abc-labels: the control word's size (phone 20 px, desktop 26 px) before it steps down to fit.
@@ -133,18 +138,14 @@ func control_font_size() -> int:
 	return 20 if compact else 26
 
 
-## The word on the tile now (tests): YOURS / RIVAL / EVEN / OPEN.
+## The control word (tests; shown when no Field is on the tile): YOURS / RIVAL / EVEN / OPEN.
 func control_word() -> String:
 	return {&"player": "YOURS", &"enemy": "RIVAL", &"contested": "EVEN"}.get(control, "OPEN")
 
 
-func _fp_line(font: Font, fs: int, at: Vector2, value: int, c: Color) -> void:
-	var rad: float = fs * 0.32
-	var ctr: Vector2 = at + Vector2(rad, 0)
-	draw_arc(ctr, rad, 0, TAU, 16, c, 2.0)
-	draw_circle(ctr, 1.5, c)
-	draw_string(font, Vector2(ctr.x + rad + 4.0, at.y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5), str(value),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+## The Field chip rects drawn now (tests): [[Rect2, side, entry]].
+func chip_rects() -> Array:
+	return _chip_rects
 
 
 func _word(font: Font, fs: int, text: String, rr: Rect2, c: Color) -> void:
@@ -165,18 +166,25 @@ func _chip(rr: Rect2, side: StringName, f: Dictionary) -> void:
 	if tex != null and not hidden:
 		draw_texture_rect(tex, rr, false, Color(1, 1, 1, 0.9 if not f.get("pending", false) else 0.6))
 	var g: float = rr.size.y
-	# Stake / pylon glyph of our own (never a flag): a post with two cross bars.
+	# kc-deck-match: the Field type icon (a planted flag; ico_type_field when the kit has it), side-coloured.
 	var gp: Rect2 = Rect2(rr.position, Vector2(g, g))
 	draw_rect(gp, Color(INK, 0.85))
-	var x: float = gp.get_center().x
-	draw_line(Vector2(x, gp.position.y + g * 0.15), Vector2(x, gp.end.y - g * 0.12), side_c, 2.0)
-	draw_line(Vector2(x - g * 0.28, gp.position.y + g * 0.35), Vector2(x + g * 0.28, gp.position.y + g * 0.35), side_c, 2.0)
-	draw_line(Vector2(x - g * 0.2, gp.position.y + g * 0.6), Vector2(x + g * 0.2, gp.position.y + g * 0.6), side_c, 2.0)
+	CardLook.draw_type_icon(self, gp.grow(-g * 0.12), &"field", side_c)
 	if hidden:
 		BannerView._dashed_rect(self, rr, Color("#B9C2C9"), 1.5)
 		_tag(Rect2(gp.end.x + 2.0, rr.position.y, rr.size.x - g - 2.0, rr.size.y), "TRAP", Color("#B9C2C9"), Color(0, 0, 0, 0))
 	else:
 		draw_rect(rr, side_c, false, 1.5)
+		# kc-abc-labels: the Field's name on the (now bigger) chip, title style with a dark outline.
+		var nm: String = String(f.get("name", "")).to_upper()
+		if nm != "" and not bool(f.get("pending", false)) and not bool(f.get("overrun_risk", false)):
+			var tf: Font = CardLook.TITLE_FONT
+			var tfs: int = clampi(int(rr.size.y * 0.7), 12, 18)
+			var room: float = rr.size.x - g - 8.0
+			var txt: String = BannerView.fit_text(nm, tf, tfs, room)
+			var base: Vector2 = Vector2(gp.end.x + 4.0, rr.get_center().y + (tf.get_ascent(tfs) - tf.get_descent(tfs)) * 0.5)
+			draw_string_outline(tf, base, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, 4, INK)
+			draw_string(tf, base, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, Color("#F2F5F7"))
 	if bool(f.get("pending", false)):
 		_tag(Rect2(gp.end.x + 2.0, rr.position.y, rr.size.x - g - 2.0, rr.size.y), "PLAN", INK, _col(&"accent"))
 	elif bool(f.get("overrun_risk", false)):

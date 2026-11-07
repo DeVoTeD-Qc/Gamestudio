@@ -47,6 +47,9 @@ const COST_RECT: Rect2 = Rect2(4, 3, 26, 26)
 ## FP reticle and Armor plate at 250 px (bottom-right of the stats bar).
 const FP_RECT: Rect2 = Rect2(181, 182, 30, 30)
 const ARMOR_RECT: Rect2 = Rect2(215, 182, 29, 30)
+## kc-deck-match: the type line's icon (Tactic / Field) and the Field icon's tint.
+const TYPE_ICON_PX: float = 18.0
+const FIELD_TINT: Color = Color("#8FD18B")
 ## kc-ipad-cards: the stats bar's badge size (trait, abilities, FP, Armor) and the text box icon.
 const BADGE_PX: float = 30.0
 const LINE_ICON_PX: float = 18.0
@@ -379,6 +382,17 @@ func regions() -> Dictionary:
 	}
 
 
+## kc-deck-match: the type icon this card shows on its type line (&"tactic" / &"field" / &"" for
+## units, Operators and killstreaks).
+func type_icon_kind() -> StringName:
+	match _card_type():
+		"tactic":
+			return &"tactic"
+		"equipment", "field":
+			return &"field"
+	return &""
+
+
 ## kc-ipad-cards: the ability icons of the stats bar (BannerView.ability_kinds over this card's
 ## keywords: Protector, up to 2 keyword icons, or 1 + the effect bolt).
 func ability_kinds() -> Array:
@@ -447,7 +461,9 @@ func _refresh() -> void:
 		bits.append("UNIT")
 	_type_label.text = "  ".join(bits)
 	var chip: Control = _type_label.get_parent() as Control
-	chip.position = (rg["type"] as Rect2).position
+	# kc-deck-match: Tactics and Fields show their type icon before the words.
+	var icon_w: float = (TYPE_ICON_PX + 4.0) if type_icon_kind() != &"" else 0.0
+	chip.position = (rg["type"] as Rect2).position + Vector2(icon_w, 0)
 	chip.size = Vector2(0, TYPE_H)
 	_type_label.set_meta(&"slot_size", Vector2((rg["type"] as Rect2).size.x - 22.0, TYPE_H))
 	# Text box: keyword lines (icon + name), the effect text of Tactics / Fields / killstreaks.
@@ -781,6 +797,12 @@ func _draw() -> void:
 	if _has_cost_badge():
 		CardLook.draw_cost(self, COST_RECT, "", bool(data.get("cant_pay", false)))
 	draw_rect(rg["art"], Color("#0C0F11"))
+	# kc-deck-match: the type icon (Tactic: orders + bolt; Field: a planted flag) on the type line.
+	var tk: StringName = type_icon_kind()
+	if tk != &"":
+		var tr0: Rect2 = rg["type"]
+		CardLook.draw_type_icon(self, Rect2(tr0.position.x, tr0.position.y + (TYPE_H - TYPE_ICON_PX) * 0.5, TYPE_ICON_PX, TYPE_ICON_PX), tk,
+				FRAME_T1.lightened(0.25) if tk == &"tactic" else FIELD_TINT)
 	# Text box.
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.08, 0.07, 0.03, 0.6) if tac else Color(0.04, 0.05, 0.055, 0.55)

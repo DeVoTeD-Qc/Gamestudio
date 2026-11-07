@@ -314,13 +314,22 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	_end_shown = false
 	_finished = false
 	_match_started_ms = Time.get_ticks_msec()
-	if PitchDecks.active():
-		# kc-syn §11.4: the whole side (its deck), so the pitch shows links and sets.
+	if pitch_swaps_apply():
+		# kc-syn §11.4: the whole side (its deck), so the pitch shows links and sets. kc-deck-match (the
+		# head: "the starting deck shown when we start campaign doesn't match what I draw in game 1"):
+		# only the Quick Match showcases the pitch swaps; a run match and the tutorial play the real decks.
 		for s: RulesSide in state.sides:
 			PitchDecks.apply_setup(s.setup)
 	_assign_copy_arts(state)
 	state.start_match()
 	_begin_deploy()
+
+
+## kc-deck-match: the private pitch's showcase swaps (PitchDecks) apply to this match: the pitch
+## build's Quick Match only, never a run match (campaign) or the tutorial, so match 1 draws exactly
+## the starter deck the Loadout screen shows.
+func pitch_swaps_apply() -> bool:
+	return PitchDecks.active() and not is_run_match and not _is_tutorial()
 
 
 ## kc-cod2: per-copy banner art (display only). kc-trait-ui (head): every copy wears ITS OWN art,

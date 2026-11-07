@@ -675,9 +675,17 @@ func _draw_kind_word(o: Control, a: Dictionary) -> void:
 		return
 	var font: Font = CardLook.TITLE_FONT
 	var fs: int = 16
-	var sb: Vector2 = Vector2(sr.position.x, sr.position.y + (sr.size.y + font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
-	o.draw_string_outline(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs, 3, INK)
-	o.draw_string(font, sb, sub, HORIZONTAL_ALIGNMENT_CENTER, sr.size.x, fs, Color("#B9C2C9"))
+	# kc-deck-match: the type icon (Tactic / Field) before the word.
+	var kind: StringName = CardLook.type_kind(sub)
+	var tw: float = font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var ip: float = minf(sr.size.y, 20.0)
+	var x0: float = sr.position.x + maxf(0.0, (sr.size.x - tw - ip - 4.0) * 0.5)
+	if kind != &"":
+		CardLook.draw_type_icon(o, Rect2(x0, sr.get_center().y - ip * 0.5, ip, ip), kind, CardView.FRAME_T1.lightened(0.25) if kind == &"tactic" else CardView.FIELD_TINT)
+		x0 += ip + 4.0
+	var sb: Vector2 = Vector2(x0, sr.position.y + (sr.size.y + font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
+	o.draw_string_outline(font, sb, sub, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, INK)
+	o.draw_string(font, sb, sub, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("#B9C2C9"))
 
 
 ## `text` cut to `width` at font size `fs`, ending in "…" when cut.

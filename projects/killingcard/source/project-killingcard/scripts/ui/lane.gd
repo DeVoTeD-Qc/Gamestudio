@@ -679,7 +679,8 @@ func _draw_decor() -> void:
 		return
 	var oy: float = BoardMetrics.objective_y(metrics)
 	# FRONT tabs: each side's row 1 meets the objective tile. kc-cards-impl: the tab sits INSIDE the
-	# tile's top (rival) / bottom (yours) margin, clear of the banners and of the tile's labels:
+	# tile's top (rival) / bottom (yours) margin, clear of the banners and of the tile's labels
+	# (kc-abc-labels: over the letter mark, clear of the Field chips):
 	# desktop keeps the FRONT word (the 96 px tile has a 26 px margin), the phone's 52 px tile has a
 	# 6 px margin, so there it is a side-coloured bar (no word).
 	var font: Font = get_theme_font(&"font", &"HudHeader")
@@ -692,7 +693,7 @@ func _draw_decor() -> void:
 			continue
 		var side_c: Color = get_theme_color(&"friend" if pair[0] == &"player" else &"enemy", &"Hud")
 		var y: float = oy + 1.0 if pair[0] == &"enemy" else oy + obj_h - 1.0 - tab.y
-		var r: Rect2 = Rect2(Vector2((size.x - tab.x) * 0.5, y), tab)
+		var r: Rect2 = Rect2(Vector2(front_tab_x(tab.x), y), tab)
 		_decor.draw_rect(r, side_c)
 		if compact:
 			continue
@@ -717,6 +718,14 @@ func _draw_decor() -> void:
 				_decor.draw_rect(_friendly_row.get_rect(), Color(border, 0.14))
 
 
+## kc-abc-labels: the FRONT tab sits over the column letter's mark (the tile's left, where the mark
+## leaves a margin above and below), so it never covers the Field chips that now fill the tile.
+func front_tab_x(tab_w: float) -> float:
+	var obj_h: float = float(metrics.get("obj_h", 52.0))
+	var mm: float = minf(roundf(obj_h * 0.76), 64.0)
+	return maxf(1.0, 6.0 + (mm - tab_w) * 0.5)
+
+
 ## The FRONT tab rects (lane-local) drawn now (tests): {&"enemy": Rect2, &"player": Rect2} for the
 ## sides with a front unit.
 func front_tab_rects() -> Dictionary:
@@ -730,5 +739,5 @@ func front_tab_rects() -> Dictionary:
 		if slot.kind != slot.Kind.UNIT or slot.pending:
 			continue
 		var y: float = oy + 1.0 if pair[0] == &"enemy" else oy + float(metrics["obj_h"]) - 1.0 - tab.y
-		out[pair[0]] = Rect2(Vector2((size.x - tab.x) * 0.5, y), tab)
+		out[pair[0]] = Rect2(Vector2(front_tab_x(tab.x), y), tab)
 	return out
