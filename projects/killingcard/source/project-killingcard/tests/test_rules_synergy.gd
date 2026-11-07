@@ -77,8 +77,10 @@ func test_cover_removal_and_blackout_strip_synergy() -> void:
 	var m: MatchState = _match()
 	var behind: RulesUnit = F.place(m, P, _u("v1", 1, 5, &"", &"vanguard"), M)
 	F.place(m, P, _u("v2", 1, 5, &"", &"vanguard"), L)
-	F.place(m, P, _u("v3", 1, 5, &"", &"vanguard"), R)
-	assert_eq(m.cover_of(behind), 1, "Vanguard 3 Cover")
+	F.place(m, P, _u("v3", 1, 5, &"", &"heavy"), R)
+	F.place(m, P, _u("h2", 1, 5, &"", &"heavy"), R)
+	behind = F.place(m, P, _u("h3", 1, 5, &"", &"heavy"), L)
+	assert_eq(m.cover_of(behind), 1, "Heavy set Cover (v2.1: Vanguard has no Cover at 3)")
 	m.sides[E].flags[DataEnums.EffectKind.REMOVE_COVER] = m.round_number
 	assert_eq(m.cover_of(behind), 0, "Recon Drone-style Cover removal takes set Cover too")
 	var m2: MatchState = _match()
@@ -123,7 +125,7 @@ func test_vanguard_tiers() -> void:
 	assert_eq([m.firepower_of(v1), m.firepower_of(v2), m.cover_of(v1)], [3, 3, 0], "Vanguard 2: +1 FP to every Vanguard, any row (kc-pos-cut)")
 	assert_eq(m.firepower_of(plain), 1, "untraited units get nothing")
 	var v3: RulesUnit = F.place(m, P, _u("v3", 2, 3, &"", &"vanguard"), R)
-	assert_eq([m.cover_of(v1), m.cover_of(v2), m.cover_of(v3), m.cover_of(plain)], [1, 1, 1, 0], "Vanguard 3: Cover +1 to every Vanguard")
+	assert_eq([m.cover_of(v1), m.cover_of(v2), m.cover_of(v3), m.cover_of(plain)], [0, 0, 0, 0], "Vanguard 3: no Cover (v2.1, head V6)")
 	assert_eq([m.firepower_of(v1), m.firepower_of(v3)], [3, 3], "tier 3 includes tier 2")
 
 
@@ -137,8 +139,8 @@ func test_specops_heavy_undead_tiers() -> void:
 	var h: MatchState = _match()
 	var h1: RulesUnit = F.place(h, P, _u("h1", 2, 6, &"", &"heavy"), L)
 	F.place(h, P, _u("h2", 2, 6, &"", &"heavy"), R)
-	assert_eq([h.cover_of(h1), h.firepower_of(h1)], [0, 2], "Heavy 2: no bonus (kc-art-traits §5, head T3)")
-	assert_eq(int(h.synergy_side(P)["tiers"][&"heavy"]), 0, "no active tier at 2")
+	assert_eq([h.cover_of(h1), h.firepower_of(h1)], [1, 2], "Heavy 2: Cover +1 (v2.1, head V6)")
+	assert_eq(int(h.synergy_side(P)["tiers"][&"heavy"]), 2, "tier 2 active")
 	F.place(h, P, _u("h3", 2, 6, &"", &"heavy"), R)
 	assert_eq([h.cover_of(h1), h.firepower_of(h1)], [1, 3], "Heavy 3: Cover +1 and +1 FP")
 	var u: MatchState = _match()
@@ -296,7 +298,7 @@ func test_synergy_view_preview_and_clone() -> void:
 	var prev: Dictionary = m.preview_synergy(P, F.hand_uid(m, P, "gunner"), M)
 	assert_true(prev["ok"], "preview")
 	assert_eq(prev["new_links"].size(), 0, "no links (kc-pos-cut)")
-	assert_eq([int(prev["tiers_before"].get(&"heavy", 0)), int(prev["tiers_after"][&"heavy"])], [0, 3], "Heavy 2 (no bonus) -> 3")
+	assert_eq([int(prev["tiers_before"].get(&"heavy", 0)), int(prev["tiers_after"][&"heavy"])], [2, 3], "Heavy 2 -> 3")
 	assert_eq(int(prev["card"]["cover"]), 1, "the Gunner itself gets Heavy 3 Cover")
 	assert_false(m.preview_synergy(P, 9999, M)["ok"], "unknown card")
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "gunner"), M))["ok"], "play it")
@@ -306,7 +308,7 @@ func test_synergy_view_preview_and_clone() -> void:
 	assert_eq([v["player"]["rail"][0]["trait"], v["player"]["rail"][0]["count"], v["player"]["rail"][0]["tier"], v["player"]["rail"][0]["next"]],
 			[&"heavy", 3, 3, 0], "rail entry")
 	var ua: Dictionary = v["units"][a1.uid]
-	assert_eq([ua["cover"], ua["links"].size(), ua["sets"], ua.has("band"), ua.has("level")], [1, 0, [[&"heavy", 3]], false, false], "unit entry (no level / band)")
+	assert_eq([ua["cover"], ua["links"].size(), ua["sets"], ua.has("band"), ua.has("level")], [1, 0, [[&"heavy", 2], [&"heavy", 3]], false, false], "unit entry (no level / band)")
 	var copy: MatchState = MatchClone.copy(m)
 	assert_eq(copy.cover_of(copy.find_unit(a1.uid)), m.cover_of(a1), "the clone reads the same synergy")
 	copy.find_unit(a1.uid).armor = 0

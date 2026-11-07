@@ -44,8 +44,8 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		var snap: Dictionary = MatchSnapshot.build(st, c.map, 0)
 		var rail: Array = snap["synergy"]["player"]["rail"]
 		assert_eq(rail.size(), 2, "%s rail: Vanguard and Spec Ops in play" % label)
-		assert_eq([rail[0]["trait"], rail[0]["count"], rail[0]["tier"], rail[0]["next"]], [&"vanguard", 2, 2, 3], "%s Vanguard 2/3 at tier 2" % label)
-		assert_eq(m.get_trait_rail().chip_texts(&"player"), PackedStringArray(["Vanguard 2/3", "Spec Ops 1/2"]), "%s rail chips" % label)
+		assert_eq([rail[0]["trait"], rail[0]["count"], rail[0]["tier"], rail[0]["next"]], [&"vanguard", 2, 2, 0], "%s Vanguard 2 at tier 2 (no 3-set since v2.1)" % label)
+		assert_eq(m.get_trait_rail().chip_texts(&"player"), PackedStringArray(["Vanguard 2", "Spec Ops 1/2"]), "%s rail chips" % label)
 		assert_true(m.get_trait_rail().is_visible_in_tree(), "%s rail visible in the strip" % label)
 		var strip_r: Rect2 = m.get_badge(&"deck").get_parent().get_global_rect().grow(0.6)
 		assert_true(strip_r.encloses(m.get_trait_rail().get_global_rect()), "%s rail inside the icon strip" % label)

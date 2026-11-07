@@ -53,19 +53,22 @@ const TIER3: int = 3
 ## for balance what-ifs (tune_check tune=...).
 ## Whole-set bonuses: every unit of the trait gets them, wherever it stands (no row or column
 ## condition any more). Tier 3 includes tier 2. An empty entry = no bonus at that tier.
+## v2.1 (kc-v2-impl, head V6: trait pass on Run v2 decks, run_v2_check exps=late): Vanguard's 3-set no
+## longer adds Cover +1 (v2 decks complete sets twice as often; Vanguard read 64%), Heavy gets Cover +1
+## at 2 and +1 FP at 3 (the same total at 3 as before; Heavy read 37%). Measured: 46-52% each.
 const TRAIT_BONUS: Dictionary = {
-	VANGUARD: [{"fp": 1}, {"cover": 1}],
+	VANGUARD: [{"fp": 1}, {}],
 	SPECOPS: [{"fp": 1}, {"cover": 1}],  # v1.5 (kc-specops3): tier 3 Cover +1 (was First Shot)
-	HEAVY: [{}, {"cover": 1, "fp": 1}],
+	HEAVY: [{"cover": 1}, {"fp": 1}],
 	UNDEAD: [{"heal": 1}, {"fp": 1, "cover": 1}],
 }
 ## The table compute() reads (balance tools may tune a copy in memory; the game uses TRAIT_BONUS).
 static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
 ## One-line tier texts for callouts / the inspector.
 const TIER_TEXT: Dictionary = {
-	VANGUARD: ["Vanguard get +1 FP", "Vanguard get Cover +1"],
+	VANGUARD: ["Vanguard get +1 FP", "3 Vanguard: still +1 FP (no extra bonus)"],
 	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops get Cover +1"],
-	HEAVY: ["No bonus yet: Heavy needs 3", "Heavy units get Cover +1 and +1 FP"],
+	HEAVY: ["Heavy units get Cover +1", "Heavy units also get +1 FP"],
 	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
 }
 ## kc-pos-cut (§13): the four neighbor keywords are retired (no card carries one, compute() makes no
@@ -140,7 +143,7 @@ static func next_tier(t: StringName, tier: int) -> int:
 	var tb: Array = trait_bonus.get(t, [])
 	if tier < TIER2 and tb.size() >= 1 and not _empty_bonus(tb[0]):
 		return TIER2
-	if tier < TIER3:
+	if tier < TIER3 and tb.size() >= 2 and not _empty_bonus(tb[1]):
 		return TIER3
 	return 0
 

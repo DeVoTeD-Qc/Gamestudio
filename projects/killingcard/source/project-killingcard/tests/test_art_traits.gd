@@ -137,15 +137,15 @@ func test_every_lmg_has_pierce_including_the_operator() -> void:
 
 
 func test_set_bonus_numbers_v1_2() -> void:
-	assert_eq(SynergyRules.active_tier(&"heavy", 2), 0, "Heavy: nothing at 2")
+	assert_eq(SynergyRules.active_tier(&"heavy", 2), 2, "Heavy 2: Cover +1 (v2.1, head V6)")
 	assert_eq(SynergyRules.active_tier(&"heavy", 3), 3, "Heavy 3")
 	assert_eq(SynergyRules.active_tier(&"vanguard", 2), 2, "others unchanged")
-	assert_eq([SynergyRules.next_tier(&"heavy", 0), SynergyRules.next_tier(&"undead", 0), SynergyRules.next_tier(&"undead", 3)], [3, 2, 0], "next set size")
+	assert_eq([SynergyRules.next_tier(&"heavy", 0), SynergyRules.next_tier(&"undead", 0), SynergyRules.next_tier(&"undead", 3), SynergyRules.next_tier(&"vanguard", 2)], [2, 2, 0, 0], "next set size (Vanguard: nothing at 3 since v2.1)")
 	var lines: Array = [[SynergyRules.slot(1, &"", &"undead")], [SynergyRules.slot(2, &"", &"undead")], [SynergyRules.slot(3, &"", &"undead")]]
 	var r: Dictionary = SynergyRules.compute(lines)
 	assert_eq([r["zones"][0][0]["fp"], r["zones"][0][0]["cover"], r["zones"][0][0]["heal"]], [1, 1, 1], "Undead 3: +1 FP, Cover +1, heal 1")
 	var h2: Dictionary = SynergyRules.compute([[SynergyRules.slot(1, &"", &"heavy")], [SynergyRules.slot(2, &"", &"heavy")], []])
-	assert_eq([h2["zones"][0][0]["cover"], h2["zones"][0][0]["sets"], int(h2["tiers"][&"heavy"])], [0, [], 0], "Heavy 2: no bonus, no set shown")
+	assert_eq([h2["zones"][0][0]["cover"], h2["zones"][0][0]["sets"], int(h2["tiers"][&"heavy"])], [1, [[&"heavy", 2]], 2], "Heavy 2: Cover +1 (v2.1)")
 
 
 # =============================================================================
