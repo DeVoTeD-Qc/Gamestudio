@@ -1,7 +1,7 @@
 # boss_plate.gd
 # Purpose: The BOSS RULE plate on the match board (run-v2.md §4, §7.1 "the boss rule plate sits where
 #   the enemy Operator plate is"; kc-v2-ui). A red plate on an empty rival back-row slot (the
-#   screen picks one; a skull tab at the board's corner when all are full), over the rival's side: skull, "BOSS RULE", the rule's name, and a state word: "FROM ROUND 4" before
+#   screen picks one; a skull tab at the board's corner when all are full), over the rival's side: skull, "BOSS RULE", the rule's name, and a state word: "FROM ROUND N" before
 #   it starts, "ACTIVE" once it is in effect (MatchState.boss_view active / note). Hidden outside boss
 #   fights. Tap = the rule as a toast, long press / right click = the boss inspector.
 # Dependencies: run_glyphs.gd, press_gesture.gd, hud_theme.tres fonts.

@@ -89,8 +89,8 @@ const OPERATOR_KITS: Dictionary = {
 const BOSS_ALIASES: Dictionary = {&"meridian_six": &"meridian", &"bulwark_prime": &"prime", &"hollow_choir": &"choir"}
 const BOSSES: Dictionary = {
 	&"meridian": {"name": "Meridian_Six", "crew": "Black Meridian · Spec Ops", "mode": "Zone Control",
-			"rule_name": "Reinforcements", "rule_text": "From round 4, gains 1 extra Supply every round.", "armor_bonus": 1,
-			"tip": "Win the Supply race before round 4, or hold out."},
+			"rule_name": "Reinforcements", "rule_text": "From round 5, gains 1 extra Supply every round.", "armor_bonus": 1,
+			"tip": "Win the Supply race before round 5, or hold out."},
 	&"prime": {"name": "Bulwark Prime", "crew": "Anchor · Heavy", "mode": "Firefight",
 			"rule_name": "Dug In", "rule_text": "Starts the match with a Mortar Pit in every column.", "armor_bonus": 1,
 			"tip": "Take a column to tear its pit down (Overrun)."},
