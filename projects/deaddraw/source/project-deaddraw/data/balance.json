@@ -1,0 +1,65 @@
+{
+  "_note": "Mirror of CONFIG in projects/deaddraw/tools/sim_deaddraw.py. Paste new CONFIG values here (the loader also accepts the Python dict as-is: True/False, # comments, trailing commas and a leading 'CONFIG =' are fine). 'extra_rules' holds numbers the sim hard-codes outside CONFIG; missing keys fall back to the sim's values.",
+  "start_hp": 20,
+  "max_hp": 20,
+  "street_size": 4,
+  "resolve_per_street": 3,
+  "safehouse_heal": 12,
+  "perk_choices": 3,
+  "fire_axe_power": 7,
+  "weapon_scrap": true,
+  "retreat_mode": "bottom",
+  "districts": [
+    {
+      "id": "maple_row",
+      "name": "Maple Row",
+      "zombies": [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10],
+      "weapons": [2, 3, 4, 5, 6, 7],
+      "medkits": [2, 3, 4, 5, 6, 7],
+      "barricades": [2, 3],
+      "finale": {"type": "boss", "name": "The Groundskeeper", "zombies": [12], "trait": "shatter"}
+    },
+    {
+      "id": "downtown",
+      "name": "Downtown",
+      "zombies": [2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12],
+      "weapons": [3, 4, 5, 6, 7, 8],
+      "medkits": [2, 3, 4, 5, 6, 7, 8],
+      "barricades": [2, 3, 4],
+      "finale": {"type": "horde", "name": "Rush Hour Horde", "zombies": [10, 9, 8], "trait": "horde"}
+    },
+    {
+      "id": "st_agnes",
+      "name": "St. Agnes Hospital",
+      "zombies": [3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 11, 12, 13, 14],
+      "weapons": [3, 4, 5, 6, 7, 8, 9],
+      "medkits": [3, 4, 5, 6, 7, 8],
+      "barricades": [2, 3, 4],
+      "finale": {"type": "boss", "name": "Patient Zero", "zombies": [15], "trait": "quarantine"}
+    }
+  ],
+  "survivors": {
+    "rosa": {"name": "Rosa Vance", "role": "Mechanic", "passive": "steady_hands", "unlocked": true},
+    "imani": {"name": "Dr. Imani Hale", "role": "Medic", "passive": "triage", "unlocked": true},
+    "theo": {"name": "Theo Park", "role": "Courier", "passive": "slip_away", "unlocked": false, "hp": 22}
+  },
+  "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "sandbags", "scrounger"],
+  "perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "tripwire", "sandbags", "second_wind", "scrounger"],
+  "extra_rules": {
+    "medkits_per_street": 1,
+    "triage_medkits_per_street": 2,
+    "field_kit_bonus": 1,
+    "knuckle_wraps_reduction": 2,
+    "sandbags_bonus": 2,
+    "thick_jacket_hp": 4,
+    "scrounger_heal": 1,
+    "tripwire_cover": 2,
+    "second_wind_hp": 1,
+    "score_per_district": 10,
+    "unlocks": {
+      "maple_row": ["perk:second_wind"],
+      "downtown": ["survivor:theo"],
+      "win": ["perk:tripwire", "badge"]
+    }
+  }
+}
