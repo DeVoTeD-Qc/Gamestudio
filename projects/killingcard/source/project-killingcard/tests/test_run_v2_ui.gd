@@ -151,7 +151,7 @@ func test_run_map_v2_at_three_sizes() -> void:
 		var boss: Control = v.get_boss_plate()
 		assert_true(boss.is_visible_in_tree(), "%s: the boss plate is shown from step 1" % screen["name"])
 		var rule: Label = boss.find_child("BossRule", true, false) as Label
-		assert_true(rule != null and rule.text.contains("round 4"), "%s: the boss rule is printed" % screen["name"])
+		assert_true(rule != null and rule.text.contains("round 5"), "%s: the boss rule is printed" % screen["name"])
 		assert_true(v.get_go_button().text == "FIGHT HERE" and not v.get_go_button().disabled, "%s: the first reachable fight is briefed (%s)" % [screen["name"], v.get_go_button().text])
 		# The nodes are 44 pt tap targets.
 		var k: float = Layout.points_per_px(screen)
