@@ -34,6 +34,7 @@ CONFIG = {
     "safehouse_heal": 12,          # healed between districts (capped at max HP)
     "perk_choices": 3,             # offered at each safehouse, pick 1
     "fire_axe_power": 7,           # perk: fresh axe at the start of each later district
+    "triage_heal_bonus": 1,        # Imani: extra heal on every medkit
     "weapon_scrap": True,          # a resolved weapon may be scrapped instead of equipped
     "retreat_mode": "bottom",     # "bottom": street goes under the deck; "shuffle": into it
     "districts": [
@@ -73,7 +74,7 @@ CONFIG = {
         "rosa": {"name": "Rosa Vance", "role": "Mechanic", "passive": "steady_hands", "unlocked": True},
         "imani": {"name": "Dr. Imani Hale", "role": "Medic", "passive": "triage", "unlocked": True},
         "theo": {"name": "Theo Park", "role": "Courier", "passive": "slip_away", "unlocked": False,
-                 "hp": 22},
+                 "hp": 24},
     },
     # starter pool on a fresh profile; second_wind and tripwire are meta unlocks
     "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps",
@@ -155,6 +156,8 @@ def apply(s: State, c: Card, use_weapon: bool, quarantine: bool) -> None:
         limit = 2 if s.passive == "triage" else 1
         if s.medkits_used < limit and not quarantine:
             heal = c.value + (1 if "field_kit" in s.perks else 0)
+            if s.passive == "triage":
+                heal += CONFIG["triage_heal_bonus"]
             s.hp = min(s.max_hp, s.hp + heal)
         s.medkits_used += 1
     elif c.kind == "B":
