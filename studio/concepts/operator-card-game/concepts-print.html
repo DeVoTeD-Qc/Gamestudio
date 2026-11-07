@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator Card Game Concepts</title>
+<style>
+:root{
+  --ink:#1c222b; --muted:#5d6672; --faint:#8a929c; --rule:#dde1e6; --soft:#f4f5f7; --soft2:#eaedf0;
+  --red:#c8423a; --blue:#2c6db5;
+  --c1:#0f6e73; --t1:#e5f0f0;
+  --c2:#4a4fa8; --t2:#ebebf6;
+  --c3:#5a7a24; --t3:#edf2e4;
+  --c4:#a8650f; --t4:#f7eddd;
+  --c5:#7d3f86; --t5:#f3e9f4;
+  --c6:#9b2c4e; --t6:#f6e6ec;
+  --cc:#1c222b; --ct:#f4f5f7;
+}
+@page{
+  size:A4; margin:15mm 15mm 17mm 15mm;
+  @bottom-left{content:"Operator Card Game — Concepts  ·  Gamestudio"; font-family:Inter; font-size:8.5pt; color:#8a929c;}
+  @bottom-right{content:counter(page) " / " counter(pages); font-family:Inter; font-size:8.5pt; font-weight:600; color:#5d6672;}
+}
+@page :first{ @bottom-left{content:none} @bottom-right{content:none} }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#fff;color:var(--ink)}
+body{font-family:Inter,"DejaVu Sans",sans-serif;font-size:9.7pt;line-height:1.48;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-feature-settings:"tnum" 1,"cv11" 1}
+p{margin:0 0 2.2mm}
+strong,b{font-weight:650}
+em{font-style:italic}
+code{font-family:"JetBrains Mono",monospace;font-size:8.2pt;background:var(--soft);padding:0 1mm;border-radius:1mm;word-break:break-word}
+.mono{font-family:"JetBrains Mono",monospace}
+.disp{font-family:"Inter Display",Inter,sans-serif}
+.page{break-before:page}
+.avoid{break-inside:avoid}
+.cont{margin-top:4mm}
+.cols3,.cols,.deck,.cardrow,.chips,.slots,.lesson,.why,.roadmap,.pitch,.facts,.chead{break-inside:avoid}
+h1,h2,h3,h4{break-after:avoid;margin:0}
+h1.sec{font-family:"Inter Display",Inter;font-weight:800;font-size:22pt;line-height:1.1;letter-spacing:-.01em;margin:0 0 1mm}
+.kick{font-size:7.6pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5mm}
+.lede{font-size:10.6pt;line-height:1.5;color:#2c333d;margin-bottom:4mm}
+h2.sub{font-family:"Inter Display",Inter;font-weight:750;font-size:13pt;margin:5mm 0 2mm;color:var(--ink)}
+h3.lab{break-after:avoid;font-size:8pt;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--cc);margin:4.5mm 0 1.6mm;display:flex;align-items:center;gap:2mm}
+h3.lab::after{content:"";flex:1;height:.6px;background:var(--rule)}
+.hdr-rule{height:1.2mm;background:var(--cc);border-radius:1mm;margin:0 0 4mm;width:22mm}
+ul.tight{margin:0 0 2mm;padding-left:4.5mm}
+ul.tight li{margin:0 0 1mm}
+.note{font-size:8.3pt;color:var(--muted);line-height:1.4}
+.ednote{font-size:8pt;color:#6b5a2e;background:#fbf6e7;border-left:2px solid #d8b75a;padding:1.5mm 2.5mm;margin:2mm 0;border-radius:0 1mm 1mm 0}
+.ednote b{color:#5c4a17}
+figure{margin:3mm 0 3mm;break-inside:avoid}
+figcaption{font-size:8pt;color:var(--muted);margin-top:1.2mm;line-height:1.35}
+figcaption b{color:var(--ink)}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:Inter,sans-serif}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+
+/* ---------- tables ---------- */
+table{border-collapse:collapse;width:100%;font-size:8.6pt;line-height:1.38;margin:1.5mm 0 3mm}
+thead th{background:var(--soft2);text-align:left;font-weight:700;font-size:7.8pt;letter-spacing:.03em;padding:1.6mm 2mm;border-bottom:1px solid #c9ced5;vertical-align:bottom}
+tbody td{padding:1.6mm 2mm;border-bottom:.6px solid var(--rule);vertical-align:top}
+tbody tr{break-inside:avoid}
+td.num,th.num{text-align:center}
+.tag{display:inline-block;font-size:7pt;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.3mm 1.6mm;border-radius:5mm;white-space:nowrap}
+
+/* ---------- cover ---------- */
+.cover{width:180mm;height:264mm;position:relative;overflow:hidden;break-after:page;background:#fbfbfa}
+.cover .bands{position:absolute;left:0;right:0;top:0;height:7mm;display:flex}
+.cover .bands i{flex:1}
+.cover .inner{position:absolute;left:20mm;right:20mm;top:34mm}
+.cover .studio{font-size:9pt;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.cover h1{font-family:"Inter Display",Inter;font-weight:900;font-size:44pt;line-height:.98;letter-spacing:-.02em;margin:8mm 0 5mm}
+.cover h1 span{display:block;color:#3d4652;font-weight:300}
+.cover .subt{font-size:15pt;line-height:1.35;color:#2c333d;max-width:170mm;font-weight:400}
+.cover .meta{margin-top:10mm;display:flex;gap:10mm;font-size:9pt;color:var(--muted)}
+.cover .meta b{display:block;color:var(--ink);font-size:10.5pt;font-weight:650}
+.cover .art{position:absolute;left:20mm;right:20mm;top:142mm}
+.cover .fine{position:absolute;left:20mm;right:20mm;bottom:16mm;font-size:8.2pt;color:var(--muted);line-height:1.45;border-top:.6px solid var(--rule);padding-top:4mm}
+
+/* ---------- exec summary ---------- */
+.egrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm;margin:3mm 0 4mm}
+.ecard{border:1px solid var(--rule);border-top:2.2mm solid var(--cc);border-radius:1.6mm;padding:2.6mm 3mm 2.6mm;background:#fff;display:flex;flex-direction:column;break-inside:avoid}
+.ecard .n{font-size:7.4pt;font-weight:700;letter-spacing:.1em;color:var(--cc);text-transform:uppercase}
+.ecard h4{font-family:"Inter Display",Inter;font-size:13pt;font-weight:800;margin:.4mm 0 1.2mm;line-height:1.1}
+.ecard p{font-size:8.3pt;line-height:1.38;margin:0 0 2mm;color:#2c333d;flex:1}
+.ecard dl{display:grid;grid-template-columns:auto 1fr;gap:.6mm 2.4mm;margin:0;font-size:7.8pt;align-items:center}
+.ecard dt{color:var(--muted)}
+.ecard dd{margin:0;font-weight:600}
+.ecard .verdict{margin-top:2mm;font-size:7.4pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1mm 2mm;border-radius:1mm;background:var(--ct);color:var(--cc);text-align:center}
+.ecard .verdict.top{background:var(--cc);color:#fff}
+.dots{display:inline-flex;gap:.7mm;vertical-align:middle}
+.dots i{width:2.1mm;height:2.1mm;border-radius:50%;background:#d6dadf;display:block}
+.dots i.on{background:var(--cc)}
+.recbox{border:1px solid #cfd5dc;background:var(--soft);border-radius:2mm;padding:3.5mm 4mm}
+.recbox h4{font-size:10.5pt;font-weight:750;margin:0 0 1.5mm}
+.recbox ol{margin:0;padding-left:5mm}
+.recbox li{margin-bottom:1.4mm;font-size:9pt}
+
+/* ---------- toc ---------- */
+.toc{margin:4mm 0 6mm}
+.toc a{display:flex;align-items:baseline;gap:2mm;text-decoration:none;color:var(--ink);padding:1.7mm 0;border-bottom:.6px solid var(--rule);font-size:10.4pt}
+.toc a .sw{width:3mm;height:3mm;border-radius:.8mm;background:var(--cc);flex:none;align-self:center}
+.toc a .t{font-weight:600}
+.toc a .s{color:var(--muted);font-size:8.6pt;flex:1}
+.toc a .p{font-weight:700;font-family:Inter;min-width:8mm;text-align:right}
+.toc a.lvl2{padding-left:5mm}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:4mm;font-size:8.6pt}
+.about .box{background:var(--soft);border-radius:1.6mm;padding:3mm 3.5mm}
+.about .box h4{font-size:7.8pt;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 1.5mm}
+blockquote{margin:0;font-size:9.4pt;line-height:1.45;font-style:italic;color:#2c333d}
+
+/* ---------- pillars ---------- */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.pill{border:1px solid var(--rule);border-radius:1.6mm;padding:2.8mm 3.2mm;break-inside:avoid;background:#fff}
+.pill .h{display:flex;gap:2.4mm;align-items:baseline}
+.pill .h .k{font-family:"Inter Display";font-weight:900;font-size:15pt;color:#b6bcc4;line-height:1}
+.pill .h b{font-size:10.2pt}
+.pill p{font-size:8.5pt;line-height:1.42;margin:1.4mm 0 1.4mm}
+.pill .test{font-size:8.1pt;background:var(--soft);border-radius:1mm;padding:1.4mm 2mm;line-height:1.38}
+.pill .test b{font-size:7.2pt;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:1mm}
+.pill.flav{background:var(--soft);border-style:dashed}
+
+/* ---------- weapon table ---------- */
+.wt td{vertical-align:middle}
+.dmg{display:inline-flex;align-items:center;gap:1.2mm;font-weight:700}
+.dmg .bar{display:inline-flex;gap:.5mm}
+.dmg .bar i{width:2.4mm;height:2.6mm;background:#e3e6ea;border-radius:.4mm;display:block}
+.dmg .bar i.on{background:#3b4450}
+.dmg.max .bar i.on{background:var(--red)}
+.hpips{display:inline-flex;gap:.8mm;vertical-align:middle}
+.hpips i{width:3.2mm;height:3.2mm;border-radius:50%;background:var(--ink);display:block}
+.hpips i.p{background:#fff;border:1.2px solid var(--ink);border-radius:.7mm}
+.hpips i.e{background:#fff;border:1.2px dashed #9aa1aa;border-radius:.7mm}
+
+/* ---------- loadout slot strip ---------- */
+.slots{display:flex;gap:1.6mm;flex-wrap:wrap;margin:2mm 0}
+.slot{border:1px solid #c9ced5;border-radius:1.4mm;padding:1.6mm 2mm;background:#fff;font-size:7.8pt;line-height:1.3;flex:1 1 0;min-width:0}
+.slot .sl{font-size:6.8pt;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.6mm}
+.slot.k{border-style:dashed}
+.slot b{font-size:8.2pt}
+
+/* ---------- concept header ---------- */
+.concept{break-before:page}
+.chead{display:flex;gap:4mm;align-items:stretch;margin-bottom:3mm}
+.chead .cn{flex:none;width:19mm;background:var(--cc);color:#fff;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm 0}
+.chead .cn b{font-family:"Inter Display";font-weight:900;font-size:26pt;line-height:1}
+.chead .cn span{font-size:6.6pt;letter-spacing:.14em;text-transform:uppercase;opacity:.85;margin-top:.8mm}
+.chead .ct{flex:1;padding-top:.5mm}
+.chead h1{font-family:"Inter Display";font-weight:850;font-size:25pt;line-height:1.02;letter-spacing:-.015em;color:var(--ink)}
+.chead .tg{font-size:11pt;color:var(--cc);font-weight:600;margin-top:1mm}
+.facts{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--rule);border-radius:1.6mm;overflow:hidden;margin:0 0 3mm;background:var(--ct)}
+.facts div{padding:1.8mm 2.4mm;border-right:1px solid rgba(0,0,0,.06);font-size:8.2pt;line-height:1.3}
+.facts div:last-child{border-right:0}
+.facts span{display:block;font-size:6.6pt;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--cc);margin-bottom:.5mm}
+.pitch{font-size:10pt;line-height:1.5;border-left:2.2px solid var(--cc);padding:.5mm 0 .5mm 3.5mm;margin:0 0 2mm}
+
+/* ---------- steps ---------- */
+.steps{margin:1.5mm 0 3mm;counter-reset:st}
+.step{display:grid;grid-template-columns:30mm 1fr;border:1px solid var(--rule);border-radius:1.6mm;margin-bottom:1mm;overflow:hidden;break-inside:avoid;background:#fff}
+.step .sh{background:var(--ct);display:flex;align-items:center;gap:2mm;padding:1.1mm 2.2mm;border-right:1px solid var(--rule)}
+.step .sh i{font-style:normal;flex:none;width:6mm;height:6mm;border-radius:50%;background:var(--cc);color:#fff;font-weight:800;font-size:9pt;display:flex;align-items:center;justify-content:center}
+.step .sh b{font-size:8.3pt;line-height:1.2;color:var(--ink)}
+.step .sb{padding:1.1mm 2.6mm;font-size:8.7pt;line-height:1.42}
+.chev{display:flex;margin:1mm 0 2mm}
+.chev div{flex:1;background:var(--cc);color:#fff;font-size:7.6pt;font-weight:650;padding:1.4mm 2mm 1.4mm 4mm;clip-path:polygon(0 0,calc(100% - 3mm) 0,100% 50%,calc(100% - 3mm) 100%,0 100%,3mm 50%);margin-right:-2mm;line-height:1.2;display:flex;align-items:center}
+.chev div:first-child{clip-path:polygon(0 0,calc(100% - 3mm) 0,100% 50%,calc(100% - 3mm) 100%,0 100%);padding-left:2.4mm}
+.chev div:nth-child(even){background:color-mix(in srgb,var(--cc) 82%,#000)}
+
+/* ---------- worked example ---------- */
+table.ex td.w{white-space:nowrap;font-weight:700;width:17mm}
+table.ex td.who{width:15mm}
+table.ex td.st{width:40mm;font-size:8pt;color:#2c333d;background:#fafbfc}
+.pr{display:inline-block;padding:.2mm 1.6mm;border-radius:1mm;color:#fff;font-size:7.4pt;font-weight:700}
+.pr.r{background:var(--red)} .pr.b{background:var(--blue)}
+.lesson{background:var(--ct);border-radius:1.6mm;padding:2.2mm 3mm;font-size:8.8pt;margin:1mm 0 2mm}
+.lesson b{color:var(--cc)}
+.hpd{font-weight:700;white-space:nowrap}
+
+/* ---------- game cards ---------- */
+.cardrow{display:flex;gap:2.4mm;align-items:center;flex-wrap:wrap;margin:2mm 0}
+.op{font-family:"Inter Display";font-weight:800;font-size:15pt;color:var(--faint)}
+.gcard{width:30mm;height:38mm;border-radius:2.2mm;border:1.2px solid var(--cc);background:#fff;display:flex;flex-direction:column;overflow:hidden;flex:none;box-shadow:0 .5mm 0 rgba(0,0,0,.08)}
+.gcard .top{background:var(--cc);color:#fff;font-size:6.4pt;font-weight:750;letter-spacing:.1em;text-transform:uppercase;padding:1mm 2mm;display:flex;justify-content:space-between;gap:1.5mm}
+.gcard .nm{font-weight:750;font-size:8.6pt;padding:1.4mm 2mm .6mm;line-height:1.15}
+.gcard .cl{font-size:6.8pt;color:var(--muted);padding:0 2mm}
+.gcard .rng{display:grid;grid-template-columns:repeat(3,1fr);gap:.8mm;padding:1.6mm 2mm}
+.gcard .rng div{background:var(--soft);border-radius:.8mm;text-align:center;font-size:6.2pt;color:var(--muted);padding:.6mm 0;line-height:1.1}
+.gcard .rng div b{display:block;font-size:11pt;color:var(--ink);line-height:1.05}
+.gcard .rng div.up{background:var(--ct);outline:1.2px solid var(--cc)}
+.gcard .rng div.up b{color:var(--cc)}
+.gcard .ft{margin-top:auto;font-size:6.8pt;padding:1.2mm 2mm;border-top:.6px solid var(--rule);display:flex;justify-content:space-between;align-items:center;line-height:1.2}
+.gcard .ft b{font-size:8pt}
+.gcard .tx{font-size:7pt;padding:.8mm 2mm;line-height:1.3;color:#2c333d}
+.gcard.back{background:repeating-linear-gradient(45deg,var(--ct) 0 2mm,#fff 2mm 4mm);align-items:center;justify-content:center;text-align:center}
+.gcard.back .bk{background:#fff;border:1px solid var(--cc);border-radius:1.2mm;padding:1.6mm 2mm;font-size:7pt;font-weight:750;color:var(--cc);letter-spacing:.06em;text-transform:uppercase;line-height:1.25;margin:0 2mm}
+.gcard.att{border-style:dashed}
+.gcard.att .top{background:#fff;color:var(--cc);border-bottom:1px dashed var(--cc)}
+.gcard.mini{width:24mm;height:33mm}
+.gcard.mini .nm{font-size:7.8pt}
+.snc .gcard.mini{width:18.4mm;height:27mm}
+.snc .gcard.mini .nm{font-size:7.4pt}
+
+/* deck composition */
+.deck{border:1px solid var(--rule);border-radius:1.6mm;padding:2.4mm 3mm;margin:2mm 0;break-inside:avoid}
+.drow{display:grid;grid-template-columns:40mm 1fr 64mm;gap:3mm;align-items:center;padding:.7mm 0;border-bottom:.6px dashed var(--rule);font-size:8.2pt}
+.drow:last-child{border-bottom:0}
+.drow .src b{display:block;font-size:8.6pt}
+.drow .src span{color:var(--muted);font-size:7.4pt}
+.pile{display:flex;gap:.9mm;flex-wrap:wrap}
+.pile i{width:3.6mm;height:5mm;border-radius:.6mm;background:var(--cc);display:block}
+.pile i.l{background:color-mix(in srgb,var(--cc) 55%,#fff)}
+.pile i.d{background:#fff;border:1px dashed var(--cc)}
+.drow .what{font-size:7.6pt;color:#2c333d;line-height:1.3}
+.total{font-size:8.6pt;margin-top:1.6mm;padding-top:1.6mm;border-top:1px solid var(--rule)}
+
+.chips{display:flex;gap:1.4mm;flex-wrap:wrap;margin:1mm 0 2mm}
+.chip{border:1px solid #cfd4da;border-radius:1.2mm;padding:1mm 1.8mm;font-size:7.8pt;line-height:1.3;background:#fff;flex:1 1 52mm}
+.chip b{display:block;font-size:8.2pt}
+
+/* comparison */
+table.cmp{table-layout:fixed}
+table.cmp td{vertical-align:middle}
+table.cmp th,table.cmp td{padding-left:1.4mm;padding-right:1.4mm}
+table.cmp td.cn{font-weight:700;white-space:nowrap}
+table.cmp td.cn i{display:inline-block;width:2.4mm;height:2.4mm;border-radius:.6mm;margin-right:1.4mm;vertical-align:middle}
+.risk{display:inline-flex;gap:1mm;align-items:center;font-weight:650}
+.risk i{width:2.2mm;height:2.2mm;border-radius:50%;display:block}
+
+/* questions */
+.q{border:1px solid var(--rule);border-radius:1.8mm;padding:3mm 3.6mm;margin-bottom:3mm;break-inside:avoid}
+.q h4{font-size:10.6pt;font-weight:750;margin:0 0 2mm;display:flex;gap:2mm;align-items:baseline}
+.q h4 .qn{background:var(--ink);color:#fff;border-radius:1mm;padding:.2mm 1.6mm;font-size:8.6pt}
+.opt{display:grid;grid-template-columns:7mm 1fr auto;gap:2mm;align-items:start;padding:1.5mm 2mm;border-radius:1.2mm;font-size:8.9pt;margin-bottom:.8mm}
+.opt .l{font-weight:800;width:5.4mm;height:5.4mm;border-radius:50%;border:1.2px solid #9aa1aa;display:flex;align-items:center;justify-content:center;font-size:8pt;color:var(--muted)}
+.opt.rec{background:#e9f3ec;outline:1.2px solid #4f8a5b}
+.opt.rec .l{background:#3f7a4c;border-color:#3f7a4c;color:#fff}
+.opt .rb{font-size:7pt;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:#3f7a4c;border-radius:1mm;padding:.5mm 1.6mm;white-space:nowrap}
+.roadmap{display:grid;grid-template-columns:1fr 1fr;gap:2.4mm;margin:2mm 0 3mm}
+.rm{border-radius:1.6mm;padding:2.4mm 3mm;border:1px solid var(--rule);font-size:8.4pt;line-height:1.38;background:#fff;border-left:2mm solid var(--cc)}
+.rm .rk{font-size:6.8pt;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rm b.nm{font-size:10pt;display:block;margin:.3mm 0 .6mm}
+.reasons li{margin-bottom:1.6mm}
+.why{display:grid;grid-template-columns:1fr 1fr;gap:4mm}
+.why .bx{border-top:2mm solid var(--cc);background:var(--ct);border-radius:1.6mm;padding:3mm 3.6mm;font-size:8.8pt}
+.why .bx h4{font-family:"Inter Display";font-size:12.5pt;font-weight:800;margin:0 0 1.6mm;color:var(--cc)}
+.why ul{padding-left:4mm;margin:0}
+.why li{margin-bottom:1.6mm}
+.legend{display:flex;gap:4mm;flex-wrap:wrap;font-size:7.8pt;color:var(--muted);margin-top:1mm}
+.legend span{display:inline-flex;align-items:center;gap:1.2mm}
+.legend i{display:inline-block;width:3mm;height:3mm;border-radius:50%}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <marker id="arR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c8423a"/></marker>
+    <marker id="arB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2c6db5"/></marker>
+    <marker id="arK" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5d6672"/></marker>
+    <pattern id="hatchR" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fbeeed"/><line x1="0" y1="0" x2="0" y2="6" stroke="#c8423a" stroke-width="1.6"/></pattern>
+    <pattern id="hatchB" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eaf1f9"/><line x1="0" y1="0" x2="0" y2="6" stroke="#2c6db5" stroke-width="1.2" opacity=".6"/></pattern>
+    <pattern id="hatchK" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f4f5f7"/><line x1="0" y1="0" x2="0" y2="6" stroke="#aab0b8" stroke-width="1.2"/></pattern>
+  </defs>
+</svg>
+
+<!-- ======================= COVER ======================= -->
+<section class="cover">
+  <div class="bands"><i style="background:var(--c1)"></i><i style="background:var(--c2)"></i><i style="background:var(--c3)"></i><i style="background:var(--c4)"></i><i style="background:var(--c5)"></i><i style="background:var(--c6)"></i></div>
+  <div class="inner">
+    <div class="studio">Gamestudio · Concept exploration</div>
+    <h1>Operator Card Game <span>— Concepts</span></h1>
+    <div class="subt">What a one-operator Call of Duty card game could look like</div>
+    <div class="meta">
+      <div>Date<b>7 Nov 2026</b></div>
+      <div>Author<b>Sr Game Designer</b></div>
+      <div>Board task<b class="mono" style="font-size:9.5pt">op-concepts</b></div>
+      <div>Status<b>For the head’s review</b></div>
+    </div>
+  </div>
+  <div class="art" id="coverArt"></div>
+  <div class="fine">
+    Call of Duty is named here only as a hypothetical licence and as inspiration. Every rule, name, number and visual in this document is original. No Call of Duty / Modern Warfare art, logos, trade dress, perk names or killstreak names are used. Weapon names reuse KillingCard’s original ones (Kestrel AR-7, Wasp-9, Longreach .338, Bastion-60, P-12 Sidearm) plus one new one (Mako-12). Design only, no code.
+  </div>
+</section>
+
+<!-- ======================= EXEC SUMMARY ======================= -->
+<section>
+  <div class="kick" data-toc="sum">Executive summary</div>
+  <h1 class="sec">Six ways to play one operator</h1>
+  <p class="lede">KillingCard deploys units into lanes. This exploration goes the other way: <strong>one operator per player, and the cards improve and drive that one body on a map.</strong> Six concepts with genuinely different structures; two are recommended for prototyping.</p>
+
+  <div class="egrid">
+    <div class="ecard" style="--cc:var(--c1);--ct:var(--t1)">
+      <div class="n">Concept 1</div><h4>Point Man</h4>
+      <p>1v1 Hardpoint duel on a 3×3 room map. Your 24-card deck is generated from your loadout; a face-down Hold Angle shoots first.</p>
+      <dl><dt>Match</dt><dd>10–12 min</dd><dt>CoD feel</dt><dd><span class="dots" data-v="5"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="4"></span></dd><dt>Risk</dt><dd>Med · balancing generated decks</dd></dl>
+      <div class="verdict top">Prototype first</div>
+    </div>
+    <div class="ecard" style="--cc:var(--c2);--ct:var(--t2)">
+      <div class="n">Concept 2</div><h4>Fireteam</h4>
+      <p>3v3 Domination, one operator per player (you plus bot allies). Secret plans revealed together, then lane-by-lane firefights.</p>
+      <dl><dt>Match</dt><dd>8–10 min</dd><dt>CoD feel</dt><dd><span class="dots" data-v="4"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="3"></span> landscape</dd><dt>Risk</dt><dd>Med · 6-body readability</dd></dl>
+      <div class="verdict">Fallback: max KillingCard reuse</div>
+    </div>
+    <div class="ecard" style="--cc:var(--c3);--ct:var(--t3)">
+      <div class="n">Concept 3</div><h4>Behind the Line</h4>
+      <p>Solo roguelite campaign. A deckbuilder card-crawl against enemies that telegraph intent; your weapon levels up mid-run.</p>
+      <dl><dt>Match</dt><dd>25–35 min run</dd><dt>CoD feel</dt><dd><span class="dots" data-v="3"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="5"></span></dd><dt>Risk</dt><dd>Low · proven genre</dd></dl>
+      <div class="verdict">Long term: solo campaign</div>
+    </div>
+    <div class="ecard" style="--cc:var(--c4);--ct:var(--t4)">
+      <div class="n">Concept 4</div><h4>Tick Rate</h4>
+      <p>Snake-draft your loadout, then a 1v1 deathmatch with no turns: a shared time track where every action costs ticks.</p>
+      <dl><dt>Match</dt><dd>about 10 min</dd><dt>CoD feel</dt><dd><span class="dots" data-v="4"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="3"></span></dd><dt>Risk</dt><dd>High · track hard to read</dd></dl>
+      <div class="verdict">Park</div>
+    </div>
+    <div class="ecard" style="--cc:var(--c5);--ct:var(--t5)">
+      <div class="n">Concept 5</div><h4>Sightline</h4>
+      <p>Map-control board game: players draft and place 9 map tiles, then fight Domination with an in-match Armory market.</p>
+      <dl><dt>Match</dt><dd>20–40 min</dd><dt>CoD feel</dt><dd><span class="dots" data-v="4"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="1"></span></dd><dt>Risk</dt><dd>High · LOS AI, length</dd></dl>
+      <div class="verdict">Park</div>
+    </div>
+    <div class="ecard" style="--cc:var(--c6);--ct:var(--t6)">
+      <div class="n">Concept 6</div><h4>Snapshot</h4>
+      <p>4-minute simultaneous-reveal Search and Destroy duel. Hold beats Rush, Rush beats Peek, Peek beats Hold.</p>
+      <dl><dt>Match</dt><dd>4–6 min</dd><dt>CoD feel</dt><dd><span class="dots" data-v="4"></span></dd><dt>Mobile fit</dt><dd><span class="dots" data-v="5"></span></dd><dt>Risk</dt><dd>Med · can feel like coin-flips</dd></dl>
+      <div class="verdict top">Prototype second</div>
+    </div>
+  </div>
+
+  <div class="recbox">
+    <h4>Recommendation: prototype two</h4>
+    <ol>
+      <li><strong style="color:var(--c1)">Point Man, the flagship.</strong> A 1v1 Hardpoint duel on a 3×3 room map, and <strong>your deck is generated from your loadout</strong>: weapons give Fire cards, attachments edit those cards, perks are passive slots and killstreaks sit in a tray. This makes the gunsmith-and-unlock loop the deckbuilding itself, so “I unlocked a foregrip” directly means “my deck changed”.</li>
+      <li><strong style="color:var(--c6)">Snapshot, the cheap second.</strong> A 4-minute simultaneous-reveal Search and Destroy duel (“who pre-aimed the angle?”). It is the purest translation of fast time-to-kill and reads, it is phone-portrait native, and it shares Point Man’s weapon table and loadout data. It could ship later as Point Man’s quick mode.</li>
+    </ol>
+    <p class="note" style="margin:2mm 0 0">Four decisions are needed from the studio head (§11): which concepts to prototype, who the first opponent is, how much is hidden on the map, and which screen to design first. Recommended answers are marked.</p>
+  </div>
+</section>
+
+<!-- ======================= CONTENTS ======================= -->
+<section class="page">
+  <div class="kick" data-toc="toc">Contents</div>
+  <h1 class="sec">Contents</h1>
+  <div class="hdr-rule"></div>
+  <nav class="toc" id="toc">
+    <a href="#s-sum" data-k="sum"><span class="sw" style="background:#9aa1aa"></span><span class="t">Executive summary</span><span class="s"></span><span class="p"></span></a>
+    <a href="#s1" data-k="s1"><span class="sw" style="background:#3b4450"></span><span class="t">1 · What makes a CoD match feel like CoD</span><span class="s">Seven pillars · what translates poorly</span><span class="p"></span></a>
+    <a href="#s2" data-k="s2"><span class="sw" style="background:#3b4450"></span><span class="t">2 · A shared stat model</span><span class="s">Health, six weapons, cover, loadout slots</span><span class="p"></span></a>
+    <a href="#s3" data-k="s3"><span class="sw" style="background:var(--c1)"></span><span class="t">3 · Point Man</span><span class="s">1v1 Hardpoint duel; your deck is your loadout</span><span class="p"></span></a>
+    <a href="#s4" data-k="s4"><span class="sw" style="background:var(--c2)"></span><span class="t">4 · Fireteam</span><span class="s">3v3 Domination, one operator per player</span><span class="p"></span></a>
+    <a href="#s5" data-k="s5"><span class="sw" style="background:var(--c3)"></span><span class="t">5 · Behind the Line</span><span class="s">Roguelite single-operator campaign (PvE)</span><span class="p"></span></a>
+    <a href="#s6" data-k="s6"><span class="sw" style="background:var(--c4)"></span><span class="t">6 · Tick Rate</span><span class="s">Draft your loadout, then fight on a time track</span><span class="p"></span></a>
+    <a href="#s7" data-k="s7"><span class="sw" style="background:var(--c5)"></span><span class="t">7 · Sightline</span><span class="s">Map-control board game with sightline tiles</span><span class="p"></span></a>
+    <a href="#s8" data-k="s8"><span class="sw" style="background:var(--c6)"></span><span class="t">8 · Snapshot</span><span class="s">Simultaneous-reveal Search and Destroy duel</span><span class="p"></span></a>
+    <a href="#s9" data-k="s9"><span class="sw" style="background:#3b4450"></span><span class="t">9 · Comparison and recommendation</span><span class="s">Ratings table · why Point Man and Snapshot</span><span class="p"></span></a>
+    <a href="#s10" data-k="s10"><span class="sw" style="background:#3b4450"></span><span class="t">10 · Reuse</span><span class="s">KillingCard code and data · studio prior art</span><span class="p"></span></a>
+    <a href="#s11" data-k="s11"><span class="sw" style="background:#3b4450"></span><span class="t">11 · Questions for the studio head</span><span class="s">Four decisions, recommended options marked</span><span class="p"></span></a>
+  </nav>
+
+  <div class="about">
+    <div class="box">
+      <h4>The head’s brief (verbatim)</h4>
+      <blockquote>“We need to find what a Call of Duty card game would look like, considering that in Call of Duty you only play one character at a time and equip two weapons and perks and stuff, so not spawning units but improving our own character and fighting on a map or something.”</blockquote>
+    </div>
+    <div class="box">
+      <h4>About this document</h4>
+      <p style="margin-bottom:1.6mm">Board task <code>op-concepts</code> · project <code>opcard</code> · Sr Game Designer · 2026-11-07 · Status: <strong>for the head’s review</strong> · design only, no code.</p>
+      <p style="margin-bottom:1.6mm"><strong>Shorthand:</strong> <b>HP</b> = Health, <b>T</b> = Tempo (action points), <b>C/M/L</b> = Close/Mid/Long.</p>
+      <p style="margin:0" class="note">Source: <code>studio/concepts/operator-card-game/concepts.md</code>. This print edition reorders the source (pillars before the stat model) and renumbers its sections; the rules and numbers are unchanged. Diagrams are drawn from the written rules; where a rule leaves layout open, the drawing is marked illustrative.</p>
+    </div>
+  </div>
+  <div class="ednote" style="margin-top:4mm"><b>Studio UX rule (all concepts).</b> Every card, slot, room, sightline and token has a zoomed inspect view on <strong>right-click (desktop) and long-press (touch)</strong>. Each concept’s board was sized so that this works on a phone.</div>
+</section>
+
+<!-- ======================= 1. PILLARS ======================= -->
+<section class="page" id="s1" style="--cc:#3b4450">
+  <div class="kick" data-toc="s1">Section 1</div>
+  <h1 class="sec">What makes a CoD match feel like CoD</h1>
+  <div class="hdr-rule"></div>
+  <h2 class="sub" style="margin-top:0">1.1 Seven design pillars</h2>
+  <div class="pgrid">
+    <div class="pill"><div class="h"><span class="k">1</span><b>One body, many lives.</b></div><p>You <em>are</em> one operator. Your body is your only piece, so every risk is personal. Death is brief (you are back in seconds), so you play boldly rather than freezing.</p><div class="test"><b>Card test</b>the player never controls more than one figure, and dying costs tempo, never the match.</div></div>
+    <div class="pill"><div class="h"><span class="k">2</span><b>First to see, first to shoot.</b></div><p>Time-to-kill is short. The fight is decided before it starts, by who held the angle, who had the better range and who acted first.</p><div class="test"><b>Card test</b>most exchanges resolve in one or two shots (Health 4, damage 1 to 4). There are no long health-bar slugfests.</div></div>
+    <div class="pill"><div class="h"><span class="k">3</span><b>Position is power.</b></div><p>Sightlines, cover, power positions, flanks and spawn logic matter. Where you stand changes what your gun is worth: an SMG in a room versus a sniper down a lane.</p><div class="test"><b>Card test</b>the same card is good or bad depending on the map square you play it from.</div></div>
+    <div class="pill"><div class="h"><span class="k">4</span><b>The loadout is your identity.</b></div><p>Before the match you make a personal, expressive build (primary, secondary, equipment, perks, field upgrade, streaks), and it shapes how you want to play.</p><div class="test"><b>Card test</b>two players with the same rank and different loadouts face different decisions every turn.</div></div>
+    <div class="pill"><div class="h"><span class="k">5</span><b>The streak is the tension.</b></div><p>Kills without dying escalate your power. Each life asks you to play safe and protect the streak, or push for the next reward.</p><div class="test"><b>Card test</b>a visible streak meter, three chosen rewards, and a reset on death.</div></div>
+    <div class="pill"><div class="h"><span class="k">6</span><b>The objective drags you out of hiding.</b></div><p>Score-to-win modes (Team Deathmatch, Domination, Hardpoint, Search and Destroy) punish camping and force fights in known places.</p><div class="test"><b>Card test</b>the score comes mainly from map spaces, so standing still loses.</div></div>
+    <div class="pill"><div class="h"><span class="k">7</span><b>Every match moves a bar.</b></div><p>Weapon XP, attachment unlocks, camo challenges and calling cards mean even a loss feels like progress, and “one more match” is always close.</p><div class="test"><b>Card test</b>every match awards XP to the weapon you used and progress on at least one visible challenge.</div></div>
+    <div class="pill flav"><div class="h"><span class="k">+</span><b>Loud and readable feedback.</b></div><p><em>Eighth, flavour pillar, applied everywhere rather than designed.</em> Hit markers, a kill feed and a streak call-in moment. KillingCard already has these as FX (§10).</p></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:#3b4450">
+  <h2 class="sub" style="margin-top:0">1.2 What translates poorly to cards, and how to fake it</h2>
+  <table>
+    <thead><tr><th style="width:36mm">Doesn’t translate</th><th style="width:44mm">Why</th><th>How we fake it</th></tr></thead>
+    <tbody>
+      <tr><td><b>Aim and reflexes</b></td><td>Cards have no aim skill.</td><td>Replace aim with <b>reads and initiative</b>: hidden “Hold Angle” reactions (Point Man), simultaneous reveal with a stance triangle (Snapshot), or a time track where slow guns pay ticks (Tick Rate). Skill becomes predicting the opponent, the card-game equivalent of pre-aiming.</td></tr>
+      <tr><td><b>Real time / simultaneity</b></td><td>Alternating turns let the defender react, which turns a 0.3-second fight into a polite exchange.</td><td>Use reaction windows (overwatch), simultaneous reveal, or a time track. Never use “I shoot, you shoot back, I shoot”.</td></tr>
+      <tr><td><b>Fast time-to-kill vs card-game health pools</b></td><td>Card games like 20–30 HP.</td><td>Health 4 and damage 1–4. Use cover and plates as the only buffers.</td></tr>
+      <tr><td><b>Fog of war, footsteps, minimap</b></td><td>A board is fully visible.</td><td>Hidden position cards, “Noise” (sprinting reveals you), and recon killstreaks that reveal hidden information. Concepts differ on how much is hidden (Q3).</td></tr>
+      <tr><td><b>6v6 chaos and respawn churn</b></td><td>Too many bodies to track on a phone.</td><td>Use 1v1 or 3v3 at most. Respawn becomes a <b>fresh hand</b> plus a tempo penalty (the respawn timer).</td></tr>
+      <tr><td><b>Fluid movement (slide, mantle, jump)</b></td><td>Grids are clunky.</td><td>Use small node or room graphs. Movement cards (Slide, Mantle, Sprint) carry the verbs as small bonuses.</td></tr>
+      <tr><td><b>Recoil, attachments as feel</b></td><td>Attachments are about feel, not numbers.</td><td>Each attachment is a <b>trade-off on a card</b>: +1 Long but Handling +1, or +2 Fire cards but −1 Close. The player feels the gunsmith as deck texture.</td></tr>
+      <tr><td><b>Spawn trapping, camping</b></td><td>These degenerate into stalemates.</td><td>Rotating objectives (Hardpoint), spawns placed far from the enemy, and grenades that ignore cover.</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <div id="fakeFig"></div>
+    <figcaption><b>Three ways the concepts replace aim.</b> Each turns “who pre-aimed?” into a read on the opponent rather than a reflex.</figcaption>
+  </figure>
+</section>
+
+<!-- ======================= 2. STAT MODEL ======================= -->
+<section class="page" id="s2" style="--cc:#3b4450;--ct:#eef0f2">
+  <div class="kick" data-toc="s2">Section 2</div>
+  <h1 class="sec">A shared stat model</h1>
+  <div class="hdr-rule"></div>
+  <p class="lede">All six concepts use one weapon model, so whichever one wins, the data carries over.</p>
+
+  <div class="cols" style="grid-template-columns:1.1fr 1fr;margin-bottom:2mm">
+    <div class="lesson" style="margin:0"><b>Operator Health: 4</b> &nbsp;<span class="hpips"><i></i><i></i><i></i><i></i></span><br>Most guns down a target in 2 hits at their best range. That is the “fast time-to-kill” dial.</div>
+    <div class="lesson" style="margin:0"><b>Cover</b> removes 1 damage at Mid and Long, never at Close. Close fights are decided by who is faster and who is closer, not by cover.</div>
+  </div>
+
+  <h3 class="lab">Weapon table (original names)</h3>
+  <table class="wt">
+    <thead><tr><th>Weapon</th><th>Class</th><th>Close</th><th>Mid</th><th>Long</th><th>Handling<br><span style="font-weight:500">(cost to fire)</span></th><th>Identity</th></tr></thead>
+    <tbody id="wtbody"></tbody>
+  </table>
+  <figure><div id="rangeFig"></div><figcaption><b>Damage by range.</b> Each weapon’s Close / Mid / Long damage against Health 4 (dashed line = one-shot). Handling (cost to fire) is listed beside each weapon.</figcaption></figure>
+
+  <h3 class="lab">Loadout slots (the CoD shape, with original contents)</h3>
+  <div class="slots">
+    <div class="slot"><span class="sl">Primary</span><b>Weapon</b></div>
+    <div class="slot"><span class="sl">Secondary</span><b>Weapon</b></div>
+    <div class="slot"><span class="sl">Lethal</span>Frag, Tripwire</div>
+    <div class="slot"><span class="sl">Tactical</span>Flashbang, Smoke</div>
+    <div class="slot"><span class="sl">Perk 1</span>list 1</div>
+    <div class="slot"><span class="sl">Perk 2</span>list 2</div>
+    <div class="slot"><span class="sl">Perk 3</span>list 3</div>
+    <div class="slot"><span class="sl">Field upgrade</span>charges over time</div>
+    <div class="slot k"><span class="sl">Streaks ×3</span>earned by streak points</div>
+  </div>
+  <p class="note">3 Perks are one from each of three lists. The 3 Killstreaks are earned by streak points without dying; the streak resets on death.</p>
+  <div class="cols3" style="font-size:8.4pt">
+    <div><b>Example perks</b><br><em>Soft Step</em> (quiet movement), <em>Scrounger</em> (refill on a kill), <em>Cool Head</em> (later streaks cost 1 less), <em>Low Profile</em> (immune to recon), <em>Long Breath</em> (holding an angle is cheaper), <em>Thick Plates</em> (Health 5).</div>
+    <div><b>Example field upgrades</b><br><em>Deployable Cover</em>, <em>Rally Beacon</em> (a personal respawn point), <em>Adrenal Shot</em> (heal to full), <em>Signal Jammer</em>.</div>
+    <div><b>Example killstreaks</b><br><em>Recon Drone</em>, <em>Sentry Turret</em>, <em>Mortar Barrage</em>, <em>Attack Helo</em>. These are KillingCard’s existing generic names.</div>
+  </div>
+</section>
+
+<!-- ======================= 3. POINT MAN ======================= -->
+<section class="concept" id="s3" style="--cc:var(--c1);--ct:var(--t1)">
+  <div class="chead"><div class="cn"><b>1</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s3">Section 3 · Concept 1</div><h1>Point Man</h1><div class="tg">1v1 Hardpoint duel; your deck is your loadout</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>1v1</div><div><span>Mode</span>Hardpoint</div><div><span>Win</span>First to 8 points</div><div><span>Match</span>About 10–12 min</div><div><span>Best screen</span>Phone portrait: good</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> Two operators fight over a rotating hardpoint on a 3×3 grid of rooms. Before the match you build a loadout, and <strong>the loadout generates your 24-card deck.</strong> Your primary contributes its Fire cards, your attachments edit them (more cards, better range, cheaper to fire), equipment adds a few utility cards, perks sit in three passive slots, and killstreaks wait in a tray until your streak points earn them. When you go down you lose your hand and respawn with a fresh one, so respawning feels like coming back in with a new plan. The skill is in positioning (which room, which sightline) and in <strong>Hold Angle</strong>: a face-down Fire card that shoots first when the enemy walks into your line. That is the “they pre-aimed me” moment.</p>
+
+  <h3 class="lab">The map</h3>
+  <p>9 rooms (A1–C3) with walls, doorways, windows (Mantle only) and some roofed rooms. <strong>Range:</strong> same room = Close; an adjacent room through an opening = Mid; two rooms away along a straight line of aligned openings (a printed sightline) = Long. Rooms have Cover 0 or 1. Each side has 2 spawn rooms in opposite corners. You respawn in the one farther from the enemy. Maps are hand-made (target 4 at launch). Positions are public; <strong>Hold Angles are hidden</strong>.</p>
+  <figure>
+    <div id="pmMap"></div>
+    <figcaption><b>Point Man board, as in the worked example.</b> Red holds the hardpoint B2 (Cover 1) with a face-down Hold Angle on the B2–B3 doorway; Blue shoots from C2 at Mid. Illustrative layout: only the openings the example uses are drawn; real maps are hand-made with their own walls, windows (Mantle only) and roofed rooms.</figcaption>
+  </figure>
+</section>
+
+<section class="cont" style="--cc:var(--c1);--ct:var(--t1)">
+  <h3 class="lab" style="margin-top:0">How the deck is built: no free deckbuilding, the gunsmith is the deckbuilder</h3>
+  <div class="deck">
+    <div class="drow"><div class="src"><b>Primary</b><span>Kestrel AR-7 shown</span></div><div class="pile" data-n="8"></div><div class="what"><b>8 Fire cards</b> (SMG 9, Sniper 6, Shotgun 6). Each shows the gun’s C/M/L damage and Handling.</div></div>
+    <div class="drow"><div class="src"><b>Secondary</b><span>P-12 Sidearm</span></div><div class="pile" data-n="3"></div><div class="what"><b>3 Fire cards</b> (Pistol: Handling 0).</div></div>
+    <div class="drow"><div class="src"><b>Lethal</b><span>e.g. Frag</span></div><div class="pile" data-n="2"></div><div class="what"><b>2 cards</b></div></div>
+    <div class="drow"><div class="src"><b>Tactical</b><span>e.g. Smoke</span></div><div class="pile" data-n="2"></div><div class="what"><b>2 cards</b></div></div>
+    <div class="drow"><div class="src"><b>Movement</b><span>fixed, everyone</span></div><div class="pile l" data-n="6"></div><div class="what"><b>6 cards:</b> 2 Sprint, 2 Slide, 1 Mantle, 1 Hold Angle</div></div>
+    <div class="drow"><div class="src"><b>Attachments</b><span>up to 5, like a gunsmith</span></div><div class="pile d" data-n="3"></div><div class="what">Each <b>edits</b> the deck with a trade-off; some add cards (<b>+0 to 3</b>).</div></div>
+    <div class="total"><b>Total:</b> 8 + 3 + 2 + 2 + 6 = <b>21</b>, +0 to 3 from attachments, so <b>about 22–24 cards</b>.</div>
+  </div>
+  <p style="font-size:8.6pt"><b>Movement cards.</b> Sprint: move 2 rooms. Slide: move 1; your next Close Fire this turn gets +1. Mantle: cross a window edge. Hold Angle: also playable from any Fire card (see the turn).</p>
+
+  <h3 class="lab">An attachment edits a Fire card</h3>
+  <div class="cardrow">
+    <div class="gcard"><div class="top"><span>Fire</span><span>Primary</span></div><div class="nm">Kestrel AR-7</div><div class="cl">Assault rifle</div><div class="rng"><div>C<b>2</b></div><div>M<b>2</b></div><div>L<b>1</b></div></div><div class="ft"><span>Handling</span><b>1 T</b></div></div>
+    <div class="op">+</div>
+    <div class="gcard att"><div class="top"><span>Attachment</span></div><div class="nm">Holo Sight</div><div class="tx" style="margin-top:2mm;font-size:8pt"><b>+1 Mid</b></div><div class="ft"><span>edits your primary’s Fire cards</span></div></div>
+    <div class="op">=</div>
+    <div class="gcard"><div class="top"><span>Fire</span><span>Primary</span></div><div class="nm">Kestrel AR-7</div><div class="cl">+ Holo Sight</div><div class="rng"><div>C<b>2</b></div><div class="up">M<b>3</b></div><div>L<b>1</b></div></div><div class="ft"><span>Handling</span><b>1 T</b></div></div>
+    <div style="width:3mm"></div>
+    <div class="gcard" style="--cc:#5d6672"><div class="top"><span>Fire</span><span>Secondary</span></div><div class="nm">P-12 Sidearm</div><div class="cl">Pistol</div><div class="rng"><div>C<b>1</b></div><div>M<b>1</b></div><div>L<b>0</b></div></div><div class="ft"><span>Handling</span><b>0 T</b></div></div>
+    <div class="gcard back"><div class="bk">Hold Angle<br><span style="font-weight:500;text-transform:none;letter-spacing:0">a Fire card,<br>face-down</span></div></div>
+  </div>
+  <p class="note" style="margin-bottom:1mm">Mock cards. The Red loadout from the worked example: Kestrel AR-7 + Holo Sight (C2 / M3 / L1, Handling 1). Card frames and art direction are placeholders.</p>
+  <div class="chips">
+    <div class="chip"><b>Extended Mag</b>+2 Fire cards; Handling +1 on the first Fire each turn</div>
+    <div class="chip"><b>Foregrip</b>+1 Mid; −1 Close</div>
+    <div class="chip"><b>Holo Sight</b>+1 Mid</div>
+    <div class="chip"><b>Long Barrel</b>+1 Long; Handling +1</div>
+    <div class="chip"><b>Quick Stock</b>Handling −1 (minimum 0); −1 Long</div>
+    <div class="chip"><b>Suppressor</b>your Fire does not trigger enemy Hold Angles; −1 Long</div>
+  </div>
+
+  <h3 class="lab">On the board, not in the deck</h3>
+  <div class="slots">
+    <div class="slot" style="flex:1.3"><span class="sl">Perks · 3 passive slots</span>e.g. <b>Soft Step</b> (your first Step each turn is free), <b>Scrounger</b> (draw 2 on a kill), <b>Long Breath</b> (Hold Angle costs 0 T)</div>
+    <div class="slot" style="flex:1"><span class="sl">Field upgrade · board slot</span>Charges 1 per turn, usable at 4. <span class="hpips" style="margin-left:1mm"><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i></span><br>Deployable Cover, Rally Beacon or Adrenal Shot.</div>
+  </div>
+  <div class="slot k" style="margin-top:1.6mm"><span class="sl">Killstreak tray · pick 3 of 4 · costs in streak points</span>
+    <div class="cols" style="grid-template-columns:1fr 1fr;gap:1.4mm 4mm;margin-top:1mm;font-size:7.9pt">
+      <div><b>Recon Drone · 3</b> — see the enemy’s hand and face-down Hold Angles for their next turn</div>
+      <div><b>Sentry Turret · 4</b> — a 1-damage turret in your room that shoots enemies who enter it or end their turn within Mid sightline</div>
+      <div><b>Mortar Barrage · 6</b> — 3 damage to everyone in a room, 1 in adjacent rooms, ignores cover</div>
+      <div><b>Attack Helo · 8</b> — 1 damage to the enemy at the start of each of their next 3 turns unless they are in a roofed room</div>
+    </div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:var(--c1);--ct:var(--t1)">
+  <h3 class="lab" style="margin-top:0">How a turn works</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Draw &amp; gain T</b></div><div class="sb">Draw up to 5. Gain 3 T (2 T on the turn you respawn).</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Spend T</b></div><div class="sb">Spend T on any mix of: <b>Step</b> (1 T: move 1 room through an opening), movement cards, <b>Fire</b> (cost = Handling; damage by range, minus cover), equipment (1 T), killstreaks from the tray (0 T), and the field upgrade (0 T when charged).</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>Hold Angle (1 T)</b></div><div class="sb">Put any Fire card face-down on one sightline or doorway from your room. Until your next turn, the first time the enemy moves into, or fires along, that line, you <b>immediately resolve that Fire first</b>, before their action. Then the card is discarded.</div></div>
+    <div class="step"><div class="sh"><i>4</i><b>End of turn</b></div><div class="sb">If you are on the hardpoint and the enemy is not, <b>+1 point</b> and +1 streak point.</div></div>
+    <div class="step"><div class="sh"><i>5</i><b>Downed</b></div><div class="sb">You lose your hand and your streak points. You respawn at the start of your next turn (that is the respawn penalty). The enemy gets +2 streak points.</div></div>
+  </div>
+  <div class="cols">
+    <div><h3 class="lab">Win</h3><p>The first to <b>8 points</b> wins. The hardpoint moves every 3 rounds (B2, then A3, then C1, then B2…). There is a cap of 14 rounds; at the cap the leader wins, and a tie goes to sudden death on B2. <b>Match length: about 10–12 minutes</b> (one turn is about 25–40 seconds).</p>
+    <h3 class="lab">Platform fit</h3><p><b>Phone portrait: good.</b> The 3×3 map sits on the top half, the hand of 5 at the bottom, with the perk and streak strips between them. PC and landscape: map on the left, hand and loadout on the right. Async PvP is possible because turns are discrete.</p></div>
+    <div><h3 class="lab">Meta progression</h3><p>Each weapon has its own XP (gained per Fire card played, and doubled on kills) and levels 1–20 that unlock attachments. That is the core pull, because each unlock changes the deck. Operator level unlocks perks, equipment and killstreaks. <b>Camos</b> come from per-weapon challenges (“10 Long downs with the Longreach”) and change the card art finish only. <b>Calling cards</b> are earned for feats (a 3-kill streak, a perfect hill) and appear as your banner on the match intro. Cosmetics never change gameplay.</p></div>
+  </div>
+  <figure><div id="pmPhone"></div><figcaption><b>Phone portrait layout as described:</b> map on the top half, perk and streak strips between, hand of 5 at the bottom. Wireframe only.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c1);--ct:var(--t1)">
+  <h3 class="lab" style="margin-top:0">3-turn worked example</h3>
+  <p><span class="pr r">Red</span> Kestrel AR-7 + Holo Sight (C2 / <b>M3</b> / L1, Handling 1). <span class="pr b">Blue</span> Longreach .338 (C1 / M3 / L4, Handling 2). The hill is <b>B2 (Cover 1)</b>. Red spawned at A1, Blue at C3.</p>
+  <table class="ex">
+    <thead><tr><th>Turn</th><th>Who</th><th>What happens</th><th>State after</th></tr></thead>
+    <tbody>
+      <tr><td class="w">Round 1</td><td class="who"><span class="pr r">Red</span><br><span class="note">3 T</span></td><td>Step A1→B1 (1), Step B1→B2 (1). Red then sets <b>Hold Angle</b> with a Fire card on the B2–B3 doorway (1). Turn end: Red is alone on the hill, so <b>Red 1 point</b>, streak 1.</td><td class="st">Red HP 4 · Blue HP 4<br>Points 1–0 · Red streak 1</td></tr>
+      <tr><td class="w">Round 1</td><td class="who"><span class="pr b">Blue</span><br><span class="note">3 T</span></td><td>Step C3→C2 (1). C2 sees B2 through an opening, so the range is Mid (Red’s Hold covers B3, not C2). Blue fires the Longreach at Mid (2 T): 3 damage − 1 cover = <b>2</b>.</td><td class="st"><span class="hpd">Red HP 4→2</span><br>Points 1–0</td></tr>
+      <tr><td class="w">Round 2</td><td class="who"><span class="pr r">Red</span><br><span class="note">3 T</span></td><td>Fire at C2 at Mid (1 T): 3 damage, cover 0, <b>Blue HP 4→1</b>. Fire again (1): <b>Blue downed.</b> Red gets +2 streak, reaching 3, so the <b>Recon Drone enters the tray</b>. With the last 1 T Red sets a <b>new Hold Angle</b> on the B2–B3 doorway (the round-1 Hold expired at the start of this turn). Turn end: <b>Red 2 points</b>, streak 4.</td><td class="st"><span class="hpd">Blue downed</span><br>Points 2–0 · Red streak 4<br>Recon Drone in tray</td></tr>
+      <tr><td class="w">Round 2</td><td class="who"><span class="pr b">Blue</span><br><span class="note">respawns, 2 T, fresh hand</span></td><td>Blue respawns at C3 and tries to flank: Step C3→B3 (1). That walks into <b>Red’s Hold Angle</b>, which fires first: Mid, 3 damage, cover 0, <b>Blue HP 4→1.</b> With 1 T left Blue cannot fire the Longreach (Handling 2), so Blue fires the <b>P-12 Sidearm</b> (0 T): Mid, 1 damage − 1 cover, <b>0 damage</b>. The pistol bounces off Red’s cover.</td><td class="st"><span class="hpd">Blue HP 4→1</span><br>Red HP 2</td></tr>
+      <tr><td class="w">Round 3</td><td class="who"><span class="pr r">Red</span></td><td>Fire at B3 (1 T): <b>Blue downed</b> again. Red’s streak is 6. Red is 2–0 on points and two kills up.</td><td class="st"><span class="hpd">Blue downed</span><br>Points 2–0 · Red streak 6</td></tr>
+    </tbody>
+  </table>
+  <div class="lesson"><b>Lesson the example teaches:</b> Blue should have used Smoke on the B2–B3 line, or gone through C2 again where the Hold wasn’t. Reading the hidden Hold is the skill.</div>
+  
+</section>
+
+<!-- ======================= 4. FIRETEAM ======================= -->
+<section class="concept" id="s4" style="--cc:var(--c2);--ct:var(--t2)">
+  <div class="chead"><div class="cn"><b>2</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s4">Section 4 · Concept 2</div><h1>Fireteam</h1><div class="tg">3v3 Domination, one operator per player</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>3v3 (humans or bots)</div><div><span>Mode</span>Domination</div><div><span>Win</span>First to 12 points</div><div><span>Match</span>About 8–10 min</div><div><span>Best screen</span>Landscape-first</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> Two fireteams of three. Every player (a human, or a bot ally with a personality) runs exactly <strong>one</strong> operator. The map is 3 lanes × 5 depth bands, with a Domination flag in the middle of each lane. Each round all six operators plan in secret: where to move, and which <strong>kit tile</strong> to use. The plans are revealed together, then each lane’s firefight resolves in a readable order (KillingCard’s beat system). Team roles come from loadouts: the SMG entry player, the LMG anchor, the sniper on the long lane. Solo play is you plus 2 bot allies against 3 bots. Co-op is 3 humans against AI. Full 3v3 PvP comes later.</p>
+  <h3 class="lab">The map</h3>
+  <p>Lanes Left / Mid / Right. Bands from your side: <b>Spawn, Side, Flag, their Side, their Spawn</b>. Range: same band = Close, 1 band apart = Mid, 2 bands apart = Long, and you can only shoot within your own lane. Your own Side band gives you Cover 1. The Flag band has Cover 0. Each map card (there are 5) changes 1–2 cells: “Mid Flag has Cover 1”, “Right lane Long sightline blocked”.</p>
+  <figure><div id="ftMain"></div><figcaption><b>Fireteam board with the worked example’s round-1 positions.</b> Ranges are counted in bands within one lane. Right: the Initiative order that decides who shoots first in each lane.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c2);--ct:var(--t2)">
+  <h3 class="lab" style="margin-top:0">Loadout becomes a kit board (no deck)</h3>
+  <p>Each operator has 4 <b>kit tiles</b>: two universal and two set by the primary. A used tile is on cooldown for one round. Lethal and tactical have 1 charge per life. Perks are passive. The field upgrade charges over 3 rounds. Killstreaks are per operator (2 / 3 / 5 kills without dying), and their effects help the team (a Recon Drone reveals the enemy’s planned lanes before your next lock-in).</p>
+  <div class="cardrow">
+    <div class="gcard mini"><div class="top"><span>Kit</span><span>All</span></div><div class="nm">Push</div><div class="tx">Move 2 bands, −1 Initiative</div></div>
+    <div class="gcard mini"><div class="top"><span>Kit</span><span>All</span></div><div class="nm">Hold</div><div class="tx">+1 damage to any enemy that enters your range this round</div></div>
+    <div style="width:2mm"></div>
+    <div class="gcard mini att"><div class="top"><span>Kit</span><span>SMG</span></div><div class="nm">Flank</div><div class="tx">Shifts lane and still lets you shoot, ignoring cover</div></div>
+    <div class="gcard mini att"><div class="top"><span>Kit</span><span>LMG</span></div><div class="nm">Suppress</div><div class="tx">Target gets −1 damage and −2 Initiative</div></div>
+    <div class="gcard mini att"><div class="top"><span>Kit</span><span>Sniper</span></div><div class="nm">Scope</div><div class="tx">+1 Long damage if you didn’t move</div></div>
+    <div class="gcard mini att"><div class="top"><span>Kit</span><span>AR</span></div><div class="nm">Burst</div><div class="tx">A second shot at −1 damage</div></div>
+  </div>
+  <p class="note">Solid: the two universal tiles every operator has. Dashed: primary-set tiles; the source gives one example per primary (it says two are set by the primary).</p>
+
+  <h3 class="lab">How a round works</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Plan (secret, 30 s online)</b></div><div class="sb">Each operator chooses a move (stay, advance or fall back 1 band, or shift lane within your Side or Spawn band) and at most one kit tile or equipment. Humans can ping lanes to bots.</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Reveal</b></div><div class="sb">Movement resolves, then smoke and flashes.</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>Firefights, lane by lane, Left to Right</b></div><div class="sb">Within a lane, the highest <b>Initiative</b> shoots first (Pistol 5, SMG/Shotgun 4, AR 3, LMG 2, Sniper 1, but Sniper is 5 at Long). Each operator fires once at the nearest enemy in range. A downed operator doesn’t fire.</div></div>
+    <div class="step"><div class="sh"><i>4</i><b>Flags</b></div><div class="sb">A lane’s flag flips to a team that has operators in the Flag band while the other team has none.</div></div>
+    <div class="step"><div class="sh"><i>5</i><b>Score</b></div><div class="sb">+1 per flag you hold. Downed operators respawn at their Spawn band next round, in any lane.</div></div>
+  </div>
+  <div class="cols3">
+    <div><h3 class="lab">Win</h3><p>The first team to <b>12 points</b>, with a cap of 12 rounds. <b>Match length: about 8–10 minutes.</b></p></div>
+    <div><h3 class="lab">Meta progression</h3><p>As in Point Man (weapon XP, attachments that upgrade kit tiles, camos, calling cards), plus <b>bot ally unlocks</b> with personalities (KillingCard’s AiPersonality weights).</p></div>
+    <div><h3 class="lab">Platform fit</h3><p><b>Landscape-first</b> (phone landscape, tablet, PC): three lanes side by side is KillingCard’s column board. Phone portrait is cramped (6 operators plus flags), but it works if the lanes stack vertically.</p></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:var(--c2);--ct:var(--t2)">
+  <h3 class="lab" style="margin-top:0">3-turn worked example</h3>
+  <p><span class="pr r">Red</span> <b>You</b> (Kestrel AR-7), Anchor bot (Bastion-60), Scout bot (Wasp-9). <span class="pr b">Blue AI</span> a sniper (Longreach), a shotgunner (Mako-12) and a rifleman (Kestrel). Everyone starts in their Spawn band. Lanes: You Mid, Anchor Left, Scout Right. Blue: sniper Mid, shotgun Left, rifle Right.</p>
+  <figure><div id="ftMinis"></div><figcaption><b>Positions during each round’s firefight</b> (top band: Blue Spawn; bottom band: Red Spawn). AR = Kestrel AR-7, LMG = Bastion-60, SMG = Wasp-9, SR = Longreach .338, SG = Mako-12. The ringed token is You. A cross marks an operator downed that round.</figcaption></figure>
+  <table class="ex">
+    <thead><tr><th>Round</th><th>What happens</th><th>Score</th></tr></thead>
+    <tbody>
+      <tr><td class="w">Round 1</td><td>Everyone advances to their Side band, which is 2 bands apart, so Long range. <b>Mid:</b> the Blue sniper used <b>Scope</b> but moved, so no bonus. Long Initiative: sniper 5 against your 3. The sniper fires first: Long 4 − 1 cover = <b>3</b>, <b>You 4→1</b>. You fire back: Long 1 − 1 = 0. <b>Left:</b> Anchor LMG at Long, 2 − 1 = <b>1</b> on the shotgunner (4→3). The shotgun deals 0 at Long. <b>Right:</b> both at Long, Wasp 0 and Kestrel 1 − 1 = 0.</td><td class="st" style="width:18mm"><b>0–0</b></td></tr>
+      <tr><td class="w">Round 2</td><td>You <b>fall back</b> to Spawn, out of the sniper’s range (3 bands). The Anchor uses <b>Suppress</b> on the shotgunner, who advances to Left Flag. Left is now Mid range: the shotgun deals 1 − 1 (suppressed) = 0, and the LMG deals 2 to the shotgunner (3→1). The Blue sniper advances to <b>Mid Flag</b> to chase you, but you are 3 bands away, out of range. The Scout uses <b>Flank</b> (Right Side→Mid Side): it shifts into your lane and still shoots. Side to Flag = Mid. The Scout has Initiative 4 and fires first, 1 damage: <b>sniper 4→3</b>. The sniper answers at Mid, 3 − 1 cover = 2: <b>Scout 4→2</b>. Blue’s rifle advances to Right Flag uncontested and <b>captures Right</b>.</td><td class="st"><b>0–1</b></td></tr>
+      <tr><td class="w">Round 3</td><td>You advance to Mid Side. In Mid lane the order is Scout (Initiative 4), You (3), sniper (1). The Scout hits for 1 (3→2) and you hit at Mid for 2: <b>sniper downed before it fires</b> (your kill: streak 1). The Anchor finishes the shotgunner (1→0) and <b>advances to Left Flag next round</b>. Blue still holds Right. Red now has a 3v1 window. A Recon Drone at 2 kills is one more down away.</td><td class="st"><b>0–2</b></td></tr>
+    </tbody>
+  </table>
+  <div class="ednote"><b>Reading note.</b> In round 2 the source says the sniper at Mid Flag is “3 bands away” from You at Red Spawn. By the band order (Spawn, Side, Flag…) that gap is 2 bands, as the diagram shows; the source wording is kept.</div>
+</section>
+
+<!-- ======================= 5. BEHIND THE LINE ======================= -->
+<section class="concept" id="s5" style="--cc:var(--c3);--ct:var(--t3)">
+  <div class="chead"><div class="cn"><b>3</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s5">Section 5 · Concept 3</div><h1>Behind the Line</h1><div class="tg">Roguelite single-operator campaign (PvE)</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>Solo, offline</div><div><span>Mode</span>Three-act campaign run</div><div><span>Win</span>Beat the act-3 boss</div><div><span>Length</span>Run 25–35 min · fight 2–3</div><div><span>Best screen</span>Phone portrait: excellent</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> A solo run. You take one operator through a three-act campaign map of missions, safehouses, armories and intel events, ending in a commander boss. Combat is a card-crawl: each encounter is a short line of enemy cards that <strong>telegraph their intent</strong> (“aiming at you: 2 damage next turn”), and you choose between three positions (Left cover, Centre, Right flank) that change who can see you. Your deck is a classic deckbuilder of actions. <strong>Your weapon levels up mid-run</strong>, and each level offers 3 attachments. <strong>Clean streaks</strong> (kills without taking Health damage) earn killstreaks inside a mission. This is where the “one more run” collection loop lives.</p>
+  <h3 class="lab">The map: two layers</h3>
+  <p>The <b>run map</b> is KillingCard Run v2’s map unchanged in structure: 9 steps, 3 paths, forks into Armory (shop, currency REQ), Intel (events), Safehouse (rest), Elite (HVT) and Boss. The <b>encounter</b> is a 3-room mission (two fights and an exfil fight). Each fight has your 3 positions against 1–4 enemy cards at Close, Mid or Long, some with cover. An enemy has a sightline to you unless your position is behind cover from its side (Left cover blocks enemies on the right flank, and so on).</p>
+  <figure><div id="btlRun"></div><figcaption><b>Run map structure</b> (9 steps, 3 paths, forks). Node placement here is illustrative; the source reuses Run v2’s structure without fixing a layout. Each Mission node is a 3-room mission: fight, fight, exfil fight.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c3);--ct:var(--t3)">
+  <h3 class="lab" style="margin-top:0">An encounter: enemy intent and your three positions</h3>
+  <figure><div id="btlEnc"></div><figcaption><b>The worked example’s fight, “Courtyard”.</b> Enemy cards show HP, range, cover and their telegraphed intent; they act left to right (shown in the order the example lists them). You start at Centre.</figcaption></figure>
+  <h3 class="lab">Loadout → cards and slots</h3>
+  <p>You start with <b>Primary + Secondary on the board</b> (their stats from §2) and a <b>10-card starter deck</b>. Perks are <b>relics</b> found at elites and Armories (3 slots; you may swap). The Field Upgrade is a per-mission charge. Killstreaks: choose 3 at the run start, earned by clean-streak points within a mission. <b>Weapon XP</b> (from kills) levels the gun: each level offers 3 attachments, pick 1, maximum 5. A second primary found mid-run can be swapped in, and your Fire cards adopt the new gun’s stats, which is exactly CoD’s “pick up a weapon”.</p>
+  <div class="deck">
+    <div class="drow"><div class="src"><b>Fire ×5</b><span>uses the equipped weapon</span></div><div class="pile" data-n="5"></div><div class="what">cost = Handling, at a target in sightline</div></div>
+    <div class="drow"><div class="src"><b>Step ×2</b><span>change position</span></div><div class="pile l" data-n="2"></div><div class="what">1 T, move one position</div></div>
+    <div class="drow"><div class="src"><b>Frag · Plate · Reload/Draw</b><span>1 each</span></div><div class="pile l" data-n="3"></div><div class="what">Plate: +2 armor</div></div>
+    <div class="total"><b>Health:</b> HP 6 + up to 4 Plates &nbsp;<span class="hpips"><i></i><i></i><i></i><i></i><i></i><i></i></span> <span class="hpips"><i class="p"></i><i class="p"></i><i class="e"></i><i class="e"></i></span> &nbsp;·&nbsp; <b>3 respawn tickets</b> per run.</div>
+  </div>
+  <h3 class="lab">How a turn works</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Draw &amp; read intents</b></div><div class="sb">Draw 5, gain 3 T. Enemy intents are visible.</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Play cards</b></div><div class="sb">Fire (cost = Handling) at a target in sightline, Step (1 T, move one position), equipment, Plate.</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>Enemies act</b></div><div class="sb">In order, left to right, as telegraphed. Damage hits Plates first, then HP.</div></div>
+    <div class="step"><div class="sh"><i>4</i><b>Clean streak</b></div><div class="sb">+1 per kill. It halves when you lose HP (Plates soak damage without breaking it).</div></div>
+    <div class="step"><div class="sh"><i>5</i><b>Health &amp; tickets</b></div><div class="sb">HP 6 + up to 4 Plates. Going down costs one of 3 <b>respawn tickets</b>: you restart the fight with a fresh hand at full HP, and the streak is lost. At 0 tickets the run ends.</div></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:var(--c3);--ct:var(--t3)">
+  <div class="cols3">
+    <div><h3 class="lab" style="margin-top:0">Win</h3><p>Beat the act-3 commander boss (each boss has one unique rule, like KillingCard Run v2’s bosses). A <b>run takes about 25–35 minutes</b>; a single fight takes 2–3 minutes.</p></div>
+    <div><h3 class="lab" style="margin-top:0">Meta progression</h3><p>The strongest of the six. Runs unlock new weapons, attachments, perks and killstreaks into the pools. There are operators with a passive and a once-per-run ability (Run v2’s Operators), camos from challenges, calling cards for boss kills and modifiers, and Threat levels (Hardcore and so on).</p></div>
+    <div><h3 class="lab" style="margin-top:0">Platform fit</h3><p><b>Phone portrait: excellent</b> (Slay the Spire-like layout: enemy line on top, you in the middle, hand at the bottom). PC is fine. Offline.</p></div>
+  </div>
+  <h3 class="lab">3-turn worked example</h3>
+  <p>You: Kestrel AR-7 (C2 / M2 / L1), HP 6, Plates 2. Fight “Courtyard”: a Rifleman (HP 3, Mid, intent: Fire 2), a Gunner (HP 4, Long, Cover 1, intent: Suppress, −1 T to you next turn) and a Rusher (HP 2, Mid, intent: advance to Close, then 3 damage). You stand at Centre.</p>
+  <table class="ex">
+    <thead><tr><th>Turn</th><th>What happens</th><th>State after</th></tr></thead>
+    <tbody>
+      <tr><td class="w">Turn 1<br><span class="note" style="font-weight:400">3 T · Fire, Fire, Step, Frag, Plate</span></td><td>Frag the Rusher (1 T, 2 damage): <b>Rusher downed</b> (streak 1). Fire at the Rifleman (1 T, Mid 2): HP 3→1. Step to <b>Left cover</b> (1 T). Enemies act: the Rifleman fires 2, −1 cover = 1, so <b>Plates 2→1</b> (the streak holds). The Gunner suppresses: next turn you get 2 T.</td><td class="st">You: HP 6 · Plates 1 · Left cover<br>Rifleman HP 1 · Gunner HP 4<br>Streak 1</td></tr>
+      <tr><td class="w">Turn 2<br><span class="note" style="font-weight:400">2 T</span></td><td>Fire at the Rifleman: <b>downed</b> (streak 2, so the <b>Recon Drone is earned</b>). Step to <b>Right flank</b> (1 T); the flank ignores the Gunner’s cover. The Gunner’s intent is “Reposition”, so it doesn’t shoot.</td><td class="st">You: Right flank<br>Gunner HP 4<br>Streak 2 · Recon Drone</td></tr>
+      <tr><td class="w">Turn 3<br><span class="note" style="font-weight:400">3 T</span></td><td>Recon Drone (0 T): it marks the Gunner, and your next 2 Fires get +1. Fire at Long: 1 + 1 = 2 (no cover from the flank), Gunner 4→2. Fire again: <b>Gunner downed</b> (streak 3). <b>The fight is clean.</b> Weapon XP is +3, so the Kestrel reaches level 2. Offer: Foregrip / Holo Sight / Extended Mag.</td><td class="st">All enemies down · clean<br>Streak 3 · Kestrel level 2</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ======================= 6. TICK RATE ======================= -->
+<section class="concept" id="s6" style="--cc:var(--c4);--ct:var(--t4)">
+  <div class="chead"><div class="cn"><b>4</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s6">Section 6 · Concept 4</div><h1>Tick Rate</h1><div class="tg">Draft your loadout, then fight on a time track</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>1v1 arena</div><div><span>Mode</span>Draft, then Team Deathmatch</div><div><span>Win</span>First to 5 downs</div><div><span>Match</span>About 10 min incl. draft</div><div><span>Best screen</span>PC / landscape</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> An arena 1v1 in two acts. <strong>Draft (3 minutes):</strong> both players snake-draft from three open packs of 4 loadout pieces (weapons, attachments, perks, equipment, streaks). Taking the sniper so your opponent can’t is a real strategy. <strong>Fight (6–8 minutes):</strong> a Team Deathmatch to 5 downs on a 7-node map, with <strong>no turns.</strong> Both operators sit on a shared <strong>time track</strong>: whoever is further behind in time acts next, and every action costs ticks. A sniper’s aim costs 3 ticks and an SMG’s costs 1. That is how real time and time-to-kill are faked: a heavy gun is literally slow. An aimed operator gets a <strong>free reaction shot</strong> when the enemy walks into their line.</p>
+  <figure><div id="trDraft"></div><figcaption><b>Act 1, the draft:</b> three open packs of 4 loadout pieces, snake-drafted by both players. Pack contents shown are generic piece types.</figcaption></figure>
+  <h3 class="lab">The map</h3>
+  <p>7 nodes (2 spawns, Alley, Market, Courtyard [Cover 1], Tower [high ground], Underpass) joined by move edges. Sightline edges are printed separately and tagged C, M or L. Positions are public.</p>
+  <figure><div id="trMap"></div><figcaption><b>The 7 nodes, with the moves and the sightline used in the worked example.</b> Other move and sightline edges are map-specific and not given in the source.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c4);--ct:var(--t4)">
+  <h3 class="lab" style="margin-top:0">Loadout → no deck; an action bar with costs (in ticks)</h3>
+  <p>Everyone has the same actions, priced by the loadout.</p>
+  <table class="avoid" id="trCost">
+    <thead><tr><th>Action</th><th class="num">SMG</th><th class="num">AR</th><th class="num">Shotgun</th><th class="num">LMG</th><th class="num">Sniper</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <p>Swap to pistol costs 1 (Aim 0, Fire 1). Equipment costs 2. Attachments shift costs (Quick Stock: Aim −1; Long Barrel: +1 Long, Aim +1). Perks bend rules (Soft Step: Step −1; Long Breath: staying Aimed has no upkeep). <b>Reaction:</b> when an enemy moves into, or along, your aimed sightline, you fire immediately and pay the Fire cost afterwards. Stepping breaks your aim.</p>
+  <h3 class="lab">How the fight works</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Lowest time acts</b></div><div class="sb">The operator with the <b>lower time</b> acts (ties: the one who acted less recently). They take one action and advance their marker by its cost.</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Reactions</b></div><div class="sb">Reactions interrupt at once.</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>Downed</b></div><div class="sb">You respawn at your far spawn at <b>your current time + 6 ticks</b> (the respawn timer), and your streak resets. Killstreaks come at 2 / 3 / 4 downs without dying (Recon Drone: the enemy’s aim lines are shown for 6 ticks; Sentry Turret: a permanent 1-damage reaction shot on one sightline; Mortar Barrage: 3 damage on a node after a 4-tick delay, so it can be dodged).</div></div>
+  </div>
+  <div class="cols3">
+    <div><h3 class="lab">Win</h3><p>The first to 5 downs. A cap of 120 ticks; at the cap the leader wins. <b>Match: about 10 minutes including the draft.</b></p></div>
+    <div><h3 class="lab">Meta progression</h3><p>Ranked draft ladders. Your <b>collection decides the draft pool’s cosmetics</b> (camos and calling cards), never the power. Weekly “pack themes” (e.g. a shotgun week).</p></div>
+    <div><h3 class="lab">Platform fit</h3><p>PC and landscape are best, since the time track reads well as a horizontal bar. Phone portrait works: the map on top, a 5-button action bar, the track as a thin strip. The rules are deterministic, so it is great for replays and tournaments.</p></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:var(--c4);--ct:var(--t4)">
+  <h3 class="lab" style="margin-top:0">3-step worked example</h3>
+  <p><span class="pr r">Red</span> Wasp-9 (SMG). <span class="pr b">Blue</span> Longreach .338 (Sniper). Both start at time 0. A Tower–Courtyard sightline is Long; Courtyard–Tower are also adjacent by a stair (Close when you’re in the same node).</p>
+  <figure><div id="trTrack"></div><figcaption><b>The time track.</b> Each block is one action; its width is its tick cost. Numbers show the order of play: whoever is further behind acts next, so after the reaction Red takes four actions in a row.</figcaption></figure>
+  <table class="ex">
+    <thead><tr><th>Step</th><th>What happens</th><th>Times after</th></tr></thead>
+    <tbody>
+      <tr><td class="w">1</td><td><span class="pr r">Red</span> (t0): Step Spawn→Alley (1), so Red is at t1. <span class="pr b">Blue</span> (t0): Step Spawn→Tower (3), Blue at t3. <span class="pr r">Red</span> (t1): Step Alley→Market (1), t2. <span class="pr r">Red</span> (t2): Step Market→Underpass (1), t3.</td><td class="st">Red t3 · Blue t3</td></tr>
+      <tr><td class="w">2</td><td><span class="pr b">Blue</span> (t3, tie, Blue acted less recently): Aim along Tower→Courtyard (3), Blue at t6, <b>aimed.</b> <span class="pr r">Red</span> (t3): Step Underpass→Courtyard (1). This walks into Blue’s line: <b>reaction.</b> The Longreach fires at Long, 4 − 1 cover = <b>3</b>, <b>Red HP 4→1</b>, and Blue pays Fire 3, so Blue is at <b>t9</b>.</td><td class="st">Red t4 · Blue t9<br><span class="hpd">Red HP 1</span></td></tr>
+      <tr><td class="w">3</td><td><span class="pr r">Red</span> (t4, far behind Blue’s t9, so Red acts several times in a row): Step Courtyard→Tower by the stair (1), t5. Aim (1), t6. Fire at Close, 2 damage, <b>Blue 4→2</b> (t7). Fire again (1), t8: <b>Blue downed.</b> Blue respawns at t9 + 6 = <b>t15</b>. Red has 7 free ticks to reposition.</td><td class="st">Red t8 · Blue t15<br><span class="hpd">Blue downed</span></td></tr>
+    </tbody>
+  </table>
+  <div class="lesson"><b>The slow, aimed gun won the first exchange; the fast gun won the close one. Time is the ammo.</b></div>
+</section>
+
+<!-- ======================= 7. SIGHTLINE ======================= -->
+<section class="concept" id="s7" style="--cc:var(--c5);--ct:var(--t5)">
+  <div class="chead"><div class="cn"><b>5</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s7">Section 7 · Concept 5</div><h1>Sightline</h1><div class="tg">Map-control board game with sightline tiles</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>1v1 or 2v2</div><div><span>Mode</span>Domination, 3 flags</div><div><span>Win</span>First to 15 points</div><div><span>Match</span>20–30 min (1v1) · 30–40 (2v2)</div><div><span>Best screen</span>PC &amp; tablet landscape</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> The deepest and most “board game” of the six. A 1v1 or 2v2 Domination match on a modular map built from <strong>9 square tiles</strong> (each 3×3 cells) that the players <strong>draft and place before the match</strong>. Each tile has printed walls, cover crates and sightline lanes, so building the map is the first tactic: “I’ll give my sniper a long lane to B.” Each player has a personal deck plus the loadout board, and earns <strong>in-match XP</strong> from kills and flags to buy attachments and equipment from a shared <strong>Armory</strong> market. That is the “level up during the match” feeling. It is designed so it can also be printed and played on a table (CardZone and Warbuilder lineage).</p>
+  <h3 class="lab">The map</h3>
+  <p>A 9×9 grid. <b>LOS</b> runs only along printed rows, columns and diagonals and is blocked by walls. Range: 1–2 cells = Close, 3–5 = Mid, 6+ = Long. Crates give Cover 1. There are three flags (A, B, C) on the centre tiles.</p>
+  <figure><div id="slMap"></div><figcaption><b>The worked example on the 9×9 grid</b> (columns a–i, rows 1–9; thick lines are tile edges). Tile contents are illustrative; only Flag A at c5 with its crate is placed by the source, so flags B and C are not drawn.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c5);--ct:var(--t5)">
+  <h3 class="lab" style="margin-top:0">Loadout → board plus deck</h3>
+  <p>The loadout board (primary, secondary, 3 perks, field upgrade, 3 killstreak slots) is chosen before the match.</p>
+  <div class="deck">
+    <div class="drow"><div class="src"><b>Move ×4</b><span>2 cells</span></div><div class="pile l" data-n="4"></div><div class="what"></div></div>
+    <div class="drow"><div class="src"><b>Sprint ×1</b><span>4 cells, makes Noise</span></div><div class="pile l" data-n="1"></div><div class="what"></div></div>
+    <div class="drow"><div class="src"><b>Fire ×3</b></div><div class="pile" data-n="3"></div><div class="what"></div></div>
+    <div class="drow"><div class="src"><b>Frag ×1 · Smoke ×1</b></div><div class="pile" data-n="2"></div><div class="what"></div></div>
+    <div class="total"><b>Starter deck of 10.</b> Hand of 5; discard and draw 5 each turn (Dominion-style).</div>
+  </div>
+  <h3 class="lab">The Armory market: 5 face-up cards, refilled each round</h3>
+  <div class="cardrow">
+    <div class="gcard mini att"><div class="top"><span>2–5 XP</span></div><div class="nm">Attachment</div><div class="tx">Goes onto your weapon board and stays</div></div>
+    <div class="gcard mini"><div class="top"><span>2 XP</span></div><div class="nm">Extra Fire card</div><div class="tx">Goes to your discard</div></div>
+    <div class="gcard mini"><div class="top"><span>2 XP</span></div><div class="nm">Equipment</div><div class="tx">&nbsp;</div></div>
+    <div class="gcard mini"><div class="top"><span>1 XP</span></div><div class="nm">Overwatch token</div><div class="tx">A reaction shot on one line</div></div>
+    <div class="gcard mini" style="opacity:.55;border-style:dashed"><div class="top"><span>…</span></div><div class="nm">5th slot</div><div class="tx">refilled each round</div></div>
+  </div>
+  <h3 class="lab">How a turn works (alternating)</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Play</b></div><div class="sb">Play up to 2 cards from your hand of 5 (Move, Fire, equipment), or place an Overwatch token (a reaction shot on one line).</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Captures</b></div><div class="sb">End your turn on a flag cell with no enemy within 1 cell, and it flips to you.</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>XP &amp; buy</b></div><div class="sb">Gain XP (+1 per flag you hold; a kill gives +3) and buy from the Armory.</div></div>
+    <div class="step"><div class="sh"><i>4</i><b>Draw &amp; score</b></div><div class="sb">Discard and draw 5 (Dominion-style). After both players have taken a turn, score +1 per flag held.</div></div>
+    <div class="step"><div class="sh"><i>5</i><b>Downed</b></div><div class="sb">You respawn at your spawn tile on your next turn with only 1 card play. The streak resets.</div></div>
+  </div>
+  <div class="cols3">
+    <div><h3 class="lab">Win</h3><p>The first to <b>15 points</b>. <b>Match: about 20–30 minutes</b> (1v1), 30–40 minutes (2v2).</p></div>
+    <div><h3 class="lab">Meta progression</h3><p>Unlock tiles (new map pieces are the collectible), weapons, attachments for the Armory pool, camos and calling cards. A physical print-and-play edition is possible.</p></div>
+    <div><h3 class="lab">Platform fit</h3><p><b>PC and tablet landscape.</b> A phone is poor: a 9×9 grid with line-of-sight needs space, even with long-press inspect.</p></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:var(--c5);--ct:var(--t5)">
+  <h3 class="lab" style="margin-top:0">3-turn worked example</h3>
+  <p><span class="pr r">Red</span> Kestrel AR-7, at b2. <span class="pr b">Blue</span> Bastion-60 LMG, at h8. Flag A is at c5, behind a crate (Cover 1).</p>
+  <table class="ex">
+    <thead><tr><th>Turn</th><th>Who</th><th>What happens</th><th>State after</th></tr></thead>
+    <tbody>
+      <tr><td class="w" rowspan="2">Turn 1</td><td class="who"><span class="pr r">Red</span></td><td>Sprint b2→c5 (4 cells), standing on the flag; no enemy within 1, so <b>A flips to Red.</b> The Sprint makes Noise, so Blue sees where Red went. Red gets +1 XP.</td><td class="st">Red holds A · Red XP 1</td></tr>
+      <tr><td class="who"><span class="pr b">Blue</span></td><td>Move h8→g6, then Move g6→e5. Row 5 LOS from e5 to c5 is 2 cells, <b>Close</b>, but Blue has used both card plays on movement, so no shot. End of round: <b>Red 1–0.</b></td><td class="st">Score 1–0</td></tr>
+      <tr><td class="w" rowspan="2">Turn 2</td><td class="who"><span class="pr r">Red</span></td><td>Fire at Close, 2 damage (cover doesn’t apply at Close), <b>Blue 4→2</b>. Then Frag e5: 2 damage, <b>Blue downed</b> (+3 XP, so Red has 5 XP). Red buys <b>Foregrip</b> (3 XP; +1 Mid, −1 Close) from the Armory.</td><td class="st"><span class="hpd">Blue downed</span><br>Red buys Foregrip</td></tr>
+      <tr><td class="who"><span class="pr b">Blue</span></td><td>Respawns at h8 with 1 play and places an <b>Overwatch</b> on the h-file toward flag C.</td><td class="st">Overwatch on the h-file</td></tr>
+      <tr><td class="w">Turn 3</td><td class="who"><span class="pr r">Red</span></td><td>Plays Move c5→c7 to threaten flag B. That doesn’t cross Blue’s Overwatch file, so there is no shot. <b>Red holds A</b> and leads 2–0. Blue’s Overwatch now forces Red to approach flag C the long way.</td><td class="st">Score 2–0</td></tr>
+    </tbody>
+  </table>
+  <figure><div id="slXp"></div><figcaption><b>Red’s in-match XP in the example.</b> +1 per flag held in turn 1 and again in turn 2 (step 3 of the turn), +3 for the down: 5 XP, as the source states; then 3 spent on Foregrip.</figcaption></figure>
+</section>
+
+<!-- ======================= 8. SNAPSHOT ======================= -->
+<section class="concept" id="s8" style="--cc:var(--c6);--ct:var(--t6)">
+  <div class="chead"><div class="cn"><b>6</b><span>of 6</span></div><div class="ct"><div class="kick" data-toc="s8">Section 8 · Concept 6</div><h1>Snapshot</h1><div class="tg">Simultaneous-reveal Search and Destroy duel</div></div></div>
+  <div class="facts">
+    <div><span>Players</span>1v1</div><div><span>Mode</span>Search and Destroy</div><div><span>Win</span>First to 4 rounds</div><div><span>Match</span>About 4–6 min</div><div><span>Best screen</span>Phone portrait: excellent</div>
+  </div>
+  <p class="pitch"><b>Pitch.</b> It looks like a 4-minute party game and has a ladder underneath. Each round is one life: the attacker has to plant at a site, and the defender has to stop them. Each <strong>beat</strong> of the round, both players <strong>secretly</strong> choose a <strong>Position</strong> (where you’ll be) and a <strong>Stance</strong> (Hold, Peek, Rush, Utility, or Plant/Defuse), then reveal. If the two positions share a sightline, it’s a fight: <strong>Hold beats Rush</strong> (they ran into your crosshair), <strong>Rush beats Peek</strong> (you closed before they settled), <strong>Peek beats Hold</strong> (the shoulder-peek baited the held angle). The winner shoots with their weapon’s damage at that range. The same stance means both fire at once, which can trade. With no contact, <strong>nothing is revealed</strong> except Noise from rushing. It is the purest version of “who pre-aimed the angle?”</p>
+  <div class="cols" style="align-items:start">
+    <figure style="margin-top:1mm"><div id="snTri"></div><figcaption><b>The stance triangle.</b> Arrows point from winner to loser. Same stance: both fire at once (can trade).</figcaption></figure>
+    <figure style="margin-top:1mm"><div id="snMap"></div><figcaption><b>The bomb-site layout.</b> Six positions plus the attacker’s spawn. Solid edges are sightlines tagged with their range; sharing a position = Close. Dashed: spawn links.</figcaption></figure>
+  </div>
+  <h3 class="lab">The map</h3>
+  <p>Six positions in a graph: <b>A Site, A Ramp, Mid, Connector, B Short, B Site</b>, plus the attacker’s spawn (which links to A Ramp, Mid and B Short). Each sightline edge is tagged with a range: A Ramp–A Site <b>M</b>, Mid–A Site <b>L</b>, Mid–Connector <b>C</b>, Connector–B Site <b>M</b>, B Short–B Site <b>C</b>, Mid–B Short <b>L</b>. Sharing a position = Close. You move one edge per beat (two with Rush). The launch target is 4 maps.</p>
+</section>
+
+<section class="cont" style="--cc:var(--c6);--ct:var(--t6)">
+  <h3 class="lab" style="margin-top:0">Loadout → no deck; an always-available hand</h3>
+  <p>Your hand is the map’s position cards plus 5 stance cards, every beat. The loadout adds to them: the weapon sets damage by range; the Secondary gives a 1-damage “Sidearm Peek”.</p>
+  <div class="cardrow snc" style="gap:1.4mm;flex-wrap:nowrap">
+    <div class="gcard mini" style="--cc:#3b4450"><div class="top"><span>Position</span></div><div class="nm">A Site</div></div>
+    <div class="gcard mini" style="--cc:#3b4450"><div class="top"><span>Position</span></div><div class="nm">Mid</div></div>
+    <div class="gcard mini" style="--cc:#3b4450;opacity:.6"><div class="top"><span>Position</span></div><div class="nm">… one per position</div></div>
+    <div style="width:2mm"></div>
+    <div class="gcard mini"><div class="top"><span>Stance</span></div><div class="nm">Hold</div><div class="tx">beats Rush</div></div>
+    <div class="gcard mini"><div class="top"><span>Stance</span></div><div class="nm">Peek</div><div class="tx">beats Hold</div></div>
+    <div class="gcard mini"><div class="top"><span>Stance</span></div><div class="nm">Rush</div><div class="tx">beats Peek · move 2 · Noise</div></div>
+    <div class="gcard mini att"><div class="top"><span>Stance</span></div><div class="nm">Utility</div><div class="tx">e.g. Frag: 2 to an adjacent position</div></div>
+    <div class="gcard mini att"><div class="top"><span>Stance</span></div><div class="nm">Plant / Defuse</div></div>
+  </div>
+  <ul class="tight" style="font-size:8.7pt">
+    <li><b>Lethal and Tactical</b>, 1 use per round each. Frag: a Utility stance that deals 2 to a chosen adjacent position. Flashbang: the enemy at a chosen adjacent position has their stance cancelled. Smoke: removes one sightline for 2 beats.</li>
+    <li><b>Perks:</b> Soft Step (your Rush makes no Noise), Low Profile (immune to Recon), Thick Plates (HP 5), Scrounger (a kill refills your Lethal).</li>
+    <li><b>Field Upgrade</b>, once per half: Deployable Cover (−1 damage taken this beat) or Signal Jammer (no enemy Recon or Noise this round).</li>
+    <li><b>Killstreaks</b> run on downs without dying, <b>across rounds</b>: Recon Drone (2: before the next beat’s choice, the enemy’s current position is shown to you), Sentry Turret (3: a position of your choice Holds for 2 damage every beat this round), Mortar Barrage (4: name a position; whoever is there next beat takes 4).</li>
+  </ul>
+  <h3 class="lab">How a round works</h3>
+  <div class="steps">
+    <div class="step"><div class="sh"><i>1</i><b>Health</b></div><div class="sb">HP 4 (wounds carry over within the round; a fresh 4 each round).</div></div>
+    <div class="step"><div class="sh"><i>2</i><b>Beat (up to 5 per round)</b></div><div class="sb">Choose Position + Stance face-down, then reveal. A fight happens if the positions share a sightline or are the same. Resolve the stance triangle; the winner deals weapon damage at that range minus cover (sites have Cover 1 for the defender). Equal stances: both deal damage. No contact: positions stay hidden, and a Rush reveals the rusher’s position afterwards (Noise).</div></div>
+    <div class="step"><div class="sh"><i>3</i><b>Plant / Defuse</b></div><div class="sb"><b>Plant:</b> the attacker uses the Plant stance at a site with no contact that beat. <b>Defuse:</b> the defender then has 2 beats to use Defuse at that site with no contact (being hit cancels it).</div></div>
+    <div class="step"><div class="sh"><i>4</i><b>Round end</b></div><div class="sb">A down (an elimination), a detonation (the attacker wins), a defuse, or 5 beats with no plant (the defender wins).</div></div>
+  </div>
+  <figure><div id="snBeat"></div><figcaption><b>One beat, resolved.</b> Two taps per player (a position and a stance), then a simultaneous reveal.</figcaption></figure>
+</section>
+
+<section class="cont" style="--cc:var(--c6);--ct:var(--t6)">
+  <div class="cols3">
+    <div><h3 class="lab" style="margin-top:0">Win</h3><p>The first to <b>4 rounds</b>, swapping sides after 3. <b>Match: about 4–6 minutes</b> (one beat is about 8 seconds).</p></div>
+    <div><h3 class="lab" style="margin-top:0">Meta progression</h3><p>Ranked tiers with seasonal calling cards, weapon XP and camos, map unlocks, and “clutch” challenges (win a round below 2 HP). It shares Point Man’s loadout collection if both ship.</p></div>
+    <div><h3 class="lab" style="margin-top:0">Platform fit</h3><p><b>Phone portrait: excellent.</b> The map graph on top, two short card rows (positions and stances) at the bottom, two taps per beat. It works for PC and async (“play a beat a day”).</p></div>
+  </div>
+  <h3 class="lab">3-beat worked example (Round 1)</h3>
+  <p><span class="pr r">Red</span> attacks with a Kestrel AR-7 (C2 / M2 / L1). <span class="pr b">Blue</span> defends with a Mako-12 shotgun (C4 / M1 / L0) and starts at B Site.</p>
+  <div class="cols" style="grid-template-columns:.85fr 1.15fr;align-items:start">
+    <figure style="margin:0"><div id="snTrail"></div><figcaption><b>Where each player chose to be,</b> beat by beat (1–3).</figcaption></figure>
+    <table class="ex" style="margin-top:0;font-size:8.2pt">
+      <thead><tr><th>Beat</th><th>Red</th><th>Blue</th><th>Contact</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td class="w">1</td><td>Mid + <b>Peek</b></td><td>Connector + <b>Hold</b></td><td>Close</td><td>Peek beats Hold. <b>Blue 4→2</b></td></tr>
+        <tr><td class="w">2</td><td>Connector + <b>Rush</b></td><td>B Site + <b>Hold</b></td><td>Mid</td><td>Hold beats Rush. <b>Red 4→3</b></td></tr>
+        <tr><td class="w">3</td><td>B Site + <b>Rush</b></td><td>B Site + <b>Peek</b></td><td>Close (same)</td><td>Rush beats Peek. <b>Blue 2→0</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="tight" style="margin-top:2mm;font-size:8.8pt">
+    <li><b>Beat 1:</b> Red picks <b>Mid + Peek</b>. Blue picks <b>Connector + Hold</b>. Mid–Connector is a Close sightline, so there’s contact. Peek beats Hold, and Red shoots: Close 2 damage, <b>Blue HP 4→2</b>. Both positions are now known.</li>
+    <li><b>Beat 2:</b> Blue expects a push and falls back to <b>B Site + Hold</b>. Red pushes to <b>Connector + Rush</b>. Connector–B Site is Mid. Hold beats Rush, and Blue shoots: shotgun Mid 1, <b>Red 4→3</b>. (Had Blue stayed at Connector, Red’s Rush would have run into a Close Hold: shotgun 4, a one-shot. Red took a risk and got away with it.)</li>
+    <li><b>Beat 3:</b> Red reads that Blue won’t leave the site and plays <b>B Site + Rush</b>. Blue, burned by Beat 1’s Peek, decides to swing out first and plays <b>B Site + Peek</b>. A Hold would have won (and one-shot Red at Close). Rush beats Peek, same position, Close 2 damage, <b>Blue 2→0, eliminated.</b> <b>Red wins Round 1 (1–0)</b> with streak 1. One more down, without dying, unlocks the <b>Recon Drone</b> for Round 2.</li>
+  </ul>
+</section>
+
+<!-- ======================= 9. COMPARISON ======================= -->
+<section class="page" id="s9" style="--cc:#3b4450;--ct:#eef0f2">
+  <div class="kick" data-toc="s9">Section 9</div>
+  <h1 class="sec">Comparison and recommendation</h1>
+  <div class="hdr-rule"></div>
+  <h2 class="sub" style="margin-top:0">9.1 Comparison table</h2>
+  <p class="note">1 = low, 5 = high; for Risk, lower is better.</p>
+  <table class="cmp">
+    <colgroup><col style="width:29mm"><col style="width:31mm"><col style="width:16mm"><col style="width:16mm"><col style="width:16mm"><col style="width:16mm"><col style="width:16mm"><col style="width:24mm"><col style="width:16mm"></colgroup><thead><tr><th>Concept</th><th>Structure</th><th>Depth</th><th>Simplicity</th><th>CoD feel</th><th>Mobile fit</th><th>Novelty</th><th>Risk</th><th>Match</th></tr></thead>
+    <tbody id="cmpBody"></tbody>
+  </table>
+  <h2 class="sub">9.2 Recommendation: prototype Point Man first and Snapshot second</h2>
+  <p><strong>Point Man</strong> is the one that answers the head’s brief most directly: <em>one character, two weapons, perks and stuff, improving our own character, fighting on a map.</em></p>
+  <div class="why">
+    <div class="bx" style="--cc:var(--c1);--ct:var(--t1)"><h4>1 · Point Man</h4><ul>
+      <li>It is the only concept where <b>the collection loop and the match loop are the same object.</b> Unlocking an attachment literally rewrites your deck, which makes pillar 7 (“every match moves a bar”) felt in the next match, not just seen in a menu. That is the strongest retention hook of the six.</li>
+      <li><b>Hold Angle</b> gives cards an honest skill expression in place of aim, and the 3×3 room map is the smallest board that still has sightlines, flanks and power positions. It fits a phone screen in portrait.</li>
+      <li>It uses all four CoD loadout layers (weapons, equipment, perks, streaks) without any of them being decorative.</li>
+      <li>The risk is balance: every loadout generates a different deck. It is manageable, because the shared weapon table (§2) has only 6 rows and attachments are small trade-offs. A headless sim (KillingCard-style <code>tests/tools/*_check.gd</code>) can sweep loadout pairs.</li>
+    </ul></div>
+    <div class="bx" style="--cc:var(--c6);--ct:var(--t6)"><h4>2 · Snapshot, the cheap second</h4><ul>
+      <li>It can be paper-tested in a day and prototyped in about a week. It isolates the riskiest feel question, “does a card read feel like a gunfight?”, at the lowest cost.</li>
+      <li>It shares Point Man’s weapon table, loadout data and collection, so if Point Man ships, Snapshot becomes its <b>quick mode</b> (and a daily ladder), not a separate game.</li>
+      <li>Its risk (“it’s rock-paper-scissors”) is tested directly: if weapon range, map positions and Noise make the reads informed rather than random, the stance triangle works. If playtesters call it a coin-flip, we learn that cheaply.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="cont" style="--cc:#3b4450;--ct:#eef0f2">
+  <h3 class="lab" style="margin-top:0">Long-term shape (not for the first prototype)</h3>
+  <div class="roadmap">
+    <div class="rm" style="--cc:var(--c1)"><span class="rk">Prototype 1</span><b class="nm">Point Man</b>The flagship: deck = loadout.</div>
+    <div class="rm" style="--cc:var(--c6)"><span class="rk">Prototype 2</span><b class="nm">Snapshot</b>Cheap feel test; later Point Man’s quick mode and a daily ladder.</div>
+    <div class="rm" style="--cc:var(--c3)"><span class="rk">Later</span><b class="nm">Behind the Line</b>The natural solo campaign for the same loadout collection, using Point Man’s cards against telegraphed AI.</div>
+    <div class="rm" style="--cc:var(--c2)"><span class="rk">Fallback</span><b class="nm">Fireteam</b>If the head prefers maximum reuse of KillingCard’s lanes.</div>
+    <div class="rm" style="--cc:var(--c4)"><span class="rk">Park</span><b class="nm">Tick Rate</b>Among the most novel and the riskiest.</div>
+    <div class="rm" style="--cc:var(--c5)"><span class="rk">Park</span><b class="nm">Sightline</b>Among the most novel and the riskiest.</div>
+  </div>
+  <figure><div id="cmpFig"></div><figcaption><b>Simplicity against depth, with mobile fit as dot size.</b> Ratings from the comparison table. Point Man and Fireteam share the same point (3, 4) and are drawn side by side.</figcaption></figure>
+</section>
+
+<!-- ======================= 10. REUSE ======================= -->
+<section class="cont" id="s10" style="--cc:#3b4450;margin-top:9mm">
+  <div class="kick" data-toc="s10">Section 10</div>
+  <h1 class="sec">Reuse</h1>
+  <div class="hdr-rule"></div>
+  <p><b>From KillingCard</b> (<code>projects/killingcard/source/project-killingcard/</code>). Original code and data only; nothing under <code>assets/licensed/</code> is touched or referenced.</p>
+  <table style="font-size:8.1pt">
+    <thead><tr><th style="width:44mm">What</th><th>File(s)</th><th style="width:36mm">Used by</th></tr></thead>
+    <tbody>
+      <tr><td>Loadout data model (Primary, Attachment, Perk, Killstreak slots; Handling-like <code>rotations_per_round</code>; attachment pools)</td><td><code>scripts/data/loadout_item.gd</code>, <code>data/loadout/*.tres</code> (Kestrel AR-7, Wasp-9, Longreach .338, Bastion-60, Grit, Extended Mag, Foregrip, Holo Sight, Recon Drone, Sentry Turret, Mortar Barrage, Attack Helo …)</td><td>All. Re-add the Secondary, Lethal and Tactical slots that <code>kc-loadout-cut</code> removed (the enum and validation already existed).</td></tr>
+      <tr><td>Streak meter, streak tray, reset on down</td><td><code>scripts/rules/streak_tracker.gd</code></td><td>All</td></tr>
+      <tr><td>Score-to-target, round cap, overtime, draw</td><td><code>scripts/rules/mode_rules.gd</code> (Zone Control is close to Domination; add Hardpoint and S&amp;D rows)</td><td id="u1">1, 2, 4, 6</td></tr>
+      <tr><td>Match state + hooks pattern, deterministic seeds, clone for AI search</td><td><code>match_state.gd</code>, <code>match_hooks.gd</code>, <code>match_clone.gd</code></td><td>1, 2, 4</td></tr>
+      <tr><td>Beat-ordered firefights, First Shot, Initiative</td><td><code>scripts/rules/firefight_resolver.gd</code>, <code>firefight-order.md</code></td><td>2 (direct), 1 (Hold Angle ordering)</td></tr>
+      <tr><td>Fair AI by construction (AiView), greedy planner with personalities</td><td><code>scripts/ai/ai_view.gd</code>, <code>ai_planner.gd</code>, <code>ai_personality.gd</code></td><td>1, 2 (bots), 3 (intent-based is simpler)</td></tr>
+      <tr><td>Run map, shop, events, modifiers, save</td><td><code>scripts/run/*</code> and <code>run-v2.md</code> (bosses with one rule, Operators with passive + ability)</td><td>3</td></tr>
+      <tr><td>Inspect on right-click / long-press, gesture</td><td><code>scripts/ui/card_inspector.gd</code>, <code>press_gesture.gd</code>, <code>card_info.gd</code></td><td>All (studio UX rule)</td></tr>
+      <tr><td>Banner card frame and calling cards as profile banners</td><td><code>banner_card.gd</code>, <code>banner_view.gd</code>, the original banner art pipeline</td><td>Meta (calling-card rewards)</td></tr>
+      <tr><td>Feedback FX: kill feed, hit markers, tracers, streak arc, call-in takeover, float text, synth SFX</td><td><code>scripts/fx/*</code></td><td>All</td></tr>
+      <tr><td>Minimap, score bar, match intro/end banners</td><td><code>minimap.gd</code>, <code>score_bar.gd</code>, <code>match_intro.gd</code>, <code>match_end_banner.gd</code></td><td>1, 2, 4, 6</td></tr>
+    </tbody>
+  </table>
+  <p class="note" style="margin-top:-1mm">“Used by” numbers are concept numbers: 1 Point Man, 2 Fireteam, 3 Behind the Line, 4 Tick Rate, 5 Sightline, 6 Snapshot.</p>
+  <h3 class="lab">Studio prior art</h3>
+  <ul class="tight" style="font-size:8.8pt">
+    <li><b>Killstreak</b> (<code>projects/killstreak/documentation/design/core-rules.md</code>): the original “the loadout is your Operator” ruleset. Its perk and streak rulings (equipment kills count for the streak, killstreak kills don’t) carry over as written.</li>
+    <li><b>KillingCard Run v2:</b> the run map structure, bosses and Operators for Behind the Line.</li>
+    <li><b>DeadDraw:</b> the solo card-crawl rhythm (deal, resolve, carry forward) is a fallback encounter format for Behind the Line.</li>
+    <li><b>CardZone / Warbuilder:</b> deckbuilder market and print-and-play constraints for Sightline. Warbuilder’s location-by-location loot is a possible Behind the Line event type.</li>
+    <li><b>CallingCard</b> and <b>Calling Card Tiles</b> (<code>studio/concepts/calling-card-tiles/</code>): making calling cards worth collecting. Here they are earned feat banners shown on the match intro, which is the same value proposition.</li>
+  </ul>
+</section>
+
+<!-- ======================= 11. QUESTIONS ======================= -->
+<section class="page" id="s11" style="--cc:#3b4450">
+  <div class="kick" data-toc="s11">Section 11</div>
+  <h1 class="sec">Questions for the studio head</h1>
+  <div class="hdr-rule"></div>
+  <p class="lede" style="margin-bottom:3mm">Four decisions. The designer’s recommended option is highlighted in each.</p>
+  <div class="q"><h4><span class="qn">Q1</span>Which concept(s) should we prototype?</h4>
+    <div class="opt"><span class="l">A</span><span>Point Man only.</span><span></span></div>
+    <div class="opt rec"><span class="l">B</span><span><b>Point Man, plus Snapshot</b> as a cheap feel test that later becomes Point Man’s quick mode.</span><span class="rb">Recommended</span></div>
+    <div class="opt"><span class="l">C</span><span>Fireteam: the most KillingCard code reuse; closest to the current lane board.</span><span></span></div>
+    <div class="opt"><span class="l">D</span><span>Behind the Line: PvE first, the lowest risk and the strongest single-player meta.</span><span></span></div>
+  </div>
+  <div class="q"><h4><span class="qn">Q2</span>Who is the opponent in the first prototype?</h4>
+    <div class="opt rec"><span class="l">A</span><span><b>AI only</b> (KillingCard-style fair AI with personalities). Fastest to test, no netcode.</span><span class="rb">Recommended</span></div>
+    <div class="opt"><span class="l">B</span><span>Local hot-seat, two humans on one device.</span><span></span></div>
+    <div class="opt"><span class="l">C</span><span>Async online PvP (turn-based duel by link).</span><span></span></div>
+  </div>
+  <div class="q"><h4><span class="qn">Q3</span>How much is hidden on the map? <span class="note" style="font-weight:400">This sets how much “fog of war” the CoD feel has.</span></h4>
+    <div class="opt rec"><span class="l">A</span><span><b>Open positions with hidden reactions</b> (Hold Angles face-down; recon reveals them). For Point Man: readable on a phone, and the bluff lives in the Hold.</span><span class="rb">Recommended</span></div>
+    <div class="opt"><span class="l">B</span><span>Fully hidden positions with Noise from sprinting and firing (Snapshot-style everywhere; more tension, harder to read).</span><span></span></div>
+    <div class="opt"><span class="l">C</span><span>Hybrid: positions are public only while in an enemy’s sightline.</span><span></span></div>
+  </div>
+  <div class="q"><h4><span class="qn">Q4</span>Which screen do we design first?</h4>
+    <div class="opt rec"><span class="l">A</span><span><b>Phone portrait first</b> (map on the top half, hand on the bottom), scaling up to PC. Both recommended concepts were sized for it.</span><span class="rb">Recommended</span></div>
+    <div class="opt"><span class="l">B</span><span>PC / landscape first, phone later.</span><span></span></div>
+    <div class="opt"><span class="l">C</span><span>Both from day one (costlier UI work).</span><span></span></div>
+  </div>
+</section>
+
+<script>
+const C={ink:'#1c222b',muted:'#5d6672',faint:'#8a929c',rule:'#cfd4da',soft:'#f4f5f7',soft2:'#eaedf0',red:'#c8423a',blue:'#2c6db5',
+ c1:'#0f6e73',t1:'#e5f0f0',c2:'#4a4fa8',t2:'#ebebf6',c3:'#5a7a24',t3:'#edf2e4',c4:'#a8650f',t4:'#f7eddd',c5:'#7d3f86',t5:'#f3e9f4',c6:'#9b2c4e',t6:'#f6e6ec',redT:'#fbeceb',blueT:'#e8f0fa'};
+const esc=s=>String(s);
+function T(x,y,s,o={}){return `<text x="${x}" y="${y}" font-size="${o.fs||11}" font-weight="${o.fw||400}" text-anchor="${o.a||'start'}" fill="${o.c||C.ink}" ${o.ls?`letter-spacing="${o.ls}"`:''} ${o.it?'font-style="italic"':''} ${o.x||''}>${s}</text>`}
+function ML(x,y,lines,o={}){const lh=o.lh||((o.fs||11)*1.3);return lines.map((l,i)=>T(x,y+i*lh,l,Object.assign({},o,{fw:(i===0&&o.firstBold)?700:(o.fw||400)}))).join('')}
+function R(x,y,w,h,o={}){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx||0}" fill="${o.f||'none'}" stroke="${o.s||'none'}" stroke-width="${o.sw||1}" ${o.dash?`stroke-dasharray="${o.dash}"`:''} ${o.op?`opacity="${o.op}"`:''}/>`}
+function Ln(x1,y1,x2,y2,o={}){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${o.s||C.ink}" stroke-width="${o.sw||1}" ${o.dash?`stroke-dasharray="${o.dash}"`:''} ${o.m?`marker-end="url(#${o.m})"`:''} ${o.lc?`stroke-linecap="${o.lc}"`:''}/>`}
+function P(d,o={}){return `<path d="${d}" fill="${o.f||'none'}" stroke="${o.s||C.ink}" stroke-width="${o.sw||1}" ${o.dash?`stroke-dasharray="${o.dash}"`:''} ${o.m?`marker-end="url(#${o.m})"`:''} ${o.op?`opacity="${o.op}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`}
+function Ci(x,y,r,o={}){return `<circle cx="${x}" cy="${y}" r="${r}" fill="${o.f||'none'}" stroke="${o.s||'none'}" stroke-width="${o.sw||1}" ${o.dash?`stroke-dasharray="${o.dash}"`:''}/>`}
+function tok(x,y,team,lab,r=14,o={}){const col=team==='r'?C.red:team==='b'?C.blue:C.muted;
+  return (o.ring?Ci(x,y,r+3.5,{s:C.ink,sw:2,f:'#fff'}):'')+Ci(x,y,r,{f:col,s:'#fff',sw:1.5})+T(x,y+(o.fs||10)*0.36,lab,{fs:o.fs||10,fw:750,a:'middle',c:'#fff'})+(o.down?P(`M${x-r*.8},${y-r*.8} L${x+r*.8},${y+r*.8} M${x+r*.8},${y-r*.8} L${x-r*.8},${y+r*.8}`,{s:C.ink,sw:2.6}):'')}
+function S(w,h,inner,maxw){return `<svg viewBox="0 0 ${w} ${h}" ${maxw?`style="max-width:${maxw};margin:0 auto"`:''} xmlns="http://www.w3.org/2000/svg">${inner}</svg>`}
+function put(id,html){const el=document.getElementById(id); if(el) el.innerHTML=html;}
+
+/* dots & piles */
+document.querySelectorAll('.dots').forEach(d=>{const v=+d.dataset.v;d.innerHTML=[1,2,3,4,5].map(i=>`<i class="${i<=v?'on':''}"></i>`).join('')});
+document.querySelectorAll('.pile').forEach(p=>{const n=+p.dataset.n;const cls=p.classList.contains('l')?'l':p.classList.contains('d')?'d':'';p.innerHTML=Array.from({length:n},()=>`<i class="${cls}"></i>`).join('');});
+
+/* ---------- cover art: one operator, one map ---------- */
+(function(){
+  let s='';
+  const cols=[C.c1,C.c2,C.c3,C.c4,C.c5,C.c6];
+  const names=['Point Man','Fireteam','Behind the Line','Tick Rate','Sightline','Snapshot'];
+  const W=680; const cw=104, ch=150, gap=11.2; const x0=(W-(6*cw+5*gap))/2;
+  for(let i=0;i<6;i++){const x=x0+i*(cw+gap), y=20+(i%2)*14;
+    s+=R(x,y,cw,ch,{rx:9,f:'#fff',s:cols[i],sw:1.6});
+    s+=`<rect x="${x}" y="${y}" width="${cw}" height="22" rx="9" fill="${cols[i]}"/>`+R(x,y+12,cw,10,{f:cols[i]});
+    s+=T(x+10,y+15,'CONCEPT '+(i+1),{fs:8,fw:750,c:'#fff',ls:1.2});
+    s+=T(x+10,y+ch-14,names[i],{fs:11,fw:750});
+    // glyph per concept
+    const gx=x+cw/2, gy=y+70;
+    if(i===0){for(let r=0;r<3;r++)for(let c=0;c<3;c++)s+=R(gx-33+c*22,gy-33+r*22,22,22,{f:(r==1&&c==1)?C.t1:'#fff',s:C.ink,sw:1.2});s+=Ci(gx,gy,6,{f:C.red});s+=R(gx+12,gy-6,6,12,{f:'url(#hatchR)',s:C.red,sw:.8});}
+    if(i===1){for(let c=0;c<3;c++)s+=R(gx-33+c*22,gy-38,20,76,{f:C.soft,s:C.rule});for(let c=0;c<3;c++){s+=Ci(gx-23+c*22,gy+24,5,{f:C.red});s+=Ci(gx-23+c*22,gy-24,5,{f:C.blue});s+=P(`M${gx-26+c*22},${gy-3} v-8 l7,3 l-7,3`,{s:C.c2,f:C.c2,sw:1});}}
+    if(i===2){const pts=[[-34,-20],[-12,-30],[-12,-6],[10,-24],[10,8],[34,0]];pts.forEach((p,k)=>{if(k<5)s+=Ln(gx+p[0],gy+p[1],gx+pts[Math.min(k+1+(k%2),5)][0],gy+pts[Math.min(k+1+(k%2),5)][1],{s:C.faint})});pts.forEach((p,k)=>s+=Ci(gx+p[0],gy+p[1],k==5?7:5,{f:k==5?C.c3:'#fff',s:C.c3,sw:1.4}));s+=R(gx-34,gy+20,68,14,{rx:3,f:C.t3,s:C.c3});}
+    if(i===3){s+=Ln(gx-38,gy,gx+38,gy,{s:C.ink,sw:1.4});for(let k=0;k<=8;k++)s+=Ln(gx-38+k*9.5,gy-4,gx-38+k*9.5,gy+4,{s:C.ink});s+=R(gx-38,gy-20,9.5,10,{f:C.red});s+=R(gx-28.5,gy-20,9.5,10,{f:C.red,op:.7});s+=R(gx-38,gy+10,28.5,10,{f:C.blue});s+=R(gx-9.5,gy+10,28.5,10,{f:C.blue,op:.7});}
+    if(i===4){for(let r=0;r<6;r++)for(let c=0;c<6;c++)s+=R(gx-33+c*11,gy-33+r*11,11,11,{f:'#fff',s:C.rule,sw:.6});s+=R(gx-33,gy-33,66,66,{s:C.ink,sw:1.2});s+=Ln(gx-33,gy,gx+33,gy,{s:C.ink,sw:1});s+=Ln(gx,gy-33,gx,gy+33,{s:C.ink,sw:1});s+=Ln(gx-27,gy+27,gx+16,gy-16,{s:C.c5,sw:1.6,dash:'3 2'});s+=Ci(gx-27,gy+27,4,{f:C.red});s+=Ci(gx+16,gy-16,4,{f:C.blue});}
+    if(i===5){const A=[gx,gy-30],B=[gx+30,gy+20],D=[gx-30,gy+20];s+=P(`M${A[0]},${A[1]} L${B[0]},${B[1]} L${D[0]},${D[1]} Z`,{s:C.c6,sw:1.4,f:C.t6});[A,B,D].forEach(p=>s+=Ci(p[0],p[1],8,{f:'#fff',s:C.c6,sw:1.6}));s+=T(A[0],A[1]+3.5,'H',{fs:9,fw:800,a:'middle',c:C.c6})+T(B[0],B[1]+3.5,'R',{fs:9,fw:800,a:'middle',c:C.c6})+T(D[0],D[1]+3.5,'P',{fs:9,fw:800,a:'middle',c:C.c6});}
+  }
+  s+=T(W/2,212,'One operator per player. The cards improve and drive that one body on a map.',{fs:12,a:'middle',c:C.muted,it:1});
+  put('coverArt',S(W,222,s));
+})();
+
+/* ---------- fake-it figure ---------- */
+(function(){
+  const W=680,H=150;let s='';
+  const bw=212, gap=22;
+  const items=[
+   {x:0,c:C.c1,t:'Hidden reaction',sub:'Point Man · Hold Angle'},
+   {x:bw+gap,c:C.c6,t:'Simultaneous reveal',sub:'Snapshot · stance triangle'},
+   {x:2*(bw+gap),c:C.c4,t:'Time track',sub:'Tick Rate · slow guns pay ticks'}];
+  items.forEach((it,k)=>{
+    s+=R(it.x+1,1,bw-2,H-2,{rx:8,f:'#fff',s:C.rule});
+    s+=R(it.x+1,1,6,H-2,{rx:3,f:it.c});
+    s+=T(it.x+18,24,it.t,{fs:12,fw:750,c:it.c});
+    s+=T(it.x+18,40,it.sub,{fs:9.5,c:C.muted});
+    const ox=it.x+18, oy=58;
+    if(k===0){s+=R(ox,oy,60,60,{f:C.t1,s:C.ink,sw:1.5});s+=R(ox+60,oy,60,60,{f:'#fff',s:C.ink,sw:1.5});s+=R(ox+57,oy+20,6,20,{f:'#fff'});
+      s+=Ci(ox+28,oy+30,9,{f:C.red});s+=R(ox+44,oy+22,9,16,{f:'url(#hatchR)',s:C.red,sw:.8});
+      s+=P(`M${ox+60},${oy+22} L${ox+118},${oy+4} L${ox+118},${oy+56} L${ox+60},${oy+38} Z`,{f:'rgba(200,66,58,.12)',s:C.red,sw:.8,dash:'3 2'});
+      s+=Ci(ox+100,oy+30,9,{f:C.blue});s+=P(`M${ox+150},${oy+30} L${ox+113},${oy+30}`,{s:C.blue,sw:1.6,m:'arB'});
+      s+=T(ox+124,oy+72,'walks in: Hold fires first',{fs:9,fw:700,c:C.red,a:'end'});}
+    if(k===1){[['?',0],['?',1]].forEach((q,j)=>{const x=ox+j*84;s+=R(x,oy+4,40,56,{rx:5,f:j?C.blueT:C.redT,s:j?C.blue:C.red,sw:1.3});s+=T(x+20,oy+40,'?',{fs:22,fw:800,a:'middle',c:j?C.blue:C.red});});
+      s+=T(ox+62,oy+30,'reveal',{fs:9.5,fw:700,a:'middle',c:C.c6});s+=P(`M${ox+44},${oy+38} L${ox+78},${oy+38}`,{s:C.c6,sw:1.4,m:'arK'});
+      s+=T(ox+134,oy+20,'Hold > Rush',{fs:9.5,c:C.ink});s+=T(ox+134,oy+36,'Rush > Peek',{fs:9.5,c:C.ink});s+=T(ox+134,oy+52,'Peek > Hold',{fs:9.5,c:C.ink});}
+    if(k===2){s+=Ln(ox,oy+40,ox+176,oy+40,{s:C.ink,sw:1.2});for(let i=0;i<=8;i++){s+=Ln(ox+i*22,oy+36,ox+i*22,oy+44,{s:C.ink});s+=T(ox+i*22,oy+58,i,{fs:8.5,a:'middle',c:C.muted});}
+      s+=R(ox,oy+8,22,12,{rx:2,f:C.red});s+=T(ox+11,oy+17,'SMG',{fs:7.5,fw:700,a:'middle',c:'#fff'});
+      s+=R(ox,oy+22,66,12,{rx:2,f:C.blue});s+=T(ox+33,oy+31,'Sniper aim 3',{fs:7.5,fw:700,a:'middle',c:'#fff'});
+      s+=T(ox+30,oy+16,'aim 1',{fs:8.5,c:C.red});}
+  });
+  put('fakeFig',S(W,H,s));
+})();
+
+/* ---------- weapon table ---------- */
+(function(){
+  const rows=[
+   ['Wasp-9','SMG',2,1,0,'1','fast','Wins rooms, loses lanes'],
+   ['Kestrel AR-7','Assault rifle',2,2,1,'1','','Generalist'],
+   ['Mako-12','Shotgun',4,1,0,'1','','One-shot in the room, useless outside it'],
+   ['Bastion-60','LMG',2,2,2,'2','slow','Holds an angle, suppresses'],
+   ['Longreach .338','Sniper',1,3,4,'2','slow','One-shot at range, punished up close'],
+   ['P-12 Sidearm','Pistol (secondary)',1,1,0,'0','','Free emergency shot (“switch to pistol”)']];
+  const dmg=v=>`<span class="dmg ${v>=4?'max':''}"><span style="width:2.4mm;display:inline-block;text-align:right">${v}</span><span class="bar">${[1,2,3,4].map(i=>`<i class="${i<=v?'on':''}"></i>`).join('')}</span></span>`;
+  document.getElementById('wtbody').innerHTML=rows.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${dmg(r[2])}</td><td>${dmg(r[3])}</td><td>${dmg(r[4])}</td><td><b>${r[5]}</b>${r[6]?` <span class="note">(${r[6]})</span>`:''}</td><td>${r[7]}</td></tr>`).join('');
+  // range profile chart
+  const W=680,H=190;let s='';const x0=60,x1=300,y0=20,y1=160;
+  const yv=v=>y1-(v/4)*(y1-y0);const xs=[x0,(x0+x1)/2,x1];
+  for(let v=0;v<=4;v++){s+=Ln(x0,yv(v),x1,yv(v),{s:v===4?C.red:C.rule,sw:v===4?1.2:.7,dash:v===4?'4 3':''});s+=T(x0-10,yv(v)+4,v,{fs:9.5,a:'end',c:C.muted});}
+  ['Close','Mid','Long'].forEach((l,i)=>s+=T(xs[i],y1+18,l,{fs:10,fw:650,a:'middle'}));
+  s+=T(x0-10,y0-8,'damage',{fs:9,a:'end',c:C.muted});
+  s+=T(x0+120,yv(4)-6,'one-shot line (Health 4)',{fs:8.5,c:C.red,a:'middle'});
+  const cols=['#2f7d6d','#3b4450','#b4552c','#6a5aa8','#2c6db5','#9aa1aa'];
+  const off=[-6,-3,0,3,6,-1.5];
+  rows.forEach((r,i)=>{const pts=[r[2],r[3],r[4]].map((v,j)=>[xs[j]+off[i],yv(v)+off[i]*.4]);
+    s+=P('M'+pts.map(p=>p.join(',')).join(' L'),{s:cols[i],sw:2.2});
+    pts.forEach(p=>s+=Ci(p[0],p[1],3.4,{f:cols[i],s:'#fff',sw:1}));});
+  // legend
+  rows.forEach((r,i)=>{const ly=24+i*24;const lx=420;s+=Ln(lx,ly,lx+24,ly,{s:cols[i],sw:2.4});s+=Ci(lx+12,ly,3.4,{f:cols[i],s:'#fff'});
+    s+=T(lx+32,ly+4,`<tspan font-weight="700">${r[0]}</tspan>  ${r[2]} / ${r[3]} / ${r[4]}`,{fs:10});
+    s+=T(lx+250,ly+4,'Handling '+r[5],{fs:9,c:C.muted,a:'end'});});
+  put('rangeFig',S(W,H,s));
+})();
+
+/* ---------- Point Man map ---------- */
+(function(){
+  const W=680,H=368;let s='';const gx=34,gy=44,c=96;
+  const rx=col=>gx+col*c, ry=row=>gy+row*c;
+  const rowsL='ABC';
+  // rooms
+  for(let r=0;r<3;r++)for(let k=0;k<3;k++){
+    const hill=(r===1&&k===1);
+    s+=R(rx(k),ry(r),c,c,{f:hill?C.t1:'#fff'});
+    s+=T(rx(k)+7,ry(r)+15,rowsL[r]+(k+1),{fs:10.5,fw:750,c:hill?C.c1:C.muted});
+  }
+  // column / row headers
+  [0,1,2].forEach(k=>s+=T(rx(k)+c/2,gy-10,'column '+(k+1),{fs:8.5,a:'middle',c:C.faint}));
+  // walls
+  s+=R(gx,gy,3*c,3*c,{s:C.ink,sw:4});
+  for(let i=1;i<3;i++){s+=Ln(gx,ry(i),gx+3*c,ry(i),{s:C.ink,sw:4});s+=Ln(rx(i),gy,rx(i),gy+3*c,{s:C.ink,sw:4});}
+  // doors: [r1,k1,r2,k2]
+  const doors=[[0,0,1,0],[1,0,1,1],[1,1,1,2],[2,1,1,1],[2,2,1,2],[2,2,2,1]];
+  doors.forEach(([r1,k1,r2,k2])=>{
+    if(k1===k2){const y=ry(Math.max(r1,r2)),x=rx(k1)+c/2;s+=R(x-17,y-4,34,8,{f:'#fff'});s+=Ln(x-17,y-6,x-17,y+6,{s:C.ink,sw:2});s+=Ln(x+17,y-6,x+17,y+6,{s:C.ink,sw:2});}
+    else{const x=rx(Math.max(k1,k2)),y=ry(r1)+c/2;s+=R(x-4,y-17,8,34,{f:'#fff'});s+=Ln(x-6,y-17,x+6,y-17,{s:C.ink,sw:2});s+=Ln(x-6,y+17,x+6,y+17,{s:C.ink,sw:2});}
+  });
+  // hill label
+  s+=T(rx(1)+7,ry(1)+28,'HARDPOINT',{fs:8.5,fw:800,c:C.c1,ls:.6});
+  s+=T(rx(1)+7,ry(1)+40,'Cover 1',{fs:9,c:C.c1});
+  // spawns
+  s+=T(rx(0)+7,ry(0)+29,'Red spawn',{fs:9,fw:650,c:C.red});
+  s+=T(rx(2)+7,ry(2)+29,'Blue spawn',{fs:9,fw:650,c:C.blue});
+  // Hold Angle cone B2->B3
+  const dx=rx(2), dy=ry(1)+c/2;
+  s+=P(`M${dx},${dy-12} L${rx(3)-2},${ry(1)+6} L${rx(3)-2},${ry(2)-6} L${dx},${dy+12} Z`,{f:'rgba(200,66,58,.10)',s:C.red,sw:1,dash:'4 3'});
+  s+=T(dx+10,ry(1)+52,'Hold Angle',{fs:9.5,fw:750,c:C.red});
+  s+=T(dx+10,ry(1)+64,'covers this line',{fs:8.5,c:C.red});
+  s+=R(dx-21,dy-14,12,22,{rx:2,f:'url(#hatchR)',s:C.red,sw:1});
+  // red route round 1
+  s+=P(`M${rx(0)+c/2},${ry(0)+48} L${rx(0)+c/2},${ry(1)+c/2} L${rx(1)+20},${ry(1)+c/2}`,{s:C.red,sw:1.8,dash:'5 4',m:'arR'});
+  s+=T(rx(0)+8,ry(1)+80,'Red, round 1:',{fs:8.5,c:C.red,fw:650});
+  s+=T(rx(0)+8,ry(1)+91,'Step, Step',{fs:8.5,c:C.red});
+  s+=tok(rx(1)+c/2,ry(1)+62,'r','R',14);
+  // blue at C2 shooting up
+  s+=tok(rx(1)+c/2,ry(2)+72,'b','B',14);
+  s+=P(`M${rx(1)+c/2},${ry(2)+56} L${rx(1)+c/2},${ry(1)+80}`,{s:C.blue,sw:2,m:'arB'});
+  s+=T(rx(1)+c/2+11,ry(2)+32,'Mid shot',{fs:8.5,fw:700,c:C.blue});
+  s+=T(rx(1)+c/2+11,ry(2)+43,'3 − 1 = 2',{fs:8.5,c:C.blue});
+  // blue flank round 2
+  s+=P(`M${rx(2)+c-20},${ry(2)+84} L${rx(2)+c-20},${ry(2)+28} L${rx(2)+c/2+2},${ry(2)+4} L${rx(2)+c/2+2},${ry(1)+78}`,{s:C.blue,sw:1.8,dash:'2 3',m:'arB'});
+  s+=T(rx(2)+8,ry(2)+60,'Blue,',{fs:8.5,c:C.blue,fw:650});
+  s+=T(rx(2)+8,ry(2)+71,'round 2',{fs:8.5,c:C.blue});
+  s+=T(rx(2)+8,ry(2)+82,'flank',{fs:8.5,c:C.blue});
+  // right panel
+  const px=360;
+  s+=T(px,44,'Range from your room',{fs:11.5,fw:750});
+  // close
+  let y=58; s+=R(px,y,44,34,{f:'#fff',s:C.ink,sw:2});s+=Ci(px+14,y+17,5,{f:C.red});s+=Ci(px+30,y+17,5,{f:C.blue});
+  s+=ML(px+152,y+12,['Close','same room'],{fs:10,firstBold:1});
+  // mid
+  y=108; s+=R(px,y,44,34,{f:'#fff',s:C.ink,sw:2});s+=R(px+44,y,44,34,{f:'#fff',s:C.ink,sw:2});s+=R(px+41,y+8,6,18,{f:'#fff'});s+=Ci(px+22,y+17,5,{f:C.red});s+=Ci(px+66,y+17,5,{f:C.blue});s+=Ln(px+28,y+17,px+60,y+17,{s:C.muted,sw:1,dash:'2 2'});
+  s+=ML(px+152,y+12,['Mid','adjacent room through an opening'],{fs:10,firstBold:1});
+  // long
+  y=158; for(let i=0;i<3;i++)s+=R(px+i*44,y,44,34,{f:'#fff',s:C.ink,sw:2});s+=R(px+41,y+8,6,18,{f:'#fff'});s+=R(px+85,y+8,6,18,{f:'#fff'});s+=Ci(px+22,y+17,5,{f:C.red});s+=Ci(px+110,y+17,5,{f:C.blue});s+=Ln(px+28,y+17,px+104,y+17,{s:C.muted,sw:1,dash:'2 2'});
+  s+=ML(px+152,y+12,['Long','two rooms away along a straight','line of aligned openings','(a printed sightline)'],{fs:10,firstBold:1,lh:13});
+  s+=ML(px,236,['Cover (0 or 1 per room) removes 1 damage at Mid and','Long, never at Close. Positions are public; Hold Angles','are hidden (face-down).'],{fs:9.5,c:C.muted,lh:13});
+  // rotation
+  s+=T(px,292,'The hardpoint moves every 3 rounds',{fs:10.5,fw:750});
+  const hills=[[1,1],[0,2],[2,0],[1,1]];const labs=['B2','A3','C1','B2 …'];const rr=['rounds 1–3','4–6','7–9','10–12'];
+  hills.forEach(([hr,hk],i)=>{const mx=px+i*80,my=302,mc=13;
+    for(let r=0;r<3;r++)for(let k=0;k<3;k++)s+=R(mx+k*mc,my+r*mc,mc,mc,{f:(r===hr&&k===hk)?C.c1:'#fff',s:C.muted,sw:.8});
+    s+=T(mx+3*mc+6,my+16,labs[i],{fs:10,fw:750,c:C.c1});s+=T(mx,my+3*mc+13,rr[i],{fs:8.5,c:C.muted});
+    if(i<3)s+=P(`M${mx+3*mc+6},${my+26} L${mx+74},${my+26}`,{s:C.faint,sw:1,m:'arK'});});
+  put('pmMap',S(W,H,s));
+})();
+
+/* ---------- Point Man phone wireframe ---------- */
+(function(){
+  const W=680,H=230;let s='';
+  // phone
+  const px=60,py=6,pw=120,ph=218;
+  s+=R(px,py,pw,ph,{rx:14,f:'#fff',s:C.ink,sw:1.6});
+  s+=R(px+8,py+16,pw-16,92,{rx:3,f:C.t1,s:C.c1,sw:1});
+  for(let r=0;r<3;r++)for(let k=0;k<3;k++)s+=R(px+22+k*25,py+24+r*25,25,25,{f:(r==1&&k==1)?'#cfe3e3':'#fff',s:C.ink,sw:.8});
+  s+=R(px+8,py+114,pw-16,14,{rx:2,f:C.soft,s:C.rule});s+=R(px+8,py+132,pw-16,14,{rx:2,f:C.soft,s:C.rule});
+  for(let i=0;i<5;i++)s+=R(px+10+i*20.5,py+154,18,30,{rx:2,f:'#fff',s:C.c1,sw:1});
+  s+=R(px+40,py+198,40,6,{rx:3,f:C.faint});
+  const lab=(y,t1,t2)=>{s+=Ln(px+pw+6,y,px+pw+40,y,{s:C.faint,dash:'2 2'});s+=T(px+pw+46,y+4,t1,{fs:12.5,fw:700})+(t2?T(px+pw+46,y+19,t2,{fs:11,c:C.muted}):'');};
+  lab(py+62,'3×3 map (top half)','positions public, Holds face-down');
+  lab(py+121,'Perk strip · 3 passive slots','');
+  lab(py+139,'Streak strip · the killstreak tray','');
+  lab(py+170,'Hand of 5','tap to play; long-press to inspect');
+  // landscape
+  const lx=470,ly=40,lw=200,lh=118;
+  s+=R(lx,ly,lw,lh,{rx:12,f:'#fff',s:C.ink,sw:1.6});
+  s+=R(lx+12,ly+10,92,lh-20,{rx:3,f:C.t1,s:C.c1});
+  for(let r=0;r<3;r++)for(let k=0;k<3;k++)s+=R(lx+22+k*24,ly+23+r*24,24,24,{f:'#fff',s:C.ink,sw:.8});
+  for(let i=0;i<5;i++)s+=R(lx+112+(i%3)*27,ly+12+Math.floor(i/3)*36,24,32,{rx:2,f:'#fff',s:C.c1});
+  s+=R(lx+112,ly+86,78,20,{rx:2,f:C.soft,s:C.rule});
+  s+=T(lx+lw/2,ly+lh+20,'PC / landscape:',{fs:11.5,fw:700,a:'middle'})+T(lx+lw/2,ly+lh+35,'map left, hand and loadout right',{fs:11,a:'middle',c:C.muted});
+  put('pmPhone',S(W,H,s,'78%'));
+})();
+
+/* ---------- Point Man example track ---------- */
+(function(){
+  const W=680,H=150;let s='';
+  const steps=['R1 Red','R1 Blue','R2 Red','R2 Blue','R3 Red'];
+  const redHP=[4,2,2,2,2], blueHP=[4,4,0,1,0], pts=['1–0','1–0','2–0','2–0','2–0'], down=[0,0,1,0,1];
+  const x0=100,dx=116;
+  s+=T(10,40,'Red HP',{fs:10,fw:700,c:C.red});s+=T(10,80,'Blue HP',{fs:10,fw:700,c:C.blue});s+=T(10,118,'Points',{fs:10,fw:700});
+  steps.forEach((st,i)=>{const x=x0+i*dx;
+    s+=T(x,14,st,{fs:9.5,fw:700,c:i%2?C.blue:C.red});
+    for(let k=0;k<4;k++){s+=R(x+k*15,30,12,14,{rx:2,f:k<redHP[i]?C.red:'#fff',s:C.red,sw:1});s+=R(x+k*15,70,12,14,{rx:2,f:k<blueHP[i]?C.blue:'#fff',s:C.blue,sw:1});}
+    if(down[i])s+=T(x,100,'downed',{fs:9,fw:700,c:C.blue});
+    s+=T(x,122,pts[i],{fs:11,fw:750});
+    if(i===3){s+=R(x-4,91,84,14,{rx:3,f:C.redT});s+=T(x,101,'Hold fires first',{fs:8.5,fw:700,c:C.red});}
+  });
+  s+=Ln(x0-8,132,x0+4*dx+100,132,{s:C.rule});
+  s+=T(x0,146,'Red streak: 1 → 4 (Recon Drone in tray at 3) → 6',{fs:9,c:C.muted});
+  put('pmTrack',S(W,H,s));
+})();
+
+/* ---------- Fireteam board ---------- */
+function ftBoard(o){
+  // o: x,y,cw,bh,tokens:[{l,b,t,lab,you,down,slot}], flags:[owner|null x3], labels, fs, r
+  let s='';const {x,y,cw,bh}=o;const bands=['Blue Spawn','Blue Side','Flag','Red Side','Red Spawn'];
+  const fills=['#eef0f3','#e8f0fa','#ffffff','#fbeceb','#eef0f3'];
+  for(let b=0;b<5;b++){s+=R(x,y+b*bh,3*cw,bh,{f:fills[b]});
+    if(o.labels){s+=T(x-8,y+b*bh+bh/2+4,bands[b],{fs:10,fw:650,a:'end',c:b===1?C.blue:b===3?C.red:C.ink});
+      if(b===1||b===3)s+=T(x-8,y+b*bh+bh/2+16,'Cover 1 for '+(b===1?'Blue':'Red'),{fs:8,a:'end',c:C.muted});
+      if(b===2)s+=T(x-8,y+b*bh+bh/2+16,'Cover 0',{fs:8,a:'end',c:C.muted});}}
+  for(let l=0;l<=3;l++)s+=Ln(x+l*cw,y,x+l*cw,y+5*bh,{s:l%3?C.rule:C.ink,sw:l%3?1:1.5,dash:l%3?'':''});
+  for(let b=0;b<=5;b++)s+=Ln(x,y+b*bh,x+3*cw,y+b*bh,{s:(b===0||b===5)?C.ink:C.rule,sw:(b===0||b===5)?1.5:.8});
+  if(o.labels)['Left','Mid','Right'].forEach((n,l)=>s+=T(x+l*cw+cw/2,y-8,n+' lane',{fs:10,fw:700,a:'middle'}));
+  else ['Left','Mid','Right'].forEach((n,l)=>s+=T(x+l*cw+cw/2,y-6,n,{fs:o.fs||10,fw:650,a:'middle',c:C.muted}));
+  // flags
+  for(let l=0;l<3;l++){const fx=x+l*cw+cw-16, fy=y+2*bh+bh/2;const own=o.flags&&o.flags[l];const col=own==='b'?C.blue:own==='r'?C.red:'#9aa1aa';
+    s+=Ln(fx,fy-12,fx,fy+12,{s:C.ink,sw:1.4});s+=P(`M${fx},${fy-12} L${fx+11},${fy-7} L${fx},${fy-2} Z`,{f:col,s:col});}
+  (o.tokens||[]).forEach(t=>{const n=t.n||1, slot=t.slot||0;const cx=x+t.l*cw+cw/2-(o.labels?14:6)+(n>1?(slot?16:-16):0);const cy=y+t.b*bh+bh/2;
+    s+=tok(cx,cy,t.t,t.lab,o.r||14,{fs:o.tfs||8.5,ring:t.you,down:t.down});
+    if(o.labels&&t.name)s+=T(cx+(o.r||14)+6,cy+4,t.name,{fs:9.5,fw:650,c:t.t==='r'?C.red:C.blue});});
+  return s;
+}
+(function(){
+  const W=680,H=276;let s='';
+  const toks=[{l:0,b:3,t:'r',lab:'LMG',name:'Anchor'},{l:1,b:3,t:'r',lab:'AR',name:'You',you:1},{l:2,b:3,t:'r',lab:'SMG',name:'Scout'},
+              {l:0,b:1,t:'b',lab:'SG',name:'Shotgun'},{l:1,b:1,t:'b',lab:'SR',name:'Sniper'},{l:2,b:1,t:'b',lab:'AR',name:'Rifle'}];
+  const x=118,y=30,cw=100,bh=44;
+  s+=ftBoard({x,y,cw,bh,tokens:toks,labels:1,r:14});
+  // range brackets on the right of the board
+  const bx=x+3*cw+12, ry=b=>y+b*bh+bh/2;
+  s+=P(`M${bx},${ry(3)} h10 V${ry(2)} h-10`,{s:C.c2,sw:1.4});s+=T(bx+16,(ry(3)+ry(2))/2+4,'Mid',{fs:9.5,fw:700,c:C.c2});
+  s+=P(`M${bx+42},${ry(3)} h10 V${ry(1)} h-10`,{s:C.c2,sw:1.4});s+=T(bx+58,(ry(3)+ry(1))/2+4,'Long',{fs:9.5,fw:700,c:C.c2});
+  s+=T(bx,y+5*bh+20,'Same band = Close · own lane only',{fs:9,c:C.muted});
+  // initiative
+  const ix=520, iy=40;
+  s+=T(ix,iy,'Initiative (shoots first)',{fs:11,fw:750});
+  const ini=[['Pistol',5],['SMG / Shotgun',4],['AR',3],['LMG',2],['Sniper',1]];
+  ini.forEach(([n,v],i)=>{const yy=iy+16+i*32;s+=T(ix,yy+10,n,{fs:9.5,fw:600});
+    s+=R(ix,yy+15,v*30,11,{rx:2,f:C.c2});s+=T(ix+v*30-4,yy+24,v,{fs:8.5,fw:750,a:'end',c:'#fff'});
+    if(n==='Sniper'){s+=R(ix,yy+15,150,11,{rx:2,s:C.c2,dash:'3 2'});s+=T(ix+146,yy+24,'5',{fs:8.5,fw:750,a:'end',c:C.c2});s+=T(ix,yy+40,'Sniper is 5 at Long',{fs:8.5,c:C.c2,fw:600});}});
+  put('ftMain',S(W,H,s));
+  // minis
+  let m='';const mw=200, gap=26;
+  const rounds=[
+    {t:'Round 1 · 0–0',toks:toks.map(o=>Object.assign({},o)),flags:[null,null,null]},
+    {t:'Round 2 · 0–1',toks:[{l:0,b:3,t:'r',lab:'LMG'},{l:1,b:4,t:'r',lab:'AR',you:1},{l:1,b:3,t:'r',lab:'SMG'},{l:0,b:2,t:'b',lab:'SG'},{l:1,b:2,t:'b',lab:'SR'},{l:2,b:2,t:'b',lab:'AR'}],flags:[null,null,'b']},
+    {t:'Round 3 · 0–2',toks:[{l:0,b:3,t:'r',lab:'LMG'},{l:1,b:3,t:'r',lab:'AR',you:1,n:2,slot:0},{l:1,b:3,t:'r',lab:'SMG',n:2,slot:1},{l:0,b:2,t:'b',lab:'SG',down:1},{l:1,b:2,t:'b',lab:'SR',down:1},{l:2,b:2,t:'b',lab:'AR'}],flags:[null,null,'b']}];
+  const notes=[['Long everywhere. Sniper (5) hits','You 4→1; Anchor hits SG 4→3.'],['You fall back. Scout flanks to Mid.','Rifle captures Right.'],['Scout + You down the sniper first;','Anchor finishes the shotgunner.']];
+  rounds.forEach((r,i)=>{const ox=i*(mw+gap);m+=T(ox,12,r.t,{fs:11,fw:750,c:C.c2});
+    m+=ftBoard({x:ox,y:34,cw:mw/3,bh:29,tokens:r.toks,flags:r.flags,r:11,tfs:7.5,fs:9});
+    });
+  put('ftMinis',S(3*mw+2*gap,184,m));
+})();
+
+/* ---------- Behind the Line run map ---------- */
+(function(){
+  const W=680,H=190;let s='';
+  const types={M:['Mission',C.c3,'#fff'],A:['Armory',C.c4,'#fff'],I:['Intel',C.c2,'#fff'],S:['Safehouse',C.blue,'#fff'],E:['Elite',C.red,'#fff'],B:['Boss',C.ink,'#fff']};
+  const grid=[['M','M','M'],['I','M','A'],['M','S','M'],['E','M','I'],['M','A','M'],['S','M','E'],['M','I','M'],['A','S','M']];
+  const x0=40,dx=70,ys=[36,82,128];
+  const links=[];
+  for(let st=0;st<grid.length-1;st++)for(let p=0;p<3;p++){links.push([st,p,st+1,p]);if(p<2&&(st+p)%2===0)links.push([st,p,st+1,p+1]);if(p>0&&(st+p)%3===1)links.push([st,p,st+1,p-1]);}
+  links.forEach(([a,p,b,q])=>s+=Ln(x0+a*dx,ys[p],x0+b*dx,ys[q],{s:'#b9bfc6',sw:1.4}));
+  const bx=x0+8*dx+30,by=ys[1];
+  [0,1,2].forEach(p=>s+=Ln(x0+7*dx,ys[p],bx,by,{s:'#b9bfc6',sw:1.4}));
+  grid.forEach((col,st)=>col.forEach((t,p)=>{const [n,c]=types[t];s+=Ci(x0+st*dx,ys[p],13,{f:'#fff',s:c,sw:2});s+=T(x0+st*dx,ys[p]+4,t,{fs:10.5,fw:800,a:'middle',c:c});}));
+  s+=Ci(bx,by,19,{f:C.ink});s+=T(bx,by+4,'BOSS',{fs:8.5,fw:800,a:'middle',c:'#fff'});
+  for(let st=0;st<9;st++)s+=T(st<8?x0+st*dx:bx,160,'step '+(st+1),{fs:8.5,a:'middle',c:C.faint});
+  // legend
+  let lx=40;Object.entries(types).forEach(([k,[n,c]])=>{s+=Ci(lx+7,182,7,{f:'#fff',s:c,sw:1.6});s+=T(lx+7,185,k,{fs:7.5,fw:800,a:'middle',c:c});
+    const extra={A:' (shop, REQ)',I:' (events)',S:' (rest)',E:' (HVT)',M:'',B:''}[k];s+=T(lx+19,186,n+extra,{fs:9,c:C.muted});lx+=({M:70,A:110,I:90,S:100,E:90,B:60})[k];});
+  put('btlRun',S(W,H+6,s));
+})();
+
+/* ---------- Behind the Line encounter ---------- */
+(function(){
+  const W=680,H=314;let s='';
+  const en=[{n:'Rifleman',hp:3,rg:'Mid',cv:0,i:['Intent: Fire 2']},
+            {n:'Gunner',hp:4,rg:'Long',cv:1,i:['Intent: Suppress','−1 T to you next turn']},
+            {n:'Rusher',hp:2,rg:'Mid',cv:0,i:['Intent: advance to Close,','then 3 damage']}];
+  const cw=180,ch=118,gap=(W-3*cw)/2;
+  s+=T(0,12,'ENEMY LINE · acts left to right, as telegraphed',{fs:8.5,fw:750,c:C.muted,ls:.8});
+  en.forEach((e,k)=>{const x=k*(cw+gap),y=22,yo=e.rg==='Long'?0:14;
+    s+=R(x,y+yo,cw,ch-14,{rx:8,f:'#fff',s:C.c3,sw:1.4});
+    s+=`<path d="M${x},${y+yo+22} v-14 a8,8 0 0 1 8,-8 h${cw-16} a8,8 0 0 1 8,8 v14 z" fill="${C.c3}"/>`;
+    s+=T(x+10,y+yo+15,e.n,{fs:11,fw:750,c:'#fff'});
+    s+=T(x+cw-10,y+yo+15,e.rg,{fs:9.5,fw:700,a:'end',c:'#fff'});
+    for(let h=0;h<e.hp;h++)s+=R(x+10+h*14,y+yo+30,11,11,{rx:2,f:C.c3});
+    s+=T(x+10+e.hp*14+4,y+yo+40,'HP '+e.hp,{fs:9,c:C.muted});
+    if(e.cv)s+=R(x+cw-58,y+yo+28,48,15,{rx:3,f:C.t3,s:C.c3})+T(x+cw-34,y+yo+39,'Cover 1',{fs:8.5,fw:700,a:'middle',c:C.c3});
+    s+=R(x+8,y+yo+52,cw-16,40,{rx:5,f:'#fdf6e6',s:'#d8b75a'});
+    s+=ML(x+16,y+yo+68,e.i,{fs:9.5,lh:13,firstBold:1,c:'#5c4a17'});
+  });
+  // positions
+  const py=200;s+=T(0,py-12,'YOUR THREE POSITIONS · Step: 1 T to move one position',{fs:8.5,fw:750,c:C.muted,ls:.8});
+  const pos=[['Left cover','blocks enemies on the right flank'],['Centre','your start in the example'],['Right flank','example: ignores the Gunner’s cover']];
+  pos.forEach(([n,d],k)=>{const x=k*(cw+gap);s+=R(x,py,cw,62,{rx:8,f:k===1?C.t3:'#fff',s:C.ink,sw:1.3,dash:k===1?'':'4 3'});
+    s+=T(x+12,py+22,n,{fs:11,fw:750});s+=T(x+12,py+38,d,{fs:9,c:C.muted});
+});
+  s+=tok(cw+gap+cw-30,py+31,'r','You',16,{fs:9});
+  s+=P(`M${cw+gap+20},${py+56} C ${cw+gap-20},${py+80} ${cw-10},${py+80} ${cw-40},${py+64}`,{s:C.c3,sw:1.6,dash:'4 3',m:'arK'});
+  s+=T(cw-22,py+92,'T1: Step',{fs:9,fw:650,c:C.c3,a:'middle'});
+  s+=P(`M${cw+gap+cw-20},${py+64} C ${cw+gap+cw+10},${py+86} ${2*(cw+gap)},${py+86} ${2*(cw+gap)+30},${py+64}`,{s:C.c3,sw:1.6,dash:'4 3',m:'arK'});
+  s+=T(2*(cw+gap)+44,py+92,'T2: Step',{fs:9,fw:650,c:C.c3,a:'middle'});
+  s+=T(W/2,py+110,'Left cover blocks enemies on the right flank, and so on. Damage hits Plates first, then HP.',{fs:9,a:'middle',c:C.muted});
+  put('btlEnc',S(W,H,s));
+})();
+
+/* ---------- Behind the Line level-up ---------- */
+(function(){
+  const W=680,H=120;let s='';
+  s+=R(0,20,150,80,{rx:8,f:C.t3,s:C.c3,sw:1.4});s+=T(14,44,'Kestrel AR-7',{fs:11.5,fw:750});s+=T(14,62,'Weapon XP +3',{fs:9.5,c:C.muted});s+=T(14,84,'→ level 2',{fs:12,fw:800,c:C.c3});
+  s+=P('M160,60 L205,60',{s:C.c3,sw:1.8,m:'arK'});s+=T(182,50,'offer 3',{fs:9,a:'middle',c:C.muted});
+  const of=[['Foregrip','+1 Mid; −1 Close'],['Holo Sight','+1 Mid'],['Extended Mag','+2 Fire cards; Handling +1 on first Fire']];
+  of.forEach(([n,d],i)=>{const x=215+i*124;s+=R(x,14,114,92,{rx:7,f:'#fff',s:C.c3,sw:1.2,dash:'4 3'});s+=T(x+10,34,'ATTACHMENT',{fs:7.5,fw:750,c:C.c3,ls:.8});s+=T(x+10,52,n,{fs:11,fw:750});});
+  s+=T(215,122,'Pick 1 · maximum 5 attachments',{fs:9,c:C.muted});
+  s+=R(600,30,76,64,{rx:6,f:C.soft,s:C.rule});s+=T(638,54,'Slots',{fs:9,a:'middle',c:C.muted});for(let i=0;i<5;i++)s+=R(606+i*14,64,11,14,{rx:2,f:i<1?C.c3:'#fff',s:C.c3});
+  put('btlLvl',S(W,H+8,s,'74%'));
+})();
+
+/* ---------- Tick Rate draft ---------- */
+(function(){
+  const W=680,H=110;let s='';const types=['Weapon','Attachment','Perk','Equipment','Streak'];
+  [0,1,2].forEach(p=>{const x=p*190;s+=R(x,14,176,84,{rx:8,f:C.t4,s:C.c4,sw:1.2});s+=T(x+10,30,'Open pack '+(p+1),{fs:9.5,fw:750,c:C.c4});
+    for(let i=0;i<4;i++){const cx=x+10+i*41;s+=R(cx,38,36,50,{rx:4,f:'#fff',s:C.c4});s+=T(cx+18,67,['Weapon','Attach.','Perk','Equip.','Streak'][(p*4+i)%5],{fs:7.6,a:'middle',fw:600});}});
+  s+=T(578,40,'Snake draft',{fs:11,fw:750});
+  s+=T(578,56,'both players pick in',{fs:9,c:C.muted});s+=T(578,68,'alternating, reversing',{fs:9,c:C.muted});s+=T(578,80,'order · 3 minutes',{fs:9,c:C.muted});
+  put('trDraft',S(W,H,s));
+})();
+
+/* ---------- Tick Rate map ---------- */
+(function(){
+  const W=680,H=230;let s='';
+  const N={rs:[58,186,'Red Spawn'],al:[172,186,'Alley'],mk:[286,186,'Market'],up:[400,186,'Underpass'],cy:[514,186,'Courtyard'],tw:[514,62,'Tower'],bs:[626,62,'Blue Spawn']};
+  const E=[['rs','al'],['al','mk'],['mk','up'],['up','cy'],['bs','tw']];
+  E.forEach(([a,b])=>s+=Ln(N[a][0],N[a][1],N[b][0],N[b][1],{s:C.ink,sw:2.2}));
+  s+=Ln(N.cy[0]-14,N.cy[1]-20,N.tw[0]-14,N.tw[1]+20,{s:C.ink,sw:2.2});
+  s+=T(N.cy[0]-22,124,'stair',{fs:9,c:C.muted,a:'end'});
+  s+=P(`M${N.tw[0]+22},${N.tw[1]+20} C ${N.tw[0]+70},${N.tw[1]+60} ${N.cy[0]+70},${N.cy[1]-60} ${N.cy[0]+22},${N.cy[1]-20}`,{s:C.c4,sw:2,dash:'6 4'});
+  s+=Ci(N.tw[0]+66,124,11,{f:C.c4});s+=T(N.tw[0]+66,128,'L',{fs:10,fw:800,a:'middle',c:'#fff'});
+  s+=T(N.tw[0]+82,128,'sightline',{fs:9,c:C.c4});
+  Object.entries(N).forEach(([k,[x,y,n]])=>{const sp=k==='rs'||k==='bs';const col=k==='rs'?C.red:k==='bs'?C.blue:C.ink;
+    s+=R(x-46,y-18,92,36,{rx:18,f:k==='cy'?C.t4:'#fff',s:col,sw:1.8});s+=T(x,y+4,n,{fs:10.5,fw:700,a:'middle',c:col});});
+  s+=T(N.cy[0],N.cy[1]+32,'Cover 1',{fs:9,a:'middle',c:C.c4,fw:650});
+  s+=T(N.tw[0],N.tw[1]-26,'high ground',{fs:9,a:'middle',c:C.c4,fw:650});
+  // Red path labels
+  s+=T(115,214,'Red Step 1',{fs:8.5,a:'middle',c:C.red});s+=T(229,214,'Step 1',{fs:8.5,a:'middle',c:C.red});s+=T(343,214,'Step 1',{fs:8.5,a:'middle',c:C.red});s+=T(457,214,'Step 1 → reaction',{fs:8.5,a:'middle',c:C.red,fw:700});
+  s+=T(570,40,'Blue Step 3',{fs:8.5,a:'middle',c:C.blue});
+  s+=ML(20,40,['Move edges: solid','Sightline edges: dashed, tagged C, M or L','Positions are public'],{fs:9.5,c:C.muted,lh:14});
+  put('trMap',S(W,H,s));
+})();
+
+/* ---------- Tick Rate cost table ---------- */
+(function(){
+  const rows=[['<b>Step</b> (1 node)',[1,2,1,3,3]],['<b>Aim</b> (pick one sightline; you are now “aimed”)',[1,1,1,2,3]],['<b>Fire</b> (requires Aimed; damage from §2)',[1,2,2,1,3]]];
+  const pip=v=>`<span style="display:inline-flex;gap:.6mm;vertical-align:middle;margin-left:1.4mm">${Array.from({length:v},()=>'<i style="display:block;width:2.2mm;height:3.2mm;border-radius:.4mm;background:#a8650f"></i>').join('')}</span>`;
+  document.querySelector('#trCost tbody').innerHTML=rows.map(([a,v])=>`<tr><td>${a}</td>${v.map(n=>`<td class="num" style="white-space:nowrap"><b>${n}</b>${pip(n)}</td>`).join('')}</tr>`).join('');
+})();
+
+/* ---------- Tick Rate time track ---------- */
+(function(){
+  const W=680,H=250;let s='';const x0=80,u=36,ry=78,by=150,bh=30;
+  const X=t=>x0+t*u;
+  for(let t=0;t<=16;t++){s+=Ln(X(t),40,X(t),by+bh+8,{s:t%5?'#eceef1':'#dde1e6',sw:1});s+=T(X(t),210,'t'+t,{fs:8.5,a:'middle',c:C.muted});}
+  s+=Ln(X(0),200,X(16),200,{s:C.ink,sw:1.2});
+  s+=T(x0-10,ry+19,'Red',{fs:11,fw:750,a:'end',c:C.red});s+=T(x0-10,ry+32,'Wasp-9',{fs:8.5,a:'end',c:C.muted});
+  s+=T(x0-10,by+19,'Blue',{fs:11,fw:750,a:'end',c:C.blue});s+=T(x0-10,by+32,'Longreach',{fs:8.5,a:'end',c:C.muted});
+  const seg=(t0,t1,y,col,lab,ord,o={})=>{s+=R(X(t0)+1.5,y,(t1-t0)*u-3,bh,{rx:4,f:o.f||col,s:o.s||'none',sw:1.4,dash:o.dash||''});
+    s+=T((X(t0)+X(t1))/2,y+bh/2+4,lab,{fs:o.fs||9,fw:700,a:'middle',c:o.tc||'#fff'});
+    if(ord){s+=Ci(X(t0)+9,y-9,8,{f:'#fff',s:col,sw:1.4});s+=T(X(t0)+9,y-5.5,ord,{fs:8.5,fw:800,a:'middle',c:col});}};
+  seg(0,1,ry,C.red,'Step','1');seg(1,2,ry,C.red,'Step','3');seg(2,3,ry,C.red,'Step','4');seg(3,4,ry,C.red,'Step','6',{f:'#e07a72'});
+  seg(4,5,ry,C.red,'Step','7');seg(5,6,ry,C.red,'Aim','8');seg(6,7,ry,C.red,'Fire','9');seg(7,8,ry,C.red,'Fire','10');
+  seg(0,3,by,C.blue,'Step → Tower','2');seg(3,6,by,C.blue,'Aim (aimed)','5');seg(6,9,by,C.blue,'Fire: reaction','6b',{fs:8.5});
+  seg(9,15,by,C.blue,'respawn timer +6',null,{f:'url(#hatchB)',s:C.blue,tc:C.blue,dash:'4 3'});
+  s+=P(`M${X(3.5)},${ry+bh+2} L${X(6.3)},${by-2}`,{s:C.ink,sw:1.2,dash:'3 2',m:'arK'});
+  s+=T(X(3.4),ry+bh+18,'walks into the aimed line',{fs:8.5,c:C.ink,a:'end'});
+  s+=T(X(4),ry-22,'Red HP 4→1',{fs:9,fw:750,c:C.red,a:'middle'});
+  s+=T(X(7),ry-22,'Blue 4→2',{fs:9,fw:750,c:C.blue,a:'middle'});s+=T(X(8)+4,ry+bh/2+4,'Blue downed',{fs:9,fw:750,c:C.blue});
+  s+=T(X(15)+4,by+bh/2+4,'t15',{fs:10,fw:800,c:C.blue});
+  s+=T(X(0),20,'Tick',{fs:9,c:C.muted});s+=T(X(16),20,'Red has 7 free ticks (t8 → t15)',{fs:9,a:'end',c:C.muted});
+  s+=R(X(8),56,7*u,6,{rx:3,f:C.redT});
+  put('trTrack',S(W,H-28,s));
+})();
+
+/* ---------- Sightline map ---------- */
+(function(){
+  const W=680,H=350;let s='';const gx=36,gy=16,c=32;
+  const cx=col=>gx+col*c+c/2, cy=row=>gy+(9-row)*c+c/2;
+  const ci=l=>'abcdefghi'.indexOf(l);
+  for(let tr=0;tr<3;tr++)for(let tc=0;tc<3;tc++)s+=R(gx+tc*3*c,gy+tr*3*c,3*c,3*c,{f:(tr*3+tc)%2?'#faf6fb':'#ffffff'});
+  for(let i=0;i<=9;i++){s+=Ln(gx,gy+i*c,gx+9*c,gy+i*c,{s:i%3?C.rule:C.ink,sw:i%3?.7:1.8});s+=Ln(gx+i*c,gy,gx+i*c,gy+9*c,{s:i%3?C.rule:C.ink,sw:i%3?.7:1.8});}
+  'abcdefghi'.split('').forEach((l,i)=>s+=T(gx+i*c+c/2,gy+9*c+15,l,{fs:10,fw:650,a:'middle',c:C.muted}));
+  for(let r=1;r<=9;r++)s+=T(gx-8,cy(r)+4,r,{fs:10,fw:650,a:'end',c:C.muted});
+  // centre tile row note
+  // flag A + crate
+  s+=R(gx+2*c+2,gy+4*c+2,c-4,c-4,{rx:3,f:C.t5,s:C.c5,sw:1.4});
+  s+=R(gx+2*c+3,gy+4*c+c-11,8,8,{f:'#b98a52',s:'#7a5a33'});
+  s+=Ln(cx(2)+8,cy(5)-12,cx(2)+8,cy(5)+2,{s:C.ink,sw:1.3});s+=P(`M${cx(2)+8},${cy(5)-12} l9,4 l-9,4 z`,{f:C.red,s:C.red});
+  s+=T(gx+4,cy(5)-20,'Flag A + crate',{fs:9,fw:700,c:C.c5});
+  // Blue overwatch on h-file
+  s+=R(gx+7*c+9,gy+2*c,c-18,7*c-4,{rx:6,f:'rgba(44,109,181,.10)',s:C.blue,sw:1,dash:'4 3'});
+  s+=T(cx(7),gy+9*c-8,'',{});
+  // LOS row 5 e5->c5
+  s+=Ln(cx(4)-14,cy(5),cx(2)+14,cy(5),{s:C.c5,sw:2,dash:'5 3'});
+  s+=T(cx(3)-6,cy(5)+28,'2 cells: Close',{fs:8.5,fw:700,c:C.c5});
+  // red sprint b2->c5
+  s+=P(`M${cx(1)},${cy(2)-12} L${cx(1)},${cy(4)} L${cx(2)-6},${cy(5)+8}`,{s:C.red,sw:1.8,dash:'5 4',m:'arR'});
+  s+=T(cx(1)+8,cy(3)+4,'T1 Sprint',{fs:8.5,fw:700,c:C.red});
+  s+=Ci(cx(1),cy(2),9,{f:'#fff',s:C.red,sw:1.5,dash:'2 2'});s+=T(cx(1),cy(2)+3.5,'b2',{fs:8,a:'middle',c:C.red});
+  // red move c5->c7
+  s+=P(`M${cx(2)},${cy(5)-14} L${cx(2)},${cy(7)+8}`,{s:C.red,sw:1.8,dash:'2 3',m:'arR'});
+  s+=tok(cx(2),cy(7),'r','R',10,{fs:9});
+  s+=T(cx(2)+14,cy(7)-10,'T3',{fs:8.5,fw:700,c:C.red});
+  s+=tok(cx(2),cy(5),'r','R',10,{fs:9});
+  // blue path h8->g6->e5
+  s+=P(`M${cx(7)-6},${cy(8)+8} L${cx(6)},${cy(6)-10}`,{s:C.blue,sw:1.8,dash:'5 4',m:'arB'});
+  s+=P(`M${cx(6)-8},${cy(6)+6} L${cx(4)+12},${cy(5)-6}`,{s:C.blue,sw:1.8,dash:'5 4',m:'arB'});
+  s+=T(cx(6)+14,cy(6)+4,'g6',{fs:8.5,c:C.blue});
+  s+=T(cx(6)-14,cy(7)+2,'T1 Move, Move',{fs:8.5,fw:700,c:C.blue,a:'end'});
+  s+=tok(cx(4),cy(5),'b','B',10,{fs:9,down:1});
+  s+=T(cx(4)+14,cy(5)+12,'T2 downed',{fs:8.5,fw:700,c:C.blue});
+  s+=tok(cx(7),cy(8),'b','B',10,{fs:9});
+  s+=T(cx(7)+14,cy(9)+4,'h8 spawn',{fs:8.5,c:C.blue});
+  s+=T(cx(7)+18,cy(3),'',{});
+  // right panel
+  const px=360;
+  s+=T(px,30,'Range, in cells along a line of sight',{fs:11,fw:750});
+  for(let i=0;i<8;i++){const col=i<2?C.c5:i<5?'#a77aae':'#d9c3dc';s+=R(px+i*36,42,32,22,{rx:3,f:col});s+=T(px+i*36+16,57,i+1+(i===7?'+':''),{fs:9.5,fw:700,a:'middle',c:i<5?'#fff':C.c5});}
+  s+=T(px+34,80,'Close 1–2',{fs:9.5,fw:700,a:'middle',c:C.c5});s+=T(px+144,80,'Mid 3–5',{fs:9.5,fw:700,a:'middle',c:C.c5});s+=T(px+234,80,'Long 6+',{fs:9.5,fw:700,a:'middle',c:C.c5});
+  s+=ML(px,108,['LOS runs only along printed rows, columns and','diagonals and is blocked by walls. Crates give','Cover 1. Three flags (A, B, C) on the centre tiles.'],{fs:9.5,c:C.ink,lh:13.5});
+  s+=ML(px,166,['Blue Overwatch (turn 2): a reaction shot','along the h-file toward flag C (blue band).'],{fs:9.5,c:C.blue,lh:13.5});
+  // tile anatomy
+  const tx=px,ty=208,tc=30;
+  s+=T(tx,ty-6,'One tile = 3×3 cells (illustrative)',{fs:10,fw:750});
+  for(let r=0;r<3;r++)for(let k=0;k<3;k++)s+=R(tx+k*tc,ty+4+r*tc,tc,tc,{f:'#fff',s:C.rule});
+  s+=R(tx,ty+4,3*tc,3*tc,{s:C.ink,sw:1.8});
+  s+=Ln(tx+tc,ty+4+tc,tx+2*tc+12,ty+4+tc,{s:C.ink,sw:4,lc:'round'});
+  s+=R(tx+2*tc+8,ty+4+8,14,14,{f:'#b98a52',s:'#7a5a33'});
+  s+=Ln(tx+4,ty+4+2.5*tc,tx+3*tc-4,ty+4+2.5*tc,{s:C.c5,sw:1.6,dash:'4 3'});
+  s+=ML(tx+3*tc+14,ty+22,['thick line: printed wall','brown square: cover crate','dashed: sightline lane'],{fs:9.5,c:C.muted,lh:16});
+  s+=ML(tx+3*tc+14,ty+82,['Players draft 9 tiles and place','them before the match.'],{fs:9.5,c:C.ink,lh:13.5});
+  put('slMap',S(W,H,s));
+})();
+
+/* ---------- Sightline XP ---------- */
+(function(){
+  const W=680,H=80;let s='';const x0=70,u=60;
+  s+=T(0,36,'Red XP',{fs:10.5,fw:750,c:C.red});
+  const seg=(a,b,lab,f,tc)=>{s+=R(x0+a*u,20,(b-a)*u-3,26,{rx:4,f:f});s+=T(x0+(a+b)/2*u-1.5,37,lab,{fs:9,fw:700,a:'middle',c:tc||'#fff'});};
+  seg(0,1,'+1 T1',C.c5);seg(1,2,'+1 T2','#9a5ca3');seg(2,5,'+3 kill (Blue downed)',C.c5);
+  s+=T(x0+5*u+8,37,'= 5 XP',{fs:9.5,fw:700,c:C.c5});
+  s+=R(x0+2*u,52,3*u-3,16,{rx:3,f:C.t5,s:C.c5,dash:'3 2'});s+=T(x0+3.5*u,64,'spend 3: Foregrip',{fs:8.5,fw:700,a:'middle',c:C.c5});
+  for(let i=0;i<=5;i++)s+=T(x0+i*u,14,i,{fs:8.5,a:'middle',c:C.muted});
+  s+=T(x0+5*u+8,64,'+1 Mid, −1 Close',{fs:9,c:C.muted});
+  put('slXp',S(W,H,s));
+})();
+
+/* ---------- Snapshot triangle ---------- */
+(function(){
+  const W=330,H=270;let s='';
+  const H0=[165,40],Ru=[285,220],Pe=[45,220];
+  const node=(p,l,sub)=>{s+=Ci(p[0],p[1],30,{f:C.t6,s:C.c6,sw:2});s+=T(p[0],p[1]+5,l,{fs:13,fw:800,a:'middle',c:C.c6});};
+  const arc=(a,b,lab,lx,ly,anchor)=>{const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L;
+    s+=Ln(a[0]+ux*36,a[1]+uy*36,b[0]-ux*40,b[1]-uy*40,{s:C.c6,sw:2.4,m:'arK'});
+    s+=ML(lx,ly,lab,{fs:9,a:anchor,lh:12,c:C.ink,firstBold:1});};
+  node(H0,'Hold');node(Ru,'Rush');node(Pe,'Peek');
+  arc(H0,Ru,['Hold beats Rush','they ran into','your crosshair'],252,110,'start');
+  arc(Ru,Pe,['Rush beats Peek','you closed before they settled'],165,248,'middle');
+  arc(Pe,H0,['Peek beats Hold','the shoulder-peek','baited the held angle'],80,110,'end');
+  put('snTri',S(W,H,s.replace(/x="252"/g,'x="236"').replace(/x="80"/g,'x="96"')));
+})();
+
+/* ---------- Snapshot map ---------- */
+function snMap(markers,opt={}){
+  const W=340,H=290;let s='';
+  const N={as:[62,46,'A Site'],ar:[62,156,'A Ramp'],mid:[170,156,'Mid'],con:[214,104,'Connector'],bs:[288,46,'B Site'],bsh:[288,186,'B Short'],sp:[170,260,'Atk spawn']};
+  const sl=[['ar','as','M'],['mid','as','L'],['mid','con','C'],['con','bs','M'],['bsh','bs','C'],['mid','bsh','L']];
+  [['sp','ar'],['sp','mid'],['sp','bsh']].forEach(([a,b])=>s+=Ln(N[a][0],N[a][1],N[b][0],N[b][1],{s:C.faint,sw:1.4,dash:'4 3'}));
+  sl.forEach(([a,b,r])=>{s+=Ln(N[a][0],N[a][1],N[b][0],N[b][1],{s:C.ink,sw:2});});
+  sl.forEach(([a,b,r])=>{const mx=(N[a][0]+N[b][0])/2,my=(N[a][1]+N[b][1])/2;const k=[0,0];s+=Ci(mx+k[0],my+k[1],9,{f:'#fff',s:C.c6,sw:1.6});s+=T(mx+k[0],my+k[1]+3.5,r,{fs:9.5,fw:800,a:'middle',c:C.c6});});
+  Object.entries(N).forEach(([k,[x,y,n]])=>{const site=k==='as'||k==='bs';const sp=k==='sp';
+    s+=R(x-40,y-14,80,28,{rx:sp?14:5,f:site?C.t6:sp?C.redT:'#fff',s:site?C.c6:sp?C.red:C.ink,sw:site?2:1.4});
+    s+=T(x,y+4,n,{fs:10,fw:700,a:'middle',c:site?C.c6:sp?C.red:C.ink});});
+  if(opt.cover){s+=T(62,24,'Cover 1 for defender',{fs:8.5,a:'middle',c:C.c6});s+=T(288,24,'Cover 1 for defender',{fs:8.5,a:'middle',c:C.c6});}
+  (markers||[]).forEach(m=>{const [x,y]=N[m.at];s+=tok(x+m.dx,y+m.dy,m.t,m.lab,9,{fs:9});});
+  return S(W,H,s);
+}
+put('snMap',snMap([],{cover:1}));
+put('snTrail',snMap([
+  {at:'mid',t:'r',lab:'1',dx:-50,dy:-14},{at:'con',t:'r',lab:'2',dx:-50,dy:-14},{at:'bs',t:'r',lab:'3',dx:-56,dy:0},
+  {at:'con',t:'b',lab:'1',dx:50,dy:-14},{at:'bs',t:'b',lab:'2',dx:8,dy:24},{at:'bs',t:'b',lab:'3',dx:30,dy:24}]));
+
+/* ---------- Snapshot beat ---------- */
+(function(){
+  const W=680,H=120;let s='';
+  const box=(x,w,t,sub,col)=>{s+=R(x,24,w,64,{rx:8,f:'#fff',s:col||C.c6,sw:1.4});s+=T(x+10,46,t,{fs:10.5,fw:750,c:col||C.ink});s+=ML(x+10,62,sub,{fs:9,c:C.muted,lh:12});};
+  box(0,150,'1 · Choose',['Position + Stance,'],C.c6);s+=ML(10,74,['face-down (2 taps)'],{fs:9,c:C.muted});
+  box(172,120,'2 · Reveal',['both at once']);
+  box(314,150,'3 · Contact?',['shared sightline or','same position']);
+  box(486,194,'4 · Resolve',['triangle winner deals weapon','damage at range − cover']);
+  [150,292,464].forEach(x=>s+=P(`M${x+4},56 L${x+18},56`,{s:C.c6,sw:1.8,m:'arK'}));
+  s+=P('M389,90 L389,108',{s:C.faint,sw:1.2,m:'arK'});s+=T(399,112,'no contact: nothing revealed (a Rush makes Noise)',{fs:8.5,c:C.muted});
+  s+=T(486,16,'equal stances: both deal damage',{fs:8.5,c:C.muted});
+  put('snBeat',S(W,H+6,s));
+})();
+
+/* ---------- comparison ---------- */
+const CMP=[
+ ['1. Point Man',C.c1,'1v1, deck = loadout, 3×3 rooms, Hardpoint',4,3,5,4,4,'Med','balancing generated decks','10–12 min'],
+ ['2. Fireteam',C.c2,'3v3, simultaneous plans, lanes, Domination',4,3,4,'3 (landscape)',3,'Med','6-body readability, ally-bot quality','8–10 min'],
+ ['3. Behind the Line',C.c3,'Solo roguelite, deckbuilder, telegraphed enemies',4,4,3,5,2,'Low','proven genre','25–35 min run'],
+ ['4. Tick Rate',C.c4,'Draft, then a time track, TDM',5,2,4,3,5,'High','the time track is hard to read','about 10 min'],
+ ['5. Sightline',C.c5,'Board game, tile-built map, in-match market',5,1,4,1,3,'High','LOS AI, length','20–40 min'],
+ ['6. Snapshot',C.c6,'Simultaneous-reveal S&amp;D duel',2,5,4,5,4,'Med','can feel like coin-flips','4–6 min']];
+(function(){
+  const dots=(v,col)=>{const n=parseInt(v);const extra=String(v).includes('(')?` <span class="note">${String(v).replace(/^\d\s*/,'')}</span>`:'';return `<span style="white-space:nowrap"><b style="display:inline-block;width:2.4mm">${n}</b> <span class="dots" style="--cc:${col}">${[1,2,3,4,5].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</span></span>${extra}`;};
+  const rc={Low:'#4f8a5b',Med:'#c99a2e',High:'#c8423a'};
+  document.getElementById('cmpBody').innerHTML=CMP.map(r=>`<tr><td class="cn"><i style="background:${r[1]}"></i>${r[0]}</td><td style="font-size:8pt">${r[2]}</td>${[3,4,5,6,7].map(i=>`<td>${dots(r[i],r[1])}</td>`).join('')}<td><span class="risk"><i style="background:${rc[r[8]]}"></i>${r[8]}</span><br><span class="note">${r[9]}</span></td><td>${r[10]}</td></tr>`).join('');
+  // scatter
+  const W=680,H=300;let s='';const x0=70,x1=640,y0=20,y1=250;
+  const X=v=>x0+(v-0.5)/5*(x1-x0), Y=v=>y1-(v-0.5)/5*(y1-y0);
+  for(let v=1;v<=5;v++){s+=Ln(X(v),y0,X(v),y1,{s:'#eceef1'});s+=Ln(x0,Y(v),x1,Y(v),{s:'#eceef1'});s+=T(X(v),y1+16,v,{fs:9.5,a:'middle',c:C.muted});s+=T(x0-10,Y(v)+4,v,{fs:9.5,a:'end',c:C.muted});}
+  s+=T((x0+x1)/2,y1+34,'Simplicity →',{fs:10,fw:700,a:'middle'});
+  s+=`<text transform="translate(22,${(y0+y1)/2}) rotate(-90)" font-size="10" font-weight="700" text-anchor="middle" fill="${C.ink}">Depth →</text>`;
+  const pos={0:[-1,0],1:[1,0]};
+  const pts=CMP.map(r=>({n:r[0].replace(/^\d\.\s/,''),c:r[1],d:r[3],si:r[4],m:parseInt(r[6])}));
+  // jitter identical coords: Point Man & Fireteam both (3,4)
+  pts.forEach((p,i)=>{let x=X(p.si),y=Y(p.d);if(i===0)x-=26;if(i===1)x+=26;const rr=6+p.m*3.2;
+    s+=Ci(x,y,rr,{f:p.c,s:'#fff',sw:2});
+    const lx=(i===1)?x+rr+6:(i===0?x-rr-6:x+rr+6);const an=(i===0)?'end':'start';
+    if(i===1)s+=T(x,y+rr+14,p.n,{fs:10.5,fw:750,a:'middle',c:p.c});else s+=T(lx,y+4,p.n,{fs:10.5,fw:750,a:an,c:p.c});});
+  s+=T(x1,y0+4,'dot size = mobile fit (1–5)',{fs:9,a:'end',c:C.muted});
+  put('cmpFig',S(W,H,s));
+})();
+</script>
+</body>
+</html>
