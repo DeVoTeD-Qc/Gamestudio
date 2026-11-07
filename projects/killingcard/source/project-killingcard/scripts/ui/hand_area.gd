@@ -40,6 +40,7 @@ signal operator_drag_ended(pos: Vector2)
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
 const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
+const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const BRASS: Color = Color("#C9A227")
 const BRASS_DARK: Color = Color("#3A2D0B")
@@ -97,6 +98,13 @@ const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 ## Uid meta of the Operator chip (never a rules card uid).
 const OPERATOR_UID: int = -2
 const AMBER: Color = Color(0.961, 0.722, 0.239)
+## kc-ipad-cards: the grid re-fits the X1 cards to the hand's count (BoardMetrics.hand_fit): the
+## size, columns, and on small 16:9 phones a scrolling single column (hand_scroll = the first row
+## shown; a vertical swipe or the mouse wheel scrolls, a sideways drag still places the card).
+var hand_fit: Dictionary = {}
+var hand_scroll: int = 0
+var _more_up: Label = null
+var _more_down: Label = null
 
 @onready var _caption: Label = %CaptionLabel
 @onready var _row: Control = %CardRow
@@ -107,6 +115,31 @@ func _ready() -> void:
 	add_theme_stylebox_override(&"panel", StyleBoxEmpty.new())
 	_caption.visible = false
 	_row.resized.connect(_fit_cards)
+	# kc-ipad-cards: "n MORE" hints of a scrolling hand (small phones).
+	for up: bool in [true, false]:
+		var l := Label.new()
+		l.name = "MoreUp" if up else "MoreDown"
+		l.theme_type_variation = &"HudTag"
+		l.add_theme_font_size_override(&"font_size", 16)
+		l.add_theme_color_override(&"font_color", AMBER)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.04, 0.05, 0.055, 0.88)
+		sb.set_corner_radius_all(4)
+		sb.content_margin_left = 6
+		sb.content_margin_right = 6
+		l.add_theme_stylebox_override(&"normal", sb)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.z_index = 5
+		# Out of the PanelContainer's layout (it would stretch the hint over the whole hand).
+		l.top_level = true
+		l.visible = false
+		l.tooltip_text = "More hand cards: swipe the hand up or down (or use the mouse wheel)"
+		add_child(l)
+		if up:
+			_more_up = l
+		else:
+			_more_down = l
 
 
 func set_compact(value: bool) -> void:
@@ -264,6 +297,24 @@ func set_selected(uid: int) -> void:
 		_fit_cards()
 		if fan and uid >= 0:
 			reveal_card(uid)
+		elif is_scrolling() and uid >= 0:
+			_reveal_in_grid(uid)
+
+
+## kc-ipad-cards: scrolls a scrolling hand so this card shows.
+func _reveal_in_grid(uid: int) -> void:
+	var cards: Array[Node] = get_cards()
+	var cols: int = maxi(1, int(hand_fit.get("cols", 1)))
+	var vis_rows: int = maxi(1, int(hand_fit.get("visible", 1)) / cols)
+	for i: int in cards.size():
+		if int(cards[i].get_meta(&"uid", -1)) == uid:
+			var row: int = i / cols
+			if row < hand_scroll:
+				hand_scroll = row
+			elif row >= hand_scroll + vis_rows:
+				hand_scroll = row - vis_rows + 1
+			_fit_cards()
+			return
 
 
 ## Hides the chip being dragged (-1 shows all again).
@@ -325,19 +376,49 @@ func _wire(chip: Control, uid: int) -> void:
 			card_tapped.emit(uid))
 	g.long_pressed.connect(func(_p: Vector2) -> void: card_inspected.emit(uid))
 	var last: Array = [Vector2.ZERO]
+	# kc-ipad-cards: on a scrolling hand a drag is undecided until it moves: mostly vertical = scroll
+	# the hand; else it places the card as usual. mode: 0 placing, 1 undecided, 2 scrolling.
+	var mode: Array = [0, Vector2.ZERO, 0.0]
 	g.drag_started.connect(func(p: Vector2) -> void:
 		if fan:
 			last[0] = p  # kc-portrait: a swipe on the fan scrolls it (place with a tap instead)
+		elif is_scrolling():
+			mode[0] = 1
+			mode[1] = p
+			mode[2] = 0.0
 		elif not read_only:
+			mode[0] = 0
 			card_drag_started.emit(uid, p))
 	g.drag_moved.connect(func(p: Vector2) -> void:
 		if fan:
 			scroll_fan(p.x - (last[0] as Vector2).x)
 			last[0] = p
-		elif not read_only:
+			return
+		if int(mode[0]) == 1:
+			var d: Vector2 = p - (mode[1] as Vector2)
+			if d.length() < 6.0:
+				return
+			if absf(d.y) > absf(d.x):
+				mode[0] = 2
+				mode[1] = p
+			elif read_only:
+				mode[0] = 3
+				return
+			else:
+				mode[0] = 0
+				card_drag_started.emit(uid, mode[1])
+		if int(mode[0]) == 2:
+			var step: float = float((hand_fit.get("card", Vector2(0, 60)) as Vector2).y) * 0.6
+			var dy: float = p.y - (mode[1] as Vector2).y
+			if absf(dy) >= step:
+				scroll_hand(-1 if dy > 0.0 else 1)
+				mode[1] = p
+		elif int(mode[0]) == 0 and not read_only:
 			card_drag_moved.emit(uid, p))
 	g.drag_ended.connect(func(p: Vector2) -> void:
-		if not fan and not read_only:
+		var m: int = int(mode[0])
+		mode[0] = 0
+		if not fan and not read_only and m == 0:
 			card_drag_ended.emit(uid, p))
 
 
@@ -381,25 +462,91 @@ func _fit_cards() -> void:
 			c.z_index = 10 if sel else 0
 		return
 	var cols: int = maxi(1, columns)
-	var rows: int = ceili(float(n) / cols)
+	var scroll: bool = false
+	var first: int = 0
+	var shown: int = n
+	if _grid_rect.size != Vector2.ZERO:
+		# kc-ipad-cards: size the cards for this many (the tray fills on iPad / desktop; columns and
+		# height follow the count).
+		var min_h: float = BoardMetrics.X1_MIN_H if compact else BoardMetrics.X1_MIN_H_DESKTOP
+		hand_fit = BoardMetrics.hand_fit(_grid_rect.size, n, _gap, min_h)
+		card_size = hand_fit["card"]
+		cols = int(hand_fit["cols"])
+		scroll = bool(hand_fit["scroll"])
+		if scroll:
+			shown = int(hand_fit["visible"])
+			var max_first_row: int = ceili(float(n - shown) / cols)
+			hand_scroll = clampi(hand_scroll, 0, max_first_row)
+			first = hand_scroll * cols
+		else:
+			hand_scroll = 0
+	var rows: int = ceili(float(shown) / cols)
 	var pitch_x: float = card_size.x + _gap
 	var pitch_y: float = card_size.y + _gap
 	# The top SELECTED_LIFT px stay free for the selected card's lift.
 	grid = Rect2(grid.position + Vector2(0, SELECTED_LIFT), grid.size - Vector2(0, SELECTED_LIFT))
-	if rows > 1:
+	if rows > 1 and not scroll:
 		# More cards than the grid holds: the rows overlap upward (the step shrinks).
 		pitch_y = minf(pitch_y, (grid.size.y - card_size.y) / (rows - 1))
 	var grid_w: float = card_size.x + pitch_x * (cols - 1)
 	var x0: float = grid.position.x + maxf(0.0, (grid.size.x - grid_w) * 0.5)
 	for i: int in n:
 		var c: Control = cards[i]
+		var j: int = i - first
+		c.visible = j >= 0 and j < shown
+		c.custom_minimum_size = card_size
 		c.size = card_size
-		var x: float = x0 + (i % cols) * pitch_x
-		var y: float = grid.position.y + (i / cols) * pitch_y
+		var x: float = x0 + (j % cols) * pitch_x
+		var y: float = grid.position.y + (j / cols) * pitch_y
 		# kc-cards-impl (H1): the selected card lifts.
 		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
 			y -= SELECTED_LIFT
 		c.position = Vector2(roundf(x), roundf(y))
+	_place_more_hints(scroll, first, shown, n, grid)
+
+
+## kc-ipad-cards: "▲ n MORE" / "▼ n MORE" over the top / bottom edge of a scrolling hand.
+func _place_more_hints(scroll: bool, first: int, shown: int, n: int, grid: Rect2) -> void:
+	if _more_up == null:
+		return
+	var above: int = first
+	var below: int = maxi(0, n - first - shown)
+	_more_up.visible = scroll and above > 0
+	_more_down.visible = scroll and below > 0
+	_more_up.text = "▲ %d MORE" % above
+	_more_down.text = "▼ %d MORE" % below
+	for l: Label in [_more_up, _more_down]:
+		l.size = l.get_combined_minimum_size()
+	var o: Vector2 = _row.global_position
+	_more_up.global_position = o + Vector2(grid.position.x + (grid.size.x - _more_up.size.x) * 0.5, grid.position.y - 4.0)
+	var last_bottom: float = grid.position.y
+	for c: Node in get_cards():
+		if (c as Control).visible:
+			last_bottom = maxf(last_bottom, (c as Control).position.y + (c as Control).size.y)
+	# Under the last card shown when the grid has room left, else over that card's bottom edge.
+	var y: float = minf(last_bottom + 2.0, grid.end.y - _more_down.size.y)
+	_more_down.global_position = o + Vector2(grid.position.x + (grid.size.x - _more_down.size.x) * 0.5, y)
+
+
+## kc-ipad-cards: scrolls a scrolling hand by `rows` rows (no-op otherwise).
+func scroll_hand(rows: int) -> void:
+	if not bool(hand_fit.get("scroll", false)):
+		return
+	hand_scroll = maxi(0, hand_scroll + rows)
+	_fit_cards()
+
+
+## True when the hand shows fewer cards than it holds (a vertical swipe scrolls it).
+func is_scrolling() -> bool:
+	return bool(hand_fit.get("scroll", false)) and not fan
+
+
+func _gui_input(event: InputEvent) -> void:
+	if is_scrolling() and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		var b: MouseButton = (event as InputEventMouseButton).button_index
+		if b == MOUSE_BUTTON_WHEEL_DOWN or b == MOUSE_BUTTON_WHEEL_UP:
+			scroll_hand(1 if b == MOUSE_BUTTON_WHEEL_DOWN else -1)
+			accept_event()
 
 
 ## Height of the mini Operator card: half a hand card, at least 64 px (a 44 pt tap target on the
@@ -443,11 +590,9 @@ static func fan_view(card: Dictionary) -> Dictionary:
 	for k: Dictionary in card.get("keywords", []):
 		kws.append({"id": String(k.get("id", "")), "value": int(k.get("value", 0))})
 	v["keywords"] = kws
-	for k: String in ["level", "trait", "standard_issue", "locked", "trains", "elite"]:
+	for k: String in ["trait", "standard_issue", "elite"]:
 		if card.has(k) and str(card[k]) != "":
 			v[k] = card[k]
-	if card.has("locked") and (card["locked"] is Array) and not (card["locked"] as Array).is_empty():
-		v["keywords"] = []
 	v["cant_pay"] = not bool(card.get("playable", true))
 	return v
 
@@ -491,9 +636,9 @@ static func banner_entry(card: Dictionary) -> Dictionary:
 			"elite": bool(card.get("elite", false)), "bolt": bool(card.get("bolt", false)),
 			"front_kw": bool(card.get("front_kw", false)),
 			"banner": String(card.get("banner", card.get("id", "")))}
-	# kc-onboard-ui: the Standard Issue / Recruit keys (StandardIssueLook.dress in match_snapshot).
-	for k: String in ["subname", "trait", "kw", "band", "fp_trend", "cover", "armor_max", "operator", "camo",
-			"standard_issue", "serial", "locked", "trains", "level", "level_badge", "reserve_trait"]:
+	# kc-onboard-ui: the Standard Issue keys (StandardIssueLook.dress in match_snapshot).
+	for k: String in ["subname", "trait", "kw", "fp_trend", "cover", "armor_max", "operator", "camo",
+			"standard_issue", "serial", "reserve_trait"]:
 		if card.has(k) and str(card[k]) != "":
 			e[k] = card[k]
 	if card.has("fp"):

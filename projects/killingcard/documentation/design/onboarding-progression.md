@@ -349,3 +349,28 @@ New tool `tests/tools/onboarding_check.gd` plays the **real** run (shipped `run_
 - art_traits_sim's own duel / mirror build late decks the old way (starter + 4 package cards, 3 Riflemen retired, which the Standard Issue starter doesn't have), so they are mostly Standard Issue decks with few sets (tier 2+ in 1–19% of matches). Their 51.7% aware edge is not the end-of-run measure; onboarding_check's 55.9% on real M5 decks is. Updating that tool's deck model to the ladder is a Mid Game Designer follow-up.
 - Every Recruit is trained by M5 (0.00 left), as §6.3 expected (the M2 Promotion trains the M1 calling card).
 
+
+## Removed (kc-no-training, 2026-11-07)
+
+*The head, after an iPad playtest: "Remove all the training thing." and "Make sure cards only have 1 trait at most."*
+
+**Removed:** the card ladder's Recruit → Trained → Veteran → Elite steps (§3), Promotion (and its "New: Promotion" explainer / `promotion` reveal flag), "Trains:" lines and locked keywords, reward levels (`RunConfig.reward_levels`: M1 drops used to be Recruits), the Recruit starter switch (`starter_recruits`), Recruit squads (`RunMatchData.enemy_recruits`, slots 1-4), per-copy `deck_levels`, offer `level` / `levels`, Honor Roll levels. Every card has its keywords and effects from the start. The KEYWORDS explainer now opens with the first calling card offered; the Engine panel flag with the first calling card owned.
+
+**Kept:** the Standard Issue starter (vanilla), Muster out, Salvage, the reward ladder by card type (units → tactics → Fields → full pool, Elite cards at rung 4), 2-of-4 picks, the green squad (M1, -1 Armor), art-given traits (one per copy).
+
+**Saves:** `SAVE_VERSION` 6. v1-v5 saves load with their levels dropped, an open Promotion removed (a rewards phase holding only a Promotion goes on to the next match) and a Regroup rebuilt from the deck. A save whose copy names more than one trait is refused.
+
+**Retune (crew decks only, `run_config.tres`):** the M2-M4 crews used to play keyword-less Recruit copies, so without training they got much harder (competent M3 74 → 48%, M4 55 → 31%). Swapped keyword cards for Standard Issue: M2 Anchor+ 2 of 3 Gunners → 2 Sergeants; M3 Rusher 2 Point Men, a Breacher, a Flanker → 3 Troopers + a Sergeant; M4 Anchor a Gunner, a Protector, a Hold the Line and both Suppressing Fires → an Armored Trooper, 2 Sergeants, 2 Troopers. M1 and the Rival are unchanged.
+
+| 400 real runs per proxy, same seeds | before (training) | no training, untuned | **no training, retuned (shipped)** | target |
+|---|---|---|---|---|
+| New player (casual) M1 | 71.2% | 71.2% | **71.2%** | 65–75% |
+| Competent run win | 38.8% | 35.8% | **40.2%** | 38–43% |
+| Competent per match M1-M5 | 94.8 / 99.0 / 74.0 / 54.5 / 39.5 | 94.8 / 83.5 / 48.2 / 31.1 / 39.3 | **94.8 / 93.8 / 68.5 / 47.2 / 41.0** | smooth ramp |
+| Casual run win (per match) | 25.0% (71 / 82 / 47 / 48 / 30) | 19.0% (71 / 61 / 28 / 19 / 31) | **20.8% (71 / 70 / 46 / 42 / 27)** | — |
+| Traits overall (round robin) | 48.9–51.1% | 43.3–56.7% | **41.6–62.0%** (Spec Ops 62.0, n = 450) | 40–60% each |
+| Aware vs blind, late decks | 59.5% | 55.3% | **58.6%** | ≥ 55% |
+| Seat 0, late decks / starter | 52.5% / 46.8% | 56.6% / 46.8% | **53.4% / 46.8%** | 45–55% |
+| Growth: late deck vs starter | 75.9% | 68.4% | **74.4%** | — |
+
+Spec Ops is 2 points over the trait band: its calling cards (Flanker, Marksman) now keep Flank / Pick from the start. A what-if inside `tune_check` (Spec Ops 3 gives Cover +1 instead of First Shot) puts the four traits at 47.1 / 42.4 / 54.7 / 55.8% with the run unchanged (40.0%); it is a rules change, so it waits for the head (task report, question 1). Tools: `tests/tools/onboarding_check.gd runs=400`, `tests/tools/tune_check.gd runs=400 late=160 mirror=400` (traits re-checked with `tn=150`).

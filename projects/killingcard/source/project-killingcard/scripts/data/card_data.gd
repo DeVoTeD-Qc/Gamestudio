@@ -41,18 +41,18 @@ const MAX_TEXT_LENGTH: int = 100
 @export_range(0, 5) var cover: int = 0
 @export var suppress: bool = false
 ## Pierce (kc-fight-impl, firefight-order.md §3): damage beyond what the target needs carries on to
-## the next enemy behind it (that unit's Cover applies). Printed: Recruit copies keep it.
+## the next enemy behind it (that unit's Cover applies).
 @export var pierce: bool = false
 ## Patch N: after the firefight restore N Armor to the most damaged other friendly here.
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
 
 @export_group("Synergy (kc-syn)")
-## Neighbor keyword of a Trained copy (synergy-system.md §3): &"guard", &"spotter", &"fireteam",
-## &"overwatch" or &"" (none). Units only. Recruit copies (level 0) don't have it.
+## Neighbor keyword (synergy-system.md §3, retired in kc-pos-cut): &"guard", &"spotter", &"fireteam",
+## &"overwatch" or &"" (none). Units only.
 @export var neighbor_keyword: StringName = &""
 ## Trait of the chassis (§4): &"vanguard", &"specops", &"heavy", &"undead" or &"" (none). Units and
-## Fields only. Recruit copies don't count for or receive set bonuses.
+## Fields only. kc-no-training: ONE trait (a single id, never a list); a copy carries at most one.
 ## kc-art-traits: this is the DEFAULT trait (= trait_options[0] when trait_options is set): a copy's
 ## trait comes from the art it wears, chosen from trait_options (SynergyRules.trait_at).
 @export var card_trait: StringName = &""
@@ -76,8 +76,7 @@ const MAX_TEXT_LENGTH: int = 100
 ## Can appear in decks and Supply Drops. False for tokens (Sentry) and Standard Issue cards.
 @export var collectible: bool = true
 ## kc-onboard (onboarding-progression.md §2, approved N1-N4): a Standard Issue starter card. Plain
-## by design: no keyword, no trait, no weapon class, no effects; never trains, is never Promoted and
-## never offered (collectible = false, but it IS a deck card: it counts for control and gives
+## by design: no keyword, no trait, no weapon class, no effects; never offered (collectible = false, but it IS a deck card: it counts for control and gives
 ## elimination credit). It leaves the deck through Muster out or Retire only.
 @export var standard_issue: bool = false
 
@@ -115,10 +114,10 @@ func is_token() -> bool:
 	return not collectible and not standard_issue
 
 
-## kc-onboard §3: printed rules a copy only has once Trained (a Recruit shows them greyed as
-## "Trains: ..."): keywords, the neighbor keyword, LMG Pierce, arrives-front and On Deploy / On Down
-## / passive effects. Player-facing names in card order. Units only ([] otherwise).
-func trained_keyword_names() -> Array[String]:
+## The unit's printed rules as player-facing keyword names in card order: keywords, the neighbor
+## keyword, LMG Pierce, arrives-front and On Deploy / On Down / passive effects. Units only ([]
+## otherwise). kc-no-training: every copy has all of them from the start.
+func keyword_names() -> Array[String]:
 	var out: Array[String] = []
 	if not is_unit():
 		return out
@@ -151,6 +150,22 @@ func trained_keyword_names() -> Array[String]:
 	if neighbor_keyword != &"":
 		out.append(String(neighbor_keyword).capitalize())
 	return out
+
+
+## kc-no-training: true when `t` combines several traits ("vanguard,undead", "heavy|specops",
+## "vanguard undead", or two known trait names glued together).
+static func _looks_like_trait_list(t: StringName) -> bool:
+	var s: String = String(t)
+	for sep: String in [",", "|", "/", "+", ";", " ", "&"]:
+		if s.contains(sep):
+			return true
+	if StringName(s) in SynergyRules.TRAITS:
+		return false
+	var found: int = 0
+	for known: StringName in SynergyRules.TRAITS:
+		if s.contains(String(known)):
+			found += 1
+	return found >= 2
 
 
 ## Field = CardType.EQUIPMENT (the engine's internal name).
@@ -192,8 +207,15 @@ func validate(v: DataValidator) -> void:
 		v.invalid("text", "rules text must be one line")
 	if neighbor_keyword != &"":
 		v.invalid("neighbor_keyword", "neighbor keywords are retired (kc-pos-cut, synergy-system.md §13); '%s' has no effect" % neighbor_keyword)
-	if card_trait != &"" and card_trait not in SynergyRules.TRAITS:
+	# kc-no-training (head: "cards only have 1 trait at most"): card_trait is ONE trait id, never a
+	# list ("vanguard,undead"), and every trait option is one trait (a copy wears one option).
+	if card_trait != &"" and _looks_like_trait_list(card_trait):
+		v.invalid("card_trait", "a card has at most one trait; '%s' names more than one" % card_trait)
+	elif card_trait != &"" and card_trait not in SynergyRules.TRAITS:
 		v.invalid("card_trait", "unknown trait '%s' (one of %s)" % [card_trait, SynergyRules.TRAITS])
+	for t: StringName in trait_options:
+		if t != &"" and _looks_like_trait_list(t):
+			v.invalid("trait_options", "a copy carries at most one trait; option '%s' names more than one" % t)
 	if card_trait != &"" and card_type == DataEnums.CardType.TACTIC:
 		v.invalid("card_trait", "only units and Fields have a trait")
 	if not trait_options.is_empty():
@@ -233,7 +255,7 @@ func validate(v: DataValidator) -> void:
 			v.invalid("standard_issue", "Standard Issue cards are never offered (collectible = false)")
 		if card_trait != &"" or not trait_options.is_empty():
 			v.invalid("standard_issue", "Standard Issue cards never have a trait")
-		if neighbor_keyword != &"" or not trained_keyword_names().is_empty() or not effects.is_empty():
+		if neighbor_keyword != &"" or not keyword_names().is_empty() or not effects.is_empty():
 			v.invalid("standard_issue", "Standard Issue cards have no keyword and no effect")
 		if weapon_class != DataEnums.WeaponClass.NONE:
 			v.invalid("standard_issue", "Standard Issue cards have no weapon class")

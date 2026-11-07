@@ -28,29 +28,22 @@ extends Resource
 @export_range(1, 5) var perk_choices: int = 2
 
 @export_group("Synergy run layer (kc-syn §5)")
-## The starter deck's copies are Recruits (level 0: no neighbor keyword, no trait). Off = Trained.
-@export var starter_recruits: bool = false
 ## Supply Drop slot 1 is always a card of the deck's main trait (§5.2).
 @export var supply_drop_on_trait: bool = false
-## The run offers of §5.2 / §5.4: Doctrine (after doctrine_after_matches), Promotion (after
-## promotion_after_matches), Retire as the Supply Drop's 4th option and Regroup (a free Retire)
-## after a loss. Their screens are a UI task; until they land the data keeps this off.
+## The run offers of §5.2 / §5.4: Doctrine (after doctrine_after_matches), Retire as the Supply
+## Drop's 4th option and Regroup (a free Retire) after a loss. (kc-no-training: Promotion is removed.)
 @export var synergy_offers: bool = false
 @export var doctrine_after_matches: PackedInt32Array = PackedInt32Array([1])
-@export var promotion_after_matches: PackedInt32Array = PackedInt32Array([2, 4])
 ## Doctrine offer: pick 1 of this many trait emblems (the deck's best trait + random others).
 @export_range(1, 4) var doctrine_choices: int = 2
 ## Retire never takes the deck below this many cards (the option greys out).
 @export_range(1, 40) var deck_floor: int = 15
 
 @export_group("Onboarding ladder (kc-onboard §4, approved N1-N4)")
-## Rung of the Supply Drop / Salvage after match n (entry n-1): RUNG_UNITS 1 (units, no Elites),
+## Rung of the Supply Drop / Salvage after match n (entry n-1): RUNG_UNITS 1 (units, no Elite cards),
 ## RUNG_TACTICS 2 (+ tactics), RUNG_FIELDS 3 (+ Fields), RUNG_FULL 4 (the whole pool). Empty or a
 ## missing / 0 entry = the whole pool (the pre-kc-onboard behaviour).
 @export var reward_rungs: PackedInt32Array = PackedInt32Array()
-## Level of the cards a Supply Drop / Salvage gives after match n (entry n-1): 0 Recruit calling card
-## (trait on, keywords locked), 1 Trained. Empty or a missing entry = Trained.
-@export var reward_levels: PackedInt32Array = PackedInt32Array()
 ## From this match on, a Supply Drop shows multi_pick_choices cards and you take multi_picks of them
 ## (N3: 2 of 4 from match 2). 0 = never (always pick 1 of supply_drop_choices).
 @export_range(0, 5) var multi_pick_from_match: int = 0
@@ -65,7 +58,7 @@ extends Resource
 @export_range(1, 5) var salvage_choices: int = 2
 ## The first calling card you take sets the Doctrine (no Doctrine screen; doctrine_after_matches empty).
 @export var doctrine_from_first_pick: bool = false
-## Cards only older saves can still hold (the kc-syn Recruit starter's Rifleman): loadable, never offered.
+## Cards only older saves can still hold (the kc-syn starter's Rifleman): loadable, never offered.
 @export var legacy_cards: Array[CardData] = []
 
 @export_group("Starter kit")
@@ -140,16 +133,6 @@ func supply_for_round(round_number: int) -> int:
 	return mini(round_number + supply_round_offset, supply_cap)
 
 
-## kc-syn: copy levels of the starter deck (parallel to starter_deck): all Recruits (0) with
-## starter_recruits, else all Trained (1). kc-onboard: Standard Issue cards are always 0 (they never
-## train; their level has no effect).
-func starter_levels() -> Array[int]:
-	var out: Array[int] = []
-	for c: CardData in starter_deck:
-		out.append(0 if starter_recruits or (c != null and c.standard_issue) else 1)
-	return out
-
-
 const RUNG_FULL: int = 4
 const RUNG_UNITS: int = 1
 const RUNG_TACTICS: int = 2
@@ -161,11 +144,6 @@ const RUNG_NAMES: Array[String] = ["Full", "Calling cards", "Keywords", "Fields"
 func rung_after(n: int) -> int:
 	var r: int = reward_rungs[n - 1] if n >= 1 and n <= reward_rungs.size() else 0
 	return r if r >= RUNG_UNITS and r <= RUNG_FULL else RUNG_FULL
-
-
-## kc-onboard §4.2: the level of reward cards after match n (Trained when unset).
-func reward_level_after(n: int) -> int:
-	return clampi(reward_levels[n - 1], 0, 1) if n >= 1 and n <= reward_levels.size() else 1
 
 
 ## True when `card` is offered at `rung` (1 units without Elites, 2 + tactics, 3 + Fields, 4 all).
@@ -217,14 +195,12 @@ func validate(v: DataValidator) -> void:
 	v.check_range("operator_cost", operator_cost, 0, 3)
 	for i: int in reward_rungs.size():
 		v.check_range("reward_rungs[%d]" % i, reward_rungs[i], 0, RUNG_FULL)
-	for i: int in reward_levels.size():
-		v.check_range("reward_levels[%d]" % i, reward_levels[i], 0, 1)
 	v.check_range("multi_pick_from_match", multi_pick_from_match, 0, maxi(matches.size(), 1))
 	v.check_range("muster_out_from_match", muster_out_from_match, 0, maxi(matches.size(), 1))
 	for i: int in legacy_cards.size():
 		if legacy_cards[i] == null:
 			v.broken_reference("legacy_cards[%d]" % i, "empty slot")
-	for field: String in ["weapon_level_after_matches", "perk_offer_after_matches", "doctrine_after_matches", "promotion_after_matches"]:
+	for field: String in ["weapon_level_after_matches", "perk_offer_after_matches", "doctrine_after_matches"]:
 		var list: PackedInt32Array = get(field)
 		for i: int in list.size():
 			v.check_range("%s[%d]" % [field, i], list[i], 1, maxi(matches.size(), 1))

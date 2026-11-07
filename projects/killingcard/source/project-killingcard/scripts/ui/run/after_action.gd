@@ -21,7 +21,6 @@ const OFFER_WORDS: Dictionary = {
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
 	RewardOffers.KIND_PERK: "PERK OFFER",
 	RewardOffers.KIND_DOCTRINE: "DOCTRINE",
-	RewardOffers.KIND_PROMOTION: "PROMOTION",
 	RewardOffers.KIND_REGROUP: "REGROUP",
 }
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
@@ -160,8 +159,8 @@ func _tickets_stat(before: int, after: int, total: int) -> void:
 	box.add_child(n)
 
 
-## kc-syn-ui: the Honor Roll album page (cosmetic): every card retired this run, with its level,
-## the match it left after and whether it trained its twin. Long-press shows the full list.
+## kc-syn-ui: the Honor Roll album page (cosmetic): every card retired this run, with its trait
+## and the match it left after. Long-press shows the full list. kc-ipad-cards: no level swatch.
 func _honor_roll(col: VBoxContainer, r: RunProgress) -> void:
 	if r.honor_roll.is_empty():
 		return
@@ -189,15 +188,11 @@ func _honor_roll(col: VBoxContainer, r: RunProgress) -> void:
 		p.add_child(hb)
 		var sw: Control = Control.new()
 		sw.custom_minimum_size = Vector2(14, 24)
-		var band: StringName = SynergyGlyphs.band_of(int(h["level"]))
+		var tr: StringName = StringName(String(h.get("trait", "")))
 		sw.draw.connect(func() -> void:
-			if band == &"":
-				sw.draw_rect(Rect2(Vector2.ZERO, sw.size), Color("#2A3036"))
-			else:
-				SynergyGlyphs.draw_band(sw, Rect2(Vector2.ZERO, sw.size), band))
+			sw.draw_rect(Rect2(Vector2.ZERO, sw.size), SynergyGlyphs.trait_color(tr) if tr != &"" else Color("#2A3036")))
 		hb.add_child(sw)
-		var words: String = "%s · after M%d%s" % [card.display_name if card != null else String(h["id"]), maxi(1, int(h["match"])),
-				" · twin trained" if bool(h.get("trained_twin", false)) else ""]
+		var words: String = "%s · after M%d" % [card.display_name if card != null else String(h["id"]), maxi(1, int(h["match"]))]
 		hb.add_child(make_label(words))
 		row.add_child(p)
 	if start > 0:

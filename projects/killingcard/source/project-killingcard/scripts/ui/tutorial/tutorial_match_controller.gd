@@ -46,12 +46,6 @@ static func build_state(script: TutorialScript) -> MatchState:
 	var player: SideSetup = SideSetup.new()
 	player.display_name = "You"
 	player.deck.assign(script.player_deck)
-	# kc-syn §11.4: the drill plays its cards at the starter's level (plain Recruits with the run's
-	# Recruit starter), from RunConfig.starter_levels().
-	var starter: Array[int] = config.starter_levels()
-	var lv: int = starter[0] if not starter.is_empty() else SynergyRules.LEVEL_TRAINED
-	for i: int in player.deck.size():
-		player.deck_levels.append(lv)
 	player.keep_deck_order = true
 	player.primary = config.starter_primary
 	player.killstreaks.assign(script.player_killstreaks if not script.player_killstreaks.is_empty() else config.starter_killstreaks)

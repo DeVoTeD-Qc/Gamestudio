@@ -46,14 +46,6 @@ static func keyword_name(kw: StringName) -> String:
 	return String(KEYWORD_NAMES.get(kw, String(kw).capitalize()))
 
 
-static func level_name(level: int) -> String:
-	return SynergyRules.LEVEL_NAMES[clampi(level, 0, 3)]
-
-
-static func band_of(level: int) -> StringName:
-	return SynergyRules.LEVEL_BANDS[clampi(level, 0, 3)]
-
-
 ## "Vanguard 2: Vanguard in row 1 get +1 FP" for tier 2 / 3.
 static func tier_line(t: StringName, tier: int) -> String:
 	var texts: Array = SynergyRules.TIER_TEXT.get(t, ["", ""])

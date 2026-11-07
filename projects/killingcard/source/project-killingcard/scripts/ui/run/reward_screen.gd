@@ -6,15 +6,13 @@
 #     ask for more than one card ("PICK 2 OF 4": offer `picks`; a taken card leaves the row and is
 #     listed in the subtitle; the drop stays until its picks are used or SKIP). DETAILS (or a long
 #     press / right-click on the card) opens the inspector without choosing.
-#     A Recruit calling card (offer `level` 0, M1) shows its trait and, instead of its rules, the
-#     greyed "[lock] RECRUIT · TRAINS: FIRST SHOT · GUARD" line (the keywords unlock at Promotion),
-#     and an R level badge on its trait line.
+#     kc-ipad-cards (kc-no-training): no Recruit cards, no "Trains:" line, no level badge.
 #   - Muster out (kc-onboard §4.3): every Standard Issue copy as a tile (its Standard Issue banner,
 #     serial plate, cost and stats); the most expensive are pre-selected (GOING HOME), tap to keep
 #     one or send another, up to the offer's count; the deck never goes under the floor. SEND n HOME
 #     commits (RunState.muster_out), KEEP ALL skips.
 #   - Weapon level: attachments for the Primary. Perk offer: Perks you don't own.
-#   - Doctrine / Promotion / Regroup (kc-syn; Doctrine and Regroup only from older configs / saves).
+#   - Doctrine / Regroup (kc-syn; only from older configs / saves). Promotion is gone (kc-no-training).
 #   RETIRE (header, "instead of a card", only once Retire is met: RevealGate) opens the Retire list.
 #   One "New: X" explainer per offer (NewCard) when the offer brings a system for the first time.
 #   SKIP declines any offer. Each offer announces EventBus.screen_shown(&"reward_<kind>").
@@ -42,7 +40,6 @@ const KIND_TITLES: Dictionary = {
 	RewardOffers.KIND_ATTACHMENT: "WEAPON LEVEL",
 	RewardOffers.KIND_PERK: "PERK OFFER",
 	RewardOffers.KIND_DOCTRINE: "DOCTRINE",
-	RewardOffers.KIND_PROMOTION: "PROMOTION",
 	RewardOffers.KIND_REGROUP: "REGROUP",
 }
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
@@ -54,7 +51,6 @@ const MUSTER_CARD_W: float = 172.0
 ## kc-cards-impl: the Supply Drop / Salvage Y2+ card width range (the mock-up's reward card is 212).
 const MIN_CARD_W: float = 172.0
 const MAX_CARD_W: float = 240.0
-const LOCK_GREY: Color = Color("#8C969E")
 
 ## The offer on screen ({kind, match, options}); {} when none.
 var offer: Dictionary = {}
@@ -65,7 +61,7 @@ var detail_buttons: Array[Button] = []
 var card_views: Array[Control] = []
 ## kc-onboard-ui: RETIRE in the header (hidden when the offer has none or Retire isn't met yet).
 var retire_button: Button = null
-## The list tiles of a Promotion / Retire / Muster out pick (option order = the RunProgress list).
+## The list tiles of a Retire / Muster out pick (option order = the RunProgress list).
 var list_tiles: Array[PickTile] = []
 var retire_mode: bool = false
 ## kc-onboard-ui Muster out: deck index -> true for the copies marked GOING HOME, and the commit button.
@@ -108,7 +104,7 @@ func _build() -> void:
 	# kc-syn-ui: DECK opens the deck view (Engine panel) from any offer.
 	_deck_button = make_button("DECK", &"HudButton", 120)
 	_deck_button.name = "DeckButton"
-	_deck_button.tooltip_text = "Your deck: every card and its level"
+	_deck_button.tooltip_text = "Your deck: every card and its trait"
 	_deck_button.pressed.connect(open_deck)
 	_header.add_child(_deck_button)
 	_header.move_child(_deck_button, _skip_button.get_index())
@@ -226,8 +222,6 @@ func show_offer() -> void:
 					r.perks.size(), r.config.perk_slots, RunFlow.names_of(r, r.perks)]
 		RewardOffers.KIND_DOCTRINE:
 			_subtitle.text = "Pick a trait: its sets count +1 for the rest of the run."
-		RewardOffers.KIND_PROMOTION:
-			_subtitle.text = "Tap a card to promote one copy by one level. A Recruit's locked keywords unlock."
 		RewardOffers.KIND_REGROUP:
 			_subtitle.text = "After a loss: retire one card for free (deck %d, floor %d)." % [r.deck.size(), r.config.deck_floor]
 	if kind in RewardOffers.CARD_DROPS and bool(offer.get("retire", false)) and RevealGate.shown(RevealFlags.RETIRE) and not retire_mode:
@@ -240,10 +234,6 @@ func show_offer() -> void:
 		return
 	if retire_mode or kind == RewardOffers.KIND_REGROUP:
 		_build_retire_list(r, kind != RewardOffers.KIND_REGROUP)
-		_after_build(key)
-		return
-	if kind == RewardOffers.KIND_PROMOTION:
-		_build_promotion_list(r)
 		_after_build(key)
 		return
 	var options: Array = offer["options"]
@@ -301,8 +291,6 @@ func _drop_subtitle(r: RunProgress) -> String:
 			var c: CardData = r.resource(StringName(t.get("id", ""))) as CardData
 			names.append(c.display_name if c != null else String(t.get("id", "")))
 		s += " Taken: %s." % ", ".join(names)
-	if offer_level() == SynergyRules.LEVEL_RECRUIT:
-		s += " Recruits: trait on, keywords unlock when they train."
 	if r.config.muster_out_after(int(offer.get("match", 0))):
 		s += " Then Muster out."
 	return s
@@ -350,7 +338,7 @@ func _inspect_header(b: Button) -> void:
 	var floor_n: int = run().config.deck_floor if run() != null else 15
 	var texts: Dictionary = {
 		"SkipButton": ["Skip", "Declines this offer: nothing is added or removed. A drop with picks left ends here; on Muster out (KEEP ALL) every Standard Issue card stays."],
-		"DeckButton": ["Deck", "Your deck: every card, its copies and their level."],
+		"DeckButton": ["Deck", "Your deck: every card, its copies and their traits."],
 		"RetireButton": ["Retire", "Instead of taking a card, remove one from your deck for good (it goes on the Honor Roll). The deck never goes under %d cards." % floor_n],
 		"SendHomeButton": ["Muster out", "Sends the Standard Issue cards marked GOING HOME back to the quartermaster. The rest stay in your deck (never under %d cards)." % floor_n],
 	}
@@ -366,7 +354,7 @@ func _inspect_item(item: LoadoutItem) -> void:
 
 
 # =============================================================================
-# kc-syn-ui: Doctrine, Promotion, Retire / Regroup, on-trait slot, deck view
+# kc-syn-ui: Doctrine, Retire / Regroup, on-trait slot, deck view
 # =============================================================================
 
 ## DECK: the deck view with the Engine panel.
@@ -378,53 +366,42 @@ func get_engine_view() -> Control:
 	return _engine
 
 
-func _inspect_card_id(id: StringName, level: int) -> void:
+func _inspect_card_id(id: StringName) -> void:
 	var card: CardData = run().resource(id) as CardData
 	if card == null:
 		return
-	_inspector.open({"view": _view_dict(card, level), "title": card.display_name, "type": CardInfo.type_line(card),
-			"banner": BannerCard.entry_for_card(card, &"", level), "is_unit": card.is_unit(),
-			"text": card.text, "keywords": CardInfo.keywords(card) + _syn_lines(card, level), "status": _level_status(card, level)})
+	_inspector.open({"view": _view_dict(card), "title": card.display_name, "type": CardInfo.type_line(card),
+			"banner": BannerCard.entry_for_card(card), "is_unit": card.is_unit(),
+			"text": card.text, "keywords": CardInfo.keywords(card) + _syn_lines(card), "status": _si_status(card)})
 
 
-## "Copy level: Recruit. Trains: First Shot · Guard (locked ...)." / "Standard Issue SI-02: ..." (inspector).
-static func _level_status(card: CardData, level: int) -> String:
+## "Standard Issue SI-02: ..." (inspector; "" for any other card).
+static func _si_status(card: CardData) -> String:
 	if card.standard_issue:
-		return "Standard Issue %s: basic kit. It never trains; Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
-	var s: String = "Copy level: %s." % SynergyGlyphs.level_name(level)
-	var tr: String = SynergyRules.trains_text(card, level)
-	if tr != "":
-		s += " %s (locked until it trains)." % tr
-	return s
+		return "Standard Issue %s: basic kit. Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
+	return ""
 
 
-## CardView dictionary of a copy at `level` (a Recruit's keywords drawn locked; Standard Issue look).
-static func _view_dict(card: CardData, level: int, art: StringName = &"") -> Dictionary:
+## CardView dictionary of a copy wearing `art` (its trait; the Standard Issue look).
+static func _view_dict(card: CardData, art: StringName = &"") -> Dictionary:
 	var vd: Dictionary = CardInfo.view_dict(card)
-	var locked: Array[String] = SynergyRules.locked_keywords(card, level)
-	if not locked.is_empty():
-		vd["locked"] = locked
-		vd["keywords"] = []
-		vd["trains"] = SynergyRules.trains_text(card, level)
 	if card.standard_issue or (art != &"" and ArtTraits.is_standard_issue_art(art, card)):
 		vd["standard_issue"] = true
 		vd["serial"] = RunProgress.standard_issue_serial(card)
-	# kc-cards-impl (Y2+): the copy's 4:1 art, level coin and trait.
+	# kc-cards-impl (Y2+): the copy's 4:1 art and trait.
 	vd["banner"] = String(art if art != &"" else card.id)
-	if card.is_unit():
-		vd["level"] = level
-	var t: StringName = SynergyRules.trait_at(card, level, ArtTraits.trait_of(art, card) if art != &"" and card.has_trait_choice() else SynergyRules.TRAIT_DEFAULT)
+	var t: StringName = SynergyRules.trait_at(card, ArtTraits.trait_of(art, card) if art != &"" and card.has_trait_choice() else SynergyRules.TRAIT_DEFAULT)
 	if t != &"":
 		vd["trait"] = String(t)
 	return vd
 
 
-## Keyword / trait lines for the inspector (what this copy has at `level`).
-func _syn_lines(card: CardData, level: int) -> Array[Dictionary]:
+## Keyword / trait lines for the inspector.
+func _syn_lines(card: CardData) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var kw: StringName = card.neighbor_keyword
 	if kw != &"":
-		out.append({"name": "%s (neighbour keyword)%s" % [SynergyGlyphs.keyword_name(kw), "" if level >= 1 else ": locked until it trains"],
+		out.append({"name": "%s (neighbour keyword)" % SynergyGlyphs.keyword_name(kw),
 				"text": String(SynergyRules.KEYWORD_TEXT[kw])})
 	var t: StringName = card.card_trait
 	if t != &"" and not card.standard_issue:
@@ -448,18 +425,11 @@ func offer_art(r: RunProgress, i: int) -> StringName:
 	return StringName(arts[i]) if i < arts.size() and StringName(arts[i]) != &"" else StringName(offer["options"][i])
 
 
-## The level the drop's units come at (0 = Recruit calling cards after match 1).
-func offer_level() -> int:
-	return int(offer.get("level", SynergyRules.LEVEL_TRAINED))
-
-
 ## Supply Drop: each option is a concrete copy: a head line "[icon] ON-TRAIT · HEAVY 3 > 4" and what it
-## does to your engine; slot 1 on your main trait is marked ON-TRAIT; the copy level badge (R / T)
-## at the end of the line.
+## does to your engine; slot 1 on your main trait is marked ON-TRAIT.
 func _mark_trait_lines(r: RunProgress) -> void:
-	var counts: Dictionary = r.trait_counts(false)
+	var counts: Dictionary = r.trait_counts()
 	var on_trait: StringName = StringName(offer.get("on_trait", &""))
-	var lv: int = offer_level()
 	for i: int in tiles.size():
 		var card: CardData = r.resource(StringName(offer["options"][i])) as CardData
 		if card == null or not card.is_unit():
@@ -480,24 +450,9 @@ func _mark_trait_lines(r: RunProgress) -> void:
 		var head: Control = _trait_head(line2.to_upper(), "", t, on)
 		head.tooltip_text = "%s · %s" % [card.display_name, line2]
 		head.name = "TraitLine"
-		head.add_child(_level_badge(lv))
 		tiles[i].content.add_child(head)
 		tiles[i].content.move_child(head, 0)
 		_trait_lines = true
-
-
-## The copy level badge (R / T / V / E) as a small node with its words in the tooltip.
-func _level_badge(level: int) -> Control:
-	var b := Control.new()
-	b.name = "LevelBadge"
-	b.custom_minimum_size = Vector2(22, 22)
-	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.set_meta(&"level", level)
-	b.tooltip_text = StandardIssueLook.level_text(level)
-	b.draw.connect(func() -> void:
-		StandardIssueLook.draw_level_badge(b, Rect2(Vector2.ZERO, b.size), level, b.get_theme_font(&"font", &"HudNumber")))
-	return b
 
 
 ## "Heavy 2 > 3: bonus ON" / "Vanguard 0 > 1 (bonus at 2)" / "Heavy 3 > 4 (full set)" for a trait
@@ -570,8 +525,8 @@ func open_retire_picker() -> void:
 	show_offer()
 
 
-## Retire list (Supply Drop / Salvage RETIRE, or Regroup): one tile per design and level,
-## Standard Issue first, with its cost, level and trait.
+## Retire list (Supply Drop / Salvage RETIRE, or Regroup): one tile per design and trait,
+## Standard Issue first, with its cost and trait.
 func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	_center.visible = false
 	_center.get_parent().visible = false
@@ -599,18 +554,15 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 		var nm: Label = tile.add_line(card.display_name.to_upper() if card != null else String(o["id"]), &"TileName")
 		if si:
 			nm.add_theme_font_override(&"font", CardLook.TITLE_FONT)  # kc-cards-impl: one title style
-		var lv: int = int(o["level"])
 		var tag: String = ("STANDARD ISSUE %s · COST %d" % [RunProgress.standard_issue_serial(card), int(o["cost"])]) if si else \
-				("%s · COST %d" % [SynergyGlyphs.level_name(lv).to_upper(), int(o["cost"])])
+				("COST %d" % int(o["cost"]))
 		if StringName(o["trait"]) != &"":
 			tag += " · " + SynergyGlyphs.trait_name(o["trait"]).to_upper()
 		tile.add_line(tag, &"HudTag", false)
 		tile.add_line("Removed from the deck (Honor Roll).")
-		if not si:
-			_add_band_strip(tile, lv, -1)
 		tile.pressed.connect(retire.bind(i))
 		if card != null:
-			_wire_inspect(tile, _inspect_card_id.bind(card.id, lv))
+			_wire_inspect(tile, _inspect_card_id.bind(card.id))
 		_list_grid.add_child(tile)
 		list_tiles.append(tile)
 	_fit_list()
@@ -623,44 +575,6 @@ func retire(i: int) -> String:
 		retire_mode = false
 		_next.call_deferred()
 	return err
-
-
-## Promotion: one tile per design and level below Elite: the band now > next, and what it gains
-## (a Recruit: its locked keywords unlock, "Unlocks First Shot and Guard.").
-func _build_promotion_list(r: RunProgress) -> void:
-	_center.visible = false
-	_center.get_parent().visible = false
-	_list_scroll.visible = true
-	var rows: Array[Dictionary] = r.promotion_options()
-	var options: Array = offer["options"]
-	var levels: Array = offer.get("levels", [])
-	for i: int in options.size():
-		var card: CardData = r.resource(StringName(options[i])) as CardData
-		var lv: int = int(levels[i]) if i < levels.size() else 1
-		var tile: PickTile = make_tile()
-		tile.name = "Promote%d" % i
-		tile.min_height = 96
-		tile.add_line(card.display_name.to_upper() if card != null else String(options[i]), &"TileName")
-		tile.add_line("%s > %s · %s" % [SynergyGlyphs.level_name(lv).to_upper(), SynergyGlyphs.level_name(lv + 1).to_upper(),
-				String(SynergyGlyphs.BAND_NAMES.get(SynergyGlyphs.band_of(lv + 1), "")).to_upper()], &"HudTag", false)
-		var gain: String = ""
-		match lv + 1:
-			SynergyRules.LEVEL_TRAINED:
-				var unlocks: Array = rows[i].get("unlocks", []) if i < rows.size() else SynergyRules.locked_keywords(card, lv)
-				gain = ("Unlocks %s." % " and ".join(PackedStringArray(unlocks))) if not unlocks.is_empty() else "Trained."
-			SynergyRules.LEVEL_VETERAN:
-				gain = ("+1 Armor (%d > %d)." % [card.armor, card.armor + 1]) if card.is_unit() else "+1 Armor."
-			SynergyRules.LEVEL_ELITE:
-				gain = ("+1 FP (%d > %d)." % [card.firepower, card.firepower + 1]) if card.is_unit() else "+1 FP."
-		var gl: Label = tile.add_line(gain, &"FriendlyLabel")
-		gl.name = "GainLine"
-		_add_band_strip(tile, lv, lv + 1)
-		tile.pressed.connect(choose.bind(i))
-		if card != null:
-			_wire_inspect(tile, _inspect_card_id.bind(card.id, lv))
-		_list_grid.add_child(tile)
-		list_tiles.append(tile)
-	_fit_list()
 
 
 # =============================================================================
@@ -704,7 +618,7 @@ func _build_muster_out(r: RunProgress) -> void:
 		var bc: CardView = CARD_VIEW_SCENE.instantiate() as CardView
 		bc.name = "Card"
 		holder.add_child(bc)
-		bc.set_card_data(_view_dict(card, SynergyRules.LEVEL_RECRUIT, StringName(row["art"])))
+		bc.set_card_data(_view_dict(card, StringName(row["art"])))
 		bc.set_card_width(MUSTER_CARD_W)
 		_ignore_mouse(bc)
 		var st: Label = tile.add_status("")
@@ -760,34 +674,10 @@ func _inspect_muster(idx: int) -> void:
 	if r == null or idx < 0 or idx >= r.deck.size():
 		return
 	var card: CardData = r.resource(r.deck[idx]) as CardData
-	_inspector.open({"view": _view_dict(card, 0, r.art_of(idx)), "banner": BannerCard.entry_for_card(card, r.art_of(idx), 0),
+	_inspector.open({"view": _view_dict(card, r.art_of(idx)), "banner": BannerCard.entry_for_card(card, r.art_of(idx)),
 			"title": card.display_name, "type": "Standard Issue %s · %s" % [RunProgress.standard_issue_serial(card), CardInfo.type_line(card)],
 			"text": "Basic kit: cost %d, %d FP, %d Armor, no keyword, no trait." % [card.cost, card.firepower, card.armor],
 			"status": "Marked GOING HOME: it leaves your deck when you tap SEND HOME." if muster_marks.has(idx) else "Stays in your deck."})
-
-
-## A strip of camo swatches on a tile: the level now, and (to >= 0) the level it becomes.
-func _add_band_strip(tile: PickTile, from_lv: int, to_lv: int) -> void:
-	var strip := Control.new()
-	strip.name = "Bands"
-	strip.custom_minimum_size = Vector2(0, 12)
-	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	strip.draw.connect(func() -> void:
-		var w: float = 70.0
-		_swatch(strip, Rect2(0, 2, w, 8), SynergyGlyphs.band_of(from_lv))
-		if to_lv >= 0:
-			strip.draw_line(Vector2(w + 6, 6), Vector2(w + 22, 6), Color("#C8D0D6"), 2.0)
-			strip.draw_colored_polygon(PackedVector2Array([Vector2(w + 28, 6), Vector2(w + 20, 1), Vector2(w + 20, 11)]), Color("#C8D0D6"))
-			_swatch(strip, Rect2(w + 34, 2, w, 8), SynergyGlyphs.band_of(to_lv)))
-	tile.content.add_child(strip)
-
-
-static func _swatch(ci: CanvasItem, r: Rect2, band: StringName) -> void:
-	if band == &"":
-		ci.draw_rect(r, Color("#2A3036"))
-		ci.draw_rect(r, Color("#8A949C"), false, 1.0)
-	else:
-		SynergyGlyphs.draw_band(ci, r, band)
 
 
 ## Doctrine: a trait emblem, its tier texts and how many cards of it the deck has.
@@ -867,8 +757,7 @@ func open_details(i: int) -> void:
 	var drop: bool = offer["kind"] in RewardOffers.CARD_DROPS
 	var art: StringName = offer_art(r, i) if drop else card.id
 	var t: StringName = offer_trait(r, i) if drop else card.card_trait
-	var lv: int = offer_level() if drop and card.is_unit() else SynergyRules.LEVEL_TRAINED
-	var vd: Dictionary = _view_dict(card, lv, art)
+	var vd: Dictionary = _view_dict(card, art)
 	var sub: String = BannerArtDB.subname(art)
 	var ba: BannerArt = BannerArtDB.get_art(art)
 	if BannerArtDB.is_card_art(ba):
@@ -878,21 +767,13 @@ func open_details(i: int) -> void:
 	if sub != "":
 		vd["subname"] = sub
 	var lines: Array[Dictionary] = CardInfo.keywords(card)
-	var trains: String = SynergyRules.trains_text(card, lv)
-	if trains != "":
-		for k: Dictionary in lines:
-			k["name"] = "%s (locked: unlocks when it trains)" % String(k["name"])
 	if card.is_unit() and card.has_trait_choice():
 		# The more-info view: the art's name and the trait it gives this copy (art-traits §8).
 		lines.push_front({"name": "Trait: %s" % ArtTraits.trait_name(t),
 				"text": "From the art%s (%s family). This copy comes with it; the art decides the trait." % [
 					(" \"%s\"" % sub) if sub != "" else "", ArtTraits.FAMILY_NAMES[ArtTraits.family_of(art, card)]]})
 	var text: String = card.text
-	if trains != "":
-		text = ("%s\n" % card.text if card.text != "" else "") + "%s: locked until it trains (Promotion)." % trains
 	var status: String = "%s: close this, then tap the card to add it to your deck." % String(KIND_TITLES.get(offer["kind"], "SUPPLY DROP")).capitalize()
-	if card.is_unit():
-		status = "%s %s" % [_level_status(card, lv), status]
 	_inspector.open({
 		"view": vd, "title": card.display_name, "type": ("%s · %s" % [sub.to_upper(), CardInfo.type_line(card)]) if sub != "" else CardInfo.type_line(card),
 		"text": text, "keywords": lines, "status": status,
@@ -916,8 +797,6 @@ func _next() -> void:
 
 
 ## kc-trait-ui: `art` = the art this copy comes with (CardView shows it; its name is in DETAILS).
-## kc-onboard-ui: a Recruit (offer level 0) shows the greyed "[lock] RECRUIT · TRAINS: ..." line in
-## place of its rules (they are locked) and its keywords greyed on the card.
 func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	var tile: PickTile = make_tile()
 	var holder: Control = Control.new()
@@ -927,8 +806,7 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	tile.content.add_child(holder)
 	var view: Control = CARD_VIEW_SCENE.instantiate()
 	holder.add_child(view)
-	var lv: int = offer_level() if card.is_unit() else SynergyRules.LEVEL_TRAINED
-	var vd: Dictionary = _view_dict(card, lv, art)
+	var vd: Dictionary = _view_dict(card, art)
 	if art != &"" and art != card.id:
 		var ba: BannerArt = BannerArtDB.get_art(art)
 		if BannerArtDB.is_card_art(ba):
@@ -937,18 +815,13 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 			vd["art_id"] = String(art)
 	view.set_card_data(vd)
 	_ignore_mouse(view)
-	var trains: String = SynergyRules.trains_text(card, lv)
-	var label: Label = null
-	if trains != "":
-		label = _trains_line(tile, trains)
-	else:
-		var rules: String = card.text
-		if rules == "":
-			var kws: Array[Dictionary] = CardInfo.keywords(card)
-			rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
-		label = tile.add_line(rules)
-		label.name = "RulesLabel"
-		label.set_meta(&"full_text", rules)
+	var rules: String = card.text
+	if rules == "":
+		var kws: Array[Dictionary] = CardInfo.keywords(card)
+		rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
+	var label: Label = tile.add_line(rules)
+	label.name = "RulesLabel"
+	label.set_meta(&"full_text", rules)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 8)
 	tile.content.add_child(row)
@@ -967,35 +840,6 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	_card_holders.append(holder)
 	_rules_labels.append(label)
 	return tile
-
-
-## The greyed Recruit line: a padlock, then "RECRUIT · TRAINS: FIRST SHOT · GUARD" (the rules text is
-## locked until the copy trains). The Label is named RulesLabel (it takes the rules line's place).
-func _trains_line(tile: PickTile, trains: String) -> Label:
-	var row := HBoxContainer.new()
-	row.name = "TrainsLine"
-	row.add_theme_constant_override(&"separation", 6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lock := Control.new()
-	lock.name = "LockIcon"
-	lock.custom_minimum_size = Vector2(18, 20)
-	lock.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lock.draw.connect(func() -> void: StandardIssueLook.draw_lock(lock, Rect2(1, 1, 16, 18), LOCK_GREY))
-	row.add_child(lock)
-	var text: String = "RECRUIT · " + trains.to_upper()
-	var l: Label = make_label(text, &"HudTag")
-	l.name = "RulesLabel"
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.add_theme_color_override(&"font_color", LOCK_GREY)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.set_meta(&"full_text", text)
-	l.set_meta(&"lock_w", 24.0)
-	l.set_meta(&"trains", trains)
-	row.add_child(l)
-	tile.content.add_child(row)
-	return l
 
 
 func _item_tile(item: LoadoutItem) -> PickTile:

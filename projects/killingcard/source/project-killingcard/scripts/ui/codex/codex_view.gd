@@ -412,8 +412,7 @@ static func inspector_info(e: Dictionary, art_override: StringName = &"") -> Dic
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
 	if card.is_field():
 		type_text = "field"
-	if card.is_unit() and CardInfo.CLASS_WORDS.get(card.weapon_class, "") != "":
-		type_text += " · " + String(CardInfo.CLASS_WORDS[card.weapon_class])
+	# kc-ipad-cards: the weapon class is never shown.
 	if card.is_unit():
 		type_text += " · FP %d · Armor %d" % [card.firepower, card.armor]
 	type_text += " · cost %d" % card.cost

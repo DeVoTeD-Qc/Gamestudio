@@ -5,7 +5,7 @@
 #   chips; matches the board after Reveal), the inspector's "FP 4 = 3 base +1 Vanguard 2 ..."
 #   lines, the Operator's own card (its Supply cost in the deck cards' cost hex since kc-loadout-cut,
 #   NEED SUPPLY state, half-height mini
-#   card on the board), Undead heal feedback, quick match on the Recruit starter, the inspector fix.
+#   card on the board), Undead heal feedback, quick match on the starter, the inspector fix.
 #   Runs with or without the git-ignored licensed art folder.
 # Author: UI/UX Agent (kc-syn-ui)
 extends "res://tests/test_case.gd"
@@ -24,7 +24,7 @@ var _saved_root_size: Vector2i = Vector2i.ZERO
 func _stage(st: MatchState) -> Dictionary:
 	var out: Dictionary = {}
 	for pair: Array in [[&"breacher", 1], [&"marksman", 1], [&"point_man", 0]]:
-		var u: RulesUnit = st.create_unit(0, CardDB.get_card(pair[0]), -1, SynergyRules.LEVEL_TRAINED)
+		var u: RulesUnit = st.create_unit(0, CardDB.get_card(pair[0]))
 		st.put_in_line(u, int(pair[1]))
 		out[pair[0]] = u
 	return out
@@ -51,7 +51,7 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		assert_true(strip_r.encloses(m.get_trait_rail().get_global_rect()), "%s rail inside the icon strip" % label)
 		# kc-pos-cut: the board draws no link ticks any more.
 		assert_false(m.get_board().has_method(&"get_drawn_ticks"), "%s no link ticks" % label)
-		# Banner entries: buffed FP marked, keyword pip lit, trait tier, camo band.
+		# Banner entries: buffed FP marked, keyword pip lit, trait tier (kc-no-training: no camo band).
 		var b_entry: Dictionary = {}
 		var m_entry: Dictionary = {}
 		for e: Dictionary in snap["lanes"][1]["friendly"]:
@@ -62,7 +62,7 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		assert_eq(int(b_entry["fp"]), st.firepower_of(u[&"breacher"]), "%s banner FP = the engine's" % label)
 		assert_true(int(b_entry["fp"]) > int(b_entry["fp_base"]) and int(b_entry["fp_trend"]) == 1, "%s Breacher FP buffed (%d > %d)" % [label, b_entry["fp"], b_entry["fp_base"]])
 		assert_eq(String(b_entry.get("kw", "")), "", "%s kc-pos-cut: no neighbour keyword pip" % label)
-		assert_eq([String(b_entry["trait"]), int(b_entry["trait_tier"]), String(b_entry["band"])], ["vanguard", 2, "gilded"], "%s Vanguard 2 icon + Gilded band" % label)
+		assert_eq([String(b_entry["trait"]), int(b_entry["trait_tier"]), b_entry.has("band")], ["vanguard", 2, false], "%s Vanguard 2 icon, no camo band (kc-no-training)" % label)
 		assert_eq(int(m_entry["cover"]), 0, "%s kc-pos-cut: no Guard Cover on the Marksman" % label)
 		# Inspector: where the number comes from.
 		c._on_lane_long_pressed(1, &"player", (u[&"breacher"] as RulesUnit).uid)
@@ -93,9 +93,9 @@ func test_placement_preview_shows_the_result() -> void:
 	var c: Node = s[2]
 	var st: MatchState = c.state
 	var me: RulesSide = st.sides[0]
-	var pm: RulesUnit = st.create_unit(0, CardDB.get_card(&"point_man"), -1, SynergyRules.LEVEL_TRAINED)
+	var pm: RulesUnit = st.create_unit(0, CardDB.get_card(&"point_man"))
 	st.put_in_line(pm, 0)
-	var rc: RulesCard = RulesCard.new(st.new_uid(), CardDB.get_card(&"marksman"), SynergyRules.LEVEL_TRAINED)
+	var rc: RulesCard = RulesCard.new(st.new_uid(), CardDB.get_card(&"marksman"))
 	me.hand.append(rc)
 	me.supply = 9
 	c.refresh()
@@ -177,22 +177,15 @@ func test_operator_card_is_its_own_card() -> void:
 		await tree.process_frame
 
 
-func test_quick_match_plays_the_recruit_starter() -> void:
+func test_quick_match_plays_the_starter() -> void:
 	var s: Array = await _spawn(Layout.DESKTOP)
 	var c: Node = s[2]
 	var setup: SideSetup = c.state.sides[0].setup
 	var cfg: RunConfig = CardDB.get_run_config()
-	assert_eq(setup.deck_levels.size(), setup.deck.size(), "levels parallel to the deck")
-	# kc-onboard: Standard Issue copies are level 0 (they never train), the rest per starter_recruits.
-	var want_of: Callable = func(card: CardData) -> int:
-		if PitchDecks.active():
-			return SynergyRules.LEVEL_TRAINED
-		return SynergyRules.LEVEL_RECRUIT if cfg.starter_recruits or card.standard_issue else SynergyRules.LEVEL_TRAINED
-	for i: int in setup.deck_levels.size():
-		var want: int = want_of.call(setup.deck[i])
-		assert_eq(setup.deck_levels[i], want, "starter copies are %s" % SynergyRules.LEVEL_NAMES[want])
+	assert_false("deck_levels" in setup, "kc-no-training: no copy levels")
 	for rc: RulesCard in c.state.sides[0].hand:
-		assert_eq(rc.level, want_of.call(rc.card), "hand copy level")
+		assert_true(SynergyRules.is_single_trait(rc.card_trait()), "a hand copy carries at most one trait")
+	assert_true(cfg != null, "run config")
 	_despawn(s[0])
 
 
@@ -201,7 +194,7 @@ func test_undead_heal_feedback() -> void:
 	var m: Control = s[1]
 	var c: Node = s[2]
 	var st: MatchState = c.state
-	var b: RulesUnit = st.create_unit(0, CardDB.get_card(&"brawler"), -1, SynergyRules.LEVEL_TRAINED)
+	var b: RulesUnit = st.create_unit(0, CardDB.get_card(&"brawler"))
 	st.put_in_line(b, 0)
 	c.refresh()
 	await _frames(2)

@@ -553,12 +553,7 @@ func _run_block(proxy: String) -> Dictionary:
 			seconds += l["seconds"] + BETWEEN_MATCH_S
 			r.record_match(m)
 			while not r.current_offer().is_empty():
-				# kc-syn: Retire a Recruit with a twin instead of a card once the deck has 22+ cards.
-				var off: Dictionary = r.current_offer()
-				if off.get("retire", false) and r.deck.size() >= 22 and not r.retire_options().is_empty() \
-						and int(r.retire_options()[0]["twin_index"]) >= 0:
-					r.retire_card(0)
-					continue
+				# (kc-no-training: the old "retire a Recruit twin" branch is gone; it never fired after kc-onboard.)
 				r.choose_offer(_choose(r))
 		if r.is_victory():
 			victories += 1

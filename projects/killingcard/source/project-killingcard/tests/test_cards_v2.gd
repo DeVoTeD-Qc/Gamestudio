@@ -1,6 +1,6 @@
 # test_cards_v2.gd
 # Purpose: kc-cards-impl (the head's picks, documentation/ux/card-design-options.html):
-#   - C1+ board card: at rest vs peek (cost / level coin / weapon only on hover, hold, in the hand or
+#   - C1+ board card: at rest vs peek (the cost only on hover, hold, in the hand or
 #     with Settings > Cards > "Always show all card info"); faint vs lit traits; the damaged plate
 #     (amber, the number left, the bottom edge + crack); the FP reticle in team colour; no spine, no
 #     serial plate; full-strength art;
@@ -8,7 +8,7 @@
 #   - H1: tap a card (it lifts, the Y2+ preview docks with CANCEL, legal slots say PLAY HERE), tap a
 #     slot to place; cancel by the card again, CANCEL or the empty board;
 #   - O2: the Operator card bottom-left of the tray, UNDO (icon) over READY, its states;
-#   - Y2+ / T1 frames (layout, tactic chevron cut, no stats bar, NOT FOUND YET, Trains line);
+#   - Y2+ / T1 frames (layout, tactic chevron cut, no stats bar, NOT FOUND YET; kc-ipad-cards: no Trains line);
 #   - one title style everywhere (Barlow Condensed Bold 16 px, UPPERCASE, #F2F5F7);
 #   - the new Pick icon (not the sheet's crosshair, UiKit first).
 # Author: UI/UX Agent (kc-cards-impl)
@@ -78,7 +78,7 @@ func _banner(entry: Dictionary, sz: Vector2 = Vector2(228, 57), side: StringName
 
 
 const UNIT: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 4, "armor_max": 4, "banner": "rifleman", "cost": 2,
-		"keywords": [{"id": &"pick"}], "trait": "vanguard", "trait_tier": 1, "level": 1}
+		"keywords": [{"id": &"pick"}], "trait": "vanguard", "trait_tier": 1}
 
 
 # =============================================================================
@@ -90,17 +90,29 @@ func test_at_rest_vs_peek() -> void:
 	BannerView.show_all = false
 	var a: Dictionary = b.anatomy_now()
 	assert_false(b.is_peeking(), "a board card is quiet at rest")
-	for key: String in ["cost", "level", "class"]:
-		assert_true(a.has(key) and (a[key] as Rect2).size.x > 0.0, "%s slot exists (shown on peek)" % key)
-		assert_true((a[key] as Rect2).position.x < 228.0 * 0.5 and (a[key] as Rect2).position.y < 57.0 * 0.3, "%s top-left" % key)
-	# Peek order: cost hex -> level coin -> weapon pill, left to right.
-	assert_true((a["cost"] as Rect2).end.x <= (a["level"] as Rect2).position.x and (a["level"] as Rect2).end.x <= (a["class"] as Rect2).position.x,
-			"cost -> level coin -> weapon")
+	assert_true(a.has("cost") and (a["cost"] as Rect2).size.x > 0.0, "the cost slot exists (shown on peek)")
+	assert_true((a["cost"] as Rect2).position.x < 228.0 * 0.5 and (a["cost"] as Rect2).position.y < 57.0 * 0.3, "cost top-left")
+	# kc-ipad-cards: no level coin, no weapon pill.
+	assert_false(a.has("level") or a.has("class"), "no level coin or weapon pill slot")
 	assert_eq((a["name"] as Rect2).size.x, 0.0, "no name on the board card")
+	var fr: Rect2 = a["fp"]
+	var tr: Rect2 = a["trait"]
+	assert_false(a["abilities"].is_empty(), "the unit shows its ability")
 	for ab: Array in a["abilities"]:
-		assert_true((ab[1] as Rect2).position.x > 228.0 * 0.5 and (ab[1] as Rect2).size.x >= 20.0, "abilities top-right, 21 px class")
-	assert_true((a["fp"] as Rect2).size.x >= 25.0 and (a["armor"] as Rect2).position.x > (a["fp"] as Rect2).position.x, "FP reticle then Armor bottom-right")
-	assert_true((a["trait"] as Rect2).position.x < 20.0 and (a["trait"] as Rect2).end.y > 50.0, "trait bottom-left")
+		var r: Rect2 = ab[1]
+		assert_true(r.size.x >= fr.size.x - 0.5, "kc-ipad-cards: the ability icon is as big as the FP reticle (%s vs %s)" % [r.size, fr.size])
+		assert_true(r.position.x >= tr.end.x and r.end.x <= fr.position.x and absf(r.end.y - fr.end.y) < 1.0,
+				"abilities bottom-centre, between the trait and the stats")
+	assert_true(fr.size.x >= 25.0 and (a["armor"] as Rect2).position.x > fr.position.x, "FP reticle then Armor bottom-right")
+	assert_true(tr.position.x < 20.0 and tr.end.y > 50.0, "trait bottom-left")
+	assert_true(tr.size.x >= fr.size.x - 0.5, "kc-ipad-cards: the trait chip is as big as the FP reticle")
+	assert_false(tr.intersects(a["cost"]), "the cost hex stays clear of the trait")
+	# The top-right placement still works (the comparison shots).
+	BannerView.ABILITIES_BOTTOM = false
+	var a2: Dictionary = b.anatomy_now()
+	BannerView.ABILITIES_BOTTOM = true
+	for ab: Array in a2["abilities"]:
+		assert_true((ab[1] as Rect2).position.x > 228.0 * 0.5 and (ab[1] as Rect2).position.y < 10.0, "abilities top-right when switched")
 	b.peek = true
 	assert_true(b.is_peeking(), "hover / hold peeks")
 	b.peek = false
@@ -113,7 +125,7 @@ func test_at_rest_vs_peek() -> void:
 	# Desktop banner scales the same layout (k = 76 / 57).
 	var d: BannerView = _banner(UNIT, Vector2(304, 76))
 	var ad: Dictionary = d.anatomy_now()
-	assert_true(absf((ad["abilities"][0][1] as Rect2).size.x - 28.0) <= 1.0, "desktop abilities 28 px")
+	assert_true(absf((ad["abilities"][0][1] as Rect2).size.x - 40.0) <= 1.0, "desktop abilities 40 px (30k, kc-ipad-cards)")
 	b.free()
 	d.free()
 
@@ -295,31 +307,41 @@ func test_hand_x1_cards_fit_and_operator_row() -> void:
 		var label: String = screen["name"]
 		var met: Dictionary = m.metrics
 		var k: float = Layout.points_per_px(screen)
-		var card: Vector2 = met["card"]
-		assert_eq(card, BoardMetrics.x1_size(card.x, BoardMetrics.X1_MIN_H if m.compact else BoardMetrics.X1_MIN_H_DESKTOP), "%s: X1 = 4:1 banner + name plate" % label)
 		var grid: Rect2 = met["grid"]
-		var cols: int = int(met["hand_cols"])
-		var fit_rows: int = ceili(8.0 / cols) if cols > 1 else 7
-		assert_true(fit_rows * card.y + (fit_rows - 1) * float(met["card_gap"]) <= grid.size.y + EPS, "%s: %d cards fit" % [label, 8 if cols > 1 else 7])
 		var hand: Control = m.get_hand()
+		var fit: Dictionary = hand.hand_fit
+		var card: Vector2 = fit["card"]
+		var cols: int = int(fit["cols"])
+		var n: int = hand.get_cards().size()
+		var rows: int = ceili(float(n) / cols)
+		assert_true(rows * card.y + (rows - 1) * float(met["card_gap"]) <= grid.size.y + EPS, "%s: %d cards fit" % [label, n])
 		for chip: Node in hand.get_cards():
 			var bv: BannerView = hand.get_banner(chip)
 			assert_true(bv.full_info, "%s: hand banners show everything" % label)
-			assert_true(absf(bv.size.x / bv.size.y - 4.0) < 0.2, "%s: 4:1 banner (%s)" % [label, bv.size])
+			# kc-ipad-cards: X1 = the banner (cover-cropped, between 2.4:1 and ~5:1) + the name plate.
+			var ratio: float = bv.size.x / bv.size.y
+			assert_true(ratio >= BannerCard.BANNER_MAX_RATIO - 0.1 and ratio <= BannerCard.BANNER_MIN_RATIO + 0.1, "%s: banner %s" % [label, bv.size])
+			var plate: Control = chip.find_child("NamePlate", true, false)
+			assert_true(plate.position.y >= bv.position.y + bv.size.y - EPS, "%s: the name plate under the banner" % label)
 			var nl: Label = chip.find_child("NameLabel", true, false)
 			assert_true(nl.has_meta(&"title_style"), "%s: the name plate in the title style" % label)
 			assert_true((chip as Control).size.y * k >= 44.0 - EPS, "%s: hand card >= 44 pt" % label)
-		# O2: the Operator bottom-left, UNDO (icon) over READY bottom-right.
+		# O2: the Operator card and UNDO (icon) + READY in the bottom row (phone: side by side, UNDO over
+		# READY; a narrow desktop / iPad tray stacks them: the Operator across, UNDO beside READY).
 		var op: Control = hand.get_operator_card()
 		assert_not_null(op, "%s: the Operator card" % label)
 		var undo: Button = m.get_undo_button()
 		var ready: Button = m.get_ready_button()
 		var orr: Rect2 = op.get_global_rect()
-		assert_true(orr.end.x <= undo.get_global_rect().position.x + EPS, "%s: the Operator is left of UNDO" % label)
-		assert_true(undo.get_global_rect().end.y <= ready.get_global_rect().position.y + EPS, "%s: UNDO over READY" % label)
+		if bool(met.get("op_stacked", false)):
+			assert_true(orr.end.y <= undo.get_global_rect().position.y + EPS, "%s: the Operator over UNDO" % label)
+			assert_true(undo.get_global_rect().end.x <= ready.get_global_rect().position.x + EPS, "%s: UNDO left of READY" % label)
+		else:
+			assert_true(orr.end.x <= undo.get_global_rect().position.x + EPS, "%s: the Operator is left of UNDO" % label)
+			assert_true(undo.get_global_rect().end.y <= ready.get_global_rect().position.y + EPS, "%s: UNDO over READY" % label)
+			assert_true(orr.end.y >= ready.get_global_rect().end.y - 2.0, "%s: the Operator sits in the bottom row" % label)
 		assert_eq(undo.text, "", "%s: UNDO is an icon" % label)
 		assert_true(undo.size.y * k >= 44.0 - EPS and ready.size.y * k >= 44.0 - EPS, "%s: 44 pt+" % label)
-		assert_true(orr.end.y >= ready.get_global_rect().end.y - 2.0, "%s: the Operator sits in the bottom row" % label)
 		var status: Label = op.find_child("OperatorStatus", true, false)
 		assert_true(status.text in ["DEPLOY", "ON BOARD", "DOWN"] or status.text.begins_with("NEED") or status.text.begins_with("PLAN")
 				or status.text.begins_with("ON BOARD"), "%s: a state (%s)" % [label, status.text])
@@ -370,7 +392,7 @@ func _card_view(view: Dictionary, w: float) -> CardView:
 
 
 func test_y2plus_and_t1_frames() -> void:
-	var unit: CardView = _card_view(CardView.view_for_card(CardDB.get_card(&"marksman"), &"", 1), 196)
+	var unit: CardView = _card_view(CardView.view_for_card(CardDB.get_card(&"marksman")), 196)
 	await _frames(1)
 	assert_eq(unit.size, CardView.size_for(196), "laid out at its width")
 	var rg: Dictionary = unit.regions()
@@ -389,19 +411,14 @@ func test_y2plus_and_t1_frames() -> void:
 	var cut: PackedVector2Array = CardView.outline(Rect2(0, 0, 196, 200), CardView.T1_CUT)
 	assert_true(cut.has(Vector2(196.0 - CardView.T1_CUT, 0.0)) and cut.has(Vector2(196.0, CardView.T1_CUT)), "T1: the chevron-cut top-right corner")
 	assert_eq(tac._frame_colors()[0], CardView.FRAME_T1, "T1: khaki orders frame")
-	# A Recruit's greyed Trains line.
-	var rec_card: CardData = null
+	# kc-no-training: no Recruit, so no greyed Trains line on any card.
 	for id: StringName in [&"breacher", &"marksman", &"flanker", &"gunner"]:
 		var cd: CardData = CardDB.get_card(id)
-		if cd != null and not SynergyRules.locked_keywords(cd, 0).is_empty():
-			rec_card = cd
-			break
-	if rec_card != null:
-		var rec: CardView = _card_view(CardView.view_for_card(rec_card, &"", 0), 196)
-		await _frames(1)
-		var lines: Array = rec.get_text_lines()
-		assert_true(lines.any(func(l: Dictionary) -> bool: return l["name"] == "Trains:" and bool(l["locked"])), "Recruit: greyed Trains: line")
-		rec.free()
+		if cd != null:
+			var cv2: CardView = _card_view(CardView.view_for_card(cd), 196)
+			await _frames(1)
+			assert_false(cv2.get_text_lines().any(func(l: Dictionary) -> bool: return l["name"] == "Trains:"), "%s: no Trains line" % id)
+			cv2.free()
 	# NOT FOUND YET (Codex).
 	var nf: Dictionary = CardView.view_for_card(CardDB.get_card(&"marksman"))
 	nf["not_found"] = true

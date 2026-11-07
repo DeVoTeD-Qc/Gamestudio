@@ -62,7 +62,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		# kc-ui4: the board banner's fields (art, subname, effect bolt, Protector, Elite): the hand card
 		# is the same banner. The name stays the chassis; the art's own name is the subname.
 		_banner_fields(c, rc.card, null, null, state, rc.uid)
-		StandardIssueLook.dress(c, rc.card, rc.level, StringName(c.get("banner", "")))
+		StandardIssueLook.dress(c, rc.card, StringName(c.get("banner", "")))
 		hand.append(c)
 	var mode_rules: ModeRules = state.hooks.mode_rules if state.hooks != null else null
 	var deploy_open: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -126,14 +126,14 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 	_banner_fields(e, u.card, u, side, state, u.uid)
 	_unit_synergy(e, state, u, side)
 	if u.card != null:
-		# kc-onboard-ui: Standard Issue frame + serial plate, a Recruit's locked keywords and level badge.
-		StandardIssueLook.dress(e, u.card, u.level, StringName(e.get("banner", "")), true)
+		# kc-onboard-ui: the Standard Issue frame (kc-ipad-cards: no levels, no locked keywords).
+		StandardIssueLook.dress(e, u.card, StringName(e.get("banner", "")), true)
 	return e
 
 
 ## kc-syn-ui: the synergy / stat fields of a unit entry: fp_base / fp_trend (1 buffed, -1 lowered:
 ## the badge colour), cover / cover_trend, kw + kw_active (the keyword pip lights while its link is
-## on), trait + trait_tier (icon lit at 2, ring at 3), level / band (camo band), fs_syn, heal.
+## on), trait + trait_tier (icon lit at 2, ring at 3), fs_syn, heal.
 static func _unit_synergy(e: Dictionary, state: MatchState, u: RulesUnit, side: RulesSide) -> void:
 	var b: Dictionary = StatBreakdown.of_unit(state, u)
 	e["fp"] = int(b["fp"]["total"])
@@ -150,8 +150,6 @@ static func _unit_synergy(e: Dictionary, state: MatchState, u: RulesUnit, side: 
 	e["heal"] = int(b["heal"])
 	e["kw"] = String(u.neighbor_keyword)
 	e["trait"] = String(u.synergy_trait)
-	e["level"] = u.level if u.card != null else -1
-	e["band"] = String(SynergyRules.LEVEL_BANDS[clampi(u.level, 0, 3)]) if u.card != null else ""
 	var sv: Dictionary = state.synergy_side(side.index)
 	e["trait_tier"] = int((sv.get("tiers", {}) as Dictionary).get(u.synergy_trait, 0)) if u.synergy_trait != &"" else 0
 	var active: bool = false
@@ -163,13 +161,11 @@ static func _unit_synergy(e: Dictionary, state: MatchState, u: RulesUnit, side: 
 	e["kw_active"] = active
 
 
-## Hand chip synergy fields: kw / trait / level / band (Recruits: none) and completes_tier (a dot:
+## Hand chip synergy fields: kw / trait and completes_tier (a dot:
 ## playing it this round would switch a set tier on, in at least one column).
 static func _hand_synergy(c: Dictionary, state: MatchState, viewer: int, rc: RulesCard) -> void:
 	c["kw"] = String(rc.neighbor_keyword())
 	c["trait"] = String(rc.card_trait())
-	c["level"] = rc.level
-	c["band"] = String(SynergyRules.LEVEL_BANDS[clampi(rc.level, 0, 3)])
 	var completes: String = ""
 	if rc.card_trait() != &"" and rc.card.card_type != DataEnums.CardType.TACTIC:
 		for z: int in MatchState.ZONE_COUNT:
@@ -295,8 +291,6 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 				_banner_fields(entry, rc.card, null, side, state, rc.uid)
 				entry["kw"] = String(rc.neighbor_keyword())
 				entry["trait"] = String(rc.card_trait())
-				entry["level"] = rc.level
-				entry["band"] = String(SynergyRules.LEVEL_BANDS[clampi(rc.level, 0, 3)])
 			&"place", &"rotate":
 				var op: RulesUnit = side.operator_unit
 				entry = {"uid": op.uid, "name": unit_name(op, side), "cls": "OPERATOR", "operator": true,
@@ -462,8 +456,8 @@ static func initiative_info(state: MatchState, viewer: int = MatchState.PLAYER) 
 
 
 ## What the progressive reveal shows on this board (RevealGate: the systems met, or in use now on
-## either side): {now: [RevealFlags ids in play], trait_rail, links, bands, initiative: bool}.
+## either side): {now: [RevealFlags ids in play], trait_rail, links, initiative: bool}.
 static func reveal_info(state: MatchState) -> Dictionary:
 	var now: Array[StringName] = RevealFlags.match_triggers(state)
 	return {"now": now, "trait_rail": RevealGate.shown(RevealFlags.TRAIT_RAIL, now),
-			"links": RevealGate.shown(RevealFlags.LINKS, now), "bands": RevealGate.shown(RevealFlags.PROMOTION, now)}
+			"links": RevealGate.shown(RevealFlags.LINKS, now)}

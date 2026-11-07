@@ -1,7 +1,7 @@
 # stat_breakdown.gd
 # Purpose: "Where does this number come from" for the board and the inspector (kc-syn-ui, head's
 #   note A: show the RESULTING stats, buffed values in their own colour, the base on inspect).
-#   Splits a unit's Firepower and Cover into printed base + copy level + loadout + range of its
+#   Splits a unit's Firepower and Cover into printed base + loadout + range of its
 #   column + effects + auras (Fields, perks, Commander) + neighbour links + trait sets, so that
 #   the parts add up to MatchState.firepower_of / cover_of. Also builds the same numbers for a
 #   card that is not on the board yet (the landing ghost of a selected hand card, per column),
@@ -28,7 +28,7 @@ static func of_ghost(state: MatchState, side: int, card_uid: int, zone: int) -> 
 	if rc == null or not rc.card.is_unit() or not state.is_zone(zone):
 		return {}
 	var pv: Dictionary = state.preview_synergy(side, card_uid, zone)
-	var tmp: RulesUnit = state.create_unit(side, rc.card, rc.uid, rc.level)
+	var tmp: RulesUnit = state.create_unit(side, rc.card, rc.uid, rc.chosen_trait)
 	tmp.zone = zone  # read-only probe: never put in a line
 	var out: Dictionary = _build(state, tmp, pv.get("card", {}) if bool(pv.get("ok", false)) else {}, zone)
 	out["preview"] = pv
@@ -52,11 +52,8 @@ static func of_operator_ghost(state: MatchState, side: int, zone: int) -> Dictio
 static func _build(state: MatchState, u: RulesUnit, syn: Dictionary, zone: int) -> Dictionary:
 	var fp_parts: Array = []
 	var base: int = u.card.firepower if u.card != null else u.base_firepower
-	var lv: Dictionary = SynergyRules.level_stats(u.level) if u.card != null else {"fp": 0, "armor": 0}
-	if int(lv["fp"]) != 0:
-		fp_parts.append([SynergyGlyphs.level_name(u.level), int(lv["fp"])])
 	if u.card != null:
-		var loadout: int = u.base_firepower - base - int(lv["fp"])
+		var loadout: int = u.base_firepower - base
 		if loadout != 0:
 			fp_parts.append(["loadout", loadout])
 	if zone >= 0:

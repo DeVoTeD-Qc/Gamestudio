@@ -77,7 +77,7 @@ func start_run(seed_value: int = -1) -> RunProgress:
 	var pref: String = String(st.get(&"operator_primary")) if st != null else ""
 	if pref != "" and pref != String(run.primary):
 		run.set_primary(StringName(pref))
-	# kc-art-traits: the starter's Recruits wear the Codex EQUIP arts (Settings.equipped_arts).
+	# kc-art-traits: new copies are pre-selected in the Codex EQUIP arts (Settings.equipped_arts).
 	run.set_equipped_arts(_equipped_arts())
 	_session_start_ms = Time.get_ticks_msec()
 	last_load_warning = ""
@@ -219,16 +219,15 @@ func current_offer() -> Dictionary:
 	return run.current_offer() if run != null else {}
 
 
-## kc-art-traits: `trait_pick` = the trait a Recruit trains into on a Promotion (one of
-## run.train_choices(copy)); TRAIT_DEFAULT = its pre-selected art's trait.
-func choose_offer(index: int, trait_pick: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
+## Takes option `index` of the current offer. Returns "" or the reason.
+func choose_offer(index: int) -> String:
 	if run == null:
 		return "no run"
 	var offer: Dictionary = run.current_offer()
 	var kind: StringName = offer.get("kind", &"")
 	var opts: Array = offer.get("options", [])
 	var chosen: StringName = StringName(opts[index]) if index >= 0 and index < opts.size() else &""
-	var err: String = run.choose_offer(index, trait_pick)
+	var err: String = run.choose_offer(index)
 	if err == "":
 		EventBus.reward_picked.emit(kind, chosen)
 		_changed()
@@ -238,27 +237,13 @@ func choose_offer(index: int, trait_pick: StringName = SynergyRules.TRAIT_DEFAUL
 
 ## kc-syn §5.4: Retire option `index` of run.retire_options() as the current offer's choice
 ## (the Supply Drop's 4th option or Regroup). Returns "" or the reason.
-func retire_card(index: int, twin_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> String:
+func retire_card(index: int) -> String:
 	if run == null:
 		return "no run"
 	var options: Array[Dictionary] = run.retire_options()
-	var err: String = run.retire_card(index, twin_trait)
+	var err: String = run.retire_card(index)
 	if err == "":
 		EventBus.reward_picked.emit(&"retire", options[index]["id"])
-		_changed()
-		_announce_offer()
-	return err
-
-
-## kc-art-traits §2.2: Re-issue option `index` of run.reissue_options() into `new_trait` as the
-## current offer's choice (the Supply Drop's Re-issue next to Retire, or Regroup). "" or the reason.
-func reissue_card(index: int, new_trait: StringName) -> String:
-	if run == null:
-		return "no run"
-	var options: Array[Dictionary] = run.reissue_options()
-	var err: String = run.reissue_card(index, new_trait)
-	if err == "":
-		EventBus.reward_picked.emit(&"reissue", options[index]["id"])
 		_changed()
 		_announce_offer()
 	return err

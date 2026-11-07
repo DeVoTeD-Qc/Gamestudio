@@ -3,13 +3,12 @@
 #   §8 steps 5-6; head W1 / Z1 / Z2 / Z3):
 #   - Standard Issue cards: the plain frame, the serial plate "SI-0n" in the abilities slot (red on
 #     the rival's side), an empty trait socket, the stencil font on the name only;
-#   - a Recruit calling card: keywords locked (greyed sockets with a padlock, "Trains: ..."), the
-#     R level badge; a Trained copy's badge / camo band wait for Promotion (RevealGate);
+#   - kc-ipad-cards (kc-no-training): no Recruit, no locked keywords, level badge or camo band;
 #   - W1: board banners show the cost but not the name; hand cards keep cost + name;
 #   - the initiative chip and the SCORE flag: who goes first this round, and why (behind / tie),
 #     inspectable by long press / right click; the rule itself is read, never changed;
 #   - progressive reveal: the trait rail and link ticks hide until met or in use; the Engine part
-#     of the deck view waits for the first Promotion;
+#     of the deck view waits for its reveal flag;
 #   - the "New: X" explainer: shown once for a met system, GOT IT marks it seen, RESET TIPS (MENU)
 #     clears the profile; long press / right click says what it is;
 #   - the tutorial and TrainingBot_01 play Standard Issue cards;
@@ -101,7 +100,7 @@ func _right_click(vp: SubViewport, ctl: Control) -> void:
 func test_standard_issue_card_look_and_serial_plate() -> void:
 	_save_profile()
 	var trooper: CardData = _card(&"si_trooper")
-	var e: Dictionary = BannerCard.entry_for_card(trooper, &"si_trooper", 0)
+	var e: Dictionary = BannerCard.entry_for_card(trooper, &"si_trooper")
 	assert_true(StandardIssueLook.is_si(e), "a Standard Issue entry")
 	assert_eq(String(e.get("serial", "")), "SI-02", "serial by cost (Trooper costs 2)")
 	assert_eq(String(e.get("band", "")), "", "no camo band on Standard Issue")
@@ -122,13 +121,13 @@ func test_standard_issue_card_look_and_serial_plate() -> void:
 	card.queue_free()
 	# A calling card never uses the stencil font.
 	var bk: CardData = _card(&"breacher")
-	var card2: PanelContainer = BannerCard.build(BannerCard.entry_for_card(bk, &"breacher", 1), Vector2(228, 73), 57.0)
+	var card2: PanelContainer = BannerCard.build(BannerCard.entry_for_card(bk, &"breacher"), Vector2(228, 73), 57.0)
 	tree.root.add_child(card2)
 	await _frames(1)
 	assert_true((card2.find_child("NameLabel", true, false) as Label).get_theme_font(&"font") != StandardIssueLook.stencil(), "calling card: normal font")
 	card2.queue_free()
 	# The starter's Ammo Resupply wears a Standard Issue art and frame (but it is not a Standard Issue unit).
-	var ammo: Dictionary = BannerCard.entry_for_card(_card(&"ammo_resupply"), &"si_ammo_resupply", 1)
+	var ammo: Dictionary = BannerCard.entry_for_card(_card(&"ammo_resupply"), &"si_ammo_resupply")
 	assert_true(StandardIssueLook.is_si(ammo), "the starter's Ammo Resupply has the Standard Issue frame")
 	# CardView (mulligan / Supply Drop / inspector face).
 	var view: Control = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()
@@ -142,37 +141,27 @@ func test_standard_issue_card_look_and_serial_plate() -> void:
 	_restore_profile()
 
 
-func test_recruit_keywords_locked_with_trains_line_and_level_badge() -> void:
+func test_no_training_on_any_card() -> void:
+	# kc-ipad-cards (kc-no-training): every copy has its keywords; no lock, Trains line, level or band.
 	_save_profile()
 	RevealGate.active = true
 	var bk: CardData = _card(&"breacher")
-	var e: Dictionary = BannerCard.entry_for_card(bk, &"breacher", SynergyRules.LEVEL_RECRUIT)
-	var locked: Array = e.get("locked", [])
-	assert_eq(locked, Array(SynergyRules.locked_keywords(bk, 0)), "locked keywords = SynergyRules.locked_keywords")
-	assert_true(not locked.is_empty(), "a Recruit Breacher has something to train")
-	assert_eq(String(e.get("trains", "")), SynergyRules.trains_text(bk, 0), "the Trains line")
-	assert_true((e.get("keywords", []) as Array).is_empty() and not bool(e.get("bolt", false)), "no live keyword glyph on a Recruit")
-	assert_true(bool(e.get("level_badge", false)) and int(e.get("level", -1)) == 0, "R badge on a Recruit")
-	assert_true(String(e.get("trait", "")) != "", "a Recruit calling card keeps its trait (N1)")
-	var a: Dictionary = BannerView.anatomy(Vector2(228, 73), BannerView.metrics(57.0), e)
-	var n_locked: int = 0
+	var e: Dictionary = BannerCard.entry_for_card(bk, &"breacher")
+	for k: String in ["locked", "trains", "level", "level_badge", "band"]:
+		assert_false(e.has(k), "no %s key on a card entry" % k)
+	assert_false(BannerView.ability_kinds(e).is_empty(), "the Breacher's keywords show from the start")
+	assert_true(String(e.get("trait", "")) != "", "a calling card keeps its trait")
+	var a: Dictionary = BannerView.anatomy(Vector2(228, 57), BannerView.metrics(57.0), e)
+	assert_false(a.has("level") or a.has("class"), "no level coin, no weapon pill")
 	for ab: Array in a["abilities"]:
-		if ab[0] is Array and ab[0][0] == &"locked":
-			n_locked += 1
-	assert_true(n_locked >= 1 and n_locked <= 2, "locked sockets top-right (%d)" % n_locked)
-	assert_true(a.has("level") and (a["level"] as Rect2).position.x < 228.0 * 0.5, "level badge bottom-left")
-	# A Trained copy: keywords on; its badge and camo band wait for Promotion on a fresh profile.
-	var t: Dictionary = BannerCard.entry_for_card(bk, &"breacher", SynergyRules.LEVEL_TRAINED)
-	assert_true((t.get("locked", []) as Array).is_empty(), "Trained: nothing locked")
-	assert_false(bool(t.get("level_badge", false)), "Trained badge hidden before Promotion is met")
-	assert_eq(String(t.get("band", "")), "", "camo band hidden before Promotion is met")
-	tree.root.get_node("Settings").met_flags = {"promotion": true}
-	var t2: Dictionary = BannerCard.entry_for_card(bk, &"breacher", SynergyRules.LEVEL_TRAINED)
-	assert_true(bool(t2.get("level_badge", false)) and String(t2.get("band", "")) == "gilded", "after Promotion: badge + Gilded band")
-	# Outside a run (quick match, pitch) everything shows.
-	tree.root.get_node("Settings").met_flags = {}
-	RevealGate.active = false
-	assert_eq(String(BannerCard.entry_for_card(bk, &"breacher", 1).get("band", "")), "gilded", "show-all outside a run")
+		assert_false(ab[0] is Array and ab[0][0] == &"locked", "no padlocked socket")
+	var cv: CardView = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()
+	tree.root.add_child(cv)
+	cv.set_card_data(CardView.view_for_card(bk))
+	await _frames(1)
+	for l: Dictionary in cv.get_text_lines():
+		assert_false(bool(l["locked"]) or String(l["name"]) == "Trains:", "no locked line")
+	cv.queue_free()
 	_restore_profile()
 
 
@@ -284,22 +273,22 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	var rv: Dictionary = MatchSnapshot.reveal_info(c.state)
 	var traited: bool = RevealFlags.TRAIT_RAIL in (rv["now"] as Array)
 	assert_eq(bool(rv["trait_rail"]), traited, "trait rail: shown only while a traited unit is in play (fresh profile)")
-	assert_false(bool(rv["bands"]), "camo bands wait for Promotion")
+	assert_false(rv.has("bands"), "kc-ipad-cards: no camo bands (no training)")
 	# A snapshot with sets but the rail not revealed: the rail stays hidden, the chip holds the slot.
 	var snap: Dictionary = MatchSnapshot.build(c.state, c.map, 0)
 	snap["synergy"] = {"player": {"rail": [{"trait": &"vanguard", "name": "Vanguard", "count": 2, "next": 3, "tier": 2}], "links": [], "tiers": {}},
 			"enemy": {"rail": [], "links": [], "tiers": {}}}
-	snap["reveal"] = {"trait_rail": false, "links": false, "bands": false}
+	snap["reveal"] = {"trait_rail": false, "links": false}
 	m.show_snapshot(snap)
 	await _frames(2)
 	assert_false(m.get_trait_rail().is_visible_in_tree(), "unmet trait rail hidden")
 	assert_true(m.get_initiative_chip().is_visible_in_tree(), "initiative chip in its place")
-	snap["reveal"] = {"trait_rail": true, "links": true, "bands": true}
+	snap["reveal"] = {"trait_rail": true, "links": true}
 	m.show_snapshot(snap)
 	await _frames(2)
 	assert_true(m.get_trait_rail().is_visible_in_tree(), "revealed rail shows")
 	assert_false(m.get_initiative_chip().is_visible_in_tree(), "phone: the rail takes the slot, SCORE keeps the flag")
-	# The Engine part of the deck view waits for the first Promotion.
+	# The Engine part of the deck view waits for its reveal flag.
 	var rs: Node = tree.root.get_node("RunState")
 	var saved_cfg: RunConfig = rs.config
 	rs.config = null
@@ -309,7 +298,7 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	panel.open(r)
 	await _frames(1)
 	var texts: String = "\n".join(panel.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text))
-	assert_false(texts.contains("ENGINE"), "no Engine section before Promotion")
+	assert_false(texts.contains("ENGINE"), "no Engine section before it is met")
 	assert_true(texts.contains("Standard Issue: 18 of 20"), "the deck view counts the Standard Issue cards: %s" % texts.substr(0, 120))
 	assert_true(panel.find_child("SerialPlate", true, false) == null, "kc-ui-hooks: the retired serial plate is gone from the deck rows")
 	tree.root.get_node("Settings").met_flags = {"engine_panel": true}
@@ -409,10 +398,7 @@ func test_kit_slots_fall_back_to_code_drawing() -> void:
 	ci.draw.connect(func() -> void:
 		StandardIssueLook.draw_frame(ci, Rect2(Vector2.ZERO, ci.size))
 		StandardIssueLook.draw_serial_plate(ci, Rect2(150, 4, 70, 22), "SI-04", true)
-		StandardIssueLook.draw_locked_keyword(ci, Rect2(120, 4, 22, 22), "Guard")
-		StandardIssueLook.draw_locked_keyword(ci, Rect2(96, 4, 22, 22), "First Shot")
 		StandardIssueLook.draw_empty_socket(ci, Rect2(6, 30, 22, 22))
-		StandardIssueLook.draw_level_badge(ci, Rect2(30, 30, 22, 22), 0, ThemeDB.fallback_font)
 		NewCard.draw_example(ci, Rect2(0, 0, 228, 57), RevealFlags.MUSTER_OUT, false)
 		drawn[0] = true)
 	ci.queue_redraw()

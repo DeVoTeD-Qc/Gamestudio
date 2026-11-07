@@ -25,7 +25,7 @@
 #   _field_future (rounds left x the chance it survives Overrun); a plan that loses a column
 #   pays for the Field it would lose there, replacing a standing Field pays for the old one,
 #   and overrunning an enemy Field is worth its future value to the AI.
-#   Synergy (kc-syn, synergy-system.md §8): records carry the neighbor keyword / trait / level of
+#   Synergy (kc-syn, synergy-system.md §8): records carry the neighbor keyword / trait of
 #   each unit. With synergy_aware (default) every unit / Operator / Field / move candidate
 #   re-computes the links and set bonuses of all three columns (side links cross columns) with
 #   SynergyRules, swaps them into the records and adds their value for the rounds left
@@ -275,7 +275,7 @@ func _gain(p: Plan, c: Dictionary, gains: Dictionary) -> float:
 func _key(c: Dictionary) -> String:
 	var src: String = ""
 	if c["card"] != null:
-		src = "%s@%d@%s" % [(c["card"] as CardData).id, int(c.get("level", 1)), c.get("trait", SynergyRules.TRAIT_DEFAULT)]
+		src = "%s@%s" % [(c["card"] as CardData).id, c.get("trait", SynergyRules.TRAIT_DEFAULT)]
 	elif c["item"] != null:
 		src = (c["item"] as LoadoutItem).id
 	return "%s|%s|%d|%d|%d" % [c["kind"], src, c["zone"], c["target_uid"], c["dest_zone"]]
@@ -322,11 +322,9 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 	for h: Dictionary in _view.hand:
 		var uid: int = h["uid"]
 		var card: CardData = h["card"]
-		var level: int = int(h.get("level", SynergyRules.LEVEL_TRAINED))
 		var chosen: StringName = h.get("trait", SynergyRules.TRAIT_DEFAULT)
-		# A Recruit and a Trained copy plan differently, and so do two copies with different traits
-		# (kc-art-traits: the trait comes from the copy's art).
-		var design: String = "%s@%d@%s" % [card.id, level, SynergyRules.trait_at(card, level, chosen)]
+		# Two copies with different traits plan differently (kc-art-traits: the trait comes from the art).
+		var design: String = "%s@%s" % [card.id, SynergyRules.trait_at(card, chosen)]
 		if p.used_cards.has(uid) or card.cost > p.supply or seen.has(design):
 			continue
 		seen[design] = true
@@ -337,23 +335,20 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 						var a: Dictionary = _action(&"unit", z, _syn_zones([z]))
 						a["card"] = card
 						a["uid"] = uid
-						a["level"] = level
 						a["trait"] = chosen
 						out.append(a)
 			DataEnums.CardType.EQUIPMENT:  # Fields
 				for z: int in 3:
 					if card.is_visible_field() and not _field_slot_open(p, card, z):
 						continue
-					var a: Dictionary = _action(&"equipment", z, _syn_zones([z]) if SynergyRules.trait_at(card, level) != &"" else [z])
+					var a: Dictionary = _action(&"equipment", z, _syn_zones([z]) if SynergyRules.trait_at(card) != &"" else [z])
 					a["card"] = card
 					a["uid"] = uid
-					a["level"] = level
 					out.append(a)
 			DataEnums.CardType.TACTIC:
 				for a: Dictionary in _effect_candidates(p, card, card.effects):
 					a["card"] = card
 					a["uid"] = uid
-					a["level"] = level
 					out.append(a)
 	# Earned killstreaks.
 	for entry: Dictionary in _view.items:
@@ -515,8 +510,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			p.rotations_left -= 1
 		&"unit":
 			var card: CardData = a["card"]
-			var rec: Dictionary = _view.record_for_card(card, a["uid"], z, int(a.get("level", SynergyRules.LEVEL_TRAINED)),
-					a.get("trait", SynergyRules.TRAIT_DEFAULT))
+			var rec: Dictionary = _view.record_for_card(card, a["uid"], z, a.get("trait", SynergyRules.TRAIT_DEFAULT))
 			if bool(rec["arrives_front"]):
 				p.lines[ME][z].insert(0, rec)
 			else:
@@ -528,7 +522,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			if card.is_visible_field() and _view.my_visible_field(z) != null:
 				p.field_replaced[z] = true
 			if card.is_visible_field():
-				var ft: StringName = SynergyRules.trait_at(card, int(a.get("level", SynergyRules.LEVEL_TRAINED)))
+				var ft: StringName = SynergyRules.trait_at(card)
 				if ft != &"":
 					p.field_traits_new[z].append(ft)
 			_apply_effects(p, card.effects, z, -1, -1)

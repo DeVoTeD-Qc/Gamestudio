@@ -434,3 +434,7 @@ Gameplay power comes only from **chassis**, which you earn through run rewards j
 - **Weapon class stays** on every chassis as a tag: the art mapping of §2.2, Sniper Perch ("your Sniper units"), and LMG Pierce still read it. The banner's weapon-class pip (§3.4) is flavour now; the Firepower number in the corner is the same in every column.
 - **Kept:** Pick, Flank, Pierce, First Shot, Suppress, Cover, Patch, Holder, the Protector's slide to the front, the Anvil's "your other units here" aura, column Fields, and every Tactic's position words (Hold the Line, Callout, Breach and Clear "3 if Close", Flank Route, Smoke Screen…).
 - **Card changes:** Breacher, Point Man, Gunner, Marksman, Recon Specialist and Rifleman lose their neighbour keyword and nothing else. **Brawler 2/3 → 3/3** (it lost both Fireteam and Shotgun +2 at Close, and would otherwise equal the Standard Issue Trooper).
+
+## Removed (kc-no-training, 2026-11-07)
+
+*The head, after an iPad playtest: "Remove all the training thing." / "Make sure cards only have 1 trait at most."* The card level system is gone: no Recruit / Trained / Veteran / Elite levels, no Promotion, no level coin or camo band, no "Trains:" line or locked keywords. Every card has its printed keywords and effects from the start. Standard Issue cards stay vanilla. A card copy carries at most one trait (see `art-traits.md`, "Removed (kc-no-training)"). "Elite" now only means the named Elite cards (★, rung 4 of the reward ladder).

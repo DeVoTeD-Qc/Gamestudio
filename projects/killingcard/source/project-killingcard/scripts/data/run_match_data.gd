@@ -17,9 +17,6 @@ extends Resource
 ## (head N4): -1 Armor makes a "green squad" (match 1), shown as such on the run map.
 @export_range(0, 5) var enemy_firepower_bonus: int = 0
 @export_range(-1, 5) var enemy_armor_bonus: int = 0
-## kc-syn §5.1 / kc-onboard §4.4: the squad plays Recruit copies of its units (kc-onboard meaning:
-## trait on, keywords locked). Fields stay Trained; Standard Issue cards are plain either way.
-@export var enemy_recruits: bool = false
 ## kc-onboard §4.4: an authored deck for this slot instead of the squad's own (15-20 cards; empty =
 ## the squad's deck). The squad keeps its name, AI, loadout and art identity.
 @export var enemy_deck: Array[CardData] = []

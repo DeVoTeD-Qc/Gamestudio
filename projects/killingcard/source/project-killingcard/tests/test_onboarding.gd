@@ -1,13 +1,13 @@
 # test_onboarding.gd
 # Purpose: kc-onboard-impl (documentation/design/onboarding-progression.md, approved N1-N4, and the
 #   head's Z1/Z2 answers on kc-trait-ui). Data: the 4 Standard Issue cards (exact numbers, plain,
-#   not collectible, validator), the 20-card starter and its fixed Standard Issue arts. Rules: the
-#   Recruit = trait on, keywords locked (units, AI records, the "Trains:" line), Standard Issue
-#   units are deck cards (discard). Squads along the ladder (green squad, authored decks, Recruit
-#   calling cards). Run ladder: rungs and levels by match, 2 picks of 4 from match 2, Muster out
-#   (count, pre-selection, floor, errors), Salvage after a loss, Doctrine from the first pick, no
-#   trait choice and no Re-issue (Z1), Promotion trains keywords only, save v4 round trip and v3
-#   migration (old Recruits load Trained, the old Rifleman still loads). Progressive reveal flags.
+#   not collectible, validator), the 20-card starter and its fixed Standard Issue arts. Rules
+#   (kc-no-training): every calling card has its keywords from the start (units, AI records), Standard
+#   Issue units are deck cards (discard). Squads along the ladder (green squad, authored decks).
+#   Run ladder: rungs by match, 2 picks of 4 from match 2, Muster out (count, pre-selection, floor,
+#   errors), Salvage after a loss, Doctrine from the first pick, no trait choice (Z1), no Promotion,
+#   save v6 round trip and v3 / v5 migration (levels dropped, the old Rifleman still loads).
+#   Progressive reveal flags.
 # Author: Mechanics Developer Agent (kc-onboard-impl)
 extends "res://tests/test_case.gd"
 
@@ -64,7 +64,7 @@ func test_standard_issue_cards_are_plain_with_the_exact_numbers() -> void:
 		assert_true(c.standard_issue and not c.collectible and c.is_unit(), "%s is Standard Issue" % id)
 		assert_eq([c.weapon_class, c.card_trait, c.trait_options.size(), c.neighbor_keyword, c.effects.size()],
 				[DataEnums.WeaponClass.NONE, &"", 0, &"", 0], "%s: no class, trait, keyword or effect" % id)
-		assert_true(c.trained_keyword_names().is_empty(), "%s: nothing to train" % id)
+		assert_true(c.keyword_names().is_empty(), "%s: no keywords" % id)
 		assert_true(c.counts_for_control and c.grants_elimination_credit and not c.is_token(), "%s is a deck card" % id)
 		var v: DataValidator = DataValidator.new()
 		c.validate(v)
@@ -83,7 +83,6 @@ func test_starter_is_twenty_standard_issue_cards_in_one_fixed_art() -> void:
 	for c: CardData in cfg.starter_deck:
 		n[String(c.id)] = int(n.get(String(c.id), 0)) + 1
 	assert_eq(n, {"si_grunt": 5, "si_trooper": 6, "si_sergeant": 4, "si_armored": 3, "ammo_resupply": 2}, "§2.1 starter")
-	assert_false(cfg.starter_recruits, "no Recruit starter any more")
 	for c: CardData in cfg.reward_pool:
 		assert_false(c.standard_issue, "Standard Issue cards are never offered (%s)" % c.id)
 	var a: RunProgress = RunProgress.create(cfg, 1)
@@ -98,70 +97,56 @@ func test_starter_is_twenty_standard_issue_cards_in_one_fixed_art() -> void:
 		assert_true(ResourceLoader.exists("res://data/banners/%s.tres" % art), "a studio placeholder drop-in exists for %s" % art)
 	assert_eq(ArtTraits.arts_for(_card("si_grunt")), [&"si_grunt"] as Array[StringName], "one art, no variants")
 	var view: Array[Dictionary] = a.deck_view()
-	assert_eq([view[0]["level_name"], view[0]["standard_issue"], view[0]["serial"], view[0]["trains"]],
-			["Standard Issue", true, "SI-01", ""], "deck view row of a Grunt")
+	assert_eq([view[0]["standard_issue"], view[0]["serial"], view[0]["trait"], view[0].has("level")],
+			[true, "SI-01", &"", false], "deck view row of a Grunt (no level)")
 
 
-func test_standard_issue_units_go_to_the_discard_and_never_train() -> void:
+func test_standard_issue_units_go_to_the_discard() -> void:
 	var m: MatchState = F.new_match()
-	var u: RulesUnit = m.create_unit(P, _card("si_sergeant"), -1, 0)
+	var u: RulesUnit = m.create_unit(P, _card("si_sergeant"))
 	m.put_in_line(u, 0)
 	u.armor = 0
 	m.process_eliminations()
 	assert_eq((m.sides[P].discard.back() as RulesCard).card.id, &"si_sergeant", "a Standard Issue unit is a deck card")
-	var r: RunProgress = _run()
-	assert_false(r.promotion_options().any(func(o: Dictionary) -> bool: return (r.resource(o["id"]) as CardData).standard_issue),
-			"never Promoted")
-	assert_eq(r._train(0), "Standard Issue cards never train", "never trained")
-	assert_eq(r.level_of(0), 0, "level unchanged")
 
 
 # =============================================================================
-# Rules: the Recruit (head N1)
+# Rules: kc-no-training (head, iPad playtest): no Recruits, every card has its keywords
 # =============================================================================
 
-func test_recruit_has_its_trait_but_no_keywords() -> void:
+func test_every_calling_card_has_its_keywords_from_the_start() -> void:
 	var m: MatchState = F.new_match()
-	var rb: RulesUnit = m.create_unit(P, _card("breacher"), -1, 0, &"heavy")
-	assert_eq([rb.synergy_trait, rb.neighbor_keyword, rb.first_shot], [&"heavy", &"", false], "Recruit Breacher: Heavy, no Guard, no First Shot")
-	assert_eq([rb.base_firepower, rb.base_max_armor, rb.weapon_class], [3, 4, DataEnums.WeaponClass.SHOTGUN], "keeps FP, Armor, class")
-	var tb: RulesUnit = m.create_unit(P, _card("breacher"), -1, 1, &"heavy")
-	assert_eq([tb.synergy_trait, tb.neighbor_keyword, tb.first_shot], [&"heavy", &"", true], "Trained: all on (no Guard since kc-pos-cut)")
-	var gun: RulesUnit = m.create_unit(P, _card("gunner"), -1, 0)
-	assert_eq([gun.synergy_trait, gun.suppress, gun.pierce], [&"heavy", false, false], "Recruit Gunner: no Suppress, no LMG Pierce")
-	var sh: RulesUnit = m.create_unit(P, _card("shieldman"), -1, 0)
-	assert_eq([sh.cover, sh.arrives_front], [0, false], "Recruit Protector: no Cover, doesn't arrive front")
-	var demo: RulesUnit = m.create_unit(P, _card("demolitions_expert"), -1, 0)
-	assert_eq([demo.effects.size(), demo.pierce], [0, false], "Recruit Demolitions Expert: no effects")
-	var medic: RulesUnit = m.create_unit(P, _card("combat_medic"), -1, 0)
-	assert_eq(medic.patch, 0, "Recruit Medic: no Patch")
-	assert_eq(SynergyRules.trait_at(_card("marksman"), 0, &"heavy"), &"heavy", "trait_at: Recruits carry the trait")
-	assert_eq(SynergyRules.trait_at(_card("si_grunt"), 1), &"", "Standard Issue: never a trait")
+	var rb: RulesUnit = m.create_unit(P, _card("breacher"), -1, &"heavy")
+	assert_eq([rb.synergy_trait, rb.neighbor_keyword, rb.first_shot], [&"heavy", &"", true], "Breacher: Heavy, First Shot (no Guard since kc-pos-cut)")
+	assert_eq([rb.base_firepower, rb.base_max_armor, rb.weapon_class], [3, 4, DataEnums.WeaponClass.SHOTGUN], "printed FP, Armor, class")
+	var gun: RulesUnit = m.create_unit(P, _card("gunner"))
+	assert_eq([gun.synergy_trait, gun.suppress, gun.pierce], [&"heavy", true, true], "Gunner: Suppress and LMG Pierce")
+	var sh: RulesUnit = m.create_unit(P, _card("shieldman"))
+	assert_eq([sh.cover, sh.arrives_front], [1, true], "Protector: Cover 1, arrives front")
+	var demo: RulesUnit = m.create_unit(P, _card("demolitions_expert"))
+	assert_eq([demo.effects.size() > 0, demo.pierce], [true, true], "Demolitions Expert: its On Down effect and Pierce")
+	var medic: RulesUnit = m.create_unit(P, _card("combat_medic"))
+	assert_eq(medic.patch, 2, "Medic: Patch 2")
+	assert_eq(SynergyRules.trait_at(_card("marksman"), &"heavy"), &"heavy", "trait_at: the art's trait")
+	assert_eq(SynergyRules.trait_at(_card("si_grunt")), &"", "Standard Issue: never a trait")
+	var rc: RulesCard = RulesCard.new(1, _card("marksman"), &"specops")
+	assert_eq([rc.card_trait(), rc.arrives_front()], [&"specops", false], "RulesCard hook")
+	assert_eq(_card("shieldman").keyword_names(), ["Cover 1", "Front line"] as Array[String], "keyword_names (Protector)")
+	for f: String in ["trains_text", "locked_keywords", "keywords_on", "effects_at", "level_stats"]:
+		assert_false(SynergyRules.new().has_method(f), "SynergyRules.%s is removed" % f)
 
 
-func test_trains_line_names_the_locked_keywords() -> void:
-	assert_eq(SynergyRules.trains_text(_card("breacher"), 0), "Trains: First Shot", "the doc's example (no Guard since kc-pos-cut)")
-	assert_eq(SynergyRules.trains_text(_card("breacher"), 1), "", "nothing locked once Trained")
-	assert_eq(SynergyRules.locked_keywords(_card("gunner"), 0), ["Suppress", "Pierce"] as Array[String], "Gunner")
-	assert_eq(SynergyRules.locked_keywords(_card("shieldman"), 0), ["Cover 1", "Front line"] as Array[String], "Protector")
-	assert_eq(SynergyRules.trains_text(_card("si_grunt"), 0), "", "Standard Issue: no line")
-	assert_eq(SynergyRules.trains_text(_card("callout"), 0), "", "tactics: no line")
-	var rc: RulesCard = RulesCard.new(1, _card("marksman"), 0, &"specops")
-	assert_eq([rc.trains_text(), rc.card_trait(), rc.keywords_on()], ["Trains: Pick", &"specops", false], "RulesCard hook")
-
-
-func test_recruit_in_a_match_and_in_the_ai_record() -> void:
+func test_cards_in_a_match_and_in_the_ai_record() -> void:
 	var s: SideSetup = F.setup([_card("shieldman"), _card("breacher")])
-	s.deck_levels.assign([0, 0])
 	s.keep_deck_order = true
 	var m: MatchState = F.new_match(s, F.setup())
 	var view: AiView = AiView.capture(m, P)
-	var rec: Dictionary = view.record_for_card(_card("breacher"), 99, 0, 0, &"vanguard")
-	assert_eq([rec["first_shot"], rec["kw"], rec["trait"], rec["fs_native"]], [false, &"", &"vanguard", false], "AI sees a Recruit Breacher")
-	var rec2: Dictionary = view.record_for_card(_card("shieldman"), 98, 0, 0)
-	assert_eq([rec2["cover"], rec2["arrives_front"]], [0, false], "and a Recruit Protector")
-	var rec3: Dictionary = view.record_for_card(_card("gunner"), 97, 0, 1)
-	assert_eq([rec3["suppress"], rec3["pierce"]], [true, true], "a Trained Gunner keeps both")
+	var rec: Dictionary = view.record_for_card(_card("breacher"), 99, 0, &"vanguard")
+	assert_eq([rec["first_shot"], rec["kw"], rec["trait"], rec["fs_native"]], [true, &"", &"vanguard", true], "AI sees the Breacher's First Shot")
+	var rec2: Dictionary = view.record_for_card(_card("shieldman"), 98, 0)
+	assert_eq([rec2["cover"], rec2["arrives_front"]], [1, true], "and the Protector's Cover and front line")
+	var rec3: Dictionary = view.record_for_card(_card("gunner"), 97, 0)
+	assert_eq([rec3["suppress"], rec3["pierce"]], [true, true], "a Gunner keeps both")
 
 
 # =============================================================================
@@ -181,37 +166,35 @@ func test_squads_along_the_ladder() -> void:
 	var heavy: int = 0
 	for i: int in s2.deck.size():
 		if s2.deck[i].id == &"gunner":
-			assert_eq(s2.level_of(i), 0, "the Gunners are Recruits")
-			assert_eq(SynergyRules.trait_at(s2.deck[i], 0, s2.trait_of(i)), &"heavy", "with the Heavy trait")
+			assert_eq(SynergyRules.trait_at(s2.deck[i], s2.trait_of(i)), &"heavy", "with the Heavy trait")
 			heavy += 1
-	assert_eq([s2.deck.size(), heavy], [18, 3], "M2: 18 cards with 3 Heavy Recruit Gunners")
+	assert_eq([s2.deck.size(), heavy], [18, 1], "M2: 18 cards with 1 Heavy Gunner (kc-no-training retune: 2 Gunners -> Sergeants)")
 	var s3: SideSetup = SideSetup.from_squad(md[2].squad, md[2])
 	# kc-syn-tune / kc-syn-tune2 (synergy-system.md §12): M3 = the Rusher's units with its tactics
 	# and Equipment (Breach and Clear, 2 Flank Routes, Callout, Tripwire) swapped for Standard Issue
 	# (3 Troopers, a Grunt, a Sergeant); M4 = the Anchor deck with 2 Demolitions + the Marksman
 	# swapped for 2 Armored Troopers + a Sergeant.
+	# kc-no-training retune (the crews lost their keyword-less Recruit copies): M2 2 of 3 Gunners ->
+	# Sergeants; M3 2 Point Men, a Breacher, a Flanker -> 3 Troopers + a Sergeant; M4 a Gunner, a
+	# Protector, a Hold the Line, 2 Suppressing Fires -> an Armored Trooper, 2 Sergeants, 2 Troopers.
 	assert_eq(s3.deck.size(), 18, "M3: 18 cards")
 	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"si_sergeant"),
-			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 1, 6],
-			"M3: Rusher deck, Breach and Clear swapped for a Sergeant")
-	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 3], "M3: Flank Routes swapped for Troopers")
+			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 2, 3],
+			"M3: Rusher deck, Breach and Clear swapped for a Sergeant (kc-no-training retune: 2 Point Men, a Breacher and a Flanker -> Standard Issue)")
+	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 6], "M3: Flank Routes swapped for Troopers (6 since kc-no-training)")
 	var vanguard: int = 0
 	for i: int in s3.deck.size():
 		if s3.deck[i].is_unit():
-			assert_eq(s3.level_of(i), 0, "M3 units are Recruits")
-			if SynergyRules.trait_at(s3.deck[i], 0, s3.trait_of(i)) == &"vanguard":
+			if SynergyRules.trait_at(s3.deck[i], s3.trait_of(i)) == &"vanguard":
 				vanguard += 1
-	assert_true(vanguard >= 6, "M3: Vanguard calling cards (%d)" % vanguard)
+	assert_true(vanguard >= 3, "M3: Vanguard calling cards (%d)" % vanguard)
 	var s4: SideSetup = SideSetup.from_squad(md[3].squad, md[3])
-	for i: int in s4.deck.size():
-		if s4.deck[i].is_unit():
-			assert_eq(s4.level_of(i), 0, "M4 units are Recruits (kc-pos-cut)")
 	var s5: SideSetup = SideSetup.from_squad(md[4].squad, md[4])
-	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman"), s5.deck_levels.is_empty()], [20, 4, 0, true],
-			"M5: the Rival's crew, Marksmen swapped for Gunners (kc-pos-cut), Trained")
+	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman")], [20, 4, 0],
+			"M5: the Rival's crew, Marksmen swapped for Gunners (kc-pos-cut)")
 	assert_eq([s4.deck.size(), _in_deck(s4.deck, &"demolitions_expert"), _in_deck(s4.deck, &"marksman"),
-			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [18, 0, 0, 2, 1],
-			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue")
+			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [18, 0, 0, 3, 3],
+			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue (kc-no-training retune: a Gunner, a Protector, a Hold the Line and both Suppressing Fires too)")
 	assert_eq([md[0].crew_label, md[2].crew_label], ["Standard Issue crew", "Honors crew"], "crew labels")
 	var db: Node = Engine.get_main_loop().root.get_node_or_null(^"/root/CardDB")
 	if db != null:
@@ -226,7 +209,7 @@ func test_squads_along_the_ladder() -> void:
 func test_rungs_filter_the_pool() -> void:
 	var cfg: RunConfig = _config()
 	assert_eq([cfg.rung_after(1), cfg.rung_after(2), cfg.rung_after(3), cfg.rung_after(4)], [1, 2, 3, 4], "rungs by match")
-	assert_eq([cfg.reward_level_after(1), cfg.reward_level_after(2)], [0, 1], "Recruits after M1, Trained after")
+	assert_false(cfg.has_method(&"reward_level_after"), "kc-no-training: no reward levels")
 	assert_true(RunConfig.in_rung(_card("breacher"), 1) and not RunConfig.in_rung(_card("okafor_anvil"), 1), "rung 1: units, no Elites")
 	assert_true(not RunConfig.in_rung(_card("callout"), 1) and RunConfig.in_rung(_card("callout"), 2), "tactics from rung 2")
 	assert_true(not RunConfig.in_rung(_card("bulwark"), 2) and RunConfig.in_rung(_card("bulwark"), 3), "Fields from rung 3")
@@ -241,12 +224,12 @@ func test_rungs_filter_the_pool() -> void:
 	assert_eq([cfg.drop_size_after(1), cfg.drop_size_after(2), cfg.drop_size_after(5)], [Vector2i(3, 1), Vector2i(4, 2), Vector2i(4, 2)], "3 / pick 1, then 4 / pick 2")
 
 
-func test_match_one_win_gives_recruit_calling_cards_and_the_doctrine() -> void:
+func test_match_one_win_gives_calling_cards_and_the_doctrine() -> void:
 	var r: RunProgress = _run()
 	r.record_result(&"player")
 	assert_eq(_kinds(r), [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_ATTACHMENT], "M1 win: drop + weapon level, no Muster out yet")
 	var drop: Dictionary = r.current_offer()
-	assert_eq([drop["options"].size(), drop["picks"], drop["level"], drop["rung"]], [3, 1, 0, 1], "3 calling cards, pick 1, Recruits, rung 1")
+	assert_eq([drop["options"].size(), drop["picks"], drop.has("level"), drop["rung"]], [3, 1, false, 1], "3 calling cards, pick 1, no level, rung 1")
 	assert_false(drop.has("reissue"), "head Z1: no Re-issue")
 	for id: Variant in drop["options"]:
 		var c: CardData = r.resource(id) as CardData
@@ -256,9 +239,9 @@ func test_match_one_win_gives_recruit_calling_cards_and_the_doctrine() -> void:
 	var id0: StringName = drop["options"][0]
 	assert_eq(r.choose_offer(0), "", "take a calling card")
 	var at: int = r.deck.size() - 1
-	assert_eq([r.deck[at], r.level_of(at), r.copy_trait(at)], [id0, 0, t0], "a Recruit with its art's trait")
+	assert_eq([r.deck[at], r.copy_trait(at)], [id0, t0], "the card with its art's trait")
 	assert_eq(r.doctrine, t0 if t0 != &"" else &"", "the first calling card sets the Doctrine")
-	assert_eq(r.deck_view()[at]["trains"], SynergyRules.trains_text(r.resource(id0) as CardData, 0), "deck view shows the Trains line")
+	assert_false(r.deck_view()[at].has("trains"), "kc-no-training: no Trains line")
 
 
 func test_match_two_drop_is_two_of_four_then_muster_out() -> void:
@@ -268,8 +251,8 @@ func test_match_two_drop_is_two_of_four_then_muster_out() -> void:
 	r.record_result(&"player")
 	assert_eq(_kinds(r).slice(0, 2), [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_MUSTER_OUT], "M2: drop then Muster out")
 	var drop: Dictionary = r.current_offer()
-	assert_eq([drop["options"].size(), drop["picks"], drop["level"], drop["rung"], drop.get("retire", false)], [4, 2, 1, 2, true],
-			"4 shown, pick 2, Trained, rung 2, Retire option")
+	assert_eq([drop["options"].size(), drop["picks"], drop["rung"], drop.get("retire", false)], [4, 2, 2, true],
+			"4 shown, pick 2, rung 2, Retire option")
 	var first: StringName = drop["options"][1]
 	assert_eq(r.choose_offer(1), "", "first pick")
 	assert_eq(r.current_offer()["kind"], RewardOffers.KIND_SUPPLY_DROP, "still the drop")
@@ -312,7 +295,6 @@ func test_muster_out_choice_floor_and_errors() -> void:
 	var r2: RunProgress = _run()
 	while r2.deck.size() > 15:
 		r2.deck.remove_at(r2.deck.size() - 3)
-		r2.deck_levels.remove_at(r2.deck_levels.size() - 3)
 		r2.deck_traits.remove_at(r2.deck_traits.size() - 3)
 		r2.deck_arts.remove_at(r2.deck_arts.size() - 3)
 	r2.record_result(&"player")
@@ -335,9 +317,8 @@ func test_salvage_replaces_regroup_after_a_loss() -> void:
 	r.record_result(&"enemy")
 	assert_eq(_kinds(r), [RewardOffers.KIND_SALVAGE, RewardOffers.KIND_ATTACHMENT], "M1 loss: Salvage, no Regroup, no Muster out")
 	var sal: Dictionary = r.current_offer()
-	assert_eq([sal["options"].size(), sal["picks"], sal["level"]], [2, 1, 0], "2 cards, pick 1, Recruits")
+	assert_eq([sal["options"].size(), sal["picks"], sal.has("level")], [2, 1, false], "2 cards, pick 1, no level")
 	assert_eq(r.choose_offer(1), "", "take one")
-	assert_eq(r.level_of(r.deck.size() - 1), 0, "a Recruit calling card")
 	_skip_all(r)
 	r.record_result(&"enemy")
 	assert_eq(_kinds(r).slice(0, 2), [RewardOffers.KIND_SALVAGE, RewardOffers.KIND_MUSTER_OUT], "M2 loss: Salvage then Muster out")
@@ -348,28 +329,26 @@ func test_salvage_replaces_regroup_after_a_loss() -> void:
 	assert_false(RewardOffers.KIND_SALVAGE in _kinds(d) or RewardOffers.KIND_SUPPLY_DROP in _kinds(d), "a draw gives no cards")
 
 
-func test_promotion_trains_keywords_and_there_is_no_trait_choice() -> void:
+func test_no_promotion_and_no_trait_choice() -> void:
 	var r: RunProgress = _run()
-	r.record_result(&"player")
-	var drop: Dictionary = r.current_offer()
-	var k: int = drop["options"].find(&"breacher")
-	r._append_copy(&"breacher", 0, &"heavy", ArtTraits.default_art(_card("breacher"), &"heavy"))
+	r._append_copy(&"breacher", &"heavy", ArtTraits.default_art(_card("breacher"), &"heavy"))
 	var at: int = r.deck.size() - 1
-	var art: StringName = r.art_of(at)
-	assert_eq(r.train_choices(at).size(), 1, "head Z1: one row, the copy's own trait")
-	assert_eq(r.train_choices(at)[0]["trait"], &"heavy", "its art's trait")
-	assert_eq(r.reissue_options(), [] as Array[Dictionary], "no Re-issue")
-	assert_true(r.reissue_card(0, &"vanguard").begins_with("Re-issue was removed"), "reissue_card refuses")
+	for f: String in ["promotion_options", "train_choices", "level_of", "reissue_options", "reissue_card", "_train"]:
+		assert_false(r.has_method(f), "RunProgress.%s is removed (kc-no-training)" % f)
+	assert_false("deck_levels" in r, "no deck_levels")
+	assert_false(&"promotion" in RewardOffers.KINDS, "no Promotion offer kind")
 	r.random_copy_arts = false
 	assert_true(r.set_copy_art(at, &"breacher").contains("keeps the trait"), "no art swap into another trait")
-	r.pending_offers = [{"kind": RewardOffers.KIND_PROMOTION, "match": 2, "options": [&"breacher"] as Array[StringName],
-			"levels": [0] as Array[int], "traits": [&"heavy"] as Array[StringName]}]
-	r.phase = RunProgress.PHASE_REWARDS
-	assert_eq(r.promotion_options()[0]["unlocks"], ["First Shot"] as Array[String], "the Promotion row says what unlocks")
-	assert_eq(r.choose_offer(0, &"vanguard"), "", "promote (the trait argument is ignored)")
-	assert_eq([r.level_of(at), r.copy_trait(at), r.art_of(at)], [1, &"heavy", art], "Trained, same trait, same art")
-	assert_eq([r.deck_view()[at]["keyword"], r.deck_view()[at]["trains"]], [&"", ""], "keywords on (no neighbor keyword since kc-pos-cut)")
-	assert_eq(k >= -1, true, "")
+	assert_eq([r.copy_trait(at), r.deck_view()[at]["keyword"], r.deck_view()[at].has("trains")], [&"heavy", &"", false], "its trait, no Trains line")
+	# The shipped schedule: no Promotion after any match.
+	var r2: RunProgress = _run()
+	for n: int in 4:
+		if r2.is_over():
+			break
+		r2.record_result(&"player")
+		while not r2.current_offer().is_empty():
+			assert_true(String(r2.current_offer()["kind"]) != "promotion", "no Promotion after M%d" % (n + 1))
+			r2.choose_offer(0)
 
 
 func test_retire_on_a_multi_pick_drop_uses_a_pick() -> void:
@@ -385,7 +364,7 @@ func test_retire_on_a_multi_pick_drop_uses_a_pick() -> void:
 	assert_eq(r.muster_out_count(), 2, "1 card taken + 1 (a Retire doesn't add)")
 
 
-func test_save_v4_round_trip_mid_drop_and_muster_out() -> void:
+func test_save_v6_round_trip_mid_drop_and_muster_out() -> void:
 	var r: RunProgress = _run()
 	r.record_result(&"player")
 	r.choose_offer(0)
@@ -393,14 +372,17 @@ func test_save_v4_round_trip_mid_drop_and_muster_out() -> void:
 	r.record_result(&"player")
 	r.choose_offer(2)
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), RunProgress.SAVE_VERSION, "current save version (5 since kc-loadout-cut)")
+	assert_eq(int(d["version"]), RunProgress.SAVE_VERSION, "current save version (6 since kc-no-training)")
+	assert_eq(RunProgress.SAVE_VERSION, 6, "v6")
+	assert_false(d.has("deck_levels"), "no levels saved")
+	assert_false((d["pending_offers"] as Array).any(func(o: Dictionary) -> bool: return o.has("level") or o.has("levels")), "no offer levels")
 	var back: Dictionary = RunProgress.from_dict(_config(), d)
 	assert_eq(back["error"], "", "loads")
 	var r2: RunProgress = back["run"]
 	assert_eq(r2.current_offer()["picks"], 1, "picks left survive")
 	assert_eq(r2.current_offer()["taken"].size(), 1, "taken survives")
 	assert_eq(r2.current_offer()["options"], r.current_offer()["options"], "options survive")
-	assert_eq(r2.deck_levels, r.deck_levels, "levels survive (a Recruit stays a Recruit)")
+	assert_eq(r2.deck_traits, r.deck_traits, "traits survive")
 	r2.choose_offer(0)
 	r.choose_offer(0)
 	assert_eq(r2.muster_out_count(), r.muster_out_count(), "Muster out count")
@@ -412,24 +394,70 @@ func test_save_v4_round_trip_mid_drop_and_muster_out() -> void:
 	assert_eq(int(JSON.parse_string(JSON.stringify(r3.to_dict()))["mustered_out"]), 3, "mustered_out saved")
 
 
-func test_v3_save_with_the_old_recruit_starter_loads_trained() -> void:
+func test_v3_save_with_the_old_recruit_starter_loads() -> void:
 	var legacy: RunConfig = preload("res://tests/legacy_starter.gd").config()
 	var old: RunProgress = RunProgress.create(legacy, 5)
 	old.begin()
 	old.record_result(&"enemy")  # Regroup + Doctrine + weapon level under the old schedule
 	var d: Dictionary = JSON.parse_string(JSON.stringify(old.to_dict()))
 	d["version"] = 3
+	var lv: Array = []
+	for i: int in (d["deck"] as Array).size():
+		lv.append(0)  # the kc-syn Recruit starter
+	d["deck_levels"] = lv
 	for o: Dictionary in d["pending_offers"]:
 		if o["kind"] == "regroup":
 			o["reissue"] = true
+			o["levels"] = (o["options"] as Array).map(func(_x: Variant) -> int: return 0)
 	var back: Dictionary = RunProgress.from_dict(_config(), d)
 	assert_eq(back["error"], "", "a v3 save with the Rifleman loads on the new config (legacy_cards)")
 	var r: RunProgress = back["run"]
-	assert_true(r.deck_levels.all(func(lv: int) -> bool: return lv == 1), "old Recruits load Trained (their old meaning had keywords)")
 	assert_true(r.deck.has(&"rifleman"), "the Rifleman is still in the deck")
-	assert_false(r.pending_offers.any(func(o: Dictionary) -> bool: return o.has("reissue")), "Re-issue flags dropped")
+	assert_false(r.pending_offers.any(func(o: Dictionary) -> bool: return o.has("reissue") or o.has("levels")), "Re-issue flags and levels dropped")
 	assert_eq(r.current_offer()["kind"], RewardOffers.KIND_REGROUP, "the open Regroup still works")
 	assert_eq(r.choose_offer(0), "", "and can be resolved")
+
+
+## kc-no-training migration: a v5 save (copy levels, a Recruit drop, an open Promotion, an Honor Roll
+## entry with a level) loads as v6: levels dropped, the Promotion removed, every copy full.
+func test_v5_save_with_levels_and_an_open_promotion_migrates() -> void:
+	var r: RunProgress = _run()
+	r.record_result(&"player")  # M1: drop + weapon level
+	r.choose_offer(0)
+	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
+	d["version"] = 5
+	var lv: Array = []
+	for i: int in (d["deck"] as Array).size():
+		lv.append(0 if i == (d["deck"] as Array).size() - 1 else 1)
+	d["deck_levels"] = lv
+	(d["pending_offers"] as Array).insert(0, {"kind": "promotion", "match": 1, "options": [String(r.deck.back())],
+			"levels": [0], "traits": [String(r.deck_traits.back())]})
+	d["honor_roll"] = [{"id": "si_grunt", "level": 0, "match": 0, "trained_twin": false, "trait": "", "art": "si_grunt"}]
+	var back: Dictionary = RunProgress.from_dict(_config(), d)
+	assert_eq(back["error"], "", "a v5 save loads")
+	var r2: RunProgress = back["run"]
+	assert_false("deck_levels" in r2, "no deck_levels after load")
+	assert_eq(r2.deck, r.deck, "the deck is kept")
+	assert_eq(r2.deck_traits, r.deck_traits, "traits kept")
+	assert_false(r2.pending_offers.any(func(o: Dictionary) -> bool: return String(o["kind"]) == "promotion"), "the open Promotion is dropped")
+	assert_eq(r2.current_offer()["kind"], RewardOffers.KIND_ATTACHMENT, "the next offer is current")
+	assert_eq(r2.honor_roll[0].has("level"), false, "Honor Roll level dropped")
+	var d2: Dictionary = JSON.parse_string(JSON.stringify(r2.to_dict()))
+	assert_eq([int(d2["version"]), d2.has("deck_levels")], [RunProgress.SAVE_VERSION, false], "saves again as v6")
+	# Only a Promotion pending: the rewards phase ends.
+	var d3: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
+	d3["version"] = 4
+	d3["pending_offers"] = [{"kind": "promotion", "match": 1, "options": [String(r.deck.back())], "levels": [0]}]
+	var b3: Dictionary = RunProgress.from_dict(_config(), d3)
+	assert_eq(b3["error"], "", "a rewards phase with only a Promotion loads")
+	assert_eq((b3["run"] as RunProgress).phase, RunProgress.PHASE_MATCH, "and goes on to the next match")
+	# A v6 save that names a Promotion is invalid; so is a copy with two traits.
+	var d4: Dictionary = JSON.parse_string(JSON.stringify(r2.to_dict()))
+	d4["pending_offers"] = [{"kind": "promotion", "match": 1, "options": [String(r.deck.back())]}]
+	assert_true(RunProgress.from_dict(_config(), d4)["error"] != "", "v6: Promotion is not an offer kind")
+	var d5: Dictionary = JSON.parse_string(JSON.stringify(r2.to_dict()))
+	(d5["deck_traits"] as Array)[0] = "vanguard,undead"
+	assert_true(String(RunProgress.from_dict(_config(), d5)["error"]).contains("at most one"), "a copy can't carry two traits")
 
 
 # =============================================================================
@@ -442,7 +470,7 @@ func test_reveal_flags_from_the_run_and_the_board() -> void:
 	r.record_result(&"player")
 	var t1: Array[StringName] = RevealFlags.run_triggers(r)
 	assert_true(RevealFlags.CALLING_CARDS in t1, "calling cards offered")
-	assert_false(RevealFlags.KEYWORDS in t1, "Recruits offered: keywords still hidden")
+	assert_true(RevealFlags.KEYWORDS in t1, "kc-no-training: calling cards with keywords offered = keywords met")
 	r.choose_offer(0)
 	var t2: Array[StringName] = RevealFlags.run_triggers(r)
 	assert_true(RevealFlags.DOCTRINE in t2 or r.doctrine == &"", "Doctrine once set")
@@ -455,15 +483,12 @@ func test_reveal_flags_from_the_run_and_the_board() -> void:
 	assert_true(RevealFlags.MUSTER_OUT in RevealFlags.run_triggers(r), "Muster out")
 	var m: MatchState = F.new_match()
 	assert_eq(RevealFlags.match_triggers(m), [] as Array[StringName], "an empty board")
-	m.put_in_line(m.create_unit(P, _card("breacher"), -1, 1), 0)
-	m.put_in_line(m.create_unit(P, _card("point_man"), -1, 1), 1)
+	m.put_in_line(m.create_unit(P, _card("breacher")), 0)
+	m.put_in_line(m.create_unit(P, _card("point_man")), 1)
 	var mt: Array[StringName] = RevealFlags.match_triggers(m)
 	assert_true(RevealFlags.TRAIT_RAIL in mt and not (RevealFlags.LINKS in mt), "traited units, no links (kc-pos-cut): %s" % str(mt))
 	assert_true(&"kw_first_shot" in mt and not (&"kw_guard" in mt), "keyword tips")
-	var m2: MatchState = F.new_match()
-	m2.put_in_line(m2.create_unit(P, _card("breacher"), -1, 0), 0)
-	var mt2: Array[StringName] = RevealFlags.match_triggers(m2)
-	assert_true(RevealFlags.TRAIT_RAIL in mt2 and not (&"kw_first_shot" in mt2), "a Recruit shows the trait, not the keyword")
+	assert_false(&"promotion" in RevealFlags.ORDER or RevealFlags.TEXTS.has(&"promotion"), "kc-no-training: no Promotion explainer")
 
 
 func test_reveal_queue_texts_and_profile_store() -> void:

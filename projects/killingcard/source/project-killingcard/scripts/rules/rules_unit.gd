@@ -40,8 +40,7 @@ var patch: int = 0
 var holder: bool = false
 var arrives_front: bool = false
 var counts_for_control: bool = true
-## kc-syn: the copy's level and the synergy it carries (both empty on Recruits, the Operator and tokens).
-var level: int = 1
+## kc-syn: the synergy this copy carries (empty on the Operator and tokens). kc-no-training: one trait at most.
 var neighbor_keyword: StringName = &""
 var synergy_trait: StringName = &""
 ## kc-art-traits: the copy's chosen trait as it came from its RulesCard (kept so the card that goes

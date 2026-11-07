@@ -247,7 +247,6 @@ func _copy(s: SideSetup) -> SideSetup:
 	for f: String in ["display_name", "primary", "secondary", "lethal", "tactical", "doctrine"]:
 		c.set(f, s.get(f))
 	c.deck = s.deck.duplicate()
-	c.deck_levels = s.deck_levels.duplicate()
 	c.deck_traits = s.deck_traits.duplicate()
 	c.deck_arts = s.deck_arts.duplicate()
 	c.attachments = s.attachments.duplicate()

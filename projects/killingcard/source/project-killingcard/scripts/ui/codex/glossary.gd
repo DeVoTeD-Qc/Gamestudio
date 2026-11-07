@@ -4,8 +4,8 @@
 #   card inspector's "?" on any keyword line (it opens scrolled to that entry). Grouped by category
 #   (chips ALL / KEYWORDS / SYNERGY / STATS & BOARD) and searchable (a search box filters names and
 #   texts). Each row: the icon as the game draws it, the name, the rules text.
-#   Single source: card keywords from CardInfo.KEYWORD_RULES, traits / levels
-#   from SynergyRules (KEYWORD_TEXT, TRAIT_NAMES, TIER_TEXT, LEVEL_NAMES, level_stats) and the rest
+#   Single source: card keywords from CardInfo.KEYWORD_RULES, traits
+#   from SynergyRules (TRAIT_NAMES, TIER_TEXT; kc-ipad-cards: no copy levels any more) and the rest
 #   from CardInfo.GLOSSARY_EXTRA, so a text never drifts from what the inspector says.
 # Usage: var g := Glossary.open_over(parent, &"pick")   # adds itself full-rect, scrolled to Pick
 # Dependencies: card_info.gd, SynergyRules, IconSheet, SynergyGlyphs, BannerView, hud_theme.tres.
@@ -25,14 +25,14 @@ const ICON: float = 44.0
 const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt", &"hidden": &"hidden",
 		&"no_control": &"no_control", &"field": &"field", &"control": &"control", &"objective": &"objective",
 		&"range": &"range", &"operator": &"operator", &"killstreak": &"killstreak", &"incoming": &"incoming",
-		&"set_callout": &"callout", &"doctrine": &"doctrine", &"level_band": &"band",
+		&"set_callout": &"callout", &"doctrine": &"doctrine",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
 		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
 		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames"}
 ## kc-cards-impl: the card-anatomy entries (C1+ board card, Y2+ / T1 frames) lead the STATS & BOARD group.
-const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames", &"range",
+const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames",
 		&"objective", &"control", &"field", &"operator", &"killstreak", &"incoming"]
-const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"set_callout", &"doctrine", &"level_band"]
+const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"set_callout", &"doctrine"]
 
 var category: StringName = &"all"
 var query: String = ""
@@ -57,7 +57,7 @@ static func open_over(parent: Control, focus: StringName = &"") -> Control:
 
 
 ## Every entry: {key, category, name, text, icon (IconSheet name or &""), drawn (glyph kind or &""),
-## trait?, kw?, band?}. Order: card keywords, synergy (keywords, traits, levels, the rest), stats.
+## trait?, kw?}. Order: card keywords, synergy (keywords, traits, the rest), stats.
 static func entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for id: StringName in CardInfo.KEYWORD_RULES:
@@ -72,22 +72,6 @@ static func entries() -> Array[Dictionary]:
 		var e: Dictionary = _entry(StringName("trait_" + String(tr)), &"synergy", String(SynergyRules.TRAIT_NAMES.get(tr, tr)),
 				"Trait set. %d in play: %s. %d in play: %s too." % [SynergyRules.TIER2, tiers[0], SynergyRules.TIER3, tiers[1]])
 		e["trait"] = tr
-		out.append(e)
-	for lvl: int in SynergyRules.LEVEL_NAMES.size():
-		var st: Dictionary = SynergyRules.level_stats(lvl)
-		var gains: PackedStringArray = []
-		if lvl == SynergyRules.LEVEL_RECRUIT:
-			gains.append("its trait; its keywords are locked until it trains")
-		else:
-			gains.append("its trait and keywords")
-			if int(st["armor"]) > 0:
-				gains.append("+%d Armor" % int(st["armor"]))
-			if int(st["fp"]) > 0:
-				gains.append("+%d FP" % int(st["fp"]))
-		var e: Dictionary = _entry(StringName("level_" + String(SynergyRules.LEVEL_NAMES[lvl]).to_lower()), &"synergy",
-				"%s copy" % SynergyRules.LEVEL_NAMES[lvl], "A %s copy has %s." % [SynergyRules.LEVEL_NAMES[lvl], ", ".join(gains)])
-		e["band"] = SynergyRules.LEVEL_BANDS[lvl]
-		e["drawn"] = &"band"
 		out.append(e)
 	for k: StringName in SYNERGY_EXTRA:
 		out.append(_entry(k, &"synergy", CardInfo.GLOSSARY_EXTRA[k][0], CardInfo.GLOSSARY_EXTRA[k][1]))
@@ -341,9 +325,7 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			CardLook.draw_damage_edge(c, Rect2(0, 4, s, s * 0.6), 2.0)
 			CardLook.draw_armor(c, Rect2(s * 0.5, s * 0.36, s * 0.48, s * 0.56), 2, true)
 		&"peek":
-			CardLook.draw_cost(c, Rect2(0, 12, 18, 18), "2")
-			CardLook.draw_level_coin(c, Rect2(19, 13, 15, 15), 1)
-			CardLook.draw_weapon_pill(c, Rect2(4, 32, 36, 12), "AR")
+			CardLook.draw_cost(c, Rect2(s * 0.2, s * 0.2, s * 0.6, s * 0.6), "2")
 		&"trait_chip":
 			CardLook.draw_trait(c, Rect2(1, 12, 20, 20), &"vanguard", false)
 			CardLook.draw_trait(c, Rect2(23, 12, 20, 20), &"vanguard", true)
@@ -369,10 +351,6 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 				hx.append(r.get_center() + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * s * 0.45)
 			c.draw_colored_polygon(hx, accent)
 			c.draw_string(font, Vector2(0, s * 0.66), "2", HORIZONTAL_ALIGNMENT_CENTER, s, 20, ink)
-		&"band":
-			# kc-cards-impl: a copy's level is its coin (R grey, T / V / E brass), shown on peek.
-			var lv: int = maxi(0, SynergyRules.LEVEL_BANDS.find(StringName(e.get("band", &"gilded"))))
-			CardLook.draw_level_coin(c, Rect2(s * 0.18, s * 0.18, s * 0.64, s * 0.64), lv)
 		&"bolt", &"killstreak":
 			c.draw_colored_polygon(PackedVector2Array([Vector2(s * 0.58, 4), Vector2(s * 0.26, s * 0.56), Vector2(s * 0.48, s * 0.56),
 					Vector2(s * 0.38, s - 4), Vector2(s * 0.74, s * 0.42), Vector2(s * 0.52, s * 0.42)]), accent if e["drawn"] == &"bolt" else Color("#5BC0EB"))

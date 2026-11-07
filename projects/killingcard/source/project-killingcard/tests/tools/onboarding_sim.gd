@@ -41,6 +41,13 @@
 extends SceneTree
 
 const Sim = preload("res://tests/mode_sim.gd")
+## kc-no-training: copy levels were removed from the engine. This historical sim keeps its own level
+## numbers as data (Recruit 0 / Trained 1 / Elite 3) to replay the kc-onboard study; the engine plays
+## every copy with its full chassis, so "Recruit" entries only change this sim's own trait rule.
+const LV_TRAINED: int = 1
+const LV_ELITE: int = 3
+## The kc-onboard Promotion schedule this sim replays (the shipped config has none any more).
+const PROMOTION_AFTER: Array[int] = [2, 4]
 
 ## Standard Issue chassis: [cost, FP, Armor]. All vanilla.
 var si_stats: Dictionary = {
@@ -241,22 +248,21 @@ func deck_from(spec: String) -> Array:
 		var count: int = int(nc[1]) if nc.size() > 1 else 1
 		for k: int in count:
 			var c: CardData = si_card(nc[0]) if si_stats.has(nc[0]) else _card(nc[0])
-			out.append({"c": c, "lv": SynergyRules.LEVEL_TRAINED, "t": SynergyRules.TRAIT_DEFAULT})
+			out.append({"c": c, "lv": LV_TRAINED, "t": SynergyRules.TRAIT_DEFAULT})
 	return out
 
 
 func starter() -> Array:
 	if base == "recruit":
 		var out: Array = []
-		var lv: Array[int] = config.starter_levels()
 		for i: int in config.starter_deck.size():
-			out.append({"c": config.starter_deck[i], "lv": lv[i], "t": SynergyRules.TRAIT_DEFAULT})
+			out.append({"c": config.starter_deck[i], "lv": 0, "t": SynergyRules.TRAIT_DEFAULT})
 		return out
 	return deck_from(starter_spec)
 
 
 func trait_of(e: Dictionary) -> StringName:
-	if is_si(e) or int(e["lv"]) < SynergyRules.LEVEL_TRAINED:
+	if is_si(e) or int(e["lv"]) < LV_TRAINED:
 		return &""
 	var c: CardData = e["c"]
 	if e["t"] == SynergyRules.TRAIT_DEFAULT or not c.has_trait_choice():
@@ -270,12 +276,10 @@ func trait_of(e: Dictionary) -> StringName:
 
 func _apply(s: SideSetup, deck: Array) -> void:
 	s.deck.clear()
-	s.deck_levels.clear()
 	s.deck_traits.clear()
 	for e: Dictionary in deck:
 		s.deck.append(e["c"])
-		s.deck_levels.append(int(e["lv"]))
-		s.deck_traits.append(e["t"])
+		s.deck_traits.append(e["t"] if int(e["lv"]) >= LV_TRAINED else &"")
 
 
 func player_setup(deck: Array, st: Dictionary = {}, slot: int = -1) -> SideSetup:
@@ -322,7 +326,7 @@ func enemy_setup(idx: int) -> SideSetup:
 			var adds: Array = []
 			for c: CardData in s.deck:
 				if c.is_unit() and not c.is_elite and c.can_carry(ident) and adds.size() < 3 and c.cost >= 2:
-					adds.append({"c": cc_card(c), "lv": SynergyRules.LEVEL_TRAINED, "t": ident})
+					adds.append({"c": cc_card(c), "lv": LV_TRAINED, "t": ident})
 			for k: int in adds.size():
 				d[k] = adds[k]  # replaces Grunts (the spec lists them first)
 			_apply(s, d)
@@ -332,12 +336,12 @@ func enemy_setup(idx: int) -> SideSetup:
 			for i: int in s.deck.size():
 				var c2: CardData = s.deck[i]
 				if c2.is_unit() and not c2.is_elite:
-					d2.append({"c": cc_card(c2), "lv": SynergyRules.LEVEL_TRAINED, "t": tr[i]})
+					d2.append({"c": cc_card(c2), "lv": LV_TRAINED, "t": tr[i]})
 				else:
-					d2.append({"c": c2, "lv": SynergyRules.LEVEL_TRAINED, "t": tr[i]})
+					d2.append({"c": c2, "lv": LV_TRAINED, "t": tr[i]})
 			_apply(s, d2)
 		"trained":
-			s.deck_levels.clear()
+			pass  # kc-no-training: every copy is full already
 		_:
 			pass
 	if lite and idx <= 1:
@@ -487,7 +491,7 @@ func _drop(n_match: int, main: StringName, rng: RandomNumberGenerator) -> Array:
 		var played: CardData = c
 		if n_match == 1 and cc_first and c.is_unit():
 			played = cc_card(c)
-		out.append({"c": played, "lv": SynergyRules.LEVEL_TRAINED, "t": t, "on": k == 0 and main != &""})
+		out.append({"c": played, "lv": LV_TRAINED, "t": t, "on": k == 0 and main != &""})
 	return out
 
 
@@ -527,7 +531,7 @@ func _cc_index(deck: Array, main: StringName) -> int:
 
 func _train(deck: Array, i: int) -> void:
 	var e: Dictionary = deck[i]
-	deck[i] = {"c": base_of(e), "lv": SynergyRules.LEVEL_TRAINED, "t": e["t"]}
+	deck[i] = {"c": base_of(e), "lv": LV_TRAINED, "t": e["t"]}
 
 
 ## Retires the weakest Standard Issue card (cheapest first). Returns false at the floor / with none.
@@ -576,7 +580,7 @@ func _promote(deck: Array, main: StringName) -> void:
 	for i: int in deck.size():
 		var e: Dictionary = deck[i]
 		var c: CardData = e["c"]
-		if is_si(e) or not c.is_unit() or int(e["lv"]) >= SynergyRules.LEVEL_ELITE:
+		if is_si(e) or not c.is_unit() or int(e["lv"]) >= LV_ELITE:
 			continue
 		var s: int = (10 if trait_of(e) == main else 0) + c.cost
 		if s > score:
@@ -631,7 +635,7 @@ func _offers(n_match: int, won: bool, lost: bool, deck: Array, st: Dictionary, r
 		for a: LoadoutItem in config.starter_primary.attachments:
 			if not ids.is_empty() and a.id == ids[0]:
 				st["atts"].append(a)
-	if n_match in config.promotion_after_matches:
+	if n_match in PROMOTION_AFTER:
 		_promote(deck, main)
 	if n_match in config.perk_offer_after_matches:
 		var owned_p: Array[StringName] = []

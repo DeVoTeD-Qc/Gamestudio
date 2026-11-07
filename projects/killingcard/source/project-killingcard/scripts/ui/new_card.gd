@@ -297,13 +297,15 @@ static func draw_example(ci: CanvasItem, r: Rect2, f: StringName, icon: bool) ->
 					SynergyGlyphs.trait_color(trait_id))
 		RevealFlags.KEYWORDS:
 			_draw_unlock(ci, r if not icon else sq, icon, &"first_shot")
-		RevealFlags.PROMOTION, RevealFlags.ENGINE_PANEL:
-			# kc-cards-impl: the level coin R > T (the camo band is retired).
+		RevealFlags.ENGINE_PANEL:
+			# kc-ipad-cards: the trait counts of a deck (no level coins: there is no training).
 			var cs: float = minf(r.size.y - 4.0, 30.0)
 			var y: float = r.get_center().y - cs * 0.5
-			CardLook.draw_level_coin(ci, Rect2(r.position.x, y, cs, cs), 0)
-			ci.draw_line(Vector2(r.position.x + cs + 4.0, y + cs * 0.5), Vector2(r.position.x + cs + 18.0, y + cs * 0.5), fog, 2.0)
-			CardLook.draw_level_coin(ci, Rect2(r.position.x + cs + 22.0, y, cs, cs), 1)
+			for i: int in 3:
+				var tid: StringName = SynergyRules.TRAITS[i]
+				var tr: Rect2 = Rect2(r.position.x + i * (cs + 30.0), y, cs, cs)
+				SynergyGlyphs.draw_trait_plate(ci, tr, tid, true, false)
+				ci.draw_string(font, Vector2(tr.end.x + 4.0, tr.get_center().y + 7.0), str(3 - i), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, fog)
 		RevealFlags.MUSTER_OUT:
 			var bw3: float = minf(r.size.x * (0.9 if icon else 0.45), r.size.y * 3.2)
 			var bh3: float = bw3 / 4.0
@@ -337,17 +339,10 @@ static func draw_example(ci: CanvasItem, r: Rect2, f: StringName, icon: bool) ->
 				ci.draw_circle(sq.get_center(), s * 0.3, AMBER)
 
 
-## A locked socket, an arrow, the same keyword lit (or, as an icon, the lit keyword alone).
+## The keyword's icon, lit (kc-ipad-cards: no locked socket or arrow: keywords are never locked).
 static func _draw_unlock(ci: CanvasItem, r: Rect2, icon: bool, kw: StringName) -> void:
 	var s: float = minf(r.size.y, 56.0)
-	var lit: Rect2 = Rect2(r.position + Vector2((r.size.x - s) * 0.5, (r.size.y - s) * 0.5), Vector2(s, s))
-	if not icon:
-		var lock_r: Rect2 = Rect2(r.position + Vector2(0, (r.size.y - s) * 0.5), Vector2(s, s))
-		StandardIssueLook.draw_locked_keyword(ci, lock_r, String(kw).capitalize())
-		lit.position.x = lock_r.end.x + 60.0
-		ci.draw_line(Vector2(lock_r.end.x + 10.0, lock_r.get_center().y), Vector2(lock_r.end.x + 44.0, lock_r.get_center().y), AMBER, 3.0)
-		ci.draw_colored_polygon(PackedVector2Array([Vector2(lock_r.end.x + 52.0, lock_r.get_center().y),
-				Vector2(lock_r.end.x + 42.0, lock_r.get_center().y - 7.0), Vector2(lock_r.end.x + 42.0, lock_r.get_center().y + 7.0)]), AMBER)
+	var lit: Rect2 = Rect2(r.position + Vector2((r.size.x - s) * 0.5 if icon else 0.0, (r.size.y - s) * 0.5), Vector2(s, s))
 	ci.draw_rect(lit, Color(0.05, 0.06, 0.07, 0.85))
 	ci.draw_rect(lit, AMBER, false, 1.5)
 	var tex: Texture2D = IconSheet.get_keyword_icon(kw) if IconSheet.KEYWORD_ICONS.has(kw) else null

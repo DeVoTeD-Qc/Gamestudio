@@ -2,8 +2,9 @@
 # Purpose: The synergy layer of documentation/design/synergy-system.md (kc-syn, approved): trait set
 #   bonuses (whole-set since kc-pos-cut §13; the neighbor keywords Guard, Spotter, Fireteam, Overwatch
 #   of §3 are retired and compute() returns no links) and trait set bonuses (Vanguard, Spec Ops,
-#   Heavy, Undead at 2 / 3 in play, §4), plus the per-copy levels (Recruit / Trained / Veteran /
-#   Elite, §5.2; kc-onboard: a Recruit has its trait but its keywords are locked). Pure and static: it works on plain "slot" dictionaries, so MatchState (real units)
+#   Heavy, Undead at 2 / 3 in play, §4). kc-no-training: the per-copy levels (Recruit / Trained /
+#   Veteran / Elite) are removed; every copy has its keywords and effects from the start and carries
+#   at most one trait. Pure and static: it works on plain "slot" dictionaries, so MatchState (real units)
 #   and AiPlanner (its projected records) read exactly the same numbers. The reference model was
 #   the designer's sim (tests/tools/synergy_rules.gd); the numbers here are its v1.1.
 #
@@ -14,7 +15,7 @@
 #   live from the lines, so they follow arrivals, slides, moves and eliminations.
 #
 #   Input of compute(): lines = 3 zones x Array of slots {uid: int, kw: StringName, trait: StringName}
-#   (front first), field_traits = traits of the side's visible Trained Fields, doctrine = the
+#   (front first), field_traits = traits of the side's visible Fields, doctrine = the
 #   side's Doctrine trait (&"" = none; +1 to that trait's count while it has at least one member).
 #   Output: {zones: 3 x Array of per-slot results parallel to the input, counts: {trait: n},
 #   tiers: {trait: 0/2/3}, links: [{kind, from_uid, to_uid}]} where a per-slot result is
@@ -38,15 +39,6 @@ const TRAITS: Array[StringName] = [VANGUARD, SPECOPS, HEAVY, UNDEAD]
 ## Sentinel for "the chassis' default trait" (a missing SideSetup.deck_traits entry, kc-art-traits).
 const TRAIT_DEFAULT: StringName = &"~default"
 const TRAIT_NAMES: Dictionary = {VANGUARD: "Vanguard", SPECOPS: "Spec Ops", HEAVY: "Heavy", UNDEAD: "Undead"}
-
-## Per-copy levels (§5.2; the camo band shows them: plain / Gilded / Forged / Priceless).
-const LEVEL_RECRUIT: int = 0
-const LEVEL_TRAINED: int = 1
-const LEVEL_VETERAN: int = 2
-const LEVEL_ELITE: int = 3
-const LEVEL_MAX: int = LEVEL_ELITE
-const LEVEL_NAMES: Array[String] = ["Recruit", "Trained", "Veteran", "Elite"]
-const LEVEL_BANDS: Array[StringName] = [&"", &"gilded", &"forged", &"priceless"]
 
 ## Keyword amounts (each keyword counts once per receiving unit).
 const GUARD_COVER: int = 1
@@ -94,64 +86,31 @@ static func slot(uid: int, kw: StringName = &"", p_trait: StringName = &"") -> D
 	return {"uid": uid, "kw": kw, "trait": p_trait}
 
 
-## Stat bonus of a copy's level: Veteran +1 Armor, Elite +1 Armor +1 FP. {fp, armor}.
-static func level_stats(level: int) -> Dictionary:
-	return {"fp": 1 if level >= LEVEL_ELITE else 0, "armor": 1 if level >= LEVEL_VETERAN else 0}
-
-
-## Neighbor keyword a copy of `card` carries at `level` (Recruits have none: it's locked until
-## the copy trains).
+## Neighbor keyword a copy of `card` carries.
 ## kc-pos-cut (§13): neighbor keywords are retired, so no copy carries one (always &"").
-static func keyword_at(_card: CardData, _level: int) -> StringName:
+static func keyword_at(_card: CardData) -> StringName:
 	return &""
 
 
-## kc-onboard §3 (head N1): a Recruit calling card (level 0) has its trait ON but none of its rules
-## text: no printed keyword (First Shot, Pick, Flank, Cover, Suppress, Pierce, Patch, Holder),
-## no arrive-front, no On Deploy / On Down / passive effect, no LMG Pierce and no neighbor keyword.
-## It keeps cost, FP, Armor and weapon class. True when a copy at `level` has its rules text.
-## Fields and tactics always have theirs (only units are ever Recruits in play).
-static func keywords_on(card: CardData, level: int) -> bool:
-	return card == null or not card.is_unit() or level >= LEVEL_TRAINED
-
-
-## The effects a copy at `level` brings (none on a Recruit unit; see keywords_on).
-static func effects_at(card: CardData, level: int) -> Array[EffectData]:
-	if card == null or not keywords_on(card, level):
-		var none: Array[EffectData] = []
-		return none
-	return card.effects
-
-
-## kc-onboard §3 UI hook: the keywords a Recruit copy unlocks when it trains, player-facing names
-## (["First Shot", "Guard"]); [] once Trained or when the card has none (Standard Issue cards).
-static func locked_keywords(card: CardData, level: int) -> Array[String]:
-	if card == null or keywords_on(card, level) or card.standard_issue:
-		var none: Array[String] = []
-		return none
-	return card.trained_keyword_names()
-
-
-## The greyed line on a Recruit: "Trains: First Shot · Guard" ("" when nothing is locked).
-static func trains_text(card: CardData, level: int) -> String:
-	var kws: Array[String] = locked_keywords(card, level)
-	return "" if kws.is_empty() else "Trains: " + " · ".join(kws)
-
-
-## kc-art-traits (art-traits.md §1, head T1/T2): the trait a copy carries. `chosen` is the copy's
-## trait as picked through its art (SideSetup.deck_traits / RulesCard.chosen_trait); TRAIT_DEFAULT =
-## the chassis' default (CardData.card_trait = trait_options[0]). A chosen trait that is not on the
-## chassis' option list makes the copy plain (&""). Printed cards (one option or none: Elites,
-## Fields, tactics, the Sentry) always carry their printed trait, whatever is chosen. kc-onboard
-## (head N1): Recruits carry their trait too (the art brings the trait first; only the keywords wait
-## for training). `level` is kept for callers; every level carries the trait now. The rules never
-## read arts: the run / UI layer resolves art -> trait (ArtTraits).
-static func trait_at(card: CardData, level: int, chosen: StringName = TRAIT_DEFAULT) -> StringName:
+## kc-art-traits (art-traits.md §1, head T1/T2): the ONE trait a copy carries (kc-no-training: at
+## most one trait per copy, never a list). `chosen` is the copy's trait as picked through its art
+## (SideSetup.deck_traits / RulesCard.chosen_trait); TRAIT_DEFAULT = the chassis' default
+## (CardData.card_trait = trait_options[0]). A chosen trait that is not on the chassis' option list
+## makes the copy plain (&""). Printed cards (one option or none: Elites, Fields, tactics, the
+## Sentry) always carry their printed trait, whatever is chosen. The rules never read arts: the
+## run / UI layer resolves art -> trait (ArtTraits).
+static func trait_at(card: CardData, chosen: StringName = TRAIT_DEFAULT) -> StringName:
 	if card == null or card.standard_issue:
 		return &""
 	if chosen == TRAIT_DEFAULT or not card.has_trait_choice():
 		return card.card_trait
 	return chosen if card.can_carry(chosen) else &""
+
+
+## kc-no-training: true when `t` names at most one trait: &"" (none) or exactly one of TRAITS.
+## A combined value ("vanguard,undead", "heavy|specops", ...) is never a trait.
+static func is_single_trait(t: StringName) -> bool:
+	return t == &"" or t in TRAITS
 
 
 static func tier_for(count: int) -> int:
@@ -191,7 +150,7 @@ static func _empty_bonus(b: Variant) -> bool:
 	return int(d.get("fp", 0)) == 0 and int(d.get("cover", 0)) == 0 and int(d.get("heal", 0)) == 0 and not bool(d.get("fs", false))
 
 
-## Trait counts of one side: units in the lines plus visible Trained Fields, + Doctrine.
+## Trait counts of one side: units in the lines plus visible Fields, + Doctrine.
 static func trait_counts(lines: Array, field_traits: Array, doctrine: StringName = &"") -> Dictionary:
 	var counts: Dictionary = {}
 	for z: int in 3:

@@ -110,9 +110,9 @@ static func family_of(art_id: StringName, card: CardData) -> StringName:
 		var suffix := StringName(s.get_slice(SEP, 1))
 		return suffix if suffix in FAMILIES else home
 	var row: Dictionary = licensed_row(art_id)
-	if not row.is_empty() and StringName(String(row.get("family", ""))) in FAMILIES:
-		return StringName(String(row["family"]))
-	return home
+	# kc-no-training: one family per art (a cell naming several is ignored: the home family).
+	var fam: StringName = single_family(String(row.get("family", ""))) if not row.is_empty() else &""
+	return fam if fam != &"" else home
 
 
 ## kc-art-traits §1.1: the trait a copy of `card` gets from wearing `art_id`. Printed cards keep
@@ -124,6 +124,60 @@ static func trait_of(art_id: StringName, card: CardData) -> StringName:
 		return card.card_trait
 	var t: StringName = FAMILY_TRAIT.get(family_of(art_id, card), &"")
 	return t if card.can_carry(t) else &""
+
+
+# =============================================================================
+# kc-no-training: at most one trait per card copy (head: "cards only have 1 trait at most")
+# =============================================================================
+
+## Problems with the art -> trait map itself ([] = fine): every family gives at most ONE trait
+## (a single trait id, never a list), no two families give the same trait, and every alternate
+## family has its placeholder look.
+static func validate_map() -> Array[String]:
+	var out: Array[String] = []
+	var owner: Dictionary = {}
+	for f: StringName in FAMILIES:
+		if not FAMILY_TRAIT.has(f):
+			out.append("family '%s' has no trait entry" % f)
+			continue
+		var t: Variant = FAMILY_TRAIT[f]
+		if typeof(t) != TYPE_STRING_NAME or not SynergyRules.is_single_trait(t):
+			out.append("family '%s' gives '%s': an art gives at most one trait" % [f, str(t)])
+			continue
+		if t != &"":
+			if owner.has(t):
+				out.append("families '%s' and '%s' both give %s" % [owner[t], f, t])
+			owner[t] = f
+		if not OPTION_VARIANTS.has(f):
+			out.append("family '%s' has no placeholder look" % f)
+	return out
+
+
+## Problems with the arts of one card ([] = fine): each art a copy can wear resolves to ONE family
+## and at most one trait, and that trait is one of the card's options (or none).
+static func card_problems(card: CardData) -> Array[String]:
+	var out: Array[String] = []
+	if card == null:
+		return out
+	if card.card_trait != &"" and not SynergyRules.is_single_trait(card.card_trait):
+		out.append("%s: card_trait '%s' is not one trait" % [card.id, card.card_trait])
+	for a: StringName in arts_for(card):
+		var fam: StringName = family_of(a, card)
+		if fam not in FAMILIES:
+			out.append("%s: art '%s' has no single family" % [card.id, a])
+		var t: StringName = trait_of(a, card)
+		if not SynergyRules.is_single_trait(t):
+			out.append("%s: art '%s' gives '%s', more than one trait" % [card.id, a, t])
+		elif t != &"" and not card.can_carry(t):
+			out.append("%s: art '%s' gives %s, which is not one of its options" % [card.id, a, t])
+	return out
+
+
+## Licensed manifest `family` cell -> one family, or &"" when the cell names several ("honors|horde")
+## or none we know (the row then falls back to its chassis' home family).
+static func single_family(cell: String) -> StringName:
+	var f := StringName(cell.strip_edges().to_lower())
+	return f if f in FAMILIES else &""
 
 
 # =============================================================================

@@ -259,8 +259,7 @@ func start_local_match(p_seed: int = seed_value) -> bool:
 	var player: SideSetup = SideSetup.new()
 	player.display_name = "You"
 	player.deck.assign(config.starter_deck)
-	# kc-syn §11.4: the quick match plays the run's starter as it is (plain Recruits).
-	player.deck_levels.assign(config.starter_levels())
+	# kc-syn §11.4: the quick match plays the run's starter as it is.
 	player.primary = config.starter_primary
 	# kc-ui4: the Operator picked on the starter screen (Settings.operator_primary), when valid.
 	var pick: LoadoutItem = _picked_operator(config)
@@ -317,7 +316,7 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	_finished = false
 	_match_started_ms = Time.get_ticks_msec()
 	if PitchDecks.active():
-		# kc-syn §11.4: the whole side (deck + copy levels), so the pitch shows links and sets.
+		# kc-syn §11.4: the whole side (its deck), so the pitch shows links and sets.
 		for s: RulesSide in state.sides:
 			PitchDecks.apply_setup(s.setup)
 	_assign_copy_arts(state)
@@ -844,7 +843,7 @@ func open_mulligan() -> void:
 	var entries: Array = []
 	for rc: RulesCard in state.sides[PLAYER].hand:
 		# kc-ui3: the full card face (CardView), with its own licensed art and title when it has one.
-		# kc-cards-impl: the Y2+ face (art, level, trait, Standard Issue tag, a Recruit's Trains line).
+		# kc-cards-impl: the Y2+ face (art, trait, Standard Issue tag).
 		var view: Dictionary = card_view_for(rc)
 		view.erase("cant_pay")
 		var art: BannerArt = BannerArtDB.get_art(StringName(String(state.art_by_uid.get(rc.uid, rc.card.id))))
@@ -1162,7 +1161,7 @@ func _show_selection() -> void:
 		var chips: String = ""
 		if ok:
 			# kc-syn-ui (head A): the ghost shows the RESULTING stats in this column (range, auras,
-			# links, sets, level), and the column badge names what the card would switch on.
+			# links, sets), and the column badge names what the card would switch on.
 			var g: Dictionary = _ghost_for_zone(ghost, z)
 			entry = g["entry"]
 			chips = String(g["chips"])
@@ -1240,8 +1239,6 @@ func _ghost_entry() -> Dictionary:
 			MatchSnapshot._banner_fields(e, rc.card, null, me, state, rc.uid)
 			e["kw"] = String(rc.neighbor_keyword())
 			e["trait"] = String(rc.card_trait())
-			e["level"] = rc.level
-			e["band"] = String(SynergyRules.LEVEL_BANDS[clampi(rc.level, 0, 3)])
 			return e
 		&"operator":
 			var op: RulesUnit = me.operator_unit
@@ -1289,22 +1286,18 @@ func _dock_view() -> Dictionary:
 	return card_view_for(rc) if rc != null else {}
 
 
-## kc-cards-impl: the Y2+ CardView data of a card in your hand (its art, level, trait, a Recruit's
-## locked keywords, Standard Issue, can't pay).
+## kc-cards-impl: the Y2+ CardView data of a card in your hand (its art, trait, Standard Issue,
+## can't pay). kc-ipad-cards: no level, no locked keywords.
 func card_view_for(rc: RulesCard) -> Dictionary:
 	var view: Dictionary = CardInfo.view_dict(rc.card, "friend")
 	var art_id: StringName = StringName(String(state.art_by_uid.get(rc.uid, rc.card.id)))
 	view["banner"] = String(art_id)
-	view["level"] = rc.level
 	var t: StringName = rc.card_trait()
 	if t != &"":
 		view["trait"] = String(t)
-	var e: Dictionary = StandardIssueLook.dress({}, rc.card, rc.level, art_id)
-	for k: String in ["standard_issue", "locked", "trains"]:
-		if e.has(k):
-			view[k] = e[k]
-	if e.has("locked"):
-		view["keywords"] = []
+	var e: Dictionary = StandardIssueLook.dress({}, rc.card, art_id)
+	if e.has("standard_issue"):
+		view["standard_issue"] = e["standard_issue"]
 	view["cant_pay"] = rc.card.cost > state.sides[PLAYER].supply
 	return view
 
@@ -1421,8 +1414,8 @@ func _on_card_inspected(uid: int) -> void:
 	var status: String = "Costs %d Supply, you have %d." % [rc.card.cost, s.supply]
 	if rc.card.cost > s.supply:
 		status += " Not enough to play it now."
-	open_card_inspector(rc.card, "friend", _join(status, _range_hint(rc.card)), {}, -1, uid,
-			synergy_lines(rc.card, rc.level, PLAYER, null, rc.chosen_trait))
+	open_card_inspector(rc.card, "friend", status, {}, -1, uid,
+			synergy_lines(rc.card, PLAYER, null, rc.chosen_trait))
 
 
 func _on_operator_inspected() -> void:
@@ -1457,11 +1450,11 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 	var u: RulesUnit = s.find_unit(uid)
 	if u != null and u.card != null:
 		var row: int = s.lines[zone].find(u) + 1
-		var status: String = "In %s, row %d%s (%s): FP %d, Armor %d/%d." % [ZONE_WORDS[zone], row,
-				" (frontline)" if row == 1 else "", RANGE_WORDS[state.zone_ranges[zone]],
+		var status: String = "In %s, row %d%s: FP %d, Armor %d/%d." % [ZONE_WORDS[zone], row,
+				" (frontline)" if row == 1 else "",
 				state.firepower_of(u), u.armor, u.max_armor(state.round_number)]
 		open_card_inspector(u.card, "friend" if side == PLAYER else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
-				-1, synergy_lines(u.card, u.level, side, u, u.chosen_trait))
+				-1, synergy_lines(u.card, side, u, u.chosen_trait))
 		return
 	if u != null:
 		# A token without a card (Sentry Turret).
@@ -1483,11 +1476,11 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 
 ## kc-syn-ui: the inspector's synergy lines for a copy (hand card: u = null; board unit: live):
 ## where its FP / Cover come from ("FP 4 = 2 base +1 Spotter (Marksman, behind) +1 Vanguard 2"),
-## its neighbour keyword (what it uses, whether the link is on, with whom), its trait (count in
-## play, tier texts) and its copy level (camo band).
+## its neighbour keyword (what it uses, whether the link is on, with whom) and its trait (count in
+## play, tier texts).
 ## kc-trait-ui: `chosen` = the copy's own trait (RulesCard / RulesUnit.chosen_trait): two copies of
 ## one card can carry different traits, so the trait line names this copy's and where it comes from.
-func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
+func synergy_lines(card: CardData, side: int, u: RulesUnit,
 		chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if card == null or state == null:
@@ -1503,7 +1496,7 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
 			out.append({"name": "First Shot (set)", "text": "Spec Ops 3 gives it First Shot."})
 		if int(b["heal"]) > 0:
 			out.append({"name": "Undead heal", "text": "At the end of the round it heals %d (never above its max Armor)." % int(b["heal"])})
-	var kw: StringName = SynergyRules.keyword_at(card, level)
+	var kw: StringName = SynergyRules.keyword_at(card)
 	if kw != &"":
 		var state_word: String = ""
 		if u != null and u.is_on_board():
@@ -1518,7 +1511,7 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
 			state_word = (" Link ON with %s." % ", ".join(partners)) if not partners.is_empty() else " Link idle: nobody stands there now."
 		out.append({"name": "%s (neighbour keyword)" % SynergyGlyphs.keyword_name(kw),
 				"text": "%s It uses %s.%s" % [String(SynergyRules.KEYWORD_TEXT[kw]), SynergyGlyphs.KEYWORD_USES[kw], state_word]})
-	var t: StringName = SynergyRules.trait_at(card, level, chosen)
+	var t: StringName = SynergyRules.trait_at(card, chosen)
 	if t == &"" and card.has_trait_choice():
 		var tc: StringName = card.card_trait if chosen == SynergyRules.TRAIT_DEFAULT else chosen
 		out.append({"name": "Trait: none", "text": "Its art is a plain art: this copy joins no set. Can be: %s." % _options_text(card)})
@@ -1535,20 +1528,9 @@ func synergy_lines(card: CardData, level: int, side: int, u: RulesUnit,
 			parts.insert(0, "From the art: %s family. Can be: %s." % [ArtTraits.FAMILY_NAMES[ArtTraits.family_for_trait(t)], _options_text(card)])
 		out.append({"name": "%s (trait)" % SynergyGlyphs.trait_name(t), "text": " ".join(parts)})
 	if card.standard_issue:
-		# kc-onboard-ui: Standard Issue kit: never trains; Muster out / Retire sends it home.
+		# kc-onboard-ui: Standard Issue kit: Muster out / Retire sends it home.
 		out.append({"name": "Standard Issue %s" % RunProgress.standard_issue_serial(card),
-				"text": "Basic kit: no keyword, no trait, no weapon class. It never trains; Muster out or Retire sends it home."})
-		return out
-	if card.is_unit() or card.is_field():
-		var trains: String = SynergyRules.trains_text(card, level)
-		var lv_text: Array[String] = [
-			"Recruit (plain frame, R badge): its trait is on; its keywords are locked until it trains (Promotion)%s." % ((". " + trains) if trains != "" else ""),
-			"Trained (Gilded band): its keywords and trait are on.",
-			"Veteran (Forged band): Trained, +1 Armor.",
-			"Elite (Priceless band): Trained, +1 Armor and +1 FP.",
-		]
-		if card.neighbor_keyword != &"" or card.card_trait != &"" or card.has_trait_choice() or level >= SynergyRules.LEVEL_VETERAN or trains != "":
-			out.append({"name": "Level: %s" % SynergyGlyphs.level_name(level), "text": lv_text[clampi(level, 0, 3)]})
+				"text": "Basic kit: no keyword, no trait. Muster out or Retire sends it home."})
 	return out
 
 
@@ -1563,8 +1545,7 @@ static func _options_text(card: CardData) -> String:
 func open_card_inspector(card: CardData, side: String, status: String, banner: Dictionary = {}, banner_side: int = -1, card_uid: int = -1,
 		extra_lines: Array[Dictionary] = []) -> void:
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
-	if card.is_unit() and CardInfo.CLASS_WORDS.get(card.weapon_class, "") != "":
-		type_text += " · " + String(CardInfo.CLASS_WORDS[card.weapon_class])
+	# kc-ipad-cards (the head: "leave out the gun type"): the weapon class is never shown.
 	if card.is_unit():
 		type_text += " · FP %d · Armor %d" % [card.firepower, card.armor]
 	type_text += " · cost %d" % card.cost
@@ -1593,16 +1574,14 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	var sub: String = BannerArtDB.subname(art.id)
 	if sub != "":
 		view["subname"] = sub
-	# kc-cards-impl: the Y2+ face shows the copy's art, level, trait (lit while its set is on), locks.
+	# kc-cards-impl: the Y2+ face shows the copy's art and trait (lit while its set is on).
 	view["banner"] = String(art.id)
-	for k: String in ["level", "trait", "standard_issue", "locked", "trains", "armor_max", "fp_trend"]:
+	for k: String in ["trait", "standard_issue", "armor_max", "fp_trend"]:
 		if banner.has(k) and str(banner[k]) != "":
 			view[k] = banner[k]
 	if banner.has("fp"):
 		view["firepower"] = int(banner["fp"])
 		view["armor"] = int(banner.get("armor", view.get("armor", 0)))
-	if banner.has("locked"):
-		view["keywords"] = []
 	view["trait_lit"] = int(banner.get("trait_tier", 0)) >= 2
 	_screen.get_inspector().open({
 		"view": view, "title": card.display_name,
@@ -1686,7 +1665,7 @@ func _on_rail_inspected(key: StringName) -> void:
 					"text": "Every elimination of the round, oldest first. Short toasts also show at the top of the board.", "status": ""})
 		&"traits":
 			_open_info({"title": "Sets (traits)", "type": "trait rail · yours%s" % ("" if _screen.compact else " and the rival's"),
-					"text": "Calling cards (Recruits too) and Fields share a trait (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Standard Issue cards have no trait.",
+					"text": "Calling cards and Fields share a trait (one trait per card at most) (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Standard Issue cards have no trait.",
 					"status": "Tap the rail for every tier text. Long-press a chip for that trait."})
 		&"initiative":
 			var ini: Dictionary = MatchSnapshot.initiative_info(state, PLAYER)
@@ -1715,7 +1694,7 @@ func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 	for k: int in [2, 3]:
 		lines.append({"name": "%s %d%s" % [SynergyGlyphs.trait_name(t), k, " (ON)" if tier >= k else ""], "text": String(SynergyRules.TIER_TEXT[t][k - 2]) + "."})
 	_open_info({"title": SynergyGlyphs.trait_name(t), "type": "trait · %s · %d in play" % ["yours" if side == PLAYER else "rival", n],
-			"text": "In play: %s.%s Trained units and visible Fields count; Recruits, tactics and hidden traps don't." % [
+			"text": "In play: %s.%s Units and visible Fields count; tactics and hidden traps don't." % [
 				", ".join(members) if not members.is_empty() else "only Fields", " Doctrine adds 1 to this count." if doc else ""],
 			"keywords": lines, "side": side,
 			"status": "Tier 2 is on." if tier == 2 else ("Tiers 2 and 3 are on." if tier >= 3 else "Needs %d in play for tier 2." % SynergyRules.TIER2)})
@@ -1727,7 +1706,7 @@ func _open_objective(zone: int) -> void:
 			&"contested": "Even (contested): both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
 	var lines: PackedStringArray = []
 	lines.append("%s. A side controls a column when it has at least one unit there and the other side has none (a Holder breaks a tie)." % control_text)
-	lines.append("Column Firepower: yours %d, rival %d. Range: %s (some weapon classes get +FP here)." % [int(lane["fp_player"]), int(lane["fp_enemy"]), String(lane["range"]).capitalize()])
+	lines.append("Column Firepower: yours %d, rival %d." % [int(lane["fp_player"]), int(lane["fp_enemy"])])
 	for key: String in ["player", "enemy"]:
 		for f: Dictionary in (lane["fields"] as Dictionary).get(key, []):
 			lines.append("%s Field: %s%s." % ["Your" if key == "player" else "Rival", f["name"], " (hidden trap)" if f.get("hidden", false) else ""])
@@ -1814,7 +1793,7 @@ func _open_operator(side: int) -> void:
 	if op_art.licensed:
 		view["licensed_art"] = String(op_art.id)  # kc-cod3: the mastery card in the card picture too
 	_screen.get_inspector().open({
-		"view": view, "title": title, "type": "operator · %s" % String(CardInfo.CLASS_WORDS.get(op.weapon_class, "")),
+		"view": view, "title": title, "type": "operator",
 		"text": String(view["text"]), "keywords": op_lines, "status": where,
 		"banner": MatchSnapshot.unit_entry(state, op, s), "side": side,
 		"art_line": _art_line(BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))) \
@@ -1829,22 +1808,6 @@ static func _mastery_line(e: Dictionary) -> String:
 		return " · Camo tier: Base (mastery tiers come later)"
 	var name: String = BannerArtDB.MASTERY_TIERS[clampi(tier, 1, 4) - 1]
 	return " · Mastery tier %d of 4: %s%s" % [tier, name, " (Base camo)" if tier == 1 else " (dev preview)"]
-
-
-## "Best in Close (Left): +2 FP" for units with a range bonus on this map.
-func _range_hint(card: CardData) -> String:
-	if not card.is_unit():
-		return ""
-	var best: int = -1
-	var best_bonus: int = 0
-	for z: int in MatchState.ZONE_COUNT:
-		var b: int = state.config.range_bonus(card.weapon_class, state.zone_ranges[z])
-		if b > best_bonus:
-			best_bonus = b
-			best = z
-	if best < 0:
-		return ""
-	return "Best in %s (%s): +%d FP." % [ZONE_WORDS[best], RANGE_WORDS[state.zone_ranges[best]], best_bonus]
 
 
 # =============================================================================

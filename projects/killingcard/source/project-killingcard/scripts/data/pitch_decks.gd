@@ -78,25 +78,20 @@ static func apply(deck: Array[CardData], card_lookup: Callable = Callable()) -> 
 	return out
 
 
-## kc-syn-impl: the pitch version of a whole side (deck + copy levels). Card slots keep their
-## index, so SideSetup.deck_levels and deck_traits stay parallel (a swapped-in card takes its default
-## trait, kc-art-traits); with `train_all` (the default) every copy plays
-## Trained so the pitch shows the neighbor links and the trait sets its calling-card families
-## illustrate (the Recruit starter would show none). Unchanged when inactive.
+## kc-syn-impl: the pitch version of a whole side. Card slots keep their index, so
+## SideSetup.deck_traits stays parallel (a swapped-in card takes its default trait, kc-art-traits).
+## Unchanged when inactive. (kc-no-training: there are no copy levels to train any more.)
 ## Hook: MatchController.start should call this instead of apply() on setup.deck (UI task).
-static func apply_setup(setup: SideSetup, train_all: bool = true, card_lookup: Callable = Callable()) -> void:
+static func apply_setup(setup: SideSetup, card_lookup: Callable = Callable()) -> void:
 	if not active() or setup == null:
 		return
 	var before: Array[CardData] = setup.deck.duplicate()
 	setup.deck = apply(setup.deck, card_lookup)
-	var levels: Array[int] = []
 	var traits: Array[StringName] = []
 	for i: int in setup.deck.size():
 		var swapped: bool = i >= before.size() or before[i] != setup.deck[i]
-		levels.append(SynergyRules.LEVEL_TRAINED if train_all or swapped else setup.level_of(i))
 		# kc-art-traits: a swapped-in card takes its default trait (not the replaced copy's).
 		traits.append(SynergyRules.TRAIT_DEFAULT if swapped else setup.trait_of(i))
-	setup.deck_levels = levels
 	if not setup.deck_traits.is_empty():
 		setup.deck_traits = traits
 

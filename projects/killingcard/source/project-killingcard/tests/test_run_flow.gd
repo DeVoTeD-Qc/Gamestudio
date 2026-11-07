@@ -41,7 +41,7 @@ func _new_run(seed_value: int = SEED) -> RunProgress:
 
 
 ## kc-syn-ui / kc-onboard: with the shipped run_config.tres the drop after match 2 is 2 picks of 4
-## followed by Muster out, Promotion comes after matches 2 and 4, a loss gives Salvage (+ Muster out
+## followed by Muster out (kc-no-training: no Promotion), a loss gives Salvage (+ Muster out
 ## from match 2), and the Doctrine comes from the first calling card (no Doctrine offer).
 func test_shipped_schedule_adds_the_synergy_offers() -> void:
 	var r: RunProgress = RunProgress.create(_config(), SEED)
@@ -49,7 +49,7 @@ func test_shipped_schedule_adds_the_synergy_offers() -> void:
 	assert_true(r.config.synergy_offers, "synergy offers are on in run_config.tres")
 	assert_eq(_play_forced(r, &"player"), [SUPPLY, ATTACH] as Array[StringName], "after match 1")
 	assert_true(r.doctrine != &"", "the first calling card set the Doctrine")
-	assert_eq(_play_forced(r, &"player"), [SUPPLY, SUPPLY, RewardOffers.KIND_MUSTER_OUT, RewardOffers.KIND_PROMOTION, PERK] as Array[StringName], "after match 2 (pick 2)")
+	assert_eq(_play_forced(r, &"player"), [SUPPLY, SUPPLY, RewardOffers.KIND_MUSTER_OUT, PERK] as Array[StringName], "after match 2 (pick 2)")
 	assert_eq(_play_forced(r, &"enemy"), [RewardOffers.KIND_SALVAGE, RewardOffers.KIND_MUSTER_OUT, ATTACH] as Array[StringName], "after a loss (match 3)")
 
 
@@ -440,7 +440,7 @@ func test_v4_save_with_the_removed_loadout_slots_loads() -> void:
 	var cfg: RunConfig = _config()
 	var r: RunProgress = _new_run()
 	var d: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
-	assert_eq(int(d["version"]), 5, "saves are v5")
+	assert_eq(int(d["version"]), RunProgress.SAVE_VERSION, "saves are the current version (v6 since kc-no-training)")
 	assert_false((d["loadout"] as Dictionary).has("lethal"), "no lethal field any more")
 	var old: Dictionary = d.duplicate(true)
 	old["version"] = 4
@@ -451,7 +451,7 @@ func test_v4_save_with_the_removed_loadout_slots_loads() -> void:
 	assert_eq(back["error"], "", "the v4 save loads")
 	if back["run"] != null:
 		var again: Dictionary = (back["run"] as RunProgress).to_dict()
-		assert_eq(int(again["version"]), 5, "saved again as v5")
+		assert_eq(int(again["version"]), RunProgress.SAVE_VERSION, "saved again as the current version")
 		assert_eq((again["loadout"] as Dictionary).keys(), ["primary", "attachments", "perks", "killstreaks"],
 				"the removed slots are dropped")
 		assert_eq(String(again["loadout"]["primary"]), String(r.primary), "the Operator is kept")

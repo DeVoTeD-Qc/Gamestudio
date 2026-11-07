@@ -182,14 +182,14 @@ func _stage_fight(c: Node) -> void:
 		s.plays.clear()
 	st.sides[E].ready = false
 	for id: StringName in [&"breacher", &"gunner", &"rifleman"]:
-		var u: RulesUnit = st.create_unit(P, CardDB.get_card(id), -1, SynergyRules.LEVEL_TRAINED)
+		var u: RulesUnit = st.create_unit(P, CardDB.get_card(id))
 		st.put_in_line(u, 0)
 	for id: StringName in [&"rifleman", &"rifleman", &"rifleman"]:
-		var e: RulesUnit = st.create_unit(E, CardDB.get_card(id), -1, SynergyRules.LEVEL_RECRUIT)
+		var e: RulesUnit = st.create_unit(E, CardDB.get_card(id))
 		st.put_in_line(e, 0)
 	# Column C: one each, so two columns fight and B is skipped.
-	st.put_in_line(st.create_unit(P, CardDB.get_card(&"rifleman"), -1, SynergyRules.LEVEL_RECRUIT), 2)
-	st.put_in_line(st.create_unit(E, CardDB.get_card(&"rifleman"), -1, SynergyRules.LEVEL_RECRUIT), 2)
+	st.put_in_line(st.create_unit(P, CardDB.get_card(&"rifleman")), 2)
+	st.put_in_line(st.create_unit(E, CardDB.get_card(&"rifleman")), 2)
 	c.refresh()
 
 
@@ -381,16 +381,16 @@ func test_hand_cards_that_switch_a_set_on_glow_at_deploy() -> void:
 	var m: Control = s[1]
 	var c: Node = s[2]
 	var st: MatchState = c.state
-	var pm: RulesUnit = st.create_unit(P, CardDB.get_card(&"point_man"), -1, SynergyRules.LEVEL_TRAINED)
+	var pm: RulesUnit = st.create_unit(P, CardDB.get_card(&"point_man"))
 	st.put_in_line(pm, 0)
-	var rc: RulesCard = RulesCard.new(st.new_uid(), CardDB.get_card(&"breacher"), SynergyRules.LEVEL_TRAINED)
+	var rc: RulesCard = RulesCard.new(st.new_uid(), CardDB.get_card(&"breacher"))
 	st.sides[P].hand.append(rc)
 	st.sides[P].supply = 9
 	c.refresh()
 	await _frames(2)
 	var hand: Array = MatchSnapshot.build(st, c.map, 0)["hand"]
 	var glow: Array[int] = m.glow_set_cards(hand)
-	assert_true(glow.has(rc.uid), "the Trained Breacher (Vanguard 2) glows (%s)" % [glow])
+	assert_true(glow.has(rc.uid), "the Breacher (Vanguard 2) glows (%s)" % [glow])
 	var glows: int = 0
 	for n: Node in m.get_fx().get_children():
 		if n.get(&"fx_kind") == &"hand_glow":

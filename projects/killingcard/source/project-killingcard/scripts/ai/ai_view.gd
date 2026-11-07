@@ -41,7 +41,7 @@ var range_bonus: Array = []
 
 # --- my side ------------------------------------------------------------------------------
 var supply: int = 0
-## [{uid: int, card: CardData, level: int}] in hand order (level: kc-syn copy level, 0 = Recruit).
+## [{uid: int, card: CardData, trait: StringName}] in hand order (trait: the copy's chosen trait).
 var hand: Array[Dictionary] = []
 var mulligans_left: int = 0
 var my_score: int = 0
@@ -129,7 +129,7 @@ static func capture(state, p_side: int) -> AiView:
 
 	v.supply = int(me.supply)
 	for c in me.hand:
-		v.hand.append({"uid": int(c.uid), "card": c.card, "level": int(c.level), "trait": c.chosen_trait})
+		v.hand.append({"uid": int(c.uid), "card": c.card, "trait": c.chosen_trait})
 	v.my_doctrine = me.setup.doctrine
 	v.operator_cost = int(state.operator_cost())
 	v.mulligans_left = int(me.mulligans_left)
@@ -227,7 +227,6 @@ static func _unit_record(state, u) -> Dictionary:
 	# synergy-aware planner swaps it for the bonus at the unit's projected position).
 	r["kw"] = u.neighbor_keyword
 	r["trait"] = u.synergy_trait
-	r["level"] = int(u.level)
 	var syn: Dictionary = state.synergy_of(u)
 	r["syn_fp"] = mini(int(syn.get("fp", 0)), int(r["fp"]))
 	var cover_removed: bool = int(state.cover_of(u)) == 0
@@ -275,7 +274,7 @@ static func new_record() -> Dictionary:
 		"first_shot": false, "pick": false, "flank": false, "suppress": false, "pierce": false, "patch": 0,
 		"holder": false, "control": true, "credit": true, "untargetable": false, "survive": 0,
 		"aura": 0, "on_down_damage": 0, "arrives_front": false,
-		"kw": &"", "trait": &"", "level": 1, "syn_fp": 0, "syn_cover": 0, "syn_fs": false, "fs_native": false,
+		"kw": &"", "trait": &"", "syn_fp": 0, "syn_cover": 0, "syn_fs": false, "fs_native": false,
 	}
 
 
@@ -292,40 +291,36 @@ static func _read_effects(r: Dictionary, effects: Array) -> void:
 			r["on_down_damage"] = int(r["on_down_damage"]) + e.amount
 
 
-## Record for a unit card I would deploy into zone z (stats as the engine would build it,
-## including the copy's level: kc-onboard Recruits carry their trait but no keyword).
-func record_for_card(card: CardData, uid: int, z: int, level: int = SynergyRules.LEVEL_TRAINED,
+## Record for a unit card I would deploy into zone z (stats as the engine would build it; the
+## copy's one trait from chosen_trait).
+func record_for_card(card: CardData, uid: int, z: int,
 		chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
 	var r: Dictionary = new_record()
-	var lv: Dictionary = SynergyRules.level_stats(level)
 	r["uid"] = uid
 	r["id"] = card.id
 	r["new"] = true
 	r["card_unit"] = true
 	r["class"] = int(card.weapon_class)
-	r["kw"] = SynergyRules.keyword_at(card, level)
-	r["trait"] = SynergyRules.trait_at(card, level, chosen_trait)
-	r["level"] = level
-	# kc-onboard §3: a Recruit's rules text is locked (SynergyRules.keywords_on), as in create_unit.
-	var kw_on: bool = SynergyRules.keywords_on(card, level)
-	r["fs_native"] = card.first_shot and kw_on
-	r["fp"] = maxi(0, card.firepower + my_firepower_bonus + int(lv["fp"]))
-	var armor: int = maxi(1, card.armor + my_armor_bonus + int(lv["armor"]))
+	r["kw"] = SynergyRules.keyword_at(card)
+	r["trait"] = SynergyRules.trait_at(card, chosen_trait)
+	r["fs_native"] = card.first_shot
+	r["fp"] = maxi(0, card.firepower + my_firepower_bonus)
+	var armor: int = maxi(1, card.armor + my_armor_bonus)
 	r["armor"] = armor
 	r["armor0"] = armor
 	r["max_armor"] = armor
-	r["cover"] = 0 if my_cover_removed or not kw_on else card.cover
-	r["first_shot"] = card.first_shot and kw_on
-	r["pick"] = card.pick and kw_on
-	r["flank"] = card.flank and kw_on
-	r["suppress"] = card.suppress and kw_on
-	r["pierce"] = (card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG) and kw_on
-	r["patch"] = card.patch if kw_on else 0
-	r["holder"] = card.holder and kw_on
+	r["cover"] = 0 if my_cover_removed else card.cover
+	r["first_shot"] = card.first_shot
+	r["pick"] = card.pick
+	r["flank"] = card.flank
+	r["suppress"] = card.suppress
+	r["pierce"] = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
+	r["patch"] = card.patch
+	r["holder"] = card.holder
 	r["control"] = card.counts_for_control
 	r["credit"] = card.grants_elimination_credit
-	r["arrives_front"] = card.arrives_front and kw_on
-	_read_effects(r, SynergyRules.effects_at(card, level))
+	r["arrives_front"] = card.arrives_front
+	_read_effects(r, card.effects)
 	return r
 
 
@@ -335,14 +330,6 @@ func my_visible_field(z: int) -> CardData:
 		if c.is_visible_field():
 			return c
 	return null
-
-
-## Level of the hand card with this uid (Trained if unknown).
-func hand_level(uid: int) -> int:
-	for h: Dictionary in hand:
-		if int(h["uid"]) == uid:
-			return int(h.get("level", SynergyRules.LEVEL_TRAINED))
-	return SynergyRules.LEVEL_TRAINED
 
 
 ## Units of `who` (ME / FOE) in zone z right now.

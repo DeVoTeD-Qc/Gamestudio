@@ -7,14 +7,13 @@
 #       an enemy Standard Issue squad), lettered in the stencil font;
 #     - the stencil font (Stardos Stencil Bold, OFL, assets/fonts/OFL-StardosStencil.txt): ONLY for a
 #       Standard Issue card's name and its serial plate;
-#     - locked keyword sockets on a Recruit calling card ("Trains: First Shot · Guard": the keyword
-#       glyph greyed in frm_socket_locked with the ico_ui_lock padlock), the empty socket
-#       (frm_socket_empty) and the copy level badge (R / T / V / E plate).
+#     - the empty socket (frm_socket_empty) of a Standard Issue card's trait slot.
+#   kc-ipad-cards (kc-no-training): copy levels, the level coin / badge, "Trains:" lines and locked
+#   keyword sockets are gone (every copy has its keywords from the start).
 #   Every kit piece goes through UiKit.piece() / UiKit.draw_piece() with a code-drawn fallback, so
 #   the screens work before the art arrives.
-#   Entry keys (BannerView / BannerCard / CardView): standard_issue (bool), serial ("SI-02"),
-#   locked (["First Shot", "Guard"]), trains ("Trains: First Shot · Guard"), level (0..3).
-# Dependencies: UiKit, SynergyRules, SynergyGlyphs, RunProgress (serial), ArtTraits.
+#   Entry keys (BannerView / BannerCard / CardView): standard_issue (bool), serial ("SI-02").
+# Dependencies: UiKit, SynergyGlyphs, RunProgress (serial), ArtTraits.
 # Author: UI/UX Agent (kc-onboard-ui)
 class_name StandardIssueLook
 extends RefCounted
@@ -34,8 +33,6 @@ const PLATE_TEXT: Color = Color("#1E241C")
 const ENEMY_PLATE: Color = Color("#B0484A")
 const LOCKED: Color = Color("#7E8890")
 const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
-## Level letters of the copy level badge (Recruit, Trained, Veteran, Elite).
-const LEVEL_LETTERS: Array[String] = ["R", "T", "V", "E"]
 
 
 ## The stencil font (Standard Issue name and serial plate only).
@@ -48,37 +45,20 @@ static func is_si(e: Dictionary) -> bool:
 	return bool(e.get("standard_issue", false))
 
 
-## Fills the Standard Issue keys of a card entry: standard_issue, serial; for a Recruit calling card
-## (level 0 with locked keywords) `locked` + `trains`, and its printed keyword glyphs / effect bolt /
-## Protector move to `locked` (a Recruit has none of its rules text yet). `art` = the copy's art (the
-## starter's Ammo Resupply wears a Standard Issue art and frame too).
-## `board`: a board banner (only a Recruit gets the level badge there; the camo band shows the rest).
-## Off the board every calling-card copy gets the badge once Promotion is met (RevealGate).
-static func dress(e: Dictionary, card: CardData, level: int, art: StringName = &"", board: bool = false) -> Dictionary:
+## Fills the Standard Issue keys of a card entry: standard_issue, serial, reserve_trait. `art` = the
+## copy's art (the starter's Ammo Resupply wears a Standard Issue art and frame too). `board` is kept
+## for callers. kc-ipad-cards: no level, band, locked or trains keys any more (kc-no-training).
+static func dress(e: Dictionary, card: CardData, art: StringName = &"", _board: bool = false) -> Dictionary:
 	if card == null:
 		return e
 	var si: bool = card.standard_issue or (art != &"" and ArtTraits.is_standard_issue_art(art, card))
 	if si:
 		e["standard_issue"] = true
 		e["serial"] = RunProgress.standard_issue_serial(card)
-		e.erase("band")
-	var locked: Array[String] = SynergyRules.locked_keywords(card, level)
-	if not locked.is_empty():
-		e["locked"] = locked
-		e["trains"] = SynergyRules.trains_text(card, level)
-		e["keywords"] = []
-		e["bolt"] = false
-		e["front_kw"] = false
-		e["kw"] = ""
-	if card.is_unit() and not si:
-		e["level"] = level
-		e["level_badge"] = not locked.is_empty() or (not board and level >= SynergyRules.LEVEL_TRAINED
-				and card.has_trait_choice() and RevealGate.shown(RevealFlags.PROMOTION))
+	for k: String in ["band", "level", "level_badge", "locked", "trains"]:
+		e.erase(k)
 	if si and card.is_unit():
 		e["reserve_trait"] = true
-	# The camo band arrives with the first Promotion (§5.2; RevealGate shows it all outside a run).
-	if String(e.get("band", "")) != "" and not RevealGate.shown(RevealFlags.PROMOTION):
-		e["band"] = ""
 	return e
 
 
@@ -130,31 +110,6 @@ static func serial_width(text: String, h: float) -> float:
 	return ceilf(STENCIL.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + h * 0.7)
 
 
-## A padlock in rect r (ico_ui_lock, else drawn: shackle arc over a body).
-static func draw_lock(ci: CanvasItem, r: Rect2, c: Color = LOCKED) -> void:
-	if UiKit.draw_icon(ci, &"ui_lock", r, c):
-		return
-	var bw: float = r.size.x * 0.72
-	var bh: float = r.size.y * 0.5
-	var body: Rect2 = Rect2(r.position.x + (r.size.x - bw) * 0.5, r.end.y - bh, bw, bh)
-	var rad: float = bw * 0.32
-	ci.draw_arc(Vector2(body.get_center().x, body.position.y), rad, PI, TAU, 12, c, maxf(1.5, r.size.x * 0.14))
-	ci.draw_rect(body, c)
-	ci.draw_circle(body.get_center(), maxf(1.0, bw * 0.1), INK)
-
-
-## A locked keyword socket: frm_socket_locked (else a grey rim with the padlock on its bottom-right
-## corner) and the keyword's glyph inside, greyed to 45%.
-static func draw_locked_socket(ci: CanvasItem, r: Rect2, icon: Texture2D = null) -> void:
-	ci.draw_rect(r, Color(INK, 0.8))
-	if icon != null:
-		ci.draw_texture_rect(icon, r.grow(-r.size.x * 0.16), false, Color(LOCKED, 0.45))
-	if not UiKit.draw_piece(ci, &"frm_socket_locked", r, Color(LOCKED, 0.9)):
-		ci.draw_rect(r, Color(LOCKED, 0.7), false, 1.0)
-		var ls: float = r.size.x * 0.46
-		draw_lock(ci, Rect2(r.end.x - ls - 1.0, r.end.y - ls - 1.0, ls, ls), Color("#C2C9CF"))
-
-
 ## An empty trait / weapon socket (frm_socket_empty, else a dashed grey rim).
 static func draw_empty_socket(ci: CanvasItem, r: Rect2) -> void:
 	if UiKit.draw_piece(ci, &"frm_socket_empty", r, Color(LOCKED, 0.6)):
@@ -162,62 +117,3 @@ static func draw_empty_socket(ci: CanvasItem, r: Rect2) -> void:
 	var pts: Array[Vector2] = [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position]
 	for i: int in 4:
 		ci.draw_dashed_line(pts[i], pts[i + 1], Color(LOCKED, 0.6), 1.0, 3.0)
-
-
-## The copy level badge: a small plate with R / T / V / E, rimmed in the level's band colour
-## (a Recruit: plain grey rim; the letter in the HudNumber font).
-static func draw_level_badge(ci: CanvasItem, r: Rect2, level: int, font: Font) -> void:
-	var lv: int = clampi(level, 0, 3)
-	var band: StringName = SynergyRules.LEVEL_BANDS[lv]
-	ci.draw_rect(r, Color(INK, 0.85))
-	var rim: Color = Color("#B9C2C9") if band == &"" else (SynergyGlyphs.BANDS[band][2] as Color)
-	ci.draw_rect(r, rim, false, 1.5)
-	if font == null:
-		return
-	var t: String = LEVEL_LETTERS[lv]
-	var fs: int = maxi(10, int(r.size.y * 0.72))
-	var sz: Vector2 = font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-	ci.draw_string(font, Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5),
-			t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, rim)
-
-
-## Plain words for the level badge's tooltip / inspector line.
-static func level_text(level: int) -> String:
-	match clampi(level, 0, 3):
-		0:
-			return "Recruit: trait on, keywords locked until it trains (Promotion)."
-		1:
-			return "Trained: trait and keywords on."
-		2:
-			return "Veteran: Trained, +1 Armor."
-	return "Elite: Trained, +1 Armor and +1 FP."
-
-
-## Keyword id of a player-facing locked keyword name ("First Shot" -> &"first_shot", "Cover 1" ->
-## &"cover", "Guard" -> &"guard", "Front line" -> &"arrives_front", "Aura" -> &"aura").
-static func keyword_id(name: String) -> StringName:
-	var base: String = name.strip_edges()
-	for prefix: String in ["Cover", "Patch"]:
-		if base.begins_with(prefix):
-			base = prefix
-	if base == "Front line":
-		return &"arrives_front"
-	return StringName(base.to_snake_case())
-
-
-## A locked keyword (by its name) in socket r: the keyword's glyph greyed under the padlock.
-static func draw_locked_keyword(ci: CanvasItem, r: Rect2, name: String) -> void:
-	var id: StringName = keyword_id(name)
-	var icon: Texture2D = IconSheet.get_keyword_icon(id) if IconSheet.KEYWORD_ICONS.has(id) else null
-	draw_locked_socket(ci, r, icon)
-	if icon == null:
-		var g: Rect2 = r.grow(-r.size.x * 0.18)
-		if SynergyGlyphs.KEYWORD_NAMES.has(id):
-			SynergyGlyphs.draw_keyword_icon(ci, g, id, Color(LOCKED, 0.5))
-		elif id == &"pierce":
-			SynergyGlyphs.draw_pierce_icon(ci, g, Color(LOCKED, 0.5))
-		elif id == &"arrives_front":
-			ci.draw_polyline(PackedVector2Array([g.position + Vector2(g.size.x * 0.2, g.size.y * 0.65),
-					g.position + Vector2(g.size.x * 0.5, g.size.y * 0.3), g.position + Vector2(g.size.x * 0.8, g.size.y * 0.65)]), Color(LOCKED, 0.5), 2.0)
-		else:
-			ci.draw_circle(g.get_center(), g.size.x * 0.22, Color(LOCKED, 0.5))

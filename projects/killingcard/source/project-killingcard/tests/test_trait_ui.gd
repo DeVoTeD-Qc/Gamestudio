@@ -78,28 +78,25 @@ func test_run_copies_keep_the_art_they_were_found_with() -> void:
 			assert_eq(ArtTraits.trait_of(drop["arts"][k], c2), drop["traits"][k], "offer %d: the art gives the offered trait" % k)
 	# No swaps; no Re-issue (head Z1): the copy keeps the art (and trait) it was found with.
 	var g: int = r.deck.size()
-	r._append_copy(&"gunner", 1, &"heavy", r._random_art(_card("gunner"), &"heavy"))
+	r._append_copy(&"gunner", &"heavy", r._random_art(_card("gunner"), &"heavy"))
 	assert_true(r.set_copy_art(g, &"gunner~operators") != "", "no art swaps in a run")
 	var draws: int = r.art_draws
-	assert_true(r.reissue_card(0, &"specops") != "", "no Re-issue")
+	assert_false(r.has_method(&"reissue_card"), "no Re-issue")
 	assert_eq([r.copy_trait(g), r.art_draws], [&"heavy", draws], "no new art drawn")
 	r.choose_offer(0)
 	assert_true(r.art_draws > 0, "Supply Drop cards drew random arts")
 	var saved: Dictionary = JSON.parse_string(JSON.stringify(r.to_dict()))
 	var back: RunProgress = RunProgress.from_dict(r.config, saved)["run"]
 	assert_eq(back.art_draws, r.art_draws, "the draw counter is saved")
-	# Training keeps the art: train_choices has one row, never a random draw.
-	var rec: int = r.deck.size() - 1
-	assert_eq(r.level_of(rec), SynergyRules.LEVEL_RECRUIT, "the M1 drop gave a Recruit")
-	for o: Dictionary in r.train_choices(rec):
-		assert_false(bool(o["random"]), "%s: training keeps the art" % o["name"])
+	# kc-no-training: no training, so a copy's art never changes after it is found.
+	assert_false(r.has_method(&"train_choices"), "no training choices")
 
 
 func test_per_copy_art_and_trait_reach_the_board() -> void:
 	var r: RunProgress = _run()
 	var mk: CardData = _card("marksman")
-	r._append_copy(&"marksman", 1, &"specops", r._random_art(mk, &"specops"))
-	r._append_copy(&"marksman", 1, &"heavy", r._random_art(mk, &"heavy"))
+	r._append_copy(&"marksman", &"specops", r._random_art(mk, &"specops"))
+	r._append_copy(&"marksman", &"heavy", r._random_art(mk, &"heavy"))
 	var m: MatchState = r.create_match()
 	var want: Array[StringName] = r.player_setup().deck_arts.duplicate()
 	MatchController._assign_copy_arts(m)
@@ -107,7 +104,7 @@ func test_per_copy_art_and_trait_reach_the_board() -> void:
 	m.start_match()
 	var seen: Dictionary = {}
 	for rc: RulesCard in m.sides[0].deck + m.sides[0].hand:
-		if rc.card.id != &"marksman" or rc.level < SynergyRules.LEVEL_TRAINED:
+		if rc.card.id != &"marksman":
 			continue
 		var art: StringName = StringName(String(m.art_by_uid.get(rc.uid, rc.card.id)))
 		assert_eq(ArtTraits.trait_of(art, mk), rc.card_trait(), "copy %d: art %s gives its trait %s" % [rc.uid, art, rc.card_trait()])
@@ -116,12 +113,12 @@ func test_per_copy_art_and_trait_reach_the_board() -> void:
 		var e: Dictionary = {}
 		MatchSnapshot._banner_fields(e, rc.card, null, m.sides[0], m, rc.uid)
 		assert_eq(StringName(String(e["banner"])), art, "copy %d wears its art" % rc.uid)
-		var be: Dictionary = BannerCard.entry_for_card(rc.card, art, rc.level, rc.chosen_trait)
+		var be: Dictionary = BannerCard.entry_for_card(rc.card, art, rc.chosen_trait)
 		assert_eq(StringName(String(be.get("trait", ""))), rc.card_trait(), "copy %d banner trait" % rc.uid)
 	assert_eq(seen.size(), 2, "two Marksmen with two different traits on the board side")
 	# The rival squad: every copy's art gives its identity trait.
 	for rc: RulesCard in m.sides[1].deck + m.sides[1].hand:
-		if not rc.card.has_trait_choice() or rc.level < SynergyRules.LEVEL_TRAINED:
+		if not rc.card.has_trait_choice():
 			continue
 		var art2: StringName = StringName(String(m.art_by_uid.get(rc.uid, rc.card.id)))
 		assert_eq(ArtTraits.trait_of(art2, rc.card), rc.card_trait(), "rival %s: art matches trait" % rc.card.id)
@@ -132,13 +129,12 @@ func test_banner_entry_trait_follows_the_art() -> void:
 	assert_eq(BannerCard.entry_for_card(mk, &"marksman")["trait"], "specops", "default art: home trait")
 	assert_eq(BannerCard.entry_for_card(mk, &"marksman~mastery")["trait"], "heavy", "Mastery art: Heavy")
 	assert_false(BannerCard.entry_for_card(mk, &"marksman~horde").has("trait"), "a plain art: no trait plate")
-	assert_eq(BannerCard.entry_for_card(mk, &"marksman", 1, &"heavy")["trait"], "heavy", "an explicit copy trait wins")
-	assert_eq(BannerCard.entry_for_card(mk, &"marksman~mastery", 0).get("trait", ""), "heavy", "kc-onboard (N1): Recruits show their trait")
-	# Anatomy: trait + weapon-type bottom-left, abilities top-right, name top-left (both sides alike).
+	assert_eq(BannerCard.entry_for_card(mk, &"marksman", &"heavy")["trait"], "heavy", "an explicit copy trait wins")
+	# Anatomy (kc-ipad-cards): the trait bottom-left, abilities bottom-centre after it, no weapon type.
 	var e: Dictionary = BannerCard.entry_for_card(mk, &"marksman~mastery")
 	var m: Dictionary = BannerView.metrics(57.0)
 	var a: Dictionary = BannerView.anatomy(Vector2(228, 57), m, e)
 	assert_true((a["trait"] as Rect2).position.x < 60.0 and (a["trait"] as Rect2).end.y > 40.0, "trait bottom-left")
-	assert_true((a["class"] as Rect2).position.x > (a["trait"] as Rect2).end.x - 0.5, "weapon-type after the trait")
+	assert_false(a.has("class"), "no weapon type on the card")
 	for ab: Array in a["abilities"]:
-		assert_true((ab[1] as Rect2).end.x > 150.0 and (ab[1] as Rect2).position.y < 20.0, "abilities top-right")
+		assert_true((ab[1] as Rect2).position.x >= (a["trait"] as Rect2).end.x - 0.5 and (ab[1] as Rect2).end.y > 40.0, "abilities bottom-centre")

@@ -4,7 +4,7 @@
 #     OPERATOR  one tile per Operator you can start with (RunProgress.operator_options: the run's
 #               Primary weapons): its brass banner (the weapon's mastery card in the pitch build),
 #               class, FP / Armor, what the gun does, SELECTED on the current pick. Tap = pick it.
-#     STARTER DECK  the plain Recruit starter grouped by card, each as its board banner (BannerCard)
+#     STARTER DECK  the starter grouped by card, each as its board banner (BannerCard)
 #               with a "x3" count.
 #   Long-press / right-click (or hover for the tooltip) any tile = the card inspector (its own).
 #   Before a run (Loadout screen, `run` given) the pick goes to the run (RunState.set_primary) and
@@ -251,15 +251,10 @@ func _build() -> void:
 	_deck_grid.add_theme_constant_override(&"h_separation", 8)
 	_deck_grid.add_theme_constant_override(&"v_separation", 8)
 	dscroll.add_child(_deck_grid)
-	var levels: Array[int] = _config.starter_levels() if _config != null else ([] as Array[int])
 	var i0: int = 0
 	for g: Dictionary in groups:
 		var card: CardData = g["card"]
-		var lvl: int = SynergyRules.LEVEL_RECRUIT
-		var at: int = _config.starter_deck.find(card) if _config != null else -1
-		if at >= 0 and at < levels.size():
-			lvl = levels[at]
-		var tile: Control = _deck_tile(card, int(g["count"]), lvl)
+		var tile: Control = _deck_tile(card, int(g["count"]))
 		_deck_tiles.append(tile)
 		_deck_grid.add_child(tile)
 		i0 += 1
@@ -358,7 +353,7 @@ func _operator_tile(item: LoadoutItem) -> Button:
 	return b
 
 
-func _deck_tile(card: CardData, count: int, level: int) -> Control:
+func _deck_tile(card: CardData, count: int) -> Control:
 	var b: Button = Button.new()
 	b.name = "Deck_%s" % card.id
 	b.flat = true
@@ -372,7 +367,7 @@ func _deck_tile(card: CardData, count: int, level: int) -> Control:
 			"id": card.id, "art": card.id, "arts": BannerArtDB.alt_arts(card.id), "name": card.display_name}
 	var info: Callable = func() -> void: _inspector.open(load("res://scripts/ui/codex/codex_view.gd").call(&"inspector_info", e))
 	_wire(b, info, info)
-	var view: Dictionary = CardView.view_for_card(card, _equipped(card.id), level)
+	var view: Dictionary = CardView.view_for_card(card, _equipped(card.id))
 	view["count"] = count
 	var panel: CardView = CodexViewScript.make_card_view(view, _tile_size().x)
 	b.add_child(panel)

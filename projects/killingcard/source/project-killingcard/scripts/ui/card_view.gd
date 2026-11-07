@@ -5,11 +5,14 @@
 #   inspector. Top to bottom:
 #     title bar  cost hex + NAME (the one title style: Barlow Condensed Bold 16 px, UPPERCASE, #F2F5F7)
 #     art        the calling card at 4:1 ((W - 8) / 4 tall), nothing over it
-#     type line  OPERATOR / STANDARD ISSUE / TACTIC tag, the weapon by name, the level coin
-#     text box   per keyword: its icon + bold name + a short rule; a Recruit's greyed "Trains: ...";
-#                the effect text
-#     stats bar  traits bottom-left (faint / lit), the FP reticle (team colour) + Armor plate
-#                bottom-right
+#     type line  UNIT / OPERATOR / STANDARD ISSUE / TACTIC / FIELD / STREAK (kc-ipad-cards: no weapon,
+#                no level coin)
+#     text box   per keyword: its icon + bold name only (kc-ipad-cards, the head: "just keyword icons
+#                and name, not definition": the definitions are in the inspector and the long-press
+#                tooltips); Tactics / Fields / killstreaks keep their effect text (it is their rules);
+#                a card with nothing to list shows its lore line
+#     stats bar  the trait chip bottom-left, the ability icons bottom-centre and the FP reticle (team
+#                colour) + Armor plate bottom-right, all the same size (30 px) on dark plates
 #   Tactics use the T1 "orders" frame: khaki paper, a chevron-cut top-right corner, no stats bar, the
 #   text box takes its room. Fields / killstreaks: the steel frame without a stats bar.
 #   The card lays out at its own width (set_card_width; height_for()); text sizes are fixed canvas px,
@@ -17,9 +20,9 @@
 #   Data keys (set_card_data): name, type (unit|tactic|equipment|killstreak|operator), weapon_class,
 #   cost, firepower, armor, armor_max?, fp_trend?, keywords (ids or {id, value}), text, side
 #   (friend|enemy), elite, threshold (killstreaks), id / banner / licensed_art / art_id (the 4:1 art),
-#   level (-1 none), standard_issue, trait, trait_lit, locked (bool: the keywords are locked; or an
-#   Array of locked keyword names), trains ("Trains: ..."), not_found (Codex), count (deck views:
-#   "x5"), cant_pay (red cost hex), marked (amber frame: taken / selected).
+#   standard_issue, trait, trait_lit, front_kw, not_found (Codex), count (deck views: "x5"),
+#   cant_pay (red cost hex), marked (amber frame: taken / selected). weapon_class only picks the
+#   fallback art now.
 #   kc-ui-hooks: the frame asks the UI kit first (frame_piece(): frm_y2_unit / frm_y2_operator /
 #   frm_y2_standard_issue / frm_t1_orders, + tex_orders_paper on Tactics); the drawn frame is the fallback.
 # Dependencies: CardLook, BannerArtDB, IconSheet, CardArt (fallback art), StandardIssueLook,
@@ -44,6 +47,9 @@ const COST_RECT: Rect2 = Rect2(4, 3, 26, 26)
 ## FP reticle and Armor plate at 250 px (bottom-right of the stats bar).
 const FP_RECT: Rect2 = Rect2(181, 182, 30, 30)
 const ARMOR_RECT: Rect2 = Rect2(215, 182, 29, 30)
+## kc-ipad-cards: the stats bar's badge size (trait, abilities, FP, Armor) and the text box icon.
+const BADGE_PX: float = 30.0
+const LINE_ICON_PX: float = 18.0
 const FRAME_UNIT: Color = Color("#4A5560")
 const FACE_UNIT: Color = Color("#1B2126")
 const FRAME_T1: Color = Color("#B8913A")
@@ -61,7 +67,8 @@ const RANGE_MODS: Dictionary = {
 	&"smg": [1, 0, 0], &"shotgun": [2, 0, -1], &"ar": [0, 1, 0], &"sniper": [-1, 0, 2], &"lmg": [0, 0, 0],
 }
 const RANGE_NAMES: PackedStringArray = ["CLOSE", "MID", "LONG"]
-## The text box's keyword names and short rules (the inspector has the full ones, CardInfo.KEYWORD_RULES).
+## The text box's keyword names, and short rules (kept for callers: kc-ipad-cards puts the rules in the
+## inspector only; the inspector has the full ones, CardInfo.KEYWORD_RULES).
 const KEYWORD_NAMES: Dictionary = {
 	&"first_shot": "First Shot", &"pick": "Pick", &"flank": "Flank", &"suppress": "Suppress", &"pierce": "Pierce",
 	&"patch": "Patch %d", &"cover": "Cover %d", &"holder": "Holder", &"on_deploy": "On Deploy", &"on_down": "On Down",
@@ -124,21 +131,19 @@ static func size_for(w: float) -> Vector2:
 	return Vector2(w, height_for(w))
 
 
-## kc-cards-impl: the Y2+ data of a deck card wearing `art` at copy `level` (the art's trait,
-## the level coin, a Recruit's locks, Standard Issue).
-static func view_for_card(card: CardData, art: StringName = &"", level: int = 1, chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
+## kc-cards-impl: the Y2+ data of a deck card wearing `art` (the art's trait, Standard Issue).
+## kc-ipad-cards: no copy level (kc-no-training).
+static func view_for_card(card: CardData, art: StringName = &"", chosen: StringName = SynergyRules.TRAIT_DEFAULT) -> Dictionary:
 	var CardInfo: GDScript = load("res://scripts/ui/card_info.gd")
 	var vd: Dictionary = CardInfo.view_dict(card)
 	var a: StringName = art if art != &"" else card.id
 	vd["banner"] = String(a)
-	var e: Dictionary = BannerCard.entry_for_card(card, art, level, chosen)
-	for k: String in ["standard_issue", "locked", "trains", "level", "trait"]:
+	var e: Dictionary = BannerCard.entry_for_card(card, art, chosen)
+	for k: String in ["standard_issue", "trait"]:
 		if e.has(k) and str(e[k]) != "":
 			vd[k] = e[k]
-	if e.has("locked"):
-		vd["keywords"] = []
-	if not card.is_unit():
-		vd.erase("level")
+	if card.arrives_front:
+		vd["front_kw"] = true
 	return vd
 
 
@@ -341,7 +346,7 @@ func _art_h() -> float:
 
 
 ## Rects of every region at the current width (tests / layout): title, cost, art, type, text, bar,
-## fp, armor, traits.
+## fp, armor, traits, abilities ([[kind, rect]], bottom-centre of the stats bar).
 func regions() -> Dictionary:
 	var w: float = _width
 	var art: Rect2 = Rect2(4, 2.0 + TITLE_H, w - 8.0, _art_h())
@@ -350,13 +355,37 @@ func regions() -> Dictionary:
 	var stats: bool = has_stats_bar()
 	var box_h: float = LINES * LINE_H + 8.0 + (0.0 if stats else BAR_H + 2.0)
 	var sy: float = by + LINES * LINE_H + 10.0
+	var fp: Rect2 = Rect2(w - 6.0 - 29.0 - 4.0 - 30.0, sy - 1.0, 30, 30)
+	var tr: Rect2 = Rect2(6, sy - 1.0, BADGE_PX, BADGE_PX)
+	# kc-ipad-cards: the ability icons, bottom-centre between the trait and FP, as big as the stats
+	# (shrunk only when they would not fit).
+	var kinds: Array = ability_kinds() if stats else []
+	var abil: Array = []
+	if not kinds.is_empty():
+		var left: float = tr.end.x + 6.0
+		var room: float = fp.position.x - 6.0 - left
+		var n: int = kinds.size()
+		var kw: float = minf(BADGE_PX, floorf((room - (n - 1) * 3.0) / n))
+		var total: float = n * kw + (n - 1) * 3.0
+		var x0: float = left + maxf(0.0, (room - total) * 0.5)
+		for i: int in n:
+			abil.append([kinds[i], Rect2(x0 + i * (kw + 3.0), sy - 1.0 + (BADGE_PX - kw), kw, kw)])
 	return {
 		"title": Rect2(0, 0, w, 2.0 + TITLE_H), "cost": COST_RECT, "art": art,
 		"type": Rect2(6, ty, w - 12.0, TYPE_H), "text": Rect2(4, by, w - 8.0, box_h),
 		"bar": Rect2(4, sy, w - 8.0, BAR_H) if stats else Rect2(),
-		"fp": Rect2(w - 6.0 - 29.0 - 4.0 - 30.0, sy - 1.0, 30, 30), "armor": Rect2(w - 6.0 - 29.0, sy - 1.0, 29, 30),
-		"traits": Rect2(6, sy + 4.0, 22, 22),
+		"fp": fp, "armor": Rect2(w - 6.0 - 29.0, sy - 1.0, 29, 30),
+		"traits": tr, "abilities": abil,
 	}
+
+
+## kc-ipad-cards: the ability icons of the stats bar (BannerView.ability_kinds over this card's
+## keywords: Protector, up to 2 keyword icons, or 1 + the effect bolt).
+func ability_kinds() -> Array:
+	var kws: Array = []
+	for kw: Array in _keyword_entries():
+		kws.append({"id": kw[0]})
+	return BannerView.ability_kinds({"keywords": kws, "front_kw": bool(data.get("front_kw", false))})
 
 
 func _refresh() -> void:
@@ -365,7 +394,6 @@ func _refresh() -> void:
 	custom_minimum_size = size_for(_width)
 	size = custom_minimum_size
 	var type_name: String = _card_type()
-	var weapon: StringName = StringName(String(data.get("weapon_class", "")).to_lower())
 	var rg: Dictionary = regions()
 	var tac: bool = is_tactic()
 	# Title bar: cost hex (or killstreak threshold) + the name.
@@ -414,8 +442,7 @@ func _refresh() -> void:
 		bits.append("FIELD")
 	elif type_name == "killstreak":
 		bits.append("STREAK %d" % int(data.get("threshold", 0)))
-	if weapon != &"":
-		bits.append(String(weapon).to_upper())
+	# kc-ipad-cards (the head: "leave out the gun type and just mention unit"): no weapon here.
 	if bits.is_empty():
 		bits.append("UNIT")
 	_type_label.text = "  ".join(bits)
@@ -423,7 +450,7 @@ func _refresh() -> void:
 	chip.position = (rg["type"] as Rect2).position
 	chip.size = Vector2(0, TYPE_H)
 	_type_label.set_meta(&"slot_size", Vector2((rg["type"] as Rect2).size.x - 22.0, TYPE_H))
-	# Text box: keyword lines, the Trains line, the effect text.
+	# Text box: keyword lines (icon + name), the effect text of Tactics / Fields / killstreaks.
 	_rebuild_text(rg["text"])
 	# Stats (the reticle and plate are drawn; the numbers are the labels).
 	var stats: bool = has_stats_bar()
@@ -502,11 +529,6 @@ func _keyword_entries() -> Array:
 	return out
 
 
-func _locked_names() -> Array:
-	var l: Variant = data.get("locked", false)
-	return l if l is Array else []
-
-
 ## The lore line shown now ("" when the card has an effect).
 func get_lore_text() -> String:
 	return _lore.text if _lore != null and _lore.visible else ""
@@ -530,30 +552,27 @@ func _rebuild_text(box: Rect2) -> void:
 	_body_label.custom_minimum_size = Vector2.ZERO
 	_text_box.position = box.position + Vector2(4, 4)
 	_text_box.size = box.size - Vector2(8, 8)
-	var lock_all: bool = data.get("locked", false) is bool and bool(data.get("locked", false))
 	var rows: int = 0
 	var names_seen: PackedStringArray = []
 	for kw: Array in _keyword_entries():
 		var id: StringName = kw[0]
 		var value: int = kw[1]
 		var nm: String = String(KEYWORD_NAMES.get(id, String(id).capitalize()))
-		var rule: String = String(SHORT_RULES.get(id, ""))
 		if nm.contains("%d"):
 			nm = nm % maxi(1, value)
-		if rule.contains("%d"):
-			rule = rule % maxi(1, value)
-		_add_line(id, nm, rule, lock_all)
+		# kc-ipad-cards: icon + name only; the definition is in the inspector / long-press tooltip.
+		_add_line(id, nm, "", false)
 		names_seen.append(nm.to_lower())
 		rows += 1
-	var locked: Array = _locked_names()
-	for ln: Variant in locked:
-		names_seen.append(String(ln).to_lower())
-	var trains: String = String(data.get("trains", ""))
-	if not locked.is_empty() or trains != "":
-		var names: String = trains.trim_prefix("Trains:").strip_edges() if trains != "" else " · ".join(PackedStringArray(locked))
-		_add_line(&"lock", "Trains:", names, true)
+	if bool(data.get("front_kw", false)) and has_stats_bar():
+		_add_line(&"arrives_front", "Arrives in front", "", false)
+		names_seen.append("arrives in front")
 		rows += 1
 	var text: String = _effect_text(names_seen)
+	# kc-ipad-cards: a unit's text box lists its keywords only (its effect is named by its On Deploy /
+	# On Down line; the rules are in the inspector). Tactics / Fields / killstreaks keep their text.
+	if has_stats_bar() and rows > 0:
+		text = ""
 	# kc-hand-y2: no effect at all: a lore line, italic dark grey, at the bottom of the box.
 	var lore: String = ""
 	if text == "" and rows == 0:
@@ -571,7 +590,7 @@ func _rebuild_text(box: Rect2) -> void:
 	_lore.position.y = box.end.y - 4.0 - _lore.size.y
 	_body_label.text = text
 	_body_label.visible = text != ""
-	_body_label.modulate = Color(0.62, 0.66, 0.7, 0.7) if lock_all else Color.WHITE
+	_body_label.modulate = Color.WHITE
 	_text_box.move_child(_body_label, -1)
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# Autowrap + an ellipsis collapses a Label to one line: no trimming; the text box clips.
@@ -597,7 +616,8 @@ func _effect_text(names: PackedStringArray) -> String:
 	return "" if only_names else text
 
 
-## One text-box line: the keyword's icon, its bold name, the short rule (greyed + padlock when locked).
+## One text-box line: the keyword's icon and its bold name (kc-ipad-cards: the rule label stays empty;
+## `locked` is kept for callers and always false now).
 func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Line%d" % _lines.size()
@@ -609,19 +629,10 @@ func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
 	var icon: Control = Control.new()
 	icon.custom_minimum_size = Vector2(16, LINE_H)
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.custom_minimum_size = Vector2(LINE_ICON_PX, LINE_H)
 	var tint: Color = MUTED if locked else AMBER
 	icon.draw.connect(func() -> void:
-		var r: Rect2 = Rect2(0, (LINE_H - 16.0) * 0.5, 16, 16)
-		if id == &"lock":
-			StandardIssueLook.draw_lock(icon, r.grow(-1.0), MUTED)
-		elif id == &"pick":
-			CardLook.draw_pick_icon(icon, r, tint)
-		elif id == &"pierce":
-			SynergyGlyphs.draw_pierce_icon(icon, r, tint)
-		else:
-			var tex: Texture2D = IconSheet.get_keyword_icon(id)
-			if tex != null:
-				icon.draw_texture_rect(tex, r, false, tint))
+		CardLook.draw_keyword_icon(icon, Rect2(0, (LINE_H - LINE_ICON_PX) * 0.5, LINE_ICON_PX, LINE_ICON_PX), id, tint))
 	row.add_child(icon)
 	var b: Label = CardLook.rule_label(nm, true)
 	b.name = "KeywordName"
@@ -633,6 +644,7 @@ func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
 	t.clip_text = true
 	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.visible = rule != ""
 	row.add_child(t)
 	_text_box.add_child(row)
 	_lines.append(row)
@@ -769,28 +781,25 @@ func _draw() -> void:
 	if _has_cost_badge():
 		CardLook.draw_cost(self, COST_RECT, "", bool(data.get("cant_pay", false)))
 	draw_rect(rg["art"], Color("#0C0F11"))
-	# Type line: the level coin after the words.
-	var lv: int = int(data.get("level", -1))
-	if lv >= 0 and has_stats_bar() and _card_type() != "operator" and not bool(data.get("standard_issue", false)):
-		var tw: float = CardLook.TITLE_FONT.get_string_size(_type_label.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		var tr: Rect2 = rg["type"]
-		CardLook.draw_level_coin(self, Rect2(tr.position.x + tw + 8.0, tr.position.y + 3.0, 16, 16), lv)
 	# Text box.
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.08, 0.07, 0.03, 0.6) if tac else Color(0.04, 0.05, 0.055, 0.55)
 	sb.set_corner_radius_all(2)
 	draw_style_box(sb, rg["text"])
-	# Stats bar: traits bottom-left, FP reticle + Armor plate bottom-right.
+	# Stats bar (kc-ipad-cards): the trait bottom-left, the abilities bottom-centre, FP reticle + Armor
+	# plate bottom-right, all 30 px, each group on a dark plate.
 	if has_stats_bar():
 		var t: String = String(data.get("trait", ""))
 		if t != "":
+			CardLook.draw_chip(self, (rg["traits"] as Rect2).grow(2.0), 4.0)
 			CardLook.draw_trait(self, rg["traits"], StringName(t), bool(data.get("trait_lit", false)))
+		var abil: Array = rg["abilities"]
+		if not abil.is_empty():
+			var grp: Rect2 = abil[0][1]
+			for ab: Array in abil:
+				grp = grp.merge(ab[1])
+			CardLook.draw_chip(self, grp.grow(2.0), 4.0)
+			for ab: Array in abil:
+				CardLook.draw_ability(self, ab[1], ab[0], AMBER, side != "enemy")
 		CardLook.draw_reticle(self, rg["fp"], 0, &"enemy" if side == "enemy" else &"player", 0, false)
 		CardLook.draw_armor(self, rg["armor"], 0, _damaged(), false)
-
-
-## The level coin's rect on the type line (tests).
-func level_coin_rect() -> Rect2:
-	var tw: float = CardLook.TITLE_FONT.get_string_size(_type_label.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-	var tr: Rect2 = regions()["type"]
-	return Rect2(tr.position.x + tw + 8.0, tr.position.y + 3.0, 16, 16)

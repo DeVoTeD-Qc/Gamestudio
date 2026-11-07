@@ -520,7 +520,7 @@ func _fill_sets_box() -> void:
 		_sets_box.add_child(head)
 		var list: Array = rails.get(side, [])
 		if list.is_empty():
-			_sets_box.add_child(_flyout_line("No traits in play. Trained units and Fields with the same trait count together: 2 in play turn tier 2 on, 3 turn tier 3 on."))
+			_sets_box.add_child(_flyout_line("No traits in play. Units and Fields with the same trait count together: 2 in play turn tier 2 on, 3 turn tier 3 on."))
 		for e: Dictionary in list:
 			var t: StringName = StringName(e["trait"])
 			var tier: int = int(e.get("tier", 0))
@@ -659,6 +659,7 @@ func _set_actions(snapshot: Dictionary) -> void:
 		_ready_button.text = {&"player": "WON", &"enemy": "LOST"}.get(result, "DRAW")
 	else:
 		_ready_button.text = "READY" if open else "WAIT"
+	fit_button_text(_ready_button)
 	_undo_button.disabled = not bool(snapshot.get("can_undo", false))
 	var label: String = String(snapshot.get("undo_label", ""))
 	# kc-cards-impl (O2): UNDO is an icon (a curved back arrow) over READY; the tooltip names the play.
@@ -868,6 +869,7 @@ func _layout_tray() -> void:
 	_hand.set_card_size(metrics["card"], metrics["card_gap"], int(metrics["hand_cols"]), 1.0 if mirror else -1.0, float(metrics["bh"]))
 	_place(_undo_button, metrics["undo"])
 	_place(_ready_button, metrics["ready"])
+	fit_button_text(_ready_button)
 	_layout_dock()
 	_place(_speed_button, Rect2(0, h - btn_h, w, btn_h))
 	var tab_y: float = h - btn_h - 8.0 - tab_h
@@ -1040,6 +1042,23 @@ func _layout_dock() -> void:
 func _place(c: Control, r: Rect2) -> void:
 	c.position = r.position
 	c.size = r.size
+
+
+## kc-ipad-cards (the head's iPad shot: READY read "READ"): the button's text at its theme size, or
+## smaller (down to 16 px) so the whole word fits inside its content box. Never clipped.
+static func fit_button_text(b: Button) -> void:
+	if b == null or b.size.x <= 0.0:
+		return
+	b.remove_theme_font_size_override(&"font_size")
+	var fs: int = b.get_theme_font_size(&"font_size")
+	var font: Font = b.get_theme_font(&"font")
+	var sb: StyleBox = b.get_theme_stylebox(&"normal")
+	var room: float = b.size.x - (sb.get_margin(SIDE_LEFT) + sb.get_margin(SIDE_RIGHT) if sb != null else 0.0) - 4.0
+	var size_now: int = fs
+	while size_now > 16 and font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size_now).x > room:
+		size_now -= 1
+	if size_now != fs:
+		b.add_theme_font_size_override(&"font_size", size_now)
 
 
 # =============================================================================

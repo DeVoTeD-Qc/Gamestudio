@@ -1,14 +1,15 @@
 # onboarding_check.gd
 # Purpose: kc-onboard-impl §8 step 8: re-measure the approved onboarding package on the REAL build
-#   (shipped run_config.tres, real RunProgress offers: rungs, Recruit calling cards, 2 picks of 4,
-#   Muster out with its pre-selection, Salvage, Doctrine from the first pick, Promotion), unlike
+#   (shipped run_config.tres, real RunProgress offers: rungs, calling cards, 2 picks of 4,
+#   Muster out with its pre-selection, Salvage, Doctrine from the first pick; kc-no-training: no
+#   Promotion, no Recruits), unlike
 #   onboarding_sim.gd, which reimplements the ladder with sim-only cards.
 #   Proxies are balance_sim's (competent / casual); squads are AiPlayer.for_squad, synergy-aware.
 #   Offer rule (balance_sim's): a drop / Salvage takes its on-trait slot 1 when it's a unit or Field,
 #   else the most expensive unit, else option 0; a 2-of-4 drop asks twice; Muster out = option 0
 #   (the pre-selection: most expensive Standard Issue first); every other offer option 0.
 #   Reports per proxy: run win, per-match reach / win, cards added, Standard Issue sent home, and the
-#   M5 deck (size, Standard Issue units, calling-card units, Recruits). Then, on the first proxy's
+#   M5 deck (size, Standard Issue units, calling-card units). Then, on the first proxy's
 #   decks that reached M5: growth (late deck vs the Standard Issue starter, same loadout), duel
 #   (aware vs blind, same late deck) and the seat-0 mirror (starter, and late decks).
 #   Run: godot --headless --path . -s res://tests/tools/onboarding_check.gd -- runs=400 late=120 proxies=competent,casual
@@ -104,7 +105,7 @@ func _runs(proxy: String, keep_late: bool) -> void:
 	var won: Array[int] = [0, 0, 0, 0, 0]
 	var added: int = 0
 	var home: int = 0
-	var m5: Array = [0, 0, 0, 0, 0]  # decks, size, SI units, calling-card units, Recruits
+	var m5: Array = [0, 0, 0, 0]  # decks, size, SI units, calling-card units
 	var t0: int = Time.get_ticks_msec()
 	for s: int in runs:
 		var r: RunProgress = RunProgress.create(config, 900000 + s)
@@ -123,8 +124,6 @@ func _runs(proxy: String, keep_late: bool) -> void:
 						m5[2] += 1
 					elif c.is_unit():
 						m5[3] += 1
-						if r.level_of(i) == SynergyRules.LEVEL_RECRUIT:
-							m5[4] += 1
 				if keep_late:
 					late.append(ps)
 			reach[idx] += 1
@@ -157,8 +156,8 @@ func _runs(proxy: String, keep_late: bool) -> void:
 	print(line)
 	print("  cards added / run %.2f, Standard Issue sent home / run %.2f" % [float(added) / runs, float(home) / runs])
 	if m5[0] > 0:
-		print("  deck at M5 (n=%d): size %.1f, Standard Issue units %.1f, calling-card units %.1f, still Recruits %.2f" % [
-				m5[0], float(m5[1]) / m5[0], float(m5[2]) / m5[0], float(m5[3]) / m5[0], float(m5[4]) / m5[0]])
+		print("  deck at M5 (n=%d): size %.1f, Standard Issue units %.1f, calling-card units %.1f" % [
+				m5[0], float(m5[1]) / m5[0], float(m5[2]) / m5[0], float(m5[3]) / m5[0]])
 
 
 ## Late deck vs late deck (or starter): A on seat a_seat. Returns 0 if seat 0 won, 1 if seat 1, -1 draw.
@@ -176,7 +175,6 @@ func _copy(s: SideSetup) -> SideSetup:
 	for f: String in ["display_name", "primary", "doctrine"]:
 		c.set(f, s.get(f))
 	c.deck = s.deck.duplicate()
-	c.deck_levels = s.deck_levels.duplicate()
 	c.deck_traits = s.deck_traits.duplicate()
 	c.deck_arts = s.deck_arts.duplicate()
 	c.attachments = s.attachments.duplicate()
@@ -211,7 +209,6 @@ func _late_checks() -> void:
 		var ld: SideSetup = late[i]
 		var st: SideSetup = _copy(ld)  # same loadout, the starter deck
 		st.deck = starter.deck.duplicate()
-		st.deck_levels = starter.deck_levels.duplicate()
 		st.deck_traits = starter.deck_traits.duplicate()
 		st.deck_arts = starter.deck_arts.duplicate()
 		st.doctrine = &""

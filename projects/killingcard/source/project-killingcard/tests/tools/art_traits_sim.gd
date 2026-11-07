@@ -260,7 +260,7 @@ func variant(c: CardData, t: String) -> CardData:
 ## Start from the starter; Retire 3 Riflemen when late.
 func _late_base() -> Array:
 	var cards: Array[CardData] = config.starter_deck.duplicate()
-	var levels: Array[int] = config.starter_levels()
+	var levels: Array[int] = _flat_levels(config.starter_deck.size())
 	for id: String in RETIRE_ORDER.slice(0, 3):
 		for i: int in cards.size():
 			if _base_id(cards[i]) == id:
@@ -359,7 +359,7 @@ func _put(d: Array, i: int, t: String) -> void:
 func deck_for(pkg: String, main: String = "") -> Array:
 	var d: Array = _late_base()
 	if pkg == "starter":
-		return [config.starter_deck.duplicate(), config.starter_levels(), _default_traits(config.starter_deck)]
+		return [config.starter_deck.duplicate(), _flat_levels(config.starter_deck.size()), _default_traits(config.starter_deck)]
 	for id: String in pkg_overrides.get(pkg, PACKAGES[pkg]):
 		d[0].append(_card(id))
 		d[1].append(1)
@@ -392,7 +392,7 @@ func _setup(d: Array, name: String) -> SideSetup:
 	var s: SideSetup = Sim.player_setup(config)
 	s.display_name = name
 	s.deck.assign(d[0])
-	s.deck_levels.assign(d[1])
+	pass  # kc-no-training: copy levels are gone (sim-only data now)
 	if d.size() > 2:
 		s.deck_traits.assign(d[2])
 	return s
@@ -656,7 +656,7 @@ func _squad_setup(slot: RunMatchData, idx: int) -> SideSetup:
 		return s
 	var levels: Array[int] = []
 	for i: int in s.deck.size():
-		levels.append(s.level_of(i))
+		levels.append(1)
 	var d: Array = [s.deck.duplicate(), levels, _default_traits(s.deck)]
 	var main: String = String(SQUAD_TRAIT.get(String(slot.squad.id), ""))
 	if squad_traits == "undead3" and idx == 2:
@@ -678,7 +678,7 @@ func _campaign() -> void:
 		var sq: SideSetup = _squad_setup(slot, i)
 		var desc: Array = [sq.deck, [], []]
 		for k2: int in sq.deck.size():
-			desc[1].append(sq.level_of(k2))
+			desc[1].append(1)
 			desc[2].append(sq.trait_of(k2))
 		for k: int in n:
 			var mode: int = DataEnums.GameMode.ZONE_CONTROL if k % 2 == 0 else DataEnums.GameMode.FIREFIGHT
@@ -700,5 +700,14 @@ func _campaign() -> void:
 				w += 1
 		tot[0] += w
 		tot[1] += n
-		print("slot %d (%s%s) win %5.1f%%  squad traits %s" % [i + 1, slot.squad.id, ", Recruits" if slot.enemy_recruits else "", 100.0 * w / n, _describe(desc)])
+		print("slot %d (%s%s) win %5.1f%%  squad traits %s" % [i + 1, slot.squad.id, "", 100.0 * w / n, _describe(desc)])
 	print("all slots win %5.1f%% (n=%d)" % [100.0 * tot[0] / tot[1], tot[1]])
+
+
+## kc-no-training: copy levels were removed from the engine; this historical sim keeps its own
+## level arrays as data only (every copy plays its full chassis).
+static func _flat_levels(n: int) -> Array[int]:
+	var out: Array[int] = []
+	for i: int in n:
+		out.append(1)
+	return out

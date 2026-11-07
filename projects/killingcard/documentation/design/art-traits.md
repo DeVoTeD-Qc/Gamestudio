@@ -340,3 +340,8 @@ Squads don't choose. Each squad's deck is authored with arts from one family, so
 - **F1, the Anchor fix:** one of the Anchor's 3 Gunners became a 3rd Hold the Line (`squad_anchor.tres`, mirrored in `gen_content.gd`). Paired seeds, n = 500 per slot: slot 2 63.4 -> 65.2%, slot 4 26.0 -> 30.8% (whole campaign about +1.3 points). Alternatives measured: Gunner -> Suppressing Fire (65 / 30%, the same), Gunner -> Rifleman (73 / 21.5%: the Rifleman joins the Anchor's Undead set and slot 4 gets harder), Gunner -> Marksman (68 / 23.5%), no Armor bonus in slot 4 (slot 4 49.5%: overshoots, campaign about 42%).
 - **Spec Ops' seat 0 (56.7%)** stays the one high cell, as in §6.4 (First Shot and initiative ties): a firefight-order item.
 - Aware-vs-blind and seat checks have ±1.2-1.8 points SE; campaign ±1.5 overall.
+
+## Removed (kc-no-training, 2026-11-07)
+
+- **No training:** a copy no longer "trains into" its trait; it has its art's trait and all its keywords from the moment it is found (Recruit / Trained / Promotion are gone, see `synergy-system.md`, "Removed (kc-no-training)").
+- **At most one trait per copy (head):** the art map gives one family per art and one trait per family (`ArtTraits.validate_map()`), every art of a card resolves to one of its options or none (`ArtTraits.card_problems()`), a licensed manifest `family` cell that names two families ("mastery|honors") falls back to the home family, and `CardData` rejects a trait id that names two traits. A chassis still lists its home trait plus one alternate (the Rifleman: none / Spec Ops / Undead); each copy wears exactly one of them.

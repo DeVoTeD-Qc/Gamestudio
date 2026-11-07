@@ -4,14 +4,14 @@
 #     - C1+ board card pieces: the FP reticle ring (team colour: teal yours, red the rival's; green
 #       number when buffed), the Armor ballistic plate (steel grey on both sides, amber when damaged,
 #       showing only what is left), trait chips (45% faint, lit with a glow while their set bonus is
-#       on), the level coin (R grey, T / V / E brass), the weapon pill (its name), the cost hex (red
-#       when you can't pay), the damage crack, chip backings.
+#       on), the cost hex (red when you can't pay), the damage crack, chip backings.
+#       kc-ipad-cards: the level coin and the weapon pill are gone (no training, no gun type on cards).
 #     - The one title style off the board: Barlow Condensed Bold, 16 px canvas, UPPERCASE, #F2F5F7
 #       (title_label()); rules lines Barlow Condensed SemiBold 16 px #C9D1D8.
 #   Pure static drawing on any CanvasItem; sizes are passed in, so the board (57 / 76 px banners),
 #   the hand (X1), the Y2+ card and the inspector share it.
 # Dependencies: SynergyGlyphs (trait icons, band colours), SynergyRules (names), UiKit.
-#   kc-ui-hooks: the reticle, the Armor plate, the level coin, the crack and the Pick glyph ask the
+#   kc-ui-hooks: the reticle, the Armor plate, the crack and the Pick glyph ask the
 #   UI kit first (UiKit.draw_piece / draw_icon) and keep this code drawing as the fallback.
 # Author: UI/UX Agent (kc-cards-impl); kit hooks: Technical Artist Agent (kc-ui-hooks)
 class_name CardLook
@@ -54,14 +54,11 @@ const CHIP: Color = Color(0.04, 0.05, 0.055, 0.86)
 const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
 ## Trait chip opacity while its set bonus is off.
 const TRAIT_FAINT: float = 0.45
-const LEVEL_LETTERS: Array[String] = ["R", "T", "V", "E"]
 ## kc-ui-hooks: the v2 kit slots these badges ask UiKit for (prompt pack §7.4b); the code shape is the
 ## fallback and the numbers / letters always draw on top in code.
 const PLATE_FP: StringName = &"plate_fp_reticle"
 const PLATE_ARMOR: StringName = &"plate_armor_ballistic"
-const COIN_LEVEL: StringName = &"coin_level"
 const FX_CRACK: StringName = &"fx_crack_damage"
-const WEAPON_NAMES: Dictionary = {"AR": "AR", "SMG": "SMG", "LMG": "LMG", "SHOTGUN": "SHOTGUN", "SNIPER": "SNIPER"}
 
 
 ## A Label in the title style (Barlow Condensed Bold 16 px, UPPERCASE, #F2F5F7, one line).
@@ -174,38 +171,6 @@ static func draw_trait(ci: CanvasItem, r: Rect2, t: StringName, lit: bool, focus
 	SynergyGlyphs.draw_trait_icon(ci, r.grow(-r.size.x * 0.17), t, Color(tc, a))
 
 
-## The level coin: R (Recruit, grey) / T / V / E (brass).
-static func draw_level_coin(ci: CanvasItem, r: Rect2, level: int) -> void:
-	var lv: int = clampi(level, 0, 3)
-	var rim: Color = Color("#B9C2C9") if lv == 0 else BRASS
-	var c: Vector2 = r.get_center()
-	var rad: float = minf(r.size.x, r.size.y) * 0.5
-	# kc-ui-hooks: the painted coin (coin_level): steel for R as is, brass-modulated for T / V / E.
-	if not UiKit.draw_piece(ci, COIN_LEVEL, Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0), Color.WHITE if lv == 0 else BRASS):
-		ci.draw_circle(c, rad, Color("#14181C"))
-		ci.draw_arc(c, rad - 1.0, 0, TAU, 20, rim, maxf(1.4, rad * 0.16), true)
-	_text_center(ci, r, LEVEL_LETTERS[lv], maxi(9, int(rad * 1.15)), rim)
-
-
-## The weapon pill (the weapon type's name, text only). Returns its width at height h.
-static func weapon_pill_width(text: String, h: float) -> float:
-	var fs: int = maxi(10, int(roundf(h * 0.7)))
-	return ceilf(TITLE_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + h * 0.8)
-
-
-static func draw_weapon_pill(ci: CanvasItem, r: Rect2, text: String) -> void:
-	var rad: float = r.size.y * 0.5
-	var c: Color = Color("#3A444D")
-	ci.draw_circle(r.position + Vector2(rad, rad), rad, c)
-	ci.draw_circle(r.position + Vector2(r.size.x - rad, rad), rad, c)
-	ci.draw_rect(Rect2(r.position + Vector2(rad, 0), Vector2(r.size.x - 2.0 * rad, r.size.y)), c)
-	ci.draw_arc(r.position + Vector2(rad, rad), rad - 0.5, PI * 0.5, PI * 1.5, 10, Color("#8C969E"), 1.0, true)
-	ci.draw_arc(r.position + Vector2(r.size.x - rad, rad), rad - 0.5, -PI * 0.5, PI * 0.5, 10, Color("#8C969E"), 1.0, true)
-	ci.draw_line(r.position + Vector2(rad, 0.5), r.position + Vector2(r.size.x - rad, 0.5), Color("#8C969E"), 1.0)
-	ci.draw_line(r.position + Vector2(rad, r.size.y - 0.5), r.position + Vector2(r.size.x - rad, r.size.y - 0.5), Color("#8C969E"), 1.0)
-	_text_center(ci, r, text, maxi(10, int(roundf(r.size.y * 0.7))), Color("#E6EBEF"), TITLE_FONT)
-
-
 ## The cost hex (amber; can't pay = dark red with a red rim and number).
 static func draw_cost(ci: CanvasItem, r: Rect2, value: String, cant_pay: bool = false) -> void:
 	var c: Vector2 = r.get_center()
@@ -280,3 +245,72 @@ static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color, code_only: bool =
 	ci.draw_polyline(pts, c, w, true)
 	ci.draw_line(o + Vector2(0.5, 0.32) * s, o + Vector2(0.5, 0.68) * s, c, w, true)
 	ci.draw_polyline(PackedVector2Array([o + Vector2(0.36, 0.55) * s, o + Vector2(0.5, 0.69) * s, o + Vector2(0.64, 0.55) * s]), c, w, true)
+
+
+## kc-ipad-cards: one ability plate (board banners, hand cards, the Y2+ stats bar), as BannerView
+## lists them (ability_kinds): a keyword icon id (kw_first_shot ...), &"kw_pick", &"pierce",
+## &"protector", &"bolt" / &"bolt_more", or [&"kw", neighbour keyword]. `mine` turns the arrows of
+## Protector / Pierce toward the rival.
+static func draw_ability(ci: CanvasItem, rr: Rect2, kind: Variant, accent: Color, mine: bool = true, kw_active: bool = false,
+		side_c: Color = Color("#2EC4B6")) -> void:
+	if kind is Array:
+		SynergyGlyphs.draw_keyword_plate(ci, rr, kind[1], kw_active, side_c, mine)
+		return
+	if kind == &"pierce":
+		SynergyGlyphs.draw_pierce_plate(ci, rr, accent, not mine)
+		return
+	ci.draw_rect(rr, Color(INK, 0.82))
+	ci.draw_rect(rr, Color(1, 1, 1, 0.18), false, 1.0)
+	var inner: Rect2 = rr.grow(-rr.size.x * 0.12)
+	match kind:
+		&"protector":
+			_draw_protector(ci, rr, accent, mine)
+		&"bolt", &"bolt_more":
+			_draw_bolt(ci, rr, accent, kind == &"bolt_more")
+		&"kw_pick":
+			draw_pick_icon(ci, rr.grow(-rr.size.x * 0.1), accent)
+		_:
+			var tex: Texture2D = IconSheet.get_icon(kind)
+			if tex != null:
+				ci.draw_texture_rect(tex, inner, false, accent)
+
+
+## A keyword's glyph alone (no plate) by keyword id (first_shot, pick, pierce, arrives_front,
+## on_deploy ...): the Y2+ text box lines.
+static func draw_keyword_icon(ci: CanvasItem, r: Rect2, id: StringName, tint: Color) -> void:
+	if id == &"pick":
+		draw_pick_icon(ci, r, tint)
+	elif id == &"pierce":
+		SynergyGlyphs.draw_pierce_icon(ci, r, tint)
+	elif id == &"arrives_front":
+		_draw_chevron(ci, r, tint, true)
+	else:
+		var tex: Texture2D = IconSheet.get_keyword_icon(id)
+		if tex != null:
+			ci.draw_texture_rect(tex, r, false, tint)
+
+
+## The effect bolt (a dot when the card has more than fits).
+static func _draw_bolt(ci: CanvasItem, rr: Rect2, c: Color, more: bool) -> void:
+	var s: float = rr.size.x
+	var p: Vector2 = rr.position
+	var pts: PackedVector2Array = [p + Vector2(s * 0.58, s * 0.12), p + Vector2(s * 0.28, s * 0.55), p + Vector2(s * 0.48, s * 0.55),
+			p + Vector2(s * 0.38, s * 0.88), p + Vector2(s * 0.72, s * 0.42), p + Vector2(s * 0.52, s * 0.42)]
+	ci.draw_colored_polygon(pts, c)
+	if more:
+		ci.draw_circle(p + Vector2(s * 0.85, s * 0.85), s * 0.1, c)
+
+
+## Protector: an up-chevron over a bar ("takes the front"); pointing down on the rival's cards.
+static func _draw_protector(ci: CanvasItem, rr: Rect2, c: Color, up: bool) -> void:
+	var s: float = rr.size.x
+	var p: Vector2 = rr.position
+	var w: float = maxf(2.0, s * 0.08)
+	var y0: float = s * (0.62 if up else 0.38)
+	var y1: float = s * (0.3 if up else 0.7)
+	ci.draw_polyline(PackedVector2Array([p + Vector2(s * 0.22, y0), p + Vector2(s * 0.5, y1), p + Vector2(s * 0.78, y0)]), c, w)
+	ci.draw_line(p + Vector2(s * 0.22, s * (0.8 if up else 0.2)), p + Vector2(s * 0.78, s * (0.8 if up else 0.2)), c, w)
+
+
+static func _draw_chevron(ci: CanvasItem, r: Rect2, c: Color, up: bool) -> void:
+	_draw_protector(ci, r, c, up)

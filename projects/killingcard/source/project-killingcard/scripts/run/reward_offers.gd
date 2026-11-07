@@ -6,16 +6,15 @@
 #   Pure and deterministic: every pick draws from the RandomNumberGenerator passed in.
 #   An offer is a plain Dictionary so it can go straight into the save file:
 #     {kind: &"supply_drop" | &"attachment" | &"perk", match: int (1-based), options: Array[StringName]}
-#   kc-syn (synergy-system.md §5) adds: &"doctrine" (options = trait ids), &"promotion" and
-#   &"regroup" (options = card ids with a parallel `levels` array: each option is the first copy
-#   of that design at that level). A Supply Drop may carry `on_trait` (slot 1's trait) and
-#   `retire: true` (Retire is its 4th option). RunProgress builds and resolves them.
-#   kc-art-traits: a Supply Drop also carries `traits` + `arts` (parallel to options: the trait and
-#   art each card comes in) and `reissue: true` (Re-issue next to Retire); Promotion / Regroup carry
-#   `traits` (each option's trait choice). (Re-issue was removed by the head's Z1 answer.)
+#   kc-syn (synergy-system.md §5) adds: &"doctrine" (options = trait ids) and &"regroup" (options =
+#   card ids, each the first copy of that design). A Supply Drop may carry `on_trait` (slot 1's
+#   trait) and `retire: true` (Retire is its 4th option). RunProgress builds and resolves them.
+#   kc-art-traits: a Supply Drop also carries `traits` + `arts` (parallel to options: the ONE trait
+#   and the art each card comes in); Regroup carries `traits` (each option's trait).
 #   kc-onboard: Supply Drop / Salvage options come from the match's rung (RunConfig.reward_rungs) and
-#   carry `level` (0 Recruit calling cards after match 1), `picks` (cards still to take) and `taken`
-#   ([{id, trait, art}] already taken; they leave `options`); &"salvage" (after a loss) and &"muster_out" ({count}) are new kinds.
+#   carry `picks` (cards still to take) and `taken` ([{id, trait, art}] already taken; they leave
+#   `options`); &"salvage" (after a loss) and &"muster_out" ({count}) are new kinds.
+#   kc-no-training: Promotion (&"promotion") and the drops' `level` are removed.
 # Dependencies: RunConfig, CardData, LoadoutItem.
 # Author: Mechanics Developer Agent
 class_name RewardOffers
@@ -25,17 +24,16 @@ const KIND_SUPPLY_DROP: StringName = &"supply_drop"
 const KIND_ATTACHMENT: StringName = &"attachment"
 const KIND_PERK: StringName = &"perk"
 const KIND_DOCTRINE: StringName = &"doctrine"
-const KIND_PROMOTION: StringName = &"promotion"
 ## kc-syn Regroup (a free Retire after a loss). kc-onboard: replaced by Salvage when
 ## RunConfig.salvage_after_loss; kept so older saves and configs still work.
 const KIND_REGROUP: StringName = &"regroup"
 ## kc-onboard §4.3 (head N2): Salvage = a small Supply Drop after a loss (salvage_choices cards,
-## pick 1; same keys as a Supply Drop: traits, arts, level, picks, taken).
+## pick 1; same keys as a Supply Drop: traits, arts, picks, taken).
 const KIND_SALVAGE: StringName = &"salvage"
 ## kc-onboard §4.3 (head N2): Muster out = Standard Issue cards go home after a Supply Drop /
 ## Salvage (`count` copies at most; options = the Standard Issue designs in the deck).
 const KIND_MUSTER_OUT: StringName = &"muster_out"
-const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK, KIND_DOCTRINE, KIND_PROMOTION, KIND_REGROUP,
+const KINDS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_ATTACHMENT, KIND_PERK, KIND_DOCTRINE, KIND_REGROUP,
 		KIND_SALVAGE, KIND_MUSTER_OUT]
 ## Offers that hand out cards (Supply Drop screens).
 const CARD_DROPS: Array[StringName] = [KIND_SUPPLY_DROP, KIND_SALVAGE]

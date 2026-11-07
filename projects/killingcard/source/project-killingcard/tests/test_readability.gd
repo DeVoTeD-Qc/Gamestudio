@@ -15,8 +15,9 @@ extends "res://tests/test_case.gd"
 const Layout: GDScript = preload("res://tests/test_board_layout.gd")
 const MATCH_SCENE: String = "res://scenes/Match.tscn"
 const PHONE_SE: Dictionary = {"name": "iPhone SE 667x375 @2x", "pt": Vector2(667, 375), "ratio": 2.0}
-## Digit floors (pt): the head asked for about 13-14 pt on an iPhone; the SE's 16:9 tray is narrower.
-const MIN_PT: Dictionary = {"iPhone 844x390 @3x": 13.0, "iPhone SE 667x375 @2x": 11.0}
+## Digit floors (pt): the head asked for about 13-14 pt on an iPhone. kc-ipad-cards (head RQ1: "Widen
+## the tray or show fewer hand cards there to reach 13 pt"): the SE's hand scrolls one readable column.
+const MIN_PT: Dictionary = {"iPhone 844x390 @3x": 13.0, "iPhone SE 667x375 @2x": 13.0}
 
 var _saved_root_size: Vector2i = Vector2i.ZERO
 
@@ -43,7 +44,7 @@ func _spawn(screen: Dictionary) -> Array:
 	var st: MatchState = c.state
 	for side: int in 2:
 		st.put_in_line(st.create_unit(side, CardDB.get_card(&"rifleman")), 0)
-	st.sides[0].hand.append(RulesCard.new(st.new_uid(), CardDB.get_card(&"marksman"), SynergyRules.LEVEL_TRAINED))
+	st.sides[0].hand.append(RulesCard.new(st.new_uid(), CardDB.get_card(&"marksman")))
 	c.refresh()
 	await _frames(4)
 	return [vp, m, c]
@@ -83,24 +84,26 @@ func test_hand_and_board_digits_in_pt() -> void:
 		var checked: int = 0
 		for chip: Node in m.get_hand().get_cards():
 			var bv: BannerView = m.get_hand().get_banner(chip)
-			if bv == null:
+			if bv == null or not (chip as Control).visible:
 				continue
-			assert_eq(bv.cost_scale > 1.0, true, "%s: hand cost hex boosted" % label)
-			var an: Dictionary = bv.anatomy_now()
-			var cost_pt: float = _cost_px(an["cost"]) * k
+			# kc-ipad-cards: the X1 card draws its own cost, trait, abilities and stats (layout_for()).
+			var face: Control = chip.get_node("Face")
+			var lay: Dictionary = BannerCard.layout_for(face.size, bv.entry)
+			var cost_pt: float = _cost_px(lay["cost"]) * k
 			assert_true(cost_pt >= floor_pt, "%s: hand cost digit %.1f pt" % [label, cost_pt])
 			if bv.entry.has("fp"):
-				var face: Control = chip.get_node("Face")
-				var sr: Dictionary = BannerCard.stat_rects(face.size)
-				var fp_pt: float = _reticle_px(sr["fp"]) * k
-				var ar_pt: float = _armor_px(sr["armor"]) * k
+				var fp_pt: float = _reticle_px(lay["fp"]) * k
+				var ar_pt: float = _armor_px(lay["armor"]) * k
 				assert_true(fp_pt >= floor_pt and ar_pt >= floor_pt, "%s: hand FP %.1f / Armor %.1f pt" % [label, fp_pt, ar_pt])
 				assert_false(bv.draw_stats, "%s: the hand card draws its own big stats" % label)
+				for ab: Array in lay["abilities"]:
+					assert_true((ab[1] as Rect2).size.x >= (lay["fp"] as Rect2).size.x - 0.5, "%s: ability icon as big as FP" % label)
+				if (lay["trait"] as Rect2).has_area():
+					assert_true((lay["trait"] as Rect2).size.x >= (lay["fp"] as Rect2).size.x - 0.5, "%s: trait chip as big as FP" % label)
 				var name_l: Label = chip.find_child("NameLabel", true, false)
-				var need: float = CardLook.TITLE_FONT.get_string_size(name_l.text.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, CardLook.TITLE_PX).x
-				assert_true(need <= name_l.size.x + 0.5 or name_l.autowrap_mode != TextServer.AUTOWRAP_OFF, "%s: %s whole (or wrapped)" % [label, name_l.text])
+				assert_true(name_l.get_theme_font_size(&"font_size") * k >= 11.0, "%s: %s name >= 11 pt" % [label, name_l.text])
 			checked += 1
-		assert_true(checked >= 4, "%s: hand cards checked (%d)" % [label, checked])
+		assert_true(checked >= 3, "%s: hand cards checked (%d)" % [label, checked])
 		var slot: Node = m.get_board().get_lanes()[0].get_friendly_slots()[0]
 		var bb: BannerView = slot.get(&"banner")
 		var a: Dictionary = bb.anatomy_now()

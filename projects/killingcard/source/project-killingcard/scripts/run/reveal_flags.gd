@@ -1,8 +1,9 @@
 # reveal_flags.gd
 # Purpose: kc-onboard §5 (onboarding-progression.md, approved): progressive reveal. The systems a
-#   player meets one at a time (traits, keywords, links, Fields, killstreak loadout, Promotion,
-#   Muster out, Retire, Engine panel, Elites, per-keyword tips ...) as FLAGS, the moments that
-#   trigger them, and the one-time "New: X" explainer texts.
+#   player meets one at a time (traits, keywords, links, Fields, killstreak loadout, Muster out,
+#   Retire, Engine panel, Elites, per-keyword tips ...) as FLAGS, the moments that
+#   trigger them, and the one-time "New: X" explainer texts. kc-no-training: the Promotion flag and
+#   its explainer are removed (old profiles may still hold "promotion"; nothing reads it).
 #   Two profile sets live in the Settings autoload (they are per player, not per run):
 #     met_flags  - systems the player has met (the UI shows an element once it is met, or while
 #                  something in play uses it right now: "hidden doesn't mean off", §5.1),
@@ -21,13 +22,11 @@ const CALLING_CARDS: StringName = &"calling_cards"
 const TRAIT_RAIL: StringName = &"trait_rail"
 ## The Doctrine emblem on the Operator plate (the first calling card taken).
 const DOCTRINE: StringName = &"doctrine"
-## Keyword pips and stat deltas (the first Trained card offered, or the first Promotion).
+## Keyword pips (the first calling card with keywords offered or owned).
 const KEYWORDS: StringName = &"keywords"
 ## Link ticks and placement preview (the first time a neighbor keyword links, either side).
 const LINKS: StringName = &"links"
-## Camo band and the Promotion screen (the first Promotion).
-const PROMOTION: StringName = &"promotion"
-## The Engine panel in the deck view (the first Promotion).
+## The Engine panel in the deck view (the first calling card owned).
 const ENGINE_PANEL: StringName = &"engine_panel"
 ## The Muster out step (the first Muster out).
 const MUSTER_OUT: StringName = &"muster_out"
@@ -52,17 +51,16 @@ const KILLSTREAKS: StringName = &"killstreaks"
 const KW_PREFIX: String = "kw_"
 
 ## Order of the "New:" queue when several trigger at once (one per screen, §5.1).
-const ORDER: Array[StringName] = [CALLING_CARDS, DOCTRINE, TRAIT_RAIL, KEYWORDS, PROMOTION, ENGINE_PANEL, MUSTER_OUT,
+const ORDER: Array[StringName] = [CALLING_CARDS, DOCTRINE, TRAIT_RAIL, KEYWORDS, ENGINE_PANEL, MUSTER_OUT,
 		SALVAGE, MULTI_PICK, RETIRE, FIELDS, LINKS, ELITES, LOADOUT, KILLSTREAKS]
 ## Flags that open with a "New:" card (the others just appear). Keyword tips have their own text.
-const EXPLAINED: Array[StringName] = [CALLING_CARDS, TRAIT_RAIL, KEYWORDS, PROMOTION, MUSTER_OUT, SALVAGE, FIELDS,
+const EXPLAINED: Array[StringName] = [CALLING_CARDS, TRAIT_RAIL, KEYWORDS, MUSTER_OUT, SALVAGE, FIELDS,
 		LINKS, ELITES, LOADOUT]
 ## "New: X" texts (§5.2): {title, text}. The UI adds the icon and the mini example.
 const TEXTS: Dictionary = {
 	CALLING_CARDS: {"title": "New: Calling cards", "text": "Calling cards bring a trait. 2 or 3 of a trait in play give a bonus. Your first one's trait is your Doctrine: it counts +1."},
 	TRAIT_RAIL: {"title": "New: Traits", "text": "Traits in play add up. The rail shows each set and its next bonus; tap a set to light its cards on the board."},
-	KEYWORDS: {"title": "New: Keywords", "text": "Trained cards have keywords. A Recruit's keywords unlock when it trains."},
-	PROMOTION: {"title": "New: Promotion", "text": "Promotion trains a card: its level coin goes R > T > V > E."},
+	KEYWORDS: {"title": "New: Keywords", "text": "Calling cards come with keywords. Hold or right-click a card to read them."},
 	MUSTER_OUT: {"title": "New: Muster out", "text": "The quartermaster takes back Standard Issue kit: one card per new card, plus one."},
 	SALVAGE: {"title": "New: Salvage", "text": "Lost a match? You still salvage a card from the field."},
 	FIELDS: {"title": "New: Fields", "text": "Fields sit on the objective and change the whole column."},
@@ -70,7 +68,7 @@ const TEXTS: Dictionary = {
 	ELITES: {"title": "New: Elites", "text": "One of a kind, with a printed trait."},
 	LOADOUT: {"title": "New: Loadout", "text": "Pick your three killstreaks before a run."},
 }
-## Keyword tip ids -> the player-facing keyword (CardData.trained_keyword_names) they explain.
+## Keyword tip ids -> the player-facing keyword (CardData.keyword_names) they explain.
 const KEYWORD_TIPS: Dictionary = {
 	&"kw_first_shot": "First Shot", &"kw_pick": "Pick", &"kw_flank": "Flank", &"kw_cover": "Cover",
 	&"kw_suppress": "Suppress", &"kw_pierce": "Pierce", &"kw_patch": "Patch", &"kw_holder": "Holder",
@@ -131,9 +129,10 @@ static func keyword_flag(name: String) -> StringName:
 # Triggers
 # =============================================================================
 
-## Flags the run state implies right now: the current offer (calling cards / Trained cards / Fields /
-## Elites offered, Promotion, Muster out, Salvage, pick 2, Retire) and the deck (a calling card owned
-## = calling cards + Doctrine; a Trained copy = keywords). A finished first run unlocks LOADOUT.
+## Flags the run state implies right now: the current offer (calling cards / cards with keywords /
+## Fields / Elites offered, Muster out, Salvage, pick 2, Retire) and the deck (a calling card owned
+## = calling cards + the Engine panel; a card with keywords = keywords). A finished first run
+## unlocks LOADOUT.
 static func run_triggers(run: RunProgress) -> Array[StringName]:
 	var out: Array[StringName] = []
 	if run == null:
@@ -144,7 +143,8 @@ static func run_triggers(run: RunProgress) -> Array[StringName]:
 			continue
 		if c.is_unit() and run.copy_trait(i) != &"":
 			_add(out, CALLING_CARDS)
-		if c.is_unit() and SynergyRules.keywords_on(c, run.level_of(i)) and not c.trained_keyword_names().is_empty():
+			_add(out, ENGINE_PANEL)
+		if c.is_unit() and not c.keyword_names().is_empty():
 			_add(out, KEYWORDS)
 		if c.is_field():
 			_add(out, FIELDS)
@@ -163,22 +163,18 @@ static func run_triggers(run: RunProgress) -> Array[StringName]:
 			_add(out, MULTI_PICK)
 		if bool(offer.get("retire", false)) and run.config.muster_out_after(int(offer.get("match", 0))):
 			_add(out, RETIRE)
-		var lv: int = int(offer.get("level", SynergyRules.LEVEL_TRAINED))
 		for id: Variant in offer["options"]:
 			var c: CardData = run.resource(StringName(id)) as CardData
 			if c == null:
 				continue
 			if c.is_unit() and not c.trait_choices().is_empty():
 				_add(out, CALLING_CARDS)
-			if c.is_unit() and SynergyRules.keywords_on(c, lv) and not c.trained_keyword_names().is_empty():
+			if c.is_unit() and not c.keyword_names().is_empty():
 				_add(out, KEYWORDS)
 			if c.is_field():
 				_add(out, FIELDS)
 			if c.is_elite:
 				_add(out, ELITES)
-	elif kind == RewardOffers.KIND_PROMOTION:
-		for f: StringName in [PROMOTION, ENGINE_PANEL, KEYWORDS]:
-			_add(out, f)
 	elif kind == RewardOffers.KIND_MUSTER_OUT:
 		_add(out, MUSTER_OUT)
 	return out
@@ -211,7 +207,7 @@ static func match_triggers(state: MatchState) -> Array[StringName]:
 	return out
 
 
-## Player-facing keywords a unit in play has (its own flags; locked ones on a Recruit don't count).
+## Player-facing keywords a unit in play has (its own flags).
 static func _unit_keywords(u: RulesUnit) -> Array[String]:
 	var out: Array[String] = []
 	if u.first_shot:

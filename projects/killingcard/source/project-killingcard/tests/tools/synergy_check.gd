@@ -55,7 +55,7 @@ func _main() -> void:
 					decks.append(d)
 			"opcost": config.operator_cost = int(kv[1])
 			"future": future_weight = float(kv[1])
-			"trained": config.starter_recruits = kv[1] != "1"
+			"trained": pass  # kc-no-training: no Recruit starter
 			"syn": SynergyRules.enabled = kv[1] != "0"
 			"tune":  # tune=vanguard.1.where=front (trait.tier_index.key=value, in memory)
 				var tv: PackedStringArray = kv[1].split("=", true, 1)
@@ -81,7 +81,7 @@ func _card(id: String) -> CardData:
 ## [cards, levels] for a deck name at the current stage.
 func deck_for(name: String) -> Array:
 	var cards: Array[CardData] = config.starter_deck.duplicate()
-	var levels: Array[int] = config.starter_levels()
+	var levels: Array[int] = _flat_levels(config.starter_deck.size())
 	if name == "starter" or stage == "starter":
 		return [cards, levels]
 	if stage == "late":
@@ -124,7 +124,7 @@ func _setup(d: Array, name: String) -> SideSetup:
 	var s: SideSetup = Sim.player_setup(config)
 	s.display_name = name
 	s.deck.assign(d[0])
-	s.deck_levels.assign(d[1])
+	pass  # kc-no-training: copy levels are gone (sim-only data now)
 	return s
 
 
@@ -260,5 +260,14 @@ func _campaign() -> void:
 				w += 1
 		tot[0] += w
 		tot[1] += n
-		print("slot %d (%s%s) win %5.1f%%" % [i + 1, slot.squad.id, ", Recruits" if slot.enemy_recruits else "", 100.0 * w / n])
+		print("slot %d (%s%s) win %5.1f%%" % [i + 1, slot.squad.id, "", 100.0 * w / n])
 	print("all slots win %5.1f%% (n=%d)" % [100.0 * tot[0] / tot[1], tot[1]])
+
+
+## kc-no-training: copy levels were removed from the engine; this historical sim keeps its own
+## level arrays as data only (every copy plays its full chassis).
+static func _flat_levels(n: int) -> Array[int]:
+	var out: Array[int] = []
+	for i: int in n:
+		out.append(1)
+	return out

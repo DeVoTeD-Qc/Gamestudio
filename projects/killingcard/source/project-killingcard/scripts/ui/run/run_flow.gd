@@ -261,7 +261,7 @@ static func result_word(result: StringName) -> String:
 static func item_effect_line(item: LoadoutItem) -> String:
 	var parts: PackedStringArray = []
 	if item.slot == DataEnums.LoadoutSlot.PRIMARY:
-		parts.append("%s · FP %d / Armor %d" % [CLASS_WORDS.get(item.weapon_class, ""), item.operator_firepower, item.operator_armor])
+		parts.append("FP %d / Armor %d" % [item.operator_firepower, item.operator_armor])
 	if item.firepower_bonus != 0:
 		parts.append("%+d Firepower" % item.firepower_bonus)
 	if item.armor_bonus != 0:

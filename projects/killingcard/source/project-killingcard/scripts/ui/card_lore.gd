@@ -1,7 +1,7 @@
 # card_lore.gd
 # Purpose: kc-hand-y2 (the head: "if a card has no effect, just put some lore text in italic and dark
 #   gray at the bottom of the text box"). One short, original flavour line per card id; the Y2+ card
-#   (CardView) shows it only when the card has no keyword, no Trains line and no effect text. Every
+#   (CardView) shows it only when the card has no keyword and no effect text. Every
 #   unit has a line so a card that loses its effect (a rules cut) still reads.
 #   UI-owned table (no CardData field): the designer can move it into the data later.
 # Usage: CardLore.line(&"si_grunt")  # "" when none

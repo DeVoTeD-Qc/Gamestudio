@@ -488,3 +488,40 @@ cards' cost iconography, and the icons needed a dark backing over the card art.
 - **Open questions.**
   - On the 16:9 SE the hand digits reach about 11 pt, not 13. The tray is narrow there.
   - The hand abilities shrink to 14 px. The alternative is to move them to inspect only.
+
+## Implementation notes (kc-ipad-cards, UI/UX Agent, 2026-11-07)
+The head played on an iPad in landscape. The hand was one narrow column of five small banners with empty space under it, and READY read "READ". The head's words: "leave out the gun type and just mention unit", "cards only have 1 trait at most", "remove all the training thing", "ability icons and trait big too along with the stats", "maybe Ability should be bottom centered?", "the text on card should just be keyword icons and name", "fix the hand not using the entire space". Two later answers: the landscape hand keeps the X1 banner cards (the Y2+ card shows when you tap one), and on the 16:9 SE the hand digits must reach 13 pt (RQ1).
+
+**What changed**
+
+| Piece | What | Where |
+|---|---|---|
+| **Weapon type** | No weapon pill on any card and no weapon on the Y2+ type line. The type line reads UNIT, OPERATOR, STANDARD ISSUE, TACTIC, FIELD or STREAK. The weapon class is never shown anywhere: not in the inspector's or Codex's type text ("unit · FP 2 · Armor 2"), the Operator's "operator" line, the loadout item line or `CardInfo.type_line` ("Unit"). The glossary's Range entry, the objective tile's range mention, the unit status "(Close)", the column tooltip's "some weapon classes get +FP here" and the hand inspector's "Best in ... +n FP" hint are gone too (column range bonuses were removed in kc-pos-cut). The data keeps `weapon_class` for the rules (LMG Pierce) and the fallback art. | `card_look.gd`, `banner_view.gd`, `card_view.gd` |
+| **Training** | Removed: the level coin, the "Trains:" lines, the padlocked keyword sockets, the R / T / V / E badge, the level camo swatches (Retire list, Honor Roll, deck view), the Promotion pick screen, the "Recruits waiting" engine line, the level glossary entries and "Level coin", the inspector's "Level:" line, and the "New:" locked-to-lit example. `StandardIssueLook.dress(e, card, art)`, `BannerCard.entry_for_card(card, art, chosen)`, `CardView.view_for_card(card, art, chosen)` and `MatchController.synergy_lines(card, side, u, chosen)` lost their `level` argument. | `standard_issue_look.gd`, `banner_card.gd`, `card_view.gd`, `match_snapshot.gd`, `match_controller.gd`, `stat_breakdown.gd`, `synergy_glyphs.gd`, `run/reward_screen.gd`, `run/engine_panel.gd`, `run/after_action.gd`, `run/starter_panel.gd`, `codex/glossary.gd`, `card_info.gd`, `new_card.gd`, `tutorial/tutorial_match_controller.gd` |
+| **One trait** | Every card draws one trait chip at most (`trait`, never a list). The rules side enforces it (kc-no-training). | `banner_view.gd`, `banner_card.gd`, `card_view.gd` |
+| **Board banner (C1+)** | The trait chip and the ability icons are now 30k, the same size as the FP reticle; they used to be 19k and 20k. Each group sits on its own dark plate. The abilities are **bottom-centre**, between the trait and the stats, and shrink only when they would not fit. `BannerView.ABILITIES_BOTTOM = false` puts them back top-right, for comparison. On peek, only the cost hex shows top-left. | `banner_view.gd` (`anatomy`, `ability_kinds`), `card_look.gd` (`draw_ability`, `draw_keyword_icon`) |
+| **Hand card (X1)** | Still the banner plus its name plate, but sized by the tray: the banner is cover-cropped between 2.4:1 and 6:1. `BannerCard.layout_for()` picks one of three layouts, each with one badge size S for the trait, abilities, FP and Armor. **ROW** (a tall banner): cost top-left; trait, abilities (bottom-centre) and stats along the banner's bottom. **SPLIT** (a short banner, such as the phone's 2 x 4 grid): cost and trait top-left, abilities top-right, stats bottom-right across the name plate. **NARROW**: SPLIT with the abilities left to the dock and the inspector. Names stay at 16 px and end in "…" when cut; the dock and the inspector show the whole name. | `banner_card.gd` (`layout_for`, `draw_badges`, `badge_px`, `fit_score`) |
+| **Y2+ card** | The text box lists only each keyword's icon and name; definitions are in the inspector and the long-press tooltips. Units drop their effect text, because the On Deploy / On Down line names it. Tactics, Fields and killstreaks keep their text (it is their rules). Lore lines stay. The stats bar shows the 30 px trait chip, the ability icons bottom-centre at 30 px, and FP / Armor. | `card_view.gd` (`regions`, `ability_kinds`, `_rebuild_text`) |
+| **Hand fill** | The grid spans the tray. `BoardMetrics.hand_fit(grid, n, gap, min_h)` sizes the cards for the real hand count (at least 4) and tries 1, 2 and 3 columns. It keeps the layout with the biggest badges, with penalties for NARROW and for a name under 60 px, then the one that covers more of the grid. HandArea re-fits on every hand change. On iPad 1024x768 / iPad Pro (canvas 1280x960, a 224 px tray): one column of 224 x 112 cards at 5 cards (ROW, 38 px badges), 92 at 6, 78 at 7, 67 at 8; 89–93% of the grid is covered. | `board_metrics.gd`, `hand_area.gd` (`_fit_cards`, `hand_fit`) |
+| **Operator row** | A narrow tray that is not compact (under 300 px: desktop and iPad) stacks the row. The Operator card spans the tray (224 x 123), with UNDO (67 px) beside READY (151 px) under it. The phone keeps the card beside UNDO over READY. `MatchScreen.fit_button_text` shrinks a button's text (to 16 px at the smallest) so the whole word always fits. | `board_metrics.gd` (`op_stacked`), `match_screen.gd` |
+| **SE (16:9 phone), RQ1** | **Choice: fewer hand cards, scrolling; the tray is not widened.** Widening the tray would shrink the board banners and push the board digits under 13 pt. When no layout reaches 27 px badges (13 pt digits at 0.694 pt/px), the hand shows one column of readable cards: 3 of 7 on the SE, at 214 x 64. A "▼ n MORE" / "▲ n MORE" hint shows what is hidden. A vertical swipe on the hand (or the mouse wheel) scrolls it; a sideways drag still places the card; selecting a card scrolls it into view. | `hand_area.gd` (`scroll_hand`, `is_scrolling`, `_reveal_in_grid`) |
+
+**Abilities: bottom-centre or top-right?** I recommend bottom-centre. The trait, abilities and stats then read as one row of equal badges. At 30k, top-right icons collide with the stats on a 57 px banner (`qa/screenshots/ipad-cards/compare_top_844x390_board_2x.png`). The cost: the bottom row covers more of the figure's lower half. On hand cards in the SPLIT layout (the phone's 2 x 4 grid), the abilities sit top-right, because the bottom holds the name and the stats.
+
+**QA**
+- New `tests/test_ipad_cards.gd`:
+  - iPad 1024x768, iPad Pro 1366x1024 and desktop 1440x900 with 5–8 cards: at least 80% coverage, no spill or overlap, READY / UNDO / Operator inside the tray, READY's whole word fits;
+  - the phone keeps 2 columns at 13 pt;
+  - the SE scrolls one readable column;
+  - X1 badges are one size and never overlap;
+  - Y2+ shows UNIT, icon + name lines, and 30 px stats-bar icons.
+- `test_readability`: the SE floor is now 13 pt. The test also checks that the hand's ability icons and trait chip are as big as FP.
+- Updated: `test_cards_v2`, `test_board_columns`, `test_board_layout` (cards hidden by a scrolling hand are skipped), `test_ui4`, `test_trait_ui`, `test_onboard_ui` (a no-training test replaces the Recruit one), `test_ui_kit_hooks`.
+- Totals: 552 pass, 0 fail (after the kc-no-training AI fixes landed).
+
+**Screenshots** (public art only), in `qa/screenshots/ipad-cards/`; tool `tests/tools/shot_ipad.gd`:
+- `before_1024x768_*` and `before_844x390_*`;
+- after: `after_1024x768_5cards_*` and `_8cards_*`, `after_844x390_5cards_*` and `_7cards_*`, `after_667x375_7cards_*`;
+- `compare_top_*` (abilities top-right).
+
+Each set has full, tray (2x), board (2x) and dock.

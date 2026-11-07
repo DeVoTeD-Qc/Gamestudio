@@ -9,9 +9,9 @@
 #   button >= 44 pt both ways, Supply Drop cards >= 0.8x with name / cost / stats >= 11 pt.
 #   SceneRouter runs in dry_run, so a route is recorded and this test loads the next screen itself.
 #   kc-onboard-ui: the suite runs on the SHIPPED run config (the Standard Issue starter and the
-#   onboarding ladder): M1 a 3-card Recruit drop (greyed "Trains:" line, R badge, no Retire yet),
-#   M2 "PICK 2 OF 4" (4 cards fit the phone; RETIRE in the header), Muster out (pre-selected most
-#   expensive, toggle, SEND n HOME), M3 Salvage + Muster out, Promotion "Unlocks ...". The profile's
+#   onboarding ladder): M1 a 3-card calling-card drop (no Retire yet), M2 "PICK 2 OF 4" (4 cards fit
+#   the phone; RETIRE in the header), Muster out (pre-selected most expensive, toggle, SEND n HOME),
+#   M3 Salvage + Muster out (kc-no-training: no Promotion, no Trains line, no level badge). The profile's
 #   reveal flags are cleared for the suite (Settings.met_flags / seen_flags) and restored after.
 # Author: UI/UX Agent (p11; kc-onboard-ui)
 extends "res://tests/test_case.gd"
@@ -291,12 +291,12 @@ func _full_run(screen: Dictionary) -> void:
 
 	# Match 1 through the real hand-off: RunMap DEPLOY -> pending MatchState -> finish_run_match.
 	var plan: Array = [
-		# kc-onboard (shipped ladder): M1 a Recruit drop (Doctrine = the first calling card's trait),
-		# M2 pick 2 of 4 + Muster out + Promotion, M3 Salvage + Muster out after the loss.
+		# kc-onboard (shipped ladder): M1 a calling-card drop (Doctrine = the first calling card's trait),
+		# M2 pick 2 of 4 + Muster out, M3 Salvage + Muster out after the loss (kc-no-training: no Promotion).
 		[&"player", {"reason": &"target", "rounds": 6, "player_score": 6, "enemy_score": 3}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_ATTACHMENT]],
-		[&"player", {"reason": &"round_cap", "rounds": 8, "player_score": 7, "enemy_score": 5}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_MUSTER_OUT, RewardOffers.KIND_PROMOTION, RewardOffers.KIND_PERK]],
+		[&"player", {"reason": &"round_cap", "rounds": 8, "player_score": 7, "enemy_score": 5}, [RewardOffers.KIND_SUPPLY_DROP, RewardOffers.KIND_MUSTER_OUT, RewardOffers.KIND_PERK]],
 		[&"enemy", {"reason": &"target", "rounds": 5, "player_score": 2, "enemy_score": 6}, [RewardOffers.KIND_SALVAGE, RewardOffers.KIND_MUSTER_OUT, RewardOffers.KIND_ATTACHMENT]],
-		[&"draw", {"reason": &"overtime_draw", "rounds": 10, "player_score": 5, "enemy_score": 5}, [RewardOffers.KIND_ATTACHMENT, RewardOffers.KIND_PROMOTION, RewardOffers.KIND_PERK]],
+		[&"draw", {"reason": &"overtime_draw", "rounds": 10, "player_score": 5, "enemy_score": 5}, [RewardOffers.KIND_ATTACHMENT, RewardOffers.KIND_PERK]],
 		[&"player", {"reason": &"target", "rounds": 7, "player_score": 6, "enemy_score": 4}, []],
 	]
 	for i: int in plan.size():
@@ -386,22 +386,12 @@ func _full_run(screen: Dictionary) -> void:
 				await _tap(reward.get_inspector().get_node("%CloseButton"))
 				assert_false(reward.get_inspector().is_open(), "%s: CLOSE shuts the inspector" % label)
 				if i == 0:
-					# M1: Recruit calling cards: trait on, keywords locked ("Trains: ..."), the R badge;
+					# M1: calling cards with their keywords (kc-no-training: no level badge, no Trains line);
 					# Retire isn't met yet, so it isn't offered.
-					assert_eq(int(reward.offer["level"]), SynergyRules.LEVEL_RECRUIT, "%s: M1 drop = Recruits" % label)
-					var trains_seen: int = 0
+					assert_false(reward.offer.has("level"), "%s: M1 drop has no level" % label)
 					for t: int in reward.tiles.size():
-						var c: CardData = _rs.run.resource(reward.offer["options"][t]) as CardData
-						var badge: Node = reward.tiles[t].find_child("LevelBadge", true, false)
-						assert_true(badge != null and int(badge.get_meta(&"level")) == 0, "%s: tile %d has the R badge" % [label, t])
-						var want_tr: String = SynergyRules.trains_text(c, 0)
-						if want_tr != "":
-							var line: Node = reward.tiles[t].find_child("TrainsLine", true, false)
-							assert_not_null(line, "%s: tile %d greyed Trains line" % [label, t])
-							assert_not_null(reward.tiles[t].find_child("LockIcon", true, false), "%s: tile %d lock icon" % [label, t])
-							assert_eq(String((line.find_child("RulesLabel", true, false) as Label).get_meta(&"trains")), want_tr, "%s: tile %d says %s" % [label, t, want_tr])
-							trains_seen += 1
-					assert_true(trains_seen >= 1, "%s: at least one Recruit shows what it trains" % label)
+						assert_true(reward.tiles[t].find_child("LevelBadge", true, false) == null, "%s: tile %d has no level badge" % [label, t])
+						assert_true(reward.tiles[t].find_child("TrainsLine", true, false) == null, "%s: tile %d has no Trains line" % [label, t])
 					assert_false(reward.retire_button.is_visible_in_tree(), "%s: no Retire before it is met" % label)
 					var want: StringName = reward.offer["options"][1]
 					await _tap(reward.tiles[1])
@@ -491,21 +481,6 @@ func _full_run(screen: Dictionary) -> void:
 				var want_doc: StringName = reward.offer["options"][0]
 				await _tap(reward.tiles[0])
 				assert_eq(_rs.run.doctrine, want_doc, "%s: Doctrine picked" % label)
-			elif kind == RewardOffers.KIND_PROMOTION:
-				assert_eq(reward.list_tiles.size(), (reward.offer["options"] as Array).size(), "%s: one tile per promotion option" % label)
-				var pid: StringName = reward.offer["options"][0]
-				var plv: int = int(reward.offer["levels"][0])
-				var before_up: int = 0
-				for d: Dictionary in _rs.run.deck_view():
-					before_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
-				if plv == SynergyRules.LEVEL_RECRUIT:
-					var gl: Label = reward.list_tiles[0].find_child("GainLine", true, false)
-					assert_true(gl != null and gl.text.begins_with("Unlocks") or gl.text == "Trained.", "%s: Promotion says what unlocks (%s)" % [label, gl.text])
-				await _tap(reward.list_tiles[0])
-				var after_up: int = 0
-				for d: Dictionary in _rs.run.deck_view():
-					after_up += 1 if d["id"] == pid and int(d["level"]) == plv + 1 else 0
-				assert_eq(after_up, before_up + 1, "%s: one copy promoted" % label)
 			elif kind == RewardOffers.KIND_REGROUP:
 				assert_false(reward.list_tiles.is_empty(), "%s: Regroup lists cards to retire" % label)
 				await _tap(reward.list_tiles[0])
@@ -768,7 +743,7 @@ func test_match_handoff_contract() -> void:
 
 
 # =============================================================================
-# kc-trait-ui: Supply Drop copies, Re-issue, TRAIN AS (Promotion / twin), deck view traits
+# kc-trait-ui: Supply Drop copies, no Re-issue, deck view traits (kc-no-training: no Promotion)
 # =============================================================================
 
 func test_trait_ui_reward_flows() -> void:
@@ -781,10 +756,7 @@ func test_trait_ui_reward_flows() -> void:
 		var mk: CardData = r.resource(&"marksman") as CardData
 		var at: int = r.deck.size()
 		# kc-onboard (head Z1): a copy keeps the trait of the art it was found with; no Re-issue.
-		r._append_copy(&"marksman", 1, &"heavy", r._random_art(mk, &"heavy"))
-		# kc-onboard-ui: the Standard Issue starter has no Recruit; add one to promote below.
-		var bk: CardData = r.resource(&"breacher") as CardData
-		r._append_copy(&"breacher", 0, &"vanguard", r._random_art(bk, &"vanguard"))
+		r._append_copy(&"marksman", &"heavy", r._random_art(mk, &"heavy"))
 		_rs.record_result(&"player")
 		var reward: Control = await _open(RunFlow.SCENE_REWARD, screen)
 		assert_eq(reward.offer["kind"], RewardOffers.KIND_SUPPLY_DROP, "%s: Supply Drop" % label)
@@ -806,29 +778,7 @@ func test_trait_ui_reward_flows() -> void:
 		assert_true(reward.get(&"reissue_tile") == null and reward.find_child("ReissueOption", true, false) == null, "%s: no Re-issue option" % label)
 		assert_not_null(reward.retire_button, "%s: Retire option still there" % label)
 		assert_false(reward.retire_button.is_visible_in_tree(), "%s: Retire waits until it is met" % label)
-		assert_eq(r.reissue_options().size(), 0, "%s: nothing to re-issue" % label)
-		# Promotion of a Recruit: training keeps the trait (TRAIN AS shows only the copy's own trait).
-		r.pending_offers.clear()
-		r.phase = RunProgress.PHASE_REWARDS
-		r._add_synergy_offer(RewardOffers.KIND_PROMOTION, 1)
-		reward.show_offer()
-		await _frames(2)
-		var popts: Array[Dictionary] = r.promotion_options()
-		var pi: int = -1
-		for i: int in popts.size():
-			if bool(popts[i]["trains"]) and (r.resource(popts[i]["id"]) as CardData).trait_choices().size() > 1:
-				pi = i
-				break
-		assert_true(pi >= 0, "%s: a Recruit to train" % label)
-		var copy: int = int(popts[pi]["index"])
-		var keep_t: StringName = r.copy_trait(copy)
-		var keep_a: StringName = r.art_of(copy)
-		await _tap(reward.list_tiles[pi])
-		# Head Z1: no TRAIN AS picker: the tap trains the copy at once.
-		assert_true(reward.get(&"train_pick") == null, "%s: no TRAIN AS picker" % label)
-		await _frames(2)
-		assert_eq(r.level_of(copy), SynergyRules.LEVEL_TRAINED, "%s: trained" % label)
-		assert_eq([r.copy_trait(copy), r.art_of(copy)], [keep_t, keep_a], "%s: same trait, same art" % label)
+		assert_false(r.has_method(&"reissue_options"), "%s: nothing to re-issue" % label)
 		# Regroup: no RE-ISSUE in the header.
 		r.pending_offers.clear()
 		r.phase = RunProgress.PHASE_REWARDS

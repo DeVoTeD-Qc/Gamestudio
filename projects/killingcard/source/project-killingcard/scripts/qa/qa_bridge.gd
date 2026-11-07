@@ -65,16 +65,16 @@ func run_command(cmd: String) -> String:
 			if ctrl == null or ctrl.get(&"state") == null:
 				return "no match"
 			var st: MatchState = ctrl.state
-			# Point Man (Fireteam, Vanguard) in A1, Marksman (Spotter, Spec Ops) in B1; in hand a Trained
-			# Breacher (Guard, Vanguard: Vanguard 2 when it lands) and a Trained Recon Specialist.
+			# Point Man (Fireteam, Vanguard) in A1, Marksman (Spotter, Spec Ops) in B1; in hand a
+			# Breacher (Guard, Vanguard: Vanguard 2 when it lands) and a Recon Specialist.
 			for pair: Array in [[&"point_man", 0], [&"marksman", 1]]:
 				var card: CardData = CardDB.get_card(pair[0])
 				if card != null and st.projected_occupancy(0, int(pair[1])) < st.config.zone_capacity:
-					st.put_in_line(st.create_unit(0, card, -1, SynergyRules.LEVEL_TRAINED), int(pair[1]))
+					st.put_in_line(st.create_unit(0, card), int(pair[1]))
 			for id: StringName in [&"breacher", &"recon_specialist"]:
 				var c2: CardData = CardDB.get_card(id)
 				if c2 != null:
-					st.sides[0].hand.push_front(RulesCard.new(st.new_uid(), c2, SynergyRules.LEVEL_TRAINED))
+					st.sides[0].hand.push_front(RulesCard.new(st.new_uid(), c2))
 			st.sides[0].supply = maxi(st.sides[0].supply, 6)
 			ctrl.refresh()
 			return ""
@@ -85,15 +85,15 @@ func run_command(cmd: String) -> String:
 			if ctrl2 == null or ctrl2.get(&"state") == null:
 				return "no match"
 			var st2: MatchState = ctrl2.state
-			var gun: RulesUnit = st2.create_unit(0, CardDB.get_card(&"gunner"), -1, SynergyRules.LEVEL_TRAINED)
+			var gun: RulesUnit = st2.create_unit(0, CardDB.get_card(&"gunner"))
 			st2.put_in_line(gun, 0)
 			st2.sides[0].line(0).erase(gun)
 			st2.sides[0].line(0).push_front(gun)
-			var back: RulesUnit = st2.create_unit(1, CardDB.get_card(&"point_man"), -1, SynergyRules.LEVEL_RECRUIT)
+			var back: RulesUnit = st2.create_unit(1, CardDB.get_card(&"point_man"))
 			st2.put_in_line(back, 0)
 			st2.sides[1].line(0).erase(back)
 			st2.sides[1].line(0).push_front(back)
-			var weak: RulesUnit = st2.create_unit(1, CardDB.get_card(&"rifleman"), -1, SynergyRules.LEVEL_RECRUIT)
+			var weak: RulesUnit = st2.create_unit(1, CardDB.get_card(&"rifleman"))
 			weak.armor = 1
 			st2.put_in_line(weak, 0)
 			st2.sides[1].line(0).erase(weak)
@@ -128,7 +128,7 @@ func snapshot(scene: Node = null) -> Dictionary:
 	if ctrl != null and ctrl.get(&"state") != null:
 		out["match"] = _match(scene, ctrl)
 	# kc-syn-ui: the reward screen's offer (kind, Retire option / picker, list tiles, deck view).
-	# kc-onboard-ui: picks / taken / level of a drop, Muster out marks, the "New:" card (head Z1: the
+	# kc-onboard-ui: picks / taken of a drop, Muster out marks, the "New:" card (head Z1: the
 	# Re-issue / TRAIN AS fields are gone).
 	if scene.has_method(&"show_offer") and scene.get(&"offer") != null:
 		var off: Dictionary = scene.get(&"offer")
@@ -141,7 +141,7 @@ func snapshot(scene: Node = null) -> Dictionary:
 				"list_tiles": (scene.get(&"list_tiles") as Array).size(),
 				"deck_view": ev != null and ev.visible,
 				"traits": _strs(off.get("traits", [])), "arts": _strs(off.get("arts", [])),
-				"picks": int(off.get("picks", 1)), "taken": (off.get("taken", []) as Array).size(), "level": int(off.get("level", 1)),
+				"picks": int(off.get("picks", 1)), "taken": (off.get("taken", []) as Array).size(),
 				"muster_marks": (scene.get(&"muster_marks") as Dictionary).size() if scene.get(&"muster_marks") != null else 0,
 				"new_card": String(nc.flag) if nc is NewCard and (nc as NewCard).is_open() else ""}
 	# kc-ui3: an open codex (Title or MENU): what it shows, and the inspector over it.

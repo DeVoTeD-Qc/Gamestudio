@@ -199,8 +199,8 @@ func _long_press_inspector(screen: Dictionary) -> void:
 	var rules_text: String = inspector.get_node("%RulesLabel").text
 	assert_true(rules_text == rc.card.text or (rules_text == "" and CardInfoKeywords.keywords(rc.card).size() > 0),
 			"%s full rules text (or keyword lines for keyword-only text): '%s'" % [label, rules_text])
-	# kc-syn-ui: printed keyword lines, then the copy's synergy lines (keyword, trait, level).
-	var expected: int = CardInfoKeywords.keywords(rc.card).size() + c.synergy_lines(rc.card, rc.level, 0, null).size()
+	# kc-syn-ui: printed keyword lines, then the copy's synergy lines (keyword, trait).
+	var expected: int = CardInfoKeywords.keywords(rc.card).size() + c.synergy_lines(rc.card, 0, null, rc.chosen_trait).size()
 	assert_eq(inspector.get_node("%KeywordList").get_child_count(), expected * 2, "%s keyword lines" % label)
 	assert_true(String(inspector.get_node("%StatusLabel").text).contains("Supply"), "%s cost / Supply status" % label)
 	await _tap(vp, inspector.get_node("%CloseButton").get_global_rect().get_center())

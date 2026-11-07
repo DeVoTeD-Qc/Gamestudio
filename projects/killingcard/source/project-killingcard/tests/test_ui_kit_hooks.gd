@@ -14,7 +14,7 @@ const CARD_SCENE: String = "res://scenes/match/CardView.tscn"
 ## The manifest lives next to the project in the repo (projects/killingcard/documentation/art/).
 const MANIFEST_REL: String = "../../documentation/art/ui-kit-manifest.csv"
 const UNIT: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 2, "armor_max": 4, "banner": "rifleman", "cost": 2,
-		"keywords": [{"id": &"pick"}], "trait": "vanguard", "trait_tier": 1, "level": 1}
+		"keywords": [{"id": &"pick"}], "trait": "vanguard", "trait_tier": 1}
 
 var _saved_dirs: PackedStringArray = PackedStringArray()
 
@@ -174,7 +174,6 @@ func test_badges_fallback_without_kit() -> void:
 	var ran: bool = await _draw_once(func(ci: CanvasItem) -> void:
 		CardLook.draw_reticle(ci, Rect2(0, 0, 28, 28), 3, &"enemy", 1)
 		CardLook.draw_armor(ci, Rect2(30, 0, 27, 28), 2, true)
-		CardLook.draw_level_coin(ci, Rect2(60, 0, 16, 16), 2)
 		CardLook.draw_crack(ci, Vector2(3, 3), 22.0)
 		CardLook.draw_pick_icon(ci, Rect2(80, 0, 16, 16), Color.WHITE))
 	assert_true(ran, "the code badges, crack and Pick glyph drew")
@@ -183,7 +182,7 @@ func test_badges_fallback_without_kit() -> void:
 
 
 func test_badges_use_the_kit_with_their_tints() -> void:
-	_kit([CardLook.PLATE_FP, CardLook.PLATE_ARMOR, CardLook.COIN_LEVEL, CardLook.FX_CRACK], [IconSheet.PICK_KIT_ID])
+	_kit([CardLook.PLATE_FP, CardLook.PLATE_ARMOR, CardLook.FX_CRACK], [IconSheet.PICK_KIT_ID])
 	var ran: bool = await _draw_once(func(ci: CanvasItem) -> void:
 		CardLook.draw_reticle(ci, Rect2(0, 0, 28, 28), 3, &"enemy", 1))
 	assert_true(ran and UiKit.draw_log.has(CardLook.PLATE_FP), "reticle: plate_fp_reticle")
@@ -199,12 +198,7 @@ func test_badges_use_the_kit_with_their_tints() -> void:
 	assert_eq(UiKit.draw_log, [CardLook.PLATE_ARMOR, CardLook.PLATE_ARMOR] as Array[StringName], "armor: plate_armor_ballistic both times")
 	assert_true(UiKit.draw_tint_log[0].is_equal_approx(Color.WHITE), "normal: as is")
 	assert_true(UiKit.draw_tint_log[1].is_equal_approx(CardLook.AR_DMG_EDGE), "damaged: amber, never red")
-	_kit([CardLook.COIN_LEVEL])
-	await _draw_once(func(ci: CanvasItem) -> void:
-		CardLook.draw_level_coin(ci, Rect2(0, 0, 16, 16), 0)
-		CardLook.draw_level_coin(ci, Rect2(20, 0, 16, 16), 3))
-	assert_eq(UiKit.draw_log.size(), 2, "coin: coin_level both times")
-	assert_true(UiKit.draw_tint_log[0].is_equal_approx(Color.WHITE) and UiKit.draw_tint_log[1].is_equal_approx(CardLook.BRASS), "R steel, E brass")
+	# kc-ipad-cards (kc-no-training): the level coin (coin_level) is gone from every card.
 	_kit([CardLook.FX_CRACK])
 	await _draw_once(func(ci: CanvasItem) -> void: CardLook.draw_crack(ci, Vector2(3, 3), 22.0))
 	assert_eq(UiKit.draw_log, [CardLook.FX_CRACK, CardLook.FX_CRACK] as Array[StringName], "crack: a dark copy, then the amber one")
@@ -276,10 +270,10 @@ func _card(view: Dictionary) -> CardView:
 
 func _views() -> Dictionary:
 	var op: Dictionary = {"name": "Kestrel", "type": "operator", "cost": 2, "firepower": 3, "armor": 7, "keywords": []}
-	var si: Dictionary = CardView.view_for_card(CardDB.get_card(&"si_grunt"), &"", 0)
+	var si: Dictionary = CardView.view_for_card(CardDB.get_card(&"si_grunt"))
 	si["standard_issue"] = true
 	return {
-		&"frm_y2_unit": CardView.view_for_card(CardDB.get_card(&"marksman"), &"", 1),
+		&"frm_y2_unit": CardView.view_for_card(CardDB.get_card(&"marksman")),
 		&"frm_y2_operator": op,
 		&"frm_y2_standard_issue": si,
 		&"frm_t1_orders": CardView.view_for_card(CardDB.get_card(&"suppressing_fire")),

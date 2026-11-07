@@ -116,7 +116,7 @@ func _init(p_config: RunConfig = null, p_map: MapData = null, player: SideSetup 
 func start_match() -> void:
 	for s: RulesSide in sides:
 		for i: int in s.setup.deck.size():
-			var rc: RulesCard = RulesCard.new(new_uid(), s.setup.deck[i], s.setup.level_of(i), s.setup.trait_of(i))
+			var rc: RulesCard = RulesCard.new(new_uid(), s.setup.deck[i], s.setup.trait_of(i))
 			if i < s.setup.deck_arts.size() and s.setup.deck_arts[i] != &"":
 				art_by_uid[rc.uid] = s.setup.deck_arts[i]
 			s.deck.append(rc)
@@ -392,7 +392,7 @@ func _check_card(side: int, intent: Dictionary) -> Dictionary:
 	var play: Dictionary = _draft_play(kind, zone, intent)
 	play["card"] = rc
 	play["cost"] = card.cost
-	var why: Dictionary = _check_targets(side, SynergyRules.effects_at(card, rc.level), play, card.card_type == DataEnums.CardType.TACTIC)
+	var why: Dictionary = _check_targets(side, card.effects, play, card.card_type == DataEnums.CardType.TACTIC)
 	if not why.is_empty():
 		return why
 	return _ok_play(play)
@@ -561,7 +561,7 @@ func _effects_of(side: int, what: Variant) -> Array[EffectData]:
 	if typeof(what) == TYPE_INT:
 		var rc: RulesCard = sides[side].find_in_hand(int(what))
 		if rc != null:
-			return SynergyRules.effects_at(rc.card, rc.level)
+			return rc.card.effects
 	elif StringName(what) != &"operator":
 		var item: LoadoutItem = find_item(side, StringName(what))
 		if item != null:
@@ -595,7 +595,7 @@ func _commit_card(side: int, play: Dictionary) -> void:
 		"side": side_name(side), "card_uid": rc.uid, "card_id": card.id,
 		"zone": zone_name(play["zone"]), "private_to": side_name(side),
 	})
-	_resolve_immediate(side, SynergyRules.effects_at(card, rc.level), play, _source_kind_for_card(card), card.id, rc.uid)
+	_resolve_immediate(side, card.effects, play, _source_kind_for_card(card), card.id, rc.uid)
 
 
 func _commit_item(side: int, play: Dictionary) -> void:
@@ -694,7 +694,7 @@ func _arrive(si: int, play: Dictionary) -> bool:
 				return false
 			var rc: RulesCard = play["card"]
 			emit_event(RulesEvent.CARD_REVEALED, {"side": side_name(si), "card_uid": rc.uid, "card_id": rc.card.id, "zone": zone_name(zone)})
-			var u: RulesUnit = create_unit(si, rc.card, rc.uid, rc.level, rc.chosen_trait)
+			var u: RulesUnit = create_unit(si, rc.card, rc.uid, rc.chosen_trait)
 			put_in_line(u, zone)
 			_apply_arrival_buff(si, u)
 			var ctx: Dictionary = make_ctx(si, SRC_UNIT, u.source_id, u.uid, zone, play["target_uid"], play["dest_zone"])
@@ -961,7 +961,7 @@ func _record_elimination(u: RulesUnit, zone: int) -> Dictionary:
 		emit_event(RulesEvent.OPERATOR_DOWN, {"side": side_name(u.side), "uid": u.uid})
 		hooks.on_operator_down(self, u.side)
 	elif u.card != null and not u.card.is_token():
-		s.discard.append(RulesCard.new(u.uid, u.card, u.level, u.chosen_trait))
+		s.discard.append(RulesCard.new(u.uid, u.card, u.chosen_trait))
 		emit_event(RulesEvent.CARD_DISCARDED, {"side": side_name(u.side), "card_uid": u.uid, "card_id": u.card.id})
 	hooks.on_elimination(self, rec)
 	return rec
@@ -982,11 +982,10 @@ func _find_unit_anywhere(uid: int, extra: Array[RulesUnit]) -> RulesUnit:
 # Board operations (used by the resolvers)
 # =============================================================================
 
-## level (kc-syn §5.2, kc-onboard §3): Recruit copies get their trait but no keyword, no neighbor
-## keyword and no effect; Veteran +1 Armor,
-## Elite +1 Armor +1 FP. chosen_trait (kc-art-traits): the trait the copy's art gives it
-## (SynergyRules.trait_at checks it against the card's options; TRAIT_DEFAULT = the default).
-func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyRules.LEVEL_TRAINED,
+## chosen_trait (kc-art-traits): the ONE trait the copy's art gives it (SynergyRules.trait_at checks
+## it against the card's options; TRAIT_DEFAULT = the default). kc-no-training: there are no copy
+## levels; every copy has its full keywords and effects.
+func create_unit(side: int, card: CardData, uid: int = -1,
 		chosen_trait: StringName = SynergyRules.TRAIT_DEFAULT) -> RulesUnit:
 	var u: RulesUnit = RulesUnit.new()
 	u.uid = uid if uid >= 0 else new_uid()
@@ -994,21 +993,15 @@ func create_unit(side: int, card: CardData, uid: int = -1, level: int = SynergyR
 	u.card = card
 	u.source_id = card.id
 	u.weapon_class = card.weapon_class
-	u.level = level
-	u.neighbor_keyword = SynergyRules.keyword_at(card, level)
+	u.neighbor_keyword = SynergyRules.keyword_at(card)
 	u.chosen_trait = chosen_trait
-	u.synergy_trait = SynergyRules.trait_at(card, level, chosen_trait)
-	var lv: Dictionary = SynergyRules.level_stats(level)
+	u.synergy_trait = SynergyRules.trait_at(card, chosen_trait)
 	var setup: SideSetup = sides[side].setup
-	u.base_firepower = card.firepower + setup.firepower_bonus + int(lv["fp"])
-	u.base_max_armor = maxi(1, card.armor + setup.armor_bonus + int(lv["armor"]))
+	u.base_firepower = card.firepower + setup.firepower_bonus
+	u.base_max_armor = maxi(1, card.armor + setup.armor_bonus)
 	u.armor = u.base_max_armor
 	u.counts_for_control = card.counts_for_control
 	u.grants_elimination_credit = card.grants_elimination_credit
-	# kc-onboard §3 (head N1): a Recruit keeps its trait, cost, FP, Armor and weapon class, but its
-	# rules text is locked until it trains (SynergyRules.keywords_on).
-	if not SynergyRules.keywords_on(card, level):
-		return u
 	u.first_shot = card.first_shot
 	u.pick = card.pick
 	u.flank = card.flank
@@ -1245,7 +1238,7 @@ func synergy_lines(side: int) -> Array:
 	return lines
 
 
-## Traits of `side`'s visible Fields (Trained copies; traps never count).
+## Traits of `side`'s visible Fields (traps never count).
 func synergy_field_traits(side: int) -> Array[StringName]:
 	var out: Array[StringName] = []
 	for z: int in ZONE_COUNT:
@@ -1328,7 +1321,7 @@ func announce_synergy() -> void:
 ##   {player: SIDE, enemy: SIDE, units: {uid: UNIT}} with
 ##   SIDE = {counts: {trait: n}, tiers: {trait: 0/2/3}, doctrine: trait, links: [{kind, from_uid, to_uid}],
 ##           rail: [{trait, name, count, tier, next, doctrine}] (traits with count > 0, TRAITS order)}
-##   UNIT = {uid, side, keyword, trait, level, band, fp, cover, fs, heal, links: [{kind, from_uid}],
+##   UNIT = {uid, side, keyword, trait, fp, cover, fs, heal, links: [{kind, from_uid}],
 ##           sets: [[trait, tier]]}
 ## (fp / cover / fs / heal are the synergy part only; firepower_of etc. already include them.)
 func synergy_view(_viewer: int = PLAYER) -> Dictionary:
@@ -1349,31 +1342,11 @@ func synergy_view(_viewer: int = PLAYER) -> Dictionary:
 		for u: RulesUnit in sides[si].units_on_board():
 			var r: Dictionary = _syn_units.get(u.uid, {})
 			out["units"][u.uid] = {"uid": u.uid, "side": side_name(si), "keyword": u.neighbor_keyword,
-					"trait": u.synergy_trait, "level": u.level, "band": SynergyRules.LEVEL_BANDS[clampi(u.level, 0, 3)],
+					"trait": u.synergy_trait,
 					"fp": int(r.get("fp", 0)), "cover": int(r.get("cover", 0)), "fs": bool(r.get("fs", false)),
 					"heal": int(r.get("heal", 0)), "links": (r.get("links", []) as Array).duplicate(true),
 					"sets": (r.get("sets", []) as Array).duplicate(true)}
 	return out
-
-
-## Level of a card copy (hand, deck, discard, Fields or a unit on the board) by uid; -1 if unknown.
-func card_level(uid: int) -> int:
-	for s: RulesSide in sides:
-		for list: Array in [s.hand, s.deck, s.discard]:
-			for rc: RulesCard in list:
-				if rc.uid == uid:
-					return rc.level
-		var u: RulesUnit = s.find_unit(uid)
-		if u != null:
-			return u.level
-		for z: int in ZONE_COUNT:
-			for entry: Dictionary in s.equipment[z]:
-				if (entry["card"] as RulesCard).uid == uid:
-					return (entry["card"] as RulesCard).level
-		for p: Dictionary in s.plays:
-			if p["card"] != null and (p["card"] as RulesCard).uid == uid:
-				return (p["card"] as RulesCard).level
-	return -1
 
 
 ## Placement preview (kc-syn §9): what `side`'s synergy would be if hand card `card_uid` arrived in

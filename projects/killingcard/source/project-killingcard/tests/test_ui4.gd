@@ -98,8 +98,10 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 			# kc-cards-impl (X1): the banner draws the cost hex top-left (always shown in the hand).
 			var hc: Rect2 = hb.anatomy_now()["cost"]
 			assert_true(hb.full_info and hc.position.x < hb.size.x * 0.2 and hc.position.y < hb.size.y * 0.3, "%s hand: cost top-left" % label)
-			assert_true(absf((hr["fp"] as Rect2).size.x - (a2["fp"] as Rect2).size.x) < 1.0 or hb.size.y < fr.banner.size.y,
-					"%s hand badges are the board's size" % label)
+			# kc-ipad-cards: the X1 card draws its own badges (BannerCard.layout_for), at least the board's size.
+			var hl: Dictionary = BannerCard.layout_for((unit_chip.get_node("Face") as Control).size, hb.entry)
+			assert_true((hl["fp"] as Rect2).size.x >= (a2["fp"] as Rect2).size.x - 1.0 or hb.size.y < fr.banner.size.y,
+					"%s hand badges are at least the board's size" % label)
 			var name_l: Label = unit_chip.find_child("NameLabel", true, false)
 			var rc_name: String = ""
 			for rc: RulesCard in st.sides[0].hand:
@@ -120,8 +122,8 @@ func test_stat_icons_same_place_for_both_sides() -> void:
 
 ## The head's card anatomy on one banner (kc-trait-ui, 2026-11-06): cost + name top-left, abilities
 ## top-right, trait + weapon-type bottom-left, FP + Armor side by side bottom-right.
-## kc-cards-impl: the head's C1+ anatomy on one banner: the peek group top-left (cost -> level coin
-## -> weapon), abilities top-right, traits bottom-left, FP reticle + Armor plate bottom-right; no name.
+## kc-cards-impl: the head's C1+ anatomy on one banner: the cost top-left (peek), traits bottom-left,
+## FP reticle + Armor plate bottom-right; no name. kc-ipad-cards: abilities bottom-centre.
 func _check_anatomy(b: BannerView, label: String) -> void:
 	var a: Dictionary = b.anatomy_now()
 	var sz: Vector2 = b.size
@@ -135,8 +137,11 @@ func _check_anatomy(b: BannerView, label: String) -> void:
 	assert_eq((a["name"] as Rect2).size.x, 0.0, "%s: no name on the banner" % label)
 	if a.has("trait"):
 		assert_true((a["trait"] as Rect2).position.x < sz.x * 0.5 and (a["trait"] as Rect2).end.y > sz.y * 0.6, "%s: trait bottom-left" % label)
+	# kc-ipad-cards: abilities bottom-centre, between the trait and FP, as big as FP.
 	for ab: Array in a["abilities"]:
-		assert_true((ab[1] as Rect2).end.x > sz.x * 0.5 and (ab[1] as Rect2).position.y < sz.y * 0.4, "%s: abilities top-right" % label)
+		var r: Rect2 = ab[1]
+		assert_true(r.position.x >= (a["trait"] as Rect2).end.x - 0.5 if a.has("trait") else r.position.x > 0.0, "%s: abilities right of the trait" % label)
+		assert_true(r.end.x <= fp.position.x + 0.5 and r.end.y >= sz.y * 0.88, "%s: abilities bottom-centre" % label)
 		if a.has("class"):
 			assert_true((a["class"] as Rect2).end.x <= (ab[1] as Rect2).position.x + 0.5 or (ab[1] as Rect2).position.x > sz.x * 0.6,
 					"%s: the peek group stops before the abilities" % label)

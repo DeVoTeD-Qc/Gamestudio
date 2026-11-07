@@ -503,12 +503,16 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 		assert_true(match_node.get_tray().get_global_rect().grow(EPS).encloses(hand_node.get_global_rect()), "%s hand inside the tray" % label)
 		assert_false(hand_node.get_global_rect().intersects(match_node.get_board().get_global_rect()), "%s hand never covers the board" % label)
 	for i: int in cards.size():
+		if not (cards[i] as Control).visible:
+			continue  # kc-ipad-cards: a scrolling hand (small phones) hides the cards scrolled away
 		var card_rect: Rect2 = (cards[i] as Control).get_global_rect()
 		if (cards[i] as Control).theme_type_variation == &"HandCardSelected":
 			card_rect = card_rect.grow_side(SIDE_LEFT, -15.0).grow_side(SIDE_RIGHT, -15.0)
 		assert_true(hand_rect.encloses(card_rect), "%s hand card spills" % label)
 		# Grid: up to 7 cards never overlap (more overlap upward, keeping a full-width strip).
 		for j: int in range(i + 1, cards.size()):
+			if not (cards[j] as Control).visible:
+				continue
 			var other: Rect2 = (cards[j] as Control).get_global_rect()
 			if cards.size() <= 7:
 				assert_false(card_rect.grow(-EPS).intersects(other.grow(-EPS)), "%s hand cards %d / %d overlap" % [label, i, j])

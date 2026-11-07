@@ -61,7 +61,7 @@ func _run() -> void:
 			st.put_in_line(u, int(row[1]))
 	# Two calling cards in hand too (the starter is all Standard Issue).
 	for id: StringName in [&"marksman", &"gunner"]:
-		st.sides[0].hand.append(RulesCard.new(st.new_uid(), db.get_card(id), SynergyRules.LEVEL_TRAINED))
+		st.sides[0].hand.append(RulesCard.new(st.new_uid(), db.get_card(id)))
 	c.refresh()
 	await create_timer(2.0).timeout
 	await _frames(4)

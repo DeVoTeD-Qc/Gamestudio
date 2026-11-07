@@ -2,13 +2,14 @@
 # Purpose: Draws one 4:1 calling-card banner (board-and-cards-ux.md §3.2-3.3).
 #   kc-cards-impl: the head's C1+ board card (documentation/ux/card-design-options.html): the full
 #   calling-card art, uncropped and undimmed, with only what you need at rest:
-#     top-right    abilities (21 px class at the phone's 57 px banner) with a Recruit's padlocks
+#     bottom-centre abilities, as big as the stats (kc-ipad-cards; ABILITIES_BOTTOM, else top-right)
 #     bottom-right the FP reticle ring (team colour: teal yours, red the rival's; green when buffed)
 #                  and the Armor ballistic plate (grey both sides, amber when damaged, the number left)
-#     bottom-left  traits, 45% faint, lit with a glow while their set bonus is on
+#     bottom-left  the trait chip (one at most), as big as the stats, 45% faint, lit with a glow while
+#                  its set bonus is on
 #   Peek (desktop hover / touch hold, `peek`; always for hand cards, `full_info`; or Settings > Cards >
-#   "Always show all card info", `show_all`): cost hex -> level coin (R grey, T / V / E brass) ->
-#   weapon by name, top-left. Damaged: a thin amber bottom edge plus the corner crack. No spine, no
+#   "Always show all card info", `show_all`): the cost hex, top-left (no level coin, no weapon).
+#   Damaged: a thin amber bottom edge plus the corner crack. No spine, no
 #   bands, no serial plate. The synergy rail's highlight (`syn_focus`) shows the trait on every card,
 #   glows the matching cards and darkens the rest. See anatomy(); pieces drawn by CardLook.
 #   Kept: PLAN tag (your queued card), frontline keyline, Operator brass keyline, Elite keyline,
@@ -87,15 +88,26 @@ var cost_scale: float = 1.0
 var draw_stats: bool = true
 ## Ability icon size override (px; 0 = 20 x k). Hand cards use a smaller row so FP / Armor fit under it.
 var ability_px: float = 0.0
-## Narrow hand cards: the level coin and weapon pill go to the docked preview too.
+## Kept for callers (kc-ipad-cards: the level coin and weapon pill are gone).
 var peek_extras: bool = true
+## kc-ipad-cards: hand cards (BannerCard) draw the cost, trait and kind word themselves.
+var draw_peek: bool = true:
+	set(value):
+		draw_peek = value
+		if _overlay != null:
+			_overlay.queue_redraw()
+var show_trait: bool = true:
+	set(value):
+		show_trait = value
+		if _overlay != null:
+			_overlay.queue_redraw()
 ## Narrow hand cards (16:9 phones) leave the abilities to the docked preview (FP / Armor take the room).
 var show_abilities: bool = true:
 	set(value):
 		show_abilities = value
 		if _overlay != null:
 			_overlay.queue_redraw()
-## kc-cards-impl: hovered (desktop) / held (touch): shows the cost / level / weapon group.
+## kc-cards-impl: hovered (desktop) / held (touch): shows the cost hex.
 var peek: bool = false:
 	set(value):
 		if peek != value:
@@ -368,7 +380,7 @@ func _draw_incoming_back(r: Rect2) -> void:
 		x += step
 
 
-## True while the cost / level / weapon group shows: hovered or held (peek), a hand card (full_info),
+## True while the cost hex shows: hovered or held (peek), a hand card (full_info),
 ## or Settings > Cards > "Always show all card info" (show_all).
 func is_peeking() -> bool:
 	return peek or full_info or show_all
@@ -430,30 +442,15 @@ func _draw_overlay() -> void:
 	# Damaged: the corner crack (under the peek group) and a thin amber bottom edge.
 	if damaged:
 		CardLook.draw_crack(o, Vector2(3, 3) * k, 22.0 * k)
-	# Top-right (always): abilities, effects, Recruit padlocks, on one dark chip.
+	# kc-ipad-cards: abilities (bottom-centre, or top-right), as big as the stats, on one dark plate.
 	var abil: Array = an["abilities"] if show_abilities else []
 	if not abil.is_empty():
-		var first: Rect2 = abil[-1][1]
-		var last: Rect2 = abil[0][1]
-		_backing(o, Rect2(first.position - Vector2(2, 2) * k, Vector2(last.end.x - first.position.x, last.size.y) + Vector2(4, 4) * k), 3.0 * k)
+		var grp: Rect2 = abil[0][1]
+		for ab: Array in abil:
+			grp = grp.merge(ab[1])
+		_backing(o, grp.grow(2.0 * k), 3.0 * k)
 	for ab: Array in abil:
-		var kind: Variant = ab[0]
-		var rr: Rect2 = ab[1]
-		if kind is Array and kind[0] == &"locked":
-			StandardIssueLook.draw_locked_keyword(o, rr, String(kind[1]))
-		elif kind is Array:
-			SynergyGlyphs.draw_keyword_plate(o, rr, kind[1], bool(entry.get("kw_active", false)), side_c, mine)
-		elif kind == &"protector":
-			_draw_protector_glyph(o, rr)
-		elif kind == &"pierce":
-			SynergyGlyphs.draw_pierce_plate(o, rr, _col(&"accent"), not mine)
-		elif kind == &"bolt" or kind == &"bolt_more":
-			_draw_bolt(o, rr, kind == &"bolt_more")
-		elif kind == &"kw_pick":
-			_draw_plate_bg(o, rr)
-			CardLook.draw_pick_icon(o, rr.grow(-rr.size.x * 0.1), _col(&"accent"))
-		else:
-			_draw_plate_icon(o, rr, IconSheet.get_icon(kind), _col(&"accent"))
+		CardLook.draw_ability(o, ab[1], ab[0], _col(&"accent"), mine, bool(entry.get("kw_active", false)), side_c)
 	# Bottom-right (always): the FP reticle (team colour) and the Armor plate (grey; amber when damaged).
 	# kc-readability: hand cards (X1) draw these bigger across the banner and the name plate.
 	if entry.has("fp") and draw_stats:
@@ -469,7 +466,7 @@ func _draw_overlay() -> void:
 			_draw_cover_chip(o, cov, int(entry.get("cover", 0)), int(entry.get("cover_trend", 0)), m)
 	# Bottom-left: traits, 45% faint at rest, lit with a glow while their set bonus is on; under a rail
 	# highlight every card shows its trait at full and the matching cards ring it. The Operator: its dog tag.
-	if an.has("trait"):
+	if an.has("trait") and show_trait:
 		# kc-readability: a soft dark backing behind the trait chip too.
 		if op or not trait_list().is_empty():
 			_backing(o, (an["trait"] as Rect2).grow(2.0 * k), 3.0 * k)
@@ -480,22 +477,14 @@ func _draw_overlay() -> void:
 			for t: StringName in trait_list():
 				var focus: bool = syn_focus != &"" and t == syn_focus
 				CardLook.draw_trait(o, an["trait"], t, lit, focus, 1.0 if syn_focus != &"" else -1.0)
-	# Top-left (peek): cost hex -> level coin -> weapon by name.
-	if is_peeking():
-		# kc-readability: one soft dark backing behind the cost / level / weapon group.
+	# Top-left (peek): the cost hex on a soft dark backing (kc-ipad-cards: no level coin, no weapon).
+	if is_peeking() and draw_peek:
 		var grp: Rect2 = an["cost"]
-		for key: String in ["level", "class"]:
-			if an.has(key) and peek_extras:
-				grp = grp.merge(an[key]) if grp.has_area() else an[key]
 		if grp.has_area():
 			_backing(o, grp.grow(2.0 * k), 5.0 * k)
 		if lead <= 0.0 and (an["cost"] as Rect2).size.x > 0.0:
 			CardLook.draw_cost(o, an["cost"], str(entry.get("cost", "")), bool(entry.get("cant_pay", false)))
-		if an.has("level") and peek_extras:
-			CardLook.draw_level_coin(o, an["level"], int(entry.get("level", 1)))
-		if an.has("class") and peek_extras:
-			CardLook.draw_weapon_pill(o, an["class"], String(entry.get("cls", "")).to_upper())
-	if not entry.has("fp"):
+	if not entry.has("fp") and show_trait:
 		_draw_kind_word(o, an)
 	if show_name and mode in [Mode.UNIT, Mode.GHOST] and (an["name"] as Rect2).size.x > 0.0:
 		_draw_names(o, an)
@@ -524,56 +513,24 @@ func _draw_overlay() -> void:
 
 
 ## kc-cards-impl: the C1+ card anatomy (the head's pick, documentation/ux/card-design-options.html).
-## Sizes follow k = banner height / 57 (the phone board banner):
-##   top-left     (peek) cost hex 20k -> level coin 17k (R grey, T / V / E brass) -> weapon pill 18k
-##   top-right    (always) abilities 21k on one chip: Protector, keyword glyphs or the effect bolt,
-##                the neighbor keyword, a Recruit's padlocked keywords (the first one at the corner)
-##   bottom-left  (always) trait chips 20k (faint / lit); the Operator: its dog tag
-##   bottom-right (always) FP reticle 26k, then the Armor plate 25k at the corner (Cover chip left)
-## Keys: cost, level, class (the weapon pill), abilities [[kind, rect]], trait, fp, armor, cover,
-## name (empty: the board card has no name; hand cards put it in a plate under the banner), sub / mid
-## (a statless card's kind word), plate_y, band (0), k.
+## Sizes follow k = banner height / 57 (the phone board banner).
+## kc-ipad-cards (the head: "make sure ability icons and trait are big too along with the stats. Maybe
+## Ability should be bottom centered?"): the trait chip and the ability icons are as big as the FP
+## reticle (30k), each group on its own dark backing plate; no level coin, no weapon pill:
+##   top-left      (peek) cost hex 24k
+##   bottom-left   (always) the trait chip 30k (one trait at most); the Operator: its dog tag
+##   bottom-centre (ABILITIES_BOTTOM, the default) abilities 30k between the trait and the stats,
+##                 shrunk to fit; else top-right (the kc-cards-impl spot), right to left from the corner
+##   bottom-right  (always) FP reticle 30k, then the Armor plate 29k x 30k at the corner (Cover chip left)
+## Keys: cost, abilities [[kind, rect]], trait, fp, armor, cover, name (empty: the board card has no
+## name), sub / mid (a statless card's kind word), plate_y, band (0), k.
 static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = -1.0) -> Dictionary:
 	var op: bool = bool(e.get("operator", false))
 	var k: float = m["k"]
 	var out: Dictionary = {"plate_y": roundf(4.0 * k), "band": 0.0, "k": k}
-	# Top-left peek group.
-	var x: float = roundf(4.0 * k)
-	var y: float = roundf(3.0 * k)
-	# kc-readability: a bigger cost hex (24 at k = 1; cost_scale boosts it on hand cards).
-	var cs: float = roundf(24.0 * k * float(m.get("cost_scale", 1.0)))
-	var has_cost: bool = str(e.get("cost", "")) != "" and not op
-	if lead_px > 0.0:
-		out["cost"] = Rect2(x, y, lead_px - 2.0, cs)
-		x += lead_px
-	elif has_cost:
-		out["cost"] = Rect2(x, y, cs, cs)
-		x += cs + roundf(3.0 * k)
-	else:
-		out["cost"] = Rect2()
-	var lv: int = int(e.get("level", -1))
-	if not op and e.has("fp") and lv >= 0 and not StandardIssueLook.is_si(e):
-		var ls: float = roundf(17.0 * k)
-		out["level"] = Rect2(x, y + (cs - ls) * 0.5, ls, ls)
-		x += ls + roundf(3.0 * k)
-	var cls: String = String(e.get("cls", "")).to_upper()
-	if CLASS_ICONS.has(cls) and not op:
-		var ph: float = roundf(18.0 * k)
-		out["class"] = Rect2(x, y + (cs - ph) * 0.5, CardLook.weapon_pill_width(cls, ph), ph)
-	# Top-right abilities, right to left from the corner.
-	var kw: float = float(m["ability_px"]) if m.has("ability_px") else roundf(20.0 * k)
 	var gap: float = maxf(1.0, roundf(2.0 * k))
-	var kinds: Array = ability_kinds(e)
-	var kws: Array = []
-	var kx: float = sz.x - roundf(4.0 * k) - kw
-	var ky: float = 1.0 if m.has("ability_px") else roundf(4.0 * k)
-	for kind: Variant in kinds:
-		kws.append([kind, Rect2(kx, ky, kw, kw)])
-		kx -= kw + gap
-	out["abilities"] = kws
-	out["name"] = Rect2()
 	# Bottom-right: Armor at the corner, FP left of it.
-	# kc-readability: FP reticle 30 / Armor plate 29x30 at k = 1 (were 26 / 25x26): 20 px digits.
+	# kc-readability: FP reticle 30 / Armor plate 29x30 at k = 1: 20 px digits.
 	var aw: float = roundf(29.0 * k)
 	var ah: float = roundf(30.0 * k)
 	var fs: float = roundf(30.0 * k)
@@ -587,21 +544,63 @@ static func anatomy(sz: Vector2, m: Dictionary, e: Dictionary, lead_px: float = 
 		var cv: float = roundf(20.0 * k)
 		out["cover"] = Rect2(fp.position.x - gap - cv, fp.position.y + (fs - cv) * 0.5, cv, cv)
 		stat_x = (out["cover"] as Rect2).position.x
-	# Bottom-left: the trait chip (or the Operator's dog tag).
-	var ts: float = roundf(19.0 * k)
-	var tx: float = roundf(5.0 * k)
+	# Bottom-left: the trait chip (or the Operator's dog tag), as big as the FP reticle.
+	var ts: float = fs
+	var tx: float = roundf(4.0 * k)
 	if op or String(e.get("trait", "")) != "" or bool(e.get("reserve_trait", false)):
-		out["trait"] = Rect2(tx, sz.y - roundf(23.0 * k), ts, ts)
+		out["trait"] = Rect2(tx, bottom - ts, ts, ts)
 		tx += ts + gap
+	# Top-left peek group: the cost hex (kept above the bottom row's trait chip).
+	var x: float = roundf(4.0 * k)
+	var y: float = roundf(2.0 * k)
+	var cs: float = roundf(24.0 * k * float(m.get("cost_scale", 1.0)))
+	if out.has("trait"):
+		cs = minf(cs, maxf(8.0, bottom - ts - y - 1.0))
+	var has_cost: bool = str(e.get("cost", "")) != "" and not op
+	if lead_px > 0.0:
+		out["cost"] = Rect2(x, y, lead_px - 2.0, cs)
+	elif has_cost:
+		out["cost"] = Rect2(x, y, cs, cs)
+	else:
+		out["cost"] = Rect2()
+	# Abilities: as big as the stats (ability_px overrides), bottom-centre or top-right.
+	var kw: float = float(m["ability_px"]) if m.has("ability_px") else fs
+	var kinds: Array = ability_kinds(e)
+	var kws: Array = []
+	var n: int = kinds.size()
+	if bool(m.get("abilities_bottom", ABILITIES_BOTTOM)):
+		var left: float = tx + gap
+		var right: float = stat_x - 2.0 * gap
+		var room: float = maxf(0.0, right - left)
+		if n > 0 and n * kw + (n - 1) * gap > room:
+			kw = floorf(maxf(8.0, (room - (n - 1) * gap) / n))
+		var total: float = n * kw + maxf(0, n - 1) * gap
+		var kx0: float = left + maxf(0.0, (room - total) * 0.5)
+		for i: int in n:
+			kws.append([kinds[i], Rect2(kx0 + i * (kw + gap), bottom - kw, kw, kw)])
+	else:
+		var kx: float = sz.x - roundf(4.0 * k) - kw
+		var ky: float = roundf(2.0 * k)
+		for kind: Variant in kinds:
+			kws.append([kind, Rect2(kx, ky, kw, kw)])
+			kx -= kw + gap
+	out["abilities"] = kws
+	out["name"] = Rect2()
 	out["sub"] = Rect2(tx + 2.0, sz.y - roundf(3.0 * k) - fs, maxf(0.0, stat_x - tx - 6.0), fs)
-	var mid_top: float = roundf(4.0 * k) + kw + 1.0
+	var mid_top: float = cs + roundf(4.0 * k)
 	out["mid"] = Rect2(roundf(4.0 * k), mid_top, sz.x - roundf(8.0 * k), maxf(0.0, sz.y - roundf(3.0 * k) - fs - mid_top))
 	return out
 
 
+## kc-ipad-cards: ability icons bottom-centre (true, the recommendation) or top-right (false: the
+## kc-cards-impl spot). A static switch so screenshots can compare the two.
+static var ABILITIES_BOTTOM: bool = true
+
+
 ## The ability plates of an entry in order: [&"protector"?, keyword icon ids (max 2, 1 with a bolt),
-## &"bolt"?, [&"kw", keyword]?, [&"locked", name] x <= 2]. The Operator shows its keywords too.
+## &"bolt"?, [&"kw", keyword]?]. The Operator shows its keywords too.
 ## kc-cards-impl: no serial plate on cards (the Standard Issue frame says it; the inspector names it).
+## kc-ipad-cards: no locked (Recruit) keywords any more (kc-no-training).
 static func ability_kinds(e: Dictionary) -> Array:
 	var icons: Array = []
 	for kw: Dictionary in e.get("keywords", []):
@@ -619,11 +618,6 @@ static func ability_kinds(e: Dictionary) -> Array:
 		out.append(&"bolt_more" if icons.size() > 2 else &"bolt")
 	if String(e.get("kw", "")) != "":
 		out.append([&"kw", StringName(String(e["kw"]))])
-	var locked: Array = e.get("locked", [])
-	if not locked.is_empty():
-		var shown: Array = locked.slice(0, 1) + [locked[-1]] if locked.size() > 2 else locked
-		for name: Variant in shown:
-			out.append([&"locked", String(name)])
 	return out
 
 
@@ -734,38 +728,6 @@ func _draw_cover_chip(o: Control, rr: Rect2, value: int, trend: int, m: Dictiona
 	o.draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
 
 
-func _draw_plate_icon(o: Control, rr: Rect2, tex: Texture2D, tint: Color) -> void:
-	o.draw_rect(rr, Color(INK, 0.82))
-	o.draw_rect(rr, Color(1, 1, 1, 0.18), false, 1.0)
-	if tex != null:
-		o.draw_texture_rect(tex, rr.grow(-rr.size.x * 0.12), false, tint)
-
-
-func _draw_bolt(o: Control, rr: Rect2, more: bool) -> void:
-	o.draw_rect(rr, Color(INK, 0.82))
-	o.draw_rect(rr, Color(1, 1, 1, 0.18), false, 1.0)
-	var s: float = rr.size.x
-	var p: Vector2 = rr.position
-	var pts: PackedVector2Array = [p + Vector2(s * 0.58, s * 0.12), p + Vector2(s * 0.28, s * 0.55), p + Vector2(s * 0.48, s * 0.55),
-			p + Vector2(s * 0.38, s * 0.88), p + Vector2(s * 0.72, s * 0.42), p + Vector2(s * 0.52, s * 0.42)]
-	o.draw_colored_polygon(pts, _col(&"accent"))
-	if more:
-		o.draw_circle(p + Vector2(s * 0.85, s * 0.85), s * 0.1, _col(&"accent"))
-
-
-## Protector: an up-chevron over a bar ("takes the front").
-func _draw_protector_glyph(o: Control, rr: Rect2) -> void:
-	o.draw_rect(rr, Color(INK, 0.82))
-	o.draw_rect(rr, Color(1, 1, 1, 0.18), false, 1.0)
-	var s: float = rr.size.x
-	var p: Vector2 = rr.position
-	var up: bool = side == &"player"
-	var y0: float = s * (0.62 if up else 0.38)
-	var y1: float = s * (0.3 if up else 0.7)
-	o.draw_polyline(PackedVector2Array([p + Vector2(s * 0.22, y0), p + Vector2(s * 0.5, y1), p + Vector2(s * 0.78, y0)]), _col(&"accent"), 2.0)
-	o.draw_line(p + Vector2(s * 0.22, s * (0.8 if up else 0.2)), p + Vector2(s * 0.78, s * (0.8 if up else 0.2)), _col(&"accent"), 2.0)
-
-
 func _draw_dog_tag(o: Control, rr: Rect2) -> void:
 	var tag: Rect2 = Rect2(rr.position + Vector2(rr.size.x * 0.12, 0), Vector2(rr.size.x * 0.76, rr.size.y))
 	o.draw_rect(tag, Color("#1B1608"))
@@ -774,11 +736,6 @@ func _draw_dog_tag(o: Control, rr: Rect2) -> void:
 	for i: int in 3:
 		var y: float = tag.position.y + tag.size.y * (0.45 + i * 0.16)
 		o.draw_line(Vector2(tag.position.x + 3, y), Vector2(tag.end.x - 3, y), Color(BRASS, 0.8), 1.0)
-
-
-func _draw_plate_bg(o: Control, rr: Rect2) -> void:
-	o.draw_rect(rr, Color(INK, 0.82))
-	o.draw_rect(rr, Color(1, 1, 1, 0.18), false, 1.0)
 
 
 func _draw_tag(o: Control, text: String, c: Color, mine: bool, m: Dictionary) -> void:

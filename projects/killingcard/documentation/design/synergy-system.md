@@ -592,3 +592,12 @@ Rejected on the way: Rival Armor +2 or FP +1 (M5 21%), Rival Breachers for Rifle
 1. **Brawler 2/3 → 3/3.** (a) Approve: it stays a clear upgrade on the Trooper. (b) Keep 2/3 and give it a non-positional keyword instead (e.g. Cover 1; untested).
 2. **M3 is now easier than M4 for a solid player (74 vs 55%).** (a) Keep: it's the new player's hardest early match (47%) and the step after it is gentle. (b) Put the Rusher's 2 Flank Routes back in M3: solid 68.5%, but the new player drops to 37.5%.
 3. **Other placement-based unit text that the cut didn't name.** These are the Protector's slide to the front, the Anvil's "your other units here get +1 FP", and the Demolitions Expert's On Down "3 damage to the enemy point man here". (a) Keep them: they decide which column and who gets shot, not stats by row or neighbour. (b) Cut them too, for units with no position words at all (needs one more pass).
+
+## Removed (kc-no-training, 2026-11-07)
+
+*The head, after an iPad playtest: "Remove all the training thing." and "Make sure cards only have 1 trait at most."*
+
+- **Gone:** the per-copy levels of §5.2 (Recruit / Trained / Veteran / Elite), Promotion (`promotion_after_matches`, the Promotion offer), the Veteran / Elite stat bonuses (+1 Armor / +1 FP), the camo bands, Recruit squads (`RunMatchData.enemy_recruits`), the Recruit starter switch (`RunConfig.starter_recruits`) and twin training. Every copy plays its full chassis (keywords, effects, Pierce, arrives-front) from the moment it is in a deck.
+- **Kept:** traits and set bonuses (§4, §13), Doctrine, Retire / Regroup and the Honor Roll (entries no longer carry a level), the 15-card floor.
+- **One trait per copy:** a copy carries at most one trait (`SynergyRules.trait_at` returns one id; `SynergyRules.is_single_trait`). `CardData.validate` rejects a `card_trait` or trait option that names two traits; `ArtTraits.validate_map()` / `card_problems()` check that each art gives at most one trait; a save whose copy names two traits is refused.
+- Numbers after the removal: `onboarding-progression.md`, "Removed (kc-no-training)".

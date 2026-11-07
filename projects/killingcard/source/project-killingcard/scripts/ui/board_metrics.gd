@@ -8,7 +8,7 @@
 #   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57, strip 6..68, columns
 #     76 / 318 / 560, tray 800..1162 (kc-ui3: the Supply row grows to 64 px to hold the 3 killstreak
 #     tiles; the Operator card takes the grid's first cell). kc-ui4: hand cards are banner cards,
-#     2 columns of 177x73.
+#     2 columns (kc-ipad-cards: their height follows the hand's count, hand_fit()).
 #   16:9 phone (canvas 960x540): banners 208x52, tray 214 wide, killstreaks in their own row, a
 #     2-column hand of 103x78 banner cards (name in the middle band).
 #   Desktop 1440x900 (canvas 1280x800): banners 304x76, columns 86 / 410 / 734, tray 1050..1274,
@@ -109,14 +109,14 @@ static func _ks_rows(p: Dictionary, tray: Vector2) -> void:
 		p["supply_h"] = p["supply_h"] + 6.0 + p["ks_h"]
 
 
-## kc-cards-impl (the head's H1 + O2): the hand grid holds X1 cards (the C1+ banner at 4:1 plus a
+## kc-cards-impl (the head's H1 + O2): the hand grid holds X1 cards (the C1+ banner plus a
 ## name plate, X1_PLATE_H) between the Supply row and the Operator row. The Operator row at the
 ## bottom: the Operator card on the left, UNDO (icon) stacked over READY on the right (each
-## btn_h tall, >= 44 pt). The grid picks 1 or 2 columns, whichever gives the wider card while
-## HAND_SLOTS cards fit (1 column: HAND_SLOTS - 1, the 8th overlaps). Keys: card, hand_cols, grid
-## (the cards' rect), hand_rect (the HandArea's rect = the grid; the Operator card is placed below
-## it, in the Operator row), op_card, undo,
-## ready, op_h (tray-local).
+## btn_h tall, >= 44 pt); kc-ipad-cards: a narrow desktop / iPad tray stacks it (op_stacked).
+## kc-ipad-cards: the grid spans the tray; card / hand_cols are hand_fit() for a 7-card hand and
+## HandArea re-fits them to the real count. Keys: card, hand_cols, hand_min_h, grid (the cards'
+## rect), hand_rect (the HandArea's rect = the grid; the Operator card is placed below it, in the
+## Operator row), op_card, undo, ready, op_h, op_stacked (tray-local).
 const X1_PLATE_H: float = 26.0
 const X1_MIN_W: float = 80.0
 ## X1 cards are at least this tall (a 44 pt tap target on the smallest phone, the SE at 0.695 pt/px):
@@ -133,39 +133,101 @@ static func x1_size(w: float, min_h: float = X1_MIN_H) -> Vector2:
 static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
 	var gap: float = p["card_gap"]
 	var btn_h: float = p["btn_h"]
-	var op_h: float = 2.0 * btn_h + 6.0
+	var compact: bool = bool(p.get("compact", true))
+	# kc-ipad-cards (the head's iPad playtest: "fix the hand not using the entire space", READY read
+	# "READ"): a narrow, tall tray (desktop / iPad sizes, < STACK_TRAY_W wide) stacks the Operator row:
+	# the Operator card across the tray, then UNDO (icon) beside a wide READY. A wide tray (the phone)
+	# keeps the Operator card beside UNDO over READY.
+	var stacked: bool = not compact and tray.x < STACK_TRAY_W
+	var op_card_h: float = clampf(roundf(tray.x * 0.55), 110.0, 150.0)
+	var op_h: float = (op_card_h + 6.0 + btn_h) if stacked else (2.0 * btn_h + 6.0)
 	var grid_top: float = p["supply_h"] + 8.0
 	var grid_h: float = tray.y - grid_top - op_h - 8.0
-	var best_w: float = 0.0
-	var best_cols: int = 2
-	# Room for the selected card's lift (HandArea.SELECTED_LIFT) at the top of the grid.
-	var room_h: float = grid_h - 6.0
-	var min_h: float = X1_MIN_H if bool(p.get("compact", true)) else X1_MIN_H_DESKTOP
-	for cols: int in [2, 1, 3]:
-		var cell_w: float = floorf((tray.x - (cols - 1) * gap) / cols)
-		var fit_rows: int = ceili(float(HAND_SLOTS) / cols) if cols != 1 else HAND_SLOTS - 1
-		var h_max: float = floorf((room_h - (fit_rows - 1) * gap) / fit_rows)
-		var w: float = minf(cell_w, floorf((h_max - X1_PLATE_H) * 4.0))
-		var h: float = x1_size(w, min_h).y
-		if w >= X1_MIN_W and fit_rows * h + (fit_rows - 1) * gap <= room_h and w > best_w:
-			best_w = w
-			best_cols = cols
-	if best_w <= 0.0:
-		# A short tray: two columns at the cell width; the rows overlap upward a little.
-		best_cols = 2
-		best_w = floorf((tray.x - gap) / 2.0)
-	var card: Vector2 = x1_size(best_w, min_h)
-	var grid_w: float = best_cols * best_w + (best_cols - 1) * gap
-	p["card"] = card
-	p["hand_cols"] = best_cols
-	p["grid"] = Rect2(floorf((tray.x - grid_w) * 0.5), grid_top, grid_w, grid_h)
+	var min_h: float = X1_MIN_H if compact else X1_MIN_H_DESKTOP
+	# The grid fills the tray's width; HandArea re-fits the cards to the hand's count (hand_fit()).
+	var fit: Dictionary = hand_fit(Vector2(tray.x, grid_h), HAND_SLOTS - 1, gap, min_h)
+	p["card"] = fit["card"]
+	p["hand_cols"] = fit["cols"]
+	p["hand_min_h"] = min_h
+	p["grid"] = Rect2(0, grid_top, tray.x, grid_h)
 	p["op_h"] = op_h
+	p["op_stacked"] = stacked
 	p["hand_rect"] = p["grid"]
-	var bcol: float = 140.0 if bool(p.get("compact", true)) else 132.0
+	if stacked:
+		var uw: float = clampf(roundf(tray.x * 0.3), 64.0, 96.0)
+		p["op_card"] = Rect2(0, tray.y - op_h, tray.x, op_card_h)
+		p["undo"] = Rect2(0, tray.y - btn_h, uw, btn_h)
+		p["ready"] = Rect2(uw + 6.0, tray.y - btn_h, tray.x - uw - 6.0, btn_h)
+		return
+	var bcol: float = 140.0 if compact else 132.0
 	bcol = minf(bcol, floorf(tray.x * 0.52))
 	p["op_card"] = Rect2(0, tray.y - op_h, tray.x - bcol - 8.0, op_h)
 	p["undo"] = Rect2(tray.x - bcol, tray.y - op_h, bcol, btn_h)
 	p["ready"] = Rect2(tray.x - bcol, tray.y - btn_h, bcol, btn_h)
+
+
+## kc-ipad-cards: trays narrower than this (desktop / iPad: 224 px) stack the Operator row.
+const STACK_TRAY_W: float = 300.0
+## The hand never sizes its cards for fewer than this many (one or two cards stay a sensible size).
+const HAND_FIT_MIN_N: int = 4
+
+
+## kc-ipad-cards: the X1 card size and columns for `n` hand cards in a grid of size `grid`: the
+## layout whose cards get the biggest badges (BannerCard.badge_px) wins, then the one covering more of
+## the grid. Cards are as tall as the rows allow (the banner up to 2.4:1), so the hand fills the tray.
+## When no layout reaches READABLE_PX badges (13 pt on the smallest phone), the hand SCROLLS: one
+## column (two when wide enough) of readable cards, `visible` of them at a time.
+## Returns {card: Vector2, cols: int, scroll: bool, visible: int, s: float}.
+static func hand_fit(grid: Vector2, n: int, gap: float, min_h: float) -> Dictionary:
+	var count: int = maxi(n, HAND_FIT_MIN_N)
+	var room: float = grid.y - 6.0  # the selected card's lift (HandArea.SELECTED_LIFT)
+	var best: Dictionary = {}
+	for cols: int in [1, 2, 3]:
+		var w: float = floorf((grid.x - (cols - 1) * gap) / cols)
+		if w < X1_MIN_W:
+			continue
+		var rows: int = ceili(float(count) / cols)
+		var h: float = floorf((room - (rows - 1) * gap) / rows)
+		h = minf(h, x1_max_h(w))
+		if h < maxf(min_h, x1_min_h(w)):
+			continue
+		var c: Vector2 = Vector2(w, h)
+		var s: float = BannerCard.badge_px(c)
+		var score: float = BannerCard.fit_score(c)
+		var cover: float = minf(1.0, float(mini(n, rows * cols)) * w * h / maxf(1.0, grid.x * room))
+		if best.is_empty() or score > float(best["score"]) + 0.5 or (absf(score - float(best["score"])) <= 0.5 and cover > float(best["cover"])):
+			best = {"card": c, "cols": cols, "scroll": false, "visible": n, "s": s, "cover": cover, "score": score}
+	if not best.is_empty() and float(best["score"]) >= BannerCard.READABLE_PX:
+		return best
+	# Scroll: the shortest card that reaches READABLE_PX, in the widest column(s) that allow it.
+	for cols: int in [2, 1]:
+		var w2: float = floorf((grid.x - (cols - 1) * gap) / cols)
+		if w2 < X1_MIN_W:
+			continue
+		var h2: float = maxf(min_h, x1_min_h(w2))
+		while h2 <= x1_max_h(w2) and BannerCard.fit_score(Vector2(w2, h2)) < BannerCard.READABLE_PX:
+			h2 += 1.0
+		if h2 > x1_max_h(w2) or h2 > room:
+			continue
+		var per_col: int = maxi(1, int(floorf((room + gap) / (h2 + gap))))
+		var vis: int = per_col * cols
+		if vis >= n:
+			return {"card": Vector2(w2, h2), "cols": cols, "scroll": false, "visible": n, "s": BannerCard.badge_px(Vector2(w2, h2)), "cover": 0.0}
+		return {"card": Vector2(w2, h2), "cols": cols, "scroll": true, "visible": vis, "s": BannerCard.badge_px(Vector2(w2, h2)), "cover": 0.0}
+	if best.is_empty():
+		var w3: float = floorf((grid.x - gap) / 2.0)
+		return {"card": x1_size(w3, min_h), "cols": 2, "scroll": false, "visible": n, "s": BannerCard.badge_px(x1_size(w3, min_h)), "cover": 0.0}
+	return best
+
+
+## The shortest an X1 card of width w gets (its banner at most 6:1: still a banner, not a strip).
+static func x1_min_h(w: float) -> float:
+	return ceilf((w - 4.0) / BannerCard.BANNER_MIN_RATIO + BannerCard.PLATE_H + 4.0)
+
+
+## The tallest an X1 card of width w gets (its banner at most 2.4:1, plus the name plate and inset).
+static func x1_max_h(w: float) -> float:
+	return floorf((w - 4.0) / BannerCard.BANNER_MAX_RATIO + BannerCard.PLATE_H + 4.0)
 
 
 ## Column-local y of a row slot. side &"enemy": row 0 (front) is nearest the objective (above it).
