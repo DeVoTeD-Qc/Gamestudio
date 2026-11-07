@@ -113,6 +113,15 @@ func _run() -> void:
 		await _frames(4)
 		await _shot("09_rest_picked")
 		await _close(rr)
+	if _want("leave"):
+		RunV2Views.clear_overrides()
+		RunV2Views.preview_event({"id": &"memorial", "title": "Memorial Wall", "scene": "Names in marker on a blast wall, someone's tags hung on a nail.",
+				"options": [{"index": 0, "label": "PAY RESPECTS", "result": "+1 ticket (max 3).", "ok": false, "reason": "Tickets are full"},
+					{"index": 1, "label": "CARRY THEIR TAGS", "result": "Copy one calling card in your deck (same trait).", "ok": false, "reason": "No calling card in your deck"}]})
+		var le: Control = await _open("res://scenes/run/Event.tscn")
+		await create_timer(0.5).timeout
+		await _shot("19_event_leave")
+		await _close(le)
 	RunV2Views.clear_overrides()
 	if _want("loadout"):
 		var lo: Control = await _open("res://scenes/run/Loadout.tscn")

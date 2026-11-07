@@ -127,7 +127,9 @@ func _build() -> void:
 		var row: Dictionary = _row_for(int(indices[0]))
 		(_tiles[picked] as PickTile).set_selected(true, "PICKED: %s" % String(row.get("name", "card")).to_upper())
 		_confirm.disabled = false)
-	if not _tiles.is_empty():
+	if leave_only or done:
+		_confirm.grab_focus.call_deferred()
+	elif not _tiles.is_empty():
 		_tiles[0].grab_focus.call_deferred()
 
 
