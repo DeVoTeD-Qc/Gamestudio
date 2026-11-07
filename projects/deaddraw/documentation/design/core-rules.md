@@ -132,7 +132,7 @@ Every deck has `4 + 3k` cards, so the last normal street always leaves exactly o
 
 A run is **3 districts in a fixed order**: Maple Row, then Downtown, then St. Agnes Hospital. The city map shows the 3 districts as nodes on one path, each with its Finale visible. Clearing St. Agnes **wins the run**.
 
-- Average run (sim): **about 37 streets** (about 7 of them retreats), so roughly **8-10 minutes** at 12-15 seconds per street. A single district takes about 3 minutes.
+- Average run (sim): **about 37 streets** (7-9 of them retreats), so roughly **8-10 minutes** at 12-15 seconds per street. A single district takes about 3 minutes.
 
 ### 2.2 Safehouse (between districts)
 
@@ -163,7 +163,7 @@ After clearing districts 1 and 2:
 | **Second Wind** | Once per run, when you would drop to 0 HP, you stay at 1 HP instead. | Unlock |
 | **Tripwire** | The street right after a Retreat starts with 2 Cover. | Unlock |
 
-Measured single-perk value (sim, Rosa, perk taken at the first safehouse, no other perks): no perk 11.5% run win; Thick Jacket +8, Axe in the Trunk +10, Field Kit +9, Knuckle Wraps +13, Sandbags +7, Scrounger +6, Second Wind +9, Tripwire +13 points. They are all within about 2x of each other, and none is a must-pick.
+Measured single-perk value (sim, Rosa, perk taken at the first safehouse, no other perks; measured before the switch to bottom-of-deck retreat, so treat it as relative): no perk 11.5% run win; Thick Jacket +8, Axe in the Trunk +10, Field Kit +9, Knuckle Wraps +13, Sandbags +7, Scrounger +6, Second Wind +9, Tripwire +13 points. They are all within about 2x of each other, and none is a must-pick.
 
 ### 2.5 Meta unlocks (v1, milestone-based, no currency)
 
@@ -210,14 +210,15 @@ python3 projects/deaddraw/tools/sim_deaddraw.py --json
 
 **AI (greedy, one street of lookahead):** on each street it tries every ordered choice of 3 cards and every legal weapon/bare and equip/scrap option, then scores the resulting state as `HP + 0.35 x the damage the weapon can still absorb against the zombies left in the deck - 0.5 x the Holdover's zombie strength + small credit for a medkit or weapon Holdover`. From the last 10 cards it also adds a penalty for how badly it would do against the face-up Finale. It Retreats when that scores better (retreated cards are valued like Holdovers, since they come back before the Finale). Theo also gets his resolve-1-then-retreat option. It picks perks from a fixed priority list. Weights are in `AI` in the script. I swept them (retreat cost, weapon weight, horizon) and kept the best-performing set, so it is a competent player, not a perfect one.
 
-**Results (1500 runs per row, seed 7):**
+**Results (1500 runs per row, seed 7, final CONFIG):**
 
 | Survivor | Core-loop win (clear Maple Row) | Clear D1 in run | Clear D2 in run | **Run win (full pool)** | **Run win (starter pool)** | Run win (no perks) | HP left on a win | Streets / run | Retreats / run |
 |---|---|---|---|---|---|---|---|---|---|
-| Rosa | 90.8% | 89.2% | 74.1% | **40.3%** | **38.3%** | 14.9% | 6.5 | 37.7 | 7.0 |
-| Imani | 86.1% | 86.7% | 64.6% | **32.5%** | **31.9%** | 9.3% | 5.9 | 36.1 | 7.0 |
-| Theo | 90.5% | 90.0% | 66.8% | **35.5%** | (33.3%) | 11.6% | 6.5 | 38.1 | 8.8 |
+| Rosa | 84.9% | 85.8% | 69.5% | **35.4%** | **34.9%** | 11.5% | 5.8 | 36.4 | 6.7 |
+| Imani | 91.1% | 89.3% | 72.3% | **41.7%** | **40.7%** | 14.4% | 6.5 | 37.4 | 6.9 |
+| Theo | 93.7% | 92.8% | 71.2% | **38.3%** | (38.5%) | 10.8% | 7.3 | 39.3 | 9.0 |
 
+Rules: bottom-of-deck retreat, Triage +1 heal, Theo 24 HP (CONFIG as of the retune).
 Sampling error is about +/-2.5 points per figure.
 
 - **Core-loop win** = clear Maple Row from a fresh start.
@@ -225,9 +226,9 @@ Sampling error is about +/-2.5 points per figure.
 - **No perks** = the same run with no safehouse picks. It shows how much the perk layer carries.
 
 **Reading the numbers:**
-- A competent first run (Rosa or Imani, starter pool) lands in the 30-45% target band. A real first-time human will play worse than the AI; we expect roughly 15-25% in playtests.
-- Maple Row is deliberately gentle (about 85-90%) so players learn the rules and nearly always see a safehouse. The run is decided in Downtown and St. Agnes.
-- Perks are worth roughly 20-25 points of run win, which means the safehouse choice matters without any single perk being mandatory.
+- Every survivor's starter-pool run win lands in the 30-42% band (35-41%). A real first-time human will play worse than the AI; we expect roughly 15-25% in playtests.
+- Maple Row is deliberately gentle (about 85-94%) so players learn the rules and nearly always see a safehouse. The run is decided in Downtown and St. Agnes.
+- Perks are worth roughly 24-28 points of run win, which means the safehouse choice matters without any single perk being mandatory.
 
 **Tuning history (for the record):** the first pass, with Scoundrel-like weights (forced equip, retreat to the bottom of the deck, harder decks, 6 HP safehouse heal), gave about 0-1% run win and an 8-23% core-loop win (12% or less run win even after the AI fixes). Changes in order of impact:
 1. Retreat shuffles the cards back in instead of putting them on the bottom. (The studio head later chose the bottom version; see item 6.)
