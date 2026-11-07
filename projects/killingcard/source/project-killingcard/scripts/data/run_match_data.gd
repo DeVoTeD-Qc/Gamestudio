@@ -29,7 +29,11 @@ extends Resource
 ## BossRules id: &"reinforcements" / &"dug_in" / &"horde".
 @export var boss_rule: StringName = &""
 @export var boss_rule_name: String = ""
+## "{from}" is replaced by the round the rule starts (RunConfig.meridian_supply_from / choir_from_round;
+## BossRules.format_text), so the printed number always matches the rule.
 @export_multiline var boss_rule_text: String = ""
+## One line of advice for the boss plate's inspect view ("{from}" as above).
+@export_multiline var boss_tip: String = ""
 ## The card the rule uses: Dug In's Field (Mortar Pit), Horde's token (Shambler).
 @export var boss_card: CardData = null
 ## Profile unlock of this boss (RunProfile.BOSS_UNLOCKS keys; &"" = from the start).

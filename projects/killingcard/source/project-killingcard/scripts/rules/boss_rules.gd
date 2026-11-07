@@ -67,6 +67,21 @@ static func on_briefing(state) -> void:
 			"uid": u.uid, "zone": state.zone_name(best), "what": "Horde: a Shambler joins column %s" % "ABC"[best]})
 
 
+## The round `rule` starts in this config (0 = from the start).
+static func start_round(cfg: RunConfig, rule: StringName) -> int:
+	match rule:
+		REINFORCEMENTS:
+			return cfg.meridian_supply_from
+		HORDE:
+			return cfg.choir_from_round
+	return 0
+
+
+## A boss text with "{from}" replaced by the round its rule starts (player-facing strings never hard-code it).
+static func format_text(cfg: RunConfig, rule: StringName, text: String) -> String:
+	return text.replace("{from}", str(start_round(cfg, rule)))
+
+
 ## True while the rule is in effect this round (for the plate's lit state).
 static func active(state) -> bool:
 	match state.boss_rule:
@@ -83,7 +98,7 @@ static func active(state) -> bool:
 static func note(state) -> String:
 	match state.boss_rule:
 		REINFORCEMENTS:
-			return "From round %d" % state.config.meridian_supply_from
+			return "From round %d" % start_round(state.config, REINFORCEMENTS)
 		HORDE:
 			return "From round %d" % state.config.choir_from_round
 		DUG_IN:

@@ -125,7 +125,8 @@ crew_label = "Boss crew"
 boss_id = &"meridian"
 boss_rule = &"reinforcements"
 boss_rule_name = "Reinforcements"
-boss_rule_text = "From round 5, the boss gains 1 extra Supply every round."
+boss_rule_text = "From round {from}, the boss gains 1 extra Supply every round."
+boss_tip = "Win the Supply race before round {from}, or hold out."
 unlock = &""
 
 [sub_resource type="Resource" id="Resource_bprime"]
@@ -142,6 +143,7 @@ boss_id = &"prime"
 boss_rule = &"dug_in"
 boss_rule_name = "Dug In"
 boss_rule_text = "The boss starts the match with a Mortar Pit in every column. Take a column to tear its pit down."
+boss_tip = "Take a column to tear its pit down (Overrun)."
 boss_card = ExtResource("36_ggcg5")
 unlock = &"first_run_done"
 
@@ -158,7 +160,8 @@ crew_label = "Boss crew"
 boss_id = &"choir"
 boss_rule = &"horde"
 boss_rule_name = "Horde"
-boss_rule_text = "From round 2, a 1/2 Shambler joins the back of the boss's emptiest column every round. Shamblers don't hold ground; Pick and Flank ignore them."
+boss_rule_text = "From round {from}, a 1/2 Shambler joins the back of the boss's emptiest column every round. Shamblers don't hold ground; Pick and Flank ignore them."
+boss_tip = "Fields and Pick still reach the real crew behind the Shamblers."
 boss_card = ExtResource("53_shamb")
 unlock = &"first_boss_win"
 

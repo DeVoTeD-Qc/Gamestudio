@@ -550,7 +550,7 @@ func _on_run_ended() -> void:
 	for b: RunMatchData in _config().bosses:
 		if b != null:
 			bosses.append({"id": b.boss_id, "name": b.squad.display_name if b.squad != null else "", "unlock": b.unlock,
-					"text": b.boss_rule_name + ": " + b.boss_rule_text})
+					"text": b.boss_rule_name + ": " + BossRules.format_text(_config(), b.boss_rule, b.boss_rule_text)})
 	var res: Dictionary = RunProfile.record_run_end(profile(), run, ops, bosses)
 	_save_profile(res["profile"])
 	var items: Array[Dictionary] = []

@@ -1405,7 +1405,8 @@ func boss_view() -> Dictionary:
 	for c: CardData in b.deck_for_squad():
 		deck_ids.append(c.id)
 	return {"id": b.boss_id, "name": b.squad.display_name if b.squad != null else "", "rule_id": b.boss_rule,
-			"rule_name": b.boss_rule_name, "rule_text": b.boss_rule_text,
+			"rule_name": b.boss_rule_name, "rule_text": BossRules.format_text(config, b.boss_rule, b.boss_rule_text),
+			"tip": BossRules.format_text(config, b.boss_rule, b.boss_tip), "start_round": BossRules.start_round(config, b.boss_rule),
 			"crew": b.squad.display_name if b.squad != null else "", "mode": _mode_id(b.mode), "mode_name": _mode_name(b.mode),
 			"armor_bonus": b.enemy_armor_bonus, "deck": deck_ids}
 
@@ -1617,6 +1618,7 @@ func configure_match(m: MatchState) -> void:
 			m.boss_rule = b.boss_rule
 			m.boss_rule_name = b.boss_rule_name
 			m.boss_rule_text = b.boss_rule_text
+			m.boss_tip = b.boss_tip
 			m.boss_card = b.boss_card
 			m.boss_name = b.squad.display_name if b.squad != null else ""
 

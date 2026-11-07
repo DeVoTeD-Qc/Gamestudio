@@ -130,7 +130,7 @@ Actions (each `-> String`): `shop_buy(slot)`, `shop_buy_perk(index)`, `shop_must
 - `ITEM_USED` / `ITEM_REVEALED` events of an ability carry `ability: true` (log: "Kestrel: Dig In, column B").
 
 ### Boss
-- `m.boss_view() -> Dictionary` (`{}` outside boss fights): `{id, rule, name, rule_name, text, active: bool (in effect this round), note: String ("From round 4")}`.
+- `m.boss_view() -> Dictionary` (`{}` outside boss fights): `{id, rule, name, rule_name, text, rule_text, tip, start_round, active: bool (in effect this round), note: String ("From round 5")}`.
 - Event `RulesEvent.BOSS_RULE_TRIGGERED {rule, side, amount?, uid?, zone?, what}` (Reinforcements Supply, Horde Shambler, Dug In pits at the start).
 - Shamblers are ordinary units (`card_id = &"shambler"`, a token: no control, Pick / Flank ignore it). Prime's Mortar Pits are ordinary enemy Fields.
 
@@ -148,3 +148,6 @@ Actions (each `-> String`): `shop_buy(slot)`, `shop_buy_perk(index)`, `shop_must
 
 ## 9. Card text changes (AB1)
 - Breach and Clear: "2 damage to every enemy unit in a column." (no Close bonus). `scripts/ui/card_samples.gd` still has the old line (UI-owned file).
+
+
+**Boss strings (kc-v2-tune):** `rule_text`, `tip` and `note` are built from RunConfig (`meridian_supply_from` = 5, `choir_from_round` = 2); show them as given and never hard-code a round. `RunV2Views.BOSSES` (UI) still carries an old "round 4" fallback that the rules views now always override.

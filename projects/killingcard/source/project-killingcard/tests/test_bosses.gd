@@ -78,6 +78,34 @@ func test_horde_shamblers_from_round_2_in_the_emptiest_column() -> void:
 	assert_true(m.sides[P].eliminations >= 1, "its kill is credited")
 
 
+## kc-v2-tune: every player-facing boss string reads its round from the config (no hard-coded "round 4").
+func test_boss_texts_follow_the_rule_numbers() -> void:
+	var cfg: RunConfig = (_shipped()).duplicate(false) as RunConfig
+	for from: int in [5, 6]:
+		cfg.meridian_supply_from = from
+		var r: RunProgress = RunProgress.create_map_run(cfg, 3, {"boss": &"meridian"})
+		var bv: Dictionary = r.boss_view()
+		var want: String = "round %d" % from
+		assert_true(String(bv["rule_text"]).contains(want) and String(bv["tip"]).contains(want), "run boss view says %s" % want)
+		assert_eq(int(bv["start_round"]), from, "start_round")
+		for k: String in ["rule_text", "tip"]:
+			assert_false(String(bv[k]).contains("{"), "no placeholder left")
+		var m: MatchState = MatchState.new(cfg, null, F.setup(), F.setup(), 1, null)
+		m.boss_rule = BossRules.REINFORCEMENTS
+		var b: RunMatchData = cfg.bosses[0]
+		m.boss_rule_text = b.boss_rule_text
+		m.boss_tip = b.boss_tip
+		m.start_match()
+		var mv: Dictionary = m.boss_view()
+		for k2: String in ["text", "rule_text", "tip", "note"]:
+			assert_true(String(mv[k2]).contains(want), "match boss %s says %s" % [k2, want])
+	for b2: RunMatchData in _shipped().bosses:
+		assert_false(b2.boss_rule_text.contains("round 4") or b2.boss_tip.contains("round 4"), "%s: no hard-coded round" % b2.boss_id)
+		assert_true(b2.boss_tip != "", "%s has a tip" % b2.boss_id)
+	var choir: Dictionary = RunProgress.create_map_run(_shipped(), 3, {"boss": &"choir"}).boss_view()
+	assert_true(String(choir["rule_text"]).begins_with("From round 2,"), "the Choir's round comes from choir_from_round")
+
+
 func test_boss_data_in_the_config() -> void:
 	var cfg: RunConfig = load("res://data/run_config.tres")
 	assert_true(cfg.run_map, "the shipped config is a map run")

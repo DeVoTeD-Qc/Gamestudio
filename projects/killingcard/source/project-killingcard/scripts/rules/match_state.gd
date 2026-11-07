@@ -102,6 +102,7 @@ var boss_id: StringName = &""
 var boss_rule: StringName = &""
 var boss_rule_name: String = ""
 var boss_rule_text: String = ""
+var boss_tip: String = ""
 var boss_name: String = ""
 ## The card the rule uses (Dug In: Mortar Pit, Horde: Shambler).
 var boss_card: CardData = null
@@ -1722,7 +1723,10 @@ func boss_view() -> Dictionary:
 	if boss_rule == &"":
 		return {}
 	return {"id": boss_id, "rule": boss_rule, "name": boss_name, "rule_name": boss_rule_name,
-			"text": boss_rule_text, "active": BossRules.active(self), "note": BossRules.note(self)}
+			"text": BossRules.format_text(config, boss_rule, boss_rule_text),
+			"rule_text": BossRules.format_text(config, boss_rule, boss_rule_text),
+			"tip": BossRules.format_text(config, boss_rule, boss_tip), "start_round": BossRules.start_round(config, boss_rule),
+			"active": BossRules.active(self), "note": BossRules.note(self)}
 
 
 # =============================================================================
