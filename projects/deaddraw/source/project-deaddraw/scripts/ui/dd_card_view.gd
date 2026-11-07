@@ -58,7 +58,7 @@ func setup(spec: Dictionary) -> DDCardView:
 		_box.add_child(bl)
 	var title: String = str(spec.get("title", ""))
 	if title != "":
-		var tt: Label = DDUi.label(title, DDUi.FONT_M - (2 if compact else 0), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+		var tt: Label = DDUi.label(title, DDUi.FONT_M - (6 if compact else 0), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
 		_box.add_child(tt)
 	for ln: Variant in spec.get("lines", []):
 		var arr: Array = ln
