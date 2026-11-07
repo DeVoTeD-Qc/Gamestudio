@@ -4,6 +4,9 @@
 #   Milestones and what they unlock come from balance.json extra_rules.unlocks:
 #     "maple_row" / "downtown" / ... = first clear of that district id, "win" = win a run.
 #     Values: "perk:<id>", "survivor:<id>", "badge" (Survivor's Mark on the survivor played).
+#   dd-feel: also the player's Settings (data.settings, see SETTING_DEFAULTS): master / SFX volume
+#   (linear 0..1), screen shake, reduce motion (+ whether the player chose it, else it follows the
+#   browser's prefers-reduced-motion).
 # Dependencies: DDBalance.
 # Author: Mechanics Developer Agent
 class_name DDProfile
@@ -11,6 +14,9 @@ extends RefCounted
 
 const DEFAULT_PATH: String = "user://deaddraw_profile.json"
 const VERSION: int = 1
+## dd-feel: Settings keys and their defaults (types are enforced on load and on set).
+const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "screen_shake": true,
+	"reduce_motion": false, "motion_chosen": false}
 
 var path: String = DEFAULT_PATH
 var bal: DDBalance
@@ -25,7 +31,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "badges": {}, "runs": 0, "wins": 0}
+		"best": {}, "badges": {}, "runs": 0, "wins": 0, "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -36,9 +42,44 @@ func load_profile() -> bool:
 	if not parsed is Dictionary:
 		return false
 	for k: String in data:
+		if k == "settings":
+			continue
 		if (parsed as Dictionary).has(k):
 			data[k] = parsed[k]
+	var saved: Variant = (parsed as Dictionary).get("settings", {})
+	if saved is Dictionary:
+		for k: String in SETTING_DEFAULTS:
+			if (saved as Dictionary).has(k):
+				_put_setting(k, saved[k])
 	return true
+
+
+# ---------------------------------------------------------------- settings (dd-feel)
+## A setting's value (its default when unknown or never set).
+func setting(key: String) -> Variant:
+	return (data["settings"] as Dictionary).get(key, SETTING_DEFAULTS.get(key))
+
+
+## Sets a setting (volumes clamped to 0..1, bools coerced) and saves. False for an unknown key.
+func set_setting(key: String, value: Variant) -> bool:
+	if not SETTING_DEFAULTS.has(key):
+		push_warning("DDProfile: unknown setting %s" % key)
+		return false
+	_put_setting(key, value)
+	if key == "reduce_motion":
+		(data["settings"] as Dictionary)["motion_chosen"] = true
+	save()
+	return true
+
+
+func _put_setting(key: String, value: Variant) -> void:
+	var d: Variant = SETTING_DEFAULTS[key]
+	var v: Variant
+	if d is bool:
+		v = bool(value)
+	else:
+		v = clampf(float(value), 0.0, 1.0)
+	(data["settings"] as Dictionary)[key] = v
 
 
 func save() -> bool:

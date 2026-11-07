@@ -2,6 +2,10 @@
 # Purpose: One tappable, inspectable card tile (street cards, weapon slot, deck counter, finale,
 #   perks, survivors, unlocks). Left click / tap emits `tapped`; right click or a long press
 #   (touch is emulated as the left mouse button) emits `inspected` with the zoom payload.
+#   dd-feel: spec "art" (a Texture2D from dd_art.gd) shows card art behind the text under a scrim
+#   in the type colour; the big number and title get a dark outline so they stay the main read.
+#   Without art the tile looks exactly as before. big_label / line_labels / art_rect are exposed
+#   for the feedback animations in main.gd.
 # Dependencies: DDUi.
 # Author: Mechanics Developer Agent
 class_name DDCardView
@@ -25,6 +29,11 @@ var _press_pos: Vector2 = Vector2.ZERO
 var _box: VBoxContainer
 var _selected: bool = false
 var _dim: bool = false
+## dd-feel: nodes the feedback animations touch (null / empty when the spec has none).
+var big_label: Label = null
+var line_labels: Array[Label] = []
+var art_rect: TextureRect = null
+var has_art: bool = false
 
 
 ## spec keys: kind, tag (top-left small), badge (top-right), big, title, lines: [[text, color]...],
@@ -36,6 +45,19 @@ func setup(spec: Dictionary) -> DDCardView:
 	_dim = bool(spec.get("dim", false))
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var compact: bool = bool(spec.get("compact", false))
+	var art: Variant = spec.get("art", null)
+	has_art = art is Texture2D
+	if has_art:
+		art_rect = TextureRect.new()
+		art_rect.texture = art
+		art_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art_rect.clip_contents = true
+		art_rect.custom_minimum_size = Vector2.ZERO
+		add_child(art_rect)
+		var scrim: ColorRect = ColorRect.new()
+		scrim.color = Color(DDUi.card_bg(kind), 0.42)
+		add_child(scrim)
 	_box = DDUi.vbox(2 if compact else 4)
 	add_child(_box)
 	var top: HBoxContainer = DDUi.hbox(4)
@@ -55,19 +77,32 @@ func setup(spec: Dictionary) -> DDCardView:
 		var bl: Label = DDUi.label(big, int(spec.get("big_size", DDUi.BIG_NUMBER)), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 		bl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		if has_art:
+			_outline(bl, 12)
+		big_label = bl
 		_box.add_child(bl)
 	var title: String = str(spec.get("title", ""))
 	if title != "":
 		var tt: Label = DDUi.label(title, DDUi.FONT_M - (6 if compact else 0), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+		if has_art:
+			_outline(tt, 6)
 		_box.add_child(tt)
 	for ln: Variant in spec.get("lines", []):
 		var arr: Array = ln
 		var l: Label = DDUi.label(str(arr[0]), int(arr[2]) if arr.size() > 2 else DDUi.FONT_S, arr[1] if arr.size() > 1 else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true)
+		if has_art:
+			_outline(l, 6)
+		line_labels.append(l)
 		_box.add_child(l)
 	_apply_style()
 	DDUi.ignore_mouse(self)
 	tooltip_text = ""
 	return self
+
+
+func _outline(l: Label, px: int) -> void:
+	l.add_theme_constant_override("outline_size", px)
+	l.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.92))
 
 
 func set_selected(v: bool) -> void:

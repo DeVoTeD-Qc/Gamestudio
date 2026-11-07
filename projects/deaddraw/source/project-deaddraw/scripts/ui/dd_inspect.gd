@@ -1,6 +1,7 @@
 # dd_inspect.gd
 # Purpose: The zoomed-card overlay opened by right click / long press on anything inspectable.
-#   payload: {kind, tag, title, big, body, extra_cards?: [payload...]} - tap anywhere or Esc to close.
+#   payload: {kind, tag, title, big, body, art?: Texture2D, extra_cards?: [payload...]} - tap anywhere
+#   or Esc to close. dd-feel: the zoom pops in (fades only with reduce motion).
 # Dependencies: DDUi.
 # Author: Mechanics Developer Agent
 class_name DDInspect
@@ -64,7 +65,28 @@ func open(payload: Dictionary) -> void:
 	split.add_child(head)
 	head.add_child(DDUi.label(str(payload.get("tag", "")), DDUi.FONT_M, DDUi.accent(kind), HORIZONTAL_ALIGNMENT_LEFT, true))
 	var big: String = str(payload.get("big", ""))
-	if big != "":
+	var art: Variant = payload.get("art", null)
+	if art is Texture2D:
+		# dd-feel: the card art, with the big number laid over its lower edge
+		var frame: Control = Control.new()
+		frame.custom_minimum_size = Vector2(head_w, 230.0 if not wide else minf(220.0, vp.y * 0.42))
+		frame.clip_contents = true
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = art
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		frame.add_child(tr)
+		if big != "":
+			var bl: Label = DDUi.label(big, 80 if not wide else 64, DDUi.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+			bl.add_theme_constant_override("outline_size", 14)
+			bl.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.92))
+			bl.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+			bl.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+			bl.grow_vertical = Control.GROW_DIRECTION_BEGIN
+			frame.add_child(bl)
+		head.add_child(frame)
+	elif big != "":
 		head.add_child(DDUi.label(big, 96 if not wide else 80, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	head.add_child(DDUi.label(str(payload.get("title", "")), DDUi.FONT_XL if not wide else DDUi.FONT_L, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var right: VBoxContainer = DDUi.vbox(8)
@@ -93,7 +115,23 @@ func open(payload: Dictionary) -> void:
 	DDUi.ignore_mouse(root)
 	visible = true
 	_opened_ms = Time.get_ticks_msec()
+	_pop_in(root, card)
 	opened.emit()
+
+
+## dd-feel: 120 ms fade + slight scale-up (fade only with reduce motion). Never blocks input.
+func _pop_in(root: Control, card: Control) -> void:
+	root.modulate.a = 0.0
+	var tw: Tween = root.create_tween()
+	tw.tween_property(root, "modulate:a", 1.0, 0.12)
+	var g: Node = get_node_or_null(^"/root/Game")
+	if g != null and g.has_method(&"reduce_motion") and bool(g.call(&"reduce_motion")):
+		return
+	card.scale = Vector2(0.94, 0.94)
+	(func() -> void:
+		if is_instance_valid(card):
+			card.pivot_offset = card.size * 0.5).call_deferred()
+	tw.parallel().tween_property(card, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func close() -> void:

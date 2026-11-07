@@ -72,7 +72,7 @@ func test_screens_portrait_and_landscape() -> void:
 		var pressed: bool = false
 		for b: Variant in _buttons(m, []):
 			var btn: Button = b
-			if not btn.disabled and not btn.text.begins_with("Retreat") and btn.text != "Log":
+			if not btn.disabled and not btn.text.begins_with("Retreat") and btn.text != "Log" and btn.text != "Settings":
 				btn.pressed.emit()
 				pressed = true
 				break

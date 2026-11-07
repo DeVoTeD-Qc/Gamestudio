@@ -38,6 +38,10 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun, selected: bool) -> D
 			if bool(pm["wasted"]):
 				badge = "WON'T HEAL"
 				lines.append(["won't heal", DDUi.WARN, DDUi.FONT_S])
+			elif int(pm["heal"]) <= 0:
+				# dd-feel: at full HP a medkit heals nothing - say so instead of "+0 HP"
+				badge = "FULL HP"
+				lines.append(["full HP: heals 0", DDUi.WARN, DDUi.FONT_S])
 			else:
 				lines.append(["+%d HP" % int(pm["heal"]), DDUi.GOOD, DDUi.FONT_S])
 		DDCard.BARRICADE:

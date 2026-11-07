@@ -92,10 +92,10 @@ function find(s, pred, what) {
       // select a street card and resolve it with the first option
       const card = find(s, (i) => i.type === 'card' && i.index === 0, 'street card 0');
       await touchTap(cdp, center(card));
-      s = await waitFor(page, (x) => x.items.some((i) => i.type === 'button' && !i.text.startsWith('Retreat') && i.text !== 'Log' && !i.disabled), 'options');
+      s = await waitFor(page, (x) => x.items.some((i) => i.type === 'button' && !i.text.startsWith('Retreat') && i.text !== 'Log' && i.text !== 'Settings' && !i.disabled), 'options');
       await shot('6_card_selected');
       const before = s.resolved;
-      const opt = find(s, (i) => i.type === 'button' && !i.text.startsWith('Retreat') && !i.text.startsWith('Slip') && i.text !== 'Log' && !i.disabled, 'option');
+      const opt = find(s, (i) => i.type === 'button' && !i.text.startsWith('Retreat') && !i.text.startsWith('Slip') && i.text !== 'Log' && i.text !== 'Settings' && !i.disabled, 'option');
       log('option: ' + opt.text.replace(/\n/g, ' '));
       await touchTap(cdp, center(opt));
       s = await waitFor(page, (x) => x.resolved !== before || x.phase !== 'STREET', 'resolved');
