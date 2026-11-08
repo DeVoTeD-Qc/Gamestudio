@@ -65,11 +65,13 @@ CONFIG = {
     "start_reserve": 6,
     "reserve_cap": 24,
     "start_points": 5,
-    "points": {"kill": 1.0, "up_close": 2, "scrap": 2, "boss": 10, "wave": 4},
+    "points": {"kill": 0.5, "up_close": 1, "scrap": 1, "boss": 8, "wave": 3},
     "melee_wave_reset": True,      # notch model: melee notch clears at the start of each wave
     "melee_delta_damage_model": -2,
-    "restock_per_room": 2,         # loot cards each opened room adds to every new wave
-    "z_add": [0, 0, 0],            # difficulty knob: added to every wave zombie per district
+    "melee_power_bonus": 0,        # tuning knob: added to every melee weapon's power
+    "restock_per_room": 1,         # loot cards each opened room adds to every new wave
+    "entrance_restock": 0,         # loot cards the entrance adds to every new wave
+    "z_add": [-1, 1, 3],          # difficulty knob: added to every wave zombie per district
     "drops": ["full_load", "payday", "boards"],
     "full_load_reserve": 4,
     "boards_cover": 4,
@@ -77,7 +79,7 @@ CONFIG = {
     "fire_axe_power": 6,
     "fixtures": {
         "retrofit": {"cost": 30, "power": 2, "mag_mult": 1.5},
-        "grin": {"cost": 10, "step": 5},
+        "grin": {"cost": 12, "step": 6},
         "locker": {"cost": 18},
         "wallrack": {"ammo_cost": 6},
     },
@@ -106,12 +108,12 @@ CONFIG = {
     "districts": [
         {"id": "maple_row", "name": "Maple Row",
          "weapons": ["crowbar", "bat", "revolver", "machete", "rifle", "knife"],
-         "waves": [[2, 3, 3, 4, 5], [3, 4, 5, 6, 7], [4, 5, 6, 7, 8, 9]],
-         "entrance": ["W", "A4", "M3", "M4", "B2"],
+         "waves": [[3, 4, 5, 6], [4, 5, 7, 8], [5, 6, 8, 9, 10]],
+         "entrance": ["W", "A4", "M4", "B2"],
          "rooms": [
-             {"name": "Garage", "cost": 10, "pack": ["W", "A4", "A3", "B3"],
+             {"name": "Garage", "cost": 10, "pack": ["W", "A4", "B3"],
               "machine": {"kind": "wallrack", "wid": "smg"}},
-             {"name": "Corner Store", "cost": 15, "pack": ["M5", "M3", "A4", "B2"],
+             {"name": "Corner Store", "cost": 15, "pack": ["M5", "M3", "A4"],
               "machine": {"kind": "grin"}},
              {"name": "Workshop", "cost": 22, "pack": ["W", "A5", "M6"],
               "machine": {"kind": "retrofit"}},
@@ -119,12 +121,12 @@ CONFIG = {
          "finale": {"name": "The Groundskeeper", "zombies": [12], "trait": "shatter"}},
         {"id": "downtown", "name": "Downtown",
          "weapons": ["bat", "machete", "revolver", "rifle", "axe", "shotgun"],
-         "waves": [[3, 4, 5, 6, 7], [4, 5, 6, 7, 8, 9], [5, 6, 7, 8, 10, 11]],
-         "entrance": ["W", "A4", "M4", "M5", "B2"],
+         "waves": [[4, 5, 6, 8], [5, 7, 8, 9], [6, 7, 9, 10, 11]],
+         "entrance": ["W", "A4", "M5", "B2"],
          "rooms": [
-             {"name": "Subway Kiosk", "cost": 12, "pack": ["M4", "A5", "B3", "W"],
+             {"name": "Subway Kiosk", "cost": 12, "pack": ["M4", "A5", "W"],
               "machine": {"kind": "grin"}},
-             {"name": "Pawn Shop", "cost": 18, "pack": ["W", "A5", "A4", "B2"],
+             {"name": "Pawn Shop", "cost": 18, "pack": ["W", "A5", "B2"],
               "machine": {"kind": "wallrack", "wid": "shotgun"}},
              {"name": "Parking Garage", "cost": 26, "pack": ["W", "M6", "A5"],
               "machine": {"kind": "locker"}},
@@ -132,12 +134,12 @@ CONFIG = {
          "finale": {"name": "Rush Hour Horde", "zombies": [10, 9, 8], "trait": "horde"}},
         {"id": "st_agnes", "name": "St. Agnes Hospital",
          "weapons": ["machete", "axe", "rifle", "shotgun", "carbine", "sledge"],
-         "waves": [[3, 5, 6, 7, 8], [4, 6, 7, 8, 9, 10], [5, 7, 8, 10, 11, 12]],
-         "entrance": ["W", "A5", "M5", "M6", "B3"],
+         "waves": [[4, 6, 7, 9], [5, 7, 9, 10], [6, 8, 10, 11, 13]],
+         "entrance": ["W", "A5", "M6", "B3"],
          "rooms": [
-             {"name": "Pharmacy", "cost": 14, "pack": ["M5", "M7", "M4", "A4"],
+             {"name": "Pharmacy", "cost": 14, "pack": ["M5", "M7", "A4"],
               "machine": {"kind": "grin"}},
-             {"name": "Security Office", "cost": 20, "pack": ["W", "A5", "A5", "B3"],
+             {"name": "Security Office", "cost": 20, "pack": ["W", "A5", "B3"],
               "machine": {"kind": "wallrack", "wid": "carbine"}},
              {"name": "Morgue Lab", "cost": 28, "pack": ["W", "M6", "A6"],
               "machine": {"kind": "retrofit"}},
@@ -147,7 +149,7 @@ CONFIG = {
     "survivors": {
         "rosa": {"name": "Rosa Vance", "passive": "steady_hands", "hp": 20},
         "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 20},
-        "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 24},
+        "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 21},
     },
     "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps",
                       "bandolier", "fast_hands"],
@@ -177,6 +179,8 @@ def mkweapon(wid: str, s=None) -> tuple:
     """Slot tuple: (power, mag_cap, ammo, notch, upgraded, wid). mag_cap 0 = melee."""
     w = CONFIG["weapons"][wid]
     p, cap = w["p"], w["mag"]
+    if cap == 0:
+        p += CONFIG.get("melee_power_bonus", 0)
     if CONFIG["model"] == "damage" and cap == 0:
         p = max(1, p + CONFIG["melee_delta_damage_model"])
     if s is not None and cap and s.passive == "steady_hands" and CONFIG["model"] == "damage":
@@ -611,8 +615,10 @@ class Map:
 
     def restock(self):
         out = []
-        for spec in [self.d["entrance"]] + [self.d["rooms"][i]["pack"] for i in self.opened]:
-            for _ in range(CONFIG["restock_per_room"]):
+        srcs = [(self.d["entrance"], CONFIG["entrance_restock"])]
+        srcs += [(self.d["rooms"][i]["pack"], CONFIG["restock_per_room"]) for i in self.opened]
+        for spec, n in srcs:
+            for _ in range(n):
                 out.append(make_loot(self.rng.choice(spec)))
         return out
 
@@ -808,7 +814,7 @@ def play_district_separate(s, d, di, rng, st, carry):
     nwaves = len(d["waves"])
     while True:
         zn = sum(1 for c in street if c.kind == "Z")
-        while zn < CONFIG["separate_zombie_slots"] and m.deck:
+        while zn < CONFIG["separate_zombie_slots"] and m.deck and len(street) < CONFIG["street_size"]:
             street.append(m.deck.pop())
             zn += 1
         while len(street) < CONFIG["street_size"] and m.loot:
@@ -849,7 +855,7 @@ def play_district_separate(s, d, di, rng, st, carry):
                    quarantine=fin["trait"] == "quarantine")
         quarantine = boss_here and fin["trait"] == "quarantine"
         may_flee = (CONFIG["allow_retreat"] and len(street) == CONFIG["street_size"] and m.deck
-                    and not boss_here and (not s.fled_last or "light_step" in s.buffs))
+                    and not boss_here and not s.fled_last)   # Light Step can't loop a wave here
         res, cards = play_street(s, street, m.deck, budget, quarantine, boss_here, must_clear,
                                  may_flee, st, rng)
         if res == "dead":
