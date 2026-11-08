@@ -193,3 +193,24 @@ Wraps, Sandbags, Scrounger, Second Wind, Tripwire. One central object each, read
 - [ ] No text in the SVG; ThorVG-safe elements only
 - [ ] Imports with no errors and matches the browser render
 - [ ] Original: no traced or referenced characters, logos or emblems
+
+---
+
+## 9. v2 additions ("Last Stand" waves, board task `dd-v2-art`)
+
+Same generator, same rules (ink outline, two tones, number safe zone clear, no text, ThorVG-safe).
+Contact sheet: `scratchpad/dd-art/contact-v2.png` (Godot-rasterised, phone size, mock number badge).
+
+| Set | Files | Notes |
+|---|---|---|
+| Guns (weapon blue) | `cards/weapon_<name>.svg`: service_pistol, revolver, compact_smg, pump_shotgun, hunting_rifle, carbine, belt_fed_mg, static_lance | Side views at a shallow -10 to -14 degree tilt (melee stays at -30), so guns and melee read apart. Heft = size: pistol < revolver < SMG < carbine < shotgun / rifle < MG. Generic, non-branded shapes. **Static Lance** is a farm-shed shock pike (wooden pole, car battery, jumper lead, copper coil, two prongs with a cyan arc): deliberately not a sci-fi ray-gun shape. |
+| New melee | `cards/weapon_kitchen_knife.svg` | Other v2 melee reuse v1 art (Crowbar, Cricket Bat, Machete, Fire Axe, Sledgehammer). |
+| Ammo (new type colour: stencil teal `#4fd1c5`, crate-slat motif) | `cards/ammo_box.svg` (3-4), `cards/ammo_can.svg` (5-6) | |
+| Carrier drops (carrier gold `#f2d65c`, sunburst motif) | `cards/drop_full_load.svg`, `drop_payday.svg`, `drop_boards.svg` | Payday = the carrier's satchel spilling prize tickets and star tokens (points, not money). |
+| Carrier | `badges/carrier.svg` (64, satchel on a gold ring) + baked variants `cards/zombie_<type>_carrier.svg` | Badge sits bottom-left of the art window (`badge_placement` in the manifest), never in the number zone. |
+| Machines (workshop copper `#d9a066`, tiled wall motif) | `cards/machine_retrofit_bench.svg`, `machine_grin_machine.svg`, `machine_lucky_locker.svg`, `machine_wall_rack.svg` (empty chalk outline) + `machine_wall_rack_<gun>.svg` per wall gun | Grin Machine is an original tin candy kiosk whose face is the dispenser (dome head, bolt eyes, toothy-grin chute, crank ear), not a classic gumball globe-on-stand. No soda-machine or mystery-box shapes anywhere. |
+| Jawbreakers (128 round icons) | `jawbreakers/<id>.svg` | One candy colour + one bone symbol each: Thick Skin (slate, shield), Steady Aim (blue, crosshair), Sleight of Hand (purple, cycle arrows), Payday (gold, stars), Sugar Rush (pink, heart), Light Step (mint, footprints). Read at 40-48 px. |
+| Room door tiles (240 x 180) | `rooms/<district>_<room>.svg` (Entrance + 3 rooms per district) | District sky + wall material (Maple Row siding/brick at dusk, Downtown brick/concrete at night, St. Agnes pale tile in sickly teal). Door centre-right, top-left kept quiet for a cost badge. `badges/locked.svg` (padlock on crossed boards) overlays a closed door. |
+| Perks | `perks/fast_hands.svg`, `perks/bandolier.svg` | |
+| Wave marker | `icons/wave.svg` (128, zombie-red ring, hand rising from the ground) | Wave number is a Godot label on top. |
+| Retrofit plate | `badges/retrofit.svg` (brass plate with a gear) | No letter baked in; the UI adds "R" if wanted. |
