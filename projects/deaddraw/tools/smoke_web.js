@@ -1,8 +1,10 @@
-// DeadDraw web smoke test: loads the packaged export in headless Chromium at phone landscape and
-// portrait viewports, plays real taps (touch) through title -> map -> street, resolves a card,
-// retreats, long-presses (touch) and right-clicks to inspect, and saves screenshots.
+// DeadDraw v2 web smoke test: loads the packaged export in headless Chromium at phone landscape and
+// portrait viewports, plays real taps (touch) through title -> map -> street, fights a zombie with
+// a weapon slot, reloads, skips (Skipped pile), opens a door and uses its machine, long-presses
+// (touch) and right-clicks to inspect, and saves screenshots of the v2 screens (wave track, deck
+// counter, doors, slots with magazine pips, last-street banner, boss street, safehouse, end).
 // Usage: node smoke_web.js <url-of-index.html> <screenshot-dir>
-// The game publishes window.ddState (screen, hp, tappable rects in CSS px) on the Web build.
+// The game publishes window.ddState (screen, hp, wave, deck, points, tappable rects in CSS px).
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -48,13 +50,22 @@ async function touchHold(cdp, p, ms = 750) {
 
 function find(s, pred, what) {
   const it = s.items.find(pred);
-  if (!it) throw new Error('not on screen: ' + what + ' items=' + JSON.stringify(s.items.map((i) => i.text || i.title)).slice(0, 600));
+  if (!it) throw new Error('not on screen: ' + what + ' items=' + JSON.stringify(s.items.map((i) => i.text || i.tag || i.title)).slice(0, 900));
   return it;
 }
+
+// every tappable thing must be inside the viewport (no clipped HUD on a phone)
+function offscreen(s, vp) {
+  return s.items.filter((i) => i.x < -1 || i.y < -1 || i.x + i.w > vp.width + 1 || i.y + i.h > vp.height + 1)
+    .map((i) => (i.text || i.tag || i.title || i.type) + '@' + Math.round(i.x) + ',' + Math.round(i.y));
+}
+
+const isOption = (i) => i.type === 'button' && !i.disabled && /^(Service Pistol|Revolver|Compact SMG|Pump Shotgun|Hunting Rifle|Carbine|Belt-fed MG|Static Lance|Retrofit|Kitchen Knife|Crowbar|Cricket Bat|Machete|Fire Axe|Sledgehammer|BARE|INTO SLOT|SCRAP|Use|Take)/.test(i.text);
 
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const results = [];
+  let failures = 0;
   for (const vp of VIEWPORTS) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     const page = await ctx.newPage();
@@ -64,62 +75,110 @@ function find(s, pred, what) {
     const shot = async (n) => { const f = path.join(OUT, `dd_${vp.name}_${n}.png`); await page.screenshot({ path: f }); results.push(f); };
     const cdp = await ctx.newCDPSession(page);
     const log = (m) => console.log(`[${vp.name}] ${m}`);
+    const closeInspect = async () => { await touchTap(cdp, { x: vp.width / 2, y: 12 }); return waitFor(page, (x) => !x.inspect, 'inspect closed'); };
     try {
       await page.goto(URL, { waitUntil: 'load' });
       let s = await waitFor(page, (x) => x.screen === 'TITLE', 'title', 90000);
-      log(`title up, portrait=${s.portrait}`); await sleep(400); await shot('1_title');
-      // long-press a survivor card (touch) -> zoom
+      log(`title up, portrait=${s.portrait}`); await sleep(400); await shot('01_title');
       await touchHold(cdp, center(find(s, (i) => i.type === 'card' && i.kind === 'S', 'survivor card')));
-      s = await waitFor(page, (x) => x.inspect, 'survivor inspect'); await shot('2_inspect_survivor');
-      await touchTap(cdp, { x: vp.width / 2, y: 20 });
-      s = await waitFor(page, (x) => !x.inspect, 'inspect closed');
+      s = await waitFor(page, (x) => x.inspect, 'survivor inspect'); await shot('02_inspect_survivor');
+      s = await closeInspect();
       await touchTap(cdp, center(find(s, (i) => i.type === 'button' && i.text.startsWith('Start run'), 'start button')));
-      s = await waitFor(page, (x) => x.screen === 'MAP', 'map'); log('map'); await shot('3_map');
+      s = await waitFor(page, (x) => x.screen === 'MAP', 'map'); log('map'); await shot('03_map');
       await touchTap(cdp, center(find(s, (i) => i.type === 'button' && i.text.startsWith('Enter'), 'enter button')));
-      s = await waitFor(page, (x) => x.screen === 'STREET', 'street'); log(`street hp=${s.hp} cards=${s.street}`); await shot('4_street');
-      // retreat first (real button), then the deck counter shows the bottom cards
-      const rb = s.items.find((i) => i.type === 'button' && i.text.startsWith('Retreat (') && !i.disabled);
-      if (rb) {
-        await touchTap(cdp, center(rb));
-        s = await waitFor(page, (x) => x.log && x.log.includes('bottom'), 'retreat feedback'); log('retreated: ' + s.log);
-        await touchHold(cdp, center(find(s, (i) => i.type === 'card' && i.kind === 'D', 'deck counter')));
-        s = await waitFor(page, (x) => x.inspect, 'deck inspect'); await shot('5_inspect_deck_bottom');
-        await touchTap(cdp, { x: vp.width / 2, y: 20 });
-        s = await waitFor(page, (x) => !x.inspect, 'closed');
-        const rb2 = s.items.find((i) => i.type === 'button' && i.text.startsWith('Retreat'));
-        log('retreat button now: ' + (rb2 ? rb2.text + ' disabled=' + rb2.disabled : 'none'));
+      s = await waitFor(page, (x) => x.screen === 'STREET', 'street'); log(`street hp=${s.hp} wave=${s.wave} deck=${s.deck} pts=${s.points}`);
+      await sleep(300); await shot('04_street_wave_banner');
+      await sleep(1800); s = await state(page); await shot('05_street');
+      const off = offscreen(s, vp);
+      if (off.length) { errors.push('OFFSCREEN: ' + off.join(' ')); }
+      // fight: tap a zombie, take the first weapon/bare option (previews show HP, ammo, points)
+      let z = s.items.find((i) => i.type === 'card' && i.kind === 'Z' && i.index >= 0 && i.index < 100);
+      if (z) {
+        await touchTap(cdp, center(z));
+        s = await waitFor(page, (x) => x.items.some(isOption), 'fight options');
+        await shot('06_fight_options');
+        const opt = s.items.find((i) => isOption(i) && !i.text.startsWith('BARE')) || find(s, isOption, 'option');
+        log('fight: ' + opt.text.replace(/\n/g, ' '));
+        const before = s.resolved;
+        await touchTap(cdp, center(opt));
+        s = await waitFor(page, (x) => x.resolved !== before || x.phase !== 'STREET', 'resolved');
+        log(`-> ${s.log} ammo=${JSON.stringify(s.ammo)}`); await sleep(200); await shot('07_after_fight');
       }
-      // select a street card and resolve it with the first option
-      const card = find(s, (i) => i.type === 'card' && i.index === 0, 'street card 0');
-      await touchTap(cdp, center(card));
-      s = await waitFor(page, (x) => x.items.some((i) => i.type === 'button' && !i.text.startsWith('Retreat') && i.text !== 'Log' && i.text !== 'Settings' && !i.disabled), 'options');
-      await shot('6_card_selected');
-      const before = s.resolved;
-      const opt = find(s, (i) => i.type === 'button' && !i.text.startsWith('Retreat') && !i.text.startsWith('Slip') && i.text !== 'Log' && i.text !== 'Settings' && !i.disabled, 'option');
-      log('option: ' + opt.text.replace(/\n/g, ' '));
-      await touchTap(cdp, center(opt));
-      s = await waitFor(page, (x) => x.resolved !== before || x.phase !== 'STREET', 'resolved');
-      log(`resolved -> log: ${s.log} hp=${s.hp}`); await sleep(150); await shot('7_after_resolve');
+      // reload (real button) when it is offered
+      const rl = s.items.find((i) => i.type === 'button' && i.text.startsWith('RELOAD') && !i.disabled);
+      if (rl) {
+        log('reload: ' + rl.text.replace(/\n/g, ' '));
+        await touchTap(cdp, center(rl));
+        s = await waitFor(page, (x) => x.log && x.log.startsWith('Reloaded'), 'reload feedback');
+        log('-> ' + s.log); await shot('08_after_reload');
+      }
+      // finish the street with any options, then skip the next one
+      for (let k = 0; k < 4 && s.actions > 0; k++) {
+        const c = s.items.find((i) => i.type === 'card' && i.index >= 0 && i.index < 100);
+        if (!c) break;
+        await touchTap(cdp, center(c));
+        s = await state(page);
+        const o = s.items.find((i) => isOption(i) && i.text.startsWith('BARE')) || s.items.find(isOption);
+        if (!o) break;
+        await touchTap(cdp, center(o));
+        await sleep(300); s = await state(page);
+      }
+      const sk = s.items.find((i) => i.type === 'button' && i.text.startsWith('SKIP STREET') && !i.disabled);
+      if (sk) {
+        await touchTap(cdp, center(sk));
+        s = await waitFor(page, (x) => x.skipped > 0, 'skip'); log(`skipped -> pile ${s.skipped}: ${s.log}`);
+        await sleep(400); await shot('09_after_skip');
+        await touchHold(cdp, center(find(s, (i) => i.type === 'card' && i.tag === 'SKIPPED PILE', 'skipped pile')));
+        s = await waitFor(page, (x) => x.inspect, 'skipped inspect'); await shot('10_inspect_skipped_longpress');
+        s = await closeInspect();
+      }
       // right click the weapon slot (desktop path)
-      const w = find(s, (i) => i.type === 'card' && i.kind === 'W' && i.index === -1, 'weapon slot');
+      const w = find(s, (i) => i.type === 'card' && i.index === 200, 'weapon slot 1');
       await page.mouse.click(center(w).x, center(w).y, { button: 'right' });
-      s = await waitFor(page, (x) => x.inspect, 'weapon inspect'); await shot('8_inspect_weapon_rightclick');
-      await page.mouse.click(vp.width / 2, 20);
+      s = await waitFor(page, (x) => x.inspect, 'slot inspect'); await shot('11_inspect_slot_rightclick');
+      await page.mouse.click(vp.width / 2, 12);
+      s = await waitFor(page, (x) => !x.inspect, 'closed');
+      // door: long press shows price + unlocks; tap selects; the button shows the price
+      const door = find(s, (i) => i.type === 'card' && i.index === 100, 'first door');
+      await touchHold(cdp, center(door));
+      s = await waitFor(page, (x) => x.inspect, 'door inspect'); await shot('12_inspect_door');
+      s = await closeInspect();
+      await touchTap(cdp, center(find(s, (i) => i.type === 'card' && i.index === 100, 'first door')));
+      s = await state(page); await shot('13_door_selected');
+      const ob = s.items.find((i) => i.type === 'button' && (i.text.startsWith('OPEN for') || i.text.startsWith('Open ')));
+      log('door button: ' + (ob ? ob.text.replace(/\n/g, ' ') + ' disabled=' + ob.disabled : 'none'));
       // other screens via the smoke query
-      for (const q of ['screen=safehouse', 'screen=end', 'screen=street&survivor=imani&select=0&seed=3', 'screen=street&seed=7&notch=3', 'screen=map']) {
+      const queries = [
+        'screen=street&seed=11&open=2&points=40&room=0',
+        'screen=street&seed=11&open=1&offer=1',
+        'screen=street&seed=5&slot2=machete&notch=4&ammo=1&buff=steady_aim&laststreet=1',
+        'screen=street&seed=5&skip=1&inspect=deck',
+        'screen=street&seed=9&boss=1',
+        'screen=street&survivor=imani&select=0&seed=3',
+        'screen=safehouse',
+        'screen=end',
+        'screen=map',
+      ];
+      let n = 14;
+      for (const q of queries) {
         await page.goto(URL + '?' + q, { waitUntil: 'load' });
         s = await waitFor(page, (x) => x.screen !== 'TITLE', q, 90000);
-        await sleep(500);
-        await shot('9_' + q.split('&')[0].replace('screen=', '') + (q.includes('imani') ? '_imani' : '') + (q.includes('notch') ? '_notched' : ''));
-        log(`${q} -> ${s.screen}`);
+        await sleep(700);
+        const name = q.replace(/screen=|seed=\d+&?|&/g, (m) => (m === '&' ? '_' : '')).replace(/=/g, '').replace(/_+$/, '');
+        await shot(String(n++) + '_' + name);
+        const off2 = offscreen(s, vp);
+        if (off2.length && !s.inspect && s.screen === 'STREET') errors.push(`OFFSCREEN ${q}: ` + off2.join(' '));
+        log(`${q} -> ${s.screen} wave=${s.wave} deck=${s.deck} pts=${s.points} pending=${s.pending}`);
       }
     } catch (e) {
       errors.push('SMOKE FAILURE: ' + e.message);
       await shot('error');
     }
+    failures += errors.length;
     log('errors: ' + (errors.length ? errors.join(' | ') : 'none'));
     await ctx.close();
   }
   await browser.close();
   console.log('SCREENSHOTS\n' + results.join('\n'));
+  process.exitCode = failures ? 1 : 0;
 })();

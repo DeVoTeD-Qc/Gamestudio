@@ -123,21 +123,21 @@ static func slot_payload(run: DDRun, i: int) -> Dictionary:
 static func slot_spec(run: DDRun, i: int) -> Dictionary:
 	var w: DDWeapon = run.slot(i)
 	var lines: Array = []
-	var spec: Dictionary = {"kind": "W", "tag": "%d  %s" % [i + 1, "EMPTY" if w == null else ("GUN" if w.is_gun() else "MELEE")],
-		"compact": true, "payload": slot_payload(run, i)}
+	var spec: Dictionary = {"kind": "W", "tag": "SLOT %d  %s" % [i + 1, "" if w == null else ("GUN" if w.is_gun() else "MELEE")],
+		"compact": true, "row": true, "big_size": 26, "payload": slot_payload(run, i)}
 	if w == null:
 		spec["big"] = "-"
 		spec["title"] = "Empty slot"
-		lines.append(["bare hands still work", DDUi.TEXT_DIM, DDUi.FONT_S])
+		lines.append(["bare hands still work", DDUi.TEXT_DIM, DDUi.FONT_S - 3])
 	else:
 		spec["big"] = "P%d" % run.power_of(w)
 		spec["title"] = w.display_name()
+		var tagline: String = "fresh" if w.is_fresh() else DDText.notch_tag(w.notch, run.equal_ok(w))
 		if w.is_gun():
 			spec["pips"] = [w.ammo, w.cap]
-			lines.append(["mag %d/%d" % [w.ammo, w.cap], DDUi.BAD if w.ammo == 0 else DDUi.TEXT, DDUi.FONT_S])
+			lines.append(["%d/%d  %s" % [w.ammo, w.cap, tagline] if w.ammo > 0 else "EMPTY - reload", (DDUi.GOOD if w.is_fresh() else DDUi.WARN) if w.ammo > 0 else DDUi.BAD, DDUi.FONT_S - 3])
 		else:
-			lines.append(["unlimited", DDUi.TEXT_DIM, DDUi.FONT_S])
-		lines.append([DDText.notch_tag(w.notch, run.equal_ok(w)), DDUi.GOOD if w.is_fresh() else DDUi.WARN, DDUi.FONT_S])
+			lines.append(["unlimited  %s" % tagline, DDUi.GOOD if w.is_fresh() else DDUi.WARN, DDUi.FONT_S - 3])
 		if w.upgraded:
 			spec["badge"] = "R"
 			spec["badge_color"] = DDUi.accent("K")
@@ -161,8 +161,8 @@ static func reserve_payload(run: DDRun) -> Dictionary:
 
 
 static func reserve_spec(run: DDRun) -> Dictionary:
-	return {"kind": "A", "tag": "RESERVE", "big": str(run.reserve), "big_size": 34, "title": "",
-		"lines": [["of %d" % run.bal.num("reserve_cap"), DDUi.TEXT_DIM, DDUi.FONT_S]], "compact": true, "payload": reserve_payload(run)}
+	return {"kind": "A", "tag": "RESERVE", "big": str(run.reserve), "big_size": 26, "title": "", "row": true,
+		"lines": [["/%d" % run.bal.num("reserve_cap"), DDUi.TEXT_DIM, DDUi.FONT_S - 4]], "compact": true, "payload": reserve_payload(run)}
 
 
 # ---------------------------------------------------------------- points, waves, deck
@@ -177,7 +177,7 @@ static func points_payload(run: DDRun) -> Dictionary:
 
 
 static func points_spec(run: DDRun) -> Dictionary:
-	return {"kind": "X", "tag": "POINTS", "big": str(run.bal.shown(run.points)), "big_size": 30, "title": "",
+	return {"kind": "X", "tag": "POINTS", "big": "", "title": str(run.bal.shown(run.points)), "title_size": DDUi.FONT_L, "row": true,
 		"compact": true, "payload": points_payload(run)}
 
 
@@ -195,7 +195,7 @@ static func wave_pip_payload(run: DDRun, w: int) -> Dictionary:
 
 static func wave_pip_spec(run: DDRun, w: int) -> Dictionary:
 	var now: bool = w == run.wave_index
-	return {"kind": "D", "tag": "WAVE", "big": str(w + 1), "big_size": 26, "title": "", "compact": true,
+	return {"kind": "D", "tag": "", "big": str(w + 1), "big_size": 22, "title": "", "compact": true, "row": true,
 		"selected": now, "dim": w < run.wave_index, "payload": wave_pip_payload(run, w)}
 
 
@@ -224,8 +224,8 @@ static func deck_spec(run: DDRun) -> Dictionary:
 		t = "BOSS STREET"
 	elif run.last_lap:
 		t += " - last lap"
-	return {"kind": "D", "tag": "DECK", "big": str(run.deck.size()), "big_size": 30, "title": "",
-		"lines": [[t, DDUi.TEXT, DDUi.FONT_S]], "compact": true, "payload": deck_payload(run)}
+	return {"kind": "D", "tag": "DECK", "big": str(run.deck.size()), "big_size": 26, "title": "", "row": true,
+		"lines": [[t, DDUi.TEXT, DDUi.FONT_S - 3]], "compact": true, "payload": deck_payload(run)}
 
 
 static func skipped_payload(run: DDRun) -> Dictionary:
@@ -242,8 +242,8 @@ static func skipped_payload(run: DDRun) -> Dictionary:
 
 
 static func skipped_spec(run: DDRun) -> Dictionary:
-	return {"kind": "D", "tag": "SKIPPED", "big": str(run.skipped.size()), "big_size": 30, "title": "",
-		"lines": [["back next wave" if not run.is_boss_wave() or run.last_lap else "last lap", DDUi.TEXT_DIM, DDUi.FONT_S]],
+	return {"kind": "D", "tag": "SKIPPED", "big": str(run.skipped.size()), "big_size": 26, "title": "", "row": true,
+		"lines": [["next wave" if not run.is_boss_wave() or run.last_lap else "last lap", DDUi.TEXT_DIM, DDUi.FONT_S - 4]],
 		"compact": true, "payload": skipped_payload(run)}
 
 
@@ -258,8 +258,8 @@ static func next_spec(run: DDRun) -> Dictionary:
 	var body: PackedStringArray = [str(nx["text"])]
 	if str(nx.get("kind", "")) == "wave":
 		body.append("Clearing the wave pays +%d. Your Holdover stays on the street; melee notches clear; buffs end; machines can be used again." % run.bal.shown(int(nx["bonus"])))
-	return {"kind": "F" if run.boss_street else "D", "tag": head, "title": "", "big": "", "compact": true,
-		"lines": [[str(nx["text"]), DDUi.TEXT, DDUi.FONT_S]], "payload": {"kind": "D", "tag": head, "title": "What comes next", "big": "", "body": "\n".join(body)}}
+	return {"kind": "F" if run.boss_street else "D", "tag": head, "title": "", "big": "", "compact": true, "row": true,
+		"lines": [[str(nx["text"]), DDUi.TEXT, DDUi.FONT_S - 3]], "payload": {"kind": "D", "tag": head, "title": "What comes next", "big": "", "body": "\n".join(body)}}
 
 
 static func _list(a: Array) -> String:
@@ -290,9 +290,9 @@ static func finale_spec(d: Dictionary, compact: bool = true, badge: String = "")
 	var f: Dictionary = d.get("finale", {})
 	var p: Dictionary = finale(d)
 	return {"kind": "F", "tag": "BOSS", "badge": badge, "badge_color": DDUi.accent("F"),
-		"big": p["big"], "big_size": 26 if compact else 56, "title": str(f.get("name", "")) if not compact else "",
-		"lines": [[DDText.trait_name(str(f.get("trait", ""))), DDUi.accent("F"), DDUi.FONT_S]],
-		"compact": compact, "payload": p}
+		"big": p["big"], "big_size": 22 if compact else 56, "title": str(f.get("name", "")) if not compact else "",
+		"lines": [] if compact else [[DDText.trait_name(str(f.get("trait", ""))), DDUi.accent("F"), DDUi.FONT_S]],
+		"compact": compact, "row": compact, "payload": p}
 
 
 # ---------------------------------------------------------------- rooms and machines
@@ -337,20 +337,20 @@ static func room_spec(run: DDRun, i: int, selected: bool) -> Dictionary:
 	if st == "open":
 		kind = "K"
 		if run.machine_used(i):
-			lines.append(["used this wave", DDUi.TEXT_DIM, DDUi.FONT_S])
+			lines.append(["used this wave", DDUi.TEXT_DIM, DDUi.FONT_S - 3])
 		else:
 			var opts: Array[Dictionary] = run.machine_options(i)
 			var price: int = int(opts[0]["price"]) if not opts.is_empty() else 0
-			lines.append(["USE %d" % run.bal.shown(price), DDUi.GOOD if (not opts.is_empty() and run.points >= price) else DDUi.WARN, DDUi.FONT_S])
+			lines.append(["USE %d" % run.bal.shown(price), DDUi.GOOD if (not opts.is_empty() and run.points >= price) else DDUi.WARN, DDUi.FONT_S - 3])
 	elif st == "next":
 		var cost: int = int(r.get("cost", 0))
-		lines.append(["OPEN %d" % run.bal.shown(cost), DDUi.GOOD if run.points >= cost else DDUi.WARN, DDUi.FONT_S])
+		lines.append(["OPEN %d" % run.bal.shown(cost), DDUi.GOOD if run.points >= cost else DDUi.WARN, DDUi.FONT_S - 3])
 	else:
 		badge = "LOCKED"
-		lines.append(["%d - locked" % run.bal.shown(int(r.get("cost", 0))), DDUi.TEXT_DIM, DDUi.FONT_S])
+		lines.append(["%d - locked" % run.bal.shown(int(r.get("cost", 0))), DDUi.TEXT_DIM, DDUi.FONT_S - 3])
 	var title: String = DDText.machine_name(str(m.get("kind", ""))) if st == "open" else str(r.get("name", ""))
 	return {"kind": kind, "tag": str(r.get("name", "")).to_upper() if st == "open" else "DOOR", "title": title, "lines": lines,
-		"badge": badge, "badge_color": DDUi.TEXT_DIM, "compact": true, "selected": selected, "dim": st == "locked",
+		"badge": badge, "badge_color": DDUi.TEXT_DIM, "compact": true, "row": true, "selected": selected, "dim": st == "locked",
 		"payload": room_payload(run, i)}
 
 
@@ -363,7 +363,7 @@ static func buff_payload(id: String, bal: DDBalance) -> Dictionary:
 
 
 static func buff_spec(id: String, bal: DDBalance) -> Dictionary:
-	return {"kind": "X" if id == "payday" else "J", "tag": "THIS WAVE", "title": DDText.buff_name(id), "compact": true,
+	return {"kind": "X" if id == "payday" else "J", "tag": "WAVE BUFF", "title": DDText.buff_name(id), "title_size": DDUi.FONT_S - 5, "compact": true, "row": true,
 		"payload": buff_payload(id, bal)}
 
 

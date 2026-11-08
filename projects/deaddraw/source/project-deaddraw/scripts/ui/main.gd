@@ -451,22 +451,22 @@ func _build_street() -> void:
 	grid.columns = 2 if portrait else 4
 	grid.add_theme_constant_override("h_separation", SEP)
 	grid.add_theme_constant_override("v_separation", SEP)
-	var left_w: float = clampf(vp.x * 0.24, 250.0, 320.0)
-	var right_w: float = clampf(vp.x * 0.24, 250.0, 320.0)
+	var left_w: float = clampf(vp.x * 0.22, 240.0, 300.0)
+	var right_w: float = clampf(vp.x * 0.2, 230.0, 290.0)
 	var banner_on: bool = run.is_last_street() or run.boss_street or run.last_lap
 	var n: int = maxi(1, run.street.size())
 	var card_w: float
 	var card_h: float
 	if portrait:
 		card_w = (vp.x - MARGIN * 2 - SEP) / 2.0
-		var fixed: float = 700.0 + (52.0 if banner_on else 0.0)
+		var fixed: float = 694.0 + (80.0 if banner_on else 0.0)
 		var rows: int = ceili(n / 2.0)
 		card_h = clampf((vp.y - fixed) / maxf(2.0, float(rows)), 150.0, card_w * 1.25)
 	else:
 		var cols: int = maxi(4, n) if n > 4 else 4
 		grid.columns = cols
 		card_w = (vp.x - MARGIN * 2 - left_w - right_w - SEP * 2 - SEP * (cols - 1)) / float(cols)
-		card_h = clampf(vp.y - MARGIN * 2 - 250.0 - (48.0 if banner_on else 0.0), 150.0, card_w * 1.45)
+		card_h = clampf(vp.y - MARGIN * 2 - 262.0 - (66.0 if banner_on else 0.0), 140.0, card_w * 1.45)
 	for i: int in run.street.size():
 		var c: DDCard = run.street[i]
 		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run, i == selected)
@@ -539,10 +539,6 @@ func _build_street() -> void:
 		side.custom_minimum_size = Vector2(left_w, 0)
 		h.add_child(side)
 		side.add_child(hp_box)
-		var r2: HBoxContainer = DDUi.hbox(8)
-		pts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		r2.add_child(pts)
-		side.add_child(r2)
 		side.add_child(wave_row)
 		side.add_child(deck_row)
 		doors.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -556,16 +552,26 @@ func _build_street() -> void:
 		main.add_child(actions)
 		log_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		main.add_child(log_box)
-		weapons.custom_minimum_size = Vector2(right_w, 0)
-		h.add_child(weapons)
+		var right: VBoxContainer = DDUi.vbox(8)
+		right.custom_minimum_size = Vector2(right_w, 0)
+		right.add_child(pts)
+		right.add_child(weapons)
+		right.add_child(_build_badges(run))
+		h.add_child(right)
 
 
 func _build_hp(run: DDRun) -> Control:
 	var h: HBoxContainer = DDUi.hbox(8)
+	var sp: Dictionary = DDPayloads.survivor(run.survivor_id, Game.bal, Game.profile)
+	if not run.perks.is_empty():
+		var pl: PackedStringArray = []
+		for p: String in run.perks:
+			pl.append("%s: %s" % [DDText.perk_name(p), DDText.perk_text(p, Game.bal)])
+		sp["body"] = str(sp["body"]) + "\nPerks this run:\n" + "\n".join(pl)
 	var sv: DDCardView = _view({"kind": "S", "tag": run.survivor_id.to_upper(),
-		"title": DDText.passive_name(run.passive), "compact": true,
-		"payload": DDPayloads.survivor(run.survivor_id, Game.bal, Game.profile),
-		"art_keys": Art.survivor_keys(run.survivor_id)}, Vector2(96 if portrait else 88, 0))
+		"title": DDText.passive_name(run.passive), "compact": true, "row": true, "title_size": DDUi.FONT_S - 5,
+		"payload": sp,
+		"art_keys": Art.survivor_keys(run.survivor_id)}, Vector2(100 if portrait else 92, 0))
 	h.add_child(sv)
 	var hp_panel: PanelContainer = DDUi.panel(DDUi.PANEL, 8)
 	hp_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -588,8 +594,13 @@ func _build_hp(run: DDRun) -> Control:
 	h.add_child(hp_panel)
 	_hp_anchor = hp_panel
 	_hp_box = h
+	# this wave's Jawbreakers / Payday sit next to HP in portrait (inspectable); landscape: under it
+	for b: String in (run.buffs if portrait else ([] as Array[String])):
+		var bs: Dictionary = DDPayloads.buff_spec(b, Game.bal)
+		bs["art_keys"] = Art.drop_keys("payday") if b == "payday" else Art.jawbreaker_keys(b)
+		h.add_child(_view(bs, Vector2(92, 0)))
 	if run.cover > 0:
-		var cov: DDCardView = _view({"kind": "B", "tag": "COVER", "big": str(run.cover), "big_size": 28, "compact": true,
+		var cov: DDCardView = _view({"kind": "B", "tag": "COVER", "big": str(run.cover), "big_size": 24, "compact": true, "row": true,
 			"payload": DDPayloads.cover(run)}, Vector2(72, 0))
 		_cover_anchor = cov
 		h.add_child(cov)
@@ -600,8 +611,7 @@ func _build_hp(run: DDRun) -> Control:
 func _build_wave_track(run: DDRun) -> HBoxContainer:
 	var h: HBoxContainer = DDUi.hbox(6)
 	for w: int in run.wave_count():
-		var pv: DDCardView = _view(DDPayloads.wave_pip_spec(run, w))
-		pv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var pv: DDCardView = _view(DDPayloads.wave_pip_spec(run, w), Vector2(40, 0))
 		h.add_child(pv)
 	var fs: Dictionary = DDPayloads.finale_spec(run.district())
 	fs["art_keys"] = Art.finale_keys(run.district())
@@ -634,25 +644,22 @@ func _build_doors(run: DDRun) -> Control:
 		rv.index = 100 + i
 		rv.tapped.connect(func(_x: DDCardView) -> void: _on_room_tapped(i))
 		box.add_child(rv)
+	return box
+
+
+## Landscape: this wave's buffs and the run's perks as chips (right column). In portrait the buffs
+## sit next to HP and the perks are listed in the survivor chip's zoom.
+func _build_badges(run: DDRun) -> Control:
 	var extra: HFlowContainer = HFlowContainer.new()
 	extra.add_theme_constant_override("h_separation", 6)
 	extra.add_theme_constant_override("v_separation", 6)
 	for b: String in run.buffs:
 		var bs: Dictionary = DDPayloads.buff_spec(b, Game.bal)
 		bs["art_keys"] = Art.drop_keys("payday") if b == "payday" else Art.jawbreaker_keys(b)
-		extra.add_child(_view(bs))
+		extra.add_child(_view(bs, Vector2(116, 0)))
 	for p: String in run.perks:
-		var ps: Dictionary = DDPayloads.perk_spec(p, Game.bal, true)
-		extra.add_child(_view(ps))
-	if extra.get_child_count() == 0:
-		extra.queue_free()
-		return box
-	var wrap: BoxContainer = BoxContainer.new()
-	wrap.vertical = true
-	wrap.add_theme_constant_override("separation", 6)
-	wrap.add_child(box)
-	wrap.add_child(extra)
-	return wrap
+		extra.add_child(_view(DDPayloads.perk_spec(p, Game.bal, true), Vector2(116, 0)))
+	return extra
 
 
 ## The two weapon slots (magazine pips, notch tag) with their Reload buttons, and the reserve.
@@ -895,17 +902,20 @@ func _build_log(run: DDRun) -> Control:
 			extra.append(str(t))
 	if not extra.is_empty():
 		v.add_child(DDUi.label(" ".join(extra), DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
-	var bv: VBoxContainer = DDUi.vbox(6)
+	var bv: BoxContainer = BoxContainer.new()
+	bv.vertical = false
+	bv.add_theme_constant_override("separation", 6)
+	bv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(bv)
 	var btn: Button = DDUi.button("Log", DDUi.PANEL, DDUi.FONT_S)
-	btn.custom_minimum_size = Vector2(96, 56)
+	btn.custom_minimum_size = Vector2(80, 56)
 	btn.autowrap_mode = TextServer.AUTOWRAP_OFF
 	btn.pressed.connect(func() -> void:
 		var lines: Array[String] = run.log_lines.slice(maxi(0, n - 14))
 		_inspect.open({"kind": "D", "tag": "WHAT HAPPENED", "title": "Recent events", "body": "\n".join(lines)}))
 	bv.add_child(btn)
 	var sb: Button = _settings_button(true)
-	sb.custom_minimum_size = Vector2(96, 56)
+	sb.custom_minimum_size = Vector2(80, 56)
 	bv.add_child(sb)
 	return p
 
@@ -1149,7 +1159,7 @@ func _build_safehouse() -> void:
 	_screen_title = head
 	v.add_child(head)
 	v.add_child(DDUi.label("HP left at the boss: +%d score  -  run score %d  -  points %d" % [Game.bal.shown(int(safehouse_info.get("hp_score", 0))), Game.bal.shown(run.run_score()), Game.bal.shown(run.points)], DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
-	v.add_child(DDUi.label("SAFEHOUSE: you rest and heal up to %d HP. Now HP %d / %d. You keep both weapons, your %d reserve ammo and your points." % [
+	v.add_child(DDUi.label("SAFEHOUSE: you rest and heal %d HP (up to your max). Now HP %d / %d. You keep both weapons, your %d reserve ammo and your points." % [
 		run.safehouse_healed(), run.hp, run.max_hp, run.reserve], DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var kit: HFlowContainer = HFlowContainer.new()
 	kit.alignment = FlowContainer.ALIGNMENT_CENTER
@@ -1297,7 +1307,6 @@ func apply_debug(args: Dictionary) -> void:
 			screen = Screen.SAFEHOUSE
 		"end":
 			run.setup_street(["Z30", "Z30", "B2", "B2", "B2", "B2", "B2", "B2"])
-			run.resolve(0, DDRun.BARE)
 			last_event = run.resolve(0, DDRun.BARE)
 			Game.sync_profile()
 			screen = Screen.END

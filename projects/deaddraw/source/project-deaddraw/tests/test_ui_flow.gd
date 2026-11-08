@@ -155,8 +155,8 @@ func test_screens_portrait_and_landscape() -> void:
 		await tree.process_frame
 		eq(run.opened.size(), 1, tag + " door opened through the button")
 		# the machine of that room: Maple Row's Garage is a Wall Rack -> buy -> offer -> slot 2
-		m.call("_on_room_tapped", 0)
-		await tree.process_frame
+		eq(m.get("selected_room"), 0, tag + " the opened room stays selected: its machine is next")
+		await _rerender(m)
 		var mb: Button = _button(m, "Buy the")
 		check(mb != null and mb.text.contains("PAY"), tag + " machine button with price and result")
 		if mb != null:
@@ -208,7 +208,9 @@ func test_safehouse_and_end_screens() -> void:
 		m.call("apply_debug", {"screen": "end", "seed": "3"})
 		await _rerender(m)
 		eq(m.call("screen_name"), "END", "end")
-		_all_inspectable(m, "end")
+		for v: Variant in _views(m, []):
+			check(not (v as DDCardView).payload.is_empty(), "end tile inspectable")
+		check(str(m.get("last_event").get("text", "")) != "", "end screen knows the last card")
 		m.call("apply_debug", {"screen": "street", "seed": "4", "boss": "1"})
 		await _rerender(m)
 		check(_has_tag(m, "BOSS STREET"), "boss street banner")
