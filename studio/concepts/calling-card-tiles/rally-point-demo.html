@@ -1,0 +1,284 @@
+<title>Rally Point Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a game table at night. Board on the felt, a scoreboard rail and the step caption beside it; stacks under the board on phones. Single dark look by choice. */
+:root{
+  color-scheme:dark;
+  --bg:#12161b; --felt:#1b2a2a; --felt-line:#27403f; --panel:#1a2026; --line:#2c3640; --ink:#eef2ef; --muted:#9aa7a3;
+  --p1:#3fc6b5; --p1-soft:rgba(63,198,181,.18); --p2:#f08a3c; --p2-soft:rgba(240,138,60,.18);
+  --gold:#f2cf5b; --dead:#e0524a;
+  --s-dia:#4fb3e8; --s-sun:#f2c14e; --s-peak:#e3625a; --s-cross:#a685e8;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cell:min(52px,calc((100vw - 48px)/8));
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:40px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+header p{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
+/* Board */
+.table{background:var(--felt);border-radius:18px;padding:14px;box-shadow:inset 0 0 0 1px var(--felt-line),0 18px 40px rgba(0,0,0,.35);justify-self:center}
+.board{position:relative;width:calc(var(--cell)*8);height:calc(var(--cell)*8);background-image:linear-gradient(var(--felt-line) 1px,transparent 1px),linear-gradient(90deg,var(--felt-line) 1px,transparent 1px);background-size:var(--cell) var(--cell);border:1px solid var(--felt-line);border-radius:6px}
+.tile{position:absolute;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .35s,box-shadow .3s}
+.tile.enter{transform:translateY(-26px) scale(1.08);opacity:0}
+.banner{border-radius:8px;padding:4px;background:var(--own);display:flex}
+.banner .face{flex:1;border-radius:5px;background:repeating-linear-gradient(135deg,var(--suit) 0 6px,color-mix(in srgb,var(--suit) 70%,#000) 6px 12px);display:flex;align-items:center;justify-content:center}
+.glyph{width:calc(var(--cell)*.46);height:calc(var(--cell)*.46);border-radius:50%;background:#0d1114;display:grid;place-items:center;color:var(--suit);font-size:calc(var(--cell)*.3);font-weight:700;line-height:1}
+.emblem{border-radius:12px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--suit);display:grid;place-items:center}
+.emblem svg{width:62%;height:62%}
+.emblem .count{position:absolute;right:4px;bottom:3px;font-family:var(--f-display);font-weight:800;font-size:15px;color:var(--ink);background:#0008;border-radius:6px;padding:0 5px}
+.emblem.rallied{box-shadow:inset 0 0 0 3px var(--suit),0 0 0 3px var(--gold),0 0 24px var(--gold)}
+.emblem.patch{background:repeating-linear-gradient(45deg,#2a3138 0 5px,#20262c 5px 10px);box-shadow:inset 0 0 0 2px #6b7780;border:2px dashed #8d99a2}
+.emblem.patch .plabel{font-family:var(--f-display);font-weight:800;font-size:13px;letter-spacing:.08em;color:#c7d0d4}
+.ring{position:absolute;border:2px dashed rgba(255,255,255,.45);border-radius:4px;pointer-events:none;transition:opacity .3s}
+.ring.filled{border-style:solid;border-color:rgba(242,207,91,.0)}
+.dead{position:absolute;background:repeating-linear-gradient(45deg,rgba(224,82,74,.55) 0 4px,transparent 4px 8px);border-radius:3px;pointer-events:none}
+.flash{animation:flash .9s ease-out 2}
+@keyframes flash{0%{box-shadow:0 0 0 0 var(--gold)}40%{box-shadow:0 0 0 5px var(--gold),0 0 22px var(--gold)}100%{box-shadow:0 0 0 0 transparent}}
+.pop{position:absolute;font-family:var(--f-display);font-weight:800;font-size:22px;color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;animation:pop 1.6s ease-out forwards;white-space:nowrap}
+@keyframes pop{0%{transform:translate(-50%,0) scale(.6);opacity:0}15%{transform:translate(-50%,-6px) scale(1.15);opacity:1}100%{transform:translate(-50%,-34px) scale(1);opacity:0}}
+.hint-cells{position:absolute;background:rgba(242,207,91,.18);border:2px solid var(--gold);border-radius:6px;pointer-events:none;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+.coords{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:6px;padding:0 4px}
+/* Side rail */
+.rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{border-radius:12px;padding:10px 12px;background:var(--panel);border:2px solid var(--line);display:flex;flex-direction:column;gap:2px;transition:border-color .3s,background .3s}
+.score.turn{border-color:var(--c);background:var(--soft)}
+.score .who{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.score .pts{font-family:var(--f-display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.score .sub{font-size:12px;color:var(--muted)}
+.p1{--c:var(--p1);--soft:var(--p1-soft)} .p2{--c:var(--p2);--soft:var(--p2-soft)}
+.caption{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:150px}
+.caption .step{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.caption h2{font-family:var(--f-display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin:2px 0 6px;line-height:1.05;text-wrap:balance}
+.caption p{margin:0;max-width:60ch}
+.caption .math{margin-top:8px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.caption .math span b{font-variant-numeric:tabular-nums}
+.market{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.market .lbl{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.mtiles{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mt{--cell:22px;position:relative;opacity:.55;transition:opacity .3s,transform .3s}
+.mt.pick{opacity:1;transform:translateY(-3px)}
+.mt .tile{position:relative}
+.stack{font-size:13px;color:var(--muted)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.04em;text-transform:uppercase;border-radius:10px;padding:8px 16px;border:1px solid var(--line);background:#222a31;color:var(--ink)}
+.btn.main{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.btn:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots button{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:#2a333b;padding:0}
+.dots button.done{background:#55626b}
+.dots button.on{background:var(--gold);border-color:var(--gold)}
+.dots button.key{box-shadow:0 0 0 2px var(--p1-soft)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.rules div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--muted)}
+.rules b{display:block;color:var(--ink);font-family:var(--f-display);font-size:19px;text-transform:uppercase;letter-spacing:.03em}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+@media (prefers-reduced-motion:reduce){.tile{transition:opacity .2s}.tile.enter{transform:none}.flash,.hint-cells{animation:none}.pop{animation-duration:2.2s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Rally Point</h1>
+    <p>A two-player walk-through of one full game. Watch it play, or step through it. Each step says what happened and why it matters.</p>
+  </header>
+
+  <div class="stage">
+    <div class="table">
+      <div class="board" id="board" aria-label="8 by 8 board"></div>
+      <div class="legend" style="margin-top:10px">
+        <span><i class="sw" style="background:var(--p1)"></i>Player 1 frame</span>
+        <span><i class="sw" style="background:var(--p2)"></i>Player 2 frame</span>
+        <span><i class="sw" style="border:2px dashed #fff8"></i>Open cell around an emblem</span>
+        <span><i class="sw" style="background:repeating-linear-gradient(45deg,#e0524a 0 3px,transparent 3px 6px)"></i>Dead cell</span>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="scores">
+        <div class="score p1" id="s1"><span class="who">Player 1</span><span class="pts" id="pts1">0</span><span class="sub" id="sub1">0 rallies closed</span></div>
+        <div class="score p2" id="s2"><span class="who">Player 2</span><span class="pts" id="pts2">0</span><span class="sub" id="sub2">0 rallies closed</span></div>
+      </div>
+      <div class="market">
+        <span class="lbl">Market</span>
+        <div class="mtiles" id="market"></div>
+        <span class="stack" id="stack"></span>
+      </div>
+      <div class="caption" aria-live="polite">
+        <div class="step" id="stepNo">Before the game</div>
+        <h2 id="capTitle">The board and the tiles</h2>
+        <p id="capText"></p>
+        <div class="math" id="capMath"></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="prev" aria-label="Previous step">◀ Back</button>
+        <button class="btn main" id="play">▶ Play</button>
+        <button class="btn" id="next" aria-label="Next step">Next ▶</button>
+        <button class="btn" id="restart">Restart</button>
+      </div>
+      <div class="dots" id="dots" aria-label="Jump to a step"></div>
+    </div>
+  </div>
+
+  <section class="rules" aria-label="Rules in short">
+    <div><b>Your turn</b>Take 1 of the 3 face-up tiles and place it.</div>
+    <div><b>Calling card</b>A banner covering any 4 empty cells in a straight line.</div>
+    <div><b>Emblem</b>A 2×2 hub on any empty 2×2, or a patch over an enclosed gap of 1–4 cells. Patches never score.</div>
+    <div><b>Rally</b>When all 8 cells around a hub are filled (the board edge counts), every banner touching it scores: 1 per cell, 2 if its suit matches. Whoever closes it gets +1.</div>
+    <div><b>Game end</b>The stack runs out. Hubs that never rallied score what touches them, at 1 per cell. Most points wins.</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const SUIT={dia:{c:"var(--s-dia)",g:"◆",n:"Diamond"},sun:{c:"var(--s-sun)",g:"●",n:"Sun"},peak:{c:"var(--s-peak)",g:"▲",n:"Peak"},cross:{c:"var(--s-cross)",g:"✚",n:"Cross"}};
+  const OWN={1:"var(--p1)",2:"var(--p2)"};
+  // The game: every placement in order. b = banner [row,col,dir,len 4], h = emblem hub [row,col] (2x2), p = emblem patch [cells]
+  const MOVES=[
+    {p:1,k:"h",s:"dia",at:[2,2],t:"Player 1 opens with an emblem",x:"An emblem placed as a hub claims a 2×2. The 8 dashed cells around it are its border: 2 on each side. When all 8 are filled, it rallies."},
+    {p:2,k:"b",s:"sun",at:[1,0,"h"],t:"A banner along the top",x:"Player 2 lays a Sun banner on row 2. Its right half touches the top of the Diamond emblem, so it covers 2 border cells. Suits don't match, so it will be worth 1 point per cell."},
+    {p:1,k:"b",s:"dia",at:[2,1,"v"],t:"Matching suit, double points",x:"Player 1 stands a Diamond banner up the left side. It covers 2 border cells and its suit matches the emblem: 2 points per cell when it rallies."},
+    {p:2,k:"h",s:"sun",at:[2,6],t:"A second hub on the edge",x:"Player 2 places a Sun emblem against the right edge. The board edge counts as filled, so this hub only needs 6 more cells."},
+    {p:1,k:"b",s:"dia",at:[4,2,"h"],t:"6 of 8: the emblem is almost closed",x:"Another matching Diamond banner covers the bottom. The Diamond emblem now has 6 of 8 border cells filled. Only the right side is open. Whoever fills it closes the rally and takes +1, but everyone's banners score."},
+    {p:2,k:"b",s:"peak",at:[0,4,"v"],t:"Player 2 closes the rally",x:"Player 2 fills the last two cells with a Peak banner. The emblem rallies: every banner touching it scores for its owner.",key:1},
+    {p:1,k:"b",s:"sun",at:[0,5,"v"],t:"Scoring off your rival's emblem",x:"Player 1 puts a Sun banner against Player 2's Sun emblem. Any banner scores for its owner, whoever placed the emblem. This one matches the suit: 4 points waiting."},
+    {p:2,k:"b",s:"sun",at:[4,6,"v"],t:"Player 2 claims a share",x:"Player 2 covers one bottom cell of the Sun emblem with a matching Sun banner: 2 points waiting."},
+    {p:1,k:"b",s:"cross",at:[4,7,"v"],t:"The last bottom cell",x:"Player 1 covers the other bottom cell. The Sun emblem now has its left, bottom and right filled. But look at the top: a 2×2 hole no banner can ever reach."},
+    {p:2,k:"h",s:"cross",at:[5,2],t:"A new hub lower down",x:"Instead of fixing the hole, Player 2 starts a Cross emblem. Its top border is already covered by Player 1's Diamond banner from step 5."},
+    {p:1,k:"p",s:"peak",cells:[[0,6],[0,7],[1,6],[1,7]],t:"A patch unlocks the stuck emblem",x:"Player 1 uses an emblem as a patch, pinned over the enclosed 4-cell hole. Patches never score, but their cells count as filled. The Sun emblem rallies, and Player 1 closes it for +1.",key:1},
+    {p:2,k:"b",s:"cross",at:[7,0,"h"],t:"Matching the Cross emblem",x:"Player 2 lays a Cross banner along the bottom row, covering the Cross emblem's bottom side: 4 points waiting."},
+    {p:1,k:"b",s:"dia",at:[2,0,"v"],t:"Filling the left column",x:"Player 1 fills column 1. It leaves a 2-cell pocket under it, next to the Cross emblem. Only a patch can fill that now."},
+    {p:2,k:"p",s:"sun",cells:[[6,0],[6,1]],t:"A small patch",x:"Player 2 patches the 2-cell pocket. The Cross emblem now has 6 of 8 border cells filled. Only its right side is open."},
+    {p:1,k:"b",s:"peak",at:[0,0,"h"],t:"The last banner",x:"Player 1 places the last banner on the top row. It touches no emblem, so it scores nothing. One tile is left in the stack."},
+    {p:2,k:"h",s:"dia",at:[5,4],t:"The last tile closes a rally",x:"Player 2 places the final emblem as a hub right next to the Cross emblem. Emblem cells count as filled, so the Cross emblem rallies and Player 2 takes +1. The new Diamond hub can never rally: its bottom cells are dead.",key:1},
+    {end:true,t:"Game over: end scoring",x:"The stack is empty. A hub that never rallied scores what touches it at 1 point per cell, with no suit bonus and no +1. The two red cells stayed empty: nothing could fill them."}
+  ];
+  const N=8; const board=document.getElementById("board");
+  const $=id=>document.getElementById(id);
+  let state, step=0, playing=false, timer=null;
+  const cs=()=>parseFloat(getComputedStyle(board).width)/8;
+
+  function fresh(){ return {grid:Array.from({length:N},()=>Array(N).fill(null)),tiles:[],hubs:[],score:{1:0,2:0},rallies:{1:0,2:0}}; }
+  function bannerCells(m){ const [r,c,d]=m.at; return [0,1,2,3].map(i=>d==="h"?[r,c+i]:[r+i,c]); }
+  function hubCells(m){ const [r,c]=m.at; return [[r,c],[r,c+1],[r+1,c],[r+1,c+1]]; }
+  function border(h){ const [r,c]=h.at; return [[r-1,c],[r-1,c+1],[r+2,c],[r+2,c+1],[r,c-1],[r+1,c-1],[r,c+2],[r+1,c+2]]; }
+  const inside=([r,c])=>r>=0&&r<N&&c>=0&&c<N;
+  function filled(st,cell){ return !inside(cell)||st.grid[cell[0]][cell[1]]!==null; }
+
+  // Apply a move to a state; returns rally events for animation.
+  function apply(st,m,i){
+    const tile={i,p:m.p,k:m.k,s:m.s};
+    let cells;
+    if(m.k==="b") cells=bannerCells(m); else if(m.k==="h") cells=hubCells(m); else cells=m.cells;
+    for(const [r,c] of cells){ if(!inside([r,c])||st.grid[r][c]) throw new Error("Illegal move "+(i+1)+" at "+r+","+c); st.grid[r][c]=tile; }
+    tile.cells=cells; st.tiles.push(tile);
+    if(m.k==="h"){ st.hubs.push({tile,at:m.at,s:m.s,rallied:false}); }
+    const events=[];
+    for(const h of st.hubs){ if(h.rallied) continue; if(border(h).every(cell=>filled(st,cell))){ h.rallied=true; const ev={hub:h,by:m.p,parts:[]}; for(const cell of border(h)){ if(!inside(cell)) continue; const t=st.grid[cell[0]][cell[1]]; if(t.k!=="b") continue; const pts=t.s===h.s?2:1; ev.parts.push({cell,tile:t,pts}); st.score[t.p]+=pts; } st.score[m.p]+=1; st.rallies[m.p]+=1; events.push(ev); } }
+    return events;
+  }
+  function endScoring(st){
+    const ev=[];
+    for(const h of st.hubs){ if(h.rallied) continue; const e={hub:h,parts:[]}; for(const cell of border(h)){ if(!inside(cell)) continue; const t=st.grid[cell[0]][cell[1]]; if(t&&t.k==="b"){ e.parts.push({cell,tile:t,pts:1}); st.score[t.p]+=1; } } ev.push(e); }
+    return ev;
+  }
+  // Precompute every step's state (and events), so stepping back is exact.
+  const SNAP=[]; { let st=fresh(); SNAP.push({st:JSON.parse(JSON.stringify(st)),ev:[]});
+    MOVES.forEach((m,i)=>{ let ev; if(m.end) ev=endScoring(st); else ev=apply(st,m,i); SNAP.push({st:JSON.parse(JSON.stringify(st)),ev}); }); }
+
+  function suitStyle(s,p){ return `--suit:${SUIT[s].c};--own:${p?OWN[p]:"transparent"}`; }
+  function tileHTML(t,cls=""){
+    const rs=t.cells.map(x=>x[0]), cs_=t.cells.map(x=>x[1]);
+    const r0=Math.min(...rs), c0=Math.min(...cs_), h=Math.max(...rs)-r0+1, w=Math.max(...cs_)-c0+1;
+    const pos=`left:calc(var(--cell)*${c0} + 2px);top:calc(var(--cell)*${r0} + 2px);width:calc(var(--cell)*${w} - 4px);height:calc(var(--cell)*${h} - 4px);`;
+    if(t.k==="b") return `<div class="tile banner ${cls}" data-t="${t.i}" style="${pos}${suitStyle(t.s,t.p)}"><div class="face"><span class="glyph">${SUIT[t.s].g}</span></div></div>`;
+    if(t.k==="p"){ return t.cells.map(([r,c])=>`<div class="tile emblem patch ${cls}" data-t="${t.i}" style="left:calc(var(--cell)*${c} + 2px);top:calc(var(--cell)*${r} + 2px);width:calc(var(--cell) - 4px);height:calc(var(--cell) - 4px);border-radius:6px;${suitStyle(t.s)}"><span class="plabel">P</span></div>`).join(""); }
+    return `<div class="tile emblem ${cls}" data-t="${t.i}" style="${pos}${suitStyle(t.s)}">${shield(t.s)}<span class="count" data-count="${t.i}"></span></div>`;
+  }
+  function shield(s){ return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z" fill="${SUIT[s].c}" opacity=".25"/><path d="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z" fill="none" stroke="${SUIT[s].c}" stroke-width="2.5"/><text x="20" y="28" text-anchor="middle" font-size="18" fill="${SUIT[s].c}" font-family="sans-serif" font-weight="700">${SUIT[s].g}</text></svg>`; }
+
+  function drawBoard(snap,animIdx){
+    const st=snap.st; let html="";
+    for(const t of st.tiles) html+=tileHTML(t,t.i===animIdx?"enter":"");
+    // open border cells of hubs that haven't rallied
+    for(const h of st.hubs){ if(h.rallied) continue; for(const cell of border(h)){ if(!inside(cell)) continue; if(st.grid[cell[0]][cell[1]]) continue; html+=`<div class="ring" style="left:calc(var(--cell)*${cell[1]} + 3px);top:calc(var(--cell)*${cell[0]} + 3px);width:calc(var(--cell) - 6px);height:calc(var(--cell) - 6px)"></div>`; } }
+    if(step===MOVES.length){ for(let r=0;r<N;r++)for(let c=0;c<N;c++) if(!st.grid[r][c]) html+=`<div class="dead" style="left:calc(var(--cell)*${c} + 2px);top:calc(var(--cell)*${r} + 2px);width:calc(var(--cell) - 4px);height:calc(var(--cell) - 4px)"></div>`; }
+    board.innerHTML=html;
+    for(const h of st.hubs){ const el=board.querySelector(`.emblem[data-t="${h.tile.i}"]`); if(!el) continue; if(h.rallied) el.classList.add("rallied"); const n=border(h).filter(cell=>filled(st,cell)).length; const cnt=el.querySelector(".count"); if(cnt) cnt.textContent=h.rallied?"✓":`${n}/8`; }
+    if(animIdx!=null) requestAnimationFrame(()=>requestAnimationFrame(()=>board.querySelectorAll(".enter").forEach(e=>e.classList.remove("enter"))));
+  }
+  function popAt(cell,txt,delay){ setTimeout(()=>{ const d=document.createElement("div"); d.className="pop"; d.textContent=txt; d.style.left=`calc(var(--cell)*${cell[1]} + var(--cell)/2)`; d.style.top=`calc(var(--cell)*${cell[0]} + 4px)`; board.appendChild(d); setTimeout(()=>d.remove(),1700); },delay); }
+  function animateEvents(evs,isEnd){
+    let delay=550;
+    for(const ev of evs){
+      const hubEl=board.querySelector(`.emblem[data-t="${ev.hub.tile.i}"]`);
+      if(hubEl) setTimeout(()=>hubEl.classList.add("flash"),delay);
+      const seen=new Set();
+      ev.parts.forEach((pt,k)=>{ const tEl=board.querySelector(`.tile[data-t="${pt.tile.i}"]`); if(tEl&&!seen.has(pt.tile.i)){ seen.add(pt.tile.i); setTimeout(()=>tEl.classList.add("flash"),delay+120); } popAt(pt.cell,"+"+pt.pts,delay+200+k*90); });
+      if(!isEnd&&hubEl){ const [r,c]=ev.hub.at; popAt([r,c+0.5],"+1 close",delay+900); }
+      delay+=600;
+    }
+  }
+  function scoreHTML(snap,prev){
+    const st=snap.st;
+    for(const p of [1,2]){ countTo($("pts"+p),prev?prev.st.score[p]:st.score[p],st.score[p]); $("sub"+p).textContent=`${st.rallies[p]} ${st.rallies[p]===1?"rally":"rallies"} closed`; }
+  }
+  function countTo(el,from,to){ if(from===to){ el.textContent=to; return; } const t0=performance.now(), dur=900; const tick=now=>{ const k=Math.min(1,(now-t0)/dur); el.textContent=Math.round(from+(to-from)*k); if(k<1) requestAnimationFrame(tick); }; setTimeout(()=>requestAnimationFrame(tick),500); }
+  function marketHTML(){
+    const rest=MOVES.slice(step).filter(m=>!m.end);
+    const show=rest.slice(0,3);
+    $("market").innerHTML=show.length?show.map((m,i)=>{ const t={i:-1,p:i===0?m.p:null,k:m.k==="p"?"h":m.k,s:m.s,cells:m.k==="b"?[[0,0],[0,1],[0,2],[0,3]]:[[0,0],[0,1],[1,0],[1,1]]}; return `<div class="mt ${i===0?"pick":""}" style="width:${t.k==="b"?88:44}px;height:${t.k==="b"?22:44}px" title="${SUIT[m.s].n} ${m.k==="b"?"banner":"emblem"}">${tileHTML(t)}</div>`; }).join(""):'<span class="stack">Empty</span>';
+    $("stack").textContent=`${rest.length} ${rest.length===1?"tile":"tiles"} left`;
+  }
+  function render(animate){
+    const snap=SNAP[step], prev=step>0?SNAP[step-1]:null;
+    drawBoard(snap,animate&&step>0&&!MOVES[step-1].end?step-1:null);
+    scoreHTML(snap,animate?prev:null);
+    const m=step>0?MOVES[step-1]:null;
+    const nextP=step<MOVES.length&&!MOVES[step].end?MOVES[step].p:null;
+    $("s1").classList.toggle("turn",(m&&!m.end?m.p:nextP)===1); $("s2").classList.toggle("turn",(m&&!m.end?m.p:nextP)===2);
+    if(!m){ $("stepNo").textContent="Before the game"; $("capTitle").textContent="The board and the tiles"; $("capText").textContent="An empty 8×8 board and a stack of 16 tiles: 10 calling cards (1×4 banners) and 6 emblems (2×2). Each tile has one of 4 suits. Three tiles lie face up in the market. On your turn, take one and place it. Banners you place carry your colour frame."; $("capMath").innerHTML=""; }
+    else{ $("stepNo").textContent=m.end?"End of game":`Turn ${step} of 16 · Player ${m.p}`; $("capTitle").textContent=m.t; $("capText").textContent=m.x; $("capMath").innerHTML=mathHTML(SNAP[step].ev,m); }
+    marketHTML();
+    document.querySelectorAll("#dots button").forEach((b,i)=>{ b.classList.toggle("on",i===step); b.classList.toggle("done",i<step); });
+    $("prev").disabled=step===0; $("next").disabled=step===MOVES.length;
+    if(animate&&SNAP[step].ev.length) animateEvents(SNAP[step].ev,!!(m&&m.end));
+    if(step===MOVES.length){ const a=SNAP[step].st.score; $("capMath").innerHTML+=`<span style="margin-top:6px;color:var(--gold);font-weight:700">Final: Player 1 ${a[1]} · Player 2 ${a[2]} · ${a[1]===a[2]?"tie, broken by rallies closed":"Player "+(a[1]>a[2]?1:2)+" wins"}</span>`; }
+  }
+  function mathHTML(evs,m){
+    if(!evs.length) return "";
+    return evs.map(ev=>{ const by={1:0,2:0}; ev.parts.forEach(pt=>by[pt.tile.p]+=pt.pts);
+      const lines=[];
+      const groups={}; ev.parts.forEach(pt=>{ const k=pt.tile.i; (groups[k]=groups[k]||{t:pt.tile,n:0,pts:0}); groups[k].n++; groups[k].pts+=pt.pts; });
+      const name=`${SUIT[ev.hub.s].n} emblem`;
+      lines.push(`<span><b>${m.end?"Un-rallied "+name:name+" rallies"}</b></span>`);
+      Object.values(groups).forEach(g=>lines.push(`<span>Player ${g.t.p}'s ${SUIT[g.t.s].n} banner: ${g.n} ${g.n===1?"cell":"cells"} × ${m.end?1:(g.t.s===ev.hub.s?"2 (match)":"1")} = <b>${g.pts}</b></span>`));
+      if(!ev.parts.length) lines.push("<span>No banners touch it: 0 points.</span>");
+      if(!m.end) lines.push(`<span>Player ${ev.by} closed it: <b>+1</b></span>`);
+      return lines.join(""); }).join("");
+  }
+  // Controls
+  function go(n,animate=true){ step=Math.max(0,Math.min(MOVES.length,n)); render(animate); }
+  function stop(){ playing=false; clearTimeout(timer); $("play").textContent="▶ Play"; }
+  function loop(){ if(!playing) return; if(step>=MOVES.length){ stop(); return; } go(step+1); const ev=SNAP[step].ev.length; timer=setTimeout(loop,ev?4200:2600); }
+  $("play").onclick=()=>{ if(playing){ stop(); return; } if(step>=MOVES.length) go(0,false); playing=true; $("play").textContent="❚❚ Pause"; timer=setTimeout(loop,400); };
+  $("next").onclick=()=>{ stop(); go(step+1); };
+  $("prev").onclick=()=>{ stop(); go(step-1,false); };
+  $("restart").onclick=()=>{ stop(); go(0,false); };
+  document.addEventListener("keydown",e=>{ if(e.key==="ArrowRight"){ stop(); go(step+1); } else if(e.key==="ArrowLeft"){ stop(); go(step-1,false); } });
+  $("dots").innerHTML=Array.from({length:MOVES.length+1},(_,i)=>`<button aria-label="${i===0?"Start":i===MOVES.length?"End scoring":"Turn "+i}" class="${i>0&&MOVES[i-1].key?"key":""}"></button>`).join("");
+  document.querySelectorAll("#dots button").forEach((b,i)=>b.onclick=()=>{ stop(); go(i,i===step+1); });
+  window.addEventListener("resize",()=>render(false));
+  render(false);
+})();
+</script>
