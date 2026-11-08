@@ -1,5 +1,6 @@
 import json, sys, importlib.util
-root = "/home/user/Gamestudio/projects/deaddraw"
+import os
+root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 spec = importlib.util.spec_from_file_location("sim", root + "/tools/sim_deaddraw_v2.py")
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 path = root + "/source/project-deaddraw/data/balance.json"
