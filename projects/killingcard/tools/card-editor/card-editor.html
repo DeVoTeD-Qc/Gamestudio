@@ -124,6 +124,23 @@ textarea.design{min-height:120px}
 .kwgrid button{font-family:var(--f-cond);font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:6px;padding:4px 9px}
 .kwgrid button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
 .kwgrid input{width:56px}
+.kwchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kwchips .kw{font-size:14px;background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}
+.picker{position:absolute;inset:0;background:var(--panel);z-index:3;display:flex;flex-direction:column}
+.picker header{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.picker header h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;font-size:19px;margin:0;flex:1}
+.picker .pbody{overflow:auto;padding:12px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.picker input[type=search]{width:100%}
+.pgroup{display:flex;flex-direction:column;gap:6px}
+.prow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel-2)}
+.prow.on{border-color:var(--teal);box-shadow:inset 3px 0 0 var(--teal)}
+.prow .pn{font-family:var(--f-cond);font-weight:700;font-size:17px;letter-spacing:.02em}
+.prow .pd{font-size:13px;color:var(--muted);line-height:1.35}
+.prow .pc{display:flex;gap:6px;align-items:center}
+.prow .pc button{min-width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-family:var(--f-cond);font-weight:700;font-size:15px;padding:0 10px}
+.prow .pc button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.prow .pc b{min-width:18px;text-align:center;font-family:var(--f-display);font-size:18px}
+.sheet{position:fixed}
 .st-building{background:var(--amber-soft);color:var(--amber)}
 .st-swapped{background:#2b3338;color:#cfe}
 </style>
@@ -220,10 +237,11 @@ textarea.design{min-height:120px}
       <div class="field"><span class="lbl">Copies in the deck</span>
         <div class="kwgrid"><button type="button" data-copies="-1" aria-label="Fewer copies">−</button><b id="fCopies" style="font-family:var(--f-display);font-size:22px;min-width:28px;text-align:center">1</b><button type="button" data-copies="1" aria-label="More copies">+</button></div></div>
     </div>
-    <div class="field" id="setOnly2">
+    <div class="field">
       <span class="lbl">Keywords</span>
-      <div class="kwgrid" id="kwGrid"></div>
-      <span class="hint">Tap to toggle. Cover and Patch take a number.</span>
+      <div class="kwchips" id="kwChips"></div>
+      <div><button type="button" class="btn" id="openPicker">Keyword picker</button></div>
+      <span class="hint">Add keywords to the card, or drop triggers and effects into the printed text.</span>
     </div>
     <div class="field"><label for="fText">Printed text</label>
       <textarea id="fText" maxlength="240" placeholder="What the card says, e.g. First Shot. On Deploy: draw 1."></textarea>
@@ -231,6 +249,15 @@ textarea.design{min-height:120px}
     <div class="field"><label for="fDesign">What should it do? (plain words for Claude)</label>
       <textarea id="fDesign" class="design" maxlength="2000" placeholder="e.g. When this unit dies, your other units in the column get +1 Firepower until the end of the round. Should feel like a sacrifice play."></textarea>
       <span class="hint">Claude converts this into rules, checks balance with the simulator and replies here.</span></div>
+  </div>
+  <div id="picker" class="picker" hidden role="dialog" aria-labelledby="pickerTitle">
+    <header><h3 id="pickerTitle">Keyword picker</h3><button class="btn" id="closePicker">Done</button></header>
+    <div class="pbody">
+      <input type="search" id="pq" placeholder="Search keywords and effects" aria-label="Search keywords and effects">
+      <div class="pgroup"><span class="lbl">Keywords on this card</span><div id="pKw" class="pgroup"></div></div>
+      <div class="pgroup"><span class="lbl">Triggers · add to the printed text</span><div id="pTrig" class="pgroup"></div></div>
+      <div class="pgroup"><span class="lbl">Effects · add to the printed text</span><div id="pFx" class="pgroup"></div></div>
+    </div>
   </div>
   <footer>
     <button class="btn warn" id="resetBtn">Reset to game values</button>
@@ -248,6 +275,9 @@ textarea.design{min-height:120px}
   const SET_STATUS={building:["Building","st-building"],ready:["Ready to swap in","st-ready"],swapping:["Claude is building it","st-ready"],swapped:["In the game","st-swapped"],question:["Claude asks","st-question"]};
   const LIMITS={cost:[0,10],firepower:[0,10],armor:[0,20]};
   const KW_FLAGS=["First Shot","Pick","Flank","Suppress","Pierce","Holder","Arrives Front","Hidden"];
+  const KW_RULES={"First Shot":"Fires first in its exchange; a partner it kills doesn't fire back.","Pick":"Shoots the enemy with the lowest current Armor (ties: front-most).","Flank":"Shoots the back-most enemy in the line.","Suppress":"At the start of the firefight, the enemy point man here gets -2 Firepower.","Pierce":"Damage beyond what its target needs carries on to the next enemy behind it.","Holder":"You control this zone while it is contested, unless the enemy also has a Holder here.","Arrives Front":"Joins the zone at the front of the line and becomes the point man.","Hidden":"Stays face-down after Reveal; the enemy only sees it when it goes off.","Cover":"Each hit on this unit deals N less damage (minimum 0).","Patch":"After the firefight, restores N Armor to the most damaged other friendly unit here."};
+  const TRIGGERS=[["On Deploy:","Happens when this unit is revealed and arrives."],["On Down:","Happens when this unit is eliminated."],["At end of round:","Happens after Score & Streak each round."],["Resolves immediately:","Takes effect as soon as you play it in Deploy (tactics)."],["While you control this column:","Lasts as long as you hold the column (fields)."],["This round,","Lasts until the end of the current round."]];
+  const EFFECTS=[["deal {n} damage to the enemy point man here","Hits the front enemy unit in this column.",2],["deal {n} damage to each enemy unit in this column","Hits the whole enemy line in the column.",1],["draw {n}","Draw cards from your deck.",1],["your units here get +{n} FP","Firepower boost for your units in this column.",1],["enemy units here get -{n} FP","Weakens the enemy line in this column.",1],["your units here gain Cover {n}","Each hit on them deals less damage.",1],["restore {n} Armor to your most damaged unit here","Heals one friendly unit.",1],["streak +{n}","Adds to your killstreak meter.",1],["gain {n} Supply","Extra Supply to spend this round.",1],["reveal enemy red dots in this zone","Shows hidden enemy plays in the zone.",0],["move a friendly unit to an adjacent zone","Repositions one of your units.",0],["destroy an enemy Field here","Removes the enemy's Field card in this column.",0]];
   const KW_NUM=["Cover","Patch"];
   const TRAIT_LABEL={undead:"Undead",vanguard:"Vanguard",heavy:"Heavy",specops:"Spec Ops"};
   const S={game:{},edits:{},sets:{},setCards:{},set:"game",filter:"all",q:"",open:null,db:null,comments:null,canWrite:true,loaded:false,unsubSet:null};
@@ -262,7 +292,7 @@ textarea.design{min-height:120px}
     if(inSet()){ const c=Object.assign({copies:1,keywords:[]},S.setCards[id]||{}); c.id=id; return c; }
     const b=S.game[id]||{}, e=S.edits[id]||{};
     const m=Object.assign({},b);
-    for(const k of ["name","type","cost","firepower","armor","text","design"]) if(e[k]!==undefined) m[k]=e[k];
+    for(const k of ["name","type","cost","firepower","armor","text","design","keywords"]) if(e[k]!==undefined) m[k]=e[k];
     m.status=e.status||null; m.claudeNote=e.claudeNote||""; m.isNew=!!e.isNew; m.id=id;
     return m;
   }
@@ -272,6 +302,7 @@ textarea.design{min-height:120px}
     if(!inSet()){ const e=S.edits[id]; if(!e) return d; if(!b){ for(const k of ["name","type","cost","firepower","armor","text"]) d[k]=true; return d; } }
     if(!b) return inSet()?{}:d;
     for(const k of ["name","type","cost","firepower","armor","text"]) if(m[k]!==undefined && m[k]!==b[k]) d[k]=true;
+    if(m.keywords && JSON.stringify([...m.keywords].sort())!==JSON.stringify([...(b.keywords||[])].sort())) d.keywords=true;
     return d;
   }
   function isEdited(id){
@@ -286,7 +317,7 @@ textarea.design{min-height:120px}
     const st=!inSet()&&m.status&&STATUS[m.status];
     const text=(m.text||"").trim();
     const was=k=> d[k]&&b[k]!==undefined? `<span class="was">${esc(b[k])}</span>`:"";
-    const kwList=inSet()?(m.keywords||[]):(b.keywords||[]);
+    const kwList=m.keywords||b.keywords||[];
     const trait=inSet()?m.trait:b.trait;
     const kws=kwList.map(k=>`<span class="kw">${esc(k)}</span>`).join("");
     const tag=preview?"div":"button";
@@ -301,7 +332,7 @@ textarea.design{min-height:120px}
         <div class="name ${d.name?"changed":""}">${esc(m.name||"Untitled card")}${was("name")}</div>
         ${trait?`<span class="trait">${esc(TRAIT_LABEL[trait]||trait)}</span>`:""}</div>
       <div class="sub">${esc(sub.join(" · "))}</div>
-      ${kws?`<div class="kws" style="padding-top:6px">${kws}</div>`:""}
+      ${kws?`<div class="kws ${d.keywords?"changed":""}" style="padding-top:6px">${kws}</div>`:""}
       <div class="text ${d.text?"changed":""}">${text?esc(text):(m.design?'<i>Design note only, no printed text yet.</i>':'<i>No rules text.</i>')}</div>
       <div class="foot">${st?`<span class="status ${st[1]}">${st[0]}</span>`:""}${inSet()&&m.claudeNote?'<span class="status st-question">Claude asks</span>':""}${d.cost&&b.cost!==undefined?`<span class="was">cost ${esc(b.cost)}</span>`:""}
         ${unit?`<div class="plates"><div class="plate ${d.firepower?"changed":""}"><small>FP</small>${esc(m.firepower??0)}</div><div class="plate ar ${d.armor?"changed":""}"><small>ARMOR</small>${esc(m.armor??0)}</div></div>`:""}</div>
@@ -400,7 +431,7 @@ textarea.design{min-height:120px}
 
   // ---------- Sheet ----------
   function openSheet(id){ S.open=id; $("scrim").hidden=false; $("sheet").hidden=false; renderSheet(true); $("closeSheet").focus(); }
-  function closeSheet(){ S.open=null; $("scrim").hidden=true; $("sheet").hidden=true; $("confirmRow")?.remove(); }
+  function closeSheet(){ $("picker").hidden=true; S.open=null; $("scrim").hidden=true; $("sheet").hidden=true; $("confirmRow")?.remove(); }
   function renderSheet(fill){
     const id=S.open, m=merged(id), b=ref(id);
     if(!inSet()&&!S.game[id]&&!S.edits[id]){ closeSheet(); return; }
@@ -416,13 +447,11 @@ textarea.design{min-height:120px}
       return `<div class="stepper" ${off?'style="opacity:.4"':''}><span class="lbl">${lab}</span><span class="v">${esc(m[k]??0)}</span>
       <div class="row"><button data-k="${k}" data-d="-1" aria-label="Lower ${lab}" ${off?"disabled":""}>−</button><button data-k="${k}" data-d="1" aria-label="Raise ${lab}" ${off?"disabled":""}>+</button></div>
       <span class="orig">${b&&b[k]!==undefined?"Game: "+b[k]:"New"}</span></div>`;}).join("");
-    $("setOnly1").hidden=!inSet(); $("setOnly2").hidden=!inSet();
-    if(inSet()){
-      $("fCopies").textContent=m.copies||1;
-      const kws=m.keywords||[];
-      $("kwGrid").innerHTML=KW_FLAGS.map(k=>`<button type="button" data-kw="${esc(k)}" aria-pressed="${kws.includes(k)}">${esc(k)}</button>`).join("")+
-        KW_NUM.map(k=>{const cur=kws.find(x=>x.startsWith(k+" "));const v=cur?+cur.split(" ")[1]:0;return `<button type="button" data-kwn="${k}" data-d="-1" aria-label="Less ${k}">−</button><button type="button" aria-pressed="${v>0}" disabled>${k} ${v}</button><button type="button" data-kwn="${k}" data-d="1" aria-label="More ${k}">+</button>`;}).join("");
-    }
+    $("setOnly1").hidden=!inSet();
+    if(inSet()) $("fCopies").textContent=m.copies||1;
+    const kwNow=m.keywords||[];
+    $("kwChips").innerHTML=kwNow.length?kwNow.map(k=>`<span class="kw">${esc(k)}</span>`).join(""):'<span class="hint">No keywords.</span>';
+    if(!$("picker").hidden) renderPicker();
     if(fill){ $("fName").value=m.name||""; $("fType").value=m.type||"Unit"; $("fText").value=m.text||""; $("fDesign").value=m.design||""; $("fTrait").value=m.trait||""; $("saving").textContent=""; }
     $("readyBtn").hidden=inSet(); $("dupBtn").hidden=!inSet();
     $("readyBtn").textContent=m.status==="ready"?"Back to draft":"Mark ready";
@@ -435,8 +464,31 @@ textarea.design{min-height:120px}
     const v=Math.max(lo,Math.min(hi,(m[k]??0)+d)); if(v===m[k]) return;
     patch(S.open,{[k]:v});
   });
-  $("kwGrid").addEventListener("click",ev=>{
+  // ---------- Keyword picker ----------
+  let pickN={};
+  function renderPicker(){
+    const q=($("pq").value||"").toLowerCase(), m=merged(S.open), kws=m.keywords||[];
+    const hit=(...t)=>!q||t.join(" ").toLowerCase().includes(q);
+    $("pKw").innerHTML=KW_FLAGS.filter(k=>hit(k,KW_RULES[k])).map(k=>{const on=kws.includes(k);return `<div class="prow ${on?"on":""}"><div><div class="pn">${esc(k)}</div><div class="pd">${esc(KW_RULES[k])}</div></div><div class="pc"><button type="button" data-kw="${esc(k)}" aria-pressed="${on}">${on?"On":"Add"}</button></div></div>`;}).join("")+
+      KW_NUM.filter(k=>hit(k,KW_RULES[k])).map(k=>{const cur=kws.find(x=>x.startsWith(k+" "));const v=cur?+cur.split(" ")[1]:0;return `<div class="prow ${v?"on":""}"><div><div class="pn">${esc(k)} ${v||"N"}</div><div class="pd">${esc(KW_RULES[k].replace("N",v||"N"))}</div></div><div class="pc"><button type="button" data-kwn="${k}" data-d="-1" aria-label="Less ${k}">−</button><b>${v}</b><button type="button" data-kwn="${k}" data-d="1" aria-label="More ${k}">+</button></div></div>`;}).join("") || '<div class="hint">No keyword matches.</div>';
+    $("pTrig").innerHTML=TRIGGERS.filter(t=>hit(t[0],t[1])).map((t,i)=>`<div class="prow"><div><div class="pn">${esc(t[0])}</div><div class="pd">${esc(t[1])}</div></div><div class="pc"><button type="button" data-ins="${esc(t[0])} ">Add</button></div></div>`).join("")||'<div class="hint">No trigger matches.</div>';
+    $("pFx").innerHTML=EFFECTS.map((e,i)=>[e,i]).filter(([e])=>hit(e[0],e[1])).map(([e,i])=>{const n=pickN[i]??e[2];const txt=e[0].replace("{n}",n);return `<div class="prow"><div><div class="pn">${esc(txt)}</div><div class="pd">${esc(e[1])}</div></div><div class="pc">${e[0].includes("{n}")?`<button type="button" data-fx="${i}" data-d="-1" aria-label="Less">−</button><b>${n}</b><button type="button" data-fx="${i}" data-d="1" aria-label="More">+</button>`:""}<button type="button" data-ins="${esc(txt)}.">Add</button></div></div>`;}).join("")||'<div class="hint">No effect matches.</div>';
+  }
+  function insertText(t){
+    const ta=$("fText"); const v=ta.value; const a=ta.selectionStart??v.length, b=ta.selectionEnd??v.length;
+    let ins=t; if(a>0&&!/\s$/.test(v.slice(0,a))) ins=" "+ins;
+    if(/[.:]$/.test(t)&&/^[a-z]/.test(t)&&(a===0||/\.\s*$/.test(v.slice(0,a)))) ins=ins.replace(/^(\s?)([a-z])/,(m,s,c)=>s+c.toUpperCase());
+    ta.value=v.slice(0,a)+ins+v.slice(b); const pos=a+ins.length; try{ta.setSelectionRange(pos,pos);}catch(e){}
+    patch(S.open,{text:ta.value});
+    $("pickerTitle").textContent="Added to the text"; setTimeout(()=>$("pickerTitle").textContent="Keyword picker",1200);
+  }
+  $("openPicker").addEventListener("click",()=>{ $("pq").value=""; $("picker").hidden=false; renderPicker(); $("pq").focus(); });
+  $("closePicker").addEventListener("click",()=>{ $("picker").hidden=true; $("openPicker").focus(); });
+  $("pq").addEventListener("input",renderPicker);
+  $("picker").addEventListener("click",ev=>{
     const b=ev.target.closest("button"); if(!b||!S.open) return;
+    if(b.dataset.ins){ insertText(b.dataset.ins); return; }
+    if(b.dataset.fx){ const i=+b.dataset.fx; pickN[i]=Math.max(1,Math.min(5,(pickN[i]??EFFECTS[i][2])+(+b.dataset.d))); renderPicker(); return; }
     const kws=[...(merged(S.open).keywords||[])];
     if(b.dataset.kw){ const k=b.dataset.kw, i=kws.indexOf(k); if(i>=0) kws.splice(i,1); else kws.push(k); patch(S.open,{keywords:kws}); }
     else if(b.dataset.kwn){ const k=b.dataset.kwn, i=kws.findIndex(x=>x.startsWith(k+" ")); const v=Math.max(0,Math.min(5,(i>=0?+kws[i].split(" ")[1]:0)+(+b.dataset.d))); if(i>=0) kws.splice(i,1); if(v>0) kws.push(k+" "+v); patch(S.open,{keywords:kws}); }
@@ -466,7 +518,7 @@ textarea.design{min-height:120px}
     };
   });
   $("closeSheet").onclick=closeSheet; $("scrim").onclick=closeSheet;
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&S.open) closeSheet(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&S.open){ if(!$("picker").hidden) $("picker").hidden=true; else closeSheet(); } });
   $("grid").addEventListener("click",e=>{ const c=e.target.closest(".card[data-id]"); if(c) openSheet(c.dataset.id); });
   document.querySelectorAll(".chip[data-f]").forEach(ch=>ch.addEventListener("click",()=>{
     S.filter=ch.dataset.f; document.querySelectorAll(".chip[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===ch?"true":"false")); render(); }));
@@ -536,7 +588,7 @@ textarea.design{min-height:120px}
     const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
     const lines=ready.map(id=>{ const m=merged(id), b=S.game[id]; const parts=[];
       if(!b) parts.push(`new ${m.type}, cost ${m.cost}${m.type==="Unit"?`, ${m.firepower} FP / ${m.armor} Armor`:""}`);
-      else for(const k of Object.keys(diffs(id))) parts.push(`${k} ${b[k]} → ${m[k]}`);
+      else for(const k of Object.keys(diffs(id))) parts.push(k==="keywords"?`keywords ${(b.keywords||[]).join(", ")||"none"} → ${(m.keywords||[]).join(", ")||"none"}`:`${k} ${b[k]} → ${m[k]}`);
       if((m.design||"").trim()) parts.push("has a plain-words design note");
       return `- ${m.name} (${id}): ${parts.join("; ")||"no changes"}`; });
     return `Apply my card edits from the Card Editor:\n${lines.join("\n")}`;
