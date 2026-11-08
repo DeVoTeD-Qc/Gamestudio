@@ -1,0 +1,312 @@
+<title>Rally Point v2 Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a game table at night. Player 2's hand across the top, the board on the felt, Player 1's hand below; the step caption and scores on the right rail (stacked under on phones). Single dark look by choice. */
+:root{
+  color-scheme:dark;
+  --bg:#12161b; --felt:#1b2a2a; --felt-line:#27403f; --panel:#1a2026; --line:#2c3640; --ink:#eef2ef; --muted:#9aa7a3;
+  --p1:#3fc6b5; --p1-soft:rgba(63,198,181,.16); --p2:#f08a3c; --p2-soft:rgba(240,138,60,.16);
+  --gold:#f2cf5b; --charge:#ffe27a;
+  --s-strike:#e2465a; --s-signal:#f2b632; --s-ridge:#57b86a; --s-supply:#4f9be8;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cell:min(54px,calc((100vw - 64px)/8));
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:40px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+header h1 span{color:var(--gold)}
+header p{margin:6px 0 0;color:var(--muted);max-width:66ch}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+.table{background:var(--felt);border-radius:18px;padding:12px;box-shadow:inset 0 0 0 1px var(--felt-line),0 18px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px;justify-self:center;max-width:100%}
+.board{position:relative;width:calc(var(--cell)*8);height:calc(var(--cell)*8);background-image:linear-gradient(var(--felt-line) 1px,transparent 1px),linear-gradient(90deg,var(--felt-line) 1px,transparent 1px);background-size:var(--cell) var(--cell);border:1px solid var(--felt-line);border-radius:6px;align-self:center}
+/* Hands */
+.hand{display:flex;align-items:center;gap:8px;border-radius:12px;padding:8px;background:rgba(0,0,0,.18);border:1px solid transparent;min-height:84px}
+.hand.turn{border-color:var(--c);background:var(--soft)}
+.hand .who{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--f-display);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--c);font-size:15px}
+.hand .cards{display:flex;gap:6px;flex:1;min-width:0;flex-wrap:wrap}
+.hand .stackc{display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--muted);gap:2px}
+.hand .stackc b{width:34px;height:46px;border-radius:6px;background:repeating-linear-gradient(135deg,#2b333b 0 5px,#232a31 5px 10px);border:1px solid var(--c);display:grid;place-items:center;font-family:var(--f-display);font-size:18px;color:var(--ink)}
+.p1{--c:var(--p1);--soft:var(--p1-soft)} .p2{--c:var(--p2);--soft:var(--p2-soft)}
+.card{width:92px;border-radius:9px;background:#10161a;border:2px solid var(--suit);padding:5px 6px;display:flex;flex-direction:column;gap:2px;transition:transform .35s,opacity .35s,box-shadow .3s}
+.card .t{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.card .t i{font-style:normal;color:var(--suit);font-weight:700;font-size:12px}
+.card .n{font-family:var(--f-display);font-weight:800;font-size:16px;line-height:1.05}
+.card .k{font-size:10.5px;color:var(--muted);line-height:1.2}
+.card.play{box-shadow:0 0 0 3px var(--gold);transform:translateY(-4px)}
+.card.new{animation:deal .5s ease-out}
+@keyframes deal{from{transform:translateX(30px) scale(.9);opacity:0}}
+/* Tiles on the board */
+.tile{position:absolute;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .35s}
+.tile.enter{transform:translateY(-26px) scale(1.08);opacity:0}
+.banner{border-radius:8px;padding:4px;background:var(--own);display:flex}
+.banner .face{flex:1;border-radius:5px;background:repeating-linear-gradient(135deg,var(--suit) 0 6px,color-mix(in srgb,var(--suit) 68%,#000) 6px 12px);display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden}
+.banner .nm{font-family:var(--f-display);font-weight:800;font-size:12px;letter-spacing:.04em;text-transform:uppercase;background:#0d1114d9;color:var(--ink);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.banner.v .face{flex-direction:column}
+.banner.v .nm{writing-mode:vertical-rl;transform:rotate(180deg);padding:5px 1px}
+.glyph{width:calc(var(--cell)*.42);height:calc(var(--cell)*.42);border-radius:50%;background:#0d1114;display:grid;place-items:center;color:var(--suit);font-size:calc(var(--cell)*.27);font-weight:700;line-height:1;flex:none}
+.emblem{border-radius:12px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--suit),0 0 0 3px var(--own);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.emblem svg{width:46%;height:46%}
+.emblem .en{font-family:var(--f-display);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.emblem .drill{font-size:9.5px;color:var(--muted);text-align:center;line-height:1.1;padding:0 4px}
+.emblem .count{position:absolute;right:5px;bottom:4px;font-family:var(--f-display);font-weight:800;font-size:14px;background:#0009;border-radius:6px;padding:0 5px}
+.emblem .pips{position:absolute;left:6px;top:5px;display:flex;gap:3px}
+.emblem .pips i{width:11px;height:11px;border-radius:50%;background:var(--charge);box-shadow:0 0 8px var(--charge);animation:pip .5s ease-out}
+@keyframes pip{from{transform:scale(2.2);opacity:0}}
+.emblem.rallied{box-shadow:inset 0 0 0 3px var(--suit),0 0 0 3px var(--gold),0 0 26px var(--gold)}
+.emblem.patch{background:repeating-linear-gradient(45deg,#26303a 0 5px,#1e252c 5px 10px);box-shadow:inset 0 0 0 2px var(--suit),0 0 0 3px var(--own);border-radius:7px}
+.emblem.patch .en{font-size:10px}
+.ring{position:absolute;border:2px dashed rgba(255,255,255,.45);border-radius:4px;pointer-events:none}
+.gap{position:absolute;border:2px solid var(--gold);background:rgba(242,207,91,.14);border-radius:5px;pointer-events:none;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+.flash{animation:flash .9s ease-out 2}
+@keyframes flash{40%{box-shadow:0 0 0 5px var(--gold),0 0 22px var(--gold)}}
+.pop{position:absolute;font-family:var(--f-display);font-weight:800;font-size:20px;color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;animation:pop 1.8s ease-out forwards;white-space:nowrap;z-index:5}
+.pop.p1c{color:#7ff0e1}.pop.p2c{color:#ffb27a}
+@keyframes pop{0%{transform:translate(-50%,0) scale(.6);opacity:0}15%{transform:translate(-50%,-6px) scale(1.15);opacity:1}100%{transform:translate(-50%,-34px);opacity:0}}
+.bubble{position:absolute;z-index:6;background:#0d1114f2;border:1px solid var(--gold);border-radius:8px;padding:4px 8px;font-size:12px;color:var(--ink);white-space:nowrap;animation:bub 2.6s ease-out forwards;transform:translate(-50%,-110%)}
+.bubble b{color:var(--gold)}
+@keyframes bub{0%{opacity:0;transform:translate(-50%,-90%)}10%{opacity:1;transform:translate(-50%,-110%)}85%{opacity:1}100%{opacity:0}}
+/* Rail */
+.rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{border-radius:12px;padding:10px 12px;background:var(--panel);border:2px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.score.turn{border-color:var(--c);background:var(--soft)}
+.score .who{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.score .pts{font-family:var(--f-display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.score .sub{font-size:12px;color:var(--muted)}
+.caption{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:170px}
+.caption .step{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.caption h2{font-family:var(--f-display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin:2px 0 6px;line-height:1.05;text-wrap:balance}
+.caption p{margin:0;max-width:62ch}
+.math{margin-top:8px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.math .h{font-weight:700;margin-top:4px}
+.math .p1t{color:#7ff0e1}.math .p2t{color:#ffb27a}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.04em;text-transform:uppercase;border-radius:10px;padding:8px 16px;border:1px solid var(--line);background:#222a31;color:var(--ink)}
+.btn.main{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.btn:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots button{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:#2a333b;padding:0}
+.dots button.done{background:#55626b}
+.dots button.on{background:var(--gold);border-color:var(--gold)}
+.dots button.key{box-shadow:0 0 0 2px rgba(242,207,91,.35)}
+.suits{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.suits div{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--suit);border-radius:10px;padding:9px 12px;font-size:14px;color:var(--muted)}
+.suits b{display:block;color:var(--ink);font-family:var(--f-display);font-size:19px;text-transform:uppercase;letter-spacing:.03em}
+.suits b i{font-style:normal;color:var(--suit)}
+h3.sec{font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.03em;margin:4px 0 0}
+@media (max-width:560px){.hand .cards{flex-wrap:nowrap}.card{flex:1 1 0;min-width:0;width:auto;padding:4px 5px}.card .n{font-size:14px}.card .k{font-size:9.5px}.emblem .drill{display:none}.hand .stackc b{width:28px;height:40px}}
+@media (prefers-reduced-motion:reduce){.tile{transition:opacity .2s}.tile.enter{transform:none}.flash,.gap,.card.new{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Rally Point <span>v2</span></h1>
+    <p>Both players bring their own shuffled 12-tile stack and hold a hand of 3. Suits and card keywords now combo. This walk-through plays the opening of one game, up to a single patch that fires two rallies at once. Both hands are shown face up so you can follow the plan.</p>
+  </header>
+
+  <div class="stage">
+    <div class="table">
+      <div class="hand p2" id="hand2"><span class="who">Player 2</span><div class="cards" id="cards2"></div><div class="stackc"><b id="stack2">9</b>stack</div></div>
+      <div class="board" id="board" aria-label="Board"></div>
+      <div class="hand p1" id="hand1"><span class="who">Player 1</span><div class="cards" id="cards1"></div><div class="stackc"><b id="stack1">9</b>stack</div></div>
+    </div>
+    <div class="rail">
+      <div class="scores">
+        <div class="score p1" id="s1"><span class="who">Player 1 · ● Signal + ✚ Supply</span><span class="pts" id="pts1">0</span><span class="sub" id="sub1">0 rallies closed</span></div>
+        <div class="score p2" id="s2"><span class="who">Player 2 · ◆ Strike + ▲ Ridge</span><span class="pts" id="pts2">1</span><span class="sub" id="sub2">0 rallies closed</span></div>
+      </div>
+      <div class="caption" aria-live="polite">
+        <div class="step" id="stepNo"></div>
+        <h2 id="capTitle"></h2>
+        <p id="capText"></p>
+        <div class="math" id="capMath"></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="prev">◀ Back</button>
+        <button class="btn main" id="play">▶ Play</button>
+        <button class="btn" id="next">Next ▶</button>
+        <button class="btn" id="restart">Restart</button>
+      </div>
+      <div class="dots" id="dots" aria-label="Jump to a step"></div>
+    </div>
+  </div>
+
+  <h3 class="sec">The four suits: what happens when a hub of that suit rallies</h3>
+  <section class="suits">
+    <div style="--suit:var(--s-strike)"><b><i>◆</i> Strike</b>The closer gets +2 instead of +1. Tempo: hold the last piece.</div>
+    <div style="--suit:var(--s-signal)"><b><i>●</i> Signal</b>Every open hub that shares a banner with it gets 1 Charge. Build pots, then cash them.</div>
+    <div style="--suit:var(--s-ridge)"><b><i>▲</i> Ridge</b>Nothing extra, but if it never rallies its banners keep the match bonus at the end.</div>
+    <div style="--suit:var(--s-supply)"><b><i>✚</i> Supply</b>Its owner draws 1 tile. Flexible: patches, filtering, odd shapes.</div>
+  </section>
+  <section class="suits">
+    <div style="--suit:var(--gold)"><b>Rally scoring</b>Each touching banner cell: 1 point to its owner, 2 if it matches. Closer +1 (Strike +2) plus 1 per Charge. Hub owner gets its Command (+2).</div>
+    <div style="--suit:var(--gold)"><b>Charges</b>Tokens on a hub. Each one pays +1 to whoever closes it, which may be your opponent.</div>
+    <div style="--suit:var(--gold)"><b>Your stack</b>12 tiles, 4–5 emblems, at most 2 suits, 2 copies per card (alt arts count as copies). Draw back to 3 each turn.</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const SUIT={strike:{c:"var(--s-strike)",g:"◆",n:"Strike"},signal:{c:"var(--s-signal)",g:"●",n:"Signal"},ridge:{c:"var(--s-ridge)",g:"▲",n:"Ridge"},supply:{c:"var(--s-supply)",g:"✚",n:"Supply"}};
+  const OWN={1:"var(--p1)",2:"var(--p2)"};
+  // Card catalogue used in this game (from the v2 spec)
+  const C={
+    signalPost:{n:"Signal Post",k:"e",s:"signal",txt:"Hub · Command 2"},
+    strikePoint:{n:"Strike Point",k:"e",s:"strike",txt:"Hub · Command 2"},
+    supplyCache:{n:"Supply Cache",k:"e",s:"supply",txt:"Hub · Command 2. Can patch a gap"},
+    ridgeCamp:{n:"Ridge Camp",k:"e",s:"ridge",txt:"Hub · Command 2"},
+    wireman:{n:"Wireman",k:"b",s:"signal",txt:"Charge: Deploy, 1 Charge on each open hub this touches"},
+    liaisonSB:{n:"Liaison ●>◆",k:"b",s:"signal",txt:"Ally ◆: also matches ◆ hubs"},
+    liaisonBS:{n:"Liaison ◆>●",k:"b",s:"strike",ally:"signal",txt:"Ally ●: also matches ● hubs"},
+    quarter:{n:"Quartermaster",k:"b",s:"supply",unmarked:true,txt:"Scout: Deploy, draw 1 then bottom 1. Unmarked"},
+    fieldKit:{n:"Field Kit",k:"b",s:"supply",txt:"Field kit: may patch. Steady +1"},
+    holdfast:{n:"Holdfast",k:"b",s:"ridge",txt:"Steady +1: End, +1"},
+    pointMan:{n:"Point Man",k:"b",s:"strike",txt:"Breach +3: if this closes a rally, +3"},
+    longWatch:{n:"Long Watch",k:"b",s:"ridge",txt:"Flank +1: Rally, +1 if along a whole side"},
+    dugIn:{n:"Dug-In",k:"b",s:"ridge",txt:"Dig in. Steady +1"},
+  };
+  // Script. Coordinates are 0-based [row, col]. Hands are shown after each turn's refill.
+  const STEPS=[
+    {t:"Each player brings a stack",x:"Player 1 built a Signal + Supply stack, Player 2 a Strike + Ridge stack. Both shuffle their 12 tiles and draw 3. Player 1 goes first, so Player 2 starts with 1 point.",
+      h1:["signalPost","wireman","liaisonSB"],h2:["strikePoint","holdfast","longWatch"],st:[9,9]},
+    {p:1,play:"signalPost",k:"h",at:[0,1],t:"Player 1 opens a Signal hub",x:"An emblem placed as a hub claims a 2×2. On the top edge, its top side counts as filled already, so it needs 6 more cells. When a Signal hub rallies, every open hub sharing a banner with it gets a Charge.",
+      draw:"quarter",h1:["wireman","liaisonSB","quarter"],st:[8,9]},
+    {p:2,play:"strikePoint",k:"h",at:[0,4],t:"Player 2 answers with a Strike hub",x:"Two cells to the right. Whoever closes a Strike hub gets +2 instead of +1. Player 2 wants to be the one closing it.",
+      draw:"pointMan",h2:["holdfast","longWatch","pointMan"],st:[8,8]},
+    {p:1,play:"wireman",k:"b",at:[2,1,"h"],t:"Wireman puts Charges on both hubs",x:"Player 1 lays Wireman under both hubs. Its Deploy text puts 1 Charge on each open hub it touches. A Charge pays +1 to whoever closes that hub, so Player 1 is building a pot and hoping to collect it.",
+      deploy:"charge",draw:"fieldKit",h1:["liaisonSB","quarter","fieldKit"],st:[7,8],key:1},
+    {p:2,play:"holdfast",k:"b",at:[0,0,"v"],t:"Holdfast takes the left side",x:"Player 2 stands Holdfast along the Signal hub's left side. Off-suit, so it will score 1 per cell when the hub rallies, plus Steady +1 at the end of the game.",
+      draw:"liaisonBS",h2:["longWatch","pointMan","liaisonBS"],st:[8,7]},
+    {p:1,play:"quarter",k:"b",at:[7,0,"h"],t:"Quartermaster digs for the right tile",x:"Quartermaster scores nothing (Unmarked), but its Scout text lets Player 1 draw 1 and send 1 to the bottom. Player 1 draws a Supply Cache, an emblem that can patch a gap, and sends Field Kit to the bottom.",
+      deploy:"scout",draw:"supplyCache",h1:["liaisonSB","supplyCache","wireman"],st:[6,7]},
+    {p:2,play:"pointMan",k:"b",at:[2,5,"v"],t:"Point Man under the Strike hub",x:"Player 2's Point Man covers one bottom cell of the Strike hub and matches its suit. Its Breach +3 only pays if it closes a rally, and it didn't, so nothing yet.",
+      draw:"dugIn",h2:["longWatch","liaisonBS","dugIn"],st:[6,6]},
+    {p:1,play:"liaisonSB",k:"b",at:[7,4,"h"],t:"Player 1 holds the patch",x:"Player 1 plays Liaison elsewhere and keeps the Supply Cache in hand. The two hubs share a 2-cell column between them. No banner can ever fit there.",
+      draw:"signalPost",h1:["supplyCache","wireman","signalPost"],st:[5,6]},
+    {p:2,play:"liaisonBS",k:"b",at:[0,6,"v"],t:"Both hubs wait on one hole",x:"Player 2's Liaison fills the Strike hub's right side. It matches both ◆ and ●. Now both hubs are full except the same 2-cell gap between them. Player 2 has no emblem in hand, so cannot patch it this turn.",
+      draw:"ridgeCamp",h2:["longWatch","dugIn","ridgeCamp"],st:[5,5],gap:[[0,3],[1,3]],key:1},
+    {p:1,play:"supplyCache",k:"p",cells:[[0,3],[1,3]],t:"One patch fires two rallies",x:"Player 1 pins the Supply Cache over the gap as a patch. It never rallies itself, but it fills the last cell of both hubs. They fire in order, oldest first.",
+      draw:"wireman",h1:["wireman","signalPost","wireman"],st:[4,5],key:1},
+    {t:"Why it was worth it",x:"Player 2 just drew a Ridge Camp. If Player 1 had waited one turn, Player 2 could have patched the gap and taken both closer bonuses and both Charge pots instead: a swing of about 12 points. The Charge, the Signal drill, the Strike drill and the patch rule all fed this one move, and the long-press preview shows all of it before you commit.",info:1},
+    {t:"The rest of the game",x:"Play continues until the board is full or both players pass, about 17 placements and 5–7 minutes in all. Hubs that never rally score 1 per touching cell at the end (Ridge hubs keep the match bonus), and Steady cards like Holdfast add their +1. Most points wins.",info:1},
+  ];
+  const N=8, board=document.getElementById("board"), $=id=>document.getElementById(id);
+  const inside=([r,c])=>r>=0&&r<N&&c>=0&&c<N;
+  function cellsOf(m){ if(m.k==="b"){ const [r,c,d]=m.at; return [0,1,2,3].map(i=>d==="h"?[r,c+i]:[r+i,c]); } if(m.k==="h"){ const [r,c]=m.at; return [[r,c],[r,c+1],[r+1,c],[r+1,c+1]]; } return m.cells; }
+  function border(at){ const [r,c]=at; return [[r-1,c],[r-1,c+1],[r+2,c],[r+2,c+1],[r,c-1],[r+1,c-1],[r,c+2],[r+1,c+2]]; }
+  const matches=(t,hub)=>!C[t.card].unmarked&&(t.s===hub.s||C[t.card].ally===hub.s);
+
+  function simulate(){
+    const st={grid:Array.from({length:N},()=>Array(N).fill(null)),tiles:[],hubs:[],score:{1:0,2:1},rallies:{1:0,2:0}};
+    const snaps=[{st:clone(st),ev:[],deploy:[]}];
+    STEPS.forEach((m,i)=>{
+      if(i===0||m.info){ if(i>0) snaps.push({st:clone(st),ev:[],deploy:[]}); return; }
+      const card=C[m.play], tile={i,p:m.p,k:m.k,s:card.s,card:m.play,cells:cellsOf(m)};
+      for(const [r,c] of tile.cells){ if(!inside([r,c])||st.grid[r][c]) throw new Error("illegal step "+i); st.grid[r][c]=tile; }
+      st.tiles.push(tile);
+      if(m.k==="h") st.hubs.push({i,at:m.at,s:card.s,owner:m.p,charges:0,rallied:false,cmd:2});
+      const deploy=[];
+      if(m.deploy==="charge"){ for(const h of st.hubs){ if(h.rallied) continue; if(border(h.at).some(cl=>inside(cl)&&st.grid[cl[0]][cl[1]]===tile)){ h.charges++; deploy.push({hub:h.i,txt:"+1 Charge"}); } } }
+      const ev=[];
+      for(const h of [...st.hubs].sort((a,b)=>a.i-b.i)){
+        if(h.rallied) continue;
+        if(!border(h.at).every(cl=>!inside(cl)||st.grid[cl[0]][cl[1]])) continue;
+        h.rallied=true; const e={hub:h.i,name:C[STEPS[h.i].play].n,s:h.s,lines:[],gain:{1:0,2:0},cells:[]};
+        const groups={};
+        for(const cl of border(h.at)){ if(!inside(cl)) continue; const t=st.grid[cl[0]][cl[1]]; if(t.k!=="b") continue; const pts=matches(t,h)?2:1; (groups[t.i]=groups[t.i]||{t,n:0,pts:0,m:pts===2}); groups[t.i].n++; groups[t.i].pts+=pts; e.cells.push({cl,p:t.p,pts}); }
+        for(const g of Object.values(groups)){ st.score[g.t.p]+=g.pts; e.gain[g.t.p]+=g.pts; e.lines.push({p:g.t.p,txt:`${C[g.t.card].n}: ${g.n} ${g.n>1?"cells":"cell"} × ${g.m?"2 (match)":"1"} = ${g.pts}`}); }
+        const closeBase=h.s==="strike"?2:1, closePts=closeBase+h.charges;
+        st.score[m.p]+=closePts; e.gain[m.p]+=closePts; st.rallies[m.p]++;
+        e.lines.push({p:m.p,txt:`Closer: +${closeBase}${h.s==="strike"?" (Strike drill)":""}${h.charges?` + ${h.charges} Charge${h.charges>1?"s":""}`:""} = ${closePts}`});
+        st.score[h.owner]+=h.cmd; e.gain[h.owner]+=h.cmd; e.lines.push({p:h.owner,txt:`Command (hub owner): +${h.cmd}`});
+        if(h.s==="signal"){ for(const o of st.hubs){ if(o.rallied||o===h) continue; const shared=border(h.at).some(cl=>{ if(!inside(cl)) return false; const t=st.grid[cl[0]][cl[1]]; return t&&t.k==="b"&&border(o.at).some(c2=>inside(c2)&&st.grid[c2[0]][c2[1]]===t); }); if(shared){ o.charges++; e.lines.push({p:0,txt:`Signal drill: ${C[STEPS[o.i].play].n} shares a banner, gets +1 Charge (now ${o.charges})`}); e.relay=o.i; } } }
+        ev.push(e);
+      }
+      snaps.push({st:clone(st),ev,deploy});
+    });
+    return snaps;
+  }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  const SNAP=simulate();
+  window.__rp2=SNAP[SNAP.length-1].st.score;
+
+  let step=0, playing=false, timer=null;
+  function tileHTML(t,enter){
+    const card=C[t.card], rs=t.cells.map(x=>x[0]), cs=t.cells.map(x=>x[1]);
+    const r0=Math.min(...rs), c0=Math.min(...cs), h=Math.max(...rs)-r0+1, w=Math.max(...cs)-c0+1;
+    const pos=`left:calc(var(--cell)*${c0} + 3px);top:calc(var(--cell)*${r0} + 3px);width:calc(var(--cell)*${w} - 6px);height:calc(var(--cell)*${h} - 6px);--suit:${SUIT[t.s].c};--own:${OWN[t.p]};`;
+    const cls="tile "+(enter?"enter ":"");
+    if(t.k==="b") return `<div class="${cls}banner ${h>w?"v":""}" data-t="${t.i}" style="${pos}"><div class="face"><span class="glyph">${SUIT[t.s].g}</span><span class="nm">${card.n}</span></div></div>`;
+    if(t.k==="p") return `<div class="${cls}emblem patch" data-t="${t.i}" style="${pos}"><span class="en">Patch</span></div>`;
+    return `<div class="${cls}emblem" data-t="${t.i}" style="${pos}">${shield(t.s)}<span class="en">${card.n}</span><span class="drill">${{signal:"Rally: Charge neighbours",strike:"Rally: closer +2",ridge:"Keeps match if open",supply:"Rally: draw 1"}[t.s]}</span><span class="pips" data-pips="${t.i}"></span><span class="count" data-count="${t.i}"></span></div>`;
+  }
+  function shield(s){ const c=SUIT[s].c; return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z" fill="${c}" opacity=".22"/><path d="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z" fill="none" stroke="${c}" stroke-width="2.5"/><text x="20" y="28" text-anchor="middle" font-size="18" fill="${c}" font-family="sans-serif" font-weight="700">${SUIT[s].g}</text></svg>`; }
+  function cardHTML(id,cls){ const c=C[id]; return `<div class="card ${cls||""}" style="--suit:${SUIT[c.s].c}"><span class="t"><span>${c.k==="e"?"Emblem":"Calling card"}</span><i>${SUIT[c.s].g}</i></span><span class="n">${c.n}</span><span class="k">${c.txt}</span></div>`; }
+  function handsAt(i){ let h1=STEPS[0].h1,h2=STEPS[0].h2,st=STEPS[0].st; for(let j=1;j<=i;j++){ if(STEPS[j].h1) h1=STEPS[j].h1; if(STEPS[j].h2) h2=STEPS[j].h2; if(STEPS[j].st) st=STEPS[j].st; } return {h1,h2,st}; }
+  function render(animate){
+    const snap=SNAP[step], st=snap.st, m=STEPS[step];
+    const lastTile=animate&&m.play?step:null;
+    let html=st.tiles.map(t=>tileHTML(t,t.i===lastTile)).join("");
+    for(const h of st.hubs){ if(h.rallied) continue; for(const cl of border(h.at)){ if(!inside(cl)||st.grid[cl[0]][cl[1]]) continue; html+=`<div class="ring" style="left:calc(var(--cell)*${cl[1]} + 4px);top:calc(var(--cell)*${cl[0]} + 4px);width:calc(var(--cell) - 8px);height:calc(var(--cell) - 8px)"></div>`; } }
+    if(m.gap) for(const cl of m.gap) html+=`<div class="gap" style="left:calc(var(--cell)*${cl[1]} + 3px);top:calc(var(--cell)*${cl[0]} + 3px);width:calc(var(--cell) - 6px);height:calc(var(--cell) - 6px)"></div>`;
+    board.innerHTML=html;
+    for(const h of st.hubs){ const el=board.querySelector(`.emblem[data-t="${h.i}"]`); if(!el) continue; if(h.rallied) el.classList.add("rallied");
+      const n=border(h.at).filter(cl=>!inside(cl)||st.grid[cl[0]][cl[1]]).length; el.querySelector(".count").textContent=h.rallied?"✓":`${n}/8`;
+      el.querySelector(".pips").innerHTML=h.rallied?"":"<i></i>".repeat(h.charges); }
+    if(lastTile!=null) requestAnimationFrame(()=>requestAnimationFrame(()=>board.querySelectorAll(".enter").forEach(e=>e.classList.remove("enter"))));
+    // hands
+    const H=handsAt(step);
+    for(const p of [1,2]){ const hand=H["h"+p]; const next=STEPS[step+1]; const playing_=next&&next.p===p?next.play:null; let marked=false;
+      $("cards"+p).innerHTML=hand.map(id=>{ let cls=""; if(!marked&&id===playing_){ cls="play"; marked=true; } if(animate&&m.p===p&&m.draw===id&&hand.lastIndexOf(id)===hand.indexOf(id)) cls+=" new"; return cardHTML(id,cls); }).join("");
+      $("stack"+p).textContent=H.st[p-1]; }
+    const turnP=m.p||(STEPS[step+1]&&STEPS[step+1].p)||null;
+    $("hand1").classList.toggle("turn",turnP===1); $("hand2").classList.toggle("turn",turnP===2);
+    $("s1").classList.toggle("turn",turnP===1); $("s2").classList.toggle("turn",turnP===2);
+    // scores
+    const prev=step>0?SNAP[step-1].st:null;
+    for(const p of [1,2]){ count($("pts"+p),animate&&prev?prev.score[p]:st.score[p],st.score[p],snap.ev.length?1400:200); $("sub"+p).textContent=`${st.rallies[p]} ${st.rallies[p]===1?"rally":"rallies"} closed`; }
+    // caption
+    $("stepNo").textContent=m.p?`Turn ${step} · Player ${m.p} plays ${C[m.play].n}`:(step===0?"Setup":"Takeaway");
+    $("capTitle").textContent=m.t; $("capText").textContent=m.x;
+    $("capMath").innerHTML=snap.ev.map(e=>`<span class="h">${e.name} rallies (${SUIT[e.s].n})</span>`+e.lines.map(l=>`<span class="${l.p===1?"p1t":l.p===2?"p2t":""}">${l.p?"Player "+l.p+" · ":""}${l.txt}</span>`).join("")).join("")+
+      (snap.ev.length>1?`<span class="h">This move: Player 1 +${snap.ev.reduce((a,e)=>a+e.gain[1],0)} · Player 2 +${snap.ev.reduce((a,e)=>a+e.gain[2],0)}</span>`:"");
+    document.querySelectorAll("#dots button").forEach((b,i)=>{ b.classList.toggle("on",i===step); b.classList.toggle("done",i<step); });
+    $("prev").disabled=step===0; $("next").disabled=step===STEPS.length-1;
+    if(animate) effects(snap,m);
+  }
+  function count(el,from,to,delay){ if(from===to){ el.textContent=to; return; } el.textContent=from; setTimeout(()=>{ const t0=performance.now(); const tick=now=>{ const k=Math.min(1,(now-t0)/900); el.textContent=Math.round(from+(to-from)*k); if(k<1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); },delay); }
+  function at(cl){ return {left:`calc(var(--cell)*${cl[1]} + var(--cell)/2)`,top:`calc(var(--cell)*${cl[0]} + 6px)`}; }
+  function float(cls,html,cl,delay,life=1900){ setTimeout(()=>{ const d=document.createElement("div"); d.className=cls; d.innerHTML=html; const p=at(cl); d.style.left=p.left; d.style.top=p.top; board.appendChild(d); setTimeout(()=>d.remove(),life); },delay); }
+  function effects(snap,m){
+    for(const d of snap.deploy){ const h=snap.st.hubs.find(x=>x.i===d.hub); float("bubble",`<b>Deploy</b> ${d.txt}`,[h.at[0]+1,h.at[1]+1],450,2600); }
+    if(m.deploy==="scout") float("bubble","<b>Scout</b> draw 1, bottom 1",[m.at[0],m.at[1]+2],450,2600);
+    let delay=600;
+    for(const e of snap.ev){ const h=snap.st.hubs.find(x=>x.i===e.hub); const el=board.querySelector(`.emblem[data-t="${e.hub}"]`);
+      setTimeout(()=>el&&el.classList.add("flash"),delay);
+      e.cells.forEach((c,k)=>float("pop "+(c.p===1?"p1c":"p2c"),"+"+c.pts,c.cl,delay+150+k*110));
+      float("bubble",`<b>${e.name}</b> rallies`,[h.at[0]+1,h.at[1]+1],delay,2200);
+      if(e.relay!=null){ const o=snap.st.hubs.find(x=>x.i===e.relay); float("bubble","<b>Signal drill</b> +1 Charge",[o.at[0]+1,o.at[1]+1],delay+900,2000); }
+      delay+=1500; }
+  }
+  function go(n,animate=true){ step=Math.max(0,Math.min(STEPS.length-1,n)); render(animate); }
+  function stop(){ playing=false; clearTimeout(timer); $("play").textContent="▶ Play"; }
+  function loop(){ if(!playing) return; if(step>=STEPS.length-1){ stop(); return; } go(step+1); timer=setTimeout(loop,SNAP[step].ev.length?6500:(STEPS[step].info?7000:3600)); }
+  $("play").onclick=()=>{ if(playing){ stop(); return; } if(step>=STEPS.length-1) go(0,false); playing=true; $("play").textContent="❚❚ Pause"; timer=setTimeout(loop,300); };
+  $("next").onclick=()=>{ stop(); go(step+1); };
+  $("prev").onclick=()=>{ stop(); go(step-1,false); };
+  $("restart").onclick=()=>{ stop(); go(0,false); };
+  document.addEventListener("keydown",e=>{ if(e.key==="ArrowRight"){ stop(); go(step+1); } else if(e.key==="ArrowLeft"){ stop(); go(step-1,false); } });
+  $("dots").innerHTML=STEPS.map((s,i)=>`<button aria-label="${i===0?"Setup":s.p?"Turn "+i:"Takeaway"}" class="${s.key?"key":""}"></button>`).join("");
+  document.querySelectorAll("#dots button").forEach((b,i)=>b.onclick=()=>{ stop(); go(i,i===step+1); });
+  window.addEventListener("resize",()=>render(false));
+  render(false);
+})();
+</script>
