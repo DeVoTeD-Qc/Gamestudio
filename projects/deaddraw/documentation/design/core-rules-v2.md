@@ -1,7 +1,7 @@
 # DeadDraw - Core Rules v2 ("Last Stand" waves)
 
 Owner: Sr Game Designer | Board task: `dd-v2-design` | Engine: Godot 4.4.1 (GDScript), Web export, phone portrait + landscape
-Status: **proposal for studio head review.** v1 (`core-rules.md`, `tools/sim_deaddraw.py`, the playable build) is untouched.
+Status: **approved by the studio head (2026-11-08, all five recommendations, see section 8) and retuned (`dd-v2-tune`).** v1 (`core-rules.md`, `tools/sim_deaddraw.py`, the playable build) is untouched until v2 ships.
 Balance source of truth for v2: `projects/deaddraw/tools/sim_deaddraw_v2.py` (`CONFIG`). If this document and the sim disagree, the sim wins and this document gets fixed.
 
 > **Naming and IP.** v2 is inspired by the *feel* of the round-based zombies modes in shooters such as Call of Duty. That is the only place that series is named. Every machine, consumable, weapon and mode name below is original to DeadDraw. Do not use that series' trademarked or signature names in the game, in store text or in code (no upgrade-machine, gum, soda-perk, mystery-box or wonder-weapon names from it).
@@ -95,7 +95,7 @@ Points are shown x10 (the sim uses units of 10): small numbers in the rules, arc
 | Source | Points (on screen) |
 |---|---|
 | Kill a zombie | **half its strength, rounded down, x10** (a 7 pays 30; sim: `strength // 2` units) |
-| Kill it with melee or bare hands ("up close") | +10 |
+| Kill it with melee or bare hands ("up close") | **+30** |
 | Scrap a weapon (or replace one) | +10 |
 | Clear a wave | +30 |
 | Beat a boss | +80 |
@@ -108,10 +108,10 @@ You start each run with 50. A strong run earns about 2,200-2,300 points. Spend: 
 | District | Wave 1 | Wave 2 | Wave 3 | Boss (face-up from the start) |
 |---|---|---|---|---|
 | Maple Row | 2, 3, 4, 5 | 3, 4, 6, 7 | 4, 5, 7, 8, 9 | **The Groundskeeper** 12, *Shatter*: the weapon used on it is destroyed (it still reduces the damage) |
-| Downtown | 5, 6, 7, 9 | 6, 8, 9, 10 | 7, 8, 10, 11, 12 | **Rush Hour Horde** 10 / 9 / 8, *Horde*: all three at once |
-| St. Agnes | 7, 9, 10, 12 | 8, 10, 12, 13 | 9, 11, 13, 14, 16 | **Patient Zero** 15, *Quarantine*: medkits don't heal on the boss street |
+| Downtown | 6, 7, 8, 10 | 7, 9, 10, 11 | 8, 9, 11, 12, 13 | **Rush Hour Horde** 10 / 9 / 8, *Horde*: all three at once |
+| St. Agnes | 6, 8, 9, 11 | 7, 9, 11, 12 | 9, 11, 13, 14, 16 | **Patient Zero** 15, *Quarantine*: medkits don't heal on the boss street |
 
-These are the effective strengths (sim: base wave lists plus `z_add` = -1 / +1 / +3 per district). St. Agnes wave 3 holds the biggest normal zombie in the game (a 16 Hulk); Patient Zero is a 15 but blocks healing. Each wave pack has exactly one **Carrier** zombie (a satchel badge on the card, visible when dealt) that drops a power-up when killed (3.5). Weapons in loot packs are drawn from a per-district weapon list, so each run's guns differ.
+These are the effective strengths (sim: base wave lists plus `z_add` = -1 / +2 / +2 per district, and `boss_wave_add` = +1 on St. Agnes wave 3 only). St. Agnes wave 3 holds the biggest normal zombie in the game (a 16 Hulk); Patient Zero is a 15 but blocks healing. Each wave pack has exactly one **Carrier** zombie (a satchel badge on the card, visible when dealt) that drops a power-up when killed (3.5). Weapons in loot packs are drawn from a per-district weapon list, so each run's guns differ.
 
 ---
 
@@ -144,14 +144,16 @@ So guns are strong but run dry and notch down; reloading them is your way back u
 
 ### 2.3 Weapon list (sim CONFIG)
 
+Melee powers below include the approved +1 (`melee_power_bonus: 1`; the `weapons` table in CONFIG keeps the base values 2-7).
+
 | Weapon | Type | Power | Mag | Where |
 |---|---|---|---|---|
-| Kitchen Knife | melee | 2 | - | loot, Locker |
-| Crowbar | melee | 3 | - | loot, Locker |
-| Cricket Bat | melee | 4 | - | loot |
-| Machete | melee | 5 | - | loot, Locker |
-| Fire Axe | melee | 6 | - | loot, perk |
-| Sledgehammer | melee | 7 | - | loot, Locker |
+| Kitchen Knife | melee | 3 | - | loot, Locker |
+| Crowbar | melee | 4 | - | loot, Locker |
+| Cricket Bat | melee | 5 | - | loot |
+| Machete | melee | 6 | - | loot, Locker |
+| Fire Axe | melee | 7 | - | loot, perk |
+| Sledgehammer | melee | 8 | - | loot, Locker |
 | Service Pistol | gun | 3 | 6 | starting kit |
 | Revolver | gun | 5 | 4 | loot |
 | Compact SMG | gun | 3 | 10 | Wall Rack 120 |
@@ -220,9 +222,9 @@ One zombie per wave pack is a **Carrier** (badge on the card: you know before yo
 | Retreat to the bottom of the deck | **Skip to the Skipped pile**, back in the next wave | Same "loan" idea as the studio head's v1 decision, now tied to waves. |
 | Face-up finales | **Kept** as the boss of wave 3 | Planning target; players loved seeing it coming. |
 | Medkits (1 per street), barricades/Cover | **Kept** | Simple, readable. |
-| Survivors | **Kept**: Rosa (Steady Hands: equal-to-notch hits), Imani (Triage), Theo (Slip Away; max HP 24 -> **21**, because skipping is stronger when skipped cards only return next wave; unlocks on first Downtown clear) | All three passives still work with the hybrid model. |
-| Safehouse | **Kept**: heal 12, pick 1 of 3 perks; keep weapons, ammo, points | Run-shaping moment between maps. |
-| Perks | **8 in pool**, two new: **Fast Hands** (first reload each wave costs no action), **Bandolier** (+2 reserve ammo each wave). Kept: Thick Jacket, Axe in the Trunk (Fire Axe 6 into your weaker slot each district), Field Kit, Knuckle Wraps, Second Wind, Tripwire. | Gun perks fit the new economy. |
+| Survivors | **Kept**: Rosa (Steady Hands: equal-to-notch hits), Imani (Triage: two medkits heal per street; the v1 +1 heal per medkit is **removed** in v2: after the melee boost it made her the strongest survivor by 15-20 points), Theo (Slip Away; max HP 24 -> **20**, because skipping is stronger when skipped cards only return next wave; unlocks on first Downtown clear) | All three passives still work with the hybrid model. |
+| Safehouse | **Kept**: heal **15** (v1: 12), pick 1 of 3 perks; keep weapons, ammo, points | Run-shaping moment between maps. |
+| Perks | **8 in pool**, two new: **Fast Hands** (first reload each wave costs no action), **Bandolier** (+2 reserve ammo each wave). Kept: Thick Jacket, Axe in the Trunk (Fire Axe 7 into your weaker slot each district), Field Kit, Knuckle Wraps, Second Wind, Tripwire. | Gun perks fit the new economy. |
 | Perks **Sandbags** and **Scrounger** | **Cut** | Sandbags was the weakest v1 perk and Cover now also comes from Boards drops; Scrounger (heal on retreat) rewards skipping, which already pays by thinning the wave. |
 | Meta unlocks | **Kept** (Second Wind on first Maple Row clear, Theo on first Downtown clear, Tripwire on a win). Later: unlock new Locker weapons and room variants. | Cheap, motivating. |
 | One deck per district, 28-34 cards | **Cut**: the deck is now a wave plus loot | Requested structure. |
@@ -244,40 +246,43 @@ python3 projects/deaddraw/tools/sim_deaddraw_v2.py --set allow_retreat=false    
 
 Wall-clock estimate: 13 s per street, 6 s per door, 4 s per machine use, 2 s per reload, 3 s per wave change, 20 s per safehouse.
 
-### 5.1 Recommended rules (mixed deck + hybrid combat), 1000 runs per survivor, seed 7
+### 5.1 Approved rules after the `dd-v2-tune` retune, 1000 runs per survivor, seed 7
 
-Final CONFIG as committed in the sim (`structure: mixed`, `model: notch`, `reload_mode: drop`, `z_add: [-1, 1, 3]`, Theo 21 HP). "Starter pool" = a true first run (6-perk pool). Sampling error is about +/-3 points.
+Final CONFIG in the sim (`structure: mixed`, `model: notch`, `reload_mode: drop`, `melee_power_bonus: 1`, up-close +3 units, `z_add: [-1, 2, 2]`, `boss_wave_add: [0, 0, 1]`, `triage_heal_bonus: 0`, `safehouse_heal: 15`, `fire_axe_power: 7`, Theo 20 HP). "Starter pool" = a true first run (6-perk pool). Sampling error is about +/-3 points.
 
 | Survivor | Clear Maple Row (fresh, no perks) | Clear D1 in run | Clear D2 in run | **Run win, starter pool** | Run win, full pool | Run win, no perks | HP left on a win | Winning run | Average run |
 |---|---|---|---|---|---|---|---|---|---|
-| Rosa | 77.9% | 80.8% | 74.3% | **32.4%** | 31.3% | 18.3% | 7.0 | 12.3 min | 10.1 min |
-| Imani | 81.6% | 83.3% | 77.7% | **38.6%** | 38.2% | 27.0% | 7.9 | 12.3 min | 10.4 min |
-| Theo | 81.6% | 80.1% | 73.0% | **33.7%** | 38.3% | 23.7% | 7.4 | 12.4 min | 10.1 min |
+| Rosa | 90.8% | 89.9% | 54.5% | **31.8%** | 32.6% | 16.9% | 7.5 | 12.4 min | 9.8 min |
+| Imani | 91.8% | 92.6% | 53.2% | **31.3%** | 32.4% | 16.8% | 8.0 | 12.4 min | 9.8 min |
+| Theo | 91.3% | 90.1% | 53.3% | **32.8%** | 32.6% | 20.3% | 8.8 | 12.6 min | 9.9 min |
 
-- All three survivors land in the **30-42%** band (32-39%). As with v1, a first-time human will do worse than the AI (expect 15-25%).
-- Shape: Maple Row ~80% (teaches the rules), Downtown ~92% of those who reach it, **St. Agnes decides the run** (~45% of arrivals). That last step is steep; a later pass should move 1 point of difficulty from St. Agnes into Downtown.
-- Perks are worth 10-14 points of run win. The two unlockable perks (Second Wind, Tripwire) are not stronger than the starter ones, so unlocking them is variety, not power (good).
-- **Run length:** about 36 streets per run, **12.3 minutes for a win** and 10.1-10.4 minutes on average including losses. That is inside the 8-12 minute target, but at its upper edge for a win; the cheapest trim, if playtests feel long, is `restock_per_room: 0` (about -1 minute, then retune).
+- All three survivors are in the **30-42%** band (31-33%) and within 1.5 points of each other. A first-time human will do worse (expect 15-25%).
+- **Difficulty moved from St. Agnes into Downtown:** Downtown now stops about 41% of those who reach it (was 8%), and St. Agnes about 40% (was 55%). Each district is now a real step: Maple Row ~90% (teaches the rules), then Downtown, then St. Agnes.
+- **Melee is used:** about **7.2-7.9 melee kills per run against ~24 gun kills** (plus ~2.9 bare-handed), so melee now takes ~22% of kills (it was ~12%, 4 vs 30, before the boost).
+- Perks are worth 12-15 points of run win. The two unlockable perks are variety, not power.
+- **Run length:** about 34-35 streets, **12.4 minutes for a win**, 9.8-9.9 minutes on average. Still inside 8-12 but at the top edge for a win; the trim knob is `restock_per_room: 0`.
 
 **Decisions per run (Rosa / Imani / Theo, per run average)**
 
 | Decision | How often | Notes |
 |---|---|---|
-| Fights | 37 / 38 / 36 | |
-| ... with **both weapons legal** (a real slot choice) | 26 / 26 / 25 | ~70% of fights offer Slot 1 vs Slot 2 vs Bare |
-| ... with the AI switching slot within a street | 1.7 / 1.7 / 1.5 | |
-| Kills by gun / melee / bare | 29.5 / 4.4 / 2.8 (Rosa) | melee is underused, see Q5 |
-| **Reload available** (a street where a reload is legal) | 11.8 / 12.2 / 12.3 streets | of ~36 |
-| Reloads done | 14.1 / 14.5 / 14.0 | includes the free reload on boss streets |
-| Reload was a **close call** (within 2 points of the best no-reload plan) | 4.6 / 4.7 / 4.6 | the "reload or fight" tension we want |
-| **Skip available** | 23.7 / 24.3 / 23.1 streets | |
-| Skips taken | 1.8 / 2.0 / 2.6 | |
-| Skip was a close call (within 2 points) | 3.2 / 3.3 / 6.1 | Theo's Slip Away makes skipping a live option twice as often |
-| Weapon cards: equip / scrap | 7.0 / 3.0 (Rosa) | |
-| **Doors opened** (of 9) | 6.7 / 6.8 / 6.6 | the third room of a district is often out of reach: saving up is a real choice |
-| **Machine uses** | 5.7 / 6.0 / 5.7 | Grin 3.1, Wall Rack gun 1.3, Retrofit 0.7, Locker 0.35, Wall ammo 0.3 |
-| Points earned | 2,260 / 2,320 / 2,210 on screen | |
-| Deck size at the start of a wave | 8.2 | skipped cards carried into a new wave: 0.5-0.7 |
+| Fights | 35 / 35 / 34 | |
+| ... with **both weapons legal** (a real slot choice) | 24.6 / 24.6 / 23.8 | ~70% of fights offer Slot 1 vs Slot 2 vs Bare |
+| ... with the AI switching slot within a street | 2.1 / 1.8 / 1.8 | |
+| Kills by gun / melee / bare | 24.0 / 7.9 / 2.9 (Rosa) | melee ~22% of kills |
+| **Reload available** (a street where a reload is legal) | 12.0 / 12.2 / 12.6 streets | of ~34 |
+| Reloads done | 11.4 / 11.9 / 11.6 | includes the free reload on boss streets |
+| Reload was a **close call** (within 2 points of the best no-reload plan) | 4.8 / 5.0 / 5.1 | |
+| **Skip available** | 22.9 / 23.1 / 22.3 streets | |
+| Skips taken | 1.9 / 1.9 / 2.9 | |
+| Skip was a close call (within 2 points) | 3.2 / 3.2 / 6.0 | Theo's Slip Away makes skipping a live option twice as often |
+| Weapon cards: equip / scrap | 7.9 / 2.4 (Rosa) | |
+| **Doors opened** (of 9) | 6.8 / 6.8 / 6.7 | |
+| **Machine uses** | 6.4 / 6.3 / 6.3 | Grin 3.1-3.2, Wall Rack gun 1.6-1.7, Retrofit 0.7, Locker 0.6, Wall ammo 0.25 |
+| Points earned | 2,430 / 2,400 / 2,340 on screen | |
+| Deck size at the start of a wave | 8.2-8.4 | skipped cards carried into a new wave: 0.55-0.77 |
+
+The comparisons in 5.2-5.5 below were run on the pre-retune rules (the `dd-v2-design` proposal: `z_add [-1, 1, 3]`, no melee boost, Triage +1, heal 12, Theo 21). They are kept as the evidence for the head's decisions; their absolute win rates are not the current balance.
 
 ### 5.2 Combat model: hybrid vs damage (evidence for Q2)
 
@@ -358,17 +363,17 @@ The studio rules apply: every card, weapon slot, magazine, pip, machine, door, p
 |------------------------------------------|
 | +-------------------+ +-----------------+|
 | | 1  SERVICE PISTOL | | 2  MACHETE      ||  both slots always visible
-| | P3   ||||..  4/6  | | P5   inf        ||  magazine pips (filled = rounds)
+| | P3   ||||..  4/6  | | P6   inf        ||  magazine pips (filled = rounds)
 | | hits under 9      | | hits under 7    ||  notch tag (v1 style)
 | | [ RELOAD  6 > 6 ] | |                 ||  reload shows "rounds lost > rounds loaded"
 | +-------------------+ +-----------------+|
 |  Reserve ammo 11          [ SKIP STREET ]|  skip shows why it's off ("skipped last street")
-|  > Lurcher 7: Machete blocked 5, -2 HP, +40 pts   |  one-line log; HP / points float up
+|  > Lurcher 7: Machete blocked 6, -1 HP, +60 pts   |  one-line log; HP / points float up
 +------------------------------------------+
 ```
 
 **Fighting a zombie** (tap it): a bottom sheet with up to three big buttons, each with its full preview:
-`PISTOL  -4 HP  uses 1 round  notch becomes 7` / `MACHETE  -2 HP  notch becomes 7` / `BARE  -7 HP  +10 up close`.
+`PISTOL  -4 HP  uses 1 round  notch becomes 7` / `MACHETE  -1 HP  notch becomes 7  +30 up close` / `BARE  -7 HP  +30 up close`.
 A blocked option stays visible but grayed with the reason ("mag empty - reload", "hits under 7").
 
 **Weapon card** (tap it): `INTO SLOT 1 (scrap Pistol, +10)` / `INTO SLOT 2` / `SCRAP +10`, with the two current slot cards shown small for comparison.
@@ -386,8 +391,8 @@ A blocked option stays visible but grayed with the reason ("mag empty - reload",
 | WAVE 1 2 [3] B| +-------+ +-------+ +-------+ +-------+  | 1 PISTOL  P3    |
 | HP 14/20  C 2 | | Z 7   | | W 6/4 | | M 5   | | A 4   |  |  ||||..  <9     |
 | Pts 1,240     | +-------+ +-------+ +-------+ +-------+  | [RELOAD 6>6]    |
-| Deck 7 (4Z)   |       ACTIONS (o)(o)( )                  | 2 MACHETE P5    |
-| Skipped 3 >   |  > Lurcher 7: Machete blocked 5, -2 HP   |  inf   <7       |
+| Deck 7 (4Z)   |       ACTIONS (o)(o)( )                  | 2 MACHETE P6    |
+| Skipped 3 >   |  > Lurcher 7: Machete blocked 6, -1 HP   |  inf   <7       |
 | DOORS (list)  |                                          | Reserve 11      |
 | [machine USE] |                                          | [ SKIP STREET ] |
 +---------------+------------------------------------------+-----------------+
@@ -399,7 +404,7 @@ The street becomes a 1 x 4 row; status and doors on the left, weapons and action
 
 ## 7. Questions for the studio head
 
-Answer on the Studio Floor task `dd-v2-design`. Recommended options are marked.
+**Answered 2026-11-08: the studio head approved the recommended option on all five (see section 8).** Kept here as the record of the options.
 
 **Q1. Deck structure: how do waves and room loot meet?**
 - (a) **One mixed deck (recommended).** Wave zombies + loot in one deck; the deck running out *is* the wave ending; Skip sends cards to the Skipped pile, which returns with the next wave. Evidence: 32-39% run win, 12.3-minute wins, skipping worth 5-9 points of run win, more reload and slot decisions (5.3).
@@ -425,3 +430,35 @@ Answer on the Studio Floor task `dd-v2-design`. Recommended options are marked.
 - (a) **Yes, small boost before the build (recommended):** up-close kills pay **+30** instead of +10 (points for risk, as in the genre), and melee weapons get **+1 power**. We retune with the sim afterwards.
 - (b) Leave it: melee is a backup for when the mag is empty, and that's fine.
 - (c) Bigger change: melee kills don't notch at all (truly unlimited), with melee power -2 to compensate.
+
+---
+
+## 8. Studio head decisions (2026-11-08) and the retune
+
+| # | Question | **Decision** |
+|---|---|---|
+| W1 | Deck structure | **(a) one mixed wave deck** (wave zombies + room loot; the deck running out ends the wave; skipped cards return next wave) |
+| W2 | Combat model | **(a) hybrid**: notch on every weapon + 1 round per gun kill; Reload clears both |
+| W3 | Reload cost | **(a) 1 action (max one per street); rounds left in the mag are dropped** |
+| W4 | How a run ends | **(a) 3 districts x 3 waves, boss at the end of each district** |
+| W5 | Melee boost | **(a) melee +1 power and +30 for up-close kills, then retune** |
+
+### 8.1 CONFIG values changed in `dd-v2-tune` (for the Godot implementation)
+
+Everything else in `CONFIG` is unchanged from the `dd-v2-design` sim (commit 907f77f).
+
+| CONFIG key (`tools/sim_deaddraw_v2.py`) | Before | **Now** | Why |
+|---|---|---|---|
+| `melee_power_bonus` (added to every melee weapon's base power) | 0 | **1** | W5 |
+| `points.up_close` (units of 10 points) | 1 | **3** (= +30 on screen) | W5 |
+| `fire_axe_power` (perk Axe in the Trunk) | 6 | **7** | matches the Fire Axe's boosted power (6 + 1) |
+| `z_add` (per district: Maple Row, Downtown, St. Agnes) | [-1, 1, 3] | **[-1, 2, 2]** | retune; moves difficulty from St. Agnes into Downtown |
+| `boss_wave_add` (new key; extra strength on wave-3 zombies only, per district) | [0, 0, 0] | **[0, 0, 1]** | keeps St. Agnes wave 3 at its old strength while waves 1-2 get easier |
+| `triage_heal_bonus` (Imani) | 1 | **0** | Imani was 15-20 points above the others after the melee boost |
+| `safehouse_heal` | 12 | **15** | global easing to land all survivors in the band |
+| `survivors.theo.hp` | 21 | **20** | Theo was the strongest after the easing |
+
+Implementation notes: the `weapons` table keeps the **base** melee powers (2-7); the game should apply `melee_power_bonus` when a melee weapon is created (sim: `mkweapon`), so the cards show Knife 3, Crowbar 4, Bat 5, Machete 6, Fire Axe 7, Sledgehammer 8. Wave zombie strength = base list value + `z_add[district]` + (`boss_wave_add[district]` on wave 3 only); the effective lists are in 1.6. The boss cards are not modified by either knob.
+
+Retune path (for the record, 200-300 runs each unless noted): melee boost alone at the old difficulty gave 45-49% run win. Then `z_add [-1,2,3]` gave Rosa 24.5%, Imani 35%, Theo 33%; `[-1,2,2]` gave 38 / 57 / 42.5%; `[-1,3,2]` gave 12-19%. With `[-1,2,2]` + `boss_wave_add [0,0,1]` + Triage +0 it was 31 / 34.5 / 37.5% (Theo 21 HP); at 1000 runs with the axe fix it was 29.9 / 28.0 / 39.0%. Safehouse heal 13 and 14 with Theo 20 gave 31-34% and 32-36%. Final: heal 15, 1000 runs, 31.8 / 31.3 / 32.8% (5.1).
+

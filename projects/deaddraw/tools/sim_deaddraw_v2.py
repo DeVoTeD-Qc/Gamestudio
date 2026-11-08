@@ -58,25 +58,26 @@ CONFIG = {
     "reloads_per_street": 1,
     "reload_mode": "drop",         # "drop": rounds left in the mag are lost; "top": kept
     "allow_retreat": True,
-    "safehouse_heal": 12,
+    "safehouse_heal": 15,
     "perk_choices": 3,
-    "triage_heal_bonus": 1,
+    "triage_heal_bonus": 0,
     "start_kit": ["pistol"],       # slot 1; slot 2 starts empty
     "start_reserve": 6,
     "reserve_cap": 24,
     "start_points": 5,
-    "points": {"kill": 0.5, "up_close": 1, "scrap": 1, "boss": 8, "wave": 3},
+    "points": {"kill": 0.5, "up_close": 3, "scrap": 1, "boss": 8, "wave": 3},
     "melee_wave_reset": True,      # notch model: melee notch clears at the start of each wave
     "melee_delta_damage_model": -2,
-    "melee_power_bonus": 0,        # tuning knob: added to every melee weapon's power
+    "melee_power_bonus": 1,        # tuning knob: added to every melee weapon's power
     "restock_per_room": 1,         # loot cards each opened room adds to every new wave
     "entrance_restock": 0,         # loot cards the entrance adds to every new wave
-    "z_add": [-1, 1, 3],          # difficulty knob: added to every wave zombie per district
+    "z_add": [-1, 2, 2],          # difficulty knob: added to every wave zombie per district
+    "boss_wave_add": [0, 0, 1],    # extra strength for wave-3 (boss wave) zombies only, per district
     "drops": ["full_load", "payday", "boards"],
     "full_load_reserve": 4,
     "boards_cover": 4,
     "bandolier_reserve": 2,        # perk: +2 reserve ammo at the start of each wave
-    "fire_axe_power": 6,
+    "fire_axe_power": 7,           # = Fire Axe 6 + melee_power_bonus 1
     "fixtures": {
         "retrofit": {"cost": 30, "power": 2, "mag_mult": 1.5},
         "grin": {"cost": 12, "step": 6},
@@ -149,7 +150,7 @@ CONFIG = {
     "survivors": {
         "rosa": {"name": "Rosa Vance", "passive": "steady_hands", "hp": 20},
         "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 20},
-        "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 21},
+        "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 20},
     },
     "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps",
                       "bandolier", "fast_hands"],
@@ -511,7 +512,7 @@ def make_loot(spec):
 
 
 def wave_pack(d, di, w, rng):
-    za = CONFIG["z_add"][di]
+    za = CONFIG["z_add"][di] + (CONFIG["boss_wave_add"][di] if w == len(d["waves"]) - 1 else 0)
     cards = [Card("Z", z + za) for z in d["waves"][w]]
     rng.choice(cards).drop = rng.choice(CONFIG["drops"])
     return cards
