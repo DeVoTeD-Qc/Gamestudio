@@ -530,9 +530,10 @@ func test_pitch_decks_swaps_only_when_active() -> void:
 		var d: Array[CardData] = PitchDecks.apply(sq.deck)
 		var k: Array = _kinds(d)
 		assert_eq(k[0], PitchDecks.unit_target(d.size()), "%s units" % f)
-		assert_eq(k[2], 3, "%s Fields" % f)
-		# kc-econ: the crews' 10-card decks pitch as 5 units / 2 tactics / 3 Fields.
-		assert_true(k[1] >= d.size() - PitchDecks.unit_target(d.size()) - 3, "%s tactics (%d)" % [f, k[1]])
+		# kc-econ: the crews' 10-card decks pitch as 5 units and 5 tactics + Fields (2-3 Fields: the
+		# Fields only replace units above the half-deck target, and a crew with 3 tactics keeps them).
+		assert_true(k[2] >= 2 and k[2] <= 3, "%s Fields (%d)" % [f, k[2]])
+		assert_true(k[1] >= 2, "%s tactics (%d)" % [f, k[1]])
 		var dids: Array = d.map(func(c: CardData) -> StringName: return c.id)
 		assert_false(dids.has(&"sniper_perch") or dids.has(&"aid_station"), "%s: no Sniper Perch / Aid Station" % f)
 		assert_true(dids.has(&"brawler") and dids.has(&"smoke_screen"), "%s shows the new chassis" % f)

@@ -216,7 +216,7 @@ Additions and decisions from design (append-only; existing CSV rows stay valid):
 | Killstreak chassis | 4 (Recon Drone, Mortar Barrage, Sentry Turret, Attack Helo) | Loadout items, also shown as banners |
 | **Banner arts at prototype launch** | **64 deck arts + 8 killstreak arts = 72**, of which **6 are animated** | Minimum viable: 48 (2 per chassis). The artist's pack v1 already covers 23 deck arts across 16 chassis, plus 1 killstreak art (§2.5). |
 | Enemy squad calling cards | 3 (one Operator banner each for Rusher, Anchor, Black Meridian), taken from the 72 | |
-| Starter deck | 20 cards, **the same list as Killstreak** (after p19) | Each copy wears that chassis' default art |
+| Starter deck | 20 cards, **the same list as Killstreak** (after p19). **kc-econ (2026-11-08): 10 Standard Issue cards**, see §9 | Each copy wears that chassis' default art |
 | Reward pool | Killstreak's 23 entries + Brawler ×2, Smoke Screen ×1, Blackout ×1, Sabotage ×1 = **28** | The new chassis enter only through rewards, so starter balance stays untouched |
 
 ### 3.2 Chassis list (exact numbers)
@@ -438,3 +438,12 @@ Gameplay power comes only from **chassis**, which you earn through run rewards j
 ## Removed (kc-no-training, 2026-11-07)
 
 *The head, after an iPad playtest: "Remove all the training thing." / "Make sure cards only have 1 trait at most."* The card level system is gone: no Recruit / Trained / Veteran / Elite levels, no Promotion, no level coin or camo band, no "Trains:" line or locked keywords. Every card has its printed keywords and effects from the start. Standard Issue cards stay vanilla. A card copy carries at most one trait (see `art-traits.md`, "Removed (kc-no-training)"). "Elite" now only means the named Elite cards (★, rung 4 of the reward ladder).
+
+
+## 9. Classic deckbuilder economy (kc-econ, 2026-11-08)
+*The head: "start at 1 supply and also draw only one card per turn. Maybe the starting deck should be 10 cards so we see our newly earned cards faster. Shuffle discard if we run out of cards, like classic deckbuilder." Numbers and sims: `run-v2.md` §15.*
+- **Starter: 10 Standard Issue cards**, the 20-card list halved with its shape kept (mostly units, one kind of Tactic): **Grunt ×3, Trooper ×3, Sergeant ×2, Armored Trooper ×1, Ammo Resupply ×1**. The starter panel shows exactly this list and match 1 draws exactly it (`tests/test_deck_match.gd`).
+- **Supply: round N gives N** (round 1 = 1, cap 7). **Draw 1 card per round** (round 1 still draws the opening hand of 4 + 1, with the free mulligan). Hand cap 7.
+- **The Operator is free to place in round 1** and costs 1 Supply on every respawn (`RunConfig.operator_free_round1`), so round 1 is "Operator + a 1-drop".
+- **Reshuffle:** when you must draw and the deck is empty, the discard pile (played Tactics, downed units, torn-down Fields, burned cards) is shuffled into a new deck. The match log says it ("Discard shuffled into a new deck (6 cards)"), and the DECK badge's inspector explains the rule.
+- **Crews play 10 cards too** (every squad and run-slot deck scaled from 18-20 to 10 with its composition kept); the Supply and draw rules are the same on both sides. Deck floor 15 → **8**.
