@@ -214,3 +214,18 @@ Contact sheet: `scratchpad/dd-art/contact-v2.png` (Godot-rasterised, phone size,
 | Perks | `perks/fast_hands.svg`, `perks/bandolier.svg` | |
 | Wave marker | `icons/wave.svg` (128, zombie-red ring, hand rising from the ground) | Wave number is a Godot label on top. |
 | Retrofit plate | `badges/retrofit.svg` (brass plate with a gear) | No letter baked in; the UI adds "R" if wanted. |
+
+## 10. v3 additions ("Kill Stacks", board task `dd-v3-art`)
+
+Same generator, same rules. Every v1/v2 file and manifest key is unchanged (manifest `version` 3; v3 groups
+come after the v2 ones and DDArt keeps the first file per key). Contact sheet: `scratchpad/dd-art/contact-v3.png`.
+
+| Set | Files | Notes |
+|---|---|---|
+| New guns (weapon blue) | `cards/weapon_ratchet_crossbow.svg`, `weapon_twin_bore.svg`, `weapon_lever_rifle.svg`, `weapon_nail_driver.svg`, `weapon_elephant_gun.svg` | Service Pistol, Hunting Rifle, Pump Shotgun reuse v2 art; Scout Carbine reuses `weapon_carbine.svg`. Crossbow is seen from above so the bow reads; Twin-Bore is an over-and-under with a two-bore muzzle plate; Lever Rifle = brass receiver + loop lever (vs the Hunting Rifle's bolt + scope); Nail Driver is an orange site nailer with an air hose (a tool, not a gun shape); Elephant Gun is the heaviest silhouette plus one oversized cartridge. |
+| Patch Press (machine copper) | `cards/machine_patch_press.svg` | A rusty clamshell heat press on a bench (raised platen, heat glow, patch on the plate, dial, thread spools). A garment-shop tool: no drinks-machine shapes. Wall Racks added for the v3 rack guns: `machine_wall_rack_ratchet_crossbow.svg`, `machine_wall_rack_elephant_gun.svg`. |
+| Patches (128 round, embroidered) | `patches/<id>.svg`: lookout (binoculars), thick_jacket (quilted jacket), field_medic (green/white plus + bandage), brawler (taped fist), bounty (gold star + ribbons), loose_grip (arrow bending over a bar), second_wind (heart + wind), trophy_belt (brass buckle with a cup) | Twill rim + stitch ring + cloth field: reads apart from v2 perk discs and Jawbreakers. One rim colour each so they tell apart at 32-48 px next to HP. |
+| Rule glyphs (64, ink disc, weapon-blue ring) | `icons/rule_<rule>.svg` for the sim rule ids: any (star), down, up, same (equals), zigzag, close (within 1: chevrons squeezing a dot), parity (one pip / two pips), spread (blocks under a red cap = sum cap), big (six-face die + up chevron = 6+), bent (Loose Grip, violet ring) | Built for 20-28 px on the gun card. No digits: the rule text stays a Godot label. |
+| Badges (64) | `badges/challenge.svg` (gold medal + check), `challenge_open.svg` (grey empty medal), `flip.svg`, `honed.svg` (Bench plates), `no_escape.svg` (chain + padlock) | |
+| Deck backs (240 x 336) | `cards/back_wave.svg` (zombie red, moon, reaching hands), `cards/back_room.svg` (slate brick, door, blank price tag, key) | The pile keeps `cards/card_back.svg`. |
+| Patient Zero phases | phase 1 = `cards/finale_patient_zero.svg`, `finale_patient_zero_phase2.svg` (IV pole down, gown torn, arms up), `finale_patient_zero_phase3.svg` (swollen, violet veins) | Manifest `boss_phases`: `patient_zero_<1-3>` and `patient_zero_v<8/10/12>`. |

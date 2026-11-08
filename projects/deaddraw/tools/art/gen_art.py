@@ -1246,13 +1246,13 @@ def silhouette(body: str, color: str, grow: float) -> str:
 WALL_BOARD = ("#26302b", "#1c2420")
 
 
-def wallrack(gun_maker=None) -> str:
+def wallrack(gun_maker=None, sc: float = 0.74) -> str:
     """Wall Rack: a chalk-outlined gun on a board. Empty outline = the generic machine card."""
     s = rect(26, 30, 208, 112, WALL_BOARD[0], 4, rx=4) + rect(26, 30, 208, 112, "none", 0)
     s += "".join(line([(x, 36), (x - 30, 136)], 2, WALL_BOARD[1]) for x in range(60, 240, 34))
     s += circ(40, 44, 3, STEEL[1], 2) + circ(220, 44, 3, STEEL[1], 2) + circ(40, 128, 3, STEEL[1], 2) + circ(220, 128, 3, STEEL[1], 2)
     body = (gun_maker or gun_carbine)()
-    place = "translate(136 88) scale(0.74)"
+    place = "translate(136 88) scale(%g)" % sc
     s += g(silhouette(body, CHALK, 10), place, opacity=0.9)
     if gun_maker is None:
         s += g(silhouette(body, WALL_BOARD[0], 0), place)
@@ -1528,6 +1528,473 @@ def icon_wave() -> str:
     return svg(128, 128, s, defs)
 
 
+# ================================================================ v3 ("Kill Stacks") art
+# Everything below was added for core-rules-v3.md (board task dd-v3-art): the five new guns
+# (Ratchet Crossbow, Twin-Bore, Lever Rifle, Nail Driver, Elephant Gun; Service Pistol, Hunting Rifle,
+# Pump Shotgun and Scout Carbine reuse v2 art), the Patch Press, the 8 Patches, gun-rule glyphs,
+# challenge / bench badges, wave-deck and room-deck backs and Patient Zero's 3 phases.
+# Same style rules as v1/v2. All designs are original to DeadDraw.
+NAIL_ORANGE = ("#d9772e", "#a8551c")   # Nail Driver tool body
+THREAD = "#f4ead0"                     # embroidery thread on Patches
+
+
+# ---------------------------------------------------------------- v3 guns (local coords, muzzle at +x)
+def gun_crossbow() -> str:
+    """Ratchet Crossbow, seen from above so the bow reads at a glance: wooden tiller, steel prod with
+    curled tips, a toothed ratchet wheel + crank at the back, a bolt on the rail."""
+    s = limb([(70, -60), (84, -30), (88, 0), (84, 30), (70, 60)], 9, STEEL[1])
+    s += line([(70, -60), (84, -30), (88, 0), (84, 30), (70, 60)], 3, STEEL[0])
+    s += circ(70, -62, 5, STEEL[1], 3) + circ(70, 62, 5, STEEL[1], 3)
+    s += line([(70, -62), (-12, -6)], 2.5, BONE_D) + line([(70, 62), (-12, 6)], 2.5, BONE_D)
+    s += path("M-124 -14 L-60 -10 L60 -8 L96 -6 L96 6 L60 8 L-60 10 L-124 14 Q-130 0 -124 -14 Z", WOOD[0])
+    s += line([(-116, 0), (-70, 0)], 3, WOOD[1]) + rect(84, -10, 16, 20, STEEL[1], 3.5, rx=2)
+    s += rect(-20, -9, 18, 18, GUN[0], 3.5, rx=2)
+    # bolt
+    s += line([(-12, 0), (118, 0)], 4, INK) + line([(-12, 0), (114, 0)], 2, "#d8c8a8")
+    s += poly([(114, -5), (126, 0), (114, 5)], STEEL[0], 2.5)
+    s += poly([(-12, 0), (-2, -8), (8, -8), (0, 0)], "#b5402f", 2) + poly([(-12, 0), (-2, 8), (8, 8), (0, 0)], "#b5402f", 2)
+    # ratchet wheel + crank (the "ratchet")
+    teeth = "".join(poly([(math.cos(a) * 15, math.sin(a) * 15), (math.cos(a + 0.22) * 21, math.sin(a + 0.22) * 21),
+                          (math.cos(a + 0.4) * 15, math.sin(a + 0.4) * 15)], STEEL[0], 2) for a in [i * math.pi / 5 for i in range(10)])
+    s += g(teeth + circ(0, 0, 16, STEEL[0], 3.5) + circ(0, 0, 5, GUN[1], 2.5)
+           + limb([(0, 0), (16, 22)], 5, GUN[1], 3) + circ(16, 24, 6, WOOD[0], 3), "translate(-62 -20)")
+    return s
+
+
+def gun_twin_bore() -> str:
+    """Twin-Bore: a stubby over-and-under break-action. Two stacked barrels and a muzzle plate that
+    shows both bores, so 'twin' reads from the side."""
+    s = path("M-104 -6 L-46 -18 L-40 10 L-58 16 Q-80 26 -104 40 Q-114 18 -104 -6 Z", WOOD[0])
+    s += line([(-96, 18), (-58, 8)], 3, WOOD[1]) + rect(-110, -8, 8, 50, POLYMER, 3.5, rx=2)
+    s += rect(-48, -24, 40, 38, GUN[0], 4, rx=5) + line([(-44, -19), (-14, -19)], 2.5, GUN_HI) + trigger(-22, 14, 18, 16)
+    s += circ(-28, -2, 4, GUN[1], 2.5)
+    s += poly([(-38, -24), (-46, -36), (-38, -38), (-30, -24)], GUN[1], 3)
+    s += rect(-10, -26, 96, 15, GUN[0], 4, rx=2) + rect(-10, -12, 96, 15, GUN[0], 4, rx=2)
+    s += line([(-4, -22), (80, -22)], 2.5, GUN_HI) + line([(-4, -8), (80, -8)], 2.5, GUN_HI)
+    s += rect(-2, 2, 52, 12, WOOD[0], 3.5, rx=5)
+    s += ell(90, -11, 9, 19, GUN[1], 4) + circ(90, -19, 4.5, INK, 0) + circ(90, -3, 4.5, INK, 0)
+    return g(s, "scale(1.08)")
+
+
+def gun_lever_rifle() -> str:
+    """Lever Rifle: straight wooden stock, brass receiver, long barrel over a tube magazine and a big
+    loop lever. Reads apart from the Hunting Rifle (bolt + scope) by the brass and the loop."""
+    s = path("M-126 -12 L-52 -16 L-46 2 L-60 6 Q-92 14 -126 28 Q-132 6 -126 -12 Z", WOOD[0])
+    s += line([(-116, 12), (-64, 4)], 2.5, WOOD[1]) + rect(-132, -14, 8, 44, "#3a2c20", 3.5, rx=2)
+    s += path("M-48 6 Q-46 34 -26 34 Q-6 34 -8 12", "none", 9) + path("M-48 6 Q-46 34 -26 34 Q-6 34 -8 12", "none", 4.5, stroke=GUN[1])
+    s += rect(-54, -20, 52, 26, BRASS[0], 4, rx=3) + line([(-48, -15), (-8, -15)], 2.5, "#f0d488")
+    s += circ(-40, -6, 3, BRASS[1], 2) + circ(-16, -6, 3, BRASS[1], 2)
+    s += rect(-4, -4, 118, 8, GUN[1], 3.5, rx=3)
+    s += rect(-4, -18, 128, 12, GUN[0], 4, rx=1) + line([(0, -14), (118, -14)], 2.5, GUN_HI)
+    s += rect(4, -6, 54, 14, WOOD[0], 4, rx=5)
+    s += poly([(112, -18), (116, -27), (120, -18)], GUN[1], 3) + rect(26, -25, 8, 7, GUN[1], 2.5)
+    s += rect(108, -6, 8, 12, BRASS[1], 3, rx=1)
+    return g(s, "scale(0.94)")
+
+
+def gun_nail_driver() -> str:
+    """Nail Driver: a pneumatic site nailer (orange tool body, nose down-front, angled nail strip,
+    coiled air hose). A tool turned weapon, not a gun shape."""
+    s = path("M-70 46 Q-84 72 -108 64 Q-130 56 -122 40 Q-114 28 -104 40 Q-96 52 -122 78", "none", 9)
+    s += path("M-70 46 Q-84 72 -108 64 Q-130 56 -122 40 Q-114 28 -104 40 Q-96 52 -122 78", "none", 4.5, stroke="#d8c060")
+    s += rect(-76, 38, 14, 10, BRASS[0], 3, rx=2)
+    s += poly([(-62, -10), (-34, -10), (-30, 46), (-58, 50)], POLYMER) + trigger(-26, -4, 18, 16)
+    s += "".join(line([(-58 + d, 4), (-54 + d, 40)], 2.2, "#4a4848") for d in (6, 14))
+    s += path("M-70 -36 L40 -36 Q58 -36 58 -18 L58 -6 L-70 -6 Q-80 -20 -70 -36 Z", NAIL_ORANGE[0])
+    s += path("M-64 -14 L52 -14 L52 -6 L-66 -6 Z", NAIL_ORANGE[1], 0) + path("M-70 -36 L40 -36 Q58 -36 58 -18 L58 -6 L-70 -6 Q-80 -20 -70 -36 Z", "none", 4)
+    s += rect(-30, -44, 44, 10, GUN[1], 3, rx=3)
+    s += rect(52, -32, 20, 62, GUN[0], 4, rx=3) + rect(56, 28, 12, 18, STEEL[1], 3.5, rx=2)
+    s += line([(62, 46), (62, 56)], 3, STEEL[0])
+    strip = poly([(-24, 12), (54, 2), (56, 16), (-22, 26)], STEEL[1], 3.5)
+    strip += "".join(line([(x, 12 - (x + 24) * 0.128 + 2), (x + 1, 24 - (x + 24) * 0.128)], 2, STEEL[0]) for x in range(-18, 52, 7))
+    s = strip + s
+    s += rect(-58, -28, 12, 12, "#2b2a2a", 2.5, rx=2) + rect(-40, -28, 50, 6, NAIL_ORANGE[1], 0, rx=2)
+    return g(s, "scale(1.05)")
+
+
+def gun_elephant() -> str:
+    """Elephant Gun: the heaviest gun in the game. Deep wooden stock with a thick recoil pad, big
+    break-action receiver, one fat barrel with a raised rib and express sights."""
+    s = path("M-132 -16 L-50 -22 L-44 6 L-60 12 Q-96 24 -132 40 Q-140 12 -132 -16 Z", WOOD[0])
+    s += path("M-118 -6 Q-90 -16 -60 -12", "none", 3, stroke=WOOD[1]) + line([(-122, 20), (-66, 8)], 3, WOOD[1])
+    s += rect(-142, -18, 12, 60, "#3a2c20", 4, rx=3)
+    s += "".join(line([(-104 + d, 2), (-98 + d, 18)], 2.2, WOOD[1]) for d in (0, 8, 16))
+    s += rect(-50, -30, 52, 40, GUN[0], 4, rx=5) + line([(-44, -25), (-6, -25)], 3, GUN_HI) + trigger(-22, 10, 22, 18)
+    s += circ(-24, -8, 5, GUN[1], 3) + poly([(-40, -30), (-48, -44), (-38, -46), (-30, -30)], GUN[1], 3)
+    s += path("M2 -30 L132 -24 L132 2 L2 8 Z", GUN[0]) + line([(8, -24), (126, -19)], 3, GUN_HI)
+    s += rect(2, -36, 120, 7, GUN[1], 3, rx=2)
+    s += rect(4, 0, 64, 16, WOOD[0], 4, rx=6) + "".join(line([(x, 4), (x, 12)], 2.5, WOOD[1]) for x in (16, 26, 36, 46, 56))
+    s += poly([(116, -36), (122, -46), (128, -36)], GUN[1], 3) + rect(36, -44, 12, 9, GUN[1], 3)
+    s += rect(128, -27, 10, 32, GUN[1], 4, rx=2)
+    return g(s, "scale(0.86)")
+
+
+def weapon_card_v3(fid: str) -> str:
+    maker, rot, cx, cy, _n, _i = GUNS_V3[fid]
+    extra = ""
+    if fid == "weapon_elephant_gun":   # one oversized cartridge lies in front: the heft cue
+        extra = bullet(206, 150, 76, 1.25)
+    return weapon_card(g(maker(), "scale(0.9)"), rot, cx, cy).replace("\n</svg>", extra + "\n</svg>")
+
+
+GUNS_V3 = {  # file id: (body maker, rotation, cx, cy, display name, sim id)
+    "weapon_ratchet_crossbow": (gun_crossbow, -12, 142, 100, "Ratchet Crossbow", "crossbow"),
+    "weapon_twin_bore": (gun_twin_bore, -10, 142, 106, "Twin-Bore", "twin"),
+    "weapon_lever_rifle": (gun_lever_rifle, -12, 132, 112, "Lever Rifle", "lever"),
+    "weapon_nail_driver": (gun_nail_driver, -10, 140, 98, "Nail Driver", "nailer"),
+    "weapon_elephant_gun": (gun_elephant, -12, 130, 110, "Elephant Gun", "elephant"),
+}
+# v3 guns already drawn for v2 (sim_deaddraw_v3.py CONFIG ids -> existing files)
+GUNS_V3_REUSE = {"pistol": ("Service Pistol", "cards/weapon_service_pistol.svg"),
+                 "rifle": ("Hunting Rifle", "cards/weapon_hunting_rifle.svg"),
+                 "shotgun": ("Pump Shotgun", "cards/weapon_pump_shotgun.svg"),
+                 "carbine": ("Scout Carbine", "cards/weapon_carbine.svg")}
+
+
+# ---------------------------------------------------------------- Patch Press (machine card, 240 x 180)
+def mc_patch_press() -> str:
+    """Patch Press: a rusty clamshell heat press on a workbench. Hinged top platen on a long lever,
+    orange heat glow, a round patch on the lower plate, a pressure dial and thread spools. Nothing
+    like a drinks machine: it is a garment-shop tool."""
+    rust, rust_d = "#8a5a3a", "#64402a"
+    s = limb([(62, 140), (60, GROUND + 6)], 10, WOOD[1]) + limb([(222, 140), (224, GROUND + 6)], 10, WOOD[1])
+    s += rect(44, 128, 192, 16, WOOD[0], 4, rx=2) + line([(50, 134), (230, 134)], 2.5, WOOD[1])
+    # base + lower plate
+    s += rect(96, 112, 116, 18, rust_d, 4, rx=3) + rect(104, 104, 100, 10, STEEL[0], 3.5, rx=2)
+    s += ell(150, 104, 22, 4, "#f2a65a", 0, extra='opacity="0.55"')
+    # the patch being pressed (bright, on the plate)
+    s += ell(150, 101, 18, 5, "#4f9ad8", 3) + ell(150, 100, 10, 2.5, THREAD, 0)
+    # column + hinge
+    s += rect(196, 40, 18, 74, rust, 4, rx=3) + circ(205, 48, 9, rust_d, 3.5) + circ(205, 48, 3, STEEL[0], 0)
+    # top platen, raised at an angle
+    s += g(rect(-96, -10, 100, 20, rust, 4, rx=4) + rect(-92, 8, 92, 7, STEEL[1], 3, rx=2)
+           + "".join(line([(x, -6), (x, 6)], 2.5, rust_d) for x in range(-84, -6, 12)), "translate(205 48) rotate(-14)")
+    # heat glow between the plates
+    s += path("M118 96 Q150 70 182 92", "none", 5, stroke="#f2a65a", extra='opacity="0.7"')
+    s += path("M128 88 Q150 70 172 86", "none", 3, stroke="#ffd59a", extra='opacity="0.7"')
+    # lever handle up and right
+    s += limb([(205, 48), (226, 18)], 6, STEEL[1], 3) + limb([(222, 22), (232, 8)], 9, "#2b2a2a", 3.5)
+    # pressure dial
+    s += circ(205, 86, 10, BONE, 3.5) + line([(205, 86), (211, 80)], 2.5, "#b5402f") + circ(205, 86, 2, INK, 0)
+    # thread spools on the bench
+    for x, c in ((70, "#e2574c"), (86, "#e6b83a")):
+        s += rect(x - 6, 110, 12, 18, c, 3, rx=2) + rect(x - 8, 108, 16, 4, WOOD[1], 2.5, rx=1) + rect(x - 8, 126, 16, 4, WOOD[1], 2.5, rx=1)
+    s += path("M86 112 Q100 96 112 102", "none", 2, stroke="#e6b83a")
+    # steam
+    s += "".join(path("M%d 66 Q%d 58 %d 50 Q%d 42 %d 34" % (x, x - 6, x, x + 6, x), "none", 3, stroke="#cfd6d0", extra='opacity="0.45"') for x in (138, 158))
+    return card_art("machine", s)
+
+
+# ---------------------------------------------------------------- Patches (128 x 128 embroidered badges)
+def patch(field: str, rim: str, symbol: str) -> str:
+    """Round embroidered patch: thick twill rim, stitch ring, cloth field, thread-coloured symbol.
+    Transparent outside the patch so it can sit on the survivor portrait."""
+    defs = radial("pf", field, field, 0.5, 0.4, 0.7)
+    s = circ(64, 64, 60, rim, 4)
+    s += "".join(rect(-1.6, -56, 3.2, 7, INK, 0, extra='opacity="0.55" transform="translate(64 64) rotate(%d)"' % a) for a in range(0, 360, 15))
+    s += circ(64, 64, 47, field, 4)
+    s += "".join(rect(-1.2, -43, 2.4, 5, THREAD, 0, extra='opacity="0.7" transform="translate(64 64) rotate(%d)"' % a) for a in range(0, 360, 12))
+    s += path("M30 46 Q44 26 70 24", "none", 3, stroke="#ffffff", extra='opacity="0.18"')
+    return svg(128, 128, s + symbol, defs)
+
+
+def pa_lookout() -> str:
+    s = g(rect(-30, -14, 24, 34, "#3a3e5c", 4, rx=8) + rect(6, -14, 24, 34, "#3a3e5c", 4, rx=8) + rect(-8, -6, 16, 14, "#2c3040", 4, rx=3)
+          + circ(-18, 26, 11, THREAD, 4) + circ(18, 26, 11, THREAD, 4) + circ(-18, 26, 5, "#9fd8ff", 0) + circ(18, 26, 5, "#9fd8ff", 0)
+          + ell(-21, 23, 2.2, 1.6, "#ffffff", 0) + ell(15, 23, 2.2, 1.6, "#ffffff", 0), "translate(64 52)")
+    return patch("#2a3550", "#9aa8ff", s)
+
+
+def pa_thick_jacket() -> str:
+    c, d = "#a86a3c", "#7a4a28"
+    s = path("M46 36 L56 32 Q64 40 72 32 L82 36 L100 54 L92 66 L86 60 L86 98 L42 98 L42 60 L36 66 L28 54 Z", c)
+    s += "".join(path("M43 %d Q64 %d 85 %d" % (y, y + 4, y), "none", 3, stroke=d) for y in (56, 70, 84))
+    s += path("M56 32 L64 46 L72 32", "none", 4) + line([(64, 46), (64, 98)], 3.5, INK)
+    s += path("M42 98 L86 98", "none", 4)
+    return patch("#3a2e26", "#e0b04a", s)
+
+
+def pa_field_medic() -> str:
+    s = rect(36, 36, 56, 56, THREAD, 4, rx=10) + rect(57, 44, 14, 40, "#3fae5e", 0) + rect(44, 57, 40, 14, "#3fae5e", 0)
+    s += rect(57, 44, 14, 40, "none", 0)
+    s += g(rect(-8, -14, 16, 28, BONE_D, 3.5, rx=3) + line([(-8, -4), (8, -4)], 2, "#8a826e"), "translate(92 92) rotate(-30)")
+    return patch("#3c4a2e", "#6fd08a", s)
+
+
+def pa_brawler() -> str:
+    sk, sd = "#d8a882", "#b07e5a"
+    s = rect(40, 48, 50, 36, sk, 4, rx=12)
+    s += "".join(line([(x, 50), (x, 66)], 3, sd) for x in (53, 65, 77))
+    s += path("M40 64 Q30 66 32 80 Q36 92 50 90 L52 74", sk, 4)
+    s += rect(40, 82, 46, 18, "#b5402f", 4, rx=4) + line([(46, 91), (80, 91)], 2.5, "#8a2f24")
+    s += line([(96, 44), (106, 36)], 4, THREAD) + line([(100, 58), (112, 56)], 4, THREAD) + line([(92, 32), (94, 22)], 4, THREAD)
+    return patch("#5a2420", "#e2574c", s)
+
+
+def pa_bounty_hunter() -> str:
+    s = star(64, 60, 26, "#e6b83a", 4) + circ(64, 60, 8, "#b58a22", 3)
+    s += path("M40 80 L32 100 L44 96 L50 106 L56 86 Z", "#b5402f", 3.5) + path("M88 80 L96 100 L84 96 L78 106 L72 86 Z", "#b5402f", 3.5)
+    return patch("#3a3020", "#f2d65c", s)
+
+
+def pa_loose_grip() -> str:
+    s = rect(30, 70, 68, 12, BONE_D, 3.5, rx=3) + line([(34, 76), (94, 76)], 2, "#8a826e")
+    s += path("M34 96 Q36 38 64 38 Q92 38 94 62", "none", 11) + path("M34 96 Q36 38 64 38 Q92 38 94 62", "none", 5.5, stroke=THREAD)
+    s += poly([(82, 60), (106, 58), (94, 80)], THREAD, 3.5)
+    return patch("#3a2a4e", "#b48ae0", s)
+
+
+def pa_second_wind() -> str:
+    s = path("M64 98 Q30 76 34 54 Q38 38 52 40 Q60 42 64 50 Q68 42 76 40 Q90 38 94 54 Q98 76 64 98 Z", "#e2574c", 4)
+    s += ell(50, 52, 6, 4, "#f4a49a", 0, rot=-30)
+    s += path("M20 66 Q40 60 52 68 Q62 74 72 66", "none", 8) + path("M20 66 Q40 60 52 68 Q62 74 72 66", "none", 4, stroke=THREAD)
+    s += path("M26 84 Q46 78 60 86 Q70 92 80 84 Q88 78 96 82", "none", 8) + path("M26 84 Q46 78 60 86 Q70 92 80 84 Q88 78 96 82", "none", 4, stroke=THREAD)
+    return patch("#1f3a3a", "#4fd1c5", s)
+
+
+def pa_trophy_belt() -> str:
+    s = rect(14, 58, 100, 20, "#5a3a24", 4, rx=3) + "".join(circ(x, 68, 2.5, INK, 0) for x in (20, 26, 102, 108))
+    s += ell(64, 68, 30, 24, BRASS[0], 4) + ell(64, 68, 22, 16, BRASS[1], 3)
+    s += path("M54 58 L74 58 Q74 72 64 74 Q54 72 54 58 Z", "#f0d488", 3) + rect(60, 74, 8, 5, "#f0d488", 2.5) + rect(55, 79, 18, 4, "#f0d488", 2.5)
+    s += path("M54 61 Q48 61 49 66 Q50 70 56 69", "none", 2.5) + path("M74 61 Q80 61 79 66 Q78 70 72 69", "none", 2.5)
+    return patch("#4a2228", "#e0b04a", s)
+
+
+PATCHES = {  # sim id: (maker, display name, extra keys)
+    "lookout": (pa_lookout, "Lookout", []),
+    "thick_jacket": (pa_thick_jacket, "Thick Jacket", []),
+    "field_medic": (pa_field_medic, "Field Medic", []),
+    "brawler": (pa_brawler, "Brawler", []),
+    "bounty": (pa_bounty_hunter, "Bounty Hunter", ["bounty_hunter"]),
+    "loose_grip": (pa_loose_grip, "Loose Grip", []),
+    "second_wind": (pa_second_wind, "Second Wind", []),
+    "trophy_belt": (pa_trophy_belt, "Trophy Belt", []),
+}
+
+
+# ---------------------------------------------------------------- gun-rule glyphs (64 x 64, transparent)
+RULE_RING = PAL["weapon"][3]
+
+
+def glyph(body: str, ring: str = RULE_RING) -> str:
+    return svg(64, 64, circ(32, 32, 30, INK, 0) + '<circle cx="32" cy="32" r="27.5" fill="none" stroke="%s" stroke-width="4"/>' % ring + body)
+
+
+def arrow_v(x, y1, y2, w=9, col=BONE) -> str:
+    """Bold arrow from y1 to y2 (head at y2), ink-outlined."""
+    d = 1 if y2 > y1 else -1
+    shaft = limb([(x, y1), (x, y2 - d * 14)], w, col, 3)
+    head = poly([(x - 16, y2 - d * 18), (x + 16, y2 - d * 18), (x, y2)], col, 3)
+    return shaft + head
+
+
+def rg_any() -> str:  # no rule: a wild star
+    return glyph(star(32, 33, 15, BONE, 3) + circ(32, 33, 4, RULE_RING, 0))
+
+
+def rg_down() -> str:
+    return glyph(arrow_v(32, 12, 52, 7))
+
+
+def rg_up() -> str:
+    return glyph(arrow_v(32, 52, 12, 7))
+
+
+def rg_same() -> str:
+    return glyph(rect(14, 20, 36, 9, BONE, 3, rx=2) + rect(14, 35, 36, 9, BONE, 3, rx=2))
+
+
+def rg_zigzag() -> str:
+    p = [(12, 40), (22, 22), (32, 42), (42, 22)]
+    return glyph(line(p, 12, INK) + line(p, 6, BONE) + poly([(36, 20), (52, 14), (48, 30)], BONE, 3))
+
+
+def rg_close() -> str:  # within 1: two chevrons squeezing a dot
+    s = poly([(10, 20), (24, 32), (10, 44), (10, 36), (15, 32), (10, 28)], BONE, 3)
+    s += poly([(54, 20), (40, 32), (54, 44), (54, 36), (49, 32), (54, 28)], BONE, 3)
+    return glyph(s + circ(32, 32, 6, RULE_RING, 3))
+
+
+def rg_parity() -> str:  # one pip <-> two pips
+    s = rect(9, 18, 20, 20, BONE, 3, rx=4) + circ(19, 28, 3.6, INK, 0)
+    s += rect(35, 26, 20, 20, BONE, 3, rx=4) + circ(40.5, 31.5, 3.2, INK, 0) + circ(49.5, 40.5, 3.2, INK, 0)
+    s += path("M18 44 Q22 52 32 50", "none", 3, stroke=RULE_RING) + path("M46 20 Q42 12 32 14", "none", 3, stroke=RULE_RING)
+    return glyph(s)
+
+
+def rg_spread() -> str:  # sum cap: blocks stacked under a ceiling
+    s = rect(22, 38, 20, 10, BONE, 2.5, rx=1.5) + rect(22, 28, 20, 10, BONE_D, 2.5, rx=1.5) + rect(22, 21, 20, 7, BONE, 2.5, rx=1.5)
+    s += line([(12, 15), (52, 15)], 9, INK) + line([(12, 15), (52, 15)], 4.5, "#e2574c")
+    s += line([(14, 50), (50, 50)], 3, BONE_D)
+    return glyph(s)
+
+
+def rg_big() -> str:  # 6 or more: a six-face die with an up chevron
+    s = rect(12, 18, 30, 30, BONE, 3, rx=6)
+    s += "".join(circ(x, y, 3, INK, 0) for x in (20, 34) for y in (25, 33, 41))
+    s += poly([(44, 26), (52, 16), (60, 26), (55, 26), (52, 22), (49, 26)], BONE, 2.5)
+    return glyph(s)
+
+
+def rg_bent() -> str:  # Loose Grip: the rule bent out of the way
+    s = rect(10, 34, 44, 7, BONE_D, 2.5, rx=2)
+    s += path("M16 50 Q18 14 36 14 Q48 14 50 28", "none", 9) + path("M16 50 Q18 14 36 14 Q48 14 50 28", "none", 4, stroke="#b48ae0")
+    s += poly([(42, 26), (58, 26), (50, 38)], "#b48ae0", 2.5)
+    return glyph(s, "#b48ae0")
+
+
+RULE_GLYPHS = {  # sim rule id: (maker, extra keys)
+    "any": (rg_any, ["none", "no_rule"]),
+    "down": (rg_down, ["lower", "down_arrow"]),
+    "up": (rg_up, ["higher", "up_arrow"]),
+    "same": (rg_same, ["equal", "equals"]),
+    "zigzag": (rg_zigzag, ["zig_zag"]),
+    "close": (rg_close, ["within_1", "within1"]),
+    "parity": (rg_parity, ["odd_even"]),
+    "spread": (rg_spread, ["sum_cap", "total_cap"]),
+    "big": (rg_big, ["min_6", "six_plus"]),
+    "bent": (rg_bent, ["loose_grip", "ignore_rule"]),
+}
+
+
+# ---------------------------------------------------------------- v3 badges (64 x 64)
+def badge_challenge() -> str:
+    """Challenge complete: gold medal on a red ribbon with a check mark."""
+    s = poly([(18, 4), (30, 4), (36, 30), (24, 30)], "#b5402f", 3) + poly([(46, 4), (34, 4), (28, 30), (40, 30)], "#8a2f24", 3)
+    s += circ(32, 40, 20, BRASS[0], 3.5) + circ(32, 40, 14, BRASS[1], 0)
+    s += "".join(rect(-1.5, -19, 3, 4, "#f0d488", 0, extra='transform="translate(32 40) rotate(%d)"' % a) for a in range(0, 360, 30))
+    s += line([(23, 40), (30, 47), (42, 33)], 10, INK) + line([(23, 40), (30, 47), (42, 33)], 5, BONE)
+    return svg(64, 64, s)
+
+
+def badge_challenge_open() -> str:
+    """Challenge not yet met: the same medal as an empty grey outline."""
+    s = poly([(18, 4), (30, 4), (36, 30), (24, 30)], "#4a4f55", 3) + poly([(46, 4), (34, 4), (28, 30), (40, 30)], "#3a3f45", 3)
+    s += circ(32, 40, 20, "#2a2e33", 3.5) + '<circle cx="32" cy="40" r="14" fill="none" stroke="%s" stroke-width="2.5" opacity="0.8"/>' % BONE_D
+    return svg(64, 64, s)
+
+
+def badge_flip() -> str:
+    """Bench Flip plate: brass plate with an up and a down arrow."""
+    s = badge_disc(BRASS[0]) + rect(12, 16, 40, 32, BRASS[0], 3, rx=4)
+    s += "".join(circ(x, y, 1.8, BRASS[1], 0) for x in (17, 47) for y in (21, 43))
+    s += poly([(20, 30), (26, 20), (32, 30)], INK, 0) + rect(24, 29, 4, 10, INK, 0)
+    s += poly([(32, 34), (38, 44), (44, 34)], INK, 0) + rect(36, 25, 4, 10, INK, 0)
+    return svg(64, 64, s)
+
+
+def badge_honed() -> str:
+    """Bench Hone plate: brass plate with a whetstone spark (+1 power is a label on top)."""
+    s = badge_disc(BRASS[0]) + rect(12, 16, 40, 32, BRASS[0], 3, rx=4)
+    s += "".join(circ(x, y, 1.8, BRASS[1], 0) for x in (17, 47) for y in (21, 43))
+    s += g(rect(-14, -4, 28, 8, "#6d7b80", 2.5, rx=2), "translate(28 36) rotate(-25)")
+    s += poly([(40, 18), (43, 26), (51, 27), (44, 31), (46, 39), (40, 34), (34, 39), (36, 31), (29, 27), (37, 26)], BONE, 2)
+    return svg(64, 64, s)
+
+
+def badge_no_escape() -> str:
+    """Patient Zero street: a chain wrapped round a padlock (the NO ESCAPE banner text is UI)."""
+    s = badge_disc(PAL["finale"][3])
+    for i, (x, y) in enumerate(((10, 22), (19, 18), (28, 15), (36, 15), (45, 18), (54, 22))):
+        s += ell(x, y, 5, 3.5 if i % 2 else 4.5, "none", 0) + '<ellipse cx="%s" cy="%s" rx="5.5" ry="%s" fill="none" stroke="%s" stroke-width="3"/>' % (x, y, "3.5" if i % 2 else "4.5", STEEL[0])
+    s += path("M24 34 L24 28 Q24 21 32 21 Q40 21 40 28 L40 34", "none", 7) + path("M24 34 L24 28 Q24 21 32 21 Q40 21 40 28 L40 34", "none", 3, stroke=STEEL[0])
+    s += rect(19, 32, 26, 20, BRASS[0], 3, rx=3) + circ(32, 40, 3, INK, 0) + rect(31, 41, 2.5, 6, INK, 0)
+    return svg(64, 64, s)
+
+
+# ---------------------------------------------------------------- deck backs (240 x 336)
+def back_wave() -> str:
+    """Wave-deck back: zombie red, a tide of reaching hands under a moon, the wave emblem."""
+    W, H = 240, 336
+    defs = radial("wb", "#5c302a", "#1a0f0e", 0.5, 0.42, 0.75)
+    s = rect(0, 0, W, H, "#1a0f0e", 0) + rect(0, 0, W, H, "url(#wb)", 0)
+    s += "".join(path("M0 %d Q60 %d 120 %d T240 %d L240 %d L0 %d Z" % (y, y - 10, y, y, y + 6, y + 6), "#2c1918", 0) for y in range(40, 336, 24))
+    s += '<rect x="12" y="12" width="216" height="312" rx="12" fill="none" stroke="%s" stroke-width="4"/>' % BONE_D
+    s += '<rect x="22" y="22" width="196" height="292" rx="8" fill="none" stroke="#e2574c" stroke-width="2"/>'
+    s += circ(120, 112, 42, "#7a4a40", 0) + circ(106, 102, 8, "#6a3e36", 0) + circ(134, 124, 5, "#6a3e36", 0)
+    sk = SKIN_Z[0]
+    for x, y, a, sc in ((50, 258, -10, 1.0), (86, 238, 4, 1.15), (120, 224, -2, 1.3), (154, 240, 8, 1.15), (190, 260, -8, 1.0)):
+        arm = limb([(0, 34), (0, 0)], 14, sk) + hand(0, -6, -math.pi / 2, 10, sk)
+        s += g(arm, "translate(%d %d) rotate(%d) scale(%s)" % (x, y, a, f(sc)))
+    s += path("M22 270 Q70 254 120 268 Q170 282 218 266 L218 314 L22 314 Z", INK, 0)
+    s += "".join(line([(x, 276), (x + 8, 266)], 3, INK) for x in (40, 96, 150, 196))
+    for cx, cy in ((40, 40), (200, 40), (40, 296), (200, 296)):
+        s += g(poly([(0, -9), (7, 0), (0, 9), (-7, 0)], "#e2574c", 2.5), "translate(%d %d)" % (cx, cy))
+    return svg(W, H, s, defs)
+
+
+def back_room() -> str:
+    """Room-deck back: district slate, brick wall, a door with a blank price tag and a key."""
+    W, H = 240, 336
+    defs = radial("rb", "#38424a", "#14181b", 0.5, 0.45, 0.75)
+    s = rect(0, 0, W, H, "#14181b", 0) + rect(0, 0, W, H, "url(#rb)", 0)
+    for r, y in enumerate(range(0, H, 20)):
+        s += line([(0, y), (W, y)], 2, "#1f2529")
+        s += "".join(line([(x, y), (x, y + 20)], 2, "#1f2529") for x in range((r % 2) * 20, W, 40))
+    s += '<rect x="12" y="12" width="216" height="312" rx="12" fill="none" stroke="%s" stroke-width="4"/>' % BONE_D
+    s += '<rect x="22" y="22" width="196" height="292" rx="8" fill="none" stroke="#b8c4c0" stroke-width="2"/>'
+    s += rect(70, 90, 100, 170, "#2a2420", 5, rx=4) + rect(82, 102, 76, 158, "#6e3b30", 4, rx=3)
+    s += rect(92, 114, 56, 56, "#5a2f27", 3, rx=2) + rect(92, 182, 56, 66, "#5a2f27", 3, rx=2)
+    s += circ(146, 178, 5, BRASS[0], 3)
+    s += lamp(120, 72, 9)
+    # blank price tag hanging off the handle on a string
+    s += line([(146, 182), (160, 210)], 2.5, BONE_D)
+    s += g(path("M0 -14 L34 -14 L44 0 L34 14 L0 14 Z", BONE, 4) + circ(36, 0, 3.5, "#2a2420", 2), "translate(156 222) rotate(70) translate(-44 0)")
+    # key
+    s += g(circ(0, 0, 11, BRASS[0], 4) + circ(0, 0, 4, "#2a2420", 0) + limb([(10, 0), (46, 0)], 6, BRASS[0], 3)
+           + rect(34, 2, 5, 9, BRASS[0], 2.5) + rect(42, 2, 5, 7, BRASS[0], 2.5), "translate(60 286) rotate(-12)")
+    s += rect(22, 260, 196, 6, INK, 0, extra='opacity="0.5"')
+    for cx, cy in ((40, 40), (200, 40), (40, 296), (200, 296)):
+        s += g(poly([(0, -9), (7, 0), (0, 9), (-7, 0)], "#b8c4c0", 2.5), "translate(%d %d)" % (cx, cy))
+    return svg(W, H, s, defs)
+
+
+# ---------------------------------------------------------------- Patient Zero phases (240 x 180 finale cards)
+def fin_patient_zero_2() -> str:
+    """Phase 2 (10): the IV pole is down, the gown is torn, both arms reach, eyes burn brighter."""
+    hr = (16, 18)
+    hy = -54 - 52 - 5 - 18 + 4
+    gown = ("#8fb0b8", "#6f8f98")
+    rips = (path("M-22 -72 L-10 -66 L-18 -58", "none", 3) + path("M10 -90 L18 -80 L8 -76", "none", 3)
+            + "".join(circ(x, y, 2, gown[1], 0) for x, y in ((-8, -92), (8, -96), (-14, -80))) + ell(14, -66, 4, 5, GORE, 0))
+    pole = g(line([(0, 0), (120, 0)], 4, STEEL[1]) + line([(118, -10), (118, 10)], 4, STEEL[1])
+             , "translate(30 154) rotate(-16)")
+    body = zombie(0, 0, leg=54, torso=52, sw=23, hw=18, legw=13, armw=11, hr=hr, lean=-0.02, tilt=-6,
+                  skin=SKIN_PZ, shirt=gown[0], pants=SKIN_PZ[1], shoe=SKIN_PZ[1], stance=10,
+                  arms={"L": [(-22, -6), (-46, -26)], "R": [(22, -6), (46, -26)]}, sleeve=0.4, hemd=12,
+                  hair=path("M-16 %s Q-15 %s -4 %s Q-6 %s -16 %s Z" % (f(hy - 2), f(hy - 20), f(hy - 18), f(hy - 8), f(hy - 2)), "#5a5048", 3),
+                  torso_extra=rips)
+    glow = circ(140, 36, 30, "#c27ce0", 0, extra='opacity="0.18"')
+    return card_art("finale", g(body, "translate(148 %s) scale(0.92)" % (GROUND - 2)), extra_bg=pole + glow)
+
+
+def fin_patient_zero_3() -> str:
+    """Phase 3 (12): swollen and hunched, glowing violet veins, gown in shreds. Still mild: no wounds."""
+    sk, sd = SKIN_PZ
+    vein = PAL["finale"][3]
+    s = limb([(-24, -56), (-30, -28), (-34, -4)], 22, sd) + ell(-36, -3, 16, 6, sd, 3)
+    s += limb([(24, -56), (30, -28), (34, -4)], 22, sd) + ell(36, -3, 16, 6, sd, 3)
+    s += limb([(-46, -108), (-78, -78), (-84, -40)], 24, sk) + hand(-84, -36, math.pi / 2 + 0.3, 13, sk)
+    s += path("M-54 -118 Q0 -146 54 -118 Q62 -86 36 -58 L-36 -58 Q-62 -86 -54 -118 Z", sk)
+    s += path("M-34 -124 Q0 -132 34 -124 L40 -70 L26 -60 L18 -72 L6 -58 L-6 -72 L-18 -60 L-30 -72 L-40 -66 Z", "#8fb0b8")
+    s += "".join(path(d, "none", 3, stroke=vein) for d in ("M-48 -112 Q-40 -96 -46 -82", "M44 -110 Q36 -94 42 -80", "M-70 -80 Q-74 -64 -80 -56"))
+    s += path("M-20 -100 L-10 -92 L-18 -84", "none", 3) + path("M12 -110 L22 -100", "none", 3)
+    s += g(rect(-8, -3, 16, 6, BONE, 2.5), "translate(-83 -52) rotate(80)")
+    s += limb([(46, -108), (80, -86), (92, -56)], 24, sk) + hand(92, -52, math.pi / 2 - 0.3, 13, sk)
+    s += path("M70 -96 Q76 -84 86 -78", "none", 3, stroke=vein)
+    s += zhead(2, -134, 15, 16, SKIN_PZ, 10, hair=path("M-13 -145 Q-12 -159 0 -157 Q-2 -150 -13 -145 Z", "#5a5048", 3))
+    s += circ(-5, -135, 7, vein, 0, extra='opacity="0.35"') + circ(9, -134, 7, vein, 0, extra='opacity="0.35"')
+    body = g(s, "matrix(0.9 0 0.05 0.9 138 %s)" % GROUND)
+    glow = circ(140, 60, 64, "#c27ce0", 0, extra='opacity="0.16"') + circ(140, 60, 40, "#c27ce0", 0, extra='opacity="0.14"')
+    return card_art("finale", body, extra_bg=glow)
+
+
+BOSS_PHASES = {  # boss slug: [(phase number, zombie value, file id or None = reuse the finale card, maker)]
+    "patient_zero": [(1, 8, None, None), (2, 10, "finale_patient_zero_phase2", fin_patient_zero_2),
+                     (3, 12, "finale_patient_zero_phase3", fin_patient_zero_3)],
+}
+
+
 # ---------------------------------------------------------------- catalogue
 CARDS = {
     # id: (file, maker, kind, display name, values)
@@ -1691,6 +2158,63 @@ def main() -> None:
     write("icons/wave.svg", icon_wave())
     man["icons"]["wave"] = "icons/wave.svg"
     man["by_name"]["Wave"] = "icons/wave.svg"
+    # ------------------------------------------------ v3 groups (core-rules-v3.md, board task dd-v3-art).
+    # Added after every v2 group and never re-using a v2 key, so all v1/v2 keys resolve as before
+    # (DDArt keeps the first file it sees for a key). The v3 Patches share two names with v2 perks
+    # ("Thick Jacket", "Second Wind"): by_name keeps the v2 perk; the Patch is "<Name> Patch" there
+    # and patches_<id> / patch_<id> in DDArt.
+    man["version"] = 3
+    man["sizes"].update({"patch": [128, 128], "rule": [64, 64], "deck_back": [240, 336]})
+    man["patches"], man["rules"], man["deck_backs"], man["boss_phases"] = {}, {}, {}, {}
+    for fid, (_m, _r, _x, _y, name, wid) in GUNS_V3.items():
+        rel = "cards/%s.svg" % fid
+        write(rel, weapon_card_v3(fid))
+        man["by_name"][name] = rel
+        man["weapons"][wid] = rel
+    for wid, (name, rel) in GUNS_V3_REUSE.items():
+        man["by_name"].setdefault(name, rel)
+        man["weapons"].setdefault(wid, rel)
+    write("cards/machine_patch_press.svg", mc_patch_press())
+    man["machines"]["patch"] = man["machines"]["patch_press"] = "cards/machine_patch_press.svg"
+    man["by_name"]["Patch Press"] = "cards/machine_patch_press.svg"
+    for wid, fid, maker, gname, sc in (("crossbow", "machine_wall_rack_ratchet_crossbow", gun_crossbow, "Ratchet Crossbow", 0.66),
+                                       ("elephant", "machine_wall_rack_elephant_gun", gun_elephant, "Elephant Gun", 0.7)):
+        rel = "cards/%s.svg" % fid
+        write(rel, wallrack(maker, sc))
+        man["wall_racks"][wid] = rel
+        man["by_name"]["Wall Rack (%s)" % gname] = rel
+    for pid, (maker, name, extra) in PATCHES.items():
+        rel = "patches/%s.svg" % pid
+        write(rel, maker())
+        for k in [pid] + extra:
+            man["patches"][k] = rel
+        man["by_name"].setdefault(name, rel)
+        man["by_name"]["%s Patch" % name] = rel
+    for rid, (maker, extra) in RULE_GLYPHS.items():
+        rel = "icons/rule_%s.svg" % rid
+        write(rel, maker())
+        for k in [rid] + extra:
+            man["rules"][k] = rel
+    for bid, maker in (("challenge", badge_challenge), ("challenge_open", badge_challenge_open), ("flip", badge_flip),
+                       ("honed", badge_honed), ("no_escape", badge_no_escape)):
+        rel = "badges/%s.svg" % bid
+        write(rel, maker())
+        man["badges"][bid] = rel
+    man["icons"]["challenge"] = "badges/challenge.svg"
+    for bid, maker in (("wave_deck", back_wave), ("room_deck", back_room)):
+        rel = "cards/back_%s.svg" % bid.replace("_deck", "")
+        write(rel, maker())
+        man["deck_backs"][bid] = rel
+        man["deck_backs"][bid.replace("_deck", "")] = rel
+    man["deck_backs"]["pile"] = "cards/card_back.svg"
+    for boss, phases in BOSS_PHASES.items():
+        base = man["art"][boss]
+        for n, value, fid, maker in phases:
+            rel = base if fid is None else "cards/%s.svg" % fid
+            if maker is not None:
+                write(rel, maker())
+            man["boss_phases"]["%s_%d" % (boss, n)] = rel
+            man["boss_phases"]["%s_v%d" % (boss, value)] = rel
     (ART / "manifest.json").write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
     print("wrote %d svg files + manifest.json to %s" % (len(out), ART))
 
