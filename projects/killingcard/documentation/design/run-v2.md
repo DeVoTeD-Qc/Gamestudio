@@ -423,3 +423,56 @@ Measured on the **shipped** code with the ported harness (`tests/tools/run_v2_ch
 | First run competent / casual (new-player F1) | 39.0 / 22.0 (71.2) | 45.0 / 27.0 (71.2) |
 
 Kestrel sits at the edge of the band (55.1, about ±2.5 SE); Meridian is still the hardest boss; the first run got kinder (Meridian is its boss).
+
+## 15. Classic deckbuilder economy (kc-econ, Mechanics Developer, 2026-11-08)
+*The head: "start at 1 supply and also draw only one card per turn. Maybe the starting deck should be 10 cards so we see our newly earned cards faster. Shuffle discard if we run out of cards, like classic deckbuilder."*
+
+### 15.1 What changed (shipped)
+| | Before | Now |
+|---|---|---|
+| Supply | round N gives N + 1 (round 1 = 2), cap 7 | **round N gives N** (round 1 = 1), cap 7 (`supply_round_offset` 1 → 0) |
+| Draws | opening 4 + 1 in round 1, then **2** per round | opening 4 + 1 in round 1 (free mulligan kept), then **1** per round |
+| Operator | 1 Supply to place, round 1 and every respawn | **free in round 1**, 1 Supply per respawn (`RunConfig.operator_free_round1`) |
+| Starter | 20 Standard Issue (Grunt 5, Trooper 6, Sergeant 4, Armored 3, Ammo Resupply 2) | **10**: Grunt 3, Trooper 3, Sergeant 2, Armored Trooper 1, Ammo Resupply 1 |
+| Deck floor (Muster out, Retire, Drill, Discharge) | 15 | **8** |
+| Crews | 18-20 cards | **10 cards each** (every squad and run-slot deck scaled with its composition kept; M2 keeps its one Heavy Gunner; `SquadData.MIN_DECK` 15 → 8) |
+| F1 crew (SandViper_07, Standard Issue) | −1 Armor ("green squad"), Grunt-heavy | 0 Armor, a slow heavy deck: Grunt 3, Trooper 2, Armored Trooper 5 |
+| Map Armor by fight (`fight_armor_bonus`) | F4 +1 | **F3 +1, F4 +1**; the Mastery crew (slot 4) base Armor 0 → 1 (F4 and Elite II end at +2) |
+| Bosses | Meridian +1 Supply from round 5; Prime Armor +1; Choir Armor +2, Shamblers from round 2 | Meridian **from round 4**; Prime **Armor +2**; Choir Armor +2, Shamblers **from round 4** |
+| Operators (player) | Kestrel 3/7, Longreach 3/6, Wasp 2/7, Bastion 2/8 | **Kestrel 3/8, Longreach 3/7**, Wasp 2/7, **Bastion 2/6**; the crews keep a crew-only 3/7 Kestrel (`kestrel_ar7_crew`, like `wasp_9_crew`) |
+| Sets | v2.1 | v2.2: **Heavy's 2-set = Cover +1 and +1 FP** (3-set +1 FP more); the others unchanged (`synergy-system.md`, kc-econ note) |
+| Reshuffle | engine only (DECK_RESHUFFLED event) | unchanged rule (an empty deck takes the shuffled discard pile when you must draw); now **said in the match log** ("Discard shuffled into a new deck (6 cards)", the rival's too) and explained in the DECK badge's inspector |
+
+**The Operator in round 1, measured on the shipped data** (400 runs each; competent run 2+, casual first-run F1): free in round 1 (shipped) **40.5% / 68.8%** · cost 1 always 41.0% / 75.2% · free always 38.0% / 68.0%. The win rates are within noise of each other, so the choice is about the decision: at cost 1, round 1's single Supply buys the Operator and nothing else (§6.3's reason for rejecting cost 2); free in round 1 keeps "Operator + a Grunt or Ammo Resupply", and the respawn cost still makes Operator downs matter.
+
+**Why the crews shrank too:** with 1 draw per round a match draws about 12 cards, so an 18-card crew deck never reshuffles and plays a random 12 of its cards, while the player's 10-card deck cycles its best cards. With the crews at 18-20 cards the mid-run fights fell to the player (F3 97%, F4 87-93%); at 10 cards both sides play the same deckbuilder (F3 85%, F4 67%). Supply and draw rules are the same for both sides.
+
+**Why F1 changed shape:** at 1 Supply in round 1 cheap units decide the opening. The −1 Armor crew (Grunts at 2/1) fell to the new player 79-94% whatever its deck; at 0 Armor a Grunt crew beat them (36-50%). A crew with 5 Armored Troopers (4-drops it can't play early) lands in the band.
+
+### 15.2 Before / after (run_v2_check, 400 runs per row unless noted; fixed seeds)
+| Target | Before (shipped kc-v2-tune) | After (kc-econ) |
+|---|---|---|
+| New player (casual) F1, first run (65–75%) | 71.2% | **68.8%** |
+| Competent run 2+, Operators and bosses rotate (38–43%) | 42.5% | **40.5%** |
+| Casual run 2+ | 22.8% | 31.2% |
+| First run competent / casual | 45.0 / 27.0% | 54.0 / 41.5% |
+| Ramp, competent run 2+ (F1 / F2 / Elite I / F3 / Elite II / F4 / Boss) | 96 / 89 / 56 / 89 / 56 / 61 / 44 | 86 / 89 / 79 / 85 / 68 / 67 / 42 |
+| Boss fight Meridian / Prime / Choir (competent) | 35.3 / 45.3 / 50.4 | 45.5 / 39.1 / 40.6 |
+| Traits, v2 end-of-run decks, n = 270 each (44–56%) | Undead 48.1 · Vanguard 54.1 · Heavy 45.6 · Spec Ops 52.2 | **Undead 50.4 · Vanguard 50.0 · Heavy 51.1 · Spec Ops 48.5** |
+| Seat 0, late-deck mirror / Standard Issue mirror (45–55%) | 50.6 / 50.5% | **51.6 / 48.0%** |
+| Aware vs blind, same late deck (≥ 55%) | 61.2% | 59.2% |
+| Operators, run win (vs the others, 45–55%) | Kestrel 44.8 (55.1) · Longreach 39.2 (47.4) · Wasp 42.0 (51.3) · Bastion 38.2 (46.1) | Kestrel 35.5 (**45.9**) · Longreach 41.8 (**54.7**) · Wasp 36.5 (**47.3**) · Bastion 39.8 (**52.0**) |
+| Per run (competent): Standard Issue sent home / deck at the end | 13.8 of 18 / 16.5 | 8.7 of 9 / 11.9 |
+
+"Vs the others" = p·(1−q) / (p·(1−q) + q·(1−p)), q = the other three Operators' mean (§10.4). The Operator, trait and seat rows were measured one step before the last F1 deck tweak (Grunt 3, Trooper 1, Armored 5, Ammo Resupply 1 → Grunt 3, Trooper 2, Armored 5); that tweak only touches F1.
+
+**Read:** the economy is slower and the deck thinner, so the run is front-loaded differently: F1 is a real fight for the competent proxy again (86% instead of 96%), Elite I is easier (79% instead of 56%: the thin deck draws its reward cards), and the boss stays the peak. The first run is much kinder than before (Kestrel 3/8 meets Meridian, whose Supply edge from round 4 is smaller against a 10-card deck). The new player's run doubles from 23% to 31%.
+
+**Tuning path (each a tool default, 200-400 runs):** with only the head's three changes the competent run read 52% and F1 85% (crews at 18-20 cards); shrinking the crews and the F1 deck fixed F1 and the mid-run; the trait pass followed Heavy's collapse (24%); the Choir swung from 15% (Shamblers from round 1 at Armor +2) to 66% (Armor +1), and Shamblers from round 4 at Armor +2 landed at 41%; Bastion read 52-67% vs the others (Cover 1 shrugs off Shamblers) until 2/6.
+
+**New harness options** (`run_v2_check.gd`): `starter=card*n,...` (the run starter, sets deck_size), `edeck=0.5|10` (enemy decks scaled, composition kept), `sdeck=N:card*n,...` (a slot's authored enemy deck), `slot=N.prop=value` (RunMatchData; 6-8 = the bosses), `lset=loadout.prop=value` (an Operator in memory).
+
+### 15.3 Watch items
+- **Elite I** (79%) is no longer a gamble; Elite II (68%) is. The lever is `elite_armor_bonus` 1 → 2 (Elite I read 35% there: too steep), or an F3-crew deck change.
+- **Kestrel** sits near the bottom of the band (45.9) and is the first-run Operator; **Longreach** near the top (54.7).
+- **Prime** (39%) is now the hardest boss and **Wasp** struggles against it (25%).
