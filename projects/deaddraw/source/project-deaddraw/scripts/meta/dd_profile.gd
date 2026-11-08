@@ -7,13 +7,16 @@
 #   dd-feel: also the player's Settings (data.settings, see SETTING_DEFAULTS): master / SFX volume
 #   (linear 0..1), screen shake, reduce motion (+ whether the player chose it, else it follows the
 #   browser's prefers-reduced-motion).
+#   v2 (save version 2): DeadDraw v2 scores are points (x10 on screen), so a version-1 save keeps
+#   every clear, unlock, badge, run count and setting, but its best scores move to "best_v1"
+#   (shown as the old record) and v2 bests start fresh.
 # Dependencies: DDBalance.
 # Author: Mechanics Developer Agent
 class_name DDProfile
 extends RefCounted
 
 const DEFAULT_PATH: String = "user://deaddraw_profile.json"
-const VERSION: int = 1
+const VERSION: int = 2
 ## dd-feel: Settings keys and their defaults (types are enforced on load and on set).
 const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "screen_shake": true,
 	"reduce_motion": false, "motion_chosen": false}
@@ -31,7 +34,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "badges": {}, "runs": 0, "wins": 0, "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "badges": {}, "runs": 0, "wins": 0, "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -41,11 +44,23 @@ func load_profile() -> bool:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not parsed is Dictionary:
 		return false
+	var from_version: int = int((parsed as Dictionary).get("version", 1))
 	for k: String in data:
-		if k == "settings":
+		if k == "settings" or k == "version":
 			continue
 		if (parsed as Dictionary).has(k):
 			data[k] = parsed[k]
+	if from_version < 2:
+		# v1 run scores (10 + HP per district) are not comparable with v2 points
+		data["best_v1"] = data["best"] if data["best"] is Dictionary else {}
+		data["best"] = {}
+	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors"]:
+		if not data[k] is Array:
+			data[k] = []
+	for k: String in ["best", "best_v1", "badges"]:
+		if not data[k] is Dictionary:
+			data[k] = {}
+	data["version"] = VERSION
 	var saved: Variant = (parsed as Dictionary).get("settings", {})
 	if saved is Dictionary:
 		for k: String in SETTING_DEFAULTS:
@@ -118,6 +133,11 @@ func has_cleared(district_id: String) -> bool:
 
 func best_score(survivor: String) -> int:
 	return int((data["best"] as Dictionary).get(survivor, 0))
+
+
+## The best score from a version-1 (DeadDraw v1) save, 0 if none.
+func best_v1(survivor: String) -> int:
+	return int((data["best_v1"] as Dictionary).get(survivor, 0))
 
 
 func badges(survivor: String) -> int:

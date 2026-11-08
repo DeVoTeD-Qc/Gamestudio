@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2] / "source" / "project-deaddraw"
@@ -850,13 +851,690 @@ def p_tripwire() -> str:
     return perk(s)
 
 
+# ================================================================ v2 ("Last Stand" waves) art
+# Everything below was added for core-rules-v2.md (board task dd-v2-art): guns, the Kitchen Knife,
+# ammo cards, carrier drops + carrier badge, the four machines, Jawbreaker buff icons, room door
+# tiles, the two new perks and the wave marker. Same style rules as v1. All designs are original.
+
+GUN = ("#4a5258", "#2c3236")
+GUN_HI = "#8a979c"
+POLYMER = "#2b2a2a"
+FURN = ("#5e6a48", "#444e34")        # carbine furniture
+BRASS = ("#d6a84a", "#a87d2e")
+COPPER = ("#b8693a", "#7d4a22")
+CHALK = "#dcd8c8"
+SPARK = ("#8ff0ff", "#e8ffff")       # Static Lance arc
+
+
+def trigger(x, y, w=22, h=18) -> str:
+    """Open trigger guard + trigger below a receiver (x = front of the guard)."""
+    s = path("M%s %s Q%s %s %s %s L%s %s Q%s %s %s %s" % (
+        f(x), f(y), f(x), f(y + h), f(x - w * 0.4), f(y + h), f(x - w * 0.8), f(y + h),
+        f(x - w), f(y + h), f(x - w), f(y + h * 0.4)), "none", 5)
+    s += line([(x - w * 0.45, y + 1), (x - w * 0.55, y + h * 0.65)], 3.5, INK)
+    return s
+
+
+def bullet(x, y, ang=0.0, sc=1.0, case=BRASS[0], tip=COPPER[0]) -> str:
+    """One cartridge, tip up at ang=0, origin at its middle."""
+    s = rect(-5, -4, 10, 22, case, 3, rx=1.5) + path("M-5 -4 Q-5 -15 0 -19 Q5 -15 5 -4 Z", tip, 3)
+    s += line([(-2, -1), (-2, 14)], 2, "#f0d488") + rect(-6, 16, 12, 3, BRASS[1], 0)
+    return g(s, "translate(%s %s) rotate(%s) scale(%s)" % (f(x), f(y), f(ang), f(sc)))
+
+
+# ---------------------------------------------------------------- v2 guns (local coords, muzzle at +x)
+def gun_pistol() -> str:
+    s = poly([(-52, -2), (-20, -2), (-24, 54), (-56, 56), (-60, 46)], "#5a4634")
+    s += "".join(line([(-50 + d, 10), (-46 + d, 44)], 2.2, "#3f3124") for d in (4, 12, 20))
+    s += rect(-62, -10, 116, 16, POLYMER, 4, rx=3) + trigger(-4, 4)
+    s += rect(-66, -36, 134, 28, GUN[0], 4, rx=4)
+    s += "".join(line([(x, -32), (x, -14)], 2.5, GUN[1]) for x in (-58, -52, -46))
+    s += line([(-36, -31), (60, -31)], 3, GUN_HI) + rect(-4, -30, 24, 9, GUN[1], 3, rx=2)
+    s += rect(56, -42, 7, 7, GUN[1], 2.5) + rect(-62, -42, 11, 7, GUN[1], 2.5)
+    s += rect(68, -30, 8, 15, GUN[1], 3.5, rx=2)
+    return g(s, "scale(1.18)")
+
+
+def gun_revolver() -> str:
+    s = path("M-50 -8 Q-56 20 -74 48 Q-80 62 -64 64 L-48 64 Q-40 38 -28 4 Z", WOOD[0])
+    s += line([(-58, 30), (-50, 12)], 2.5, WOOD[1]) + circ(-56, 40, 3, BONE_D, 2)
+    s += path("M-58 -30 L-28 -30 L-28 6 L-50 6 Z", GUN[0]) + trigger(-26, 4, 20, 18)
+    s += path("M-56 -28 L-70 -44 L-62 -48 L-48 -32 Z", GUN[1], 3.5)
+    s += rect(-28, -36, 46, 40, GUN[1], 4, rx=7)
+    s += "".join(line([(x, -30), (x, -2)], 3, "#1b1f22") for x in (-18, -5, 8))
+    s += rect(18, -14, 64, 8, GUN[1], 3.5, rx=2)
+    s += rect(18, -32, 100, 18, GUN[0], 4, rx=2) + line([(22, -27), (112, -27)], 3, GUN_HI)
+    s += poly([(108, -32), (114, -40), (118, -32)], GUN[1], 3)
+    return s
+
+
+def gun_smg() -> str:
+    s = line([(-50, -20), (-98, -20), (-98, 2), (-50, 2)], 11, INK) + line([(-50, -20), (-98, -20), (-98, 2), (-50, 2)], 5, GUN[1])
+    s += poly([(-40, -2), (-20, -2), (-24, 40), (-46, 40)], POLYMER) + trigger(-14, 2, 18, 16)
+    s += poly([(-6, -2), (14, -2), (16, 70), (-4, 70)], POLYMER) + rect(-8, 66, 26, 8, GUN[1], 3, rx=2)
+    s += line([(4, 6), (5, 60)], 2.5, "#4a4848")
+    s += rect(-56, -34, 112, 32, GUN[0], 4, rx=4) + line([(-50, -29), (50, -29)], 3, GUN_HI)
+    s += rect(-40, -42, 64, 8, GUN[1], 3, rx=1) + rect(30, -2, 10, 22, POLYMER, 3.5, rx=3)
+    s += rect(56, -30, 34, 22, GUN[1], 4, rx=3) + "".join(circ(x, -19, 3, "#151214", 0) for x in (64, 73, 82))
+    s += rect(90, -25, 10, 12, GUN[0], 3.5, rx=1)
+    return s
+
+
+def gun_shotgun() -> str:
+    s = path("M-120 -12 L-50 -22 L-46 4 L-62 10 Q-92 22 -122 32 Q-128 10 -120 -12 Z", WOOD[0])
+    s += line([(-112, 12), (-62, 2)], 3, WOOD[1]) + rect(-126, -14, 8, 46, "#2b2a2a", 3.5, rx=2)
+    s += rect(-52, -26, 56, 30, GUN[0], 4, rx=4) + trigger(-26, 4, 20, 18)
+    s += rect(4, -10, 100, 10, GUN[1], 3.5, rx=3)
+    s += rect(2, -24, 120, 12, GUN[0], 4, rx=2) + line([(8, -20), (116, -20)], 2.5, GUN_HI)
+    s += rect(18, -14, 50, 20, WOOD[0], 4, rx=7) + "".join(line([(x, -10), (x, 2)], 2.5, WOOD[1]) for x in (28, 36, 44, 52, 60))
+    s += circ(119, -26, 2.8, BONE_D, 2)
+    return s
+
+
+def gun_rifle() -> str:
+    s = path("M-122 -10 L-40 -18 L-32 4 L-52 8 Q-86 16 -122 30 Q-128 8 -122 -10 Z", WOOD[0])
+    s += path("M-96 -12 Q-72 -24 -50 -16", "none", 3, stroke=WOOD[1]) + line([(-112, 14), (-60, 6)], 2.5, WOOD[1])
+    s += path("M-34 -14 L64 -12 L60 2 L-34 6 Z", WOOD[0])
+    s += rect(-40, -20, 160, 8, GUN[0], 3.5, rx=2) + trigger(-26, 4, 18, 16)
+    s += rect(-44, -24, 40, 14, GUN[1], 3.5, rx=2)
+    s += limb([(-30, -16), (-24, 2)], 4, GUN[1], 3) + circ(-24, 4, 5, GUN[1], 3)
+    s += rect(-36, -36, 6, 10, GUN[1], 3) + rect(8, -36, 6, 10, GUN[1], 3)
+    s += rect(-46, -46, 72, 13, GUN[1], 4, rx=6)
+    s += rect(-54, -50, 12, 21, GUN[0], 3.5, rx=3) + rect(22, -50, 14, 21, GUN[0], 3.5, rx=3)
+    s += line([(-40, -43), (18, -43)], 2.5, GUN_HI) + ell(36, -39.5, 2, 6, "#9fd8ff", 0)
+    return g(s, "scale(0.94)")
+
+
+def gun_carbine() -> str:
+    s = rect(-112, -24, 40, 30, FURN[0], 4, rx=5) + line([(-106, -12), (-80, -12)], 2.5, FURN[1])
+    s += rect(-74, -18, 26, 12, GUN[1], 3.5, rx=2)
+    s += path("M-14 -4 L6 -4 Q8 30 22 56 L2 64 Q-12 34 -14 -4 Z", GUN[1])
+    s += poly([(-46, -4), (-28, -4), (-34, 36), (-52, 34)], POLYMER) + trigger(-18, 0, 16, 16)
+    s += rect(-52, -28, 64, 26, GUN[0], 4, rx=3) + line([(-46, -23), (8, -23)], 3, GUN_HI)
+    s += rect(-44, -36, 52, 8, GUN[1], 3, rx=1) + rect(-40, -44, 10, 8, GUN[1], 3)
+    s += rect(10, -28, 64, 22, FURN[0], 4, rx=4) + "".join(rect(x, -22, 8, 4, FURN[1], 0, rx=1.5) for x in (18, 32, 46, 60))
+    s += rect(74, -22, 36, 9, GUN[0], 3.5, rx=1) + poly([(80, -22), (86, -38), (92, -22)], GUN[1], 3)
+    s += rect(108, -25, 10, 15, GUN[1], 3.5, rx=2)
+    return s
+
+
+def gun_lmg() -> str:
+    s = limb([(68, -8), (50, 54)], 5, GUN[1], 3) + limb([(72, -8), (92, 54)], 5, GUN[1], 3)
+    s += path("M-120 -22 L-70 -28 L-70 8 L-120 16 Q-126 -4 -120 -22 Z", POLYMER)
+    s += poly([(-60, 2), (-40, 2), (-44, 40), (-64, 40)], POLYMER) + trigger(-30, 4, 18, 16)
+    s += rect(-74, -36, 80, 40, GUN[0], 4, rx=4) + rect(-64, -46, 56, 12, GUN[1], 3.5, rx=2)
+    s += line([(-66, -30), (0, -30)], 3, GUN_HI)
+    s += path("M8 -28 Q24 -52 42 -28", "none", 9) + path("M8 -28 Q24 -52 42 -28", "none", 4, stroke=GUN[1])
+    s += rect(6, -28, 84, 22, GUN[1], 4, rx=3) + "".join(circ(x, -17, 3.5, "#151214", 0) for x in range(16, 86, 12))
+    s += rect(90, -23, 30, 12, GUN[0], 3.5, rx=1) + rect(118, -26, 8, 18, GUN[1], 3.5, rx=2)
+    # hanging brass belt: the one saturated prop colour
+    belt = [(-66 + 6 * t, 8 + 54 * math.sin(min(t, 9) / 9 * math.pi / 2) - (t - 9) * 1.2 * (t > 9)) for t in range(0, 14)]
+    for i, (x, y) in enumerate(belt[1:], 1):
+        px, py = belt[i - 1]
+        ang = math.degrees(math.atan2(y - py, x - px)) - 90
+        s += bullet(x, y + 10, ang, 0.62)
+    return s
+
+
+def gun_lance() -> str:
+    """Static Lance: a jury-rigged shock pike (car battery, jumper leads, copper coil, two prongs).
+    Deliberately not a sci-fi pistol: a farm-shed prototype on a wooden pole."""
+    s = circ(114, 0, 22, SPARK[0], 0, extra='opacity="0.28"') + circ(114, 0, 12, SPARK[0], 0, extra='opacity="0.35"')
+    s += limb([(-120, 0), (-4, 0)], 12, WOOD[0])
+    s += rect(-108, -9, 12, 18, "#9aa0a0", 3, rx=2) + rect(-62, -9, 10, 18, "#9aa0a0", 3, rx=2)
+    s += path("M-62 22 Q-40 34 -14 22 Q-4 16 0 8", "none", 9) + path("M-62 22 Q-40 34 -14 22 Q-4 16 0 8", "none", 4, stroke="#b5402f")
+    s += rect(-92, 10, 44, 30, "#2f3a33", 4, rx=3) + rect(-92, 10, 44, 9, "#3e4c43", 3, rx=2)
+    s += rect(-86, 4, 8, 7, "#b5402f", 2.5) + rect(-62, 4, 8, 7, "#55636a", 2.5)
+    s += rect(-4, -14, 9, 28, BONE, 3.5, rx=2)
+    s += rect(5, -10, 64, 20, COPPER[0], 4, rx=3) + "".join(line([(x, -9), (x + 6, 9)], 2.2, COPPER[1]) for x in range(8, 64, 6))
+    s += rect(68, -14, 9, 28, BONE, 3.5, rx=2)
+    s += limb([(76, -5), (96, -16), (114, -18)], 4, STEEL[0], 3) + limb([(76, 5), (96, 16), (114, 18)], 4, STEEL[0], 3)
+    arc = [(114, -18), (108, -9), (118, -3), (109, 4), (117, 10), (114, 18)]
+    s += line(arc, 7, SPARK[0]) + line(arc, 2.5, SPARK[1])
+    s += line([(122, -12), (130, -16)], 2.5, SPARK[0]) + line([(122, 12), (129, 18)], 2.5, SPARK[0]) + line([(124, 0), (133, 1)], 2.5, SPARK[0])
+    return s
+
+
+def w_knife() -> str:
+    s = path("M-10 -12 L66 -12 Q94 -10 108 -2 Q84 14 -10 12 Z", STEEL[0])
+    s += path("M-6 6 L80 6 Q96 4 104 -1", "none", 2.5, stroke=STEEL[1]) + line([(-2, -6), (70, -6)], 3, "#e6eeeb")
+    s += rect(-16, -14, 8, 28, STEEL[1], 3.5, rx=2)
+    s += rect(-78, -11, 64, 22, POLYMER, 4, rx=8) + "".join(circ(x, 0, 3, BONE_D, 0) for x in (-64, -46, -28))
+    return weapon_card(g(s, "scale(0.92)"), -30, 128, 98)
+
+
+GUNS_V2 = {  # file id: (body maker, rotation, cx, cy, display name, sim id)
+    "weapon_service_pistol": (gun_pistol, -10, 150, 102, "Service Pistol", "pistol"),
+    "weapon_revolver": (gun_revolver, -10, 140, 104, "Revolver", "revolver"),
+    "weapon_compact_smg": (gun_smg, -10, 146, 96, "Compact SMG", "smg"),
+    "weapon_pump_shotgun": (gun_shotgun, -12, 132, 112, "Pump Shotgun", "shotgun"),
+    "weapon_hunting_rifle": (gun_rifle, -12, 130, 114, "Hunting Rifle", "rifle"),
+    "weapon_carbine": (gun_carbine, -12, 134, 106, "Carbine", "carbine"),
+    "weapon_belt_fed_mg": (gun_lmg, -10, 132, 104, "Belt-fed MG", "lmg"),
+    "weapon_static_lance": (gun_lance, -14, 118, 108, "Static Lance", "lance"),
+}
+
+
+def gun_card(fid: str) -> str:
+    maker, rot, cx, cy, _n, _i = GUNS_V2[fid]
+    return weapon_card(g(maker(), "scale(0.9)"), rot, cx, cy)  # 0.9 keeps stocks out of the number zone
+
+
+# ---------------------------------------------------------------- new kinds: palette + motifs
+PAL.update({
+    "ammo":    ("#17302f", "#24494a", "#122524", "#4fd1c5"),   # stencil teal: reserve ammo cards
+    "drop":    ("#302a17", "#4f4524", "#26210f", "#f2d65c"),   # carrier gold: drops + carrier badge
+    "machine": ("#2a2420", "#463a30", "#211c19", "#d9a066"),   # workshop copper: machine cards
+    "room":    ("#22282c", "#38424a", "#1a1f22", "#b8c4c0"),   # = district: door tiles
+    "jawbreaker": ("#1e1a26", "#332c40", "#16131c", "#f08cc0"),
+})
+
+
+def motif_ammo(m: str) -> str:     # stencilled crate slats
+    out = "".join(rect(0, y, CW, 3, m, 0) for y in range(10, GROUND, 24))
+    return out + "".join(rect(x, 0, 3, GROUND, m, 0) for x in range(30, CW, 60))
+
+
+def motif_drop(m: str) -> str:     # sunburst rays from behind the subject
+    out = ""
+    cx, cy = 150, 96
+    for i in range(0, 16, 2):
+        a1, a2 = i * math.pi / 8, (i + 1) * math.pi / 8
+        out += poly([(cx, cy), (cx + math.cos(a1) * 260, cy + math.sin(a1) * 260), (cx + math.cos(a2) * 260, cy + math.sin(a2) * 260)], m, 0)
+    return out
+
+
+def motif_machine(m: str) -> str:  # tiled back wall
+    out = ""
+    for r, y in enumerate(range(0, GROUND, 26)):
+        for x in range((r % 2) * -16, CW, 32):
+            out += rect(x + 1.5, y + 1.5, 29, 23, m, 0, rx=1)
+    return out
+
+
+MOTIFS.update({"ammo": motif_ammo, "drop": motif_drop, "machine": motif_machine})
+
+
+# ---------------------------------------------------------------- ammo cards
+def a_box() -> str:
+    tan, tan_d = "#b89a66", "#8a7044"
+    s = poly([(58, 80), (40, 58), (70, 54), (86, 80)], tan_d, 3.5) + poly([(192, 80), (214, 62), (220, 86), (196, 92)], tan_d, 3.5)
+    s += poly([(62, 80), (190, 80), (196, 94), (56, 94)], "#3a2c1c", 3.5)
+    for i, x in enumerate(range(74, 182, 14)):
+        s += bullet(x, 78 - (i % 2) * 3, 0, 0.9)
+    s += poly([(56, 94), (196, 94), (190, 152), (62, 152)], tan)
+    s += rect(108, 94, 34, 58, tan_d, 0, extra='opacity="0.55"') + line([(56, 94), (196, 94)], 4, INK)
+    s += path("M78 112 L78 136 L90 136 L90 112 Q84 102 78 112 Z", "#6b5434", 0) + path("M160 112 L160 136 L172 136 L172 112 Q166 102 160 112 Z", "#6b5434", 0)
+    s = g(s, "translate(24 20) scale(0.86)")
+    s += bullet(222, 150, 84, 0.85) + bullet(66, 154, -76, 0.85)
+    return card_art("ammo", s)
+
+
+def a_can() -> str:
+    od, od_d = "#5b6440", "#434a2e"
+    s = rect(66, 76, 132, 80, od, 4, rx=5) + rect(66, 76, 132, 14, od_d, 0)
+    s += rect(60, 62, 144, 18, od_d, 4, rx=4) + path("M104 62 Q132 36 160 62", "none", 10) + path("M104 62 Q132 36 160 62", "none", 4, stroke=STEEL[1])
+    s += rect(196, 84, 14, 40, STEEL[1], 3.5, rx=3) + rect(78, 104, 108, 10, "#d8c8a8", 0, extra='opacity="0.55"')
+    s += line([(72, 140), (192, 140)], 2.5, od_d)
+    for i in range(7):
+        s += bullet(70 + i * 15, 66 + (i % 2) * 2, 90, 0.8)
+    s = g(s, "translate(18 10) scale(0.92)")
+    s += bullet(60, 150, -70, 0.85) + bullet(226, 152, 80, 0.85) + bullet(218, 138, 64, 0.85)
+    return card_art("ammo", s)
+
+
+# ---------------------------------------------------------------- carrier drops (shown when a Carrier dies)
+def satchel(sc=1.0, open_=False) -> str:
+    kh, kh_d = "#9a8656", "#76653e"
+    s = path("M-30 -16 Q0 -66 30 -16", "none", 9) + path("M-30 -16 Q0 -66 30 -16", "none", 4, stroke=kh_d)
+    s += path("M-36 -18 L36 -18 L40 26 Q40 34 32 34 L-32 34 Q-40 34 -40 26 Z", kh)
+    if open_:
+        s += path("M-36 -18 L36 -18 L30 -32 L-30 -32 Z", kh_d)
+    else:
+        s += path("M-36 -18 L36 -18 L32 8 Q0 14 -32 8 Z", kh_d)
+        s += rect(-6, 2, 12, 12, BRASS[0], 3, rx=2)
+    s += line([(-28, 24), (28, 24)], 2.5, kh_d)
+    return g(s, "scale(%s)" % f(sc))
+
+
+def star(cx, cy, r, fill, sw=3) -> str:
+    p = []
+    for i in range(10):
+        a = -math.pi / 2 + i * math.pi / 5
+        rr = r if i % 2 == 0 else r * 0.45
+        p.append((cx + math.cos(a) * rr, cy + math.sin(a) * rr))
+    return poly(p, fill, sw)
+
+
+def d_full_load() -> str:
+    mag = "M-14 -40 L14 -40 Q16 6 30 44 L4 52 Q-12 10 -14 -40 Z"
+    one = path(mag, GUN[1]) + line([(-6, -30), (-2, 10)], 3, GUN_HI) + bullet(0, -46, 0, 0.8)
+    s = g(one, "translate(136 98) rotate(-10)") + g(one, "translate(166 96) rotate(8)")
+    s += rect(122, 76, 64, 14, "#9aa0a0", 3.5, rx=2) + rect(124, 112, 64, 14, "#9aa0a0", 3.5, rx=2)
+    s += bullet(98, 146, -70, 0.9) + bullet(212, 140, 76, 0.9) + bullet(222, 120, 58, 0.8) + bullet(90, 120, -40, 0.8)
+    return card_art("drop", s)
+
+
+def d_payday() -> str:
+    tk, tk_d = "#e8b0b8", "#b9828c"
+    s = g(satchel(1.25, open_=True), "translate(124 112)")
+    strip = [(118, 74), (140, 52), (170, 50), (196, 70), (206, 100), (214, 130)]
+    for i in range(len(strip) - 1):
+        (x1, y1), (x2, y2) = strip[i], strip[i + 1]
+        ang = math.degrees(math.atan2(y2 - y1, x2 - x1))
+        s += g(rect(-15, -9, 30, 18, tk, 3, rx=1) + circ(-15, 0, 3, tk_d, 0) + circ(15, 0, 3, tk_d, 0) + star(0, 0, 5, tk_d, 0),
+               "translate(%s %s) rotate(%s)" % (f((x1 + x2) / 2), f((y1 + y2) / 2), f(ang)))
+    s += star(86, 140, 12, BRASS[0]) + star(206, 150, 10, BRASS[0]) + star(176, 30, 9, BRASS[0])
+    return card_art("drop", s)
+
+
+def d_boards() -> str:
+    s = ""
+    for i, (y, rot) in enumerate(((118, -8), (100, -4), (82, 2))):
+        s += g(rect(-78, -10, 156, 20, WOOD[0] if i != 1 else "#b8875a", 4, rx=2) + line([(-70, -2), (66, -2)], 2.5, WOOD[1])
+               + circ(-66, 3, 2.6, STEEL[1], 0) + circ(66, 3, 2.6, STEEL[1], 0), "translate(146 %s) rotate(%s)" % (y, rot))
+    s += line([(104, 72), (110, 132)], 9, INK) + line([(104, 72), (110, 132)], 4, "#c9b98a")
+    s += line([(184, 70), (180, 130)], 9, INK) + line([(184, 70), (180, 130)], 4, "#c9b98a")
+    s += g(limb([(-40, 0), (26, 0)], 10, WOOD[0]) + path("M20 -12 L40 -12 L40 16 L20 16 Z", STEEL[0]) + path("M22 -12 Q20 -28 10 -36 L18 -38 Q30 -26 32 -12 Z", STEEL[1]),
+           "translate(84 148) rotate(-14)")
+    for x, y, a in ((196, 150, 30), (210, 146, -20), (220, 154, 70)):
+        s += g(line([(0, -9), (0, 9)], 3, STEEL[1]) + rect(-4, -11, 8, 3, STEEL[1], 0), "translate(%s %s) rotate(%s)" % (x, y, a))
+    return card_art("drop", s)
+
+
+# ---------------------------------------------------------------- badges (64 x 64, transparent, overlay on a card)
+def badge_disc(ring: str) -> str:
+    return circ(32, 32, 29, INK, 0) + '<circle cx="32" cy="32" r="27" fill="none" stroke="%s" stroke-width="4"/>' % ring
+
+
+def badge_carrier_body() -> str:
+    return badge_disc(PAL["drop"][3]) + g(satchel(0.52), "translate(32 35)") + star(48, 16, 5.5, PAL["drop"][3], 2)
+
+
+def badge_carrier() -> str:
+    return svg(64, 64, badge_carrier_body())
+
+
+def badge_locked() -> str:
+    s = badge_disc(PAL["room"][3])
+    s += g(rect(-24, -5, 48, 10, WOOD[0], 2.5, rx=1), "translate(32 33) rotate(-30)") + g(rect(-24, -5, 48, 10, WOOD[1], 2.5, rx=1), "translate(32 33) rotate(30)")
+    s += path("M23 30 L23 22 Q23 12 32 12 Q41 12 41 22 L41 30", "none", 8) + path("M23 30 L23 22 Q23 12 32 12 Q41 12 41 22 L41 30", "none", 3.5, stroke=STEEL[0])
+    s += rect(19, 28, 26, 22, BRASS[0], 3, rx=3) + circ(32, 36, 3, INK, 0) + rect(31, 37, 2.5, 7, INK, 0)
+    return svg(64, 64, s)
+
+
+def badge_retrofit() -> str:
+    """Brass plate for a Retrofit weapon. No letter baked in (no text in SVGs): a gear emblem instead;
+    the UI may add the "R" as a label on top."""
+    s = badge_disc(BRASS[0])
+    s += rect(12, 20, 40, 24, BRASS[0], 3, rx=4) + "".join(circ(x, y, 1.8, BRASS[1], 0) for x in (17, 47) for y in (25, 39))
+    teeth = "".join(g(rect(-2.5, -11, 5, 5, BRASS[1], 0), "rotate(%d)" % a) for a in range(0, 360, 45))
+    s += g(teeth + circ(0, 0, 7.5, BRASS[1], 0) + circ(0, 0, 3, BRASS[0], 0), "translate(32 32)")
+    return svg(64, 64, s)
+
+
+def carrier_variant(card_svg: str) -> str:
+    """Bake the carrier badge into a zombie card: bottom-left of the art window (ground, never the
+    number safe zone, never the zombie's head)."""
+    return card_svg.replace("\n</svg>", g(badge_carrier_body(), "translate(6 114) scale(0.84)") + "\n</svg>")
+
+
+# ---------------------------------------------------------------- machines (240 x 180 cards)
+def mc_retrofit() -> str:
+    s = "".join(circ(x, y, 2.2, "#3a302a", 0) for x in range(112, 236, 14) for y in range(18, 72, 14))
+    s += g(limb([(-26, 0), (14, 0)], 6, STEEL[1], 3) + circ(20, 0, 8, "none", 0) + path("M14 -8 L26 -8 L26 8 L14 8", "none", 5, stroke=STEEL[1]), "translate(150 40) rotate(-20)")
+    s += path("M196 26 L226 26 L226 34 Q212 46 196 34 Z", "#6d7b80", 3)
+    s += limb([(52, 112), (50, GROUND + 6)], 10, WOOD[1]) + limb([(214, 112), (216, GROUND + 6)], 10, WOOD[1])
+    s += rect(36, 102, 196, 16, WOOD[0], 4, rx=2) + line([(42, 108), (226, 108)], 2.5, WOOD[1])
+    s += rect(110, 70, 34, 32, "#5a6e5e", 4, rx=3) + rect(186, 78, 22, 24, "#5a6e5e", 4, rx=3)
+    s += limb([(144, 86), (186, 86)], 7, STEEL[0], 3) + rect(156, 80, 14, 12, STEEL[1], 3, rx=2)
+    s += circ(126, 72, 20, "none", 8) + '<circle cx="126" cy="72" r="20" fill="none" stroke="%s" stroke-width="3.5"/>' % GUN_HI
+    s += line([(126, 72), (126, 52)], 4, STEEL[1]) + limb([(126, 52), (110, 46)], 5, WOOD[0], 3)
+    s += path("M58 80 L58 100 Q58 104 62 104 L88 104 Q92 104 92 100 L92 80 Z", "#a8c4c8", 3.5, extra='fill-opacity="0.5"')
+    s += rect(56, 74, 38, 8, "#6d7b80", 3, rx=2)
+    for x, y in ((64, 96), (74, 90), (84, 97), (68, 88), (82, 88), (76, 98)):
+        s += g(rect(-4, -2, 8, 4, STEEL[1], 0) + circ(0, 0, 2.2, STEEL[0], 0), "translate(%d %d) rotate(%d)" % (x, y, x * 7))
+    return card_art("machine", s)
+
+
+def mc_grin() -> str:
+    """Grin Machine: an original candy cabinet. A tall tin kiosk whose face IS the dispenser: dome
+    head full of jawbreakers, two bolt eyes, a toothy grin for a chute, a crank for an ear."""
+    tin, tin_d, trim = "#4f8f88", "#386a65", "#e8dcc0"
+    s = rect(110, 128, 90, 30, tin_d, 4, rx=4) + rect(104, 150, 102, 10, INK, 0)
+    s += path("M114 74 L196 74 L190 132 L120 132 Z", tin)
+    s += path("M114 74 L196 74 L194 88 L116 88 Z", tin_d, 0) + line([(114, 74), (196, 74)], 4, INK)
+    s += path("M126 94 Q155 126 184 94 Q182 118 155 122 Q128 118 126 94 Z", INK, 3)
+    s += "".join(poly([(x, 97 + (x - 126) * 0.1), (x + 7, 98 + (x - 126) * 0.12), (x + 3.5, 106)], trim, 0) for x in range(130, 178, 9))
+    s += circ(134, 82, 4.5, STEEL[0], 3) + circ(176, 82, 4.5, STEEL[0], 3)
+    s += path("M118 74 Q118 18 155 16 Q192 18 192 74 Z", "#cfe6ec", 0, extra='opacity="0.35"')
+    candies = [(132, 62, "#e77fae"), (148, 66, "#4f9ad8"), (166, 64, "#e6b83a"), (180, 66, "#9b6cd0"), (140, 50, "#8fd6c0"),
+               (158, 50, "#e77fae"), (174, 50, "#7c8aa0"), (150, 36, "#e6b83a"), (166, 34, "#4f9ad8"), (128, 70, "#9b6cd0")]
+    s += "".join(circ(x, y, 7.5, c, 2.5) for x, y, c in candies)
+    s += path("M118 74 Q118 18 155 16 Q192 18 192 74 Z", "none", 4)
+    s += path("M128 40 Q136 26 150 22", "none", 4, stroke="#f4fbfc", extra='opacity="0.8"')
+    s += line([(170, 22), (176, 34), (172, 42), (182, 52)], 2.5, INK) + line([(176, 34), (186, 36)], 2, INK)
+    s += rect(150, 8, 10, 10, tin_d, 3.5, rx=2)
+    s += circ(200, 96, 7, tin_d, 3.5) + limb([(200, 96), (214, 80)], 5, STEEL[0], 3) + circ(214, 78, 6, "#b5402f", 3)
+    s += circ(110, 144, 5, "#e77fae", 2.5) + circ(96, 152, 5, "#4f9ad8", 2.5)
+    return card_art("machine", s)
+
+
+def mc_locker() -> str:
+    body, body_d = "#7a8f5a", "#5c6d42"
+    s = rect(116, 16, 84, 142, body_d, 4, rx=3) + rect(122, 22, 72, 132, body, 4, rx=2)
+    s += "".join(rect(140, y, 36, 3.5, INK, 0, rx=1.5) for y in (32, 40, 48))
+    s += path("M132 88 Q144 94 140 108", "none", 3, stroke=body_d) + path("M170 120 Q182 116 186 128", "none", 3, stroke=body_d)
+    s += rect(178, 76, 8, 30, STEEL[1], 3, rx=3)
+    s += path("M168 96 L168 88 Q168 80 175 80 Q182 80 182 88 L182 96", "none", 7) + path("M168 96 L168 88 Q168 80 175 80 Q182 80 182 88 L182 96", "none", 3, stroke=STEEL[0])
+    s += rect(164, 94, 22, 18, BRASS[0], 3, rx=3) + circ(175, 101, 2.5, INK, 0) + rect(174, 102, 2, 6, INK, 0)
+    s += line([(192, 84), (200, 80)], 2.5, BONE) + line([(192, 100), (202, 102)], 2.5, BONE) + line([(158, 90), (152, 86)], 2.5, BONE)
+    s += star(138, 66, 9, "#e6b83a", 2.5) + circ(150, 134, 8, "#e77fae", 2.5) + circ(150, 134, 3, BONE, 0)
+    s += poly([(136, 114), (128, 128), (134, 128), (130, 140), (142, 124), (136, 124), (140, 114)], "#4fd1c5", 2.5)
+    s += rect(178, 128, 12, 16, "#ece6d6", 2.5, rx=1, extra='transform="rotate(12 184 136)"')
+    return card_art("machine", s)
+
+
+def silhouette(body: str, color: str, grow: float) -> str:
+    """Flatten a drawing to one colour (fills + strokes), widening every stroke by `grow`."""
+    out = re.sub(r'stroke-width="([\d.]+)"', lambda m: 'stroke-width="%s"' % f(float(m.group(1)) + grow), body)
+    out = re.sub(r'fill="#[0-9a-fA-F]{6}"', 'fill="%s"' % color, out)
+    out = re.sub(r'stroke="#[0-9a-fA-F]{6}"', 'stroke="%s"' % color, out)
+    return out.replace('opacity="0.28"', 'opacity="0"').replace('opacity="0.35"', 'opacity="0"')
+
+
+WALL_BOARD = ("#26302b", "#1c2420")
+
+
+def wallrack(gun_maker=None) -> str:
+    """Wall Rack: a chalk-outlined gun on a board. Empty outline = the generic machine card."""
+    s = rect(26, 30, 208, 112, WALL_BOARD[0], 4, rx=4) + rect(26, 30, 208, 112, "none", 0)
+    s += "".join(line([(x, 36), (x - 30, 136)], 2, WALL_BOARD[1]) for x in range(60, 240, 34))
+    s += circ(40, 44, 3, STEEL[1], 2) + circ(220, 44, 3, STEEL[1], 2) + circ(40, 128, 3, STEEL[1], 2) + circ(220, 128, 3, STEEL[1], 2)
+    body = (gun_maker or gun_carbine)()
+    place = "translate(136 88) scale(0.74)"
+    s += g(silhouette(body, CHALK, 10), place, opacity=0.9)
+    if gun_maker is None:
+        s += g(silhouette(body, WALL_BOARD[0], 0), place)
+        s += g(line([(-90, 30), (-70, 38)], 3, CHALK) + line([(60, 34), (84, 26)], 3, CHALK), place, opacity=0.6)
+    else:
+        s += g(body, place)
+    for x in (104, 172):
+        s += path("M%d 58 L%d 68 Q%d 76 %d 70" % (x, x, x + 6, x + 8), "none", 7) + path("M%d 58 L%d 68 Q%d 76 %d 70" % (x, x, x + 6, x + 8), "none", 3, stroke=STEEL[0])
+    s += line([(34, 150), (226, 150)], 4, WOOD[1])
+    return card_art("machine", s, ground=False)
+
+
+MACHINES = {  # file id: (maker, sim kind, display name)
+    "machine_retrofit_bench": (mc_retrofit, "retrofit", "Retrofit Bench"),
+    "machine_grin_machine": (mc_grin, "grin", "Grin Machine"),
+    "machine_lucky_locker": (mc_locker, "locker", "Lucky Locker"),
+    "machine_wall_rack": (lambda: wallrack(None), "wallrack", "Wall Rack"),
+}
+WALLRACKS = {  # sim weapon id -> (file id, gun maker, gun name)
+    "smg": ("machine_wall_rack_compact_smg", gun_smg, "Compact SMG"),
+    "shotgun": ("machine_wall_rack_pump_shotgun", gun_shotgun, "Pump Shotgun"),
+    "carbine": ("machine_wall_rack_carbine", gun_carbine, "Carbine"),
+}
+
+
+# ---------------------------------------------------------------- Jawbreakers (128 x 128 round buff icons)
+def jawbreaker(candy: str, shade: str, symbol: str) -> str:
+    bg, mid, _m, _a = PAL["jawbreaker"]
+    defs = radial("jb", mid, bg, 0.5, 0.4, 0.7)
+    s = circ(64, 64, 60, "url(#jb)", 0) + '<circle cx="64" cy="64" r="57" fill="none" stroke="%s" stroke-width="6"/>' % candy
+    s += "".join(rect(-3, -62, 6, 7, INK, 0, extra='transform="translate(64 64) rotate(%d)"' % a) for a in range(0, 360, 30))
+    s += circ(64, 66, 40, candy)
+    s += path("M98 56 Q104 92 72 104 Q100 96 98 56 Z", shade, 0) + path("M30 78 Q44 104 74 104 Q40 108 30 78 Z", shade, 0)
+    s += ell(48, 46, 12, 7, "#ffffff", 0, rot=-30, extra='opacity="0.55"')
+    s += circ(64, 66, 40, "none")
+    return svg(128, 128, s + symbol, defs)
+
+
+def jb_thick_skin() -> str:
+    sym = path("M64 46 L84 54 Q84 78 64 90 Q44 78 44 54 Z", BONE, 4) + path("M64 52 L64 84", "none", 3, stroke=BONE_D)
+    return jawbreaker("#8b96ab", "#66708a", sym)
+
+
+def jb_steady_aim() -> str:
+    sym = circ(64, 68, 18, "none", 5) + line([(64, 42), (64, 56)], 5, INK) + line([(64, 80), (64, 94)], 5, INK)
+    sym += line([(38, 68), (52, 68)], 5, INK) + line([(76, 68), (90, 68)], 5, INK) + circ(64, 68, 4, BONE, 2.5)
+    return jawbreaker("#4f9ad8", "#3a74a8", sym)
+
+
+def jb_sleight() -> str:
+    sym = path("M46 62 Q50 44 70 46", "none", 9) + path("M46 62 Q50 44 70 46", "none", 4.5, stroke=BONE)
+    sym += poly([(68, 38), (80, 47), (68, 55)], BONE, 3)
+    sym += path("M82 72 Q78 90 58 88", "none", 9) + path("M82 72 Q78 90 58 88", "none", 4.5, stroke=BONE)
+    sym += poly([(60, 80), (48, 89), (60, 96)], BONE, 3)
+    return jawbreaker("#9b6cd0", "#7650a6", sym)
+
+
+def jb_payday() -> str:
+    return jawbreaker("#e6b83a", "#b58a22", star(54, 70, 15, BONE, 3.5) + star(78, 62, 11, BONE, 3))
+
+
+def jb_sugar_rush() -> str:
+    sym = path("M64 92 Q38 74 42 58 Q46 46 58 50 Q62 52 64 58 Q66 52 70 50 Q82 46 86 58 Q90 74 64 92 Z", BONE, 4)
+    return jawbreaker("#e77fae", "#b85a86", sym)
+
+
+def jb_light_step() -> str:
+    def sole(x, y, a):
+        return g(ell(0, -6, 7, 11, BONE, 3) + ell(0, 12, 5.5, 6, BONE, 3), "translate(%s %s) rotate(%s)" % (x, y, a))
+    sym = sole(54, 74, -14) + sole(76, 58, -14) + line([(36, 92), (46, 86)], 3, INK) + line([(40, 98), (50, 94)], 3, INK)
+    return jawbreaker("#8fd6c0", "#62a892", sym)
+
+
+JAWBREAKERS = {  # sim id: (maker, display name, extra keys)
+    "thick_skin": (jb_thick_skin, "Thick Skin", []),
+    "steady_aim": (jb_steady_aim, "Steady Aim", []),
+    "sleight": (jb_sleight, "Sleight of Hand", ["sleight_of_hand"]),
+    "payday": (jb_payday, "Payday Jawbreaker", []),
+    "sugar_rush": (jb_sugar_rush, "Sugar Rush", []),
+    "light_step": (jb_light_step, "Light Step", []),
+}
+
+
+# ---------------------------------------------------------------- room door tiles (240 x 180)
+def room_tile(sky_top, sky_bot, wall, body: str) -> str:
+    defs = linear("sky", [(0, sky_top), (1, sky_bot)])
+    s = rect(0, 0, CW, CH, "url(#sky)", 0) + wall + body
+    s += rect(0, GROUND, CW, CH - GROUND, INK, 0, extra='opacity="0.55"')
+    return svg(CW, CH, s, defs)
+
+
+def lamp(x, y, r=10, col="#f4d27a") -> str:
+    return circ(x, y, r * 2.2, col, 0, extra='opacity="0.18"') + circ(x, y, r, col, 3)
+
+
+def siding(col, col_d, top=22) -> str:
+    return rect(0, top, CW, GROUND - top, col, 0) + "".join(line([(0, y), (CW, y)], 2.5, col_d) for y in range(top + 12, GROUND, 13))
+
+
+def brick(col, col_d, top=0) -> str:
+    out = rect(0, top, CW, GROUND - top, col, 0)
+    for r, y in enumerate(range(top, GROUND, 14)):
+        out += line([(0, y), (CW, y)], 2, col_d)
+        for x in range((r % 2) * 14, CW, 28):
+            out += line([(x, y), (x, y + 14)], 2, col_d)
+    return out
+
+
+def tiles(col, col_d, top=0, step=20) -> str:
+    out = rect(0, top, CW, GROUND - top, col, 0)
+    out += "".join(line([(0, y), (CW, y)], 1.8, col_d) for y in range(top, GROUND, step))
+    return out + "".join(line([(x, top), (x, GROUND)], 1.8, col_d) for x in range(0, CW, step))
+
+
+MAPLE_SKY = ("#2b2a3f", "#7a5a52")
+DOWN_SKY = ("#141b2a", "#2d3a52")
+AGNES_SKY = ("#18282a", "#3b5a50")
+
+
+def r_maple_entrance() -> str:
+    s = rect(96, 40, 104, 118, "#e8dcc0", 4) + poly([(88, 40), (148, 18), (208, 40)], "#5a4a3a")
+    s += rect(122, 58, 52, 100, "#6e3b30", 4, rx=2) + rect(132, 68, 32, 26, "#f4d27a", 3, extra='opacity="0.85"')
+    s += line([(148, 68), (148, 94)], 2.5, INK) + rect(130, 102, 14, 46, "#5a2f27", 0) + rect(152, 102, 14, 46, "#5a2f27", 0)
+    s += circ(166, 112, 3.5, BRASS[0], 2) + lamp(210, 70, 7)
+    s += rect(110, 150, 76, 8, "#7a6a58", 3) + rect(126, 144, 44, 7, "#4d6040", 2.5)
+    return room_tile(*MAPLE_SKY, siding("#6b5a4a", "#55473a"), s)
+
+
+def r_garage() -> str:
+    s = rect(80, 44, 140, 114, "#4a4038", 4) + rect(90, 54, 120, 104, "#8a9196", 4)
+    s += "".join(line([(92, y), (208, y)], 3, "#6a7176") for y in range(70, 158, 16))
+    s += path("M130 118 Q140 110 152 120", "none", 3, stroke="#5a6064") + rect(140, 146, 22, 5, "#c9ccce", 2, rx=2)
+    s += ell(150, 156, 20, 3, "#151214", 0, extra='opacity="0.6"') + lamp(150, 38, 5)
+    return room_tile(*MAPLE_SKY, siding("#6b5a4a", "#55473a"), s)
+
+
+def r_corner_store() -> str:
+    s = rect(86, 64, 140, 94, "#3a3a34", 4)
+    s += "".join(poly([(86 + i * 20, 48), (106 + i * 20, 48), (106 + i * 20, 62), (86 + i * 20, 66)], "#4d6040" if i % 2 == 0 else "#e8dcc0", 3) for i in range(7))
+    s += rect(96, 76, 58, 44, "#f4d27a", 3, extra='opacity="0.55"') + line([(98, 98), (152, 98)], 3, "#5a4a3a")
+    s += "".join(rect(x, 86, 7, 11, c, 2) for x, c in ((102, "#b5402f"), (112, "#46607c"), (122, "#d9a03a"), (134, "#6fd08a")))
+    s += rect(170, 76, 42, 82, "#46607c", 4) + rect(176, 84, 30, 40, "#cfe6ec", 3, extra='opacity="0.6"') + rect(198, 128, 8, 4, STEEL[0], 2)
+    s += circ(204, 70, 5, BRASS[0], 2.5)
+    return room_tile(*MAPLE_SKY, brick("#6a4034", "#4f2f26", 24), s)
+
+
+def r_workshop() -> str:
+    s = rect(92, 46, 124, 112, "#3a2c20", 4)
+    for x in (98, 156):
+        s += rect(x, 52, 54, 106, WOOD[0], 4) + line([(x + 4, 56), (x + 50, 152)], 6, WOOD[1]) + rect(x, 52, 54, 106, "none", 4)
+        s += "".join(line([(x + 13 * i + 13, 54), (x + 13 * i + 13, 156)], 2, WOOD[1]) for i in range(3))
+    s += circ(154, 34, 14, STEEL[0], 4) + "".join(poly([(154 + math.cos(a) * 14, 34 + math.sin(a) * 14), (154 + math.cos(a + 0.3) * 19, 34 + math.sin(a + 0.3) * 19),
+                                                         (154 + math.cos(a + 0.5) * 14, 34 + math.sin(a + 0.5) * 14)], STEEL[0], 2) for a in [i * math.pi / 5 for i in range(10)])
+    s += circ(154, 34, 4, INK, 0) + lamp(224, 68, 6)
+    return room_tile(*MAPLE_SKY, siding("#5a4c3e", "#46392e"), s)
+
+
+def r_down_entrance() -> str:
+    s = rect(116, 60, 58, 98, "#46505a", 4) + rect(124, 70, 42, 14, "#2c3236", 3) + rect(156, 108, 8, 14, STEEL[0], 2.5, rx=2)
+    s += "".join(line([(124, y), (166, y)], 2, "#38414a") for y in (96, 132, 146))
+    s += lamp(145, 48, 6, "#cfe6ec")
+    s += line([(186, 20), (186, 120)], 4, "#2a2f36") + line([(226, 20), (226, 120)], 4, "#2a2f36")
+    s += "".join(line([(186, y), (226, y)], 3.5, "#2a2f36") for y in range(30, 120, 14)) + rect(180, 60, 52, 6, "#2a2f36", 0)
+    s += ell(150, 156, 24, 3, "#4a6a80", 0, extra='opacity="0.6"')
+    return room_tile(*DOWN_SKY, brick("#4a3a36", "#33282a", 0), s)
+
+
+def r_subway() -> str:
+    s = poly([(100, 98), (224, 98), (240, 158), (88, 158)], "#1a1d20", 4)
+    s += "".join(line([(96 - i * 2, 110 + i * 12), (226 + i * 3, 110 + i * 12)], 3, "#3a4048") for i in range(4))
+    s += line([(100, 98), (88, 72), (88, 158)], 5, STEEL[1]) + line([(224, 98), (234, 72), (236, 158)], 5, STEEL[1])
+    s += line([(88, 72), (100, 72), (110, 98)], 5, STEEL[1]) + line([(234, 72), (222, 72), (214, 98)], 5, STEEL[1])
+    s += line([(96, 72), (96, 44)], 5, "#2a2f36") + lamp(96, 38, 9, "#7fe0a0")
+    return room_tile(*DOWN_SKY, tiles("#5c6a62", "#4a564f", 40, 18) + rect(0, 0, CW, 40, "none", 0), s)
+
+
+def r_pawn_shop() -> str:
+    s = rect(96, 56, 74, 66, "#f4d27a", 4, extra='opacity="0.4"') + rect(96, 56, 74, 66, "none", 4)
+    s += "".join(line([(x, 58), (x, 120)], 4, "#2a2f36") for x in range(106, 168, 12))
+    s += rect(178, 60, 44, 98, "#3a3226", 4) + "".join(line([(184, y), (216, y)], 3, "#2a2f36") for y in range(70, 150, 12))
+    s += line([(150, 30), (196, 30)], 4, "#2a2f36") + line([(196, 30), (196, 22)], 4, "#2a2f36")
+    s += line([(178, 30), (178, 38)], 2.5, "#2a2f36")
+    s += circ(170, 44, 7, BRASS[0], 3) + circ(186, 44, 7, BRASS[0], 3) + circ(178, 57, 7, BRASS[0], 3)
+    return room_tile(*DOWN_SKY, brick("#4a3a36", "#33282a", 0), s)
+
+
+def r_parking() -> str:
+    s = rect(80, 40, 160, 118, "#6a6e70", 0) + rect(92, 58, 148, 100, "#141618", 4)
+    s += poly([(92, 158), (240, 120), (240, 158)], "#2a2e30", 0)
+    s += rect(82, 40, 14, 118, "#7d8284", 4) + "".join(poly([(82, y), (96, y - 8), (96, y + 2), (82, y + 10)], "#e0b04a", 0) for y in range(120, 156, 18))
+    s += rect(104, 108, 18, 40, "#46505a", 4) + rect(108, 114, 10, 10, "#cfe6ec", 2.5, extra='opacity="0.7"')
+    s += g(rect(0, -5, 104, 10, "#e8dcc0", 3.5, rx=2) + "".join(rect(x, -5, 10, 10, "#b5402f", 0) for x in range(10, 100, 22)), "translate(118 116) rotate(-8)")
+    s += lamp(170, 74, 5, "#cfe6ec") + lamp(214, 74, 5, "#cfe6ec")
+    return room_tile(*DOWN_SKY, rect(0, 0, CW, GROUND, "#4f5456", 0) + "".join(line([(0, y), (CW, y)], 2, "#3f4446") for y in (20, 40)), s)
+
+
+def plus(cx, cy, r, fill="#6fd08a", bg=BONE) -> str:
+    return (rect(cx - r, cy - r, 2 * r, 2 * r, bg, 3, rx=3) + rect(cx - r * 0.25, cy - r * 0.75, r * 0.5, r * 1.5, fill, 0)
+            + rect(cx - r * 0.75, cy - r * 0.25, r * 1.5, r * 0.5, fill, 0))
+
+
+def r_agnes_entrance() -> str:
+    s = poly([(80, 44), (234, 44), (226, 58), (88, 58)], "#cfd6d0", 4) + limb([(94, 58), (94, 158)], 4, STEEL[1], 3) + limb([(222, 58), (222, 158)], 4, STEEL[1], 3)
+    s += rect(110, 70, 96, 88, "#a8c4c8", 4, extra='fill-opacity="0.45"') + line([(158, 70), (158, 158)], 4, INK)
+    s += rect(150, 70, 4, 88, "#f4fbfc", 0, extra='opacity="0.5"') + plus(158, 30, 12)
+    s += g(line([(0, 0), (130, 12)], 7, "#e0b04a") + "".join(line([(x, x * 0.092 - 3), (x + 5, x * 0.092 + 3.5)], 3, INK) for x in range(4, 126, 14)), "translate(100 116)")
+    return room_tile(*AGNES_SKY, tiles("#8e9a92", "#78857d", 0, 22), s)
+
+
+def r_pharmacy() -> str:
+    s = rect(92, 50, 132, 108, "#2c3236", 4) + rect(100, 96, 116, 54, "#1d3325", 0)
+    s += "".join(rect(x, 104 + (x % 3) * 0, 8, 12, c, 2) for x, c in ((106, BONE), (118, "#6fd08a"), (130, BONE), (142, "#d9a03a"), (178, BONE), (190, "#6fd08a"), (202, BONE)))
+    s += line([(100, 118), (216, 118)], 3, "#3e4c43") + "".join(rect(x, 124, 9, 14, c, 2) for x, c in ((110, "#6fd08a"), (124, BONE), (184, BONE), (198, "#6fd08a")))
+    s += rect(96, 54, 124, 42, "#6d7b80", 4) + "".join(line([(98, y), (218, y)], 2.5, "#55636a") for y in range(62, 96, 8))
+    s += rect(96, 140, 124, 18, "#cfd6d0", 4) + plus(158, 30, 13)
+    return room_tile(*AGNES_SKY, tiles("#8e9a92", "#78857d", 0, 22), s)
+
+
+def r_security() -> str:
+    s = rect(120, 52, 60, 106, "#55636a", 4) + rect(132, 62, 36, 26, "#cfe6ec", 3, extra='opacity="0.55"')
+    s += "".join(line([(132 + d, 62), (132 + d + 26, 88)], 1.6, INK) for d in (-18, -6, 6, 18) if True)
+    s += rect(132, 62, 36, 26, "none", 3) + rect(166, 104, 8, 16, STEEL[0], 2.5, rx=2)
+    s += rect(188, 96, 16, 22, "#2c3236", 3, rx=2) + "".join(circ(193 + (i % 2) * 6, 101 + (i // 2) * 5, 1.6, "#9fd8ff", 0) for i in range(6))
+    s += line([(214, 40), (226, 40)], 5, "#2c3236") + g(rect(-24, -8, 30, 16, BONE_D, 3.5, rx=3) + circ(-24, 0, 4, "#2c3236", 2.5), "translate(214 50) rotate(20)")
+    s += circ(212, 44, 2.5, "#e2574c", 0)
+    return room_tile(*AGNES_SKY, tiles("#8e9a92", "#78857d", 0, 22), s)
+
+
+def r_morgue() -> str:
+    s = rect(100, 46, 120, 112, "#3a4a52", 4)
+    for x in (106, 162):
+        s += rect(x, 52, 52, 106, "#b8c4c0", 4) + rect(x, 118, 52, 10, "#6d7b80", 0) + circ(x + 26, 80, 13, "#9fd8ff", 4) + ell(x + 22, 76, 4, 3, "#f4fbfc", 0, extra='opacity="0.7"')
+    s += "".join(path("M%d 156 Q%d 146 %d 152 T%d 150" % (x, x + 10, x + 20, x + 40), "none", 4, stroke="#cfe6ec", extra='opacity="0.45"') for x in (92, 140, 186))
+    s += lamp(160, 34, 6, "#cfe6ec")
+    return room_tile(*AGNES_SKY, tiles("#7f8c8a", "#6b7876", 0, 22), s)
+
+
+ROOMS = {  # district id: [(room slug, display name, maker)] entrance first, then the 3 rooms in sim order
+    "maple_row": [("entrance", "Maple Row Entrance", r_maple_entrance), ("garage", "Garage", r_garage),
+                  ("corner_store", "Corner Store", r_corner_store), ("workshop", "Workshop", r_workshop)],
+    "downtown": [("entrance", "Downtown Entrance", r_down_entrance), ("subway_kiosk", "Subway Kiosk", r_subway),
+                 ("pawn_shop", "Pawn Shop", r_pawn_shop), ("parking_garage", "Parking Garage", r_parking)],
+    "st_agnes": [("entrance", "St. Agnes Entrance", r_agnes_entrance), ("pharmacy", "Pharmacy", r_pharmacy),
+                 ("security_office", "Security Office", r_security), ("morgue_lab", "Morgue Lab", r_morgue)],
+}
+
+
+# ---------------------------------------------------------------- v2 perks + wave marker
+def p_fast_hands() -> str:
+    s = g(path("M-12 -34 L12 -34 Q14 4 26 36 L4 42 Q-10 8 -12 -34 Z", STEEL[1]) + line([(-4, -26), (0, 8)], 3.5, STEEL[0]) + bullet(0, -40, 0, 0.7),
+          "translate(74 60) rotate(18)")
+    s += line([(24, 40), (48, 40)], 5, "#9aa8ff") + line([(18, 58), (46, 58)], 5, "#9aa8ff") + line([(26, 76), (50, 76)], 5, "#9aa8ff")
+    return perk(s)
+
+
+def p_bandolier() -> str:
+    s = g(rect(-50, -11, 100, 22, "#7a4f2c", 4, rx=4) + "".join(bullet(x, -6, 0, 0.62) for x in range(-40, 44, 14))
+          + "".join(rect(x - 6, -2, 12, 13, "#5e3b20", 2.5, rx=1) for x in range(-40, 44, 14)) + rect(-10, -14, 20, 28, BRASS[0], 3.5, rx=3)
+          + rect(-4, -8, 8, 16, "#7a4f2c", 0), "translate(64 66) rotate(-35)")
+    return perk(s)
+
+
+def icon_wave() -> str:
+    bg, mid, motif, acc = PAL["zombie"]
+    defs = radial("wv", mid, bg, 0.5, 0.4, 0.7)
+    s = circ(64, 64, 60, "url(#wv)", 0) + circ(88, 40, 16, "#7a4a40", 0)
+    s += "".join(rect(x, y, w, 104 - y, motif, 0) for x, y, w in ((22, 70, 14), (36, 58, 12), (84, 62, 14), (98, 74, 10)))
+    sk = SKIN_Z[0]
+    s += limb([(60, 112), (60, 78)], 15, "#5c5048") + path("M50 86 L54 78 L58 86 L62 78 L66 86 L70 78 L70 92 L50 92 Z", "#5c5048", 3)
+    s += limb([(60, 84), (62, 50)], 14, sk) + hand(62, 42, -math.pi / 2, 12, sk) + circ(56, 72, 3, GORE, 0)
+    s += path("M12 94 Q38 88 64 96 Q90 102 116 94 A60 60 0 0 1 12 94 Z", INK, 0) + "".join(line([(x, 96), (x + 6, 88)], 3, INK) for x in (34, 80, 96))
+    s += '<circle cx="64" cy="64" r="57" fill="none" stroke="%s" stroke-width="6"/>' % acc
+    return svg(128, 128, s, defs)
+
+
 # ---------------------------------------------------------------- catalogue
 CARDS = {
     # id: (file, maker, kind, display name, values)
     "zombie_shambler": (z_shambler, "zombie", "Shambler", [2, 3, 4]),
     "zombie_lurcher": (z_lurcher, "zombie", "Lurcher", [5, 6, 7]),
     "zombie_bruiser": (z_bruiser, "zombie", "Bruiser", [8, 9, 10]),
-    "zombie_hulk": (z_hulk, "zombie", "Hulk", [11, 12, 13, 14]),
+    "zombie_hulk": (z_hulk, "zombie", "Hulk", [11, 12, 13, 14, 15, 16]),
     "weapon_broken_bottle": (w_bottle, "weapon", "Broken Bottle", [2]),
     "weapon_claw_hammer": (w_hammer, "weapon", "Claw Hammer", [3]),
     "weapon_crowbar": (w_crowbar, "weapon", "Crowbar", [4]),
@@ -882,7 +1560,15 @@ DISTRICTS = {"maple_row": (d_maple_row, "Maple Row"), "downtown": (d_downtown, "
 PERKS = {"thick_jacket": (p_thick_jacket, "Thick Jacket"), "fire_axe": (p_fire_axe, "Axe in the Trunk"),
          "field_kit": (p_field_kit, "Field Kit"), "knuckle_wraps": (p_knuckle_wraps, "Knuckle Wraps"),
          "sandbags": (p_sandbags, "Sandbags"), "scrounger": (p_scrounger, "Scrounger"),
-         "second_wind": (p_second_wind, "Second Wind"), "tripwire": (p_tripwire, "Tripwire")}
+         "second_wind": (p_second_wind, "Second Wind"), "tripwire": (p_tripwire, "Tripwire"),
+         "fast_hands": (p_fast_hands, "Fast Hands"), "bandolier": (p_bandolier, "Bandolier")}
+AMMO = {"ammo_box": (a_box, "Ammo Box", [3, 4]), "ammo_can": (a_can, "Ammo Can", [5, 6])}
+DROPS = {"full_load": (d_full_load, "Full Load"), "payday": (d_payday, "Payday"), "boards": (d_boards, "Boards")}
+CARRIERS = ["shambler", "lurcher", "bruiser", "hulk"]
+# v2 weapon roster by sim id (tools/sim_deaddraw_v2.py CONFIG["weapons"]): new art + reused v1 melee art
+WEAPONS_V2 = {"knife": "cards/weapon_kitchen_knife.svg", "crowbar": "cards/weapon_crowbar.svg",
+              "bat": "cards/weapon_cricket_bat.svg", "machete": "cards/weapon_machete.svg",
+              "axe": "cards/weapon_fire_axe.svg", "sledge": "cards/weapon_sledgehammer.svg"}
 
 
 def main() -> None:
@@ -936,6 +1622,75 @@ def main() -> None:
         write(rel, maker())
         man["perks"][pid] = rel
         man["by_name"][name] = rel
+    # ------------------------------------------------ v2 groups (added after the v1 groups so a bare key
+    # that both use, e.g. "payday", resolves to the first: the drop card before the Jawbreaker)
+    man["version"] = 2
+    man["sizes"].update({"machine": [CW, CH], "room": [CW, CH], "jawbreaker": [128, 128], "badge": [64, 64], "icon": [128, 128]})
+    man["badge_placement"] = {"carrier": [6, 114, 54, 54], "note": "carrier badge on a 240x180 card: bottom-left "
+                              "(x, y, w, h); the *_carrier card files already have it baked in"}
+    man["weapons"], man["ammo"], man["drops"], man["carriers"] = {}, {}, {}, {}
+    man["machines"], man["wall_racks"], man["jawbreakers"], man["rooms"] = {}, {}, {}, {}
+    man["badges"], man["icons"] = {}, {}
+    man["by_kind_value"]["ammo"] = {}
+    man["by_kind_value"]["zombie_carrier"] = {}
+    write("cards/weapon_kitchen_knife.svg", w_knife())
+    man["by_name"]["Kitchen Knife"] = "cards/weapon_kitchen_knife.svg"
+    for fid, (_m, _r, _x, _y, name, wid) in GUNS_V2.items():
+        rel = "cards/%s.svg" % fid
+        write(rel, gun_card(fid))
+        man["by_name"][name] = rel
+        WEAPONS_V2[wid] = rel
+    man["weapons"].update(WEAPONS_V2)
+    for aid, (maker, name, values) in AMMO.items():
+        rel = "cards/%s.svg" % aid
+        write(rel, maker())
+        man["ammo"][aid] = rel
+        for v in values:
+            man["by_kind_value"]["ammo"][str(v)] = rel
+    man["by_name"]["Ammo"] = man["ammo"]["ammo_box"]
+    for did, (maker, name) in DROPS.items():
+        rel = "cards/drop_%s.svg" % did
+        write(rel, maker())
+        man["drops"][did] = rel
+        man["by_name"][name] = rel
+    for zid in CARRIERS:
+        rel = "cards/zombie_%s_carrier.svg" % zid
+        write(rel, carrier_variant(CARDS["zombie_" + zid][0]()))
+        man["carriers"][zid] = rel
+        for v in CARDS["zombie_" + zid][3]:
+            man["by_kind_value"]["zombie_carrier"][str(v)] = rel
+    for mid, (maker, kind, name) in MACHINES.items():
+        rel = "cards/%s.svg" % mid
+        write(rel, maker())
+        man["machines"][kind] = rel
+        man["machines"][mid.replace("machine_", "", 1)] = rel
+        man["by_name"][name] = rel
+    for wid, (fid, maker, gname) in WALLRACKS.items():
+        rel = "cards/%s.svg" % fid
+        write(rel, wallrack(maker))
+        man["wall_racks"][wid] = rel
+        man["by_name"]["Wall Rack (%s)" % gname] = rel
+    for jid, (maker, name, extra) in JAWBREAKERS.items():
+        rel = "jawbreakers/%s.svg" % jid
+        write(rel, maker())
+        for k in [jid] + extra:
+            man["jawbreakers"][k] = rel
+        man["by_name"][name] = rel
+    for did, rooms in ROOMS.items():
+        for slug_, name, maker in rooms:
+            rel = "rooms/%s_%s.svg" % (did, slug_)
+            write(rel, maker())
+            man["rooms"]["%s_%s" % (did, slug_)] = rel
+            if slug_ != "entrance":
+                man["rooms"][slug_] = rel
+            man["by_name"][name] = rel
+    for bid, maker in (("carrier", badge_carrier), ("locked", badge_locked), ("retrofit", badge_retrofit)):
+        rel = "badges/%s.svg" % bid
+        write(rel, maker())
+        man["badges"][bid] = rel
+    write("icons/wave.svg", icon_wave())
+    man["icons"]["wave"] = "icons/wave.svg"
+    man["by_name"]["Wave"] = "icons/wave.svg"
     (ART / "manifest.json").write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
     print("wrote %d svg files + manifest.json to %s" % (len(out), ART))
 

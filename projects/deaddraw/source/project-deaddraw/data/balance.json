@@ -1,66 +1,502 @@
 {
-  "_note": "Mirror of CONFIG in projects/deaddraw/tools/sim_deaddraw.py. Paste new CONFIG values here (the loader also accepts the Python dict as-is: True/False, # comments, trailing commas and a leading 'CONFIG =' are fine). 'extra_rules' holds numbers the sim hard-codes outside CONFIG; missing keys fall back to the sim's values.",
-  "start_hp": 20,
-  "max_hp": 20,
+  "_note": "Mirror of CONFIG in projects/deaddraw/tools/sim_deaddraw_v2.py (DeadDraw v2). Paste new CONFIG values here (the loader also accepts the Python dict as-is: True/False, # comments, trailing commas and a leading 'CONFIG =' are fine). Points are in sim units (shown x10 on screen). 'extra_rules' holds numbers the sim hard-codes outside CONFIG plus display-only survivor info; missing keys fall back to the sim's values.",
+  "structure": "mixed",
+  "model": "notch",
   "street_size": 4,
-  "resolve_per_street": 3,
-  "safehouse_heal": 12,
+  "separate_zombie_slots": 2,
+  "actions_per_street": 3,
+  "reloads_per_street": 1,
+  "reload_mode": "drop",
+  "allow_retreat": true,
+  "safehouse_heal": 15,
   "perk_choices": 3,
+  "triage_heal_bonus": 0,
+  "start_kit": [
+    "pistol"
+  ],
+  "start_reserve": 6,
+  "reserve_cap": 24,
+  "start_points": 5,
+  "points": {
+    "kill": 0.5,
+    "up_close": 3,
+    "scrap": 1,
+    "boss": 8,
+    "wave": 3
+  },
+  "melee_wave_reset": true,
+  "melee_delta_damage_model": -2,
+  "melee_power_bonus": 1,
+  "restock_per_room": 1,
+  "entrance_restock": 0,
+  "z_add": [
+    -1,
+    2,
+    2
+  ],
+  "boss_wave_add": [
+    0,
+    0,
+    1
+  ],
+  "drops": [
+    "full_load",
+    "payday",
+    "boards"
+  ],
+  "full_load_reserve": 4,
+  "boards_cover": 4,
+  "bandolier_reserve": 2,
   "fire_axe_power": 7,
-  "triage_heal_bonus": 1,
-  "weapon_scrap": true,
-  "retreat_mode": "bottom",
+  "fixtures": {
+    "retrofit": {
+      "cost": 30,
+      "power": 2,
+      "mag_mult": 1.5
+    },
+    "grin": {
+      "cost": 12,
+      "step": 6
+    },
+    "locker": {
+      "cost": 18
+    },
+    "wallrack": {
+      "ammo_cost": 6
+    }
+  },
+  "weapons": {
+    "knife": {
+      "name": "Kitchen Knife",
+      "p": 2,
+      "mag": 0
+    },
+    "crowbar": {
+      "name": "Crowbar",
+      "p": 3,
+      "mag": 0
+    },
+    "bat": {
+      "name": "Cricket Bat",
+      "p": 4,
+      "mag": 0
+    },
+    "machete": {
+      "name": "Machete",
+      "p": 5,
+      "mag": 0
+    },
+    "axe": {
+      "name": "Fire Axe",
+      "p": 6,
+      "mag": 0
+    },
+    "sledge": {
+      "name": "Sledgehammer",
+      "p": 7,
+      "mag": 0
+    },
+    "pistol": {
+      "name": "Service Pistol",
+      "p": 3,
+      "mag": 6
+    },
+    "revolver": {
+      "name": "Revolver",
+      "p": 5,
+      "mag": 4
+    },
+    "smg": {
+      "name": "Compact SMG",
+      "p": 3,
+      "mag": 10,
+      "price": 12
+    },
+    "shotgun": {
+      "name": "Pump Shotgun",
+      "p": 7,
+      "mag": 3,
+      "price": 16
+    },
+    "rifle": {
+      "name": "Hunting Rifle",
+      "p": 6,
+      "mag": 4
+    },
+    "carbine": {
+      "name": "Carbine",
+      "p": 5,
+      "mag": 8,
+      "price": 20
+    },
+    "lmg": {
+      "name": "Belt-fed MG",
+      "p": 5,
+      "mag": 14
+    },
+    "lance": {
+      "name": "Static Lance",
+      "p": 9,
+      "mag": 5
+    }
+  },
+  "locker_pool": [
+    "lance",
+    "lmg",
+    "lmg",
+    "shotgun",
+    "shotgun",
+    "carbine",
+    "carbine",
+    "sledge",
+    "sledge",
+    "machete",
+    "rifle",
+    "knife",
+    "crowbar"
+  ],
+  "grin_effects": [
+    "thick_skin",
+    "steady_aim",
+    "sleight",
+    "payday",
+    "sugar_rush",
+    "light_step"
+  ],
   "districts": [
     {
       "id": "maple_row",
       "name": "Maple Row",
-      "zombies": [2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10],
-      "weapons": [2, 3, 4, 5, 6, 7],
-      "medkits": [2, 3, 4, 5, 6, 7],
-      "barricades": [2, 3],
-      "finale": {"type": "boss", "name": "The Groundskeeper", "zombies": [12], "trait": "shatter"}
+      "weapons": [
+        "crowbar",
+        "bat",
+        "revolver",
+        "machete",
+        "rifle",
+        "knife"
+      ],
+      "waves": [
+        [
+          3,
+          4,
+          5,
+          6
+        ],
+        [
+          4,
+          5,
+          7,
+          8
+        ],
+        [
+          5,
+          6,
+          8,
+          9,
+          10
+        ]
+      ],
+      "entrance": [
+        "W",
+        "A4",
+        "M4",
+        "B2"
+      ],
+      "rooms": [
+        {
+          "name": "Garage",
+          "cost": 10,
+          "pack": [
+            "W",
+            "A4",
+            "B3"
+          ],
+          "machine": {
+            "kind": "wallrack",
+            "wid": "smg"
+          }
+        },
+        {
+          "name": "Corner Store",
+          "cost": 15,
+          "pack": [
+            "M5",
+            "M3",
+            "A4"
+          ],
+          "machine": {
+            "kind": "grin"
+          }
+        },
+        {
+          "name": "Workshop",
+          "cost": 22,
+          "pack": [
+            "W",
+            "A5",
+            "M6"
+          ],
+          "machine": {
+            "kind": "retrofit"
+          }
+        }
+      ],
+      "finale": {
+        "name": "The Groundskeeper",
+        "zombies": [
+          12
+        ],
+        "trait": "shatter"
+      }
     },
     {
       "id": "downtown",
       "name": "Downtown",
-      "zombies": [2, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 9, 10, 11, 12],
-      "weapons": [3, 4, 5, 6, 7, 8],
-      "medkits": [2, 3, 4, 5, 6, 7, 8],
-      "barricades": [2, 3, 4],
-      "finale": {"type": "horde", "name": "Rush Hour Horde", "zombies": [10, 9, 8], "trait": "horde"}
+      "weapons": [
+        "bat",
+        "machete",
+        "revolver",
+        "rifle",
+        "axe",
+        "shotgun"
+      ],
+      "waves": [
+        [
+          4,
+          5,
+          6,
+          8
+        ],
+        [
+          5,
+          7,
+          8,
+          9
+        ],
+        [
+          6,
+          7,
+          9,
+          10,
+          11
+        ]
+      ],
+      "entrance": [
+        "W",
+        "A4",
+        "M5",
+        "B2"
+      ],
+      "rooms": [
+        {
+          "name": "Subway Kiosk",
+          "cost": 12,
+          "pack": [
+            "M4",
+            "A5",
+            "W"
+          ],
+          "machine": {
+            "kind": "grin"
+          }
+        },
+        {
+          "name": "Pawn Shop",
+          "cost": 18,
+          "pack": [
+            "W",
+            "A5",
+            "B2"
+          ],
+          "machine": {
+            "kind": "wallrack",
+            "wid": "shotgun"
+          }
+        },
+        {
+          "name": "Parking Garage",
+          "cost": 26,
+          "pack": [
+            "W",
+            "M6",
+            "A5"
+          ],
+          "machine": {
+            "kind": "locker"
+          }
+        }
+      ],
+      "finale": {
+        "name": "Rush Hour Horde",
+        "zombies": [
+          10,
+          9,
+          8
+        ],
+        "trait": "horde"
+      }
     },
     {
       "id": "st_agnes",
       "name": "St. Agnes Hospital",
-      "zombies": [3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 11, 12, 13, 14],
-      "weapons": [3, 4, 5, 6, 7, 8, 9],
-      "medkits": [3, 4, 5, 6, 7, 8],
-      "barricades": [2, 3, 4],
-      "finale": {"type": "boss", "name": "Patient Zero", "zombies": [15], "trait": "quarantine"}
+      "weapons": [
+        "machete",
+        "axe",
+        "rifle",
+        "shotgun",
+        "carbine",
+        "sledge"
+      ],
+      "waves": [
+        [
+          4,
+          6,
+          7,
+          9
+        ],
+        [
+          5,
+          7,
+          9,
+          10
+        ],
+        [
+          6,
+          8,
+          10,
+          11,
+          13
+        ]
+      ],
+      "entrance": [
+        "W",
+        "A5",
+        "M6",
+        "B3"
+      ],
+      "rooms": [
+        {
+          "name": "Pharmacy",
+          "cost": 14,
+          "pack": [
+            "M5",
+            "M7",
+            "A4"
+          ],
+          "machine": {
+            "kind": "grin"
+          }
+        },
+        {
+          "name": "Security Office",
+          "cost": 20,
+          "pack": [
+            "W",
+            "A5",
+            "B3"
+          ],
+          "machine": {
+            "kind": "wallrack",
+            "wid": "carbine"
+          }
+        },
+        {
+          "name": "Morgue Lab",
+          "cost": 28,
+          "pack": [
+            "W",
+            "M6",
+            "A6"
+          ],
+          "machine": {
+            "kind": "retrofit"
+          }
+        }
+      ],
+      "finale": {
+        "name": "Patient Zero",
+        "zombies": [
+          15
+        ],
+        "trait": "quarantine"
+      }
     }
   ],
   "survivors": {
-    "rosa": {"name": "Rosa Vance", "role": "Mechanic", "passive": "steady_hands", "unlocked": true},
-    "imani": {"name": "Dr. Imani Hale", "role": "Medic", "passive": "triage", "unlocked": true},
-    "theo": {"name": "Theo Park", "role": "Courier", "passive": "slip_away", "unlocked": false, "hp": 24}
+    "rosa": {
+      "name": "Rosa Vance",
+      "passive": "steady_hands",
+      "hp": 20
+    },
+    "imani": {
+      "name": "Dr. Imani Hale",
+      "passive": "triage",
+      "hp": 20
+    },
+    "theo": {
+      "name": "Theo Park",
+      "passive": "slip_away",
+      "hp": 20
+    }
   },
-  "starter_perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "sandbags", "scrounger"],
-  "perks": ["thick_jacket", "fire_axe", "field_kit", "knuckle_wraps", "tripwire", "sandbags", "second_wind", "scrounger"],
+  "starter_perks": [
+    "thick_jacket",
+    "fire_axe",
+    "field_kit",
+    "knuckle_wraps",
+    "bandolier",
+    "fast_hands"
+  ],
+  "perks": [
+    "thick_jacket",
+    "fire_axe",
+    "field_kit",
+    "knuckle_wraps",
+    "bandolier",
+    "fast_hands",
+    "second_wind",
+    "tripwire"
+  ],
   "extra_rules": {
     "medkits_per_street": 1,
     "triage_medkits_per_street": 2,
     "field_kit_bonus": 1,
     "knuckle_wraps_reduction": 2,
-    "sandbags_bonus": 2,
     "thick_jacket_hp": 4,
-    "scrounger_heal": 1,
     "tripwire_cover": 2,
     "second_wind_hp": 1,
-    "score_per_district": 10,
+    "steady_aim_power": 2,
+    "thick_skin_reduction": 1,
+    "sugar_rush_heal": 5,
+    "payday_mult": 2,
+    "empty_pool_ammo": 3,
+    "points_display_mult": 10,
+    "score_hp_mult": 1,
+    "survivor_info": {
+      "rosa": {
+        "role": "Mechanic",
+        "unlocked": true
+      },
+      "imani": {
+        "role": "Medic",
+        "unlocked": true
+      },
+      "theo": {
+        "role": "Courier",
+        "unlocked": false
+      }
+    },
     "unlocks": {
-      "maple_row": ["perk:second_wind"],
-      "downtown": ["survivor:theo"],
-      "win": ["perk:tripwire", "badge"]
+      "maple_row": [
+        "perk:second_wind"
+      ],
+      "downtown": [
+        "survivor:theo"
+      ],
+      "win": [
+        "perk:tripwire",
+        "badge"
+      ]
     }
   }
 }

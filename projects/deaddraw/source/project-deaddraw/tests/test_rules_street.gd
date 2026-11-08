@@ -1,96 +1,120 @@
-# Street loop: deal 4, resolve 3, Holdover, no stopping partway, illegal moves rejected.
+# v2 street basics: start kit, street of 4 with 3 actions, Holdover, the card types, equip/scrap
+# into two slots, medkit limit, Cover, short streets.
 extends "res://tests/dd_test_case.gd"
 
 
-func test_start_deals_four_from_full_deck() -> void:
+func test_run_start_state() -> void:
 	var r: DDRun = DDRun.new(bal())
 	r.start("rosa", bal().starter_perks(), 5)
-	eq(r.street.size(), 4, "street size")
-	eq(r.deck.size(), 28 - 4, "Maple Row deck after the first deal")
-	eq(r.hp, 20, "start hp")
-	eq(r.to_resolve, 3, "resolve 3 of 4")
-	eq(r.phase, DDRun.Phase.STREET, "phase")
+	var kit: Array = bal().list("start_kit")
+	check(r.slot(0) != null and r.slot(0).wid == str(kit[0]), "slot 1 holds the start kit")
+	eq(r.slot(0).ammo, bal().weapon_mag(str(kit[0])), "full magazine")
+	check(r.slot(1) == null, "slot 2 empty")
+	eq(r.reserve, bal().num("start_reserve"), "start reserve")
+	eq(r.points, bal().num("start_points"), "start points")
+	eq(r.hp, bal().survivor_hp("rosa"), "start HP")
+	eq(r.wave_index, 0, "wave 1")
+	var wave1: int = bal().wave_zombies(0, 0).size()
+	var entrance: int = (bal().district(0).get("entrance", []) as Array).size()
+	eq(r.street.size(), 4, "street of 4")
+	eq(r.deck.size() + r.street.size(), wave1 + entrance, "deck = wave 1 pack + Entrance loot")
+	eq(r.budget, bal().num("actions_per_street"), "3 actions")
+	var carriers: int = 0
+	for c: DDCard in r.deck + r.street:
+		if c.drop != "":
+			carriers += 1
+	eq(carriers, 1, "one Carrier in the wave pack")
 
 
-func test_deck_sizes_are_4_plus_3k() -> void:
-	for d: Variant in bal().districts():
-		var n: int = DDRun.build_deck(d).size()
-		eq((n - 4) % 3, 0, "%s deck size %d is 4+3k" % [str(d["id"]), n])
-	eq(DDRun.build_deck(bal().district(0)).size(), 28, "Maple Row 28")
-	eq(DDRun.build_deck(bal().district(1)).size(), 31, "Downtown 31")
-	eq(DDRun.build_deck(bal().district(2)).size(), 34, "St. Agnes 34")
-
-
-func test_resolve_three_leaves_holdover() -> void:
-	var r: DDRun = plain_run(["B2", "B3", "M2", "Z4", "Z2", "W5", "M3", "B2"] + filler(6))
-	eq(codes(r.street), ["B2", "B3", "M2", "Z4"], "street dealt top-first")
+func test_three_actions_then_holdover_and_refill() -> void:
+	var r: DDRun = plain_run(["B2", "M3", "A3", "Z4", "Z2", "Z2", "B3", "B3"])
+	eq(codes(r.street), ["B2", "M3", "A3", "Z4"], "dealt top first")
 	r.resolve(0, DDRun.USE)
 	r.resolve(0, DDRun.USE)
+	eq(r.actions_left(), 1, "one action left")
 	var ev: Dictionary = r.resolve(0, DDRun.USE)
-	check(bool(ev["street_ended"]), "street ended after 3")
-	eq((ev["holdover"] as DDCard).code(), "Z4", "Z4 is the holdover")
-	eq(codes(r.street), ["Z4", "Z2", "W5", "M3"], "holdover stays, 3 new cards fill the street")
-	check(r.street[0].holdover, "holdover flag set")
-	check(not r.street[1].holdover, "new cards are not holdovers")
-	eq(r.resolved_count, 0, "counter reset")
+	check(bool(ev["street_ended"]), "street ended after 3 actions")
+	eq(r.street.size(), 4, "refilled to 4")
+	eq(r.street[0].code(), "Z4", "the Holdover stays first")
+	check(r.street[0].holdover, "marked as Holdover")
+	eq(r.actions_used, 0, "fresh actions")
 
 
-func test_cannot_stop_partway_or_retreat_after_starting() -> void:
-	var r: DDRun = plain_run(["B2", "B3", "M2", "Z4"] + filler(8))
-	check(r.can_retreat(), "retreat allowed before resolving")
+func test_choices_per_kind() -> void:
+	var r: DDRun = plain_run(["Z5", "W:revolver", "M3", "A4"] + filler(4))
+	eq(r.choices_for(idx(r, "Z5")), [DDRun.SLOT1, DDRun.SLOT2, DDRun.BARE] as Array[String], "zombie: slot 1 / slot 2 / bare")
+	eq(r.choices_for(idx(r, "W:revolver")), [DDRun.EQUIP1, DDRun.EQUIP2, DDRun.SCRAP] as Array[String], "weapon: slot 1 / slot 2 / scrap")
+	eq(r.choices_for(idx(r, "M3")), [DDRun.USE] as Array[String], "medkit: use")
+	eq(r.choices_for(idx(r, "A4")), [DDRun.USE] as Array[String], "ammo: use")
+	check(not bool(r.preview(idx(r, "Z5"), DDRun.SLOT2)["enabled"]), "empty slot 2 can't fight")
+	eq(str(r.preview(idx(r, "Z5"), DDRun.SLOT2)["reason"]), "slot empty", "reason given")
+
+
+func test_equip_into_slots_and_scrap_pay_points() -> void:
+	var scrap: int = int(bal().points("scrap"))
+	var r: DDRun = plain_run(["W:revolver", "W:machete", "W:knife", "B2"] + filler(4))
+	var p0: int = r.points
+	r.resolve(idx(r, "W:revolver"), DDRun.EQUIP2)
+	eq(r.slot(1).wid, "revolver", "revolver in slot 2")
+	eq(r.slot(1).ammo, bal().weapon_mag("revolver"), "arrives with a full magazine")
+	eq(r.points, p0, "empty slot: no scrap points")
+	var pr: Dictionary = r.preview(idx(r, "W:machete"), DDRun.EQUIP1)
+	eq(str(pr["replaces"]), r.slot(0).display_name(), "preview names the weapon it replaces")
+	r.resolve(idx(r, "W:machete"), DDRun.EQUIP1)
+	eq(r.slot(0).wid, "machete", "machete replaced the pistol")
+	eq(r.slot(0).power, bal().weapon_power("machete"), "melee power includes the melee bonus")
+	eq(r.points, p0 + scrap, "replaced weapon scrapped for points")
+	r.resolve(idx(r, "W:knife"), DDRun.SCRAP)
+	eq(r.points, p0 + scrap * 2, "scrap pays")
+	eq(r.points_earned, scrap * 2, "earned counts it")
+
+
+func test_ammo_card_fills_reserve_to_cap() -> void:
+	var r: DDRun = plain_run(["A5", "A5", "B2", "B2"] + filler(4))
+	r.reserve = bal().num("reserve_cap") - 2
+	var pr: Dictionary = r.preview(0, DDRun.USE)
+	eq(int(pr["ammo_gain"]), 2, "capped gain previewed")
 	r.resolve(0, DDRun.USE)
-	check(not r.can_retreat(), "no retreat once searching")
-	eq(r.retreat_block_reason(), "you already started searching", "reason")
-	var ev: Dictionary = r.retreat()
-	check(not bool(ev["ok"]), "retreat call rejected")
-	eq(r.street.size(), 3, "street untouched")
+	eq(r.reserve, bal().num("reserve_cap"), "reserve at cap")
 
 
-func test_illegal_choices_rejected() -> void:
-	var r: DDRun = plain_run(["M3", "W5", "Z6", "B2"] + filler(8))
-	check(not bool(r.resolve(0, DDRun.WEAPON)["ok"]), "weapon on a medkit")
-	check(not bool(r.resolve(1, DDRun.USE)["ok"]), "use on a weapon")
-	check(not bool(r.resolve(2, DDRun.EQUIP)["ok"]), "equip a zombie")
-	check(not bool(r.resolve(9, DDRun.USE)["ok"]), "index out of range")
-	check(not bool(r.resolve(2, DDRun.WEAPON)["ok"]), "no weapon yet")
-	eq(r.resolved_count, 0, "nothing resolved")
-	eq(r.street.size(), 4, "street intact")
+func test_medkit_one_heal_per_street() -> void:
+	var r: DDRun = plain_run(["M3", "M5", "B2", "B2"] + filler(4))
+	r.hp = 5
+	r.resolve(0, DDRun.USE)
+	eq(r.hp, 8, "first medkit heals")
+	var pr: Dictionary = r.preview(0, DDRun.USE)
+	check(bool(pr["wasted"]), "second one won't heal")
+	r.resolve(0, DDRun.USE)
+	eq(r.hp, 8, "no heal")
 
 
-func test_zombie_damage_bare_and_hp_event() -> void:
-	var r: DDRun = plain_run(["Z7", "B2", "B2", "B2"] + filler(8))
-	var p: Dictionary = r.preview(0, DDRun.BARE)
-	eq(int(p["hp_loss"]), 7, "preview bare")
-	var ev: Dictionary = r.resolve(0, DDRun.BARE)
-	eq(r.hp, 13, "hp after bare 7")
-	eq(int(ev["hp_delta"]), -7, "event hp delta")
-	check(str(ev["text"]).contains("you took 7"), "log text: " + str(ev["text"]))
-	check(r.log_lines[r.log_lines.size() - 1] == str(ev["text"]), "log line recorded")
-
-
-func test_death_ends_run() -> void:
-	var r: DDRun = plain_run(["Z9", "Z8", "Z7", "B2"] + filler(8))
-	r.hp = 10
+func test_cover_soaks_then_clears() -> void:
+	var r: DDRun = plain_run(["B3", "Z5", "B2", "B2"] + filler(4))
+	r.resolve(0, DDRun.USE)
+	eq(r.cover, 3, "cover 3")
+	var hp0: int = r.hp
+	var pr: Dictionary = r.preview(0, DDRun.BARE)
+	eq(int(pr["absorbed"]), 3, "cover soaks 3")
 	r.resolve(0, DDRun.BARE)
-	eq(r.phase, DDRun.Phase.STREET, "alive at 1")
-	var ev: Dictionary = r.resolve(0, DDRun.BARE)
-	check(bool(ev["dead"]), "dead flag")
-	eq(r.phase, DDRun.Phase.DEAD, "phase dead")
-	eq(r.hp, 0, "hp clamps at 0")
-	check(not bool(r.resolve(0, DDRun.BARE)["ok"]), "no actions after death")
-	check(bool(r.preview(0, DDRun.BARE)["dies"]) == false, "preview disabled after death")
+	eq(r.hp, hp0 - 2, "took 2")
+	r.resolve(0, DDRun.USE)
+	eq(r.cover, 0, "new street, cover gone")
 
 
-func test_preview_predicts_death() -> void:
-	var r: DDRun = plain_run(["Z9", "B2", "B2", "B2"] + filler(8))
-	r.hp = 9
-	check(bool(r.preview(0, DDRun.BARE)["dies"]), "preview flags a lethal fight")
+func test_short_street_resolves_all_but_one() -> void:
+	var r: DDRun = plain_run([], ["B2", "B2", "B3"])
+	eq(r.street.size(), 3, "3 cards, deck empty")
+	eq(r.budget, 2, "resolve all but one")
+	check(r.is_last_street(), "last street of the wave")
+	check(not r.can_skip(), "short street can't be skipped")
 
 
-func test_same_seed_same_deck() -> void:
-	var a: DDRun = DDRun.new(bal())
-	var b: DDRun = DDRun.new(bal())
-	a.start("rosa", bal().starter_perks(), 42)
-	b.start("rosa", bal().starter_perks(), 42)
-	eq(codes(a.deck), codes(b.deck), "seeded decks match")
-	eq(codes(a.street), codes(b.street), "seeded streets match")
+func test_reload_counts_as_an_action_and_leaves_two_holdovers() -> void:
+	var r: DDRun = plain_run(["Z4", "Z3", "B2", "B2", "B3", "B3", "B3", "B3"])
+	r.resolve(idx(r, "Z4"), DDRun.SLOT1)
+	r.reload(0)
+	eq(r.actions_left(), 1, "reload used an action")
+	r.resolve(idx(r, "Z3"), DDRun.SLOT1)
+	eq(r.street.size(), 4, "refilled")
+	eq(codes(r.street).slice(0, 2), ["B2", "B2"], "two cards held over")

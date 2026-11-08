@@ -28,6 +28,7 @@ func bal() -> DDBalance:
 
 
 ## A run for `survivor` with every perk in the pool, seeded, then a scripted deck/street.
+## Codes: "Z9", "Z9!payday" (Carrier), "W:revolver", "A4", "M5", "B2" (see DDCard.parse()).
 func make_run(survivor: String, deck_codes: Array = [], street_codes: Array = [], b: DDBalance = null) -> DDRun:
 	var r: DDRun = DDRun.new(b if b != null else bal())
 	r.start(survivor, bal().all_perks(), 1234)
@@ -43,6 +44,35 @@ func plain_run(deck_codes: Array, street_codes: Array = [], b: DDBalance = null)
 	r.passive = ""
 	r.setup_street(deck_codes, street_codes)
 	return r
+
+
+## Puts the run on its boss wave with an empty Skipped pile, then deals `street_codes` with an
+## empty deck: the boss street comes next (or the last lap if `skipped_codes` is given).
+func to_boss_wave(r: DDRun, deck_codes: Array, street_codes: Array = [], skipped_codes: Array = []) -> void:
+	r.wave_index = r.wave_count() - 1
+	r.last_lap = false
+	r.skipped.clear()
+	for c: Variant in skipped_codes:
+		r.skipped.append(r.as_card(c))
+	r.setup_street(deck_codes, street_codes)
+
+
+## Clears the current district at once: boss wave, empty deck, boss street fought bare with
+## lots of HP. Leaves the run at the safehouse (or WON).
+func clear_district(r: DDRun) -> void:
+	r.hp = r.max_hp
+	r.cover = 0
+	to_boss_wave(r, [], [])
+	r.cover = 40
+	var guard: int = 0
+	while r.phase == DDRun.Phase.STREET and guard < 10:
+		guard += 1
+		r.resolve(0, DDRun.BARE if r.street[0].kind == DDCard.ZOMBIE else DDRun.USE)
+
+
+func gun(r: DDRun, s: int, wid: String = "pistol") -> DDWeapon:
+	r.slots[s] = r.make_weapon(wid)
+	return r.slots[s]
 
 
 func filler(n: int, code: String = "B2") -> Array:
