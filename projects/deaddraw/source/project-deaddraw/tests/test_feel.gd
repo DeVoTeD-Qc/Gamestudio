@@ -126,8 +126,20 @@ func test_real_manifest_covers_the_cards() -> void:
 	if Art.entry_count() == 0:
 		check(true, "no art shipped yet (fallback look)")
 		return
-	for code: String in ["Z2", "Z14", "W2", "W9", "M3", "B4"]:
+	for code: String in ["Z2", "Z14", "Z16", "M3", "B4", "A4", "Z9!payday"]:
 		check(Art.texture_for(Art.card_keys(DDCard.parse(code))) != null, "art for " + code)
+	for wid: Variant in bal().weapons().keys():
+		check(Art.texture_for(Art.weapon_keys(str(wid), bal().weapon_name(str(wid)))) != null, "art for weapon " + str(wid))
+	var pistol: DDCard = DDCard.weapon("pistol", 3)
+	check(Art.file_for("weapons_pistol") != "" and Art.texture_for(Art.card_keys(pistol)) == Art.texture_for(Art.weapon_keys("pistol", "Service Pistol")), "a power-3 gun is never the v1 power-3 card")
+	for di: int in 3:
+		for r: Variant in bal().rooms(di):
+			var m: Dictionary = (r as Dictionary)["machine"]
+			check(Art.texture_for(Art.machine_keys(m)) != null, "machine art " + str(m["kind"]))
+			check(Art.texture_for(Art.room_keys(str(bal().district(di)["id"]), str((r as Dictionary)["name"]))) != null, "room art " + str((r as Dictionary)["name"]))
+	for e: Variant in bal().list("grin_effects"):
+		check(Art.texture_for(Art.jawbreaker_keys(str(e))) != null, "jawbreaker art " + str(e))
+	check(Art.texture_for(Art.badge_keys("retrofit")) != null, "retrofit plate")
 	for d: Variant in bal().districts():
 		check(Art.texture_for(Art.district_keys(d)) != null, "banner for " + str((d as Dictionary).get("id")))
 		check(Art.texture_for(Art.finale_keys(d)) != null, "finale art for " + str((d as Dictionary).get("id")))
@@ -181,7 +193,7 @@ func test_feedback_deal_resolve_and_reduce_motion() -> void:
 	m.call("_start_run")
 	await tree.process_frame
 	var run: DDRun = game.get("run")
-	run.setup_street(["Z5", "W6", "M3", "B2"] + filler(8, "Z3"))
+	run.setup_street(["Z5", "W:machete", "M3", "A4"] + filler(8, "Z3"))
 	# enter the street: the four cards are dealt
 	bank.clear_log()
 	m.set("_pending_fx", {"type": "deal", "snap": {}, "ev": {}})
@@ -200,7 +212,7 @@ func test_feedback_deal_resolve_and_reduce_motion() -> void:
 	check(lp.has("zombie_bare") and lp.has("hit"), "zombie hit feedback (%s)" % str(lp))
 	check(bank.played.has(&"hit"), "hit cue")
 	# equip the weapon: it flies into the slot
-	m.call("_do_resolve", idx(run, "W6"), DDRun.EQUIP)
+	m.call("_do_resolve", idx(run, "W:machete"), DDRun.EQUIP2)
 	await _frames(3)
 	check((fb.get("last_played") as Array).has("equip"), "equip feedback")
 	await tree.create_timer(0.6).timeout
@@ -241,14 +253,11 @@ func test_medkit_at_full_hp_warns() -> void:
 	m.free()
 
 
-# dd-polish (head F1 a): a zombie the equipped weapon can't hit (notch rule) is darkened, its
+# dd-polish (head F1 a): a zombie no weapon can hit (notch rule / empty mag) is darkened, its
 # number stays bright, the name bar says bare hands only, and it is still selectable.
 func test_blocked_zombie_is_darkened() -> void:
-	var r: DDRun = plain_run(["W6", "Z5", "Z4", "Z9"] + filler(8))
-	r.resolve(idx(r, "W6"), DDRun.EQUIP)
-	r.resolve(idx(r, "Z5"), DDRun.WEAPON)   # notch 5: now only zombies < 5
-	eq(r.notch, 5, "notched at 5")
-	r.setup_street(["Z7", "Z3", "B2", "B2"] + filler(8), [], true)
+	var r: DDRun = plain_run(["Z7", "Z3", "B2", "B2"] + filler(8))
+	r.slot(0).notch = 5
 	var hi: int = idx(r, "Z7")
 	var lo: int = idx(r, "Z3")
 	var blocked: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
@@ -260,7 +269,6 @@ func test_blocked_zombie_is_darkened() -> void:
 		texts.append(str(ln[0]))
 	check(texts.has("Bare hands only"), "name bar says bare hands only (%s)" % str(texts))
 	check(r.choices_for(hi).has(DDRun.BARE), "still playable bare-handed")
-	# with art: the art window is at 45%, the number badge at full brightness
 	var tex: Texture2D = Art.texture_for(Art.card_keys(r.street[hi]))
 	if tex == null:
 		var img: Image = Image.create(8, 6, false, Image.FORMAT_RGB8)
@@ -272,10 +280,26 @@ func test_blocked_zombie_is_darkened() -> void:
 	check(v.big_label != null and v.big_label.text == "7", "number shown")
 	check(v.big_label.modulate == Color.WHITE and v.big_label.self_modulate == Color.WHITE, "number at full brightness")
 	v.free()
-	# no art: the tile background darkens instead
 	var plain: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
 	var pv: DDCardView = DDCardView.new()
 	pv.setup(plain)
 	var st: StyleBoxFlat = pv.get_theme_stylebox("panel") as StyleBoxFlat
 	check(st != null and st.bg_color.get_luminance() < DDUi.card_bg("Z").get_luminance(), "plain tile darkened")
 	pv.free()
+
+
+func test_slot_tile_shows_magazine_pips_and_retrofit_plate() -> void:
+	var r: DDRun = plain_run(filler(8))
+	r.slot(0).ammo = 2
+	var spec: Dictionary = DDPayloads.slot_spec(r, 0)
+	eq(spec["pips"], [2, r.slot(0).cap], "pips = rounds / magazine")
+	var v: DDCardView = DDCardView.new()
+	v.setup(spec)
+	check(v.pip_bar != null and v.pip_bar.filled == 2 and v.pip_bar.total == r.slot(0).cap, "pip bar built")
+	v.free()
+	r.slots[0] = r.retrofit_result(r.slot(0))
+	var up: Dictionary = DDPayloads.slot_spec(r, 0)
+	eq(str(up["badge"]), "R", "Retrofit 'R' label")
+	check(str(up["title"]).begins_with("Retrofit"), "Retrofit name")
+	var melee: Dictionary = DDPayloads.slot_spec(r, 1)
+	eq(str(melee["title"]), "Empty slot", "empty slot tile")

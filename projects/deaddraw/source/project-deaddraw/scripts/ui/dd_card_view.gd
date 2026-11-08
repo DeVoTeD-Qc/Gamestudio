@@ -40,6 +40,39 @@ var _frame: bool = false
 var _art_dim: bool = false
 var _badge_panel: PanelContainer = null
 var _corner_chip: Control = null
+## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
+var pip_bar: Pips = null
+
+
+## v2: a row of magazine pips: filled = rounds left, hollow = spent. Wraps into a second row
+## when the magazine is long (Belt-fed MG).
+class Pips:
+	extends Control
+	var filled: int = 0
+	var total: int = 0
+	var color: Color = Color.WHITE
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _get_minimum_size() -> Vector2:
+		return Vector2(0, 16 if total <= 12 else 30)
+
+	func _draw() -> void:
+		if total <= 0:
+			return
+		var per_row: int = total if total <= 12 else ceili(total / 2.0)
+		var w: float = clampf((size.x - 4.0) / per_row - 3.0, 4.0, 14.0)
+		var h: float = 12.0
+		var row_w: float = per_row * (w + 3.0)
+		for k: int in total:
+			var rr: int = int(k / float(per_row))
+			var cc: int = k % per_row
+			var r: Rect2 = Rect2((size.x - row_w) * 0.5 + cc * (w + 3.0), 2.0 + rr * (h + 2.0), w, h)
+			if k < filled:
+				draw_rect(r, color)
+			else:
+				draw_rect(r, Color(color, 0.8), false, 1.5)
 
 ## dd-feel: how a non-compact tile with art is laid out. "frame" = art direction section 4 (number
 ## badge over full art, name bar below); anything else = the plain tile with the art behind a scrim.
@@ -48,7 +81,8 @@ const INK: Color = Color("151214")
 const BONE: Color = Color("ece6d6")
 
 
-## spec keys: kind, tag (top-left small), badge (top-right), big, title, lines: [[text, color]...],
+## spec keys: kind, tag (top-left small), badge (top-right), badge_art (small icon before the badge,
+## v2 Retrofit plate), pips ([rounds, magazine], v2 guns), big, title, lines: [[text, color]...],
 ## big_size, compact, selected, dim, payload.
 ## dd-feel art keys: art (Texture2D), art_fit ("cover" | "contain" for icons), art_dim (darken the
 ## art window to 45% while the number stays bright: the rules block part of the card's use, e.g. a
@@ -233,6 +267,14 @@ func _add_art(parent: Control, tex: Texture2D, fit: String) -> TextureRect:
 
 
 func _add_badge(row: HBoxContainer, spec: Dictionary) -> void:
+	var ba: Variant = spec.get("badge_art", null)
+	if ba is Texture2D:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = ba
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(26, 26)
+		row.add_child(tr)
 	var badge: String = str(spec.get("badge", ""))
 	var col: Color = Color(spec.get("badge_color", DDUi.WARN))
 	if badge == "" and bool(spec.get("holdover", false)):
@@ -245,6 +287,14 @@ func _add_badge(row: HBoxContainer, spec: Dictionary) -> void:
 
 
 func _add_lines(parent: Container, spec: Dictionary, outline: bool, align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER) -> void:
+	var pips: Variant = spec.get("pips", null)
+	if pips is Array and (pips as Array).size() == 2:
+		var bar: Pips = Pips.new()
+		bar.filled = int(pips[0])
+		bar.total = int(pips[1])
+		bar.color = DDUi.accent(kind)
+		pip_bar = bar
+		parent.add_child(bar)
 	for ln: Variant in spec.get("lines", []):
 		var arr: Array = ln
 		var l: Label = DDUi.label(str(arr[0]), int(arr[2]) if arr.size() > 2 else DDUi.FONT_S, arr[1] if arr.size() > 1 else DDUi.TEXT_DIM, align, true)

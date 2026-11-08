@@ -15,7 +15,8 @@
 #     scrap     the card drops, tilts and fades
 #     medkit    the card flies into the HP panel, green pulse, HP ticks up (no heal: grey fade, warn)
 #     barricade the card flies to the HP panel, gold shield outline, the Cover chip pops
-#     retreat   every street card slides back into the deck, then a new street is dealt
+#     retreat   (v2 Skip) every street card slides onto the Skipped pile, then a new street is dealt
+#     ammo      (v2) the ammo card flies into the reserve counter, which pops
 #     finale    a Finale card flips with a purple flash, a low swell and a light shake
 #     death     heavy shake and a red screen flash; clear: a bright cue
 #   Every animation is <= 300 ms, uses ghosts in the fx layer (or scale / colour on real nodes,
@@ -117,7 +118,7 @@ func _resolve_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> float:
 		DDCard.ZOMBIE:
 			_zombie_fx(ghost, choice, pr, snap, ctx)
 		DDCard.WEAPON:
-			if choice == DDRun.EQUIP:
+			if choice == DDRun.EQUIP1 or choice == DDRun.EQUIP2:
 				last_played.append("equip")
 				var wv: Control = ctx.get("weapon")
 				_fly_into(ghost, wv, func() -> void:
@@ -139,6 +140,13 @@ func _resolve_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> float:
 				last_played.append("no_heal")
 				Sfx.cue(&"warn")
 				_grey_out(ghost)
+		DDCard.AMMO:
+			# v2: the ammo card flies into the reserve counter, which pops
+			last_played.append("ammo")
+			var rv: Control = ctx.get("reserve") if ctx.get("reserve") != null else ctx.get("weapon")
+			_fly_into(ghost, rv, func() -> void:
+				Sfx.cue(&"equip", 1.25)
+				_pop(rv, 1.15, DDUi.accent("A")))
 		DDCard.BARRICADE:
 			last_played.append("cover")
 			var target: Control = ctx.get("cover") if ctx.get("cover") != null else ctx.get("hp_panel")
@@ -151,7 +159,7 @@ func _resolve_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> float:
 
 func _zombie_fx(ghost: DDCardView, choice: String, pr: Dictionary, snap: Dictionary, ctx: Dictionary) -> void:
 	var loss: int = int(pr.get("hp_loss", 0))
-	var weapon_used: bool = choice == DDRun.WEAPON
+	var weapon_used: bool = choice == DDRun.SLOT1 or choice == DDRun.SLOT2
 	last_played.append("zombie_weapon" if weapon_used else "zombie_bare")
 	if weapon_used:
 		Sfx.cue(&"kill", randf_range(0.95, 1.05))

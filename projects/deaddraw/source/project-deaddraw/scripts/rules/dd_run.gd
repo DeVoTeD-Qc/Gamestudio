@@ -309,7 +309,7 @@ func _end_wave() -> void:
 	wave_index += 1
 	var pack: Array[DDCard] = wave_pack(wave_index)
 	var restock: Array[DDCard] = _restock()
-	deck = back
+	deck = back.duplicate()
 	deck.append_array(pack)
 	deck.append_array(restock)
 	_shuffle(deck)

@@ -20,7 +20,7 @@ func _cleanup() -> void:
 
 func test_fresh_pool_is_starter() -> void:
 	var pr: DDProfile = _prof()
-	eq(pr.perk_pool(), bal().starter_perks(), "6-perk starter pool")
+	eq(pr.perk_pool(), bal().starter_perks(), "starter pool")
 	_cleanup()
 
 
@@ -98,17 +98,12 @@ func test_game_session_records_unlocks() -> void:
 	g.call("start_run", "rosa", 3)
 	var r: DDRun = g.get("run")
 	eq(r.perk_pool, bal().starter_perks(), "run uses the profile pool")
-	r.setup_street(["M2", "M2", "M2", "M2"])
-	r.resolve(0, DDRun.USE)
-	r.resolve(0, DDRun.USE)
-	r.resolve(0, DDRun.USE)
-	r.resolve(0, DDRun.USE)
-	r.resolve(0, DDRun.BARE)
+	clear_district(r)
 	eq(r.phase, DDRun.Phase.SAFEHOUSE, "cleared Maple Row")
 	check((g.get("new_unlocks") as Array).has("perk:second_wind"), "unlock recorded during the run")
 	check(pr.has_cleared("maple_row"), "saved")
 	r.choose_perk(r.perk_offer[0])
-	r.setup_street(["Z14", "Z14", "B2", "B2"] + filler(8))
+	r.setup_street(["Z30", "Z30", "B2", "B2"] + filler(8))
 	r.hp = 3
 	r.second_wind = false
 	r.resolve(0, DDRun.BARE)
@@ -118,4 +113,30 @@ func test_game_session_records_unlocks() -> void:
 	g.call("sync_profile")
 	eq(int(pr.data["runs"]), 1, "still once")
 	g.free()
+	_cleanup()
+
+
+func test_version_1_save_keeps_unlocks() -> void:
+	var pr: DDProfile = _prof()
+	var f: FileAccess = FileAccess.open(pr.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 1, "cleared": ["maple_row", "downtown"], "unlocked_perks": ["second_wind", "sandbags"],
+		"unlocked_survivors": ["theo"], "best": {"rosa": 64}, "badges": {"imani": 1}, "runs": 9, "wins": 1,
+		"settings": {"master_volume": 0.4}}))
+	f.close()
+	check(pr.load_profile(), "v1 save loads")
+	eq(int(pr.data["version"]), DDProfile.VERSION, "upgraded to version 2")
+	check(DDProfile.VERSION >= 2, "save version bumped")
+	check(pr.survivor_unlocked("theo"), "Theo kept")
+	check(pr.perk_pool().has("second_wind"), "unlocked perk kept")
+	check(not pr.perk_pool().has("sandbags"), "cut v1 perk not offered")
+	check(pr.has_cleared("downtown"), "clears kept")
+	eq(pr.badges("imani"), 1, "badges kept")
+	eq(int(pr.data["runs"]), 9, "runs kept")
+	eq(pr.best_score("rosa"), 0, "v2 best starts fresh")
+	eq(pr.best_v1("rosa"), 64, "v1 best kept as the old record")
+	eq(float(pr.setting("master_volume")), 0.4, "settings kept")
+	pr.save()
+	var back: DDProfile = DDProfile.new(bal(), pr.path)
+	back.load_profile()
+	eq(back.best_v1("rosa"), 64, "old record survives a v2 save/load")
 	_cleanup()

@@ -15,12 +15,15 @@
 #   then the district; survivors "<id>" / "survivor_<id>"; perks "<id>" / "perk_<id>"; district
 #   banners "district_<id>" / "<id>"; a district's finale card finale_keys(); the card back
 #   "card_back" / "back". Also the card's display name (the manifest's by_name group).
+#   v2 (art manifest version 2): weapons by sim id (weapons_<wid>), Carrier zombies
+#   (zombie_carrier_<n>), ammo (ammo_<n>), machines, Wall Racks, rooms, Jawbreakers, drops, badges and
+#   icons have their own *_keys functions; anything missing falls back to the plain tile.
 # Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
 
 const DEFAULT_MANIFEST: String = "res://assets/art/manifest.json"
-const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "B": "barricade"}
+const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "B": "barricade", "A": "ammo"}
 
 static var _path: String = DEFAULT_MANIFEST
 static var _entries: Dictionary = {}   # lowercase key -> resolved file path
@@ -79,11 +82,53 @@ static func card_keys(c: DDCard, district_id: String = "") -> Array:
 			out.append("finales_" + district_id)
 			out.append("finale_" + district_id)
 		out.append("finale_" + c.boss_trait)
+	if c.kind == DDCard.WEAPON:
+		# v2: weapons by sim id, then by name; never by value (power 3 is not the v1 "W3" card)
+		return weapon_keys(c.wid, DDText.card_name(c))
+	if c.drop != "" and c.kind == DDCard.ZOMBIE:
+		out.append_array(["zombie_carrier_%d" % c.value, "carrier_" + DDText.zombie_name(c.value).to_lower()])
 	out.append_array([c.code(), "%s_%d" % [w, c.value], "%s%d" % [w, c.value]])
 	if not c.is_finale():
 		out.append(DDText.card_name(c).to_lower())
 	out.append_array([w, c.kind])
 	return out
+
+
+static func weapon_keys(wid: String, display_name: String = "") -> Array:
+	var out: Array = ["weapons_" + wid, "weapons:" + wid]
+	if display_name != "":
+		out.append_array(["weapon_" + slug(display_name), display_name.to_lower()])
+	return out
+
+
+static func machine_keys(m: Dictionary) -> Array:
+	var kind: String = str(m.get("kind", ""))
+	var out: Array = []
+	if kind == "wallrack" and str(m.get("wid", "")) != "":
+		out.append_array(["wall_racks_" + str(m["wid"]), "wall_rack_" + str(m["wid"])])
+	out.append_array(["machines_" + kind, "machine_" + kind, "machine_" + slug(DDText.machine_name(kind)), DDText.machine_name(kind).to_lower()])
+	return out
+
+
+static func room_keys(district_id: String, room_name: String) -> Array:
+	var r: String = slug(room_name)
+	return ["rooms_%s_%s" % [district_id, r], "room_%s_%s" % [district_id, r], "rooms_" + r, room_name.to_lower()]
+
+
+static func jawbreaker_keys(id: String) -> Array:
+	return ["jawbreakers_" + id, "jawbreaker_" + id]
+
+
+static func drop_keys(id: String) -> Array:
+	return ["drops_" + id, "drop_" + id]
+
+
+static func badge_keys(id: String) -> Array:
+	return ["badges_" + id, "badge_" + id]
+
+
+static func icon_keys(id: String) -> Array:
+	return ["icons_" + id, "icon_" + id]
 
 
 static func survivor_keys(id: String) -> Array:
