@@ -2,7 +2,7 @@
 # Purpose: v3 gun card at the bottom of the street: the gun's stats, rule and challenge on the
 #   LEFT, its KILL STACK on the right like a board game: every killed zombie is a small card laid
 #   over the one before, offset so each number (top-left) stays visible, so the stack visibly
-#   grows (fanned upward in portrait, sideways in landscape). A faint outline marks where the next
+#   grows (fanned downward in portrait, sideways in landscape). A faint outline marks where the next
 #   kill lands. The ACTIVE gun has a bright frame. Tap = make it active; long press / right click
 #   = the gun's zoom; each stack card has its own zoom. Empty slots say how to fill them.
 #   Feedback reads `stack_cards` (the mini cards in kill order) and `next_rect()`.
@@ -157,17 +157,13 @@ func _step() -> Vector2:
 func _layout_stack() -> void:
 	var step: Vector2 = _step()
 	var n_slots: int = maxi(_cap, stack_cards.size() + 1)
-	# portrait: the stack grows upward from the bottom; landscape: left to right
-	var origin: Vector2 = Vector2(0, step.y * (n_slots - 1)) if vertical_fan else Vector2.ZERO
-	var dir: Vector2 = Vector2(0, -step.y) if vertical_fan else step
+	# each new kill is laid over the one before, offset down (portrait) or right (landscape), so
+	# the strip with every earlier number stays visible; tree order draws later kills on top
 	for k: int in stack_cards.size():
-		stack_cards[k].position = origin + dir * k
+		stack_cards[k].position = step * k
 		stack_cards[k].size = _mini
 	if _next_outline != null:
-		_next_outline.position = origin + dir * stack_cards.size()
-	# later kills sit on top; in portrait they are drawn above (upward), so keep tree order
-	for k: int in stack_cards.size():
-		stack_cards[k].z_index = k
+		_next_outline.position = step * stack_cards.size()
 
 
 ## Global rect where the next kill would land.

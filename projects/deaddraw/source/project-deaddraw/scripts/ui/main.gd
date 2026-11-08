@@ -509,7 +509,7 @@ func _patch_chip(p: String) -> DDCardView:
 	var ps: Dictionary = DDPayloads.patch_spec(p, Game.bal, true)
 	ps["art_keys"] = Art.patch_keys(p)
 	ps["art_tint"] = 0.55
-	return _view(ps, Vector2(118, 40))
+	return _view(ps, Vector2(104, 36))
 
 
 func _build_street() -> void:
@@ -528,7 +528,7 @@ func _build_street() -> void:
 	if portrait:
 		var lw: float = clampf(W * 0.27, 130.0, 210.0)
 		var rw: float = clampf(W * 0.38, 180.0, 300.0)
-		var mini: Vector2 = Vector2(clampf(W * 0.11, 52.0, 70.0), 0)
+		var mini: Vector2 = Vector2(clampf(56.0 + (H - 900.0) / 8.0, 52.0, 80.0), 0)
 		mini.y = mini.x * 1.3
 		var gun_h: float = mini.y + mini.y * 0.32 * 4 + 16.0
 		var guns: Control = _build_guns(run, true, mini, gun_h)
@@ -554,6 +554,7 @@ func _build_street() -> void:
 		v.add_child(_build_street_row(run, card_w, card_h))
 		v.add_child(actions)
 		v.add_child(guns)
+		bottom.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		v.add_child(bottom)
 	else:
 		var lw2: float = clampf(W * 0.15, 140.0, 200.0)
@@ -590,6 +591,9 @@ func _build_street() -> void:
 		var right: VBoxContainer = DDUi.vbox(SEP)
 		right.custom_minimum_size = Vector2(rw2, 0)
 		right.add_child(rooms)
+		var lk2: Control = _build_lookout(run)
+		if lk2 != null:
+			right.add_child(lk2)
 		if not run.patches.is_empty():
 			right.add_child(_patch_row(run))
 		right.add_child(_build_log(run))
@@ -629,7 +633,7 @@ func _build_top(run: DDRun) -> Control:
 	h.add_child(hp_panel)
 	_hp_anchor = hp_panel
 	var cov: DDCardView = _view({"kind": "C", "tag": "COVER", "big": str(run.cover), "big_size": 22, "row": true, "dim": run.cover == 0,
-		"payload": DDPayloads.cover(run)}, Vector2(72, 0))
+		"payload": DDPayloads.cover(run)}, Vector2(84, 0))
 	_cover_view = cov
 	h.add_child(cov)
 	var pv: DDCardView = _view(_points_spec(run), Vector2(112, 0))
@@ -690,6 +694,15 @@ func _build_pile(run: DDRun) -> Control:
 	pv.size_flags_vertical = Control.SIZE_EXPAND_FILL if portrait else Control.SIZE_FILL
 	_pile_view = pv
 	v.add_child(pv)
+	if portrait:
+		var lk: Control = _build_lookout(run)
+		if lk != null:
+			v.add_child(lk)
+	return v
+
+
+## Lookout Patch: the pile's top card + BURY (once per street).
+func _build_lookout(run: DDRun) -> Control:
 	var lc: DDCard = run.lookout_card()
 	if lc != null:
 		var row: HBoxContainer = DDUi.hbox(4)
@@ -702,8 +715,8 @@ func _build_pile(run: DDRun) -> Control:
 		bb.tooltip_text = "Lookout: send the top card to the bottom (once per street)"
 		bb.pressed.connect(do_bury)
 		row.add_child(bb)
-		v.add_child(row)
-	return v
+		return row
+	return null
 
 
 ## RIGHT: the 3 room decks, each with its price and OPEN (or its machine's USE).
@@ -864,6 +877,7 @@ func _build_bottom(run: DDRun, _p: bool) -> Control:
 	var h: HBoxContainer = DDUi.hbox(SEP)
 	var mv: DDCardView = _melee_tile(run)
 	mv.custom_minimum_size = Vector2(190, 64)
+	mv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	h.add_child(mv)
 	var log_box: Control = _build_log(run)
 	log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -67,7 +67,7 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 			var pr: Dictionary = run.preview(i, run.active)
 			if bool(pr["ok"]):
 				var loss: int = int(pr["hp_loss"])
-				badge = ("-%d" % loss) if loss > 0 else "-0"
+				badge = ("-%d" % loss) if loss > 0 else "0"
 				badge_color = DDUi.BAD if loss > 0 else DDUi.GOOD
 				if bool(pr["dies"]):
 					badge = "-%d DIES" % loss
@@ -245,9 +245,13 @@ static func boss(run: DDRun) -> Dictionary:
 
 static func boss_spec(run: DDRun) -> Dictionary:
 	var b: Dictionary = run.boss_def()
+	var zs: Array = b.get("zombies", [9])
+	var more: String = ""
+	if zs.size() > 1:
+		more = ("then " + " -> ".join(PackedStringArray(zs.slice(1).map(func(z: Variant) -> String: return str(int(z)))))) if str(b.get("trait", "")) == "phases" else "x%d at once" % zs.size()
 	return {"kind": "F", "tag": "BOSS", "badge": "NO ESCAPE" if run.is_final_district() else "", "badge_color": DDUi.BAD,
-		"big": DDText.boss_summary(b), "big_size": 22, "title": str(b.get("name", "")), "row": true, "title_size": DDUi.FONT_S - 4,
-		"payload": boss(run)}
+		"big": str(int(zs[0])), "big_size": 26, "title": str(b.get("name", "")), "row": true, "title_size": DDUi.FONT_S - 4,
+		"lines": [[more, DDUi.TEXT_DIM, DDUi.FONT_S - 5]] if more != "" else [], "payload": boss(run)}
 
 
 # ---------------------------------------------------------------- middle: the pile
@@ -298,7 +302,7 @@ static func room_spec(run: DDRun, i: int) -> Dictionary:
 	if open:
 		line = "used this wave" if run.machine_used[i] else DDText.machine_name(kind)
 	else:
-		line = DDText.machine_name(kind) + ((" - " + run.bal.weapon_name(str(m.get("wid", "")))) if kind == "wall" else "")
+		line = DDText.machine_name(kind)
 	return {"kind": "K" if open else "R", "tag": str(r.get("name", "")).to_upper(), "badge": "OPEN" if open else "",
 		"badge_color": DDUi.GOOD, "big": "" if open else str(run.bal.shown(run.room_cost(i))), "big_size": 24, "row": true,
 		"lines": [[line, DDUi.TEXT_DIM if not open else DDUi.accent("K"), DDUi.FONT_S - 4]], "payload": room(run, i)}
@@ -310,7 +314,7 @@ static func patch(id: String, bal: DDBalance) -> Dictionary:
 
 
 static func patch_spec(id: String, bal: DDBalance, compact: bool = true) -> Dictionary:
-	return {"kind": "P", "tag": "PATCH", "title": DDText.patch_name(id), "compact": compact, "row": compact,
+	return {"kind": "P", "tag": "" if compact else "PATCH", "title": DDText.patch_name(id), "compact": compact, "row": compact,
 		"lines": [] if compact else [[DDText.patch_text(id, bal), DDUi.TEXT, DDUi.FONT_S]], "payload": patch(id, bal)}
 
 

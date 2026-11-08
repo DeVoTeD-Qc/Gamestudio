@@ -322,7 +322,7 @@ static func machine_name(kind: String) -> String:
 static func machine_text(m: Dictionary, bal: DDBalance) -> String:
 	match str(m.get("kind", "")):
 		"bench":
-			return "A grimy workbench with a hand-cranked lathe. Once per wave, one service on an equipped gun:\nTRIM %d: take the top kill off the stack (banked now); the rule checks the kill below and the gun gets one capacity back.\nFLIP %d: a Rifle-style DOWN rule becomes UP (or back).\nHONE %d: +1 power for that gun (once per gun)." % [
+			return "A grimy workbench with a hand-cranked lathe. Once per wave, one service on an equipped gun:\nTRIM %d: take the top kill off the stack (it already paid); the rule checks the kill below and the gun gets one capacity back.\nFLIP %d: a Rifle-style DOWN rule becomes UP (or back).\nHONE %d: +1 power for that gun (once per gun)." % [
 				bal.shown(bal.bench_price("trim")), bal.shown(bal.bench_price("flip")), bal.shown(bal.bench_price("hone"))]
 		"patch":
 			return "A rusty heat press. Once per wave: pay, it shows %d random Patches, you take 1 for the rest of the run. Price rises with every Patch you own (%s)." % [

@@ -666,8 +666,7 @@ def bench_(s, zd, st):
         f2 = zd.flex(g[1], g[4][:-1], rosa)
         if f < 0.3 and f2 > f + 0.25:
             wid, rule, p, cap, stack, honed = g
-            s.points -= B["trim"]
-            s.points += stack[-1]
+            s.points -= B["trim"]   # the removed kill already paid when it was made (K1)
             s.slots[i] = (wid, rule, p, cap, stack[:-1], honed)
             st["bench_trim"] += 1
             return True

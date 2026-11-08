@@ -1079,7 +1079,7 @@ func machine_options(i: int) -> Array[Dictionary]:
 								if g2.stack.is_empty():
 									r3 = "nothing on the stack"
 								else:
-									res = "Remove the top kill (%d) and bank it: +%d pts; the rule checks %s next." % [g2.top(), bal.shown(g2.top()),
+									res = "Remove the top kill (%d) (already paid); the rule checks %s next." % [g2.top(),
 										("the %d below" % g2.stack[g2.stack.size() - 2]) if g2.stack.size() > 1 else "an empty stack"]
 							"flip":
 								if g2.rule != "up" and g2.rule != "down":
@@ -1146,10 +1146,10 @@ func use_machine(i: int, option_id: String) -> Dictionary:
 			result["service"] = str(opt["service"])
 			match str(opt["service"]):
 				"trim":
+					# the removed kill already paid when it was made (K1): Trim banks nothing
 					var z: int = g.stack.pop_back()
-					_earn(z)
 					result["trimmed"] = z
-					_log("Retrofit Bench - Trim (-%d): the %d comes off the %s, +%d banked." % [bal.shown(price), z, g.name, bal.shown(z)])
+					_log("Retrofit Bench - Trim (-%d): the %d comes off the %s; it gets a kill back." % [bal.shown(price), z, g.name])
 				"flip":
 					g.rule = "up" if g.rule == "down" else "down"
 					g.flipped = not g.flipped

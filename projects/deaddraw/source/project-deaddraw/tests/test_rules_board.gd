@@ -85,7 +85,8 @@ func test_bench_trim_flip_hone() -> void:
 	var ev: Dictionary = r.use_machine(2, "trim1")
 	check(bool(ev["ok"]), "trim")
 	eq(g.stack, [7] as Array[int], "top kill (2) removed")
-	eq(r.points, p0 - bal().bench_price("trim") + 2, "Trim: pay 5, the 2 is banked (sim)")
+	eq(r.points, p0 - bal().bench_price("trim"), "Trim: pay 5, the removed 2 is NOT paid again (it paid on the kill, K1)")
+	eq(r.points_earned, 0, "Trim earns nothing")
 	check(bool(r.preview(0, 0)["ok"]), "the rifle can take the 6 again")
 	check(not bool(r.use_machine(2, "hone1")["ok"]), "Bench once per wave")
 	r.machine_used[2] = false

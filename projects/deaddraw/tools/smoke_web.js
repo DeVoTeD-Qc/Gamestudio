@@ -166,7 +166,7 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
           await waitFor(page, (x) => x.sheet === 'machine', 'machine sheet'); await shot('room_wall_rack_sheet');
         }],
         ['screen=street&seed=5&gun2=crossbow&stack1=3,5,6&stack2=4,5,6&open=2', 'stacks_two_guns'],
-        ['screen=street&seed=5&gun1=rifle&stack1=3&active=0', 'rule_lock'],
+        ['screen=street&seed=5&survivor=imani&gun1=rifle&stack1=2&active=0', 'rule_lock'],
         ['screen=street&seed=3&sheet=gun', 'gun_card_sheet'],
         ['screen=street&seed=3&sheet=machine2&gun1=rifle&stack1=7,2&gun2=crossbow&stack2=4', 'bench_sheet'],
         ['screen=street&seed=3&sheet=patch', 'patch_press_pick'],
