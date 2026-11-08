@@ -18,12 +18,16 @@
 #   v2 (art manifest version 2): weapons by sim id (weapons_<wid>), Carrier zombies
 #   (zombie_carrier_<n>), ammo (ammo_<n>), machines, Wall Racks, rooms, Jawbreakers, drops, badges and
 #   icons have their own *_keys functions; anything missing falls back to the plain tile.
+#   v3 (manifest v3): Patches (patch_keys), gun-rule icons (rule_keys), deck backs
+#   (deck_back_keys), Patient Zero phases, v3 machine kinds (bench / patch / wall).
 # Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
 
 const DEFAULT_MANIFEST: String = "res://assets/art/manifest.json"
-const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "B": "barricade", "A": "ammo"}
+const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "C": "barricade", "B": "barricade", "A": "ammo"}
+## v3 machine kinds -> the manifest's machine ids.
+const MACHINE_ART: Dictionary = {"bench": "retrofit_bench", "patch": "patch_press", "wall": "wall_rack"}
 
 static var _path: String = DEFAULT_MANIFEST
 static var _entries: Dictionary = {}   # lowercase key -> resolved file path
@@ -74,21 +78,20 @@ static func texture_for(keys: Array) -> Texture2D:
 static func card_keys(c: DDCard, district_id: String = "") -> Array:
 	var w: String = str(KIND_WORD.get(c.kind, c.kind))
 	var out: Array = []
-	if c.is_finale():
-		if c.finale_name != "":
-			out.append(slug(c.finale_name))
-			out.append("finale_" + slug(c.finale_name))
+	if c.is_boss():
+		if c.phase > 0:
+			out.append_array(["boss_phases_%s_%d" % [slug(c.boss_name), c.phase], "boss_phases_%s_v%d" % [slug(c.boss_name), c.value]])
+		if c.boss_name != "":
+			out.append(slug(c.boss_name))
+			out.append("finale_" + slug(c.boss_name))
 		if district_id != "":
 			out.append("finales_" + district_id)
 			out.append("finale_" + district_id)
 		out.append("finale_" + c.boss_trait)
 	if c.kind == DDCard.WEAPON:
-		# v2: weapons by sim id, then by name; never by value (power 3 is not the v1 "W3" card)
 		return weapon_keys(c.wid, DDText.card_name(c))
-	if c.drop != "" and c.kind == DDCard.ZOMBIE:
-		out.append_array(["zombie_carrier_%d" % c.value, "carrier_" + DDText.zombie_name(c.value).to_lower()])
 	out.append_array([c.code(), "%s_%d" % [w, c.value], "%s%d" % [w, c.value]])
-	if not c.is_finale():
+	if not c.is_boss():
 		out.append(DDText.card_name(c).to_lower())
 	out.append_array([w, c.kind])
 	return out
@@ -103,11 +106,27 @@ static func weapon_keys(wid: String, display_name: String = "") -> Array:
 
 static func machine_keys(m: Dictionary) -> Array:
 	var kind: String = str(m.get("kind", ""))
+	var art: String = str(MACHINE_ART.get(kind, kind))
 	var out: Array = []
-	if kind == "wallrack" and str(m.get("wid", "")) != "":
+	if (kind == "wall" or kind == "wallrack") and str(m.get("wid", "")) != "":
 		out.append_array(["wall_racks_" + str(m["wid"]), "wall_rack_" + str(m["wid"])])
-	out.append_array(["machines_" + kind, "machine_" + kind, "machine_" + slug(DDText.machine_name(kind)), DDText.machine_name(kind).to_lower()])
+	out.append_array(["machines_" + art, "machines_" + kind, "machine_" + art, DDText.machine_name(kind).to_lower()])
 	return out
+
+
+## v3: a Patch (the v3 group first: plain "thick_jacket" still points at the v2 perk art).
+static func patch_keys(id: String) -> Array:
+	return ["patches_" + id, "patch_" + id, "patch:" + id, (DDText.patch_name(id) + " Patch").to_lower()]
+
+
+## v3: the rule icon on a gun card ("down", "bent" for Loose Grip).
+static func rule_keys(rule: String) -> Array:
+	return ["rules_" + rule, "rule_" + rule]
+
+
+## v3: the back of a wave deck / room deck / the draw pile.
+static func deck_back_keys(kind: String) -> Array:
+	return ["deck_backs_" + kind, "deck_backs_%s_deck" % kind, "deck_back_" + kind] + back_keys()
 
 
 static func room_keys(district_id: String, room_name: String) -> Array:
@@ -149,7 +168,7 @@ static func district_keys(d: Dictionary) -> Array:
 ## The district's Finale card art.
 static func finale_keys(d: Dictionary) -> Array:
 	var id: String = str(d.get("id", ""))
-	var fname: String = slug(str((d.get("finale", {}) as Dictionary).get("name", "")))
+	var fname: String = slug(str((d.get("boss", d.get("finale", {})) as Dictionary).get("name", "")))
 	var out: Array = []
 	if fname != "":
 		out.append_array([fname, "finale_" + fname])

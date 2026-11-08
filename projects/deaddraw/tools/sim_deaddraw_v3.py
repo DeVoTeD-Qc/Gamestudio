@@ -49,7 +49,7 @@ CONFIG = {
     "safehouse_heal": 8,
     "points_on_kill": True,       # K1 (head, 2026-11-08): a gun kill pays the zombie's number at once
     "ditch_share": 0.0,           # replacing an unfinished gun: extra share of its stack (K1: nothing)
-    "finish_bonus": 3,            # extra points when a gun is finished (full stack)
+    "finish_bonus": 5,            # extra points when a gun is finished (full stack)
     "scrap_points": 2,            # scrap a weapon card instead of equipping it
     "melee_power": 2,
     "melee_points": 0.0,          # share of the zombie number a melee kill banks (0 = none)
@@ -74,7 +74,7 @@ CONFIG = {
         "rifle":    {"name": "Hunting Rifle",     "rule": "down",   "p": 4, "cap": 4,
                      "chal": "countdown", "reward": ("heal", 4)},
         "crossbow": {"name": "Ratchet Crossbow",  "rule": "up",     "p": 3, "cap": 4,
-                     "chal": "staircase", "reward": ("encore", 0), "price": 10},
+                     "chal": "staircase", "reward": ("encore", 0), "price": 15},
         "twin":     {"name": "Twin-Bore",         "rule": "same",   "p": 5, "cap": 3,
                      "chal": "big_game", "reward": ("points", 10)},
         "lever":    {"name": "Lever Rifle",       "rule": "zigzag", "p": 4, "cap": 5,
@@ -84,9 +84,9 @@ CONFIG = {
         "nailer":   {"name": "Nail Driver",       "rule": "parity", "p": 3, "cap": 4,
                      "chal": "full_spread", "reward": ("heal", 3)},
         "shotgun":  {"name": "Pump Shotgun",      "rule": "spread", "p": 5, "cap": 4,
-                     "chal": "point_blank", "reward": ("heal", 5), "price": 14},
+                     "chal": "point_blank", "reward": ("heal", 5), "price": 20},
         "elephant": {"name": "Elephant Gun",      "rule": "big",    "p": 6, "cap": 2,
-                     "chal": "trophy", "reward": ("points", 10), "price": 16},
+                     "chal": "trophy", "reward": ("points", 10), "price": 24},
     },
     "spread_cap": 16,
     "big_min": 6,
@@ -99,11 +99,11 @@ CONFIG = {
                    [4, 5, 5, 6, 7, 8, 9, "W"]],
          "entrance": ["W", "M4", "C2"],
          "rooms": [
-             {"name": "Garage", "cost": 15, "pack": ["W", "M4", "C2"],
+             {"name": "Garage", "cost": 21, "pack": ["W", "M4", "C2"],
               "machine": {"kind": "wall", "wid": "crossbow"}},
-             {"name": "Corner Store", "cost": 22, "pack": ["M5", "M3", "W"],
+             {"name": "Corner Store", "cost": 31, "pack": ["M5", "M3", "W"],
               "machine": {"kind": "patch"}},
-             {"name": "Workshop", "cost": 31, "pack": ["W", "M5", "C3"],
+             {"name": "Workshop", "cost": 43, "pack": ["W", "M5", "C3"],
               "machine": {"kind": "bench"}},
          ],
          "boss": {"name": "The Groundskeeper", "zombies": [9], "trait": "shatter"}},
@@ -113,11 +113,11 @@ CONFIG = {
                    [5, 6, 7, 8, 8, 9, 10, "W"]],
          "entrance": ["W", "M5", "C2"],
          "rooms": [
-             {"name": "Subway Kiosk", "cost": 19, "pack": ["M4", "W", "M5"],
+             {"name": "Subway Kiosk", "cost": 27, "pack": ["M4", "W", "M5"],
               "machine": {"kind": "patch"}},
-             {"name": "Pawn Shop", "cost": 25, "pack": ["W", "C3", "W"],
+             {"name": "Pawn Shop", "cost": 35, "pack": ["W", "C3", "W"],
               "machine": {"kind": "wall", "wid": "shotgun"}},
-             {"name": "Parking Garage", "cost": 35, "pack": ["W", "M6", "C3"],
+             {"name": "Parking Garage", "cost": 49, "pack": ["W", "M6", "C3"],
               "machine": {"kind": "bench"}},
          ],
          "boss": {"name": "Rush Hour Horde", "zombies": [6, 6, 6], "trait": "horde"}},
@@ -127,11 +127,11 @@ CONFIG = {
                    [6, 7, 8, 9, 9, 10, 11, "W"]],
          "entrance": ["W", "M6", "C3"],
          "rooms": [
-             {"name": "Pharmacy", "cost": 20, "pack": ["M5", "M6", "M4"],
+             {"name": "Pharmacy", "cost": 28, "pack": ["M5", "M6", "M4"],
               "machine": {"kind": "patch"}},
-             {"name": "Security Office", "cost": 28, "pack": ["W", "C3", "M5"],
+             {"name": "Security Office", "cost": 39, "pack": ["W", "C3", "M5"],
               "machine": {"kind": "wall", "wid": "elephant"}},
-             {"name": "Morgue Lab", "cost": 38, "pack": ["W", "M6", "C4"],
+             {"name": "Morgue Lab", "cost": 53, "pack": ["W", "M6", "C4"],
               "machine": {"kind": "bench"}},
          ],
          # phases: each appears after the previous dies; cannot be run from
@@ -139,7 +139,7 @@ CONFIG = {
     ],
     "survivors": {
         "rosa": {"name": "Rosa Vance", "passive": "steady_hands", "hp": 20},
-        "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 20},
+        "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 19},
         "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 21},
     },
     "triage_bonus": 1,

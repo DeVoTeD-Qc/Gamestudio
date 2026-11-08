@@ -7,6 +7,8 @@
 #   dd-feel: also the player's Settings (data.settings, see SETTING_DEFAULTS): master / SFX volume
 #   (linear 0..1), screen shake, reduce motion (+ whether the player chose it, else it follows the
 #   browser's prefers-reduced-motion).
+#   v3 (K5): first-run hints. data.hints_seen lists the hint ids already shown; hints only show
+#   while no run has ended yet (data.runs == 0), each one once.
 #   v2 (save version 2): DeadDraw v2 scores are points (x10 on screen), so a version-1 save keeps
 #   every clear, unlock, badge, run count and setting, but its best scores move to "best_v1"
 #   (shown as the old record) and v2 bests start fresh.
@@ -34,7 +36,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "best_v1": {}, "badges": {}, "runs": 0, "wins": 0, "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -54,7 +56,7 @@ func load_profile() -> bool:
 		# v1 run scores (10 + HP per district) are not comparable with v2 points
 		data["best_v1"] = data["best"] if data["best"] is Dictionary else {}
 		data["best"] = {}
-	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors"]:
+	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen"]:
 		if not data[k] is Array:
 			data[k] = []
 	for k: String in ["best", "best_v1", "badges"]:
@@ -152,6 +154,23 @@ func unlock_milestone_for(kind_id: String) -> String:
 			if (u[m] as Array).has(kind_id):
 				return str(m)
 	return ""
+
+
+# ---------------------------------------------------------------- first-run hints (K5)
+## True while this is the player's first run (no run has ended yet).
+func first_run() -> bool:
+	return int(data.get("runs", 0)) == 0
+
+
+## Should hint `id` show now? (first run only, each hint once)
+func hint_due(id: String) -> bool:
+	return first_run() and not (data["hints_seen"] as Array).has(id)
+
+
+func mark_hint(id: String) -> void:
+	if not (data["hints_seen"] as Array).has(id):
+		(data["hints_seen"] as Array).append(id)
+		save()
 
 
 # ---------------------------------------------------------------- recording

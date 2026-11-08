@@ -1,7 +1,7 @@
 # DeadDraw - Core Rules v3 ("Kill Stacks")
 
 Owner: Sr Game Designer | Board task: `dd-v3-design` | Engine: Godot 4.4.1 (GDScript), Web export, phone portrait + landscape
-Status: **proposal for the studio head (questions in section 9).** v2 (`core-rules-v2.md`, `tools/sim_deaddraw_v2.py`, the live build in `source/`) is untouched until v3 is approved and built.
+Status: **studio head answered K1-K5 on 2026-11-08 and the sim was retuned (`dd-v3-tune`); see section 12, which overrides any older value below it.** v2 (`core-rules-v2.md`, `tools/sim_deaddraw_v2.py`, the live build in `source/`) is untouched until v3 is approved and built.
 Balance source of truth for v3: `projects/deaddraw/tools/sim_deaddraw_v3.py` (`CONFIG`). If this document and the sim disagree, the sim wins and this document gets fixed.
 
 > **Naming and IP.** v3 keeps the *feel* of round-based zombie survival modes in shooters. Every machine, perk, weapon and mode name in this document is original to DeadDraw. Do not use any shooter series' trademarked or signature names (upgrade machines, soda perks, gums, mystery boxes, wonder weapons) in the game, store text, code or file names. The repo is public.
@@ -10,9 +10,9 @@ Balance source of truth for v3: `projects/deaddraw/tools/sim_deaddraw_v3.py` (`C
 
 ## 0. Vision
 
-**One sentence:** Waves of zombies shuffle into one deck, you shoot them in an order your gun's rule allows, and every gun you fill pays out the points that open the next room.
+**One sentence:** Waves of zombies shuffle into one deck, you shoot them in an order your gun's rule allows, every kill pays the points that open the next room, and every gun you fill pays a bonus.
 
-**What v3 changes, in one breath:** the board now shows its own machinery. **Wave decks** wait on the left, **room decks** with their prices wait on the right, and both are visibly **shuffled into the draw pile** in the middle. Guns no longer have magazines or Reload: each gun has a **rule** for the order of its kills (going down, going up, the same number, zig-zag...) and a **capacity**. Every kill is **stacked on the gun** like a board game. When the stack is full the gun is **finished**: you **collect** the stack as points, check the gun's **challenge** for a bonus, and the gun leaves your hand. Guns rotate every few streets. Two machines complete the genre: the **Retrofit Bench** reworks your equipped gun, and the **Patch Press** sews a permanent perk onto your jacket.
+**What v3 changes, in one breath:** the board now shows its own machinery. **Wave decks** wait on the left, **room decks** with their prices wait on the right, and both are visibly **shuffled into the draw pile** in the middle. Guns no longer have magazines or Reload: each gun has a **rule** for the order of its kills (going down, going up, the same number, zig-zag...) and a **capacity**. Every kill is **stacked on the gun** like a board game. When the stack is full the gun is **finished**: you **collect** a finish bonus, check the gun's **challenge** for an extra reward, and the gun leaves your hand. Guns rotate every few streets. Two machines complete the genre: the **Retrofit Bench** reworks your equipped gun, and the **Patch Press** sews a permanent perk onto your jacket.
 
 **Design pillars**
 1. **Every card is a choice you can read.** A gun's rule, its top kill and the numbers it can still take are always visible. The only hidden information is the order of the pile.
@@ -65,7 +65,7 @@ Weapons, points, Patches and HP carry between districts. Rooms, machines and the
 | Card | Effect |
 |---|---|
 | **Zombie N** (1-11) | Fight it with a gun, or melee. Its number is its strength **and** its point value. |
-| **Gun** (named) | Equip into slot 1 or 2, or scrap it (+2 points). Equipping over a gun collects that gun early (5.4). |
+| **Gun** (named) | Equip into slot 1 or 2, or scrap it (+2 points). Equipping over a gun discards that gun and its stack (5.4). |
 | **Medkit N** (3-7) | Heal N (max 1 medkit per street; a second one is discarded). |
 | **Cover N** (2-4) | Gain N Cover: absorbs damage before HP. |
 
@@ -113,13 +113,13 @@ You have **Gun slot 1, Gun slot 2 and Melee** (always there). You start with a *
 |---|---|---|---|---|---|---|
 | **Service Pistol** | anything (no rule) | 2 | 4 | *Mixed Bag*: 4 different numbers | +5 points | start, Maple Row loot |
 | **Hunting Rifle** | **lower** than the top kill (the classic notch) | 4 | 4 | *Countdown*: the last 3 kills go down by exactly 1 (6-5-4) | heal 4 | Maple Row, Downtown |
-| **Ratchet Crossbow** | **higher** than the top kill | 3 | 4 | *Staircase*: 3 consecutive numbers in a row going up (4-5-6) | **Encore**: the gun stays, its stack resets | all districts; Maple Row Wall Rack (10) |
+| **Ratchet Crossbow** | **higher** than the top kill | 3 | 4 | *Staircase*: 3 consecutive numbers in a row going up (4-5-6) | **Encore**: the gun stays, its stack resets | all districts; Maple Row Wall Rack (15) |
 | **Twin-Bore** | the **same number** as the first kill | 5 | 3 | *Big Game*: the number is 6 or more | +10 points | all districts |
 | **Lever Rifle** | **zig-zag**: if the last step went up, this one goes down (and vice versa); never equal | 4 | 5 | *Wide Swing*: every step is 2 or more apart | +3 Cover | Downtown, St. Agnes |
 | **Scout Carbine** | **within 1** of the top kill (equal is fine) | 3 | 5 | *Drift*: the last kill is 3+ away from the first | +8 points | all districts |
 | **Nail Driver** | **odd after even, even after odd** | 3 | 4 | *Full Spread*: 4 different numbers | heal 3 | Maple Row |
-| **Pump Shotgun** | anything, as long as the **stack total stays at 16 or less**; finished at 4 kills or a total of 16 | 5 | 4 / 16 | *Point Blank*: the total is exactly 16 | heal 5 | Downtown, St. Agnes; Downtown Wall Rack (14) |
-| **Elephant Gun** | **6 or more** only | 6 | 2 | *Trophy*: both kills 8+ | +10 points | St. Agnes; St. Agnes Wall Rack (16) |
+| **Pump Shotgun** | anything, as long as the **stack total stays at 16 or less**; finished at 4 kills or a total of 16 | 5 | 4 / 16 | *Point Blank*: the total is exactly 16 | heal 5 | Downtown, St. Agnes; Downtown Wall Rack (20) |
+| **Elephant Gun** | **6 or more** only | 6 | 2 | *Trophy*: both kills 8+ | +10 points | St. Agnes; St. Agnes Wall Rack (24) |
 
 Design notes:
 - **Lower numbers than v2.** Powers are 2-6 (v2: 3-9) against zombies 1-11 (v2: 2-16). Each point of power matters, which is why the rule is the price of a strong gun: the Twin-Bore hits 5 but only takes one number.
@@ -135,29 +135,30 @@ Design notes:
 
 | Source | Points |
 |---|---|
-| **Finish a gun** (stack full) | **sum of the stack + 3** finish bonus, then its challenge reward |
-| Replace a gun before it's finished | **half the stack** (rounded down), no bonus, no challenge |
+| **Gun kill** | **the zombie's number, at once** (K1) |
+| **Finish a gun** (stack full) | **+5** finish bonus, then its challenge reward |
+| Replace a gun before it's finished | nothing (the stack is discarded, no bonus, no challenge) |
 | Melee kill | 0 |
 | Scrap a gun card | +2 |
 | Beat a district boss | +10 and a free Patch (pick 1 of 3) |
 | Beat Patient Zero | +10 (score) |
 
-So **a zombie's number is its point value, paid when its gun is collected.** A strong run earns about **350 points** (3,500 on screen) and spends about **310**: rooms 15-38, Patches 15/25/35..., Bench 5-12, Wall guns 10-16.
+So **a zombie's number is its point value, paid the moment a gun kills it.** A strong run earns about **390-410 points** (about 4,000 on screen) and spends about **350-370**: rooms 21-53, Patches 15/25/35..., Bench 5-12, Wall guns 15-24.
 
 ### 5.2 "Collect" (finishing a gun)
 
 When the last kill lands:
-1. The gun card flips to its back, the stack slides off it and **counts up** into the points counter, one card at a time ("4 + 5 + 6 + 3 = 18").
+1. The kill points were already paid one by one as each zombie landed ("+4", "+5", "+6" float up). On finish the stack slides off, the gun card flips, and the **+5 finish bonus** flies into the points counter.
 2. If the **challenge** is met, its badge stamps the card ("STAIRCASE!") and the reward plays (heal / cover / points / Encore).
 3. The gun goes to the discard (Encore: it stays with an empty stack). The slot is empty until you equip a new gun.
 
-### 5.3 Why points arrive in bursts
+### 5.3 Why points arrive in bursts (superseded by K1: points now arrive per kill, see 12)
 
 Banking on collect makes the economy a **race against your own guns**: you can see "this Rifle has 4-3 on it, one more kill and it pays 13 + 3", and a room you can't quite afford becomes one well-placed kill away. It also makes the half-value rule for an early swap a real decision. (Question Q1 offers points per kill as the alternative.)
 
-### 5.4 Replacing a gun early
+### 5.4 Replacing a gun early (K1: the old gun's stack is simply discarded; see 12)
 
-Equipping a gun into an occupied slot collects the old gun at **half value** (no bonus, no challenge). It is the answer to a stack that has painted itself into a corner (a Rifle sitting on a 2), and it costs you. The Bench's Trim (6.1) is the paid alternative that keeps the gun.
+Equipping a gun into an occupied slot discards the old gun and its stack (no bonus, no challenge). It is the answer to a stack that has painted itself into a corner (a Rifle sitting on a 2); the cost is the finish bonus and challenge you give up. The Bench's Trim (6.1) is the paid alternative that keeps the gun.
 
 ---
 
@@ -167,9 +168,9 @@ Each district has a free **Entrance** (3 cards, in the pile from the start) and 
 
 | District | Room (price) - machine - pack (3 cards) |
 |---|---|
-| Maple Row | **Garage** (15) - Wall Rack: Ratchet Crossbow - gun, medkit 4, cover 2 \| **Corner Store** (22) - Patch Press - medkit 5, medkit 3, gun \| **Workshop** (31) - Retrofit Bench - gun, medkit 5, cover 3 |
-| Downtown | **Subway Kiosk** (19) - Patch Press - medkit 4, gun, medkit 5 \| **Pawn Shop** (25) - Wall Rack: Pump Shotgun - gun, cover 3, gun \| **Parking Garage** (35) - Retrofit Bench - gun, medkit 6, cover 3 |
-| St. Agnes | **Pharmacy** (20) - Patch Press - medkit 5, medkit 6, medkit 4 \| **Security Office** (28) - Wall Rack: Elephant Gun - gun, cover 3, medkit 5 \| **Morgue Lab** (38) - Retrofit Bench - gun, medkit 6, cover 4 |
+| Maple Row | **Garage** (21) - Wall Rack: Ratchet Crossbow - gun, medkit 4, cover 2 \| **Corner Store** (31) - Patch Press - medkit 5, medkit 3, gun \| **Workshop** (43) - Retrofit Bench - gun, medkit 5, cover 3 |
+| Downtown | **Subway Kiosk** (27) - Patch Press - medkit 4, gun, medkit 5 \| **Pawn Shop** (35) - Wall Rack: Pump Shotgun - gun, cover 3, gun \| **Parking Garage** (49) - Retrofit Bench - gun, medkit 6, cover 3 |
+| St. Agnes | **Pharmacy** (28) - Patch Press - medkit 5, medkit 6, medkit 4 \| **Security Office** (39) - Wall Rack: Elephant Gun - gun, cover 3, medkit 5 \| **Morgue Lab** (53) - Retrofit Bench - gun, medkit 6, cover 4 |
 
 Entrance: Maple Row gun, medkit 4, cover 2; Downtown gun, medkit 5, cover 2; St. Agnes gun, medkit 6, cover 3. Opened rooms **restock 1 card per new wave** (cycling through their pack). "Gun" cards are drawn from the district's gun list (4.5).
 
@@ -225,7 +226,7 @@ When the last wave is spent and at most one card is left on the street, the **bo
 | Survivor | HP | Passive |
 |---|---|---|
 | Rosa Vance | 20 | *Steady Hands*: Rifle/Crossbow rules accept equal numbers. |
-| Dr. Imani Hale | 20 | *Triage*: medkits heal +1. |
+| Dr. Imani Hale | **19** | *Triage*: medkits heal +1. |
 | Theo Park | **21** | *Slip Away*: Run costs no HP. (Unlock: first Downtown clear, as in v2.) |
 
 ### 7.3 Safehouse (kept, smaller)
@@ -252,6 +253,8 @@ python3 projects/deaddraw/tools/sim_deaddraw_v3.py --set allow_run=false --ai gr
 **AI ("strong").** Each street it searches every ordered choice of 3 cards with every legal weapon for each zombie (gun 1, gun 2, melee; Loose Grip as an extra option), every equip choice (slot 1 / slot 2 / scrap) and the Holdover, and scores the result as `HP + 0.7 x Cover + 0.30 x points + sum over guns of [0.12 x (power+1) x remaining kills (cap 4) x (0.15 + 0.85 x share of upcoming zombies its rule still allows) + 0.24 x stack total] - 0.5 x Holdover zombie`. "Upcoming zombies" = the pile plus the next wave deck (public information). It Runs when the best plan loses more than its running average + 1 + 3. Between streets it opens the cheapest affordable room, buys a Patch whenever affordable (priority list), uses the Bench (Trim a blocked stack, Flip a blocked Rifle/Crossbow, Hone a gun with 3+ kills left), and buys a Wall gun if a slot is empty or much weaker. Weights were chosen by a grid search for the highest win rate (strong AI = 0.12 / 0.30; e.g. 0.30 / 0.12 wins 23% instead of 37% at the same rules).
 
 **Time model (seconds):** 4 per street (read + deal) + 1.1 per tap + 1.2 per collect + 1.5 per challenge + 2.5 per wave shuffle-in + 3.5 per room + 5 per machine use + 2 per Run + 4 per boss + 12 per safehouse. Taps = card taps + active-weapon toggles + 1 per Run + 2 per room + 3 per machine.
+
+> Sections 8.1-8.5 are the `dd-v3-design` evidence (points paid on collect). The current balance after K1 is in **12.3**.
 
 ### 8.1 Proposed rules, 1000 runs per survivor, seed 7 (strong AI)
 
@@ -341,7 +344,7 @@ Design rules behind it:
 
 ---
 
-## 9. Questions for the studio head
+## 9. Questions for the studio head (answered 2026-11-08: see section 12)
 
 **Q1. When do kills turn into points?**
 - (a) **On collect (recommended, simulated):** the stack pays (sum + 3) when the gun is finished; half if you swap it early. Points come in visible bursts and finishing a gun is the goal. 36-40% win.
@@ -420,13 +423,13 @@ Studio rules apply: every card, gun, stack card, wave deck, room deck, machine, 
 | | ★ Countdown         | | ★ Staircase  ✓✓     ||
 | |        +--+         | |        +--+         ||  right column: the KILL STACK, fanned
 | |        |6 +--+      | |        |4 +--+      ||  upward, number top-left on each card;
-| |        |  |5 |      | |        |  |5 |      ||  "2/4 - pays 11+3" under the stack
+| |        |  |5 |      | |        |  |5 |      ||  "2/4 - finish +5" under the stack
 | +---------------------+ +---------------------+|
 | [ MELEE  Crowbar P2 ]     log: Z7 > Rifle, -3  |  melee is a third, smaller toggle
 +------------------------------------------------+
 ```
 
-**Tap flow.** Tap a weapon (slot 1, slot 2 or melee) to make it active: it lifts and glows, and every zombie on the street re-labels with the damage it would cost ("-3") or a LOCK if the rule forbids it. Tap a zombie to attack with the active weapon. The active weapon **stays active** across streets until you change it; when the active gun is finished, the other gun becomes active (melee if that slot is empty). Non-zombie cards: tap a medkit / cover to use it; tap a gun card to open a 3-button sheet (`INTO SLOT 1 - collects Rifle: +5` / `INTO SLOT 2` / `SCRAP +2`), the only per-tap choice left, because it is not frequent (~7 per run).
+**Tap flow.** Tap a weapon (slot 1, slot 2 or melee) to make it active: it lifts and glows, and every zombie on the street re-labels with the damage it would cost ("-3") or a LOCK if the rule forbids it. Tap a zombie to attack with the active weapon. The active weapon **stays active** across streets until you change it; when the active gun is finished, the other gun becomes active (melee if that slot is empty). Non-zombie cards: tap a medkit / cover to use it; tap a gun card to open a 3-button sheet (`INTO SLOT 1 - discards Rifle (2/4)` / `INTO SLOT 2` / `SCRAP +2`), the only per-tap choice left, because it is not frequent (~7 per run).
 
 **Machines.** Tap an opened room's USE: Bench shows its 3 services with prices and a before/after of the chosen gun; Patch Press shows the 2 patches and `TAKE`; Wall Rack shows its gun card and `BUY 14`.
 
@@ -465,3 +468,67 @@ Same zones: waves left, rooms right, pile top-middle, street middle, weapons alo
 ### 11.4 Inspect (long press / right click)
 
 Zombie: number, damage with each of your three weapons, and which gun rules allow it. Gun: full rule, capacity, challenge, reward, current stack, "can still take: 1-5". Stack card: its number and when it was added. Wave deck: exact list of its numbers. Pile: counts by type/number. Room: price, machine, pack contents, restock. Patch: full text.
+
+---
+
+## 12. Studio head decisions (2026-11-08) and the `dd-v3-tune` retune
+
+| # | Question | **Decision** |
+|---|---|---|
+| K1 | When do kills turn into points? | **(b) on every kill**: a gun kill pays the zombie's number at once (not the recommendation) |
+| K2 | Melee kill reward | **(a) nothing** |
+| K3 | Run | **(a) keep** (shuffle back, 1 damage, not twice in a row, never on a boss street) |
+| K4 | Street size | **(a) deal 4, resolve 3** |
+| K5 | Skill curve | **(a) first-run tutorial hints only** (no balance change): Service Pistol challenge as the first tip, "Finish guns for the bonus" hint the first time a gun is 1 kill from finished |
+
+### 12.1 What K1 means for collect and swaps
+
+- **Gun kill:** +zombie number immediately (floats up from the card as it lands on the stack).
+- **Finishing a gun:** **+5 finish bonus** (was +3) and the challenge reward (unchanged). The gun leaves (Encore: stays, stack resets). The stack itself pays nothing more: it was already paid.
+- **Replacing an unfinished gun:** nothing extra; its stack is discarded (no bonus, no challenge).
+- Melee: still 0 points (K2).
+
+### 12.2 CONFIG values changed in `dd-v3-tune` (for the Godot build)
+
+Everything else in `CONFIG` (`tools/sim_deaddraw_v3.py`) is as committed in 47a0e4c.
+
+| CONFIG key | Before (47a0e4c) | **Now** | Why |
+|---|---|---|---|
+| `points_on_kill` (new) | - (stack paid on collect) | **True** | K1 |
+| `ditch_share` | 0.5 | **0.0** | K1: an early swap pays nothing extra |
+| `finish_bonus` | 3 | **5** | keeps finishing worth chasing once the stack no longer pays |
+| Room `cost`, Maple Row: Garage / Corner Store / Workshop | 15 / 22 / 31 | **21 / 31 / 43** | per-kill points made the economy ~15% richer and the AI opened everything |
+| Room `cost`, Downtown: Subway Kiosk / Pawn Shop / Parking Garage | 19 / 25 / 35 | **27 / 35 / 49** | same |
+| Room `cost`, St. Agnes: Pharmacy / Security Office / Morgue Lab | 20 / 28 / 38 | **28 / 39 / 53** | same |
+| `weapons.crossbow.price` (Maple Row Wall Rack) | 10 | **15** | the Wall Rack was bought 6+ times a run |
+| `weapons.shotgun.price` (Downtown Wall Rack) | 14 | **20** | same |
+| `weapons.elephant.price` (St. Agnes Wall Rack) | 16 | **24** | same |
+| `survivors.imani.hp` | 20 | **19** | Imani was 10-15 points above Rosa/Theo once medkits got scarcer |
+| AI only: `fin_w` (new), stack term off when `points_on_kill` | - | 1.0 | the AI credits the +5 finish bonus by how close a gun is to finishing (not a game value) |
+
+Unchanged and worth restating for the build: `room_cost_mult` 1.0, `z_add` [0, 0, 0] (the wave lists in 8.6 are final), `patch_costs` 15/25/35..., `bench` 5/8/12, `melee_points` 0, `melee_power` 2, `safehouse_heal` 8, `triage_bonus` 1, Theo 21 HP, Rosa 20 HP.
+
+### 12.3 Balance after K1 (1000 runs per survivor, seed 7, strong AI)
+
+| Survivor | Clear Maple Row | Clear Downtown (reached) | Clear St. Agnes (reached) | **Run win** | Winning run | Average run | Streets | Taps / street |
+|---|---|---|---|---|---|---|---|---|
+| Rosa | 88.9% | 64.2% | 55.7% | **31.8%** | 8.6 min | 6.7 min | 32.6 | 4.4 |
+| Imani | 92.4% | 72.8% | 59.6% | **40.1%** | 8.5 min | 7.1 min | 34.7 | 4.4 |
+| Theo | 94.1% | 69.6% | 60.2% | **39.4%** | 8.6 min | 7.2 min | 35.4 | 4.3 |
+
+**Does finishing still matter? Yes.**
+
+| Per run (Rosa / Imani / Theo) | After K1 | Before K1 (8.2) |
+|---|---|---|
+| Guns finished | **9.3 / 9.6 / 9.5** | 11.3 / 10.7 / 10.7 |
+| Challenges completed | **4.7 / 5.2 / 5.1** | 5.1 / 5.3 / 5.4 |
+| Guns replaced early | **9.6 / 10.6 / 10.8** | 6.3 / 6.9 / 7.3 |
+| Rooms opened (of 9) | 5.9 / 6.3 / 6.3 | 7.5 / 7.4 / 7.5 |
+| Machine uses | 7.4 / 7.4 / 7.4 (Patch 2.5, Wall 3.8, Trim 0.3, Hone 0.5) | 7.2 / 6.8 / 6.9 |
+| Took extra damage on purpose (fights) | 10.5 / 12.7 / 11.1% | 12.4-13.3% |
+| Melee kills | 1.5 / 2.3 / 2.0 | 3.6-4.9 |
+
+- **Ablation: finish bonus 0** (challenges kept): run win drops to **5.8% (Rosa) / 9.5% (Theo)** (400 runs). The +5 bonus plus challenges are worth ~25-30 points of win rate, so finishing is still the main lever, even though swapping is now free.
+- Swaps went up (free swap = more rotation by replacement), while finishes went down by ~1.5 per run. That's acceptable for the head's rotation goal; if playtests show players never finish, raise `finish_bonus` to 6 before touching anything else.
+- Difficulty moved slightly into Downtown (64-73% clear of those who reach it, was ~80%). Maple Row still teaches (89-94%).
+- The Bench is used less (Trim 0.3, Hone 0.5 a run) because the Workshop / Parking Garage / Morgue Lab are now the expensive rooms. Watch it in playtests; the knob is moving the Bench to a cheaper room, not repricing it.

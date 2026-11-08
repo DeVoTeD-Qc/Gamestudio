@@ -1,16 +1,17 @@
 # dd_run_save.gd
 # Purpose: dd-save. The mid-run save: the whole DDRun (DDRun.to_dict(), RNG state included) plus
 #   which screen the player was on, in its own file next to the profile (user://, IndexedDB on the
-#   Web). Save version 3. Written after every run event and on screen changes; cleared when the
-#   run ends (death / win) or is abandoned. A missing, corrupt, wrong-version or unusable file
-#   reads as "no saved run" and never crashes.
+#   Web). Save version 4 (DeadDraw v3 "Kill Stacks"). Written after every run event and on screen
+#   changes; cleared when the run ends (death / win) or is abandoned. A missing, corrupt or unusable
+#   file reads as "no saved run" and never crashes. An older version (a v2 run: magazines, Skipped
+#   pile) can't be played under the v3 rules: discard_old() removes it and the title says so once.
 # Dependencies: DDRun, DDBalance, DDText.
 # Author: Mechanics Developer Agent
 class_name DDRunSave
 extends RefCounted
 
 const DEFAULT_PATH: String = "user://deaddraw_run.json"
-const VERSION: int = 3
+const VERSION: int = 4
 
 var path: String = DEFAULT_PATH
 
@@ -61,8 +62,24 @@ func summary(bal: DDBalance = null) -> String:
 		return ""
 	var run: DDRun = s["run"]
 	var where: String = "safehouse after %s" % str(run.district().get("name", "")) if run.phase == DDRun.Phase.SAFEHOUSE \
-		else "%s, wave %d" % [str(run.district().get("name", "")), run.wave_index + 1]
+		else ("%s, boss" % str(run.district().get("name", "")) if run.boss_street else "%s, wave %d" % [str(run.district().get("name", "")), run.wave_index + 1])
 	return "%s - %s - HP %d/%d - %d pts" % [str(run.bal.survivor(run.survivor_id).get("name", run.survivor_id)), where, run.hp, run.max_hp, run.bal.shown(run.points)]
+
+
+## True when the file holds a run from an older version of the game (not resumable).
+func is_old() -> bool:
+	if not exists():
+		return false
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed is Dictionary and int((parsed as Dictionary).get("version", 0)) > 0 and int((parsed as Dictionary).get("version", 0)) < VERSION
+
+
+## Deletes an older-version run. Returns true when one was discarded.
+func discard_old() -> bool:
+	if not is_old():
+		return false
+	clear()
+	return true
 
 
 func clear() -> void:

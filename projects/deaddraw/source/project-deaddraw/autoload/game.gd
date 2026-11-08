@@ -29,10 +29,15 @@ var _recorded_clears: int = 0
 var _run_recorded: bool = false
 
 
+## v3: a v2 mid-run save was found and discarded at startup (the title shows a note once).
+var discarded_old_run: bool = false
+
+
 func _ready() -> void:
 	bal = DDBalance.get_default()
 	profile = DDProfile.new(bal)
 	profile.load_profile()
+	discarded_old_run = run_save.discard_old()
 	var bank: Node = SfxBank.new()
 	bank.name = "Sfx"
 	add_child(bank)
@@ -88,7 +93,7 @@ func start_run(survivor: String, seed_value: int = -1) -> void:
 	_run_recorded = false
 	run = DDRun.new(bal)
 	run.changed.connect(_on_run_changed)
-	run.start(survivor, profile.perk_pool(), seed_value)
+	run.start(survivor, seed_value)
 	save_screen = "MAP"
 	save_run()
 	run_started.emit()

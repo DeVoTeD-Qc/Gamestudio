@@ -23,17 +23,18 @@ Military layer (MIL on; v2 drills off)
     Assault (S) -> Ammo, Recon (G) -> Intel, Engineer (R) -> Works, Support (P) -> Supply.
   * Orders: at the end of your turn every meter at 3+ spends 3 and fires, in the order
     Engineer, Recon, Assault, Support:
-      Fortify (Works)  +2 Armor (max 4).  Armor soaks Front pushes 1:1.
-      Spot    (Intel)  +1 Charge on each open hub you touch; your next Strike
-                       is +1 and ignores Armor and cover.
+      Fortify (Works)  +2 Armor (max 4; Armor soaks Front pushes 1:1; 1 point each
+                       at the end) and, if the Front leans toward you, win back 1.
+      Spot    (Intel)  Front +1; +1 Charge on each open hub you touch; your next
+                       Strike is +1 and ignores Armor and cover.
       Strike  (Ammo)   Attack 2: push the Front 2 toward the enemy, or destroy one
                        enemy banner that is not in cover.
-      Resupply(Supply) draw 1, +1 point.
+      Resupply(Supply) draw 1, +1 point, Front +1.
   * Cover: a contact piece is in cover if it touches another tile of its owner's that
     is Engineer class (banner or insignia), or a Bunker objective of its owner's.
   * The Front: a track from -FMAX..+FMAX, starts 0.  Reaching the enemy end is a
-    Breakthrough: instant win.  At the end the player it leans toward scores |front|.
-  * Streak: +1 per rally you close, +1 per Strike that lands.  An enemy Strike landing on
+    Breakthrough: instant win.  Otherwise it scores nothing (CFG front_end).
+  * Streak: +1 per rally you close, +1 per order you fire.  An enemy Strike landing on
     you resets it.  At 3: Spotter Drone (+1 Intel, see their hand); at 5: Supply Drop
     (draw 1, place 1 more tile now); at 7: Fire Mission (Front +2 ignoring Armor and
     destroy an exposed enemy banner).
@@ -69,9 +70,9 @@ for _t in BAR_SLOTS + SQ_SLOTS:
     for _x in _t:
         SLOTS_BY_CELL[_x].append(_t)
 
-CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=1, strike=2,
-           thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1, fort_regain=0,
-           spot_push=0, supply_push=0)
+CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=0, strike=2,
+           thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1, fort_regain=1,
+           spot_push=1, supply_push=1)
 
 
 def hub_info(cells, shape):
@@ -170,10 +171,10 @@ STACKS = {  # 7 banners, 3 objectives, 2 insignia
                                  ("oS", 2), ("oG", 1), ("iS", 1), ("iG", 1)]),
     "T2 Hold the Line (E+S)": stack([("r01", 2), ("r02", 2), ("r03", 1), ("p02", 1), ("p01", 1),
                                      ("oR", 1), ("oB", 1), ("oP", 1), ("iR", 1), ("iP", 1)]),
-    "T3 Relay Net (R+E)": stack([("g01", 2), ("g03", 2), ("r02", 1), ("r01", 1), ("g02", 1),
-                                 ("oG", 2), ("oR", 1), ("iG", 1), ("iR", 1)]),
-    "T4 Shock and Supply (A+S)": stack([("a01", 2), ("a04", 2), ("a05", 1), ("p03", 1), ("p02", 1),
-                                        ("oS", 2), ("oP", 1), ("iS", 1), ("iP", 1)]),
+    "T3 Relay Net (R+E)": stack([("g01", 1), ("g03", 2), ("r02", 2), ("r01", 1), ("g02", 1),
+                                 ("oG", 1), ("oR", 2), ("iG", 1), ("iR", 1)]),
+    "T4 Shock and Supply (A+S)": stack([("a01", 2), ("a04", 1), ("a05", 1), ("p03", 1), ("p02", 1),
+                                        ("p01", 1), ("oS", 2), ("oP", 1), ("iS", 1), ("iP", 1)]),
 }
 
 
@@ -401,11 +402,34 @@ def landed(s, attacker):
     s.streak[v] = 0
 
 
+TARGETER = [None, None]  # per seat: a function choosing a Strike target in real play
+
+
+def eval_targets(s, a, dmg, ignore):
+    """Look one step ahead at every legal target and keep the best for the attacker."""
+    opts = [None] + [q for q, b in s.pcs.items() if b["owner"] != a and b["kind"] == "bar"
+                     and (ignore or not in_cover(s, b))]
+    best, bv = None, None
+    for q in opts:
+        t = s.clone()
+        if q is None:
+            push(t, a, dmg, ignore)
+        else:
+            destroy(t, q)
+        v = t.score[a] - t.score[1 - a] + potential(t, a)
+        if bv is None or v > bv + 1e-9:
+            best, bv = q, v
+    return best
+
+
 def strike(s, a, dmg=None, fire_mission=False):
     spotted = s.spot[a]
     s.spot[a] = False
     dmg = (dmg or CFG["strike"]) + (1 if spotted else 0)
     tgt, tv = best_target(s, a, spotted or fire_mission)
+    if TARGETER[a] and not fire_mission and not MODE.get("look"):
+        tgt = eval_targets(s, a, dmg, spotted)
+        tv = 1e9 if tgt else 0
     front_val = dmg if spotted else max(0, dmg - s.armor[1 - a])
     if fire_mission:
         n = push(s, a, 2, True)
@@ -701,15 +725,17 @@ def choose(s, hand, me, policy, rng, stats):
     for hi, cid, m in opts:
         t = s.clone()
         MODE["vanilla"] = policy == "textblind"
+        MODE["look"] = True
         place(t, cid, m, me)
         orders(t, me)
+        MODE["look"] = False
         val = t.score[me] - t.score[opp] - base
         if t.winner is not None:
             val += 100 if t.winner == me else -100
         if policy == "greedy" and CFG["mil"]:
             sign = 1 if me == 0 else -1
             val += (t.front - s.front) * sign
-        if policy in ("smart", "textblind", "milblind"):
+        if policy in ("smart", "textblind", "milblind", "smartht"):
             val += potential(t, me, policy == "milblind")
             if m[0] == "patch" and CH[cid]["kind"] == "hub":
                 val -= 0.5
@@ -739,6 +765,8 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
         if tok[:3] in ("p1:", "p2:"):
             s.score[int(tok[1]) - 1] += int(tok[3:])
     stats = stats if stats is not None else Counter()
+    for k in (0, 1):
+        TARGETER[k] = policies[k] in ("smart", "textblind")
     passes, turn, places = 0, 0, 0
     small = 0
     lead_hist = []
@@ -895,7 +923,7 @@ def sec_skill(n, rng):
     print("== Skill (v3 rules): A vs B, random stack pairs, both seats (A win / B win / ties)")
     names = list(STACKS)
     for pa, pb in (("greedy", "random"), ("smart", "greedy"), ("smart", "milblind"),
-                   ("smart", "textblind")):
+                   ("smart", "smartht"), ("smart", "textblind")):
         tot = Counter()
         for _ in range(n):
             a, b = rng.choice(names), rng.choice(names)

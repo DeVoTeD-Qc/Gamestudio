@@ -1,10 +1,11 @@
 # dd_balance.gd
 # Purpose: Loads every tunable number from res://data/balance.json, which mirrors CONFIG in
-#   projects/deaddraw/tools/sim_deaddraw_v2.py (DeadDraw v2). The file may be strict JSON or a
-#   pasted Python dict (True/False/None, # comments, trailing commas, a leading "CONFIG =" are all
-#   accepted). Numbers the sim hard-codes outside CONFIG live in "extra_rules"; a missing key falls
-#   back to the sim's value (DEFAULT_EXTRA / DEFAULT_TOP), so pasting the bare CONFIG dict never
-#   breaks the game. Points are kept in sim units; the UI shows them x points_display_mult (10).
+#   projects/deaddraw/tools/sim_deaddraw_v3.py (DeadDraw v3 "Kill Stacks"; regenerate it with
+#   tools/regen_balance.py). The file may be strict JSON or a pasted Python dict (True/False/None,
+#   # comments, trailing commas, a leading "CONFIG =" are all accepted). Display-only info and the
+#   meta unlocks live in "extra_rules"; a missing key falls back to DEFAULT_EXTRA / DEFAULT_TOP, so
+#   pasting the bare CONFIG dict never breaks the game. Points are kept in sim units; the UI shows
+#   them x points_display_mult (10).
 # Dependencies: none (pure data, safe in headless tests).
 # Author: Mechanics Developer Agent
 class_name DDBalance
@@ -12,21 +13,8 @@ extends RefCounted
 
 const DEFAULT_PATH: String = "res://data/balance.json"
 
-# Values the sim hard-codes in apply() / take_damage() / play_run() (sim_deaddraw_v2.py), plus
-# display-only survivor info and the meta unlocks.
+# Display-only survivor info and the meta unlocks (the sim does not model them).
 const DEFAULT_EXTRA: Dictionary = {
-	"medkits_per_street": 1,
-	"triage_medkits_per_street": 2,
-	"field_kit_bonus": 1,
-	"knuckle_wraps_reduction": 2,
-	"thick_jacket_hp": 4,
-	"tripwire_cover": 2,
-	"second_wind_hp": 1,
-	"steady_aim_power": 2,
-	"thick_skin_reduction": 1,
-	"sugar_rush_heal": 5,
-	"payday_mult": 2,
-	"empty_pool_ammo": 3,
 	"points_display_mult": 10,
 	"score_hp_mult": 1,
 	"survivor_info": {
@@ -35,26 +23,22 @@ const DEFAULT_EXTRA: Dictionary = {
 		"theo": {"role": "Courier", "unlocked": false},
 	},
 	"unlocks": {
-		"maple_row": ["perk:second_wind"],
 		"downtown": ["survivor:theo"],
-		"win": ["perk:tripwire", "badge"],
+		"win": ["badge"],
 	},
 }
 
-# CONFIG keys the rules read, with the sim's values as the fallback.
+# CONFIG keys the rules read, with the v3 sim's values as the fallback.
 const DEFAULT_TOP: Dictionary = {
-	"structure": "mixed", "model": "notch", "street_size": 4, "actions_per_street": 3,
-	"reloads_per_street": 1, "reload_mode": "drop", "allow_retreat": true, "safehouse_heal": 12,
-	"perk_choices": 3, "triage_heal_bonus": 1, "start_kit": ["pistol"], "start_reserve": 6,
-	"reserve_cap": 24, "start_points": 5,
-	"points": {"kill": 0.5, "up_close": 1, "scrap": 1, "boss": 8, "wave": 3},
-	"melee_wave_reset": true, "melee_power_bonus": 0, "restock_per_room": 1, "entrance_restock": 0,
-	"z_add": [0, 0, 0], "boss_wave_add": [0, 0, 0], "drops": ["full_load", "payday", "boards"],
-	"full_load_reserve": 4, "boards_cover": 4, "bandolier_reserve": 2, "fire_axe_power": 6,
-	"fixtures": {"retrofit": {"cost": 30, "power": 2, "mag_mult": 1.5}, "grin": {"cost": 12, "step": 6},
-		"locker": {"cost": 18}, "wallrack": {"ammo_cost": 6}},
-	"weapons": {}, "locker_pool": [], "grin_effects": [], "districts": [], "survivors": {},
-	"starter_perks": [], "perks": [],
+	"street_size": 4, "actions": 3, "medkits_per_street": 1, "allow_run": true, "run_damage": 1,
+	"boss_runpast_damage": 3, "boss_reward_points": 10, "safehouse_heal": 8, "points_on_kill": true,
+	"ditch_share": 0.0, "finish_bonus": 3, "scrap_points": 2, "melee_power": 2, "melee_points": 0.0,
+	"start_points": 0, "start_kit": ["pistol"], "restock_per_room": 1, "room_cost_mult": 1.0,
+	"z_add": [0, 0, 0], "patch_costs": [15, 25, 35, 45, 55, 65, 75, 85], "patch_offer": 2,
+	"boss_patch_offer": 3, "bench": {"trim": 5, "flip": 8, "hone": 12}, "brawler_bonus": 2,
+	"field_medic_bonus": 2, "thick_jacket_hp": 4, "second_wind_hp": 6, "trophy_belt_heal": 2,
+	"spread_cap": 16, "big_min": 6, "triage_bonus": 1, "theo_melee_bonus": 0,
+	"weapons": {}, "districts": [], "survivors": {}, "patches": [],
 }
 
 static var _cached: DDBalance = null
@@ -203,6 +187,10 @@ func num(key: String) -> int:
 	return int(config.get(key, DEFAULT_TOP.get(key, 0)))
 
 
+func fnum(key: String) -> float:
+	return float(config.get(key, DEFAULT_TOP.get(key, 0.0)))
+
+
 func flag(key: String) -> bool:
 	return bool(config.get(key, DEFAULT_TOP.get(key, false)))
 
@@ -225,24 +213,29 @@ func rule(key: String) -> int:
 	return int(extra.get(key, DEFAULT_EXTRA.get(key, 0)))
 
 
-## Points table entry (sim units, may be fractional: "kill" is points per strength).
-func points(key: String) -> float:
-	var p: Dictionary = dict("points")
-	return float(p.get(key, (DEFAULT_TOP["points"] as Dictionary).get(key, 0)))
-
-
 ## Points as the player sees them (sim units x 10).
 func shown(units: int) -> int:
 	return units * rule("points_display_mult")
 
 
-func fixture(kind: String) -> Dictionary:
-	var f: Variant = dict("fixtures").get(kind, (DEFAULT_TOP["fixtures"] as Dictionary).get(kind, {}))
-	return f if f is Dictionary else {}
+## Retrofit Bench service price (trim / flip / hone), sim units.
+func bench_price(service: String) -> int:
+	return int(dict("bench").get(service, (DEFAULT_TOP["bench"] as Dictionary).get(service, 0)))
 
 
-func fixture_num(kind: String, key: String) -> float:
-	return float(fixture(kind).get(key, 0))
+## Patch Press price for the next Patch when you own `owned` of them (15, 25, 35...).
+func patch_price(owned: int) -> int:
+	var c: Array = list("patch_costs")
+	if c.is_empty():
+		return 0
+	return int(c[mini(owned, c.size() - 1)])
+
+
+func patches() -> Array[String]:
+	var out: Array[String] = []
+	for p: Variant in list("patches"):
+		out.append(str(p))
+	return out
 
 
 func weapons() -> Dictionary:
@@ -259,20 +252,29 @@ func weapon_name(wid: String) -> String:
 
 
 func is_gun(wid: String) -> bool:
-	return int(weapon_def(wid).get("mag", 0)) > 0
+	return weapons().has(wid)
 
 
-## A weapon's power as dealt (melee gets melee_power_bonus, as in the sim's mkweapon()).
 func weapon_power(wid: String) -> int:
-	var d: Dictionary = weapon_def(wid)
-	var p: int = int(d.get("p", 0))
-	if int(d.get("mag", 0)) == 0:
-		p += num("melee_power_bonus")
-	return p
+	return int(weapon_def(wid).get("p", 0))
 
 
-func weapon_mag(wid: String) -> int:
-	return int(weapon_def(wid).get("mag", 0))
+func weapon_cap(wid: String) -> int:
+	return int(weapon_def(wid).get("cap", 0))
+
+
+func weapon_rule(wid: String) -> String:
+	return str(weapon_def(wid).get("rule", "any"))
+
+
+func weapon_challenge(wid: String) -> String:
+	return str(weapon_def(wid).get("chal", ""))
+
+
+## [kind, amount]: "points" / "heal" / "cover" / "encore".
+func weapon_reward(wid: String) -> Array:
+	var r: Variant = weapon_def(wid).get("reward", ["points", 0])
+	return r if r is Array and (r as Array).size() >= 2 else ["points", 0]
 
 
 ## Wall Rack price of a gun (sim units), 0 if it has none.
@@ -297,24 +299,44 @@ func wave_count(di: int) -> int:
 	return (district(di).get("waves", []) as Array).size()
 
 
-## The effective zombie strengths of a wave pack (base + z_add + boss_wave_add on the last wave).
-func wave_zombies(di: int, w: int) -> Array[int]:
-	var out: Array[int] = []
+## A wave deck spec with z_add applied to its zombies (ints); "W" entries stay as they are.
+func wave_spec(di: int, w: int) -> Array:
+	var out: Array = []
 	var waves: Array = district(di).get("waves", [])
 	if w < 0 or w >= waves.size():
 		return out
 	var za: Array = list("z_add")
 	var add: int = int(za[di]) if di < za.size() else 0
-	if w == waves.size() - 1:
-		var bw: Array = list("boss_wave_add")
-		add += int(bw[di]) if di < bw.size() else 0
-	for z: Variant in waves[w]:
-		out.append(int(z) + add)
+	for x: Variant in waves[w]:
+		if x is String:
+			out.append(x)
+		else:
+			out.append(int(x) + add)
+	return out
+
+
+## The zombie numbers of a wave deck (sorted as listed).
+func wave_zombies(di: int, w: int) -> Array[int]:
+	var out: Array[int] = []
+	for x: Variant in wave_spec(di, w):
+		if not x is String:
+			out.append(int(x))
 	return out
 
 
 func rooms(di: int) -> Array:
 	return district(di).get("rooms", [])
+
+
+func room_cost(di: int, ri: int) -> int:
+	var r: Array = rooms(di)
+	if ri < 0 or ri >= r.size():
+		return 0
+	return int(round(float((r[ri] as Dictionary).get("cost", 0)) * fnum("room_cost_mult")))
+
+
+func boss(di: int) -> Dictionary:
+	return district(di).get("boss", {})
 
 
 func survivors() -> Dictionary:
@@ -347,18 +369,13 @@ func survivor_max_hp(id: String) -> int:
 	return survivor_hp(id)
 
 
+## v2 compatibility for the profile: v3 has no perk pool (Patches come from the Patch Press).
 func all_perks() -> Array[String]:
-	var out: Array[String] = []
-	for p: Variant in list("perks"):
-		out.append(str(p))
-	return out
+	return patches()
 
 
 func starter_perks() -> Array[String]:
-	var out: Array[String] = []
-	for p: Variant in list("starter_perks"):
-		out.append(str(p))
-	return out
+	return patches()
 
 
 func unlocks_for(milestone: String) -> Array[String]:

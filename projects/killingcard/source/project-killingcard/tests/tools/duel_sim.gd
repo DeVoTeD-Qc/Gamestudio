@@ -53,6 +53,8 @@ var respawn_cost: int = 1
 var terrain_on: bool = false
 var exps: Array[String] = ["presets"]
 var recruit_sb: float = 0.8
+## Recruit AI: Armor added to its units and Operator (the campaign's "green squad" lever, SideSetup.armor_bonus).
+var recruit_armor: int = 0
 var cfg_over: Dictionary = {}
 var config: RunConfig = null
 var dummy: CardData = null
@@ -126,6 +128,17 @@ func _main() -> void:
 			"respawn": respawn_cost = int(kv[1])
 			"terrain": terrain_on = kv[1] == "1"
 			"rsb": recruit_sb = float(kv[1])
+			"rarmor": recruit_armor = int(kv[1])
+			"tune":
+				# tune=trait.tier.key=value[;...] (tier 0 = the 2-set, 1 = the 3-set; value none = remove)
+				for item: String in kv[1].split(";"):
+					var tv: PackedStringArray = item.split("=", true, 1)
+					var tk: PackedStringArray = tv[0].split(".")
+					var tiers: Array = SynergyRules.trait_bonus[StringName(tk[0])]
+					if tv[1] == "none":
+						(tiers[int(tk[1])] as Dictionary).erase(tk[2])
+					else:
+						(tiers[int(tk[1])] as Dictionary)[tk[2]] = int(tv[1])
 			"pdeck":
 				# pdeck=I:card@trait,card,...[;I:...] replaces preset I's pick list (0-based); hero=I.op via phero.
 				for item: String in kv[1].split(";"):
@@ -162,6 +175,7 @@ func _main() -> void:
 					exps.append(e)
 			_: push_error("duel_sim: unknown option " + arg)
 	var t0: int = Time.get_ticks_msec()
+	print("  trait bonus: %s" % SynergyRules.trait_bonus)
 	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s" % [n, picks, draws, mode_opt,
 			hero_mode, respawn_cost, terrain_on])
 	_apply_cfg()
@@ -486,6 +500,8 @@ func _exp_ai() -> void:
 						var p_seat: int = k % 2
 						var sp: SideSetup = _deck(a)
 						var se: SideSetup = _deck(b)
+						if tier == "recruit":
+							se.armor_bonus = recruit_armor
 						var w: int = _game(sp if p_seat == 0 else se, se if p_seat == 0 else sp,
 								3301 + a * 71 + b * 911 + k * 7919, proxy if p_seat == 0 else tier, tier if p_seat == 0 else proxy)
 						if w >= 0:
