@@ -169,6 +169,7 @@ func test_generated_sounds() -> void:
 func _main() -> Control:
 	var game: Node = tree.root.get_node_or_null("Game")
 	game.set("profile", DDProfile.new(bal(), _tmp("ui.json")))
+	game.set("run_save", DDRunSave.new(_tmp("run.json")))
 	var m: Control = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
 	tree.root.add_child(m)
 	return m

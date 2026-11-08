@@ -3,6 +3,8 @@
 // a weapon slot, reloads, skips (Skipped pile), opens a door and uses its machine, long-presses
 // (touch) and right-clicks to inspect, and saves screenshots of the v2 screens (wave track, deck
 // counter, doors, slots with magazine pips, last-street banner, boss street, safehouse, end).
+// dd-save: reloads the page mid-run and continues from the title (the state must match), and taps
+// the "run resumed" banner away.
 // Usage: node smoke_web.js <url-of-index.html> <screenshot-dir>
 // The game publishes window.ddState (screen, hp, wave, deck, points, tappable rects in CSS px).
 const { chromium } = require('playwright');
@@ -147,6 +149,24 @@ const isOption = (i) => i.type === 'button' && !i.disabled && /^(Service Pistol|
       s = await state(page); await shot('13_door_selected');
       const ob = s.items.find((i) => i.type === 'button' && (i.text.startsWith('OPEN for') || i.text.startsWith('Open ')));
       log('door button: ' + (ob ? ob.text.replace(/\n/g, ' ') + ' disabled=' + ob.disabled : 'none'));
+      // dd-save: reload the page mid-run, then Continue from the title: same run, same state
+      s = await state(page);
+      const before = { hp: s.hp, wave: s.wave, deck: s.deck, skipped: s.skipped, points: s.points, actions: s.actions, street: s.street };
+      await sleep(1500);   // let user:// reach IndexedDB
+      await page.reload({ waitUntil: 'load' });
+      s = await waitFor(page, (x) => x.screen === 'TITLE', 'title after reload', 90000);
+      await sleep(300); await shot('13b_title_continue');
+      await touchTap(cdp, center(find(s, (i) => i.type === 'button' && i.text.startsWith('CONTINUE RUN'), 'continue button')));
+      s = await waitFor(page, (x) => x.screen === 'STREET', 'resumed street');
+      const after = { hp: s.hp, wave: s.wave, deck: s.deck, skipped: s.skipped, points: s.points, actions: s.actions, street: s.street };
+      log('resumed: ' + JSON.stringify(after));
+      if (JSON.stringify(before) !== JSON.stringify(after)) errors.push('RESUME MISMATCH ' + JSON.stringify(before) + ' vs ' + JSON.stringify(after));
+      s = await waitFor(page, (x) => x.banner_open, 'resume banner');
+      await shot('13c_resumed_banner');
+      await touchTap(cdp, center(s.banner_rect));
+      s = await waitFor(page, (x) => !x.banner_open, 'banner dismissed by a tap', 3000);
+      log('banner dismissed by tap');
+      await shot('13d_resumed_street');
       // other screens via the smoke query
       const queries = [
         'screen=street&seed=11&open=2&points=40&room=0',

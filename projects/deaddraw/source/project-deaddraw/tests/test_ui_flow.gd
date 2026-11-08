@@ -32,6 +32,7 @@ func _main() -> Control:
 	var game: Node = tree.root.get_node_or_null("Game")
 	if game != null:
 		game.set("profile", DDProfile.new(bal(), "user://dd_test_ui_profile.json"))
+		game.set("run_save", DDRunSave.new("user://dd_test_ui_run.json"))
 	var m: Control = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
 	tree.root.add_child(m)
 	return m

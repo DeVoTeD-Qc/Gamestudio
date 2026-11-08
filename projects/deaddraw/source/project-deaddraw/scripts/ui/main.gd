@@ -270,13 +270,16 @@ func _build_title() -> void:
 	else:
 		# landscape: one line of text so the Start row stays clear of the bottom edge
 		v.add_child(DDUi.label("Hold out one wave at a time: four cards a street, three actions. Pick a survivor (long press / right click to read).", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var saved: String = Game.run_save.summary(Game.bal) if Game.run_save != null else ""
+	if saved != "":
+		v.add_child(_continue_row(saved))
 	var row: HBoxContainer = DDUi.hbox(SEP)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
 	var vp: Vector2 = get_viewport_rect().size
 	var w: float = minf(230.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0)
 	# landscape: what is left after the title, the text line and the Start row (+ a bottom gap)
-	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0, 120.0, 230.0)
+	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0 - (80.0 if saved != "" else 0.0), 110.0, 230.0)
 	for sid: String in Game.bal.survivor_ids():
 		var unlocked: bool = Game.profile.survivor_unlocked(sid)
 		var s: Dictionary = Game.bal.survivor(sid)
@@ -304,7 +307,7 @@ func _build_title() -> void:
 			else:
 				_inspect.open(DDPayloads.survivor(sid, Game.bal, Game.profile)))
 		row.add_child(cv)
-	var go: Button = DDUi.button("Start run as %s" % str(Game.bal.survivor(chosen_survivor).get("name", "")), Color("7a2d27"), DDUi.FONT_L)
+	var go: Button = DDUi.button(("Start run as %s" if saved == "" else "New run as %s (replaces the saved run)") % str(Game.bal.survivor(chosen_survivor).get("name", "")), Color("7a2d27"), DDUi.FONT_L if saved == "" else DDUi.FONT_M)
 	go.custom_minimum_size = Vector2(0, 88 if portrait else DDUi.TAP_MIN)
 	go.pressed.connect(_start_run)
 	var h: HBoxContainer = DDUi.hbox(SEP)
@@ -350,7 +353,70 @@ func _show_pool() -> void:
 	_inspect.open({"kind": "P", "tag": "PERK POOL", "title": "Safehouse perks", "body": "\n".join(lines)})
 
 
+## dd-save: "Continue run" (survivor, district, wave, HP) and "Abandon run" with a confirmation.
+var _confirm_abandon: bool = false
+
+
+func _continue_row(summary: String) -> Control:
+	var h: HBoxContainer = DDUi.hbox(SEP)
+	if _confirm_abandon:
+		var yes: Button = DDUi.button("Abandon this run for good?\nYes, abandon it", Color("6b1f1a"), DDUi.FONT_S)
+		yes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		yes.pressed.connect(func() -> void:
+			Game.abandon_run()
+			_confirm_abandon = false
+			_queue_render())
+		h.add_child(yes)
+		var no: Button = DDUi.button("No, keep it", DDUi.PANEL_HI, DDUi.FONT_M)
+		no.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		no.pressed.connect(func() -> void:
+			_confirm_abandon = false
+			_queue_render())
+		h.add_child(no)
+		return h
+	var c: Button = DDUi.button("CONTINUE RUN\n" + summary, Color("245236"), DDUi.FONT_S)
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.size_flags_stretch_ratio = 3.0
+	c.pressed.connect(continue_run)
+	h.add_child(c)
+	var a: Button = DDUi.button("Abandon run", DDUi.PANEL_HI, DDUi.FONT_S)
+	a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a.pressed.connect(func() -> void:
+		_confirm_abandon = true
+		_queue_render())
+	h.add_child(a)
+	return h
+
+
+## dd-save: resume the saved run on the screen it was left on.
+func continue_run() -> void:
+	var where: String = Game.resume_run()
+	if where == "":
+		_queue_render()
+		return
+	var run: DDRun = Game.run
+	selected = -1
+	selected_room = -1
+	last_event = {}
+	_confirm_abandon = false
+	match where:
+		"SAFEHOUSE":
+			safehouse_info = {"district": str(Game.bal.district(run.district_index).get("name", "")),
+				"hp_score": run.boss_hp[run.boss_hp.size() - 1] if not run.boss_hp.is_empty() else 0}
+			chosen_perk = ""
+			screen = Screen.SAFEHOUSE
+		"MAP":
+			screen = Screen.MAP
+		_:
+			screen = Screen.STREET
+			_pending_fx = {"type": "deal", "snap": {}, "ev": {}}
+			_pending_banner = {"text": "RUN RESUMED", "color": DDUi.GOOD, "sub": "%s - wave %d" % [str(run.district().get("name", "")), run.wave_index + 1]}
+	Sfx.cue(&"flip")
+	_queue_render()
+
+
 func _start_run() -> void:
+	_confirm_abandon = false
 	Game.start_run(chosen_survivor)
 	selected = -1
 	selected_room = -1
@@ -399,6 +465,7 @@ func _build_map() -> void:
 	go.custom_minimum_size = Vector2(0, 88)
 	go.pressed.connect(func() -> void:
 		screen = Screen.STREET
+		Game.save_run("STREET")
 		selected = -1
 		selected_room = -1
 		_pending_fx = {"type": "deal", "snap": {}, "ev": {}}
@@ -1125,25 +1192,51 @@ func _float_text(t: String, col: Color, anchor: Control) -> void:
 
 ## Full-width banner (wave change, last lap, boss, Carrier drop): ~1.6 s, never blocks input.
 var last_banner: String = ""
+var _banner: Control = null
+
+
+## True while a wave / boss / drop banner is on screen.
+func banner_open() -> bool:
+	return _banner != null and is_instance_valid(_banner) and not _banner.is_queued_for_deletion()
+
+
+func dismiss_banner() -> void:
+	if banner_open():
+		_banner.queue_free()
+	_banner = null
+	if OS.has_feature("web"):
+		_publish_state.call_deferred()
 
 
 func _show_banner(text: String, col: Color, sub: String) -> void:
 	last_banner = text
 	var vp: Vector2 = get_viewport_rect().size
+	if _banner != null and is_instance_valid(_banner):
+		_banner.queue_free()
 	var p: PanelContainer = DDUi.panel(Color(0.05, 0.06, 0.06, 0.92), 14, col, 3)
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner = p
 	var v: VBoxContainer = DDUi.vbox(2)
 	p.add_child(v)
-	v.add_child(DDUi.label(text, DDUi.FONT_L, col, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var lw: float = minf(vp.x - 40.0, 900.0) - 34.0
+	var l1: Label = DDUi.label(text, DDUi.FONT_L, col, HORIZONTAL_ALIGNMENT_CENTER, true)
+	l1.custom_minimum_size = Vector2(lw, 0)
+	v.add_child(l1)
 	if sub != "":
-		v.add_child(DDUi.label(sub, DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		var l2: Label = DDUi.label(sub, DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true)
+		l2.custom_minimum_size = Vector2(lw, 0)
+		v.add_child(l2)
 	DDUi.ignore_mouse(p)
+	# tap the banner to dismiss it early (the tap is used up); taps elsewhere go through
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and is_instance_valid(p):
+			p.accept_event()
+			dismiss_banner())
 	_fx.add_child(p)
-	p.size = Vector2(vp.x - 40.0, 0)
-	p.custom_minimum_size = Vector2(vp.x - 40.0, 0)
-	p.position = Vector2(20.0, vp.y * 0.3)
+	p.size = p.get_combined_minimum_size()
+	p.position = Vector2((vp.x - p.size.x) * 0.5, vp.y * 0.3)
 	p.modulate.a = 0.0
-	var tw: Tween = create_tween()
+	var tw: Tween = p.create_tween()
 	tw.tween_property(p, "modulate:a", 1.0, 0.15)
 	tw.tween_interval(1.3 if not Game.reduce_motion() else 1.5)
 	tw.tween_property(p, "modulate:a", 0.0, 0.3)
@@ -1153,33 +1246,49 @@ func _show_banner(text: String, col: Color, sub: String) -> void:
 # ---------------------------------------------------------------- safehouse
 func _build_safehouse() -> void:
 	var run: DDRun = Game.run
-	var v: VBoxContainer = DDUi.vbox(12)
-	_content.add_child(_scroll(v))
-	var head: Label = DDUi.label("%s CLEARED" % str(safehouse_info.get("district", "")).to_upper(), DDUi.FONT_XL, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true)
+	# portrait: one scrolling column; landscape (844x390): two columns that fit without scrolling
+	var v: VBoxContainer = DDUi.vbox(12 if portrait else 8)
+	var right: VBoxContainer = v
+	if portrait:
+		_content.add_child(_scroll(v))
+	else:
+		var h: HBoxContainer = DDUi.hbox(SEP * 2)
+		_content.add_child(h)
+		v.custom_minimum_size = Vector2(get_viewport_rect().size.x * 0.36, 0)
+		h.add_child(v)
+		right = DDUi.vbox(8)
+		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(right)
+	var head: Label = DDUi.label("%s CLEARED" % str(safehouse_info.get("district", "")).to_upper(), DDUi.FONT_XL if portrait else DDUi.FONT_L, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_screen_title = head
 	v.add_child(head)
-	v.add_child(DDUi.label("HP left at the boss: +%d score  -  run score %d  -  points %d" % [Game.bal.shown(int(safehouse_info.get("hp_score", 0))), Game.bal.shown(run.run_score()), Game.bal.shown(run.points)], DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var fs: int = DDUi.FONT_M if portrait else DDUi.FONT_S
+	v.add_child(DDUi.label("HP left at the boss: +%d score  -  run score %d  -  points %d" % [Game.bal.shown(int(safehouse_info.get("hp_score", 0))), Game.bal.shown(run.run_score()), Game.bal.shown(run.points)], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
 	v.add_child(DDUi.label("SAFEHOUSE: you rest and heal %d HP (up to your max). Now HP %d / %d. You keep both weapons, your %d reserve ammo and your points." % [
-		run.safehouse_healed(), run.hp, run.max_hp, run.reserve], DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		run.safehouse_healed(), run.hp, run.max_hp, run.reserve], fs, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var kit: HFlowContainer = HFlowContainer.new()
 	kit.alignment = FlowContainer.ALIGNMENT_CENTER
 	kit.add_theme_constant_override("h_separation", SEP)
+	kit.add_theme_constant_override("v_separation", SEP)
 	for i: int in 2:
 		kit.add_child(_view(_slot_spec(run, i), Vector2(180, 0)))
 	kit.add_child(_view(DDPayloads.reserve_spec(run), Vector2(100, 0)))
 	v.add_child(kit)
 	if run.perk_offer.is_empty():
-		v.add_child(DDUi.label("No perks left to offer.", DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+		right.add_child(DDUi.label("No perks left to offer.", DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	else:
-		v.add_child(DDUi.label("Pick 1 perk for the rest of the run (long press / right click to zoom)", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		right.add_child(DDUi.label("Pick 1 perk for the rest of the run (long press / right click to zoom)", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var box: BoxContainer = BoxContainer.new()
 	box.vertical = portrait
 	box.add_theme_constant_override("separation", SEP)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(box)
+	if not portrait:
+		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.add_child(box)
 	var vp: Vector2 = get_viewport_rect().size
+	var col_w: float = vp.x - MARGIN * 2 - vp.x * 0.36 - SEP * 2
 	for pid: String in run.perk_offer:
-		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 120) if portrait else Vector2(minf(320.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 200)
+		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 120) if portrait else Vector2((col_w - SEP * 2) / 3.0, clampf(vp.y - MARGIN * 2 - 140.0, 150.0, 260.0))
 		var ps: Dictionary = DDPayloads.perk_spec(pid, Game.bal, false, pid == chosen_perk)
 		ps["art_keys"] = Art.perk_keys(pid)
 		ps["art_fit"] = "contain"
@@ -1198,7 +1307,7 @@ func _build_safehouse() -> void:
 		box.add_child(cv)
 	var label: String = "Continue" if run.perk_offer.is_empty() else ("Take %s" % DDText.perk_name(chosen_perk) if chosen_perk != "" else "Tap a perk to choose it")
 	var go: Button = DDUi.button(label, Color("245236"), DDUi.FONT_L)
-	go.custom_minimum_size = Vector2(0, 88)
+	go.custom_minimum_size = Vector2(0, 88 if portrait else DDUi.TAP_MIN)
 	go.disabled = chosen_perk == "" and not run.perk_offer.is_empty()
 	go.pressed.connect(func() -> void:
 		var ev: Dictionary = run.choose_perk(chosen_perk)
@@ -1208,9 +1317,10 @@ func _build_safehouse() -> void:
 				Sfx.cue(&"perk")
 			_perk_popped = ""
 			screen = Screen.MAP
+			Game.save_run("MAP")
 			_screen_fx = "map"
 			_queue_render())
-	v.add_child(go)
+	right.add_child(go)
 
 
 # ---------------------------------------------------------------- end
@@ -1404,7 +1514,7 @@ func _publish_state() -> void:
 			items.append(e)
 	var st: Dictionary = {"screen": screen_name(), "portrait": portrait, "items": items,
 		"inspect": _inspect.is_open(), "settings": settings_panel.is_open(), "fx": feedback.last_played,
-		"banner": last_banner, "vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}
+		"banner": last_banner, "banner_open": banner_open(), "banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}
 	if Game.run != null:
 		var run: DDRun = Game.run
 		st["hp"] = run.hp
@@ -1425,6 +1535,13 @@ func _publish_state() -> void:
 			ammo.append((w as DDWeapon).ammo if w != null else -1)
 		st["ammo"] = ammo
 	JavaScriptBridge.eval("window.ddState = " + JSON.stringify(st) + ";", true)
+
+
+func _css_rect(c: Control, xf: Transform2D, dpr: float) -> Dictionary:
+	var r: Rect2 = c.get_global_rect()
+	var p0: Vector2 = xf * r.position / dpr
+	var p1: Vector2 = xf * r.end / dpr
+	return {"x": p0.x, "y": p0.y, "w": p1.x - p0.x, "h": p1.y - p0.y}
 
 
 ## Used by the headless UI smoke test and the browser smoke test: what is on screen now.

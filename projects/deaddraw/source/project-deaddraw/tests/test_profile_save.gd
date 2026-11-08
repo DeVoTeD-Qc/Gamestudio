@@ -95,6 +95,7 @@ func test_game_session_records_unlocks() -> void:
 	g.set("bal", bal())
 	var pr: DDProfile = _prof()
 	g.set("profile", pr)
+	g.set("run_save", DDRunSave.new(pr.path + ".run.json"))
 	g.call("start_run", "rosa", 3)
 	var r: DDRun = g.get("run")
 	eq(r.perk_pool, bal().starter_perks(), "run uses the profile pool")

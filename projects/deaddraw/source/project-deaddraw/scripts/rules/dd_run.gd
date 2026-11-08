@@ -1325,3 +1325,170 @@ func summary() -> Dictionary:
 	return {"district": district_index, "wave": wave_index, "hp": hp, "points": points, "earned": points_earned,
 		"reserve": reserve, "slots": ws, "deck": deck.size(), "street": street.size(), "skipped": skipped.size(),
 		"opened": opened.duplicate(), "phase": Phase.keys()[phase], "boss_street": boss_street, "last_lap": last_lap}
+
+
+# ================================================================ mid-run save (dd-save)
+static func _card_to(c: DDCard) -> Dictionary:
+	var d: Dictionary = {"k": c.kind, "v": c.value}
+	if c.wid != "":
+		d["w"] = c.wid
+	if c.drop != "":
+		d["d"] = c.drop
+	if c.boss_trait != "":
+		d["t"] = c.boss_trait
+		d["n"] = c.finale_name
+	if c.holdover:
+		d["h"] = true
+	if c.skipped:
+		d["s"] = true
+	return d
+
+
+static func _card_from(d: Dictionary) -> DDCard:
+	var c: DDCard = DDCard.make(str(d.get("k", "Z")), int(d.get("v", 0)), str(d.get("t", "")), str(d.get("n", "")))
+	c.wid = str(d.get("w", ""))
+	c.drop = str(d.get("d", ""))
+	c.holdover = bool(d.get("h", false))
+	c.skipped = bool(d.get("s", false))
+	return c
+
+
+static func _cards_to(a: Array[DDCard]) -> Array:
+	var out: Array = []
+	for c: DDCard in a:
+		out.append(_card_to(c))
+	return out
+
+
+static func _cards_from(a: Variant) -> Array[DDCard]:
+	var out: Array[DDCard] = []
+	if a is Array:
+		for d: Variant in a:
+			if d is Dictionary:
+				out.append(_card_from(d))
+	return out
+
+
+static func _weapon_from(d: Variant) -> DDWeapon:
+	if not d is Dictionary:
+		return null
+	var w: DDWeapon = DDWeapon.make(str(d.get("wid", "")), str(d.get("name", "")), int(d.get("power", 0)), int(d.get("cap", 0)))
+	w.ammo = int(d.get("ammo", 0))
+	w.notch = int(d.get("notch", NO_NOTCH))
+	w.upgraded = bool(d.get("upgraded", false))
+	return w
+
+
+static func _strs(a: Variant) -> Array[String]:
+	var out: Array[String] = []
+	if a is Array:
+		for v: Variant in a:
+			out.append(str(v))
+	return out
+
+
+static func _ints(a: Variant) -> Array[int]:
+	var out: Array[int] = []
+	if a is Array:
+		for v: Variant in a:
+			out.append(int(v))
+	return out
+
+
+## The whole run as plain JSON-safe data (64-bit RNG seed / state as strings so they survive JSON).
+## from_dict() restores it exactly: a resumed run plays identically to the uninterrupted one.
+func to_dict() -> Dictionary:
+	var ws: Array = []
+	for w: Variant in slots:
+		ws.append((w as DDWeapon).to_dict() if w != null else null)
+	var offer: Dictionary = {}
+	if not pending_offer.is_empty():
+		offer = {"weapon": (pending_offer["weapon"] as DDWeapon).to_dict(), "source": str(pending_offer.get("source", "")),
+			"room": int(pending_offer.get("room", -1)), "can_leave": bool(pending_offer.get("can_leave", false))}
+	var ms: Array = []
+	for m: Dictionary in machine_state:
+		ms.append({"used": bool(m.get("used", false)), "n": int(m.get("n", 0))})
+	return {"survivor_id": survivor_id, "passive": passive, "hp": hp, "max_hp": max_hp, "slots": ws, "reserve": reserve,
+		"points": points, "points_earned": points_earned, "cover": cover, "medkits_used": medkits_used, "fled_last": fled_last,
+		"second_wind": second_wind, "perks": perks.duplicate(), "perk_pool": perk_pool.duplicate(), "perk_offer": perk_offer.duplicate(),
+		"buffs": buffs.duplicate(), "free_reload": free_reload, "reloads_left": reloads_left, "district_index": district_index,
+		"wave_index": wave_index, "last_lap": last_lap, "boss_street": boss_street, "deck": _cards_to(deck), "street": _cards_to(street),
+		"skipped": _cards_to(skipped), "opened": opened.duplicate(), "machine_state": ms, "district_weapons": district_weapons.duplicate(),
+		"actions_used": actions_used, "budget": budget, "cards_resolved": cards_resolved, "street_was_full": street_was_full,
+		"phase": int(phase), "pending_offer": offer, "last_wave_info": last_wave_info.duplicate(true), "boss_hp": boss_hp.duplicate(),
+		"cleared_ids": cleared_ids.duplicate(), "streets_played": streets_played, "skips": skips, "reloads": reloads, "kills": kills,
+		"log_lines": log_lines.slice(maxi(0, log_lines.size() - 40)),
+		"rng_seed": str(rng.seed), "rng_state": str(rng.state)}
+
+
+## A run restored from to_dict() data, or null when the data is unusable.
+static func from_dict(d: Dictionary, balance: DDBalance = null) -> DDRun:
+	var r: DDRun = DDRun.new(balance)
+	for k: String in ["survivor_id", "hp", "max_hp", "slots", "deck", "street", "phase", "district_index", "rng_state"]:
+		if not d.has(k):
+			return null
+	r.survivor_id = str(d["survivor_id"])
+	if r.bal.survivor(r.survivor_id).is_empty() or int(d["district_index"]) < 0 or int(d["district_index"]) >= r.bal.district_count():
+		return null
+	r.passive = str(d.get("passive", ""))
+	r.hp = int(d["hp"])
+	r.max_hp = int(d["max_hp"])
+	var sl: Array = d["slots"] if d["slots"] is Array else []
+	r.slots = [_weapon_from(sl[0]) if sl.size() > 0 else null, _weapon_from(sl[1]) if sl.size() > 1 else null]
+	r.reserve = int(d.get("reserve", 0))
+	r.points = int(d.get("points", 0))
+	r.points_earned = int(d.get("points_earned", 0))
+	r.cover = int(d.get("cover", 0))
+	r.medkits_used = int(d.get("medkits_used", 0))
+	r.fled_last = bool(d.get("fled_last", false))
+	r.second_wind = bool(d.get("second_wind", false))
+	r.perks = _strs(d.get("perks", []))
+	r.perk_pool = _strs(d.get("perk_pool", []))
+	r.perk_offer = _strs(d.get("perk_offer", []))
+	r.buffs = _strs(d.get("buffs", []))
+	r.free_reload = bool(d.get("free_reload", false))
+	r.reloads_left = int(d.get("reloads_left", 1))
+	r.district_index = int(d["district_index"])
+	r.wave_index = int(d.get("wave_index", 0))
+	r.last_lap = bool(d.get("last_lap", false))
+	r.boss_street = bool(d.get("boss_street", false))
+	r.deck = _cards_from(d["deck"])
+	r.street = _cards_from(d["street"])
+	r.skipped = _cards_from(d.get("skipped", []))
+	r.opened = _ints(d.get("opened", []))
+	r.machine_state.clear()
+	for m: Variant in d.get("machine_state", []):
+		if m is Dictionary:
+			r.machine_state.append({"used": bool(m.get("used", false)), "n": int(m.get("n", 0))})
+	while r.machine_state.size() < r.room_count():
+		r.machine_state.append({"used": false, "n": 0})
+	r.district_weapons = _strs(d.get("district_weapons", []))
+	r.actions_used = int(d.get("actions_used", 0))
+	r.budget = int(d.get("budget", 3))
+	r.cards_resolved = int(d.get("cards_resolved", 0))
+	r.street_was_full = bool(d.get("street_was_full", false))
+	r.phase = clampi(int(d["phase"]), 0, Phase.size() - 1) as Phase
+	var po: Variant = d.get("pending_offer", {})
+	if po is Dictionary and not (po as Dictionary).is_empty():
+		var w: DDWeapon = _weapon_from(po.get("weapon"))
+		if w != null:
+			r.pending_offer = {"weapon": w, "source": str(po.get("source", "")), "room": int(po.get("room", -1)), "can_leave": bool(po.get("can_leave", false))}
+	var lw: Variant = d.get("last_wave_info", {})
+	r.last_wave_info = {}
+	if lw is Dictionary:
+		for k: String in ["wave", "district", "skipped", "restock", "bonus"]:
+			r.last_wave_info[k] = int((lw as Dictionary).get(k, 0))
+		r.last_wave_info["boss_wave"] = bool((lw as Dictionary).get("boss_wave", false))
+		r.last_wave_info["zombies"] = _ints((lw as Dictionary).get("zombies", []))
+	r.boss_hp = _ints(d.get("boss_hp", []))
+	r.cleared_ids = _strs(d.get("cleared_ids", []))
+	r.streets_played = int(d.get("streets_played", 0))
+	r.skips = int(d.get("skips", 0))
+	r.reloads = int(d.get("reloads", 0))
+	r.kills = int(d.get("kills", 0))
+	r.log_lines = _strs(d.get("log_lines", []))
+	r.rng.seed = str(d.get("rng_seed", "0")).to_int()
+	r.rng.state = str(d["rng_state"]).to_int()
+	if r.phase == Phase.STREET and r.street.is_empty():
+		return null
+	return r

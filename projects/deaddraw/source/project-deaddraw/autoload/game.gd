@@ -3,7 +3,9 @@
 #   current DDRun, and records district clears / run ends into the profile (meta unlocks).
 #   dd-feel: owns the sound bank (/root/Game/Sfx, scripts/fx/dd_sfx.gd) and applies the profile's
 #   Settings (volumes to the Master / SFX buses; screen shake and reduce motion read by the UI).
-# Dependencies: DDBalance, DDRun, DDProfile, scripts/fx/dd_sfx.gd.
+#   dd-save: owns the mid-run save (DDRunSave, user://deaddraw_run.json): written after every run
+#   event and on screen changes, cleared when the run ends; resume_run() / abandon_run().
+# Dependencies: DDBalance, DDRun, DDProfile, DDRunSave, scripts/fx/dd_sfx.gd.
 # Author: Mechanics Developer Agent
 extends Node
 
@@ -16,6 +18,9 @@ const SfxBank: GDScript = preload("res://scripts/fx/dd_sfx.gd")
 
 var bal: DDBalance
 var profile: DDProfile
+## dd-save: the mid-run save file and the screen the UI last reported for it.
+var run_save: DDRunSave = DDRunSave.new()
+var save_screen: String = "STREET"
 var run: DDRun = null
 var survivor_id: String = "rosa"
 ## Unlock keys earned during the current run ("perk:x", "survivor:x", "badge:x").
@@ -84,12 +89,54 @@ func start_run(survivor: String, seed_value: int = -1) -> void:
 	run = DDRun.new(bal)
 	run.changed.connect(_on_run_changed)
 	run.start(survivor, profile.perk_pool(), seed_value)
+	save_screen = "MAP"
+	save_run()
 	run_started.emit()
+
+
+## dd-save: writes the run in progress (or clears the file when it is over).
+func save_run(screen_hint: String = "") -> void:
+	if screen_hint != "":
+		save_screen = screen_hint
+	if run_save != null and run != null:
+		run_save.save(run, save_screen)
+
+
+func has_saved_run() -> bool:
+	return run_save != null and not run_save.load_run(bal).is_empty()
+
+
+## dd-save: resumes the saved run. Returns the screen to show ("" when there is nothing to resume).
+func resume_run() -> String:
+	var s: Dictionary = run_save.load_run(bal) if run_save != null else {}
+	if s.is_empty():
+		return ""
+	run = s["run"]
+	survivor_id = run.survivor_id
+	new_unlocks.clear()
+	_recorded_clears = run.cleared_ids.size()   # those clears were recorded when they happened
+	_run_recorded = false
+	run.changed.connect(_on_run_changed)
+	save_screen = str(s["screen"])
+	run_started.emit()
+	return save_screen
+
+
+## dd-save: drops the saved run (the title's Abandon run, after confirmation).
+func abandon_run() -> void:
+	if run_save != null:
+		run_save.clear()
+	run = null
 
 
 ## Called after every run event: saves first clears and the run result exactly once.
 func _on_run_changed(_ev: Dictionary) -> void:
 	sync_profile()
+	if run != null and run.phase == DDRun.Phase.SAFEHOUSE:
+		save_screen = "SAFEHOUSE"
+	elif save_screen == "SAFEHOUSE" and run != null and run.phase == DDRun.Phase.STREET:
+		save_screen = "MAP"
+	save_run()
 
 
 func sync_profile() -> void:
