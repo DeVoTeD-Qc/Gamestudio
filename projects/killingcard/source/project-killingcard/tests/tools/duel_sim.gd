@@ -126,6 +126,19 @@ func _main() -> void:
 			"respawn": respawn_cost = int(kv[1])
 			"terrain": terrain_on = kv[1] == "1"
 			"rsb": recruit_sb = float(kv[1])
+			"pdeck":
+				# pdeck=I:card@trait,card,...[;I:...] replaces preset I's pick list (0-based); hero=I.op via phero.
+				for item: String in kv[1].split(";"):
+					var pa: PackedStringArray = item.split(":", true, 1)
+					var lst: Array = []
+					for part: String in pa[1].split(","):
+						var pt: PackedStringArray = part.split("@")
+						lst.append([StringName(pt[0]), StringName(pt[1]) if pt.size() > 1 else SynergyRules.TRAIT_DEFAULT])
+					PRESETS[int(pa[0])]["picks"] = lst
+			"phero":
+				for item: String in kv[1].split(";"):
+					var ph: PackedStringArray = item.split(":", true, 1)
+					PRESETS[int(ph[0])]["hero"] = StringName(ph[1])
 			"cfg":
 				for item: String in kv[1].split(";"):
 					var p2: PackedStringArray = item.split("=", true, 1)
