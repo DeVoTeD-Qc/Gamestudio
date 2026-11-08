@@ -5,10 +5,12 @@
 #   the 4 chassis added for the MW3 art (Brawler, Smoke Screen, Blackout, Sabotage). The public build,
 #   the tests and the saved run deck are untouched: apply() returns a new array for this match only.
 #   Swap rule (deterministic, kc-cod3 head answers): about half units, 3 Fields, the rest tactics
-#   (20 cards: 10 / 7 / 3; 18 cards: 9 / 6 / 3). Sniper Perch and Aid Station never appear (no art fits).
+#   (20 cards: 10 / 7 / 3; 10 cards, kc-econ: 5 / 2 / 3). Sniper Perch and Aid Station never appear (no art fits).
 #   1. Brawler replaces one copy of the most duplicated non-Elite unit.
-#   2. Fields up to FIELDS from FIELD_ADDS, each replacing a duplicated unit while units > target.
-#   3. The new tactics (TACTIC_ADDS) each replace a duplicated unit while units > target, else a
+#   2. Fields up to FIELDS from FIELD_ADDS, each replacing a duplicated unit (kc-econ: else the last
+#      non-Elite unit; 10-card decks have few duplicates) while units > target.
+#   3. The new tactics (TACTIC_ADDS) each replace a duplicated unit (kc-econ: else the last non-Elite
+#      unit) while units > target, else a
 #      duplicated older tactic, else the last older tactic. Decks under MIN_DECK cards are left alone.
 # Dependencies: CardDB (autoload), CardData, DataEnums.
 # Author: Mechanics Developer Agent (kc-cod2)
@@ -54,21 +56,21 @@ static func apply(deck: Array[CardData], card_lookup: Callable = Callable()) -> 
 				out[i] = sub
 	var brawler: CardData = lookup.call(&"brawler")
 	if brawler != null and not _has(out, brawler.id):
-		var v: int = _dup_victim(out, UNIT, [] as Array[StringName])
+		var v: int = _unit_victim(out)
 		if v >= 0:
 			out[v] = brawler
 	for id: StringName in FIELD_ADDS:
 		if _count_type(out, DataEnums.CARD_TYPE_FIELD) >= FIELDS or _count_type(out, UNIT) <= target:
 			break
 		var card: CardData = lookup.call(id)
-		var v: int = _dup_victim(out, UNIT, [] as Array[StringName])
+		var v: int = _unit_victim(out)
 		if card != null and not _has(out, id) and v >= 0:
 			out[v] = card
 	for id: StringName in TACTIC_ADDS:
 		var card: CardData = lookup.call(id)
 		if card == null or _has(out, id):
 			continue
-		var v: int = _dup_victim(out, UNIT, [] as Array[StringName]) if _count_type(out, UNIT) > target else -1
+		var v: int = _unit_victim(out) if _count_type(out, UNIT) > target else -1
 		if v < 0:
 			v = _dup_victim(out, DataEnums.CardType.TACTIC, TACTIC_ADDS)
 		if v < 0:
@@ -116,6 +118,19 @@ static func _count_type(deck: Array[CardData], type: int) -> int:
 		if c != null and c.card_type == type:
 			n += 1
 	return n
+
+
+## kc-econ: the unit a pitch card replaces: a copy of the most duplicated non-Elite unit, else (10-card
+## decks have few duplicates) the last non-Elite unit that isn't the Brawler.
+static func _unit_victim(deck: Array[CardData]) -> int:
+	var v: int = _dup_victim(deck, DataEnums.CardType.UNIT, [] as Array[StringName])
+	if v >= 0:
+		return v
+	for i: int in range(deck.size() - 1, -1, -1):
+		var c: CardData = deck[i]
+		if c != null and c.card_type == DataEnums.CardType.UNIT and not c.is_elite and c.id != &"brawler":
+			return i
+	return -1
 
 
 ## Index of the last copy of the most duplicated non-Elite card of `type` (not in `keep`), -1 if none.

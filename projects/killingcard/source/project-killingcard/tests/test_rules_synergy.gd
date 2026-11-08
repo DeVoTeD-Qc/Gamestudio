@@ -342,7 +342,7 @@ func test_shipped_starter_squads_and_pool() -> void:
 	for c: CardData in cfg.starter_deck:
 		counts[c.id] = int(counts.get(c.id, 0)) + 1
 	# kc-onboard §2.1: the Standard Issue starter replaced the kc-syn Recruit starter.
-	assert_eq(counts, {&"si_grunt": 5, &"si_trooper": 6, &"si_sergeant": 4, &"si_armored": 3, &"ammo_resupply": 2}, "Standard Issue starter")
+	assert_eq(counts, {&"si_grunt": 3, &"si_trooper": 3, &"si_sergeant": 2, &"si_armored": 1, &"ammo_resupply": 1}, "Standard Issue starter (kc-econ: 10 cards)")
 	assert_false("starter_recruits" in cfg, "kc-no-training: no Recruit starter setting")
 	assert_false(cfg.matches.any(func(md: RunMatchData) -> bool: return "enemy_recruits" in md), "kc-no-training: no Recruit squads")
 	var pool: Dictionary = {}

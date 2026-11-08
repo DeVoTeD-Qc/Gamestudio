@@ -82,10 +82,13 @@ func test_scripted_match_on_the_engine() -> void:
 	_resolve(m)
 	assert_eq(me.streak, 1, "R1 elimination: streak 1")
 	assert_true(me.operator_unit.is_on_board(), "Operator survives")
-	# Round 2: Sergeant (3 FP) Right vs their Trooper (2/3): the beat order, no First Shot.
+	# kc-econ: round 1 has 1 Supply; the Operator is free in round 1, the Grunt takes the Supply.
+	assert_eq(me.supply, 0, "round 1: the Grunt spent the only Supply")
+	# Round 2 (2 Supply): Trooper (2/3) Right vs their Grunt (2/2): the beat order, no First Shot.
 	m.begin_round()
+	assert_eq(me.supply, 2, "round 2 gives 2 Supply")
 	Controller.play_scripted_enemy(t, m)
-	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_sergeant"), 2))["ok"], "Sergeant Right")
+	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_trooper"), 2))["ok"], "Trooper Right")
 	_resolve(m)
 	assert_eq(me.streak, 2, "R2 elimination: streak 2")
 	assert_true(&"recon_drone" in me.streak_tray, "Recon Drone earned by the scripted firefight")
@@ -204,7 +207,7 @@ func _play_through(screen: Dictionary, fast_forward: bool) -> void:
 		return e["type"] == RulesEvent.ITEM_REVEALED and e.get("item_id") == &"recon_drone")
 	assert_true(revealed, "%s the drone resolved at Reveal" % label)
 	assert_eq(c.state.result, &"player", "%s the drill is won" % label)
-	assert_true(intel.contains("Armored Trooper and Grunt to column B"), "%s drone intel lists the face-up column B cards: %s" % [label, intel])
+	assert_true(intel.contains("Trooper and Grunt to column B"), "%s drone intel lists the face-up column B cards: %s" % [label, intel])
 	var refused: Array = c.intent_log.filter(func(e: Dictionary) -> bool: return not e["result"]["ok"])
 	assert_eq(refused.size(), 0, "%s no engine refusals: %s" % [label, refused])
 	if not fast_forward:

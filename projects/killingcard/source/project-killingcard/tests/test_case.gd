@@ -30,3 +30,18 @@ func assert_eq(actual: Variant, expected: Variant, message: String = "") -> void
 
 func assert_not_null(value: Variant, message: String = "expected non-null") -> void:
 	assert_true(value != null, message)
+
+
+## kc-econ: round 1 gives 1 Supply, so a seeded opening hand may hold no unit it can pay for. UI tests
+## that need "a playable unit" top the side up to its cheapest unit's cost (never lower it) and
+## refresh the controller so the hand redraws. `filter` (RulesCard -> bool) narrows the units.
+static func afford_a_unit(controller: Node, side: int = 0, filter: Callable = Callable()) -> void:
+	var s: RulesSide = controller.state.sides[side]
+	var cheapest: int = -1
+	for rc: RulesCard in s.hand:
+		if rc.card.is_unit() and (not filter.is_valid() or filter.call(rc)):
+			cheapest = rc.card.cost if cheapest < 0 else mini(cheapest, rc.card.cost)
+	if cheapest > s.supply:
+		s.supply = cheapest
+		if controller.has_method(&"refresh"):
+			controller.refresh()

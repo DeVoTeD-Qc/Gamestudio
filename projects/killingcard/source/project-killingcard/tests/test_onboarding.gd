@@ -77,12 +77,12 @@ func test_standard_issue_cards_are_plain_with_the_exact_numbers() -> void:
 	assert_true(v2.error_count() > 0, "a Standard Issue card with a keyword or a trait is rejected")
 
 
-func test_starter_is_twenty_standard_issue_cards_in_one_fixed_art() -> void:
+func test_starter_is_ten_standard_issue_cards_in_one_fixed_art() -> void:
 	var cfg: RunConfig = _config()
 	var n: Dictionary = {}
 	for c: CardData in cfg.starter_deck:
 		n[String(c.id)] = int(n.get(String(c.id), 0)) + 1
-	assert_eq(n, {"si_grunt": 5, "si_trooper": 6, "si_sergeant": 4, "si_armored": 3, "ammo_resupply": 2}, "§2.1 starter")
+	assert_eq(n, {"si_grunt": 3, "si_trooper": 3, "si_sergeant": 2, "si_armored": 1, "ammo_resupply": 1}, "§2.1 starter (kc-econ: 10 cards)")
 	for c: CardData in cfg.reward_pool:
 		assert_false(c.standard_issue, "Standard Issue cards are never offered (%s)" % c.id)
 	var a: RunProgress = RunProgress.create(cfg, 1)
@@ -156,19 +156,22 @@ func test_cards_in_a_match_and_in_the_ai_record() -> void:
 func test_squads_along_the_ladder() -> void:
 	var cfg: RunConfig = _config()
 	var md: Array[RunMatchData] = cfg.matches
-	assert_eq(md.map(func(x: RunMatchData) -> int: return x.enemy_armor_bonus), [-1, 0, 0, 0, 1], "green squad, Anchor+ at 0, Rival 1")
-	assert_eq(md.map(func(x: RunMatchData) -> bool: return x.is_green_squad()), [true, false, false, false, false], "only M1 is green")
+	# kc-econ: every crew plays 10 cards. M1's handicap moved from -1 Armor (with 1 Supply in round 1 a
+	# 2/1 Grunt crew fell to 90% for the new player) to its deck: 5 Armored Troopers it can't afford early.
+	assert_eq(md.map(func(x: RunMatchData) -> int: return x.enemy_armor_bonus), [0, 0, 0, 1, 1], "M1 at 0, Mastery crew +1, Rival 1")
+	assert_eq(md.map(func(x: RunMatchData) -> bool: return x.is_green_squad()), [false, false, false, false, false], "no -1 Armor crew any more")
 	var s1: SideSetup = SideSetup.from_squad(md[0].squad, md[0])
-	assert_eq(s1.deck.size(), 18, "M1: 18 cards")
+	assert_eq(s1.deck.size(), 10, "M1: 10 cards")
 	assert_true(s1.deck.all(func(c: CardData) -> bool: return c.standard_issue or c.id == &"ammo_resupply"), "M1: Standard Issue only")
-	assert_eq(s1.armor_bonus, -1, "M1 at -1 Armor")
+	assert_eq([_in_deck(s1.deck, &"si_grunt"), _in_deck(s1.deck, &"si_trooper"), _in_deck(s1.deck, &"si_armored")], [2, 2, 5], "M1: a slow, heavy crew")
+	assert_eq(s1.armor_bonus, 0, "M1 at 0 Armor")
 	var s2: SideSetup = SideSetup.from_squad(md[1].squad, md[1])
 	var heavy: int = 0
 	for i: int in s2.deck.size():
 		if s2.deck[i].id == &"gunner":
 			assert_eq(SynergyRules.trait_at(s2.deck[i], s2.trait_of(i)), &"heavy", "with the Heavy trait")
 			heavy += 1
-	assert_eq([s2.deck.size(), heavy], [18, 1], "M2: 18 cards with 1 Heavy Gunner (kc-no-training retune: 2 Gunners -> Sergeants)")
+	assert_eq([s2.deck.size(), heavy], [10, 1], "M2: 10 cards with 1 Heavy Gunner (kc-no-training retune: 2 Gunners -> Sergeants)")
 	var s3: SideSetup = SideSetup.from_squad(md[2].squad, md[2])
 	# kc-syn-tune / kc-syn-tune2 (synergy-system.md §12): M3 = the Rusher's units with its tactics
 	# and Equipment (Breach and Clear, 2 Flank Routes, Callout, Tripwire) swapped for Standard Issue
@@ -177,23 +180,23 @@ func test_squads_along_the_ladder() -> void:
 	# kc-no-training retune (the crews lost their keyword-less Recruit copies): M2 2 of 3 Gunners ->
 	# Sergeants; M3 2 Point Men, a Breacher, a Flanker -> 3 Troopers + a Sergeant; M4 a Gunner, a
 	# Protector, a Hold the Line, 2 Suppressing Fires -> an Armored Trooper, 2 Sergeants, 2 Troopers.
-	assert_eq(s3.deck.size(), 18, "M3: 18 cards")
+	assert_eq(s3.deck.size(), 10, "M3: 10 cards")
 	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"si_sergeant"),
-			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 2, 3],
+			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 1, 2],
 			"M3: Rusher deck, Breach and Clear swapped for a Sergeant (kc-no-training retune: 2 Point Men, a Breacher and a Flanker -> Standard Issue)")
-	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 6], "M3: Flank Routes swapped for Troopers (6 since kc-no-training)")
+	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 3], "M3: Flank Routes swapped for Troopers (6 of 18 since kc-no-training, 3 of 10 since kc-econ)")
 	var vanguard: int = 0
 	for i: int in s3.deck.size():
 		if s3.deck[i].is_unit():
 			if SynergyRules.trait_at(s3.deck[i], s3.trait_of(i)) == &"vanguard":
 				vanguard += 1
-	assert_true(vanguard >= 3, "M3: Vanguard calling cards (%d)" % vanguard)
+	assert_true(vanguard >= 2, "M3: Vanguard calling cards (%d)" % vanguard)
 	var s4: SideSetup = SideSetup.from_squad(md[3].squad, md[3])
 	var s5: SideSetup = SideSetup.from_squad(md[4].squad, md[4])
-	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman")], [20, 4, 0],
+	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman")], [10, 2, 0],
 			"M5: the Rival's crew, Marksmen swapped for Gunners (kc-pos-cut)")
 	assert_eq([s4.deck.size(), _in_deck(s4.deck, &"demolitions_expert"), _in_deck(s4.deck, &"marksman"),
-			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [18, 0, 0, 3, 3],
+			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [10, 0, 0, 2, 2],
 			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue (kc-no-training retune: a Gunner, a Protector, a Hold the Line and both Suppressing Fires too)")
 	assert_eq([md[0].crew_label, md[2].crew_label], ["Standard Issue crew", "Honors crew"], "crew labels")
 	var db: Node = Engine.get_main_loop().root.get_node_or_null(^"/root/CardDB")
@@ -263,14 +266,14 @@ func test_match_two_drop_is_two_of_four_then_muster_out() -> void:
 	assert_eq(r.current_offer()["kind"], RewardOffers.KIND_MUSTER_OUT, "Muster out is current")
 	assert_eq(r.muster_out_count(), 3, "2 cards taken + 1")
 	var rows: Array[Dictionary] = r.muster_out_options()
-	assert_eq(rows.size(), 18, "every Standard Issue copy listed")
+	assert_eq(rows.size(), 9, "every Standard Issue copy listed (kc-econ: 9 of the 10-card starter)")
 	var pre: Array = rows.filter(func(x: Dictionary) -> bool: return x["preselected"])
-	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"]), [&"si_armored", &"si_armored", &"si_armored"], "Armored Troopers pre-selected")
+	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"]), [&"si_armored", &"si_sergeant", &"si_sergeant"], "most expensive pre-selected: the Armored Trooper, then Sergeants")
 	assert_eq(rows[0]["serial"], "SI-04", "serial plate")
 	var size0: int = r.deck.size()
 	assert_eq(r.choose_offer(0), "", "accept the pre-selection")
-	assert_eq([r.deck.size(), _count(r, &"si_armored"), r.mustered_out], [size0 - 3, 0, 3], "3 Armored Troopers home")
-	assert_eq(r.deck.size(), 19, "20 (M1 drop skipped) + 2 - 3: the deck shrank by one with this drop")
+	assert_eq([r.deck.size(), _count(r, &"si_armored"), _count(r, &"si_sergeant"), r.mustered_out], [size0 - 3, 0, 0, 3], "3 Standard Issue cards home")
+	assert_eq(r.deck.size(), 9, "10 (M1 drop skipped) + 2 - 3: the deck shrank by one with this drop")
 	assert_false(RewardOffers.KIND_MUSTER_OUT in _kinds(r), "done")
 
 
@@ -290,17 +293,17 @@ func test_muster_out_choice_floor_and_errors() -> void:
 			four.append(i)
 	assert_eq(r.muster_out(four), "you can send at most 3 Standard Issue cards home", "at most the count")
 	assert_eq(r.muster_out([grunt]), "", "send just one Grunt home (keep the rest)")
-	assert_eq(_count(r, &"si_grunt"), 4, "one Grunt gone")
-	# Floor: a deck at 15 gets no Muster out.
+	assert_eq(_count(r, &"si_grunt"), 2, "one Grunt gone")
+	# Floor: a deck at the floor (8, kc-econ) gets no Muster out.
 	var r2: RunProgress = _run()
-	while r2.deck.size() > 15:
+	while r2.deck.size() > r2.config.deck_floor:
 		r2.deck.remove_at(r2.deck.size() - 3)
 		r2.deck_traits.remove_at(r2.deck_traits.size() - 3)
 		r2.deck_arts.remove_at(r2.deck_arts.size() - 3)
 	r2.record_result(&"player")
 	_skip_all(r2)
 	r2.record_result(&"player")
-	assert_eq(r2.deck.size(), 15, "at the floor")
+	assert_eq(r2.deck.size(), 8, "at the floor")
 	r2.skip_offer()
 	assert_false(RewardOffers.KIND_MUSTER_OUT in _kinds(r2), "at the floor the Muster out is dropped")
 	# Skipping a drop above the floor still sends the +1 home.

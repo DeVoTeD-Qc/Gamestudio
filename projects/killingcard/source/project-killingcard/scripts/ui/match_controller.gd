@@ -1715,7 +1715,8 @@ func _on_rail_inspected(key: StringName) -> void:
 						"you go first." if bool(ini_s.get("mine", true)) else "the rival goes first.", String(ini_s.get("reason", ""))]})
 		&"deck":
 			_open_info({"title": "Your deck", "type": "deck · discard",
-					"text": "%d cards left to draw, %d used (discard pile). You draw at the start of each round; the hand holds up to 7." % [me.deck.size(), me.discard.size()],
+					"text": "%d cards left to draw, %d in the discard pile. You draw %d card%s at the start of each round; the hand holds up to %d. When the deck is empty, the discard pile is shuffled into a new deck." % [
+							me.deck.size(), me.discard.size(), state.config.draws_per_round, "" if state.config.draws_per_round == 1 else "s", state.config.hand_cap],
 					"status": ""})
 		&"intel":
 			var dots: PackedInt32Array = state.red_dots(PLAYER)
@@ -1862,9 +1863,14 @@ func _open_operator(side: int) -> void:
 	elif side == PLAYER and s.operator_can_deploy:
 		where = "Off the board: tap it, then a column, to place it."
 	var cost: int = state.operator_cost()
+	var respawn_cost: int = maxi(0, state.config.operator_cost)
 	if cost > 0:
-		where += " Placing it costs %d Supply (round 1 and every respawn)%s." % [cost,
+		where += " Placing it costs %d Supply (%s)%s." % [cost,
+				"every respawn; round 1 is free" if state.config.operator_free_round1 else "round 1 and every respawn",
 				", you have %d: not enough now" % s.supply if side == PLAYER and s.operator_can_deploy and cost > s.supply else ""]
+	elif respawn_cost > 0 and state.config.operator_free_round1:
+		# kc-econ: round 1's placement is free; say what a respawn will cost.
+		where += " Free to place in round 1; a respawn costs %d Supply." % respawn_cost
 	var op_lines: Array[Dictionary] = CardInfo.operator_keywords(op)
 	# kc-v2-ui: the Operator kit (run-v2.md §7): its passive and its once-per-match ability.
 	var kit: Dictionary = RunV2Views.operator_kit_view(state, side)
@@ -1939,6 +1945,10 @@ func _add_v2_line(e: Dictionary) -> void:
 	var text: String = ""
 	var side: StringName = StringName(str(e.get("side", "")))
 	match t:
+		"deck_reshuffled":
+			# kc-econ: the classic deckbuilder reshuffle, said in words (both sides; it is public).
+			var n: int = int(e.get("count", 0))
+			text = ("Discard shuffled into a new deck (%d cards)" if side == &"player" else "Rival shuffled their discard into a new deck (%d cards)") % n
 		"terrain_triggered":
 			text = String(e.get("what", ""))
 			if text == "":

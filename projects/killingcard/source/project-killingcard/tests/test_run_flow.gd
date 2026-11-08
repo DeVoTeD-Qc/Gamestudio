@@ -87,7 +87,7 @@ func test_new_run_reads_everything_from_run_config() -> void:
 	assert_eq(r.match_count(), 5, "5 matches")
 	assert_eq(r.tickets, cfg.tickets, "tickets from config")
 	assert_eq(r.tickets, 3, "3 tickets")
-	assert_eq(r.deck.size(), 20, "starter deck")
+	assert_eq(r.deck.size(), 10, "starter deck (kc-econ: 10 cards)")
 	assert_eq(r.primary, &"kestrel_ar7", "starter primary")
 	for gone: String in ["secondary", "lethal", "tactical"]:
 		assert_false(gone in r, "kc-loadout-cut: no %s slot" % gone)
@@ -126,7 +126,7 @@ func test_forced_winning_run_gets_all_offers_at_the_right_matches() -> void:
 	assert_eq(r.result, RunProgress.RESULT_VICTORY, "victory")
 	assert_eq(r.end_reason, RunProgress.END_RIVAL_WON, "reason")
 	assert_eq(r.tickets, 3, "no tickets lost")
-	assert_eq(r.deck.size(), 24, "4 Supply Drop cards")
+	assert_eq(r.deck.size(), 14, "4 Supply Drop cards")
 	assert_eq(r.attachments.size(), 3, "3 weapon levels")
 	assert_eq(r.weapon_level, 3, "weapon level")
 	assert_eq(r.perks.size(), 2, "2 perks")
@@ -147,7 +147,7 @@ func test_forced_losing_run_ends_at_zero_tickets() -> void:
 	assert_eq(r.result, RunProgress.RESULT_DEFEAT, "defeat")
 	assert_eq(r.end_reason, RunProgress.END_NO_TICKETS, "reason")
 	assert_eq(r.matches_played(), 3, "ended after match 3")
-	assert_eq(r.deck.size(), 20, "no cards gained")
+	assert_eq(r.deck.size(), 10, "no cards gained")
 	assert_true(r.create_match() == null, "no match after the end")
 
 
@@ -191,7 +191,7 @@ func test_offers_must_be_resolved_before_the_next_match() -> void:
 	assert_false(r.record_result(&"player")["ok"], "no result while offers are pending")
 	assert_true(r.choose_offer(7) != "", "bad index")
 	assert_eq(r.skip_offer(), "", "skip the Supply Drop")
-	assert_eq(r.deck.size(), 20, "skipping adds nothing")
+	assert_eq(r.deck.size(), 10, "skipping adds nothing")
 	assert_eq(r.current_offer()["kind"], ATTACH, "weapon level next")
 	assert_eq(r.choose_offer(1), "", "take option 1")
 	assert_eq(r.phase, RunProgress.PHASE_MATCH, "back to the match phase")
@@ -296,8 +296,8 @@ func test_player_setup_carries_deck_loadout_and_rewards() -> void:
 	var r: RunProgress = _new_run()
 	_play_forced(r, &"player")  # Supply Drop + attachment
 	var s: SideSetup = r.player_setup()
-	assert_eq(s.deck.size(), 21, "deck + Supply Drop card")
-	assert_eq(s.deck[20].id, r.deck[20], "reward card last")
+	assert_eq(s.deck.size(), 11, "deck + Supply Drop card")
+	assert_eq(s.deck[10].id, r.deck[10], "reward card last")
 	assert_eq(s.primary.id, &"kestrel_ar7", "primary")
 	assert_eq(s.attachments.size(), 1, "attachment")
 	assert_eq(s.attachments[0].id, r.attachments[0], "attachment id")
@@ -315,7 +315,7 @@ func test_enemy_bonuses_by_bracket() -> void:
 	var r: RunProgress = _new_run()
 	# kc-fight-impl: match 3 (Rusher+) Armor bonus 1 -> 0; kc-onboard N4: match 1 "green squad" -1,
 	# match 4 (Anchor+) 1 -> 0.
-	var expect: Array[int] = [-1, 0, 0, 0, 1]
+	var expect: Array[int] = [0, 0, 0, 1, 1]  # kc-econ: M1 0 (its deck is the handicap), Mastery crew +1
 	for i: int in 5:
 		var md: RunMatchData = r.current_match()
 		var e: SideSetup = r.enemy_setup()
@@ -606,7 +606,7 @@ func test_real_matches_can_win_and_lose_a_run() -> void:
 			victory = seed_value
 			assert_eq(r.matches_played(), 5, "victory after the Rival")
 			assert_true(r.history.back()["rival"] and r.history.back()["result"] == "player", "won the Rival")
-			assert_eq(r.deck.size(), 20 + r.count_results(&"player") - 1, "a Supply Drop card per win before the Rival")
+			assert_eq(r.deck.size(), 10 + r.count_results(&"player") - 1, "a Supply Drop card per win before the Rival")
 		elif not r.is_victory() and defeat < 0:
 			defeat = seed_value
 		if victory >= 0 and defeat >= 0:

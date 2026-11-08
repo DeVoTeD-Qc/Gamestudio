@@ -194,6 +194,7 @@ func test_board_banners_cost_without_name_and_si_hand_cards() -> void:
 	# Play one: on the board it has the cost but no name, and a serial plate.
 	var me: RulesSide = c.state.sides[0]
 	var uid: int = -1
+	afford_a_unit(c, 0, func(rc: RulesCard) -> bool: return rc.card.standard_issue)
 	for rc: RulesCard in me.hand:
 		if rc.card.standard_issue and rc.card.cost <= me.supply:
 			uid = rc.uid
@@ -299,7 +300,7 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	await _frames(1)
 	var texts: String = "\n".join(panel.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text))
 	assert_false(texts.contains("ENGINE"), "no Engine section before it is met")
-	assert_true(texts.contains("Standard Issue: 18 of 20"), "the deck view counts the Standard Issue cards: %s" % texts.substr(0, 120))
+	assert_true(texts.contains("Standard Issue: 9 of 10"), "the deck view counts the Standard Issue cards: %s" % texts.substr(0, 120))
 	assert_true(panel.find_child("SerialPlate", true, false) == null, "kc-ui-hooks: the retired serial plate is gone from the deck rows")
 	tree.root.get_node("Settings").met_flags = {"engine_panel": true}
 	panel.open(r)
@@ -380,7 +381,8 @@ func test_tutorial_and_training_bot_play_standard_issue() -> void:
 	assert_eq(counts, {&"si_grunt": 8, &"si_trooper": 3, &"si_sergeant": 2, &"si_armored": 2}, "TrainingBot_01: 8 Grunts, 3 Troopers, 2 Sergeants, 2 Armored Troopers")
 	var texts: String = "\n".join(t.steps.map(func(s: TutorialStep) -> String: return s.text))
 	assert_false(texts.contains("First Shot"), "First Shot is not taught in the drill any more (its own tip teaches it)")
-	assert_true(texts.contains("Sergeant") and texts.contains("steps up"), "steps 8-10 teach the beat order")
+	# kc-econ: round 2 has 2 Supply, so the beat-order step uses the Trooper (2/3) against a Grunt.
+	assert_true(texts.contains("Trooper") and texts.contains("steps up"), "steps 8-10 teach the beat order")
 
 
 func test_kit_slots_fall_back_to_code_drawing() -> void:

@@ -172,7 +172,7 @@ func confirm() -> String:
 		if cands.is_empty() and r != null:
 			for i: int in r.deck.size():
 				cands.append({"index": i, "card_id": r.deck[i]})
-		var floor_n: int = r.config.deck_floor if r != null else 15
+		var floor_n: int = r.config.deck_floor if r != null else 8
 		var room: int = maxi(0, (r.deck.size() if r != null else 0) - floor_n)
 		_picker.compact = compact
 		_picker.open("DRILL · SEND 2 HOME", "Mark up to %d cards to send home (the deck never goes under %d)." % [mini(2, room), floor_n],

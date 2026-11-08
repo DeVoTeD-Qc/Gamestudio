@@ -311,7 +311,7 @@ static func normalise_event(v: Dictionary) -> Dictionary:
 static func normalise_shop(v: Dictionary) -> Dictionary:
 	if v.is_empty() or v.has("muster_price"):
 		return v
-	var s: Dictionary = {"req": int(v.get("req", 0)), "deck_size": int(v.get("deck_size", 0)), "floor": int(v.get("floor", 15)), "api": true}
+	var s: Dictionary = {"req": int(v.get("req", 0)), "deck_size": int(v.get("deck_size", 0)), "floor": int(v.get("floor", 8)), "api": true}
 	var cards: Array = []
 	for c: Dictionary in v.get("cards", []):
 		cards.append({"index": int(c.get("slot", 0)), "card_id": StringName(str(c.get("id", ""))),
@@ -656,7 +656,7 @@ static func sample_shop_view() -> Dictionary:
 			"muster_price": 2, "discharge_price": 3, "restock_price": 1,
 			"perks": [{"index": 0, "id": &"grit", "name": "Grit", "text": "Your Operator survives its first lethal hit each match with 1 Armor.", "price": 6, "can_buy": true},
 				{"index": 1, "id": &"field_salvage", "name": "Field Salvage", "text": "When one of your Fields is torn down, draw a card.", "price": 6, "can_buy": true}],
-			"deck_size": 20, "floor": 15}
+			"deck_size": 10, "floor": 8}
 
 
 static func sample_event_view() -> Dictionary:
@@ -671,5 +671,5 @@ static func sample_event_view() -> Dictionary:
 static func sample_rest_options() -> Array:
 	return [
 		{"id": &"ticket", "title": "+1 TICKET", "result": "Get a Reinforcement Ticket back (2 -> 3, max 3).", "ok": true},
-		{"id": &"drill", "title": "DRILL", "result": "Send 2 cards of your choice home (the deck never goes under 15).", "ok": true},
+		{"id": &"drill", "title": "DRILL", "result": "Send 2 cards of your choice home (the deck never goes under 8).", "ok": true},
 		{"id": &"field_strip", "title": "FIELD-STRIP", "result": "A weapon level now: pick 1 of 2 upgrades for your Operator.", "ok": true}]

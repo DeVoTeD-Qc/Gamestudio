@@ -674,6 +674,8 @@ func _row_point(lane: Control) -> Vector2:
 
 func _affordable(c: Node, card_type: int) -> RulesCard:
 	var me: RulesSide = c.state.sides[0]
+	if card_type == DataEnums.CardType.UNIT:
+		afford_a_unit(c)
 	for rc: RulesCard in me.hand:
 		if rc.card.card_type == card_type and rc.card.cost <= me.supply:
 			return rc

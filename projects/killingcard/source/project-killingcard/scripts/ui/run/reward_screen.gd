@@ -279,7 +279,7 @@ func _after_build(key: String) -> void:
 		new_card.offer(RevealFlags.run_triggers(r), key)
 
 
-## "Tap 2 cards to add them to your deck (20 cards now). Taken: Breacher." (Salvage: "After a loss
+## "Tap 2 cards to add them to your deck (12 cards now). Taken: Breacher." (Salvage: "After a loss
 ## you still salvage a card.").
 func _drop_subtitle(r: RunProgress) -> String:
 	var picks: int = int(offer.get("picks", 1))
@@ -341,7 +341,7 @@ func _wire_inspect(b: BaseButton, on_inspect: Callable) -> void:
 
 
 func _inspect_header(b: Button) -> void:
-	var floor_n: int = run().config.deck_floor if run() != null else 15
+	var floor_n: int = run().config.deck_floor if run() != null else 8
 	var texts: Dictionary = {
 		"SkipButton": ["Skip", "Declines this offer: nothing is added or removed. A drop with picks left ends here; on Muster out (KEEP ALL) every Standard Issue card stays."],
 		"DeckButton": ["Deck", "Your deck: every card, its copies and their traits."],

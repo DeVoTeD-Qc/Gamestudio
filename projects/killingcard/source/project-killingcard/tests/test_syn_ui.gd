@@ -146,6 +146,10 @@ func test_operator_card_is_its_own_card() -> void:
 		assert_eq(int(card.get_meta(&"cost", -1)), st.operator_cost(), "%s the hex shows its Supply cost" % label)
 		var sb: StyleBox = card.get_theme_stylebox(&"panel")
 		assert_true(sb is StyleBoxFlat and (sb as StyleBoxFlat).border_color.is_equal_approx(Color("#C9A227")), "%s brass frame" % label)
+		# kc-econ: round 1's placement is free (operator_free_round1); a respawn costs 1.
+		assert_eq(st.operator_cost(), 0, "%s round 1: the Operator is free to place" % label)
+		st.round_number = 2
+		assert_eq(st.operator_cost(), st.config.operator_cost, "%s later rounds (respawn): it costs Supply" % label)
 		# Not enough Supply: red plate, NEED 1 SUPPLY, no glow.
 		me.supply = 0
 		c.refresh()

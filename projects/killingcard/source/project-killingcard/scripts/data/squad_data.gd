@@ -6,7 +6,8 @@
 class_name SquadData
 extends Resource
 
-const MIN_DECK: int = 15
+## kc-econ: crews play 10-card decks like the player (8 = the run deck floor).
+const MIN_DECK: int = 8
 const MAX_DECK: int = 20
 
 @export_group("Identity")
@@ -19,7 +20,7 @@ const MAX_DECK: int = 20
 @export var personality: DataEnums.Personality = DataEnums.Personality.RUSHER
 
 @export_group("Deck")
-## 15-20 card references; add the same card several times for copies.
+## 8-20 card references (kc-econ: shipped crews use 10); add the same card several times for copies.
 @export var deck: Array[CardData] = []
 
 ## kc-art-traits §7 (head T4): the squad's fixed art identity. Its deck is dressed in arts of this

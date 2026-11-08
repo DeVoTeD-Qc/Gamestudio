@@ -1265,9 +1265,10 @@ func field_passive_total(u: RulesUnit, kind: int) -> int:
 # Synergy (kc-syn: neighbor keywords, trait sets, Operator cost; SynergyRules)
 # =============================================================================
 
-## Supply the Operator costs to place (round 1 and every respawn; RunConfig.operator_cost).
+## Supply the Operator costs to place this round (RunConfig.operator_cost on every respawn; round 1
+## too unless RunConfig.operator_free_round1, kc-econ).
 func operator_cost() -> int:
-	return maxi(0, config.operator_cost)
+	return config.operator_cost_in_round(round_number)
 
 
 ## This unit's synergy right now: {fp, cover, fs, heal, links: [{kind, from_uid}], sets: [[trait, tier]]}

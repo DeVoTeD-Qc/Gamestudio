@@ -95,6 +95,7 @@ func test_layout_switches_live_without_losing_the_match() -> void:
 	assert_false(m.get_hand().fan, "the side tray: X1 cards")
 	var me: RulesSide = c.state.sides[0]
 	var rc0: RulesCard = null
+	afford_a_unit(c)
 	for rc: RulesCard in me.hand:
 		if rc.card.is_unit() and rc.card.cost <= me.supply:
 			rc0 = rc

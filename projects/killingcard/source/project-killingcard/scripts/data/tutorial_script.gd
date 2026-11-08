@@ -29,7 +29,7 @@ const MAX_DECK: int = 40
 @export var seed_value: int = 15
 
 @export_group("Player")
-## Drawn in this order (deck[0] first): Round 1 draws the opening hand + 1, then 2 per round.
+## Drawn in this order (deck[0] first): Round 1 draws the opening hand + 1, then draws_per_round (1) per round.
 @export var player_deck: Array[CardData] = []
 ## Empty = the run config's starter killstreaks.
 @export var player_killstreaks: Array[LoadoutItem] = []

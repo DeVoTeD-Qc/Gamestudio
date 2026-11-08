@@ -1,6 +1,6 @@
 # loadout_screen.gd
 # Purpose: Loadout pick (p11, scenes/run/Loadout.tscn). Shows the starter kit (the Operator's
-#   Primary, the 20-card deck) and the killstreak pool as tiles (kc-loadout-cut: no Secondary /
+#   Primary, the 10-card deck) and the killstreak pool as tiles (kc-loadout-cut: no Secondary /
 #   Lethal / Tactical rows any more). Tap a tile to pick it, tap a picked one to drop it; exactly RunConfig.killstreak_slots must be picked before
 #   BEGIN RUN works (the starter three are pre-picked). BEGIN RUN calls RunState.set_killstreaks()
 #   and begin_run(), then opens the run map.

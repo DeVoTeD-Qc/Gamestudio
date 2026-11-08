@@ -25,7 +25,7 @@ func _boss_match(rule: StringName, card: CardData = null) -> MatchState:
 
 func test_reinforcements_extra_supply_from_round_5() -> void:
 	var m: MatchState = _boss_match(BossRules.REINFORCEMENTS)
-	assert_eq(_shipped().meridian_supply_from, 5, "shipped: from round 5 (head I2)")
+	assert_eq(_shipped().meridian_supply_from, 4, "shipped: from round 4 (kc-econ; head I2 had 5 at 2 Supply in round 1)")
 	for r: int in range(1, 7):
 		var base: int = m.config.supply_for_round(r)
 		var want: int = base + (1 if r >= 5 else 0)
@@ -103,7 +103,7 @@ func test_boss_texts_follow_the_rule_numbers() -> void:
 		assert_false(b2.boss_rule_text.contains("round 4") or b2.boss_tip.contains("round 4"), "%s: no hard-coded round" % b2.boss_id)
 		assert_true(b2.boss_tip != "", "%s has a tip" % b2.boss_id)
 	var choir: Dictionary = RunProgress.create_map_run(_shipped(), 3, {"boss": &"choir"}).boss_view()
-	assert_true(String(choir["rule_text"]).begins_with("From round 2,"), "the Choir's round comes from choir_from_round")
+	assert_true(String(choir["rule_text"]).begins_with("From round %d," % _shipped().choir_from_round), "the Choir's round comes from choir_from_round")
 
 
 func test_boss_data_in_the_config() -> void:
@@ -114,8 +114,8 @@ func test_boss_data_in_the_config() -> void:
 	assert_eq(rules, [&"reinforcements", &"dug_in", &"horde"], "one rule each")
 	var choir: RunMatchData = cfg.bosses[2]
 	assert_eq(choir.squad.identity_trait, &"undead", "the Choir is Undead")
-	assert_eq(choir.deck_for_squad().size(), 20, "20-card authored deck")
-	assert_eq([cfg.bosses[0].enemy_armor_bonus, cfg.bosses[1].enemy_armor_bonus, choir.enemy_armor_bonus], [1, 1, 2], "boss Armor")
+	assert_eq(choir.deck_for_squad().size(), 10, "10-card authored deck (kc-econ: crews play 10 cards like the player)")
+	assert_eq([cfg.bosses[0].enemy_armor_bonus, cfg.bosses[1].enemy_armor_bonus, choir.enemy_armor_bonus], [1, 2, 2], "boss Armor (kc-econ: Prime 1 -> 2)")
 	assert_eq(cfg.bosses[1].mode, DataEnums.GameMode.FIREFIGHT, "Prime plays Firefight")
 
 

@@ -11,6 +11,10 @@
 #   Options: exps=runs,ops,late  runs=N  proxies=competent,casual  first=1 (the first-run map)
 #     op=kestrel_ar7|longreach_338|wasp_9|bastion_60|rotate  boss=meridian|prime|choir|rotate
 #     mods=hardcore,austerity,hot_ground,veterans,fog  terrain=0 (no Terrain anywhere)
+#     slot=N.prop=value[;...] (kc-econ: RunMatchData N, 1-5 = F1-F4 + the old M5, 6-8 = the bosses)
+#     lset=loadout.prop=value[;...] (kc-econ: e.g. lset=wasp_9.operator_armor=8)
+#     sdeck=N:card*count,...[;N:...] (kc-econ: slot N's authored enemy deck)
+#     starter=card*n,... (kc-econ: the run starter, sets deck_size) edeck=0.5|10 (kc-econ: enemy decks scaled to a share or to N cards, composition kept)
 #     cfg=prop=value[;...] (RunConfig, e.g. cfg=price_muster_out=1)  set=card.prop=value  tune=trait.tier.key=value
 #     late=N (aware-vs-blind decks) mirror=N tn=N (trait games per pairing) hn=N (head-to-head games per pair)
 #   Run: godot --headless --path . -s res://tests/tools/run_v2_check.gd -- exps=runs runs=400
@@ -29,6 +33,8 @@ var op_mode: String = "rotate"
 var boss_mode: String = "rotate"
 var mods: Array = []
 var terrain_on: bool = true
+## kc-econ what-ifs: enemy decks scaled to this share of their size (composition kept; 0 = as authored).
+var edeck_scale: float = 0.0
 
 const OPS: Array[StringName] = [&"kestrel_ar7", &"longreach_338", &"wasp_9", &"bastion_60"]
 const BOSSES: Array[StringName] = [&"meridian", &"prime", &"choir"]
@@ -59,6 +65,36 @@ func _main() -> void:
 			"op": op_mode = kv[1]
 			"boss": boss_mode = kv[1]
 			"terrain": terrain_on = kv[1] != "0"
+			"edeck": edeck_scale = float(kv[1])
+			"sdeck":
+				# kc-econ: sdeck=N:card*count,... sets slot N's authored enemy_deck (1-based, as slot=).
+				for item: String in kv[1].split(";"):
+					var a3: PackedStringArray = item.split(":", true, 1)
+					var ix3: int = int(a3[0]) - 1
+					var md3: RunMatchData = config.matches[ix3] if ix3 < config.matches.size() else config.bosses[ix3 - config.matches.size()]
+					var ed: Array[CardData] = []
+					for part: String in a3[1].split(","):
+						var pc3: PackedStringArray = part.split("*")
+						for j: int in (int(pc3[1]) if pc3.size() > 1 else 1):
+							ed.append(load("res://data/cards/%s.tres" % pc3[0]) as CardData)
+					md3.enemy_deck = ed
+			"slot":
+				# kc-econ: slot=N.prop=value[;...] edits RunMatchData N (1-based; 6-8 = the bosses).
+				for item: String in kv[1].split(";"):
+					var a2: PackedStringArray = item.split(".", true, 1)
+					var b2: PackedStringArray = a2[1].split("=", true, 1)
+					var ix: int = int(a2[0]) - 1
+					var md2: RunMatchData = config.matches[ix] if ix < config.matches.size() else config.bosses[ix - config.matches.size()]
+					_assign(md2, b2[0], b2[1])
+			"starter":
+				# kc-econ: starter=si_grunt*3,si_trooper*3,... (also sets deck_size).
+				var sd: Array[CardData] = []
+				for part: String in kv[1].split(","):
+					var pc: PackedStringArray = part.split("*")
+					for j: int in (int(pc[1]) if pc.size() > 1 else 1):
+						sd.append(load("res://data/cards/%s.tres" % pc[0]) as CardData)
+				config.starter_deck = sd
+				config.deck_size = sd.size()
 			"proxies":
 				proxies.clear()
 				for p: String in kv[1].split(","):
@@ -81,6 +117,12 @@ func _main() -> void:
 					var a: PackedStringArray = item.split(".", true, 1)
 					var b: PackedStringArray = a[1].split("=", true, 1)
 					_assign(load("res://data/cards/%s.tres" % a[0]), b[0], b[1])
+			"lset":
+				# kc-econ: lset=loadout_id.prop=value[;...] edits a LoadoutItem (an Operator) in memory.
+				for item: String in kv[1].split(";"):
+					var la: PackedStringArray = item.split(".", true, 1)
+					var lb: PackedStringArray = la[1].split("=", true, 1)
+					_assign(load("res://data/loadout/%s.tres" % la[0]), lb[0], lb[1])
 			"tune":
 				for item: String in kv[1].split(";"):
 					var tv: PackedStringArray = item.split("=", true, 1)
@@ -428,6 +470,8 @@ func _runs(proxy: String, keep_late: bool) -> void:
 						late_op.append(op)
 					reach[key] = int(reach.get(key, 0)) + 1
 					var m: MatchState = r.create_match()
+					if edeck_scale > 0.0:
+						_scale_deck(m.sides[MatchState.ENEMY].setup, edeck_scale)
 					if not terrain_on:
 						m.terrain = [&"", &"", &""] as Array[StringName]
 					m.start_match()
@@ -483,6 +527,44 @@ func _runs(proxy: String, keep_late: bool) -> void:
 	print("  per run: REQ from fights %.1f, REQ spent in shops %.1f, shop cards %.2f, SI sent home %.2f, end deck %.1f, events %.2f, shops %.2f, rests %.2f" % [
 			totals["req"] / n_end, totals["req_spent"] / n_end, totals["bought"] / n_end, totals["si_out"] / n_end,
 			totals["deck"] / n_end, totals["events"] / n_end, totals["shops"] / n_end, totals["rests"] / n_end])
+
+
+## kc-econ: keeps round(share * size) cards, each design's count scaled (largest remainder), in order.
+func _scale_deck(s: SideSetup, share: float) -> void:
+	var n: int = s.deck.size()
+	var target: int = mini(n, int(share)) if share >= 2.0 else maxi(1, roundi(n * share))
+	var counts: Dictionary = {}
+	for c: CardData in s.deck:
+		counts[c.id] = int(counts.get(c.id, 0)) + 1
+	var keep: Dictionary = {}
+	var rema: Array = []
+	var total: int = 0
+	for id: StringName in counts:
+		var exact: float = counts[id] * float(target) / n
+		keep[id] = int(floor(exact))
+		total += int(keep[id])
+		rema.append([exact - floor(exact), id])
+	rema.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	for k: int in target - total:
+		keep[rema[k % rema.size()][1]] += 1
+	var deck: Array[CardData] = []
+	var traits: Array[StringName] = []
+	var arts: Array[StringName] = []
+	for i: int in n:
+		var id: StringName = s.deck[i].id
+		if int(keep[id]) <= 0:
+			continue
+		keep[id] -= 1
+		deck.append(s.deck[i])
+		if i < s.deck_traits.size():
+			traits.append(s.deck_traits[i])
+		if i < s.deck_arts.size():
+			arts.append(s.deck_arts[i])
+	s.deck = deck
+	if not s.deck_traits.is_empty():
+		s.deck_traits = traits
+	if not s.deck_arts.is_empty():
+		s.deck_arts = arts
 
 
 # =============================================================================

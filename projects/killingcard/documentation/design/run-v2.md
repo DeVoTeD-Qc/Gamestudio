@@ -26,7 +26,7 @@
 | Skill still matters | Aware vs blind ≥ 55%; traits 40–60%; seat 0 45–55% | §10 |
 | Unlocks are variety, never power | Every unlock is a sidegrade, a challenge or a cosmetic | §8 |
 
-**What stays exactly as it is:** the Standard Issue starter (20 cards), traits from the art (one per copy), Doctrine from the first calling card, the reward ladder by card type (units → tactics → Fields → full pool), pick 2 of 4 from F2, Muster out (one Standard Issue card home per card taken, plus one), Salvage after a loss, the green M1 squad (−1 Armor), 3 tickets, the 15-card floor, Field cards (Model B, one per side per column, Overrun), the beat order, the Operator's 1 Supply cost and the progressive reveal ("New: …" cards).
+**What stays exactly as it is:** the Standard Issue starter (20 cards; **10 since kc-econ, §15**), traits from the art (one per copy), Doctrine from the first calling card, the reward ladder by card type (units → tactics → Fields → full pool), pick 2 of 4 from F2, Muster out (one Standard Issue card home per card taken, plus one), Salvage after a loss, the green M1 squad (−1 Armor; **since kc-econ a slow, heavy 10-card crew at 0 Armor**), 3 tickets, the 15-card floor (**8 since kc-econ**), Field cards (Model B, one per side per column, Overrun), the beat order, the Operator's 1 Supply cost (**free in round 1 since kc-econ**) and the progressive reveal ("New: …" cards).
 
 Design pillars for v2:
 1. **Every choice shows its price.** A map node shows what it gives and what it risks before you step on it; a Terrain shows its rule on the column before you deploy.
@@ -74,7 +74,7 @@ One currency, **Requisition (REQ)**, shown as a stencil "REQ 7" chip next to the
 | Tactic | 3 |
 | Field | 3 |
 | Elite ★ card (rung 4 only) | 7 |
-| **Muster out** a Standard Issue card (any number, floor 15) | 2 each |
+| **Muster out** a Standard Issue card (any number, floor 15; 8 since kc-econ) | 2 each |
 | **Discharge** any other card (floor 15) | 3 |
 | Perk (if a slot is free; 1 of 2) | 6 |
 | Restock the 3 cards | 1 |

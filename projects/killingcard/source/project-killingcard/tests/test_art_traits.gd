@@ -528,4 +528,5 @@ func test_anchor_runs_one_gunner_fewer() -> void:
 	# Hold the Line (art_traits_sim campaign, slots 2 and 4, kc-art-traits-impl §11.3).
 	var sq: SquadData = load("res://data/squads/squad_anchor.tres") as SquadData
 	var ids: Array = sq.deck.map(func(c: CardData) -> StringName: return c.id)
-	assert_eq([ids.count(&"gunner"), ids.count(&"hold_the_line"), ids.size()], [2, 3, 18], "2 Gunners, 3 Hold the Line, 18 cards")
+	# kc-econ: every crew plays a 10-card deck (the 18-card list scaled, composition kept).
+	assert_eq([ids.count(&"gunner"), ids.count(&"hold_the_line"), ids.size()], [1, 2, 10], "1 Gunner, 2 Hold the Line, 10 cards")

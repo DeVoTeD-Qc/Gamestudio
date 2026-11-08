@@ -1,7 +1,7 @@
 # deck_picker.gd
 # Purpose: Pick cards from your deck (kc-v2-ui): the shop's Muster out (Standard Issue cards, 2 REQ
 #   each) and Discharge (any other card, 3 REQ), the Rest's Drill (send 2 home). A modal sheet over the
-#   screen: a title that says the rule ("Pick up to 2 · the deck never goes under 15"), the cards as
+#   screen: a title that says the rule ("Pick up to 2 · the deck never goes under 8"), the cards as
 #   tiles (tap = mark / unmark, a marked tile reads GOING HOME with a dark veil and an amber frame:
 #   shape and words, not colour only), and a confirm button that prices the choice ("SEND 2 HOME ·
 #   4 REQ"). Long press / right click on a tile = the full card. CANCEL closes with nothing done.

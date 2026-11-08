@@ -2,7 +2,7 @@
 # Purpose: The run's deck view and Engine panel (kc-syn-ui; synergy-system.md §5.2, §9): an overlay
 #   any run screen can open (DECK button). Top: the engine in one look: cards per trait (trait icon
 #   + count + what the deck can switch on: "2 in play: tier 2"), neighbour keyword counts, Doctrine,
-#   deck size over the 15-card floor (kc-onboard-ui: the Engine part shows once RevealGate shows
+#   deck size over the deck floor (RunConfig.deck_floor, 8 since kc-econ) (kc-onboard-ui: the Engine part shows once RevealGate shows
 #   ENGINE_PANEL; Standard Issue rows carry the title-style name). Below: every design in the deck,
 #   one row each, with its copies' traits and keyword glyphs. kc-ipad-cards (kc-no-training): no
 #   copy levels, camo level chips, Recruit counts or "Trains:" lines.

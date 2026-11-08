@@ -462,6 +462,16 @@ func _op_cost_text() -> String:
 	return str(c) if c > 0 else ""
 
 
+## kc-econ: the Operator's placement rule in words (round 1 free or not, the respawn cost).
+func _op_cost_rule() -> String:
+	var c: int = _config.operator_cost if _config != null else 0
+	if c <= 0:
+		return "it is free to place and comes back after it goes down."
+	if _config.operator_free_round1:
+		return "it is free to place in round 1 and costs %d Supply to place again after it goes down." % c
+	return "it costs %d Supply to place and to place again after it goes down." % c
+
+
 ## The inspector's info for an Operator option.
 func operator_info(item: LoadoutItem) -> Dictionary:
 	var kws: Array[Dictionary] = []
@@ -478,7 +488,7 @@ func operator_info(item: LoadoutItem) -> Dictionary:
 				"text": "%s Use it from the button on your Operator card during Deploy, like a killstreak (with the same preview and UNDO)." % kit.get("ability_text", "")})
 	var locked: bool = not kit.is_empty() and not bool(kit.get("unlocked", true))
 	return {"title": item.display_name, "type": "Operator · " + RunFlowScript.item_effect_line(item),
-			"text": "%s Your Operator is never drawn or discarded: it costs Supply to place and comes back after it goes down." % item.text,
+			"text": "%s Your Operator is never drawn or discarded: %s" % [item.text, _op_cost_rule()],
 			"keywords": kws, "banner": entry, "side": 0, "is_unit": true,
 			"status": ("LOCKED: %s" % kit.get("unlock_text", "")) if locked else ("SELECTED: you start with this Operator" if item.id == picked else "Tap the tile to start with this Operator")}
 

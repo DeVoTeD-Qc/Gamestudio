@@ -22,7 +22,7 @@ zone = 0
 [sub_resource type="Resource" id="Resource_kt1yq"]
 script = ExtResource("6_tyh01")
 round_number = 2
-card = ExtResource("17_sitr")
+card = ExtResource("16_sigr")
 zone = 2
 
 [sub_resource type="Resource" id="Resource_a4e86"]
@@ -40,7 +40,7 @@ zone = 1
 [sub_resource type="Resource" id="Resource_dhd5w"]
 script = ExtResource("6_tyh01")
 round_number = 4
-card = ExtResource("19_siar")
+card = ExtResource("17_sitr")
 zone = 1
 
 [sub_resource type="Resource" id="Resource_auso3"]
@@ -68,7 +68,7 @@ script = ExtResource("15_qx8xj")
 index = 2
 round_number = 1
 title = "YOUR OPERATOR"
-text = "Your Operator leads the squad. Tap it, then tap column A to place it there."
+text = "Your Operator leads the squad and is free to place in round 1. Tap it, then tap column A."
 advance_on = &"place_operator"
 highlight = &"auto"
 card_id = &""
@@ -96,7 +96,7 @@ script = ExtResource("15_qx8xj")
 index = 4
 round_number = 1
 title = "DEPLOY"
-text = "Tap Grunt, then tap column A. It costs 1 Supply."
+text = "Tap Grunt, then tap column A. It costs your 1 Supply; each round gives 1 more."
 advance_on = &"play_card"
 highlight = &"auto"
 card_id = &"si_grunt"
@@ -152,10 +152,10 @@ script = ExtResource("15_qx8xj")
 index = 8
 round_number = 2
 title = "BEAT ORDER"
-text = "Sergeant hits for 3. Deploy it to column C, against their Trooper."
+text = "Trooper: 2 Firepower, 3 Armor. Deploy it to column C, against their Grunt (2/2)."
 advance_on = &"play_card"
 highlight = &"auto"
-card_id = &"si_sergeant"
+card_id = &"si_trooper"
 zone = 2
 item_id = &""
 lock_input = true
@@ -180,7 +180,7 @@ script = ExtResource("15_qx8xj")
 index = 10
 round_number = 2
 title = "FIREFIGHT"
-text = "Front cards trade shots; when one falls, the card behind steps up. Your Sergeant wins column C."
+text = "Front cards trade shots; when one falls, the card behind steps up. Your Trooper wins column C."
 advance_on = &"round_end"
 highlight = &"auto"
 card_id = &""
@@ -297,7 +297,7 @@ mode = 0
 round_cap = 4
 score_target = 20
 seed_value = 15
-player_deck = Array[ExtResource("1_c2y0l")]([ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("18_sisg"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("18_sisg"), ExtResource("17_sitr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("18_sisg"), ExtResource("16_sigr"), ExtResource("20_ammo"), ExtResource("17_sitr")])
+player_deck = Array[ExtResource("1_c2y0l")]([ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("18_sisg"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("18_sisg"), ExtResource("17_sitr"), ExtResource("20_ammo")])
 player_killstreaks = Array[ExtResource("12_qfvru")]([])
 enemy_deck = Array[ExtResource("1_c2y0l")]([ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("19_siar"), ExtResource("16_sigr"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr"), ExtResource("17_sitr"), ExtResource("16_sigr")])
 enemy_plays = Array[ExtResource("6_tyh01")]([SubResource("Resource_2itl3"), SubResource("Resource_kt1yq"), SubResource("Resource_a4e86"), SubResource("Resource_y131t"), SubResource("Resource_dhd5w"), SubResource("Resource_auso3")])

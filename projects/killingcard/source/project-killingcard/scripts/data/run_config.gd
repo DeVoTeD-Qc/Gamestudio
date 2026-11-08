@@ -137,6 +137,9 @@ extends Resource
 ## kc-syn §6.3: Supply to place the Operator (round 1 and every respawn), both sides, all modes.
 ## 0 = free (RunConfig.new() default, so hand-built test configs keep the old rule).
 @export_range(0, 3) var operator_cost: int = 0
+## kc-econ: the round-1 placement is free (respawns still cost operator_cost), so round 1's single
+## Supply goes to a card. false = round 1 costs operator_cost too (RunConfig.new() default).
+@export var operator_free_round1: bool = false
 
 @export_group("Mode targets")
 @export_range(1, 20) var zone_control_target: int = 6
@@ -173,6 +176,13 @@ func range_bonus(_weapon_class: DataEnums.WeaponClass, _range_tag: DataEnums.Ran
 ## Supply gained in round `round_number` (1-based).
 func supply_for_round(round_number: int) -> int:
 	return mini(round_number + supply_round_offset, supply_cap)
+
+
+## kc-econ: Supply to place the Operator in round `round_number` (round 1 free with operator_free_round1).
+func operator_cost_in_round(round_number: int) -> int:
+	if operator_free_round1 and round_number <= 1:
+		return 0
+	return maxi(0, operator_cost)
 
 
 const RUNG_FULL: int = 4

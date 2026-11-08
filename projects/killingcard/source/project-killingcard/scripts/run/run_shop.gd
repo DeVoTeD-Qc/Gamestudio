@@ -2,9 +2,9 @@
 # Purpose: The Shop and the Rest of the run map (run-v2.md §2.2-§2.3). One currency, Requisition (REQ),
 #   earned, never bought. Prices from RunConfig (head V5: Muster out 2 REQ).
 #   Shop: 3 cards from the rung you are on (slot 1 on your main trait; an Elite card only at rung 4),
-#   Muster out a Standard Issue card (any number, floor 15), Discharge any other card (floor 15), a
+#   Muster out a Standard Issue card (any number, floor RunConfig.deck_floor = 8), Discharge any other card (same floor), a
 #   Perk (1 of 2, if a slot is free), restock the 3 cards. No tickets in the shop.
-#   Rest: pick one: +1 ticket (up to the max), Drill: send 2 cards of your choice home (floor 15), or
+#   Rest: pick one: +1 ticket (up to the max), Drill: send 2 cards of your choice home (deck floor), or
 #   Field-strip: a weapon level now (queued as the normal weapon-level offer).
 #   The stock lives in RunProgress.shop (saved): {rung, cards: [{id, trait, art, sold}], perks: [ids],
 #   restocks}. Static; RunProgress calls these.

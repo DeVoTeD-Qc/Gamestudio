@@ -238,6 +238,7 @@ func test_h1_select_place_and_cancel() -> void:
 		var hand: Control = m.get_hand()
 		var chip: Control = null
 		var rc0: RulesCard = null
+		afford_a_unit(c)
 		for rc: RulesCard in c.state.sides[0].hand:
 			if rc.card.is_unit() and rc.card.cost <= c.state.sides[0].supply:
 				chip = hand.get_card(rc.uid)
