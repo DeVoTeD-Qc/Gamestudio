@@ -110,6 +110,22 @@ textarea.design{min-height:120px}
 .sendbox code{font-size:13px;background:var(--panel-2);padding:6px 8px;border-radius:6px;display:block;white-space:pre-wrap}
 @media (max-width:520px){.steppers{gap:6px}.stepper button{width:36px;height:36px}.row2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.card:hover{transform:none}}
+/* Sets */
+.setbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.setbar select{font-family:var(--f-cond);font-size:17px;font-weight:600;min-width:0;max-width:100%}
+.setpanel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.setpanel .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.setpanel input[type=text]{flex:1 1 220px;min-width:0;font-family:var(--f-display);font-size:18px;text-transform:uppercase;letter-spacing:.03em}
+.mix{display:flex;gap:12px;flex-wrap:wrap;font-family:var(--f-cond);font-size:15px;color:var(--muted)}
+.mix b{color:var(--ink);font-variant-numeric:tabular-nums}
+.choice{display:flex;gap:8px;flex-wrap:wrap}
+.choice label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel-2);cursor:pointer}
+.kwgrid{display:flex;flex-wrap:wrap;gap:6px}
+.kwgrid button{font-family:var(--f-cond);font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:6px;padding:4px 9px}
+.kwgrid button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff}
+.kwgrid input{width:56px}
+.st-building{background:var(--amber-soft);color:var(--amber)}
+.st-swapped{background:#2b3338;color:#cfe}
 </style>
 
 <header class="top"><div class="wrap">
@@ -117,27 +133,58 @@ textarea.design{min-height:120px}
     <h1>KillingCard <span>Card Editor</span></h1>
     <div class="counts" id="counts"><span>Loading cards…</span></div>
   </div>
+  <div class="setbar">
+    <label class="lbl" for="setSel">Card set</label>
+    <select id="setSel"><option value="game">Game set (what you play now)</option></select>
+    <button class="btn" id="newSetBtn">+ New set</button>
+  </div>
   <div class="toolbar">
     <input type="search" id="q" placeholder="Search name, text or keyword" aria-label="Search cards">
     <button class="chip" data-f="all" aria-pressed="true">All</button>
     <button class="chip" data-f="Unit" aria-pressed="false">Units</button>
     <button class="chip" data-f="Tactic" aria-pressed="false">Tactics</button>
     <button class="chip" data-f="Field" aria-pressed="false">Fields</button>
-    <button class="chip" data-f="edited" aria-pressed="false">Edited</button>
+    <button class="chip" data-f="edited" aria-pressed="false" id="editedChip">Edited</button>
     <button class="btn" id="newCard">+ New card</button>
   </div>
 </div></header>
 
 <main class="wrap">
   <div id="banner" class="notice" hidden></div>
-  <div class="howto">
+
+  <section id="newSetPanel" class="setpanel" hidden>
+    <span class="lbl">New card set</span>
+    <div class="row"><input type="text" id="newSetName" maxlength="40" placeholder="Set name, e.g. Season 2" aria-label="Set name"></div>
+    <div class="choice" role="radiogroup" aria-label="Start from">
+      <label><input type="radio" name="startFrom" value="copy" checked> Copy the game set (36 cards) and change it</label>
+      <label><input type="radio" name="startFrom" value="blank"> Start empty</label>
+    </div>
+    <div class="row"><button class="btn primary" id="createSet">Create set</button><button class="btn" id="cancelSet">Cancel</button><span class="saving" id="createMsg"></span></div>
+  </section>
+
+  <section id="setPanel" class="setpanel" hidden>
+    <div class="row">
+      <input type="text" id="setName" maxlength="40" aria-label="Set name">
+      <span id="setStatus" class="status st-building">Building</span>
+    </div>
+    <div class="mix" id="setMix"></div>
+    <div id="setNote" class="claude-note" hidden></div>
+    <div class="row">
+      <button class="btn primary" id="setReady">Ready to swap in</button>
+      <button class="btn warn" id="setDelete">Delete set</button>
+      <span id="setDeleteConfirm" class="confirm" hidden><span>Delete this set and all its cards?</span><button class="btn warn" id="setDeleteYes">Delete</button><button class="btn" id="setDeleteNo">Keep</button></span>
+    </div>
+    <span class="hint">The game keeps its current cards until you mark this set ready and send it to Claude. Claude builds every card into the game, tests and balances the set, then swaps it in.</span>
+  </section>
+
+  <div class="howto" id="howto">
     <div><b>1 · Edit</b>Tap a card. Change cost, Firepower and Armor, its name and printed text. Changes save as you type.</div>
     <div><b>2 · Describe</b>Write what the card should do in plain words. Claude turns it into game rules and tests it.</div>
-    <div><b>3 · Mark ready</b>Mark the card ready, then send it to Claude with the button below the grid.</div>
+    <div><b>3 · Send</b>Mark it ready, then send it to Claude with the button below the cards.</div>
   </div>
   <div id="grid" class="grid" aria-live="polite"></div>
   <div class="sendbox" id="sendbox">
-    <div class="lbl">Send ready cards to Claude</div>
+    <div class="lbl" id="sendTitle">Send ready cards to Claude</div>
     <div id="readyList" class="hint">No cards are marked ready yet.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn primary" id="sendBtn" disabled>Send to Claude</button>
@@ -167,6 +214,17 @@ textarea.design{min-height:120px}
       <div class="field"><label for="fType">Type</label>
         <select id="fType"><option>Unit</option><option>Tactic</option><option>Field</option></select></div>
     </div>
+    <div class="row2" id="setOnly1">
+      <div class="field"><label for="fTrait">Trait</label>
+        <select id="fTrait"><option value="">None</option><option value="undead">Undead</option><option value="vanguard">Vanguard</option><option value="heavy">Heavy</option><option value="specops">Spec Ops</option></select></div>
+      <div class="field"><span class="lbl">Copies in the deck</span>
+        <div class="kwgrid"><button type="button" data-copies="-1" aria-label="Fewer copies">−</button><b id="fCopies" style="font-family:var(--f-display);font-size:22px;min-width:28px;text-align:center">1</b><button type="button" data-copies="1" aria-label="More copies">+</button></div></div>
+    </div>
+    <div class="field" id="setOnly2">
+      <span class="lbl">Keywords</span>
+      <div class="kwgrid" id="kwGrid"></div>
+      <span class="hint">Tap to toggle. Cover and Patch take a number.</span>
+    </div>
     <div class="field"><label for="fText">Printed text</label>
       <textarea id="fText" maxlength="240" placeholder="What the card says, e.g. First Shot. On Deploy: draw 1."></textarea>
       <span class="hint">Keyword icons and tooltips come from the game; write the words players read.</span></div>
@@ -176,6 +234,7 @@ textarea.design{min-height:120px}
   </div>
   <footer>
     <button class="btn warn" id="resetBtn">Reset to game values</button>
+    <button class="btn" id="dupBtn" hidden>Duplicate</button>
     <span class="grow"></span>
     <span class="saving" id="saving"></span>
     <button class="btn primary" id="readyBtn">Mark ready</button>
@@ -186,107 +245,169 @@ textarea.design{min-height:120px}
 (function(){
   const TYPE_COLOR={Unit:"var(--unit)",Tactic:"var(--tactic)",Field:"var(--field)"};
   const STATUS={draft:["Draft","st-draft"],ready:["Ready for Claude","st-ready"],applied:["In the game","st-applied"],question:["Claude asks","st-question"]};
+  const SET_STATUS={building:["Building","st-building"],ready:["Ready to swap in","st-ready"],swapping:["Claude is building it","st-ready"],swapped:["In the game","st-swapped"],question:["Claude asks","st-question"]};
   const LIMITS={cost:[0,10],firepower:[0,10],armor:[0,20]};
-  const S={base:{},edits:{},filter:"all",q:"",open:null,db:null,comments:null,canWrite:true,loaded:false};
+  const KW_FLAGS=["First Shot","Pick","Flank","Suppress","Pierce","Holder","Arrives Front","Hidden"];
+  const KW_NUM=["Cover","Patch"];
+  const TRAIT_LABEL={undead:"Undead",vanguard:"Vanguard",heavy:"Heavy",specops:"Spec Ops"};
+  const S={game:{},edits:{},sets:{},setCards:{},set:"game",filter:"all",q:"",open:null,db:null,comments:null,canWrite:true,loaded:false,unsubSet:null};
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const inSet=()=>S.set!=="game";
+  try{ const last=localStorage.getItem("kc-editor-set"); if(last) S.set=last; }catch(e){}
 
+  // ---------- Model ----------
+  function cardMap(){ return inSet()?S.setCards:S.game; }
   function merged(id){
-    const b=S.base[id]||{}, e=S.edits[id]||{};
+    if(inSet()){ const c=Object.assign({copies:1,keywords:[]},S.setCards[id]||{}); c.id=id; return c; }
+    const b=S.game[id]||{}, e=S.edits[id]||{};
     const m=Object.assign({},b);
     for(const k of ["name","type","cost","firepower","armor","text","design"]) if(e[k]!==undefined) m[k]=e[k];
     m.status=e.status||null; m.claudeNote=e.claudeNote||""; m.isNew=!!e.isNew; m.id=id;
     return m;
   }
+  function ref(id){ if(inSet()){ return S.game[(S.setCards[id]||{}).from]; } return S.game[id]; }
   function diffs(id){
-    const b=S.base[id], e=S.edits[id]; if(!e) return {};
-    const d={};
-    if(!b){ for(const k of ["name","type","cost","firepower","armor","text"]) d[k]=true; return d; }
-    for(const k of ["name","type","cost","firepower","armor","text"]) if(e[k]!==undefined && e[k]!==b[k]) d[k]=true;
+    const m=merged(id), b=ref(id), d={};
+    if(!inSet()){ const e=S.edits[id]; if(!e) return d; if(!b){ for(const k of ["name","type","cost","firepower","armor","text"]) d[k]=true; return d; } }
+    if(!b) return inSet()?{}:d;
+    for(const k of ["name","type","cost","firepower","armor","text"]) if(m[k]!==undefined && m[k]!==b[k]) d[k]=true;
     return d;
   }
-  function isEdited(id){ const e=S.edits[id]; return !!e && (e.isNew || Object.keys(diffs(id)).length>0 || (e.design||"").trim()!=="" ); }
+  function isEdited(id){
+    if(inSet()){ const c=S.setCards[id]; return !c.from || Object.keys(diffs(id)).length>0 || (c.design||"").trim()!==""; }
+    const e=S.edits[id]; return !!e && (e.isNew || Object.keys(diffs(id)).length>0 || (e.design||"").trim()!=="");
+  }
 
   function cardHTML(id,{preview=false}={}){
-    const m=merged(id), d=diffs(id), b=S.base[id]||{};
+    const m=merged(id), d=diffs(id), b=ref(id)||{};
     const tc=TYPE_COLOR[m.type]||"#666";
     const unit=m.type==="Unit";
-    const st=m.status&&STATUS[m.status];
+    const st=!inSet()&&m.status&&STATUS[m.status];
     const text=(m.text||"").trim();
-    const was=(k)=> d[k]&&b[k]!==undefined? `<span class="was">${esc(b[k])}</span>`:"";
-    const kws=(b.keywords||[]).map(k=>`<span class="kw">${esc(k)}</span>`).join("");
+    const was=k=> d[k]&&b[k]!==undefined? `<span class="was">${esc(b[k])}</span>`:"";
+    const kwList=inSet()?(m.keywords||[]):(b.keywords||[]);
+    const trait=inSet()?m.trait:b.trait;
+    const kws=kwList.map(k=>`<span class="kw">${esc(k)}</span>`).join("");
     const tag=preview?"div":"button";
+    const sub=[m.type];
+    if(!inSet()&&b.standard_issue) sub.push("Standard Issue");
+    if(!inSet()&&m.isNew) sub.push("New");
+    if(!inSet()&&b.collectible===false&&!b.standard_issue&&!m.isNew) sub.push("Enemy only");
+    if(inSet()) sub.push(m.from?"from the game set":"new"), (m.copies>1&&sub.push("×"+m.copies));
     return `<${tag} class="card" ${preview?"":`data-id="${esc(id)}" aria-label="Edit ${esc(m.name)}"`} style="--tc:${tc}">
       <div class="band"></div>
       <div class="head"><div class="cost ${d.cost?"changed":""}">${esc(m.cost??0)}</div>
         <div class="name ${d.name?"changed":""}">${esc(m.name||"Untitled card")}${was("name")}</div>
-        ${b.trait?`<span class="trait">${esc(b.trait)}</span>`:""}</div>
-      <div class="sub">${esc(m.type)}${b.standard_issue?" · Standard Issue":""}${m.isNew?" · New":""}${b.collectible===false&&!b.standard_issue&&!m.isNew?" · Enemy only":""}</div>
+        ${trait?`<span class="trait">${esc(TRAIT_LABEL[trait]||trait)}</span>`:""}</div>
+      <div class="sub">${esc(sub.join(" · "))}</div>
       ${kws?`<div class="kws" style="padding-top:6px">${kws}</div>`:""}
-      <div class="text ${d.text?"changed":""}">${text?esc(text):'<i>No rules text.</i>'}</div>
-      <div class="foot">${st?`<span class="status ${st[1]}">${st[0]}</span>`:""}${d.cost&&b.cost!==undefined?`<span class="was">cost ${esc(b.cost)}</span>`:""}
+      <div class="text ${d.text?"changed":""}">${text?esc(text):(m.design?'<i>Design note only, no printed text yet.</i>':'<i>No rules text.</i>')}</div>
+      <div class="foot">${st?`<span class="status ${st[1]}">${st[0]}</span>`:""}${inSet()&&m.claudeNote?'<span class="status st-question">Claude asks</span>':""}${d.cost&&b.cost!==undefined?`<span class="was">cost ${esc(b.cost)}</span>`:""}
         ${unit?`<div class="plates"><div class="plate ${d.firepower?"changed":""}"><small>FP</small>${esc(m.firepower??0)}</div><div class="plate ar ${d.armor?"changed":""}"><small>ARMOR</small>${esc(m.armor??0)}</div></div>`:""}</div>
     </${tag}>`;
   }
 
   function visibleIds(){
-    const ids=Object.keys(S.base).concat(Object.keys(S.edits).filter(k=>!S.base[k]));
+    const ids=inSet()?Object.keys(S.setCards):Object.keys(S.game).concat(Object.keys(S.edits).filter(k=>!S.game[k]));
     const q=S.q.toLowerCase();
     return ids.filter(id=>{
       const m=merged(id);
       if(S.filter==="edited" && !isEdited(id)) return false;
       if(["Unit","Tactic","Field"].includes(S.filter) && m.type!==S.filter) return false;
-      if(q){ const hay=[m.name,m.text,(S.base[id]?.keywords||[]).join(" "),S.base[id]?.trait].join(" ").toLowerCase(); if(!hay.includes(q)) return false; }
+      if(q){ const kw=inSet()?(m.keywords||[]):(S.game[id]?.keywords||[]); const hay=[m.name,m.text,kw.join(" "),m.trait||S.game[id]?.trait].join(" ").toLowerCase(); if(!hay.includes(q)) return false; }
       return true;
-    }).sort((a,b)=>{const A=merged(a),B=merged(b);const o={Unit:0,Tactic:1,Field:2};return (o[A.type]-o[B.type])||((A.cost||0)-(B.cost||0))||String(A.name).localeCompare(B.name);});
+    }).sort((a,b)=>{const A=merged(a),B=merged(b);const o={Unit:0,Tactic:1,Field:2};return ((o[A.type]??3)-(o[B.type]??3))||((A.cost||0)-(B.cost||0))||String(A.name).localeCompare(B.name);});
   }
 
+  // ---------- Render ----------
+  function renderSetBar(){
+    const sel=$("setSel"), ids=Object.keys(S.sets).sort((a,b)=>String(S.sets[a].createdAt).localeCompare(String(S.sets[b].createdAt)));
+    const opts=['<option value="game">Game set (what you play now)</option>'].concat(ids.map(id=>{const s=S.sets[id];return `<option value="${esc(id)}">${esc(s.name||"Untitled set")} · ${esc((SET_STATUS[s.status]||SET_STATUS.building)[0])}</option>`;}));
+    sel.innerHTML=opts.join("");
+    if(inSet()&&!S.sets[S.set]&&S.setsLoaded){ S.set="game"; }
+    sel.value=S.set;
+    $("setPanel").hidden=!inSet()||!S.sets[S.set];
+    $("editedChip").textContent=inSet()?"Changed or new":"Edited";
+    if(inSet()&&S.sets[S.set]){
+      const s=S.sets[S.set]; const st=SET_STATUS[s.status]||SET_STATUS.building;
+      if(document.activeElement!==$("setName")) $("setName").value=s.name||"";
+      $("setStatus").textContent=st[0]; $("setStatus").className="status "+st[1];
+      const cards=Object.values(S.setCards); const n=t=>cards.filter(c=>c.type===t).reduce((a,c)=>a+1,0);
+      const copies=cards.reduce((a,c)=>a+(c.copies||1),0);
+      const changed=Object.keys(S.setCards).filter(isEdited).length;
+      $("setMix").innerHTML=`<span><b>${cards.length}</b> cards</span><span><b>${n("Unit")}</b> units</span><span><b>${n("Tactic")}</b> tactics</span><span><b>${n("Field")}</b> fields</span><span><b>${copies}</b> copies total</span><span><b>${changed}</b> changed or new</span>`;
+      const note=$("setNote"); note.hidden=!s.claudeNote; note.textContent=s.claudeNote?("Claude: "+s.claudeNote):"";
+      $("setReady").textContent=s.status==="ready"?"Back to building":"Ready to swap in";
+      $("setReady").disabled=s.status==="swapping"||s.status==="swapped";
+    }
+  }
   function render(){
-    const ids=visibleIds();
-    const g=$("grid");
-    if(!S.loaded){ g.innerHTML='<div class="empty">Loading the card list…</div>'; }
-    else if(Object.keys(S.base).length===0){ g.innerHTML='<div class="empty">No cards yet. Claude loads the game\'s cards into this editor; ask in the Studio Floor chat if this stays empty.</div>'; }
+    renderSetBar();
+    const ids=visibleIds(), g=$("grid");
+    const total=Object.keys(cardMap()).length;
+    if(!S.loaded) g.innerHTML='<div class="empty">Loading the card list…</div>';
+    else if(!inSet()&&Object.keys(S.game).length===0) g.innerHTML='<div class="empty">No cards yet. Claude loads the game\'s cards into this editor; ask in the Studio Floor chat if this stays empty.</div>';
+    else if(inSet()&&total===0) g.innerHTML='<div class="empty">This set has no cards yet. Press <b>+ New card</b> to add the first one.</div>';
     else g.innerHTML=ids.length?ids.map(id=>cardHTML(id)).join(""):'<div class="empty">No cards match this filter.</div>';
-    const all=Object.keys(S.base).length, edited=Object.keys(S.edits).filter(isEdited).length;
-    const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
-    $("counts").innerHTML=`<span><b>${all}</b> cards</span><span><b>${edited}</b> edited</span><span><b>${ready.length}</b> ready for Claude</span>`;
-    $("readyList").innerHTML=ready.length?ready.map(id=>esc(merged(id).name||id)).join(", "):"No cards are marked ready yet.";
-    $("sendBtn").disabled=!ready.length||!S.comments; $("copyBtn").disabled=!ready.length;
+    const edited=Object.keys(cardMap()).filter(isEdited).length + (inSet()?0:Object.keys(S.edits).filter(k=>!S.game[k]&&isEdited(k)).length);
+    if(inSet()){
+      const s=S.sets[S.set]||{};
+      $("counts").innerHTML=`<span><b>${total}</b> cards in ${esc(s.name||"this set")}</span><span><b>${edited}</b> changed or new</span>`;
+      $("sendTitle").textContent="Swap this set into the game";
+      $("readyList").textContent=s.status==="ready"?`"${s.name||"This set"}" is ready. Send it to Claude to build and swap it in.`:"Mark the set ready to swap in, then send it here.";
+      $("sendBtn").disabled=s.status!=="ready"||!S.comments; $("copyBtn").disabled=s.status!=="ready";
+    } else {
+      const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
+      $("counts").innerHTML=`<span><b>${total}</b> cards in the game</span><span><b>${edited}</b> edited</span><span><b>${ready.length}</b> ready for Claude</span>`;
+      $("sendTitle").textContent="Send ready cards to Claude";
+      $("readyList").innerHTML=ready.length?ready.map(id=>esc(merged(id).name||id)).join(", "):"No cards are marked ready yet.";
+      $("sendBtn").disabled=!ready.length||!S.comments; $("copyBtn").disabled=!ready.length;
+    }
     if(!S.comments) $("sendHint").textContent="Copy the message and paste it into the Studio Floor chat to send it to Claude.";
     if(S.open) renderSheet(false);
   }
 
-  // ---------- Saving: one write at a time per card, coalesced ----------
-  const pending={}, inflight={};
-  function patch(id,fields){
-    const prev=S.edits[id]||{cardId:id,status:"draft"};
-    const next=Object.assign({},prev,fields,{updatedAt:new Date().toISOString()});
-    if(next.status==="applied"||next.status==="question"){ if(!("status" in fields)) next.status="draft"; }
-    S.edits[id]=next; pending[id]=next; flush(id); render();
-  }
-  let saveTimer=null;
-  function flush(id){
-    clearTimeout(saveTimer);
-    $("saving").textContent="Saving…";
-    saveTimer=setTimeout(()=>write(id),600);
-  }
-  async function write(id){
+  // ---------- Saving: one write at a time per document, coalesced ----------
+  const pending={}, inflight={}, timers={};
+  function docRef(key){ const [kind,a,b]=key.split("|"); if(kind==="edit") return S.db.collection("edits").doc(a); if(kind==="set") return S.db.collection("sets").doc(a); return S.db.collection("sets/"+a+"/cards").doc(b); }
+  function queue(key,body){ pending[key]=body; clearTimeout(timers[key]); $("saving").textContent="Saving…"; timers[key]=setTimeout(()=>write(key),600); }
+  async function write(key){
     if(!S.db||!S.canWrite){ $("saving").textContent="Not saved: this view can't save"; return; }
-    if(inflight[id]) return;
-    const body=pending[id]; if(!body) return; delete pending[id];
-    inflight[id]=true;
-    try{ await S.db.collection("edits").doc(id).set(body); $("saving").textContent="Saved"; }
-    catch(e){ $("saving").textContent = e&&e.code==="invalid_argument"?"You can view but not edit this page":"Not saved, try again"; if(e&&e.code==="invalid_argument") S.canWrite=false; }
-    finally{ inflight[id]=false; if(pending[id]) write(id); }
+    if(inflight[key]) return;
+    const body=pending[key]; if(!body) return; delete pending[key];
+    inflight[key]=true;
+    try{ await docRef(key).set(body); $("saving").textContent="Saved"; }
+    catch(e){ $("saving").textContent=e&&e.code==="invalid_argument"?"You can view but not edit this page":"Not saved, try again"; if(e&&e.code==="invalid_argument") S.canWrite=false; else if(e&&e.code==="quota_exceeded") banner("The editor's storage is full. Delete an old set to make room.",true); }
+    finally{ inflight[key]=false; if(pending[key]) write(key); }
   }
+  async function remove(key){ delete pending[key]; clearTimeout(timers[key]); try{ if(S.db) await docRef(key).delete(); }catch(e){} }
+  function patch(id,fields){
+    const now=new Date().toISOString();
+    if(inSet()){
+      const next=Object.assign({},S.setCards[id]||{},fields,{updatedAt:now});
+      S.setCards[id]=next; queue("card|"+S.set+"|"+id,next);
+      if(S.sets[S.set]&&S.sets[S.set].status!=="building"&&S.sets[S.set].status!=="swapping"){ patchSet({status:"building"}); }
+    } else {
+      const prev=S.edits[id]||{cardId:id,status:"draft"};
+      const next=Object.assign({},prev,fields,{updatedAt:now});
+      if((prev.status==="applied"||prev.status==="question")&&!("status" in fields)) next.status="draft";
+      S.edits[id]=next; queue("edit|"+id,next);
+    }
+    render();
+  }
+  function patchSet(fields){ const next=Object.assign({},S.sets[S.set],fields,{updatedAt:new Date().toISOString()}); S.sets[S.set]=next; queue("set|"+S.set,next); render(); }
 
   // ---------- Sheet ----------
   function openSheet(id){ S.open=id; $("scrim").hidden=false; $("sheet").hidden=false; renderSheet(true); $("closeSheet").focus(); }
   function closeSheet(){ S.open=null; $("scrim").hidden=true; $("sheet").hidden=true; $("confirmRow")?.remove(); }
   function renderSheet(fill){
-    const id=S.open, m=merged(id), b=S.base[id]||{};
+    const id=S.open, m=merged(id), b=ref(id);
+    if(!inSet()&&!S.game[id]&&!S.edits[id]){ closeSheet(); return; }
+    if(inSet()&&!S.setCards[id]){ closeSheet(); return; }
     $("sheetTitle").textContent=m.name||"New card";
-    const st=STATUS[m.status||"draft"]; const el=$("sheetStatus"); el.textContent=st[0]; el.className="status "+st[1];
+    const el=$("sheetStatus");
+    if(inSet()){ el.hidden=true; } else { el.hidden=false; const st=STATUS[m.status||"draft"]; el.textContent=st[0]; el.className="status "+st[1]; }
     $("preview").innerHTML=cardHTML(id,{preview:true});
     const note=$("claudeNote"); note.hidden=!m.claudeNote; note.textContent=m.claudeNote?("Claude: "+m.claudeNote):"";
     const unit=m.type==="Unit";
@@ -294,11 +415,19 @@ textarea.design{min-height:120px}
       const off=k!=="cost"&&!unit; const lab={cost:"Cost",firepower:"Firepower",armor:"Armor"}[k];
       return `<div class="stepper" ${off?'style="opacity:.4"':''}><span class="lbl">${lab}</span><span class="v">${esc(m[k]??0)}</span>
       <div class="row"><button data-k="${k}" data-d="-1" aria-label="Lower ${lab}" ${off?"disabled":""}>−</button><button data-k="${k}" data-d="1" aria-label="Raise ${lab}" ${off?"disabled":""}>+</button></div>
-      <span class="orig">${b[k]!==undefined?"Game: "+b[k]:"New"}</span></div>`;}).join("");
-    if(fill){ $("fName").value=m.name||""; $("fType").value=m.type||"Unit"; $("fText").value=m.text||""; $("fDesign").value=m.design||""; $("saving").textContent=""; }
+      <span class="orig">${b&&b[k]!==undefined?"Game: "+b[k]:"New"}</span></div>`;}).join("");
+    $("setOnly1").hidden=!inSet(); $("setOnly2").hidden=!inSet();
+    if(inSet()){
+      $("fCopies").textContent=m.copies||1;
+      const kws=m.keywords||[];
+      $("kwGrid").innerHTML=KW_FLAGS.map(k=>`<button type="button" data-kw="${esc(k)}" aria-pressed="${kws.includes(k)}">${esc(k)}</button>`).join("")+
+        KW_NUM.map(k=>{const cur=kws.find(x=>x.startsWith(k+" "));const v=cur?+cur.split(" ")[1]:0;return `<button type="button" data-kwn="${k}" data-d="-1" aria-label="Less ${k}">−</button><button type="button" aria-pressed="${v>0}" disabled>${k} ${v}</button><button type="button" data-kwn="${k}" data-d="1" aria-label="More ${k}">+</button>`;}).join("");
+    }
+    if(fill){ $("fName").value=m.name||""; $("fType").value=m.type||"Unit"; $("fText").value=m.text||""; $("fDesign").value=m.design||""; $("fTrait").value=m.trait||""; $("saving").textContent=""; }
+    $("readyBtn").hidden=inSet(); $("dupBtn").hidden=!inSet();
     $("readyBtn").textContent=m.status==="ready"?"Back to draft":"Mark ready";
-    $("resetBtn").textContent=m.isNew?"Delete new card":"Reset to game values";
-    $("resetBtn").disabled=!S.edits[id];
+    if(inSet()){ $("resetBtn").textContent="Delete card"; $("resetBtn").disabled=false; }
+    else { $("resetBtn").textContent=m.isNew?"Delete new card":"Reset to game values"; $("resetBtn").disabled=!S.edits[id]; }
   }
   $("steppers").addEventListener("click",ev=>{
     const btn=ev.target.closest("button[data-k]"); if(!btn) return;
@@ -306,22 +435,32 @@ textarea.design{min-height:120px}
     const v=Math.max(lo,Math.min(hi,(m[k]??0)+d)); if(v===m[k]) return;
     patch(S.open,{[k]:v});
   });
+  $("kwGrid").addEventListener("click",ev=>{
+    const b=ev.target.closest("button"); if(!b||!S.open) return;
+    const kws=[...(merged(S.open).keywords||[])];
+    if(b.dataset.kw){ const k=b.dataset.kw, i=kws.indexOf(k); if(i>=0) kws.splice(i,1); else kws.push(k); patch(S.open,{keywords:kws}); }
+    else if(b.dataset.kwn){ const k=b.dataset.kwn, i=kws.findIndex(x=>x.startsWith(k+" ")); const v=Math.max(0,Math.min(5,(i>=0?+kws[i].split(" ")[1]:0)+(+b.dataset.d))); if(i>=0) kws.splice(i,1); if(v>0) kws.push(k+" "+v); patch(S.open,{keywords:kws}); }
+  });
+  document.querySelectorAll("[data-copies]").forEach(b=>b.addEventListener("click",()=>{ const c=Math.max(1,Math.min(4,(merged(S.open).copies||1)+(+b.dataset.copies))); patch(S.open,{copies:c}); }));
   let typeTimer=null;
-  function textField(key,el){ el.addEventListener("input",()=>{ clearTimeout(typeTimer); const id=S.open, v=el.value; typeTimer=setTimeout(()=>patch(id,{[key]:v}),400); }); }
+  function textField(key,el){ el.addEventListener("input",()=>{ clearTimeout(typeTimer); const id=S.open, v=el.value; typeTimer=setTimeout(()=>{ if(S.open===id) patch(id,{[key]:v}); },400); }); }
   textField("name",$("fName")); textField("text",$("fText")); textField("design",$("fDesign"));
   $("fType").addEventListener("change",e=>{ const t=e.target.value; const f={type:t}; if(t!=="Unit"){f.firepower=0;f.armor=0;} patch(S.open,f); });
+  $("fTrait").addEventListener("change",e=>patch(S.open,{trait:e.target.value}));
   $("readyBtn").addEventListener("click",()=>{ const m=merged(S.open); patch(S.open,{status:m.status==="ready"?"draft":"ready"}); });
+  $("dupBtn").addEventListener("click",()=>{ const m=merged(S.open); const id="c-"+Date.now().toString(36); const copy=Object.assign({},S.setCards[S.open]); delete copy.from; delete copy.claudeNote; copy.name=(m.name||"Card")+" copy"; S.setCards[id]={}; patch(id,copy); openSheet(id); });
   $("resetBtn").addEventListener("click",()=>{
     if($("confirmRow")) return;
     const m=merged(S.open);
+    const q=inSet()?"Delete this card from the set?":(m.isNew?"Delete this new card?":"Drop your changes to this card?");
     const row=document.createElement("div"); row.id="confirmRow"; row.className="confirm";
-    row.innerHTML=`<span>${m.isNew?"Delete this new card?":"Drop your changes to this card?"}</span><button class="btn warn" id="yesReset">${m.isNew?"Delete":"Reset"}</button><button class="btn" id="noReset">Keep</button>`;
+    row.innerHTML=`<span>${q}</span><button class="btn warn" id="yesReset">${inSet()||m.isNew?"Delete":"Reset"}</button><button class="btn" id="noReset">Keep</button>`;
     $("sheet").querySelector("footer").prepend(row);
     $("noReset").onclick=()=>row.remove();
     $("yesReset").onclick=async()=>{
       const id=S.open; row.remove();
-      delete S.edits[id]; delete pending[id];
-      try{ if(S.db) await S.db.collection("edits").doc(id).delete(); }catch(e){}
+      if(inSet()){ delete S.setCards[id]; closeSheet(); render(); await remove("card|"+S.set+"|"+id); return; }
+      delete S.edits[id]; await remove("edit|"+id);
       if(m.isNew) closeSheet(); else renderSheet(true);
       render();
     };
@@ -333,28 +472,84 @@ textarea.design{min-height:120px}
     S.filter=ch.dataset.f; document.querySelectorAll(".chip[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===ch?"true":"false")); render(); }));
   $("q").addEventListener("input",e=>{ S.q=e.target.value; render(); });
   $("newCard").addEventListener("click",()=>{
+    if(inSet()){ const id="c-"+Date.now().toString(36); S.setCards[id]={}; patch(id,{name:"New card",type:"Unit",cost:2,firepower:2,armor:2,trait:"",keywords:[],copies:1,text:"",design:""}); openSheet(id); return; }
     const id="new-"+Date.now().toString(36);
     patch(id,{cardId:id,isNew:true,name:"New card",type:"Unit",cost:2,firepower:2,armor:2,text:"",design:"",status:"draft"});
     openSheet(id);
   });
 
+  // ---------- Sets ----------
+  function switchSet(id){
+    S.set=id; S.setCards={}; S.open=null; closeSheet();
+    try{ localStorage.setItem("kc-editor-set",id); }catch(e){}
+    if(S.unsubSet){ S.unsubSet(); S.unsubSet=null; }
+    if(inSet()&&S.db){
+      S.unsubSet=S.db.collection("sets/"+id+"/cards").onSnapshot(snap=>{
+        const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); });
+        for(const k of Object.keys(pending)){ const p=k.split("|"); if(p[0]==="card"&&p[1]===id) m[p[2]]=pending[k]; }
+        S.setCards=m; render();
+      },()=>banner("This set's cards stopped updating. Reload the page to try again.",true));
+    }
+    render();
+  }
+  $("setSel").addEventListener("change",e=>switchSet(e.target.value));
+  $("newSetBtn").addEventListener("click",()=>{ $("newSetPanel").hidden=false; $("newSetName").focus(); });
+  $("cancelSet").addEventListener("click",()=>{ $("newSetPanel").hidden=true; });
+  $("createSet").addEventListener("click",async()=>{
+    if(!S.db||!S.canWrite){ $("createMsg").textContent="This view can't save."; return; }
+    const name=$("newSetName").value.trim()||"New set";
+    const from=document.querySelector('input[name="startFrom"]:checked').value;
+    const id="set-"+Date.now().toString(36);
+    $("createSet").disabled=true; $("createMsg").textContent="Creating…";
+    try{
+      await S.db.collection("sets").doc(id).set({name,status:"building",startedFrom:from,createdAt:new Date().toISOString()});
+      if(from==="copy"){
+        const ids=Object.keys(S.game); let n=0;
+        for(const gid of ids){
+          const g=S.game[gid];
+          await S.db.collection("sets/"+id+"/cards").doc(gid).set({from:gid,name:g.name,type:g.type,cost:g.cost,firepower:g.firepower,armor:g.armor,trait:g.trait||"",keywords:g.keywords||[],text:g.text||"",design:"",copies:1,standard_issue:!!g.standard_issue,collectible:g.collectible!==false});
+          n++; $("createMsg").textContent=`Copying cards… ${n}/${ids.length}`;
+        }
+      }
+      $("newSetPanel").hidden=true; $("newSetName").value=""; $("createMsg").textContent="";
+      switchSet(id);
+    }catch(e){ $("createMsg").textContent=e&&e.code==="quota_exceeded"?"Storage is full. Delete an old set first.":"Couldn't create the set. Try again."; }
+    finally{ $("createSet").disabled=false; }
+  });
+  let nameTimer=null;
+  $("setName").addEventListener("input",e=>{ clearTimeout(nameTimer); const v=e.target.value; nameTimer=setTimeout(()=>patchSet({name:v}),500); });
+  $("setReady").addEventListener("click",()=>{ const s=S.sets[S.set]; patchSet({status:s.status==="ready"?"building":"ready"}); });
+  $("setDelete").addEventListener("click",()=>{ $("setDeleteConfirm").hidden=false; });
+  $("setDeleteNo").addEventListener("click",()=>{ $("setDeleteConfirm").hidden=true; });
+  $("setDeleteYes").addEventListener("click",async()=>{
+    const id=S.set; $("setDeleteConfirm").hidden=true;
+    const cards=Object.keys(S.setCards);
+    switchSet("game"); delete S.sets[id]; render();
+    for(const c of cards){ await remove("card|"+id+"|"+c); }
+    await remove("set|"+id);
+  });
+
+  // ---------- Send ----------
   function message(){
+    if(inSet()){ const s=S.sets[S.set]||{}; const cards=Object.values(S.setCards); const notes=cards.filter(c=>(c.design||"").trim()).length;
+      return `Build and swap in my new card set "${s.name}" from the Card Editor (set id ${S.set}): ${cards.length} cards, ${cards.reduce((a,c)=>a+(c.copies||1),0)} copies, ${Object.keys(S.setCards).filter(isEdited).length} changed or new, ${notes} with design notes.`; }
     const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
-    const lines=ready.map(id=>{ const m=merged(id), b=S.base[id]; const parts=[];
+    const lines=ready.map(id=>{ const m=merged(id), b=S.game[id]; const parts=[];
       if(!b) parts.push(`new ${m.type}, cost ${m.cost}${m.type==="Unit"?`, ${m.firepower} FP / ${m.armor} Armor`:""}`);
       else for(const k of Object.keys(diffs(id))) parts.push(`${k} ${b[k]} → ${m[k]}`);
       if((m.design||"").trim()) parts.push("has a plain-words design note");
       return `- ${m.name} (${id}): ${parts.join("; ")||"no changes"}`; });
     return `Apply my card edits from the Card Editor:\n${lines.join("\n")}`;
   }
+  function showMsg(t){ let pre=$("msgPre"); if(!pre){ pre=document.createElement("code"); pre.id="msgPre"; $("sendbox").appendChild(pre);} pre.textContent=t; return pre; }
   $("copyBtn").addEventListener("click",async()=>{
     const t=message();
     try{ await navigator.clipboard.writeText(t); $("copyBtn").textContent="Copied"; setTimeout(()=>$("copyBtn").textContent="Copy message",1500); }
-    catch(e){ let pre=$("msgPre"); if(!pre){ pre=document.createElement("code"); pre.id="msgPre"; $("sendbox").appendChild(pre);} pre.textContent=t; const r=document.createRange(); r.selectNodeContents(pre); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+    catch(e){ const pre=showMsg(t); const r=document.createRange(); r.selectNodeContents(pre); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
   });
   $("sendBtn").addEventListener("click",async()=>{
     if(!S.comments) return;
-    let pre=$("msgPre"); if(!pre){ pre=document.createElement("code"); pre.id="msgPre"; $("sendbox").appendChild(pre);} pre.textContent=message();
+    showMsg(message());
     try{ await navigator.clipboard.writeText(message()); }catch(e){}
     try{ await S.comments.openComposer({element:$("sendbox")}); $("sendHint").textContent='Paste the message (it is copied) and choose "Send to Claude".'; }
     catch(e){ $("sendHint").textContent="The comment box didn't open. Paste the message into the Studio Floor chat instead."; }
@@ -364,25 +559,28 @@ textarea.design{min-height:120px}
   function banner(t,err){ const b=$("banner"); b.hidden=!t; b.textContent=t||""; b.className="notice"+(err?" err":""); }
   render();
   (async()=>{
-    const timer=setTimeout(()=>{ if(!S.loaded){ banner("The card list can't be reached yet. Check your connection; it loads on its own when it can."); } },10000);
+    const timer=setTimeout(()=>{ if(!S.loaded) banner("The card list can't be reached yet. Check your connection; it loads on its own when it can."); },10000);
     const C=(typeof claude!=="undefined"&&claude&&claude.use)?claude:null;
     const db=C?await C.use("db"):null;
     if(!db){ clearTimeout(timer); S.loaded=true; banner("Open this page on claude.ai while signed in to see and edit the cards.",true); render(); return; }
     S.db=db;
-    try{ const user=await C.use("user"); const w=user?await user.can("data.write"):null; if(w===false){ S.canWrite=false; banner("You can view these cards. Only editors can change them."); } }catch(e){}
+    try{ const user=await C.use("user"); const w=user?await user.can("data.write"):null; if(w===false){ S.canWrite=false; } }catch(e){}
     try{ S.comments=await C.use("comments"); }catch(e){ S.comments=null; }
-    render();
-    let gotCards=false;
     db.collection("cards").onSnapshot(snap=>{
-      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); }); S.base=m;
-      if(!snap.metadata.fromCache){ gotCards=true; S.loaded=true; clearTimeout(timer); banner(S.canWrite?"":"You can view these cards. Only editors can change them."); }
-      else if(Object.keys(m).length) S.loaded=true;
+      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); }); S.game=m;
+      if(!snap.metadata.fromCache||Object.keys(m).length){ S.loaded=true; clearTimeout(timer); banner(S.canWrite?"":"You can view these cards. Only editors can change them."); }
       render();
-    },e=>{ clearTimeout(timer); S.loaded=true; banner("The card list stopped updating. Reload the page to try again.",true); render(); });
+    },()=>{ clearTimeout(timer); S.loaded=true; banner("The card list stopped updating. Reload the page to try again.",true); render(); });
     db.collection("edits").onSnapshot(snap=>{
       const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); });
-      for(const k of Object.keys(pending)) m[k]=pending[k];
+      for(const k of Object.keys(pending)){ const p=k.split("|"); if(p[0]==="edit") m[p[1]]=pending[k]; }
       S.edits=m; render();
+    },()=>{});
+    db.collection("sets").onSnapshot(snap=>{
+      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); });
+      for(const k of Object.keys(pending)){ const p=k.split("|"); if(p[0]==="set"&&m[p[1]]) m[p[1]]=pending[k]; }
+      S.sets=m; if(!snap.metadata.fromCache) S.setsLoaded=true;
+      if(inSet()&&!S.unsubSet&&m[S.set]) switchSet(S.set); else if(inSet()&&!m[S.set]&&S.setsLoaded) switchSet("game"); else render();
     },()=>{});
   })();
 })();
