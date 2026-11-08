@@ -614,3 +614,10 @@ Rejected on the way: Rival Armor +2 or FP +1 (M5 21%), Rival Breachers for Rifle
 | Aware vs blind | 58.6 / 59.7 | **57.3 / 57.5** | ≥ 55 |
 | Seat 0, late decks (tune / onboarding check) | 53.4 / 55.0 | **54.7 / 58.1** (n=320 / 160) | 45–55 |
 | Seat 0, starter | 46.8 | 46.8 | 45–55 |
+
+## Changed (kc-econ, 2026-11-08): sets on a 1-Supply, 1-draw, 10-card economy
+*Numbers: `run-v2.md` §15. Harness: `tests/tools/run_v2_check.gd exps=late` (v2 end-of-run decks, aware round robin, Kestrel on both sides, n = 270 per trait).*
+- **Why a trait pass:** with round N giving N Supply, cheap bodies come out first and 4-drops land late. On the new economy the v2.1 table read **Heavy 24.1 · Undead 63.7 · Vanguard 58.5 · Spec Ops 53.7**.
+- **Table v2.2** (`SynergyRules.TRAIT_BONUS`): **Vanguard** 2-set nothing, 3-set +1 FP (was 2-set +1 FP) · **Heavy** 2-set Cover +1 **and +1 FP**, 3-set +1 FP more · **Undead** 2-set heal 1, 3-set +1 FP (Cover +1 dropped) · **Spec Ops** unchanged (+1 FP / Cover +1).
+- **Measured:** Undead **42.6** · Vanguard **55.2** · Heavy **48.5** · Spec Ops **53.7** (target 44–56; Undead sits 1.4 under the band edge, about half an SE: watch item). Aware vs blind on the same late deck **58.0%** (≥ 55%).
+- **§6.3 Operator cost:** still 1 Supply per placement, but **the round-1 placement is free** (`RunConfig.operator_free_round1`): round 1 has only 1 Supply, and paying it for the Operator would make round 1 "place the Operator, nothing else" again (the reason §6.3 rejected cost 2).
