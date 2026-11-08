@@ -60,7 +60,7 @@ mode = 0
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 0
-enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("30_y1ak3")])
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar"), ExtResource("51_siar")])
 crew_label = "Standard Issue crew"
 
 [sub_resource type="Resource" id="Resource_8e67x"]

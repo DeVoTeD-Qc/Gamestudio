@@ -307,7 +307,7 @@ func test_player_setup_carries_deck_loadout_and_rewards() -> void:
 	m.start_match()
 	var op: RulesUnit = m.sides[0].operator_unit
 	var att: LoadoutItem = s.attachments[0]
-	assert_eq(op.base_max_armor, 7 + att.armor_bonus, "Operator armor includes the attachment")
+	assert_eq(op.base_max_armor, s.primary.operator_armor + att.armor_bonus, "Operator armor includes the attachment")
 	assert_eq(op.base_firepower, 3 + att.firepower_bonus, "Operator firepower includes the attachment")
 
 

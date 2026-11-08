@@ -26,10 +26,10 @@ func test_operator_data_head_v2() -> void:
 	var l: LoadoutItem = _op("longreach_338")
 	var w: LoadoutItem = _op("wasp_9")
 	var b: LoadoutItem = _op("bastion_60")
-	assert_eq([k.operator_firepower, k.operator_armor], [3, 7], "Kestrel 3/7")
-	assert_eq([l.operator_firepower, l.operator_armor, l.pick, l.pierce], [3, 6, true, true], "Longreach 3/6 Pick, Pierce passive")
+	assert_eq([k.operator_firepower, k.operator_armor], [3, 8], "Kestrel 3/8 (kc-econ: was 3/7)")
+	assert_eq([l.operator_firepower, l.operator_armor, l.pick, l.pierce], [3, 7, true, true], "Longreach 3/7 Pick, Pierce passive (kc-econ: was 3/6)")
 	assert_eq([w.operator_firepower, w.operator_armor, w.first_shot, w.rotations_per_round], [2, 7, true, 2], "Wasp-9 2/7")
-	assert_eq([b.operator_firepower, b.operator_armor, b.cover, b.weapon_class], [2, 8, 1, DataEnums.WeaponClass.LMG], "Bastion-60 LMG 2/8 Cover 1")
+	assert_eq([b.operator_firepower, b.operator_armor, b.cover, b.weapon_class], [2, 6, 1, DataEnums.WeaponClass.LMG], "Bastion-60 LMG 2/6 Cover 1 (kc-econ: was 2/8)")
 	var abs: Array = [k, l, w, b].map(func(o: LoadoutItem) -> StringName: return (o.ability as LoadoutItem).id)
 	assert_eq(abs, [&"ab_dig_in", &"ab_marked_shot", &"ab_flashbang", &"ab_covering_fire"], "one ability each")
 	for o: LoadoutItem in [k, l, w, b]:
@@ -155,3 +155,12 @@ func test_ai_uses_its_ability() -> void:
 				uses += 1
 		assert_true(m.sides[P].ability_used() or m.phase == MatchState.Phase.ENDED, "match %d ran" % s)
 	assert_true(uses >= 3, "the AI uses its Operator ability (%d uses in 6 matches)" % uses)
+
+
+func test_crews_keep_the_old_kestrel() -> void:
+	# kc-econ: the player's Kestrel went 3/7 -> 3/8; Bulwark_Nine, Meridian_Six and TrainingBot_01 keep a
+	# crew-only 3/7 copy (like wasp_9_crew), so the buff doesn't toughen the crews.
+	var crew: LoadoutItem = load("res://data/loadout/kestrel_ar7_crew.tres") as LoadoutItem
+	assert_eq([crew.operator_firepower, crew.operator_armor, crew.crew_only, crew.ability == null], [3, 7, true, true], "crew Kestrel 3/7, no kit")
+	for f: String in ["squad_anchor", "squad_black_meridian", "squad_tutorial"]:
+		assert_eq((load("res://data/squads/%s.tres" % f) as SquadData).primary.id, &"kestrel_ar7_crew", "%s plays the crew copy" % f)

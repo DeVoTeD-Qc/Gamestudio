@@ -596,6 +596,9 @@ func _spawn(screen: Dictionary, keep_hand: bool = true) -> Array:
 	if keep_hand and c.is_mulligan_open():
 		c.keep_hand()
 		await _frames(2)
+	# kc-econ: round 1 has 1 Supply; top the player up so the opening hand has a unit to play.
+	afford_a_unit(c)
+	await _frames(2)
 	return [vp, m, c]
 
 
@@ -674,8 +677,6 @@ func _row_point(lane: Control) -> Vector2:
 
 func _affordable(c: Node, card_type: int) -> RulesCard:
 	var me: RulesSide = c.state.sides[0]
-	if card_type == DataEnums.CardType.UNIT:
-		afford_a_unit(c)
 	for rc: RulesCard in me.hand:
 		if rc.card.card_type == card_type and rc.card.cost <= me.supply:
 			return rc

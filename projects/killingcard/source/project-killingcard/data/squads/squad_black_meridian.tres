@@ -24,7 +24,7 @@
 [ext_resource type="Resource" path="res://data/loadout/sentry_turret.tres" id="22_bt3vx"]
 [ext_resource type="Resource" path="res://data/loadout/grit.tres" id="24_tkwhh"]
 [ext_resource type="Resource" path="res://data/loadout/objective_focus.tres" id="25_b5k2s"]
-[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="26_v3aog"]
+[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7_crew.tres" id="26_v3aog"]
 [ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="27_gu06b"]
 [ext_resource type="Resource" path="res://data/loadout/extended_mag.tres" id="31_xmag1"]
 

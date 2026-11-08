@@ -616,8 +616,8 @@ Rejected on the way: Rival Armor +2 or FP +1 (M5 21%), Rival Breachers for Rifle
 | Seat 0, starter | 46.8 | 46.8 | 45–55 |
 
 ## Changed (kc-econ, 2026-11-08): sets on a 1-Supply, 1-draw, 10-card economy
-*Numbers: `run-v2.md` §15. Harness: `tests/tools/run_v2_check.gd exps=late` (v2 end-of-run decks, aware round robin, Kestrel on both sides, n = 270 per trait).*
-- **Why a trait pass:** with round N giving N Supply, cheap bodies come out first and 4-drops land late. On the new economy the v2.1 table read **Heavy 24.1 · Undead 63.7 · Vanguard 58.5 · Spec Ops 53.7**.
-- **Table v2.2** (`SynergyRules.TRAIT_BONUS`): **Vanguard** 2-set nothing, 3-set +1 FP (was 2-set +1 FP) · **Heavy** 2-set Cover +1 **and +1 FP**, 3-set +1 FP more · **Undead** 2-set heal 1, 3-set +1 FP (Cover +1 dropped) · **Spec Ops** unchanged (+1 FP / Cover +1).
-- **Measured:** Undead **42.6** · Vanguard **55.2** · Heavy **48.5** · Spec Ops **53.7** (target 44–56; Undead sits 1.4 under the band edge, about half an SE: watch item). Aware vs blind on the same late deck **58.0%** (≥ 55%).
+*Numbers: `run-v2.md` §15. Harness: `tests/tools/run_v2_check.gd exps=late` (v2 end-of-run decks, aware round robin, Kestrel on both sides, n = 270 per trait, about ±3 SE).*
+- **Why a trait pass:** with round N giving N Supply, cheap bodies come out first and 4-drops land late. On the new economy the v2.1 table read **Heavy 24.1** · Undead 63.7 · Vanguard 58.5 · Spec Ops 53.7.
+- **Table v2.2** (`SynergyRules.TRAIT_BONUS`): only **Heavy** changes: its 2-set is **Cover +1 and +1 FP** (was Cover +1), its 3-set adds +1 FP more (as before). Vanguard (+1 FP at 2), Spec Ops (+1 FP / Cover +1) and Undead (heal 1 / +1 FP and Cover +1) keep v2.1.
+- **Measured with the kc-econ Operators** (Kestrel 3/8, Longreach 3/7, Bastion 2/6): Undead **50.4** · Vanguard **50.0** · Heavy **51.1** · Spec Ops **48.5** (target 44–56). Tried and rejected on the way (each n = 270 per trait): Vanguard's bonus moved to the 3-set (Vanguard 36–42), Undead without the 3-set Cover (Undead 37–43), Spec Ops' 3-set as +1 FP (Spec Ops 36–42), Undead heal 2 (Spec Ops 40). The spread is mostly in the card packages; one set change moves its trait 10–20 points.
 - **§6.3 Operator cost:** still 1 Supply per placement, but **the round-1 placement is free** (`RunConfig.operator_free_round1`): round 1 has only 1 Supply, and paying it for the Operator would make round 1 "place the Operator, nothing else" again (the reason §6.3 rejected cost 2).

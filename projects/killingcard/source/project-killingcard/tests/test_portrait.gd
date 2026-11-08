@@ -96,6 +96,7 @@ func test_layout_switches_live_without_losing_the_match() -> void:
 	var me: RulesSide = c.state.sides[0]
 	var rc0: RulesCard = null
 	afford_a_unit(c)
+	await _frames(2)
 	for rc: RulesCard in me.hand:
 		if rc.card.is_unit() and rc.card.cost <= me.supply:
 			rc0 = rc
@@ -132,6 +133,8 @@ func test_portrait_hand_select_place_cancel() -> void:
 	assert_not_null(m.get_preview_well(), "the empty preview well shows")
 	var me: RulesSide = c.state.sides[0]
 	var rc0: RulesCard = null
+	afford_a_unit(c)
+	await _frames(2)
 	for rc: RulesCard in me.hand:
 		if rc.card.is_unit() and rc.card.cost <= me.supply:
 			rc0 = rc

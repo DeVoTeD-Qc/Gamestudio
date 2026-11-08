@@ -6,7 +6,7 @@
 [ext_resource type="Resource" path="res://data/cards/si_trooper.tres" id="4_olrcr"]
 [ext_resource type="Resource" path="res://data/cards/si_sergeant.tres" id="5_d0nb6"]
 [ext_resource type="Resource" path="res://data/cards/si_armored.tres" id="6_05ver"]
-[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="8_ppiym"]
+[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7_crew.tres" id="8_ppiym"]
 [ext_resource type="Script" path="res://scripts/data/squad_data.gd" id="9_yibs8"]
 
 [resource]

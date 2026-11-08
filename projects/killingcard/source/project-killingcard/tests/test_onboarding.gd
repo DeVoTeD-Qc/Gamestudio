@@ -163,7 +163,7 @@ func test_squads_along_the_ladder() -> void:
 	var s1: SideSetup = SideSetup.from_squad(md[0].squad, md[0])
 	assert_eq(s1.deck.size(), 10, "M1: 10 cards")
 	assert_true(s1.deck.all(func(c: CardData) -> bool: return c.standard_issue or c.id == &"ammo_resupply"), "M1: Standard Issue only")
-	assert_eq([_in_deck(s1.deck, &"si_grunt"), _in_deck(s1.deck, &"si_trooper"), _in_deck(s1.deck, &"si_armored")], [2, 2, 5], "M1: a slow, heavy crew")
+	assert_eq([_in_deck(s1.deck, &"si_grunt"), _in_deck(s1.deck, &"si_trooper"), _in_deck(s1.deck, &"si_armored")], [3, 2, 5], "M1: a slow, heavy crew (3 Grunts, 2 Troopers, 5 Armored Troopers)")
 	assert_eq(s1.armor_bonus, 0, "M1 at 0 Armor")
 	var s2: SideSetup = SideSetup.from_squad(md[1].squad, md[1])
 	var heavy: int = 0

@@ -49,7 +49,8 @@ var ability: Resource = null
 ## Profile unlock of this Operator (RunProfile.OPERATOR_UNLOCKS keys: &"" = from the start).
 @export var unlock: StringName = &""
 ## An enemy crew's Primary only (never offered as the player's Operator): wasp_9_crew keeps the pre-v2
-## Wasp-9 (Armor 6) on SandViper / the Choir, so head V2's player buff doesn't toughen the crews.
+## Wasp-9 (Armor 6) on SandViper / the Choir, so head V2's player buff doesn't toughen the crews;
+## kestrel_ar7_crew (kc-econ) keeps the 3/7 Kestrel on Bulwark_Nine, Meridian_Six and TrainingBot_01.
 @export var crew_only: bool = false
 
 @export_group("Attachment stat changes")

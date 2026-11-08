@@ -195,6 +195,7 @@ func test_board_banners_cost_without_name_and_si_hand_cards() -> void:
 	var me: RulesSide = c.state.sides[0]
 	var uid: int = -1
 	afford_a_unit(c, 0, func(rc: RulesCard) -> bool: return rc.card.standard_issue)
+	await _frames(2)
 	for rc: RulesCard in me.hand:
 		if rc.card.standard_issue and rc.card.cost <= me.supply:
 			uid = rc.uid
