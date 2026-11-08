@@ -40,6 +40,7 @@ var _frame: bool = false
 var _art_dim: bool = false
 var _badge_panel: PanelContainer = null
 var _corner_chip: Control = null
+var _row: bool = false
 ## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
 var pip_bar: Pips = null
 
@@ -94,6 +95,7 @@ func setup(spec: Dictionary) -> DDCardView:
 	_selected = bool(spec.get("selected", false))
 	_dim = bool(spec.get("dim", false))
 	_art_dim = bool(spec.get("art_dim", false))
+	_row = bool(spec.get("row", false))
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var compact: bool = bool(spec.get("compact", false))
 	var art: Variant = spec.get("art", null)
@@ -102,6 +104,8 @@ func setup(spec: Dictionary) -> DDCardView:
 		has_art = true
 		_frame = true
 		_build_district(spec)
+	elif bool(spec.get("row", false)):
+		_build_row(spec, art if has_art else null)
 	elif has_art and not compact and ART_LAYOUT == "frame":
 		_frame = true
 		_build_framed(spec, art)
@@ -147,6 +151,51 @@ func _build_plain(spec: Dictionary, art: Variant, compact: bool) -> void:
 			_outline(tt, 6)
 		_box.add_child(tt)
 	_add_lines(_box, spec, art != null)
+
+
+## v2 strip tile ("row": true): the big number on the left, tag / title / pips / lines stacked on
+## the right. Used for the HUD (points, deck, Skipped pile, reserve, weapon slots, doors, waves) so
+## the phone screen keeps room for the street. With art: the art sits behind a scrim.
+func _build_row(spec: Dictionary, art: Variant) -> void:
+	if art != null:
+		_add_art(self, art, "cover")
+		var scrim: ColorRect = ColorRect.new()
+		scrim.color = Color(DDUi.card_bg(kind), float(spec.get("art_tint", 0.72)))
+		add_child(scrim)
+	var h: HBoxContainer = DDUi.hbox(8)
+	add_child(h)
+	_box = DDUi.vbox(0)
+	var big: String = str(spec.get("big", ""))
+	if big != "":
+		var bl: Label = DDUi.label(big, int(spec.get("big_size", 30)), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		bl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		if art != null:
+			_outline(bl, 8)
+		big_label = bl
+		h.add_child(bl)
+	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(_box)
+	var top: HBoxContainer = DDUi.hbox(4)
+	_box.add_child(top)
+	var tag: String = str(spec.get("tag", ""))
+	if tag != "":
+		var tl: Label = DDUi.label(tag, DDUi.FONT_S - 5, DDUi.accent(kind))
+		tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tl.clip_text = true
+		if art != null:
+			_outline(tl, 5)
+		top.add_child(tl)
+	_add_badge(top, spec)
+	var title: String = str(spec.get("title", ""))
+	if title != "":
+		var tt: Label = DDUi.label(title, int(spec.get("title_size", DDUi.FONT_S - 1)), DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		tt.clip_text = true
+		if art != null:
+			_outline(tt, 5)
+		_box.add_child(tt)
+	_add_lines(_box, spec, art != null, HORIZONTAL_ALIGNMENT_LEFT)
 
 
 ## Art direction section 4: the art fills the window, the number sits in an ink badge in the art's
@@ -356,7 +405,10 @@ func _apply_style() -> void:
 	if _art_dim and not has_art:
 		bg = bg.darkened(0.45)
 	var border: Color = DDUi.SELECT if _selected else DDUi.accent(kind)
-	var st: StyleBoxFlat = DDUi.box(bg, border, 5 if _selected else (3 if _frame else 2), 14 if not _frame else 12, 10 if not _frame else 3)
+	var pad: int = 10 if not _frame else 3
+	if _row:
+		pad = 6
+	var st: StyleBoxFlat = DDUi.box(bg, border, 5 if _selected else (3 if _frame else 2), 14 if not _frame else 12, pad)
 	if _selected:
 		st.shadow_color = Color(DDUi.SELECT, 0.35)
 		st.shadow_size = 10
