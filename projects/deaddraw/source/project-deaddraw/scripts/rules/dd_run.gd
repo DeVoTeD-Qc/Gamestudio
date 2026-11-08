@@ -1410,7 +1410,8 @@ static func from_dict(d: Dictionary, balance: DDBalance = null) -> DDRun:
 	r.boss_results.clear()
 	for b: Variant in d.get("boss_results", []):
 		if b is Dictionary:
-			r.boss_results.append((b as Dictionary).duplicate())
+			r.boss_results.append({"beaten": bool(b.get("beaten", false)), "ran_past": bool(b.get("ran_past", false)),
+				"hp": int(b.get("hp", 0)), "name": str(b.get("name", ""))})
 	var stv: Variant = d.get("stats", {})
 	r.stats = (stv as Dictionary).duplicate() if stv is Dictionary else {}
 	for k: String in ["streets", "kills", "gun_kills", "melee_kills", "finished", "challenges", "runs", "rooms", "machines", "damage"]:

@@ -1,5 +1,6 @@
 # dd-feel: settings saved in the profile, the card-art hook and its fallback, the generated sounds,
-# the feedback director (deal / resolve / reduce motion) and the medkit-at-full-HP warning.
+# the v3 feedback director (deal / kill onto a stack / collect / challenge / shuffle-in / reduce
+# motion), the medkit-at-full-HP warning, the rule lock and the gun card's kill stack.
 extends "res://tests/dd_test_case.gd"
 
 const Art: GDScript = preload("res://scripts/ui/dd_art.gd")
@@ -110,7 +111,7 @@ func test_art_from_a_manifest_and_missing_files() -> void:
 	check(Art.entry_count() > 0, "entries read")
 	check(Art.texture_for(Art.card_keys(DDCard.parse("Z9"))) != null, "grouped kind/value entry found")
 	check(Art.texture_for(Art.survivor_keys("rosa")) != null, "dictionary entry with file found")
-	check(Art.texture_for(Art.card_keys(DDCard.parse("W5"))) == null, "missing file falls back (null)")
+	check(Art.texture_for(Art.card_keys(DDCard.parse("W:nothing"))) == null, "missing file falls back (null)")
 	check(Art.texture_for(Art.card_keys(DDCard.parse("M3"))) == null, "no entry falls back (null)")
 	var v: DDCardView = DDCardView.new()
 	v.setup({"kind": "Z", "tag": "ZOMBIE", "big": "9", "title": "Bruiser", "art": Art.texture_for(Art.card_keys(DDCard.parse("Z9"))), "payload": {"title": "x"}})
@@ -126,28 +127,31 @@ func test_real_manifest_covers_the_cards() -> void:
 	if Art.entry_count() == 0:
 		check(true, "no art shipped yet (fallback look)")
 		return
-	for code: String in ["Z2", "Z14", "Z16", "M3", "B4", "A4", "Z9!payday"]:
+	for code: String in ["Z1", "Z6", "Z11", "M3", "M6", "C2", "C4"]:
 		check(Art.texture_for(Art.card_keys(DDCard.parse(code))) != null, "art for " + code)
 	for wid: Variant in bal().weapons().keys():
-		check(Art.texture_for(Art.weapon_keys(str(wid), bal().weapon_name(str(wid)))) != null, "art for weapon " + str(wid))
-	var pistol: DDCard = DDCard.weapon("pistol", 3)
-	check(Art.file_for("weapons_pistol") != "" and Art.texture_for(Art.card_keys(pistol)) == Art.texture_for(Art.weapon_keys("pistol", "Service Pistol")), "a power-3 gun is never the v1 power-3 card")
+		check(Art.texture_for(Art.weapon_keys(str(wid), bal().weapon_name(str(wid)))) != null, "art for gun " + str(wid))
+		check(Art.texture_for(Art.rule_keys(bal().weapon_rule(str(wid)))) != null, "rule icon for " + str(wid))
 	for di: int in 3:
 		for r: Variant in bal().rooms(di):
 			var m: Dictionary = (r as Dictionary)["machine"]
 			check(Art.texture_for(Art.machine_keys(m)) != null, "machine art " + str(m["kind"]))
 			check(Art.texture_for(Art.room_keys(str(bal().district(di)["id"]), str((r as Dictionary)["name"]))) != null, "room art " + str((r as Dictionary)["name"]))
-	for e: Variant in bal().list("grin_effects"):
-		check(Art.texture_for(Art.jawbreaker_keys(str(e))) != null, "jawbreaker art " + str(e))
-	check(Art.texture_for(Art.badge_keys("retrofit")) != null, "retrofit plate")
+	for p: String in bal().patches():
+		check(Art.texture_for(Art.patch_keys(p)) != null, "Patch art " + p)
+	check(Art.file_for("patches_thick_jacket") != Art.file_for("thick_jacket") or Art.file_for("thick_jacket") == "", "the v3 Patch art, not the v2 perk icon")
+	for b2: String in ["challenge", "challenge_open", "no_escape"]:
+		check(Art.texture_for(Art.badge_keys(b2)) != null, "badge " + b2)
+	for k: String in ["wave", "pile", "room"]:
+		check(Art.texture_for(Art.deck_back_keys(k)) != null, "deck back " + k)
+	for ph: int in 3:
+		var pz: DDCard = DDCard.boss([8, 10, 12][ph], "phases", "Patient Zero", ph + 1)
+		check(Art.texture_for(Art.card_keys(pz, "st_agnes")) != null, "Patient Zero phase %d" % (ph + 1))
 	for d: Variant in bal().districts():
 		check(Art.texture_for(Art.district_keys(d)) != null, "banner for " + str((d as Dictionary).get("id")))
-		check(Art.texture_for(Art.finale_keys(d)) != null, "finale art for " + str((d as Dictionary).get("id")))
-		check(Art.file_for("district_" + str((d as Dictionary).get("id"))).contains("districts/"), "district key is the banner")
+		check(Art.texture_for(Art.finale_keys(d)) != null, "boss art for " + str((d as Dictionary).get("id")))
 	for s: String in bal().survivor_ids():
 		check(Art.texture_for(Art.survivor_keys(s)) != null, "portrait for " + s)
-	for p: String in bal().all_perks():
-		check(Art.texture_for(Art.perk_keys(p)) != null, "icon for " + p)
 	check(Art.texture_for(Art.back_keys()) != null, "card back")
 
 
@@ -180,7 +184,7 @@ func _frames(n: int) -> void:
 		await tree.process_frame
 
 
-func test_feedback_deal_resolve_and_reduce_motion() -> void:
+func test_feedback_kill_collect_and_reduce_motion() -> void:
 	var game: Node = tree.root.get_node_or_null("Game")
 	if game == null:
 		check(false, "Game autoload missing")
@@ -194,9 +198,9 @@ func test_feedback_deal_resolve_and_reduce_motion() -> void:
 	m.call("_start_run")
 	await tree.process_frame
 	var run: DDRun = game.get("run")
-	run.setup_street(["Z5", "W:machete", "M3", "A4"] + filler(8, "Z3"))
-	# enter the street: the four cards are dealt
-	bank.clear_log()
+	run.setup_street(["Z5", "W:rifle", "M3", "Z4"] + filler(8, "Z3"))
+	run.slot(0).stack = [1, 2, 3] as Array[int]
+	m.set("hints_enabled", false)
 	m.set("_pending_fx", {"type": "deal", "snap": {}, "ev": {}})
 	m.set("screen", 2)
 	m.call("_render")
@@ -205,28 +209,30 @@ func test_feedback_deal_resolve_and_reduce_motion() -> void:
 	check((fb.get("last_played") as Array).has("deal"), "street deal animation")
 	await tree.create_timer(0.8).timeout
 	check(bank.played.has(&"deal") and bank.played.has(&"flip"), "deal and flip cues")
-	# fight the zombie bare-handed: hit feedback
+	# a gun kill that finishes the pistol: kill onto the stack, collect, Mixed Bag stamp
 	bank.clear_log()
-	m.call("_do_resolve", idx(run, "Z5"), DDRun.BARE)
+	m.call("tap_street", idx(run, "Z5"))
 	await _frames(3)
 	var lp: Array = fb.get("last_played")
-	check(lp.has("zombie_bare") and lp.has("hit"), "zombie hit feedback (%s)" % str(lp))
-	check(bank.played.has(&"hit"), "hit cue")
-	# equip the weapon: it flies into the slot
-	m.call("_do_resolve", idx(run, "W:machete"), DDRun.EQUIP2)
+	check(lp.has("kill_stack"), "the zombie flies onto the stack (%s)" % str(lp))
+	check(lp.has("collect"), "collect animation (%s)" % str(lp))
+	check(lp.has("challenge"), "challenge moment (%s)" % str(lp))
+	check(lp.has("hit"), "damage feedback")
+	await tree.create_timer(0.7).timeout
+	check(bank.played.has(&"kill"), "kill cue on landing")
+	# equip the rifle: it flies into slot 1
+	m.call("do_resolve", idx(run, "W:rifle"), DDRun.EQUIP1)
 	await _frames(3)
 	check((fb.get("last_played") as Array).has("equip"), "equip feedback")
-	await tree.create_timer(0.6).timeout
-	check(bank.played.has(&"equip"), "equip cue on landing")
 	# reduce motion: no shake, nothing moves the content
 	game.call("set_setting", "reduce_motion", true)
 	check(bool(fb.get("reduce")), "feedback follows reduce motion")
-	m.call("_do_resolve", idx(run, "M3"), DDRun.USE)
+	run.set_active(DDRun.SLOT1)
+	m.call("tap_street", idx(run, "Z4") if idx(run, "Z4") >= 0 else 0)
 	await _frames(3)
 	var content: Control = m.get("_content")
 	eq(content.position, Vector2.ZERO, "no shake with reduce motion")
-	check((fb.get("last_played") as Array).has("deal") or (fb.get("last_played") as Array).has("heal") or (fb.get("last_played") as Array).has("no_heal"), "medkit feedback still plays")
-	await tree.create_timer(0.6).timeout
+	await tree.create_timer(2.6).timeout
 	var ghosts: int = 0
 	for c: Node in (m.get("_fx") as Control).get_children():
 		if c.has_meta(&"ghost"):
@@ -239,68 +245,96 @@ func test_feedback_deal_resolve_and_reduce_motion() -> void:
 	_cleanup()
 
 
+func test_shuffle_in_animations() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	tree.root.size = Vector2i(844, 390)
+	var keep: DDProfile = game.get("profile")
+	var m: Control = _main()
+	await tree.process_frame
+	m.call("apply_debug", {"screen": "street", "seed": "3", "points": "40"})
+	m.call("_render")
+	await _frames(2)
+	m.call("do_open_room", 0)
+	await _frames(3)
+	await tree.create_timer(1.0).timeout
+	var fb: Node = m.get("feedback")
+	check((fb.get("last_played") as Array).has("room_open"), "room cards fly into the pile (%s)" % str(fb.get("last_played")))
+	var run: DDRun = game.get("run")
+	run.setup_street(["Z1", "Z1", "Z1", "Z1", "Z1"])
+	run.set_active(DDRun.MELEE)
+	m.call("_render")
+	await _frames(2)
+	m.call("tap_street", 0)
+	await _frames(2)
+	m.call("tap_street", 0)
+	await _frames(2)
+	m.call("tap_street", 0)
+	await _frames(3)
+	check((fb.get("last_played") as Array).has("wave_shuffle"), "the next wave deck flies into the pile (%s)" % str(fb.get("last_played")))
+	await tree.create_timer(2.0).timeout
+	check(str(m.get("last_banner")).begins_with("WAVE 2"), "wave banner shown: " + str(m.get("last_banner")))
+	m.queue_free()
+	await tree.process_frame
+	game.set("profile", keep)
+	_cleanup()
+
+
 func test_medkit_at_full_hp_warns() -> void:
-	var r: DDRun = make_run("rosa", ["M4", "B2", "B2", "B2"] + filler(8))
+	var r: DDRun = make_run("rosa", ["M4", "C2", "C2", "C2"] + filler(8))
 	r.hp = r.max_hp
 	var i: int = idx(r, "M4")
-	var pr: Dictionary = r.preview(i, DDRun.USE)
-	eq(int(pr["heal"]), 0, "heals 0 at full HP")
-	var spec: Dictionary = DDPayloads.street_card_spec(r.street[i], i, r, false)
+	eq(int(r.card_preview(i, DDRun.USE)["heal"]), 0, "heals 0 at full HP")
+	var spec: Dictionary = DDPayloads.street_card_spec(r.street[i], i, r)
 	eq(str(spec["badge"]), "FULL HP", "tile badge warns")
-	check(str(spec["lines"][0][0]).contains("full HP"), "tile line warns")
-	var m: Control = (load("res://scripts/ui/main.gd") as GDScript).new()
-	var label: String = m.call("_choice_label", r, r.street[i], DDRun.USE, pr)
-	check(label.contains("full HP") and not label.contains("+0"), "button says full HP, not +0 (%s)" % label)
-	m.free()
 
 
-# dd-polish (head F1 a): a zombie no weapon can hit (notch rule / empty mag) is darkened, its
-# number stays bright, the name bar says bare hands only, and it is still selectable.
-func test_blocked_zombie_is_darkened() -> void:
-	var r: DDRun = plain_run(["Z7", "Z3", "B2", "B2"] + filler(8))
-	r.slot(0).notch = 5
+## The active gun's rule forbids a zombie: the tile says LOCK with the reason, art darkened,
+## the number stays bright.
+func test_rule_lock_on_the_tile() -> void:
+	var r: DDRun = plain_run(["Z7", "Z3", "C2", "C2"] + filler(8))
+	r.slots[0] = r.make_gun("rifle")
+	r.slot(0).stack = [5] as Array[int]
 	var hi: int = idx(r, "Z7")
 	var lo: int = idx(r, "Z3")
-	var blocked: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
-	var fine: Dictionary = DDPayloads.street_card_spec(r.street[lo], lo, r, false)
-	check(bool(blocked["art_dim"]), "zombie above the notch is darkened")
-	check(not bool(fine["art_dim"]), "zombie the weapon can hit is not")
-	var texts: Array = []
-	for ln: Variant in blocked["lines"]:
-		texts.append(str(ln[0]))
-	check(texts.has("Bare hands only"), "name bar says bare hands only (%s)" % str(texts))
-	check(r.choices_for(hi).has(DDRun.BARE), "still playable bare-handed")
+	var blocked: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r)
+	var fine: Dictionary = DDPayloads.street_card_spec(r.street[lo], lo, r)
+	eq(str(blocked["badge"]), "LOCK", "LOCK chip before the tap")
+	check(str(blocked["lock"]).contains("lower than 5"), "with the rule's reason")
+	check(bool(blocked["art_dim"]), "darkened")
+	eq(str(fine["badge"]), "-0", "damage chip (3 - power 4 = 0)")
+	var v: DDCardView = DDCardView.new()
 	var tex: Texture2D = Art.texture_for(Art.card_keys(r.street[hi]))
 	if tex == null:
-		var img: Image = Image.create(8, 6, false, Image.FORMAT_RGB8)
-		tex = ImageTexture.create_from_image(img)
+		tex = ImageTexture.create_from_image(Image.create(8, 6, false, Image.FORMAT_RGB8))
 	blocked["art"] = tex
-	var v: DDCardView = DDCardView.new()
 	v.setup(blocked)
 	check(v.art_rect != null and v.art_rect.self_modulate.r < 0.5, "art darkened to 45%")
 	check(v.big_label != null and v.big_label.text == "7", "number shown")
-	check(v.big_label.modulate == Color.WHITE and v.big_label.self_modulate == Color.WHITE, "number at full brightness")
 	v.free()
-	var plain: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r, false)
-	var pv: DDCardView = DDCardView.new()
-	pv.setup(plain)
-	var st: StyleBoxFlat = pv.get_theme_stylebox("panel") as StyleBoxFlat
-	check(st != null and st.bg_color.get_luminance() < DDUi.card_bg("Z").get_luminance(), "plain tile darkened")
-	pv.free()
+	r.set_active(DDRun.MELEE)
+	eq(str(DDPayloads.street_card_spec(r.street[hi], hi, r)["badge"]), "-5", "melee: 7 - 2 = 5, never locked")
 
 
-func test_slot_tile_shows_magazine_pips_and_retrofit_plate() -> void:
+func test_gun_card_shows_the_kill_stack() -> void:
 	var r: DDRun = plain_run(filler(8))
-	r.slot(0).ammo = 2
-	var spec: Dictionary = DDPayloads.slot_spec(r, 0)
-	eq(spec["pips"], [2, r.slot(0).cap], "pips = rounds / magazine")
-	var v: DDCardView = DDCardView.new()
-	v.setup(spec)
-	check(v.pip_bar != null and v.pip_bar.filled == 2 and v.pip_bar.total == r.slot(0).cap, "pip bar built")
-	v.free()
-	r.slots[0] = r.retrofit_result(r.slot(0))
-	var up: Dictionary = DDPayloads.slot_spec(r, 0)
-	eq(str(up["badge"]), "R", "Retrofit 'R' label")
-	check(str(up["title"]).begins_with("Retrofit"), "Retrofit name")
-	var melee: Dictionary = DDPayloads.slot_spec(r, 1)
-	eq(str(melee["title"]), "Empty slot", "empty slot tile")
+	r.slots[0] = r.make_gun("rifle")
+	r.slot(0).stack = [9, 6, 5] as Array[int]
+	var spec: Dictionary = DDPayloads.gun_spec(r, 0)
+	spec["mini"] = Vector2(60, 78)
+	var gv: DDGunView = DDGunView.new()
+	gv.setup_gun(spec)
+	tree.root.add_child(gv)
+	gv.size = Vector2(260, 220)
+	await tree.process_frame
+	eq(gv.stack_cards.size(), 3, "3 stack cards")
+	eq(gv.stack_cards[2].big_label.text, "5", "top kill's number")
+	check(not gv.stack_cards[0].payload.is_empty(), "each stack card is inspectable")
+	check(gv.stack_cards[1].position.y < gv.stack_cards[0].position.y, "portrait: the stack grows upward")
+	check(absf(gv.stack_cards[1].position.y - gv.stack_cards[0].position.y) < 78 * 0.5, "overlapping: the number below stays visible")
+	check(not gv.payload.is_empty() and str(gv.payload["title"]) == "Hunting Rifle", "gun zoom")
+	gv.queue_free()
+	var e: Dictionary = DDPayloads.gun_spec(r, 1)
+	var ev: DDGunView = DDGunView.new()
+	ev.setup_gun(e)
+	check(not ev.payload.is_empty(), "empty slot is inspectable")
+	ev.free()

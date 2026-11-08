@@ -18,17 +18,25 @@ func _cleanup() -> void:
 			DirAccess.remove_absolute(p)
 
 
-func test_fresh_pool_is_starter() -> void:
+func test_maple_row_unlocks_nothing_in_v3() -> void:
 	var pr: DDProfile = _prof()
-	eq(pr.perk_pool(), bal().starter_perks(), "starter pool")
+	eq(pr.record_district_clear("maple_row").size(), 0, "v3: Maple Row unlocks nothing (Patches come from the Patch Press)")
+	check(pr.has_cleared("maple_row"), "but the clear is recorded")
 	_cleanup()
 
 
-func test_maple_unlocks_second_wind_once() -> void:
+func test_first_run_hints_once() -> void:
 	var pr: DDProfile = _prof()
-	eq(pr.record_district_clear("maple_row"), ["perk:second_wind"] as Array[String], "new unlock")
-	check(pr.perk_pool().has("second_wind"), "in the pool")
-	eq(pr.record_district_clear("maple_row").size(), 0, "not new the second time")
+	check(pr.first_run(), "a fresh profile is on its first run")
+	check(pr.hint_due("weapon"), "hint due")
+	pr.mark_hint("weapon")
+	check(not pr.hint_due("weapon"), "each hint once")
+	var back: DDProfile = DDProfile.new(bal(), pr.path)
+	back.load_profile()
+	check(not back.hint_due("weapon"), "seen hints are saved")
+	check(back.hint_due("rooms"), "others still due")
+	back.record_run_end("rosa", 10, false)
+	check(not back.hint_due("rooms"), "no hints after the first run")
 	_cleanup()
 
 
@@ -40,15 +48,14 @@ func test_downtown_unlocks_theo() -> void:
 	_cleanup()
 
 
-func test_win_unlocks_tripwire_and_badge() -> void:
+func test_win_gives_the_badge() -> void:
 	var pr: DDProfile = _prof()
 	var fresh: Array[String] = pr.record_run_end("imani", 80, true)
-	check(fresh.has("perk:tripwire"), "Tripwire")
 	check(fresh.has("badge:imani"), "Survivor's Mark")
 	eq(pr.badges("imani"), 1, "badge count")
 	eq(pr.badges("rosa"), 0, "only that survivor")
 	var again: Array[String] = pr.record_run_end("imani", 50, true)
-	check(not again.has("badge:imani") and not again.has("perk:tripwire"), "nothing new on the second win")
+	check(not again.has("badge:imani"), "nothing new on the second win")
 	eq(pr.badges("imani"), 2, "marks counted")
 	_cleanup()
 
@@ -73,7 +80,6 @@ func test_save_load_roundtrip() -> void:
 	var back: DDProfile = DDProfile.new(bal(), pr.path)
 	check(back.load_profile(), "loaded")
 	check(back.survivor_unlocked("theo"), "Theo persisted")
-	check(back.perk_pool().has("second_wind") and back.perk_pool().has("tripwire"), "perks persisted")
 	eq(back.best_score("rosa"), 77, "best persisted")
 	eq(back.badges("rosa"), 1, "badge persisted")
 	check(back.has_cleared("maple_row"), "clears persisted")
@@ -98,16 +104,18 @@ func test_game_session_records_unlocks() -> void:
 	g.set("run_save", DDRunSave.new(pr.path + ".run.json"))
 	g.call("start_run", "rosa", 3)
 	var r: DDRun = g.get("run")
-	eq(r.perk_pool, bal().starter_perks(), "run uses the profile pool")
 	clear_district(r)
 	eq(r.phase, DDRun.Phase.SAFEHOUSE, "cleared Maple Row")
-	check((g.get("new_unlocks") as Array).has("perk:second_wind"), "unlock recorded during the run")
 	check(pr.has_cleared("maple_row"), "saved")
-	r.choose_perk(r.perk_offer[0])
-	r.setup_street(["Z30", "Z30", "B2", "B2"] + filler(8))
-	r.hp = 3
-	r.second_wind = false
-	r.resolve(0, DDRun.BARE)
+	r.leave_safehouse(str(r.pending_patch["offer"][0]))
+	clear_district(r)
+	check((g.get("new_unlocks") as Array).has("survivor:theo"), "Downtown clear unlocks Theo during the run")
+	r.leave_safehouse(str(r.pending_patch["offer"][0]))
+	r.setup_street(["Z11", "Z11", "C2", "C2"] + filler(8))
+	r.hp = 2
+	r.cover = 0
+	r.patches.erase("second_wind")
+	r.attack(0, DDRun.MELEE)
 	eq(r.phase, DDRun.Phase.DEAD, "dead")
 	eq(pr.best_score("rosa"), r.run_score(), "run end recorded")
 	eq(int(pr.data["runs"]), 1, "recorded once")
@@ -128,8 +136,6 @@ func test_version_1_save_keeps_unlocks() -> void:
 	eq(int(pr.data["version"]), DDProfile.VERSION, "upgraded to version 2")
 	check(DDProfile.VERSION >= 2, "save version bumped")
 	check(pr.survivor_unlocked("theo"), "Theo kept")
-	check(pr.perk_pool().has("second_wind"), "unlocked perk kept")
-	check(not pr.perk_pool().has("sandbags"), "cut v1 perk not offered")
 	check(pr.has_cleared("downtown"), "clears kept")
 	eq(pr.badges("imani"), 1, "badges kept")
 	eq(int(pr.data["runs"]), 9, "runs kept")

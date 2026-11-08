@@ -1,21 +1,26 @@
 # main.gd
-# Purpose: The whole DeadDraw v2 UI: title (survivor pick), city map, street, safehouse and run-end
-#   screens. Rebuilt from the run state after every action, laid out for portrait (2x2 street) or
-#   landscape (1x4 street, status + doors on the left, weapons on the right) from the viewport
-#   aspect. Rules live in DDRun; this script only renders state, previews outcomes and calls the
-#   run's public methods. v2 street (core-rules-v2.md section 6): wave track + boss, points, HP /
-#   Cover / Jawbreaker badges, deck counter "Wave 2 - 7 cards (4 zombies)", Skipped pile, doors
-#   (price + what they unlock) and machines (price + result), the last-street banner with the
-#   next-wave preview, 2 weapon slots with magazine pips, notch tags and Reload buttons (cost and
-#   result), reserve ammo, Skip. Every tile opens a zoom on right click / long press; every
-#   button states its result before the tap; the log line, HP / points floats, the wave banner and
-#   machine-result zooms show what just happened.
-#   dd-feel: before each action it snapshots the street (card rects, HP, notch); after the
-#   rebuild scripts/fx/dd_feedback.gd animates from the old picture to the new one. Card art from
-#   the manifest (scripts/ui/dd_art.gd); anything without art keeps the plain tile.
-# Dependencies: Game (autoload), DDRun, DDWeapon, DDPayloads, DDCardView, DDInspect, DDUi, DDText,
-#   scripts/fx/dd_feedback.gd, scripts/fx/dd_sfx.gd, scripts/ui/dd_art.gd, scripts/ui/dd_settings_panel.gd.
-# Author: Mechanics Developer Agent (feel pass: Game Feel Engineer Agent)
+# Purpose: The whole DeadDraw v3 ("Kill Stacks") UI: title (survivor pick), city map, street,
+#   safehouse and run-end screens. Rebuilt from the run state after every action, laid out for
+#   phone portrait or landscape from the viewport aspect. Rules live in DDRun; this script only
+#   renders state, previews outcomes and calls the run's public methods.
+#   The street (studio head's layout): WAVE decks on the LEFT (W1-W3 + the face-up boss), the
+#   mixed DRAW PILE top middle, 3 ROOM decks on the RIGHT each with its price and an OPEN button
+#   (lit whenever you can pay; opened rooms show their machine's USE button). The street's 4 cards
+#   in the middle; the 2 equipped GUN cards at the bottom (stats + rule on the left, the kill stack
+#   on the right, each zombie's number visible) plus the MELEE tile. Active weapon: tap a gun /
+#   melee once, then every tap on a zombie attacks with it; each zombie shows the damage you'd
+#   take ("-2") or LOCK with the rule's reason before the tap. Gun cards on the street open a
+#   3-button sheet (slot 1 / slot 2 / scrap); machines open a sheet with every service, price and
+#   result; a Patch choice is a sheet you must answer. HP / Cover / points / Patch chips on top,
+#   Run (or Run past / NO ESCAPE) next to the prompt, the log line says what just happened, and
+#   first-run hints (K5) teach the flow. Everything opens a zoom on right click / long press.
+#   dd-feel: before each action it snapshots the street and the stacks; after the rebuild
+#   scripts/fx/dd_feedback.gd animates kills onto stacks, collects, challenge stamps, wave / room
+#   shuffle-ins, Run and the deal. Card art from the manifest (scripts/ui/dd_art.gd), else plain.
+# Dependencies: Game (autoload), DDRun, DDGun, DDPayloads, DDCardView, DDGunView, DDInspect, DDUi,
+#   DDText, scripts/fx/dd_feedback.gd, scripts/fx/dd_sfx.gd, scripts/ui/dd_art.gd,
+#   scripts/ui/dd_settings_panel.gd.
+# Author: Mechanics Developer Agent (feel primitives: Game Feel Engineer Agent)
 extends Control
 
 const Feedback: GDScript = preload("res://scripts/fx/dd_feedback.gd")
@@ -26,41 +31,53 @@ const SettingsPanel: GDScript = preload("res://scripts/ui/dd_settings_panel.gd")
 enum Screen { TITLE, MAP, STREET, SAFEHOUSE, END }
 
 const MARGIN: int = 16
-const SEP: int = 10
+const SEP: int = 8
+## Indices DDCardView tiles carry (tests and the web smoke find tiles by them).
+const IDX_ROOM: int = 100
+const IDX_GUN: int = 200
+const IDX_MELEE: int = 202
+const IDX_WAVE: int = 300
+const IDX_PILE: int = 400
+const IDX_BOSS: int = 410
+const IDX_POINTS: int = 420
+const IDX_STACK: int = 500
 
 var screen: Screen = Screen.TITLE
-var selected: int = -1
-var selected_room: int = -1
 var chosen_survivor: String = "rosa"
-var chosen_perk: String = ""
+var chosen_patch: String = ""
 var portrait: bool = true
 var busy: bool = false
 var last_event: Dictionary = {}
-var safehouse_info: Dictionary = {}
+## The open sheet: {} or {"type": "gun", "index": i} / {"type": "machine", "room": i}.
+var sheet: Dictionary = {}
+## K5: the first-run hint on screen ("" = none); hints off for debug / smoke screens.
+var hint_id: String = ""
+var hints_enabled: bool = true
+var last_block: String = ""
 
 var _content: MarginContainer
+var _sheet_root: Control
 var _fx: Control
 var _inspect: DDInspect
-var _hp_anchor: Control = null
-var _weapon_anchor: Control = null
-var _auto_inspect: Dictionary = {}
-## dd-feel
 var feedback: Node
 var settings_panel: Control
+var _auto_inspect: Dictionary = {}
 var _pending_fx: Dictionary = {}
 var _screen_fx: String = ""
 var _pending_banner: Dictionary = {}
-var _street_views: Dictionary = {}   # card instance id -> DDCardView
-var _street_specs: Dictionary = {}   # card instance id -> tile spec
-var _street_cards: Dictionary = {}   # card instance id -> DDCard
+var _street_views: Dictionary = {}
+var _street_specs: Dictionary = {}
+var _street_cards: Dictionary = {}
 var _street_order: Array = []
-var _deck_anchor: Control = null
-var _skipped_anchor: Control = null
-var _finale_anchor: Control = null
-var _cover_anchor: Control = null
-var _points_anchor: Control = null
-var _reserve_anchor: Control = null
-var _slot_views: Array = [null, null]
+var _gun_views: Array = [null, null]
+var _wave_views: Array = []
+var _room_views: Array = []
+var _melee_view: DDCardView = null
+var _pile_view: DDCardView = null
+var _boss_view: DDCardView = null
+var _points_view: DDCardView = null
+var _cover_view: DDCardView = null
+var _hp_anchor: Control = null
 var _hp_box: Control = null
 var _hp_label: Label = null
 var _hp_bar: ProgressBar = null
@@ -79,6 +96,10 @@ func _ready() -> void:
 	for side: String in ["left", "right", "top", "bottom"]:
 		_content.add_theme_constant_override("margin_" + side, MARGIN)
 	add_child(_content)
+	_sheet_root = Control.new()
+	_sheet_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_sheet_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_sheet_root)
 	_fx = Control.new()
 	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -106,7 +127,6 @@ func _ready() -> void:
 	_render()
 
 
-# ================================================================ rendering
 func _sync_feel() -> void:
 	feedback.reduce = Game.reduce_motion()
 	feedback.shake_on = Game.screen_shake()
@@ -116,28 +136,32 @@ func open_settings() -> void:
 	settings_panel.open()
 
 
+# ================================================================ rendering
 func _render() -> void:
 	for c: Node in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
+	for c2: Node in _sheet_root.get_children():
+		_sheet_root.remove_child(c2)
+		c2.queue_free()
 	feedback.clear()
-	_hp_anchor = null
-	_weapon_anchor = null
-	_deck_anchor = null
-	_skipped_anchor = null
-	_finale_anchor = null
-	_cover_anchor = null
-	_points_anchor = null
-	_reserve_anchor = null
-	_slot_views = [null, null]
-	_hp_box = null
-	_hp_label = null
-	_hp_bar = null
-	_screen_title = null
 	_street_views = {}
 	_street_specs = {}
 	_street_cards = {}
 	_street_order = []
+	_gun_views = [null, null]
+	_wave_views = []
+	_room_views = []
+	_melee_view = null
+	_pile_view = null
+	_boss_view = null
+	_points_view = null
+	_cover_view = null
+	_hp_anchor = null
+	_hp_box = null
+	_hp_label = null
+	_hp_bar = null
+	_screen_title = null
 	var vp: Vector2 = get_viewport_rect().size
 	portrait = vp.y >= vp.x
 	match screen:
@@ -147,6 +171,7 @@ func _render() -> void:
 			_build_map()
 		Screen.STREET:
 			_build_street()
+			_build_sheet()
 		Screen.SAFEHOUSE:
 			_build_safehouse()
 		Screen.END:
@@ -168,11 +193,9 @@ func _render() -> void:
 
 
 var _render_queued: bool = false
-var _perk_popped: String = ""
 
 
-## Re-render at the end of the frame: handlers run inside a Button's signal, and freeing the
-## pressed Button synchronously makes the engine complain.
+## Re-render at the end of the frame (handlers run inside a Button's signal).
 func _queue_render() -> void:
 	if _render_queued:
 		return
@@ -182,15 +205,17 @@ func _queue_render() -> void:
 		_render()).call_deferred()
 
 
-## dd-feel: the feedback for the last action, once the new layout has settled.
 func _play_fx(pend: Dictionary, screen_fx: String, banner: Dictionary = {}) -> void:
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
 	_sync_feel()
 	if not pend.is_empty() and screen == Screen.STREET:
-		feedback.play(pend, _fx_context(pend))
+		feedback.play(pend, _fx_context())
 	if not banner.is_empty() and screen == Screen.STREET:
+		var d: float = float(banner.get("delay", 0.0))
+		if d > 0.0:
+			await get_tree().create_timer(d).timeout
 		_show_banner(str(banner.get("text", "")), banner.get("color", DDUi.TEXT), str(banner.get("sub", "")))
 	match screen_fx:
 		"end_won":
@@ -200,35 +225,37 @@ func _play_fx(pend: Dictionary, screen_fx: String, banner: Dictionary = {}) -> v
 			feedback.title_slam(_screen_title, false)
 		"safehouse":
 			feedback.title_slam(_screen_title, true)
-		"map":
-			if _finale_anchor != null:
-				feedback._pop(_finale_anchor, 1.05, DDUi.accent("F"))
 
 
-func _fx_context(pend: Dictionary = {}) -> Dictionary:
+func _fx_context() -> Dictionary:
 	var run: DDRun = Game.run
-	var ev: Dictionary = pend.get("ev", {})
-	var s: int = int(ev.get("slot", -1))
-	var wv: Control = _slot_views[s] if s >= 0 and s < 2 else _slot_views[0]
-	var deck: Control = _skipped_anchor if str(pend.get("type", "")) == "retreat" else _deck_anchor
 	return {"street": _street_views, "specs": _street_specs, "cards": _street_cards, "order": _street_order,
-		"deck": deck, "weapon": wv, "finale": _finale_anchor, "cover": _cover_anchor, "reserve": _reserve_anchor,
-		"hp_panel": _hp_anchor, "hp_box": _hp_box, "hp_label": _hp_label, "hp_bar": _hp_bar,
-		"hp": run.hp if run != null else 0, "max_hp": run.max_hp if run != null else 0}
+		"pile": _pile_view, "boss": _boss_view, "guns": _gun_views, "melee": _melee_view, "waves": _wave_views,
+		"rooms": _room_views, "open_rooms": run.room_open.duplicate() if run != null else [], "points": _points_view,
+		"cover": _cover_view, "hp_panel": _hp_anchor, "hp_box": _hp_box, "hp_label": _hp_label, "hp_bar": _hp_bar,
+		"hp": run.hp if run != null else 0, "max_hp": run.max_hp if run != null else 0, "finale": _boss_view}
 
 
-## dd-feel: what the street looks like right before an action (for the feedback animations).
-func _snapshot(slot: int = -1) -> Dictionary:
+## What the board looks like right before an action (for the feedback animations).
+func _snapshot() -> Dictionary:
 	var run: DDRun = Game.run
 	var rects: Dictionary = {}
 	for id: Variant in _street_views:
 		var v: DDCardView = _street_views[id]
 		if is_instance_valid(v) and v.is_inside_tree():
 			rects[id] = v.get_global_rect()
-	var w: DDWeapon = run.slot(slot) if slot >= 0 else null
-	return {"rects": rects, "specs": _street_specs.duplicate(), "hp": run.hp, "cover": run.cover,
-		"notch": w.notch if w != null else DDRun.NO_NOTCH,
-		"deck_rect": _deck_anchor.get_global_rect() if _deck_anchor != null and is_instance_valid(_deck_anchor) else Rect2()}
+	var stack_rects: Array = [[], []]
+	var next_rects: Array = [Rect2(), Rect2()]
+	var gun_rects: Array = [Rect2(), Rect2()]
+	for s: int in 2:
+		var gv: DDGunView = _gun_views[s]
+		if gv != null and is_instance_valid(gv) and gv.is_inside_tree():
+			gun_rects[s] = gv.get_global_rect()
+			next_rects[s] = gv.next_rect()
+			for mc: DDCardView in gv.stack_cards:
+				(stack_rects[s] as Array).append(Rect2(mc.get_global_rect().position, mc.size))
+	return {"rects": rects, "specs": _street_specs.duplicate(), "hp": run.hp, "cover": run.cover, "points": run.points,
+		"stack_rects": stack_rects, "next_rect": next_rects, "gun_rects": gun_rects}
 
 
 func _view(spec: Dictionary, min_size: Vector2 = Vector2.ZERO) -> DDCardView:
@@ -258,18 +285,36 @@ func _scroll(child: Control) -> ScrollContainer:
 	return s
 
 
+func _settings_button(small: bool = false) -> Button:
+	var b: Button = DDUi.button("Settings", DDUi.PANEL if small else DDUi.PANEL_HI, DDUi.FONT_S if small else DDUi.FONT_M)
+	b.name = "SettingsButton"
+	if small:
+		b.custom_minimum_size = Vector2(96, 56)
+		b.autowrap_mode = TextServer.AUTOWRAP_OFF
+	else:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.pressed.connect(open_settings)
+	return b
+
+
 # ---------------------------------------------------------------- title
+var _confirm_abandon: bool = false
+var _old_note_shown: bool = false
+
+
 func _build_title() -> void:
 	var v: VBoxContainer = DDUi.vbox(14 if portrait else 8)
 	_content.add_child(_scroll(v))
-	var t: Label = DDUi.label("DEADDRAW", 64 if portrait else 40, DDUi.accent("Z"), HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(t)
+	v.add_child(DDUi.label("DEADDRAW", 64 if portrait else 40, DDUi.accent("Z"), HORIZONTAL_ALIGNMENT_CENTER))
+	var sub: String = "KILL STACKS: shoot zombies in the order your gun's rule allows, fill its stack, get paid, open the next room."
+	v.add_child(DDUi.label(sub + ("  Pick a survivor (long press / right click to read)." if not portrait else ""), DDUi.FONT_M if portrait else DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	if portrait:
-		v.add_child(DDUi.label("Hold out across a fallen city, one wave at a time.\nEvery street deals four cards; you get three actions.", DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 		v.add_child(DDUi.label("Pick a survivor  (long press / right click to read)", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
-	else:
-		# landscape: one line of text so the Start row stays clear of the bottom edge
-		v.add_child(DDUi.label("Hold out one wave at a time: four cards a street, three actions. Pick a survivor (long press / right click to read).", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	if Game.discarded_old_run and not _old_note_shown:
+		var note: PanelContainer = DDUi.panel(Color("3a2a12"), 10, DDUi.WARN, 2)
+		note.add_child(DDUi.label("DeadDraw has new rules (Kill Stacks). Your saved run from the old rules can't continue and was put away. Your unlocks and best scores are kept.", DDUi.FONT_S, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER, true))
+		note.name = "OldRunNote"
+		v.add_child(note)
 	var saved: String = Game.run_save.summary(Game.bal) if Game.run_save != null else ""
 	if saved != "":
 		v.add_child(_continue_row(saved))
@@ -278,8 +323,7 @@ func _build_title() -> void:
 	v.add_child(row)
 	var vp: Vector2 = get_viewport_rect().size
 	var w: float = minf(230.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0)
-	# landscape: what is left after the title, the text line and the Start row (+ a bottom gap)
-	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0 - (80.0 if saved != "" else 0.0), 110.0, 230.0)
+	var card_h: float = 220.0 if portrait else clampf(vp.y - MARGIN * 2 - 52.0 - 30.0 - DDUi.TAP_MIN - 8.0 * 3 - 12.0 - (80.0 if saved != "" else 0.0) - (50.0 if Game.discarded_old_run else 0.0), 110.0, 230.0)
 	for sid: String in Game.bal.survivor_ids():
 		var unlocked: bool = Game.profile.survivor_unlocked(sid)
 		var s: Dictionary = Game.bal.survivor(sid)
@@ -292,11 +336,9 @@ func _build_title() -> void:
 		var marks: int = Game.profile.badges(sid)
 		var spec: Dictionary = {"kind": "S", "tag": "%d HP" % Game.bal.survivor_max_hp(sid),
 			"badge": ("MARK x%d" % marks) if marks > 0 else ("LOCKED" if not unlocked else ""),
-			"badge_color": DDUi.GOOD if marks > 0 else DDUi.TEXT_DIM,
-			"big": sid.substr(0, 1).to_upper(), "big_size": 56,
-			"title": str(s.get("name", sid)), "lines": lines, "selected": sid == chosen_survivor,
-			"dim": not unlocked, "payload": DDPayloads.survivor(sid, Game.bal, Game.profile),
-			"art_keys": Art.survivor_keys(sid)}
+			"badge_color": DDUi.GOOD if marks > 0 else DDUi.TEXT_DIM, "big": sid.substr(0, 1).to_upper(), "big_size": 56,
+			"title": str(s.get("name", sid)), "lines": lines, "selected": sid == chosen_survivor, "dim": not unlocked,
+			"payload": DDPayloads.survivor(sid, Game.bal, Game.profile), "art_keys": Art.survivor_keys(sid)}
 		var cv: DDCardView = _view(spec, Vector2(w, card_h))
 		cv.tapped.connect(func(_x: DDCardView) -> void:
 			if unlocked:
@@ -322,39 +364,7 @@ func _build_title() -> void:
 	how.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	how.pressed.connect(func() -> void: _inspect.open(DDPayloads.how_to_play(Game.bal)))
 	h.add_child(how)
-	var pool: Array[String] = Game.profile.perk_pool()
-	var pb: Button = DDUi.button("Perk pool %d/%d" % [pool.size(), Game.bal.all_perks().size()])
-	pb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pb.pressed.connect(_show_pool)
-	h.add_child(pb)
 	h.add_child(_settings_button())
-
-
-func _settings_button(small: bool = false) -> Button:
-	var b: Button = DDUi.button("Settings", DDUi.PANEL if small else DDUi.PANEL_HI, DDUi.FONT_S if small else DDUi.FONT_M)
-	b.name = "SettingsButton"
-	if small:
-		b.custom_minimum_size = Vector2(120, 56)
-		b.autowrap_mode = TextServer.AUTOWRAP_OFF
-		b.size_flags_vertical = Control.SIZE_SHRINK_END
-	else:
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.pressed.connect(open_settings)
-	return b
-
-
-func _show_pool() -> void:
-	var lines: PackedStringArray = []
-	for p: String in Game.bal.all_perks():
-		if Game.profile.perk_unlocked(p):
-			lines.append("%s: %s" % [DDText.perk_name(p), DDText.perk_text(p, Game.bal)])
-		else:
-			lines.append("LOCKED %s (%s)" % [DDText.perk_name(p), DDPayloads.unlock_hint(Game.profile.unlock_milestone_for("perk:" + p), Game.bal)])
-	_inspect.open({"kind": "P", "tag": "PERK POOL", "title": "Safehouse perks", "body": "\n".join(lines)})
-
-
-## dd-save: "Continue run" (survivor, district, wave, HP) and "Abandon run" with a confirmation.
-var _confirm_abandon: bool = false
 
 
 func _continue_row(summary: String) -> Control:
@@ -395,32 +405,31 @@ func continue_run() -> void:
 		_queue_render()
 		return
 	var run: DDRun = Game.run
-	selected = -1
-	selected_room = -1
 	last_event = {}
+	sheet = {}
 	_confirm_abandon = false
+	_old_note_shown = true
 	match where:
 		"SAFEHOUSE":
-			safehouse_info = {"district": str(Game.bal.district(run.district_index).get("name", "")),
-				"hp_score": run.boss_hp[run.boss_hp.size() - 1] if not run.boss_hp.is_empty() else 0}
-			chosen_perk = ""
 			screen = Screen.SAFEHOUSE
 		"MAP":
 			screen = Screen.MAP
 		_:
 			screen = Screen.STREET
 			_pending_fx = {"type": "deal", "snap": {}, "ev": {}}
-			_pending_banner = {"text": "RUN RESUMED", "color": DDUi.GOOD, "sub": "%s - wave %d" % [str(run.district().get("name", "")), run.wave_index + 1]}
+			_pending_banner = {"text": "RUN RESUMED", "color": DDUi.GOOD, "sub": "%s - %s" % [str(run.district().get("name", "")),
+				"boss street" if run.boss_street else "wave %d" % (run.wave_index + 1)]}
 	Sfx.cue(&"flip")
 	_queue_render()
 
 
 func _start_run() -> void:
 	_confirm_abandon = false
+	_old_note_shown = true
 	Game.start_run(chosen_survivor)
-	selected = -1
-	selected_room = -1
 	last_event = {}
+	sheet = {}
+	hints_enabled = true
 	screen = Screen.MAP
 	_queue_render()
 
@@ -431,7 +440,7 @@ func _build_map() -> void:
 	var v: VBoxContainer = DDUi.vbox(12)
 	_content.add_child(_scroll(v))
 	v.add_child(DDUi.label("THE CITY", DDUi.FONT_XL if portrait else DDUi.FONT_L, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	v.add_child(DDUi.label("District %d of %d: 3 waves, then its boss (face up: plan for it)." % [run.district_index + 1, Game.bal.district_count()], DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	v.add_child(DDUi.label("District %d of %d: 3 wave decks, 3 rooms, then the face-up boss." % [run.district_index + 1, Game.bal.district_count()], DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var path: BoxContainer = BoxContainer.new()
 	path.vertical = portrait
 	path.add_theme_constant_override("separation", SEP)
@@ -440,714 +449,826 @@ func _build_map() -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	for di: int in Game.bal.district_count():
 		var d: Dictionary = Game.bal.district(di)
+		var b: Dictionary = d.get("boss", {})
 		var status: String = "CLEARED" if di < run.district_index else ("NEXT" if di == run.district_index else "")
-		var spec: Dictionary = DDPayloads.finale_spec(d, false, status)
-		spec["tag"] = "%d  %s" % [di + 1, str(d.get("name", "")).to_upper()]
-		spec["selected"] = di == run.district_index
-		spec["dim"] = di < run.district_index
+		var spec: Dictionary = {"kind": "F", "tag": "%d  %s" % [di + 1, str(d.get("name", "")).to_upper()], "badge": status,
+			"badge_color": DDUi.GOOD if status == "CLEARED" else DDUi.WARN, "big": DDText.boss_summary(b), "big_size": 30,
+			"title": "Boss: %s" % str(b.get("name", "")), "lines": [[DDText.trait_text(str(b.get("trait", ""))), DDUi.TEXT_DIM, DDUi.FONT_S - 2]],
+			"selected": di == run.district_index, "dim": di < run.district_index,
+			"payload": {"kind": "F", "tag": str(d.get("name", "")).to_upper(), "title": str(b.get("name", "")), "big": DDText.boss_summary(b),
+				"body": "%s\nWaves: %s.\nRooms: %s." % [DDText.trait_text(str(b.get("trait", ""))), " | ".join(PackedStringArray([0, 1, 2].map(func(w: int) -> String: return DDText.zombie_list(Game.bal.wave_zombies(di, w))))),
+					", ".join(PackedStringArray((d.get("rooms", []) as Array).map(func(r: Variant) -> String: return "%s %d" % [str((r as Dictionary).get("name", "")), Game.bal.shown(int((r as Dictionary).get("cost", 0)))])))]}}
 		var banner: Texture2D = Art.texture_for(Art.district_keys(d))
 		if banner != null:
 			spec["bg_art"] = banner
 		spec["art_keys"] = Art.finale_keys(d)
-		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 150) if portrait else Vector2(minf(300.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 170)
-		var dv: DDCardView = _view(spec, size)
-		if di == run.district_index:
-			_finale_anchor = dv
-		path.add_child(dv)
+		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 150) if portrait else Vector2(minf(320.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 170)
+		path.add_child(_view(spec, size))
 	var bottom: BoxContainer = BoxContainer.new()
 	bottom.vertical = portrait
 	bottom.add_theme_constant_override("separation", SEP)
 	v.add_child(bottom)
-	var st: Control = _status_line(run)
+	var st: HFlowContainer = HFlowContainer.new()
+	st.add_theme_constant_override("h_separation", SEP)
 	st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var s: Dictionary = Game.bal.survivor(run.survivor_id)
+	st.add_child(_view({"kind": "S", "tag": "SURVIVOR", "title": str(s.get("name", "")), "compact": true,
+		"lines": [["HP %d / %d" % [run.hp, run.max_hp], DDUi.GOOD, DDUi.FONT_M]], "payload": DDPayloads.survivor(run.survivor_id, Game.bal, Game.profile)}, Vector2(190, 0)))
+	st.add_child(_view(_points_spec(run), Vector2(120, 0)))
+	for p: String in run.patches:
+		st.add_child(_patch_chip(p))
 	bottom.add_child(st)
 	var go: Button = DDUi.button("Enter %s" % str(run.district().get("name", "")), Color("7a2d27"), DDUi.FONT_L)
 	go.custom_minimum_size = Vector2(0, 88)
-	go.pressed.connect(func() -> void:
-		screen = Screen.STREET
-		Game.save_run("STREET")
-		selected = -1
-		selected_room = -1
-		_pending_fx = {"type": "deal", "snap": {}, "ev": {}}
-		_pending_banner = {"text": "WAVE 1 - %s" % DDText.zombie_summary(Game.bal.wave_zombies(run.district_index, 0)), "color": DDUi.TEXT,
-			"sub": str(run.district().get("name", ""))}
-		_queue_render())
 	go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	go.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	go.pressed.connect(enter_district)
 	bottom.add_child(go)
 	var sb: Button = _settings_button(true)
 	sb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(sb)
 
 
-func _status_line(run: DDRun) -> Control:
-	var h: HFlowContainer = HFlowContainer.new()
-	h.add_theme_constant_override("h_separation", SEP)
-	h.add_theme_constant_override("v_separation", SEP)
-	h.alignment = FlowContainer.ALIGNMENT_CENTER
-	var s: Dictionary = Game.bal.survivor(run.survivor_id)
-	h.add_child(_view({"kind": "S", "tag": "SURVIVOR", "title": str(s.get("name", "")), "lines": [["HP %d / %d" % [run.hp, run.max_hp], DDUi.GOOD, DDUi.FONT_M]], "compact": true,
-		"payload": DDPayloads.survivor(run.survivor_id, Game.bal, Game.profile)}, Vector2(190, 0)))
-	for i: int in 2:
-		h.add_child(_view(_slot_spec(run, i), Vector2(170, 0)))
-	h.add_child(_view(DDPayloads.reserve_spec(run), Vector2(100, 0)))
-	h.add_child(_view(DDPayloads.points_spec(run), Vector2(110, 0)))
-	for p: String in run.perks:
-		h.add_child(_view(DDPayloads.perk_spec(p, Game.bal, true), Vector2(150, 0)))
-	return h
-
-
-func _slot_spec(run: DDRun, i: int) -> Dictionary:
-	var ws: Dictionary = DDPayloads.slot_spec(run, i)
-	var w: DDWeapon = run.slot(i)
-	if w != null:
-		ws["art_keys"] = Art.weapon_keys(w.wid, w.name)
-		if w.upgraded:
-			var plate: Texture2D = Art.texture_for(Art.badge_keys("retrofit"))
-			if plate != null:
-				ws["badge_art"] = plate
-	return ws
+func enter_district() -> void:
+	var run: DDRun = Game.run
+	screen = Screen.STREET
+	Game.save_run("STREET")
+	sheet = {}
+	_pending_fx = {"type": "deal", "snap": {}, "ev": {"waves": [{"wave": 0, "cards": 10, "restock": 0}]}}
+	_pending_banner = {"text": "%s - WAVE 1" % str(run.district().get("name", "")).to_upper(), "color": DDUi.TEXT,
+		"sub": "Wave 1 (%s) and the Entrance shuffle into the pile" % DDText.zombie_summary(Game.bal.wave_zombies(run.district_index, 0))}
+	_queue_render()
 
 
 # ---------------------------------------------------------------- street
+func _points_spec(run: DDRun) -> Dictionary:
+	return {"kind": "X", "tag": "POINTS", "big": str(Game.bal.shown(run.points)), "big_size": 26, "row": true, "payload": DDPayloads.points(run)}
+
+
+func _patch_chip(p: String) -> DDCardView:
+	var ps: Dictionary = DDPayloads.patch_spec(p, Game.bal, true)
+	ps["art_keys"] = Art.patch_keys(p)
+	ps["art_tint"] = 0.55
+	return _view(ps, Vector2(118, 40))
+
+
 func _build_street() -> void:
 	var run: DDRun = Game.run
 	var vp: Vector2 = get_viewport_rect().size
-	var did: String = str(run.district().get("id", ""))
-	var grid: GridContainer = GridContainer.new()
-	grid.columns = 2 if portrait else 4
-	grid.add_theme_constant_override("h_separation", SEP)
-	grid.add_theme_constant_override("v_separation", SEP)
-	var left_w: float = clampf(vp.x * 0.22, 240.0, 300.0)
-	var right_w: float = clampf(vp.x * 0.2, 230.0, 290.0)
-	var banner_on: bool = run.is_last_street() or run.boss_street or run.last_lap
-	var n: int = maxi(1, run.street.size())
-	var card_w: float
-	var card_h: float
-	if portrait:
-		card_w = (vp.x - MARGIN * 2 - SEP) / 2.0
-		var fixed: float = 694.0 + (80.0 if banner_on else 0.0)
-		var rows: int = ceili(n / 2.0)
-		card_h = clampf((vp.y - fixed) / maxf(2.0, float(rows)), 150.0, card_w * 1.25)
-	else:
-		var cols: int = maxi(4, n) if n > 4 else 4
-		grid.columns = cols
-		card_w = (vp.x - MARGIN * 2 - left_w - right_w - SEP * 2 - SEP * (cols - 1)) / float(cols)
-		card_h = clampf(vp.y - MARGIN * 2 - 262.0 - (66.0 if banner_on else 0.0), 140.0, card_w * 1.45)
-	for i: int in run.street.size():
-		var c: DDCard = run.street[i]
-		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run, i == selected)
-		spec["art_keys"] = Art.card_keys(c, did)
-		spec["holdover"] = c.holdover and str(spec.get("badge", "")) == "HOLDOVER"
-		if spec["holdover"]:
-			spec["badge"] = ""
-		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
-		cv.index = i
-		cv.tapped.connect(_on_card_tapped)
-		grid.add_child(cv)
-		var cid: int = c.get_instance_id()
-		_street_views[cid] = cv
-		_street_specs[cid] = spec
-		_street_cards[cid] = c
-		_street_order.append(cid)
+	var W: float = vp.x - MARGIN * 2
+	var H: float = vp.y - MARGIN * 2
+	hint_id = _due_hint(run)
+	var top: Control = _build_top(run)
+	var left: Control = _build_waves(run)
+	var rooms: Control = _build_rooms(run)
+	var pile: Control = _build_pile(run)
 	var actions: Control = _build_actions(run)
-	var log_box: Control = _build_log(run)
-	var hp_box: Control = _build_hp(run)
-	var pts: DDCardView = _view(DDPayloads.points_spec(run), Vector2(118 if portrait else 0, 0))
-	_points_anchor = pts
-	var wave_row: HBoxContainer = _build_wave_track(run)
-	var deck_row: HBoxContainer = DDUi.hbox(SEP)
-	var ds: Dictionary = DDPayloads.deck_spec(run)
-	ds["art_keys"] = Art.back_keys()
-	ds["art_tint"] = 0.82
-	var dv: DDCardView = _view(ds)
-	dv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dv.size_flags_stretch_ratio = 2.0
-	_deck_anchor = dv
-	deck_row.add_child(dv)
-	var sv: DDCardView = _view(DDPayloads.skipped_spec(run))
-	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_skipped_anchor = sv
-	deck_row.add_child(sv)
-	var doors: Control = _build_doors(run)
-	var weapons: Control = _build_weapons(run)
-	var banner: Control = null
-	if banner_on:
-		banner = _view(DDPayloads.next_spec(run))
+	var hint: Control = _build_hint(run) if hint_id != "" else null
+	var n: int = maxi(4, run.street.size())
 	if portrait:
-		var v: VBoxContainer = DDUi.vbox(8)
+		var lw: float = clampf(W * 0.27, 130.0, 210.0)
+		var rw: float = clampf(W * 0.38, 180.0, 300.0)
+		var mini: Vector2 = Vector2(clampf(W * 0.11, 52.0, 70.0), 0)
+		mini.y = mini.x * 1.3
+		var gun_h: float = mini.y + mini.y * 0.32 * 4 + 16.0
+		var guns: Control = _build_guns(run, true, mini, gun_h)
+		var bottom: Control = _build_bottom(run, true)
+		var fixed: float = 62.0 + 236.0 + 64.0 + gun_h + 64.0 + SEP * 6 + (44.0 if not run.patches.is_empty() else 0.0) + (64.0 if hint != null else 0.0)
+		var card_w: float = (W - SEP * (n - 1)) / n
+		var card_h: float = clampf(H - fixed, 120.0, card_w * 1.45)
+		var v: VBoxContainer = DDUi.vbox(SEP)
 		_content.add_child(v)
-		var top: HBoxContainer = DDUi.hbox(SEP)
-		hp_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		top.add_child(hp_box)
-		top.add_child(pts)
 		v.add_child(top)
-		var mid: HBoxContainer = DDUi.hbox(SEP)
-		wave_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		mid.add_child(wave_row)
-		deck_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		deck_row.size_flags_stretch_ratio = 1.4
-		mid.add_child(deck_row)
-		v.add_child(mid)
-		v.add_child(doors)
-		if banner != null:
-			v.add_child(banner)
-		var gc: CenterContainer = CenterContainer.new()
-		gc.add_child(grid)
-		v.add_child(gc)
+		if not run.patches.is_empty():
+			v.add_child(_patch_row(run))
+		var board: HBoxContainer = DDUi.hbox(SEP)
+		left.custom_minimum_size = Vector2(lw, 0)
+		board.add_child(left)
+		pile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		board.add_child(pile)
+		rooms.custom_minimum_size = Vector2(rw, 0)
+		board.add_child(rooms)
+		v.add_child(board)
+		if hint != null:
+			v.add_child(hint)
+		v.add_child(_build_street_row(run, card_w, card_h))
 		v.add_child(actions)
-		v.add_child(weapons)
-		log_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		v.add_child(log_box)
+		v.add_child(guns)
+		v.add_child(bottom)
 	else:
+		var lw2: float = clampf(W * 0.15, 140.0, 200.0)
+		var rw2: float = clampf(W * 0.19, 170.0, 240.0)
+		var mid_w: float = W - lw2 - rw2 - SEP * 2
+		var mini2: Vector2 = Vector2(clampf(H * 0.085, 40.0, 56.0), 0)
+		mini2.y = mini2.x * 1.3
+		var gun_h2: float = maxf(mini2.y + 16.0, 126.0)
+		var guns2: Control = _build_guns(run, false, mini2, gun_h2)
+		var fixed2: float = 60.0 + 64.0 + gun_h2 + SEP * 3 + (64.0 if hint != null else 0.0)
+		var card_w2: float = (mid_w - SEP * (n - 1)) / n
+		# a conservative minimum; the row expands into whatever height is left (text can wrap)
+		var card_h2: float = clampf(H - fixed2 - 36.0, 100.0, card_w2 * 1.3)
 		var h: HBoxContainer = DDUi.hbox(SEP)
 		_content.add_child(h)
-		var side: VBoxContainer = DDUi.vbox(8)
-		side.custom_minimum_size = Vector2(left_w, 0)
-		h.add_child(side)
-		side.add_child(hp_box)
-		side.add_child(wave_row)
-		side.add_child(deck_row)
-		doors.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		side.add_child(doors)
-		var main: VBoxContainer = DDUi.vbox(8)
-		main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(main)
-		if banner != null:
-			main.add_child(banner)
-		main.add_child(grid)
-		main.add_child(actions)
-		log_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		main.add_child(log_box)
-		var right: VBoxContainer = DDUi.vbox(8)
-		right.custom_minimum_size = Vector2(right_w, 0)
-		right.add_child(pts)
-		right.add_child(weapons)
-		right.add_child(_build_badges(run))
+		left.custom_minimum_size = Vector2(lw2, 0)
+		h.add_child(left)
+		var mid: VBoxContainer = DDUi.vbox(SEP)
+		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(mid)
+		var tr: HBoxContainer = DDUi.hbox(SEP)
+		top.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tr.add_child(top)
+		pile.custom_minimum_size = Vector2(clampf(mid_w * 0.28, 150.0, 220.0), 0)
+		tr.add_child(pile)
+		mid.add_child(tr)
+		if hint != null:
+			mid.add_child(hint)
+		var srow: Control = _build_street_row(run, card_w2, card_h2)
+		srow.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		mid.add_child(srow)
+		mid.add_child(actions)
+		mid.add_child(guns2)
+		var right: VBoxContainer = DDUi.vbox(SEP)
+		right.custom_minimum_size = Vector2(rw2, 0)
+		right.add_child(rooms)
+		if not run.patches.is_empty():
+			right.add_child(_patch_row(run))
+		right.add_child(_build_log(run))
 		h.add_child(right)
 
 
-func _build_hp(run: DDRun) -> Control:
-	var h: HBoxContainer = DDUi.hbox(8)
+## HP / Cover / points (+ survivor chip, settings).
+func _build_top(run: DDRun) -> Control:
+	var h: HBoxContainer = DDUi.hbox(6)
+	_hp_box = h
 	var sp: Dictionary = DDPayloads.survivor(run.survivor_id, Game.bal, Game.profile)
-	if not run.perks.is_empty():
-		var pl: PackedStringArray = []
-		for p: String in run.perks:
-			pl.append("%s: %s" % [DDText.perk_name(p), DDText.perk_text(p, Game.bal)])
-		sp["body"] = str(sp["body"]) + "\nPerks this run:\n" + "\n".join(pl)
-	var sv: DDCardView = _view({"kind": "S", "tag": run.survivor_id.to_upper(),
-		"title": DDText.passive_name(run.passive), "compact": true, "row": true, "title_size": DDUi.FONT_S - 5,
-		"payload": sp,
-		"art_keys": Art.survivor_keys(run.survivor_id)}, Vector2(100 if portrait else 92, 0))
-	h.add_child(sv)
-	var hp_panel: PanelContainer = DDUi.panel(DDUi.PANEL, 8)
+	h.add_child(_view({"kind": "S", "tag": run.survivor_id.to_upper(), "title": DDText.passive_name(run.passive), "compact": true, "row": true,
+		"title_size": DDUi.FONT_S - 6, "payload": sp, "art_keys": Art.survivor_keys(run.survivor_id)}, Vector2(84, 0)))
+	var hp_panel: PanelContainer = DDUi.panel(DDUi.PANEL, 6)
 	hp_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var hv: VBoxContainer = DDUi.vbox(4)
+	hp_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	hp_panel.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+			_inspect.open(DDPayloads.hp(run)))
+	var hv: VBoxContainer = DDUi.vbox(2)
 	hp_panel.add_child(hv)
 	var col: Color = DDUi.GOOD if run.hp * 2 > run.max_hp else (DDUi.WARN if run.hp * 4 > run.max_hp else DDUi.BAD)
-	_hp_label = DDUi.label("HP %d / %d" % [run.hp, run.max_hp], DDUi.FONT_M, col)
+	_hp_label = DDUi.label("HP %d / %d" % [run.hp, run.max_hp], DDUi.FONT_M - 2, col)
 	hv.add_child(_hp_label)
 	var bar: ProgressBar = ProgressBar.new()
 	bar.min_value = 0
 	bar.max_value = run.max_hp
 	bar.value = run.hp
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 12)
+	bar.custom_minimum_size = Vector2(0, 10)
 	bar.add_theme_stylebox_override("background", DDUi.box(Color("0d0f10"), Color(0, 0, 0, 0), 0, 6, 0))
 	bar.add_theme_stylebox_override("fill", DDUi.box(col, Color(0, 0, 0, 0), 0, 6, 0))
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hv.add_child(bar)
 	_hp_bar = bar
+	DDUi.ignore_mouse(hp_panel)
 	h.add_child(hp_panel)
 	_hp_anchor = hp_panel
-	_hp_box = h
-	# this wave's Jawbreakers / Payday sit next to HP in portrait (inspectable); landscape: under it
-	for b: String in (run.buffs if portrait else ([] as Array[String])):
-		var bs: Dictionary = DDPayloads.buff_spec(b, Game.bal)
-		bs["art_keys"] = Art.drop_keys("payday") if b == "payday" else Art.jawbreaker_keys(b)
-		h.add_child(_view(bs, Vector2(92, 0)))
-	if run.cover > 0:
-		var cov: DDCardView = _view({"kind": "B", "tag": "COVER", "big": str(run.cover), "big_size": 24, "compact": true, "row": true,
-			"payload": DDPayloads.cover(run)}, Vector2(72, 0))
-		_cover_anchor = cov
-		h.add_child(cov)
+	var cov: DDCardView = _view({"kind": "C", "tag": "COVER", "big": str(run.cover), "big_size": 22, "row": true, "dim": run.cover == 0,
+		"payload": DDPayloads.cover(run)}, Vector2(72, 0))
+	_cover_view = cov
+	h.add_child(cov)
+	var pv: DDCardView = _view(_points_spec(run), Vector2(112, 0))
+	pv.index = IDX_POINTS
+	_points_view = pv
+	h.add_child(pv)
+	var sb: Button = _settings_button(true)
+	sb.text = "Menu"
+	sb.custom_minimum_size = Vector2(72, 56)
+	h.add_child(sb)
 	return h
 
 
-## Wave track: the district's waves as pips (current lit) plus the face-up boss card.
-func _build_wave_track(run: DDRun) -> HBoxContainer:
-	var h: HBoxContainer = DDUi.hbox(6)
+func _patch_row(run: DDRun) -> Control:
+	var f: HFlowContainer = HFlowContainer.new()
+	f.add_theme_constant_override("h_separation", 6)
+	f.add_theme_constant_override("v_separation", 6)
+	for p: String in run.patches:
+		f.add_child(_patch_chip(p))
+	return f
+
+
+## LEFT: the wave decks (W1-W3) and the face-up boss.
+func _build_waves(run: DDRun) -> Control:
+	var v: VBoxContainer = DDUi.vbox(6)
+	v.add_child(DDUi.label("WAVES", DDUi.FONT_S - 4, DDUi.TEXT_DIM))
 	for w: int in run.wave_count():
-		var pv: DDCardView = _view(DDPayloads.wave_pip_spec(run, w), Vector2(40, 0))
-		h.add_child(pv)
-	var fs: Dictionary = DDPayloads.finale_spec(run.district())
-	fs["art_keys"] = Art.finale_keys(run.district())
-	var fv: DDCardView = _view(fs)
-	fv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fv.size_flags_stretch_ratio = 1.6
-	_finale_anchor = fv
-	h.add_child(fv)
-	return h
+		var ws: Dictionary = DDPayloads.wave_spec(run, w)
+		ws["art_keys"] = Art.deck_back_keys("wave")
+		ws["art_tint"] = 0.75
+		var wv: DDCardView = _view(ws, Vector2(0, 48))
+		wv.index = IDX_WAVE + w
+		_wave_views.append(wv)
+		v.add_child(wv)
+	var bs: Dictionary = DDPayloads.boss_spec(run)
+	bs["art_keys"] = Art.finale_keys(run.district())
+	bs["art_tint"] = 0.6
+	var bv: DDCardView = _view(bs, Vector2(0, 64))
+	bv.index = IDX_BOSS
+	bv.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_boss_view = bv
+	v.add_child(bv)
+	return v
 
 
-## Doors / machines strip (+ this wave's Jawbreaker badges and perks).
-func _build_doors(run: DDRun) -> Control:
-	var box: Container
+## MIDDLE (top): the mixed draw pile (+ Lookout's top card).
+func _build_pile(run: DDRun) -> Control:
+	var v: VBoxContainer = DDUi.vbox(6)
 	if portrait:
-		var hb: HBoxContainer = DDUi.hbox(8)
-		box = hb
-	else:
-		box = DDUi.vbox(6)
+		v.add_child(DDUi.label(str(run.district().get("name", "")).to_upper(), DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var ps: Dictionary = DDPayloads.pile_spec(run)
+	ps["art_keys"] = Art.deck_back_keys("pile")
+	ps["art_tint"] = 0.7
+	if not portrait:
+		ps["title"] = "%s - %d zombies" % [str(run.district().get("name", "")), run.pile_zombies()]
+	var pv: DDCardView = _view(ps, Vector2(0, 92 if portrait else 56))
+	pv.index = IDX_PILE
+	pv.size_flags_vertical = Control.SIZE_EXPAND_FILL if portrait else Control.SIZE_FILL
+	_pile_view = pv
+	v.add_child(pv)
+	var lc: DDCard = run.lookout_card()
+	if lc != null:
+		var row: HBoxContainer = DDUi.hbox(4)
+		row.add_child(_view({"kind": lc.kind, "tag": "TOP", "big": str(lc.value) if lc.kind != DDCard.WEAPON else "", "big_size": 20, "row": true,
+			"title": DDText.card_name(lc, Game.bal), "title_size": DDUi.FONT_S - 7, "payload": DDPayloads.card(lc, run)}, Vector2(80, 40)))
+		var bb: Button = DDUi.button("BURY" if run.can_bury() else "buried", DDUi.PANEL_HI, DDUi.FONT_S - 4)
+		bb.name = "BuryButton"
+		bb.custom_minimum_size = Vector2(64, 44)
+		bb.disabled = not run.can_bury() or busy
+		bb.tooltip_text = "Lookout: send the top card to the bottom (once per street)"
+		bb.pressed.connect(do_bury)
+		row.add_child(bb)
+		v.add_child(row)
+	return v
+
+
+## RIGHT: the 3 room decks, each with its price and OPEN (or its machine's USE).
+func _build_rooms(run: DDRun) -> Control:
+	var v: VBoxContainer = DDUi.vbox(6)
+	v.add_child(DDUi.label("ROOMS", DDUi.FONT_S - 4, DDUi.TEXT_DIM))
 	var did: String = str(run.district().get("id", ""))
 	for i: int in run.room_count():
-		var rs: Dictionary = DDPayloads.room_spec(run, i, i == selected_room)
+		var box: BoxContainer = BoxContainer.new()
+		box.vertical = false
+		box.add_theme_constant_override("separation", 4)
+		var rs: Dictionary = DDPayloads.room_spec(run, i)
 		var r: Dictionary = run.room(i)
-		if run.room_status(i) == "open":
-			rs["art_keys"] = Art.machine_keys(r.get("machine", {}))
-		else:
-			rs["art_keys"] = Art.room_keys(did, str(r.get("name", "")))
-		var rv: DDCardView = _view(rs)
+		rs["art_keys"] = Art.machine_keys(run.machine(i)) if run.room_open[i] else Art.room_keys(did, str(r.get("name", "")))
+		rs["art_tint"] = 0.6
+		var rv: DDCardView = _view(rs, Vector2(0, 60))
+		rv.index = IDX_ROOM + i
 		rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		rv.index = 100 + i
-		rv.tapped.connect(func(_x: DDCardView) -> void: _on_room_tapped(i))
+		_room_views.append(rv)
 		box.add_child(rv)
-	return box
-
-
-## Landscape: this wave's buffs and the run's perks as chips (right column). In portrait the buffs
-## sit next to HP and the perks are listed in the survivor chip's zoom.
-func _build_badges(run: DDRun) -> Control:
-	var extra: HFlowContainer = HFlowContainer.new()
-	extra.add_theme_constant_override("h_separation", 6)
-	extra.add_theme_constant_override("v_separation", 6)
-	for b: String in run.buffs:
-		var bs: Dictionary = DDPayloads.buff_spec(b, Game.bal)
-		bs["art_keys"] = Art.drop_keys("payday") if b == "payday" else Art.jawbreaker_keys(b)
-		extra.add_child(_view(bs, Vector2(116, 0)))
-	for p: String in run.perks:
-		extra.add_child(_view(DDPayloads.perk_spec(p, Game.bal, true), Vector2(116, 0)))
-	return extra
-
-
-## The two weapon slots (magazine pips, notch tag) with their Reload buttons, and the reserve.
-func _build_weapons(run: DDRun) -> Control:
-	var outer: BoxContainer = BoxContainer.new()
-	outer.vertical = not portrait
-	outer.add_theme_constant_override("separation", SEP)
-	for i: int in 2:
-		var col: VBoxContainer = DDUi.vbox(6)
-		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var sv: DDCardView = _view(_slot_spec(run, i))
-		sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sv.index = 200 + i
-		sv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.slot_payload(run, i)))
-		_slot_views[i] = sv
-		col.add_child(sv)
-		var w: DDWeapon = run.slot(i)
-		if w != null and w.is_gun():
-			var rp: Dictionary = run.reload_preview(i)
-			if bool(rp["useful"]):
-				var b: Button = DDUi.button(_reload_label(rp), Color("1f4a63"), DDUi.FONT_S)
-				b.custom_minimum_size = Vector2(0, 64)
-				b.disabled = not bool(rp["enabled"]) or busy
-				b.pressed.connect(func() -> void: _do_reload(i))
-				col.add_child(b)
-		outer.add_child(col)
-	var rs: DDCardView = _view(DDPayloads.reserve_spec(run), Vector2(96 if portrait else 0, 0))
-	_reserve_anchor = rs
-	outer.add_child(rs)
-	_weapon_anchor = _slot_views[0]
-	return outer
-
-
-func _reload_label(rp: Dictionary) -> String:
-	var cost: String = ("free: %s" % str(rp["free_why"])) if int(rp["cost"]) == 0 else "1 action"
-	if not bool(rp["enabled"]):
-		return "Reload - %s" % str(rp["reason"])
-	return "RELOAD (%s)\ndrop %d, load %d" % [cost, int(rp["drop"]), int(rp["load"])]
-
-
-func _build_actions(run: DDRun) -> Control:
-	var p: PanelContainer = DDUi.panel(DDUi.PANEL, 8)
-	var v: VBoxContainer = DDUi.vbox(6)
-	p.add_child(v)
-	var head: HBoxContainer = DDUi.hbox(8)
-	v.add_child(head)
-	var prompt: String
-	if not run.pending_offer.is_empty():
-		var w: DDWeapon = run.pending_offer["weapon"]
-		prompt = "%s: %s - where does it go?" % ["Lucky Locker" if str(run.pending_offer["source"]) == "locker" else "Wall Rack", DDText.weapon_stats(w, run)]
-	elif selected >= 0 and selected < run.street.size():
-		prompt = "%s %d: choose how to resolve it." % [DDText.card_name(run.street[selected], run.bal), run.street[selected].value]
-	elif selected_room >= 0:
-		var r: Dictionary = run.room(selected_room)
-		prompt = "%s - %s" % [str(r.get("name", "")), DDText.machine_name(str((r.get("machine", {}) as Dictionary).get("kind", "")))]
-	elif run.boss_street:
-		prompt = "BOSS STREET: resolve every card (%d left). Reloads are free." % run.street.size()
-	elif run.actions_used == 0:
-		prompt = "Tap a card to resolve it, or a door / machine (free, between streets)."
-	else:
-		prompt = "Keep going: %d more action%s this street." % [run.actions_left(), "" if run.actions_left() == 1 else "s"]
-	var pl: Label = DDUi.label(prompt, DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
-	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(pl)
-	if not run.boss_street:
-		head.add_child(_action_pips(run))
-	var row: HBoxContainer = DDUi.hbox(8)
-	v.add_child(row)
-	if not run.pending_offer.is_empty():
-		var w2: DDWeapon = run.pending_offer["weapon"]
-		var ws: Dictionary = {"kind": "W", "tag": "NEW", "big": "P%d" % w2.power, "big_size": 26, "title": w2.name, "compact": true,
-			"lines": [[("mag %d" % w2.cap) if w2.is_gun() else "melee", DDUi.TEXT_DIM, DDUi.FONT_S]],
-			"payload": DDPayloads.weapon_payload(w2, run, "NEW WEAPON"), "art_keys": Art.weapon_keys(w2.wid, w2.name)}
-		row.add_child(_view(ws, Vector2(110, 0)))
-		for ch: String in [DDRun.EQUIP1, DDRun.EQUIP2, DDRun.SCRAP]:
-			var op: Dictionary = run.offer_preview(ch)
-			if ch == DDRun.SCRAP and not bool(op["enabled"]):
-				continue
-			var b: Button = DDUi.button(_offer_label(run, ch, op), Color("1f4a63") if ch != DDRun.SCRAP else DDUi.PANEL_HI, DDUi.FONT_S)
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.disabled = not bool(op["enabled"]) or busy
-			b.pressed.connect(func() -> void: _do_offer(ch))
-			row.add_child(b)
-	elif selected >= 0 and selected < run.street.size():
-		for ch: String in run.choices_for(selected):
-			var pr: Dictionary = run.preview(selected, ch)
-			var b2: Button = DDUi.button(_choice_label(run, run.street[selected], ch, pr), _choice_color(ch, pr), DDUi.FONT_S)
-			b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b2.disabled = not bool(pr["enabled"]) or busy
-			var idx: int = selected
-			b2.pressed.connect(func() -> void: _do_resolve(idx, ch))
-			row.add_child(b2)
-	elif selected_room >= 0:
-		_room_buttons(run, selected_room, row)
-	else:
-		var rb: Button
-		if run.can_slip_away():
-			rb = DDUi.button("SLIP AWAY: skip the other %d (back next wave)" % run.street.size(), Color("3c3550"), DDUi.FONT_S)
-			rb.pressed.connect(_do_slip)
+		var b: Button
+		if not run.room_open[i]:
+			var afford: bool = run.can_open_room(i)
+			b = DDUi.button("OPEN\n%d" % Game.bal.shown(run.room_cost(i)), Color("7a5a1d") if afford else DDUi.PANEL, DDUi.FONT_S - 4)
+			b.name = "Open%d" % i
+			b.disabled = not afford or busy
+			b.pressed.connect(func() -> void: do_open_room(i))
 		else:
-			var why: String = run.skip_block_reason()
-			rb = DDUi.button("SKIP STREET: the %d cards come back next wave" % run.street.size() if why == "" else "Skip - %s" % why, Color("3c3550"), DDUi.FONT_S)
-			rb.disabled = why != "" or busy
-			rb.pressed.connect(_do_skip)
-		rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(rb)
-	return p
+			var used: bool = run.machine_used[i]
+			b = DDUi.button("USE" if not used else "used", Color("3d4f2a") if not used else DDUi.PANEL, DDUi.FONT_S - 4)
+			b.name = "Use%d" % i
+			b.disabled = used or busy or not run.pending_patch.is_empty()
+			b.pressed.connect(func() -> void: open_machine(i))
+		b.custom_minimum_size = Vector2(66, 60)
+		b.autowrap_mode = TextServer.AUTOWRAP_OFF
+		box.add_child(b)
+		v.add_child(box)
+	return v
 
 
-## "(o)(o)( )": actions used / left this street.
-func _action_pips(run: DDRun) -> Control:
-	var h: HBoxContainer = DDUi.hbox(4)
-	h.add_child(DDUi.label("ACTIONS", DDUi.FONT_S - 4, DDUi.TEXT_DIM))
-	for k: int in run.budget:
-		var dot: PanelContainer = PanelContainer.new()
-		var used: bool = k < run.actions_used
-		dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.TEXT_DIM if used else DDUi.GOOD, DDUi.TEXT, 1, 9, 0))
-		dot.custom_minimum_size = Vector2(18, 18)
-		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		h.add_child(dot)
+func _build_street_row(run: DDRun, card_w: float, card_h: float) -> Control:
+	var h: HBoxContainer = DDUi.hbox(SEP)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	var did: String = str(run.district().get("id", ""))
+	for i: int in run.street.size():
+		var c: DDCard = run.street[i]
+		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run)
+		spec["art_keys"] = Art.card_keys(c, did)
+		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
+		cv.index = i
+		cv.tapped.connect(_on_card_tapped)
+		h.add_child(cv)
+		var cid: int = c.get_instance_id()
+		_street_views[cid] = cv
+		_street_specs[cid] = spec
+		_street_cards[cid] = c
+		_street_order.append(cid)
 	return h
 
 
-func _room_buttons(run: DDRun, i: int, row: HBoxContainer) -> void:
-	var st: String = run.room_status(i)
-	var r: Dictionary = run.room(i)
-	if st != "open":
-		var why: String = run.room_block_reason(i)
-		var mk: String = DDText.machine_name(str((r.get("machine", {}) as Dictionary).get("kind", "")))
-		var t: String = "OPEN for %d: +%d loot into the deck now, %s, restock 1/wave" % [Game.bal.shown(int(r.get("cost", 0))), (r.get("pack", []) as Array).size(), mk]
-		var b: Button = DDUi.button(t if why == "" else "Open %s - %s" % [str(r.get("name", "")), why], Color("245236"), DDUi.FONT_S)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.disabled = why != "" or busy
-		b.pressed.connect(func() -> void: _do_open_room(i))
-		row.add_child(b)
-		return
-	for o: Dictionary in run.machine_options(i):
-		var label: String = "%s - PAY %d\n%s" % [str(o["label"]), Game.bal.shown(int(o["price"])), str(o["result"])]
-		if not bool(o["enabled"]):
-			label = "%s - %s" % [str(o["label"]), str(o["reason"])]
-		var b2: Button = DDUi.button(label, Color("5a4023"), DDUi.FONT_S)
-		b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b2.disabled = not bool(o["enabled"]) or busy
-		var oid: String = str(o["id"])
-		b2.pressed.connect(func() -> void: _do_machine(i, oid))
-		row.add_child(b2)
+## The prompt (what to do / what the active weapon does), resolve pips, Run / Run past.
+func _build_actions(run: DDRun) -> Control:
+	var h: HBoxContainer = DDUi.hbox(SEP)
+	var p: PanelContainer = DDUi.panel(DDUi.PANEL, 6)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var pv: VBoxContainer = DDUi.vbox(0)
+	p.add_child(pv)
+	var act: String = "MELEE (Crowbar)" if run.active == DDRun.MELEE else (run.slot(run.active).name.to_upper() if run.slot(run.active) != null else "-")
+	var prompt: String
+	if run.boss_street:
+		prompt = "BOSS STREET: resolve every card (%d left). Active: %s." % [run.cards_left_to_resolve(), act]
+	elif run.resolved == 0:
+		prompt = "Active: %s - tap a zombie to attack. Resolve %d of %d." % [act, run.budget, run.street.size()]
+	else:
+		prompt = "Active: %s. %d more to resolve this street." % [act, run.cards_left_to_resolve()]
+	var pl: Label = DDUi.label(prompt, DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	pv.add_child(pl)
+	if not run.boss_street:
+		var pips: String = ""
+		for k: int in run.budget:
+			pips += "(o) " if k < run.resolved else "( ) "
+		pv.add_child(DDUi.label("resolves " + pips.strip_edges(), DDUi.FONT_S - 6, DDUi.TEXT_DIM))
+	if portrait:
+		pv.add_child(DDUi.label(last_block if last_block != "" else str(last_event.get("text", "")), DDUi.FONT_S - 6, DDUi.WARN if last_block != "" else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
+	h.add_child(p)
+	if run.boss_street and run.is_final_district():
+		var ne: PanelContainer = DDUi.panel(Color("3b1414"), 8, DDUi.BAD, 3)
+		var tex: Texture2D = Art.texture_for(Art.badge_keys("no_escape"))
+		var nh: HBoxContainer = DDUi.hbox(4)
+		ne.add_child(nh)
+		if tex != null:
+			var tr: TextureRect = TextureRect.new()
+			tr.texture = tex
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tr.custom_minimum_size = Vector2(32, 32)
+			nh.add_child(tr)
+		nh.add_child(DDUi.label("NO ESCAPE", DDUi.FONT_S, DDUi.BAD))
+		ne.name = "NoEscape"
+		h.add_child(ne)
+	elif run.boss_street:
+		var rp: Button = DDUi.button("RUN PAST\n-%d HP, no reward" % Game.bal.num("boss_runpast_damage"), Color("5a2a1a"), DDUi.FONT_S - 5)
+		rp.name = "RunPast"
+		rp.custom_minimum_size = Vector2(130, 56)
+		rp.disabled = not run.can_run_past() or busy
+		rp.pressed.connect(do_run_past)
+		h.add_child(rp)
+	else:
+		var why: String = run.run_block_reason()
+		var cost: int = run.run_cost()
+		var rb: Button = DDUi.button(("RUN  -%d HP" % cost if cost > 0 else "RUN  free") + ("\n" + why if why != "" else "\nshuffle back"), Color("5a2a1a") if why == "" else DDUi.PANEL, DDUi.FONT_S - 5)
+		rb.name = "Run"
+		rb.custom_minimum_size = Vector2(130, 56)
+		rb.disabled = why != "" or busy
+		rb.pressed.connect(do_run)
+		h.add_child(rb)
+	return h
 
 
-func _offer_label(run: DDRun, ch: String, op: Dictionary) -> String:
-	if ch == DDRun.SCRAP:
-		return "LEAVE IT +%d" % Game.bal.shown(int(op["points"]))
-	var s: int = 0 if ch == DDRun.EQUIP1 else 1
-	var t: String = "INTO SLOT %d" % (s + 1)
-	if str(op["replaces"]) != "":
-		t += "\nscrap %s +%d" % [str(op["replaces"]), Game.bal.shown(int(op["points"]))]
-	return t
+## BOTTOM: the two gun cards (kill stacks) (+ the melee tile in landscape).
+func _build_guns(run: DDRun, vertical: bool, mini: Vector2, gun_h: float) -> Control:
+	var h: HBoxContainer = DDUi.hbox(SEP)
+	for s: int in 2:
+		var spec: Dictionary = DDPayloads.gun_spec(run, s)
+		spec["fan_vertical"] = vertical
+		spec["mini"] = mini
+		var gv: DDGunView = DDGunView.new()
+		gv.setup_gun(spec)
+		gv.custom_minimum_size = Vector2(0, gun_h)
+		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gv.index = IDX_GUN + s
+		gv.inspected.connect(_on_inspect)
+		gv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(s))
+		for k: int in gv.stack_cards.size():
+			gv.stack_cards[k].index = IDX_STACK + s * 10 + k
+		_gun_views[s] = gv
+		h.add_child(gv)
+	if not portrait:
+		var mv: DDCardView = _melee_tile(run)
+		mv.custom_minimum_size = Vector2(118, gun_h)
+		h.add_child(mv)
+	return h
 
 
-func _choice_label(run: DDRun, c: DDCard, ch: String, pr: Dictionary) -> String:
-	match ch:
-		DDRun.BARE:
-			return "BARE: -%d HP%s\n+%d pts up close" % [int(pr["hp_loss"]), _fate(pr), Game.bal.shown(int(pr["points"]))]
-		DDRun.SLOT1, DDRun.SLOT2:
-			var s: int = 0 if ch == DDRun.SLOT1 else 1
-			var w: DDWeapon = run.slot(s)
-			if w == null:
-				return "Slot %d: empty" % (s + 1)
-			if not bool(pr["enabled"]):
-				return "%s: %s" % [w.display_name(), str(pr["reason"])]
-			var tail: String = "weapon breaks (Shatter)" if bool(pr["breaks"]) else "notch %d" % int(pr["notch_after"])
-			var use: String = "1 round, " if w.is_gun() else ""
-			return "%s: -%d HP%s\n%s%s, +%d pts" % [w.display_name(), int(pr["hp_loss"]), _fate(pr), use, tail, Game.bal.shown(int(pr["points"]))]
-		DDRun.EQUIP1, DDRun.EQUIP2:
-			var s2: int = 0 if ch == DDRun.EQUIP1 else 1
-			var t: String = "INTO SLOT %d" % (s2 + 1)
-			if str(pr["replaces"]) != "":
-				t += "\nscrap %s +%d" % [str(pr["replaces"]), Game.bal.shown(int(pr["points"]))]
-			return t
-		DDRun.SCRAP:
-			return "SCRAP +%d" % Game.bal.shown(int(pr["points"]))
-		DDRun.USE:
-			match c.kind:
-				DDCard.MEDKIT:
-					if bool(pr["wasted"]):
-						return "Use: won't heal"
-					if int(pr["heal"]) <= 0:
-						return "Use: you're at full HP,\nthis medkit heals nothing"
-					return "Use: +%d HP" % int(pr["heal"])
-				DDCard.AMMO:
-					return "Take: +%d reserve ammo" % int(pr["ammo_gain"])
-			return "Take cover: +%d" % int(pr["cover_gain"])
-	return ch
+func _melee_tile(run: DDRun) -> DDCardView:
+	var on: bool = run.active == DDRun.MELEE
+	var mv: DDCardView = _view({"kind": "K", "tag": "MELEE", "badge": "ACTIVE" if on else "", "badge_color": DDUi.SELECT,
+		"big": "P%d" % run.melee_power(), "big_size": 24, "title": "Crowbar", "lines": [["no rule, 0 pts", DDUi.TEXT_DIM, DDUi.FONT_S - 6]],
+		"selected": on, "compact": true, "payload": DDPayloads.melee(run), "art_keys": Art.weapon_keys("crowbar", "Crowbar"), "art_tint": 0.7})
+	mv.index = IDX_MELEE
+	mv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(DDRun.MELEE))
+	_melee_view = mv
+	return mv
 
 
-func _fate(pr: Dictionary) -> String:
-	if bool(pr["dies"]):
-		return "  YOU DIE"
-	if bool(pr["second_wind"]):
-		return " (Second Wind)"
-	if int(pr["absorbed"]) > 0:
-		return " (Cover %d)" % int(pr["absorbed"])
-	return ""
-
-
-func _choice_color(ch: String, pr: Dictionary) -> Color:
-	if bool(pr.get("dies", false)):
-		return Color("6b1f1a")
-	if ch == DDRun.USE and str(pr.get("kind", "")) == DDCard.MEDKIT and (bool(pr.get("wasted", false)) or int(pr.get("heal", 0)) <= 0):
-		return Color("5a4a1f")
-	match ch:
-		DDRun.SLOT1, DDRun.SLOT2, DDRun.EQUIP1, DDRun.EQUIP2:
-			return Color("1f4a63")
-		DDRun.BARE:
-			return Color("5a2a26")
-		DDRun.USE:
-			return Color("245236")
-	return DDUi.PANEL_HI
+## Portrait: the melee tile + the log line.
+func _build_bottom(run: DDRun, _p: bool) -> Control:
+	var h: HBoxContainer = DDUi.hbox(SEP)
+	var mv: DDCardView = _melee_tile(run)
+	mv.custom_minimum_size = Vector2(190, 64)
+	h.add_child(mv)
+	var log_box: Control = _build_log(run)
+	log_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(log_box)
+	return h
 
 
 func _build_log(run: DDRun) -> Control:
-	var p: PanelContainer = DDUi.panel(Color("111416"), 8)
-	var h: HBoxContainer = DDUi.hbox(8)
-	p.add_child(h)
-	var v: VBoxContainer = DDUi.vbox(2)
-	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(v)
-	var n: int = run.log_lines.size()
-	var main_text: String = str(last_event.get("text", "")) if not last_event.is_empty() else (run.log_lines[n - 1] if n > 0 else "")
-	var col: Color = DDUi.TEXT
-	var d: int = int(last_event.get("hp_delta", 0))
-	if d < 0:
-		col = DDUi.BAD
-	elif d > 0:
-		col = DDUi.GOOD
-	v.add_child(DDUi.label("> " + main_text, DDUi.FONT_S, col, HORIZONTAL_ALIGNMENT_LEFT, true))
-	# what else happened (drop, holdover, wave change, boss) since the main line
-	var extra: PackedStringArray = []
-	for t: Variant in last_event.get("notes", []):
-		if str(t) != main_text:
-			extra.append(str(t))
-	if not extra.is_empty():
-		v.add_child(DDUi.label(" ".join(extra), DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
-	var bv: BoxContainer = BoxContainer.new()
-	bv.vertical = false
-	bv.add_theme_constant_override("separation", 6)
-	bv.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	h.add_child(bv)
-	var btn: Button = DDUi.button("Log", DDUi.PANEL, DDUi.FONT_S)
-	btn.custom_minimum_size = Vector2(80, 56)
-	btn.autowrap_mode = TextServer.AUTOWRAP_OFF
-	btn.pressed.connect(func() -> void:
-		var lines: Array[String] = run.log_lines.slice(maxi(0, n - 14))
-		_inspect.open({"kind": "D", "tag": "WHAT HAPPENED", "title": "Recent events", "body": "\n".join(lines)}))
-	bv.add_child(btn)
-	var sb: Button = _settings_button(true)
-	sb.custom_minimum_size = Vector2(80, 56)
-	bv.add_child(sb)
+	var p: PanelContainer = DDUi.panel(Color("181c1e"), 6)
+	p.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var v: VBoxContainer = DDUi.vbox(0)
+	p.add_child(v)
+	var lines: Array[String] = run.log_lines.slice(maxi(0, run.log_lines.size() - (2 if portrait else 5)))
+	for k: int in lines.size():
+		v.add_child(DDUi.label(lines[k], DDUi.FONT_S - 6, DDUi.TEXT if k == lines.size() - 1 else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
+	p.name = "Log"
 	return p
 
 
+# ---------------------------------------------------------------- first-run hints (K5)
+func _due_hint(run: DDRun) -> String:
+	if not hints_enabled or Game.profile == null or not Game.profile.first_run() or run.phase != DDRun.Phase.STREET:
+		return ""
+	var order: Array[String] = ["weapon"]
+	if run.active != DDRun.MELEE and run.slot(run.active) != null:
+		order.append("rule_" + run.slot(run.active).wid)
+	for s: int in 2:
+		if run.slot(s) != null and run.slot(s).kills_left() == 1:
+			order.append("finish")
+	if int(run.stats.get("challenges", 0)) > 0:
+		order.append("challenge")
+	if int(run.stats.get("gun_kills", 0)) > 0:
+		order.append("points")
+	for i: int in run.room_count():
+		if run.can_open_room(i):
+			order.append("rooms")
+	for h: String in order:
+		if Game.profile.hint_due(h):
+			return h
+	return ""
+
+
+func _build_hint(run: DDRun) -> Control:
+	var p: PanelContainer = DDUi.panel(Color("1d2b3a"), 6, DDUi.accent("W"), 2)
+	p.name = "Hint"
+	var h: HBoxContainer = DDUi.hbox(6)
+	p.add_child(h)
+	h.add_child(DDUi.label("TIP", DDUi.FONT_S - 4, DDUi.accent("W")))
+	var l: Label = DDUi.label(DDText.hint_text(hint_id, run.bal), DDUi.FONT_S - 4, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(l)
+	var ok: Button = DDUi.button("Got it", DDUi.PANEL_HI, DDUi.FONT_S - 4)
+	ok.name = "HintOk"
+	ok.custom_minimum_size = Vector2(80, 48)
+	ok.pressed.connect(dismiss_hint)
+	h.add_child(ok)
+	return p
+
+
+func dismiss_hint() -> void:
+	if hint_id != "":
+		Game.profile.mark_hint(hint_id)
+		hint_id = ""
+	_queue_render()
+
+
+# ---------------------------------------------------------------- sheets (gun card, machines, Patch pick)
+func _build_sheet() -> void:
+	var run: DDRun = Game.run
+	if run == null:
+		return
+	var kind: String = ""
+	if not run.pending_patch.is_empty():
+		kind = "patch"
+	elif not sheet.is_empty():
+		kind = str(sheet.get("type", ""))
+	if kind == "":
+		return
+	var dim: ColorRect = ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.7)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	if kind != "patch":
+		dim.gui_input.connect(func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+				close_sheet())
+	_sheet_root.add_child(dim)
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet_root.add_child(center)
+	var vp: Vector2 = get_viewport_rect().size
+	var panel: PanelContainer = DDUi.panel(DDUi.PANEL, 14, DDUi.SELECT, 2)
+	panel.name = "Sheet"
+	panel.custom_minimum_size = Vector2(minf(vp.x - 32.0, 620.0 if portrait else 900.0), 0)
+	center.add_child(panel)
+	var v: VBoxContainer = DDUi.vbox(8)
+	panel.add_child(v)
+	match kind:
+		"gun":
+			_gun_sheet(run, v, int(sheet.get("index", 0)))
+		"machine":
+			_machine_sheet(run, v, int(sheet.get("room", 0)))
+		"patch":
+			_patch_sheet(run, v)
+
+
+func _sheet_button(text: String, enabled: bool, color: Color, cb: Callable) -> Button:
+	var b: Button = DDUi.button(text, color if enabled else DDUi.PANEL, DDUi.FONT_S - 2)
+	b.disabled = not enabled
+	b.custom_minimum_size = Vector2(0, 64)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.pressed.connect(cb)
+	return b
+
+
+func _gun_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
+	if i < 0 or i >= run.street.size() or run.street[i].kind != DDCard.WEAPON:
+		sheet = {}
+		return
+	var c: DDCard = run.street[i]
+	var top: BoxContainer = BoxContainer.new()
+	top.vertical = portrait
+	top.add_theme_constant_override("separation", 10)
+	v.add_child(top)
+	var gp: Dictionary = DDPayloads.gun_def(c.wid, Game.bal, "NEW GUN", run.steady())
+	top.add_child(_view({"kind": "W", "tag": "GUN", "big": "P%d" % Game.bal.weapon_power(c.wid), "big_size": 30, "title": Game.bal.weapon_name(c.wid),
+		"compact": true, "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
+	var txt: Label = DDUi.label(DDText.gun_card_text(c.wid, Game.bal, run.steady()), DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	txt.custom_minimum_size = Vector2(240, 0)
+	top.add_child(txt)
+	var row: BoxContainer = BoxContainer.new()
+	row.vertical = portrait
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	for s: int in 2:
+		var pv: Dictionary = run.card_preview(i, DDRun.EQUIP1 if s == 0 else DDRun.EQUIP2)
+		var g: DDGun = run.slot(s)
+		var label: String = "INTO SLOT %d" % (s + 1)
+		if g != null:
+			label += "\nreplaces %s%s" % [g.name, (" (stack %s discarded)" % DDText.zombie_list(g.stack)) if not g.stack.is_empty() else ""]
+		else:
+			label += "\n(empty)"
+		row.add_child(_sheet_button(label, bool(pv["ok"]), Color("1f4a63"), func() -> void: do_resolve(i, DDRun.EQUIP1 if s == 0 else DDRun.EQUIP2)))
+	var ps: Dictionary = run.card_preview(i, DDRun.SCRAP)
+	row.add_child(_sheet_button("SCRAP +%d" % Game.bal.shown(int(ps.get("points", 0))), bool(ps["ok"]), Color("5a4a1d"), func() -> void: do_resolve(i, DDRun.SCRAP)))
+	v.add_child(_sheet_button("Cancel", true, DDUi.PANEL_HI, close_sheet))
+
+
+func _machine_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
+	var m: Dictionary = run.machine(i)
+	var kind: String = str(m.get("kind", ""))
+	var head: HBoxContainer = DDUi.hbox(10)
+	v.add_child(head)
+	var tex: Texture2D = Art.texture_for(Art.machine_keys(m))
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(96, 72)
+		head.add_child(tr)
+	var hv: VBoxContainer = DDUi.vbox(2)
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hv)
+	hv.add_child(DDUi.label(DDText.machine_name(kind).to_upper() + " - " + str(run.room(i).get("name", "")), DDUi.FONT_M, DDUi.accent("K")))
+	hv.add_child(DDUi.label("Once per wave. You have %d points." % Game.bal.shown(run.points), DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
+	var grid: GridContainer = GridContainer.new()
+	grid.columns = 3 if kind == "bench" else (2 if kind == "wall" else 1)
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	v.add_child(grid)
+	for o: Dictionary in run.machine_options(i):
+		var t: String = "%s - %d" % [str(o["label"]), Game.bal.shown(int(o["price"]))]
+		var res: String = str(o["result"]) if bool(o["enabled"]) else str(o["reason"])
+		var b: Button = _sheet_button(t + ("\n" + res if res != "" else ""), bool(o["enabled"]) and not busy, Color("3d4f2a"), func() -> void: do_machine(i, str(o["id"])))
+		b.add_theme_font_size_override("font_size", DDUi.FONT_S - 5)
+		b.custom_minimum_size = Vector2(0, 84)
+		grid.add_child(b)
+	if kind == "wall":
+		v.add_child(DDUi.label(DDText.gun_card_text(str(m.get("wid", "")), Game.bal, run.steady()), DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
+	v.add_child(_sheet_button("Close", true, DDUi.PANEL_HI, close_sheet))
+
+
+func _patch_sheet(run: DDRun, v: VBoxContainer) -> void:
+	var src: String = str(run.pending_patch.get("source", ""))
+	v.add_child(DDUi.label("PATCH PRESS: pick 1 Patch (permanent for the run)" if src == "press" else "PICK A PATCH", DDUi.FONT_M, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER, true))
+	var row: BoxContainer = BoxContainer.new()
+	row.vertical = portrait
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	for p: Variant in run.pending_patch.get("offer", []):
+		var pid: String = str(p)
+		var spec: Dictionary = DDPayloads.patch_spec(pid, Game.bal, false)
+		spec["art_keys"] = Art.patch_keys(pid)
+		spec["art_fit"] = "contain"
+		var cv: DDCardView = _view(spec, Vector2(0, 110 if portrait else 200))
+		cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cv.tapped.connect(func(_x: DDCardView) -> void: do_take_patch(pid))
+		row.add_child(cv)
+		var b: Button = _sheet_button("TAKE %s" % DDText.patch_name(pid).to_upper(), not busy, Color("2f2f5a"), func() -> void: do_take_patch(pid))
+		b.custom_minimum_size = Vector2(0, 56)
+		if portrait:
+			row.add_child(b)
+	if not portrait:
+		var brow: HBoxContainer = DDUi.hbox(8)
+		v.add_child(brow)
+		for p2: Variant in run.pending_patch.get("offer", []):
+			var pid2: String = str(p2)
+			brow.add_child(_sheet_button("TAKE %s" % DDText.patch_name(pid2).to_upper(), not busy, Color("2f2f5a"), func() -> void: do_take_patch(pid2)))
+
+
+func close_sheet() -> void:
+	sheet = {}
+	_queue_render()
+
+
+# ================================================================ input -> rules
 func _on_card_tapped(v: DDCardView) -> void:
-	if busy:
+	tap_street(v.index)
+
+
+## A tap on street card i: zombies are attacked with the active weapon; medkit / cover are used;
+## a gun card opens the 3-button sheet.
+func tap_street(i: int) -> void:
+	var run: DDRun = Game.run
+	if busy or run == null or i < 0 or i >= run.street.size() or not run.pending_patch.is_empty():
 		return
-	selected = -1 if selected == v.index else v.index
-	selected_room = -1
-	Sfx.cue(&"button", 0.8 if selected >= 0 else 0.7)
+	var c: DDCard = run.street[i]
+	match c.kind:
+		DDCard.ZOMBIE:
+			var pr: Dictionary = run.preview(i, run.active)
+			if not bool(pr["ok"]):
+				last_block = "Can't: %s. Tap another weapon below, or melee." % str(pr["reason"])
+				Sfx.cue(&"warn")
+				var cv: DDCardView = _street_views.get(c.get_instance_id())
+				if cv != null:
+					feedback._wobble(cv)
+					feedback._pulse(cv, Color(1.6, 0.6, 0.6))
+				for s: int in 2:
+					if s == run.active and _gun_views[s] != null:
+						feedback._pulse(_gun_views[s], Color(1.6, 1.4, 0.6))
+				_queue_render()
+				return
+			var snap: Dictionary = _snapshot()
+			var ev: Dictionary = run.attack(i)
+			_finish(ev, {"type": "attack", "ev": ev, "snap": snap})
+		DDCard.WEAPON:
+			sheet = {"type": "gun", "index": i}
+			Sfx.cue(&"button", 0.9)
+			_queue_render()
+		_:
+			do_resolve(i, DDRun.USE)
+
+
+func tap_weapon(w: int) -> void:
+	var run: DDRun = Game.run
+	if busy or run == null:
+		return
+	if w != DDRun.MELEE and run.slot(w) == null:
+		_inspect.open(DDPayloads.gun(run, w))
+		return
+	if run.active != w:
+		run.set_active(w)
+		Sfx.cue(&"equip", 1.2)
+		Game.save_run()
+	last_block = ""
 	_queue_render()
 
 
-func _on_room_tapped(i: int) -> void:
-	if busy:
-		return
-	selected_room = -1 if selected_room == i else i
-	selected = -1
-	Sfx.cue(&"button", 0.85)
-	_queue_render()
-
-
-func _begin_action() -> int:
-	return Game.run.log_lines.size()
-
-
-func _finish(ev: Dictionary, fx: Dictionary) -> void:
-	if not bool(ev.get("ok", false)):
-		return
-	last_event = ev
-	selected = -1
-	if str(ev.get("kind", "")) != "room" and str(ev.get("kind", "")) != "machine":
-		selected_room = -1
-	_pending_fx = fx
-	_after_event(ev)
-
-
-func _do_resolve(i: int, ch: String) -> void:
+func do_resolve(i: int, choice: String) -> void:
 	if busy:
 		return
 	var run: DDRun = Game.run
-	var s: int = 0 if ch == DDRun.SLOT1 else (1 if ch == DDRun.SLOT2 else -1)
-	var snap: Dictionary = _snapshot(s)
-	var ev: Dictionary = run.resolve(i, ch)
-	_finish(ev, {"type": "resolve", "ev": ev, "snap": snap})
+	var snap: Dictionary = _snapshot()
+	sheet = {}
+	var ev: Dictionary = run.resolve(i, choice)
+	_finish(ev, {"type": "card", "ev": ev, "snap": snap})
 
 
-func _do_reload(s: int) -> void:
+func do_run() -> void:
 	if busy:
 		return
-	var run: DDRun = Game.run
-	var ev: Dictionary = run.reload(s)
+	var snap: Dictionary = _snapshot()
+	var ev: Dictionary = Game.run.run_street()
+	_finish(ev, {"type": "run", "ev": ev, "snap": snap})
+
+
+func do_run_past() -> void:
+	if busy:
+		return
+	var ev: Dictionary = Game.run.run_past()
+	_finish(ev, {"type": "run", "ev": ev, "snap": _snapshot()})
+
+
+func do_bury() -> void:
+	if busy:
+		return
+	var ev: Dictionary = Game.run.bury_top()
 	if bool(ev.get("ok", false)):
-		Sfx.cue(&"equip", 0.85)
-		(func() -> void:
-			await get_tree().process_frame
-			await get_tree().process_frame
-			if _slot_views[s] != null and is_instance_valid(_slot_views[s]):
-				feedback._pop(_slot_views[s], 1.12, DDUi.accent("W"))).call()
-	_finish(ev, {"type": "deal", "ev": ev, "snap": _snapshot()})
+		Sfx.cue(&"flip", 0.8)
+	_finish(ev, {})
 
 
-func _do_skip() -> void:
-	if busy:
-		return
-	var snap: Dictionary = _snapshot()
-	var ev: Dictionary = Game.run.skip()
-	_finish(ev, {"type": "retreat", "ev": ev, "snap": snap})
-
-
-func _do_slip() -> void:
-	if busy:
-		return
-	var snap: Dictionary = _snapshot()
-	var ev: Dictionary = Game.run.slip_away()
-	_finish(ev, {"type": "retreat", "ev": ev, "snap": snap})
-
-
-func _do_open_room(i: int) -> void:
+func do_open_room(i: int) -> void:
 	if busy:
 		return
 	var snap: Dictionary = _snapshot()
 	var ev: Dictionary = Game.run.open_room(i)
 	if bool(ev.get("ok", false)):
-		Sfx.cue(&"clear", 1.2)
-		selected_room = i
-	_finish(ev, {"type": "deal", "ev": ev, "snap": snap})
+		_pending_banner = {"text": "%s OPEN" % str(Game.run.room(i).get("name", "")).to_upper(), "color": DDUi.accent("K"),
+			"sub": "3 cards shuffle into the pile. The %s is on: tap USE." % DDText.machine_name(str(Game.run.machine(i).get("kind", ""))), "delay": 0.5}
+	_finish(ev, {"type": "room", "ev": ev, "snap": snap})
 
 
-func _do_machine(i: int, oid: String) -> void:
+func open_machine(i: int) -> void:
+	if busy:
+		return
+	sheet = {"type": "machine", "room": i}
+	Sfx.cue(&"button", 0.9)
+	_queue_render()
+
+
+func do_machine(i: int, oid: String) -> void:
 	if busy:
 		return
 	var run: DDRun = Game.run
+	var snap: Dictionary = _snapshot()
 	var ev: Dictionary = run.use_machine(i, oid)
 	if not bool(ev.get("ok", false)):
 		return
-	Sfx.cue(&"perk")
-	selected_room = -1
-	_auto_inspect = _result_payload(run, ev)
-	_finish(ev, {})
-
-
-func _do_offer(ch: String) -> void:
-	if busy:
-		return
-	var ev: Dictionary = Game.run.take_offer(ch)
-	if bool(ev.get("ok", false)):
-		Sfx.cue(&"equip" if ch != DDRun.SCRAP else &"scrap")
-	_finish(ev, {})
-
-
-## The zoomed "You got" card after a machine use (the result is never hidden).
-func _result_payload(run: DDRun, ev: Dictionary) -> Dictionary:
+	sheet = {}
 	var res: Dictionary = ev.get("result", {})
-	var p: Dictionary
-	if res.has("effect"):
-		var e: String = str(res["effect"])
-		p = {"kind": "J", "tag": "GRIN MACHINE - YOU GOT", "title": DDText.buff_name(e), "big": "",
-			"body": "%s: %s%s" % [DDText.buff_name(e), DDText.buff_text(e, run.bal), "" if e == "sugar_rush" else " The badge sits next to your HP; long press it any time."]}
-		var tex: Texture2D = Art.texture_for(Art.jawbreaker_keys(e))
+	if res.has("gun"):
+		var g: DDGun = res["gun"]
+		var s: int = int(res.get("slot", 0))
+		var p: Dictionary = DDPayloads.gun(run, s)
+		p["tag"] = "%s - RESULT" % DDText.machine_name(str(res.get("machine", ""))).to_upper()
+		p["body"] = str(ev.get("text", "")) + "\n\n" + str(p["body"])
+		var tex: Texture2D = Art.texture_for(Art.weapon_keys(g.wid, g.name))
 		if tex != null:
 			p["art"] = tex
-	else:
-		var w: DDWeapon = res.get("weapon")
-		var tag: String = {"locker": "LUCKY LOCKER - YOU GOT", "retrofit": "RETROFIT BENCH", "wallrack": "WALL RACK"}.get(str(res.get("machine", "")), "YOU GOT")
-		p = DDPayloads.weapon_payload(w, run, tag)
-		p["body"] = str(ev.get("text", "")) + "\n" + str(p["body"])
-		var tex2: Texture2D = Art.texture_for(Art.weapon_keys(w.wid, w.name))
-		if tex2 != null:
-			p["art"] = tex2
-	return p
+		_auto_inspect = p
+	_finish(ev, {"type": "machine", "ev": ev, "snap": snap})
+
+
+func do_take_patch(id: String) -> void:
+	if busy:
+		return
+	var ev: Dictionary = Game.run.take_patch(id)
+	if bool(ev.get("ok", false)):
+		Sfx.cue(&"perk")
+		var p: Dictionary = DDPayloads.patch(id, Game.bal)
+		p["tag"] = "PATCH SEWN ON"
+		var tex: Texture2D = Art.texture_for(Art.patch_keys(id))
+		if tex != null:
+			p["art"] = tex
+		_auto_inspect = p
+	_finish(ev, {})
+
+
+func _finish(ev: Dictionary, fx: Dictionary) -> void:
+	if not bool(ev.get("ok", false)):
+		last_block = str(ev.get("reason", ""))
+		_queue_render()
+		return
+	last_event = ev
+	last_block = ""
+	# a hint is learned once the player acts with it on screen (or taps Got it)
+	if hint_id != "":
+		Game.profile.mark_hint(hint_id)
+	_pending_fx = fx
+	_after_event(ev)
 
 
 func _after_event(ev: Dictionary) -> void:
 	var run: DDRun = Game.run
-	if ev.has("wave_changed"):
-		var info: Dictionary = ev["wave_changed"]
-		var t: String = "WAVE %d - %s" % [int(info["wave"]) + 1, DDText.zombie_summary(info["zombies"])]
-		if int(info["skipped"]) > 0:
-			t += " + %d skipped" % int(info["skipped"])
-		if int(info["restock"]) > 0:
-			t += " + %d restock" % int(info["restock"])
-		_pending_banner = {"text": t, "color": DDUi.TEXT, "sub": "Wave cleared: +%d points%s" % [Game.bal.shown(int(info.get("bonus", 0))), "  -  BOSS WAVE" if bool(info["boss_wave"]) else ""]}
+	var waves: Array = ev.get("waves", [])
+	if not waves.is_empty():
+		var info: Dictionary = waves[waves.size() - 1]
+		_pending_banner = {"text": "WAVE %d - %d cards, zombies %s" % [int(info["wave"]) + 1, int(info.get("cards", 0)), DDText.zombie_range(info.get("zombies", []))],
+			"color": DDUi.TEXT, "sub": "The pile ran dry: the next wave deck shuffles in%s." % ((" + %d restock from opened rooms" % int(info["restock"])) if int(info.get("restock", 0)) > 0 else ""), "delay": 0.2}
 		Sfx.cue(&"clear", 0.9)
-	elif bool(ev.get("last_lap", false)):
-		_pending_banner = {"text": "LAST LAP", "color": DDUi.WARN, "sub": "The skipped cards come back once. No skipping."}
-	elif bool(ev.get("boss_street", false)):
-		_pending_banner = {"text": "BOSS: " + str(run.finale().get("name", "")), "color": DDUi.accent("F"), "sub": "Resolve every card. Reloads are free."}
-	elif str(ev.get("drop", "")) != "":
-		_pending_banner = {"text": "CARRIER DROP: " + DDText.drop_name(str(ev["drop"])).to_upper(), "color": DDUi.accent("X"), "sub": DDText.drop_text(str(ev["drop"]), run.bal).capitalize()}
+	if bool(ev.get("boss_street", false)):
+		var b: Dictionary = run.boss_def()
+		_pending_banner = {"text": ("%s - NO ESCAPE" if run.is_final_district() else "BOSS: %s") % str(b.get("name", "")).to_upper(),
+			"color": DDUi.BAD if run.is_final_district() else DDUi.accent("F"), "sub": DDText.trait_text(str(b.get("trait", ""))), "delay": 0.3}
+	for info2: Variant in ev.get("collects", []):
+		if bool((info2 as Dictionary).get("challenge", false)):
+			Sfx.cue(&"perk")
 	if run.phase == DDRun.Phase.DEAD or run.phase == DDRun.Phase.WON or run.phase == DDRun.Phase.SAFEHOUSE:
 		busy = true
 		_pending_banner = {}
 		_queue_render()
-		_float_hp(int(ev.get("hp_delta", 0)))
-		_float_points(int(ev.get("points_delta", 0)))
-		# the death / clear moment plays on the street first (input is held only for this beat)
-		await get_tree().create_timer(0.9).timeout
+		var hold: float = 0.9
+		for info3: Variant in ev.get("collects", []):
+			hold = maxf(hold, 1.6 if bool((info3 as Dictionary).get("challenge", false)) else 1.2)
+		await get_tree().create_timer(hold).timeout
 		busy = false
 		if run.phase == DDRun.Phase.SAFEHOUSE:
-			safehouse_info = {"district": str(Game.bal.district(run.district_index).get("name", "")),
-				"hp_score": run.boss_hp[run.boss_hp.size() - 1] if not run.boss_hp.is_empty() else 0}
-			chosen_perk = ""
 			screen = Screen.SAFEHOUSE
+			chosen_patch = ""
 			_screen_fx = "safehouse"
+			Game.save_run("SAFEHOUSE")
 		else:
 			screen = Screen.END
 			_screen_fx = "end_won" if run.phase == DDRun.Phase.WON else "end_dead"
@@ -1156,46 +1277,13 @@ func _after_event(ev: Dictionary) -> void:
 		_queue_render()
 		return
 	_queue_render()
-	_float_hp(int(ev.get("hp_delta", 0)))
-	_float_points(int(ev.get("points_delta", 0)))
 
 
-func _float_hp(delta: int) -> void:
-	if delta == 0:
-		return
-	await get_tree().process_frame
-	_float_text("%+d HP" % delta, DDUi.GOOD if delta > 0 else DDUi.BAD, _hp_anchor)
-
-
-func _float_points(delta: int) -> void:
-	if delta == 0:
-		return
-	await get_tree().process_frame
-	_float_text("%+d pts" % Game.bal.shown(delta), DDUi.accent("X") if delta > 0 else DDUi.WARN, _points_anchor)
-
-
-func _float_text(t: String, col: Color, anchor: Control) -> void:
-	if anchor == null or not is_instance_valid(anchor) or not anchor.is_inside_tree():
-		return
-	var l: Label = DDUi.label(t, 36, col)
-	l.add_theme_constant_override("outline_size", 8)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	_fx.add_child(l)
-	var r: Rect2 = anchor.get_global_rect()
-	l.position = Vector2(clampf(r.position.x + r.size.x * 0.5 - 50, 0.0, get_viewport_rect().size.x - 140.0), r.end.y - 10)
-	var tw: Tween = create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(l, "position:y", l.position.y - 56, 1.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(l, "modulate:a", 0.0, 1.0).set_delay(0.35)
-	tw.chain().tween_callback(l.queue_free)
-
-
-## Full-width banner (wave change, last lap, boss, Carrier drop): ~1.6 s, never blocks input.
+# ---------------------------------------------------------------- banner
 var last_banner: String = ""
 var _banner: Control = null
 
 
-## True while a wave / boss / drop banner is on screen.
 func banner_open() -> bool:
 	return _banner != null and is_instance_valid(_banner) and not _banner.is_queued_for_deletion()
 
@@ -1226,7 +1314,6 @@ func _show_banner(text: String, col: Color, sub: String) -> void:
 		l2.custom_minimum_size = Vector2(lw, 0)
 		v.add_child(l2)
 	DDUi.ignore_mouse(p)
-	# tap the banner to dismiss it early (the tap is used up); taps elsewhere go through
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and is_instance_valid(p):
@@ -1238,7 +1325,7 @@ func _show_banner(text: String, col: Color, sub: String) -> void:
 	p.modulate.a = 0.0
 	var tw: Tween = p.create_tween()
 	tw.tween_property(p, "modulate:a", 1.0, 0.15)
-	tw.tween_interval(1.3 if not Game.reduce_motion() else 1.5)
+	tw.tween_interval(1.5 if not Game.reduce_motion() else 1.7)
 	tw.tween_property(p, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(p.queue_free)
 
@@ -1246,81 +1333,72 @@ func _show_banner(text: String, col: Color, sub: String) -> void:
 # ---------------------------------------------------------------- safehouse
 func _build_safehouse() -> void:
 	var run: DDRun = Game.run
-	# portrait: one scrolling column; landscape (844x390): two columns that fit without scrolling
-	var v: VBoxContainer = DDUi.vbox(12 if portrait else 8)
-	var right: VBoxContainer = v
-	if portrait:
-		_content.add_child(_scroll(v))
-	else:
-		var h: HBoxContainer = DDUi.hbox(SEP * 2)
-		_content.add_child(h)
-		v.custom_minimum_size = Vector2(get_viewport_rect().size.x * 0.36, 0)
-		h.add_child(v)
-		right = DDUi.vbox(8)
-		right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(right)
-	var head: Label = DDUi.label("%s CLEARED" % str(safehouse_info.get("district", "")).to_upper(), DDUi.FONT_XL if portrait else DDUi.FONT_L, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true)
+	var v: VBoxContainer = DDUi.vbox(10 if portrait else 6)
+	_content.add_child(_scroll(v))
+	var last: Dictionary = run.boss_results[run.boss_results.size() - 1] if not run.boss_results.is_empty() else {}
+	var dname: String = str(Game.bal.district(run.district_index).get("name", ""))
+	var head: Label = DDUi.label(("%s CLEARED" if not bool(last.get("ran_past", false)) else "YOU RAN PAST %s") % (dname.to_upper() if not bool(last.get("ran_past", false)) else str(last.get("name", "")).to_upper()), DDUi.FONT_XL if portrait else DDUi.FONT_L, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_screen_title = head
 	v.add_child(head)
-	var fs: int = DDUi.FONT_M if portrait else DDUi.FONT_S
-	v.add_child(DDUi.label("HP left at the boss: +%d score  -  run score %d  -  points %d" % [Game.bal.shown(int(safehouse_info.get("hp_score", 0))), Game.bal.shown(run.run_score()), Game.bal.shown(run.points)], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
-	v.add_child(DDUi.label("SAFEHOUSE: you rest and heal %d HP (up to your max). Now HP %d / %d. You keep both weapons, your %d reserve ammo and your points." % [
-		run.safehouse_healed(), run.hp, run.max_hp, run.reserve], fs, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
-	var kit: HFlowContainer = HFlowContainer.new()
-	kit.alignment = FlowContainer.ALIGNMENT_CENTER
-	kit.add_theme_constant_override("h_separation", SEP)
-	kit.add_theme_constant_override("v_separation", SEP)
-	for i: int in 2:
-		kit.add_child(_view(_slot_spec(run, i), Vector2(180, 0)))
-	kit.add_child(_view(DDPayloads.reserve_spec(run), Vector2(100, 0)))
+	v.add_child(DDUi.label("SAFEHOUSE: you rest, +%d HP when you head out (HP now %d / %d). Guns, points and Patches carry on; rooms and the pile reset. Points %d." % [run.safehouse_heal(), run.hp, run.max_hp, Game.bal.shown(run.points)], DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var kit: HBoxContainer = DDUi.hbox(SEP)
 	v.add_child(kit)
-	if run.perk_offer.is_empty():
-		right.add_child(DDUi.label("No perks left to offer.", DDUi.FONT_M, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	else:
-		right.add_child(DDUi.label("Pick 1 perk for the rest of the run (long press / right click to zoom)", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
-	var box: BoxContainer = BoxContainer.new()
-	box.vertical = portrait
-	box.add_theme_constant_override("separation", SEP)
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	if not portrait:
-		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right.add_child(box)
-	var vp: Vector2 = get_viewport_rect().size
-	var col_w: float = vp.x - MARGIN * 2 - vp.x * 0.36 - SEP * 2
-	for pid: String in run.perk_offer:
-		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 120) if portrait else Vector2((col_w - SEP * 2) / 3.0, clampf(vp.y - MARGIN * 2 - 140.0, 150.0, 260.0))
-		var ps: Dictionary = DDPayloads.perk_spec(pid, Game.bal, false, pid == chosen_perk)
-		ps["art_keys"] = Art.perk_keys(pid)
-		ps["art_fit"] = "contain"
-		var cv: DDCardView = _view(ps, size)
-		if pid == chosen_perk and _screen_fx == "" and _pending_fx.is_empty() and _perk_popped != pid:
-			_perk_popped = pid
-			(func() -> void:
-				await get_tree().process_frame
-				if is_instance_valid(cv):
-					feedback._pop(cv, 1.06, DDUi.accent("P"))).call()
-		cv.tapped.connect(func(_x: DDCardView) -> void:
-			if chosen_perk != pid:
-				Sfx.cue(&"flip", 1.1)
-			chosen_perk = pid
-			_queue_render())
-		box.add_child(cv)
-	var label: String = "Continue" if run.perk_offer.is_empty() else ("Take %s" % DDText.perk_name(chosen_perk) if chosen_perk != "" else "Tap a perk to choose it")
-	var go: Button = DDUi.button(label, Color("245236"), DDUi.FONT_L)
-	go.custom_minimum_size = Vector2(0, 88 if portrait else DDUi.TAP_MIN)
-	go.disabled = chosen_perk == "" and not run.perk_offer.is_empty()
-	go.pressed.connect(func() -> void:
-		var ev: Dictionary = run.choose_perk(chosen_perk)
-		if bool(ev.get("ok", false)):
-			last_event = ev
-			if chosen_perk != "":
-				Sfx.cue(&"perk")
-			_perk_popped = ""
-			screen = Screen.MAP
-			Game.save_run("MAP")
-			_screen_fx = "map"
-			_queue_render())
-	right.add_child(go)
+	for s: int in 2:
+		var spec: Dictionary = DDPayloads.gun_spec(run, s)
+		spec["fan_vertical"] = false
+		spec["mini"] = Vector2(40, 52)
+		var gv: DDGunView = DDGunView.new()
+		gv.setup_gun(spec)
+		gv.custom_minimum_size = Vector2(0, 110)
+		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gv.inspected.connect(_on_inspect)
+		kit.add_child(gv)
+	if not run.patches.is_empty():
+		v.add_child(_patch_row(run))
+	var offer: Array = run.pending_patch.get("offer", [])
+	if not offer.is_empty():
+		v.add_child(DDUi.label("BOSS REWARD: pick 1 free Patch (long press to read)", DDUi.FONT_M, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER, true))
+		var box: BoxContainer = BoxContainer.new()
+		box.vertical = portrait
+		box.add_theme_constant_override("separation", SEP)
+		v.add_child(box)
+		for p: Variant in offer:
+			var pid: String = str(p)
+			var ps: Dictionary = DDPayloads.patch_spec(pid, Game.bal, false)
+			ps["selected"] = pid == chosen_patch
+			ps["art_keys"] = Art.patch_keys(pid)
+			ps["art_fit"] = "contain"
+			var cv: DDCardView = _view(ps, Vector2(0, 104 if portrait else 150))
+			cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cv.tapped.connect(func(_x: DDCardView) -> void:
+				if chosen_patch != pid:
+					Sfx.cue(&"flip", 1.1)
+				chosen_patch = pid
+				_queue_render())
+			box.add_child(cv)
+	var nxt: String = str(Game.bal.district(run.district_index + 1).get("name", ""))
+	var label: String = ("Head to %s (+%d HP)" % [nxt, run.safehouse_heal()]) if offer.is_empty() or chosen_patch != "" else "Tap a Patch to choose it"
+	if not offer.is_empty() and chosen_patch != "":
+		label = "Take %s, head to %s (+%d HP)" % [DDText.patch_name(chosen_patch), nxt, run.safehouse_heal()]
+	var go: Button = DDUi.button(label, Color("245236"), DDUi.FONT_M)
+	go.name = "LeaveSafehouse"
+	go.custom_minimum_size = Vector2(0, 80 if portrait else DDUi.TAP_MIN)
+	go.disabled = not offer.is_empty() and chosen_patch == ""
+	go.pressed.connect(leave_safehouse)
+	v.add_child(go)
+
+
+func leave_safehouse() -> void:
+	var run: DDRun = Game.run
+	var ev: Dictionary = run.leave_safehouse(chosen_patch)
+	if bool(ev.get("ok", false)):
+		last_event = ev
+		if chosen_patch != "":
+			Sfx.cue(&"perk")
+		chosen_patch = ""
+		screen = Screen.MAP
+		Game.save_run("MAP")
+		_queue_render()
 
 
 # ---------------------------------------------------------------- end
@@ -1333,24 +1411,27 @@ func _build_end() -> void:
 	_screen_title = head
 	v.add_child(head)
 	var s: Dictionary = Game.bal.survivor(run.survivor_id)
-	var where: String = "%s escaped the city." % str(s.get("name", "")) if won else "%s fell in %s, wave %d." % [str(s.get("name", "")), str(run.district().get("name", "")), run.wave_index + 1]
+	var where: String = "%s escaped the city." % str(s.get("name", "")) if won else "%s fell in %s%s." % [str(s.get("name", "")), str(run.district().get("name", "")),
+		" at the boss" if run.boss_street else ", wave %d" % (run.wave_index + 1)]
 	v.add_child(DDUi.label(where, DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
 	if not won and not last_event.is_empty():
-		v.add_child(DDUi.label("Last card: " + str(last_event.get("text", "")), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		v.add_child(DDUi.label("Last: " + str(last_event.get("text", "")), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var sc: PanelContainer = DDUi.panel(DDUi.PANEL, 14)
 	var sv: VBoxContainer = DDUi.vbox(4)
 	sc.add_child(sv)
 	sv.add_child(DDUi.label("Points earned: %d" % Game.bal.shown(run.points_earned), DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	for di: int in run.boss_hp.size():
-		sv.add_child(DDUi.label("%s boss: %d HP left, +%d" % [str(Game.bal.district(di).get("name", "")), run.boss_hp[di], Game.bal.shown(run.boss_hp[di])], DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	if won:
+		sv.add_child(DDUi.label("HP left: %d  (+%d)" % [run.hp, Game.bal.shown(run.hp * Game.bal.rule("score_hp_mult"))], DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	sv.add_child(DDUi.label("RUN SCORE %d" % Game.bal.shown(run.run_score()), DDUi.FONT_XL, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER))
-	sv.add_child(DDUi.label("Best with %s: %d   -   %d streets, %d skips, %d reloads, %d kills" % [run.survivor_id.capitalize(), Game.bal.shown(Game.profile.best_score(run.survivor_id)), run.streets_played, run.skips, run.reloads, run.kills], DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var st: Dictionary = run.stats
+	sv.add_child(DDUi.label("Best with %s: %d   -   %d kills, %d guns finished, %d challenges, %d rooms, %d runs" % [run.survivor_id.capitalize(),
+		Game.bal.shown(Game.profile.best_score(run.survivor_id)), int(st.get("kills", 0)), int(st.get("finished", 0)), int(st.get("challenges", 0)),
+		int(st.get("rooms", 0)), int(st.get("runs", 0))], DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	v.add_child(sc)
 	if not Game.new_unlocks.is_empty():
 		v.add_child(DDUi.label("NEW UNLOCKS (long press / right click to zoom)", DDUi.FONT_M, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true))
 		var row: HFlowContainer = HFlowContainer.new()
 		row.alignment = FlowContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("h_separation", SEP)
 		v.add_child(row)
 		for key: String in Game.new_unlocks:
 			var p: Dictionary = DDPayloads.unlock(key, Game.bal, Game.profile)
@@ -1377,10 +1458,12 @@ func _build_end() -> void:
 
 
 # ================================================================ test / smoke hooks
-## Web only (QA screenshots): ?screen=street&seed=5&select=0 jumps to a screen with a seeded run.
-## Street extras: &points=40 (sim units), &open=2 (rooms opened), &slot2=machete, &notch=3 (slot 1),
-## &ammo=1 (slot 1 rounds), &laststreet=1, &boss=1, &offer=locker, &room=0 (select a door),
-## &buff=steady_aim, &skip=1, &inspect=deck|skipped|slot1|slot2|points|reserve|boss|room0|wave.
+## Web only (QA screenshots): ?screen=street&seed=5 jumps to a screen with a seeded run.
+## Street extras: &points=40 (sim units), &open=2 (rooms opened), &gun1=rifle &gun2=crossbow,
+## &stack1=5,4 &stack2=..., &active=0|1|2, &patches=lookout,brawler, &district=0..2, &boss=1,
+## &wave=1, &sheet=gun|machine0..2|patch, &inspect=pile|wave0|room0|gun1|gun2|stack|boss|melee|points,
+## &hints=1 (first-run hints on), &near=1 (gun 1 one kill from finishing, a legal zombie dealt),
+## &lastcards=1 (the pile runs dry after this street: wave 2 shuffles in).
 func _apply_smoke_query() -> void:
 	if not OS.has_feature("web"):
 		return
@@ -1391,9 +1474,17 @@ func _apply_smoke_query() -> void:
 	for part: String in q.trim_prefix("?").split("&"):
 		var kv: PackedStringArray = part.split("=")
 		if kv.size() == 2:
-			args[kv[0]] = kv[1]
+			args[kv[0]] = kv[1].uri_decode()
 	if args.has("screen"):
 		apply_debug(args)
+
+
+func _ints_arg(s: String) -> Array[int]:
+	var out: Array[int] = []
+	for p: String in s.split(","):
+		if p.strip_edges() != "":
+			out.append(int(p))
+	return out
 
 
 ## Shared by the web smoke query and the headless UI tests.
@@ -1401,23 +1492,30 @@ func apply_debug(args: Dictionary) -> void:
 	var sid: String = str(args.get("survivor", "rosa"))
 	Game.start_run(sid, int(args.get("seed", "7")))
 	var run: DDRun = Game.run
+	hints_enabled = str(args.get("hints", "0")) == "1"
+	sheet = {}
+	if args.has("district"):
+		run.district_index = clampi(int(args["district"]), 0, Game.bal.district_count() - 1)
+		run._start_district()
 	match str(args.get("screen", "street")):
 		"map":
 			screen = Screen.MAP
 		"street":
 			screen = Screen.STREET
-			selected = int(args.get("select", "-1"))
 		"safehouse":
 			run.hp = run.max_hp
 			run.wave_index = run.wave_count() - 1
 			run.setup_street([], [])
 			run.cover = 50
-			run.resolve(0, DDRun.BARE)
-			safehouse_info = {"district": "Maple Row", "hp_score": run.boss_hp[0] if not run.boss_hp.is_empty() else 0}
+			for k: int in 3:
+				if run.phase == DDRun.Phase.STREET and not run.street.is_empty():
+					run.attack(0, DDRun.MELEE)
 			screen = Screen.SAFEHOUSE
 		"end":
-			run.setup_street(["Z30", "Z30", "B2", "B2", "B2", "B2", "B2", "B2"])
-			last_event = run.resolve(0, DDRun.BARE)
+			run.setup_street(["Z11", "Z11", "C2", "C2", "C2", "C2"])
+			run.hp = 2
+			run.set_active(DDRun.MELEE)
+			last_event = run.attack(0)
 			Game.sync_profile()
 			screen = Screen.END
 	if screen != Screen.STREET:
@@ -1425,64 +1523,93 @@ func apply_debug(args: Dictionary) -> void:
 	if args.has("points"):
 		run.points = int(args["points"])
 	for k: int in int(args.get("open", "0")):
-		run.points += int(run.room(k).get("cost", 0))
+		run.points += run.room_cost(k)
 		run.open_room(k)
-	if args.has("slot2"):
-		run.slots[1] = run.make_weapon(str(args["slot2"]))
-	if args.has("notch") and run.slot(0) != null:
-		run.slot(0).notch = int(args["notch"])
-	if args.has("ammo") and run.slot(0) != null:
-		run.slot(0).ammo = int(args["ammo"])
-	if args.has("buff"):
-		run.buffs.append(str(args["buff"]))
-	if args.has("skip"):
-		run.skip()
-	if args.has("laststreet"):
-		run.deck.clear()
+	for s: int in 2:
+		var key: String = "gun%d" % (s + 1)
+		if args.has(key):
+			run.slots[s] = run.make_gun(str(args[key])) if str(args[key]) != "none" else null
+		var sk: String = "stack%d" % (s + 1)
+		if args.has(sk) and run.slot(s) != null:
+			run.slot(s).stack = _ints_arg(str(args[sk]))
+	if args.has("patches"):
+		for p: String in str(args["patches"]).split(","):
+			if p != "" and not run.patches.has(p):
+				run._add_patch(p)
+	if args.has("wave"):
+		run.wave_index = clampi(int(args["wave"]), 0, run.wave_count() - 1)
+	if args.has("near") and run.slot(0) != null:
+		var g: DDGun = run.slot(0)
+		g.stack.clear()
+		var zs: Array[int] = [5, 4, 3, 2, 1]
+		if g.rule == "up":
+			zs = [2, 3, 4, 5, 6]
+		for k: int in g.cap - 1:
+			g.stack.append(zs[k])
+		var nz: int = 1 if g.rule != "up" else 7
+		if g.rule == "any":
+			nz = 6
+		run.setup_street(["Z%d" % nz, "M4", "Z3", "C2", "Z5", "Z6", "Z2", "M3"])
+		run.active = 0
+	if args.has("lastcards"):
+		# one card left in the pile after this street: the third resolve shuffles wave 2 in
+		run.setup_street(["Z1", "Z2", "Z1", "Z3", "Z2"])
+		run.active = DDRun.MELEE
 	if args.has("boss"):
 		run.wave_index = run.wave_count() - 1
-		run.skipped.clear()
-		run.setup_street([], ["M4"])
-	if args.has("offer"):
-		var i: int = -1
-		for k: int in run.room_count():
-			if str(run.machine(k).get("kind", "")) == "wallrack":
-				i = k
-		if i >= 0:
-			if not run.opened.has(i):
-				for k: int in i + 1:
-					if not run.opened.has(k):
-						run.points += int(run.room(k).get("cost", 0))
-						run.open_room(k)
-			run.points += 99
-			for o: Dictionary in run.machine_options(i):
-				if bool(o["enabled"]):
-					run.use_machine(i, str(o["id"]))
-					break
-	if args.has("room"):
-		selected_room = int(args["room"])
+		run.setup_street([], ["C2"])
+	if args.has("active"):
+		run.set_active(int(args["active"]))
+	if args.has("sheet"):
+		var sh: String = str(args["sheet"])
+		if sh == "gun":
+			run.setup_street(["W:rifle", "Z5", "M4", "Z3", "Z2", "C2"])
+			sheet = {"type": "gun", "index": 0}
+		elif sh.begins_with("machine"):
+			var ri: int = int(sh.trim_prefix("machine"))
+			if not run.room_open[ri]:
+				run.points += run.room_cost(ri)
+				run.open_room(ri)
+			run.points += 60
+			sheet = {"type": "machine", "room": ri}
+		elif sh == "patch":
+			var ri2: int = -1
+			for k: int in run.room_count():
+				if str(run.machine(k).get("kind", "")) == "patch":
+					ri2 = k
+			if not run.room_open[ri2]:
+				run.points += run.room_cost(ri2)
+				run.open_room(ri2)
+			run.points += run.bal.patch_price(run.patches.size())
+			run.use_machine(ri2, "press")
 	if args.has("inspect"):
 		var what: String = str(args["inspect"])
 		match what:
-			"deck":
-				_auto_inspect = DDPayloads.deck_payload(run)
-			"skipped":
-				_auto_inspect = DDPayloads.skipped_payload(run)
-			"slot1":
-				_auto_inspect = DDPayloads.slot_payload(run, 0)
-			"slot2":
-				_auto_inspect = DDPayloads.slot_payload(run, 1)
-			"points":
-				_auto_inspect = DDPayloads.points_payload(run)
-			"reserve":
-				_auto_inspect = DDPayloads.reserve_payload(run)
+			"pile":
+				_auto_inspect = DDPayloads.pile(run)
+			"gun1":
+				_auto_inspect = DDPayloads.gun(run, 0)
+			"gun2":
+				_auto_inspect = DDPayloads.gun(run, 1)
+			"stack":
+				if run.slot(0) != null and not run.slot(0).stack.is_empty():
+					_auto_inspect = DDPayloads.stack_card(run, 0, 0)
 			"boss":
-				_auto_inspect = DDPayloads.finale(run.district())
-			"wave":
-				_auto_inspect = DDPayloads.wave_pip_payload(run, run.wave_index)
+				_auto_inspect = DDPayloads.boss(run)
+			"melee":
+				_auto_inspect = DDPayloads.melee(run)
+			"points":
+				_auto_inspect = DDPayloads.points(run)
+			"zombie":
+				for k: int in run.street.size():
+					if run.street[k].kind == DDCard.ZOMBIE:
+						_auto_inspect = DDPayloads.card(run.street[k], run, k)
+						break
 			_:
-				if what.begins_with("room"):
-					_auto_inspect = DDPayloads.room_payload(run, int(what.trim_prefix("room")))
+				if what.begins_with("wave"):
+					_auto_inspect = DDPayloads.wave(run, int(what.trim_prefix("wave")))
+				elif what.begins_with("room"):
+					_auto_inspect = DDPayloads.room(run, int(what.trim_prefix("room")))
 
 
 ## Web only: exposes window.ddState (screen, hp, tappable rects in CSS px) for browser smoke tests.
@@ -1504,6 +1631,7 @@ func _publish_state() -> void:
 			if n is Button:
 				e["type"] = "button"
 				e["text"] = (n as Button).text
+				e["name"] = str((n as Button).name)
 				e["disabled"] = (n as Button).disabled
 			else:
 				e["type"] = "card"
@@ -1512,28 +1640,29 @@ func _publish_state() -> void:
 				e["title"] = str((n as DDCardView).payload.get("title", ""))
 				e["tag"] = str((n as DDCardView).payload.get("tag", ""))
 			items.append(e)
-	var st: Dictionary = {"screen": screen_name(), "portrait": portrait, "items": items,
-		"inspect": _inspect.is_open(), "settings": settings_panel.is_open(), "fx": feedback.last_played,
-		"banner": last_banner, "banner_open": banner_open(), "banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}
+	var st: Dictionary = {"screen": screen_name(), "portrait": portrait, "items": items, "inspect": _inspect.is_open(),
+		"settings": settings_panel.is_open(), "fx": feedback.last_played, "banner": last_banner, "banner_open": banner_open(),
+		"banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "hint": hint_id,
+		"sheet": str(sheet.get("type", "")) if Game.run == null or Game.run.pending_patch.is_empty() else "patch", "block": last_block,
+		"vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}
 	if Game.run != null:
 		var run: DDRun = Game.run
 		st["hp"] = run.hp
 		st["phase"] = DDRun.Phase.keys()[run.phase]
 		st["log"] = str(last_event.get("text", ""))
 		st["street"] = run.street.size()
-		st["resolved"] = run.cards_resolved + run.streets_played * 10
-		st["actions"] = run.actions_used
+		st["resolved"] = run.resolved + int(run.stats.get("streets", 0)) * 10
 		st["wave"] = run.wave_index + 1
-		st["deck"] = run.deck.size()
-		st["skipped"] = run.skipped.size()
+		st["pile"] = run.pile.size()
 		st["points"] = Game.bal.shown(run.points)
-		st["reserve"] = run.reserve
-		st["opened"] = run.opened.size()
-		st["pending"] = not run.pending_offer.is_empty()
-		var ammo: Array = []
-		for w: Variant in run.slots:
-			ammo.append((w as DDWeapon).ammo if w != null else -1)
-		st["ammo"] = ammo
+		st["opened"] = run.room_open.count(true)
+		st["active"] = run.active
+		st["boss_street"] = run.boss_street
+		st["finished"] = int(run.stats.get("finished", 0))
+		var stacks: Array = []
+		for g: Variant in run.slots:
+			stacks.append((g as DDGun).stack.duplicate() if g != null else null)
+		st["stacks"] = stacks
 	JavaScriptBridge.eval("window.ddState = " + JSON.stringify(st) + ";", true)
 
 
@@ -1544,6 +1673,5 @@ func _css_rect(c: Control, xf: Transform2D, dpr: float) -> Dictionary:
 	return {"x": p0.x, "y": p0.y, "w": p1.x - p0.x, "h": p1.y - p0.y}
 
 
-## Used by the headless UI smoke test and the browser smoke test: what is on screen now.
 func screen_name() -> String:
 	return Screen.keys()[screen]

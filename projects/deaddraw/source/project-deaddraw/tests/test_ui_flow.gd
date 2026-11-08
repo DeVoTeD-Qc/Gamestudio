@@ -1,13 +1,17 @@
-# Headless UI smoke (v2): the Main scene builds every screen in portrait and landscape, every
-# tile is inspectable (has a zoom payload), the v2 street shows the wave track, deck counter,
-# Skipped pile, doors, two weapon slots with pips, reserve, points and Reload, and a scripted
-# street plays through the buttons' code paths (resolve, reload, skip, door, machine, offer).
+# Headless UI flow (v3): the Main scene builds every screen in phone portrait and landscape; the
+# street matches the head's layout (wave decks + boss LEFT, draw pile TOP MIDDLE, 3 room decks
+# with price + OPEN on the RIGHT, the street, the 2 gun cards with their kill stacks + melee at
+# the BOTTOM); every tile is inspectable and inside the screen; the active weapon toggles; a tap
+# on a zombie attacks with it (damage chip before, the kill lands on the stack after); a rule lock
+# blocks the tap with the reason; gun cards open the slot / scrap sheet; OPEN is lit only when
+# affordable; machines open their sheet (Bench, Patch Press -> mandatory pick, Wall Rack); Run;
+# first-run hints show and dismiss; boss streets (Run past, NO ESCAPE); safehouse and end screens.
 extends "res://tests/dd_test_case.gd"
 
 
 func _views(n: Node, out: Array) -> Array:
 	for c: Node in n.get_children():
-		if c is DDCardView:
+		if c is DDCardView and not c.has_meta(&"ghost"):
 			out.append(c)
 		_views(c, out)
 	return out
@@ -23,227 +27,355 @@ func _buttons(n: Node, out: Array) -> Array:
 
 func _button(m: Node, prefix: String) -> Button:
 	for b: Variant in _buttons(m, []):
-		if (b as Button).text.begins_with(prefix):
+		if (b as Button).text.begins_with(prefix) and (b as Button).is_visible_in_tree():
 			return b
 	return null
 
 
+func _named(m: Node, nm: String) -> Node:
+	return m.find_child(nm, true, false)
+
+
+func _view_idx(m: Node, i: int) -> DDCardView:
+	for v: Variant in _views(m, []):
+		if (v as DDCardView).index == i:
+			return v
+	return null
+
+
+var _paths: Array[String] = []
+
+
 func _main() -> Control:
 	var game: Node = tree.root.get_node_or_null("Game")
-	if game != null:
-		game.set("profile", DDProfile.new(bal(), "user://dd_test_ui_profile.json"))
-		game.set("run_save", DDRunSave.new("user://dd_test_ui_run.json"))
+	var pp: String = "user://dd_test_ui_profile_%d.json" % Time.get_ticks_usec()
+	_paths.append(pp)
+	_paths.append(pp + ".run")
+	game.set("profile", DDProfile.new(bal(), pp))
+	game.set("run_save", DDRunSave.new(pp + ".run"))
 	var m: Control = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
 	tree.root.add_child(m)
 	return m
 
 
-func _all_inspectable(m: Control, where: String) -> void:
+func _cleanup() -> void:
+	for p: String in _paths:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+	_paths.clear()
+
+
+func _settle() -> void:
+	for k: int in 3:
+		await tree.process_frame
+
+
+func _all_inspectable_and_on_screen(m: Control, where: String, need_tiles: bool = true) -> void:
 	var vs: Array = _views(m, [])
-	check(vs.size() > 0, "%s: has tiles" % where)
+	if need_tiles:
+		check(vs.size() > 0, "%s: has tiles" % where)
+	var vp: Rect2 = m.get_viewport_rect()
 	for v: Variant in vs:
-		check(not (v as DDCardView).payload.is_empty(), "%s: tile '%s' is inspectable" % [where, (v as DDCardView).kind])
+		var cv: DDCardView = v
+		if not cv.is_visible_in_tree():
+			continue
+		check(not cv.payload.is_empty(), "%s: tile '%s' (%d) is inspectable" % [where, cv.kind, cv.index])
+		var r: Rect2 = cv.get_global_rect()
+		check(r.position.x >= -1 and r.position.y >= -1 and r.end.x <= vp.size.x + 1 and r.end.y <= vp.size.y + 1,
+			"%s: tile %s/%d inside the screen (%s in %s)" % [where, cv.kind, cv.index, str(r), str(vp.size)])
+	for b: Variant in _buttons(m, []):
+		var bb: Button = b
+		if not bb.is_visible_in_tree():
+			continue
+		var r2: Rect2 = bb.get_global_rect()
+		check(r2.end.x <= vp.size.x + 1 and r2.end.y <= vp.size.y + 1, "%s: button '%s' inside the screen (%s)" % [where, bb.text.replace("\n", " "), str(r2)])
+		check(r2.size.y >= 44, "%s: button '%s' is a big enough tap target (%s)" % [where, bb.text.replace("\n", " "), str(r2.size)])
 
 
-func _tags(m: Control) -> Array:
-	var out: Array = []
-	for v: Variant in _views(m, []):
-		out.append(str((v as DDCardView).payload.get("tag", "")))
-	return out
-
-
-func _has_tag(m: Control, prefix: String) -> bool:
-	for t: Variant in _tags(m):
-		if str(t).begins_with(prefix):
-			return true
-	return false
-
-
-func _rerender(m: Control) -> void:
-	m.call("_render")
-	await tree.process_frame
-
-
-func test_screens_portrait_and_landscape() -> void:
-	if tree.root.get_node_or_null("Game") == null:
+func test_street_layout_and_flow_portrait_and_landscape() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	if game == null:
 		check(false, "Game autoload missing from the test runner")
 		return
 	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390)]:
 		tree.root.size = sz
-		var m: Control = _main()
-		await tree.process_frame
 		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
 		eq(m.call("screen_name"), "TITLE", tag + " title first")
-		_all_inspectable(m, tag + " title")
+		_all_inspectable_and_on_screen(m, tag + " title")
 		m.call("_start_run")
-		await tree.process_frame
+		await _settle()
 		eq(m.call("screen_name"), "MAP", tag + " map")
-		_all_inspectable(m, tag + " map")
-		m.set("screen", 2)
-		await _rerender(m)
-		_all_inspectable(m, tag + " street")
-		var run: DDRun = tree.root.get_node("Game").get("run")
-		var portrait: bool = sz.y > sz.x
-		eq(m.get("portrait"), portrait, tag + " orientation detected")
-		# v2 street furniture
-		for t: String in ["WAVE", "BOSS", "DECK", "SKIPPED PILE", "POINTS", "RESERVE AMMO", "SLOT 1", "SLOT 2", "DOOR"]:
-			check(_has_tag(m, t), "%s street shows %s" % [tag, t])
-		var deck_line: String = ""
-		for v: Variant in _views(m, []):
-			if str((v as DDCardView).payload.get("tag", "")).begins_with("DECK"):
-				for l: Label in (v as DDCardView).line_labels:
-					deck_line = l.text
-		check(deck_line.begins_with("Wave 1 - ") and deck_line.contains("zombie"), tag + " deck counter reads 'Wave 1 - N cards (M zombies)': " + deck_line)
-		var sv: DDCardView = m.get("_slot_views")[0]
-		check(sv != null and sv.pip_bar != null, tag + " slot 1 shows magazine pips")
-		# the street grid uses 2 columns in portrait, 4 in landscape
-		var grids: Array = []
-		for v: Variant in _views(m, []):
-			if (v as DDCardView).index >= 0 and (v as DDCardView).index < 100:
-				grids.append((v as DDCardView).get_parent())
-		check(grids.size() == run.street.size(), tag + " one tile per street card")
-		if not grids.is_empty():
-			eq((grids[0] as GridContainer).columns, 2 if portrait else 4, tag + " grid columns")
-		# no tile is pushed off the screen
-		var vp: Vector2 = m.get_viewport_rect().size
-		for v: Variant in _views(m, []):
-			var r: Rect2 = (v as DDCardView).get_global_rect()
-			check(r.end.x <= vp.x + 1.0 and r.end.y <= vp.y + 1.0, "%s tile '%s' on screen (%s in %s)" % [tag, str((v as DDCardView).payload.get("tag", "")), str(r), str(vp)])
-		# scripted street: a gun fight, a reload, then the street ends
-		run.setup_street(["Z5", "Z4", "A4", "B2"] + filler(8, "B3"))
-		await _rerender(m)
-		var zi: int = idx(run, "Z5")
-		m.call("_on_card_tapped", _views(m, []).filter(func(x: DDCardView) -> bool: return x.index == zi)[0])
+		_all_inspectable_and_on_screen(m, tag + " map")
+		m.call("enter_district")
+		await _settle()
+		eq(m.call("screen_name"), "STREET", tag + " street")
+		var run: DDRun = game.get("run")
+		# K5: first-run hint (pick a weapon then tap zombies)
+		eq(str(m.get("hint_id")), "weapon", tag + " first hint: pick a weapon, tap zombies")
+		check(_named(m, "Hint") != null, tag + " hint shown")
+		m.call("dismiss_hint")
+		await _settle()
+		check(str(m.get("hint_id")).begins_with("rule_"), tag + " next hint: the active gun's rule (%s)" % str(m.get("hint_id")))
+		m.call("dismiss_hint")
+		await _settle()
+		_all_inspectable_and_on_screen(m, tag + " street")
+		# the head's layout
+		var w1: DDCardView = _view_idx(m, 300)
+		var boss: DDCardView = _view_idx(m, 410)
+		var pile: DDCardView = _view_idx(m, 400)
+		var room0: DDCardView = _view_idx(m, 100)
+		var g1: DDCardView = _view_idx(m, 200)
+		var g2: DDCardView = _view_idx(m, 201)
+		var melee: DDCardView = _view_idx(m, 202)
+		var st0: DDCardView = _view_idx(m, 0)
+		check(w1 != null and boss != null and pile != null and room0 != null and g1 != null and g2 != null and melee != null and st0 != null, tag + " every zone is on screen")
+		if st0 == null or pile == null or w1 == null or room0 == null or g1 == null:
+			m.queue_free()
+			continue
+		var cx: Callable = func(v: Control) -> float: return v.get_global_rect().get_center().x
+		check(float(cx.call(w1)) < float(cx.call(pile)) and float(cx.call(pile)) < float(cx.call(room0)), tag + " waves LEFT, pile MIDDLE, rooms RIGHT")
+		check(boss.get_global_rect().position.y > w1.get_global_rect().position.y, tag + " boss under the wave decks")
+		check(pile.get_global_rect().position.y < st0.get_global_rect().position.y, tag + " pile above the street (top middle)")
+		check(g1.get_global_rect().position.y > st0.get_global_rect().end.y - 1, tag + " guns at the BOTTOM")
+		check(_named(m, "Open0") != null, tag + " each room has an OPEN button")
+		check((_named(m, "Open0") as Button).text.contains(str(bal().shown(bal().room_cost(0, 0)))), tag + " OPEN shows the price")
+		check((_named(m, "Open0") as Button).disabled, tag + " OPEN is off when you can't pay")
+		# active weapon: melee, then the pistol
+		run.setup_street(["Z5", "Z3", "W:rifle", "M4"] + filler(10, "Z2"))
+		m.call("tap_weapon", DDRun.MELEE)
+		await _settle()
+		eq(run.active, DDRun.MELEE, tag + " melee active")
+		var z5: DDCardView = _view_idx(m, idx(run, "Z5"))
+		eq(str(z5.payload.get("title", "")), "Lurcher", tag + " zombie zoom")
+		var spec5: Dictionary = (m.get("_street_specs") as Dictionary)[run.street[idx(run, "Z5")].get_instance_id()]
+		eq(str(spec5["badge"]), "-3", tag + " damage chip with melee (5 - 2)")
+		m.call("tap_weapon", DDRun.SLOT1)
+		await _settle()
+		eq(run.active, DDRun.SLOT1, tag + " pistol active")
+		spec5 = (m.get("_street_specs") as Dictionary)[run.street[idx(run, "Z5")].get_instance_id()]
+		eq(str(spec5["badge"]), "-3", tag + " damage chip with the pistol (5 - 2)")
+		# tap a zombie: it attacks with the active gun and lands on the stack
+		var pts0: int = run.points
+		m.call("tap_street", idx(run, "Z5"))
+		await _settle()
+		eq(run.slot(0).stack, [5] as Array[int], tag + " kill on the pistol's stack")
+		eq(run.points - pts0, 5, tag + " +5 points (K1)")
+		var gv: DDGunView = m.get("_gun_views")[0]
+		eq(gv.stack_cards.size(), 1, tag + " the gun card shows the stack")
+		eq(gv.stack_cards[0].big_label.text, "5", tag + " the number is visible")
+		check(not gv.stack_cards[0].payload.is_empty(), tag + " stack card inspectable")
+		# gun card: the 3-button sheet
+		m.call("tap_street", idx(run, "W:rifle"))
+		await _settle()
+		eq(str((m.get("sheet") as Dictionary).get("type", "")), "gun", tag + " gun sheet open")
+		check(_button(m, "INTO SLOT 1") != null and _button(m, "INTO SLOT 2") != null and _button(m, "SCRAP") != null, tag + " slot 1 / slot 2 / scrap")
+		check(_button(m, "INTO SLOT 1").text.contains("replaces Service Pistol"), tag + " says what it replaces")
+		_button(m, "INTO SLOT 2").pressed.emit()
+		await _settle()
+		eq(run.slot(1).wid, "rifle", tag + " rifle in slot 2")
+		eq((m.get("sheet") as Dictionary).size(), 0, tag + " sheet closed")
+		# street ended after 2 resolves? no: 2 of 3 used; resolve the medkit
+		m.call("tap_street", idx(run, "M4"))
+		await _settle()
+		check(run.resolved == 0, tag + " the street ended after 3 resolves (Holdover + new cards)")
+		# rule lock: rifle on a stack of 3 can't take a 5
+		run.setup_street(["Z5", "Z2", "C2", "C2"] + filler(10, "Z2"))
+		run.slot(1).stack = [3] as Array[int]
+		run.set_active(1)
+		m.call("_render")
+		await _settle()
+		var lspec: Dictionary = (m.get("_street_specs") as Dictionary)[run.street[idx(run, "Z5")].get_instance_id()]
+		eq(str(lspec["badge"]), "LOCK", tag + " LOCK before the tap")
+		m.call("tap_street", idx(run, "Z5"))
+		await _settle()
+		eq(run.resolved, 0, tag + " a locked tap spends nothing")
+		check(str(m.get("last_block")).contains("at most 3"), tag + " and says why: " + str(m.get("last_block")))
+		# Run
+		var rb: Button = _named(m, "Run")
+		check(rb != null and not rb.disabled and rb.text.begins_with("RUN"), tag + " Run button")
+		rb.pressed.emit()
+		await _settle()
+		eq(int(run.stats["runs"]), 1, tag + " ran")
+		check((_named(m, "Run") as Button).disabled, tag + " not twice in a row")
+		# rooms: OPEN lights up when you can pay; USE opens the machine sheet
+		run.points = 200
+		m.call("_render")
+		await _settle()
+		var ob: Button = _named(m, "Open0")
+		check(not ob.disabled, tag + " OPEN lit when affordable")
+		ob.pressed.emit()
+		await _settle()
+		check(run.room_open[0], tag + " Garage open")
+		check(_named(m, "Use0") != null, tag + " the opened room shows USE")
+		(_named(m, "Use0") as Button).pressed.emit()
+		await _settle()
+		check(_button(m, "BUY INTO SLOT 1") != null, tag + " Wall Rack sheet (%s)" % str(m.get("sheet")))
+		_button(m, "BUY INTO SLOT 1").pressed.emit()
+		await _settle()
+		eq(run.slot(0).wid, "crossbow", tag + " bought the Crossbow")
 		await tree.process_frame
-		var gun_btn: Button = _button(m, "Service Pistol: -")
-		check(gun_btn != null and not gun_btn.disabled, tag + " slot 1 option states its result")
-		check(gun_btn != null and gun_btn.text.contains("1 round") and gun_btn.text.contains("pts"), tag + " option shows ammo and points")
-		check(_button(m, "BARE: -5 HP") != null, tag + " bare option previews the damage")
-		if gun_btn != null:
-			gun_btn.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		eq(run.cards_resolved, 1, tag + " resolved through the button")
-		check(str((m.get("last_event") as Dictionary).get("text", "")) != "", tag + " feedback text shown")
-		var rb: Button = _button(m, "RELOAD")
-		check(rb != null and rb.text.contains("1 action") and rb.text.contains("drop"), tag + " Reload states cost and result")
-		if rb != null:
-			rb.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		eq(run.reloads, 1, tag + " reloaded through the button")
-		# skip from a fresh street
-		run.setup_street(filler(12, "B2"))
-		run.fled_last = false
-		await _rerender(m)
-		var sk: Button = _button(m, "SKIP STREET")
-		check(sk != null and not sk.disabled, tag + " Skip button")
-		if sk != null:
-			sk.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		eq(run.skipped.size(), 4, tag + " skipped through the button")
-		check(_button(m, "Skip - you skipped last street") != null, tag + " Skip says why it's off")
-		# a door: select it, the button names price and what it unlocks
-		run.points = 999
-		m.call("_on_room_tapped", 0)
-		await tree.process_frame
-		var ob: Button = _button(m, "OPEN for")
-		check(ob != null and not ob.disabled, tag + " door button with its price")
-		if ob != null:
-			ob.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		eq(run.opened.size(), 1, tag + " door opened through the button")
-		# the machine of that room: Maple Row's Garage is a Wall Rack -> buy -> offer -> slot 2
-		eq(m.get("selected_room"), 0, tag + " the opened room stays selected: its machine is next")
-		await _rerender(m)
-		var mb: Button = _button(m, "Buy the")
-		check(mb != null and mb.text.contains("PAY"), tag + " machine button with price and result")
-		if mb != null:
-			mb.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		check(not run.pending_offer.is_empty(), tag + " bought: waiting for a slot")
-		var insp: DDInspect = null
-		for c: Node in m.get_children():
-			if c is DDInspect:
-				insp = c
-		await tree.process_frame
-		check(insp.is_open(), tag + " the result is zoomed")
-		insp.close()
-		var s2: Button = _button(m, "INTO SLOT 2")
-		check(s2 != null, tag + " offer: slot buttons")
-		if s2 != null:
-			s2.pressed.emit()
-		await tree.process_frame
-		await tree.process_frame
-		check(run.slot(1) != null, tag + " the bought gun is in slot 2")
-		# last street banner
-		run.setup_street(["B2", "B2", "B2", "B2"])
-		await _rerender(m)
-		check(_has_tag(m, "LAST STREET OF THE WAVE"), tag + " last-street banner")
-		# inspect overlay opens and closes
-		insp.open(DDPayloads.skipped_payload(run))
-		check(insp.is_open(), tag + " inspect opens")
-		insp.close()
-		check(not insp.is_open(), tag + " inspect closes")
+		(m.get("_inspect") as DDInspect).close()
+		m.call("do_open_room", 1)
+		await _settle()
+		m.call("open_machine", 1)
+		await _settle()
+		_button(m, "PRESS A PATCH").pressed.emit()
+		await _settle()
+		check(_named(m, "Sheet") != null, tag + " the Patch pick is a sheet")
+		check(_button(m, "TAKE ") != null, tag + " with TAKE buttons")
+		check(_button(m, "Close") == null and _button(m, "Cancel") == null, tag + " that must be answered")
+		var tb: Button = _button(m, "TAKE ")
+		tb.pressed.emit()
+		await _settle()
+		eq(run.patches.size(), 1, tag + " Patch taken")
+		(m.get("_inspect") as DDInspect).close()
+		await _settle()
+		_all_inspectable_and_on_screen(m, tag + " street with a Patch chip and open rooms")
+		run.points = 200
+		m.call("do_open_room", 2)
+		await _settle()
+		m.call("open_machine", 2)
+		await _settle()
+		check(_button(m, "TRIM") != null and _button(m, "FLIP") != null and _button(m, "HONE") != null, tag + " Bench: Trim / Flip / Hone with prices")
+		m.call("close_sheet")
+		await _settle()
 		m.queue_free()
 		await tree.process_frame
-	if FileAccess.file_exists("user://dd_test_ui_profile.json"):
-		DirAccess.remove_absolute("user://dd_test_ui_profile.json")
+	_cleanup()
+
+
+func test_boss_streets() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390)]:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		m.call("apply_debug", {"screen": "street", "boss": "1", "seed": "4"})
+		m.call("_render")
+		await _settle()
+		var run: DDRun = game.get("run")
+		check(run.boss_street, tag + " Maple Row boss street")
+		check(_named(m, "RunPast") != null and not (_named(m, "RunPast") as Button).disabled, tag + " Run past offered")
+		check(_named(m, "Run") == null, tag + " no Run on a boss street")
+		_all_inspectable_and_on_screen(m, tag + " boss street")
+		m.call("apply_debug", {"screen": "street", "boss": "1", "district": "2", "seed": "4"})
+		m.call("_render")
+		await _settle()
+		run = game.get("run")
+		check(_named(m, "NoEscape") != null, tag + " Patient Zero: NO ESCAPE banner")
+		check(_named(m, "RunPast") == null and _named(m, "Run") == null, tag + " no Run, no Run past")
+		var pz: int = -1
+		for k: int in run.street.size():
+			if run.street[k].phase == 1:
+				pz = k
+		check(pz >= 0, tag + " phase 1 on the street")
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
 
 
 func test_safehouse_and_end_screens() -> void:
-	if tree.root.get_node_or_null("Game") == null:
-		check(false, "Game autoload missing")
-		return
 	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390)]:
 		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
 		var m: Control = _main()
-		await tree.process_frame
-		m.call("apply_debug", {"screen": "safehouse", "seed": "3"})
-		await _rerender(m)
-		eq(m.call("screen_name"), "SAFEHOUSE", "safehouse")
-		_all_inspectable(m, "safehouse")
-		m.call("apply_debug", {"screen": "end", "seed": "3"})
-		await _rerender(m)
-		eq(m.call("screen_name"), "END", "end")
-		for v: Variant in _views(m, []):
-			check(not (v as DDCardView).payload.is_empty(), "end tile inspectable")
-		check(str(m.get("last_event").get("text", "")) != "", "end screen knows the last card")
-		m.call("apply_debug", {"screen": "street", "seed": "4", "boss": "1"})
-		await _rerender(m)
-		check(_has_tag(m, "BOSS STREET"), "boss street banner")
+		await _settle()
+		m.call("apply_debug", {"screen": "safehouse"})
+		m.call("_render")
+		await _settle()
+		eq(m.call("screen_name"), "SAFEHOUSE", tag + " safehouse")
+		_all_inspectable_and_on_screen(m, tag + " safehouse")
+		var go: Button = _named(m, "LeaveSafehouse")
+		check(go != null and go.disabled, tag + " pick the free Patch first")
+		var run: DDRun = tree.root.get_node("Game").get("run")
+		m.set("chosen_patch", str(run.pending_patch["offer"][0]))
+		m.call("_render")
+		await _settle()
+		go = _named(m, "LeaveSafehouse")
+		check(not go.disabled and go.text.contains("+8 HP"), tag + " then head out (+8 HP): " + go.text)
+		go.pressed.emit()
+		await _settle()
+		eq(m.call("screen_name"), "MAP", tag + " map after the safehouse")
+		eq(run.district_index, 1, tag + " Downtown next")
+		m.call("apply_debug", {"screen": "end"})
+		m.call("_render")
+		await _settle()
+		eq(m.call("screen_name"), "END", tag + " end screen")
+		_all_inspectable_and_on_screen(m, tag + " end", false)
+		check(_button(m, "Run again") != null, tag + " run again")
 		m.queue_free()
 		await tree.process_frame
-	if FileAccess.file_exists("user://dd_test_ui_profile.json"):
-		DirAccess.remove_absolute("user://dd_test_ui_profile.json")
+	_cleanup()
+
+
+func test_finish_moment_in_the_ui() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	m.call("apply_debug", {"screen": "street", "near": "1", "seed": "2"})
+	m.call("_render")
+	await _settle()
+	var run: DDRun = game.get("run")
+	eq(run.slot(0).kills_left(), 1, "one kill from finishing")
+	var spec: Dictionary = (m.get("_street_specs") as Dictionary)[run.street[0].get_instance_id()]
+	check(str(spec["lines"][0][0]).contains("FINISH"), "the zombie says it finishes the gun: " + str(spec["lines"]))
+	var p0: int = run.points
+	m.call("tap_street", 0)
+	await _settle()
+	eq(int(run.stats["finished"]), 1, "finished")
+	check(run.points - p0 >= 6 + bal().num("finish_bonus"), "paid the kill + finish bonus (+ challenge)")
+	check((m.get("feedback").get("last_played") as Array).has("collect"), "collect animation")
+	eq(run.active, DDRun.MELEE, "slot 2 empty: melee becomes active")
+	m.queue_free()
+	await tree.process_frame
+	_cleanup()
+
+
+func test_hints_only_on_the_first_run() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	var prof: DDProfile = game.get("profile")
+	prof.record_run_end("rosa", 1, false)
+	m.call("_start_run")
+	m.call("enter_district")
+	await _settle()
+	eq(str(m.get("hint_id")), "", "no hints after the first run")
+	m.queue_free()
+	await tree.process_frame
+	_cleanup()
 
 
 func test_payloads_cover_everything() -> void:
-	var r: DDRun = make_run("rosa", ["Z9!payday", "W:revolver", "M3", "A4"] + filler(8))
-	for c: DDCard in r.street:
-		var p: Dictionary = DDPayloads.card(c, r)
-		check(str(p["body"]) != "", "card body " + c.code())
-	check(str(DDPayloads.card(r.street[idx(r, "Z9!payday")], r)["body"]).contains("CARRIER"), "Carrier explained")
-	for s: int in 2:
-		check(str(DDPayloads.slot_payload(r, s)["body"]) != "", "slot %d" % s)
-	check(str(DDPayloads.finale(r.district())["body"]).contains("Shatter"), "boss")
-	for i: int in r.room_count():
-		check(str(DDPayloads.room_payload(r, i)["body"]).contains("Machine"), "room %d" % i)
-	check(str(DDPayloads.points_payload(r)["body"]) != "", "points")
-	check(str(DDPayloads.reserve_payload(r)["body"]) != "", "reserve")
-	check(str(DDPayloads.wave_pip_payload(r, 0)["body"]).contains("Wave 1"), "wave pip")
-	r.skip()
-	var d: Dictionary = DDPayloads.skipped_payload(r)
-	eq((d["extra_cards"] as Array).size(), 4, "Skipped pile zoom lists the 4 cards face up")
-	check(str(DDPayloads.deck_payload(r)["body"]).contains("Next:"), "deck zoom has the next-wave preview")
-	for b: Variant in bal().list("grin_effects"):
-		check(str(DDPayloads.buff_payload(str(b), bal())["body"]) != "", "buff " + str(b))
-	for p2: String in bal().all_perks():
-		check(str(DDPayloads.perk(p2, bal())["body"]) != "", "perk " + p2)
-	for s2: String in bal().survivor_ids():
-		check(str(DDPayloads.survivor(s2, bal(), DDProfile.new(bal(), "user://x_unused.json"))["body"]) != "", "survivor " + s2)
-	check(str(DDPayloads.unlock("survivor:theo", bal(), null)["tag"]).contains("NEW"), "unlock payload")
-	check(str(DDPayloads.how_to_play(bal())["body"]).contains("RELOAD"), "how to play is v2")
+	var r: DDRun = make_run("imani")
+	r.points = 999
+	for i: int in 3:
+		r.open_room(i)
+		check(not DDPayloads.room(r, i).is_empty() and str(DDPayloads.room(r, i)["body"]).contains("Pack"), "room %d zoom" % i)
+	for w: int in 3:
+		check(str(DDPayloads.wave(r, w)["body"]).contains("zombies"), "wave %d zoom lists its numbers" % w)
+	check(str(DDPayloads.pile(r)["body"]).contains("Zombies"), "pile zoom: counts by number")
+	check(str(DDPayloads.boss(r)["body"]).contains("Groundskeeper") or str(DDPayloads.boss(r)["title"]).contains("Groundskeeper"), "boss zoom")
+	r.slots[1] = r.make_gun("rifle")
+	r.slot(1).stack = [6, 4] as Array[int]
+	var gp: Dictionary = DDPayloads.gun(r, 1)
+	check(str(gp["body"]).contains("Can still take: 1-3"), "gun zoom: can still take 1-3 (%s)" % str(gp["body"]))
+	check(str(gp["body"]).contains("COUNTDOWN"), "gun zoom: challenge")
+	check(str(DDPayloads.stack_card(r, 1, 1)["body"]).contains("TOP kill"), "stack card zoom")
+	for p: String in bal().patches():
+		check(str(DDPayloads.patch(p, bal())["body"]) != "", "patch zoom " + p)
+	for wid: Variant in bal().weapons().keys():
+		check(str(DDPayloads.gun_def(str(wid), bal())["body"]).contains("Challenge"), "gun card zoom " + str(wid))
+	check(str(DDPayloads.melee(r)["body"]).contains("NO points"), "melee zoom")
+	check(not DDPayloads.how_to_play(bal()).is_empty(), "how to play")
+	var z: DDRun = plain_run(["Z7", "C2", "C2", "C2"] + filler(4))
+	z.slots[0] = z.make_gun("rifle")
+	z.slot(0).stack = [5] as Array[int]
+	var zp: Dictionary = DDPayloads.card(z.street[0], z, 0)
+	check(str(zp["body"]).contains("NOT ALLOWED"), "zombie zoom: which rules allow it")
+	check(str(zp["body"]).contains("Melee (power 2): -5 HP"), "zombie zoom: damage with each weapon")

@@ -1,7 +1,8 @@
-# dd-save: the mid-run save (save version 3, its own file). Round trips mid-wave, after a reload,
-# with skipped cards, machines bought, buffs active and a pending Locker/Wall Rack offer; a resumed
-# run plays identically (RNG state included); corrupt / old-version files are ignored; the file
-# is cleared when the run ends; the Game session resumes and abandons; the title offers Continue.
+# dd-save: the mid-run save (save version 4 = v3 "Kill Stacks", its own file). Round trips
+# mid-wave, with kill stacks, rooms / machines / Patches, a pending Patch pick, after a Run, on a
+# boss street (Patient Zero phases) and at the safehouse; a resumed run plays identically (RNG
+# state included); corrupt files are ignored; an old v2 run is discarded safely (with a note on
+# the title); the file is cleared when the run ends; the Game session resumes and abandons.
 extends "res://tests/dd_test_case.gd"
 
 var _paths: Array[String] = []
@@ -20,49 +21,51 @@ func _cleanup() -> void:
 	_paths.clear()
 
 
-## Plays `n` random legal actions (cards, reloads, skips, doors, machines, offers, perks).
+## Plays `n` random legal actions (attacks, cards, Run, rooms, machines, Patches, safehouse).
 func _play(r: DDRun, rng: RandomNumberGenerator, n: int) -> Array:
 	var trace: Array = []
 	for k: int in n:
 		if r.phase == DDRun.Phase.SAFEHOUSE:
-			r.choose_perk(r.perk_offer[0] if not r.perk_offer.is_empty() else "")
-			trace.append("perk")
+			var off: Array = r.pending_patch.get("offer", [])
+			r.leave_safehouse(str(off[0]) if not off.is_empty() else "")
+			trace.append("safehouse")
 			continue
 		if r.phase != DDRun.Phase.STREET:
 			break
 		var acts: Array = []
-		if not r.pending_offer.is_empty():
-			acts.append(["offer", DDRun.EQUIP2])
+		if not r.pending_patch.is_empty():
+			acts.append(["patch", str(r.pending_patch["offer"][0])])
 		else:
 			for i: int in r.street.size():
-				for ch: String in r.choices_for(i):
-					if bool(r.preview(i, ch)["enabled"]):
-						acts.append(["card", i, ch])
-			for s: int in 2:
-				if r.can_reload(s):
-					acts.append(["reload", s])
-			if r.can_skip():
-				acts.append(["skip"])
+				if r.street[i].kind == DDCard.ZOMBIE:
+					for w: int in 3:
+						if r.can_attack(i, w):
+							acts.append(["attack", i, w])
+				else:
+					for ch: String in r.choices_for(i):
+						if bool(r.card_preview(i, ch)["ok"]):
+							acts.append(["card", i, ch])
+			if r.can_run():
+				acts.append(["run"])
 			for i: int in r.room_count():
 				if r.can_open_room(i):
 					acts.append(["room", i])
-				if r.opened.has(i):
-					for o: Dictionary in r.machine_options(i):
-						if bool(o["enabled"]):
-							acts.append(["machine", i, str(o["id"])])
+				for o: Dictionary in r.machine_options(i):
+					if bool(o["enabled"]):
+						acts.append(["machine", i, str(o["id"])])
 		if acts.is_empty():
 			break
 		var a: Array = acts[rng.randi_range(0, acts.size() - 1)]
 		var ev: Dictionary
 		match str(a[0]):
-			"offer":
-				ev = r.take_offer(str(a[1]))
+			"patch":
+				ev = r.take_patch(str(a[1]))
+			"attack":
+				ev = r.attack(int(a[1]), int(a[2]))
 			"card":
 				ev = r.resolve(int(a[1]), str(a[2]))
-			"reload":
-				ev = r.reload(int(a[1]))
-			"skip":
-				ev = r.skip()
+			"run":
+				ev = r.run_street()
 			"room":
 				ev = r.open_room(int(a[1]))
 			"machine":
@@ -98,68 +101,127 @@ func _rng(s: int) -> RandomNumberGenerator:
 
 func test_roundtrip_mid_wave() -> void:
 	var r: DDRun = make_run("rosa")
-	r.resolve(0, r.choices_for(0)[r.choices_for(0).size() - 1])
-	check(r.actions_used == 1, "mid-street")
+	_play(r, _rng(3), 7)
 	_roundtrip(r, "mid wave")
 	_cleanup()
 
 
-func test_roundtrip_after_reload_skip_machines_buffs() -> void:
-	var r: DDRun = plain_run(["Z5", "Z4", "B2", "B2"] + filler(8, "M3"))
-	r.resolve(idx(r, "Z5"), DDRun.SLOT1)
-	r.reload(0)
-	_roundtrip(r, "after a reload")
-	var s: DDRun = make_run("theo")
-	s.skip()
-	check(s.skipped.size() == 4, "skipped cards")
-	_roundtrip(s, "with skipped cards")
-	var m: DDRun = make_run("imani")
-	m.points = 999
-	m.open_room(0)
-	m.open_room(1)
-	m.use_machine(0, str(m.machine_options(0)[0]["id"]))
-	m.use_machine(1, "grin")
-	m.buffs.append("steady_aim")
-	m.buffs.append("payday")
-	m.free_reload = true
-	check(not m.pending_offer.is_empty(), "a Wall Rack gun waiting for a slot")
-	_roundtrip(m, "machines bought, buffs active, pending offer")
+func test_roundtrip_stacks_rooms_patches_pending() -> void:
+	var r: DDRun = make_run("theo")
+	r.points = 999
+	r.open_room(0)
+	r.open_room(1)
+	r.slots[1] = r.make_gun("rifle")
+	r.slot(1).stack = [8, 6] as Array[int]
+	r.slot(1).honed = true
+	r.slot(1).flipped = true
+	r.slot(1).rule = "up"
+	r.active = 1
+	r.cover = 3
+	r._add_patch("loose_grip")
+	r._add_patch("lookout")
+	r.use_machine(1, "press")
+	check(not r.pending_patch.is_empty(), "a Patch pick is pending")
+	var sv: DDRunSave = _save()
+	sv.save(r, "STREET")
+	var b: DDRun = sv.load_run(bal())["run"]
+	eq(b.slot(1).stack, [8, 6] as Array[int], "stack kept")
+	check(b.slot(1).honed and b.slot(1).flipped and b.slot(1).rule == "up", "bench plates kept")
+	eq(b.active, 1, "active weapon kept")
+	eq(b.room_open, [true, true, false] as Array[bool], "rooms kept")
+	check(b.machine_used[1], "machine used this wave kept")
+	eq(b.pending_patch["offer"], r.pending_patch["offer"], "pending Patch pick kept")
+	_roundtrip(r, "stacks + rooms + pending Patch")
 	_cleanup()
 
 
-func test_roundtrip_safehouse_and_later_district() -> void:
+func test_roundtrip_after_a_run_and_on_the_boss_street() -> void:
 	var r: DDRun = make_run("rosa")
-	r.perks.append("fast_hands")
+	r.run_street()
+	check(r.ran_last, "ran")
+	var sv: DDRunSave = _save()
+	sv.save(r, "STREET")
+	check(sv.load_run(bal())["run"].ran_last, "can't Run twice in a row, even after a reload")
+	_roundtrip(r, "after Run")
+	var p: DDRun = make_run("imani")
+	p.district_index = 2
+	p._start_district()
+	to_boss(p, ["M5"])
+	p.cover = 99
+	p.slots[0] = p.make_gun("crossbow")
+	p.attack(idx(p, "Z8"), 0)
+	eq(p.pz_next, 2, "phase 2 next")
+	var sv2: DDRunSave = _save()
+	sv2.save(p, "STREET")
+	var b: DDRun = sv2.load_run(bal())["run"]
+	check(b.boss_street, "boss street kept")
+	eq(b.pz_next, 2, "phase kept")
+	eq(b.boss_queue.size(), 1, "phase 3 still waiting")
+	eq(codes(b.street), codes(p.street), "street kept (phase 2 on it)")
+	check(b.street[idx(b, "Z10")].phase == 2, "phase number kept")
+	check(sv2.summary(bal()).contains("boss"), "Continue says boss street: " + sv2.summary(bal()))
+	_roundtrip(p, "Patient Zero mid-fight")
+	_cleanup()
+
+
+func test_roundtrip_safehouse() -> void:
+	var r: DDRun = make_run("rosa")
 	clear_district(r)
-	eq(r.phase, DDRun.Phase.SAFEHOUSE, "at the safehouse")
+	var sv: DDRunSave = _save()
+	check(sv.save(r, "SAFEHOUSE"), "saved at the safehouse")
+	var back: Dictionary = sv.load_run(bal())
+	eq(str(back["screen"]), "SAFEHOUSE", "screen kept")
+	var b: DDRun = back["run"]
+	eq(b.phase, DDRun.Phase.SAFEHOUSE, "phase kept")
+	eq(b.pending_patch["offer"], r.pending_patch["offer"], "the free Patch offer kept")
 	_roundtrip(r, "safehouse")
-	var r2: DDRun = make_run("rosa")
-	clear_district(r2)
-	r2.choose_perk(r2.perk_offer[0])
-	to_boss_wave(r2, [], ["B2", "B2", "B2", "B2"], ["Z3", "M4"])
-	_roundtrip(r2, "Downtown boss wave with a Skipped pile")
 	_cleanup()
 
 
 func test_corrupt_old_and_finished_files_are_ignored() -> void:
 	var sv: DDRunSave = _save()
 	check(sv.load_run(bal()).is_empty(), "no file: nothing to resume")
-	for junk: String in ["{not json", "[]", JSON.stringify({"version": 2, "run": {}}),
-			JSON.stringify({"version": 3, "run": {"survivor_id": "nobody"}}), JSON.stringify({"version": 3, "run": "x"}),
-			JSON.stringify({"version": 3, "run": {"survivor_id": "rosa", "hp": 5, "max_hp": 20, "slots": [], "deck": [], "street": [],
-				"phase": 0, "district_index": 0, "rng_state": "1"}})]:
-		var f: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
-		f.store_string(junk)
-		f.close()
-		check(sv.load_run(bal()).is_empty(), "ignored: " + junk.substr(0, 40))
-		eq(sv.summary(bal()), "", "no Continue for it")
-	var r: DDRun = plain_run(["Z30", "B2", "B2", "B2"] + filler(4))
-	check(sv.save(r), "saved")
-	check(sv.summary(bal()).contains("Maple Row, wave 1"), "summary: " + sv.summary(bal()))
-	r.resolve(0, DDRun.BARE)
-	eq(r.phase, DDRun.Phase.DEAD, "dead")
+	var f: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+	f.store_string("{broken")
+	f.close()
+	check(sv.load_run(bal()).is_empty(), "corrupt file: nothing, no crash")
+	check(not sv.is_old(), "corrupt is not 'old'")
+	# a v2 run (save version 3: magazines, Skipped pile) can't continue under the v3 rules
+	f = FileAccess.open(sv.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 3, "screen": "STREET", "run": {"survivor_id": "rosa", "hp": 12, "max_hp": 20, "slots": [{"wid": "pistol", "ammo": 3}, null],
+		"reserve": 6, "deck": [], "street": [{"k": "Z", "v": 5}], "skipped": [], "phase": 0, "district_index": 0, "rng_state": "1"}}))
+	f.close()
+	check(sv.load_run(bal()).is_empty(), "v2 run: not resumable")
+	eq(sv.summary(bal()), "", "no Continue for it")
+	check(sv.is_old(), "recognised as an old run")
+	check(sv.discard_old(), "discarded")
+	check(not sv.exists(), "file removed")
+	# a v3-shaped run without its version marker inside is refused too
+	f = FileAccess.open(sv.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": DDRunSave.VERSION, "run": {"survivor_id": "rosa"}}))
+	f.close()
+	check(sv.load_run(bal()).is_empty(), "unusable run data: nothing")
+	var r: DDRun = make_run("rosa")
+	r.phase = DDRun.Phase.DEAD
 	check(not sv.save(r), "a finished run is not saved")
-	check(not sv.exists(), "and the file is cleared")
+	check(not sv.exists(), "and clears the file")
+	eq(DDRunSave.VERSION, 4, "save version bumped for v3")
+	_cleanup()
+
+
+func test_game_discards_an_old_run_at_startup() -> void:
+	var sv: DDRunSave = _save()
+	var f: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 3, "run": {}}))
+	f.close()
+	var g: Node = (load("res://autoload/game.gd") as GDScript).new()
+	g.set("run_save", sv)
+	g.set("bal", bal())
+	g.set("profile", DDProfile.new(bal(), "user://dd_test_run_old_profile.json"))
+	g.set("discarded_old_run", sv.discard_old())
+	check(bool(g.get("discarded_old_run")), "Game notes the discarded run (the title shows it)")
+	check(not g.call("has_saved_run"), "no saved run left")
+	g.free()
 	_cleanup()
 
 
@@ -173,7 +235,8 @@ func test_game_session_saves_resumes_and_clears() -> void:
 	g.call("start_run", "imani", 5)
 	check(sv.exists(), "a new run is saved right away")
 	var r: DDRun = g.get("run")
-	r.resolve(0, r.choices_for(0)[r.choices_for(0).size() - 1])
+	r.setup_street(["C2", "C2", "C2", "C2"] + filler(6))
+	r.resolve(0, DDRun.USE)
 	var want: String = JSON.stringify(r.to_dict())
 	g.set("run", null)
 	eq(g.call("resume_run"), "MAP", "resumes on the screen it was left on")
@@ -182,15 +245,16 @@ func test_game_session_saves_resumes_and_clears() -> void:
 	back.points = 999
 	back.setup_street(filler(12))
 	back.open_room(0)
-	check(sv.load_run(bal())["run"].opened.size() == 1, "events keep saving the resumed run")
+	check(sv.load_run(bal())["run"].room_open[0], "events keep saving the resumed run")
 	clear_district(back)
 	eq(str(sv.load_run(bal())["screen"]), "SAFEHOUSE", "the safehouse is remembered")
-	back.choose_perk(back.perk_offer[0])
+	back.leave_safehouse(str(back.pending_patch["offer"][0]))
 	eq(str(sv.load_run(bal())["screen"]), "MAP", "then the map")
-	back.setup_street(["Z40", "B2", "B2", "B2"] + filler(4))
+	back.setup_street(["Z11", "C2", "C2", "C2"] + filler(4))
 	back.hp = 2
-	back.second_wind = false
-	back.resolve(0, DDRun.BARE)
+	back.cover = 0
+	back.patches.erase("second_wind")
+	back.attack(0, DDRun.MELEE)
 	check(not sv.exists(), "death clears the save")
 	g.call("start_run", "rosa", 6)
 	g.call("abandon_run")
@@ -215,7 +279,8 @@ func test_title_continue_and_abandon() -> void:
 		tree.root.size = sz
 		game.call("start_run", "rosa", 9)
 		var r: DDRun = game.get("run")
-		r.resolve(0, r.choices_for(0)[r.choices_for(0).size() - 1])
+		r.setup_street(["C2", "C2", "C2", "C2"] + filler(6))
+		r.resolve(0, DDRun.USE)
 		game.call("save_run", "STREET")
 		var hp: int = r.hp
 		var m: Control = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
@@ -239,7 +304,7 @@ func test_title_continue_and_abandon() -> void:
 		eq(m.call("screen_name"), "STREET", "back on the street")
 		var rr: DDRun = game.get("run")
 		eq(rr.hp, hp, "same HP")
-		eq(rr.actions_used, 1, "same street, one action in")
+		eq(rr.resolved, 1, "same street, one card in")
 		await tree.process_frame
 		check(bool(m.call("banner_open")), "a 'run resumed' banner")
 		m.call("dismiss_banner")

@@ -375,7 +375,9 @@ static func boss_summary(b: Dictionary) -> String:
 static func hint_text(id: String, bal: DDBalance) -> String:
 	if id.begins_with("rule_"):
 		var wid: String = id.trim_prefix("rule_")
-		return "%s: each kill must be %s. Finished at %d kills." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)), bal.weapon_cap(wid)]
+		var rw: Array = bal.weapon_reward(wid)
+		return "%s rule: each kill must be %s. Finished at %d kills. Challenge %s: %s -> %s." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)),
+			bal.weapon_cap(wid), challenge_name(bal.weapon_challenge(wid)), challenge_text(bal.weapon_challenge(wid), bal), reward_text(str(rw[0]), int(rw[1]), bal)]
 	match id:
 		"weapon":
 			return "Pick a weapon below (gun 1, gun 2 or melee), then tap zombies: every tap attacks with it. The chip on each zombie is the damage you'd take."

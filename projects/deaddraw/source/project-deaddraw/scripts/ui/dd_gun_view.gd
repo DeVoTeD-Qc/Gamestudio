@@ -57,8 +57,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	_box = left
 	var head: HBoxContainer = DDUi.hbox(4)
 	left.add_child(head)
-	var nl: Label = DDUi.label("%d %s" % [int(spec.get("slot", 0)) + 1, str(spec.get("name", "")).to_upper()], DDUi.FONT_S - 3, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_LEFT, true)
-	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var nl: Label = _one_line(DDUi.label("%d %s" % [int(spec.get("slot", 0)) + 1, str(spec.get("name", "")).to_upper()], DDUi.FONT_S - 3, DDUi.accent("W")))
 	_outline(nl, 4)
 	head.add_child(nl)
 	if _selected:
@@ -66,7 +65,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 7, DDUi.BG))
 		head.add_child(chip)
 	var plates: String = ("  HONED" if bool(spec.get("honed", false)) else "") + ("  FLIPPED" if bool(spec.get("flipped", false)) else "")
-	var pl: Label = DDUi.label("P%d   %d/%d kills%s" % [int(spec.get("power", 0)), (spec.get("stack", []) as Array).size(), int(spec.get("cap", 0)), plates], DDUi.FONT_S - 2, DDUi.TEXT)
+	var pl: Label = _one_line(DDUi.label("P%d   %d/%d kills%s" % [int(spec.get("power", 0)), (spec.get("stack", []) as Array).size(), int(spec.get("cap", 0)), plates], DDUi.FONT_S - 2, DDUi.TEXT))
 	_outline(pl, 4)
 	big_label = pl
 	left.add_child(pl)
@@ -82,6 +81,9 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		rr.add_child(ri)
 	var rl: Label = DDUi.label(str(spec.get("rule_text", "")), DDUi.FONT_S - 4, DDUi.WARN, HORIZONTAL_ALIGNMENT_LEFT, true)
 	rl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rl.max_lines_visible = 2
+	rl.custom_minimum_size = Vector2(0, 30)
+	rl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_outline(rl, 4)
 	rr.add_child(rl)
 	line_labels.append(rl)
@@ -100,12 +102,11 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		cr.add_child(bi)
 	var word: String = {"met": "MET", "on_track": "on track", "broken": "missed", "open": ""}.get(cs, "")
 	var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.accent("X"), "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT)
-	var cl: Label = DDUi.label("%s %s%s" % [str(spec.get("challenge", "")), str(spec.get("reward", "")), (" - " + word) if word != "" else ""], DDUi.FONT_S - 5, col, HORIZONTAL_ALIGNMENT_LEFT, true)
-	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var cl: Label = _one_line(DDUi.label("%s %s%s" % [str(spec.get("challenge", "")), str(spec.get("reward", "")), (" - " + word) if word != "" else ""], DDUi.FONT_S - 5, col))
 	_outline(cl, 4)
 	cr.add_child(cl)
 	line_labels.append(cl)
-	var tk: Label = DDUi.label("takes: %s" % str(spec.get("can_take", "")), DDUi.FONT_S - 6, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true)
+	var tk: Label = _one_line(DDUi.label("takes: %s" % str(spec.get("can_take", "")), DDUi.FONT_S - 6, DDUi.TEXT_DIM))
 	_outline(tk, 4)
 	left.add_child(tk)
 	# the kill stack
@@ -137,6 +138,15 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	_layout_stack()
 	_apply_style()
 	return self
+
+
+func _one_line(l: Label) -> Label:
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.clip_text = true
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.custom_minimum_size = Vector2(10, 0)
+	return l
 
 
 ## Offset between two stack cards: enough to keep the previous card's number visible.
