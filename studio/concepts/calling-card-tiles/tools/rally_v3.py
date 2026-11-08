@@ -173,7 +173,7 @@ STACKS = {  # 7 banners, 3 objectives, 2 insignia
                                      ("oR", 1), ("oB", 1), ("oP", 1), ("iR", 1), ("iP", 1)]),
     "T3 Relay Net (R+E)": stack([("g01", 1), ("g03", 2), ("r02", 2), ("r01", 1), ("g02", 1),
                                  ("oG", 1), ("oR", 2), ("iG", 1), ("iR", 1)]),
-    "T4 Shock and Supply (A+S)": stack([("a01", 2), ("a04", 1), ("a05", 1), ("p03", 1), ("p02", 1),
+    "T4 Shock and Supply (A+S)": stack([("a01", 2), ("a02", 1), ("a05", 1), ("p03", 1), ("p02", 1),
                                         ("p01", 1), ("oS", 2), ("oP", 1), ("iS", 1), ("iP", 1)]),
 }
 
