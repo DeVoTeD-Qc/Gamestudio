@@ -1,0 +1,389 @@
+<title>KillingCard Card Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Oswald:wght@500;700&display=swap">
+<style>
+/* Layout: a briefing-room tool. Sticky toolbar, card grid on the left, edit sheet slides over on the right (full screen on phones). */
+:root{
+  --bg:#eef0ec; --panel:#ffffff; --panel-2:#f5f6f2; --ink:#16191b; --muted:#5b6461; --line:#d5d9d3;
+  --plate:#1b2024; --plate-ink:#eef1ec; --plate-muted:#9aa5a0;
+  --teal:#1f9d8f; --teal-soft:#d6efeb; --red:#c8443a; --red-soft:#f6dcd9; --amber:#c98a12; --amber-soft:#f6ead0;
+  --unit:#2f6f9f; --tactic:#b06a1d; --field:#4f7d3a;
+  --f-display:"Oswald","Barlow Condensed","Arial Narrow",sans-serif;
+  --f-cond:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101315; --panel:#171b1e; --panel-2:#1d2225; --ink:#e7ebe7; --muted:#97a19d; --line:#2b3236;
+  --plate:#0b0e10; --plate-ink:#eef1ec; --plate-muted:#8f9a95;
+  --teal:#35c2b1; --teal-soft:#123a36; --red:#e26357; --red-soft:#3d1b19; --amber:#e3a83a; --amber-soft:#3a2c10;
+  --unit:#5a9bd0; --tactic:#d58b3d; --field:#79ad5f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101315; --panel:#171b1e; --panel-2:#1d2225; --ink:#e7ebe7; --muted:#97a19d; --line:#2b3236;
+  --plate:#0b0e10; --plate-ink:#eef1ec; --plate-muted:#8f9a95;
+  --teal:#35c2b1; --teal-soft:#123a36; --red:#e26357; --red-soft:#3d1b19; --amber:#e3a83a; --amber-soft:#3a2c10;
+  --unit:#5a9bd0; --tactic:#d58b3d; --field:#79ad5f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-direction:column;gap:10px;padding-block:12px}
+.titlerow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.04em;text-transform:uppercase;margin:0}
+h1 span{color:var(--teal)}
+.counts{font-family:var(--f-cond);font-size:15px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.counts b{color:var(--ink);font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=search],input[type=text],textarea,select{font:inherit;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input[type=search]{flex:1 1 200px;min-width:0}
+.chip{font-family:var(--f-cond);font-size:15px;font-weight:600;letter-spacing:.03em;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--f-cond);font-weight:700;font-size:16px;letter-spacing:.04em;text-transform:uppercase;border-radius:8px;padding:8px 14px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.warn{color:var(--red)}
+.btn:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+main.wrap{padding-block:16px 48px;display:flex;flex-direction:column;gap:16px}
+.notice{border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:12px 14px;color:var(--muted)}
+.notice.err{border-color:var(--red);color:var(--ink)}
+.howto{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.howto div{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;font-size:14px;color:var(--muted)}
+.howto b{font-family:var(--f-cond);font-size:16px;color:var(--ink);display:block;letter-spacing:.03em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+/* The card: the game's anatomy. Cost top-left, trait top-right, FP and Armor plates bottom-right. */
+.card{position:relative;text-align:left;border:0;padding:0;background:var(--plate);color:var(--plate-ink);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:190px;box-shadow:inset 0 0 0 2px var(--tc,#555);cursor:pointer}
+.card:hover{transform:translateY(-1px)}
+.card .band{height:6px;background:var(--tc)}
+.card .head{display:flex;align-items:center;gap:8px;padding:10px 10px 4px}
+.cost{flex:none;width:34px;height:38px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:21px;color:#111;background:#e9c25b;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.card .name{font-family:var(--f-display);font-weight:500;font-size:18px;letter-spacing:.03em;text-transform:uppercase;line-height:1.1;min-width:0}
+.card .sub{font-family:var(--f-cond);font-size:14px;color:var(--plate-muted);letter-spacing:.04em;text-transform:uppercase;padding:0 10px}
+.card .trait{margin-left:auto;font-family:var(--f-cond);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--plate-muted);border-radius:4px;padding:1px 6px;color:var(--plate-ink);flex:none}
+.card .text{padding:6px 10px;font-size:14px;line-height:1.35;color:var(--plate-ink);flex:1}
+.card .text i{color:var(--plate-muted)}
+.card .kws{display:flex;gap:4px;flex-wrap:wrap;padding:0 10px 6px}
+.kw{font-family:var(--f-cond);font-size:13px;font-weight:600;background:#2b3338;color:#d9e2de;border-radius:4px;padding:1px 6px}
+.card .foot{display:flex;align-items:flex-end;gap:6px;padding:8px 10px 10px}
+.status{font-family:var(--f-cond);font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 7px}
+.st-draft{background:var(--amber-soft);color:var(--amber)}
+.st-ready{background:var(--teal-soft);color:var(--teal)}
+.st-applied{background:#2b3338;color:#cfe;}
+.st-question{background:var(--red-soft);color:var(--red)}
+.plates{margin-left:auto;display:flex;gap:6px}
+.plate{min-width:40px;text-align:center;border-radius:6px;padding:2px 6px;font-family:var(--f-display);font-weight:700;font-size:20px;line-height:1.15;background:#0f2b28;color:#9fe9df}
+.plate.ar{background:#2a2f33;color:#e8ecea}
+.plate small{display:block;font-family:var(--f-cond);font-size:10px;letter-spacing:.08em;font-weight:600;opacity:.8}
+.changed{outline:2px solid var(--amber);outline-offset:1px}
+.cost.changed{outline:0;background:#f08a24}
+.was{display:block;font-family:var(--f-cond);font-size:11px;color:var(--amber);text-decoration:line-through}
+.empty{color:var(--muted);padding:24px 0}
+/* Edit sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);z-index:21;display:flex;flex-direction:column;border-left:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.sheet header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sheet header h2{font-family:var(--f-display);font-size:20px;text-transform:uppercase;letter-spacing:.04em;margin:0;flex:1;min-width:0}
+.sheet .body{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+.sheet .preview{display:flex;justify-content:center}
+.sheet .preview .card{width:260px;cursor:default}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.lbl{font-family:var(--f-cond);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field .hint{font-size:13px;color:var(--muted)}
+.steppers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stepper{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel-2)}
+.stepper .v{font-family:var(--f-display);font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.stepper .row{display:flex;gap:8px}
+.stepper button{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:22px;font-weight:700}
+.stepper .orig{font-size:12px;color:var(--muted)}
+textarea{min-height:84px;resize:vertical;line-height:1.4}
+textarea.design{min-height:120px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.claude-note{border-left:3px solid var(--teal);background:var(--teal-soft);padding:8px 10px;border-radius:6px;font-size:14px}
+.sheet footer{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line);background:var(--panel)}
+.sheet footer .grow{flex:1}
+.saving{font-size:13px;color:var(--muted);align-self:center}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+.sendbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.sendbox code{font-size:13px;background:var(--panel-2);padding:6px 8px;border-radius:6px;display:block;white-space:pre-wrap}
+@media (max-width:520px){.steppers{gap:6px}.stepper button{width:36px;height:36px}.row2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.card:hover{transform:none}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="titlerow">
+    <h1>KillingCard <span>Card Editor</span></h1>
+    <div class="counts" id="counts"><span>Loading cards…</span></div>
+  </div>
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Search name, text or keyword" aria-label="Search cards">
+    <button class="chip" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="Unit" aria-pressed="false">Units</button>
+    <button class="chip" data-f="Tactic" aria-pressed="false">Tactics</button>
+    <button class="chip" data-f="Field" aria-pressed="false">Fields</button>
+    <button class="chip" data-f="edited" aria-pressed="false">Edited</button>
+    <button class="btn" id="newCard">+ New card</button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div id="banner" class="notice" hidden></div>
+  <div class="howto">
+    <div><b>1 · Edit</b>Tap a card. Change cost, Firepower and Armor, its name and printed text. Changes save as you type.</div>
+    <div><b>2 · Describe</b>Write what the card should do in plain words. Claude turns it into game rules and tests it.</div>
+    <div><b>3 · Mark ready</b>Mark the card ready, then send it to Claude with the button below the grid.</div>
+  </div>
+  <div id="grid" class="grid" aria-live="polite"></div>
+  <div class="sendbox" id="sendbox">
+    <div class="lbl">Send ready cards to Claude</div>
+    <div id="readyList" class="hint">No cards are marked ready yet.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="sendBtn" disabled>Send to Claude</button>
+      <button class="btn" id="copyBtn" disabled>Copy message</button>
+    </div>
+    <div class="hint" id="sendHint">Send opens a comment box. Choose "Send to Claude" there. You can also paste the message into the Studio Floor chat.</div>
+  </div>
+</main>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="sheet" class="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheetTitle">
+  <header>
+    <h2 id="sheetTitle">Card</h2>
+    <span id="sheetStatus" class="status st-draft">Draft</span>
+    <button class="btn" id="closeSheet" aria-label="Close editor">Close</button>
+  </header>
+  <div class="body">
+    <div class="preview" id="preview"></div>
+    <div id="claudeNote" class="claude-note" hidden></div>
+    <div class="field">
+      <span class="lbl">Cost and stats</span>
+      <div class="steppers" id="steppers"></div>
+      <span class="hint">Tactics and Fields have no Firepower or Armor.</span>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="fName">Name</label><input type="text" id="fName" maxlength="40"></div>
+      <div class="field"><label for="fType">Type</label>
+        <select id="fType"><option>Unit</option><option>Tactic</option><option>Field</option></select></div>
+    </div>
+    <div class="field"><label for="fText">Printed text</label>
+      <textarea id="fText" maxlength="240" placeholder="What the card says, e.g. First Shot. On Deploy: draw 1."></textarea>
+      <span class="hint">Keyword icons and tooltips come from the game; write the words players read.</span></div>
+    <div class="field"><label for="fDesign">What should it do? (plain words for Claude)</label>
+      <textarea id="fDesign" class="design" maxlength="2000" placeholder="e.g. When this unit dies, your other units in the column get +1 Firepower until the end of the round. Should feel like a sacrifice play."></textarea>
+      <span class="hint">Claude converts this into rules, checks balance with the simulator and replies here.</span></div>
+  </div>
+  <footer>
+    <button class="btn warn" id="resetBtn">Reset to game values</button>
+    <span class="grow"></span>
+    <span class="saving" id="saving"></span>
+    <button class="btn primary" id="readyBtn">Mark ready</button>
+  </footer>
+</aside>
+
+<script>
+(function(){
+  const TYPE_COLOR={Unit:"var(--unit)",Tactic:"var(--tactic)",Field:"var(--field)"};
+  const STATUS={draft:["Draft","st-draft"],ready:["Ready for Claude","st-ready"],applied:["In the game","st-applied"],question:["Claude asks","st-question"]};
+  const LIMITS={cost:[0,10],firepower:[0,10],armor:[0,20]};
+  const S={base:{},edits:{},filter:"all",q:"",open:null,db:null,comments:null,canWrite:true,loaded:false};
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  function merged(id){
+    const b=S.base[id]||{}, e=S.edits[id]||{};
+    const m=Object.assign({},b);
+    for(const k of ["name","type","cost","firepower","armor","text","design"]) if(e[k]!==undefined) m[k]=e[k];
+    m.status=e.status||null; m.claudeNote=e.claudeNote||""; m.isNew=!!e.isNew; m.id=id;
+    return m;
+  }
+  function diffs(id){
+    const b=S.base[id], e=S.edits[id]; if(!e) return {};
+    const d={};
+    if(!b){ for(const k of ["name","type","cost","firepower","armor","text"]) d[k]=true; return d; }
+    for(const k of ["name","type","cost","firepower","armor","text"]) if(e[k]!==undefined && e[k]!==b[k]) d[k]=true;
+    return d;
+  }
+  function isEdited(id){ const e=S.edits[id]; return !!e && (e.isNew || Object.keys(diffs(id)).length>0 || (e.design||"").trim()!=="" ); }
+
+  function cardHTML(id,{preview=false}={}){
+    const m=merged(id), d=diffs(id), b=S.base[id]||{};
+    const tc=TYPE_COLOR[m.type]||"#666";
+    const unit=m.type==="Unit";
+    const st=m.status&&STATUS[m.status];
+    const text=(m.text||"").trim();
+    const was=(k)=> d[k]&&b[k]!==undefined? `<span class="was">${esc(b[k])}</span>`:"";
+    const kws=(b.keywords||[]).map(k=>`<span class="kw">${esc(k)}</span>`).join("");
+    const tag=preview?"div":"button";
+    return `<${tag} class="card" ${preview?"":`data-id="${esc(id)}" aria-label="Edit ${esc(m.name)}"`} style="--tc:${tc}">
+      <div class="band"></div>
+      <div class="head"><div class="cost ${d.cost?"changed":""}">${esc(m.cost??0)}</div>
+        <div class="name ${d.name?"changed":""}">${esc(m.name||"Untitled card")}${was("name")}</div>
+        ${b.trait?`<span class="trait">${esc(b.trait)}</span>`:""}</div>
+      <div class="sub">${esc(m.type)}${b.standard_issue?" · Standard Issue":""}${m.isNew?" · New":""}${b.collectible===false&&!b.standard_issue&&!m.isNew?" · Enemy only":""}</div>
+      ${kws?`<div class="kws" style="padding-top:6px">${kws}</div>`:""}
+      <div class="text ${d.text?"changed":""}">${text?esc(text):'<i>No rules text.</i>'}</div>
+      <div class="foot">${st?`<span class="status ${st[1]}">${st[0]}</span>`:""}${d.cost&&b.cost!==undefined?`<span class="was">cost ${esc(b.cost)}</span>`:""}
+        ${unit?`<div class="plates"><div class="plate ${d.firepower?"changed":""}"><small>FP</small>${esc(m.firepower??0)}</div><div class="plate ar ${d.armor?"changed":""}"><small>ARMOR</small>${esc(m.armor??0)}</div></div>`:""}</div>
+    </${tag}>`;
+  }
+
+  function visibleIds(){
+    const ids=Object.keys(S.base).concat(Object.keys(S.edits).filter(k=>!S.base[k]));
+    const q=S.q.toLowerCase();
+    return ids.filter(id=>{
+      const m=merged(id);
+      if(S.filter==="edited" && !isEdited(id)) return false;
+      if(["Unit","Tactic","Field"].includes(S.filter) && m.type!==S.filter) return false;
+      if(q){ const hay=[m.name,m.text,(S.base[id]?.keywords||[]).join(" "),S.base[id]?.trait].join(" ").toLowerCase(); if(!hay.includes(q)) return false; }
+      return true;
+    }).sort((a,b)=>{const A=merged(a),B=merged(b);const o={Unit:0,Tactic:1,Field:2};return (o[A.type]-o[B.type])||((A.cost||0)-(B.cost||0))||String(A.name).localeCompare(B.name);});
+  }
+
+  function render(){
+    const ids=visibleIds();
+    const g=$("grid");
+    if(!S.loaded){ g.innerHTML='<div class="empty">Loading the card list…</div>'; }
+    else if(Object.keys(S.base).length===0){ g.innerHTML='<div class="empty">No cards yet. Claude loads the game\'s cards into this editor; ask in the Studio Floor chat if this stays empty.</div>'; }
+    else g.innerHTML=ids.length?ids.map(id=>cardHTML(id)).join(""):'<div class="empty">No cards match this filter.</div>';
+    const all=Object.keys(S.base).length, edited=Object.keys(S.edits).filter(isEdited).length;
+    const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
+    $("counts").innerHTML=`<span><b>${all}</b> cards</span><span><b>${edited}</b> edited</span><span><b>${ready.length}</b> ready for Claude</span>`;
+    $("readyList").innerHTML=ready.length?ready.map(id=>esc(merged(id).name||id)).join(", "):"No cards are marked ready yet.";
+    $("sendBtn").disabled=!ready.length||!S.comments; $("copyBtn").disabled=!ready.length;
+    if(!S.comments) $("sendHint").textContent="Copy the message and paste it into the Studio Floor chat to send it to Claude.";
+    if(S.open) renderSheet(false);
+  }
+
+  // ---------- Saving: one write at a time per card, coalesced ----------
+  const pending={}, inflight={};
+  function patch(id,fields){
+    const prev=S.edits[id]||{cardId:id,status:"draft"};
+    const next=Object.assign({},prev,fields,{updatedAt:new Date().toISOString()});
+    if(next.status==="applied"||next.status==="question"){ if(!("status" in fields)) next.status="draft"; }
+    S.edits[id]=next; pending[id]=next; flush(id); render();
+  }
+  let saveTimer=null;
+  function flush(id){
+    clearTimeout(saveTimer);
+    $("saving").textContent="Saving…";
+    saveTimer=setTimeout(()=>write(id),600);
+  }
+  async function write(id){
+    if(!S.db||!S.canWrite){ $("saving").textContent="Not saved: this view can't save"; return; }
+    if(inflight[id]) return;
+    const body=pending[id]; if(!body) return; delete pending[id];
+    inflight[id]=true;
+    try{ await S.db.collection("edits").doc(id).set(body); $("saving").textContent="Saved"; }
+    catch(e){ $("saving").textContent = e&&e.code==="invalid_argument"?"You can view but not edit this page":"Not saved, try again"; if(e&&e.code==="invalid_argument") S.canWrite=false; }
+    finally{ inflight[id]=false; if(pending[id]) write(id); }
+  }
+
+  // ---------- Sheet ----------
+  function openSheet(id){ S.open=id; $("scrim").hidden=false; $("sheet").hidden=false; renderSheet(true); $("closeSheet").focus(); }
+  function closeSheet(){ S.open=null; $("scrim").hidden=true; $("sheet").hidden=true; $("confirmRow")?.remove(); }
+  function renderSheet(fill){
+    const id=S.open, m=merged(id), b=S.base[id]||{};
+    $("sheetTitle").textContent=m.name||"New card";
+    const st=STATUS[m.status||"draft"]; const el=$("sheetStatus"); el.textContent=st[0]; el.className="status "+st[1];
+    $("preview").innerHTML=cardHTML(id,{preview:true});
+    const note=$("claudeNote"); note.hidden=!m.claudeNote; note.textContent=m.claudeNote?("Claude: "+m.claudeNote):"";
+    const unit=m.type==="Unit";
+    $("steppers").innerHTML=["cost","firepower","armor"].map(k=>{
+      const off=k!=="cost"&&!unit; const lab={cost:"Cost",firepower:"Firepower",armor:"Armor"}[k];
+      return `<div class="stepper" ${off?'style="opacity:.4"':''}><span class="lbl">${lab}</span><span class="v">${esc(m[k]??0)}</span>
+      <div class="row"><button data-k="${k}" data-d="-1" aria-label="Lower ${lab}" ${off?"disabled":""}>−</button><button data-k="${k}" data-d="1" aria-label="Raise ${lab}" ${off?"disabled":""}>+</button></div>
+      <span class="orig">${b[k]!==undefined?"Game: "+b[k]:"New"}</span></div>`;}).join("");
+    if(fill){ $("fName").value=m.name||""; $("fType").value=m.type||"Unit"; $("fText").value=m.text||""; $("fDesign").value=m.design||""; $("saving").textContent=""; }
+    $("readyBtn").textContent=m.status==="ready"?"Back to draft":"Mark ready";
+    $("resetBtn").textContent=m.isNew?"Delete new card":"Reset to game values";
+    $("resetBtn").disabled=!S.edits[id];
+  }
+  $("steppers").addEventListener("click",ev=>{
+    const btn=ev.target.closest("button[data-k]"); if(!btn) return;
+    const k=btn.dataset.k, d=+btn.dataset.d, m=merged(S.open); const [lo,hi]=LIMITS[k];
+    const v=Math.max(lo,Math.min(hi,(m[k]??0)+d)); if(v===m[k]) return;
+    patch(S.open,{[k]:v});
+  });
+  let typeTimer=null;
+  function textField(key,el){ el.addEventListener("input",()=>{ clearTimeout(typeTimer); const id=S.open, v=el.value; typeTimer=setTimeout(()=>patch(id,{[key]:v}),400); }); }
+  textField("name",$("fName")); textField("text",$("fText")); textField("design",$("fDesign"));
+  $("fType").addEventListener("change",e=>{ const t=e.target.value; const f={type:t}; if(t!=="Unit"){f.firepower=0;f.armor=0;} patch(S.open,f); });
+  $("readyBtn").addEventListener("click",()=>{ const m=merged(S.open); patch(S.open,{status:m.status==="ready"?"draft":"ready"}); });
+  $("resetBtn").addEventListener("click",()=>{
+    if($("confirmRow")) return;
+    const m=merged(S.open);
+    const row=document.createElement("div"); row.id="confirmRow"; row.className="confirm";
+    row.innerHTML=`<span>${m.isNew?"Delete this new card?":"Drop your changes to this card?"}</span><button class="btn warn" id="yesReset">${m.isNew?"Delete":"Reset"}</button><button class="btn" id="noReset">Keep</button>`;
+    $("sheet").querySelector("footer").prepend(row);
+    $("noReset").onclick=()=>row.remove();
+    $("yesReset").onclick=async()=>{
+      const id=S.open; row.remove();
+      delete S.edits[id]; delete pending[id];
+      try{ if(S.db) await S.db.collection("edits").doc(id).delete(); }catch(e){}
+      if(m.isNew) closeSheet(); else renderSheet(true);
+      render();
+    };
+  });
+  $("closeSheet").onclick=closeSheet; $("scrim").onclick=closeSheet;
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&S.open) closeSheet(); });
+  $("grid").addEventListener("click",e=>{ const c=e.target.closest(".card[data-id]"); if(c) openSheet(c.dataset.id); });
+  document.querySelectorAll(".chip[data-f]").forEach(ch=>ch.addEventListener("click",()=>{
+    S.filter=ch.dataset.f; document.querySelectorAll(".chip[data-f]").forEach(x=>x.setAttribute("aria-pressed",x===ch?"true":"false")); render(); }));
+  $("q").addEventListener("input",e=>{ S.q=e.target.value; render(); });
+  $("newCard").addEventListener("click",()=>{
+    const id="new-"+Date.now().toString(36);
+    patch(id,{cardId:id,isNew:true,name:"New card",type:"Unit",cost:2,firepower:2,armor:2,text:"",design:"",status:"draft"});
+    openSheet(id);
+  });
+
+  function message(){
+    const ready=Object.entries(S.edits).filter(([,e])=>e.status==="ready").map(([k])=>k);
+    const lines=ready.map(id=>{ const m=merged(id), b=S.base[id]; const parts=[];
+      if(!b) parts.push(`new ${m.type}, cost ${m.cost}${m.type==="Unit"?`, ${m.firepower} FP / ${m.armor} Armor`:""}`);
+      else for(const k of Object.keys(diffs(id))) parts.push(`${k} ${b[k]} → ${m[k]}`);
+      if((m.design||"").trim()) parts.push("has a plain-words design note");
+      return `- ${m.name} (${id}): ${parts.join("; ")||"no changes"}`; });
+    return `Apply my card edits from the Card Editor:\n${lines.join("\n")}`;
+  }
+  $("copyBtn").addEventListener("click",async()=>{
+    const t=message();
+    try{ await navigator.clipboard.writeText(t); $("copyBtn").textContent="Copied"; setTimeout(()=>$("copyBtn").textContent="Copy message",1500); }
+    catch(e){ let pre=$("msgPre"); if(!pre){ pre=document.createElement("code"); pre.id="msgPre"; $("sendbox").appendChild(pre);} pre.textContent=t; const r=document.createRange(); r.selectNodeContents(pre); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+  });
+  $("sendBtn").addEventListener("click",async()=>{
+    if(!S.comments) return;
+    let pre=$("msgPre"); if(!pre){ pre=document.createElement("code"); pre.id="msgPre"; $("sendbox").appendChild(pre);} pre.textContent=message();
+    try{ await navigator.clipboard.writeText(message()); }catch(e){}
+    try{ await S.comments.openComposer({element:$("sendbox")}); $("sendHint").textContent='Paste the message (it is copied) and choose "Send to Claude".'; }
+    catch(e){ $("sendHint").textContent="The comment box didn't open. Paste the message into the Studio Floor chat instead."; }
+  });
+
+  // ---------- Data ----------
+  function banner(t,err){ const b=$("banner"); b.hidden=!t; b.textContent=t||""; b.className="notice"+(err?" err":""); }
+  render();
+  (async()=>{
+    const timer=setTimeout(()=>{ if(!S.loaded){ banner("The card list can't be reached yet. Check your connection; it loads on its own when it can."); } },10000);
+    const C=(typeof claude!=="undefined"&&claude&&claude.use)?claude:null;
+    const db=C?await C.use("db"):null;
+    if(!db){ clearTimeout(timer); S.loaded=true; banner("Open this page on claude.ai while signed in to see and edit the cards.",true); render(); return; }
+    S.db=db;
+    try{ const user=await C.use("user"); const w=user?await user.can("data.write"):null; if(w===false){ S.canWrite=false; banner("You can view these cards. Only editors can change them."); } }catch(e){}
+    try{ S.comments=await C.use("comments"); }catch(e){ S.comments=null; }
+    render();
+    let gotCards=false;
+    db.collection("cards").onSnapshot(snap=>{
+      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); }); S.base=m;
+      if(!snap.metadata.fromCache){ gotCards=true; S.loaded=true; clearTimeout(timer); banner(S.canWrite?"":"You can view these cards. Only editors can change them."); }
+      else if(Object.keys(m).length) S.loaded=true;
+      render();
+    },e=>{ clearTimeout(timer); S.loaded=true; banner("The card list stopped updating. Reload the page to try again.",true); render(); });
+    db.collection("edits").onSnapshot(snap=>{
+      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); });
+      for(const k of Object.keys(pending)) m[k]=pending[k];
+      S.edits=m; render();
+    },()=>{});
+  })();
+})();
+</script>
