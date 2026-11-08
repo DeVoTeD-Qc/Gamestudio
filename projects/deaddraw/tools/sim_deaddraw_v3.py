@@ -47,7 +47,8 @@ CONFIG = {
     "boss_runpast_damage": 3,
     "boss_reward_points": 10,
     "safehouse_heal": 8,
-    "ditch_share": 0.5,           # replacing an unfinished gun banks this share of its stack
+    "points_on_kill": True,       # K1 (head, 2026-11-08): a gun kill pays the zombie's number at once
+    "ditch_share": 0.0,           # replacing an unfinished gun: extra share of its stack (K1: nothing)
     "finish_bonus": 3,            # extra points when a gun is finished (full stack)
     "scrap_points": 2,            # scrap a weapon card instead of equipping it
     "melee_power": 2,
@@ -150,7 +151,7 @@ CONFIG = {
 PATCH_PRIORITY = ["thick_jacket", "field_medic", "second_wind", "loose_grip", "trophy_belt",
                   "brawler", "lookout", "bounty"]
 AI = {"ww": 0.12, "pw": 0.30, "carry_z": 0.5, "pend_w": 0.8, "run_margin": 3.0,
-      "spend_reserve": 0, "lookout_bury": 7, "strong": True}
+      "spend_reserve": 0, "lookout_bury": 7, "strong": True, "fin_w": 1.0}
 DEATH = -10_000.0
 
 
@@ -289,7 +290,10 @@ def collect(s, i, finished, st=None):
     """Bank the stack of gun in slot i. Finished guns get the bonus + challenge."""
     g = s.slots[i]
     wid, rule, p, cap, stack, honed = g
-    pts = sum(stack) if finished else int(sum(stack) * CONFIG["ditch_share"])
+    if CONFIG["points_on_kill"]:
+        pts = 0 if finished else int(sum(stack) * CONFIG["ditch_share"])
+    else:
+        pts = sum(stack) if finished else int(sum(stack) * CONFIG["ditch_share"])
     keep = False
     if finished:
         pts += CONFIG["finish_bonus"]
@@ -327,6 +331,8 @@ def fight(s, z, opt, st=None):
     g = s.slots[opt]
     wid, rule, p, cap, stack, honed = g
     hurt(s, z - p)
+    if CONFIG["points_on_kill"]:
+        s.points += z
     s.slots[opt] = (wid, rule, p, cap, stack + (z,), honed)
     if s.shatter or is_full(s.slots[opt]):
         collect(s, opt, True, st)
@@ -379,7 +385,11 @@ def gun_value(g, s, zd):
         rem = min(rem, max(1, (CONFIG["spread_cap"] - sum(stack)) // 3))
     f = zd.flex(rule, stack, s.passive == "steady_hands")
     v = AI["ww"] * (p + 1) * min(rem, 4) * (0.15 + 0.85 * f)
-    v += sum(stack) * AI["pw"] * AI["pend_w"]
+    if not CONFIG["points_on_kill"]:
+        v += sum(stack) * AI["pw"] * AI["pend_w"]
+    elif rem > 0 and f > 0:
+        # finishing still pays the bonus (+ challenge): credit it by how close the gun is
+        v += AI["fin_w"] * (CONFIG["finish_bonus"] * AI["pw"]) / rem
     return v
 
 

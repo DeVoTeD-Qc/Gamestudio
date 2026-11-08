@@ -70,7 +70,8 @@ for _t in BAR_SLOTS + SQ_SLOTS:
         SLOTS_BY_CELL[_x].append(_t)
 
 CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=1, strike=2,
-           thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1)
+           thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1, fort_regain=0,
+           spot_push=0, supply_push=0)
 
 
 def hub_info(cells, shape):
@@ -455,6 +456,11 @@ def orders(s, p):
     if m[2] >= th:  # Fortify
         m[2] -= th
         s.armor[p] = min(CFG["armor_cap"], s.armor[p] + 2)
+        k = CFG["fort_regain"]
+        if k and (s.front < 0 if p == 0 else s.front > 0):
+            step = min(k, abs(s.front))
+            s.front += step if p == 0 else -step
+            s.trig["regain"] += step
         s.trig["fortify"] += 1
         add_streak(s, p, 1)
     if m[1] >= th:  # Spot
@@ -465,6 +471,8 @@ def orders(s, p):
                 if any(s.own[y] and s.pcs[s.own[y]]["owner"] == p for y in e["info"]["border"]):
                     e["charges"] += 1
         s.trig["spot"] += 1
+        if CFG["spot_push"]:
+            push(s, p, CFG["spot_push"])
         add_streak(s, p, 1)
     if m[0] >= th and s.winner is None:  # Strike
         m[0] -= th
@@ -475,6 +483,8 @@ def orders(s, p):
         m[3] -= th
         s.draws[p] += 1
         s.score[p] += 1
+        if CFG["supply_push"]:
+            push(s, p, CFG["supply_push"])
         s.trig["resupply"] += 1
         add_streak(s, p, 1)
 
