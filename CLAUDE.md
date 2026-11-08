@@ -48,6 +48,9 @@ Keep it current with the ArtifactData tool whenever work starts or finishes:
   requested | active | archived. A project created from the page arrives with `status: "requested"`
   plus a chat message: run `scripts/init_project.py` with those answers (id = the doc id), set
   `status: "active"` and `path`, then start the master-orchestrator on its first step.
+  The user archives or restores a project from the page's project list (`status: "archived"` + `archivedAt`,
+  or back to `active` + `restoredAt`, plus a chat message). Never start work on an archived project; keep its
+  files, board and docs as a record. Restoring makes it active again: pick up its Ready tasks.
 - `tasks/<id>` — `{title, project, agent, status: todo|doing|review|done, phase, order, note, depends?,
   createdBy, createdFrom?, createdAt?}`; createdBy is who asked for the task (an agent id, `lead` or `you`);
   `project` is the project id (missing means `killstreak`);
