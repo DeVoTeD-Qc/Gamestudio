@@ -422,18 +422,11 @@ func _machine_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> void:
 	if s >= 0 and s < guns.size() and guns[s] != null:
 		_pop(guns[s], 1.08, DDUi.SELECT)
 	if res.has("trimmed"):
+		# the removed kill already paid when it was made: it pops off and drops away
 		var rects: Array = (snap.get("stack_rects", [[], []]) as Array)[s]
 		if not rects.is_empty():
 			var g: Control = _mini_ghost(int(res["trimmed"]), rects[rects.size() - 1])
-			var dest: Control = ctx.get("points")
-			if dest != null and not reduce:
-				var to: Rect2 = _rect(dest)
-				var tw: Tween = g.create_tween()
-				tw.tween_property(g, "position:y", g.position.y - 30.0, 0.12)
-				tw.tween_property(g, "position", to.position - fx.global_position, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-				tw.tween_callback(g.queue_free)
-			else:
-				_drop_ctrl(g)
+			_drop_ctrl(g)
 	var rooms: Array = ctx.get("rooms", [])
 	var ri: int = int(res.get("room", -1))
 	if ri >= 0 and ri < rooms.size():

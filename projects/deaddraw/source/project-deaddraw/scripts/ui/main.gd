@@ -795,10 +795,7 @@ func _build_actions(run: DDRun) -> Control:
 	var pl: Label = DDUi.label(prompt, DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	pv.add_child(pl)
 	if not run.boss_street:
-		var pips: String = ""
-		for k: int in run.budget:
-			pips += "(o) " if k < run.resolved else "( ) "
-		pv.add_child(DDUi.label("resolves " + pips.strip_edges(), DDUi.FONT_S - 6, DDUi.TEXT_DIM))
+		pv.add_child(_resolve_pips(run))
 	if portrait:
 		pv.add_child(DDUi.label(last_block if last_block != "" else str(last_event.get("text", "")), DDUi.FONT_S - 6, DDUi.WARN if last_block != "" else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
 	h.add_child(p)
@@ -833,6 +830,23 @@ func _build_actions(run: DDRun) -> Control:
 		rb.disabled = why != "" or busy
 		rb.pressed.connect(do_run)
 		h.add_child(rb)
+	return h
+
+
+## The street's resolve pips: one dot per card you may resolve, filled as you resolve them.
+func _resolve_pips(run: DDRun) -> Control:
+	var h: HBoxContainer = DDUi.hbox(5)
+	h.name = "ResolvePips"
+	h.add_child(DDUi.label("resolves", DDUi.FONT_S - 6, DDUi.TEXT_DIM))
+	for k: int in run.budget:
+		var done: bool = k < run.resolved
+		var dot: Panel = Panel.new()
+		dot.custom_minimum_size = Vector2(14, 14)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.SELECT if done else Color(0, 0, 0, 0), DDUi.SELECT if done else DDUi.TEXT_DIM, 2, 7, 0))
+		dot.set_meta(&"filled", done)
+		h.add_child(dot)
 	return h
 
 

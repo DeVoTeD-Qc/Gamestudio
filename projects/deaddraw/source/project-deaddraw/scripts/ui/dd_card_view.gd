@@ -255,6 +255,8 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 		tt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if tag == "" else HORIZONTAL_ALIGNMENT_LEFT
 		name_row.add_child(tt)
+		# v3: long names on narrow cards shrink to fit instead of being cut ("Shambler")
+		tt.resized.connect(func() -> void: fit_label(tt, DDUi.FONT_S, 10))
 	_add_lines(bv, spec, false)
 
 
@@ -388,6 +390,18 @@ func _fit_badge() -> void:
 	_badge_panel.custom_minimum_size = Vector2(w, d)
 	_badge_panel.size = Vector2(w, d)
 	_badge_panel.pivot_offset = _badge_panel.size * 0.5
+
+
+## Shrinks a one-line label's font (down to `min_size`) until its text fits its width.
+static func fit_label(l: Label, base: int, min_size: int) -> void:
+	if l == null or not is_instance_valid(l) or l.size.x <= 0.0:
+		return
+	var font: Font = l.get_theme_font("font")
+	var fs: int = base
+	while fs > min_size and font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > l.size.x:
+		fs -= 1
+	if l.get_theme_font_size("font_size") != fs:
+		l.add_theme_font_size_override("font_size", fs)
 
 
 func _outline(l: Label, px: int) -> void:

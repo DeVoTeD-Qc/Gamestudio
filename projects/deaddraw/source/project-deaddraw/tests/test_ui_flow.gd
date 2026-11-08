@@ -158,8 +158,16 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		eq(str(spec5["badge"]), "-3", tag + " damage chip with the pistol (5 - 2)")
 		# tap a zombie: it attacks with the active gun and lands on the stack
 		var pts0: int = run.points
+		var pips: Node = _named(m, "ResolvePips")
+		check(pips != null and pips.get_child_count() == 1 + 3, tag + " 3 resolve pips")
 		m.call("tap_street", idx(run, "Z5"))
 		await _settle()
+		pips = _named(m, "ResolvePips")
+		var filled: int = 0
+		for c: Node in pips.get_children():
+			if c.has_meta(&"filled") and bool(c.get_meta(&"filled")):
+				filled += 1
+		eq(filled, 1, tag + " one pip filled after one resolve")
 		eq(run.slot(0).stack, [5] as Array[int], tag + " kill on the pistol's stack")
 		eq(run.points - pts0, 5, tag + " +5 points (K1)")
 		var gv: DDGunView = m.get("_gun_views")[0]
@@ -333,6 +341,28 @@ func test_finish_moment_in_the_ui() -> void:
 	m.queue_free()
 	await tree.process_frame
 	_cleanup()
+
+
+func test_long_names_shrink_to_fit() -> void:
+	var v: DDCardView = DDCardView.new()
+	var tex: Texture2D = ImageTexture.create_from_image(Image.create(8, 6, false, Image.FORMAT_RGB8))
+	v.setup({"kind": "Z", "tag": "ZOMBIE", "big": "3", "title": "Shambler", "art": tex, "payload": {"title": "x"}})
+	v.custom_minimum_size = Vector2(124, 170)
+	tree.root.add_child(v)
+	v.size = Vector2(124, 170)
+	await _settle()
+	var name_label: Label = null
+	for l: Variant in v.find_children("*", "Label", true, false):
+		if (l as Label).text == "Shambler":
+			name_label = l
+	check(name_label != null, "name label")
+	if name_label != null:
+		var font: Font = name_label.get_theme_font("font")
+		var w: float = font.get_string_size("Shambler", HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x
+		check(w <= name_label.size.x + 0.5 or name_label.get_theme_font_size("font_size") == 10, "Shambler fits its card (%.0f <= %.0f)" % [w, name_label.size.x])
+		check(name_label.get_theme_font_size("font_size") < DDUi.FONT_S, "by shrinking the font")
+	v.queue_free()
+	await tree.process_frame
 
 
 func test_hints_only_on_the_first_run() -> void:

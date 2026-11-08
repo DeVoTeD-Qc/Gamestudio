@@ -9,6 +9,8 @@
 #   browser's prefers-reduced-motion).
 #   v3 (K5): first-run hints. data.hints_seen lists the hint ids already shown; hints only show
 #   while no run has ended yet (data.runs == 0), each one once.
+#   v3 (save version 3): v3 "Kill Stacks" scores aren't comparable with v2's, so a version-2 save
+#   keeps everything but moves its best scores to "best_v2" (the old record); v3 bests start at 0.
 #   v2 (save version 2): DeadDraw v2 scores are points (x10 on screen), so a version-1 save keeps
 #   every clear, unlock, badge, run count and setting, but its best scores move to "best_v1"
 #   (shown as the old record) and v2 bests start fresh.
@@ -18,7 +20,7 @@ class_name DDProfile
 extends RefCounted
 
 const DEFAULT_PATH: String = "user://deaddraw_profile.json"
-const VERSION: int = 2
+const VERSION: int = 3
 ## dd-feel: Settings keys and their defaults (types are enforced on load and on set).
 const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "screen_shake": true,
 	"reduce_motion": false, "motion_chosen": false}
@@ -36,7 +38,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "best_v1": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -59,7 +61,11 @@ func load_profile() -> bool:
 	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen"]:
 		if not data[k] is Array:
 			data[k] = []
-	for k: String in ["best", "best_v1", "badges"]:
+	if from_version == 2:
+		# v2 run scores (magazines, Skipped pile) are not comparable with v3 Kill Stacks scores
+		data["best_v2"] = data["best"] if data["best"] is Dictionary else {}
+		data["best"] = {}
+	for k: String in ["best", "best_v1", "best_v2", "badges"]:
 		if not data[k] is Dictionary:
 			data[k] = {}
 	data["version"] = VERSION
@@ -140,6 +146,11 @@ func best_score(survivor: String) -> int:
 ## The best score from a version-1 (DeadDraw v1) save, 0 if none.
 func best_v1(survivor: String) -> int:
 	return int((data["best_v1"] as Dictionary).get(survivor, 0))
+
+
+## The best score from a version-2 (DeadDraw v2) save, 0 if none.
+func best_v2(survivor: String) -> int:
+	return int((data["best_v2"] as Dictionary).get(survivor, 0))
 
 
 func badges(survivor: String) -> int:

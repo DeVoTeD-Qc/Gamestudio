@@ -328,6 +328,8 @@ static func survivor(id: String, bal: DDBalance, prof: DDProfile) -> Dictionary:
 		if not prof.survivor_unlocked(id):
 			body.append("LOCKED: %s." % unlock_hint(prof.unlock_milestone_for("survivor:" + id), bal))
 		body.append("Best score: %d" % bal.shown(prof.best_score(id)))
+		if prof.best_v2(id) > 0:
+			body.append("Old record (v2 rules): %d" % bal.shown(prof.best_v2(id)))
 		if prof.badges(id) > 0:
 			body.append("Survivor's Mark x%d (runs won)" % prof.badges(id))
 	return {"kind": "S", "tag": "SURVIVOR", "title": str(s.get("name", id)), "big": str(bal.survivor_max_hp(id)), "body": "\n".join(body)}
