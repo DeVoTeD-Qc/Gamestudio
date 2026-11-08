@@ -14,8 +14,14 @@
 #     presets  preset vs preset with their own heroes (round robin, both seats)
 #     ai       player proxies (casual, competent) vs AI tiers (recruit, regular, veteran)
 #     mode     Zone Control vs Firefight: rounds and seat
-#   Options: exps=size,hero,...  n=N (games per pairing and seat-pair)  picks=10  draws=1  mode=zc|ff
-#     hero=cmd|draw|drawfree|top  respawn=1  terrain=0|1
+#     build    deckbuilding edge: each preset vs random legal decks (Kestrel both sides), by deck size
+#     length   Zone Control target 6 / 7 / 8: rounds per match
+#   Defaults = the spec's Duel rules: picks=10, draws=1, Zone Control, hero in the command zone, respawn 1,
+#     no Terrain, no Doctrine, the Duel hero lines (DUEL_HERO_LINES, Marked Shot 2; heroline=campaign = shipped).
+#   Options: exps=size,hero,...  n=N (games per pairing)  picks=10  draws=1  mode=zc|ff
+#     hero=cmd|draw|drawfree|top  respawn=1  terrain=0|1  doctrine=0|1  heroline=duel|campaign
+#     lset=loadout.prop=v;...  eset=loadout.effect_index.prop=v  tune=trait.tier.key=v|none  cfg=prop=v;...
+#     pdeck=I:card@trait,...;...  phero=I:operator;...  only=0,2  rsb=0.8 rarmor=-1 (Recruit AI)
 #   Run: godot --headless --path . -s res://tests/tools/duel_sim.gd -- exps=presets n=40
 # Author: Sr Game Designer Agent (kc-duel-design)
 extends SceneTree
@@ -26,23 +32,27 @@ const OPS: Array[StringName] = [&"kestrel_ar7", &"longreach_338", &"wasp_9", &"b
 ## (6, 8, 10), and 11-12 come from the tail. Each pick = 2 copies with the given trait (&"~default" = the
 ## chassis default).
 var PRESETS: Array[Dictionary] = [
-	{"name": "Spearhead", "trait": &"vanguard", "hero": &"wasp_9", "picks": [
+	{"name": "Spearhead", "trait": &"vanguard", "hero": &"kestrel_ar7", "picks": [
 		[&"point_man", &"vanguard"], [&"rifleman", &""], [&"breacher", &"vanguard"], [&"shieldman", &"vanguard"],
 		[&"flank_route", &""], [&"hold_the_line", &""], [&"brawler", &"undead"], [&"bulwark", &"vanguard"],
 		[&"blackout", &""], [&"ammo_resupply", &""], [&"gunner", &"heavy"], [&"suppressing_fire", &""]]},
 	{"name": "Overwatch", "trait": &"specops", "hero": &"longreach_338", "picks": [
 		[&"rifleman", &"specops"], [&"recon_specialist", &"specops"], [&"marksman", &"specops"], [&"brawler", &"specops"],
 		[&"flanker", &"specops"], [&"smoke_screen", &""], [&"sniper_perch", &"specops"], [&"halek_wren", &"specops"],
-		[&"callout", &""], [&"listening_post", &""], [&"combat_medic", &"specops"], [&"blackout", &""]]},
+		[&"breach_and_clear", &""], [&"combat_medic", &"specops"], [&"callout", &""], [&"listening_post", &""]]},
 	{"name": "Iron Wall", "trait": &"heavy", "hero": &"bastion_60", "picks": [
 		[&"rifleman", &""], [&"breacher", &"heavy"], [&"gunner", &"heavy"], [&"marksman", &"heavy"],
 		[&"demolitions_expert", &"heavy"], [&"ammo_resupply", &""], [&"suppressing_fire", &""], [&"mortar_pit", &"heavy"],
 		[&"okafor_anvil", &"heavy"], [&"hold_the_line", &""], [&"point_man", &"vanguard"], [&"comms_relay", &""]]},
-	{"name": "Hollow Ranks", "trait": &"undead", "hero": &"kestrel_ar7", "picks": [
-		[&"rifleman", &"undead"], [&"brawler", &"undead"], [&"point_man", &"undead"], [&"combat_medic", &"undead"],
-		[&"shieldman", &"undead"], [&"aid_station", &"undead"], [&"recon_specialist", &"undead"], [&"breach_and_clear", &""],
-		[&"war_standard", &"undead"], [&"tripwire_charge", &""], [&"flanker", &"undead"], [&"sabotage", &""]]},
+	{"name": "Hollow Ranks", "trait": &"undead", "hero": &"wasp_9", "picks": [
+		[&"rifleman", &"undead"], [&"brawler", &"undead"], [&"point_man", &"undead"], [&"shieldman", &"undead"],
+		[&"recon_specialist", &"undead"], [&"flanker", &"undead"], [&"war_standard", &"undead"], [&"breach_and_clear", &""],
+		[&"tripwire_charge", &""], [&"sabotage", &""], [&"combat_medic", &"undead"], [&"aid_station", &"undead"]]},
 ]
+## duel-mode.md §3.3: the Duel hero lines, applied in memory unless heroline=campaign (shipped kc-econ data).
+const DUEL_HERO_LINES: Dictionary = {&"kestrel_ar7": 7, &"longreach_338": 6, &"wasp_9": 8, &"bastion_60": 7}
+const DUEL_MARKED_SHOT: int = 2
+var heroline: String = "duel"
 
 var n: int = 40
 var picks: int = 10
@@ -52,11 +62,13 @@ var hero_mode: String = "cmd"
 var respawn_cost: int = 1
 var terrain_on: bool = false
 var exps: Array[String] = ["presets"]
-var recruit_sb: float = 0.8
+var recruit_sb: float = 0.6
 ## Recruit AI: Armor added to its units and Operator (the campaign's "green squad" lever, SideSetup.armor_bonus).
-var recruit_armor: int = 0
+var recruit_armor: int = -1
+## Regular AI: the competent planner, synergy-blind, picks its second-best play this often.
+var regular_sb: float = 0.6
 ## Doctrine (campaign: from the first calling card) = the deck's main trait; doctrine=0 plays without it.
-var doctrine_on: bool = true
+var doctrine_on: bool = false
 var cfg_over: Dictionary = {}
 var config: RunConfig = null
 var dummy: CardData = null
@@ -119,6 +131,10 @@ func _main() -> void:
 	dummy.card_type = DataEnums.CardType.TACTIC
 	dummy.cost = 10
 	dummy.collectible = false
+	if not "heroline=campaign" in OS.get_cmdline_user_args():
+		for op: StringName in DUEL_HERO_LINES:
+			(load("res://data/loadout/%s.tres" % op) as LoadoutItem).operator_armor = int(DUEL_HERO_LINES[op])
+		((load("res://data/loadout/ab_marked_shot.tres") as LoadoutItem).effects[0] as EffectData).amount = DUEL_MARKED_SHOT
 	for arg: String in OS.get_cmdline_user_args():
 		var kv: PackedStringArray = arg.split("=", true, 1)
 		match kv[0]:
@@ -131,7 +147,15 @@ func _main() -> void:
 			"terrain": terrain_on = kv[1] == "1"
 			"rsb": recruit_sb = float(kv[1])
 			"rarmor": recruit_armor = int(kv[1])
+			"gsb": regular_sb = float(kv[1])
 			"doctrine": doctrine_on = kv[1] != "0"
+			"heroline": heroline = kv[1]
+			"only":
+				# only=0,2: keep these presets (by index) in the preset experiments.
+				var keep_p: Array[Dictionary] = []
+				for ix: String in kv[1].split(","):
+					keep_p.append(PRESETS[int(ix)])
+				PRESETS = keep_p
 			"tune":
 				# tune=trait.tier.key=value[;...] (tier 0 = the 2-set, 1 = the 3-set; value none = remove)
 				for item: String in kv[1].split(";"):
@@ -179,8 +203,8 @@ func _main() -> void:
 			_: push_error("duel_sim: unknown option " + arg)
 	var t0: int = Time.get_ticks_msec()
 	print("  trait bonus: %s" % SynergyRules.trait_bonus)
-	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s" % [n, picks, draws, mode_opt,
-			hero_mode, respawn_cost, terrain_on])
+	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s doctrine=%s heroline=%s" % [n, picks,
+			draws, mode_opt, hero_mode, respawn_cost, terrain_on, doctrine_on, heroline])
 	_apply_cfg()
 	if "size" in exps:
 		_exp_size()
@@ -273,7 +297,7 @@ func _ai(tier: String) -> AiPlayer:
 			p.weight_deny_streak = 1.0
 			aware = false
 		"regular":
-			p.second_best_chance = 0.2
+			p.second_best_chance = regular_sb
 			aware = false
 		_:
 			pass  # competent / veteran: the run_v2_check competent proxy, synergy-aware
