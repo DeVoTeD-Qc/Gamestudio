@@ -21,14 +21,14 @@ const SELECT: Color = Color("fff2b0")
 const KIND_BG: Dictionary = {
 	"Z": Color("3b2321"), "W": Color("1f2e3a"), "M": Color("1d3325"), "B": Color("37301d"),
 	"F": Color("2c1d35"), "P": Color("26283a"), "S": Color("2a2a24"), "D": Color("22282c"),
-	"A": Color("17302f"), "X": Color("302a17"), "R": Color("22282c"), "K": Color("2a2420"), "J": Color("1e1a26"),
+	"A": Color("17302f"), "C": Color("37301d"), "X": Color("302a17"), "R": Color("22282c"), "K": Color("2a2420"), "J": Color("1e1a26"),
 }
 const KIND_ACCENT: Dictionary = {
 	"Z": Color("e2574c"), "W": Color("5bb0e0"), "M": Color("6fd08a"), "B": Color("e0b04a"),
 	"F": Color("c27ce0"), "P": Color("9aa8ff"), "S": Color("f0d27a"), "D": Color("b8c4c0"),
-	"A": Color("4fd1c5"), "X": Color("f2d65c"), "R": Color("b8c4c0"), "K": Color("d9a066"), "J": Color("f08cc0"),
+	"A": Color("4fd1c5"), "C": Color("e0b04a"), "X": Color("f2d65c"), "R": Color("b8c4c0"), "K": Color("d9a066"), "J": Color("f08cc0"),
 }
-## v2 kinds: A ammo (teal), X Carrier drop / points (gold), R room / door, K machine, J Jawbreaker.
+## v3: C cover card (gold). v2 kinds: A ammo (teal), X Carrier drop / points (gold), R room / door, K machine, J Jawbreaker.
 
 const FONT_S: int = 18
 const FONT_M: int = 22

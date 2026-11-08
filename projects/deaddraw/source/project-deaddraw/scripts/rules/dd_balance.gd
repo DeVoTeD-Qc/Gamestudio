@@ -119,6 +119,15 @@ static func normalize(src: String) -> String:
 			while i < s.length() and s[i] != "\n":
 				i += 1
 			continue
+		# Python tuples ("points", 5) -> JSON arrays
+		if ch == "(":
+			out += "["
+			i += 1
+			continue
+		if ch == ")":
+			out += "]"
+			i += 1
+			continue
 		if _word_at(s, i, "True"):
 			out += "true"
 			i += 4

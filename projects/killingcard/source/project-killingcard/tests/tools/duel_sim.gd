@@ -55,6 +55,8 @@ var exps: Array[String] = ["presets"]
 var recruit_sb: float = 0.8
 ## Recruit AI: Armor added to its units and Operator (the campaign's "green squad" lever, SideSetup.armor_bonus).
 var recruit_armor: int = 0
+## Doctrine (campaign: from the first calling card) = the deck's main trait; doctrine=0 plays without it.
+var doctrine_on: bool = true
 var cfg_over: Dictionary = {}
 var config: RunConfig = null
 var dummy: CardData = null
@@ -129,6 +131,7 @@ func _main() -> void:
 			"terrain": terrain_on = kv[1] == "1"
 			"rsb": recruit_sb = float(kv[1])
 			"rarmor": recruit_armor = int(kv[1])
+			"doctrine": doctrine_on = kv[1] != "0"
 			"tune":
 				# tune=trait.tier.key=value[;...] (tier 0 = the 2-set, 1 = the 3-set; value none = remove)
 				for item: String in kv[1].split(";"):
@@ -239,7 +242,7 @@ func _deck(p: int, op: StringName = &"", k: int = -1) -> SideSetup:
 		for j: int in 2:
 			s.deck.append(c)
 			s.deck_traits.append(t)
-	s.doctrine = pr["trait"]
+	s.doctrine = pr["trait"] if doctrine_on else &""
 	s.primary = load("res://data/loadout/%s.tres" % (op if op != &"" else pr["hero"])) as LoadoutItem
 	s.operator_kit = true
 	s.killstreaks.assign(config.starter_killstreaks)
@@ -568,7 +571,7 @@ func _random_deck(k: int, seed_value: int, op: StringName) -> SideSetup:
 	for t: StringName in counts:
 		if best == &"" or int(counts[t]) > int(counts[best]):
 			best = t
-	s.doctrine = best
+	s.doctrine = best if doctrine_on else &""
 	s.primary = load("res://data/loadout/%s.tres" % op) as LoadoutItem
 	s.operator_kit = true
 	s.killstreaks.assign(config.starter_killstreaks)

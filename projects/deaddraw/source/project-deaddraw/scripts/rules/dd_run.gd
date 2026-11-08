@@ -253,16 +253,18 @@ func _wave_info(w: int, restock: int) -> Dictionary:
 
 ## Tops the street up to street_size (wave decks shuffle in when the pile runs dry), then starts
 ## the boss street when every wave is spent and at most one card is left (sim play_district()).
-func _deal() -> void:
+func _deal(mark_holdover: bool = false) -> void:
 	var size: int = bal.num("street_size")
+	for c: DDCard in street:
+		c.holdover = mark_holdover
 	while street.size() < size:
 		if pile.is_empty() and not _next_wave():
 			break
 		if pile.is_empty():
 			continue
-		street.append(pile.pop_back())
-	for c: DDCard in street:
-		c.holdover = false
+		var dealt: DDCard = pile.pop_back()
+		dealt.holdover = false
+		street.append(dealt)
 	resolved = 0
 	med_used = 0
 	lookout_used = false
@@ -765,10 +767,8 @@ func _after_resolve(ev: Dictionary) -> Dictionary:
 
 
 func _end_street(ev: Dictionary) -> void:
-	for c: DDCard in street:
-		c.holdover = true
 	ev["street_ended"] = true
-	_deal()
+	_deal(true)
 	if boss_street:
 		ev["boss_street"] = true
 

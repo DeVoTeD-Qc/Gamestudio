@@ -11,7 +11,7 @@
   "safehouse_heal": 8,
   "points_on_kill": true,
   "ditch_share": 0.0,
-  "finish_bonus": 3,
+  "finish_bonus": 5,
   "scrap_points": 2,
   "melee_power": 2,
   "melee_points": 0.0,
@@ -205,7 +205,7 @@
       "rooms": [
         {
           "name": "Garage",
-          "cost": 15,
+          "cost": 21,
           "pack": [
             "W",
             "M4",
@@ -218,7 +218,7 @@
         },
         {
           "name": "Corner Store",
-          "cost": 22,
+          "cost": 31,
           "pack": [
             "M5",
             "M3",
@@ -230,7 +230,7 @@
         },
         {
           "name": "Workshop",
-          "cost": 31,
+          "cost": 43,
           "pack": [
             "W",
             "M5",
@@ -299,7 +299,7 @@
       "rooms": [
         {
           "name": "Subway Kiosk",
-          "cost": 19,
+          "cost": 27,
           "pack": [
             "M4",
             "W",
@@ -311,7 +311,7 @@
         },
         {
           "name": "Pawn Shop",
-          "cost": 25,
+          "cost": 35,
           "pack": [
             "W",
             "C3",
@@ -324,7 +324,7 @@
         },
         {
           "name": "Parking Garage",
-          "cost": 35,
+          "cost": 49,
           "pack": [
             "W",
             "M6",
@@ -395,7 +395,7 @@
       "rooms": [
         {
           "name": "Pharmacy",
-          "cost": 20,
+          "cost": 28,
           "pack": [
             "M5",
             "M6",
@@ -407,7 +407,7 @@
         },
         {
           "name": "Security Office",
-          "cost": 28,
+          "cost": 39,
           "pack": [
             "W",
             "C3",
@@ -420,7 +420,7 @@
         },
         {
           "name": "Morgue Lab",
-          "cost": 38,
+          "cost": 53,
           "pack": [
             "W",
             "M6",
@@ -451,7 +451,7 @@
     "imani": {
       "name": "Dr. Imani Hale",
       "passive": "triage",
-      "hp": 20
+      "hp": 19
     },
     "theo": {
       "name": "Theo Park",
