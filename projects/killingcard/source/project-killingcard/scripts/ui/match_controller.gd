@@ -999,7 +999,7 @@ func select_card(uid: int) -> void:
 		_screen.show_toast(PlayText.describe(state.can_submit(me_side, RulesIntent.play_card(uid, 0)),
 				{"name": rc.card.display_name})["reason"])
 	elif _unit_target_kind() == &"friendly":
-		_screen.show_toast("Pick one of your units to move.")
+		_screen.show_toast("Pick one of your units to move." if _selection_moves() else "Pick one of your units.")
 	elif _unit_target_kind() == &"enemy":
 		_screen.show_toast("Pick an enemy unit.")
 
@@ -1117,6 +1117,8 @@ func check_play(zone: int) -> Dictionary:
 
 func _badge(kind: StringName) -> String:
 	match selection.get("kind"):
+		&"agile":
+			return "MOVE HERE"
 		&"operator":
 			var s: RulesSide = state.sides[me_side]
 			return "PLACE HERE" if s.operator_can_deploy and not _has_play(&"place") else "ROTATE HERE"
@@ -1141,6 +1143,9 @@ func _ctx() -> Dictionary:
 	match selection.get("kind"):
 		&"operator":
 			return {"name": "Your Operator", "kind": &"operator"}
+		&"agile":
+			var mover: RulesUnit = state.sides[me_side].find_unit(int(selection.get("uid", -1)))
+			return {"name": mover.card.display_name if mover != null and mover.card != null else "That unit", "kind": &"move"}
 		&"item":
 			return _item_ctx(state.find_item(me_side, selection["id"]))
 		&"card":
@@ -1159,6 +1164,8 @@ func _item_ctx(item: LoadoutItem) -> Dictionary:
 
 func _intent_for(zone: int) -> Dictionary:
 	match selection.get("kind"):
+		&"agile":
+			return RulesIntent.move_unit(int(selection["uid"]), zone)
 		&"operator":
 			var s: RulesSide = state.sides[me_side]
 			if s.operator_can_deploy and not _has_play(&"place"):
@@ -1194,7 +1201,7 @@ func _what() -> Variant:
 
 ## &"friendly" / &"enemy" when the selection needs a chosen unit (engine: needs_unit_target).
 func _unit_target_kind() -> StringName:
-	if state == null or selection.is_empty() or selection.get("kind") == &"operator":
+	if state == null or selection.is_empty() or selection.get("kind") in [&"operator", &"agile"]:
 		return &""
 	return state.needs_unit_target(me_side, _what())
 
@@ -1207,6 +1214,38 @@ func _target_candidates(_kind: StringName = &"") -> Array:
 		if uid >= 0 and uid not in out:
 			out.append(uid)
 	return out
+
+
+## kc-wip-impl: true when the selected card's chosen friendly unit is MOVED (Flank Route), false for a
+## chosen-friendly buff (Premium Loadout), which needs no destination column.
+func _selection_moves() -> bool:
+	if selection.get("kind") != &"card":
+		return false
+	var rc: RulesCard = state.sides[me_side].find_in_hand(int(selection["uid"]))
+	return rc != null and rc.card.effects.any(func(e: EffectData) -> bool: return e != null and e.kind == DataEnums.EffectKind.MOVE_UNIT)
+
+
+## Zone of my unit on the board, or of a unit card I queued this Deploy (NO_ZONE if neither).
+func _friendly_zone(uid: int) -> int:
+	var u: RulesUnit = state.sides[me_side].find_unit(uid)
+	if u != null:
+		return u.zone
+	for p: Dictionary in state.sides[me_side].plays:
+		if p["kind"] == &"unit" and (p["card"] as RulesCard).uid == uid:
+			return int(p["zone"])
+	return MatchState.NO_ZONE
+
+
+## kc-wip-impl Agile (wip-set.md §2.2): select my Agile unit on the board; then a tap on an adjacent
+## column orders the free move (it moves at Reveal, to the back of that line). Undo takes it back.
+func select_agile(uid: int) -> void:
+	var u: RulesUnit = state.sides[me_side].find_unit(uid) if state != null else null
+	if u == null or not u.agile:
+		return
+	selection = {"kind": &"agile", "uid": uid}
+	target_uid = -1
+	_show_selection()
+	_screen.show_toast("%s is Agile: tap an adjacent column to move it there (free, once per round)." % u.card.display_name)
 
 
 func _enemy_zone(uid: int) -> int:
@@ -1384,6 +1423,14 @@ func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
 			return
 		slot_side = &"objective"
 	if selection.is_empty():
+		# kc-wip-impl Agile: a tap on my own Agile unit (with nothing selected) selects its move order.
+		if slot_side == &"player" and uid >= 0 and state.phase == MatchState.Phase.DEPLOY:
+			var u: RulesUnit = state.sides[me_side].find_unit(uid)
+			if u != null and u.agile and state.can_submit(me_side, RulesIntent.move_unit(uid, u.zone + (1 if u.zone < 2 else -1)))["code"] != &"already_moved":
+				select_agile(uid)
+		return
+	if selection.get("kind") == &"agile" and slot_side == &"player" and uid == int(selection["uid"]):
+		clear_selection()
 		return
 	_pick_or_play(zone, slot_side, uid)
 
@@ -1498,6 +1545,10 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 			target_uid = uid
 			if kind == &"enemy":
 				play_at(_enemy_zone(uid))
+				return
+			if not _selection_moves():
+				# kc-wip-impl (Premium Loadout): a chosen-friendly buff needs no column: play it now.
+				play_at(_friendly_zone(uid))
 				return
 			_show_selection()
 			_screen.show_toast("Now tap an adjacent column.")
@@ -1625,6 +1676,10 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		var mod_line: String = MatchSnapshot.armor_mod_line(s)
 		if mod_line != "":
 			status += " " + mod_line
+		if u.agile and side == me_side:
+			status += " Agile: tap it, then tap an adjacent column to move it there at Reveal (free, once per round)."
+		if u.beam:
+			status += " Beam: its shot also hits %s units in front of it in this column." % ("your" if side == me_side else "their own")
 		open_card_inspector(u.card, "friend" if side == me_side else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
 				-1, synergy_lines(u.card, side, u, u.chosen_trait))
 		return
@@ -2072,6 +2127,22 @@ func _add_v2_line(e: Dictionary) -> void:
 	var text: String = ""
 	var side: StringName = StringName(str(e.get("side", "")))
 	match t:
+		"beam_fired":
+			# kc-wip-impl Beam: who the beam hit, friends marked, so a friendly hit is never a mystery.
+			var parts: PackedStringArray = []
+			for h: Variant in e.get("hits", []):
+				var hd: Dictionary = h
+				var who: String = _name_of(int(hd.get("uid", -1)))
+				if bool(hd.get("friendly", false)):
+					who = ("your " if side == MatchState.SIDE_NAMES[me_side] else "their own ") + who
+				parts.append("%d to %s" % [int(hd.get("damage", 0)), who])
+			text = "%s beam: %s" % [_name_of(int(e.get("shooter_uid", -1))), ", ".join(parts) if not parts.is_empty() else "no target"]
+		"agile_moved":
+			var mz: Array = [str(e.get("from_zone", "")), str(e.get("zone", ""))].map(
+					func(z: String) -> String: return ["A", "B", "C"][maxi(0, MapData.ZONE_IDS.find(StringName(z)))])
+			text = ("%s moves %s > %s (Agile)" if bool(e.get("moved", false)) else "%s can't move to %s > %s: full") % [_name_of(int(e.get("uid", -1))), mz[0], mz[1]]
+		"effect_applied":
+			text = _effect_line(e)
 		"deck_reshuffled":
 			# kc-econ: the classic deckbuilder reshuffle, said in words (both sides; it is public).
 			var n: int = int(e.get("count", 0))
@@ -2123,6 +2194,30 @@ func _add_v2_line(e: Dictionary) -> void:
 	killfeed.push_front({"text": text.to_upper(), "side": side if side != &"" else &"player", "kind": StringName(t)})
 	if killfeed.size() > KILLFEED_KEEP:
 		killfeed.resize(KILLFEED_KEEP)
+
+
+## kc-wip-impl: a log line for the Wip effects the player must be able to follow: Supply next round (the
+## Hacker), +N/+N buffs (Flag Bearer, Premium Loadout) and end-of-round growth (Fast Learner). "" = none.
+func _effect_line(e: Dictionary) -> String:
+	var kind: String = String(e.get("kind", ""))
+	var src_id: StringName = StringName(str(e.get("source_id", "")))
+	var src: CardData = CardDB.get_card(src_id) if CardDB != null and CardDB.has_card(src_id) else null
+	var src_name: String = src.display_name if src != null else String(src_id).capitalize()
+	if kind == "GAIN_SUPPLY_NEXT_ROUND":
+		return "%s: +%d Supply next round" % [src_name, int(e.get("amount", 0))]
+	if kind != "MODIFY_ARMOR" or src == null or int(e.get("amount", 0)) <= 0:
+		return ""
+	var fp: int = 0
+	for fx: EffectData in src.effects:
+		if fx != null and fx.kind == DataEnums.EffectKind.MODIFY_FIREPOWER and fx.duration_rounds == 0:
+			fp = fx.amount
+	if fp <= 0:
+		return ""
+	var target: String = _name_of(int(e.get("target_uid", -1)))
+	var u: RulesUnit = state.find_unit(int(e.get("target_uid", -1)))
+	if u != null and u.card == src and src.effects.any(func(fx: EffectData) -> bool: return fx != null and fx.trigger == DataEnums.Trigger.END_OF_ROUND):
+		return "%s grows +%d/+%d" % [target, fp, int(e.get("amount", 0))]
+	return "%s: +%d/+%d to %s" % [src_name, fp, int(e.get("amount", 0)), target]
 
 
 ## Display name of any uid in the match (board, Operator, discard, hand, deck), or "".

@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_jgauc"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_quo3g"]
+
+[resource]
+script = ExtResource("2_quo3g")
+id = &"kc_wip_private_2"
+display_name = "Private II"
+card_type = 0
+is_elite = false
+text = ""
+cost = 2
+weapon_class = 0
+firepower = 2
+armor = 3
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &""
+trait_options = Array[StringName]([])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = false
+standard_issue = true
+effects = Array[ExtResource("1_jgauc")]([])

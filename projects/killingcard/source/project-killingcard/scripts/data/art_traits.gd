@@ -67,6 +67,17 @@ const OPTION_VARIANTS: Dictionary = {
 ## Game Artist's 5 arts arrive); the starter's tactic wears "si_<id>". kc-mw3-cards (head): in the
 ## private pitch build only, BannerArtDB renders these ids with their licensed calling card.
 const STANDARD_ISSUE_ARTS: Dictionary = {&"ammo_resupply": &"si_ammo_resupply"}
+## Art id prefixes of Standard Issue arts: the si_* starter of kc-onboard and the Wip Private ladder
+## (kc-wip-impl: kc_wip_private_1..4, the Standard Issue starter since the head's W2).
+const STANDARD_ISSUE_PREFIXES: PackedStringArray = ["si_", "kc_wip_private_"]
+
+
+## True when art_id is a Standard Issue art by its id (si_*, kc_wip_private_*).
+static func is_standard_issue_id(art_id: StringName) -> bool:
+	for pre: String in STANDARD_ISSUE_PREFIXES:
+		if String(art_id).begins_with(pre):
+			return true
+	return false
 
 ## Licensed manifest index (id -> {card, family, title}), chassis -> ids; reloaded when the folder
 ## settings change.
@@ -294,7 +305,7 @@ static func subname(art_id: StringName) -> String:
 	var s: String = String(art_id)
 	if art_id == &"":
 		return ""
-	if s.begins_with("si_"):
+	if is_standard_issue_id(art_id):
 		return "Standard Issue"  # kc-onboard §2.2: the details subname of every Standard Issue card
 	if s.contains(SEP):
 		var suffix: String = s.get_slice(SEP, 1)

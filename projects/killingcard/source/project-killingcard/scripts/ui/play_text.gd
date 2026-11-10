@@ -68,6 +68,10 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 			return _t("", "Nothing to undo.")
 		&"already_resolved":
 			return _t("", "That play already resolved, it can't be undone.")
+		&"already_moved":  # kc-wip-impl Agile
+			return _t("MOVED", "%s already has a move order this round (Agile: once per round)." % label)
+		&"not_agile":
+			return _t("", "Only an Agile unit can move like this.")
 	return _t("", sentence(String(check.get("reason", ""))))
 
 

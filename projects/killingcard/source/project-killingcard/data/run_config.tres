@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunConfig" load_steps=59 format=3]
+[gd_resource type="Resource" script_class="RunConfig" load_steps=78 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="1_aw1hj"]
 [ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="2_mbgj7"]
@@ -50,6 +50,25 @@
 [ext_resource type="Resource" path="res://data/cards/si_armored.tres" id="51_siar"]
 [ext_resource type="Resource" path="res://data/squads/squad_hollow_choir.tres" id="52_choir"]
 [ext_resource type="Resource" path="res://data/cards/shambler.tres" id="53_shamb"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_private_1.tres" id="60_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_private_2.tres" id="61_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_private_3.tres" id="62_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_private_4.tres" id="63_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_scout.tres" id="64_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_medic.tres" id="65_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_sharpshooter.tres" id="66_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_flag_bearer.tres" id="67_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_hacker.tres" id="68_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_kamikaze.tres" id="69_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_runner.tres" id="70_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_sniper.tres" id="71_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_juggernaut.tres" id="72_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_riot_shield.tres" id="73_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_fast_learner.tres" id="74_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_laser_gunner.tres" id="75_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_war_shout.tres" id="76_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_barrage.tres" id="77_wip"]
+[ext_resource type="Resource" path="res://data/cards/kc_wip_premium_loadout.tres" id="78_wip"]
 
 [sub_resource type="Resource" id="Resource_erhuq"]
 script = ExtResource("6_vn4hk")
@@ -195,11 +214,11 @@ meridian_supply_from = 4
 choir_from_round = 4
 fight_armor_bonus = PackedInt32Array(0, 0, 1, 1)
 bosses = Array[ExtResource("6_vn4hk")]([SubResource("Resource_bmerid"), SubResource("Resource_bprime"), SubResource("Resource_bchoir")])
-legacy_cards = Array[ExtResource("15_yt66f")]([ExtResource("42_ilvsx")])
-starter_deck = Array[ExtResource("15_yt66f")]([ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("49_sitr"), ExtResource("50_sisg"), ExtResource("50_sisg"), ExtResource("51_siar"), ExtResource("30_y1ak3")])
+legacy_cards = Array[ExtResource("15_yt66f")]([ExtResource("42_ilvsx"), ExtResource("48_sigr"), ExtResource("49_sitr"), ExtResource("50_sisg"), ExtResource("51_siar")])
+starter_deck = Array[ExtResource("15_yt66f")]([ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("63_wip"), ExtResource("30_y1ak3")])
 starter_primary = ExtResource("44_ocvin")
 starter_killstreaks = Array[ExtResource("1_aw1hj")]([ExtResource("2_mbgj7"), ExtResource("3_vimp0"), ExtResource("5_sexiq")])
-reward_pool = Array[ExtResource("15_yt66f")]([ExtResource("16_gmig0"), ExtResource("16_gmig0"), ExtResource("17_84r8d"), ExtResource("17_84r8d"), ExtResource("18_4l4qd"), ExtResource("18_4l4qd"), ExtResource("19_2fo86"), ExtResource("19_2fo86"), ExtResource("20_1qn3b"), ExtResource("21_gia51"), ExtResource("22_1pqw0"), ExtResource("23_epug7"), ExtResource("24_vxiig"), ExtResource("25_re5x2"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("28_upcpp"), ExtResource("29_yqpqb"), ExtResource("30_y1ak3"), ExtResource("31_1w2cq"), ExtResource("32_7m22p"), ExtResource("33_13yh0"), ExtResource("34_13mxe"), ExtResource("35_gwq4b"), ExtResource("36_ggcg5"), ExtResource("37_83mpb"), ExtResource("38_nnndg"), ExtResource("39_f68of"), ExtResource("40_wauce"), ExtResource("47_brwlr"), ExtResource("47_brwlr"), ExtResource("29_yqpqb"), ExtResource("31_1w2cq"), ExtResource("32_7m22p"), ExtResource("34_13mxe")])
+reward_pool = Array[ExtResource("15_yt66f")]([ExtResource("16_gmig0"), ExtResource("16_gmig0"), ExtResource("17_84r8d"), ExtResource("17_84r8d"), ExtResource("18_4l4qd"), ExtResource("18_4l4qd"), ExtResource("19_2fo86"), ExtResource("19_2fo86"), ExtResource("20_1qn3b"), ExtResource("21_gia51"), ExtResource("22_1pqw0"), ExtResource("23_epug7"), ExtResource("24_vxiig"), ExtResource("25_re5x2"), ExtResource("26_1daox"), ExtResource("27_gt2np"), ExtResource("28_upcpp"), ExtResource("29_yqpqb"), ExtResource("30_y1ak3"), ExtResource("31_1w2cq"), ExtResource("32_7m22p"), ExtResource("33_13yh0"), ExtResource("34_13mxe"), ExtResource("35_gwq4b"), ExtResource("36_ggcg5"), ExtResource("37_83mpb"), ExtResource("38_nnndg"), ExtResource("39_f68of"), ExtResource("40_wauce"), ExtResource("47_brwlr"), ExtResource("47_brwlr"), ExtResource("29_yqpqb"), ExtResource("31_1w2cq"), ExtResource("32_7m22p"), ExtResource("34_13mxe"), ExtResource("64_wip"), ExtResource("65_wip"), ExtResource("66_wip"), ExtResource("67_wip"), ExtResource("68_wip"), ExtResource("69_wip"), ExtResource("70_wip"), ExtResource("71_wip"), ExtResource("72_wip"), ExtResource("73_wip"), ExtResource("74_wip"), ExtResource("75_wip"), ExtResource("76_wip"), ExtResource("77_wip"), ExtResource("78_wip")])
 killstreak_pool = Array[ExtResource("1_aw1hj")]([ExtResource("2_mbgj7"), ExtResource("3_vimp0"), ExtResource("4_jr484"), ExtResource("5_sexiq")])
 perk_pool = Array[ExtResource("1_aw1hj")]([ExtResource("11_d00ys"), ExtResource("12_cbmx1"), ExtResource("13_yu1f1"), ExtResource("14_757h7")])
 perk_slots = 3

@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_uaj4e"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_w1s41"]
+
+[sub_resource type="Resource" id="Resource_spp3j"]
+script = ExtResource("1_uaj4e")
+trigger = 0
+kind = 1
+target = 5
+zone_scope = 5
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_w1s41")
+id = &"kc_wip_barrage"
+display_name = "Barrage"
+card_type = 1
+is_elite = false
+text = "1 damage to each enemy frontline unit."
+cost = 3
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &""
+trait_options = Array[StringName]([])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_uaj4e")]([SubResource("Resource_spp3j")])

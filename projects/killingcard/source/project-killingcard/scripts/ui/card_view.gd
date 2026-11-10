@@ -75,6 +75,7 @@ const RANGE_NAMES: PackedStringArray = ["CLOSE", "MID", "LONG"]
 const KEYWORD_NAMES: Dictionary = {
 	&"first_shot": "First Shot", &"pick": "Pick", &"flank": "Flank", &"suppress": "Suppress", &"pierce": "Pierce",
 	&"patch": "Patch %d", &"cover": "Cover %d", &"holder": "Holder", &"on_deploy": "On Deploy", &"on_down": "On Down",
+	&"agile": "Agile", &"beam": "Beam", &"end_of_round": "End of round",
 }
 const SHORT_RULES: Dictionary = {
 	&"first_shot": "fires first in its exchange", &"pick": "shoots the lowest-Armor enemy",
@@ -82,6 +83,8 @@ const SHORT_RULES: Dictionary = {
 	&"pierce": "extra damage carries on", &"patch": "restores %d Armor to a friend here",
 	&"cover": "each hit deals %d less", &"holder": "holds a contested zone",
 	&"on_deploy": "happens when it arrives", &"on_down": "happens when it goes down",
+	&"agile": "free move to the next column", &"beam": "hits everyone in front, friends too",
+	&"end_of_round": "happens each round's end",
 }
 
 ## Placeholder shown in the editor and when no data is set.
@@ -574,6 +577,8 @@ func _rebuild_text(box: Rect2) -> void:
 		var id: StringName = kw[0]
 		var value: int = kw[1]
 		var nm: String = String(KEYWORD_NAMES.get(id, String(id).capitalize()))
+		if id == &"suppress" and value > 0:  # kc-wip-impl: Suppress N
+			nm = "Suppress %d" % value
 		if nm.contains("%d"):
 			nm = nm % maxi(1, value)
 		# kc-ipad-cards: icon + name only; the definition is in the inspector / long-press tooltip.

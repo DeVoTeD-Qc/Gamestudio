@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_syu06"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_x7bl2"]
+
+[sub_resource type="Resource" id="Resource_t7vwa"]
+script = ExtResource("1_syu06")
+trigger = 7
+kind = 2
+target = 0
+zone_scope = 0
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_amjhm"]
+script = ExtResource("1_syu06")
+trigger = 7
+kind = 3
+target = 0
+zone_scope = 0
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_x7bl2")
+id = &"kc_wip_fast_learner"
+display_name = "Fast Learner"
+card_type = 0
+is_elite = false
+text = "At end of round: this unit gets +1/+1."
+cost = 5
+weapon_class = 3
+firepower = 3
+armor = 4
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &"undead"
+trait_options = Array[StringName]([&"undead"])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_syu06")]([SubResource("Resource_t7vwa"), SubResource("Resource_amjhm")])

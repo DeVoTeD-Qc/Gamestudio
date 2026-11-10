@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_ocy0o"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_7gmr2"]
+
+[resource]
+script = ExtResource("2_7gmr2")
+id = &"kc_wip_sniper"
+display_name = "Sniper"
+card_type = 0
+is_elite = false
+text = "Pick."
+cost = 4
+weapon_class = 4
+firepower = 5
+armor = 2
+first_shot = false
+pick = true
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &"specops"
+trait_options = Array[StringName]([&"specops"])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_ocy0o")]([])

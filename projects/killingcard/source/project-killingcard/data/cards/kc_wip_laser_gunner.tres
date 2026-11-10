@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_jxotu"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_lmjpy"]
+
+[resource]
+script = ExtResource("2_lmjpy")
+id = &"kc_wip_laser_gunner"
+display_name = "Laser Gunner"
+card_type = 0
+is_elite = false
+text = "Beam. It hits your units in front of it too."
+cost = 5
+weapon_class = 0
+firepower = 2
+armor = 2
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = true
+neighbor_keyword = &""
+card_trait = &"heavy"
+trait_options = Array[StringName]([&"heavy"])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_jxotu")]([])

@@ -28,7 +28,8 @@ const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt"
 		&"set_callout": &"callout", &"doctrine": &"doctrine",
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
 		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
-		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames"}
+		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames",
+		&"agile": &"agile", &"beam": &"beam", &"end_of_round": &"end_of_round"}
 ## kc-cards-impl: the card-anatomy entries (C1+ board card, Y2+ / T1 frames) lead the STATS & BOARD group.
 const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames",
 		&"objective", &"control", &"field", &"operator", &"killstreak", &"incoming"]
@@ -388,6 +389,21 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			SynergyGlyphs.draw_trait_icon(c, r.grow(-10.0), SynergyRules.VANGUARD, accent)
 		&"pierce":
 			SynergyGlyphs.draw_pierce_plate(c, r, accent)  # kc-fight-ui
+		&"agile":
+			# kc-wip-impl: a sideways double arrow (a free move to the next column).
+			c.draw_line(Vector2(6, s * 0.5), Vector2(s - 6, s * 0.5), accent, 3.0)
+			c.draw_colored_polygon(PackedVector2Array([Vector2(4, s * 0.5), Vector2(14, s * 0.3), Vector2(14, s * 0.7)]), accent)
+			c.draw_colored_polygon(PackedVector2Array([Vector2(s - 4, s * 0.5), Vector2(s - 14, s * 0.3), Vector2(s - 14, s * 0.7)]), accent)
+		&"beam":
+			# kc-wip-impl: a beam down the column through a friendly (teal) and an enemy (red) dot.
+			c.draw_line(Vector2(s * 0.5, 4), Vector2(s * 0.5, s - 4), accent, 4.0)
+			c.draw_circle(Vector2(s * 0.5, s * 0.3), s * 0.12, friend)
+			c.draw_circle(Vector2(s * 0.5, s * 0.72), s * 0.12, get_theme_color(&"enemy", &"Hud"))
+		&"end_of_round":
+			# kc-wip-impl: a round arrow (each round's end).
+			c.draw_arc(r.get_center(), s * 0.32, -PI * 0.35, PI * 1.35, 24, accent, 3.0)
+			var tip: Vector2 = r.get_center() + Vector2.from_angle(-PI * 0.35) * s * 0.32
+			c.draw_colored_polygon(PackedVector2Array([tip + Vector2(-7, -3), tip + Vector2(5, -5), tip + Vector2(1, 6)]), accent)
 		_:
 			# Any other keyword (a new one added to KEYWORD_RULES): its initial on a plate.
 			c.draw_rect(r, Color(ink, 0.85))

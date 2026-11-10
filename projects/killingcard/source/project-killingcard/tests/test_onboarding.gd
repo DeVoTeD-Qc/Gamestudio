@@ -82,7 +82,7 @@ func test_starter_is_ten_standard_issue_cards_in_one_fixed_art() -> void:
 	var n: Dictionary = {}
 	for c: CardData in cfg.starter_deck:
 		n[String(c.id)] = int(n.get(String(c.id), 0)) + 1
-	assert_eq(n, {"si_grunt": 3, "si_trooper": 3, "si_sergeant": 2, "si_armored": 1, "ammo_resupply": 1}, "§2.1 starter (kc-econ: 10 cards)")
+	assert_eq(n, {"kc_wip_private_1": 3, "kc_wip_private_2": 3, "kc_wip_private_3": 2, "kc_wip_private_4": 1, "ammo_resupply": 1}, "§2.1 starter (kc-wip-impl W2: the Private ladder, 10 cards)")
 	for c: CardData in cfg.reward_pool:
 		assert_false(c.standard_issue, "Standard Issue cards are never offered (%s)" % c.id)
 	var a: RunProgress = RunProgress.create(cfg, 1)
@@ -268,11 +268,11 @@ func test_match_two_drop_is_two_of_four_then_muster_out() -> void:
 	var rows: Array[Dictionary] = r.muster_out_options()
 	assert_eq(rows.size(), 9, "every Standard Issue copy listed (kc-econ: 9 of the 10-card starter)")
 	var pre: Array = rows.filter(func(x: Dictionary) -> bool: return x["preselected"])
-	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"]), [&"si_armored", &"si_sergeant", &"si_sergeant"], "most expensive pre-selected: the Armored Trooper, then Sergeants")
+	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"]), [&"kc_wip_private_4", &"kc_wip_private_3", &"kc_wip_private_3"], "most expensive pre-selected: Private IV, then Private IIIs")
 	assert_eq(rows[0]["serial"], "SI-04", "serial plate")
 	var size0: int = r.deck.size()
 	assert_eq(r.choose_offer(0), "", "accept the pre-selection")
-	assert_eq([r.deck.size(), _count(r, &"si_armored"), _count(r, &"si_sergeant"), r.mustered_out], [size0 - 3, 0, 0, 3], "3 Standard Issue cards home")
+	assert_eq([r.deck.size(), _count(r, &"kc_wip_private_4"), _count(r, &"kc_wip_private_3"), r.mustered_out], [size0 - 3, 0, 0, 3], "3 Standard Issue cards home")
 	assert_eq(r.deck.size(), 9, "10 (M1 drop skipped) + 2 - 3: the deck shrank by one with this drop")
 	assert_false(RewardOffers.KIND_MUSTER_OUT in _kinds(r), "done")
 
@@ -284,7 +284,7 @@ func test_muster_out_choice_floor_and_errors() -> void:
 	r.record_result(&"player")
 	r.choose_offer(0)
 	r.choose_offer(0)
-	var grunt: int = r.deck.find(&"si_grunt")
+	var grunt: int = r.deck.find(&"kc_wip_private_1")
 	assert_eq(r.muster_out([r.deck.size() - 1]), "only Standard Issue cards can be mustered out", "not a calling card")
 	assert_eq(r.muster_out([grunt, grunt]), "copy %d is listed twice" % grunt, "no duplicates")
 	var four: Array = []
@@ -293,7 +293,7 @@ func test_muster_out_choice_floor_and_errors() -> void:
 			four.append(i)
 	assert_eq(r.muster_out(four), "you can send at most 3 Standard Issue cards home", "at most the count")
 	assert_eq(r.muster_out([grunt]), "", "send just one Grunt home (keep the rest)")
-	assert_eq(_count(r, &"si_grunt"), 2, "one Grunt gone")
+	assert_eq(_count(r, &"kc_wip_private_1"), 2, "one Private I gone")
 	# Floor: a deck at the floor (8, kc-econ) gets no Muster out.
 	var r2: RunProgress = _run()
 	while r2.deck.size() > r2.config.deck_floor:

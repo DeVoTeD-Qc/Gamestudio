@@ -337,6 +337,9 @@ static func play_name(state: MatchState, side: RulesSide, play: Dictionary) -> S
 			return "Place Operator"
 		&"rotate":
 			return "Rotate"
+		&"agile":
+			var mover: RulesUnit = side.find_unit(int(play["target_uid"]))
+			return "Move %s" % (mover.card.display_name if mover != null and mover.card != null else "unit")
 		&"item":
 			return (play["item"] as LoadoutItem).display_name if play["item"] != null else "Item"
 	var rc: RulesCard = play["card"]
@@ -367,6 +370,15 @@ static func _queued_arrivals(state: MatchState, side: RulesSide, z: int) -> Arra
 						"armor_max": op.max_armor(state.round_number),
 						"keywords": CardInfo.icon_keywords(CardInfo.operator_keywords(op)), "art": art_key(op, side)}
 				_banner_fields(entry, null, op, side)
+			&"agile":
+				# kc-wip-impl Agile: the ordered unit shows as a pending arrival in its destination.
+				var mover: RulesUnit = side.find_unit(int(p["target_uid"]))
+				if mover != null and mover.card != null:
+					entry = {"uid": mover.uid, "name": mover.card.display_name,
+							"cls": String(CardInfo.CLASS_WORDS.get(mover.card.weapon_class, "")).to_upper(),
+							"fp": state.firepower_of(mover), "armor": mover.armor, "armor_max": mover.max_armor(state.round_number),
+							"keywords": CardInfo.icon_keywords(CardInfo.keywords(mover.card)), "art": art_key_of_card(mover.card)}
+					_banner_fields(entry, mover.card, null, side, state, mover.uid)
 		if not entry.is_empty():
 			entry["pending"] = true
 			out.append(entry)

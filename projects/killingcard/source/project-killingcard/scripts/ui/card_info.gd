@@ -25,11 +25,16 @@ const KEYWORD_RULES: Dictionary = {
 	# kc-fight-ui (firefight-order.md §3; head's O3: the LMG units).
 	&"pierce": ["Pierce", "Damage beyond what its target needs carries on to the next enemy behind it (that unit's Cover applies)."],
 	&"cover": ["Cover %d", "Each hit on this unit deals %d less damage (minimum 0)."],
-	&"suppress": ["Suppress", "At the start of the firefight, the enemy point man here gets -2 Firepower."],
+	# kc-wip-impl: Suppress takes a number (Gunner Suppress 2, Riot Shield Suppress 1).
+	&"suppress": ["Suppress %d", "At the start of the firefight, the enemy point man here gets -%d Firepower this round. Several Suppress add up."],
 	&"patch": ["Patch %d", "After the firefight, restores %d Armor to the most damaged other friendly unit here."],
 	&"holder": ["Holder", "You control this zone while it is contested, unless the enemy also has a Holder here."],
 	&"on_deploy": ["On Deploy", "Happens when this unit is revealed and arrives."],
 	&"on_down": ["On Down", "Happens when this unit is eliminated."],
+	# kc-wip-impl (wip-set.md §2): the Wip set's new words, in plain language.
+	&"end_of_round": ["End of round", "Happens at the end of every round this unit is on the board (after the firefight, in the Score step)."],
+	&"agile": ["Agile", "Once per round, in Deploy, tap it and then an adjacent column: it moves there at Reveal, to the back of the line. Free. If that column is full then, it stays."],
+	&"beam": ["Beam", "Its shot hits every unit in front of it in its column: your own units ahead of it AND every enemy there, its Firepower each (Cover applies). In front, it only hits enemies."],
 	&"arrives_front": ["Arrives in front", "Joins the zone at the front of the line and becomes the point man."],
 	&"immediate": ["Resolves immediately", "Takes effect as soon as you play it in Deploy, so it can't be undone."],
 	&"hidden": ["Hidden", "Stays face-down after Reveal; the enemy only sees it when it goes off."],
@@ -43,6 +48,8 @@ const KEYWORD_RULES: Dictionary = {
 const ICON_KEYWORDS: Array[StringName] = [
 	&"first_shot", &"pick", &"flank", &"pierce", &"cover", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down",
 ]
+## kc-wip-impl: keyword ids with a value (Cover N, Patch N, Suppress N).
+const VALUE_KEYWORDS: Array[StringName] = [&"cover", &"patch", &"suppress"]
 
 
 ## Hand chip (hand_area.gd): {uid, id, name, type, card_type, weapon_class, keywords, cost, fp?,
@@ -85,7 +92,7 @@ static func short_text(card: CardData) -> String:
 	if card.is_unit():
 		var names: PackedStringArray = []
 		for k: Dictionary in keywords(card):
-			if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"cover", &"suppress", &"patch", &"holder"]:
+			if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"cover", &"suppress", &"patch", &"holder", &"agile", &"beam"]:
 				names.append(k["name"])
 		if not names.is_empty():
 			return ", ".join(names)
@@ -96,9 +103,9 @@ static func short_text(card: CardData) -> String:
 static func view_dict(card: CardData, side: String = "friend") -> Dictionary:
 	var kw: Array = []
 	for k: Dictionary in keywords(card):
-		if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"suppress", &"holder", &"on_deploy", &"on_down"]:
+		if k["id"] in [&"first_shot", &"pick", &"flank", &"pierce", &"holder", &"on_deploy", &"on_down", &"agile", &"beam", &"end_of_round"]:
 			kw.append(String(k["id"]))
-		elif k["id"] in [&"cover", &"patch"]:
+		elif k["id"] in VALUE_KEYWORDS:
 			kw.append({"id": String(k["id"]), "value": k["value"]})
 	return {
 		"id": String(card.id), "name": card.display_name, "type": TYPE_WORDS.get(card.card_type, "unit"),
@@ -118,11 +125,15 @@ static func keywords(card: CardData) -> Array[Dictionary]:
 		if card.cover > 0:
 			out.append(_entry(&"cover", card.cover))
 		if card.suppress:
-			out.append(_entry(&"suppress"))
+			out.append(_entry(&"suppress", card.suppress_amount))
 		if card.patch > 0:
 			out.append(_entry(&"patch", card.patch))
 		if card.holder:
 			out.append(_entry(&"holder"))
+		if card.agile:
+			out.append(_entry(&"agile"))
+		if card.beam:
+			out.append(_entry(&"beam"))
 		if card.arrives_front:
 			out.append(_entry(&"arrives_front"))
 	var triggers: Array[int] = []
@@ -133,6 +144,8 @@ static func keywords(card: CardData) -> Array[Dictionary]:
 		out.append(_entry(&"on_deploy"))
 	if triggers.has(DataEnums.Trigger.ON_DOWN):
 		out.append(_entry(&"on_down"))
+	if card.is_unit() and triggers.has(DataEnums.Trigger.END_OF_ROUND):
+		out.append(_entry(&"end_of_round"))
 	if triggers.has(DataEnums.Trigger.IMMEDIATE):
 		out.append(_entry(&"immediate"))
 	if card.hidden:
@@ -164,11 +177,15 @@ static func operator_keywords(op: RulesUnit) -> Array[Dictionary]:
 	if op.cover > 0:
 		out.append(_entry(&"cover", op.cover))
 	if op.suppress:
-		out.append(_entry(&"suppress"))
+		out.append(_entry(&"suppress", op.suppress_amount))
 	if op.patch > 0:
 		out.append(_entry(&"patch", op.patch))
 	if op.holder:
 		out.append(_entry(&"holder"))
+	if op.agile:
+		out.append(_entry(&"agile"))
+	if op.beam:
+		out.append(_entry(&"beam"))
 	return out
 
 
@@ -177,7 +194,7 @@ static func unit_keywords(u: RulesUnit) -> Array[Dictionary]:
 	var out: Array[Dictionary] = operator_keywords(u)
 	if u.card != null:
 		for k: Dictionary in keywords(u.card):
-			if k["id"] in [&"on_deploy", &"on_down"]:
+			if k["id"] in [&"on_deploy", &"on_down", &"end_of_round"]:
 				out.append(k)
 	return out
 

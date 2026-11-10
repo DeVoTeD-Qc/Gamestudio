@@ -406,7 +406,7 @@ func test_pierce_is_on_the_lmg_units_only() -> void:
 				pierce.append(c.id)
 				assert_true(c.text.contains("Pierce"), "%s: the text says Pierce" % c.id)
 	pierce.sort()
-	assert_eq(pierce, [&"demolitions_expert", &"gunner"] as Array[StringName], "the Gunner and the Demolitions Expert")
+	assert_eq(pierce, [&"demolitions_expert", &"gunner", &"kc_wip_juggernaut"] as Array[StringName], "the Gunner, the Demolitions Expert and the Juggernaut (kc-wip-impl)")
 	var v: DataValidator = DataValidator.new()
 	var bad: CardData = F.hold_the_line()
 	bad.pierce = true

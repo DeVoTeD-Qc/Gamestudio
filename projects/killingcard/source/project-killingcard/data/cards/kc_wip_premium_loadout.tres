@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_fe183"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_g53e4"]
+
+[sub_resource type="Resource" id="Resource_yji3d"]
+script = ExtResource("1_fe183")
+trigger = 0
+kind = 2
+target = 4
+zone_scope = 6
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[sub_resource type="Resource" id="Resource_8vm57"]
+script = ExtResource("1_fe183")
+trigger = 0
+kind = 3
+target = 4
+zone_scope = 6
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_g53e4")
+id = &"kc_wip_premium_loadout"
+display_name = "Premium Loadout"
+card_type = 1
+is_elite = false
+text = "A unit of yours gets +1/+1."
+cost = 1
+weapon_class = 0
+firepower = 0
+armor = 0
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &""
+trait_options = Array[StringName]([])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_fe183")]([SubResource("Resource_yji3d"), SubResource("Resource_8vm57")])

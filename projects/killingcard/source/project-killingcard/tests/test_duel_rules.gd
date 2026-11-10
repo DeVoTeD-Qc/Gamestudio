@@ -52,8 +52,9 @@ func test_pool_excludes_tokens_standard_issue_and_counts_30() -> void:
 	var ids: Array[StringName] = []
 	for c: CardData in pool:
 		ids.append(c.id)
-	assert_eq(pool.size(), 30, "30 collectible chassis")
-	for bad: StringName in [&"sentry", &"shambler", &"si_grunt", &"si_trooper", &"si_sergeant", &"si_armored"]:
+	assert_eq(pool.size(), 45, "45 collectible chassis (kc-wip-impl: + the 15 Wip cards)")
+	for bad: StringName in [&"sentry", &"shambler", &"si_grunt", &"si_trooper", &"si_sergeant", &"si_armored",
+			&"kc_wip_private_1", &"kc_wip_private_2", &"kc_wip_private_3", &"kc_wip_private_4"]:
 		assert_false(bad in ids, "%s is never in the Duel pool" % bad)
 	var units: int = 0
 	var elites: int = 0
@@ -68,7 +69,7 @@ func test_pool_excludes_tokens_standard_issue_and_counts_30() -> void:
 			fields += 1
 		else:
 			tactics += 1
-	assert_eq([units, elites, tactics, fields], [11, 2, 9, 8], "11 units, 2 Elites, 9 tactics, 8 Fields")
+	assert_eq([units, elites, tactics, fields], [23, 2, 12, 8], "23 units (12 Wip), 2 Elites, 12 tactics (3 Wip), 8 Fields")
 
 
 func test_legal_deck_is_ready() -> void:

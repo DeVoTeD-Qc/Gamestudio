@@ -99,7 +99,7 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 	var art: BannerArt = null
 	# kc-mw3-cards (head): in the private pitch build a Standard Issue art (si_*) wears its licensed
 	# calling card ahead of the public drop-in; the public build has no licensed rows and keeps ours.
-	if licensed_enabled and String(art_id).begins_with("si_"):
+	if licensed_enabled and ArtTraits.is_standard_issue_id(art_id):
 		art = _licensed_art(art_id)
 	var path: String = BANNER_DIR + String(art_id) + ".tres"
 	if art == null and drop_in_enabled and art_id != &"" and ResourceLoader.exists(path):

@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_d6c5j"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_emfs1"]
+
+[resource]
+script = ExtResource("2_emfs1")
+id = &"kc_wip_riot_shield"
+display_name = "Riot Shield"
+card_type = 0
+is_elite = false
+text = "Suppress 1. Cover 1."
+cost = 4
+weapon_class = 0
+firepower = 1
+armor = 3
+first_shot = false
+pick = false
+flank = false
+cover = 1
+suppress = true
+suppress_amount = 1
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &"vanguard"
+trait_options = Array[StringName]([&"vanguard"])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_d6c5j")]([])

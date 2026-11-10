@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/effect_data.gd" id="1_naopb"]
+[ext_resource type="Script" path="res://scripts/data/card_data.gd" id="2_gqtqi"]
+
+[sub_resource type="Resource" id="Resource_37xf1"]
+script = ExtResource("1_naopb")
+trigger = 2
+kind = 21
+target = 2
+zone_scope = 6
+target_class = 0
+amount = 1
+bonus_amount = 0
+bonus_condition = 0
+condition = 0
+duration_rounds = 0
+delay_rounds = 0
+
+[resource]
+script = ExtResource("2_gqtqi")
+id = &"kc_wip_hacker"
+display_name = "Hacker"
+card_type = 0
+is_elite = false
+text = "On Deploy: +1 Supply next round."
+cost = 2
+weapon_class = 1
+firepower = 1
+armor = 1
+first_shot = false
+pick = false
+flank = false
+cover = 0
+suppress = false
+suppress_amount = 2
+pierce = false
+patch = 0
+holder = false
+agile = false
+beam = false
+neighbor_keyword = &""
+card_trait = &"specops"
+trait_options = Array[StringName]([&"specops"])
+arrives_front = false
+hidden = false
+consumed_on_trigger = false
+counts_for_control = true
+grants_elimination_credit = true
+collectible = true
+standard_issue = false
+effects = Array[ExtResource("1_naopb")]([SubResource("Resource_37xf1")])
