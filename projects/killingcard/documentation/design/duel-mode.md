@@ -4,6 +4,8 @@
 *Inputs: `run-v2.md` (§7 Operators, §15 kc-econ economy), `card-system.md`, `synergy-system.md` (traits v2.2), `onboarding-progression.md` (reward rungs, Codex), `art-traits.md` (a copy's trait comes from its art), `data/cards/*.tres`, `data/loadout/*.tres`, `data/run_config.tres`, `scripts/ui/match_controller.gd` (today's Quick Match), `scripts/data/pitch_decks.gd`.*
 *The head (verbatim): "a campaign mode where we start with the starter deck and play through as we have now. But also a duel mode where you set up a small deck and play a one-shot battle against AI or another player. Deck building should be simple and straightforward: you pick only 10 or 12 cards; as soon as you select a card it's 2 copies in the deck; then you select a hero that's a single card with a special feature. No huge decks with 3-4 copies. Maybe you need to draw the hero, maybe you start with it — that's a good question."*
 
+> **kc-duel-tune (2026-11-10): the head answered D1–D5, and §12 "Decisions" is now the source of truth.** In short: the hero stays in its own slot and decks stay at 10 picks (D1, D2 as recommended). The card pool follows D3 (a). There is **one set of Operator numbers for both modes** (D4 b): Wasp-9 2/9, Bastion-60 2/8, Marked Shot 2. The duel-only hero lines of §3.3 are dropped. **The player picks a Doctrine** (D5 c): in Duel it starts a set but never completes one. The Undead set moves its Cover from the 3-set to the 2-set. Where §0–§11 disagree with §12, §12 wins.
+
 ## 0. Summary in eight lines
 1. **A Duel deck is 10 picks plus 1 hero.** Every pick puts exactly 2 copies in the deck, so the deck is always 20 cards. You can pick each card once. The deck needs at least 5 unit picks, at most 1 Elite ★ pick and at most 3 Field picks. Nothing else blocks it; the curve and set hints are advice only (§2).
 2. **The hero is your Operator** (Kestrel AR-7, Longreach .338, Wasp-9, Bastion-60): its body, its passive and its once-per-match ability. **It starts in your command slot**, as it does today. You can place it from round 1 (free in round 1), and it respawns for 1 Supply. It is never shuffled into the deck. In the sim, a hero you had to draw never showed up in 44% of games, and the side that got its hero first won 85% (§3).
@@ -396,3 +398,108 @@ Hot-seat privacy (no hand visible under a cover, on every transition), deck save
 3. **The Duel card pool?** (a) **All units and tactics from the start; Fields and Elites unlock when found in the campaign; the presets are always playable** (the campaign feeds Duel). (b) Everything open from the start (no link to the campaign). (c) Only cards found in the campaign (new players can only play presets at first).
 4. **Hero numbers in Duel?** (a) **Duel-only numbers** (Kestrel 3/7, Longreach 3/6 with Marked Shot 2, Wasp-9 2/8, Bastion-60 2/7: heroes 48–55% in duels; the campaign is unchanged). (b) One set of numbers for both modes: use these in the campaign too, then re-tune the campaign (run_v2_check). (c) The campaign numbers in Duel too (Longreach wins 72% of hero duels, Bastion-60 31%).
 5. **Doctrine and sets in Duel?** (a) **No Doctrine in Duel** (a campaign reward; mono-Undead 71% → 51–59%). (b) Doctrine = the deck's main trait, with an Undead 3-set change for both modes (campaign Undead falls to 41%). (c) The player picks a Doctrine trait in the builder (one more choice; mono decks stay over 60%).
+
+
+## 12. Decisions (kc-duel-tune, 2026-11-10)
+*Board task kc-duel-tune. Tools: `tests/tools/duel_sim.gd`, whose defaults are now this section's design, applied in memory; `tests/tools/run_v2_check.gd`, with new options `eset=`, `latt=` and `docrule=` plus a sanity line that prints the Operator numbers in use; and the new `tests/tools/doctrine_match.gd`, a what-if MatchState with alternative Doctrine rules. No rule, data or UI file was changed. More than 60,000 games in all.*
+
+### 12.1 The head's answers
+| # | Answer | Effect on this spec |
+|---|---|---|
+| D1 | (a) the hero has its own slot from round 1 | §3.2 stands |
+| D2 | (a) 10 picks | §2 stands |
+| D3 | (a) units and tactics open, Fields and Elites unlock in the campaign, presets always playable | §7 stands |
+| D4 | **(b) one set of Operator numbers for both modes**, then retune the campaign | §3.3's duel-only lines are **dropped**; see §12.2 |
+| D5 | **(c) the player picks a Doctrine trait** | §2.4's "no Doctrine" is **replaced**; see §12.3 |
+
+### 12.2 One set of Operator numbers (both modes)
+| Operator | Shipped (kc-econ) | **New, both modes** | Duel, each hero on all 4 presets mirrored (n ≈ 720) | Campaign run win, competent, 600 runs (150 each) | Campaign vs the others |
+|---|---|---|---|---|---|
+| Kestrel AR-7 | 3/8, Quartermaster +1, Dig In Cover 1 | **unchanged** | 51.7% | 38.0% | 50.0% |
+| Longreach .338 | 3/7, Marked Shot **3** | 3/7, **Marked Shot 2** | 54.5% | 36.0% | 47.2% |
+| Wasp-9 | 2/**7** | **2/9** | 43.5% | 38.0% | 50.0% |
+| Bastion-60 | 2/**6** | **2/8** | 50.3% | 40.0% | 52.8% |
+
+- **How it was found.** The campaign needs Kestrel's 3 FP. At 2 FP its run win falls to 22–28%, and at 3/7 to 27%. In Duel, Kestrel's extra opening card is worth more because the deck is better. So Kestrel keeps its campaign body and the other three were raised to meet it. Wasp-9 and Bastion-60 got +2 Armor each, which helps them in both modes. Longreach's Marked Shot went from 3 to 2 damage: in Duel the shot killed a 2-drop for free, while the campaign barely notices (its run win stays 36–40%). Longreach's Armor stays 7, because at 3/6 its campaign F1 fell to 48%.
+- **Rejected along the way** (each row is a measured run): §3.3's duel-only lines tried in the campaign (Kestrel 3/7 run win 27%, Heavy trait 37%). Kestrel 2/8 or 2/9 (Duel 48–56%, but campaign 22–28%). Dig In Cover 2 (Duel Kestrel 69%). Longreach 3/6 (campaign F1 48%). Marked Shot 1 (works, but 1 damage hardly reads as an ability). Wasp-9 2/10 (Duel 44.3%, no better than 2/9; campaign 42.5%). Bastion-60 2/7 with Covering Fire +2 (campaign 52.5%, too strong).
+- **Watch items:** Wasp-9 sits at **43.5%** in Duel, 1.5 points under the band (about ±1.9 SE). It's insensitive to Armor, so the next lever is Flashbang's −2 FP → −3 FP (untested). Longreach is at the top in Duel (54.5%). The crews keep their own crew-only `kestrel_ar7_crew` and `wasp_9_crew` resources (unchanged).
+
+### 12.3 Doctrine in Duel (the player picks it) and the mono-Undead fix
+**The rule (Duel):** in the builder the player picks one trait as the deck's **Doctrine**, or None. The default is the trait with the most picks. **A Duel Doctrine starts the set but never completes one:** while exactly **one** of your units or Fields of that trait is in play, it counts as two, so its 2-set is on. It never adds to a count of 2 or more, so the 3-set always needs 3 real members. Card text: *"Doctrine: your first Undead in play already turns on the Undead 2-set."*
+- **Restriction:** the Doctrine trait needs **at least 4 picks wearing it** (8 cards). Otherwise the red line reads "Doctrine Undead needs 4 Undead picks (3/4)". A Doctrine is a deck's identity, not a bonus for a two-card splash.
+- **The campaign's Doctrine is unchanged** (+1 while you have at least one member, chosen by your first calling card). The "starts the set only" rule was tested there too. With the old Undead table it dropped the competent run to 27.7% and Undead to 36–39%, so it is Duel only. The two rules agree whenever you have exactly one member in play, which is when a new player first meets Doctrine.
+
+**Why Doctrine and Undead changed together:**
+
+| Duel presets, n = 100 per pair (rows 1 and 3: §3.3's hero lines; rows 2 and 4: the new set of §12.2) | Spearhead (V) | Overwatch (SO) | Iron Wall (H) | Hollow Ranks (U) |
+|---|---|---|---|---|
+| Doctrine with the campaign rule, shipped Undead | 37.1 | 54.0 | 46.0 | **62.9** (71–74% with Aid Station, Medic and Kestrel) |
+| Duel Doctrine "starts the set", shipped Undead | 54.8 | 51.2 | 55.7 | **38.3** (strongest searched Undead deck 29%; **Vanguard 70%**) |
+| Duel Doctrine "completes the set only" | 25.7 | 57.3 | 34.0 | 66.7 |
+| **Duel Doctrine "starts the set" + Undead 2-set heal 1 + Cover 1, 3-set +1 FP (final)** | **48.2** | **53.1** | **45.8** | **52.9** (n = 200 per pair) |
+
+- In a 2-copy deck, a Doctrine that adds +1 at any count completes the 3-set with two units. Undead's 3-set (+1 FP and Cover 1) is the strongest in the game, so mono-Undead ran away. A Doctrine that only starts sets turns it around: Vanguard, whose only bonus is its 2-set, wins 70%. Moving Undead's Cover from the 3-set to the 2-set evens out what each trait gets from the 2-set and from the 3-set, and the Duel meta flattens.
+- **Undead table (both modes):** 2-set = **heal 1 + Cover 1** (was heal 1). 3-set = **+1 FP** (was +1 FP and Cover 1). With the campaign's own Doctrine the campaign traits stay in band (§12.5): Undead 52.7%, against 50.4% shipped.
+- **Strongest custom decks after the change** (`duel_sim exps=search`: 40 steps of hill-climbing from each preset, cards and hero; then 200 fresh games against the 4 presets):
+
+| Trait | Best deck found | Hero | vs the presets |
+|---|---|---|---|
+| Heavy | Rifleman, Breacher (H), Gunner (H), Demolitions Expert (H), Okafor Anvil ★ (H), Point Man, Tripwire Charge, Ammo Resupply, Blackout, Suppressing Fire | Bastion-60 | **66.0%** |
+| Undead | Rifleman (U), Brawler (U), Point Man (U), Shieldman (U), Recon Specialist (U), Flanker (U), Okafor Anvil ★, Breach and Clear, Hold the Line, Flank Route | Wasp-9 | 62.0% |
+| Vanguard | Point Man (V), Rifleman, Breacher (V), Gunner, Okafor Anvil ★, Brawler (U), Bulwark (V), Flank Route, Combat Medic, Demolitions Expert | Longreach | 61.8% |
+| Spec Ops | Rifleman (SO), Recon (SO), Marksman (SO), Brawler (SO), Flanker (SO), Okafor Anvil ★, Combat Medic (SO), Ammo Resupply, Suppressing Fire, Breach and Clear | Longreach | 59.8% |
+
+A searched deck should beat the presets: it's built against them. What matters is that the four traits' best decks sit within 6 points of each other (59.8–66.0), with no single runaway. Under the campaign Doctrine rule mono-Undead reached 71–74% *in the preset round robin itself*. Watch item: Okafor Anvil ★ shows up in all four best decks. It's the Elite pick of choice, and Elite pricing is the next lever (for example 6 Supply).
+
+### 12.4 Final Duel numbers (`duel_sim`, defaults = this design)
+| Check | Target | Result |
+|---|---|---|
+| Presets, round robin, n = 200 per pair | 45–55% each | Spearhead **48.2** · Overwatch **53.1** · Iron Wall **45.8** · Hollow Ranks **52.9** |
+| Pairs | – | Sp–Ow 46.5 · Sp–IW 58.0 · Sp–HR 40.0 · Ow–IW 56.5 · Ow–HR 49.2 · IW–HR 52.0 |
+| Seat 0 / rounds / draws | 45–55 / 6–8 | 50.7% / 6.14 / 0.1% |
+| Heroes, n ≈ 720 each | 45–55% | 51.7 / 54.5 / **43.5** / 50.3 (Kestrel, Longreach, Wasp-9, Bastion-60) |
+| AI: new-player proxy vs Recruit | 65–75% | 73.8% |
+| AI: competent proxy vs Regular / Veteran | 55–65 / 45–55% | **66.2%** / 46.7% (Regular at the edge; second-best 0.5 read 66.7%, so the lever is weak; keep 0.6) |
+
+**Preset changes (content):** Overwatch: **Smoke Screen → Ammo Resupply**. Hollow Ranks: **Sabotage → Listening Post**. The heroes are unchanged (Spearhead Kestrel, Overwatch Longreach, Iron Wall Bastion-60, Hollow Ranks Wasp-9). Each preset's Doctrine is its own trait. The spare picks 11–12 become Overwatch: Callout, Smoke Screen; Hollow Ranks: Combat Medic, Aid Station.
+
+### 12.5 Final campaign numbers (`run_v2_check`, 600 runs, competent, Operators and bosses rotating, the new Operator numbers and Undead table, the shipped campaign Doctrine)
+| Target | Shipped kc-econ | **After kc-duel-tune** |
+|---|---|---|
+| New player (casual) F1, first run (65–75%) | 68.8% | **68.8%** (Kestrel and Meridian unchanged; first run 38.5%) |
+| Competent run 2+ (38–43%) | 40.5% (39.0% on these 300 seeds) | **38.0%** |
+| Ramp F1 / F2 / Elite I / F3 / Elite II / F4 / Boss | 86 / 89 / 79 / 85 / 68 / 67 / 42 | 95 / 90 / 83 / 89 / 77 / 76 / 39 |
+| Operators vs the others (45–55%) | 45.9 / 54.7 / 47.3 / 52.0 | **50.0 / 47.2 / 50.0 / 52.8** |
+| Boss fights Meridian / Prime / Choir | 45.5 / 39.1 / 40.6 | 44.9 / 33.0 / 37.7 |
+| Traits, end-of-run decks (44–56%; n = 300 each) | 50.4 / 50.0 / 51.1 / 48.5 (U / V / H / SO) | **52.7 / 44.7 / 50.0 / 52.7** |
+| Seat 0 late / Standard Issue (45–55%) | 51.6 / 48.0 | 48.5 / 48.0 |
+| Aware vs blind (≥ 55%) | 59.2% | 63.1% |
+
+- **No crew, boss or map lever had to change.** Raising Wasp-9 and Bastion-60 lifts the mid-run (F4 67 → 76%), and the boss stays the peak (39%). Vanguard (44.7%) and Prime (33%) are the edge values to watch. Their levers are a Vanguard 3-set (the v2.0 Cover +1) and Prime's pits in 2 columns instead of 3. Prime's 2-column variant was tested inside other runs and was not needed here.
+- Noise: campaign trait rows swing ±5–8 points between deck samples (seen across this task's 600-run samples), so read the trait row as "in band", not to the decimal.
+
+### 12.6 Exact changes for the mechanics developer (kc-duel-impl)
+| # | File | Field | From | To |
+|---|---|---|---|---|
+| 1 | `data/loadout/wasp_9.tres` | `operator_armor` | 7 | **9** |
+| 2 | `data/loadout/bastion_60.tres` | `operator_armor` | 6 | **8** |
+| 3 | `data/loadout/ab_marked_shot.tres` | `effects[0].amount` (sub-resource) | 3 | **2** |
+| 4 | `data/loadout/ab_marked_shot.tres` | `text` | "…free: 3 damage to an enemy unit…" | "Once per match, free: **2** damage to an enemy unit in your Operator's column." |
+| 5 | `scripts/ui/run/run_v2_views.gd` (line ~78) | Marked Shot ability string | "3 damage…" | "2 damage to an enemy unit in the Operator's column." (and any other copy of this text; grep "3 damage to an enemy unit") |
+| 6 | `scripts/rules/synergy_rules.gd` | `TRAIT_BONUS[UNDEAD]` | `[{"heal": 1}, {"fp": 1, "cover": 1}]` | **`[{"heal": 1, "cover": 1}, {"fp": 1}]`** |
+| 7 | `scripts/rules/synergy_rules.gd` | `TIER_TEXT[UNDEAD]` | ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"] | **["Undead get Cover +1 and heal 1 at the end of the round", "Undead get +1 FP"]** |
+| 8 | `scripts/rules/synergy_rules.gd` | `trait_counts()` (and `compute()`) | Doctrine: +1 while count > 0 | add a parameter `doctrine_starts_only: bool = false`; when true, Doctrine adds +1 **only while the real count == 1** (reference: `tests/tools/doctrine_match.gd`) |
+| 9 | `scripts/rules/side_setup.gd` | new `doctrine_starts_only: bool = false` | – | `DuelRules.side_setup` sets it **true**; the campaign leaves it false |
+| 10 | `scripts/rules/match_state.gd` | `_syn_refresh`, `preview_synergy` (both `SynergyRules.compute` calls), and `scripts/run/reveal_flags.gd` | – | pass `setup.doctrine_starts_only` |
+| 11 | `scripts/ai/ai_view.gd` and `scripts/ai/ai_planner.gd` (`_synergy_of_plan`) | – | – | carry and pass the same flag, so the AI values plans with the Duel rule |
+| 12 | `data/duel/duel_config.tres` | `doctrine_enabled` / `doctrine_required` / `doctrine_min_trait_picks` | true / false / 0 | true / **false** (None allowed; the builder pre-selects the most-picked trait) / **4** |
+| 13 | `data/duel/presets/overwatch.tres` | picks | … Smoke Screen … | Smoke Screen → **Ammo Resupply** |
+| 14 | `data/duel/presets/hollow_ranks.tres` | picks | … Sabotage … | Sabotage → **Listening Post** |
+| 15 | `data/duel/presets/*.tres` | `doctrine_trait` | – | Spearhead vanguard · Overwatch specops · Iron Wall heavy · Hollow Ranks undead |
+| 16 | (none) | duel-only hero resources (`*_duel.tres`, `ab_marked_shot_duel.tres` from §9.1) | planned | **do not create**: the heroes use the shared Operators |
+| 17 | `data/run_config.tres`, crews, bosses, map Armor | – | – | **unchanged** |
+| 18 | `data/duel/duel_config.tres` | `recruit_*`, `regular_second_best`, `veteran_second_best` | – | unchanged (−1 / 0.6 / 0.6 / 0.0) |
+
+- **UI copy:** the Doctrine chip in the builder (under the hero strip): "DOCTRINE: Undead ▾", with None and the traits that have 4 or more picks. Its inspector (long press / right click) says: "Doctrine: your first Undead in play already turns on the Undead 2-set. The 3-set still needs 3 Undead." The trait rail shows the Doctrine star as today. The Codex glossary keeps the campaign line and adds "In Duel, Doctrine only starts a set."
+- **Tests to update:** synergy tests that assert the Undead set numbers, Marked Shot damage (3 → 2), Operator stats in the data tests (Wasp-9 2/9, Bastion-60 2/8), and new tests for the Doctrine flag (count 1 → 2 on, count 2 stays 2, flag off = the old rule).
+- **Re-measure after the port:** `duel_sim exps=presets,heroes,ai n=200` (its in-memory defaults set the same absolute values as the ported data, so the result is the same with or without `heroline=campaign`). Check the Operator and trait lines it prints, and `run_v2_check exps=runs,late runs=600 tn=100` plus `first=1 proxies=casual runs=400`.
