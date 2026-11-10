@@ -707,8 +707,7 @@ def end_score(s):
     if CFG["mil"]:
         for k in (0, 1):
             s.score[k] += s.armor[k] * CFG["armor_end"]
-            if CFG["hold"]:
-                s.trig["unfired_end"] += sum(s.mat[k])
+            s.trig["unfired_end"] += sum(s.mat[k])
         f = s.front * CFG["front_end"]
         if f > 0:
             s.score[0] += f
@@ -1401,13 +1400,20 @@ def sec_power(n, rng, var="v3 launch (auto at 3)", only=None):
     use({})
 
 
+SEED = [41]
+
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 100
     secs = sys.argv[2:] or ["hold", "seat", "length", "stacks", "density"]
     vnames = None
     if "core" in secs:   # launch, hold, and the two tweaks recommended in rally-point-v4.md
         vnames = ["v3 launch (auto at 3)", "hold (cap 6)", "hold + Called Shot", "Called Shot (auto at 3)"]
-    rng = random.Random(41)
+    for a in secs:
+        if a.startswith("v="):  # pick variants by number, e.g. v=1,4
+            vnames = [list(VARIANTS)[int(k)] for k in a[2:].split(",")]
+        if a.startswith("seed="):
+            SEED[0] = int(a[5:])
+    rng = random.Random(SEED[0])
     for nm, st in STACKS.items():
         assert len(st) == 12, nm
     if "hold" in secs:
@@ -1428,3 +1434,5 @@ if __name__ == "__main__":
         sec_power(n, rng, "hold (cap 6)")
     if "tweaks" in secs:
         sec_hold(n, rng)
+    if "skill3" in secs:   # the v3 skill table under v4's AIs
+        sec_skill(n, rng)
