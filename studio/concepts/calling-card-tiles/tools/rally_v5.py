@@ -1,4 +1,30 @@
-"""Rally Point v4: "hold an order" and the military power test.
+"""Rally Point v5: the rulebook's simulator (rally-point-v5.md).
+Standard library only.  Copied from rally_v4.py, which is unchanged; the v4 sections still run.
+
+    python3 -I rally_v5.py [games] [section ...]
+
+v5 sections: layers (skill, seats, length per layer), ai (head to head, p=tunedvsmart,...),
+stacks5 (starter round robin).  Options: l=0,1 picks LAYERS by number, stk=f applies a starter
+swap set (STACK_FIXES), w=mat:0.3,... overrides the tuned AI weights, seed=N.
+
+What v5 changes from v4
+  * Bug fix: moves_for read the Field Kit (p02) patch ability from the raw card data, so it could
+    patch with card text off (Basic).  It now reads it through AB().
+  * No geometric cover (cover=False by default).  Only cards protect: an own Bunker or an own Smoke
+    (until its owner's next turn) that the tile touches.  Spot and Fire Mission ignore protection.
+  * The Strike target rule is the same for every AI: an enemy tile that touches an open objective.
+    With no Front, a Strike must remove a tile if it can, else it scores 1.
+  * The v4 power fixes are printed on the cards: Bunker Command 2, Shock Line Breach +2.
+  * Materiel: 1 per tile touching a rally; card text (insignia 2, "Rally: +1 ...") only with
+    text=True; owner_mat switches the objective owner's +1 (cut in v5).  spot_charge, spot_dmg,
+    spot_push, supply_push and fort_regain switch the parts of Spot, Resupply and Fortify.
+  * LAYERS: L0 Tiles, L1 Basic (BASIC5), L2 Cards, and "v5 L3/L4/L5" for the rulebook.
+  * AI weights per seat (WSETS): "smart" keeps v3's FLAGS, "tuned" is the v5 retune.  Policy
+    "smartnt" is smart without the one-step Strike targeter.
+
+The v4 notes follow.
+
+Rally Point v4: "hold an order" and the military power test.
 Standard library only.  Derived from rally_v3.py (see rally-point-v3.md for the base rules and
 rally-point-v4.md for this pass).  v1-v3 (rally.py, rally_v2.py, rally_v3.py) are unchanged.
 
@@ -815,7 +841,11 @@ def closable(s, e):
 
 FLAGS = dict(expo=0.8, mat=0.55, armor=0.5, streak=0.35, spot=0.9, front=1.3, draw=0.3, extra=2.5,
              threat=0.4, hq=3.0, rallymat=1.0)
-WSETS = {"smart": FLAGS}
+# v5 retune (rally-point-v5.md section 6): a materiel is worth mat * 3 / threshold, and the
+# military terms are about half of v3's
+TUNED = dict(FLAGS, scale=1, mat=0.35, armor=0.25, streak=0.175, spot=0.45, front=0.65,
+             threat=0.2, hq=1.5)
+WSETS = {"smart": FLAGS, "tuned": TUNED}
 CURW = [FLAGS]   # the weights of the player whose turn it is (set in play)
 
 
@@ -1188,6 +1218,8 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
 def outcome(s):
     if s.winner is not None:
         return s.winner
+    if CFG.get("tie_p2"):   # v5 option: no starting point; the second player wins ties
+        return 0 if s.score[0] > s.score[1] else 1
     a, b = (s.score[0], s.rallies[0]), (s.score[1], s.rallies[1])
     return 0 if a > b else 1 if b > a else -1
 
@@ -1675,9 +1707,37 @@ LAYERS = {
     "L5 trimmed, Front 5 each way": dict(L5, fmax=5, **SIMPLE),
     "L4 trimmed, Front 4 each way": dict(L4, fmax=4, **SIMPLE),
     "L5 trimmed, Front 4 each way": dict(L5, fmax=4, **SIMPLE),
+    "L5 trimmed, Front 4, Fortify wins back 1": dict(L5, fmax=4, **dict(SIMPLE, fort_regain=1)),
+    "L5 trimmed, Front 5, spotted Strike +1": dict(L5, fmax=5, **dict(SIMPLE, spot_dmg=1)),
+    # the v5 rulebook (rally-point-v5.md): L0-L2 as above, then these
+    "v5 L3 Classes": dict(L3, owner_mat=False),
+    "v5 L4 Front Line": dict(L4, fmax=5, **dict(SIMPLE, spot_dmg=1)),
+    "v5 L5 Streaks (ranked rules)": dict(L5, fmax=5, **dict(SIMPLE, spot_dmg=1)),
 }
 RULESETS.update(LAYERS)
 VARIANTS.update({k: v for k, v in LAYERS.items()})
+
+
+STACKS_V4 = dict(STACKS)
+STACK_FIXES = {   # candidate starter swaps for the no-cover rules (rally-point-v5.md section 4)
+    "c": {"T3 Relay Net (R+E)": [("r01", "r03")], "T4 Shock and Supply (A+S)": [("a01", "a04")]},
+    "d": {"T3 Relay Net (R+E)": [("r01", "r03")], "T4 Shock and Supply (A+S)": [("a02", "a04")]},
+    "e": {"T3 Relay Net (R+E)": [("g01", "r03")], "T4 Shock and Supply (A+S)": [("a01", "a04")]},
+    "f": {"T3 Relay Net (R+E)": [("r01", "r03")],
+          "T4 Shock and Supply (A+S)": [("a01", "a04"), ("p02", "p03")]},
+    "g": {"T3 Relay Net (R+E)": [("r01", "r03")],
+          "T4 Shock and Supply (A+S)": [("a01", "a04"), ("a02", "a04")]},
+}
+
+
+def fix_stacks(key):
+    STACKS.clear()
+    STACKS.update(STACKS_V4)
+    for name, swaps in STACK_FIXES.get(key, {}).items():
+        st = list(STACKS[name])
+        for old, new in swaps:
+            st[st.index(old)] = new
+        STACKS[name] = st
 
 
 def sec_layers(n, rng, names):
@@ -1703,6 +1763,23 @@ def sec_layers(n, rng, names):
               f" {sum(trig[k] for k in MIL_KEYS) / g:4.1f} | {trig['strike'] / g:4.2f} |"
               f" {pct(trig['perfect'], g)} | {st['opts'] / t:5.1f} {st['distinct'] / t:4.1f}"
               f" {st['spread'] / t:4.2f}", flush=True)
+    use({})
+
+
+def sec_seat5(n, rng, names):
+    print(f"== Seats: smart mirror, a random starter against itself, {2 * n} games per cell (P1 win %)")
+    for nm in names:
+        out = []
+        for lab, comp, tie in (("P2 starts with 1", "p2:1", False), ("no komi", "none", False),
+                               ("P2 wins ties", "none", True)):
+            use(dict(LAYERS[nm], tie_p2=tie))
+            tot = Counter()
+            for _ in range(n):
+                a = rng.choice(list(STACKS))
+                r0, _, _ = match(rng, STACKS[a], STACKS[a], "smart", "smart", 1, comp)
+                tot.update(r0)
+            out.append(f"{lab} {pct(tot['p1'], 2 * n)}")
+        print(f"  {nm:<36} | " + " | ".join(out), flush=True)
     use({})
 
 
@@ -1758,6 +1835,8 @@ if __name__ == "__main__":
         sec_rules(n, rng, rn)
     lnames = list(LAYERS)
     for a in secs:
+        if a.startswith("stk="):   # starter swaps, e.g. stk=c
+            fix_stacks(a[4:])
         if a.startswith("l="):
             lnames = [list(LAYERS)[int(k)] for k in a[2:].split(",")]
         if a.startswith("w="):   # tuned weights, e.g. w=mat:0.3,front:1.0
@@ -1767,6 +1846,8 @@ if __name__ == "__main__":
                 WSETS["tuned"][k] = float(v)
     if "layers" in secs:
         sec_layers(n, rng, lnames)
+    if "seat5" in secs:
+        sec_seat5(n, rng, lnames)
     if "ai" in secs:
         prs = [tuple(x.split("v")) for a in secs if a.startswith("p=") for x in a[2:].split(",")]
         sec_ai(n, rng, lnames, prs or [("smart", "milblind")])
