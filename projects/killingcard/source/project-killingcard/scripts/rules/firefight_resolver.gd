@@ -7,8 +7,8 @@
 #      the next; then the lines close up.
 #   1. Columns resolve in order A (left) -> B (mid) -> C (right); a column fights only when both
 #      sides have units in it. In a column:
-#      a. Suppress: each Suppress unit gives the enemy front unit -2 FP this round (it pins that
-#         unit, not the slot).
+#      a. Suppress N: each Suppress N unit gives the enemy front unit -N FP this round (it pins that
+#         unit, not the slot; kc-wip-impl: the Gunner is Suppress 2, the Riot Shield Suppress 1).
 #      b. Beats until the column is resolved. In a beat the front-most living unit of each side
 #         that has not fired this round shoots; the two shots are simultaneous. First Shot
 #         exchange (head's answer O2): when exactly one of the two has First Shot, it fires first
@@ -22,6 +22,10 @@
 #         lines move up. Every unit fires at most once per round (`RulesUnit.fired`; moving up
 #         never resets it). The column ends when one side has no units left in it, or no unit on
 #         either side can still fire.
+#         kc-wip-impl Beam (Laser Gunner, wip-set.md §2.4): a Beam unit's shot, in its own beat, hits
+#         each living unit of its own side ahead of it in its line and every living enemy in the
+#         column, its FP each minus that unit's Cover (no Pick / Flank / Pierce). A friendly unit it
+#         downs gives nobody credit (the killer's side is the victim's). Event BEAM_FIRED.
 #      c. Patch N: each living Medic heals the most damaged other friendly unit in the column.
 #   Event stream (playback; firefight-order.md "Implementation notes"):
 #     FIREFIGHT_STARTED {zone}, SUPPRESSED, then per beat FIREFIGHT_BEAT {zone, beat, shooters,
@@ -33,7 +37,8 @@
 class_name FirefightResolver
 extends RefCounted
 
-## Firepower the enemy point man loses per Suppress unit (core-rules §1).
+## Firepower the enemy point man loses per Suppress unit (core-rules §1). kc-wip-impl: the default of
+## Suppress N (RulesUnit.suppress_amount; the Gunner's Suppress 2).
 const SUPPRESS_AMOUNT: int = 2
 ## SHOT_FIRED.step values. STEP_FIRST_SHOT: the shooter has First Shot (it fires before a partner
 ## without it, or trades at once with a partner that also has it); STEP_BEAT: any other shot.
@@ -93,9 +98,10 @@ static func _suppress(state, z: int) -> void:
 			if foe_line.is_empty():
 				continue
 			var target: RulesUnit = foe_line[0]
-			target.add_mod(DataEnums.EffectKind.MODIFY_FIREPOWER, -SUPPRESS_AMOUNT, state.round_number)
+			var amount: int = maxi(1, u.suppress_amount)
+			target.add_mod(DataEnums.EffectKind.MODIFY_FIREPOWER, -amount, state.round_number)
 			state.emit_event(RulesEvent.SUPPRESSED, {"side": state.side_name(si), "uid": u.uid,
-					"target_uid": target.uid, "amount": SUPPRESS_AMOUNT, "zone": state.zone_name(z)})
+					"target_uid": target.uid, "amount": amount, "zone": state.zone_name(z)})
 
 
 ## Next shooter of side si in column z: the front-most living unit that has not fired (null = none).
@@ -147,6 +153,9 @@ static func _beat(state, z: int, beat: int, shooters: Array, exchange: int) -> v
 		u.fired = true
 		var si: int = u.side
 		var step: StringName = STEP_FIRST_SHOT if state.has_first_shot(u) else STEP_BEAT
+		if u.beam:
+			_beam(state, z, beat, u, step, hits)
+			continue
 		var foe_line: Array = state.sides[1 - si].line(z)
 		var target: RulesUnit = pick_target(state, u, foe_line, {})
 		if target == null:
@@ -166,6 +175,37 @@ static func _beat(state, z: int, beat: int, shooters: Array, exchange: int) -> v
 		state.deal_damage(h[0], int(h[1]), h[2], false)
 	state.process_eliminations()
 	_emit_advances(state, rows)
+
+
+## kc-wip-impl Beam: the shot of `u` hits each living friendly ahead of it in its line, then every
+## living enemy in column z (its FP each, minus each target's Cover). Hits land with the beat's others.
+static func _beam(state, z: int, beat: int, u: RulesUnit, step: StringName, hits: Array) -> void:
+	var si: int = u.side
+	var src: Dictionary = _source(state, si, u)
+	var fp: int = state.firepower_of(u)
+	var targets: Array[RulesUnit] = []
+	var own: Array = state.sides[si].line(z)
+	for i: int in own.find(u):
+		if (own[i] as RulesUnit).is_alive():
+			targets.append(own[i])
+	var first_enemy: RulesUnit = null
+	for e: RulesUnit in state.sides[1 - si].line(z):
+		if e.is_alive():
+			targets.append(e)
+			if first_enemy == null:
+				first_enemy = e
+	var listed: Array[Dictionary] = []
+	for t: RulesUnit in targets:
+		var dmg: int = maxi(0, fp - state.cover_of(t))
+		hits.append([t, dmg, src])
+		listed.append({"uid": t.uid, "side": state.side_name(t.side), "damage": dmg, "friendly": t.side == si})
+	# Playback reads SHOT_FIRED for the tracer: the beam's shot at the first enemy it hits.
+	state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
+			"target_uid": first_enemy.uid if first_enemy != null else -1, "zone": state.zone_name(z),
+			"damage": maxi(0, fp - state.cover_of(first_enemy)) if first_enemy != null else 0, "step": step,
+			"beat": beat, "overkill": 0, "pierce": false, "beam": true})
+	state.emit_event(RulesEvent.BEAM_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
+			"zone": state.zone_name(z), "beat": beat, "hits": listed})
 
 
 ## Pierce: `left` damage beyond what `from` needs carries down the enemy line (Cover applies).

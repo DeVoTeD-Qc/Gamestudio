@@ -9,6 +9,8 @@
 #   - place_operator: place an off-board Operator (Round 1, respawn).
 #   - rotate: move the Operator to an adjacent zone (back of the line).
 #   - use_item: call in a killstreak by its id.
+#   - move_unit (kc-wip-impl Agile): order an Agile unit on the board to an adjacent zone (free,
+#     once per round; it moves at Reveal with the arrivals, to the back of that line).
 # Dependencies: none.
 # Author: Mechanics Developer Agent
 class_name RulesIntent
@@ -18,6 +20,7 @@ const PLAY_CARD: StringName = &"play_card"
 const PLACE_OPERATOR: StringName = &"place_operator"
 const ROTATE: StringName = &"rotate"
 const USE_ITEM: StringName = &"use_item"
+const MOVE_UNIT: StringName = &"move_unit"
 
 
 static func play_card(card_uid: int, zone: int = -1, target_uid: int = -1, dest_zone: int = -1) -> Dictionary:
@@ -34,3 +37,8 @@ static func rotate(zone: int) -> Dictionary:
 
 static func use_item(item_id: StringName, zone: int = -1, target_uid: int = -1, dest_zone: int = -1) -> Dictionary:
 	return {"type": USE_ITEM, "item_id": item_id, "zone": zone, "target_uid": target_uid, "dest_zone": dest_zone}
+
+
+## kc-wip-impl Agile: move the Agile unit `uid` (on the board) to the adjacent `zone` at Reveal.
+static func move_unit(uid: int, zone: int) -> Dictionary:
+	return {"type": MOVE_UNIT, "uid": uid, "zone": zone}

@@ -74,6 +74,7 @@ enum EffectKind {
 	SUMMON_UNIT,                ## Place summon_card as a unit.
 	SURVIVE_LETHAL,             ## Target survives lethal damage with amount Armor.
 	HEAL,                       ## Each target regains up to amount lost Armor (never above max).
+	GAIN_SUPPLY_NEXT_ROUND,     ## kc-wip-impl (the Hacker): the owner gets +amount Supply next round only (may pass the cap).
 }
 
 ## Who an effect hits. CHOSEN_* targets are picked by the player once per play

@@ -25,6 +25,9 @@ var weapon_class: DataEnums.WeaponClass = DataEnums.WeaponClass.NONE
 var base_firepower: int = 0
 ## Printed max Armor (plus permanent MODIFY_ARMOR changes).
 var base_max_armor: int = 1
+## kc-wip-impl (E6): the Operator's kit max Armor; base_max_armor goes back to it when it goes down
+## (a permanent +Armor such as the Flag Bearer's does not survive a respawn).
+var kit_max_armor: int = 1
 ## Current Armor. Damage persists across rounds.
 var armor: int = 1
 
@@ -34,6 +37,12 @@ var pick: bool = false
 var flank: bool = false
 var cover: int = 0
 var suppress: bool = false
+## kc-wip-impl: Suppress N (the Operator: the largest of its parts).
+var suppress_amount: int = 2
+## kc-wip-impl: Agile (a free order to an adjacent column, once per round) and Beam (its shot hits
+## every unit in front of it in its column, friends included).
+var agile: bool = false
+var beam: bool = false
 ## kc-fight-impl: damage beyond what the target needs carries to the next enemy behind it.
 var pierce: bool = false
 var patch: int = 0

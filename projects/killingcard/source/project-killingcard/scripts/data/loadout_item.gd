@@ -63,6 +63,8 @@ var ability: Resource = null
 @export var flank: bool = false
 @export_range(0, 5) var cover: int = 0
 @export var suppress: bool = false
+## kc-wip-impl: Suppress N (wip-set.md §2.1): the FP the enemy front unit loses (2 = the shipped Suppress).
+@export_range(1, 5) var suppress_amount: int = 2
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
 

@@ -275,6 +275,8 @@ func submit(side: int, intent: Dictionary) -> Dictionary:
 			_commit_place(side, play)
 		&"rotate":
 			_commit_rotate(side, play)
+		&"agile":
+			sides[side].plays.append(play)
 		&"item":
 			_commit_item(side, play)
 		_:
@@ -295,6 +297,7 @@ func submit(side: int, intent: Dictionary) -> Dictionary:
 ##   not_in_loadout, not_in_tray,
 ##   no_uses_left {per: &"round"|&"match"}                       (loadout items)
 ##   no_operator, cant_place, already_placed, no_rotations_left {allowed}   (Operator)
+##   not_agile, already_moved {uid}                              (kc-wip-impl Agile moves)
 ##   item_blocked (a MatchHooks subclass refused the item with its own reason)
 ## An accepted intent may carry data.warnings: [&"dest_full"] = a move into a zone that is
 ## full right now (it fizzles at Reveal unless a slot frees up).
@@ -361,7 +364,7 @@ func undo_last(side: int) -> Dictionary:
 	match play["kind"]:
 		&"rotate":
 			s.rotations_used -= 1
-		&"place":
+		&"place", &"agile":
 			pass
 		&"item":
 			hooks.on_item_undone(self, side, play["item"])
@@ -392,6 +395,8 @@ func _check_intent(side: int, intent: Dictionary) -> Dictionary:
 			return _check_rotate(side, int(intent.get("zone", NO_ZONE)))
 		RulesIntent.USE_ITEM:
 			return _check_item(side, intent)
+		RulesIntent.MOVE_UNIT:
+			return _check_agile(side, int(intent.get("uid", -1)), int(intent.get("zone", NO_ZONE)))
 	return _fail("unknown intent", &"unknown_intent")
 
 
@@ -488,6 +493,28 @@ func _check_rotate(side: int, zone: int) -> Dictionary:
 		return _zone_full(zone)
 	var play: Dictionary = _draft_play(&"rotate", zone, {})
 	play["from_zone"] = from
+	return _ok_play(play)
+
+
+## kc-wip-impl Agile (wip-set.md §2.2): a free order for an Agile unit of `side` on the board to move to
+## the adjacent `zone` at Reveal. Once per unit per round; the destination needs room (projected).
+func _check_agile(side: int, uid: int, zone: int) -> Dictionary:
+	var u: RulesUnit = sides[side].find_unit(uid)
+	if u == null or u.is_operator:
+		return _fail("pick one of your units on the board", &"no_target", {"want": &"friendly"})
+	if not u.agile:
+		return _fail("only an Agile unit can move like this", &"not_agile", {"uid": uid})
+	for p: Dictionary in sides[side].plays:
+		if p["kind"] == &"agile" and int(p["target_uid"]) == uid:
+			return _fail("it already has a move order this round", &"already_moved", {"uid": uid})
+	if zone == u.zone:
+		return _fail("move only to an adjacent zone", &"same_zone", {"from_zone": u.zone})
+	if not is_zone(zone) or not are_adjacent(u.zone, zone):
+		return _fail("move only to an adjacent zone", &"not_adjacent", {"from_zone": u.zone})
+	if projected_occupancy(side, zone) >= config.zone_capacity:
+		return _zone_full(zone)
+	var play: Dictionary = _draft_play(&"agile", zone, {"target_uid": uid})
+	play["from_zone"] = u.zone
 	return _ok_play(play)
 
 
@@ -693,7 +720,7 @@ func reveal() -> void:
 	for si: int in order:
 		var waiting: Array[Dictionary] = []
 		for play: Dictionary in sides[si].plays:
-			if play["kind"] in [&"unit", &"place", &"rotate"]:
+			if play["kind"] in [&"unit", &"place", &"rotate", &"agile"]:
 				if not _arrive(si, play):
 					waiting.append(play)
 		for play: Dictionary in waiting:  # a slot freed later in play order
@@ -761,6 +788,22 @@ func _arrive(si: int, play: Dictionary) -> bool:
 			put_in_line(op, zone, false)
 			emit_event(RulesEvent.OPERATOR_ROTATED, {"side": side_name(si), "uid": op.uid, "from_zone": zone_name(from), "zone": zone_name(zone)})
 			trigger_traps(si, op)
+		&"agile":
+			# kc-wip-impl Agile: the ordered unit moves to the back of the adjacent line (a full
+			# destination waits for the retry, then fizzles: the unit stays).
+			var u: RulesUnit = s.find_unit(int(play["target_uid"]))
+			if u == null or not u.is_alive() or u.zone == zone or not are_adjacent(u.zone, zone):
+				_waste_arrival(si, play)
+				return true
+			if s.line(zone).size() >= config.zone_capacity:
+				return false
+			var from: int = u.zone
+			s.line(from).erase(u)
+			put_in_line(u, zone, false)
+			emit_event(RulesEvent.UNIT_MOVED, {"side": side_name(si), "uid": u.uid, "from_zone": zone_name(from), "zone": zone_name(zone)})
+			emit_event(RulesEvent.AGILE_MOVED, {"side": side_name(si), "uid": u.uid, "card_id": u.source_id,
+					"from_zone": zone_name(from), "zone": zone_name(zone), "moved": true})
+			trigger_traps(si, u)
 	process_eliminations()
 	return true
 
@@ -779,6 +822,11 @@ func _waste_arrival(si: int, play: Dictionary) -> void:
 		else:
 			s.discard.append(rc)
 			emit_event(RulesEvent.CARD_DISCARDED, fields)
+	elif play["kind"] == &"agile":
+		var u: RulesUnit = sides[si].find_unit(int(play["target_uid"]))
+		emit_event(RulesEvent.AGILE_MOVED, {"side": side_name(si), "uid": int(play["target_uid"]),
+				"card_id": u.source_id if u != null else &"", "from_zone": zone_name(play["from_zone"]),
+				"zone": zone_name(play["zone"]), "moved": false})
 	emit_event(RulesEvent.EFFECT_WASTED, {"side": side_name(si), "source_id": play["kind"], "kind": "ARRIVE", "reason": "zone full or Operator gone"})
 
 
@@ -999,6 +1047,7 @@ func _record_elimination(u: RulesUnit, zone: int) -> Dictionary:
 	if u.is_operator:
 		s.operator_down_this_round = true
 		u.mods.clear()
+		u.base_max_armor = u.kit_max_armor  # kc-wip-impl E6: permanent Armor buffs end with the down
 		u.survive_lethal = 0
 		emit_event(RulesEvent.OPERATOR_DOWN, {"side": side_name(u.side), "uid": u.uid})
 		hooks.on_operator_down(self, u.side)
@@ -1049,6 +1098,9 @@ func create_unit(side: int, card: CardData, uid: int = -1,
 	u.flank = card.flank
 	u.cover = card.cover
 	u.suppress = card.suppress
+	u.suppress_amount = card.suppress_amount
+	u.agile = card.agile
+	u.beam = card.beam
 	# kc-art-traits / head F2: every LMG has Pierce (printed on the Gunner and the Demolitions Expert).
 	u.pierce = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
 	u.patch = card.patch
@@ -1081,6 +1133,8 @@ func _build_operator(side: int, setup: SideSetup) -> RulesUnit:
 		u.pick = u.pick or p.pick
 		u.flank = u.flank or p.flank
 		u.cover += p.cover
+		if p.suppress:
+			u.suppress_amount = p.suppress_amount if not u.suppress else maxi(u.suppress_amount, p.suppress_amount)
 		u.suppress = u.suppress or p.suppress
 		u.patch += p.patch
 		u.holder = u.holder or p.holder
@@ -1090,6 +1144,7 @@ func _build_operator(side: int, setup: SideSetup) -> RulesUnit:
 	u.pierce = primary.weapon_class == DataEnums.WeaponClass.LMG or (setup.operator_kit and primary.pierce)
 	u.base_firepower = maxi(0, fp)
 	u.base_max_armor = maxi(1, ar)
+	u.kit_max_armor = u.base_max_armor
 	u.armor = u.base_max_armor
 	return u
 
@@ -1566,7 +1621,7 @@ func red_dots(viewer: int) -> PackedInt32Array:
 	var op_hidden: bool = foe.has_flag(DataEnums.EffectKind.HIDE_FROM_INTEL, round_number)
 	for play: Dictionary in foe.plays:
 		var kind: StringName = play["kind"]
-		if kind == &"unit" or (kind in [&"place", &"rotate"] and not op_hidden):
+		if kind in [&"unit", &"agile"] or (kind in [&"place", &"rotate"] and not op_hidden):
 			counts[int(play["zone"])] += 1
 	return counts
 
@@ -1588,6 +1643,10 @@ func revealed_red_dots(viewer: int, zone: int) -> Array[StringName]:
 			continue
 		if play["kind"] == &"unit":
 			out.append((play["card"] as RulesCard).card.id)
+		elif play["kind"] == &"agile":
+			var mover: RulesUnit = foe.find_unit(int(play["target_uid"]))
+			if mover != null:
+				out.append(mover.source_id)
 		elif play["kind"] in [&"place", &"rotate"] and not foe.has_flag(DataEnums.EffectKind.HIDE_FROM_INTEL, round_number):
 			out.append(foe.operator_unit.source_id)
 	return out
@@ -1597,9 +1656,9 @@ func revealed_red_dots(viewer: int, zone: int) -> Array[StringName]:
 func projected_occupancy(side: int, zone: int) -> int:
 	var n: int = sides[side].line(zone).size()
 	for play: Dictionary in sides[side].plays:
-		if play["kind"] in [&"unit", &"place", &"rotate"] and int(play["zone"]) == zone:
+		if play["kind"] in [&"unit", &"place", &"rotate", &"agile"] and int(play["zone"]) == zone:
 			n += 1
-		if play["kind"] == &"rotate" and int(play["from_zone"]) == zone:
+		if play["kind"] in [&"rotate", &"agile"] and int(play["from_zone"]) == zone:
 			n -= 1
 	return n
 

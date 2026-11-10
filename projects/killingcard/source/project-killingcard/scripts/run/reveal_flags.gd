@@ -96,6 +96,7 @@ const KEYWORD_TIPS: Dictionary = {
 	&"kw_first_shot": "First Shot", &"kw_pick": "Pick", &"kw_flank": "Flank", &"kw_cover": "Cover",
 	&"kw_suppress": "Suppress", &"kw_pierce": "Pierce", &"kw_patch": "Patch", &"kw_holder": "Holder",
 	&"kw_front": "Front line", &"kw_on_deploy": "On Deploy", &"kw_on_down": "On Down",
+	&"kw_agile": "Agile", &"kw_beam": "Beam", &"kw_end_of_round": "End of round",
 	&"kw_guard": "Guard", &"kw_spotter": "Spotter", &"kw_fireteam": "Fireteam", &"kw_overwatch": "Overwatch",
 }
 
@@ -143,7 +144,7 @@ static func pending_explainers(met: Dictionary, seen: Dictionary) -> Array[Strin
 ## Tip flag of a player-facing keyword name ("First Shot" -> &"kw_first_shot", "Cover 1" -> kw_cover).
 static func keyword_flag(name: String) -> StringName:
 	var base: String = name
-	for prefix: String in ["Cover", "Patch"]:
+	for prefix: String in ["Cover", "Patch", "Suppress"]:
 		if name.begins_with(prefix):
 			base = prefix
 	for f: StringName in KEYWORD_TIPS:
@@ -277,6 +278,10 @@ static func _unit_keywords(u: RulesUnit) -> Array[String]:
 		out.append("Patch")
 	if u.holder:
 		out.append("Holder")
+	if u.agile:
+		out.append("Agile")
+	if u.beam:
+		out.append("Beam")
 	if u.arrives_front:
 		out.append("Front line")
 	for e: EffectData in u.effects:
@@ -284,6 +289,8 @@ static func _unit_keywords(u: RulesUnit) -> Array[String]:
 			out.append("On Deploy")
 		elif e != null and e.trigger == DataEnums.Trigger.ON_DOWN and "On Down" not in out:
 			out.append("On Down")
+		elif e != null and e.trigger == DataEnums.Trigger.END_OF_ROUND and "End of round" not in out:
+			out.append("End of round")
 	if u.neighbor_keyword != &"":
 		out.append(String(u.neighbor_keyword).capitalize())
 	return out

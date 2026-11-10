@@ -40,12 +40,21 @@ const MAX_TEXT_LENGTH: int = 100
 ## Cover N: each hit on this unit deals N less damage (0 = no Cover).
 @export_range(0, 5) var cover: int = 0
 @export var suppress: bool = false
+## kc-wip-impl: Suppress N (wip-set.md §2.1): at the start of the firefight here, the enemy front unit
+## gets -N FP this round. 2 = the shipped Suppress (Gunner); the Riot Shield is Suppress 1.
+@export_range(1, 5) var suppress_amount: int = 2
 ## Pierce (kc-fight-impl, firefight-order.md §3): damage beyond what the target needs carries on to
 ## the next enemy behind it (that unit's Cover applies).
 @export var pierce: bool = false
 ## Patch N: after the firefight restore N Armor to the most damaged other friendly here.
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
+## kc-wip-impl: Agile (wip-set.md §2.2): once per round, in Deploy, you may order this unit to an
+## adjacent column for free; it moves at Reveal and joins the back of that line.
+@export var agile: bool = false
+## kc-wip-impl: Beam (wip-set.md §2.4): its shot hits every unit in front of it in its column: each of
+## your units ahead of it and every enemy unit there (its FP each, minus that unit's Cover).
+@export var beam: bool = false
 
 @export_group("Synergy (kc-syn)")
 ## Neighbor keyword (synergy-system.md §3, retired in kc-pos-cut): &"guard", &"spotter", &"fireteam",
@@ -130,20 +139,25 @@ func keyword_names() -> Array[String]:
 	if cover > 0:
 		out.append("Cover %d" % cover)
 	if suppress:
-		out.append("Suppress")
+		out.append("Suppress %d" % suppress_amount)
 	if pierce or weapon_class == DataEnums.WeaponClass.LMG:
 		out.append("Pierce")
 	if patch > 0:
 		out.append("Patch %d" % patch)
 	if holder:
 		out.append("Holder")
+	if agile:
+		out.append("Agile")
+	if beam:
+		out.append("Beam")
 	if arrives_front:
 		out.append("Front line")
 	var seen: Dictionary = {}
 	for e: EffectData in effects:
 		if e == null:
 			continue
-		var n: String = {DataEnums.Trigger.ON_DEPLOY: "On Deploy", DataEnums.Trigger.ON_DOWN: "On Down"}.get(e.trigger, "Aura")
+		var n: String = {DataEnums.Trigger.ON_DEPLOY: "On Deploy", DataEnums.Trigger.ON_DOWN: "On Down",
+				DataEnums.Trigger.END_OF_ROUND: "End of round"}.get(e.trigger, "Aura")
 		if not seen.has(n):
 			seen[n] = true
 			out.append(n)
@@ -240,7 +254,7 @@ func validate(v: DataValidator) -> void:
 			v.invalid("firepower", "only units have Firepower/Armor (got %d/%d)" % [firepower, armor])
 		if weapon_class != DataEnums.WeaponClass.NONE:
 			v.invalid("weapon_class", "only units have a weapon class")
-		if first_shot or pick or flank or cover > 0 or suppress or pierce or patch > 0 or holder or arrives_front:
+		if first_shot or pick or flank or cover > 0 or suppress or pierce or patch > 0 or holder or arrives_front or agile or beam:
 			v.invalid("keywords", "keywords and arrives_front are for units only")
 		if is_elite:
 			v.invalid("is_elite", "only units can be elite")

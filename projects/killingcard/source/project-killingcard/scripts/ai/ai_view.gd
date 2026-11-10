@@ -231,6 +231,9 @@ static func _unit_record(state, u) -> Dictionary:
 	r["pick"] = bool(state.can_pick(u)) if "terrain" in state else bool(u.pick)
 	r["flank"] = bool(state.can_flank(u)) if "terrain" in state else bool(u.flank)
 	r["suppress"] = bool(u.suppress)
+	r["suppress_amount"] = int(u.suppress_amount) if u.suppress else 0
+	r["agile"] = bool(u.agile)
+	r["beam"] = bool(u.beam)
 	r["pierce"] = bool(state.has_pierce(u)) if "terrain" in state else bool(u.pierce)
 	r["patch"] = int(u.patch)
 	r["holder"] = bool(u.holder)
@@ -294,6 +297,7 @@ static func new_record() -> Dictionary:
 		"first_shot": false, "pick": false, "flank": false, "suppress": false, "pierce": false, "patch": 0,
 		"holder": false, "control": true, "credit": true, "untargetable": false, "survive": 0,
 		"aura": 0, "on_down_damage": 0, "arrives_front": false,
+		"suppress_amount": 0, "agile": false, "beam": false, "on_down_all": 0,
 		"kw": &"", "trait": &"", "syn_fp": 0, "syn_cover": 0, "syn_fs": false, "fs_native": false,
 	}
 
@@ -309,6 +313,9 @@ static func _read_effects(r: Dictionary, effects: Array) -> void:
 		elif e.trigger == DataEnums.Trigger.ON_DOWN and e.kind == DataEnums.EffectKind.DAMAGE \
 				and e.target == DataEnums.Target.ENEMY_POINT_MAN:
 			r["on_down_damage"] = int(r["on_down_damage"]) + e.amount
+		elif e.trigger == DataEnums.Trigger.ON_DOWN and e.kind == DataEnums.EffectKind.DAMAGE \
+				and e.target == DataEnums.Target.ALL_ENEMIES and e.zone_scope == DataEnums.ZoneScope.THIS_ZONE:
+			r["on_down_all"] = int(r["on_down_all"]) + e.amount  # kc-wip-impl: the Kamikaze
 
 
 ## Record for a unit card I would deploy into zone z (stats as the engine would build it; the
@@ -334,6 +341,9 @@ func record_for_card(card: CardData, uid: int, z: int,
 	r["pick"] = card.pick
 	r["flank"] = card.flank
 	r["suppress"] = card.suppress
+	r["suppress_amount"] = card.suppress_amount if card.suppress else 0
+	r["agile"] = card.agile
+	r["beam"] = card.beam
 	r["pierce"] = card.pierce or card.weapon_class == DataEnums.WeaponClass.LMG
 	r["patch"] = card.patch
 	r["holder"] = card.holder

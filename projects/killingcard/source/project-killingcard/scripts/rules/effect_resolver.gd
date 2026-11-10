@@ -10,7 +10,7 @@
 #   REMOVE_COVER, GRANT_FIRST_SHOT, REMOVE_FIRST_SHOT, UNTARGETABLE_BY_PICK_FLANK, DRAW,
 #   REVEAL_RED_DOTS, REVEAL_DEPLOYMENTS / HIDE_FROM_INTEL (side flags), MOVE_UNIT,
 #   STREAK_BONUS (counted by MatchHooks.apply_streak), DESTROY_EQUIPMENT, SUMMON_UNIT,
-#   SURVIVE_LETHAL, HEAL (kc-field-impl: Aid Station). STREAK_THRESHOLD_MOD only logs an event: p05
+#   SURVIVE_LETHAL, HEAL (kc-field-impl: Aid Station), GAIN_SUPPLY_NEXT_ROUND (kc-wip-impl: the Hacker). STREAK_THRESHOLD_MOD only logs an event: p05
 #   reads it from the perks when it builds the Streak Tray. COOLDOWN_MOD is retired (kc-loadout-cut).
 # Dependencies: DataEnums, EffectData, RulesUnit, RulesSide, RulesEvent (MatchState passed in).
 # Author: Mechanics Developer Agent
@@ -317,6 +317,11 @@ static func _apply(state, e: EffectData, ctx: Dictionary, z: int, amount: int) -
 			_move(state, e, ctx, t, dest)
 	elif kind == K.STREAK_BONUS:
 		own.streak_bonus_this_round += amount
+		_applied(state, e, ctx, -1, amount)
+	elif kind == K.GAIN_SUPPLY_NEXT_ROUND:
+		# kc-wip-impl (the Hacker, wip-set.md §2.3): the Supply Cache's per-side slot; begin_round adds it
+		# on top of next round's Supply (it may pass the cap) and reports it as SUPPLY_GAINED.extra.
+		state.terrain_supply_next[side] += amount
 		_applied(state, e, ctx, -1, amount)
 	elif kind == K.DESTROY_EQUIPMENT:
 		var foe: RulesSide = state.sides[1 - side]

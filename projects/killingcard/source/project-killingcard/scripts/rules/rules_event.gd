@@ -39,6 +39,8 @@ const UNIT_ARRIVED: StringName = &"unit_arrived"              ## side, uid, card
 const UNIT_MOVED: StringName = &"unit_moved"                  ## side, uid, from_zone, zone
 const OPERATOR_PLACED: StringName = &"operator_placed"        ## side, uid, zone
 const OPERATOR_ROTATED: StringName = &"operator_rotated"      ## side, uid, from_zone, zone
+## kc-wip-impl Agile: an Agile move order resolved at Reveal (UNIT_MOVED also fires) or fizzled (moved false).
+const AGILE_MOVED: StringName = &"agile_moved"                ## side, uid, card_id, from_zone, zone, moved
 # "Equipment" events are the Field events (Field = CardType.EQUIPMENT, kc-field-impl).
 const EQUIPMENT_PLACED: StringName = &"equipment_placed"      ## side, card_uid, card_id, zone, hidden
 const EQUIPMENT_TRIGGERED: StringName = &"equipment_triggered" ## side, card_uid, card_id, zone, target_uid
@@ -61,6 +63,9 @@ const FIREFIGHT_BEAT: StringName = &"firefight_beat"          ## zone, beat (1-b
 const PIERCE_CARRIED: StringName = &"pierce_carried"          ## side (shooter's), shooter_uid, from_uid, target_uid, carried (damage left before Cover), damage, zone, beat
 const LINE_ADVANCED: StringName = &"line_advanced"            ## side, zone, moves [{uid, from_row, to_row}] (after removals: the line closed up)
 const FIREFIGHT_COLUMN_ENDED: StringName = &"firefight_column_ended" ## zone, beats (after Patch)
+## kc-wip-impl Beam (Laser Gunner): one beam shot; hits in order (its own units ahead first, then every
+## enemy in the column). friendly = the hit unit is on the shooter's side. DAMAGE_DEALT follows per hit.
+const BEAM_FIRED: StringName = &"beam_fired"                  ## side, shooter_uid, zone, beat, hits [{uid, side, damage, friendly}]
 const SUPPRESSED: StringName = &"suppressed"                  ## side (suppressor's), uid (shooter), target_uid, amount
 const SHOT_FIRED: StringName = &"shot_fired"                  ## side, shooter_uid, target_uid (-1 = no target), zone, damage, step (&"first_shot" if the shooter has First Shot, else &"beat"), beat, overkill, pierce
 const DAMAGE_DEALT: StringName = &"damage_dealt"              ## target_uid, side (target's), amount, remaining, source_id
