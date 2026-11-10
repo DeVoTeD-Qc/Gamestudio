@@ -16,7 +16,7 @@ const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_p
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
 const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
-## kc-duel-ui: DUEL (under the campaign's START NEW RUN) opens the Duel hub.
+## kc-duel-ui: DUEL (beside the campaign's START NEW RUN) opens the Duel hub.
 const SCENE_DUEL_HUB: String = "res://scenes/duel/DuelHub.tscn"
 var _duel_button: Button = null
 var _codex: Control = null
@@ -82,7 +82,7 @@ func _build() -> void:
 	_tutorial_button.custom_minimum_size.x = 0
 	row.add_child(_codex_button)
 	_codex_button.pressed.connect(open_codex)
-	# kc-duel-ui: DUEL sits right under the campaign's START NEW RUN.
+	# kc-duel-ui: DUEL sits beside the campaign's START NEW RUN.
 	_duel_button = Button.new()
 	_duel_button.name = "DuelButton"
 	_duel_button.text = "DUEL"
@@ -91,8 +91,23 @@ func _build() -> void:
 	_duel_button.custom_minimum_size = Vector2(0, _start_button.custom_minimum_size.y)
 	_duel_button.focus_mode = Control.FOCUS_ALL
 	_duel_button.add_to_group(&"tap_target")
-	_column.add_child(_duel_button)
-	_column.move_child(_duel_button, _start_button.get_index() + 1)
+	# START NEW RUN (the campaign) and DUEL share a row, like TUTORIAL and CODEX (the phone column has
+	# no room for another row when the replace-save confirm is open).
+	var mode_row: HBoxContainer = HBoxContainer.new()
+	mode_row.name = "ModeRow"
+	mode_row.add_theme_constant_override(&"separation", 10)
+	var start_at: int = _start_button.get_index()
+	_column.remove_child(_start_button)
+	_column.add_child(mode_row)
+	_column.move_child(mode_row, start_at)
+	mode_row.add_child(_start_button)
+	_start_button.owner = self  # keeps %StartButton resolvable after the move
+	_start_button.unique_name_in_owner = true
+	_start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_start_button.size_flags_stretch_ratio = 1.4
+	_start_button.custom_minimum_size.x = 0
+	_duel_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_row.add_child(_duel_button)
 	_duel_button.pressed.connect(open_duel)
 	resized.connect(_update_key_art)
 	_update_key_art()

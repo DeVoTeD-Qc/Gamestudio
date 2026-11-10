@@ -834,3 +834,12 @@ static func record_text(r: Dictionary) -> String:
 	if int(r.get("d", 0)) > 0:
 		t += " · %d D" % int(r["d"])
 	return t
+
+
+## Setters for tests and tools (a script preloaded as a const can't assign its static vars).
+static func set_local_saves(on: bool) -> void:
+	local_saves = on
+
+
+static func set_use_rules(on: bool) -> void:
+	use_rules = on

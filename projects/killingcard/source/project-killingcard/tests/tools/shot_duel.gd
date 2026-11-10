@@ -74,8 +74,8 @@ func _run() -> void:
 	BannerArtDB.clear_cache()
 	var router: Node = root.get_node("SceneRouter")
 	router.dry_run = true
-	DuelFlow.set(&"dry_run", true)
-	DuelViews.set(&"local_saves", true)
+	DuelFlow.set_dry_run(true)
+	DuelViews.set_local_saves(true)
 	DuelViews.reset_local()
 	# A fresh player: Fields and Elites not found yet, except Mortar Pit.
 	for e: Dictionary in DuelViews.pool():
@@ -93,7 +93,7 @@ func _run() -> void:
 		await _shot("01_title_duel_entry")
 		await _close(t)
 	if _want("hub"):
-		DuelFlow.set(&"hub_tab", "mine")
+		DuelFlow.set_hub_tab("mine")
 		var h: Control = await _open(DuelFlow.SCENE_HUB)
 		await _shot("02_hub_my_decks")
 		h.call(&"set_tab", "presets")
@@ -106,13 +106,13 @@ func _run() -> void:
 		await _shot("05_hub_pass_and_play_setup")
 		await _close(h)
 	if _want("builder"):
-		DuelFlow.set(&"edit_deck", DuelViews.new_deck())
+		DuelFlow.set_edit_deck(DuelViews.new_deck())
 		var b: Control = await _open(DuelFlow.SCENE_BUILDER)
 		await _shot("06_builder_empty")
 		await _close(b)
 		var mid: Dictionary = _sample_deck(6)
 		mid["picks"].append(DuelViews.make_pick(&"halek_wren", &""))
-		DuelFlow.set(&"edit_deck", mid)
+		DuelFlow.set_edit_deck(mid)
 		b = await _open(DuelFlow.SCENE_BUILDER)
 		b.call(&"add_card", &"breach_and_clear")
 		await _frames(4)
@@ -122,7 +122,7 @@ func _run() -> void:
 			await _frames(4)
 			await _shot("08_builder_tray_open")
 		await _close(b)
-		DuelFlow.set(&"edit_deck", _sample_deck(10))
+		DuelFlow.set_edit_deck(_sample_deck(10))
 		b = await _open(DuelFlow.SCENE_BUILDER)
 		await _shot("09_builder_ready")
 		b.call(&"add_card", &"war_standard")
@@ -144,6 +144,33 @@ func _run() -> void:
 		await _frames(6)
 		await _shot("13_builder_inspect_card")
 		await _close(b)
+	if _want("match"):
+		var r1: Dictionary = DuelFlow.start_match({"mode": DuelFlow.MODE_VS_AI, "decks": [DuelViews.preset("spearhead"), DuelViews.preset("iron_wall")],
+				"names": ["You", "Iron Wall"], "tier": &"recruit", "opponent_id": "iron_wall", "seed": 7})
+		print("vs ai: ", r1)
+		var ms: Control = await _open("res://scenes/Match.tscn")
+		var mc: Node = ms.get_node("MatchController")
+		if mc.is_mulligan_open():
+			mc.keep_hand()
+		await _frames(6)
+		await _shot("16_match_vs_ai_recruit")
+		await _close(ms)
+		var r2: Dictionary = DuelFlow.start_match({"mode": DuelFlow.MODE_HOT_SEAT, "decks": [DuelViews.preset("overwatch"), DuelViews.preset("hollow_ranks")],
+				"names": ["Alex", "Dana"], "seed": 11})
+		print("hot seat: ", r2)
+		ms = await _open("res://scenes/Match.tscn")
+		mc = ms.get_node("MatchController")
+		await _shot("17_match_hot_seat_cover")
+		mc.get_cover().accept()
+		await _frames(4)
+		if mc.is_mulligan_open():
+			mc.keep_hand()
+		await _frames(4)
+		await _shot("18_match_hot_seat_first_deploy")
+		await mc.press_ready()
+		await _frames(4)
+		await _shot("19_match_hot_seat_pass_cover")
+		await _close(ms)
 	if _want("cover"):
 		var m: Control = await _open("res://scenes/duel/PassCover.tscn")
 		m.call(&"show_for", 1, "Dana", {"round": 3, "other_name": "Alex", "other_orders": 3,
@@ -154,7 +181,7 @@ func _run() -> void:
 	if _want("result"):
 		var setup: Dictionary = {"mode": DuelFlow.MODE_VS_AI, "decks": [_sample_deck(10), DuelViews.preset("spearhead")],
 				"names": ["You", "Spearhead"], "tier": &"regular", "opponent_id": "spearhead"}
-		DuelFlow.set(&"setup", setup)
+		DuelFlow.set_setup(setup)
 		var last: Dictionary = {"ok": true, "result": {"kind": &"ai", "tier": &"regular", "ended": true, "winner_side": 0,
 				"reason": &"target", "rounds": 6, "scores": [6, 4], "names": ["You", "Spearhead"],
 				"deck_names": ["Iron Wall copy", "Spearhead"], "heroes": [&"bastion_60", &"kestrel_ar7"], "human_won": true,
@@ -163,7 +190,7 @@ func _run() -> void:
 				"duelist_frames": [&"bastion_60"], "veteran_stamps": []},
 				"new_cosmetics": [{"kind": &"duelist_frame", "id": &"bastion_60", "name": "Duelist frame: Bastion-60", "text": "Your first duel win with Bastion-60."}],
 				"setup": setup}
-		DuelFlow.set(&"last_result", last)
+		DuelFlow.set_last_result(last)
 		var r: Control = await _open(DuelFlow.SCENE_RESULT)
 		await _shot("15_result_win")
 		await _close(r)

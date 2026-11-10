@@ -376,9 +376,12 @@ static func deck_row(pick: Dictionary, on_inspect: Callable, on_remove: Callable
 		tb.add_to_group(&"tap_target")
 		tb.tooltip_text = "%s · tap: choose the art (and so the trait)" % ArtTraits.trait_name(t)
 		var plate: Control = TraitPlate.new(t, 28)
-		plate.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 		tb.add_child(plate)
-		plate.position = Vector2(10, 10)
+		plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side: int in [SIDE_LEFT, SIDE_TOP]:
+			plate.set_offset(side, 10)
+		for side: int in [SIDE_RIGHT, SIDE_BOTTOM]:
+			plate.set_offset(side, -10)
 		if on_trait.is_valid() and c.has_trait_choice():
 			tb.pressed.connect(func() -> void: on_trait.call(id))
 		else:
@@ -400,7 +403,11 @@ static func deck_row(pick: Dictionary, on_inspect: Callable, on_remove: Callable
 		rm.tooltip_text = "Remove %s (both copies)" % (c.display_name if c != null else String(id))
 		var m: Control = Mark.new(&"cross", RED, 20)
 		rm.add_child(m)
-		m.position = Vector2(14, 14)
+		m.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side: int in [SIDE_LEFT, SIDE_TOP]:
+			m.set_offset(side, 14)
+		for side: int in [SIDE_RIGHT, SIDE_BOTTOM]:
+			m.set_offset(side, -14)
 		rm.pressed.connect(func() -> void: on_remove.call(id))
 		row.add_child(rm)
 	RunScreen.wire_inspect_control(p, func() -> void: on_inspect.call(id), true)

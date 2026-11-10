@@ -333,8 +333,8 @@ func play() -> Dictionary:
 		_shake(_play_button)
 		return {"ok": false, "text": t}
 	save()
-	DuelFlow.edit_deck = deck.duplicate(true)
-	DuelFlow.hub_tab = "play:" + String(deck.get("id", ""))
+	DuelFlow.set_edit_deck(deck)
+	DuelFlow.set_hub_tab("play:" + String(deck.get("id", "")))
 	goto(DuelFlow.SCENE_HUB)
 	return {"ok": true, "text": ""}
 
@@ -1299,18 +1299,8 @@ func _snackbar(text: String, can_undo: bool) -> void:
 	_snack_label.text = text
 	_snack_undo.visible = can_undo
 	_snack.show()
-	var vr: Vector2 = size
-	var w: float = minf(vr.x - 32.0, 640.0)
-	_snack.size = Vector2(w, 0)
-	_snack.reset_size()
-	_snack.size.x = w
-	var bottom: float = vr.y - 16.0
-	if portrait and _play_button != null and _play_button.is_inside_tree():
-		bottom = _play_button.get_global_rect().position.y - get_global_rect().position.y - 8.0
-	elif _grid_scroll != null and _grid_scroll.is_inside_tree():
-		bottom = _grid_scroll.get_global_rect().end.y - get_global_rect().position.y - 8.0
-	var x: float = 16.0 if portrait else (_grid_scroll.get_global_rect().position.x - get_global_rect().position.x if _grid_scroll != null else 16.0)
-	_snack.position = Vector2(x, bottom - maxf(_snack.size.y, 56.0))
+	_place_snack()
+	_place_snack.call_deferred()
 	_snack.modulate = Color(1.5, 1.4, 1.1, 1.0)
 	if is_inside_tree():
 		var tw: Tween = create_tween()
@@ -1321,6 +1311,25 @@ func _snackbar(text: String, can_undo: bool) -> void:
 			if is_instance_valid(_snack) and my_id == _snack_id:
 				_snack.hide()
 				_undo = {})
+
+
+## Bottom of the grid (landscape) or just above PLAY (portrait), never wider than the grid area.
+func _place_snack() -> void:
+	if _snack == null or not _snack.visible:
+		return
+	var origin: Vector2 = get_global_rect().position
+	var area: Rect2 = Rect2(Vector2(16, 0), Vector2(size.x - 32.0, size.y - 16.0))
+	if not portrait and _grid_scroll != null and _grid_scroll.is_inside_tree() and _grid_scroll.size.x > 100.0:
+		area = Rect2(_grid_scroll.get_global_rect().position - origin, _grid_scroll.size)
+	var bottom: float = area.end.y - 8.0
+	if portrait and _play_button != null and _play_button.is_inside_tree() and _play_button.size.y > 0.0:
+		bottom = _play_button.get_global_rect().position.y - origin.y - 8.0
+	var w: float = minf(area.size.x, 640.0)
+	_snack_label.custom_minimum_size.x = maxf(120.0, w - (140.0 if _snack_undo.visible else 30.0))
+	_snack.size = Vector2.ZERO
+	_snack.reset_size()
+	_snack.size.x = w
+	_snack.position = Vector2(area.position.x, bottom - _snack.size.y)
 
 
 ## The last "what just happened" line (also while the snackbar is hidden).

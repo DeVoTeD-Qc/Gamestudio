@@ -70,6 +70,9 @@ const KILLFEED_KEEP: int = 6
 const SCENE_TITLE: String = "res://scenes/Title.tscn"
 ## outcome.reason of a forfeited match (MatchEndBanner / AfterAction wording).
 const REASON_FORFEIT: StringName = &"forfeit"
+## kc-duel-ui: the Duel hand-off (Match.tscn plays a DuelMatch from the Duel hub).
+const DuelFlowScript: GDScript = preload("res://scripts/ui/duel/duel_flow.gd")
+const PASS_COVER_SCENE: String = "res://scenes/duel/PassCover.tscn"
 
 ## Start a local test match when the scene loads (off: the screen shows its mock snapshot).
 @export var autostart: bool = true
@@ -91,6 +94,16 @@ var enemy_planner: Callable = Callable()
 var enemy_ai_player: AiPlayer = null
 
 var state: MatchState = null
+## kc-duel-ui: the side this screen plays and shows (side 0, except in a Pass & Play duel, where it is
+## the side whose private Deploy is open) and the other side. Static helpers keep PLAYER / ENEMY.
+var me_side: int = MatchState.PLAYER
+var foe_side: int = MatchState.ENEMY
+## kc-duel-ui: the DuelMatch this screen plays (duel-api.md §6), null outside a duel.
+var duel: Object = null
+## kc-duel-ui: the Pass & Play cover (scenes/duel/PassCover.tscn), made on first use.
+var _cover: Control = null
+## kc-duel-ui: the last round's public summary (shown on the cover).
+var _last_round_line: String = ""
 var map: MapData = null
 ## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
 var selection: Dictionary = {}
@@ -205,8 +218,11 @@ func _on_screen_ready() -> void:
 			pause.forfeit_confirmed.connect(forfeit, d)
 			pause.quit_pressed.connect(quit_to_title, d)
 	if autostart:
-		var run_match: MatchState = _take_run_match()
-		if run_match != null:
+		var duel_match: Object = DuelFlowScript.take_pending() if not _is_tutorial() else null
+		var run_match: MatchState = _take_run_match() if duel_match == null else null
+		if duel_match != null:
+			start_duel_match(duel_match)
+		elif run_match != null:
 			start_run_match(run_match)
 		else:
 			start_local_match(seed_value)
@@ -325,7 +341,8 @@ func _play(m: MatchState, squad: SquadData) -> void:
 		# only the Quick Match showcases the pitch swaps; a run match and the tutorial play the real decks.
 		for s: RulesSide in state.sides:
 			PitchDecks.apply_setup(s.setup)
-	_assign_copy_arts(state)
+	if duel == null:
+		_assign_copy_arts(state)  # kc-duel-ui: a duel deck's copies already wear their picked arts
 	state.start_match()
 	_begin_deploy()
 
@@ -400,7 +417,7 @@ static func _picked_operator(config: RunConfig) -> LoadoutItem:
 
 
 func _ai_turn(st: MatchState) -> void:
-	enemy_ai_player.take_turn(st, ENEMY)
+	enemy_ai_player.take_turn(st, foe_side)
 
 
 ## True while FeedbackDirector plays a resolved round (input only fast-forwards it).
@@ -420,18 +437,31 @@ func skip_feedback() -> void:
 ## pre-resolve board (switching to the post-Reveal board when the firefight starts), then the
 ## next Deploy starts. Returns after the feedback has played.
 func press_ready() -> void:
-	if state == null or _busy or state.phase != MatchState.Phase.DEPLOY or state.sides[PLAYER].ready \
+	if state == null or _busy or state.phase != MatchState.Phase.DEPLOY or state.sides[me_side].ready \
 			or is_mulligan_open():
 		return
 	clear_selection()
-	var me: RulesSide = state.sides[PLAYER]
+	var me: RulesSide = state.sides[me_side]
 	var supply_unspent: int = me.supply
 	var hand_size: int = me.hand.size()
-	state.set_ready(PLAYER)
-	if not state.sides[ENEMY].ready:
-		state.set_ready(ENEMY)  # the enemy passes (or already planned in enemy_planner)
+	if is_hot_seat():
+		# kc-duel-ui: this player's Deploy is done; the other one's cover comes up, or (both ready) the
+		# DuelMatch emits round_ready and _on_duel_round_ready plays the round.
+		_last_supply = supply_unspent
+		_last_hand = hand_size
+		duel.call(&"finish_deploy", me_side)
+		return
+	state.set_ready(me_side)
+	await _play_round(supply_unspent, hand_size)
+
+
+## Reveal, Firefight and Score of a round both sides are ready for, played over the board; then the
+## next Deploy (or the match end).
+func _play_round(supply_unspent: int, hand_size: int) -> void:
+	if not state.sides[foe_side].ready:
+		state.set_ready(foe_side)  # the enemy passes (or already planned in enemy_planner)
 	# The pre-resolve board (deploy closed) stays up while the Reveal plays.
-	var before: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)
+	var before: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)
 	before["phase"] = "REVEAL"
 	_screen.show_snapshot(before)
 	_show_selection()
@@ -448,11 +478,11 @@ func press_ready() -> void:
 		for u: RulesUnit in s.units_on_board():
 			pre_uids[u.uid] = true
 	state.reveal()
-	var after_reveal: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)
+	var after_reveal: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)
 	after_reveal["phase"] = "FIREFIGHT"
 	# kc-fight-ui: a copy of the board as the firefight starts; the playback applies the events to it
 	# as they land, so units leave and lines slide up beat by beat.
-	var playback: RefCounted = FightPlayback.start(state, map, PLAYER) if fx != null else null
+	var playback: RefCounted = FightPlayback.start(state, map, me_side) if fx != null else null
 	fight_playback = playback
 	fight_refreshes = 0
 	state.firefight()
@@ -513,6 +543,11 @@ func press_ready() -> void:
 			_show_match_end()
 		round_presented.emit()
 		return
+	_last_round_line = _round_line()
+	if is_hot_seat():
+		round_presented.emit()
+		duel.call(&"round_done")  # the next round's first cover (cover_needed)
+		return
 	state.begin_round()
 	_begin_deploy()
 	round_presented.emit()
@@ -527,7 +562,7 @@ func _board_callout(ev: Dictionary) -> void:
 	var text: String = {RulesEvent.FIELD_GONE_OVERRUN: "FIELD OVERRUN", RulesEvent.FIELD_GONE_DESTROYED: "FIELD DESTROYED",
 			RulesEvent.FIELD_GONE_REPLACED: "FIELD REPLACED"}.get(StringName(ev.get("reason", &"")), "")
 	if z >= 0 and text != "":
-		_screen.get_board().show_callout(z, text, &"enemy" if side == MatchState.SIDE_NAMES[ENEMY] else &"player")
+		_screen.get_board().show_callout(z, text, &"enemy" if side == MatchState.SIDE_NAMES[foe_side] else &"player")
 
 
 ## Takes back the last play of this Deploy.
@@ -537,9 +572,9 @@ func undo() -> Dictionary:
 	if _busy:
 		skip_feedback()
 		return {"ok": false, "code": &"wrong_phase", "reason": "busy", "data": {}}
-	var s: RulesSide = state.sides[PLAYER]
+	var s: RulesSide = state.sides[me_side]
 	var label: String = MatchSnapshot.play_name(state, s, s.plays.back()) if not s.plays.is_empty() else ""
-	var res: Dictionary = state.undo_last(PLAYER)
+	var res: Dictionary = state.undo_last(me_side)
 	if res["ok"]:
 		clear_selection()
 		_after_change()
@@ -554,12 +589,12 @@ func _begin_deploy() -> void:
 		enemy_planner.call(state)
 	_flush_events()
 	if emit_to_event_bus:
-		var dots: PackedInt32Array = state.red_dots(PLAYER)
+		var dots: PackedInt32Array = state.red_dots(me_side)
 		for z: int in dots.size():
 			EventBus.intel_updated.emit(MapData.ZONE_IDS[z], dots[z])
 	var met_now: Array[StringName] = note_board_systems()
 	refresh()
-	if offer_mulligan and state.round_number == 1 and state.can_mulligan(PLAYER)["ok"] and _mulligan_panel() != null:
+	if offer_mulligan and state.round_number == 1 and state.can_mulligan(me_side)["ok"] and _mulligan_panel() != null:
 		open_mulligan()
 		return
 	_deploy_hint()
@@ -577,7 +612,7 @@ func _reveal_off() -> void:
 ## explainer of those shows over the board.
 func note_board_systems() -> Array[StringName]:
 	var flags: Array[StringName] = RevealFlags.match_triggers(state)
-	var me: RulesSide = state.sides[PLAYER]
+	var me: RulesSide = state.sides[me_side]
 	if not me.streak_tray.is_empty():
 		flags.append(RevealFlags.KILLSTREAKS)
 	var rs: Node = get_node_or_null(^"/root/RunState")
@@ -587,7 +622,7 @@ func note_board_systems() -> Array[StringName]:
 
 
 func _deploy_hint() -> void:
-	var s: RulesSide = state.sides[PLAYER]
+	var s: RulesSide = state.sides[me_side]
 	if s.operator_can_deploy:
 		_screen.show_toast("Round %d: tap your Operator (next to READY), then a column." % state.round_number)
 	else:
@@ -597,7 +632,7 @@ func _deploy_hint() -> void:
 func refresh() -> void:
 	if state == null:
 		return
-	_screen.show_snapshot(MatchSnapshot.build(state, map, PLAYER, killfeed))
+	_screen.show_snapshot(MatchSnapshot.build(state, map, me_side, killfeed))
 	_show_selection()
 
 
@@ -713,6 +748,14 @@ func _show_match_end() -> void:
 	if _end_shown or state == null or state.phase != MatchState.Phase.ENDED:
 		return
 	_end_shown = true
+	if duel != null:
+		# kc-duel-ui: a duel ends on its own result screen (score, reason, records).
+		close_pause_menu()
+		_finished = true
+		if duel.has_method(&"round_done"):
+			duel.call(&"round_done")
+		DuelFlowScript.finish(duel, _duel_result())
+		return
 	close_pause_menu()
 	var banner: Control = _end_banner()
 	if banner == null:
@@ -720,8 +763,8 @@ func _show_match_end() -> void:
 	var outcome: Dictionary = state.hooks.mode_rules.outcome if state.hooks != null and state.hooks.mode_rules != null else {}
 	banner.open({
 		"result": state.result,
-		"player_score": int(outcome.get("player_score", state.sides[PLAYER].score)),
-		"enemy_score": int(outcome.get("enemy_score", state.sides[ENEMY].score)),
+		"player_score": int(outcome.get("player_score", state.sides[me_side].score)),
+		"enemy_score": int(outcome.get("enemy_score", state.sides[foe_side].score)),
 		"reason": outcome.get("reason", &""),
 		"rounds": int(outcome.get("rounds", state.round_number)),
 		"context": _match_context(),
@@ -798,10 +841,21 @@ func _on_fast_animations_toggled(on: bool) -> void:
 func forfeit() -> bool:
 	if state == null or state.phase == MatchState.Phase.ENDED or _finished:
 		return false
+	if duel != null and duel.has_method(&"forfeit"):
+		# kc-duel-ui: the side on screen concedes (in Pass & Play, the player whose Deploy is open).
+		skip_feedback()
+		duel.call(&"forfeit", me_side)
+		forfeited = true
+		close_pause_menu()
+		_flush_events()
+		if not _busy:
+			refresh()
+			_show_match_end()
+		return true
 	skip_feedback()
 	var mr: ModeRules = state.hooks.mode_rules if state.hooks != null else null
-	var me: RulesSide = state.sides[PLAYER]
-	var foe: RulesSide = state.sides[ENEMY]
+	var me: RulesSide = state.sides[me_side]
+	var foe: RulesSide = state.sides[foe_side]
 	var outcome: Dictionary = {
 		"result": ModeRules.RESULT_ENEMY, "winner": ModeRules.RESULT_ENEMY, "is_draw": false,
 		"reason": REASON_FORFEIT, "mode": mr.mode_name if mr != null else &"",
@@ -840,6 +894,10 @@ func quit_to_title() -> void:
 		return
 	if _is_routed_run_match():
 		router.active_match = null
+	if duel != null:
+		DuelFlowScript.clear_active()
+		router.goto_scene(DuelFlowScript.SCENE_HUB)
+		return
 	router.goto_scene(SCENE_TITLE)
 
 
@@ -854,7 +912,7 @@ func is_mulligan_open() -> bool:
 
 func open_mulligan() -> void:
 	var entries: Array = []
-	for rc: RulesCard in state.sides[PLAYER].hand:
+	for rc: RulesCard in state.sides[me_side].hand:
 		# kc-ui3: the full card face (CardView), with its own licensed art and title when it has one.
 		# kc-cards-impl: the Y2+ face (art, trait, Standard Issue tag).
 		var view: Dictionary = card_view_for(rc)
@@ -895,7 +953,7 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 		panel.close()
 	var res: Dictionary = {"ok": true, "code": &"ok", "reason": "", "data": {}}
 	if not put_back.is_empty():
-		res = state.mulligan(PLAYER, put_back)
+		res = state.mulligan(me_side, put_back)
 		_after_change()
 		if res["ok"]:
 			_screen.show_toast("Put back %d card%s and drew %d. Round 1: tap your Operator, then a column."
@@ -916,11 +974,11 @@ func select_card(uid: int) -> void:
 	selection = {"kind": &"card", "uid": uid}
 	target_uid = -1
 	_show_selection()
-	var rc: RulesCard = state.sides[PLAYER].find_in_hand(uid) if state != null else null
+	var rc: RulesCard = state.sides[me_side].find_in_hand(uid) if state != null else null
 	if rc == null:
 		return
-	if rc.card.cost > state.sides[PLAYER].supply:
-		_screen.show_toast(PlayText.describe(state.can_submit(PLAYER, RulesIntent.play_card(uid, 0)),
+	if rc.card.cost > state.sides[me_side].supply:
+		_screen.show_toast(PlayText.describe(state.can_submit(me_side, RulesIntent.play_card(uid, 0)),
 				{"name": rc.card.display_name})["reason"])
 	elif _unit_target_kind() == &"friendly":
 		_screen.show_toast("Pick one of your units to move.")
@@ -933,7 +991,7 @@ func select_operator() -> void:
 	target_uid = -1
 	_show_selection()
 	# kc-syn §6.3: placing the Operator costs Supply; say so at once when it can't be paid.
-	var s: RulesSide = state.sides[PLAYER] if state != null else null
+	var s: RulesSide = state.sides[me_side] if state != null else null
 	if s != null and s.operator_can_deploy and not _has_play(&"place") and state.operator_cost() > s.supply:
 		_screen.show_toast("Not enough Supply: your Operator costs %d, you have %d." % [state.operator_cost(), s.supply])
 
@@ -943,14 +1001,14 @@ func select_operator() -> void:
 func select_item(item_id: StringName) -> Dictionary:
 	if state == null:
 		return {"ok": false, "code": &"no_match", "reason": "", "data": {}}
-	var item: LoadoutItem = state.find_item(PLAYER, item_id)
-	var check: Dictionary = state.check_use(PLAYER, item_id)
+	var item: LoadoutItem = state.find_item(me_side, item_id)
+	var check: Dictionary = state.check_use(me_side, item_id)
 	if item == null or not check["ok"]:
 		clear_selection()
 		_screen.show_toast(PlayText.describe(check, _item_ctx(item))["reason"])
 		return check
-	var targets: Array[Dictionary] = state.legal_targets(PLAYER, item_id)
-	var kind: StringName = state.needs_unit_target(PLAYER, item_id)
+	var targets: Array[Dictionary] = state.legal_targets(me_side, item_id)
+	var kind: StringName = state.needs_unit_target(me_side, item_id)
 	var no_choice: bool = kind == &"" and targets.any(func(t: Dictionary) -> bool: return t["zone"] == MatchState.NO_ZONE)
 	if no_choice:
 		clear_selection()
@@ -985,14 +1043,14 @@ func play_at(zone: int) -> Dictionary:
 
 
 func _submit(intent: Dictionary) -> Dictionary:
-	var res: Dictionary = state.submit(PLAYER, intent)
+	var res: Dictionary = state.submit(me_side, intent)
 	intent_log.append({"intent": intent, "result": res})
 	intent_submitted.emit(intent, res)
 	if res["ok"]:
 		clear_selection()
 		_after_change()
 		if intent["type"] == RulesIntent.USE_ITEM:
-			var item: LoadoutItem = state.find_item(PLAYER, intent["item_id"])
+			var item: LoadoutItem = state.find_item(me_side, intent["item_id"])
 			var what: String = item.display_name if item != null else "Item"
 			var zone: int = int(intent.get("zone", -1))
 			_screen.show_toast("%s queued%s. It resolves at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
@@ -1010,13 +1068,13 @@ func check_play(zone: int) -> Dictionary:
 	if selection.is_empty():
 		return _no("", "Select a card first.")
 	if not state.is_zone(zone):
-		var phase_check: Dictionary = state.can_submit(PLAYER, {"type": &"probe"})
+		var phase_check: Dictionary = state.can_submit(me_side, {"type": &"probe"})
 		if phase_check["code"] in [&"wrong_phase", &"already_ready"]:
 			return PlayText.describe(phase_check)
 		return _no("", "Drop it on a column.")
-	if selection.get("kind") == &"card" and state.sides[PLAYER].find_in_hand(int(selection["uid"])) == null:
+	if selection.get("kind") == &"card" and state.sides[me_side].find_in_hand(int(selection["uid"])) == null:
 		return _no("", "That card is not in your hand any more.")
-	var r: Dictionary = state.can_submit(PLAYER, _intent_for(zone))
+	var r: Dictionary = state.can_submit(me_side, _intent_for(zone))
 	if not r["ok"]:
 		return PlayText.describe(r, _ctx())
 	var kind: StringName = _unit_target_kind()
@@ -1030,14 +1088,14 @@ func check_play(zone: int) -> Dictionary:
 func _badge(kind: StringName) -> String:
 	match selection.get("kind"):
 		&"operator":
-			var s: RulesSide = state.sides[PLAYER]
+			var s: RulesSide = state.sides[me_side]
 			return "PLACE HERE" if s.operator_can_deploy and not _has_play(&"place") else "ROTATE HERE"
 		&"item":
-			var item: LoadoutItem = state.find_item(PLAYER, selection["id"])
+			var item: LoadoutItem = state.find_item(me_side, selection["id"])
 			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 				return "CALL IN HERE"
 			return "TARGET COLUMN"
-	var card: CardData = state.sides[PLAYER].find_in_hand(int(selection["uid"])).card
+	var card: CardData = state.sides[me_side].find_in_hand(int(selection["uid"])).card
 	match card.card_type:
 		DataEnums.CardType.UNIT:
 			return "PLAY HERE"
@@ -1054,9 +1112,9 @@ func _ctx() -> Dictionary:
 		&"operator":
 			return {"name": "Your Operator", "kind": &"operator"}
 		&"item":
-			return _item_ctx(state.find_item(PLAYER, selection["id"]))
+			return _item_ctx(state.find_item(me_side, selection["id"]))
 		&"card":
-			var rc: RulesCard = state.sides[PLAYER].find_in_hand(int(selection["uid"]))
+			var rc: RulesCard = state.sides[me_side].find_in_hand(int(selection["uid"]))
 			if rc != null:
 				return {"name": rc.card.display_name, "kind": &"move" if _unit_target_kind() == &"friendly" else &"card"}
 	return {}
@@ -1065,14 +1123,14 @@ func _ctx() -> Dictionary:
 func _item_ctx(item: LoadoutItem) -> Dictionary:
 	if item == null:
 		return {"name": "That item", "kind": &"item"}
-	var t: int = StreakTracker.threshold_for(state, PLAYER, item) if item.slot == DataEnums.LoadoutSlot.KILLSTREAK else 0
+	var t: int = StreakTracker.threshold_for(state, me_side, item) if item.slot == DataEnums.LoadoutSlot.KILLSTREAK else 0
 	return {"name": item.display_name, "kind": &"item", "threshold": t}
 
 
 func _intent_for(zone: int) -> Dictionary:
 	match selection.get("kind"):
 		&"operator":
-			var s: RulesSide = state.sides[PLAYER]
+			var s: RulesSide = state.sides[me_side]
 			if s.operator_can_deploy and not _has_play(&"place"):
 				return RulesIntent.place_operator(zone)
 			return RulesIntent.rotate(zone)
@@ -1081,7 +1139,7 @@ func _intent_for(zone: int) -> Dictionary:
 				return RulesIntent.use_item(selection["id"], -1, target_uid)
 			return RulesIntent.use_item(selection["id"], zone)
 	var uid: int = int(selection["uid"])
-	var rc: RulesCard = state.sides[PLAYER].find_in_hand(uid)
+	var rc: RulesCard = state.sides[me_side].find_in_hand(uid)
 	match _unit_target_kind():
 		&"friendly":
 			return RulesIntent.play_card(uid, zone, target_uid, zone)
@@ -1108,13 +1166,13 @@ func _what() -> Variant:
 func _unit_target_kind() -> StringName:
 	if state == null or selection.is_empty() or selection.get("kind") == &"operator":
 		return &""
-	return state.needs_unit_target(PLAYER, _what())
+	return state.needs_unit_target(me_side, _what())
 
 
 ## Units that can be picked for the selection: the engine's legal targets.
 func _target_candidates(_kind: StringName = &"") -> Array:
 	var out: Array = []
-	for t: Dictionary in state.legal_targets(PLAYER, _what()):
+	for t: Dictionary in state.legal_targets(me_side, _what()):
 		var uid: int = int(t["target_uid"])
 		if uid >= 0 and uid not in out:
 			out.append(uid)
@@ -1122,12 +1180,12 @@ func _target_candidates(_kind: StringName = &"") -> Array:
 
 
 func _enemy_zone(uid: int) -> int:
-	var u: RulesUnit = state.sides[ENEMY].find_unit(uid)
+	var u: RulesUnit = state.sides[foe_side].find_unit(uid)
 	return u.zone if u != null else MatchState.NO_ZONE
 
 
 func _has_play(kind: StringName) -> bool:
-	for p: Dictionary in state.sides[PLAYER].plays:
+	for p: Dictionary in state.sides[me_side].plays:
 		if p["kind"] == kind:
 			return true
 	return false
@@ -1195,10 +1253,10 @@ func _ghost_for_zone(ghost: Dictionary, z: int) -> Dictionary:
 	var out: Dictionary = {"entry": ghost, "links": [], "chips": ""}
 	var b: Dictionary = {}
 	if selection.get("kind") == &"card":
-		b = StatBreakdown.of_ghost(state, PLAYER, int(selection["uid"]), z)
-	elif selection.get("kind") == &"operator" and state.sides[PLAYER].operator_unit != null \
-			and not state.sides[PLAYER].operator_unit.is_on_board():
-		b = StatBreakdown.of_operator_ghost(state, PLAYER, z)
+		b = StatBreakdown.of_ghost(state, me_side, int(selection["uid"]), z)
+	elif selection.get("kind") == &"operator" and state.sides[me_side].operator_unit != null \
+			and not state.sides[me_side].operator_unit.is_on_board():
+		b = StatBreakdown.of_operator_ghost(state, me_side, z)
 	if b.is_empty():
 		return out
 	var e: Dictionary = ghost.duplicate()
@@ -1239,7 +1297,7 @@ func _ghost_for_zone(ghost: Dictionary, z: int) -> Dictionary:
 
 ## Banner entry of the selected unit card / Operator (for the landing ghost), {} for anything else.
 func _ghost_entry() -> Dictionary:
-	var me: RulesSide = state.sides[PLAYER]
+	var me: RulesSide = state.sides[me_side]
 	match selection.get("kind"):
 		&"card":
 			var rc: RulesCard = me.find_in_hand(int(selection["uid"]))
@@ -1326,7 +1384,7 @@ func _open_terrain(zone: int) -> void:
 func use_ability() -> Dictionary:
 	if state == null or _swallow_tap():
 		return {"ok": false, "code": &"busy", "reason": "", "data": {}}
-	var a: Dictionary = RunV2Views.ability_view(state, PLAYER)
+	var a: Dictionary = RunV2Views.ability_view(state, me_side)
 	if a.is_empty():
 		return {"ok": false, "code": &"no_ability", "reason": "", "data": {}}
 	if not bool(a.get("ready", false)):
@@ -1341,8 +1399,8 @@ func use_ability() -> Dictionary:
 
 ## kc-v2-ui: the ability's inspector (text, targets, once per match).
 func open_ability_inspector() -> void:
-	var a: Dictionary = RunV2Views.ability_view(state, PLAYER) if state != null else {}
-	var k: Dictionary = RunV2Views.operator_kit_view(state, PLAYER) if state != null else {}
+	var a: Dictionary = RunV2Views.ability_view(state, me_side) if state != null else {}
+	var k: Dictionary = RunV2Views.operator_kit_view(state, me_side) if state != null else {}
 	if a.is_empty() and k.is_empty():
 		return
 	var target_words: Dictionary = {&"zone": "Pick a column.", &"enemy": "Pick an enemy unit in your Operator's column.", &"none": "No target."}
@@ -1359,7 +1417,7 @@ func open_ability_inspector() -> void:
 func _dock_view() -> Dictionary:
 	if state == null or selection.get("kind") != &"card":
 		return {}
-	var rc: RulesCard = state.sides[PLAYER].find_in_hand(int(selection.get("uid", -1)))
+	var rc: RulesCard = state.sides[me_side].find_in_hand(int(selection.get("uid", -1)))
 	return card_view_for(rc) if rc != null else {}
 
 
@@ -1375,7 +1433,7 @@ func card_view_for(rc: RulesCard) -> Dictionary:
 	var e: Dictionary = StandardIssueLook.dress({}, rc.card, art_id)
 	if e.has("standard_issue"):
 		view["standard_issue"] = e["standard_issue"]
-	view["cant_pay"] = rc.card.cost > state.sides[PLAYER].supply
+	view["cant_pay"] = rc.card.cost > state.sides[me_side].supply
 	return view
 
 
@@ -1431,7 +1489,7 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 
 
 func _on_operator_drag_started(pos: Vector2) -> void:
-	if state == null or _swallow_tap() or state.sides[PLAYER].operator_unit == null:
+	if state == null or _swallow_tap() or state.sides[me_side].operator_unit == null:
 		return
 	select_operator()
 	_dragging = true
@@ -1440,7 +1498,7 @@ func _on_operator_drag_started(pos: Vector2) -> void:
 	chip.theme_type_variation = &"HandCardSelected"
 	var label: Label = Label.new()
 	label.theme_type_variation = &"UnitName"
-	label.text = MatchSnapshot.unit_name(state.sides[PLAYER].operator_unit, state.sides[PLAYER])
+	label.text = MatchSnapshot.unit_name(state.sides[me_side].operator_unit, state.sides[me_side])
 	chip.add_child(label)
 	_screen.begin_drag_ghost(chip, pos)
 	chip.free()
@@ -1484,7 +1542,7 @@ func _on_drag_ended(pos: Vector2) -> void:
 func _on_card_inspected(uid: int) -> void:
 	if state == null:
 		return
-	var s: RulesSide = state.sides[PLAYER]
+	var s: RulesSide = state.sides[me_side]
 	var rc: RulesCard = s.find_in_hand(uid)
 	if rc == null:
 		return
@@ -1492,13 +1550,13 @@ func _on_card_inspected(uid: int) -> void:
 	if rc.card.cost > s.supply:
 		status += " Not enough to play it now."
 	open_card_inspector(rc.card, "friend", status, {}, -1, uid,
-			synergy_lines(rc.card, PLAYER, null, rc.chosen_trait))
+			synergy_lines(rc.card, me_side, null, rc.chosen_trait))
 
 
 func _on_operator_inspected() -> void:
-	if state == null or state.sides[PLAYER].operator_unit == null:
+	if state == null or state.sides[me_side].operator_unit == null:
 		return
-	_open_operator(PLAYER)
+	_open_operator(me_side)
 
 
 func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
@@ -1518,11 +1576,11 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 					"status": "Recon Drone or Callout can spot it before Reveal."})
 			return
 		&"field_player", &"field_enemy":
-			_open_field(zone, PLAYER if slot_side == &"field_player" else ENEMY, uid)
+			_open_field(zone, me_side if slot_side == &"field_player" else foe_side, uid)
 			return
 	if uid < 0:
 		return
-	var side: int = PLAYER if slot_side == &"player" else ENEMY
+	var side: int = me_side if slot_side == &"player" else foe_side
 	var s: RulesSide = state.sides[side]
 	if s.operator_unit != null and s.operator_unit.uid == uid:
 		_open_operator(side)
@@ -1533,7 +1591,7 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		var status: String = "In %s, row %d%s: FP %d, Armor %d/%d." % [ZONE_WORDS[zone], row,
 				" (frontline)" if row == 1 else "",
 				state.firepower_of(u), u.armor, u.max_armor(state.round_number)]
-		open_card_inspector(u.card, "friend" if side == PLAYER else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
+		open_card_inspector(u.card, "friend" if side == me_side else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
 				-1, synergy_lines(u.card, side, u, u.chosen_trait))
 		return
 	if u != null:
@@ -1550,7 +1608,7 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 					"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(), "pending": true,
 					"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
 			MatchSnapshot._banner_fields(e3, card, null, s, state, uid)
-			open_card_inspector(card, "friend", "Queued for %s (PLAN). It arrives at Reveal." % ZONE_WORDS[zone], e3, PLAYER)
+			open_card_inspector(card, "friend", "Queued for %s (PLAN). It arrives at Reveal." % ZONE_WORDS[zone], e3, me_side)
 			return
 
 
@@ -1641,7 +1699,7 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 		banner = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 				"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
 				"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
-		MatchSnapshot._banner_fields(banner, card, null, state.sides[PLAYER], state, card_uid)
+		MatchSnapshot._banner_fields(banner, card, null, state.sides[me_side], state, card_uid)
 	var art: BannerArt = BannerArtDB.get_art(StringName(String(banner.get("banner", card.id))))
 	if card.is_field():
 		text = _join(text, FIELD_RULE)
@@ -1667,7 +1725,7 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 		"view": view, "title": card.display_name,
 		"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,
 		"text": text, "keywords": keywords, "status": status,
-		"banner": banner, "side": banner_side if banner_side >= 0 else (PLAYER if side == "friend" else ENEMY),
+		"banner": banner, "side": banner_side if banner_side >= 0 else (me_side if side == "friend" else foe_side),
 		"art_line": _art_line(art), "is_unit": card.is_unit(),
 	})
 
@@ -1695,7 +1753,7 @@ func _art_line(art: BannerArt) -> String:
 func _open_info(info: Dictionary) -> void:
 	var d: Dictionary = info.duplicate()
 	d["view"] = {}
-	d["side"] = int(info.get("side", PLAYER))
+	d["side"] = int(info.get("side", me_side))
 	_screen.get_inspector().open(d)
 
 
@@ -1703,12 +1761,12 @@ func _open_info(info: Dictionary) -> void:
 func _on_rail_inspected(key: StringName) -> void:
 	if state == null:
 		return
-	var me: RulesSide = state.sides[PLAYER]
-	var foe: RulesSide = state.sides[ENEMY]
+	var me: RulesSide = state.sides[me_side]
+	var foe: RulesSide = state.sides[foe_side]
 	match key:
 		&"score":
 			var goal: String = String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") else ""
-			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, PLAYER)
+			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
 					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal],
 					"status": "Each round you score the columns you control. Initiative (the flag): %s %s" % [
@@ -1719,7 +1777,7 @@ func _on_rail_inspected(key: StringName) -> void:
 							me.deck.size(), me.discard.size(), state.config.draws_per_round, "" if state.config.draws_per_round == 1 else "s", state.config.hand_cap],
 					"status": ""})
 		&"intel":
-			var dots: PackedInt32Array = state.red_dots(PLAYER)
+			var dots: PackedInt32Array = state.red_dots(me_side)
 			_open_info({"title": "Rival intel", "type": "rival hand · incoming plays",
 					"text": "The rival holds %d cards. Hidden plays this Deploy: A %d, B %d, C %d. Each shows on the board as an INCOMING back in the slot where it will land." % [foe.hand.size(), dots[0], dots[1], dots[2]],
 					"status": "Recon Drone and Callout reveal what they are."})
@@ -1732,7 +1790,7 @@ func _on_rail_inspected(key: StringName) -> void:
 			var names: PackedStringArray = []
 			for item: LoadoutItem in me.setup.killstreaks:
 				if item != null:
-					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, PLAYER, item)])
+					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, me_side, item)])
 			_open_info({"title": "Killstreaks", "type": "streak %d" % me.streak,
 					"text": "Eliminations build your streak; each killstreak is earned at its threshold (%s) and called in from this badge." % ", ".join(names),
 					"status": "The badge glows amber when one is ready."})
@@ -1749,7 +1807,7 @@ func _on_rail_inspected(key: StringName) -> void:
 					"text": "Calling cards and Fields share a trait (one trait per card at most) (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Standard Issue cards have no trait.",
 					"status": "Tap the rail for every tier text. Long-press a chip for that trait."})
 		&"initiative":
-			var ini: Dictionary = MatchSnapshot.initiative_info(state, PLAYER)
+			var ini: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Initiative", "type": "round %d · %s first" % [state.round_number, "you go" if bool(ini.get("mine", true)) else "the rival goes"],
 					"text": "%s %s" % [String(ini.get("reason", "")), String(ini.get("effect", ""))],
 					"status": "Initiative goes to the side behind on score; %s. The flag on SCORE shows who has it." % String(MatchSnapshot.TIE_RULE_WORDS.get(ini.get("tie_rule", &"player"), "the tie rule decides a tie"))})
@@ -1762,7 +1820,7 @@ func _on_rail_inspected(key: StringName) -> void:
 func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 	if state == null:
 		return
-	var side: int = PLAYER if side_name == &"player" else ENEMY
+	var side: int = me_side if side_name == &"player" else foe_side
 	var sv: Dictionary = state.synergy_side(side)
 	var n: int = int((sv["counts"] as Dictionary).get(t, 0))
 	var tier: int = int((sv["tiers"] as Dictionary).get(t, 0))
@@ -1774,7 +1832,7 @@ func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 	var lines: Array[Dictionary] = []
 	for k: int in [2, 3]:
 		lines.append({"name": "%s %d%s" % [SynergyGlyphs.trait_name(t), k, " (ON)" if tier >= k else ""], "text": String(SynergyRules.TIER_TEXT[t][k - 2]) + "."})
-	_open_info({"title": SynergyGlyphs.trait_name(t), "type": "trait · %s · %d in play" % ["yours" if side == PLAYER else "rival", n],
+	_open_info({"title": SynergyGlyphs.trait_name(t), "type": "trait · %s · %d in play" % ["yours" if side == me_side else "rival", n],
 			"text": "In play: %s.%s Units and visible Fields count; tactics and hidden traps don't." % [
 				", ".join(members) if not members.is_empty() else "only Fields", " Doctrine adds 1 to this count." if doc else ""],
 			"keywords": lines, "side": side,
@@ -1782,7 +1840,7 @@ func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 
 
 func _open_objective(zone: int) -> void:
-	var lane: Dictionary = MatchSnapshot.build(state, map, PLAYER, killfeed)["lanes"][zone]
+	var lane: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)["lanes"][zone]
 	var control_text: String = {&"player": "You control it", &"enemy": "The rival controls it",
 			&"contested": "Even (contested): both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
 	var lines: PackedStringArray = []
@@ -1803,7 +1861,7 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 	var s: RulesSide = state.sides[side]
 	var rc: RulesCard = null
 	var risk: bool = false
-	for entry: Dictionary in state.fields_in(side, zone, side == PLAYER):
+	for entry: Dictionary in state.fields_in(side, zone, side == me_side):
 		if (entry["card"] as RulesCard).uid == uid:
 			rc = entry["card"]
 	for p: Dictionary in s.plays:
@@ -1813,13 +1871,13 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 		return
 	var control: int = state.control_of(zone)
 	risk = rc.card.is_visible_field() and control == 1 - side
-	var status: String = "On %s's half of objective %s." % ["your" if side == PLAYER else "the rival", MatchSnapshot.ZONE_LABELS[zone]]
+	var status: String = "On %s's half of objective %s." % ["your" if side == me_side else "the rival", MatchSnapshot.ZONE_LABELS[zone]]
 	if rc.card.hidden:
 		status = "Hidden trap: the rival can't see it. Traps are never overrun."
 	elif risk:
-		status = "OVERRUN RISK: the %s controls this column now. If it still does at the end of the round, this Field is destroyed." % ("rival" if side == PLAYER else "you")
+		status = "OVERRUN RISK: the %s controls this column now. If it still does at the end of the round, this Field is destroyed." % ("rival" if side == me_side else "you")
 	status += " Removed by: Overrun, Sabotage, or a newer Field of the same side here."
-	open_card_inspector(rc.card, "friend" if side == PLAYER else "enemy", status, {}, side)
+	open_card_inspector(rc.card, "friend" if side == me_side else "enemy", status, {}, side)
 
 
 ## kc-ui3: a loadout item's rules (long-press on a killstreak tile): its card, threshold, what it does
@@ -1827,13 +1885,13 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 func open_item_inspector(item_id: StringName) -> void:
 	if state == null:
 		return
-	var item: LoadoutItem = state.find_item(PLAYER, item_id)
+	var item: LoadoutItem = state.find_item(me_side, item_id)
 	if item == null:
 		return
-	var me: RulesSide = state.sides[PLAYER]
+	var me: RulesSide = state.sides[me_side]
 	var is_ks: bool = item.slot == DataEnums.LoadoutSlot.KILLSTREAK
-	var threshold: int = StreakTracker.threshold_for(state, PLAYER, item) if is_ks else 0
-	var check: Dictionary = state.check_use(PLAYER, item_id)
+	var threshold: int = StreakTracker.threshold_for(state, me_side, item) if is_ks else 0
+	var check: Dictionary = state.check_use(me_side, item_id)
 	var status: String = ""
 	if check["ok"]:
 		status = "Ready: tap its tile, then a target, to call it in." if is_ks else "Ready to use."
@@ -1850,7 +1908,7 @@ func open_item_inspector(item_id: StringName) -> void:
 	if item.supply_cost > 0:
 		type_text += " · cost %d" % item.supply_cost
 	_screen.get_inspector().open({"view": view, "title": item.display_name, "type": type_text, "text": item.text,
-			"keywords": [], "status": status, "side": PLAYER})
+			"keywords": [], "status": status, "side": me_side})
 
 
 func _open_operator(side: int) -> void:
@@ -1860,14 +1918,14 @@ func _open_operator(side: int) -> void:
 	var where: String = "Off the board."
 	if op.is_on_board():
 		where = "In %s: FP %d, Armor %d/%d." % [ZONE_WORDS[op.zone], state.firepower_of(op), op.armor, op.max_armor(state.round_number)]
-	elif side == PLAYER and s.operator_can_deploy:
+	elif side == me_side and s.operator_can_deploy:
 		where = "Off the board: tap it, then a column, to place it."
 	var cost: int = state.operator_cost()
 	var respawn_cost: int = maxi(0, state.config.operator_cost)
 	if cost > 0:
 		where += " Placing it costs %d Supply (%s)%s." % [cost,
 				"every respawn; round 1 is free" if state.config.operator_free_round1 else "round 1 and every respawn",
-				", you have %d: not enough now" % s.supply if side == PLAYER and s.operator_can_deploy and cost > s.supply else ""]
+				", you have %d: not enough now" % s.supply if side == me_side and s.operator_can_deploy and cost > s.supply else ""]
 	elif respawn_cost > 0 and state.config.operator_free_round1:
 		# kc-econ: round 1's placement is free; say what a respawn will cost.
 		where += " Free to place in round 1; a respawn costs %d Supply." % respawn_cost
@@ -1886,7 +1944,7 @@ func _open_operator(side: int) -> void:
 	if op.is_on_board():
 		op_lines.append({"name": "Firepower now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)
-	view["side"] = "friend" if side == PLAYER else "enemy"
+	view["side"] = "friend" if side == me_side else "enemy"
 	view["cost"] = cost  # kc-loadout-cut: the Supply cost in the card's cost badge, like a deck card
 	var op_art: BannerArt = BannerArtDB.get_art(StringName(String(MatchSnapshot.unit_entry(state, op, s)["banner"])))
 	if op_art.licensed:
@@ -1919,7 +1977,7 @@ func _flush_events() -> void:
 	while _cursor < state.events.size():
 		var e: Dictionary = state.events[_cursor]
 		_cursor += 1
-		if e.has("private_to") and e["private_to"] != MatchState.SIDE_NAMES[PLAYER]:
+		if e.has("private_to") and e["private_to"] != MatchState.SIDE_NAMES[me_side]:
 			continue
 		if e["type"] == RulesEvent.UNIT_ELIMINATED:
 			_add_killfeed(e)
@@ -1964,9 +2022,9 @@ func _add_v2_line(e: Dictionary) -> void:
 				return
 			if t == "item_used" and side != &"player" and side != &"":
 				return
-			var item: LoadoutItem = state.find_item(PLAYER if side != &"enemy" else ENEMY, StringName(str(e.get("item_id", ""))))
+			var item: LoadoutItem = state.find_item(me_side if side != &"enemy" else foe_side, StringName(str(e.get("item_id", ""))))
 			var op: String = ""
-			var s2: RulesSide = state.sides[PLAYER if side != &"enemy" else ENEMY]
+			var s2: RulesSide = state.sides[me_side if side != &"enemy" else foe_side]
 			if s2.operator_unit != null:
 				op = MatchSnapshot.unit_name(s2.operator_unit, s2)
 			var z: int = int(e.get("zone", -1))
@@ -2019,9 +2077,9 @@ func _emit(e: Dictionary) -> void:
 			EventBus.card_deployed.emit(StringName(e.get("side", &"")), StringName(e.get("card_id", &"")), StringName(e.get("zone", &"")))
 			EventBus.card_revealed.emit(StringName(e.get("side", &"")), StringName(e.get("card_id", &"")), StringName(e.get("zone", &"")))
 		RulesEvent.ITEM_REVEALED:
-			if e.get("side", &"") == MatchState.SIDE_NAMES[PLAYER]:
+			if e.get("side", &"") == MatchState.SIDE_NAMES[me_side]:
 				var item_id: StringName = StringName(e.get("item_id", &""))
-				var item: LoadoutItem = state.find_item(PLAYER, item_id)
+				var item: LoadoutItem = state.find_item(me_side, item_id)
 				if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 					EventBus.killstreak_used.emit(item_id, r)
 		RulesEvent.OPERATOR_PLACED:
@@ -2037,10 +2095,10 @@ func _emit(e: Dictionary) -> void:
 		RulesEvent.OPERATOR_DOWN:
 			EventBus.operator_down.emit(StringName(e.get("side", &"")), r)
 		RulesEvent.STREAK_CHANGED:
-			if e.get("side", &"") == MatchState.SIDE_NAMES[PLAYER]:
+			if e.get("side", &"") == MatchState.SIDE_NAMES[me_side]:
 				EventBus.streak_changed.emit(int(e.get("streak", 0)))
 		RulesEvent.KILLSTREAK_EARNED:
-			if e.get("side", &"") == MatchState.SIDE_NAMES[PLAYER]:
+			if e.get("side", &"") == MatchState.SIDE_NAMES[me_side]:
 				EventBus.killstreak_earned.emit(StringName(e.get("item_id", &"")), r)
 		RulesEvent.MODE_SCORED:
 			EventBus.score_changed.emit(int(e.get("player_score", 0)), int(e.get("enemy_score", 0)))
@@ -2065,3 +2123,112 @@ static func _no(badge: String, reason: String) -> Dictionary:
 
 static func _join(a: String, b: String) -> String:
 	return a if b.is_empty() else "%s %s" % [a, b]
+
+
+
+# =============================================================================
+# kc-duel-ui: Duel matches (duel-api.md §6)
+# =============================================================================
+
+var _last_supply: int = 0
+var _last_hand: int = 0
+
+
+## Plays a DuelMatch (or, without DuelState, a plain MatchState from DuelRules.create_match).
+## vs AI: the match's tier AI plans before every Deploy (as a squad AI does). Pass & Play: the
+## DuelMatch drives the turns: cover_needed -> the cover -> accept_cover -> deploy_started (the
+## screen turns to that side) -> READY = finish_deploy -> round_ready -> the round plays -> round_done.
+func start_duel_match(m: Object) -> bool:
+	if m == null:
+		return false
+	is_run_match = false
+	if m is MatchState:
+		duel = null
+		map = CardDB.get_map((m as MatchState).map_id)
+		_play(m, null)
+		return true
+	duel = m
+	var st: MatchState = m.get(&"state")
+	var cfg: Resource = m.get(&"config")
+	map = cfg.get(&"map") if cfg != null and cfg.get(&"map") != null else CardDB.get_map(st.map_id)
+	me_side = MatchState.PLAYER
+	foe_side = MatchState.ENEMY
+	var ai: Object = m.get(&"ai")
+	_default_planner = false
+	if StringName(str(m.get(&"kind"))) != &"hot_seat" and ai != null:
+		enemy_planner = func(s: MatchState) -> void: ai.call(&"take_turn", s, MatchState.ENEMY)
+		_play(st, null)
+		return true
+	# Pass & Play.
+	enemy_planner = Callable()
+	m.connect(&"cover_needed", _on_duel_cover_needed)
+	m.connect(&"deploy_started", _on_duel_deploy_started)
+	m.connect(&"round_ready", _on_duel_round_ready)
+	state = st
+	RevealGate.active = false
+	_cursor = 0
+	killfeed.clear()
+	intent_log.clear()
+	selection.clear()
+	_busy = false
+	_end_shown = false
+	_finished = false
+	_match_started_ms = Time.get_ticks_msec()
+	# Starts the match and raises the first cover (cover_needed).
+	m.call(&"start")
+	return true
+
+
+func is_duel() -> bool:
+	return duel != null
+
+
+func is_hot_seat() -> bool:
+	return duel != null and StringName(str(duel.get(&"kind"))) == &"hot_seat"
+
+
+## The cover screen (null outside Pass & Play).
+func get_cover() -> Control:
+	return _cover
+
+
+func _on_duel_cover_needed(side: int, player_name: String) -> void:
+	clear_selection()
+	if _screen.get_inspector().is_open():
+		_screen.get_inspector().close()
+	if is_mulligan_open():
+		_mulligan_panel().close()
+	if _cover == null:
+		_cover = (load(PASS_COVER_SCENE) as PackedScene).instantiate()
+		_screen.add_child(_cover)
+		_cover.accepted.connect(func(s: int) -> void: duel.call(&"accept_cover", s))
+	var names: Array = duel.get(&"names")
+	var other: int = 1 - side
+	var other_ready: bool = state.sides[other].ready
+	_cover.show_for(side, player_name, {"round": state.round_number, "other_name": String(names[other]),
+			"other_orders": state.sides[other].plays.size() if other_ready else -1,
+			"last": _last_round_line, "mulligan": state.round_number == 1 and state.can_mulligan(side)["ok"]})
+
+
+func _on_duel_deploy_started(side: int) -> void:
+	me_side = side
+	foe_side = 1 - side
+	_begin_deploy()
+
+
+func _on_duel_round_ready() -> void:
+	await _play_round(_last_supply, _last_hand)
+
+
+## The result for DuelFlow when the match has no result() (a plain MatchState).
+func _duel_result() -> Dictionary:
+	var outcome: Dictionary = state.hooks.mode_rules.outcome if state.hooks != null and state.hooks.mode_rules != null else {}
+	var w: int = 0 if state.result == &"player" else (1 if state.result == &"enemy" else -1)
+	return {"winner_side": w, "scores": [int(state.sides[0].score), int(state.sides[1].score)], "rounds": state.round_number,
+			"reason": outcome.get("reason", &"")}
+
+
+## "Round 2: Zone Control 3 - 2 (Dana - Alex)": the public line the next cover shows.
+func _round_line() -> String:
+	var names: Array = duel.get(&"names") if duel != null else ["You", "Rival"]
+	return "After round %d: %s %d · %s %d" % [state.round_number, names[0], state.sides[0].score, names[1], state.sides[1].score]

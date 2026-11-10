@@ -211,6 +211,13 @@ func _main() -> void:
 					exps.append(e)
 			_: push_error("duel_sim: unknown option " + arg)
 	var t0: int = Time.get_ticks_msec()
+	# kc-duel-tune sanity line: the Operator numbers this run really uses.
+	var ops_line: Array[String] = []
+	for opid: String in ["kestrel_ar7", "longreach_338", "wasp_9", "bastion_60"]:
+		var li: LoadoutItem = load("res://data/loadout/%s.tres" % opid) as LoadoutItem
+		ops_line.append("%s %d/%d qm%d" % [opid, li.operator_firepower, li.operator_armor, li.opening_hand_bonus])
+	var ms: LoadoutItem = load("res://data/loadout/ab_marked_shot.tres") as LoadoutItem
+	print("  operators: %s · marked shot %d" % [", ".join(ops_line), (ms.effects[0] as EffectData).amount])
 	print("  trait bonus: %s" % SynergyRules.trait_bonus)
 	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s doctrine=%s heroline=%s" % [n, picks,
 			draws, mode_opt, hero_mode, respawn_cost, terrain_on, doctrine_on, heroline])

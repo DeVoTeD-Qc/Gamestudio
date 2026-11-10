@@ -74,11 +74,10 @@ static func start_match(p_setup: Dictionary) -> Dictionary:
 static func take_pending() -> Object:
 	var m: Object = pending
 	pending = null
+	# Only the match this hand-off started (DuelState.current may hold a match a test or tool made).
 	var ds: Node = DuelViews.state()
-	if ds != null and ds.has_method(&"take_current"):
-		var cur: Object = ds.call(&"take_current")
-		if m == null:
-			m = cur
+	if m != null and ds != null and ds.has_method(&"take_current") and ds.get(&"current") == m:
+		ds.call(&"take_current")
 	if m != null:
 		active = m
 	return m
@@ -131,3 +130,28 @@ static func rematch() -> Dictionary:
 	var s: Dictionary = setup.duplicate(true)
 	s.erase("seed")
 	return start_match(s)
+
+
+## Setters for the hand-off state (a script preloaded as a const can't assign its static vars).
+static func set_hub_tab(t: String) -> void:
+	hub_tab = t
+
+
+static func set_edit_deck(d: Dictionary) -> void:
+	edit_deck = d.duplicate(true)
+
+
+static func set_setup(s: Dictionary) -> void:
+	setup = s.duplicate(true)
+
+
+static func set_last_result(r: Dictionary) -> void:
+	last_result = r.duplicate(true)
+
+
+static func set_dry_run(on: bool) -> void:
+	dry_run = on
+
+
+static func clear_active() -> void:
+	active = null

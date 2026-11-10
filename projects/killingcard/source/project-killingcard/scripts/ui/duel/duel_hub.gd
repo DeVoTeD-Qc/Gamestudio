@@ -54,7 +54,7 @@ func _build() -> void:
 		tab = "presets"
 	if t.begins_with("play:"):
 		vs_deck_id = t.trim_prefix("play:")
-		DuelFlow.hub_tab = "mine"
+		DuelFlow.set_hub_tab("mine")
 		open_vs_ai.call_deferred(vs_deck_id)
 
 
@@ -538,7 +538,7 @@ func _fill_vs_ai() -> void:
 				"text": String(t["text"]), "keywords": [], "status": "Your record at this tier: %s" % DuelViews.record_text(_tier_record(t["id"]))}))
 		tr.add_child(b)
 		if t["id"] == tier:
-			line = "%s: %s" % [String(t["name"]).capitalize(), t["text"]]
+			line = String(t["text"]) if String(t["text"]).to_lower().begins_with(String(t["name"]).to_lower()) else "%s: %s" % [String(t["name"]).capitalize(), t["text"]]
 	var tl: Label = W.label(line, &"", 17, W.FOG, true)
 	tl.name = "TierLine"
 	body.add_child(tl)
@@ -550,9 +550,13 @@ func _fill_vs_ai() -> void:
 	go.custom_minimum_size.y = 72
 	if bool(r["ok"]):
 		var opp: String = "a random preset" if opponent_id == "random" else String(deck_by_id(opponent_id).get("name", opponent_id))
-		go.text = "START · %s vs %s · %s" % [mine["name"], opp, TIER_WORD(tier)]
+		var vs_line: Label = W.label("%s vs %s · %s" % [mine["name"], opp, TIER_WORD(tier)], &"UnitName", 18, W.FOG, true)
+		vs_line.name = "Matchup"
+		body.add_child(vs_line)
+		go.text = "START DUEL"
 	else:
-		go.text = "CAN'T START · %s" % String(r["errors"][0]["text"])
+		body.add_child(W.rule_line(String(r["errors"][0]["text"]), &"error"))
+		go.text = "CAN'T START YET"
 		go.modulate = Color(1, 1, 1, 0.55)
 	go.clip_text = true
 	go.pressed.connect(func() -> void: start_vs_ai())
@@ -593,7 +597,7 @@ func _opponent_tile(d: Dictionary) -> Button:
 	col.offset_right = -8
 	col.add_child(W.label(String(d["name"]).to_upper(), &"TileName", 18))
 	var h: Dictionary = DuelViews.hero(StringName(str(d.get("hero", ""))))
-	col.add_child(W.label(String(h["name"]) if not h.is_empty() else "? hero", &"HudAccent", 16))
+	col.add_child(W.label(String(h["name"]) if not h.is_empty() else "Any hero", &"HudAccent", 16))
 	var t: StringName = DuelViews.main_trait(d)
 	if t != &"":
 		var tr: HBoxContainer = HBoxContainer.new()

@@ -146,6 +146,13 @@ func _main() -> void:
 					else:
 						(tiers[int(tk[1])] as Dictionary)[tk[2]] = val
 			_: push_error("run_v2_check: unknown option " + arg)
+	# kc-duel-tune sanity line: the Operator numbers this run really uses.
+	var ops_line: Array[String] = []
+	for opid: String in ["kestrel_ar7", "longreach_338", "wasp_9", "bastion_60"]:
+		var li: LoadoutItem = load("res://data/loadout/%s.tres" % opid) as LoadoutItem
+		ops_line.append("%s %d/%d qm%d" % [opid, li.operator_firepower, li.operator_armor, li.opening_hand_bonus])
+	var ms: LoadoutItem = load("res://data/loadout/ab_marked_shot.tres") as LoadoutItem
+	print("  operators: %s · marked shot %d" % [", ".join(ops_line), (ms.effects[0] as EffectData).amount])
 	var t0: int = Time.get_ticks_msec()
 	print("run_v2_check (shipped): runs=%d first=%s op=%s boss=%s mods=%s terrain=%s args=%s" % [runs, first_run,
 			op_mode, boss_mode, mods, terrain_on, OS.get_cmdline_user_args()])

@@ -132,9 +132,11 @@ func _rebuild() -> void:
 		(nr.get_child(1) as Label).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		body.add_child(np)
 	# Actions.
-	var acts: HBoxContainer = HBoxContainer.new()
+	var acts: GridContainer = GridContainer.new()
 	acts.name = "Actions"
-	acts.add_theme_constant_override(&"separation", 8)
+	acts.columns = 2 if portrait else 4
+	acts.add_theme_constant_override(&"h_separation", 8)
+	acts.add_theme_constant_override(&"v_separation", 8)
 	layout.add_child(acts)
 	var again: Button = _act("REMATCH", &"ReadyButton", acts)
 	again.name = "RematchButton"
