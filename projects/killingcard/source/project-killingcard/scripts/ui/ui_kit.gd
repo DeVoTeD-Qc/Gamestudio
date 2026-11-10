@@ -93,11 +93,29 @@ static func kit_texture(icon_name: StringName, px: float = DEFAULT_PX) -> Textur
 	if _tex.has(cache_key):
 		return _tex[cache_key]
 	var tex: Texture2D = null
-	var path: String = path_for(icon_name, size)
-	if ResourceLoader.exists(path):
-		tex = load(path) as Texture2D
+	for s: int in export_fallbacks(size):
+		var path: String = path_for(icon_name, s)
+		if ResourceLoader.exists(path):
+			tex = load(path) as Texture2D
+			break
 	_tex[cache_key] = tex
 	return tex
+
+
+## Sizes to try for a wanted export, in order (kc-ui-wire2): the wanted one, then the largest
+## export present below it, then larger ones. The web build leaves out the 256 master and the 128
+## exports (export_presets.cfg exclude_filter), so a big menu icon draws from the 64 px export.
+static func export_fallbacks(size: int) -> Array[int]:
+	var all: Array[int] = EXPORT_PX.duplicate()
+	all.append(MASTER_PX)
+	var out: Array[int] = [size]
+	for i: int in range(all.size() - 1, -1, -1):
+		if all[i] < size:
+			out.append(all[i])
+	for s: int in all:
+		if s > size:
+			out.append(s)
+	return out
 
 
 ## Kit image as an AtlasTexture (full region), for IconSheet callers typed to AtlasTexture.
@@ -215,6 +233,17 @@ const PIECE_MARGINS: Dictionary = {
 	&"frm_y2_unit": Vector4(24, 24, 24, 24), &"frm_y2_operator": Vector4(24, 24, 24, 24),
 	&"frm_y2_standard_issue": Vector4(24, 24, 24, 24), &"frm_t1_orders": Vector4(24, 64, 48, 24),
 	&"fx_glow_rail": Vector4(48, 48, 48, 48),
+	# kc-ui-wire2 (batch 2): frames, tiles, fx and panels drawn with draw_piece (manifest margins).
+	&"frm_front_tab": Vector4(12, 6, 12, 6), &"frm_plan_plate": Vector4(16, 8, 16, 8),
+	&"frm_ghost": Vector4(20, 20, 20, 20), &"fx_outline_teal": Vector4(32, 32, 32, 32),
+	&"fx_outline_side": Vector4(32, 32, 32, 32), &"fx_glow_amber": Vector4(64, 64, 64, 64),
+	&"fx_glow_red": Vector4(64, 64, 64, 64), &"tile_objective": Vector4(24, 20, 24, 20),
+	&"tile_field_chip": Vector4(24, 16, 24, 16), &"tile_field_chip_trap": Vector4(24, 16, 24, 16),
+	&"tile_slot_empty": Vector4(20, 20, 20, 20), &"pnl_counter": Vector4(16, 16, 16, 16),
+	&"pnl_toast": Vector4(40, 16, 24, 16), &"pnl_rail_chip": Vector4(20, 20, 20, 20),
+	&"pnl_order_strip": Vector4(24, 12, 24, 12), &"pnl_callout": Vector4(32, 12, 32, 12),
+	&"pnl_tray": Vector4(32, 32, 32, 32), &"pnl_flyout": Vector4(32, 32, 32, 32),
+	&"pnl_header": Vector4(40, 16, 40, 16),
 }
 ## Ship size -> drawn size of the 9-slice rims and of tiles (§7.4 step 3). The kit's plates, panels and
 ## frames ship at 2x the largest on-screen size, so they draw at 0.5 (a 24 px ship margin = a 12 px
@@ -236,6 +265,32 @@ static var log_draws: bool = false
 static var draw_log: Array[StringName] = []
 static var draw_tint_log: Array[Color] = []
 static var _pieces: Dictionary = {}  # id -> Texture2D or null
+
+
+## kc-ui-wire2: the fx/ glows, outlines, tracer, flash and sheen are RGB on black with no alpha; they
+## draw with additive blending (black adds nothing). One shared material.
+static var _add_mat: CanvasItemMaterial = null
+
+
+static func additive_material() -> CanvasItemMaterial:
+	if _add_mat == null:
+		_add_mat = CanvasItemMaterial.new()
+		_add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return _add_mat
+
+
+## A full-rect child of parent drawn with additive blending (behind the parent's own drawing when
+## behind = true); on_draw(layer) does the drawing. Returns the layer (call queue_redraw on it).
+static func fx_layer(parent: Control, on_draw: Callable, behind: bool = false, layer_name: String = "KitFx") -> Control:
+	var layer: Control = Control.new()
+	layer.name = layer_name
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.material = additive_material()
+	layer.show_behind_parent = behind
+	parent.add_child(layer)
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.draw.connect(func() -> void: on_draw.call(layer))
+	return layer
 
 
 ## A kit piece by its file id (&"frm_standard_issue", &"pnl_new_card", &"kc_b_si_grunt", ...), or

@@ -31,7 +31,7 @@ Two modes.
 
 After either mode, from the Godot project:
      godot --headless --path . --import
-     python3 -I ../../tools/ui_kit_icons.py --post-import .    (icons: mipmaps on; then --import again)
+     python3 -I ../../tools/ui_kit_icons.py --post-import .    (icons: mipmaps off; then --import again)
 """
 import csv
 import glob
@@ -344,16 +344,18 @@ def manifest_mode(manifest, raw_dir, project, dry):
 
 
 def post_import(project):
-    """Icons (assets/ui/kit/icons/**.png.import): mipmaps on (7.3). Pieces keep Godot's defaults
-    (lossless, no mipmaps, fix_alpha_border on). Run `godot --import` again afterwards."""
+    """Icons (assets/ui/kit/icons/**.png.import): mipmaps off (kc-ui-wire2: canvas items never sample
+    them, UiKit picks the export nearest the on-screen size instead, and they add a third to every icon
+    texture in the web .pck). Pieces keep Godot's defaults (lossless, no mipmaps, fix_alpha_border on).
+    Run `godot --import` again afterwards."""
     n = 0
     for p in glob.glob(os.path.join(project, 'assets/ui/kit/icons/**/*.png.import'), recursive=True):
         s = open(p).read()
-        t = s.replace('mipmaps/generate=false', 'mipmaps/generate=true')
+        t = s.replace('mipmaps/generate=true', 'mipmaps/generate=false')
         if t != s:
             open(p, 'w').write(t)
             n += 1
-    print('mipmaps switched on in %d icon .import files' % n)
+    print('mipmaps switched off in %d icon .import files' % n)
 
 
 def main(argv):

@@ -14,6 +14,9 @@ const SCENE_CONSENT: String = "res://scenes/survey/Consent.tscn"
 
 func _ready() -> void:
 	_status.text = "Loading..."
+	# kc-ui-wire2: the painted loading backdrop (bg_loading) over the shader background, when shipped.
+	var bg: Node = get_node_or_null(^"Background")
+	CardArt.add_backdrop(self, &"loading", bg.get_index() + 1 if bg != null else 0, Color(0.07, 0.08, 0.09, 0.45))
 	# Wait one frame so the label is drawn before the next scene loads.
 	await get_tree().process_frame
 	SceneRouter.goto_scene(first_scene(get_node_or_null("/root/PlaytestLog"), DisplayServer.get_name() == "headless"))

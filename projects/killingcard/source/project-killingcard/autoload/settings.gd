@@ -82,6 +82,8 @@ func _ready() -> void:
 	var bank: Node = (load("res://scripts/fx/sfx_bank.gd") as GDScript).new()
 	bank.name = "Sfx"
 	add_child(bank)
+	# kc-ui-wire2: the UI kit's button / panel plates into the project theme (no-op without the kit).
+	KitTheme.apply(ThemeDB.get_project_theme())
 	# Headless runs (tests, exports) have no real screen; tests check ScreenProfile directly.
 	if DisplayServer.get_name() == "headless":
 		return

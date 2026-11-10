@@ -483,6 +483,9 @@ func _build() -> void:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# kc-ui-wire2: the painted Codex backdrop (bg_codex) under a heavy scrim; the plain panel without it.
+	if CardArt.add_backdrop(self, &"codex", bg.get_index() + 1, Color(0.055, 0.065, 0.075, 0.8)):
+		bg.color = Color(0.055, 0.065, 0.075, 1.0)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.name = "Margin"
 	add_child(margin)

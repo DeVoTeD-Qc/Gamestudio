@@ -20,8 +20,21 @@ var _alpha: float = 1.0
 var _total: float = 0.0
 
 
+## kc-ui-wire2: the kit's hit flash (fx_hit_flash, additive) behind the brackets, when shipped.
+const FLASH_PIECE: StringName = &"fx_hit_flash"
+var _kit_layer: Control = null
+
+
 func _ready() -> void:
 	fx_kind = &"hit_marker"
+	if UiKit.has_piece(FLASH_PIECE):
+		_kit_layer = UiKit.fx_layer(self, _draw_kit, true, "KitHitFlash")
+
+
+func _draw_kit(layer: Control) -> void:
+	var w: float = radius * 7.0
+	var h: float = w * 0.25
+	UiKit.draw_piece(layer, FLASH_PIECE, Rect2(center - Vector2(w, h) * 0.5, Vector2(w, h)), Color(color.lightened(0.5), _alpha))
 
 
 func _build(t: Tween, timing: RefCounted) -> void:
@@ -48,6 +61,8 @@ func _set_alpha(v: float) -> void:
 
 
 func _draw() -> void:
+	if _kit_layer != null:
+		_kit_layer.queue_redraw()
 	var r: float = radius * (1.0 + _spread * 0.9)
 	var arm: float = radius * 0.55
 	var c: Color = Color(color, _alpha)

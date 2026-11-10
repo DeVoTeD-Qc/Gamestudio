@@ -79,28 +79,8 @@ func backdrop_key() -> StringName:
 
 ## Puts the painted backdrop and its scrim right above the scene's Background, under the UI.
 func _add_backdrop() -> void:
-	var key: StringName = backdrop_key()
-	var tex: Texture2D = CardArt.backdrop_texture(key) if key != &"" else null
-	if tex == null:
-		return
-	var art: TextureRect = TextureRect.new()
-	art.name = "BackdropArt"
-	art.texture = tex
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	var scrim: ColorRect = ColorRect.new()
-	scrim.name = "BackdropScrim"
-	scrim.color = BACKDROP_SCRIM
-	var at: int = 0
 	var bg: Node = get_node_or_null(^"Background")
-	if bg != null:
-		at = bg.get_index() + 1
-	for c: Control in [art, scrim]:
-		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		add_child(c)
-		move_child(c, at)
-		at += 1
+	CardArt.add_backdrop(self, backdrop_key(), bg.get_index() + 1 if bg != null else 0, BACKDROP_SCRIM)
 
 
 ## Name announced to PlaytestLog (EventBus.screen_shown).

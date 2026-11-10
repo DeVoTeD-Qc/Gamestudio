@@ -26,8 +26,15 @@ var _travel: float = 0.0
 var _fade: float = 0.0
 
 
+## kc-ui-wire2: the kit's tracer streak (fx_tracer, additive) along the path, when shipped.
+const TRACER_PIECE: StringName = &"fx_tracer"
+var _kit_layer: Control = null
+
+
 func _ready() -> void:
 	fx_kind = &"tracer"
+	if UiKit.has_piece(TRACER_PIECE):
+		_kit_layer = UiKit.fx_layer(self, _draw_kit, true, "KitTracer")
 
 
 func _build(t: Tween, timing: RefCounted) -> void:
@@ -70,11 +77,29 @@ func _set_alpha(v: float) -> void:
 	queue_redraw()
 
 
+## The kit streak: stretched from tail to head, 4x the line width tall, tinted the side colour.
+func _draw_kit(layer: Control) -> void:
+	var a: Vector2 = from.lerp(to, _tail)
+	var b: Vector2 = from.lerp(to, _head)
+	var span: float = a.distance_to(b)
+	if span <= 0.5:
+		return
+	var h: float = width * 4.0
+	layer.draw_set_transform(a, (b - a).angle())
+	UiKit.draw_piece(layer, TRACER_PIECE, Rect2(0.0, -h * 0.5, span, h), Color(color.lightened(0.35), _alpha))
+	layer.draw_set_transform(Vector2.ZERO)
+
+
 func _draw() -> void:
 	var a: Vector2 = from.lerp(to, _tail)
 	var b: Vector2 = from.lerp(to, _head)
 	var c: Color = Color(color, _alpha)
-	if a.distance_to(b) > 0.5:
+	if _kit_layer != null:
+		_kit_layer.queue_redraw()
+		# The bright core stays a thin code line so the shot reads on the light Fog cards too.
+		if a.distance_to(b) > 0.5:
+			draw_line(a, b, Color(FxStyle.FOG, _alpha * 0.8), maxf(1.0, width * 0.35), true)
+	elif a.distance_to(b) > 0.5:
 		draw_line(a, b, Color(c, _alpha * 0.45), width * 2.2, true)
 		draw_line(a, b, c, width, true)
 		draw_line(a, b, Color(FxStyle.FOG, _alpha * 0.9), maxf(1.0, width * 0.4), true)

@@ -140,7 +140,7 @@ func _run() -> void:
 	for id: StringName in [&"marksman", &"ammo_resupply", &"breacher"]:
 		var cd: CardData = root.get_node("CardDB").get_card(id)
 		if cd != null:
-			cards.append(CardView.view_for_card(cd, &"", 0 if id == &"breacher" else 1))
+			cards.append(CardView.view_for_card(cd))
 	var x: float = 40.0
 	for v: Dictionary in cards:
 		var cv: CardView = (load("res://scenes/match/CardView.tscn") as PackedScene).instantiate()

@@ -29,6 +29,8 @@ signal long_pressed(zone_id: StringName, slot_side: StringName, uid: int)
 ## Mouse over a unit banner (desktop hover zoom); null when it leaves.
 signal hovered(slot: Node)
 
+## kc-ui-wire2: the UI kit FRONT tab plate (desktop only; the phone keeps its 5 px bar).
+const FRONT_TAB_PIECE: StringName = &"frm_front_tab"
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const UnitSlotScript: GDScript = preload("res://scripts/ui/unit_slot.gd")
@@ -703,9 +705,13 @@ func _draw_decor() -> void:
 		var side_c: Color = get_theme_color(&"friend" if pair[0] == &"player" else &"enemy", &"Hud")
 		var y: float = oy + 1.0 if pair[0] == &"enemy" else oy + obj_h - 1.0 - tab.y
 		var r: Rect2 = Rect2(Vector2(front_tab_x(tab.x), y), tab)
-		_decor.draw_rect(r, side_c)
 		if compact:
+			# The phone's 5 px bar is too thin for the kit tab's chamfers: it stays a plain bar.
+			_decor.draw_rect(r, side_c)
 			continue
+		# kc-ui-wire2: the kit's FRONT tab (frm_front_tab) tinted the side colour; else a flat tab.
+		if not UiKit.draw_piece(_decor, FRONT_TAB_PIECE, r, side_c):
+			_decor.draw_rect(r, side_c)
 		var sz: Vector2 = font.get_string_size("FRONT", HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		_decor.draw_string(font, Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5),
 				"FRONT", HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.05, 0.06, 0.07))

@@ -55,6 +55,10 @@ const SoundMotionPanel: GDScript = preload("res://scripts/ui/sound_motion_panel.
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	# kc-ui-wire2: the kit's modal plate and red danger plates (code look without the kit).
+	KitTheme.style_panel(get_node_or_null(^"Center/Box") as Control, &"pnl_modal")
+	for b: Button in [_forfeit, _quit, _forfeit_yes]:
+		KitTheme.style_button(b, &"btn_danger")
 	_resume.pressed.connect(func() -> void: resume_pressed.emit())
 	_fast.toggled.connect(_on_fast_toggled)
 	_mirror.toggled.connect(_on_mirror_toggled)

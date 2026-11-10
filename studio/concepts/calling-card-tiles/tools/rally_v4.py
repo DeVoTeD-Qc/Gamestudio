@@ -61,7 +61,8 @@ for _t in BAR_SLOTS + SQ_SLOTS:
 
 CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=0, strike=2,
            thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1, fort_regain=1,
-           spot_push=1, supply_push=1, hold=False, cap=6, over=False, suppress=0, aim=False)
+           spot_push=1, supply_push=1, hold=False, cap=6, over=False, suppress=0, aim=False,
+           pre=False, overwatch=False)
 LAUNCH = dict(CFG)
 
 
@@ -205,7 +206,7 @@ def frame(st, fr):
 class State:
     __slots__ = ("own", "pcs", "score", "rallies", "nid", "draws", "extra", "trig", "bottom",
                  "mat", "front", "armor", "streak", "spot", "winner", "lost", "hits", "turn",
-                 "left", "seen")
+                 "left", "seen", "fired")
 
     def clone(self):
         s = State.__new__(State)
@@ -229,6 +230,7 @@ class State:
         s.turn = self.turn
         s.left = self.left[:]
         s.seen = self.seen
+        s.fired = self.fired
         return s
 
 
@@ -254,6 +256,7 @@ def new_state():
     s.turn = 0
     s.left = [12, 12]  # tiles not yet placed (deck + hand), for the end-of-game timing rule
     s.seen = {}       # piece id -> turn it was last seen exposed (Called Shot)
+    s.fired = ()      # meters already fired this turn (Fire First)
     return s
 
 
@@ -455,6 +458,9 @@ def eval_targets(s, a, dmg, ignore):
     return best
 
 
+FORCE = [None]   # a Strike target chosen by the Fire First search (0 = the Front)
+
+
 def strike(s, a, dmg=None, fire_mission=False):
     spotted = s.spot[a]
     s.spot[a] = False
@@ -463,6 +469,13 @@ def strike(s, a, dmg=None, fire_mission=False):
     if TARGETER[a] and not fire_mission and not MODE.get("look"):
         tgt = eval_targets(s, a, dmg, spotted)
         tv = 1e9 if tgt else 0
+    if FORCE[0] is not None and not fire_mission:
+        tgt = FORCE[0] or None   # 0 = push the Front
+        tv = 1e9 if tgt else 0
+    if not fire_mission and CFG["overwatch"] and s.mat[1 - a][2] >= CFG["thresh"]:
+        s.mat[1 - a][2] -= CFG["thresh"]   # Overwatch: held Works cancel the Strike
+        s.trig["overwatch"] += 1
+        return
     front_val = dmg if spotted else max(0, dmg - s.armor[1 - a])
     if fire_mission:
         n = push(s, a, 2, True)
@@ -516,7 +529,7 @@ def ready(s, p):
     out = {}
     for i in range(4):
         c = cost(s, p, i)
-        if s.mat[p][i] >= c:
+        if s.mat[p][i] >= c and i not in s.fired:
             out[i] = 2 if (CFG["over"] and s.mat[p][i] >= 2 * c) else 1
     return out
 
@@ -527,12 +540,16 @@ def orders(s, p, fire=None):
         return
     m = s.mat[p]
     for i in (2, 1, 0, 3):  # Fortify, Spot, Strike, Resupply
+        if i in s.fired:
+            continue
         for _ in range(1 if fire is None else fire.get(i, 0)):
             c = cost(s, p, i)
             if m[i] < c or s.winner is not None:
                 break
             m[i] -= c
             fire_one(s, p, i)
+            if i not in s.fired:
+                s.fired = s.fired + (i,)
 
 
 def fire_one(s, p, i):
@@ -785,7 +802,7 @@ def potential(s, me, blind_mil=False):
 
 
 TIMER = dict(strike=True, spot=True, fort=True, late=True, overflow=True)
-SMART_LIKE = ("smart", "textblind", "milblind", "smartht", "timer", "plan", "rhold")
+SMART_LIKE = ("smart", "textblind", "milblind", "smartht", "timer", "plan", "rhold", "nofire")
 
 
 def late_game(s, p):
@@ -797,8 +814,10 @@ def decide(s, p, policy, rng, stats=None):
     r = ready(s, p)
     if not r:
         return {}
-    if not CFG["hold"] or policy not in ("timer", "plan", "rhold"):
+    if not CFG["hold"] or policy not in ("timer", "plan", "rhold", "nofire"):
         return {i: 1 for i in r}
+    if policy == "nofire":
+        return {}
     late = late_game(s, p)
     if policy == "rhold":
         f = {i: n for i, n in r.items() if late or rng.random() < 0.5}
@@ -887,7 +906,7 @@ def plan_fire(s, p, r, late):
     return best
 
 
-def choose(s, hand, me, policy, rng, stats):
+def choose(s, hand, me, policy, rng, stats, want_val=False):
     opts, seen = [], set()
     for hi, cid in enumerate(hand):
         if cid in seen:
@@ -934,7 +953,49 @@ def choose(s, hand, me, policy, rng, stats):
     vs = sorted(vals)
     stats["spread"] += vs[-1] - vs[len(vs) // 2]
     stats["distinct"] += len({round(v, 1) for v in vs})
+    if want_val:
+        return best[1], best[0][0]
     return best[1]
+
+
+def pre_decide(s, hand, me, policy, rng, stats):
+    """Fire First: which ready meters fire before this turn's placement (and at what Strike
+    target).  Searches each option and keeps the one whose best placement is worth most."""
+    r = ready(s, me)
+    if not r or not hand or policy not in ("timer", "plan"):
+        return {}, None
+    keys = [i for i in r if policy == "plan" or i == 0]
+    subsets = [()]
+    for i in keys:
+        subsets += [x + (i,) for x in subsets]
+    base = s.score[me] - s.score[1 - me]
+    best, bv = ({}, None), None
+    dummy = Counter()
+    for sub in subsets:
+        tgts = [None]
+        if 0 in sub:
+            spotted = s.spot[me] or 1 in sub
+            tgts = [0] + [q for q, b in s.pcs.items() if b["owner"] != me and b["kind"] == "bar"
+                          and (spotted or (not in_cover(s, b) and aimable(s, q, me)))]
+        for tg in tgts:
+            t = s.clone()
+            FORCE[0] = tg
+            MODE["look"] = True
+            orders(t, me, {i: 1 for i in sub})
+            MODE["look"] = False
+            FORCE[0] = None
+            if t.winner is not None:
+                v = 100 if t.winner == me else -100
+            else:
+                got = choose(t, hand, me, policy, rng, dummy, True)
+                if got is None:
+                    continue
+                v = t.score[me] - t.score[1 - me] - base + got[1]
+            if bv is None or v > bv + 1e-9:
+                best, bv = ({i: 1 for i in sub}, tg), v
+    if stats is not None and best[0]:
+        stats["prefire"] += 1
+    return best
 
 
 # ---------------------------------------------------------------- match
@@ -949,7 +1010,7 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
             s.score[int(tok[1]) - 1] += int(tok[3:])
     stats = stats if stats is not None else Counter()
     for k in (0, 1):
-        TARGETER[k] = policies[k] in ("smart", "textblind", "timer", "plan", "rhold")
+        TARGETER[k] = policies[k] in ("smart", "textblind", "timer", "plan", "rhold", "nofire")
     passes, turn, places = 0, 0, 0
     small = 0
     lead_hist = []
@@ -957,7 +1018,22 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
         me = turn % 2
         s.turn = turn
         s.left = [len(decks[k]) + len(hands[k]) for k in (0, 1)]
+        s.fired = ()
         acted, extra_used = False, False
+        bonus = False
+        if CFG["pre"] and CFG["hold"] and CFG["mil"] and s.winner is None:
+            pre, tg = pre_decide(s, hands[me], me, policies[me], rng, stats)
+            if pre:
+                s.draws = [0, 0]
+                s.extra = False
+                FORCE[0] = tg
+                orders(s, me, pre)
+                FORCE[0] = None
+                bonus = s.extra
+                for p in range(2):
+                    for _ in range(s.draws[p]):
+                        if decks[p]:
+                            hands[p].append(decks[p].pop())
         while True:
             pick = choose(s, hands[me], me, policies[me], rng, stats) if hands[me] else None
             if pick is None:
@@ -979,7 +1055,7 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
                         hands[p].append(decks[p].pop())
             if s.bottom and hands[me]:
                 decks[me].insert(0, hands[me].pop(0))
-            if s.extra and not extra_used and hands[me] and s.winner is None:
+            if (s.extra or bonus) and not extra_used and hands[me] and s.winner is None:
                 extra_used = True
                 continue
             break
@@ -1204,6 +1280,9 @@ VARIANTS = {
     "Called Shot (auto at 3)": dict(aim=True),
     "Suppression 2 (auto at 3)": dict(suppress=2),
     "hold + Double Time + Suppression 2": dict(hold=True, over=True, suppress=2),
+    "hold + Fire First": dict(hold=True, pre=True),
+    "hold + Overwatch": dict(hold=True, overwatch=True),
+    "hold + Fire First + Overwatch": dict(hold=True, pre=True, overwatch=True),
 }
 
 
@@ -1234,14 +1313,14 @@ def se(g):
 def sec_hold(n, rng, names=None):
     print(f"== Timing skill: A vs B on random starter pairs, both seats, {2 * n} games per cell"
           f" (A score %, ties half; 2 SE about +-{se(2 * n):.1f})")
-    pairs = (("timer", "smart"), ("plan", "smart"), ("rhold", "smart"), ("timer", "plan"),
-             ("smart", "milblind"), ("timer", "milblind"))
+    pairs = (("timer", "smart"), ("plan", "smart"), ("rhold", "smart"), ("nofire", "smart"),
+             ("timer", "plan"), ("smart", "milblind"))
     print("  variant                              | " + " | ".join(f"{a} v {b}" for a, b in pairs))
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
         row = []
         for pa, pb in pairs:
-            if not CFG["hold"] and pa in ("timer", "plan", "rhold") and pb != "milblind":
+            if not CFG["hold"] and pa in ("timer", "plan", "rhold", "nofire"):
                 row.append("   -  ")
                 continue
             w = h2h(rng, pa, pb, n)[0]
@@ -1275,7 +1354,7 @@ def sec_length(n, rng, names=None):
     print(f"== Length and military events per game ({2 * n} games, random pairs, timing AI mirror;"
           f" smart mirror for auto rules)")
     print("  variant                              | placements | orders F/S/St/R      | spotted"
-          " strikes | tiles lost | Breakthrough | wasted | unfired at end | held/turn")
+          " strikes | tiles lost | Breakthrough | wasted | unfired at end | held/turn | fired first")
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
         pol = "timer" if CFG["hold"] else "smart"
@@ -1284,7 +1363,7 @@ def sec_length(n, rng, names=None):
         print(f"  {nm:<36} | {tot['places'] / g:5.1f} | {o:<20} | {trig['strike_spotted'] / g:4.2f}"
               f" | {trig['lost_total'] / g:4.2f} | {pct(trig['breakthrough'], g)} |"
               f" {trig['wasted'] / g:4.1f} | {trig['unfired_end'] / g:4.1f} |"
-              f" {st['held'] / max(1, st['turns']):.2f}")
+              f" {st['held'] / max(1, st['turns']):.2f} | {st['prefire'] / g:.2f}")
     use({})
 
 

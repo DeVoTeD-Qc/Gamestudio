@@ -289,6 +289,8 @@ func _ready() -> void:
 	_supply_value.add_theme_color_override(&"font_outline_color", CardLook.INK)
 	# kc-cards-impl (O2): READY / UNDO fit the narrow column next to the Operator card.
 	_ready_button.clip_text = true
+	# kc-ui-wire2: READY draws the kit's btn_primary plate through the ReadyButton theme slot. btn_ready
+	# is not used: its hazard stripes take 51 px of a ~105 px phone button and cover the word READY.
 	_undo_button.clip_text = true
 	_undo_button.tooltip_text = "Undo the last play"
 	_setup_dock()

@@ -32,6 +32,11 @@ var _kit: VBoxContainer = null
 @onready var _body: MarginContainer = %Body
 
 
+## kc-ui-wire2: painted backdrop (assets/ui/backgrounds/bg_loadout.webp) under the run-screen scrim.
+func backdrop_key() -> StringName:
+	return &"loadout"
+
+
 func screen_id() -> StringName:
 	return &"loadout"
 

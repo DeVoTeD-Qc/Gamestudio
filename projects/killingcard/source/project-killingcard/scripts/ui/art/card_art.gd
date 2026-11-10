@@ -15,7 +15,8 @@
 #   to the SVG above, so no slot is ever blank. New slots with no SVG return null when their image
 #   is missing and the caller keeps its old look:
 #   CardArt.mode_texture(&"rival", &"gunship", 2.0)   # run map card (falls back to the card art)
-#   CardArt.backdrop_texture(&"run")                  # bg_run / bg_supply_drop
+#   CardArt.backdrop_texture(&"run")                  # bg_run / bg_supply_drop / bg_codex ...
+#   CardArt.add_backdrop(screen, &"codex", 1)         # kc-ui-wire2: backdrop + scrim as children
 #   CardArt.fx_texture(&"callin_tablet")             # call-in takeover background
 #   CardArt.card_back_texture(140)                    # face-down card back
 #   CardArt.perk_texture(&"grit", 96)                 # perk patch (mask it with circle_mask.gdshader)
@@ -108,6 +109,34 @@ static func mode_texture(mode: StringName, fallback_card: StringName, scale: flo
 static func backdrop_texture(key: StringName) -> Texture2D:
 	var path: String = BACKDROP_DIR + "bg_" + String(key) + BITMAP_EXT
 	return bitmap(path) if has_bitmap(path) else null
+
+
+## kc-ui-wire2: slate scrim over a painted backdrop; text sits on it, so it stays heavy.
+const BACKDROP_SCRIM: Color = Color(0.0705882, 0.0862745, 0.101961, 0.72)
+
+
+## kc-ui-wire2: puts the painted backdrop bg_<key> (cover-cropped) and a scrim into host at child
+## index `at`, both full rect and mouse-transparent. Returns false (adds nothing) without the image,
+## so the screen keeps its plain or shader backdrop.
+static func add_backdrop(host: Control, key: StringName, at: int = 0, scrim: Color = BACKDROP_SCRIM) -> bool:
+	var tex: Texture2D = backdrop_texture(key) if host != null and key != &"" else null
+	if tex == null:
+		return false
+	var art: TextureRect = TextureRect.new()
+	art.name = "BackdropArt"
+	art.texture = tex
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	var sc: ColorRect = ColorRect.new()
+	sc.name = "BackdropScrim"
+	sc.color = scrim
+	for c: Control in [art, sc]:
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.add_child(c)
+		c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		host.move_child(c, clampi(at, 0, host.get_child_count() - 1))
+		at += 1
+	return true
 
 
 ## Full-screen effect art (&"callin_tablet": fx_callin_tablet.webp); null without its image.

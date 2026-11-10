@@ -34,6 +34,8 @@ var _sent: bool = false
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	# kc-ui-wire2: the kit's modal plate behind the result (code look without the kit).
+	KitTheme.style_panel(get_node_or_null(^"Center/Box") as Control, &"pnl_modal")
 	_button.pressed.connect(_on_pressed)
 
 

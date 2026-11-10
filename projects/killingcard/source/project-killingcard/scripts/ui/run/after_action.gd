@@ -40,6 +40,11 @@ var _result_label: Label = null
 @onready var _layout: VBoxContainer = %Layout
 
 
+## kc-ui-wire2: painted backdrop (assets/ui/backgrounds/bg_after_action.webp) under the run-screen scrim.
+func backdrop_key() -> StringName:
+	return &"after_action"
+
+
 func screen_id() -> StringName:
 	return &"after_action"
 

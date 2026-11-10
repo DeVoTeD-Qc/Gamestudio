@@ -370,6 +370,11 @@ func _draw() -> void:
 
 
 func _draw_incoming_back(r: Rect2) -> void:
+	# kc-ui-wire2: the kit's face-down back (frm_incoming, dark chevrons) warmed toward the rival red;
+	# the red keyline, the pulsing dot and the INCOMING word stay code (overlay). Else the red stripes.
+	if UiKit.draw_piece(self, INCOMING_PIECE, r, INCOMING_TINT):
+		draw_rect(r, Color(_col(&"enemy"), 0.14))
+		return
 	draw_rect(r, Color("#2A1416"))
 	var red: Color = _col(&"enemy")
 	var step: float = maxf(10.0, size.y * 0.32)
@@ -408,6 +413,12 @@ func trait_lit() -> bool:
 var backing_rects: Array[Rect2] = []
 ## kc-duel-impl: where the side's Armor marker (the Recruit's green "-1") was last drawn (empty = none).
 var armor_mod_rect: Rect2 = Rect2()
+## kc-ui-wire2 (UI kit batch 2): the face-down back, the PLAN plate, the ghost frame, the dog tag.
+const INCOMING_PIECE: StringName = &"frm_incoming"
+const INCOMING_TINT: Color = Color(1.0, 0.72, 0.72)
+const PLAN_PIECE: StringName = &"frm_plan_plate"
+const GHOST_PIECE: StringName = &"frm_ghost"
+const DOGTAG_PIECE: StringName = &"frm_dogtag_plate"
 ## The green of a handicap marker (the campaign's "green squad" colour).
 const HANDICAP_GREEN: Color = Color("#5FBF4A")
 
@@ -509,7 +520,9 @@ func _draw_overlay() -> void:
 	elif is_front:
 		o.draw_rect(r.grow(-1.0), Color(side_c, 0.85), false, 1.5)
 	if mode == Mode.GHOST:
-		_dashed_rect(o, r.grow(-1.0), _col(&"text"), 2.0)
+		# kc-ui-wire2: the kit's dashed ghost frame (frm_ghost); else the code dashes.
+		if not UiKit.draw_piece(o, GHOST_PIECE, r, _col(&"text")):
+			_dashed_rect(o, r.grow(-1.0), _col(&"text"), 2.0)
 	# The damaged bottom edge over the frontline keyline (so it always reads).
 	if damaged:
 		CardLook.draw_damage_edge(o, r, maxf(2.0, 2.0 * k))
@@ -765,6 +778,14 @@ func _draw_armor_mod(o: Control, ar_rect: Rect2, m: Dictionary) -> void:
 
 
 func _draw_dog_tag(o: Control, rr: Rect2) -> void:
+	# kc-ui-wire2: the kit's brass dog tag (frm_dogtag_plate, 2.4:1) across the chip, centred; else code.
+	var kit: Texture2D = UiKit.piece(DOGTAG_PIECE)
+	if kit != null:
+		var ks: Vector2 = kit.get_size()
+		var w: float = rr.size.x
+		var h: float = w * ks.y / maxf(1.0, ks.x)
+		UiKit.draw_piece(o, DOGTAG_PIECE, Rect2(Vector2(rr.position.x, rr.get_center().y - h * 0.5), Vector2(w, h)))
+		return
 	var tag: Rect2 = Rect2(rr.position + Vector2(rr.size.x * 0.12, 0), Vector2(rr.size.x * 0.76, rr.size.y))
 	o.draw_rect(tag, Color("#1B1608"))
 	o.draw_rect(tag, BRASS, false, 1.5)
@@ -779,8 +800,15 @@ func _draw_tag(o: Control, text: String, c: Color, mine: bool, m: Dictionary) ->
 	var fs: int = maxi(11, int(m["number"]) - 4)
 	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var rr: Rect2 = Rect2(Vector2((size.x - sz.x) * 0.5 - 4.0, 0.0), Vector2(sz.x + 8.0, fs + 2.0))
-	o.draw_rect(rr, c)
-	o.draw_string(font, Vector2(rr.position.x + 4.0, rr.position.y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, INK)
+	# kc-ui-wire2: the PLAN tag on the kit's dark plate (frm_plan_plate, amber notch), a bit wider for its
+	# chamfers, with the word in the tag colour. Else the flat code tag (tag colour, dark word).
+	var plate: Rect2 = rr.grow_individual(5.0, 0.0, 5.0, 2.0)
+	var word: Color = INK
+	if text == "PLAN" and UiKit.draw_piece(o, PLAN_PIECE, plate):
+		word = c
+	else:
+		o.draw_rect(rr, c)
+	o.draw_string(font, Vector2(rr.position.x + 4.0, rr.position.y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, word)
 
 
 func _draw_reticle(o: Control, r: Rect2) -> void:

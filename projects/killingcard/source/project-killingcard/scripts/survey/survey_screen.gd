@@ -20,6 +20,14 @@ const SCENE_TITLE: String = "res://scenes/Title.tscn"
 @export_file("*.tscn") var next_scene: String = SCENE_TITLE
 
 
+## kc-ui-wire2: the painted menu backdrop (bg_menu) over the scene's Background when shipped. Runs
+## from the READY notification, so the subclasses' own _ready() need no super() call.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_READY and get_node_or_null(^"BackdropArt") == null:
+		var bg: Node = get_node_or_null(^"Background")
+		CardArt.add_backdrop(self, &"menu", bg.get_index() + 1 if bg != null else 0)
+
+
 func playtest_log() -> Node:
 	return get_node_or_null("/root/PlaytestLog")
 
