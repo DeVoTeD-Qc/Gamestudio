@@ -4,8 +4,12 @@ rally-point-v4.md for this pass).  v1-v3 (rally.py, rally_v2.py, rally_v3.py) ar
 
     python3 -I rally_v4.py [games] [section ...]
 
-Sections: hold, seat, length, stacks, density, power, tweaks, ablate (default: hold seat length
-stacks density).  power and tweaks are slow and must be named.
+Sections: hold, seat, length, stacks, density (the default set), plus ablate, power, powerhold,
+rules and skill3, which must be named.  Options: v=1,4 picks VARIANTS by number, r=22 picks
+RULESETS by number, seed=N.  Runs of 400 take 3-15 minutes each.
+  hold     timing AIs vs fire-at-3 under each variant (rally-point-v4.md section 2)
+  power    v2's chassis power test on the v3 library (section 5)
+  rules    the layer ladder, v3 with one rule removed, and the Basic ruleset (section 6)
 
 What v4 adds to the v3 rules (all switches live in CFG; the defaults are the v3 launch rules)
   * hold=True: a meter no longer fires by itself.  It holds up to cap (6); materiel past the cap
@@ -17,6 +21,12 @@ What v4 adds to the v3 rules (all switches live in CFG; the defaults are the v3 
     meter.
   * aim=True ("Called Shot"): a Strike that destroys a tile and is not spotted needs the target to
     have been exposed since the attacker's previous turn (no instant snipes of fresh tiles).
+  * overwatch=True: while you hold 3+ Works, the next enemy Strike is cancelled and spends them.
+  * pre=True ("Fire First"): with hold, ready orders may fire before your placement; without
+    hold, meters full at the start of your turn fire then (and not at the end).
+  * Rule switches for the Basic study: text, match, closer, command, cover, front, streaks,
+    classes (False = one Ammo meter), simple_ammo (1 per touching tile, no owner bonus) and
+    endscore.  BASIC5 is the 5-line Basic ruleset of rally-point-v4.md section 6.1.
   * The rest of the military library from v3 section 5.1 is now simulated: Forward Observer,
     Armory, Claymore, Smoke, Medal and Dog Tags.
 
@@ -27,6 +37,8 @@ Policies ("placement/firing"): every AI places tiles with the v3 smart evaluator
   plan    evaluator-based timing: tries every subset of ready meters and keeps the best by the
           v3 evaluator, with held materiel valued up to the cap.
   rhold   holds each ready meter at random half the time (a deliberately bad timer).
+  nofire  never fires an order (measures what the orders are worth).
+  aimer   auto Fire First: picks the Strike target together with the placement that follows.
 """
 import random
 import sys
