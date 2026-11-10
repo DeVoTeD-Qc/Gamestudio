@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KillingCard Art Direction</title>
+<meta name="description" content="KillingCard visual style guide: vision, palette, type, card frames, rules and the current-screen audit (public art only).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,500&family=Share+Tech+Mono&family=Stardos+Stencil:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF0F2; --surface:#FFFFFF; --surface-2:#E3E7EB; --line:#C9D0D6; --text:#12161A; --muted:#55606A;
+  --chip:#E3E7EB;
+  /* game tokens (fixed in both themes) */
+  --k-ink:#12161A; --k-gun:#232A31; --k-hi:#2E3740; --k-steel:#3A444D; --k-edge:#4A535B; --k-muted:#7D8790; --k-fog:#D8DEE3;
+  --k-khaki:#B8913A; --k-khaki-face:#2B2716; --k-paper:#E9DFC6;
+  --k-you:#2EC4B6; --k-you-deep:#0F2F2C; --k-rival:#E5383B; --k-rival-ret:#FF5A5D; --k-rival-deep:#341113;
+  --k-amber:#FFB020; --k-amber-p:#E59A12; --k-brass:#C9A227; --k-brass-d:#5A4512; --k-op-face:#1E1A10;
+  --k-up:#7CF29A; --k-down:#FF6B6B; --k-unit:#4A5560; --k-unit-face:#1B2126;
+  --f-head:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"Barlow",system-ui,sans-serif;
+  --f-mono:"Share Tech Mono",ui-monospace,monospace; --f-stamp:"Stardos Stencil","Barlow Condensed",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#0E1114; --surface:#161B20; --surface-2:#1E252B; --line:#2C343B; --text:#D8DEE3; --muted:#8C969F; --chip:#232A31;}
+}
+:root[data-theme="dark"]{--bg:#0E1114; --surface:#161B20; --surface-2:#1E252B; --line:#2C343B; --text:#D8DEE3; --muted:#8C969F; --chip:#232A31;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.5 var(--f-body)}
+main{max-width:1120px;margin:0 auto;padding:0 16px 64px}
+h1,h2,h3{font-family:var(--f-head);text-transform:uppercase;letter-spacing:.04em;line-height:1.1;margin:0}
+h2{font-size:26px;margin:56px 0 6px}
+h2 small{display:block;font:500 14px/1.4 var(--f-body);text-transform:none;letter-spacing:0;color:var(--muted);margin-top:6px}
+h3{font-size:18px;margin:24px 0 8px}
+p{margin:8px 0;max-width:70ch}
+code{font-family:var(--f-mono);font-size:.9em}
+.muted{color:var(--muted)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font:700 13px var(--f-head);text-transform:uppercase;letter-spacing:.05em;color:var(--text);text-decoration:none;background:var(--chip);padding:5px 10px;border-radius:2px}
+nav.toc a:hover{background:var(--line)}
+/* hero */
+.hero{background:var(--k-ink);color:var(--k-fog);margin:0 -16px;padding:40px 16px 32px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:4px;background:repeating-linear-gradient(135deg,var(--k-amber) 0 12px,var(--k-ink) 12px 24px)}
+.hero-in{max-width:1120px;margin:0 auto}
+.wordmark{font:700 clamp(40px,9vw,80px)/1 var(--f-stamp);letter-spacing:.04em}
+.tag{font:13px var(--f-mono);color:var(--k-amber);letter-spacing:.08em;margin-top:8px}
+.hero p{color:#B9C2C9;font-size:17px;max-width:62ch}
+.hero p b{color:var(--k-fog)}
+/* pillars */
+.pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+.pillar{background:var(--surface);border:1px solid var(--line);padding:14px;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+.pillar .n{font:13px var(--f-mono);color:var(--muted)}
+.pillar h3{margin:4px 0 6px;font-size:19px}
+.pillar p{font-size:14px;margin:0}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+.tbl th,.tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font:700 13px var(--f-head);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.scroll{overflow-x:auto}
+/* swatches */
+.swgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.sw{background:var(--surface);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.sw .c{height:64px;display:flex;align-items:flex-end;padding:6px 8px;font:12px var(--f-mono)}
+.sw .m{padding:8px;font-size:13px;line-height:1.35}
+.sw .m b{display:block;font:700 15px var(--f-head);text-transform:uppercase;letter-spacing:.03em}
+.ratio{display:flex;height:22px;border-radius:2px;overflow:hidden;margin:12px 0 4px;border:1px solid var(--line)}
+.bands{display:grid;gap:8px;margin-top:10px}
+.band{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;font-size:14px}
+.band .strip{height:18px;border-radius:2px}
+.b-base{background:repeating-linear-gradient(90deg,#4B5A3A 0 3px,#2F3A25 3px 5px)}
+.b-gold{background:linear-gradient(100deg,#7A5E12,#C9A227 30%,#F3D36B 45%,#C9A227 60%,#7A5E12)}
+.b-mach{background:repeating-linear-gradient(180deg,#D9DEE3 0 1px,#7E878F 1px 3px),#7E878F}
+.b-prism{background:conic-gradient(from 30deg at 30% 50%,#1B3F78,#3E8EDE,#9FE3FF,#3E8EDE,#1B3F78)}
+.b-star{background:radial-gradient(circle at 20% 40%,#FFF4FF 0 1px,transparent 2px),radial-gradient(circle at 55% 70%,#FFF4FF 0 1px,transparent 2px),radial-gradient(circle at 80% 30%,#FFF4FF 0 1.5px,transparent 2.5px),linear-gradient(90deg,#120A2E,#3A1C6E,#120A2E)}
+/* type */
+.type{display:grid;gap:10px;margin-top:10px}
+.trow{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:14px;align-items:baseline;background:var(--surface);border:1px solid var(--line);padding:12px 14px;border-radius:3px}
+.trow .lbl{font:12px/1.4 var(--f-mono);color:var(--muted)}
+.t-stamp{font:700 40px/1 var(--f-stamp);letter-spacing:.04em}
+.t-title{font:800 26px/1.1 var(--f-head);text-transform:uppercase;letter-spacing:.04em}
+.t-btn{font:700 18px/1.1 var(--f-head);text-transform:uppercase;letter-spacing:.06em}
+.t-num{font:800 26px/1 var(--f-head)}
+.t-body{font:500 14px/1.45 var(--f-body)}
+.t-flav{font:italic 500 14px/1.4 var(--f-head)}
+.t-mono{font:13px/1.4 var(--f-mono);text-transform:uppercase}
+/* game stage (always dark: the game) */
+.stage{background:var(--k-ink);border-radius:4px;padding:20px 16px;margin-top:12px;color:var(--k-fog);display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.stage .cap{font:12px var(--f-mono);color:var(--k-muted);width:100%;margin:-6px 0 -8px}
+/* banner card */
+.bcard{position:relative;width:min(100%,400px);aspect-ratio:4/1;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1.5px var(--k-unit)}
+.bcard img{width:100%;height:100%;object-fit:cover;display:block}
+.bcard::before,.bcard::after{content:"";position:absolute;top:0;bottom:0;width:15%;pointer-events:none}
+.bcard::before{left:0;background:linear-gradient(90deg,rgba(0,0,0,.38),transparent)}
+.bcard::after{right:0;background:linear-gradient(270deg,rgba(0,0,0,.38),transparent)}
+.bcard.you{box-shadow:0 0 0 2px var(--k-you),0 0 12px rgba(46,196,182,.45)}
+.bcard.op{box-shadow:0 0 0 2px var(--k-brass)}
+.bcard .band-s{position:absolute;left:0;right:0;bottom:0;height:3px;z-index:2}
+.sock{position:absolute;z-index:3;width:24px;height:24px;background:var(--k-ink);border:1px solid var(--k-steel);display:grid;place-items:center;border-radius:2px}
+.sock svg{width:16px;height:16px;fill:var(--k-fog)}
+.fp,.ar{position:absolute;z-index:3;bottom:6px;width:28px;height:28px;display:grid;place-items:center;font:800 17px/1 var(--f-head);color:#fff;background:var(--k-ink)}
+.fp{right:38px;border-radius:50%;border:3px solid var(--k-you)}
+.fp.rv{border-color:var(--k-rival-ret)}
+.ar{right:6px;border:2px solid #B9C2C9;border-radius:3px 3px 10px 10px;background:#2A3238}
+.hex{position:absolute;z-index:3;left:6px;top:6px;width:22px;height:24px;background:var(--k-amber);color:var(--k-ink);font:800 15px/24px var(--f-head);text-align:center;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+/* hand card */
+.hcard{width:200px;border-radius:3px;overflow:hidden;background:var(--k-unit-face);box-shadow:0 0 0 1.5px var(--k-unit);display:flex;flex-direction:column;font-family:var(--f-body)}
+.hcard .bar{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--k-gun);font:700 14px/1 var(--f-head);text-transform:uppercase;letter-spacing:.04em}
+.hcard .hx{width:18px;height:20px;background:var(--k-amber);color:var(--k-ink);display:grid;place-items:center;font:800 13px var(--f-head);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.hcard .win{aspect-ratio:4/1;overflow:hidden}
+.hcard .win img{width:100%;height:100%;object-fit:cover;display:block}
+.hcard .kind{font:700 11px var(--f-head);letter-spacing:.08em;color:var(--k-muted);padding:6px 8px 0;text-transform:uppercase}
+.hcard .rules{font-size:12px;line-height:1.35;padding:2px 8px 6px;min-height:58px}
+.hcard .rules b{color:var(--k-amber);font-weight:600}
+.hcard .rules i{display:block;color:var(--k-muted);font:italic 500 12px/1.3 var(--f-head);margin-top:3px}
+.hcard .rail{display:flex;justify-content:flex-end;gap:5px;padding:6px 7px;border-top:1px solid #2A3238;align-items:center}
+.hcard .rail .s{margin-right:auto;width:20px;height:20px;background:var(--k-ink);border:1px solid var(--k-steel);border-radius:2px}
+.mfp{width:24px;height:24px;border-radius:50%;border:3px solid var(--k-you);display:grid;place-items:center;font:800 14px var(--f-head)}
+.mar{width:22px;height:24px;border:2px solid #B9C2C9;border-radius:3px 3px 9px 9px;display:grid;place-items:center;font:800 14px var(--f-head);background:#2A3238}
+.hcard.tac{background:var(--k-khaki-face);box-shadow:0 0 0 1.5px var(--k-khaki)}
+.hcard.tac .bar{background:#3A331C;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+.hcard.tac .rules{background:repeating-linear-gradient(0deg,transparent 0 17px,rgba(184,145,58,.12) 17px 18px)}
+.hcard.op{background:var(--k-op-face);box-shadow:0 0 0 2px var(--k-brass)}
+.hcard.op .bar{background:#3A2D0B;color:#F3D36B}
+.hcard.ks{box-shadow:0 0 0 1.5px var(--k-unit)}
+.hcard.ks .bar{background:linear-gradient(90deg,var(--k-gun) 70%,transparent 70%),repeating-linear-gradient(135deg,var(--k-amber) 0 6px,var(--k-ink) 6px 12px)}
+/* buttons */
+.btn{display:inline-grid;place-items:center;min-width:120px;height:42px;padding:0 18px;font:700 16px var(--f-head);text-transform:uppercase;letter-spacing:.06em;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.btn.pri{background:var(--k-amber);color:var(--k-ink)}
+.btn.sec{background:var(--k-gun);color:var(--k-fog);box-shadow:inset 0 0 0 1px var(--k-edge)}
+.stamp{font:700 34px/1 var(--f-stamp);color:var(--k-you);border:3px solid currentColor;padding:6px 14px;transform:rotate(-4deg);display:inline-block;letter-spacing:.06em}
+.stamp.def{color:var(--k-rival)}
+.paper{background:var(--k-paper);color:var(--k-khaki-face);padding:16px;width:min(100%,300px);font:13px/1.45 var(--f-mono);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.paper h4{margin:0 0 6px;font:800 18px var(--f-head);letter-spacing:.05em;text-transform:uppercase}
+/* icon rules */
+.icons{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.ic{text-align:center;font:11px var(--f-mono);color:var(--k-muted)}
+.ic .box{background:var(--k-ink);border:1px solid var(--k-steel);border-radius:2px;display:grid;place-items:center;margin:0 auto 6px}
+.ic svg{fill:var(--k-fog)}
+/* do / dont */
+.dd{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:10px}
+.pair{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--surface)}
+.pair>div{padding:12px;font-size:13.5px;line-height:1.4}
+.pair .lab{font:700 12px var(--f-head);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.pair .do{border-right:1px solid var(--line)}
+.pair .do .lab{color:#1F9C90}
+.pair .no .lab{color:#C42B2E}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pair .do .lab{color:var(--k-you)} :root:not([data-theme="light"]) .pair .no .lab{color:var(--k-rival-ret)}}
+:root[data-theme="dark"] .pair .do .lab{color:var(--k-you)}
+:root[data-theme="dark"] .pair .no .lab{color:var(--k-rival-ret)}
+.demo{height:46px;border-radius:2px;margin-bottom:8px;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--k-ink)}
+/* audit */
+.audit{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px;margin-top:12px}
+.shot{background:var(--surface);border:1px solid var(--line);border-radius:3px;overflow:hidden;display:flex;flex-direction:column}
+.shot img{width:100%;display:block;aspect-ratio:844/390;object-fit:cover;background:var(--k-ink)}
+.shot .b{padding:10px 12px 12px}
+.shot h3{margin:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:17px}
+.rate{font:700 12px var(--f-head);letter-spacing:.06em;padding:2px 8px;border-radius:2px;white-space:nowrap}
+.r-fit{background:var(--k-you-deep);color:var(--k-you)}
+.r-part{background:#3A2A08;color:var(--k-amber)}
+.r-no{background:var(--k-rival-deep);color:var(--k-rival-ret)}
+.shot ol{margin:0;padding-left:18px;font-size:13.5px;line-height:1.4}
+.size{font:700 12px var(--f-head);padding:1px 6px;border:1px solid var(--line);border-radius:2px}
+.q{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--k-amber);padding:12px 14px;margin-top:10px;border-radius:2px}
+.q b{font-family:var(--f-head);font-size:17px;text-transform:uppercase;letter-spacing:.03em}
+.q ul{margin:6px 0 0;padding-left:18px;font-size:14px}
+pre{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto;font:12.5px/1.5 var(--f-mono);white-space:pre-wrap;border-radius:3px}
+footer{margin-top:48px;font-size:13px;color:var(--muted)}
+@media (max-width:560px){ .trow{grid-template-columns:1fr} .pair{grid-template-columns:1fr} .pair .do{border-right:0;border-bottom:1px solid var(--line)} .t-stamp{font-size:32px} }
+</style>
+</head>
+<body>
+<header class="hero">
+ <div class="hero-in">
+  <div class="wordmark">KILLINGCARD</div>
+  <div class="tag">//// ART DIRECTION v1 · BOARD TASK KC-DA · PUBLIC ART ONLY</div>
+  <p style="margin-top:18px"><b>An operator's field case opened at dusk.</b> The case is quiet: matte gunmetal plates, steel rims, khaki orders paper, every label stamped and short. What sits inside is loud: collectible cards painted with drama, the only thing allowed to shout. Teal is us, red is them, amber is "act now". A painted original and a licensed calling card sit in the same case without a seam.</p>
+ </div>
+</header>
+<main>
+<nav class="toc" aria-label="Sections">
+ <a href="#pillars">Pillars</a><a href="#palette">Palette</a><a href="#type">Type</a><a href="#cards">Card frames</a><a href="#materials">Materials</a><a href="#icons">Icons</a><a href="#art">Illustration</a><a href="#motion">Motion</a><a href="#dodont">Do / Don't</a><a href="#audit">Audit</a><a href="#updates">Updates</a><a href="#questions">Questions</a>
+</nav>
+
+<h2 id="pillars">Five pillars</h2>
+<div class="pillars">
+ <div class="pillar"><div class="n">01</div><h3>Quiet case, loud card</h3><p>UI is matte, dark, calm. Card art carries all the colour and energy, and is never dimmed or tinted.</p></div>
+ <div class="pillar"><div class="n">02</div><h3>Briefing room</h3><p>Orders, stamps, numbered steps, khaki paper for Tactics, mono type for intel. Every screen says what to do now.</p></div>
+ <div class="pillar"><div class="n">03</div><h3>Calling-card collectible</h3><p>Each banner is a trophy. Finishes, alt arts and the Elite star are earned and shown off.</p></div>
+ <div class="pillar"><div class="n">04</div><h3>One colour, one meaning</h3><p>Teal you. Red rival and danger. Amber act now. Brass Operator. Nothing else carries meaning.</p></div>
+ <div class="pillar"><div class="n">05</div><h3>Hit, then explain</h3><p>Strikes land hard in one beat, then the board settles and says plainly what changed.</p></div>
+</div>
+
+<h3>What each screen should feel like</h3>
+<div class="scroll"><table class="tbl">
+<tr><th>Screen</th><th>Feels like</th><th>Key move</th></tr>
+<tr><td>Title</td><td>Opening the case: your best card on top</td><td>Wordmark + equipped banner + one amber CTA</td></tr>
+<tr><td>Run map</td><td>A paper map pinned to the briefing table</td><td>Pins, string, stamps; boss is a red-circled target</td></tr>
+<tr><td>Match board</td><td>A tactical table under a lamp</td><td>Board recedes; cards and three signal colours carry the read</td></tr>
+<tr><td>Hand</td><td>Cards fanned in your glove</td><td>Playable cards lift; unplayable lose the amber cost, not their art</td></tr>
+<tr><td>Inspector</td><td>Pulling one card into the light</td><td>One big card + a paper rules sheet</td></tr>
+<tr><td>Duel hub / builder</td><td>The armoury locker</td><td>Cards on steel racks; one amber button</td></tr>
+<tr><td>Loadout</td><td>Kitting up</td><td>Operator as hero: big art, brass frame, band on show</td></tr>
+<tr><td>Codex</td><td>A collector's binder</td><td>Owned in full colour with finish; unowned as stamped silhouettes</td></tr>
+<tr><td>After-action</td><td>A debrief sheet with a stamp</td><td>VICTORY / DEFEAT stamp, MVP card large</td></tr>
+<tr><td>Killstreaks</td><td>A radio call-in, then the strike</td><td>Owner-coloured banner, one impact, a persistent marker</td></tr>
+</table></div>
+
+<h2 id="palette">Palette<small>The case is 80% of every screen; signals are the only hues with meaning. The game is always dark: swatches show the in-game colour in both page themes.</small></h2>
+<div class="ratio" aria-label="Rough screen colour ratio">
+ <div style="flex:46;background:#12161A"></div><div style="flex:22;background:#232A31"></div><div style="flex:12;background:#3A444D"></div><div style="flex:8;background:#D8DEE3"></div><div style="flex:4;background:#2EC4B6"></div><div style="flex:4;background:#E5383B"></div><div style="flex:3;background:#FFB020"></div><div style="flex:1;background:#C9A227"></div>
+</div>
+<p class="muted" style="font-size:13px">Rough share of a match screen, excluding card art: neutrals ~88%, signals ~12%.</p>
+
+<h3>Case neutrals</h3>
+<div class="swgrid">
+ <div class="sw"><div class="c" style="background:#12161A;color:#D8DEE3">#12161A</div><div class="m"><b>Slate ink</b>Deepest background, text on amber</div></div>
+ <div class="sw"><div class="c" style="background:#232A31;color:#D8DEE3">#232A31</div><div class="m"><b>Gunmetal</b>Panels, tiles, button faces</div></div>
+ <div class="sw"><div class="c" style="background:#2E3740;color:#D8DEE3">#2E3740</div><div class="m"><b>Panel hi</b>Hover, raised panels</div></div>
+ <div class="sw"><div class="c" style="background:#3A444D;color:#D8DEE3">#3A444D</div><div class="m"><b>Steel rim</b>Rims, outlines, empty slots</div></div>
+ <div class="sw"><div class="c" style="background:#7D8790;color:#12161A">#7D8790</div><div class="m"><b>Muted</b>Captions, idle icons</div></div>
+ <div class="sw"><div class="c" style="background:#D8DEE3;color:#12161A">#D8DEE3</div><div class="m"><b>Fog white</b>Text, white icons</div></div>
+ <div class="sw"><div class="c" style="background:#B8913A;color:#2B2716">#B8913A</div><div class="m"><b>Orders khaki</b>Tactic frame, orders paper</div></div>
+ <div class="sw"><div class="c" style="background:#E9DFC6;color:#2B2716">#E9DFC6 · NEW</div><div class="m"><b>Paper</b>Run map, debrief sheet</div></div>
+</div>
+<h3>Signals</h3>
+<div class="swgrid">
+ <div class="sw"><div class="c" style="background:#2EC4B6;color:#0F2F2C">#2EC4B6</div><div class="m"><b>You</b>Your FP, selection, control, your killstreaks</div></div>
+ <div class="sw"><div class="c" style="background:#E5383B;color:#fff">#E5383B</div><div class="m"><b>Rival / danger</b>Rival FP, INCOMING, HOSTILE, boss</div></div>
+ <div class="sw"><div class="c" style="background:#FFB020;color:#12161A">#FFB020</div><div class="m"><b>Amber: act now</b>READY, the one primary button, cost, ready killstreak</div></div>
+ <div class="sw"><div class="c" style="background:#C9A227;color:#1E1A10">#C9A227</div><div class="m"><b>Brass</b>Operator frame, Elite star</div></div>
+ <div class="sw"><div class="c" style="background:#F2A33A;color:#12161A">#F2A33A</div><div class="m"><b>Damaged</b>Hurt Armor plate, crack</div></div>
+ <div class="sw"><div class="c" style="background:#7CF29A;color:#12161A">#7CF29A</div><div class="m"><b>Buff up</b>Raised number, active synergy</div></div>
+ <div class="sw"><div class="c" style="background:#FF6B6B;color:#12161A">#FF6B6B</div><div class="m"><b>Debuff down</b>Lowered number</div></div>
+ <div class="sw"><div class="c" style="background:#8EDB6A;color:#12161A">#8EDB6A</div><div class="m"><b>Heal</b>Heal numbers</div></div>
+</div>
+<h3>Traits (chips only)</h3>
+<div class="swgrid">
+ <div class="sw"><div class="c" style="background:#F2B544;color:#12161A">#F2B544</div><div class="m"><b>Vanguard</b>Chip-size only (close to amber)</div></div>
+ <div class="sw"><div class="c" style="background:#8FB8FF;color:#12161A">#8FB8FF</div><div class="m"><b>Spec Ops</b></div></div>
+ <div class="sw"><div class="c" style="background:#C9D1D8;color:#12161A">#C9D1D8</div><div class="m"><b>Heavy</b></div></div>
+ <div class="sw"><div class="c" style="background:#8EDB6A;color:#12161A">#8EDB6A</div><div class="m"><b>Undead</b></div></div>
+</div>
+<h3>Rarity and finish ladder</h3>
+<p>Rarity lives in the keyline and the band, never in the art.</p>
+<div class="bands">
+ <div class="band"><b>Recruit</b><div class="strip" style="background:#5E6B5A"></div></div>
+ <div class="band"><b>Base (Operator)</b><div class="strip b-base"></div></div>
+ <div class="band"><b>Trained · Gold Leaf</b><div class="strip b-gold"></div></div>
+ <div class="band"><b>Veteran · Machined</b><div class="strip b-mach"></div></div>
+ <div class="band"><b>Elite · Prism</b><div class="strip b-prism"></div></div>
+ <div class="band"><b>Operator top · Starfield</b><div class="strip b-star"></div></div>
+</div>
+<p class="muted" style="font-size:13px">CSS approximations; the game draws the real finishes in <code>mastery_bands.gd</code>.</p>
+<h3>Change: killstreak colour</h3>
+<div class="stage">
+ <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <span style="font:12px var(--f-mono);color:var(--k-muted);width:60px">TODAY</span>
+  <span class="rate" style="background:#FF8A3D;color:#12161A">MORTAR #FF8A3D</span>
+  <span class="rate" style="background:#C9E265;color:#12161A">HELO #C9E265</span>
+  <span class="rate" style="background:#2EC4B6;color:#12161A">SENTRY</span>
+  <span class="rate" style="background:#E5383B;color:#fff">GUNSHIP</span>
+ </div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <span style="font:12px var(--f-mono);color:var(--k-muted);width:60px">DA v1</span>
+  <span class="rate" style="background:#0F2F2C;color:#2EC4B6;box-shadow:inset 0 0 0 1px #2EC4B6">YOUR MORTAR</span>
+  <span class="rate" style="background:#341113;color:#FF5A5D;box-shadow:inset 0 0 0 1px #E5383B">RIVAL HELO</span>
+  <span class="rate" style="background:#FFB020;color:#12161A">READY TO CALL</span>
+ </div>
+</div>
+
+<h2 id="type">Typography<small>All bundled in <code>assets/fonts/</code>, all OFL and on Google Fonts. Max three fonts per screen.</small></h2>
+<div class="type">
+ <div class="trow"><div class="lbl">Stardos Stencil Bold<br>wordmark, stamps only</div><div class="t-stamp">VICTORY</div></div>
+ <div class="trow"><div class="lbl">Barlow Condensed ExtraBold<br>screen titles 20-28</div><div class="t-title">Starting Squad</div></div>
+ <div class="trow"><div class="lbl">Barlow Condensed Bold<br>buttons, card names 14-18</div><div class="t-btn">Fight here · Marksman</div></div>
+ <div class="trow"><div class="lbl">Barlow Condensed ExtraBold<br>FP, Armor, cost 12-20</div><div class="t-num">2 · 3 · 8</div></div>
+ <div class="trow"><div class="lbl">Barlow Medium<br>rules 11-13, never under 10</div><div class="t-body">Shoots the enemy with the lowest current Armor (ties: front-most).</div></div>
+ <div class="trow"><div class="lbl">Barlow Condensed Medium Italic<br>flavour</div><div class="t-flav">Third tour, same boots. The boots are holding up better.</div></div>
+ <div class="trow"><div class="lbl">Share Tech Mono<br>intel, logs, killfeed</div><div class="t-mono">&gt; Mortar Barrage · 3 hit · 2 down · col B</div></div>
+</div>
+<p class="muted" style="font-size:13px">Oswald retires to a fallback: one condensed number font only.</p>
+
+<h2 id="cards">Card frames: the display case<small>One frame family everywhere. The art window is fixed; all chrome is code-drawn around it, so painted originals and licensed calling cards drop into the same window.</small></h2>
+<h3>Banner card (board, 4:1)</h3>
+<div class="stage">
+ <div class="cap">IDLE UNIT · SELECTED (YOU) · RIVAL · OPERATOR WITH BAND</div>
+ <div class="bcard"><img src="killingcard-da/art-marksman.jpg" alt="Marksman banner: a masked sniper prone at a port at dusk"><div class="sock" style="left:6px;bottom:6px"><svg viewBox="0 0 16 16"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div><div class="fp">2</div><div class="ar">2</div></div>
+ <div class="bcard you"><img src="killingcard-da/art-gunner.jpg" alt="Gunner banner: a masked heavy gunner firing"><div class="hex">4</div><div class="sock" style="right:6px;top:6px"><svg viewBox="0 0 16 16"><path d="M1 4h14v2H1zm2 4h12v2H3zm2 4h10v2H5z"/></svg></div><div class="fp">2</div><div class="ar">6</div></div>
+ <div class="bcard" style="box-shadow:0 0 0 1.5px var(--k-unit)"><img src="killingcard-da/art-flank_route.jpg" alt="Flank Route art: an alley between containers"><div class="fp rv">1</div><div class="ar">3</div></div>
+ <div class="bcard op"><img src="killingcard-da/art-kestrel_ar7.jpg" alt="Kestrel AR-7 Operator: a fictional rifle"><div class="fp">3</div><div class="ar">8</div><div class="band-s b-prism"></div></div>
+</div>
+<h3>Hand card (portrait) by kind</h3>
+<div class="stage">
+ <div class="hcard"><div class="bar"><span class="hx">3</span>Marksman</div><div class="win"><img src="killingcard-da/art-marksman.jpg" alt=""></div><div class="kind">Unit · Spec Ops</div><div class="rules"><b>Pick.</b> Shoots the enemy with the lowest current Armor.<i>One breath, one round.</i></div><div class="rail"><span class="s"></span><span class="mfp">2</span><span class="mar">2</span></div></div>
+ <div class="hcard tac"><div class="bar"><span class="hx">1</span>Flank Route</div><div class="win"><img src="killingcard-da/art-flank_route.jpg" alt=""></div><div class="kind" style="color:#B8913A">Tactic · orders</div><div class="rules">Move a friendly unit to an adjacent zone; it gains <b>First Shot</b> this round.</div><div class="rail"><span class="s"></span></div></div>
+ <div class="hcard ks"><div class="bar"><span class="hx">3</span>Mortar Barrage</div><div class="win"><img src="killingcard-da/art-mortar_barrage.jpg" alt=""></div><div class="kind">Killstreak</div><div class="rules">2 damage to every enemy in one column. Strikes before column A.</div><div class="rail"><span class="s"></span></div></div>
+ <div class="hcard op"><div class="bar"><span class="hx" style="background:#C9A227">◆</span>Kestrel AR-7</div><div class="win"><img src="killingcard-da/art-kestrel_ar7.jpg" alt=""></div><div class="kind" style="color:#C9A227">Operator</div><div class="rules">Respawns at your next Deploy if it goes down.</div><div class="rail"><span class="s"></span><span class="mfp">3</span><span class="mar">8</span></div></div>
+</div>
+<div class="scroll"><table class="tbl">
+<tr><th>Zone</th><th>Banner card</th><th>Hand card</th></tr>
+<tr><td>Art window</td><td>Full card, middle 70% focal, never dimmed</td><td>The same 4:1 crop under the name bar</td></tr>
+<tr><td>Left column (15%)</td><td>Cost hex + level coin on peek (top), trait chips (bottom)</td><td>Cost hex in the name bar</td></tr>
+<tr><td>Right column (15%)</td><td>Abilities chip (top), FP reticle + Armor plate (bottom)</td><td>Sockets left, FP + Armor bottom-right</td></tr>
+<tr><td>Frame</td><td>Keyline: steel; teal when selected; brass for Operator / Elite</td><td>Unit steel · Tactic khaki orders · Killstreak amber hazard tab · Operator brass</td></tr>
+<tr><td>Rarity</td><td>3 px band strip along the bottom</td><td>Band under the name bar</td></tr>
+<tr><td>Unaffordable</td><td colspan="2">Cost hex goes grey and the card drops 4 px. The art stays full colour.</td></tr>
+</table></div>
+
+<h2 id="materials">Shapes and materials</h2>
+<div class="stage">
+ <span class="btn pri">Ready</span><span class="btn sec">Deck</span>
+ <span class="stamp">VICTORY</span><span class="stamp def">DEFEAT</span>
+ <div class="paper"><h4>Orders · Fight 1</h4>ZONE CONTROL VS SANDVIPER_07<br>WIN: SUPPLY DROP, +3 REQ<br>LOSE: SALVAGE, -1 TICKET</div>
+ <div style="width:220px;height:30px;background:repeating-linear-gradient(135deg,#FFB020 0 10px,#12161A 10px 20px)"></div>
+ <div style="width:220px;height:30px;background:repeating-linear-gradient(135deg,#E5383B 0 10px,#12161A 10px 20px)"></div>
+</div>
+<div class="scroll"><table class="tbl">
+<tr><th>Material</th><th>Rule</th></tr>
+<tr><td>Steel plate</td><td>Matte gunmetal, 1-2 px rim, 45° chamfer on top-left + bottom-right, one soft top-left bevel. No rivets, rust, scratches, grunge.</td></tr>
+<tr><td>Orders paper</td><td>Khaki or light paper, faint fibre, typed mono text, square corners. Where rules and orders live.</td></tr>
+<tr><td>Hazard stripes</td><td>Amber/black = ready to call, drop zone. Red/black = hostile. Edges only, never behind text.</td></tr>
+<tr><td>Glow</td><td>Signals only, signal colour at 30-60%, 6-12 px soft.</td></tr>
+<tr><td>Shape = meaning</td><td>Hexagon cost · circle reticle FP · shield plate Armor · chevron level · diamond Field · rounded chip trait.</td></tr>
+</table></div>
+
+<h2 id="icons">Icon rules</h2>
+<div class="stage">
+ <div class="icons">
+  <div class="ic"><div class="box" style="width:48px;height:48px"><svg width="32" height="32" viewBox="0 0 16 16"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>48 px</div>
+  <div class="ic"><div class="box" style="width:32px;height:32px"><svg width="22" height="22" viewBox="0 0 16 16"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>32</div>
+  <div class="ic"><div class="box" style="width:24px;height:24px"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>24 must read</div>
+  <div class="ic"><div class="box" style="width:17px;height:17px"><svg width="11" height="11" viewBox="0 0 16 16"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>17 survives</div>
+  <div class="ic"><div class="box" style="width:32px;height:32px"><svg width="22" height="22" viewBox="0 0 16 16" style="fill:#2EC4B6"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>tinted you</div>
+  <div class="ic"><div class="box" style="width:32px;height:32px"><svg width="22" height="22" viewBox="0 0 16 16" style="fill:#FF5A5D"><path d="M8 1 15 4v4c0 4-3 6-7 7-4-1-7-3-7-7V4z"/></svg></div>tinted rival</div>
+ </div>
+</div>
+<ol>
+ <li><b>Bold white pictograms</b>, tinted by code: one icon, every state, both sides.</li>
+ <li>Read at <b>24 px</b>, survive at 17 px. 2-3 shapes, filled silhouettes, min 2.5 px stroke at 24 px.</li>
+ <li>Side or three-quarter top view, compact near-square silhouettes (no thin rotors or long flat wings).</li>
+ <li><b>One meaning, one icon</b>: shield = Armor, eye = PREVIEW, reticle = FP. Nothing else borrows them.</li>
+ <li>No text, letters, numbers, real weapon models, insignia or skulls inside icons.</li>
+ <li>Icons sit on a dark socket (<code>#12161A</code>, 1 px rim) on art, never straight on a painting.</li>
+</ol>
+
+<h2 id="art">Illustration: "Theatre at dusk"<small>Painted, semi-realistic, graphic-novel edges; strong silhouette; one warm practical light against a cool sky.</small></h2>
+<div class="stage">
+ <div class="bcard" style="width:min(100%,520px)"><img src="killingcard-da/art-marksman.jpg" alt="House style reference: masked sniper at a port at dusk, amber lights over a slate sky"></div>
+ <div style="flex:1;min-width:220px;font-size:14px;color:#B9C2C9">
+  <b style="color:#D8DEE3">Keep:</b> cool sky + one warm key light, rim light, masked faces, fictional gear, one subject in the middle 70%.<br>
+  <b style="color:#D8DEE3">Push:</b> a notch more saturation and contrast, so the public build is as loud as the pitch build.<br>
+  <b style="color:#D8DEE3">Fix:</b> every card today is the same Port dusk. Add theatres.
+ </div>
+</div>
+<div class="swgrid">
+ <div class="sw"><div class="c" style="background:linear-gradient(180deg,#3B4A5E,#E8912F);color:#fff">Port dusk</div><div class="m">Amber sodium / slate blue. Set 1.</div></div>
+ <div class="sw"><div class="c" style="background:linear-gradient(180deg,#9FD8E8,#E59AA0);color:#12161A">Arctic dawn</div><div class="m">Rose light / ice cyan</div></div>
+ <div class="sw"><div class="c" style="background:linear-gradient(180deg,#2F7C7A,#D9A35A);color:#12161A">Desert haze</div><div class="m">Ochre / teal</div></div>
+ <div class="sw"><div class="c" style="background:linear-gradient(180deg,#2A1A4E,#F0A040);color:#fff">Night city</div><div class="m">Sodium / violet</div></div>
+ <div class="sw"><div class="c" style="background:linear-gradient(180deg,#123A2A,#D99A3A);color:#fff">Jungle rain</div><div class="m">Amber / deep green</div></div>
+</div>
+<p><b>Collectible alt arts</b> (Trained and up, rewards) may break into the graphic families from the banner doc: Ink Comic, Retro Screenprint, Minimal Emblem, Neon Synth, Woodblock. The base card is the house painting; the earned card is the show-off. <b>Tactics</b> show objects, places or events, never a soldier as subject.</p>
+<p><b>Public and pitch, one case.</b> Originals and licensed calling cards fill the same art window and crop. The frame is neutral steel so it holds a dusk painting and a maximal calling card alike. Rarity, side and level live in the frame and bands. A licensed card that fights the frame is skipped, never edited. No licensed image appears on this page.</p>
+<h3>Prompt template (ChatGPT, landscape 3:2)</h3>
+<pre>Original painted game card illustration, landscape 3:2, 1536x1024.
+Subject: [one invented operator / one object / one event], [verb], seen [side / three-quarter], filling the middle.
+Style: semi-realistic painting with graphic-novel edges, bold silhouette, visible brushwork, strong warm rim light,
+three value groups, slightly saturated, high contrast.
+Theatre: [Port dusk: amber sodium lights over a slate-blue sky, cranes and containers | Arctic dawn | Desert haze |
+Night city | Jungle rain].
+Gear: olive, khaki and charcoal tactical gear, face covered by a mask, goggles or visor, fictional weapon, no markings.
+Composition: head and weapon between 30% and 65% of the height, in the middle 70% of the width; left and right 15%
+calm, darker, simple; horizontal flow.
+No text, letters, numbers, logos, flags, insignia, patches or stamps. No real people, no real weapon or vehicle
+models. No blood or gore.</pre>
+
+<h2 id="motion">Motion and VFX: call-in, impact, settle</h2>
+<div class="scroll"><table class="tbl">
+<tr><th>Beat</th><th>Time</th><th>What happens</th></tr>
+<tr><td>Call-in</td><td>0.25 s in, 0.6-0.9 s hold</td><td>Steel banner slides in from the owner's side: teal rim (you) or red hazard rim (rival); icon, name, one line.</td></tr>
+<tr><td>Telegraph</td><td>until resolve</td><td>One persistent marker in the owner's colour on the target (a hatch or pin, not a full-column fill).</td></tr>
+<tr><td>Impact</td><td>0.1-0.3 s</td><td>Hit-stop 50-80 ms, 4-8 px shake on the struck column only, white flash max 2 frames, warm sparks and smoke.</td></tr>
+<tr><td>Numbers</td><td>0.4 s</td><td>Damage pops 1.3 → 1.0, red / green, Barlow Condensed.</td></tr>
+<tr><td>Settle</td><td>0.3 s</td><td>Downed cards crack and drop; one mono log line; the board is still again.</td></tr>
+</table></div>
+<p>One big moment at a time, in A → B → C order. Snappy out (ease-out-back 0.25 s), quick in (0.15 s). No full-screen flashes. Reduced motion: fades only, no shake. Particles warm or side-coloured, never rainbow.</p>
+
+<h2 id="dodont">Do and don't</h2>
+<div class="dd">
+ <div class="pair"><div class="do"><div class="lab">Do</div><div class="demo"><span class="btn pri" style="min-width:70px;height:30px;font-size:13px">Play</span><span class="btn sec" style="min-width:60px;height:30px;font-size:13px">Edit</span></div>One amber button per screen.</div><div class="no"><div class="lab">Don't</div><div class="demo"><span class="btn pri" style="min-width:60px;height:30px;font-size:13px">Play</span><span class="btn pri" style="min-width:60px;height:30px;font-size:13px">Play</span></div>Amber on every action, chart and label.</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div><div class="demo" style="padding:0"><img src="killingcard-da/art-gunner.jpg" alt="" style="height:46px;width:100%;object-fit:cover"></div>Full-colour art; show state with frame and cost.</div><div class="no"><div class="lab">Don't</div><div class="demo" style="padding:0"><img src="killingcard-da/art-gunner.jpg" alt="" style="height:46px;width:100%;object-fit:cover;filter:brightness(.4) saturate(.4)"></div>Dim or desaturate art to say "can't play".</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div><div class="demo"><span class="rate" style="background:#0F2F2C;color:#2EC4B6;box-shadow:inset 0 0 0 1px #2EC4B6">YOUR HELO</span></div>Killstreak in its owner's colour.</div><div class="no"><div class="lab">Don't</div><div class="demo"><span class="rate" style="background:#C9E265;color:#12161A">HELO</span></div>A new hue per killstreak (lime reads as buff).</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div>Tactic art shows an object, place or event (crates, an alley, a smoke wall).</div><div class="no"><div class="lab">Don't</div>A soldier as the subject of a Tactic.</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div>Original names, original finishes (Gold Leaf, Machined, Prism, Starfield), our own wordmark.</div><div class="no"><div class="lab">Don't</div>CoD / MW3 logos, trade dress, HUD shapes, camo patterns, calling-card designs or names in public art or prompts.</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div>A red-circled target for the boss; blood-free action.</div><div class="no"><div class="lab">Don't</div>Skulls, gore, red that reads as blood.</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div>Faces covered, fictional weapons and vehicles, no text in art.</div><div class="no"><div class="lab">Don't</div>Real people, real gun or aircraft models, logos, flags, patches, baked-in letters.</div></div>
+ <div class="pair"><div class="do"><div class="lab">Do</div><span style="font:700 20px var(--f-stamp)">VICTORY</span><br>Stencil for wordmark and stamps.</div><div class="no"><div class="lab">Don't</div><span style="font:700 14px var(--f-stamp)">Shoots the enemy with the lowest Armor</span><br>Stencil body text or buttons.</div></div>
+</div>
+
+<h2 id="audit">Current screens (public build)<small>Captured 2026-11-10 with shot_wire2, shot_duel, shot_ks and shot_bands at 844x390, licensed art off.</small></h2>
+<div class="audit">
+ <div class="shot"><img src="killingcard-da/title.png" alt="Title screen" loading="lazy"><div class="b"><h3>Title <span class="rate r-part">PARTLY</span></h3><ol><li>Wordmark is plain text, no lockup.</li><li>Drill invite framed in danger red.</li><li>No equipped banner on show; three CTAs compete.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/run-map.png" alt="Run map" loading="lazy"><div class="b"><h3>Run map <span class="rate r-part">PARTLY</span></h3><ol><li>Round mobile-game nodes, not a briefing map.</li><li>Boss is a big red skull disc.</li><li>Map almost invisible; white NEXT box off-palette.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/match-board.png" alt="Match board" loading="lazy"><div class="b"><h3>Match board <span class="rate r-fit">FITS</span></h3><ol><li>Same few paintings repeat, columns blur.</li><li>Empty slot grid and INCOMING hatch louder than cards.</li><li>Left rail stacks many tiny icons.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/hand.png" alt="Hand with a card selected" loading="lazy"><div class="b"><h3>Hand <span class="rate r-part">PARTLY</span></h3><ol><li>Unaffordable cards dimmed to mud.</li><li>Ammo Resupply (Tactic) shows a soldier.</li><li>Play preview is a third card layout.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/inspector.png" alt="Card inspector" loading="lazy"><div class="b"><h3>Inspector <span class="rate r-part">PARTLY</span></h3><ol><li>Three copies of one card at once.</li><li>Placeholder text visible.</li><li>"?" buttons are blank plates.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/deck-builder.png" alt="Duel deck builder" loading="lazy"><div class="b"><h3>Duel hub and builder <span class="rate r-no">DOESN'T FIT</span></h3><ol><li>Flat pink / green placeholder arts beside paintings.</li><li>Amber everywhere (PLAY x2, bars, VS AI).</li><li>Deck curve is a plain bar chart.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/duel-hub.png" alt="Duel hub" loading="lazy"><div class="b"><h3>Duel hub (detail) <span class="rate r-no">DOESN'T FIT</span></h3><ol><li>Two amber PLAY buttons plus VS AI.</li><li>No deck art: a deck is text and bars.</li><li>Hero shown as a text line, not a card.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/loadout.png" alt="Loadout" loading="lazy"><div class="b"><h3>Loadout <span class="rate r-part">PARTLY</span></h3><ol><li>Operators in small text tiles, not heroes.</li><li>Locked Operator has placeholder purple art.</li><li>Bands and mastery not shown.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/codex.png" alt="Codex" loading="lazy"><div class="b"><h3>Codex <span class="rate r-part">PARTLY</span></h3><ol><li>Reads as a spreadsheet, not a binder.</li><li>Placeholder flat art (Brawler).</li><li>No finishes, alt-art count or owned state.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/after-action.png" alt="After-action" loading="lazy"><div class="b"><h3>After-action <span class="rate r-part">PARTLY</span></h3><ol><li>Empty stats with no hero moment.</li><li>No MVP card or banner shown.</li><li>VICTORY is plain text, no stamp; scene too dark.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/ks-called-in.png" alt="Killstreak called in" loading="lazy"><div class="b"><h3>Killstreak: call-in <span class="rate r-part">PARTLY</span></h3><ol><li>Orange banner reads as amber "act now".</li><li>Dashed column box + hatch + stripes stack up.</li><li>Banner covers the rival top row.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/ks-strike.png" alt="Killstreak strike" loading="lazy"><div class="b"><h3>Killstreak: strike <span class="rate r-part">PARTLY</span></h3><ol><li>Lime HELO INCOMING clashes with buff green.</li><li>Three reticles at once, no single focus.</li><li>Log lines repeat the banner text.</li></ol></div></div>
+ <div class="shot"><img src="killingcard-da/bands.png" alt="Level bands" loading="lazy"><div class="b"><h3>Level bands <span class="rate r-fit">FITS</span></h3><ol><li>Original, readable finishes.</li><li>Gold Leaf reads as a checker at small size: soften.</li><li>Not yet shown on Codex, Loadout or title.</li></ol></div></div>
+</div>
+
+<h2 id="updates">Update list (prioritised)</h2>
+<div class="scroll"><table class="tbl">
+<tr><th>#</th><th>Update</th><th>Owner</th><th>Size</th></tr>
+<tr><td>1</td><td>Replace every flat placeholder art (Brawler, Blackout, Smoke Screen, Aid Station, Listening Post, Bastion-60...) with house-style paintings</td><td>Artist</td><td><span class="size">L</span></td></tr>
+<tr><td>2</td><td>Re-art Tactics that show a soldier (Ammo Resupply first) as objects, places, events</td><td>Artist</td><td><span class="size">M</span></td></tr>
+<tr><td>3</td><td>Killstreaks coloured by owner, kind by icon; retire lime and orange; one telegraph mark</td><td>Technical Artist</td><td><span class="size">S</span></td></tr>
+<tr><td>4</td><td>One display-case frame everywhere; inspector = one big card + paper rules sheet</td><td>UI/UX</td><td><span class="size">M</span></td></tr>
+<tr><td>5</td><td>Never dim art for state: grey cost hex + 4 px drop</td><td>UI/UX</td><td><span class="size">S</span></td></tr>
+<tr><td>6</td><td>Amber discipline: one amber button per screen; drill invite in steel, not red</td><td>UI/UX</td><td><span class="size">S</span></td></tr>
+<tr><td>7</td><td>Title lockup: original stencil wordmark + equipped banner</td><td>Artist + UI/UX</td><td><span class="size">M</span></td></tr>
+<tr><td>8</td><td>Run map as briefing map: paper, pins, string, red-circled boss target</td><td>UI/UX + Artist</td><td><span class="size">M</span></td></tr>
+<tr><td>9</td><td>After-action debrief: stamp, MVP card with band, real stats only</td><td>UI/UX</td><td><span class="size">M</span></td></tr>
+<tr><td>10</td><td>Codex as binder: finishes, owned / unowned silhouettes, alt-art count</td><td>UI/UX</td><td><span class="size">M</span></td></tr>
+<tr><td>11</td><td>Second theatre art pack (Night city or Arctic dawn)</td><td>Artist</td><td><span class="size">L</span></td></tr>
+<tr><td>12</td><td>Type cleanup: Oswald to fallback, stencil for wordmark and stamps only</td><td>UI/UX</td><td><span class="size">S</span></td></tr>
+</table></div>
+
+<h2 id="questions">Questions for the head</h2>
+<div class="q"><b>1 · House style</b><ul><li><b>Recommended:</b> one painted "Theatre at dusk" house style for base cards; graphic families only for earned alt arts.</li><li>Fully mixed styles on every card (banner plan v1).</li><li>One style only, no alt-art families.</li></ul></div>
+<div class="q"><b>2 · Grit</b><ul><li><b>Recommended:</b> clean tactical (matte steel; grit only inside the paintings).</li><li>Grittier worn kit (scratches, dirt, stencil everywhere).</li></ul></div>
+<div class="q"><b>3 · Collectible lean</b><ul><li><b>Recommended:</b> medium: finishes, alt arts, binder Codex, equipped banner on title and debrief; no loot-box reveals.</li><li>Heavy: pack openings, shiny reveals, rarity glows on the board.</li><li>Light: the collection is a list.</li></ul></div>
+<div class="q"><b>4 · Killstreak colour</b><ul><li><b>Recommended:</b> colour by owner (teal / red), kind by icon.</li><li>Keep a signature hue per killstreak (new non-clashing hues needed).</li></ul></div>
+
+<footer>Source: <code>projects/killingcard/documentation/art/art-direction.md</code>. All images on this page are original public-build art and screenshots; no licensed images.</footer>
+</main>
+</body>
+</html>
