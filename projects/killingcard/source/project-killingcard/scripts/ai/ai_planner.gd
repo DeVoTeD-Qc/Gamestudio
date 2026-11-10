@@ -48,6 +48,8 @@ const MIN_GAIN: float = 0.05
 const MAX_STEPS: int = 14
 ## Value of one card drawn (if the hand has room).
 const DRAW_VALUE: float = 1.1
+## kc-wip-impl: value of +1 Supply next round (the Hacker's On Deploy).
+const SUPPLY_NEXT_VALUE: float = 0.5
 const K := DataEnums.EffectKind
 const T := DataEnums.Target
 const Z := DataEnums.ZoneScope
@@ -85,6 +87,8 @@ class Plan:
 	## Units a Flank Route moves out at Reveal still count for Deploy capacity (MatchState
 	## projected_occupancy does not see moves).
 	var moved_out: Array[int] = [0, 0, 0]
+	## kc-wip-impl: my Agile units with a move order this plan (uid -> true).
+	var agile_moved: Dictionary = {}
 	var equip_new: Array = [[], [], []]
 	## kc-syn: traits of the new Trained visible Fields per zone (they count for my sets).
 	var field_traits_new: Array = [[], [], []]
@@ -126,6 +130,7 @@ class Plan:
 		p.my_cover_buff = my_cover_buff.duplicate()
 		p.callout = callout.duplicate()
 		p.moved_out = moved_out.duplicate()
+		p.agile_moved = agile_moved.duplicate()
 		p.equip_new = [equip_new[0].duplicate(), equip_new[1].duplicate(), equip_new[2].duplicate()]
 		p.field_traits_new = [field_traits_new[0].duplicate(), field_traits_new[1].duplicate(), field_traits_new[2].duplicate()]
 		p.syn_total = syn_total
@@ -321,6 +326,18 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 			for z: int in [p.op_zone - 1, p.op_zone + 1]:
 				if z >= 0 and z < 3 and _occupancy(p, z) < cap:
 					out.append(_action(&"rotate", z, _syn_zones([p.op_zone, z])))
+	# kc-wip-impl Agile: a free order moving one of my Agile units on the board to an adjacent column.
+	for z: int in 3:
+		for rec: Dictionary in p.lines[ME][z]:
+			if not bool(rec.get("agile", false)) or rec["new"] or rec["is_op"] or int(rec["armor"]) <= 0 \
+					or rec.get("moved", false) or p.agile_moved.has(int(rec["uid"])):
+				continue
+			for dest: int in [z - 1, z + 1]:
+				if dest >= 0 and dest < 3 and _occupancy(p, dest) < cap:
+					var am: Dictionary = _action(&"agile", z, _syn_zones([z, dest]))
+					am["target_uid"] = rec["uid"]
+					am["dest_zone"] = dest
+					out.append(am)
 	# Deck cards (one candidate set per distinct card design).
 	var seen: Dictionary = {}
 	for h: Dictionary in _view.hand:
@@ -374,6 +391,7 @@ func _effect_candidates(p: Plan, owner: Resource, effects: Array[EffectData]) ->
 	var op_zone_only: bool = tr["op_zone_only"]
 	var chosen_enemy: bool = tr["chosen_enemy"]
 	var move: bool = tr["move"]
+	var buff_friendly: bool = tr["buff_friendly"]
 	var global: bool = tr["global"]
 	var hits_enemies: bool = tr["hits_enemies"]
 	var summons: bool = tr["summons"]
@@ -393,6 +411,18 @@ func _effect_candidates(p: Plan, owner: Resource, effects: Array[EffectData]) ->
 						a["dest_zone"] = dest
 						a["op_bound"] = false
 						out.append(a)
+		return out
+	if buff_friendly:
+		# kc-wip-impl E5 (Premium Loadout): a chosen-friendly buff, one candidate per living unit of mine
+		# (a unit played this Deploy counts; an Operator placed this Deploy is not on the board yet).
+		for z: int in 3:
+			for rec: Dictionary in p.lines[ME][z]:
+				if int(rec["armor"]) <= 0 or (rec["new"] and not rec["card_unit"]):
+					continue
+				var a: Dictionary = _action(&"tactic", -1, [z])
+				a["target_uid"] = rec["uid"]
+				a["op_bound"] = false
+				out.append(a)
 		return out
 	if chosen_enemy:
 		var zones: Array[int] = [0, 1, 2]
@@ -435,7 +465,7 @@ func _traits_of(owner: Resource, effects: Array[EffectData]) -> Dictionary:
 	if _traits.has(key):
 		return _traits[key]
 	var tr: Dictionary = {"needs_zone": false, "op_bound": false, "op_zone_only": false, "chosen_enemy": false,
-			"move": false, "global": false, "hits_enemies": false, "summons": false}
+			"move": false, "global": false, "hits_enemies": false, "summons": false, "buff_friendly": false}
 	for e: EffectData in effects:
 		if e == null:
 			continue
@@ -456,6 +486,8 @@ func _traits_of(owner: Resource, effects: Array[EffectData]) -> Dictionary:
 			tr["chosen_enemy"] = true
 		if e.kind == K.MOVE_UNIT:
 			tr["move"] = true
+		if e.target == T.CHOSEN_FRIENDLY and e.kind in [K.MODIFY_FIREPOWER, K.MODIFY_ARMOR, K.GRANT_COVER, K.GRANT_FIRST_SHOT]:
+			tr["buff_friendly"] = true
 		if e.kind == K.SUMMON_UNIT:
 			tr["summons"] = true
 		if e.target in [T.ALL_ENEMIES, T.ENEMY_POINT_MAN, T.ENEMY_SECOND_IN_LINE, T.CHOSEN_ENEMY]:
@@ -512,6 +544,19 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			p.lines[ME][z].append(rec)
 			p.op_zone = z
 			p.rotations_left -= 1
+		&"agile":
+			# kc-wip-impl Agile: the unit leaves column z for the back of dest (MatchState counts the
+			# order for capacity, so moved_out stays as it is).
+			var dest: int = a["dest_zone"]
+			var line: Array = p.lines[ME][z]
+			for i: int in line.size():
+				if int(line[i]["uid"]) == int(a["target_uid"]):
+					var rec: Dictionary = line[i]
+					line.remove_at(i)
+					rec["moved"] = true
+					p.lines[ME][dest].append(rec)
+					break
+			p.agile_moved[int(a["target_uid"])] = true
 		&"unit":
 			var card: CardData = a["card"]
 			var rec: Dictionary = _view.record_for_card(card, a["uid"], z, a.get("trait", SynergyRules.TRAIT_DEFAULT))
@@ -520,6 +565,10 @@ func _apply(p: Plan, a: Dictionary) -> void:
 			else:
 				p.lines[ME][z].append(rec)
 			_spend_card(p, a, card.cost)
+			# kc-wip-impl (the Hacker): Supply next round is worth a flat bit to the plan.
+			for e: EffectData in card.effects:
+				if e != null and e.trigger == TR.ON_DEPLOY and e.kind == K.GAIN_SUPPLY_NEXT_ROUND:
+					p.flat += SUPPLY_NEXT_VALUE * e.amount
 		&"equipment":
 			var card: CardData = a["card"]
 			p.equip_new[z].append(card)
@@ -701,6 +750,13 @@ func _apply_effect(p: Plan, e: EffectData, z: int, amount: int, foes: Array, tar
 				else:
 					for rec: Dictionary in foes:
 						rec["cover"] = 0
+		K.MODIFY_ARMOR:
+			# kc-wip-impl E5: a chosen-friendly +Armor (Premium Loadout) raises max and current Armor.
+			if e.target == T.CHOSEN_FRIENDLY:
+				var rec: Dictionary = _find_mine(p, target_uid)
+				if not rec.is_empty():
+					rec["armor"] = maxi(1, int(rec["armor"]) + amount)
+					rec["max_armor"] = maxi(1, int(rec["max_armor"]) + amount)
 		K.GRANT_FIRST_SHOT:
 			if e.target == T.CHOSEN_FRIENDLY:
 				var rec: Dictionary = _find_mine(p, target_uid)
@@ -879,7 +935,8 @@ func _eval_zone(p: Plan, z: int) -> float:
 				if armor[si][i] > 0 and sides[si][i]["suppress"]:
 					var pm: int = _first_alive(armor[1 - si])
 					if pm >= 0:
-						fp[1 - si][pm] = int(fp[1 - si][pm]) - 2
+						# kc-wip-impl: Suppress N (records without the amount: the shipped 2).
+						fp[1 - si][pm] = int(fp[1 - si][pm]) - maxi(1, int(sides[si][i].get("suppress_amount", 2)))
 		# 2. Beats front to back, First Shot exchange, Pierce (FirefightResolver._run_beats).
 		_fight(sides, n, armor, fp, cover, fs, survive, front_fp, front_cover)
 		# 3. Patch.
@@ -963,6 +1020,16 @@ func _beat(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, s
 		var i: int = sh[1]
 		var o: int = 1 - si
 		fired[si][i] = true
+		if bool(sides[si][i].get("beam", false)):
+			# kc-wip-impl Beam: its FP to each of my living units ahead of it, then every living enemy.
+			var beam_fp: int = maxi(0, int(fp[si][i]) + (front_fp[si] if i == front[si] else 0))
+			for j: int in i:
+				if int(armor[si][j]) > 0:
+					dmg[si][j] = int(dmg[si][j]) + maxi(0, beam_fp - int(cover[si][j]) - (front_cover[si] if j == front[si] else 0))
+			for k: int in n[o]:
+				if int(armor[o][k]) > 0:
+					dmg[o][k] = int(dmg[o][k]) + maxi(0, beam_fp - int(cover[o][k]) - (front_cover[o] if k == front[o] else 0))
+			continue
 		var assigned: Array[int] = []
 		assigned.resize(n[o])
 		var t: int = _target(sides[si][i], sides[o], armor[o], assigned)
@@ -999,6 +1066,17 @@ func _beat(sides: Array, n: Array[int], armor: Array, fp: Array, cover: Array, s
 			var od: int = int(sides[si][i]["on_down_damage"])
 			if od > 0:
 				_hit_point_man(armor[1 - si], cover[1 - si], survive[1 - si], od, front_cover[1 - si])
+			# kc-wip-impl (Kamikaze): On Down damage to every enemy in the column (Cover applies).
+			var all_d: int = int(sides[si][i].get("on_down_all", 0))
+			if all_d > 0:
+				var fr: int = _first_alive(armor[1 - si])
+				for k: int in n[1 - si]:
+					if int(armor[1 - si][k]) <= 0:
+						continue
+					armor[1 - si][k] = int(armor[1 - si][k]) - maxi(0, all_d - int(cover[1 - si][k]) - (front_cover[1 - si] if k == fr else 0))
+					if int(armor[1 - si][k]) <= 0 and int(survive[1 - si][k]) > 0:
+						armor[1 - si][k] = survive[1 - si][k]
+						survive[1 - si][k] = 0
 
 func _zone_value(p: Plan, z: int, sides: Array, armor: Array, foe_present_at_start: bool) -> float:
 	var P: AiPersonality = personality
@@ -1277,7 +1355,7 @@ func _to_result(p: Plan, best_score: float, alt_score: float, second: bool) -> D
 	var rest: Array[Dictionary] = []
 	for a: Dictionary in chain:
 		match a["kind"]:
-			&"place", &"rotate":
+			&"place", &"rotate", &"agile":
 				moves.append(_intent_for(a))
 			&"unit":
 				units.append(_intent_for(a))
@@ -1301,6 +1379,8 @@ func _intent_for(a: Dictionary) -> Dictionary:
 			return RulesIntent.place_operator(a["zone"])
 		&"rotate":
 			return RulesIntent.rotate(a["zone"])
+		&"agile":
+			return RulesIntent.move_unit(a["target_uid"], a["dest_zone"])
 	if a["item"] != null:
 		return RulesIntent.use_item((a["item"] as LoadoutItem).id, a["zone"], a["target_uid"], a["dest_zone"])
 	return RulesIntent.play_card(a["uid"], a["zone"], a["target_uid"], a["dest_zone"])
