@@ -100,9 +100,17 @@ func get_important_labels() -> Array[Label]:
 	return []
 
 
+const EMPTY_PIECE: StringName = &"tile_slot_empty"
+const EMPTY_ALPHA: float = 0.45
+
+
 ## Empty slot: a faint dashed outline so the 4 rows read as slots.
 func _draw() -> void:
 	if kind != Kind.EMPTY:
+		return
+	# kc-ui-wire2: the kit's empty slot backer (tile_slot_empty), faint so the cards stay the loudest
+	# thing on the board; else the dashed outline.
+	if UiKit.draw_piece(self, EMPTY_PIECE, Rect2(Vector2.ZERO, size), Color(1, 1, 1, EMPTY_ALPHA)):
 		return
 	var c: Color = Color(get_theme_color(&"text_dim", &"Hud"), 0.22)
 	BannerView._dashed_rect(self, Rect2(Vector2.ZERO, size).grow(-1.0), c, 1.0)

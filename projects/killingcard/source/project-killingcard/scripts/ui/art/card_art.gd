@@ -145,10 +145,19 @@ static func fx_texture(key: StringName) -> Texture2D:
 	return bitmap(path) if has_bitmap(path) else null
 
 
-## Face-down card back, at most px wide; null without its image.
+## Face-down card back, at most px wide; null without its image. kc-ui-wire2: the UI kit's hand-size
+## back (card_back_hand, 256x320) first, else cards/card_back.webp.
 static func card_back_texture(px: int = 0) -> Texture2D:
+	var kit: Texture2D = UiKit.piece(&"card_back_hand")
+	if kit != null:
+		return kit
 	var path: String = CARD_DIR + "card_back" + BITMAP_EXT
 	return bitmap(path, px) if has_bitmap(path) else null
+
+
+## kc-ui-wire2: the face-down 4:1 banner back (UI kit card_back_banner), or null without it.
+static func card_back_banner_texture() -> Texture2D:
+	return UiKit.piece(&"card_back_banner")
 
 
 ## Perk patch (square, round patch inside), at most px wide; null without its image.

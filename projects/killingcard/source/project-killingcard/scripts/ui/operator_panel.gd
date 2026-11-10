@@ -206,6 +206,12 @@ func _build_perks(perks: Array, slots: int) -> void:
 		if patch != null:
 			patch.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 1)
 			slot.add_child(patch)
+		elif perk == &"":
+			# kc-ui-wire2: an empty slot shows the kit's faint perk-slot mark (ico_perk_slot); else outlined only.
+			var mark: TextureRect = UiKit.icon_rect(&"perk_slot", PERK_SIZE * 0.6, Color(1, 1, 1, 0.35))
+			if mark != null:
+				slot.add_child(mark)
+				mark.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 		_perk_row.add_child(slot)
 
 

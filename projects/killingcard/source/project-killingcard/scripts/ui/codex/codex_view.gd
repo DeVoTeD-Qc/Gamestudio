@@ -535,6 +535,9 @@ func _build() -> void:
 	_glossary_button.tooltip_text = "Every keyword, synergy icon and stat mark in plain words"
 	_glossary_button.pressed.connect(func() -> void: open_glossary())
 	_top.add_child(_glossary_button)
+	# kc-ui-wire2: kit icons on BACK and GLOSSARY (none without the kit).
+	UiKit.set_button_icon(_back, &"ui_back")
+	UiKit.set_button_icon(_glossary_button, &"ui_info")
 	# Filter row (scrolls sideways on narrow screens).
 	var filter_scroll: ScrollContainer = ScrollContainer.new()
 	filter_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

@@ -82,6 +82,10 @@ func _build() -> void:
 	_tutorial_button.custom_minimum_size.x = 0
 	row.add_child(_codex_button)
 	_codex_button.pressed.connect(open_codex)
+	# kc-ui-wire2: the kit's menu icons on the title buttons (no icon without the kit).
+	UiKit.set_button_icon(_codex_button, &"ui_codex", 24.0)
+	UiKit.set_button_icon(_tutorial_button, &"ui_tutorial", 24.0)
+	UiKit.set_button_icon(_continue_button, &"ui_continue", 24.0)
 	# kc-duel-ui: DUEL sits beside the campaign's START NEW RUN.
 	_duel_button = Button.new()
 	_duel_button.name = "DuelButton"

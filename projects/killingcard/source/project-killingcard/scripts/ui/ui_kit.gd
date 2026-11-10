@@ -267,6 +267,42 @@ static var draw_tint_log: Array[Color] = []
 static var _pieces: Dictionary = {}  # id -> Texture2D or null
 
 
+## kc-ui-wire2: a tinted, mouse-transparent TextureRect of a kit icon, px logical px square, or null
+## without the kit (the caller adds nothing, so its layout stays as it was).
+static func icon_rect(icon_name: StringName, px: float, tint_color: Color = Color.WHITE) -> TextureRect:
+	var tex: Texture2D = kit_texture(icon_name, px * 2.0)
+	if tex == null:
+		return null
+	var r: TextureRect = TextureRect.new()
+	r.name = "KitIcon_%s" % kit_id(icon_name)
+	r.texture = tex
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.custom_minimum_size = Vector2(px, px)
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.modulate = tint_color
+	r.set_meta(&"icon", kit_id(icon_name))
+	_logged(kit_id(icon_name), tint_color)
+	return r
+
+
+## kc-ui-wire2: a kit menu icon (&"ui_codex" ...) on a text button, `px` logical px wide, in the
+## button's font colour (dark on the amber ReadyButton). False (button unchanged) without the kit.
+static func set_button_icon(b: Button, icon_name: StringName, px: float = 20.0) -> bool:
+	var tex: Texture2D = kit_texture(icon_name, px * 2.0) if b != null else null
+	if tex == null:
+		return false
+	b.icon = tex
+	b.expand_icon = true
+	b.add_theme_constant_override(&"icon_max_width", int(px))
+	for st: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		var fc: StringName = StringName("font_color") if st == "normal" else StringName("font_%s_color" % st)
+		b.add_theme_color_override(StringName("icon_%s_color" % st), b.get_theme_color(fc))
+	_logged(kit_id(icon_name))
+	return true
+
+
 ## kc-ui-wire2: the fx/ glows, outlines, tracer, flash and sheen are RGB on black with no alpha; they
 ## draw with additive blending (black adds nothing). One shared material.
 static var _add_mat: CanvasItemMaterial = null

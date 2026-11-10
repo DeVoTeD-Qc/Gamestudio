@@ -1156,6 +1156,15 @@ func _add_glyph(b: Button, kind: StringName) -> void:
 	g.draw.connect(func() -> void:
 		var c: Color = b.get_theme_color(&"font_color")
 		var s: float = 24.0
+		# kc-ui-wire2: the kit's menu / undo / eye icons (ui_menu, ui_undo, ui_eye; ui_eye_off while
+		# PREVIEW is off) in the same spot and colour; the drawn glyphs below are the fallback.
+		var kit_id: StringName = {&"undo": &"ui_undo", &"menu": &"ui_menu"}.get(kind, &"ui_eye")
+		if kind == &"eye" and b.toggle_mode and not b.button_pressed:
+			kit_id = &"ui_eye_off"
+		var kit_s: float = 26.0 if kind == &"undo" else s
+		var kit_o: Vector2 = Vector2((b.size.x - kit_s) * 0.5, (b.size.y - kit_s) * 0.5 if kind != &"eye" else 6.0)
+		if UiKit.draw_icon(g, kit_id, Rect2(kit_o, Vector2(kit_s, kit_s)), c if not b.disabled else Color(c, 0.4)):
+			return
 		var o: Vector2 = Vector2((b.size.x - s) * 0.5, (b.size.y - s) * 0.5 if kind == &"menu" else 6.0)
 		if kind == &"undo":
 			# A curved back arrow (UNDO is an icon over READY, kc-cards-impl O2).
@@ -1188,6 +1197,7 @@ func _add_glyph(b: Button, kind: StringName) -> void:
 	b.resized.connect(func() -> void:
 		g.size = b.size
 		g.queue_redraw())
+	b.toggled.connect(func(_on: bool) -> void: g.queue_redraw())
 
 
 func _setup_flyout() -> void:

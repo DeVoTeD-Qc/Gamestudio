@@ -90,7 +90,10 @@ func _col(name: StringName) -> Color:
 
 func _draw() -> void:
 	var r: Rect2 = Rect2(Vector2.ZERO, size)
-	draw_rect(r, Color("#232A31"))
+	# kc-ui-wire2: the kit's objective tile backer (tile_objective, gunmetal plate); else the flat fill.
+	var kit_tile: bool = UiKit.draw_piece(self, &"tile_objective", r)
+	if not kit_tile:
+		draw_rect(r, Color("#232A31"))
 	_terrain_rect = Rect2()
 	var tint: Color = RunGlyphs.terrain_tint(StringName(str(terrain.get("id", "")))) if not terrain.is_empty() else Color()
 	if not terrain.is_empty():
@@ -103,7 +106,8 @@ func _draw() -> void:
 			x += step
 		draw_rect(Rect2(0, 0, size.x, 3), tint)
 		draw_rect(Rect2(0, size.y - 3, size.x, 3), tint)
-	draw_rect(r, Color("#3A444D"), false, 1.0)
+	if not kit_tile:
+		draw_rect(r, Color("#3A444D"), false, 1.0)
 	var h: float = size.y
 	# kc-abc-labels (the head: "remove the firepower total on locations ... just keep the location
 	# letter and leave more space for field card"): left, the column letter in its control mark (yours:
@@ -261,7 +265,9 @@ func _chip(rr: Rect2, side: StringName, f: Dictionary) -> void:
 	var side_c: Color = _col(&"friend") if side == &"player" else _col(&"enemy")
 	var tex: Texture2D = BannerArtDB.banner_texture(StringName(String(f.get("banner", f.get("card_id", "")))), {"type": "field"})
 	var hidden: bool = bool(f.get("hidden", false))
-	draw_rect(rr, Color("#1C2228"))
+	# kc-ui-wire2: the kit's chip backers (tile_field_chip; your hidden trap: tile_field_chip_trap, dashed).
+	if not UiKit.draw_piece(self, &"tile_field_chip_trap" if hidden else &"tile_field_chip", rr):
+		draw_rect(rr, Color("#1C2228"))
 	if tex != null and not hidden:
 		draw_texture_rect(tex, rr, false, Color(1, 1, 1, 0.9 if not f.get("pending", false) else 0.6))
 	var g: float = rr.size.y
@@ -270,7 +276,8 @@ func _chip(rr: Rect2, side: StringName, f: Dictionary) -> void:
 	draw_rect(gp, Color(INK, 0.85))
 	CardLook.draw_type_icon(self, gp.grow(-g * 0.12), &"field", side_c)
 	if hidden:
-		BannerView._dashed_rect(self, rr, Color("#B9C2C9"), 1.5)
+		if not UiKit.has_piece(&"tile_field_chip_trap"):
+			BannerView._dashed_rect(self, rr, Color("#B9C2C9"), 1.5)
 		_tag(Rect2(gp.end.x + 2.0, rr.position.y, rr.size.x - g - 2.0, rr.size.y), "TRAP", Color("#B9C2C9"), Color(0, 0, 0, 0))
 	else:
 		draw_rect(rr, side_c, false, 1.5)

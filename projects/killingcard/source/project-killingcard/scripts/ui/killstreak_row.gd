@@ -165,6 +165,8 @@ func _draw_tile(tile: Control) -> void:
 	var sb: StyleBox = get_theme_stylebox(&"panel", &"HudPanelDark")
 	if selected:
 		tile.draw_rect(r, AMBER)
+	elif UiKit.draw_piece(tile, &"pnl_ks_tile", r):
+		pass  # kc-ui-wire2: the kit's killstreak tile backer (pnl_ks_tile, recessed ring well).
 	elif sb != null:
 		tile.draw_style_box(sb, r)
 	else:
@@ -185,7 +187,9 @@ func _draw_tile(tile: Control) -> void:
 	var ring_c: Color = AMBER if ready_now else (CYAN if bool(e.get("earned", false)) else Color(0.55, 0.62, 0.68))
 	if selected:
 		ring_c = DARK
-	tile.draw_arc(c, ring_d * 0.5 - 2.0, 0.0, TAU, 40, Color(ring_c, 0.22), 3.0, true)
+	# kc-ui-wire2: the kit's segmented ring track (ring_track) under the code fill arc; else a faint arc.
+	if not UiKit.draw_piece(tile, &"ring_track", Rect2(c - Vector2(ring_d, ring_d) * 0.5, Vector2(ring_d, ring_d)), Color(ring_c, 0.5)):
+		tile.draw_arc(c, ring_d * 0.5 - 2.0, 0.0, TAU, 40, Color(ring_c, 0.22), 3.0, true)
 	if frac > 0.0:
 		tile.draw_arc(c, ring_d * 0.5 - 2.0, -PI * 0.5, -PI * 0.5 + TAU * frac, 40, ring_c, 3.0, true)
 	var icon_name: StringName = ICONS.get(StringName(e.get("id", &"")), &"type_killstreak")

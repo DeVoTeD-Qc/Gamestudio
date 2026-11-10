@@ -153,6 +153,14 @@ func _draw() -> void:
 
 
 func _dashed(a: Vector2, b: Vector2, c: Color, w: float) -> void:
+	# kc-ui-wire2: the kit's dashed path (runmap_path, white dashes) tiled along the link, tinted; else code.
+	var tex: Texture2D = UiKit.piece(&"runmap_path")
+	if tex != null and a.distance_to(b) > 1.0:
+		var h: float = maxf(4.0, w * 2.5)
+		draw_set_transform(a, (b - a).angle())
+		UiKit.draw_tiled(self, &"runmap_path", Rect2(0.0, -h * 0.5, a.distance_to(b), h), c.lightened(0.25), h / tex.get_size().y)
+		draw_set_transform(Vector2.ZERO)
+		return
 	var len: float = a.distance_to(b)
 	var d: Vector2 = (b - a) / maxf(1.0, len)
 	var t: float = 0.0
@@ -202,13 +210,25 @@ class MapNode extends Button:
 		var enemy: Color = get_theme_color(&"enemy", &"Hud")
 		var tr: Rect2 = Rect2(Vector2((size.x - tile) * 0.5, 0), Vector2(tile, tile))
 		var fill: Color = Color("#5A1A1C") if boss else Color("#1C2228")
-		draw_rect(tr, Color(fill, 0.55 if done else 0.95))
+		# kc-ui-wire2: with the kit's node ring (runmap_node, a hexagon) the tile is a filled hexagon and
+		# the ring carries the state colour; the square tile and frame are the fallback.
+		var hex: bool = UiKit.has_piece(&"runmap_node")
+		if hex:
+			var hp: PackedVector2Array = []
+			for i: int in 6:
+				hp.append(tr.get_center() + Vector2.from_angle(PI / 3.0 * i) * tile * 0.47)
+			draw_colored_polygon(hp, Color(fill, 0.55 if done else 0.95))
+		else:
+			draw_rect(tr, Color(fill, 0.55 if done else 0.95))
 		var glyph_c: Color = RunGlyphs.node_tint(t)
 		if done:
 			glyph_c = Color(glyph_c, 0.45)
 		RunGlyphs.draw_node(self, tr.grow(-tile * 0.16), t, glyph_c)
 		# Frame: shape carries the state.
-		if cur:
+		if hex:
+			var ring_c: Color = friend if cur else accent if reach else enemy if boss else Color("#5A646D")
+			UiKit.draw_piece(self, &"runmap_node", tr.grow(2.0 if reach and not cur else 0.0), ring_c)
+		elif cur:
 			draw_rect(tr, friend, false, 3.0)
 		elif reach:
 			draw_rect(tr.grow(2.0), accent, false, 3.0)
