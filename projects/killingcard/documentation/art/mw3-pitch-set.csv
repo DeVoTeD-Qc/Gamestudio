@@ -128,3 +128,27 @@ p12_sidearm,kc_mw3_cor45_mastery_gilded,COR-45 Mastery: Gilded,operator,yes,wm_c
 p12_sidearm,kc_mw3_cor45_mastery_forged,COR-45 Mastery: Forged,operator,yes,wm_cor_45,2,mastery,COR45_MasteryForged_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
 p12_sidearm,kc_mw3_cor45_mastery_priceless,COR-45 Mastery: Priceless,operator,yes,wm_cor_45,3,mastery,COR45_MasteryPriceless_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
 p12_sidearm,kc_mw3_cor45_mastery_interstellar,COR-45 Mastery: Interstellar,operator,yes,wm_cor_45,4,mastery,COR45_MasteryInterstellar_CallingCard_MWIII.gif,weapon-mastery card of the Operator's primary weapon
+si_grunt,kc_mw3_anything_that_moves,Anything That Moves,unit,no,,,operators,AnythingThatMoves_CallingCard_MWIII.png,kc-mw3-cards starter: rank-and-file riflemen advancing (Grunt)
+si_trooper,kc_mw3_helo_support,Helo Support,unit,no,,,operators,HeloSupport_CallingCard_MWIII.png,kc-mw3-cards starter: seasoned trooper with rifle in the dust (Trooper)
+si_sergeant,kc_mw3_landing_party,Landing Party,unit,no,,,operators,LandingParty_CallingCard_MWIII.png,kc-mw3-cards starter: squad leader bringing a fire team off the helo (Sergeant)
+si_armored,kc_mw3_grid_and_grit,Grid And Grit,unit,no,,,operators,GridAndGrit_CallingCard_MWIII.png,"kc-mw3-cards starter: helmeted, plated soldier (Armored Trooper)"
+si_ammo_resupply,kc_mw3_hand_off,Hand-Off,tactic,no,,,honors,HandOff_CallingCard_MWIII.png,kc-mw3-cards starter: an ammo box handed over (Standard Issue Ammo Resupply)
+kc_wip_private_1,kc_mw3_mtz556_mastery_gilded,MTZ-556 Mastery: Gilded,unit,yes,,,mastery,MTZ556_MasteryGilded_CallingCard_MWIII.gif,"kc-mw3-cards Wip: Private ladder I (one rifle, four finishes)"
+kc_wip_private_2,kc_mw3_mtz556_mastery_forged,MTZ-556 Mastery: Forged,unit,yes,,,mastery,MTZ556_MasteryForged_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder II
+kc_wip_private_3,kc_mw3_mtz556_mastery_priceless,MTZ-556 Mastery: Priceless,unit,yes,,,mastery,MTZ556_MasteryPriceless_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder III
+kc_wip_private_4,kc_mw3_mtz556_mastery_interstellar,MTZ-556 Mastery: Interstellar,unit,yes,,,mastery,MTZ556_MasteryInterstellar_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder IV
+kc_wip_scout,kc_mw3_low_profile,Low Profile,unit,no,,,honors,LowProfile_CallingCard_MWIII.png,"kc-mw3-cards Wip: ghillie scout lying low (Scout, arrives front)"
+kc_wip_medic,kc_mw3_useful,Useful,unit,no,,,horde,Useful_CallingCard_MWIII.png,"kc-mw3-cards Wip: stim / heal (Medic, Patch)"
+kc_wip_sharpshooter,kc_mw3_scoped_and_ready,Scoped And Ready,unit,no,,,honors,ScopedAndReady_CallingCard_MWIII.png,"kc-mw3-cards Wip: scope close-up (Sharpshooter, First Shot)"
+kc_wip_flag_bearer,kc_mw3_so_it_begins,So It Begins,unit,no,,,horde,SoItBegins_CallingCard_MWIII.png,kc-mw3-cards Wip: a war banner flying over the fire (Flag Bearer)
+kc_wip_hacker,kc_mw3_pet_drones,Pet Drones,unit,yes,,,honors,PetDrones_CallingCard_MWIII.gif,kc-mw3-cards Wip: operator steering a drone swarm (Hacker)
+kc_wip_kamikaze,kc_mw3_pin_pulled,Pin Pulled,unit,no,,,horde,PinPulled_CallingCard_MWIII.png,"kc-mw3-cards Wip: pin pulled, blast behind (Kamikaze, On Down damage)"
+kc_wip_runner,kc_mw3_damn_fast,Damn Fast,unit,no,,,horde,DamnFast_CallingCard_MWIII.png,"kc-mw3-cards Wip: speed-blur sprint (Runner, Agile)"
+kc_wip_sniper,kc_mw3_ghillie_guy,Ghillie Guy,unit,no,,,standard,GhillieGuy_CallingCard_MWIII.png,"kc-mw3-cards Wip: ghillie sniper with a bolt rifle (Sniper, Pick)"
+kc_wip_juggernaut,kc_mw3_all_the_guns,All The Guns,unit,no,,,honors,AllTheGuns_CallingCard_MWIII.png,kc-mw3-cards Wip: skull-masked heavy with miniguns and belts (Juggernaut)
+kc_wip_riot_shield,kc_mw3_riot_shield_mastery_golden_ivory,Riot Shield Mastery: Golden Ivory,unit,yes,,,mastery,RiotShield_MasteryGoldenIvory_CallingCard_MWIII.gif,"kc-mw3-cards Wip: a riot shield (classifier review=yes; cleared by eye: plain shield, no IP)"
+kc_wip_fast_learner,kc_mw3_trained_and_ready,Trained And Ready,unit,no,,,operators,TrainedAndReady_CallingCard_MWIII.png,kc-mw3-cards Wip: training dummies on the range (Fast Learner)
+kc_wip_laser_gunner,kc_mw3_too_many_lasers,Too Many Lasers?,unit,no,,,honors,TooManyLasers_CallingCard_MWIII.png,kc-mw3-cards Wip: rifle firing a fan of laser beams (Laser Gunner)
+kc_wip_war_shout,kc_mw3_revolution_rising,Revolution Rising,tactic,no,,,operators,RevolutionRising_CallingCard_MWIII.png,kc-mw3-cards Wip: a crowd raising arms before the charge (War Shout)
+kc_wip_barrage,kc_mw3_warships,Warships,tactic,no,,,operators,Warships_CallingCard_MWIII.png,kc-mw3-cards Wip: ship guns firing a broadside (Barrage)
+kc_wip_premium_loadout,kc_mw3_gearing_up,Gearing Up,tactic,no,,,honors,GearingUp_CallingCard_MWIII.png,kc-mw3-cards Wip: an operator picking kit off the armory wall (Premium Loadout)

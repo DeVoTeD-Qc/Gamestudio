@@ -172,6 +172,44 @@ The Operator wears the weapon-mastery card of its primary weapon. Tier 1 (Gilded
 
 Camo band per tier: Base (olive), Forged (silver-white), Priceless (blue), Interstellar (purple). Dev toggle: `?mastery=N` (1-4) in the URL, or **Ctrl+M** on the match screen cycles the tier.
 
+### 2.2 Starters and the Wip set (kc-mw3-cards, head)
+24 more arts (153 in all; the set is now about 8.1 MB of WebP). All are new to the set: **no calling card is reused**. Picked by eye on a contact sheet (kept outside the repo).
+
+**Standard Issue starters** wear one calling card each, **private pitch build only** (the public build keeps the original Standard Issue art). `BannerArtDB.get_art` looks up a licensed row for an `si_*` art id before the public drop-in (`data/banners/si_*.tres`); the starter Ammo Resupply copy wears `si_ammo_resupply` (the collectible Ammo Resupply keeps its three crates). The card still counts as Standard Issue (serial, no trait).
+| Card (art id) | Calling card | Why |
+|---|---|---|
+| Grunt (`si_grunt`) | Anything That Moves | rank-and-file riflemen advancing |
+| Trooper (`si_trooper`) | Helo Support | seasoned trooper, rifle up, in the dust |
+| Sergeant (`si_sergeant`) | Landing Party | squad leader bringing a fire team off the helo |
+| Armored Trooper (`si_armored`) | Grid And Grit | helmeted, plated soldier |
+| Ammo Resupply, starter copy (`si_ammo_resupply`) | Hand-Off | an ammo box handed over |
+
+**Wip set** (`documentation/design/wip-set.json`, not in `data/cards/` yet). Rows use the **proposed card ids** (`kc_wip_` + snake_case name, Roman numerals as digits). They do nothing until a card with that id exists; then it wears the art with no code change (its licensed pool, `ArtTraits.arts_for`). If the final id differs, change the `card` cell in `mw3-pitch-set.csv` and rebuild.
+| Card | Proposed id | Calling card | Why |
+|---|---|---|---|
+| Private I | `kc_wip_private_1` | MTZ-556 Mastery: Gilded | one rifle in four finishes: the Private ladder |
+| Private II | `kc_wip_private_2` | MTZ-556 Mastery: Forged | ladder II |
+| Private III | `kc_wip_private_3` | MTZ-556 Mastery: Priceless | ladder III |
+| Private IV | `kc_wip_private_4` | MTZ-556 Mastery: Interstellar | ladder IV |
+| Scout | `kc_wip_scout` | Low Profile | ghillie scout lying low |
+| Medic | `kc_wip_medic` | Useful | stim / heal, like the Combat Medic's drinks |
+| Sharpshooter | `kc_wip_sharpshooter` | Scoped And Ready | scope close-up (First Shot) |
+| Flag Bearer | `kc_wip_flag_bearer` | So It Begins | a war banner over the fire |
+| Hacker | `kc_wip_hacker` | Pet Drones | operator steering a drone swarm |
+| Kamikaze | `kc_wip_kamikaze` | Pin Pulled | pin pulled, blast behind |
+| Runner | `kc_wip_runner` | Damn Fast | speed-blur sprint |
+| Sniper | `kc_wip_sniper` | Ghillie Guy | ghillie sniper with a bolt rifle |
+| Juggernaut | `kc_wip_juggernaut` | All The Guns | skull-masked heavy with miniguns and belts |
+| Riot Shield | `kc_wip_riot_shield` | Riot Shield Mastery: Golden Ivory | a riot shield; the only `review = yes` pick (classifier was unsure of the chassis; checked by eye: a plain shield, no third-party IP) |
+| Fast Learner | `kc_wip_fast_learner` | Trained And Ready | training dummies on the range |
+| Laser Gunner | `kc_wip_laser_gunner` | Too Many Lasers? | a rifle firing a fan of laser beams |
+| War Shout | `kc_wip_war_shout` | Revolution Rising | a crowd raising arms before the charge |
+| Barrage | `kc_wip_barrage` | Warships | ship guns firing a broadside |
+| Premium Loadout | `kc_wip_premium_loadout` | Gearing Up | picking kit off the armory wall |
+
+- The Private ladder uses weapon-mastery cards with `mastery_family` empty, so it is never read as an Operator ladder (the Operator uses MCW, KATT-AMR, WSP-9, COR-45). The card shows the calling card title as its name, as every licensed card does ("MTZ-556 Mastery: Gilded", type line "Private I").
+- Rejected on sight: Combat Surgeon (blood spatter), Gun Go Brrrrrt (blood), Squad Up / Beach Breacher (event logo), the Ranked Play rank cards (MW3 logo), Snow Speed (no shield, a snowmobile).
+
 ## 3. How it works in the game
 - **Per-copy art** (card-system §4.6/§5.2, display only): `MatchState.art_by_uid` (card uid -> art id), filled from `SideSetup.deck_arts`. `BannerArtDB.copy_arts` gives the n-th copy of a chassis, counted across both sides, the n-th art of its pool, so copies of a chassis wear different banners. Fields on the objective tile use their copy's art too.
 - **Inspector card picture:** the card view next to the inspector text shows the copy's licensed art too (cover crop of the strip), and its name is the calling card title; the Operator's card picture shows its mastery card.
@@ -188,6 +226,6 @@ python3 tools/fetch_mw3_calling_cards.py              # step 1: download (git-ig
 python3 tools/build_mw3_pitch_set.py                  # step 2: stills + frame sheets -> assets/licensed/mw3_pitch/
 bash tools/package_artifact_build.sh <godot> <out-dir> --pitch   # out-dir outside the repo or git-ignored
 ```
-- The pitch set is about 7.1 MB of WebP (kc-art-traits-impl: 129 arts; was 5.5 MB); the packaged `game.pck.wasm` is about 9.6 MB (artifact limit 16 MB per file).
+- The pitch set is about 8.1 MB of WebP (kc-mw3-cards: 153 arts; kc-art-traits-impl: 129 arts, 7.1 MB); the packaged `game.pck.wasm` is about 9.6 MB (artifact limit 16 MB per file).
 - The default "Web" preset still excludes `assets/licensed/*`, and the default package run does not even copy that folder into its build tree. The script refuses a pitch output folder inside the repo unless git ignores it; `.gitignore` covers `projects/*/builds/pitch/` and any `web-pitch/` folder.
 - Tests never use the licensed folder (`run_tests.gd` switches it off); they pass with the folder present or absent.

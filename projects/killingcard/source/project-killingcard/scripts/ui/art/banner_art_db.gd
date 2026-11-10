@@ -14,6 +14,10 @@
 #      which is what per-copy art uses (copy_arts, MatchState.art_by_uid). Operator rows (kind
 #      operator, card = the primary weapon id) form the weapon's mastery ladder (operator_art_id).
 #      A clean checkout has no such folder and silently falls through to the placeholders.
+#      kc-mw3-cards: Standard Issue arts (si_<card>, the starters) look here BEFORE step 1, so the
+#      pitch build dresses the starters in calling cards (rows with card = si_grunt, si_ammo_resupply
+#      ...). Rows may name card ids that do not exist yet (the head's Wip set: kc_wip_<name>); they
+#      sit unused until a card with that id appears, then it wears them with no code change.
 #   2. Placeholder from Killstreak's painted card art (assets/sprites/cards/card_<id>.webp, or its
 #      SVG when bitmaps are off), cut with PLACEHOLDER_CROPS (eyeballed per card so the head and the
 #      weapon sit in the band).
@@ -93,8 +97,12 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 	if _arts.has(art_id):
 		return _arts[art_id]
 	var art: BannerArt = null
+	# kc-mw3-cards (head): in the private pitch build a Standard Issue art (si_*) wears its licensed
+	# calling card ahead of the public drop-in; the public build has no licensed rows and keeps ours.
+	if licensed_enabled and String(art_id).begins_with("si_"):
+		art = _licensed_art(art_id)
 	var path: String = BANNER_DIR + String(art_id) + ".tres"
-	if drop_in_enabled and art_id != &"" and ResourceLoader.exists(path):
+	if art == null and drop_in_enabled and art_id != &"" and ResourceLoader.exists(path):
 		art = load(path) as BannerArt
 	if art == null and licensed_enabled:
 		art = _licensed_art(art_id)
@@ -113,7 +121,7 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 ## as kit pieces kc_b_si_<card> (UiKit.piece: assets/ui/kit/arts/ or assets/sprites/banners/). When one
 ## is there it replaces the placeholder of that Standard Issue art id (si_grunt, si_ammo_resupply ...).
 static func _apply_si_art(art_id: StringName, art: BannerArt) -> void:
-	if art == null or not String(art_id).begins_with("si_"):
+	if art == null or art.licensed or not String(art_id).begins_with("si_"):
 		return
 	var tex: Texture2D = UiKit.piece(StringName("kc_b_" + String(art_id)))
 	if tex == null:

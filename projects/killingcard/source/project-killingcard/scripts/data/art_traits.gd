@@ -62,9 +62,10 @@ const OPTION_VARIANTS: Dictionary = {
 	STANDARD: ["Standard Issue", Color(0.0, 0.0, 0.0, 0.0), &""],
 }
 
-## kc-onboard §2.2 (head Z2): the one Standard Issue art each starter card wears (never random, never
-## licensed MW3 art). Standard Issue units wear their own id (data/banners/si_*.tres; PLACEHOLDER
-## drop-ins until the Sr Game Artist's 5 arts arrive); the starter's tactic wears "si_<id>".
+## kc-onboard §2.2 (head Z2): the one Standard Issue art each starter card wears (never random).
+## Standard Issue units wear their own id (data/banners/si_*.tres; PLACEHOLDER drop-ins until the Sr
+## Game Artist's 5 arts arrive); the starter's tactic wears "si_<id>". kc-mw3-cards (head): in the
+## private pitch build only, BannerArtDB renders these ids with their licensed calling card.
 const STANDARD_ISSUE_ARTS: Dictionary = {&"ammo_resupply": &"si_ammo_resupply"}
 
 ## Licensed manifest index (id -> {card, family, title}), chassis -> ids; reloaded when the folder
