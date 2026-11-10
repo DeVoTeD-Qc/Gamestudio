@@ -3,6 +3,9 @@
 #   Settings.run_profile, saved with the settings): runs finished / won, the boss reached, bosses beaten,
 #   Operators won with, Hardcore wins, best Threat, the Terrains / events / bosses seen (Dossier), the
 #   last boss (V3: never the same twice in a row). Pure static functions; RunState feeds them.
+#   kc-duel-impl: versioned (PROFILE_VERSION 2). v2 adds the Duel keys: found_cards (card ids met in a
+#   campaign run: the Duel collection, D3), duel_decks (up to 8 saved DuelDeck dicts) and duel_records
+#   (DuelProfile). A v1 profile (no "version") migrates by keeping every value and adding the new keys.
 #   Unlock ids (LoadoutItem.unlock, RunMatchData.unlock, RunModifiers.TABLE[].unlock):
 #     ""                  from the start (Kestrel, Meridian_Six)
 #     first_run_done      a run ended (win or lose): Longreach .338, Bulwark Prime
@@ -25,13 +28,27 @@ const UNLOCK_TEXTS: Dictionary = {
 	&"all_terrains_seen": "Play on all 10 Terrains",
 }
 const BOSS_IDS: Array[StringName] = [&"meridian", &"prime", &"choir"]
+## kc-duel-impl: profile save version (1 = the unversioned kc-v2-impl profile).
+const PROFILE_VERSION: int = 2
 
 
 ## A blank profile with every key (missing keys of an older profile read as these).
 static func blank() -> Dictionary:
 	return {"runs_finished": 0, "run_wins": 0, "boss_reached": 0, "boss_wins": {}, "operator_wins": [],
 			"hardcore_wins": 0, "best_threat": -1, "terrains_seen": [], "events_seen": [], "bosses_seen": [],
-			"last_boss": ""}
+			"last_boss": "", "version": PROFILE_VERSION, "found_cards": [], "duel_decks": [], "duel_records": {}}
+
+
+## kc-duel-impl: the version a stored profile was written with (1 when it has none).
+static func version_of(p: Variant) -> int:
+	if typeof(p) != TYPE_DICTIONARY or not (p as Dictionary).has("version"):
+		return 1
+	return int(p["version"]) if typeof(p["version"]) in [TYPE_INT, TYPE_FLOAT] else 1
+
+
+## kc-duel-impl: true when `p` predates PROFILE_VERSION (RunState back-fills found_cards once).
+static func needs_migration(p: Variant) -> bool:
+	return typeof(p) == TYPE_DICTIONARY and not (p as Dictionary).is_empty() and version_of(p) < PROFILE_VERSION
 
 
 static func normalised(p: Variant) -> Dictionary:
@@ -43,7 +60,20 @@ static func normalised(p: Variant) -> Dictionary:
 			out[k] = p[k]
 		elif p.has(k) and typeof(out[k]) == TYPE_INT and typeof(p[k]) == TYPE_FLOAT:
 			out[k] = int(p[k])
+	# v1 -> v2 (kc-duel-impl): the old values stay, the Duel keys start empty; the result is v2.
+	out["version"] = PROFILE_VERSION
 	return out
+
+
+## kc-duel-impl: adds card ids to found_cards (the Duel collection). Returns the profile.
+static func add_found_cards(p: Dictionary, ids: Array) -> Dictionary:
+	p = normalised(p)
+	var found: Array = p["found_cards"]
+	for id: Variant in ids:
+		var s: String = String(id)
+		if s != "" and s not in found:
+			found.append(s)
+	return p
 
 
 ## True when the profile meets unlock `id` (&"" = always).

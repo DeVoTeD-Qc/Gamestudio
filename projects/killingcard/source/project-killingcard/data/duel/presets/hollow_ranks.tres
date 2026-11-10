@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DuelDeck" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/duel_deck.gd" id="1_duel"]
+
+[resource]
+script = ExtResource("1_duel")
+id = &"hollow_ranks"
+display_name = "Hollow Ranks"
+hero_id = &"wasp_9"
+picks = Array[Dictionary]([{"art_id": &"rifleman~horde", "card_id": &"rifleman"}, {"art_id": &"", "card_id": &"brawler"}, {"art_id": &"point_man~horde", "card_id": &"point_man"}, {"art_id": &"shieldman~horde", "card_id": &"shieldman"}, {"art_id": &"recon_specialist~horde", "card_id": &"recon_specialist"}, {"art_id": &"flanker~horde", "card_id": &"flanker"}, {"art_id": &"", "card_id": &"war_standard"}, {"art_id": &"", "card_id": &"breach_and_clear"}, {"art_id": &"", "card_id": &"tripwire_charge"}, {"art_id": &"", "card_id": &"sabotage"}])
+doctrine_trait = &""
+plan = "Cheap bodies that come back stronger; trap the lane, then clear it."
+preset = true

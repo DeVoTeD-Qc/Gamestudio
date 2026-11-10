@@ -26,6 +26,8 @@
 # Author: Sr Game Designer Agent (kc-duel-design)
 extends SceneTree
 
+const DocMatch: GDScript = preload("res://tests/tools/doctrine_match.gd")
+var docrule: String = ""
 const OPS: Array[StringName] = [&"kestrel_ar7", &"longreach_338", &"wasp_9", &"bastion_60"]
 
 ## The four preset decks of duel-mode.md §5. Picks in priority order: the first `picks` are used
@@ -53,6 +55,9 @@ var PRESETS: Array[Dictionary] = [
 const DUEL_HERO_LINES: Dictionary = {&"kestrel_ar7": 7, &"longreach_338": 6, &"wasp_9": 8, &"bastion_60": 7}
 const DUEL_MARKED_SHOT: int = 2
 var heroline: String = "duel"
+var search_iters: int = 60
+var search_games: int = 12
+var search_traits: PackedStringArray = PackedStringArray(["vanguard", "specops", "heavy", "undead"])
 
 var n: int = 40
 var picks: int = 10
@@ -150,6 +155,10 @@ func _main() -> void:
 			"gsb": regular_sb = float(kv[1])
 			"doctrine": doctrine_on = kv[1] != "0"
 			"heroline": heroline = kv[1]
+			"iters": search_iters = int(kv[1])
+			"docrule": docrule = kv[1]
+			"sg": search_games = int(kv[1])
+			"strait": search_traits = kv[1].split(",")
 			"only":
 				# only=0,2: keep these presets (by index) in the preset experiments.
 				var keep_p: Array[Dictionary] = []
@@ -224,6 +233,8 @@ func _main() -> void:
 		_exp_build()
 	if "length" in exps:
 		_exp_length()
+	if "search" in exps:
+		_exp_search()
 	print("\nduel_sim done in %.1f s" % ((Time.get_ticks_msec() - t0) / 1000.0))
 	quit(0)
 
@@ -321,7 +332,8 @@ func _game(sa: SideSetup, sb: SideSetup, seed_value: int, ta: String = "competen
 	if gm < 0:
 		gm = DataEnums.GameMode.FIREFIGHT if mode_opt == "ff" else DataEnums.GameMode.ZONE_CONTROL
 	h.mode_rules = ModeRules.create(gm, config)
-	var m: MatchState = MatchState.new(config, md.map, sa, sb, seed_value, h)
+	var m: MatchState = DocMatch.new(config, md.map, sa, sb, seed_value, h)
+	m.set("rule", docrule)
 	if terrain_on:
 		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		rng.seed = seed_value
@@ -653,3 +665,111 @@ func _exp_length() -> void:
 			hi = maxf(hi, pct)
 		print("  zone_control_target=%d | preset spread %.1f-%.1f | %s" % [tgt, lo, hi, _summary()])
 	_apply_cfg()
+
+
+# =============================================================================
+# Strongest custom decks (kc-duel-tune): hill-climb against the 4 presets
+# =============================================================================
+
+func _pool() -> Array[CardData]:
+	var pool: Array[CardData] = []
+	for f: String in DirAccess.get_files_at("res://data/cards"):
+		if f.ends_with(".tres"):
+			var c: CardData = load("res://data/cards/" + f) as CardData
+			if c != null and c.collectible:
+				pool.append(c)
+	return pool
+
+
+## A custom deck: picks [[id, trait]], hero, Doctrine trait (the player's pick when doctrine_on).
+func _custom(picks_list: Array, hero: StringName, doct: StringName) -> SideSetup:
+	var s: SideSetup = SideSetup.new()
+	s.display_name = "Custom"
+	for pk: Array in picks_list:
+		var c: CardData = load("res://data/cards/%s.tres" % pk[0]) as CardData
+		var t: StringName = pk[1] if c.can_carry(pk[1]) else SynergyRules.TRAIT_DEFAULT
+		for j: int in 2:
+			s.deck.append(c)
+			s.deck_traits.append(t)
+	s.doctrine = doct if doctrine_on else &""
+	s.primary = load("res://data/loadout/%s.tres" % hero) as LoadoutItem
+	s.operator_kit = true
+	s.killstreaks.assign(config.starter_killstreaks)
+	return s
+
+
+func _legal_list(lst: Array) -> bool:
+	var cards: Array[CardData] = []
+	for pk: Array in lst:
+		cards.append(load("res://data/cards/%s.tres" % pk[0]) as CardData)
+	var units: int = 0
+	var elites: int = 0
+	var fields: int = 0
+	for c: CardData in cards:
+		units += int(c.is_unit())
+		elites += int(c.is_elite)
+		fields += int(c.card_type == DataEnums.CARD_TYPE_FIELD)
+	return units >= 5 and elites <= 1 and fields <= 3
+
+
+## Win rate of a custom deck against every preset (own heroes), seats alternate, fixed seeds.
+func _score(lst: Array, hero: StringName, doct: StringName, games: int, salt: int) -> float:
+	var w: int = 0
+	var dec: int = 0
+	for p: int in PRESETS.size():
+		for g: int in games:
+			var seat: int = g % 2
+			var sc: SideSetup = _custom(lst, hero, doct)
+			var sp: SideSetup = _deck(p)
+			var r: int = _game(sc if seat == 0 else sp, sp if seat == 0 else sc, 880000 + salt + p * 7717 + g * 7919)
+			if r >= 0:
+				dec += 1
+				w += int(r == seat)
+	return float(w) / maxf(1.0, float(dec))
+
+
+func _exp_search() -> void:
+	print("\n---- strongest custom decks: hill-climb vs the 4 presets (iters %d, %d games per preset per step, doctrine %s) ----" % [search_iters, search_games, doctrine_on])
+	var pool: Array[CardData] = _pool()
+	for tr: String in search_traits:
+		var t: StringName = StringName(tr)
+		var start: int = 0
+		for p: int in PRESETS.size():
+			if PRESETS[p]["trait"] == t:
+				start = p
+		var cur: Array = []
+		for i: int in mini(picks, (PRESETS[start]["picks"] as Array).size()):
+			cur.append((PRESETS[start]["picks"][i] as Array).duplicate())
+		var hero: StringName = PRESETS[start]["hero"]
+		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		rng.seed = 4040 + start
+		_reset()
+		var best: float = _score(cur, hero, t, search_games, 1)
+		for it: int in search_iters:
+			var cand: Array = cur.duplicate(true)
+			var ch: StringName = hero
+			if rng.randf() < 0.15:
+				ch = OPS[rng.randi_range(0, OPS.size() - 1)]
+			else:
+				var c: CardData = pool[rng.randi_range(0, pool.size() - 1)]
+				var dup: bool = false
+				for pk: Array in cand:
+					dup = dup or pk[0] == c.id
+				if dup:
+					continue
+				var tr2: StringName = t if c.can_carry(t) else SynergyRules.TRAIT_DEFAULT
+				cand[rng.randi_range(0, cand.size() - 1)] = [c.id, tr2]
+				if not _legal_list(cand):
+					continue
+			var sc: float = _score(cand, ch, t, search_games, 1)
+			if sc >= best:
+				best = sc
+				cur = cand
+				hero = ch
+		_reset()
+		var val: float = _score(cur, hero, t, 50, 777)
+		var names: Array[String] = []
+		for pk: Array in cur:
+			names.append("%s%s" % [pk[0], ("@" + String(pk[1])) if pk[1] != SynergyRules.TRAIT_DEFAULT and pk[1] != &"" else ""])
+		print("  %-8s best %s  climb %.1f%%  validate vs presets %.1f%% (n=%d)" % [t, hero, 100.0 * best, 100.0 * val, stats[0]])
+		print("    picks: %s" % ",".join(names))

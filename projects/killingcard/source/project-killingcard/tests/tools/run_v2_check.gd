@@ -15,6 +15,7 @@
 #     lset=loadout.prop=value[;...] (kc-econ: e.g. lset=wasp_9.operator_armor=8)
 #     sdeck=N:card*count,...[;N:...] (kc-econ: slot N's authored enemy deck)
 #     starter=card*n,... (kc-econ: the run starter, sets deck_size) edeck=0.5|10 (kc-econ: enemy decks scaled to a share or to N cards, composition kept)
+#     eset=loadout.effect_index.prop=value (kc-duel-tune: e.g. eset=ab_marked_shot.0.amount=2)
 #     cfg=prop=value[;...] (RunConfig, e.g. cfg=price_muster_out=1)  set=card.prop=value  tune=trait.tier.key=value
 #     late=N (aware-vs-blind decks) mirror=N tn=N (trait games per pairing) hn=N (head-to-head games per pair)
 #   Run: godot --headless --path . -s res://tests/tools/run_v2_check.gd -- exps=runs runs=400
@@ -36,6 +37,9 @@ var terrain_on: bool = true
 ## kc-econ what-ifs: enemy decks scaled to this share of their size (composition kept; 0 = as authored).
 var edeck_scale: float = 0.0
 
+## kc-duel-tune: Doctrine-rule what-ifs (docrule=2only|3only).
+const DocMatch: GDScript = preload("res://tests/tools/doctrine_match.gd")
+var docrule: String = ""
 const OPS: Array[StringName] = [&"kestrel_ar7", &"longreach_338", &"wasp_9", &"bastion_60"]
 const BOSSES: Array[StringName] = [&"meridian", &"prime", &"choir"]
 
@@ -123,6 +127,14 @@ func _main() -> void:
 					var la: PackedStringArray = item.split(".", true, 1)
 					var lb: PackedStringArray = la[1].split("=", true, 1)
 					_assign(load("res://data/loadout/%s.tres" % la[0]), lb[0], lb[1])
+			"docrule": docrule = kv[1]
+			"eset":
+				# kc-duel-tune: eset=loadout_id.effect_index.prop=value[;...] edits an ability's effect (Marked Shot amount).
+				for item: String in kv[1].split(";"):
+					var ea: PackedStringArray = item.split(".", true, 2)
+					var eb: PackedStringArray = ea[2].split("=", true, 1)
+					var eli: LoadoutItem = load("res://data/loadout/%s.tres" % ea[0]) as LoadoutItem
+					_assign(eli.effects[int(ea[1])], eb[0], eb[1])
 			"tune":
 				for item: String in kv[1].split(";"):
 					var tv: PackedStringArray = item.split("=", true, 1)
@@ -469,7 +481,7 @@ func _runs(proxy: String, keep_late: bool) -> void:
 						late_trait.append(r.main_trait())
 						late_op.append(op)
 					reach[key] = int(reach.get(key, 0)) + 1
-					var m: MatchState = r.create_match()
+					var m: MatchState = _create_match(r)
 					if edeck_scale > 0.0:
 						_scale_deck(m.sides[MatchState.ENEMY].setup, edeck_scale)
 					if not terrain_on:
@@ -604,7 +616,8 @@ func _duel(sa: SideSetup, aware_a: bool, sb: SideSetup, aware_b: bool, seed_valu
 	var md: RunMatchData = config.matches[0]
 	var h: MatchHooks = MatchHooks.new()
 	h.mode_rules = ModeRules.create(mode, config)
-	var m: MatchState = MatchState.new(config, md.map, _copy(sa), _copy(sb), seed_value, h)
+	var m: MatchState = DocMatch.new(config, md.map, _copy(sa), _copy(sb), seed_value, h)
+	m.set("rule", docrule)
 	m.terrain = ter.duplicate()
 	m.start_match()
 	_play(m, _ai("competent", aware_a), _ai("competent", aware_b), track)
@@ -708,3 +721,14 @@ func _mirrors() -> void:
 	var r4: Array = _pair(starter, true, starter, true, mirror_n, 77, true)
 	print("  mirror: seat 0, late decks (Terrain random)       %5.1f%% (n=%d)" % [100.0 * ml[0] / maxf(1, ml[1]), ml[1]])
 	print("  mirror: seat 0, Standard Issue starter            %5.1f%% (n=%d)" % [100.0 * r4[1] / maxf(1, r4[2]), r4[2]])
+
+
+## kc-duel-tune: RunProgress.create_match with the Doctrine-rule MatchState (same setup and configure_match).
+func _create_match(r: RunProgress) -> MatchState:
+	var md: RunMatchData = r.current_match()
+	var h: MatchHooks = MatchHooks.new()
+	h.mode_rules = ModeRules.create(md.mode, config)
+	var m: MatchState = DocMatch.new(config, md.map, r.player_setup(), r.enemy_setup(), r.match_seed(), h)
+	m.set("rule", docrule)
+	r.configure_match(m)
+	return m

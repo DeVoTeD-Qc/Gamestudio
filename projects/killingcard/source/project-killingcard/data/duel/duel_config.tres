@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="DuelConfig" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/duel_config.gd" id="1_dcfg"]
+[ext_resource type="Script" path="res://scripts/data/loadout_item.gd" id="14_li"]
+[ext_resource type="Script" path="res://scripts/data/duel_deck.gd" id="15_dd"]
+[ext_resource type="Resource" path="res://data/maps/port_vasel.tres" id="2_map"]
+[ext_resource type="Resource" path="res://data/loadout/recon_drone.tres" id="3_ks1"]
+[ext_resource type="Resource" path="res://data/loadout/mortar_barrage.tres" id="4_ks2"]
+[ext_resource type="Resource" path="res://data/loadout/attack_helo.tres" id="5_ks3"]
+[ext_resource type="Resource" path="res://data/loadout/kestrel_ar7.tres" id="6_h1"]
+[ext_resource type="Resource" path="res://data/loadout/longreach_338.tres" id="7_h2"]
+[ext_resource type="Resource" path="res://data/loadout/wasp_9.tres" id="8_h3"]
+[ext_resource type="Resource" path="res://data/loadout/bastion_60.tres" id="9_h4"]
+[ext_resource type="Resource" path="res://data/duel/presets/spearhead.tres" id="10_p1"]
+[ext_resource type="Resource" path="res://data/duel/presets/overwatch.tres" id="11_p2"]
+[ext_resource type="Resource" path="res://data/duel/presets/iron_wall.tres" id="12_p3"]
+[ext_resource type="Resource" path="res://data/duel/presets/hollow_ranks.tres" id="13_p4"]
+
+[resource]
+script = ExtResource("1_dcfg")
+id = &"duel_default"
+display_name = "Duel"
+picks = 10
+copies_per_pick = 2
+min_unit_picks = 5
+max_elite_picks = 1
+max_field_picks = 3
+max_saved_decks = 8
+name_max_length = 20
+low_curve_min_picks = 2
+low_cost = 1
+heavy_curve_picks = 4
+heavy_cost = 4
+game_mode = 0
+zone_control_target = 6
+map = ExtResource("2_map")
+killstreaks = Array[ExtResource("14_li")]([ExtResource("3_ks1"), ExtResource("4_ks2"), ExtResource("5_ks3")])
+heroes = Array[ExtResource("14_li")]([ExtResource("6_h1"), ExtResource("7_h2"), ExtResource("8_h3"), ExtResource("9_h4")])
+hero_plays_like = {
+"bastion_60": "holds one column",
+"kestrel_ar7": "the steady all-rounder",
+"longreach_338": "picks off the backline",
+"wasp_9": "goes where the fight is"
+}
+presets = Array[ExtResource("15_dd")]([ExtResource("10_p1"), ExtResource("11_p2"), ExtResource("12_p3"), ExtResource("13_p4")])
+doctrine_enabled = true
+doctrine_required = false
+doctrine_min_trait_picks = 0
+recruit_armor_bonus = -1
+recruit_second_best = 0.6
+regular_second_best = 0.6
+veteran_second_best = 0.0

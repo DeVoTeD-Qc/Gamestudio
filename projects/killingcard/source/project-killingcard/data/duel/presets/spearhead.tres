@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="DuelDeck" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/duel_deck.gd" id="1_duel"]
+
+[resource]
+script = ExtResource("1_duel")
+id = &"spearhead"
+display_name = "Spearhead"
+hero_id = &"kestrel_ar7"
+picks = Array[Dictionary]([{"art_id": &"", "card_id": &"point_man"}, {"art_id": &"", "card_id": &"rifleman"}, {"art_id": &"", "card_id": &"breacher"}, {"art_id": &"", "card_id": &"shieldman"}, {"art_id": &"", "card_id": &"flank_route"}, {"art_id": &"", "card_id": &"hold_the_line"}, {"art_id": &"", "card_id": &"brawler"}, {"art_id": &"", "card_id": &"bulwark"}, {"art_id": &"", "card_id": &"blackout"}, {"art_id": &"", "card_id": &"ammo_resupply"}])
+doctrine_trait = &""
+plan = "First Shot up front, Cover behind it, take the column early."
+preset = true

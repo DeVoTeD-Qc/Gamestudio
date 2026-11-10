@@ -2,7 +2,8 @@
 # Purpose: CardDB autoload. Loads every data Resource under res://data/ (recursively),
 #   indexes it by id and validates it. Invalid data fails loudly: every issue is
 #   push_error'd and kept in a validation report (get_report()) that tests read.
-#   Data classes: CardData, LoadoutItem, SquadData, MapData, RunConfig, TutorialScript (p15)
+#   Data classes: CardData, LoadoutItem, SquadData, MapData, RunConfig, TutorialScript (p15),
+#   TerrainData, EventData (kc-v2-impl), DuelConfig, DuelDeck (kc-duel-impl: data/duel/)
 #   (scripts/data/).
 # Dependencies: scripts/data/* (class_name Resources), DataValidator.
 # Author: Mechanics Developer Agent
@@ -13,6 +14,7 @@ signal data_loaded(ok: bool)
 
 const DATA_ROOT: String = "res://data"
 const DEFAULT_RUN_ID: StringName = &"run_default"
+const DEFAULT_DUEL_ID: StringName = &"duel_default"
 
 ## When false, issues are only recorded in the report (tests feeding bad data on purpose).
 var report_to_console: bool = true
@@ -26,6 +28,8 @@ var _run_configs: Dictionary = {}  # StringName id -> RunConfig
 var _tutorials: Dictionary = {}    # StringName id -> TutorialScript (p15)
 var _terrains: Dictionary = {}     # StringName id -> TerrainData (kc-v2-impl)
 var _events: Dictionary = {}       # StringName id -> EventData (kc-v2-impl)
+var _duel_configs: Dictionary = {} # StringName id -> DuelConfig (kc-duel-impl)
+var _duel_decks: Dictionary = {}   # StringName id -> DuelDeck (kc-duel-impl: the presets)
 var _files: Dictionary = {}        # Resource -> file path it was loaded from
 var _issues: Array[Dictionary] = []
 var _root: String = DATA_ROOT
@@ -142,6 +146,16 @@ func get_event(id: StringName) -> EventData:
 	return _events.get(id)
 
 
+## kc-duel-impl: the Duel config (duel_default when omitted), or null.
+func get_duel_config(id: StringName = DEFAULT_DUEL_ID) -> DuelConfig:
+	return _duel_configs.get(id)
+
+
+## kc-duel-impl: a preset Duel deck by id, or null.
+func get_duel_deck(id: StringName) -> DuelDeck:
+	return _duel_decks.get(id)
+
+
 func get_resource(id: StringName) -> Resource:
 	return _by_id.get(String(id))
 
@@ -225,7 +239,8 @@ func get_report() -> Dictionary:
 # --- Internals ----------------------------------------------------------------------
 
 func _clear() -> void:
-	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _tutorials, _terrains, _events, _files]:
+	for d: Dictionary in [_by_id, _cards, _loadout, _squads, _maps, _run_configs, _tutorials, _terrains, _events,
+			_duel_configs, _duel_decks, _files]:
 		d.clear()
 	_issues = []
 	_files_loaded = 0
@@ -233,7 +248,7 @@ func _clear() -> void:
 
 func _is_data_class(res: Resource) -> bool:
 	return res is CardData or res is LoadoutItem or res is SquadData or res is MapData or res is RunConfig \
-			or res is TutorialScript or res is TerrainData or res is EventData
+			or res is TutorialScript or res is TerrainData or res is EventData or res is DuelConfig or res is DuelDeck
 
 
 func _bucket_for(res: Resource) -> Dictionary:
@@ -253,6 +268,10 @@ func _bucket_for(res: Resource) -> Dictionary:
 		return _terrains
 	if res is EventData:
 		return _events
+	if res is DuelConfig:
+		return _duel_configs
+	if res is DuelDeck:
+		return _duel_decks
 	return {}
 
 
