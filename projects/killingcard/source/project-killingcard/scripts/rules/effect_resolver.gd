@@ -41,6 +41,7 @@ static func resolve_play(state, effects: Array[EffectData], ctx: Dictionary) -> 
 		elif e.trigger == DataEnums.Trigger.START_OF_FIREFIGHT:
 			state.firefight_effects.append({
 				"effect": e, "ctx": ctx, "until_round": state.round_number + maxi(1, e.duration_rounds) - 1,
+				"from_round": state.round_number,
 			})
 	state.process_eliminations()
 

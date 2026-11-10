@@ -77,6 +77,11 @@ const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"
 const MODE_SCORED: StringName = &"mode_scored"                ## mode, player_gained, enemy_gained, player_score, enemy_score, target
 const STREAK_CHANGED: StringName = &"streak_changed"          ## side, streak, before, gained, reset, earned
 const KILLSTREAK_EARNED: StringName = &"killstreak_earned"    ## side, item_id, streak, threshold (into the Streak Tray)
+## kc-ks-seq (killstreak_strikes.gd): a damage killstreak revealed at Reveal waits for Firefight step 0.
+const KILLSTREAK_QUEUED: StringName = &"killstreak_queued"    ## side, item_id, zone, zones [zone], fights (firefights it strikes), resolves (&"firefight")
+## Firefight step 0: one strike starts; its DAMAGE_DEALT / UNIT_ELIMINATED follow, then KILLSTREAK_RESOLVED.
+const KILLSTREAK_STRIKE: StringName = &"killstreak_strike"    ## side, item_id, zone, zones, pass, passes
+const KILLSTREAK_RESOLVED: StringName = &"killstreak_resolved" ## side, item_id, zone, zones, pass, passes, hits [{uid, side, amount, remaining, card_id, name, zone}], kills [uid], what (log line)
 
 # --- Loadout (p05) -------------------------------------------------------------------
 const PERK_TRIGGERED: StringName = &"perk_triggered"          ## side, item_id (Field Salvage ...)

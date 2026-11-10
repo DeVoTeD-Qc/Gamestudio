@@ -272,6 +272,8 @@ func test_point_man_and_second_in_line_damage_in_operator_or_adjacent_zone() -> 
 	assert_false(r["ok"], "Right is not adjacent to Left")
 	assert_true(m.submit(P, RulesIntent.use_item(&"point_strike", F.MID))["ok"], "adjacent Mid")
 	m.reveal()
+	KillstreakStrikes.resolve_step0(m)  # kc-ks-seq: a damage killstreak strikes at Firefight step 0
+	m.process_eliminations()
 	assert_false(pm.is_alive(), "2 to the point man")
 	assert_eq(nxt.armor, 3, "1 to the next enemy")
 	var rec: Dictionary = F.events_of(m, RulesEvent.UNIT_ELIMINATED)[0]

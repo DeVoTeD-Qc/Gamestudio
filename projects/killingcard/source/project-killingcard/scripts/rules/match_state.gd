@@ -69,7 +69,8 @@ var result: StringName = &""
 var events: Array[Dictionary] = []
 ## UNIT_ELIMINATED records of the current round (the Score step counts these).
 var round_eliminations: Array[Dictionary] = []
-## Registered START_OF_FIREFIGHT effects: {side, effect, ctx, until_round}.
+## Registered START_OF_FIREFIGHT effects and queued killstreak strikes (kc-ks-seq):
+## {effect, ctx, until_round, from_round}. They resolve at Firefight step 0 (KillstreakStrikes).
 var firefight_effects: Array[Dictionary] = []
 ## Effects waiting for a later round (delay_rounds): {due_round, effect, ctx}.
 var delayed_effects: Array[Dictionary] = []
@@ -826,7 +827,11 @@ func _reveal_item(si: int, play: Dictionary) -> void:
 	emit_event(RulesEvent.ITEM_REVEALED, {"side": side_name(si), "item_id": item.id, "zone": zone_name(play["zone"]),
 			"ability": item.slot == DataEnums.LoadoutSlot.ABILITY})
 	var ctx: Dictionary = make_ctx(si, source_kind_for_item(item), item.id, -1, play["zone"], play["target_uid"], play["dest_zone"])
-	EffectResolver.resolve_play(self, item.effects, ctx)
+	if KillstreakStrikes.is_strike(item):
+		# kc-ks-seq: a damage killstreak is queued here and strikes at Firefight step 0.
+		KillstreakStrikes.queue(self, si, item, ctx)
+	else:
+		EffectResolver.resolve_play(self, item.effects, ctx)
 	hooks.on_item_resolved(self, si, item)
 
 

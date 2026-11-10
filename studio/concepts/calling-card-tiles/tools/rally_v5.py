@@ -77,7 +77,7 @@ CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=0, stri
            pre=False, overwatch=False,
            # rule switches for "The simplest Rally Point" (all on = v3)
            text=True, match=True, closer=True, command=True, cover=False, front=True,
-           streaks=True, classes=True, owner_mat=True, endscore=True, spot_charge=True)
+           streaks=True, classes=True, owner_mat=True, endscore=True, spot_charge=True, spot_dmg=1)
 LAUNCH = dict(CFG)
 
 
@@ -495,6 +495,8 @@ def eval_targets(s, a, dmg, ignore):
     opts = [None] + [q for q, b in s.pcs.items() if b["owner"] != a and b["kind"] == "bar"
                      and on_open(s, b)
                      and (ignore or (not in_cover(s, b) and aimable(s, q, a)))]
+    if not CFG["front"] and len(opts) > 1:
+        opts = opts[1:]   # v5: with no Front, a Strike must remove a tile if it can
     best, bv = None, None
     for q in opts:
         t = s.clone()
@@ -517,7 +519,7 @@ FORCE = [None]   # a Strike target chosen by the Fire First search (0 = the Fron
 def strike(s, a, dmg=None, fire_mission=False):
     spotted = s.spot[a]
     s.spot[a] = False
-    dmg = (dmg or CFG["strike"]) + (1 if spotted else 0)
+    dmg = (dmg or CFG["strike"]) + (CFG["spot_dmg"] if spotted else 0)
     tgt, tv = best_target(s, a, spotted or fire_mission)
     if TARGETER[a] and not fire_mission and not MODE.get("look"):
         tgt = eval_targets(s, a, dmg, spotted)
@@ -539,7 +541,7 @@ def strike(s, a, dmg=None, fire_mission=False):
             s.trig["fm_destroy"] += 1
         landed(s, a)
         return
-    if tgt and tv * 0.9 > front_val:
+    if tgt and (tv * 0.9 > front_val or not CFG["front"]):
         destroy(s, tgt)
         s.trig["strike_destroy"] += 1
         landed(s, a)
@@ -819,6 +821,7 @@ CURW = [FLAGS]   # the weights of the player whose turn it is (set in play)
 
 def potential(s, me, blind_mil=False):
     W = CURW[0]
+    mw = W["mat"] * (3 / CFG["thresh"] if W.get("scale") else 1)   # value of 1 materiel
     if s.winner is not None:
         return 100.0 if s.winner == me else -100.0
     v = 0.0
@@ -838,7 +841,7 @@ def potential(s, me, blind_mil=False):
             ev = rv if keep else 1
             val = n * (ev + (rv - ev) * p)
             if CFG["mil"] and not blind_mil:
-                val += p * W["mat"] * W["rallymat"] * (AB(b["cid"]).get("gem", 1))
+                val += p * mw * W["rallymat"] * (AB(b["cid"]).get("gem", 1))
             v += val if b["owner"] == me else -val
         if closable(s, e):
             cb = 2 if drill(e, "S") else 1
@@ -857,7 +860,7 @@ def potential(s, me, blind_mil=False):
         for k in (0, 1):
             sg = 1 if k == me else -1
             th = CFG["thresh"]
-            mv = sum(min(x, th) for x in s.mat[k]) * W["mat"]
+            mv = sum(min(x, th) for x in s.mat[k]) * mw
             v += sg * (mv + W["armor"] * s.armor[k] + W["streak"] * min(s.streak[k], 7)
                        + (W["spot"] if s.spot[k] else 0))
         # exposed banners near open hubs are at risk once the enemy has ammo
@@ -1651,8 +1654,7 @@ L2 = dict(BASIC5, text=True, command=True, endscore=True)
 L3 = dict(L2, classes=True, thresh=3, owner_mat=True)
 L4 = dict(L3, front=True)
 L5 = dict(L4, streaks=True)
-SIMPLE = dict(endscore=False, owner_mat=False, spot_charge=False, spot_push=0, supply_push=0,
-              fort_regain=0)
+SIMPLE = dict(owner_mat=False, spot_push=0, supply_push=0, fort_regain=0, spot_dmg=0)
 LAYERS = {
     "L0 Tiles (tutorial)": dict(BASIC5, mil=False),
     "L1 Basic (the 5 lines)": dict(BASIC5),
@@ -1662,11 +1664,11 @@ LAYERS = {
     "L5 Streaks (full rules)": dict(L5),
     # trimmed variants (v5 section 3): each layer adds one idea
     "L2 Cards, no end scoring": dict(L2, endscore=False),
-    "L3 Classes, trimmed": dict(L3, endscore=False, owner_mat=False, spot_charge=False),
+    "L3 Classes, trimmed": dict(L3, owner_mat=False),
     "L4 Front Line, trimmed": dict(L4, **SIMPLE),
     "L5 full rules, trimmed": dict(L5, **SIMPLE),
     "L5 trimmed, Strike at 4 (classes)": dict(L5, thresh=4, **SIMPLE),
-    "L3 trimmed, owner materiel kept": dict(L3, endscore=False, spot_charge=False),
+    "L3 trimmed, Spot without Charges": dict(L3, owner_mat=False, spot_charge=False),
     "L5 trimmed, owner materiel kept": dict(L5, **dict(SIMPLE, owner_mat=True)),
     "v3 launch rules with cover (v4 reference)": dict(cover=True),
 }
@@ -1709,8 +1711,6 @@ def sec_ai(n, rng, names, pairs):
     use({})
 
 
-if __name__ == "__main__" and "v5" in sys.argv:
-    pass
 
 SEED = [41]
 

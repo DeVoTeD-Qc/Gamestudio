@@ -10,7 +10,7 @@
 #           + w_deny  * deny-the-player's-streak (down their Operator, don't feed kills)
 #           + personality habits (preferred zones, pushing, Operator home, keep costs)
 #   The board after a plan is scored with a small deterministic firefight estimator
-#   (_eval_zone: Attack Helo, Suppress, beats front to back with the First Shot exchange,
+#   (_eval_zone: killstreak strikes at step 0 (Mortar, Attack Helo; kc-ks-seq), Suppress, beats front to back with the First Shot exchange,
 #   Pick / Flank / Cover / Pierce, On Down damage, Patch, control with Holder; kc-fight-impl)
 #   that mirrors FirefightResolver on the
 #   public board. The player's response is unknown, so it is not predicted.
@@ -94,6 +94,9 @@ class Plan:
 	var field_replaced: Array[bool] = [false, false, false]
 	var foe_cover_removed: bool = false
 	var my_ff_damage: int = 0
+	## kc-ks-seq: a damage killstreak's ON_PLAY damage per zone; it strikes at step 0 of the
+	## estimate (Firefight step 0), with the Cover its targets have then, not when it is planned.
+	var my_strike: Array[int] = [0, 0, 0]
 	var flat: float = 0.0
 	var draws: int = 0
 	var zone_scores: Array[float] = [0.0, 0.0, 0.0]
@@ -129,6 +132,7 @@ class Plan:
 		p.field_replaced = field_replaced.duplicate()
 		p.foe_cover_removed = foe_cover_removed
 		p.my_ff_damage = my_ff_damage
+		p.my_strike = my_strike.duplicate()
 		p.flat = flat
 		p.draws = draws
 		p.zone_scores = zone_scores.duplicate()
@@ -534,7 +538,7 @@ func _apply(p: Plan, a: Dictionary) -> void:
 				_spend_card(p, a, card.cost)
 			else:
 				var item: LoadoutItem = a["item"]
-				_apply_effects(p, item.effects, z, a["target_uid"], a["dest_zone"])
+				_apply_effects(p, item.effects, z, a["target_uid"], a["dest_zone"], KillstreakStrikes.is_strike(item))
 				p.supply -= item.supply_cost
 				p.used_items[item.id] = true
 				# kc-v2-impl: an Operator ability is kept like a killstreak (once per match).
@@ -604,10 +608,17 @@ func _spend_card(p: Plan, a: Dictionary, cost: int) -> void:
 
 ## Applies the Deploy / Reveal effects of one play to the projected board. All effects
 ## of one play read the lines as they were when the play began (Rulings part 2 #7).
-func _apply_effects(p: Plan, effects: Array[EffectData], zone: int, target_uid: int, dest_zone: int) -> void:
+## kc-ks-seq: strike = the effects belong to a damage killstreak; its ON_PLAY damage on every enemy
+## of a zone waits for step 0 of the estimate (my_strike) instead of landing now.
+func _apply_effects(p: Plan, effects: Array[EffectData], zone: int, target_uid: int, dest_zone: int,
+		strike: bool = false) -> void:
 	var snap: Array = [null, null, null]
 	for e: EffectData in effects:
 		if e == null:
+			continue
+		if strike and KillstreakStrikes.waits_for_fight(e) and e.target == T.ALL_ENEMIES \
+				and e.zone_scope == Z.CHOSEN_ZONE and zone >= 0 and e.condition == DataEnums.Condition.ALWAYS:
+			p.my_strike[zone] += amount_of(e, zone)
 			continue
 		if e.trigger == TR.START_OF_FIREFIGHT:
 			if e.kind == K.DAMAGE:
@@ -640,6 +651,14 @@ func _apply_effects(p: Plan, effects: Array[EffectData], zone: int, target_uid: 
 						alive.append(rec)
 				snap[z] = alive
 			_apply_effect(p, e, z, amount, snap[z] if z >= 0 else [], target_uid, dest_zone)
+
+
+## amount + bonus_amount when its bonus condition holds in z (as _apply_effects).
+func amount_of(e: EffectData, z: int) -> int:
+	var amount: int = e.amount
+	if e.bonus_amount != 0 and _condition(e.bonus_condition, z):
+		amount += e.bonus_amount
+	return amount
 
 
 func _apply_effect(p: Plan, e: EffectData, z: int, amount: int, foes: Array, target_uid: int, dest_zone: int) -> void:
@@ -838,7 +857,17 @@ func _eval_zone(p: Plan, z: int) -> float:
 	var front_cover: Array[int] = [0 if cover_off[ME] else int(auras[ME]["front_cover"]),
 			0 if cover_off[FOE] else int(auras[FOE]["front_cover"])]
 	var foe_present_at_start: bool = _any_alive(armor[FOE])
-	# 0. Start-of-firefight damage (Attack Helo) on each point man.
+	# 0. Killstreak strikes (Firefight step 0): this plan's Mortar on every enemy of the zone, with
+	# the Cover (and frontline aura Cover) they have at the fight, then the Attack Helo point-man hits.
+	if p.my_strike[z] > 0:
+		var front_foe: int = _first_alive(armor[FOE])
+		for i: int in n[FOE]:
+			if int(armor[FOE][i]) <= 0:
+				continue
+			armor[FOE][i] = int(armor[FOE][i]) - maxi(0, p.my_strike[z] - int(cover[FOE][i]) - (front_cover[FOE] if i == front_foe else 0))
+			if armor[FOE][i] <= 0 and survive[FOE][i] > 0:
+				armor[FOE][i] = survive[FOE][i]
+				survive[FOE][i] = 0
 	if p.my_ff_damage > 0:
 		_hit_point_man(armor[FOE], cover[FOE], survive[FOE], p.my_ff_damage, front_cover[FOE])
 	if _view.foe_firefight_damage > 0:

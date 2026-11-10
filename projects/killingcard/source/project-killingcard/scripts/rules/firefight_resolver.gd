@@ -1,8 +1,10 @@
 # firefight_resolver.gd
 # Purpose: The Firefight phase (core-rules §2.4, Rulings 5/6/8, firefight-order.md §2), stateless
 #   and deterministic (no randomness at all):
-#   0. START_OF_FIREFIGHT effects registered earlier (Attack Helo) hit first, in every zone their
-#      scope covers, then the dead are removed and the lines close up.
+#   0. Killstreak strikes (kc-ks-seq, killstreak_strikes.gd): the strikes queued at Reveal (Mortar
+#      Barrage) and the START_OF_FIREFIGHT effects registered earlier (Attack Helo) hit one at a
+#      time, oldest first, then this round's in Reveal order; each strike's dead are removed before
+#      the next; then the lines close up.
 #   1. Columns resolve in order A (left) -> B (mid) -> C (right); a column fights only when both
 #      sides have units in it. In a column:
 #      a. Suppress: each Suppress unit gives the enemy front unit -2 FP this round (it pins that
@@ -57,9 +59,8 @@ const PLAYBACK_ADVANCE_S: float = 0.35
 
 static func resolve(state) -> void:
 	var rows: Dictionary = _rows(state)
-	for f: Dictionary in state.firefight_effects.duplicate():
-		if int(f["until_round"]) >= state.round_number:
-			EffectResolver.resolve_effect(state, f["effect"], f["ctx"])
+	# Step 0: Killstreak strikes (kc-ks-seq, killstreak_strikes.gd), one at a time in queue order.
+	KillstreakStrikes.resolve_step0(state)
 	state.process_eliminations()
 	_emit_advances(state, rows)
 	for z: int in state.ZONE_COUNT:

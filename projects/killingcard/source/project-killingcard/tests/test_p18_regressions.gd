@@ -84,6 +84,9 @@ func test_second_in_line_hit_reads_the_line_as_it_was() -> void:
 	var third: RulesUnit = F.place(m, E, F.unit("third", 0, 5), F.MID)
 	assert_true(m.submit(P, RulesIntent.use_item(&"point_strike", F.MID))["ok"], "point strike")
 	m.reveal()
+	assert_true(pm.is_alive(), "kc-ks-seq: a damage killstreak waits for the fight")
+	KillstreakStrikes.resolve_step0(m)  # Firefight step 0
+	m.process_eliminations()
 	assert_false(pm.is_alive(), "point man down")
 	assert_eq([second.armor, third.armor], [4, 5], "the 1 went to the original 2nd unit")
 
