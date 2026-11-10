@@ -64,7 +64,7 @@ const TRAIT_BONUS: Dictionary = {
 	VANGUARD: [{"fp": 1}, {}],
 	SPECOPS: [{"fp": 1}, {"cover": 1}],  # v1.5 (kc-specops3): tier 3 Cover +1 (was First Shot)
 	HEAVY: [{"cover": 1, "fp": 1}, {"fp": 1}],
-	UNDEAD: [{"heal": 1}, {"fp": 1, "cover": 1}],
+	UNDEAD: [{"heal": 1, "cover": 1}, {"fp": 1}],  # kc-duel-tune §12.3: Cover moved to the 2-set
 }
 ## The table compute() reads (balance tools may tune a copy in memory; the game uses TRAIT_BONUS).
 static var trait_bonus: Dictionary = TRAIT_BONUS.duplicate(true)
@@ -73,7 +73,7 @@ const TIER_TEXT: Dictionary = {
 	VANGUARD: ["Vanguard get +1 FP", "3 Vanguard: still +1 FP (no extra bonus)"],
 	SPECOPS: ["Spec Ops get +1 FP", "Spec Ops get Cover +1"],
 	HEAVY: ["Heavy units get Cover +1 and +1 FP", "Heavy units get +1 more FP"],
-	UNDEAD: ["Undead heal 1 at the end of the round", "Undead get +1 FP and Cover +1"],
+	UNDEAD: ["Undead get Cover +1 and heal 1 at the end of the round", "Undead get +1 FP"],
 }
 ## kc-pos-cut (§13): the four neighbor keywords are retired (no card carries one, compute() makes no
 ## links). The names and texts stay until the UI drops its link views.
@@ -160,7 +160,11 @@ static func _empty_bonus(b: Variant) -> bool:
 
 
 ## Trait counts of one side: units in the lines plus visible Fields, + Doctrine.
-static func trait_counts(lines: Array, field_traits: Array, doctrine: StringName = &"") -> Dictionary:
+## kc-duel-impl (duel-mode.md §12.3): doctrine_starts_only (Duel) = the Doctrine adds its +1 only while
+## exactly ONE member is in play (it starts the 2-set, never completes the 3-set); false (campaign) =
+## +1 while at least one member is in play.
+static func trait_counts(lines: Array, field_traits: Array, doctrine: StringName = &"",
+		doctrine_starts_only: bool = false) -> Dictionary:
 	var counts: Dictionary = {}
 	for z: int in 3:
 		for s: Dictionary in lines[z]:
@@ -170,14 +174,16 @@ static func trait_counts(lines: Array, field_traits: Array, doctrine: StringName
 	for t: Variant in field_traits:
 		if StringName(t) != &"":
 			counts[StringName(t)] = int(counts.get(StringName(t), 0)) + 1
-	if doctrine != &"" and int(counts.get(doctrine, 0)) > 0:
-		counts[doctrine] = int(counts[doctrine]) + 1
+	var real: int = int(counts.get(doctrine, 0)) if doctrine != &"" else 0
+	if real > 0 and (not doctrine_starts_only or real == 1):
+		counts[doctrine] = real + 1
 	return counts
 
 
 ## Synergy of one side's whole board (see the header for the shapes).
-static func compute(lines: Array, field_traits: Array = [], doctrine: StringName = &"") -> Dictionary:
-	var counts: Dictionary = trait_counts(lines, field_traits, doctrine) if enabled else {}
+static func compute(lines: Array, field_traits: Array = [], doctrine: StringName = &"",
+		doctrine_starts_only: bool = false) -> Dictionary:
+	var counts: Dictionary = trait_counts(lines, field_traits, doctrine, doctrine_starts_only) if enabled else {}
 	var tiers: Dictionary = {}
 	for t: StringName in counts:
 		tiers[t] = active_tier(t, int(counts[t]))

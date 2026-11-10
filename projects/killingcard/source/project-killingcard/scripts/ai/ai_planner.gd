@@ -563,7 +563,7 @@ func _synergy_of_plan(p: Plan) -> Dictionary:
 		if not p.field_replaced[z]:
 			fields.append_array(_view.my_field_traits[z])
 		fields.append_array(p.field_traits_new[z])
-	return SynergyRules.compute(lines, fields, _view.my_doctrine)
+	return SynergyRules.compute(lines, fields, _view.my_doctrine, _view.my_doctrine_starts_only)
 
 
 func _synergy_total(p: Plan) -> float:

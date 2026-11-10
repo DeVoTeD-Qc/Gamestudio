@@ -242,7 +242,8 @@ static func match_triggers(state: MatchState) -> Array[StringName]:
 				var rc: RulesCard = entry["card"]
 				if rc != null and rc.card.is_visible_field():
 					_add(out, FIELDS)
-		var syn: Dictionary = SynergyRules.compute(state.synergy_lines(si), state.synergy_field_traits(si), side.setup.doctrine)
+		var syn: Dictionary = SynergyRules.compute(state.synergy_lines(si), state.synergy_field_traits(si), side.setup.doctrine,
+				side.setup.doctrine_starts_only)
 		if not (syn["links"] as Array).is_empty():
 			_add(out, LINKS)
 	# kc-v2-impl: Terrain on the board, the boss rule, the player's Operator ability.

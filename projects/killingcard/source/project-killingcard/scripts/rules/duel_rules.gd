@@ -296,6 +296,8 @@ static func side_setup(deck: DuelDeck, cfg: DuelConfig, display_name: String = "
 	s.killstreaks.assign(cfg.killstreaks)
 	# D5: the deck's Doctrine trait.
 	s.doctrine = deck.doctrine_trait if cfg.doctrine_enabled and deck.doctrine_trait in SynergyRules.TRAITS else &""
+	# §12.3: the Duel Doctrine starts a set, never completes one.
+	s.doctrine_starts_only = true
 	return s
 
 

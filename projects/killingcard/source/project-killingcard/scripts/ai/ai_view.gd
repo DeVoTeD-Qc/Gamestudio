@@ -72,6 +72,8 @@ var my_fields: Array = [[], [], []]
 var my_field_traits: Array = [[], [], []]
 ## kc-syn: my Doctrine trait (+1 to that set count), and the Operator's Supply cost to place.
 var my_doctrine: StringName = &""
+## kc-duel-impl: the Duel Doctrine only starts a set (SideSetup.doctrine_starts_only).
+var my_doctrine_starts_only: bool = false
 var operator_cost: int = 0
 
 # --- my Operator --------------------------------------------------------------------------
@@ -139,6 +141,7 @@ static func capture(state, p_side: int) -> AiView:
 	for c in me.hand:
 		v.hand.append({"uid": int(c.uid), "card": c.card, "trait": c.chosen_trait})
 	v.my_doctrine = me.setup.doctrine
+	v.my_doctrine_starts_only = me.setup.doctrine_starts_only
 	v.operator_cost = int(state.operator_cost())
 	v.mulligans_left = int(me.mulligans_left)
 	v.my_score = int(me.score)

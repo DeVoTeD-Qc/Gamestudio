@@ -1327,7 +1327,8 @@ func _syn_refresh() -> void:
 	_syn_units = {}
 	for si: int in 2:
 		var lines: Array = synergy_lines(si)
-		var res: Dictionary = SynergyRules.compute(lines, synergy_field_traits(si), sides[si].setup.doctrine)
+		var res: Dictionary = SynergyRules.compute(lines, synergy_field_traits(si), sides[si].setup.doctrine,
+				sides[si].setup.doctrine_starts_only)
 		for z: int in ZONE_COUNT:
 			for i: int in (lines[z] as Array).size():
 				_syn_units[int(lines[z][i]["uid"])] = res["zones"][z][i]
@@ -1428,7 +1429,7 @@ func preview_synergy(side: int, card_uid: int, zone: int) -> Dictionary:
 			var t0: StringName = (p["card"] as RulesCard).card_trait()
 			if t0 != &"":
 				fields.append(t0)
-	var before: Dictionary = SynergyRules.compute(lines, fields, s.setup.doctrine)
+	var before: Dictionary = SynergyRules.compute(lines, fields, s.setup.doctrine, s.setup.doctrine_starts_only)
 	var after_lines: Array = [(lines[0] as Array).duplicate(), (lines[1] as Array).duplicate(), (lines[2] as Array).duplicate()]
 	var after_fields: Array[StringName] = fields.duplicate()
 	if rc.card.is_unit():
@@ -1438,7 +1439,7 @@ func preview_synergy(side: int, card_uid: int, zone: int) -> Dictionary:
 		if standing != null and standing.card_trait() != &"":
 			after_fields.erase(standing.card_trait())
 		after_fields.append(rc.card_trait())
-	var after: Dictionary = SynergyRules.compute(after_lines, after_fields, s.setup.doctrine)
+	var after: Dictionary = SynergyRules.compute(after_lines, after_fields, s.setup.doctrine, s.setup.doctrine_starts_only)
 	var seen: Dictionary = {}
 	for l: Dictionary in before["links"]:
 		seen["%s:%d>%d" % [l["kind"], l["from_uid"], l["to_uid"]]] = true

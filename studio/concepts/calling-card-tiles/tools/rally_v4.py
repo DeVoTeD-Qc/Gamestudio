@@ -65,7 +65,7 @@ CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=0, stri
            pre=False, overwatch=False,
            # rule switches for "The simplest Rally Point" (all on = v3)
            text=True, match=True, closer=True, command=True, cover=True, front=True,
-           streaks=True, classes=True)
+           streaks=True, classes=True, simple_ammo=False, endscore=True)
 LAUNCH = dict(CFG)
 
 
@@ -697,7 +697,7 @@ def place(s, cid, move, player):
             touching.append(q)
             if CFG["mil"] and not b.get("jammed"):
                 ba = AB(b["cid"])
-                g = ba.get("gem", 1) + ba.get("mat", 0)
+                g = 1 if CFG["simple_ammo"] else ba.get("gem", 1) + ba.get("mat", 0)
                 if eab.get("armory") and b["suit"] == "S":
                     g += 1
                 gain(s, b["owner"], SUITI[b["suit"]], g)
@@ -718,7 +718,7 @@ def place(s, cid, move, player):
                 s.trig["tags"] += 1
                 tags[b["owner"]] += 1
         s.score[e["owner"]] += eab.get("command", 0) if CFG["command"] else 0
-        if CFG["mil"] and e["owner"] >= 0:
+        if CFG["mil"] and e["owner"] >= 0 and not CFG["simple_ammo"]:
             gain(s, e["owner"], SUITI[e["suit"]], 1)
         if drill(e, "G"):
             for q in touching:
@@ -737,7 +737,7 @@ def place(s, cid, move, player):
 
 def end_score(s):
     for e in s.pcs.values():
-        if e["kind"] == "hub" and not e["rallied"]:
+        if e["kind"] == "hub" and not e["rallied"] and CFG["endscore"]:
             cnt = Counter(s.own[y] for y in e["info"]["border"] if s.own[y])
             for q, n in cnt.items():
                 b = s.pcs[q]
@@ -883,6 +883,8 @@ def timer_fire(s, p, r, late):
             tv = best_target(s, p, spotted)[1]
             dmg = CFG["strike"] + (1 if spotted else 0)
             fv = dmg if spotted else max(0, dmg - s.armor[o])
+            if not CFG["front"]:
+                fv = 0
             sign = 1 if p == 0 else -1
             reach = s.front * sign + fv >= CFG["fmax"]
             spot_soon = m[1] >= th - 1 and not spotted
@@ -1321,6 +1323,7 @@ VARIANTS = {
     "hold + Overwatch": dict(hold=True, overwatch=True),
     "hold + Fire First + Overwatch": dict(hold=True, pre=True, overwatch=True),
     "Fire First (auto at 3)": dict(pre=True),
+    "BASIC + hold (cap 10)": "BASIC + hold (cap 10)",
 }
 
 
@@ -1332,6 +1335,8 @@ def mirror_pol():
 
 
 def use(var):
+    if isinstance(var, str):
+        var = RULESETS[var]
     CFG.clear()
     CFG.update(LAUNCH)
     CFG.update(var)
@@ -1469,6 +1474,10 @@ def sec_ablate(n, rng):
 # ---------------------------------------------------------------- the simplest Rally Point
 NOMIL = dict(mil=False)
 BASIC = dict(text=False, classes=False, cover=False, front=False, streaks=False)
+# Basic: no card text, no Command, one Ammo meter (1 per tile of yours touching a rally),
+# Strike at 5 removes an enemy tile touching an open objective (else +1), no cover, Front or streaks
+# and objectives that never rallied score nothing at the end
+BASIC5 = dict(BASIC, command=False, simple_ammo=True, thresh=5, endscore=False)
 RULESETS = {
     # the layer ladder, simplest first
     "L0 tiling, no card text": dict(NOMIL, text=False),
@@ -1494,6 +1503,15 @@ RULESETS = {
     "Basic, Strike at 4": dict(BASIC, thresh=4),
     "Basic, Strike at 5": dict(BASIC, thresh=5),
     "Basic, Strike at 6": dict(BASIC, thresh=6),
+    # the proposed Basic, exactly as the 5 lines in rally-point-v4.md word it
+    "BASIC (the 5 lines)": dict(BASIC5),
+    "BASIC, Strike at 4": dict(BASIC5, thresh=4),
+    "BASIC, Strike at 6": dict(BASIC5, thresh=6),
+    "BASIC + Command": dict(BASIC5, command=True),
+    "BASIC + end scoring": dict(BASIC5, endscore=True),
+    "BASIC - patch rule": dict(BASIC5, patch=False),
+    "BASIC + hold (cap 10)": dict(BASIC5, hold=True, cap=10),
+    "BASIC tiling only (no Strike)": dict(BASIC5, mil=False),
 }
 
 
@@ -1507,6 +1525,13 @@ def sec_rules(n, rng, names=None):
         use(RULESETS[nm])
         w1, g1, t1, _, _ = h2h(rng, "smart", "greedy", n)
         w2 = h2h(rng, "greedy", "random", n)[0]
+        w3 = h2h(rng, "smart", "milblind", n)[0] if CFG["mil"] else None
+        names_ = list(STACKS)
+        nk = Counter()
+        for _ in range(n):
+            a = rng.choice(names_)
+            r0, _, _ = match(rng, STACKS[a], STACKS[a], "smart", "smart", 1, "none")
+            nk.update(r0)
         w, g, tot, st, trig = h2h(rng, "smart", "smart", n)
         t = st["turns"]
         orders_n = sum(trig[k] for k in MIL_KEYS) / g
@@ -1514,7 +1539,8 @@ def sec_rules(n, rng, names=None):
               f" {st['opts'] / t:5.1f} {st['distinct'] / t:4.1f} {st['spread'] / t:4.2f} |"
               f" {tot['places'] / g:5.1f} | {tot['empty'] / g:4.1f} | {pct(trig['perfect'], g)} |"
               f" {pct(tot['p1'], g)} | {pct(trig['breakthrough'], g)} | {trig['lost_total'] / g:4.2f} |"
-              f" {orders_n:4.1f}")
+              f" {orders_n:4.1f} | smart v milblind {'  -  ' if w3 is None else f'{w3:5.1f}'} |"
+              f" P1 no komi {pct(nk['p1'], 2 * n)}")
     use({})
 
 

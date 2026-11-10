@@ -19,6 +19,9 @@ var deck_arts: Array[StringName] = []
 var deck_traits: Array[StringName] = []
 ## kc-syn §5.2 Doctrine: this trait's set count is +1 while the side has a member in play (&"" = none).
 var doctrine: StringName = &""
+## kc-duel-impl (duel-mode.md §12.3): the Duel Doctrine only starts a set (+1 while exactly one member
+## is in play). DuelRules.side_setup sets it; the campaign keeps false (+1 while any member is in play).
+var doctrine_starts_only: bool = false
 ## Defines the Operator (class, FP, Armor, keywords). Null = no Operator (tests only).
 var primary: LoadoutItem = null
 var attachments: Array[LoadoutItem] = []
