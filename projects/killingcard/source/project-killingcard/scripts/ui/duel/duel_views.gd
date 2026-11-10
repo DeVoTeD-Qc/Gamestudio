@@ -632,10 +632,14 @@ static func validate(deck: Dictionary, loaner: bool = false) -> Dictionary:
 	var raw: Variant = null
 	var dd: Resource = to_deck(deck)
 	if dd != null:
-		var rules: GDScript = _script(RULES_PATH)
-		if rules != null:
-			# Always the rules' validator with the screen's collection (so a preview override shows too).
-			raw = rules.call(&"validate", dd, config(), collection(), opts)
+		var s: Node = state()
+		if s != null and s.has_method(&"validate") and owned_override.is_empty():
+			raw = s.call(&"validate", dd, opts)
+		else:
+			# A preview's collection override (or no DuelState): the rules' validator with the screen's collection.
+			var rules: GDScript = _script(RULES_PATH)
+			if rules != null:
+				raw = rules.call(&"validate", dd, config(), collection(), opts)
 	var out: Dictionary = {}
 	if raw is Dictionary and (raw as Dictionary).has("ok"):
 		out = {"ok": bool(raw["ok"]), "errors": _lines(raw.get("errors", [])), "warnings": _lines(raw.get("warnings", [])),
