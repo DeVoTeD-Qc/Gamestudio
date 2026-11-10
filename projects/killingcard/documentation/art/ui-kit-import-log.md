@@ -16,6 +16,88 @@ One pass, from the repo root. The manifest (`ui-kit-manifest.csv`) is the source
 
 Nothing in the code needs to change for a batch: every v2 slot below already asks the kit first and keeps its code drawing as the fallback.
 
+## Batch 2: the full prompt pack, 201 images (kc-ui-import2, 2026-11-10)
+
+**In:** the studio head's complete drop, 201 PNGs (P1 97, P2 84, P3 20), checksum-verified against its `ASSET_INDEX.csv`. It was generated from the pack before v2 settled, so it holds 19 retired slots and 5 v1 slots that are no longer in the manifest (`frm_cost_hex`, `frm_badge_fp_you`, `frm_badge_fp_rival`, `frm_badge_armor`, `frm_chip_cover`), and none of the 11 v2 slots (`kw_pick_v2`, the Y2+ / T1 frames, `tex_orders_paper`, `fx_glow_rail`, `fx_crack_damage`, the painted reticle / plate / coin): those hooks still draw their code fallback. The raw files were processed from a scratch folder and never entered the repo.
+
+**Result:** 160 shipped (151 new or changed images; the 9 batch-1 icons in the drop are the same images and re-export byte for byte), **17 not shipped** (12 rejects, 5 where the current art reads better), 24 skipped (19 retired, 5 not in the manifest). Manifest `status` is now `imported (batch 2)` or `rejected (batch 2): regenerate`, with the reason in `notes`.
+
+### Rejected (regenerate; reasons also in the manifest notes)
+
+| Slot | Why |
+|---|---|
+| `ico_kw_guard` | A plain shield. The prompt says "not a shield" (the shield is Armor, and `kw_pick_v2` is a shield with an arrow). |
+| `ico_kw_spotter` | An eye. The prompt says "not an eye" (the eye is the PREVIEW toggle, `ico_ui_eye`, which shipped). |
+| `ico_kw_overwatch` | A reticle with side arrows. The prompt asks for a visor slit and forbids circles, rings and reticles; it reads as the FP reticle. |
+| `ico_kw_aura` | Concentric broken rings and a dot. The prompt asks for a square with four radiating bars and forbids circles; it reads as the FP reticle. |
+| `band_gilded`, `band_forged`, `band_priceless`, `band_interstellar` | **IP.** Gold / white-steel / blue-crystal / violet-nebula blob camo that reads as a copy of a shooter franchise's mastery camos (the internal ids are already those camo names). The repo is public and §6.1 bans copied camo patterns. If the swatches are still wanted, ask for a non-camo look (brushed gold leaf, machined steel, faceted crystal, a star field) with no blob pattern. `band_base` (generic olive woodland blobs) shipped. |
+| `btn_primary_pressed`, `btn_secondary_pressed` | A different plate from the normal one (inset rim, chamfers on all four corners): the button would change shape when pressed. The code pressed state (x0.85, 1-2 px down, pack §2.6) is better until a matching pair is generated in one chat. |
+| `btn_ready_pressed` | Same, and its left hazard stripes sit in the stretched middle and smear. |
+| `pnl_hand_tab` | A grip mark in the middle of the top edge: it smears when the 9-slice stretches. |
+
+**Kept the current art** (they pass the checklist but read worse in the game than what it shows today): `ico_ks_attack_helo` (thin rotor and tail boom vanish at 22 px) and `ico_ks_gunship` (a long, flat four-engine plane; at 22 px it is a line, and the silhouette is very close to one real gunship model). Ask for both as compact, roughly square silhouettes (three-quarter top view, thick rotor disc / thick wings). And `col_containers`, `col_cranes`, `col_offices`: the manifest's middle 648 px crop is plain dark asphalt, so at 34% behind the slots the three columns turned into the same blank grey; the Killstreak `lane_*.webp` still read as containers / cranes / offices, so they stay. Regenerate with the location visible across the full width, still low contrast.
+
+**IP check:** no image in the drop has a franchise, publisher or studio logo, emblem, wordmark, a copied real trademark, or any text, letters or numbers (the backgrounds were checked at full size: the map, notice board, ruler and crates are all blank). Weapon silhouettes are generic (no one real model, no markings). The only IP problem is the four mastery-camo bands above.
+
+### What shipped where
+
+- **Icons (83 new, `assets/ui/kit/icons/`):** 256 master + 128/64/48/32 exports, as batch 1.
+- **Buttons and controls (11, `buttons/`), panels and strips (23, `panels/`), tile backers (4, `tiles/`), frame parts (7, `frames/`), glows and overlays (11, `fx/`), `band_base` + `band_base_strip` (`bands/`).** Every alpha piece came with real transparency (no magenta key needed). The 9-slice pieces were checked stretched wide and tall; four margins were raised in the manifest (and in the pack and `slots.py`) because a corner detail reached past them: `btn_ready` (and its pressed slot) right 112 -> 128 (hazard stripes), `pnl_callout` 24 -> 32 left and right (the slant), `pnl_coach` left 32 -> 64 (the speech tail), `pnl_pick_tile` bottom 64 -> 80 (the name band).
+- **Backgrounds:** 1536x864 WebP q85 in `assets/ui/backgrounds/`. Three replace the Killstreak-era files at the paths the game already loads, so the screens pick them up with no code change: `bg_title` -> `title_key_art.webp` (the old one had three soldiers in the foreground, which the v2 brief forbids), `bg_run_map` -> `bg_run.webp`, `bg_supply_drop` -> `bg_supply_drop.webp` (more room for the cards). Six are new and not loaded by anything yet: `bg_menu`, `bg_match`, `bg_codex`, `bg_loadout`, `bg_loading`, `bg_after_action`.
+- **Old files:** the replaced WebPs are in git history (`git checkout HEAD~ -- <path>` brings one back).
+
+### Hooks: what draws the new art now
+
+- **Through the existing `IconSheet` / `UiKit` lookups (no code change):** `range_close / mid / long`, `type_unit / tactic / field / killstreak / operator`, `class_ar / smg / shotgun / sniper / lmg`, `kw_flank`, `kw_suppress`, `kw_patch`, `kw_holder`, `trig_on_deploy`, `trig_on_down`, `ks_recon_drone`, `ks_mortar`, `ks_sentry`, `elite_star`, `eliminated`, `ui_lock` (the Duel lock), plus the three backgrounds above.
+- **Wired in this batch (one line each, code glyph kept as the fallback):** the trait chips (`SynergyGlyphs.draw_trait_icon` asks for `trait_<t>`: Vanguard, Spec Ops, Heavy, Undead on every card, the rail and the inspector), Fireteam (`SynergyGlyphs.draw_keyword_icon`, symmetric so it needs no flip) and the effect bolt (`CardLook._draw_bolt`, the "more" dot stays code). `UiKit.PIECE_DIRS` now also searches `buttons/`, `tiles/` and `bands/`. Test: `test_ui_kit_hooks.gd::test_import2_trait_fireteam_bolt_hooks`.
+
+### Shipped but not hooked yet (for the UI owner)
+
+| Asset(s) | Where it goes | Hook needed |
+|---|---|---|
+| `bg_menu`, `bg_match`, `bg_codex`, `bg_loadout`, `bg_loading`, `bg_after_action` | pause menu; match backdrop (in place of the tactical shader, if the head prefers); Codex; Loadout; loading screen (+ a 960x540 copy for the web shell); After-Action | `CardArt.backdrop_texture(&"menu")` etc. under the run-screen scrim |
+| `band_base` (+ `_strip`) | run-screen level swatch (Operator base tier) | `UiKit.draw_tiled` |
+| `runmap_node`, `runmap_path` | run map node rings and dashed paths (`run_glyphs.gd`) | `UiKit.draw_piece`, tinted |
+| `frm_front_tab`, `frm_plan_plate`, `frm_incoming`, `frm_dogtag_plate`, `frm_put_back`, `frm_ghost` | FRONT tab, PLAN tag, INCOMING slot, Operator dog tag, PUT BACK card, ghost preview | `UiKit.draw_piece` (+ margins in `PIECE_MARGINS`) |
+| `card_back_banner`, `card_back_hand` | face-down 4:1 back (new); hand / mulligan back (`CardArt.card_back_texture` loads `cards/card_back.webp` 500x700 today) | new path or a swap at the right size |
+| `fx_outline_teal`, `fx_outline_side`, `fx_glow_amber`, `fx_glow_red`, `fx_link_tick`, `fx_link_tick_ghost`, `fx_hit_flash`, `fx_tracer`, `fx_crack`, `fx_sheen` | selection outline, side outline, READY / killstreak glow, danger glow, board link ticks, hit flash, now-firing tracer, crack, hover sheen | draw with a `CanvasItemMaterial` blend Add (they are RGB on black, no alpha) |
+| `btn_*` (primary, secondary, danger, ready, badge, chip, chip_on, tab), `tgl_track`, `tgl_knob`, `sld_track` | `hud_theme.tres` StyleBoxTextures (pack §7.4 step 2): READY, menu buttons, filter chips, tabs, settings toggles and sliders | StyleBoxTexture `.tres` from the manifest margins (0.5 scale: 1x exports or the `draw_nine` helper) |
+| `pnl_tray`, `pnl_flyout`, `pnl_flyout_pointer`, `pnl_toast`, `pnl_inspector`, `pnl_tooltip`, `pnl_modal`, `pnl_header`, `pnl_ks_tile`, `pnl_counter`, `pnl_order_strip`, `pnl_rail_chip`, `pnl_callout`, `pnl_pick_tile`, `pnl_coach`, `pnl_result`, `ring_track`, `ring_fill`, `pip_supply`, `order_node`, `order_arrow` | hand tray, Operator flyout, killfeed toasts, inspector, tooltips, modals, headers, killstreak tile + charge ring, counters, fight-order strip, rail chips, set callouts, pick tiles, coach bubbles, result banner, Supply pips | themes or `UiKit.draw_piece` per widget |
+| `tile_objective`, `tile_field_chip`, `tile_field_chip_trap`, `tile_slot_empty` | objective tile, Field chips, empty slot (`objective_tile.gd`, `lane.gd`) | `UiKit.draw_piece` |
+| `ico_stat_discard`, `ico_stat_hand`, `ico_tickets`, `ico_round`, `ico_fired`, `ico_heal`, `ico_damage` | tray counters, score / tickets HUD, round counter, killfeed and feedback numbers | `UiKit.draw_icon` next to the numbers |
+| `ico_kw_pierce`, `ico_kw_protector` | ability chip | side-dependent arrows: draw the kit base and keep the code arrow, or flip the rect for the rival |
+| `ico_kw_hidden`, `ico_trap`, `ico_plan_mark`, `ico_field_slot`, `ico_overrun`, `ico_ctl_yours / rival / even / open` | Hidden traps, TRAP chip, PLAN tag, empty Field slot, OVERRUN callout, objective control marks | `UiKit.draw_icon` |
+| `ico_ph_deploy / reveal / firefight / score`, `ico_mode_zone_control / firefight / detonator / rival` | phase header, mode picker and run-map mode tiles | `UiKit.draw_icon` |
+| `ico_att_optic / grip / mag / lining`, `ico_perk_slot` | Loadout attachments and perk slot | `UiKit.draw_icon` |
+| `ico_ui_*` (24: menu, settings, undo, speed, skip, codex, mirror, sound on / off, close, back, info, eye, eye off, filter, check, continue, retire, promote, reward, rotate, survey, tutorial) | strip MENU badge, settings, undo, x1 / x2, skip, Codex, mirror, sound, close / back, info, PREVIEW eye, filters, confirm, run actions, rotate notice, survey, tutorial | `Button.icon` = `UiKit.icon(&"ui_x", px)` |
+
+### Web build size
+
+Measured with a real `--export-pack "Web"` (public preset, no licensed art) of HEAD before the batch and of the tree after: **game.pck 5.58 MB -> 9.03 MB (+3.45 MB)**. Of that, the UI kit is **+2.96 MB** (kit textures in the .pck: 0.33 MB -> 3.29 MB) and the backgrounds +0.18 MB (six new ones, minus the three smaller replacements); the rest is other work in progress in the same tree. Kit textures by folder: icons 256 px 666 KB, 128 px 354 KB, 64 px 192 KB, 48 px 147 KB, 32 px 105 KB; panels 807 KB, buttons 255 KB, frames 256 KB, fx 200 KB, bands 200 KB, tiles 104 KB.
+
+That is near the pack's 4 MB budget, and about 1.7 MB of it is art nothing draws yet. Proposals, biggest first:
+1. **Leave unhooked art out of the web export until it is wired** (add `assets/ui/kit/buttons/*, assets/ui/kit/tiles/*, assets/ui/kit/bands/*` and the unhooked panels / fx / frames / backgrounds to the Web preset's `exclude_filter`, or keep them in a `.gdignore`d staging folder): about -1.7 MB now, and each hook brings back only its own file.
+2. **Drop the 256 and 128 px icon exports from the web build** (nothing on the phone draws an icon above 64 px; needs a small change in `UiKit.kit_texture` to fall back to the largest export present instead of the sheet): -1.0 MB.
+3. **Mipmaps off for the icon exports.** Canvas items never sample them (that is why the exports exist); they add a third to every icon texture: about -0.35 MB.
+4. Once the set is final, pack each export size into one atlas (`kit_icons_32.png` ...) to cut ~430 icon files to 5; and ship the big panels at 1x as lossy WebP if they stay large.
+
+### Checks
+
+- Full suite: **661 passed, 0 failed** with the kit (658 after this batch plus 3 that other in-flight work added meanwhile; 1 new here: `test_ui_kit_hooks.gd::test_import2_trait_fireteam_bolt_hooks`), and **661 passed** in a copy of the project with `assets/ui/kit` and `assets/licensed` removed. Two existing tests were updated: `test_ui_kit.gd` (it checked that `kw_flank` was still a sheet icon; it now checks `ks_gunship`, which stays on the sheet) and `test_art_bitmaps.gd` (10 shipped backgrounds instead of 4).
+- One run showed `test_board_columns.gd::test_banner_art_path_and_crops` failing; it passes alone and in the next full run. It writes and deletes `data/banners/kc_test_drop.tres`, so it races with another Godot process running in the same project at the same time.
+- Screenshots (public art, 844x390, before / after): match board, hand (H1 selected), the Y2+ dock card (the inspector), Codex, run map, title, plus contact sheets of everything shipped at 32 and 64 px. They are not committed (scratch folder, see the task report).
+- `tests/tools/shot_cards.gd` no longer parses (`CardView.view_for_card` third argument is now a trait StringName, the tool passes an int at line 143); the shots used a fixed copy. One-word fix for the UI owner.
+- **The 21 v2 slots with no image in this drop are final** (generation closed): `kw_pick_v2`, `frm_y2_unit`, `frm_y2_operator`, `frm_y2_standard_issue`, `frm_t1_orders`, `tex_orders_paper`, `fx_glow_rail`, `fx_crack_damage`, `plate_fp_reticle`, `plate_armor_ballistic`, `coin_level`, `frm_standard_issue`, `frm_socket_empty`, `frm_socket_locked`, `pnl_new_card`, `pnl_new_inset` and the five Standard Issue arts `kc_b_si_grunt / trooper / sergeant / armored / ammo_resupply`. All are **covered by fallback**: each hook draws its code version (the Y2+ / T1 frames, paper colour, rail lines, crack, reticle, plate, coin, sockets, explainer panels, the built-in Pick shield) and the Standard Issue cards keep their current banner art (`data/banners/si_*.tres`, `BannerArtDB`), as the no-kit suite and the screenshots show (no empty or broken slot). The same holds for the 17 slots not shipped above.
+
+### Style feedback for batch 3+ (regenerations)
+
+1. **Read the Avoid line literally.** All four keyword rejects drew exactly what the Avoid line forbade (shield, eye, reticle, rings). Keep "Not a shield / not an eye / no circle" in the subject sentence too, not only in Avoid, and ask Guard as "a short thick wall of three stacked blocks", Spotter as "binoculars seen from the front", Overwatch as "a visor slit", Aura as "a square with four bars".
+2. **Duplicates across groups.** `trait_heavy` and `ui_settings` are both gears, and `kw_hidden` and `ui_eye_off` are both a slashed eye; both follow their prompts, so the pack should change one of each pair (Heavy: a heavy weight / anvil block; Hidden: a dashed outline with a half-closed lid). `ctl_open` reads as a crosshair at 24 px (fine on the objective tile, but keep it off cards). `ctl_yours` is close to the FP reticle shape.
+3. **Long silhouettes** still come out small after the trim: the shotgun, sniper, gunship and attack helicopter icons. For vehicles, ask for a three-quarter or top view that fills a square.
+4. **Pressed plates:** generate the normal and pressed plates of a button in the same chat, with "the same plate, darker, pressed in", or skip them (code pressed state).
+5. **9-slice ornaments** must sit within one margin of a corner: the hand-tab grip, the READY stripes, the coach tail and the callout slant all went past it.
+6. **What worked:** all alpha pieces came with real transparency (no checkerboard, no magenta needed), every white-on-black icon keyed cleanly, the backgrounds are dark and calm with no text, and the panel family (gunmetal, thin steel rim, 45-degree chamfers, one amber accent) is consistent across buttons, panels and tiles.
+
 ## kc-ui-hooks: v2 slots wired (2026-11-06)
 
 **Hooks** (prompt pack §7.4b; all fall back to the current code drawing, so the game looks the same until a file lands):

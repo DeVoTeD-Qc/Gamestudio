@@ -61,3 +61,8 @@ projects/*/assets/licensed/
 projects/*/builds/pitch/
 **/web-pitch/
 **/licensed_cache/
+# Raw art drops: only the READMEs and manifests in assets/incoming are tracked.
+projects/*/source/**/assets/incoming/**/*.png
+projects/*/source/**/assets/incoming/**/*.jpg
+projects/*/source/**/assets/incoming/**/*.webp
+projects/*/source/**/assets/incoming/**/*.zip
