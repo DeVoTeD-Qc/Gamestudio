@@ -399,6 +399,17 @@ static func hero(id: StringName) -> Dictionary:
 
 
 ## True when the deck may have no Doctrine (DuelConfig.doctrine_required off).
+## kc-duel-impl (duel-mode.md §12.3): picks that must wear the Doctrine trait (DuelConfig; 0 = any).
+static func doctrine_min() -> int:
+	var cfg: Resource = config()
+	return int(cfg.get(&"doctrine_min_trait_picks")) if cfg != null else 0
+
+
+## Picks of `deck` wearing trait `t` (units and Fields; both copies of a pick wear its art's trait).
+static func picks_wearing(deck: Dictionary, t: StringName) -> int:
+	return int(composition(deck)["traits"].get(t, 0)) / COPIES
+
+
 static func doctrine_optional() -> bool:
 	var cfg: Resource = config()
 	return cfg == null or not bool(cfg.get(&"doctrine_required"))

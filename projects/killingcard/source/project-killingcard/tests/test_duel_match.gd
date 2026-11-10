@@ -198,7 +198,8 @@ func test_doctrine_text() -> void:
 	var ds: Node = tree.root.get_node("DuelState")
 	assert_eq(ds.doctrine_text(&""), "No Doctrine: your trait counts are what your picks wear.", "none")
 	var h: String = ds.doctrine_text(&"heavy")
-	assert_true(h.begins_with("Doctrine Heavy: while you have a Heavy card in play, your Heavy count gets +1"), h)
+	assert_true(h.begins_with("Doctrine: your first Heavy in play already turns on the Heavy 2-set. The 3-set still needs 3 Heavy."), h)
+	assert_true(h.contains("Needs 4 Heavy picks"), "the 4-pick rule is explained")
 	assert_true(h.contains("2 Heavy: Heavy units get Cover +1 and +1 FP") and h.contains("3 Heavy: Heavy units get +1 more FP"),
 			"the set lines: %s" % h)
 	for t: StringName in SynergyRules.TRAITS:

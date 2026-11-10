@@ -28,8 +28,8 @@ func test_operator_data_head_v2() -> void:
 	var b: LoadoutItem = _op("bastion_60")
 	assert_eq([k.operator_firepower, k.operator_armor], [3, 8], "Kestrel 3/8 (kc-econ: was 3/7)")
 	assert_eq([l.operator_firepower, l.operator_armor, l.pick, l.pierce], [3, 7, true, true], "Longreach 3/7 Pick, Pierce passive (kc-econ: was 3/6)")
-	assert_eq([w.operator_firepower, w.operator_armor, w.first_shot, w.rotations_per_round], [2, 7, true, 2], "Wasp-9 2/7")
-	assert_eq([b.operator_firepower, b.operator_armor, b.cover, b.weapon_class], [2, 6, 1, DataEnums.WeaponClass.LMG], "Bastion-60 LMG 2/6 Cover 1 (kc-econ: was 2/8)")
+	assert_eq([w.operator_firepower, w.operator_armor, w.first_shot, w.rotations_per_round], [2, 9, true, 2], "Wasp-9 2/9 (kc-duel-tune §12.2: one set for both modes)")
+	assert_eq([b.operator_firepower, b.operator_armor, b.cover, b.weapon_class], [2, 8, 1, DataEnums.WeaponClass.LMG], "Bastion-60 LMG 2/8 Cover 1 (kc-duel-tune §12.2)")
 	var abs: Array = [k, l, w, b].map(func(o: LoadoutItem) -> StringName: return (o.ability as LoadoutItem).id)
 	assert_eq(abs, [&"ab_dig_in", &"ab_marked_shot", &"ab_flashbang", &"ab_covering_fire"], "one ability each")
 	for o: LoadoutItem in [k, l, w, b]:
@@ -101,7 +101,7 @@ func test_marked_shot_needs_the_operator_and_hits_its_column() -> void:
 	assert_true(foe.uid in uids and other.uid not in uids, "only enemies in the Operator's column")
 	assert_true(m.submit(P, RulesIntent.use_item(&"ab_marked_shot", -1, foe.uid))["ok"], "Marked Shot")
 	m.reveal()
-	assert_eq(foe.armor, 2, "3 damage")
+	assert_eq(foe.armor, 3, "2 damage (kc-duel-tune §12.2: Marked Shot 3 -> 2)")
 	var off: MatchState = _kit_match("longreach_338", [], [], false)
 	assert_false(off.sides[P].operator_unit.pierce, "no Pierce with the kit off")
 

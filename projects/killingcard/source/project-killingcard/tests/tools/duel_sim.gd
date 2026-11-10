@@ -16,11 +16,13 @@
 #     mode     Zone Control vs Firefight: rounds and seat
 #     build    deckbuilding edge: each preset vs random legal decks (Kestrel both sides), by deck size
 #     length   Zone Control target 6 / 7 / 8: rounds per match
-#   Defaults = the spec's Duel rules: picks=10, draws=1, Zone Control, hero in the command zone, respawn 1,
-#     no Terrain; kc-duel-tune: Doctrine = the deck's chosen trait under the "2only" rule (docrule=), the
-#     one Operator set and the Undead table of duel-mode.md §12 (DUEL_HERO_LINES, UNDEAD_TUNE; heroline=campaign = shipped).
+#   Defaults = the shipped Duel rules, read from the real data (kc-duel-impl port): the presets, their heroes,
+#     traits and Doctrines from data/duel/ (DuelConfig + DuelDeck, via DuelRules.side_setup's trait / art
+#     resolution), the Operators and the Undead table from data/loadout and SynergyRules, the Duel Doctrine
+#     "starts the set only" (SideSetup.doctrine_starts_only), the Duel match config (DuelConfig.match_config).
+#     Picks 11-12 (size tests) come from SPARES (duel-mode.md §12.4). No in-memory overrides by default.
 #   Options: exps=size,hero,...  n=N (games per pairing)  picks=10  draws=1  mode=zc|ff
-#     hero=cmd|draw|drawfree|top  respawn=1  terrain=0|1  doctrine=0|1  docrule=2only|3only|""  heroline=duel|campaign
+#     hero=cmd|draw|drawfree|top  respawn=1  terrain=0|1  doctrine=0|1  docrule=""(shipped Duel)|campaign|2only|3only
 #     search: iters=40 sg=10 strait=undead,vanguard,specops,heavy (hill-climb the strongest custom decks)
 #     lset=loadout.prop=v;...  eset=loadout.effect_index.prop=v  tune=trait.tier.key=v|none  cfg=prop=v;...
 #     pdeck=I:card@trait,...;...  phero=I:operator;...  only=0,2  rsb=0.8 rarmor=-1 (Recruit AI)
@@ -29,40 +31,21 @@
 extends SceneTree
 
 const DocMatch: GDScript = preload("res://tests/tools/doctrine_match.gd")
-## kc-duel-tune: the Doctrine rule of §12 ("2only": it turns on the 2-set, never completes the 3-set); "" = shipped.
-var docrule: String = "2only"
+## The Doctrine rule: "" = the shipped Duel rule (SideSetup.doctrine_starts_only), "campaign" = +1 while any
+## member is in play, "2only" / "3only" = doctrine_match.gd what-ifs.
+var docrule: String = ""
 const OPS: Array[StringName] = [&"kestrel_ar7", &"longreach_338", &"wasp_9", &"bastion_60"]
 
-## The four preset decks of duel-mode.md §5. Picks in priority order: the first `picks` are used
-## (6, 8, 10), and 11-12 come from the tail. Each pick = 2 copies with the given trait (&"~default" = the
-## chassis default).
-var PRESETS: Array[Dictionary] = [
-	{"name": "Spearhead", "trait": &"vanguard", "hero": &"kestrel_ar7", "picks": [
-		[&"point_man", &"vanguard"], [&"rifleman", &""], [&"breacher", &"vanguard"], [&"shieldman", &"vanguard"],
-		[&"flank_route", &""], [&"hold_the_line", &""], [&"brawler", &"undead"], [&"bulwark", &"vanguard"],
-		[&"blackout", &""], [&"ammo_resupply", &""], [&"gunner", &"heavy"], [&"suppressing_fire", &""]]},
-	{"name": "Overwatch", "trait": &"specops", "hero": &"longreach_338", "picks": [
-		[&"rifleman", &"specops"], [&"recon_specialist", &"specops"], [&"marksman", &"specops"], [&"brawler", &"specops"],
-		[&"flanker", &"specops"], [&"ammo_resupply", &""], [&"sniper_perch", &"specops"], [&"halek_wren", &"specops"],
-		[&"breach_and_clear", &""], [&"combat_medic", &"specops"], [&"callout", &""], [&"smoke_screen", &""]]},
-	{"name": "Iron Wall", "trait": &"heavy", "hero": &"bastion_60", "picks": [
-		[&"rifleman", &""], [&"breacher", &"heavy"], [&"gunner", &"heavy"], [&"marksman", &"heavy"],
-		[&"demolitions_expert", &"heavy"], [&"ammo_resupply", &""], [&"suppressing_fire", &""], [&"mortar_pit", &"heavy"],
-		[&"okafor_anvil", &"heavy"], [&"hold_the_line", &""], [&"point_man", &"vanguard"], [&"comms_relay", &""]]},
-	{"name": "Hollow Ranks", "trait": &"undead", "hero": &"wasp_9", "picks": [
-		[&"rifleman", &"undead"], [&"brawler", &"undead"], [&"point_man", &"undead"], [&"shieldman", &"undead"],
-		[&"recon_specialist", &"undead"], [&"flanker", &"undead"], [&"war_standard", &"undead"], [&"breach_and_clear", &""],
-		[&"tripwire_charge", &""], [&"listening_post", &""], [&"combat_medic", &"undead"], [&"aid_station", &"undead"]]},
-]
-## kc-duel-tune (duel-mode.md §12): ONE Operator set for both modes (head D4 b), applied in memory until
-## the data carries it; heroline=campaign = the shipped kc-econ data. Kestrel 3/8 and Longreach 3/7 keep
-## their bodies; Wasp-9 2/7 -> 2/9, Bastion-60 2/6 -> 2/8, Marked Shot 3 -> 2.
-const DUEL_HERO_LINES: Dictionary = {&"kestrel_ar7": 8, &"longreach_338": 7, &"wasp_9": 9, &"bastion_60": 8}
-const DUEL_MARKED_SHOT: int = 2
-## kc-duel-tune: the Undead trait table of §12 (2-set: heal 1 + Cover 1; 3-set: +1 FP), applied in memory
-## with the hero set (tune= still edits on top).
-const UNDEAD_TUNE: Array = [{"heal": 1, "cover": 1}, {"fp": 1}]
-var heroline: String = "duel"
+## The presets, built from data/duel/ at start (_load_presets): {id, name, trait (its Doctrine), hero,
+## picks: [[card id, trait]]}; picks 11-12 from SPARES (duel-mode.md §12.4: only the size tests use them).
+var PRESETS: Array[Dictionary] = []
+const SPARES: Dictionary = {
+	&"spearhead": [[&"gunner", &"heavy"], [&"suppressing_fire", &""]],
+	&"overwatch": [[&"callout", &""], [&"smoke_screen", &""]],
+	&"iron_wall": [[&"point_man", &"vanguard"], [&"comms_relay", &""]],
+	&"hollow_ranks": [[&"combat_medic", &"undead"], [&"aid_station", &"undead"]],
+}
+var duel_config: DuelConfig = null
 var search_iters: int = 60
 var search_games: int = 12
 var search_traits: PackedStringArray = PackedStringArray(["vanguard", "specops", "heavy", "undead"])
@@ -138,18 +121,18 @@ func _initialize() -> void:
 
 func _main() -> void:
 	await process_frame
-	config = (load("res://data/run_config.tres") as RunConfig).duplicate(false) as RunConfig
+	duel_config = load("res://data/duel/duel_config.tres") as DuelConfig
+	config = duel_config.match_config(load("res://data/run_config.tres") as RunConfig)
+	recruit_armor = duel_config.recruit_armor_bonus
+	recruit_sb = duel_config.recruit_second_best
+	regular_sb = duel_config.regular_second_best
+	_load_presets()
 	dummy = CardData.new()
 	dummy.id = &"duel_hero_card"
 	dummy.display_name = "Hero"
 	dummy.card_type = DataEnums.CardType.TACTIC
 	dummy.cost = 10
 	dummy.collectible = false
-	if not "heroline=campaign" in OS.get_cmdline_user_args():
-		for op: StringName in DUEL_HERO_LINES:
-			(load("res://data/loadout/%s.tres" % op) as LoadoutItem).operator_armor = int(DUEL_HERO_LINES[op])
-		((load("res://data/loadout/ab_marked_shot.tres") as LoadoutItem).effects[0] as EffectData).amount = DUEL_MARKED_SHOT
-		SynergyRules.trait_bonus[&"undead"] = UNDEAD_TUNE.duplicate(true)
 	for arg: String in OS.get_cmdline_user_args():
 		var kv: PackedStringArray = arg.split("=", true, 1)
 		match kv[0]:
@@ -164,7 +147,6 @@ func _main() -> void:
 			"rarmor": recruit_armor = int(kv[1])
 			"gsb": regular_sb = float(kv[1])
 			"doctrine": doctrine_on = kv[1] != "0"
-			"heroline": heroline = kv[1]
 			"iters": search_iters = int(kv[1])
 			"docrule": docrule = kv[1]
 			"sg": search_games = int(kv[1])
@@ -229,8 +211,8 @@ func _main() -> void:
 	var ms: LoadoutItem = load("res://data/loadout/ab_marked_shot.tres") as LoadoutItem
 	print("  operators: %s · marked shot %d" % [", ".join(ops_line), (ms.effects[0] as EffectData).amount])
 	print("  trait bonus: %s" % SynergyRules.trait_bonus)
-	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s doctrine=%s docrule=%s heroline=%s" % [n,
-			picks, draws, mode_opt, hero_mode, respawn_cost, terrain_on, doctrine_on, docrule, heroline])
+	print("duel_sim: n=%d picks=%d draws=%d mode=%s hero=%s respawn=%d terrain=%s doctrine=%s docrule=%s" % [n,
+			picks, draws, mode_opt, hero_mode, respawn_cost, terrain_on, doctrine_on, docrule if docrule != "" else "duel"])
 	print("  trait bonus (in use): %s" % SynergyRules.trait_bonus)
 	_apply_cfg()
 	if "size" in exps:
@@ -255,6 +237,19 @@ func _main() -> void:
 		_exp_search()
 	print("\nduel_sim done in %.1f s" % ((Time.get_ticks_msec() - t0) / 1000.0))
 	quit(0)
+
+
+## The presets from the real data (DuelConfig.presets), each pick's trait resolved from its art.
+func _load_presets() -> void:
+	PRESETS.clear()
+	for d: DuelDeck in duel_config.presets:
+		var pk: Array = []
+		for i: int in d.picks.size():
+			pk.append([d.card_id_at(i), d.trait_of_pick(i)])
+		for sp: Array in SPARES.get(d.id, []):
+			pk.append(sp.duplicate())
+		PRESETS.append({"id": d.id, "name": d.display_name, "trait": d.doctrine_trait if d.doctrine_trait != &"" else DuelRules.main_trait(d),
+				"hero": d.hero_id, "picks": pk})
 
 
 func _apply_cfg() -> void:
@@ -342,7 +337,6 @@ func _ai(tier: String) -> AiPlayer:
 ## Plays sa (seat 0) vs sb (seat 1). Returns 0 / 1 (winner seat) or -1 (draw); fills `stats`.
 func _game(sa: SideSetup, sb: SideSetup, seed_value: int, ta: String = "competent", tb: String = "competent",
 		mode: int = -1) -> int:
-	var md: RunMatchData = config.matches[0]
 	var h: DuelHooks = DuelHooks.new()
 	h.hero_mode = hero_mode
 	h.dummy = dummy
@@ -350,8 +344,15 @@ func _game(sa: SideSetup, sb: SideSetup, seed_value: int, ta: String = "competen
 	if gm < 0:
 		gm = DataEnums.GameMode.FIREFIGHT if mode_opt == "ff" else DataEnums.GameMode.ZONE_CONTROL
 	h.mode_rules = ModeRules.create(gm, config)
-	var m: MatchState = DocMatch.new(config, md.map, sa, sb, seed_value, h)
-	m.set("rule", docrule)
+	# The shipped Duel Doctrine (starts the set only) unless a what-if rule is asked for.
+	for st: SideSetup in [sa, sb]:
+		st.doctrine_starts_only = docrule == ""
+	var m: MatchState = null
+	if docrule in ["2only", "3only"]:
+		m = DocMatch.new(config, duel_config.map, sa, sb, seed_value, h)
+		m.set("rule", docrule)
+	else:
+		m = MatchState.new(config, duel_config.map, sa, sb, seed_value, h)
 	if terrain_on:
 		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		rng.seed = seed_value

@@ -160,7 +160,7 @@ func test_amber_lines_never_block() -> void:
 	assert_true(r["ok"], "advice never blocks: %s" % str(r["errors"]))
 	# The presets carry the spec's one amber line: Hollow Ranks has a single 1-cost pick.
 	var hr: Dictionary = DuelRules.validate(c.preset(&"hollow_ranks"), c)
-	assert_true(&"low_curve" in _codes(hr["warnings"]), "Hollow Ranks shows the round-1 line on purpose")
+	assert_true(hr["ok"], "Hollow Ranks: legal (§12.4 list)")
 
 
 func test_editing_refusals() -> void:
@@ -210,7 +210,7 @@ func test_presets_are_legal_with_their_heroes_and_traits() -> void:
 		assert_eq(DuelRules.main_trait(d), want[id][1], "%s main trait" % id)
 		assert_true(d.preset, "%s read-only" % id)
 	# The spec's unit / tactic / Field counts (copies).
-	var counts: Dictionary = {&"spearhead": [10, 8, 2], &"overwatch": [14, 4, 2], &"iron_wall": [12, 6, 2], &"hollow_ranks": [12, 4, 4]}
+	var counts: Dictionary = {&"spearhead": [10, 8, 2], &"overwatch": [14, 4, 2], &"iron_wall": [12, 6, 2], &"hollow_ranks": [12, 2, 6]}
 	for id: StringName in counts:
 		var s: Dictionary = DuelRules.validate(c.preset(id), c)["summary"]
 		assert_eq([s["units"] * 2, s["tactics"] * 2, s["fields"] * 2], counts[id], "%s composition" % id)
@@ -236,8 +236,11 @@ func test_side_setup_two_copies_art_trait_hero_no_doctrine_by_default() -> void:
 	assert_true(s.operator_kit, "kit on: passive + ability")
 	assert_eq(s.killstreaks.size(), 3, "3 starter killstreaks")
 	assert_true(s.perks.is_empty() and s.attachments.is_empty(), "no perks / attachments")
-	assert_eq(s.doctrine, &"", "presets carry no Doctrine")
+	assert_eq(s.doctrine, &"specops", "§12.4: each preset's Doctrine is its own trait")
+	assert_true(s.doctrine_starts_only, "§12.3: the Duel Doctrine only starts a set")
 	d = d.copy()
+	d.set_doctrine(&"")
+	assert_eq(DuelRules.side_setup(d, c).doctrine, &"", "None is allowed")
 	d.set_doctrine(&"specops")
 	assert_eq(DuelRules.side_setup(d, c).doctrine, &"specops", "D5: the deck's Doctrine applies")
 	var off: DuelConfig = c.duplicate() as DuelConfig
@@ -247,6 +250,7 @@ func test_side_setup_two_copies_art_trait_hero_no_doctrine_by_default() -> void:
 
 func test_doctrine_validation_hooks() -> void:
 	var c: DuelConfig = (_cfg().duplicate() as DuelConfig)
+	c.doctrine_min_trait_picks = 0
 	var d: DuelDeck = _legal()
 	assert_true(DuelRules.validate(d, c)["ok"], "no Doctrine is fine by default")
 	c.doctrine_required = true
@@ -262,7 +266,7 @@ func test_doctrine_validation_hooks() -> void:
 	assert_true(r["ok"], "4 Vanguard picks meet a minimum of 3: %s" % str(r["errors"]))
 	c.doctrine_min_trait_picks = 5
 	r = DuelRules.validate(d, c)
-	assert_eq(_find(r["errors"], &"doctrine_rule").get("text", ""), "Doctrine Vanguard needs 5 picks that wear Vanguard (4/5)", "red rule")
+	assert_eq(_find(r["errors"], &"doctrine_rule").get("text", ""), "Doctrine Vanguard needs 5 Vanguard picks (4/5)", "red rule")
 
 
 func test_duel_heroes_use_campaign_stats() -> void:
@@ -297,3 +301,47 @@ func test_match_setup_economy_and_mode() -> void:
 	assert_true(m.sides[0].operator_can_deploy, "D1: the hero is placeable from round 1")
 	assert_eq(m.sides[1].setup.armor_bonus, -1, "armor bonus per side")
 	assert_eq(m.sides[0].hand.size() + m.sides[0].deck.size(), 20, "20 cards in play")
+
+
+## duel-mode.md §12.3 / §12.6: a Doctrine needs 4 picks wearing its trait (red line otherwise), None is
+## allowed, and the presets' Doctrines meet it.
+func test_doctrine_needs_four_picks() -> void:
+	var c: DuelConfig = _cfg()
+	assert_eq(c.doctrine_min_trait_picks, 4, "shipped minimum: 4 picks")
+	assert_true(c.doctrine_enabled and not c.doctrine_required, "on, None allowed")
+	var d: DuelDeck = _legal()
+	assert_true(DuelRules.validate(d, c)["ok"], "None is legal")
+	d.set_doctrine(&"vanguard")  # Point Man, Breacher, Shieldman (default Vanguard) + Bulwark (printed)
+	assert_true(DuelRules.validate(d, c)["ok"], "4 Vanguard picks: legal")
+	d.remove_pick(&"bulwark")
+	d.add_pick(&"sabotage")
+	var r: Dictionary = DuelRules.validate(d, c)
+	var line: Dictionary = _find(r["errors"], &"doctrine_rule")
+	assert_eq(line.get("text", ""), "Doctrine Vanguard needs 4 Vanguard picks (3/4)", "the spec's red line")
+	assert_eq(line.get("fix_filter", {}), {"doctrine": true}, "opens the Doctrine picker")
+	assert_false(r["ok"], "blocks PLAY")
+	d.set_art(&"brawler", &"")  # Brawler stays Undead: still 3
+	d.remove_pick(&"brawler")
+	assert_eq(d.add_pick(&"marksman"), "", "add Marksman")
+	assert_false(DuelRules.validate(d, c)["ok"], "Marksman (Spec Ops) doesn't count for Vanguard")
+	d.set_doctrine(&"")
+	assert_true(DuelRules.validate(d, c)["ok"], "None again: legal")
+	var txt: String = DuelRules.doctrine_text(&"undead", c)
+	assert_true(txt.contains("Needs 4 Undead picks"), "the Doctrine text explains the minimum: %s" % txt)
+	assert_true(txt.begins_with("Doctrine: your first Undead in play already turns on the Undead 2-set."), "the spec's card text")
+	var want: Dictionary = {&"spearhead": &"vanguard", &"overwatch": &"specops", &"iron_wall": &"heavy", &"hollow_ranks": &"undead"}
+	for id: StringName in want:
+		assert_eq(c.preset(id).doctrine_trait, want[id], "%s Doctrine" % id)
+
+
+## §12.4 preset content: Overwatch Smoke Screen -> Ammo Resupply, Hollow Ranks Sabotage -> Listening Post.
+func test_tuned_preset_lists() -> void:
+	var c: DuelConfig = _cfg()
+	var ow: DuelDeck = c.preset(&"overwatch")
+	assert_false(ow.has_pick(&"smoke_screen"), "Overwatch: no Smoke Screen")
+	assert_true(ow.has_pick(&"ammo_resupply"), "Overwatch: Ammo Resupply")
+	var hr: DuelDeck = c.preset(&"hollow_ranks")
+	assert_false(hr.has_pick(&"sabotage"), "Hollow Ranks: no Sabotage")
+	assert_true(hr.has_pick(&"listening_post"), "Hollow Ranks: Listening Post")
+	assert_eq(c.preset(&"spearhead").hero_id, &"kestrel_ar7", "heroes unchanged")
+	assert_eq(hr.hero_id, &"wasp_9", "heroes unchanged")

@@ -214,5 +214,5 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"killstreak": ["Killstreak", "Eliminations build your streak; at its number a killstreak is ready (amber glow) and you tap it to call it in."],
 	&"incoming": ["Incoming", "A rival card played face-down this Deploy: it lands here at Reveal."],
 	&"set_callout": ["Set callout", "When a trait set switches on (2 or 3 in play) its bonus is announced beside the trait rail, then folds into it. A red crack: a set switched off."],
-	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play."],
+	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play. In Duel, Doctrine only starts a set."],
 }

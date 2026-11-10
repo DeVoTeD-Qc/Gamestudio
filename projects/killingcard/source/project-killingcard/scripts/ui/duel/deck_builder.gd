@@ -89,6 +89,10 @@ func screen_id() -> StringName:
 	return &"duel_builder"
 
 
+## The player picked the Doctrine (None included) themselves: no automatic choice any more.
+var _doctrine_touched: bool = false
+
+
 func backdrop_key() -> StringName:
 	return &""
 
@@ -293,8 +297,19 @@ func set_hero(id: StringName) -> Dictionary:
 
 
 func set_doctrine(t: StringName) -> void:
+	_doctrine_touched = true
 	deck["doctrine"] = t
 	_changed("Doctrine: %s" % (SynergyGlyphs.trait_name(t) if t != &"" else "none"), false)
+
+
+## kc-duel-impl (§12.3): a new deck's Doctrine follows its most-picked trait once that trait has the
+## picks a Doctrine needs, until the player picks one (None included) themselves.
+func _auto_doctrine() -> void:
+	if _doctrine_touched or String(deck.get("id", "")) != "" or StringName(str(deck.get("doctrine", ""))) != &"":
+		return
+	var main: StringName = DuelViews.main_trait(deck)
+	if main != &"" and DuelViews.picks_wearing(deck, main) >= maxi(1, DuelViews.doctrine_min()):
+		deck["doctrine"] = main
 
 
 func set_deck_name(n: String) -> void:
@@ -1127,7 +1142,8 @@ func _hero_tile(h: Dictionary, s: Dictionary) -> Button:
 
 ## The Doctrine picker: 4 traits, each with its rule (from the rules) and the deck's copies of it.
 func open_doctrine_picker() -> Dictionary:
-	var s: Dictionary = W.sheet(self, "PICK YOUR DOCTRINE · +1 to one trait's count")
+	var s: Dictionary = W.sheet(self, "PICK YOUR DOCTRINE · it starts one trait's set")
+	var need: int = DuelViews.doctrine_min()
 	s["root"].name = "DoctrinePicker"
 	var body: VBoxContainer = s["body"]
 	var comp: Dictionary = DuelViews.composition(deck)
@@ -1157,7 +1173,12 @@ func open_doctrine_picker() -> Dictionary:
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(col)
 		var copies: int = int(comp["traits"].get(t, 0))
-		col.add_child(W.label("%s · %d copies in your deck%s" % [d["name"], copies, " · your main trait" if t == main and copies > 0 else ""], &"TileName", 18))
+		var wearing: int = copies / DuelViews.COPIES
+		# kc-duel-impl (§12.3): a Doctrine needs `need` picks wearing its trait; under that it can't be picked.
+		var short: bool = t != &"" and need > 0 and wearing < need
+		b.disabled = short and StringName(str(deck.get("doctrine", ""))) != t
+		col.add_child(W.label("%s · %d copies in your deck%s%s" % [d["name"], copies, " · your main trait" if t == main and copies > 0 else "",
+				" · needs %d picks (%d/%d)" % [need, wearing, need] if short else ""], &"TileName", 18))
 		col.add_child(W.label(String(d["text"]), &"", 16, Color(0, 0, 0, 0), true))
 		col.minimum_size_changed.connect(func() -> void: b.custom_minimum_size.y = col.get_combined_minimum_size().y + 14.0)
 		b.custom_minimum_size.y = 96
@@ -1256,6 +1277,7 @@ func _ask_leave() -> void:
 # =============================================================================
 
 func _changed(text: String, can_undo: bool, id: StringName = &"", delta: int = 0) -> void:
+	_auto_doctrine()
 	_refill()
 	_refresh_panel()
 	_snackbar(text, can_undo)

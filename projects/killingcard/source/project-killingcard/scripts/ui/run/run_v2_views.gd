@@ -75,7 +75,7 @@ const OPERATOR_KITS: Dictionary = {
 			"ability_id": &"ab_dig_in", "ability_name": "Dig In", "ability": "Your units in a column have Cover 1 this round.",
 			"target": "a column", "needs_operator": false, "unlock": ""},
 	&"longreach_338": {"passive_name": "Overpenetration", "passive": "The Operator has Pierce.",
-			"ability_id": &"ab_marked_shot", "ability_name": "Marked Shot", "ability": "3 damage to an enemy unit in the Operator's column.",
+			"ability_id": &"ab_marked_shot", "ability_name": "Marked Shot", "ability": "2 damage to an enemy unit in the Operator's column.",
 			"target": "an enemy unit in the Operator's column", "needs_operator": true, "unlock": "Finish your first run (win or lose)."},
 	&"wasp_9": {"passive_name": "Run and Gun", "passive": "May Rotate twice per round.",
 			"ability_id": &"ab_flashbang", "ability_name": "Flashbang", "ability": "Enemies in the Operator's column lose First Shot and get -2 FP this round.",

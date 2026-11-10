@@ -147,9 +147,9 @@ func test_specops_heavy_undead_tiers() -> void:
 	var u1: RulesUnit = F.place(u, P, _u("u1", 2, 3, &"", &"undead"), L)
 	F.place(u, P, _u("u2", 2, 3, &"", &"undead"), R)
 	assert_eq(int(u.synergy_of(u1)["heal"]), 1, "Undead 2: heal 1")
-	assert_eq([u.firepower_of(u1), u.cover_of(u1)], [2, 0], "no FP or Cover at 2")
+	assert_eq([u.firepower_of(u1), u.cover_of(u1)], [2, 1], "Undead 2: Cover +1, no FP (kc-duel-tune §12.3)")
 	F.place(u, P, _u("u3", 2, 3, &"", &"undead"), M)
-	assert_eq([u.firepower_of(u1), u.cover_of(u1)], [3, 1], "Undead 3: +1 FP and Cover +1 (head T3)")
+	assert_eq([u.firepower_of(u1), u.cover_of(u1)], [3, 1], "Undead 3: +1 FP (Cover from the 2-set)")
 
 
 func test_fields_count_for_sets() -> void:

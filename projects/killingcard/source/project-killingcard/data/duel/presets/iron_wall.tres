@@ -8,6 +8,6 @@ id = &"iron_wall"
 display_name = "Iron Wall"
 hero_id = &"bastion_60"
 picks = Array[Dictionary]([{"art_id": &"", "card_id": &"rifleman"}, {"art_id": &"breacher~mastery", "card_id": &"breacher"}, {"art_id": &"", "card_id": &"gunner"}, {"art_id": &"marksman~mastery", "card_id": &"marksman"}, {"art_id": &"", "card_id": &"demolitions_expert"}, {"art_id": &"", "card_id": &"ammo_resupply"}, {"art_id": &"", "card_id": &"suppressing_fire"}, {"art_id": &"", "card_id": &"mortar_pit"}, {"art_id": &"", "card_id": &"okafor_anvil"}, {"art_id": &"", "card_id": &"hold_the_line"}])
-doctrine_trait = &""
+doctrine_trait = &"heavy"
 plan = "Hold one column with Gunners and Anvil; the Mortar does the rest."
 preset = true

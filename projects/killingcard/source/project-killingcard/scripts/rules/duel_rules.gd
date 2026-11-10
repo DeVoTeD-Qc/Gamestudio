@@ -196,7 +196,7 @@ static func _doctrine_checks(deck: DuelDeck, cfg: DuelConfig, _unit_traits: Dict
 		wearing += int(deck.trait_of_pick(i) == t)
 	var tname: String = ArtTraits.trait_name(t)
 	if cfg.doctrine_min_trait_picks > 0 and wearing < cfg.doctrine_min_trait_picks:
-		errors.append(_line(E_DOCTRINE_RULE, "Doctrine %s needs %d picks that wear %s (%d/%d)" % [tname,
+		errors.append(_line(E_DOCTRINE_RULE, "Doctrine %s needs %d %s picks (%d/%d)" % [tname,
 				cfg.doctrine_min_trait_picks, tname, wearing, cfg.doctrine_min_trait_picks], {"doctrine": true},
 				{"wearing": wearing}))
 	elif wearing == 0 and not deck.picks.is_empty():
@@ -214,8 +214,12 @@ static func doctrine_text(t: StringName, cfg: DuelConfig = null) -> String:
 		return ""
 	var n: String = ArtTraits.trait_name(t)
 	var tiers: Array = SynergyRules.TIER_TEXT.get(t, ["", ""])
-	return "Doctrine %s: while you have a %s card in play, your %s count gets +1, so its set bonus starts one card sooner. 2 %s: %s. 3 %s: %s." % [
-			n, n, n, n, tiers[0], n, tiers[1]]
+	# duel-mode.md §12.3: the Duel Doctrine starts the set (one member counts as two), never completes it.
+	var need: int = cfg.doctrine_min_trait_picks if cfg != null else 0
+	var out: String = "Doctrine: your first %s in play already turns on the %s 2-set. The 3-set still needs 3 %s." % [n, n, n]
+	if need > 0:
+		out += " Needs %d %s picks in your deck." % [need, n]
+	return out + " 2 %s: %s. 3 %s: %s." % [n, tiers[0], n, tiers[1]]
 
 
 static func _line(code: StringName, text: String, fix_filter: Dictionary = {}, data: Dictionary = {}) -> Dictionary:
