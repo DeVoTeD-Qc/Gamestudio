@@ -11,7 +11,8 @@
 #     deck   the export's 20-card list as one deck (Kestrel, no Doctrine) vs each preset.
 #     starter the campaign starter shapes as Duel decks vs each preset (cheap context; the campaign test is
 #            wip_run_check.gd).
-#   Options: duel_sim's (n=N ...); WIP_CARDS=id,id (swap subset); WIP_SET (wip_cards.gd what-ifs).
+#   Options: duel_sim's (n=N ...); WIP_CARDS=id,id (swap subset); WIP_REF=id,id (shipped cards through the same
+#   swap, as yardsticks); WIP_SET (wip_cards.gd what-ifs).
 #   Run: WIP_EXPS=swap godot --headless --path . -s res://tests/tools/wip_duel_sim.gd -- exps=none n=40
 # Author: Sr Game Designer Agent (kc-wip-design)
 extends "res://tests/tools/duel_sim.gd"
@@ -145,11 +146,17 @@ func _exp_swap() -> void:
 	print("  baseline: %s" % ", ".join(PackedStringArray(range(PRESETS.size()).map(func(p: int) -> String:
 			return "%s %.1f%%" % [PRESETS[p]["name"], base[p]]))))
 	print("  %-16s %4s | %-60s | %s" % ["card", "cost", "replaces (per preset) -> win% (delta)", "mean delta / AI plays per game"])
-	for row: Array in WC.LIST:
+	var rows: Array = WC.LIST.duplicate()
+	# WIP_REF=si_trooper,brawler,...: shipped cards through the same swap, as yardsticks.
+	for rid: String in OS.get_environment("WIP_REF").split(",", false):
+		var rc: CardData = load("res://data/cards/%s.tres" % rid) as CardData
+		rows.append([rc.id, "(ref) " + rc.display_name])
+		only.append(rid)
+	for row: Array in rows:
 		var id: StringName = row[0]
 		if not only.is_empty() and String(id) not in only:
 			continue
-		var c: CardData = wip[id]
+		var c: CardData = wip[id] if wip.has(id) else load("res://data/cards/%s.tres" % id) as CardData
 		var parts: Array[String] = []
 		var sum_d: float = 0.0
 		var cnt: int = 0

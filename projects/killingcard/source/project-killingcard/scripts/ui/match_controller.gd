@@ -632,8 +632,26 @@ func _deploy_hint() -> void:
 func refresh() -> void:
 	if state == null:
 		return
-	_screen.show_snapshot(MatchSnapshot.build(state, map, me_side, killfeed))
+	var snap: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)
+	_screen.show_snapshot(snap)
 	_show_selection()
+	# kc-ks-seq: the INCOMING markers of strikes still waiting for a fight (the playback moves them
+	# itself while it runs).
+	var fx: Control = _fx()
+	if fx != null and not _busy and fx.has_method(&"set_pending_strikes"):
+		fx.set_pending_strikes(snap.get("ks_pending", []))
+		_connect_ks_inspect(fx)
+
+
+## kc-ks-seq: the killstreak banner and INCOMING chips open the killstreak's rules.
+func _connect_ks_inspect(fx: Control) -> void:
+	var ks: Variant = fx.get(&"ks")
+	if ks is Control and not (ks as Control).is_connected(&"inspect_requested", _on_ks_inspect):
+		(ks as Control).connect(&"inspect_requested", _on_ks_inspect)
+
+
+func _on_ks_inspect(item_id: StringName, side: StringName) -> void:
+	open_item_inspector(item_id, me_side if side == MatchState.SIDE_NAMES[me_side] else foe_side)
 
 
 func _after_change() -> void:
@@ -1043,6 +1061,7 @@ func play_at(zone: int) -> Dictionary:
 
 
 func _submit(intent: Dictionary) -> Dictionary:
+	var ev_start: int = state.events.size()
 	var res: Dictionary = state.submit(me_side, intent)
 	intent_log.append({"intent": intent, "result": res})
 	intent_submitted.emit(intent, res)
@@ -1053,7 +1072,18 @@ func _submit(intent: Dictionary) -> Dictionary:
 			var item: LoadoutItem = state.find_item(me_side, intent["item_id"])
 			var what: String = item.display_name if item != null else "Item"
 			var zone: int = int(intent.get("zone", -1))
-			_screen.show_toast("%s queued%s. It resolves at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
+			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
+				# kc-ks-seq: the killstreak's own banner (and the drone's scan) instead of a toast.
+				var fx: Control = _fx()
+				var used: Array = state.events_since(ev_start).filter(func(e: Dictionary) -> bool:
+					return e["type"] == RulesEvent.ITEM_USED)
+				if fx != null and not used.is_empty():
+					fx.play(used)
+				else:
+					_screen.show_toast("%s called in%s. %s" % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else "",
+							KillstreakFx.when_text(item.id)])
+			else:
+				_screen.show_toast("%s queued%s. It resolves at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
 	else:
 		_screen.show_toast(PlayText.describe(res, _ctx())["reason"])
 		_show_selection()
@@ -1886,11 +1916,16 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 
 ## kc-ui3: a loadout item's rules (long-press on a killstreak tile): its card, threshold, what it does
 ## and, in plain words, whether you can call it in now.
-func open_item_inspector(item_id: StringName) -> void:
+func open_item_inspector(item_id: StringName, side: int = -1) -> void:
 	if state == null:
 		return
-	var item: LoadoutItem = state.find_item(me_side, item_id)
+	if side < 0:
+		side = me_side
+	var item: LoadoutItem = state.find_item(side, item_id)
 	if item == null:
+		return
+	if side != me_side:
+		_open_rival_item(item)
 		return
 	var me: RulesSide = state.sides[me_side]
 	var is_ks: bool = item.slot == DataEnums.LoadoutSlot.KILLSTREAK
@@ -1904,6 +1939,8 @@ func open_item_inspector(item_id: StringName) -> void:
 				"" if threshold - me.streak == 1 else "s"]
 	else:
 		status = String(PlayText.describe(check, _item_ctx(item))["reason"])
+	if is_ks:
+		status += " " + _ks_timing_line(item, me_side)
 	var icon: String = String({&"recon_drone": "ks_recon_drone", &"mortar_barrage": "ks_mortar", &"sentry_turret": "ks_sentry",
 			&"attack_helo": "ks_attack_helo", &"gunship": "ks_gunship"}.get(item.id, ""))
 	var view: Dictionary = {"name": item.display_name, "type": "killstreak" if is_ks else "tactic", "threshold": threshold,
@@ -1913,6 +1950,26 @@ func open_item_inspector(item_id: StringName) -> void:
 		type_text += " · cost %d" % item.supply_cost
 	_screen.get_inspector().open({"view": view, "title": item.display_name, "type": type_text, "text": item.text,
 			"keywords": [], "status": status, "side": me_side})
+
+
+## kc-ks-seq: when a killstreak resolves, and where a pending strike will land, in words.
+func _ks_timing_line(item: LoadoutItem, side: int) -> String:
+	var line: String = "When: " + KillstreakFx.when_text(item.id)
+	for pe: Dictionary in MatchSnapshot.pending_strikes(state, me_side):
+		if pe["item_id"] == item.id and pe["side"] == MatchState.SIDE_NAMES[side]:
+			var cols: Array = (pe["zones"] as Array).map(func(z: Variant) -> String:
+				return ["A", "B", "C"][MapData.ZONE_IDS.find(StringName(z))])
+			line += " Incoming on column%s %s." % ["s" if cols.size() > 1 else "", ", ".join(cols)]
+	return line
+
+
+## kc-ks-seq: a rival killstreak (its banner or INCOMING chip): what it does and when it lands.
+func _open_rival_item(item: LoadoutItem) -> void:
+	var icon: String = String(KillstreakFx.look(item.id)["icon"])
+	var view: Dictionary = {"name": item.display_name, "type": "killstreak", "threshold": item.streak_threshold,
+			"cost": item.supply_cost, "art_icon": icon, "id": String(item.id), "text": item.text, "side": "enemy"}
+	_screen.get_inspector().open({"view": view, "title": item.display_name, "type": "rival killstreak",
+			"text": item.text, "keywords": [], "status": _ks_timing_line(item, foe_side), "side": foe_side})
 
 
 func _open_operator(side: int) -> void:
@@ -2029,6 +2086,25 @@ func _add_v2_line(e: Dictionary) -> void:
 			if text == "":
 				text = "Boss rule: %s" % String(e.get("rule", "")).capitalize()
 			side = &"enemy"
+		"killstreak_queued":
+			# kc-ks-seq: the log says when a strike lands.
+			var qi: LoadoutItem = state.find_item(me_side if side == MatchState.SIDE_NAMES[me_side] else foe_side, StringName(str(e.get("item_id", ""))))
+			var zs: Array = (e.get("zones", []) as Array).map(func(z: Variant) -> String: return ["A", "B", "C"][MapData.ZONE_IDS.find(StringName(z))])
+			text = "%s%s incoming on %s: strikes at the fight" % ["" if side == MatchState.SIDE_NAMES[me_side] else "Rival ",
+					qi.display_name if qi != null else "Killstreak", "every column" if zs.size() == 3 else "column " + ", ".join(zs)]
+		"killstreak_resolved":
+			var hits: Array = []
+			for h: Variant in e.get("hits", []):
+				var hd: Dictionary = (h as Dictionary).duplicate()
+				var nm: String = _name_of(int(hd.get("uid", -1)))
+				if nm != "":
+					hd["name"] = nm
+				hits.append(hd)
+			var zi: Array[int] = []
+			for z: Variant in e.get("zones", []):
+				zi.append(MapData.ZONE_IDS.find(StringName(z)))
+			var ri: LoadoutItem = state.find_item(me_side if side == MatchState.SIDE_NAMES[me_side] else foe_side, StringName(str(e.get("item_id", ""))))
+			text = KillstreakStrikes.log_line(ri.display_name if ri != null else "Killstreak", zi, hits, e.get("kills", []))
 		"item_revealed", "item_used":
 			if not bool(e.get("ability", false)) or (t == "item_used" and e.has("private_to")):
 				return

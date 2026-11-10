@@ -8,7 +8,7 @@
 #   Checkpoints for screenshots: open with `#cp=<name>&t=<seconds>` on the web (or
 #   `-- --cp=<name> --t=<seconds>` on desktop). Everything before the checkpoint is played
 #   instantly (skip), then the checkpoint plays and the tree pauses after t seconds.
-#   Names: mid_firefight, left_trade, takeover, streak, shatter.
+#   Names: mid_firefight, left_trade, takeover (kc-ks-seq: the mortar's queue + strike), streak, shatter.
 # Dependencies: scenes/Match.tscn (read-only), scenes/fx/*, scripts/fx/*.
 # Author: Game Feel Engineer Agent (p14)
 extends Control
@@ -162,11 +162,20 @@ func _script_events() -> Array:
 	e.append(_ev(RulesEvent.UNIT_ELIMINATED, {"victim_uid": 1, "victim_side": &"player", "victim_id": &"point_man", "is_operator": false,
 			"by_uid": 21, "by_side": &"enemy", "by_id": &"breacher", "zone": &"left", "source_kind": &"unit", "by_killstreak": false, "credit": true}))
 	_mark("takeover", e)
+	# kc-ks-seq: revealed and queued at Reveal (INCOMING on column C), then Firefight step 0.
 	e.append(_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"right"}))
+	e.append(_ev(RulesEvent.KILLSTREAK_QUEUED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"right",
+			"zones": [&"right"], "fights": 1, "resolves": &"firefight"}))
+	e.append(_ev(RulesEvent.KILLSTREAK_STRIKE, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"right",
+			"zones": [&"right"], "pass": 1, "passes": 1}))
 	e.append(_ev(RulesEvent.DAMAGE_DEALT, {"target_uid": 23, "side": &"enemy", "amount": 3, "remaining": 0, "source_id": &"mortar_barrage"}))
 	e.append(_ev(RulesEvent.DAMAGE_DEALT, {"target_uid": 24, "side": &"enemy", "amount": 3, "remaining": 3, "source_id": &"mortar_barrage"}))
 	e.append(_ev(RulesEvent.UNIT_ELIMINATED, {"victim_uid": 23, "victim_side": &"enemy", "victim_id": &"rifleman", "is_operator": false,
 			"by_uid": -1, "by_side": &"player", "by_id": &"mortar_barrage", "zone": &"right", "source_kind": &"killstreak", "by_killstreak": true, "credit": true}))
+	e.append(_ev(RulesEvent.KILLSTREAK_RESOLVED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"right",
+			"zones": [&"right"], "pass": 1, "passes": 1, "kills": [23],
+			"hits": [{"uid": 23, "side": &"enemy", "amount": 3, "remaining": 0, "name": "Rifleman"},
+				{"uid": 24, "side": &"enemy", "amount": 3, "remaining": 3, "name": "Gunner"}]}))
 	_mark("streak", e)
 	e.append(_ev(RulesEvent.ZONE_CONTROL, {"zone": &"mid", "owner": &"player"}))
 	e.append(_ev(RulesEvent.MODE_SCORED, {"mode": &"zone_control", "player_gained": 2, "enemy_gained": 1, "player_score": 3, "enemy_score": 2, "target": 6}))

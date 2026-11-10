@@ -120,10 +120,11 @@ func test_fast_animations_setting_halves_durations() -> void:
 		_setup()
 		_director.use_settings = true
 		await _director.play(_firefight() + [
-			_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"right"}),
+			_ev(RulesEvent.ITEM_REVEALED, {"side": &"enemy", "item_id": &"mortar_barrage", "zone": &"left"}),
+			_ev(RulesEvent.KILLSTREAK_STRIKE, {"side": &"enemy", "item_id": &"mortar_barrage", "zone": &"left", "zones": [&"left"], "pass": 1, "passes": 1}),
 		])
 		var d: Dictionary = {}
-		for kind: StringName in [&"tracer", &"hit_marker", &"damage_number", &"stamp", &"killfeed", &"takeover", &"shake", &"hitstop"]:
+		for kind: StringName in [&"tracer", &"hit_marker", &"damage_number", &"stamp", &"killfeed", &"ks_banner", &"shells", &"shake", &"hitstop"]:
 			d[kind] = _director.logged_duration(kind)
 		assert_eq(_director.fast, fast, "director read fast_animations from Settings")
 		durations.append(d)
@@ -135,7 +136,7 @@ func test_fast_animations_setting_halves_durations() -> void:
 		assert_true(normal > 0.0, "%s ran at normal speed" % kind)
 		assert_true(absf(quick - normal * FxTiming.FAST_SCALE) < 0.001,
 				"%s: fast %.3f should be half of %.3f" % [kind, quick, normal])
-	assert_true(absf(float(durations[0][&"takeover"]) - 0.8) < 0.001, "takeover is 0.8 s (art direction)")
+	assert_true(absf(float(durations[0][&"ks_banner"]) - 1.7) < 0.001, "kc-ks-seq: the compact banner stays 1.7 s")
 
 
 func test_reduced_motion_drops_shake_and_hitstop_but_keeps_feedback() -> void:
@@ -161,22 +162,24 @@ func test_private_events_of_the_other_side_are_skipped() -> void:
 		_ev(RulesEvent.ITEM_USED, {"side": &"player", "item_id": &"recon_drone", "zone": &"left", "private_to": &"player"}),
 	])
 	assert_eq(seen.size(), 1, "only the viewer's private event plays")
-	assert_eq(_director.logged_kinds(), [&"popup"] as Array[StringName], "UPLINK QUEUED pop-up for own killstreak")
+	assert_eq(_director.logged_kinds(), [&"ks_banner", &"scan"] as Array[StringName], "own Recon Drone: CALLED IN banner + scan")
+	assert_eq(_director.ks.last_banner.get("mode"), &"called", "called-in banner")
 	await _teardown()
 
 
-func test_killstreak_reveal_plays_takeover_and_other_items_do_not() -> void:
+func test_killstreak_reveal_plays_its_banner_and_other_items_do_not() -> void:
 	_setup(true)
-	var take: Control = _director.takeover
+	var ks: Control = _director.ks
 	_director.play([
 		_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"some_item", "zone": &"mid"}),
 		_ev(RulesEvent.ITEM_REVEALED, {"side": &"enemy", "item_id": &"mortar_barrage", "zone": &"left"}),
 	])
 	assert_eq(_director.logged_kinds(), [&"tag"] as Array[StringName], "a non-killstreak item: name tag only")
 	await _director.sequence_finished
-	assert_eq(_director.logged_kinds(), [&"tag", &"takeover"] as Array[StringName], "mortar: takeover")
-	assert_true(String(take.last_data.get("name", "")).to_lower().contains("mortar"), "takeover names the killstreak")
-	assert_false(take.visible, "takeover hides when done")
+	assert_eq(_director.logged_kinds(), [&"tag", &"ks_banner"] as Array[StringName], "mortar: its compact banner, no takeover")
+	assert_true(String(ks.last_banner.get("name", "")).to_lower().contains("mortar"), "the banner names the killstreak")
+	assert_eq(ks.last_banner.get("mode"), &"revealed", "a rival killstreak is HOSTILE")
+	assert_true(ks.banner.size.y <= 56.0, "compact: one strip, not a full-screen band")
 	await _teardown()
 
 
@@ -256,3 +259,102 @@ func test_fx_timing_table() -> void:
 	assert_eq(fast.get_value(&"feed_life"), 2.0, "killfeed life halves")
 	assert_eq(fast.get_value(&"shake_px"), 3.0, "distances are not scaled")
 	assert_true(normal.get_value(&"shake_px") >= 2.0 and normal.get_value(&"shake_px_big") <= 4.0, "shake 2-4 px")
+
+
+# --- kc-ks-seq: per-killstreak sequences ------------------------------------------------------
+
+func _mortar_round() -> Array:
+	return [
+		_ev(RulesEvent.ITEM_REVEALED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"mid"}),
+		_ev(RulesEvent.KILLSTREAK_QUEUED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"mid", "zones": [&"mid"], "fights": 1, "resolves": &"firefight"}),
+		_ev(RulesEvent.PHASE_CHANGED, {"phase": &"firefight"}),
+		_ev(RulesEvent.KILLSTREAK_STRIKE, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"mid", "zones": [&"mid"], "pass": 1, "passes": 1}),
+		_ev(RulesEvent.DAMAGE_DEALT, {"target_uid": 11, "side": &"enemy", "amount": 2, "remaining": 0, "source_id": &"mortar_barrage"}),
+		_ev(RulesEvent.DAMAGE_DEALT, {"target_uid": 12, "side": &"enemy", "amount": 2, "remaining": 2, "source_id": &"mortar_barrage"}),
+		_ev(RulesEvent.UNIT_ELIMINATED, {"victim_uid": 11, "victim_side": &"enemy", "victim_id": &"rifleman", "is_operator": false,
+				"by_uid": -1, "by_side": &"player", "by_id": &"mortar_barrage", "zone": &"mid", "source_kind": &"killstreak",
+				"by_killstreak": true, "credit": true}),
+		_ev(RulesEvent.KILLSTREAK_RESOLVED, {"side": &"player", "item_id": &"mortar_barrage", "zone": &"mid", "zones": [&"mid"],
+				"pass": 1, "passes": 1, "kills": [11], "hits": [
+					{"uid": 11, "side": &"enemy", "amount": 2, "remaining": 0, "name": "Rifleman"},
+					{"uid": 12, "side": &"enemy", "amount": 2, "remaining": 2, "name": "Gunner"}]}),
+	]
+
+
+func test_mortar_marks_its_column_then_strikes_with_numbers_on_impact() -> void:
+	_setup(true)
+	var ks: Control = _director.ks
+	var events: Array = _mortar_round()
+	var marked_at_strike: Array = []
+	var number_t: Array = []
+	var strike_t: Array = [0.0]
+	_director.event_started.connect(func(ev: Dictionary) -> void:
+		if ev["type"] == RulesEvent.KILLSTREAK_STRIKE:
+			marked_at_strike.append(ks.pending_keys().size())
+			strike_t[0] = Time.get_ticks_msec() / 1000.0)
+	_director.fx_started.connect(func(kind: StringName, _n: Object, _d: float) -> void:
+		if kind == &"damage_number":
+			number_t.append(Time.get_ticks_msec() / 1000.0 - strike_t[0]))
+	await _director.play(events)
+	var kinds: Array[StringName] = _director.logged_kinds()
+	assert_true(kinds.has(&"ks_queued"), "INCOMING marker when queued")
+	assert_eq(marked_at_strike, [1], "the marker stood until the strike")
+	assert_eq(ks.pending_keys().size(), 0, "and went away with it")
+	assert_true(kinds.find(&"shells") >= 0 and kinds.find(&"shells") < kinds.find(&"damage_number"), "shells before the numbers")
+	assert_eq(_count(kinds, &"damage_number"), 2, "a number on each hit unit")
+	assert_true(number_t.size() == 2 and float(number_t[0]) > 0.2, "numbers wait for the shells (%s)" % str(number_t))
+	assert_false(kinds.has(&"takeover"), "no full-screen takeover")
+	var feed: Control = _director.killfeed
+	var lines: Array = feed.get_entries().map(func(l: Control) -> String: return "%s: %s" % [l.entry["attacker"], l.entry["victim"]])
+	assert_true(lines.has("Mortar Barrage hit column B: Rifleman −2 (down), Gunner −2"), "plain killfeed line: %s" % str(lines))
+	await _teardown()
+
+
+func test_each_killstreak_has_its_own_look() -> void:
+	var seqs: Dictionary = {}
+	var colors: Dictionary = {}
+	for id: StringName in [&"recon_drone", &"mortar_barrage", &"sentry_turret", &"attack_helo"]:
+		var look: Dictionary = KillstreakFx.look(id)
+		seqs[look["seq"]] = true
+		colors[(look["color"] as Color).to_html()] = true
+		assert_true(IconSheet.has_icon(look["icon"]), "%s has its icon" % id)
+		assert_true(String(look["effect"]) != "" and String(look["when"]) != "", "%s says what and when" % id)
+	assert_eq(seqs.size(), 4, "four different sequences")
+	assert_eq(colors.size(), 4, "four different colours")
+
+
+func test_helo_strafe_and_sentry_drop_and_reduced_motion_banner() -> void:
+	_setup(true, true)
+	await _director.play([
+		_ev(RulesEvent.ITEM_REVEALED, {"side": &"enemy", "item_id": &"sentry_turret", "zone": &"mid"}),
+		_ev(RulesEvent.KILLSTREAK_STRIKE, {"side": &"enemy", "item_id": &"attack_helo", "zone": &"", "zones": [&"left", &"mid", &"right"], "pass": 2, "passes": 2}),
+		_ev(RulesEvent.DAMAGE_DEALT, {"target_uid": 1, "side": &"player", "amount": 2, "remaining": 3, "source_id": &"attack_helo"}),
+		_ev(RulesEvent.KILLSTREAK_RESOLVED, {"side": &"enemy", "item_id": &"attack_helo", "zone": &"", "zones": [&"left", &"mid", &"right"],
+				"pass": 2, "passes": 2, "kills": [], "hits": [{"uid": 1, "side": &"player", "amount": 2, "remaining": 3, "name": "Rifleman", "zone": &"left"}]}),
+	])
+	var kinds: Array[StringName] = _director.logged_kinds()
+	assert_true(kinds.has(&"drop"), "the Sentry drops in")
+	assert_true(kinds.has(&"strafe"), "the helo strafes")
+	assert_true(kinds.has(&"ks_banner"), "the rival's Sentry gets a HOSTILE banner")
+	assert_eq(_director.ks.banner.position.y, 6.0, "reduced motion: the banner fades in place, no slide")
+	await _teardown()
+
+
+func test_pending_markers_follow_the_snapshot_and_are_inspectable() -> void:
+	_setup(true)
+	var ks: Control = _director.ks
+	_director.set_pending_strikes([{"item_id": &"attack_helo", "side": &"enemy", "zones": [&"left", &"mid", &"right"], "label": "AT FIGHT"}])
+	assert_eq(ks.pending_keys().size(), 3, "a helo marks every column")
+	var got: Array = []
+	ks.inspect_requested.connect(func(id: StringName, side: StringName) -> void: got.append([id, side]))
+	var chip: Control = (ks.markers.values()[0] as Control).get(&"chip")
+	assert_true(chip != null and chip.mouse_filter == Control.MOUSE_FILTER_STOP, "the chip takes input")
+	var right: InputEventMouseButton = InputEventMouseButton.new()
+	right.button_index = MOUSE_BUTTON_RIGHT
+	right.pressed = true
+	chip.gui_input.emit(right)
+	assert_eq(got, [[&"attack_helo", &"enemy"]], "right click inspects it")
+	_director.set_pending_strikes([])
+	await tree.process_frame
+	assert_eq(ks.pending_keys().size(), 0, "cleared with the snapshot")
+	await _teardown()

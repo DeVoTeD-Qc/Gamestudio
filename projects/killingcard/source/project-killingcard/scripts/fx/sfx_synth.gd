@@ -7,7 +7,8 @@
 #   and each step layers one more partial), the round-step cues (step_1 Reveal, step_2 Firefight,
 #   step_3 Score: rising two-tone chirps), hit, hit_big, kill, block (Cover / no damage), card_land
 #   (the calling-card stamp), click (button press), supply (a Supply hex spent), column_win and
-#   reward.
+#   reward. kc-ks-seq: the killstreak sequences (ks_whistle: the mortar's falling whistle,
+#   ks_rotor: the helo's rotor chop, ks_scan: the recon drone's rising scan ping).
 #   Deterministic: the noise uses a fixed seed per cue, so the generated files never change.
 # Dependencies: none.
 # Author: Game Feel Engineer Agent (kc-juice)
@@ -20,6 +21,7 @@ const CUES: Array[StringName] = [
 	&"beat_1", &"beat_2", &"beat_3", &"beat_4",
 	&"step_1", &"step_2", &"step_3",
 	&"hit", &"hit_big", &"kill", &"block", &"card_land", &"click", &"supply", &"column_win", &"reward",
+	&"ks_whistle", &"ks_rotor", &"ks_scan",
 ]
 
 
@@ -61,6 +63,12 @@ static func _voice(id: StringName) -> PackedFloat32Array:
 			return _notes([523.25, 659.25, 783.99, 1046.5], 0.07, 0.75, 0.45)
 		&"reward":
 			return _reward(rng)
+		&"ks_whistle":
+			return _whistle()
+		&"ks_rotor":
+			return _rotor(rng)
+		&"ks_scan":
+			return _scan()
 	return PackedFloat32Array()
 
 
@@ -245,4 +253,43 @@ static func _reward(rng: RandomNumberGenerator) -> PackedFloat32Array:
 		var t: float = float(i) / RATE
 		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.9
 		b[i] += lp * 0.05 * sin(TAU * 7.0 * t) * exp(-t / 0.15)
+	return b
+
+
+## kc-ks-seq: a falling shell's whistle, a sine gliding down an octave with a little vibrato.
+static func _whistle() -> PackedFloat32Array:
+	var b: PackedFloat32Array = _buf(0.55)
+	var phase: float = 0.0
+	for i: int in b.size():
+		var t: float = float(i) / RATE
+		var k: float = t / 0.55
+		var f: float = 1900.0 * pow(0.5, k) * (1.0 + 0.01 * sin(TAU * 9.0 * t))
+		phase += TAU * f / RATE
+		var e: float = minf(1.0, t / 0.06) * (1.0 - k * 0.6)
+		b[i] = sin(phase) * e * 0.28
+	return b
+
+
+## kc-ks-seq: helicopter rotor chop: noise pulsed at 14 Hz over a low hum.
+static func _rotor(rng: RandomNumberGenerator) -> PackedFloat32Array:
+	var b: PackedFloat32Array = _buf(0.7)
+	var lp: float = 0.0
+	for i: int in b.size():
+		var t: float = float(i) / RATE
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.08
+		var chop: float = pow(maxf(0.0, sin(TAU * 14.0 * t)), 6.0)
+		var e: float = minf(1.0, t / 0.08) * minf(1.0, (0.7 - t) / 0.15)
+		b[i] = (lp * 2.6 * chop + 0.18 * sin(TAU * 70.0 * t)) * e * 0.6
+	return b
+
+
+## kc-ks-seq: recon scan: two short rising pings.
+static func _scan() -> PackedFloat32Array:
+	var b: PackedFloat32Array = _buf(0.4)
+	for k: int in 2:
+		var start: int = int(0.16 * k * RATE)
+		for i: int in range(start, b.size()):
+			var t: float = float(i - start) / RATE
+			var f: float = 1400.0 + 900.0 * minf(1.0, t / 0.08) + 300.0 * k
+			b[i] += sin(TAU * f * t) * _env(t, 0.004, 0.05) * 0.3
 	return b

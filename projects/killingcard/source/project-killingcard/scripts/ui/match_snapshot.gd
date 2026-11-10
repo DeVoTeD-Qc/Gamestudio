@@ -99,6 +99,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	}
 	var ks: Array = []
 	var top: int = 0
+	var pending: Array = pending_strikes(state, viewer)
+	snap["ks_pending"] = pending
 	for item: LoadoutItem in me.setup.killstreaks:
 		if item == null:
 			continue
@@ -109,6 +111,12 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		entry["earned"] = me.streak_tray.has(item.id)
 		if entry["code"] == &"not_in_tray":
 			entry["state"] = "AT %d" % t
+		# kc-ks-seq: a strike called this Deploy (or still standing from an earlier round) waits for the fight.
+		entry["pending"] = false
+		for pe: Dictionary in pending:
+			if pe["side"] == MatchState.SIDE_NAMES[viewer] and pe["item_id"] == item.id:
+				entry["pending"] = true
+				entry["pending_text"] = String(pe.get("label", "AT FIGHT"))
 		ks.append(entry)
 	snap["killstreaks"] = ks
 	snap["streak_max"] = maxi(top, 5)
@@ -273,6 +281,52 @@ static func revealed_names(state: MatchState, viewer: int, zone: int) -> Array:
 			continue
 		var card: CardData = CardDB.get_card(id) if CardDB != null else null
 		out.append(card.display_name if card != null else String(id).capitalize())
+	return out
+
+
+## kc-ks-seq: damage killstreaks waiting for a fight, for the INCOMING markers and the killstreak row:
+## [{item_id, side (&"player" / &"enemy" as in the engine), zones: [zone id], label}]. The viewer's own
+## strikes called this Deploy, plus every strike already revealed and still standing (an Attack Helo's
+## next fight). The other side's face-down calls are never listed.
+static func pending_strikes(state: MatchState, viewer: int) -> Array:
+	var out: Array = []
+	if state.phase in [MatchState.Phase.DEPLOY, MatchState.Phase.BRIEFING]:
+		for p: Dictionary in state.sides[viewer].plays:
+			var it: Variant = p.get("item")
+			if p["kind"] == &"item" and it is LoadoutItem and KillstreakStrikes.is_strike(it):
+				var zones: Array = []
+				for e: EffectData in (it as LoadoutItem).effects:
+					if e == null or e.kind != DataEnums.EffectKind.DAMAGE:
+						continue
+					if e.zone_scope == DataEnums.ZoneScope.ALL_ZONES:
+						zones = [&"left", &"mid", &"right"]
+					elif state.is_zone(int(p["zone"])) and state.zone_name(int(p["zone"])) not in zones:
+						zones.append(state.zone_name(int(p["zone"])))
+				var fights: int = 1
+				for e: EffectData in (it as LoadoutItem).effects:
+					if e != null and e.trigger == DataEnums.Trigger.START_OF_FIREFIGHT:
+						fights = maxi(fights, e.duration_rounds)
+				out.append({"item_id": (it as LoadoutItem).id, "side": MatchState.SIDE_NAMES[viewer], "zones": zones,
+						"label": "AT FIGHT" if fights <= 1 else "%d FIGHTS" % fights})
+	var seen: Dictionary = {}
+	for f: Dictionary in state.firefight_effects:
+		var ctx: Dictionary = f["ctx"]
+		if int(f["until_round"]) < state.round_number or StringName(ctx.get("source_kind", &"")) != MatchState.SRC_KILLSTREAK:
+			continue
+		if state.phase in [MatchState.Phase.FIREFIGHT, MatchState.Phase.SCORE, MatchState.Phase.ENDED] \
+				and int(f["until_round"]) <= state.round_number:
+			continue
+		var key: String = "%d:%s" % [int(ctx["side"]), ctx.get("source_id", &"")]
+		if seen.has(key):
+			continue
+		seen[key] = true
+		var zones: Array = []
+		for z: int in EffectResolver.scope_zones(state, f["effect"], ctx):
+			if z >= 0:
+				zones.append(state.zone_name(z))
+		var left: int = int(f["until_round"]) - state.round_number + (1 if state.phase in [MatchState.Phase.DEPLOY, MatchState.Phase.BRIEFING, MatchState.Phase.REVEAL] else 0)
+		out.append({"item_id": StringName(ctx.get("source_id", &"")), "side": MatchState.SIDE_NAMES[int(ctx["side"])],
+				"zones": zones, "label": "AT FIGHT" if left <= 1 else "%d FIGHTS" % left})
 	return out
 
 

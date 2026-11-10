@@ -13,8 +13,18 @@
 #                       board keeps showing the pre-resolve snapshot, so without it a dead unit
 #                       still looks like it is in the fight while the next unit shoots)
 #     STREAK_CHANGED    StreakArc fills; on reset it shatters
-#     KILLSTREAK_EARNED "<NAME> READY" pop-up at the arc (the notch glows)
-#     ITEM_REVEALED     killstreak: full-screen call-in takeover; other items: name tag
+#     kc-ks-seq, killstreaks (killstreak_fx.gd banner + markers, strike_fx.gd sequences; the old
+#     full-screen call-in takeover is retired):
+#     KILLSTREAK_EARNED   compact "<NAME> READY" banner in the streak's colour, with its one-line effect
+#     ITEM_USED (yours)   "CALLED IN" banner; Recon Drone scans the rival half at once
+#     ITEM_REVEALED       the rival's killstreak: HOSTILE banner; Sentry: the drop sequence (both
+#                         sides); the rival's Recon Drone scans your half; other items: name tag
+#     KILLSTREAK_QUEUED   INCOMING / AT FIGHT marker on the half-column(s) the strike will hit
+#     KILLSTREAK_STRIKE   (Firefight step 0) the marker goes, the streak's sequence plays: mortar
+#                         shells arc in and burst on each unit, the helo strafes each front unit;
+#                         the DAMAGE_DEALT numbers that follow land with each impact
+#     KILLSTREAK_RESOLVED the plain log line ("Mortar Barrage hit column C: Rifleman -2 (down)") as a
+#                         caption and a killfeed line, then the fight goes on
 #     SUPPRESSED / SURVIVED_LETHAL / PATCHED / EQUIPMENT_TRIGGERED: short tags
 #     ZONE_CONTROL / MODE_SCORED: "+50 ZONE SECURED" / "+N POINTS" pop-ups
 #   Everything else costs no time. No rules logic: it reads the event fields and nothing else.
@@ -60,9 +70,9 @@
 #   director.skip()                                # fast-forward (F key / tap)
 #
 # Scene: res://scenes/fx/FeedbackDirector.tscn: full-rect overlay Control (mouse ignored) that
-#   holds the transient effects and the CallInTakeover. Put it last under the match root so it
+#   holds the transient effects and the KillstreakFx layer. Put it last under the match root so it
 #   draws on top. The Killfeed and StreakArc live in the HUD and are assigned (or set by path).
-# Dependencies: fx_*.gd, killfeed.gd, streak_arc.gd, call_in_takeover.gd, RulesEvent,
+# Dependencies: fx_*.gd, killfeed.gd, streak_arc.gd, killstreak_fx.gd, strike_fx.gd, RulesEvent,
 #   CardDB autoload (display names, item slots; optional), Settings autoload (optional).
 # Author: Game Feel Engineer Agent (p14)
 extends Control
@@ -84,7 +94,8 @@ signal event_landed(event: Dictionary)
 ## destroyed"), or the rival card being revealed. [] = nothing to say.
 signal caption_changed(lines: Array)
 ## An effect started: kind (&"tracer", &"hit_marker", &"damage_number", &"stamp", &"popup",
-## &"killfeed", &"streak", &"shatter", &"takeover", &"shake", &"hitstop", &"tag"), node or null.
+## &"killfeed", &"streak", &"shatter", &"ks_banner", &"ks_queued", &"shells", &"strafe", &"scan", &"drop",
+## &"shake", &"hitstop", &"tag"), node or null.
 signal fx_started(kind: StringName, node: Object, duration: float)
 
 const FxTiming: GDScript = preload("res://scripts/fx/fx_timing.gd")
@@ -94,8 +105,7 @@ const HitMarkerFx: GDScript = preload("res://scripts/fx/hit_marker_fx.gd")
 const FloatTextFx: GDScript = preload("res://scripts/fx/float_text_fx.gd")
 const ElimStampFx: GDScript = preload("res://scripts/fx/elim_stamp_fx.gd")
 const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
-const CallInScene: PackedScene = preload("res://scenes/fx/CallInTakeover.tscn")
-const CallInTakeover: GDScript = preload("res://scripts/fx/call_in_takeover.gd")
+const StrikeFx: GDScript = preload("res://scripts/fx/strike_fx.gd")
 const FightOverlay: GDScript = preload("res://scripts/fx/fight_overlay.gd")
 const ColumnFlourishFx: GDScript = preload("res://scripts/fx/column_flourish_fx.gd")
 const SfxBank: GDScript = preload("res://scripts/fx/sfx_bank.gd")
@@ -140,7 +150,8 @@ var sfx_log: Array[StringName] = []
 var locator: RefCounted = null
 var killfeed: Node = null
 var streak_arc: Node = null
-var takeover: Control = null
+## kc-ks-seq: the killstreak banner and the pending-strike markers (killstreak_fx.gd).
+var ks: KillstreakFx = null
 ## uid -> display name, for killfeed lines (filled from UNIT_ARRIVED; controllers may add more).
 var unit_names: Dictionary = {}
 ## Every effect started since clear_log(): {kind, duration, type (event type)}.
@@ -212,8 +223,11 @@ func _ready() -> void:
 		killfeed = get_node_or_null(killfeed_path)
 	if streak_arc == null and not streak_arc_path.is_empty():
 		streak_arc = get_node_or_null(streak_arc_path)
-	takeover = CallInScene.instantiate()
-	add_child(takeover)
+	ks = KillstreakFx.new()
+	ks.name = "KillstreakFx"
+	ks.viewer_side = viewer_side
+	ks.zone_rect_fn = _zone_rect_local
+	add_child(ks)
 	overlay = FightOverlay.new()
 	overlay.name = "FightOverlay"
 	add_child(overlay)
@@ -255,6 +269,8 @@ func play(events: Array) -> void:
 		overlay.clear()
 		overlay.locator = locator
 		overlay.viewer_side = viewer_side
+	if ks != null:
+		ks.viewer_side = viewer_side
 	set_meta(&"qa_seen", [])
 	_set_captions([])
 	sequence_started.emit(_queue.size())
@@ -307,8 +323,8 @@ func skip() -> void:
 	for node: Node in get_tree().get_nodes_in_group(GROUP_TRANSIENT):
 		if is_ancestor_of(node):
 			node.finish()
-	if takeover != null:
-		takeover.finish()
+	if ks != null:
+		ks.finish_banner()
 	if killfeed != null:
 		killfeed.finish_all()
 	if streak_arc != null:
@@ -426,14 +442,20 @@ func _handle(ev: Dictionary) -> float:
 		RulesEvent.KILLSTREAK_EARNED:
 			if ev.get("side") != viewer_side:
 				return 0.0
-			var name_text: String = "%s READY" % _display_name(ev.get("item_id", &"")).to_upper()
-			_popup_at(_arc_point(-1.0), name_text, &"numeric", 22, FxStyle.CYAN, ev)
-			return t.get_value(&"earned_beat")
+			return maxf(_ks_banner(ev, &"earned"), t.get_value(&"earned_beat"))
 		RulesEvent.ITEM_USED:
 			if ev.get("side") == viewer_side and _is_killstreak(ev.get("item_id", &"")):
-				_popup_at(_arc_point(-1.0), "UPLINK QUEUED", &"numeric", 20, FxStyle.CYAN, ev)
-				return t.get_value(&"popup_beat")
+				var beat: float = _ks_banner(ev, &"called")
+				if StringName(ev.get("item_id", &"")) == &"recon_drone":
+					beat = maxf(beat, _ks_scan(ev, _other(viewer_side)))
+				return beat
 			return 0.0
+		RulesEvent.KILLSTREAK_QUEUED:
+			return _on_ks_queued(ev, t)
+		RulesEvent.KILLSTREAK_STRIKE:
+			return _on_ks_strike(ev, t)
+		RulesEvent.KILLSTREAK_RESOLVED:
+			return _on_ks_resolved(ev, t)
 		RulesEvent.ITEM_REVEALED:
 			return _on_item_revealed(ev, t)
 		RulesEvent.EQUIPMENT_TRIGGERED:
@@ -652,16 +674,216 @@ func _on_streak(ev: Dictionary, t: RefCounted) -> float:
 func _on_item_revealed(ev: Dictionary, t: RefCounted) -> float:
 	var item_id: StringName = ev.get("item_id", &"")
 	if _is_killstreak(item_id):
-		if _skipping or takeover == null:
+		if _skipping:
 			return 0.0
-		var dur: float = takeover.show_call_in({"item_id": item_id, "name": _display_name(item_id),
-				"side": ev.get("side", &"player"), "zone": ev.get("zone", &"")}, _timing)
-		_log(&"takeover", takeover, dur, ev)
-		return dur
+		var side: StringName = ev.get("side", &"player")
+		var beat: float = 0.0
+		if side != viewer_side:
+			beat = _ks_banner(ev, &"revealed")
+		match StringName(KillstreakFx.look(item_id)["seq"]):
+			&"drop":
+				beat = maxf(beat, _ks_drop(ev))
+			&"scan":
+				if side != viewer_side:
+					beat = maxf(beat, _ks_scan(ev, viewer_side))
+		return beat
 	var zone: StringName = ev.get("zone", &"")
 	_popup_at(_zone_point(zone, ev.get("side", &"player")), _display_name(item_id).to_upper(), &"heading", 20,
 			FxStyle.side_color(ev.get("side", &"player")), ev, &"tag")
 	return t.get_value(&"popup_beat")
+
+
+# --- killstreaks (kc-ks-seq) ------------------------------------------------------------------
+
+## The compact banner for an event with item_id / side. Returns the playback's wait for it.
+func _ks_banner(ev: Dictionary, mode: StringName) -> float:
+	if _skipping or ks == null:
+		return 0.0
+	var item_id: StringName = ev.get("item_id", &"")
+	var wait: float = ks.show_banner({"item_id": item_id, "side": ev.get("side", &"player"), "mode": mode,
+			"name": _display_name(item_id)}, _timing)
+	_log(&"ks_banner", ks.banner, _timing.get_value(&"ks_banner"), ev)
+	if mode == &"earned":
+		_sfx(&"reward", 1.1, -4.0)
+	return wait
+
+
+func _on_ks_queued(ev: Dictionary, t: RefCounted) -> float:
+	var side: StringName = ev.get("side", &"player")
+	var item_id: StringName = ev.get("item_id", &"")
+	var fights: int = int(ev.get("fights", 1))
+	var added: int = ks.add_pending(item_id, side, ev.get("zones", []), "AT FIGHT" if fights <= 1 else "%d FIGHTS" % fights) if ks != null else 0
+	if _skipping:
+		return 0.0
+	var zones: Array = ev.get("zones", [])
+	var where: String = "every column" if zones.size() == 3 else "column %s" % ZONE_LETTERS.get(StringName(zones[0]) if not zones.is_empty() else &"", "?")
+	_set_captions(["%s%s: incoming on %s. It strikes when the fight starts." % ["Rival " if side != viewer_side else "Your ",
+			_display_name(item_id), where]])
+	if added > 0:
+		_log(&"ks_queued", ks, t.get_value(&"ks_queued"), ev)
+		return t.get_value(&"ks_queued")
+	return 0.0
+
+
+## Firefight step 0: the strike's own sequence. The DAMAGE_DEALT events that follow (up to its
+## KILLSTREAK_RESOLVED) are its hits; each waits for its own impact (see _pre_wait / _arrival).
+func _on_ks_strike(ev: Dictionary, t: RefCounted) -> float:
+	var side: StringName = ev.get("side", &"player")
+	var item_id: StringName = ev.get("item_id", &"")
+	if ks != null:
+		ks.clear_pending(item_id, side)
+	var hits: Array[int] = []
+	for next: Variant in _queue:
+		var nev: Dictionary = next
+		if nev.get("type") == RulesEvent.KILLSTREAK_RESOLVED:
+			break
+		if nev.get("type") == RulesEvent.DAMAGE_DEALT and StringName(nev.get("source_id", &"")) == item_id:
+			var uid: int = int(nev.get("target_uid", -1))
+			if uid >= 0 and uid not in hits:
+				hits.append(uid)
+	if _skipping:
+		return 0.0
+	var zones: Array = ev.get("zones", [])
+	var where: String = "every column" if zones.size() == 3 else "column %s" % ZONE_LETTERS.get(StringName(zones[0]) if not zones.is_empty() else &"", "?")
+	var pass_text: String = " (fight %d of %d)" % [int(ev.get("pass", 1)), int(ev.get("passes", 1))] if int(ev.get("passes", 1)) > 1 else ""
+	_set_captions(["Killstreak: %s%s strikes %s%s." % ["rival " if side != viewer_side else "your ", _display_name(item_id), where, pass_text]])
+	var foe: StringName = _other(side)
+	var fx: Control = StrikeFx.new()
+	fx.style = KillstreakFx.look(item_id)["seq"]
+	fx.color = KillstreakFx.color_of(item_id)
+	fx.icon = KillstreakFx.icon_of(item_id)
+	fx.reduced = t.reduced_motion
+	var targets: Array[Vector2] = []
+	for uid: int in hits:
+		var z: StringName = _zone_of.get(uid, StringName(zones[0]) if not zones.is_empty() else &"")
+		targets.append(_unit_point(uid, foe, z))
+		unit_sides[uid] = foe
+	var all: Rect2 = Rect2()
+	for z: Variant in zones:
+		var r: Rect2 = _zone_rect_local(StringName(z))
+		all = r if not all.has_area() else all.merge(r)
+	if not all.has_area():
+		all = Rect2(Vector2.ZERO, size if size.x > 0.0 else get_viewport_rect().size)
+	if targets.is_empty():
+		for z: Variant in zones:
+			targets.append(_zone_point(StringName(z), foe))
+	fx.targets = targets
+	fx.area = all
+	if fx.style == &"strafe":
+		# Enters from the caster's left (yours) or right (the rival's).
+		fx.origin = Vector2(all.position.x if side == viewer_side else all.end.x, all.position.y)
+		_sfx(&"ks_rotor")
+	else:
+		fx.style = &"shells"
+		# Shells leave from the caster's edge of the screen, below (yours) or above (the rival's).
+		var s: Vector2 = size if size.x > 0.0 else get_viewport_rect().size
+		fx.origin = Vector2(all.get_center().x - 60.0, s.y + 10.0) if side == viewer_side else Vector2(all.get_center().x + 60.0, -10.0)
+		_sfx(&"ks_whistle")
+	_start(fx, fx.style, ev)
+	var impacts: Array[float] = fx.impact_times(t)
+	for i: int in hits.size():
+		_arrival[hits[i]] = maxf(float(_arrival.get(hits[i], 0.0)), _clock + impacts[i])
+		_shot_dir[hits[i]] = Vector2.DOWN if side == viewer_side else Vector2.UP
+	if hits.is_empty():
+		return fx.duration
+	# The numbers wait for their impacts; the sequence's tail plays under them.
+	return 0.0
+
+
+func _on_ks_resolved(ev: Dictionary, t: RefCounted) -> float:
+	var side: StringName = ev.get("side", &"player")
+	var item_id: StringName = ev.get("item_id", &"")
+	var line: String = ks_line(ev)
+	if killfeed != null:
+		var parts: PackedStringArray = line.split(": ", true, 1)
+		var entry: Control = killfeed.push({"attacker": parts[0], "attacker_side": side,
+				"victim": parts[1] if parts.size() > 1 else "", "victim_side": _other(side),
+				"icon": KillstreakFx.look(item_id)["icon"], "zone": ev.get("zone", &""), "killstreak": true}, _timing)
+		_log(&"killfeed", entry, float(entry.get(&"life")), ev)
+	if _skipping:
+		return 0.0
+	_set_captions([line])
+	if not (ev.get("hits", []) as Array).is_empty():
+		_sfx(&"hit_big", 0.9)
+		_shake(t.get_value(&"shake_hit_px"), t.get_value(&"shake_hit"), ev, Vector2.DOWN if side == viewer_side else Vector2.UP)
+	return t.get_value(&"ks_resolved")
+
+
+## The plain log line of a KILLSTREAK_RESOLVED, with the names the board shows (unit_names).
+func ks_line(ev: Dictionary) -> String:
+	var hits: Array = []
+	for h: Variant in ev.get("hits", []):
+		var hd: Dictionary = (h as Dictionary).duplicate()
+		var uid: int = int(hd.get("uid", -1))
+		if unit_names.has(uid) and String(unit_names[uid]) != "":
+			hd["name"] = unit_names[uid]
+		hits.append(hd)
+	var zones: Array[int] = []
+	for z: Variant in ev.get("zones", []):
+		zones.append(MapData.ZONE_IDS.find(StringName(z)))
+	if hits.is_empty() and String(ev.get("what", "")) != "" and zones.is_empty():
+		return String(ev["what"])
+	return KillstreakStrikes.log_line(_display_name(ev.get("item_id", &"")), zones, hits, ev.get("kills", []))
+
+
+## Recon Drone: a scan over the `scanned` side's half of the board.
+func _ks_scan(ev: Dictionary, scanned: StringName) -> float:
+	if _skipping:
+		return 0.0
+	var item_id: StringName = ev.get("item_id", &"recon_drone")
+	var all: Rect2 = Rect2()
+	for z: StringName in [&"left", &"mid", &"right"]:
+		var r: Rect2 = _zone_rect_local(z)
+		if r.has_area():
+			all = r if not all.has_area() else all.merge(r)
+	if not all.has_area():
+		all = Rect2(Vector2.ZERO, size if size.x > 0.0 else get_viewport_rect().size)
+	var half: Rect2 = Rect2(all.position + Vector2(0, 0 if scanned != viewer_side else all.size.y * 0.5), Vector2(all.size.x, all.size.y * 0.5))
+	var fx: Control = StrikeFx.new()
+	fx.style = &"scan"
+	fx.color = KillstreakFx.color_of(item_id)
+	fx.icon = KillstreakFx.icon_of(item_id)
+	fx.area = half
+	fx.reduced = _timing.reduced_motion
+	_sfx(&"ks_scan")
+	_start(fx, &"scan", ev)
+	return fx.duration
+
+
+## Sentry Turret: drops in at the back of the caster's line in its column.
+func _ks_drop(ev: Dictionary) -> float:
+	if _skipping:
+		return 0.0
+	var item_id: StringName = ev.get("item_id", &"sentry_turret")
+	var side: StringName = ev.get("side", &"player")
+	var col: Rect2 = _zone_rect_local(ev.get("zone", &""))
+	if not col.has_area():
+		var p: Vector2 = _zone_point(ev.get("zone", &""), side)
+		col = Rect2(p - Vector2(60, 120), Vector2(120, 240))
+	var fx: Control = StrikeFx.new()
+	fx.style = &"drop"
+	fx.color = KillstreakFx.color_of(item_id)
+	fx.icon = KillstreakFx.icon_of(item_id)
+	fx.area = col
+	fx.end_point = Vector2(col.get_center().x, col.position.y + col.size.y * (0.88 if side == viewer_side else 0.12))
+	fx.targets = [fx.end_point] as Array[Vector2]
+	fx.reduced = _timing.reduced_motion
+	_sfx(&"card_land", 0.8)
+	_start(fx, &"drop", ev)
+	_popup_at(fx.end_point + Vector2(0, -34.0 if side == viewer_side else 34.0), "SENTRY ONLINE", &"heading", 16,
+			fx.color, ev, &"tag")
+	return fx.duration
+
+
+func _zone_rect_local(zone: StringName) -> Rect2:
+	var r: Rect2 = _zone_rect(zone)
+	return Rect2(_to_local(r.position), r.size) if r.has_area() else Rect2()
+
+
+## kc-ks-seq: the strikes still waiting for a fight, as markers (the controller calls it each refresh).
+func set_pending_strikes(list: Array) -> void:
+	if ks != null:
+		ks.set_pending(list)
 
 
 # --- step-by-step firefight (kc-fight-ui) --------------------------------------------------
@@ -907,9 +1129,9 @@ func lifted_uids() -> Array:
 func _start(fx: Control, kind: StringName, ev: Dictionary) -> void:
 	fx.add_to_group(GROUP_TRANSIENT)
 	add_child(fx)
-	# Keep the takeover on top of everything else.
-	if takeover != null:
-		move_child(takeover, get_child_count() - 1)
+	# Keep the killstreak banner and markers on top of everything else.
+	if ks != null:
+		move_child(ks, get_child_count() - 1)
 	fx.play(_timing)
 	_log(kind, fx, fx.duration, ev)
 
@@ -1162,7 +1384,7 @@ func _killfeed_entry(ev: Dictionary) -> Dictionary:
 	if kind == &"unit":
 		icon = _class_icon(by_id)
 	elif kind == &"killstreak":
-		icon = CallInTakeover.ICONS.get(by_id, &"type_killstreak")
+		icon = KillstreakFx.look(by_id)["icon"]
 	return {
 		"attacker": attacker, "attacker_side": ev.get("by_side", &"player"),
 		"victim": unit_names.get(victim, _display_name(ev.get("victim_id", &""))),

@@ -1671,6 +1671,10 @@ LAYERS = {
     "L3 trimmed, Spot without Charges": dict(L3, owner_mat=False, spot_charge=False),
     "L5 trimmed, owner materiel kept": dict(L5, **dict(SIMPLE, owner_mat=True)),
     "v3 launch rules with cover (v4 reference)": dict(cover=True),
+    "L4 trimmed, Front 5 each way": dict(L4, fmax=5, **SIMPLE),
+    "L5 trimmed, Front 5 each way": dict(L5, fmax=5, **SIMPLE),
+    "L4 trimmed, Front 4 each way": dict(L4, fmax=4, **SIMPLE),
+    "L5 trimmed, Front 4 each way": dict(L5, fmax=4, **SIMPLE),
 }
 RULESETS.update(LAYERS)
 VARIANTS.update({k: v for k, v in LAYERS.items()})

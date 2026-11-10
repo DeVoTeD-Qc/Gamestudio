@@ -4,7 +4,9 @@
 #   loadout, its icon (IconSheet ks_*) inside a charge ring that fills with the streak toward its
 #   threshold, and one plain word under it: "1/3" while charging, READY when it can be called in
 #   (amber glow, pulsing), its state (USED, NO OP...) when earned but blocked. The killstreak
-#   being targeted is filled amber.
+#   being targeted is filled amber. kc-ks-seq: a strike called this Deploy (or an Attack Helo with a
+#   fight still to come) is marked pending: a dashed frame in the streak's colour and its word says
+#   when it lands (AT FIGHT / 2 FIGHTS); the long-press rules say so too.
 #   Tap = use (the controller selects it, as the flyout's buttons did); long-press / right-click =
 #   its rules. Display + gestures only: match_screen.gd forwards the signals.
 # Dependencies: press_gesture.gd, icon_sheet.gd, hud_theme.tres (HudPanelDark, Hud colours, HudTag font).
@@ -77,8 +79,11 @@ static func is_ready(e: Dictionary) -> bool:
 	return bool(e.get("earned", false)) and bool(e.get("ready", false))
 
 
-## The word under the icon: 1/3 (charging), READY, or the blocked state (USED, NO OP...).
+## The word under the icon: 1/3 (charging), READY, AT FIGHT (a strike waiting for the fight), or the
+## blocked state (USED, NO OP...).
 func word_for(e: Dictionary) -> String:
+	if bool(e.get("pending", false)):
+		return String(e.get("pending_text", "AT FIGHT"))
 	if is_ready(e):
 		return "READY"
 	if not bool(e.get("earned", false)):
@@ -89,6 +94,8 @@ func word_for(e: Dictionary) -> String:
 
 func _tooltip(e: Dictionary) -> String:
 	var name_text: String = String(e.get("full_name", e.get("name", "")))
+	if bool(e.get("pending", false)):
+		return "%s: incoming. %s" % [name_text, KillstreakFx.when_text(StringName(e.get("id", &"")))]
 	if is_ready(e):
 		return "%s: ready. Tap to call it in." % name_text
 	if not bool(e.get("earned", false)):
@@ -171,6 +178,19 @@ func _draw_tile(tile: Control) -> void:
 		tile.draw_style_box(sb, r)
 	else:
 		tile.draw_rect(r, Color(0.09, 0.11, 0.13, 0.95))
+	if bool(e.get("pending", false)) and not selected:
+		# kc-ks-seq: pending strike: a dashed frame in the streak's own colour.
+		var pc: Color = KillstreakFx.color_of(StringName(e.get("id", &"")))
+		var pr: Rect2 = r.grow(-2.0)
+		var corners: Array[Vector2] = [pr.position, Vector2(pr.end.x, pr.position.y), pr.end, Vector2(pr.position.x, pr.end.y), pr.position]
+		for i: int in 4:
+			var a: Vector2 = corners[i]
+			var b: Vector2 = corners[i + 1]
+			var d: float = a.distance_to(b)
+			var p: float = 0.0
+			while p < d:
+				tile.draw_line(a.lerp(b, p / d), a.lerp(b, minf(d, p + 6.0) / d), pc, 2.0)
+				p += 10.0
 	if ready_now and not selected:
 		# Ready: amber frame with a soft outer glow that pulses.
 		tile.draw_rect(r.grow(-1.5), Color(AMBER, 0.55 + 0.45 * _pulse), false, 3.0)
@@ -199,6 +219,8 @@ func _draw_tile(tile: Control) -> void:
 		var icon_c: Color = DARK if selected else (Color.WHITE if ready_now or bool(e.get("earned", false)) else MUTED)
 		tile.draw_texture_rect(tex, Rect2(c - Vector2(s, s) * 0.5, Vector2(s, s)), false, icon_c)
 	var word_c: Color = DARK if selected else (AMBER if ready_now else MUTED)
+	if bool(e.get("pending", false)) and not selected:
+		word_c = KillstreakFx.color_of(StringName(e.get("id", &"")))
 	var tw: float = font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	tile.draw_string(font, Vector2((tile.size.x - tw) * 0.5, tile.size.y - 4.0 - font.get_descent(fs)), word,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, word_c)

@@ -3,8 +3,8 @@
 #   plus the two player options that change them:
 #   - Settings.fast_animations: every duration and beat x FAST_SCALE (killfeed life included).
 #   - Settings.reduced_motion: no screen shake, no hit-stop, no travel (pop-ups and stamps fade
-#     in place, the StreakArc fades instead of flying apart, the takeover cross-fades and its
-#     scanlines stand still). Colour and text feedback stay, so nothing is lost, only motion.
+#     in place, the StreakArc fades instead of flying apart, the killstreak banner fades and the
+#     killstreak sequences show their end frame without travel). Colour and text feedback stay, so nothing is lost, only motion.
 #   - Settings.screen_shake (kc-juice, default on): off = no screen shake (hit-stop and flashes stay).
 #   An FxTiming instance is a snapshot of those options; FX components take one in play().
 # Dependencies: Settings autoload (read through the scene tree, optional).
@@ -75,7 +75,19 @@ const BASE: Dictionary = {
 	&"feed_enter": 0.16,
 	&"feed_life": 4.0,          # art direction: lines fade after 4 s
 	&"feed_fade": 0.3,
-	# Killstreak call-in takeover (art direction: 0.8 s)
+	# kc-ks-seq: killstreak banner + per-streak sequences (killstreak_fx.gd, strike_fx.gd). The banner
+	# is compact and never blocks: the playback waits only ks_banner_beat while it shows.
+	&"ks_banner": 1.7,          # on screen, in + hold + out
+	&"ks_banner_in": 0.18,
+	&"ks_banner_out": 0.22,
+	&"ks_banner_beat": 0.45,    # what the playback waits for a banner
+	&"ks_queued": 0.3,          # the INCOMING marker drops onto its column
+	&"ks_shells": 1.0,          # mortar: three shells arc in (whistle), then impact
+	&"ks_strafe": 1.15,         # helo: a pass over the columns, bursts into each front unit
+	&"ks_scan": 0.9,            # recon drone: a scan sweep over the scanned half
+	&"ks_drop": 0.75,           # sentry: drops in at the back of its column, lands
+	&"ks_resolved": 0.55,       # after the strike's log line, before the fight goes on
+	# Killstreak call-in takeover (art direction: 0.8 s; retired from the match by kc-ks-seq)
 	&"takeover": 0.8,
 	&"takeover_in": 0.14,
 	&"takeover_out": 0.16,

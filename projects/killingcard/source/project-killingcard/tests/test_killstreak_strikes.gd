@@ -60,7 +60,7 @@ func test_mortar_waits_for_the_fight_and_strikes_before_column_a() -> void:
 	assert_true(done < types.find(RulesEvent.FIREFIGHT_STARTED), "step 0 ends before column A")
 	var res: Dictionary = F.events_of(m, RulesEvent.KILLSTREAK_RESOLVED)[0]
 	assert_eq(res["kills"], [a.uid], "the kill is listed")
-	assert_eq(String(res["what"]), "Mortar Barrage hit column C: Rifleman −2 (down), tough −2",
+	assert_eq(String(res["what"]), "Mortar Barrage hit column C: Rifleman −2 (down), Tough −2",
 			"plain log line: %s" % res["what"])
 
 

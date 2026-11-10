@@ -25,6 +25,7 @@ const CUE_DB: Dictionary = {
 	&"click": -8.0, &"card_land": -4.0, &"supply": -6.0, &"hit": -2.0, &"hit_big": -1.0, &"kill": -1.0,
 	&"block": -4.0, &"beat_1": -5.0, &"beat_2": -5.0, &"beat_3": -5.0, &"beat_4": -5.0,
 	&"step_1": -6.0, &"step_2": -6.0, &"step_3": -6.0, &"column_win": -4.0, &"reward": -3.0,
+	&"ks_whistle": -6.0, &"ks_rotor": -5.0, &"ks_scan": -7.0,
 }
 
 var played: Array[Dictionary] = []
