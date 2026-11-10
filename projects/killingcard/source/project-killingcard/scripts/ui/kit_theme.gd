@@ -54,7 +54,7 @@ const THEME_SLOTS: Dictionary = {
 ## True once apply() has changed the project theme (tests).
 static var applied: int = 0
 static var _tex: Dictionary = {}  # "id@scale" -> Texture2D or null
-static var _originals: Dictionary = {}  # "type/name" -> StyleBox replaced by apply()
+static var _originals: Dictionary = {}  # theme instance id -> {"type/name": StyleBox replaced by apply()}
 
 
 ## The scale a piece draws at (buttons 0.4, everything else 0.5).
@@ -113,16 +113,18 @@ static func apply(theme: Theme) -> int:
 	if theme == null:
 		return 0
 	var n: int = 0
+	var orig: Dictionary = _originals.get(theme.get_instance_id(), {})
+	_originals[theme.get_instance_id()] = orig
 	for type: StringName in THEME_SLOTS:
 		var slots: Dictionary = THEME_SLOTS[type]
 		for style: StringName in slots:
 			var key: String = "%s/%s" % [type, style]
-			var old: StyleBox = _originals.get(key, theme.get_stylebox(style, type) if theme.has_stylebox(style, type) else null)
+			var old: StyleBox = orig.get(key, theme.get_stylebox(style, type) if theme.has_stylebox(style, type) else null)
 			var sb: StyleBoxTexture = stylebox(slots[style][0], old, slots[style][1])
 			if sb == null:
 				continue
-			if not _originals.has(key):
-				_originals[key] = old
+			if not orig.has(key):
+				orig[key] = old
 			theme.set_stylebox(style, type, sb)
 			n += 1
 	# Slider: the kit track and the knob (24 px).
@@ -131,8 +133,8 @@ static func apply(theme: Theme) -> int:
 	if track != null and knob != null:
 		for pair: Array in [[&"slider", track]]:
 			var key2: String = "HSlider/%s" % pair[0]
-			if not _originals.has(key2):
-				_originals[key2] = theme.get_stylebox(pair[0], &"HSlider") if theme.has_stylebox(pair[0], &"HSlider") else null
+			if not orig.has(key2):
+				orig[key2] = theme.get_stylebox(pair[0], &"HSlider") if theme.has_stylebox(pair[0], &"HSlider") else null
 			theme.set_stylebox(pair[0], &"HSlider", pair[1])
 		theme.set_icon(&"grabber", &"HSlider", knob)
 		theme.set_icon(&"grabber_highlight", &"HSlider", knob)
@@ -145,17 +147,18 @@ static func apply(theme: Theme) -> int:
 static func restore(theme: Theme) -> void:
 	if theme == null:
 		return
-	for key: String in _originals:
+	var orig: Dictionary = _originals.get(theme.get_instance_id(), {})
+	for key: String in orig:
 		var parts: PackedStringArray = key.split("/")
-		var old: StyleBox = _originals[key]
+		var old: StyleBox = orig[key]
 		if old != null:
 			theme.set_stylebox(StringName(parts[1]), StringName(parts[0]), old)
 		else:
 			theme.clear_stylebox(StringName(parts[1]), StringName(parts[0]))
-	if theme.has_icon(&"grabber", &"HSlider") and _originals.has("HSlider/slider"):
+	if theme.has_icon(&"grabber", &"HSlider") and orig.has("HSlider/slider"):
 		theme.clear_icon(&"grabber", &"HSlider")
 		theme.clear_icon(&"grabber_highlight", &"HSlider")
-	_originals.clear()
+	_originals.erase(theme.get_instance_id())
 	applied = 0
 
 
