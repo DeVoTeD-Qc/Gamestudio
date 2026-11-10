@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rally Point Learn</title>
+<meta name="description" content="Playable tutorial for Rally Point Basic: ten hands-on lessons where you place the tiles yourself, then a free match against a simple AI.">
+<style>
+/* A game table at night, as in the v3 demo. Single dark look by choice (it is a game table).
+   Phone portrait first: task card, scores, board, hand. Desktop: board on the left, rail on the right. */
+:root{
+  color-scheme:dark;
+  --bg:#12161b; --felt:#1b2a2a; --felt-line:#27403f; --panel:#1a2026; --line:#2c3640; --ink:#eef2ef; --muted:#9fb0ab;
+  --p1:#3fc6b5; --p1-soft:rgba(63,198,181,.16); --p1-ink:#7ff0e1; --p2:#f08a3c; --p2-soft:rgba(240,138,60,.16); --p2-ink:#ffb27a;
+  --gold:#f2cf5b; --bad:#ff6b7c;
+  --f-display:"Avenir Next Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --cell:44px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font-family:var(--f-body);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));
+  display:grid;gap:10px;grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "task" "score" "board" "pv" "hand" "acts"}
+@media (min-width:900px){
+  .app{grid-template-columns:auto minmax(330px,400px);grid-template-areas:"top top" "board task" "board score" "board pv" "board hand" "board acts" "board ." ;align-items:start;column-gap:24px;padding-top:16px}
+  .boardwrap{position:sticky;top:12px}
+}
+.top{grid-area:top;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1;margin-right:auto}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.03em;text-transform:uppercase}
+.brand b span{color:var(--gold)}
+.brand small{color:var(--muted);font-size:12px;margin-top:3px}
+.tabs{display:flex;gap:6px}
+.tab{font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:7px 14px;border:1px solid var(--line);background:#1d242b;color:var(--muted);min-height:38px}
+.tab.on{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.iconbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--gold);background:#1d242b;color:var(--gold);font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1}
+/* Task card */
+.task{grid-area:task;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.tk-top{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.tk-no{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots button{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:#2a333b;padding:0;font-size:10px;font-weight:700;color:var(--muted)}
+.dots button.done{background:#3c6b57;color:#d9f2de;border-color:#3c6b57}
+.dots button.on{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.task h2{font-family:var(--f-display);font-weight:800;font-size:23px;text-transform:uppercase;letter-spacing:.02em;margin:0;line-height:1.05}
+.task p{margin:0}
+#tkText{font-size:16px;font-weight:600}
+.say{font-size:14px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 8px;min-height:1.4em}
+.say.hint{color:#ffe7a8;border-color:var(--gold)}
+.say.ok{color:#c8f5e4;border-color:var(--p1)}
+.say.ai{color:#ffd2b0;border-color:var(--p2)}
+.say b{color:var(--ink)}
+.pv{grid-area:pv;margin:0;min-height:2.6em;font-size:13.5px;color:var(--ink);background:#10161a;border:1px dashed var(--line);border-radius:8px;padding:4px 8px}
+.pv b{color:var(--gold)}
+.pv.idle{color:var(--muted);border-color:transparent;background:transparent}
+.tk-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tk-act:empty{display:none}
+/* Scores */
+.scores{grid-area:score;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pbox{border-radius:12px;padding:6px 9px;background:rgba(0,0,0,.2);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.pbox.turn{border-color:var(--c);background:var(--soft)}
+.p1{--c:var(--p1);--soft:var(--p1-soft);--ci:var(--p1-ink)} .p2{--c:var(--p2);--soft:var(--p2-soft);--ci:var(--p2-ink)}
+.prow{display:flex;align-items:center;gap:6px;min-width:0}
+.who{font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--c)}
+.turnTag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--c);color:#0b1012;border-radius:5px;padding:1px 5px;visibility:hidden;white-space:nowrap}
+.pbox.turn .turnTag{visibility:visible}
+.pts{margin-left:auto;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);border-radius:6px;padding:0 3px}
+.pts.bump{animation:bump .35s ease-out}
+@keyframes bump{40%{transform:scale(1.25);color:var(--gold)}}
+.sub{font-size:11.5px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.sub span{border-radius:5px}
+.ammo{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border-radius:6px}
+.ammo .pips{display:flex;gap:3px}
+.ammo .pips i{width:13px;height:14px;border-radius:3px;background:#2a333b;transition:background .25s}
+.ammo .pips i.on{background:#ff8a5b;box-shadow:0 0 6px rgba(255,138,91,.5)}
+.ammo.full .pips i{background:#ff5b6e}
+.ammo b{color:var(--ink);font-variant-numeric:tabular-nums}
+/* Board */
+.boardwrap{grid-area:board;display:flex;justify-content:center}
+.table{background:var(--felt);border-radius:16px;padding:8px;box-shadow:inset 0 0 0 1px var(--felt-line),0 18px 40px rgba(0,0,0,.35);max-width:100%}
+.board{position:relative;width:calc(var(--cell)*var(--C));height:calc(var(--cell)*var(--R));border-radius:6px;outline:none;touch-action:manipulation}
+.board:focus-visible{box-shadow:0 0 0 3px var(--gold)}
+#bl,#fx{position:absolute;inset:0}
+#fx{pointer-events:none;z-index:20}
+.sq{position:absolute;width:var(--cell);height:var(--cell);border:1px solid var(--felt-line);background:rgba(0,0,0,.08)}
+.sq.ring{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 2px rgba(255,255,255,.28);border-style:dashed;border-color:rgba(255,255,255,.35)}
+.sq.goal{background:rgba(242,207,91,.22);box-shadow:inset 0 0 0 3px var(--gold);animation:pulse 1.1s ease-in-out infinite;z-index:1}
+.sq.freed{background:rgba(255,107,124,.18);box-shadow:inset 0 0 0 2px var(--bad);animation:pulse 1.1s ease-in-out infinite}
+.sq.cur{box-shadow:inset 0 0 0 3px #fff}
+@keyframes pulse{50%{opacity:.45}}
+.tile{position:absolute;z-index:3;transition:transform .3s cubic-bezier(.2,1.3,.4,1),opacity .3s}
+.tile.enter{animation:enter .4s cubic-bezier(.2,1.3,.4,1)}
+@keyframes enter{from{transform:translateY(-18px) scale(1.08);opacity:0}}
+.banner{border-radius:8px;padding:calc(var(--cell)*.08);background:var(--own);display:flex}
+.banner .face{flex:1;border-radius:5px;background:repeating-linear-gradient(135deg,var(--k) 0 6px,color-mix(in srgb,var(--k) 66%,#000) 6px 12px);display:flex;align-items:center;justify-content:space-around;overflow:hidden}
+.banner.v .face{flex-direction:column}
+.glyph{width:calc(var(--cell)*.46);height:calc(var(--cell)*.46);border-radius:50%;background:#0d1114;display:grid;place-items:center;color:var(--k);font-size:calc(var(--cell)*.28);font-weight:700;line-height:1;flex:none}
+.ins{border-radius:9px;background:#0f1418;box-shadow:inset 0 0 0 calc(var(--cell)*.08) var(--own);display:grid;place-items:center}
+.ins .gem{width:62%;height:62%;border-radius:6px;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--k) 55%,#fff) 0,var(--k) 45%,color-mix(in srgb,var(--k) 55%,#000) 100%);display:grid;place-items:center;color:#0d1114;font-weight:800;font-size:calc(var(--cell)*.26);transform:rotate(45deg)}
+.ins .gem span{transform:rotate(-45deg)}
+.obj{border-radius:12px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--own);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.obj svg{width:50%;height:50%}
+.obj .count{position:absolute;right:4px;bottom:3px;font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.3);background:#000b;border-radius:6px;padding:0 5px;line-height:1.25}
+.obj .count.near{color:var(--gold)}
+.obj.rallied{box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--gold),0 0 20px rgba(242,207,91,.5)}
+.obj.rallied .count{color:var(--gold)}
+.obj.rallying{animation:rallyglow .9s ease-out 2}
+@keyframes rallyglow{40%{box-shadow:inset 0 0 0 3px var(--k),0 0 0 6px var(--gold),0 0 40px var(--gold)}}
+.patchc{border-radius:5px;background:repeating-linear-gradient(45deg,#2c353e 0 5px,#20272e 5px 10px);box-shadow:inset 0 0 0 2px #59646d;display:grid;place-items:center;color:#aeb8b4;font-size:calc(var(--cell)*.22);font-weight:700;opacity:.9}
+.tile.flash{animation:flash .7s ease-out}
+@keyframes flash{40%{filter:brightness(1.7);transform:scale(1.04)}}
+.tile.tgt{outline:3px solid var(--bad);outline-offset:1px;cursor:crosshair;animation:tgt 1s ease-in-out infinite;z-index:6}
+@keyframes tgt{50%{outline-color:#ffb3bc}}
+.tile.last{outline:2px dashed var(--p2-ink);outline-offset:2px}
+.tile.boom{animation:boom .6s ease-in forwards;z-index:8}
+@keyframes boom{30%{transform:scale(1.08);filter:brightness(2.2)}100%{transform:scale(.6) rotate(-5deg);opacity:0;filter:brightness(3)}}
+.ghost{position:absolute;z-index:7;pointer-events:none;opacity:.62;border-radius:8px}
+.ghost.bad{opacity:.35;filter:grayscale(.6)}
+.gcell{position:absolute;z-index:7;pointer-events:none;width:var(--cell);height:var(--cell);border:2px solid var(--gold);border-radius:5px}
+.gcell.bad{border-color:var(--bad)}
+.plab{position:absolute;z-index:9;pointer-events:none;transform:translate(-50%,-50%);font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.32);background:#0d1114e6;border-radius:6px;padding:0 4px;line-height:1.2}
+.plab.p1c{color:var(--p1-ink)} .plab.p2c{color:var(--p2-ink)}
+.pop{position:absolute;font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.4);color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;animation:pop 1.5s ease-out forwards;white-space:nowrap;transform:translate(-50%,-50%)}
+.pop.p1c{color:var(--p1-ink)} .pop.p2c{color:var(--p2-ink)} .pop.am{color:#ff9d7a;font-size:calc(var(--cell)*.24)} .pop.cl{font-size:calc(var(--cell)*.3);color:var(--gold)} .pop.m::after{content:"";position:absolute;inset:-3px -5px;border:2px solid var(--gold);border-radius:8px}
+@keyframes pop{0%{transform:translate(-50%,-30%) scale(.6);opacity:0}15%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-140%);opacity:0}}
+/* Hand */
+.handbar{grid-area:hand;display:flex;gap:8px;align-items:stretch}
+.cards{display:flex;gap:6px;flex:1;min-width:0}
+.card{flex:1 1 0;min-width:0;max-width:130px;min-height:64px;border-radius:10px;background:#10161a;border:2px solid var(--k);padding:5px 6px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;transition:transform .2s,box-shadow .2s}
+.card .t{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;width:100%;align-items:center}
+.card .t i{font-style:normal;color:var(--k);font-weight:700;font-size:15px}
+.card .n{font-family:var(--f-display);font-weight:800;font-size:15px;line-height:1.05}
+.card.sel{box-shadow:0 0 0 3px var(--gold);transform:translateY(-4px)}
+.card.nofit{opacity:.5}
+.card.new{animation:deal .45s ease-out backwards}
+@keyframes deal{from{transform:translateX(30px) scale(.85);opacity:0}}
+.card.empty{border-style:dashed;border-color:var(--line);background:transparent}
+.shape{display:inline-grid;gap:1px;vertical-align:middle}
+.shape b{display:block;background:var(--k);width:6px;height:6px;border-radius:1px}
+.stackc{display:inline-flex;align-items:center;gap:6px;border-radius:6px}
+.stackc.bump b{animation:bump .4s ease-out}
+.stackc b{width:18px;height:22px;border-radius:5px;background:repeating-linear-gradient(135deg,#2b333b 0 5px,#232a31 5px 10px);border:1px solid var(--p1);display:grid;place-items:center;font-family:var(--f-display);font-size:13px;color:var(--ink);box-shadow:2px 2px 0 #0d1114}
+.btn{font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.04em;text-transform:uppercase;border-radius:10px;padding:8px 12px;border:1px solid var(--line);background:#222a31;color:var(--ink);min-height:42px}
+.btn.main{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.btn.warn{background:#3a1d24;border-color:var(--bad);color:#ffd4da}
+.btn:disabled{opacity:.38;cursor:default}
+#rot{flex:none;width:74px;padding:4px;font-size:14px;line-height:1.1}
+#rot small{display:block;font-family:var(--f-body);font-size:10px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)}
+.acts{grid-area:acts;display:flex;flex-direction:column;gap:6px}
+.keys{font-size:12px;color:var(--muted)}
+.keys b{color:var(--ink)}
+/* Modal + inspector */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(5,8,10,.72);display:grid;place-items:center;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:14px 16px;max-width:560px;width:100%;max-height:calc(100vh - 32px);overflow:auto;position:relative}
+.modal h3{font-family:var(--f-display);font-weight:800;font-size:24px;text-transform:uppercase;margin:0 36px 8px 0;line-height:1.05}
+.modal ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:7px}
+.modal li::marker{color:var(--gold);font-weight:800}
+.modal p{color:var(--muted);font-size:13.5px;margin:10px 0 0}
+.x{position:absolute;right:8px;top:8px;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:#1d242b;font-size:16px;line-height:1}
+.endbox b.big{display:block;font-family:var(--f-display);font-weight:800;font-size:40px;text-transform:uppercase;line-height:1;color:var(--p1-ink)}
+.endbox .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.insp{position:fixed;z-index:300;width:min(340px,calc(100vw - 24px));background:#0f1519f7;border:1px solid var(--gold);border-radius:12px;padding:10px 12px 12px;box-shadow:0 18px 40px rgba(0,0,0,.6);display:none}
+.insp.on{display:block;animation:fadein .15s ease-out}
+@keyframes fadein{from{opacity:0}}
+.insp .it{font-family:var(--f-display);font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.02em;line-height:1.05;padding-right:34px}
+.insp .is{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-top:2px}
+.insp ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.insp li b{color:var(--gold)}
+.hl{outline:3px solid var(--gold)!important;outline-offset:2px}
+[data-ins]{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.task p,.modal li,.modal p{user-select:text;-webkit-user-select:text}
+@media (max-width:899px){
+  .mode-lesson .pv{display:none}
+  .insp{left:12px!important;right:12px;bottom:max(12px,env(safe-area-inset-bottom,0px));top:auto!important;width:auto}
+  .keys{display:none}
+}
+@media (max-width:420px){
+  .brand b{font-size:19px} .brand b span{display:none} .brand small{display:none}
+  .tab{font-size:13px;padding:6px 9px;min-height:36px} .iconbtn{width:36px;height:36px;font-size:20px}
+  .task h2{font-size:20px} #tkText{font-size:15px}
+  .card .n{font-size:13.5px}
+  #rot{width:64px;font-size:12.5px}
+}
+@media (prefers-reduced-motion:reduce){.tile.enter,.card.new,.sq.goal,.sq.freed,.tile.tgt,.obj.rallying{animation:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><b>Rally Point <span>Learn</span></b><small>Basic rules · place the tiles yourself</small></div>
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button class="tab on" id="tabL" role="tab" aria-selected="true" data-ins="btn:lessons">Lessons</button>
+      <button class="tab" id="tabM" role="tab" aria-selected="false" data-ins="btn:match">Match</button>
+    </nav>
+    <button class="iconbtn" id="helpBtn" aria-label="Rules card" data-ins="btn:help">?</button>
+  </header>
+
+  <section class="task" id="task" data-ins="task" aria-live="polite">
+    <div class="tk-top"><span class="tk-no" id="tkNo"></span><div class="dots" id="dots" aria-label="Lessons"></div></div>
+    <h2 id="tkTitle"></h2>
+    <p id="tkText"></p>
+    <p class="say" id="say"></p>
+    <div class="tk-act" id="tkAct"></div>
+  </section>
+
+  <section class="scores" id="scores">
+    <div class="pbox p1" id="pb1">
+      <div class="prow"><span class="who">You</span><span class="turnTag">Your turn</span><span class="pts" id="s1" data-ins="score:1">0</span></div>
+      <div class="ammo" id="am1" data-ins="ammo:1"><span>Ammo</span><span class="pips" id="ap1"></span><b id="an1">0/5</b></div>
+      <div class="sub" id="mysub"><span class="stackc" id="stackc" data-ins="stack:1"><b id="stk">0</b>tiles in your stack</span></div>
+    </div>
+    <div class="pbox p2" id="pb2">
+      <div class="prow"><span class="who">AI</span><span class="turnTag">Moving</span><span class="pts" id="s2" data-ins="score:2">0</span></div>
+      <div class="ammo" id="am2" data-ins="ammo:2"><span>Ammo</span><span class="pips" id="ap2"></span><b id="an2">0/5</b></div>
+      <div class="sub" id="aisub"><span data-ins="start:2" id="startTag">+1 start</span><span data-ins="aihand" id="aihand"></span></div>
+    </div>
+  </section>
+
+  <div class="boardwrap"><div class="table"><div class="board" id="board" tabindex="0" aria-label="Board"><div id="bl"></div><div id="fx"></div></div></div></div>
+
+  <p class="pv idle" id="pv" aria-live="polite" data-ins="pv"></p>
+  <section class="handbar" id="handbar">
+    <div class="cards" id="cards" aria-label="Your hand"></div>
+    <button class="btn" id="rot" data-ins="btn:rotate" aria-label="Rotate banner">⟳<br>Rotate<small id="rotS">flat</small></button>
+  </section>
+
+  <div class="acts" id="acts">
+    <div class="keys">Keys: <b>1</b>–<b>3</b> pick a tile · <b>R</b> rotate · arrows + <b>Enter</b> place on the board · <b>I</b> inspect · <b>?</b> rules. Right-click (desktop) or long-press (touch) anything to see what it is.</div>
+  </div>
+</div>
+
+<div class="modal" id="rules" hidden role="dialog" aria-modal="true" aria-labelledby="rulesT">
+  <div class="box" data-ins="rules">
+    <button class="x" id="rulesX" aria-label="Close">✕</button>
+    <h3 id="rulesT">Rally Point · the 5 rules</h3>
+    <ol>
+      <li><b>On your turn, place one tile from your hand of 3 on empty squares:</b> a banner (1×4), an objective (2×2) or an insignia (1×1). An objective may also fill a closed-in gap of 1–4 squares, but then it never rallies.</li>
+      <li><b>An objective rallies the moment all 8 squares around it are filled.</b> The board edge counts as filled.</li>
+      <li><b>When it rallies, every square of a tile touching it scores 1 for that tile's owner, or 2 if the tile's colour matches the objective.</b> Whoever closed it scores 1 more.</li>
+      <li><b>Each rally also gives you 1 Ammo for every one of your tiles touching it. At 5 Ammo you Strike</b> (at the end of your turn): remove an enemy tile that touches an open objective. If there is none, score 1.</li>
+      <li><b>When the board is full or no one can place, the most points wins.</b> The second player starts with 1 point.</li>
+    </ol>
+    <p>After each turn you draw back up to 3 tiles from your stack. If none of your tiles fit, you swap one with your stack and pass. Right-click or long-press anything on the table to see what it gives you right now.</p>
+  </div>
+</div>
+<div class="modal" id="endM" hidden role="dialog" aria-modal="true" aria-labelledby="endT">
+  <div class="box endbox" data-ins="end">
+    <b class="big" id="endT"></b>
+    <p id="endP" style="color:var(--ink);font-size:15px"></p>
+    <div class="row"><button class="btn main" id="endNew" data-ins="btn:new">New match</button><button class="btn" id="endLessons" data-ins="btn:lessons">Lessons</button><button class="btn" id="endLook" data-ins="btn:look">Look at the board</button></div>
+  </div>
+</div>
+<div class="insp" id="insp" role="dialog" aria-modal="false" aria-labelledby="inspT"><button class="x" id="inspX" aria-label="Close">✕</button><div class="it" id="inspT"></div><div class="is" id="inspS"></div><ul id="inspL"></ul></div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const Q=new URLSearchParams(location.search);
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SP=Q.has("fast")?0.02:(reduce?0.35:1);
+const STRIKE=5, HAND=3;
+const COL={R:{n:"Red",g:"◆",k:"#e2465a"},Y:{n:"Gold",g:"●",k:"#f2b632"},G:{n:"Green",g:"▲",k:"#57b86a"},B:{n:"Blue",g:"✚",k:"#4f9be8"}};
+const KN={b:"banner",o:"objective",i:"insignia"}, SH={b:"1×4",o:"2×2",i:"1×1"};
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const other=p=>3-p;
+const PN=p=>p===1?"You":"AI", pn=p=>p===1?"you":"the AI", poss=p=>p===1?"your":"the AI's";
+const tname=t=>`${COL[t.c].n} ${t.patch?"patch":KN[t.k]}`;
+let UID=1; const mk=(k,c)=>({u:UID++,k,c});
+
+/* =================== Rules engine: the Basic ruleset of rally_v4.py (BASIC5) =================== */
+function newGame(R,C){ return {R,C,grid:new Array(R*C).fill(0),tiles:{},nid:1,score:{1:0,2:0},rallies:{1:0,2:0},ammo:{1:0,2:0},
+  hands:{1:[],2:[]},stacks:{1:[],2:[]},bd:{1:{contact:0,closer:0,strike:0,start:0},2:{contact:0,closer:0,strike:0,start:0}},passes:0,turn:1,over:false}; }
+const clone=s=>JSON.parse(JSON.stringify(s));
+const inb=(st,r,c)=>r>=0&&r<st.R&&c>=0&&c<st.C;
+const RC=(st,i)=>[Math.floor(i/st.C),i%st.C];
+const isHub=t=>t.k==="o"&&!t.patch;
+const isContact=t=>t.k==="b"||t.k==="i";
+function borderOf(st,h){ // 8 side squares, clockwise from top-left; off-board ones count as filled
+  const [r0,c0]=RC(st,Math.min(...h.cells));
+  return [[r0-1,c0],[r0-1,c0+1],[r0,c0+2],[r0+1,c0+2],[r0+2,c0+1],[r0+2,c0],[r0+1,c0-1],[r0,c0-1]]
+    .map(([r,c])=>({r,c,on:inb(st,r,c),i:inb(st,r,c)?r*st.C+c:-1}));
+}
+function filledOf(st,h){ let n=0; for(const b of borderOf(st,h)) if(!b.on||st.grid[b.i]) n++; return n; }
+function openHubs(st){ return Object.values(st.tiles).filter(h=>isHub(h)&&!h.rallied); }
+function hubsTouching(st,t){ const cs=new Set(t.cells); return Object.values(st.tiles).filter(h=>isHub(h)&&borderOf(st,h).some(b=>b.on&&cs.has(b.i))); }
+function pockets(st){ // closed-in empty groups of 1-4 squares (the patch rule)
+  const seen=new Set(), out=[];
+  for(let i=0;i<st.grid.length;i++){ if(st.grid[i]||seen.has(i)) continue;
+    const comp=[], stk=[i]; seen.add(i);
+    while(stk.length){ const x=stk.pop(); comp.push(x); const [r,c]=RC(st,x);
+      for(const [a,b] of [[r+1,c],[r-1,c],[r,c+1],[r,c-1]]) if(inb(st,a,b)){ const y=a*st.C+b; if(!st.grid[y]&&!seen.has(y)){ seen.add(y); stk.push(y); } } }
+    if(comp.length<=4) out.push(comp.sort((a,b)=>a-b));
+  }
+  return out;
+}
+function slot(st,r,c,h,w){ const out=[]; for(let a=0;a<h;a++) for(let b=0;b<w;b++){ if(!inb(st,r+a,c+b)) return null; const i=(r+a)*st.C+c+b; if(st.grid[i]) return null; out.push(i); } return out; }
+function movesFor(st,cd){
+  const mv=[];
+  for(let r=0;r<st.R;r++) for(let c=0;c<st.C;c++){
+    if(cd.k==="b"){ let s=slot(st,r,c,1,4); if(s) mv.push({cells:s,o:"h"}); s=slot(st,r,c,4,1); if(s) mv.push({cells:s,o:"v"}); }
+    else if(cd.k==="i"){ const s=slot(st,r,c,1,1); if(s) mv.push({cells:s}); }
+    else { const s=slot(st,r,c,2,2); if(s) mv.push({cells:s}); }
+  }
+  if(cd.k==="o") for(const p of pockets(st)) mv.push({cells:p,patch:true});
+  return mv;
+}
+function hasMove(st,p){ return st.hands[p].some(cd=>movesFor(st,cd).length>0); }
+function place(st,p,cd,mv){ // mirrors rally_v4.place() under BASIC5
+  const id=st.nid++;
+  const t={id,k:cd.k,c:cd.c,p,cells:mv.cells.slice().sort((a,b)=>a-b),o:mv.o||null,patch:!!mv.patch,rallied:false};
+  st.tiles[id]=t; for(const i of t.cells) st.grid[i]=id;
+  const ev=[{t:"place",id,p,k:t.k,c:t.c,patch:t.patch}];
+  const cs=new Set(t.cells);
+  const cand=openHubs(st).filter(h=>h.id===id||borderOf(st,h).some(b=>b.on&&cs.has(b.i))).sort((a,b)=>a.id-b.id);
+  const before={}; for(const h of cand) before[h.id]=filledOf(st,h)-(h.id===id?0:borderOf(st,h).filter(b=>b.on&&cs.has(b.i)).length);
+  const fired=cand.filter(h=>filledOf(st,h)>=8);
+  for(const h of fired){
+    const items=[], touch=new Map();
+    for(const b of borderOf(st,h)){ if(!b.on) continue; const q=st.grid[b.i]; if(!q) continue; const tt=st.tiles[q]; if(!isContact(tt)) continue;
+      const m=tt.c===h.c, pts=m?2:1; st.score[tt.p]+=pts; st.bd[tt.p].contact+=pts; items.push({i:b.i,tile:q,p:tt.p,pts,m,k:tt.k,c:tt.c}); touch.set(q,tt.p); }
+    st.score[p]+=1; st.bd[p].closer+=1; st.rallies[p]++;
+    const ammo=[]; for(const [q,o] of touch){ st.ammo[o]+=1; ammo.push({tile:q,p:o}); }
+    h.rallied=true;
+    ev.push({t:"rally",hub:h.id,c:h.c,p,items,ammo});
+  }
+  for(const h of cand) if(!h.rallied) ev.push({t:"fill",hub:h.id,c:h.c,from:before[h.id],to:filledOf(st,h)});
+  return ev;
+}
+function threat(st,t){ let v=0; const cs=new Set(t.cells); for(const h of openHubs(st)){ const n=borderOf(st,h).filter(b=>b.on&&cs.has(b.i)).length; v+=n*(t.c===h.c?2:1); } return v; }
+function strikeTargets(st,p){ // enemy banners and insignia touching an open objective
+  const ids=new Set(); for(const h of openHubs(st)) for(const b of borderOf(st,h)) if(b.on&&st.grid[b.i]) ids.add(st.grid[b.i]);
+  return [...ids].sort((x,y)=>x-y).map(q=>st.tiles[q]).filter(t=>isContact(t)&&t.p!==p);
+}
+function aiStrikeChoice(st,p){ // rally_v4.best_target: the most valuable exposed tile, else take the point
+  let best=null,bv=0; for(const t of strikeTargets(st,p)){ const v=threat(st,t); if(v>bv){ best=t; bv=v; } }
+  return best&&bv*0.9>1?best.id:null;
+}
+function applyStrike(st,p,tid){
+  st.ammo[p]-=STRIKE;
+  if(tid&&st.tiles[tid]){ const t=st.tiles[tid]; for(const i of t.cells) st.grid[i]=0; delete st.tiles[tid]; return {t:"strike",p,tile:t}; }
+  st.score[p]+=1; st.bd[p].strike+=1; return {t:"strike",p,tile:null};
+}
+function drawUp(st,p){ let n=0; while(st.hands[p].length<HAND&&st.stacks[p].length){ st.hands[p].push(st.stacks[p].shift()); n++; } return n; }
+function boardFull(st){ return st.grid.every(x=>x); }
+function potential(st,me){ // small look-ahead flavour for the greedy AI: open contacts it owns
+  let v=0; for(const h of openHubs(st)){ const need=8-filledOf(st,h); const seen=new Map();
+    for(const b of borderOf(st,h)) if(b.on&&st.grid[b.i]){ const t=st.tiles[st.grid[b.i]]; if(t&&isContact(t)) seen.set(t.id,(seen.get(t.id)||0)+(t.c===h.c?2:1)); }
+    for(const [q,x] of seen){ const t=st.tiles[q]; v+=(t.p===me?1:-1)*x/(1+need*0.5); } }
+  return v;
+}
+function aiChoose(st,p){
+  let best=null; const seen=new Set(), o=other(p), base=st.score[p]-st.score[o], pot0=potential(st,p);
+  st.hands[p].forEach((cd,hi)=>{ const key=cd.k+cd.c; if(seen.has(key)) return; seen.add(key);
+    for(const mv of movesFor(st,cd)){ const t=clone(st); place(t,p,cd,mv); if(t.ammo[p]>=STRIKE) applyStrike(t,p,aiStrikeChoice(t,p));
+      let v=t.score[p]-t.score[o]-base+0.3*(potential(t,p)-pot0);
+      if(mv.patch) v-=0.5; if(cd.k==="i") v-=0.4; v+=Math.random()*0.05;
+      if(!best||v>best.v) best={v,hi,mv}; } });
+  return best;
+}
+
+/* =================== Lessons (rally-point-v4.md section 6.4) =================== */
+const B=(c,p,r,col,o)=>({k:"b",c,p,r,col,o:o||"h"}), O=(c,p,r,col)=>({k:"o",c,p,r,col}), I=(c,p,r,col)=>({k:"i",c,p,r,col});
+const sameSet=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+const covers=(a,b)=>b.every(x=>a.includes(x));
+const LESSONS=[
+ {title:"Place a banner",text:"Tap your banner, tap Rotate to stand it up, then tap the glowing strip.",
+  R:6,C:6,tiles:[],hand:[["b","R"]],goal:[[1,2],[2,2],[3,2],[4,2]],show:{score:false,ammo:false,stack:false},
+  want(st,cd,mv,g){ if(sameSet(mv.cells,g)) return null; return mv.o==="h"?"Nearly! The glow runs up and down: tap Rotate (or press R) first.":"Put it on the glowing squares."; },
+  done:()=>true, win:()=>"Placed! A banner fills 4 squares in a row. It scores when it touches an objective that rallies."},
+ {title:"Place an objective",text:"Tap your objective, then tap the glowing 2×2 to place it.",
+  R:6,C:6,tiles:[],hand:[["o","Y"]],goal:[[2,2],[2,3],[3,2],[3,3]],show:{score:false,ammo:false,stack:false},
+  want(st,cd,mv,g){ return sameSet(mv.cells,g)?null:"Put it on the glowing 2×2."; },
+  done:()=>true, win:()=>"That's an objective. The dashed squares are its border: 8 squares, 0 filled, so it shows 0/8. Fill all 8 and it rallies."},
+ {title:"Fill the border",text:"Fill the last 2 border squares to make the Gold objective rally.",
+  R:6,C:6,tiles:[O("Y",1,2,2),B("Y",1,1,0,"h"),B("G",2,0,4,"v"),B("G",2,4,2,"h")],hand:[["b","R"]],goal:[[2,1],[3,1]],show:{score:true,ammo:false,stack:false},
+  want(st,cd,mv,g){ if(covers(mv.cells,g)) return null; return mv.o==="h"?"Those 2 squares sit one above the other: tap Rotate, then tap the top one.":"Cover both glowing squares."; },
+  done:(st,ev)=>ev.some(e=>e.t==="rally"),
+  win:(st,ev)=>rallyLine(ev.find(e=>e.t==="rally"))+" Every touching square scored for its owner: 2 when the colours match."},
+ {title:"Use the edge",text:"The board edge counts as filled, so this corner objective needs just 4 squares: fill the last 2.",
+  R:6,C:6,tiles:[O("R",1,0,0),B("G",2,0,2,"h"),B("G",2,1,2,"h")],hand:[["b","R"]],goal:[[2,0],[2,1]],show:{score:true,ammo:false,stack:false},
+  want(st,cd,mv,g){ return covers(mv.cells,g)?null:(mv.o==="v"?"Those squares sit side by side: tap Rotate to lay it flat.":"Cover both glowing squares."); },
+  done:(st,ev)=>ev.some(e=>e.t==="rally"), win:(st,ev)=>rallyLine(ev.find(e=>e.t==="rally"))+" A corner objective needs 4 squares, an edge one 6."},
+ {title:"Plug a gap",text:"One closed-in square is left: plug it with your 1×1 insignia.",
+  R:6,C:6,tiles:[O("Y",1,1,1),B("Y",1,0,0,"h"),B("R",1,1,0,"v"),B("G",2,1,3,"v"),I("G",2,3,1),I("G",2,4,2)],hand:[["b","R"],["i","Y"]],goal:[[3,2]],show:{score:true,ammo:false,stack:false},
+  want(st,cd,mv,g){ if(cd.k==="b") return "A banner is 4 long and can't fit a 1-square hole: pick your insignia (1×1)."; return sameSet(mv.cells,g)?null:"Put the insignia in the glowing hole."; },
+  done:(st,ev)=>ev.some(e=>e.t==="rally"), win:(st,ev)=>rallyLine(ev.find(e=>e.t==="rally"))+" Insignia are small, so keep them for holes like this."},
+ {title:"Patch a gap",text:"No 2×2 space is left: drop your objective into the 3-square pocket as a patch.",
+  R:6,C:6,tiles:[O("G",2,1,2),B("R",1,0,1,"h"),B("G",2,1,1,"v"),B("Y",1,1,4,"v"),I("R",1,4,2),B("G",2,5,2,"h")],hand:[["o","Y"]],goal:[[3,2],[3,3],[4,3]],show:{score:true,ammo:false,stack:false},
+  want(st,cd,mv,g){ return mv.patch&&sameSet(mv.cells,g)?null:"Tap a glowing pocket square: the objective fills the whole pocket as a patch."; },
+  done:(st,ev)=>ev.some(e=>e.t==="rally"), win:(st,ev)=>"The grey patch filled the pocket and never rallies. "+rallyLine(ev.find(e=>e.t==="rally"))},
+ {title:"Hand and stack",text:"Place any tile, then watch your hand refill from your stack.",
+  R:6,C:6,tiles:[O("Y",1,2,2)],hand:[["b","Y"],["b","R"],["i","R"]],stack:[["o","R"],["b","Y"],["b","R"],["i","Y"]],
+  aiHand:[["b","G"],["b","G"],["i","G"]],aiStack:[["b","Y"]],ai:true,goal:[],show:{score:true,ammo:false,stack:true},
+  want:()=>null, done:()=>true,
+  win:(st,ev)=>`You drew 1 tile (stack 4 → ${st.stacks[1].length}), so you hold 3 again. Then the AI took its turn: ${ui.aiLine}`},
+ {title:"Earn Ammo",text:"Close the objective: each of your tiles touching it gives you 1 Ammo.",
+  R:6,C:6,tiles:[O("R",1,2,2),B("R",1,1,0,"h"),B("Y",1,0,4,"v"),B("G",2,4,2,"h")],hand:[["b","R"]],goal:[[2,1],[3,1]],ammo:{1:1,2:0},show:{score:true,ammo:true,stack:false},
+  want(st,cd,mv,g){ if(covers(mv.cells,g)) return null; return mv.o==="h"?"Those 2 squares sit one above the other: tap Rotate, then tap the top one.":"Cover both glowing squares."; },
+  done:(st,ev)=>ev.some(e=>e.t==="rally"),
+  win:(st,ev)=>{ const r=ev.find(e=>e.t==="rally"); const a=r.ammo.filter(x=>x.p===1).length, b=r.ammo.length-a; return `+${a} Ammo: one for each of your ${a} tiles touching it (now ${st.ammo[1]}/5). The AI's banner gave it ${b}. At 5 you Strike.`; }},
+ {title:"Strike at 5",text:"You have 3 Ammo: close the Gold objective to reach 5, then Strike.",
+  R:6,C:6,tiles:[O("Y",1,0,0),B("R",1,0,2,"h"),B("G",2,2,0,"h"),O("G",2,3,3),B("G",2,2,5,"v")],hand:[["b","Y"]],goal:[[1,2]],ammo:{1:3,2:0},noPoint:true,show:{score:true,ammo:true,stack:false},
+  want(st,cd,mv,g){ return covers(mv.cells,g)?null:"Lay it flat across the glowing square."; },
+  done:(st,ev)=>ev.some(e=>e.t==="strike"&&e.tile),
+  win:(st,ev)=>{ const s=ev.find(e=>e.t==="strike"); return `Strike! The AI's ${tname(s.tile)} is gone and its squares are open again: a chance for you. Only tiles touching an objective that hasn't rallied can be hit.`; }},
+ {title:"Win",text:"Fill the last 4 squares: when the board is full, the most points wins.",
+  R:6,C:6,tiles:[B("G",2,0,0,"h"),B("R",1,1,0,"h"),B("G",2,0,4,"v"),B("Y",1,0,5,"v"),B("G",2,2,0,"v"),O("R",1,2,2),B("G",2,4,2,"h"),B("Y",1,5,2,"h")],
+  hand:[["b","R"]],goal:[[2,1],[3,1],[4,1],[5,1]],score:{1:5,2:9},start2:true,show:{score:true,ammo:false,stack:false},
+  want(st,cd,mv,g){ return sameSet(mv.cells,g)?null:(mv.o==="h"?"The glow runs up and down: tap Rotate first.":"Put it on the glowing column."); },
+  done:st=>st.over,
+  win:(st,ev)=>{ const r=ev.find(e=>e.t==="rally"); return `${r?rallyLine(r)+" ":""}Board full: you ${st.score[1]}, AI ${st.score[2]} (it started with 1 point as the second player). You win! You're ready for a match.`; }},
+];
+
+/* =================== UI state =================== */
+let st=null;
+const ui={mode:"lesson",li:0,sel:-1,orient:"h",pv:null,busy:false,phase:"place",targets:[],turnEv:[],done:{},lastAi:[],cur:null,touch:false,freed:[],aiLine:"",shown:null,ended:false};
+ui.touch=matchMedia("(pointer: coarse)").matches;
+try{ const d=JSON.parse(localStorage.getItem("rp-learn-done")||"{}"); if(d&&typeof d==="object") ui.done=d; }catch(_){}
+function saveDone(){ try{ localStorage.setItem("rp-learn-done",JSON.stringify(ui.done)); }catch(_){} }
+const L=()=>LESSONS[ui.li];
+const timers=[]; function later(ms,fn){ const t=setTimeout(fn,ms*SP); timers.push(t); return t; }
+function clearTimers(){ while(timers.length) clearTimeout(timers.pop()); }
+
+function buildLesson(i){
+  clearTimers(); closeIns(); hideModals();
+  ui.mode="lesson"; ui.li=i; ui.lessonDone=false; ui.sel=-1; ui.orient="h"; ui.pv=null; ui.busy=false; ui.phase="place"; ui.targets=[]; ui.turnEv=[]; ui.lastAi=[]; ui.freed=[]; ui.cur=null; ui.ended=false;
+  const l=LESSONS[i]; st=newGame(l.R,l.C);
+  for(const s of l.tiles){ const id=st.nid++; let cells;
+    if(s.k==="b") cells=s.o==="h"?[0,1,2,3].map(j=>s.r*st.C+s.col+j):[0,1,2,3].map(j=>(s.r+j)*st.C+s.col);
+    else if(s.k==="o") cells=[s.r*st.C+s.col,s.r*st.C+s.col+1,(s.r+1)*st.C+s.col,(s.r+1)*st.C+s.col+1];
+    else cells=[s.r*st.C+s.col];
+    st.tiles[id]={id,k:s.k,c:s.c,p:s.p,cells,o:s.k==="b"?s.o:null,patch:false,rallied:false}; for(const x of cells){ if(st.grid[x]) console.warn("overlap",i,x); st.grid[x]=id; } }
+  st.hands[1]=l.hand.map(([k,c])=>mk(k,c)); st.stacks[1]=(l.stack||[]).map(([k,c])=>mk(k,c));
+  st.hands[2]=(l.aiHand||[]).map(([k,c])=>mk(k,c)); st.stacks[2]=(l.aiStack||[]).map(([k,c])=>mk(k,c));
+  if(l.ammo) st.ammo={...l.ammo}; if(l.score){ st.score={...l.score}; }
+  if(l.start2){ st.bd[2].start=1; st.bd[2].contact=st.score[2]-1; st.bd[1].contact=st.score[1]; }
+  ui.goal=l.goal.map(([r,c])=>r*st.C+c);
+  ui.shown={score:{...st.score},ammo:{...st.ammo}};
+  setTabs(); sizeBoard();
+  task({no:`Lesson ${i+1} of ${LESSONS.length}`,title:l.title,text:l.text,say:"",kind:"",acts:[]});
+  renderAll();
+}
+function newMatch(){
+  clearTimers(); closeIns(); hideModals();
+  ui.mode="match"; ui.lessonDone=false; ui.sel=-1; ui.orient="h"; ui.pv=null; ui.busy=false; ui.phase="place"; ui.targets=[]; ui.turnEv=[]; ui.lastAi=[]; ui.freed=[]; ui.goal=[]; ui.cur=null; ui.ended=false;
+  st=newGame(8,8);
+  const mine=[["b","R",4],["b","Y",3],["o","R",2],["o","Y",1],["i","R",1],["i","Y",1]];  // starter "Spearhead" colours
+  const ai=[["b","Y",4],["b","G",3],["o","Y",1],["o","G",2],["i","Y",1],["i","G",1]];    // starter "Relay Net" colours
+  const build=spec=>shuffle(spec.flatMap(([k,c,n])=>Array.from({length:n},()=>mk(k,c))));
+  st.stacks[1]=build(mine); st.stacks[2]=build(ai); drawUp(st,1); drawUp(st,2);
+  st.score[2]=1; st.bd[2].start=1; st.turn=1;
+  ui.shown={score:{...st.score},ammo:{...st.ammo}};
+  setTabs(); sizeBoard();
+  task({no:"Match · Basic rules · 8×8",title:"Your move",text:"Pick a tile from your hand, then a square on the board.",say:"You go first. The AI goes second, so it starts with 1 point.",kind:"",acts:[]});
+  renderAll(); humanTurn();
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function setTabs(){ document.body.classList.toggle("mode-lesson",ui.mode==="lesson"); $("tabL").classList.toggle("on",ui.mode==="lesson"); $("tabM").classList.toggle("on",ui.mode==="match");
+  $("tabL").setAttribute("aria-selected",ui.mode==="lesson"); $("tabM").setAttribute("aria-selected",ui.mode==="match"); }
+
+/* =================== Task panel =================== */
+let T={};
+function task(o){ T=Object.assign(T,o); paintTask(); }
+function paintTask(){
+  $("tkNo").textContent=T.no||""; $("tkTitle").textContent=T.title||""; $("tkText").textContent=T.text||"";
+  const s=$("say"); s.innerHTML=T.say||""; s.className="say "+(T.kind||"");
+  const a=$("tkAct"); a.innerHTML="";
+  for(const b of T.acts||[]){ const el=document.createElement("button"); el.className="btn"+(b.main?" main":"")+(b.warn?" warn":""); el.textContent=b.label; el.id=b.id||""; el.setAttribute("data-ins","btn:"+(b.ins||"generic")); el.onclick=b.fn; a.appendChild(el); }
+  const d=$("dots"); d.hidden=ui.mode!=="lesson";
+  if(ui.mode==="lesson"){ d.innerHTML=LESSONS.map((l,i)=>`<button class="${i===ui.li?"on":ui.done[i]?"done":""}" data-ins="dot:${i}" aria-label="Lesson ${i+1}: ${l.title}" data-i="${i}">${i+1}</button>`).join("");
+    d.querySelectorAll("button").forEach(b=>b.onclick=()=>buildLesson(+b.dataset.i)); }
+}
+function hint(msg){ task({say:msg,kind:"hint"}); }
+
+/* =================== Rendering =================== */
+const board=$("board"), bl=$("bl"), fx=$("fx");
+function sizeBoard(){
+  const R=st.R,C=st.C, wide=innerWidth>=900; let cell;
+  if(wide) cell=Math.min((innerHeight-110)/R,(Math.min(innerWidth,1240)-32-400-24-16)/C,78);
+  else cell=Math.min((Math.min(innerWidth,640)-32-16)/C,62);
+  cell=Math.max(28,Math.floor(cell));
+  document.documentElement.style.setProperty("--cell",cell+"px");
+  board.style.setProperty("--R",R); board.style.setProperty("--C",C);
+}
+addEventListener("resize",()=>{ if(st) sizeBoard(); });
+const pos=(r,c,h,w)=>`left:calc(var(--cell)*${c});top:calc(var(--cell)*${r});width:calc(var(--cell)*${w});height:calc(var(--cell)*${h})`;
+function box(cells){ const rc=cells.map(i=>RC(st,i)); const r0=Math.min(...rc.map(x=>x[0])), c0=Math.min(...rc.map(x=>x[1])), r1=Math.max(...rc.map(x=>x[0])), c1=Math.max(...rc.map(x=>x[1])); return {r0,c0,h:r1-r0+1,w:c1-c0+1}; }
+function emblem(c){ const k=COL[c].k, p="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z";
+  return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="${p}" fill="${k}" opacity=".22"/><path d="${p}" fill="none" stroke="${k}" stroke-width="2.5"/><text x="20" y="28" text-anchor="middle" font-size="16" fill="${k}" font-family="sans-serif" font-weight="700">${COL[c].g}</text></svg>`; }
+function tileHTML(t,extra){
+  const own=t.p===1?"var(--p1)":"var(--p2)", k=COL[t.c].k, b=box(t.cells);
+  const cls=(extra||"")+(ui.targets.includes(t.id)?" tgt":"")+(ui.lastAi.includes(t.id)?" last":"");
+  const lab=`${tname(t)}, ${t.p===1?"yours":"AI's"}`;
+  if(t.patch) return t.cells.map(i=>{ const [r,c]=RC(st,i); return `<div class="tile patchc${cls}" data-t="${t.id}" data-ins="tile:${t.id}" aria-label="${lab}" style="${pos(r,c,1,1)}">patch</div>`; }).join("");
+  const st0=`--k:${k};--own:${own};${pos(b.r0,b.c0,b.h,b.w)}`;
+  if(t.k==="b") return `<div class="tile banner ${t.o==="v"?"v":"h"}${cls}" data-t="${t.id}" data-ins="tile:${t.id}" aria-label="${lab}" style="${st0}"><div class="face">${`<span class="glyph">${COL[t.c].g}</span>`.repeat(2)}</div></div>`;
+  if(t.k==="i") return `<div class="tile ins${cls}" data-t="${t.id}" data-ins="tile:${t.id}" aria-label="${lab}" style="${st0}"><div class="gem"><span>${COL[t.c].g}</span></div></div>`;
+  const f=filledOf(st,t);
+  return `<div class="tile obj${t.rallied?" rallied":""}${cls}" data-t="${t.id}" data-ins="tile:${t.id}" aria-label="${lab}, ${t.rallied?"rallied":f+" of 8 filled"}" style="${st0}">${emblem(t.c)}<span class="count${!t.rallied&&f>=6?" near":""}">${t.rallied?"✓":f+"/8"}</span></div>`;
+}
+function renderBoard(){
+  const ring=new Set(); for(const h of openHubs(st)) for(const b of borderOf(st,h)) if(b.on&&!st.grid[b.i]) ring.add(b.i);
+  let h="";
+  for(let i=0;i<st.R*st.C;i++){ if(st.grid[i]) continue; const [r,c]=RC(st,i);
+    const cls=(ui.goal.includes(i)&&!ui.lessonDone?" goal":"")+(ring.has(i)?" ring":"")+(ui.freed.includes(i)?" freed":"")+(ui.cur===i?" cur":"");
+    h+=`<div class="sq${cls}" data-sq="${i}" data-ins="sq:${i}" style="${pos(r,c,1,1)}"></div>`; }
+  for(const t of Object.values(st.tiles)) h+=tileHTML(t,ui.enterId===t.id?" enter":"");
+  ui.enterId=null;
+  if(ui.pv&&ui.pv.mv){ const p=ui.pv, cd=st.hands[1][ui.sel]; if(cd){ const bad=!!p.bad;
+      const fake={id:0,k:cd.k,c:cd.c,p:1,cells:p.mv.cells,o:p.mv.o,patch:!!p.mv.patch,rallied:false};
+      if(fake.patch||cd.k==="o") for(const i of p.mv.cells){ const [r,c]=RC(st,i); h+=`<div class="gcell${bad?" bad":""}" style="${pos(r,c,1,1)}"></div>`; }
+      else { const b=box(fake.cells); h+=`<div class="ghost${bad?" bad":""}" style="${pos(b.r0,b.c0,b.h,b.w)};border:2px solid ${bad?"var(--bad)":"var(--gold)"}"></div>`; }
+      h+=tileHTML(fake,"").replace(/class="tile/g,'class="tile ghost'+(bad?" bad":"")).replace(/data-ins="[^"]*"/g,'data-ins="ghost"');
+      if(!bad&&p.labels) for(const l of p.labels){ const [r,c]=RC(st,l.i); h+=`<div class="plab ${l.p===1?"p1c":"p2c"}" style="left:calc(var(--cell)*${c+.5});top:calc(var(--cell)*${r+.5})">+${l.pts}</div>`; }
+    } }
+  bl.innerHTML=h;
+}
+function renderHand(){
+  const hand=st.hands[1]; let h="";
+  hand.forEach((cd,i)=>{ const fits=movesFor(st,cd).length>0; const n=cd.k==="b"?[4,1]:cd.k==="o"?[2,2]:[1,1];
+    h+=`<button class="card${i===ui.sel?" sel":""}${fits?"":" nofit"}${ui.newCards&&ui.newCards.includes(cd.u)?" new":""}" style="--k:${COL[cd.c].k}" data-i="${i}" data-ins="card:${i}" aria-pressed="${i===ui.sel}" aria-label="${COL[cd.c].n} ${KN[cd.k]} ${SH[cd.k]}">
+      <span class="t"><span class="shape" style="grid-template-columns:repeat(${n[0]},6px)">${"<b></b>".repeat(n[0]*n[1])}</span><i>${COL[cd.c].g}</i></span><span class="n">${COL[cd.c].n} ${cap(KN[cd.k])}</span></button>`; });
+  for(let i=hand.length;i<HAND;i++) h+=`<div class="card empty" data-ins="slot" aria-hidden="true"></div>`;
+  $("cards").innerHTML=h; ui.newCards=null;
+  $("cards").querySelectorAll("button.card").forEach(b=>b.onclick=()=>pick(+b.dataset.i));
+  const cd=st.hands[1][ui.sel]; $("rot").disabled=!(cd&&cd.k==="b"); $("rotS").textContent=ui.orient==="h"?"now: flat":"now: upright";
+  const sh=ui.mode==="match"||L().show.stack; $("mysub").hidden=!sh; const sk=$("stk"); if(sk.textContent!==String(st.stacks[1].length)&&sh){ $("stackc").classList.remove("bump"); void sk.offsetWidth; $("stackc").classList.add("bump"); } sk.textContent=st.stacks[1].length;
+}
+function paintScores(){
+  const show=ui.mode==="match"?{score:true,ammo:true}:L().show;
+  $("scores").hidden=!show.score;
+  for(const p of [1,2]){ const el=$("s"+p), v=ui.shown.score[p]; if(el.textContent!==String(v)){ el.textContent=v; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+    const a=Math.min(ui.shown.ammo[p],STRIKE); $("ap"+p).innerHTML=Array.from({length:STRIKE},(_,j)=>`<i class="${j<a?"on":""}"></i>`).join("");
+    $("an"+p).textContent=`${ui.shown.ammo[p]}/5`; $("am"+p).classList.toggle("full",ui.shown.ammo[p]>=STRIKE); $("am"+p).hidden=!show.ammo;
+    $("pb"+p).classList.toggle("turn",!st.over&&st.turn===p&&(ui.mode==="match"||(!!L().ai&&!ui.lessonDone))); }
+  $("startTag").hidden=!st.bd[2].start;
+  $("aihand").hidden=ui.mode!=="match"; $("aihand").textContent=`hand ${st.hands[2].length} · stack ${st.stacks[2].length}`;
+  $("aisub").hidden=$("startTag").hidden&&$("aihand").hidden;
+}
+function paintPv(){ const el=$("pv"); const on=!!(ui.pv&&ui.pv.text); el.classList.toggle("idle",!on);
+  el.innerHTML=on?ui.pv.text:(ui.sel>=0&&ui.phase==="place"&&!ui.lessonDone&&!st.over?(ui.touch?"Tap a square to preview what happens there.":"Point at a square to preview what happens there."):"&nbsp;"); }
+function renderAll(){ renderBoard(); renderHand(); paintScores(); paintPv(); }
+
+/* =================== Placement input =================== */
+function pick(i){
+  if(ui.busy||st.over||ui.lessonDone) return;
+  if(ui.phase==="strike"){ hint("Strike first: tap a tile outlined in red."); return; }
+  if(st.turn!==1){ return; }
+  ui.sel=ui.sel===i?-1:i; ui.pv=null;
+  const cd=st.hands[1][ui.sel];
+  if(cd){ const n=movesFor(st,cd).length;
+    if(!n) hint(`This ${KN[cd.k]} doesn't fit anywhere right now. Pick another tile.`);
+    else if(ui.mode==="match") task({text:ui.touch?"Tap a square to preview, tap it again to place.":"Point at a square to preview, click to place."+(cd.k==="b"?" Rotate turns it.":"")});
+  } else if(ui.mode==="match") task({text:"Pick a tile from your hand, then a square on the board."});
+  renderAll();
+}
+function rotate(){ if(ui.busy) return; ui.orient=ui.orient==="h"?"v":"h"; if(ui.pv&&ui.pv.at!=null) preview(ui.pv.at); renderAll(); }
+function candidates(cd,i){
+  const [r,c]=RC(st,i), out=[];
+  if(cd.k==="b"){ for(let k=0;k<4;k++){ const s=ui.orient==="h"?slot(st,r,c-k,1,4):slot(st,r-k,c,4,1); if(s) out.push({cells:s,o:ui.orient}); } }
+  else if(cd.k==="i"){ const s=slot(st,r,c,1,1); if(s) out.push({cells:s}); }
+  else { for(const [a,b] of [[0,0],[0,-1],[-1,0],[-1,-1]]){ const s=slot(st,r+a,c+b,2,2); if(s) out.push({cells:s}); }
+    if(!out.length&&!st.grid[i]) for(const p of pockets(st)) if(p.includes(i)) out.push({cells:p,patch:true}); }
+  if(ui.mode==="lesson"&&ui.goal.length){ out.sort((x,y)=>score(y)-score(x)); }
+  return out;
+  function score(m){ const g=ui.goal; return (sameSet(m.cells,g)?3:0)+(covers(m.cells,g)?2:0)+(m.cells.filter(x=>g.includes(x)).length/10); }
+}
+function preview(i){
+  const cd=st.hands[1][ui.sel]; if(!cd){ ui.pv=null; return null; }
+  const cands=candidates(cd,i);
+  if(!cands.length){ ui.pv={at:i,mv:null,text:null}; return null; }
+  const mv=cands[0]; let bad=null;
+  if(ui.mode==="lesson") bad=L().want(st,cd,mv,ui.goal);
+  const t=clone(st); const ev=place(t,1,cd,mv);
+  const labels=[]; const lines=[]; const d1=t.score[1]-st.score[1], d2=t.score[2]-st.score[2];
+  for(const e of ev){ if(e.t==="rally"){ for(const it of e.items) labels.push({i:it.i,p:it.p,pts:it.pts}); lines.push(`closes the <b>${COL[e.c].n} objective</b>`); }
+    if(e.t==="fill"&&e.hub===ev[0].id) lines.push(`your new objective starts at <b>${e.to}/8</b>`);
+    else if(e.t==="fill"&&e.to!==e.from) lines.push(`${COL[e.c].n} objective ${e.from}/8 → <b>${e.to}/8</b>`); }
+  let text=`If you place here: `;
+  if(mv.patch) text+=`a <b>patch</b> (never rallies) · `;
+  text+=lines.length?lines.join(" · "):"touches no objective";
+  if(ev.some(e=>e.t==="rally")){ text+=` · <b>you +${d1}</b>, AI +${d2}`; const da=t.ammo[1]-st.ammo[1]; if(da) text+=` · +${da} Ammo`; if(t.ammo[1]>=STRIKE) text+=` → <b>Strike!</b>`; }
+  ui.pv={at:i,mv,bad,labels,text:bad?`<span style="color:#ffe7a8">${bad}</span>`:text};
+  return ui.pv;
+}
+function boardIndexAt(x,y){ const r=board.getBoundingClientRect(); const cell=r.width/st.C; const c=Math.floor((x-r.left)/cell), rr=Math.floor((y-r.top)/cell); return inb(st,rr,c)?rr*st.C+c:null; }
+let lastPT="mouse";
+board.addEventListener("pointerdown",e=>{ lastPT=e.pointerType||"mouse"; ui.touch=lastPT!=="mouse"; },{passive:true});
+board.addEventListener("pointermove",e=>{
+  if(e.pointerType!=="mouse"||ui.busy||ui.sel<0||st.turn!==1||ui.phase!=="place") return;
+  const i=boardIndexAt(e.clientX,e.clientY); if(i===null||(ui.pv&&ui.pv.at===i)) return;
+  preview(i); renderBoard(); paintPv();
+});
+board.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse"&&ui.pv&&ui.phase==="place"){ ui.pv=null; renderBoard(); paintPv(); } });
+board.addEventListener("click",e=>{
+  if(ui.busy) return;
+  if(ui.phase==="strike"){ const t=e.target.closest("[data-t]"); const id=t?+t.dataset.t:0;
+    if(id&&ui.targets.includes(id)) humanStrike(id);
+    else hint("Tap a tile outlined in red: an enemy tile touching an objective that hasn't rallied."); return; }
+  if(st.over||ui.lessonDone) return;
+  const i=boardIndexAt(e.clientX,e.clientY); if(i===null) return;
+  tapSquare(i,lastPT==="mouse"||e.detail===0&&!ui.touch);
+});
+function tapSquare(i,immediate){
+  if(st.turn!==1) return;
+  if(ui.sel<0&&ui.mode==="lesson"&&st.hands[1].length===1){ ui.sel=0; renderHand(); }
+  if(ui.sel<0){ if(st.hands[1].length) hint(st.grid[i]?"Right-click or long-press a tile to see what it is. To place, pick a tile from your hand first.":"Pick a tile from your hand first."); return; }
+  const cd=st.hands[1][ui.sel];
+  const prev=ui.pv&&ui.pv.at===i&&ui.pv.mv;
+  const p=preview(i);
+  if(!p){ const flip=cd.k==="b"&&(ui.orient==="h"?[0,1,2,3].some(k=>slot(st,RC(st,i)[0]-k,RC(st,i)[1],4,1)):[0,1,2,3].some(k=>slot(st,RC(st,i)[0],RC(st,i)[1]-k,1,4)));
+    const lh=ui.mode==="lesson"&&!st.grid[i]?L().want(st,cd,{cells:[i],o:ui.orient},ui.goal):null;
+    hint(st.grid[i]?"That square is taken. Tiles go on empty squares.":lh&&cd.k!=="b"?lh:flip?`It doesn't fit ${ui.orient==="h"?"flat":"upright"} here: tap Rotate.`:lh?lh:"It doesn't fit there."); renderBoard(); paintPv(); return; }
+  if(p.bad){ hint(p.bad); ui.pv=null; renderBoard(); paintPv(); return; }
+  if(immediate||prev){ commit(p.mv); return; }
+  task({say:"Preview shown. Tap the same square again to place it, or tap another square.",kind:"hint"});
+  renderBoard(); paintPv();
+}
+
+/* =================== Turn flow =================== */
+function commit(mv){
+  const cd=st.hands[1][ui.sel]; if(!cd) return;
+  st.hands[1].splice(ui.sel,1); ui.sel=-1; ui.pv=null; ui.freed=[]; ui.lastAi=[];
+  const ev=place(st,1,cd,mv); ui.turnEv=ev.slice();
+  ui.enterId=ev[0].id; ui.busy=true;
+  task({say:"",kind:""}); renderAll();
+  playEvents(ev,()=>{ task({say:turnLine(1,cd,mv,ev),kind:"ok"}); afterPlace(1); });
+}
+function afterPlace(p){
+  if(st.ammo[p]>=STRIKE){
+    if(p===1){ const tg=strikeTargets(st,1);
+      if(!tg.length){ runStrike(1,null,()=>finishTurn(1)); return; }
+      ui.phase="strike"; ui.targets=tg.map(t=>t.id); ui.busy=false;
+      const acts=L&&ui.mode==="lesson"&&L().noPoint?[]:[{label:"Take +1 point instead",fn:()=>humanStrike(null),ins:"point",id:"pointBtn"}];
+      task({text:"Strike! Tap an enemy tile outlined in red to remove it.",say:(T.say?T.say+" ":"")+"You have 5 Ammo, so your turn ends with a Strike.",kind:"ok",acts});
+      renderAll(); return; }
+    runStrike(2,aiStrikeChoice(st,2),()=>finishTurn(2)); return;
+  }
+  finishTurn(p);
+}
+function humanStrike(id){ if(ui.phase!=="strike") return; ui.phase="place"; ui.targets=[]; task({acts:[]}); runStrike(1,id,()=>finishTurn(1)); }
+function runStrike(p,id,then){
+  ui.busy=true; renderBoard();
+  const t=id&&st.tiles[id]; const had=strikeTargets(st,p).length>0;
+  const go=()=>{ const cells=t?t.cells.slice():[]; const e=applyStrike(st,p,id); ui.turnEv.push(e);
+    ui.shown.ammo[p]=st.ammo[p];
+    if(t){ ui.freed=cells; } else { ui.shown.score[p]=st.score[p]; }
+    renderAll();
+    const line=t?`<b>Strike!</b> ${PN(p)} removed ${poss(other(p))} ${tname(t)} (−5 Ammo). Its squares are open again.`:`<b>Strike:</b> ${had?(p===1?"you":"the AI")+" took":"no enemy tile touches an open objective, so "+pn(p)+" scored"} +1 point (−5 Ammo).`;
+    task({say:(T.say?T.say+"<br>":"")+line});
+    later(500,()=>{ ui.busy=false; then(); }); };
+  if(t){ board.querySelectorAll(`[data-t="${id}"]`).forEach(e=>e.classList.add("boom")); later(650,go); }
+  else { const [r,c]=[st.R/2-.5,st.C/2-.5]; popAt(r,c,"+1",p); later(300,go); }
+}
+function finishTurn(p){
+  const n=drawUp(st,p); st.passes=0;
+  if(p===1&&n){ ui.newCards=st.hands[1].slice(-n).map(c=>c.u); }
+  if(boardFull(st)) st.over=true;
+  ui.shown={score:{...st.score},ammo:{...st.ammo}};
+  if(!st.over) st.turn=other(p);
+  ui.busy=false; renderAll();
+  if(ui.mode==="lesson"){
+    const l=L();
+    if(p===1&&l.ai&&!st.over){ ui.busy=true; renderAll(); later(700,aiTurn); return; }
+    lessonCheck(); return;
+  }
+  if(st.over){ endMatch(); return; }
+  if(st.turn===2){ ui.busy=true; task({text:"The AI is thinking…"}); paintScores(); later(750,aiTurn); }
+  else humanTurn();
+}
+function lessonCheck(){
+  const l=L(); const ok=l.done(st,ui.turnEv);
+  if(!ok){ task({say:"Not quite. Let's set it up again.",kind:"hint",acts:[{label:"Try again",fn:()=>buildLesson(ui.li),main:true,ins:"retry"}]}); return; }
+  ui.done[ui.li]=true; saveDone(); ui.lessonDone=true; ui.goal=[];
+  const last=ui.li===LESSONS.length-1;
+  const acts=[last?{label:"Play a match ▶",fn:newMatch,main:true,ins:"match",id:"nextBtn"}:{label:"Next lesson ▶",fn:()=>{ ui.lessonDone=false; buildLesson(ui.li+1); },main:true,ins:"next",id:"nextBtn"},
+    {label:"Again",fn:()=>{ ui.lessonDone=false; buildLesson(ui.li); },ins:"retry"}];
+  task({text:"Done! "+(last?"That's the whole Basic game.":"On to the next rule."),say:l.win(st,ui.turnEv),kind:"ok",acts});
+  renderAll();
+  setTimeout(()=>{ const b=$("nextBtn"); if(b) b.focus({preventScroll:true}); },50);
+}
+function humanTurn(){
+  ui.phase="place"; ui.busy=false;
+  if(!hasMove(st,1)){
+    task({title:"No room",text:"None of your tiles fit anywhere.",acts:[{label:"Pass (swap a tile)",fn:()=>doPass(1),main:true,ins:"pass",id:"passBtn"}]});
+    renderAll(); return; }
+  task({title:"Your move",text:"Pick a tile from your hand, then a square on the board.",acts:[]}); renderAll();
+}
+function doPass(p){
+  task({acts:[]});
+  const h=st.hands[p]; if(h.length&&st.stacks[p].length){ st.stacks[p].push(h.shift()); h.push(st.stacks[p].shift()); }
+  st.passes++;
+  const line=p===1?"You passed: one tile went under your stack and you drew one.":"The AI couldn't place, so it swapped a tile and passed.";
+  task({say:line,kind:p===1?"ok":"ai"});
+  if(st.passes>=2||boardFull(st)){ st.over=true; renderAll(); endMatch(); return; }
+  st.turn=other(p); renderAll();
+  if(st.turn===2){ ui.busy=true; later(750,aiTurn); } else humanTurn();
+}
+function aiTurn(){
+  if(st.over) return;
+  if(!hasMove(st,2)){ ui.busy=false; doPass(2); return; }
+  const ch=aiChoose(st,2); const cd=st.hands[2].splice(ch.hi,1)[0];
+  const ev=place(st,2,cd,ch.mv); ui.turnEv=ev.slice(); ui.enterId=ev[0].id; ui.lastAi=[ev[0].id]; ui.freed=[];
+  renderAll();
+  playEvents(ev,()=>{ ui.aiLine=turnLine(2,cd,ch.mv,ev); task({say:ui.aiLine,kind:"ai"}); afterPlace(2); });
+}
+function endMatch(){
+  ui.busy=false; renderAll();
+  const a=st.score[1], b=st.score[2]; let head, why="";
+  if(a!==b) head=a>b?"You win!":"The AI wins";
+  else if(st.rallies[1]!==st.rallies[2]){ head=st.rallies[1]>st.rallies[2]?"You win!":"The AI wins"; why=" Tied on points, so more rallies decides."; }
+  else head="Draw";
+  $("endT").textContent=head; $("endT").style.color=head==="You win!"?"var(--p1-ink)":head==="Draw"?"var(--gold)":"var(--p2-ink)";
+  $("endP").textContent=`${boardFull(st)?"The board is full.":"No one can place."} You ${a} – AI ${b} (it started with 1). Rallies closed: you ${st.rallies[1]}, AI ${st.rallies[2]}.${why}`;
+  task({title:"Match over",text:`${head} ${a} – ${b}.`,acts:[{label:"New match",fn:newMatch,main:true,ins:"new"}]});
+  $("endM").hidden=false; ui.ended=true; setTimeout(()=>$("endNew").focus(),30);
+}
+
+/* =================== Event playback: rallies count up square by square =================== */
+function popAt(r,c,txt,p,cls){ const el=document.createElement("div"); el.className="pop "+(p===1?"p1c":p===2?"p2c":"")+" "+(cls||""); el.textContent=txt;
+  const life=Math.max(250,1500*SP); el.style.animationDuration=life+"ms";
+  el.style.left=`calc(var(--cell)*${c+.5})`; el.style.top=`calc(var(--cell)*${r+.5})`; fx.appendChild(el); setTimeout(()=>el.remove(),life); }
+function flashTile(id){ board.querySelectorAll(`[data-t="${id}"]`).forEach(e=>{ e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); }); }
+function playEvents(ev,done){
+  const steps=[[260,null]];
+  for(const e of ev){ if(e.t!=="rally") continue;
+    steps.push([380,()=>{ const el=board.querySelector(`[data-t="${e.hub}"]`); if(el) el.classList.add("rallying"); task({say:`<b>${COL[e.c].n} objective rallies!</b> Counting the touching squares…`,kind:"ok"}); }]);
+    for(const it of e.items) steps.push([300,()=>{ const [r,c]=RC(st,it.i); popAt(r,c,"+"+it.pts,it.p,it.m?"m":""); flashTile(it.tile); ui.shown.score[it.p]+=it.pts; paintScores(); }]);
+    steps.push([420,()=>{ const h=st.tiles[e.hub]; const b=box(h.cells); popAt(b.r0+.5,b.c0+.5,"+1 closer",e.p,"cl"); ui.shown.score[e.p]+=1; paintScores(); }]);
+    if(e.ammo.length&&showAmmo()) for(const a of e.ammo) steps.push([220,()=>{ const t=st.tiles[a.tile]; if(t){ const [r,c]=RC(st,t.cells[0]); popAt(r+.1,c,"+1 Ammo",a.p,"am"); } ui.shown.ammo[a.p]+=1; paintScores(); }]);
+    else steps.push([0,()=>{ for(const a of e.ammo) ui.shown.ammo[a.p]+=1; }]);
+    steps.push([200,null]);
+  }
+  let i=0; const next=()=>{ if(i>=steps.length){ ui.shown={score:{...st.score},ammo:{...st.ammo}}; paintScores(); renderBoard(); done&&done(); return; } const [d,fn]=steps[i++]; if(fn) fn(); later(d,next); };
+  next();
+}
+function showAmmo(){ return ui.mode==="match"||L().show.ammo; }
+function rallyLine(e){
+  if(!e) return "";
+  const by={1:new Map(),2:new Map()}; for(const it of e.items){ const m=by[it.p]; const x=m.get(it.tile)||{n:0,pts:0,m:it.m,k:it.k,c:it.c}; x.n++; x.pts+=it.pts; m.set(it.tile,x); }
+  const part=p=>{ const arr=[...by[p].values()].map(x=>`${COL[x.c].n} ${KN[x.k]} ${x.m?`${x.n}×2 = ${x.pts}`:x.pts}`); if(e.p===p) arr.push("closer +1");
+    const tot=[...by[p].values()].reduce((s,x)=>s+x.pts,0)+(e.p===p?1:0); return tot?`<b>${PN(p)} +${tot}</b> (${arr.join(", ")})`:`${PN(p)} +0`; };
+  return `${COL[e.c].n} objective rallied: ${part(1)} · ${part(2)}.`;
+}
+function turnLine(p,cd,mv,ev){
+  let s=`${PN(p)} placed ${p===1?"your":"its"} ${COL[cd.c].n} ${mv.patch?"objective as a patch":KN[cd.k]}.`;
+  const r=ev.filter(e=>e.t==="rally"), f=ev.filter(e=>e.t==="fill");
+  for(const e of r) s+=" "+rallyLine(e);
+  if(r.length&&showAmmo()){ const a1=r.reduce((n,e)=>n+e.ammo.filter(x=>x.p===1).length,0), a2=r.reduce((n,e)=>n+e.ammo.filter(x=>x.p===2).length,0); if(a1||a2) s+=` Ammo: you +${a1}, AI +${a2}.`; }
+  for(const e of f){ if(e.hub===ev[0].id) s+=` It starts at ${e.to}/8${e.to?" (edges and neighbours count)":""}.`; else if(e.to!==e.from) s+=` ${COL[e.c].n} objective ${e.from}/8 → ${e.to}/8.`; }
+  if(!r.length&&!f.length) s+=" It touches no open objective yet.";
+  return s;
+}
+
+/* =================== Inspector (right click / long press) =================== */
+const insp=$("insp"); let insKey=null, insAt=0;
+function describe(key){
+  const [kind,a]=key.split(":"); const o={title:"",sub:"",lines:[],hl:[]};
+  if(kind==="sq"){ const i=+a, [r,c]=RC(st,i); o.title="Empty square"; o.sub=`row ${r+1}, column ${c+1}`;
+    const hs=openHubs(st).filter(h=>borderOf(st,h).some(b=>b.i===i));
+    for(const h of hs){ o.lines.push(`Part of the border of the <b>${COL[h.c].n} objective</b> (${filledOf(st,h)}/8). Filling it brings that objective one step closer to rallying.`); o.hl.push(h.id); }
+    if(ui.goal.includes(i)) o.lines.push("It glows because this lesson wants a tile here.");
+    if(ui.freed.includes(i)) o.lines.push("A Strike just cleared it: anyone can fill it again.");
+    if(!hs.length) o.lines.push("Not next to any open objective, so a tile here scores nothing yet.");
+    o.lines.push("Pick a tile from your hand, then tap here to place it."); return o; }
+  if(kind==="tile"){ const t=st.tiles[+a]; if(!t) return null; const who=t.p===1?"yours":"the AI's";
+    if(t.patch){ o.title=tname(t); o.sub=`placed by ${pn(t.p)}`; o.lines=["An objective dropped into a closed-in gap of 1–4 squares.","It fills those squares (which can close a neighbouring objective) but it never rallies and scores nothing."]; return o; }
+    if(isHub(t)){ const f=filledOf(st,t); o.title=tname(t); o.sub=`placed by ${pn(t.p)} · ${t.rallied?"rallied":f+"/8 filled"}`;
+      if(t.rallied){ o.lines.push("Rallied: it has already paid out. Tiles touching only rallied objectives are safe from Strikes."); }
+      else { o.lines.push("It rallies the moment all 8 squares around it are filled. The board edge counts as filled.");
+        const t2=clone(st); const sc={1:0,2:0}; const cs=new Set(); for(const b of borderOf(st,t)) if(b.on&&st.grid[b.i]){ const q=st.tiles[st.grid[b.i]]; if(isContact(q)){ sc[q.p]+=q.c===t.c?2:1; cs.add(q.id); } }
+        o.lines.push(`If it closed now, the tiles touching it would score <b>you +${sc[1]}</b>, <b>AI +${sc[2]}</b>, and whoever closes it gets +1 more.`);
+        o.lines.push(`${COL[t.c].n} tiles touching it score 2 per square; other colours 1.`);
+        o.lines.push(`${8-f} border square${8-f===1?"":"s"} still empty (dashed).`); o.hl=[...cs]; }
+      o.lines.push("Who placed it doesn't matter: whoever's tiles touch it score."); return o; }
+    o.title=tname(t); o.sub=`${who} · ${SH[t.k]}`;
+    const hs=hubsTouching(st,t); const cs=new Set(t.cells);
+    o.lines.push(t.k==="b"?"A banner. It scores when an objective it touches rallies: 1 per touching square, 2 if the colours match.":"An insignia: a 1×1 tile for plugging holes. It scores like a banner: 1 per touching square, 2 on a matching colour.");
+    if(!hs.length) o.lines.push("It touches no objective, so it scores nothing for now.");
+    for(const h of hs){ const n=borderOf(st,h).filter(b=>b.on&&cs.has(b.i)).length, pts=n*(h.c===t.c?2:1);
+      o.lines.push(h.rallied?`Touched the ${COL[h.c].n} objective when it rallied (already scored).`:`Touches the open <b>${COL[h.c].n} objective</b> (${filledOf(st,h)}/8) with ${n} square${n>1?"s":""}: <b>+${pts}</b> for ${pn(t.p)} when it rallies${h.c===t.c?" (colours match)":""}, plus 1 Ammo.`); o.hl.push(h.id); }
+    if(hs.some(h=>!h.rallied)) o.lines.push(`While it touches an open objective, ${t.p===1?"the AI":"you"} can remove it with a Strike.`);
+    return o; }
+  if(kind==="card"){ const cd=st.hands[1][+a]; if(!cd) return null; o.title=`${COL[cd.c].n} ${cap(KN[cd.k])}`; o.sub=`in your hand · ${SH[cd.k]}`;
+    o.lines.push(cd.k==="b"?"Fills 4 squares in a row. Rotate turns it flat or upright.":cd.k==="o"?"Rallies when its 8 border squares are filled. It can also fill a closed-in gap of 1–4 squares as a patch, but then it never rallies.":"Fills 1 square: perfect for closed-in holes.");
+    if(cd.k!=="o") o.lines.push(`Scores 2 per touching square on a ${COL[cd.c].n} objective, 1 on other colours.`);
+    o.lines.push(`Fits in ${movesFor(st,cd).length} places right now. Tap it, then tap the board.`); return o; }
+  if(kind==="stack"){ o.title="Your stack"; o.sub=`${st.stacks[1].length} tiles left`; o.lines=["Face-down tiles you haven't drawn yet.","At the end of each of your turns you draw back up to 3 tiles in hand."]; return o; }
+  if(kind==="ammo"){ const p=+a; o.title=`${p===1?"Your":"AI"} Ammo`; o.sub=`${st.ammo[p]} of 5`; o.lines=["+1 for each of "+poss(p)+" tiles touching an objective when it rallies.","At 5, at the end of "+poss(p)+" turn, "+(p===1?"you Strike":"it Strikes")+": remove an enemy tile touching an open objective, or score 1 if there is none. That uses 5 Ammo."]; return o; }
+  if(kind==="score"){ const p=+a, b=st.bd[p]; o.title=p===1?"Your points":"AI points"; o.sub=`${st.score[p]} points`;
+    o.lines=[`From touching squares when objectives rallied: ${b.contact}`,`Closing rallies (+1 each): ${b.closer}`]; if(b.strike) o.lines.push(`Strikes with no target: ${b.strike}`); if(b.start) o.lines.push(`Starting point for going second: ${b.start}`);
+    o.lines.push("Most points when the board is full or no one can place wins."); return o; }
+  if(kind==="start"){ o.title="+1 start"; o.lines=["The second player starts with 1 point, because going first is a small edge."]; return o; }
+  if(kind==="aihand"){ o.title="AI's tiles"; o.sub=`hand ${st.hands[2].length} · stack ${st.stacks[2].length}`; o.lines=["The AI's hand is hidden. Its stack holds Gold and Green tiles.","It plays greedily: it takes the move worth the most points right now."]; return o; }
+  if(kind==="pv"){ o.title="Preview line"; o.lines=["Says what would happen if you placed your tile on the square you point at or tap: which objectives fill or rally, and the points and Ammo it would give."]; return o; }
+  if(kind==="ghost"){ o.title="Preview"; o.lines=["Where your tile would go. Numbers show what each touching square would score if this closes an objective."]; return o; }
+  if(kind==="task"){ o.title=ui.mode==="lesson"?"This lesson":"Match status"; o.lines=["The top line says what to do now.","The grey line says what just happened, with the numbers that changed."]; return o; }
+  if(kind==="dot"){ const l=LESSONS[+a]; o.title=`Lesson ${+a+1}: ${l.title}`; o.lines=[l.text,ui.done[+a]?"Done. Tap to replay it.":"Tap to open it."]; return o; }
+  if(kind==="rules"){ o.title="Rules card"; o.lines=["The whole Basic game in 5 lines."]; return o; }
+  if(kind==="end"){ o.title="Result"; o.lines=["Final score and who won."]; return o; }
+  if(kind==="slot"){ o.title="Empty hand slot"; o.lines=["Refilled from your stack at the end of your turn."]; return o; }
+  if(kind==="btn"){ const B={lessons:["Lessons","Ten short lessons, one rule each. You place the tiles yourself."],match:["Match","A full Basic game on the 8×8 board against a simple AI."],help:["Rules","Opens the 5-line rules card."],
+      rotate:["Rotate","Turns a banner between flat and upright. Key: R."],next:["Next lesson","Moves on to the next rule."],retry:["Again","Sets this lesson up again."],point:["Take +1 point","Use your Strike to score 1 point instead of removing a tile."],
+      pass:["Pass","None of your tiles fit: one goes under your stack, you draw one, and the turn passes. Two passes in a row end the game."],new:["New match","Shuffles both stacks and starts again."],look:["Look at the board","Closes this box so you can inspect the final board."],generic:["Button",""]};
+    const x=B[a]||B.generic; o.title=x[0]; o.lines=[x[1]]; return o; }
+  return null;
+}
+function openIns(el,x,y){
+  const key=el.getAttribute("data-ins"); const o=describe(key); if(!o) return;
+  clearHl(); insKey=key; insAt=performance.now();
+  $("inspT").textContent=o.title; $("inspS").textContent=o.sub||""; $("inspS").hidden=!o.sub;
+  $("inspL").innerHTML=o.lines.filter(Boolean).map(l=>`<li>${l}</li>`).join("");
+  insp.classList.add("on"); el.classList.add("hl");
+  for(const id of o.hl||[]) board.querySelectorAll(`[data-t="${id}"]`).forEach(e=>e.classList.add("hl"));
+  if(innerWidth>=900){ const w=insp.offsetWidth,h=insp.offsetHeight; let Lx=x+14,Ty=y+14; if(Lx+w>innerWidth-10) Lx=Math.max(10,x-w-14); if(Ty+h>innerHeight-10) Ty=Math.max(10,innerHeight-h-10); insp.style.left=Lx+"px"; insp.style.top=Ty+"px"; }
+  else { insp.style.left=""; insp.style.top=""; }
+}
+function clearHl(){ document.querySelectorAll(".hl").forEach(e=>e.classList.remove("hl")); }
+function closeIns(){ if(!insp.classList.contains("on")) return; insp.classList.remove("on"); insKey=null; clearHl(); }
+$("inspX").onclick=closeIns;
+document.addEventListener("contextmenu",e=>{ const el=e.target.closest("[data-ins]"); if(!el) return; e.preventDefault(); openIns(el,e.clientX,e.clientY); });
+let lp=null, suppressClick=false;
+document.addEventListener("pointerdown",e=>{
+  if(insp.classList.contains("on")&&!insp.contains(e.target)&&performance.now()-insAt>300) closeIns();
+  if(e.pointerType==="mouse") return; const el=e.target.closest("[data-ins]"); if(!el) return;
+  const x=e.clientX,y=e.clientY; lp={el,x,y}; lp.timer=setTimeout(()=>{ if(!lp) return; suppressClick=true; openIns(el,x,y); if(navigator.vibrate) try{navigator.vibrate(12);}catch(_){} lp=null; },460);
+},{passive:true});
+document.addEventListener("pointermove",e=>{ if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){ clearTimeout(lp.timer); lp=null; } },{passive:true});
+["pointerup","pointercancel"].forEach(n=>document.addEventListener(n,()=>{ if(lp){ clearTimeout(lp.timer); lp=null; } },{passive:true}));
+document.addEventListener("click",e=>{ if(suppressClick){ suppressClick=false; e.preventDefault(); e.stopPropagation(); } },true);
+
+/* =================== Buttons and keys =================== */
+function hideModals(){ $("rules").hidden=true; $("endM").hidden=true; }
+$("tabL").onclick=()=>{ if(ui.mode!=="lesson"){ let i=LESSONS.findIndex((_,j)=>!ui.done[j]); buildLesson(i<0?0:i); } };
+$("tabM").onclick=()=>{ if(ui.mode!=="match"||st.over) newMatch(); };
+$("helpBtn").onclick=()=>{ $("rules").hidden=false; $("rulesX").focus(); };
+$("rulesX").onclick=()=>{ $("rules").hidden=true; $("helpBtn").focus(); };
+$("rules").addEventListener("click",e=>{ if(e.target===$("rules")) $("rules").hidden=true; });
+$("rot").onclick=rotate;
+$("endNew").onclick=newMatch; $("endLessons").onclick=()=>buildLesson(0); $("endLook").onclick=()=>{ $("endM").hidden=true; };
+board.addEventListener("focus",()=>{ if(ui.cur===null&&board.matches(":focus-visible")){ ui.cur=Math.floor(st.R/2)*st.C+Math.floor(st.C/2); renderBoard(); } });
+board.addEventListener("blur",()=>{ if(ui.cur!==null){ ui.cur=null; renderBoard(); } });
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ if(insp.classList.contains("on")) closeIns(); else if(!$("rules").hidden) $("rules").hidden=true; else if(ui.sel>=0){ ui.sel=-1; ui.pv=null; renderAll(); } return; }
+  if(e.target.closest&&e.target.closest("input,textarea")) return;
+  if(e.key==="?"){ $("rules").hidden=!$("rules").hidden; return; }
+  if(e.key==="r"||e.key==="R"){ rotate(); return; }
+  if(/^[1-3]$/.test(e.key)){ pick(+e.key-1); return; }
+  if(e.key==="i"||e.key==="I"){ let el=document.activeElement; if(el===board&&ui.cur!==null) el=board.querySelector(`[data-sq="${ui.cur}"]`)||board.querySelector(`[data-t="${st.grid[ui.cur]}"]`); if(el&&el.closest("[data-ins]")){ const t=el.closest("[data-ins]"), r=t.getBoundingClientRect(); openIns(t,r.left+r.width/2,r.bottom); } return; }
+  if(document.activeElement===board&&ui.cur===null&&/^Arrow/.test(e.key)){ ui.cur=Math.floor(st.R/2)*st.C+Math.floor(st.C/2); e.preventDefault(); renderBoard(); return; }
+  if(document.activeElement===board&&ui.cur!==null){
+    const [r,c]=RC(st,ui.cur); const mv={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];
+    if(mv){ e.preventDefault(); const nr=Math.max(0,Math.min(st.R-1,r+mv[0])), nc=Math.max(0,Math.min(st.C-1,c+mv[1])); ui.cur=nr*st.C+nc; if(ui.sel>=0&&ui.phase==="place") preview(ui.cur); renderBoard(); paintPv(); }
+    else if(e.key==="Enter"||e.key===" "){ e.preventDefault();
+      if(ui.phase==="strike"){ const id=st.grid[ui.cur]; if(ui.targets.includes(id)) humanStrike(id); else hint("Move to a tile outlined in red, then press Enter."); }
+      else if(!ui.busy&&!st.over&&!ui.lessonDone) tapSquare(ui.cur,true); }
+  }
+});
+
+/* test hooks (used by the headless check) */
+window.RP={state:()=>st,ui,lessons:LESSONS.length,buildLesson,newMatch,movesFor:(p,hi)=>movesFor(st,st.hands[p][hi]),
+  suggest:()=>{ const s=aiChoose(st,1); return s?{hi:s.hi,mv:s.mv,rc:RC(st,s.mv.cells[0])}:null; }, strikeTargets:p=>strikeTargets(st,p).map(t=>t.id)};
+buildLesson(0);
+})();
+</script>
+</body>
+</html>
