@@ -24,7 +24,11 @@ Output (<out>, default source/project-killingcard/assets/licensed/mw3_pitch/):
                       ArtTraits in the game derives the same from family + CardData.trait_options)
 Usage:
   python3 tools/build_mw3_pitch_set.py [--src DIR] [--out DIR] [--still-width 512]
-         [--frame-width 384] [--max-frames 16] [--quality 80]
+         [--frame-width 384] [--max-frames 16] [--quality 70] [--still-quality 78] [--keep-stale]
+kc-mw3-cards (size): the pitch game.pck must stay under the artifact limit (15 MiB per file;
+target <= 14.5 MB). Defaults: frame sheets q70, stills q78 (cards draw at about 512x128 or less),
+and files in <out> that the manifest no longer names (stale picks) are deleted, since the pitch
+preset ships the whole folder.
 Requires Pillow. Refuses to write into a folder git does not ignore.
 """
 from __future__ import annotations
@@ -111,7 +115,9 @@ def main() -> int:
     ap.add_argument("--still-width", type=int, default=512)
     ap.add_argument("--frame-width", type=int, default=384)
     ap.add_argument("--max-frames", type=int, default=16)
-    ap.add_argument("--quality", type=int, default=80)
+    ap.add_argument("--quality", type=int, default=70, help="WebP quality of the frame sheets")
+    ap.add_argument("--still-quality", type=int, default=78, help="WebP quality of the stills")
+    ap.add_argument("--keep-stale", action="store_true", help="keep files the manifest does not name")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     if not is_ignored(a.out):
@@ -136,7 +142,7 @@ def main() -> int:
             frames, durs = [Image.open(src).convert("RGB")], [0]
         # Still: a middle frame shows the finished composition (first frames are often a fade-in).
         still = fit_4x1(frames[len(frames) // 2], a.still_width)
-        write_webp(still, os.path.join(a.out, row["file"]), a.quality + 5)
+        write_webp(still, os.path.join(a.out, row["file"]), a.still_quality)
         total += os.path.getsize(os.path.join(a.out, row["file"]))
         if len(frames) > 1 and r.get("animated", "no") == "yes":
             step = max(1, -(-len(frames) // a.max_frames))
@@ -158,6 +164,15 @@ def main() -> int:
     # Keep the CSV as a plain file (Godot would otherwise import it as a translation table).
     with open(os.path.join(a.out, "manifest.csv.import"), "w") as f:
         f.write(KEEP_IMPORT)
+    if not a.keep_stale:
+        keep = {"manifest.csv"} | {r["file"] for r in out_rows} | {r["frames_file"] for r in out_rows if r["frames_file"]}
+        stale = [n for n in os.listdir(a.out) if n.endswith(".webp") and n not in keep]
+        for n in stale:
+            for victim in (n, n + ".import"):
+                if os.path.exists(os.path.join(a.out, victim)):
+                    os.remove(os.path.join(a.out, victim))
+        if stale:
+            print("removed %d stale WebP files no manifest row names" % len(stale))
     print("%d arts (%d animated), %.2f MB of WebP in %s" % (len(out_rows), sum(r["animated"] == "yes" for r in out_rows),
                                                           total / 1e6, a.out))
     return 0

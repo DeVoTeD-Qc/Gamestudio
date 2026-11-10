@@ -173,7 +173,7 @@ The Operator wears the weapon-mastery card of its primary weapon. Tier 1 (Gilded
 Camo band per tier: Base (olive), Forged (silver-white), Priceless (blue), Interstellar (purple). Dev toggle: `?mastery=N` (1-4) in the URL, or **Ctrl+M** on the match screen cycles the tier.
 
 ### 2.2 Starters and the Wip set (kc-mw3-cards, head)
-24 more arts (153 in all; the set is now about 8.1 MB of WebP). All are new to the set: **no calling card is reused**. Picked by eye on a contact sheet (kept outside the repo).
+24 more arts (153 in all; 6.4 MB of WebP after the size pass in §4). All are new to the set: **no calling card is reused**. Picked by eye on a contact sheet (kept outside the repo).
 
 **Standard Issue starters** wear one calling card each, **private pitch build only** (the public build keeps the original Standard Issue art). `BannerArtDB.get_art` looks up a licensed row for an `si_*` art id before the public drop-in (`data/banners/si_*.tres`); the starter Ammo Resupply copy wears `si_ammo_resupply` (the collectible Ammo Resupply keeps its three crates). The card still counts as Standard Issue (serial, no trait).
 | Card (art id) | Calling card | Why |
@@ -226,6 +226,6 @@ python3 tools/fetch_mw3_calling_cards.py              # step 1: download (git-ig
 python3 tools/build_mw3_pitch_set.py                  # step 2: stills + frame sheets -> assets/licensed/mw3_pitch/
 bash tools/package_artifact_build.sh <godot> <out-dir> --pitch   # out-dir outside the repo or git-ignored
 ```
-- The pitch set is about 8.1 MB of WebP (kc-mw3-cards: 153 arts; kc-art-traits-impl: 129 arts, 7.1 MB); the packaged `game.pck.wasm` is about 9.6 MB (artifact limit 16 MB per file).
+- **Size (kc-mw3-cards):** the artifact upload limit is 15 MiB (15,728,640 bytes) per file; keep the pitch `game.pck` at or under 14.5 MB. Measured with `--export-pack "Web (private pitch)"`: 16,444,672 bytes with the 24 new arts at the old settings, **13,874,640 bytes** now. The builder's defaults do this: frame sheets WebP q70 (was q80), stills q78 (was q85), sizes unchanged (stills 512x128, frame cells 384x96, at most 16 frames), and it deletes WebP files in the output folder that no manifest row names (34 stale picks, 0.87 MB, were shipping because the preset includes the whole folder; `--keep-stale` keeps them). The arts use the "keep" importer, so there are no mipmaps to turn off. The set is 6.4 MB of WebP for 153 arts.
 - The default "Web" preset still excludes `assets/licensed/*`, and the default package run does not even copy that folder into its build tree. The script refuses a pitch output folder inside the repo unless git ignores it; `.gitignore` covers `projects/*/builds/pitch/` and any `web-pitch/` folder.
 - Tests never use the licensed folder (`run_tests.gd` switches it off); they pass with the folder present or absent.
