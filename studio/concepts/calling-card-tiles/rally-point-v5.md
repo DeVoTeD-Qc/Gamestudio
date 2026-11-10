@@ -7,9 +7,9 @@
 
 **TL;DR**
 - **Basic is 5 lines and a whole game.** After the Field Kit bug fix, a planning AI still beats a greedy one **97%** of the time (+14 points), and a game lasts **19.6 placements**.
-- **Each layer is one idea:** Cards (tiles have text), Classes (each class fills its own meter), Front Line (a tug-of-war you can win outright), Streaks (rewards for a hot run). Every layer passes the same checks in the sim (section 2): the skill gap holds (96–98%), the seats are within a few points of even, and games last 19–20 placements.
-- **Six rules are cut** to keep each layer to one idea: Engineer cover, the objective owner's bonus materiel, the Front pushes on Spot and Resupply, Fortify winning back ground, and seeing the opponent's hand. The Front is shortened from 6 to 5 steps each way so it still decides about **⟨BT5⟩** of games.
-- **Starter stacks: 46.4–53.6%** (inside the 45–55 target) with the v4 fixes (Bunker Command 2, Shock Line Breach +2) and two common swaps. Without the swaps, the full rules minus cover give 44.9–56.6.
+- **Each layer is one idea:** Cards (tiles have text), Classes (each class fills its own meter), Front Line (a tug-of-war you can win outright), Streaks (rewards for a hot run). Every layer passes the same checks in the sim (section 2): the skill gap holds (97–98%), the first player wins 46–49% with the 1-point start, and games last 19–20 placements.
+- **Six rules are cut** to keep each layer to one idea: Engineer cover, the objective owner's bonus materiel, Spot's Front push, Resupply's Front push, Fortify winning back ground, and seeing the opponent's hand. The Front is shortened from 6 to 5 steps each way, so it still ends **about 9%** of games, as v3 intended.
+- **Starter stacks: 46.4–53.6%** (inside the 45–55 target) under the v5 ranked rules, with the v4 fixes (Bunker Command 2, Shock Line Breach +2) and two common swaps. The v3 rules minus cover miss it (44.9–56.6); the v5 rules without the swaps just make it (45.4–54.2).
 - **The AI's military weights are retuned.** The new weights beat the old ones **52.7%** over 4,000 games. They still don't beat the military-blind AI (48.8%), and section 6 explains why that is expected.
 
 ---
@@ -26,7 +26,7 @@ If nothing in your hand fits, put one tile from your hand at the bottom of your 
 
 **Example.** Your red objective sits in a corner, so only 4 squares around it are on the board. Your red banner covers 2 of them and your opponent's blue banner 1. You put a red insignia in the last square, and the objective rallies. Your banner scores 2 × 2 = 4 (red matches red), your insignia 2, their banner 1, and you get 1 for closing: **you +7, them +1**. Your two tiles give you 2 Ammo, which takes you from 3 to 5, so you Strike. Their green banner touches the open objective in the middle of the board, so it is removed and its 4 squares are empty again.
 
-**The tutorial (Layer 0, "Tiles")** teaches lines 1, 2, 3 and 5 first, without Ammo; line 4 arrives as Layer 1 right after. Both are complete games in the sim (section 2).
+**The tutorial (Layer 0, "Tiles")** teaches lines 1, 2, 3 and 5 first, without Ammo; line 4 arrives as Layer 1 right after. Layer 0 is a complete game on its own too: skill 96.8% (+13.1), luck floor 69.0%, seats 45.6 / 52.7, 18.8 placements.
 
 ---
 
@@ -43,7 +43,7 @@ Each layer keeps every rule before it and adds one idea. Layers unlock by games 
 | 4 | Front Line | A tug-of-war track: push it to the end and you win | After 10 games |
 | 5 | Streaks | A hot run earns rewards | After 15 games |
 
-**How to read the sim checks.** Each layer ends with a small table from `rally_v5.py` (1,000 games a row, random starter pairs, both seats). *Skill* is a planning AI against a greedy one; above 90% means a better player almost always wins. *Luck floor* is greedy against random; it should stay well above 50%. *Seats* is the first player's win rate in a mirror match, with the 1-point start and without it. *Length* is placements a game; Basic is about 20, which is 5–7 minutes.
+**How to read the sim checks.** Each layer ends with a small table from `rally_v5.py` (1,000 games a row, random starter pairs, both seats). *Skill* is a planning AI against a greedy one; above 90% means a better player almost always wins. *Luck floor* is greedy against random; it should stay well above 50%. *Seats* is the first player's win rate in a mirror match, with the 1-point start and without it. *Length* is placements a game; Basic is about 20, which is 5–7 minutes. Seats come from 2,000 mirror games a layer (two seeds); in Basic, from 4,200 (five runs).
 
 ### Layer 1: Basic
 
@@ -51,7 +51,7 @@ The 5 lines above.
 
 | Skill | Luck floor | Seats (start 1 / none) | Length | Military a game |
 |---|---|---|---|---|
-| 96.8% (+14.1) | 72.9% | ⟨S1⟩ | 19.6 | 1.7 Strikes, 1.0 tile removed |
+| 96.8% (+14.1) | 72.9% | 46.3 / 52.4 | 19.6 | 1.7 Strikes, 1.0 tile removed |
 
 ### Layer 2: Cards
 
@@ -66,7 +66,7 @@ The 5 lines above.
 
 | Skill | Luck floor | Seats (start 1 / none) | Length | Military a game |
 |---|---|---|---|---|
-| 97.8% (+18.8) | 64.0% | ⟨S2⟩ | 20.3 | 2.9 Strikes, 1.6 tiles removed |
+| 97.8% (+18.8) | 64.0% | 49.1 / 54.6 | 20.3 | 2.9 Strikes, 1.6 tiles removed |
 
 ### Layer 3: Classes
 
@@ -85,7 +85,7 @@ The Strike now costs 3, not 5, because only Assault tiles fill the Ammo meter.
 
 | Skill | Luck floor | Seats (start 1 / none) | Length | Military a game |
 |---|---|---|---|---|
-| ⟨K3⟩ | ⟨G3⟩ | ⟨S3⟩ | ⟨P3⟩ | ⟨M3⟩ |
+| 97.6% (+18.7) | 65.2% | 48.1 / 53.6 | 19.6 | 4.7 orders (1.3 Strikes), 0.7 tiles removed |
 
 ### Layer 4: Front Line
 
@@ -94,11 +94,11 @@ The Strike now costs 3, not 5, because only Assault tiles fill the Ammo meter.
 - Enemy **Armor** soaks pushes 1 for 1. A **spotted** Strike pushes 3 and ignores Armor.
 - **Push the Front to the enemy's end and you win at once** (a Breakthrough). Otherwise the Front scores nothing.
 
-**Example.** Your Ammo reaches 3. Their banner on the open objective is next to their Bunker, so you push the Front instead. They have 1 Armor, which soaks 1: the Front moves 1, to 4 steps from their end. Next turn you Spot first, and your Strike pushes 3 through their Armor: **Breakthrough**.
+**Example.** The Front is 2 steps toward your opponent, and your Ammo reaches 3. Their only banner on an open objective touches their Bunker, so your Strike pushes instead. They have 1 Armor, which soaks 1: the Front moves to 3, two steps from their end. Next turn your Intel and Ammo both fire: Spot first, then a Strike that pushes 3 through their Armor. **Breakthrough.**
 
 | Skill | Luck floor | Seats (start 1 / none) | Length | Military a game |
 |---|---|---|---|---|
-| ⟨K4⟩ | ⟨G4⟩ | ⟨S4⟩ | ⟨P4⟩ | ⟨M4⟩ |
+| 97.1% (+17.7) | 64.5% | 49.0 / 54.9 | 19.3 | 4.7 orders, 0.4 tiles removed, Breakthrough in 4.1% of games |
 
 ### Layer 5: Streaks (the ranked rules)
 
@@ -111,7 +111,7 @@ The Strike now costs 3, not 5, because only Assault tiles fill the Ammo meter.
 
 | Skill | Luck floor | Seats (start 1 / none) | Length | Military a game |
 |---|---|---|---|---|
-| ⟨K5⟩ | ⟨G5⟩ | ⟨S5⟩ | ⟨P5⟩ | ⟨M5⟩ |
+| 97.4% (+17.8) | 68.5% | 48.1 / 54.3 | 19.1 | 5.0 orders, 0.4 tiles removed, Breakthrough in 8.7% of games |
 
 ---
 
@@ -122,15 +122,15 @@ The head's note was "too many rules at once". Before v5, Classes and Front Line 
 | Cut | Was | Why it can go |
 |---|---|---|
 | **Engineer cover** | A tile touching its owner's Engineer tile could not be Struck (v3) | The head chose (a) on H3. The sim measured nothing it added (v4 §6.2). Bunker and Smoke keep protection as card text. |
-| **Objective owner's materiel** | The objective's owner also got 1 materiel of its class (v3) | Now Classes reads like Basic line 4: "1 for every tile touching it". It costs about 1.3 orders a game; skill stays at 96–98%. |
+| **Objective owner's materiel** | The objective's owner also got 1 materiel of its class (v3) | Now Classes reads like Basic line 4: "1 for every tile touching it". It costs about 1.3 orders a game; skill stays at 97.6%. |
 | **Spot and Resupply push the Front** | +1 step each (v3) | Each order is now one line, and only the Strike moves the Front. |
 | **Fortify wins back ground** | +1 step back toward the centre (v3) | Same reason. Fortify is "+2 Armor", and Armor does the defending. |
 | **Seeing the opponent's hand** | On Spot and Spotter Drone (v3) | It adds a screen and reading time on the opponent's turn. The sim never modelled it, so no balance number depends on it. |
-| **Front 6 steps each way** | 13-step track (v3) | With only Strikes pushing, 6 steps gave Breakthroughs in 1–4% of games. 5 steps, with a spotted Strike pushing 3, gives ⟨BT5⟩ (v3 aimed for 8–9%). 4 steps gave 12–15%, too swingy. |
+| **Front 6 steps each way** | 13-step track (v3) | With only Strikes pushing, 6 steps gave Breakthroughs in 1–4% of games. 5 steps, with a spotted Strike pushing 3, gives about 9% (v3 aimed for 8–9%). 4 steps gave 12–15%, too swingy. |
 
 **What stays although it is a second rule:** the end rule in Layer 2 (unrallied objectives score at 1 a square). Without it, the Cards layer measured worse on both counts: seats 45.8 / 54.5 instead of 50.3 / 53.0, and the skill margin +16.9 instead of +18.7. Cards such as Dig-In also need it. It is one line on the end-of-game screen.
 
-**Why Classes is one layer, not two.** Splitting it (Ammo and Supply first, Intel and Works later) would leave two of the four starter stacks without working meters for a whole layer: T3 has no Assault or Support, and T2 no Assault. "Your tile's class picks the meter" is one idea, and the four orders are one line each, printed on the meters. Question 2 offers the split anyway.
+**Why Classes is one layer, not two.** Splitting it (Ammo and Supply first, Intel and Works later) would leave starters without orders for a whole layer: T3 Relay Net (Recon and Engineer) would have no meter at all, and T2 Hold the Line only Supply. "Your tile's class picks the meter" is one idea, and the four orders are one line each, printed on the meters. Question 2 offers the split anyway.
 
 **Not changed:** orders fire by themselves (H2); points win, with the Front as a sudden-death threat; streaks are fixed at 3 / 5 / 7; objectives and scored points are never removed.
 
@@ -154,18 +154,19 @@ The bug flattered the board, not the skill: full boards fall from 23.5% to about
 
 ## 5. Starter stacks
 
-Round robin, ranked rules (Layer 5), the second player starts with 1, 600 games a pairing.
+Round robin, the second player starts with 1, 600 games a pairing (2 SE about ±2.4 on each stack's average). "v5 rules" means Layer 5 as written above.
 
 | Rules and stacks | T1 | T2 | T3 | T4 | Range |
 |---|---|---|---|---|---|
 | v3 launch rules with cover, no fixes (v4, `rally_v3.py`) | 51.3 | 46.5 | 40.8 | 61.4 | 40.8–61.4 |
 | v3 launch rules with cover + v4 fixes (v4) | 45.7 | 52.3 | 47.6 | 54.4 | 45.7–54.4 |
-| **Full rules minus cover + v4 fixes** (the brief) | 47.4 | 51.1 | **44.9** | **56.6** | 44.9–56.6 |
-| v5 rules, v4 fixes, v4 starters | 45.6 | 55.9 | 44.8 | 53.7 | 44.8–55.9 |
+| **v3 rules minus cover + v4 fixes** (the brief) | 47.4 | 51.1 | **44.9** | **56.6** | 44.9–56.6 |
+| v3 rules minus cover + v4 fixes + the two swaps | 46.5 | 52.5 | 45.2 | 55.8 | 45.2–55.8 |
+| v5 rules + v4 fixes, v4 starters | 47.9 | 52.5 | 45.4 | 54.2 | 45.4–54.2 |
 | **v5 rules + v4 fixes + two swaps** (seed 151) | 46.4 | 51.2 | 48.9 | 53.6 | **46.4–53.6** |
 | same, second seed (152) | 47.4 | 50.8 | 48.6 | 53.2 | **47.4–53.2** |
 
-- **The v4 fixes alone miss the target without cover.** T3 Relay Net leaned on Engineer cover, and T4 Shock and Supply on Point Man.
+- **The v4 fixes alone miss the target without cover.** T3 Relay Net leaned on Engineer cover, and T4 Shock and Supply on Point Man. The v5 trims narrow it (T3 45.4, T4 54.2, just inside), and the swaps add a margin.
 - **The two swaps (commons only):** T3 swaps **Dug-In → Sandbag Line** (Rally: +1 Works). T4 swaps **one Point Man → Rifle Team** (Rally: +1 Ammo) and **Field Kit → Medic Line** (Rally: +1 Supply). The other swap sets we tried (`STACK_FIXES` c, d, e and g) left T4 at 55.1–57.8.
 - **The v4 fixes apply:** Bunker is Command 2 and Shock Line is "Breach +2".
 
@@ -211,14 +212,17 @@ v4 found that the AI that ignores the military layer (`milblind`) beat the one t
 
 ## 8. Questions for the studio head (recommended option first)
 
-1. **⟨Q1⟩**
+1. **The seat rule.** With "the second player starts with 1", the first player wins 48–49% in Layers 2–5 but only about 46% in Basic and the tutorial, where scores are lower. "The second player wins ties" measures 50–51% in Layers 0–2 but 55% from Classes on.
+   - **(a) Keep "the second player starts with 1" in every layer (recommended).** One rule everywhere, and ranked is balanced. Basic leans 4 points toward the second player, which matters least in the learning games; we log seats in playtests and can tune the start later.
+   - (b) Layers 0–2 use "the second player wins ties", and the 1-point start arrives with Classes. Fairest in every layer, but a rule changes between layers.
+   - (c) "The second player wins ties" everywhere. Simplest to say, but the first player wins 55% in ranked.
 2. **Classes: one layer or two?**
    - **(a) One layer, with the trimmed orders above (recommended).** Each order is one line, printed on its meter. It is one idea, "your tile's class picks the meter".
-   - (b) Two layers: Ammo and Supply first, then Intel and Works. Smaller steps, but T2 and T3 play a whole layer with an idle meter, and the unlock path grows to 6 steps.
+   - (b) Two layers: Ammo and Supply first, then Intel and Works. Smaller steps, but T3 plays a whole layer with no orders and T2 with only Resupply, and the unlock path grows to 6 steps.
 3. **The trimmed Front (section 3):**
-   - **(a) 5 steps each way, only Strikes push, and a spotted Strike pushes 3 through Armor (recommended).** One idea, with Breakthroughs in about ⟨BT5⟩ of games.
-   - (b) v3's Front, as approved in v3: 6 steps each way, and Spot, Resupply and Fortify also move it. Breakthroughs in about 8% of games, but four extra rules arrive in Layer 4.
+   - **(a) 5 steps each way, only Strikes push, and a spotted Strike pushes 3 through Armor (recommended).** One idea, with Breakthroughs in about 9% of games.
+   - (b) v3's Front, as approved in v3: 6 steps each way, and Spot, Resupply and Fortify also move it. Breakthroughs in about 8% of games, but three more rules arrive in Layer 4.
 
 ---
 
-*Reproduce (from `tools/`, about 5–15 minutes each on one core):* `python3 -I rally_v5.py 400 rules r=22 seed=71` (Basic re-run; `rally_v4.py` the same for v4) · `500 layers l=0,1,2,20,21,22 stk=f seed=141` (layer tables) · `500 seat5 l=0,1,2 stk=f seed=171` and `l=20,21,22 seed=172` (seats) · `300 stacks5 l=22 stk=f seed=151` (starters; `l=5` for the full rules minus cover) · `400 ai l=1,2,20,21,22 stk=f seed=161 "p=tunedvsmart,tunedvmilblind,smartvmilblind"` (AI) · `500 ai l=1,5 "p=tunedvmilblind" "w=scale:1,mat:0.35,..."` (the weight grid, seeds 311–334) · `300 layers l=3..19 seed=101,111,112` (the trimming variants).
+*Reproduce (from `tools/`, about 5–15 minutes each on one core):* `python3 -I rally_v5.py 400 rules r=22 seed=71` (Basic re-run; `rally_v4.py` the same for v4) · `500 layers l=0,1,2,20,21,22 stk=f seed=141` (layer tables) · `500 seat5 l=0,1,2 stk=f seed=171` and `l=20,21,22 stk=f seed=172` (seats) · `300 stacks5 l=22 stk=f seed=151` (starters; `l=5` for the full rules minus cover) · `400 ai l=1,2,20,21,22 stk=f seed=161 "p=tunedvsmart,tunedvmilblind,smartvmilblind"` (AI) · `500 ai l=1,5 "p=tunedvmilblind" "w=scale:1,mat:0.35,..."` (the weight grid, seeds 311–334) · `300 layers l=3..19 seed=101,111,112` (the trimming variants in section 3; seed 101 ran on an earlier v5 build in which a Strike without the Front could still choose the point over a tile).
