@@ -203,6 +203,56 @@ func _draw_banner() -> void:
 			Color(FxStyle.FOG, 0.86))
 
 
+# --- strike kill tag (kc-ks-pop) -------------------------------------------------------------
+
+## "MORTAR KILL" over a unit a strike eliminated, in the streak's colour; rises and fades over the
+## popup time (in place with reduced motion). Tap / long-press / right-click inspects the killstreak.
+## `point` is overlay-local (the tag's centre). Returns the tag (it frees itself).
+func show_kill_tag(point: Vector2, item_id: StringName, side: StringName, timing: RefCounted = null) -> Control:
+	if timing == null:
+		timing = FxTiming.from_settings()
+	var text: String = "%s KILL" % look(item_id)["short"]
+	var font: Font = FxStyle.font_for(&"heading")
+	var fs: int = 20
+	var c: Color = color_of(item_id)
+	var tag: Control = Control.new()
+	tag.name = "KillTag_%s" % item_id
+	tag.set_meta(&"text", text)
+	tag.set_meta(&"item_id", item_id)
+	tag.mouse_filter = Control.MOUSE_FILTER_STOP
+	tag.tooltip_text = "%s: a killstreak kill (no streak). %s" % [text.capitalize(), when_text(item_id)]
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 30.0
+	tag.size = Vector2(w, 26.0)
+	var s: Vector2 = size if size.x > 0.0 else get_viewport_rect().size
+	tag.position = Vector2(clampf(point.x - w * 0.5, 2.0, maxf(2.0, s.x - w - 2.0)), clampf(point.y - 13.0, 2.0, maxf(2.0, s.y - 28.0)))
+	var tex: Texture2D = icon_of(item_id)
+	tag.draw.connect(func() -> void:
+		var r: Rect2 = Rect2(Vector2.ZERO, tag.size)
+		tag.draw_rect(r, Color(FxStyle.SLATE, 0.9))
+		tag.draw_rect(r, c, false, 2.0)
+		if tex != null:
+			tag.draw_texture_rect(tex, Rect2(4, 4, 18, 18), false, c)
+		tag.draw_string(font, Vector2(25, 20), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c))
+	var g: RefCounted = PressGesture.new(tag)
+	g.drag_enabled = false
+	tag.set_meta(&"gesture", g)
+	tag.gui_input.connect(func(ev: InputEvent) -> void:
+		if g.handle(ev):
+			tag.accept_event())
+	var inspect: Callable = func(_p: Vector2) -> void: inspect_requested.emit(item_id, side)
+	g.tapped.connect(inspect)
+	g.long_pressed.connect(inspect)
+	add_child(tag)
+	var life: float = maxf(0.2, timing.get_value(&"popup")) * 1.4
+	var tw: Tween = tag.create_tween()
+	tw.set_parallel(true)
+	if not timing.reduced_motion:
+		tw.tween_property(tag, ^"position:y", tag.position.y - 18.0, life).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(tag, ^"modulate:a", 0.0, life * 0.3).set_delay(life * 0.7)
+	tw.chain().tween_callback(tag.queue_free)
+	return tag
+
+
 # --- pending markers ------------------------------------------------------------------------
 
 ## A strike waiting for the fight on one column: dashed half-column outline + an inspectable chip.

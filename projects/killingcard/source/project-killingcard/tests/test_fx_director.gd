@@ -362,3 +362,40 @@ func test_pending_markers_follow_the_snapshot_and_are_inspectable() -> void:
 	await tree.process_frame
 	assert_eq(ks.pending_keys().size(), 0, "cleared with the snapshot")
 	await _teardown()
+
+
+## kc-ks-pop (head S2): a strike's kill shows "MORTAR KILL" in the mortar's colour, inspectable, and no
+## "+100 ELIMINATION"; a normal kill keeps the +100.
+func test_strike_kill_shows_its_own_inspectable_popup() -> void:
+	_setup(true)
+	var ks: Control = _director.ks
+	var tags: Array = []
+	_director.fx_started.connect(func(kind: StringName, node: Object, _d: float) -> void:
+		if kind == &"ks_kill":
+			tags.append(node))
+	_director.play(_mortar_round())
+	while tags.is_empty() and _director.is_playing():
+		await tree.process_frame
+	assert_eq(tags.size(), 1, "one strike kill tag")
+	var tag: Control = tags[0]
+	assert_eq(String(tag.get_meta(&"text")), "MORTAR KILL", "names the streak")
+	assert_eq(tag.mouse_filter, Control.MOUSE_FILTER_STOP, "inspectable")
+	var got: Array = []
+	ks.inspect_requested.connect(func(id: StringName, side: StringName) -> void: got.append([id, side]))
+	var right: InputEventMouseButton = InputEventMouseButton.new()
+	right.button_index = MOUSE_BUTTON_RIGHT
+	right.pressed = true
+	tag.gui_input.emit(right)
+	assert_eq(got, [[&"mortar_barrage", &"player"]], "right click opens the mortar's rules")
+	await _director.sequence_finished
+	var kinds: Array[StringName] = _director.logged_kinds()
+	assert_eq(_count(kinds, &"popup"), 0, "no +100 ELIMINATION for a strike kill")
+	assert_eq(_count(kinds, &"streak"), 0, "no streak tick")
+	assert_eq(_count(kinds, &"killfeed"), 2, "the kill line and the strike's line stay")
+	assert_eq(KillstreakFx.color_of(&"mortar_barrage"), Color("#FF8A3D"), "the mortar's colour")
+	await _teardown()
+	_setup(true)
+	await _director.play(_firefight())
+	assert_eq(_count(_director.logged_kinds(), &"popup"), 1, "a normal kill keeps +100 ELIMINATION")
+	assert_eq(_count(_director.logged_kinds(), &"ks_kill"), 0, "and no strike tag")
+	await _teardown()

@@ -23,6 +23,8 @@
 #     KILLSTREAK_STRIKE   (Firefight step 0) the marker goes, the streak's sequence plays: mortar
 #                         shells arc in and burst on each unit, the helo strafes each front unit;
 #                         the DAMAGE_DEALT numbers that follow land with each impact
+#     UNIT_ELIMINATED by a strike: "MORTAR KILL" / "HELO KILL" tag in the streak's colour (kc-ks-pop),
+#                         inspectable, instead of "+100 ELIMINATION"
 #     KILLSTREAK_RESOLVED the plain log line ("Mortar Barrage hit column C: Rifleman -2 (down)") as a
 #                         caption and a killfeed line, then the fight goes on
 #     SUPPRESSED / SURVIVED_LETHAL / PATCHED / EQUIPMENT_TRIGGERED: short tags
@@ -645,7 +647,13 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	stamp.font_size = 20 if rect.size.x < 90.0 else 22
 	_veil(victim)
 	_start(stamp, &"stamp", ev)
-	if by_side == viewer_side and bool(ev.get("credit", true)) and int(score_popups.get(&"elimination", 0)) > 0:
+	if bool(ev.get("by_killstreak", false)) and String(ev.get("source_kind", &"killstreak")) == "killstreak" and ks != null:
+		# kc-ks-pop (head S2): a strike's kill says which streak made it ("MORTAR KILL"), in that
+		# streak's colour, inspectable; no "+100 ELIMINATION" (and it never ticks the streak).
+		var tag: Control = ks.show_kill_tag(rect.get_center() + Vector2(0, -rect.size.y * 0.5 - 6.0),
+				StringName(ev.get("by_id", &"")), by_side, _timing)
+		_log(&"ks_kill", tag, _timing.get_value(&"popup"), ev)
+	elif by_side == viewer_side and bool(ev.get("credit", true)) and int(score_popups.get(&"elimination", 0)) > 0:
 		_popup_at(rect.get_center() + Vector2(0, -rect.size.y * 0.5 - 6.0),
 				"+%d ELIMINATION" % int(score_popups[&"elimination"]), &"heading", 22, FxStyle.AMBER, ev)
 	var by_ks: bool = bool(ev.get("by_killstreak", false))
