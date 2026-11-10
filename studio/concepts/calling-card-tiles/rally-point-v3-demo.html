@@ -1,0 +1,865 @@
+<title>Rally Point v3 Demo</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Animated, self-explaining walk-through of Rally Point v3 Front Line: stacks and hands, rallies paying materiel, auto-firing orders, cover, the Front and killstreaks.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a game table at night, as in the v2 demo. Player 2's side across the top, the board and the Front beside it, Player 1's side below;
+   the caption, controls and step dots on the right rail (under the table on phones, with the controls pinned to the bottom). Single dark look by choice. */
+:root{
+  color-scheme:dark;
+  --bg:#12161b; --felt:#1b2a2a; --felt-line:#27403f; --panel:#1a2026; --panel2:#151b20; --line:#2c3640; --ink:#eef2ef; --muted:#9aa7a3;
+  --p1:#3fc6b5; --p1-soft:rgba(63,198,181,.16); --p1-ink:#7ff0e1; --p2:#f08a3c; --p2-soft:rgba(240,138,60,.16); --p2-ink:#ffb27a;
+  --gold:#f2cf5b; --charge:#ffe27a;
+  --k-a:#e2465a; --k-r:#f2b632; --k-e:#57b86a; --k-s:#4f9be8;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --front-w:28px;
+  --cell:min(54px,calc((100vw - 32px - 20px - var(--front-w) - 8px)/8));
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 40px;display:flex;flex-direction:column;gap:10px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:34px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+header h1 span{color:var(--gold)}
+header p{margin:6px 0 0;color:var(--muted);max-width:72ch}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:6px 14px;border:1px solid var(--line);background:#1d242b;color:var(--muted)}
+.tab.on{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.stage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
+@media (min-width:981px){:root{--cell:min(54px,max(40px,calc((100vh - 500px)/8)))} .card .x{-webkit-line-clamp:1}}
+.table{background:var(--felt);border-radius:18px;padding:10px;box-shadow:inset 0 0 0 1px var(--felt-line),0 18px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:8px;justify-self:center;max-width:100%;position:relative}
+.field{display:flex;gap:8px;align-items:stretch;justify-content:center}
+.board{position:relative;width:calc(var(--cell)*8);height:calc(var(--cell)*8);background-image:linear-gradient(var(--felt-line) 1px,transparent 1px),linear-gradient(90deg,var(--felt-line) 1px,transparent 1px);background-size:var(--cell) var(--cell);border:1px solid var(--felt-line);border-radius:6px;flex:none}
+/* Player sides */
+.side{display:flex;flex-direction:column;gap:6px;border-radius:12px;padding:7px 8px;background:rgba(0,0,0,.18);border:1px solid transparent;transition:background .3s,border-color .3s}
+.side.turn{border-color:var(--c);background:var(--soft)}
+.p1{--c:var(--p1);--soft:var(--p1-soft);--ci:var(--p1-ink)} .p2{--c:var(--p2);--soft:var(--p2-soft);--ci:var(--p2-ink)}
+.row{display:flex;align-items:center;gap:8px;min-width:0}
+.who{font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.who small{color:var(--muted);font-weight:400;letter-spacing:.02em;text-transform:none;font-size:13px}
+.turnTag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--c);color:#0b1012;border-radius:5px;padding:1px 6px;visibility:hidden}
+.side.turn .turnTag{visibility:visible}
+.pts{margin-left:auto;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:3px}
+.pts small{font-family:var(--f-body);font-size:11px;color:var(--muted);font-weight:400}
+.mil{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.chip{display:flex;align-items:center;gap:4px;border-radius:8px;padding:3px 6px;background:#10161a;border:1px solid var(--line);font-size:12px;line-height:1;white-space:nowrap;transition:box-shadow .3s,border-color .3s}
+.chip .g{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:var(--k);color:#0d1114;font-size:10px;font-weight:700}
+.chip .lbl{color:var(--muted)}
+.chip .pips{display:flex;gap:2px}
+.chip .pips i{width:8px;height:11px;border-radius:2px;background:#2a333b;transition:background .25s}
+.chip .pips i.on{background:var(--k)}
+.chip .over{font-weight:700;color:var(--k);min-width:0}
+.chip.dim{opacity:.45}
+.chip.ready{border-color:var(--k);box-shadow:0 0 0 1px var(--k),0 0 12px var(--k)}
+.chip.bump{animation:bump .45s ease-out}
+@keyframes bump{40%{transform:scale(1.18)}}
+.chip.armor .sh{color:var(--ink)}
+.chip.streak .pips i{width:7px;height:7px;border-radius:50%}
+.chip.streak .pips i.tier{outline:1px solid var(--gold);outline-offset:1px}
+.chip.streak .pips i.on{background:var(--gold)}
+.chip.eye{border-color:var(--gold);color:var(--gold)}
+.handrow{display:flex;gap:6px;align-items:stretch}
+.cards{display:flex;gap:6px;flex:1;min-width:0}
+.card{flex:1 1 0;min-width:0;max-width:128px;border-radius:9px;background:#10161a;border:2px solid var(--k);padding:4px 6px;display:flex;flex-direction:column;gap:1px;transition:transform .35s,box-shadow .3s}
+.card .t{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:4px}
+.card .t i{font-style:normal;color:var(--k);font-weight:700;font-size:12px}
+.card .n{font-family:var(--f-display);font-weight:800;font-size:15px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .x{font-size:10px;color:var(--muted);line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.shape{display:inline-grid;gap:1px;vertical-align:middle}
+.shape b{display:block;background:var(--k);width:5px;height:5px;border-radius:1px}
+.card.play{box-shadow:0 0 0 3px var(--gold);transform:translateY(-3px)}
+.p1 .card.play{transform:translateY(3px)}
+.card.new{animation:deal .55s ease-out backwards}
+@keyframes deal{from{transform:translateX(34px) scale(.85);opacity:0}}
+.card.empty{border-style:dashed;border-color:var(--line);background:transparent}
+.stackc{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10.5px;color:var(--muted);gap:2px;flex:none;width:40px}
+.stackc b{width:32px;height:42px;border-radius:6px;background:repeating-linear-gradient(135deg,#2b333b 0 5px,#232a31 5px 10px);border:1px solid var(--c);display:grid;place-items:center;font-family:var(--f-display);font-size:18px;color:var(--ink);box-shadow:2px 2px 0 #0d1114,4px 4px 0 #2b333b}
+/* Tiles on the board */
+.tile{position:absolute;transition:transform .45s cubic-bezier(.2,1.3,.4,1),opacity .35s}
+.tile.enter{transform:translateY(-26px) scale(1.08);opacity:0}
+.banner{border-radius:8px;padding:4px;background:var(--own);display:flex}
+.banner .face{flex:1;border-radius:5px;background:repeating-linear-gradient(135deg,var(--k) 0 6px,color-mix(in srgb,var(--k) 66%,#000) 6px 12px);display:flex;align-items:center;justify-content:center;gap:4px;overflow:hidden}
+.banner .nm{font-family:var(--f-display);font-weight:800;font-size:12px;letter-spacing:.04em;text-transform:uppercase;background:#0d1114d9;color:var(--ink);border-radius:4px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.banner.v .face{flex-direction:column}
+.banner.v .nm{writing-mode:vertical-rl;transform:rotate(180deg);padding:5px 1px;max-height:100%}
+.glyph{width:calc(var(--cell)*.42);height:calc(var(--cell)*.42);border-radius:50%;background:#0d1114;display:grid;place-items:center;color:var(--k);font-size:calc(var(--cell)*.27);font-weight:700;line-height:1;flex:none}
+.ins{border-radius:9px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--own);display:grid;place-items:center}
+.ins .gem{width:72%;height:72%;border-radius:6px;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--k) 55%,#fff) 0,var(--k) 45%,color-mix(in srgb,var(--k) 55%,#000) 100%);display:grid;place-items:center;color:#0d1114;font-weight:800;font-size:calc(var(--cell)*.3);transform:rotate(45deg)}
+.ins .gem span{transform:rotate(-45deg)}
+.obj{border-radius:12px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--own);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.obj svg{width:44%;height:44%}
+.obj .en{font-family:var(--f-display);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.04em;line-height:1;text-align:center;padding:0 3px}
+.obj .count{position:absolute;right:4px;bottom:3px;font-family:var(--f-display);font-weight:800;font-size:13px;background:#000a;border-radius:6px;padding:0 5px}
+.obj .cpips{position:absolute;left:6px;top:5px;display:flex;gap:3px}
+.obj .cpips i{width:10px;height:10px;border-radius:50%;background:var(--charge);box-shadow:0 0 8px var(--charge);animation:pip .5s ease-out}
+@keyframes pip{from{transform:scale(2.2);opacity:0}}
+.obj.rallied{box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--gold),0 0 22px rgba(242,207,91,.55)}
+.patch{border-radius:7px;background:repeating-linear-gradient(45deg,#26303a 0 5px,#1e252c 5px 10px);box-shadow:inset 0 0 0 2px var(--k),0 0 0 3px var(--own);display:grid;place-items:center}
+.patch span{font-family:var(--f-display);font-weight:800;font-size:11px;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg);color:var(--ink)}
+.cov{position:absolute;right:-5px;top:-5px;width:17px;height:17px;z-index:3;pointer-events:none;filter:drop-shadow(0 1px 2px #000)}
+.cov path{fill:#d9f2de;stroke:#16301c;stroke-width:1.5}
+.cov.pulse{animation:covp 1s ease-in-out 2}
+@keyframes covp{50%{transform:scale(1.7)}}
+.cov.broken path{fill:#ff8a8a}
+.cov.broken::after{content:""}
+.ring{position:absolute;border:2px dashed rgba(255,255,255,.4);border-radius:4px}
+.mark{position:absolute;border:2px solid var(--gold);background:rgba(242,207,91,.16);border-radius:5px;pointer-events:none;animation:pulse 1.1s ease-in-out infinite;z-index:2}
+@keyframes pulse{50%{opacity:.35}}
+.hl{outline:3px solid var(--gold)!important;outline-offset:2px;z-index:4}
+.tgt{outline:3px solid #ff5b6e!important;outline-offset:2px;z-index:4}
+.flash{animation:flash .9s ease-out 2}
+@keyframes flash{40%{box-shadow:0 0 0 5px var(--gold),0 0 24px var(--gold)}}
+.doomed{z-index:5}
+.doomed.boom{animation:boom .7s ease-in forwards}
+@keyframes boom{30%{transform:scale(1.06);filter:brightness(2.2)}100%{transform:scale(.6) rotate(-4deg);opacity:0;filter:brightness(3)}}
+.blast{position:absolute;border-radius:50%;pointer-events:none;z-index:6;background:radial-gradient(circle,#fff6 0,#ff5b6e66 40%,transparent 70%);animation:blast .8s ease-out forwards}
+@keyframes blast{from{transform:translate(-50%,-50%) scale(.2);opacity:1}to{transform:translate(-50%,-50%) scale(1.6);opacity:0}}
+.pop{position:absolute;font-family:var(--f-display);font-weight:800;font-size:20px;color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;animation:pop 1.8s ease-out forwards;white-space:nowrap;z-index:7}
+.pop.p1c{color:var(--p1-ink)}.pop.p2c{color:var(--p2-ink)}
+@keyframes pop{0%{transform:translate(-50%,0) scale(.6);opacity:0}15%{transform:translate(-50%,-6px) scale(1.15);opacity:1}100%{transform:translate(-50%,-34px);opacity:0}}
+.bubble{position:absolute;z-index:8;background:#0d1114f2;border:1px solid var(--gold);border-radius:8px;padding:4px 8px;font-size:12px;color:var(--ink);white-space:nowrap;animation:bub 2.6s ease-out forwards;transform:translate(-50%,-110%);pointer-events:none}
+.bubble b{color:var(--gold)}
+@keyframes bub{0%{opacity:0;transform:translate(-50%,-90%)}10%{opacity:1;transform:translate(-50%,-110%)}85%{opacity:1}100%{opacity:0}}
+.toast{position:absolute;left:50%;top:42%;z-index:9;transform:translate(-50%,-50%);background:#0d1114f5;border:2px solid var(--k,var(--gold));border-radius:12px;padding:8px 14px;text-align:center;pointer-events:none;animation:toast 2s ease-out forwards;min-width:62%;max-width:92%}
+.toast b{display:block;font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.04em;text-transform:uppercase;color:var(--k,var(--gold));line-height:1.05}
+.toast span{font-size:13px;color:var(--ink)}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}20%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+.win{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:radial-gradient(circle,rgba(63,198,181,.28),rgba(13,17,20,.75));border-radius:6px;animation:fadein .6s ease-out;pointer-events:none}
+.win div{text-align:center;background:#0d1114e8;border:2px solid var(--p1-ink);border-radius:14px;padding:12px 16px;max-width:88%}
+.win b{display:block;font-family:var(--f-display);font-weight:800;font-size:44px;color:var(--p1-ink);letter-spacing:.03em;text-transform:uppercase;line-height:1;text-shadow:0 3px 12px #000}
+.win span{font-size:14px}
+@keyframes fadein{from{opacity:0}}
+.flyer{position:fixed;z-index:50;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--k);color:#0d1114;font-size:10px;font-weight:800;display:grid;place-items:center;box-shadow:0 0 10px var(--k);pointer-events:none;transition:transform .75s cubic-bezier(.5,0,.3,1),opacity .2s}
+/* The Front */
+.front{position:relative;width:var(--front-w);flex:none;border-radius:8px;background:#11181c;border:1px solid var(--felt-line);display:flex;flex-direction:column}
+.front .end{position:absolute;left:0;right:0;font-family:var(--f-display);font-weight:800;font-size:10px;text-align:center;letter-spacing:.03em;line-height:1}
+.front .step{flex:1;border-bottom:1px solid #1f2a30;position:relative}
+.front .step:last-child{border-bottom:0}
+.front .step.p2z{background:rgba(240,138,60,.10)} .front .step.p1z{background:rgba(63,198,181,.10)}
+.front .step.mid{background:#26323a}
+.front .step.edge2{background:rgba(240,138,60,.35)} .front .step.edge1{background:rgba(63,198,181,.35)}
+.front .mk{position:absolute;left:50%;width:calc(var(--front-w) + 8px);height:22px;margin-left:calc((var(--front-w) + 8px)/-2);border-radius:6px;background:var(--gold);color:#1a1606;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:14px;box-shadow:0 0 0 2px #0d1114,0 0 14px rgba(242,207,91,.6);transition:top .9s cubic-bezier(.3,1.3,.5,1);z-index:2}
+.front .lab{position:absolute;left:50%;transform:translateX(-50%) rotate(-90deg);white-space:nowrap;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);top:50%}
+/* Rail */
+.rail{display:flex;flex-direction:column;gap:12px;min-width:0}
+.caption{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:150px}
+.caption .stepno{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.caption h2{font-family:var(--f-display);font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.02em;margin:2px 0 6px;line-height:1.05;text-wrap:balance}
+.caption p{margin:0;max-width:64ch}
+.math{margin-top:8px;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.math .h{font-weight:700;margin-top:5px}
+.math .p1t{color:var(--p1-ink)}.math .p2t{color:var(--p2-ink)}
+.math .mt{color:var(--muted)}
+.stackl{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.stackl span{font-size:11.5px;border:1px solid var(--k);border-radius:6px;padding:1px 6px;color:var(--ink);background:#10161a}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.04em;text-transform:uppercase;border-radius:10px;padding:8px 14px;border:1px solid var(--line);background:#222a31;color:var(--ink)}
+.btn.main{background:var(--gold);border-color:var(--gold);color:#1a1606;min-width:108px}
+.btn:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dots button{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:#2a333b;padding:0}
+.dots button.done{background:#55626b}
+.dots button.on{background:var(--gold);border-color:var(--gold)}
+.dots button.key{box-shadow:0 0 0 2px rgba(242,207,91,.35)}
+.hint{font-size:13px;color:var(--muted)}
+.hint b{color:var(--ink)}
+/* Reference */
+h3.sec{font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.03em;margin:6px 0 0}
+.ref{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.ref div{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--k);border-radius:10px;padding:9px 12px;font-size:14px;color:var(--muted)}
+.ref b{display:block;color:var(--ink);font-family:var(--f-display);font-size:19px;text-transform:uppercase;letter-spacing:.03em}
+.ref b i{font-style:normal;color:var(--k)}
+.ref em{font-style:normal;color:var(--ink)}
+/* Inspector */
+.insp{position:fixed;z-index:100;width:min(340px,calc(100vw - 24px));background:#0f1519f7;border:1px solid var(--gold);border-radius:12px;padding:10px 12px 12px;box-shadow:0 18px 40px rgba(0,0,0,.6);display:none}
+.insp.on{display:block;animation:fadein .15s ease-out}
+.insp .it{font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.02em;line-height:1.05;padding-right:28px}
+.insp .is{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-top:2px}
+.insp ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.insp li b{color:var(--gold)}
+.insp .x{position:absolute;right:6px;top:6px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#1d242b;color:var(--ink);font-size:16px;line-height:1}
+[data-ins]{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.caption,.caption *,.ref,.ref *{user-select:text;-webkit-user-select:text}
+@media (max-width:600px){
+  header h1{font-size:27px} header p{font-size:13.5px;line-height:1.4}
+  .tab{font-size:14px;padding:5px 10px}
+  .card .n{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:1.05}
+  .insp{left:12px!important;right:12px;bottom:max(12px,env(safe-area-inset-bottom,0px));top:auto!important;width:auto}
+  .card .x{display:none} .card .n{font-size:13.5px} .card{padding:3px 5px}
+  .chip .lbl{display:none}
+  .chip{padding:3px 5px}
+  .obj .en{font-size:9.5px} .banner .nm{font-size:10px} .obj .count{font-size:11px}
+  .controls.sticky{position:sticky;bottom:0;z-index:20;background:linear-gradient(transparent,var(--bg) 22%);padding:14px 0 calc(8px + env(safe-area-inset-bottom,0px))}
+  .controls .btn{flex:1;padding:8px 4px;font-size:15px;white-space:nowrap} .btn.main{min-width:0}
+  .caption h2{font-size:22px} .caption{min-height:0}
+  .toast b{font-size:21px}
+  .win b{font-size:32px}
+}
+@media (prefers-reduced-motion:reduce){.tile{transition:opacity .2s}.tile.enter{transform:none}.flash,.mark,.card.new,.cov.pulse,.chip.bump{animation:none}.front .mk{transition:none}.flyer{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Rally Point <span>v3 · Front Line</span></h1>
+    <p>A 2-player tile-laying duel with 1×4 banners, 2×2 objectives and 1×1 insignia. Fill an objective's border and it rallies, paying points and the materiel that fires military orders. Two scripted scenes, both hands face up. <b>Right-click or long-press anything to inspect it.</b></p>
+  </header>
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <div class="stage">
+    <div class="table" id="table">
+      <div class="side p2" id="side2" data-ins="side:2">
+        <div class="row"><span class="who" id="who2"></span><span class="turnTag">To move</span><span class="pts" id="ptsBox2" data-ins="score:2"><span id="pts2">0</span><small>pts</small></span></div>
+        <div class="mil" id="mil2"></div>
+        <div class="handrow"><div class="cards" id="cards2"></div><div class="stackc" data-ins="stack:2"><b id="stack2">9</b>stack</div></div>
+      </div>
+      <div class="field">
+        <div class="board" id="board" aria-label="Board, 8 by 8"></div>
+        <div class="front" id="front" data-ins="front" aria-label="The Front"></div>
+      </div>
+      <div class="side p1" id="side1" data-ins="side:1">
+        <div class="handrow"><div class="cards" id="cards1"></div><div class="stackc" data-ins="stack:1"><b id="stack1">9</b>stack</div></div>
+        <div class="mil" id="mil1"></div>
+        <div class="row"><span class="who" id="who1"></span><span class="turnTag">To move</span><span class="pts" id="ptsBox1" data-ins="score:1"><span id="pts1">0</span><small>pts</small></span></div>
+      </div>
+    </div>
+    <div class="rail">
+      <div class="caption" aria-live="polite" data-ins="caption">
+        <div class="stepno" id="stepNo"></div>
+        <h2 id="capTitle"></h2>
+        <p id="capText"></p>
+        <div class="math" id="capMath"></div>
+      </div>
+      <div class="dots" id="dots" aria-label="Jump to a step"></div>
+      <div class="controls sticky">
+        <button class="btn" id="prev" data-ins="btn:prev">◀ Back</button>
+        <button class="btn main" id="play" data-ins="btn:play">▶ Play</button>
+        <button class="btn" id="next" data-ins="btn:next">Step ▶</button>
+        <button class="btn" id="restart" data-ins="btn:restart">Restart</button>
+      </div>
+      <div class="hint">Keys: <b>←</b> <b>→</b> step, <b>Space</b> play or pause, <b>I</b> inspect the focused item. Right-click (desktop) or long-press (touch) any tile, card, meter, chip or the Front to see what it is and what it gives you now.</div>
+    </div>
+  </div>
+
+  <h3 class="sec">Classes: what a rally pays, and the order it fires at 3</h3>
+  <section class="ref">
+    <div style="--k:var(--k-a)"><b><i>◆</i> Assault · Ammo → Strike</b>Attack 2: destroy one enemy banner or insignia that is <em>not in cover</em>, or else push the Front 2. Armor soaks pushes 1 for 1.</div>
+    <div style="--k:var(--k-r)"><b><i>●</i> Recon · Intel → Spot</b>Front +1. +1 Charge on each open objective you touch. Your next Strike is +1 and <em>ignores cover and Armor</em>.</div>
+    <div style="--k:var(--k-e)"><b><i>▲</i> Engineer · Works → Fortify</b>+2 Armor (max 4). If the Front leans toward you, win back 1 step. Unused Armor scores 1 each at the end.</div>
+    <div style="--k:var(--k-s)"><b><i>✚</i> Support · Supply → Resupply</b>Draw 1 tile, +1 point, Front +1.</div>
+  </section>
+  <section class="ref">
+    <div style="--k:var(--gold)"><b>Rally</b>Each touching banner or insignia cell scores 1 for its owner, 2 if it matches the objective's class. Closer +1 (+1 per Charge). Owner gets its Command. Each touching banner pays its owner 1 materiel of its class, an insignia 2, the objective 1.</div>
+    <div style="--k:var(--k-e)"><b>Cover</b>A banner or insignia touching another of its owner's Engineer tiles, or its owner's Bunker, is in cover. A Strike can't destroy it unless the attacker spotted first. Objectives and scored points are never destroyed.</div>
+    <div style="--k:var(--gold)"><b>Streak</b>+1 per rally you close and per order you fire. An enemy Strike that lands resets it. 3 Spotter Drone (+1 Intel, see their hand) · 5 Supply Drop (draw 1, place it now) · 7 Fire Mission (Front +2 through Armor, destroy an exposed banner).</div>
+    <div style="--k:var(--gold)"><b>Winning</b>Most points when the board is full or both players pass. The Front has 13 steps; pushing it to the enemy end is a Breakthrough and wins at once (about 1 game in 12). The second player starts with 1 point.</div>
+  </section>
+</div>
+<div class="insp" id="insp" role="dialog" aria-modal="false" aria-labelledby="inspT"><button class="x" id="inspX" aria-label="Close">✕</button><div class="it" id="inspT"></div><div class="is" id="inspS"></div><ul id="inspL"></ul></div>
+
+<script>
+(function(){
+"use strict";
+const N=8;
+const CLS={A:{n:"Assault",g:"◆",mat:"Ammo",order:"Strike",i:0},R:{n:"Recon",g:"●",mat:"Intel",order:"Spot",i:1},E:{n:"Engineer",g:"▲",mat:"Works",order:"Fortify",i:2},S:{n:"Support",g:"✚",mat:"Supply",order:"Resupply",i:3}};
+const KORDER=["A","R","E","S"];
+// Card catalogue. k: b banner (1x4), o objective (2x2), i insignia (1x1)
+const C={
+  pointMan:{n:"Point Man",k:"b",c:"A",ab:{breach:3},txt:"Breach +3: if this tile closes a rally, +3."},
+  shockLine:{n:"Shock Line",k:"b",c:"A",ab:{pioneer:1},txt:"Deploy: +1 point for each objective it touches."},
+  liaisonAR:{n:"Liaison ◆>●",k:"b",c:"A",ab:{ally:"R"},txt:"Also matches Recon ● objectives."},
+  liaisonAS:{n:"Liaison ◆>✚",k:"b",c:"A",ab:{ally:"S"},txt:"Also matches Support ✚ objectives."},
+  rifleTeam:{n:"Rifle Team",k:"b",c:"A",ab:{mat:1},txt:"Rally: +1 extra Ammo."},
+  wireman:{n:"Wireman",k:"b",c:"R",ab:{charge:1},txt:"Deploy: 1 Charge on each open objective it touches."},
+  spotter:{n:"Spotter",k:"b",c:"R",ab:{mat:1},txt:"Rally: +1 extra Intel."},
+  dugIn:{n:"Dug-In",k:"b",c:"E",ab:{hold:1},txt:"Dig in: keeps its match bonus if its objective never rallies."},
+  longWatch:{n:"Long Watch",k:"b",c:"E",ab:{flank:1},txt:"Flank +1: when it lines a whole side of a rallying objective, +1."},
+  sandbagLine:{n:"Sandbag Line",k:"b",c:"E",ab:{mat:1},txt:"Rally: +1 extra Works."},
+  medicLine:{n:"Medic Line",k:"b",c:"S",ab:{mat:1},txt:"Rally: +1 extra Supply."},
+  quartermaster:{n:"Quartermaster",k:"b",c:"S",ab:{scout:1,nomatch:1},txt:"Deploy: draw 1, then put 1 on the bottom. Never matches."},
+  fieldKit:{n:"Field Kit",k:"b",c:"S",ab:{},txt:"Can be pinned as a patch over a 4-cell gap."},
+  assaultPost:{n:"Assault Post",k:"o",c:"A",ab:{command:2},txt:"Objective. Command +2."},
+  reconPost:{n:"Recon Post",k:"o",c:"R",ab:{command:2},txt:"Objective. Command +2."},
+  engineerPost:{n:"Engineer Post",k:"o",c:"E",ab:{command:2},txt:"Objective. Command +2. Can patch a gap."},
+  supplyDepot:{n:"Supply Depot",k:"o",c:"S",ab:{command:2},txt:"Objective. Command +2."},
+  bunker:{n:"Bunker",k:"o",c:"E",ab:{command:1,bunker:1},txt:"Objective. Command +1. Its owner's tiles touching it are in cover."},
+  ammoCache:{n:"Ammo Cache",k:"i",c:"A",ab:{gem:2},txt:"Insignia: fills 1 cell. Gives 2 Ammo when a touching objective rallies."},
+  flare:{n:"Flare",k:"i",c:"R",ab:{gem:2},txt:"Insignia: fills 1 cell. Gives 2 Intel when a touching objective rallies."},
+  sandbags:{n:"Sandbags",k:"i",c:"E",ab:{gem:2},txt:"Insignia: fills 1 cell. Gives 2 Works when a touching objective rallies."},
+  supplyCrate:{n:"Supply Crate",k:"i",c:"S",ab:{gem:2},txt:"Insignia: fills 1 cell. Gives 2 Supply when a touching objective rallies."},
+};
+const inside=(r,c)=>r>=0&&r<N&&c>=0&&c<N;
+const NB4=(r,c)=>[[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([a,b])=>inside(a,b));
+function cellsFor(k,at){ const [r,c,d]=at; if(k==="b") return [0,1,2,3].map(i=>d==="v"?[r+i,c]:[r,c+i]); if(k==="o") return [[r,c],[r,c+1],[r+1,c],[r+1,c+1]]; return [[r,c]]; }
+function sidesOf(t){ const [r,c]=t.cells[0]; return {top:[[r-1,c],[r-1,c+1]],bottom:[[r+2,c],[r+2,c+1]],left:[[r,c-1],[r+1,c-1]],right:[[r,c+2],[r+1,c+2]]}; }
+function borderOf(t){ const s=sidesOf(t); return [...s.top,...s.right,...s.bottom,...s.left]; }
+function newState(ch){
+  return {grid:Array.from({length:N},()=>Array(N).fill(0)),tiles:{},nid:1,score:{1:0,2:0},rallies:{1:0,2:0},
+    mat:{1:[0,0,0,0],2:[0,0,0,0]},armor:{1:0,2:0},front:0,streak:{1:0,2:0},spot:{1:false,2:false},see:{1:0,2:0},
+    hands:{1:[],2:[]},stacks:{1:[],2:[]},winner:0,extra:0,fired:{},lost:{1:0,2:0}};
+}
+const clone=o=>JSON.parse(JSON.stringify(o));
+function tileAt(st,r,c){ return inside(r,c)&&st.grid[r][c]?st.tiles[st.grid[r][c]]:null; }
+function filledCount(st,t){ let n=0; for(const [r,c] of borderOf(t)) if(!inside(r,c)||st.grid[r][c]) n++; return n; }
+function isContact(t){ return t.k==="b"||t.k==="i"; }
+function matches(st,t,h){ const ab=C[t.cid].ab; if(ab.nomatch) return false; return t.c===h.c||ab.ally===h.c; }
+function coverOf(st,t){ // ids of tiles giving cover
+  if(!isContact(t)) return [];
+  const out=new Set(), own=new Set(t.cells.map(x=>x.join()));
+  for(const [r,c] of t.cells) for(const [a,b] of NB4(r,c)){ if(own.has(a+","+b)) continue; const q=tileAt(st,a,b); if(!q||q.p!==t.p) continue;
+    if(isContact(q)&&q.c==="E") out.add(q.id); if(q.k==="o"&&C[q.cid].ab.bunker) out.add(q.id); }
+  return [...out];
+}
+function objectivesTouching(st,t){ const ids=new Set(t.cells.map(x=>x.join())); return Object.values(st.tiles).filter(h=>h.k==="o"&&!h.patch&&borderOf(h).some(([r,c])=>ids.has(r+","+c))); }
+function threat(st,t){ // value still on open objectives
+  let v=0; for(const h of objectivesTouching(st,t)){ if(h.rallied) continue; const bs=new Set(borderOf(h).map(x=>x.join())); const n=t.cells.filter(x=>bs.has(x.join())).length; v+=n*(matches(st,t,h)?2:1); } return v;
+}
+function strikeTarget(st,a,ignoreCover){
+  const v=a===1?2:1; let best=null,bv=0;
+  for(const t of Object.values(st.tiles)){ if(t.p!==v||!isContact(t)) continue; if(!ignoreCover&&coverOf(st,t).length) continue; const x=threat(st,t); if(x>bv){best=t;bv=x;} }
+  return {t:best,v:bv};
+}
+function draw(st,p,ev,why){ const id=st.stacks[p].shift(); if(id){ st.hands[p].push(id); ev.push({t:"draw",p,cid:id,why}); } return id; }
+function push(st,a,n,ignoreArmor,ev,src){
+  const v=a===1?2:1; let soak=0;
+  if(!ignoreArmor){ soak=Math.min(st.armor[v],n); st.armor[v]-=soak; n-=soak; }
+  const from=st.front;
+  if(n>0){ st.front+=a===1?n:-n; if(Math.abs(st.front)>=6){ st.front=st.front>0?6:-6; st.winner=a; } }
+  ev.push({t:"front",a,src,from,to:st.front,soak,moved:n>0?Math.abs(st.front-from):0});
+  if(st.winner) ev.push({t:"breakthrough",p:a});
+  return n>0;
+}
+function landed(st,a,ev){ const v=a===1?2:1; const was=st.streak[v]; st.streak[v]=0; ev.push({t:"streakReset",p:v,was}); }
+function destroy(st,t,ev,src){ for(const [r,c] of t.cells) st.grid[r][c]=0; delete st.tiles[t.id]; st.lost[t.p]++; ev.push({t:"destroy",id:t.id,p:t.p,cid:t.cid,cells:t.cells,src}); }
+function addStreak(st,p,ev,why){
+  st.streak[p]++; const k=st.streak[p]; ev.push({t:"streak",p,to:k,why});
+  if(k===3){ st.mat[p][1]++; st.see[p]=2; ev.push({t:"reward",p,tier:3,name:"Spotter Drone"}); ev.push({t:"mat",p,k:"R",n:1,from:"drone"}); }
+  else if(k===5){ draw(st,p,ev,"Supply Drop"); st.extra=p; ev.push({t:"reward",p,tier:5,name:"Supply Drop"}); }
+  else if(k===7){ ev.push({t:"reward",p,tier:7,name:"Fire Mission"}); if(!st.winner){ push(st,p,2,true,ev,"Fire Mission"); if(!st.winner){ const tg=strikeTarget(st,p,false); if(tg.t) destroy(st,tg.t,ev,"Fire Mission"); } landed(st,p,ev); } }
+}
+function rallyCheck(st,placed,p,ev){
+  const fired=Object.values(st.tiles).filter(h=>h.k==="o"&&!h.patch&&!h.rallied&&filledCount(st,h)===8).sort((a,b)=>a.id-b.id);
+  for(const h of fired){
+    const e={t:"rally",id:h.id,cid:h.cid,owner:h.p,closer:p,lines:[],gain:{1:0,2:0},cells:[],mats:[]};
+    const groups={};
+    for(const [r,c] of borderOf(h)){ const q=tileAt(st,r,c); if(!q||!isContact(q)) continue; const m=matches(st,q,h); (groups[q.id]=groups[q.id]||{q,n:0,pts:0,m}); groups[q.id].n++; groups[q.id].pts+=m?2:1; e.cells.push({r,c,p:q.p,pts:m?2:1}); }
+    for(const g of Object.values(groups)){ const q=g.q, ab=C[q.cid].ab; let pts=g.pts, extra="";
+      st.score[q.p]+=g.pts; e.gain[q.p]+=g.pts;
+      if(ab.flank){ const s=sidesOf(h); const own=new Set(q.cells.map(x=>x.join())); if(Object.values(s).some(sd=>sd.every(([r,c])=>inside(r,c)&&own.has(r+","+c)))){ st.score[q.p]+=ab.flank; e.gain[q.p]+=ab.flank; pts+=ab.flank; extra+=` + Flank ${ab.flank}`; } }
+      if(ab.breach&&q.id===placed){ st.score[q.p]+=ab.breach; e.gain[q.p]+=ab.breach; pts+=ab.breach; extra+=` + Breach ${ab.breach}`; }
+      e.lines.push({p:q.p,txt:`${C[q.cid].n}: ${g.n} ${g.n>1?"cells":"cell"} × ${g.m?"2 (match)":"1"}${extra} = ${pts}`});
+      const gain=(ab.gem||1)+(ab.mat||0); st.mat[q.p][CLS[q.c].i]+=gain; e.mats.push({p:q.p,k:q.c,n:gain,from:q.id});
+    }
+    const cl=1+h.charges; st.score[p]+=cl; e.gain[p]+=cl; st.rallies[p]++;
+    e.lines.push({p,txt:`Closer: +1${h.charges?` + ${h.charges} Charge${h.charges>1?"s":""}`:""} = ${cl}`});
+    const cmd=C[h.cid].ab.command||0; st.score[h.p]+=cmd; e.gain[h.p]+=cmd; e.lines.push({p:h.p,txt:`Command (objective owner): +${cmd}`});
+    st.mat[h.p][CLS[h.c].i]+=1; e.mats.push({p:h.p,k:h.c,n:1,from:h.id});
+    h.rallied=true; h.charges=0;
+    ev.push(e);
+  }
+  for(const h of fired){ if(st.winner) break; addStreak(st,p,ev,"rally"); }
+  return fired.length;
+}
+function pocketOf(st,r,c){ const seen=new Set([r+","+c]), q=[[r,c]]; while(q.length){ const [a,b]=q.pop(); for(const [x,y] of NB4(a,b)){ const k=x+","+y; if(!seen.has(k)&&!st.grid[x][y]){ seen.add(k); q.push([x,y]); } } } return seen; }
+function place(st,p,cid,at,ev,extra,patchCells){
+  const card=C[cid]; const hi=st.hands[p].indexOf(cid); if(hi<0) throw new Error(`P${p} has no ${cid} in hand ${st.hands[p]}`);
+  st.hands[p].splice(hi,1);
+  const cells=patchCells||cellsFor(card.k,at);
+  for(const [r,c] of cells){ if(!inside(r,c)||st.grid[r][c]) throw new Error(`illegal ${cid} at ${at}`); }
+  if(patchCells){ const pk=pocketOf(st,cells[0][0],cells[0][1]); if(pk.size!==cells.length||cells.length>4) throw new Error("patch gap not enclosed: "+pk.size); }
+  const t={id:st.nid++,p,cid,k:card.k,c:card.c,cells,rallied:false,charges:0,v:at?at[2]==="v":false,patch:!!patchCells};
+  st.tiles[t.id]=t; for(const [r,c] of cells) st.grid[r][c]=t.id;
+  ev.push({t:"place",id:t.id,p,cid,extra:!!extra,patch:!!patchCells});
+  const ab=card.ab;
+  if(ab.pioneer){ const n=objectivesTouching(st,t).length*ab.pioneer; if(n){ st.score[p]+=n; ev.push({t:"deploy",p,id:t.id,txt:`Deploy +${n}`,pts:n}); } }
+  if(ab.charge){ for(const h of objectivesTouching(st,t)) if(!h.rallied){ h.charges++; ev.push({t:"charge",id:h.id}); } }
+  rallyCheck(st,t.id,p,ev);
+  return t;
+}
+function orders(st,p,ev){
+  const m=st.mat[p], f=st.fired[p]=st.fired[p]||{};
+  const go=k=>m[CLS[k].i]>=3&&!f[k]&&!st.winner;
+  if(go("E")){ m[2]-=3; f.E=1; const a0=st.armor[p]; st.armor[p]=Math.min(4,st.armor[p]+2); ev.push({t:"order",p,k:"E",armor:[a0,st.armor[p]]});
+    const lean=p===1?st.front<0:st.front>0; if(lean){ const from=st.front; st.front+=p===1?1:-1; ev.push({t:"front",a:p,src:"Fortify",from,to:st.front,soak:0,moved:1,regain:1}); }
+    addStreak(st,p,ev,"Fortify"); }
+  if(go("R")){ m[1]-=3; f.R=1; st.spot[p]=true; const ch=[];
+    for(const h of Object.values(st.tiles)) if(h.k==="o"&&!h.rallied&&!h.patch&&borderOf(h).some(([r,c])=>{const q=tileAt(st,r,c); return q&&q.p===p;})){ h.charges++; ch.push(h.id); }
+    ev.push({t:"order",p,k:"R",charges:ch}); push(st,p,1,false,ev,"Spot"); addStreak(st,p,ev,"Spot"); }
+  if(go("A")){ m[0]-=3; f.A=1; const spotted=st.spot[p]; st.spot[p]=false; const dmg=2+(spotted?1:0);
+    const tg=strikeTarget(st,p,spotted); const covered=Object.values(st.tiles).filter(t=>t.p!==p&&isContact(t)&&coverOf(st,t).length).map(t=>t.id);
+    const e={t:"order",p,k:"A",dmg,spotted,covered,target:tg.t?tg.t.id:0,value:tg.v}; ev.push(e);
+    if(tg.t){ destroy(st,tg.t,ev,"Strike"); landed(st,p,ev); e.hit="tile"; }
+    else { const ok=push(st,p,dmg,spotted,ev,"Strike"); e.hit=ok?"front":"soaked"; if(ok) landed(st,p,ev); }
+    addStreak(st,p,ev,"Strike"); }
+  if(go("S")){ m[3]-=3; f.S=1; ev.push({t:"order",p,k:"S"}); draw(st,p,ev,"Resupply"); st.score[p]+=1; push(st,p,1,false,ev,"Resupply"); addStreak(st,p,ev,"Resupply"); }
+}
+function refill(st,p,ev){ while(st.hands[p].length<3&&st.stacks[p].length) draw(st,p,ev,"refill"); }
+// Run a chapter: returns array of {st, ev}
+function runChapter(ch){
+  let st=newState();
+  st.score={1:ch.score?ch.score[0]:0,2:ch.score?ch.score[1]:0};
+  st.front=ch.front||0;
+  st.hands={1:[...ch.hands[1]],2:[...ch.hands[2]]}; st.stacks={1:[...ch.stacks[1]],2:[...ch.stacks[2]]};
+  for(const pre of ch.pre||[]){ const cells=cellsFor(C[pre.cid].k,pre.at); const t={id:st.nid++,p:pre.p,cid:pre.cid,k:C[pre.cid].k,c:C[pre.cid].c,cells,rallied:false,charges:0,v:pre.at[2]==="v"}; st.tiles[t.id]=t; for(const [r,c] of cells){ if(!inside(r,c)||st.grid[r][c]) throw new Error("pre overlap "+pre.cid); st.grid[r][c]=t.id; } }
+  const out=[{st:clone(st),ev:[]}];
+  ch.steps.slice(1).forEach((s,ix)=>{
+    const ev=[];
+    if(s.info||st.winner){ out.push({st:clone(st),ev}); return; }
+    if(s.play){ if(s.extra){ if(st.extra!==s.p) throw new Error("no Supply Drop pending"); st.extra=0; } place(st,s.p,s.play,s.at,ev,s.extra,s.patch); }
+    if(!s.split){
+      orders(st,s.p,ev);
+      if(st.extra!==s.p){ refill(st,s.p,ev); st.fired[s.p]={}; if(st.see[s.p]) st.see[s.p]--; }
+    }
+    out.push({st:clone(st),ev});
+  });
+  return out;
+}
+const CH1={
+  id:"m1", tab:"1 · Match: combo 1", name:"Spearhead vs Hold the Line",
+  p1:{name:"Spearhead",cls:["A","R"]}, p2:{name:"Hold the Line",cls:["E","S"]}, first:1, placed0:0,
+  score:[0,1],
+  hands:{1:["assaultPost","spotter","wireman"],2:["sandbagLine","supplyDepot","longWatch"]},
+  stacks:{1:["pointMan","assaultPost","shockLine","liaisonAR","reconPost","ammoCache","flare","pointMan","spotter"],
+          2:["bunker","longWatch","supplyCrate","medicLine","engineerPost","dugIn","quartermaster","sandbags","dugIn"]},
+  steps:[
+    {setup:1,key:1,t:"Two stacks, two hands",
+      x:"Each player brings a shuffled stack of 12 tiles: 7 banners, 3 objectives and 2 insignia, in at most 2 classes. Both draw a hand of 3 and refill to 3 after every turn. Player 1 goes first, so Player 2 starts with 1 point."},
+    {p:1,play:"assaultPost",at:[0,0],t:"An objective in the corner",
+      x:"An objective is a 2×2 emblem. When every cell around it is filled, it rallies. In a corner, half its border is the board edge, which counts as filled, so it needs only the 4 dashed cells."},
+    {p:2,play:"sandbagLine",at:[0,6,"v"],t:"An Engineer banner",
+      x:"Sandbag Line is Engineer ▲. Engineer tiles give cover: a banner touching one of its owner's Engineer tiles can't be destroyed by a normal Strike."},
+    {p:1,play:"spotter",at:[0,2,"h"],t:"Spotter: an Intel source",
+      x:"Spotter is Recon ●, so it doesn't match the Assault ◆ post and scores 1 per cell. When that post rallies, Spotter pays 1 Intel plus 1 from its Rally text."},
+    {p:2,play:"supplyDepot",at:[1,4],t:"Player 2 builds under Player 1's banner",
+      x:"The Supply Depot borrows Spotter and Sandbag Line as border: 4 of 8 already. Contacts score for their own owner, so Player 1's Spotter would earn here too."},
+    {p:1,play:"pointMan",at:[2,0,"h"],mark:[[1,2]],t:"One cell from a rally",
+      x:"Point Man lines the post's bottom and the Depot's left. The Assault Post now waits on one highlighted cell. Player 1 has nothing that fits it yet."},
+    {p:2,play:"longWatch",at:[0,7,"v"],t:"Two Engineers cover each other",
+      x:"Long Watch touches Sandbag Line. Each is an Engineer tile touching another of its owner's Engineer tiles, so both are in cover (shield icon). Inspect one to see why."},
+    {p:1,play:"assaultPost",at:[6,0],t:"A second post, bottom left",
+      x:"Player 1 opens another Assault Post in the opposite corner. It also needs only 4 cells."},
+    {p:2,play:"bunker",at:[6,6],key:1,t:"The Bunker",
+      x:"Bunker is an Engineer objective with a rule: every Player 2 tile touching it is in cover. The price is a Command of +1 instead of +2."},
+    {p:1,play:"shockLine",at:[5,0,"h"],t:"Shock Line deploys",
+      x:"Shock Line's Deploy text scores +1 for each objective it touches: +1 now. It lines the top of the bottom-left post."},
+    {p:2,play:"longWatch",at:[5,4,"h"],t:"Long Watch lines the Bunker",
+      x:"It covers the Bunker's whole top side, so Flank +1 will pay when the Bunker rallies. It touches the Bunker, so it is in cover."},
+    {p:1,play:"liaisonAR",at:[6,2,"h"],mark:[[7,2],[7,5]],t:"Two objectives, one cell each",
+      x:"Liaison fills a cell of the bottom post and of the Bunker. Each now waits on one highlighted cell in the bottom row."},
+    {p:2,play:"supplyCrate",at:[7,5],key:1,t:"A rally pays materiel",
+      x:"The Supply Crate, an insignia, closes the Bunker. Every touching tile pays its owner materiel of its class (insignia pay 2), and the meters fill. A banner across the bottom row would have closed both objectives, but it would have handed Player 1 the post."},
+    {p:1,play:"ammoCache",at:[7,2],split:1,key:1,t:"Ammo Cache closes the post",
+      x:"The Cache could close either Assault Post. The bottom one pays 11 points and 5 Ammo; the top one would pay 10 and 4. Player 1's Ammo meter reaches 6, and a meter at 3 fires at the end of the turn."},
+    {p:1,phase:"orders",key:1,t:"Cover blocks the Strike",
+      x:"Strike fires (Attack 2, spends 3 Ammo). It may destroy an enemy banner or insignia that is not in cover. Every Player 2 tile is in cover, including Sandbag Line, which is worth 2 on the open Depot. So the Strike pushes the Front 2 toward Player 2 instead. It landed, so Player 2's streak resets."},
+    {p:2,play:"medicLine",at:[3,2,"h"],mark:[[1,3]],t:"Player 2 sets up a plug",
+      x:"Medic Line fills the Depot's bottom: 7 of 8. The last cell is an enclosed hole no banner fits, but the Engineer Post in Player 2's hand can be pinned there as a patch: Player 2 +9. Medic Line touches Sandbag Line, so it is in cover. Player 1 still holds 3 Ammo."},
+    {p:1,play:"flare",at:[1,2],split:1,key:1,t:"Combo 1: the Flare",
+      x:"The Flare is a Recon insignia. It fills the last cell of the top Assault Post, which rallies: Player 1 +9, Intel 0 → 4, Ammo 3 → 5. The rally is Player 1's 3rd streak point: Spotter Drone, +1 Intel and a look at Player 2's hand. It shows the Engineer Post, ready to patch."},
+    {p:1,phase:"orders",key:1,t:"Spot, then a Strike through cover",
+      x:"Spot fires first: the Front moves 1 more, the Depot gets a Charge, and the next Strike ignores cover. Strike fires as Attack 3 and destroys Medic Line, worth 4 on the Depot. Four cells reopen and the Depot drops to 5 of 8: the patch no longer closes it. Streak 5: Supply Drop."},
+    {p:1,play:"reconPost",at:[3,0],extra:1,t:"Supply Drop: one more tile",
+      x:"Player 1 drew a Point Man and places the Recon Post at once, beside the reopened cells. Then Player 1 refills to 3, which empties the stack."},
+    {info:1,key:1,t:"Why it was a combo",
+      x:"Recon alone can't destroy, and Assault alone can't reach a tile in cover. Recon and Assault around one Assault Post, finished by a 1×1 insignia, could. Player 1 leads 22 to 9 and the Front is 3 steps toward Player 2, halfway to a Breakthrough. The Depot now carries a Charge for whoever closes it."},
+  ]
+};
+const CH2={
+  id:"m2", tab:"2 · Combo 2 and the Front", name:"Shock and Supply vs Hold the Line",
+  p1:{name:"Shock and Supply",cls:["A","S"]}, p2:{name:"Hold the Line",cls:["E","S"]}, first:2, placed0:13,
+  score:[1,0],
+  pre:[
+    {p:2,cid:"dugIn",at:[2,0,"v"]},
+    {p:1,cid:"pointMan",at:[2,1,"v"]},
+    {p:1,cid:"rifleTeam",at:[3,2,"v"]},
+    {p:2,cid:"longWatch",at:[2,3,"v"]},
+    {p:1,cid:"liaisonAS",at:[2,4,"v"]},
+    {p:1,cid:"medicLine",at:[4,5,"v"]},
+    {p:1,cid:"assaultPost",at:[6,0]},
+    {p:1,cid:"supplyDepot",at:[6,3]},
+    {p:2,cid:"bunker",at:[0,6]},
+    {p:2,cid:"fieldKit",at:[2,7,"v"]},
+    {p:2,cid:"dugIn",at:[2,6,"v"]},
+    {p:2,cid:"sandbags",at:[0,5]},
+    {p:2,cid:"supplyCrate",at:[1,4]},
+  ],
+  hands:{1:["ammoCache","shockLine","assaultPost"],2:["sandbagLine","longWatch","quartermaster"]},
+  stacks:{1:["pointMan","supplyCrate","quartermaster"],2:["engineerPost","supplyDepot"]},
+  steps:[
+    {setup:1,key:1,mark:[[7,2]],t:"Fire team at the wire",
+      x:"Another match, 13 tiles in. Player 1 brought Shock and Supply (Assault ◆ and Support ✚, with a Rifle Team in it). Player 2 went first, so Player 1 started with 1 point. Nothing has rallied yet. The highlighted cell is enclosed and sits on the border of both Player 1 objectives."},
+    {p:1,play:"ammoCache",at:[7,2],split:1,key:1,t:"One cell, two rallies",
+      x:"The Ammo Cache fills it and both objectives rally, oldest first. One placement: Player 1 +20, Player 2 +2, and Player 1 collects 11 Ammo and 3 Supply. Two rallies make streak 2."},
+    {p:1,phase:"orders",key:1,t:"A barrage, one Strike a turn",
+      x:"Each meter fires once a turn and keeps the rest. Strike (11 → 8 Ammo) finds no exposed tile worth anything, so it pushes the Front 2; that is streak 3, a Spotter Drone. Resupply (3 → 0 Supply) draws a tile, scores 1 and pushes the Front 1 more: 3 of 6."},
+    {p:2,play:"sandbagLine",at:[1,0,"h"],mark:[[1,5]],t:"Player 2 digs in",
+      x:"Player 2 can see 8 Ammo waiting. Sandbag Line touches Dug-In and Long Watch, so all three are in cover. Player 2 has 2 Works, one short of Fortify. The Bunker's last cell (highlighted) takes only a 1×1 or a patch, and Player 2 just drew an Engineer Post."},
+    {p:1,play:"shockLine",at:[0,0,"h"],key:1,t:"Strike two: one step from Breakthrough",
+      x:"Shock Line goes in quietly. At the end of the turn, Strike (8 → 5 Ammo) has no target, so the Front moves 2 more: 5 of 6. That is Player 1's 5th streak point: Supply Drop."},
+    {p:1,play:"supplyCrate",at:[0,4],extra:1,t:"Supply Drop",
+      x:"Player 1 drew a Supply Crate and places it at once. Then Player 1 refills from the stack."},
+    {p:2,play:"engineerPost",patch:[[1,5],[2,5],[3,5]],key:1,t:"The patch rule, then Armor",
+      x:"Player 2 pins the Engineer Post as a patch over the enclosed 3-cell gap. A patch fills cells and never rallies, but it completes the Bunker: Player 2 +7 and 4 Works. Fortify fires: +2 Armor, and because the Front leans toward Player 2 it wins back 1 step (5 → 4)."},
+    {p:1,play:"assaultPost",at:[6,6],key:1,t:"Fire Mission: Breakthrough",
+      x:"The Assault Post drops into the corner with its border already full and rallies at once: streak 6. Strike fires, but Armor soaks both steps. Firing still counts: streak 7, Fire Mission. It pushes the Front 2 and ignores Armor: 6 of 6. Breakthrough, Player 1 wins on the spot."},
+    {info:1,t:"How often does that happen?",
+      x:"Rarely. In the simulator a Breakthrough ends about 1 game in 12 and a Fire Mission happens in about 1 game in 5, so most games end on points. Player 2's answer was right (cover, then Armor) and one turn late. The meters showed both players what was coming."},
+  ]
+};
+const CHAPTERS=[CH1,CH2];
+const G=[];
+CHAPTERS.forEach((ch,ci)=>{ ch.snaps=runChapter(ch); ch.start=G.length; let turn=ch.placed0;
+  ch.steps.forEach((s,i)=>{ if(s.play&&!s.extra) turn++; G.push({ci,i,s,ch,snap:ch.snaps[i],prev:i?ch.snaps[i-1]:null,turn}); }); });
+window.__rp3={G,final:CHAPTERS.map(ch=>{ const st=ch.snaps[ch.snaps.length-1].st; return {score:st.score,front:st.front,winner:st.winner}; })};
+const $=id=>document.getElementById(id);
+const board=$("board");
+const KC={A:"var(--k-a)",R:"var(--k-r)",E:"var(--k-e)",S:"var(--k-s)"};
+const OWN={1:"var(--p1)",2:"var(--p2)"};
+const KN={b:"Banner",o:"Objective",i:"Insignia"};
+const PN=p=>"Player "+p;
+const other=p=>p===1?2:1;
+const MATI=k=>CLS[k].i;
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+let cur=0, playing=false, timers=[], playTimer=null, disp=null;
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- geometry
+function boxOf(cells){ const rs=cells.map(x=>x[0]), cs=cells.map(x=>x[1]); const r0=Math.min(...rs), c0=Math.min(...cs); return {r0,c0,h:Math.max(...rs)-r0+1,w:Math.max(...cs)-c0+1}; }
+function posStyle(cells,inset){ const b=boxOf(cells); return `left:calc(var(--cell)*${b.c0} + ${inset}px);top:calc(var(--cell)*${b.r0} + ${inset}px);width:calc(var(--cell)*${b.w} - ${inset*2}px);height:calc(var(--cell)*${b.h} - ${inset*2}px);`; }
+function cellCenter(r,c){ return {left:`calc(var(--cell)*${c} + var(--cell)/2)`,top:`calc(var(--cell)*${r} + 8px)`}; }
+function tileCenter(t){ const b=boxOf(t.cells); return [b.r0+(b.h-1)/2,b.c0+(b.w-1)/2]; }
+
+// ---------- art
+function emblemSVG(k,bunker){ const c=KC[k];
+  const p=bunker?"M3 41 V25 C3 12 11 4 20 4 C29 4 37 12 37 25 V41 Z":"M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z";
+  return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="${p}" fill="${c}" opacity=".22"/><path d="${p}" fill="none" stroke="${c}" stroke-width="2.5"/>${bunker?`<rect x="10" y="27" width="20" height="5" rx="1.5" fill="#0d1114" stroke="${c}" stroke-width="1.5"/>`:""}<text x="20" y="${bunker?22:28}" text-anchor="middle" font-size="16" fill="${c}" font-family="sans-serif" font-weight="700">${CLS[k].g}</text></svg>`; }
+const COV=`<svg class="cov" viewBox="0 0 20 22" aria-hidden="true"><path d="M10 1 L18 4 V11 C18 16 14 19 10 21 C6 19 2 16 2 11 V4 Z"/></svg>`;
+const SHIELD=`<svg viewBox="0 0 20 22" width="13" height="14" aria-hidden="true"><path d="M10 1 L18 4 V11 C18 16 14 19 10 21 C6 19 2 16 2 11 V4 Z" fill="#cfd8d5"/></svg>`;
+const EYE=`<svg viewBox="0 0 24 14" width="18" height="11" aria-hidden="true"><path d="M1 7 C5 1 19 1 23 7 C19 13 5 13 1 7 Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="7" r="3" fill="currentColor"/></svg>`;
+function shapeHTML(k){ const n=k==="b"?[4,1]:k==="o"?[2,2]:[1,1]; return `<span class="shape" style="grid-template-columns:repeat(${n[0]},5px)">${"<b></b>".repeat(n[0]*n[1])}</span>`; }
+
+function tileHTML(t,st,o){
+  const card=C[t.cid], b=boxOf(t.cells);
+  const style=posStyle(t.cells,3)+`--k:${KC[t.c]};--own:${OWN[t.p]};`;
+  const cls="tile "+(o.enter?"enter ":"")+(o.doomed?"doomed ":"");
+  const attrs=`data-t="${t.id}" ${o.doomed?`data-doom="${t.id}"`:""} data-ins="tile:${t.id}${o.doomed?":prev":""}" tabindex="0" aria-label="${esc(card.n)}, ${PN(t.p)}"`;
+  const cov=(t.k!=="o"&&coverOf(st,t).length)?COV:"";
+  if(t.patch) return `<div class="${cls}patch" ${attrs} style="${style}"><span>Patch</span></div>`;
+  if(t.k==="b") return `<div class="${cls}banner ${b.h>b.w?"v":""}" ${attrs} style="${style}"><div class="face"><span class="glyph">${CLS[t.c].g}</span><span class="nm">${card.n}</span></div>${cov}</div>`;
+  if(t.k==="i") return `<div class="${cls}ins" ${attrs} style="${style}"><span class="gem"><span>${CLS[t.c].g}</span></span>${cov}</div>`;
+  const rall=t.rallied&&!o.pending;
+  const n=o.pending?o.pendingCount:filledCount(st,t);
+  return `<div class="${cls}obj ${rall?"rallied":""}" ${attrs} style="${style}">${emblemSVG(t.c,card.ab.bunker)}<span class="en">${card.n}</span><span class="cpips">${rall?"":"<i></i>".repeat(t.charges)}</span><span class="count">${rall?"✓":n+"/8"}</span></div>`;
+}
+
+// ---------- static frame per chapter
+let builtFor=-1;
+function buildChapter(ci){
+  if(builtFor===ci) return; builtFor=ci; const ch=CHAPTERS[ci];
+  for(const p of [1,2]){ const pi=ch["p"+p];
+    $("who"+p).innerHTML=`${PN(p)} <small>· ${pi.name} ${pi.cls.map(k=>`<span style="color:${KC[k]}">${CLS[k].g}</span>`).join("")}</small>`;
+    let h="";
+    for(const k of KORDER) h+=`<span class="chip meter ${pi.cls.includes(k)?"":"dim"}" id="m${p}${k}" style="--k:${KC[k]}" data-ins="meter:${p}:${k}" tabindex="0"><span class="g">${CLS[k].g}</span><span class="lbl">${CLS[k].mat}</span><span class="pips"><i></i><i></i><i></i></span><span class="over"></span></span>`;
+    h+=`<span class="chip armor" id="ar${p}" data-ins="armor:${p}" tabindex="0">${SHIELD}<span class="lbl">Armor</span><b class="v">0</b></span>`;
+    h+=`<span class="chip streak" id="sk${p}" data-ins="streak:${p}" tabindex="0"><span class="lbl">Streak</span><span class="pips">${[1,2,3,4,5,6,7].map(i=>`<i class="${i%2&&i>1?"tier":""}"></i>`).join("")}</span><b class="v">0</b></span>`;
+    h+=`<span class="chip eye" id="eye${p}" data-ins="eye:${p}" tabindex="0" hidden>${EYE}<span>Seen</span></span>`;
+    $("mil"+p).innerHTML=h;
+  }
+  let f=""; for(let v=6;v>=-6;v--) f+=`<div class="step ${v===6?"edge2":v===-6?"edge1":v===0?"mid":v>0?"p2z":"p1z"}"></div>`;
+  $("front").innerHTML=f+`<span class="end" style="top:4px;color:var(--p2-ink)">P2</span><span class="end" style="bottom:4px;color:var(--p1-ink)">P1</span><div class="mk" id="fmk">0</div>`;
+  document.querySelectorAll("#tabs .tab").forEach((b,i)=>{ b.classList.toggle("on",i===ci); b.setAttribute("aria-selected",i===ci); });
+  $("dots").innerHTML=ch.steps.map((s,i)=>`<button aria-label="Step ${i+1}" class="${s.key?"key":""}" data-ins="dot:${ch.start+i}"></button>`).join("");
+  document.querySelectorAll("#dots button").forEach((b,i)=>b.onclick=()=>{ stop(); go(ch.start+i,ch.start+i===cur+1); });
+}
+
+// ---------- displayed numbers (animated separately from the board)
+function snapDisp(st){ return {score:{...st.score},mat:{1:[...st.mat[1]],2:[...st.mat[2]]},armor:{...st.armor},front:st.front,streak:{...st.streak}}; }
+let shownScore={1:0,2:0};
+function paint(){
+  for(const p of [1,2]){
+    for(const k of KORDER){ const el=$("m"+p+k); if(!el) continue; const n=disp.mat[p][MATI(k)];
+      el.querySelectorAll(".pips i").forEach((x,i)=>x.classList.toggle("on",i<n)); el.querySelector(".over").textContent=n>3?"+"+(n-3):""; el.classList.toggle("ready",n>=3); }
+    $("ar"+p).querySelector(".v").textContent=disp.armor[p];
+    const sk=$("sk"+p); sk.querySelector(".v").textContent=disp.streak[p]; sk.querySelectorAll(".pips i").forEach((x,i)=>x.classList.toggle("on",i<disp.streak[p]));
+    countTo(p,disp.score[p]);
+  }
+  const m=$("fmk"); if(m){ const f=disp.front; m.style.top=`calc(${(6-f+.5)/13*100}% - 11px)`; m.textContent=f===0?"0":(f>0?"▲":"▼")+Math.abs(f); m.style.background=f>0?"var(--p1-ink)":f<0?"var(--p2-ink)":"var(--gold)"; }
+}
+const counting={};
+function countTo(p,to){ const el=$("pts"+p); const from=shownScore[p]; if(from===to){ el.textContent=to; return; } cancelAnimationFrame(counting[p]); const t0=performance.now();
+  const tick=now=>{ const k=reduce?1:Math.min(1,(now-t0)/700); const v=Math.round(from+(to-from)*k); el.textContent=v; shownScore[p]=v; if(k<1) counting[p]=requestAnimationFrame(tick); }; counting[p]=requestAnimationFrame(tick); }
+function bump(el){ if(!el) return; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+
+// ---------- render
+function stepPlayer(g){ if(g.s.p) return g.s.p; const nx=G[cur+1]; if(nx&&nx.ci===g.ci&&nx.s.p) return nx.s.p; return 0; }
+function toMove(g){ const nx=G.find((x,j)=>j>G.indexOf(g)&&x.ci===g.ci&&x.s.p); if(nx) return nx.s.p; return g.s.p?other(g.s.p):1; }
+function render(animate){
+  clearTimers(); closeIns();
+  const g=G[cur], st=g.snap.st; buildChapter(g.ci);
+  const ev=animate?g.snap.ev:[];
+  const sch=animate?schedule(g):{S:[],total:0};
+  // board
+  const placed=new Set(ev.filter(e=>e.t==="place").map(e=>e.id));
+  const rallying=new Set(ev.filter(e=>e.t==="rally").map(e=>e.id));
+  let h=""; const ringSeen=new Set();
+  for(const t of Object.values(st.tiles)) if(t.k==="o"&&!t.patch&&!t.rallied) for(const [r,c] of borderOf(t)){ const key=r+","+c; if(!inside(r,c)||st.grid[r][c]||ringSeen.has(key)) continue; ringSeen.add(key); h+=`<div class="ring" data-ins="ring:${r}:${c}" style="${posStyle([[r,c]],4)}"></div>`; }
+  for(const t of Object.values(st.tiles)){ const pend=rallying.has(t.id); let pc=0; if(pend){ const pt=g.prev&&g.prev.st.tiles[t.id]; pc=pt?filledCount(g.prev.st,pt):filledCount(st,t); if(!pt) pc=8; } h+=tileHTML(t,st,{enter:placed.has(t.id)&&!reduce,pending:pend,pendingCount:pc}); }
+  for(const e of ev) if(e.t==="destroy"){ const t=g.prev.st.tiles[e.id]; h+=tileHTML(t,g.prev.st,{doomed:true}); }
+  for(const [r,c] of g.s.mark||[]) h+=`<div class="mark" style="${posStyle([[r,c]],3)}"></div>`;
+  if(st.winner&&!ev.some(e=>e.t==="breakthrough")) h+=winHTML(st);
+  board.innerHTML=h;
+  if(placed.size) requestAnimationFrame(()=>requestAnimationFrame(()=>board.querySelectorAll(".enter").forEach(e=>e.classList.remove("enter"))));
+  // hands and stacks
+  const nx=G[cur+1]; const nextPlay=nx&&nx.ci===g.ci&&nx.s.play?{p:nx.s.p,cid:nx.s.play}:null;
+  for(const p of [1,2]){ const hand=st.hands[p]; let marked=false; const newIdx={};
+    if(animate){ const draws=ev.filter(e=>e.t==="draw"&&e.p===p); for(const d of draws){ for(let i=hand.length-1;i>=0;i--) if(hand[i]===d.cid&&newIdx[i]==null){ newIdx[i]=d._at; break; } } }
+    if(animate&&g.s.setup&&g.ci===0) hand.forEach((_,i)=>newIdx[i]=400+i*260);
+    let ch="";
+    hand.forEach((cid,i)=>{ let cls=""; if(nextPlay&&nextPlay.p===p&&!marked&&cid===nextPlay.cid){ cls="play"; marked=true; } if(newIdx[i]!=null&&!reduce) cls+=" new"; ch+=cardHTML(cid,p,i,cls,newIdx[i]); });
+    for(let i=hand.length;i<3;i++) ch+=`<div class="card empty" data-ins="slot:${p}" aria-hidden="true"></div>`;
+    $("cards"+p).innerHTML=ch;
+    const sEl=$("stack"+p); sEl.textContent=st.stacks[p].length;
+    if(animate&&g.s.setup&&g.ci===0){ sEl.textContent=12; [1,2,3].forEach(k=>timers.push(setTimeout(()=>{ sEl.textContent=12-k; },400+(k-1)*260))); }
+    $("eye"+p).hidden=!(st.see[other(p)]>0);
+  }
+  // turn
+  const tp=stepPlayer(g); for(const p of [1,2]) $("side"+p).classList.toggle("turn",tp===p);
+  // numbers
+  disp=animate&&g.prev?snapDisp(g.prev.st):snapDisp(st);
+  if(!animate||!g.prev) shownScore={...disp.score};
+  paint();
+  // caption
+  const ch=g.ch, s=g.s;
+  let label;
+  if(s.setup) label=`Scene ${g.ci+1} · ${g.ci===0?"Setup":`Turn ${g.turn+1} coming up`}`;
+  else if(s.info) label=`Scene ${g.ci+1} · Takeaway`;
+  else if(s.phase==="orders") label=`Scene ${g.ci+1} · Turn ${g.turn} · End of ${PN(s.p)}'s turn: orders`;
+  else if(s.extra) label=`Scene ${g.ci+1} · Turn ${g.turn} · Supply Drop: ${PN(s.p)} places ${C[s.play].n}`;
+  else label=`Scene ${g.ci+1} · Turn ${g.turn} · ${PN(s.p)} ${s.patch?"pins":"plays"} ${C[s.play].n}${s.patch?" as a patch":""}`;
+  $("stepNo").textContent=label; $("capTitle").textContent=s.t; $("capText").textContent=s.x;
+  $("capMath").innerHTML=mathHTML(g);
+  document.querySelectorAll("#dots button").forEach((b,i)=>{ const j=ch.start+i; b.classList.toggle("on",j===cur); b.classList.toggle("done",j<cur); });
+  $("prev").disabled=cur===0; $("next").disabled=cur===G.length-1;
+  // run effects
+  for(const [at,fn] of sch.S) timers.push(setTimeout(fn,reduce?Math.min(at,50):at));
+  timers.push(setTimeout(()=>{ disp=snapDisp(st); paint(); },reduce?60:sch.total+100));
+  return sch.total;
+}
+function cardHTML(cid,p,i,cls,delay){ const c=C[cid]; return `<div class="card ${cls}" style="--k:${KC[c.c]};${delay!=null?`animation-delay:${Math.round(delay)}ms`:""}" data-ins="card:${p}:${i}" tabindex="0"><span class="t"><span>${shapeHTML(c.k)} ${KN[c.k]}</span><i>${CLS[c.c].g}</i></span><span class="n">${c.n}</span><span class="x">${c.txt}</span></div>`; }
+function winHTML(st){ return `<div class="win"><div><b>Breakthrough</b><span>${PN(st.winner)} pushed the Front to the end and wins at once.<br>Points at that moment: ${st.score[1]} to ${st.score[2]}.</span></div></div>`; }
+
+// ---------- caption math
+function signedFront(f){ return f===0?"centre":f>0?`${f} toward Player 2`:`${-f} toward Player 1`; }
+function mathHTML(g){
+  const s=g.s, st=g.snap.st, ev=g.snap.ev; let h="";
+  if(s.setup){
+    for(const p of [1,2]){ const ch=g.ch, list=[...(ch.pre||[]).filter(x=>x.p===p).map(x=>x.cid),...ch.hands[p],...ch.stacks[p]];
+      const cnt={}; list.forEach(c=>cnt[c]=(cnt[c]||0)+1);
+      const kinds={b:0,o:0,i:0}; list.forEach(c=>kinds[C[c].k]++);
+      h+=`<span class="h ${p===1?"p1t":"p2t"}">${PN(p)} · ${ch["p"+p].name}: ${kinds.b} banners, ${kinds.o} objectives, ${kinds.i} insignia</span><span class="stackl">${Object.entries(cnt).map(([c,n])=>`<span style="--k:${KC[C[c].c]}">${CLS[C[c].c].g} ${C[c].n}${n>1?" ×"+n:""}</span>`).join("")}</span>`; }
+    return h;
+  }
+  const matSum={1:{},2:{}};
+  for(const e of ev){
+    if(e.t==="rally"){ h+=`<span class="h">${C[e.cid].n} rallies (${PN(e.owner)}'s, closed by ${PN(e.closer)})</span>`+e.lines.map(l=>`<span class="${l.p===1?"p1t":"p2t"}">${PN(l.p)} · ${esc(l.txt)}</span>`).join("");
+      const ms={1:{},2:{}}; e.mats.forEach(m=>{ ms[m.p][m.k]=(ms[m.p][m.k]||0)+m.n; });
+      for(const p of [1,2]){ const parts=Object.entries(ms[p]).map(([k,n])=>`+${n} ${CLS[k].mat}`); if(parts.length) h+=`<span class="${p===1?"p1t":"p2t"}">${PN(p)} · materiel ${parts.join(", ")}</span>`; } }
+    else if(e.t==="deploy") h+=`<span class="${e.p===1?"p1t":"p2t"}">${PN(e.p)} · ${C[st.tiles[e.id].cid].n} Deploy: +${e.pts}</span>`;
+    else if(e.t==="order"){ const nm=CLS[e.k].order; let txt="";
+      if(e.k==="A") txt=e.hit==="tile"?`Attack ${e.dmg}${e.spotted?", spotted (ignores cover)":""}: destroys ${C[(g.prev.st.tiles[e.target]||{cid:"medicLine"}).cid].n}`:e.hit==="soaked"?`Attack ${e.dmg}: no exposed target, Armor soaks it`:`Attack ${e.dmg}: no exposed target worth anything, so it hits the Front`;
+      if(e.k==="R") txt=`next Strike ignores cover and Armor${e.charges.length?`, +1 Charge on ${e.charges.map(id=>C[st.tiles[id].cid].n).join(", ")}`:""}`;
+      if(e.k==="E") txt=`Armor ${e.armor[0]} → ${e.armor[1]}`;
+      if(e.k==="S") txt=`draw 1, +1 point`;
+      h+=`<span class="h">${PN(e.p)} · ${nm} fires (3 ${CLS[e.k].mat} spent)</span><span>${txt}</span>`; }
+    else if(e.t==="front"){ h+=`<span class="mt">Front (${e.src}): ${e.soak?`Armor soaks ${e.soak}. `:""}${e.moved?`${signedFront(e.from)} → ${signedFront(e.to)}`:"does not move"}</span>`; }
+    else if(e.t==="reward") h+=`<span class="h" style="color:var(--gold)">${PN(e.p)} · streak ${e.tier}: ${e.name}</span>`;
+    else if(e.t==="streakReset"&&e.was>0) h+=`<span class="mt">${PN(e.p)}'s streak resets (${e.was} → 0)</span>`;
+    else if(e.t==="destroy") h+=`<span class="mt">${C[e.cid].n} is destroyed; its ${e.cells.length} cells are empty again</span>`;
+    else if(e.t==="draw"&&e.why!=="refill") h+=`<span class="mt">${PN(e.p)} draws ${C[e.cid].n} (${e.why})</span>`;
+    else if(e.t==="breakthrough") h+=`<span class="h" style="color:var(--p1-ink)">Breakthrough: ${PN(e.p)} wins</span>`;
+  }
+  if(!s.setup&&!s.info&&ev.some(e=>e.t==="rally"||e.t==="order")) h+=`<span class="mt" style="margin-top:4px">Score ${st.score[1]} to ${st.score[2]} · Front ${signedFront(st.front)}</span>`;
+  return h;
+}
+
+// ---------- effects
+function tileEl(id){ return board.querySelector(`[data-t="${id}"]:not([data-doom])`)||board.querySelector(`[data-t="${id}"]`); }
+function floatAt(cls,html,r,c,life){ const d=document.createElement("div"); d.className=cls; d.innerHTML=html; const p=cellCenter(r,c); d.style.left=p.left; d.style.top=p.top; board.appendChild(d); setTimeout(()=>d.remove(),life||2000); }
+function bubbleTile(id,html,st){ const t=st.tiles[id]; if(!t) return; const [r,c]=tileCenter(t); floatAt("bubble",html,r,Math.min(6.2,Math.max(1.3,c)),2600); }
+function toast(title,sub,k){ const d=document.createElement("div"); d.className="toast"; d.style.setProperty("--k",k||"var(--gold)"); d.innerHTML=`<b>${title}</b><span>${sub}</span>`; board.appendChild(d); setTimeout(()=>d.remove(),2100); }
+function fly(fromEl,p,k,n){ const to=$("m"+p+k); if(!fromEl||!to||reduce){ disp.mat[p][MATI(k)]+=n; paint(); return; }
+  const a=fromEl.getBoundingClientRect(), b=to.getBoundingClientRect();
+  for(let i=0;i<n;i++){ const f=document.createElement("div"); f.className="flyer"; f.style.setProperty("--k",KC[k]); f.textContent=CLS[k].g; f.style.left=(a.left+a.width/2+i*6)+"px"; f.style.top=(a.top+a.height/2)+"px"; document.body.appendChild(f);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ f.style.transform=`translate(${b.left+14-(a.left+a.width/2+i*6)}px,${b.top+b.height/2-(a.top+a.height/2)}px) scale(.8)`; }));
+    setTimeout(()=>{ f.remove(); disp.mat[p][MATI(k)]+=1; paint(); bump(to); },780+i*90); }
+}
+function frontPop(txt,color){ const fr=$("front"), m=$("fmk"); const d=document.createElement("div"); d.className="pop"; d.style.color=color||"var(--gold)"; d.style.fontSize="15px"; d.style.left="50%"; d.style.top=m?m.style.top:"50%"; d.textContent=txt; fr.appendChild(d); setTimeout(()=>d.remove(),1900); }
+const ORDER_TXT={A:"Strike",R:"Spot",E:"Fortify",S:"Resupply"};
+function schedule(g){
+  const S=[]; let t=350; const add=(dt,fn)=>{ S.push([t,fn]); t+=dt; };
+  const st=g.snap.st, prev=g.prev?g.prev.st:st;
+  for(const e of g.snap.ev){
+    switch(e.t){
+      case "place": add(e.extra||e.patch?900:600,()=>{ if(e.extra) bubbleTile(e.id,"<b>Supply Drop</b> extra tile",st); if(e.patch) bubbleTile(e.id,"<b>Patch</b> fills the gap",st); }); break;
+      case "deploy": add(900,()=>{ bubbleTile(e.id,`<b>Deploy</b> +${e.pts}`,st); disp.score[e.p]+=e.pts; paint(); }); break;
+      case "rally": {
+        add(500,()=>{ const el=tileEl(e.id); if(el){ el.classList.add("flash","rallied"); const cn=el.querySelector(".count"); if(cn) cn.textContent="✓"; const cp=el.querySelector(".cpips"); if(cp) cp.innerHTML=""; }
+          bubbleTile(e.id,`<b>${C[e.cid].n}</b> rallies`,st);
+          e.cells.forEach((cl,i)=>setTimeout(()=>floatAt("pop "+(cl.p===1?"p1c":"p2c"),"+"+cl.pts,cl.r,cl.c,1900),150+i*110)); });
+        add(900,()=>{ disp.score[1]+=e.gain[1]; disp.score[2]+=e.gain[2]; paint(); });
+        e.mats.forEach(m=>add(240,()=>fly(tileEl(m.from),m.p,m.k,m.n)));
+        add(900,()=>{}); break; }
+      case "mat": add(1000,()=>fly($("sk"+e.p),e.p,e.k,e.n)); break;
+      case "streak": add(380,()=>{ disp.streak[e.p]=e.to; paint(); bump($("sk"+e.p)); }); break;
+      case "streakReset": add(e.was>0?700:150,()=>{ if(e.was>0){ const sk=$("sk"+e.p); bump(sk); } disp.streak[e.p]=0; paint(); }); break;
+      case "reward": add(2100,()=>{ const d={3:"+1 Intel · see their hand",5:"draw 1 · place one more tile now",7:"Front +2 through Armor"}[e.tier]; toast(`Streak ${e.tier} · ${e.name}`,d,"var(--gold)"); bump($("sk"+e.p)); }); break;
+      case "order": {
+        const fire=()=>{ disp.mat[e.p][MATI(e.k)]-=3; paint(); bump($("m"+e.p+e.k)); };
+        if(e.k==="A"){
+          add(1500,()=>{ fire(); toast("Strike",`Attack ${e.dmg}${e.spotted?" · spotted: cover ignored":" · only exposed tiles"}`,KC.A);
+            e.covered.forEach(id=>{ const el=tileEl(id); const cv=el&&el.querySelector(".cov"); if(cv){ cv.classList.add("pulse"); if(e.spotted) cv.classList.add("broken"); } }); });
+          if(e.target){ add(1300,()=>{ const el=board.querySelector(`[data-doom="${e.target}"]`)||tileEl(e.target); if(el) el.classList.add("tgt"); bubbleTile(e.target,`<b>Target</b> worth ${e.value} on an open objective`,prev); }); }
+          else add(1300,()=>{ toast(e.covered.length?"All in cover":"No target",e.hit==="soaked"?"so it hits the Front, and Armor soaks it":"so it hits the Front",KC.A); });
+        }
+        if(e.k==="R") add(1700,()=>{ fire(); toast("Spot","Front +1 · Charges · next Strike ignores cover",KC.R); e.charges.forEach(id=>bubbleTile(id,"<b>Spot</b> +1 Charge",st)); });
+        if(e.k==="E") add(1600,()=>{ fire(); toast("Fortify",`+2 Armor (${e.armor[0]} → ${e.armor[1]})`,KC.E); disp.armor[e.p]=e.armor[1]; paint(); bump($("ar"+e.p)); });
+        if(e.k==="S") add(1600,()=>{ fire(); toast("Resupply","draw 1 · +1 point · Front +1",KC.S); disp.score[e.p]+=1; paint(); });
+        break; }
+      case "front": add(1200,()=>{ const v=other(e.a); if(e.soak){ disp.armor[v]-=e.soak; bump($("ar"+v)); frontPop(`Armor −${e.soak}`,"#cfd8d5"); }
+          disp.front=e.to; paint(); if(e.moved) setTimeout(()=>frontPop(e.regain?"wins back 1":`+${e.moved}`,e.a===1?"var(--p1-ink)":"var(--p2-ink)"),e.soak?500:0); }); break;
+      case "destroy": add(1200,()=>{ const el=board.querySelector(`[data-doom="${e.id}"]`); if(el){ el.classList.add("boom"); setTimeout(()=>el.remove(),720); } const t=prev.tiles[e.id]; if(t){ const [r,c]=tileCenter(t); const b=document.createElement("div"); b.className="blast"; b.style.left=`calc(var(--cell)*${c} + var(--cell)/2)`; b.style.top=`calc(var(--cell)*${r} + var(--cell)/2)`; b.style.width=b.style.height=`calc(var(--cell)*3)`; board.appendChild(b); setTimeout(()=>b.remove(),850); } }); break;
+      case "draw": e._at=t; add(e.why==="refill"?150:500,()=>{}); break;
+      case "breakthrough": add(2600,()=>{ board.insertAdjacentHTML("beforeend",winHTML(st)); }); break;
+    }
+  }
+  return {S,total:t};
+}
+function clearTimers(){ timers.forEach(clearTimeout); timers=[]; document.querySelectorAll(".flyer").forEach(f=>f.remove()); }
+
+// ---------- navigation
+function readTime(g){ const w=((g.s.t||"")+" "+(g.s.x||"")).split(/\s+/).length; return Math.min(15000,Math.max(3800,w*210)); }
+function go(n,animate=true){ cur=Math.max(0,Math.min(G.length-1,n)); return render(animate); }
+function stop(){ playing=false; clearTimeout(playTimer); $("play").textContent="▶ Play"; }
+function loop(){ if(!playing) return; if(cur>=G.length-1){ stop(); return; } const total=go(cur+1); playTimer=setTimeout(loop,total+readTime(G[cur])); }
+$("play").onclick=()=>{ if(playing){ stop(); return; } if(cur>=G.length-1) go(0,false); playing=true; $("play").textContent="❚❚ Pause"; playTimer=setTimeout(loop,250); };
+$("next").onclick=()=>{ stop(); go(cur+1); };
+$("prev").onclick=()=>{ stop(); go(cur-1,false); };
+$("restart").onclick=()=>{ stop(); go(0,false); };
+$("tabs").innerHTML=CHAPTERS.map((ch,i)=>`<button class="tab" role="tab" data-ins="tab:${i}">${ch.tab}</button>`).join("");
+document.querySelectorAll("#tabs .tab").forEach((b,i)=>b.onclick=()=>{ stop(); go(CHAPTERS[i].start,true); });
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ closeIns(); return; }
+  if(e.target.closest&&e.target.closest("input,textarea")) return;
+  if(e.key==="ArrowRight"){ stop(); go(cur+1); } else if(e.key==="ArrowLeft"){ stop(); go(cur-1,false); }
+  else if(e.key===" "&&!(e.target.tagName==="BUTTON")){ e.preventDefault(); $("play").click(); }
+  else if(e.key==="i"||e.key==="I"){ const el=document.activeElement&&document.activeElement.closest&&document.activeElement.closest("[data-ins]"); if(el){ const r=el.getBoundingClientRect(); openIns(el,r.left+r.width/2,r.bottom); } }
+});
+let rz; window.addEventListener("resize",()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(!playing) render(false); },150); });
+
+// ---------- inspector
+const insp=$("insp"); let insOpenAt=0, insKey=null;
+function li(s){ return `<li>${s}</li>`; }
+function previewRally(st,h,closer){ const gain={1:0,2:0}, mats={1:{},2:{}}; const seen={};
+  for(const [r,c] of borderOf(h)){ const q=tileAt(st,r,c); if(!q||!(q.k==="b"||q.k==="i")) continue; const m=matches(st,q,h); gain[q.p]+=m?2:1; if(!seen[q.id]){ seen[q.id]=1; const ab=C[q.cid].ab; mats[q.p][q.c]=(mats[q.p][q.c]||0)+(ab.gem||1)+(ab.mat||0); } }
+  gain[closer]+=1+h.charges; gain[h.p]+=C[h.cid].ab.command||0; mats[h.p][h.c]=(mats[h.p][h.c]||0)+1;
+  const ms=p=>Object.entries(mats[p]).map(([k,n])=>`${n} ${CLS[k].mat}`).join(", ")||"nothing";
+  return `If it closed now (closer: ${PN(closer)}): <b>${PN(1)} +${gain[1]}, ${PN(2)} +${gain[2]}</b>, plus the closing tile's own cells. Materiel: ${PN(1)} ${ms(1)}; ${PN(2)} ${ms(2)}.`; }
+function matLine(t){ const ab=C[t.cid].ab; const n=(ab.gem||1)+(ab.mat||0); return `When an objective it touches rallies, it pays ${PN(t.p)} <b>${n} ${CLS[t.c].mat}</b> (${t.k==="i"?"insignia pay 2":"1 per banner"}${ab.mat?", +1 from its text":""}).`; }
+function info(key){
+  const g=G[cur], st=g.snap.st, parts=key.split(":"), kind=parts[0], o={title:"",sub:"",lines:[],hl:[],tgt:[]};
+  if(kind==="tile"){ const src=parts[2]==="prev"&&g.prev?g.prev.st:st; const t=src.tiles[+parts[1]]; if(!t) return null; const c=C[t.cid];
+    o.title=c.n; o.sub=`${PN(t.p)} · ${CLS[t.c].n} ${CLS[t.c].g} · ${t.patch?"Objective pinned as a patch":KN[t.k]}`;
+    if(t.patch){ o.lines.push("Pinned over an enclosed gap: it counts as filled and never rallies.","It was the last piece the Bunker needed."); return o; }
+    o.lines.push(esc(c.txt));
+    if(t.k==="o"){
+      if(t.rallied) o.lines.push("<b>Rallied.</b> It has paid out. Objectives and scored points are never destroyed.");
+      else { o.lines.push(`Border: <b>${filledCount(st,t)} of 8</b> filled (board edge counts). Open cells are dashed.`); if(t.charges) o.lines.push(`<b>${t.charges} Charge${t.charges>1?"s":""}</b>: +${t.charges} to whoever closes it.`); o.lines.push(previewRally(st,t,toMove(g))); }
+      if(c.ab.bunker) { o.lines.push(`Every ${PN(t.p)} tile touching it is <b>in cover</b>.`); o.hl=Object.values(st.tiles).filter(q=>q.p===t.p&&q.k!=="o"&&coverOf(st,q).includes(t.id)).map(q=>q.id); }
+      o.lines.push(`When it rallies, its owner gets Command +${c.ab.command} and 1 ${CLS[t.c].mat}.`);
+    } else {
+      const cv=coverOf(st,t);
+      if(cv.length){ o.lines.push(`<b>In cover:</b> touches ${cv.map(id=>C[st.tiles[id].cid].n).join(" and ")} (outlined). A Strike can't destroy it unless the attacker spotted first.`); o.hl=cv; }
+      else o.lines.push(`<b>Exposed:</b> no ${PN(t.p)} Engineer tile or Bunker touches it, so an enemy Strike can destroy it.`);
+      const objs=objectivesTouching(st,t);
+      if(!objs.length) o.lines.push("Touches no objective yet, so it is not a contact.");
+      for(const h of objs){ const bs=new Set(borderOf(h).map(x=>x.join())); const n=t.cells.filter(x=>bs.has(x.join())).length; const m=matches(st,t,h);
+        o.lines.push(`${h.rallied?"Touched":"Touches"} ${C[h.cid].n} (${PN(h.p)}'s${h.rallied?", rallied":`, ${filledCount(st,h)}/8`}): ${n} cell${n>1?"s":""} × ${m?"2 (match)":"1"}${h.rallied?"":` = ${n*(m?2:1)} points if it rallies`}.`); }
+      o.lines.push(matLine(t));
+    }
+    return o; }
+  if(kind==="ring"){ const r=+parts[1], c=+parts[2]; const objs=Object.values(st.tiles).filter(h=>h.k==="o"&&!h.patch&&!h.rallied&&borderOf(h).some(x=>x[0]===r&&x[1]===c));
+    o.title="Open border cell"; o.sub=objs.map(h=>`${C[h.cid].n}, ${filledCount(st,h)}/8`).join(" · ");
+    o.lines.push("Fill it to bring the objective closer to a rally. The tile that fills the last cell closes it and takes the closer bonus.");
+    objs.forEach(h=>{ o.lines.push(`<b>${C[h.cid].n}</b>: ${previewRally(st,h,toMove(g))}`); o.hl.push(h.id); }); return o; }
+  if(kind==="card"||kind==="slot"){ const p=+parts[1]; if(kind==="slot"){ o.title="Empty hand slot"; o.lines.push(`${PN(p)} refills to 3 at the end of the turn, from the stack.`); return o; }
+    const cid=st.hands[p][+parts[2]]; const c=C[cid]; o.title=c.n; o.sub=`In ${PN(p)}'s hand · ${CLS[c.c].n} ${CLS[c.c].g} · ${KN[c.k]} (${c.k==="b"?"1×4":c.k==="o"?"2×2":"1×1"})`;
+    o.lines.push(esc(c.txt));
+    if(c.k==="b") o.lines.push("Placed on any 4 empty cells in a straight line. Scores 1 per cell on a touching objective that rallies, 2 if it matches.");
+    if(c.k==="i") o.lines.push("Placed on any single empty cell: the only tile, besides a patch, that fills a 1-cell hole.");
+    if(c.k==="o") o.lines.push("Placed on any empty 2×2, or pinned as a patch over an enclosed gap of 1 to 4 cells (it then never rallies).");
+    if(c.k!=="o") o.lines.push(`Pays ${(c.ab.gem||1)+(c.ab.mat||0)} ${CLS[c.c].mat} when an objective it touches rallies.`);
+    const ob=st.see[other(p)]>0; if(ob) o.lines.push(`${PN(other(p))} can see this hand (Spotter Drone).`);
+    return o; }
+  if(kind==="stack"){ const p=+parts[1]; const s=st.stacks[p]; o.title=`${PN(p)}'s stack`; o.sub=`${s.length} tiles left, face down`;
+    o.lines.push("Shuffled before the game. You draw from it to refill your hand to 3 at the end of each turn; Resupply and Supply Drop draw from it too.");
+    if(s.length){ const cnt={}; s.forEach(c=>cnt[c]=(cnt[c]||0)+1); o.lines.push(`Still in it: ${Object.entries(cnt).map(([c,n])=>C[c].n+(n>1?" ×"+n:"")).join(", ")}.`); } else o.lines.push("Empty: this player only has the tiles in hand.");
+    return o; }
+  if(kind==="meter"){ const p=+parts[1], k=parts[2]; const n=st.mat[p][MATI(k)]; const cl=CLS[k];
+    o.title=`${cl.mat} → ${cl.order}`; o.sub=`${PN(p)} · ${n} ${cl.mat} · ${cl.n} ${cl.g}`;
+    o.lines.push({A:"Strike, Attack 2: destroy one enemy banner or insignia that is not in cover, or push the Front 2. Armor soaks pushes.",R:"Spot: Front +1, +1 Charge on each open objective you touch, and your next Strike is +1 and ignores cover and Armor.",E:"Fortify: +2 Armor (max 4); if the Front leans toward you, win back 1 step.",S:"Resupply: draw 1 tile, +1 point, Front +1."}[k]);
+    o.lines.push(n>=3?`<b>Ready:</b> it fires at the end of ${PN(p)}'s turn, spends 3 and keeps the rest. Once a turn.`:`Fires automatically at 3. Earned when an objective touching ${PN(p)}'s ${cl.n} tiles rallies.`);
+    if(k==="A"){ const tg=strikeTarget(st,p,st.spot[p]); if(tg.t){ o.lines.push(`Default target now: <b>${C[tg.t.cid].n}</b> (worth ${tg.v} on open objectives, outlined in red).`); o.tgt=[tg.t.id]; } else { const ar=st.armor[other(p)]; o.lines.push(`No exposed target worth anything: it would push the Front ${2+(st.spot[p]?1:0)}${ar&&!st.spot[p]?`, and Armor would soak ${Math.min(ar,2)}`:""}.`); } }
+    if(k==="R"&&st.spot[p]) o.lines.push("<b>Spot is loaded:</b> the next Strike ignores cover and Armor.");
+    if(!g.ch["p"+p].cls.includes(k)) o.lines.push(`Not one of this stack's classes, so it fills only from rewards like the Spotter Drone.`);
+    return o; }
+  if(kind==="armor"){ const p=+parts[1]; o.title="Armor"; o.sub=`${PN(p)} · ${st.armor[p]} of 4`; o.lines.push("Each point soaks 1 step of an enemy Front push, then is used up.","Fortify gives +2. Spotted Strikes and Fire Missions ignore Armor.","Unused Armor scores 1 point each at the end."); return o; }
+  if(kind==="streak"){ const p=+parts[1]; o.title="Streak"; o.sub=`${PN(p)} · ${st.streak[p]}`; o.lines.push("+1 for each rally you close and each order you fire. An enemy Strike that lands resets it to 0.","<b>3 · Spotter Drone:</b> +1 Intel, see their hand until your next turn ends.","<b>5 · Supply Drop:</b> draw 1 and place one more tile now.","<b>7 · Fire Mission:</b> Front +2 ignoring Armor, and destroy an exposed enemy banner."); return o; }
+  if(kind==="eye"){ const p=+parts[1]; o.title="Hand seen"; o.sub=`${PN(other(p))} sees ${PN(p)}'s hand`; o.lines.push("Spotter Drone (streak 3) shows the opponent's hand until the drone owner's next turn ends. In this demo both hands are face up anyway."); return o; }
+  if(kind==="front"){ o.title="The Front"; o.sub=st.front===0?"At the centre":`${Math.abs(st.front)} of 6 toward ${PN(st.front>0?2:1)}`;
+    o.lines.push("A tug-of-war track of 13 steps: the centre and 6 steps to each player's end.","Pushing it to the enemy end is a <b>Breakthrough</b>: you win at once, whatever the score. Otherwise it scores nothing.","Strike pushes 2, Spot and Resupply push 1; Armor soaks pushes; Fortify wins ground back.",`Armor now: ${PN(1)} ${st.armor[1]}, ${PN(2)} ${st.armor[2]}.`);
+    if(st.winner) o.lines.push(`<b>${PN(st.winner)} broke through.</b>`); return o; }
+  if(kind==="score"){ const p=+parts[1]; o.title=`${PN(p)}: ${st.score[p]} points`; o.sub=`${st.rallies[p]} ${st.rallies[p]===1?"rally":"rallies"} closed`;
+    o.lines.push("Points come from contacts on rallies, closing, Command, Deploy texts and Resupply.","Most points wins when the board is full or both players pass; ties go to more rallies closed.");
+    if((g.ch.first===1&&p===2)||(g.ch.first===2&&p===1)) o.lines.push("Moved second, so started with 1 point."); return o; }
+  if(kind==="side"){ const p=+parts[1], pi=g.ch["p"+p]; o.title=`${PN(p)} · ${pi.name}`; o.sub=pi.cls.map(k=>`${CLS[k].n} ${CLS[k].g}`).join(" + ");
+    o.lines.push("Top to bottom: hand and stack, materiel meters, Armor and streak, score.","Meters glow when they will fire at the end of this player's turn."); return o; }
+  if(kind==="caption"){ o.title="Step caption"; o.sub=$("stepNo").textContent; o.lines.push("What just happened, with the numbers that changed. The lines below the text are the exact scoring."); return o; }
+  if(kind==="tab"){ const ch=CHAPTERS[+parts[1]]; o.title=ch.tab; o.sub=ch.name; o.lines.push(+parts[1]===0?"A short match from the first tile: stacks and hands, a rally paying materiel, cover blocking a Strike, then combo 1 (Spot, then Strike).":"A mid-game position: combo 2 (one insignia, two rallies), a barrage, the patch rule, Armor and a Fire Mission Breakthrough."); return o; }
+  if(kind==="dot"){ const j=+parts[1]; o.title=`Step ${j-G[j].ch.start+1}`; o.sub=G[j].s.t; o.lines.push("Click to jump to this step. Gold-ringed dots are key moments."); return o; }
+  if(kind==="btn"){ const m={prev:["Back","Go to the previous step, without animation."],play:["Play / Pause","Plays the scenes step by step with animation and captions. Inspecting anything pauses."],next:["Step","Play the next step once, with animation."],restart:["Restart","Back to the setup of scene 1."]}[parts[1]]; o.title=m[0]; o.lines.push(m[1]); return o; }
+  return null;
+}
+function openIns(el,x,y){
+  const key=el.getAttribute("data-ins"); const o=info(key); if(!o) return;
+  if(playing) stop();
+  clearHl(); insKey=key; insOpenAt=performance.now();
+  $("inspT").textContent=o.title; $("inspS").textContent=o.sub||""; $("inspS").hidden=!o.sub; $("inspL").innerHTML=o.lines.map(li).join("");
+  insp.classList.add("on");
+  o.hl.forEach(id=>{ const e=tileEl(id); if(e) e.classList.add("hl"); }); o.tgt.forEach(id=>{ const e=tileEl(id); if(e) e.classList.add("tgt"); });
+  el.classList.add("hl"); el.dataset.hlself="1";
+  if(window.innerWidth>600){ const w=insp.offsetWidth, h=insp.offsetHeight; let L=x+14, T=y+14; if(L+w>innerWidth-10) L=Math.max(10,x-w-14); if(T+h>innerHeight-10) T=Math.max(10,innerHeight-h-10); insp.style.left=L+"px"; insp.style.top=T+"px"; }
+  else { insp.style.left=""; insp.style.top=""; }
+}
+function clearHl(){ document.querySelectorAll(".hl").forEach(e=>e.classList.remove("hl")); document.querySelectorAll(".tgt").forEach(e=>{ if(!e.dataset.keepTgt) e.classList.remove("tgt"); }); }
+function closeIns(){ if(!insp.classList.contains("on")) return; insp.classList.remove("on"); insKey=null; clearHl(); }
+$("inspX").onclick=closeIns;
+document.addEventListener("contextmenu",e=>{ const el=e.target.closest("[data-ins]"); if(!el) return; e.preventDefault(); if(insKey===el.getAttribute("data-ins")&&performance.now()-insOpenAt<700) return; openIns(el,e.clientX,e.clientY); });
+let lp=null, suppressClick=false;
+document.addEventListener("pointerdown",e=>{
+  if(insp.classList.contains("on")&&!insp.contains(e.target)) closeIns();
+  if(e.pointerType==="mouse") return; const el=e.target.closest("[data-ins]"); if(!el) return;
+  const x=e.clientX,y=e.clientY; lp={el,x,y,fired:false}; lp.timer=setTimeout(()=>{ if(!lp) return; lp.fired=true; suppressClick=true; openIns(el,x,y); if(navigator.vibrate) try{navigator.vibrate(12);}catch(_){} },460);
+},{passive:true});
+document.addEventListener("pointermove",e=>{ if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){ clearTimeout(lp.timer); lp=null; } },{passive:true});
+["pointerup","pointercancel"].forEach(n=>document.addEventListener(n,()=>{ if(lp){ clearTimeout(lp.timer); lp=null; } },{passive:true}));
+document.addEventListener("click",e=>{ if(suppressClick){ suppressClick=false; e.preventDefault(); e.stopPropagation(); } },true);
+
+render(false);
+})();
+</script>
