@@ -81,7 +81,7 @@ func _run() -> void:
 	await _frames(60)
 	var fx: Control = m.get_fx()
 	fx.fx_started.connect(func(kind: StringName, _node: Object, _d: float) -> void:
-		if kind in [&"ks_banner", &"ks_queued", &"shells", &"strafe", &"drop", &"scan", &"takeover", &"killfeed", &"damage_number"]:
+		if kind in [&"ks_banner", &"ks_queued", &"shells", &"strafe", &"drop", &"scan", &"takeover", &"killfeed", &"damage_number", &"ks_kill"]:
 			_key(String(kind)))
 	_save("deploy")
 	c.select_item(&"mortar_barrage")
