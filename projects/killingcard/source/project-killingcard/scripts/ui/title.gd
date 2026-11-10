@@ -16,6 +16,9 @@ const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_p
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
 const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
+## kc-duel-ui: DUEL (under the campaign's START NEW RUN) opens the Duel hub.
+const SCENE_DUEL_HUB: String = "res://scenes/duel/DuelHub.tscn"
+var _duel_button: Button = null
 var _codex: Control = null
 
 var _key_art_scale: float = 0.0
@@ -79,6 +82,18 @@ func _build() -> void:
 	_tutorial_button.custom_minimum_size.x = 0
 	row.add_child(_codex_button)
 	_codex_button.pressed.connect(open_codex)
+	# kc-duel-ui: DUEL sits right under the campaign's START NEW RUN.
+	_duel_button = Button.new()
+	_duel_button.name = "DuelButton"
+	_duel_button.text = "DUEL"
+	_duel_button.theme_type_variation = &"HudButton"
+	_duel_button.tooltip_text = "Build a 10-pick deck, pick a hero, play one battle (vs AI or Pass & Play)"
+	_duel_button.custom_minimum_size = Vector2(0, _start_button.custom_minimum_size.y)
+	_duel_button.focus_mode = Control.FOCUS_ALL
+	_duel_button.add_to_group(&"tap_target")
+	_column.add_child(_duel_button)
+	_column.move_child(_duel_button, _start_button.get_index() + 1)
+	_duel_button.pressed.connect(open_duel)
 	resized.connect(_update_key_art)
 	_update_key_art()
 	refresh()
@@ -114,6 +129,8 @@ func _apply_compact() -> void:
 	_continue_button.custom_minimum_size.y = h
 	_start_button.custom_minimum_size.y = h
 	_tutorial_button.custom_minimum_size.y = h
+	if _duel_button != null:
+		_duel_button.custom_minimum_size.y = h
 	if _codex_button != null:
 		_codex_button.custom_minimum_size.y = h
 	_column.add_theme_constant_override(&"separation", 10 if compact else 14)
@@ -172,6 +189,15 @@ func get_codex() -> Control:
 
 func get_codex_button() -> Button:
 	return _codex_button
+
+
+## kc-duel-ui: DUEL opens the Duel hub.
+func open_duel() -> void:
+	goto(SCENE_DUEL_HUB)
+
+
+func get_duel_button() -> Button:
+	return _duel_button
 
 
 ## TUTORIAL / PLAY DRILL: opens the p15 drill.

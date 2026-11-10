@@ -2,9 +2,10 @@
 # Purpose: kc-duel-ui. Hand-off between the Duel screens (static state, like run_flow.gd for the run):
 #   the deck the builder edits, the match setup the hub starts (vs AI: your deck, the opponent preset,
 #   the tier; Pass & Play: both decks and names), and the last result for the result screen.
-#   start_match() asks the rules for the MatchState (DuelRules.create_match(setup), duel-api.md) and
-#   opens Match.tscn; match_controller.gd takes it with take_pending() and reports with finish().
-# Dependencies: duel_views.gd, run_flow.gd (goto), SceneRouter.
+#   start_match() asks DuelState for the match (duel-api.md §5: start_vs_ai / start_hot_seat; the
+#   DuelMatch is kept as DuelState.current) and opens Match.tscn; match_controller.gd takes it with
+#   take_pending() and reports the end with finish() (DuelState.finish records it, §7).
+# Dependencies: duel_views.gd, run_flow.gd (goto).
 # Author: UI/UX Agent (kc-duel-ui)
 extends RefCounted
 
@@ -24,22 +25,24 @@ const MODE_HOT_SEAT: StringName = &"hot_seat"
 static var edit_deck: Dictionary = {}
 ## Where the builder goes back to.
 static var builder_return: String = SCENE_HUB
-## The match the hub set up: {mode, decks: [deck0, deck1], names: [String, String], tier, opponent_id,
-## seed, open_pool}.
+## The match the hub set up: {mode, decks: [deck0, deck1] (screen shape), names: [String, String], tier,
+## opponent_id, seed, open_pool}.
 static var setup: Dictionary = {}
-## The MatchState waiting for Match.tscn (null = none).
+## The DuelMatch (or, without DuelState, a plain MatchState) waiting for Match.tscn.
 static var pending: Object = null
 ## The duel Match.tscn is playing (set by take_pending, cleared by finish).
 static var active: Object = null
-## The last finished duel: {mode, result (&"win"/&"loss"/&"draw" for seat 0), winner_name, score: [a, b],
-## rounds, reason, names, decks, tier, opponent_id, lines: PackedStringArray}.
+## The last finished duel (duel-api.md §6.2 result + records, new_cosmetics, setup).
 static var last_result: Dictionary = {}
-## Hub tab to open on ("mine" / "presets").
+## Hub state to open on: "mine" / "presets", or "play:<deck id>" (the VS AI setup with that deck).
 static var hub_tab: String = "mine"
+## Tests: true = start_match() builds the match but doesn't change the scene.
+static var dry_run: bool = false
 
 
 static func goto(path: String) -> void:
-	RunFlow.goto(path)
+	if not dry_run:
+		RunFlow.goto(path)
 
 
 static func open_builder(deck: Dictionary, back_to: String = SCENE_HUB) -> void:
@@ -48,31 +51,34 @@ static func open_builder(deck: Dictionary, back_to: String = SCENE_HUB) -> void:
 	goto(SCENE_BUILDER)
 
 
-## Builds the match from `p_setup` with the rules and opens the match screen. {ok, text}.
+## Builds the match from `p_setup` and opens the match screen. {ok, text}.
 static func start_match(p_setup: Dictionary) -> Dictionary:
 	setup = p_setup.duplicate(true)
-	if not setup.has("seed"):
-		setup["seed"] = int(Time.get_unix_time_from_system()) % 1000000007
 	var decks: Array = setup.get("decks", [])
-	for d: Variant in decks:
-		var r: Dictionary = DuelViews.validate(d, bool((d as Dictionary).get("preset", false)) or bool(setup.get("open_pool", false)))
-		if not bool(r["ok"]):
-			return {"ok": false, "text": "%s: %s" % [(d as Dictionary).get("name", "Deck"), r["errors"][0]["text"]]}
-	var rules_setup: Dictionary = setup.duplicate(true)
-	rules_setup["decks"] = decks.map(func(d: Variant) -> Dictionary: return DuelViews.to_rules(d))
-	var m: Variant = DuelViews._ask(&"create_match", [rules_setup])
-	if not m is Object:
+	var seed_value: int = int(setup.get("seed", -1))
+	var r: Dictionary = {}
+	if StringName(str(setup.get("mode", MODE_VS_AI))) == MODE_HOT_SEAT:
+		r = DuelViews.start_hot_seat(decks[0], decks[1], names(), {"open_pool": bool(setup.get("open_pool", false)), "seed": seed_value})
+	else:
+		r = DuelViews.start_vs_ai(decks[0], StringName(str(setup.get("opponent_id", "random"))), StringName(str(setup.get("tier", "regular"))), seed_value)
+	if not bool(r.get("ok", false)):
 		pending = null
-		return {"ok": false, "text": "Duel matches need the rules (DuelRules.create_match): not in this build yet."}
-	pending = m
+		return {"ok": false, "text": String(r.get("reason", "The duel could not start."))}
+	pending = r["match"] if r.get("match") != null else r.get("state")
 	goto(SCENE_MATCH)
 	return {"ok": true, "text": ""}
 
 
-## Match.tscn: the duel waiting to be played (once). null = not a duel.
+## Match.tscn: the duel waiting to be played (once). null = not a duel. With DuelState it is the
+## DuelMatch also kept as DuelState.current (taken there too, so it is played once).
 static func take_pending() -> Object:
 	var m: Object = pending
 	pending = null
+	var ds: Node = DuelViews.state()
+	if ds != null and ds.has_method(&"take_current"):
+		var cur: Object = ds.call(&"take_current")
+		if m == null:
+			m = cur
 	if m != null:
 		active = m
 	return m
@@ -86,7 +92,7 @@ static func is_hot_seat() -> bool:
 	return StringName(str(setup.get("mode", ""))) == MODE_HOT_SEAT
 
 
-## Player names for the seats (["You", "<opponent preset>"] vs AI).
+## Player names for the seats.
 static func names() -> PackedStringArray:
 	var n: Array = setup.get("names", [])
 	var out: PackedStringArray = []
@@ -95,20 +101,29 @@ static func names() -> PackedStringArray:
 	return out
 
 
-## Match.tscn: the duel is over. Notes the record and opens the result screen.
-static func finish(result: Dictionary) -> void:
+## Match.tscn: the duel is over (match = the DuelMatch; result = its result() or the controller's own
+## {winner_side, scores, rounds, reason} without DuelState). Records it and opens the result screen.
+static func finish(match: Object, result: Dictionary = {}) -> Dictionary:
 	active = null
-	last_result = result.duplicate(true)
-	last_result["mode"] = setup.get("mode", MODE_VS_AI)
-	last_result["names"] = names()
-	last_result["decks"] = setup.get("decks", [])
-	last_result["tier"] = setup.get("tier", &"")
-	last_result["opponent_id"] = setup.get("opponent_id", "")
-	if StringName(str(last_result["mode"])) == MODE_VS_AI:
-		var decks: Array = setup.get("decks", [{}, {}])
-		DuelViews.note_result(StringName(str(result.get("result", "draw"))), StringName(str((decks[0] as Dictionary).get("hero", ""))),
-				String(setup.get("opponent_id", "")), StringName(str(setup.get("tier", ""))))
+	var out: Dictionary = {}
+	var ds: Node = DuelViews.state()
+	if ds != null and ds.has_method(&"finish") and match != null and match.has_method(&"result"):
+		out = ds.call(&"finish", match)
+	if out.is_empty() or not out.has("result"):
+		var res: Dictionary = result.duplicate(true)
+		if match != null and match.has_method(&"result"):
+			res = match.call(&"result")
+		out = {"ok": true, "result": res, "records": DuelViews.records(), "new_cosmetics": []}
+		if StringName(str(setup.get("mode", MODE_VS_AI))) == MODE_VS_AI and not setup.is_empty():
+			var won: int = int(res.get("winner_side", -1))
+			var decks: Array = setup.get("decks", [{}, {}])
+			DuelViews.note_local(&"win" if won == 0 else (&"loss" if won == 1 else &"draw"), StringName(str((decks[0] as Dictionary).get("hero", ""))),
+					String(setup.get("opponent_id", "")), StringName(str(setup.get("tier", ""))))
+			out["records"] = DuelViews.records()
+	last_result = out.duplicate(true)
+	last_result["setup"] = setup.duplicate(true)
 	goto(SCENE_RESULT)
+	return last_result
 
 
 ## The result screen's REMATCH: the same setup, a new seed.

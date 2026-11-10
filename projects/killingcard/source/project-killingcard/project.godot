@@ -19,6 +19,7 @@ EventBus="*res://autoload/event_bus.gd"
 Settings="*res://autoload/settings.gd"
 CardDB="*res://autoload/card_db.gd"
 RunState="*res://autoload/run_state.gd"
+DuelState="*res://autoload/duel_state.gd"
 PlaytestLog="*res://autoload/playtest_log.gd"
 SceneRouter="*res://autoload/scene_router.gd"
 

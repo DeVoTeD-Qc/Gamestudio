@@ -88,3 +88,21 @@ static func card_row(c: CardData, locked: bool = false, presets: Array = []) -> 
 			"trait_name": ArtTraits.trait_name(c.card_trait) if c.card_trait != &"" else "",
 			"trait_options": ArtTraits.options(c), "locked": locked, "unlock_text": UNLOCK_TEXT if locked else "",
 			"in_presets": presets}
+
+
+## Profile v1 -> v2 (kc-duel-impl): the card ids a v1 player has already met, from the arts their run
+## copies wore (Settings.found_arts: "<chassis>~<look>" or a licensed id) and the current run's deck.
+static func backfill_ids(found_arts: Dictionary, run_deck: Array) -> Array[String]:
+	var out: Array[String] = []
+	for a: Variant in found_arts.keys():
+		var s: String = String(a)
+		var chassis: String = s.get_slice(ArtTraits.SEP, 0) if s.contains(ArtTraits.SEP) else ""
+		if chassis == "":
+			var row: Dictionary = ArtTraits.licensed_row(StringName(s))
+			chassis = String(row.get("chassis", row.get("card", s)))
+		if chassis != "" and chassis not in out:
+			out.append(chassis)
+	for id: Variant in run_deck:
+		if String(id) != "" and String(id) not in out:
+			out.append(String(id))
+	return out

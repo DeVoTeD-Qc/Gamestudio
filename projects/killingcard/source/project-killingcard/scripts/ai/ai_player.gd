@@ -44,6 +44,14 @@ static func for_squad(squad: SquadData) -> AiPlayer:
 	return AiPlayer.new(AiPersonality.from_squad(squad))
 
 
+## kc-duel-impl: the Duel AI of `tier` (&"recruit", &"regular", &"veteran"; AiPersonality.for_duel_tier).
+## `second_best` < 0 = the tier's default chance of playing its 2nd-best plan (DuelConfig sets it).
+static func for_duel_tier(tier: StringName, second_best: float = -1.0) -> AiPlayer:
+	var ai: AiPlayer = AiPlayer.new(AiPersonality.for_duel_tier(tier, second_best))
+	ai.planner.synergy_aware = AiPersonality.duel_tier_synergy_aware(tier)
+	return ai
+
+
 ## Plays the AI's whole Deploy for this round and sets it READY. Returns the
 ## committed intents. Call it before the player's Deploy so red dots are complete.
 func take_turn(state, side: int, set_ready: bool = true) -> Array[Dictionary]:

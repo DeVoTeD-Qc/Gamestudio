@@ -14,6 +14,8 @@
 
 Implementation map: data `scripts/data/duel_config.gd`, `scripts/data/duel_deck.gd`, `data/duel/duel_config.tres`, `data/duel/presets/*.tres`; rules `scripts/rules/duel_rules.gd`; run / profile `scripts/run/duel_collection.gd`, `scripts/run/duel_profile.gd`, `scripts/run/duel_match.gd`, `scripts/run/run_profile.gd` (profile v2); AI `scripts/ai/ai_personality.gd` (`for_duel_tier`), `scripts/ai/ai_player.gd` (`for_duel_tier`); autoload `autoload/duel_state.gd` (**`DuelState`**); `autoload/card_db.gd` loads the Duel data (`CardDB.get_duel_config()`, `CardDB.get_duel_deck(id)`); `autoload/run_state.gd` marks campaign cards found.
 
+**Note for kc-duel-ui (2026-11-10):** the rules API is **not** under `scripts/duel/` (the spec's §9.1 guess): use the `DuelState` autoload; the classes are global (`class_name`) in the folders above. Preset ids are `spearhead`, `overwatch`, `iron_wall`, `hollow_ranks` (no `preset_` prefix). A deck row is `{card_id, art_id}` (not `{card, art}`), the hero field is `hero_id`, the Doctrine field is `doctrine_trait`. `DuelDeck.to_dict()` / `from_dict()` convert to and from plain Dictionaries if the screens keep Dictionary drafts.
+
 Rules of the road (same as run-v2-api):
 - Screens call the **`DuelState`** autoload and read the **`DuelMatch`** / **`MatchState`** they are handed. They never write fields directly (a `DuelDeck` draft is the exception: edit it with its own methods, then `DuelState.save_deck`).
 - Actions return `""` (ok) or a short English reason, or a result Dictionary with `ok` + `reason`. Views are plain Dictionaries (JSON-safe values, `StringName` ids).
@@ -81,7 +83,7 @@ Red codes (`DuelRules.E_*`):
 | `not_in_pool` | "Sentry can't be in a Duel deck" (tokens, boss cards, Standard Issue) | `{card_id}` |
 | `locked_card` | "Mortar Pit isn't in your collection: find it in the campaign" | `{card_id}` |
 | `unit_min` | "At least 5 unit picks (4/5)" | `{type: "unit"}` |
-| `elite_max` | "Only 1 Elite ★ pick (2/1): remove Okafor Anvil or Halek Wren" | `{elite: true}` |
+| `elite_max` | "Only 1 Elite ★ pick (2/1): remove Commander or Ace" (the cards' display names) | `{elite: true}` |
 | `field_max` | "At most 3 Field picks (4/3)" | `{type: "field"}` |
 | `no_hero` | "Pick a hero" | `{hero: true}` |
 | `unknown_hero` | "Unknown hero (x): pick a hero" | `{hero: true}` |
@@ -126,7 +128,7 @@ Up to `DuelState.MAX_DECKS` (8) per profile, in `Settings.run_profile.duel_decks
 | Call | Returns |
 |---|---|
 | `DuelState.decks() -> Array[Dictionary]` | deck views in slot order: `{id, name, hero_id, hero_name, preset: false, picks: [{card_id, art_id, trait, name, cost, type}], doctrine_trait, trait (main trait), curve, status, status_text, ok, created, edited}` |
-| `DuelState.deck(id) -> DuelDeck` | a fresh copy of a saved deck or a preset (null if unknown); edit it, then save |
+| `DuelState.deck(id) -> DuelDeck` | a saved deck: a fresh editable copy (edit it, then `save_deck`); a preset: the read-only preset resource (`.copy()` it to edit); null if unknown |
 | `DuelState.new_deck(from_preset := &"", hero_id := &"") -> DuelDeck` | an unsaved draft ("start empty" / "start from a preset"); named "<main trait> · <hero>" once it has picks (`DuelState.default_name(deck)`) |
 | `DuelState.save_deck(deck) -> Dictionary` | `{ok, id, reason}`. New decks get an id; refuses a preset and a 9th deck ("8 decks saved: delete one first"). Saves even an incomplete or illegal deck (the tile shows "2 PICKS TO GO" / the red line) |
 | `DuelState.copy_deck(id) -> Dictionary` | `{ok, id, reason, deck}`: saves a copy ("<name> copy") |
@@ -136,7 +138,7 @@ Up to `DuelState.MAX_DECKS` (8) per profile, in `Settings.run_profile.duel_decks
 Every change saves the profile and emits `DuelState.decks_changed`.
 
 ## 5. Starting a duel
-Both return `{ok: bool, reason: String, match: DuelMatch}`. `reason` is the first red line of an illegal deck ("Player 2: Pick a hero"). The match is also kept as `DuelState.current` for the match scene to take (`DuelState.take_current() -> DuelMatch`).
+Both return `{ok: bool, reason: String, match: DuelMatch}` (the reason is also kept in `DuelState.last_error`). `reason` is the first red line of an illegal deck ("Player 2: Pick a hero"). The match is also kept as `DuelState.current` for the match scene to take (`DuelState.take_current() -> DuelMatch`).
 
 - **`DuelState.start_vs_ai(deck: DuelDeck, opponent: StringName, tier: StringName, seed := -1)`**
   `opponent` = a preset id or `&"random"` (a seeded pick among the 4). `tier` = `&"recruit"`, `&"regular"`, `&"veteran"` (`DuelState.TIERS`; `DuelState.tier_views()` gives `[{id, name, text}]` with the spec's lines, e.g. "Recruit: its cards have −1 Armor and it makes mistakes"). The human is side 0 (`MatchState.PLAYER`), the AI side 1.
@@ -146,7 +148,7 @@ Both return `{ok: bool, reason: String, match: DuelMatch}`. `reason` is the firs
 What a Duel match is (`DuelRules.match_config`): the campaign economy (`data/run_config.tres`: round N gives N Supply, cap 7; 4 + 1 cards in round 1, a free mulligan, 1 a round, hand cap 7), deck size 20, **Zone Control to 6** (round cap 8, overtime to 10), the map Port Vasel, **no Terrain, no perks, no attachments, no weapon levels**, the 3 starter killstreaks (Recon Drone, Mortar Barrage, Attack Helo) on both sides, the Operator kit on (passive + once-per-match ability), Doctrine = the deck's `doctrine_trait` (D5). Recruit's side has `armor_bonus = -1` (`match.armor_bonus(side)`, to show the green "−1").
 
 ## 6. The match (`DuelMatch`, `scripts/run/duel_match.gd`)
-A `RefCounted` that owns one `MatchState` (`match.state`) and who plays which side. The UI keeps using `MatchState` for plays (`submit`, `can_submit`, `legal_targets`, `undo_last`, `mulligan`) and its existing playback split (`reveal()`, `firefight()`, `score()`), with these Duel rules on top:
+A `RefCounted` that owns one `MatchState` (`match.state`) and who plays which side. The UI keeps using `MatchState` for plays (`submit`, `can_submit`, `legal_targets`, `undo_last`, `mulligan`) and its existing playback split (`reveal()`, `firefight()`, `score()`), with these Duel rules on top. In hot seat, send plays, mulligans and undos through `DuelMatch.submit` / `mulligan` / `undo_last` (they refuse the side whose turn it isn't); read-only checks (`can_submit`, `legal_targets`, `check_use`) can go straight to `state`.
 
 | Member | Notes |
 |---|---|
@@ -162,6 +164,8 @@ A `RefCounted` that owns one `MatchState` (`match.state`) and who plays which si
 | `first_deployer(round := state.round_number) -> int` | hot seat: the seat-0 side in round 1, then it **alternates every round** |
 | `accept_cover(side) -> String` | the player tapped "only I can see the screen": `active_side = side`, emits `deploy_started(side)`. Refuses another side |
 | `finish_deploy(side) -> String` | READY for this side (`state.set_ready`). Hot seat: if the other side hasn't deployed, its cover comes up (`cover_needed`); when both are ready, `round_ready` fires |
+| `undo_last(side) -> Dictionary` | `MatchState.undo_last` with the same guard |
+| `forfeit(side) -> bool` | `side` concedes; the other side wins with reason `&"forfeit"`; emits `match_ended` |
 | `submit(side, intent) -> Dictionary` | `MatchState.submit` with a guard: in hot seat only `active_side` may play (`{ok: false, code: &"not_your_turn", reason: "Wait for your turn"}`) |
 | `mulligan(side, uids) -> Dictionary` | the same guard; mulligans happen in each player's first private Deploy |
 | `can_view_private(side) -> bool` | true when `side`'s hand, deck order, face-down plays, red dots and intel may be on screen: vs AI always for the human side; hot seat only while `active_side == side` |
@@ -194,13 +198,13 @@ Flow, vs AI: `start()`/`round_done()` → the AI commits and is ready → `deplo
 Call once when `match_ended` fired (or for a forfeit after `state` ended). Duel gives **records and cosmetics only** (never cards, tickets, REQ or a campaign unlock).
 Returns `{ok, reason, result: <6.2>, records: <records()>, new_cosmetics: [{kind: &"duelist_frame"|&"veteran_stamp"|&"veteran_all", id, name, text}]}`.
 - vs AI: a win / loss / draw for the human's hero and for the opponent preset at that tier; a win with a hero gives its **Duelist banner frame** (once); a Veteran win against a preset gives its **map stamp**; all 4 stamps give `veteran_all`.
-- Hot seat: counts the match (`hot_seat_games`) and each hero's games; no wins or cosmetics (both players share the profile).
+- Hot seat: counts the match (`hot_seat_games`) and each hero's `games`; no wins or cosmetics (both players share the profile).
 - `DuelState.records() -> {heroes: {hero_id: {w, l, d}}, vs_ai: {preset_id: {tier: {w, l, d}}}, hot_seat_games: int, duelist_frames: [hero ids], veteran_stamps: [preset ids]}`.
 - Signal `DuelState.records_changed`.
 
 ## 8. Profile (save) v2
 `Settings.run_profile` is now versioned: `RunProfile.PROFILE_VERSION = 2`. A v1 profile (no `version`) loads with every old value kept plus `found_cards: []` (back-filled once from `Settings.found_arts` and the current run's deck), `duel_decks: []`, `duel_records: {}`. A saved deck that no longer loads (unknown card, bad art) keeps its slot and shows the red line ("needs attention"); unknown arts fall back to the default art on load.
-`found_cards` (D3): `RunState` adds every card id in the run deck and in every offer shown (Supply Drop, Elite Cache, Salvage) as the run changes.
+`found_cards` (D3): `RunState.note_found_cards()` (called on every run change) adds every card id in the run deck and in every offer shown (Supply Drop, Elite Cache, Salvage) as the run changes.
 
 ## 9. Applying the final numbers (D4, D5)
 - **Operator stats (D4):** edit `data/loadout/kestrel_ar7.tres`, `longreach_338.tres`, `wasp_9.tres`, `bastion_60.tres` (`operator_firepower`, `operator_armor`) and the abilities' `effects[0].amount` (`ab_marked_shot.tres` ...). Both modes read these; nothing in Duel code changes. `tests/test_duel_rules.gd::test_duel_heroes_use_campaign_stats` checks that the Duel side's Operator body equals the loadout file.

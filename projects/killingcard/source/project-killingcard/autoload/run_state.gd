@@ -334,7 +334,33 @@ func _announce_offer() -> void:
 func profile() -> Dictionary:
 	var st: Node = get_node_or_null(^"/root/Settings")
 	var p: Variant = st.get(&"run_profile") if st != null else _profile_fallback
+	if RunProfile.needs_migration(p):
+		# kc-duel-impl: profile v1 -> v2, once: keep everything, back-fill the Duel collection.
+		var fa: Variant = st.get(&"found_arts") if st != null else {}
+		var ids: Array = DuelCollection.backfill_ids(fa if fa is Dictionary else {}, run.deck if run != null else [])
+		var migrated: Dictionary = RunProfile.add_found_cards(RunProfile.normalised(p), ids)
+		_save_profile(migrated)
+		return migrated
 	return RunProfile.normalised(p)
+
+
+## kc-duel-impl (D3): records campaign cards the player has met (in the run deck or shown in an offer)
+## in the profile's found_cards, which unlock Fields and Elites for Duel. Saves only when one is new.
+func note_found_cards() -> void:
+	if run == null:
+		return
+	var ids: Array = []
+	for id: StringName in run.deck:
+		ids.append(String(id))
+	for offer: Dictionary in run.pending_offers:
+		for o: Variant in offer.get("options", []):
+			if typeof(o) in [TYPE_STRING, TYPE_STRING_NAME] and _config() != null and CardDB.has_card(StringName(o)):
+				ids.append(String(o))
+	var p: Dictionary = profile()
+	var before: int = (p["found_cards"] as Array).size()
+	p = RunProfile.add_found_cards(p, ids)
+	if (p["found_cards"] as Array).size() != before:
+		_save_profile(p)
 
 
 func _save_profile(p: Dictionary) -> void:
@@ -628,6 +654,7 @@ func _changed() -> void:
 		for i: int in run.deck.size():
 			arts.append(run.art_of(i))
 		st.mark_found(arts)
+	note_found_cards()
 	run_changed.emit()
 
 

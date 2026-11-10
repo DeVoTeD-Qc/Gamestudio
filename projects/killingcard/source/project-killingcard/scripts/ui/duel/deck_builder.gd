@@ -43,6 +43,7 @@ var _saved_copy: Dictionary = {}
 var kind_filter: StringName = &"all"
 var cost_filter: int = 0          # 0 = any, 1..5 (5 = 5+, 1 = 1 or less)
 var cost_min: int = 0             # rule-line fixes ("cost 4+")
+var elite_only: bool = false      # rule-line fix (too many Elites)
 var trait_filter: StringName = &"" # &"" any, &"none", or a trait
 var keyword_filter: StringName = &""
 var search_text: String = ""
@@ -234,7 +235,7 @@ func add_card(id: StringName, t: StringName = &"") -> Dictionary:
 	var extra: String = ""
 	var r: Dictionary = DuelViews.validate(deck)
 	for e: Dictionary in r["errors"]:
-		if StringName(e["code"]) in [&"elite_over", &"fields_over"]:
+		if StringName(e["code"]) in [&"elite_max", &"field_max", &"elite_over", &"fields_over"]:
 			extra = " · " + String(e["text"])
 	var text: String = "Added %s ×2 · %d/%d picks%s" % [c.display_name, now, DuelViews.MAX_PICKS, extra]
 	_changed(text, false, id, 2)
@@ -293,7 +294,7 @@ func set_hero(id: StringName) -> Dictionary:
 
 func set_doctrine(t: StringName) -> void:
 	deck["doctrine"] = t
-	_changed("Doctrine: %s" % SynergyGlyphs.trait_name(t), false)
+	_changed("Doctrine: %s" % (SynergyGlyphs.trait_name(t) if t != &"" else "none"), false)
 
 
 func set_deck_name(n: String) -> void:
@@ -387,6 +388,7 @@ func clear_filters() -> void:
 	kind_filter = &"all"
 	cost_filter = 0
 	cost_min = 0
+	elite_only = false
 	trait_filter = &""
 	keyword_filter = &""
 	search_text = ""
@@ -395,9 +397,17 @@ func clear_filters() -> void:
 	_refill()
 
 
-## A rule line's fix: {kind?, cost_max?, cost_min?}.
+## A rule line's fix: {kind?, cost_max?, cost_min?, elite?, hero?, doctrine?} (duel-api.md §2 fix_filter).
+## hero / doctrine open their picker instead of filtering the grid.
 func apply_fix(fix: Dictionary) -> void:
+	if bool(fix.get("hero", false)):
+		open_hero_picker()
+		return
+	if bool(fix.get("doctrine", false)):
+		open_doctrine_picker()
+		return
 	clear_filters()
+	elite_only = bool(fix.get("elite", false))
 	if fix.has("kind"):
 		kind_filter = StringName(str(fix["kind"]))
 	if fix.has("cost_max"):
@@ -414,6 +424,8 @@ func passes(e: Dictionary) -> bool:
 	if cost_filter > 0 and DuelViews.cost_bucket(cost) != cost_filter:
 		return false
 	if cost_min > 0 and cost < cost_min:
+		return false
+	if elite_only and not bool(e["elite"]):
 		return false
 	if trait_filter == &"none" and not (e["traits"] as Array).is_empty():
 		return false
@@ -975,11 +987,12 @@ func _refresh_panel() -> void:
 		line.name = "Rule_%d" % shown
 		var fix: Dictionary = e.get("fix", {})
 		line.pressed.connect(func() -> void:
-			if not fix.is_empty():
+			if e.has("card"):
+				inspect_card(StringName(str(e["card"])))
+			elif not fix.is_empty():
 				apply_fix(fix)
-				_snackbar("Showing the cards that fix it: %s" % String(e["text"]), false)
-			elif e.has("card"):
-				inspect_card(StringName(str(e["card"]))))
+				if not (fix.has("hero") or fix.has("doctrine")):
+					_snackbar("Showing the cards that fix it: %s" % String(e["text"]), false))
 		_rules_box.add_child(line)
 		shown += 1
 	if portrait and not _tray_open and lines.size() > shown:
@@ -1031,7 +1044,7 @@ func _doctrine_strip() -> Button:
 	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(tag)
 	row.add_child(W.TraitPlate.new(t, 28))
-	var nm: Label = W.label(SynergyGlyphs.trait_name(t) if t != &"" else "Pick a trait", &"UnitName", 18, W.FOG if t != &"" else W.RED)
+	var nm: Label = W.label(SynergyGlyphs.trait_name(t) if t != &"" else ("None · tap to pick" if DuelViews.doctrine_optional() else "Pick a trait"), &"UnitName", 18, W.FOG if t != &"" else (W.AMBER if DuelViews.doctrine_optional() else W.RED))
 	nm.name = "DoctrineName"
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1119,10 +1132,13 @@ func open_doctrine_picker() -> Dictionary:
 	var body: VBoxContainer = s["body"]
 	var comp: Dictionary = DuelViews.composition(deck)
 	var main: StringName = DuelViews.main_trait(deck)
-	for d: Dictionary in DuelViews.doctrines():
+	var choices: Array[Dictionary] = DuelViews.doctrines()
+	if DuelViews.doctrine_optional():
+		choices.append({"id": &"", "name": "No Doctrine", "text": DuelViews.doctrine_text(&"")})
+	for d: Dictionary in choices:
 		var t: StringName = d["id"]
 		var b: Button = Button.new()
-		b.name = "Doctrine_%s" % t
+		b.name = "Doctrine_%s" % (t if t != &"" else &"none")
 		b.theme_type_variation = &"PickTileSelected" if StringName(str(deck.get("doctrine", ""))) == t else &"PickTile"
 		b.focus_mode = Control.FOCUS_ALL
 		b.add_to_group(&"tap_target")
@@ -1357,3 +1373,10 @@ func _has_sheet() -> bool:
 
 const SfxBankScript: GDScript = preload("res://scripts/fx/sfx_bank.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+
+
+## The inspector always opens over the sheets (hero / Doctrine / art pickers).
+func inspector() -> Control:
+	var insp: Control = super()
+	move_child(insp, get_child_count() - 1)
+	return insp

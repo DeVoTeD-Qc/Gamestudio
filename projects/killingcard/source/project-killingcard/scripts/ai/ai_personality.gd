@@ -81,6 +81,41 @@ static func for_kind(p_kind: int) -> AiPersonality:
 	return p
 
 
+## kc-duel-impl (duel-mode.md §4.1): the Duel AI tiers (the duel_sim proxies, now real):
+## recruit = the casual personality (2nd-best `second_best` of the time; synergy-blind, set by
+## AiPlayer.for_duel_tier); regular = the competent planner, 2nd-best `second_best`, synergy-blind;
+## veteran = the competent planner, always its best plan. No positional habits (no squad).
+## Recruit's -1 Armor is the side's SideSetup.armor_bonus (DuelConfig.recruit_armor_bonus).
+static func for_duel_tier(tier: StringName, second_best: float = -1.0) -> AiPersonality:
+	var p: AiPersonality = AiPersonality.new()
+	p.preferred_ranges.clear()
+	p.preferred_zone_bonus = 0.0
+	p.operator_home_bonus = 0.0
+	p.second_best_chance = 0.0
+	p.weight_damage_dealt = 2.0
+	p.weight_damage_taken = 0.5
+	p.push_bonus = 0.6
+	match tier:
+		&"recruit":
+			p.weight_damage_dealt = 1.5
+			p.weight_damage_taken = 0.8
+			p.push_bonus = 0.3
+			p.second_best_chance = 0.6
+			p.card_keep_cost = 0.6
+			p.killstreak_keep_cost = 1.2
+			p.weight_deny_streak = 1.0
+		&"regular":
+			p.second_best_chance = 0.6
+	if second_best >= 0.0:
+		p.second_best_chance = second_best
+	return p
+
+
+## kc-duel-impl: the Duel tiers whose planner reads trait sets (only the Veteran).
+static func duel_tier_synergy_aware(tier: StringName) -> bool:
+	return tier not in [&"recruit", &"regular"]
+
+
 ## Zone indices this personality prefers on a map with these range tags.
 func preferred_zones(zone_ranges: Array) -> Array[int]:
 	var out: Array[int] = []
