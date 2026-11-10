@@ -62,7 +62,10 @@ for _t in BAR_SLOTS + SQ_SLOTS:
 CFG = dict(mil=True, drills=False, patch=True, ring=8, fmax=6, front_end=0, strike=2,
            thresh=3, streak=(3, 5, 7), armor_cap=4, armor_end=1, fort_regain=1,
            spot_push=1, supply_push=1, hold=False, cap=6, over=False, suppress=0, aim=False,
-           pre=False, overwatch=False)
+           pre=False, overwatch=False,
+           # rule switches for "The simplest Rally Point" (all on = v3)
+           text=True, match=True, closer=True, command=True, cover=True, front=True,
+           streaks=True, classes=True)
 LAUNCH = dict(CFG)
 
 
@@ -265,8 +268,16 @@ MODE = dict(vanilla=False)
 EMPTY = {}
 
 
+KEEP_NOTEXT = ("command", "gem", "need")
+
+
 def AB(cid):
-    return EMPTY if MODE["vanilla"] else CH[cid]["ab"]
+    if MODE["vanilla"]:
+        return EMPTY
+    if not CFG["text"]:
+        ab = CH[cid]["ab"]
+        return {k: ab[k] for k in KEEP_NOTEXT if k in ab}
+    return CH[cid]["ab"]
 
 
 def drill(e, suit):
@@ -335,6 +346,8 @@ def moves_for(s, cid):
 def in_cover(s, b):
     if b["kind"] != "bar":
         return True
+    if not CFG["cover"]:
+        return False
     o = b["owner"]
     cells = set(b["cells"])
     for x in b["cells"]:
@@ -355,6 +368,8 @@ def in_cover(s, b):
 
 def gain(s, o, i, n):
     """Add n materiel of class i to player o's meter (capped when meters hold)."""
+    if not CFG["classes"]:
+        i = 0   # one meter: every rally pays Ammo, the only order is Strike
     if CFG["hold"]:
         room = CFG["cap"] - s.mat[o][i]
         if n > room:
@@ -406,6 +421,8 @@ def best_target(s, attacker, ignore_cover):
 
 
 def push(s, attacker, n, ignore_armor=False):
+    if not CFG["front"]:
+        return 0
     v = 1 - attacker
     if not ignore_armor:
         soak = min(s.armor[v], n)
@@ -449,7 +466,10 @@ def eval_targets(s, a, dmg, ignore):
     for q in opts:
         t = s.clone()
         if q is None:
-            push(t, a, dmg, ignore)
+            if CFG["front"]:
+                push(t, a, dmg, ignore)
+            else:
+                t.score[a] += 1
         else:
             destroy(t, q)
         v = t.score[a] - t.score[1 - a] + potential(t, a)
@@ -477,6 +497,8 @@ def strike(s, a, dmg=None, fire_mission=False):
         s.trig["overwatch"] += 1
         return
     front_val = dmg if spotted else max(0, dmg - s.armor[1 - a])
+    if not CFG["front"]:
+        front_val = 1
     if fire_mission:
         n = push(s, a, 2, True)
         if tgt:
@@ -488,6 +510,9 @@ def strike(s, a, dmg=None, fire_mission=False):
         destroy(s, tgt)
         s.trig["strike_destroy"] += 1
         landed(s, a)
+    elif not CFG["front"]:   # no Front: a Strike with no target scores 1 instead
+        s.score[a] += 1
+        s.trig["strike_point"] += 1
     else:
         n = push(s, a, dmg, spotted)
         s.trig["strike_front"] += 1
@@ -498,7 +523,7 @@ def strike(s, a, dmg=None, fire_mission=False):
 
 
 def add_streak(s, p, n):
-    if not CFG["mil"]:
+    if not CFG["mil"] or not CFG["streaks"]:
         return
     for _ in range(n):
         s.streak[p] += 1
@@ -650,11 +675,12 @@ def place(s, cid, move, player):
             and (h == pid or cset & e["info"]["bset"])]
     fired = [h for h in sorted(cand) if hub_filled(s, s.pcs[h]) >= hub_need(s.pcs[h])]
     nf = len(fired)
+    tags = [0, 0]
     for h in fired:
         e = s.pcs[h]
         eab = AB(e["cid"])
         info = e["info"]
-        cb = 2 if drill(e, "S") else 1
+        cb = (2 if drill(e, "S") else 1) if CFG["closer"] else 0
         s.score[player] += cb + e["charges"]
         s.trig["charges_cashed"] += e["charges"]
         e["charges"] = 0
@@ -667,7 +693,7 @@ def place(s, cid, move, player):
             if b["kind"] != "bar":
                 continue
             m = matches(s, b, e)
-            s.score[b["owner"]] += ncell * (2 if m else 1)
+            s.score[b["owner"]] += ncell * (2 if m and CFG["match"] else 1)
             touching.append(q)
             if CFG["mil"] and not b.get("jammed"):
                 ba = AB(b["cid"])
@@ -690,8 +716,8 @@ def place(s, cid, move, player):
                 s.score[b["owner"]] += ba["echo"]
             if ba.get("tags") and CFG["mil"]:
                 s.trig["tags"] += 1
-                add_streak(s, b["owner"], 1)
-        s.score[e["owner"]] += eab.get("command", 0)
+                tags[b["owner"]] += 1
+        s.score[e["owner"]] += eab.get("command", 0) if CFG["command"] else 0
         if CFG["mil"] and e["owner"] >= 0:
             gain(s, e["owner"], SUITI[e["suit"]], 1)
         if drill(e, "G"):
@@ -704,6 +730,9 @@ def place(s, cid, move, player):
         e["rallied"] = True
     if nf:
         add_streak(s, player, nf)
+    for k in (0, 1):
+        if tags[k]:
+            add_streak(s, k, tags[k])
 
 
 def end_score(s):
@@ -1136,6 +1165,7 @@ def match(rng, a, b, pa, pb, n, comp="p2:1"):
         res["p2"] += o == 1
         res["pts"] += sum(s.score)
         res["margin"] += abs(s.score[0] - s.score[1])
+        res["amargin"] += (s.score[1] - s.score[0]) if flip else (s.score[0] - s.score[1])
         res["empty"] += empty
         res["places"] += pl
         res["rallies"] += sum(s.rallies)
@@ -1436,6 +1466,58 @@ def sec_ablate(n, rng):
     use({})
 
 
+# ---------------------------------------------------------------- the simplest Rally Point
+NOMIL = dict(mil=False)
+BASIC = dict(text=False, classes=False, cover=False, front=False, streaks=False)
+RULESETS = {
+    # the layer ladder, simplest first
+    "L0 tiling, no card text": dict(NOMIL, text=False),
+    "L1 Basic: L0 + Strike (one meter)": dict(BASIC),
+    "L2 Basic + card text": dict(BASIC, text=True),
+    "L3 + four classes and orders": dict(BASIC, text=True, classes=True),
+    "L4 + cover": dict(BASIC, text=True, classes=True, cover=True),
+    "L5 + the Front (Breakthrough)": dict(BASIC, text=True, classes=True, cover=True, front=True),
+    "L6 = v3: + streaks": dict(),
+    # v3 with one rule taken out
+    "v3 - card text": dict(text=False),
+    "v3 - match bonus": dict(match=False),
+    "v3 - closer bonus": dict(closer=False),
+    "v3 - Command": dict(command=False),
+    "v3 - patch rule": dict(patch=False),
+    "v3 - cover": dict(cover=False),
+    "v3 - Front": dict(front=False),
+    "v3 - streaks": dict(streaks=False),
+    "v3 - classes (one meter)": dict(classes=False),
+    "v3 - whole military layer": dict(NOMIL),
+    "L0 + card text (tiling only)": dict(NOMIL),
+    "Basic + hold (cap 6)": dict(BASIC, hold=True),
+    "Basic, Strike at 4": dict(BASIC, thresh=4),
+    "Basic, Strike at 5": dict(BASIC, thresh=5),
+    "Basic, Strike at 6": dict(BASIC, thresh=6),
+}
+
+
+def sec_rules(n, rng, names=None):
+    print(f"== Rulesets: skill = smart vs greedy and greedy vs random ({2 * n} games each, random"
+          f" pairs); the rest from a smart mirror ({2 * n} games)")
+    print("  ruleset                              | smart v greedy (margin) | greedy v random |"
+          " opts distinct spread | placements | empty | full | P1 (p2:1) | Breakthr | tiles lost |"
+          " orders")
+    for nm in names or RULESETS:
+        use(RULESETS[nm])
+        w1, g1, t1, _, _ = h2h(rng, "smart", "greedy", n)
+        w2 = h2h(rng, "greedy", "random", n)[0]
+        w, g, tot, st, trig = h2h(rng, "smart", "smart", n)
+        t = st["turns"]
+        orders_n = sum(trig[k] for k in MIL_KEYS) / g
+        print(f"  {nm:<36} | {w1:5.1f} ({t1['amargin'] / g1:+5.1f}) | {w2:5.1f} |"
+              f" {st['opts'] / t:5.1f} {st['distinct'] / t:4.1f} {st['spread'] / t:4.2f} |"
+              f" {tot['places'] / g:5.1f} | {tot['empty'] / g:4.1f} | {pct(trig['perfect'], g)} |"
+              f" {pct(tot['p1'], g)} | {pct(trig['breakthrough'], g)} | {trig['lost_total'] / g:4.2f} |"
+              f" {orders_n:4.1f}")
+    use({})
+
+
 # ---------------------------------------------------------------- power test (v2 method)
 BASE_HUB = dict(S="oS", G="oG", R="oR", P="oP")
 BASE_INS = dict(S="iS", G="iG", R="iR", P="iP")
@@ -1531,5 +1613,11 @@ if __name__ == "__main__":
         sec_power(n, rng, "hold (cap 6)")
     if "tweaks" in secs:
         sec_hold(n, rng)
+    if "rules" in secs:
+        rn = list(RULESETS)
+        for a in secs:
+            if a.startswith("r="):
+                rn = [list(RULESETS)[int(k)] for k in a[2:].split(",")]
+        sec_rules(n, rng, rn)
     if "skill3" in secs:   # the v3 skill table under v4's AIs
         sec_skill(n, rng)
