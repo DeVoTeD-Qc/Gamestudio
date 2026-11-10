@@ -3,8 +3,8 @@
 #   SHAPE first and a colour second (accessibility): trait icons (Vanguard chevrons, Spec Ops mask,
 #   Heavy gear, Undead hand from the ground), keyword glyphs with the arrow that points at the
 #   neighbours they use (Guard shield + down, Spotter eye + up, Fireteam two chevrons sideways,
-#   Overwatch crosshair sideways), the copy-level camo bands (Recruit none, Trained Gilded, Veteran
-#   Forged, Elite Priceless), link ticks (vertical bar for Guard / Spotter, horizontal for Fireteam /
+#   Overwatch crosshair sideways), the copy-level bands (Recruit none, Trained Gold Leaf, Veteran
+#   Machined, Elite Prism; original finishes drawn by MasteryBands, kc-ui-bands), link ticks (vertical bar for Guard / Spotter, horizontal for Fireteam /
 #   Overwatch) and the buffed / lowered stat colours. Pure static drawing on any CanvasItem, plus
 #   the words the UI uses for them.
 # Dependencies: SynergyRules (names and texts only).
@@ -19,13 +19,14 @@ const TRAIT_COLORS: Dictionary = {
 ## Stat colours: buffed up (green-gold) / lowered (red) / plain.
 const UP: Color = Color("#7CF29A")
 const DOWN: Color = Color("#FF6B6B")
-## Copy-level camo bands (Trained = Gilded, Veteran = Forged, Elite = Priceless): base, dark, light.
+## Copy-level bands (Trained = Gold Leaf, Veteran = Machined, Elite = Prism): base, dark, light swatch
+## colours (the finish itself is drawn by MasteryBands; kc-ui-bands retired the camo-ladder ids).
 const BANDS: Dictionary = {
-	&"gilded": [Color("#C9A227"), Color("#7A5E12"), Color("#F3D36B")],
-	&"forged": [Color("#D9DEE3"), Color("#7E878F"), Color("#FFFFFF")],
-	&"priceless": [Color("#3E8EDE"), Color("#1B3F78"), Color("#9FE3FF")],
+	&"gold_leaf": [Color("#C9A227"), Color("#7A5E12"), Color("#F3D36B")],
+	&"machined": [Color("#D9DEE3"), Color("#7E878F"), Color("#FFFFFF")],
+	&"prism": [Color("#3E8EDE"), Color("#1B3F78"), Color("#9FE3FF")],
 }
-const BAND_NAMES: Dictionary = {&"": "plain frame", &"gilded": "Gilded", &"forged": "Forged", &"priceless": "Priceless"}
+const BAND_NAMES: Dictionary = {&"": "plain frame", &"gold_leaf": "Gold Leaf", &"machined": "Machined", &"prism": "Prism"}
 const KEYWORD_NAMES: Dictionary = {&"guard": "Guard", &"spotter": "Spotter", &"fireteam": "Fireteam", &"overwatch": "Overwatch"}
 ## Which neighbours a keyword uses, in words (inspector).
 const KEYWORD_USES: Dictionary = {
@@ -198,26 +199,13 @@ static func _arrow(ci: CanvasItem, o: Vector2, s: float, y: float, dir: float, c
 	ci.draw_colored_polygon(PackedVector2Array([tip, o + Vector2(s * 0.24, cy), o + Vector2(s * 0.76, cy)]), c)
 
 
-## Camo band of a copy level (the weapon-mastery ladder). Recruit (&"") draws nothing.
+## Level band of a copy level (kc-ui-bands: an original finish, MasteryBands.draw). Recruit (&"") draws
+## nothing; a retired id (MasteryBands.LEGACY) draws as its new band.
 static func draw_band(ci: CanvasItem, band: Rect2, band_id: StringName) -> void:
-	if not BANDS.has(band_id) or band.size.x <= 0.0:
+	var id: StringName = MasteryBands.migrate_id(band_id)
+	if not BANDS.has(id) or band.size.x <= 0.0:
 		return
-	var cols: Array = BANDS[band_id]
-	ci.draw_rect(band, cols[1])
-	var cell: float = maxf(2.0, band.size.y / 2.0)
-	var seed_v: int = 11 + band_id.length()
-	var x: float = band.position.x
-	while x < band.end.x:
-		var y: float = band.position.y
-		while y < band.end.y:
-			seed_v = (seed_v * 1103515245 + 12345) & 0x7fffffff
-			var pick: int = seed_v % 5
-			if pick < 2:
-				ci.draw_rect(Rect2(x, y, minf(cell, band.end.x - x), minf(cell, band.end.y - y)), cols[0])
-			elif pick == 2:
-				ci.draw_rect(Rect2(x, y, minf(cell, band.end.x - x), minf(cell, band.end.y - y)), cols[2])
-			y += cell
-		x += cell
+	MasteryBands.draw(ci, band, id)
 
 
 ## A link tick between two banner edges: a short glowing bar (vertical for Guard / Spotter, a

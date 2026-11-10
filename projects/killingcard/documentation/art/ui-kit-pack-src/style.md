@@ -40,10 +40,10 @@ Readability at phone size is the rule: an ability icon is **21 px** on a C1+ boa
 | Trait Spec Ops | `#8FB8FF` | | |
 | Trait Heavy | `#C9D1D8` | | |
 | Trait Undead | `#8EDB6A` | | |
-| Band Gilded | `#C9A227` / `#7A5E12` / `#F3D36B` | Run-screen level swatches only (cards show the level coin since kc-cards-impl) | `synergy_glyphs.gd` BANDS |
-| Band Forged | `#D9DEE3` / `#7E878F` / `#FFFFFF` | Veteran level band | |
-| Band Priceless | `#3E8EDE` / `#1B3F78` / `#9FE3FF` | Elite level band | |
-| Band Interstellar | `#7B3FC4` / `#1A0F3A` / `#FF7AD9` | Operator top tier only | `banner_view.gd` |
+| Band Gold Leaf | `#C9A227` / `#7A5E12` / `#F3D36B` | Trained level (kc-ui-bands: drawn in code, `mastery_bands.gd`) | `mastery_bands.gd` |
+| Band Machined | `#D9DEE3` / `#7E878F` / `#FFFFFF` | Veteran level band (code) | |
+| Band Prism | `#3E8EDE` / `#1B3F78` / `#9FE3FF` | Elite level band (code) | |
+| Band Starfield | `#3A1C6E` / `#120A2E` / `#FFF4FF` | Operator top tier only (code) | `mastery_bands.gd` |
 | Band base camo | `#4B5A3A` / `#2F3A25` / `#7A8A5A` | Operator base tier | `banner_view.gd` |
 
 | Card frame steel | `#4A5560` / face `#1B2126` | Y2+ unit frame | `card_view.gd` FRAME_UNIT |
@@ -90,7 +90,7 @@ ChatGPT can return a real transparent PNG when asked, but sometimes it paints a 
 | Plates, frames, buttons, panels (`alpha`) | **transparent background**, and if that fails **flat magenta #FF00FF** | keep the alpha, or key out magenta (with 1-2 px despill) |
 | Backgrounds, bands, card backs (`opaque`) | full-bleed image | crop and resize |
 
-If an `alpha` image comes back with a checkerboard, reply: "The background must be real transparency. If you can't, use a perfectly flat solid magenta #FF00FF background instead, with no shadow." Magenta was chosen because no plate in the kit uses pink (the interstellar band is opaque).
+If an `alpha` image comes back with a checkerboard, reply: "The background must be real transparency. If you can't, use a perfectly flat solid magenta #FF00FF background instead, with no shadow." Magenta was chosen because no plate in the kit uses pink (the level bands are drawn in code).
 
 ### 2.6 States: how each one is made
 

@@ -68,9 +68,9 @@ Design pillars for onboarding:
 |---|---|---|---|---|---|---|
 | — | **Standard Issue** | The starter | never | never | Standard Issue frame | Muster out / Retire only |
 | 0 | **Recruit** (calling card) | The M1 Supply Drop, Salvage after an M1 loss, enemy squads in M2–M3 | **on** (from the art, art-traits §1) | **shown greyed, locked**: "Trains: First Shot · Guard" | banner frame, no band | Promotion (or the kit hand-over option, §4.3) |
-| 1 | **Trained** | Supply Drops from M2 on, Promotion | on | **on** | Gilded | Promotion |
-| 2 | Veteran | Promotion | on | on, +1 Armor | Forged | Promotion |
-| 3 | Elite | Promotion | on | on, +1 Armor +1 FP | Priceless | — |
+| 1 | **Trained** | Supply Drops from M2 on, Promotion | on | **on** | Gold Leaf | Promotion |
+| 2 | Veteran | Promotion | on | on, +1 Armor | Machined | Promotion |
+| 3 | Elite | Promotion | on | on, +1 Armor +1 FP | Prism | — |
 
 - **"Recruit" changes meaning.** Today (kc-syn) a Recruit has its printed keywords but no neighbor keyword and no trait. In this design, a Recruit has its **trait** but **none** of its rules text: no First Shot, Pick, Flank, Cover, Suppress, Patch, Holder, arrive-front, On Deploy / On Down effect, neighbor keyword or LMG Pierce. It keeps the chassis' cost, FP, Armor and weapon class. That's exactly the head's order: the art brings the trait first, and the keywords are discovered next.
 - The greyed "Trains: …" line is the **discovery hook**. A Recruit Breacher in hand shows "Trains: First Shot · Guard". The first Promotion lights it up with the "New: Keywords" card (§5).
@@ -148,7 +148,7 @@ Smoke Screen, Blackout and Sabotage (card-system §3.1) are not in the shipped p
 | Keyword pips and stat deltas (▲) | the first Trained card offered, or the first Promotion | **New: Keywords.** "Trained cards have keywords. Your Breacher now has First Shot." |
 | Per-keyword tip (First Shot, Pick, Flank, Pierce, Suppress, Patch, Cover, Protector slide, On Deploy / On Down, Holder) | the first time that keyword is in play on either side | One line each (the card text / `SynergyRules.KEYWORD_TEXT`) |
 | Link ticks and placement preview | the first time a neighbor keyword links (either side) | **New: Links.** "Guard: the card behind this one has Cover +1." (with the mini-grid) |
-| Camo band, Promotion screen | the first Promotion (after M2) | **New: Promotion.** "Promotion trains a card. Gilded → Forged → Priceless." |
+| Camo band, Promotion screen | the first Promotion (after M2) | **New: Promotion.** "Promotion trains a card. Gold Leaf → Machined → Prism." |
 | Muster out step | the first Supply Drop from M2 on | **New: Muster out.** "The quartermaster takes back Standard Issue kit: one card per new card, plus one." |
 | Retire (4th option), Re-issue | the first Supply Drop from M2 on (under "More") | — |
 | Field strip on the objective | the first Field offered or in play (either side) | **New: Fields.** "Fields sit on the objective and change the whole column." |

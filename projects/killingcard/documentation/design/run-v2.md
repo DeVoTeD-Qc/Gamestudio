@@ -222,7 +222,7 @@ The Operator is still a unit card with its Primary's stats, its keyword and its 
 | Bosses | after run 1, after the first boss win | variety, not difficulty (§10.2 has each boss's numbers) |
 | Modifiers | §5 | opt-in challenge |
 | **Dossier** (Codex tab) | a Terrain's page fills in the first time you play on it; an event's page when you first see it; a boss's when you first fight it | knowledge: each page has the rule, the flavour and your record on it |
-| **Operator camo** | win a run with that Operator (Gilded), then at Threat 2 (Forged), Threat 4 (Priceless), Threat 6 (Interstellar) | the mastery-tier camos the pitch set already has (card-system §2.7); cosmetic only |
+| **Operator camo** | win a run with that Operator (Gold Leaf), then at Threat 2 (Machined), Threat 4 (Prism), Threat 6 (Starfield) | original level finishes drawn in code (`mastery_bands.gd`, kc-ui-bands; the old camo-ladder names are retired); cosmetic only |
 | **Banner frames / map stamps** | beat each boss; win at each Threat level | a frame for calling cards in the Codex, a stamp on the map's boss node |
 | Calling cards | found in runs (unchanged) | the Codex album (unchanged) |
 

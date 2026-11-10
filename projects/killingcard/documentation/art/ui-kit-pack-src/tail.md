@@ -6,7 +6,7 @@
 - **No real military marks:** no national or unit insignia, rank badges, roundels, flags, red cross or red crescent. Heal and Patch icons are plain white shapes, tinted green or teal in game, never a red cross.
 - **No real products:** weapon and vehicle silhouettes are generic, with no shape that is clearly one real model and no brand marks.
 - **No baked text.** The game draws all words and numbers (READY, FRONT, PLAN, A / B / C, EQUIPPED, PUT BACK, costs, stats). Any letter or digit in an image, even fake writing, means regenerate.
-- The level names in code (Gilded, Forged, Priceless, Interstellar) are internal ids. The band images are described only by their look (gold leaf, white steel, blue crystal, violet nebula) and must not copy any existing camo pattern.
+- kc-ui-bands: the level bands are no longer generated. The head chose original finishes drawn in code (`scripts/ui/mastery_bands.gd`: Gold Leaf, Machined, Prism, Starfield; no camo pattern), and the old ids (the names of a shooter franchise's mastery camos) are retired. Only `band_base` stays an image.
 
 ### 6.2 Reject checklist (any "yes" = regenerate; two tries, then skip and note it)
 - [ ] Any letters, numbers, fake writing, a logo or a stamp?

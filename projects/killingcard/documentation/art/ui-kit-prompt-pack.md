@@ -69,10 +69,10 @@ Readability at phone size is the rule: an ability icon is **21 px** on a C1+ boa
 | Trait Spec Ops | `#8FB8FF` | | |
 | Trait Heavy | `#C9D1D8` | | |
 | Trait Undead | `#8EDB6A` | | |
-| Band Gilded | `#C9A227` / `#7A5E12` / `#F3D36B` | Run-screen level swatches only (cards show the level coin since kc-cards-impl) | `synergy_glyphs.gd` BANDS |
-| Band Forged | `#D9DEE3` / `#7E878F` / `#FFFFFF` | Veteran level band | |
-| Band Priceless | `#3E8EDE` / `#1B3F78` / `#9FE3FF` | Elite level band | |
-| Band Interstellar | `#7B3FC4` / `#1A0F3A` / `#FF7AD9` | Operator top tier only | `banner_view.gd` |
+| Band Gold Leaf | `#C9A227` / `#7A5E12` / `#F3D36B` | Trained level (kc-ui-bands: drawn in code, `mastery_bands.gd`) | `mastery_bands.gd` |
+| Band Machined | `#D9DEE3` / `#7E878F` / `#FFFFFF` | Veteran level band (code) | |
+| Band Prism | `#3E8EDE` / `#1B3F78` / `#9FE3FF` | Elite level band (code) | |
+| Band Starfield | `#3A1C6E` / `#120A2E` / `#FFF4FF` | Operator top tier only (code) | `mastery_bands.gd` |
 | Band base camo | `#4B5A3A` / `#2F3A25` / `#7A8A5A` | Operator base tier | `banner_view.gd` |
 
 | Card frame steel | `#4A5560` / face `#1B2126` | Y2+ unit frame | `card_view.gd` FRAME_UNIT |
@@ -119,7 +119,7 @@ ChatGPT can return a real transparent PNG when asked, but sometimes it paints a 
 | Plates, frames, buttons, panels (`alpha`) | **transparent background**, and if that fails **flat magenta #FF00FF** | keep the alpha, or key out magenta (with 1-2 px despill) |
 | Backgrounds, bands, card backs (`opaque`) | full-bleed image | crop and resize |
 
-If an `alpha` image comes back with a checkerboard, reply: "The background must be real transparency. If you can't, use a perfectly flat solid magenta #FF00FF background instead, with no shadow." Magenta was chosen because no plate in the kit uses pink (the interstellar band is opaque).
+If an `alpha` image comes back with a checkerboard, reply: "The background must be real transparency. If you can't, use a perfectly flat solid magenta #FF00FF background instead, with no shadow." Magenta was chosen because no plate in the kit uses pink (the level bands are drawn in code).
 
 ### 2.6 States: how each one is made
 
@@ -1665,37 +1665,37 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 - **Code id:** `band_base` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 - **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands, and those are drawn in code (SynergyGlyphs.draw_band).
 
-##### `band_gilded.png` · P3 · Batch 22.5
+##### `band_gold_leaf.png` · P3 · Batch 22.5
 
-- **Used in:** Trained copies (Gilded band under the art and on the outer edge), Operator gold tier.
+- **Used in:** Trained copies (Gold Leaf band under the art and on the outer edge), Operator gold leaf tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
 - **States:** normal / shimmer (banner_shimmer shader on animated finishes). **Repeat:** tile horizontally.
-- **Code id:** `band_gilded` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
+- **Code id:** `band_gold_leaf` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 - **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands (SynergyGlyphs.draw_band).
 
-##### `band_forged.png` · P3 · Batch 22.6
+##### `band_machined.png` · P3 · Batch 22.6
 
-- **Used in:** Veteran copies (Forged band), Operator forged tier.
+- **Used in:** Veteran copies (Machined band), Operator machined tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
 - **States:** normal / shimmer (banner_shimmer shader on animated finishes). **Repeat:** tile horizontally.
-- **Code id:** `band_forged` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
-- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gilded.
+- **Code id:** `band_machined` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
+- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gold_leaf.
 
-##### `band_priceless.png` · P3 · Batch 22.7
+##### `band_prism.png` · P3 · Batch 22.7
 
-- **Used in:** Elite copies (Priceless band), Operator priceless tier.
+- **Used in:** Elite copies (Prism band), Operator prism tier.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
 - **States:** normal / shimmer (banner_shimmer shader on animated finishes). **Repeat:** tile horizontally.
-- **Code id:** `band_priceless` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
-- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gilded.
+- **Code id:** `band_prism` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
+- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gold_leaf.
 
-##### `band_interstellar.png` · P3 · Batch 22.8
+##### `band_starfield.png` · P3 · Batch 22.8
 
 - **Used in:** Operator top mastery tier only.
 - **Generate:** 1024x1024 (square 1:1). **Ship:** 512x512 swatch + 512x32 seamless strip. **Background:** opaque, no transparency.
 - **States:** normal / shimmer (banner_shimmer shader on animated finishes). **Repeat:** tile horizontally.
-- **Code id:** `band_interstellar` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
-- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gilded.
+- **Code id:** `band_starfield` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
+- **Note:** Tileable strip. Generate a square swatch; the TA cuts a horizontal strip and makes it seamless (offset + clone, or mirror-tile). kc-ui-art2: As band_gold_leaf.
 
 ### 4.10 Glows, outlines and overlays (13)
 
@@ -1830,7 +1830,7 @@ Order is by **visual impact on the card design now in the game**: batch 2 is the
 | 19 | P2 | Panels, trays, rings and strips, Objective and Field tile backers | 9 | `order_node`, `order_arrow`, `pnl_rail_chip`, `pnl_callout`, `pnl_coach`, `pnl_result`, `runmap_node`, `tile_field_chip_trap`, `tile_slot_empty` |
 | 20 | P3 | Icons | 9 | `ico_range_close`, `ico_range_mid`, `ico_range_long`, `ico_round`, `ico_ks_gunship`, `ico_att_optic`, `ico_att_grip`, `ico_att_mag`, `ico_att_lining` |
 | 21 | P3 | Icons, Backgrounds, Glows, outlines and overlays, Card frame parts | 9 | `ico_perk_slot`, `ico_ui_rotate`, `ico_ui_survey`, `ico_ui_tutorial`, `bg_menu`, `fx_crack`, `fx_sheen`, `card_back_hand`, `frm_socket_empty` |
-| 22 | P3 | Buttons and controls, Panels, trays, rings and strips, Camo bands | 8 | `btn_tab`, `sld_track`, `runmap_path`, `band_base`, `band_gilded`, `band_forged`, `band_priceless`, `band_interstellar` |
+| 22 | P3 | Buttons and controls, Panels, trays, rings and strips, Camo bands | 8 | `btn_tab`, `sld_track`, `runmap_path`, `band_base`, `band_gold_leaf`, `band_machined`, `band_prism`, `band_starfield` |
 
 P1 is batches 1 to 11 (93 images, 84 still to make). After batches 2 and 3, pause and let the Technical Artist drop them into the build (batch 2 needs the small code hooks listed in section 7.4): if the frame style needs a tweak, it is cheaper to change the style block then.
 
@@ -3730,7 +3730,7 @@ Original pictogram for the interface of a modern military-tactical card game pla
 
 ### Batch 22 · P3 · Buttons and controls, Panels, trays, rings and strips, Camo bands (8)
 
-Upload line: `kc-ui-art2 batch 22: btn_tab, sld_track, runmap_path, band_base, band_gilded, band_forged, band_priceless, band_interstellar`
+Upload line: `kc-ui-art2 batch 22: btn_tab, sld_track, runmap_path, band_base, band_gold_leaf, band_machined, band_prism, band_starfield`
 
 #### 22.1 `btn_tab.png` · P3 · **New chat**
 
@@ -3772,9 +3772,9 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-#### 22.5 `band_gilded.png` · P3
+#### 22.5 `band_gold_leaf.png` · P3
 
-*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Trained copies (Gilded band under the art and on the outer edge), Operator gold tier.
+*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Trained copies (Gold Leaf band under the art and on the outer edge), Operator gold leaf tier.
 
 ```
 Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A seamless pattern of polished gold leaf: the same rounded camouflage blob shapes rendered in bright gold #C9A227, deep gold #7A5E12 and pale gold highlights #F3D36B, a soft metallic sheen, evenly spread over the whole square with no centre focus, flat front-on. Square 1:1.
@@ -3782,9 +3782,9 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-#### 22.6 `band_forged.png` · P3
+#### 22.6 `band_machined.png` · P3
 
-*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Veteran copies (Forged band), Operator forged tier.
+*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Veteran copies (Machined band), Operator machined tier.
 
 ```
 Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A seamless pattern of polished white steel: the same rounded camouflage blob shapes in bright silver #D9DEE3, mid grey steel #7E878F and white highlights, crisp machined metal sheen, evenly spread over the whole square with no centre focus, flat front-on. Square 1:1.
@@ -3792,9 +3792,9 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-#### 22.7 `band_priceless.png` · P3
+#### 22.7 `band_prism.png` · P3
 
-*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Elite copies (Priceless band), Operator priceless tier.
+*Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Elite copies (Prism band), Operator prism tier.
 
 ```
 Original game UI asset for a modern military-tactical card game played on phones. Clean semi-flat rendering: matte gunmetal and dark slate metal with a faint brushed grain, crisp 45-degree chamfered corners, thin bevels with one soft top-left highlight, no grunge, no rust, no scratches. Bold simple shapes that stay readable when shrunk small. Palette: slate #12161A, gunmetal #232A31, panel #2E3740, steel #3A444D, edge grey #4A535B, fog white #D8DEE3, plus only the accent colours named below. Straight-on front view, no perspective, no cast shadow, even flat lighting. No text, letters, numbers, logos, brand marks, insignia, flags or emblems. A seamless pattern of deep blue crystal: the same rounded camouflage blob shapes in sapphire blue #3E8EDE, navy #1B3F78 and icy cyan facets #9FE3FF, faceted gem-like sparkle, evenly spread over the whole square with no centre focus, flat front-on. Square 1:1.
@@ -3802,7 +3802,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 
 **Avoid:** text, logos, a centre focus, a border or frame, hard seams, colours other than the ones named.
 
-#### 22.8 `band_interstellar.png` · P3
+#### 22.8 `band_starfield.png` · P3
 
 *Level camo bands and Operator mastery ladder.* Square 1:1, opaque, no transparency. For: Operator top mastery tier only.
 
@@ -3820,7 +3820,7 @@ Original game UI asset for a modern military-tactical card game played on phones
 - **No real military marks:** no national or unit insignia, rank badges, roundels, flags, red cross or red crescent. Heal and Patch icons are plain white shapes, tinted green or teal in game, never a red cross.
 - **No real products:** weapon and vehicle silhouettes are generic, with no shape that is clearly one real model and no brand marks.
 - **No baked text.** The game draws all words and numbers (READY, FRONT, PLAN, A / B / C, EQUIPPED, PUT BACK, costs, stats). Any letter or digit in an image, even fake writing, means regenerate.
-- The level names in code (Gilded, Forged, Priceless, Interstellar) are internal ids. The band images are described only by their look (gold leaf, white steel, blue crystal, violet nebula) and must not copy any existing camo pattern.
+- kc-ui-bands: the level bands are no longer generated. The head chose original finishes drawn in code (`scripts/ui/mastery_bands.gd`: Gold Leaf, Machined, Prism, Starfield; no camo pattern), and the old ids (the names of a shooter franchise's mastery camos) are retired. Only `band_base` stays an image.
 
 ### 6.2 Reject checklist (any "yes" = regenerate; two tries, then skip and note it)
 - [ ] Any letters, numbers, fake writing, a logo or a stamp?

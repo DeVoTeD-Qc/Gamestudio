@@ -250,7 +250,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo \
 			and (event as InputEventKey).keycode == KEY_M and (event as InputEventKey).ctrl_pressed \
 			and BannerArtDB.has_licensed():
-		# Pitch dev toggle: cycle the Operator mastery tier (Base -> Forged -> Priceless -> Interstellar).
+		# Pitch dev toggle: cycle the Operator mastery tier (Base -> Machined -> Prism -> Starfield).
 		get_viewport().set_input_as_handled()
 		BannerArtDB.operator_tier_override = (maxi(1, BannerArtDB.operator_tier_override) % 4) + 1
 		refresh()
@@ -1965,13 +1965,18 @@ func _open_operator(side: int) -> void:
 	})
 
 
-## Operator inspector line: the camo / weapon-mastery tier the banner shows.
+## Operator inspector line: the level band the Operator wears (its name and how it is earned) and,
+## with the licensed pitch art, the mastery tier.
 static func _mastery_line(e: Dictionary) -> String:
 	var tier: int = int(e.get("mastery_tier", 1))
+	var band: StringName = MasteryBands.migrate_id(StringName(String(e.get("camo", "base"))))
+	if band == &"":
+		band = MasteryBands.BASE
+	var band_line: String = " · Band: %s. %s" % [MasteryBands.display_name(band), String(MasteryBands.EARN.get(band, ""))]
 	if not BannerArtDB.has_licensed():
-		return " · Camo tier: Base (mastery tiers come later)"
+		return band_line
 	var name: String = BannerArtDB.MASTERY_TIERS[clampi(tier, 1, 4) - 1]
-	return " · Mastery tier %d of 4: %s%s" % [tier, name, " (Base camo)" if tier == 1 else " (dev preview)"]
+	return " · Mastery tier %d of 4: %s%s%s" % [tier, name, " (Base band)" if tier == 1 else " (dev preview)", band_line]
 
 
 # =============================================================================

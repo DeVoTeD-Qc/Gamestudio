@@ -476,13 +476,13 @@ bandnote = "Tileable strip. Generate a square swatch; the TA cuts a horizontal s
 for bid, used, pri, subj in [
     ("band_base", "Operator base camo tier (OPERATOR badge swatch, Operator frame band); optional Recruit swatch in the deck view", "P1",
      "a seamless flat woodland camouflage pattern: rounded blobs of olive #4B5A3A, dark olive #2F3A25 and pale moss #7A8A5A, no other colours"),
-    ("band_gilded", "Trained copies (Gilded band under the art and on the outer edge), Operator gold tier", "P1",
+    ("band_gold_leaf", "Trained copies (Gold Leaf band under the art and on the outer edge), Operator gold leaf tier", "P1",
      "a seamless pattern of polished gold leaf: the same rounded camouflage blob shapes rendered in bright gold #C9A227, deep gold #7A5E12 and pale gold highlights #F3D36B, a soft metallic sheen"),
-    ("band_forged", "Veteran copies (Forged band), Operator forged tier", "P1",
+    ("band_machined", "Veteran copies (Machined band), Operator machined tier", "P1",
      "a seamless pattern of polished white steel: the same rounded camouflage blob shapes in bright silver #D9DEE3, mid grey steel #7E878F and white highlights, crisp machined metal sheen"),
-    ("band_priceless", "Elite copies (Priceless band), Operator priceless tier", "P1",
+    ("band_prism", "Elite copies (Prism band), Operator prism tier", "P1",
      "a seamless pattern of deep blue crystal: the same rounded camouflage blob shapes in sapphire blue #3E8EDE, navy #1B3F78 and icy cyan facets #9FE3FF, faceted gem-like sparkle"),
-    ("band_interstellar", "Operator top mastery tier only", "P2",
+    ("band_starfield", "Operator top mastery tier only", "P2",
      "a seamless pattern of a violet cosmic nebula: the same rounded camouflage blob shapes filled with deep violet #7B3FC4, near-black indigo #1A0F3A and hot pink star specks #FF7AD9, tiny white stars"),
 ]:
     S.append(dict(id=bid, file=f"{bid}.png", cat="band", sec=sec, gen="1024x1024", ship="512x512 swatch + 512x32 seamless strip",
@@ -575,7 +575,7 @@ part("frame", sec, "card_back_hand", "card_back_hand.png", "Face-down hand-size 
      notes="Replaces the Killstreak-era card_back.webp.")
 
 # ---------------------------------------------------------------- priority pass (keep P1 to what a normal match and the first run show)
-_DEMOTE = {"type_killstreak", "type_operator", "ui_codex", "ui_info", "eq_frag", "eq_flash", "band_forged", "band_priceless",
+_DEMOTE = {"type_killstreak", "type_operator", "ui_codex", "ui_info", "eq_frag", "eq_flash", "band_machined", "band_prism",
            "pnl_tooltip", "pnl_order_strip", "order_node", "order_arrow"}
 _NEW_HOOK = {"pnl_order_strip": "NEW: the A > B > C order strip (firefight-order.md section 8) is not built yet.",
              "order_node": "NEW: for the order strip (not built yet).", "order_arrow": "NEW: for the order strip (not built yet).",
@@ -732,8 +732,8 @@ RETIRED.update({
 
 # Old slots the new design keeps but uses differently.
 _DEMOTE3 = {"band_base": "Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands, and those are drawn in code (SynergyGlyphs.draw_band).",
-            "band_gilded": "Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands (SynergyGlyphs.draw_band).",
-            "band_forged": "As band_gilded.", "band_priceless": "As band_gilded.", "band_interstellar": "As band_gilded.",
+            "band_gold_leaf": "Cards no longer show a level band (the level coin replaced it). Only the run-screen level swatches use bands (SynergyGlyphs.draw_band).",
+            "band_machined": "As band_gold_leaf.", "band_prism": "As band_gold_leaf.", "band_starfield": "As band_gold_leaf.",
             "frm_socket_empty": "Still drawn by StandardIssueLook.draw_empty_socket in the reward screen; the C1+ board shows nothing in an empty trait slot."}
 _REUSE = {
     "class_ar": "Cards show the weapon as a text pill now; class icons remain for the killfeed source icon, the art fallback and the Codex filters.",

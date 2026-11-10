@@ -37,7 +37,7 @@ func _reset_settings() -> void:
 
 func test_stat_icons_same_place_for_both_sides() -> void:
 	var entry: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 4, "armor_max": 4, "banner": "rifleman", "cost": 2,
-			"keywords": [{"id": &"pick"}], "trait": "vanguard", "kw": "spotter", "band": "gilded"}
+			"keywords": [{"id": &"pick"}], "trait": "vanguard", "kw": "spotter", "band": "gold_leaf"}
 	for sz: Vector2 in [Vector2(228, 57), Vector2(304, 76), Vector2(208, 52), Vector2(512, 128)]:
 		var mine: BannerView = BannerView.new()
 		var theirs: BannerView = BannerView.new()

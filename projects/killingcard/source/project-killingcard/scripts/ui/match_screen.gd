@@ -1325,6 +1325,8 @@ func _set_badges(snapshot: Dictionary) -> void:
 	elif op.has("armor") and String(op.get("zone", "OFF BOARD")) != "OFF BOARD":
 		op_text = "%d/%d" % [int(op.get("armor", 0)), int(op.get("armor_max", 0))]
 	_operator_badge.font_size = 20
+	# kc-ui-bands: the badge's swatch is the Operator's level band (Base until the mastery grind).
+	_operator_badge.band = StringName(String(op.get("camo", "base")))
 	_operator_badge.set_value([[[op_text, text_c]]], false)
 	_operator_badge.set_drag_enabled(false)
 	var ready_ks: bool = false

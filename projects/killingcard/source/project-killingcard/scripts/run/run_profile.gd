@@ -62,6 +62,9 @@ static func normalised(p: Variant) -> Dictionary:
 			out[k] = int(p[k])
 	# v1 -> v2 (kc-duel-impl): the old values stay, the Duel keys start empty; the result is v2.
 	out["version"] = PROFILE_VERSION
+	# kc-ui-bands: retired level-band ids (the old camo-ladder names, MasteryBands.LEGACY) load as the
+	# new ones (gold_leaf / machined / prism / starfield) wherever a band is stored.
+	MasteryBands.migrate(out)
 	return out
 
 

@@ -50,7 +50,7 @@ The family is shown in the pitch's trait tooltip ("Undead · Zombies card"). The
 | | Private pitch (MW3 cards, never committed) | Public build (our own art) |
 |---|---|---|
 | Where the family comes from | Manifest `section` → family table §1.2 (one lookup in BannerArtDB's licensed rows) | A `family` field on `BannerArt` (new tag column `family` in the art CSV), set by the curator |
-| Default art per option | Today each traited chassis has only home-family arts in the pitch set (31 were re-picked for that in kc-syn-impl). **About 16 alternates must be added** (§3.2) | 13 placeholder variants: the chassis' sprite with a family corner emblem and backdrop tint (Honors laurel, Operators tape, Mastery camo swatch, Horde rot-green), from BannerArtDB's generated path. They must not reuse the level camo band (Gilded / Forged / Priceless), which shows the copy's level |
+| Default art per option | Today each traited chassis has only home-family arts in the pitch set (31 were re-picked for that in kc-syn-impl). **About 16 alternates must be added** (§3.2) | 13 placeholder variants: the chassis' sprite with a family corner emblem and backdrop tint (Honors laurel, Operators tape, Mastery camo swatch, Horde rot-green), from BannerArtDB's generated path. They must not reuse the level band (Gold Leaf / Machined / Prism), which shows the copy's level |
 | Names | Subname = MW3 title ("Glint") | Subname = our title ("Grave Watch"). No MW3 names, no "Zombies" mode name |
 | Risk | Shows a rule we **can** ship (unlike kc-syn option B, which broke the old fairness rule) | Needs original art in four families before a public demo: about 13 extra arts at minimum |
 

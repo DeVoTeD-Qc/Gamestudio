@@ -43,14 +43,14 @@ const BRASS_DARK: Color = Color("#5A4512")
 const STEEL: Color = Color("#3A444D")
 const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
 const DAMAGED: Color = Color("#F2A33A")
-## Camo tiers of the Operator's mastery band (pattern differs per tier, not only colour).
+## Swatch colours of the Operator's level band (kc-ui-bands: the finishes are drawn by MasteryBands;
+## tier 1 shows the Base band, head B3).
 const CAMO: Dictionary = {
 	&"base": [Color("#4B5A3A"), Color("#2F3A25"), Color("#7A8A5A")],
-	&"gold": [Color("#C9A227"), Color("#7A5E12"), Color("#F3D36B")],
-	# kc-cod2 weapon-mastery tiers 2-4 (tier 1 Gilded = the Base camo, head B3).
-	&"forged": [Color("#D9DEE3"), Color("#8E979F"), Color("#FFFFFF")],
-	&"priceless": [Color("#3E8EDE"), Color("#1B3F78"), Color("#9FE3FF")],
-	&"interstellar": [Color("#7B3FC4"), Color("#1A0F3A"), Color("#FF7AD9")],
+	&"gold_leaf": [Color("#C9A227"), Color("#7A5E12"), Color("#F3D36B")],
+	&"machined": [Color("#D9DEE3"), Color("#8E979F"), Color("#FFFFFF")],
+	&"prism": [Color("#3E8EDE"), Color("#1B3F78"), Color("#9FE3FF")],
+	&"starfield": [Color("#3A1C6E"), Color("#120A2E"), Color("#FFF4FF")],
 }
 ## The one banner animating right now (focus / placement), so a new focus stops the old one.
 static var focus_owner: WeakRef = null

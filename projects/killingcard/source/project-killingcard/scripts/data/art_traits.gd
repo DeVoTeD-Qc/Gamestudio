@@ -52,7 +52,7 @@ const SECTION_FAMILY: Dictionary = {
 }
 const SEP: String = "~"
 ## Public placeholder art of each alternate family (§1.4, our own art): the chassis sprite with a
-## family corner emblem and backdrop tint. Never a level camo band (Gilded / Forged / Priceless).
+## family corner emblem and backdrop tint. Never a level band (Gold Leaf / Machined / Prism).
 ## family -> [subname, tint (alpha = strength), emblem]. Rendering is BannerArtDB's (UI hook).
 const OPTION_VARIANTS: Dictionary = {
 	HONORS: ["Honor Guard", Color(0.78, 0.62, 0.22, 0.30), &"laurel"],

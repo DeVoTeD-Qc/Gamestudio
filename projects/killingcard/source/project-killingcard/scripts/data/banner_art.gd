@@ -44,7 +44,8 @@ extends Resource
 @export var frames_path: String = ""
 @export var frame_count: int = 0
 @export var frame_ms: int = 80
-## Operator weapon-mastery art: family (wm_mcw) and tier 1-4 (Gilded, Forged, Priceless, Interstellar).
+## Operator weapon-mastery art: family (wm_mcw) and tier 1-4 (Gold Leaf, Machined, Prism, Starfield;
+## the tier names of MasteryBands).
 @export var mastery_family: StringName = &""
 @export var mastery_tier: int = 0
 

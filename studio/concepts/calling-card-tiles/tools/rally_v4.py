@@ -469,7 +469,7 @@ def strike(s, a, dmg=None, fire_mission=False):
     if TARGETER[a] and not fire_mission and not MODE.get("look"):
         tgt = eval_targets(s, a, dmg, spotted)
         tv = 1e9 if tgt else 0
-    if FORCE[0] is not None and not fire_mission:
+    if FORCE[0] is not None and not fire_mission and (not FORCE[0] or FORCE[0] in s.pcs):
         tgt = FORCE[0] or None   # 0 = push the Front
         tv = 1e9 if tgt else 0
     if not fire_mission and CFG["overwatch"] and s.mat[1 - a][2] >= CFG["thresh"]:
@@ -802,7 +802,7 @@ def potential(s, me, blind_mil=False):
 
 
 TIMER = dict(strike=True, spot=True, fort=True, late=True, overflow=True)
-SMART_LIKE = ("smart", "textblind", "milblind", "smartht", "timer", "plan", "rhold", "nofire")
+SMART_LIKE = ("smart", "textblind", "milblind", "smartht", "timer", "plan", "rhold", "nofire", "aimer")
 
 
 def late_game(s, p):
@@ -812,7 +812,7 @@ def late_game(s, p):
 def decide(s, p, policy, rng, stats=None):
     """Which ready meters fire at the end of p's turn: {meter index: times}."""
     r = ready(s, p)
-    if not r:
+    if not r or (CFG["pre"] and not CFG["hold"]):
         return {}
     if not CFG["hold"] or policy not in ("timer", "plan", "rhold", "nofire"):
         return {i: 1 for i in r}
@@ -962,12 +962,19 @@ def pre_decide(s, hand, me, policy, rng, stats):
     """Fire First: which ready meters fire before this turn's placement (and at what Strike
     target).  Searches each option and keeps the one whose best placement is worth most."""
     r = ready(s, me)
-    if not r or not hand or policy not in ("timer", "plan"):
+    if not r or not hand:
         return {}, None
-    keys = [i for i in r if policy == "plan" or i == 0]
-    subsets = [()]
-    for i in keys:
-        subsets += [x + (i,) for x in subsets]
+    if not CFG["hold"]:   # auto Fire First: every full meter fires now; only the target is chosen
+        if policy not in ("aimer", "plan", "timer") or 0 not in r:
+            return {i: 1 for i in r}, None
+        subsets = [tuple(r)]
+    elif policy not in ("timer", "plan"):
+        return {}, None
+    else:
+        keys = [i for i in r if policy == "plan" or i == 0]
+        subsets = [()]
+        for i in keys:
+            subsets += [x + (i,) for x in subsets]
     base = s.score[me] - s.score[1 - me]
     best, bv = ({}, None), None
     dummy = Counter()
@@ -993,7 +1000,7 @@ def pre_decide(s, hand, me, policy, rng, stats):
                 v = t.score[me] - t.score[1 - me] - base + got[1]
             if bv is None or v > bv + 1e-9:
                 best, bv = ({i: 1 for i in sub}, tg), v
-    if stats is not None and best[0]:
+    if stats is not None and best[0] and CFG["hold"]:
         stats["prefire"] += 1
     return best
 
@@ -1010,7 +1017,7 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
             s.score[int(tok[1]) - 1] += int(tok[3:])
     stats = stats if stats is not None else Counter()
     for k in (0, 1):
-        TARGETER[k] = policies[k] in ("smart", "textblind", "timer", "plan", "rhold", "nofire")
+        TARGETER[k] = policies[k] in ("smart", "textblind", "timer", "plan", "rhold", "nofire", "aimer")
     passes, turn, places = 0, 0, 0
     small = 0
     lead_hist = []
@@ -1021,7 +1028,7 @@ def play(rng, stacks, policies, comp="p2:1", stats=None, trig=None, log=None):
         s.fired = ()
         acted, extra_used = False, False
         bonus = False
-        if CFG["pre"] and CFG["hold"] and CFG["mil"] and s.winner is None:
+        if CFG["pre"] and CFG["mil"] and s.winner is None:
             pre, tg = pre_decide(s, hands[me], me, policies[me], rng, stats)
             if pre:
                 s.draws = [0, 0]
@@ -1283,7 +1290,15 @@ VARIANTS = {
     "hold + Fire First": dict(hold=True, pre=True),
     "hold + Overwatch": dict(hold=True, overwatch=True),
     "hold + Fire First + Overwatch": dict(hold=True, pre=True, overwatch=True),
+    "Fire First (auto at 3)": dict(pre=True),
 }
+
+
+def mirror_pol():
+    """The strongest AI for the current rules, used for mirrors."""
+    if CFG["hold"]:
+        return "plan" if CFG["pre"] else "timer"
+    return "aimer" if CFG["pre"] else "smart"
 
 
 def use(var):
@@ -1313,14 +1328,17 @@ def se(g):
 def sec_hold(n, rng, names=None):
     print(f"== Timing skill: A vs B on random starter pairs, both seats, {2 * n} games per cell"
           f" (A score %, ties half; 2 SE about +-{se(2 * n):.1f})")
-    pairs = (("timer", "smart"), ("plan", "smart"), ("rhold", "smart"), ("nofire", "smart"),
-             ("timer", "plan"), ("smart", "milblind"))
+    pairs = (("timer", "smart"), ("plan", "smart"), ("aimer", "smart"), ("rhold", "smart"),
+             ("nofire", "smart"), ("timer", "plan"), ("smart", "milblind"))
     print("  variant                              | " + " | ".join(f"{a} v {b}" for a, b in pairs))
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
         row = []
         for pa, pb in pairs:
-            if not CFG["hold"] and pa in ("timer", "plan", "rhold", "nofire"):
+            skip = ((not CFG["hold"] and pa in ("timer", "rhold", "nofire"))
+                    or (pa == "plan" and not CFG["hold"] and not CFG["pre"])
+                    or (pa == "aimer" and (CFG["hold"] or not CFG["pre"])))
+            if skip:
                 row.append("   -  ")
                 continue
             w = h2h(rng, pa, pb, n)[0]
@@ -1330,11 +1348,11 @@ def sec_hold(n, rng, names=None):
 
 
 def sec_seat4(n, rng, names=None):
-    print(f"== Seat balance: each starter vs itself, both seats, {2 * n * 4} games; timing AI"
-          f" mirror (smart mirror for auto rules)")
+    print(f"== Seat balance: each starter vs itself, both seats, {2 * n * 4} games, mirror of the"
+          f" best AI for the rules")
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
-        pol = "timer" if CFG["hold"] else "smart"
+        pol = mirror_pol()
         out = []
         for comp in ("none", "p2:1"):
             tot = Counter()
@@ -1343,7 +1361,7 @@ def sec_seat4(n, rng, names=None):
                 tot.update(res)
             g = 2 * n * len(STACKS)
             out.append(f"{comp}: P1 {pct(tot['p1'], g)} P2 {pct(tot['p2'], g)}")
-        print(f"  {nm:<36} | " + " | ".join(out))
+        print(f"  {nm:<36} ({pol}) | " + " | ".join(out))
     use({})
 
 
@@ -1351,13 +1369,13 @@ MIL_KEYS = ("fortify", "spot", "strike", "resupply")
 
 
 def sec_length(n, rng, names=None):
-    print(f"== Length and military events per game ({2 * n} games, random pairs, timing AI mirror;"
-          f" smart mirror for auto rules)")
+    print(f"== Length and military events per game ({2 * n} games, random pairs, mirror of the"
+          f" best AI for the rules)")
     print("  variant                              | placements | orders F/S/St/R      | spotted"
           " strikes | tiles lost | Breakthrough | wasted | unfired at end | held/turn | fired first")
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
-        pol = "timer" if CFG["hold"] else "smart"
+        pol = mirror_pol()
         w, g, tot, st, trig = h2h(rng, pol, pol, n)
         o = "/".join(f"{trig[k] / g:.1f}" for k in MIL_KEYS)
         print(f"  {nm:<36} | {tot['places'] / g:5.1f} | {o:<20} | {trig['strike_spotted'] / g:4.2f}"
@@ -1372,7 +1390,7 @@ def sec_stacks4(n, rng, names=None):
     sn = list(STACKS)
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
-        pol = "timer" if CFG["hold"] else "smart"
+        pol = mirror_pol()
         table = {}
         for i, a in enumerate(sn):
             for j, b in enumerate(sn):
@@ -1389,12 +1407,12 @@ def sec_stacks4(n, rng, names=None):
 
 
 def sec_density4(n, rng, names=None):
-    print(f"== Decision density ({2 * n} games, random pairs, timing AI mirror)")
+    print(f"== Decision density ({2 * n} games, random pairs, mirror of the best AI for the rules)")
     print("  variant                              | options/turn distinct spread | turns with a"
           " fire choice | ready meters on those | held")
     for nm in names or VARIANTS:
         use(VARIANTS[nm])
-        pol = "timer" if CFG["hold"] else "smart"
+        pol = mirror_pol()
         w, g, tot, st, trig = h2h(rng, pol, pol, n)
         t = st["turns"]
         ft = st["fire_turns"]
@@ -1456,7 +1474,7 @@ def test_stack4(cid):
 
 def sec_power(n, rng, var="v3 launch (auto at 3)", only=None):
     use(VARIANTS[var])
-    pol = "timer" if CFG["hold"] else "smart"
+    pol = mirror_pol()
     print(f"== Chassis power ({var}, {pol} mirror): 2 copies swapped into a plain 7/3/2 stack vs the"
           f" plain stack, {2 * n} games each (win % - 50; 2 SE about +-{se(2 * n):.1f})")
     rows = []

@@ -430,8 +430,8 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 	f.store_line("r1.png,unit,rifleman,Rifle One,kc_t_r1,no,,,,,")
 	f.store_line("r2.png,unit,rifleman,Rifle Two,kc_t_r2,yes,r2_frames.png,4,50,,")
 	f.store_line("m1.png,unit,marksman,Mark One,kc_t_m1,no,,,,,")
-	f.store_line("g1.png,operator,kestrel_ar7,MCW Gilded,kc_t_g1,no,,,,wm_mcw,1")
-	f.store_line("g2.png,operator,kestrel_ar7,MCW Forged,kc_t_g2,no,,,,wm_mcw,2")
+	f.store_line("g1.png,operator,kestrel_ar7,MCW Gold Leaf,kc_t_g1,no,,,,wm_mcw,1")
+	f.store_line("g2.png,operator,kestrel_ar7,MCW Machined,kc_t_g2,no,,,,wm_mcw,2")
 	f.close()
 	BannerArtDB.clear_cache()
 	assert_true(BannerArtDB.has_licensed(), "pitch manifest loaded")
@@ -449,10 +449,10 @@ func test_pitch_set_per_copy_art_mastery_and_flipbook() -> void:
 	assert_true(absf(float(p.get_width()) / p.get_height() - 4.0) < 0.05, "hand shows the strip (%s)" % p.get_size())
 	# Operator mastery ladder: Base = tier 1, the dev override previews higher tiers.
 	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g1", "Base = first mastery tier")
-	assert_eq(BannerArtDB.camo_for_tier(1), &"base", "tier 1 wears the Base camo")
+	assert_eq(BannerArtDB.camo_for_tier(1), &"base", "tier 1 wears the Base band")
 	BannerArtDB.operator_tier_override = 2
 	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g2", "dev toggle shows tier 2")
-	assert_eq(BannerArtDB.camo_for_tier(1), &"forged", "camo follows the tier")
+	assert_eq(BannerArtDB.camo_for_tier(1), &"machined", "the band follows the tier")
 	BannerArtDB.operator_tier_override = 4
 	assert_eq(BannerArtDB.operator_art_id(&"kestrel_ar7", 1), &"kc_t_g2", "clamped to the ladder")
 	BannerArtDB.operator_tier_override = 0

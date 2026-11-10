@@ -24,6 +24,11 @@ const CAMO: Array[Color] = [Color("#6b5a2a"), Color("#c9a548"), Color("#3d3a1c")
 @export var key: StringName = &""
 ## Glyph drawn on top: &"camo", &"streak", &"cards", &"cards_rival", &"none".
 @export var glyph: StringName = &"none"
+## kc-ui-bands: the level band the &"camo" glyph shows (MasteryBands id; old ids migrate on set).
+var band: StringName = &"base":
+	set(value):
+		band = MasteryBands.migrate_id(value) if value != &"" else &"base"
+		queue_redraw()
 ## Value rows under the glyph (or alone): each row is an Array of [text, Color] segments.
 var lines: Array = []
 var hot: bool = false
@@ -148,10 +153,11 @@ func _draw_glyph(gr: Rect2, c: Color) -> void:
 	var s: float = gr.size.x
 	match glyph:
 		&"camo":
-			# The Operator's camo swatch in a brass ring.
+			# The Operator's level band (kc-ui-bands: an original finish, MasteryBands) on a disc in a
+			# brass ring; the band's name and how it is earned are in the Operator inspector (long press).
 			var rad: float = s * 0.48
-			for i: int in 4:
-				draw_circle(ctr + Vector2(cos(i * PI * 0.5 + 0.6), sin(i * PI * 0.5 + 0.6)) * rad * 0.35, rad * 0.62, CAMO[i])
+			if not MasteryBands.draw(self, Rect2(ctr - Vector2(rad, rad), Vector2(rad, rad) * 2.0), band, MasteryBands.disc(ctr, rad * 0.86)):
+				draw_circle(ctr, rad * 0.86, CAMO[0])
 			draw_arc(ctr, rad, 0, TAU, 28, Color("#0d1014"), rad * 0.3)
 			draw_arc(ctr, rad * 0.86, 0, TAU, 28, CAMO[3], 2.0)
 		&"streak":

@@ -31,10 +31,11 @@ const LICENSED_DIRS: PackedStringArray = ["res://assets/licensed/mw3_pitch/", "r
 ## Tests point this at a scratch folder; "" = search LICENSED_DIRS.
 static var licensed_dir: String = ""
 const LICENSED_MANIFEST: String = "manifest.csv"
-## Operator mastery tiers (MW3 multiplayer ladder) and the camo band id each one maps to.
-## Tier 1 is the Base camo (head, kc-polish B3: Base for both sides until the mastery grind exists).
-const MASTERY_TIERS: PackedStringArray = ["Gilded", "Forged", "Priceless", "Interstellar"]
-const MASTERY_CAMO: Array[StringName] = [&"base", &"forged", &"priceless", &"interstellar"]
+## Operator mastery tiers and the level band each one maps to (kc-ui-bands: original names and
+## finishes, MasteryBands). Tier 1 shows the Base band (head, kc-polish B3: Base for both sides until
+## the mastery grind exists).
+const MASTERY_TIERS: PackedStringArray = MasteryBands.TIER_NAMES
+const MASTERY_CAMO: Array[StringName] = MasteryBands.TIER_BANDS
 ## Dev toggle for the pitch: 0 = the match's tier (Base), 1-4 = force that mastery tier on every
 ## Operator (URL ?mastery=N on the web build, or Ctrl+M on the match screen cycles it).
 static var operator_tier_override: int = 0
@@ -301,7 +302,7 @@ static func operator_art_id(weapon_id: StringName, tier: int = 1) -> StringName:
 	return pool[clampi(t, 1, pool.size()) - 1]
 
 
-## Camo band id for a mastery tier (1 = Base).
+## Level band id for a mastery tier (1 = Base).
 static func camo_for_tier(tier: int) -> StringName:
 	var t: int = operator_tier_override if operator_tier_override > 0 else tier
 	return MASTERY_CAMO[clampi(t, 1, MASTERY_CAMO.size()) - 1]

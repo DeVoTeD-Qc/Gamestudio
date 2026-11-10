@@ -142,7 +142,7 @@ The run stays Killstreak's 5 matches: Supply Drops after wins (`RewardOffers`), 
 | After a loss (today: nothing, Ruling 12) | **Regroup** (new: a free Retire) | Retire one card. | A loss still moves the deck forward, so no run feels wasted. |
 | Always | **Deck view: Engine panel** | Trait counters (Vanguard 4 · Spec Ops 2 · Heavy 1 · Undead 0), keyword counts, the Recruit count, and the next tier the deck can reach. | The engine is visible before it's on the board. |
 
-**The camo band shows the level** (MW3's own progression language, from the weapon-mastery ladder): Recruit = plain frame, Trained = **Gilded**, Veteran = **Forged**, Elite = **Priceless**. **Interstellar** stays the Operator's. The art itself never changes.
+**The level band shows the level** (original finishes drawn in code, kc-ui-bands; no camo pattern and no franchise ladder names): Recruit = plain frame, Trained = **Gold Leaf**, Veteran = **Machined**, Elite = **Prism**. **Starfield** stays the Operator's. The art itself never changes.
 
 ### 5.3 Pacing of a typical run
 Start: 20 Recruits. After M1: Doctrine, weapon level, Supply Drop (if won). After M2: Promotion, perk, Supply Drop. After M3: weapon level, Supply Drop or Retire. After M4: Promotion, perk, weapon level, Supply Drop. Expected end state for a run with 3–4 wins: **~21 cards, 4 reward cards (Trained), 2–3 Retired, 2 Promoted.** That's the sim's "late" deck (§7). The starter shows no synergy, mid-run decks show some, and the late deck is an engine. This is the curve the head asked for: complexity and combos come as the deck improves.
@@ -155,8 +155,8 @@ Start: 20 Recruits. After M1: Doctrine, weapon level, Supply Drop (if won). Afte
 | **Cost** | Opportunity only: no tickets, no currency. Retiring is a real choice against a new card, and Regroup makes a loss less empty. |
 | **Floor** | The deck never goes below **15 cards** (the Retire option greys out). |
 | **List order** | Recruits first, then your 1-cost cards, then everything else, with the Supply cost and trait icon shown. |
-| **Recruits feel like progress: "two become one"** | Retire a Recruit while a **second Recruit of the same chassis** is in your deck, and that twin is **Trained** for free. Two plain Point Men become one Gilded Point Man: a thinner deck **and** a stronger card. The starter's duplicates (§5.1) exist partly for this. |
-| **Show it** | The retired banner flies to the run's **Honor Roll** (an album page in the After-Action; cosmetic). The trained twin gets its Gilded band with a flash. |
+| **Recruits feel like progress: "two become one"** | Retire a Recruit while a **second Recruit of the same chassis** is in your deck, and that twin is **Trained** for free. Two plain Point Men become one Gold Leaf Point Man: a thinner deck **and** a stronger card. The starter's duplicates (§5.1) exist partly for this. |
+| **Show it** | The retired banner flies to the run's **Honor Roll** (an album page in the After-Action; cosmetic). The trained twin gets its Gold Leaf band with a flash. |
 
 Sim proxy: "late" decks = 3 cards Retired + 2 Recruits trained (§7.1, §7.4). They beat the starter 53–76% with synergy, vs 39–58% with synergy off.
 
@@ -307,14 +307,14 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 - **Link ticks**: a short glowing tick between two linked banners. Vertical between rows for Guard / Spotter, horizontal across the column gap for Fireteam / Overwatch. Draw only **active** links, at most one tick per pair, in the owner's colour (teal / red). Ticks slide with the line when it advances.
 - **Stat delta**: the FP / Cover icons already show ▲ when modified (card-system §3.4), and link and set bonuses use the same marker. The inspector lists sources: "FP 3 = 2 + Spotter (Marksman, behind) + Vanguard 2".
 - **Trait icon** on every Trained banner (small, bottom-left, next to the class pip) and on hand cards (next to the cost hex). **Recruits show no trait icon and no keyword pip**, just the plain frame.
-- **Camo band** on the frame for the level: Recruit = none, Trained = Gilded, Veteran = Forged, Elite = Priceless.
+- **Camo band** on the frame for the level: Recruit = none, Trained = Gold Leaf, Veteran = Machined, Elite = Prism.
 - **Trait rail** per side (a thin strip by the Streak arc or along the board's outer edge): only the traits you have in play (max 4), each with a counter like "2/3". The icon lights at tier 2 and gets a ring at tier 3. The Doctrine trait has a small emblem mark.
 - **Set callouts**: when a tier switches on, a short banner over the rail ("UNDEAD 2: heal 1 each round") shows for ~1.2 s, then folds into the rail. When a tier switches off (a member died), the icon dims with a crack tick. At most one callout per side per step.
 - **Placement preview**: while dragging a unit over a column, show ghost link ticks and chips ("+1 FP", "Cover +1", "Vanguard 2 ▶ 3") before the drop. This is the main teaching tool, and it makes the hub column visible.
 - **Field strips** show their trait icon (Fields count for sets).
 - **Operator cost**: a cost hex on the Operator's staging card and on the respawn prompt. It's greyed with "1 Supply" when you can't afford it.
 - **Hand**: trait icon and keyword pip on Trained cards; a dot on cards that would complete a tier if played this round.
-- **Deck view and rewards**: the Engine panel (§5.2), the on-trait Supply Drop slot marked, "Vanguard 3 → 4" on offers, the Retire option (with the twin-training preview "Point Man → Gilded"), the Promotion picker showing the next band, the Doctrine emblems, and the Honor Roll page in the After-Action.
+- **Deck view and rewards**: the Engine panel (§5.2), the on-trait Supply Drop slot marked, "Vanguard 3 → 4" on offers, the Retire option (with the twin-training preview "Point Man → Gold Leaf"), the Promotion picker showing the next band, the Doctrine emblems, and the Honor Roll page in the After-Action.
 - **Accessibility**: link ticks also differ by shape (vertical bar vs horizontal bar), trait icons are shapes rather than colours, and callouts use text.
 - **Inspector** (right click / long press): the full keyword text, which neighbors count (a mini 3×4 grid with the cells highlighted), the trait tier texts with the current count, and the copy's level.
 
@@ -374,7 +374,7 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 **Match (MatchState, public board information, safe for either viewer):**
 - `synergy_view(viewer) -> {player: SIDE, enemy: SIDE, units: {uid: UNIT}}`.
   `SIDE = {counts: {trait: n}, tiers: {trait: 0|2|3}, doctrine: trait, links: [{kind, from_uid, to_uid}], rail: [{trait, name, count, tier, next, doctrine}]}` (rail = traits with count > 0 in `SynergyRules.TRAITS` order; `next` = the next threshold or 0 at tier 3).
-  `UNIT = {uid, side, keyword, trait, level, band (&"" / gilded / forged / priceless), fp, cover, fs, heal, links: [{kind, from_uid}], sets: [[trait, tier]]}`. fp / cover / fs / heal are the synergy part only (`firepower_of` / `cover_of` / `has_first_shot` already include it), so the inspector can write "FP 3 = 2 + Spotter + Vanguard 2". Link ticks: one per `links` entry of the side (`from_uid` gives, `to_uid` receives; Fireteam's `from_uid` is the friend beside it).
+  `UNIT = {uid, side, keyword, trait, level, band (&"" / gold_leaf / machined / prism), fp, cover, fs, heal, links: [{kind, from_uid}], sets: [[trait, tier]]}`. fp / cover / fs / heal are the synergy part only (`firepower_of` / `cover_of` / `has_first_shot` already include it), so the inspector can write "FP 3 = 2 + Spotter + Vanguard 2". Link ticks: one per `links` entry of the side (`from_uid` gives, `to_uid` receives; Fireteam's `from_uid` is the friend beside it).
 - `synergy_of(unit)`, `synergy_side(side)`: the same data for one unit / one side.
 - `preview_synergy(side, hand_card_uid, zone) -> {ok, links, new_links, card: {fp, cover, fs, links, sets}, tiers_before, tiers_after, counts_before, counts_after}`: the placement preview (ghost ticks, "+1 FP", "Vanguard 2 ▶ 3") for a unit or a Field arriving after this Deploy's queued plays.
 - `card_level(uid)` for any copy (hand, deck, discard, plays, Fields, board); `RulesCard.level`, `RulesCard.neighbor_keyword()`, `RulesCard.card_trait()`; `RulesUnit.level / neighbor_keyword / synergy_trait`. Hand cards of a Recruit return `&""` for both: no trait icon, no keyword pip.
@@ -386,7 +386,7 @@ The Doctrine (+1 set count), Promotion levels 2–3 (+1 Armor / +1 FP), the on-t
 - `deck_levels` (parallel to `deck`), `level_of(i)`, `deck_view() -> [{index, id, level, level_name, band, keyword, trait}]`.
 - `engine_summary() -> {traits: {trait: Trained n}, keywords: {kw: n}, recruits, main_trait, doctrine, deck_size, floor}` (the Engine panel), `trait_counts()`, `main_trait()`.
 - Offers (`current_offer()`): `supply_drop` may carry `on_trait: trait` (slot 1 is on it; show "Vanguard 3 ▶ 4") and `retire: true` (show Retire as the 4th option); `doctrine` (options = trait ids; `choose_offer(i)`); `promotion` and `regroup` (options = card ids + parallel `levels`; each option is the first copy of that design at that level; `choose_offer(i)`). Promotion / Regroup options are rebuilt when they become current (an earlier offer may have changed the deck).
-- `retire_options() -> [{index, id, level, cost, trait, twin_index}]` (Recruits first, then 1-cost cards, then the rest; `twin_index >= 0` = "Point Man ▶ Gilded" preview), `can_retire()` (false at the 15-card floor: grey the option), `retire_card(i)` / `RunState.retire_card(i)` (resolves the Supply Drop or the Regroup; EventBus `reward_picked(&"retire", id)`).
+- `retire_options() -> [{index, id, level, cost, trait, twin_index}]` (Recruits first, then 1-cost cards, then the rest; `twin_index >= 0` = "Point Man ▶ Gold Leaf" preview), `can_retire()` (false at the 15-card floor: grey the option), `retire_card(i)` / `RunState.retire_card(i)` (resolves the Supply Drop or the Regroup; EventBus `reward_picked(&"retire", id)`).
 - `promotion_options() -> [{index, id, level, next_level}]`, `doctrine`, `honor_roll: [{id, level, match, trained_twin}]` (After-Action album page).
 - `RunConfig.starter_levels()` gives the starter's levels for setups built outside a run.
 
