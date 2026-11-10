@@ -28,6 +28,10 @@ func test_ai_tiers() -> void:
 	assert_eq(r.personality.weight_damage_dealt, 1.5, "casual weights")
 	assert_eq(AiPlayer.for_duel_tier(&"regular", 0.4).personality.second_best_chance, 0.4, "tunable from DuelConfig")
 	var c: DuelConfig = _cfg()
+	# kc-duel-tune (duel-mode.md §12.7): the shipped tier values in duel_config.tres.
+	assert_eq(c.recruit_second_best, 0.5, "data: Recruit 2nd-best 50%")
+	assert_eq(c.regular_second_best, 0.3, "data: Regular 2nd-best 30%")
+	assert_eq(c.veteran_second_best, 0.0, "data: Veteran 2nd-best 0%")
 	var m: DuelMatch = DuelMatch.vs_ai(c.preset(&"spearhead"), c.preset(&"iron_wall"), &"recruit", c, _base(), 3)
 	assert_eq(m.armor_bonus(1), -1, "Recruit's side: -1 Armor")
 	assert_eq(m.armor_bonus(0), 0, "the player's side: none")

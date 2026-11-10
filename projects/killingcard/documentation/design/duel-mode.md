@@ -503,3 +503,20 @@ A searched deck should beat the presets: it's built against them. What matters i
 - **UI copy:** the Doctrine chip in the builder (under the hero strip): "DOCTRINE: Undead ▾", with None and the traits that have 4 or more picks. Its inspector (long press / right click) says: "Doctrine: your first Undead in play already turns on the Undead 2-set. The 3-set still needs 3 Undead." The trait rail shows the Doctrine star as today. The Codex glossary keeps the campaign line and adds "In Duel, Doctrine only starts a set."
 - **Tests to update:** synergy tests that assert the Undead set numbers, Marked Shot damage (3 → 2), Operator stats in the data tests (Wasp-9 2/9, Bastion-60 2/8), and new tests for the Doctrine flag (count 1 → 2 on, count 2 stays 2, flag off = the old rule).
 - **Re-measure after the port:** `duel_sim exps=presets,heroes,ai n=200` (its in-memory defaults set the same absolute values as the ported data, so the result is the same with or without `heroline=campaign`). Check the Operator and trait lines it prints, and `run_v2_check exps=runs,late runs=600 tn=100` plus `first=1 proxies=casual runs=400`.
+
+### 12.7 Re-measured on the shipped engine (kc-duel-impl, commits 5c04f23 / 9e7ca6c / 312d44e)
+`duel_sim` now reads the real data (`data/duel/`, the Operators, `SynergyRules`). The AI values its plans with the Duel Doctrine rule (`SideSetup.doctrine_starts_only`). The tool versions of §12.4 kept the old rule in the planner. Each row is `exps=presets,heroes,ai n=200`.
+
+| Check | Target | Shipped engine |
+|---|---|---|
+| Presets (n = 200 per pair; 1,200 games) | 45–55% each | Spearhead **46.7** · Overwatch **48.4** · Iron Wall **51.7** · Hollow Ranks **53.2** |
+| Pairs | – | Sp–Ow 43.5 · Sp–IW 56.0 · Sp–HR 40.7 · Ow–IW 45.0 · Ow–HR 43.7 · IW–HR 56.0 |
+| Seat 0 / rounds / draws | 45–55 / 6–8 | 49.3% / 6.18 / 0.2% |
+| Heroes (each preset mirrored, n ≈ 2,400 each) | 45–55% | Kestrel 50.1 · Longreach 54.8 · Wasp-9 **44.4** · Bastion-60 50.7 |
+| New-player proxy vs Recruit (n = 800) | 65–75% | **74.6%** (was 75.5% at second-best 0.6) |
+| Competent proxy vs Regular (n = 800) | 55–65% | **63.4%** (was 68.2% at second-best 0.6) |
+| Competent proxy vs Veteran (n = 800) | 45–55% | 51.1% |
+
+- **The presets need no swap.** The n = 50 read (Overwatch 44.7, Hollow Ranks 55.3, Overwatch vs Hollow Ranks 36%) was sampling noise. At n = 200 every preset is in band, and Overwatch vs Hollow Ranks is 43.7%.
+- **AI tier values changed (data only):** `data/duel/duel_config.tres` `recruit_second_best` 0.6 → **0.5** and `regular_second_best` 0.6 → **0.3**. With the AI planning under the Duel Doctrine rule, Regular had become too easy (68.2%) and Recruit sat at the top edge (75.5%). Tried at n = 120: Regular 0.2 / 0.3 / 0.4 read 62.0 / 61.3 / 62.3% for the competent proxy (0.3 shipped). Recruit 0.45 / 0.5 read 72.7 / 73.3% for the new-player proxy. `tests/test_duel_match.gd::test_ai_tiers` now also asserts the data values. 685 tests pass.
+- **Still at the edge:** Wasp-9 at 44.4%, with Flashbang −3 FP as the next lever (rules data, untested), and Longreach at 54.8%. The campaign numbers of §12.5 are unaffected: the Duel Doctrine flag is off in the campaign and these AI values are Duel only.
