@@ -392,7 +392,13 @@ func test_strike_kill_shows_its_own_inspectable_popup() -> void:
 	assert_eq(_count(kinds, &"popup"), 0, "no +100 ELIMINATION for a strike kill")
 	assert_eq(_count(kinds, &"streak"), 0, "no streak tick")
 	assert_eq(_count(kinds, &"killfeed"), 2, "the kill line and the strike's line stay")
-	assert_eq(KillstreakFx.color_of(&"mortar_barrage"), Color("#FF8A3D"), "the mortar's colour")
+	# kc-da-ui: killstreaks are coloured by owner (teal yours, red the rival's), never per kind.
+	assert_eq(KillstreakFx.color_of(&"mortar_barrage", &"player", &"player"), Color("#2EC4B6"), "your mortar is teal")
+	assert_eq(KillstreakFx.color_of(&"mortar_barrage", &"enemy", &"player"), Color("#E5383B"), "the rival's mortar is red")
+	assert_eq(KillstreakFx.color_of(&"attack_helo", &"enemy", &"player"), KillstreakFx.color_of(&"mortar_barrage", &"enemy", &"player"),
+			"one colour for every kind of the same owner")
+	for id: StringName in KillstreakFx.LOOKS:
+		assert_false((KillstreakFx.LOOKS[id] as Dictionary).has("color"), "%s has no per-kind hue" % id)
 	await _teardown()
 	_setup(true)
 	await _director.play(_firefight())
