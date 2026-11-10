@@ -10,7 +10,7 @@
 | D2 | Exactly 10 picks, each exactly 2 copies (20 cards); at least 5 unit picks, at most 1 Elite pick, at most 3 Field picks; never tokens, boss cards or Standard Issue | `data/duel/duel_config.tres` (`DuelConfig`), checked by `DuelRules.validate` |
 | D3 | Units and tactics open from the start; Fields and Elites unlock when found in a campaign run; the 4 presets and all 4 heroes always playable | `DuelCollection` (+ `found_cards` in the run profile) |
 | D4 | ONE Operator stat set for both modes | Duel reads the campaign's `data/loadout/<hero>.tres` directly. **The final numbers are a data-only change** to those files (`operator_firepower`, `operator_armor`, the ability's effect `amount`); no Duel override table exists |
-| D5 | The player picks a Doctrine trait for the Duel deck | `DuelDeck.doctrine_trait`, validation hook `DuelRules._doctrine_checks`, `DuelConfig.doctrine_*`, applied as `SideSetup.doctrine` in Duel matches |
+| D5 | The player picks a Doctrine trait for the Duel deck (or None). **Duel Doctrine starts a set, never completes one** (duel-mode.md §12.3): while exactly one member of the trait is in play it counts as two. It needs **4 picks wearing the trait** | `DuelDeck.doctrine_trait`; `DuelConfig.doctrine_min_trait_picks = 4`; `SideSetup.doctrine` + `SideSetup.doctrine_starts_only = true` (set by `DuelRules.side_setup`; the campaign keeps false = +1 while any member is in play); `SynergyRules.trait_counts / compute(..., doctrine_starts_only)`, used by MatchState, RevealFlags and the AI (`AiView.my_doctrine_starts_only`) |
 
 Implementation map: data `scripts/data/duel_config.gd`, `scripts/data/duel_deck.gd`, `data/duel/duel_config.tres`, `data/duel/presets/*.tres`; rules `scripts/rules/duel_rules.gd`; run / profile `scripts/run/duel_collection.gd`, `scripts/run/duel_profile.gd`, `scripts/run/duel_match.gd`, `scripts/run/run_profile.gd` (profile v2); AI `scripts/ai/ai_personality.gd` (`for_duel_tier`), `scripts/ai/ai_player.gd` (`for_duel_tier`); autoload `autoload/duel_state.gd` (**`DuelState`**); `autoload/card_db.gd` loads the Duel data (`CardDB.get_duel_config()`, `CardDB.get_duel_deck(id)`); `autoload/run_state.gd` marks campaign cards found.
 
@@ -90,7 +90,7 @@ Red codes (`DuelRules.E_*`):
 | `bad_art` | "Rifleman: that art isn't one of its arts" | `{card_id}` |
 | `doctrine_invalid` | "Doctrine must be Vanguard, Spec Ops, Heavy or Undead" | `{doctrine: true}` |
 | `doctrine_required` | "Pick a Doctrine trait" (only when `DuelConfig.doctrine_required`) | `{doctrine: true}` |
-| `doctrine_rule` | reserved for the designer's Doctrine rule (D5): red lines added by `DuelRules._doctrine_checks` | `{doctrine: true}` |
+| `doctrine_rule` | "Doctrine Undead needs 4 Undead picks (3/4)" (§12.3: the Doctrine trait must be worn by `doctrine_min_trait_picks` picks) | `{doctrine: true}` |
 
 Amber codes (`DuelRules.W_*`):
 | code | text | fix_filter |
@@ -121,7 +121,7 @@ The 4 heroes, Kestrel, Longreach, Wasp-9, Bastion-60: the same row shape as `Run
 
 ### Presets
 ### Doctrine text (D5)
-`DuelState.doctrine_text(trait) -> String`: the player-facing Doctrine text for the builder's Doctrine strip and the inspect views. `&""` gives "No Doctrine: your trait counts are what your picks wear."; a trait gives "Doctrine Heavy: while you have a Heavy card in play, your Heavy count gets +1, so its set bonus starts one card sooner. 2 Heavy: ... 3 Heavy: ..." (the set lines come from `SynergyRules.TIER_TEXT`); not a trait gives `""`. With `DuelConfig.doctrine_enabled = false` it says Doctrine is off. Same as `DuelRules.doctrine_text(trait, config)`.
+`DuelState.doctrine_text(trait) -> String`: the player-facing Doctrine text for the builder's Doctrine strip and the inspect views. `&""` gives "No Doctrine: your trait counts are what your picks wear."; a trait gives "Doctrine: your first Heavy in play already turns on the Heavy 2-set. The 3-set still needs 3 Heavy. Needs 4 Heavy picks in your deck. 2 Heavy: ... 3 Heavy: ..." (the set lines come from `SynergyRules.TIER_TEXT`); not a trait gives `""`. With `DuelConfig.doctrine_enabled = false` it says Doctrine is off. Same as `DuelRules.doctrine_text(trait, config)`.
 
 ### Presets
 - `DuelState.presets() -> Array[Dictionary]`: the 4 deck views (§4 shape) with `preset: true`, `plan`, `trait` (main trait).
@@ -213,4 +213,6 @@ Returns `{ok, reason, result: <6.2>, records: <records()>, new_cosmetics: [{kind
 
 ## 9. Applying the final numbers (D4, D5)
 - **Operator stats (D4):** edit `data/loadout/kestrel_ar7.tres`, `longreach_338.tres`, `wasp_9.tres`, `bastion_60.tres` (`operator_firepower`, `operator_armor`) and the abilities' `effects[0].amount` (`ab_marked_shot.tres` ...). Both modes read these; nothing in Duel code changes. `tests/test_duel_rules.gd::test_duel_heroes_use_campaign_stats` checks that the Duel side's Operator body equals the loadout file.
-- **Doctrine (D5):** `DuelConfig.doctrine_enabled` (default true: the deck's trait applies), `doctrine_required` (default false), `doctrine_min_trait_picks` (default 0: any trait; N = the trait must be worn by at least N picks, else red `doctrine_rule`). A rule that needs code goes in `DuelRules._doctrine_checks` (one function; its lines use code `doctrine_rule`). Preset decks carry `doctrine_trait = &""` until the designer sets them.
+- **Applied (kc-duel-tune, duel-mode.md §12.6):** Wasp-9 2/9, Bastion-60 2/8, Marked Shot 2 damage (both modes); Undead 2-set heal 1 + Cover 1, 3-set +1 FP (both modes).
+- **Doctrine (D5, §12.3):** `DuelConfig.doctrine_enabled` true, `doctrine_required` false (None allowed), `doctrine_min_trait_picks` **4** (red `doctrine_rule` under it). The presets' Doctrines: Spearhead Vanguard, Overwatch Spec Ops, Iron Wall Heavy, Hollow Ranks Undead. The builder's Doctrine picker disables traits with fewer than 4 picks ("needs 4 picks (n/4)") and a new deck pre-selects its most-picked trait once it has 4 picks, until the player chooses (None included). Further rules that need code go in `DuelRules._doctrine_checks`.
+- **Presets (§12.4):** Overwatch Smoke Screen → Ammo Resupply; Hollow Ranks Sabotage → Listening Post.
