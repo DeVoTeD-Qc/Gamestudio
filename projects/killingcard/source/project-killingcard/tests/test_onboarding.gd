@@ -163,7 +163,7 @@ func test_squads_along_the_ladder() -> void:
 	var s1: SideSetup = SideSetup.from_squad(md[0].squad, md[0])
 	assert_eq(s1.deck.size(), 10, "M1: 10 cards")
 	assert_true(s1.deck.all(func(c: CardData) -> bool: return c.standard_issue or c.id == &"ammo_resupply"), "M1: Standard Issue only")
-	assert_eq([_in_deck(s1.deck, &"si_grunt"), _in_deck(s1.deck, &"si_trooper"), _in_deck(s1.deck, &"si_armored")], [3, 2, 5], "M1: a slow, heavy crew (3 Grunts, 2 Troopers, 5 Armored Troopers)")
+	assert_eq([_in_deck(s1.deck, &"kc_wip_private_1"), _in_deck(s1.deck, &"kc_wip_private_2"), _in_deck(s1.deck, &"kc_wip_private_4")], [3, 2, 5], "M1: a slow, heavy crew (kc-wip-fix P2: 3 Private I, 2 Private II, 5 Private IV)")
 	assert_eq(s1.armor_bonus, 0, "M1 at 0 Armor")
 	var s2: SideSetup = SideSetup.from_squad(md[1].squad, md[1])
 	var heavy: int = 0
@@ -180,11 +180,13 @@ func test_squads_along_the_ladder() -> void:
 	# kc-no-training retune (the crews lost their keyword-less Recruit copies): M2 2 of 3 Gunners ->
 	# Sergeants; M3 2 Point Men, a Breacher, a Flanker -> 3 Troopers + a Sergeant; M4 a Gunner, a
 	# Protector, a Hold the Line, 2 Suppressing Fires -> an Armored Trooper, 2 Sergeants, 2 Troopers.
+	# kc-wip-fix (head P2): every crew's Standard Issue is the Private ladder, slot for slot by cost
+	# (Grunt -> Private I, Trooper -> II, Sergeant -> III, Armored Trooper -> IV).
 	assert_eq(s3.deck.size(), 10, "M3: 10 cards")
-	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"si_sergeant"),
+	assert_eq([_in_deck(s3.deck, &"breach_and_clear"), _in_deck(s3.deck, &"kc_wip_private_3"),
 			_in_deck(s3.deck, &"breacher") + _in_deck(s3.deck, &"point_man")], [0, 1, 2],
 			"M3: Rusher deck, Breach and Clear swapped for a Sergeant (kc-no-training retune: 2 Point Men, a Breacher and a Flanker -> Standard Issue)")
-	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"si_trooper")], [0, 3], "M3: Flank Routes swapped for Troopers (6 of 18 since kc-no-training, 3 of 10 since kc-econ)")
+	assert_eq([_in_deck(s3.deck, &"flank_route"), _in_deck(s3.deck, &"kc_wip_private_2")], [0, 3], "M3: Flank Routes swapped for Troopers (6 of 18 since kc-no-training, 3 of 10 since kc-econ)")
 	var vanguard: int = 0
 	for i: int in s3.deck.size():
 		if s3.deck[i].is_unit():
@@ -196,7 +198,7 @@ func test_squads_along_the_ladder() -> void:
 	assert_eq([s5.deck.size(), _in_deck(s5.deck, &"gunner"), _in_deck(s5.deck, &"marksman")], [10, 2, 0],
 			"M5: the Rival's crew, Marksmen swapped for Gunners (kc-pos-cut)")
 	assert_eq([s4.deck.size(), _in_deck(s4.deck, &"demolitions_expert"), _in_deck(s4.deck, &"marksman"),
-			_in_deck(s4.deck, &"si_armored"), _in_deck(s4.deck, &"si_sergeant")], [10, 0, 0, 2, 2],
+			_in_deck(s4.deck, &"kc_wip_private_4"), _in_deck(s4.deck, &"kc_wip_private_3")], [10, 0, 0, 2, 2],
 			"M4: Anchor deck, Demolitions and Marksman swapped for Standard Issue (kc-no-training retune: a Gunner, a Protector, a Hold the Line and both Suppressing Fires too)")
 	assert_eq([md[0].crew_label, md[2].crew_label], ["Standard Issue crew", "Honors crew"], "crew labels")
 	var db: Node = Engine.get_main_loop().root.get_node_or_null(^"/root/CardDB")

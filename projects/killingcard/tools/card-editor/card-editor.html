@@ -274,8 +274,11 @@ textarea.design{min-height:120px}
   const STATUS={draft:["Draft","st-draft"],ready:["Ready for Claude","st-ready"],applied:["In the game","st-applied"],question:["Claude asks","st-question"]};
   const SET_STATUS={building:["Building","st-building"],ready:["Ready to swap in","st-ready"],swapping:["Claude is building it","st-ready"],swapped:["In the game","st-swapped"],question:["Claude asks","st-question"]};
   const LIMITS={cost:[0,10],firepower:[0,10],armor:[0,20]};
-  const KW_FLAGS=["First Shot","Pick","Flank","Pierce","Holder","Arrives Front","Hidden","Agile","Beam"];
-  const KW_RULES={"First Shot":"Fires first in its exchange; a partner it kills doesn't fire back.","Pick":"Shoots the enemy with the lowest current Armor (ties: front-most).","Flank":"Shoots the back-most enemy in the line.","Suppress":"Suppress N: at the start of the firefight, the enemy front unit here gets -N FP this round.","Agile":"Once per round, in Deploy, you may order it to an adjacent column; it moves at Reveal, to the back of that line (free).","Beam":"Its shot hits every unit in front of it in its column: your units ahead of it and every enemy there.","Pierce":"Damage beyond what its target needs carries on to the next enemy behind it.","Holder":"You control this zone while it is contested, unless the enemy also has a Holder here.","Arrives Front":"Joins the zone at the front of the line and becomes the point man.","Hidden":"Stays face-down after Reveal; the enemy only sees it when it goes off.","Cover":"Each hit on this unit deals N less damage (minimum 0).","Patch":"After the firefight, restores N Armor to the most damaged other friendly unit here."};
+  const KW_FLAGS=["First Shot","Pick","Flank","Pierce","Holder","Front line","Hidden","Agile","Beam"];
+  // kc-wip-fix (head P3): the keyword is "Front line" everywhere; saved data may still say "Arrives Front".
+  const KW_ALIAS={"Arrives Front":"Front line","Arrives in front":"Front line"};
+  const normKw=list=>[...new Set((list||[]).map(k=>KW_ALIAS[k]||k))];
+  const KW_RULES={"First Shot":"Fires first in its exchange; a partner it kills doesn't fire back.","Pick":"Shoots the enemy with the lowest current Armor (ties: front-most).","Flank":"Shoots the back-most enemy in the line.","Suppress":"Suppress N: at the start of the firefight, the enemy front unit here gets -N FP this round.","Agile":"Once per round, in Deploy, you may order it to an adjacent column; it moves at Reveal, to the back of that line (free).","Beam":"Its shot hits every unit in front of it in its column: your units ahead of it and every enemy there.","Pierce":"Damage beyond what its target needs carries on to the next enemy behind it.","Holder":"You control this zone while it is contested, unless the enemy also has a Holder here.","Front line":"Joins the column at the front of the line and becomes the point man.","Hidden":"Stays face-down after Reveal; the enemy only sees it when it goes off.","Cover":"Each hit on this unit deals N less damage (minimum 0).","Patch":"After the firefight, restores N Armor to the most damaged other friendly unit here."};
   const TRIGGERS=[["On Deploy:","Happens when this unit is revealed and arrives."],["On Down:","Happens when this unit is eliminated."],["At end of round:","Happens after Score & Streak each round."],["Resolves immediately:","Takes effect as soon as you play it in Deploy (tactics)."],["While you control this column:","Lasts as long as you hold the column (fields)."],["This round,","Lasts until the end of the current round."]];
   const EFFECTS=[["deal {n} damage to the enemy point man here","Hits the front enemy unit in this column.",2],["deal {n} damage to each enemy unit in this column","Hits the whole enemy line in the column.",1],["draw {n}","Draw cards from your deck.",1],["your units here get +{n} FP","Firepower boost for your units in this column.",1],["enemy units here get -{n} FP","Weakens the enemy line in this column.",1],["your units here gain Cover {n}","Each hit on them deals less damage.",1],["restore {n} Armor to your most damaged unit here","Heals one friendly unit.",1],["streak +{n}","Adds to your killstreak meter.",1],["gain {n} Supply","Extra Supply to spend this round.",1],["gain {n} Supply next round","Extra Supply next round only (it may pass the cap).",1],["reveal enemy red dots in this zone","Shows hidden enemy plays in the zone.",0],["move a friendly unit to an adjacent zone","Repositions one of your units.",0],["destroy an enemy Field here","Removes the enemy's Field card in this column.",0]];
   const KW_NUM=["Cover","Patch","Suppress"];
@@ -289,11 +292,11 @@ textarea.design{min-height:120px}
   // ---------- Model ----------
   function cardMap(){ return inSet()?S.setCards:S.game; }
   function merged(id){
-    if(inSet()){ const c=Object.assign({copies:1,keywords:[]},S.setCards[id]||{}); c.id=id; return c; }
+    if(inSet()){ const c=Object.assign({copies:1,keywords:[]},S.setCards[id]||{}); c.id=id; c.keywords=normKw(c.keywords); return c; }
     const b=S.game[id]||{}, e=S.edits[id]||{};
     const m=Object.assign({},b);
     for(const k of ["name","type","cost","firepower","armor","text","design","keywords"]) if(e[k]!==undefined) m[k]=e[k];
-    m.status=e.status||null; m.claudeNote=e.claudeNote||""; m.isNew=!!e.isNew; m.id=id;
+    m.keywords=normKw(m.keywords); m.status=e.status||null; m.claudeNote=e.claudeNote||""; m.isNew=!!e.isNew; m.id=id;
     return m;
   }
   function ref(id){ if(inSet()){ return S.game[(S.setCards[id]||{}).from]; } return S.game[id]; }
@@ -302,7 +305,7 @@ textarea.design{min-height:120px}
     if(!inSet()){ const e=S.edits[id]; if(!e) return d; if(!b){ for(const k of ["name","type","cost","firepower","armor","text"]) d[k]=true; return d; } }
     if(!b) return inSet()?{}:d;
     for(const k of ["name","type","cost","firepower","armor","text"]) if(m[k]!==undefined && m[k]!==b[k]) d[k]=true;
-    if(m.keywords && JSON.stringify([...m.keywords].sort())!==JSON.stringify([...(b.keywords||[])].sort())) d.keywords=true;
+    if(m.keywords && JSON.stringify([...m.keywords].sort())!==JSON.stringify(normKw(b.keywords).sort())) d.keywords=true;
     return d;
   }
   function isEdited(id){

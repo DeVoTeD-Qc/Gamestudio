@@ -586,8 +586,8 @@ func _rebuild_text(box: Rect2) -> void:
 		names_seen.append(nm.to_lower())
 		rows += 1
 	if bool(data.get("front_kw", false)) and has_stats_bar():
-		_add_line(&"arrives_front", "Arrives in front", "", false)
-		names_seen.append("arrives in front")
+		_add_line(&"arrives_front", "Front line", "", false)
+		names_seen.append("front line")
 		rows += 1
 	var text: String = _effect_text(names_seen)
 	# kc-ipad-cards: a unit's text box lists its keywords only (its effect is named by its On Deploy /

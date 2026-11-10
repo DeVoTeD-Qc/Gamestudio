@@ -13,8 +13,9 @@ import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "source", "project-killingcard")
 TYPES = {0: "Unit", 1: "Tactic", 2: "Field"}
-BOOL_KW = [("first_shot", "First Shot"), ("pick", "Pick"), ("flank", "Flank"), ("suppress", "Suppress"),
-           ("pierce", "Pierce"), ("holder", "Holder"), ("arrives_front", "Arrives Front"), ("hidden", "Hidden")]
+BOOL_KW = [("first_shot", "First Shot"), ("pick", "Pick"), ("flank", "Flank"),
+           ("pierce", "Pierce"), ("holder", "Holder"), ("arrives_front", "Front line"), ("hidden", "Hidden"),
+           ("agile", "Agile"), ("beam", "Beam")]
 NUM_KW = [("cover", "Cover"), ("patch", "Patch")]
 
 
@@ -43,6 +44,8 @@ def parse(path):
 
     kws = [label for key, label in BOOL_KW if b(key)]
     kws += ["%s %d" % (label, i(key)) for key, label in NUM_KW if i(key) > 0]
+    if b("suppress"):  # kc-wip-impl: Suppress N (2 when the file predates suppress_amount)
+        kws.append("Suppress %d" % (i("suppress_amount") if "suppress_amount" in f else 2))
     effects = len(re.findall(r'SubResource\(', f.get("effects", "")))
     return {
         "id": s("id"),

@@ -26,7 +26,7 @@ Engine column: **ready** = the shipped engine plays it from data alone (existing
 | 2 | Private II | Unit | 2 | 2/2 | — | — | ready |
 | 3 | Private III | Unit | 3 | 3/3 | — | — | ready |
 | 4 | Private IV | Unit | 4 | 4/4 | — | — | ready |
-| 5 | Scout | Unit | 1 | 0/3 | Arrives Front | **Arrives Front.** (Slides to the front of its column on arrival, like the Protector.) | ready (`arrives_front`) |
+| 5 | Scout | Unit | 1 | 0/3 | Front line (editor: "Arrives Front") | **Front line.** (Slides to the front of its column on arrival, like the Protector.) | ready (`arrives_front`) |
 | 6 | Medic | Unit | 2 | 2/3 | Patch 1 | **Patch 1.** (After the firefight here, restores 1 Armor to your most damaged other unit here.) | ready (`patch = 1`) |
 | 7 | Sharpshooter | Unit | 3 | 3/2 | First Shot | **First Shot.** | ready |
 | 8 | Flag Bearer | Unit | 4 | 2/2 | "On Deploy: Give +1/+1 to everyone here." | **On Deploy: your units here get +1/+1 (itself included).** | ready (ON_DEPLOY · MODIFY_FIREPOWER +1 and MODIFY_ARMOR +1 · ALL_FRIENDLIES · THIS_ZONE · permanent) |
@@ -222,7 +222,7 @@ Order: data-only cards first (they work today), then the four mechanics. Don't t
 | E4 | **Beam** | `card_data.gd` (`beam: bool`), `rules_unit.gd`, `firefight_resolver.gd` `_beat`, `rules_event.gd`, AI estimator | In `_beat`, a Beam shooter's hits are: each living friendly unit with a lower index in its own line, then every living enemy unit in the column, each `firepower_of(u)` (Cover applied by `deal_damage`). No Pick / Flank / Pierce on a Beam. Event `BEAM_FIRED {side, shooter_uid, zone, beat, hits: [{uid, side, damage}]}` (plus the usual `DAMAGE_DEALT`). Friendly downs: no change needed (no credit when the killer's side is the victim's). |
 | E5 | **AI: chosen-friendly buffs** | `ai/ai_planner.gd` `_effect_candidates`, `_apply_effect` | A candidate per living friendly unit for a tactic whose effects target CHOSEN_FRIENDLY with MODIFY_FIREPOWER / MODIFY_ARMOR / GRANT_COVER; add MODIFY_ARMOR to `_apply_effect`'s CHOSEN_FRIENDLY branch. Without it the AI never plays Premium Loadout. |
 | E6 | **Operator and permanent Armor buffs** | `match_state.gd` `_record_elimination` (Operator branch) | A permanent MODIFY_ARMOR raises `base_max_armor`, which the Operator keeps through respawns (Flag Bearer can hit it). Reset the Operator's `base_max_armor` to its kit value when it goes down (as `mods.clear()` already does for FP). |
-| E7 | Keyword names | `card_data.gd` `keyword_names()`, `card_info.gd` | "Agile", "Beam", "Suppress N". The editor says "Arrives Front", the game says "Front line": pick one ("Arrives Front" reads better on a card; one-line change). |
+| E7 | Keyword names | `card_data.gd` `keyword_names()`, `card_info.gd` | "Agile", "Beam", "Suppress N". The editor said "Arrives Front", the game "Front line". **Decided (head P3, kc-wip-fix): "Front line" everywhere** (card text, editor, glossary, inspector); old editor data saying "Arrives Front" maps to it. |
 
 ### 5.2 Data (`data/`)
 | Item | Change |

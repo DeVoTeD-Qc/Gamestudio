@@ -35,7 +35,7 @@ const KEYWORD_RULES: Dictionary = {
 	&"end_of_round": ["End of round", "Happens at the end of every round this unit is on the board (after the firefight, in the Score step)."],
 	&"agile": ["Agile", "Once per round, in Deploy, tap it and then an adjacent column: it moves there at Reveal, to the back of the line. Free. If that column is full then, it stays."],
 	&"beam": ["Beam", "Its shot hits every unit in front of it in its column: your own units ahead of it AND every enemy there, its Firepower each (Cover applies). In front, it only hits enemies."],
-	&"arrives_front": ["Arrives in front", "Joins the zone at the front of the line and becomes the point man."],
+	&"arrives_front": ["Front line", "Joins the column at the front of the line and becomes the point man."],
 	&"immediate": ["Resolves immediately", "Takes effect as soon as you play it in Deploy, so it can't be undone."],
 	&"hidden": ["Hidden", "Stays face-down after Reveal; the enemy only sees it when it goes off."],
 	&"no_control": ["Doesn't hold zones", "Doesn't count for zone control."],

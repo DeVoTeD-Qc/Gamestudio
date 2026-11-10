@@ -21,7 +21,7 @@ const CARDS: Array = [
 	["private_2", "Private II", 0, 2, 2, 3, W.NONE, &"", ""],
 	["private_3", "Private III", 0, 3, 3, 3, W.NONE, &"", ""],
 	["private_4", "Private IV", 0, 4, 4, 4, W.NONE, &"", ""],
-	["scout", "Scout", 0, 1, 0, 3, W.SMG, &"vanguard", "Arrives Front."],
+	["scout", "Scout", 0, 1, 0, 3, W.SMG, &"vanguard", "Front line."],
 	["medic", "Medic", 0, 2, 2, 3, W.AR, &"undead", "Patch 1."],
 	["sharpshooter", "Sharpshooter", 0, 3, 3, 2, W.SNIPER, &"specops", "First Shot."],
 	["flag_bearer", "Flag Bearer", 0, 4, 2, 2, W.AR, &"vanguard", "On Deploy: your units here get +1/+1 (itself included)."],
