@@ -36,8 +36,8 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		var v: VBoxContainer = DDUi.vbox(2)
 		add_child(v)
 		v.alignment = BoxContainer.ALIGNMENT_CENTER
-		v.add_child(DDUi.label("GUN %d - EMPTY" % (int(spec.get("slot", 0)) + 1), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-		v.add_child(DDUi.label("tap a gun card on the street to equip one", DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		v.add_child(DDUi.label("GUN %d · EMPTY" % (int(spec.get("slot", 0)) + 1), DDUi.FONT_S - 2, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+		v.add_child(DDUi.label("equip a gun from the street", DDUi.FONT_S - 5, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 		_apply_style()
 		DDUi.ignore_mouse(self)
 		return self
@@ -51,25 +51,31 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		add_child(scrim)
 	var h: HBoxContainer = DDUi.hbox(6)
 	add_child(h)
-	var left: VBoxContainer = DDUi.vbox(1)
+	var left: VBoxContainer = DDUi.vbox(2)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_child(left)
 	_box = left
+	# dd-ux-clean: name (+ ACTIVE), power + kills, the rule as icon + short label, the challenge
+	# reward. The full rule, challenge and "can still take" live in the zoom.
+	var nl: Label = _one_line(DDUi.label(str(spec.get("name", "")).to_upper(), DDUi.FONT_S - 3, DDUi.accent("W")))
+	nl.resized.connect(func() -> void: fit_label(nl, DDUi.FONT_S - 3, 10))
+	_outline(nl, 4)
+	left.add_child(nl)
 	var head: HBoxContainer = DDUi.hbox(4)
 	left.add_child(head)
-	var nl: Label = _one_line(DDUi.label("%d %s" % [int(spec.get("slot", 0)) + 1, str(spec.get("name", "")).to_upper()], DDUi.FONT_S - 3, DDUi.accent("W")))
-	_outline(nl, 4)
-	head.add_child(nl)
-	if _selected:
-		var chip: PanelContainer = DDUi.panel(DDUi.SELECT, 2)
-		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 7, DDUi.BG))
-		head.add_child(chip)
-	var plates: String = ("  HONED" if bool(spec.get("honed", false)) else "") + ("  FLIPPED" if bool(spec.get("flipped", false)) else "")
-	var pl: Label = _one_line(DDUi.label("P%d   %d/%d kills%s" % [int(spec.get("power", 0)), (spec.get("stack", []) as Array).size(), int(spec.get("cap", 0)), plates], DDUi.FONT_S - 2, DDUi.TEXT))
+	var plates: String = (" H" if bool(spec.get("honed", false)) else "") + (" F" if bool(spec.get("flipped", false)) else "")
+	var pl: Label = _one_line(DDUi.label("P%d · %d/%d%s" % [int(spec.get("power", 0)), (spec.get("stack", []) as Array).size(), int(spec.get("cap", 0)), plates], DDUi.FONT_S, DDUi.TEXT))
+	pl.resized.connect(func() -> void: fit_label(pl, DDUi.FONT_S, 11))
 	_outline(pl, 4)
 	big_label = pl
-	left.add_child(pl)
-	var rr: HBoxContainer = DDUi.hbox(4)
+	head.add_child(pl)
+	if _selected:
+		var chip: PanelContainer = DDUi.panel(DDUi.SELECT, 3)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 6, DDUi.BG))
+		head.add_child(chip)
+	var rr: HBoxContainer = DDUi.hbox(5)
 	left.add_child(rr)
 	var rtex: Texture2D = Art.texture_for(Art.rule_keys(str(spec.get("rule", ""))))
 	if rtex != null:
@@ -77,17 +83,14 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		ri.texture = rtex
 		ri.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ri.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ri.custom_minimum_size = Vector2(24, 24)
+		ri.custom_minimum_size = Vector2(26, 26)
 		rr.add_child(ri)
-	var rl: Label = DDUi.label(str(spec.get("rule_text", "")), DDUi.FONT_S - 4, DDUi.WARN, HORIZONTAL_ALIGNMENT_LEFT, true)
-	rl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rl.max_lines_visible = 2
-	rl.custom_minimum_size = Vector2(0, 30)
-	rl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var rl: Label = _one_line(DDUi.label(str(spec.get("rule_text", "")), DDUi.FONT_S - 3, DDUi.WARN))
+	rl.resized.connect(func() -> void: fit_label(rl, DDUi.FONT_S - 3, 10))
 	_outline(rl, 4)
 	rr.add_child(rl)
 	line_labels.append(rl)
-	var cr: HBoxContainer = DDUi.hbox(4)
+	var cr: HBoxContainer = DDUi.hbox(5)
 	left.add_child(cr)
 	var cs: String = str(spec.get("challenge_state", "open"))
 	var btex: Texture2D = Art.texture_for(Art.badge_keys("challenge" if cs == "met" else "challenge_open"))
@@ -100,15 +103,13 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		if cs == "broken":
 			bi.self_modulate = Color(0.5, 0.5, 0.5, 0.6)
 		cr.add_child(bi)
-	var word: String = {"met": "MET", "on_track": "on track", "broken": "missed", "open": ""}.get(cs, "")
-	var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.accent("X"), "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT)
-	var cl: Label = _one_line(DDUi.label("%s %s%s" % [str(spec.get("challenge", "")), str(spec.get("reward", "")), (" - " + word) if word != "" else ""], DDUi.FONT_S - 5, col))
+	var word: String = {"met": "met", "on_track": "on track", "broken": "missed", "open": ""}.get(cs, "")
+	var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.accent("X"), "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT_DIM)
+	var cl: Label = _one_line(DDUi.label("%s%s" % [str(spec.get("reward", "")), (" · " + word) if word != "" else ""], DDUi.FONT_S - 5, col))
+	cl.resized.connect(func() -> void: fit_label(cl, DDUi.FONT_S - 5, 10))
 	_outline(cl, 4)
 	cr.add_child(cl)
 	line_labels.append(cl)
-	var tk: Label = _one_line(DDUi.label("takes: %s" % str(spec.get("can_take", "")), DDUi.FONT_S - 6, DDUi.TEXT_DIM))
-	_outline(tk, 4)
-	left.add_child(tk)
 	# the kill stack
 	stack_area = Control.new()
 	stack_area.mouse_filter = Control.MOUSE_FILTER_IGNORE

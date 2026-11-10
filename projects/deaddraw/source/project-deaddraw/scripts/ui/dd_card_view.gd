@@ -146,7 +146,13 @@ func _build_plain(spec: Dictionary, art: Variant, compact: bool) -> void:
 		_box.add_child(bl)
 	var title: String = str(spec.get("title", ""))
 	if title != "":
-		var tt: Label = DDUi.label(title, DDUi.FONT_M - (6 if compact else 0), DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+		var tsz: int = DDUi.FONT_M - (6 if compact else 0)
+		var tt: Label = DDUi.label(title, tsz, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, not bool(spec.get("title_fit", false)))
+		if bool(spec.get("title_fit", false)):
+			# dd-ux-clean: one line that shrinks to fit (boss names in a narrow column)
+			tt.clip_text = true
+			tt.custom_minimum_size = Vector2(10, 0)
+			tt.resized.connect(func() -> void: fit_label(tt, tsz, 8))
 		if art != null:
 			_outline(tt, 6)
 		_box.add_child(tt)
@@ -184,14 +190,18 @@ func _build_row(spec: Dictionary, art: Variant) -> void:
 		var tl: Label = DDUi.label(tag, DDUi.FONT_S - 5, DDUi.accent(kind))
 		tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tl.clip_text = true
+		tl.resized.connect(func() -> void: fit_label(tl, DDUi.FONT_S - 5, 10))
 		if art != null:
 			_outline(tl, 5)
 		top.add_child(tl)
 	_add_badge(top, spec)
 	var title: String = str(spec.get("title", ""))
 	if title != "":
-		var tt: Label = DDUi.label(title, int(spec.get("title_size", DDUi.FONT_S - 1)), DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
+		var tsz: int = int(spec.get("title_size", DDUi.FONT_S - 1))
+		var tt: Label = DDUi.label(title, tsz, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, false)
 		tt.clip_text = true
+		# dd-ux-clean: long names shrink to fit the strip instead of being cut
+		tt.resized.connect(func() -> void: fit_label(tt, tsz, 11))
 		if art != null:
 			_outline(tt, 5)
 		_box.add_child(tt)
@@ -225,7 +235,7 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	var badge: String = str(spec.get("badge", ""))
 	if badge != "" or bool(spec.get("holdover", false)):
 		var chip: PanelContainer = DDUi.panel(Color(spec.get("badge_color", DDUi.WARN)) if badge != "" else DDUi.TEXT, 3)
-		chip.add_child(DDUi.label(badge if badge != "" else "HOLDOVER", DDUi.FONT_S - 5, DDUi.BG))
+		chip.add_child(DDUi.label(badge if badge != "" else "HOLDOVER", int(spec.get("badge_size", DDUi.FONT_S - 5)), DDUi.BG))
 		window.add_child(chip)
 		window.resized.connect(func() -> void:
 			if is_instance_valid(chip):

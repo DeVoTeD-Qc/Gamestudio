@@ -1,7 +1,7 @@
 // DeadDraw v3 ("Kill Stacks") web smoke test: loads the packaged export in headless Chromium at
 // phone landscape and portrait viewports and plays real taps (touch) through title -> map -> street:
 // the first-run hint, the active-weapon toggle (melee / gun), a zombie attack that lands on the
-// gun's kill stack, Run, long-press (touch) and right-click inspects (gun, wave deck, pile, room),
+// gun's kill stack, Run, long-press (touch) and right-click inspects (gun, wave stack, pile, room),
 // opening a room (cards fly into the pile) and its machine. dd-save: reloads the page mid-run and
 // continues from the title (the state must match), then taps the "run resumed" banner away.
 // Then smoke-query screens: open rooms, stacks, rule lock, gun sheet, Bench / Wall Rack / Patch
@@ -119,7 +119,7 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       await touchHold(cdp, center(find(s, card(200), 'gun 1')));
       s = await waitFor(page, (x) => x.inspect, 'gun inspect'); await shot('09_inspect_gun_longpress');
       s = await closeInspect();
-      const w = find(s, card(301), 'wave 2 deck');
+      const w = find(s, card(300), 'wave stack');
       await page.mouse.click(center(w).x, center(w).y, { button: 'right' });
       s = await waitFor(page, (x) => x.inspect, 'wave inspect'); await shot('10_inspect_wave_rightclick');
       await page.mouse.click(vp.width / 2, 8);

@@ -79,41 +79,42 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 					if bool(pr["uses_loose"]):
 						extra = "BENT RULE " + extra
 				else:
-					extra = "melee: 0 pts"
+					extra = "0 pts"
 				if int(pr["absorbed"]) > 0:
 					extra = ("Cover %d  " % int(pr["absorbed"])) + extra
-				lines.append([extra.strip_edges() if extra.strip_edges() != "" else "kill", DDUi.GOOD if loss == 0 else DDUi.TEXT, DDUi.FONT_S - 2])
+				lines.append([extra.strip_edges() if extra.strip_edges() != "" else "kill", DDUi.GOOD if loss == 0 else DDUi.TEXT, DDUi.FONT_S])
 			else:
 				lock = str(pr["reason"])
 				badge = "LOCK"
 				badge_color = DDUi.TEXT_DIM
 				dim_art = true
-				lines.append([lock, DDUi.WARN, DDUi.FONT_S - 3])
+				lines.append([lock, DDUi.WARN, DDUi.FONT_S - 1])
 		DDCard.WEAPON:
-			lines.append(["P%d - %s" % [b.weapon_power(c.wid), DDText.RULE_ICONS.get(b.weapon_rule(c.wid), "")], DDUi.accent("W"), DDUi.FONT_S - 2])
+			lines.append(["P%d · %s" % [b.weapon_power(c.wid), DDText.RULE_ICONS.get(b.weapon_rule(c.wid), "")], DDUi.accent("W"), DDUi.FONT_S])
 		DDCard.MEDKIT:
 			var pm: Dictionary = run.card_preview(i, DDRun.USE)
 			if bool(pm["wasted"]):
 				dim_art = true
 				badge = "DISCARD"
-				lines.append(["1 medkit per street", DDUi.WARN, DDUi.FONT_S - 2])
+				lines.append(["1 medkit per street", DDUi.WARN, DDUi.FONT_S])
 			elif int(pm["heal"]) <= 0:
 				dim_art = true
 				badge = "FULL HP"
-				lines.append(["heals 0", DDUi.WARN, DDUi.FONT_S - 2])
+				lines.append(["heals 0", DDUi.WARN, DDUi.FONT_S])
 			else:
-				lines.append(["+%d HP" % int(pm["heal"]), DDUi.GOOD, DDUi.FONT_S - 2])
+				lines.append(["+%d HP" % int(pm["heal"]), DDUi.GOOD, DDUi.FONT_S])
 		DDCard.COVER:
-			lines.append(["+%d Cover" % c.value, DDUi.COVER, DDUi.FONT_S - 2])
+			lines.append(["+%d Cover" % c.value, DDUi.COVER, DDUi.FONT_S])
 	if c.is_boss() and badge == "":
 		badge = DDText.trait_name(c.boss_trait).to_upper()
 		badge_color = DDUi.accent("F")
-	var tag: String = DDText.kind_label(c.kind)
+	# dd-ux-clean: no kind label on the tile (the art and the colour say it; the zoom has it)
+	var tag: String = ""
 	if c.is_boss():
 		tag = "BOSS" if c.phase == 0 else "PHASE %d" % c.phase
 	elif c.holdover:
 		tag = "HOLDOVER"
-	return {"kind": "F" if c.is_boss() else c.kind, "tag": tag, "badge": badge, "badge_color": badge_color,
+	return {"kind": "F" if c.is_boss() else c.kind, "tag": tag, "badge": badge, "badge_color": badge_color, "badge_size": DDUi.FONT_M,
 		"big": str(c.value) if c.kind != DDCard.WEAPON else "", "title": DDText.card_name(c, b), "lines": lines,
 		"art_dim": dim_art, "lock": lock, "payload": card(c, run, i)}
 
@@ -187,7 +188,7 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	spec["power"] = g.power
 	spec["cap"] = g.cap
 	spec["rule"] = g.rule
-	spec["rule_text"] = DDText.rule_short(g.rule, run.steady())
+	spec["rule_text"] = DDText.rule_tag(g.rule, run.steady())
 	spec["challenge"] = DDText.challenge_name(b.weapon_challenge(g.wid))
 	spec["reward"] = DDText.reward_short(str(rw[0]), int(rw[1]), b)
 	spec["challenge_state"] = run.challenge_state(g)
@@ -233,6 +234,41 @@ static func wave_spec(run: DDRun, w: int) -> Dictionary:
 		"selected": st == "active", "payload": wave(run, w)}
 
 
+## dd-ux-clean: every wave deck in one zoom (the board shows them as one stack).
+static func waves(run: DDRun) -> Dictionary:
+	var parts: PackedStringArray = []
+	for w: int in run.wave_count():
+		var zs: Array[int] = run.bal.wave_zombies(run.district_index, w)
+		var sorted: Array[int] = zs.duplicate()
+		sorted.sort()
+		var st: String = run.wave_status(w)
+		parts.append("WAVE %d (%s): %d cards, zombies %s." % [w + 1, {"done": "done", "active": "in the pile now", "waiting": "waiting"}[st],
+			run.bal.wave_spec(run.district_index, w).size(), DDText.zombie_list(sorted)])
+	parts.append("When the pile runs dry, the next wave shuffles in. After the last wave comes the boss. Zombie numbers are public; only the order is hidden.")
+	return {"kind": "D", "tag": "WAVES - %s" % str(run.district().get("name", "")).to_upper(), "title": "Wave %d of %d" % [mini(run.wave_index + 1, run.wave_count()), run.wave_count()],
+		"big": str(waves_waiting(run)), "body": "\n".join(parts)}
+
+
+static func waves_waiting(run: DDRun) -> int:
+	var n: int = 0
+	for w: int in run.wave_count():
+		if run.wave_status(w) == "waiting":
+			n += 1
+	return n
+
+
+## The wave stack tile: how many decks wait, and the next threat only.
+static func waves_spec(run: DDRun) -> Dictionary:
+	var n: int = waves_waiting(run)
+	var nxt: String = "boss next"
+	for w: int in run.wave_count():
+		if run.wave_status(w) == "waiting":
+			nxt = "next: %s" % DDText.zombie_range(run.bal.wave_zombies(run.district_index, w))
+			break
+	return {"kind": "D", "tag": "WAVE %d/%d" % [mini(run.wave_index + 1, run.wave_count()), run.wave_count()], "big": "×%d" % n, "big_size": 34,
+		"compact": true, "lines": [[nxt, DDUi.TEXT, DDUi.FONT_S - 3]], "dim": n == 0, "payload": waves(run)}
+
+
 static func boss(run: DDRun) -> Dictionary:
 	var b: Dictionary = run.boss_def()
 	var final: bool = run.is_final_district()
@@ -246,12 +282,13 @@ static func boss(run: DDRun) -> Dictionary:
 static func boss_spec(run: DDRun) -> Dictionary:
 	var b: Dictionary = run.boss_def()
 	var zs: Array = b.get("zombies", [9])
-	var more: String = ""
-	if zs.size() > 1:
-		more = ("then " + " -> ".join(PackedStringArray(zs.slice(1).map(func(z: Variant) -> String: return str(int(z)))))) if str(b.get("trait", "")) == "phases" else "x%d at once" % zs.size()
-	return {"kind": "F", "tag": "BOSS", "badge": "NO ESCAPE" if run.is_final_district() else "", "badge_color": DDUi.BAD,
-		"big": str(int(zs[0])), "big_size": 26, "title": str(b.get("name", "")), "row": true, "title_size": DDUi.FONT_S - 4,
-		"lines": [[more, DDUi.TEXT_DIM, DDUi.FONT_S - 5]] if more != "" else [], "payload": boss(run)}
+	# dd-ux-clean: the tile shows the first number, the name and "x3" for a horde; phases and the
+	# trait are in the zoom
+	var lines: Array = []
+	if zs.size() > 1 and str(b.get("trait", "")) != "phases":
+		lines.append(["x%d at once" % zs.size(), DDUi.TEXT_DIM, DDUi.FONT_S - 4])
+	return {"kind": "F", "tag": "BOSS" if not run.is_final_district() else "NO ESCAPE", "big": str(int(zs[0])), "big_size": 34,
+		"title": str(b.get("name", "")), "title_fit": true, "compact": true, "lines": lines, "payload": boss(run)}
 
 
 # ---------------------------------------------------------------- middle: the pile
@@ -273,7 +310,7 @@ static func pile(run: DDRun) -> Dictionary:
 
 
 static func pile_spec(run: DDRun) -> Dictionary:
-	return {"kind": "D", "tag": "DRAW PILE", "big": str(run.pile.size()), "big_size": 34, "title": "%d zombies" % run.pile_zombies(),
+	return {"kind": "D", "tag": "PILE", "big": str(run.pile.size()), "big_size": 30, "title": "%d zombie%s" % [run.pile_zombies(), "" if run.pile_zombies() == 1 else "s"],
 		"row": true, "payload": pile(run)}
 
 
@@ -303,9 +340,9 @@ static func room_spec(run: DDRun, i: int) -> Dictionary:
 		line = "used this wave" if run.machine_used[i] else DDText.machine_name(kind)
 	else:
 		line = DDText.machine_name(kind)
-	return {"kind": "K" if open else "R", "tag": str(r.get("name", "")).to_upper(), "badge": "OPEN" if open else "",
-		"badge_color": DDUi.GOOD, "big": "" if open else str(run.bal.shown(run.room_cost(i))), "big_size": 24, "row": true,
-		"lines": [[line, DDUi.TEXT_DIM if not open else DDUi.accent("K"), DDUi.FONT_S - 4]], "payload": room(run, i)}
+	# dd-ux-clean: the tile names the room and its machine; the price is on the OPEN button only
+	return {"kind": "K" if open else "R", "tag": str(r.get("name", "")).to_upper(), "title": line, "title_size": DDUi.FONT_S, "row": true,
+		"payload": room(run, i)}
 
 
 # ---------------------------------------------------------------- patches, people, counters
@@ -359,9 +396,27 @@ static func unlock(key: String, bal: DDBalance, prof: DDProfile) -> Dictionary:
 
 
 static func hp(run: DDRun) -> Dictionary:
-	return {"kind": "S", "tag": "HP", "title": "Health", "big": "%d/%d" % [run.hp, run.max_hp],
-		"body": "HP %d of %d. At 0 the run ends%s. Damage = zombie - weapon power; Cover soaks it first." % [run.hp, run.max_hp,
-			" (Second Wind: once, back to %d)" % run.bal.num("second_wind_hp") if run.has_patch("second_wind") and not run.second_wind_used else ""]}
+	var s: Dictionary = run.bal.survivor(run.survivor_id)
+	return {"kind": "S", "tag": "HP - %s" % str(s.get("name", "")).to_upper(), "title": "Health", "big": "%d/%d" % [run.hp, run.max_hp],
+		"body": "HP %d of %d. At 0 the run ends%s. Damage = zombie - weapon power; Cover soaks it first.%s\n%s: %s" % [run.hp, run.max_hp,
+			" (Second Wind: once, back to %d)" % run.bal.num("second_wind_hp") if run.has_patch("second_wind") and not run.second_wind_used else "",
+			("\nCover now: %d." % run.cover) if run.cover > 0 else "", DDText.passive_name(run.passive), DDText.passive_text(run.passive, run.bal)]}
+
+
+## dd-ux-clean: every Patch you have, in one zoom (the HUD shows one chip).
+static func patches(run: DDRun) -> Dictionary:
+	var parts: PackedStringArray = []
+	for p: String in run.patches:
+		parts.append("%s: %s" % [DDText.patch_name(p), DDText.patch_text(p, run.bal)])
+	return {"kind": "P", "tag": "PATCHES", "title": "%d Patch%s" % [run.patches.size(), "" if run.patches.size() == 1 else "es"], "big": str(run.patches.size()),
+		"body": "\n".join(parts) + "\nPermanent for the run."}
+
+
+## dd-ux-clean: the history (the board shows only the last line).
+static func history(run: DDRun) -> Dictionary:
+	var lines: Array[String] = run.log_lines.slice(maxi(0, run.log_lines.size() - 12))
+	lines.reverse()
+	return {"kind": "D", "tag": "WHAT HAPPENED", "title": "History", "big": "", "body": "\n".join(lines) if not lines.is_empty() else "Nothing yet."}
 
 
 static func cover(run: DDRun) -> Dictionary:

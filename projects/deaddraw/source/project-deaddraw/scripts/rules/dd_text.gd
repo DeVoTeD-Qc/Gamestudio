@@ -373,22 +373,45 @@ static func boss_summary(b: Dictionary) -> String:
 
 # ---------------------------------------------------------------- first-run hints (K5)
 static func hint_text(id: String, bal: DDBalance) -> String:
+	# dd-ux-clean: first-run hints, one short sentence each
 	if id.begins_with("rule_"):
 		var wid: String = id.trim_prefix("rule_")
-		var rw: Array = bal.weapon_reward(wid)
-		return "%s rule: each kill must be %s. Finished at %d kills. Challenge %s: %s -> %s." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)),
-			bal.weapon_cap(wid), challenge_name(bal.weapon_challenge(wid)), challenge_text(bal.weapon_challenge(wid), bal), reward_text(str(rw[0]), int(rw[1]), bal)]
+		return "%s: each kill must be %s. %d kills finish it." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)), bal.weapon_cap(wid)]
 	match id:
 		"weapon":
-			return "Pick a weapon below (gun 1, gun 2 or melee), then tap zombies: every tap attacks with it. The chip on each zombie is the damage you'd take."
+			return "Tap a weapon below, then tap a zombie. The red chip is the damage you'd take."
 		"points":
-			return "Every gun kill pays the zombie's number in points (melee pays nothing)."
+			return "Gun kills pay points (melee pays nothing)."
 		"finish":
-			return "One more kill finishes this gun: +%d bonus, and its challenge pays extra if you met it. Then it leaves - equip the next gun." % bal.shown(bal.num("finish_bonus"))
+			return "One more kill finishes this gun: +%d bonus, then equip the next one." % bal.shown(bal.num("finish_bonus"))
 		"challenge":
-			return "Challenge met! Each gun has one (long press a gun to read it)."
+			return "Challenge met! Long press a gun to read its challenge."
 		"rooms":
-			return "You can afford a room: tap OPEN on the right. Its cards shuffle into the pile and its machine switches on."
+			return "You can afford a room: tap OPEN. Its machine switches on."
 		"run":
-			return "Bad street? RUN shuffles it back into the pile for %d HP. Not twice in a row, never on a boss street." % bal.num("run_damage")
+			return "Bad street? RUN puts it back for %d HP." % bal.num("run_damage")
 	return ""
+
+
+## dd-ux-clean: the rule as a short label for the gun tile (icon + label; full text on inspect).
+static func rule_tag(rule: String, rosa: bool = false) -> String:
+	match rule:
+		"any":
+			return "ANY ZOMBIE"
+		"down":
+			return "LOWER THAN TOP" if not rosa else "LOWER OR EQUAL"
+		"up":
+			return "HIGHER THAN TOP" if not rosa else "HIGHER OR EQUAL"
+		"same":
+			return "SAME NUMBER"
+		"zigzag":
+			return "ZIG-ZAG"
+		"close":
+			return "WITHIN 1 OF TOP"
+		"parity":
+			return "ODD / EVEN"
+		"spread":
+			return "TOTAL 16 MAX"
+		"big":
+			return "6 OR MORE"
+	return rule.to_upper()
