@@ -1,13 +1,15 @@
 # killstreak_fx.gd
 # Purpose: kc-ks-seq. The killstreak layer of the FeedbackDirector, replacing the full-screen call-in
 #   takeover that looked the same for every streak (studio head: "a huge flash popup that is the same
-#   for all killstreaks... hard to follow"). Three parts, each in the streak's own colour and icon:
+#   for all killstreaks... hard to follow"). Three parts, each in its OWNER's colour (teal yours, red
+#   the rival's; kc-da-ui, art direction v1 §2.2) with the streak's own icon telling the kind:
 #   - BANNER: a compact strip at the top centre (about 50 px tall at 844x390) when a killstreak is
 #     earned (READY), called (yours, in Deploy) or revealed (the rival's, at Reveal): icon, name, a
 #     state word and its one-line effect. No dim, no flash, it never takes the board: the playback
 #     waits ks_banner_beat (0.45 s) while it slides in and stays ks_banner (1.7 s) in all.
 #   - PENDING MARKERS: a strike that has not landed yet (Mortar, Attack Helo) marks the half-column it
-#     will hit with a dashed outline, hazard hatch and an "INCOMING / AT FIGHT" chip. Yours appear when
+#     will hit with ONE telegraph style: a faint hatch in the owner's colour and an "INCOMING" pin chip
+#     (kc-da-ui: no dashed box on top of the stripes). Yours appear when
 #     you call it in Deploy, the rival's when it is revealed; a helo's second fight stays marked
 #     through the next Deploy. They go away when the strike starts (Firefight step 0).
 #   - SEQUENCES (strike_fx.gd): the mortar's shells, the helo's strafing pass, the drone's scan, the
@@ -27,26 +29,27 @@ const FxStyle: GDScript = preload("res://scripts/fx/fx_style.gd")
 const FxTiming: GDScript = preload("res://scripts/fx/fx_timing.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 
-## Per killstreak: icon, colour, the state words, a one-line effect (banner), what it does and when
-## it resolves (inspector), and its sequence (strike_fx.gd style).
+## Per killstreak: icon, the state words, a one-line effect (banner), what it does and when it
+## resolves (inspector), and its sequence (strike_fx.gd style). No per-kind colour (kc-da-ui): the
+## kind is told by the icon and name, the colour by the owner (owner_color).
 const LOOKS: Dictionary = {
-	&"recon_drone": {"icon": &"ks_recon_drone", "color": Color("#5BC0EB"), "seq": &"scan", "short": "DRONE",
+	&"recon_drone": {"icon": &"ks_recon_drone", "seq": &"scan", "short": "DRONE",
 		"effect": "Rival plays face-up, rival Cover off: 2 rounds",
 		"when": "Resolves at once when you call it in Deploy (the rival's at Reveal)."},
-	&"mortar_barrage": {"icon": &"ks_mortar", "color": Color("#FF8A3D"), "seq": &"shells", "short": "MORTAR",
+	&"mortar_barrage": {"icon": &"ks_mortar", "seq": &"shells", "short": "MORTAR",
 		"effect": "2 damage to every enemy in one column",
 		"when": "Strikes at the start of the fight, before column A."},
-	&"sentry_turret": {"icon": &"ks_sentry", "color": Color("#2EC4B6"), "seq": &"drop", "short": "SENTRY",
+	&"sentry_turret": {"icon": &"ks_sentry", "seq": &"drop", "short": "SENTRY",
 		"effect": "A Sentry (FP 2, Armor 4, Cover 1) at the back of a column",
 		"when": "Deploys at Reveal, then fights from the back of the column."},
-	&"attack_helo": {"icon": &"ks_attack_helo", "color": Color("#C9E265"), "seq": &"strafe", "short": "HELO",
+	&"attack_helo": {"icon": &"ks_attack_helo", "seq": &"strafe", "short": "HELO",
 		"effect": "2 damage to each enemy front unit, this fight and next",
 		"when": "Strikes at the start of this round's fight and the next, before column A."},
-	&"gunship": {"icon": &"ks_gunship", "color": Color("#E5383B"), "seq": &"strafe", "short": "GUNSHIP",
+	&"gunship": {"icon": &"ks_gunship", "seq": &"strafe", "short": "GUNSHIP",
 		"effect": "Heavy fire on the enemy lines",
 		"when": "Strikes at the start of the fight."},
 }
-const DEFAULT_LOOK: Dictionary = {"icon": &"type_killstreak", "color": Color("#FFB020"), "seq": &"shells", "short": "STRIKE",
+const DEFAULT_LOOK: Dictionary = {"icon": &"type_killstreak", "seq": &"shells", "short": "STRIKE",
 		"effect": "", "when": "Resolves at Reveal."}
 ## Banner state words.
 const MODE_WORDS: Dictionary = {&"earned": "READY", &"called": "CALLED IN", &"revealed": "HOSTILE"}
@@ -69,8 +72,14 @@ static func look(item_id: StringName) -> Dictionary:
 	return LOOKS.get(item_id, DEFAULT_LOOK)
 
 
-static func color_of(item_id: StringName) -> Color:
-	return look(item_id)["color"]
+## kc-da-ui: a killstreak's colour is its owner's: teal when `side` is the viewer's, red for the rival.
+## The item id is kept for callers; it no longer changes the colour (the icon tells the kind).
+static func color_of(_item_id: StringName, side: StringName = &"player", viewer: StringName = &"player") -> Color:
+	return owner_color(side, viewer)
+
+
+static func owner_color(side: StringName, viewer: StringName = &"player") -> Color:
+	return FxStyle.TEAL if side == viewer else FxStyle.RED
 
 
 static func icon_of(item_id: StringName) -> Texture2D:
@@ -171,18 +180,22 @@ func _hide_banner() -> void:
 
 func _draw_banner() -> void:
 	var item_id: StringName = last_banner.get("item_id", &"")
-	var c: Color = color_of(item_id)
 	var hostile: bool = StringName(last_banner.get("side", &"player")) != viewer_side
+	# kc-da-ui: a steel banner with its owner's rim (teal yours, red hazard rim the rival's). Amber
+	# only while the streak is READY to call.
+	var c: Color = owner_color(StringName(last_banner.get("side", &"player")), viewer_side)
+	var mode: StringName = StringName(last_banner.get("mode", &"called"))
+	var word_c: Color = FxStyle.AMBER if mode == &"earned" and not hostile else (FxStyle.RED.lightened(0.2) if hostile else c)
 	var r: Rect2 = Rect2(Vector2.ZERO, banner.size)
 	banner.draw_rect(r, Color(FxStyle.SLATE, 0.95))
-	banner.draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0)), Color(c, 0.35))
-	banner.draw_rect(r, Color(FxStyle.RED if hostile else c, 0.9), false, 2.0)
-	# Accent block with the streak's icon.
-	var icon_r: Rect2 = Rect2(2, 2, BANNER_H - 4.0, BANNER_H - 4.0)
-	banner.draw_rect(icon_r, Color(c, 0.9))
+	banner.draw_rect(r, Color(c, 0.9), false, 2.0)
+	# Icon on a dark socket with the owner's rim (art direction §5.6).
+	var icon_r: Rect2 = Rect2(4, 4, BANNER_H - 8.0, BANNER_H - 8.0)
+	banner.draw_rect(icon_r, FxStyle.GUNMETAL)
+	banner.draw_rect(icon_r, Color(c, 0.9), false, 1.0)
 	var tex: Texture2D = icon_of(item_id)
 	if tex != null:
-		banner.draw_texture_rect(tex, icon_r.grow(-6.0), false, FxStyle.SLATE)
+		banner.draw_texture_rect(tex, icon_r.grow(-6.0), false, FxStyle.FOG)
 	if hostile:
 		for i: int in 4:
 			var x0: float = r.end.x - 10.0 - i * 9.0
@@ -190,14 +203,13 @@ func _draw_banner() -> void:
 	var head: Font = FxStyle.font_for(&"heading")
 	var body: Font = FxStyle.font_for(&"body")
 	var x: float = icon_r.end.x + 10.0
-	var word: String = String(MODE_WORDS.get(StringName(last_banner.get("mode", &"called")), ""))
+	var word: String = String(MODE_WORDS.get(mode, ""))
 	if hostile and word != "HOSTILE":
 		word = "HOSTILE " + word
 	var name_text: String = String(last_banner.get("name", "")).to_upper()
 	var name_w: float = head.get_string_size(name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 	banner.draw_string(head, Vector2(x, 22.0), name_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, FxStyle.FOG)
-	banner.draw_string(head, Vector2(x + name_w + 10.0, 22.0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
-			FxStyle.RED.lightened(0.2) if hostile else c)
+	banner.draw_string(head, Vector2(x + name_w + 10.0, 22.0), word, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, word_c)
 	var room: float = r.size.x - x - (44.0 if hostile else 10.0)
 	banner.draw_string(body, Vector2(x, 42.0), String(last_banner.get("effect", "")), HORIZONTAL_ALIGNMENT_LEFT, room, 15,
 			Color(FxStyle.FOG, 0.86))
@@ -205,7 +217,7 @@ func _draw_banner() -> void:
 
 # --- strike kill tag (kc-ks-pop) -------------------------------------------------------------
 
-## "MORTAR KILL" over a unit a strike eliminated, in the streak's colour; rises and fades over the
+## "MORTAR KILL" over a unit a strike eliminated, in its owner's colour (kc-da-ui: teal / red); rises and fades over the
 ## popup time (in place with reduced motion). Tap / long-press / right-click inspects the killstreak.
 ## `point` is overlay-local (the tag's centre). Returns the tag (it frees itself).
 func show_kill_tag(point: Vector2, item_id: StringName, side: StringName, timing: RefCounted = null) -> Control:
@@ -214,7 +226,7 @@ func show_kill_tag(point: Vector2, item_id: StringName, side: StringName, timing
 	var text: String = "%s KILL" % look(item_id)["short"]
 	var font: Font = FxStyle.font_for(&"heading")
 	var fs: int = 20
-	var c: Color = color_of(item_id)
+	var c: Color = owner_color(side, viewer_side)
 	var tag: Control = Control.new()
 	tag.name = "KillTag_%s" % item_id
 	tag.set_meta(&"text", text)
@@ -315,40 +327,35 @@ class PendingMarker:
 		chip.queue_redraw()
 
 	func _draw() -> void:
-		var c: Color = KillstreakFx.color_of(item_id)
+		# kc-da-ui: one telegraph style: a faint hatch in the owner's colour (no dashed box), with the
+		# pin chip on top. It breathes gently unless reduced motion is on.
+		var c: Color = KillstreakFx.owner_color(side, owner_fx.viewer_side if owner_fx != null else &"player")
 		var r: Rect2 = Rect2(Vector2.ZERO, size).grow(-3.0)
-		var pulse: float = 0.6 + 0.4 * sin(_t * 4.0)
-		# Hazard hatch at low alpha, then a dashed outline.
+		var pulse: float = 1.0 if _reduced() else 0.8 + 0.2 * sin(_t * 3.0)
 		var step: float = 16.0
 		var x: float = -r.size.y
 		while x < r.size.x:
 			var a: Vector2 = Vector2(r.position.x + maxf(0.0, x), r.position.y + maxf(0.0, -x))
 			var b_x: float = minf(r.end.x, r.position.x + x + r.size.y)
 			var b: Vector2 = Vector2(b_x, r.position.y + (b_x - (r.position.x + x)))
-			draw_line(a, b, Color(c, 0.1), 3.0)
+			draw_line(a, b, Color(c, 0.16 * pulse), 3.0)
 			x += step
-		var pts: Array[Vector2] = [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y), r.position]
-		for i: int in 4:
-			_dash(pts[i], pts[i + 1], Color(c, 0.55 + 0.4 * pulse))
 
-	func _dash(a: Vector2, b: Vector2, c: Color) -> void:
-		var d: float = a.distance_to(b)
-		var dir: Vector2 = (b - a) / maxf(0.001, d)
-		var p: float = fmod(_t * 18.0, 14.0)
-		while p < d:
-			draw_line(a + dir * p, a + dir * minf(d, p + 8.0), c, 2.0)
-			p += 14.0
+	func _reduced() -> bool:
+		var settings: Node = get_node_or_null(^"/root/Settings")
+		return settings != null and bool(settings.get(&"reduced_motion"))
 
 	func _draw_chip() -> void:
-		var c: Color = KillstreakFx.color_of(item_id)
+		var c: Color = KillstreakFx.owner_color(side, owner_fx.viewer_side if owner_fx != null else &"player")
 		var r: Rect2 = Rect2(Vector2.ZERO, chip.size)
 		chip.draw_rect(r, Color(FxStyle.SLATE, 0.92))
 		chip.draw_rect(r, c, false, 2.0)
 		var ir: Rect2 = Rect2(3, 3, r.size.y - 6.0, r.size.y - 6.0)
-		chip.draw_rect(ir, c)
+		chip.draw_rect(ir, FxStyle.GUNMETAL)
+		chip.draw_rect(ir, Color(c, 0.9), false, 1.0)
 		var tex: Texture2D = KillstreakFx.icon_of(item_id)
 		if tex != null:
-			chip.draw_texture_rect(tex, ir.grow(-3.0), false, FxStyle.SLATE)
+			chip.draw_texture_rect(tex, ir.grow(-3.0), false, FxStyle.FOG)
 		var head: Font = FxStyle.font_for(&"heading")
 		var x: float = ir.end.x + 5.0
 		var room: float = r.size.x - x - 3.0

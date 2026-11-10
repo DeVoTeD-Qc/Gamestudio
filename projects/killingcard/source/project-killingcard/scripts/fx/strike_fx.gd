@@ -14,6 +14,8 @@
 #                with a ring and locks four brackets around itself.
 #   Reduced motion: nothing travels; the end frame fades in and out where it lands. Fast animations
 #   halve it (timing keys ks_shells / ks_strafe / ks_scan / ks_drop).
+#   kc-da-ui: `color` is the OWNER's colour (teal yours, red the rival's; KillstreakFx.owner_color),
+#   never a per-kind hue: the icon and the motion tell the kind. Impact flashes stay warm white.
 #   Coordinates are local to the parent overlay. Display only.
 # Dependencies: fx_transient.gd, fx_style.gd, UiKit (fx_hit_flash, fx_tracer pieces; optional).
 # Author: Game Feel Engineer Agent (kc-ks-seq)
@@ -29,9 +31,12 @@ const SHELL_GAP: float = 0.09
 const SHELL_FLIGHT: float = 0.45
 ## Seconds an impact burst lasts as a share of the sequence.
 const BURST: float = 0.22
+## Impact flash and sparks: warm light (art direction §8), whoever fired.
+const WARM: Color = Color("#FFE2B0")
 
 var style: StringName = &"shells"
-var color: Color = FxStyle.AMBER
+## The owner's colour (teal yours, red the rival's), set by the director.
+var color: Color = FxStyle.TEAL
 var icon: Texture2D = null
 ## Where shells leave from / where the helo enters.
 var origin: Vector2 = Vector2.ZERO
@@ -206,7 +211,7 @@ func _draw_shells() -> void:
 			for d: int in 6:
 				var dir: Vector2 = Vector2.UP.rotated(d * TAU / 6.0 + i)
 				var p0: Vector2 = targets[i] + dir * (8.0 + 20.0 * grow)
-				draw_line(p0, p0 + dir * 8.0, Color(color.lightened(0.3), a), 2.0, true)
+				draw_line(p0, p0 + dir * 8.0, Color(WARM, a), 2.0, true)
 
 
 func _draw_strafe() -> void:
@@ -295,7 +300,7 @@ func _draw_kit(layer: Control) -> void:
 			var a: float = _burst_alpha(_k, _impact_k(i))
 			if a > 0.0:
 				var s: float = (70.0 if style == &"shells" else 44.0) * (0.6 + 0.4 * (1.0 - a))
-				UiKit.draw_piece(layer, FLASH_PIECE, Rect2(targets[i] - Vector2(s, s) * 0.5, Vector2(s, s)), Color(color.lightened(0.2), a))
+				UiKit.draw_piece(layer, FLASH_PIECE, Rect2(targets[i] - Vector2(s, s) * 0.5, Vector2(s, s)), Color(WARM, a))
 	if style == &"strafe" and not reduced and UiKit.has_piece(TRACER_PIECE):
 		var helo: Vector2 = _helo_pos(_k)
 		for i: int in targets.size():

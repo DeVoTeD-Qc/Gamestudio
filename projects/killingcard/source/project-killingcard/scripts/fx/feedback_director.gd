@@ -648,8 +648,8 @@ func _on_eliminated(ev: Dictionary, t: RefCounted) -> float:
 	_veil(victim)
 	_start(stamp, &"stamp", ev)
 	if bool(ev.get("by_killstreak", false)) and String(ev.get("source_kind", &"killstreak")) == "killstreak" and ks != null:
-		# kc-ks-pop (head S2): a strike's kill says which streak made it ("MORTAR KILL"), in that
-		# streak's colour, inspectable; no "+100 ELIMINATION" (and it never ticks the streak).
+		# kc-ks-pop (head S2): a strike's kill says which streak made it ("MORTAR KILL"), in its
+		# owner's colour (kc-da-ui: teal yours, red the rival's), inspectable; no "+100 ELIMINATION" (and it never ticks the streak).
 		var tag: Control = ks.show_kill_tag(rect.get_center() + Vector2(0, -rect.size.y * 0.5 - 6.0),
 				StringName(ev.get("by_id", &"")), by_side, _timing)
 		_log(&"ks_kill", tag, _timing.get_value(&"popup"), ev)
@@ -758,7 +758,7 @@ func _on_ks_strike(ev: Dictionary, t: RefCounted) -> float:
 	var foe: StringName = _other(side)
 	var fx: Control = StrikeFx.new()
 	fx.style = KillstreakFx.look(item_id)["seq"]
-	fx.color = KillstreakFx.color_of(item_id)
+	fx.color = KillstreakFx.owner_color(StringName(ev.get("side", &"player")), viewer_side)
 	fx.icon = KillstreakFx.icon_of(item_id)
 	fx.reduced = t.reduced_motion
 	var targets: Array[Vector2] = []
@@ -853,7 +853,7 @@ func _ks_scan(ev: Dictionary, scanned: StringName) -> float:
 	var half: Rect2 = Rect2(all.position + Vector2(0, 0 if scanned != viewer_side else all.size.y * 0.5), Vector2(all.size.x, all.size.y * 0.5))
 	var fx: Control = StrikeFx.new()
 	fx.style = &"scan"
-	fx.color = KillstreakFx.color_of(item_id)
+	fx.color = KillstreakFx.owner_color(StringName(ev.get("side", &"player")), viewer_side)
 	fx.icon = KillstreakFx.icon_of(item_id)
 	fx.area = half
 	fx.reduced = _timing.reduced_motion
@@ -874,7 +874,7 @@ func _ks_drop(ev: Dictionary) -> float:
 		col = Rect2(p - Vector2(60, 120), Vector2(120, 240))
 	var fx: Control = StrikeFx.new()
 	fx.style = &"drop"
-	fx.color = KillstreakFx.color_of(item_id)
+	fx.color = KillstreakFx.owner_color(StringName(ev.get("side", &"player")), viewer_side)
 	fx.icon = KillstreakFx.icon_of(item_id)
 	fx.area = col
 	fx.end_point = Vector2(col.get_center().x, col.position.y + col.size.y * (0.88 if side == viewer_side else 0.12))
