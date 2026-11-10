@@ -6,6 +6,7 @@
 #   Cards whose rules the engine already has use real EffectData. The four NEW mechanics are listed in the
 #   constants below and played by wip_match.gd (a sim-only MatchState):
 #     Suppress N (Riot Shield, N = 1), Agile (Runner), Supply next round (Hacker), Beam (Laser Gunner).
+#   WIP_TRAITS=1 gives each unit its proposed trait (PROPOSED_TRAIT); otherwise they have none.
 #   Tweaks for what-ifs: the WIP_SET environment variable, "card.prop=value;card.prop=value"
 #   (e.g. WIP_SET="sniper.firepower=4;private_1.armor=2").
 # Author: Sr Game Designer Agent (kc-wip-design)
@@ -47,6 +48,12 @@ const LIST: Array = [
 	[&"barrage", "Barrage", 1, 3, 0, 0, 1],
 	[&"premium_loadout", "Premium Loadout", 1, 1, 0, 0, 1],
 ]
+
+## The proposed trait per unit (wip-set.md §3.3); WIP_TRAITS=1 prints them on the sim cards.
+const PROPOSED_TRAIT: Dictionary = {&"scout": &"vanguard", &"medic": &"undead", &"sharpshooter": &"specops",
+		&"flag_bearer": &"vanguard", &"hacker": &"specops", &"kamikaze": &"heavy", &"runner": &"specops",
+		&"sniper": &"specops", &"juggernaut": &"heavy", &"riot_shield": &"vanguard", &"fast_learner": &"undead",
+		&"laser_gunner": &"heavy"}
 
 ## Cards whose every rule the shipped engine already plays (safe in run_v2_check's plain MatchState).
 const ENGINE_READY: Array[StringName] = [&"private_1", &"private_2", &"private_3", &"private_4", &"scout",
@@ -113,8 +120,14 @@ static func build(any_trait: bool = false) -> Dictionary:
 				# a stand-in the AI can value (+1 FP to your units in a chosen column this round) and
 				# wip_match.gd resolves it as +1/+1 for good on your front unit in that column.
 				c.effects.append(fx(TR.ON_PLAY, K.MODIFY_FIREPOWER, T.ALL_FRIENDLIES, Z.CHOSEN_ZONE, 1, 1))
+		if OS.get_environment("WIP_TRAITS") == "1" and PROPOSED_TRAIT.has(c.id):
+			c.card_trait = PROPOSED_TRAIT[c.id]
 		if any_trait and c.is_unit() and not c.standard_issue:
-			c.trait_options.assign([&"", &"vanguard", &"specops", &"heavy", &"undead"])
+			var opts: Array[StringName] = [c.card_trait]  # the default (printed) trait first
+			for t: StringName in [&"", &"vanguard", &"specops", &"heavy", &"undead"]:
+				if t != c.card_trait:
+					opts.append(t)
+			c.trait_options.assign(opts)
 		out[c.id] = c
 	_apply_env(out)
 	return out
