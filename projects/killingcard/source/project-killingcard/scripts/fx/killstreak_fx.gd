@@ -30,23 +30,23 @@ const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 ## Per killstreak: icon, colour, the state words, a one-line effect (banner), what it does and when
 ## it resolves (inspector), and its sequence (strike_fx.gd style).
 const LOOKS: Dictionary = {
-	&"recon_drone": {"icon": &"ks_recon_drone", "color": Color("#5BC0EB"), "seq": &"scan",
+	&"recon_drone": {"icon": &"ks_recon_drone", "color": Color("#5BC0EB"), "seq": &"scan", "short": "DRONE",
 		"effect": "Rival plays face-up, rival Cover off: 2 rounds",
 		"when": "Resolves at once when you call it in Deploy (the rival's at Reveal)."},
-	&"mortar_barrage": {"icon": &"ks_mortar", "color": Color("#FF8A3D"), "seq": &"shells",
+	&"mortar_barrage": {"icon": &"ks_mortar", "color": Color("#FF8A3D"), "seq": &"shells", "short": "MORTAR",
 		"effect": "2 damage to every enemy in one column",
 		"when": "Strikes at the start of the fight, before column A."},
-	&"sentry_turret": {"icon": &"ks_sentry", "color": Color("#2EC4B6"), "seq": &"drop",
+	&"sentry_turret": {"icon": &"ks_sentry", "color": Color("#2EC4B6"), "seq": &"drop", "short": "SENTRY",
 		"effect": "A Sentry (FP 2, Armor 4, Cover 1) at the back of a column",
 		"when": "Deploys at Reveal, then fights from the back of the column."},
-	&"attack_helo": {"icon": &"ks_attack_helo", "color": Color("#C9E265"), "seq": &"strafe",
+	&"attack_helo": {"icon": &"ks_attack_helo", "color": Color("#C9E265"), "seq": &"strafe", "short": "HELO",
 		"effect": "2 damage to each enemy front unit, this fight and next",
 		"when": "Strikes at the start of this round's fight and the next, before column A."},
-	&"gunship": {"icon": &"ks_gunship", "color": Color("#E5383B"), "seq": &"strafe",
+	&"gunship": {"icon": &"ks_gunship", "color": Color("#E5383B"), "seq": &"strafe", "short": "GUNSHIP",
 		"effect": "Heavy fire on the enemy lines",
 		"when": "Strikes at the start of the fight."},
 }
-const DEFAULT_LOOK: Dictionary = {"icon": &"type_killstreak", "color": Color("#FFB020"), "seq": &"shells",
+const DEFAULT_LOOK: Dictionary = {"icon": &"type_killstreak", "color": Color("#FFB020"), "seq": &"shells", "short": "STRIKE",
 		"effect": "", "when": "Resolves at Reveal."}
 ## Banner state words.
 const MODE_WORDS: Dictionary = {&"earned": "READY", &"called": "CALLED IN", &"revealed": "HOSTILE"}
@@ -116,9 +116,18 @@ func show_banner(data: Dictionary, timing: RefCounted = null) -> float:
 	if not last_banner.has("effect") or String(last_banner["effect"]) == "":
 		last_banner["effect"] = look(item_id)["effect"]
 	var s: Vector2 = size if size.x > 0.0 else get_viewport_rect().size
-	var w: float = minf(BANNER_MAX_W, s.x - 32.0)
+	# Centred over the board (the three columns) when it is known, else over the screen.
+	var board: Rect2 = Rect2()
+	if zone_rect_fn.is_valid():
+		for z: StringName in [&"left", &"mid", &"right"]:
+			var zr: Rect2 = zone_rect_fn.call(z)
+			if zr.has_area():
+				board = zr if not board.has_area() else board.merge(zr)
+	if not board.has_area():
+		board = Rect2(Vector2(16, 0), Vector2(s.x - 32.0, s.y))
+	var w: float = minf(BANNER_MAX_W, board.size.x - 8.0)
 	banner.size = Vector2(w, BANNER_H)
-	var x: float = roundf((s.x - w) * 0.5)
+	var x: float = roundf(board.position.x + (board.size.x - w) * 0.5)
 	var y: float = 6.0
 	banner.visible = true
 	banner.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -165,8 +174,8 @@ func _draw_banner() -> void:
 	var c: Color = color_of(item_id)
 	var hostile: bool = StringName(last_banner.get("side", &"player")) != viewer_side
 	var r: Rect2 = Rect2(Vector2.ZERO, banner.size)
-	if not UiKit.draw_piece(banner, &"pnl_ks_tile", r, Color(0.75, 0.78, 0.8, 0.97)):
-		banner.draw_rect(r, Color(FxStyle.SLATE, 0.94))
+	banner.draw_rect(r, Color(FxStyle.SLATE, 0.95))
+	banner.draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0)), Color(c, 0.35))
 	banner.draw_rect(r, Color(FxStyle.RED if hostile else c, 0.9), false, 2.0)
 	# Accent block with the streak's icon.
 	var icon_r: Rect2 = Rect2(2, 2, BANNER_H - 4.0, BANNER_H - 4.0)
@@ -248,7 +257,7 @@ class PendingMarker:
 			return
 		position = r.position
 		size = r.size
-		var cw: float = minf(r.size.x - 8.0, 132.0)
+		var cw: float = minf(r.size.x - 8.0, 150.0)
 		chip.size = Vector2(cw, 36.0)
 		var hits_top: bool = side == owner_fx.viewer_side
 		chip.position = Vector2((r.size.x - cw) * 0.5, 4.0 if hits_top else r.size.y - 40.0)
@@ -293,8 +302,9 @@ class PendingMarker:
 		var head: Font = FxStyle.font_for(&"heading")
 		var x: float = ir.end.x + 5.0
 		var room: float = r.size.x - x - 3.0
-		chip.draw_string(head, Vector2(x, 16.0), "INCOMING", HORIZONTAL_ALIGNMENT_LEFT, room, 15, c)
-		chip.draw_string(head, Vector2(x, 32.0), label, HORIZONTAL_ALIGNMENT_LEFT, room, 13, FxStyle.FOG)
+		chip.draw_string(head, Vector2(x, 16.0), "%s INCOMING" % KillstreakFx.look(item_id)["short"], HORIZONTAL_ALIGNMENT_LEFT, room, 15, c)
+		var when: String = "resolves at fight" if label == "AT FIGHT" else "next %s" % label.to_lower()
+		chip.draw_string(FxStyle.font_for(&"body"), Vector2(x, 32.0), when, HORIZONTAL_ALIGNMENT_LEFT, room, 13, FxStyle.FOG)
 
 
 ## Replaces every marker with `list`: [{item_id, side, zones: [StringName], label?}].

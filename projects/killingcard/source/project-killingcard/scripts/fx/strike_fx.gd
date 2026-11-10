@@ -124,7 +124,8 @@ func _helo_k_at(x: float) -> float:
 
 func _helo_pos(k: float) -> Vector2:
 	var span: Vector2 = _helo_span()
-	return Vector2(lerpf(span.x, span.y, k), area.position.y + 18.0 + sin(k * TAU) * 3.0)
+	# Over the objective line between the two halves, clear of the killfeed at the top.
+	return Vector2(lerpf(span.x, span.y, k), area.get_center().y - 4.0 + sin(k * TAU) * 3.0)
 
 
 func _burst_alpha(k: float, at: float) -> float:
@@ -213,7 +214,7 @@ func _draw_strafe() -> void:
 	var a_all: float = _fade_all(k) if not reduced else clampf(1.0 - absf(k - 0.45) / 0.45, 0.0, 1.0)
 	var helo: Vector2 = _helo_pos(0.5 if reduced else k)
 	# Shadow and rotor blur.
-	draw_set_transform(Vector2(helo.x, area.position.y + area.size.y * 0.5), 0.0, Vector2(1.0, 0.35))
+	draw_set_transform(Vector2(helo.x + 10.0, helo.y + 26.0), 0.0, Vector2(1.0, 0.35))
 	draw_circle(Vector2.ZERO, 22.0, Color(0, 0, 0, 0.25 * a_all))
 	draw_set_transform(Vector2.ZERO)
 	var blade: float = (k * 40.0) if not reduced else 0.0

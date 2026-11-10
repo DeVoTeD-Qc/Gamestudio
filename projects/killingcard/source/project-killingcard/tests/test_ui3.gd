@@ -167,6 +167,46 @@ func test_killstreak_tiles_charge_glow_use_and_rules() -> void:
 		await tree.process_frame
 
 
+## kc-ks-seq: a called Mortar marks its column INCOMING, its tile says AT FIGHT, and the chip opens
+## its rules with when it resolves and where.
+func test_called_strike_is_marked_and_inspectable_on_the_phone() -> void:
+	var s: Array = await _spawn(Layout.PHONE)
+	var vp: SubViewport = s[0]
+	var m: Control = s[1]
+	var c: Node = s[2]
+	var st: MatchState = c.state
+	if st.find_item(0, &"mortar_barrage") == null:
+		st.sides[0].setup.killstreaks.append(load("res://data/loadout/mortar_barrage.tres"))
+	StreakTracker.grant(st, 0, &"mortar_barrage")
+	c.refresh()
+	await _frames(2)
+	c.select_item(&"mortar_barrage")
+	assert_true(c.play_at(1)["ok"], "Mortar called on column B")
+	await _frames(4)
+	var ks: Control = m.get_fx().ks
+	assert_true(ks.banner.visible, "its compact banner shows")
+	assert_eq(ks.last_banner.get("mode"), &"called", "CALLED IN")
+	assert_eq(ks.pending_keys(), ["player:mortar_barrage:mid"], "INCOMING on column B")
+	var tile: Control = m.get_killstreak_row().get_tile(&"mortar_barrage")
+	assert_eq(m.get_killstreak_row().word_for(tile.get_meta(&"entry")), "AT FIGHT", "the tile says when it lands")
+	var chip: Control = (ks.markers.values()[0] as Control).get(&"chip")
+	assert_true(chip.is_visible_in_tree() and chip.get_global_rect().has_area(), "the chip is on the board")
+	var right: InputEventMouseButton = InputEventMouseButton.new()
+	right.button_index = MOUSE_BUTTON_RIGHT
+	right.pressed = true
+	chip.gui_input.emit(right)
+	await _frames(3)
+	assert_true(m.get_inspector().is_open(), "right click opens its rules")
+	var status: String = (m.get_inspector().get_node("%StatusLabel") as Label).text
+	assert_true(status.contains("start of the fight") and status.contains("column B"), "when and where: %s" % status)
+	m.get_inspector().close()
+	c.undo()
+	await _frames(2)
+	assert_eq(ks.pending_keys(), [], "UNDO takes the marker away")
+	_despawn(vp)
+	await tree.process_frame
+
+
 # =============================================================================
 # Codex
 # =============================================================================

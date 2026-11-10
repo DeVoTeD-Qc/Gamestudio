@@ -86,7 +86,7 @@ const BASE: Dictionary = {
 	&"ks_strafe": 1.15,         # helo: a pass over the columns, bursts into each front unit
 	&"ks_scan": 0.9,            # recon drone: a scan sweep over the scanned half
 	&"ks_drop": 0.75,           # sentry: drops in at the back of its column, lands
-	&"ks_resolved": 0.55,       # after the strike's log line, before the fight goes on
+	&"ks_resolved": 0.9,        # the strike's log line is read before the fight goes on
 	# Killstreak call-in takeover (art direction: 0.8 s; retired from the match by kc-ks-seq)
 	&"takeover": 0.8,
 	&"takeover_in": 0.14,

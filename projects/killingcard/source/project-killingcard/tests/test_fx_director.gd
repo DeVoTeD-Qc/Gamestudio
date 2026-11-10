@@ -288,6 +288,8 @@ func test_mortar_marks_its_column_then_strikes_with_numbers_on_impact() -> void:
 	var marked_at_strike: Array = []
 	var number_t: Array = []
 	var strike_t: Array = [0.0]
+	var captions_seen: Array = []
+	_director.caption_changed.connect(func(lines: Array) -> void: captions_seen.append_array(lines))
 	_director.event_started.connect(func(ev: Dictionary) -> void:
 		if ev["type"] == RulesEvent.KILLSTREAK_STRIKE:
 			marked_at_strike.append(ks.pending_keys().size())
@@ -305,8 +307,10 @@ func test_mortar_marks_its_column_then_strikes_with_numbers_on_impact() -> void:
 	assert_true(number_t.size() == 2 and float(number_t[0]) > 0.2, "numbers wait for the shells (%s)" % str(number_t))
 	assert_false(kinds.has(&"takeover"), "no full-screen takeover")
 	var feed: Control = _director.killfeed
-	var lines: Array = feed.get_entries().map(func(l: Control) -> String: return "%s: %s" % [l.entry["attacker"], l.entry["victim"]])
-	assert_true(lines.has("Mortar Barrage hit column B: Rifleman −2 (down), Gunner −2"), "plain killfeed line: %s" % str(lines))
+	var lines: Array = feed.get_entries().map(func(l: Control) -> String: return "%s > %s" % [l.entry["attacker"], l.entry["victim"]])
+	assert_true(lines.has("Mortar Barrage > 2 HIT · 1 DOWN"), "killfeed summary: %s" % str(lines))
+	assert_eq(_director.ks_line(events[-1]), "Mortar Barrage hit column B: Rifleman −2 (down), Gunner −2", "the plain log line")
+	assert_true(captions_seen.has("Mortar Barrage hit column B: Rifleman −2 (down), Gunner −2"), "and it is the caption: %s" % str(captions_seen))
 	await _teardown()
 
 

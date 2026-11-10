@@ -795,9 +795,13 @@ func _on_ks_resolved(ev: Dictionary, t: RefCounted) -> float:
 	var item_id: StringName = ev.get("item_id", &"")
 	var line: String = ks_line(ev)
 	if killfeed != null:
-		var parts: PackedStringArray = line.split(": ", true, 1)
-		var entry: Control = killfeed.push({"attacker": parts[0], "attacker_side": side,
-				"victim": parts[1] if parts.size() > 1 else "", "victim_side": _other(side),
+		# The killfeed has room for names only: "MORTAR BARRAGE > 3 HIT · 2 DOWN"; the caption and the
+		# match log carry the full line.
+		var n_hits: int = (ev.get("hits", []) as Array).size()
+		var n_down: int = (ev.get("kills", []) as Array).size()
+		var summary: String = "NO TARGET" if n_hits == 0 else ("%d HIT" % n_hits + (" · %d DOWN" % n_down if n_down > 0 else ""))
+		var entry: Control = killfeed.push({"attacker": _display_name(item_id), "attacker_side": side,
+				"victim": summary, "victim_side": _other(side),
 				"icon": KillstreakFx.look(item_id)["icon"], "zone": ev.get("zone", &""), "killstreak": true}, _timing)
 		_log(&"killfeed", entry, float(entry.get(&"life")), ev)
 	if _skipping:

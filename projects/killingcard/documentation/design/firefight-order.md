@@ -31,7 +31,10 @@
 ### 2.1 Order of the Firefight phase
 ```
 FIREFIGHT
- 0. Start of firefight: Attack Helo hits (as today), the dead are removed.
+ 0. Killstreak strikes (kc-ks-seq): every damage killstreak hits here, one at a time, and each
+    strike's dead are removed before the next. Order: strikes still standing from an earlier round
+    first (Attack Helo's second fight), then this round's calls in Reveal order (initiative side
+    first, each side's plays in order). Then the lines close up.
  1. For each column A, B, C that has units on both sides:
       a. Suppress: each Suppress unit gives the enemy front unit -2 FP this round (as today).
       b. Beats until the column is resolved (§2.2).
@@ -64,6 +67,7 @@ When only one side still has unfired units, that side keeps firing one unit per 
 | Rule | Where it sits now | Note |
 |---|---|---|
 | **Attack Helo** (start of firefight) | Step 0, before column A | unchanged |
+| **Mortar Barrage** (kc-ks-seq) | Step 0, before column A | was Reveal step b. Called face-down in Deploy, revealed and queued at Reveal ("INCOMING, resolves at fight"), strikes at step 0. Same damage, targets and Cover. |
 | **Suppress** | Start of each column, on the enemy front unit at that moment | If that unit dies, the unit that moves up is **not** suppressed. Suppress pins a target, not a slot. |
 | **First Shot** | §2.3 | |
 | **Pick** | The shot's target choice, at its beat | A row-2 Marksman fires in beat 2, at whoever is weakest *then*. |
@@ -218,7 +222,14 @@ Rules details fixed while implementing:
 Every event is a `RulesEvent` dictionary `{type, round, ...}` appended to `MatchState.events` in this order. Units are integer uids, sides `&"player"` / `&"enemy"`, zones `&"left"` / `&"mid"` / `&"right"` (columns A / B / C).
 ```
 FIREFIGHT phase (PHASE_CHANGED phase=firefight)
-  [Attack Helo: EFFECT_APPLIED / DAMAGE_DEALT / UNIT_ELIMINATED ..., then LINE_ADVANCED per line that closed up]
+  per killstreak strike (kc-ks-seq, scripts/rules/killstreak_strikes.gd):
+    KILLSTREAK_STRIKE     {side, item_id, zone, zones, pass, passes}
+    DAMAGE_DEALT* / SURVIVED_LETHAL* / UNIT_ELIMINATED* (+ On Down)
+    KILLSTREAK_RESOLVED   {..., hits [{uid, side, amount, remaining, card_id, name, zone}], kills [uid], what}
+                          what = "Mortar Barrage hit column B: Trooper −2 (down), Sergeant −2"
+  then LINE_ADVANCED per line that closed up
+  (at Reveal, a damage killstreak emits ITEM_REVEALED then KILLSTREAK_QUEUED {side, item_id, zone, zones,
+  fights, resolves: firefight} instead of dealing its damage)
   for each column with units on both sides, A -> B -> C:
     FIREFIGHT_STARTED       {zone}                                    column banner
     SUPPRESSED*             {side, uid, target_uid, amount, zone}
@@ -295,3 +306,35 @@ The head, after playing the first build of the beat order: *"The resolving of fi
 In the browser (software rendering, 8-10 fps on the phone viewport) x1 rounds took 7.1 – 10.2 s of firefight; the desktop viewport ran at 2-5 fps in the smoke machine, so its times are not representative.
 
 **QA.** `tests/test_fight_ui.gd` (9): events land in the stream's order and beats are paced; Pierce tracer and "-n PIERCE"; column banner and summary; outline while firing, fired tokens, cleared at the end; captions per shot; the playback board applies the events in order and redraws at the line advance, not at the elimination; on the match screen an eliminated unit is still on the board when it lands, and after `LINE_ADVANCED` the moved units are in their new rows; the strip greys the skipped column and ticks the fought ones; a skip lands on the live final board; rival cards turn over one at a time; speed defaults and choice; the phone strip (below); the Deploy glow; Pierce glossary / glyph and the First Shot line. Browser smoke (`?qa=1&seed=101` / `303`, 844x390 and 1440x900, public and pitch builds): mid-beat, Pierce carry, line advance, column summary, captions, SPEED x2, tap-to-skip; no console errors. QA-only `window.kcQaCmd = "stage_fight"` puts a Pierce carry and a line advance in column A. Screenshots (public art, WebP): `qa/screenshots/fight-ui/`.
+
+
+## kc-ks-seq: killstreak timing and presentation (studio head, 2026-11-10)
+Head: "the killstreaks show a huge flash popup that is the same for all killstreaks; it's hard to follow.
+The ones that do damage like mortar should wait until fight start and the killstreak's sequence triggers
+before dealing damage."
+
+- **Rule.** A killstreak with a DAMAGE effect is a *strike* (`KillstreakStrikes.is_strike`: Mortar Barrage,
+  Attack Helo). It never deals damage when earned, called or revealed. Its ON_PLAY damage is queued at
+  Reveal into `MatchState.firefight_effects` for this round and resolves at Firefight step 0 (above);
+  START_OF_FIREFIGHT damage (Attack Helo) already did. Non-damage killstreaks keep their timing: Recon
+  Drone at once in Deploy, Sentry Turret at Reveal step b. Streak credit is unchanged (no streak for a
+  killstreak kill).
+- **AI.** `AiPlanner` keeps a strike's damage per zone (`Plan.my_strike`) and applies it at step 0 of its
+  firefight estimate, with the Cover and frontline-aura Cover the targets have then. The outcome preview
+  runs the real engine, so it shows the strike in the column's numbers.
+- **Presentation** (`scripts/fx/killstreak_fx.gd`, `strike_fx.gd`; the full-screen call-in takeover is
+  retired from the match):
+  - a compact banner in the streak's own colour and icon (READY when earned, CALLED IN when you call it,
+    HOSTILE for the rival's at Reveal) with its one-line effect; about 50 px tall, 1.7 s, the playback
+    waits 0.45 s for it;
+  - an INCOMING marker on the half-column a strike will hit ("MORTAR INCOMING / resolves at fight"; the
+    helo marks every column, "next 2 fights") and AT FIGHT on its killstreak tile, until it strikes;
+  - its own sequence: Mortar shells arc in and burst on each unit (damage numbers land with each impact),
+    the Attack Helo strafes each front unit, the Recon Drone scans the rival half, the Sentry drops in;
+  - the plain line as the fight caption and in the match log ("Mortar Barrage hit column B: Trooper −2
+    (down), Sergeant −2"), and "MORTAR BARRAGE > 2 HIT · 1 DOWN" in the killfeed;
+  - banner and chips open the killstreak's rules on tap, long press or right click (what it does, when it
+    resolves, which column). Fast animations halve it all; reduced motion slides nothing.
+- **Balance check** (small n, same seeds, before → after): run_v2_check runs=240 competent 39.2% → 37.5%,
+  casual 27.9% → 26.7%; duel_sim presets n=12 unchanged (spread 47.2–52.8 both); duel_sim ai n=20 within
+  1.3 points in every cell. Nothing moved more than about 2 points.
