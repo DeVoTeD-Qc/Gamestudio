@@ -79,7 +79,7 @@ mode = 0
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 0
-enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("63_wip")])
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("60_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("30_y1ak3"), ExtResource("30_y1ak3")])
 crew_label = "Standard Issue crew"
 
 [sub_resource type="Resource" id="Resource_8e67x"]
@@ -91,7 +91,7 @@ mode = 0
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 0
-enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("60_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("26_1daox"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("30_y1ak3"), ExtResource("33_13yh0")])
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("60_wip"), ExtResource("61_wip"), ExtResource("61_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("26_1daox"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("30_y1ak3"), ExtResource("33_13yh0")])
 crew_label = "Standard Issue crew"
 
 [sub_resource type="Resource" id="Resource_thwj8"]
@@ -115,7 +115,7 @@ mode = 1
 map = ExtResource("7_1oiq7")
 enemy_firepower_bonus = 0
 enemy_armor_bonus = 1
-enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("33_13yh0"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("26_1daox"), ExtResource("24_vxiig"), ExtResource("63_wip"), ExtResource("63_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("61_wip")])
+enemy_deck = Array[ExtResource("15_yt66f")]([ExtResource("33_13yh0"), ExtResource("42_ilvsx"), ExtResource("42_ilvsx"), ExtResource("26_1daox"), ExtResource("24_vxiig"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("62_wip"), ExtResource("61_wip")])
 crew_label = "Mastery crew"
 
 [sub_resource type="Resource" id="Resource_1sehu"]
