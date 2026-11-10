@@ -16,6 +16,7 @@
 #     sdeck=N:card*count,...[;N:...] (kc-econ: slot N's authored enemy deck)
 #     starter=card*n,... (kc-econ: the run starter, sets deck_size) edeck=0.5|10 (kc-econ: enemy decks scaled to a share or to N cards, composition kept)
 #     eset=loadout.effect_index.prop=value (kc-duel-tune: e.g. eset=ab_marked_shot.0.amount=2)
+#     latt=operator:attachment,... (kc-duel-tune: an Operator's weapon-level list)  docrule=2only|3only (doctrine_match.gd)
 #     cfg=prop=value[;...] (RunConfig, e.g. cfg=price_muster_out=1)  set=card.prop=value  tune=trait.tier.key=value
 #     late=N (aware-vs-blind decks) mirror=N tn=N (trait games per pairing) hn=N (head-to-head games per pair)
 #   Run: godot --headless --path . -s res://tests/tools/run_v2_check.gd -- exps=runs runs=400
@@ -128,6 +129,14 @@ func _main() -> void:
 					var lb: PackedStringArray = la[1].split("=", true, 1)
 					_assign(load("res://data/loadout/%s.tres" % la[0]), lb[0], lb[1])
 			"docrule": docrule = kv[1]
+			"latt":
+				# kc-duel-tune: latt=operator:attachment,attachment[;...] replaces an Operator's weapon-level list.
+				for item: String in kv[1].split(";"):
+					var la2: PackedStringArray = item.split(":", true, 1)
+					var lst: Array[Resource] = []
+					for aid: String in la2[1].split(","):
+						lst.append(load("res://data/loadout/%s.tres" % aid))
+					(load("res://data/loadout/%s.tres" % la2[0]) as LoadoutItem).attachments = lst
 			"eset":
 				# kc-duel-tune: eset=loadout_id.effect_index.prop=value[;...] edits an ability's effect (Marked Shot amount).
 				for item: String in kv[1].split(";"):

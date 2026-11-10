@@ -294,6 +294,11 @@ static func draw_keyword_icon(ci: CanvasItem, r: Rect2, id: StringName, tint: Co
 static func _draw_bolt(ci: CanvasItem, rr: Rect2, c: Color, more: bool) -> void:
 	var s: float = rr.size.x
 	var p: Vector2 = rr.position
+	# kc-ui-import2: the UI kit's ico_effect_bolt wins when imported (the "more" dot stays code).
+	if UiKit.draw_icon(ci, &"effect_bolt", rr.grow(-s * 0.12), c):
+		if more:
+			ci.draw_circle(p + Vector2(s * 0.85, s * 0.85), s * 0.1, c)
+		return
 	var pts: PackedVector2Array = [p + Vector2(s * 0.58, s * 0.12), p + Vector2(s * 0.28, s * 0.55), p + Vector2(s * 0.48, s * 0.55),
 			p + Vector2(s * 0.38, s * 0.88), p + Vector2(s * 0.72, s * 0.42), p + Vector2(s * 0.52, s * 0.42)]
 	ci.draw_colored_polygon(pts, c)

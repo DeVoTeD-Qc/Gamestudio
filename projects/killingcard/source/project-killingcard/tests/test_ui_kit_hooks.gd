@@ -11,6 +11,7 @@
 extends "res://tests/test_case.gd"
 
 const CARD_SCENE: String = "res://scenes/match/CardView.tscn"
+const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 ## The manifest lives next to the project in the repo (projects/killingcard/documentation/art/).
 const MANIFEST_REL: String = "../../documentation/art/ui-kit-manifest.csv"
 const UNIT: Dictionary = {"name": "Rifleman", "cls": "AR", "fp": 3, "armor": 2, "armor_max": 4, "banner": "rifleman", "cost": 2,
@@ -208,6 +209,25 @@ func test_badges_use_the_kit_with_their_tints() -> void:
 		CardLook.draw_pick_icon(ci, Rect2(0, 0, 16, 16), CardLook.AMBER)
 		CardLook.draw_pick_icon(ci, Rect2(20, 0, 16, 16), CardLook.AMBER, true))
 	assert_eq(UiKit.draw_log, [IconSheet.PICK_KIT_ID] as Array[StringName], "Pick: kw_pick_v2 first (code_only skips it)")
+	_reset()
+
+
+## kc-ui-import2: trait chips (ico_trait_*), the Fireteam keyword (ico_kw_fireteam) and the effect bolt
+## (ico_effect_bolt) ask the kit first, tinted like their code glyph, and keep the code glyph without it.
+func test_import2_trait_fireteam_bolt_hooks() -> void:
+	var draw_all: Callable = func(ci: CanvasItem) -> void:
+		SynergyGlyphs.draw_trait_icon(ci, Rect2(0, 0, 20, 20), &"vanguard", Color.RED)
+		SynergyGlyphs.draw_trait_icon(ci, Rect2(24, 0, 20, 20), &"undead", Color.GREEN)
+		SynergyGlyphs.draw_keyword_icon(ci, Rect2(48, 0, 20, 20), &"fireteam", Color.BLUE)
+		CardLook.draw_ability(ci, Rect2(72, 0, 21, 21), &"bolt_more", Color.YELLOW)
+	_kit()
+	var ran: bool = await _draw_once(draw_all)
+	assert_true(ran and UiKit.draw_log.is_empty(), "no kit: the code glyphs draw (%s)" % [UiKit.draw_log])
+	_kit([], [&"trait_vanguard", &"trait_undead", &"kw_fireteam", &"effect_bolt"])
+	await _draw_once(draw_all)
+	assert_eq(UiKit.draw_log, [&"trait_vanguard", &"trait_undead", &"kw_fireteam", &"effect_bolt"] as Array[StringName], "kit icons drawn")
+	assert_true(_tint_of(&"trait_vanguard").is_equal_approx(Color.RED), "trait tint kept")
+	assert_true(_tint_of(&"effect_bolt").is_equal_approx(Color.YELLOW), "bolt tint kept")
 	_reset()
 
 

@@ -1591,6 +1591,10 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		var status: String = "In %s, row %d%s: FP %d, Armor %d/%d." % [ZONE_WORDS[zone], row,
 				" (frontline)" if row == 1 else "",
 				state.firepower_of(u), u.armor, u.max_armor(state.round_number)]
+		# kc-duel-impl: the Recruit's -1 Armor (or a crew's +1), the marker's long-press / right-click line.
+		var mod_line: String = MatchSnapshot.armor_mod_line(s)
+		if mod_line != "":
+			status += " " + mod_line
 		open_card_inspector(u.card, "friend" if side == me_side else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
 				-1, synergy_lines(u.card, side, u, u.chosen_trait))
 		return
@@ -1929,6 +1933,9 @@ func _open_operator(side: int) -> void:
 	elif respawn_cost > 0 and state.config.operator_free_round1:
 		# kc-econ: round 1's placement is free; say what a respawn will cost.
 		where += " Free to place in round 1; a respawn costs %d Supply." % respawn_cost
+	var op_mod: String = MatchSnapshot.armor_mod_line(s)
+	if op_mod != "":
+		where += " " + op_mod
 	var op_lines: Array[Dictionary] = CardInfo.operator_keywords(op)
 	# kc-v2-ui: the Operator kit (run-v2.md §7): its passive and its once-per-match ability.
 	var kit: Dictionary = RunV2Views.operator_kit_view(state, side)

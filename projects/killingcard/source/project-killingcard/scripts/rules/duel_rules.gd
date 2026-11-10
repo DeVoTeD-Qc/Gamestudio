@@ -203,6 +203,21 @@ static func _doctrine_checks(deck: DuelDeck, cfg: DuelConfig, _unit_traits: Dict
 		warnings.append(_line(W_DOCTRINE_UNUSED, "Doctrine %s: none of your picks wear %s." % [tname, tname], {"doctrine": true}))
 
 
+## D5: the player-facing Doctrine text for trait `t` (&"" = no Doctrine), for the builder's Doctrine
+## strip and the inspect views. Says what the rule does and what the trait's sets give.
+static func doctrine_text(t: StringName, cfg: DuelConfig = null) -> String:
+	if cfg != null and not cfg.doctrine_enabled:
+		return "Doctrine is off in Duel: your trait counts are what your picks wear."
+	if t == &"":
+		return "No Doctrine: your trait counts are what your picks wear."
+	if t not in SynergyRules.TRAITS:
+		return ""
+	var n: String = ArtTraits.trait_name(t)
+	var tiers: Array = SynergyRules.TIER_TEXT.get(t, ["", ""])
+	return "Doctrine %s: while you have a %s card in play, your %s count gets +1, so its set bonus starts one card sooner. 2 %s: %s. 3 %s: %s." % [
+			n, n, n, n, tiers[0], n, tiers[1]]
+
+
 static func _line(code: StringName, text: String, fix_filter: Dictionary = {}, data: Dictionary = {}) -> Dictionary:
 	return {"code": code, "text": text, "fix_filter": fix_filter, "data": data}
 

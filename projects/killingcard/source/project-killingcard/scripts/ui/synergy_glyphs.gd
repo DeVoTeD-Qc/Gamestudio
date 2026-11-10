@@ -70,6 +70,9 @@ static func draw_trait_plate(ci: CanvasItem, r: Rect2, t: StringName, lit: bool 
 static func draw_trait_icon(ci: CanvasItem, r: Rect2, t: StringName, c: Color) -> void:
 	var s: float = minf(r.size.x, r.size.y)
 	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
+	# kc-ui-import2: the UI kit's ico_trait_<t> wins when imported; the code glyphs below are the fallback.
+	if UiKit.draw_icon(ci, StringName("trait_" + String(t)), Rect2(o, Vector2(s, s)), c):
+		return
 	var w: float = maxf(1.5, s * 0.13)
 	match t:
 		&"vanguard":
@@ -136,6 +139,9 @@ static func draw_keyword_icon(ci: CanvasItem, r: Rect2, kw: StringName, c: Color
 			ci.draw_circle(ctr, s * 0.1, c)
 			_arrow(ci, o, s, 0.4 if up_dir else 0.6, -flip, c)
 		&"fireteam":
+			# kc-ui-import2: ico_kw_fireteam (symmetric, so it needs no flip) wins when imported.
+			if UiKit.draw_icon(ci, &"kw_fireteam", Rect2(o, Vector2(s, s)), c):
+				return
 			for k: int in 2:
 				var dx: float = -1.0 if k == 0 else 1.0
 				var x0: float = s * (0.5 + dx * 0.1)

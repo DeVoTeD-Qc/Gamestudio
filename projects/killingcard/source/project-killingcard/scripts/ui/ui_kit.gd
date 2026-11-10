@@ -192,7 +192,9 @@ static func clear_cache() -> void:
 ## folder for the kc_b_si_* starter arts). tools/ui_kit_icons.py ships each file to the same folder.
 const PIECE_DIRS: PackedStringArray = ["res://assets/ui/kit/frames/", "res://assets/ui/kit/fx/",
 		"res://assets/ui/kit/panels/", "res://assets/ui/kit/plates/", "res://assets/ui/kit/icons/",
-		"res://assets/ui/kit/arts/", "res://assets/sprites/banners/"]
+		"res://assets/ui/kit/arts/", "res://assets/sprites/banners/",
+		# kc-ui-import2 (batch 2): buttons, tile backers and bands ship here (manifest final_folder).
+		"res://assets/ui/kit/buttons/", "res://assets/ui/kit/tiles/", "res://assets/ui/kit/bands/"]
 ## The new art slots of kc-onboard-ui (they arrive later; every caller has a code-drawn fallback).
 const ONBOARD_PIECES: Array[StringName] = [&"frm_standard_issue", &"frm_serial_plate", &"frm_socket_empty",
 		&"frm_socket_locked", &"ico_ui_lock", &"pnl_new_card", &"pnl_new_inset", &"kc_b_si_grunt", &"kc_b_si_trooper",

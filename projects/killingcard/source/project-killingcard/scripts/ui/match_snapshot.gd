@@ -138,6 +138,7 @@ static func unit_entry(state: MatchState, u: RulesUnit, side: RulesSide) -> Dict
 		"art": art_key(u, side),
 	}
 	_banner_fields(e, u.card, u, side, state, u.uid)
+	_armor_mod(e, side)
 	_unit_synergy(e, state, u, side)
 	if u.card != null:
 		# kc-onboard-ui: the Standard Issue frame (kc-ipad-cards: no levels, no locked keywords).
@@ -346,7 +347,26 @@ static func _operator_entry(state: MatchState, side: RulesSide) -> Dictionary:
 	var banner: Dictionary = {"operator": true}
 	_banner_fields(banner, null, op, side)
 	e["banner"] = banner["banner"]
+	_armor_mod(e, side)
 	return e
+
+
+## kc-duel-impl (duel-mode.md §4.1): a side-wide Armor handicap (SideSetup.armor_bonus < 0: the Duel
+## Recruit's -1) on the unit entry: armor_mod (the number) and armor_mod_text (the inspector line).
+## BannerView draws the green "-1" marker. Campaign crews' +Armor keep their own run-screen wording.
+static func _armor_mod(e: Dictionary, side: RulesSide) -> void:
+	var line: String = armor_mod_line(side)
+	if line != "":
+		e["armor_mod"] = side.setup.armor_bonus
+		e["armor_mod_text"] = line
+
+
+## The inspector line for a side's Armor change ("" when it has none).
+static func armor_mod_line(side: RulesSide) -> String:
+	var b: int = side.setup.armor_bonus if side != null and side.setup != null else 0
+	if b < 0:
+		return "Recruit handicap: %d Armor on every unit and the Operator of this side (already in its Armor)." % b
+	return ""
 
 
 ## Button entry for one activated loadout item (a killstreak), straight from the engine's checks.

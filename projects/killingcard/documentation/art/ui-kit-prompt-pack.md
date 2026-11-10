@@ -1114,7 +1114,7 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 
 - **Used in:** READY in the tray (245x64 phone, 149x72 desktop): the main button of every round.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / hover / pressed (btn_ready_pressed) / disabled (grey: nothing planned yet is still allowed, so rare) / glow (fx_glow_amber pulse when the Deploy timer is low). **9-slice (L,T,R,B at ship size):** 48,40,112,48.
+- **States:** normal / hover / pressed (btn_ready_pressed) / disabled (grey: nothing planned yet is still allowed, so rare) / glow (fx_glow_amber pulse when the Deploy timer is low). **9-slice (L,T,R,B at ship size):** 48,40,128,48.
 - **Code id:** `btn_ready` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 - **Note:** The stripes sit inside the right 9-slice margin so they never stretch.
 
@@ -1122,7 +1122,7 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 
 - **Used in:** Pressed state of READY.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 512x136. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** pressed. **9-slice (L,T,R,B at ship size):** 48,40,112,48.
+- **States:** pressed. **9-slice (L,T,R,B at ship size):** 48,40,128,48.
 - **Code id:** `btn_ready_pressed` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 
 ##### `btn_badge.png` · P1 · Batch 10.6
@@ -1312,21 +1312,21 @@ Not generated. The rows stay in `ui-kit-manifest.csv` with `status` = RETIRED an
 
 - **Used in:** Set callouts ('VANGUARD 2: ...'), column banner 'COLUMN A', FIRST SHOT tag, DEPLOY / PLAY HERE chips.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 256x48. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal (code tints outline: green buff, red off, amber ready). **9-slice (L,T,R,B at ship size):** 24,12,24,12.
+- **States:** normal (code tints outline: green buff, red off, amber ready). **9-slice (L,T,R,B at ship size):** 32,12,32,12.
 - **Code id:** `pnl_callout` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 
 ##### `pnl_pick_tile.png` · P1 · Batch 11.7
 
 - **Used in:** Reward pick tiles (Supply Drop cards, Retire, Doctrine, Promotion, Perk Offer), Loadout picks.
 - **Generate:** 1024x1536 (portrait 2:3). **Ship:** 256x384. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal / hover (+10%) / selected (fx_outline_teal) / disabled (AT THE FLOOR: grey). **9-slice (L,T,R,B at ship size):** 32,32,32,64.
+- **States:** normal / hover (+10%) / selected (fx_outline_teal) / disabled (AT THE FLOOR: grey). **9-slice (L,T,R,B at ship size):** 32,32,32,80.
 - **Code id:** `pnl_pick_tile` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 
 ##### `pnl_coach.png` · P2 · Batch 19.5
 
 - **Used in:** Tutorial coach bubbles over the objective row.
 - **Generate:** 1536x1024 (landscape 3:2). **Ship:** 384x160. **Background:** transparent PNG (magenta #FF00FF key if it fails).
-- **States:** normal. **9-slice (L,T,R,B at ship size):** 32,32,32,48.
+- **States:** normal. **9-slice (L,T,R,B at ship size):** 64,32,32,48.
 - **Code id:** `pnl_coach` (needs code (no UiKit lookup yet)). **Fallback:** code fallback kept.
 
 ##### `pnl_result.png` · P2 · Batch 19.6

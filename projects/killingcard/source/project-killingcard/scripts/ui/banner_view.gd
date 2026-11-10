@@ -406,6 +406,10 @@ func trait_lit() -> bool:
 
 ## kc-readability: the soft dark backings drawn on this banner now (tests): one per badge group.
 var backing_rects: Array[Rect2] = []
+## kc-duel-impl: where the side's Armor marker (the Recruit's green "-1") was last drawn (empty = none).
+var armor_mod_rect: Rect2 = Rect2()
+## The green of a handicap marker (the campaign's "green squad" colour).
+const HANDICAP_GREEN: Color = Color("#5FBF4A")
 
 
 func _backing(o: Control, r: Rect2, radius: float = 3.0) -> void:
@@ -462,6 +466,7 @@ func _draw_overlay() -> void:
 				Vector2(ar_rect.end.x - chip_l + 4.0 * k, maxf(fp_rect.size.y, ar_rect.size.y) + 2.0 * k)), 4.0 * k)
 		CardLook.draw_reticle(o, fp_rect, int(entry.get("fp", 0)), side, int(entry.get("fp_trend", 0)))
 		CardLook.draw_armor(o, ar_rect, armor, damaged)
+		_draw_armor_mod(o, ar_rect, m)
 		if cov.size.x > 0.0:
 			_draw_cover_chip(o, cov, int(entry.get("cover", 0)), int(entry.get("cover_trend", 0)), m)
 	# Bottom-left: traits, 45% faint at rest, lit with a glow while their set bonus is on; under a rail
@@ -734,6 +739,29 @@ func _draw_cover_chip(o: Control, rr: Rect2, value: int, trend: int, m: Dictiona
 	var pos: Vector2 = Vector2(rr.end.x - sz.x - 2.0, rr.end.y - font.get_descent(fs) - 1.0)
 	o.draw_string_outline(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, INK)
 	o.draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+
+
+## kc-duel-impl (duel-mode.md §4.1): the Recruit handicap marker, a green "-1" chip on top of the Armor
+## plate (entry.armor_mod < 0). Its long-press / right-click line is the unit inspector's armor_mod_text.
+func _draw_armor_mod(o: Control, ar_rect: Rect2, m: Dictionary) -> void:
+	armor_mod_rect = Rect2()
+	var mod: int = int(entry.get("armor_mod", 0))
+	if mod >= 0:
+		return
+	var k: float = m["k"]
+	var font: Font = get_theme_font(&"font", &"HudNumber")
+	var fs: int = maxi(10, int(ar_rect.size.y * 0.5))
+	var txt: String = "−%d" % absi(mod)
+	var sz: Vector2 = font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var w: float = maxf(sz.x + 6.0 * k, ar_rect.size.x * 0.7)
+	var h: float = fs + 4.0 * k
+	var rr: Rect2 = Rect2(Vector2(ar_rect.end.x - w, ar_rect.position.y - h - 1.0 * k), Vector2(w, h))
+	armor_mod_rect = rr
+	o.draw_rect(rr, Color(INK, 0.9))
+	o.draw_rect(rr, HANDICAP_GREEN, false, 1.5)
+	var pos: Vector2 = Vector2(rr.position.x + (w - sz.x) * 0.5, rr.end.y - font.get_descent(fs) - 1.0 * k)
+	o.draw_string_outline(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, INK)
+	o.draw_string(font, pos, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, HANDICAP_GREEN)
 
 
 func _draw_dog_tag(o: Control, rr: Rect2) -> void:

@@ -14,7 +14,10 @@ const Data: GDScript = preload("res://scripts/ui/art/card_art_data.gd")
 const APPROVED: Dictionary = {
 	"res://assets/sprites/cards/": 34,  # 29 card art + 4 run map modes + card back (kc-loadout-cut: -3 gear)
 	"res://assets/sprites/board/": 3,
-	"res://assets/ui/backgrounds/": 4,  # title key art, bg_run, bg_supply_drop, fx_callin_tablet
+	# title key art, bg_run, bg_supply_drop, fx_callin_tablet; kc-ui-import2 (UI kit batch 2) swapped the first
+	# three for bg_title / bg_run_map / bg_supply_drop and added bg_menu, bg_match, bg_codex, bg_loadout,
+	# bg_loading and bg_after_action (no screen loads those yet).
+	"res://assets/ui/backgrounds/": 10,
 	"res://assets/ui/perks/": 4,
 }
 const MODES: Array[StringName] = [&"zone_control", &"firefight", &"detonator", &"rival"]

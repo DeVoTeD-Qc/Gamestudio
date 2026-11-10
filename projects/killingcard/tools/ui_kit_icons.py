@@ -17,7 +17,14 @@ Two modes.
      - "luma", or fx_glow_rail           -> luma (white + alpha), cropped to the content, fitted
        (fx_crack_damage, fx_glow_rail)      to the ship size (the 7.2 v2 exceptions)
      - "alpha or magenta key"            -> real alpha kept, else the magenta field keyed (12% fuzz,
-       (frames, plates, coins)              1 px erode, edge despill), cropped, resized to ship size
+       (frames, plates, coins)              1 px erode, edge despill), cropped, resized to ship size;
+                                            9-slice pieces keep their corners (nine_resize, batch 2)
+     - "additive on black" (fx_*)        -> RGB kept on black, no alpha (drawn with blend Add),
+                                            cropped to the light with its falloff, resized (batch 2)
+     - backgrounds (bg_*)                -> crop 80 px top and bottom, 1536x864 WebP q85 (batch 2)
+     - column backdrops (col_*)          -> middle 648x1536, 512x1216 WebP q85 (batch 2)
+     - bands (band_*)                    -> 512x512 seamless swatch + <id>_strip.png 512x32 (batch 2)
+     - other opaque one-offs (frm_incoming, card_back_*) -> centre crop to the ship aspect (batch 2)
      - `transparent` = "no" (tiles)      -> centre square, resized, made seamless (half-offset blend)
    Files not in the manifest, and RETIRED slots, are listed and skipped.
      python3 -I tools/ui_kit_icons.py --manifest <manifest.csv> <raw_dir> <godot_project_dir> [--dry-run]
@@ -132,7 +139,37 @@ def key_magenta(im):
     return out
 
 
-def ship_alpha_piece(src_path, dst_path, size, contain=False):
+def nine_resize(im, size, m):
+    """Batch 2: a 9-slice piece to exactly `size` without cutting or squashing its corners. Scaled
+    uniformly to cover `size` (so nothing is upscaled more than the short side needs), then the
+    corners (manifest margins m = L, T, R, B at ship size) are copied as they are and the edges and
+    centre are stretched or squeezed to fit, which is what the game's 9-slice does anyway."""
+    w, h = im.size
+    k = max(size[0] / w, size[1] / h)
+    im = im.resize((max(1, round(w * k)), max(1, round(h * k))), Image.LANCZOS)
+    w, h = im.size
+    l, t, r, b = m
+    sx = [0, l, w - r, w]
+    sy = [0, t, h - b, h]
+    dx = [0, l, size[0] - r, size[0]]
+    dy = [0, t, size[1] - b, size[1]]
+    out = Image.new(im.mode, size, 0)
+    for j in range(3):
+        for i in range(3):
+            src = (sx[i], sy[j], sx[i + 1], sy[j + 1])
+            dw, dh = dx[i + 1] - dx[i], dy[j + 1] - dy[j]
+            if dw <= 0 or dh <= 0 or src[2] <= src[0] or src[3] <= src[1]:
+                continue
+            out.paste(im.crop(src).resize((dw, dh), Image.LANCZOS), (dx[i], dy[j]))
+    return out
+
+
+def parse_margins(text):
+    parts = [p.strip() for p in text.split(',')]
+    return tuple(int(p) for p in parts) if len(parts) == 4 and all(p.isdigit() for p in parts) else None
+
+
+def ship_alpha_piece(src_path, dst_path, size, contain=False, margins=None):
     im = Image.open(src_path)
     how = 'real alpha'
     if im.mode in ('RGBA', 'LA') and im.getchannel('A').getextrema()[0] < 250:
@@ -141,8 +178,79 @@ def ship_alpha_piece(src_path, dst_path, size, contain=False):
         im = key_magenta(im)
         how = 'magenta key'
     bbox = im.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox() or (0, 0) + im.size
-    fit(im.crop(bbox), size, contain).save(dst_path, optimize=True)
-    return '%s, crop %s -> %dx%d' % (how, bbox, size[0], size[1])
+    im = im.crop(bbox)
+    out = nine_resize(im, size, margins) if margins else fit(im, size, contain)
+    out.save(dst_path, optimize=True)
+    return '%s, crop %s -> %dx%d%s' % (how, bbox, size[0], size[1], ' (corners kept)' if margins else '')
+
+
+# --- batch 2: additive fx, opaque art ------------------------------------------------------------
+
+def ship_add_piece(src_path, dst_path, size, margins=None):
+    """Light on black (7.2 `add`): RGB kept, no alpha (the game draws it with blend mode Add, so
+    black disappears). Cropped to the light including its falloff (anything above 2% brightness),
+    then fitted like the alpha pieces (9-slice: corners kept; else contained on black)."""
+    im = Image.open(src_path).convert('RGB')
+    bbox = im.convert('L').point(lambda v: 255 if v > 5 else 0).getbbox() or (0, 0) + im.size
+    im = im.crop(bbox)
+    out = nine_resize(im, size, margins) if margins else fit(im, size, True)
+    out.save(dst_path, optimize=True)
+    return 'additive RGB, light %s -> %dx%d' % (bbox, size[0], size[1])
+
+
+def keep_import(dst_path):
+    """WebPs are shipped byte for byte and decoded by the game (CardArt.bitmap): importer "keep"."""
+    with open(dst_path + '.import', 'w') as f:
+        f.write('[remap]\n\nimporter="keep"\n')
+
+
+def ship_background(src_path, dst_path, size, quality=85):
+    """bg_*: 1536x1024 -> crop 80 px top and bottom -> 1536x864 WebP (pack size key / 7.2)."""
+    im = Image.open(src_path).convert('RGB')
+    w, h = im.size
+    k = size[0] / w
+    im = im.resize((size[0], round(h * k)), Image.LANCZOS)
+    t = (im.size[1] - size[1]) // 2
+    im = im.crop((0, t, size[0], t + size[1]))
+    im.save(dst_path, 'WEBP', quality=quality, method=6)
+    keep_import(dst_path)
+    return 'background, %dx%d WebP q%d' % (size[0], size[1], quality)
+
+
+def ship_column(src_path, dst_path, size, quality=85):
+    """col_*: crop the middle 648x1536 of a 1024x1536 portrait, resize to 512x1216, WebP."""
+    im = Image.open(src_path).convert('RGB')
+    w, h = im.size
+    cw = round(h * size[0] / size[1])
+    l = (w - cw) // 2
+    im.crop((l, 0, l + cw, h)).resize(size, Image.LANCZOS).save(dst_path, 'WEBP', quality=quality, method=6)
+    keep_import(dst_path)
+    return 'column, middle %dx%d -> %dx%d WebP q%d' % (cw, h, size[0], size[1], quality)
+
+
+def ship_band(src_path, dst_path):
+    """band_*: a 512x512 seamless swatch, plus <id>_strip.png, a 512x32 strip cut from the swatch's
+    middle and made seamless horizontally (mirror-free: half-offset blend at the ends)."""
+    note = ship_tile(src_path, dst_path, (512, 512))
+    sw = Image.open(dst_path).convert('RGB')
+    strip = sw.crop((0, 240, 512, 272))
+    w, h = strip.size
+    off = ImageChops.offset(strip, w // 2, 0)
+    mask = Image.new('L', strip.size, 0)
+    mp = mask.load()
+    for x in range(w):
+        v = int(255 * max(0.0, 1.0 - min(x, w - 1 - x) / (w * 0.25)))
+        for y in range(h):
+            mp[x, y] = v
+    Image.composite(off, strip, mask).save(dst_path.replace('.png', '_strip.png'), optimize=True)
+    return note + ' + 512x32 strip'
+
+
+def ship_opaque(src_path, dst_path, size):
+    """One-off opaque images (frm_incoming, card_back_*): centre crop to the ship aspect, resize."""
+    im = Image.open(src_path).convert('RGB')
+    fit(im, size, False).save(dst_path, optimize=True)
+    return 'opaque, centre crop -> %dx%d' % size
 
 
 def ship_tile(src_path, dst_path, size):
@@ -202,17 +310,32 @@ def manifest_mode(manifest, raw_dir, project, dry):
             continue
         os.makedirs(folder, exist_ok=True)
         nine = r['nine_slice_margins_ltrb'][:1].isdigit()
+        margins = parse_margins(r['nine_slice_margins_ltrb'])
+        cat = r['category']
+        webp = dst[:-4] + '.webp'
         if name.startswith('ico_'):
             note = ship_icon(src, folder, name)
         elif 'luma' in trans or name in LUMA_PIECES:
             note = ship_luma_piece(src, dst, size, not nine)
-        elif trans.startswith('no'):
+        elif cat == 'background' and name.startswith('col_'):
+            note = ship_column(src, webp, size)
+            dst = webp
+        elif cat == 'background':
+            note = ship_background(src, webp, size)
+            dst = webp
+        elif cat == 'band':
+            note = ship_band(src, dst)
+        elif 'additive' in trans:
+            note = ship_add_piece(src, dst, size, margins)
+        elif trans.startswith('no') and r['nine_slice_margins_ltrb'].startswith('tiles'):
             note = ship_tile(src, dst, size)
+        elif trans.startswith('no'):
+            note = ship_opaque(src, dst, size)
         else:
-            note = ship_alpha_piece(src, dst, size, not nine)
+            note = ship_alpha_piece(src, dst, size, not nine, margins)
         if nine:
             note += '; 9-slice %s: check the corners sit inside it' % r['nine_slice_margins_ltrb']
-        done.append((os.path.basename(src), r['final_folder'] + name, note))
+        done.append((os.path.basename(src), r['final_folder'] + os.path.basename(dst), note))
     for d in done:
         print('SHIP  %-30s -> %-44s %s' % d)
     for s in skipped:

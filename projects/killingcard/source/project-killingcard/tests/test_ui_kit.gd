@@ -66,8 +66,9 @@ func test_aliases_and_icon_sheet_hook() -> void:
 	assert_true(kw != null and kw.atlas.resource_path.ends_with("ico_kw_first_shot.png"), "First Shot keyword icon from the kit")
 	assert_true(IconSheet.has_icon(&"score"), "kit-only id is visible through has_icon")
 	# Ids neither the kit nor the sheet has yet still resolve to the sheet.
-	var flank: AtlasTexture = IconSheet.get_icon(&"kw_flank")
-	assert_true(flank != null and flank.atlas.resource_path == IconSheet.SHEET_PATH, "kw_flank still from the sheet")
+	# (kw_flank came in batch 2; ks_gunship was kept on the sheet icon, kc-ui-import2.)
+	var gunship: AtlasTexture = IconSheet.get_icon(&"ks_gunship")
+	assert_true(gunship != null and gunship.atlas.resource_path == IconSheet.SHEET_PATH, "ks_gunship still from the sheet")
 	assert_null_tex(UiKit.icon(&"kw_guard"), "kw_guard has no image yet (code-drawn)")
 	var t: Color = UiKit.tint(&"player")
 	assert_true(t.is_equal_approx(UiKit.FRIEND), "player tint")

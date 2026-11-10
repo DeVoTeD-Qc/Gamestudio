@@ -120,6 +120,10 @@ Every Duel-eligible card (30 today: 11 units, 2 Elites, 9 tactics, 8 Fields), so
 The 4 heroes, Kestrel, Longreach, Wasp-9, Bastion-60: the same row shape as `RunState.operator_choices()` (`id, name, weapon, fp, armor, keywords, passive_name, passive_text, ability_id, ability_name, ability_text`) plus `plays_like: String` and `unlocked: true` (D3: always playable). `fp` / `armor` are the shared numbers (D4).
 
 ### Presets
+### Doctrine text (D5)
+`DuelState.doctrine_text(trait) -> String`: the player-facing Doctrine text for the builder's Doctrine strip and the inspect views. `&""` gives "No Doctrine: your trait counts are what your picks wear."; a trait gives "Doctrine Heavy: while you have a Heavy card in play, your Heavy count gets +1, so its set bonus starts one card sooner. 2 Heavy: ... 3 Heavy: ..." (the set lines come from `SynergyRules.TIER_TEXT`); not a trait gives `""`. With `DuelConfig.doctrine_enabled = false` it says Doctrine is off. Same as `DuelRules.doctrine_text(trait, config)`.
+
+### Presets
 - `DuelState.presets() -> Array[Dictionary]`: the 4 deck views (§4 shape) with `preset: true`, `plan`, `trait` (main trait).
 - `DuelState.preset(id) -> DuelDeck`: the preset resource (read-only; call `.copy()` to edit).
 
@@ -138,14 +142,15 @@ Up to `DuelState.MAX_DECKS` (8) per profile, in `Settings.run_profile.duel_decks
 Every change saves the profile and emits `DuelState.decks_changed`.
 
 ## 5. Starting a duel
-Both return `{ok: bool, reason: String, match: DuelMatch}` (the reason is also kept in `DuelState.last_error`). `reason` is the first red line of an illegal deck ("Player 2: Pick a hero"). The match is also kept as `DuelState.current` for the match scene to take (`DuelState.take_current() -> DuelMatch`).
+Both return `{ok: bool, reason: String, match: DuelMatch}` (the reason is also kept in `DuelState.last_error`). `reason` is the first red line of an illegal deck ("Player 2: Pick a hero"). The match is also kept as `DuelState.current` for the match scene to take with `DuelState.take_current() -> DuelMatch`, which **clears `current`** (the match is handed over once; a second call returns null).
 
 - **`DuelState.start_vs_ai(deck: DuelDeck, opponent: StringName, tier: StringName, seed := -1)`**
   `opponent` = a preset id or `&"random"` (a seeded pick among the 4). `tier` = `&"recruit"`, `&"regular"`, `&"veteran"` (`DuelState.TIERS`; `DuelState.tier_views()` gives `[{id, name, text}]` with the spec's lines, e.g. "Recruit: its cards have −1 Armor and it makes mistakes"). The human is side 0 (`MatchState.PLAYER`), the AI side 1.
 - **`DuelState.start_hot_seat(deck_a, deck_b, names := ["Player 1", "Player 2"], opts := {})`**
   `opts`: `{open_pool: bool, seed: int}`. A seeded coin flip decides who is seat 0 (`match.seat_of_player(0|1)`, `match.player_of_side(side)`). Both decks are validated.
 
-What a Duel match is (`DuelRules.match_config`): the campaign economy (`data/run_config.tres`: round N gives N Supply, cap 7; 4 + 1 cards in round 1, a free mulligan, 1 a round, hand cap 7), deck size 20, **Zone Control to 6** (round cap 8, overtime to 10), the map Port Vasel, **no Terrain, no perks, no attachments, no weapon levels**, the 3 starter killstreaks (Recon Drone, Mortar Barrage, Attack Helo) on both sides, the Operator kit on (passive + once-per-match ability), Doctrine = the deck's `doctrine_trait` (D5). Recruit's side has `armor_bonus = -1` (`match.armor_bonus(side)`, to show the green "−1").
+What a Duel match is (`DuelRules.match_config`): the campaign economy (`data/run_config.tres`: round N gives N Supply, cap 7; 4 + 1 cards in round 1, a free mulligan, 1 a round, hand cap 7), deck size 20, **Zone Control to 6** (round cap 8, overtime to 10), the map Port Vasel, **no Terrain, no perks, no attachments, no weapon levels**, the 3 starter killstreaks (Recon Drone, Mortar Barrage, Attack Helo) on both sides, the Operator kit on (passive + once-per-match ability), Doctrine = the deck's `doctrine_trait` (D5). Recruit's side has `armor_bonus = -1` (`match.armor_bonus(side)`).
+**The Recruit marker:** `MatchSnapshot.unit_entry()` and the Operator entry carry `armor_mod` (-1) and `armor_mod_text` ("Recruit handicap: -1 Armor on every unit and the Operator of this side (already in its Armor).") for a side whose `armor_bonus` is below 0 (the Recruit). `BannerView` draws a green "−1" chip on top of the Armor plate when `armor_mod < 0` (`BannerView.armor_mod_rect`), and the unit and Operator inspectors (long press / right click) add the line to their status.
 
 ## 6. The match (`DuelMatch`, `scripts/run/duel_match.gd`)
 A `RefCounted` that owns one `MatchState` (`match.state`) and who plays which side. The UI keeps using `MatchState` for plays (`submit`, `can_submit`, `legal_targets`, `undo_last`, `mulligan`) and its existing playback split (`reveal()`, `firefight()`, `score()`), with these Duel rules on top. In hot seat, send plays, mulligans and undos through `DuelMatch.submit` / `mulligan` / `undo_last` (they refuse the side whose turn it isn't); read-only checks (`can_submit`, `legal_targets`, `check_use`) can go straight to `state`.

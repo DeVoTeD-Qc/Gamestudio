@@ -131,7 +131,10 @@ func test_duel_state_start_and_finish() -> void:
 	r = ds.start_vs_ai(ds.preset(&"spearhead"), &"random", &"recruit", 1)
 	assert_true(r["ok"], "a preset (loaner) plays at once")
 	var m: DuelMatch = r["match"]
-	assert_true(m == ds.take_current(), "kept for the match scene")
+	assert_true(m == ds.current, "kept for the match scene")
+	assert_true(m == ds.take_current(), "handed to the match scene")
+	assert_eq(ds.current, null, "take_current clears it")
+	assert_eq(ds.take_current(), null, "handed over once")
 	assert_true(m.decks[1].preset, "the AI plays a preset")
 	assert_false(ds.finish(m)["ok"], "not over yet")
 	m.start()
@@ -178,3 +181,70 @@ func test_soak_presets_reach_an_end() -> void:
 			assert_true(m.result()["ended"], "result says ended")
 	assert_eq(games, 12, "12 games")
 	assert_true(max_rounds <= c.match_config(_base()).overtime_draw_round, "no match runs past overtime (%d)" % max_rounds)
+
+
+func test_take_current_hands_the_match_over_once() -> void:
+	var ds: Node = tree.root.get_node("DuelState")
+	var keep: Variant = ds.current
+	var r: Dictionary = ds.start_hot_seat(ds.preset(&"spearhead"), ds.preset(&"overwatch"), ["A", "B"], {"seed": 4})
+	assert_true(r["ok"], "started")
+	assert_true(ds.take_current() == r["match"], "the match")
+	assert_eq(ds.current, null, "cleared after the take")
+	assert_eq(ds.take_current(), null, "a second take gets nothing")
+	ds.current = keep
+
+
+func test_doctrine_text() -> void:
+	var ds: Node = tree.root.get_node("DuelState")
+	assert_eq(ds.doctrine_text(&""), "No Doctrine: your trait counts are what your picks wear.", "none")
+	var h: String = ds.doctrine_text(&"heavy")
+	assert_true(h.begins_with("Doctrine Heavy: while you have a Heavy card in play, your Heavy count gets +1"), h)
+	assert_true(h.contains("2 Heavy: Heavy units get Cover +1 and +1 FP") and h.contains("3 Heavy: Heavy units get +1 more FP"),
+			"the set lines: %s" % h)
+	for t: StringName in SynergyRules.TRAITS:
+		assert_true(String(ds.doctrine_text(t)).contains(ArtTraits.trait_name(t)), "%s named" % t)
+	assert_eq(ds.doctrine_text(&"pirates"), "", "not a trait")
+	var off: DuelConfig = _cfg().duplicate() as DuelConfig
+	off.doctrine_enabled = false
+	assert_true(DuelRules.doctrine_text(&"heavy", off).begins_with("Doctrine is off"), "switched off in data")
+
+
+## The Recruit's -1 Armor shows on its units and Operator (a green marker) and in their inspector line.
+func test_recruit_armor_marker_on_units() -> void:
+	var c: DuelConfig = _cfg()
+	var m: DuelMatch = DuelMatch.vs_ai(c.preset(&"spearhead"), c.preset(&"iron_wall"), &"recruit", c, _base(), 12)
+	m.start()
+	m.finish_deploy(0)
+	m.resolve_round()
+	m.round_done()
+	var Snap: GDScript = load("res://scripts/ui/match_snapshot.gd")
+	var foe: RulesSide = m.state.sides[1]
+	var me: RulesSide = m.state.sides[0]
+	var units: Array[RulesUnit] = foe.units_on_board()
+	assert_false(units.is_empty(), "the Recruit placed something in round 1")
+	var u: RulesUnit = units[0]
+	var e: Dictionary = Snap.unit_entry(m.state, u, foe)
+	assert_eq(e.get("armor_mod", 0), -1, "the unit entry carries the handicap")
+	assert_true(String(e.get("armor_mod_text", "")).begins_with("Recruit handicap: -1 Armor"), "inspector line")
+	if u.card != null:
+		assert_eq(u.base_max_armor, maxi(1, u.card.armor - 1), "and it is real: -1 Armor")
+	var op_e: Dictionary = Snap._operator_entry(m.state, foe)
+	assert_eq(op_e.get("armor_mod", 0), -1, "the Operator too")
+	if not me.units_on_board().is_empty():
+		assert_false(Snap.unit_entry(m.state, me.units_on_board()[0], me).has("armor_mod"), "never on the player's side")
+	assert_eq(Snap.armor_mod_line(me), "", "no line without a handicap")
+	# The board banner draws the green marker over the Armor plate.
+	var bv: BannerView = BannerView.new()
+	bv.size = Vector2(80, 114)
+	tree.root.add_child(bv)
+	bv.show_unit(e, &"enemy", true)
+	await tree.process_frame
+	await tree.process_frame
+	assert_true(bv.armor_mod_rect.has_area(), "the -1 marker is drawn")
+	var plain: Dictionary = e.duplicate()
+	plain.erase("armor_mod")
+	bv.show_unit(plain, &"enemy", true)
+	await tree.process_frame
+	await tree.process_frame
+	assert_false(bv.armor_mod_rect.has_area(), "no marker without a handicap")
+	bv.queue_free()

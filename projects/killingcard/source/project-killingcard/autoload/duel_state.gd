@@ -101,6 +101,12 @@ func preset(id: StringName) -> DuelDeck:
 	return config().preset(id)
 
 
+## D5: the player-facing Doctrine text of trait `t` (&"" = "No Doctrine ..."), for the builder and the
+## inspect views (DuelRules.doctrine_text).
+func doctrine_text(t: StringName) -> String:
+	return DuelRules.doctrine_text(t, config())
+
+
 func tier_views() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for t: StringName in TIERS:
@@ -242,8 +248,11 @@ func start_hot_seat(deck_a: DuelDeck, deck_b: DuelDeck, names: Array = ["Player 
 	return {"ok": true, "reason": "", "match": current}
 
 
+## The match to play, handed over once: `current` is cleared, so a second call returns null.
 func take_current() -> DuelMatch:
-	return current
+	var m: DuelMatch = current
+	current = null
+	return m
 
 
 ## Records a finished duel (records and cosmetics only). {ok, reason, result, records, new_cosmetics}.

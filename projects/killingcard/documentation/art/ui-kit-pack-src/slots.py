@@ -276,11 +276,11 @@ part("button", sec, "btn_danger", "btn_danger.png", "Danger / leave actions: BAC
      gen="1536x1024", ship="384x128", nine="40,40,40,48", states="normal / hover (+10%) / pressed (code: darker + 2 px down) / disabled (grey)")
 part("button", sec, "btn_ready", "btn_ready.png", "READY in the tray (245x64 phone, 149x72 desktop): the main button of every round", "P1",
      "a big wide command button plate: amber #FFB020 face with a darker amber bottom edge, a thick dark #12161A outline, chamfered top-left and bottom-right corners, and a band of three short dark diagonal hazard stripes at the far right end only; the rest of the face is plain and flat",
-     gen="1536x1024", ship="512x136", nine="48,40,112,48", states="normal / hover / pressed (btn_ready_pressed) / disabled (grey: nothing planned yet is still allowed, so rare) / glow (fx_glow_amber pulse when the Deploy timer is low)",
+     gen="1536x1024", ship="512x136", nine="48,40,128,48", states="normal / hover / pressed (btn_ready_pressed) / disabled (grey: nothing planned yet is still allowed, so rare) / glow (fx_glow_amber pulse when the Deploy timer is low)",
      notes="The stripes sit inside the right 9-slice margin so they never stretch.")
 part("button", sec, "btn_ready_pressed", "btn_ready_pressed.png", "Pressed state of READY", "P1",
      "the same READY button plate pressed in: amber face one shade darker, no bottom edge, a thin inner top shadow, stripes unchanged",
-     gen="1536x1024", ship="512x136", nine="48,40,112,48", states="pressed")
+     gen="1536x1024", ship="512x136", nine="48,40,128,48", states="pressed")
 part("button", sec, "btn_badge", "btn_badge.png", "Icon strip badges 62x64 (MENU, SCORE, OPERATOR, STREAK, RIVAL, PREVIEW, DECK), SPEED, UNDO square", "P1",
      "a square badge plate: dark slate #1C2228 face, a 2-pixel steel #3A444D outline, all four corners chamfered at 45 degrees, a thin darker inner bevel, a faint vertical brushed grain, plain empty face",
      ship="128x128", nine="24,24,24,24", states="normal / pressed (code darker) / glow (fx_glow_amber: killstreak ready, Operator DEPLOY) / selected (fx_outline_teal: flyout open)")
@@ -361,13 +361,13 @@ part("panel", sec, "pnl_rail_chip", "pnl_rail_chip.png", "Trait rail chips (62x4
      ship="128x96", nine="20,20,20,20", states="idle / lit (code tints the slot by trait) / ring tier 3 (fx_ring_tier3) / crack (fx_crack)")
 part("panel", sec, "pnl_callout", "pnl_callout.png", "Set callouts ('VANGUARD 2: ...'), column banner 'COLUMN A', FIRST SHOT tag, DEPLOY / PLAY HERE chips", "P2",
      "a slim angled tag plate like a cut ribbon: a parallelogram with both ends slanted, near-black face, a thin fog-white outline",
-     gen="1536x1024", ship="256x48", nine="24,12,24,12", states="normal (code tints outline: green buff, red off, amber ready)")
+     gen="1536x1024", ship="256x48", nine="32,12,32,12", states="normal (code tints outline: green buff, red off, amber ready)")
 part("panel", sec, "pnl_pick_tile", "pnl_pick_tile.png", "Reward pick tiles (Supply Drop cards, Retire, Doctrine, Promotion, Perk Offer), Loadout picks", "P1",
      "an upright tile frame: dark gunmetal face, a 2-pixel steel outline, chamfered top-left and bottom-right corners, a slightly lighter band across the bottom fifth for a caption",
-     gen="1024x1536", ship="256x384", nine="32,32,32,64", states="normal / hover (+10%) / selected (fx_outline_teal) / disabled (AT THE FLOOR: grey)")
+     gen="1024x1536", ship="256x384", nine="32,32,32,80", states="normal / hover (+10%) / selected (fx_outline_teal) / disabled (AT THE FLOOR: grey)")
 part("panel", sec, "pnl_coach", "pnl_coach.png", "Tutorial coach bubbles over the objective row", "P2",
      "a speech-bubble style info panel with a squared body and a small triangular tail at the bottom left, near-black face, a thin amber outline, chamfered corners",
-     gen="1536x1024", ship="384x160", nine="32,32,32,48", states="normal")
+     gen="1536x1024", ship="384x160", nine="64,32,32,48", states="normal")
 part("panel", sec, "pnl_result", "pnl_result.png", "Match end and run end headline plate behind VICTORY / DEFEAT / DRAW", "P2",
      "a wide ceremonial plate: a long horizontal bar with angled ends and two short parallel wing bars above and below it at each end, brushed steel face, plain centre",
      gen="1536x1024", ship="768x160", nine="160,48,160,48", states="victory (code tints amber) / defeat (red) / draw (steel)",
