@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 20,
+  "generated_count": 30,
   "requested_count": 77,
   "images": [
     {
@@ -210,7 +210,8 @@
       "file": "dd_melee_bare_hands.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "f20f9b3844e324f9c4581f7ce276af1ecb0f2bb975de6f377c129335163aa5c2"
     },
     {
       "batch": 3,
@@ -219,7 +220,8 @@
       "file": "dd_melee_pipe_wrench.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "8c860e3e4c493891466175394e9174b7267ca4e4a5a1ef38ad2ab35b7a1ea220"
     },
     {
       "batch": 3,
@@ -228,7 +230,8 @@
       "file": "dd_melee_fire_axe.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "8f9afa969426461eff9a4cd987c39f8ef5ad8190d0b6fa38bdfe38fc15ee819a"
     },
     {
       "batch": 3,
@@ -237,7 +240,8 @@
       "file": "dd_melee_sledgehammer.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "6b3bb73e85fce65645c3db430588c70cf2f3d2055868896b36fed347fc87c799"
     },
     {
       "batch": 3,
@@ -246,7 +250,8 @@
       "file": "dd_item_bandage.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "77f02a5b6777f01e0ac73f0d9efeb9c84201badfe79dae3a5bb40959d3a6d0ed"
     },
     {
       "batch": 3,
@@ -255,7 +260,8 @@
       "file": "dd_item_first_aid_kit.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "885efc5a26cecdcfd30369460e21f29cecaa8c8ab33ef47eee4e986ad4fe89db"
     },
     {
       "batch": 3,
@@ -264,7 +270,8 @@
       "file": "dd_item_trauma_kit.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "6788b4801a1247e3b6fc2e1bfa284c3eb614cac0e75651d4cf227f90cc390d4f"
     },
     {
       "batch": 3,
@@ -273,7 +280,8 @@
       "file": "dd_cover_plywood.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "cce2f2da6702e00e8823c8da92c4aa2e33624b418780b36f2b50d09c2a05cca1"
     },
     {
       "batch": 3,
@@ -282,7 +290,8 @@
       "file": "dd_cover_car_door.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "45fb79c91720fd04a7abbf33e17275b14e2834d815b8c2d99827deed691a42de"
     },
     {
       "batch": 3,
@@ -291,7 +300,8 @@
       "file": "dd_cover_dumpster.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "be1349a484a6ef97a450b679140971519e7c594d99129c1062c8250886585ad2"
     },
     {
       "batch": 4,
