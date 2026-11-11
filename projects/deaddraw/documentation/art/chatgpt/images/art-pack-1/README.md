@@ -1,9 +1,7 @@
 # DeadDraw art pack 1 — generated originals
 
-Full-size PNG originals from [dd-art-pack-1-prompts.md](../../dd-art-pack-1-prompts.md), preserving requested filenames and sizes. Transparent patches and icons use real alpha.
+PNG illustrations from [dd-art-pack-1-prompts.md](../../dd-art-pack-1-prompts.md), preserving requested filenames and dimensions. All **77 images** are present and passed PNG integrity and requested-size checks. All 18 patches and icons have verified transparent alpha channels.
 
-76 of 77 images generated. All present files passed PNG integrity, requested dimension, and applicable alpha-channel checks. See [manifest.json](manifest.json) for batches, status and SHA-256 hashes. These are originals for art review; no game imports or crops have been changed.
+See [manifest.json](manifest.json) for batches, prompt sources and SHA-256 hashes. These are images for art review; no game imports or crops have been changed. Square outputs returned above the requested size were exported to 1024×1024 without cropping, preserving alpha where requested.
 
-Generation finished across all seven batches: **76 of 77 images**. The image service rejected image 43, `dd_machine_retrofit_bench.png` (Retrofit Bench), with `moderation_blocked` (violence) at the output stage; no substitute was inserted.
-
-Square images returned above the requested size were exported to 1024×1024 without cropping, preserving alpha where requested. The landscape title background was cleaned to remove generated button shapes and leave the requested dark area for the game UI.
+Retrofit Bench and the landscape title were regenerated from [dd-art-pack-1-retry-prompts.md](../../dd-art-pack-1-retry-prompts.md). The bench fills the previously blocked slot. The title replaces the rejected illustration with the mechanic carrying a red pipe wrench, the doctor in a white coat and green scrubs, and the courier with an amber cap and messenger bag, with clear dark space on the left for the game UI.

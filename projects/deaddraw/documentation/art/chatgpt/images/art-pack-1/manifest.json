@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 76,
+  "generated_count": 77,
   "requested_count": 77,
   "images": [
     {
@@ -430,8 +430,9 @@
       "file": "dd_machine_retrofit_bench.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "blocked",
-      "reason": "Image service rejected generation: moderation_blocked (violence), output stage."
+      "status": "generated",
+      "sha256": "fe09fded2dda6f925f1846529ad798709507be9315064ceb66ac1b6667d37e94",
+      "prompt_source": "../../dd-art-pack-1-retry-prompts.md"
     },
     {
       "batch": 4,
@@ -591,7 +592,8 @@
       "size": "1536x1024",
       "transparent": false,
       "status": "generated",
-      "sha256": "0b9b3eda9572cca8f763176de882881dd47dc5692458255ecec62af55e8f77c0"
+      "sha256": "d5be5ba11ee15fb0527cd17cc57aee1972495a00bf3a7ec3620bcf33b632b9cd",
+      "prompt_source": "../../dd-art-pack-1-retry-prompts.md"
     },
     {
       "batch": 6,
@@ -774,5 +776,5 @@
       "sha256": "085d370af02dc5c68efcd4ee0084e2e8b361cf7fdc5b5b28573840fb8c63670d"
     }
   ],
-  "blocked_count": 1
+  "blocked_count": 0
 }
