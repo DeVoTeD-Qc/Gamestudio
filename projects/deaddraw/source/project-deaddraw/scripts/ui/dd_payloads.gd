@@ -86,6 +86,12 @@ static func _weapon_label(run: DDRun, w: int) -> String:
 ## Zoom for a street card. Zombies: damage with each weapon and which gun rules allow it.
 static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	var b: DDBalance = run.bal
+	if c.kind == DDCard.MELEE:
+		# v4: a melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer)
+		var mp: Dictionary = DDV4Hooks.melee_card(c, run, index)
+		mp["hit"] = b.melee_power(c.wid)
+		mp["art_keys"] = DDV4Hooks.melee_art_keys(c.wid, b.melee_name(c.wid))
+		return mp
 	var body: PackedStringArray = []
 	match c.kind:
 		DDCard.ZOMBIE:
@@ -110,7 +116,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 			body.append(DDText.gun_card_text(c.wid, b, run.steady()))
 			body.append("Tap it: put it into slot 1 or 2 (replacing a gun discards its stack: no bonus, no challenge), or scrap it for %d points." % b.shown(b.num("scrap_points")))
 		DDCard.MEDKIT:
-			body.append("Heal %d (one medkit per street; a second one is discarded)." % run.medkit_heal(c))
+			body.append("Heal %d%s." % [run.medkit_heal(c), " (one medkit per street; a second one is discarded)" if b.num("medkits_per_street") == 1 else ""])
 		DDCard.COVER:
 			body.append("Gain %d Cover: it absorbs damage before HP and stays until used." % c.value)
 	if c.holdover:
@@ -160,7 +166,7 @@ static func card_t2(c: DDCard, run: DDRun, index: int) -> String:
 		DDCard.WEAPON:
 			return "Each kill %s. Tap: equip, or scrap (+%d)." % [_rule_words(b.weapon_rule(c.wid), run.steady()), b.shown(b.num("scrap_points"))]
 		DDCard.MEDKIT:
-			return "You're at %d/%d HP. One medkit per street." % [run.hp, run.max_hp]
+			return "You're at %d/%d HP. Tap it to heal." % [run.hp, run.max_hp]
 		DDCard.COVER:
 			return "Cover takes damage before your HP."
 	return ""
@@ -187,11 +193,21 @@ static func _rule_words(rule: String, rosa: bool) -> String:
 			return "while the total stays 16 or less"
 		"big":
 			return "strength 6 or more"
+		"small":
+			return "strength 6 or less"
+		"heavy":
+			return "can be any zombie; one kill fills it"
 	return DDText.rule_short(rule, rosa)
 
 
 static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
+	if c.kind == DDCard.MELEE:
+		var ms: Dictionary = DDV4Hooks.melee_card_spec(c, i, run)
+		ms["hit"] = b.melee_power(c.wid)
+		ms["lines"] = [[DDText.uses_text(int(ms.get("uses", 0))) + " · melee", DDUi.accent("K"), DDUi.FONT_S]]
+		ms["payload"] = card(c, run, i)
+		return ms
 	var lines: Array = []
 	var badge: String = ""
 	var badge_color: Color = DDUi.WARN
@@ -232,7 +248,7 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 			if bool(pm["wasted"]):
 				dim_art = true
 				badge = "DISCARD"
-				lines.append(["1 medkit per street", DDUi.WARN, DDUi.FONT_S])
+				lines.append(["%d medkit per street" % b.num("medkits_per_street"), DDUi.WARN, DDUi.FONT_S])
 			elif int(pm["heal"]) <= 0:
 				dim_art = true
 				badge = "FULL HP"
@@ -359,20 +375,24 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	return spec
 
 
+## dd-ux-v4 + v4 rules: the melee slot's zoom is DDV4Hooks.melee (Bare Hands or the melee weapon
+## you hold), with the hit burst and the art for the tooltip.
 static func melee(run: DDRun) -> Dictionary:
-	return tip({"kind": "K", "tag": "MELEE%s" % (" - ACTIVE" if run.active == DDRun.MELEE else ""), "title": "Crowbar", "big": "P%d" % run.melee_power(), "hit": run.melee_power(),
-		"art_keys": Art.weapon_keys("crowbar", "Crowbar"),
-		"body": "Always there. Power %d, no rule, unlimited. Melee kills don't stack and pay NO points: the escape valve for a zombie your guns can't take.%s" % [
-			run.melee_power(), "\nBrawler Patch: +%d power." % run.bal.num("brawler_bonus") if run.has_patch("brawler") else ""]},
-		"Crowbar · hits %d · melee%s" % [run.melee_power(), " · active" if run.active == DDRun.MELEE else ""],
-		"Any zombie, never breaks. Melee kills pay no points.")
+	var p: Dictionary = DDV4Hooks.melee(run)
+	p["hit"] = run.melee_power()
+	p["art_keys"] = DDV4Hooks.melee_art_keys(str(run.melee.get("id", "")) if run.has_melee_weapon() else "", run.melee_name())
+	return p
+
 
 
 # ---------------------------------------------------------------- left column: waves + boss
 static func wave(run: DDRun, w: int) -> Dictionary:
 	var zs: Array[int] = run.bal.wave_zombies(run.district_index, w)
 	var spec: Array = run.bal.wave_spec(run.district_index, w)
-	var guns: int = spec.size() - zs.size()
+	var guns: int = 0
+	for code: Variant in spec:
+		if typeof(code) == TYPE_STRING and str(code).begins_with("W"):
+			guns += 1
 	var st: String = run.wave_status(w)
 	var sorted: Array[int] = zs.duplicate()
 	sorted.sort()
@@ -500,7 +520,7 @@ static func room(run: DDRun, i: int) -> Dictionary:
 		DDText.machine_name(str(m.get("kind", ""))).to_upper(), DDText.machine_text(m, run.bal)]
 	if run.room_open[i] and run.machine_used[i]:
 		body += "\nUsed this wave: back next wave."
-	var p: Dictionary = {"kind": "R" if not run.room_open[i] else "K", "tag": "ROOM - %s" % DDText.machine_name(str(m.get("kind", ""))).to_upper(),
+	var p: Dictionary = {"kind": "R" if not run.room_open[i] else "Q", "tag": "ROOM - %s" % DDText.machine_name(str(m.get("kind", ""))).to_upper(),
 		"title": str(r.get("name", "")), "big": str(run.bal.shown(run.room_cost(i))), "body": body,
 		"art_keys": Art.machine_keys(m) if run.room_open[i] else Art.room_keys(str(run.district().get("id", "")), str(r.get("name", "")))}
 	var price: int = run.bal.shown(run.room_cost(i))
@@ -527,7 +547,7 @@ static func room_spec(run: DDRun, i: int) -> Dictionary:
 	else:
 		line = DDText.machine_name(kind)
 	# dd-ux-clean: the tile names the room and its machine; the price is on the OPEN button only
-	return {"kind": "K" if open else "R", "tag": str(r.get("name", "")).to_upper(), "title": line, "title_size": DDUi.FONT_S, "row": true,
+	return {"kind": "Q" if open else "R", "tag": str(r.get("name", "")).to_upper(), "title": line, "title_size": DDUi.FONT_S, "row": true,
 		"payload": room(run, i)}
 
 
@@ -556,6 +576,18 @@ static func patch_line(id: String, bal: DDBalance) -> String:
 			return "Once a run, at 0 HP you go to %d instead." % bal.num("second_wind_hp")
 		"trophy_belt":
 			return "Heal %d whenever you finish a gun." % bal.num("trophy_belt_heal")
+		"lockpick":
+			return "Rooms cost %d less." % bal.shown(bal.num("lockpick_off"))
+		"iron_stomach":
+			return "Healing past your max HP becomes Cover."
+		"adrenaline":
+			return "At %d HP or less, every weapon hits 1 harder." % bal.num("adrenaline_hp")
+		"grudge":
+			return "Hit 1 harder against zombies %d or more." % bal.num("grudge_min")
+		"show_off":
+			return "Every challenge you complete pays +%d more." % bal.shown(bal.num("show_off_points"))
+		"whetstone":
+			return "Melee weapons you pick up get +%d uses." % bal.num("whetstone_dur")
 	return DDText.patch_text(id, bal)
 
 
@@ -670,9 +702,9 @@ static func points(run: DDRun) -> Dictionary:
 static func how_to_play(bal: DDBalance) -> Dictionary:
 	var b: PackedStringArray = []
 	b.append("3 districts, 3 wave decks each, then the boss. Wave decks wait on the LEFT, room decks on the RIGHT, the draw pile in the MIDDLE. When the pile runs dry, the next wave is shuffled in.")
-	b.append("Every street deals %d cards; you resolve %d, 1 stays (the Holdover). Before resolving you may RUN: the street goes back into the pile for %d HP (not twice in a row, never on a boss street)." % [bal.num("street_size"), bal.num("actions"), bal.num("run_damage")])
+	b.append("Every street deals %d cards; you resolve %d, 1 stays (the Holdover). %s" % [bal.num("street_size"), bal.num("actions"), DDText.run_rule_text(bal)])
 	b.append("Pick the ACTIVE weapon (gun 1, gun 2 or melee), then tap zombies. You take number - power damage. Each kill STACKS on the gun and pays its number in points. Each gun has a RULE (lower than the top kill, same number...) and a capacity.")
-	b.append("A full stack FINISHES the gun: +%d bonus, its CHALLENGE pays extra, the gun leaves. Then equip the next one. Melee: power %d, no rule, no points." % [bal.shown(bal.num("finish_bonus")), bal.num("melee_power")])
+	b.append("A full stack FINISHES the gun: +%d bonus, its CHALLENGE pays extra, the gun leaves. Then equip the next one. Melee: Bare Hands (power %d, no rule, no points); melee weapon cards hit harder until their uses run out." % [bal.shown(bal.num("finish_bonus")), bal.num("hands_power")])
 	b.append("Spend points to OPEN rooms (their cards shuffle in, their machine switches on): Retrofit Bench, Patch Press, Wall Rack.")
 	b.append("Long press or right click anything to read it.")
 	return {"kind": "D", "tag": "HOW TO PLAY", "title": "Kill Stacks", "big": "", "list": true, "body": "\n\n".join(b)}

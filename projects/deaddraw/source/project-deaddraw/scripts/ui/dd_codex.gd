@@ -98,8 +98,20 @@ static func entries(bal: DDBalance) -> Array:
 			"hit": bal.weapon_power(wid2), "rule": bal.weapon_rule(wid2), "stat": "holds %d" % bal.weapon_cap(wid2), "districts": wdist.get(wid2, []),
 			"line": "Each kill %s. Full: %s." % [DDPayloads._rule_words(bal.weapon_rule(wid2), false), DDText.reward_short(str(rw[0]), int(rw[1]), bal)]})
 	var all_ids: Array = ds.map(func(d: Variant) -> String: return str((d as Dictionary).get("id", "")))
-	out.append({"key": "melee:crowbar", "type": "melee", "name": "Crowbar", "art_keys": Art.weapon_keys("crowbar", "Crowbar"), "hit": bal.num("melee_power"),
-		"stat": "melee", "districts": all_ids, "line": "Always with you. Any zombie, no points, never breaks."})
+	# v4: Bare Hands (always) and the melee weapon cards (power, uses)
+	out.append({"key": "melee:bare_hands", "type": "melee", "name": "Bare Hands", "art_keys": DDV4Hooks.melee_art_keys("", "Bare Hands"), "hit": bal.num("hands_power"),
+		"stat": "always", "districts": all_ids, "line": "Always with you. Any zombie, no points, never breaks."})
+	# which districts deal each melee weapon card (balance melee_pool)
+	var mdist2: Dictionary = {}
+	var pool: Dictionary = bal.dict("melee_pool")
+	for did: Variant in pool:
+		for m2: Variant in pool[did]:
+			_add(mdist2, str(m2), str(did))
+	for mid: Variant in bal.dict("melee_weapons").keys():
+		var m: String = str(mid)
+		out.append({"key": "melee:" + m, "type": "melee", "name": bal.melee_name(m), "art_keys": DDV4Hooks.melee_art_keys(m, bal.melee_name(m)), "hit": bal.melee_power(m),
+			"stat": DDText.uses_text(bal.melee_uses(m)), "districts": mdist2.get(m, all_ids),
+			"line": "Found in the pile. Each kill uses 1; at 0 it breaks."})
 	for t: int in 4:
 		var nm: String = Marks.TIER_NAMES[t]
 		var rng: String = ["1-3", "4-6", "7-9", "10+"][t]
@@ -144,7 +156,9 @@ static func _card_dist(code: String, id: String, mdist: Dictionary, cdist: Dicti
 ## The Codex keys a run has met right now: street cards, equipped guns, Patches (owned or offered),
 ## the boss on a boss street, and melee.
 static func keys_met_by(run: DDRun) -> Array[String]:
-	var out: Array[String] = ["melee:crowbar"]
+	var out: Array[String] = ["melee:bare_hands"]
+	if run.has_melee_weapon():
+		out.append("melee:" + str(run.melee.get("id", "")))
 	var cards: Array = run.street.duplicate()
 	var lc: DDCard = run.lookout_card()
 	if lc != null:
@@ -159,6 +173,8 @@ static func keys_met_by(run: DDRun) -> Array[String]:
 					out.append("zombie:" + DDText.zombie_name(cc.value).to_lower())
 			DDCard.WEAPON:
 				out.append("gun:" + cc.wid)
+			DDCard.MELEE:
+				out.append("melee:" + cc.wid)
 			DDCard.MEDKIT:
 				out.append("item:" + Art.slug(DDText.medkit_name(cc.value)))
 			DDCard.COVER:
@@ -427,7 +443,8 @@ static func sections(bal: DDBalance) -> Array:
 	var rules: Array = []
 	for r: Array in [["any", "Any zombie", "Service Pistol"], ["down", "Lower than the top", "Hunting Rifle"], ["up", "Higher than the top", "Ratchet Crossbow"],
 			["same", "Same number", "Twin-Bore"], ["zigzag", "Zig-zag", "Lever Rifle"], ["close", "Within 1", "Scout Carbine"], ["parity", "Odd / even", "Nail Driver"],
-			["spread", "Total 16 max", "Pump Shotgun"], ["big", "6 or more", "Elephant Gun"]]:
+			["spread", "Total 16 max", "Pump Shotgun"], ["big", "6 or more", "Elephant Gun"], ["small", "6 or less", "Alley Sweeper"],
+			["heavy", "One shot", "Stovepipe Launcher"]]:
 		rules.append({"icon": "rule:" + str(r[0]), "name": str(r[1]), "line": "Each kill %s (%s)." % [DDPayloads._rule_words(str(r[0]), false), str(r[2])]})
 	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: this kill may break the rule, once a wave."})
 	return [
@@ -437,7 +454,9 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "next", "name": "Next socket", "line": "What the next kill must be, e.g. <6 or >4."},
 			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
 			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
-			{"icon": "burst:%d" % bal.num("melee_power"), "name": "Melee", "line": "The Crowbar: any zombie, no points, never breaks."},
+			{"icon": "burst:%d" % bal.num("hands_power"), "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
+			{"icon": "uses", "name": "Melee uses", "line": "A melee weapon's dots: each kill uses 1; at 0 it breaks."},
+			{"icon": "text:+N", "name": "Salvage", "line": "Swap out a gun: it pays part of its kills back."},
 		]],
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
@@ -456,7 +475,8 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "pips", "name": "Resolve dots", "line": "Deal with %d of the %d cards; 1 stays." % [bal.num("actions"), bal.num("street_size")]},
 			{"icon": "text:+2", "name": "Cover", "line": "Takes damage before your HP."},
 			{"icon": "text:PTS", "name": "Points", "line": "Gun kills pay. Spend them on rooms and machines."},
-			{"icon": "text:RUN", "name": "Run", "line": "Put the street back for %d HP. Not twice in a row." % bal.num("run_damage")},
+			{"icon": "text:RUN", "name": "Run", "line": "Every street card goes under the pile for %d HP. Not twice in a row." % bal.num("run_damage")},
+			{"icon": "text:SHOP", "name": "Safehouse Shop", "line": "Points stay in the district: spend them before you leave."},
 		]],
 		["HOW A STREET WORKS", [
 			{"icon": "text:1", "name": "Deal", "line": "%d cards come off the pile." % bal.num("street_size")},
@@ -532,6 +552,16 @@ static func icon(id: String) -> Control:
 			tr2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			inner = tr2
+		"uses":
+			var hu: HBoxContainer = DDUi.hbox(3)
+			hu.alignment = BoxContainer.ALIGNMENT_CENTER
+			for k2: int in 3:
+				var d: Panel = Panel.new()
+				d.custom_minimum_size = Vector2(10, 10)
+				d.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				d.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if k2 < 2 else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 2, 0))
+				hu.add_child(d)
+			inner = hu
 		"pips":
 			var hp: HBoxContainer = DDUi.hbox(3)
 			hp.alignment = BoxContainer.ALIGNMENT_CENTER

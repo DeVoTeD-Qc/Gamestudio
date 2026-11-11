@@ -45,6 +45,9 @@ const ROOM_FLY_GAP: float = 0.11
 const FLY_S: float = 0.4
 const RIFFLE_AT: float = 1.2
 const WAVE_DEAL_AT: float = 1.6
+## Run (v4): each street card flies face up to the bottom of the pile, RUN_STAGGER apart.
+const RUN_STAGGER: float = 0.09
+const RUN_FLY: float = 0.36
 var shake_on: bool = true
 ## Names of the animations started by the last play() (tests and QA read it).
 var last_played: Array[String] = []
@@ -404,25 +407,37 @@ func _run_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> float:
 	var to: Rect2 = _rect(ctx.get("pile"))
 	var rects: Dictionary = snap.get("rects", {})
 	var specs: Dictionary = snap.get("specs", {})
+	# v4 (head: "cards seemed to vanish"): every card on the street flies FACE UP to the pile, one
+	# after the other, and slips under it (to the bottom); then "N cards to the bottom" floats there
 	var k: int = 0
+	var n_back: int = (ev.get("returned", []) as Array).size()
+	var bottom: bool = bool(ev.get("to_bottom", false))
 	for id: Variant in rects:
 		var g: DDCardView = _ghost(specs.get(id, {}), rects[id]) if not (specs.get(id, {}) as Dictionary).is_empty() else null
 		if g == null:
 			continue
 		var tw: Tween = g.create_tween()
 		if reduce or to.size == Vector2.ZERO:
-			tw.tween_property(g, "modulate:a", 0.0, 0.15)
+			tw.tween_interval(0.1 * k)
+			tw.tween_property(g, "modulate:a", 0.0, 0.25)
 		else:
-			tw.tween_interval(0.04 * k)
+			tw.tween_interval(RUN_STAGGER * k)
 			var s: float = clampf(to.size.y / maxf(1.0, g.size.y), 0.2, 1.0)
-			tw.tween_property(g, "position", to.position - fx.global_position, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-			tw.parallel().tween_property(g, "scale", Vector2(s, s), 0.24)
-			tw.tween_property(g, "modulate:a", 0.0, 0.05)
+			var dest: Vector2 = to.position - fx.global_position + Vector2(0, to.size.y * (0.35 if bottom else 0.0))
+			tw.tween_property(g, "position", dest, RUN_FLY).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+			tw.parallel().tween_property(g, "scale", Vector2(s, s), RUN_FLY)
+			# slip under the pile: squash down and fade
+			tw.tween_property(g, "scale", Vector2(s, s * 0.2), 0.12)
+			tw.parallel().tween_property(g, "modulate:a", 0.0, 0.12)
 		tw.tween_callback(g.queue_free)
 		k += 1
-	_after(0.3, func() -> void: _riffle(ctx.get("pile")))
+	var t_end: float = (RUN_STAGGER * maxi(0, k - 1) + RUN_FLY + 0.12) if not reduce else 0.3
+	if n_back > 0:
+		_float(to, "%d card%s %s" % [n_back, "" if n_back == 1 else "s", "to the bottom" if bottom else "back in"], DDUi.TEXT, t_end, 22)
+		_mark("run_to_bottom" if bottom else "run_back")
+	_after(t_end, func() -> void: _riffle(ctx.get("pile")))
 	_damage_fx({"hp_loss": maxi(0, int(snap.get("hp", 0)) - int(ctx.get("hp", 0)))}, snap, ctx)
-	return 0.42 if not reduce else 0.1
+	return (t_end + 0.1) if not reduce else 0.3
 
 
 func _machine_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> void:
@@ -442,7 +457,7 @@ func _machine_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> void:
 	var rooms: Array = ctx.get("rooms", [])
 	var ri: int = int(res.get("room", -1))
 	if ri >= 0 and ri < rooms.size():
-		_pop(rooms[ri], 1.06, DDUi.accent("K"))
+		_pop(rooms[ri], 1.06, DDUi.accent("Q"))
 
 
 # ================================================================ shuffle-in
@@ -454,8 +469,12 @@ func _shuffle_in(src: Variant, n: int, ctx: Dictionary, delay: float, door: bool
 		return
 	var from: Rect2 = _rect(src)
 	var to: Rect2 = _rect(pile)
+	# delayed callbacks hold the nodes through a Dictionary: the board can be rebuilt before they run
+	var ref: Dictionary = {"pile": pile, "src": src}
 	if reduce or from.size == Vector2.ZERO or to.size == Vector2.ZERO:
-		_after(delay, func() -> void: _pulse(pile, Color(1.4, 1.4, 1.4)))
+		_after(delay, func() -> void:
+			if is_instance_valid(ref["pile"]):
+				_pulse(ref["pile"], Color(1.4, 1.4, 1.4)))
 		return
 	var c: Control = src
 	var start: float
@@ -463,8 +482,8 @@ func _shuffle_in(src: Variant, n: int, ctx: Dictionary, delay: float, door: bool
 	if door:
 		# the room's padlock plate pops open, the door lights up
 		_after(delay + 0.2, func() -> void:
-			if is_instance_valid(c):
-				_pop(c, 1.06, DDUi.WARN))
+			if is_instance_valid(ref["src"]):
+				_pop(ref["src"], 1.06, DDUi.WARN))
 		Sfx.cue(&"clear", 1.2)
 		start = delay + ROOM_FLY_AT
 		gap = ROOM_FLY_GAP
@@ -497,7 +516,7 @@ func _shuffle_in(src: Variant, n: int, ctx: Dictionary, delay: float, door: bool
 		tw.parallel().tween_property(b, "rotation", 0.0, FLY_S * 0.55)
 		tw.tween_property(b, "modulate:a", 0.0, 0.06)
 		tw.tween_callback(b.queue_free)
-	_after(delay + RIFFLE_AT, func() -> void: _riffle(pile))
+	_after(delay + RIFFLE_AT, func() -> void: _riffle(ref["pile"]))
 
 
 ## The pile riffles: a quick double wobble and pop (the shuffle).

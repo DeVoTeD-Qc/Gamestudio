@@ -376,7 +376,7 @@ func test_codex_filters_and_met_tracking() -> void:
 		_street(m, {"screen": "street", "seed": "5", "gun2": "crossbow"})
 		await _settle()
 		var prof: DDProfile = tree.root.get_node("Game").get("profile")
-		check(prof.codex_met("gun:crossbow") and prof.codex_met("melee:crowbar"), tag + " equipped guns and melee are met")
+		check(prof.codex_met("gun:crossbow") and prof.codex_met("melee:bare_hands"), tag + " equipped guns and melee are met")
 		var again: DDProfile = DDProfile.new(bal(), prof.path)
 		again.load_profile()
 		check(again.codex_met("gun:crossbow"), tag + " met entries are saved in the profile")
@@ -474,3 +474,80 @@ func test_strength_mark_tiers() -> void:
 	for z: int in range(1, 13):
 		every.append(z)
 	eq(DDPayloads.accept_tag(every), "any", "accept: any")
+
+
+# ---------------------------------------------------------------- v4 rules in the Door row
+func test_v4_melee_launcher_salvage_and_run_flight() -> void:
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(1440, 900)]:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5", "gun1": "rifle", "stack1": "8,6,5", "gun2": "launcher"})
+		await _settle()
+		var run: DDRun = game_run()
+		# Bare Hands in the melee button
+		var mv: DDCardView = _tile(m, 202)
+		eq(str((mv.find_child("MeleeName", true, false) as Label).text), "Bare Hands", tag + " melee starts as Bare Hands")
+		eq(int(mv.hit_burst.get("value")), bal().num("hands_power"), tag + " the burst shows the hands' hit")
+		check(mv.find_child("UsePips", true, false) == null, tag + " bare hands have no use pips")
+		# the launcher: one socket
+		var lv: DDGunView = _tile(m, 201)
+		eq(lv.stack_area.get_child_count(), 1, tag + " the launcher has one kill socket")
+		# a melee weapon card on the street: TAKE / SCRAP sheet, then use pips on the melee button
+		run.setup_street(["K:axe", "Z5", "Z3", "M4"] + _filler(10))
+		m.call("_render")
+		await _settle()
+		var kc: DDCardView = _tile(m, 0)
+		check(kc != null and kc.hit_burst != null and kc.kind == "K", tag + " the melee card shows its hit burst")
+		check(str(kc.payload.get("t1", "")).contains("Fire Axe"), tag + " the melee card's tooltip: " + str(kc.payload.get("t1", "")))
+		m.call("tap_street", 0)
+		await _settle()
+		var take: Button = m.find_child("Melee_" + DDRun.TAKE, true, false)
+		check(take != null and not take.disabled and take.size.y >= 63.5, tag + " TAKE in the sheet")
+		check(m.find_child("Melee_" + DDRun.SCRAP, true, false) != null, tag + " SCRAP in the sheet")
+		take.pressed.emit()
+		await _settle()
+		mv = _tile(m, 202)
+		eq(str((mv.find_child("MeleeName", true, false) as Label).text), "Fire Axe", tag + " melee is the Fire Axe now")
+		var pips: Node = mv.find_child("UsePips", true, false)
+		check(pips != null and pips.get_child_count() == run.melee_uses(), tag + " use pips = uses left (%d)" % run.melee_uses())
+		# the equip sheet names the salvage
+		run.setup_street(["W:carbine", "Z5", "Z3", "M4"] + _filler(10))
+		m.call("_render")
+		await _settle()
+		m.call("tap_street", 0)
+		await _settle()
+		var texts: Array = []
+		for b: Variant in m.find_child("Sheet", true, false).find_children("*", "Button", true, false):
+			texts.append((b as Button).text)
+		check(" ".join(texts).contains("replaces Hunting Rifle 3/4") and not " ".join(texts).contains("loses"), tag + " equip says what it replaces: " + str(texts))
+		m.call("close_sheet")
+		await _settle()
+		# Run: allowed with no zombie; the cards fly face up to the bottom with a count
+		run.setup_street(["M4", "C2", "M3", "C3"] + _filler(10))
+		run.ran_last = false
+		m.call("_render")
+		await _settle()
+		var rb: Button = m.find_child("Run", true, false)
+		check(rb != null and not rb.disabled, tag + " Run with no zombie on the street")
+		check(str(rb.get_meta(&"tip").get("t2", "")).contains("bottom"), tag + " Run's tooltip: cards go to the bottom")
+		m.call("do_run")
+		await _settle()
+		await tree.create_timer(0.3).timeout
+		var fb: Node = m.get("feedback")
+		check((fb.get("last_played") as Array).has("run_to_bottom"), tag + " the street flies to the bottom of the pile (%s)" % str(fb.get("last_played")))
+		var floats: Array = []
+		for c: Node in (m.get("_fx") as Control).find_children("*", "Label", true, false):
+			floats.append((c as Label).text)
+		await tree.create_timer(0.9).timeout
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+func _filler(n: int) -> Array:
+	var out: Array = []
+	for k: int in n:
+		out.append("Z2")
+	return out

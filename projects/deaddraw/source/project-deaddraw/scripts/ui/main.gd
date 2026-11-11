@@ -309,6 +309,8 @@ func _play_fx(pend: Dictionary, screen_fx: String, banner: Dictionary = {}) -> v
 	_sync_feel()
 	if not pend.is_empty() and screen == Screen.STREET:
 		feedback.play(pend, _fx_context())
+		# v4: a swapped-out gun pays its Salvage: "+N" over that slot
+		DDV4Hooks.play_salvage(feedback, _gun_views, pend.get("ev", {}), Game.bal)
 	if not banner.is_empty() and screen == Screen.STREET:
 		_banner_seq += 1
 		var seq: int = _banner_seq
@@ -655,7 +657,7 @@ func _stacked(v: Control, n: int, kind: String) -> Control:
 ##   "what just happened" line (tap it for the history) and the resolve pips. The old prompt band
 ##   is gone (head's note on M1), so the street sits right above the guns;
 ## - the GUN ROW: the two guns (hit burst, rule, kill sockets, reward) and a narrow column with
-##   two small buttons: MELEE (the Crowbar) and RUN.
+##   two small buttons: MELEE (Bare Hands or the melee weapon you hold, with its use pips) and RUN.
 ## Portrait: HUD / doors / street (2x2 when tall enough) / strip / guns + [melee, run].
 ## Landscape: [doors as a column] | [HUD / street / strip] | [gun 1 / gun 2 / melee + run].
 ## Same pieces, reflowed, never shrunk below a 44 CSS px tap target.
@@ -811,25 +813,37 @@ func _help_button() -> Button:
 ## presses them). The long press is timed by the button itself.
 func _inspectable_button(b: Button, payload: Dictionary) -> void:
 	b.set_meta(&"tip", payload)
+	# the long-press timer is the button's child: it dies with the button (no stale callback)
+	var t: Timer = Timer.new()
+	t.one_shot = true
+	t.wait_time = DDCardView.LONG_PRESS_MS / 1000.0
+	b.add_child(t)
+	t.timeout.connect(func() -> void:
+		if bool(b.get_meta(&"held", false)) and not bool(b.get_meta(&"long", false)):
+			b.set_meta(&"long", true)
+			_inspect.open(payload))
 	b.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton:
-			var mb: InputEventMouseButton = e
-			if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+			if e.is_pressed():
 				_inspect.open(payload)
 				b.accept_event()
-			elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			return
+		var left: bool = (e is InputEventMouseButton and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT) or e is InputEventScreenTouch
+		if not left:
+			return
+		if e.is_pressed():
+			if not bool(b.get_meta(&"held", false)):
+				b.set_meta(&"held", true)
+				b.set_meta(&"long", false)
 				b.set_meta(&"press_ms", Time.get_ticks_msec())
-				var t: SceneTreeTimer = get_tree().create_timer(DDCardView.LONG_PRESS_MS / 1000.0)
-				t.timeout.connect(func() -> void:
-					if is_instance_valid(b) and b.is_inside_tree() and int(b.get_meta(&"press_ms", 0)) > 0 \
-							and Time.get_ticks_msec() - int(b.get_meta(&"press_ms", 0)) >= DDCardView.LONG_PRESS_MS - 20:
-						b.set_meta(&"press_ms", 0)
-						b.set_meta(&"long", true)
-						_inspect.open(payload))
-			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
-				b.set_meta(&"press_ms", 0))
-	# a long press opened the tooltip: swallow the release so the button doesn't fire
-	b.button_down.connect(func() -> void: b.set_meta(&"long", false))
+				t.start()
+		elif bool(b.get_meta(&"held", false)):
+			# release: a hold that the timer missed still counts (checked before "pressed" fires)
+			b.set_meta(&"held", false)
+			t.stop()
+			if not bool(b.get_meta(&"long", false)) and Time.get_ticks_msec() - int(b.get_meta(&"press_ms", 0)) >= DDCardView.LONG_PRESS_MS:
+				b.set_meta(&"long", true)
+				_inspect.open(payload))
 	b.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
 
 
@@ -972,7 +986,7 @@ func _room_door(run: DDRun, i: int, column: bool) -> DDCardView:
 	var afford: bool = not open and run.can_open_room(i)
 	var keys: Array = Art.machine_keys(run.machine(i)) if open else Art.room_keys(did, str(r.get("name", "")))
 	var border: Color = DDUi.WARN if afford else (DDUi.GOOD.darkened(0.2) if open and not run.machine_used[i] else Color("4a5358"))
-	var rv: DDCardView = _door_tile("K" if open else "R", DDPayloads.room(run, i), keys, 0.25 if (afford or open) else 0.45, border)
+	var rv: DDCardView = _door_tile("Q" if open else "R", DDPayloads.room(run, i), keys, 0.25 if (afford or open) else 0.45, border)
 	rv.index = IDX_ROOM + i
 	rv.name = "Room%d" % i
 	rv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.room(Game.run, i)))
@@ -1082,7 +1096,8 @@ func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99)
 	for i: int in run.street.size():
 		var c: DDCard = run.street[i]
 		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run)
-		spec["art_keys"] = Art.card_keys(c, did)
+		if not spec.has("art_keys"):
+			spec["art_keys"] = Art.card_keys(c, did)
 		if card_w < 160.0:
 			spec["badge_size"] = DDUi.FONT_S - 4
 		elif run.boss_street and run.street.size() <= 2:
@@ -1232,22 +1247,33 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 	return box
 
 
-## MELEE as a small button: the hit burst, "Crowbar", "0 pts" (the tile is a DDCardView: tap =
-## make it active, right click / long press = its tooltip).
+## MELEE as a small button (v4: DDV4Hooks.melee_spec): the hit burst, the name (Bare Hands or the
+## melee weapon you hold), and its use pips (filled = uses left) or "0 pts" for bare hands. The
+## tile is a DDCardView: tap = make it active, right click / long press = its tooltip.
 func _melee_tile(run: DDRun) -> DDCardView:
-	var on: bool = run.active == DDRun.MELEE
+	var ms: Dictionary = DDV4Hooks.melee_spec(run)
+	var on: bool = bool(ms.get("active", false))
 	var mv: DDCardView = _custom_tile("K", DDPayloads.melee(run), DDUi.card_bg("K"))
-	mv.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("K"), DDUi.SELECT if on else DDUi.accent("K"), 4 if on else 2, 12, 4))
 	mv.set_selected(on)
 	mv.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("K"), DDUi.SELECT if on else DDUi.accent("K"), 4 if on else 2, 12, 4))
 	mv.index = IDX_MELEE
 	mv.name = "Melee"
 	mv.custom_minimum_size = Vector2(0, TAP)
+	var tex: Texture2D = Art.texture_for(ms.get("art_keys", []))
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.self_modulate = Color(1, 1, 1, 0.28)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mv.add_child(tr)
+		mv.art_rect = tr
 	var h: HBoxContainer = DDUi.hbox(4)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	mv.add_child(h)
-	var burst: Control = Marks.HitBurst.new(run.melee_power())
+	var burst: Control = Marks.HitBurst.new(int(ms.get("power", run.melee_power())))
 	burst.custom_minimum_size = Vector2(36, 36)
 	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(burst)
@@ -1255,13 +1281,33 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	var tv: VBoxContainer = DDUi.vbox(0)
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tv.alignment = BoxContainer.ALIGNMENT_CENTER
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(tv)
-	var tl: Label = DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 7, DDUi.SELECT if on else DDUi.accent("K"))
-	tv.add_child(tl)
-	tv.add_child(DDUi.label("Crowbar", DDUi.FONT_S - 4, DDUi.TEXT))
-	var pl: Label = DDUi.label("0 pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
-	tv.add_child(pl)
-	mv.big_label = pl
+	tv.add_child(DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 7, DDUi.SELECT if on else DDUi.accent("K")))
+	var nl: Label = DDUi.label(str(ms.get("name", "")), DDUi.FONT_S - 4, DDUi.TEXT)
+	nl.clip_text = true
+	nl.custom_minimum_size = Vector2(10, 0)
+	nl.name = "MeleeName"
+	nl.resized.connect(func() -> void: DDCardView.fit_label(nl, DDUi.FONT_S - 4, 10))
+	tv.add_child(nl)
+	if bool(ms.get("bare", true)):
+		var pl: Label = DDUi.label("0 pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+		tv.add_child(pl)
+		mv.big_label = pl
+	else:
+		# use pips: filled = uses left
+		var pips: HBoxContainer = DDUi.hbox(2)
+		pips.name = "UsePips"
+		pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for k: int in int(ms.get("uses_max", 0)):
+			var left: bool = k < int(ms.get("uses", 0))
+			var dot: Panel = Panel.new()
+			dot.custom_minimum_size = Vector2(9, 9)
+			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if left else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 2, 0))
+			dot.set_meta(&"left", left)
+			pips.add_child(dot)
+		tv.add_child(pips)
 	mv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(DDRun.MELEE))
 	_melee_view = mv
 	return mv
@@ -1290,7 +1336,8 @@ func _run_button(run: DDRun) -> Control:
 		return rp
 	var why: String = run.run_block_reason()
 	var cost: int = run.run_cost()
-	var short_why: String = {"you ran last street": "not twice\nin a row", "only before you resolve a card": "only at\nthe start"}.get(why, "blocked" if why != "" else "")
+	var short_why: String = {"you ran last street": "not twice\nin a row", "only before you resolve a card": "only at\nthe start",
+		"nothing on the street": "nothing\nto run", "the pile is empty": "pile\nempty", "not enough HP": "not\nenough HP"}.get(why, "blocked" if why != "" else "")
 	var rb: Button = DDUi.button(("RUN\n-%d HP" % cost if cost > 0 else "RUN\nfree") if why == "" else ("RUN\n" + short_why), Color("5a2a1a") if why == "" else DDUi.PANEL,
 		DDUi.FONT_S - 4 if why == "" else DDUi.FONT_S - 7)
 	rb.name = "Run"
@@ -1300,8 +1347,10 @@ func _run_button(run: DDRun) -> Control:
 	rb.pressed.connect(func() -> void:
 		if not _was_long(rb):
 			do_run())
-	_inspectable_button(rb, {"kind": "D", "t1": ("Run · -%d HP" % cost) if cost > 0 else "Run · free",
-		"t2": ("Can't now: %s." % why) if why != "" else "Put this street back into the pile. Not twice in a row."})
+	var rpl: Dictionary = DDV4Hooks.run_payload(run)
+	if why != "":
+		rpl["t2"] = "Can't now: %s." % why
+	_inspectable_button(rb, rpl)
 	return rb
 
 
@@ -1392,6 +1441,8 @@ func _build_sheet() -> void:
 			_machine_sheet(run, v, int(sheet.get("room", 0)))
 		"patch":
 			_patch_sheet(run, v)
+		"melee":
+			_melee_sheet(run, v, int(sheet.get("index", 0)))
 
 
 func _sheet_button(text: String, enabled: bool, color: Color, cb: Callable) -> Button:
@@ -1430,14 +1481,40 @@ func _gun_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	for s: int in 2:
 		var pv: Dictionary = run.card_preview(i, DDRun.EQUIP1 if s == 0 else DDRun.EQUIP2)
 		var g: DDGun = run.slot(s)
-		var label: String = "INTO SLOT %d" % (s + 1)
-		if g != null:
-			label += "\nreplaces %s%s" % [g.name, (" (loses %d kills)" % g.stack.size()) if not g.stack.is_empty() else ""]
-		else:
-			label += "\n(empty)"
+		var label: String = DDV4Hooks.equip_label(run, i, s)
 		row.add_child(_sheet_button(label, bool(pv["ok"]), Color("1f4a63"), func() -> void: do_resolve(i, DDRun.EQUIP1 if s == 0 else DDRun.EQUIP2)))
 	var ps: Dictionary = run.card_preview(i, DDRun.SCRAP)
 	row.add_child(_sheet_button("SCRAP\n+%d pts" % Game.bal.shown(int(ps.get("points", 0))), bool(ps["ok"]), Color("5a4a1d"), func() -> void: do_resolve(i, DDRun.SCRAP)))
+	v.add_child(_sheet_button("Cancel", true, DDUi.PANEL_HI, close_sheet))
+
+
+## v4: the melee weapon card sheet: the card, its two lines, TAKE / SCRAP (DDV4Hooks.melee_choices).
+func _melee_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
+	if i < 0 or i >= run.street.size() or run.street[i].kind != DDCard.MELEE:
+		sheet = {}
+		return
+	var c: DDCard = run.street[i]
+	var top: BoxContainer = BoxContainer.new()
+	top.vertical = portrait
+	top.add_theme_constant_override("separation", 10)
+	v.add_child(top)
+	var mp: Dictionary = DDPayloads.card(c, run, i)
+	top.add_child(_view({"kind": "K", "tag": "MELEE", "hit": Game.bal.melee_power(c.wid), "title": Game.bal.melee_name(c.wid),
+		"payload": mp, "art_keys": DDV4Hooks.melee_art_keys(c.wid, Game.bal.melee_name(c.wid))}, Vector2(170, 130)))
+	var txt: Label = DDUi.label("%s\n%s" % [str(mp.get("t1", "")), str(mp.get("t2", ""))], DDUi.FONT_S - 1, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	txt.custom_minimum_size = Vector2(240, 0)
+	top.add_child(txt)
+	var row: BoxContainer = BoxContainer.new()
+	row.vertical = portrait
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	for ch: Dictionary in DDV4Hooks.melee_choices(run, i):
+		var choice: String = str(ch["choice"])
+		var lab: String = str(ch["label"]) if bool(ch["enabled"]) else "%s\n%s" % [str(ch["label"]).split("\n")[0], str(ch["reason"])]
+		var b: Button = _sheet_button(lab, bool(ch["enabled"]) and not busy, Color("5a3d1d") if choice == DDRun.TAKE else Color("5a4a1d"), func() -> void: do_resolve(i, choice))
+		b.name = "Melee_" + choice
+		row.add_child(b)
 	v.add_child(_sheet_button("Cancel", true, DDUi.PANEL_HI, close_sheet))
 
 
@@ -1457,7 +1534,7 @@ func _machine_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	var hv: VBoxContainer = DDUi.vbox(2)
 	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(hv)
-	hv.add_child(DDUi.label(DDText.machine_name(kind).to_upper() + " - " + str(run.room(i).get("name", "")), DDUi.FONT_M, DDUi.accent("K")))
+	hv.add_child(DDUi.label(DDText.machine_name(kind).to_upper() + " - " + str(run.room(i).get("name", "")), DDUi.FONT_M, DDUi.accent("Q")))
 	hv.add_child(DDUi.label("Once per wave · you have %d pts" % Game.bal.shown(run.points), DDUi.FONT_S - 2, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = (3 if not portrait else 2) if kind == "bench" else (2 if kind == "wall" else 1)
@@ -1545,6 +1622,11 @@ func tap_street(i: int) -> void:
 			sheet = {"type": "gun", "index": i}
 			Sfx.cue(&"button", 0.9)
 			_queue_render()
+		DDCard.MELEE:
+			# v4: a melee weapon card: TAKE it (melee slot) or SCRAP it
+			sheet = {"type": "melee", "index": i}
+			Sfx.cue(&"button", 0.9)
+			_queue_render()
 		_:
 			do_resolve(i, DDRun.USE)
 
@@ -1604,7 +1686,7 @@ func do_open_room(i: int) -> void:
 	var snap: Dictionary = _snapshot()
 	var ev: Dictionary = Game.run.open_room(i)
 	if bool(ev.get("ok", false)):
-		_pending_banner = {"text": "%s OPEN" % str(Game.run.room(i).get("name", "")).to_upper(), "color": DDUi.accent("K"),
+		_pending_banner = {"text": "%s OPEN" % str(Game.run.room(i).get("name", "")).to_upper(), "color": DDUi.accent("Q"),
 			"sub": "Tap USE for the %s" % DDText.machine_name(str(Game.run.machine(i).get("kind", ""))), "delay": 1.5}
 	_finish(ev, {"type": "room", "ev": ev, "snap": snap})
 
@@ -1736,6 +1818,7 @@ func dismiss_banner() -> void:
 		if wv != null and is_instance_valid(wv) and (wv as Node).has_meta(&"numeral"):
 			var num: Control = (wv as Node).get_meta(&"numeral")
 			if is_instance_valid(num):
+				_stop_numeral(num)
 				if num.has_meta(&"final_text"):
 					num.set("text", str(num.get_meta(&"final_text")))
 					num.remove_meta(&"final_text")
@@ -1748,6 +1831,45 @@ func dismiss_banner() -> void:
 		_publish_state.call_deferred()
 
 
+func _stop_numeral(num: Control) -> void:
+	var nt: Variant = num.get_meta(&"tween") if num.has_meta(&"tween") else null
+	if nt is Tween and (nt as Tween).is_valid():
+		(nt as Tween).kill()
+	num.scale = Vector2.ONE
+	num.modulate.a = 1.0
+	num.offset_top = 22
+
+
+## Hides the banner at once (the layer stays until the finger lifts).
+func _skip_banner_visuals(layer: Control) -> void:
+	if _banner_tween != null and _banner_tween.is_valid():
+		_banner_tween.kill()
+	_banner_tween = null
+	for c: Node in layer.get_children():
+		(c as CanvasItem).visible = false
+	layer.set_meta(&"skipped", true)
+	_banner = null
+	for wv: Variant in _wave_views:
+		if wv != null and is_instance_valid(wv) and (wv as Node).has_meta(&"numeral"):
+			var num: Control = (wv as Node).get_meta(&"numeral")
+			if is_instance_valid(num):
+				_stop_numeral(num)
+			if is_instance_valid(num) and num.has_meta(&"final_text"):
+				num.set("text", str(num.get_meta(&"final_text")))
+				num.remove_meta(&"final_text")
+				num.queue_redraw()
+				num.scale = Vector2.ONE
+				num.modulate.a = 1.0
+				num.offset_top = 22
+	# safety: free it shortly even if the release never arrives
+	var lid: int = layer.get_instance_id()
+	get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		if _banner_layer != null and is_instance_valid(_banner_layer) and _banner_layer.get_instance_id() == lid:
+			dismiss_banner())
+	if OS.has_feature("web"):
+		_publish_state.call_deferred()
+
+
 ## A full-screen layer that catches the tap that skips the banner.
 func _banner_catcher() -> Control:
 	dismiss_banner()
@@ -1755,9 +1877,15 @@ func _banner_catcher() -> Control:
 	layer.name = "BannerLayer"
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	# the tap that skips the banner is eaten whole: the press hides it, the release frees the
+	# layer, so the release never lands on a street card underneath
 	layer.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and is_instance_valid(layer):
-			layer.accept_event()
+		if not (e is InputEventMouseButton or e is InputEventScreenTouch):
+			return
+		layer.accept_event()
+		if e.is_pressed():
+			_skip_banner_visuals(layer)
+		else:
 			dismiss_banner())
 	_fx.add_child(layer)
 	_banner_layer = layer
@@ -1857,16 +1985,19 @@ func _wave_banner(n: int, sub: String) -> void:
 		num.set("text", str(maxi(1, n - 1)))
 		num.queue_redraw()
 		num.pivot_offset = num.size * 0.5
-		tw.tween_property(num, "offset_top", 22.0 + 16.0, 0.3).set_delay(0.1)
-		tw.tween_property(num, "modulate:a", 0.0, 0.3).set_delay(0.1)
-		tw.tween_callback(func() -> void:
-			if is_instance_valid(num):
-				num.set("text", str(n))
-				num.queue_redraw()
-				num.offset_top = 22
-				num.scale = Vector2(2.4, 2.4)).set_delay(0.4)
-		tw.tween_property(num, "scale", Vector2.ONE, 0.3).set_delay(0.41).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.tween_property(num, "modulate:a", 1.0, 0.2).set_delay(0.41)
+		# the numeral's own tween: it dies with the door if the board is rebuilt meanwhile
+		var nt: Tween = num.create_tween()
+		num.set_meta(&"tween", nt)
+		nt.set_parallel(true)
+		nt.tween_property(num, "offset_top", 22.0 + 16.0, 0.3).set_delay(0.1)
+		nt.tween_property(num, "modulate:a", 0.0, 0.3).set_delay(0.1)
+		nt.tween_callback(num.set.bind("text", str(n))).set_delay(0.4)
+		nt.tween_callback(num.queue_redraw).set_delay(0.4)
+		nt.tween_callback(num.set.bind("offset_top", 22.0)).set_delay(0.4)
+		nt.tween_callback(num.set.bind("scale", Vector2(2.4, 2.4))).set_delay(0.4)
+		nt.tween_callback(num.remove_meta.bind(&"final_text")).set_delay(0.4)
+		nt.tween_property(num, "scale", Vector2.ONE, 0.3).set_delay(0.41).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		nt.tween_property(num, "modulate:a", 1.0, 0.2).set_delay(0.41)
 	if rm:
 		tw.tween_property(p, "modulate:a", 1.0, 0.2).set_delay(0.4)
 	else:
@@ -1941,8 +2072,9 @@ func _build_safehouse() -> void:
 	var head: Label = DDUi.label(("%s CLEARED" if not bool(last.get("ran_past", false)) else "YOU RAN PAST %s") % (dname.to_upper() if not bool(last.get("ran_past", false)) else str(last.get("name", "")).to_upper()), DDUi.FONT_XL if portrait else DDUi.FONT_L, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_screen_title = head
 	v.add_child(head)
-	# dd-ux-clean: one plain line, then your kit as small inspectable tiles, then the one choice
-	v.add_child(DDUi.label("Safehouse: +%d HP when you head out. Your guns, points and Patches come with you." % run.safehouse_heal(), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	# dd-ux-clean: one plain line, then your kit as small inspectable tiles, then the choices.
+	# v4: points don't come along; the Safehouse Shop is where they are spent.
+	v.add_child(DDUi.label("Safehouse: +%d HP when you head out. Guns and Patches come with you." % run.safehouse_heal(), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var kit: HFlowContainer = HFlowContainer.new()
 	kit.alignment = FlowContainer.ALIGNMENT_CENTER
 	kit.add_theme_constant_override("h_separation", SEP)
@@ -1961,7 +2093,8 @@ func _build_safehouse() -> void:
 		kit.add_child(pc)
 	var offer: Array = run.pending_patch.get("offer", [])
 	if not offer.is_empty():
-		v.add_child(DDUi.label("Boss reward: pick 1 free Patch", DDUi.FONT_M, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER, true))
+		# v4: the boss Patch is sewn on with the tap (the shop opens after it)
+		v.add_child(DDUi.label("Boss reward: tap 1 free Patch", DDUi.FONT_M, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER, true))
 		var box: BoxContainer = BoxContainer.new()
 		box.vertical = portrait
 		box.add_theme_constant_override("separation", SEP)
@@ -1969,32 +2102,45 @@ func _build_safehouse() -> void:
 		for p: Variant in offer:
 			var pid: String = str(p)
 			var ps: Dictionary = DDPayloads.patch_spec(pid, Game.bal, false)
-			ps["selected"] = pid == chosen_patch
 			ps["art_keys"] = Art.patch_keys(pid)
 			ps["art_fit"] = "contain"
 			var cv: DDCardView = _view(ps, Vector2(0, 104 if portrait else 150))
 			cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			cv.tapped.connect(func(_x: DDCardView) -> void:
-				if chosen_patch != pid:
-					Sfx.cue(&"flip", 1.1)
-				chosen_patch = pid
-				_queue_render())
+			cv.name = "BossPatch_" + pid
+			cv.tapped.connect(func(_x: DDCardView) -> void: take_boss_patch(pid))
 			box.add_child(cv)
-	var nxt: String = str(Game.bal.district(run.district_index + 1).get("name", ""))
-	var label: String = ("Head to %s (+%d HP)" % [nxt, run.safehouse_heal()]) if offer.is_empty() or chosen_patch != "" else "Tap a Patch to choose it"
-	if not offer.is_empty() and chosen_patch != "":
-		label = "Take %s, head to %s (+%d HP)" % [DDText.patch_name(chosen_patch), nxt, run.safehouse_heal()]
-	var go: Button = DDUi.button(label, Color("245236"), DDUi.FONT_M)
-	go.name = "LeaveSafehouse"
-	go.custom_minimum_size = Vector2(0, 80 if portrait else DDUi.TAP_MIN)
-	go.disabled = not offer.is_empty() and chosen_patch == ""
-	go.pressed.connect(leave_safehouse)
-	v.add_child(go)
+	if bool(run.shop_state().get("enabled", false)):
+		var shop: DDShopPanel = DDShopPanel.new()
+		shop.setup(run, portrait)
+		shop.changed.connect(func(_ev: Dictionary) -> void:
+			Sfx.cue(&"perk")
+			Game.save_run("SAFEHOUSE")
+			_queue_render())
+		shop.inspect_requested.connect(func(pl: Dictionary) -> void: _inspect.open(pl))
+		shop.leave_requested.connect(leave_safehouse)
+		v.add_child(shop)
+	elif offer.is_empty():
+		var nxt: String = str(Game.bal.district(run.district_index + 1).get("name", ""))
+		var go: Button = DDUi.button("%s · head to %s (+%d HP)" % [DDText.leave_text(int(run.shop_state().get("left_behind", 0)), Game.bal), nxt, run.safehouse_heal()], Color("245236"), DDUi.FONT_M)
+		go.name = "LeaveSafehouse"
+		go.custom_minimum_size = Vector2(0, 80 if portrait else DDUi.TAP_MIN)
+		go.pressed.connect(leave_safehouse)
+		v.add_child(go)
+
+
+## v4: the boss reward Patch is sewn on when tapped; then the Safehouse Shop opens.
+func take_boss_patch(pid: String) -> void:
+	var ev: Dictionary = Game.run.take_patch(pid)
+	if bool(ev.get("ok", false)):
+		Sfx.cue(&"perk")
+		chosen_patch = ""
+		Game.save_run("SAFEHOUSE")
+	_queue_render()
 
 
 func leave_safehouse() -> void:
 	var run: DDRun = Game.run
-	var ev: Dictionary = run.leave_safehouse(chosen_patch)
+	var ev: Dictionary = run.leave_safehouse("")
 	if bool(ev.get("ok", false)):
 		last_event = ev
 		if chosen_patch != "":

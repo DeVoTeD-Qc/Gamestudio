@@ -108,7 +108,8 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       await sleep(250); await shot('03_street_enter_shuffle');
       s = await waitFor(page, (x) => x.banner_open, 'WAVE 1 banner'); await sleep(500); await shot('03b_wave1_banner');
       if (s.banner !== 'WAVE 1') errors.push('first banner is not WAVE 1: ' + s.banner);
-      await touchTap(cdp, { x: vp.width / 2, y: vp.height / 2 });
+      // skip it with a tap on the empty top margin (if it already ended, that tap does nothing)
+      await touchTap(cdp, { x: vp.width / 2, y: 4 });
       s = await waitFor(page, (x) => !x.banner_open, 'a tap skips the banner', 3000);
       await sleep(1600); s = await state(page); await shot('04_street_first_hint');
       checkOff(s, 'street');
@@ -174,7 +175,8 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       s = await state(page);
       const pick = (x) => ({ hp: x.hp, wave: x.wave, pile: x.pile, points: x.points, street: x.street, stacks: x.stacks, active: x.active });
       const before = pick(s);
-      await sleep(1500);
+      // let the run save reach IndexedDB (the Run flight and the profile's Codex save run too)
+      await sleep(3000);
       await page.reload({ waitUntil: 'load' });
       s = await waitFor(page, (x) => x.screen === 'TITLE', 'title after reload', 90000);
       await sleep(300); await shot('14_title_continue');
@@ -218,7 +220,7 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
           let u = await waitFor(page, (x) => x.wave === 2 && x.banner_open, 'wave 2 banner'); await sleep(500); await shot('wave2_banner');
           log('wave: ' + u.banner);
           if (u.banner !== 'WAVE 2') errors.push('wave banner: ' + u.banner);
-          await touchTap(cdp, { x: vp.width / 2, y: vp.height - 30 });
+          await touchTap(cdp, { x: vp.width / 2, y: 4 });
           u = await waitFor(page, (x) => !x.banner_open, 'a tap skips the WAVE banner', 2500);
         }],
         ['screen=street&seed=9&boss=1', 'boss_groundskeeper'],
