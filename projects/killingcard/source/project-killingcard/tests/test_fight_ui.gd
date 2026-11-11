@@ -405,7 +405,7 @@ func test_hand_cards_that_switch_a_set_on_glow_at_deploy() -> void:
 
 func test_pierce_glossary_glyph_and_first_shot_line() -> void:
 	assert_true(CardInfo.KEYWORD_RULES.has(&"pierce"), "Pierce keyword rule")
-	assert_eq(CardInfo.KEYWORD_RULES[&"first_shot"][1], "Fires first in its exchange; a partner it kills doesn't fire back.", "First Shot line")
+	assert_eq(CardInfo.KEYWORD_RULES[&"first_shot"][1], "Fires first. A target it eliminates doesn't fire back.", "First Shot line")
 	var gunner: CardData = CardDB.get_card(&"gunner")
 	var ids: Array = CardInfo.keywords(gunner).map(func(k: Dictionary) -> StringName: return k["id"])
 	assert_true(ids.has(&"pierce"), "the Gunner lists Pierce (%s)" % [ids])

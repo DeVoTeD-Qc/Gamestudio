@@ -671,9 +671,9 @@ func test_fields_on_the_objective_tile_and_overrun() -> void:
 		await tree.process_frame
 		var insp: Control = m.get_inspector()
 		assert_true(insp.is_open(), "field inspector")
-		var rules: String = (insp.get_node("%RulesLabel") as Label).text
-		assert_true(rules.contains("Overrun: at the end of each round, if the enemy controls this column, this Field is destroyed (hidden traps are exempt)."), "Overrun in plain words: %s" % rules)
-		assert_true((insp.get_node("%StatusLabel") as Label).text.contains("OVERRUN RISK"), "status warns")
+		var rules: String = IconText.plain(insp.get_node("%RulesLabel"))
+		assert_true(rules.contains("Overrun: destroyed at end of round if the enemy controls this column."), "Overrun in plain words: %s" % rules)
+		assert_true(IconText.plain(insp.get_node("%StatusLabel")).contains("OVERRUN RISK"), "status warns")
 		insp.close()
 	# Objective tile and incoming backs are inspectable too.
 	c._on_lane_long_pressed(1, &"objective", -1)

@@ -11,14 +11,20 @@ class_name CardLore
 extends RefCounted
 
 const LINES: Dictionary = {
+	# kc-text (the head: "a different lore for each" vanilla card): every card with no keyword and no
+	# effect has its own line, at most 12 words, gritty military humour, original (no franchise names).
 	# Standard Issue (the quartermaster's kit).
-	&"si_grunt": "Signed for one rifle, one helmet, no questions.",
+	&"si_grunt": "Signed for one rifle, one helmet and zero questions.",
 	&"si_trooper": "Third tour, same boots. The boots are holding up better.",
 	&"si_armored": "The plate is older than he is. Both still stop rounds.",
-	&"si_sergeant": "Counts heads before the drop and after. Hates the difference.",
-	# Calling-card units.
-	&"rifleman": "Point, breathe, squeeze. Everything else is noise.",
-	&"brawler": "Swapped his manual for a shotgun and never looked back.",
+	&"si_sergeant": "Counts heads before the drop and after. Hates the subtraction.",
+	&"kc_wip_private_1": "First day. Still thinks the chin strap is optional.",
+	&"kc_wip_private_2": "Learned to dig before he learned to shoot. Digs beautifully.",
+	&"kc_wip_private_3": "Survived three ambushes and the mess hall. The mess hall was worse.",
+	&"kc_wip_private_4": "Promoted twice, busted twice. Net result: still the new guy.",
+	# Calling-card units (vanilla first, then the rest: shown in the inspector only).
+	&"rifleman": "Point, breathe, squeeze. Everything else is somebody else's problem.",
+	&"brawler": "Ran dry once. The other guy ran out of teeth.",
 	&"breacher": "Doors are just walls that haven't met him yet.",
 	&"point_man": "First in, eyes open, mouth shut.",
 	&"flanker": "If you can see him coming, he took the wrong route.",
@@ -44,3 +50,11 @@ static func line(card_id: StringName, standard_issue: bool = false, unit: bool =
 	if standard_issue:
 		return SI_FALLBACK
 	return UNIT_FALLBACK if unit else ""
+
+
+## kc-text: the flavour line for the inspector sheet: the card's own line, but "" for a vanilla card
+## (its face already shows the line) and for a card without one (no fallback filler there).
+static func flavour(card_id: StringName, vanilla: bool, _standard_issue: bool = false) -> String:
+	if vanilla or not LINES.has(card_id):
+		return ""
+	return String(LINES[card_id])

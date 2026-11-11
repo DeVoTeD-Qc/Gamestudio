@@ -57,6 +57,11 @@ const OPTIONS = {
       for (const id of pl._ups || []) UPGRADES.find(u => u.id === id).ready(pl); } },
   // INCOME: Ready: +1 Intel, and 3 buys per turn (a bigger engine budget, the "more buys" control).
   income: { ready(s, p) { s.players[p].res.intel += 1; }, tune: { buyCap: 3 } },
+  // KIT (drop draft): before round 1 each player picks a squad kit; 2 of the 3 Sprints become that squad's Buy Station basic.
+  kit: { setup(s, p) { const pl = s.players[p]; const sq = WD.SQUADS[Math.floor(rnd(s) * 4)]; let k = 0;
+    for (const i of pl.deck.concat(pl.hand)) if (k < 2 && defOf(s, i) === 'T001') { s.cards[i].def = BASIC[sq]; k++; } } },
+  // HP50: Health 50 instead of 40 (the pacing control for packages that add power).
+  hp50: { tune: { hp: 50 } },
 };
 // a side RNG for sim-only choices, so the engine's own seed stream is not disturbed
 function rnd(s) { s._r = ((s._r || s.seed * 7 + 3) * 1103515245 + 12345) & 0x7fffffff; return s._r / 0x7fffffff; }
@@ -106,15 +111,16 @@ function turn(s, p, opts) {
 function run(n, polA, polB, optNames) {
   const opts = optNames.map(k => { if (!OPTIONS[k]) throw new Error('unknown option ' + k); return OPTIONS[k]; });
   const saved = Object.assign({}, WD.TUNE); for (const o of opts) if (o.tune) Object.assign(WD.TUNE, o.tune);
-  const R = { n: 0, aWins: 0, draws: 0, rounds: 0, acq: 0, starters: 0, size: 0, built: 0, scrapped: 0, promos: 0, swing: 0, prec: 0, zero4: [0, 0], dmg: {}, handBuilt: {}, firstHitRound: 0, errors: 0 };
+  const R = { n: 0, aWins: 0, draws: 0, rounds: 0, acq: 0, starters: 0, size: 0, built: 0, scrapped: 0, promos: 0, swing: 0, prec: 0, zero4: [0, 0], dmg: {}, handBuilt: {}, firstHitRound: 0, errors: 0, final: 0 };
   for (let i = 0; i < n; i++) {
     const aSeat = i % 2; const s = WD.newGame({ seed: i + 1 });
     s.pol = aSeat === 0 ? [polA, polB] : [polB, polA];
     s.aiMode = s.pol.map(x => x === 'blind' ? 'blind' : 'aware');
     s.T = [0, 1].map(() => ({ dmg: {}, turnDmg: [], prec: [], handBuilt: {} }));
+    for (const o of opts) if (o.setup) { o.setup(s, 0); o.setup(s, 1); }
     try { let g = 0; while (!s.over && g++ < 400) turn(s, s.turn, opts); } catch (e) { R.errors++; if (R.errors < 3) console.error(e); continue; }
     R.n++; if (s.winner === aSeat) R.aWins++; else if (s.winner === 'draw') R.draws++;
-    R.rounds += s.round;
+    R.rounds += s.round; R.final += s.finalReached ? 1 : 0;
     const pl = s.players[aSeat]; const T = s.T[aSeat];
     const all = pl.deck.concat(pl.discard, pl.hand, pl.play, pl.loadout);
     R.acq += pl.stats.cardsAcquired; R.size += all.length; R.starters += all.filter(i => isStarterDef(defOf(s, i))).length;
@@ -126,7 +132,7 @@ function run(n, polA, polB, optNames) {
   }
   Object.assign(WD.TUNE, saved);
   const k = R.n || 1; const f = (x, d = 2) => +x.toFixed(d);
-  return { a: polA, b: polB, opt: optNames.join('+') || 'baseline', games: R.n, errors: R.errors, aWin: f(R.aWins / k, 3), draws: R.draws, rounds: f(R.rounds / k),
+  return { a: polA, b: polB, opt: optNames.join('+') || 'baseline', games: R.n, errors: R.errors, aWin: f(R.aWins / k, 3), draws: R.draws, rounds: f(R.rounds / k), finalCircle: f(R.final / k),
     cardsAcquired: f(R.acq / k, 1), deckAtEnd: f(R.size / k, 1), startersAtEnd: f(R.starters / k, 1), builtShareAtEnd: f(R.built / k), scrapped: f(R.scrapped / k, 1), promoted: f(R.promos / k, 1),
     builtShareOfHand: Object.fromEntries(Object.entries(R.handBuilt).map(([r, v]) => [r, f(v[0] / v[1])])),
     dmgPerTurn: Object.fromEntries(Object.entries(R.dmg).map(([r, v]) => [r, f(v[0] / v[1], 1)])),
@@ -136,9 +142,9 @@ function run(n, polA, polB, optNames) {
 if (require.main === module) {
   if (opt('all')) {
     const rows = [];
-    for (const o of [[], ['promote'], ['thin'], ['spoils'], ['freecard'], ['upgrades'], ['income'], ['promote', 'spoils', 'upgrades']]) {
+    for (const o of [[], ['promote'], ['thin'], ['spoils'], ['freecard'], ['upgrades'], ['income'], ['kit'], ['promote', 'spoils', 'upgrades'], ['kit', 'promote', 'spoils', 'upgrades', 'hp50'], ['kit', 'spoils', 'upgrades', 'hp50']]) {
       const ab = run(N, 'aware', 'blind', o), an = run(N, 'aware', 'noloot', o), ar = run(N, 'aware', 'random', o), mm = run(N, 'aware', 'aware', o);
-      rows.push({ opt: ab.opt, synergyEdge: ab.aWin, buildEdgeVsNoloot: an.aWin, edgeVsRandom: ar.aWin, rounds: mm.rounds, acquired: mm.cardsAcquired, startersAtEnd: mm.startersAtEnd, deckAtEnd: mm.deckAtEnd,
+      rows.push({ opt: ab.opt, synergyEdge: ab.aWin, buildEdgeVsNoloot: an.aWin, edgeVsRandom: ar.aWin, rounds: mm.rounds, finalCircle: mm.finalCircle, acquired: mm.cardsAcquired, startersAtEnd: mm.startersAtEnd, deckAtEnd: mm.deckAtEnd,
         builtHandR3: mm.builtShareOfHand[3], builtHandR6: mm.builtShareOfHand[6], dmgR2: mm.dmgPerTurn[2], dmgR4: mm.dmgPerTurn[4], dmgR6: mm.dmgPerTurn[6], dmgR8: mm.dmgPerTurn[8], zeroDmgR4plus: mm.zeroDamageTurnsFromR4, bestTurnShare: mm.bestTurnShareOfDamage, firstDamageRound: mm.firstDamageRound, errors: ab.errors + an.errors + ar.errors + mm.errors });
     }
     console.log(JSON.stringify(rows, null, 1));

@@ -245,3 +245,31 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"set_callout": ["Set callout", "A set switching on is announced beside the trait rail. A red crack: a set switched off."],
 	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while one of its members is in play. In Duel it only starts a set."],
 }
+
+
+# --- kc-text: the inspector sheet's lines (match and Codex) ---------------------------------
+
+## kc-text: the Overrun rule in one line (the head asked "What is overrun again?"), on every Field.
+const FIELD_RULE: String = "Overrun: destroyed at end of round if the enemy controls this column."
+
+
+## kc-text: "2 Supply · 3 FP · 4 Armor" (a tactic: "1 Supply"); IconText adds the icons.
+static func stats_line(card: CardData) -> String:
+	var parts: PackedStringArray = ["%d Supply" % card.cost]
+	if card.is_unit():
+		parts.append("%d FP" % card.firepower)
+		parts.append("%d Armor" % card.armor)
+	return " · ".join(parts)
+
+
+## kc-text: the rules text minus sentences that only name a keyword already on its own line.
+static func rules_without_keywords(text: String, names: PackedStringArray) -> String:
+	var kept: PackedStringArray = []
+	for sentence: String in text.split(". ", false):
+		var bare: String = sentence.strip_edges().trim_suffix(".")
+		if names.has(bare.to_lower()):
+			continue
+		kept.append(bare)
+	if kept.is_empty():
+		return ""
+	return ". ".join(kept) + "."

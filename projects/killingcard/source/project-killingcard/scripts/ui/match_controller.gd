@@ -1486,7 +1486,7 @@ func open_ability_inspector() -> void:
 			"text": String(a.get("text", k.get("ability_text", ""))),
 			"keywords": [{"name": "Targets", "text": String(target_words.get(StringName(str(a.get("target", "zone"))), ""))},
 				{"name": "Passive · %s" % k.get("passive_name", ""), "text": String(k.get("passive_text", ""))},
-				{"name": "Once per match", "text": "Free, played in Deploy like a killstreak, with the same preview and UNDO. It isn't a killstreak: it needs no streak and isn't lost when your Operator goes down."}],
+				{"name": "Once per match", "text": "Free. Play it in Deploy. Needs no streak."}],
 			"status": state_line})
 
 
@@ -1627,9 +1627,8 @@ func _on_card_inspected(uid: int) -> void:
 	var rc: RulesCard = s.find_in_hand(uid)
 	if rc == null:
 		return
-	var status: String = "Costs %d Supply, you have %d." % [rc.card.cost, s.supply]
-	if rc.card.cost > s.supply:
-		status += " Not enough to play it now."
+	# kc-text: the cost is on the stats line; the status says only what you have.
+	var status: String = ("You have %d Supply." if rc.card.cost <= s.supply else "Not enough Supply: you have %d.") % s.supply
 	open_card_inspector(rc.card, "friend", status, {}, -1, uid,
 			synergy_lines(rc.card, me_side, null, rc.chosen_trait))
 
@@ -1653,8 +1652,8 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		&"incoming":
 			_open_info({"banner_back": true, "title": "Incoming rival play",
 					"type": "hidden · %s" % ZONE_WORDS[zone],
-					"text": "The rival committed a unit to %s this Deploy. It stays face down until Reveal, then flips and slides in from the top edge to this slot (a Protector slides on to the front)." % ZONE_WORDS[zone],
-					"status": "Recon Drone or Callout can spot it before Reveal."})
+					"text": "A rival card for %s. It flips at Reveal." % ZONE_WORDS[zone],
+					"status": "Recon Drone or Callout reveals it."})
 			return
 		&"field_player", &"field_enemy":
 			_open_field(zone, me_side if slot_side == &"field_player" else foe_side, uid)
@@ -1677,9 +1676,9 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		if mod_line != "":
 			status += " " + mod_line
 		if u.agile and side == me_side:
-			status += " Agile: tap it, then tap an adjacent column to move it there at Reveal (free, once per round)."
+			status += " Agile: tap it, then an adjacent column."
 		if u.beam:
-			status += " Beam: its shot also hits %s units in front of it in this column." % ("your" if side == me_side else "their own")
+			status += " Beam: also hits %s units in front." % ("your" if side == me_side else "their own")
 		open_card_inspector(u.card, "friend" if side == me_side else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
 				-1, synergy_lines(u.card, side, u, u.chosen_trait))
 		return
@@ -1722,7 +1721,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 		if bool(b["fs"]):
 			out.append({"name": "First Shot (set)", "text": "Its trait set gives it First Shot."})
 		if int(b["heal"]) > 0:
-			out.append({"name": "Undead heal", "text": "At the end of the round it heals %d (never above its max Armor)." % int(b["heal"])})
+			out.append({"name": "Undead heal", "text": "End of round: heals %d Armor." % int(b["heal"])})
 	var kw: StringName = SynergyRules.keyword_at(card)
 	if kw != &"":
 		var state_word: String = ""
@@ -1741,7 +1740,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 	var t: StringName = SynergyRules.trait_at(card, chosen)
 	if t == &"" and card.has_trait_choice():
 		var tc: StringName = card.card_trait if chosen == SynergyRules.TRAIT_DEFAULT else chosen
-		out.append({"name": "Trait: none", "text": "Its art is a plain art: this copy joins no set. Can be: %s." % _options_text(card)})
+		out.append({"name": "Trait: none", "text": "Plain art: joins no set. Can be: %s." % _options_text(card)})
 	if t != &"":
 		var sv: Dictionary = state.synergy_side(side)
 		var n: int = int((sv["counts"] as Dictionary).get(t, 0))
@@ -1757,7 +1756,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 	if card.standard_issue:
 		# kc-onboard-ui: Standard Issue kit: Muster out / Retire sends it home.
 		out.append({"name": "Standard Issue %s" % RunProgress.standard_issue_serial(card),
-				"text": "Basic kit: no keyword, no trait. Muster out or Retire sends it home."})
+				"text": "Basic kit, no trait. Muster out or Retire sends it home."})
 	return out
 
 
@@ -1821,29 +1820,15 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 
 
 ## Plain-words Overrun rule (the head asked "What is overrun again?"), shown on every Field.
-const FIELD_RULE: String = "Overrun: destroyed at end of round if the enemy controls this column."
+const FIELD_RULE: String = CardInfo.FIELD_RULE
 
 
-## kc-text: "2 Supply · 3 FP · 4 Armor" (a tactic: "1 Supply"); IconText adds the icons.
 static func stats_line(card: CardData) -> String:
-	var parts: PackedStringArray = ["%d Supply" % card.cost]
-	if card.is_unit():
-		parts.append("%d FP" % card.firepower)
-		parts.append("%d Armor" % card.armor)
-	return " · ".join(parts)
+	return CardInfo.stats_line(card)
 
 
-## kc-text: the rules text minus sentences that only name a keyword already on its own line.
 static func rules_without_keywords(text: String, names: PackedStringArray) -> String:
-	var kept: PackedStringArray = []
-	for sentence: String in text.split(". ", false):
-		var bare: String = sentence.strip_edges().trim_suffix(".")
-		if names.has(bare.to_lower()):
-			continue
-		kept.append(bare)
-	if kept.is_empty():
-		return ""
-	return ". ".join(kept) + "."
+	return CardInfo.rules_without_keywords(text, names)
 
 
 ## "Art: Marksman (placeholder from Killstreak art) · alternate art 1 of 1" for the inspector.
@@ -1881,21 +1866,21 @@ func _on_rail_inspected(key: StringName) -> void:
 			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
 					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal],
-					"status": "Each round you score the columns you control. Initiative (the flag): %s %s" % [
-						"you go first." if bool(ini_s.get("mine", true)) else "the rival goes first.", String(ini_s.get("reason", ""))]})
+					"status": "Each round: +1 per column you control. %s" % [
+						"You go first." if bool(ini_s.get("mine", true)) else "The rival goes first."]})
 		&"deck":
 			_open_info({"title": "Your deck", "type": "deck · discard",
-					"text": "%d cards left to draw, %d in the discard pile. You draw %d card%s at the start of each round; the hand holds up to %d. When the deck is empty, the discard pile is shuffled into a new deck." % [
-							me.deck.size(), me.discard.size(), state.config.draws_per_round, "" if state.config.draws_per_round == 1 else "s", state.config.hand_cap],
+					"text": "%d to draw, %d discarded. Draw %d a round (hand max %d)." % [
+							me.deck.size(), me.discard.size(), state.config.draws_per_round, state.config.hand_cap],
 					"status": ""})
 		&"intel":
 			var dots: PackedInt32Array = state.red_dots(me_side)
 			_open_info({"title": "Rival intel", "type": "rival hand · incoming plays",
-					"text": "The rival holds %d cards. Hidden plays this Deploy: A %d, B %d, C %d. Each shows on the board as an INCOMING back in the slot where it will land." % [foe.hand.size(), dots[0], dots[1], dots[2]],
-					"status": "Recon Drone and Callout reveal what they are."})
+					"text": "%d cards in hand. Incoming: A %d, B %d, C %d." % [foe.hand.size(), dots[0], dots[1], dots[2]],
+					"status": "Recon Drone and Callout reveal them."})
 		&"supply":
 			_open_info({"title": "Supply", "type": "resource",
-					"text": "%d of %d Supply left this round. Cards cost Supply to play; it refills (and grows) each round." % [me.supply, state.config.supply_for_round(state.round_number)],
+					"text": "%d of %d Supply left. Refills and grows each round." % [me.supply, state.config.supply_for_round(state.round_number)],
 					"status": ""})
 		# kc-board2: the icon strip's other badges and the tray's controls.
 		&"streak":
@@ -1904,28 +1889,28 @@ func _on_rail_inspected(key: StringName) -> void:
 				if item != null:
 					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, me_side, item)])
 			_open_info({"title": "Killstreaks", "type": "streak %d" % me.streak,
-					"text": "Eliminations build your streak; each killstreak is earned at its threshold (%s) and called in from this badge." % ", ".join(names),
-					"status": "The badge glows amber when one is ready."})
+					"text": "Eliminations build your streak. %s." % ", ".join(names),
+					"status": "Amber glow: one is ready."})
 		&"menu":
-			_open_info({"title": "Menu", "type": "pause", "text": "Pause the match: fast animations, mirror layout (tray on the left), forfeit, quit to title.", "status": ""})
+			_open_info({"title": "Menu", "type": "pause", "text": "Pause, settings, forfeit, quit.", "status": ""})
 		&"preview":
 			_open_info({"title": "Preview", "type": "forecast",
-					"text": "Shows the forecast of this round's firefight on the objective tiles, from what you can see (P).", "status": ""})
+					"text": "Forecast of this round's firefight, from what you can see (P).", "status": ""})
 		&"killfeed":
 			_open_info({"title": "Killfeed", "type": "this round",
-					"text": "Every elimination of the round, oldest first. Short toasts also show at the top of the board.", "status": ""})
+					"text": "This round's eliminations, oldest first.", "status": ""})
 		&"traits":
 			_open_info({"title": "Sets (traits)", "type": "trait rail · yours%s" % ("" if _screen.compact else " and the rival's"),
-					"text": "Calling cards and Fields share a trait (one trait per card at most) (Vanguard, Spec Ops, Heavy, Undead). With 2 of a trait in play, tier 2 turns on for that trait's units; with 3, tier 3 as well. Each chip shows the count over the next threshold; a lit icon = tier 2, a ring = tier 3. Standard Issue cards have no trait.",
-					"status": "Tap the rail for every tier text. Long-press a chip for that trait."})
+					"text": "2 of a trait in play: tier 2 bonus. 3: tier 3 too.",
+					"status": "Long press a chip for its bonus."})
 		&"initiative":
 			var ini: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Initiative", "type": "round %d · %s first" % [state.round_number, "you go" if bool(ini.get("mine", true)) else "the rival goes"],
 					"text": "%s %s" % [String(ini.get("reason", "")), String(ini.get("effect", ""))],
-					"status": "Initiative goes to the side behind on score; %s. The flag on SCORE shows who has it." % String(MatchSnapshot.TIE_RULE_WORDS.get(ini.get("tie_rule", &"player"), "the tie rule decides a tie"))})
+					"status": "The side behind on score goes first."})
 		&"hand_tab":
 			_open_info({"title": "Your hand", "type": "%d cards" % me.hand.size(),
-					"text": "The hand tray opens on its own in Deploy. Outside Deploy, PEEK shows your cards read-only (NEXT DEPLOY); long-press a card for its rules.", "status": ""})
+					"text": "Opens in Deploy. Outside Deploy, PEEK shows it read-only.", "status": ""})
 
 
 ## kc-syn-ui: one trait's rules from its rail chip (side &"player" / &"enemy").
@@ -1945,7 +1930,7 @@ func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 	for k: int in [2, 3]:
 		lines.append({"name": "%s %d%s" % [SynergyGlyphs.trait_name(t), k, " (ON)" if tier >= k else ""], "text": String(SynergyRules.TIER_TEXT[t][k - 2]) + "."})
 	_open_info({"title": SynergyGlyphs.trait_name(t), "type": "trait · %s · %d in play" % ["yours" if side == me_side else "rival", n],
-			"text": "In play: %s.%s Units and visible Fields count; tactics and hidden traps don't." % [
+			"text": "In play: %s.%s" % [
 				", ".join(members) if not members.is_empty() else "only Fields", " Doctrine adds 1 to this count." if doc else ""],
 			"keywords": lines, "side": side,
 			"status": "Tier 2 is on." if tier == 2 else ("Tiers 2 and 3 are on." if tier >= 3 else "Needs %d in play for tier 2." % SynergyRules.TIER2)})
@@ -1954,19 +1939,18 @@ func open_trait_inspector(side_name: StringName, t: StringName) -> void:
 func _open_objective(zone: int) -> void:
 	var lane: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)["lanes"][zone]
 	var control_text: String = {&"player": "You control it", &"enemy": "The rival controls it",
-			&"contested": "Even (contested): both sides have units here", &"empty": "Nobody holds it"}.get(lane["control"], "")
+			&"contested": "Even: both sides are here", &"empty": "Nobody holds it"}.get(lane["control"], "")
 	var lines: PackedStringArray = []
 	var terr: Dictionary = lane.get("terrain", {})
 	if not terr.is_empty():
 		lines.append("Terrain · %s: %s (both sides)." % [terr["name"], String(terr["text"]).trim_suffix(".")])
-	lines.append("%s. A side controls a column when it has at least one unit there and the other side has none (a Holder breaks a tie)." % control_text)
-	lines.append("Column Firepower: yours %d, rival %d." % [int(lane["fp_player"]), int(lane["fp_enemy"])])
+	lines.append("%s. FP: yours %d, rival %d." % [control_text, int(lane["fp_player"]), int(lane["fp_enemy"])])
 	for key: String in ["player", "enemy"]:
 		for f: Dictionary in (lane["fields"] as Dictionary).get(key, []):
 			lines.append("%s Field: %s%s." % ["Your" if key == "player" else "Rival", f["name"], " (hidden trap)" if f.get("hidden", false) else ""])
 	_open_info({"title": "Objective %s · %s" % [String(lane["label"]), String(lane["name"]).capitalize()],
 			"type": "objective · column %s" % String(lane["label"]), "text": "\n".join(lines),
-			"status": "Row 1 on each side touches the objective: that card is the frontline."})
+			"status": ""})
 
 
 func _open_field(zone: int, side: int, uid: int) -> void:
@@ -1985,10 +1969,9 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 	risk = rc.card.is_visible_field() and control == 1 - side
 	var status: String = "On %s's half of objective %s." % ["your" if side == me_side else "the rival", MatchSnapshot.ZONE_LABELS[zone]]
 	if rc.card.hidden:
-		status = "Hidden trap: the rival can't see it. Traps are never overrun."
+		status = "Hidden trap: never overrun."
 	elif risk:
-		status = "OVERRUN RISK: the %s controls this column now. If it still does at the end of the round, this Field is destroyed." % ("rival" if side == me_side else "you")
-	status += " Removed by: Overrun, Sabotage, or a newer Field of the same side here."
+		status = "OVERRUN RISK: the %s controls this column. Lost at end of round." % ("rival" if side == me_side else "you")
 	open_card_inspector(rc.card, "friend" if side == me_side else "enemy", status, {}, side)
 
 
@@ -2011,7 +1994,7 @@ func open_item_inspector(item_id: StringName, side: int = -1) -> void:
 	var check: Dictionary = state.check_use(me_side, item_id)
 	var status: String = ""
 	if check["ok"]:
-		status = "Ready: tap its tile, then a target, to call it in." if is_ks else "Ready to use."
+		status = "Ready: tap it, then a target." if is_ks else "Ready."
 	elif is_ks and not me.streak_tray.has(item.id):
 		status = "Streak %d of %d: %d more elimination%s to earn it." % [me.streak, threshold, maxi(0, threshold - me.streak),
 				"" if threshold - me.streak == 1 else "s"]
@@ -2081,8 +2064,7 @@ func _open_operator(side: int) -> void:
 		var ab_state: String = "ready" if bool(ab.get("ready", false)) else ("used" if bool(ab.get("used", false)) else String(ab.get("reason", "not now")).to_lower())
 		op_lines.append({"name": "Ability · %s (once per match, free, %s)" % [kit["ability_name"], ab_state], "text": String(kit.get("ability_text", ""))})
 	if not kit.is_empty() and not bool(kit.get("kit_on", true)):
-		op_lines.append({"name": "Kit off this fight", "text": "The passive and the ability switch on from your second fight."})
-	op_lines.append({"name": "Not from the deck", "text": "Your Operator is always with you: it is never drawn, never discarded, and its card stays pinned at the start of your hand."})
+		op_lines.append({"name": "Kit off this fight", "text": "Passive and ability start from your second fight."})
 	if op.is_on_board():
 		op_lines.append({"name": "Firepower now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)

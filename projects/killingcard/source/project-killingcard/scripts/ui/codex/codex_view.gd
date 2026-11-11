@@ -454,21 +454,21 @@ static func inspector_info(e: Dictionary, art_override: StringName = &"") -> Dic
 				"cost": item.supply_cost},
 				"title": item.display_name, "type": "killstreak · earned at streak %d%s" % [item.streak_threshold,
 						(" · cost %d" % item.supply_cost) if item.supply_cost > 0 else ""],
-				"text": item.text, "keywords": [], "status": "Loadout killstreak: eliminations build your streak; at %d it is ready to call in." % item.streak_threshold,
+				"text": item.text, "keywords": [], "status": "Ready at streak %d." % item.streak_threshold,
 				"side": 0}
 	var card: CardData = e["card"]
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
 	if card.is_field():
 		type_text = "field"
 	# kc-ipad-cards: the weapon class is never shown.
-	if card.is_unit():
-		type_text += " · FP %d · Armor %d" % [card.firepower, card.armor]
-	type_text += " · cost %d" % card.cost
+	# kc-text: cost and stats on their own icon line (CardInfo.stats_line).
+	var stats: String = CardInfo.stats_line(card)
 	var keywords: Array[Dictionary] = CardInfo.keywords(card)
 	var names: PackedStringArray = []
 	for k: Dictionary in keywords:
 		names.append(String(k["name"]).to_lower())
-	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else card.text
+	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) \
+			else CardInfo.rules_without_keywords(card.text, names)
 	var art_id: StringName = art_override if art_override != &"" else shown_art(e)
 	var banner: Dictionary = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 			"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
@@ -495,10 +495,11 @@ static func inspector_info(e: Dictionary, art_override: StringName = &"") -> Dic
 		art_line += " · " + gives.capitalize().replace("Gives ", "gives ")
 	art_line += " · found in a run" if is_found(e, art_id) else " · not found yet"
 	if card.is_field():
-		text = (text + " " if text != "" else "") + "Overrun: at the end of each round, if the enemy controls this column, this Field is destroyed (hidden traps are exempt)."
+		text = (text + " " if text != "" else "") + CardInfo.FIELD_RULE
 	return {"view": view, "title": card.display_name,
 			"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,
-			"text": text, "keywords": keywords, "status": "In the reward pool" if card.is_elite else "",
+			"text": text, "keywords": keywords, "status": "In the reward pool" if card.is_elite else "", "stats": stats,
+			"flavour": CardLore.flavour(card.id, card.is_unit() and card.text == "" and keywords.is_empty()),
 			"banner": banner, "side": 0, "art_line": art_line, "is_unit": card.is_unit()}
 
 
