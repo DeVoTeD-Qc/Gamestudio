@@ -77,13 +77,18 @@ CONFIG = {
     },
     "melee_pool": {"maple_row": ["wrench"], "downtown": ["wrench", "axe"],
                    "st_agnes": ["axe", "sledge"]},
-    "card_add": {d: {"entrance": ["K"], "waves": [[], ["K"]]}       # 17: a melee weapon card in
-                 for d in ("maple_row", "downtown", "st_agnes")},   # every Entrance and Wave 2
+    "card_add": {                 # 17: a melee weapon card in every Entrance and Wave 2
+        "maple_row": {"entrance": ["K"], "waves": [[], ["K"]]},
+        "downtown": {"entrance": ["K"], "waves": [[], ["K"]]},
+        "st_agnes": {"entrance": ["K"], "waves": [[], ["K"]]},
+    },
     #                             # 16/17: extra cards per district: {district_id: {"entrance": [...],
                                   #        "waves": [[...], [...], [...]], "rooms": [[...], ...]}}
     "pool_add": {"maple_row": ["sweeper"], "downtown": ["sweeper", "launcher"],
                  "st_agnes": ["launcher"]},   # 16: extra gun ids per district pool {district_id: [wid, ...]}
     "run_mode": "before",         # 19: before | zombies_only | anytime
+    "run_return": "shuffle",      # 19: shuffle (v3: back into the pile, shuffled) | bottom (head
+                                  #     2026-11-11: the street goes under the pile, unshuffled)
     "start_patches": [],          # test hook: Patches owned from the start (not a game rule)
     "lockpick_off": 5,            # 14: Lockpick, rooms cost this much less
     "adrenaline_hp": 6,           #     Adrenaline: +1 power to every weapon at this HP or less
@@ -1040,8 +1045,11 @@ def play_district(s, d, di, rng, st, final):
                     back = [c for c in street if c.kind == "Z"]
                 st["run_cards_back"] += len(back)
                 st["run_nonzombie_back"] += sum(1 for c in back if c.kind != "Z")
-                b.pile += back
-                rng.shuffle(b.pile)
+                if CONFIG["run_return"] == "bottom":
+                    b.pile[:0] = back     # the pile pops from the back: index 0 is the bottom
+                else:
+                    b.pile += back
+                    rng.shuffle(b.pile)
                 street = []
                 st["runs"] += 1
                 st["taps"] += 1
@@ -1317,7 +1325,7 @@ def summarize(survivor, st, runs):
 # --preset v3 puts every v4 option back to the v3 rules (same numbers as sim_deaddraw_v3.py).
 PRESETS = {
     "v3": {"swap_salvage": "none", "carry_mode": "all", "melee_mode": "crowbar",
-           "medkits_per_street": 1, "run_mode": "before", "card_add": {}, "pool_add": {},
+           "medkits_per_street": 1, "run_mode": "before", "run_return": "shuffle", "card_add": {}, "pool_add": {},
            "patches": ["lookout", "thick_jacket", "field_medic", "brawler", "bounty",
                        "loose_grip", "second_wind", "trophy_belt"],
            "melee_weapon_points": 0.0, "brawler_bonus": 2, "brawler_mode": "all",
