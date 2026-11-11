@@ -776,7 +776,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 		var nm: String = String(kw.get("name", ""))
 		if nm != "":
 			names.append(nm)
-	var ability: Label = CardLook.rule_label(", ".join(names) if not names.is_empty() else "Respawns at your next Deploy if it goes down.")
+	var ability: Label = CardLook.rule_label(", ".join(names) if not names.is_empty() else "Respawns next Deploy.")
 	ability.name = "AbilityLine"
 	ability.clip_text = true
 	ability.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

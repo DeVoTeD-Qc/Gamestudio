@@ -52,7 +52,7 @@ func _run() -> void:
 	insp.call(&"close")
 	for id: String in ["kc_wip_private_2", "kc_wip_war_shout", "kc_wip_riot_shield", "si_grunt"]:
 		var card: CardData = load("res://data/cards/%s.tres" % id) as CardData
-		c.call(&"open_card_inspector", card, "friend", "Costs %d Supply, you have %d." % [card.cost, me.supply])
+		c.call(&"open_card_inspector", card, "friend", ("You have %d Supply." if card.cost <= me.supply else "Not enough Supply: you have %d.") % me.supply)
 		await _shot("insp_" + id)
 		insp.call(&"close")
 	for key: StringName in [&"supply", &"streak", &"deck"]:

@@ -58,7 +58,8 @@ Rules for the lines:
 | The "Front line" keyword | Front line | Protector rule, slides to the front |
 
 Verbs: "gets +N FP", "gets Cover N", "heals N Armor", "deal N damage to", "reveal incoming enemy
-cards". Stat boosts are spelled out: "+1 FP and +1 Armor", never "+1/+1".
+cards". Stat boosts are spelled out: "+1 FP and +1 Armor", never "+1/+1". Place words: a unit
+says "here" (its column), a Field says "in this column", a tactic says "in a column".
 
 ## 3. Concept, icon, and where it appears
 
@@ -73,9 +74,9 @@ colour (Supply amber, FP teal, Armor steel); keyword icons take the ink of the t
 | Armor | Armor, ARMOR | plate `stat_armor` (steel) | card Armor plate, board units, inspector stats line, card rules text, glossary, tooltips |
 | Cover | Cover | `kw_cover` (UI kit `stat_cover`) | card keyword line, Cover chip, inspector keyword line, rules text, glossary |
 | streak | streak, Streak | rising arrow `streak` (amber) | HUD streak badge, killstreak inspector, card rules text ("streak +1"), glossary |
-| killstreak | killstreak(s) | jet `type_killstreak` | killstreak tray, killstreak inspector, glossary, tutorial text in the inspector |
+| killstreak | killstreak(s) | jet `type_killstreak` | killstreak tray, killstreak inspector, tutorial coach text, glossary |
 | REQ | REQ, Requisition | requisition slip (built-in `svg:req`, brass) | REQ chip (map, shop, rewards), every run-screen button that names REQ (BUY · 4 REQ, NEED 4 REQ, MUSTER OUT, DISCHARGE, RESTOCK, PERK), REQ inspector, glossary |
-| Tickets | Ticket(s), Reinforcement Tickets | ticket `tickets` (brass) | ticket pips, rest and event texts in the inspector, glossary |
+| Tickets | Ticket(s), Reinforcement Tickets | ticket `tickets` (brass) | in front of the ticket pips (map, event, rest, after-action), rest and event texts in the inspector, glossary |
 | First Shot | First Shot | `kw_first_shot` | card keyword line, board icons, inspector, rules text, glossary |
 | Pick | Pick | `kw_pick` (shield with down arrow) | same as First Shot |
 | Flank | Flank | `kw_flank` | same |
@@ -101,6 +102,9 @@ How each surface gets its icons:
 - Buttons that name a concept get its icon with `IconText.tag_button(b)` (run screens' make_button,
   the shop's BUY buttons).
 - Chips and counters use `IconText.icon_rect(concept)` (the REQ chip).
+- The tutorial coach card draws its step text through an IconText overlay (Supply, FP, Armor,
+  streak, killstreak in the steps get their icons).
+- The run screens' ticket pips are led by the Tickets icon (`RunScreen.make_tickets`).
 - Hover tooltips on the HUD and card controls (card view, unit slot, strip badge, objective tile,
   initiative chip, ability button, boss plate) render through `IconText.tooltip()`.
 - `IconText.plain(node)` returns the words of any of these, for tests and accessibility.
