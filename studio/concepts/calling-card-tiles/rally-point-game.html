@@ -1,0 +1,1468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rally Point</title>
+<meta name="description" content="Rally Point, the layered game: learn one rule at a time, from Tiles to the full Streaks rules, and play each layer against the AI.">
+<style>
+/* A game table at night, as in rally-point-learn.html. Single dark look by choice (it is a game table).
+   Phone portrait first: task card, scores, Front, board, preview, hand. Desktop: board left, rail right. */
+:root{
+  color-scheme:dark;
+  --bg:#12161b; --felt:#1b2a2a; --felt-line:#27403f; --panel:#1a2026; --line:#2c3640; --ink:#eef2ef; --muted:#9fb0ab;
+  --p1:#3fc6b5; --p1-soft:rgba(63,198,181,.16); --p1-ink:#7ff0e1; --p2:#f08a3c; --p2-soft:rgba(240,138,60,.16); --p2-ink:#ffb27a;
+  --gold:#f2cf5b; --bad:#ff6b7c;
+  --kS:#e2465a; --kG:#f2b632; --kR:#57b86a; --kP:#4f9be8;
+  --f-display:"Avenir Next Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --cell:44px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink);margin:0;overflow-x:hidden}
+body{font-family:var(--f-body);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));
+  display:grid;gap:8px;grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "task" "score" "front" "board" "pv" "hand" "acts"}
+@media (min-width:900px){
+  .app{grid-template-columns:auto minmax(340px,410px);grid-template-areas:"top top" "board task" "board score" "board front" "board pv" "board hand" "board acts" "board .";align-items:start;column-gap:24px;padding-top:14px}
+  .boardwrap{position:sticky;top:12px}
+}
+/* Header */
+.top{grid-area:top;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1;margin-right:auto;min-width:0}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:24px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.layerbtn{display:flex;align-items:center;gap:6px;min-height:44px;border-radius:999px;border:1px solid var(--gold);background:#1d242b;padding:4px 12px 4px 6px;font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.04em;text-transform:uppercase}
+.layerbtn i{font-style:normal;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#1a1606;display:grid;place-items:center;font-size:16px}
+.layerbtn small{font-family:var(--f-body);font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:600;display:block;line-height:1}
+.tabs{display:flex;gap:4px}
+.tab{font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:6px 14px;border:1px solid var(--line);background:#1d242b;color:var(--muted);min-height:44px;min-width:44px}
+.tab.on{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--gold);background:#1d242b;color:var(--gold);font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1;display:grid;place-items:center;padding:0}
+.iconbtn svg{width:22px;height:22px}
+/* Task card */
+.task{grid-area:task;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;display:flex;flex-direction:column;gap:4px}
+.tk-top{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.tk-no{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.dots{display:flex;gap:0;flex-wrap:wrap}
+.dots button{width:44px;height:44px;border:0;background:transparent;padding:0;display:grid;place-items:center}
+.dots button span{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:#2a333b;font-size:11px;font-weight:700;color:var(--muted);display:grid;place-items:center}
+.dots button.done span{background:#3c6b57;color:#d9f2de;border-color:#3c6b57}
+.dots button.on span{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.task h2{font-family:var(--f-display);font-weight:800;font-size:23px;text-transform:uppercase;letter-spacing:.02em;margin:0;line-height:1.05}
+.task p{margin:0}
+#tkText{font-size:16px;font-weight:600}
+.say{font-size:14px;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 8px;min-height:1.4em}
+.say.hint{color:#ffe7a8;border-color:var(--gold)}
+.say.ok{color:#c8f5e4;border-color:var(--p1)}
+.say.ai{color:#ffd2b0;border-color:var(--p2)}
+.say b{color:var(--ink)}
+.tk-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tk-act:empty{display:none}
+.pv{grid-area:pv;margin:0;min-height:2.6em;font-size:13.5px;color:var(--ink);background:#10161a;border:1px dashed var(--line);border-radius:8px;padding:4px 8px}
+.pv b{color:var(--gold)}
+.pv.idle{color:var(--muted);border-color:transparent;background:transparent}
+/* Scores, meters, chips */
+.scores{grid-area:score;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pbox{border-radius:12px;padding:6px 8px;background:rgba(0,0,0,.2);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.pbox.turn{border-color:var(--c);background:var(--soft)}
+.pY{--c:var(--p1);--soft:var(--p1-soft);--ci:var(--p1-ink)} .pA{--c:var(--p2);--soft:var(--p2-soft);--ci:var(--p2-ink)}
+.prow{display:flex;align-items:center;gap:6px;min-width:0}
+.who{font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--c)}
+.turnTag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--c);color:#0b1012;border-radius:5px;padding:1px 5px;visibility:hidden;white-space:nowrap}
+.pbox.turn .turnTag{visibility:visible}
+.pts{margin-left:auto;font-family:var(--f-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);border-radius:6px;padding:0 3px;min-width:36px;text-align:right}
+.pts.bump{animation:bump .35s ease-out}
+@keyframes bump{40%{transform:scale(1.25);color:var(--gold)}}
+.meters{display:flex;flex-direction:column;gap:3px}
+.meter{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);border-radius:6px;min-height:20px;flex-wrap:wrap}
+.meter .g{color:var(--k);font-weight:700;width:12px;text-align:center}
+.meter .lb{color:var(--ink);font-weight:600}
+.meter .pips{display:flex;gap:2px}
+.meter .pips i{width:10px;height:13px;border-radius:3px;background:#2a333b;transition:background .25s}
+.meter .pips i.on{background:var(--k);box-shadow:0 0 5px color-mix(in srgb,var(--k) 60%,transparent)}
+.meter.full .pips i.on{box-shadow:0 0 8px var(--k)}
+.meter b{color:var(--ink);font-variant-numeric:tabular-nums}
+.meter .od{font-size:10.5px;color:var(--muted)}
+.meter.full .od{color:var(--gold);font-weight:700}
+.meter.bump{animation:bump .4s ease-out}
+.chips{display:flex;gap:4px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
+.chip{border:1px solid var(--line);border-radius:999px;padding:1px 7px;background:#151b20;white-space:nowrap}
+.chip b{color:var(--ink)}
+.chip.hot{border-color:var(--gold);color:#ffe7a8}
+.chip.bump{animation:bump .4s ease-out}
+/* The Front */
+.frontbar{grid-area:front;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 10px;display:flex;align-items:center;gap:8px}
+.frontbar .end{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;width:34px;text-align:center;line-height:1.1}
+.frontbar .end.y{color:var(--p1-ink)} .frontbar .end.a{color:var(--p2-ink)}
+.track{flex:1;display:grid;grid-template-columns:repeat(11,1fr);gap:2px;position:relative;min-width:0}
+.track i{height:22px;border-radius:4px;background:#232c33;display:block}
+.track i.mid{background:#39444d}
+.track i.yz{background:color-mix(in srgb,var(--p1) 22%,#232c33)}
+.track i.az{background:color-mix(in srgb,var(--p2) 22%,#232c33)}
+.track i.ye{background:var(--p1)} .track i.ae{background:var(--p2)}
+.track .mk{position:absolute;top:-4px;width:calc(100% / 11);height:30px;display:grid;place-items:center;transition:left .45s cubic-bezier(.2,1.3,.4,1);pointer-events:none}
+.track .mk b{width:20px;height:20px;background:var(--gold);transform:rotate(45deg);border-radius:4px;box-shadow:0 0 10px rgba(242,207,91,.6);border:2px solid #1a1606}
+.frontbar .fv{font-size:12px;color:var(--muted);width:58px;text-align:right;line-height:1.1}
+.frontbar .fv b{color:var(--gold);font-size:14px}
+/* Board */
+.boardwrap{grid-area:board;display:flex;justify-content:center}
+.table{background:var(--felt);border-radius:14px;padding:3px;box-shadow:inset 0 0 0 1px var(--felt-line),0 18px 40px rgba(0,0,0,.35);max-width:100%}
+@media (min-width:900px){.table{padding:8px}}
+.board{position:relative;width:calc(var(--cell)*var(--C));height:calc(var(--cell)*var(--R));border-radius:6px;outline:none;touch-action:manipulation}
+.board:focus-visible{box-shadow:0 0 0 3px var(--gold)}
+#bl,#fx{position:absolute;inset:0}
+#fx{pointer-events:none;z-index:20}
+.sq{position:absolute;width:var(--cell);height:var(--cell);border:1px solid var(--felt-line);background:rgba(0,0,0,.08)}
+.sq.ring{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 2px rgba(255,255,255,.28);border-style:dashed;border-color:rgba(255,255,255,.35)}
+.sq.goal{background:rgba(242,207,91,.22);box-shadow:inset 0 0 0 3px var(--gold);animation:pulse 1.1s ease-in-out infinite;z-index:1}
+.sq.freed{background:rgba(255,107,124,.18);box-shadow:inset 0 0 0 2px var(--bad);animation:pulse 1.1s ease-in-out infinite}
+.sq.cur{box-shadow:inset 0 0 0 3px #fff}
+@keyframes pulse{50%{opacity:.45}}
+.tile{position:absolute;z-index:3;transition:transform .3s cubic-bezier(.2,1.3,.4,1),opacity .3s}
+.tile.enter{animation:enter .4s cubic-bezier(.2,1.3,.4,1)}
+@keyframes enter{from{transform:translateY(-18px) scale(1.08);opacity:0}}
+.banner{border-radius:8px;padding:calc(var(--cell)*.08);background:var(--own);display:flex}
+.banner .face{flex:1;border-radius:5px;background:repeating-linear-gradient(135deg,var(--k) 0 6px,color-mix(in srgb,var(--k) 66%,#000) 6px 12px);display:flex;align-items:center;justify-content:space-around;overflow:hidden;gap:2px}
+.banner.v .face{flex-direction:column}
+.glyph{width:calc(var(--cell)*.46);height:calc(var(--cell)*.46);border-radius:50%;background:#0d1114;display:grid;place-items:center;color:var(--k);font-size:calc(var(--cell)*.28);font-weight:700;line-height:1;flex:none}
+.nm{background:#0d1114e8;color:var(--ink);border-radius:5px;padding:1px 5px;font-family:var(--f-display);font-weight:800;font-size:max(10px,calc(var(--cell)*.25));letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%;line-height:1.25}
+.banner.v .nm{writing-mode:vertical-rl;max-width:none;max-height:72%;padding:5px 1px}
+.ins{border-radius:9px;background:#0f1418;box-shadow:inset 0 0 0 calc(var(--cell)*.08) var(--own);display:grid;place-items:center}
+.ins .gem{width:62%;height:62%;border-radius:6px;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--k) 55%,#fff) 0,var(--k) 45%,color-mix(in srgb,var(--k) 55%,#000) 100%);display:grid;place-items:center;color:#0d1114;font-weight:800;font-size:calc(var(--cell)*.26);transform:rotate(45deg)}
+.ins .gem span{transform:rotate(-45deg)}
+.obj{border-radius:12px;background:#0f1418;box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--own);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.obj svg{width:50%;height:50%}
+.obj .count{position:absolute;right:4px;bottom:3px;font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.3);background:#000b;border-radius:6px;padding:0 5px;line-height:1.25}
+.obj .count.near{color:var(--gold)}
+.obj .chg{position:absolute;left:4px;top:3px;font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.26);background:var(--gold);color:#1a1606;border-radius:6px;padding:0 4px;line-height:1.3}
+.obj.rallied{box-shadow:inset 0 0 0 3px var(--k),0 0 0 3px var(--gold),0 0 20px rgba(242,207,91,.5)}
+.obj.rallied .count{color:var(--gold)}
+.obj.rallying{animation:rallyglow .9s ease-out 2}
+@keyframes rallyglow{40%{box-shadow:inset 0 0 0 3px var(--k),0 0 0 6px var(--gold),0 0 40px var(--gold)}}
+.shield{position:absolute;right:-4px;top:-6px;width:calc(var(--cell)*.42);height:calc(var(--cell)*.46);z-index:4;pointer-events:none;filter:drop-shadow(0 1px 2px #000)}
+.patchc{border-radius:5px;background:repeating-linear-gradient(45deg,#2c353e 0 5px,#20272e 5px 10px);box-shadow:inset 0 0 0 2px #59646d;display:grid;place-items:center;color:#aeb8b4;font-size:calc(var(--cell)*.22);font-weight:700;opacity:.9}
+.tile.flash{animation:flash .7s ease-out}
+@keyframes flash{40%{filter:brightness(1.7);transform:scale(1.04)}}
+.tile.tgt{outline:3px solid var(--bad);outline-offset:1px;cursor:crosshair;animation:tgt 1s ease-in-out infinite;z-index:6}
+@keyframes tgt{50%{outline-color:#ffb3bc}}
+.tile.last{outline:2px dashed var(--p2-ink);outline-offset:2px}
+.tile.boom{animation:boom .6s ease-in forwards;z-index:8}
+@keyframes boom{30%{transform:scale(1.08);filter:brightness(2.2)}100%{transform:scale(.6) rotate(-5deg);opacity:0;filter:brightness(3)}}
+.ghost{position:absolute;z-index:7;pointer-events:none;opacity:.62;border-radius:8px}
+.ghost.bad{opacity:.35;filter:grayscale(.6)}
+.gcell{position:absolute;z-index:7;pointer-events:none;width:var(--cell);height:var(--cell);border:2px solid var(--gold);border-radius:5px}
+.gcell.bad{border-color:var(--bad)}
+.plab{position:absolute;z-index:9;pointer-events:none;transform:translate(-50%,-50%);font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.32);background:#0d1114e6;border-radius:6px;padding:0 4px;line-height:1.2}
+.plab.yc{color:var(--p1-ink)} .plab.ac{color:var(--p2-ink)}
+.pop{position:absolute;font-family:var(--f-display);font-weight:800;font-size:calc(var(--cell)*.4);color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;animation:pop 1.5s ease-out forwards;white-space:nowrap;transform:translate(-50%,-50%)}
+.pop.yc{color:var(--p1-ink)} .pop.ac{color:var(--p2-ink)} .pop.am{color:#ff9d7a;font-size:calc(var(--cell)*.24)} .pop.cl{font-size:calc(var(--cell)*.3);color:var(--gold)} .pop.m::after{content:"";position:absolute;inset:-3px -5px;border:2px solid var(--gold);border-radius:8px}
+@keyframes pop{0%{transform:translate(-50%,-30%) scale(.6);opacity:0}15%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-140%);opacity:0}}
+.banner-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;background:#0d1114f0;border:2px solid var(--gold);border-radius:12px;padding:8px 14px;font-family:var(--f-display);font-weight:800;font-size:22px;text-transform:uppercase;color:var(--gold);white-space:nowrap;pointer-events:none;animation:fadein .2s}
+/* Hand */
+.handbar{grid-area:hand;display:flex;gap:8px;align-items:stretch}
+.cards{display:flex;gap:6px;flex:1;min-width:0;flex-wrap:wrap}
+.card{flex:1 1 0;min-width:72px;max-width:140px;min-height:64px;border-radius:10px;background:#10161a;border:2px solid var(--k);padding:5px 6px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;transition:transform .2s,box-shadow .2s}
+.card .t{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;width:100%;align-items:center}
+.card .t i{font-style:normal;color:var(--k);font-weight:700;font-size:15px}
+.card .n{font-family:var(--f-display);font-weight:800;font-size:15px;line-height:1.05}
+.card .kw{font-size:11px;color:#ffe7a8;line-height:1.15}
+.card.sel{box-shadow:0 0 0 3px var(--gold);transform:translateY(-4px)}
+.card.nofit{opacity:.5}
+.card.new{animation:deal .45s ease-out backwards}
+@keyframes deal{from{transform:translateX(30px) scale(.85);opacity:0}}
+.card.empty{border-style:dashed;border-color:var(--line);background:transparent}
+.shape{display:inline-grid;gap:1px;vertical-align:middle}
+.shape b{display:block;background:var(--k);width:6px;height:6px;border-radius:1px}
+.btn{font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.04em;text-transform:uppercase;border-radius:10px;padding:8px 12px;border:1px solid var(--line);background:#222a31;color:var(--ink);min-height:44px}
+.btn.main{background:var(--gold);border-color:var(--gold);color:#1a1606}
+.btn.warn{background:#3a1d24;border-color:var(--bad);color:#ffd4da}
+.btn:disabled{opacity:.38;cursor:default}
+#rot{flex:none;width:72px;padding:4px;font-size:14px;line-height:1.1}
+#rot small{display:block;font-family:var(--f-body);font-size:10px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted)}
+.acts{grid-area:acts;display:flex;flex-direction:column;gap:6px}
+.actrow{display:flex;gap:8px;flex-wrap:wrap}
+.keys{font-size:12px;color:var(--muted)}
+.keys b{color:var(--ink)}
+/* Modals and inspector */
+.modal{position:fixed;inset:0;z-index:200;background:rgba(5,8,10,.72);display:grid;place-items:center;padding:12px}
+.modal .box{background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:14px 14px;max-width:580px;width:100%;max-height:calc(100dvh - 24px);overflow:auto;position:relative}
+.modal h3{font-family:var(--f-display);font-weight:800;font-size:24px;text-transform:uppercase;margin:0 44px 8px 0;line-height:1.05}
+.modal h4{font-family:var(--f-display);font-weight:800;font-size:17px;text-transform:uppercase;margin:12px 0 6px;color:var(--gold);letter-spacing:.03em}
+.modal h4 .newtag{font-family:var(--f-body);font-size:10px;background:var(--gold);color:#1a1606;border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;letter-spacing:.05em}
+.modal ol,.modal ul{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.modal li::marker{color:var(--gold);font-weight:800}
+.modal p{color:var(--muted);font-size:13.5px;margin:8px 0 0}
+.modal .newsec{border-left:3px solid var(--gold);padding-left:10px;margin-left:-2px}
+.otab{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px}
+.otab td{padding:4px 6px;border-top:1px solid var(--line);vertical-align:top}
+.otab td:first-child{white-space:nowrap;color:var(--k);font-weight:700}
+.x{position:absolute;right:8px;top:8px;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:#1d242b;font-size:16px;line-height:1}
+.endbox b.big{display:block;font-family:var(--f-display);font-weight:800;font-size:40px;text-transform:uppercase;line-height:1;color:var(--p1-ink)}
+.endbox .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.endbox .unlock{margin-top:10px;border:1px solid var(--gold);border-radius:10px;padding:8px 10px;background:rgba(242,207,91,.08);color:var(--ink);font-size:14px}
+.lrow{display:grid;grid-template-columns:40px 1fr;gap:4px 10px;align-items:center;border-top:1px solid var(--line);padding:9px 0}
+.lrow .num{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:18px;background:#2a333b;color:var(--muted);grid-row:span 2}
+.lrow.open .num{background:#3c6b57;color:#d9f2de} .lrow.cur .num{background:var(--gold);color:#1a1606}
+.lrow .ln{font-family:var(--f-display);font-weight:800;font-size:18px;text-transform:uppercase}
+.lrow .ln small{font-family:var(--f-body);font-size:12px;color:var(--muted);text-transform:none;font-weight:600;margin-left:6px}
+.lrow .li{font-size:13px;color:var(--muted)}
+.lrow .lb{grid-column:2;display:flex;gap:6px;flex-wrap:wrap}
+.lrow.locked .ln{color:var(--muted)}
+.opt{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.opt button{min-height:44px;border-radius:10px;border:1px solid var(--line);background:#222a31;padding:6px 12px;font-weight:700}
+.opt button.on{border-color:var(--gold);background:rgba(242,207,91,.15);color:#ffe7a8}
+.stk{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+@media (min-width:560px){.stk{grid-template-columns:1fr 1fr}}
+.stk button{min-height:64px;text-align:left;border-radius:12px;border:1px solid var(--line);background:#141a1f;padding:8px 10px;display:flex;flex-direction:column;gap:3px}
+.stk button:hover,.stk button.on{border-color:var(--gold)}
+.stk .sn{font-family:var(--f-display);font-weight:800;font-size:18px;text-transform:uppercase}
+.stk .sn i{font-style:normal;margin-left:6px}
+.stk .sd{font-size:12.5px;color:var(--muted)}
+.insp{position:fixed;z-index:300;width:min(350px,calc(100vw - 24px));background:#0f1519f7;border:1px solid var(--gold);border-radius:12px;padding:10px 12px 12px;box-shadow:0 18px 40px rgba(0,0,0,.6);display:none;max-height:70vh;overflow:auto}
+.insp.on{display:block;animation:fadein .15s ease-out}
+@keyframes fadein{from{opacity:0}}
+.insp .it{font-family:var(--f-display);font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.02em;line-height:1.05;padding-right:44px}
+.insp .is{font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:700;margin-top:2px}
+.insp ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.insp li b{color:var(--gold)}
+.insp .x{right:6px;top:6px}
+.hl{outline:3px solid var(--gold)!important;outline-offset:2px}
+[data-ins]{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.task p,.modal li,.modal p{user-select:text;-webkit-user-select:text}
+@media (max-width:899px){
+  .mode-lesson .pv{display:none}
+  .insp{left:12px!important;right:12px;bottom:max(12px,env(safe-area-inset-bottom,0px));top:auto!important;width:auto}
+  .keys{display:none}
+}
+@media (max-width:430px){
+  .top{gap:5px}
+  .tab{font-size:13px;padding:6px 9px}
+  .layerbtn{font-size:13px;padding-right:8px;gap:5px}
+  .layerbtn small{display:none}
+  .task h2{font-size:20px} #tkText{font-size:15px}
+  .card .n{font-size:13.5px}
+  #rot{width:62px;font-size:12.5px}
+  .pts{font-size:26px}
+}
+@media (max-width:600px){ .brand{display:none} }
+@media (prefers-reduced-motion:reduce){.tile.enter,.card.new,.sq.goal,.sq.freed,.tile.tgt,.obj.rallying,.pts.bump,.meter.bump,.chip.bump{animation:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><b>Rally Point</b></div>
+    <button class="layerbtn" id="layerBtn" data-ins="btn:layers" aria-label="Layers"><i id="lbNum">0</i><span><span id="lbName">Tiles</span><small id="lbSub">layer</small></span></button>
+    <nav class="tabs" role="tablist" aria-label="Mode">
+      <button class="tab on" id="tabL" role="tab" aria-selected="true" data-ins="btn:learn">Learn</button>
+      <button class="tab" id="tabM" role="tab" aria-selected="false" data-ins="btn:match">Play</button>
+    </nav>
+    <button class="iconbtn" id="helpBtn" aria-label="Rules card for this layer" data-ins="btn:help">?</button>
+    <button class="iconbtn" id="setBtn" aria-label="Settings" data-ins="btn:settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
+  </header>
+
+  <section class="task" id="task" data-ins="task" aria-live="polite">
+    <div class="tk-top"><span class="tk-no" id="tkNo"></span><div class="dots" id="dots" aria-label="Lessons"></div></div>
+    <h2 id="tkTitle"></h2>
+    <p id="tkText"></p>
+    <p class="say" id="say"></p>
+    <div class="tk-act" id="tkAct"></div>
+  </section>
+
+  <section class="scores" id="scores">
+    <div class="pbox pY" id="pbY">
+      <div class="prow"><span class="who">You</span><span class="turnTag">Your turn</span><span class="pts" id="sY" data-ins="score:Y">0</span></div>
+      <div class="meters" id="mY"></div>
+      <div class="chips" id="cY"></div>
+    </div>
+    <div class="pbox pA" id="pbA">
+      <div class="prow"><span class="who">AI</span><span class="turnTag">Moving</span><span class="pts" id="sA" data-ins="score:A">0</span></div>
+      <div class="meters" id="mA"></div>
+      <div class="chips" id="cA"></div>
+    </div>
+  </section>
+
+  <section class="frontbar" id="frontbar" data-ins="front" hidden aria-label="The Front">
+    <span class="end y">Your end</span>
+    <div class="track" id="track"></div>
+    <span class="end a">AI end</span>
+    <span class="fv" id="fv"></span>
+  </section>
+
+  <div class="boardwrap"><div class="table"><div class="board" id="board" tabindex="0" aria-label="Board"><div id="bl"></div><div id="fx"></div></div></div></div>
+
+  <p class="pv idle" id="pv" aria-live="polite" data-ins="pv"></p>
+  <section class="handbar" id="handbar">
+    <div class="cards" id="cards" aria-label="Your hand"></div>
+    <button class="btn" id="rot" data-ins="btn:rotate" aria-label="Rotate banner">⟳<br>Rotate<small id="rotS">flat</small></button>
+  </section>
+
+  <div class="acts" id="acts">
+    <div class="actrow" id="actrow"></div>
+    <div class="keys">Keys: <b>1</b>–<b>6</b> pick a tile · <b>R</b> rotate · arrows + <b>Enter</b> place · <b>I</b> inspect · <b>?</b> rules. Right-click (desktop) or long-press (touch) anything to see what it is and what it gives you now.</div>
+  </div>
+</div>
+
+<div class="modal" id="rules" hidden role="dialog" aria-modal="true" aria-labelledby="rulesT">
+  <div class="box" data-ins="rules"><button class="x" id="rulesX" aria-label="Close">✕</button><h3 id="rulesT"></h3><div id="rulesB"></div></div>
+</div>
+<div class="modal" id="layersM" hidden role="dialog" aria-modal="true" aria-labelledby="layersT">
+  <div class="box"><button class="x" id="layersX" aria-label="Close">✕</button><h3 id="layersT">Layers</h3><p id="layersP" style="margin-top:0"></p><div id="layersB"></div></div>
+</div>
+<div class="modal" id="setM" hidden role="dialog" aria-modal="true" aria-labelledby="setT">
+  <div class="box"><button class="x" id="setX" aria-label="Close">✕</button><h3 id="setT">Settings</h3><div id="setB"></div></div>
+</div>
+<div class="modal" id="stackM" hidden role="dialog" aria-modal="true" aria-labelledby="stackT">
+  <div class="box"><button class="x" id="stackX" aria-label="Close">✕</button><h3 id="stackT">Pick your stack</h3><p style="margin-top:0">Your 12 tiles for this match. The AI then picks one of the other three. Long-press or right-click a stack to see every tile in it.</p><div class="stk" id="stackB"></div></div>
+</div>
+<div class="modal" id="endM" hidden role="dialog" aria-modal="true" aria-labelledby="endT">
+  <div class="box endbox" data-ins="end">
+    <b class="big" id="endT"></b>
+    <p id="endP" style="color:var(--ink);font-size:15px"></p>
+    <div id="endU"></div>
+    <div class="row" id="endRow"></div>
+  </div>
+</div>
+<div class="insp" id="insp" role="dialog" aria-modal="false" aria-labelledby="inspT"><button class="x" id="inspX" aria-label="Close">✕</button><div class="it" id="inspT"></div><div class="is" id="inspS"></div><ul id="inspL"></ul></div>
+
+<script>
+(function(){
+"use strict";
+/*ENGINE-START*/
+/* =================== Rules engine: a line-for-line port of tools/rally_v5.py ===================
+   Players are 0 (moves first) and 1. Suits are the sim's class codes:
+   S Assault (Ammo, Strike), G Recon (Intel, Spot), R Engineer (Works, Fortify), P Support (Supply, Resupply).
+   Meter index = SUITI[suit]: 0 Ammo, 1 Intel, 2 Works, 3 Supply. */
+const SUITI={S:0,G:1,R:2,P:3};
+const CH={};
+function ch(id,name,kind,shape,suit,rar,ab){ CH[id]={id,name,kind,shape,suit,rar,ab:ab||{}}; }
+ch("a01","Point Man","bar","1x4","S","C",{breach:3});
+ch("a02","Shock Line","bar","1x4","S","C",{breach:2});
+ch("a03","Liaison A>R","bar","1x4","S","C",{ally:"G"});
+ch("a04","Rifle Team","bar","1x4","S","C",{mat:1});
+ch("a05","Liaison A>S","bar","1x4","S","C",{ally:"P"});
+ch("g01","Wireman","bar","1x4","G","C",{charge:1});
+ch("g02","Spotter","bar","1x4","G","C",{mat:1});
+ch("g03","Liaison R>E","bar","1x4","G","C",{ally:"R"});
+ch("r01","Dug-In","bar","1x4","R","C",{hold:1});
+ch("r02","Long Watch","bar","1x4","R","C",{flank:1});
+ch("r03","Sandbag Line","bar","1x4","R","C",{mat:1});
+ch("p01","Quartermaster","bar","1x4","P","C",{scout:1,nomatch:1});
+ch("p02","Field Kit","bar","1x4","P","C",{fieldkit:1});
+ch("p03","Medic Line","bar","1x4","P","C",{mat:1});
+ch("iS","Ammo Cache","bar","1x1","S","C",{gem:2});
+ch("iG","Flare","bar","1x1","G","C",{gem:2});
+ch("iR","Sandbags","bar","1x1","R","C",{gem:2});
+ch("iP","Supply Crate","bar","1x1","P","C",{gem:2});
+ch("oS","Assault Post","hub","2x2","S","C",{command:2});
+ch("oG","Recon Post","hub","2x2","G","C",{command:2});
+ch("oR","Engineer Post","hub","2x2","R","C",{command:2});
+ch("oP","Supply Depot","hub","2x2","P","C",{command:2});
+ch("oB","Bunker","hub","2x2","R","R",{command:2,bunker:1});
+for(const s of "SGRP") ch("v"+s,"Plain "+s,"bar","1x4",s,"T",{});
+const KEEP_NOTEXT=["command","gem","need"];
+const stackOf=spec=>spec.flatMap(([c,n])=>Array.from({length:n},()=>c));
+/* Starter stacks: rally-point-v5.md section 5, with the v4 fixes (on the cards above) and swap set "f" */
+const STACKS={
+  T1:stackOf([["a01",2],["a02",1],["a03",1],["g01",1],["g02",2],["oS",2],["oG",1],["iS",1],["iG",1]]),
+  T2:stackOf([["r01",2],["r02",2],["r03",1],["p02",1],["p01",1],["oR",1],["oB",1],["oP",1],["iR",1],["iP",1]]),
+  T3:stackOf([["g01",1],["g03",2],["r02",2],["r03",1],["g02",1],["oG",1],["oR",2],["iG",1],["iR",1]]),
+  T4:stackOf([["a04",1],["a01",1],["a02",1],["a05",1],["p03",1],["p03",1],["p01",1],["oS",2],["oP",1],["iS",1],["iP",1]]),
+};
+/* The v5 layers (rally_v5.LAYERS): L0 Tiles, L1 Basic, L2 Cards, "v5 L3/L4/L5" */
+const LAUNCH={mil:true,patch:true,fmax:6,strike:2,thresh:3,streak:[3,5,7],armor_cap:4,armor_end:1,fort_regain:1,spot_push:1,supply_push:1,
+  text:true,match:true,closer:true,command:true,front:true,streaks:true,classes:true,owner_mat:true,endscore:true,spot_charge:true,spot_dmg:1};
+const BASIC5={text:false,classes:false,front:false,streaks:false,command:false,owner_mat:false,thresh:5,endscore:false};
+const L2C={...BASIC5,text:true,command:true,endscore:true};
+const L3C={...L2C,classes:true,thresh:3,owner_mat:false};
+const SIMPLE={owner_mat:false,spot_push:0,supply_push:0,fort_regain:0,spot_dmg:1};
+const L4C={...L3C,front:true,fmax:5,...SIMPLE};
+const L5C={...L4C,streaks:true};
+const LAYER_CFG=[{...LAUNCH,...BASIC5,mil:false},{...LAUNCH,...BASIC5},{...LAUNCH,...L2C},{...LAUNCH,...L3C},{...LAUNCH,...L4C},{...LAUNCH,...L5C}];
+/* AI weights (rally_v5.FLAGS and TUNED) */
+const FLAGS={expo:0.8,mat:0.55,armor:0.5,streak:0.35,spot:0.9,front:1.3,draw:0.3,extra:2.5,threat:0.4,hq:3.0,rallymat:1.0};
+const TUNED={...FLAGS,scale:1,mat:0.35,armor:0.25,streak:0.175,spot:0.45,front:0.65,threat:0.2,hq:1.5};
+const WSETS={smart:FLAGS,tuned:TUNED};
+let CFG=LAYER_CFG[1], CURW=FLAGS, LOOK=false, FORCE=null;
+const TARGETER=[false,false];
+
+const GEO={};
+function geo(R,C){ const key=R+"x"+C; if(GEO[key]) return GEO[key];
+  const N=R*C, NB=[];
+  for(let i=0;i<N;i++){ const r=Math.floor(i/C), c=i%C, a=[]; for(const [rr,cc] of [[r+1,c],[r-1,c],[r,c+1],[r,c-1]]) if(rr>=0&&rr<R&&cc>=0&&cc<C) a.push(rr*C+cc); NB.push(a); }
+  const BAR=[]; for(let r=0;r<R;r++) for(let c=0;c<C-3;c++) BAR.push([0,1,2,3].map(k=>r*C+c+k));
+  for(let r=0;r<R-3;r++) for(let c=0;c<C;c++) BAR.push([0,1,2,3].map(k=>(r+k)*C+c));
+  const SQ=[]; for(let r=0;r<R-1;r++) for(let c=0;c<C-1;c++) SQ.push([r*C+c,r*C+c+1,(r+1)*C+c,(r+1)*C+c+1]);
+  const BY=Array.from({length:N},()=>[]); for(const t of BAR.concat(SQ)) for(const x of t) BY[x].push(t);
+  return GEO[key]={R,C,N,NB,BAR,SQ,BY}; }
+
+function hubInfo(g,cells){ const r=Math.floor(cells[0]/g.C), c=cells[0]%g.C;
+  const sides=[[[r-1,c],[r-1,c+1]],[[r+2,c],[r+2,c+1]],[[r,c-1],[r+1,c-1]],[[r,c+2],[r+1,c+2]]];
+  const border=[], sc=[]; let edge=0;
+  for(const cl of sides){ const on=cl.filter(([a,b])=>a>=0&&a<g.R&&b>=0&&b<g.C).map(([a,b])=>a*g.C+b); if(!on.length) edge++; else sc.push(on); border.push(...on); }
+  return {border,bset:new Set(border),off:8-border.length,sides:sc,edge}; }
+
+function newState(R,C){ const g=geo(R,C);
+  return {g,own:new Array(g.N).fill(0),pcs:new Map(),score:[0,0],rallies:[0,0],nid:1,draws:[0,0],extra:false,bottom:0,
+    mat:[[0,0,0,0],[0,0,0,0]],front:0,armor:[0,0],streak:[0,0],spot:[false,false],winner:null,turn:0,fired:[],
+    hands:[[],[]],decks:[[],[]],passes:0,ev:null}; }
+function cloneS(s){ const t={...s}; t.own=s.own.slice(); t.pcs=new Map(); for(const [k,v] of s.pcs) t.pcs.set(k,{...v});
+  t.score=s.score.slice(); t.rallies=s.rallies.slice(); t.draws=[0,0]; t.extra=false; t.bottom=0; t.mat=[s.mat[0].slice(),s.mat[1].slice()];
+  t.armor=s.armor.slice(); t.streak=s.streak.slice(); t.spot=s.spot.slice(); t.fired=s.fired.slice();
+  t.hands=[s.hands[0].slice(),s.hands[1].slice()]; t.decks=[s.decks[0].slice(),s.decks[1].slice()]; t.ev=null; return t; }
+function AB(cid){ const ab=CH[cid].ab; if(!CFG.text){ const o={}; for(const k of KEEP_NOTEXT) if(k in ab) o[k]=ab[k]; return o; } return ab; }
+const EV=(s,e)=>{ if(s.ev) s.ev.push(e); };
+function hubsTouching(s,piece){ const out=[]; for(const [h,e] of s.pcs) if(e.kind==="hub"&&piece.cells.some(x=>e.info.bset.has(x))) out.push(h); return out; }
+function matches(s,b,e){ const ba=AB(b.cid); if(ba.nomatch) return false; return b.suit===e.suit||ba.ally===e.suit; }
+function hubFilled(s,e){ let n=e.info.off; for(const y of e.info.border) if(s.own[y]) n++; return n; }
+const hubNeed=e=>e.info.border.length+e.info.off;
+function pockets(s){ const seen=new Set(), out=[], N=s.g.N;
+  for(let i=0;i<N;i++){ if(s.own[i]||seen.has(i)) continue; const comp=[], st=[i]; seen.add(i);
+    while(st.length){ const x=st.pop(); comp.push(x); for(const y of s.g.NB[x]) if(!s.own[y]&&!seen.has(y)){ seen.add(y); st.push(y); } }
+    if(comp.length<=4) out.push(comp.sort((a,b)=>a-b)); }
+  return out; }
+function movesFor(s,cid){ const c=CH[cid], ab=AB(cid), own=s.own, mv=[];
+  if(c.shape==="1x1"){ for(let i=0;i<s.g.N;i++) if(!own[i]) mv.push([c.kind,[i]]); }
+  else for(const t of (c.shape==="1x4"?s.g.BAR:s.g.SQ)) if(t.every(x=>!own[x])) mv.push([c.kind,t]);
+  if((c.kind==="hub"&&c.shape==="2x2"&&CFG.patch)||ab.fieldkit) for(const p of pockets(s)) mv.push(["patch",p]);
+  return mv; }
+function inCover(s,b){ // v5: only cards protect (an own Bunker the tile touches); objectives are never targets
+  if(b.kind!=="bar") return true; const o=b.owner, cells=new Set(b.cells);
+  for(const x of b.cells) for(const y of s.g.NB[x]){ const q=s.own[y]; if(q&&!cells.has(y)){ const p=s.pcs.get(q); if(p.owner!==o) continue;
+    if(p.kind==="hub"&&AB(p.cid).bunker) return true; } }
+  return false; }
+function gain(s,o,i,n){ if(!CFG.classes) i=0; s.mat[o][i]+=n; }
+function barThreat(s,b){ let v=0; for(const h of hubsTouching(s,b)){ const e=s.pcs.get(h); if(e.rallied) continue; let n=0; for(const x of b.cells) if(e.info.bset.has(x)) n++; v+=n*(matches(s,b,e)?2:1); } return v; }
+function onOpen(s,b){ return hubsTouching(s,b).some(h=>!s.pcs.get(h).rallied); }
+function destroy(s,q){ const b=s.pcs.get(q); s.pcs.delete(q); for(const x of b.cells) s.own[x]=0; return b; }
+function bestTarget(s,a,ignore){ let best=null,bv=0; for(const [q,b] of s.pcs){ if(b.owner===a||b.kind!=="bar") continue; if(!ignore&&inCover(s,b)) continue; const v=barThreat(s,b); if(v>bv){ best=q; bv=v; } } return [best,bv]; }
+function push(s,a,n,ignoreArmor){ if(!CFG.front) return 0; const v=1-a, from=s.front; let soak=0;
+  if(!ignoreArmor){ soak=Math.min(s.armor[v],n); s.armor[v]-=soak; n-=soak; }
+  if(n<=0){ EV(s,{t:"front",p:a,from,to:s.front,soak,moved:0}); return 0; }
+  s.front+=a===0?n:-n; const fm=CFG.fmax; let bt=false;
+  if(Math.abs(s.front)>=fm){ s.front=s.front>0?fm:-fm; s.winner=a; bt=true; }
+  EV(s,{t:"front",p:a,from,to:s.front,soak,moved:n,breakthrough:bt}); return n; }
+function landed(s,a){ const v=1-a; const was=s.streak[v]; s.streak[v]=0; if(was&&CFG.streaks) EV(s,{t:"streakReset",p:v,was}); }
+/* Legal Strike targets for attacker a: enemy banners and insignia touching an open objective, unprotected unless spotted */
+function strikeTargets(s,a,ignore){ const out=[]; for(const [q,b] of s.pcs) if(b.owner!==a&&b.kind==="bar"&&onOpen(s,b)&&(ignore||!inCover(s,b))) out.push(q); return out; }
+function evalTargets(s,a,dmg,ignore){ let opts=[null].concat(strikeTargets(s,a,ignore));
+  if(!CFG.front&&opts.length>1) opts=opts.slice(1);
+  let best=null,bv=null;
+  for(const q of opts){ const t=cloneS(s); if(q===null){ if(CFG.front) push(t,a,dmg,ignore); else t.score[a]+=1; } else destroy(t,q);
+    const v=t.score[a]-t.score[1-a]+potential(t,a); if(bv===null||v>bv+1e-9){ best=q; bv=v; } }
+  return best; }
+function strike(s,a,dmg,fm){ const spotted=s.spot[a]; s.spot[a]=false;
+  dmg=(dmg||CFG.strike)+(spotted?CFG.spot_dmg:0);
+  let [tgt,tv]=bestTarget(s,a,spotted||fm);
+  if(TARGETER[a]&&!fm&&!LOOK){ tgt=evalTargets(s,a,dmg,spotted); tv=tgt?1e9:0; }
+  if(FORCE!==null&&!fm&&(!FORCE||s.pcs.has(FORCE))){ tgt=FORCE||null; tv=tgt?1e9:0; }
+  let fv=spotted?dmg:Math.max(0,dmg-s.armor[1-a]); if(!CFG.front) fv=1;
+  if(fm){ push(s,a,2,true); let tile=null; if(tgt) tile=destroy(s,tgt); EV(s,{t:"fireMission",p:a,tile}); landed(s,a); return; }
+  if(tgt&&(tv*0.9>fv||!CFG.front)){ const tile=destroy(s,tgt); EV(s,{t:"strike",p:a,tile,spotted}); landed(s,a); }
+  else if(!CFG.front){ s.score[a]+=1; EV(s,{t:"strike",p:a,tile:null,point:true}); }
+  else { EV(s,{t:"strike",p:a,tile:null,dmg,spotted}); const n=push(s,a,dmg,spotted); if(n>0) landed(s,a); }
+}
+function addStreak(s,p,n){ if(!CFG.mil||!CFG.streaks) return;
+  for(let j=0;j<n;j++){ s.streak[p]++; const k=s.streak[p], [t3,t5,t7]=CFG.streak;
+    if(k===t3){ gain(s,p,1,1); EV(s,{t:"reward",p,tier:3}); }
+    else if(k===t5){ s.draws[p]++; s.extra=true; EV(s,{t:"reward",p,tier:5}); }
+    else if(k===t7){ EV(s,{t:"reward",p,tier:7}); if(s.winner===null) strike(s,p,null,true); } } }
+function ready(s,p){ const out=[]; for(let i=0;i<4;i++) if(s.mat[p][i]>=CFG.thresh&&!s.fired.includes(i)) out.push(i); return out; }
+function orders(s,p,fire,stopAtStrike){ // fire: meter indexes that were ready when the turn ended
+  if(!CFG.mil||s.winner!==null) return false; const m=s.mat[p];
+  for(const i of [2,1,0,3]){ if(s.fired.includes(i)||!fire.includes(i)) continue;
+    if(m[i]<CFG.thresh||s.winner!==null) continue;
+    if(i===0&&stopAtStrike) return true;
+    m[i]-=CFG.thresh; fireOne(s,p,i); if(!s.fired.includes(i)) s.fired.push(i); }
+  return false; }
+function fireOne(s,p,i){
+  if(i===2){ const a0=s.armor[p]; s.armor[p]=Math.min(CFG.armor_cap,s.armor[p]+2); EV(s,{t:"order",p,i,armor:[a0,s.armor[p]]});
+    const k=CFG.fort_regain; if(k&&(p===0?s.front<0:s.front>0)){ const step=Math.min(k,Math.abs(s.front)); s.front+=p===0?step:-step; } }
+  else if(i===1){ s.spot[p]=true; const hubs=[];
+    for(const [h,e] of s.pcs) if(e.kind==="hub"&&!e.rallied&&CFG.spot_charge&&e.info.border.some(y=>s.own[y]&&s.pcs.get(s.own[y]).owner===p)){ e.charges++; hubs.push(h); }
+    EV(s,{t:"order",p,i,hubs}); if(CFG.spot_push) push(s,p,CFG.spot_push,false); }
+  else if(i===0){ EV(s,{t:"order",p,i}); strike(s,p,null,false); }
+  else { s.draws[p]++; s.score[p]++; EV(s,{t:"order",p,i}); if(CFG.supply_push) push(s,p,CFG.supply_push,false); }
+  addStreak(s,p,1); }
+function place(s,cid,move,player){ const [kind,cells]=move, c=CH[cid], pid=s.nid++;
+  const p={id:pid,cid,kind,suit:c.suit,owner:player,cells:cells.slice(),rallied:false,charges:0};
+  if(kind==="hub") p.info=hubInfo(s.g,p.cells);
+  s.pcs.set(pid,p); for(const x of p.cells) s.own[x]=pid;
+  const ab=AB(cid); EV(s,{t:"place",id:pid,p:player,cid,kind,cells:p.cells.slice()});
+  if(kind==="bar"){ const th=hubsTouching(s,p);
+    if(ab.charge){ const hs=[]; for(const h of th){ const e=s.pcs.get(h); if(!e.rallied){ e.charges++; hs.push(h); } } if(hs.length) EV(s,{t:"charge",p:player,hubs:hs}); }
+    if(ab.scout){ s.draws[player]++; s.bottom=1; EV(s,{t:"scout",p:player}); } }
+  const cset=new Set(p.cells), cand=[];
+  for(const [h,e] of s.pcs) if(e.kind==="hub"&&!e.rallied&&(h===pid||e.info.border.some(y=>cset.has(y)))) cand.push(h);
+  const before={}; for(const h of cand){ const e=s.pcs.get(h); before[h]=h===pid?hubFilled(s,e):hubFilled(s,e)-e.info.border.filter(y=>cset.has(y)).length; }
+  const fired=cand.slice().sort((a,b)=>a-b).filter(h=>hubFilled(s,s.pcs.get(h))>=hubNeed(s.pcs.get(h)));
+  const nf=fired.length;
+  for(const h of fired){ const e=s.pcs.get(h), eab=AB(e.cid), info=e.info;
+    const cb=CFG.closer?1:0, charges=e.charges; s.score[player]+=cb+e.charges; e.charges=0; s.rallies[player]++;
+    const cnt=new Map(); for(const y of info.border) if(s.own[y]) cnt.set(s.own[y],(cnt.get(s.own[y])||0)+1);
+    const items=[], touching=[], matl=[], bonus=[];
+    for(const [q,n] of cnt){ const b=s.pcs.get(q); if(b.kind!=="bar") continue; const m=matches(s,b,e), pts=n*(m&&CFG.match?2:1);
+      s.score[b.owner]+=pts; touching.push(q); items.push({tile:q,cid:b.cid,p:b.owner,n,pts,m});
+      if(CFG.mil){ const ba=AB(b.cid); const gg=CFG.text?((ba.gem!==undefined?ba.gem:1)+(ba.mat||0)):1; gain(s,b.owner,SUITI[b.suit],gg); matl.push({tile:q,cid:b.cid,p:b.owner,i:CFG.classes?SUITI[b.suit]:0,n:gg}); } }
+    for(const q of touching){ const b=s.pcs.get(q), ba=AB(b.cid);
+      if(ba.flank){ const bc=new Set(b.cells); if(info.sides.some(sd=>sd.length===2&&sd.every(y=>bc.has(y)))){ s.score[b.owner]+=ba.flank; bonus.push({tile:q,cid:b.cid,p:b.owner,k:"Flank",n:ba.flank}); } }
+      if(ba.breach&&q===pid){ s.score[b.owner]+=ba.breach; bonus.push({tile:q,cid:b.cid,p:b.owner,k:"Breach",n:ba.breach}); } }
+    const cmd=CFG.command?(eab.command||0):0; s.score[e.owner]+=cmd; if(cmd) bonus.push({tile:h,cid:e.cid,p:e.owner,k:"Command",n:cmd});
+    if(CFG.mil&&CFG.owner_mat) gain(s,e.owner,SUITI[e.suit],1);
+    e.rallied=true;
+    EV(s,{t:"rally",hub:h,cid:e.cid,p:player,closer:cb,charges,items,mat:matl,bonus}); }
+  for(const h of cand){ const e=s.pcs.get(h); if(!e.rallied) EV(s,{t:"fill",hub:h,from:before[h],to:hubFilled(s,e)}); }
+  if(nf) addStreak(s,player,nf);
+  return nf; }
+function endScore(s){ const out=[];
+  for(const [h,e] of s.pcs) if(e.kind==="hub"&&!e.rallied&&CFG.endscore){ const cnt=new Map(); for(const y of e.info.border) if(s.own[y]) cnt.set(s.own[y],(cnt.get(s.own[y])||0)+1);
+    for(const [q,n] of cnt){ const b=s.pcs.get(q); if(b.kind!=="bar") continue; const keep=!!AB(b.cid).hold; const pts=n*(keep&&matches(s,b,e)?2:1); s.score[b.owner]+=pts; out.push({hub:h,tile:q,p:b.owner,pts,keep}); } }
+  if(CFG.mil) for(const k of [0,1]){ s.score[k]+=s.armor[k]*CFG.armor_end; if(s.armor[k]) out.push({armor:s.armor[k],p:k}); }
+  return out; }
+/* ---------------- AI (rally_v5.potential / choose / eval_targets) ---------------- */
+function closable(s,e){ const empt=e.info.border.filter(y=>!s.own[y]); const need=hubNeed(e)-hubFilled(s,e);
+  if(!empt.length||need<=0) return false; if(need<empt.length) return need<=2; if(empt.length===1) return true;
+  for(const sl of s.g.BY[empt[0]]) if(empt.every(y=>sl.includes(y))&&sl.every(x=>!s.own[x])) return true;
+  return false; }
+function potential(s,me,blind){ const W=CURW; const mw=W.mat*(W.scale?3/CFG.thresh:1);
+  if(s.winner!==null) return s.winner===me?100:-100;
+  let v=0;
+  for(const e of s.pcs.values()){ if(e.kind!=="hub"||e.rallied) continue;
+    const prog=Math.min(1,hubFilled(s,e)/hubNeed(e)), p=0.25+0.65*prog*prog;
+    const cnt=new Map(); for(const y of e.info.border) if(s.own[y]) cnt.set(s.own[y],(cnt.get(s.own[y])||0)+1);
+    for(const [q,n] of cnt){ const b=s.pcs.get(q); if(b.kind!=="bar") continue; const rv=matches(s,b,e)?2:1; const keep=AB(b.cid).hold; const ev=keep?rv:1;
+      let val=n*(ev+(rv-ev)*p); if(CFG.mil&&!blind) val+=p*mw*W.rallymat*(AB(b.cid).gem!==undefined?AB(b.cid).gem:1);
+      v+=b.owner===me?val:-val; }
+    if(closable(s,e)) v-=W.expo*(1+0.5*e.charges); }
+  if(CFG.mil&&!blind){ const opp=1-me, sign=me===0?1:-1, f=s.front*sign; v+=W.front*f; const fm=CFG.fmax;
+    if(f>=fm-2) v+=W.hq*(f-(fm-3)); if(-f>=fm-2) v-=W.hq*(-f-(fm-3));
+    for(const k of [0,1]){ const sg=k===me?1:-1, th=CFG.thresh; let mv=0; for(const x of s.mat[k]) mv+=Math.min(x,th); mv*=mw;
+      v+=sg*(mv+W.armor*s.armor[k]+W.streak*Math.min(s.streak[k],7)+(s.spot[k]?W.spot:0)); }
+    if(s.mat[opp][0]>=2){ const tv=bestTarget(s,opp,s.spot[opp])[1]; v-=W.threat*tv; } }
+  return v; }
+/* All placements an AI weighs, with the sim's value. policy "tuned" (Normal) or "greedy" (Easy). */
+function evalMoves(s,hand,me,policy){ const opts=[], seen=new Set();
+  hand.forEach((cid,hi)=>{ if(seen.has(cid)) return; seen.add(cid); for(const m of movesFor(s,cid)) opts.push([hi,cid,m]); });
+  const opp=1-me, W=CURW, base=s.score[me]-s.score[opp], out=[];
+  for(const [hi,cid,m] of opts){ const t=cloneS(s); LOOK=true; place(t,cid,m,me); orders(t,me,ready(t,me)); LOOK=false;
+    let val=t.score[me]-t.score[opp]-base; if(t.winner!==null) val+=t.winner===me?100:-100;
+    if(policy==="greedy"&&CFG.mil){ const sign=me===0?1:-1; val+=(t.front-s.front)*sign; }
+    if(policy==="tuned"||policy==="smart"){ val+=potential(t,me,false); if(m[0]==="patch"&&CH[cid].kind==="hub") val-=0.5;
+      if(CH[cid].shape==="1x1"&&CH[cid].kind==="bar") val-=0.4; val+=W.draw*(t.draws[me]-t.draws[opp]); val+=t.extra?W.extra:0; }
+    out.push({hi,cid,m,val}); }
+  return out; }
+function aiPick(s,me,policy,rnd){ const r=rnd||Math.random; const opts=evalMoves(s,s.hands[me],me,policy); if(!opts.length) return null;
+  let best=null,bk=null; for(const o of opts){ const k=[o.val,r()]; if(!bk||k[0]>bk[0]||(k[0]===bk[0]&&k[1]>bk[1])){ best=o; bk=k; } } return best; }
+function setPolicies(pols){ for(const k of [0,1]) TARGETER[k]=pols[k]==="tuned"||pols[k]==="smart"; }
+function setLayer(li){ CFG=LAYER_CFG[li]; }
+/* ---------------- Turn steps (rally_v5.play, split so the page can animate between them) ---------------- */
+function hasMove(s,p){ return s.hands[p].some(cid=>movesFor(s,cid).length>0); }
+function doPlace(s,p,hi,move){ const cid=s.hands[p].splice(hi,1)[0]; s.draws=[0,0]; s.extra=false; s.bottom=0;
+  place(s,cid,move,p); const drawn=[[],[]];
+  for(const q of [0,1]) for(let j=0;j<s.draws[q];j++) if(s.decks[q].length){ const c=s.decks[q].pop(); s.hands[q].push(c); drawn[q].push(c); }
+  let under=null; if(s.bottom&&s.hands[p].length){ under=s.hands[p].shift(); s.decks[p].unshift(under); }
+  return {cid,extra:s.extra,drawn,under}; }
+function doOrders(s,p,force){ s.draws=[0,0]; FORCE=force===undefined?null:force; try{ orders(s,p,ready(s,p)); } finally { FORCE=null; }
+  const drawn=[[],[]]; for(const q of [0,1]) for(let j=0;j<s.draws[q];j++) if(s.decks[q].length){ const c=s.decks[q].pop(); s.hands[q].push(c); drawn[q].push(c); }
+  s.fired=[]; return drawn; }
+function doPass(s,p){ s.passes++; let swapped=null; if(s.hands[p].length&&s.decks[p].length){ swapped=s.hands[p].shift(); s.decks[p].unshift(swapped); s.hands[p].push(s.decks[p].pop()); } return swapped; }
+function refill(s,p){ const got=[]; while(s.hands[p].length<3&&s.decks[p].length){ const c=s.decks[p].pop(); s.hands[p].push(c); got.push(c); } return got; }
+function gameOver(s){ return s.passes>=2||s.own.every(x=>x)||s.winner!==null; }
+function outcome(s){ if(s.winner!==null) return s.winner; if(s.score[0]!==s.score[1]) return s.score[0]>s.score[1]?0:1; if(s.rallies[0]!==s.rallies[1]) return s.rallies[0]>s.rallies[1]?0:1; return -1; }
+/* The human's end of turn, split around the Strike so the player can pick its target.
+   beginOrders fires Fortify and Spot and stops before the Strike (returns true if one is due);
+   finishOrders fires the rest with the player's choice (a tile id, or 0 for the Front / the point). */
+function beginOrders(s,p){ s.draws=[0,0]; s._ready=ready(s,p); return orders(s,p,s._ready,true); }
+function finishOrders(s,p,force){ FORCE=force===undefined?null:force; try{ orders(s,p,s._ready||[],false); } finally { FORCE=null; }
+  const drawn=[[],[]]; for(const q of [0,1]) for(let j=0;j<s.draws[q];j++) if(s.decks[q].length){ const c=s.decks[q].pop(); s.hands[q].push(c); drawn[q].push(c); }
+  s.fired=[]; s._ready=null; return drawn; }
+/*ENGINE-END*/
+
+/* =================== Names, colours, card text =================== */
+const $=id=>document.getElementById(id);
+const Q=new URLSearchParams(location.search);
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SP=Q.has("fast")?0.02:(reduce?0.35:1);
+const SU={S:{col:"Red",cls:"Assault",g:"◆",k:"#e2465a",mat:"Ammo",order:"Strike"},G:{col:"Gold",cls:"Recon",g:"●",k:"#f2b632",mat:"Intel",order:"Spot"},
+  R:{col:"Green",cls:"Engineer",g:"▲",k:"#57b86a",mat:"Works",order:"Fortify"},P:{col:"Blue",cls:"Support",g:"✚",k:"#4f9be8",mat:"Supply",order:"Resupply"}};
+const MI=["S","G","R","P"];
+const KN={b:"banner",o:"objective",i:"insignia"}, SH={b:"1×4",o:"2×2",i:"1×1"};
+const kOf=cid=>CH[cid].shape==="1x4"?"b":CH[cid].shape==="2x2"?"o":"i";
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const DNAME={a03:"Liaison ◆>●",a05:"Liaison ◆>✚",g03:"Liaison ●>▲"};
+const cname=cid=>DNAME[cid]||CH[cid].name;
+const matOf=s=>CFG.classes?SU[s].mat:"Ammo";
+const meterName=i=>CFG.classes?SU[MI[i]].mat:"Ammo";
+const LAYERS=[
+  {n:"Tiles",idea:"Place, rally and score."},
+  {n:"Basic",idea:"Ammo and the Strike."},
+  {n:"Cards",idea:"Your tiles have text, and you bring your own stack."},
+  {n:"Classes",idea:"Each class fills its own meter, and each meter fires its own order."},
+  {n:"Front Line",idea:"A tug-of-war track: push it to the enemy's end and you win."},
+  {n:"Streaks",idea:"A hot run earns rewards. These are the full ranked rules."}];
+const GATE=[0,0,3,6,10,15];
+function tname(t){ const k=kOf(t.cid);
+  if(CFG.text) return t.kind==="patch"?`${cname(t.cid)} (patch)`:cname(t.cid);
+  return `${SU[CH[t.cid].suit].col} ${t.kind==="patch"?"patch":KN[k]}`; }
+function clsLabel(cid){ const s=CH[cid].suit; return CFG.text?`${SU[s].cls} ${SU[s].g}`:`${SU[s].col} ${SU[s].g}`; }
+function cardKw(cid){ const ab=CH[cid].ab, s=CH[cid].suit;
+  if(ab.breach) return `Breach +${ab.breach}`; if(ab.ally) return `Also matches ${SU[ab.ally].g}`; if(ab.mat) return `Rally: +1 ${matOf(s)}`;
+  if(ab.charge) return "Charge"; if(ab.hold) return "Dig in"; if(ab.flank) return `Flank +${ab.flank}`; if(ab.scout) return "Draw 1 · never matches";
+  if(ab.fieldkit) return "Can patch"; if(ab.gem) return `2 ${matOf(s)}`; if(ab.bunker) return "Protects · Command 2"; if(ab.command) return `Command ${ab.command}`; return ""; }
+function cardText(cid){ const ab=CH[cid].ab, s=CH[cid].suit;
+  if(ab.breach) return `<b>Breach +${ab.breach}:</b> if this tile closes a rally, +${ab.breach}.`;
+  if(ab.ally) return `<b>Also matches ${SU[ab.ally].cls} ${SU[ab.ally].g} objectives</b> (2 a square on them).`;
+  if(ab.mat) return `<b>Rally: +1 ${matOf(s)}.</b> When an objective it touches rallies, it gives 2 ${matOf(s)} instead of 1.`;
+  if(ab.charge) return `<b>Charge:</b> when placed, +1 Charge on each open objective it touches. Whoever closes that objective scores +1 per Charge.`;
+  if(ab.hold) return `<b>Dig in:</b> if an objective it touches never rallies, it still scores 2 a square at the end when the colours match.`;
+  if(ab.flank) return `<b>Flank +${ab.flank}:</b> if it lines a whole side of an objective that rallies, +${ab.flank}.`;
+  if(ab.scout) return `<b>Draw 1:</b> when placed, draw 1, then your oldest tile in hand goes under your stack. <b>Never matches</b> (always 1 a square).`;
+  if(ab.fieldkit) return `<b>Can patch:</b> may fill a closed-in gap of 1–4 squares as a patch. A patch scores nothing.`;
+  if(ab.gem) return `<b>2 ${matOf(s)}:</b> gives 2 instead of 1 when an objective it touches rallies.`;
+  if(ab.bunker) return `<b>Command 2:</b> when it rallies, its owner scores 2. <b>Protects:</b> its owner's tiles touching it can't be Struck.`;
+  if(ab.command) return `<b>Command ${ab.command}:</b> when it rallies, its owner scores ${ab.command}.`;
+  return ""; }
+function orderText(i){
+  if(i===0){ if(!CFG.classes) return "Strike: remove an enemy tile that touches an open objective. If there is none, score 1.";
+    return CFG.front?"Strike: remove an enemy tile touching an open objective, or push the Front 2 toward the enemy (their Armor soaks 1 a step). With no tile to hit, it pushes."
+      :"Strike: remove an enemy tile that touches an open objective. If there is none, score 1."; }
+  if(i===1) return "Spot: +1 Charge on every open objective you touch, and your next Strike ignores protection"+(CFG.front?" and pushes 3 through Armor.":".");
+  if(i===2) return "Fortify: +2 Armor (up to 4). Each Armor scores 1 at the end"+(CFG.front?" and soaks 1 step of an enemy push.":".");
+  return "Resupply: draw 1 tile and score 1."; }
+const ORD=["Strike","Spot","Fortify","Resupply"];
+const STK={T1:{n:"Spearhead",d:"Point Man's Breach pays big when it closes. Two Assault Posts and a Recon Post."},
+  T2:{n:"Hold the Line",d:"A Bunker protects your tiles, and Dug-In keeps its points if an objective never rallies."},
+  T3:{n:"Relay Net",d:"Wireman's Charges, Liaisons that match two colours, and Long Watch flanks."},
+  T4:{n:"Shock and Supply",d:"Rifle Team, Medic Lines and two Assault Posts: fill the meters fast."}};
+const stackSuits=id=>[...new Set(STACKS[id].map(c=>CH[c].suit))].sort((a,b)=>MI.indexOf(a)-MI.indexOf(b));
+
+/* =================== Progress (localStorage, wrapped) =================== */
+const SAVE="rp-game-v1";
+let prog={games:0,wins:[0,0,0,0,0,0],played:[0,0,0,0,0,0],lessons:{},layer:0,diff:"normal",skip:false,stack:"T1",seat:"alt"};
+let fresh=true;
+try{ const d=JSON.parse(localStorage.getItem(SAVE)||"null"); if(d&&typeof d==="object"){ prog=Object.assign(prog,d); fresh=false; } }catch(_){}
+if(fresh){ try{ const t=JSON.parse(localStorage.getItem("rp-learn-done")||"null"); // carry over the tutorial's lessons
+  if(t&&typeof t==="object"){ const m0=[0,1,2,3,4,5,6,9], m1=[7,8]; prog.lessons["0"]={}; prog.lessons["1"]={};
+    m0.forEach((x,i)=>{ if(t[x]) prog.lessons["0"][i]=true; }); m1.forEach((x,i)=>{ if(t[x]) prog.lessons["1"][i]=true; }); } }catch(_){} }
+function save(){ try{ localStorage.setItem(SAVE,JSON.stringify(prog)); }catch(_){} }
+const lessonDone=(L,i)=>!!(prog.lessons[L]&&prog.lessons[L][i]);
+const allLessons=L=>LESSONS[L].every((_,i)=>lessonDone(L,i));
+function unlockedMax(){ if(prog.skip) return 5; let u=0;
+  if(allLessons(0)||prog.wins[0]>0) u=1;
+  for(let k=1;k<5;k++) if(u>=k&&(prog.wins[k]>0||prog.games>=GATE[k+1])) u=k+1;
+  return u; }
+function gateText(k){ if(k===1) return "Unlocks when you finish the Tiles lessons (or win a Tiles match).";
+  return `Unlocks after a win in ${LAYERS[k-1].n}, or after ${GATE[k]} games (you have played ${prog.games}).`; }
+
+/* =================== Lessons =================== */
+const T2S={R:"S",Y:"G",G:"R",B:"P"};
+const B=(c,p,r,col,o)=>["v"+T2S[c],p-1,r,col,o||"h"], O=(c,p,r,col)=>["o"+T2S[c],p-1,r,col], I=(c,p,r,col)=>["i"+T2S[c],p-1,r,col];
+const X=(cid,p,r,col,o)=>[cid,p,r,col,o||"h"];
+const tc=(k,c)=>(k==="b"?"v":k)+T2S[c];
+const sameSet=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+const covers=(a,b)=>b.every(x=>a.includes(x));
+const rallyEv=info=>info.ev.find(e=>e.t==="rally");
+const LESSONS=[
+ [ // Layer 0: Tiles (the tutorial's lessons 1-7 and 10)
+ {title:"Place a banner",text:"Tap your banner, tap Rotate to stand it up, then tap the glowing strip.",
+  R:6,C:6,tiles:[],hand:[tc("b","R")],goal:[[1,2],[2,2],[3,2],[4,2]],show:{score:false,meters:false,stack:false},
+  want(st,cid,mv,g){ if(sameSet(mv.cells,g)) return null; return mv.o==="h"?"Nearly! The glow runs up and down: tap Rotate (or press R) first.":"Put it on the glowing squares."; },
+  done:()=>true, win:()=>"Placed! A banner fills 4 squares in a row. It scores when it touches an objective that rallies."},
+ {title:"Place an objective",text:"Tap your objective, then tap the glowing 2×2 to place it.",
+  R:6,C:6,tiles:[],hand:[tc("o","Y")],goal:[[2,2],[2,3],[3,2],[3,3]],show:{score:false,meters:false,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:"Put it on the glowing 2×2."; },
+  done:()=>true, win:()=>"That's an objective. The dashed squares are its border: 8 squares, 0 filled, so it shows 0/8. Fill all 8 and it rallies."},
+ {title:"Fill the border",text:"Fill the last 2 border squares to make the Gold objective rally.",
+  R:6,C:6,tiles:[O("Y",1,2,2),B("Y",1,1,0,"h"),B("G",2,0,4,"v"),B("G",2,4,2,"h")],hand:[tc("b","R")],goal:[[2,1],[3,1]],show:{score:true,meters:false,stack:false},
+  want(st,cid,mv,g){ if(covers(mv.cells,g)) return null; return mv.o==="h"?"Those 2 squares sit one above the other: tap Rotate, then tap the top one.":"Cover both glowing squares."; },
+  done:(st,info)=>!!rallyEv(info), win:(st,info)=>rallyLine(rallyEv(info))+" Every touching square scored for its owner: 2 when the colours match."},
+ {title:"Use the edge",text:"The board edge counts as filled, so this corner objective needs just 4 squares: fill the last 2.",
+  R:6,C:6,tiles:[O("R",1,0,0),B("G",2,0,2,"h"),B("G",2,1,2,"h")],hand:[tc("b","R")],goal:[[2,0],[2,1]],show:{score:true,meters:false,stack:false},
+  want(st,cid,mv,g){ return covers(mv.cells,g)?null:(mv.o==="v"?"Those squares sit side by side: tap Rotate to lay it flat.":"Cover both glowing squares."); },
+  done:(st,info)=>!!rallyEv(info), win:(st,info)=>rallyLine(rallyEv(info))+" A corner objective needs 4 squares, an edge one 6."},
+ {title:"Plug a gap",text:"One closed-in square is left: plug it with your 1×1 insignia.",
+  R:6,C:6,tiles:[O("Y",1,1,1),B("Y",1,0,0,"h"),B("R",1,1,0,"v"),B("G",2,1,3,"v"),I("G",2,3,1),I("G",2,4,2)],hand:[tc("b","R"),tc("i","Y")],goal:[[3,2]],show:{score:true,meters:false,stack:false},
+  want(st,cid,mv,g){ if(kOf(cid)==="b") return "A banner is 4 long and can't fit a 1-square hole: pick your insignia (1×1)."; return sameSet(mv.cells,g)?null:"Put the insignia in the glowing hole."; },
+  done:(st,info)=>!!rallyEv(info), win:(st,info)=>rallyLine(rallyEv(info))+" Insignia are small, so keep them for holes like this."},
+ {title:"Patch a gap",text:"No 2×2 space is left: drop your objective into the 3-square pocket as a patch.",
+  R:6,C:6,tiles:[O("G",2,1,2),B("R",1,0,1,"h"),B("G",2,1,1,"v"),B("Y",1,1,4,"v"),I("R",1,4,2),B("G",2,5,2,"h")],hand:[tc("o","Y")],goal:[[3,2],[3,3],[4,3]],show:{score:true,meters:false,stack:false},
+  want(st,cid,mv,g){ return mv.patch&&sameSet(mv.cells,g)?null:"Tap a glowing pocket square: the objective fills the whole pocket as a patch."; },
+  done:(st,info)=>!!rallyEv(info), win:(st,info)=>"The grey patch filled the pocket and never rallies. "+rallyLine(rallyEv(info))},
+ {title:"Hand and stack",text:"Place any tile, then watch your hand refill from your stack.",
+  R:6,C:6,tiles:[O("Y",1,2,2)],hand:[tc("b","Y"),tc("b","R"),tc("i","R")],stack:[tc("o","R"),tc("b","Y"),tc("b","R"),tc("i","Y")],
+  aiHand:[tc("b","G"),tc("b","G"),tc("i","G")],aiStack:[tc("b","Y")],ai:true,goal:[],show:{score:true,meters:false,stack:true},
+  want:()=>null, done:()=>true,
+  win:st=>`You drew 1 tile (stack 4 → ${st.decks[0].length}), so you hold 3 again. Then the AI took its turn: ${ui.aiLine}`},
+ {title:"Win",text:"Fill the last 4 squares: when the board is full, the most points wins.",
+  R:6,C:6,tiles:[B("G",2,0,0,"h"),B("R",1,1,0,"h"),B("G",2,0,4,"v"),B("Y",1,0,5,"v"),B("G",2,2,0,"v"),O("R",1,2,2),B("G",2,4,2,"h"),B("Y",1,5,2,"h")],
+  hand:[tc("b","R")],goal:[[2,1],[3,1],[4,1],[5,1]],score:[5,9],start2:true,show:{score:true,meters:false,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:(mv.o==="h"?"The glow runs up and down: tap Rotate first.":"Put it on the glowing column."); },
+  done:st=>gameOver(st),
+  win:(st,info)=>{ const r=rallyEv(info); return `${r?rallyLine(r)+" ":""}Board full: you ${st.score[0]}, AI ${st.score[1]} (it started with 1 point as the second player). You win! That's the whole Tiles game: play a match, or go on to Basic.`; }},
+ ],
+ [ // Layer 1: Basic (the tutorial's lessons 8 and 9)
+ {title:"Earn Ammo",text:"Close the objective: each of your tiles touching it gives you 1 Ammo.",
+  R:6,C:6,tiles:[O("R",1,2,2),B("R",1,1,0,"h"),B("Y",1,0,4,"v"),B("G",2,4,2,"h")],hand:[tc("b","R")],goal:[[2,1],[3,1]],mat:[[1,0,0,0],[0,0,0,0]],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ if(covers(mv.cells,g)) return null; return mv.o==="h"?"Those 2 squares sit one above the other: tap Rotate, then tap the top one.":"Cover both glowing squares."; },
+  done:(st,info)=>!!rallyEv(info),
+  win:(st,info)=>{ const r=rallyEv(info); const a=r.mat.filter(x=>x.p===0).length, b=r.mat.length-a; return `+${a} Ammo: one for each of your ${a} tiles touching it (now ${st.mat[0][0]}/5). The AI's banner gave it ${b}. At 5 you Strike.`; }},
+ {title:"Strike at 5",text:"You have 3 Ammo: close the Gold objective to reach 5, then Strike.",
+  R:6,C:6,tiles:[O("Y",1,0,0),B("R",1,0,2,"h"),B("G",2,2,0,"h"),O("G",2,3,3),B("G",2,2,5,"v")],hand:[tc("b","Y")],goal:[[1,2]],mat:[[3,0,0,0],[0,0,0,0]],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ return covers(mv.cells,g)?null:"Lay it flat across the glowing square."; },
+  done:(st,info)=>info.ev.some(e=>e.t==="strike"&&e.tile),
+  win:(st,info)=>{ const s=info.ev.find(e=>e.t==="strike"); return `Strike! The AI's ${tname(s.tile)} is gone and its squares are open again: a chance for you. Only tiles touching an objective that hasn't rallied can be hit, and if there is one, the Strike must take it. With none, you score 1 instead.`; }},
+ ],
+ [ // Layer 2: Cards
+ {title:"Read the card",text:"Long-press or right-click Point Man to read it. Then Rotate it and fill the last 2 squares beside your Assault Post.",
+  R:6,C:6,tiles:[X("oS",0,2,2),X("r02",1,1,2,"h"),X("g02",0,4,0,"h"),X("r01",1,2,4,"v")],hand:["a01","a04"],card:"a01",goal:[[2,1],[3,1]],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ if(cid!=="a01") return "Pick Point Man: its Breach +3 pays when it closes a rally."; if(covers(mv.cells,g)) return null; return mv.o==="h"?"The 2 squares sit one above the other: tap Rotate first.":"Cover both glowing squares."; },
+  done:(st,info)=>!!rallyEv(info),
+  win:(st,info)=>`${rallyLine(rallyEv(info))} Point Man alone gave you 10: 2 squares × 2 (red matches red), closing +1, <b>Breach +3</b>, and your post's <b>Command +2</b>. Long Watch's <b>Flank +1</b> paid the AI for lining a whole side.`},
+ {title:"Protection is card text",text:"Plug the gap with your Flare. It gives 2 Ammo, which takes you to 5: Strike a tile that isn't protected.",
+  R:6,C:6,tiles:[X("oG",0,0,0),X("g02",0,0,2,"h"),X("a04",1,1,2,"h"),X("iS",1,2,1),X("oS",1,3,0),X("oB",1,3,4),X("r02",1,2,2,"v"),X("r01",1,2,3,"v")],
+  hand:["iG"],goal:[[2,0]],mat:[[1,0,0,0],[0,0,0,0]],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:"Put the Flare in the glowing gap."; },
+  done:(st,info)=>info.ev.some(e=>e.t==="strike"&&e.tile),
+  win:(st,info)=>{ const s=info.ev.find(e=>e.t==="strike"); return `Strike! You removed the AI's ${tname(s.tile)}. Dug-In touches the AI's <b>Bunker</b>, whose text says "your tiles touching this can't be Struck", so it was safe (the shield). Your Flare gave 2 Ammo, Spotter's "Rally: +1 Ammo" another.`; }},
+ ],
+ [ // Layer 3: Classes
+ {title:"Each class has a meter",text:"Close your Supply Depot with Medic Line. Watch which meters fill: each tile fills its own class's meter.",
+  R:6,C:6,tiles:[X("oP",0,0,0),X("r02",0,0,2,"h"),X("a01",1,1,2,"h")],hand:["p03"],stack:["oR","g02"],goal:[[2,0],[2,1]],mat:[[0,0,2,1],[0,0,0,0]],show:{score:true,meters:true,stack:true},
+  want(st,cid,mv,g){ if(covers(mv.cells,g)) return null; return mv.o==="v"?"The 2 squares sit side by side: lay it flat.":"Cover both glowing squares."; },
+  done:(st,info)=>info.ev.filter(e=>e.t==="order").length>=2,
+  win:()=>`Long Watch (Engineer ▲) filled <b>Works</b> to 3, and Medic Line (Support ✚, Rally: +1) filled <b>Supply</b> to 3. At the end of your turn both fired by themselves: <b>Fortify</b> (+2 Armor, each scores 1 at the end) and <b>Resupply</b> (draw 1, +1 point). The AI's Point Man filled the AI's Ammo.`},
+ {title:"Spot, then Strike",text:"Plug the gap with your Flare: Intel and Ammo both reach 3. Spot fires first, so your Strike can hit the Dug-In beside their Bunker.",
+  R:6,C:6,tiles:[X("oG",0,0,0),X("a01",0,0,2,"h"),X("g01",0,1,2,"h"),X("iS",1,2,1),X("oS",1,3,0),X("oB",1,3,4),X("r02",1,2,2,"v"),X("r01",1,2,3,"v")],
+  hand:["iG"],goal:[[2,0]],mat:[[2,0,0,0],[0,0,0,0]],strikeWant:"r01",show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:"Put the Flare in the glowing gap."; },
+  done:(st,info)=>info.ev.some(e=>e.t==="strike"&&e.tile),
+  win:()=>`Orders fire in a fixed order: Fortify, <b>Spot</b>, <b>Strike</b>, Resupply. Spot put a Charge on the AI's Assault Post (you touch it) and made this Strike ignore protection, so the Dug-In beside the Bunker was fair game. Without Spot it is safe.`},
+ ],
+ [ // Layer 4: Front Line
+ {title:"Push the Front",text:"Plug the gap with your Ammo Cache. Ammo reaches 3, and with no tile to hit, your Strike pushes the Front.",
+  R:6,C:6,tiles:[X("oS",0,0,0),X("a02",0,0,2,"h"),X("r02",1,1,2,"h"),X("iR",1,2,1),X("oB",1,3,4),X("r01",1,2,3,"v")],
+  hand:["iS"],goal:[[2,0]],front:2,armor:[0,1],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:"Put the Ammo Cache in the glowing gap."; },
+  done:(st,info)=>info.ev.some(e=>e.t==="front"&&e.moved),
+  win:(st)=>`The AI's only tile on an open objective is the Dug-In beside its Bunker, which is protected, so your Strike pushed the Front 2. The AI's 1 Armor soaked 1: the Front moved from 2 to <b>${Math.abs(st.front)}</b>, two steps from the AI's end. Push it to the end and you win at once.`},
+ {title:"Breakthrough",text:"The Front is 3 steps toward the AI. Plug the gap with your Flare: Spot fires, then a spotted Strike pushes 3 through their Armor.",
+  R:6,C:6,tiles:[X("oG",0,0,0),X("a01",0,0,2,"h"),X("r02",1,1,2,"h"),X("iR",1,2,1)],
+  hand:["iG"],goal:[[2,0]],front:3,armor:[0,2],mat:[[2,2,0,0],[0,0,0,0]],show:{score:true,meters:true,stack:false},
+  want(st,cid,mv,g){ return sameSet(mv.cells,g)?null:"Put the Flare in the glowing gap."; },
+  done:st=>st.winner===0,
+  win:()=>`<b>Breakthrough!</b> Spot fired first, so the Strike was spotted: it pushed 3 and ignored the AI's 2 Armor. The Front hit the AI's end and you win at once, whatever the score. It happens in about 1 game in 11.`},
+ ],
+ [ // Layer 5: Streaks
+ {title:"Streak 3",text:"Close your Supply Depot with Medic Line. The rally, then your Strike and Resupply each add 1 to your streak.",
+  R:6,C:6,tiles:[X("oP",0,0,0),X("a01",0,0,2,"h"),X("r02",1,1,2,"h"),X("iR",1,2,1)],hand:["p03"],stack:["g02"],goal:[[2,0]],mat:[[2,0,0,1],[0,0,0,0]],streak:[0,2],show:{score:true,meters:true,stack:true},
+  want(st,cid,mv,g){ if(covers(mv.cells,g)&&mv.cells.length===4) return null; return mv.o==="h"?"Only one square is free beside the Depot: stand Medic Line up (Rotate).":"Cover the glowing square."; },
+  done:(st,info)=>info.ev.some(e=>e.t==="reward"&&e.tier===3),
+  win:()=>`Closing the rally made your streak 1, the Strike 2 and Resupply 3: <b>Spotter Drone</b>, +1 Intel. Your Strike pushed the Front, so it landed, and the AI's streak dropped from 2 to 0. An enemy Strike that lands on you does the same to yours.`},
+ {title:"Streak 5",text:"Your streak is 4. Plug the gap with your Supply Crate: the rally makes it 5, a Supply Drop. Then place the tile you draw.",
+  R:6,C:6,tiles:[X("oR",0,0,0),X("r02",0,0,2,"h"),X("a01",1,1,2,"h"),X("iR",1,2,1)],hand:["iP"],stack:["a04"],goal:[[2,0]],streak:[4,0],extraOk:true,show:{score:true,meters:true,stack:true},
+  want(st,cid,mv,g){ if(ui.extraUsed) return null; return sameSet(mv.cells,g)?null:"Put the Supply Crate in the glowing gap."; },
+  done:(st,info)=>info.ev.filter(e=>e.t==="place").length>=2,
+  win:()=>`<b>Supply Drop:</b> you drew 1 and placed one more tile in the same turn. At <b>7</b> comes the <b>Fire Mission</b>: the Front moves 2 through Armor and the AI's most valuable tile on an open objective is removed, protected or not.`},
+ ],
+];
+
+/* =================== UI state =================== */
+let st=null, H=0;
+const ui={mode:"lesson",layer:0,li:0,sel:-1,orient:"h",pv:null,busy:false,phase:"place",targets:[],turnEv:[],lastAi:[],cur:null,touch:matchMedia("(pointer: coarse)").matches,
+  freed:[],extraUsed:false,lessonDone:false,ended:false,view:null,shown:null,policy:"tuned",stacks:["T1","T3"],goal:[],aiLine:"",turnP:0,bd:null,show:null,newCards:null,enterId:null};
+const A=()=>1-H;
+const PN=p=>p===H?"You":"The AI", pn=p=>p===H?"you":"the AI", poss=p=>p===H?"your":"the AI's";
+const L=()=>LESSONS[ui.layer][ui.li];
+const timers=[]; function later(ms,fn){ const t=setTimeout(fn,ms*SP); timers.push(t); return t; }
+function clearTimers(){ while(timers.length) clearTimeout(timers.pop()); }
+const showOf=()=>ui.mode==="match"?{score:true,meters:CFG.mil,stack:true}:L().show;
+function syncShown(){ ui.shown={score:st.score.slice(),mat:[st.mat[0].slice(),st.mat[1].slice()],armor:st.armor.slice(),streak:st.streak.slice(),front:st.front,spot:st.spot.slice()}; }
+function newBd(){ return [0,1].map(()=>({contact:0,closer:0,charges:0,bonus:0,command:0,orders:0,end:0,armor:0,start:0})); }
+function resetUi(){ clearTimers(); closeIns(); hideModals(); ui.sel=-1; ui.orient="h"; ui.pv=null; ui.busy=false; ui.phase="place"; ui.targets=[]; ui.turnEv=[]; ui.lastAi=[]; ui.freed=[]; ui.cur=null; ui.ended=false; ui.view=null; ui.extraUsed=false; ui.lessonDone=false; ui.goal=[]; ui.newCards=null; ui.lines=[]; ui.detail=[]; }
+
+function setupPiece(s,cid,p,r,c,o){ const kind=CH[cid].kind, C=s.g.C; let cells;
+  if(CH[cid].shape==="1x4") cells=o==="v"?[0,1,2,3].map(j=>(r+j)*C+c):[0,1,2,3].map(j=>r*C+c+j);
+  else if(CH[cid].shape==="2x2") cells=[r*C+c,r*C+c+1,(r+1)*C+c,(r+1)*C+c+1]; else cells=[r*C+c];
+  const id=s.nid++; const pc={id,cid,kind,suit:CH[cid].suit,owner:p,cells,rallied:false,charges:0}; if(kind==="hub") pc.info=hubInfo(s.g,cells);
+  s.pcs.set(id,pc); for(const x of cells){ if(s.own[x]) console.warn("overlap",cid,x); s.own[x]=id; } }
+function buildLesson(layer,i){
+  resetUi(); ui.mode="lesson"; ui.layer=layer; ui.li=i; setLayer(layer); H=0; ui.turnP=0;
+  const l=LESSONS[layer][i]; st=newState(l.R,l.C);
+  for(const [cid,p,r,c,o] of l.tiles) setupPiece(st,cid,p,r,c,o);
+  st.hands[0]=l.hand.slice(); st.decks[0]=(l.stack||[]).slice().reverse();
+  st.hands[1]=(l.aiHand||[]).slice(); st.decks[1]=(l.aiStack||[]).slice().reverse();
+  if(l.mat) st.mat=[l.mat[0].slice(),l.mat[1].slice()]; if(l.armor) st.armor=l.armor.slice(); if(l.front) st.front=l.front; if(l.streak) st.streak=l.streak.slice(); if(l.score) st.score=l.score.slice();
+  ui.bd=newBd(); if(l.start2){ ui.bd[1].start=1; ui.bd[1].contact=st.score[1]-1; ui.bd[0].contact=st.score[0]; }
+  setPolicies(["human","greedy"]); CURW=FLAGS;
+  ui.goal=l.goal.map(([r,c])=>r*st.g.C+c); syncShown();
+  prog.layer=layer; save();
+  setChrome(); sizeBoard();
+  task({no:`${LAYERS[layer].n} · lesson ${i+1} of ${LESSONS[layer].length}`,title:l.title,text:l.text,say:"",kind:"",acts:[]});
+  renderAll();
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function startPlay(layer){ // Cards and later: pick a stack first
+  const Lr=layer===undefined?ui.layer:layer;
+  if(Lr>=2){ ui.pending=Lr; openStackPick(); return; }
+  ui.layer=Lr; prog.layer=Lr; save();
+  const ids=shuffle(Object.keys(STACKS)); ui.stacks=[ids[0],ids[1]]; newMatch(); }
+function newMatch(){
+  resetUi(); ui.mode="match"; setLayer(ui.layer);
+  const pl=prog.played[ui.layer]||0; H=prog.seat==="first"?0:prog.seat==="second"?1:pl%2;
+  ui.policy=prog.diff==="easy"?"greedy":"tuned";
+  st=newState(8,8);
+  st.decks[H]=shuffle(STACKS[ui.stacks[0]].slice()); st.decks[A()]=shuffle(STACKS[ui.stacks[1]].slice());
+  st.hands=[0,1].map(p=>[st.decks[p].pop(),st.decks[p].pop(),st.decks[p].pop()]);
+  st.score[1]+=1; ui.bd=newBd(); ui.bd[1].start=1;
+  const pols=["human","human"]; pols[A()]=ui.policy; setPolicies(pols);
+  syncShown(); setChrome(); sizeBoard();
+  const diff=prog.diff==="easy"?"Easy":"Normal";
+  task({no:`${LAYERS[ui.layer].n} · match vs AI (${diff})`,title:H===0?"Your move":"AI to move",text:"",
+    say:H===0?"You go first, so the AI starts with 1 point.":"The AI goes first this time, so you start with 1 point.",kind:"",acts:[]});
+  renderAll();
+  if(H===0) humanTurn(); else { ui.busy=true; task({text:"The AI is thinking…"}); later(700,aiTurn); }
+}
+function setChrome(){
+  document.body.classList.toggle("mode-lesson",ui.mode==="lesson");
+  $("tabL").classList.toggle("on",ui.mode==="lesson"); $("tabM").classList.toggle("on",ui.mode==="match");
+  $("tabL").setAttribute("aria-selected",ui.mode==="lesson"); $("tabM").setAttribute("aria-selected",ui.mode==="match");
+  $("lbNum").textContent=ui.layer; $("lbName").textContent=LAYERS[ui.layer].n; $("lbSub").textContent=`layer ${ui.layer} of 5`;
+  $("frontbar").hidden=!CFG.front;
+  const ar=$("actrow"); ar.innerHTML="";
+  if(ui.mode==="match"){ const b=document.createElement("button"); b.className="btn"; b.textContent="New match"; b.setAttribute("data-ins","btn:new"); b.onclick=()=>startPlay(); ar.appendChild(b); }
+}
+
+/* =================== Task panel =================== */
+let T={};
+function task(o){ T=Object.assign(T,o); paintTask(); }
+function paintTask(){
+  $("tkNo").textContent=T.no||""; $("tkTitle").textContent=T.title||""; $("tkText").textContent=T.text||"";
+  const s=$("say"); s.innerHTML=T.say||""; s.className="say "+(T.kind||"");
+  const a=$("tkAct"); a.innerHTML="";
+  for(const b of T.acts||[]){ const el=document.createElement("button"); el.className="btn"+(b.main?" main":"")+(b.warn?" warn":""); el.textContent=b.label; if(b.id) el.id=b.id; el.setAttribute("data-ins","btn:"+(b.ins||"generic")); el.onclick=b.fn; a.appendChild(el); }
+  const d=$("dots"); d.hidden=ui.mode!=="lesson";
+  if(ui.mode==="lesson"){ d.innerHTML=LESSONS[ui.layer].map((l,i)=>`<button class="${i===ui.li?"on":lessonDone(ui.layer,i)?"done":""}" data-ins="dot:${i}" aria-label="Lesson ${i+1}: ${l.title}" data-i="${i}"><span>${i+1}</span></button>`).join("");
+    d.querySelectorAll("button").forEach(b=>b.onclick=()=>buildLesson(ui.layer,+b.dataset.i)); }
+}
+function hint(msg){ task({say:msg,kind:"hint"}); }
+
+/* =================== Rendering =================== */
+const board=$("board"), bl=$("bl"), fx=$("fx");
+const V=()=>ui.view||st;
+function sizeBoard(){
+  const R=st.g.R,C=st.g.C, wide=innerWidth>=900; let cell;
+  if(wide) cell=Math.min((innerHeight-110)/R,(Math.min(innerWidth,1240)-32-410-24-16)/C,78);
+  else cell=Math.min((Math.min(innerWidth,640)-32-6)/C,62);
+  cell=Math.max(28,Math.floor(cell));
+  document.documentElement.style.setProperty("--cell",cell+"px");
+  board.style.setProperty("--R",R); board.style.setProperty("--C",C);
+}
+addEventListener("resize",()=>{ if(st) sizeBoard(); });
+const RC=(s,i)=>[Math.floor(i/s.g.C),i%s.g.C];
+const inb=(s,r,c)=>r>=0&&r<s.g.R&&c>=0&&c<s.g.C;
+const pos=(r,c,h,w)=>`left:calc(var(--cell)*${c});top:calc(var(--cell)*${r});width:calc(var(--cell)*${w});height:calc(var(--cell)*${h})`;
+function box(s,cells){ const rc=cells.map(i=>RC(s,i)); const r0=Math.min(...rc.map(x=>x[0])), c0=Math.min(...rc.map(x=>x[1])), r1=Math.max(...rc.map(x=>x[0])), c1=Math.max(...rc.map(x=>x[1])); return {r0,c0,h:r1-r0+1,w:c1-c0+1}; }
+const SHIELD=`<svg class="shield" viewBox="0 0 20 22" aria-hidden="true"><path d="M10 1 L18 4 V11 C18 16 14 19.5 10 21 C6 19.5 2 16 2 11 V4 Z" fill="#dfe8e4" stroke="#0d1114" stroke-width="1.6"/><path d="M10 5 V17 M5.5 9.5 H14.5" stroke="#0d1114" stroke-width="1.8"/></svg>`;
+function emblem(suit,bunker){ const k=SU[suit].k, p="M20 2 L37 8 V22 C37 33 29 39 20 42 C11 39 3 33 3 22 V8 Z";
+  const inner=bunker?`<rect x="11" y="15" width="18" height="12" rx="2" fill="none" stroke="${k}" stroke-width="2.4"/><path d="M11 19 H29" stroke="${k}" stroke-width="2"/><path d="M16 27 V31 M24 27 V31" stroke="${k}" stroke-width="2"/>`
+    :`<text x="20" y="28" text-anchor="middle" font-size="16" fill="${k}" font-family="sans-serif" font-weight="700">${SU[suit].g}</text>`;
+  return `<svg viewBox="0 0 40 44" aria-hidden="true"><path d="${p}" fill="${k}" opacity=".22"/><path d="${p}" fill="none" stroke="${k}" stroke-width="2.5"/>${inner}</svg>`; }
+function tileHTML(s,t,extra){
+  const own=t.owner===H?"var(--p1)":"var(--p2)", k=SU[t.suit].k, b=box(s,t.cells);
+  const cls=(extra||"")+(ui.targets.includes(t.id)?" tgt":"")+(ui.lastAi.includes(t.id)?" last":"");
+  const lab=`${tname(t)}, ${t.owner===H?"yours":"the AI's"}`;
+  const ins=t.id?`data-t="${t.id}" data-ins="tile:${t.id}"`:`data-ins="ghost"`;
+  if(t.kind==="patch") return t.cells.map(i=>{ const [r,c]=RC(s,i); return `<div class="tile patchc${cls}" ${ins} aria-label="${lab}, patch" style="${pos(r,c,1,1)}">patch</div>`; }).join("");
+  const st0=`--k:${k};--own:${own};${pos(b.r0,b.c0,b.h,b.w)}`;
+  const prot=t.id&&CFG.text&&CFG.mil&&t.kind==="bar"&&inCover(s,t)?SHIELD:"";
+  if(t.kind==="bar"&&CH[t.cid].shape==="1x4"){ const v=b.h>1;
+    const face=CFG.text?`<span class="glyph">${SU[t.suit].g}</span><span class="nm">${cname(t.cid)}</span>`:`<span class="glyph">${SU[t.suit].g}</span>`.repeat(2);
+    return `<div class="tile banner ${v?"v":"h"}${cls}" ${ins} aria-label="${lab}" style="${st0}"><div class="face">${face}</div>${prot}</div>`; }
+  if(t.kind==="bar") return `<div class="tile ins${cls}" ${ins} aria-label="${lab}" style="${st0}"><div class="gem"><span>${SU[t.suit].g}</span></div>${prot}</div>`;
+  const f=t.info?hubFilled(s,t):0;
+  const bunker=CFG.text&&AB(t.cid).bunker;
+  return `<div class="tile obj${t.rallied?" rallied":""}${cls}" ${ins} aria-label="${lab}, ${t.rallied?"rallied":f+" of 8 filled"}" style="${st0}">${emblem(t.suit,bunker)}${t.charges&&!t.rallied?`<span class="chg">+${t.charges}</span>`:""}<span class="count${!t.rallied&&f>=6?" near":""}">${t.rallied?"✓":f+"/8"}</span></div>`;
+}
+function renderBoard(){
+  const s=V(); const ring=new Set();
+  for(const e of s.pcs.values()) if(e.kind==="hub"&&!e.rallied) for(const y of e.info.border) if(!s.own[y]) ring.add(y);
+  let h="";
+  for(let i=0;i<s.g.N;i++){ if(s.own[i]) continue; const [r,c]=RC(s,i);
+    const cls=(ui.goal.includes(i)&&!ui.lessonDone?" goal":"")+(ring.has(i)?" ring":"")+(ui.freed.includes(i)?" freed":"")+(ui.cur===i?" cur":"");
+    h+=`<div class="sq${cls}" data-sq="${i}" data-ins="sq:${i}" style="${pos(r,c,1,1)}"></div>`; }
+  for(const t of s.pcs.values()) h+=tileHTML(s,t,ui.enterId===t.id?" enter":"");
+  ui.enterId=null;
+  if(ui.pv&&ui.pv.mv&&!ui.view){ const p=ui.pv, cid=st.hands[H][ui.sel]; if(cid){ const bad=!!p.bad;
+      const fake={id:0,cid,kind:p.mv.patch?"patch":CH[cid].kind,suit:CH[cid].suit,owner:H,cells:p.mv.cells,rallied:false,charges:0};
+      if(fake.kind==="hub") fake.info=hubInfo(st.g,fake.cells);
+      if(fake.kind==="patch"||fake.kind==="hub") for(const i of p.mv.cells){ const [r,c]=RC(st,i); h+=`<div class="gcell${bad?" bad":""}" style="${pos(r,c,1,1)}"></div>`; }
+      else { const b=box(st,fake.cells); h+=`<div class="ghost${bad?" bad":""}" style="${pos(b.r0,b.c0,b.h,b.w)};border:2px solid ${bad?"var(--bad)":"var(--gold)"}"></div>`; }
+      h+=tileHTML(st,fake,"").replace(/class="tile/g,'class="tile ghost'+(bad?" bad":""));
+      if(!bad&&p.labels) for(const l of p.labels){ const [r,c]=RC(st,l.i); h+=`<div class="plab ${l.p===H?"yc":"ac"}" style="left:calc(var(--cell)*${c+.5});top:calc(var(--cell)*${r+.5})">+${l.pts}</div>`; }
+    } }
+  bl.innerHTML=h;
+}
+function renderHand(){
+  const hand=st.hands[H]; let h="";
+  hand.forEach((cid,i)=>{ const k=kOf(cid); const fits=movesFor(st,cid).length>0; const n=k==="b"?[4,1]:k==="o"?[2,2]:[1,1];
+    const name=CFG.text?cname(cid):`${SU[CH[cid].suit].col} ${cap(KN[k])}`;
+    h+=`<button class="card${i===ui.sel?" sel":""}${fits?"":" nofit"}${ui.newCards&&ui.newCards.includes(i)?" new":""}" style="--k:${SU[CH[cid].suit].k}" data-i="${i}" data-ins="card:${i}" aria-pressed="${i===ui.sel}" aria-label="${name}, ${SH[k]}">
+      <span class="t"><span class="shape" style="grid-template-columns:repeat(${n[0]},6px)">${"<b></b>".repeat(n[0]*n[1])}</span><i>${SU[CH[cid].suit].g}</i></span><span class="n">${name}</span>${CFG.text&&cardKw(cid)?`<span class="kw">${cardKw(cid)}</span>`:""}</button>`; });
+  for(let i=hand.length;i<3;i++) h+=`<div class="card empty" data-ins="slot" aria-hidden="true"></div>`;
+  $("cards").innerHTML=h; ui.newCards=null;
+  $("cards").querySelectorAll("button.card").forEach(b=>b.onclick=()=>pick(+b.dataset.i));
+  const cid=hand[ui.sel]; $("rot").disabled=!(cid&&kOf(cid)==="b"&&ui.phase==="place"); $("rotS").textContent=ui.orient==="h"?"now: flat":"now: upright";
+}
+function meterHTML(p,i,who){ const th=CFG.thresh, n=ui.shown.mat[p][i], s=MI[i], full=n>=th, k=CFG.classes?SU[s].k:"#ff8a5b";
+  return `<div class="meter${full?" full":""}" style="--k:${k}" data-ins="meter:${who}:${i}" id="mt${who}${i}"><span class="g">${CFG.classes?SU[s].g:"◆"}</span><span class="lb">${meterName(i)}</span><span class="pips">${Array.from({length:th},(_,j)=>`<i class="${j<Math.min(n,th)?"on":""}"></i>`).join("")}</span><b>${n}/${th}</b><span class="od">→ ${ORD[i]}</span></div>`; }
+function paintScores(){
+  const show=showOf(); $("scores").hidden=!show.score;
+  for(const who of ["Y","A"]){ const p=who==="Y"?H:A();
+    const el=$("s"+who), v=ui.shown.score[p]; if(el.textContent!==String(v)){ el.textContent=v; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+    let mh="";
+    if(show.meters&&CFG.mil){ if(!CFG.classes) mh=meterHTML(p,0,who);
+      else { const suits=ui.mode==="match"?(who==="Y"?stackSuits(ui.stacks[0]):stackSuits(ui.stacks[1])):[...new Set([...st.pcs.values()].concat(st.hands[p].map(c=>({suit:CH[c].suit,owner:p}))).filter(t=>t.owner===p).map(t=>t.suit))];
+        for(let i=0;i<4;i++) if(suits.includes(MI[i])||ui.shown.mat[p][i]>0) mh+=meterHTML(p,i,who); } }
+    $("m"+who).innerHTML=mh;
+    let ch="";
+    if(who==="Y"&&show.stack) ch+=`<span class="chip" data-ins="stack:Y">stack <b>${st.decks[H].length}</b></span>`;
+    if(who==="A"&&ui.mode==="match") ch+=`<span class="chip" data-ins="aihand">hand <b>${st.hands[A()].length}</b> · stack <b>${st.decks[A()].length}</b></span>`;
+    if(CFG.mil&&CFG.classes&&show.meters) ch+=`<span class="chip${ui.shown.armor[p]?" hot":""}" data-ins="armor:${who}">Armor <b>${ui.shown.armor[p]}</b>/4</span>`;
+    if(CFG.streaks&&show.meters){ const k=ui.shown.streak[p]; ch+=`<span class="chip${k>=2?" hot":""}" data-ins="streak:${who}" id="sk${who}">Streak <b>${k}</b></span>`; }
+    if(ui.shown.spot[p]&&CFG.classes) ch+=`<span class="chip hot" data-ins="spot:${who}">Spotted</span>`;
+    if(ui.bd&&ui.bd[p].start) ch+=`<span class="chip" data-ins="start:${who}">+1 start</span>`;
+    $("c"+who).innerHTML=ch; $("c"+who).hidden=!ch;
+    $("pb"+who).classList.toggle("turn",!gameOver(st)&&ui.turnP===p&&(ui.mode==="match"||(!!L().ai&&!ui.lessonDone)));
+  }
+  if(CFG.front){ const fm=CFG.fmax, v=(H===0?1:-1)*ui.shown.front; let h="";
+    for(let j=-fm;j<=fm;j++) h+=`<i class="${j===0?"mid":j===-fm?"ye":j===fm?"ae":j<0?"yz":"az"}"></i>`;
+    h+=`<span class="mk" style="left:calc(100% / ${2*fm+1} * ${v+fm})"><b></b></span>`;
+    $("track").innerHTML=h; $("track").style.gridTemplateColumns=`repeat(${2*fm+1},1fr)`;
+    $("fv").innerHTML=v===0?"<b>centre</b>":v>0?`<b>${v}</b> to AI`:`<b>${-v}</b> to you`; }
+}
+function paintPv(){ const el=$("pv"); const on=!!(ui.pv&&ui.pv.text); el.classList.toggle("idle",!on);
+  el.innerHTML=on?ui.pv.text:(ui.sel>=0&&ui.phase==="place"&&!ui.lessonDone&&!gameOver(st)?(ui.touch?"Tap a square to preview what happens there.":"Point at a square to preview what happens there."):"&nbsp;"); }
+function renderAll(){ renderBoard(); renderHand(); paintScores(); paintPv(); }
+
+/* =================== Placement input and the "if I place here" preview =================== */
+function pick(i){
+  if(ui.busy||gameOver(st)||ui.lessonDone||i>=st.hands[H].length) return;
+  if(ui.phase==="strike"){ hint("Strike first: tap a tile outlined in red."); return; }
+  if(ui.turnP!==H) return;
+  ui.sel=ui.sel===i?-1:i; ui.pv=null;
+  const cid=st.hands[H][ui.sel];
+  if(cid){ const n=movesFor(st,cid).length;
+    if(!n) hint(`This ${KN[kOf(cid)]} doesn't fit anywhere right now. Pick another tile.`);
+    else if(ui.mode==="match") task({text:(ui.touch?"Tap a square to preview, tap it again to place.":"Point at a square to preview, click to place.")+(kOf(cid)==="b"?" Rotate turns it.":"")});
+  } else if(ui.mode==="match") task({text:"Pick a tile from your hand, then a square on the board."});
+  renderAll();
+}
+function rotate(){ if(ui.busy) return; ui.orient=ui.orient==="h"?"v":"h"; if(ui.pv&&ui.pv.at!=null) preview(ui.pv.at); renderAll(); }
+function slot(s,r,c,h,w){ const out=[]; for(let a=0;a<h;a++) for(let b=0;b<w;b++){ if(!inb(s,r+a,c+b)) return null; const i=(r+a)*s.g.C+c+b; if(s.own[i]) return null; out.push(i); } return out; }
+function candidates(cid,i){
+  const [r,c]=RC(st,i), out=[], k=kOf(cid);
+  if(k==="b"){ for(let j=0;j<4;j++){ const s=ui.orient==="h"?slot(st,r,c-j,1,4):slot(st,r-j,c,4,1); if(s) out.push({cells:s,o:ui.orient}); } }
+  else if(k==="i"){ const s=slot(st,r,c,1,1); if(s) out.push({cells:s}); }
+  else { for(const [a,b] of [[0,0],[0,-1],[-1,0],[-1,-1]]){ const s=slot(st,r+a,c+b,2,2); if(s) out.push({cells:s}); } }
+  if(!out.length&&!st.own[i]&&(k==="o"||(CFG.text&&CH[cid].ab.fieldkit))) for(const p of pockets(st)) if(p.includes(i)) out.push({cells:p,patch:true});
+  if(ui.mode==="lesson"&&ui.goal.length) out.sort((x,y)=>sc(y)-sc(x));
+  return out;
+  function sc(m){ const g=ui.goal; return (sameSet(m.cells,g)?3:0)+(covers(m.cells,g)?2:0)+(m.cells.filter(x=>g.includes(x)).length/10); }
+}
+const emove=(cid,mv)=>[mv.patch?"patch":CH[cid].kind,mv.cells.slice().sort((a,b)=>a-b)];
+function preview(i){
+  const cid=st.hands[H][ui.sel]; if(!cid){ ui.pv=null; return null; }
+  const cands=candidates(cid,i);
+  if(!cands.length){ ui.pv={at:i,mv:null,text:null}; return null; }
+  const mv=cands[0]; let bad=null;
+  if(ui.mode==="lesson") bad=L().want(st,cid,mv,ui.goal);
+  const t=cloneS(st); t.ev=[]; place(t,cid,emove(cid,mv),H); const ev=t.ev; t.ev=null;
+  const labels=[], parts=[]; const d1=t.score[H]-st.score[H], d2=t.score[A()]-st.score[A()];
+  for(const e of ev){
+    if(e.t==="rally"){ const hub=t.pcs.get(e.hub); for(const it of e.items) for(const y of hub.info.border) if(t.own[y]===it.tile) labels.push({i:y,p:it.p,pts:it.m?2:1});
+      const bx=e.bonus.filter(b=>b.p===H).map(b=>`${b.k} +${b.n}`); if(e.charges) bx.push(`${e.charges} Charge${e.charges>1?"s":""} +${e.charges}`);
+      parts.push(`closes the <b>${tname(hub)}</b>${bx.length?` (${bx.join(", ")})`:""}`); }
+    if(e.t==="fill"){ const hub=t.pcs.get(e.hub); if(e.hub===ev[0].id) parts.push(`your new objective starts at <b>${e.to}/8</b>`); else if(e.to!==e.from) parts.push(`${tname(hub)} ${e.from}/8 → <b>${e.to}/8</b>`); }
+    if(e.t==="charge") parts.push(`+1 Charge on ${e.hubs.map(h=>tname(t.pcs.get(h))).join(" and ")}`);
+    if(e.t==="scout") parts.push("draw 1, oldest tile under your stack"); }
+  let text="If you place here: "+(mv.patch?"a <b>patch</b> (never rallies) · ":"")+(parts.length?parts.join(" · "):"touches no open objective");
+  if(ev.some(e=>e.t==="rally")){ text+=` · <b>you +${d1}</b>, AI +${d2}`;
+    if(CFG.mil){ const g=[0,1,2,3].map(j=>t.mat[H][j]-st.mat[H][j]).map((n,j)=>n>0?`+${n} ${meterName(j)}`:"").filter(Boolean); if(g.length) text+=` · ${g.join(", ")}`; } }
+  if(CFG.mil){ const r=ready(t,H); if(r.length) text+=` → at turn end: <b>${[2,1,0,3].filter(j=>r.includes(j)).map(j=>ORD[j]).join(", ")}</b>`; }
+  if(ev.some(e=>e.t==="reward")) text+=` · <b>${ev.filter(e=>e.t==="reward").map(e=>["","","","Spotter Drone","","Supply Drop","","Fire Mission"][e.tier]).join(", ")}</b>`;
+  if(t.winner===H) text+=" · <b>Breakthrough!</b>";
+  ui.pv={at:i,mv,bad,labels,text:bad?`<span style="color:#ffe7a8">${bad}</span>`:text};
+  return ui.pv;
+}
+function boardIndexAt(x,y){ const r=board.getBoundingClientRect(); const cell=r.width/st.g.C; const c=Math.floor((x-r.left)/cell), rr=Math.floor((y-r.top)/cell); return inb(st,rr,c)?rr*st.g.C+c:null; }
+let lastPT="mouse";
+board.addEventListener("pointerdown",e=>{ lastPT=e.pointerType||"mouse"; ui.touch=lastPT!=="mouse"; },{passive:true});
+board.addEventListener("pointermove",e=>{
+  if(e.pointerType!=="mouse"||ui.busy||ui.sel<0||ui.turnP!==H||ui.phase!=="place") return;
+  const i=boardIndexAt(e.clientX,e.clientY); if(i===null||(ui.pv&&ui.pv.at===i)) return;
+  preview(i); renderBoard(); paintPv();
+});
+board.addEventListener("pointerleave",e=>{ if(e.pointerType==="mouse"&&ui.pv&&ui.phase==="place"){ ui.pv=null; renderBoard(); paintPv(); } });
+board.addEventListener("click",e=>{
+  if(ui.busy) return;
+  if(ui.phase==="strike"){ const t=e.target.closest("[data-t]"); const id=t?+t.dataset.t:0;
+    if(id&&ui.targets.includes(id)) humanStrike(id);
+    else hint("Tap a tile outlined in red: an enemy tile touching an objective that hasn't rallied."); return; }
+  if(gameOver(st)||ui.lessonDone) return;
+  const i=boardIndexAt(e.clientX,e.clientY); if(i===null) return;
+  tapSquare(i,lastPT==="mouse"||e.detail===0&&!ui.touch);
+});
+function tapSquare(i,immediate){
+  if(ui.turnP!==H||ui.phase!=="place") return;
+  if(ui.sel<0&&ui.mode==="lesson"&&st.hands[H].length===1){ ui.sel=0; renderHand(); }
+  if(ui.sel<0){ if(st.hands[H].length) hint(st.own[i]?"Right-click or long-press a tile to see what it is. To place, pick a tile from your hand first.":"Pick a tile from your hand first."); return; }
+  const cid=st.hands[H][ui.sel];
+  if(ui.mode==="lesson"&&L().card&&cid!==L().card){ hint(L().want(st,cid,{cells:[i],o:ui.orient},ui.goal)); return; }
+  const prev=ui.pv&&ui.pv.at===i&&ui.pv.mv;
+  const p=preview(i);
+  if(!p){ const [r,c]=RC(st,i); const flip=kOf(cid)==="b"&&(ui.orient==="h"?[0,1,2,3].some(k=>slot(st,r-k,c,4,1)):[0,1,2,3].some(k=>slot(st,r,c-k,1,4)));
+    const lh=ui.mode==="lesson"&&!st.own[i]?L().want(st,cid,{cells:[i],o:ui.orient},ui.goal):null;
+    hint(st.own[i]?"That square is taken. Tiles go on empty squares.":lh&&kOf(cid)!=="b"?lh:flip?`It doesn't fit ${ui.orient==="h"?"flat":"upright"} here: tap Rotate.`:lh?lh:"It doesn't fit there."); renderBoard(); paintPv(); return; }
+  if(p.bad){ hint(p.bad); ui.pv=null; renderBoard(); paintPv(); return; }
+  if(immediate||prev){ commit(p.mv); return; }
+  task({say:"Preview shown. Tap the same square again to place it, or tap another square.",kind:"hint"});
+  renderBoard(); paintPv();
+}
+
+/* =================== Turn flow =================== */
+function act(fn){ ui.view=cloneS(st); st.ev=[]; const r=fn(); const ev=st.ev; st.ev=null; return [ev,r]; }
+function commit(mv){
+  const cid=st.hands[H][ui.sel]; if(!cid) return;
+  const hi=ui.sel; ui.sel=-1; ui.pv=null; ui.freed=[]; ui.lastAi=[]; if(!ui.extraUsed) ui.detail=[];
+  const [ev,res]=act(()=>doPlace(st,H,hi,emove(cid,mv)));
+  ui.turnEv=ui.turnEv.concat(ev); ui.busy=true; tally(ev);
+  task({say:"",kind:""}); renderHand();
+  animate(ev,()=>{ ui.lines.push(narrate(ev,res)); const line=ui.lines.join(" "); task({say:line,kind:"ok"});
+    if(res.drawn[H].length) ui.newCards=st.hands[H].map((_,i)=>i).slice(-res.drawn[H].length);
+    if(res.extra&&!ui.extraUsed&&st.hands[H].length&&st.winner===null){ ui.extraUsed=true;
+      if(hasMove(st,H)){ ui.busy=false; task({text:"Supply Drop: place one more tile now.",say:line+" <b>Supply Drop:</b> place one more tile now.",kind:"ok"}); renderAll(); return; } }
+    endTurnHuman(); });
+}
+function endTurnHuman(){
+  ui.busy=true;
+  const [ev,stop]=act(()=>beginOrders(st,H)); ui.turnEv=ui.turnEv.concat(ev); tally(ev);
+  animate(ev,()=>{ const pre=narrate(ev); if(pre) ui.lines.push(pre);
+    if(stop){ const spotted=st.spot[H], tg=strikeTargets(st,H,spotted);
+      if(!tg.length){ finishHuman(0); return; }
+      ui.phase="strike"; ui.targets=tg; ui.busy=false;
+      const dmg=CFG.strike+(spotted?CFG.spot_dmg:0), ar=st.armor[A()];
+      const acts=CFG.front?[{label:`Push the Front ${dmg}${!spotted&&ar?` (Armor soaks ${Math.min(ar,dmg)})`:""}`,fn:()=>humanStrike(0),ins:"push",id:"pushBtn"}]:[];
+      task({text:`Strike! Tap an enemy tile outlined in red to remove it${CFG.front?", or push the Front":""}.`,say:ui.lines.join(" ")+` Your ${meterName(0)} is full, so your turn ends with a Strike${spotted?" (spotted: it ignores protection"+(CFG.front?" and Armor":"")+")":""}.`,kind:"ok",acts});
+      renderAll(); return; }
+    finishHuman(undefined); });
+}
+function humanStrike(id){ if(ui.phase!=="strike") return;
+  const l=ui.mode==="lesson"?L():null;
+  if(l&&l.strikeWant&&id&&st.pcs.get(id).cid!==l.strikeWant){ hint(`This lesson wants the ${cname(l.strikeWant)} beside the Bunker: Spot lets you hit it.`); return; }
+  ui.phase="place"; ui.targets=[]; task({acts:[]}); finishHuman(id); }
+function finishHuman(force){
+  ui.busy=true;
+  const [ev,drawn]=act(()=>finishOrders(st,H,force)); ui.turnEv=ui.turnEv.concat(ev); tally(ev);
+  animate(ev,()=>{ const o=narrate(ev); if(o) ui.lines.push(o); task({say:ui.lines.join(" "),kind:"ok"});
+    if(drawn[H].length) ui.newCards=st.hands[H].map((_,i)=>i).slice(-drawn[H].length);
+    afterTurn(H); });
+}
+function afterTurn(p){
+  st.passes=0;
+  const got=refill(st,p); if(p===H&&got.length) ui.newCards=(ui.newCards||[]).concat(st.hands[H].map((_,i)=>i).slice(-got.length));
+  syncShown(); ui.busy=false; ui.view=null;
+  const over=gameOver(st);
+  if(!over) ui.turnP=1-p;
+  renderAll();
+  if(ui.mode==="lesson"){ const l=L(); if(p===H&&l.ai&&!over){ ui.busy=true; renderAll(); later(700,aiTurn); return; } lessonCheck(); return; }
+  if(over){ endMatch(); return; }
+  if(ui.turnP===A()){ ui.busy=true; task({title:"AI to move",text:"The AI is thinking…"}); paintScores(); later(750,aiTurn); }
+  else humanTurn();
+}
+function lessonCheck(){
+  const l=L(); const info={ev:ui.turnEv}; const ok=l.done(st,info);
+  if(!ok){ task({say:"Not quite. Let's set it up again.",kind:"hint",acts:[{label:"Try again",fn:()=>buildLesson(ui.layer,ui.li),main:true,ins:"retry"}]}); return; }
+  prog.lessons[ui.layer]=prog.lessons[ui.layer]||{}; const before=unlockedMax(); prog.lessons[ui.layer][ui.li]=true; save(); ui.lessonDone=true; ui.goal=[];
+  const last=ui.li===LESSONS[ui.layer].length-1; const un=unlockedMax()>before;
+  const acts=[last?{label:`Play ${LAYERS[ui.layer].n} ▶`,fn:()=>startPlay(ui.layer),main:true,ins:"match",id:"nextBtn"}:{label:"Next lesson ▶",fn:()=>buildLesson(ui.layer,ui.li+1),main:true,ins:"next",id:"nextBtn"},
+    {label:"Again",fn:()=>buildLesson(ui.layer,ui.li),ins:"retry"}];
+  if(last&&un) acts.splice(1,0,{label:`Learn ${LAYERS[ui.layer+1].n} ▶`,fn:()=>buildLesson(ui.layer+1,0),ins:"nextlayer"});
+  task({text:"Done! "+(last?`That's the ${LAYERS[ui.layer].n} layer.${un?` ${LAYERS[ui.layer+1].n} is unlocked too.`:" Play a match against the AI."}`:"On to the next step."),say:l.win(st,info),kind:"ok",acts});
+  renderAll();
+  setTimeout(()=>{ const b=$("nextBtn"); if(b) b.focus({preventScroll:true}); },50);
+}
+function humanTurn(){
+  ui.phase="place"; ui.busy=false; ui.extraUsed=false; ui.turnEv=[]; ui.turnP=H; ui.lines=[];
+  if(!hasMove(st,H)){ task({title:"No room",text:"None of your tiles fit anywhere.",acts:[{label:"Pass (swap a tile)",fn:()=>passTurn(H),main:true,ins:"pass",id:"passBtn"}]}); renderAll(); return; }
+  task({title:"Your move",text:"Pick a tile from your hand, then a square on the board.",acts:[]}); renderAll();
+}
+function passTurn(p){
+  task({acts:[]}); ui.view=null;
+  doPass(st,p); refill(st,p); syncShown();
+  task({say:p===H?"You passed: your oldest tile went under your stack and you drew one.":"The AI couldn't place, so it swapped a tile and passed.",kind:p===H?"ok":"ai"});
+  if(gameOver(st)){ renderAll(); endMatch(); return; }
+  ui.turnP=1-p; renderAll();
+  if(ui.turnP===A()){ ui.busy=true; later(750,aiTurn); } else humanTurn();
+}
+function aiTurn(){
+  if(gameOver(st)) return; ui.turnP=A(); ui.turnEv=[]; ui.detail=[];
+  const pol=ui.mode==="lesson"?"greedy":ui.policy; CURW=WSETS[pol]||FLAGS;
+  if(!hasMove(st,A())){ ui.busy=false; passTurn(A()); return; }
+  let extraUsed=false, lines=[];
+  const step=()=>{ CURW=WSETS[pol]||FLAGS; const pk=aiPick(st,A(),pol);
+    if(!pk){ endAi(lines); return; }
+    const [ev,res]=act(()=>doPlace(st,A(),pk.hi,pk.m)); ui.turnEv=ui.turnEv.concat(ev); tally(ev);
+    ui.lastAi=ui.lastAi.concat([ev[0].id]); ui.freed=[];
+    animate(ev,()=>{ lines.push(narrate(ev,res)); task({say:lines.join(" "),kind:"ai"});
+      if(res.extra&&!extraUsed&&st.hands[A()].length&&st.winner===null){ extraUsed=true; later(500,step); return; }
+      endAi(lines); }); };
+  ui.lastAi=[]; step();
+}
+function endAi(lines){
+  CURW=WSETS[ui.mode==="lesson"?"greedy":ui.policy]||FLAGS;
+  const [ev]=act(()=>doOrders(st,A())); ui.turnEv=ui.turnEv.concat(ev); tally(ev);
+  animate(ev,()=>{ const o=narrate(ev); if(o) lines.push(o); ui.aiLine=lines.join(" "); task({say:ui.aiLine,kind:"ai"}); afterTurn(A()); });
+}
+function endMatch(){
+  ui.busy=false; ui.view=null; ui.ended=true;
+  let endLines=[];
+  if(st.winner===null){ const sc=endScore(st); for(const x of sc){ if(x.armor){ ui.bd[x.p].armor+=x.armor; } else ui.bd[x.p].end+=x.pts; }
+    const ue=[0,1].map(p=>sc.filter(x=>x.p===p&&!x.armor).reduce((n,x)=>n+x.pts,0)), ua=[0,1].map(p=>sc.filter(x=>x.p===p&&x.armor).reduce((n,x)=>n+x.armor,0));
+    if(CFG.endscore&&(ue[0]||ue[1])) endLines.push(`Objectives that never rallied: you +${ue[H]}, AI +${ue[A()]}.`);
+    if(ua[0]||ua[1]) endLines.push(`Armor: you +${ua[H]}, AI +${ua[A()]}.`); }
+  syncShown(); renderAll();
+  const o=outcome(st), a=st.score[H], b=st.score[A()];
+  let head, why="";
+  if(st.winner!==null){ head=st.winner===H?"Breakthrough! You win":"Breakthrough: the AI wins"; why=` The Front reached ${st.winner===H?"the AI's":"your"} end.`; }
+  else if(o===-1) head="Draw"; else { head=o===H?"You win!":"The AI wins"; if(a===b) why=" Tied on points, so more rallies decides."; }
+  const before=unlockedMax(); prog.games++; prog.played[ui.layer]=(prog.played[ui.layer]||0)+1; if(o===H) prog.wins[ui.layer]=(prog.wins[ui.layer]||0)+1; save();
+  const after=unlockedMax();
+  $("endT").textContent=head; $("endT").style.color=o===H?"var(--p1-ink)":o===-1?"var(--gold)":"var(--p2-ink)";
+  $("endP").innerHTML=`${st.winner!==null?"":gameOverWhy()} You ${a} – AI ${b} (${H===1?"you":"the AI"} started with 1). Rallies closed: you ${st.rallies[H]}, AI ${st.rallies[A()]}.${why}${endLines.length?"<br>"+endLines.join(" "):""}`;
+  const U=$("endU"); U.innerHTML="";
+  if(after>before) U.innerHTML=`<div class="unlock"><b>New layer unlocked: ${LAYERS[after].n}.</b> ${LAYERS[after].idea}</div>`;
+  else if(ui.layer<5&&after<=ui.layer) U.innerHTML=`<div class="unlock">${gateText(ui.layer+1)}</div>`;
+  const R=$("endRow"); R.innerHTML="";
+  const mk=(label,fn,main,ins,id)=>{ const el=document.createElement("button"); el.className="btn"+(main?" main":""); el.textContent=label; el.onclick=fn; el.setAttribute("data-ins","btn:"+ins); if(id) el.id=id; R.appendChild(el); };
+  if(after>before) mk(`Learn ${LAYERS[after].n} ▶`,()=>buildLesson(after,0),true,"nextlayer","endNext");
+  mk("Play again",()=>startPlay(ui.layer),after<=before,"new","endNew"); mk("Layers",openLayers,false,"layers"); mk("Look at the board",()=>{ $("endM").hidden=true; },false,"look");
+  task({title:"Match over",text:`${head} ${a} – ${b}.`,acts:[{label:"Play again",fn:()=>startPlay(ui.layer),main:true,ins:"new"}]});
+  $("endM").hidden=false; setTimeout(()=>{ const b=$("endNext")||$("endNew"); if(b) b.focus(); },30);
+}
+const gameOverWhy=()=>st.own.every(x=>x)?"The board is full.":"No one can place.";
+
+/* =================== Score breakdown from events =================== */
+function tally(ev){ if(!ui.bd) return; for(const e of ev){
+  if(e.t==="rally"){ ui.bd[e.p].closer+=e.closer; ui.bd[e.p].charges+=e.charges; for(const it of e.items) ui.bd[it.p].contact+=it.pts; for(const b of e.bonus) ui.bd[b.p][b.k==="Command"?"command":"bonus"]+=b.n; }
+  if(e.t==="order"&&e.i===3) ui.bd[e.p].orders+=1;
+  if(e.t==="strike"&&e.point) ui.bd[e.p].orders+=1; } }
+
+/* =================== Event playback =================== */
+function popAt(r,c,txt,p,cls){ const el=document.createElement("div"); el.className="pop "+(p===H?"yc":p===A()?"ac":"")+" "+(cls||""); el.textContent=txt;
+  const life=Math.max(250,1500*SP); el.style.animationDuration=life+"ms";
+  el.style.left=`calc(var(--cell)*${c+.5})`; el.style.top=`calc(var(--cell)*${r+.5})`; fx.appendChild(el); setTimeout(()=>el.remove(),life); }
+function bigMsg(txt,p){ const el=document.createElement("div"); el.className="banner-msg"; el.textContent=txt; if(p!==undefined) el.style.borderColor=p===H?"var(--p1)":"var(--p2)"; fx.appendChild(el); setTimeout(()=>el.remove(),Math.max(200,900*SP)); }
+function flashTile(id){ board.querySelectorAll(`[data-t="${id}"]`).forEach(e=>{ e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); }); }
+function centreOf(s,cells){ const b=box(s,cells); return [b.r0+b.h/2-.5,b.c0+b.w/2-.5]; }
+function bumpEl(id){ const el=$(id); if(el){ el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); } }
+function animate(ev,done){
+  const steps=[[200,null]]; const v=()=>ui.view;
+  const sm=CFG.mil;
+  for(const e of ev){
+    if(e.t==="place") steps.push([300,()=>{ const s=v(); const pc={id:e.id,cid:e.cid,kind:e.kind,suit:CH[e.cid].suit,owner:e.p,cells:e.cells,rallied:false,charges:0}; if(e.kind==="hub") pc.info=hubInfo(s.g,e.cells);
+      s.pcs.set(e.id,pc); for(const x of e.cells) s.own[x]=e.id; s.nid=Math.max(s.nid,e.id+1); ui.enterId=e.id; renderBoard(); }]);
+    else if(e.t==="charge") steps.push([420,()=>{ const s=v(); for(const h of e.hubs){ const hb=s.pcs.get(h); hb.charges++; const [r,c]=centreOf(s,hb.cells); popAt(r,c,"+1 Charge",e.p,"cl"); } renderBoard(); }]);
+    else if(e.t==="rally"){
+      steps.push([380,()=>{ renderBoard(); const el=board.querySelector(`[data-t="${e.hub}"]`); if(el) el.classList.add("rallying"); task({say:`<b>${tname(v().pcs.get(e.hub))} rallies!</b> Counting the touching squares…`,kind:"ok"}); }]);
+      for(const it of e.items) steps.push([260,()=>{ const s=v(), hb=s.pcs.get(e.hub); for(const y of hb.info.border) if(s.own[y]===it.tile){ const [r,c]=RC(s,y); popAt(r,c,"+"+(it.m?2:1),it.p,it.m?"m":""); } flashTile(it.tile); ui.shown.score[it.p]+=it.pts; paintScores(); }]);
+      steps.push([380,()=>{ const s=v(), hb=s.pcs.get(e.hub), [r,c]=centreOf(s,hb.cells); popAt(r,c,"+1 closer"+(e.charges?` +${e.charges} Charge`:""),e.p,"cl"); ui.shown.score[e.p]+=e.closer+e.charges; paintScores(); }]);
+      for(const b of e.bonus) steps.push([420,()=>{ const s=v(); const t=s.pcs.get(b.tile); if(t){ const [r,c]=centreOf(s,t.cells); popAt(r-.3,c,`${b.k} +${b.n}`,b.p,"cl"); } ui.shown.score[b.p]+=b.n; paintScores(); }]);
+      if(sm&&e.mat.length) steps.push([300,()=>{ const s=v(); for(const m of e.mat){ const t=s.pcs.get(m.tile); if(t){ const [r,c]=RC(s,t.cells[0]); popAt(r+.1,c+.2,`+${m.n} ${meterName(m.i)}`,m.p,"am"); } ui.shown.mat[m.p][m.i]+=m.n; } paintScores(); }]);
+      steps.push([160,()=>{ const s=v(); const hb=s.pcs.get(e.hub); hb.rallied=true; hb.charges=0; if(CFG.streaks){ ui.shown.streak[e.p]+=1; } renderBoard(); paintScores(); }]); }
+    else if(e.t==="reward") steps.push([950,()=>{ const nm={3:"Spotter Drone",5:"Supply Drop",7:"Fire Mission"}[e.tier]; bigMsg(`Streak ${e.tier} · ${nm}`,e.p); if(e.tier===3) ui.shown.mat[e.p][1]+=1; paintScores(); bumpEl(e.p===H?"skY":"skA"); }]);
+    else if(e.t==="order") steps.push([750,()=>{ bigMsg(ORD[e.i],e.p); ui.shown.mat[e.p][e.i]-=CFG.thresh; if(CFG.streaks) ui.shown.streak[e.p]+=1;
+      if(e.i===2) ui.shown.armor[e.p]=e.armor[1];
+      if(e.i===1){ ui.shown.spot[e.p]=true; const s=v(); for(const h of e.hubs){ const hb=s.pcs.get(h); hb.charges++; const [r,c]=centreOf(s,hb.cells); popAt(r,c,"+1 Charge",e.p,"cl"); } renderBoard(); }
+      if(e.i===3) ui.shown.score[e.p]+=1;
+      paintScores(); }]);
+    else if(e.t==="strike"){ steps.push([e.tile?700:450,()=>{ ui.shown.spot[e.p]=false;
+        if(e.tile){ board.querySelectorAll(`[data-t="${e.tile.id}"]`).forEach(x=>x.classList.add("boom")); later(620,()=>{ const s=v(); s.pcs.delete(e.tile.id); for(const x of e.tile.cells) s.own[x]=0; ui.freed=e.tile.cells.slice(); renderBoard(); }); }
+        else if(e.point){ const s=v(); popAt(s.g.R/2-.5,s.g.C/2-.5,"+1",e.p); ui.shown.score[e.p]+=1; }
+        paintScores(); }]); }
+    else if(e.t==="fireMission"){ steps.push([700,()=>{ if(e.tile){ board.querySelectorAll(`[data-t="${e.tile.id}"]`).forEach(x=>x.classList.add("boom")); later(620,()=>{ const s=v(); s.pcs.delete(e.tile.id); for(const x of e.tile.cells) s.own[x]=0; ui.freed=e.tile.cells.slice(); renderBoard(); }); } }]); }
+    else if(e.t==="front") steps.push([650,()=>{ ui.shown.front=e.to; ui.shown.armor[1-e.p]-=e.soak; paintScores(); if(e.breakthrough) bigMsg("Breakthrough!",e.p); }]);
+    else if(e.t==="streakReset") steps.push([200,()=>{ ui.shown.streak[e.p]=0; paintScores(); bumpEl(e.p===H?"skY":"skA"); }]);
+  }
+  let i=0; const next=()=>{ if(i>=steps.length){ ui.view=null; syncShown(); renderBoard(); paintScores(); done&&done(); return; } const [d,fn]=steps[i++]; if(fn) fn(); later(d,next); };
+  next();
+}
+/* =================== Plain lines: what just happened =================== */
+const fdesc=f=>{ const v=(H===0?1:-1)*f; return v===0?"the centre":v>0?`${v} toward the AI`:`${-v} toward you`; };
+function rallyLine(e){
+  if(!e) return "";
+  const part=p=>{ const arr=[]; let tot=0;
+    for(const it of e.items.filter(x=>x.p===p)){ const nm=tname({cid:it.cid,kind:"bar"}); arr.push(it.m?`${nm} ${it.n}×2 = ${it.pts}`:`${nm} ${it.pts}`); tot+=it.pts; }
+    if(e.p===p){ arr.push(`closer +${e.closer}`); tot+=e.closer; if(e.charges){ arr.push(`Charges +${e.charges}`); tot+=e.charges; } }
+    for(const b of e.bonus.filter(x=>x.p===p)){ arr.push(`${b.k} +${b.n}`); tot+=b.n; }
+    const who=p===H?"You":"AI"; return tot?`<b>${who} +${tot}</b> (${arr.join(", ")})`:`${who} +0`; };
+  let s=`${tname({cid:e.cid,kind:"hub"})} rallied: ${part(H)} · ${part(A())}.`;
+  if(CFG.mil&&e.mat.length){ const by=p=>{ const m=[0,0,0,0]; for(const x of e.mat) if(x.p===p) m[x.i]+=x.n; return m.map((n,i)=>n?`+${n} ${meterName(i)}`:"").filter(Boolean).join(", ")||"nothing"; };
+    s+=` Materiel: you ${by(H)}; AI ${by(A())}.`; }
+  return s; }
+function rallyShort(e){
+  const tot=p=>e.items.filter(x=>x.p===p).reduce((n,x)=>n+x.pts,0)+(e.p===p?e.closer+e.charges:0)+e.bonus.filter(b=>b.p===p).reduce((n,b)=>n+b.n,0);
+  const bx=p=>{ const a=e.bonus.filter(b=>b.p===p).map(b=>`${b.k} +${b.n}`); if(e.p===p&&e.charges) a.push(`Charges +${e.charges}`); return a.length?` (${a.join(", ")})`:""; };
+  let s=`${tname({cid:e.cid,kind:"hub"})} rallied: <b>you +${tot(H)}</b>${bx(H)}, AI +${tot(A())}${bx(A())}.`;
+  if(CFG.mil&&e.mat.length){ const by=p=>{ const m=[0,0,0,0]; for(const x of e.mat) if(x.p===p) m[x.i]+=x.n; return m.map((n,i)=>n?`+${n} ${meterName(i)}`:"").filter(Boolean).join(", "); };
+    const a=by(H), b=by(A()); s+=` ${a?`You ${a}`:""}${a&&b?"; ":""}${b?`AI ${b}`:""}.`; }
+  return s; }
+function narrate(ev,res){
+  const out=[]; const s=st;
+  for(const e of ev){ switch(e.t){
+    case "place": out.push(`${PN(e.p)} placed ${e.p===H?"your":"its"} ${e.kind==="patch"?(CFG.text?cname(e.cid)+" as a patch":SU[CH[e.cid].suit].col.toLowerCase()+" "+KN[kOf(e.cid)]+" as a patch"):tname({cid:e.cid,kind:e.kind})}.`); break;
+    case "charge": out.push(`+1 Charge on ${e.hubs.map(h=>tname(s.pcs.get(h))).join(" and ")}.`); break;
+    case "scout": out.push(`${PN(e.p)} drew 1 and put ${e.p===H?"your":"its"} oldest tile under the stack.`); break;
+    case "rally": out.push(rallyShort(e)); ui.detail.push(rallyLine(e)); break;
+    case "fill": { const h=s.pcs.get(e.hub); if(ev[0]&&e.hub===ev[0].id) out.push(`It starts at ${e.to}/8${e.to?" (edges and neighbours count)":""}.`); else if(e.to!==e.from) out.push(`${tname(h)} ${e.from}/8 → ${e.to}/8.`); break; }
+    case "order":
+      if(e.i===2) out.push(`<b>Fortify:</b> ${pn(e.p)} +2 Armor (now ${e.armor[1]}).`);
+      else if(e.i===1) out.push(`<b>Spot:</b> ${e.hubs.length?`+1 Charge on ${e.hubs.map(h=>tname(s.pcs.get(h))).join(" and ")}, and `:""}${poss(e.p)} next Strike ignores protection${CFG.front?" and Armor":""}.`);
+      else if(e.i===3) out.push(`<b>Resupply:</b> ${pn(e.p)} ${e.p===H?"draw":"draws"} 1 and ${e.p===H?"score":"scores"} 1.`);
+      break;
+    case "strike":
+      if(e.tile) out.push(`<b>Strike:</b> ${pn(e.p)} removed ${poss(1-e.p)} ${tname(e.tile)}${e.spotted?" (spotted)":""}. Its squares are open again.`);
+      else if(e.point) out.push(`<b>Strike:</b> no enemy tile touches an open objective, so ${pn(e.p)} ${e.p===H?"score":"scores"} 1.`);
+      else out.push(`<b>Strike:</b> ${pn(e.p)} ${e.p===H?"push":"pushes"} the Front ${e.dmg}${e.spotted?" (spotted, through Armor)":""}.`);
+      break;
+    case "front": out.push(e.moved?`${e.soak?`Armor soaks ${e.soak}. `:""}Front: ${fdesc(e.from)} → <b>${fdesc(e.to)}</b>.${e.breakthrough?` <b>Breakthrough!</b>`:""}`:`Armor soaks all ${e.soak}: the Front stays at ${fdesc(e.to)}.`); break;
+    case "reward": out.push(e.tier===3?`<b>Streak 3, Spotter Drone:</b> ${pn(e.p)} +1 Intel.`:e.tier===5?`<b>Streak 5, Supply Drop:</b> ${pn(e.p)} ${e.p===H?"draw":"draws"} 1 and place${e.p===H?"":"s"} one more tile.`:`<b>Streak 7, Fire Mission:</b> the Front moves 2 through Armor.`); break;
+    case "fireMission": out.push(e.tile?`${cap(poss(1-e.p))} ${tname(e.tile)} is removed.`:"No enemy tile touches an open objective, so nothing is removed."); break;
+    case "streakReset": out.push(`${poss(e.p)==="your"?"Your":"The AI's"} streak drops from ${e.was} to 0.`); break; } }
+  if(ev.some(e=>e.t==="place")&&!ev.some(e=>e.t==="rally"||e.t==="fill")) out.push("It touches no open objective yet.");
+  if(res&&res.under&&!ev.some(e=>e.t==="scout")) out.push("");
+  return out.filter(Boolean).join(" ");
+}
+
+/* =================== Inspector (right click / long press) =================== */
+const insp=$("insp"); let insAt=0;
+function pOfWho(w){ return w==="Y"?H:A(); }
+function describe(key){
+  const [kind,a,b2]=key.split(":"); const o={title:"",sub:"",lines:[],hl:[]}; const s=V();
+  if(kind==="sq"){ const i=+a, [r,c]=RC(s,i); o.title="Empty square"; o.sub=`row ${r+1}, column ${c+1}`;
+    const hs=[...s.pcs.values()].filter(h=>h.kind==="hub"&&!h.rallied&&h.info.border.includes(i));
+    for(const h of hs){ o.lines.push(`Part of the border of the <b>${tname(h)}</b> (${hubFilled(s,h)}/8). Filling it brings that objective one step closer to rallying.`); o.hl.push(h.id); }
+    if(ui.goal.includes(i)) o.lines.push("It glows because this lesson wants a tile here.");
+    if(ui.freed.includes(i)) o.lines.push("A Strike just cleared it: anyone can fill it again.");
+    if(!hs.length) o.lines.push("Not next to any open objective, so a tile here scores nothing yet.");
+    o.lines.push("Pick a tile from your hand, then tap here to place it."); return o; }
+  if(kind==="tile"){ const t=s.pcs.get(+a); if(!t) return null; const who=t.owner===H?"yours":"the AI's";
+    if(t.kind==="patch"){ o.title=tname(t); o.sub=`placed by ${pn(t.owner)}`; o.lines=["A tile dropped into a closed-in gap of 1–4 squares.","It fills those squares (which can close a neighbouring objective) but it never rallies and scores nothing."]; return o; }
+    if(t.kind==="hub"){ const f=hubFilled(s,t); o.title=tname(t); o.sub=`${clsLabel(t.cid)} objective · placed by ${pn(t.owner)} · ${t.rallied?"rallied":f+"/8 filled"}`;
+      if(CFG.text&&cardText(t.cid)) o.lines.push(cardText(t.cid));
+      if(t.rallied){ o.lines.push("Rallied: it has already paid out. Tiles touching only rallied objectives are safe from Strikes."); }
+      else { o.lines.push("It rallies the moment all 8 squares around it are filled. The board edge counts as filled.");
+        const sc=[0,0], cs=new Set(); for(const y of t.info.border) if(s.own[y]){ const q=s.pcs.get(s.own[y]); if(q.kind==="bar"&&!cs.has(q.id)){ cs.add(q.id); } }
+        for(const q of cs){ const tl=s.pcs.get(q); const n=tl.cells.filter(x=>t.info.bset.has(x)).length; sc[tl.owner]+=n*(matches(s,tl,t)?2:1); }
+        o.lines.push(`If it closed now, the tiles touching it would score <b>you +${sc[H]}</b>, <b>AI +${sc[A()]}</b>; whoever closes it gets +1${t.charges?` and +${t.charges} for its Charge${t.charges>1?"s":""}`:""}${CFG.command&&AB(t.cid).command?`, and ${pn(t.owner)} ${t.owner===H?"get":"gets"} Command +${AB(t.cid).command}`:""}.`);
+        o.lines.push(`${CFG.text?SU[t.suit].cls:SU[t.suit].col} tiles touching it score 2 a square; other colours 1.`);
+        const empt=t.info.border.filter(y=>!s.own[y]).length; o.lines.push(`${empt} border square${empt===1?"":"s"} still empty (dashed).`);
+        if(CFG.endscore) o.lines.push("If it never rallies, its touching squares score 1 each at the end (a Dug-In 2)."); o.hl=[...cs]; }
+      o.lines.push("Who placed it doesn't matter: whoever's tiles touch it score."); return o; }
+    const k=kOf(t.cid); o.title=tname(t); o.sub=`${clsLabel(t.cid)} ${KN[k]} · ${who} · ${SH[k]}`;
+    if(CFG.text&&cardText(t.cid)) o.lines.push(cardText(t.cid));
+    o.lines.push(k==="b"?"A banner. It scores when an objective it touches rallies: 1 a touching square, 2 if the colours match.":"An insignia: a 1×1 tile for plugging holes. It scores like a banner.");
+    const hs=hubsTouching(s,t).map(h=>s.pcs.get(h));
+    if(!hs.length) o.lines.push("It touches no objective, so it scores nothing for now.");
+    for(const h of hs){ const n=t.cells.filter(x=>h.info.bset.has(x)).length, m=matches(s,t,h), pts=n*(m?2:1);
+      const ab=AB(t.cid); const g=CFG.mil?(CFG.text?((ab.gem!==undefined?ab.gem:1)+(ab.mat||0)):1):0;
+      o.lines.push(h.rallied?`Touched the ${tname(h)} when it rallied (already scored).`:`Touches the open <b>${tname(h)}</b> (${hubFilled(s,h)}/8) with ${n} square${n>1?"s":""}: <b>+${pts}</b> for ${pn(t.owner)} when it rallies${m?" (it matches)":""}${g?`, plus ${g} ${matOf(t.suit)}`:""}.`); o.hl.push(h.id); }
+    if(CFG.mil&&hs.some(h=>!h.rallied)){ if(CFG.text&&inCover(s,t)) o.lines.push(`<b>Protected:</b> it touches ${poss(t.owner)} Bunker, so it can't be Struck${CFG.classes?" (a spotted Strike can)":""}.`);
+      else o.lines.push(`While it touches an open objective, ${t.owner===H?"the AI":"you"} can remove it with a Strike.`); }
+    if(ui.targets.includes(t.id)) o.lines.push(`<b>Strike target:</b> tap it to remove it. It would have scored ${barThreat(s,t)} for ${pn(t.owner)} on open objectives.`);
+    return o; }
+  if(kind==="card"){ const cid=st.hands[H][+a]; if(!cid) return null; const k=kOf(cid); o.title=CFG.text?cname(cid):`${SU[CH[cid].suit].col} ${cap(KN[k])}`; o.sub=`in your hand · ${clsLabel(cid)} · ${SH[k]}`;
+    if(CFG.text&&cardText(cid)) o.lines.push(cardText(cid));
+    o.lines.push(k==="b"?"Fills 4 squares in a row. Rotate turns it flat or upright.":k==="o"?"Rallies when its 8 border squares are filled. It can also fill a closed-in gap of 1–4 squares as a patch, but then it never rallies.":"Fills 1 square: perfect for closed-in holes.");
+    if(k!=="o") o.lines.push(`Scores 2 a touching square on a ${CFG.text?SU[CH[cid].suit].cls:SU[CH[cid].suit].col} objective${CFG.text&&CH[cid].ab.ally?` or a ${SU[CH[cid].ab.ally].cls} one`:""}, 1 on others${CFG.text&&CH[cid].ab.nomatch?" (this one never matches: always 1)":""}.`);
+    if(CFG.mil&&k!=="o") o.lines.push(`Gives ${pn(H)} ${CFG.text?((CH[cid].ab.gem||1)+(CH[cid].ab.mat||0)):1} ${matOf(CH[cid].suit)} each time an objective it touches rallies.`);
+    o.lines.push(`Fits in ${movesFor(st,cid).length} places right now. Tap it, then tap the board.`); return o; }
+  if(kind==="meter"){ const p=pOfWho(a), i=+b2, n=ui.shown.mat[p][i], th=CFG.thresh; o.title=`${p===H?"Your":"AI"} ${meterName(i)}`; o.sub=`${n} of ${th}${n>=th?" · fires at the end of the turn":""}`;
+    o.lines.push(CFG.classes?`+1 for each of ${poss(p)} ${SU[MI[i]].cls} ${SU[MI[i]].g} tiles touching an objective when it rallies (an insignia 2, a "Rally: +1" card 2).`:`+1 for each of ${poss(p)} tiles touching an objective when it rallies${CFG.text?" (an insignia 2, a \"Rally: +1\" card 2)":""}.`);
+    o.lines.push(`At ${th}, at the end of ${poss(p)} turn, it fires by itself and uses ${th}: <b>${orderText(i)}</b>`);
+    if(CFG.classes) o.lines.push("Orders fire in this order: Fortify, Spot, Strike, Resupply.");
+    if(i===0&&n>=th-1){ const [tg,v]=bestTarget(s,p,s.spot[p]); if(tg){ o.lines.push(`The most valuable target now: <b>${tname(s.pcs.get(tg))}</b> (worth ${v} on open objectives).`); o.hl.push(tg); } }
+    return o; }
+  if(kind==="armor"){ const p=pOfWho(a); o.title=`${p===H?"Your":"AI"} Armor`; o.sub=`${ui.shown.armor[p]} of 4`; o.lines=["Fortify gives +2 (up to 4).","Each Armor scores 1 point at the end of the game."]; if(CFG.front) o.lines.push("Each Armor soaks 1 step of an enemy push on the Front, and is used up. A spotted Strike and a Fire Mission ignore it."); return o; }
+  if(kind==="streak"){ const p=pOfWho(a); o.title=`${p===H?"Your":"AI"} streak`; o.sub=`${ui.shown.streak[p]}`;
+    o.lines=["+1 for each rally you close and each order you fire. An enemy Strike that lands on you (removes your tile or moves the Front) resets it to 0.","<b>3 · Spotter Drone:</b> +1 Intel.","<b>5 · Supply Drop:</b> draw 1 and place one more tile now.","<b>7 · Fire Mission:</b> push the Front 2 ignoring Armor, and remove the enemy's most valuable tile touching an open objective, protected or not."]; return o; }
+  if(kind==="spot"){ const p=pOfWho(a); o.title="Spotted"; o.lines=[`${p===H?"Your":"The AI's"} next Strike ignores protection${CFG.front?", pushes 3 and ignores Armor":""}.`]; return o; }
+  if(kind==="front"){ o.title="The Front"; const v=(H===0?1:-1)*ui.shown.front; o.sub=v===0?"at the centre":v>0?`${v} of ${CFG.fmax} toward the AI`:`${-v} of ${CFG.fmax} toward you`;
+    o.lines=[`A tug-of-war track, ${CFG.fmax} steps each way from the centre.`,"A Strike may push it 2 toward the enemy instead of removing a tile; with no tile to hit, it pushes.","Enemy Armor soaks pushes 1 for 1. A spotted Strike pushes 3 and ignores Armor.","<b>Push it to the enemy's end and you win at once</b> (a Breakthrough). Otherwise it scores nothing."]; return o; }
+  if(kind==="stack"){ o.title="Your stack"; o.sub=`${st.decks[H].length} tiles left`; o.lines=["Face-down tiles you haven't drawn yet.","At the end of each of your turns you draw back up to 3 tiles in hand."]; if(ui.mode==="match"&&ui.layer>=2) o.lines.push(`Stack: ${ui.stacks[0]} ${STK[ui.stacks[0]].n}.`); return o; }
+  if(kind==="score"){ const p=pOfWho(a), b=ui.bd?ui.bd[p]:null; o.title=p===H?"Your points":"AI points"; o.sub=`${st.score[p]} points`;
+    if(b){ o.lines.push(`Touching squares when objectives rallied: ${b.contact}`,`Closing rallies (+1 each): ${b.closer}`); if(b.charges) o.lines.push(`Charges cashed: ${b.charges}`); if(b.bonus) o.lines.push(`Breach and Flank: ${b.bonus}`); if(b.command) o.lines.push(`Command: ${b.command}`); if(b.orders) o.lines.push(`Strikes with no target and Resupply: ${b.orders}`); if(b.end) o.lines.push(`End scoring: ${b.end}`); if(b.armor) o.lines.push(`Armor at the end: ${b.armor}`); if(b.start) o.lines.push(`Starting point for going second: ${b.start}`); }
+    o.lines.push(CFG.front?"Most points when the board is full or no one can place wins, unless someone breaks through first.":"Most points when the board is full or no one can place wins."); return o; }
+  if(kind==="start"){ o.title="+1 start"; o.lines=["The second player starts with 1 point, because going first is a small edge."]; return o; }
+  if(kind==="aihand"){ o.title="AI's tiles"; o.sub=`hand ${st.hands[A()].length} · stack ${st.decks[A()].length}`;
+    o.lines=[ui.layer>=2?`Its stack: ${ui.stacks[1]} ${STK[ui.stacks[1]].n} (${stackSuits(ui.stacks[1]).map(x=>SU[x].cls+" "+SU[x].g).join(" and ")}). Its hand is hidden.`:`Its tiles are ${stackSuits(ui.stacks[1]).map(x=>SU[x].col).join(" and ")}. Its hand is hidden.`,
+      ui.policy==="greedy"?"Easy: it takes the move worth the most points right now.":"Normal: it weighs points now and what each move sets up, with the v5 tuned weights."]; return o; }
+  if(kind==="pv"){ o.title="Preview line"; o.lines=["Says what would happen if you placed your tile on the square you point at or tap: which objectives fill or rally, the points and materiel, and which orders would fire at the end of your turn."]; return o; }
+  if(kind==="ghost"){ o.title="Preview"; o.lines=["Where your tile would go. Numbers show what each touching square would score if this closes an objective."]; return o; }
+  if(kind==="task"){ o.title=ui.mode==="lesson"?"This lesson":"Match status"; o.lines=["The top line says what to do now.","The coloured line says what just happened, with the numbers that changed."];
+    if(ui.detail&&ui.detail.length){ o.lines.push("<b>Square by square:</b>"); o.lines.push(...ui.detail); } return o; }
+  if(kind==="dot"){ const l=LESSONS[ui.layer][+a]; o.title=`Lesson ${+a+1}: ${l.title}`; o.lines=[l.text,lessonDone(ui.layer,+a)?"Done. Tap to replay it.":"Tap to open it."]; return o; }
+  if(kind==="rules"){ o.title="Rules card"; o.lines=[`Every rule of the ${LAYERS[ui.layer].n} layer, and nothing from later layers. The newest rule is marked.`]; return o; }
+  if(kind==="end"){ o.title="Result"; o.lines=["Final score, who won, and whether a new layer unlocked."]; return o; }
+  if(kind==="slot"){ o.title="Empty hand slot"; o.lines=["Refilled from your stack at the end of your turn."]; return o; }
+  if(kind==="layer"){ const k=+a, u=unlockedMax(); o.title=`Layer ${k}: ${LAYERS[k].n}`; o.sub=k<=u?"unlocked":"locked"; o.lines=[`The one new idea: ${LAYERS[k].idea}`,k<=u?`Lessons done: ${LESSONS[k].filter((_,i)=>lessonDone(k,i)).length} of ${LESSONS[k].length}. Matches played: ${prog.played[k]||0}, won: ${prog.wins[k]||0}.`:gateText(k)]; return o; }
+  if(kind==="stk"){ const id=a; o.title=`${id} ${STK[id].n}`; o.sub=stackSuits(id).map(x=>`${SU[x].cls} ${SU[x].g}`).join(" · ");
+    const cnt={}; for(const c of STACKS[id]) cnt[c]=(cnt[c]||0)+1; o.lines=[STK[id].d]; for(const [c,n] of Object.entries(cnt)) o.lines.push(`${n>1?n+"× ":""}<b>${cname(c)}</b> (${SH[kOf(c)]}): ${cardText(c).replace(/<[^>]+>/g,"")}`); return o; }
+  if(kind==="opt"){ const D={easy:["Easy","The AI takes the move worth the most points right now (search depth 0)."],normal:["Normal","The v5 AI: it also weighs what each move sets up for later (one move deep plus the board's potential), with the tuned weights."],
+      alt:["Take turns","You go first in your first match of each layer, then you swap."],first:["Always me","You always go first; the AI starts with 1 point."],second:["Always the AI","The AI always goes first; you start with 1 point."],
+      skipon:["Unlock every layer","Skip ahead: every layer opens right away, for testing."],skipoff:["Normal unlocking","Layers open after a win or after enough games."],reset:["Reset progress","Forgets lessons, games and wins on this device."]};
+    const x=D[a]||["Option",""]; o.title=x[0]; o.lines=[x[1]]; return o; }
+  if(kind==="btn"){ const Bt={learn:["Learn",`The ${LAYERS[ui.layer].n} lessons: 1–3 short steps where you place the tiles yourself.`],match:["Play",`A full match on the 8×8 board against the AI, with the ${LAYERS[ui.layer].n} rules.`],help:["Rules",`The rules card for the ${LAYERS[ui.layer].n} layer.`],
+      settings:["Settings","AI difficulty, who goes first, skip ahead and reset."],layers:["Layers","All six layers, what each adds and how to unlock it."],
+      rotate:["Rotate","Turns a banner between flat and upright. Key: R."],next:["Next step","Moves on to the next step of the lesson."],retry:["Again","Sets this step up again."],nextlayer:["Next layer","Opens the lesson for the layer you just unlocked."],
+      push:["Push the Front","Use your Strike on the Front instead of a tile: it moves toward the AI's end, minus their Armor."],
+      pass:["Pass","None of your tiles fit: your oldest tile goes under your stack, you draw one, and the turn passes. Two passes in a row end the game."],new:["New match","Shuffles the stacks and starts a new match in this layer."],look:["Look at the board","Closes this box so you can inspect the final board."],
+      match2:["Play","Start a match in this layer."],lesson2:["Learn","Open this layer's lessons."],generic:["Button",""]};
+    const x=Bt[a]||Bt.generic; o.title=x[0]; o.lines=[x[1]]; return o; }
+  return null;
+}
+function openIns(el,x,y){
+  const key=el.getAttribute("data-ins"); const o=describe(key); if(!o) return;
+  clearHl(); insAt=performance.now();
+  $("inspT").textContent=o.title; $("inspS").textContent=o.sub||""; $("inspS").hidden=!o.sub;
+  $("inspL").innerHTML=o.lines.filter(Boolean).map(l=>`<li>${l}</li>`).join("");
+  insp.classList.add("on"); el.classList.add("hl");
+  for(const id of o.hl||[]) board.querySelectorAll(`[data-t="${id}"]`).forEach(e=>e.classList.add("hl"));
+  if(innerWidth>=900){ const w=insp.offsetWidth,h=insp.offsetHeight; let Lx=x+14,Ty=y+14; if(Lx+w>innerWidth-10) Lx=Math.max(10,x-w-14); if(Ty+h>innerHeight-10) Ty=Math.max(10,innerHeight-h-10); insp.style.left=Lx+"px"; insp.style.top=Ty+"px"; }
+  else { insp.style.left=""; insp.style.top=""; }
+}
+function clearHl(){ document.querySelectorAll(".hl").forEach(e=>e.classList.remove("hl")); }
+function closeIns(){ if(!insp.classList.contains("on")) return; insp.classList.remove("on"); clearHl(); }
+$("inspX").onclick=closeIns;
+document.addEventListener("contextmenu",e=>{ const el=e.target.closest("[data-ins]"); if(!el) return; e.preventDefault(); openIns(el,e.clientX,e.clientY); });
+let lp=null, suppressClick=false;
+document.addEventListener("pointerdown",e=>{
+  suppressClick=false; // a new gesture: only the click that ends a long press is swallowed
+  if(insp.classList.contains("on")&&!insp.contains(e.target)&&performance.now()-insAt>300) closeIns();
+  if(e.pointerType==="mouse") return; const el=e.target.closest("[data-ins]"); if(!el) return;
+  const x=e.clientX,y=e.clientY; lp={el,x,y}; lp.timer=setTimeout(()=>{ if(!lp) return; suppressClick=true; openIns(el,x,y); if(navigator.vibrate) try{navigator.vibrate(12);}catch(_){} lp=null; },460);
+},{passive:true});
+document.addEventListener("pointermove",e=>{ if(lp&&Math.hypot(e.clientX-lp.x,e.clientY-lp.y)>10){ clearTimeout(lp.timer); lp=null; } },{passive:true});
+["pointerup","pointercancel"].forEach(n=>document.addEventListener(n,()=>{ if(lp){ clearTimeout(lp.timer); lp=null; } },{passive:true}));
+document.addEventListener("click",e=>{ if(suppressClick){ suppressClick=false; e.preventDefault(); e.stopPropagation(); } },true);
+
+/* =================== Rules card, layers, settings, stack pick =================== */
+function rulesHTML(Lr){
+  const sec=(k,title,body)=>`<div class="${k===Lr&&Lr>0?"newsec":""}"><h4>${title}${k===Lr&&Lr>0?'<span class="newtag">NEW</span>':""}</h4>${body}</div>`;
+  let h="";
+  const l5=Lr>=1?`<li><b>Each rally also gives you 1 Ammo for every one of your tiles touching it. At 5 Ammo you Strike</b> (at the end of your turn): remove an enemy tile that touches an open objective. If there is none, score 1.</li>`:"";
+  h+=sec(Lr>=1?1:0,Lr>=1?"The 5 lines":"The Tiles rules",`<ol>
+    <li><b>On your turn, place one tile from your hand of 3 on empty squares:</b> a banner (1×4), an objective (2×2) or an insignia (1×1). An objective may also cover a closed-in gap of 1–4 squares, but then it never rallies.</li>
+    <li><b>An objective rallies the moment all 8 squares around it are filled.</b> The board edge counts as filled.</li>
+    <li><b>When it rallies, every square of a tile touching it scores 1 for that tile's owner, or 2 if the tile's colour matches the objective.</b> Whoever closed it scores 1 more.</li>
+    ${Lr>=3?`<li><b>Materiel:</b> see Classes below (it replaces the one Ammo meter).</li>`:l5}
+    <li><b>When the board is full or no one can place, the most points wins.</b> The second player starts with 1 point.</li></ol>
+    <p>If nothing in your hand fits, your oldest tile goes under your stack, you draw one, and you pass. "Open" means "has not rallied yet". After each turn you draw back up to 3.</p>`);
+  if(Lr>=2) h+=sec(2,"Cards: your tiles have text",`<ul>
+    <li>Each tile has a name and one keyword, printed with its reminder text. Long-press or right-click shows it.</li>
+    <li><b>Objectives print Command 2:</b> when one rallies, its owner scores 2.</li>
+    <li><b>Insignia give 2 ${Lr>=3?"materiel":"Ammo"}</b> instead of 1. Cards that say "Rally: +1" add 1.${Lr===2?" (Until Classes, all materiel is Ammo.)":""}</li>
+    <li><b>Protection is card text:</b> Bunker, "Your tiles touching this can't be Struck" (shown by a shield).</li>
+    <li><b>You bring your own 12-tile stack.</b> Four starter stacks are free.</li>
+    <li><b>End rule:</b> an objective that never rallied scores its touching squares at 1 each when the game ends (Dug-In keeps 2).</li></ul>`);
+  if(Lr>=3) h+=sec(3,"Classes: each class fills its own meter",`<p style="margin-top:0;color:var(--ink)">The one Ammo meter becomes four. A tile touching a rally gives 1 of its class's materiel (an insignia 2). A meter that reaches <b>3</b> fires its order at the end of your turn, by itself, in this order:</p>
+    <table class="otab"><tr style="--k:${SU.R.k}"><td>▲ Works</td><td><b>Fortify:</b> +2 Armor (up to 4). Each Armor scores 1 at the end.</td></tr>
+    <tr style="--k:${SU.G.k}"><td>● Intel</td><td><b>Spot:</b> +1 Charge on every open objective you touch (the closer scores +1 a Charge), and your next Strike ignores protection.</td></tr>
+    <tr style="--k:${SU.S.k}"><td>◆ Ammo</td><td><b>Strike:</b> as in Basic. It now costs 3, not 5.</td></tr>
+    <tr style="--k:${SU.P.k}"><td>✚ Supply</td><td><b>Resupply:</b> draw 1 tile and score 1.</td></tr></table>`);
+  if(Lr>=4) h+=sec(4,"Front Line: the tug-of-war",`<ul>
+    <li>A track runs between the players, <b>5 steps each way</b> from the centre.</li>
+    <li>A <b>Strike</b> may push the Front 2 toward the enemy instead of removing a tile. With no tile to hit, it pushes.</li>
+    <li>Enemy <b>Armor</b> soaks pushes 1 for 1. A <b>spotted</b> Strike pushes 3 and ignores Armor.</li>
+    <li><b>Push the Front to the enemy's end and you win at once</b> (a Breakthrough). Otherwise the Front scores nothing.</li></ul>`);
+  if(Lr>=5) h+=sec(5,"Streaks: a hot run earns rewards",`<ul>
+    <li>Your <b>streak</b> goes up 1 for each rally you close and each order you fire. An enemy Strike that lands on you (removes your tile or moves the Front) resets it to 0.</li>
+    <li><b>3 · Spotter Drone:</b> +1 Intel.</li><li><b>5 · Supply Drop:</b> draw 1 and place one more tile now.</li>
+    <li><b>7 · Fire Mission:</b> push the Front 2, ignoring Armor, and remove the enemy's most valuable tile touching an open objective, ignoring protection.</li></ul>`);
+  return h; }
+function openRules(){ $("rulesT").textContent=`${LAYERS[ui.layer].n} · the rules`; $("rulesB").innerHTML=rulesHTML(ui.layer); $("rules").hidden=false; $("rulesX").focus(); }
+function openLayers(){ hideModals(); const u=unlockedMax();
+  $("layersP").textContent=`Each layer keeps every rule before it and adds one idea. Games played: ${prog.games}.${prog.skip?" Skip ahead is on.":""}`;
+  $("layersB").innerHTML=LAYERS.map((l,k)=>{ const open=k<=u, cur=k===ui.layer; const dn=LESSONS[k].filter((_,i)=>lessonDone(k,i)).length;
+    return `<div class="lrow ${open?"open":"locked"}${cur?" cur":""}" data-ins="layer:${k}"><span class="num">${k}</span><span class="ln">${l.n}<small>${open?`lessons ${dn}/${LESSONS[k].length} · won ${prog.wins[k]||0} of ${prog.played[k]||0}`:"locked"}</small></span>
+      <span class="li">${l.idea}${open?"":" "+gateText(k)}</span>
+      ${open?`<span class="lb"><button class="btn" data-k="${k}" data-a="learn" data-ins="btn:lesson2">Learn</button><button class="btn${cur?" main":""}" data-k="${k}" data-a="play" data-ins="btn:match2">Play</button></span>`:""}</div>`; }).join("");
+  $("layersB").querySelectorAll("button[data-k]").forEach(b=>b.onclick=()=>{ const k=+b.dataset.k; $("layersM").hidden=true; if(b.dataset.a==="learn"){ const i=LESSONS[k].findIndex((_,j)=>!lessonDone(k,j)); buildLesson(k,i<0?0:i); } else startPlay(k); });
+  $("layersM").hidden=false; $("layersX").focus(); }
+function openSettings(){ hideModals(); renderSettings(); $("setM").hidden=false; $("setX").focus(); }
+let resetArm=false;
+function renderSettings(){
+  const opt=(key,val,label)=>`<button class="${prog[key]===val?"on":""}" data-key="${key}" data-val="${val}" data-ins="opt:${key==="skip"?(val?"skipon":"skipoff"):val}">${label}</button>`;
+  $("setB").innerHTML=`<h4>AI</h4><div class="opt">${opt("diff","easy","Easy")}${opt("diff","normal","Normal")}</div><p>Easy looks only at points now. Normal is the v5 AI with the tuned weights; it also weighs what each move sets up.</p>
+    <h4>Who goes first</h4><div class="opt">${opt("seat","alt","Take turns")}${opt("seat","first","Always me")}${opt("seat","second","Always the AI")}</div>
+    <h4>Skip ahead</h4><div class="opt">${opt("skip",false,"Normal unlocking")}${opt("skip",true,"Unlock every layer")}</div><p>For testing: opens every layer right away. Your lessons and wins are kept.</p>
+    <h4>Progress</h4><div class="opt"><button id="resetBtn" class="${resetArm?"on":""}" data-ins="opt:reset">${resetArm?"Tap again to reset":"Reset progress"}</button></div><p>Games played: ${prog.games}. Saved on this device only.</p>`;
+  $("setB").querySelectorAll("button[data-key]").forEach(b=>b.onclick=()=>{ const k=b.dataset.key; let v=b.dataset.val; if(k==="skip") v=v==="true"; prog[k]=v; save(); renderSettings(); setChrome(); });
+  $("resetBtn").onclick=()=>{ if(!resetArm){ resetArm=true; renderSettings(); return; } resetArm=false;
+    prog={games:0,wins:[0,0,0,0,0,0],played:[0,0,0,0,0,0],lessons:{},layer:0,diff:prog.diff,skip:false,stack:"T1",seat:"alt"}; save(); $("setM").hidden=true; buildLesson(0,0); }; }
+function openStackPick(){ hideModals(); setLayer(ui.pending); $("stackT").textContent=`Pick your stack · ${LAYERS[ui.pending].n}`;
+  $("stackB").innerHTML=Object.keys(STACKS).map(id=>`<button class="${prog.stack===id?"on":""}" data-id="${id}" data-ins="stk:${id}"><span class="sn">${id} ${STK[id].n}<i>${stackSuits(id).map(x=>`<span style="color:${SU[x].k}">${SU[x].g}</span>`).join(" ")}</i></span><span class="sd">${STK[id].d}</span></button>`).join("");
+  $("stackB").querySelectorAll("button").forEach(b=>b.onclick=()=>{ const id=b.dataset.id; prog.stack=id; save(); const others=Object.keys(STACKS).filter(x=>x!==id); ui.stacks=[id,others[Math.floor(Math.random()*others.length)]]; $("stackM").hidden=true; ui.layer=ui.pending; prog.layer=ui.layer; save(); newMatch(); });
+  $("stackM").hidden=false; setTimeout(()=>{ const b=$("stackB").querySelector("button.on")||$("stackB").querySelector("button"); if(b) b.focus(); },30); }
+
+/* =================== Buttons and keys =================== */
+function hideModals(){ for(const id of ["rules","endM","layersM","setM","stackM"]) $(id).hidden=true; }
+$("tabL").onclick=()=>{ if(ui.mode!=="lesson"){ const i=LESSONS[ui.layer].findIndex((_,j)=>!lessonDone(ui.layer,j)); buildLesson(ui.layer,i<0?0:i); } };
+$("tabM").onclick=()=>{ if(ui.mode!=="match"||ui.ended) startPlay(ui.layer); };
+$("helpBtn").onclick=openRules;
+$("layerBtn").onclick=openLayers; $("setBtn").onclick=openSettings;
+function closeModal(m){ $(m).hidden=true; resetArm=false; if(m==="stackM"&&st) setLayer(ui.layer); }
+for(const [m,x] of [["rules","rulesX"],["layersM","layersX"],["setM","setX"],["stackM","stackX"]]){ $(x).onclick=()=>closeModal(m); $(m).addEventListener("click",e=>{ if(e.target===$(m)) closeModal(m); }); }
+$("rot").onclick=rotate;
+board.addEventListener("focus",()=>{ if(ui.cur===null&&board.matches(":focus-visible")){ ui.cur=Math.floor(st.g.R/2)*st.g.C+Math.floor(st.g.C/2); renderBoard(); } });
+board.addEventListener("blur",()=>{ if(ui.cur!==null){ ui.cur=null; renderBoard(); } });
+document.addEventListener("keydown",e=>{
+  const anyModal=["rules","layersM","setM","stackM"].some(id=>!$(id).hidden);
+  if(e.key==="Escape"){ if(insp.classList.contains("on")) closeIns(); else if(anyModal){ for(const m of ["rules","layersM","setM","stackM"]) if(!$(m).hidden) closeModal(m); } else if(ui.sel>=0){ ui.sel=-1; ui.pv=null; renderAll(); } return; }
+  if(e.target.closest&&e.target.closest("input,textarea")) return;
+  if(e.key==="?"){ if($("rules").hidden) openRules(); else $("rules").hidden=true; return; }
+  if(anyModal) return;
+  if(e.key==="r"||e.key==="R"){ rotate(); return; }
+  if(/^[1-6]$/.test(e.key)){ pick(+e.key-1); return; }
+  if(e.key==="i"||e.key==="I"){ let el=document.activeElement; if(el===board&&ui.cur!==null) el=board.querySelector(`[data-sq="${ui.cur}"]`)||board.querySelector(`[data-t="${st.own[ui.cur]}"]`); if(el&&el.closest("[data-ins]")){ const t=el.closest("[data-ins]"), r=t.getBoundingClientRect(); openIns(t,r.left+r.width/2,r.bottom); } return; }
+  if(document.activeElement===board&&ui.cur===null&&/^Arrow/.test(e.key)){ ui.cur=Math.floor(st.g.R/2)*st.g.C+Math.floor(st.g.C/2); e.preventDefault(); renderBoard(); return; }
+  if(document.activeElement===board&&ui.cur!==null){
+    const [r,c]=RC(st,ui.cur); const mv={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];
+    if(mv){ e.preventDefault(); const nr=Math.max(0,Math.min(st.g.R-1,r+mv[0])), nc=Math.max(0,Math.min(st.g.C-1,c+mv[1])); ui.cur=nr*st.g.C+nc; if(ui.sel>=0&&ui.phase==="place") preview(ui.cur); renderBoard(); paintPv(); }
+    else if(e.key==="Enter"||e.key===" "){ e.preventDefault();
+      if(ui.phase==="strike"){ const id=st.own[ui.cur]; if(ui.targets.includes(id)) humanStrike(id); else hint("Move to a tile outlined in red, then press Enter."); }
+      else if(!ui.busy&&!gameOver(st)&&!ui.lessonDone) tapSquare(ui.cur,true); }
+  }
+});
+
+/* test hooks (used by the headless check) */
+window.RP={state:()=>st,ui,prog:()=>prog,H:()=>H,LESSONS,buildLesson,startPlay,newMatch,setStacks:(a,b)=>{ ui.stacks=[a,b]; },
+  suggest:()=>{ CURW=TUNED; const s=aiPick(st,H,"tuned"); if(!s) return null; const cells=s.m[1]; const kind=s.m[0]; return {hi:s.hi,cells,patch:kind==="patch",rc:RC(st,cells[0]),vertical:CH[s.cid].shape==="1x4"&&cells[1]-cells[0]!==1}; },
+  play:(hi,cells,patch)=>{ ui.sel=hi; commit({cells,patch:!!patch,o:null}); }, strike:id=>humanStrike(id), targets:()=>ui.targets.slice(), skip:v=>{ prog.skip=v; save(); }};
+
+/* =================== Start =================== */
+(function start(){
+  const u=unlockedMax(); let Lr=Math.min(prog.layer||0,u); if(Q.has("layer")) Lr=Math.min(+Q.get("layer")||0,5);
+  if(Q.has("layer")&&Lr>u){ prog.skip=true; save(); }
+  ui.layer=Lr; setLayer(Lr);
+  const i=LESSONS[Lr].findIndex((_,j)=>!lessonDone(Lr,j));
+  if(i>=0) buildLesson(Lr,i);
+  else if(Lr<2){ ui.layer=Lr; const ids=shuffle(Object.keys(STACKS)); ui.stacks=[ids[0],ids[1]]; newMatch(); }
+  else { buildLesson(Lr,0); startPlay(Lr); }
+})();
+})();
+</script>
+</body>
+</html>
