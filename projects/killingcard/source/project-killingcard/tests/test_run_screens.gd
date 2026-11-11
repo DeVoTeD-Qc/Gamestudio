@@ -610,7 +610,7 @@ func test_continue_into_rewards() -> void:
 	# The After-Action report survives a reload too (rebuilt from history).
 	var aa: Control = await _open(RunFlow.SCENE_AFTER_ACTION, PHONE)
 	assert_true("VICTORY" in _all_text(aa) and "6-2" in _all_text(aa), "after-action from history")
-	assert_true("—" in _all_text(aa), "unknown stats shown as a dash")
+	assert_false("—" in _all_text(aa), "unknown stats are left out, never a dash (kc-da-ui2)")
 	_teardown()
 
 

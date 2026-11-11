@@ -68,3 +68,147 @@ func test_inspector_is_one_card_and_a_paper_sheet() -> void:
 		insp.close()
 		_free(host)
 		await _frames(1)
+
+
+# --- Run screens (after-action, run map): a scratch run, restored afterwards.
+
+var _rs: Node = null
+var _router: Node = null
+var _saved: Dictionary = {}
+
+
+func _run_setup() -> void:
+	_rs = tree.root.get_node("RunState")
+	_router = tree.root.get_node("SceneRouter")
+	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run, "config": _rs.config}
+	var dir: String = "user://test_da_ui2/s%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(dir)
+	_rs.save_path = dir.path_join("run_save.json")
+	_rs.autosave = false
+	_rs.config = null
+	_rs.reset()
+	_router.dry_run = true
+	_router.last_match_report = {}
+
+
+func _run_teardown() -> void:
+	var dir: String = _rs.save_path.get_base_dir()
+	_rs.abandon_run()
+	for f: String in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(f))
+	DirAccess.remove_absolute(dir)
+	_rs.save_path = _saved["save_path"]
+	_rs.autosave = _saved["autosave"]
+	_rs.config = _saved["config"]
+	_rs.reset()
+	_router.dry_run = _saved["dry_run"]
+	_router.last_match_report = {}
+
+
+func _open_in(path: String, sz: Vector2) -> Array:
+	var vp: SubViewport = SubViewport.new()
+	vp.size = Vector2i(sz)
+	vp.disable_3d = true
+	tree.root.add_child(vp)
+	var node: Control = (load(path) as PackedScene).instantiate()
+	vp.add_child(node)
+	await _frames(5)
+	return [vp, node]
+
+
+func _labels_text(node: Node) -> String:
+	var parts: PackedStringArray = []
+	for c: Node in node.find_children("*", "Label", true, false):
+		if (c as Label).is_visible_in_tree():
+			parts.append((c as Label).text)
+	return "\n".join(parts)
+
+
+func _record(result: StringName) -> void:
+	_rs.start_run(4242)
+	_rs.begin_run()
+	if _rs.run.map != null:
+		var reach: Array = _rs.run.map.reachable()
+		for id: StringName in reach:
+			if _rs.run.map.node(id)["type"] == &"fight" or id == reach[-1]:
+				_rs.move_to(id)
+				break
+	var win: bool = result == &"player"
+	_rs.record_result(result, {"reason": &"target", "rounds": 6, "player_score": 6 if win else 2, "enemy_score": 3 if win else 6})
+
+
+func test_after_action_is_a_debrief_with_stamp_mvp_and_real_stats() -> void:
+	_run_setup()
+	var RunFlow: GDScript = load("res://scripts/ui/run/run_flow.gd")
+	for sz: Vector2 in [Vector2(844, 390), Vector2(1440, 900)]:
+		# A report from a played match: eliminations, best streak and an MVP.
+		_record(&"player")
+		var rep: Dictionary = RunFlow.report_from_history(_rs.run, _rs.run.history[-1])
+		rep.merge({"player_eliminations": 4, "enemy_eliminations": 2, "best_streak": 3,
+				"mvp": {"card_id": "marksman", "art": "", "operator": false, "kills": 2, "damage": 7}}, true)
+		_router.last_match_report = rep
+		var got: Array = await _open_in("res://scenes/run/AfterAction.tscn", sz)
+		var aa: Control = got[1]
+		await _frames(2)
+		var stamp: Label = aa.find_child("ResultLabel", true, false) as Label
+		assert_not_null(stamp, "%s: result stamp" % sz)
+		if stamp != null:
+			assert_eq(stamp.text, "VICTORY", "%s: stamp word" % sz)
+			assert_true(bool(stamp.get_meta(&"stamp", false)) and absf(stamp.rotation_degrees) > 3.0, "%s: a turned stamp" % sz)
+			assert_true(String(stamp.get_theme_font(&"font").resource_path).contains("Stencil"), "%s: stencil face" % sz)
+		assert_true(aa.get_sheet() != null and aa.get_sheet().has_meta(&"paper"), "%s: debrief on paper" % sz)
+		var mvp: Control = aa.get_mvp_card()
+		assert_not_null(mvp, "%s: MVP card" % sz)
+		if mvp != null:
+			assert_true(mvp.get_global_rect().size.x >= 230.0, "%s: MVP card shown large" % sz)
+			assert_true(bool(mvp.get_parent().get_meta(&"inspectable", false)), "%s: MVP card inspectable" % sz)
+			assert_not_null(mvp.get_parent().get_parent().get_node_or_null(^"Band"), "%s: MVP band" % sz)
+			assert_true(Rect2(Vector2.ZERO, sz).encloses(mvp.get_global_rect()), "%s: MVP card on screen" % sz)
+		var text: String = _labels_text(aa)
+		assert_true("MVP" in text and "2 KILLS" in text, "%s: MVP line" % sz)
+		assert_true("4-2" in text and "6-3" in text, "%s: real stats" % sz)
+		assert_false("—" in text or "---" in text, "%s: no empty stat rows" % sz)
+		var amber: int = 0
+		for b: Node in aa.find_children("*", "Button", true, false):
+			if (b as Button).is_visible_in_tree() and (b as Button).theme_type_variation == &"ReadyButton":
+				amber += 1
+		assert_eq(amber, 1, "%s: one amber button" % sz)
+		got[0].queue_free()
+		await _frames(1)
+		_rs.abandon_run()
+		# After a reload (no match log): no eliminations / streak rows, the Operator stands in.
+		_record(&"enemy")
+		_router.last_match_report = {}
+		got = await _open_in("res://scenes/run/AfterAction.tscn", sz)
+		aa = got[1]
+		text = _labels_text(aa)
+		assert_true("DEFEAT" in text, "%s: defeat stamp" % sz)
+		assert_false("ELIMINATIONS" in text or "BEST STREAK" in text or "—" in text, "%s: unknown stats left out" % sz)
+		assert_true("YOUR OPERATOR" in text, "%s: the Operator stands in, named as such" % sz)
+		got[0].queue_free()
+		await _frames(1)
+		_rs.abandon_run()
+	_run_teardown()
+
+
+func test_mvp_from_the_match_log() -> void:
+	var RunFlow: GDScript = load("res://scripts/ui/run/run_flow.gd")
+	assert_eq(RunFlow.mvp(null), {}, "no match: no MVP")
+	var m: MatchState = MatchState.new()
+	m.sides.clear()
+	m.sides.append(RulesSide.new())
+	m.sides.append(RulesSide.new())
+	m.events.clear()
+	for e: Dictionary in [
+		{"type": RulesEvent.UNIT_ARRIVED, "side": &"player", "uid": 11, "card_id": &"rifleman"},
+		{"type": RulesEvent.UNIT_ARRIVED, "side": &"player", "uid": 12, "card_id": &"marksman"},
+		{"type": RulesEvent.SHOT_FIRED, "side": &"player", "shooter_uid": 11, "damage": 6},
+		{"type": RulesEvent.SHOT_FIRED, "side": &"player", "shooter_uid": 12, "damage": 2},
+		{"type": RulesEvent.UNIT_ELIMINATED, "by_side": &"player", "by_uid": 12, "by_id": &"marksman", "credit": true},
+		{"type": RulesEvent.SHOT_FIRED, "side": &"enemy", "shooter_uid": 30, "damage": 40},
+	]:
+		m.events.append(e)
+	var got: Dictionary = RunFlow.mvp(m)
+	assert_eq(String(got.get("card_id", "")), "marksman", "a kill (x10) beats 6 damage")
+	assert_eq(int(got.get("kills", 0)), 1, "kills counted")
+	assert_eq(int(got.get("damage", 0)), 2, "damage counted")

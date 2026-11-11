@@ -119,6 +119,13 @@ func _run() -> void:
 						break
 			var win: bool = pair[0] == &"player"
 			rs.record_result(pair[0], {"reason": &"target", "rounds": 6, "player_score": 6 if win else 2, "enemy_score": 3 if win else 6})
+			if win:
+				# A report as a real match makes it: eliminations, best streak and the MVP from the log.
+				var RunFlow: GDScript = load("res://scripts/ui/run/run_flow.gd")
+				var rep: Dictionary = RunFlow.report_from_history(rs.run, rs.run.history[-1])
+				rep.merge({"player_eliminations": 4, "enemy_eliminations": 2, "best_streak": 3, "tickets_before": 3,
+						"mvp": {"card_id": "marksman", "art": "", "operator": false, "kills": 2, "damage": 7}}, true)
+				root.get_node("SceneRouter").last_match_report = rep
 			var aa: Control = await _open("res://scenes/run/AfterAction.tscn")
 			await _shot(pair[1])
 			await _close(aa)

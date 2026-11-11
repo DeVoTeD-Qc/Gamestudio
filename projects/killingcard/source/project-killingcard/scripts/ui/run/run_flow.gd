@@ -128,7 +128,54 @@ static func record_match(m: MatchState) -> Dictionary:
 	if m != null and m.sides.size() == 2:
 		stats["player_eliminations"] = m.sides[MatchState.PLAYER].eliminations
 		stats["enemy_eliminations"] = m.sides[MatchState.ENEMY].eliminations
-	return _report(rs.run, before, summary, stats)
+	var rep: Dictionary = _report(rs.run, before, summary, stats)
+	if bool(rep.get("ok", false)):
+		rep["mvp"] = mvp(m)
+	return rep
+
+
+## kc-da-ui2 (debrief MVP): the player's unit (or Operator) that did the most this match, from the
+## match log: eliminations it is credited with (x10) plus damage its shots dealt. {} when none of
+## your units dealt damage. {card_id, art, operator, kills, damage}.
+static func mvp(m: MatchState) -> Dictionary:
+	if m == null or m.sides.size() != 2:
+		return {}
+	var me: StringName = m.side_name(MatchState.PLAYER)
+	var kills: Dictionary = {}
+	var damage: Dictionary = {}
+	var ids: Dictionary = {}
+	for e: Dictionary in m.events:
+		var t: StringName = e.get("type", &"")
+		if t == RulesEvent.UNIT_ELIMINATED and StringName(str(e.get("by_side", ""))) == me and bool(e.get("credit", true)):
+			var by: int = int(e.get("by_uid", -1))
+			if by >= 0:
+				kills[by] = int(kills.get(by, 0)) + 1
+				if str(e.get("by_id", "")) != "":
+					ids[by] = StringName(str(e["by_id"]))
+		elif t == RulesEvent.SHOT_FIRED and StringName(str(e.get("side", ""))) == me:
+			var sh: int = int(e.get("shooter_uid", -1))
+			if sh >= 0:
+				damage[sh] = int(damage.get(sh, 0)) + maxi(0, int(e.get("damage", 0)))
+		elif t == RulesEvent.UNIT_ARRIVED and StringName(str(e.get("side", ""))) == me:
+			ids[int(e.get("uid", -1))] = StringName(str(e.get("card_id", "")))
+	var best: int = -1
+	var best_score: int = 0
+	for uid: int in kills.keys() + damage.keys():
+		var sc: int = int(kills.get(uid, 0)) * 10 + int(damage.get(uid, 0))
+		if sc > best_score:
+			best_score = sc
+			best = uid
+	if best < 0:
+		return {}
+	var op: RulesUnit = m.sides[MatchState.PLAYER].operator_unit
+	var is_op: bool = op != null and op.uid == best
+	var id: StringName = ids.get(best, &"")
+	if is_op and m.sides[MatchState.PLAYER].setup != null and m.sides[MatchState.PLAYER].setup.primary != null:
+		id = m.sides[MatchState.PLAYER].setup.primary.id
+	if id == &"":
+		return {}
+	return {"card_id": String(id), "art": String(m.art_by_uid.get(best, "")), "operator": is_op,
+			"kills": int(kills.get(best, 0)), "damage": int(damage.get(best, 0))}
 
 
 ## Records a forced result (debug, tests) with RunState.record_result and returns the report.
