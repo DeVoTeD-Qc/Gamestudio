@@ -316,7 +316,7 @@ static func weapon_rule_chip(wid: String, b: DDBalance, rosa: bool = false) -> D
 static func gun_def(wid: String, bal: DDBalance, tag: String = "GUN", rosa: bool = false) -> Dictionary:
 	var rw: Array = bal.weapon_reward(wid)
 	return tip({"kind": "W", "tag": tag, "title": bal.weapon_name(wid), "big": "P%d" % bal.weapon_power(wid), "hit": bal.weapon_power(wid),
-		"body": DDText.gun_card_text(wid, bal, rosa)},
+		"body": DDText.gun_card_text(wid, bal, rosa), "icon_row": gun_icon_row(bal, bal.weapon_rule(wid), wid, rosa, "open")},
 		"%s · hits %d · holds %d" % [bal.weapon_name(wid), bal.weapon_power(wid), bal.weapon_cap(wid)],
 		"Each kill %s. Full: +%d, %s." % [_rule_words(bal.weapon_rule(wid), rosa), bal.shown(bal.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), bal)])
 
@@ -361,6 +361,7 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 		body.append("Tap to make it the active weapon.")
 	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": "P%d" % g.power, "hit": g.power, "body": "\n".join(body),
 		"art_keys": Art.weapon_keys(g.wid, g.name)}
+	p["icon_row"] = gun_icon_row(b, g.rule, g.wid, run.steady(), run.challenge_state(g))
 	var nxt: String = "Full: tap it to collect." if g.kills_left() <= 0 else "Next kill: %s." % accept_words(run.can_take(g))
 	return tip(p, "%s · hits %d · %d of %d kills" % [g.name, g.power, g.stack.size(), g.cap],
 		"%s Full: +%d, %s." % [nxt, b.shown(b.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), b)])
@@ -402,11 +403,40 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	spec["can_take"] = _range_text(run.can_take(g))
 	spec["accept"] = accept_tag(run.can_take(g))
 	spec["finish_shown"] = b.shown(b.num("finish_bonus"))
+	spec["plate_payload"] = full_plate(run, s)
+	spec["reward_kind"] = str(rw[0])
 	var stack_payloads: Array = []
 	for k: int in g.stack.size():
 		stack_payloads.append(stack_card(run, s, k))
 	spec["stack_payloads"] = stack_payloads
 	return spec
+
+
+## dd-ui6: the icon key a gun's tooltip shows under its two lines: its rule, the Full set bonus
+## and its challenge reward, with the same glyphs as the gun tile.
+static func gun_icon_row(b: DDBalance, rule: String, wid: String, rosa: bool, cs: String) -> Array:
+	var rw: Array = b.weapon_reward(wid)
+	return [
+		{"keys": Art.rule_keys(rule), "text": DDText.rule_tag(rule, rosa)},
+		{"keys": Art.badge_keys("full_set"), "text": "Full +%d" % b.shown(b.num("finish_bonus")), "color": DDUi.accent("X")},
+		{"keys": Art.badge_keys("challenge" if cs in ["met", "on_track"] else "challenge_open"), "text": "%s %s" % [DDText.challenge_name(b.weapon_challenge(wid)), DDText.reward_short(str(rw[0]), int(rw[1]), b)]},
+	]
+
+
+## dd-ui6: the Full set plate on a gun tile (the completion bonus): fill every socket for the
+## finish bonus, plus the challenge reward when its challenge holds.
+static func full_plate(run: DDRun, s: int) -> Dictionary:
+	var g: DDGun = run.slot(s)
+	var b: DDBalance = run.bal
+	var rw: Array = b.weapon_reward(g.wid)
+	var cs: String = run.challenge_state(g)
+	var left: int = g.kills_left()
+	var now: String = {"met": "met", "on_track": "on track", "broken": "missed: no reward this time", "open": "not decided yet"}.get(cs, "")
+	return tip({"kind": "W", "tag": "FULL SET", "title": "Full set", "icon_keys": Art.badge_keys("full_set"),
+		"body": "Fill all %d sockets: +%d pts and the gun leaves. Challenge %s: %s -> %s." % [g.cap, b.shown(b.num("finish_bonus")),
+			DDText.challenge_name(b.weapon_challenge(g.wid)).to_upper(), DDText.challenge_text(b.weapon_challenge(g.wid), b), DDText.reward_text(str(rw[0]), int(rw[1]), b)]},
+		"Full set: +%d pts · %s" % [b.shown(b.num("finish_bonus")), ("%d kill%s to go" % [left, "" if left == 1 else "s"]) if left > 0 else "full"],
+		"Challenge %s %s: %s." % [DDText.challenge_name(b.weapon_challenge(g.wid)), DDText.reward_short(str(rw[0]), int(rw[1]), b), now])
 
 
 ## dd-ux-v4 + v4 rules: the melee slot's zoom is DDV4Hooks.melee (Bare Hands or the melee weapon

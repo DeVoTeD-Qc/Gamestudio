@@ -354,15 +354,20 @@ func _snapshot() -> Dictionary:
 	var stack_rects: Array = [[], []]
 	var next_rects: Array = [Rect2(), Rect2()]
 	var gun_rects: Array = [Rect2(), Rect2()]
+	var plates: Array = [{}, {}]
 	for s: int in 2:
 		var gv: DDGunView = _gun_views[s]
 		if gv != null and is_instance_valid(gv) and gv.is_inside_tree():
 			gun_rects[s] = gv.get_global_rect()
+			if gv.plate != null and is_instance_valid(gv.plate):
+				var pi: Dictionary = (gv.plate.get_meta(&"info", {}) as Dictionary).duplicate()
+				pi["rect"] = gv.plate.get_global_rect()
+				plates[s] = pi
 			next_rects[s] = gv.next_rect()
 			for mc: DDCardView in gv.stack_cards:
 				(stack_rects[s] as Array).append(Rect2(mc.get_global_rect().position, mc.size))
 	return {"rects": rects, "specs": _street_specs.duplicate(), "hp": run.hp, "cover": run.cover, "points": run.points,
-		"stack_rects": stack_rects, "next_rect": next_rects, "gun_rects": gun_rects}
+		"stack_rects": stack_rects, "next_rect": next_rects, "gun_rects": gun_rects, "plates": plates}
 
 
 func _view(spec: Dictionary, min_size: Vector2 = Vector2.ZERO) -> DDCardView:
@@ -683,7 +688,8 @@ func _build_street() -> void:
 	if duel:
 		n = 2
 	if portrait:
-		var gun_h: float = 196.0
+		# dd-ui6 (head: more room for the gun art, a little less for the street cards): 196 -> 264
+		var gun_h: float = 264.0
 		var door_h: float = clampf(H * 0.165, 150.0, 200.0)
 		var fixed: float = HUD_H + door_h + hint_h + strip_h + gun_h + SEP * 4 + SLACK
 		var avail: float = H - fixed
@@ -711,7 +717,7 @@ func _build_street() -> void:
 	else:
 		var tall: bool = H >= 600.0
 		var lw: float = clampf(W * 0.14, 150.0, 210.0)
-		var rw: float = clampf(W * 0.25, 280.0, 400.0)
+		var rw: float = clampf(W * 0.27, 290.0, 440.0)
 		var mid_w: float = W - lw - rw - SEP * 2
 		var street_h: float = H - HUD_H - hint_h - strip_h - SEP * 2 - SLACK
 		# one row of 4, or a 2x2 grid when that gives bigger cards (tall desktop windows)
@@ -743,7 +749,7 @@ func _build_street() -> void:
 		srow2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		mid.add_child(srow2)
 		mid.add_child(_build_strip(run, strip_h))
-		var guns: Control = _build_guns(run, false, 0.0, rw)
+		var guns: Control = _build_guns(run, false, H, rw)
 		guns.custom_minimum_size = Vector2(rw, 0)
 		h.add_child(guns)
 
@@ -1219,9 +1225,15 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 	if row:
 		box.custom_minimum_size = Vector2(0, gun_h)
 	var small_w: float = 112.0
+	# dd-ui6: the socket row and the Full set plate have fixed heights; the art band takes the rest
+	# (portrait: gun_h is the row; landscape: gun_h is the column, two guns over melee / run)
+	var tile_h: float = gun_h if row else (gun_h - maxf(TAP, 80.0) - SEP * 2) / 2.0
+	var sock_h: float = 62.0 if row else clampf(tile_h * 0.26, 50.0, 92.0)
+	var plate_h: float = 34.0 if tile_h < 260.0 else 38.0
 	for s: int in 2:
 		var spec: Dictionary = DDPayloads.gun_spec(run, s)
-		spec["socket_h_max"] = 92.0 if row else 104.0
+		spec["socket_h_max"] = sock_h
+		spec["plate_h"] = plate_h
 		var gv: DDGunView = DDGunView.new()
 		gv.setup_gun(spec)
 		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL

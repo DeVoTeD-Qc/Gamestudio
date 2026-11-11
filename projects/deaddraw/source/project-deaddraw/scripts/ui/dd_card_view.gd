@@ -341,11 +341,11 @@ func _build_district(spec: Dictionary) -> void:
 	_add_lines(_box, spec, true, HORIZONTAL_ALIGNMENT_LEFT)
 
 
-## dd-ui6: the rule chip: a small tile (kind "R", index -1, so finders of street cards skip it)
+## dd-ui6: the rule chip: a small tile (kind "W", index -1, so finders of street cards skip it)
 ## holding a Marks.RuleChip. A tap on it is a tap on the card; inspect explains the verdict.
 func _add_rule_chip(window: Control, rc: Dictionary) -> void:
 	var holder: DDCardView = DDCardView.new()
-	holder.kind = "R"
+	holder.kind = "W"
 	holder.name = "RuleChip"
 	holder.payload = rc.get("payload", {})
 	holder.add_theme_stylebox_override("panel", StyleBoxEmpty.new())

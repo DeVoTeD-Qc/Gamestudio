@@ -289,6 +289,11 @@ func _collect_fx(info: Dictionary, snap: Dictionary, ctx: Dictionary, t0: float)
 			tw.tween_callback(g2.queue_free))
 	var t_end: float = t + 0.09 * st.size() + 0.3
 	var bonus: int = int(info.get("bonus", 0)) + int(info.get("bounty", 0))
+	# dd-ui6: the Full set plate lights up (gold) where it was, pops, then fades
+	var pls: Array = snap.get("plates", [])
+	if s < pls.size() and not (pls[s] as Dictionary).is_empty() and not bool(info.get("shatter", false)):
+		_mark("full_plate")
+		_lit_plate(pls[s] as Dictionary, bool(info.get("challenge", false)), t)
 	_float(gun_rect, "FINISHED +%d" % (bonus * 10), DDUi.GOOD, t + 0.05, 30)
 	_after(t + 0.05, func() -> void: Sfx.cue(&"clear", 1.25))
 	if bool(info.get("shatter", false)):
@@ -311,6 +316,32 @@ func _collect_fx(info: Dictionary, snap: Dictionary, ctx: Dictionary, t0: float)
 				_pop(gv, 1.1, DDUi.SELECT))
 		t_end += 1.1
 	return t_end
+
+
+## dd-ui6: a lit copy of a gun's Full set plate at its old place: the last socket filled.
+func _lit_plate(pi: Dictionary, challenge: bool, delay: float) -> void:
+	var r: Rect2 = pi.get("rect", Rect2())
+	if fx == null or r.size == Vector2.ZERO:
+		return
+	var p: DDCardView = DDGunView.make_plate(str(pi.get("finish", "")), str(pi.get("reward", "")),
+		"met" if challenge else "broken", "lit", float(pi.get("h", 34.0)))
+	p.set_meta(&"ghost", true)
+	p.name = "LitPlate"
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx.add_child(p)
+	p.position = r.position - fx.global_position
+	p.size = r.size
+	p.pivot_offset = r.size * 0.5
+	p.modulate.a = 0.0
+	var tw: Tween = p.create_tween()
+	tw.tween_interval(delay)
+	tw.tween_property(p, "modulate:a", 1.0, 0.08)
+	if not reduce:
+		tw.tween_property(p, "scale", Vector2(1.12, 1.12), 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(p, "scale", Vector2.ONE, 0.16)
+	tw.tween_interval(0.9)
+	tw.tween_property(p, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(p.queue_free)
 
 
 ## The gold challenge stamp over the gun card.
