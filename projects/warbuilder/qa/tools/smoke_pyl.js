@@ -1,3 +1,4 @@
+// NOT SHIPPED (wb-fix2, 2026-11-11): push-your-luck FIRE was reverted; this tool is kept as design history and will not run against the current engine.
 // Playwright smoke + screenshot pass for wb-pyl-impl (push-your-luck FIRE, Firefight bust: one tap per flip, a pot, cash out).
 // Plays several of my turns at 844x390 (phone landscape, touch) and 1440x900 by tapping: Play all, then FIRE and FLIP / BANK / STOP
 // (decided by the AI's pot-counting rule), FIRE AGAIN or CASH OUT, End turn. Move and buy

@@ -1,5 +1,7 @@
 # Warbuilder: Bust variants for push-your-luck FIRE (design + simulator proof)
 
+> **NOT SHIPPED (2026-11-11, wb-fix2).** The push-your-luck FIRE build was reverted at the head's request; the game is back to the wb-art-import rules (b8f83e1). Kept as design history. See `wb-improve-v2.md` for the current direction.
+
 *Sr Game Designer · 2026-11-05 · Board task `wb-bust` · Status: **proposal, proven in the simulator, not in the game***
 *Inputs: the head's note ("we need a busting mechanic, otherwise the stakes are too low"; inspiration: the push-your-luck party-builder where a bust loses the whole night). The approved base rule is `push-your-luck-shooting.md` (V2 Hot Zone).*
 *Simulator: `qa/tools/ai_sim_bust.js` (new). It runs a **frozen copy of the pre-PYL engine** (`qa/tools/fixtures/engine_pre_pyl.js`), so the numbers don't move while `source/` is being rebuilt. `ai_sim.js`, `ai_sim_syn.js`, `ai_sim_pyl.js` and `source/` are unchanged.*

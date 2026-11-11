@@ -47,7 +47,7 @@ function aiMatch(seed, { maxTurns = 400, onTurn } = {}) {
   }
   return s;
 }
-// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow (each shot flips until the first step, then stops), end the turn.
+// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow (each shot commits all Precision), end the turn.
 function scriptedMatch(seed, { maxTurns = 400 } = {}) {
   const s = WD.newGame({ seed }); const actions = []; let n = 0;
   while (!s.over) {

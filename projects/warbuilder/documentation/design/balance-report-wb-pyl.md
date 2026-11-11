@@ -1,5 +1,7 @@
 # Warbuilder: Balance report for push-your-luck FIRE with the Firefight bust (as built)
 
+> **NOT SHIPPED (2026-11-11, wb-fix2).** The push-your-luck FIRE build was reverted at the head's request; the game is back to the wb-art-import rules (b8f83e1). Kept as design history. See `wb-improve-v2.md` for the current direction.
+
 *Mechanics developer · 2026-11-05 · Board task `wb-pyl-impl`*
 *Design: `push-your-luck-shooting.md` (flip and stop, Jam icons, 3-step ladders; head's answers P2 and P3), with the bust rule from `bust-variants.md` A "Firefight" (head's choice: Rally hook, no final-circle change, the 4-gun retune).*
 *Simulator: `qa/tools/ai_sim.js` on the **shipped engine** (`source/project-warbuilder/src/engine.js`). The engine's own AI plays both sides: the combo-aware AI (now Jam-aware) against the combo-blind one. Unless a row says otherwise, each row is 4,000 seeded games. Every run had 0 errors, 0 stuck games and 0 card-count failures.*

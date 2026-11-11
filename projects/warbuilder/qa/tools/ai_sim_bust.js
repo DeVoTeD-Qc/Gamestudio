@@ -1,3 +1,4 @@
+// NOT SHIPPED (wb-fix2, 2026-11-11): push-your-luck FIRE was reverted; this tool is kept as design history and will not run against the current engine.
 // Warbuilder BUST VARIANTS for push-your-luck FIRE (studio QA tool, board task wb-bust, 2026-11-05).
 // Design: projects/warbuilder/documentation/design/bust-variants.md   (base rule: push-your-luck-shooting.md, sim: ai_sim_pyl.js)
 //

@@ -1,5 +1,7 @@
 # Warbuilder: Push-Your-Luck FIRE (design + simulator proof)
 
+> **NOT SHIPPED (2026-11-11, wb-fix2).** The push-your-luck FIRE build was reverted at the head's request; the game is back to the wb-art-import rules (b8f83e1). Kept as design history. See `wb-improve-v2.md` for the current direction.
+
 *Sr Game Designer · 2026-11-05 · Board task `wb-pyl` · Status: **proposal, proven in the simulator, not in the game yet***
 *Inputs: the head's question ("should we use a push-your-luck mechanic for shooting with those card reveals and hit markers?"), `engine-synergy-spec.md` §8 and §12, `balance-report-wb-rules.md` §4, `source/project-warbuilder/src/engine.js` (read only).*
 *Simulator: `qa/tools/ai_sim_pyl.js` (new). It runs the **shipped engine** for everything except the shot. `ai_sim.js`, `ai_sim_syn.js` and `source/` are unchanged.*

@@ -1,8 +1,7 @@
 /* WARZONE DECKBUILDER v5 "Engine & Synergy" — rules engine (board task wb-rules).
    Spec: documentation/design/engine-synergy-spec.md (approved), with the head's answers S1–S4.
    Squads + Loadout build the engine; a fixed 7-location row closes on a public schedule into an escalating final circle and a hard end.
-   Shooting (wb-pyl-impl): push your luck, Firefight. Flip cards one at a time (1 Precision each), bank a ladder step into your pot or flip on;
-   Jams (Sprint, Scout) cost Recoil and count for the turn; at the Jam limit (2 + 1 per Rally) you bust and lose the pot. STOP cashes the pot out.
+   Shooting: commit Precision to a shot (1 card revealed per Precision committed); the shot spends it, and Recoil costs more Precision on top.
    Resources: Movement, Precision, Intel (+ Armor, which lasts until your next turn). */
 (function (root) {
 'use strict';
@@ -14,9 +13,7 @@ const TUNE = {
   closeAfter: [2, 4, 5, 6, 7, 8], gasDmg: 3, finalStorm: [3, 4, 5, 6], hardEnd: 11, crateRounds: [2, 4], crate: [3, 1],
   buyCap: 2, hotDrop: 3, supplyCost: 2, station: ['K02', 'K04', 'K05', 'K03'], stationCopies: 6, stationScrapCost: 1,
   loadoutSlots: 2, squadCap: 3, rally: [3, 5],
-  needPlus: 0, closeQuarters: true, pointBlank: true,
-  // push-your-luck FIRE (see the fire section): the bust rule's swappable pieces. Only these values are built.
-  pyl: { flipCost: 1, jamRecoil: true, jamLimit: 2, rallyPlus: 1, finalMinus: 0, jamScope: 'turn', bustCost: 'pot', bank: 'pot' },
+  needPlus: 0, closeQuarters: true, pointBlank: true, aim: 'spend',
   stSprint: 3, stScout: 3, stAim: 2, alternateFirst: true,
   // kept for the UI and print-and-play (old systems switched off)
   lite: true, perks: false, ammo: false, phases: false, stacks: true, physical: true, tradeIn: 0, combos: false, locEveryTurn: true,
@@ -71,8 +68,8 @@ function TC(id, name, archetype, tier, hm, cost, copies, effects, extra) {
   CARDS[id] = d;
 }
 // Starter deck (10): no squad
-TC('T001', 'Sprint', 'starter', 0, 0, 0, 3, [M(1)], { jam: true });
-TC('T002', 'Scout', 'starter', 0, 0, 0, 3, [I(1)], { jam: true });
+TC('T001', 'Sprint', 'starter', 0, 0, 0, 3, [M(1)]);
+TC('T002', 'Scout', 'starter', 0, 0, 0, 3, [I(1)]);
 TC('T004', 'Steady Aim', 'starter', 0, 1, 0, 2, [Pr(1)]);
 TC('T005', 'Recon Run', 'starter', 0, 1, 0, 2, [M(1), I(1)]);
 // Buy Station: one basic per squad, 2 Intel, 6 copies each
@@ -142,20 +139,19 @@ const MODS = {
   reddot: { name: 'Red Dot', text: 'every Hit Marker step −1', mod: { hit_need: -1 } },
   none: { name: '', text: '', mod: {} },
 };
-// wb-pyl-impl: 3-step ladders [Hit Markers, damage] for push-your-luck FIRE (step 1 is the safe bank, the top step the prize; steps 2–3 ≈ 2–3× step 1).
-// Firefight retune (bust-variants.md §4): Viper, Bastion, Magnum, Breacher. Recoil is what a Jam costs in Precision; single-shot guns got lower Recoil so one Jam does not end the turn's damage. The knife flips like any gun.
+// wb-rules retune for the Precision-spend rule: Recoil is now a Precision cost per shot, so multi-shot guns lost Recoil; the big single shots lost 1 damage.
 const GUNCLASS = {
-  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 2, range: 1, band: [0, 2], ladder: [[2, 2], [4, 4], [6, 5]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
-  revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[2, 3], [5, 7], [7, 10]], shots: 1, recoil: 1, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
-  knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 3, range: 0, band: [0, 0], ladder: [[2, 4], [4, 7]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
-  smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 2, range: 0, band: [0, 1], ladder: [[2, 3], [4, 5], [6, 7]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
-  shotgun: { name: 'Breacher', cls: 'Shotgun', arch: 'engineer', damage: 3, range: 0, band: [0, 1], ladder: [[2, 4], [4, 6], [6, 8]], shots: 1, recoil: 2, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Dragon’s Breath' },
-  burst: { name: 'Raider', cls: 'Burst Rifle', arch: 'assault', damage: 2, range: 1, band: [0, 2], ladder: [[2, 3], [5, 4], [8, 6]], shots: 2, recoil: 0, cost: 2, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Night Raid' },
-  launcher: { name: 'Sapper', cls: 'Launcher', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [5, 8], [7, 11]], shots: 1, recoil: 2, cost: 3, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Demolition' },
-  ar: { name: 'Sentinel', cls: 'Assault Rifle', arch: 'support', damage: 2, range: 2, band: [0, 3], ladder: [[3, 4], [5, 6], [7, 8]], shots: 2, recoil: 1, cost: 3, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Crown Jewel' },
-  lmg: { name: 'Bastion', cls: 'LMG', arch: 'support', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [5, 6], [7, 9]], shots: 3, recoil: 0, cost: 3, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Iron Monarch' },
-  dmr: { name: 'Ranger', cls: 'Marksman Rifle', arch: 'recon', damage: 3, range: 3, band: [0, 4], ladder: [[3, 4], [5, 7], [7, 10]], shots: 2, recoil: 1, cost: 3, mods: ['reddot', 'hollow', 'comp', 'hollow'], skin: 'Golden Hour' },
-  sniper: { name: 'Longbow', cls: 'Sniper', arch: 'recon', damage: 3, range: 4, band: [0, 5], ladder: [[3, 4], [6, 9], [9, 13]], shots: 1, recoil: 1, cost: 4, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Sun God' },
+  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 2, range: 1, band: [0, 2], ladder: [[2, 2], [4, 3]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
+  revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [6, 7]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
+  knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 3, range: 0, band: [0, 0], ladder: [[0, 3]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
+  smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 2, range: 0, band: [0, 1], ladder: [[2, 2], [5, 4]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
+  shotgun: { name: 'Breacher', cls: 'Shotgun', arch: 'engineer', damage: 3, range: 0, band: [0, 1], ladder: [[2, 3], [6, 6]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Dragon’s Breath' },
+  burst: { name: 'Raider', cls: 'Burst Rifle', arch: 'assault', damage: 2, range: 1, band: [0, 2], ladder: [[2, 2], [6, 4]], shots: 2, recoil: 0, cost: 2, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Night Raid' },
+  launcher: { name: 'Sapper', cls: 'Launcher', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[3, 4], [6, 7]], shots: 1, recoil: 3, cost: 3, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Demolition' },
+  ar: { name: 'Sentinel', cls: 'Assault Rifle', arch: 'support', damage: 2, range: 2, band: [0, 3], ladder: [[3, 3], [5, 5]], shots: 2, recoil: 1, cost: 3, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Crown Jewel' },
+  lmg: { name: 'Bastion', cls: 'LMG', arch: 'support', damage: 3, range: 2, band: [0, 3], ladder: [[3, 3], [6, 5]], shots: 3, recoil: 0, cost: 3, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Iron Monarch' },
+  dmr: { name: 'Ranger', cls: 'Marksman Rifle', arch: 'recon', damage: 3, range: 3, band: [0, 4], ladder: [[3, 3], [7, 6]], shots: 2, recoil: 1, cost: 3, mods: ['reddot', 'hollow', 'comp', 'hollow'], skin: 'Golden Hour' },
+  sniper: { name: 'Longbow', cls: 'Sniper', arch: 'recon', damage: 3, range: 4, band: [0, 5], ladder: [[3, 4], [8, 8]], shots: 1, recoil: 2, cost: 4, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Sun God' },
 };
 const WEAPONS = {};
 for (const k in GUNCLASS) for (let r = 0; r < RARITY.length; r++) {
@@ -164,7 +160,7 @@ for (const k in GUNCLASS) for (let r = 0; r < RARITY.length; r++) {
   for (const m of mods) for (const f in MODS[m].mod) st[f] = Math.max(f === 'hit_need' ? 1 : 0, st[f] + MODS[m].mod[f]);
   const id = `${k}-${r}`;
   WEAPONS[id] = { id, gunClass: k, name: r === 4 ? `${g.name} “${g.skin}”` : g.name, baseName: g.name, skin: r === 4 ? g.skin : null, archetype: g.arch, cls: g.cls, tier: r, rarity: RARITY[r].key, rarityName: RARITY[r].name,
-    ladder: g.ladder.map(([h, dm]) => [Math.max(1, h + st.hit_need - g.ladder[0][0]), dm + st.damage - g.damage]), band: g.band.slice(), melee: !!g.melee,
+    ladder: g.ladder.map(([h, dm]) => [g.melee ? 0 : Math.max(1, h + st.hit_need - g.ladder[0][0]), dm + st.damage - g.damage]), band: g.band.slice(), melee: !!g.melee,
     damage: st.damage, max_range: st.max_range, magazine_capacity: st.magazine_capacity, recoil: st.recoil, hit_need: st.hit_need, reveal: 0, intel_cost: 1 + r,
     mods: mods.filter(m => MODS[m].name).map(m => MODS[m].name), modText: mods.filter(m => MODS[m].name).map(m => `${MODS[m].name} (${MODS[m].text})`),
     tactical_main_effects: [], main_text: '', slot: 0, gcombo: null, tactical_boost_effects: [], boost_text: '', tags: [ARCH_TAG[g.arch]] };
@@ -192,8 +188,6 @@ const fail = err => ({ ok: false, err });
 const P = (s, i) => s.players[i];
 const envAt = (s, w) => s.envs.find(e => e.w === w);
 const dist = s => Math.abs(s.players[0].pos - s.players[1].pos);
-// rec: a replay frame only (no log line), e.g. one flip of a shot; the UI replays the AI's turn frame by frame
-function rec(s, msg, cls) { if (s._rec) { const r = s._rec; s._rec = null; r.push({ msg, cls: cls || '', state: JSON.stringify(s), quiet: true }); s._rec = r; } }
 function log(s, msg, cls) { s.log.push({ r: s.round, msg, cls: cls || '' }); if (s.log.length > 500) s.log.shift(); if (s._rec) { const r = s._rec; s._rec = null; r.push({ msg, cls: cls || '', state: JSON.stringify(s) }); s._rec = r; } }
 const cardDef = (s, iid) => CARDS[s.cards[iid].def];
 const hmOf = (s, iid) => cardDef(s, iid).hit_markers;
@@ -202,7 +196,7 @@ function itemDef(s, item) { return item.kind === 'card' ? CARDS[s.cards[item.iid
 function eff(s, wiid) {
   const W = s.weapons[wiid]; const d = WEAPONS[W.def];
   const e = { damage: d.damage, max_range: d.max_range, magazine_capacity: d.magazine_capacity, hit_need: d.hit_need, recoil: d.recoil, reveal: 0 };
-  e.hit_need = Math.max(1, e.hit_need); e.ladder = d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
+  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
   return e;
 }
 const guns = pl => pl.guns.filter(Boolean);
@@ -216,7 +210,7 @@ function mkPlayer(idx, name) {
     deck: [], discard: [], hand: [], play: [], loadout: [], fuelled: [], removed: [], guns: [null, null],
     bonusTaken: [], moved: false, movedToward: false, nextFire: { reqMod: 0, bonusPrec: 0 }, revealPlus: 0, dmgTurn: 0, ignoreCover: false,
     buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0, stationScrapped: false, squadN: {}, rallyDone: [], fp: 0, fpHist: [], perks: [], perkOffer: null,
-    heat: 0, pot: [], busted: false, stats: { shots: 0, hits: 0, jams: 0, flips: 0, busts: 0, outs: 0, banked: 0, cashes: 0, potLost: 0, wipes: 0, damageDealt: 0, cardsAcquired: 0, weaponAcq: 0, burned: 0, searches: 0, reactions: 0, hitsBy: {}, maxTurnDmg: 0, turnDmg: 0, squads: 0, rallies: 0, big: 0, buys: 0 } };
+    stats: { shots: 0, hits: 0, jams: 0, damageDealt: 0, cardsAcquired: 0, weaponAcq: 0, burned: 0, searches: 0, reactions: 0, hitsBy: {}, maxTurnDmg: 0, turnDmg: 0, squads: 0, rallies: 0, big: 0, buys: 0 } };
 }
 function newCard(s, def) { const iid = 'c' + (s.nid++); s.cards[iid] = { iid, def }; return iid; }
 function newWeapon(s, def) { const iid = 'w' + (s.nid++); s.weapons[iid] = { iid, def, shots: 0, used: false, att: null }; return iid; }
@@ -240,7 +234,7 @@ function locSize() { return TUNE.stackSize; }
 // ---------- setup ----------
 function newGame(opts = {}) {
   const s = { v: '6.0', seed: (opts.seed ?? (Date.now() & 0x7fffffff)) | 0, round: 1, turnNo: 1, first: 0, turn: 0, over: false, winner: null, endBy: null,
-    log: [], nid: 1, cards: {}, weapons: {}, atts: {}, envs: [], players: [], lastFire: null, shot: null, finalN: 0, finalDmg: 0, gone: [], aiMode: ['aware', 'aware'] };
+    log: [], nid: 1, cards: {}, weapons: {}, atts: {}, envs: [], players: [], lastFire: null, finalN: 0, finalDmg: 0, gone: [], aiMode: ['aware', 'aware'] };
   s.players = [mkPlayer(0, (opts.names && opts.names[0]) || 'You'), mkPlayer(1, (opts.names && opts.names[1]) || 'Rival')];
   for (const pl of s.players) { for (const id of ['T001', 'T002', 'T004', 'T005']) for (let c = 0; c < CARDS[id].copies; c++) pl.deck.push(newCard(s, id)); shuffle(s, pl.deck); }
   s.loot = { 1: [], 2: [], 3: [] };
@@ -310,7 +304,7 @@ function runEffect(s, p, e, ctx) {
 }
 
 // ---------- turn checks ----------
-function check(s, p) { if (s.over) return fail('The match is over.'); if (s.turn !== p) return fail("It isn't your turn."); if (s.shot) return fail('Finish the shot in progress first (FLIP or STOP).'); return null; }
+function check(s, p) { if (s.over) return fail('The match is over.'); if (s.turn !== p) return fail("It isn't your turn."); return null; }
 
 // Squad: a card's Squad line pays once for each OTHER card of its squad in play (Loadout counts), up to ×3.
 // Order never matters: whenever a new squad card arrives, every line already in play is topped up to its new count.
@@ -443,71 +437,32 @@ function scrap(s, p, iid) {
   log(s, `${pl.name} scraps ${cardDef(s, iid).name} (out of the game).`, 'fx'); return { ok: true };
 }
 
-// ---------- fire: push your luck, Firefight bust (wb-pyl-impl; push-your-luck-shooting.md + bust-variants.md A, head's answers) ----------
-// FIRE. Flip cards off the top of your deck one at a time. Each flip costs 1 Precision. Add up the Hit Markers.
-// When your total reaches a step on your gun's ladder, you may bank that step into your POT, or flip on for the next step.
-// Banked shots wait in the pot. STOP (cash out) whenever you like to deal the whole pot; End turn cashes it too.
-// A card with the Jam icon (Sprint, Scout) is a Jam: it costs your gun's Recoil in Precision. Jams count for your whole turn:
-// your Jam limit is 2, +1 for each Rally you made this turn. Reach it and you BUST: the pot is lost and your shooting ends this turn.
-// If you run out of Precision before a shot's first step, that shot misses (the pot stays). Steady: cancel a Jam. Mark: next shot −1 per step.
-// A shot is fireStart → flip (one per tap) → stop (bank); the top step banks by itself, and so does running out of Precision on a step.
-// Flipped cards sit in s.shot until the shot ends, then go to the discard pile. cashOut deals the pot (Reactions and Armor per shot).
-//
-// The bust rule is built from small swappable pieces (TUNE.pyl). Shipped: Firefight. Also built: the earlier Hot Zone rule
-// ({ jamScope: 'shot', bustCost: 'shot', bank: 'shot', rallyPlus: 0, finalMinus: 1 }).
-//   jamScope 'turn' (pl.heat: every Jam this turn) | 'shot' (this shot's Jams)              → jamsCounted()
-//   jamLimit + rallyPlus × Rallies this turn − finalMinus in the final circle               → jamLimit()
-//   bustCost 'pot' (lose the pot, shooting ends) | 'shot' (only this shot misses)          → onBust()
-//   bank 'pot' (banked steps wait for cashOut) | 'shot' (a banked step hits at once)       → bankShot()
-const PYL_BUILT = { jamScope: ['turn', 'shot'], bustCost: ['pot', 'shot'], bank: ['pot', 'shot'] };
-function pylCheck() { const c = TUNE.pyl; for (const k in PYL_BUILT) if (!PYL_BUILT[k].includes(c[k])) throw new Error(`TUNE.pyl.${k} "${c[k]}" is not built yet (built: ${PYL_BUILT[k].join(', ')})`); }
-const isJamDef = d => !!d.jam;
-function jamLimit(s, p) { const c = TUNE.pyl; return Math.max(1, c.jamLimit + c.rallyPlus * P(s, p).rallyDone.length - (safeBounds(s).n <= 1 ? c.finalMinus : 0)); }
-const jamsCounted = (pl, sh) => TUNE.pyl.jamScope === 'turn' ? pl.heat : sh.jams;
-const potValue = pl => pl.pot.reduce((a, x) => a + x.dmg, 0);
-function onBust(s, p, sh) { // bustCost 'pot': the pot is lost and the turn's shooting ends; 'shot': only this shot misses
-  const pl = P(s, p); if (TUNE.pyl.bustCost !== 'pot') return 0;
-  const lost = potValue(pl); pl.stats.potLost += lost; if (lost || sh.level >= 0) pl.stats.wipes++; pl.pot = []; pl.busted = true; return lost;
-}
-function dealHit(s, p, dmg, cq, cover) { // one hit: Reactions, then Armor (not at close quarters)
-  const r = applyHit(s, 1 - p, dmg, cq); const notes = [];
-  if (cover) notes.push(`cover −${cover}`); if (cq && !r.notes.some(n => n.startsWith('close quarters'))) notes.push('close quarters');
-  const pl = P(s, p); pl.stats.hits++; pl.stats.damageDealt += r.dealt; pl.stats.turnDmg += r.dealt;
-  return { dealt: r.dealt, notes: notes.concat(r.notes) };
-}
-function bankShot(s, p, sh) { // bank 'pot': the step goes into the pot; 'shot': it hits now
-  const pl = P(s, p); const lvl = sh.level; const e = { dmg: sh.steps[lvl][1], cq: sh.cq, cover: sh.cover, weapon: sh.weapon, level: lvl, gunClass: sh.gunClass, steps: sh.steps.length };
-  if (TUNE.pyl.bank === 'pot') { pl.pot.push(e); pl.stats.banked++; return { dealt: 0, banked: e.dmg, notes: [] }; }
-  pl.stats.banked++; const r = dealHit(s, p, e.dmg, e.cq, e.cover); return { dealt: r.dealt, banked: 0, notes: r.notes };
-}
-const levelOf = (steps, sum) => steps.filter(([h]) => sum >= h).length - 1;
-
+// ---------- fire ----------
+// Aim (head's S1 "Recoil decreases Precision"): you commit Precision to a shot; it reveals 1 card per Precision committed (+1 free card
+// per Steady). The shot spends what you committed, and then the gun's Recoil costs that much more Precision (down to 0).
 function shotsLeft(s, p, gi) { const pl = P(s, p); const wid = pl.guns[gi]; if (!wid) return 0; return Math.max(0, eff(s, wid).magazine_capacity - s.weapons[wid].shots) + pl.shot; }
-// What a shot with gun slot gi would look like right now.
-function shotPreview(s, p, gi = 0) {
+function shotPreview(s, p, gi, commit) {
   const pl = P(s, p), o = P(s, 1 - p); const wid = pl.guns[gi]; if (!wid) return null;
   const W = s.weapons[wid]; const E = eff(s, wid); const d = WEAPONS[W.def];
   const Dd = dist(s); const inBand = Dd >= E.band[0] && Dd <= E.band[1];
-  const steps = E.ladder.map(([h, dm]) => [Math.max(1, h - pl.nextFire.reqMod), dm + pl.dmgTurn]);
+  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, commit == null ? pl.res.prec : commit | 0));
+  const free = d.melee ? 0 : pl.revealPlus;
+  const reveal = c + free;
+  const shift = TUNE.needPlus - pl.nextFire.reqMod;
+  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn]); const need = steps[0][0];
   const cq = TUNE.closeQuarters && Dd === 0;
   const tEnv = envAt(s, o.pos); const cover = !cq && tEnv && tEnv.state === 'safe' && !pl.ignoreCover ? ENVS[tEnv.def].cover : 0;
   const net = dm => Math.max(1, dm - cover);
-  const pool = pl.deck.length ? pl.deck : pl.discard;
-  return { gi, prec: pl.res.prec, need: steps[0][0], mark: pl.nextFire.reqMod, recoil: E.recoil, cover, cq, steady: pl.revealPlus,
-    steps: steps.map(([h, dm]) => [h, net(dm)]), rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee,
-    limit: jamLimit(s, p), jams: TUNE.pyl.jamScope === 'turn' ? pl.heat : 0, pot: potValue(pl), potShots: pl.pot.length, flipCost: TUNE.pyl.flipCost,
-    jamsInDeck: pool.filter(i => isJamDef(cardDef(s, i))).length, cardsInDeck: pool.length };
+  return { gi, commit: c, free, prec: pl.res.prec, reveal, need, base: E.hit_need, accuracy: pl.nextFire.reqMod, recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover, cq, damage: E.damage, dmg: net(steps[0][1]),
+    steps: steps.map(([h, dm]) => [h, net(dm)]), rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
 }
-function shootCheck(s, p, gi = 0) {
+function shootCheck(s, p, gi, commit) {
   const pl = P(s, p); const wid = pl.guns[gi];
-  if (s.shot) return fail('Finish the shot in progress first (FLIP or STOP).');
-  if (pl.busted) return fail('You busted: no more shots this turn.');
   if (!wid) return fail('No gun in that slot.');
   if (shotsLeft(s, p, gi) < 1) return fail(`${WEAPONS[s.weapons[wid].def].name} has fired its shots this turn.`);
   const E = eff(s, wid);
   if (dist(s) < E.band[0] || dist(s) > E.band[1]) return fail(`${WEAPONS[s.weapons[wid].def].name} fires at distance ${E.band[0]}–${E.band[1]}. You are at ${dist(s)}.`);
-  if (pl.res.prec < TUNE.pyl.flipCost) return fail('No Precision: every flip costs 1 Precision. Play Precision cards first.');
-  if (!pl.deck.length && !pl.discard.length) return fail('No cards to flip.');
+  if (!WEAPONS[s.weapons[wid].def].melee && shotPreview(s, p, gi, commit).reveal < 1) return fail('Nothing to reveal: commit Precision first (play Precision cards).');
   return { ok: true };
 }
 function applyHit(s, ti, dmg, cq) {
@@ -526,93 +481,30 @@ function checkDeath(s, by) {
   s.winner = d0 && d1 ? (a.hp !== b.hp ? (a.hp > b.hp ? 0 : 1) : 'draw') : d0 ? 1 : 0;
   log(s, s.winner === 'draw' ? 'Both operators fall. Draw.' : `${s.players[s.winner].name} is the last operator standing.`, 'win');
 }
-const flipTxt = c => c.jam ? (c.cancelled ? 'JAM (Steady)' : 'JAM') : String(c.hm);
-// Start a shot with gun slot gi: uses one of its shots (or an extra shot) and the Mark. Nothing is flipped yet.
-function fireStart(s, p, gi = 0) {
+// o: a number (Precision to commit) or { commit }. Without one, the shot commits all your Precision.
+function fire(s, p, gi, o) {
   const pl = P(s, p); const e = check(s, p); if (e) return e;
-  const sc = shootCheck(s, p, gi); if (!sc.ok) return sc;
-  pylCheck();
-  const wid = pl.guns[gi]; const W = s.weapons[wid]; const d = WEAPONS[W.def]; const sp = shotPreview(s, p, gi);
-  if (W.shots >= eff(s, wid).magazine_capacity) pl.shot--; else W.shots++; W.shotTurn = s.turnNo;
-  s.shot = { p, gi, weapon: d.name, gunClass: d.gunClass, steps: sp.steps, need: sp.need, mark: sp.mark, recoil: sp.recoil, cover: sp.cover, cq: sp.cq,
-    flipped: [], sum: 0, jams: 0, cancelled: 0, level: -1, prec0: pl.res.prec, pot0: potValue(pl), stopped: false };
+  const commit = typeof o === 'number' ? o : o && typeof o === 'object' && o.commit != null ? o.commit : null;
+  const sc = shootCheck(s, p, gi, commit); if (!sc.ok) return sc;
+  const W = s.weapons[pl.guns[gi]]; const d = WEAPONS[W.def]; const sp = shotPreview(s, p, gi, commit);
+  if (W.shots >= eff(s, pl.guns[gi]).magazine_capacity) pl.shot--; else W.shots++; W.shotTurn = s.turnNo;
+  const revealed = [];
+  for (let i = 0; i < sp.reveal; i++) { if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; } revealed.push(pl.deck.pop()); }
+  const total = revealed.reduce((a, i) => a + hmOf(s, i), 0);
+  const hit = d.melee || total >= sp.need;
+  const before = pl.res.prec; pl.res.prec = d.melee ? pl.res.prec : Math.max(0, pl.res.prec - sp.commit - sp.recoil);
   pl.nextFire = { reqMod: 0, bonusPrec: 0 };
   pl.stats.shots++;
-  rec(s, `${pl.name} opens fire with the ${d.name}: steps ${sp.steps.map(([h, dm]) => `${h}→${dm}`).join(' · ')}${sp.pot ? ` (pot ${sp.pot} at stake)` : ''}.`, 'flip');
-  return { ok: true, shot: s.shot };
-}
-// Flip the top card of your deck into the open shot.
-function flip(s, p) {
-  const pl = P(s, p); const sh = s.shot;
-  if (s.over) return fail('The match is over.');
-  if (!sh || sh.p !== p) return fail('No shot in progress: tap FIRE first.');
-  if (pl.res.prec < TUNE.pyl.flipCost) return resolveShot(s, sh.level >= 0 ? 'bank' : 'out', null);
-  if (!pl.deck.length) { if (!pl.discard.length) return resolveShot(s, sh.level >= 0 ? 'bank' : 'out', null); pl.deck = shuffle(s, pl.discard); pl.discard = []; }
-  const iid = pl.deck.pop(); pl.res.prec -= TUNE.pyl.flipCost; pl.stats.flips++;
-  const def = cardDef(s, iid); const c = { iid, name: def.name, hm: def.hit_markers, jam: isJamDef(def), cancelled: false, recoil: 0 };
-  sh.flipped.push(c); sh.sum += c.hm;
-  let ev = 'flip';
-  if (c.jam) {
-    if (pl.revealPlus > 0) { pl.revealPlus--; c.cancelled = true; sh.cancelled++; ev = 'steady'; }
-    else {
-      sh.jams++; pl.heat++; pl.stats.jams++; ev = 'jam';
-      if (TUNE.pyl.jamRecoil) { const b = pl.res.prec; pl.res.prec = Math.max(0, pl.res.prec - sh.recoil); c.recoil = b - pl.res.prec; }
-      if (jamsCounted(pl, sh) >= jamLimit(s, p)) return resolveShot(s, 'bust', c);
-    }
-  }
-  const was = sh.level; sh.level = levelOf(sh.steps, sh.sum);
-  if (sh.level >= sh.steps.length - 1) return resolveShot(s, 'bank', c);
-  if (pl.res.prec < TUNE.pyl.flipCost || (!pl.deck.length && !pl.discard.length)) return resolveShot(s, sh.level >= 0 ? 'bank' : 'out', c);
-  if (sh.level > was) ev = ev === 'flip' ? 'step' : ev;
-  rec(s, `${pl.name} flips ${def.name}: ${flipTxt(c)}${c.recoil ? ` (−${c.recoil} Precision)` : ''} · ${sh.sum}/${sh.steps[Math.min(sh.steps.length - 1, sh.level + 1)][0]} Hit Markers · Jams ${jamsCounted(pl, sh)}/${jamLimit(s, p)}.`, ev === 'jam' ? 'jamf' : 'flip');
-  return { ok: true, card: c, event: ev, shot: sh, stepUp: sh.level > was };
-}
-// Bank the step you are on (into the pot).
-function stop(s, p) {
-  const sh = s.shot;
-  if (s.over) return fail('The match is over.');
-  if (!sh || sh.p !== p) return fail('No shot in progress.');
-  if (sh.level < 0) return fail(`Reach the first step (${sh.steps[0][0]} Hit Markers) before you stop.`);
-  sh.stopped = true; return resolveShot(s, 'bank', null);
-}
-function resolveShot(s, how, last) {
-  const sh = s.shot; const p = sh.p; const pl = P(s, p); s.shot = null;
-  pl.discard.push(...sh.flipped.map(c => c.iid));
-  let dealt = 0, banked = 0, lost = 0, notes = []; const ok = how === 'bank'; const lvl = ok ? sh.level : -1;
-  if (ok) { const r = bankShot(s, p, sh); dealt = r.dealt; banked = r.banked; notes = r.notes; if (lvl > 0) pl.stats.big++;
-    if (lvl === sh.steps.length - 1 && sh.steps.length > 2 && sh.gunClass === 'sniper') notes.unshift('HEADSHOT'); }
-  else if (how === 'bust') { pl.stats.busts++; lost = onBust(s, p, sh); }
-  else pl.stats.outs++;
-  const seq = sh.flipped.map(flipTxt).join(' · ') || 'no cards';
-  s.lastFire = { p, gi: sh.gi, weapon: sh.weapon, revealed: sh.flipped.map(c => ({ name: c.name, hm: c.hm, jam: c.jam, cancelled: c.cancelled, recoil: c.recoil })), total: sh.sum, req: sh.steps[0][0], steps: sh.steps,
-    level: lvl, reached: sh.level, hit: ok, banked, dealt, lost, pot: potValue(pl), potShots: pl.pot.length, notes, how, jam: how === 'bust', stopped: sh.stopped, jams: sh.jams, heat: pl.heat, limit: jamLimit(s, p),
-    cancelled: sh.cancelled, recoil: sh.prec0 - pl.res.prec, flips: sh.flipped.length };
-  const step = `step ${lvl + 1}${sh.stopped ? ', stopped' : lvl === sh.steps.length - 1 ? ', top step' : ', banked'}`;
-  const tail = ok ? (TUNE.pyl.bank === 'pot' ? `→ BANKED ${banked} (${step}; pot ${potValue(pl)})` : `→ HIT for ${dealt} (${step}${notes.length ? `, ${notes.join(', ')}` : ''})`)
-    : how === 'bust' ? `→ BUST: JAMMED (${jamsCounted(pl, sh)}/${jamLimit(s, p)} Jams)${lost ? `, pot of ${lost} lost` : ''}${TUNE.pyl.bustCost === 'pot' ? ', shooting over' : ''}` : `→ MISS (out of ${pl.res.prec < TUNE.pyl.flipCost ? 'Precision' : 'cards'} before step 1${pl.pot.length ? '; the pot stays' : ''})`;
-  log(s, `${pl.name} fires ${sh.weapon}: ${seq} ${tail}. Precision ${sh.prec0}→${pl.res.prec}.`, ok ? (TUNE.pyl.bank === 'pot' ? 'bank' : 'hit') : 'miss');
+  let dealt = 0, notes = [], lvl = -1;
+  if (hit) { pl.stats.hits++; pl.stats.hitsBy[W.def] = (pl.stats.hitsBy[W.def] || 0) + 1; lvl = d.melee ? 0 : sp.steps.filter(([h]) => total >= h).length - 1; if (lvl > 0) pl.stats.big++;
+    // applyHit's notes may already say 'close quarters: Armor ignored': the bare 'close quarters' tag is added only if not
+    const r = applyHit(s, 1 - p, sp.steps[lvl][1], sp.cq); if (lvl > 0) notes.push(lvl === 1 && d.gunClass === 'sniper' ? 'HEADSHOT' : `step ${lvl + 1}`); dealt = r.dealt; notes = notes.concat(r.notes);
+    if (sp.cover) notes.unshift(`cover −${sp.cover}`); if (sp.cq && !notes.some(n => n.startsWith('close quarters'))) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt; }
+  pl.discard.push(...revealed);
+  s.lastFire = { p, weapon: d.name, bullet: null, req: sp.need, steps: sp.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < sp.reveal, recoil: before - pl.res.prec, commit: sp.commit, free: sp.free };
+  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.free ? ` + ${sp.free} Steady` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
   checkDeath(s, 'ko');
-  return { ok: true, card: last, event: how, done: true, result: s.lastFire };
-}
-// STOP: deal the whole pot. Each banked shot hits on its own (Reactions and Armor per shot).
-function cashOut(s, p) {
-  const pl = P(s, p); const e = check(s, p); if (e) return e;
-  if (!pl.pot.length) return fail('Your pot is empty.');
-  const pot = pl.pot; pl.pot = []; let total = 0; const hits = [];
-  for (const x of pot) { if (s.over) break; const r = dealHit(s, p, x.dmg, x.cq, x.cover); total += r.dealt; hits.push({ dealt: r.dealt, notes: r.notes });
-    log(s, `${pl.name} cashes out ${x.weapon} → HIT for ${r.dealt} (step ${x.level + 1}${r.notes.length ? `, ${r.notes.join(', ')}` : ''}).`, 'hit'); checkDeath(s, 'ko'); }
-  pl.stats.cashes++; s.lastCash = { p, shots: pot.length, total, hits };
-  return { ok: true, total, shots: pot.length, result: s.lastCash };
-}
-// Fire a whole shot in one call (tests, scripted replays): flip until the shot ends or reaches step o.stopAt (default: the first step),
-// then bank it; o.cash (default true) cashes the pot out afterwards.
-function fire(s, p, gi = 0, o = {}) {
-  const r = fireStart(s, p, gi); if (!r.ok) return r; const stopAt = o.stopAt == null ? 0 : o.stopAt;
-  let res = null;
-  for (let g = 0; g < 200; g++) { const sh = s.shot; if (!sh) break; const x = sh.level >= stopAt ? stop(s, p) : flip(s, p); if (!x.ok) return x; if (x.done) { res = x.result; break; } }
-  res = res || s.lastFire;
-  if (o.cash !== false && P(s, p).pot.length && !s.over) { const c = cashOut(s, p); res = Object.assign({}, res, { dealt: res.dealt + c.total, notes: res.notes.concat(...c.result.hits.map(h => h.notes)), cash: c.result }); }
-  return { ok: true, result: res };
+  return { ok: true, result: s.lastFire };
 }
 
 // ---------- turn flow ----------
@@ -620,7 +512,7 @@ function fire(s, p, gi = 0, o = {}) {
 function startTurn(s, p) {
   const pl = P(s, p);
   Object.assign(pl, { res: { move: 0, prec: 0, intel: 0 }, def: 0, shot: 0, revealPlus: 0, dmgTurn: 0, ignoreCover: false, buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0,
-    stationScrapped: false, squadN: {}, rallyDone: [], turnSquads: 0, heat: 0, pot: [], busted: false, moved: false, movedToward: false, bonusTaken: [], fp: 0 });
+    stationScrapped: false, squadN: {}, rallyDone: [], turnSquads: 0, moved: false, movedToward: false, bonusTaken: [], fp: 0 });
   pl.nextFire = { reqMod: 0, bonusPrec: 0 };
   for (const wid of guns(pl)) { s.weapons[wid].shots = 0; s.weapons[wid].used = false; }
   pl.stats.turnDmg = 0;
@@ -629,7 +521,6 @@ function startTurn(s, p) {
 }
 function endTurn(s, p) {
   const pl = P(s, p); const e = check(s, p); if (e) return e;
-  if (pl.pot.length) { cashOut(s, p); if (s.over) return { ok: true }; } // End turn cashes the pot out
   pl.stats.maxTurnDmg = Math.max(pl.stats.maxTurnDmg, pl.stats.turnDmg);
   pl.fpHist.push(Math.round(pl.fp * 10) / 10);
   pl.discard.push(...pl.hand, ...pl.play); pl.hand = []; pl.play = [];
@@ -685,34 +576,45 @@ function endRound(s) {
 
 // ---------- estimates ----------
 function lcg(seed) { let x = seed | 0; return () => { x = (x * 1103515245 + 12345) & 0x7fffffff; return x / 0x7fffffff; }; }
-// Odds for the open shot (or a fresh shot with gun slot gi), if you keep flipping: reach[k] = chance to reach step k,
-// bust[k] = chance to bust before step k; plus the next flip's chance to be a Jam that counts (pJam) and to bust (pBust).
-// The unknown cards are the rest of the deck (any order), then the discard pile reshuffled. Seeded from the state (deterministic AI).
-function shotOdds(s, p, gi = 0, trials = 150) {
-  const pl = P(s, p); const sh = s.shot && s.shot.p === p ? s.shot : null;
-  const sp = sh ? null : shotPreview(s, p, gi); if (!sh && !sp) return null;
-  const steps = sh ? sh.steps : sp.steps; const recoil = sh ? sh.recoil : sp.recoil; const limit = jamLimit(s, p);
-  const card = i => { const d = cardDef(s, i); return [d.hit_markers, isJamDef(d)]; };
-  const dk = pl.deck.map(card), dc = pl.discard.map(card); const fc = TUNE.pyl.flipCost;
-  const st0 = { sum: sh ? sh.sum : 0, jams: sh ? jamsCounted(pl, sh) : (TUNE.pyl.jamScope === 'turn' ? pl.heat : 0), prec: pl.res.prec, steady: pl.revealPlus };
-  const lvl0 = levelOf(steps, st0.sum);
-  const r = lcg((s.seed ^ Math.imul(pl.deck.length + 1, 7919) ^ Math.imul(pl.discard.length + 1, 104729) ^ Math.imul(st0.sum + 3, 31) ^ Math.imul(st0.prec + 5, 2654435)) | 0);
-  const sh2 = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const cnt = steps.map(() => 0), bst = steps.map(() => 0);
-  for (let t = 0; t < trials; t++) {
-    const seq = sh2(dk.slice()).concat(sh2(dc.slice())); const x = Object.assign({}, st0); let best = lvl0, busted = false;
-    for (let i = 0; i < seq.length && x.prec >= fc && best < steps.length - 1; i++) {
-      const [hm, jam] = seq[i]; x.prec -= fc; x.sum += hm;
-      if (jam) { if (x.steady > 0) x.steady--; else { x.jams++; if (TUNE.pyl.jamRecoil) x.prec = Math.max(0, x.prec - recoil); if (x.jams >= limit) { busted = true; break; } } }
-      best = Math.max(best, levelOf(steps, x.sum));
-    }
-    for (let k = 0; k < steps.length; k++) { if (k <= best) cnt[k]++; else if (busted) bst[k]++; }
-  }
-  const reach = cnt.map(v => v / trials), bust = bst.map(v => v / trials);
-  const pool = dk.length ? dk : dc; const jamN = pool.filter(c => c[1]).length;
-  const pJam = pool.length && st0.steady < 1 ? jamN / pool.length : 0;
-  return { reach, bust, steps, level: lvl0, next: lvl0 + 1 < steps.length ? reach[lvl0 + 1] : null, nextBust: lvl0 + 1 < steps.length ? bust[lvl0 + 1] : null,
-    pJam, pBust: st0.jams + 1 >= limit ? pJam : 0, jamsLeft: jamN, cardsLeft: pool.length, limit, jams: st0.jams, steady: st0.steady, pot: potValue(pl) };
+function hitChance(s, p, n, req, trials = 300) {
+  const pl = P(s, p); if (n <= 0) return 0; if (req <= 0) return 1;
+  const dk = pl.deck.map(i => hmOf(s, i)), dc = pl.discard.map(i => hmOf(s, i));
+  const r = lcg(12345); let ok = 0; const sh = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  for (let t = 0; t < trials; t++) { const seq = sh(dk.slice()).concat(sh(dc.slice())); let sum = 0; for (let i = 0; i < Math.min(n, seq.length); i++) sum += seq[i]; if (sum >= req) ok++; }
+  return ok / trials;
+}
+// probability of reaching each ladder step when revealing 0..max cards (one Monte Carlo pass, prefix sums)
+function stepOdds(s, p, steps, max, trials = 120) {
+  const pl = P(s, p); const dk = pl.deck.map(i => hmOf(s, i)), dc = pl.discard.map(i => hmOf(s, i));
+  const cnt = Array.from({ length: max + 1 }, () => steps.map(() => 0)); const r = lcg(777 + dk.length * 31 + max);
+  const sh = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  for (let t = 0; t < trials; t++) { const a = sh(dk.slice()).concat(sh(dc.slice())); let sum = 0;
+    for (let c = 1; c <= max; c++) { sum += c <= a.length ? a[c - 1] : 0; steps.forEach(([h], i) => { if (sum >= h) cnt[c][i]++; }); } }
+  return cnt.map(x => x.map(v => v / trials));
+}
+function expDmg(s, p, sp) { if (sp.melee) return sp.steps[0][1]; const o = stepOdds(s, p, sp.steps, sp.reveal)[sp.reveal] || sp.steps.map(() => 0); let ev = 0; sp.steps.forEach(([, dm], i) => { ev += (o[i] - (o[i + 1] || 0)) * dm; }); return ev; }
+// Best Precision to commit to the next shot: a small dynamic programme over the shots left this turn (expected damage, Armor ignored).
+// V(q, l, first): best expected damage with q Precision and l shots still allowed. The model behind it:
+// - every shot is optional: a shot that cannot add damage is simply not fired, so the plan never burns Precision on a dud shot
+//   just to reach a later one (it used to: with spare shots it suggested a 0% commit-1 shot first);
+// - Mark (nextFire.reqMod) helps only the next shot; Steady (+reveal) and +damage last the whole turn;
+// - ties go to the larger commit: the surer shot now, and Precision left at End turn is worth nothing.
+// The planner re-runs after every shot, so later shots are re-planned with the cards actually left.
+function suggestCommit(s, p, gi) {
+  const pl = P(s, p); const sp = shotPreview(s, p, gi, 0); if (!sp || sp.melee) return { commit: 0, ev: sp ? sp.steps[0][1] : 0, p: 1 };
+  const pool = pl.res.prec, fr = pl.revealPlus, rc = sp.recoil; if (pool + fr < 1) return { commit: 0, ev: 0, p: 0 };
+  const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
+  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus), sp.steps[i][1]]) : sp.steps;
+  const odds = stepOdds(s, p, sp.steps.concat(later), pool + fr, 300); // one pass, same samples for both ladders
+  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, c + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * dm; }); return e; };
+  const EV = [0, 1].map(k => Array.from({ length: pool + 1 }, (_, c) => evOf(c, k))); const memo = {};
+  const V = (q, l, first) => { if (l <= 0) return [0, -1]; const key = (q * 16 + l) * 2 + (first ? 1 : 0); if (memo[key]) return memo[key];
+    let best = V(q, l - 1, first); // leave one shot unfired
+    for (let c = q; c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
+    return (memo[key] = best); };
+  const [, c] = V(pool, Math.min(sp.left, 6), true);
+  if (c < 0) return { commit: 0, ev: 0, p: 0 };
+  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, c + fr)][0] };
 }
 
 // ---------- AI ----------
@@ -776,11 +678,9 @@ function aiCycle(s, p) {
 function aiScrap(s, p) {
   const pl = P(s, p); const mf = mainSquad(s, p);
   if (pl.res.intel >= TUNE.stationScrapCost && owned(pl) > TUNE.minDeck && mf && archCounts(s, p)[mf] >= 2) { const t = pl.discard.concat(pl.play).find(i => cardDef(s, i).id === 'T001'); if (t) stationScrap(s, p, t); }
-  // Jam-aware (combo-aware AI only): Scouts are Jams, so they go once the deck has a little other Intel
-  const scoutAt = aiAware(s, p) ? AI_PYL.scoutIntel : 6;
   while (pl.scrapAvail > 0 && owned(pl) > TUNE.minDeck) {
     const intelSrc = allCards(pl).filter(i => cardDef(s, i).id !== 'T002').reduce((t, i) => t + cardDef(s, i).effects.concat(cardDef(s, i).loadout || []).reduce((a, e) => a + (e.op === 'gain' && e.res === 'intel' ? e.n : 0), 0), 0);
-    const pool = pl.discard.concat(pl.play).filter(i => { const id = cardDef(s, i).id; return id === 'T001' || (id === 'T002' && intelSrc >= scoutAt) || (id === 'T005' && s.round >= 5 && intelSrc >= 6); });
+    const pool = pl.discard.concat(pl.play).filter(i => { const id = cardDef(s, i).id; return id === 'T001' || (id === 'T002' && intelSrc >= 6) || (id === 'T005' && s.round >= 5 && intelSrc >= 6); });
     const t = pool.sort((a, b) => (cardDef(s, a).id === 'T005') - (cardDef(s, b).id === 'T005'))[0]; if (!t || !scrap(s, p, t).ok) break;
   }
 }
@@ -812,29 +712,13 @@ function aiPlay(s, p) {
     } else playCard(s, p, iid);
   }
 }
-// Stop policy: expected value with the pot at stake (bust-variants.md §3.1, the best policy there). The first shot fires when
-// step 1 is at least 5% likely. Another shot into a pot fires only if what it should add beats what a bust would lose;
-// inside a shot, push on only if the step it should add beats the pot (and this step) that a bust would lose.
-const AI_PYL = { startMin: 0.05, trials: 150, scoutIntel: 3 };
 function aiFireLoop(s, p) {
   const pl = P(s, p);
   for (let g = 0; g < 12 && !s.over; g++) {
-    if (!shootCheck(s, p, 0).ok) break;
-    const o = shotOdds(s, p, 0, AI_PYL.trials); if (!o || o.reach[0] < AI_PYL.startMin) break;
-    const pol = (s.aiPolicy && s.aiPolicy[p]) || 'ev'; // sim only: 'timid' never risks a bust, 'reckless' always pushes (bust-variants.md §3.1)
-    if (o.pot && !(pol === 'reckless' || (pol === 'timid' ? o.bust[0] === 0 : o.reach[0] * o.steps[0][1] > o.bust[0] * o.pot))) break; // keep the pot: cash out
-    if (!fireStart(s, p, 0).ok) break;
-    let decided = -1;
-    for (let k = 0; k < 200 && s.shot && !s.over; k++) {
-      const sh = s.shot;
-      if (sh.level >= 0 && sh.level > decided) { decided = sh.level; const q = shotOdds(s, p, 0, AI_PYL.trials);
-        const cur = sh.steps[sh.level][1], nxt = sh.steps[sh.level + 1][1];
-        const push = pol === 'reckless' || (pol === 'timid' ? q.next === 1 : q.next * (nxt - cur) > q.nextBust * (q.pot + cur));
-        if (!push) { stop(s, p); break; } }
-      if (!flip(s, p).ok) break;
-    }
+    if (!shootCheck(s, p, 0, pl.res.prec).ok) break;
+    const sg = suggestCommit(s, p, 0); if (sg.ev < 0.3) break;
+    if (!fire(s, p, 0, sg.commit).ok) break;
   }
-  if (!s.over && pl.pot.length && !s.shot) cashOut(s, p);
 }
 function aiTurn(s, p) {
   if (s.over || s.turn !== p) return fail('not AI turn');
@@ -851,9 +735,9 @@ function aiTurn(s, p) {
 const LOADOUT = {}; const PERKS = {};
 const no = () => fail('Not in these rules.');
 const API = { RES, RES_LABEL, TIER_NAME, RARITY, MODS, GUNCLASS, CARDS, WEAPONS, ATTS, ENVS, WEAPON_COPIES, TUNE, ARCH_TAG, SQUADS, RALLY, RALLY_TEXT, FPW,
-  newGame, playCard, playAll, move, buy, fire, endTurn, aiTurn, aiPlay, aiMove, aiBuy, aiCycle, aiFireLoop, aiScrap, AI_PYL, fireStart, flip, stop, cashOut, shotOdds, jamLimit, potValue, levelOf, stationScrap, squadCounts, mainSquad, buysLeft, closeSchedule, effText, playText,
+  newGame, playCard, playAll, move, buy, fire, endTurn, aiTurn, aiPlay, aiMove, aiBuy, aiCycle, aiFireLoop, aiScrap, suggestCommit, stepOdds, stationScrap, squadCounts, mainSquad, buysLeft, closeSchedule, effText, playText,
   reachable, closing, GUNSET, LOCSET, locTier, locSize, SQUAD_TEXT, rolesPlayed, NEIGHBOURS, cycle, LOADOUT, plateCost, nextPhase, buySupply, scrap, lootNear, PERKS, archCounts, gasRate, moveCost,
-  shotPreview, shootCheck, shotsLeft, lootCost, buyTotal, eff, envAt, dist, itemDef, cardDef, nextEdge, safeBounds, inSafe, isStarter, guns, owned, aiItemScore,
-  activateGun: no, eligibleFuel: () => [], boostOk: () => 'Not in these rules.', search: no, searchable: () => null, burnAtBench: no, canBench: () => false, punch: no, pickPerk: no, perksOf: () => [], hasPerk: () => false, stackPlan: () => [], ammoLeft: () => 0 };
+  shotPreview, shootCheck, shotsLeft, hitChance, expDmg, lootCost, buyTotal, eff, envAt, dist, itemDef, cardDef, nextEdge, safeBounds, inSafe, isStarter, guns, owned, aiItemScore,
+  activateGun: no, eligibleFuel: () => [], boostOk: () => 'Not in these rules.', search: no, searchable: () => null, burnAtBench: no, canBench: () => false, punch: no, pickPerk: no, perksOf: () => [], hasPerk: () => false, stackPlan: () => [], flip: () => false, ammoLeft: () => 0 };
 if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.WD = API;
 })(typeof window !== 'undefined' ? window : globalThis);
