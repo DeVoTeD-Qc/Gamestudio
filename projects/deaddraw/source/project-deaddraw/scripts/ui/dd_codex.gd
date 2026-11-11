@@ -217,6 +217,7 @@ func _frame(title: String, sub: String) -> VBoxContainer:
 	panel.position = Vector2((vp.x - pw) * 0.5, 8.0)
 	panel.size = Vector2(pw, vp.y - 16.0)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	DDUi.skin_panel(panel, "overlay", 16)
 	root.add_child(panel)
 	var v: VBoxContainer = DDUi.vbox(8)
 	panel.add_child(v)
@@ -259,6 +260,15 @@ func _chip(text: String, on: bool, cb: Callable, nm: String) -> Button:
 	b.autowrap_mode = TextServer.AUTOWRAP_OFF
 	if on:
 		b.add_theme_stylebox_override("normal", DDUi.box(DDUi.WARN.darkened(0.45), DDUi.WARN, 3, 12, 10))
+	# dd-art2-import: painted filter chips (on = gold plate, off = dark slate; bone words with an ink outline:
+	# ink on the dark gold reads only 3:1, bone 6.9:1)
+	if DDUi.Kit.skin_plate(b, "dd_chip_filter_on" if on else "dd_chip_filter_off", 10.0):
+		# the painted corners need room: never narrower than a fat thumb
+		b.custom_minimum_size.x = 72.0
+		for sn: String in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			var cst: StyleBox = b.get_theme_stylebox(sn)
+			cst.content_margin_left = 14.0
+			cst.content_margin_right = 14.0
 	b.set_meta(&"on", on)
 	b.pressed.connect(cb)
 	return b
@@ -369,6 +379,8 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 		v.remove_child(c)
 		c.queue_free()
 	v.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg(kind) if met else Color("343b40"), DDUi.accent(kind) if met else Color("4a5358"), 2, 10, 4))
+	if DDUi.Kit.rim(v, DDUi.accent(kind) if met else Color("4a5358"), false, true) != null:
+		v.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(kind) if met else Color("343b40"), 4.0, 10.0))
 	v.custom_minimum_size = sz
 	v.name = "Cx_" + str(e["key"]).replace(":", "_")
 	v.set_meta(&"key", str(e["key"]))
@@ -642,9 +654,7 @@ static func icon(id: String) -> Control:
 				hp.add_child(dot)
 			inner = hp
 		"chip":
-			var pc: PanelContainer = DDUi.panel(DDUi.BAD, 3)
-			var l: Label = DDUi.label(arg, DDUi.FONT_S - 2, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER)
-			pc.add_child(l)
+			var pc: PanelContainer = DDUi.tag(arg, "red", DDUi.FONT_S - 2, DDUi.BAD)
 			var cc: CenterContainer = CenterContainer.new()
 			cc.add_child(pc)
 			inner = cc

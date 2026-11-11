@@ -10,10 +10,12 @@
 #   - WaveNumeral: the big blood-red wave number on the wave door (slams in on a new wave).
 #   - RuleChip (dd-ui6): a weapon rule icon (the same SVG glyph as the gun row, Glossary, Codex)
 #     with a verdict: yes = full colour + a green tick, no = dimmed + a red strike, or plain.
+#   dd-art2-import: NumBadge and Socket draw the painted UI kit (dd_skin.gd) when its image exists.
 # Dependencies: DDUi. Loaded with preload() (no class_name, so no class-cache rescan).
 # Author: UI/UX Agent (dd-ux-v4)
 extends RefCounted
 
+const Kit = preload("res://scripts/ui/dd_skin.gd")
 const INK: Color = Color("151214")
 const BONE: Color = Color("ece6d6")
 const BURST_YELLOW: Color = Color("f2c14e")
@@ -147,12 +149,40 @@ class NumBadge:
 		var tw: float = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_for(d, text)).x
 		return maxf(d, tw + d * 0.45)
 
+	## dd-art2-import: the painted badge for this role (null: draw the vector circle).
+	func painted_file(pill: bool) -> String:
+		var key: String = "neutral"
+		match role:
+			"weapon":
+				key = "hit"
+			"zombie":
+				key = "zombie" if pill else "zombie_t%d" % (Mark.tier_of(value) + 1)
+			_:
+				if not pill:
+					if ring.is_equal_approx(Color("6fd08a")) or (ring.g > ring.r * 1.15 and ring.g > ring.b * 1.2):
+						key = "heal"
+					elif ring.r > 0.8 and ring.g > 0.6 and ring.b < 0.45:
+						key = "cover"
+		return ("dd_pill_" if pill else "dd_badge_") + key
+
 	func _draw() -> void:
 		var h: float = size.y
 		var w: float = size.x
 		var d: float = minf(w, h)
 		if d <= 4.0:
 			return
+		var pill: bool = w > h + 0.5
+		var file: String = painted_file(pill)
+		if pill:
+			var st: StyleBox = Kit.box(file, 0.0)
+			if st != null:
+				draw_style_box(st, Rect2(Vector2.ZERO, size))
+				return
+		else:
+			var t: Texture2D = Kit.tex(file)
+			if t != null:
+				draw_texture_rect(t, Rect2((size - Vector2(d, d)) * 0.5, Vector2(d, d)), false)
+				return
 		var rw: float = clampf(d * 0.075, 2.0, 5.0)
 		var hair: float = maxf(1.0, d * 0.03)
 		_shape(Vector2(w, h), 0.0, Color(INK, 0.9))
@@ -235,6 +265,17 @@ class Socket:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
+		var st: StyleBox = Kit.box("dd_socket_next" if is_next else "dd_socket_empty", 0.0)
+		if st != null:
+			draw_style_box(st, Rect2(Vector2.ZERO, size))
+			if is_next:
+				# the painted dashes are thin at 56 px: a soft gold wash says "next" from across the room
+				var inset: float = minf(size.x, size.y) * 0.16
+				draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset, inset) * 2.0), Color(BURST_YELLOW, 0.14))
+				draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset, inset) * 2.0), Color(BURST_YELLOW, 0.55), false, 1.5)
+			if is_next and next_text != "":
+				_draw_next_text()
+			return
 		var r: Rect2 = Rect2(Vector2(1.5, 1.5), size - Vector2(3, 3))
 		draw_rect(r, Color(0, 0, 0, 0.28))
 		var col: Color = BURST_YELLOW if is_next else Color("4f5b62")
@@ -242,10 +283,13 @@ class Socket:
 		for k: int in 4:
 			draw_dashed_line(corners[k], corners[(k + 1) % 4], col, 2.0, 5.0)
 		if is_next and next_text != "":
-			var fs: int = int(clampf(minf(size.x * 0.34, size.y * 0.3), 11.0, 24.0))
-			while fs > 9 and _font().get_string_size(next_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 6.0:
-				fs -= 1
-			draw_num(self, next_text, size * 0.5, fs, BURST_YELLOW)
+			_draw_next_text()
+
+	func _draw_next_text() -> void:
+		var fs: int = int(clampf(minf(size.x * 0.34, size.y * 0.3), 11.0, 24.0))
+		while fs > 9 and _font().get_string_size(next_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 6.0:
+			fs -= 1
+		draw_num(self, next_text, size * 0.5, fs, BURST_YELLOW, Color(INK, 0.9), 3)
 
 
 # ================================================================ rule chip (dd-ui6)

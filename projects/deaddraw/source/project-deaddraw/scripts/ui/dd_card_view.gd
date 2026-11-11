@@ -298,8 +298,8 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 		_add_rule_chip(window, rc)
 	var badge: String = str(spec.get("badge", ""))
 	if badge != "" or bool(spec.get("holdover", false)):
-		var chip: PanelContainer = DDUi.panel(Color(spec.get("badge_color", DDUi.WARN)) if badge != "" else DDUi.TEXT, 3)
-		chip.add_child(DDUi.label(badge if badge != "" else "HOLDOVER", roundi(int(spec.get("badge_size", DDUi.FONT_S - 5)) * ts), DDUi.BG))
+		var bcol: Color = Color(spec.get("badge_color", DDUi.WARN)) if badge != "" else DDUi.TEXT
+		var chip: PanelContainer = DDUi.tag(badge if badge != "" else "HOLDOVER", tag_color(bcol), roundi(int(spec.get("badge_size", DDUi.FONT_S - 5)) * ts), bcol)
 		window.add_child(chip)
 		window.resized.connect(func() -> void:
 			if is_instance_valid(chip):
@@ -311,6 +311,12 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	bst.corner_radius_bottom_left = 10
 	bst.corner_radius_bottom_right = 10
 	bar.add_theme_stylebox_override("panel", bst)
+	# dd-art2-import: the painted name strip (ink tape with bolts) when it exists
+	var pst: StyleBox = DDUi.Kit.box("dd_bar_name", 5.0)
+	if pst != null:
+		pst.content_margin_left = 8.0
+		pst.content_margin_right = 8.0
+		bar.add_theme_stylebox_override("panel", pst)
 	_box.add_child(bar)
 	var bv: VBoxContainer = DDUi.vbox(0)
 	bar.add_child(bv)
@@ -350,6 +356,8 @@ func _build_district(spec: Dictionary) -> void:
 		var mini: PanelContainer = PanelContainer.new()
 		var st: StyleBoxFlat = DDUi.box(DDUi.card_bg(kind), DDUi.accent(kind), 3, 10, 0)
 		mini.add_theme_stylebox_override("panel", st)
+		if DDUi.Kit.rim(mini, DDUi.accent(kind), false, true) != null:
+			mini.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(kind), 0.0, 10.0))
 		mini.custom_minimum_size = Vector2(108, 0)
 		h.add_child(mini)
 		var window: Control = Control.new()
@@ -432,8 +440,8 @@ func _add_badge(row: HBoxContainer, spec: Dictionary) -> void:
 		badge = "HOLDOVER"
 		col = DDUi.TEXT_DIM
 	if badge != "":
-		var bp: PanelContainer = DDUi.panel(col, 3)
-		bp.add_child(DDUi.label(badge, DDUi.FONT_S - 3, DDUi.BG))
+		var bp: PanelContainer = DDUi.tag(badge, tag_color(col), DDUi.FONT_S - 3, col)
+		bp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(bp)
 
 
@@ -550,6 +558,17 @@ func _outline(l: Label, px: int) -> void:
 	l.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.92))
 
 
+## dd-art2-import: the painted tag colour for an old chip colour (red damage, yellow notes, bone ACTIVE...).
+static func tag_color(c: Color) -> String:
+	if c.r > 0.75 and c.g < 0.5:
+		return "red"
+	if c.r > 0.6 and c.b < 0.5 and c.g > 0.5:
+		return "yellow"
+	if c.b > c.g and c.r > c.g:
+		return "boss"
+	return "bone"
+
+
 func set_selected(v: bool) -> void:
 	_selected = v
 	_apply_style()
@@ -572,6 +591,16 @@ func _apply_style() -> void:
 		st.set_border_width_all(3)
 		st.shadow_color = Color(DDUi.WARN, 0.32)
 		st.shadow_size = 7
+	# dd-art2-import: the painted rim (tinted to the type, gold when selected) over the content; the
+	# flat box keeps only the body colour (and the selected / lit glow)
+	var rim_tint: Color = DDUi.SELECT if (_lit and not _selected) else DDUi.accent(kind).lightened(0.3)
+	if DDUi.Kit.rim(self, rim_tint, _selected, _row) != null:
+		st.border_color = Color(0, 0, 0, 0)
+		st.set_border_width_all(0)
+		st.expand_margin_left = -2.0
+		st.expand_margin_right = -2.0
+		st.expand_margin_top = -2.0
+		st.expand_margin_bottom = -2.0
 	add_theme_stylebox_override("panel", st)
 	modulate = Color(1, 1, 1, 0.55) if _dim else Color(1, 1, 1, 1)
 

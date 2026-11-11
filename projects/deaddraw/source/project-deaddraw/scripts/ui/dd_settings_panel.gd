@@ -51,6 +51,7 @@ func open() -> void:
 	var wide: bool = vp.x > vp.y
 	card.custom_minimum_size = Vector2(minf(640.0 if wide else 520.0, vp.x - 32.0), 0)
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	DDUi.skin_panel(card, "modal", 24)
 	center.add_child(card)
 	var v: VBoxContainer = DDUi.vbox(8 if wide else 12)
 	card.add_child(v)
@@ -106,6 +107,16 @@ func _slider(g: Node, key: String, text: String) -> Control:
 	fill.content_margin_bottom = 8
 	s.add_theme_stylebox_override("grabber_area", fill)
 	s.add_theme_stylebox_override("grabber_area_highlight", fill)
+	# dd-art2-import: the painted gauge (sunk track, green enamel fill)
+	var ptrack: StyleBox = DDUi.Kit.box("dd_bar_track", 0.0)
+	var pfill: StyleBox = DDUi.Kit.box("dd_bar_fill_green", 0.0)
+	if ptrack != null and pfill != null:
+		for st: StyleBox in [ptrack, pfill]:
+			st.content_margin_top = 9
+			st.content_margin_bottom = 9
+		s.add_theme_stylebox_override("slider", ptrack)
+		s.add_theme_stylebox_override("grabber_area", pfill)
+		s.add_theme_stylebox_override("grabber_area_highlight", pfill)
 	s.value = roundf(float(g.profile.setting(key)) * 100.0)
 	lab.text = "%s  %d%%" % [text, int(s.value)]
 	s.value_changed.connect(func(val: float) -> void:
@@ -126,6 +137,9 @@ func _toggle(g: Node, key: String, text: String) -> Control:
 		var c: Color = Color("245236") if state else DDUi.PANEL_HI
 		b.add_theme_stylebox_override("normal", DDUi.box(c, c.lightened(0.25), 2, 12, 12))
 		b.add_theme_stylebox_override("hover", DDUi.box(c.lightened(0.1), c.lightened(0.4), 2, 12, 12))
+		# dd-art2-import: painted toggle (gold chip when on, dark slate when off; bone words, ink outline)
+		if DDUi.Kit.skin_plate(b, "dd_chip_filter_on" if state else "dd_chip_filter_off", 12.0):
+			DDUi.ink_outline(b)
 	paint.call(on)
 	b.pressed.connect(func() -> void:
 		var now: bool = not (g.reduce_motion() if key == "reduce_motion" else bool(g.profile.setting(key)))

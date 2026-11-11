@@ -21,6 +21,9 @@ func setup(view: Control, n: int, kind: String) -> Container:
 		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var shade: float = 0.25 + 0.15 * (layers - 1 - k)
 		p.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg(kind).darkened(shade), DDUi.accent(kind).darkened(0.35 + shade * 0.5), 2, 12, 0))
+		# dd-art2-import: the painted rim, darker on the layers further back
+		if DDUi.Kit.rim(p, DDUi.accent(kind).darkened(0.35 + shade * 0.5), false, false) != null:
+			p.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(kind).darkened(shade), 0.0))
 		add_child(p)
 	add_child(view)
 	return self

@@ -673,6 +673,11 @@ func _custom_tile(kind: String, payload: Dictionary, bg: Color = Color(0, 0, 0, 
 		c.queue_free()
 	if bg.a > 0.0:
 		v.add_theme_stylebox_override("panel", DDUi.box(bg, DDUi.accent(kind).darkened(0.3), 2, 12, 6))
+		# dd-art2-import: the painted chip rim over the tile
+		if DDUi.Kit.rim(v, DDUi.accent(kind).darkened(0.3), false, true) != null:
+			v.add_theme_stylebox_override("panel", DDUi.Kit.card_body(bg, 6.0))
+	else:
+		v.set_selected(false)
 	v.inspected.connect(_on_inspect)
 	return v
 
@@ -800,9 +805,11 @@ func _build_top(run: DDRun) -> Control:
 	bar.max_value = run.max_hp
 	bar.value = run.hp
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 10)
-	bar.add_theme_stylebox_override("background", DDUi.box(Color("0d0f10"), Color(0, 0, 0, 0), 0, 6, 0))
-	bar.add_theme_stylebox_override("fill", DDUi.box(col, Color(0, 0, 0, 0), 0, 6, 0))
+	bar.custom_minimum_size = Vector2(0, 12)
+	# dd-art2-import: painted gauge (sunk track; green / amber / red enamel fill by HP)
+	bar.add_theme_stylebox_override("background", DDUi.bar_style("dd_bar_track", Color("0d0f10")))
+	var fill_file: String = "dd_bar_fill_green" if col == DDUi.GOOD else ("dd_bar_fill_amber" if col == DDUi.WARN else "dd_bar_fill_red")
+	bar.add_theme_stylebox_override("fill", DDUi.bar_style(fill_file, col))
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hv.add_child(bar)
 	_hp_bar = bar
@@ -837,7 +844,8 @@ func _help_button() -> Button:
 	b.name = "HelpButton"
 	b.custom_minimum_size = Vector2(64, HUD_H)
 	b.autowrap_mode = TextServer.AUTOWRAP_OFF
-	b.add_theme_stylebox_override("normal", DDUi.box(Color("1f3a4f"), DDUi.accent("W"), 2, 12, 8))
+	if not b.has_meta(&"painted"):
+		b.add_theme_stylebox_override("normal", DDUi.box(Color("1f3a4f"), DDUi.accent("W"), 2, 12, 8))
 	b.pressed.connect(func() -> void:
 		if not _was_long(b):
 			open_glossary())
@@ -919,6 +927,9 @@ func _door_tile(kind: String, payload: Dictionary, art_keys: Array, tint: float,
 		c.queue_free()
 	var st: StyleBoxFlat = DDUi.box(DDUi.card_bg(kind), border, 3, 12, 0)
 	v.add_theme_stylebox_override("panel", st)
+	# dd-art2-import: the painted rim in the door's colour over the art
+	if DDUi.Kit.rim(v, border, false, false) != null:
+		v.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(kind), 0.0))
 	var window: Control = Control.new()
 	window.clip_contents = true
 	window.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -984,10 +995,16 @@ func _wave_door(run: DDRun, column: bool) -> DDCardView:
 		bv.remove_child(c)
 		c.queue_free()
 	bv.add_theme_stylebox_override("panel", DDUi.box(Color(DDUi.card_bg("F"), 0.92), DDUi.accent("F"), 2, 8, 2))
+	# dd-art2-import: the painted BOSS tag (purple plate, bone words)
+	var boss_tag: StyleBox = DDUi.Kit.box("dd_tag_boss", 2.0)
+	if boss_tag != null:
+		boss_tag.content_margin_left = 10.0
+		boss_tag.content_margin_right = 10.0
+		bv.add_theme_stylebox_override("panel", boss_tag)
 	bv.index = IDX_BOSS
 	bv.name = "BossChip"
 	var bl: Label = DDUi.label("BOSS %s" % ("·".join(PackedStringArray(zs.map(func(z: Variant) -> String: return str(int(z))))) if str(b.get("trait", "")) != "phases" else str(int(zs[0])) + "+"),
-		DDUi.FONT_S - 3, DDUi.accent("F"), HORIZONTAL_ALIGNMENT_CENTER)
+		DDUi.FONT_S - 3, DDUi.accent("F") if boss_tag == null else DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	bl.clip_text = true
 	bl.custom_minimum_size = Vector2(10, 0)
 	bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1101,13 +1118,17 @@ func _room_plate(run: DDRun, i: int) -> Control:
 		pg.value = mini(price, Game.bal.shown(run.points))
 		pg.custom_minimum_size = Vector2(0, 5)
 		pg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pg.add_theme_stylebox_override("background", DDUi.box(Color("3a3328"), Color(0, 0, 0, 0), 0, 2, 0))
-		pg.add_theme_stylebox_override("fill", DDUi.box(DDUi.WARN, Color(0, 0, 0, 0), 0, 2, 0))
+		pg.add_theme_stylebox_override("background", DDUi.bar_style("dd_bar_track", Color("3a3328"), 2))
+		pg.add_theme_stylebox_override("fill", DDUi.bar_style("dd_bar_fill_gold", DDUi.WARN, 2))
+		if DDUi.Kit.tex("dd_bar_track") != null:
+			pg.custom_minimum_size = Vector2(0, 8)
 		pg.name = "Progress"
 		inner.add_child(pg)
 	var sb: StyleBoxFlat = DDUi.box(bg, edge, 2, 10, 6)
 	for st: String in ["normal", "hover", "pressed", "disabled"]:
 		b.add_theme_stylebox_override(st, sb if st != "hover" else DDUi.box(bg.lightened(0.1), edge, 2, 10, 6))
+	# dd-art2-import: the painted door plates (gold afford, dark iron locked, green USE, used)
+	DDUi.Kit.skin_plate(b, "dd_plate_door_" + (("used" if used else "use") if open else ("afford" if afford else "locked")), 6.0)
 	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP)
 	if b.disabled:
 		# a locked / used plate: the door under it gets the taps (tooltip) and the long press
@@ -1174,6 +1195,14 @@ func _build_strip(run: DDRun, strip_h: float) -> Control:
 		h.add_child(lk)
 	var p: DDCardView = _custom_tile("D", DDPayloads.history(run), DDUi.PANEL)
 	p.name = "Log"
+	# dd-art2-import: the event log sits on the painted HUD strip
+	var log_st: StyleBox = DDUi.painted("hud", 6)
+	if log_st != null:
+		var old_rim: Node = p.get_node_or_null(^"PaintedRim")
+		if old_rim != null:
+			p.remove_child(old_rim)
+			old_rim.queue_free()
+		p.add_theme_stylebox_override("panel", log_st)
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(DDPayloads.history(Game.run)))
 	var row: HBoxContainer = DDUi.hbox(8)
@@ -1295,6 +1324,12 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	var mv: DDCardView = _custom_tile("K", DDPayloads.melee(run), DDUi.card_bg("K"))
 	mv.set_selected(on)
 	mv.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("K"), DDUi.SELECT if on else DDUi.accent("K"), 4 if on else 2, 12, 4))
+	if mv.get_node_or_null(^"PaintedRim") != null:
+		var mb: StyleBoxFlat = DDUi.Kit.card_body(DDUi.card_bg("K"), 4.0)
+		if on:
+			mb.shadow_color = Color(DDUi.SELECT, 0.35)
+			mb.shadow_size = 10
+		mv.add_theme_stylebox_override("panel", mb)
 	mv.index = IDX_MELEE
 	mv.name = "Melee"
 	mv.custom_minimum_size = Vector2(0, TAP)
@@ -1381,6 +1416,19 @@ func _run_button(run: DDRun) -> Control:
 		var nl: Label = DDUi.label("NO\nESCAPE", DDUi.FONT_S - 5, DDUi.BAD, HORIZONTAL_ALIGNMENT_CENTER)
 		nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		ne.add_child(nl)
+		# dd-art2-import: the painted red tag (ink words) centred in the slot, not stretched to its height
+		if DDUi.Kit.tex("dd_tag_red") != null:
+			ne.remove_child(nl)
+			nl.queue_free()
+			ne.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+			var nt: PanelContainer = DDUi.tag("NO\nESCAPE", "red", DDUi.FONT_S - 5, DDUi.BAD)
+			var nts: StyleBox = nt.get_theme_stylebox("panel")
+			nts.content_margin_left = 12.0
+			nts.content_margin_right = 12.0
+			nts.content_margin_top = 4.0
+			nts.content_margin_bottom = 4.0
+			nt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			ne.add_child(nt)
 		return ne
 	if run.boss_street:
 		var rp: Button = DDUi.button("RUN PAST\n-%d HP" % Game.bal.num("boss_runpast_damage"), Color("5a2a1a"), DDUi.FONT_S - 4)
@@ -1437,7 +1485,7 @@ func _due_hint(run: DDRun) -> String:
 
 
 func _build_hint(run: DDRun) -> Control:
-	var p: PanelContainer = DDUi.panel(Color("1d2b3a"), 6, DDUi.accent("W"), 2)
+	var p: PanelContainer = DDUi.skin_panel(DDUi.panel(Color("1d2b3a"), 6, DDUi.accent("W"), 2), "hud", 12)
 	p.name = "Hint"
 	p.custom_minimum_size = Vector2(0, HINT_H)
 	var h: HBoxContainer = DDUi.hbox(6)
@@ -1487,7 +1535,7 @@ func _build_sheet() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet_root.add_child(center)
 	var vp: Vector2 = get_viewport_rect().size
-	var panel: PanelContainer = DDUi.panel(DDUi.PANEL, 14, DDUi.SELECT, 2)
+	var panel: PanelContainer = DDUi.skin_panel(DDUi.panel(DDUi.PANEL, 14, DDUi.SELECT, 2), "modal", 22)
 	panel.name = "Sheet"
 	panel.custom_minimum_size = Vector2(minf(vp.x - 32.0, 620.0 if portrait else 900.0), 0)
 	center.add_child(panel)
@@ -2230,7 +2278,7 @@ func _build_end() -> void:
 	v.add_child(DDUi.label(where, DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
 	if not won and not last_event.is_empty():
 		v.add_child(DDUi.label("Last: " + str(last_event.get("text", "")), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
-	var sc: PanelContainer = DDUi.panel(DDUi.PANEL, 14)
+	var sc: PanelContainer = DDUi.skin_panel(DDUi.panel(DDUi.PANEL, 14), "modal", 22)
 	var sv: VBoxContainer = DDUi.vbox(4)
 	sc.add_child(sv)
 	sv.add_child(DDUi.label("Points earned: %d" % Game.bal.shown(run.points_earned), DDUi.FONT_M, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))

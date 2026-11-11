@@ -103,9 +103,8 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		var tr: TextureRect = _add_art(band, tex, "cover")
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if _selected:
-		var chip: PanelContainer = DDUi.panel(DDUi.SELECT, 3)
+		var chip: PanelContainer = DDUi.tag("ACTIVE", "bone", DDUi.FONT_S - 7, DDUi.SELECT)
 		chip.name = "ActiveChip"
-		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 7, DDUi.BG))
 		band.add_child(chip)
 		band.resized.connect(func() -> void:
 			if is_instance_valid(chip):
@@ -178,6 +177,14 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 		stb.shadow_color = Color(gold, 0.35)
 		stb.shadow_size = 6
 	p.add_theme_stylebox_override("panel", stb)
+	# dd-art2-import: the painted Full set plate (open / near with its glow / lit gold)
+	var pst: StyleBox = DDUi.Kit.box("dd_plate_fullset_" + mode, 0.0)
+	if pst != null:
+		pst.content_margin_left = maxf(6.0, h * 0.3)
+		pst.content_margin_right = maxf(8.0, h * 0.38)
+		pst.content_margin_top = 1.0
+		pst.content_margin_bottom = 1.0
+		p.add_theme_stylebox_override("panel", pst)
 	p.custom_minimum_size = Vector2(0, h)
 	var row: HBoxContainer = DDUi.hbox(4)
 	p.add_child(row)
@@ -319,6 +326,9 @@ func _make_mini(z: int, pl: Dictionary) -> DDCardView:
 	mc.mouse_filter = Control.MOUSE_FILTER_STOP
 	mc.clip_contents = true
 	mc.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("Z"), Marks.TIER_COLORS[Marks.tier_of(z)], 2, 6, 0))
+	# dd-art2-import: the painted chip rim in the tier colour
+	if DDUi.Kit.rim(mc, Marks.TIER_COLORS[Marks.tier_of(z)], false, true) != null:
+		mc.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg("Z"), 0.0, 6.0))
 	var c: DDCard = DDCard.make(DDCard.ZOMBIE, z)
 	var tex: Texture2D = Art.texture_for(Art.card_keys(c))
 	if tex != null:

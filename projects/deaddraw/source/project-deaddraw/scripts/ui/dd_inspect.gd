@@ -62,6 +62,8 @@ func open(payload: Dictionary) -> void:
 	st.shadow_color = Color(0, 0, 0, 0.6)
 	st.shadow_size = 18
 	card.add_theme_stylebox_override("panel", st)
+	# dd-art2-import: the painted tooltip body (neutral) with the type's tinted rim on top
+	_paint(card, kind, 26)
 	var wide: bool = vp.x > vp.y
 	var w: float = minf(980.0, vp.x - 40.0) if wide else minf(560.0, vp.x - 40.0)
 	card.custom_minimum_size = Vector2(w, 0)
@@ -120,6 +122,8 @@ func open(payload: Dictionary) -> void:
 			var d: Dictionary = e
 			var chip: PanelContainer = DDUi.panel(DDUi.card_bg(str(d.get("kind", "D"))), 8, DDUi.accent(str(d.get("kind", "D"))), 2)
 			chip.custom_minimum_size = Vector2(96, 0)
+			if DDUi.Kit.rim(chip, DDUi.accent(str(d.get("kind", "D"))), false, true) != null:
+				chip.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(str(d.get("kind", "D"))), 10.0))
 			var cv: VBoxContainer = DDUi.vbox(0)
 			chip.add_child(cv)
 			cv.add_child(DDUi.label(str(d.get("big", "")), DDUi.FONT_XL, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
@@ -135,6 +139,15 @@ func open(payload: Dictionary) -> void:
 
 ## The 2-line tooltip: a small picture (the art with its number badge, or the big number),
 ## then t1 in bold and t2 in plain words.
+## dd-art2-import: painted tooltip panel + the kind's tinted card rim over it (flat box stays when missing).
+func _paint(card: PanelContainer, kind: String, pad: int) -> void:
+	var pst: StyleBox = DDUi.painted("tooltip", pad)
+	if pst == null:
+		return
+	card.add_theme_stylebox_override("panel", pst)
+	DDUi.Kit.rim(card, DDUi.accent(kind), false, false)
+
+
 func _open_tip(payload: Dictionary) -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	var root: Control = Control.new()
@@ -156,6 +169,7 @@ func _open_tip(payload: Dictionary) -> void:
 	st.shadow_color = Color(0, 0, 0, 0.6)
 	st.shadow_size = 14
 	card.add_theme_stylebox_override("panel", st)
+	_paint(card, kind, 20)
 	var w: float = minf(620.0, vp.x - 32.0)
 	card.custom_minimum_size = Vector2(w, 0)
 	center.add_child(card)
@@ -183,6 +197,8 @@ func _open_tip(payload: Dictionary) -> void:
 	elif has_pic:
 		var pic: PanelContainer = PanelContainer.new()
 		pic.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg(kind), DDUi.accent(kind).darkened(0.3), 2, 10, 0))
+		if DDUi.Kit.rim(pic, DDUi.accent(kind), false, true) != null:
+			pic.add_theme_stylebox_override("panel", DDUi.Kit.card_body(DDUi.card_bg(kind), 0.0, 10.0))
 		pic.custom_minimum_size = Vector2(pic_d, pic_d)
 		pic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		pic.clip_contents = true

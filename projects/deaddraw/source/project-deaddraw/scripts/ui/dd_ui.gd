@@ -4,8 +4,12 @@
 # Dependencies: DDCard.
 #   v2: ammo, drop, room, machine and Jawbreaker colours from the art manifest palette.
 # Author: Mechanics Developer Agent
+#   dd-art2-import: buttons, panels, tags and bars use the painted UI kit (dd_skin.gd) when its image
+#   exists; the StyleBoxFlat look stays the fallback.
 class_name DDUi
 extends RefCounted
+
+const Kit = preload("res://scripts/ui/dd_skin.gd")
 
 const BG: Color = Color("15181a")
 const PANEL: Color = Color("20262a")
@@ -87,9 +91,59 @@ static func button(text: String, color: Color = PANEL_HI, size: int = FONT_M, mi
 	b.add_theme_stylebox_override("pressed", box(color.darkened(0.15), SELECT, 2, 12, 12))
 	b.add_theme_stylebox_override("disabled", box(Color(PANEL, 0.8), Color(TEXT_DIM, 0.25), 2, 12, 12))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	if Kit.skin_button(b, Kit.family(color)):
+		ink_outline(b)
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.focus_mode = Control.FOCUS_NONE
 	return b
+
+
+## dd-art2-import: an ink outline so words stay readable on the painted plates.
+static func ink_outline(c: Control, px: int = 4) -> void:
+	c.add_theme_constant_override("outline_size", px)
+	c.add_theme_color_override("font_outline_color", Color(0.05, 0.04, 0.04, 0.85))
+
+
+## dd-art2-import: a painted panel ("tooltip", "modal", "overlay", "hud") or null when its image is missing.
+static func painted(role: String, pad: int = 10) -> StyleBox:
+	return Kit.box("dd_panel_" + role, pad)
+
+
+## Puts the painted panel `role` on p (keeps p's flat style when the image is missing). Returns p.
+static func skin_panel(p: PanelContainer, role: String, pad: int = -1) -> PanelContainer:
+	var cur: StyleBox = p.get_theme_stylebox("panel")
+	var pd: int = pad if pad >= 0 else (int(cur.content_margin_left) if cur != null and cur.content_margin_left >= 0.0 else 10)
+	# the painted rim is ~12 px deep: keep content off it
+	var st: StyleBox = painted(role, maxi(pd, 12))
+	if st != null:
+		p.add_theme_stylebox_override("panel", st)
+	return p
+
+
+## A painted tag ("yellow", "red", "bone", "boss") with a word on it, or a flat chip when missing.
+static func tag(text: String, color: String, fs: int, flat_bg: Color = WARN) -> PanelContainer:
+	var p: PanelContainer = PanelContainer.new()
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dark_word: bool = color != "boss"
+	var st: StyleBox = Kit.box("dd_tag_" + color, 0.0)
+	if st != null:
+		st.content_margin_left = maxf(6.0, fs * 0.6)
+		st.content_margin_right = maxf(6.0, fs * 0.6)
+		st.content_margin_top = 2.0
+		st.content_margin_bottom = 2.0
+		p.add_theme_stylebox_override("panel", st)
+	else:
+		p.add_theme_stylebox_override("panel", box(flat_bg, Color(0, 0, 0, 0), 0, 14, 3))
+	var l: Label = label(text, fs, BG if dark_word else TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	l.name = "Word"
+	p.add_child(l)
+	return p
+
+
+## dd-art2-import: painted bar track / fill on a ProgressBar or Slider style slot (flat fallback).
+static func bar_style(file: String, flat: Color, radius: int = 6) -> StyleBox:
+	var st: StyleBox = Kit.box(file, 0.0)
+	return st if st != null else box(flat, Color(0, 0, 0, 0), 0, radius, 0)
 
 
 static func panel(bg: Color = PANEL, pad: int = 10, border: Color = Color(0, 0, 0, 0), width: int = 0) -> PanelContainer:
