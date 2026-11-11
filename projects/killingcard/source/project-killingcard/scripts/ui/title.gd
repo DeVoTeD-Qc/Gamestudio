@@ -11,6 +11,10 @@
 #   kc-da-ui (art direction v1 #6): ONE amber button: PLAY DRILL while the drill is offered, else
 #   CONTINUE RUN when a run is saved, else START NEW RUN; every other button is steel. The drill
 #   invite sits in a steel frame (red is for danger, never a friendly offer).
+#   kc-da-ui2 (art direction #7, "opening the case: your best card on top"): the title lockup
+#   (title_wordmark.gd: stencil KILLING + CARD on a card-cut plate) and, on the right, the player's
+#   equipped Operator (Settings.operator_primary, else the starter's) as a large Y2+ card with its
+#   band; long press / right click (or a tap) opens the inspector. Still exactly one amber button.
 # Dependencies: run_screen.gd, RunState, SceneRouter (via RunFlow), tutorial_progress.gd, card_art.gd.
 # Author: Mechanics Developer Agent (placeholder); run flow: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
@@ -25,6 +29,16 @@ var _duel_button: Button = null
 var _codex: Control = null
 
 var _key_art_scale: float = 0.0
+const TitleWordmark: GDScript = preload("res://scripts/ui/title_wordmark.gd")
+const CodexViewScript: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
+## kc-da-ui2: the Operator showcase card width (desktop / phone landscape).
+const SHOWCASE_W: float = 400.0
+const SHOWCASE_W_COMPACT: float = 280.0
+const BRASS: Color = Color("#C9A227")
+var _wordmark_art: Control = null
+var _showcase: VBoxContainer = null
+var _showcase_card: CardView = null
+var _showcase_item: LoadoutItem = null
 
 @onready var _key_art: TextureRect = %KeyArt
 @onready var _column: VBoxContainer = %Column
@@ -119,7 +133,116 @@ func _build() -> void:
 	resized.connect(_update_key_art)
 	_update_key_art()
 	_offer_panel.add_theme_stylebox_override(&"panel", steel_frame())
+	_wordmark_art = TitleWordmark.attach(_wordmark)
+	_build_showcase()
+	resized.connect(_fit_showcase)
 	refresh()
+
+
+## kc-da-ui2: the Operator the player has equipped (the starter screen's pick), else the starter's.
+func equipped_operator() -> LoadoutItem:
+	var db: Node = get_tree().root.get_node_or_null(^"/root/CardDB") if is_inside_tree() else null
+	var st: Node = get_tree().root.get_node_or_null(^"/root/Settings") if is_inside_tree() else null
+	var pref: String = String(st.get(&"operator_primary")) if st != null else ""
+	if db != null and pref != "" and db.has_method(&"get_loadout_item"):
+		var it: Resource = db.get_loadout_item(StringName(pref))
+		if it is LoadoutItem:
+			return it
+	var rs: Node = RunFlow.run_state()
+	var cfg: RunConfig = rs.call(&"_config") as RunConfig if rs != null and rs.has_method(&"_config") else null
+	return cfg.starter_primary if cfg != null else null
+
+
+## The showcase: "YOUR OPERATOR" in brass, the Operator's Y2+ card large, its band strip.
+func _build_showcase() -> void:
+	_showcase_item = equipped_operator()
+	if _showcase_item == null:
+		return
+	var center: Container = _column.get_parent() as Container
+	var spacer: Control = Control.new()
+	spacer.name = "ShowcaseGap"
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(spacer)
+	_showcase = VBoxContainer.new()
+	_showcase.name = "Showcase"
+	_showcase.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_showcase.add_theme_constant_override(&"separation", 6)
+	center.add_child(_showcase)
+	var right: Control = Control.new()
+	right.name = "ShowcaseRight"
+	right.custom_minimum_size = Vector2(24, 0)
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(right)
+	var cap: Label = make_label("YOUR OPERATOR", &"HudTag")
+	cap.name = "ShowcaseLabel"
+	cap.add_theme_color_override(&"font_color", BRASS)
+	_showcase.add_child(cap)
+	var item: LoadoutItem = _showcase_item
+	var view: Dictionary = {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
+			"armor": item.operator_armor, "banner": String(BannerArtDB.operator_art_id(item.id, 1)),
+			"text": item.text if item.text != "" else "Your Operator: respawns if it goes down.", "side": "friend"}
+	_showcase_card = CodexViewScript.make_card_view(view, SHOWCASE_W)
+	var holder: Control = Control.new()
+	holder.name = "ShowcaseCard"
+	holder.tooltip_text = "%s, your Operator: long press or right click for its rules" % item.display_name
+	holder.add_child(_showcase_card)
+	_showcase.add_child(holder)
+	wire_inspect_control(holder, open_showcase_inspector)
+	var band: StringName = BannerArtDB.camo_for_tier(1)
+	var strip: Control = Control.new()
+	strip.name = "Band"
+	strip.custom_minimum_size = Vector2(0, 10)
+	strip.set_meta(&"band", band)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.draw.connect(func() -> void:
+		MasteryBands.draw(strip, Rect2(Vector2.ZERO, strip.size), band)
+		strip.draw_rect(Rect2(Vector2.ZERO, strip.size), Color("#4A535B"), false, 1.0))
+	_showcase.add_child(strip)
+	var line: Label = make_label("%s BAND" % MasteryBands.display_name(band).to_upper(), &"HudSubtle")
+	line.name = "BandLabel"
+	_showcase.add_child(line)
+	# Captions over the painting sit on a dark socket (art direction §5.6), never straight on the art.
+	for l: Label in [cap, line]:
+		var sock: StyleBoxFlat = StyleBoxFlat.new()
+		sock.bg_color = Color("#12161A", 0.88)
+		sock.set_corner_radius_all(2)
+		sock.content_margin_left = 6
+		sock.content_margin_right = 6
+		l.add_theme_stylebox_override(&"normal", sock)
+		l.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_fit_showcase()
+
+
+func open_showcase_inspector() -> void:
+	if _showcase_item == null or _showcase_card == null:
+		return
+	var item: LoadoutItem = _showcase_item
+	inspector().open({"view": _showcase_card.data.duplicate(), "title": item.display_name,
+			"type": "operator · FP %d · Armor %d" % [item.operator_firepower, item.operator_armor],
+			"text": item.text, "is_unit": true, "status": "Your equipped Operator: it leads every run and Duel you start. Change it on the starter screen (Codex > STARTER)."})
+
+
+func get_showcase_card() -> Control:
+	return _showcase_card if _showcase != null and _showcase.visible else null
+
+
+## Card width by profile; the showcase folds away when the column and the card would not fit side by side.
+func _fit_showcase() -> void:
+	if _showcase == null or _showcase_card == null:
+		return
+	var w: float = SHOWCASE_W_COMPACT if compact else SHOWCASE_W
+	var room_h: float = size.y - 120.0
+	while w > 200.0 and CardView.height_for(w) + 60.0 > room_h:
+		w -= 20.0
+	_showcase_card.set_card_width(w)
+	var holder: Control = _showcase_card.get_parent() as Control
+	holder.custom_minimum_size = CardView.size_for(w)
+	var need: float = _column.get_combined_minimum_size().x + 40.0 + 40.0 + w + 24.0 + 32.0
+	_showcase.visible = size.x >= need and size.x > size.y
+	var gap: Node = _showcase.get_parent().get_node_or_null(^"ShowcaseGap")
+	if gap != null:
+		(gap as Control).visible = _showcase.visible
 
 
 ## kc-da-ui: the drill invite's frame: a gunmetal plate with a steel rim (art direction §4).
@@ -185,6 +308,9 @@ func _apply_compact() -> void:
 		_codex_button.custom_minimum_size.y = h
 	_column.add_theme_constant_override(&"separation", 10 if compact else 14)
 	_wordmark.add_theme_font_size_override(&"font_size", 64 if compact else 84)
+	if _wordmark_art != null:
+		_wordmark_art.call(&"set_size_from", _wordmark)
+	_fit_showcase()
 
 
 func _on_continue_pressed() -> void:

@@ -71,7 +71,6 @@ func _draw() -> void:
 	var p: Dictionary = _parts()
 	var f: float = float(font_size)
 	var asc: float = p["asc"]
-	var line_h: float = p["line_h"]
 	# KILLING: fog white stencil with a soft dark drop (no glow).
 	var base_y: float = asc
 	draw_string(_font, Vector2(2, base_y + 2), "KILLING", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.45))
@@ -103,4 +102,3 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([Vector2(x + tick_w * 0.6, ry - 2.0), Vector2(x + tick_w * 1.4, ry - 2.0),
 				Vector2(x + tick_w * 0.8, ry + 2.0), Vector2(x, ry + 2.0)]), MUTED)
 	draw_line(Vector2(tick_w * 7.4, ry), Vector2(plate.end.x, ry), STEEL, 2.0)
-	var _unused: float = line_h

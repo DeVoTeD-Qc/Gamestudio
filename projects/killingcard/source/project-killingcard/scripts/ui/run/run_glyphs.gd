@@ -1,10 +1,12 @@
 # run_glyphs.gd
 # Purpose: Run v2 pictograms (kc-v2-ui): the 6 map node icons (run-v2.md §2.2: crossed rifles, rifles +
-#   star, radio, crate, tent, skull plate) and the 10 Terrain icons. The UI kit's image wins when it
+#   star, radio, crate, tent, target mark) and the 10 Terrain icons. The UI kit's image wins when it
 #   ships (UiKit ids node_<type> and terrain_<id>, white with alpha, tinted); until the Sr Game Artist's
 #   set lands (§11.2 "Art") these are code-drawn line glyphs, so every screen works without art.
 #   Also each Terrain's band colour (a muted tint for its chip on the objective tile).
 #   Shape and word always carry the meaning; colour only groups.
+#   kc-da-ui2 (art direction §5.5, #8): the boss is a target mark (rings + centre dot + four ticks),
+#   never a skull; the code mark wins over any kit node_boss image.
 # Dependencies: UiKit.
 # Author: UI/UX Agent (kc-v2-ui)
 extends RefCounted
@@ -33,7 +35,7 @@ static func node_tint(t: StringName) -> Color:
 
 ## Draws a map node pictogram in rect (square-ish). Kit image first.
 static func draw_node(ci: CanvasItem, rect: Rect2, t: StringName, c: Color) -> void:
-	if UiKit.draw_icon(ci, StringName("node_%s" % t), rect, c):
+	if t != &"boss" and UiKit.draw_icon(ci, StringName("node_%s" % t), rect, c):
 		return
 	var r: Rect2 = _square(rect)
 	var w: float = maxf(1.5, r.size.x * 0.085)
@@ -67,16 +69,14 @@ static func draw_node(ci: CanvasItem, rect: Rect2, t: StringName, c: Color) -> v
 			ci.draw_line(p.call(0.5, 0.2), p.call(0.5, 0.84), c, w * 0.8)
 			ci.draw_line(p.call(0.5, 0.5), p.call(0.38, 0.84), c, w * 0.8)
 		&"boss":
-			# A skull plate: rounded cranium, eye sockets, jaw teeth.
-			ci.draw_arc(p.call(0.5, 0.46), r.size.x * 0.32, PI, TAU, 18, c, w)
-			ci.draw_line(p.call(0.18, 0.46), p.call(0.24, 0.7), c, w)
-			ci.draw_line(p.call(0.82, 0.46), p.call(0.76, 0.7), c, w)
-			ci.draw_line(p.call(0.24, 0.7), p.call(0.76, 0.7), c, w)
-			ci.draw_circle(p.call(0.37, 0.5), r.size.x * 0.075, c)
-			ci.draw_circle(p.call(0.63, 0.5), r.size.x * 0.075, c)
-			for x: float in [0.34, 0.5, 0.66]:
-				ci.draw_line(p.call(x, 0.7), p.call(x, 0.86), c, w)
-			ci.draw_line(p.call(0.28, 0.86), p.call(0.72, 0.86), c, w)
+			# A target mark: outer ring, inner ring, centre dot, four ticks outside the ring.
+			var ctr: Vector2 = r.get_center()
+			ci.draw_arc(ctr, r.size.x * 0.36, 0, TAU, 32, c, w)
+			ci.draw_arc(ctr, r.size.x * 0.2, 0, TAU, 24, c, w)
+			ci.draw_circle(ctr, r.size.x * 0.07, c)
+			for a2: float in [0.0, PI * 0.5, PI, PI * 1.5]:
+				var d: Vector2 = Vector2.from_angle(a2)
+				ci.draw_line(ctr + d * r.size.x * 0.4, ctr + d * r.size.x * 0.5, c, w)
 		_:
 			ci.draw_arc(r.get_center(), r.size.x * 0.3, 0, TAU, 20, c, w)
 
