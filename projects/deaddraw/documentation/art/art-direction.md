@@ -72,3 +72,30 @@ arrows stay **vector** for crispness at 20 px.
 
 Out of scope for pack 1 (legacy v2/v3 art not in the current game): ammo, carrier drops, Jawbreakers, perks, the
 Grin Machine, Lucky Locker and the old melee set (knife, crowbar, bat, machete, chainsaw, bottle, hammer).
+
+## UI kit (art pack 2)
+
+Prompts: `chatgpt/dd-art-pack-2-ui-prompts.md` (52 images, 5 batches) | List: `art-pack-2-ui-list.csv` | ChatGPT pushes to
+branch `art/deaddraw-pack-2`, folder `chatgpt/images/art-pack-2/`.
+
+- **Why:** with painted cards, the flat StyleBoxFlat buttons, rings and panels from `dd_ui.gd` / `dd_marks.gd` look like a
+  different game. The kit paints them in the same style: **painted enamel on thick sheet metal**, the same #151214 ink
+  contour, three value steps, light from the **upper right** (highlight top/right, shade bottom/left), wear only at the edges.
+- **The rule:** the game still draws every word, number and icon (crisp at 20 px, translatable, testable). Images carry no
+  text, numbers or icons; their centres are plain and even, the detail lives in the corners and edges.
+- **Number badges** (`NumBadge`): one painted circle per role, the number drawn on top: hit (yellow fill, ink ring), zombie
+  strength (blood #5c1b19 fill, ring per tier: bone, amber, orange, red), heal (green ring), cover (gold ring), neutral
+  (bone ring), plus wide pills (zombie, hit, neutral) for 6x3 / 8-12 / 9/11. Dim and highlight stay `modulate` in code.
+- **9-slice** (`StyleBoxTexture`, `texture_margin_*`): buttons 176x80 with 16 px margins; plates and tags 176x64 (16) or
+  88x32 (8); panels 240x240 (40); card frame 192x192 (32), chip frame 120x120 (20); bars 124x16 (8 left/right only); pills
+  328x128 (64 left/right only); kill sockets 56x84 (8, edges tiled).
+- **States:** buttons have normal + pressed per colour (primary red #7a2d27, secondary dark #2b3338, Run rust #5a2a1a, go
+  green #245236, help blue #1f3a4f, shop indigo #2f2f5a) and **one shared disabled** plate; hover = normal x1.12 in code.
+  Door plates: afford (gold), locked (dark iron), USE (green), used. Full set plate: open, near (glow), lit. Card frame:
+  normal and selected. Filter chips: on and off.
+- **Tinting:** the card and chip frames are painted in neutral grey and tinted to the type accent (`KIND_ACCENT`) with
+  `self_modulate`, so one image serves every card type; the tooltip/inspect body is neutral and the tinted rim goes on top.
+- **Stays vector:** padlock, rule glyphs and their tick/strike, the log dots, the big wave numeral, the selected glow in code.
+- **Pipeline:** Technical Artist trims each PNG to its shape, scales it to the in-game size in the CSV, saves WebP to
+  `assets/art/painted/ui/`, and maps it in `dd_ui.gd` (`button()`, `box()`), `dd_marks.gd` (`NumBadge._draw`) and the
+  door / Full set plates, keeping the StyleBoxFlat look as the fallback when an image is missing.

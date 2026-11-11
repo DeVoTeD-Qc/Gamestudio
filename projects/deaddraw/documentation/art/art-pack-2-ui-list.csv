@@ -1,0 +1,53 @@
+file,generate_size,in_game_size,nine_slice_margins,states,used_in,priority
+dd_badge_hit.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"every gun / melee / Bare Hands number (street cards, gun row, melee button, inspect, tooltips, Codex)",P1
+dd_badge_zombie_t1.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"zombie numbers on street cards, gun kill-stack thumbnails, inspect, tooltips, Codex (tier 1)",P1
+dd_badge_zombie_t2.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"zombie numbers on street cards, gun kill-stack thumbnails, inspect, tooltips, Codex (tier 2)",P1
+dd_badge_zombie_t3.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"zombie numbers on street cards, gun kill-stack thumbnails, inspect, tooltips, Codex (tier 3)",P1
+dd_badge_zombie_t4.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"zombie numbers on street cards, gun kill-stack thumbnails, inspect, tooltips, Codex (tier 4)",P1
+dd_badge_heal.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"heal numbers (Bandage, First Aid Kit, Trauma Kit) on street cards, inspect, Codex",P1
+dd_badge_cover.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"cover numbers (Plywood, Car Door, Dumpster), the Cover chip in the top bar, inspect, Codex",P1
+dd_badge_neutral.png,1024x1024,128x128,"none (fixed circle, scaled as one piece)",normal,"survivor initials on the title screen, pile count, patch count and any other card number",P2
+dd_pill_zombie.png,1536x1024,328x128,"left 64, right 64, top 0, bottom 0 (stretches sideways only)",normal,"boss values on the map district tiles, boss cards, wave tile, inspect",P1
+dd_pill_hit.png,1536x1024,328x128,"left 64, right 64, top 0, bottom 0 (stretches sideways only)",normal,"weapon numbers with 3+ characters (inspect, Codex)",P2
+dd_pill_neutral.png,1536x1024,328x128,"left 64, right 64, top 0, bottom 0 (stretches sideways only)",normal,"wide counts such as 9/11 (Codex, pile, patches)",P3
+dd_btn_red_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),"Start run, Enter <district>, Run again, Yes abandon",P1
+dd_btn_red_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,"Start run, Enter <district>, Run again, Yes abandon",P1
+dd_btn_dark_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),"How to play, Codex, Settings, Menu, Close, Got it, No keep it, Survivors, BURY, Abandon run",P1
+dd_btn_dark_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,"How to play, Codex, Settings, Menu, Close, Got it, No keep it, Survivors, BURY, Abandon run",P1
+dd_btn_rust_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),"RUN -1 HP, RUN PAST, Leave the safehouse",P1
+dd_btn_rust_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,"RUN -1 HP, RUN PAST, Leave the safehouse",P1
+dd_btn_green_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),"CONTINUE RUN, head to the next district, Supplies (Safehouse shop)",P2
+dd_btn_green_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,"CONTINUE RUN, head to the next district, Supplies (Safehouse shop)",P2
+dd_btn_blue_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),the ? (Help / Glossary) button in the top bar,P1
+dd_btn_blue_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,the ? (Help / Glossary) button in the top bar,P1
+dd_btn_indigo_normal.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (hover = this image brightened x1.12 in game),Patch rows in the Safehouse shop and the boss reward pick,P2
+dd_btn_indigo_pressed.png,1536x1024,176x80,16 all sides (128 px on the generated plate),pressed,Patch rows in the Safehouse shop and the boss reward pick,P2
+dd_btn_disabled.png,1536x1024,176x80,16 all sides (128 px on the generated plate),disabled,"every disabled button (Open plate you cannot afford uses the door plates instead), RUN when there is no escape, shop rows you cannot buy",P1
+dd_plate_door_afford.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (afford; pressed = darkened in game),Door row: OPEN plate on a room you can pay for,P1
+dd_plate_door_locked.png,1536x1024,176x80,16 all sides (128 px on the generated plate),disabled (locked),Door row: price plate on a room you cannot pay for yet,P1
+dd_plate_door_use.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (USE),Door row: USE plate on an open room's machine,P1
+dd_plate_door_used.png,1536x1024,176x80,16 all sides (128 px on the generated plate),disabled (used),Door row: plate on a room whose machine was used this street,P2
+dd_plate_fullset_open.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),normal (open),"the Full set plate at the bottom of each gun tile (gun row, inspect)",P1
+dd_plate_fullset_near.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),highlighted (near),the Full set plate when the next kill fills the gun,P2
+dd_plate_fullset_lit.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),active (lit),"the Full set plate when every socket is filled (finish animation, inspect)",P1
+dd_tag_yellow.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),normal,"FULL HP, NEXT, holdover and other yellow card tags",P2
+dd_tag_red.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),normal,"the damage chip on zombie cards (top-right), the boss NO ESCAPE marker",P1
+dd_tag_bone.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),normal,"ACTIVE on the active gun, LOCKED / MARK on survivor tiles",P2
+dd_tag_boss.png,1536x1024,176x64 (and 88x32 for the small tags),16 all sides (8 for the 88x32 copy; 128 px on the generated plate),normal,the BOSS counter under the wave number on the wave tile; PHASE tag on boss cards,P2
+dd_bar_track.png,1536x1024,124x16,"left 8, right 8, top 0, bottom 0 (stretches sideways only; 96 px on the generated bar)",normal,"HP bar background in the top bar, door price progress, Settings sliders",P1
+dd_bar_fill_green.png,1536x1024,124x16,"left 8, right 8, top 0, bottom 0 (stretches sideways only; 96 px on the generated bar)",normal,"HP bar fill above half HP, Settings slider fill",P1
+dd_bar_fill_amber.png,1536x1024,124x16,"left 8, right 8, top 0, bottom 0 (stretches sideways only; 96 px on the generated bar)",normal,HP bar fill between a quarter and half HP,P1
+dd_bar_fill_red.png,1536x1024,124x16,"left 8, right 8, top 0, bottom 0 (stretches sideways only; 96 px on the generated bar)",normal,HP bar fill below a quarter HP,P1
+dd_bar_fill_gold.png,1536x1024,124x16,"left 8, right 8, top 0, bottom 0 (stretches sideways only; 96 px on the generated bar)",normal,the thin progress bar on a locked door plate (points towards the price),P3
+dd_chip_filter_on.png,1536x1024,176x80,16 all sides (128 px on the generated plate),active (selected),Codex type / district / Met only filters (selected); Settings toggles on,P2
+dd_chip_filter_off.png,1536x1024,176x80,16 all sides (128 px on the generated plate),normal (unselected),Codex filters not selected; Settings toggles off,P2
+dd_frame_card_rim.png,1024x1024,192x192 (cards) / 120x120 (chips),"32 all sides for 192x192, 20 for 120x120 (160 px on the generated frame)",normal (tinted per type in game),"every card: street cards, gun tiles, melee button, Door row, wave/boss tile, pile, map district tiles, survivor tiles, Codex tiles",P1
+dd_frame_card_selected.png,1024x1024,192x192 (cards) / 120x120 (chips),"32 all sides for 192x192, 20 for 120x120 (160 px on the generated frame)",active (selected),"the active gun, a picked card, the chosen survivor",P1
+dd_frame_chip_rim.png,1024x1024,192x192 (cards) / 120x120 (chips),"32 all sides for 192x192, 20 for 120x120 (160 px on the generated frame)",normal (tinted per type in game),"top bar chips (HP, points, Cover, Patches), kill-stack thumbnails in the gun row, inspect pictures, Codex mini tiles",P2
+dd_panel_tooltip.png,1024x1024,240x240,40 all sides (160 px on the generated panel),normal,"the 2-line tooltip on right click / long press, the inspect (zoom) view",P1
+dd_panel_modal.png,1024x1024,240x240,40 all sides (160 px on the generated panel),normal,"the decision sheets (take a gun, use a machine, pick a Patch, melee), abandon-run confirm, Settings",P1
+dd_panel_overlay.png,1024x1024,240x240,40 all sides (160 px on the generated panel),normal,"the Glossary and Codex overlays (header with Close, filters, scrolling list)",P2
+dd_panel_hud.png,1024x1024,240x240,40 all sides (160 px on the generated panel),normal,"the event log strip, the hint bar with Got it, the Safehouse kit rows, the map survivor chip",P2
+dd_bar_name.png,1536x1024,184x40,"left 16, right 16, top 8, bottom 8 (128 / 64 px on the generated strip)",normal,the name bar at the bottom of every card (name + value line),P3
+dd_socket_empty.png,1024x1536,56x84,"8 all sides, edges tiled (axis stretch: tile) (128 px on the generated socket)",normal (empty),the empty kill sockets on gun tiles,P3
+dd_socket_next.png,1024x1536,56x84,"8 all sides, edges tiled (axis stretch: tile) (128 px on the generated socket)",highlighted (next),"the next kill socket on gun tiles (the game writes what it accepts, e.g. >6, inside)",P3
