@@ -1,0 +1,709 @@
+{
+  "source": "../../dd-art-pack-1-prompts.md",
+  "generated_count": 9,
+  "requested_count": 77,
+  "images": [
+    {
+      "batch": 1,
+      "number": 1,
+      "title": "Shambler (values 1-3)",
+      "file": "dd_zombie_shambler.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "07511038363f8d7ba97ea8803bab0fb313be5df892d4f10f4a162bc89c36563b"
+    },
+    {
+      "batch": 1,
+      "number": 2,
+      "title": "Lurcher (values 4-6)",
+      "file": "dd_zombie_lurcher.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "b0abd208b29945eeda1a237b04f876c3c14b27cf3362079b5db2f2c19b7b1343"
+    },
+    {
+      "batch": 1,
+      "number": 3,
+      "title": "Bruiser (values 7-9)",
+      "file": "dd_zombie_bruiser.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "4943cbe53490eed3ccef325a34e314b56592c26081b7527730dfd5dfc8237436"
+    },
+    {
+      "batch": 1,
+      "number": 4,
+      "title": "Hulk (values 10+)",
+      "file": "dd_zombie_hulk.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "69890ecef87f40341f346789ce8b064fdf5d715981bc6972d0b70b3a4ea5dbbd"
+    },
+    {
+      "batch": 1,
+      "number": 5,
+      "title": "Boss: The Groundskeeper (Maple Row)",
+      "file": "dd_boss_groundskeeper.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "be80ff363c42bc1bfe44ee863c10aa31a318ec973e07280e62864ea54a478473"
+    },
+    {
+      "batch": 1,
+      "number": 6,
+      "title": "Boss: Rush Hour Horde (Downtown)",
+      "file": "dd_boss_rush_hour_horde.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "fbc8d400c08be9b75d9f9cf601cae7473ae4f51e25e91a01aafd10a29e452df7"
+    },
+    {
+      "batch": 1,
+      "number": 7,
+      "title": "Boss: Patient Zero, phase 1 (value 8)",
+      "file": "dd_boss_patient_zero_1.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "50c9500c8d37814833b23cccb26ec328655eceec1ef595a942c9d90db1cca9d9"
+    },
+    {
+      "batch": 1,
+      "number": 8,
+      "title": "Boss: Patient Zero, phase 2 (value 10)",
+      "file": "dd_boss_patient_zero_2.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "262465c4b5d1aa60ddd681566cb025aa19c2ea58b1aec62ba23a72bfa2b18aea"
+    },
+    {
+      "batch": 1,
+      "number": 9,
+      "title": "Boss: Patient Zero, phase 3 (value 12)",
+      "file": "dd_boss_patient_zero_3.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "generated",
+      "sha256": "5120d9f4ee188f4e293457f7881aff43267840b3b6ce3734c35442d1a1fcda29"
+    },
+    {
+      "batch": 2,
+      "number": 10,
+      "title": "Service Pistol (the starting gun)",
+      "file": "dd_gun_service_pistol.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 11,
+      "title": "Hunting Rifle",
+      "file": "dd_gun_hunting_rifle.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 12,
+      "title": "Ratchet Crossbow",
+      "file": "dd_gun_ratchet_crossbow.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 13,
+      "title": "Twin-Bore",
+      "file": "dd_gun_twin_bore.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 14,
+      "title": "Lever Rifle",
+      "file": "dd_gun_lever_rifle.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 15,
+      "title": "Scout Carbine",
+      "file": "dd_gun_scout_carbine.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 16,
+      "title": "Nail Driver",
+      "file": "dd_gun_nail_driver.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 17,
+      "title": "Pump Shotgun",
+      "file": "dd_gun_pump_shotgun.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 18,
+      "title": "Elephant Gun",
+      "file": "dd_gun_elephant_gun.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 19,
+      "title": "Stovepipe Launcher",
+      "file": "dd_gun_stovepipe_launcher.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 20,
+      "title": "Alley Sweeper",
+      "file": "dd_gun_alley_sweeper.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 21,
+      "title": "Bare Hands (no melee weapon)",
+      "file": "dd_melee_bare_hands.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 22,
+      "title": "Pipe Wrench",
+      "file": "dd_melee_pipe_wrench.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 23,
+      "title": "Fire Axe",
+      "file": "dd_melee_fire_axe.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 24,
+      "title": "Sledgehammer",
+      "file": "dd_melee_sledgehammer.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 25,
+      "title": "Bandage (heal 1-3)",
+      "file": "dd_item_bandage.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 26,
+      "title": "First Aid Kit (heal 4-5)",
+      "file": "dd_item_first_aid_kit.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 27,
+      "title": "Trauma Kit (heal 6+)",
+      "file": "dd_item_trauma_kit.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 28,
+      "title": "Plywood (cover 2)",
+      "file": "dd_cover_plywood.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 29,
+      "title": "Car Door (cover 3)",
+      "file": "dd_cover_car_door.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 30,
+      "title": "Dumpster (cover 4)",
+      "file": "dd_cover_dumpster.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 31,
+      "title": "Entrance door (Maple Row)",
+      "file": "dd_room_maple_row_entrance.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 32,
+      "title": "Garage door (Maple Row)",
+      "file": "dd_room_maple_row_garage.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 33,
+      "title": "Corner Store door (Maple Row)",
+      "file": "dd_room_maple_row_corner_store.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 34,
+      "title": "Workshop door (Maple Row)",
+      "file": "dd_room_maple_row_workshop.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 35,
+      "title": "Entrance door (Downtown)",
+      "file": "dd_room_downtown_entrance.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 36,
+      "title": "Subway Kiosk door (Downtown)",
+      "file": "dd_room_downtown_subway_kiosk.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 37,
+      "title": "Pawn Shop door (Downtown)",
+      "file": "dd_room_downtown_pawn_shop.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 38,
+      "title": "Parking Garage door (Downtown)",
+      "file": "dd_room_downtown_parking_garage.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 39,
+      "title": "Entrance door (St. Agnes Hospital)",
+      "file": "dd_room_st_agnes_entrance.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 40,
+      "title": "Pharmacy door (St. Agnes Hospital)",
+      "file": "dd_room_st_agnes_pharmacy.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 41,
+      "title": "Security Office door (St. Agnes Hospital)",
+      "file": "dd_room_st_agnes_security_office.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 42,
+      "title": "Morgue Lab door (St. Agnes Hospital)",
+      "file": "dd_room_st_agnes_morgue_lab.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 43,
+      "title": "Retrofit Bench",
+      "file": "dd_machine_retrofit_bench.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 44,
+      "title": "Patch Press",
+      "file": "dd_machine_patch_press.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 45,
+      "title": "Wall Rack (empty)",
+      "file": "dd_machine_wall_rack.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 46,
+      "title": "Wall Rack: Ratchet Crossbow",
+      "file": "dd_machine_wall_rack_crossbow.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 47,
+      "title": "Wall Rack: Pump Shotgun",
+      "file": "dd_machine_wall_rack_shotgun.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 48,
+      "title": "Wall Rack: Elephant Gun",
+      "file": "dd_machine_wall_rack_elephant_gun.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 49,
+      "title": "District banner: Maple Row",
+      "file": "dd_district_maple_row.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 50,
+      "title": "District banner: Downtown",
+      "file": "dd_district_downtown.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 51,
+      "title": "District banner: St. Agnes Hospital",
+      "file": "dd_district_st_agnes.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 52,
+      "title": "Survivor: Rosa Vance (mechanic)",
+      "file": "dd_survivor_rosa.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 53,
+      "title": "Survivor: Dr. Imani Hale (medic)",
+      "file": "dd_survivor_imani.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 54,
+      "title": "Survivor: Theo Park (courier)",
+      "file": "dd_survivor_theo.png",
+      "size": "1024x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 55,
+      "title": "Card back: draw pile",
+      "file": "dd_back_pile.png",
+      "size": "1024x1536",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 56,
+      "title": "Card back: wave deck",
+      "file": "dd_back_wave.png",
+      "size": "1024x1536",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 57,
+      "title": "Card back: room deck",
+      "file": "dd_back_room.png",
+      "size": "1024x1536",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 58,
+      "title": "Title screen (phone, portrait)",
+      "file": "dd_title_portrait.png",
+      "size": "1024x1536",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 59,
+      "title": "Title screen (desktop, landscape)",
+      "file": "dd_title_landscape.png",
+      "size": "1536x1024",
+      "transparent": false,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 60,
+      "title": "Patch: Lookout",
+      "file": "dd_patch_lookout.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 61,
+      "title": "Patch: Thick Jacket",
+      "file": "dd_patch_thick_jacket.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 62,
+      "title": "Patch: Field Medic",
+      "file": "dd_patch_field_medic.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 63,
+      "title": "Patch: Brawler",
+      "file": "dd_patch_brawler.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 64,
+      "title": "Patch: Bounty Hunter",
+      "file": "dd_patch_bounty.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 65,
+      "title": "Patch: Loose Grip",
+      "file": "dd_patch_loose_grip.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 66,
+      "title": "Patch: Second Wind",
+      "file": "dd_patch_second_wind.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 67,
+      "title": "Patch: Trophy Belt",
+      "file": "dd_patch_trophy_belt.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 68,
+      "title": "Patch: Lockpick",
+      "file": "dd_patch_lockpick.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 69,
+      "title": "Patch: Iron Stomach",
+      "file": "dd_patch_iron_stomach.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 70,
+      "title": "Patch: Adrenaline",
+      "file": "dd_patch_adrenaline.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 71,
+      "title": "Patch: Grudge",
+      "file": "dd_patch_grudge.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 72,
+      "title": "Patch: Show-Off",
+      "file": "dd_patch_show_off.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 6,
+      "number": 73,
+      "title": "Patch: Whetstone",
+      "file": "dd_patch_whetstone.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 7,
+      "number": 74,
+      "title": "Icon: Locked room",
+      "file": "dd_icon_locked.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 7,
+      "number": 75,
+      "title": "Icon: Gun challenge met",
+      "file": "dd_icon_challenge_met.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 7,
+      "number": 76,
+      "title": "Icon: Gun challenge open",
+      "file": "dd_icon_challenge_open.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    },
+    {
+      "batch": 7,
+      "number": 77,
+      "title": "Icon: Wave marker",
+      "file": "dd_icon_wave.png",
+      "size": "1024x1024",
+      "transparent": true,
+      "status": "pending"
+    }
+  ]
+}
