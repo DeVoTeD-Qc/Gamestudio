@@ -688,8 +688,8 @@ func _build_street() -> void:
 	if duel:
 		n = 2
 	if portrait:
-		# dd-ui6 (head: more room for the gun art, a little less for the street cards): 196 -> 264
-		var gun_h: float = 264.0
+		# dd-ui6 (head: more room for the gun art, a little less for the street cards): 196 -> 284
+		var gun_h: float = 284.0
 		var door_h: float = clampf(H * 0.165, 150.0, 200.0)
 		var fixed: float = HUD_H + door_h + hint_h + strip_h + gun_h + SEP * 4 + SLACK
 		var avail: float = H - fixed
@@ -1229,7 +1229,7 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 	# (portrait: gun_h is the row; landscape: gun_h is the column, two guns over melee / run)
 	var tile_h: float = gun_h if row else (gun_h - maxf(TAP, 80.0) - SEP * 2) / 2.0
 	var sock_h: float = 62.0 if row else clampf(tile_h * 0.26, 50.0, 92.0)
-	var plate_h: float = 34.0 if tile_h < 260.0 else 38.0
+	var plate_h: float = 36.0 if tile_h < 260.0 or row else 38.0
 	for s: int in 2:
 		var spec: Dictionary = DDPayloads.gun_spec(run, s)
 		spec["socket_h_max"] = sock_h
@@ -2408,6 +2408,18 @@ func apply_debug(args: Dictionary) -> void:
 					if run.street[k].kind == DDCard.ZOMBIE:
 						_auto_inspect = DDPayloads.card(run.street[k], run, k)
 						break
+			"rulechip":
+				# dd-ui6: the rule chip on the first zombie (the active gun's verdict)
+				for k: int in run.street.size():
+					if run.street[k].kind == DDCard.ZOMBIE:
+						var rc: Dictionary = DDPayloads.zombie_rule_chip(run.street[k], run)
+						if not rc.is_empty():
+							_auto_inspect = rc["payload"]
+						break
+			"plate1", "plate2":
+				var ps: int = 0 if what == "plate1" else 1
+				if run.slot(ps) != null:
+					_auto_inspect = DDPayloads.full_plate(run, ps)
 			_:
 				if what.begins_with("wave"):
 					_auto_inspect = DDPayloads.waves(run)

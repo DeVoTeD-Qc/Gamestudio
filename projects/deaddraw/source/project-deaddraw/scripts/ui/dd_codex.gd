@@ -463,8 +463,9 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "num:C:3", "name": "Cover (gold ring)", "line": "A cover card's number: the Cover you gain."},
 		]],
 		["ON YOUR WEAPONS", [
-			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds. All full: +%d pts." % bal.shown(bal.num("finish_bonus"))},
+			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds; a filled one shows the kill."},
 			{"icon": "next", "name": "Next socket", "line": "What the next kill must be, e.g. <6 or >4."},
+			{"icon": "badge:full_set", "name": "Full set", "line": "Every socket filled: +%d pts, then the gun leaves. 1 to go: the cup glows." % bal.shown(bal.num("finish_bonus"))},
 			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
 			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
 			{"icon": "art:bare_hands", "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
@@ -474,6 +475,8 @@ static func sections(bal: DDBalance) -> Array:
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
 			{"icon": "chip:-3", "name": "Damage to you", "line": "What you'd lose with the active weapon. Green 0 = free."},
+			{"icon": "rulechip:down:1", "name": "Rule chip: yes", "line": "The active gun's rule icon, ticked: this zombie fits its rule."},
+			{"icon": "rulechip:down:0", "name": "Rule chip: no", "line": "Dimmed and struck: it breaks the active gun's rule."},
 			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take this zombie."},
 			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},
 		]],
@@ -574,6 +577,9 @@ static func icon(id: String) -> Control:
 			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			inner = tr
+		"rulechip":
+			# dd-ui6: the chip on street zombies, rulechip:<rule>:<1 yes | 0 no>
+			inner = _square(Marks.RuleChip.new(Art.texture_for(Art.rule_keys(arg)), int(id.get_slice(":", 2))))
 		"socket", "next":
 			inner = Marks.Socket.new(id == "next", "<6" if id == "next" else "")
 		"lock", "open":

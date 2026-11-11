@@ -158,7 +158,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 
 ## dd-ui6 (head: "the completion bonus needs to be more clear"): the Full set plate. The gold
 ## cup (badges/full_set.svg: a cup holding 4 filled kill sockets, also in the Glossary and the
-## tooltips) + "FULL +50" in gold, then the challenge medal + its reward, coloured by its state
+## tooltips) + "FULL +50" in gold, then the challenge reward + its medal, coloured by its state
 ## (met / on track gold-green, open dim, missed struck through). `mode`: "open" (dark plate,
 ## gold rim), "near" (one kill to go: brighter rim, the cup pulses), "lit" (gold plate, ink text:
 ## every socket filled; the finish animation shows it).
@@ -197,12 +197,27 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 		fl.add_theme_constant_override("outline_size", 3)
 		fl.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.9))
 	row.add_child(fl)
-	var sp: Control = Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sp.custom_minimum_size = Vector2(2, 0)
-	row.add_child(sp)
+	# a narrow plate (phone gun row) drops the word: the cup already says "full set"
+	p.resized.connect(func() -> void:
+		if is_instance_valid(fl):
+			fl.text = ("FULL +%s" if p.size.x >= 230.0 or reward == "" else "+%s") % finish)
 	if reward != "":
 		var good: bool = cs == "met" or cs == "on_track"
+		var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.GOOD, "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT)
+		if lit:
+			col = DDUi.BG
+		# the reward takes the rest of the plate, right-aligned against the challenge medal
+		var rl: Label = DDUi.label(reward, fs - 1, col, HORIZONTAL_ALIGNMENT_RIGHT)
+		rl.name = "RewardLabel"
+		rl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		rl.clip_text = true
+		rl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		rl.custom_minimum_size = Vector2(10, 0)
+		rl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rl.resized.connect(func() -> void: fit_label(rl, fs - 1, 11))
+		if cs == "broken":
+			rl.add_child(_Strike.new())
+		row.add_child(rl)
 		var mt: TextureRect = TextureRect.new()
 		mt.name = "Medal"
 		mt.texture = Art.texture_for(Art.badge_keys("challenge" if good else "challenge_open"))
@@ -213,20 +228,6 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 		if cs == "broken":
 			mt.self_modulate = Color(0.55, 0.55, 0.55, 0.7)
 		row.add_child(mt)
-		var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.GOOD, "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT)
-		if lit:
-			col = DDUi.BG
-		var rl: Label = DDUi.label(reward, fs - 2, col)
-		rl.name = "RewardLabel"
-		rl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		rl.clip_text = true
-		rl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		rl.custom_minimum_size = Vector2(10, 0)
-		rl.size_flags_horizontal = Control.SIZE_SHRINK_END
-		rl.resized.connect(func() -> void: fit_label(rl, fs - 2, 10))
-		if cs == "broken":
-			rl.add_child(_Strike.new())
-		row.add_child(rl)
 	DDUi.ignore_mouse(p)
 	return p
 
@@ -240,7 +241,12 @@ class _Strike:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	func _draw() -> void:
-		draw_line(Vector2(0, size.y * 0.55), Vector2(size.x, size.y * 0.55), DDUi.TEXT_DIM, 2.0)
+		# over the text only (the label is right-aligned and wider than its text)
+		var l: Label = get_parent() as Label
+		var tw: float = size.x
+		if l != null:
+			tw = minf(size.x, l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, l.get_theme_font_size("font_size")).x)
+		draw_line(Vector2(size.x - tw, size.y * 0.55), Vector2(size.x, size.y * 0.55), DDUi.TEXT_DIM, 2.0)
 
 
 ## One kill to go: the cup breathes (not with reduce motion).

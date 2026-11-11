@@ -245,8 +245,10 @@ func test_tooltips_are_two_short_lines() -> void:
 	insp.open(DDPayloads.gun(run, 0))
 	await _settle()
 	# (dd-polish5: the number inside the hit badge is the badge's own label, not a text line)
-	var labels: Array = insp.find_children("*", "Label", true, false).filter(func(l: Node) -> bool: return l.name != "Num")
+	# (dd-ui6: the icon key under the lines - rule, Full set, challenge - is glyph + word, not a text line)
+	var labels: Array = insp.find_children("*", "Label", true, false).filter(func(l: Node) -> bool: return l.name != "Num" and not str(l.get_path()).contains("IconRow"))
 	eq(labels.size(), 2, "the tooltip is two labels")
+	check(insp.find_child("IconRow", true, false) != null, "the gun tooltip shows its icon key (rule, Full set, challenge)")
 	eq(insp.last_lines[0], str(DDPayloads.gun(run, 0)["t1"]), "line 1 is t1")
 	insp.close()
 	# the full rules live in the Glossary: every gun rule has a line there
