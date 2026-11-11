@@ -67,6 +67,8 @@ CONFIG = {
     "room_cost_scale": [1.0, 1.0, 1.0],   # scale: room price multiplier per district
     "melee_mode": "crowbar",      # 17: crowbar (v3: power melee_power, unlimited) | hands
     "hands_power": 1,             #     hands: bare-hands power (unlimited, no points)
+    "brawler_mode": "all",        #     all: Brawler +power on any melee | hands: +power on bare
+    "brawler_dur": 1,             #       hands only, melee weapons get +brawler_dur durability
     "melee_weapon_points": 0.0,   #     share of the zombie number a melee-WEAPON kill pays
     "melee_weapons": {
         "wrench": {"name": "Pipe Wrench", "p": 3, "dur": 4},
@@ -337,7 +339,7 @@ def melee_power(s, z=0):
         p = s.melee[1] if s.melee else CONFIG["hands_power"]
     else:
         p = CONFIG["melee_power"]
-    if "brawler" in s.patches:
+    if "brawler" in s.patches and not (s.melee and CONFIG["brawler_mode"] == "hands"):
         p += CONFIG["brawler_bonus"]
     if s.passive == "slip_away":
         p += CONFIG["theo_melee_bonus"]
@@ -581,6 +583,8 @@ def apply_card(s, c, opt, st=None):
         else:
             m = CONFIG["melee_weapons"][c.wid]
             dur = m["dur"] + (CONFIG["whetstone_dur"] if "whetstone" in s.patches else 0)
+            if "brawler" in s.patches and CONFIG["brawler_mode"] == "hands":
+                dur += CONFIG["brawler_dur"]
             s.melee = (c.wid, m["p"], dur)
     elif c.kind == "W":
         if opt == 2:
@@ -1305,7 +1309,7 @@ PRESETS = {
            "medkits_per_street": 1, "run_mode": "before", "card_add": {}, "pool_add": {},
            "patches": ["lookout", "thick_jacket", "field_medic", "brawler", "bounty",
                        "loose_grip", "second_wind", "trophy_belt"],
-           "melee_weapon_points": 0.0, "brawler_bonus": 2},
+           "melee_weapon_points": 0.0, "brawler_bonus": 2, "brawler_mode": "all"},
 }
 
 
