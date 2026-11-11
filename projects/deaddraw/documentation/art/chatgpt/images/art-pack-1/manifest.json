@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 58,
+  "generated_count": 72,
   "requested_count": 77,
   "images": [
     {
@@ -591,7 +591,7 @@
       "size": "1536x1024",
       "transparent": false,
       "status": "generated",
-      "sha256": "99ba514a86f7e966aee2594a242b0305f72ff465048728000ef50f9bdf997c44"
+      "sha256": "0b9b3eda9572cca8f763176de882881dd47dc5692458255ecec62af55e8f77c0"
     },
     {
       "batch": 6,
@@ -600,7 +600,8 @@
       "file": "dd_patch_lookout.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "36bf687d092ca7a079ec36bd90dc1ec68f0074c9e12573cdc9f4b11639f72e97"
     },
     {
       "batch": 6,
@@ -609,7 +610,8 @@
       "file": "dd_patch_thick_jacket.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "3dfafc9482736ae4e5203f4b7eb3be78e224a2d5bf7f78a1caae423eb0c2b5dd"
     },
     {
       "batch": 6,
@@ -618,7 +620,8 @@
       "file": "dd_patch_field_medic.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "321235db7849244ae3e512d4dd8ac722d7854015cc3d8f5d300be69b476dc0df"
     },
     {
       "batch": 6,
@@ -627,7 +630,8 @@
       "file": "dd_patch_brawler.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "0d04f0ca20939498d896a5acd29871d9f2309aea12baf30c491b680fc4db9fbb"
     },
     {
       "batch": 6,
@@ -636,7 +640,8 @@
       "file": "dd_patch_bounty.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "6aa386f421f63f93bd5cab2950fc12360bdd263fbc7bebc639aaf3bb4730a6e3"
     },
     {
       "batch": 6,
@@ -645,7 +650,8 @@
       "file": "dd_patch_loose_grip.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "df0474c4714904cd09c720fc6ba38eb5f4f20ab161d4dd42bb34a32d209ed541"
     },
     {
       "batch": 6,
@@ -654,7 +660,8 @@
       "file": "dd_patch_second_wind.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "31722b67a3bc9f24f3ad7256279fd090116c3ec239a31fec652f4e4cc6789d7e"
     },
     {
       "batch": 6,
@@ -663,7 +670,8 @@
       "file": "dd_patch_trophy_belt.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "a8181dd021447bdf975df476d4fdc75fc591b7222ce5ab492d6d5952682ecf27"
     },
     {
       "batch": 6,
@@ -672,7 +680,8 @@
       "file": "dd_patch_lockpick.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "79b28379576331a8042504807ef001ba4f007d87cf17b012c1f40ca302aef6b9"
     },
     {
       "batch": 6,
@@ -681,7 +690,8 @@
       "file": "dd_patch_iron_stomach.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "a3e5ec05e3acd1fc5cfbbf955a81a2846bf3ebe92696360c48f99548ff8db760"
     },
     {
       "batch": 6,
@@ -690,7 +700,8 @@
       "file": "dd_patch_adrenaline.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "642cd32a04e2c4183efe41b092ecb9e1129390cf5c477248a19e0ec59172f27f"
     },
     {
       "batch": 6,
@@ -699,7 +710,8 @@
       "file": "dd_patch_grudge.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "169bfdee89f25a5bf6e4735170964910bfb26abbf016d585754e347823a719e1"
     },
     {
       "batch": 6,
@@ -708,7 +720,8 @@
       "file": "dd_patch_show_off.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "91904a2b7dae701d19784632a7397be44c93da432ac69ed8ea3a925457a85866"
     },
     {
       "batch": 6,
@@ -717,7 +730,8 @@
       "file": "dd_patch_whetstone.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "0456b1a2da048d742a171de6d9ab83c8671f618ccb118abbfafa014af66e13f9"
     },
     {
       "batch": 7,
