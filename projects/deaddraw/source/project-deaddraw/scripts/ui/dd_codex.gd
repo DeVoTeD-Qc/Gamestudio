@@ -477,8 +477,7 @@ static func sections(bal: DDBalance) -> Array:
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
 			{"icon": "chip:-3", "name": "Damage to you", "line": "What you'd lose with the active weapon. Green 0 = free."},
-			{"icon": "rulechip:down:1", "name": "Rule chip: yes", "line": "The active gun's rule icon, ticked: this zombie fits its rule."},
-			{"icon": "rulechip:down:0", "name": "Rule chip: no", "line": "Dimmed and struck: it breaks the active gun's rule."},
+			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = your active weapon can take it; dark = it can't."},
 			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take this zombie."},
 			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},
 		]],
@@ -579,9 +578,25 @@ static func icon(id: String) -> Control:
 			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			inner = tr
-		"rulechip":
-			# dd-ui6: the chip on street zombies, rulechip:<rule>:<1 yes | 0 no>
-			inner = _square(Marks.RuleChip.new(Art.texture_for(Art.rule_keys(arg)), int(id.get_slice(":", 2))))
+		"litdark":
+			# dd-art-fit: a lit zombie (gun-yellow rim) beside a dark one
+			var hl: HBoxContainer = DDUi.hbox(3)
+			hl.alignment = BoxContainer.ALIGNMENT_CENTER
+			for lit: bool in [true, false]:
+				var pz: PanelContainer = PanelContainer.new()
+				var sb: StyleBoxFlat = DDUi.box(DDUi.card_bg("Z"), DDUi.WARN if lit else DDUi.accent("Z").darkened(0.5), 2, 4, 2)
+				if lit:
+					sb.shadow_color = Color(DDUi.WARN, 0.45)
+					sb.shadow_size = 3
+				pz.add_theme_stylebox_override("panel", sb)
+				pz.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				var sm: Control = Marks.StrengthMark.new(5)
+				sm.custom_minimum_size = Vector2(18, 18)
+				pz.add_child(sm)
+				if not lit:
+					pz.modulate = Color(0.45, 0.45, 0.45)
+				hl.add_child(pz)
+			inner = hl
 		"socket", "next":
 			inner = Marks.Socket.new(id == "next", "<6" if id == "next" else "")
 		"lock", "open":

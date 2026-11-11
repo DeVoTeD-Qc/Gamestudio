@@ -2443,7 +2443,7 @@ PAINTED_FOCUS = {
     "dd_item_trauma_kit": [0.10, 0.06, 0.97, 0.90],
     "dd_cover_car_door": [0.08, 0.08, 0.82, 0.90], "dd_cover_dumpster": [0.08, 0.15, 0.93, 0.88],
     "dd_cover_plywood": [0.20, 0.08, 0.85, 0.88],
-    "dd_machine_patch_press": [0.12, 0.06, 0.92, 0.92], "dd_machine_wall_rack": [0.15, 0.15, 0.95, 0.92],
+    "dd_machine_retrofit_bench": [0.05, 0.12, 0.95, 0.80], "dd_machine_patch_press": [0.12, 0.06, 0.92, 0.92], "dd_machine_wall_rack": [0.15, 0.15, 0.95, 0.92],
     "dd_machine_wall_rack_crossbow": [0.08, 0.25, 0.95, 0.85],
     "dd_machine_wall_rack_elephant_gun": [0.08, 0.25, 0.95, 0.85],
     "dd_machine_wall_rack_shotgun": [0.05, 0.28, 0.95, 0.78],

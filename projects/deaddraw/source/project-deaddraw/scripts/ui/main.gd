@@ -2435,14 +2435,6 @@ func apply_debug(args: Dictionary) -> void:
 					if run.street[k].kind == DDCard.ZOMBIE:
 						_auto_inspect = DDPayloads.card(run.street[k], run, k)
 						break
-			"rulechip":
-				# dd-ui6: the rule chip on the first zombie (the active gun's verdict)
-				for k: int in run.street.size():
-					if run.street[k].kind == DDCard.ZOMBIE:
-						var rc: Dictionary = DDPayloads.zombie_rule_chip(run.street[k], run)
-						if not rc.is_empty():
-							_auto_inspect = rc["payload"]
-						break
 			"plate1", "plate2":
 				var ps: int = 0 if what == "plate1" else 1
 				if run.slot(ps) != null:

@@ -46,6 +46,8 @@ var _art_dim: bool = false
 var _badge_panel: Control = null
 var _corner_chip: Control = null
 var _row: bool = false
+## dd-art-fit: a street zombie the active gun can take (a rim and glow in the gun's yellow).
+var _lit: bool = false
 ## dd-ui6: the rule chip under the number badge (street zombies: can the active gun take it; street
 ## guns: the gun's own rule). Its own tile, so right click / long press on it explains it.
 var rule_chip: DDCardView = null
@@ -106,6 +108,7 @@ func setup(spec: Dictionary) -> DDCardView:
 	_selected = bool(spec.get("selected", false))
 	_dim = bool(spec.get("dim", false))
 	_art_dim = bool(spec.get("art_dim", false))
+	_lit = bool(spec.get("lit", false))
 	_row = bool(spec.get("row", false))
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var compact: bool = bool(spec.get("compact", false))
@@ -564,6 +567,11 @@ func _apply_style() -> void:
 	if _selected:
 		st.shadow_color = Color(DDUi.SELECT, 0.35)
 		st.shadow_size = 10
+	elif _lit:
+		st.border_color = DDUi.WARN
+		st.set_border_width_all(3)
+		st.shadow_color = Color(DDUi.WARN, 0.32)
+		st.shadow_size = 7
 	add_theme_stylebox_override("panel", st)
 	modulate = Color(1, 1, 1, 0.55) if _dim else Color(1, 1, 1, 1)
 

@@ -98,6 +98,9 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 			body.append("Strength %d (the red badge): its attack AND its toughness. It hits you for %d minus your weapon's hit, and a gun kill pays %d pts (melee pays nothing)." % [c.value, c.value, b.shown(c.value)])
 			if c.is_boss():
 				body.append("%s (%s): %s" % [c.boss_name, DDText.trait_name(c.boss_trait), DDText.trait_text(c.boss_trait)])
+			var verdict: String = gun_verdict(c, run, index)
+			if verdict != "":
+				body.append(verdict + ".")
 			for w: int in 3:
 				if w != DDRun.MELEE and run.slot(w) == null:
 					continue
@@ -153,15 +156,18 @@ static func card_t2(c: DDCard, run: DDRun, index: int) -> String:
 			var who: String = "Melee" if w == DDRun.MELEE else _short_name(_weapon_label(run, w))
 			var pr: Dictionary = run.preview(index, w) if index >= 0 else {}
 			var mel: int = maxi(0, c.value - run.melee_power())
+			var vd: String = gun_verdict(c, run, index)
+			if vd == "":
+				vd = who
 			if not pr.is_empty() and not bool(pr["ok"]) and w != DDRun.MELEE and run.slot(w) != null:
-				return "%s can't take it (%s). Melee: you take %d." % [who, str(pr["reason"]), mel]
+				return "%s. Melee: you take %d." % [vd, mel]
 			var dmg: int = maxi(0, c.value - run.power_of(w))
 			if w == DDRun.MELEE or run.slot(w) == null:
 				return "Melee: you take %d, no points." % mel
 			var g: DDGun = run.slot(w)
-			var s: String = "%s: you take %d, +%d pts, lands on it (%d of %d)." % [who, dmg, b.shown(c.value), g.stack.size() + 1, g.cap]
+			var s: String = "%s. You take %d, +%d pts (%d of %d)." % [vd, dmg, b.shown(c.value), g.stack.size() + 1, g.cap]
 			if c.is_boss():
-				s = "%s: you take %d. %s" % [who, dmg, DDText.trait_name(c.boss_trait)]
+				s = "%s. You take %d. %s" % [vd, dmg, DDText.trait_name(c.boss_trait)]
 			return s
 		DDCard.WEAPON:
 			return "Each kill %s. Tap: equip, or scrap (+%d)." % [_rule_words(b.weapon_rule(c.wid), run.steady()), b.shown(b.num("scrap_points"))]
@@ -272,35 +278,35 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	# dd-ux-v4: zombies (and bosses) show the strength mark, guns the hit burst
 	if c.kind == DDCard.ZOMBIE:
 		spec["strength"] = c.value
-		var zc: Dictionary = zombie_rule_chip(c, run)
-		if not zc.is_empty():
-			spec["rule_chip"] = zc
+		# dd-art-fit (head: the rule chips read like a special ability): no chip on zombies. With a
+		# gun active, the zombies it can take are LIT (a rim in the gun's yellow) and the rest are
+		# dark (art_dim + the LOCK line, as before); with melee active every zombie looks normal.
+		# The yes / no in words is in the zombie's tooltip (card_t2).
+		var ga: DDGun = run.slot(run.active) if run.active != DDRun.MELEE else null
+		if ga != null and bool(run.preview(i, run.active)["ok"]):
+			spec["lit"] = true
 	elif c.kind == DDCard.WEAPON:
 		spec["hit"] = b.weapon_power(c.wid)
 		spec["rule_chip"] = weapon_rule_chip(c.wid, b, run.steady())
 	return spec
 
 
-## dd-ui6 (head: "show the rule icons on the row cards too"): the chip under a street zombie's
-## number: the ACTIVE gun's rule icon (the same glyph as the gun row, Glossary and Codex), with a
-## green tick when that gun's rule lets this zombie onto its stack, dimmed and struck when it
-## doesn't. Melee active (no rule) or an empty slot: no chip. Its tooltip says it in words:
-## "Hunting Rifle: lower than 7 - yes".
-static func zombie_rule_chip(c: DDCard, run: DDRun) -> Dictionary:
-	if run.active == DDRun.MELEE:
-		return {}
+## dd-art-fit: the active gun's yes / no for a street zombie, in words (it replaced the rule chip):
+## "Hunting Rifle can take this: lower than 7" / "Hunting Rifle can't take this: needs at most 3".
+## "" with melee active, an empty slot or no street index.
+static func gun_verdict(c: DDCard, run: DDRun, index: int) -> String:
+	if index < 0 or run.active == DDRun.MELEE:
+		return ""
 	var g: DDGun = run.slot(run.active)
 	if g == null:
-		return {}
-	var ok: bool = run.gun_allows(g, c.value)
-	var t1: String = "%s: %s - %s" % [g.name, accept_words(run.can_take(g)), "yes" if ok else "no"]
-	var t2: String = ""
-	if ok:
-		t2 = "Its rule (%s) lets this %d onto its stack." % [DDText.rule_tag(g.rule, run.steady()).to_lower(), c.value]
-	else:
-		t2 = "This %d breaks its rule (%s). Use the other gun or melee." % [c.value, DDText.rule_block(g, c.value, run).trim_prefix("rule: ")]
-	var p: Dictionary = tip({"kind": "W", "tag": "RULE", "title": DDText.rule_tag(g.rule, run.steady()), "icon_keys": Art.rule_keys(g.rule)}, t1, t2)
-	return {"tex": Art.texture_for(Art.rule_keys(g.rule)), "state": 1 if ok else 0, "payload": p}
+		return ""
+	var pr: Dictionary = run.preview(index, run.active)
+	if bool(pr["ok"]):
+		return "%s can take this: %s" % [g.name, accept_words(run.can_take(g))]
+	var why: String = str(pr["reason"])
+	if not run.gun_allows(g, c.value):
+		why = DDText.rule_block(g, c.value, run).trim_prefix("rule: ")
+	return "%s can't take this: %s" % [g.name, why]
 
 
 ## dd-ui6: a street gun card's own rule, as the same chip (no verdict).

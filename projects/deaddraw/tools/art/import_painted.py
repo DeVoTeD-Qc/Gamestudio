@@ -23,7 +23,8 @@ ROOT = Path(__file__).resolve().parents[2] / "source" / "project-deaddraw"
 OUT = ROOT / "assets" / "art" / "painted"
 
 # Rejected in review (retry prompts in documentation/art/chatgpt/dd-art-pack-1-retry-prompts.md) or blocked.
-SKIP = {"dd_title_landscape.png", "dd_machine_retrofit_bench.png"}
+# dd-art-fit: the two retries (title landscape, Retrofit Bench) passed review and are imported.
+SKIP: set[str] = set()
 
 # District banners: the 1536x480 band kept from a 1536x1024 original (landmarks sit at 30-62% height).
 BAND_TOP = 0.20
