@@ -1,7 +1,7 @@
 {
   "source": "../../dd-art-pack-2-ui-prompts.md",
   "requested_count": 52,
-  "generated_count": 11,
+  "generated_count": 24,
   "images": [
     {
       "batch": 1,
@@ -222,7 +222,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "00794a3f2e24c076bd656c43a921e242f25d41398d57b3b4af0187b0e99bebab"
     },
     {
       "batch": 2,
@@ -234,7 +241,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "edcfb0f6679d63cb8da12312b7e297c3ec940747c3cd33673dacb65eb47fb39e"
     },
     {
       "batch": 2,
@@ -246,7 +260,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "df385d8634a0b6b7b1b85cf6370e75df75128915fdeff4c2d8db522c32e03c6f"
     },
     {
       "batch": 2,
@@ -258,7 +279,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "7ca7d0b149660e7a47308c56622e28239ee871c567ead1dcec32e09745ac6e74"
     },
     {
       "batch": 2,
@@ -270,7 +298,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "e9e33bfbe56a792feea97f1849788dcfc9ca3b90dd701e273de055b33cf5703c"
     },
     {
       "batch": 2,
@@ -282,7 +317,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "81c8fa2eb250825505aa9a68c47bf98e564fa140153bc5659d447724cb224283"
     },
     {
       "batch": 2,
@@ -294,7 +336,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "7827a8d5f191716a99e7e220b7787faf7635f40e7ae3914cfa7a314b48eef31f"
     },
     {
       "batch": 2,
@@ -306,7 +355,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "41e02c569eabbc211e82beafe0ead4cbcf0b284ba124840a024a5b3834ba86b5"
     },
     {
       "batch": 2,
@@ -318,7 +374,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "287dca37f23690c36e32588d55aad816951330ff2d310d3e7543c6b78de7169b"
     },
     {
       "batch": 2,
@@ -330,7 +393,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "bafffc7c7589439bf69869b113a62ca1554b9a9a28a76b702b6635d09e326bc3"
     },
     {
       "batch": 2,
@@ -342,7 +412,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "d11d147325cc23041e50e2c8fc1461f59d38c37f97ea487c95440e3c6502b650"
     },
     {
       "batch": 2,
@@ -354,7 +431,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "42bcb5e38fdabc7d974040607b7bd61a96ca482d68c06e1e013840f0e848cd21"
     },
     {
       "batch": 2,
@@ -366,7 +450,14 @@
         1408,
         640
       ],
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        64,
+        192,
+        1472,
+        832
+      ],
+      "sha256": "551acb48d1ea92e05d1aa47bbda33cbea4704d7df6bd65111d3ce98522b61015"
     },
     {
       "batch": 3,
