@@ -1,6 +1,6 @@
 # dd_balance.gd
 # Purpose: Loads every tunable number from res://data/balance.json, which mirrors CONFIG in
-#   projects/deaddraw/tools/sim_deaddraw_v3.py (DeadDraw v3 "Kill Stacks"; regenerate it with
+#   projects/deaddraw/tools/sim_deaddraw_v4.py (DeadDraw v4, core-rules-v4.md; regenerate it with
 #   tools/regen_balance.py). The file may be strict JSON or a pasted Python dict (True/False/None,
 #   # comments, trailing commas, a leading "CONFIG =" are all accepted). Display-only info and the
 #   meta unlocks live in "extra_rules"; a missing key falls back to DEFAULT_EXTRA / DEFAULT_TOP, so
@@ -28,17 +28,24 @@ const DEFAULT_EXTRA: Dictionary = {
 	},
 }
 
-# CONFIG keys the rules read, with the v3 sim's values as the fallback.
+# CONFIG keys the rules read, with the v4 sim's values as the fallback.
 const DEFAULT_TOP: Dictionary = {
-	"street_size": 4, "actions": 3, "medkits_per_street": 1, "allow_run": true, "run_damage": 1,
+	"street_size": 4, "actions": 3, "medkits_per_street": 99, "allow_run": true, "run_damage": 1,
 	"boss_runpast_damage": 3, "boss_reward_points": 10, "safehouse_heal": 8, "points_on_kill": true,
-	"ditch_share": 0.0, "finish_bonus": 3, "scrap_points": 2, "melee_power": 2, "melee_points": 0.0,
+	"ditch_share": 0.0, "finish_bonus": 5, "scrap_points": 2, "melee_power": 2, "melee_points": 0.0,
 	"start_points": 0, "start_kit": ["pistol"], "restock_per_room": 1, "room_cost_mult": 1.0,
 	"z_add": [0, 0, 0], "patch_costs": [15, 25, 35, 45, 55, 65, 75, 85], "patch_offer": 2,
 	"boss_patch_offer": 3, "bench": {"trim": 5, "flip": 8, "hone": 12}, "brawler_bonus": 2,
 	"field_medic_bonus": 2, "thick_jacket_hp": 4, "second_wind_hp": 6, "trophy_belt_heal": 2,
 	"spread_cap": 16, "big_min": 6, "triage_bonus": 1, "theo_melee_bonus": 0,
 	"weapons": {}, "districts": [], "survivors": {}, "patches": [],
+	# v4 (core-rules-v4.md section 9.1)
+	"swap_salvage": "per_kill", "salvage_per_kill": 1, "carry_mode": "shop", "carry_heal_rate": 3,
+	"melee_mode": "hands", "hands_power": 1, "brawler_mode": "hands", "brawler_dur": 1,
+	"melee_weapon_points": 0.0, "melee_weapons": {}, "melee_pool": {}, "card_add": {}, "pool_add": {},
+	"run_mode": "anytime", "run_return": "bottom", "lockpick_off": 5, "adrenaline_hp": 6, "grudge_min": 9,
+	"show_off_points": 4, "whetstone_dur": 2, "small_max": 6, "heavy_min": 0, "big_bang_min": 9,
+	"pest_total": 15,
 }
 
 static var _cached: DDBalance = null
@@ -291,6 +298,75 @@ func weapon_price(wid: String) -> int:
 	return int(weapon_def(wid).get("price", 0))
 
 
+## v4 melee weapon cards ("K"): {"name", "p", "dur"}.
+func melee_def(mid: String) -> Dictionary:
+	var m: Variant = dict("melee_weapons").get(mid, {})
+	return m if m is Dictionary else {}
+
+
+func melee_name(mid: String) -> String:
+	return str(melee_def(mid).get("name", mid.capitalize()))
+
+
+func melee_power(mid: String) -> int:
+	return int(melee_def(mid).get("p", 0))
+
+
+func melee_uses(mid: String) -> int:
+	return int(melee_def(mid).get("dur", 0))
+
+
+func is_melee(mid: String) -> bool:
+	return dict("melee_weapons").has(mid)
+
+
+func _district_id(di: int) -> String:
+	return str(district(di).get("id", ""))
+
+
+## Melee weapon ids a "K" card of district di can be (sim Board.mpool; wrench if none listed).
+func melee_pool(di: int) -> Array[String]:
+	var out: Array[String] = []
+	for v: Variant in dict("melee_pool").get(_district_id(di), ["wrench"]):
+		out.append(str(v))
+	return out
+
+
+## Gun ids a "W" card of district di can be: the district's list + pool_add (sim Board.pool).
+func district_pool(di: int) -> Array[String]:
+	var out: Array[String] = []
+	for v: Variant in district(di).get("weapons", ["pistol"]):
+		out.append(str(v))
+	for v: Variant in dict("pool_add").get(_district_id(di), []):
+		out.append(str(v))
+	return out
+
+
+## Extra cards per district: {"entrance": [...], "waves": [[...], ...], "rooms": [[...], ...]}.
+func district_card_add(di: int) -> Dictionary:
+	var a: Variant = dict("card_add").get(_district_id(di), {})
+	return a if a is Dictionary else {}
+
+
+## The Entrance pack of district di with its card_add entries appended.
+func entrance_spec(di: int) -> Array:
+	var out: Array = (district(di).get("entrance", []) as Array).duplicate()
+	out.append_array(district_card_add(di).get("entrance", []))
+	return out
+
+
+## A room's pack with its card_add entries appended.
+func room_pack(di: int, ri: int) -> Array:
+	var r: Array = rooms(di)
+	if ri < 0 or ri >= r.size():
+		return []
+	var out: Array = ((r[ri] as Dictionary).get("pack", []) as Array).duplicate()
+	var ra: Array = district_card_add(di).get("rooms", [])
+	if ri < ra.size() and ra[ri] is Array:
+		out.append_array(ra[ri])
+	return out
+
+
 func districts() -> Array:
 	return list("districts")
 
@@ -308,7 +384,8 @@ func wave_count(di: int) -> int:
 	return (district(di).get("waves", []) as Array).size()
 
 
-## A wave deck spec with z_add applied to its zombies (ints); "W" entries stay as they are.
+## A wave deck spec with z_add applied to its zombies (ints); "W" / "K" entries stay as they
+## are; the district's card_add entries for that wave are appended (sim Board.__init__).
 func wave_spec(di: int, w: int) -> Array:
 	var out: Array = []
 	var waves: Array = district(di).get("waves", [])
@@ -321,6 +398,9 @@ func wave_spec(di: int, w: int) -> Array:
 			out.append(x)
 		else:
 			out.append(int(x) + add)
+	var wa: Array = district_card_add(di).get("waves", [])
+	if w < wa.size() and wa[w] is Array:
+		out.append_array(wa[w])
 	return out
 
 
