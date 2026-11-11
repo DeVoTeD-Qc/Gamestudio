@@ -185,8 +185,9 @@
       "number": 23,
       "title": "Tripwire Charge",
       "file": "kc_b_tripwire_charge.png",
-      "status": "blocked",
-      "reason": "Image service rejected original prompt: moderation_blocked (violence), input stage."
+      "status": "generated",
+      "sha256": "719ff197c79c652bd31a6acd34ffc9fd837b2049a72e79434c6b97e029a48559",
+      "prompt_source": "../../art-pack-1-retry-prompts.md"
     },
     {
       "batch": 3,
@@ -298,7 +299,8 @@
       "title": "Fast Learner",
       "file": "kc_b_kc_wip_fast_learner.png",
       "status": "generated",
-      "sha256": "2381b54018c8527fea16e398a3b396fd8dcfd342c274395d915e6ba6c77c630a"
+      "sha256": "ebc2579defbf35b417fca7e8dfac30b9013d9530a525f17b7c5a72f01d04eb05",
+      "prompt_source": "../../art-pack-1-retry-prompts.md"
     },
     {
       "batch": 5,
@@ -337,8 +339,9 @@
       "number": 42,
       "title": "Demolitions Expert",
       "file": "kc_b_demolitions_expert_nightcity.png",
-      "status": "blocked",
-      "reason": "Image service rejected generation: moderation_blocked (violence), output stage."
+      "status": "generated",
+      "sha256": "6fb1842c806e1314c3485074910d7895b57109746ecd84b7c295259b8cabfaf0",
+      "prompt_source": "../../art-pack-1-retry-prompts.md"
     },
     {
       "batch": 6,
@@ -386,9 +389,10 @@
       "title": "Recon Specialist",
       "file": "kc_b_recon_specialist_nightcity.png",
       "status": "generated",
-      "sha256": "52553b9679dd07feb5c165a4d95157b518016a7419b2a5197e2531ce026ebd17"
+      "sha256": "67124c0672771d0bb10312dd8e691cb9d16b005aa8f4b9b1810923e97ad4572a",
+      "prompt_source": "../../art-pack-1-retry-prompts.md"
     }
   ],
-  "generated_count": 46,
-  "blocked_count": 2
+  "generated_count": 48,
+  "blocked_count": 0
 }
