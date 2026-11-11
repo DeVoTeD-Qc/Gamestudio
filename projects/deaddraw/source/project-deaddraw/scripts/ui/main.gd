@@ -1464,11 +1464,10 @@ func _gun_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
 	var gp: Dictionary = DDPayloads.gun_def(c.wid, Game.bal, "NEW GUN", run.steady())
-	top.add_child(_view({"kind": "W", "tag": "GUN", "big": "P%d" % Game.bal.weapon_power(c.wid), "big_size": 30, "title": Game.bal.weapon_name(c.wid),
-		"compact": true, "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
+	top.add_child(_view({"kind": "W", "tag": "GUN", "hit": Game.bal.weapon_power(c.wid), "title": Game.bal.weapon_name(c.wid), "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
 	# dd-ux-clean: three plain lines; the card's zoom has the full text
 	var rw: Array = Game.bal.weapon_reward(c.wid)
-	var txt: Label = DDUi.label("Power %d · %d kills finish it\nRule: %s\nChallenge: %s -> %s" % [Game.bal.weapon_power(c.wid), Game.bal.weapon_cap(c.wid),
+	var txt: Label = DDUi.label("Hits %d · %d kills fill it\nRule: %s\nChallenge: %s -> %s" % [Game.bal.weapon_power(c.wid), Game.bal.weapon_cap(c.wid),
 		DDText.rule_short(Game.bal.weapon_rule(c.wid), run.steady()), DDText.challenge_name(Game.bal.weapon_challenge(c.wid)), DDText.reward_short(str(rw[0]), int(rw[1]), Game.bal)],
 		DDUi.FONT_S - 1, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL

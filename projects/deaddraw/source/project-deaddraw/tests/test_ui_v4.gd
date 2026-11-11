@@ -354,7 +354,7 @@ func test_codex_filters_and_met_tracking() -> void:
 			var v: DDCardView = (e2 as Dictionary)["view"]
 			check(not bool((e2 as Dictionary)["met"]) and str(v.payload.get("t1", "")).begins_with("???"), tag + " unmet entries are ???")
 			if v.art_rect != null:
-				check(v.art_rect.self_modulate.v < 0.1, tag + " unmet art is a silhouette")
+				check(v.art_rect.self_modulate.v < 0.2, tag + " unmet art is a dark silhouette")
 		# filters: type, district, met only
 		cx.call("set_filters", "guns", "any", false)
 		await _settle()

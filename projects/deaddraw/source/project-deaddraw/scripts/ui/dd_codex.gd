@@ -374,7 +374,7 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if not met:
 			# a dark silhouette until met
-			tr.self_modulate = Color(0, 0, 0, 0.9)
+			tr.self_modulate = Color(0.13, 0.13, 0.15, 1.0)
 		win.add_child(tr)
 		v.art_rect = tr
 	if met:
