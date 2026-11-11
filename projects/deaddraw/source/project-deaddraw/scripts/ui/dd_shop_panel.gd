@@ -76,7 +76,7 @@ func rebuild() -> void:
 			if ptex != null:
 				bt.icon = ptex
 				bt.expand_icon = false
-				bt.add_theme_constant_override("icon_max_width", 48)
+				bt.add_theme_constant_override("icon_max_width", 72)
 				bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			bt.pressed.connect(func() -> void: _buy_patch(pid))
 			row.add_child(bt)

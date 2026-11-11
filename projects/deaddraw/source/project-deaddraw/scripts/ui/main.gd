@@ -1626,8 +1626,8 @@ func _patch_sheet(run: DDRun, v: VBoxContainer) -> void:
 		spec["art_keys"] = Art.patch_keys(pid)
 		spec["art_fit"] = "contain"
 		if portrait:
-			spec["art_side"] = 64.0
-		var cv: DDCardView = _view(spec, Vector2(0, 84 if portrait else 200))
+			spec["art_side"] = 88.0
+		var cv: DDCardView = _view(spec, Vector2(0, 96 if portrait else 200))
 		cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cv.tapped.connect(func(_x: DDCardView) -> void: do_take_patch(pid))
 		row.add_child(cv)
@@ -2165,9 +2165,10 @@ func _build_safehouse() -> void:
 			ps["art_keys"] = Art.patch_keys(pid)
 			ps["art_fit"] = "contain"
 			if portrait:
-				# dd-art-fit: the Patch as a 56 px square beside its text (it was a ~20 px strip)
-				ps["art_side"] = 56.0
-			var cv: DDCardView = _view(ps, Vector2(0, 76 if portrait else 150))
+				# dd-art-fit: the Patch as a square beside its text (it was a ~20 px strip); 80 layout px
+				# is ~55 CSS px on a 390 px phone
+				ps["art_side"] = 80.0
+			var cv: DDCardView = _view(ps, Vector2(0, 88 if portrait else 150))
 			cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			cv.name = "BossPatch_" + pid
 			cv.tapped.connect(func(_x: DDCardView) -> void: take_boss_patch(pid))

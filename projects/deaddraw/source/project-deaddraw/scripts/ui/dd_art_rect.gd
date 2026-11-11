@@ -2,18 +2,18 @@
 # Purpose: dd-art-fit. A cover-fit art rect that knows where the subject of a painting is. The art
 #   fills its rect (cover) around a focus point, but never crops the subject's must-see box (the
 #   whole gun, a zombie's head and chest...): when the rect is too wide or too tall for that, the
-#   art zooms out just enough to show the box, and the bars that leaves are filled with the same
-#   painting, covered and darkened, so the tile never shows an empty edge.
+#   art zooms out just enough to show the box, and the bars that leaves are filled with the
+#   painting's own edge stretched out (slightly darker), so the tile never shows an empty edge.
 #   Made by DDArt.cover_rect() from the manifest's "focus" entries; anything without one keeps the
 #   plain TextureRect cover look. It is a TextureRect (art_rect slots, self_modulate dimming), but
 #   draws the art itself: `texture` stays null, the painting is in `art`.
-#   Performance: low. Two draw_texture_rect_region calls at most, redrawn on resize only.
+#   Performance: low. Three draw_texture_rect_region calls at most, redrawn on resize only.
 # Dependencies: none.
 # Author: Technical Artist Agent (dd-art-fit)
 extends TextureRect
 
-## How dark the bars behind a zoomed-out painting are (1 = as bright as the art).
-const BACKDROP: Color = Color(0.32, 0.32, 0.34)
+## The tint of the bars beside a zoomed-out painting (1 = as bright as the art).
+const BACKDROP: Color = Color(0.8, 0.8, 0.82)
 
 var art: Texture2D = null
 ## The subject's must-see box, in 0..1 of the image (Rect2() = none: plain cover).
@@ -29,7 +29,7 @@ func _init() -> void:
 	resized.connect(queue_redraw)
 
 
-## The image rect drawn and where it lands, for a rect of `area` (for tests and the backdrop).
+## The image rect drawn and where it lands, for a rect of `area` (for tests and the bars).
 ## Returns [src: Rect2 (image px), dst: Rect2 (local px), letterboxed: bool].
 func layout(area: Vector2) -> Array:
 	if art == null or area.x < 1.0 or area.y < 1.0:
@@ -62,10 +62,13 @@ func _draw() -> void:
 	if src.size.x <= 0.0 or src.size.y <= 0.0:
 		return
 	if bool(l[2]):
-		# the bars: the same painting, covered around the focus and darkened
-		var isz: Vector2 = art.get_size()
-		var s: float = maxf(size.x / isz.x, size.y / isz.y)
-		var vis: Vector2 = size / s
-		var o: Vector2 = (focus * isz - vis * 0.5).clamp(Vector2.ZERO, (isz - vis).max(Vector2.ZERO))
-		draw_texture_rect_region(art, Rect2(Vector2.ZERO, size), Rect2(o, vis), BACKDROP)
+		# the bars: the painting's own edge (a 2 px strip of its backdrop) stretched out, a touch
+		# darker, so the wall or sky just carries on behind the subject
+		var dst: Rect2 = l[1]
+		if dst.position.x > 0.5 or dst.end.x < size.x - 0.5:
+			draw_texture_rect_region(art, Rect2(0.0, dst.position.y, dst.position.x + 1.0, dst.size.y), Rect2(src.position.x, src.position.y, 2.0, src.size.y), BACKDROP)
+			draw_texture_rect_region(art, Rect2(dst.end.x - 1.0, dst.position.y, size.x - dst.end.x + 1.0, dst.size.y), Rect2(src.end.x - 2.0, src.position.y, 2.0, src.size.y), BACKDROP)
+		else:
+			draw_texture_rect_region(art, Rect2(dst.position.x, 0.0, dst.size.x, dst.position.y + 1.0), Rect2(src.position.x, src.position.y, src.size.x, 2.0), BACKDROP)
+			draw_texture_rect_region(art, Rect2(dst.position.x, dst.end.y - 1.0, dst.size.x, size.y - dst.end.y + 1.0), Rect2(src.position.x, src.end.y - 2.0, src.size.x, 2.0), BACKDROP)
 	draw_texture_rect_region(art, l[1], src)
