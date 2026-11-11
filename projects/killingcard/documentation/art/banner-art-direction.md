@@ -41,7 +41,7 @@ On the board a banner is drawn at roughly 150 to 220 pt wide on a landscape phon
 - **Value contrast first.** Subject light on dark or dark on light. Max three value groups (background, subject, one highlight).
 - **One focal accent** (muzzle flash, glowing eye, neon line). Not five.
 - **Horizontal flow.** Weapons, motion, tracer lines and horizons run left-right across the strip: the format rewards it.
-- **Mirror-safe.** No text means the engine may flip a banner horizontally (for example to face the objective). Avoid details that look wrong mirrored; handedness does not matter.
+- **Never mirrored (kc-pitch-art, head).** The engine shows every banner the right way round on both sides; the side reads from the frame, badges and reticle colour. Painted art still avoids text so a public "Flipside" look variant stays possible.
 
 ### 1.4 Safe zones (coordinate with UX)
 

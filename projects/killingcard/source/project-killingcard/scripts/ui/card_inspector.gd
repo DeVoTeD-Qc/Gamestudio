@@ -5,8 +5,8 @@
 #   allows) next to a text panel: name, type line, full rules text, one line per keyword /
 #   trigger with its rule (card_info.gd), and a status line ("Costs 3 Supply - you have 2").
 #   Closes on CLOSE, a tap anywhere outside the text panel, or the cancel action (Esc).
-#   kc-board: above the card, the full 512x128 banner (the art's 4:1 band with large badges; the
-#   rival's mirrored as on the board), animated (shimmer) while the inspector is open, and a line
+#   kc-board: above the card, the full 512x128 banner (the art's 4:1 band with large badges; never
+#   mirrored, kc-pitch-art), animated (shimmer) while the inspector is open, and a line
 #   naming the art. info.view = {} hides the card (objective tiles, incoming backs, rail boxes).
 #   kc-da-ui2 (art direction #4, "pulling one card into the light"): ONE big card plus a paper rules
 #   sheet, nothing else. The 512x128 banner shows only when there is no card to show (tokens,

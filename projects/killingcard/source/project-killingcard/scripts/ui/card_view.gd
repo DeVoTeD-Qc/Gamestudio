@@ -541,7 +541,8 @@ func _set_art() -> void:
 		_art_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		_art_icon.modulate = Color(0.6, 0.65, 0.7, 0.55)
 	_art_icon.texture = tex
-	_art_icon.flip_h = side == "enemy"
+	# kc-pitch-art (head): never mirror card art for the rival (the side shows in the frame).
+	_art_icon.flip_h = false
 
 
 ## Rasterises the illustration fallback for the scale the card is shown at (bucketed, cached).

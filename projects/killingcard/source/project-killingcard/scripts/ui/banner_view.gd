@@ -334,8 +334,9 @@ func _set_art(art_id: StringName, unit: Dictionary) -> void:
 			_art.texture = _flip
 		elif not _start_flipbook():
 			set_focus(false)
-	# Rival figures face the other way (the art is mirrored, never recoloured).
-	_art.flip_h = side == &"enemy"
+	# kc-pitch-art (head): card art is never mirrored, on either side. The side shows in the frame,
+	# badges and reticle colour; a mirrored calling card reads wrong (its own text runs backwards).
+	_art.flip_h = false
 
 
 func _refresh() -> void:

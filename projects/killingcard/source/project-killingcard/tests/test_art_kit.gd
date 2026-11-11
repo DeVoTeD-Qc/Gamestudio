@@ -98,14 +98,14 @@ func test_card_text_fits_at_full_and_half_scale() -> void:
 
 
 ## kc-cards-impl (Y2+): the side shows in the FP reticle's team colour (teal / red) and the rival's
-## art faces the other way; Tactics are the only cut-corner frame (T1).
+## art is never mirrored (kc-pitch-art); Tactics are the only cut-corner frame (T1).
 func test_friend_and_enemy_differ_by_shape() -> void:
 	var card: CardView = (load(CARD_SCENE) as PackedScene).instantiate()
 	tree.root.add_child(card)
 	await tree.process_frame
 	assert_true((CardLook.TEAM[&"player"] as Array)[0] != (CardLook.TEAM[&"enemy"] as Array)[0], "team reticles differ")
 	card.set_card_data({"name": "X", "type": "unit", "side": "enemy", "id": "rifleman"})
-	assert_true((card.get_node("%ArtIcon") as TextureRect).flip_h, "the rival's art is mirrored")
+	assert_false((card.get_node("%ArtIcon") as TextureRect).flip_h, "kc-pitch-art: the rival's art is never mirrored")
 	for type_name: String in ["unit", "tactic", "equipment", "killstreak", "operator"]:
 		card.set_card_data({"name": "X", "type": type_name, "side": "friend"})
 		assert_eq(card.is_tactic(), type_name == "tactic", "%s: T1 frame only on tactics" % type_name)

@@ -1,7 +1,7 @@
 # test_card_art_views.gd
 # Purpose: k-art4 painted art on the small card views. Hand chips show the card's art band under
 #   the name (stats / keywords on plates, tactic chips trade their cut-off rules line for the art),
-#   board unit slots show the unit's art cropped to the slot (enemy mirrored, side in the frame
+#   board unit slots show the unit's art cropped to the slot (never mirrored since kc-pitch-art, side in the frame
 #   and tab, silhouette only as the no-art fallback), mulligan buttons carry art too (the Loadout
 #   killstreak tiles are covered by test_run_screens' layout checks). The full-board layout and legibility checks of test_board_layout.gd
 #   (tap targets, text >= 11 pt, key numbers >= 14 pt, nothing cut or spilling) run on a board
@@ -97,7 +97,7 @@ func test_board_shows_art() -> void:
 	await tree.process_frame
 	# Let the arrival slides (lane.gd motion) settle.
 	await tree.create_timer(2.0).timeout
-	# kc-board: unit slots show their 4:1 banner (BannerArtDB), enemy art mirrored, never recoloured
+	# kc-board: unit slots show their 4:1 banner (BannerArtDB), never mirrored (kc-pitch-art), never recoloured
 	# (back rows are only darker: r == g == b).
 	var units: int = 0
 	for lane: Node in match_node.get_board().get_lanes():
@@ -108,7 +108,7 @@ func test_board_shows_art() -> void:
 			assert_true(slot.has_art(), "slot %s shows art" % slot.get_path())
 			var art: TextureRect = slot.banner.get_node("Art")
 			assert_not_null(art.texture, "slot banner texture")
-			assert_eq(art.flip_h, slot.side == &"enemy", "enemy art mirrored, own art not")
+			assert_false(art.flip_h, "kc-pitch-art: card art is never mirrored, either side")
 			var m: Color = art.modulate * art.self_modulate
 			assert_true(is_equal_approx(m.r, m.g) and is_equal_approx(m.g, m.b), "art never recoloured")
 			var tex_size: Vector2 = art.texture.get_size()
