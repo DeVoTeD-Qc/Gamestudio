@@ -2418,6 +2418,41 @@ for _p in ("lookout", "thick_jacket", "field_medic", "brawler", "bounty", "loose
     PAINTED["patches/%s.svg" % _p] = "dd_patch_" + _p
 
 
+# dd-art-fit: where each painting's subject is, [x0, y0, x1, y1] in 0..1 of the image (the must-see
+# box) and optionally "focus": [x, y] (where the crop centres; the box centre by default). Cover-fit
+# art (street cards, the gun-row strip, sockets, room doors, inspect pictures) crops around it and
+# never cuts the box (scripts/ui/dd_art_rect.gd): whole guns and tools, zombies from head to waist.
+PAINTED_FOCUS = {
+    # guns and melee: the whole weapon
+    "dd_gun_alley_sweeper": [0.01, 0.08, 0.98, 0.82], "dd_gun_elephant_gun": [0.02, 0.16, 0.99, 0.78],
+    "dd_gun_hunting_rifle": [0.02, 0.24, 0.98, 0.80], "dd_gun_lever_rifle": [0.02, 0.14, 0.98, 0.80],
+    "dd_gun_nail_driver": [0.02, 0.06, 0.97, 0.85], "dd_gun_pump_shotgun": [0.03, 0.16, 0.98, 0.76],
+    "dd_gun_ratchet_crossbow": [0.02, 0.09, 0.99, 0.80], "dd_gun_scout_carbine": [0.05, 0.16, 0.97, 0.75],
+    "dd_gun_service_pistol": [0.16, 0.08, 0.90, 0.83], "dd_gun_stovepipe_launcher": [0.03, 0.20, 0.99, 0.80],
+    "dd_gun_twin_bore": [0.02, 0.16, 0.99, 0.86],
+    "dd_melee_bare_hands": [0.20, 0.18, 0.92, 0.66], "dd_melee_fire_axe": [0.03, 0.10, 0.92, 0.85],
+    "dd_melee_pipe_wrench": [0.07, 0.08, 0.97, 0.85], "dd_melee_sledgehammer": [0.03, 0.13, 0.98, 0.83],
+    # zombies and bosses: head to waist, the crop leaning to the head
+    "dd_zombie_bruiser": [0.26, 0.0, 0.73, 0.60], "dd_zombie_hulk": [0.22, 0.06, 0.88, 0.72],
+    "dd_zombie_lurcher": [0.16, 0.03, 0.95, 0.60], "dd_zombie_shambler": [0.31, 0.0, 0.72, 0.58],
+    "dd_boss_groundskeeper": [0.20, 0.0, 0.75, 0.62], "dd_boss_patient_zero_1": [0.28, 0.02, 0.72, 0.66],
+    "dd_boss_patient_zero_2": [0.20, 0.02, 0.92, 0.66], "dd_boss_patient_zero_3": [0.14, 0.0, 0.90, 0.72],
+    "dd_boss_rush_hour_horde": [0.06, 0.10, 0.95, 0.72],
+    # items, cover and machines: the whole object
+    "dd_item_bandage": [0.15, 0.10, 0.92, 0.85], "dd_item_first_aid_kit": [0.22, 0.12, 0.88, 0.88],
+    "dd_item_trauma_kit": [0.10, 0.06, 0.97, 0.90],
+    "dd_cover_car_door": [0.08, 0.08, 0.82, 0.90], "dd_cover_dumpster": [0.08, 0.15, 0.93, 0.88],
+    "dd_cover_plywood": [0.20, 0.08, 0.85, 0.88],
+    "dd_machine_patch_press": [0.12, 0.06, 0.92, 0.92], "dd_machine_wall_rack": [0.15, 0.15, 0.95, 0.92],
+    "dd_machine_wall_rack_crossbow": [0.08, 0.25, 0.95, 0.85],
+    "dd_machine_wall_rack_elephant_gun": [0.08, 0.25, 0.95, 0.85],
+    "dd_machine_wall_rack_shotgun": [0.05, 0.28, 0.95, 0.78],
+    # survivors: the face and shoulders
+    "dd_survivor_rosa": [0.18, 0.04, 0.85, 0.66], "dd_survivor_imani": [0.18, 0.06, 0.82, 0.66],
+    "dd_survivor_theo": [0.15, 0.06, 0.80, 0.66],
+}
+
+
 def apply_painted(man: dict) -> None:
     have = {svg: "painted/%s.webp" % stem for svg, stem in PAINTED.items() if (ART / "painted" / ("%s.webp" % stem)).exists()}
     if not have:
@@ -2449,7 +2484,13 @@ def apply_painted(man: dict) -> None:
         title.setdefault("landscape", title.get("portrait", ""))
         title.setdefault("portrait", title["landscape"])
         man["title"] = title
-    man["_note"] += " v5: painted art pack 1 (assets/art/painted/*.webp) replaces the SVGs it covers; the SVGs stay the fallback."
+    focus = {}
+    for stem, bx in PAINTED_FOCUS.items():
+        if (ART / "painted" / ("%s.webp" % stem)).exists():
+            focus["painted/%s.webp" % stem] = {"box": bx}
+    if focus:
+        man["focus"] = focus
+    man["_note"] += " v5: painted art pack 1 (assets/art/painted/*.webp) replaces the SVGs it covers; the SVGs stay the fallback. focus: each painting's must-see box (dd-art-fit)."
 
 
 if __name__ == "__main__":

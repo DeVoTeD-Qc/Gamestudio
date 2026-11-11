@@ -23,6 +23,7 @@ signal inspect_requested(payload: Dictionary)
 ## The Leave button (the screen calls DDRun.leave_safehouse()).
 signal leave_requested
 
+const Art: GDScript = preload("res://scripts/ui/dd_art.gd")
 const LONG_PRESS: float = 0.45
 
 var run: DDRun
@@ -70,6 +71,13 @@ func rebuild() -> void:
 			var bt: Button = _button("BUY %s · %d pts\n%s" % [DDText.patch_name(pid).to_upper(), b.shown(int(st["patch_price"])),
 				DDText.patch_text(pid, b) if why == "" else why], why == "", Color("2f2f5a"), DDPayloads.patch(pid, b))
 			bt.name = "ShopPatch_" + pid
+			# dd-art-fit: the Patch's art on its BUY button, big enough to read
+			var ptex: Texture2D = Art.texture_for(Art.patch_keys(pid))
+			if ptex != null:
+				bt.icon = ptex
+				bt.expand_icon = false
+				bt.add_theme_constant_override("icon_max_width", 48)
+				bt.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			bt.pressed.connect(func() -> void: _buy_patch(pid))
 			row.add_child(bt)
 	# supplies stepper

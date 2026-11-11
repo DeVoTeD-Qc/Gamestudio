@@ -16,6 +16,7 @@ class_name DDCardView
 extends PanelContainer
 
 const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
+const ArtFit: GDScript = preload("res://scripts/ui/dd_art.gd")
 
 signal tapped(view: DDCardView)
 signal inspected(payload: Dictionary)
@@ -116,6 +117,8 @@ func setup(spec: Dictionary) -> DDCardView:
 		_build_district(spec)
 	elif bool(spec.get("row", false)):
 		_build_row(spec, art if has_art else null)
+	elif has_art and float(spec.get("art_side", 0.0)) > 0.0:
+		_build_side(spec, art)
 	elif has_art and not compact and ART_LAYOUT == "frame":
 		_frame = true
 		_build_framed(spec, art)
@@ -218,6 +221,43 @@ func _build_row(spec: Dictionary, art: Variant) -> void:
 			_outline(tt, 5)
 		_box.add_child(tt)
 	_add_lines(_box, spec, art != null, HORIZONTAL_ALIGNMENT_LEFT)
+
+
+## dd-art-fit: a list row with the art as a square on the left (spec "art_side" = its side, px) and
+## tag / title / lines on the right. Small square art (Patches) shows big enough to read in a row
+## that stays short.
+func _build_side(spec: Dictionary, art: Texture2D) -> void:
+	var h: HBoxContainer = DDUi.hbox(10)
+	add_child(h)
+	var side: float = float(spec.get("art_side", 56.0))
+	var tr: TextureRect = TextureRect.new()
+	tr.name = "SideArt"
+	tr.texture = art
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.custom_minimum_size = Vector2(side, side)
+	tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(tr)
+	art_rect = tr
+	_box = DDUi.vbox(2)
+	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(_box)
+	var top: HBoxContainer = DDUi.hbox(6)
+	_box.add_child(top)
+	var tag: String = str(spec.get("tag", ""))
+	if tag != "":
+		var kl: Label = DDUi.label(tag.to_upper(), DDUi.FONT_S - 5, DDUi.accent(kind))
+		kl.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		top.add_child(kl)
+	var title: String = str(spec.get("title", ""))
+	if title != "":
+		var tt: Label = DDUi.label(title, DDUi.FONT_S, BONE)
+		tt.clip_text = true
+		tt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		top.add_child(tt)
+		tt.resized.connect(func() -> void: fit_label(tt, DDUi.FONT_S, 10))
+	_add_lines(_box, spec, false, HORIZONTAL_ALIGNMENT_LEFT)
 
 
 ## Art direction section 4: the art fills the window, the number sits in an ink badge in the art's
@@ -361,10 +401,12 @@ func _add_rule_chip(window: Control, rc: Dictionary) -> void:
 
 
 func _add_art(parent: Control, tex: Texture2D, fit: String) -> TextureRect:
-	var tr: TextureRect = TextureRect.new()
-	tr.texture = tex
-	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if fit == "contain" else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	# dd-art-fit: cover art crops around the painting's subject (the manifest's focus box)
+	var tr: TextureRect = ArtFit.cover_rect(tex) if fit != "contain" else TextureRect.new()
+	if fit == "contain":
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	tr.custom_minimum_size = Vector2.ZERO
 	parent.add_child(tr)
 	if art_rect == null:

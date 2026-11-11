@@ -190,10 +190,7 @@ func _open_tip(payload: Dictionary) -> void:
 		var layer: Control = Control.new()
 		pic.add_child(layer)
 		if art is Texture2D:
-			var tr: TextureRect = TextureRect.new()
-			tr.texture = art
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			var tr: TextureRect = ArtLib.cover_rect(art)
 			tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			layer.add_child(tr)
 		var mark: Control = null

@@ -925,10 +925,7 @@ func _door_tile(kind: String, payload: Dictionary, art_keys: Array, tint: float,
 	v.add_child(window)
 	var tex: Texture2D = Art.texture_for(art_keys)
 	if tex != null:
-		var tr: TextureRect = TextureRect.new()
-		tr.texture = tex
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		var tr: TextureRect = Art.cover_rect(tex)
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		window.add_child(tr)
@@ -1628,7 +1625,9 @@ func _patch_sheet(run: DDRun, v: VBoxContainer) -> void:
 		var spec: Dictionary = DDPayloads.patch_spec(pid, Game.bal, false)
 		spec["art_keys"] = Art.patch_keys(pid)
 		spec["art_fit"] = "contain"
-		var cv: DDCardView = _view(spec, Vector2(0, 110 if portrait else 200))
+		if portrait:
+			spec["art_side"] = 64.0
+		var cv: DDCardView = _view(spec, Vector2(0, 84 if portrait else 200))
 		cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cv.tapped.connect(func(_x: DDCardView) -> void: do_take_patch(pid))
 		row.add_child(cv)
@@ -2165,7 +2164,10 @@ func _build_safehouse() -> void:
 			var ps: Dictionary = DDPayloads.patch_spec(pid, Game.bal, false)
 			ps["art_keys"] = Art.patch_keys(pid)
 			ps["art_fit"] = "contain"
-			var cv: DDCardView = _view(ps, Vector2(0, 104 if portrait else 150))
+			if portrait:
+				# dd-art-fit: the Patch as a 56 px square beside its text (it was a ~20 px strip)
+				ps["art_side"] = 56.0
+			var cv: DDCardView = _view(ps, Vector2(0, 76 if portrait else 150))
 			cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			cv.name = "BossPatch_" + pid
 			cv.tapped.connect(func(_x: DDCardView) -> void: take_boss_patch(pid))

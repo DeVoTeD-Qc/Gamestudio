@@ -370,10 +370,12 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 	win.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(win)
 	if tex != null:
-		var tr: TextureRect = TextureRect.new()
-		tr.texture = tex
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED if str(e.get("art_fit", "cover")) == "contain" else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		var contain: bool = str(e.get("art_fit", "cover")) == "contain"
+		var tr: TextureRect = TextureRect.new() if contain else Art.cover_rect(tex)
+		if contain:
+			tr.texture = tex
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if not met:

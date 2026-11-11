@@ -122,6 +122,36 @@ func test_art_from_a_manifest_and_missing_files() -> void:
 	_cleanup()
 
 
+## dd-art-fit: a painting with a focus box is cropped around its subject and never cuts the box,
+## whatever the shape of the rect (the wide gun-row strip, a tall tile, a square).
+func test_art_focus_keeps_the_subject_whole() -> void:
+	Art.use_manifest(Art.DEFAULT_MANIFEST)
+	var tex: Texture2D = Art.texture_for(Art.weapon_keys("pistol", "Service Pistol"))
+	check(tex != null, "pistol art found")
+	var fz: Dictionary = Art.focus_for(tex)
+	check(fz.has("box"), "pistol has a focus box")
+	var tr: TextureRect = Art.cover_rect(tex)
+	check(tr.get("art") == tex, "focus art rect made")
+	var isz: Vector2 = tex.get_size()
+	var bx: Rect2 = fz.get("box", Rect2())
+	var bpx: Rect2 = Rect2(bx.position * isz, bx.size * isz)
+	for area: Vector2 in [Vector2(140, 60), Vector2(200, 40), Vector2(360, 90), Vector2(120, 160), Vector2(96, 96), Vector2(300, 200)]:
+		var l: Array = tr.call("layout", area)
+		var src: Rect2 = l[0]
+		check(src.grow(0.5).encloses(bpx), "box whole at %s" % str(area))
+		var dst: Rect2 = l[1]
+		check(Rect2(Vector2.ZERO, area).grow(0.5).encloses(dst), "drawn inside the rect at %s" % str(area))
+	# a plain cover crop where the box already fits: fills the rect
+	var l2: Array = tr.call("layout", Vector2(150, 100))
+	check(not bool(l2[2]) and (l2[1] as Rect2).size.is_equal_approx(Vector2(150, 100)), "fills the rect when the box fits")
+	tr.free()
+	var sv: Texture2D = Art.texture_for(Art.card_keys(DDCard.parse("M3")))
+	if sv != null and Art.focus_for(sv).is_empty():
+		var plain: TextureRect = Art.cover_rect(sv)
+		check(plain.texture == sv and plain.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_COVERED, "no focus: the plain cover look")
+		plain.free()
+
+
 func test_real_manifest_covers_the_cards() -> void:
 	Art.use_manifest(Art.DEFAULT_MANIFEST)
 	if Art.entry_count() == 0:

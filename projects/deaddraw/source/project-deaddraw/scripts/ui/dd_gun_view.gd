@@ -322,10 +322,7 @@ func _make_mini(z: int, pl: Dictionary) -> DDCardView:
 	var c: DDCard = DDCard.make(DDCard.ZOMBIE, z)
 	var tex: Texture2D = Art.texture_for(Art.card_keys(c))
 	if tex != null:
-		var tr: TextureRect = TextureRect.new()
-		tr.texture = tex
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		var tr: TextureRect = Art.cover_rect(tex)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.self_modulate = Color(1, 1, 1, 0.8)
 		mc.add_child(tr)

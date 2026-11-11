@@ -20,6 +20,9 @@
 #   icons have their own *_keys functions; anything missing falls back to the plain tile.
 #   v3 (manifest v3): Patches (patch_keys), gun-rule icons (rule_keys), deck backs
 #   (deck_back_keys), Patient Zero phases, v3 machine kinds (bench / patch / wall).
+#   v5 (dd-art-fit): the manifest's "focus" group, {file: {"box": [x0, y0, x1, y1], "focus": [x, y]}}
+#   in 0..1 of the image, says where a painting's subject is; cover_rect() then crops around it and
+#   never cuts the box (dd_art_rect.gd).
 # Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
@@ -28,11 +31,13 @@ const DEFAULT_MANIFEST: String = "res://assets/art/manifest.json"
 const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "C": "barricade", "B": "barricade", "A": "ammo"}
 ## v3 machine kinds -> the manifest's machine ids.
 const MACHINE_ART: Dictionary = {"bench": "retrofit_bench", "patch": "patch_press", "wall": "wall_rack"}
+const ArtRect: GDScript = preload("res://scripts/ui/dd_art_rect.gd")
 
 static var _path: String = DEFAULT_MANIFEST
 static var _entries: Dictionary = {}   # lowercase key -> resolved file path
 static var _loaded: bool = false
 static var _tex: Dictionary = {}       # file path -> Texture2D (or null)
+static var _focus: Dictionary = {}     # file path -> {"box": Rect2, "focus": Vector2}
 
 
 ## Points the hook at another manifest (tests) and forgets what was loaded.
@@ -45,6 +50,7 @@ static func reset() -> void:
 	_entries = {}
 	_loaded = false
 	_tex = {}
+	_focus = {}
 
 
 ## Number of manifest entries found (0 = no manifest / empty).
@@ -72,6 +78,36 @@ static func texture_for(keys: Array) -> Texture2D:
 		if t != null:
 			return t
 	return null
+
+
+## dd-art-fit: where a painting's subject is ({} when the manifest says nothing about it).
+static func focus_for(tex: Texture2D) -> Dictionary:
+	_ensure()
+	if tex == null or _focus.is_empty():
+		return {}
+	if tex.resource_path != "" and _focus.has(tex.resource_path):
+		return _focus[tex.resource_path]
+	for p: Variant in _tex.keys():
+		if _tex[p] == tex:
+			return _focus.get(p, {})
+	return {}
+
+
+## dd-art-fit: a full-cover art rect. Paintings with a focus entry crop around their subject and
+## never cut its box (dd_art_rect.gd); anything else is a plain cover TextureRect, as before.
+static func cover_rect(tex: Texture2D) -> TextureRect:
+	var fz: Dictionary = focus_for(tex)
+	if fz.is_empty():
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		return tr
+	var ar: TextureRect = ArtRect.new()
+	ar.set("art", tex)
+	ar.set("box", fz.get("box", Rect2()))
+	ar.set("focus", fz.get("focus", Vector2(0.5, 0.5)))
+	return ar
 
 
 # ---------------------------------------------------------------- lookup keys
@@ -202,6 +238,23 @@ static func _ensure() -> void:
 	if parsed == null:
 		push_warning("DDArt: %s is not valid JSON" % _path)
 		return
+	if parsed is Dictionary and (parsed as Dictionary).get("focus", null) is Dictionary:
+		var fz: Dictionary = parsed["focus"]
+		for f: Variant in fz.keys():
+			var e: Variant = fz[f]
+			if not (e is Dictionary):
+				continue
+			var bx: Array = (e as Dictionary).get("box", [])
+			var out: Dictionary = {}
+			if bx.size() == 4:
+				out["box"] = Rect2(Vector2(float(bx[0]), float(bx[1])), Vector2(float(bx[2]) - float(bx[0]), float(bx[3]) - float(bx[1])))
+				out["focus"] = (out["box"] as Rect2).get_center()
+			var fc: Array = (e as Dictionary).get("focus", [])
+			if fc.size() == 2:
+				out["focus"] = Vector2(float(fc[0]), float(fc[1]))
+			_focus[_resolve(str(f))] = out
+		parsed = (parsed as Dictionary).duplicate()
+		(parsed as Dictionary).erase("focus")
 	_walk(parsed, "")
 
 
