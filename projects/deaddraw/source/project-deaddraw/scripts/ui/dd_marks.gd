@@ -26,38 +26,46 @@ const STRENGTH_VARIANT: String = "claw"
 
 
 static func tier_of(n: int) -> int:
-	if n <= 3:
-		return 0
-	if n <= 6:
-		return 1
-	if n <= 9:
-		return 2
-	return 3
+	return Mark.tier_of(n)
 
 
-static func _font() -> Font:
-	return ThemeDB.fallback_font
+# ================================================================ shared base
+class Mark:
+	extends Control
+
+	static func tier_of(n: int) -> int:
+		if n <= 3:
+			return 0
+		if n <= 6:
+			return 1
+		if n <= 9:
+			return 2
+		return 3
 
 
-## Draws text centred on c with an ink outline.
-static func draw_num(ci: CanvasItem, text: String, c: Vector2, fs: int, col: Color, outline: Color = Color(0, 0, 0, 0), ow: int = 0) -> void:
-	var f: Font = _font()
-	var sz: Vector2 = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-	var pos: Vector2 = Vector2(c.x - sz.x * 0.5, c.y + (f.get_ascent(fs) - f.get_descent(fs)) * 0.5)
-	if ow > 0:
-		ci.draw_string_outline(f, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ow, outline)
-	ci.draw_string(f, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	static func _font() -> Font:
+		return ThemeDB.fallback_font
 
 
-static func _closed(pts: PackedVector2Array) -> PackedVector2Array:
-	var out: PackedVector2Array = pts.duplicate()
-	out.append(pts[0])
-	return out
+	## Draws text centred on c with an ink outline.
+	static func draw_num(ci: CanvasItem, text: String, c: Vector2, fs: int, col: Color, outline: Color = Color(0, 0, 0, 0), ow: int = 0) -> void:
+		var f: Font = _font()
+		var sz: Vector2 = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var pos: Vector2 = Vector2(c.x - sz.x * 0.5, c.y + (f.get_ascent(fs) - f.get_descent(fs)) * 0.5)
+		if ow > 0:
+			ci.draw_string_outline(f, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ow, outline)
+		ci.draw_string(f, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+
+	static func _closed(pts: PackedVector2Array) -> PackedVector2Array:
+		var out: PackedVector2Array = pts.duplicate()
+		out.append(pts[0])
+		return out
 
 
 # ================================================================ strength mark
 class StrengthMark:
-	extends Control
+	extends Mark
 	var value: int = 1
 	var variant: String = "claw"
 
@@ -85,44 +93,64 @@ class StrengthMark:
 				_claw(c, s, col, t)
 				draw_num(self, str(value), c + Vector2(-s * 0.05, 0), int(s * 0.44), num_col)
 
-	## A tier-coloured disc raked by 1-4 claw slashes cutting out past its upper right edge.
+	## A tier-coloured disc raked by 1-4 claw slashes that tear out past its upper right edge.
 	func _claw(c: Vector2, s: float, col: Color, t: int) -> void:
-		var r: float = s * 0.38
-		var cc: Vector2 = c + Vector2(-s * 0.05, s * 0.02)
-		draw_circle(cc, r + 3.0, INK)
-		draw_circle(cc, r, col)
+		var r: float = s * 0.36
+		var cc: Vector2 = c + Vector2(-s * 0.07, s * 0.05)
 		var n: int = t + 1
-		var gap: float = s * 0.105
+		var gap: float = s * 0.12
+		var slashes: Array = []
 		for k: int in n:
 			var off: float = (k - (n - 1) * 0.5) * gap
-			# each slash runs from the disc's upper right, outward past its rim (a raking claw)
-			var a: Vector2 = cc + Vector2(s * 0.14 + off, -s * 0.44 + off)
-			var b: Vector2 = cc + Vector2(s * 0.50 + off, -s * 0.06 + off)
-			var d: Vector2 = (b - a).normalized()
-			var nrm: Vector2 = Vector2(-d.y, d.x)
-			var w: float = s * 0.05
-			var mid: Vector2 = (a + b) * 0.5
-			var leaf: PackedVector2Array = [a, mid + nrm * w, b, mid - nrm * w]
-			var big: PackedVector2Array = [a - d * 2.0, mid + nrm * (w + 2.5), b + d * 2.0, mid - nrm * (w + 2.5)]
-			draw_colored_polygon(big, INK)
-			draw_colored_polygon(leaf, col.lightened(0.15))
+			var a: Vector2 = cc + Vector2(-s * 0.02 + off, -s * 0.50 + off * 0.2)
+			var b: Vector2 = cc + Vector2(s * 0.56 + off * 0.2, s * 0.02 + off)
+			slashes.append([a, b])
+		# ink outlines first, then the disc, then the slashes on top (they tear across its rim)
+		for sl: Array in slashes:
+			draw_colored_polygon(_leaf(sl[0], sl[1], s * 0.085 + 3.0, 3.0), INK)
+		draw_circle(cc, r + 3.0, INK)
+		draw_circle(cc, r, col)
+		for sl2: Array in slashes:
+			draw_colored_polygon(_leaf(sl2[0], sl2[1], s * 0.085, 0.0), col.lightened(0.25))
+			draw_colored_polygon(_leaf(sl2[0], sl2[1], s * 0.03, -s * 0.06), INK.lightened(0.1))
+
+	## A curved, tapered slash from a to b (bowed to one side), half-width w; ext lengthens the tips.
+	func _leaf(a: Vector2, b: Vector2, w: float, ext: float) -> PackedVector2Array:
+		var d: Vector2 = (b - a).normalized()
+		var nrm: Vector2 = Vector2(-d.y, d.x)
+		var a2: Vector2 = a - d * ext
+		var b2: Vector2 = b + d * ext
+		var pts: PackedVector2Array = []
+		var steps: int = 10
+		for k: int in steps + 1:
+			var u: float = float(k) / steps
+			var bow: float = sin(u * PI) * (b2 - a2).length() * 0.12
+			pts.append(a2.lerp(b2, u) + nrm * (bow + sin(u * PI) * w))
+		for k2: int in range(steps - 1, 0, -1):
+			var u2: float = float(k2) / steps
+			var bow2: float = sin(u2 * PI) * (b2 - a2).length() * 0.12
+			pts.append(a2.lerp(b2, u2) + nrm * (bow2 - sin(u2 * PI) * w))
+		return pts
 
 	## A jaw: flat top, 2-5 fangs along the bottom (one more per tier).
 	func _fang(c: Vector2, s: float, col: Color, t: int) -> void:
 		var w: float = s * 0.86
 		var x0: float = c.x - w * 0.5
 		var x1: float = c.x + w * 0.5
-		var y0: float = c.y - s * 0.42
-		var ym: float = c.y + s * 0.18
-		var y1: float = c.y + s * 0.46
+		var y0: float = c.y - s * 0.44
+		var ym: float = c.y + s * 0.12
+		var y1: float = c.y + s * 0.48
 		var fangs: int = t + 2
-		var pts: PackedVector2Array = [Vector2(x0 + 6, y0), Vector2(x1 - 6, y0), Vector2(x1, y0 + 6), Vector2(x1, ym)]
+		var pts: PackedVector2Array = []
+		for k0: int in 13:
+			var ang: float = PI + PI * k0 / 12.0
+			pts.append(Vector2(c.x + cos(ang) * w * 0.5, y0 + s * 0.2 + sin(ang) * s * 0.2))
+		pts.append(Vector2(x1, ym))
 		var fw: float = w / fangs
 		for k: int in range(fangs - 1, -1, -1):
 			var fx: float = x0 + fw * k
 			pts.append(Vector2(fx + fw * 0.5, y1))
 			pts.append(Vector2(fx, ym))
-		pts.append(Vector2(x0, y0 + 6))
 		draw_colored_polygon(pts, col)
 		draw_polyline(_closed(pts), INK, 3.0, true)
 
@@ -143,7 +171,7 @@ class StrengthMark:
 
 # ================================================================ hit burst
 class HitBurst:
-	extends Control
+	extends Mark
 	var value: int = 2
 
 	func _init(v: int = 2) -> void:
@@ -167,7 +195,7 @@ class HitBurst:
 
 # ================================================================ padlock
 class Padlock:
-	extends Control
+	extends Mark
 	var open: bool = false
 	var color: Color = BONE
 
@@ -198,7 +226,7 @@ class Padlock:
 
 # ================================================================ kill socket (empty / next)
 class Socket:
-	extends Control
+	extends Mark
 	var next_text: String = ""
 	var is_next: bool = false
 
@@ -223,7 +251,7 @@ class Socket:
 
 # ================================================================ the big wave numeral
 class WaveNumeral:
-	extends Control
+	extends Mark
 	var text: String = "1"
 	var font_px: int = 64
 

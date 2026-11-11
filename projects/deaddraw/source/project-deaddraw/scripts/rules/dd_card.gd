@@ -1,7 +1,7 @@
 # dd_card.gd
-# Purpose: One DeadDraw v3 card in the pile / on the street: a zombie (maybe a boss card, maybe a
-#   Patient Zero phase), a gun (by weapon id), a medkit or a cover card. Mirrors Card in
-#   tools/sim_deaddraw_v3.py.
+# Purpose: One DeadDraw v4 card in the pile / on the street: a zombie (maybe a boss card, maybe a
+#   Patient Zero phase), a gun (by weapon id), a melee weapon (v4 "K", by melee id), a medkit or a
+#   cover card. Mirrors Card in tools/sim_deaddraw_v4.py.
 # Dependencies: none.
 # Author: Mechanics Developer Agent
 class_name DDCard
@@ -11,11 +11,13 @@ const ZOMBIE: String = "Z"
 const WEAPON: String = "W"
 const MEDKIT: String = "M"
 const COVER: String = "C"
+## v4: a melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer); `wid` is the melee id.
+const MELEE: String = "K"
 
 var kind: String = ZOMBIE
 ## Zombie number (strength and point value), medkit heal, cover amount; 0 for guns.
 var value: int = 0
-## Weapon id ("rifle") for gun cards.
+## Weapon id ("rifle") for gun cards, melee id ("wrench") for melee weapon cards.
 var wid: String = ""
 ## Boss trait ("shatter", "horde", "phases") and display name; empty for normal cards.
 var boss_trait: String = ""
@@ -39,6 +41,12 @@ static func gun(id: String) -> DDCard:
 	return c
 
 
+static func melee(id: String) -> DDCard:
+	var c: DDCard = make(MELEE, 0)
+	c.wid = id
+	return c
+
+
 static func boss(v: int, trait_id: String, display_name: String, phase_no: int = 0) -> DDCard:
 	var c: DDCard = make(ZOMBIE, v)
 	c.boss_trait = trait_id
@@ -47,10 +55,12 @@ static func boss(v: int, trait_id: String, display_name: String, phase_no: int =
 	return c
 
 
-## Test / debug codes: "Z9", "W:rifle", "M5", "C2".
+## Test / debug codes: "Z9", "W:rifle", "K:wrench", "M5", "C2".
 static func parse(s: String) -> DDCard:
 	if s.begins_with("W:"):
 		return gun(s.substr(2))
+	if s.begins_with("K:"):
+		return melee(s.substr(2))
 	return make(s.substr(0, 1), int(s.substr(1)))
 
 
@@ -61,6 +71,8 @@ func is_boss() -> bool:
 func code() -> String:
 	if kind == WEAPON:
 		return "W:" + wid
+	if kind == MELEE:
+		return "K:" + wid
 	return "%s%d" % [kind, value]
 
 

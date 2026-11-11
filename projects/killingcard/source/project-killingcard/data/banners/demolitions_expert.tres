@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BannerArt" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/banner_art.gd" id="1_bart"]
+
+[resource]
+script = ExtResource("1_bart")
+id = &"demolitions_expert"
+title = "Demolitions Expert"
+card_id = &"demolitions_expert"
+image_path = "res://assets/sprites/banners/kc_b_demolitions_expert_nightcity.webp"
+banner_y = 0.30
+portrait_x = 0.50
+is_default = true
+artist = "KillingCard studio (DA art pack 1)"
+licence = "studio-owned"
+source_note = "DA art pack 1 #11 retry (kc-da-import2): Night city theatre, the default art (tools at a shutter, no charge). The Port dusk painting assets/sprites/cards/card_demolitions_expert.webp stays as the fallback (delete this file to bring it back)."

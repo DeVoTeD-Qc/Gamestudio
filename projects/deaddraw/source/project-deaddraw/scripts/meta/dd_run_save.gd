@@ -1,17 +1,18 @@
 # dd_run_save.gd
 # Purpose: dd-save. The mid-run save: the whole DDRun (DDRun.to_dict(), RNG state included) plus
 #   which screen the player was on, in its own file next to the profile (user://, IndexedDB on the
-#   Web). Save version 4 (DeadDraw v3 "Kill Stacks"). Written after every run event and on screen
-#   changes; cleared when the run ends (death / win) or is abandoned. A missing, corrupt or unusable
-#   file reads as "no saved run" and never crashes. An older version (a v2 run: magazines, Skipped
-#   pile) can't be played under the v3 rules: discard_old() removes it and the title says so once.
+#   Web). Save version 5 (DeadDraw v4 rules, run data "v": 4). Written after every run event and on
+#   screen changes; cleared when the run ends (death / win) or is abandoned. A missing, corrupt or
+#   unusable file reads as "no saved run" and never crashes. An older version (save 4 = a v3 run:
+#   crowbar melee, points carried between districts; save 3 and older = v2 runs) can't be played
+#   under the v4 rules: discard_old() removes it and the title says so once.
 # Dependencies: DDRun, DDBalance, DDText.
 # Author: Mechanics Developer Agent
 class_name DDRunSave
 extends RefCounted
 
 const DEFAULT_PATH: String = "user://deaddraw_run.json"
-const VERSION: int = 4
+const VERSION: int = 5
 
 var path: String = DEFAULT_PATH
 

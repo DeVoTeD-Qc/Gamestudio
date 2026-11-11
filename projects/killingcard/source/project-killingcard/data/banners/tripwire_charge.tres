@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BannerArt" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/banner_art.gd" id="1_bart"]
+
+[resource]
+script = ExtResource("1_bart")
+id = &"tripwire_charge"
+title = "Tripwire Charge"
+card_id = &"tripwire_charge"
+image_path = "res://assets/sprites/banners/kc_b_tripwire_charge.webp"
+banner_y = 0.52
+portrait_x = 0.70
+is_default = true
+artist = "KillingCard studio (DA art pack 1)"
+licence = "studio-owned"
+source_note = "DA art pack 1 retry (kc-da-import2): Tripwire Charge, Port dusk house painting, no people. The Killstreak painting assets/sprites/cards/card_tripwire_charge.webp stays as the fallback (delete this file to bring it back)."
