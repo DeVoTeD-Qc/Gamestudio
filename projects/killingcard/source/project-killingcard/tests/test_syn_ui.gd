@@ -74,8 +74,8 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		await _frames(3)
 		var insp: Control = m.get_inspector()
 		var words: String = ""
-		for n: Node in insp.get_node("%KeywordList").get_children():
-			words += (n as Label).text + "\n"
+		for n: Node in insp.get_node("%KeywordList").find_children("*", "", true, false):
+			words += IconText.plain(n) + "\n"  # kc-text: name Labels in rows, rule lines are IconText labels
 		assert_true("base" in words and "Vanguard 2" in words, "%s FP breakdown in the inspector: %s" % [label, words])
 		assert_false("Spotter" in words or "Link ON" in words, "%s kc-pos-cut: no link lines" % label)
 		var screen_r: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(0.6)

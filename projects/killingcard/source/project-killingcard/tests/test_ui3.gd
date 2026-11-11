@@ -198,7 +198,7 @@ func test_called_strike_is_marked_and_inspectable_on_the_phone() -> void:
 	chip.gui_input.emit(right)
 	await _frames(3)
 	assert_true(m.get_inspector().is_open(), "right click opens its rules")
-	var status: String = (m.get_inspector().get_node("%StatusLabel") as Label).text
+	var status: String = IconText.plain(m.get_inspector().get_node("%StatusLabel"))  # kc-text: an IconText label
 	assert_true(status.contains("start of the fight") and status.contains("column B"), "when and where: %s" % status)
 	m.get_inspector().close()
 	c.undo()
