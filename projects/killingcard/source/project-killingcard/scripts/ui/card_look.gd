@@ -389,7 +389,7 @@ static func draw_ability(ci: CanvasItem, rr: Rect2, kind: Variant, accent: Color
 	var inner: Rect2 = rr.grow(-rr.size.x * 0.12)
 	match kind:
 		&"protector":
-			_draw_protector(ci, rr, accent, mine)
+			_draw_protector(ci, inner, accent, mine)
 		&"bolt", &"bolt_more":
 			_draw_bolt(ci, rr, accent, kind == &"bolt_more")
 		&"kw_pick":

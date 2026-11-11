@@ -16,7 +16,7 @@ const TUNE = {
   needPlus: 0, closeQuarters: true, pointBlank: true, aim: 'spend',
   stSprint: 3, stScout: 3, stAim: 2, alternateFirst: true,
   // wb-pkg1: Spoils (O2), Field Promotion (O3), Hot Drop delivery (O6), Squad Tactics (O1)
-  spoils: 3, spoilsTierDown: 0, spoilsSquad: 1, spoilsUp: 1, promoteBuy: 1, aiSpoilsFocus: 1.5, promoteCost: 1, overwatchCap: 4, fortifyCap: 6, turretRange: 3, sweepMax: 4,
+  spoils: 3, spoilsSquad: 1, promoteCost: 1, promoteBuy: 1, aiSpoilsFocus: 1.5, overwatchCap: 4, fortifyCap: 6, turretRange: 3,
   // kept for the UI and print-and-play (old systems switched off)
   lite: true, perks: false, ammo: false, phases: false, stacks: true, physical: true, tradeIn: 0, combos: false, locEveryTurn: true,
 };
@@ -478,11 +478,11 @@ function stationScrap(s, p, iid) {
 // ---------- Spoils (O2), Field Promotion (O3), Sweep ----------
 // 3 different loot cards from the current tier (topped up from the other tiers); they stay in the loot deck until one is taken
 function spoilsOffer(s, p) {
-  const t = Math.max(1, phaseTier(s) - TUNE.spoilsTierDown); const out = [];
+  const t = phaseTier(s); const out = [];
   // the first card is from your main squad (the squad you have most cards of), if this tier still has one: looting rewards a focused squad
   const mf = p != null && TUNE.spoilsSquad ? mainSquad(s, p) : null;
   if (mf) { const pool = (s.loot[t] || []).filter(it => it.kind === 'card' && CARDS[s.cards[it.iid].def].archetype === mf).map(it => it.iid); while (out.length < TUNE.spoilsSquad && pool.length) out.push(pool.splice(Math.floor(rng(s) * pool.length), 1)[0]); }
-  for (const k of TUNE.spoilsUp ? [t, t + 1, t - 1, 3, 2, 1] : [t, t - 1, t - 2]) { const pool = (s.loot[k] || []).filter(it => it.kind === 'card' && !out.includes(it.iid)).map(it => it.iid);
+  for (const k of [t, t + 1, t - 1, 3, 2, 1]) { const pool = (s.loot[k] || []).filter(it => it.kind === 'card' && !out.includes(it.iid)).map(it => it.iid);
     while (out.length < TUNE.spoils && pool.length) out.push(pool.splice(Math.floor(rng(s) * pool.length), 1)[0]); if (out.length >= TUNE.spoils) break; }
   return out;
 }

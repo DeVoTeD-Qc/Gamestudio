@@ -30,7 +30,7 @@ const R = { errors: 0, stuck: 0, invariantFailures: 0, decided: 0, draws: 0, aWi
 function cardCount(s) { // every card instance must be in exactly one place
   const seen = new Map();
   const note = (iid, where) => { if (seen.has(iid)) throw new Error(`card ${iid} in ${seen.get(iid)} and ${where}`); seen.set(iid, where); };
-  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'loadout', 'fuelled', 'removed'].forEach(z => pl[z].forEach(c => note(c, `p${i}.${z}`))));
+  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'loadout', 'fuelled', 'removed', 'drop'].forEach(z => (pl[z] || []).forEach(c => note(c, `p${i}.${z}`))));
   s.envs.forEach(e => e.loot.forEach(it => note(it.iid, `env${e.w}`)));
   [1, 2, 3].forEach(t => s.loot[t].forEach(it => note(it.iid, `loot${t}`)));
   s.gone.forEach(it => note(it.iid, 'gone'));

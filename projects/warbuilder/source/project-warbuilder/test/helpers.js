@@ -71,7 +71,7 @@ function stateHash(s) {
 function cardPlaces(s) {
   const seen = new Map();
   const note = (iid, where) => { if (seen.has(iid)) throw new Error(`card ${iid} is in ${seen.get(iid)} and ${where}`); seen.set(iid, where); };
-  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'loadout', 'fuelled', 'removed'].forEach(z => pl[z].forEach(c => note(c, `p${i}.${z}`))));
+  s.players.forEach((pl, i) => ['deck', 'discard', 'hand', 'play', 'loadout', 'fuelled', 'removed', 'drop'].forEach(z => (pl[z] || []).forEach(c => note(c, `p${i}.${z}`))));
   s.gone.forEach(it => note(it.iid, 'gone'));
   s.envs.forEach(e => e.loot.forEach(it => note(it.iid, `loc${e.w}`)));
   [1, 2, 3].forEach(t => s.loot[t].forEach(it => note(it.iid, `loot${t}`)));

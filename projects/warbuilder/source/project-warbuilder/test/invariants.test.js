@@ -14,7 +14,10 @@ function since(s, mark) { const i = mark ? s.log.lastIndexOf(mark) : -1; return 
 function loggedDamage(s, lines) {
   const dmg = [0, 0]; const who = name => s.players.findIndex(pl => pl.name === name);
   for (const { msg } of lines) {
-    let m = msg.match(/^(.+?) fires .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1])] += +m[2]; continue; }
+    // wb-pkg1: Overwatch (rival's turn) and Sentry Turret (Ready) shots, and Field Medic heals (also when a Jury-Rig repeats it)
+    let m = msg.match(/^(.+?)(?:’s)? (?:Overwatch|Sentry Turret) fires: .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1] === 'Your' ? 'You' : m[1])] += +m[2]; continue; }
+    m = msg.match(/^(.+?) plays /); if (m) { for (const h of msg.matchAll(/Heal (\d+)/g)) dmg[who(m[1])] -= +h[1]; }
+    m = msg.match(/^(.+?) fires .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1])] += +m[2]; continue; }
     m = msg.match(/^(.+?) is caught \d+ spaces? deep in the gas: −(\d+)/); if (m) { dmg[who(m[1])] += +m[2]; continue; }
     m = msg.match(/storm hits both operators for (\d+)/); if (m) { dmg[0] += +m[1]; dmg[1] += +m[1]; }
   }
@@ -66,6 +69,6 @@ test('loot decks never hold the same item twice, and every match deals the full 
     assert.deepEqual(guns, [1, 2, 3].flatMap(t => WD.GUNSET[t]).sort(), `seed ${seed}: loot guns`);
     const cards = items.filter(it => it.kind === 'card').length;
     assert.equal(cards, Object.values(WD.CARDS).reduce((a, d) => a + (d.tier ? d.copies : 0), 0));
-    assert.equal(cards, 76, '32 loot cards × 2 + 4 Loadouts × 3');
+    assert.equal(cards, 76, '31 loot cards × 2 + Sentry Turret × 2 + 4 Loadouts × 3 (the 12 Squad Tactics replaced 12 cards one for one)');
   }
 });

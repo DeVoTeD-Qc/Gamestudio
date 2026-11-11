@@ -20,6 +20,10 @@
 #   Deploy it reads PLAN · B; on the board it dims to a status card ("ON BOARD" / "B · ROW 2", tap =
 #   select to Rotate); down it reads "DOWN" / "BACK NEXT ROUND". Long-press = the Operator's rules.
 #   It reports operator_* signals; get_cards() never includes it (hand cards only).
+#   kc-layout-a (ux-layout-v2.html direction A; the head's L1-L3): the Operator card is the grid's FIRST
+#   card, an X1 card like the others with the Operator mark; the grid re-fits to the count and never
+#   scrolls or overlaps; the faces are full / mid (rule lines) where there is room, compact at 6-7.
+#   Portrait uses the same grid (no fan).
 # Dependencies: hud_theme.tres variations (HandCard, HandCardSelected, HandCardDim, UnitName,
 #   HudNumber, HudTag), press_gesture.gd, cost_hex.gd, icon_sheet.gd, BannerArtDB.
 # Author: UI/UX Agent (p08-f04), Mechanics Developer Agent (kc-board: option A cards)

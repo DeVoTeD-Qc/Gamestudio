@@ -615,8 +615,9 @@ func enter_district() -> void:
 	Game.save_run("STREET")
 	sheet = {}
 	_pending_fx = {"type": "deal", "snap": {}, "ev": {"waves": [{"wave": 0, "cards": 10, "restock": 0}]}}
-	_pending_banner = {"text": "%s - WAVE 1" % str(run.district().get("name", "")).to_upper(), "color": DDUi.TEXT,
-		"sub": "Wave 1 shuffles into the pile"}
+	# dd-ux-v4: the district's first wave gets the WAVE banner too
+	_pending_banner = {"text": "WAVE 1", "wave": 1, "color": DDUi.TEXT,
+		"sub": "%s · zombies %s" % [str(run.district().get("name", "")), DDText.zombie_range(Game.bal.wave_zombies(run.district_index, 0))]}
 	_queue_render()
 
 

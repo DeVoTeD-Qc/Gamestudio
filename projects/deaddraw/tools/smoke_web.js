@@ -7,6 +7,8 @@
 // Then smoke-query screens: open rooms, stacks, rule lock, gun sheet, Bench / Wall Rack / Patch
 // Press sheets, the three bosses (Patient Zero: NO ESCAPE), a finishing kill (collect + challenge
 // stamp, captured mid-animation), a wave shuffle-in, Patch chips + Lookout, zooms, safehouse, end.
+// dd-ux-v4 (Door row): the WAVE banner (tap skips it), the ? Glossary (long press a row), the
+// Codex from the title (a filter chip), long press on the Run button (its tooltip, not a Run).
 // Every tappable thing must be inside the viewport; console errors fail the run.
 // Usage: node smoke_web.js <url-of-index.html> <screenshot-dir>
 // The game publishes window.ddState (screen, hp, wave, pile, points, stacks, tappable rects in CSS px).
@@ -86,6 +88,15 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       await page.goto(URL, { waitUntil: 'load' });
       let s = await waitFor(page, (x) => x.screen === 'TITLE', 'title', 90000);
       log(`title up, portrait=${s.portrait}`); await sleep(400); await shot('01_title');
+      // dd-ux-v4: the Codex from the title, a filter chip, close
+      await touchTap(cdp, center(find(s, btn('CodexButton'), 'Codex button')));
+      s = await waitFor(page, (x) => x.overlay === 'codex', 'codex open'); await sleep(300); await shot('01b_codex');
+      checkOff({ items: s.items.filter((i) => i.name === 'CloseOverlay' || (i.name || '').startsWith('Type_')) }, 'codex chips');
+      await touchTap(cdp, center(find(s, btn('Type_guns'), 'Guns chip')));
+      await sleep(400); await shot('01c_codex_guns');
+      s = await state(page);
+      await touchTap(cdp, center(find(s, btn('CloseOverlay'), 'close codex')));
+      s = await waitFor(page, (x) => x.overlay === '', 'codex closed');
       await touchHold(cdp, center(find(s, (i) => i.type === 'card' && i.kind === 'S', 'survivor card')));
       s = await waitFor(page, (x) => x.inspect, 'survivor inspect');
       s = await closeInspect();
@@ -95,7 +106,11 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       s = await waitFor(page, (x) => x.screen === 'STREET', 'street');
       log(`street hp=${s.hp} wave=${s.wave} pile=${s.pile} pts=${s.points} hint=${s.hint}`);
       await sleep(250); await shot('03_street_enter_shuffle');
-      await sleep(1900); s = await state(page); await shot('04_street_first_hint');
+      s = await waitFor(page, (x) => x.banner_open, 'WAVE 1 banner'); await sleep(500); await shot('03b_wave1_banner');
+      if (s.banner !== 'WAVE 1') errors.push('first banner is not WAVE 1: ' + s.banner);
+      await touchTap(cdp, { x: vp.width / 2, y: vp.height / 2 });
+      s = await waitFor(page, (x) => !x.banner_open, 'a tap skips the banner', 3000);
+      await sleep(1600); s = await state(page); await shot('04_street_first_hint');
       checkOff(s, 'street');
       if (s.hint !== 'weapon') errors.push('first-run hint missing: ' + s.hint);
       await touchTap(cdp, center(find(s, btn('HintOk'), 'hint ok')));
@@ -130,6 +145,23 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       await touchHold(cdp, center(find(s, card(100), 'room 1')));
       s = await waitFor(page, (x) => x.inspect, 'room inspect'); await shot('12_inspect_room');
       s = await closeInspect();
+      // dd-ux-v4: the ? opens the Glossary; long press a row reads it
+      await touchTap(cdp, center(find(s, btn('HelpButton'), 'help button')));
+      s = await waitFor(page, (x) => x.overlay === 'glossary', 'glossary open'); await sleep(300); await shot('12b_glossary');
+      await touchHold(cdp, { x: vp.width / 2, y: Math.min(vp.height - 40, 170) });
+      s = await waitFor(page, (x) => x.inspect, 'glossary row tooltip'); await shot('12c_glossary_row_tip');
+      s = await closeInspect();
+      await touchTap(cdp, center(find(s, btn('CloseOverlay'), 'close glossary')));
+      s = await waitFor(page, (x) => x.overlay === '', 'glossary closed');
+      // long press Run: its tooltip, and it does NOT run
+      const rbl = s.items.find((i) => btn('Run')(i));
+      if (rbl) {
+        const hp0 = s.hp;
+        await touchHold(cdp, center(rbl));
+        s = await waitFor(page, (x) => x.inspect, 'run tooltip'); await shot('12d_run_tooltip');
+        s = await closeInspect();
+        if (s.hp !== hp0) errors.push('a long press on Run ran');
+      }
       // Run (if allowed now)
       const rb = s.items.find((i) => btn('Run')(i) && !i.disabled);
       if (rb) {
@@ -161,7 +193,9 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
           await touchTap(cdp, center(find(t, btn('Open0'), 'OPEN 1')));
           await sleep(200); await shot('room_open_cards_flying');
           t = await waitFor(page, (x) => x.opened === 1, 'room opened');
-          await sleep(1200);
+          t = await waitFor(page, (x) => x.banner_open, 'room open banner', 4000); await shot('room_open_banner');
+          await touchTap(cdp, center(t.banner_rect));
+          t = await waitFor(page, (x) => !x.banner_open, 'banner skipped', 3000);
           await touchTap(cdp, center(find(t, btn('Use0'), 'USE')));
           await waitFor(page, (x) => x.sheet === 'machine', 'machine sheet'); await shot('room_wall_rack_sheet');
         }],
@@ -181,8 +215,11 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
         ['screen=street&seed=4&lastcards=1', 'wave_shuffle', async () => {
           for (let k = 0; k < 3; k++) { const t = await state(page); await touchTap(cdp, center(find(t, card(0), 'card 0'))); await sleep(150); }
           await sleep(200); await shot('wave2_shuffle_in');
-          const u = await waitFor(page, (x) => x.wave === 2, 'wave 2'); await sleep(500); await shot('wave2_banner');
+          let u = await waitFor(page, (x) => x.wave === 2 && x.banner_open, 'wave 2 banner'); await sleep(500); await shot('wave2_banner');
           log('wave: ' + u.banner);
+          if (u.banner !== 'WAVE 2') errors.push('wave banner: ' + u.banner);
+          await touchTap(cdp, { x: vp.width / 2, y: vp.height - 30 });
+          u = await waitFor(page, (x) => !x.banner_open, 'a tap skips the WAVE banner', 2500);
         }],
         ['screen=street&seed=9&boss=1', 'boss_groundskeeper'],
         ['screen=street&seed=9&boss=1&district=1', 'boss_horde'],

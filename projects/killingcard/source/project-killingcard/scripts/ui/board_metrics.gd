@@ -5,26 +5,27 @@
 #     bh = floor((H - 2*pad_y - 2*mid_gap - obj_h - 6*row_gap) / 8),   bw = 4 * bh
 #     tray_w = W - strip_w - side_gap - board_w - tray_gap
 #   If the tray would get narrower than tray_min, the banners shrink (keeping 4:1) until it fits.
-#   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57, strip 6..68, columns
-#     76 / 318 / 560, tray 800..1162 (kc-ui3: the Supply row grows to 64 px to hold the 3 killstreak
-#     tiles; the Operator card takes the grid's first cell). kc-ui4: hand cards are banner cards,
-#     2 columns (kc-ipad-cards: their height follows the hand's count, hand_fit()).
-#   16:9 phone (canvas 960x540): banners 208x52, tray 214 wide, killstreaks in their own row, a
-#     2-column hand of 103x78 banner cards (name in the middle band).
-#   Desktop 1440x900 (canvas 1280x800): banners 304x76, columns 86 / 410 / 734, tray 1050..1274,
-#     hand cards 224x64 banner cards in one column.
+#   kc-layout-a (ux-layout-v2.html direction A, the head's L1-L5): the TRAY is sized first (phone
+#   tray_min 346 px = 250 pt: 7 cards + the Operator in a 2-column grid that never scrolls); the board
+#   takes the rest. The killstreak sockets sit in the strip under STREAK; landscape drops the OPERATOR
+#   badge (the Operator card is the hand grid's first card); the phone's sets rail moves to the tray's
+#   top row beside the Supply box. Faces: full / mid (rule lines) where there is room, compact at 6-7.
+#   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57 (unchanged), tray 362 wide,
+#     7 cards: 177x90 compact cards; 4 cards: 177x127 full faces.
+#   Safari 750x390 (canvas 1038x540): banners 192x48, tray 352. 16:9 phone (canvas 960x540): banners
+#     164x41, tray 346, 169x90 cards.
+#   Desktop 1440x900 (canvas 1280x800): banners 304x76, tray 224 (one column; 7 cards: 224x72).
+#   Portrait: the same grid under the board (no fan, no preview well).
 # Usage: var m: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true)   # pure, tested
-# Author: Mechanics Developer Agent (kc-board, kc-board2)
+# Author: Mechanics Developer Agent (kc-board, kc-board2), UI/UX Agent (kc-layout-a)
 extends RefCounted
 
 const COLUMNS: int = 3
 const ROWS: int = 4
-## The hand grid is sized for this many cards (run_config.hand_cap 7 + the Operator card, kc-ui3;
-## more overlap upward).
+## The hand grid is sized for this many cards (run_config.hand_cap 7 + the Operator card; kc-layout-a:
+## it never scrolls or overlaps).
 const HAND_SLOTS: int = 8
-## kc-ui3: killstreak tiles at the top of the tray (3 per loadout). On a wide tray (phone 844x390)
-## they share the Supply row, which grows to ks_h; on a narrow one (desktop, 16:9 phone) they get
-## their own row under it.
+## Killstreak sockets per loadout (kc-layout-a: in the icon strip, ks_rect()).
 const KS_SLOTS: int = 3
 const KS_GAP: float = 4.0
 ## Supply text + pips need this much of a shared row.
