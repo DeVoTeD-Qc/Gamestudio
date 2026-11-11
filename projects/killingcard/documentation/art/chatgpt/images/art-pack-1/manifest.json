@@ -1,0 +1,394 @@
+{
+  "source": "../../art-pack-1-prompts.md",
+  "format": "PNG",
+  "width": 1536,
+  "height": 1024,
+  "images": [
+    {
+      "batch": 1,
+      "number": 1,
+      "title": "Ammo Resupply",
+      "file": "kc_b_ammo_resupply.png",
+      "status": "generated",
+      "sha256": "d46b522d54ad7e01a0ab2a21563e62179482de38541d2e45bf1627bbfcd17b6a"
+    },
+    {
+      "batch": 1,
+      "number": 2,
+      "title": "Ammo Resupply (Standard Issue, the starter's copy)",
+      "file": "kc_b_si_ammo_resupply.png",
+      "status": "generated",
+      "sha256": "2bd73414d8473e714a0170e6d3881a86ebf948885e32ce20f9c7fe6532aebb82"
+    },
+    {
+      "batch": 1,
+      "number": 3,
+      "title": "Private I",
+      "file": "kc_b_kc_wip_private_1.png",
+      "status": "generated",
+      "sha256": "cda5faa12288d40ed7ce9c56b339eb3ddb275c7cf9b3bdcbbef94438fa35833d"
+    },
+    {
+      "batch": 1,
+      "number": 4,
+      "title": "Private II",
+      "file": "kc_b_kc_wip_private_2.png",
+      "status": "generated",
+      "sha256": "c9fb9252bead724869f7fa53356cf54eb57f1b53aae44ac281ab575d713f63a2"
+    },
+    {
+      "batch": 1,
+      "number": 5,
+      "title": "Private III",
+      "file": "kc_b_kc_wip_private_3.png",
+      "status": "generated",
+      "sha256": "d7b2976eb16e3263b4160c435a7087f161e14fd8f36da37b7ab76f87e8a98938"
+    },
+    {
+      "batch": 1,
+      "number": 6,
+      "title": "Private IV",
+      "file": "kc_b_kc_wip_private_4.png",
+      "status": "generated",
+      "sha256": "03154a94c0b34ade1b6c8ba4f3c9574fee2ea0430784c50e4cf2bd40eb1ca1ad"
+    },
+    {
+      "batch": 1,
+      "number": 7,
+      "title": "Bastion-60 (the locked LMG Operator)",
+      "file": "kc_b_bastion_60.png",
+      "status": "generated",
+      "sha256": "2be17c163ee507cbee83c74a4fd0d18bd5a97fed0cbf42df38954d597ceb74c3"
+    },
+    {
+      "batch": 1,
+      "number": 8,
+      "title": "Brawler",
+      "file": "kc_b_brawler.png",
+      "status": "generated",
+      "sha256": "2bd6e12be21bdbc893bfb406cf6e76d62af21afda073505d13d8101d97be3800"
+    },
+    {
+      "batch": 2,
+      "number": 9,
+      "title": "Blackout",
+      "file": "kc_b_blackout.png",
+      "status": "generated",
+      "sha256": "67ab0160825b4fba1e76c0df0a8ade42be826ec6ca2a34ec564a5f3d2b32d8d8"
+    },
+    {
+      "batch": 2,
+      "number": 10,
+      "title": "Smoke Screen",
+      "file": "kc_b_smoke_screen.png",
+      "status": "generated",
+      "sha256": "ea953f36617f4c85dd8a26d68c5090068b78e73109fea4ad7505babf8e9dd8a4"
+    },
+    {
+      "batch": 2,
+      "number": 11,
+      "title": "Sabotage",
+      "file": "kc_b_sabotage.png",
+      "status": "generated",
+      "sha256": "e2546ce3fc56ef60b8a42c9dee0c6c2b525343c7594ba269f6be2c5431d00eee"
+    },
+    {
+      "batch": 2,
+      "number": 12,
+      "title": "Aid Station",
+      "file": "kc_b_aid_station.png",
+      "status": "generated",
+      "sha256": "6f41feb7c0e607559df2724de6f71400b2fb78a5ff22a4293ff787991e16e403"
+    },
+    {
+      "batch": 2,
+      "number": 13,
+      "title": "Listening Post",
+      "file": "kc_b_listening_post.png",
+      "status": "generated",
+      "sha256": "0d592166a28284d10ce6259466cd4e2878645ca6f3f9fc04e7e26ada71a2cf96"
+    },
+    {
+      "batch": 2,
+      "number": 14,
+      "title": "War Standard",
+      "file": "kc_b_war_standard.png",
+      "status": "generated",
+      "sha256": "03526e12c27c9efff20adc53216a21018aeb8581a6b54550a7bc00da56a543b4"
+    },
+    {
+      "batch": 2,
+      "number": 15,
+      "title": "Bulwark",
+      "file": "kc_b_bulwark.png",
+      "status": "generated",
+      "sha256": "4f7078e8938c4434ef44c29aeb8c843b5f893524569a0b06b82437ce715998f1"
+    },
+    {
+      "batch": 2,
+      "number": 16,
+      "title": "Mortar Pit",
+      "file": "kc_b_mortar_pit.png",
+      "status": "generated",
+      "sha256": "51c547ca91c1b4bc12110af54f6d3a5538e20458a0ac4c6b7d695a88dea3f34f"
+    },
+    {
+      "batch": 2,
+      "number": 17,
+      "title": "Sniper Perch",
+      "file": "kc_b_sniper_perch.png",
+      "status": "generated",
+      "sha256": "ec7d0b72338a49511c4e957e3bbff323a57d0adb56e38c8fec138eaf35e44778"
+    },
+    {
+      "batch": 2,
+      "number": 18,
+      "title": "Shambler (boss token)",
+      "file": "kc_b_shambler.png",
+      "status": "generated",
+      "sha256": "4f7a216b0bfedf26c275f7e806ec7f892bebc63f5e325eec216d69f2d7ad23ed"
+    },
+    {
+      "batch": 3,
+      "number": 19,
+      "title": "Callout",
+      "file": "kc_b_callout_nightcity.png",
+      "status": "generated",
+      "sha256": "0a7bc326df9df2b08c129d2318f8ff0956c7b8225f756c95920e74499524e4ea"
+    },
+    {
+      "batch": 3,
+      "number": 20,
+      "title": "Breach and Clear",
+      "file": "kc_b_breach_and_clear_nightcity.png",
+      "status": "generated",
+      "sha256": "c3184a8ea3e9f4678ac16098749f0b4e3907e597cd6a7c43241cc9ffb8112c39"
+    },
+    {
+      "batch": 3,
+      "number": 21,
+      "title": "Hold the Line",
+      "file": "kc_b_hold_the_line.png",
+      "status": "generated",
+      "sha256": "f2b0e781695bf7a6dd1c3150ee657e6e5f99ac521a2f33e21b5d1cdc1e937d78"
+    },
+    {
+      "batch": 3,
+      "number": 22,
+      "title": "Suppressing Fire",
+      "file": "kc_b_suppressing_fire.png",
+      "status": "generated",
+      "sha256": "023e50c569f8b8ff21796560eb63fcf7c95b35efd38f850f9f3c21ace6f162b8"
+    },
+    {
+      "batch": 3,
+      "number": 23,
+      "title": "Tripwire Charge",
+      "file": "kc_b_tripwire_charge.png",
+      "status": "blocked",
+      "reason": "Image service rejected original prompt: moderation_blocked (violence), input stage."
+    },
+    {
+      "batch": 3,
+      "number": 24,
+      "title": "Barrage",
+      "file": "kc_b_kc_wip_barrage.png",
+      "status": "generated",
+      "sha256": "3a8e61ce8f87237bfb1fc9727fb37c859bc9c1eadb198c1f48ecba97e347068d"
+    },
+    {
+      "batch": 3,
+      "number": 25,
+      "title": "War Shout",
+      "file": "kc_b_kc_wip_war_shout.png",
+      "status": "generated",
+      "sha256": "b341b0f48d1f94abcffb872e641af7c0a6864786a45dcb18b9b320d99c1e46fb"
+    },
+    {
+      "batch": 3,
+      "number": 26,
+      "title": "Premium Loadout",
+      "file": "kc_b_kc_wip_premium_loadout.png",
+      "status": "generated",
+      "sha256": "6572923f8597a007ebb8d49ef49d5363983574d7dc2030b02bd406d487d25371"
+    },
+    {
+      "batch": 4,
+      "number": 27,
+      "title": "Scout",
+      "file": "kc_b_kc_wip_scout.png",
+      "status": "generated",
+      "sha256": "0e73994f2e5d3576fc34ec414dde31b2a53b719018207b58a0422172bd81778b"
+    },
+    {
+      "batch": 4,
+      "number": 28,
+      "title": "Medic",
+      "file": "kc_b_kc_wip_medic.png",
+      "status": "generated",
+      "sha256": "97958ca65cd707608ff1b0f052d64e2b7bf488262293662820cbe36e4a53d238"
+    },
+    {
+      "batch": 4,
+      "number": 29,
+      "title": "Sharpshooter",
+      "file": "kc_b_kc_wip_sharpshooter.png",
+      "status": "generated",
+      "sha256": "56d0388d86f3001e1d7f89cf4e9d2275cf2459d4ee5a014d7a09975bbc3db42f"
+    },
+    {
+      "batch": 4,
+      "number": 30,
+      "title": "Flag Bearer",
+      "file": "kc_b_kc_wip_flag_bearer.png",
+      "status": "generated",
+      "sha256": "25d3c288625deeb0104b413fad337278f08bf0b54edd7a94840107565c9a4f35"
+    },
+    {
+      "batch": 4,
+      "number": 31,
+      "title": "Hacker",
+      "file": "kc_b_kc_wip_hacker.png",
+      "status": "generated",
+      "sha256": "f1a8dd1189c47ca6364ce36c349afcd4a818b8fab55757748b9321fa237ab8b9"
+    },
+    {
+      "batch": 4,
+      "number": 32,
+      "title": "Runner",
+      "file": "kc_b_kc_wip_runner.png",
+      "status": "generated",
+      "sha256": "1e71035eaf4d70b471a62491fcd2773fb917f2cdc3c385c99ab97c3a1704975b"
+    },
+    {
+      "batch": 4,
+      "number": 33,
+      "title": "Sniper",
+      "file": "kc_b_kc_wip_sniper.png",
+      "status": "generated",
+      "sha256": "69b7ca1acaa1221d4228080e840ad055618624db46c85b199a0d017846fd4161"
+    },
+    {
+      "batch": 4,
+      "number": 34,
+      "title": "Riot Shield",
+      "file": "kc_b_kc_wip_riot_shield.png",
+      "status": "generated",
+      "sha256": "027c69ae58f25dacd65b43f0bf938062fd33cdd754322c17322d0b9abb5a0f83"
+    },
+    {
+      "batch": 5,
+      "number": 35,
+      "title": "Juggernaut",
+      "file": "kc_b_kc_wip_juggernaut.png",
+      "status": "generated",
+      "sha256": "a65db0a384e030ab98f97c9a8a08ef67201513d58d723d2fc85e24c94840e199"
+    },
+    {
+      "batch": 5,
+      "number": 36,
+      "title": "Kamikaze",
+      "file": "kc_b_kc_wip_kamikaze.png",
+      "status": "generated",
+      "sha256": "4e0f2b50c199b90e27f691afa6463304c38600c107fbdcb8a182637eb6166f0d"
+    },
+    {
+      "batch": 5,
+      "number": 37,
+      "title": "Fast Learner",
+      "file": "kc_b_kc_wip_fast_learner.png",
+      "status": "generated",
+      "sha256": "2381b54018c8527fea16e398a3b396fd8dcfd342c274395d915e6ba6c77c630a"
+    },
+    {
+      "batch": 5,
+      "number": 38,
+      "title": "Laser Gunner",
+      "file": "kc_b_kc_wip_laser_gunner.png",
+      "status": "generated",
+      "sha256": "9cca14d177bf67cca9f2b1c46726b0676509321d7e4c3b9d959129cdef6e66cc"
+    },
+    {
+      "batch": 5,
+      "number": 39,
+      "title": "Protector",
+      "file": "kc_b_shieldman_nightcity.png",
+      "status": "generated",
+      "sha256": "63b6b6abbe0b7ad623c5a8f724bbf4fb8f46be29f7fbc9c7d329b1f00c98a25a"
+    },
+    {
+      "batch": 5,
+      "number": 40,
+      "title": "Combat Medic",
+      "file": "kc_b_combat_medic_nightcity.png",
+      "status": "generated",
+      "sha256": "87e70a6ce27f78db18b4b4b0f888b2f922715af86f75d83a502b18db1626cf3b"
+    },
+    {
+      "batch": 5,
+      "number": 41,
+      "title": "Rifleman",
+      "file": "kc_b_rifleman_nightcity.png",
+      "status": "generated",
+      "sha256": "22262d20f639a9c8efc0f3db1b607bc487ee4dba5c628d76ad58b2e82c292aa4"
+    },
+    {
+      "batch": 5,
+      "number": 42,
+      "title": "Demolitions Expert",
+      "file": "kc_b_demolitions_expert_nightcity.png",
+      "status": "blocked",
+      "reason": "Image service rejected generation: moderation_blocked (violence), output stage."
+    },
+    {
+      "batch": 6,
+      "number": 43,
+      "title": "Point Man",
+      "file": "kc_b_point_man_nightcity.png",
+      "status": "generated",
+      "sha256": "8cb3b8be741489b0e49ea4f64b79aa1d75e2b1802416d206b0fa0b7fad94df04"
+    },
+    {
+      "batch": 6,
+      "number": 44,
+      "title": "Marksman",
+      "file": "kc_b_marksman_nightcity.png",
+      "status": "generated",
+      "sha256": "d40ba3593a9328e3cc9b09d37d941af3c6d88a36ff8b877f5142c679a42a2487"
+    },
+    {
+      "batch": 6,
+      "number": 45,
+      "title": "Gunner",
+      "file": "kc_b_gunner_nightcity.png",
+      "status": "generated",
+      "sha256": "54a1fa479155578617fc08fcbdda7f17826f1c556cd562116edf10b8b5ad524e"
+    },
+    {
+      "batch": 6,
+      "number": 46,
+      "title": "Flanker",
+      "file": "kc_b_flanker_nightcity.png",
+      "status": "generated",
+      "sha256": "0fc849c6703342db21b248cf919dba22a95495d91d1dad983bccaccaa5b40854"
+    },
+    {
+      "batch": 6,
+      "number": 47,
+      "title": "Breacher",
+      "file": "kc_b_breacher_nightcity.png",
+      "status": "generated",
+      "sha256": "2f325d5539f43cba34f46bd580a6874d3e68eda0dbcdc177b8d7d5f9f7046046"
+    },
+    {
+      "batch": 6,
+      "number": 48,
+      "title": "Recon Specialist",
+      "file": "kc_b_recon_specialist_nightcity.png",
+      "status": "generated",
+      "sha256": "52553b9679dd07feb5c165a4d95157b518016a7419b2a5197e2531ce026ebd17"
+    }
+  ],
+  "generated_count": 46,
+  "blocked_count": 2
+}
