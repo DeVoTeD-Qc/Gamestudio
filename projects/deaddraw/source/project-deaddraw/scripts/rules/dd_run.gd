@@ -803,7 +803,7 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 		if mp > 0:
 			_earn(mp)
 		stats["melee_kills"] = int(stats["melee_kills"]) + 1
-		line = "%s %d: %s (%d) - %s." % [cname, c.value, mname, int(pr["power"]), _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
+		line = "%s %d: %s (hit %d), %s." % [cname, c.value, mname, int(pr["power"]), _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
 		if has_melee_weapon():
 			stats["melee_weapon_kills"] = int(stats["melee_weapon_kills"]) + 1
 			melee["uses"] = melee_uses() - 1
@@ -824,7 +824,7 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 			fired[w] = true
 		g.stack.append(c.value)
 		stats["gun_kills"] = int(stats["gun_kills"]) + 1
-		line = "%s %d -> %s (%d/%d)%s - %s." % [cname, c.value, g.name, g.stack.size(), g.cap,
+		line = "%s %d -> %s (%d/%d)%s, %s." % [cname, c.value, g.name, g.stack.size(), g.cap,
 			(", +%d pts" % bal.shown(c.value)) if bal.flag("points_on_kill") else "", _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
 		_log(line)
 		line = ""

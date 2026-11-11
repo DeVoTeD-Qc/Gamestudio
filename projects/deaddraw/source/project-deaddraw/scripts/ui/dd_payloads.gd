@@ -95,7 +95,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	var body: PackedStringArray = []
 	match c.kind:
 		DDCard.ZOMBIE:
-			body.append("Number %d: its strength and its points (paid when a gun kills it; melee pays nothing)." % c.value)
+			body.append("Strength %d (the red badge): its attack AND its toughness. It hits you for %d minus your weapon's hit, and a gun kill pays %d pts (melee pays nothing)." % [c.value, c.value, b.shown(c.value)])
 			if c.is_boss():
 				body.append("%s (%s): %s" % [c.boss_name, DDText.trait_name(c.boss_trait), DDText.trait_text(c.boss_trait)])
 			for w: int in 3:
@@ -135,7 +135,7 @@ static func card_t1(c: DDCard, run: DDRun) -> String:
 	var b: DDBalance = run.bal
 	match c.kind:
 		DDCard.ZOMBIE:
-			return "%s · strength %d" % [DDText.card_name(c, b), c.value]
+			return "%s · strength %d: its attack and its toughness" % [DDText.card_name(c, b), c.value]
 		DDCard.WEAPON:
 			return "%s · hits %d · holds %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid), b.weapon_cap(c.wid)]
 		DDCard.MEDKIT:

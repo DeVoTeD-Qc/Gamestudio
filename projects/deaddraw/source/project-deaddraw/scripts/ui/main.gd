@@ -577,6 +577,11 @@ func _build_map() -> void:
 					", ".join(PackedStringArray((d.get("rooms", []) as Array).map(func(r: Variant) -> String: return "%s %d" % [str((r as Dictionary).get("name", "")), Game.bal.shown(int((r as Dictionary).get("cost", 0)))])))],
 				"t1": "%s · boss %s (%s)" % [str(d.get("name", "")), str(b.get("name", "")), DDText.boss_summary(b).replace(" -> ", ", ")],
 				"t2": "3 waves, then the boss. %s" % ("You are here." if di == run.district_index else ("Cleared." if di < run.district_index else "Ahead."))}}
+		# dd-polish5: the boss's number in the zombie badge, short: "9", "6×3" (horde), "8-12" (phases)
+		var bz: Array = b.get("zombies", [9])
+		spec["strength"] = int(bz[0])
+		if bz.size() > 1:
+			spec["big"] = "%d-%d" % [int(bz[0]), int(bz[bz.size() - 1])] if str(b.get("trait", "")) == "phases" else "%d×%d" % [int(bz[0]), bz.size()]
 		var banner: Texture2D = Art.texture_for(Art.district_keys(d))
 		if banner != null:
 			spec["bg_art"] = banner
@@ -1247,8 +1252,8 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 	return box
 
 
-## MELEE as a small button (v4: DDV4Hooks.melee_spec): the hit burst, the name (Bare Hands or the
-## melee weapon you hold), and its use pips (filled = uses left) or "0 pts" for bare hands. The
+## MELEE as a small button (v4: DDV4Hooks.melee_spec): the yellow hit badge, MELEE / ACTIVE, the use
+## pips (filled = uses left) or "no pts" for bare hands, and the name (Bare Hands or the weapon). The
 ## tile is a DDCardView: tap = make it active, right click / long press = its tooltip.
 func _melee_tile(run: DDRun) -> DDCardView:
 	var ms: Dictionary = DDV4Hooks.melee_spec(run)
@@ -1261,37 +1266,48 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	mv.custom_minimum_size = Vector2(0, TAP)
 	var tex: Texture2D = Art.texture_for(ms.get("art_keys", []))
 	if tex != null:
+		# dd-polish5: the art sits faint on the right, away from the text
 		var tr: TextureRect = TextureRect.new()
 		tr.texture = tex
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tr.self_modulate = Color(1, 1, 1, 0.28)
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.self_modulate = Color(1, 1, 1, 0.16)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		mv.add_child(tr)
 		mv.art_rect = tr
-	var h: HBoxContainer = DDUi.hbox(4)
+	# dd-polish5 (head: "a visual bug when we select a melee weapon"): the old one-row button
+	# (burst | tag / name / pips) was wider than the button on phones, so the burst slid over the
+	# border and the text. Now two rows that always fit: [hit badge | MELEE or ACTIVE + uses], then
+	# the weapon's name on its own full-width line (shrinks to fit, never clipped mid-word).
+	var col: VBoxContainer = DDUi.vbox(2)
+	col.name = "MeleeBox"
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	mv.add_child(col)
+	var h: HBoxContainer = DDUi.hbox(5)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	mv.add_child(h)
+	col.add_child(h)
 	var burst: Control = Marks.HitBurst.new(int(ms.get("power", run.melee_power())))
-	burst.custom_minimum_size = Vector2(36, 36)
+	burst.name = "HitBurst"
+	burst.custom_minimum_size = Vector2(30, 30)
 	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(burst)
 	mv.hit_burst = burst
-	var tv: VBoxContainer = DDUi.vbox(0)
+	var tv: VBoxContainer = DDUi.vbox(1)
 	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tv.alignment = BoxContainer.ALIGNMENT_CENTER
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(tv)
-	tv.add_child(DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 7, DDUi.SELECT if on else DDUi.accent("K")))
-	var nl: Label = DDUi.label(str(ms.get("name", "")), DDUi.FONT_S - 4, DDUi.TEXT)
-	nl.clip_text = true
-	nl.custom_minimum_size = Vector2(10, 0)
-	nl.name = "MeleeName"
-	nl.resized.connect(func() -> void: DDCardView.fit_label(nl, DDUi.FONT_S - 4, 10))
-	tv.add_child(nl)
+	var tag: Label = DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 6, DDUi.SELECT if on else DDUi.accent("K"))
+	tag.name = "MeleeTag"
+	tag.clip_text = true
+	tag.custom_minimum_size = Vector2(10, 0)
+	tv.add_child(tag)
 	if bool(ms.get("bare", true)):
-		var pl: Label = DDUi.label("0 pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+		var pl: Label = DDUi.label("no pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+		pl.name = "MeleeUses"
+		pl.clip_text = true
+		pl.custom_minimum_size = Vector2(10, 0)
 		tv.add_child(pl)
 		mv.big_label = pl
 	else:
@@ -1303,11 +1319,20 @@ func _melee_tile(run: DDRun) -> DDCardView:
 			var left: bool = k < int(ms.get("uses", 0))
 			var dot: Panel = Panel.new()
 			dot.custom_minimum_size = Vector2(9, 9)
+			dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if left else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 2, 0))
+			dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if left else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 5, 0))
 			dot.set_meta(&"left", left)
 			pips.add_child(dot)
 		tv.add_child(pips)
+	var nl: Label = DDUi.label(str(ms.get("name", "")), DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	nl.clip_text = true
+	nl.custom_minimum_size = Vector2(10, 0)
+	nl.name = "MeleeName"
+	nl.add_theme_constant_override("outline_size", 4)
+	nl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	nl.resized.connect(func() -> void: DDCardView.fit_label(nl, DDUi.FONT_S - 3, 9))
+	col.add_child(nl)
 	mv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(DDRun.MELEE))
 	_melee_view = mv
 	return mv
@@ -2212,7 +2237,8 @@ func _build_end() -> void:
 ## &wave=1, &sheet=gun|machine0..2|patch, &inspect=pile|wave0|room0|gun1|gun2|stack|boss|melee|points,
 ## &overlay=codex|glossary|banner (dd-ux-v4),
 ## &hints=1 (first-run hints on), &near=1 (gun 1 one kill from finishing, a legal zombie dealt),
-## &lastcards=1 (the pile runs dry after this street: wave 2 shuffles in).
+## &lastcards=1 (the pile runs dry after this street: wave 2 shuffles in),
+## &street=K:wrench,Z3,M4 (dd-polish5: deal exactly these cards).
 func _apply_smoke_query() -> void:
 	if not OS.has_feature("web"):
 		return
@@ -2300,6 +2326,13 @@ func apply_debug(args: Dictionary) -> void:
 			nz = 6
 		run.setup_street(["Z%d" % nz, "M4", "Z3", "C2", "Z5", "Z6", "Z2", "M3"])
 		run.active = 0
+	if args.has("street"):
+		# dd-polish5: &street=K:wrench,Z3,M4,C2 deals exactly these cards (QA: melee equip flow)
+		var codes: Array[String] = []
+		for c: String in str(args["street"]).split(","):
+			if c != "":
+				codes.append(c)
+		run.setup_street(codes)
 	if args.has("lastcards"):
 		# one card left in the pile after this street: the third resolve shuffles wave 2 in
 		run.setup_street(["Z1", "Z2", "Z1", "Z3", "Z2"])

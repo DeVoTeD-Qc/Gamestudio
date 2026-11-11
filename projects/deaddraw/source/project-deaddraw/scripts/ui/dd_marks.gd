@@ -1,12 +1,10 @@
 # dd_marks.gd
 # Purpose: dd-ux-v4: small vector marks drawn with Control._draw (no image assets), shared by the
 #   street, the gun tiles, the Glossary and the Codex:
-#   - StrengthMark: the zombie strength mark (M2). Tier colour + the number, in a shape that reads
-#     as threat / attack AND toughness, not a shield. Variant "fang" (the pick: a monster's jaw,
-#     3-6 fangs, one more per tier) and the alternatives "claw" (a disc raked by 1-4 claw
-#     slashes) and "spike" (a jagged splat, 7-13 spikes; too close to the yellow hit burst). The tier (Shambler 1-3, Lurcher 4-6, Bruiser 7-9,
-#     Hulk 10+) is the colour AND a count, so it reads for colour-blind players too.
-#   - HitBurst: the weapon's hit number in a yellow 8-point burst (every gun, melee, Codex entry).
+#   - NumBadge (dd-polish5): THE number badge on every card number, one circle shape. The role
+#     picks the colours only: zombie (blood fill, tier-coloured ring: its attack AND toughness),
+#     weapon (yellow fill: the hit of a gun / melee weapon / Bare Hands), item (ink fill, ring in the
+#     kind's accent: heal, cover...). StrengthMark / HitBurst are the zombie / weapon presets.
 #   - Padlock: closed / open padlock icon for the room price plate.
 #   - Socket: an empty kill socket (dashed) or the next one (gold dashed + what it accepts).
 #   - WaveNumeral: the big blood-red wave number on the wave door (slams in on a new wave).
@@ -21,8 +19,11 @@ const BLOOD: Color = Color("c8322a")
 ## Tier colours (Shambler, Lurcher, Bruiser, Hulk): bone, amber, orange, red.
 const TIER_COLORS: Array[Color] = [Color("bdb5a0"), Color("d99a3c"), Color("e8793a"), Color("e2574c")]
 const TIER_NAMES: Array[String] = ["Shambler", "Lurcher", "Bruiser", "Hulk"]
-## The strength mark the game uses (see ux-v4-pass.md for the alternatives).
-const STRENGTH_VARIANT: String = "fang"
+## dd-polish5: every card number uses the same circle badge (NumBadge); the fang / burst shapes are gone.
+const BADGE_SHAPE: String = "circle"
+const STRENGTH_VARIANT: String = BADGE_SHAPE
+const ZOMBIE_FILL: Color = Color("5c1b19")
+const WEAPON_FILL: Color = Color("f2c14e")
 
 
 static func tier_of(n: int) -> int:
@@ -63,134 +64,128 @@ class Mark:
 		return out
 
 
-# ================================================================ strength mark
-class StrengthMark:
+# ================================================================ the number badge
+## dd-polish5 (head: "all numbers on all cards had that simple circle"): ONE badge for every card
+## number. A circle (a pill when the text is wider than 2 digits), an ink hairline outside, a
+## coloured ring, a fill, the number centred in a Label. The role only picks the colours:
+##   "zombie": blood-red fill, ring in the tier colour (Shambler bone, Lurcher amber, Bruiser
+##             orange, Hulk red), bone number. The number is its attack AND its toughness.
+##   "weapon": yellow fill, ink ring, ink number (guns, melee weapons, Bare Hands): the hit.
+##   "item":   ink fill, ring in the card kind's accent (medkit green, cover gold...), bone number.
+## Feedback / tests read `value` and `num_label`.
+class NumBadge:
 	extends Mark
-	var value: int = 1
-	var variant: String = "claw"
+	var value: int = 0
+	var role: String = "item"
+	var ring: Color = BONE
+	var fill: Color = INK
+	var text_color: Color = BONE
+	var text: String = ""
+	var num_label: Label = null
+	## kept for older callers / tests: the badge shape in use
+	var variant: String = BADGE_SHAPE
 
-	func _init(v: int = 1, var_name: String = "") -> void:
+	func _init(v: int = 0, r: String = "item", ring_col: Color = BONE, txt: String = "") -> void:
 		value = v
-		variant = var_name if var_name != "" else STRENGTH_VARIANT
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		text = txt if txt != "" else str(v)
+		set_role(r, ring_col)
+		num_label = Label.new()
+		num_label.name = "Num"
+		num_label.text = text
+		num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		num_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		num_label.add_theme_color_override("font_color", text_color)
+		add_child(num_label)
+		resized.connect(fit)
+
+	## A badge sized before it entered the tree measured its label without the theme: refit.
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_THEME_CHANGED:
+			fit.call_deferred()
+
+	func set_role(r: String, ring_col: Color = BONE) -> void:
+		role = r
+		var c: Dictionary = colors(r, value, ring_col)
+		ring = c["ring"]
+		fill = c["fill"]
+		text_color = c["text"]
+		if num_label != null:
+			num_label.add_theme_color_override("font_color", text_color)
+		queue_redraw()
+
+	## {ring, fill, text} for a role (see the class comment).
+	static func colors(r: String, v: int, ring_col: Color = BONE) -> Dictionary:
+		match r:
+			"zombie":
+				return {"ring": TIER_COLORS[Mark.tier_of(v)], "fill": ZOMBIE_FILL, "text": BONE}
+			"weapon":
+				return {"ring": INK, "fill": WEAPON_FILL, "text": INK}
+		return {"ring": ring_col, "fill": INK, "text": BONE}
+
+	## The number's font size for a badge of height d (the same rule everywhere).
+	static func font_for(d: float, txt: String) -> int:
+		return maxi(8, int(d * (0.58 if txt.length() <= 2 else 0.42)))
+
+	func fit() -> void:
+		var d: float = minf(size.x, size.y)
+		if d <= 2.0 or num_label == null:
+			return
+		num_label.add_theme_font_size_override("font_size", font_for(d, text))
+		# centred by hand (not anchored): a label taller than a small badge would grow past it
+		var ls: Vector2 = num_label.get_combined_minimum_size()
+		num_label.size = Vector2(maxf(ls.x, size.x), ls.y)
+		num_label.position = (size - num_label.size) * 0.5
+		queue_redraw()
+
+	## The width a badge of height d needs for its text (a circle up to 2 digits, then a pill).
+	func width_for(d: float) -> float:
+		var f: Font = num_label.get_theme_font("font") if num_label != null else _font()
+		var tw: float = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_for(d, text)).x
+		return maxf(d, tw + d * 0.45)
 
 	func _draw() -> void:
-		var s: float = minf(size.x, size.y)
-		if s <= 4.0:
+		var h: float = size.y
+		var w: float = size.x
+		var d: float = minf(w, h)
+		if d <= 4.0:
 			return
-		var t: int = tier_of(value)
-		var col: Color = TIER_COLORS[t]
-		var c: Vector2 = size * 0.5
-		var num_col: Color = INK if t < 3 else Color.WHITE
-		match variant:
-			"fang":
-				_fang(c, s, col, t)
-				draw_num(self, str(value), c - Vector2(0, s * 0.07), int(s * 0.44), num_col)
-			"spike":
-				_spike(c, s, col, t)
-				draw_num(self, str(value), c, int(s * 0.42), num_col)
-			_:
-				_claw(c, s, col, t)
-				draw_num(self, str(value), c + Vector2(-s * 0.05, 0), int(s * 0.44), num_col)
+		var rw: float = clampf(d * 0.075, 2.0, 5.0)
+		var hair: float = maxf(1.0, d * 0.03)
+		_shape(Vector2(w, h), 0.0, Color(INK, 0.9))
+		_shape(Vector2(w, h), hair, ring)
+		_shape(Vector2(w, h), hair + rw, fill)
 
-	## A tier-coloured disc raked by 1-4 claw slashes that tear out past its upper right edge.
-	func _claw(c: Vector2, s: float, col: Color, t: int) -> void:
-		var r: float = s * 0.36
-		var cc: Vector2 = c + Vector2(-s * 0.07, s * 0.05)
-		var n: int = t + 1
-		var gap: float = s * 0.12
-		var slashes: Array = []
-		for k: int in n:
-			var off: float = (k - (n - 1) * 0.5) * gap
-			var a: Vector2 = cc + Vector2(-s * 0.02 + off, -s * 0.50 + off * 0.2)
-			var b: Vector2 = cc + Vector2(s * 0.56 + off * 0.2, s * 0.02 + off)
-			slashes.append([a, b])
-		# ink outlines first, then the disc, then the slashes on top (they tear across its rim)
-		for sl: Array in slashes:
-			draw_colored_polygon(_leaf(sl[0], sl[1], s * 0.085 + 3.0, 3.0), INK)
-		draw_circle(cc, r + 3.0, INK)
-		draw_circle(cc, r, col)
-		for sl2: Array in slashes:
-			draw_colored_polygon(_leaf(sl2[0], sl2[1], s * 0.085, 0.0), col.lightened(0.25))
-			draw_colored_polygon(_leaf(sl2[0], sl2[1], s * 0.03, -s * 0.06), INK.lightened(0.1))
-
-	## A curved, tapered slash from a to b (bowed to one side), half-width w; ext lengthens the tips.
-	func _leaf(a: Vector2, b: Vector2, w: float, ext: float) -> PackedVector2Array:
-		var d: Vector2 = (b - a).normalized()
-		var nrm: Vector2 = Vector2(-d.y, d.x)
-		var a2: Vector2 = a - d * ext
-		var b2: Vector2 = b + d * ext
-		var pts: PackedVector2Array = []
-		var steps: int = 10
-		for k: int in steps + 1:
-			var u: float = float(k) / steps
-			var bow: float = sin(u * PI) * (b2 - a2).length() * 0.12
-			pts.append(a2.lerp(b2, u) + nrm * (bow + sin(u * PI) * w))
-		for k2: int in range(steps - 1, 0, -1):
-			var u2: float = float(k2) / steps
-			var bow2: float = sin(u2 * PI) * (b2 - a2).length() * 0.12
-			pts.append(a2.lerp(b2, u2) + nrm * (bow2 - sin(u2 * PI) * w))
-		return pts
-
-	## A jaw: a rounded top, 3-6 fangs along the bottom (one more per tier).
-	func _fang(c: Vector2, s: float, col: Color, t: int) -> void:
-		var w: float = s * 0.86
-		var x0: float = c.x - w * 0.5
-		var x1: float = c.x + w * 0.5
-		var y0: float = c.y - s * 0.44
-		var ym: float = c.y + s * 0.12
-		var y1: float = c.y + s * 0.48
-		var fangs: int = t + 3
-		var pts: PackedVector2Array = []
-		for k0: int in 13:
-			var ang: float = PI + PI * k0 / 12.0
-			pts.append(Vector2(c.x + cos(ang) * w * 0.5, y0 + s * 0.2 + sin(ang) * s * 0.2))
-		pts.append(Vector2(x1, ym))
-		var fw: float = w / fangs
-		for k: int in range(fangs - 1, -1, -1):
-			var fx: float = x0 + fw * k
-			pts.append(Vector2(fx + fw * 0.5, y1))
-			pts.append(Vector2(fx, ym))
-		draw_colored_polygon(pts, col)
-		draw_polyline(_closed(pts), INK, 3.0, true)
-
-	## A jagged splat: 7-13 spikes, sharper with each tier.
-	func _spike(c: Vector2, s: float, col: Color, t: int) -> void:
-		var m: int = 7 + t * 2
-		var ro: float = s * 0.48
-		var ri: float = s * (0.36 - t * 0.02)
-		var pts: PackedVector2Array = []
-		for k: int in m * 2:
-			var ang: float = -PI * 0.5 + PI * k / m
-			var jit: float = 1.0 + 0.08 * sin(k * 2.3 + value)
-			var rr: float = (ro if k % 2 == 0 else ri) * jit
-			pts.append(c + Vector2(cos(ang), sin(ang)) * rr)
-		draw_colored_polygon(pts, col)
-		draw_polyline(_closed(pts), INK, 3.0, true)
+	## A circle (w == h) or a pill, inset by `inset` px.
+	func _shape(sz: Vector2, inset: float, col: Color) -> void:
+		var r: float = minf(sz.x, sz.y) * 0.5 - inset
+		if r <= 0.0:
+			return
+		var c: Vector2 = sz * 0.5
+		if sz.x <= sz.y + 0.5:
+			draw_circle(c, r, col, true, -1.0, true)
+			return
+		var half: float = sz.x * 0.5 - sz.y * 0.5
+		draw_rect(Rect2(c.x - half, c.y - r, half * 2.0, r * 2.0), col)
+		draw_circle(c - Vector2(half, 0), r, col, true, -1.0, true)
+		draw_circle(c + Vector2(half, 0), r, col, true, -1.0, true)
 
 
-# ================================================================ hit burst
+## A zombie's strength badge (its attack and its toughness).
+class StrengthMark:
+	extends NumBadge
+
+	func _init(v: int = 1, _unused: String = "") -> void:
+		super(v, "zombie")
+
+
+## A weapon's hit badge (guns, melee weapons, Bare Hands).
 class HitBurst:
-	extends Mark
-	var value: int = 2
+	extends NumBadge
 
 	func _init(v: int = 2) -> void:
-		value = v
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		var s: float = minf(size.x, size.y)
-		if s <= 4.0:
-			return
-		var c: Vector2 = size * 0.5
-		var pts: PackedVector2Array = []
-		for k: int in 16:
-			var ang: float = -PI * 0.5 + PI * k / 8.0
-			var rr: float = s * (0.49 if k % 2 == 0 else 0.29)
-			pts.append(c + Vector2(cos(ang), sin(ang)) * rr)
-		draw_colored_polygon(pts, BURST_YELLOW)
-		draw_polyline(_closed(pts), INK, maxf(2.0, s * 0.06), true)
-		draw_num(self, str(value), c + Vector2(0, 1), int(s * 0.42), INK)
+		super(v, "weapon")
 
 
 # ================================================================ padlock

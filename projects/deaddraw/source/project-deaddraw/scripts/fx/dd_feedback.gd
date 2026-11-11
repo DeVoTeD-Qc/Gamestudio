@@ -398,6 +398,24 @@ func _card_fx(ev: Dictionary, snap: Dictionary, ctx: Dictionary) -> float:
 				Sfx.cue(&"cover")
 				_shield(ctx.get("hp_box"))
 				_pop(ctx.get("cover"), 1.35, DDUi.COVER))
+		DDCard.MELEE:
+			# dd-polish5: a melee weapon card had no branch here, so its ghost stayed on the street
+			# (over the next card) until the next render: TAKE flies it into the melee button, SCRAP
+			# drops it with the points
+			if str(ev.get("choice", "")) == DDRun.SCRAP:
+				_mark("scrap")
+				Sfx.cue(&"scrap")
+				_drop(ghost)
+				_float(from, "+%d" % (int(pr.get("points", 0)) * 10), DDUi.accent("X"), 0.05)
+			else:
+				_mark("melee_take")
+				var mv: Control = ctx.get("melee")
+				_fly_into(ghost, mv, func() -> void:
+					Sfx.cue(&"equip")
+					_pop(mv, 1.08, DDUi.accent("K")))
+		_:
+			# any other card: never leave a ghost behind
+			_drop(ghost)
 	return 0.16 if bool(ev.get("street_ended", false)) else 0.0
 
 

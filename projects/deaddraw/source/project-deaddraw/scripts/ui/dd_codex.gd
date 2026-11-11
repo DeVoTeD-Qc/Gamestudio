@@ -129,10 +129,10 @@ static func entries(bal: DDBalance) -> Array:
 				"phases": "Three phases, no escape."}.get(str(b.get("trait", "")), "")]})
 	for mk: Array in [["Bandage", 3, "heals 3"], ["First Aid Kit", 4, "heals 4-5"], ["Trauma Kit", 6, "heals 6-7"]]:
 		out.append({"key": "item:" + Art.slug(str(mk[0])), "type": "items", "name": str(mk[0]), "art_keys": Art.card_keys(DDCard.make(DDCard.MEDKIT, int(mk[1]))),
-			"stat": str(mk[2]), "districts": mdist.get(str(mk[0]), []), "line": "Medkit: %s HP. One medkit per street." % str(mk[2]).trim_prefix("heals ")})
+			"value": int(mk[1]), "badge_kind": "M", "stat": str(mk[2]), "districts": mdist.get(str(mk[0]), []), "line": "Medkit: %s HP. One medkit per street." % str(mk[2]).trim_prefix("heals ")})
 	for ck: Array in [["Plywood", 2], ["Car Door", 3], ["Dumpster", 4]]:
 		out.append({"key": "item:" + Art.slug(str(ck[0])), "type": "items", "name": str(ck[0]), "art_keys": Art.card_keys(DDCard.make(DDCard.COVER, int(ck[1]))),
-			"stat": "+%d Cover" % int(ck[1]), "districts": cdist.get(str(ck[0]), []), "line": "Cover %d: takes damage before your HP." % int(ck[1])})
+			"value": int(ck[1]), "badge_kind": "C", "stat": "+%d Cover" % int(ck[1]), "districts": cdist.get(str(ck[0]), []), "line": "Cover %d: takes damage before your HP." % int(ck[1])})
 	for pid: Variant in bal.patches():
 		out.append({"key": "patch:" + str(pid), "type": "patches", "name": DDText.patch_name(str(pid)), "art_keys": Art.patch_keys(str(pid)), "art_fit": "contain",
 			"stat": "Patch", "districts": all_ids, "line": DDPayloads.patch_line(str(pid), bal)})
@@ -347,6 +347,10 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 			p["hit"] = e["hit"]
 		if e.has("strength"):
 			p["strength"] = e["strength"]
+			p["t2"] = "Its number is its attack AND its toughness. " + str(e["line"])
+		if e.has("value"):
+			p["big"] = str(e["value"])
+			p["kind"] = str(e.get("badge_kind", kind))
 	var v: DDCardView = DDCardView.new()
 	v.setup({"kind": kind, "payload": p, "row": true})
 	for c: Node in v.get_children():
@@ -383,7 +387,10 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 			mark = Marks.HitBurst.new(int(e["hit"]))
 		elif e.has("strength"):
 			mark = Marks.StrengthMark.new(int(e["strength"]))
+		elif e.has("value"):
+			mark = Marks.NumBadge.new(int(e["value"]), "item", DDUi.accent(str(e.get("badge_kind", kind))))
 		if mark != null:
+			mark.name = "NumBadge"
 			mark.position = Vector2(3, 3)
 			mark.size = Vector2(40, 40)
 			win.add_child(mark)
@@ -437,7 +444,7 @@ func open_glossary(bal: DDBalance) -> void:
 	opened.emit()
 
 
-## Glossary sections: [title, [{icon, name, line}...]]. icon: "burst:4", "strength:7", "rule:down",
+## Glossary sections: [title, [{icon, name, line}...]]. icon: "burst:4", "strength:7", "num:M:4", "rule:down",
 ## "badge:challenge", "lock", "socket", "chip:-3", "text:HOLD" ...
 static func sections(bal: DDBalance) -> Array:
 	var rules: Array = []
@@ -448,20 +455,24 @@ static func sections(bal: DDBalance) -> Array:
 		rules.append({"icon": "rule:" + str(r[0]), "name": str(r[1]), "line": "Each kill %s (%s)." % [DDPayloads._rule_words(str(r[0]), false), str(r[2])]})
 	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: this kill may break the rule, once a wave."})
 	return [
+		["NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT", [
+			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A gun's or melee weapon's power. You take strength minus hit."},
+			{"icon": "strength:7", "name": "Strength (blood red)", "line": "A zombie's attack AND its toughness. A gun kill pays ×10 pts."},
+			{"icon": "tiers", "name": "Tier (the red badge's ring)", "line": "Bone Shambler 1-3, amber Lurcher 4-6, orange Bruiser 7-9, red Hulk 10+."},
+			{"icon": "num:M:4", "name": "Heal (green ring)", "line": "A medkit's number: the HP it heals."},
+			{"icon": "num:C:3", "name": "Cover (gold ring)", "line": "A cover card's number: the Cover you gain."},
+		]],
 		["ON YOUR WEAPONS", [
-			{"icon": "burst:4", "name": "Hit", "line": "How hard it hits. You take strength minus hit."},
 			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds. All full: +%d pts." % bal.shown(bal.num("finish_bonus"))},
 			{"icon": "next", "name": "Next socket", "line": "What the next kill must be, e.g. <6 or >4."},
 			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
 			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
-			{"icon": "burst:%d" % bal.num("hands_power"), "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
+			{"icon": "art:bare_hands", "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
 			{"icon": "uses", "name": "Melee uses", "line": "A melee weapon's dots: each kill uses 1; at 0 it breaks."},
 			{"icon": "text:+N", "name": "Salvage", "line": "Swap out a gun: it pays part of its kills back."},
 		]],
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
-			{"icon": "strength:7", "name": "Strength", "line": "Its toughness and its attack. Pays ×10 pts."},
-			{"icon": "tiers", "name": "Tier", "line": "Colour and fangs: Shambler 1-3, Lurcher 4-6, Bruiser 7-9, Hulk 10+."},
 			{"icon": "chip:-3", "name": "Damage to you", "line": "What you'd lose with the active weapon. Green 0 = free."},
 			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take this zombie."},
 			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},
@@ -516,6 +527,14 @@ func _gloss_row(row: Dictionary) -> DDCardView:
 	return v
 
 
+## A badge centred at 42 px (the same size in every Glossary row).
+static func _square(b: Control) -> Control:
+	var cc: CenterContainer = CenterContainer.new()
+	b.custom_minimum_size = Vector2(42, 42)
+	cc.add_child(b)
+	return cc
+
+
 ## A Glossary icon, drawn with the same marks the game uses.
 static func icon(id: String) -> Control:
 	var c: Control = Control.new()
@@ -524,16 +543,31 @@ static func icon(id: String) -> Control:
 	var inner: Control = null
 	match id.get_slice(":", 0):
 		"burst":
-			inner = Marks.HitBurst.new(int(arg))
+			inner = _square(Marks.HitBurst.new(int(arg)))
 		"strength":
-			inner = Marks.StrengthMark.new(int(arg))
+			inner = _square(Marks.StrengthMark.new(int(arg)))
 		"tiers":
-			var hb: HBoxContainer = DDUi.hbox(1)
+			var gc: GridContainer = GridContainer.new()
+			gc.columns = 2
+			gc.add_theme_constant_override("h_separation", 2)
+			gc.add_theme_constant_override("v_separation", 2)
 			for v: int in [2, 5, 8, 11]:
 				var m: Control = Marks.StrengthMark.new(v)
-				m.custom_minimum_size = Vector2(12, 24)
-				hb.add_child(m)
-			inner = hb
+				m.custom_minimum_size = Vector2(23, 23)
+				gc.add_child(m)
+			var tc: CenterContainer = CenterContainer.new()
+			tc.add_child(gc)
+			inner = tc
+		"num":
+			# dd-polish5: an item badge, num:<kind>:<value>
+			var nb: Control = Marks.NumBadge.new(int(id.get_slice(":", 2)), "item", DDUi.accent(arg))
+			inner = _square(nb)
+		"art":
+			var tra: TextureRect = TextureRect.new()
+			tra.texture = Art.texture_for(DDV4Hooks.melee_art_keys("", "Bare Hands"))
+			tra.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tra.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			inner = tra
 		"rule", "badge":
 			var tr: TextureRect = TextureRect.new()
 			tr.texture = Art.texture_for(Art.rule_keys(arg) if id.begins_with("rule") else Art.badge_keys(arg))

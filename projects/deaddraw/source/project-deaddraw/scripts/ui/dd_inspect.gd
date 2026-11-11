@@ -133,7 +133,7 @@ func open(payload: Dictionary) -> void:
 	opened.emit()
 
 
-## The 2-line tooltip: a small picture (the art, the strength mark / hit burst or the big number),
+## The 2-line tooltip: a small picture (the art with its number badge, or the big number),
 ## then t1 in bold and t2 in plain words.
 func _open_tip(payload: Dictionary) -> void:
 	var vp: Vector2 = get_viewport_rect().size
@@ -188,8 +188,12 @@ func _open_tip(payload: Dictionary) -> void:
 			mark = Marks.StrengthMark.new(int(payload["strength"]))
 		elif payload.has("hit"):
 			mark = Marks.HitBurst.new(int(payload["hit"]))
+		elif art is Texture2D and big.is_valid_int() and kind in ["M", "C"]:
+			# dd-polish5: an item's value (heal, cover) in the same circle as on its card
+			mark = Marks.NumBadge.new(int(big), "item", DDUi.accent(kind))
 		if mark != null:
-			mark.position = Vector2(2, 2)
+			mark.name = "NumBadge"
+			mark.position = Vector2(4, 4)
 			mark.size = Vector2(44, 44)
 			layer.add_child(mark)
 		elif big != "" and not (art is Texture2D):

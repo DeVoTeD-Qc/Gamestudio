@@ -10,8 +10,8 @@
 #   exposed for the feedback animations.
 # Dependencies: DDUi.
 # Author: Mechanics Developer Agent
-#   dd-ux-v4: spec "strength" (a zombie's number) draws the strength mark (dd_marks.gd) in place of
-#   the number badge; spec "hit" (a weapon's power) draws the yellow hit burst in the corner.
+#   dd-polish5: every number sits in the same circle badge (dd_marks.gd NumBadge): spec "strength"
+#   (a zombie: blood fill, tier ring), spec "hit" (a weapon: yellow fill), else the kind's accent.
 class_name DDCardView
 extends PanelContainer
 
@@ -42,7 +42,7 @@ var art_rect: TextureRect = null
 var has_art: bool = false
 var _frame: bool = false
 var _art_dim: bool = false
-var _badge_panel: PanelContainer = null
+var _badge_panel: Control = null
 var _corner_chip: Control = null
 var _row: bool = false
 ## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
@@ -238,22 +238,10 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	if bool(spec.get("art_dim", false)):
 		tr.self_modulate = Color(0.45, 0.45, 0.45)
 	var big: String = str(spec.get("big", ""))
-	if spec.has("strength") or spec.has("hit"):
-		# dd-ux-v4: the zombie strength mark or the weapon's hit burst, sized to the tile
-		var m: Control = Marks.StrengthMark.new(int(spec["strength"])) if spec.has("strength") else Marks.HitBurst.new(int(spec["hit"]))
-		window.add_child(m)
-		if spec.has("strength"):
-			strength_mark = m
-		else:
-			hit_burst = m
-		var place: Callable = func() -> void:
-			if is_instance_valid(m):
-				var d: float = clampf(minf(window.size.x * 0.3, window.size.y * 0.62), 34.0, 104.0)
-				m.size = Vector2(d, d)
-				m.position = Vector2(5, 5)
-		window.resized.connect(place)
-	elif big != "":
-		_badge_panel = _number_badge(big)
+	if spec.has("strength") or spec.has("hit") or big != "":
+		# dd-polish5: one circle badge for every card number (zombie strength, weapon hit, item
+		# value); only its colours differ (dd_marks.gd NumBadge)
+		_badge_panel = _number_badge(big, spec)
 		window.add_child(_badge_panel)
 		# dd-ux-clean2: the art window can settle after the tile (tall tiles); refit then too
 		window.resized.connect(func() -> void: _fit_badge.call_deferred())
@@ -319,7 +307,7 @@ func _build_district(spec: Dictionary) -> void:
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		var big: String = str(spec.get("big", ""))
 		if big != "":
-			_badge_panel = _number_badge(big)
+			_badge_panel = _number_badge(big, spec)
 			window.add_child(_badge_panel)
 	_box = DDUi.vbox(2)
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -394,16 +382,22 @@ func _add_lines(parent: Container, spec: Dictionary, outline: bool, align: Horiz
 
 ## Ink disc (a pill for long numbers like "9/11") with a 3 px type-accent ring and bone numerals.
 ## Sized to ~30% of the tile width in _fit_badge().
-func _number_badge(text: String) -> PanelContainer:
-	var p: PanelContainer = PanelContainer.new()
-	var st: StyleBoxFlat = DDUi.box(INK, DDUi.accent(kind), 3, 999, 4)
-	p.add_theme_stylebox_override("panel", st)
-	p.position = Vector2(6, 6)
-	var l: Label = DDUi.label(text, DDUi.BIG_NUMBER, BONE, HORIZONTAL_ALIGNMENT_CENTER)
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	p.add_child(l)
-	big_label = l
-	return p
+## dd-polish5: the card's number badge (dd_marks.gd NumBadge): spec "strength" = a zombie (blood
+## fill, tier ring), spec "hit" = a weapon (yellow fill), else the kind's accent ring on ink.
+func _number_badge(text: String, spec: Dictionary = {}) -> Control:
+	var b: Control = null
+	if spec.has("strength"):
+		b = Marks.NumBadge.new(int(spec["strength"]), "zombie", Marks.BONE, text)
+		strength_mark = b
+	elif spec.has("hit"):
+		b = Marks.HitBurst.new(int(spec["hit"]))
+		hit_burst = b
+	else:
+		b = Marks.NumBadge.new(int(text) if text.is_valid_int() else 0, "item", DDUi.accent(kind), text)
+	b.name = "NumBadge"
+	b.position = Vector2(6, 6)
+	big_label = b.get("num_label")
+	return b
 
 
 func _notification(what: int) -> void:
@@ -412,20 +406,22 @@ func _notification(what: int) -> void:
 
 
 func _fit_badge() -> void:
-	if _badge_panel == null or not is_instance_valid(_badge_panel) or big_label == null:
+	if _badge_panel == null or not is_instance_valid(_badge_panel):
 		return
 	var host: Control = _badge_panel.get_parent() as Control
-	var d: float = clampf(size.x * 0.3, 38.0, 96.0)
+	var d: float = clampf(size.x * 0.3, 34.0, 96.0)
 	if host != null and host.size.y > 0.0:
-		d = minf(d, maxf(34.0, host.size.y - 12.0))
+		d = minf(d, maxf(30.0, host.size.y - 12.0))
 	if host != null and host.size.x > 0.0 and host != _box:
-		d = minf(d, host.size.x * 0.55)
-	var digits: int = big_label.text.length()
-	var fs: int = int(d * (0.56 if digits <= 2 else 0.4))
-	big_label.add_theme_font_size_override("font_size", fs)
-	var w: float = maxf(d, big_label.get_minimum_size().x + 16.0)
+		d = minf(d, host.size.x * 0.5)
+	var w: float = float(_badge_panel.call("width_for", d))
+	if host != null and host.size.x > 0.0 and w > host.size.x - 12.0:
+		# a long number (a boss's "6×3") shrinks to fit its window
+		d = maxf(20.0, d * (host.size.x - 12.0) / w)
+		w = float(_badge_panel.call("width_for", d))
 	_badge_panel.custom_minimum_size = Vector2(w, d)
 	_badge_panel.size = Vector2(w, d)
+	_badge_panel.position = Vector2(6, 6)
 	_badge_panel.pivot_offset = _badge_panel.size * 0.5
 
 

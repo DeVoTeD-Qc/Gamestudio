@@ -1,6 +1,6 @@
 # dd_gun_view.gd
-# Purpose: the gun tile in the street's gun row. dd-ux-v4 (head's points 4, 5, 6): the hit burst
-#   (the gun's hit number, replacing "P4") and the name on top; the rule as icon + short label;
+# Purpose: the gun tile in the street's gun row. dd-ux-v4 (head's points 4, 5, 6): the hit badge
+#   (dd-polish5: the yellow circle with the gun's hit number, replacing "P4") and the name on top; the rule as icon + short label;
 #   then the KILL SOCKETS, one per kill the gun holds, so capacity reads at a glance: filled sockets
 #   show the zombie's art and number (each is inspectable), the next socket shows what it accepts
 #   ("<6", ">4", "any"), the rest are dashed; then the challenge reward. The ACTIVE gun has a bright
@@ -58,6 +58,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	v2.add_child(head)
 	var burst: Control = Marks.HitBurst.new(int(spec.get("power", 0)))
 	burst.custom_minimum_size = Vector2(38, 38)
+	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	burst.name = "HitBurst"
 	head.add_child(burst)
 	hit_burst = burst
@@ -178,8 +179,10 @@ func _layout_sockets() -> void:
 		x += w + gap
 		if c is DDCardView:
 			var badge: Control = c.get_meta(&"badge", null)
-			if badge != null and (c as DDCardView).big_label != null:
-				(c as DDCardView).big_label.add_theme_font_size_override("font_size", int(clampf(w * 0.42, 12.0, 28.0)))
+			if badge != null:
+				var bd: float = clampf(minf(w * 0.7, h * 0.45), 16.0, 34.0)
+				badge.position = Vector2(2, 2)
+				badge.size = Vector2(bd, bd)
 
 
 func _notification(what: int) -> void:
@@ -214,13 +217,15 @@ func _make_mini(z: int, pl: Dictionary) -> DDCardView:
 	var holder: Control = Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mc.add_child(holder)
-	var l: Label = DDUi.label(str(z), 18, DDUi.TEXT)
-	l.add_theme_constant_override("outline_size", 6)
-	l.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.95))
-	l.position = Vector2(3, 0)
-	holder.add_child(l)
-	mc.set_meta(&"badge", l)
-	mc.big_label = l
+	# dd-polish5: the same zombie badge as on the street (blood fill, tier ring)
+	var zb: Control = Marks.StrengthMark.new(z)
+	zb.name = "NumBadge"
+	zb.position = Vector2(2, 2)
+	zb.size = Vector2(22, 22)
+	holder.add_child(zb)
+	mc.set_meta(&"badge", zb)
+	mc.strength_mark = zb
+	mc.big_label = zb.get("num_label")
 	mc.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
 	mc.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
 	return mc
