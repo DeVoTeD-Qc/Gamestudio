@@ -16,7 +16,7 @@ const TUNE = {
   loadoutSlots: 2, squadCap: 3, rally: [3, 5],
   needPlus: 0, closeQuarters: true, pointBlank: true, aim: 'spend',
   // wb-odds2 (head's wb-odds answer a): cover and long range raise the Hit Markers a shot needs (on every step); Expose and Pierce ignore cover
-  coverNeed: 1, coverDmg: 0, longFrom: 2, longNeed: 1, dmgPlus: 0, aimCap: 0,
+  coverNeed: 1, coverDmg: 0, longFrom: 2, longNeed: 1, dmgPlus: 0, aimCap: 0, aimOver: 0, cqCover: 0,
   stSprint: 3, stScout: 3, stAim: 2, alternateFirst: true,
   // wb-pkg1: Spoils (O2), Field Promotion (O3), Hot Drop delivery (O6), Squad Tactics (O1)
   spoils: 3, spoilsSquad: 1, promoteCost: 1, promoteBuy: 1, aiSpoilsFocus: 1.5, overwatchCap: 4, fortifyCap: 6, turretRange: 3,
@@ -544,7 +544,7 @@ function scrap(s, p, iid) {
 // Long range +longNeed at distance longFrom or more (not for melee). They add to every ladder step, like Mark takes away.
 function aimMods(s, p, o = {}) {
   const pl = P(s, p), t = P(s, 1 - p); const Dd = dist(s); const cq = TUNE.closeQuarters && Dd === 0;
-  const tEnv = envAt(s, t.pos); const lv = !cq && tEnv && tEnv.state === 'safe' ? ENVS[tEnv.def].cover : 0;
+  const tEnv = envAt(s, t.pos); const lv = (!cq || TUNE.cqCover) && tEnv && tEnv.state === 'safe' ? ENVS[tEnv.def].cover : 0;
   const ignore = !o.auto && (pl.ignoreCover || pl.expose); const cover = ignore ? 0 : lv;
   const long = !o.melee && Dd >= TUNE.longFrom ? TUNE.longNeed : 0;
   return { cq, coverLv: lv, coverIgnored: ignore && lv > 0 ? (pl.expose ? 'Expose' : 'Pierce') : null, cover, coverNeed: cover * TUNE.coverNeed, coverDmg: cover * TUNE.coverDmg, long, distance: Dd };
@@ -554,12 +554,14 @@ function shotPreview(s, p, gi, commit) {
   const pl = P(s, p), o = P(s, 1 - p); const wid = pl.guns[gi]; if (!wid) return null;
   const W = s.weapons[wid]; const E = eff(s, wid); const d = WEAPONS[W.def];
   const Dd = dist(s); const inBand = Dd >= E.band[0] && Dd <= E.band[1];
-  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, TUNE.aimCap || 99, commit == null ? pl.res.prec : commit | 0));
+  const capC = TUNE.aimCap && !TUNE.aimOver ? TUNE.aimCap : 99;
+  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, capC, commit == null ? pl.res.prec : commit | 0));
+  const over = TUNE.aimCap && TUNE.aimOver ? Math.max(0, c - TUNE.aimCap) : 0;
   const free = d.melee ? 0 : pl.revealPlus;
-  const reveal = c + free;
+  const reveal = c - over + free;
   const am = aimMods(s, p, { melee: d.melee }); const cq = am.cq, cover = am.cover;
   const shift = TUNE.needPlus - pl.nextFire.reqMod + am.coverNeed + am.long;
-  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
+  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn + Math.floor(over * TUNE.aimOver) + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
   const net = dm => Math.max(1, dm - am.coverDmg);
   return { gi, commit: c, free, prec: pl.res.prec, reveal, need, base: E.hit_need, accuracy: pl.nextFire.reqMod, recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover, coverNeed: am.coverNeed, coverLv: am.coverLv, coverIgnored: am.coverIgnored, long: am.long, printedNeed: E.ladder[0][0], cq, damage: E.damage, dmg: net(steps[0][1]),
     steps: steps.map(([h, dm]) => [h, net(dm)]), rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
@@ -761,15 +763,16 @@ function suggestCommit(s, p, gi) {
   const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
   const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus + sp.coverNeed + sp.long), sp.steps[i][1]]) : sp.steps;
   const odds = stepOdds(s, p, sp.steps.concat(later), pool + fr, 300); // one pass, same samples for both ladders
-  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, c + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * dm; }); return e; };
+  const capR = c => TUNE.aimCap ? Math.min(c, TUNE.aimCap) : c; const ovD = c => TUNE.aimCap && TUNE.aimOver ? Math.floor(Math.max(0, c - TUNE.aimCap) * TUNE.aimOver) : 0;
+  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, capR(c) + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * (dm + ovD(c)); }); return e; };
   const EV = [0, 1].map(k => Array.from({ length: pool + 1 }, (_, c) => evOf(c, k))); const memo = {};
   const V = (q, l, first) => { if (l <= 0) return [0, -1]; const key = (q * 16 + l) * 2 + (first ? 1 : 0); if (memo[key]) return memo[key];
     let best = V(q, l - 1, first); // leave one shot unfired
-    for (let c = Math.min(q, TUNE.aimCap || 99); c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
+    for (let c = Math.min(q, TUNE.aimCap && !TUNE.aimOver ? TUNE.aimCap : 99); c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
     return (memo[key] = best); };
   const [total, c] = V(pool, Math.min(sp.left, 6), true);
   if (c < 0) return { commit: 0, ev: 0, p: 0, total: 0 };
-  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, c + fr)][0], total };
+  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, capR(c) + fr)][0], total };
 }
 
 // Threat (O7): the damage you can expect from the rest of this turn with the Precision you have now (the planner's plan, all shots left),
