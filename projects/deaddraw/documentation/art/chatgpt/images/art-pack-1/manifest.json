@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 9,
+  "generated_count": 20,
   "requested_count": 77,
   "images": [
     {
@@ -100,7 +100,8 @@
       "file": "dd_gun_service_pistol.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "d45da3e357d668bb375cd401f634fab01d64c705d9cbc55a9bbbf03fd0305c45"
     },
     {
       "batch": 2,
@@ -109,7 +110,8 @@
       "file": "dd_gun_hunting_rifle.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "67e84ed29c03b895cd97de356f0291d8b14c60d2b4aab6c95e0808d16013c31b"
     },
     {
       "batch": 2,
@@ -118,7 +120,8 @@
       "file": "dd_gun_ratchet_crossbow.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "99a4402a09f9b7944d2e0afc36c7e713d9f3b04538a263b9e79f53b6a7c6dc74"
     },
     {
       "batch": 2,
@@ -127,7 +130,8 @@
       "file": "dd_gun_twin_bore.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "b8070d8c9815e5ab68dd24853fb3f5101e346efb50f1a405dbcb2edb4af4f588"
     },
     {
       "batch": 2,
@@ -136,7 +140,8 @@
       "file": "dd_gun_lever_rifle.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "11f8a26dcaf2bd4b809237fa58bcb4d5814376808d1f45cd4db51eb4f268dd98"
     },
     {
       "batch": 2,
@@ -145,7 +150,8 @@
       "file": "dd_gun_scout_carbine.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "ed6042aa87b85ee2e01ee55f9a28a8b580115851125b39cf7e4ead64058d2f0e"
     },
     {
       "batch": 2,
@@ -154,7 +160,8 @@
       "file": "dd_gun_nail_driver.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "b30259d669ac05b95af2e9dd7dc35f3f20c9c13778d9d17cccdffb07e1493563"
     },
     {
       "batch": 2,
@@ -163,7 +170,8 @@
       "file": "dd_gun_pump_shotgun.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "e5632bad46ea1da458abc49f2be5b1368f7365a147cc696398b7abda89a3e40e"
     },
     {
       "batch": 2,
@@ -172,7 +180,8 @@
       "file": "dd_gun_elephant_gun.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "e93f0c541ae43cf437ba3b7e0ea9391e309aed6e249d596a968d629d8ab38b28"
     },
     {
       "batch": 2,
@@ -181,7 +190,8 @@
       "file": "dd_gun_stovepipe_launcher.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "4644a75fcbb6b63cbe912e9feba38080a43b8e474f62fdc40ea5b47652a1bc84"
     },
     {
       "batch": 2,
@@ -190,7 +200,8 @@
       "file": "dd_gun_alley_sweeper.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "0d4d32d4f70f60339bc0243dabb09da8aa34363d048b0ace0f56270fef998437"
     },
     {
       "batch": 3,
