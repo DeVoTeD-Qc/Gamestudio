@@ -39,7 +39,28 @@ The head said the threat badge looked too much like a shield. The number is both
 | Claw | a disc raked by 1-4 claw slashes | The slashes read weakly at card size and look like a comet tail. |
 | Spike | a jagged splat, 7-13 spikes | Too close to the yellow hit burst; the Lurcher's amber is almost the burst's yellow. |
 
-The screenshot is `dd-ux-v4-shots/strength_variants.png` (scratchpad). All three stay in `scripts/ui/dd_marks.gd` (`StrengthMark.variant`); `STRENGTH_VARIANT = "fang"`.
+The screenshot is `dd-ux-v4-shots/strength_variants.png` (scratchpad). **Replaced in dd-polish5** by the one-circle badge below (the head preferred the plain circle on every number); the fang, claw, spike and burst shapes are gone.
+
+## Number badges (dd-polish5)
+
+Head's note: "I think it looked better when all numbers on all cards had that simple circle as icon." Every card number now uses **one badge**: `NumBadge` in `scripts/ui/dd_marks.gd`. Same shape everywhere: a circle (a pill when the text is wider than 2 digits, e.g. a boss's `6×3` on the map), a 1 px ink hairline, a coloured ring (7.5% of the size, 2-5 px), a fill, the number centred (58% of the height for 1-2 digits, 42% for more). Only the colours change:
+
+| Role | Ring | Fill | Number | Used for |
+|---|---|---|---|---|
+| Hit (`HitBurst`) | ink | yellow `#f2c14e` | ink | gun power, melee weapon power, Bare Hands |
+| Strength (`StrengthMark`) | tier colour: Shambler bone, Lurcher amber, Bruiser orange, Hulk red | blood `#5c1b19` | bone | zombies, bosses, the kills in a gun's sockets, the map's boss numbers |
+| Item | the card kind's accent (medkit green, cover gold) | ink | bone | medkit heal, cover value |
+
+The yellow fill is the only light badge, so hit never reads as an item even next to the gold cover ring. The zombie number stays **attack and toughness**: the zombie tooltip line 1 says "Lurcher · strength 4: its attack and its toughness", the zoom body and the Codex say it too. No extra glyph: the number itself carries the tier for colour-blind players.
+
+Where it appears: street cards, the gun row (hit badge + filled sockets), the melee button, inspect tooltips (44 px), the Codex tiles (zombies, bosses, guns, melee, medkits, cover) and the Glossary. The Glossary opens with **NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT**, one row per badge colour: Hit (yellow), Strength (blood red), Tier (the red badge's ring), Heal (green ring), Cover (gold ring). `STRENGTH_VARIANT` / `BADGE_SHAPE` = `"circle"`.
+
+### Melee equip fix (dd-polish5)
+
+- **Bug:** taking a melee weapon left its card on the street. `dd_feedback.gd _card_fx` had no branch for melee cards, so the ghost tile made for the fly-out was never moved or freed; it sat over the next card (enlarged) until the next tap re-rendered the board. Now TAKE flies it into the melee button (with a pop), SCRAP drops it with the points, and any other kind drops its ghost.
+- **Melee button:** the old single row (burst | MELEE / name / pips) needed more width than the button has on a phone, so the burst slid over the border and the text. Now two rows that always fit: [yellow hit badge | MELEE or ACTIVE, then the use pips or "no pts"], then the weapon's name on its own line (shrinks to fit). The art sits faint behind.
+- Also: the log line read "Pipe Wrench (3) - -2 HP"; now "Lurcher 5: Pipe Wrench (hit 3), -2 HP." (guns too). Map district names wrapped mid-word at 1440x900 ("Groundskeepe/r"): titles now shrink until the longest word fits.
+- QA: `?screen=street&street=K:wrench,Z3,M4` deals exact cards (web smoke query).
 
 ## Motion (the mockup's storyboards)
 

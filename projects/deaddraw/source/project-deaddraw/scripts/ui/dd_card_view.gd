@@ -326,6 +326,10 @@ func _build_district(spec: Dictionary) -> void:
 	var tt: Label = DDUi.label(str(spec.get("title", "")), DDUi.FONT_M, BONE, HORIZONTAL_ALIGNMENT_LEFT, true)
 	_outline(tt, 6)
 	_box.add_child(tt)
+	# dd-polish5: wrap between words only ("Groundskeepe / r" at 1440x900): shrink until the
+	# longest word fits the line
+	tl.resized.connect(func() -> void: fit_words(tl, DDUi.FONT_S, 11))
+	tt.resized.connect(func() -> void: fit_words(tt, DDUi.FONT_M, 12))
 	_add_lines(_box, spec, true, HORIZONTAL_ALIGNMENT_LEFT)
 
 
@@ -423,6 +427,24 @@ func _fit_badge() -> void:
 	_badge_panel.size = Vector2(w, d)
 	_badge_panel.position = Vector2(6, 6)
 	_badge_panel.pivot_offset = _badge_panel.size * 0.5
+
+
+## Shrinks a wrapping label's font (down to `min_size`) until its longest word fits one line.
+static func fit_words(l: Label, base: int, min_size: int) -> void:
+	if l == null or not is_instance_valid(l) or l.size.x <= 0.0:
+		return
+	var font: Font = l.get_theme_font("font")
+	var fs: int = base
+	var words: PackedStringArray = l.text.split(" ", false)
+	var widest: Callable = func(sz: int) -> float:
+		var m: float = 0.0
+		for wd: String in words:
+			m = maxf(m, font.get_string_size(wd, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x)
+		return m
+	while fs > min_size and float(widest.call(fs)) > l.size.x - 2.0:
+		fs -= 1
+	if l.get_theme_font_size("font_size") != fs:
+		l.add_theme_font_size_override("font_size", fs)
 
 
 ## Shrinks a one-line label's font (down to `min_size`) until its text fits its width.
