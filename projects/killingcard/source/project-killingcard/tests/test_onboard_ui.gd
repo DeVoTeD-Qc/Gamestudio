@@ -257,7 +257,8 @@ func test_initiative_chip_says_who_goes_first_and_why() -> void:
 	await _right_click(vp, chip)
 	var insp: Control = m.get_inspector()
 	assert_true(insp.is_open(), "right click opens the initiative inspector")
-	var text: String = "\n".join(insp.find_children("*", "Label", true, false).map(func(l: Label) -> String: return l.text))
+	# kc-text: rules and status are IconText labels (RichTextLabel); read every label's words.
+	var text: String = "\n".join(insp.find_children("*", "", true, false).map(func(l: Node) -> String: return IconText.plain(l)))
 	assert_true(text.contains("Initiative") and text.contains("first"), "inspector says who goes first and why")
 	insp.close()
 	_despawn(vp)

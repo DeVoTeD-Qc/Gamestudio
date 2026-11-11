@@ -182,6 +182,7 @@ func open(info: Dictionary) -> void:
 		_keywords.add_child(row)
 		_add_glossary_link(name_label, id)
 		var text_label: RichTextLabel = _to_rich(null, "KeywordText")
+		text_label.add_theme_color_override(&"default_color", PaperSheet.INK)
 		IconText.fill(text_label, String(k.get("text", "")), ICON_PX, PaperSheet.INK, true, [concept])
 		_keywords.add_child(text_label)
 	_keywords.visible = _keywords.get_child_count() > 0
@@ -330,6 +331,9 @@ func _fit() -> void:
 		grow = clampf(minf((room.y - 2.0 * MARGIN) / base.y, (room.x - 2.0 * MARGIN - info_w - 24.0) / base.x), 1.0, 1.5)
 	_card.pivot_offset = Vector2.ZERO
 	_card.scale = Vector2(grow, grow)
+	# kc-pitch-art: rasterise the grown card's text at its on-screen size (no magnified bitmaps).
+	if _card.has_method(&"set_text_scale"):
+		_card.set_text_scale(grow)
 	_holder.custom_minimum_size = base * grow
 	# The text panel may be as tall as the room under the banner; its body scrolls past that.
 	var info_max: float = room.y - banner_h - 4.0

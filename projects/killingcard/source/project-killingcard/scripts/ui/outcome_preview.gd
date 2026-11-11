@@ -6,7 +6,7 @@
 #       KILLS 2 · LOST 1         +2 UNKNOWN
 #   The numbers come from OutcomeForecast (the real rules engine on a copy of the match) and use
 #   only what the player can see: their own plays and the board. Enemy red dots are never
-#   simulated; the card says "+N UNKNOWN" for them (or "NO RED DOTS"), so a forecast is never
+#   simulated; the card says "+N UNKNOWN" for them (or "NO INCOMING"), so a forecast is never
 #   presented as certain. It recomputes on every redraw of the board (match_screen.gd
 #   snapshot_shown: plays, undo, new round) and hides outside the player's open Deploy, while
 #   the round plays and under the mulligan panel.
@@ -114,7 +114,7 @@ static func card_lines(zone: Dictionary) -> PackedStringArray:
 		"DEAL %d · TAKE %d" % [dealt, taken] if active else "NO FIREFIGHT",
 		String(CONTROL_WORDS.get(zone.get("control", &"empty"), "ENDS OPEN")),
 		"KILLS %d · LOST %d" % [kills, losses] if active else "NO LOSSES",
-		"+%d UNKNOWN" % unknown if unknown > 0 else "NO RED DOTS",
+		"+%d UNKNOWN" % unknown if unknown > 0 else "NO INCOMING",
 	])
 
 

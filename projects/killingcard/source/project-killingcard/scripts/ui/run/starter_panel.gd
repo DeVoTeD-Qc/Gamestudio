@@ -427,7 +427,7 @@ func _deck_tile(card: CardData, count: int) -> Control:
 	b.set_meta(&"id", card.id)
 	b.set_meta(&"count", count)
 	b.custom_minimum_size = _tile_size()
-	b.tooltip_text = "%d x %s · long-press / right-click: rules" % [count, card.display_name]
+	b.tooltip_text = "%d x %s" % [count, card.display_name]
 	var e: Dictionary = {"kind": &"unit" if card.is_unit() else (&"field" if card.is_field() else &"tactic"), "card": card,
 			"id": card.id, "art": card.id, "arts": BannerArtDB.alt_arts(card.id), "name": card.display_name}
 	var info: Callable = func() -> void: _inspector.open(load("res://scripts/ui/codex/codex_view.gd").call(&"inspector_info", e))

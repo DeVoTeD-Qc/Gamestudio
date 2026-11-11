@@ -57,6 +57,9 @@ var compact: bool = false
 var _pulse: float = 0.0
 var _time: float = 0.0
 var _skip_armed_until: int = 0
+## kc-text: the step text drawn with each concept's icon inline (IconText); the Body Label under it
+## keeps the words and the layout, with transparent ink.
+var _body_rich: RichTextLabel = null
 
 
 func _ready() -> void:
@@ -66,6 +69,16 @@ func _ready() -> void:
 	_replay.pressed.connect(func() -> void: replay_pressed.emit())
 	_done.pressed.connect(func() -> void: done_pressed.emit())
 	_end_panel.hide()
+	_body_rich = RichTextLabel.new()
+	_body_rich.name = "BodyRich"
+	IconText.setup(_body_rich)
+	_body_rich.fit_content = false
+	_body_rich.clip_contents = false
+	_body_rich.add_theme_font_override(&"normal_font", _body.get_theme_font(&"font"))
+	_body_rich.add_theme_font_size_override(&"normal_font_size", _body.get_theme_font_size(&"font_size"))
+	_body_rich.add_theme_color_override(&"default_color", _body.get_theme_color(&"font_color"))
+	_body.add_child(_body_rich)
+	_body_rich.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 func _process(delta: float) -> void:
@@ -84,6 +97,9 @@ func show_step(title: String, text: String, number: int, total: int, with_next: 
 	_title.text = title
 	_count.text = "%d / %d" % [number, total]
 	_body.text = text
+	if _body_rich != null:
+		IconText.fill(_body_rich, text, int(_body.get_theme_font_size(&"font_size") * 1.05), _body.get_theme_color(&"font_color"))
+		_body.self_modulate = Color(1, 1, 1, 0)
 	_next.visible = with_next
 	var w: float = CARD_WIDTH_COMPACT if compact else CARD_WIDTH
 	_body.custom_minimum_size.x = w - 40.0

@@ -192,3 +192,8 @@ func _pip(c: Vector2, r: float, col: Color, fill: float) -> void:
 		draw_colored_polygon(PackedVector2Array([pts[0], pts[1], pts[2], pts[3]]), col)
 	pts.append(pts[0])
 	draw_polyline(pts, col, 2.0, true)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

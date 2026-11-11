@@ -1,7 +1,7 @@
 card,id,title,kind,animated,mastery_family,tier_rank,family,source_file,why
 rifleman,kc_mw3_banner_waves,Banner Waves,unit,yes,,,honors,BannerWaves_CallingCard_MWIII.gif,operator with an assault rifle
 rifleman,kc_mw3_crosshairs,Crosshairs,unit,yes,,,honors,Crosshairs_CallingCard_MWIII.gif,operator with an assault rifle
-rifleman,kc_mw3_imbued,Imbued,unit,no,,,horde,Imbued_CallingCard_MWIII.png,operator with an assault rifle
+rifleman,kc_mw3_harvesting_season,Harvesting Season,unit,no,,,horde,HarvestingSeason_CallingCard_MWIII.png,operator in a gas mask with a rifle in the swamp (kc-pitch-art: replaces a gun showcase)
 rifleman,kc_mw3_god_ray,God Ray,unit,no,,,operators,GodRay_CallingCard_MWIII.png,operator with an assault rifle
 rifleman,kc_mw3_beta_tester,Beta Tester,unit,yes,,,standard,BetaTester_CallingCard_MWIII.gif,operator with an assault rifle
 rifleman,kc_mw3_friends_dont_let_friends_fire_alone,Friends Don't Let Friends Fire Alone,unit,no,,,honors,FriendsDontLetFriendsFireAlone_CallingCard_MWIII.png,operator with an assault rifle
@@ -15,7 +15,7 @@ rifleman,kc_mw3_swamp_guys,Swamp Guys,unit,no,,,operators,SwampGuys_CallingCard_
 point_man,kc_mw3_smoking_guns,Smoking Guns,unit,yes,,,honors,SmokingGuns_CallingCard_MWIII.gif,"operator with an SMG or pistol, close in"
 point_man,kc_mw3_non_business,Non-Business,unit,no,,,honors,NonBusiness_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
 point_man,kc_mw3_close_quarters,Close Quarters,unit,no,,,honors,CloseQuarters_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-point_man,kc_mw3_dual_sm_gs,Dual SMGs,unit,no,,,honors,DualSMGs_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
+point_man,kc_mw3_snow_speed,Snow Speed,unit,no,,,honors,SnowSpeed_CallingCard_MWIII.png,"operator rushing in on a snowmobile, firing (kc-pitch-art: replaces a gun showcase)"
 point_man,kc_mw3_nades_and_guns,Nades And Guns,unit,no,,,honors,NadesAndGuns_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
 point_man,kc_mw3_bang_2,Bang!,unit,no,,,honors,Bang_CallingCard_MWIII.png,"operator with an SMG or pistol, close in"
 point_man,kc_mw3_standoff,Standoff,unit,no,,,honors,Standoff_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
@@ -26,11 +26,11 @@ flanker,kc_mw3_operation_azure,Operation Azure,unit,no,,,operators,OperationAzur
 flanker,kc_mw3_cant_catch_me,Can't Catch Me,unit,yes,,,operators,CantCatchMe_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
 flanker,kc_mw3_operator_infil,Operator Infil,unit,yes,,,operators,OperatorInfil_CallingCard_MWIII.gif,stealthy operator moving or infiltrating
 flanker,kc_mw3_gift_giver,Gift Giver,unit,no,,,operators,GiftGiver_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
-gunner,kc_mw3_pulemyot762_mastery_gilded,Pulemyot 762 Mastery: Gilded,unit,yes,,,mastery,Pulemyot762_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_dg58_lsw_mastery_gilded,DG-58 LSW Mastery: Gilded,unit,yes,,,mastery,DG58LSW_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_holger26_mastery_gilded,Holger 26 Mastery: Gilded,unit,yes,,,mastery,Holger26_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_bruen_mk9_mastery_gilded,Bruen Mk9 Mastery: Gilded,unit,yes,,,mastery,BruenMk9_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
-gunner,kc_mw3_taq_eradicator_mastery_gilded,TAQ Eradicator Mastery: Gilded,unit,yes,,,mastery,TAQEradicator_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1)
+gunner,kc_mw3_unleashing_chaos,Unleashing Chaos,unit,no,,,mastery,UnleashingChaos_CallingCard_MWIII.png,gunner firing a belt-fed machine gun; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+gunner,kc_mw3_heavy_barrage,Heavy Barrage,unit,no,,,mastery,HeavyBarrage_CallingCard_MWIII.png,gunner with an LMG over an ammo crate; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+gunner,kc_mw3_suppression,Suppression,unit,no,,,mastery,Suppression_CallingCard_MWIII.png,gunner laying suppressing fire; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+gunner,kc_mw3_blaze_of_glory,Blaze Of Glory,unit,no,,,mastery,BlazeOfGlory_CallingCard_MWIII.png,gunner firing from the hip; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+gunner,kc_mw3_lawn_mowing,Lawn Mowing,unit,no,,,mastery,LawnMowing_CallingCard_MWIII.png,gunner sweeping a rooftop; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
 gunner,kc_mw3_lead_rain,Lead Rain,unit,yes,,,operators,LeadRain_CallingCard_MWIII.gif,"Gunner alternate: Spec Ops (Operators family), operator with an LMG (kc-art-traits)"
 gunner,kc_mw3_download_complete,Download Complete,unit,no,,,operators,DownloadComplete_CallingCard_MWIII.png,"Gunner alternate: Spec Ops (Operators family), operator-bundle robot (kc-art-traits)"
 marksman,kc_mw3_battle_highlights,Battle Highlights,unit,no,,,operators,BattleHighlights_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
@@ -39,8 +39,8 @@ marksman,kc_mw3_trophy_collector,Trophy Collector,unit,no,,,operators,TrophyColl
 marksman,kc_mw3_winters_silence,Winter's Silence,unit,no,,,operators,WintersSilence_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
 marksman,kc_mw3_snow_snipers,Snow Snipers,unit,no,,,honors,SnowSnipers_CallingCard_MWIII.png,sniper rifle / scope
 marksman,kc_mw3_art_of_disguise,Art Of Disguise,unit,yes,,,operators,ArtOfDisguise_CallingCard_MWIII.gif,sniper rifle / scope
-marksman,kc_mw3_kvd_enforcer_mastery_gilded,KVD Enforcer Mastery: Gilded,unit,yes,,,mastery,KVDEnforcer_MasteryGilded_CallingCard_MWIII.gif,"Marksman alternate: Heavy (Mastery family), marksman rifle mastery (kc-art-traits)"
-marksman,kc_mw3_mcw68_mastery_gilded,MCW 6.8 Mastery: Gilded,unit,yes,,,mastery,MCW68_MasteryGilded_CallingCard_MWIII.gif,"Marksman alternate: Heavy (Mastery family), marksman rifle mastery (kc-art-traits)"
+marksman,kc_mw3_long_distance_laser,Long Distance Laser,unit,no,,,mastery,LongDistanceLaser_CallingCard_MWIII.png,sniper on a ridge with a laser sight; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+marksman,kc_mw3_message_inbound,Message Inbound,unit,no,,,mastery,MessageInbound_CallingCard_MWIII.png,sniper behind a big-bore rifle in the desert; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
 halek_wren,kc_mw3_big_game_hunter,Big Game Hunter,unit,no,,,honors,BigGameHunter_CallingCard_MWIII.png,"lone sniper hunting (Ace, sniper elite)"
 shieldman,kc_mw3_keeping_these,Keeping These,unit,yes,,,honors,KeepingThese_CallingCard_MWIII.gif,riot shield / armoured defender (Protector)
 shieldman,kc_mw3_shields_above_all,Shields Above All,unit,no,,,honors,ShieldsAboveAll_CallingCard_MWIII.png,riot shield / armoured defender (Protector)
@@ -50,12 +50,12 @@ breacher,kc_mw3_broken_walls,Broken Walls,unit,yes,,,honors,BrokenWalls_CallingC
 breacher,kc_mw3_lethal_patience,Lethal Patience,unit,no,,,honors,LethalPatience_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
 breacher,kc_mw3_behind_the_door,Behind The Door,unit,no,,,honors,BehindTheDoor_CallingCard_MWIII.png,shotgun at close quarters / room entry
 breacher,kc_mw3_fast_acting,Fast Acting,unit,no,,,honors,FastActing_CallingCard_MWIII.png,Vanguard trait: prestige / challenge card (kc-syn S1)
-breacher,kc_mw3_lockwood680_mastery_gilded,Lockwood 680 Mastery: Gilded,unit,yes,,,mastery,Lockwood680_MasteryGilded_CallingCard_MWIII.gif,"Breacher alternate: Heavy (Mastery family), shotgun mastery (kc-art-traits)"
-breacher,kc_mw3_haymaker_mastery_gilded,Haymaker Mastery: Gilded,unit,yes,,,mastery,Haymaker_MasteryGilded_CallingCard_MWIII.gif,"Breacher alternate: Heavy (Mastery family), shotgun mastery (kc-art-traits)"
-demolitions_expert,kc_mw3_rgl80_mastery_gilded,RGL-80 Mastery: Gilded,unit,yes,,,mastery,RGL80_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_stormender_mastery_gilded,Stormender Mastery: Gilded,unit,yes,,,mastery,Stormender_MasteryGilded_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_pila_mastery_golden_ivory,PILA Mastery: Golden Ivory,unit,yes,,,mastery,PILA_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
-demolitions_expert,kc_mw3_strela_p_mastery_golden_ivory,Strela-P Mastery: Golden Ivory,unit,yes,,,mastery,StrelaP_MasteryGoldenIvory_CallingCard_MWIII.gif,Heavy trait: weapon-mastery card of a launcher (kc-syn S1)
+breacher,kc_mw3_clearer_vision,Clearer Vision,unit,no,,,mastery,ClearerVision_CallingCard_MWIII.png,operator with a shotgun at close range; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+breacher,kc_mw3_cqc,CQC (Close Quarters Combat),unit,no,,,mastery,CQC_CallingCard_MWIII.png,close-quarters entry team; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+demolitions_expert,kc_mw3_did_i_hit_it,Did I Hit It!?,unit,no,,,mastery,DidIHitIt_CallingCard_MWIII.png,launcher shot downing an aircraft; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+demolitions_expert,kc_mw3_armor_crusher,Armor Crusher,unit,no,,,mastery,ArmorCrusher_CallingCard_MWIII.png,"demolitions man with a detonator, tank exploding; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)"
+demolitions_expert,kc_mw3_out_with_a_bang,Out With A Bang,unit,no,,,mastery,OutWithABang_CallingCard_MWIII.png,demolitions man with a charge; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
+demolitions_expert,kc_mw3_escape_artist,Escape Artist,unit,no,,,mastery,EscapeArtist_CallingCard_MWIII.png,operator running from an explosion; Heavy look (kc-pitch-art: no weapon cards off Operators; family kept as mastery so the chassis keeps its Heavy option)
 demolitions_expert,kc_mw3_objective_destroyed,Objective Destroyed,unit,no,,,horde,ObjectiveDestroyed_CallingCard_MWIII.png,"Demolitions Expert alternate: Undead (Horde family), explosion (kc-art-traits)"
 demolitions_expert,kc_mw3_boom_and_gloom,Boom And Gloom,unit,no,,,horde,BoomAndGloom_CallingCard_MWIII.png,"Demolitions Expert alternate: Undead (Horde family), explosion (kc-art-traits)"
 recon_specialist,kc_mw3_dark_patrol,Dark Patrol,unit,no,,,operators,DarkPatrol_CallingCard_MWIII.png,Spec Ops trait: operator-bundle card (kc-syn S1)
@@ -133,22 +133,22 @@ si_trooper,kc_mw3_helo_support,Helo Support,unit,no,,,operators,HeloSupport_Call
 si_sergeant,kc_mw3_landing_party,Landing Party,unit,no,,,operators,LandingParty_CallingCard_MWIII.png,kc-mw3-cards starter: squad leader bringing a fire team off the helo (Sergeant)
 si_armored,kc_mw3_grid_and_grit,Grid And Grit,unit,no,,,operators,GridAndGrit_CallingCard_MWIII.png,"kc-mw3-cards starter: helmeted, plated soldier (Armored Trooper)"
 si_ammo_resupply,kc_mw3_hand_off,Hand-Off,tactic,no,,,honors,HandOff_CallingCard_MWIII.png,kc-mw3-cards starter: an ammo box handed over (Standard Issue Ammo Resupply)
-kc_wip_private_1,kc_mw3_mtz556_mastery_gilded,MTZ-556 Mastery: Gilded,unit,yes,,,mastery,MTZ556_MasteryGilded_CallingCard_MWIII.gif,"kc-mw3-cards Wip: Private ladder I (one rifle, four finishes)"
-kc_wip_private_2,kc_mw3_mtz556_mastery_forged,MTZ-556 Mastery: Forged,unit,yes,,,mastery,MTZ556_MasteryForged_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder II
-kc_wip_private_3,kc_mw3_mtz556_mastery_priceless,MTZ-556 Mastery: Priceless,unit,yes,,,mastery,MTZ556_MasteryPriceless_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder III
-kc_wip_private_4,kc_mw3_mtz556_mastery_interstellar,MTZ-556 Mastery: Interstellar,unit,yes,,,mastery,MTZ556_MasteryInterstellar_CallingCard_MWIII.gif,kc-mw3-cards Wip: Private ladder IV
+kc_wip_private_1,kc_mw3_anything_that_moves_private,Anything That Moves,unit,no,,,operators,AnythingThatMoves_CallingCard_MWIII.png,"the pitch starter's earlier art, back on Private (head, kc-pitch-art); shared with the tutorial's si_grunt"
+kc_wip_private_2,kc_mw3_helo_support_private,Helo Support,unit,no,,,operators,HeloSupport_CallingCard_MWIII.png,"the pitch starter's earlier art, back on Private (head, kc-pitch-art); shared with the tutorial's si_trooper"
+kc_wip_private_3,kc_mw3_landing_party_private,Landing Party,unit,no,,,operators,LandingParty_CallingCard_MWIII.png,"the pitch starter's earlier art, back on Private (head, kc-pitch-art); shared with the tutorial's si_sergeant"
+kc_wip_private_4,kc_mw3_grid_and_grit_private,Grid And Grit,unit,no,,,operators,GridAndGrit_CallingCard_MWIII.png,"the pitch starter's earlier art, back on Private (head, kc-pitch-art); shared with the tutorial's si_armored"
 kc_wip_scout,kc_mw3_low_profile,Low Profile,unit,no,,,honors,LowProfile_CallingCard_MWIII.png,"kc-mw3-cards Wip: ghillie scout lying low (Scout, arrives front)"
 kc_wip_medic,kc_mw3_useful,Useful,unit,no,,,horde,Useful_CallingCard_MWIII.png,"kc-mw3-cards Wip: stim / heal (Medic, Patch)"
-kc_wip_sharpshooter,kc_mw3_scoped_and_ready,Scoped And Ready,unit,no,,,honors,ScopedAndReady_CallingCard_MWIII.png,"kc-mw3-cards Wip: scope close-up (Sharpshooter, First Shot)"
+kc_wip_sharpshooter,kc_mw3_glint,Glint,unit,no,,,horde,Glint_CallingCard_MWIII.png,masked sniper aiming (kc-pitch-art: replaces a scope close-up)
 kc_wip_flag_bearer,kc_mw3_so_it_begins,So It Begins,unit,no,,,horde,SoItBegins_CallingCard_MWIII.png,kc-mw3-cards Wip: a war banner flying over the fire (Flag Bearer)
 kc_wip_hacker,kc_mw3_pet_drones,Pet Drones,unit,yes,,,honors,PetDrones_CallingCard_MWIII.gif,kc-mw3-cards Wip: operator steering a drone swarm (Hacker)
 kc_wip_kamikaze,kc_mw3_pin_pulled,Pin Pulled,unit,no,,,horde,PinPulled_CallingCard_MWIII.png,"kc-mw3-cards Wip: pin pulled, blast behind (Kamikaze, On Down damage)"
 kc_wip_runner,kc_mw3_damn_fast,Damn Fast,unit,no,,,horde,DamnFast_CallingCard_MWIII.png,"kc-mw3-cards Wip: speed-blur sprint (Runner, Agile)"
 kc_wip_sniper,kc_mw3_ghillie_guy,Ghillie Guy,unit,no,,,standard,GhillieGuy_CallingCard_MWIII.png,"kc-mw3-cards Wip: ghillie sniper with a bolt rifle (Sniper, Pick)"
-kc_wip_juggernaut,kc_mw3_all_the_guns,All The Guns,unit,no,,,honors,AllTheGuns_CallingCard_MWIII.png,kc-mw3-cards Wip: skull-masked heavy with miniguns and belts (Juggernaut)
-kc_wip_riot_shield,kc_mw3_riot_shield_mastery_golden_ivory,Riot Shield Mastery: Golden Ivory,unit,yes,,,mastery,RiotShield_MasteryGoldenIvory_CallingCard_MWIII.gif,"kc-mw3-cards Wip: a riot shield (classifier review=yes; cleared by eye: plain shield, no IP)"
+kc_wip_juggernaut,kc_mw3_last_man_standing,Last Man Standing,unit,yes,,,operators,LastManStanding_CallingCard_MWIII.gif,armoured juggernaut in a burning ruin (kc-pitch-art: replaces a gun showcase)
+kc_wip_riot_shield,kc_mw3_move_as_one,Move As One,unit,yes,,,operators,MoveAsOne_CallingCard_MWIII.gif,riot-shield squad moving as one (kc-pitch-art: replaces a weapon-mastery card)
 kc_wip_fast_learner,kc_mw3_trained_and_ready,Trained And Ready,unit,no,,,operators,TrainedAndReady_CallingCard_MWIII.png,kc-mw3-cards Wip: training dummies on the range (Fast Learner)
-kc_wip_laser_gunner,kc_mw3_too_many_lasers,Too Many Lasers?,unit,no,,,honors,TooManyLasers_CallingCard_MWIII.png,kc-mw3-cards Wip: rifle firing a fan of laser beams (Laser Gunner)
+kc_wip_laser_gunner,kc_mw3_laser_grid,Laser Grid,unit,yes,,,honors,LaserGrid_CallingCard_MWIII.gif,operator in a laser grid (kc-pitch-art: replaces a gun close-up)
 kc_wip_war_shout,kc_mw3_revolution_rising,Revolution Rising,tactic,no,,,operators,RevolutionRising_CallingCard_MWIII.png,kc-mw3-cards Wip: a crowd raising arms before the charge (War Shout)
 kc_wip_barrage,kc_mw3_warships,Warships,tactic,no,,,operators,Warships_CallingCard_MWIII.png,kc-mw3-cards Wip: ship guns firing a broadside (Barrage)
 kc_wip_premium_loadout,kc_mw3_gearing_up,Gearing Up,tactic,no,,,honors,GearingUp_CallingCard_MWIII.png,kc-mw3-cards Wip: an operator picking kit off the armory wall (Premium Loadout)

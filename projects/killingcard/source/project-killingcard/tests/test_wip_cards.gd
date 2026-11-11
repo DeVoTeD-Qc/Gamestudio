@@ -149,7 +149,7 @@ func test_keyword_names_and_inspect_texts_in_plain_words() -> void:
 		if not found.is_empty():
 			assert_true(String(found["text"]).length() > 20, "%s: %s has a rule text" % [key, want[key]])
 	var sup: Array[Dictionary] = CardInfo.keywords(_card("riot_shield")).filter(func(k: Dictionary) -> bool: return k["id"] == &"suppress")
-	assert_eq([sup[0]["name"], String(sup[0]["text"]).contains("-1 Firepower")], ["Suppress 1", true], "Suppress N in the inspector")
+	assert_eq([sup[0]["name"], String(sup[0]["text"]).contains("-1 FP")], ["Suppress 1", true], "Suppress N in the inspector")
 	assert_true(String(CardInfo.keywords(_card("laser_gunner"))[0]["text"]).contains("your own units"), "Beam says it hits friends")
 	# The Codex glossary lists the new words (it reads CardInfo.KEYWORD_RULES), each with an icon.
 	var keys: Array = Glossary.entries().map(func(e: Dictionary) -> StringName: return e["key"])

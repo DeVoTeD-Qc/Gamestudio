@@ -95,7 +95,124 @@ static func team_of(side: StringName) -> StringName:
 	return &"enemy" if side == &"enemy" or side == &"rival" else &"player"
 
 
+## kc-pitch-art (head: "an easy way to distinguish Operators from other cards in the deck"): THE Operator
+## mark, drawn the same way by every card view (hand, board, inspector, deck builder, Codex): a brass
+## frame (art-direction §3: brass = the Operator, never on other cards) and a solid brass tab at the
+## top-left of the art: a double rank chevron and the word OPERATOR (chevron only when there is no
+## room). It sits on the art, so it reads on a full-bleed calling card as well as on painted art.
+const OP_BRASS: Color = Color("#C9A227")
+const OP_BRASS_LIGHT: Color = Color("#F3D36B")
+const OP_BRASS_DARK: Color = Color("#5A4512")
+const OP_INK: Color = Color("#1E1A10")
+const OP_WORD: String = "OPERATOR"
+
+
+## The tab's size at height h (word: with the OPERATOR word).
+static func operator_tab_size(h: float, word: bool = true) -> Vector2:
+	var cw: float = roundf(h * 0.9)
+	var w: float = cw + roundf(h * 0.5)
+	if word:
+		var fs: int = maxi(8, int(roundf(h * 0.7)))
+		w += TITLE_FONT.get_string_size(OP_WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + roundf(h * 0.15)
+	return Vector2(w, h)
+
+
+## Draws the brass tab with its top-left at pos, height h. word: false = the chevron badge only;
+## max_w > 0 drops the word when the tab would be wider. Returns the tab's rect.
+static func draw_operator_tab(ci: CanvasItem, pos: Vector2, h: float, word: bool = true, max_w: float = -1.0) -> Rect2:
+	h = roundf(maxf(10.0, h))
+	if word and max_w > 0.0 and operator_tab_size(h, true).x > max_w:
+		word = false
+	var sz: Vector2 = operator_tab_size(h, word)
+	var r: Rect2 = Rect2(pos, sz)
+	var notch: float = roundf(h * 0.32)
+	# A rank tab: square left end, chevron-cut right end; dark rim, light top bevel.
+	var body: PackedVector2Array = [r.position, Vector2(r.end.x - notch, r.position.y), Vector2(r.end.x, r.position.y + h * 0.5),
+			Vector2(r.end.x - notch, r.end.y), Vector2(r.position.x, r.end.y)]
+	var rim: PackedVector2Array = [r.position - Vector2(1, 1), Vector2(r.end.x - notch + 0.5, r.position.y - 1), Vector2(r.end.x + 1.5, r.position.y + h * 0.5),
+			Vector2(r.end.x - notch + 0.5, r.end.y + 1), Vector2(r.position.x - 1, r.end.y + 1)]
+	ci.draw_colored_polygon(rim, OP_BRASS_DARK)
+	ci.draw_colored_polygon(body, OP_BRASS)
+	ci.draw_line(r.position + Vector2(1, 1), Vector2(r.end.x - notch, r.position.y + 1), OP_BRASS_LIGHT, maxf(1.0, roundf(h * 0.07)))
+	# The double chevron (pointing up: rank).
+	var cw: float = roundf(h * 0.9)
+	var cx: float = r.position.x + roundf(h * 0.18) + cw * 0.5
+	var lw: float = maxf(1.5, h * 0.13)
+	for i: int in 2:
+		var y: float = r.position.y + h * (0.46 + 0.26 * i)
+		ci.draw_polyline(PackedVector2Array([Vector2(cx - cw * 0.36, y), Vector2(cx, y - h * 0.24), Vector2(cx + cw * 0.36, y)]), OP_INK, lw, true)
+	if word:
+		var fs: int = maxi(8, int(roundf(h * 0.7)))
+		var f: Font = sharp_font(TITLE_FONT, text_os_of(ci))
+		var tx: float = r.position.x + roundf(h * 0.18) + cw + roundf(h * 0.1)
+		var ty: float = r.position.y + (h + f.get_ascent(fs) - f.get_descent(fs)) * 0.5
+		ci.draw_string(f, Vector2(tx, ty), OP_WORD, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, OP_INK)
+	return r
+
+
+## The brass frame around rect r: a w px brass rim with a 1 px dark line inside it.
+static func draw_operator_frame(ci: CanvasItem, r: Rect2, w: float = 3.0) -> void:
+	w = maxf(2.0, roundf(w))
+	ci.draw_rect(r.grow(-w * 0.5), OP_BRASS, false, w)
+	ci.draw_rect(r.grow(-w - 0.5), Color(OP_BRASS_DARK, 0.9), false, 1.0)
+
+
+## kc-pitch-art (blur fix): Godot 4.4 rasterises glyphs at the window's font oversampling and ignores
+## a Control's own scale, so text on a card shown under scale k > 1 (the inspector's "pulled into the
+## light" grow) was a magnified bitmap. sharp_font() returns a copy of the font rasterised at
+## oversampling os (cached per font and os; os <= 0 returns the font unchanged).
+static var _sharp_cache: Dictionary = {}
+## Instance id of a sharp copy -> the font it copies.
+static var _sharp_plain: Dictionary = {}
+
+
+## The shared font behind a sharp copy (any other font is returned as is).
+static func plain_font(f: Font) -> Font:
+	if f == null:
+		return f
+	return _sharp_plain.get(f.get_instance_id(), f)
+
+
+static func sharp_font(f: Font, os: float) -> Font:
+	f = plain_font(f)
+	if f == null or os <= 0.0:
+		return f
+	var key: String = "%d@%.3f" % [f.get_instance_id(), os]
+	if _sharp_cache.has(key):
+		return _sharp_cache[key]
+	var out: Font = f
+	if f is FontFile:
+		var ff: FontFile = (f as FontFile).duplicate() as FontFile
+		ff.oversampling = os
+		out = ff
+	elif f is FontVariation:
+		var fv: FontVariation = (f as FontVariation).duplicate() as FontVariation
+		fv.base_font = sharp_font(fv.base_font, os)
+		var fb: Array[Font] = []
+		for x: Font in fv.fallbacks:
+			fb.append(sharp_font(x, os))
+		fv.fallbacks = fb
+		out = fv
+	_sharp_cache[key] = out
+	_sharp_plain[out.get_instance_id()] = f
+	return out
+
+
+## The text oversampling a canvas item asks for: the nearest "text_os" meta on it or its parents
+## (CardView.set_text_scale sets it), 0 = the global one.
+static func text_os_of(ci: CanvasItem) -> float:
+	var n: Node = ci
+	for i: int in 4:
+		if n == null:
+			break
+		if n.has_meta(&"text_os"):
+			return float(n.get_meta(&"text_os"))
+		n = n.get_parent()
+	return 0.0
+
+
 static func _text_center(ci: CanvasItem, r: Rect2, text: String, fs: int, c: Color, font: Font = NUM_FONT, outline: int = 0) -> void:
+	font = sharp_font(font, text_os_of(ci))
 	var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var pos: Vector2 = Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
 	if outline > 0:

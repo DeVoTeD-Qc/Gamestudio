@@ -128,7 +128,7 @@ func _gen() -> void:
 		"Pick. Its eliminations give +1 streak.", {"is_elite": true, "pick": true},
 		[fx(T.ON_ELIMINATE, K.STREAK_BONUS, TG.OWNER, Z.ANY, 1)])
 	var callout := card("callout", "Callout", DataEnums.CardType.TACTIC, 0,
-		"Resolves immediately: reveal incoming enemy cards in a column. Your first unit to arrive there gets +1 FP.",
+		"Resolves immediately: reveal incoming enemy cards in a column. Your first unit there gets +1 FP.",
 		[fx(T.IMMEDIATE, K.REVEAL_RED_DOTS, TG.OWNER, Z.CHOSEN_ZONE),
 		 fx(T.IMMEDIATE, K.MODIFY_FIREPOWER, TG.NEXT_FRIENDLY_ARRIVING, Z.CHOSEN_ZONE, 1, {"duration_rounds": 1})])
 	var ammo := card("ammo_resupply", "Ammo Resupply", DataEnums.CardType.TACTIC, 1, "Resolves immediately: draw 2.",
@@ -149,7 +149,7 @@ func _gen() -> void:
 	# --- Fields (CardType.EQUIPMENT; KillingCard field-cards.md §4, kc-field-impl) ---------
 	var FIELD: int = DataEnums.CARD_TYPE_FIELD
 	var tripwire := card("tripwire_charge", "Tripwire Charge", FIELD, 2,
-		"Hidden. The next enemy unit to arrive here takes 3 damage. Then it's gone.",
+		"Hidden. The next enemy unit to arrive in this column takes 3 damage. Then it's gone.",
 		[fx(T.ON_ENEMY_ARRIVE, K.DAMAGE, TG.ARRIVING_ENEMY, Z.THIS_ZONE, 3)],
 		{"hidden": true, "consumed_on_trigger": true})
 	var comms := card("comms_relay", "Comms Relay", FIELD, 2,
@@ -159,19 +159,19 @@ func _gen() -> void:
 		"Each round: reveal incoming enemy cards in this column.",
 		[fx(T.END_OF_ROUND, K.REVEAL_RED_DOTS, TG.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
 	var mortar_pit := card("mortar_pit", "Mortar Pit", FIELD, 3,
-		"End of round: deal 1 damage to the enemy front unit here.",
+		"End of round: deal 1 damage to the enemy front unit in this column.",
 		[fx(T.END_OF_ROUND, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var bulwark := card("bulwark", "Bulwark", FIELD, 3,
-		"Your front unit here gets Cover 1.",
+		"Your front unit in this column gets Cover 1.",
 		[fx(T.PASSIVE, K.GRANT_COVER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var war_standard := card("war_standard", "War Standard", FIELD, 3,
-		"Your front unit here gets +1 FP.",
+		"Your front unit in this column gets +1 FP.",
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var sniper_perch := card("sniper_perch", "Sniper Perch", FIELD, 2,
-		"Your Sniper units here get +1 FP.",
+		"Your Sniper units in this column get +1 FP.",
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.ALL_FRIENDLIES, Z.THIS_ZONE, 1, {"target_class": W.SNIPER})])
 	var aid_station := card("aid_station", "Aid Station", FIELD, 2,
-		"End of round: your most damaged unit here heals 1 Armor.",
+		"End of round: your most damaged unit in this column heals 1 Armor.",
 		[fx(T.END_OF_ROUND, K.HEAL, TG.MOST_DAMAGED_FRIENDLY, Z.THIS_ZONE, 1)])
 
 	# --- Loadout -------------------------------------------------------------

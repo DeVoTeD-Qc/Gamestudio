@@ -581,7 +581,7 @@ func _build() -> void:
 	_glossary_button = _button("GLOSSARY", &"HudButton")
 	_glossary_button.name = "GlossaryButton"
 	_glossary_button.custom_minimum_size.x = 150
-	_glossary_button.tooltip_text = "Every keyword, synergy icon and stat mark in plain words"
+	_glossary_button.tooltip_text = "Every keyword and icon, explained"
 	_glossary_button.pressed.connect(func() -> void: open_glossary())
 	_top.add_child(_glossary_button)
 	# kc-ui-wire2: kit icons on BACK and GLOSSARY (none without the kit).
@@ -707,7 +707,7 @@ func _make_tile(e: Dictionary) -> Control:
 	var finish: StringName = finish_of(e, owned, found)
 	b.set_meta(&"owned", owned)
 	b.set_meta(&"finish", finish)
-	b.tooltip_text = "%s · %s · tap: %s · long-press / right-click: rules" % [String(e["name"]),
+	b.tooltip_text = "%s · %s · tap: %s" % [String(e["name"]),
 			("owned · %s finish" % MasteryBands.display_name(finish)) if owned else "not found yet",
 			"its %d arts (%d found)" % [arts.size(), found] if arts.size() > 1 else "rules"]
 	_wire_press(b, tap_entry.bind(e), open_entry.bind(e, &""))
@@ -1008,7 +1008,7 @@ func _make_art_tile(art: StringName, _equipped: bool, selected: bool) -> Control
 	b.set_meta(&"found", found)
 	var sub: String = BannerArtDB.subname(art)
 	var gives: String = gives_text(card, art)
-	b.tooltip_text = "%s%s · %s · tap: preview · long-press / right-click: rules" % [sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME,
+	b.tooltip_text = "%s%s · %s · tap: preview" % [sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME,
 			(" · " + gives.capitalize()) if gives != "" else "", "found" if found else "not found yet"]
 	_wire_press(b, select_art.bind(art), open_entry.bind(art_entry, art))
 	var entry: Dictionary = _card_entry(art_entry, art)

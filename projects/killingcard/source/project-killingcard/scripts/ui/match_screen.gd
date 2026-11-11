@@ -918,7 +918,7 @@ func _setup_dock() -> void:
 	sb.border_width_bottom = 2
 	_dock.add_theme_stylebox_override(&"panel", sb)
 	_dock.visible = false
-	_dock.tooltip_text = "The selected card: tap it (or CANCEL) to put it back; long press for its rules"
+	_dock.tooltip_text = "Selected card: tap to put it back"
 	# The dock IS the selected card: a tap on it = "tap the card again" (cancel); long press = rules.
 	var g: RefCounted = PressGesture.new(_dock)
 	g.drag_enabled = false
@@ -939,7 +939,7 @@ func _setup_dock() -> void:
 	_dock_cancel.name = "DockCancel"
 	_dock_cancel.text = "CANCEL"
 	_dock_cancel.theme_type_variation = &"HudButton"
-	_dock_cancel.tooltip_text = "Put the card back (or tap it again, or the empty board)"
+	_dock_cancel.tooltip_text = "Put the card back"
 	_dock_cancel.focus_mode = Control.FOCUS_ALL
 	_dock_cancel.add_to_group(&"tap_target")
 	_dock_cancel.pressed.connect(func() -> void: dock_cancel_pressed.emit())

@@ -48,7 +48,7 @@ const TERRAIN: Dictionary = {
 	&"smoke": ["Smoke", "No Pick or Flank here: every shot hits the front unit."],
 	&"dust_storm": ["Dust Storm", "No First Shot here."],
 	&"breach_point": ["Breach Point", "Every unit here has Pierce."],
-	&"floodlights": ["Floodlights", "Red dots here are shown face-up to both sides."],
+	&"floodlights": ["Floodlights", "Incoming cards here are shown face up to both sides."],
 	&"comms_tower": ["Comms Tower", "Hold this column at the end of the round: +1 streak."],
 	&"supply_cache": ["Supply Cache", "Hold this column at the end of the round: +1 Supply next round."],
 	&"hot_zone": ["Hot Zone", "Holding this column scores 1 extra point."],

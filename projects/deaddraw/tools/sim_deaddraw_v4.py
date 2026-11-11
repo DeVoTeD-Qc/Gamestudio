@@ -56,18 +56,18 @@ from multiprocessing import Pool
 CONFIG = {
     "street_size": 4,
     "actions": 3,
-    "medkits_per_street": 1,      # 18: max medkits that heal per street (99 = no limit)
+    "medkits_per_street": 99,     # 18: max medkits that heal per street (99 = no limit)
     # ---- v4 options (see the docstring; PRESETS["v3"] puts every one back to v3)
-    "swap_salvage": "none",       # 13: none | per_kill | half_bonus | tally
+    "swap_salvage": "per_kill",   # 13: none | per_kill | half_bonus | tally
     "salvage_per_kill": 1,        #     per_kill: points per kill on the swapped gun's stack
     "tally_size": 4,              #     tally: every N swapped-away kills pay one finish bonus
-    "carry_mode": "all",          # 15: all | none | cap | heal | cap_heal | patch | shop | scale
+    "carry_mode": "shop",         # 15: all | none | cap | heal | cap_heal | patch | shop | scale
     "carry_cap": 10,              #     cap: points kept into the next district
-    "carry_heal_rate": 5,         #     heal: unspent points per 1 HP at the safehouse
+    "carry_heal_rate": 3,         #     heal / shop: unspent points per 1 HP at the safehouse
     "room_cost_scale": [1.0, 1.0, 1.0],   # scale: room price multiplier per district
-    "melee_mode": "crowbar",      # 17: crowbar (v3: power melee_power, unlimited) | hands
+    "melee_mode": "hands",        # 17: crowbar (v3: power melee_power, unlimited) | hands
     "hands_power": 1,             #     hands: bare-hands power (unlimited, no points)
-    "brawler_mode": "all",        #     all: Brawler +power on any melee | hands: +power on bare
+    "brawler_mode": "hands",      #     all: Brawler +power on any melee | hands: +power on bare
     "brawler_dur": 1,             #       hands only, melee weapons get +brawler_dur durability
     "melee_weapon_points": 0.0,   #     share of the zombie number a melee-WEAPON kill pays
     "melee_weapons": {
@@ -77,9 +77,12 @@ CONFIG = {
     },
     "melee_pool": {"maple_row": ["wrench"], "downtown": ["wrench", "axe"],
                    "st_agnes": ["axe", "sledge"]},
-    "card_add": {},               # 16/17: extra cards per district: {district_id: {"entrance": [...],
+    "card_add": {d: {"entrance": ["K"], "waves": [[], ["K"]]}       # 17: a melee weapon card in
+                 for d in ("maple_row", "downtown", "st_agnes")},   # every Entrance and Wave 2
+    #                             # 16/17: extra cards per district: {district_id: {"entrance": [...],
                                   #        "waves": [[...], [...], [...]], "rooms": [[...], ...]}}
-    "pool_add": {},               # 16: extra gun ids per district pool {district_id: [wid, ...]}
+    "pool_add": {"maple_row": ["sweeper"], "downtown": ["sweeper", "launcher"],
+                 "st_agnes": ["launcher"]},   # 16: extra gun ids per district pool {district_id: [wid, ...]}
     "run_mode": "before",         # 19: before | zombies_only | anytime
     "start_patches": [],          # test hook: Patches owned from the start (not a game rule)
     "lockpick_off": 5,            # 14: Lockpick, rooms cost this much less
@@ -89,7 +92,7 @@ CONFIG = {
     "grudge_min": 9,              #     Grudge: +1 power against zombies this big or bigger
     "quartermaster_off": 4,       #     Quartermaster: Bench services and Wall guns cost this less
     "whetstone_dur": 2,           #     Whetstone: melee weapons get this much more durability
-    "small_max": 5,               # 16: Alley Sweeper rule ("small"): 5 or less
+    "small_max": 6,               # 16: Alley Sweeper rule ("small"): 6 or less
     "heavy_min": 0,               # 16: Stovepipe rule ("heavy"): only zombies this big or bigger
     "allow_run": True,
     "run_damage": 1,
@@ -137,9 +140,9 @@ CONFIG = {
         "elephant": {"name": "Elephant Gun",      "rule": "big",    "p": 6, "cap": 2,
                      "chal": "trophy", "reward": ("points", 10), "price": 24},
         # v4 (point 16): only in play when pool_add / card_add puts them in a district
-        "launcher": {"name": "Stovepipe Launcher", "rule": "heavy", "p": 8, "cap": 2,
-                     "chal": "demolition", "reward": ("cover", 3)},
-        "sweeper":  {"name": "Alley Sweeper",     "rule": "small",  "p": 3, "cap": 5,
+        "launcher": {"name": "Stovepipe Launcher", "rule": "heavy", "p": 7, "cap": 1,
+                     "chal": "big_bang", "reward": ("points", 5)},
+        "sweeper":  {"name": "Alley Sweeper",     "rule": "small",  "p": 3, "cap": 4,
                      "chal": "pest_control", "reward": ("points", 6)},
     },
     "spread_cap": 16,
@@ -193,14 +196,17 @@ CONFIG = {
     ],
     "survivors": {
         "rosa": {"name": "Rosa Vance", "passive": "steady_hands", "hp": 20},
-        "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 19},
+        "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 18},   # v4: 19 -> 18
         "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 21},
     },
     "triage_bonus": 1,
     "theo_melee_bonus": 0,
     "patches": ["lookout", "thick_jacket", "field_medic", "brawler", "bounty",
-                "loose_grip", "second_wind", "trophy_belt"],
-    "demolition_total": 16,       # 16: Stovepipe challenge, both kills total this or more
+                "loose_grip", "second_wind", "trophy_belt",
+                # v4 (point 14)
+                "lockpick", "iron_stomach", "adrenaline", "grudge", "show_off", "whetstone"],
+    "big_bang_min": 9,            # 16: Stovepipe challenge, the kill is this big or bigger
+    "demolition_total": 16,       #     (cap-2 launcher draft, not used) both kills total this or more
     "pest_total": 15,             # 16: Alley Sweeper challenge, total this or less
 }
 
@@ -330,6 +336,8 @@ def challenge_met(wid, stack):
         return sum(stack) == CONFIG["spread_cap"]
     if c == "trophy":
         return all(z >= 8 for z in stack)
+    if c == "big_bang":
+        return max(stack) >= CONFIG["big_bang_min"]
     if c == "demolition":
         return sum(stack) >= CONFIG["demolition_total"]
     if c == "pest_control":
@@ -1312,7 +1320,10 @@ PRESETS = {
            "medkits_per_street": 1, "run_mode": "before", "card_add": {}, "pool_add": {},
            "patches": ["lookout", "thick_jacket", "field_medic", "brawler", "bounty",
                        "loose_grip", "second_wind", "trophy_belt"],
-           "melee_weapon_points": 0.0, "brawler_bonus": 2, "brawler_mode": "all"},
+           "melee_weapon_points": 0.0, "brawler_bonus": 2, "brawler_mode": "all",
+           "survivors": {"rosa": {"name": "Rosa Vance", "passive": "steady_hands", "hp": 20},
+                         "imani": {"name": "Dr. Imani Hale", "passive": "triage", "hp": 19},
+                         "theo": {"name": "Theo Park", "passive": "slip_away", "hp": 21}}},
 }
 
 

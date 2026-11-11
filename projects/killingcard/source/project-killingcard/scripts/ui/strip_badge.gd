@@ -172,3 +172,8 @@ func _draw_glyph(gr: Rect2, c: Color) -> void:
 			draw_rect(Rect2(gr.position + Vector2(s * 0.14, s * 0.26), Vector2(s * 0.46, s * 0.62)), col, false, 2.2)
 			draw_polyline(PackedVector2Array([gr.position + Vector2(s * 0.34, s * 0.14), gr.position + Vector2(s * 0.8, s * 0.14),
 					gr.position + Vector2(s * 0.8, s * 0.72)]), col, 2.2)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

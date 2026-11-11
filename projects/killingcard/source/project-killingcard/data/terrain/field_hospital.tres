@@ -6,6 +6,6 @@
 script = ExtResource("1_terr")
 id = &"field_hospital"
 display_name = "Field Hospital"
-text = "End of round: each side's most damaged unit here heals 1."
+text = "End of round: each side's most damaged unit here heals 1 Armor."
 detail = "Long fights favour the side with the bigger Armor pool."
 zone_control_only = false

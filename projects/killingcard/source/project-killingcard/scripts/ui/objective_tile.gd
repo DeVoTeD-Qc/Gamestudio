@@ -311,3 +311,8 @@ func _tag(rr: Rect2, text: String, fg: Color, bg: Color) -> void:
 		draw_rect(box, bg)
 	draw_string(font, Vector2(box.position.x + 3.0, box.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5),
 			text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, fg)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

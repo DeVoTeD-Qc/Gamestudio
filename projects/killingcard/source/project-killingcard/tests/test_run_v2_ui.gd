@@ -176,9 +176,8 @@ func test_run_map_v2_at_three_sizes() -> void:
 		assert_true(insp.is_open(), "%s: long press opens the node inspector" % screen["name"])
 		var kws: Control = insp.find_child("KeywordList", true, false)
 		var all: String = ""
-		for l: Node in kws.get_children():
-			if l is Label:
-				all += (l as Label).text + " "
+		for l: Node in kws.find_children("*", "", true, false):
+			all += IconText.plain(l) + " "  # kc-text: keyword rules are IconText labels
 		assert_true(all.contains("Smoke") and all.contains("both sides"), "%s: the inspector has the Terrain rule (%s)" % [screen["name"], all.left(80)])
 		insp.close()
 		# Every node, the boss plate, the REQ and Threat chips are inspectable.

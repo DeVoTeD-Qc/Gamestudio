@@ -112,7 +112,7 @@ func _build() -> void:
 	_duel_button.name = "DuelButton"
 	_duel_button.text = "DUEL"
 	_duel_button.theme_type_variation = &"HudButton"
-	_duel_button.tooltip_text = "Build a 10-pick deck, pick a hero, play one battle (vs AI or Pass & Play)"
+	_duel_button.tooltip_text = "Build a deck, pick a hero, fight one battle"
 	_duel_button.custom_minimum_size = Vector2(0, _start_button.custom_minimum_size.y)
 	_duel_button.focus_mode = Control.FOCUS_ALL
 	_duel_button.add_to_group(&"tap_target")
@@ -197,7 +197,7 @@ func _build_showcase() -> void:
 	_showcase_card = CodexViewScript.make_card_view(view, SHOWCASE_W)
 	var holder: Control = Control.new()
 	holder.name = "ShowcaseCard"
-	holder.tooltip_text = "%s, your Operator: long press or right click for its rules" % item.display_name
+	holder.tooltip_text = "Operator: %s" % item.display_name
 	holder.add_child(_showcase_card)
 	_showcase.add_child(holder)
 	wire_inspect_control(holder, open_showcase_inspector)

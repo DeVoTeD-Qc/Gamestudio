@@ -621,7 +621,7 @@ func _filters() -> Control:
 	row.add_child(_keyword_button)
 	_locked_button = _chip("LOCKED: SHOWN")
 	_locked_button.name = "LockedToggle"
-	_locked_button.tooltip_text = "Show or hide the cards you haven't found in a campaign run yet"
+	_locked_button.tooltip_text = "Show or hide cards not found yet"
 	_locked_button.pressed.connect(func() -> void: set_show_locked(not show_locked))
 	row.add_child(_locked_button)
 	return scroll
@@ -926,7 +926,7 @@ func _make_tile(e: Dictionary) -> Button:
 		b.draw.connect(func() -> void:
 			if picked:
 				b.draw_rect(Rect2(Vector2.ZERO, csz + Vector2(0, BAND_H + 2.0)).grow(-1.0), W.TEAL, false, 3.0))
-	b.tooltip_text = "%s · %s · hold / right click: the full card" % [c.display_name,
+	b.tooltip_text = "%s · %s" % [c.display_name,
 			"tap: remove both copies" if picked else ("Find it in a campaign run" if not owned else "tap: add 2 copies")]
 	var g: RefCounted = PressGesture.new(b)
 	g.drag_enabled = false
@@ -1063,7 +1063,7 @@ func _doctrine_strip() -> Button:
 	nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	nm.clip_text = true
 	row.add_child(nm)
-	b.tooltip_text = "Doctrine: +1 to one trait's count · tap: choose · hold / right click: the rule"
+	b.tooltip_text = "Doctrine: +1 to one trait's count"
 	b.pressed.connect(open_doctrine_picker)
 	wire_inspect_button(b, func() -> void: inspector().open({"title": "Doctrine · %s" % (SynergyGlyphs.trait_name(t) if t != &"" else "none"),
 			"type": "Deck trait", "text": DuelViews.doctrine_text(t), "keywords": [], "status": "Tap the strip to choose your deck's Doctrine."}))
@@ -1134,7 +1134,7 @@ func _hero_tile(h: Dictionary, s: Dictionary) -> Button:
 		else:
 			inspector().open(W.hero_info(h, String(r["text"]))))
 	wire_inspect_button(b, func() -> void: inspector().open(W.hero_info(h)))
-	b.tooltip_text = "%s · tap: pick · hold / right click: the full kit" % h["name"]
+	b.tooltip_text = "%s" % h["name"]
 	return b
 
 

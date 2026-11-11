@@ -273,7 +273,7 @@ func _row(e: Dictionary) -> Control:
 	row.theme_type_variation = &"HudPanelDark"
 	row.custom_minimum_size.y = ROW_H
 	row.set_meta(&"entry", e)
-	row.tooltip_text = "%s: %s" % [e["name"], e["text"]]
+	# kc-text: no hover tooltip: the row already shows the whole entry.
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 12)
 	row.add_child(h)
@@ -293,10 +293,13 @@ func _row(e: Dictionary) -> Control:
 	n.theme_type_variation = &"KeywordName"
 	n.text = String(e["name"])
 	v.add_child(n)
-	var t: Label = Label.new()
-	t.text = String(e["text"])
-	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	t.add_theme_font_size_override(&"font_size", 18)
+	# kc-text: the concepts the text names show their icons inline (the row's own icon is at left).
+	var t: RichTextLabel = RichTextLabel.new()
+	t.name = "EntryText"
+	IconText.setup(t)
+	t.add_theme_font_size_override(&"normal_font_size", 18)
+	t.add_theme_color_override(&"default_color", get_theme_color(&"font_color", &"Label"))
+	IconText.fill(t, String(e["text"]), 18, Color("#E6EBEF"), false, [IconText.first_concept(String(e["name"]))])
 	v.add_child(t)
 	return row
 

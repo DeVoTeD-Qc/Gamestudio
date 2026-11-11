@@ -75,21 +75,12 @@ const RANGE_MODS: Dictionary = {
 	&"smg": [1, 0, 0], &"shotgun": [2, 0, -1], &"ar": [0, 1, 0], &"sniper": [-1, 0, 2], &"lmg": [0, 0, 0],
 }
 const RANGE_NAMES: PackedStringArray = ["CLOSE", "MID", "LONG"]
-## The text box's keyword names, and short rules (kept for callers: kc-ipad-cards puts the rules in the
-## inspector only; the inspector has the full ones, CardInfo.KEYWORD_RULES).
+## The text box's keyword names (kc-ipad-cards: the rules are in the inspector only, from
+## CardInfo.KEYWORD_RULES; kc-text: the unused SHORT_RULES copy is gone, one wording per keyword).
 const KEYWORD_NAMES: Dictionary = {
 	&"first_shot": "First Shot", &"pick": "Pick", &"flank": "Flank", &"suppress": "Suppress", &"pierce": "Pierce",
 	&"patch": "Patch %d", &"cover": "Cover %d", &"holder": "Holder", &"on_deploy": "On Deploy", &"on_down": "On Down",
 	&"agile": "Agile", &"beam": "Beam", &"end_of_round": "End of round",
-}
-const SHORT_RULES: Dictionary = {
-	&"first_shot": "fires first in its exchange", &"pick": "shoots the lowest-Armor enemy",
-	&"flank": "shoots the back-most enemy", &"suppress": "their point man gets -2 FP",
-	&"pierce": "extra damage carries on", &"patch": "restores %d Armor to a friend here",
-	&"cover": "each hit deals %d less", &"holder": "holds a contested zone",
-	&"on_deploy": "happens when it arrives", &"on_down": "happens when it goes down",
-	&"agile": "free move to the next column", &"beam": "hits everyone in front, friends too",
-	&"end_of_round": "happens each round's end",
 }
 
 ## Placeholder shown in the editor and when no data is set.
@@ -107,11 +98,14 @@ const PLACEHOLDER: Dictionary = {
 var data: Dictionary = {}
 var _art_key: StringName = &""
 var _art_scale: float = 0.0
+## kc-pitch-art: the layer that draws the Operator mark over the art (operators only).
+var _op_mark: Control = null
 var _width: float = BASE_SIZE.x
 var _text_box: VBoxContainer = null
 var _count_label: Label = null
 var _not_found: Label = null
 var _lore: Label = null
+var _body_rich: RichTextLabel = null
 var _lines: Array[Control] = []
 
 @onready var _cost_label: Label = %CostLabel
@@ -178,6 +172,20 @@ func _ready() -> void:
 	remove_child(_body_label)
 	_text_box.add_child(_body_label)
 	_body_label.owner = self
+	# kc-text: the rules text is drawn by an IconText overlay (each concept's icon inline, e.g. the FP
+	# ring in "+2 FP"); the Label under it keeps the words and the layout, with transparent ink.
+	_body_rich = RichTextLabel.new()
+	_body_rich.name = "BodyRich"
+	IconText.setup(_body_rich)
+	_body_rich.fit_content = false
+	_body_rich.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body_rich.clip_contents = true
+	_body_rich.add_theme_font_override(&"normal_font", CardLook.RULE_FONT)
+	_body_rich.add_theme_font_size_override(&"normal_font_size", 16)
+	_body_rich.add_theme_color_override(&"default_color", CardLook.RULE_COLOR)
+	_body_rich.add_theme_constant_override(&"line_separation", -3)
+	_body_label.add_child(_body_rich)
+	_body_rich.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_count_label = Label.new()
 	_count_label.name = "CountLabel"
 	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -258,6 +266,13 @@ func _ready() -> void:
 	_body_label.add_theme_constant_override(&"line_spacing", -3)
 	if data.is_empty():
 		data = PLACEHOLDER.duplicate(true)
+	# kc-pitch-art: the Operator mark (CardLook.draw_operator_tab / _frame) on top of the art.
+	_op_mark = Control.new()
+	_op_mark.name = "OperatorMark"
+	_op_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_op_mark.visible = false
+	add_child(_op_mark)
+	_op_mark.draw.connect(_draw_op_mark)
 	set_notify_transform(true)
 	_refresh()
 
@@ -265,6 +280,39 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSFORM_CHANGED or what == NOTIFICATION_ENTER_TREE:
 		_update_art_texture()
+
+
+## kc-pitch-art (blur fix): a card shown under Control.scale k > 1 (the inspector's grow) draws its text
+## from fonts rasterised at k x the window's oversampling, so the magnified text stays sharp instead
+## of a stretched bitmap. k <= 1 restores the shared fonts. Call after the scale is set.
+func set_text_scale(k: float) -> void:
+	var os: float = 0.0
+	if k > 1.01:
+		os = TextServerManager.get_primary_interface().font_get_global_oversampling() * k
+	var was: float = float(get_meta(&"text_os", 0.0))
+	set_meta(&"text_os", os)
+	if os > 0.0 or was > 0.0:
+		_apply_text_os()
+
+
+## Points every label's font at the copy for the card's "text_os" (0 = back to the shared fonts).
+func _apply_text_os() -> void:
+	var os: float = float(get_meta(&"text_os", 0.0))
+	var stack: Array[Node] = [self]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		stack.append_array(n.get_children())
+		var names: Array[StringName] = []
+		if n is Label:
+			names = [&"font"]
+		elif n is RichTextLabel:
+			names = [&"normal_font", &"bold_font", &"italics_font", &"bold_italics_font"]
+		for fname: StringName in names:
+			var c: Control = n as Control
+			var plain: Font = CardLook.plain_font(c.get_theme_font(fname))
+			c.add_theme_font_override(fname, CardLook.sharp_font(plain, os) if os > 0.0 else plain)
+		if n is CanvasItem:
+			(n as CanvasItem).queue_redraw()
 
 
 ## Lays the card out at width w (height = height_for(w)); the card is not scaled.
@@ -509,6 +557,14 @@ func _refresh() -> void:
 	_fp_label.add_theme_color_override(&"font_color", CardLook.trend_color(int(data.get("fp_trend", 0))))
 	_armor_label.text = str(int(data.get("armor", 0)))
 	_armor_label.add_theme_color_override(&"font_color", CardLook.AR_DMG_NUM if _damaged() else Color.WHITE)
+	if float(get_meta(&"text_os", 0.0)) > 0.0:
+		_apply_text_os()  # labels made by this refresh get the sharp fonts too
+	if _op_mark != null:
+		_op_mark.visible = is_operator()
+		_op_mark.position = Vector2.ZERO
+		_op_mark.size = size
+		move_child(_op_mark, -1)
+		_op_mark.queue_redraw()
 	queue_redraw()
 	card_changed.emit()
 
@@ -631,6 +687,9 @@ func _rebuild_text(box: Rect2) -> void:
 	_body_label.text = text
 	_body_label.visible = text != ""
 	_body_label.modulate = Color.WHITE
+	_body_label.self_modulate = Color(1, 1, 1, 0) if _body_rich != null else Color.WHITE
+	if _body_rich != null:
+		IconText.fill(_body_rich, text, 15, CardLook.RULE_COLOR)
 	_text_box.move_child(_body_label, -1)
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# Autowrap + an ellipsis collapses a Label to one line: no trimming; the text box clips.
@@ -744,6 +803,20 @@ func _frame_colors() -> Array:
 	if bool(data.get("marked", false)):
 		frame = AMBER
 	return [frame, face]
+
+
+## True for the Operator card (it wears the Operator mark).
+func is_operator() -> bool:
+	return _card_type() == "operator"
+
+
+## kc-pitch-art: the Operator mark on the Y2+ card: a brass keyline round the art window (full-bleed
+## calling cards have no frame of their own) and the brass OPERATOR tab at the art's top-left.
+func _draw_op_mark() -> void:
+	var art: Rect2 = regions()["art"]
+	CardLook.draw_operator_frame(_op_mark, art.grow(1.0), 2.0)
+	var h: float = clampf(roundf(art.size.y * 0.24), 14.0, 22.0)
+	CardLook.draw_operator_tab(_op_mark, art.position + Vector2(5, 5), h, true, art.size.x * 0.6)
 
 
 ## kc-ui-hooks: the UI kit frame for this card (prompt pack §7.4b): frm_t1_orders (Tactics),
@@ -865,3 +938,8 @@ func _draw() -> void:
 				CardLook.draw_ability(self, ab[1], ab[0], AMBER, side != "enemy")
 		CardLook.draw_reticle(self, rg["fp"], 0, &"enemy" if side == "enemy" else &"player", 0, false)
 		CardLook.draw_armor(self, rg["armor"], 0, _damaged(), false)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

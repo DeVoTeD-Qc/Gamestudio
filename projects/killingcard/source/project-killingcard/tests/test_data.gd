@@ -34,7 +34,7 @@ func test_sample_cards_match_core_rules() -> void:
 	if bac != null:
 		assert_eq(bac.card_type, DataEnums.CardType.TACTIC, "B&C type")
 		assert_eq([bac.effects[0].amount, bac.effects[0].bonus_amount], [2, 0], "B&C 2 damage, no Close bonus (AB1)")
-		assert_eq(bac.text, "2 damage to every enemy unit in a column.", "B&C text (AB1)")
+		assert_eq(bac.text, "Deal 2 damage to each enemy unit in a column.", "B&C text (AB1)")
 		assert_true(bac.requires_zone_choice(), "B&C needs a zone")
 	var mortar: LoadoutItem = db.get_loadout_item(&"mortar_barrage")
 	assert_not_null(mortar, "mortar sample")

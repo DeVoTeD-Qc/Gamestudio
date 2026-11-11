@@ -36,7 +36,7 @@ func test_card_lines_wording() -> void:
 			"fight": true, "control": &"player", "unknown": 2})
 	assert_eq(lines, PackedStringArray(["DEAL 5 · TAKE 3", "ENDS YOURS", "KILLS 2 · LOST 1", "+2 UNKNOWN"]), "busy zone")
 	lines = OutcomePreviewScript.card_lines({"control": &"empty", "unknown": 0})
-	assert_eq(lines, PackedStringArray(["NO FIREFIGHT", "ENDS OPEN", "NO LOSSES", "NO RED DOTS"]), "quiet zone")
+	assert_eq(lines, PackedStringArray(["NO FIREFIGHT", "ENDS OPEN", "NO LOSSES", "NO INCOMING"]), "quiet zone")
 	var hud: Theme = load("res://assets/ui/hud_theme.tres")
 	var font: Font = hud.get_font(&"font", &"PreviewText")
 	for ch: String in ["·", "+"]:

@@ -6,6 +6,6 @@
 script = ExtResource("1_terr")
 id = &"floodlights"
 display_name = "Floodlights"
-text = "Red dots here are shown face-up to both sides."
+text = "Incoming cards here are shown face up to both sides."
 detail = "No surprises here: commit where you have the better card."
 zone_control_only = false

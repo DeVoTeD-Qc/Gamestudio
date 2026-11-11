@@ -95,6 +95,12 @@ static func concept_of(word: String) -> StringName:
 	return &""
 
 
+## The first concept a text names (&"" when none): a row titled "Cover N" already shows Cover's icon.
+static func first_concept(text: String) -> StringName:
+	var m: RegExMatch = _words().search(text)
+	return concept_of(m.get_string()) if m != null else &""
+
+
 ## Fills `rtl` with `text`, the concepts' icons inline (first mention per concept). `px` = icon
 ## size (0: the label's font size); `ink` tints keyword icons (stat icons keep their colour, darkened
 ## on paper when `paper`). `skip` = concept ids to leave without an icon (a line that already
@@ -155,6 +161,38 @@ static func tooltip(for_text: String) -> Control:
 	r.fit_content = true
 	r.autowrap_mode = TextServer.AUTOWRAP_OFF if for_text.length() < 48 else TextServer.AUTOWRAP_WORD_SMART
 	r.custom_minimum_size = Vector2(0 if for_text.length() < 48 else 360, 0)
+	return r
+
+
+## kc-text: a Button whose text names one concept with an icon ("BUY · 4 REQ", "NEED 2 SUPPLY")
+## gets that icon in front of its words. Returns the concept (&"" when none / the button has an icon).
+static func tag_button(b: Button, px: int = 20) -> StringName:
+	if b == null or b.icon != null:
+		return &""
+	var c: StringName = first_concept(b.text)
+	var tex: Texture2D = texture(c) if c != &"" else null
+	if tex == null:
+		return &""
+	b.icon = tex
+	b.expand_icon = false
+	b.add_theme_constant_override(&"icon_max_width", px)
+	var tint: Color = color(c, Color.WHITE)
+	for st: StringName in [&"icon_normal_color", &"icon_hover_color", &"icon_pressed_color", &"icon_focus_color", &"icon_hover_pressed_color"]:
+		b.add_theme_color_override(st, tint)
+	return c
+
+
+## A small TextureRect of a concept's icon (chips, counters), tinted with its colour.
+static func icon_rect(concept: StringName, px: float = 20.0) -> TextureRect:
+	var r: TextureRect = TextureRect.new()
+	r.name = "Icon_%s" % concept
+	r.texture = texture(concept)
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.custom_minimum_size = Vector2(px, px)
+	r.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.modulate = color(concept, Color.WHITE)
 	return r
 
 

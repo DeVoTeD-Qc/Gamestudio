@@ -203,6 +203,7 @@ static func make_button(text: String, variation: StringName = &"HudButton", min_
 	b.theme_type_variation = variation
 	b.custom_minimum_size = Vector2(min_w, BUTTON_H_COMPACT)
 	b.focus_mode = Control.FOCUS_ALL
+	IconText.tag_button(b)  # kc-text: "BUY · 4 REQ" leads with the REQ icon
 	return b
 
 
@@ -241,11 +242,12 @@ static func make_req_chip(amount: int) -> PanelContainer:
 	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.set_meta(&"inspectable", true)
-	p.tooltip_text = "Requisition: earned in fights (+3, elites +5, a loss +1) and events; spent in shops."
+	p.tooltip_text = "REQ: earned in fights and events, spent in shops."
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(row)
+	row.add_child(IconText.icon_rect(&"req", 20.0))  # kc-text: REQ's icon, the same everywhere
 	var tag: Label = make_label("REQ", &"HudTag")
 	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(tag)
@@ -416,6 +418,8 @@ static func make_tickets(left: int, total: int, pip: Vector2 = Vector2(18, 26)) 
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override(&"separation", 6)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	# kc-text: the Tickets icon leads the pips (the same icon as in every text about Tickets).
+	row.add_child(IconText.icon_rect(&"tickets", pip.y * 0.8))
 	for i: int in total:
 		var p: Panel = Panel.new()
 		p.theme_type_variation = &"TicketPip" if i < left else &"TicketPipSpent"

@@ -89,3 +89,8 @@ func _draw() -> void:
 		var fs3: int = fs_small
 		var w3: float = num.get_string_size(t3, HORIZONTAL_ALIGNMENT_LEFT, -1, fs3).x
 		draw_string(num, Vector2((size.x - w3) * 0.5, size.y - 4.0), t3, HORIZONTAL_ALIGNMENT_LEFT, -1, fs3, muted)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

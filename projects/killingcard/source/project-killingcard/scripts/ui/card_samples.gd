@@ -28,7 +28,7 @@ const CARDS: Array[Dictionary] = [
 	{"name": "Recon Drone", "type": "killstreak", "threshold": 2, "art_icon": "ks_recon_drone", "text": "This round and next: enemy deployments are shown face-up during Deploy, and enemy units lose Cover."},
 	{"name": "Mortar Barrage", "type": "killstreak", "threshold": 3, "art_icon": "ks_mortar", "text": "2 damage to each enemy unit in one zone."},
 	{"name": "Sentry Turret", "type": "killstreak", "threshold": 4, "art_icon": "ks_sentry", "text": "Place a Sentry (FP 2 / Armor 4, Cover 1) in a zone. It doesn't count for control."},
-	{"name": "Attack Helo", "type": "killstreak", "threshold": 5, "art_icon": "ks_attack_helo", "text": "At the start of the next 2 firefights, deal 2 damage to the enemy point man in every zone."},
+	{"name": "Attack Helo", "type": "killstreak", "threshold": 5, "art_icon": "ks_attack_helo", "text": "At the start of the next 2 firefights, deal 2 damage to each enemy front unit."},
 	{"name": "Gunship", "type": "killstreak", "threshold": 7, "art_icon": "ks_gunship", "text": "3 damage to every enemy unit in all zones."},
 	{"name": "Kestrel AR-7", "type": "operator", "weapon_class": "ar", "firepower": 3, "armor": 7, "text": "Operator. Respawns at your next Deploy."},
 	{"name": "Wasp-9", "type": "operator", "weapon_class": "smg", "firepower": 2, "armor": 6, "keywords": ["first_shot"], "text": "May Rotate twice per round."},

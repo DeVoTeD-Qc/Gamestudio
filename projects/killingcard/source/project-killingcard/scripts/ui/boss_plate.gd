@@ -87,3 +87,8 @@ func _draw() -> void:
 	var sw: String = state_word()
 	draw_string(f, Vector2(x, top + 51), BannerView.fit_text(sw, f, 14, room), HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
 			red if active else Color("#B9C2C9"))
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)

@@ -22,7 +22,7 @@ Traits live on the chassis (synergy-system.md §4.1) and each traited chassis we
 
 - 19 of the set's traited unit / Field arts already matched; **31 were re-picked** (`review = no` only, never an id already in the set, no duplicate title) and checked by eye on contact sheets. Rejected on sight: Smoke And Blood, Cut And Gutted, Green Glow, Pure Rage, Chest Cavity Cave In, Room Cleared (blood), Too Much Speed (no weapon), Going Down and Bursting (titles already in the set).
 - **Kept as they were:** the Elites (Ace: Big Game Hunter, Commander: Golden Throne / King Of It All), Bulwark and Mortar Pit (no family art fits a crest), and one Marksman (Snow Snipers: the Spec Ops family has only four usable sniper arts). The rule is the trait icon, not the art.
-- Heavy units use weapon-mastery cards with the unit's own weapon type (LMGs on the Gunner, launchers on the Demolitions Expert) and keep `mastery_family` empty, so BannerArtDB never mistakes them for the Operator's mastery ladder.
+- Heavy units wear heavy-weapon soldiers and demolitions (kc-pitch-art, §1.3: weapon-mastery cards are the Operator's only); their rows keep `family = mastery` (Heavy) and an empty `mastery_family`, so BannerArtDB never mistakes them for the Operator's mastery ladder.
 
 ### 1.2 Alternate-trait arts (kc-art-traits-impl, head T1)
 The art now gives the trait (`documentation/design/art-traits.md`): a copy's trait is its art's **family** (`family` column of `mw3-pitch-set.csv`, from the manifest `section`: Honors -> Vanguard, Operators -> Spec Ops, Mastery -> Heavy, Horde -> Undead, Standard -> none), if that trait is one of the chassis' options. The builder writes `family` and the resolved `trait` into the pitch manifest. Each chassis' home-family arts stay first (the first row is the default art); the alternates follow:
@@ -31,10 +31,10 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 | Rifleman · Undead | Helo Exfil, In Trouble |
 | Rifleman · Spec Ops | Solid Tactics, Swamp Guys (Warzone) |
 | Point Man · Undead | Violent Vortex, Wolves Wasted |
-| Breacher · Heavy | Lockwood 680 Mastery: Gilded, Haymaker Mastery: Gilded |
+| Breacher · Heavy | Clearer Vision, CQC (Close Quarters Combat) (kc-pitch-art: were Lockwood 680 / Haymaker masteries) |
 | Protector · Undead | Surrounded |
 | Recon Specialist · Undead | Seal Time |
-| Marksman · Heavy | KVD Enforcer Mastery: Gilded, MCW 6.8 Mastery: Gilded |
+| Marksman · Heavy | Long Distance Laser, Message Inbound (kc-pitch-art: were KVD Enforcer / MCW 6.8 masteries) |
 | Gunner · Spec Ops | Lead Rain, Download Complete |
 | Demolitions Expert · Undead | Objective Destroyed, Boom And Gloom |
 | Brawler · Spec Ops | Big Sword |
@@ -44,12 +44,18 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 - **Crossover IP flagged (never use; tagged `review = no` in the manifest by mistake):** Cadia Stands! (Warhammer 40,000), Char's Laugh (Gundam), Here Comes The A-Train (The Boys). The manifest should mark them `review = yes` (Technical Artist). Any Store bundle card with a third-party character needs the same eye check before it enters the set.
 - **Plain arts kept:** the four Honors Riflemen (Vanguard is not a Rifleman option) and Snow Snipers on the Marksman play as plain copies when they are worn; they stay as looks.
 
+### 1.3 Weapon cards only on Operators (kc-pitch-art, head)
+"Never use GUN-specific calling card images for units or any other cards than Operators." Every row of `mw3-pitch-set.csv` was audited: the classifier (`section` Weapon Mastery, `subject` weapon_only, `mastery_family`) found 20 weapon cards off the Operator, and a contact sheet by eye added three gun showcases (Dual SMGs, All The Guns, Too Many Lasers?). All 23 were re-picked (`review = no`, no blood, no event or game logos, no id, title or image already in the set): see §2 and §2.2, and the "was ..." notes there.
+- **Heavy look:** the Heavy units (Gunner, Demolitions Expert, and the Breacher / Marksman Heavy option) now wear soldiers with heavy weapons, explosions and demolitions instead of weapon-mastery cards. Their CSV `family` stays `mastery`, so the chassis keep their Heavy option (the trait is curated, not read from the card's own MW3 section for these 13 rows).
+- **Privates:** back on the pitch starter's earlier arts (head: "They were nice"), see §2.2.
+- Weapon-mastery cards now appear only on the four Operators' mastery ladders. Kept after the eye check: soldier cards where the person is the subject and the gun is in their hands (e.g. Smoking Guns, Nades And Guns, Big Sword).
+
 ## 2. Mapping: title -> chassis, and why
 | # | Calling card | Chassis | Kind | Anim. | Why (what the image shows) |
 |---|---|---|---|---|---|
 | 1 | Banner Waves | Rifleman | unit | yes | operator with an assault rifle |
 | 2 | Crosshairs | Rifleman | unit | yes | operator with an assault rifle |
-| 3 | Imbued | Rifleman | unit |  | operator with an assault rifle |
+| 3 | Harvesting Season | Rifleman | unit |  | gas-masked operator with a rifle in a swamp (kc-pitch-art: was Imbued, a gun showcase) |
 | 4 | God Ray | Rifleman | unit |  | operator with an assault rifle |
 | 5 | Beta Tester | Rifleman | unit | yes | operator with an assault rifle |
 | 6 | Friends Don't Let Friends Fire Alone | Rifleman | unit |  | operator with an assault rifle |
@@ -59,7 +65,7 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 | 10 | Smoking Guns | Point Man | unit | yes | operator with an SMG or pistol, close in |
 | 11 | Non-Business | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 12 | Close Quarters | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
-| 13 | Dual SMGs | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
+| 13 | Snow Speed | Point Man | unit |  | Vanguard trait: operator rushing in on a snowmobile (kc-pitch-art: was Dual SMGs) |
 | 14 | Nades And Guns | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 15 | Bang! | Point Man | unit |  | operator with an SMG or pistol, close in |
 | 16 | Standoff | Point Man | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
@@ -68,11 +74,11 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 | 19 | Can't Catch Me | Flanker | unit | yes | stealthy operator moving or infiltrating |
 | 20 | Operator Infil | Flanker | unit | yes | stealthy operator moving or infiltrating |
 | 21 | Gift Giver | Flanker | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
-| 22 | Pulemyot 762 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
-| 23 | DG-58 LSW Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
-| 24 | Holger 26 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
-| 25 | Bruen Mk9 Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
-| 26 | TAQ Eradicator Mastery: Gilded | Gunner | unit | yes | Heavy trait: weapon-mastery card of a light machine gun (kc-syn S1) |
+| 22 | Unleashing Chaos | Gunner | unit |  | Heavy look: gunner firing a belt-fed gun (kc-pitch-art) |
+| 23 | Heavy Barrage | Gunner | unit |  | Heavy look: gunner over an ammo crate (kc-pitch-art) |
+| 24 | Suppression | Gunner | unit |  | Heavy look: suppressing fire (kc-pitch-art) |
+| 25 | Blaze Of Glory | Gunner | unit |  | Heavy look: gunner firing from the hip (kc-pitch-art) |
+| 26 | Lawn Mowing | Gunner | unit |  | Heavy look: gunner sweeping a rooftop (kc-pitch-art) |
 | 27 | Battle Highlights | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 28 | Stained Memory | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 29 | Trophy Collector | Marksman | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
@@ -87,10 +93,10 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 | 38 | Lethal Patience | Breacher | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
 | 39 | Behind The Door | Breacher | unit |  | shotgun at close quarters / room entry |
 | 40 | Fast Acting | Breacher | unit |  | Vanguard trait: prestige / challenge card (kc-syn S1) |
-| 41 | RGL-80 Mastery: Gilded | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
-| 42 | Stormender Mastery: Gilded | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
-| 43 | PILA Mastery: Golden Ivory | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
-| 44 | Strela-P Mastery: Golden Ivory | Demolitions Expert | unit | yes | Heavy trait: weapon-mastery card of a launcher (kc-syn S1) |
+| 41 | Did I Hit It!? | Demolitions Expert | unit |  | Heavy look: launcher shot downing an aircraft (kc-pitch-art) |
+| 42 | Armor Crusher | Demolitions Expert | unit |  | Heavy look: detonator, tank exploding (kc-pitch-art) |
+| 43 | Out With A Bang | Demolitions Expert | unit |  | Heavy look: demolitions charge (kc-pitch-art) |
+| 44 | Escape Artist | Demolitions Expert | unit |  | Heavy look: running from an explosion (kc-pitch-art) |
 | 45 | Dark Patrol | Recon Specialist | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
 | 46 | Infiltration | Recon Specialist | unit |  | night vision, optics, scouting |
 | 47 | Don't Look Back | Recon Specialist | unit |  | Spec Ops trait: operator-bundle card (kc-syn S1) |
@@ -149,12 +155,12 @@ The art now gives the trait (`documentation/design/art-traits.md`): a copy's tra
 | 100 | Swamp Guys | Rifleman | unit |  | alternate: Spec Ops (Operators family, Warzone) |
 | 101 | Violent Vortex | Point Man | unit |  | alternate: Undead (Horde family) |
 | 102 | Wolves Wasted | Point Man | unit |  | alternate: Undead (Horde family) |
-| 103 | Lockwood 680 Mastery: Gilded | Breacher | unit | yes | alternate: Heavy (shotgun mastery) |
-| 104 | Haymaker Mastery: Gilded | Breacher | unit | yes | alternate: Heavy (shotgun mastery) |
+| 103 | Clearer Vision | Breacher | unit |  | alternate: Heavy look (shotgun at close range) |
+| 104 | CQC (Close Quarters Combat) | Breacher | unit |  | alternate: Heavy look (entry team) |
 | 105 | Surrounded | Protector | unit |  | alternate: Undead (Horde family) |
 | 106 | Seal Time | Recon Specialist | unit |  | alternate: Undead (Horde family) |
-| 107 | KVD Enforcer Mastery: Gilded | Marksman | unit | yes | alternate: Heavy (marksman rifle mastery) |
-| 108 | MCW 6.8 Mastery: Gilded | Marksman | unit | yes | alternate: Heavy (marksman rifle mastery) |
+| 107 | Long Distance Laser | Marksman | unit |  | alternate: Heavy look (sniper with a laser sight) |
+| 108 | Message Inbound | Marksman | unit |  | alternate: Heavy look (big-bore sniper) |
 | 109 | Lead Rain | Gunner | unit | yes | alternate: Spec Ops (operator with an LMG) |
 | 110 | Download Complete | Gunner | unit |  | alternate: Spec Ops (operator-bundle robot) |
 | 111 | Objective Destroyed | Demolitions Expert | unit |  | alternate: Undead (Horde family) |
@@ -187,27 +193,27 @@ Camo band per tier: Base (olive), Forged (silver-white), Priceless (blue), Inter
 **Wip set** (`documentation/design/wip-set.json`, not in `data/cards/` yet). Rows use the **proposed card ids** (`kc_wip_` + snake_case name, Roman numerals as digits). They do nothing until a card with that id exists; then it wears the art with no code change (its licensed pool, `ArtTraits.arts_for`). If the final id differs, change the `card` cell in `mw3-pitch-set.csv` and rebuild.
 | Card | Proposed id | Calling card | Why |
 |---|---|---|---|
-| Private I | `kc_wip_private_1` | MTZ-556 Mastery: Gilded | one rifle in four finishes: the Private ladder |
-| Private II | `kc_wip_private_2` | MTZ-556 Mastery: Forged | ladder II |
-| Private III | `kc_wip_private_3` | MTZ-556 Mastery: Priceless | ladder III |
-| Private IV | `kc_wip_private_4` | MTZ-556 Mastery: Interstellar | ladder IV |
+| Private I | `kc_wip_private_1` | Anything That Moves | the pitch starter's earlier art (head, kc-pitch-art); shared with the tutorial's Grunt |
+| Private II | `kc_wip_private_2` | Helo Support | earlier starter art (tutorial Trooper) |
+| Private III | `kc_wip_private_3` | Landing Party | earlier starter art (tutorial Sergeant) |
+| Private IV | `kc_wip_private_4` | Grid And Grit | earlier starter art (tutorial Armored Trooper) |
 | Scout | `kc_wip_scout` | Low Profile | ghillie scout lying low |
 | Medic | `kc_wip_medic` | Useful | stim / heal, like the Combat Medic's drinks |
-| Sharpshooter | `kc_wip_sharpshooter` | Scoped And Ready | scope close-up (First Shot) |
+| Sharpshooter | `kc_wip_sharpshooter` | Glint | masked sniper aiming (kc-pitch-art: was a scope close-up) |
 | Flag Bearer | `kc_wip_flag_bearer` | So It Begins | a war banner over the fire |
 | Hacker | `kc_wip_hacker` | Pet Drones | operator steering a drone swarm |
 | Kamikaze | `kc_wip_kamikaze` | Pin Pulled | pin pulled, blast behind |
 | Runner | `kc_wip_runner` | Damn Fast | speed-blur sprint |
 | Sniper | `kc_wip_sniper` | Ghillie Guy | ghillie sniper with a bolt rifle |
-| Juggernaut | `kc_wip_juggernaut` | All The Guns | skull-masked heavy with miniguns and belts |
-| Riot Shield | `kc_wip_riot_shield` | Riot Shield Mastery: Golden Ivory | a riot shield; the only `review = yes` pick (classifier was unsure of the chassis; checked by eye: a plain shield, no third-party IP) |
+| Juggernaut | `kc_wip_juggernaut` | Last Man Standing | armoured juggernaut in a burning ruin (kc-pitch-art: was All The Guns, a gun showcase) |
+| Riot Shield | `kc_wip_riot_shield` | Move As One | a riot-shield squad advancing (kc-pitch-art: was the Riot Shield weapon-mastery card) |
 | Fast Learner | `kc_wip_fast_learner` | Trained And Ready | training dummies on the range |
-| Laser Gunner | `kc_wip_laser_gunner` | Too Many Lasers? | a rifle firing a fan of laser beams |
+| Laser Gunner | `kc_wip_laser_gunner` | Laser Grid | operator in a laser grid (kc-pitch-art: was a rifle close-up) |
 | War Shout | `kc_wip_war_shout` | Revolution Rising | a crowd raising arms before the charge |
 | Barrage | `kc_wip_barrage` | Warships | ship guns firing a broadside |
 | Premium Loadout | `kc_wip_premium_loadout` | Gearing Up | picking kit off the armory wall |
 
-- The Private ladder uses weapon-mastery cards with `mastery_family` empty, so it is never read as an Operator ladder (the Operator uses MCW, KATT-AMR, WSP-9, COR-45). The card shows the calling card title as its name, as every licensed card does ("MTZ-556 Mastery: Gilded", type line "Private I").
+- kc-pitch-art (head): the Privates wear the pitch starter's earlier arts again (Anything That Moves, Helo Support, Landing Party, Grid And Grit), the same images as the tutorial's si_* starters (separate ids `kc_mw3_*_private`, one source file each). The card shows the calling card title as its name, as every licensed card does ("Anything That Moves", type line "Private I").
 - Rejected on sight: Combat Surgeon (blood spatter), Gun Go Brrrrrt (blood), Squad Up / Beach Breacher (event logo), the Ranked Play rank cards (MW3 logo), Snow Speed (no shield, a snowmobile).
 
 ## 3. How it works in the game

@@ -43,11 +43,11 @@ func screen_id() -> StringName:
 func _build() -> void:
 	shop = RunV2Views.shop_view(run())
 	_title.text = "SHOP"
-	_subtitle.text = "Spend REQ. Long-press any card to zoom."
+	_subtitle.text = "Spend REQ."
 	_req_chip = make_req_chip(int(shop.get("req", RunV2Views.req(run()))))
 	_header.add_child(_req_chip)
 	wire_inspect_control(_req_chip, func() -> void: inspector().open({"title": "Requisition (REQ)", "type": "currency",
-			"text": "Earned, never bought: win a fight +3, an elite +5, a loss +1, events +1 to +3. The shop never sells tickets.",
+			"text": "Win +3, elite +5, loss +1, events +1 to +3.",
 			"status": "You have %d REQ." % int(shop.get("req", 0))}))
 	_done = make_button("DONE", &"ReadyButton", 160)
 	_done.name = "DoneButton"
@@ -118,11 +118,11 @@ func _fill() -> void:
 	var dp: int = int(shop.get("discharge_price", 3))
 	var rp: int = int(shop.get("restock_price", 1))
 	_service(&"muster", "MUSTER OUT · %d REQ EACH" % mp,
-			"Send Standard Issue cards home, any number. Deck %d, never under %d." % [deck_n, floor_n],
+			"Send Standard Issue cards home. Deck %d (min %d)." % [deck_n, floor_n],
 			bool(shop.get("muster_can", true)) and req >= mp and room > 0 and not _muster_candidates().is_empty(),
 			_why(&"muster", "NEED %d REQ" % mp if req < mp else ("DECK AT ITS FLOOR (%d)" % floor_n if room <= 0 else "PICK CARDS")),
 			_open_muster)
-	_service(&"discharge", "DISCHARGE · %d REQ" % dp, "Remove any other card from your deck for good (never under %d)." % floor_n,
+	_service(&"discharge", "DISCHARGE · %d REQ" % dp, "Remove any other card for good (deck min %d)." % floor_n,
 			bool(shop.get("discharge_can", true)) and req >= dp and room > 0,
 			_why(&"discharge", "NEED %d REQ" % dp if req < dp else ("DECK AT ITS FLOOR (%d)" % floor_n if room <= 0 else "PICK A CARD")),
 			_open_discharge)
@@ -135,7 +135,7 @@ func _fill() -> void:
 			why_p = "SOLD" if bool(pk.get("sold", false)) else ("NEED %d REQ" % pp if req < pp else "BUY")
 		_service(StringName("perk_%d" % pidx), "PERK: %s · %d REQ" % [String(pk.get("name", "")).to_upper(), pp], String(pk.get("text", "")),
 				can_p, "BUY" if can_p else why_p, func() -> void: buy_perk(pidx))
-	_service(&"restock", "RESTOCK · %d REQ" % rp, "Replace the 3 cards on offer with 3 new ones from your rung.",
+	_service(&"restock", "RESTOCK · %d REQ" % rp, "3 new cards on offer.",
 			bool(shop.get("restock_can", true)) and req >= rp, _why(&"restock", "NEED %d REQ" % rp if req < rp else "RESTOCK"), restock)
 
 
@@ -185,6 +185,8 @@ func _offer(c: Dictionary, req: int, w: float) -> Control:
 		b.disabled = true
 	else:
 		b.text = "BUY · %d REQ" % price
+	if b.text.contains("REQ"):
+		IconText.tag_button(b, 18)
 	b.custom_minimum_size = Vector2(w, button_height())
 	if w < 190.0:
 		# Portrait: three cards across; the price stays whole at 18 px.
@@ -192,7 +194,7 @@ func _offer(c: Dictionary, req: int, w: float) -> Control:
 	b.clip_text = true
 	b.pressed.connect(func() -> void: buy(idx))
 	wire_inspect_button(b, func() -> void: inspector().open({"title": "Buy %s" % (card.display_name if card != null else "card"),
-			"type": "%s · %d REQ" % [kind.to_lower(), price], "text": "Adds the card to your deck for %d REQ (you have %d)." % [price, req], "status": ""}))
+			"type": "%s · %d REQ" % [kind.to_lower(), price], "text": "Add it to your deck: %d REQ (you have %d)." % [price, req], "status": ""}))
 	col.add_child(b)
 	_buy_buttons.append(b)
 	return col

@@ -152,14 +152,14 @@ func _rebuild() -> void:
 	vs.name = "VsAiButton"
 	vs.add_to_group(&"tap_target")
 	vs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vs.tooltip_text = "Play one battle against the AI (it plays a preset deck)"
+	vs.tooltip_text = "One battle against the AI"
 	vs.pressed.connect(func() -> void: open_vs_ai(vs_deck_id))
 	modes.add_child(vs)
 	var hs: Button = make_button("PASS & PLAY", &"HudButton", 190)
 	hs.name = "HotSeatButton"
 	hs.add_to_group(&"tap_target")
 	hs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hs.tooltip_text = "Two players on this device: each Deploy is played behind a cover screen"
+	hs.tooltip_text = "Two players, one device"
 	hs.pressed.connect(func() -> void: open_hot_seat())
 	modes.add_child(hs)
 	var tabs: HBoxContainer = HBoxContainer.new()
@@ -332,7 +332,7 @@ func _deck_tile(d: Dictionary) -> PanelContainer:
 		edit_b.pressed.connect(func() -> void: DuelFlow.open_builder(d))
 	var copy_b: Button = _act("COPY", &"HudButton", acts)
 	copy_b.name = "CopyButton"
-	copy_b.tooltip_text = "Save a copy you can edit" if not preset else "Copy this preset into My Decks to edit it"
+	copy_b.tooltip_text = "Save a copy you can edit" if not preset else "Copy to My Decks to edit"
 	copy_b.pressed.connect(func() -> void: copy_deck(d))
 	if not preset:
 		var del_b: Button = _act("DELETE", &"HudButton", acts)
@@ -618,7 +618,7 @@ func _opponent_tile(d: Dictionary) -> Button:
 	else:
 		wire_inspect_button(b, func() -> void: inspector().open({"title": "Random opponent", "type": "AI deck",
 				"text": "The AI plays one of the 4 presets, picked when the duel starts. Its deck list is shown in the match intro.", "keywords": [], "status": ""}))
-	b.tooltip_text = "%s · tap: choose · hold / right click: its deck list" % d["name"]
+	b.tooltip_text = "%s" % d["name"]
 	return b
 
 
@@ -725,7 +725,7 @@ func _fill_hot_seat() -> void:
 	pool_b.name = "OpenPool"
 	pool_b.toggle_mode = true
 	pool_b.set_pressed_no_signal(open_pool)
-	pool_b.tooltip_text = "On: both players may use every card, also the ones not found in a campaign run yet"
+	pool_b.tooltip_text = "On: every card, found or not"
 	pool_b.pressed.connect(func() -> void:
 		open_pool = not open_pool
 		_fill_hot_seat())

@@ -231,7 +231,7 @@ class CurveChart extends Control:
 	func set_counts(c: Array[int]) -> void:
 		counts = c
 		for i: int in 5:
-			_hits[i].tooltip_text = "%d copies at cost %s · tap: show these cards · hold: what the curve means" % [counts[i], DuelViews.CURVE_LABELS[i]]
+			_hits[i].tooltip_text = "%d copies at cost %s" % [counts[i], DuelViews.CURVE_LABELS[i]]
 		queue_redraw()
 
 	func get_bar(i: int) -> Control:
@@ -382,7 +382,7 @@ static func deck_row(pick: Dictionary, on_inspect: Callable, on_remove: Callable
 		tb.custom_minimum_size = Vector2(48, 48)
 		tb.focus_mode = Control.FOCUS_ALL
 		tb.add_to_group(&"tap_target")
-		tb.tooltip_text = "%s · tap: choose the art (and so the trait)" % ArtTraits.trait_name(t)
+		tb.tooltip_text = "%s: choose the art" % ArtTraits.trait_name(t)
 		var plate: Control = TraitPlate.new(t, 28)
 		tb.add_child(plate)
 		plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -419,7 +419,7 @@ static func deck_row(pick: Dictionary, on_inspect: Callable, on_remove: Callable
 		rm.pressed.connect(func() -> void: on_remove.call(id))
 		row.add_child(rm)
 	RunScreen.wire_inspect_control(p, func() -> void: on_inspect.call(id), true)
-	p.tooltip_text = "%s ×2 · hold / right click: the full card" % (c.display_name if c != null else String(id))
+	p.tooltip_text = "%s ×2" % (c.display_name if c != null else String(id))
 	return p
 
 
@@ -466,7 +466,7 @@ static func hero_strip(h: Dictionary, on_tap: Callable, on_inspect: Callable, co
 		arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(arrow)
 		b.pressed.connect(func() -> void: on_tap.call())
-	b.tooltip_text = "%s · tap: pick a hero · hold / right click: the full kit" % h.get("name", "Hero")
+	b.tooltip_text = "%s" % h.get("name", "Hero")
 	RunScreen.wire_inspect_button(b, on_inspect)
 	return b
 

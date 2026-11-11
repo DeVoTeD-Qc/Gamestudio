@@ -137,7 +137,7 @@ func _ready() -> void:
 		# Out of the PanelContainer's layout (it would stretch the hint over the whole hand).
 		l.top_level = true
 		l.visible = false
-		l.tooltip_text = "More hand cards: swipe the hand up or down (or use the mouse wheel)"
+		l.tooltip_text = "More cards: swipe or scroll"
 		add_child(l)
 		if up:
 			_more_up = l
@@ -694,7 +694,7 @@ func _add_synergy_overlay(panel: Control, face: Control, card: Dictionary) -> vo
 		syn.size = face.size
 		syn.queue_redraw())
 	if completes != "":
-		panel.tooltip_text = "%s · playing it now turns %s on" % [panel.tooltip_text, completes]
+		panel.tooltip_text = "%s · turns %s on" % [panel.tooltip_text, completes]
 
 
 # =============================================================================
@@ -719,7 +719,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 	panel.set_meta(&"state", state)
 	panel.set_meta(&"cost", cost)
 	panel.add_to_group(&"tap_target")
-	panel.tooltip_text = "Your Operator: %s" % String(op.get("name", ""))
+	panel.tooltip_text = "Operator: %s" % String(op.get("name", ""))
 	var face: Control = Control.new()
 	face.name = "Face"
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -799,17 +799,8 @@ func _make_operator_card(op: Dictionary) -> Control:
 			CardLook.draw_cost(ink, Rect2(x, 5, 26, 26), str(cost), short)
 			x += 30.0
 		var narrow: bool = ink.size.x < 150.0
-		var tag: Rect2 = Rect2(x, 7, 58.0 if narrow else 70.0, 18)
-		var tsb := StyleBoxFlat.new()
-		tsb.bg_color = Color(0.04, 0.05, 0.055, 0.86)
-		tsb.border_color = BRASS
-		tsb.set_border_width_all(1)
-		tsb.set_corner_radius_all(9)
-		ink.draw_style_box(tsb, tag)
-		var f: Font = CardLook.TITLE_FONT
-		var tfs: int = 12 if narrow else 14
-		var tw: float = f.get_string_size("OPERATOR", HORIZONTAL_ALIGNMENT_LEFT, -1, tfs).x
-		ink.draw_string(f, Vector2(tag.position.x + (tag.size.x - tw) * 0.5, tag.position.y + 13.0 + (tfs - 12) * 0.5), "OPERATOR", HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, Color("#F3D36B"))
+		# kc-pitch-art: the shared Operator mark's brass tab (CardLook.draw_operator_tab), as on every card view.
+		var tag: Rect2 = CardLook.draw_operator_tab(ink, Vector2(x, 6), 16.0 if narrow else 18.0, true, ink.size.x - x - 30.0)
 		var kinds: Array = BannerView.ability_kinds(entry)
 		var kx: float = ink.size.x - 4.0 - 20.0
 		for k: Variant in kinds:
@@ -909,7 +900,7 @@ func _make_operator_mini(op: Dictionary) -> Control:
 	panel.set_meta(&"operator", true)
 	panel.set_meta(&"mini", true)
 	panel.add_to_group(&"tap_target")
-	panel.tooltip_text = "Your Operator: %s (on the board)" % String(op.get("name", ""))
+	panel.tooltip_text = "Operator: %s (on the board)" % String(op.get("name", ""))
 	var face: Control = Control.new()
 	face.name = "Face"
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -250,7 +250,7 @@ func _mvp_column(r: RunProgress) -> void:
 	var holder: Control = Control.new()
 	holder.name = "MvpCard"
 	holder.custom_minimum_size = CardView.size_for(MVP_W_COMPACT if compact else MVP_W)
-	holder.tooltip_text = "%s: long press or right click for the full card" % String(view.get("name", ""))
+	holder.tooltip_text = "%s" % String(view.get("name", ""))
 	holder.add_child(_mvp_card)
 	box.add_child(holder)
 	if not info.is_empty():

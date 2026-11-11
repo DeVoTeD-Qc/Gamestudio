@@ -447,7 +447,8 @@ func _draw_overlay() -> void:
 	var k: float = m["k"]
 	# kc-cards-impl (C1+): no spine, no bands, no scrim; frames are a thin keyline only.
 	if op:
-		o.draw_rect(r.grow(-1.0), BRASS, false, 2.0)
+		# kc-pitch-art: the Operator mark's brass frame (CardLook.draw_operator_frame; the tab is drawn last).
+		CardLook.draw_operator_frame(o, r, 3.0 * k)
 	elif bool(entry.get("elite", false)):
 		o.draw_rect(r.grow(-1.0), BRASS, false, 1.5)
 	elif StandardIssueLook.is_si(entry):
@@ -527,6 +528,9 @@ func _draw_overlay() -> void:
 	# The damaged bottom edge over the frontline keyline (so it always reads).
 	if damaged:
 		CardLook.draw_damage_edge(o, r, maxf(2.0, 2.0 * k))
+	# kc-pitch-art: the Operator mark's brass tab, top-left of the art (the Operator has no cost hex there).
+	if op and mode in [Mode.UNIT, Mode.GHOST]:
+		CardLook.draw_operator_tab(o, Vector2(roundf(5.0 * k), roundf(5.0 * k)), roundf(clampf(16.0 * k, 12.0, 26.0)), true, size.x * 0.5)
 	if is_target:
 		_draw_reticle(o, r)
 

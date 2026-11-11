@@ -92,7 +92,7 @@ func _ready() -> void:
 	_glossary_button.name = "GlossaryButton"
 	_glossary_button.text = "GLOSSARY"
 	_glossary_button.theme_type_variation = &"HudButton"
-	_glossary_button.tooltip_text = "Every keyword, synergy icon and stat mark in plain words"
+	_glossary_button.tooltip_text = "Every keyword and icon, explained"
 	_glossary_button.custom_minimum_size = Vector2(150, 64)
 	_glossary_button.focus_mode = Control.FOCUS_ALL
 	_glossary_button.add_to_group(&"tap_target")
@@ -146,7 +146,7 @@ func _ready() -> void:
 	_card_info_button.name = "CardInfoButton"
 	_card_info_button.toggle_mode = true
 	_card_info_button.theme_type_variation = &"HudButton"
-	_card_info_button.tooltip_text = "Cards: always show all card info (cost, level and weapon on every board card)"
+	_card_info_button.tooltip_text = "Show cost and stats on every board card"
 	_card_info_button.custom_minimum_size = Vector2(150, 64)
 	_card_info_button.focus_mode = Control.FOCUS_ALL
 	_card_info_button.add_to_group(&"tap_target")

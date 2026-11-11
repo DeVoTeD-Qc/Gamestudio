@@ -94,7 +94,7 @@ static func draw_serial_plate(ci: CanvasItem, r: Rect2, text: String, enemy: boo
 			ci.draw_circle(Vector2(x, r.get_center().y), rr, base.darkened(0.35))
 	if text == "":
 		return
-	var font: Font = STENCIL
+	var font: Font = CardLook.sharp_font(STENCIL, CardLook.text_os_of(ci))
 	var fs: int = maxi(11, int(r.size.y * 0.66))
 	var room: float = r.size.x - r.size.y * 0.5
 	while fs > 9 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:

@@ -90,7 +90,7 @@ func open(hand: Array) -> void:
 		b.custom_minimum_size = view_size + Vector2(CARD_PAD, CARD_PAD) * 2.0
 		b.set_meta(&"uid", uid)
 		b.set_meta(&"name", String(entry.get("name", "?")))
-		b.tooltip_text = "%s · tap to put it back, long-press for its rules" % entry.get("name", "?")
+		b.tooltip_text = "%s · tap to put it back" % entry.get("name", "?")
 		b.add_to_group(&"tap_target")
 		b.toggled.connect(func(on: bool) -> void: _toggle(b, uid, on))
 		_cards.add_child(b)

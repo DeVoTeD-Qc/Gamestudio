@@ -114,3 +114,8 @@ func _draw() -> void:
 		return
 	var c: Color = Color(get_theme_color(&"text_dim", &"Hud"), 0.22)
 	BannerView._dashed_rect(self, Rect2(Vector2.ZERO, size).grow(-1.0), c, 1.0)
+
+
+## kc-text: hover tooltips show each concept's icon inline (IconText), like every other text.
+func _make_custom_tooltip(for_text: String) -> Object:
+	return IconText.tooltip(for_text)
