@@ -167,7 +167,11 @@ func _ready() -> void:
 	add_child(feedback)
 	feedback.setup(_fx, _content)
 	_sync_feel()
-	Game.settings_changed.connect(func(_k: String, _v: Variant) -> void: _sync_feel())
+	Game.settings_changed.connect(func(k: String, _v: Variant) -> void:
+		_sync_feel()
+		if k == "ui_skin":
+			# dd-ui-clean: rebuild the screen in the new skin (the Settings panel rebuilds itself)
+			_render())
 	if OS.has_feature("web"):
 		_inspect.opened.connect(_publish_state)
 		_inspect.closed.connect(_publish_state)
@@ -2323,7 +2327,7 @@ func _build_end() -> void:
 ## Street extras: &points=40 (sim units), &open=2 (rooms opened), &gun1=rifle &gun2=crossbow,
 ## &stack1=5,4 &stack2=..., &active=0|1|2, &patches=lookout,brawler, &district=0..2, &boss=1,
 ## &wave=1, &sheet=gun|machine0..2|patch, &inspect=pile|wave0|room0|gun1|gun2|stack|boss|melee|points,
-## &overlay=codex|glossary|banner (dd-ux-v4),
+## &overlay=codex|glossary|banner (dd-ux-v4), &skin=a|b|c|old (dd-ui-clean),
 ## &hints=1 (first-run hints on), &near=1 (gun 1 one kill from finishing, a legal zombie dealt),
 ## &lastcards=1 (the pile runs dry after this street: wave 2 shuffles in),
 ## &street=K:wrench,Z3,M4 (dd-polish5: deal exactly these cards).
@@ -2338,6 +2342,9 @@ func _apply_smoke_query() -> void:
 		var kv: PackedStringArray = part.split("=")
 		if kv.size() == 2:
 			args[kv[0]] = kv[1].uri_decode()
+	# dd-ui-clean: &skin=a|b|c (or old) shows that UI skin for this visit (the saved setting is kept)
+	if args.has("skin"):
+		DDUi.Kit.set_skin(str(args["skin"]))
 	if args.has("screen"):
 		apply_debug(args)
 

@@ -66,6 +66,7 @@ func open() -> void:
 	grid.add_child(_toggle(g, "screen_shake", "Screen shake"))
 	grid.add_child(_toggle(g, "reduce_motion", "Reduce motion"))
 	v.add_child(DDUi.label("Reduce motion: cards fade instead of flying, no shake or zoom.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	v.add_child(_skin_row(g))
 	var more: HBoxContainer = DDUi.hbox(8)
 	v.add_child(more)
 	var cx: Button = DDUi.button("Codex", DDUi.PANEL_HI, DDUi.FONT_M)
@@ -146,6 +147,35 @@ func _toggle(g: Node, key: String, text: String) -> Control:
 		g.set_setting(key, now)
 		paint.call(now))
 	return b
+
+
+## dd-ui-clean: "UI style": the three UI skins side by side; the lit one is in use. Picking one saves it,
+## rebuilds the screen behind (main.gd listens) and this panel in the new skin.
+func _skin_row(g: Node) -> Control:
+	var box: VBoxContainer = DDUi.vbox(4)
+	box.name = "UiStyle"
+	box.add_child(DDUi.label("UI style", DDUi.FONT_M, DDUi.TEXT))
+	var row: HBoxContainer = DDUi.hbox(8)
+	box.add_child(row)
+	for k: String in DDUi.Kit.SKINS:
+		var b: Button = DDUi.button(str(DDUi.Kit.SKIN_NAMES[k]), DDUi.PANEL_HI, DDUi.FONT_S)
+		b.name = "Skin_" + k
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var on: bool = DDUi.Kit.skin == k
+		if on:
+			var c: Color = Color("245236")
+			b.add_theme_stylebox_override("normal", DDUi.box(c, DDUi.SELECT, 3, 12, 12))
+			b.add_theme_stylebox_override("hover", DDUi.box(c.lightened(0.1), DDUi.SELECT, 3, 12, 12))
+		if DDUi.Kit.skin_plate(b, "dd_chip_filter_on" if on else "dd_chip_filter_off", 12.0):
+			DDUi.ink_outline(b)
+		b.pressed.connect(func() -> void:
+			if DDUi.Kit.skin == k:
+				return
+			g.set_setting("ui_skin", k)
+			Sfx.cue(&"flip")
+			open.call_deferred())
+		row.add_child(b)
+	return box
 
 
 func close() -> void:

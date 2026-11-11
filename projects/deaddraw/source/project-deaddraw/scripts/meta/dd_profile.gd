@@ -25,7 +25,7 @@ const DEFAULT_PATH: String = "user://deaddraw_profile.json"
 const VERSION: int = 3
 ## dd-feel: Settings keys and their defaults (types are enforced on load and on set).
 const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "screen_shake": true,
-	"reduce_motion": false, "motion_chosen": false}
+	"reduce_motion": false, "motion_chosen": false, "ui_skin": ""}
 
 var path: String = DEFAULT_PATH
 var bal: DDBalance
@@ -102,6 +102,9 @@ func _put_setting(key: String, value: Variant) -> void:
 	var v: Variant
 	if d is bool:
 		v = bool(value)
+	elif d is String:
+		# dd-ui-clean: "ui_skin" ("" = the studio default skin)
+		v = str(value).strip_edges().to_lower()
 	else:
 		v = clampf(float(value), 0.0, 1.0)
 	(data["settings"] as Dictionary)[key] = v

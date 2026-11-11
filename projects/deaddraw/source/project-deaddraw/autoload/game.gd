@@ -45,6 +45,7 @@ func _ready() -> void:
 	bank.name = "Sfx"
 	add_child(bank)
 	apply_settings()
+	DDUi.Kit.set_skin(str(profile.setting("ui_skin")))
 	_hook_page_hide()
 
 
@@ -96,6 +97,8 @@ func set_setting(key: String, value: Variant) -> void:
 	if profile == null or not profile.set_setting(key, value):
 		return
 	apply_settings()
+	if key == "ui_skin":
+		DDUi.Kit.set_skin(str(profile.setting(key)))
 	settings_changed.emit(key, profile.setting(key))
 
 

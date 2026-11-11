@@ -56,7 +56,8 @@ static func box(bg: Color, border: Color = Color(0, 0, 0, 0), width: int = 0, ra
 	s.bg_color = bg
 	s.border_color = border
 	s.set_border_width_all(width)
-	s.set_corner_radius_all(radius)
+	# dd-ui-clean: the skin caps the corner radius (b / c: 6 px, a: 8 px)
+	s.set_corner_radius_all(Kit.radius(radius))
 	s.content_margin_left = pad
 	s.content_margin_right = pad
 	s.content_margin_top = pad
