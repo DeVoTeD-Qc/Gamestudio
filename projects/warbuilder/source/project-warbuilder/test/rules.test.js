@@ -7,6 +7,7 @@ const { WD, scenario, card, cards, setCards, setGun, place, zero } = require('./
 
 const T = WD.TUNE;
 const defs = (s, z) => z.map(i => s.cards[i].def);
+const HIT5 = ['T004', 'K04', 'K04']; // revealed top first: Focus 2 + Focus 2 + Steady Aim 1 = 5 Hit Markers, the Sidearm's first step (wb-odds2: 5+ → 4)
 
 // One operator `me` (whose turn it is) with a known gun and deck, shooting at `them`.
 function duel({ seed = 1, gun = 'pistol-0', posMe = 2, posThem = 3, types = { 3: 'E01' }, deck = [], prec = 0, themHand = [] } = {}) {
@@ -67,22 +68,28 @@ describe('firing (Precision is spent: commit + Recoil)', () => {
     WD.fire(s, p, 0, 3); assert.equal(me.res.prec, 4, '9 − 3 committed − 2 Recoil');
     WD.fire(s, p, 0, 3); assert.equal(me.res.prec, 0, '4 − 3 − 2, floored at 0');
   });
-  test('Steady: each shot this turn reveals 1 extra card for free', () => {
-    const { s, p, me } = duel({ prec: 4, deck: Array(20).fill('T001') });
+  test('Aim limit (wb-odds2): a shot reveals at most 3 cards; each Precision committed beyond that is Power, +1 damage', () => {
+    const { s, p, me, them } = duel({ prec: 5, deck: Array(8).fill('K04') });
+    const sp = WD.shotPreview(s, p, 0, 5); assert.equal(sp.reveal, 3); assert.equal(sp.power, 2); assert.deepEqual(sp.steps, [[5, 6], [7, 7]], 'Sidearm 5+ → 4, 7+ → 5, each +2');
+    const r = WD.fire(s, p, 0, 5).result; assert.equal(r.revealed.length, 3); assert.equal(r.total, 6); assert.equal(r.dealt, 6); assert.ok(r.notes.includes('Power +2'));
+    assert.equal(them.hp, T.hp - 6); assert.equal(me.res.prec, 0, 'it spends all 5, then Recoil');
+  });
+  test('Steady: each shot this turn needs 1 fewer Hit Marker on every step (wb-odds2; it no longer reveals a card)', () => {
+    const { s, p, me } = duel({ prec: 4, deck: Array(20).fill('K04') });
     me.revealPlus = 1;
-    const r = WD.fire(s, p, 0, 2).result;
-    assert.equal(r.revealed.length, 3); assert.equal(r.free, 1); assert.equal(me.res.prec, 0, '4 − 2 − 2');
-    assert.equal(WD.shotPreview(s, p, 0, 0).reveal, 1, 'with Steady a shot can commit nothing');
+    const sp = WD.shotPreview(s, p, 0, 2); assert.equal(sp.reveal, 2); assert.equal(sp.steady, 1); assert.deepEqual(sp.steps.map(x => x[0]), [4, 6]);
+    const r = WD.fire(s, p, 0, 2).result; assert.equal(r.revealed.length, 2); assert.equal(r.hit, true, '4 Hit Markers against 4');
+    assert.equal(WD.shotPreview(s, p, 0, 0).reveal, 0, 'a shot needs at least 1 Precision');
   });
   test('Hit Markers against the gun\'s ladder: miss, first step, second step', () => {
-    assert.deepEqual(WD.WEAPONS['pistol-0'].ladder, [[3, 2], [5, 3]], 'wb-pkg1 trim: every gun step needs 1 more Hit Marker');
+    assert.deepEqual(WD.WEAPONS['pistol-0'].ladder, [[5, 4], [7, 5]], 'wb-odds2: every gun step needs 2 more Hit Markers and deals 2 more damage');
     const cases = [
-      { deck: ['T004', 'T004', 'T001'], hit: false, dealt: 0, total: 2 },
-      { deck: ['T004', 'T004', 'T004'], hit: true, dealt: 2, total: 3 },
-      { deck: ['T004', 'T004', 'T004', 'T004', 'T004'], prec: 5, hit: true, dealt: 3, total: 5 },
+      { deck: ['T004', 'K04', 'T004'], hit: false, dealt: 0, total: 4 },
+      { deck: HIT5, hit: true, dealt: 4, total: 5 },
+      { deck: ['R12', 'R12', 'K04'], hit: true, dealt: 5, total: 8 },
     ];
     for (const c of cases) {
-      const { s, p, them } = duel({ prec: c.prec || 3, deck: c.deck });
+      const { s, p, them } = duel({ prec: 3, deck: c.deck });
       const r = WD.fire(s, p, 0).result;
       assert.equal(r.total, c.total); assert.equal(r.hit, c.hit); assert.equal(r.dealt, c.dealt);
       assert.equal(them.hp, T.hp - c.dealt);
@@ -91,33 +98,37 @@ describe('firing (Precision is spent: commit + Recoil)', () => {
   test('Mark: the next shot needs 1 fewer Hit Marker on every step (then it is used up)', () => {
     const { s, p, me } = duel({ prec: 9, deck: Array(20).fill('T004') });
     me.nextFire.reqMod = 1;
-    assert.deepEqual(WD.shotPreview(s, p, 0, 1).steps.map(x => x[0]), [2, 4]);
+    assert.deepEqual(WD.shotPreview(s, p, 0, 1).steps.map(x => x[0]), [4, 6]);
     WD.fire(s, p, 0, 1);
-    assert.deepEqual(WD.shotPreview(s, p, 0, 1).steps.map(x => x[0]), [3, 5]);
+    assert.deepEqual(WD.shotPreview(s, p, 0, 1).steps.map(x => x[0]), [5, 7]);
   });
   test('"Your hits deal +1 damage this turn" adds to every step', () => {
-    const { s, p, me } = duel({ prec: 3, deck: ['T004', 'T004', 'T004'] }); me.dmgTurn = 2;
-    assert.equal(WD.fire(s, p, 0).result.dealt, 4);
+    const { s, p, me } = duel({ prec: 3, deck: HIT5 }); me.dmgTurn = 2;
+    assert.equal(WD.fire(s, p, 0).result.dealt, 6);
   });
-  test('cover takes 1 damage off; close quarters (distance 0) and Pierce ignore it', () => {
-    const hit = (o) => { const { s, p } = duel(Object.assign({ prec: 3, deck: ['T004', 'T004', 'T004'] }, o)); if (o.pierce) s.players[p].ignoreCover = true; return WD.fire(s, p, 0).result.dealt; };
+  test('cover raises every step by 1 Hit Marker, also at distance 0; Pierce and Expose ignore it; long range (distance 2+) adds 1', () => {
+    const need = (o) => { const { s, p } = duel(Object.assign({ prec: 3 }, o)); if (o.pierce) s.players[p].ignoreCover = true; if (o.expose) s.players[p].expose = true; return WD.shotPreview(s, p, 0, 3); };
     assert.equal(WD.ENVS.E05.cover, 1); assert.equal(WD.ENVS.E01.cover, 0);
-    assert.equal(hit({ posThem: 3, types: { 3: 'E05' } }), 1, 'distance 1, target in cover');
-    assert.equal(hit({ posThem: 3, types: { 3: 'E01' } }), 2, 'distance 1, open ground');
-    assert.equal(hit({ posThem: 2, types: { 2: 'E05' } }), 2, 'same location: no cover');
-    assert.equal(hit({ posThem: 3, types: { 3: 'E05' }, pierce: true }), 2, 'Pierce');
+    assert.equal(need({ posThem: 3, types: { 3: 'E05' } }).need, 6, 'distance 1, target in cover');
+    assert.equal(need({ posThem: 3, types: { 3: 'E01' } }).need, 5, 'distance 1, open ground');
+    assert.equal(need({ posThem: 2, types: { 2: 'E05' } }).need, 6, 'same location: cover still counts');
+    assert.equal(need({ posThem: 3, types: { 3: 'E05' }, pierce: true }).need, 5, 'Pierce');
+    assert.equal(need({ posThem: 3, types: { 3: 'E05' }, expose: true }).coverBy, 'Expose');
+    const far = need({ posThem: 4, types: { 4: 'E05' } }); assert.equal(far.need, 7, 'distance 2 in cover: 5 + cover 1 + long range 1'); assert.equal(far.long, 1);
+    const { s, p } = duel({ prec: 3, deck: HIT5, types: { 3: 'E05' } });
+    assert.equal(WD.fire(s, p, 0).result.hit, false, '5 Hit Markers miss a target in cover');
   });
   test('the best Reaction card in hand is used first, then Armor; close quarters ignores Armor; a hit deals at least 1', () => {
-    const big = { prec: 5, deck: ['T004', 'T004', 'T004', 'T004', 'T004'] }; // Sidearm second step: 3 damage
+    const big = { prec: 3, deck: ['R12', 'R12', 'R12'] }; // 9 Hit Markers: the Sidearm's second step, 5 damage
     let d = duel(Object.assign({ themHand: ['E12'] }, big)); // Deployable Cover, Reaction 3
-    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 1);
+    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 2);
     assert.equal(d.them.hand.length, 0); assert.equal(d.them.discard.length, 1, 'the reaction card is discarded');
     d = duel(big); d.them.def = 1;
-    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 2); assert.equal(d.them.def, 0, 'Armor is used up');
-    d = duel(big); d.them.def = 5;
-    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 1); assert.equal(d.them.def, 3, 'only the Armor needed is used');
+    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 4); assert.equal(d.them.def, 0, 'Armor is used up');
+    d = duel(big); d.them.def = 9;
+    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 1); assert.equal(d.them.def, 5, 'only the Armor needed is used');
     d = duel(Object.assign({ posThem: 2, types: { 2: 'E01' } }, big)); d.them.def = 5;
-    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 3, 'close quarters: Armor ignored'); assert.equal(d.them.def, 5);
+    assert.equal(WD.fire(d.s, d.p, 0).result.dealt, 5, 'close quarters: Armor ignored'); assert.equal(d.them.def, 5);
   });
   test('a gun fires up to its shots per turn; extra shots add to it', () => {
     const { s, p, me } = duel({ prec: 30, deck: Array(40).fill('T001') });
@@ -139,13 +150,13 @@ describe('firing (Precision is spent: commit + Recoil)', () => {
     d = duel({ gun: 'sniper-1', prec: 3, deck: ['T004', 'T004', 'T004'], posMe: 0, posThem: 5, types: { 5: 'E01' } });
     assert.equal(WD.fire(d.s, d.p, 0).ok, true);
   });
-  test('a knife hits at distance 0 without Precision, for 3', () => {
+  test('a knife hits at distance 0 without Precision, for 5', () => {
     const { s, p, them } = duel({ gun: 'knife-0', prec: 0, posThem: 2, types: { 2: 'E05' } });
     const r = WD.fire(s, p, 0);
-    assert.equal(r.ok, true); assert.equal(r.result.hit, true); assert.equal(them.hp, T.hp - 3);
+    assert.equal(r.ok, true); assert.equal(r.result.hit, true); assert.equal(them.hp, T.hp - 5, 'cover does not stop a knife');
   });
   test('a lethal hit ends the match', () => {
-    const { s, p, them } = duel({ prec: 3, deck: ['T004', 'T004', 'T004'] });
+    const { s, p, them } = duel({ prec: 3, deck: HIT5 });
     them.hp = 2; WD.fire(s, p, 0);
     assert.equal(s.over, true); assert.equal(s.winner, p); assert.equal(s.endBy, 'ko');
   });
@@ -156,27 +167,27 @@ describe('firing (Precision is spent: commit + Recoil)', () => {
   });
   // wb-fix1: decks where every card has the same Hit Markers make the odds exact, so the best plan can be checked by hand.
   const plan = (o) => { const d = duel(Object.assign({ posThem: 2, types: { 2: 'E01' } }, o)); d.me.shot = (o.shots || 1) - WD.shotsLeft(d.s, d.p, 0); return d; };
-  test('suggestCommit: on ties it takes the surer, bigger commit (Breacher, 13 Precision, 2 shots)', () => {
-    // 1 Hit Marker per card; Breacher steps 3+ → 3, 7+ → 6; Recoil 3. Plans 3 + 7 and 7 + 3 both make 9: fire the sure 6-damage
-    // shot first (the old planner took the cheapest tie and showed it on FIRE).
-    const { s, p } = plan({ gun: 'shotgun-0', prec: 13, shots: 2, deck: Array(14).fill('T004') });
+  test('suggestCommit: Power makes one big shot worth more than two small ones (Breacher, 13 Precision, 2 shots)', () => {
+    // 2 Hit Markers per card; Breacher 5+ → 5, 9+ → 8 (9 is out of reach: 3 cards = 6); Recoil 3. Two shots need 3 cards each:
+    // 5 + 5 + Power (13 − 3 Recoil − 6) = 14. One shot with all 13: 5 + Power 10 = 15.
+    const { s, p } = plan({ gun: 'shotgun-0', prec: 13, shots: 2, deck: Array(14).fill('K04') });
     const sg = WD.suggestCommit(s, p, 0);
-    assert.equal(sg.commit, 7); assert.equal(sg.p, 1); assert.equal(sg.ev, 6); assert.equal(sg.total, 9, 'the whole turn plan');
+    assert.equal(sg.commit, 13); assert.equal(sg.p, 1); assert.equal(sg.ev, 15); assert.equal(sg.total, 15, 'the whole turn plan');
   });
   test('suggestCommit never spends Precision on a shot that cannot hit just to reach a later one', () => {
-    // Ranger needs 4; 1 Hit Marker per card; 10 Precision, 4 shots, Recoil 1. A commit of 1 to 3 is a sure miss.
-    const { s, p } = plan({ gun: 'dmr-0', posThem: 3, types: { 3: 'E01' }, prec: 10, shots: 4, deck: Array(14).fill('T004') });
+    // Ranger needs 6; 2 Hit Markers per card; 10 Precision, 4 shots, Recoil 1. A commit of 1 or 2 is a sure miss.
+    const { s, p } = plan({ gun: 'dmr-0', posThem: 3, types: { 3: 'E01' }, prec: 10, shots: 4, deck: Array(14).fill('K04') });
     const sg = WD.suggestCommit(s, p, 0);
-    assert.ok(sg.commit >= 4, `commit ${sg.commit}`); assert.equal(sg.p, 1);
+    assert.ok(sg.commit >= 3, `commit ${sg.commit}`); assert.equal(sg.p, 1);
   });
   test('suggestCommit: a Mark helps only the next shot, so the plan does not save Precision for a marked second shot', () => {
-    // Sidearm needs 3 (Mark 1: 2), steps 4+ → 3 with the Mark; Recoil 2; 4 Precision, 2 shots; 1 Hit Marker per card.
-    // Commit 2 hits for 2 but leaves nothing for the second shot. All 4 now hits for 3.
-    const { s, p, me } = plan({ gun: 'pistol-0', prec: 4, shots: 2, deck: Array(14).fill('T004') }); me.nextFire.reqMod = 1;
+    // Sidearm needs 5 (Mark 1: 4), 7 (Mark: 6) for 5 damage; Recoil 2; 4 Precision, 2 shots; 2 Hit Markers per card. Commit 2 hits for 4 and
+    // leaves nothing for a second shot; commit 3 reaches the marked second step (5); all 4 adds Power: 6.
+    const { s, p, me } = plan({ gun: 'pistol-0', prec: 4, shots: 2, deck: Array(14).fill('K04') }); me.nextFire.reqMod = 1;
     assert.equal(WD.suggestCommit(s, p, 0).commit, 4);
   });
   test('the fire report says "close quarters" once', () => {
-    const big = { prec: 5, deck: ['T004', 'T004', 'T004', 'T004', 'T004'], posThem: 2, types: { 2: 'E01' } };
+    const big = { prec: 3, deck: ['R12', 'R12', 'R12'], posThem: 2, types: { 2: 'E01' } };
     let d = duel(big); d.them.def = 5;
     let notes = WD.fire(d.s, d.p, 0).result.notes;
     assert.equal(notes.filter(n => /close quarters/.test(n)).length, 1, notes.join(' · ')); assert.ok(notes.includes('close quarters: Armor ignored'));
@@ -202,10 +213,10 @@ describe('Squad lines and Rally', () => {
     me.loadout = cards(s, ['L1R']);
     play(s, p, ['R12', 'K04', 'K04', 'K04']); // 5 Recon cards: each line ×3 (cap)
     assert.equal(me.squadN[me.play[0]], 3);
-    // R12: 2 + 3×2; three Focus: 2 + 3×1 each; plus Recon Rally 5 (+2); Rally 3 and 5 each give Mark and hits +1 damage
+    // R12: 2 + 3×2; three Focus: 2 + 3×1 each; plus Recon Rally 5 (+2); Rally 3 and 5 each give Mark
     assert.equal(me.res.prec, 8 + 3 * 5 + 2);
     assert.equal(me.nextFire.reqMod, 2, 'Recon Rally 3 and 5 each Mark');
-    assert.equal(me.dmgTurn, 2, 'wb-pkg1: Recon Rally 3 and 5 each give hits +1 damage');
+    assert.equal(me.dmgTurn, 1, 'Recon Rally 5 gives hits +1 damage (wb-odds2: Rally 3 no longer does)');
   });
   test('Rally fires once per turn at 3 and at 5 cards of one squad', () => {
     const { s, p, me } = scenario(35); zero(me);
@@ -316,13 +327,13 @@ describe('moving and looting', () => {
     s.stationLeft.K04 = 0; me.res.intel = 2; me.buys = 0; assert.match(WD.buySupply(s, p, 'K04').err, /sold out/);
     assert.equal(WD.buySupply(s, p, 'A11').ok, false);
   });
-  test('Buy Station Scrap service: 1 Intel scraps a Sprint, once per turn, not a buy', () => {
+  test('Buy Station Scrap service: free (wb-odds2), scraps a Sprint, once per turn, not a buy', () => {
     const { s, p, me } = scenario(14); zero(me);
     setCards(s, me, { hand: ['T001', 'T001', 'T002'], discard: Array(8).fill('T002') });
     me.res.intel = 3;
     assert.match(WD.stationScrap(s, p, me.hand[2]).err, /only takes a Sprint/);
     const x = me.hand[0];
-    assert.equal(WD.stationScrap(s, p, x).ok, true); assert.ok(me.removed.includes(x)); assert.equal(me.res.intel, 2); assert.equal(me.buys, 0);
+    assert.equal(WD.stationScrap(s, p, x).ok, true); assert.ok(me.removed.includes(x)); assert.equal(me.res.intel, 3); assert.equal(me.buys, 0);
     assert.match(WD.stationScrap(s, p, me.hand[0]).err, /once per turn/);
   });
   test('Scrap removes a card from the game but never takes the deck below 7 cards', () => {

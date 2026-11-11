@@ -8,6 +8,7 @@ const { WD, scenario, card, cards, setCards, setGun, place, zero, aiMatch } = re
 
 const T = WD.TUNE;
 const defOf = (s, iid) => s.cards[iid].def;
+const HIT5 = ['T004', 'K04', 'K04']; // revealed top first: Focus 2 + Focus 2 + Steady Aim 1 = 5 Hit Markers, the Sidearm's first step (wb-odds2: 5+ → 4)
 function duel({ seed = 1, gun = 'pistol-0', posMe = 2, posThem = 3, types = { 3: 'E01' }, deck = [], prec = 0, hand = [], themHand = [], themDeck = Array(8).fill('T001') } = {}) {
   const sc = scenario(seed); const { s, p, me, them } = sc;
   place(s, posMe, posThem, p, types);
@@ -31,18 +32,18 @@ describe('Squad Tactics (O1): 12 rule-changing cards replace the 12 flattest', (
     assert.ok(tac.every(d => d.text && !/undefined/.test(d.text)), 'every Tactic has rules text');
   });
   test('Charge: +2 Movement, and hits at distance 0 deal +1 this turn (not at range)', () => {
-    let d = duel({ prec: 3, deck: Array(3).fill('T004'), posThem: 2, types: { 2: 'E01' } }); play(d.s, d.p, 'AT1');
-    assert.equal(d.me.res.move, 2); assert.equal(WD.fire(d.s, d.p, 0, 3).result.dealt, 3, 'Sidearm 2 + Charge 1');
-    d = duel({ prec: 3, deck: Array(3).fill('T004') }); play(d.s, d.p, 'AT1');
-    assert.equal(WD.fire(d.s, d.p, 0, 3).result.dealt, 2, 'distance 1: no Charge bonus');
+    let d = duel({ prec: 3, deck: HIT5, posThem: 2, types: { 2: 'E01' } }); play(d.s, d.p, 'AT1');
+    assert.equal(d.me.res.move, 2); assert.equal(WD.fire(d.s, d.p, 0, 3).result.dealt, 5, 'Sidearm 4 + Charge 1');
+    d = duel({ prec: 3, deck: HIT5 }); play(d.s, d.p, 'AT1');
+    assert.equal(WD.fire(d.s, d.p, 0, 3).result.dealt, 4, 'distance 1: no Charge bonus');
   });
   test('Follow Through: your next hit this turn draws 2 cards (once)', () => {
-    const d = duel({ prec: 6, deck: ['T001', 'T001', 'T001', 'T001', 'T004', 'T004', 'T004', 'T004', 'T004', 'T004'] }); play(d.s, d.p, 'AT2');
+    const d = duel({ prec: 6, deck: ['T001', 'T001', 'T001', 'T001', 'T004', 'T004', 'T004', 'T004', 'K04', 'K04'] }); play(d.s, d.p, 'AT2');
     assert.equal(d.me.hand.length, 0); const r = WD.fire(d.s, d.p, 0, 3).result;
     assert.equal(r.hit, true); assert.ok(r.notes.includes('Follow Through: draw 2')); assert.equal(d.me.hand.length, 2); assert.equal(d.me.onHitDraw, 0);
   });
   test('Adrenaline: when a shot hits you, one Adrenaline returns from your discard pile to your hand', () => {
-    const d = duel({ prec: 3, deck: Array(3).fill('T004') }); d.them.discard = cards(d.s, ['AT3', 'AT3']);
+    const d = duel({ prec: 3, deck: HIT5 }); d.them.discard = cards(d.s, ['AT3', 'AT3']);
     WD.fire(d.s, d.p, 0, 3);
     assert.equal(d.them.hand.filter(i => defOf(d.s, i) === 'AT3').length, 1); assert.equal(d.them.discard.length, 1);
   });
@@ -56,16 +57,18 @@ describe('Squad Tactics (O1): 12 rule-changing cards replace the 12 flattest', (
     assert.equal(WD.arrange(d.s, d.p, order).ok, false, 'one arrangement per Sweep');
     play(d.s, d.p, 'RT1'); d.me.deck.pop(); assert.match(WD.arrange(d.s, d.p, d.me.peek).err, /changed/);
   });
-  test('Expose: your hits ignore the rival\'s Armor and Reaction cards this turn', () => {
-    const d = duel({ prec: 6, deck: Array(6).fill('T004'), themHand: ['E12'] }); d.them.def = 4; play(d.s, d.p, 'RT2');
-    const r = WD.fire(d.s, d.p, 0, 3).result; assert.equal(r.dealt, 2, 'the full 2: no Armor −1, no Reaction −3');
+  test('Expose: this turn your shots ignore cover and your hits ignore the rival\'s Armor and Reaction cards', () => {
+    const d = duel({ prec: 6, deck: Array(6).fill('K04'), themHand: ['E12'], types: { 3: 'E05' } }); d.them.def = 4;
+    assert.equal(WD.shotPreview(d.s, d.p, 0, 3).need, 6, 'in cover: Sidearm 5 + cover 1'); play(d.s, d.p, 'RT2');
+    assert.equal(WD.shotPreview(d.s, d.p, 0, 3).need, 4, 'Expose: cover ignored, and its Mark −1'); assert.equal(WD.shotPreview(d.s, d.p, 0, 3).coverBy, 'Expose');
+    const r = WD.fire(d.s, d.p, 0, 3).result; assert.equal(r.dealt, 5, 'the full 5 (6 Hit Markers: the marked second step): no Armor −4, no Reaction −3');
     assert.equal(d.them.def, 4); assert.equal(d.them.hand.length, 1, 'the Reaction card stays in hand'); assert.ok(r.notes.includes('Exposed: Armor ignored'));
   });
-  test('Hold the Angle: unspent Precision (up to 4) fires on the rival\'s turn if they end it in your range', () => {
-    let d = duel({ prec: 0, deck: Array(10).fill('T004') }); play(d.s, d.p, 'RT3'); d.me.res.prec = 9;
-    WD.endTurn(d.s, d.p); assert.deepEqual(d.me.ow, { prec: 4 });
+  test('Hold the Angle: unspent Precision (up to 3) fires on the rival\'s turn if they end it in your range', () => {
+    let d = duel({ prec: 0, deck: Array(10).fill('K04') }); play(d.s, d.p, 'RT3'); d.me.res.prec = 9;
+    WD.endTurn(d.s, d.p); assert.deepEqual(d.me.ow, { prec: 3 }, 'wb-odds2: 3, the aim limit');
     const hp = d.them.hp; zero(d.them); d.them.hand = []; WD.endTurn(d.s, d.o);
-    assert.equal(d.them.hp, hp - 2, 'Sidearm: 4 Precision saved, 4 Hit Markers revealed, first step (needs 3)'); assert.equal(d.s.lastFire.kind, 'overwatch'); assert.equal(d.me.ow, null); assert.equal(d.me.stats.owShots, 1);
+    assert.equal(d.them.hp, hp - 4, 'Sidearm: 3 Precision saved, 6 Hit Markers revealed, first step (needs 5)'); assert.equal(d.s.lastFire.kind, 'overwatch'); assert.equal(d.me.ow, null); assert.equal(d.me.stats.owShots, 1);
     d = duel({ prec: 0, deck: Array(10).fill('T004'), posMe: 0, posThem: 4, types: { 4: 'E01' } }); play(d.s, d.p, 'RT3'); d.me.res.prec = 5;
     WD.endTurn(d.s, d.p); const hp2 = d.them.hp; d.them.hand = []; WD.endTurn(d.s, d.o);
     assert.equal(d.them.hp, hp2, 'out of range: it holds'); assert.equal(d.me.ow, null, 'and is gone at your next Ready');
@@ -108,7 +111,7 @@ describe('Squad Tactics (O1): 12 rule-changing cards replace the 12 flattest', (
 });
 
 describe('Spoils (O2): pick 1 of 3 after a turn in which you dealt damage', () => {
-  const hitTurn = () => { const d = duel({ prec: 3, deck: Array(3).fill('T004') }); WD.fire(d.s, d.p, 0, 3); assert.ok(d.me.stats.turnDmg > 0); return d; };
+  const hitTurn = () => { const d = duel({ prec: 3, deck: HIT5 }); WD.fire(d.s, d.p, 0, 3); assert.ok(d.me.stats.turnDmg > 0); return d; };
   test('End turn offers 3 different loot cards of the current tier (one of your main squad first) and waits for your pick', () => {
     const d = hitTurn(); d.me.discard.push(...cards(d.s, ['K04', 'K04']));
     const r = WD.endTurn(d.s, d.p); assert.equal(r.ok, true); assert.equal(r.spoils.length, 3);
@@ -130,35 +133,42 @@ describe('Spoils (O2): pick 1 of 3 after a turn in which you dealt damage', () =
     assert.equal(d.me.stats.cardsAcquired, n); assert.equal(d.s.turn, d.o);
     d = duel({}); const r = WD.endTurn(d.s, d.p); assert.equal(r.spoils, undefined); assert.equal(d.s.turn, d.o);
   });
+  test('wb-odds2: Spoils also come after a turn in which you were hit since your last turn (once)', () => {
+    const d = duel({ prec: 3, deck: HIT5 }); WD.fire(d.s, d.p, 0, 3); assert.equal(d.them.hurt, true);
+    WD.endTurn(d.s, d.p); WD.takeSpoils(d.s, d.p, null); assert.equal(d.s.turn, d.o);
+    d.them.hand = []; const r = WD.endTurn(d.s, d.o); assert.equal(r.spoils.length, 3, 'the rival was hit: Spoils without dealing damage');
+    assert.match(d.s.log[d.s.log.length - 1].msg, /was hit since their last turn: Spoils/);
+    WD.takeSpoils(d.s, d.o, null); assert.equal(d.them.hurt, false, 'used up');
+  });
 });
 
-describe('Field Promotion (O3): 1 Intel and a buy, once per turn, a starter becomes a squad basic', () => {
+describe('Field Promotion (O3): 1 Intel (wb-odds2: not a buy), once per turn, a starter becomes a squad basic', () => {
   test('from the discard pile: the starter leaves the game, the basic comes from the Buy Station stock to your discard', () => {
     const d = duel({}); d.me.discard = cards(d.s, ['T001']); d.me.res.intel = 3; const sprint = d.me.discard[0]; const left = d.s.stationLeft.K04;
     const r = WD.promote(d.s, d.p, sprint, 'recon'); assert.equal(r.ok, true);
     assert.ok(d.me.removed.includes(sprint)); assert.equal(defOf(d.s, d.me.discard[0]), 'K04'); assert.equal(d.s.stationLeft.K04, left - 1);
-    assert.equal(d.me.res.intel, 2); assert.equal(d.me.buys, 1, 'uses one of your buys'); assert.equal(d.me.stats.promoted, 1);
+    assert.equal(d.me.res.intel, 2); assert.equal(d.me.buys, 0, 'wb-odds2: not a buy'); assert.equal(d.me.stats.promoted, 1);
     d.me.discard.push(card(d.s, 'T002')); assert.match(WD.promote(d.s, d.p, d.me.discard[1], 'recon').err, /once per turn/);
   });
   test('from your hand it stays in your hand (play it this turn)', () => {
     const d = duel({ hand: ['T002'] }); d.me.res.intel = 1; const r = WD.promote(d.s, d.p, d.me.hand[0], 'assault');
     assert.equal(r.ok, true); assert.equal(defOf(d.s, d.me.hand[0]), 'K02');
   });
-  test('refused: no Intel, not a starter, an unknown squad, sold out, no buys left', () => {
+  test('refused: no Intel, not a starter, an unknown squad, sold out; no buys left is fine (wb-odds2)', () => {
     let d = duel({ hand: ['T001', 'K04'] });
     assert.match(WD.promote(d.s, d.p, d.me.hand[0], 'recon').err, /Intel/);
     d.me.res.intel = 5;
     assert.match(WD.promote(d.s, d.p, d.me.hand[1], 'recon').err, /starter/);
     assert.match(WD.promote(d.s, d.p, d.me.hand[0], 'pirates').err, /squad/);
     d.s.stationLeft.K04 = 0; assert.match(WD.promote(d.s, d.p, d.me.hand[0], 'recon').err, /sold out/);
-    d.me.buys = T.buyCap; assert.match(WD.promote(d.s, d.p, d.me.hand[0], 'assault').err, /buys/);
+    d.me.buys = T.buyCap; assert.equal(WD.promote(d.s, d.p, d.me.hand[0], 'assault').ok, true, 'Field Promotion is not a buy');
   });
 });
 
 describe('Readouts (O7): Threat and the Deck bar', () => {
   test('Threat is the planner\'s expected damage for the rest of the turn; with ifPlayAll it counts your hand', () => {
-    const d = duel({ prec: 3, deck: Array(9).fill('T004'), hand: ['K04', 'K04'] });
-    const now = WD.threat(d.s, d.p); assert.equal(now.inRange, true); assert.equal(now.ev, 2); assert.equal(now.p, 1);
+    const d = duel({ prec: 3, deck: Array(9).fill('K04'), hand: ['K04', 'K04'] });
+    const now = WD.threat(d.s, d.p); assert.equal(now.inRange, true); assert.equal(now.ev, 4, 'commit 3: 6 Hit Markers, the first step'); assert.equal(now.p, 1);
     const all = WD.threat(d.s, d.p, { ifPlayAll: true }); assert.ok(all.ev > now.ev, `${all.ev} > ${now.ev}`);
     assert.equal(d.me.hand.length, 2, 'the real hand is untouched');
     const far = duel({ prec: 3, deck: Array(9).fill('T004'), posMe: 0, posThem: 5, types: { 5: 'E01' } }); assert.deepEqual([WD.threat(far.s, far.p).ev, WD.threat(far.s, far.p).inRange], [0, false]);

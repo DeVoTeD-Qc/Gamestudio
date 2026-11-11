@@ -2,7 +2,8 @@
    Rules (single source of truth): documentation/design/rules.md. v7 adds Squad Tactics, Spoils, Field Promotion, the Hot Drop delivery,
    Threat / deck readouts and the Operator rank (wb-improve-v2.md, the head's answers W1–W5) on top of engine-synergy-spec.md.
    Squads + Loadout build the engine; a fixed 7-location row closes on a public schedule into an escalating final circle and a hard end.
-   Shooting: commit Precision to a shot (1 card revealed per Precision committed); the shot spends it, and Recoil costs more Precision on top.
+   Shooting: commit Precision to a shot (1 card revealed per Precision committed, up to 3; each Precision beyond that is +1 damage); the shot
+   spends it, and Recoil costs more Precision on top. Cover and long range raise the Hit Markers needed (wb-odds2).
    Resources: Movement, Precision, Intel (+ Armor, which lasts until your next turn). */
 (function (root) {
 'use strict';
@@ -12,14 +13,17 @@ const TUNE = {
   hp: 60, hand: 5, firstHand: 5, lowHp: 10, digIn: 2, minDeck: 7,
   zones: 7, startA: 1, startB: 5, stackSize: 3, affinityShare: 2 / 3, adjCost: 1, cycleCost: 1,
   closeAfter: [2, 4, 5, 6, 7, 8], gasDmg: 3, finalStorm: [3, 4, 5, 6], hardEnd: 11, crateRounds: [2, 4], crate: [3, 1],
-  buyCap: 2, hotDrop: 3, supplyCost: 2, station: ['K02', 'K04', 'K05', 'K03'], stationCopies: 6, stationScrapCost: 1,
+  buyCap: 2, hotDrop: 3, supplyCost: 2, station: ['K02', 'K04', 'K05', 'K03'], stationCopies: 6, stationScrapCost: 0,
   loadoutSlots: 2, squadCap: 3, rally: [3, 5],
   needPlus: 0, closeQuarters: true, pointBlank: true, aim: 'spend',
-  // wb-odds2 (head's wb-odds answer a): cover and long range raise the Hit Markers a shot needs (on every step); Expose and Pierce ignore cover
-  coverNeed: 1, coverDmg: 0, longFrom: 2, longNeed: 1, dmgPlus: 0, aimCap: 0, aimOver: 0, cqCover: 0,
   stSprint: 3, stScout: 3, stAim: 2, alternateFirst: true,
   // wb-pkg1: Spoils (O2), Field Promotion (O3), Hot Drop delivery (O6), Squad Tactics (O1)
-  spoils: 3, spoilsSquad: 1, promoteCost: 1, promoteBuy: 1, aiSpoilsFocus: 1.5, overwatchCap: 4, fortifyCap: 6, turretRange: 3,
+  spoils: 3, spoilsSquad: 1, promoteCost: 1, promoteBuy: 0, aiSpoilsFocus: 1.5, overwatchCap: 3, fortifyCap: 6, turretRange: 3,
+  // wb-odds2: fewer turns deal damage now, so fewer Spoils. Three rules keep building on pace: Spoils also come after a turn in which you were
+  // hit since your last turn (spoilsHurt), Field Promotion no longer uses a buy (promoteBuy 0) and the Buy Station's Scrap service is free.
+  // wb-odds2 (head's wb-odds answer a: shots hit about 65%): a shot reveals at most aimCap cards; each Precision committed beyond that adds
+  // aimPower damage (Power). Cover (+coverNeed per level) and long range (distance longFrom+: +longNeed) raise every step's Hit Markers.
+  spoilsHurt: 1, aimCap: 3, aimPower: 1, coverNeed: 1, longFrom: 2, longNeed: 1,
   // kept for the UI and print-and-play (old systems switched off)
   lite: true, perks: false, ammo: false, phases: false, stacks: true, physical: true, tradeIn: 0, combos: false, locEveryTurn: true,
 };
@@ -55,7 +59,7 @@ function effParts(effs) {
     else if (e.op === 'charge') out.push(`at distance 0 your hits deal +${e.n} damage this turn`);
     else if (e.op === 'onHit') out.push(`your next hit this turn draws ${e.n} cards`);
     else if (e.op === 'sweep') out.push(`look at your top ${e.n} cards and put them back in any order`);
-    else if (e.op === 'expose') out.push('this turn your shots ignore cover and your hits ignore Armor and Reaction cards');
+    else if (e.op === 'expose') out.push('this turn your shots ignore cover, and your hits ignore Armor and Reaction cards');
     else if (e.op === 'overwatch') out.push(`at End, save up to ${TUNE.overwatchCap} unspent Precision: fire it if the rival ends their turn in range`);
     else if (e.op === 'fortify') out.push(`your Armor holds through your next Ready (up to ${TUNE.fortifyCap})`);
     else if (e.op === 'heal') out.push(`Heal ${e.n}`);
@@ -97,13 +101,13 @@ TC('K02', 'Tac Sprint', 'assault', 1, 1, 2, 0, [M(1), Pr(2)], { squad: [Pr(1)] }
 TC('K04', 'Focus', 'recon', 1, 2, 2, 0, [Pr(2)], { squad: [Pr(1)] });
 TC('K05', 'Spare Rounds', 'support', 1, 1, 2, 0, [Pr(2), Sh(1)], { squad: [Pr(1)] });
 TC('K03', 'Dead Drop', 'engineer', 1, 1, 2, 0, [I(2)], { squad: [BY(1)] }); // wb-pkg1: +1 Buy per Engineer (promotions use a buy)
-// ASSAULT: hits hit harder
-TC('A11', 'Breach', 'assault', 1, 2, 1, 2, [M(1), Pr(2)], { squad: [DM(1), Pr(1)] });
-TC('A12', 'Slide Cancel', 'assault', 1, 2, 1, 2, [M(2), Pr(1), SC(1)], { squad: [D(1), Pr(2)] });
-TC('A13', 'Hip Fire', 'assault', 1, 2, 2, 2, [M(1), Pr(2)], { squad: [Pr(3)] });
-TC('A21', 'Rush the Door', 'assault', 2, 2, 3, 2, [M(1), Pr(3), PI], { squad: [DM(1), Pr(2)] });
-TC('AT1', 'Charge', 'assault', 2, 2, 3, 2, [M(2), Pr(1), CH(1)], { squad: [Pr(1)], tactic: true });
-TC('AT2', 'Follow Through', 'assault', 2, 2, 3, 2, [M(1), Pr(2), FT(2)], { squad: [Pr(1)], tactic: true });
+// ASSAULT: hits hit harder (wb-odds2: six cards 2 → 3 Hit Markers, so the squad still lands its shots under the 3-card aim limit)
+TC('A11', 'Breach', 'assault', 1, 3, 1, 2, [M(1), Pr(2)], { squad: [DM(1), Pr(1)] });
+TC('A12', 'Slide Cancel', 'assault', 1, 3, 1, 2, [M(2), Pr(1), SC(1)], { squad: [D(1), Pr(2)] });
+TC('A13', 'Hip Fire', 'assault', 1, 3, 2, 2, [M(1), Pr(2)], { squad: [Pr(2), ST(1)] }); // wb-odds2: Squad line Steady (was +3 Precision)
+TC('A21', 'Rush the Door', 'assault', 2, 3, 3, 2, [M(1), Pr(3), PI], { squad: [DM(1), Pr(2)] });
+TC('AT1', 'Charge', 'assault', 2, 3, 3, 2, [M(2), Pr(1), CH(1)], { squad: [Pr(1)], tactic: true });
+TC('AT2', 'Follow Through', 'assault', 2, 3, 3, 2, [M(1), Pr(2), FT(2)], { squad: [Pr(1)], tactic: true });
 TC('AT3', 'Adrenaline', 'assault', 3, 3, 4, 2, [M(1), Pr(3)], { squad: [Pr(1)], tactic: true, adrenaline: true });
 TC('A32', 'Breaching Charge', 'assault', 3, 3, 4, 2, [M(1), Pr(3), PI, DM(1)], { squad: [DM(1), Sh(1), ST(1)] });
 TC('L1A', 'Tac Vest', 'assault', 2, 1, 3, 3, [], { loadout: [Pr(2), DM(1)], tiers: [1, 2, 2] });
@@ -117,9 +121,9 @@ TC('RT2', 'Expose', 'recon', 2, 2, 3, 2, [Pr(2), MK(1), EX], { squad: [MK(1), DM
 TC('R31', 'UAV', 'recon', 3, 3, 4, 2, [Pr(3), I(1), PI], { squad: [D(1), MK(1), Pr(1)] });
 TC('RT3', 'Hold the Angle', 'recon', 3, 3, 4, 2, [Pr(3), OW], { squad: [DM(1)], tactic: true });
 TC('L1R', 'Recon Post', 'recon', 2, 1, 3, 3, [], { loadout: [Pr(2)], tiers: [1, 2, 2] });
-// SUPPORT: sustained fire (extra shots, Steady = free reveals, Armor)
+// SUPPORT: sustained fire (extra shots, Steady = +1 Hit Marker on every shot this turn, Armor)
 TC('S11', 'Ammo Box', 'support', 1, 2, 2, 2, [Pr(2), ST(1), SC(1)], { squad: [Pr(3)] }); // wb-pkg1 trim: Steady instead of an extra shot
-TC('S12', 'Suppressing Fire', 'support', 1, 2, 2, 2, [Pr(2), Ar(1)], { squad: [Pr(2), Ar(1)] });
+TC('S12', 'Suppressing Fire', 'support', 1, 2, 2, 2, [Pr(2), Ar(1)], { squad: [Pr(2), ST(1)] }); // wb-odds2: Squad line Steady (was +1 Armor)
 TC('S13', 'Bandolier', 'support', 1, 2, 2, 2, [Pr(2), Ar(1), ST(1)], { squad: [Pr(3)] }); // wb-pkg1 trim: no extra shot
 TC('ST1', 'Fortify', 'support', 2, 2, 3, 2, [Pr(2), Ar(2), FO], { squad: [Ar(1)], tactic: true });
 TC('S22', 'Resupply', 'support', 2, 2, 3, 2, [Pr(1), I(1), D(1)], { squad: [ST(1), Pr(2)] }); // wb-pkg1 trim: no extra shot
@@ -141,9 +145,9 @@ TC('L1E', 'Bounty Contract', 'engineer', 2, 1, 3, 3, [], { loadout: [I(1), Pr(1)
 // Rally (head's S4): 3+ / 5+ cards of one squad in play this turn (Loadout counts) give that squad's bonus, once per turn each.
 const RALLY = {
   assault: { 3: [DM(1), Pr(2), PI], 5: [DM(1), Pr(2)] },
-  recon: { 3: [MK(1), DM(1)], 5: [MK(1), DM(1), Pr(2)] }, // wb-pkg1: Recon hits harder (headshots), not just surer
+  recon: { 3: [MK(1)], 5: [MK(1), DM(1), Pr(2)] }, // wb-pkg1: Recon hits harder (headshots); wb-odds2: Rally 3 lost its +1 damage (Mark is worth more now)
   support: { 3: [Pr(2), Sh(1), ST(1)], 5: [Pr(3), Sh(1), ST(2)] },
-  engineer: { 3: [I(1)], 5: [D(1)] },
+  engineer: { 3: [I(1), Pr(1)], 5: [D(1), BY(1)] }, // wb-odds2: +1 Precision and +1 Buy (Intel is worth less now that Field Promotion is free of Intel)
 };
 const RALLY_TEXT = {}; for (const a in RALLY) RALLY_TEXT[a] = { 3: effText(RALLY[a][3]), 5: effText(RALLY[a][5]) };
 const SQUAD_TEXT = { 3: 'Rally at 3 cards of one squad in play', 4: '' };
@@ -160,19 +164,20 @@ const MODS = {
   none: { name: '', text: '', mod: {} },
 };
 // wb-pkg1 trim: every gun's Hit Marker steps +1 (the package adds cards and Spoils; Health 60 alone left matches too short).
+// wb-odds2: every step +2 Hit Markers and +2 damage over v7 (shots hit about 65% instead of 93%; the damage keeps the match pace).
 // wb-rules retune for the Precision-spend rule: Recoil is now a Precision cost per shot, so multi-shot guns lost Recoil; the big single shots lost 1 damage.
 const GUNCLASS = {
-  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 2, range: 1, band: [0, 2], ladder: [[3, 2], [5, 3]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
-  revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[4, 4], [7, 7]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
-  knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 3, range: 0, band: [0, 0], ladder: [[0, 3]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
-  smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 2, range: 0, band: [0, 1], ladder: [[3, 2], [6, 4]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
-  shotgun: { name: 'Breacher', cls: 'Shotgun', arch: 'engineer', damage: 3, range: 0, band: [0, 1], ladder: [[3, 3], [7, 6]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Dragon’s Breath' },
-  burst: { name: 'Raider', cls: 'Burst Rifle', arch: 'assault', damage: 2, range: 1, band: [0, 2], ladder: [[3, 2], [7, 4]], shots: 2, recoil: 0, cost: 2, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Night Raid' },
-  launcher: { name: 'Sapper', cls: 'Launcher', arch: 'engineer', damage: 3, range: 2, band: [0, 3], ladder: [[4, 4], [7, 7]], shots: 1, recoil: 3, cost: 3, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Demolition' },
-  ar: { name: 'Sentinel', cls: 'Assault Rifle', arch: 'support', damage: 2, range: 2, band: [0, 3], ladder: [[4, 3], [6, 5]], shots: 2, recoil: 1, cost: 3, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Crown Jewel' },
-  lmg: { name: 'Bastion', cls: 'LMG', arch: 'support', damage: 3, range: 2, band: [0, 3], ladder: [[4, 3], [7, 5]], shots: 3, recoil: 0, cost: 3, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Iron Monarch' },
-  dmr: { name: 'Ranger', cls: 'Marksman Rifle', arch: 'recon', damage: 3, range: 3, band: [0, 4], ladder: [[4, 3], [8, 6]], shots: 2, recoil: 1, cost: 3, mods: ['reddot', 'hollow', 'comp', 'hollow'], skin: 'Golden Hour' },
-  sniper: { name: 'Longbow', cls: 'Sniper', arch: 'recon', damage: 3, range: 4, band: [0, 5], ladder: [[4, 4], [9, 8]], shots: 1, recoil: 2, cost: 4, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Sun God' },
+  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 4, range: 1, band: [0, 2], ladder: [[5, 4], [7, 5]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
+  revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 5, range: 2, band: [0, 3], ladder: [[6, 6], [9, 9]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
+  knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 5, range: 0, band: [0, 0], ladder: [[0, 5]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
+  smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 4, range: 0, band: [0, 1], ladder: [[5, 4], [8, 6]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
+  shotgun: { name: 'Breacher', cls: 'Shotgun', arch: 'engineer', damage: 5, range: 0, band: [0, 1], ladder: [[5, 5], [9, 8]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Dragon’s Breath' },
+  burst: { name: 'Raider', cls: 'Burst Rifle', arch: 'assault', damage: 4, range: 1, band: [0, 2], ladder: [[5, 4], [9, 6]], shots: 2, recoil: 0, cost: 2, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Night Raid' },
+  launcher: { name: 'Sapper', cls: 'Launcher', arch: 'engineer', damage: 5, range: 2, band: [0, 3], ladder: [[6, 6], [9, 9]], shots: 1, recoil: 3, cost: 3, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Demolition' },
+  ar: { name: 'Sentinel', cls: 'Assault Rifle', arch: 'support', damage: 4, range: 2, band: [0, 3], ladder: [[6, 5], [8, 7]], shots: 2, recoil: 1, cost: 3, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Crown Jewel' },
+  lmg: { name: 'Bastion', cls: 'LMG', arch: 'support', damage: 5, range: 2, band: [0, 3], ladder: [[6, 5], [9, 7]], shots: 3, recoil: 0, cost: 3, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Iron Monarch' },
+  dmr: { name: 'Ranger', cls: 'Marksman Rifle', arch: 'recon', damage: 5, range: 3, band: [0, 4], ladder: [[6, 5], [10, 8]], shots: 2, recoil: 1, cost: 3, mods: ['reddot', 'hollow', 'comp', 'hollow'], skin: 'Golden Hour' },
+  sniper: { name: 'Longbow', cls: 'Sniper', arch: 'recon', damage: 5, range: 4, band: [0, 5], ladder: [[6, 6], [11, 10]], shots: 1, recoil: 2, cost: 4, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Sun God' },
 };
 const WEAPONS = {};
 for (const k in GUNCLASS) for (let r = 0; r < RARITY.length; r++) {
@@ -192,12 +197,12 @@ const ATTS = {};
 // ---------- LOCATIONS (8 types, 7 dealt in a fixed row). Each has a squad: 2 in 3 refills of its stack are that squad's cards. ----------
 const ENVS = {
   E01: { affinity: 'assault', id: 'E01', name: 'Open Road', cover: 0, bonus: { move: 1 }, bonusText: '+1 Movement', text: 'No cover. Here: +1 Movement.' },
-  E02: { affinity: 'assault', id: 'E02', name: 'Small Shed', cover: 1, bonus: { cycle: 1 }, bonusText: '1 free cycle', text: 'Cover −1. Here: 1 free cycle.' },
-  E03: { affinity: 'engineer', id: 'E03', name: 'House', cover: 1, bonus: { draw: 1 }, bonusText: 'Draw 1', text: 'Cover −1. Here: draw 1 card.' },
+  E02: { affinity: 'assault', id: 'E02', name: 'Small Shed', cover: 1, bonus: { cycle: 1 }, bonusText: '1 free cycle', text: 'Cover: shots here need +1 Hit Marker. Here: 1 free cycle.' },
+  E03: { affinity: 'engineer', id: 'E03', name: 'House', cover: 1, bonus: { draw: 1 }, bonusText: 'Draw 1', text: 'Cover: shots here need +1 Hit Marker. Here: draw 1 card.' },
   E04: { affinity: 'engineer', id: 'E04', name: 'Supply Depot', cover: 0, bonus: { intel: 1 }, bonusText: '+1 Intel', text: 'No cover. Here: +1 Intel.' },
-  E05: { affinity: 'support', id: 'E05', name: 'Concrete Barrier', cover: 1, bonus: { def: 1 }, bonusText: '+1 Armor', text: 'Cover −1. Here: +1 Armor.' },
-  E06: { affinity: 'support', id: 'E06', name: 'Military Bunker', cover: 1, bonus: { shot: 1 }, bonusText: '+1 extra shot', text: 'Cover −1. Here: +1 extra shot.' },
-  E07: { affinity: 'recon', id: 'E07', name: 'Recon Tower', cover: 1, bonus: { prec: 1 }, bonusText: '+1 Precision', text: 'Cover −1. Here: +1 Precision.' },
+  E05: { affinity: 'support', id: 'E05', name: 'Concrete Barrier', cover: 1, bonus: { def: 1 }, bonusText: '+1 Armor', text: 'Cover: shots here need +1 Hit Marker. Here: +1 Armor.' },
+  E06: { affinity: 'support', id: 'E06', name: 'Military Bunker', cover: 1, bonus: { shot: 1 }, bonusText: '+1 extra shot', text: 'Cover: shots here need +1 Hit Marker. Here: +1 extra shot.' },
+  E07: { affinity: 'recon', id: 'E07', name: 'Recon Tower', cover: 1, bonus: { prec: 1 }, bonusText: '+1 Precision', text: 'Cover: shots here need +1 Hit Marker. Here: +1 Precision.' },
   E08: { affinity: 'recon', id: 'E08', name: 'Workbench', cover: 0, bonus: { scrap: 1 }, bonusText: 'Scrap 1', text: 'No cover. Here: Scrap 1.' },
 };
 for (const k in ENVS) ENVS[k].cache = TUNE.stackSize;
@@ -217,7 +222,7 @@ function itemDef(s, item) { return item.kind === 'card' ? CARDS[s.cards[item.iid
 function eff(s, wiid) {
   const W = s.weapons[wiid]; const d = WEAPONS[W.def];
   const e = { damage: d.damage, max_range: d.max_range, magazine_capacity: d.magazine_capacity, hit_need: d.hit_need, recoil: d.recoil, reveal: 0 };
-  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = TUNE.dmgPlus || TUNE.dmgBig ? d.ladder.map(([h, dm], i) => [h, dm + (i ? TUNE.dmgBig || 0 : TUNE.dmgPlus || 0)]) : d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
+  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
   return e;
 }
 const guns = pl => pl.guns.filter(Boolean);
@@ -232,7 +237,7 @@ function mkPlayer(idx, name) {
     bonusTaken: [], moved: false, movedToward: false, nextFire: { reqMod: 0, bonusPrec: 0 }, revealPlus: 0, dmgTurn: 0, ignoreCover: false,
     buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0, stationScrapped: false, squadN: {}, rallyDone: [], fp: 0, fpHist: [], perks: [], perkOffer: null,
     dmgHist: [], drop: [], ow: null, supp: null, suppNext: null, fortify: false, peek: null, lastPlayed: null, promoted: false, spoilsDone: false,
-    chargeDmg: 0, onHitDraw: 0, expose: false, overwatch: false, anyStack: false,
+    chargeDmg: 0, onHitDraw: 0, expose: false, overwatch: false, anyStack: false, hurt: false,
     stats: { shots: 0, hits: 0, jams: 0, damageDealt: 0, cardsAcquired: 0, weaponAcq: 0, burned: 0, searches: 0, reactions: 0, hitsBy: {}, maxTurnDmg: 0, turnDmg: 0, squads: 0, rallies: 0, big: 0, buys: 0,
       spoils: 0, promoted: 0, healed: 0, owShots: 0, turretShots: 0, dmgRounds: {}, bestRound: 0, mvp: {}, added: [] } };
 }
@@ -328,7 +333,7 @@ function runEffect(s, p, e, ctx) {
     case 'charge': pl.chargeDmg += e.n; ctx.out.push(`Charge: hits at distance 0 +${e.n} damage`); fp = e.n; break;
     case 'onHit': pl.onHitDraw += e.n; ctx.out.push(`next hit draws ${e.n}`); fp = 1.5 * e.n; break;
     case 'sweep': { const k = Math.min(e.n, pl.deck.length); pl.peek = pl.deck.slice(pl.deck.length - k).reverse(); ctx.out.push(`Sweep: your top ${k} card${k === 1 ? '' : 's'}`); fp = 1; break; }
-    case 'expose': pl.expose = true; ctx.out.push('Expose: hits ignore cover, Armor and Reaction cards'); fp = 1; break;
+    case 'expose': pl.expose = true; ctx.out.push('Expose: shots ignore cover, hits ignore Armor and Reaction cards'); fp = 1; break;
     case 'overwatch': pl.overwatch = true; ctx.out.push('angle held at End'); fp = 2; break;
     case 'fortify': pl.fortify = true; ctx.out.push('Fortify: Armor holds through your next Ready'); fp = 1; break;
     case 'heal': { const h = Math.max(0, Math.min(e.n, TUNE.hp - pl.hp)); pl.hp += h; pl.stats.healed += h; ctx.out.push(`Heal ${h}`); fp = h; break; }
@@ -476,7 +481,7 @@ function stationScrap(s, p, iid) {
   if (cardDef(s, iid).id !== 'T001') return fail('The Scrap service only takes a Sprint.');
   if (owned(pl) <= TUNE.minDeck) return fail(`Your deck is at the ${TUNE.minDeck}-card minimum.`);
   pl.res.intel -= TUNE.stationScrapCost; pl.stationScrapped = true; from.splice(from.indexOf(iid), 1); pl.removed.push(iid); pl.stats.burned++;
-  log(s, `${pl.name} pays ${TUNE.stationScrapCost} Intel at the Buy Station to scrap a Sprint (out of the game).`, 'fx'); return { ok: true };
+  log(s, `${pl.name} ${TUNE.stationScrapCost ? `pays ${TUNE.stationScrapCost} Intel at the Buy Station to scrap` : 'uses the Buy Station to scrap'} a Sprint (out of the game).`, 'fx'); return { ok: true };
 }
 // ---------- Spoils (O2), Field Promotion (O3), Sweep ----------
 // 3 different loot cards from the current tier (topped up from the other tiers); they stay in the loot deck until one is taken
@@ -514,7 +519,7 @@ function promote(s, p, iid, squad) {
   pl.res.intel -= TUNE.promoteCost; pl.promoted = true; s.stationLeft[id]--; if (TUNE.promoteBuy) pl.buys++;
   const old = cardDef(s, iid).name; from.splice(from.indexOf(iid), 1); pl.removed.push(iid);
   const n = newCard(s, id); (from === pl.hand ? pl.hand : pl.discard).push(n); pl.stats.promoted++; pl.stats.added.push(id);
-  log(s, `${pl.name} promotes ${old} to ${CARDS[id].name} (${ARCH_TAG[squad]}, −${TUNE.promoteCost} Intel).`, 'act');
+  log(s, `${pl.name} promotes ${old} to ${CARDS[id].name} (${ARCH_TAG[squad]}${TUNE.promoteCost ? `, −${TUNE.promoteCost} Intel` : ''}).`, 'act');
   return { ok: true, iid: n };
 }
 // Sweep: order = the swept cards, new top first. Until you arrange them they stay as they were.
@@ -538,33 +543,32 @@ function scrap(s, p, iid) {
 }
 
 // ---------- fire ----------
-// Aim (head's S1 "Recoil decreases Precision"): you commit Precision to a shot; it reveals 1 card per Precision committed (+1 free card
-// per Steady). The shot spends what you committed, and then the gun's Recoil costs that much more Precision (down to 0).
-// To-hit modifiers (wb-odds2), shared by every shot: Cover +coverNeed per cover level (not at distance 0, not with Pierce or Expose),
-// Long range +longNeed at distance longFrom or more (not for melee). They add to every ladder step, like Mark takes away.
+// Aim (head's S1 "Recoil decreases Precision"): you commit Precision to a shot; it reveals 1 card per Precision committed, up to TUNE.aimCap
+// cards (wb-odds2). Each Precision committed beyond that is Power: +TUNE.aimPower damage on every step if the shot hits. The shot spends what
+// you committed, and then the gun's Recoil costs that much more Precision (down to 0).
+// To hit (wb-odds2), the Hit Markers each step needs = printed + Cover + Long range − Mark − Steady (never below 1):
+//   Cover: +coverNeed per cover level of the rival's location (also at distance 0; Pierce and Expose ignore it);
+//   Long range: +longNeed at distance longFrom or more (not the knife); Steady: −1 per Steady this turn (pl.revealPlus counts them).
 function aimMods(s, p, o = {}) {
-  const pl = P(s, p), t = P(s, 1 - p); const Dd = dist(s); const cq = TUNE.closeQuarters && Dd === 0;
-  const tEnv = envAt(s, t.pos); const lv = (!cq || TUNE.cqCover) && tEnv && tEnv.state === 'safe' ? ENVS[tEnv.def].cover : 0;
-  const ignore = !o.auto && (pl.ignoreCover || pl.expose); const cover = ignore ? 0 : lv;
-  const long = !o.melee && Dd >= TUNE.longFrom ? TUNE.longNeed : 0;
-  return { cq, coverLv: lv, coverIgnored: ignore && lv > 0 ? (pl.expose ? 'Expose' : 'Pierce') : null, cover, coverNeed: cover * TUNE.coverNeed, coverDmg: cover * TUNE.coverDmg, long, distance: Dd };
+  const pl = P(s, p), t = P(s, 1 - p); const Dd = dist(s);
+  const tEnv = envAt(s, t.pos); const lv = tEnv && tEnv.state === 'safe' ? ENVS[tEnv.def].cover : 0;
+  const by = o.auto ? null : pl.expose ? 'Expose' : pl.ignoreCover ? 'Pierce' : null; // held-angle and turret shots: no Pierce / Expose
+  const cover = by ? 0 : lv * TUNE.coverNeed; const long = !o.melee && Dd >= TUNE.longFrom ? TUNE.longNeed : 0;
+  return { coverLv: lv, coverBy: lv && by ? by : null, cover, long, distance: Dd, cq: TUNE.closeQuarters && Dd === 0 };
 }
 function shotsLeft(s, p, gi) { const pl = P(s, p); const wid = pl.guns[gi]; if (!wid) return 0; return Math.max(0, eff(s, wid).magazine_capacity - s.weapons[wid].shots) + pl.shot; }
 function shotPreview(s, p, gi, commit) {
   const pl = P(s, p), o = P(s, 1 - p); const wid = pl.guns[gi]; if (!wid) return null;
   const W = s.weapons[wid]; const E = eff(s, wid); const d = WEAPONS[W.def];
   const Dd = dist(s); const inBand = Dd >= E.band[0] && Dd <= E.band[1];
-  const capC = TUNE.aimCap && !TUNE.aimOver ? TUNE.aimCap : 99;
-  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, capC, commit == null ? pl.res.prec : commit | 0));
-  const over = TUNE.aimCap && TUNE.aimOver ? Math.max(0, c - TUNE.aimCap) : 0;
-  const free = d.melee ? 0 : pl.revealPlus;
-  const reveal = c - over + free;
-  const am = aimMods(s, p, { melee: d.melee }); const cq = am.cq, cover = am.cover;
-  const shift = TUNE.needPlus - pl.nextFire.reqMod + am.coverNeed + am.long;
-  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn + Math.floor(over * TUNE.aimOver) + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
-  const net = dm => Math.max(1, dm - am.coverDmg);
-  return { gi, commit: c, free, prec: pl.res.prec, reveal, need, base: E.hit_need, accuracy: pl.nextFire.reqMod, recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover, coverNeed: am.coverNeed, coverLv: am.coverLv, coverIgnored: am.coverIgnored, long: am.long, printedNeed: E.ladder[0][0], cq, damage: E.damage, dmg: net(steps[0][1]),
-    steps: steps.map(([h, dm]) => [h, net(dm)]), rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
+  const c = d.melee ? 0 : Math.max(0, Math.min(pl.res.prec, commit == null ? pl.res.prec : commit | 0));
+  const free = 0; const reveal = Math.min(c, TUNE.aimCap); const power = c - reveal;
+  const am = aimMods(s, p, { melee: d.melee }); const steady = d.melee ? 0 : pl.revealPlus;
+  const shift = TUNE.needPlus - pl.nextFire.reqMod + am.cover + am.long - steady;
+  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn + power * TUNE.aimPower + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
+  return { gi, commit: c, free, prec: pl.res.prec, reveal, power, powerDmg: power * TUNE.aimPower, need, base: E.hit_need, printed: E.ladder[0][0], accuracy: pl.nextFire.reqMod, steady, coverNeed: am.cover, coverLv: am.coverLv, coverBy: am.coverBy, long: am.long,
+    recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover: am.cover, cq: am.cq, damage: E.damage, dmg: steps[0][1],
+    steps, rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
 }
 function shootCheck(s, p, gi, commit) {
   const pl = P(s, p); const wid = pl.guns[gi];
@@ -584,7 +588,7 @@ function applyHit(s, ti, dmg, cq, expose) {
   if (expose) { if (t.def) notes.push('Exposed: Armor ignored'); }
   else if (!cq) { const ab = Math.min(t.def, dmg - 1); if (ab > 0) { t.def -= ab; dmg -= ab; notes.push(`Armor −${ab}`); } }
   else if (t.def) notes.push('close quarters: Armor ignored');
-  t.hp -= dmg;
+  t.hp -= dmg; t.hurt = true;
   // Adrenaline: one Adrenaline card in the target's discard pile comes back to their hand
   const ad = t.discard.find(i => cardDef(s, i).adrenaline); if (ad) { t.discard.splice(t.discard.indexOf(ad), 1); t.hand.push(ad); notes.push(`${cardDef(s, ad).name} returns to ${poss(t.name).toLowerCase() === 'your' ? 'your' : poss(t.name)} hand`); }
   return { dealt: dmg, notes };
@@ -595,14 +599,14 @@ function autoShot(s, p, o) {
   const pl = P(s, p), t = P(s, 1 - p); const Dd = dist(s);
   if (s.over || Dd > o.range) return null;
   const revealed = [];
-  for (let i = 0; i < o.reveal; i++) { if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; } revealed.push(pl.deck.pop()); }
+  for (let i = 0; i < Math.min(o.reveal, TUNE.aimCap); i++) { if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; } revealed.push(pl.deck.pop()); }
   const total = revealed.reduce((a, i) => a + hmOf(s, i), 0);
-  const am = aimMods(s, p, { auto: true }); const cq = am.cq, cover = am.coverDmg; const shift = am.coverNeed + am.long;
-  o = Object.assign({}, o, { steps: o.steps.map(([h, dm]) => [h <= 0 ? h : h + shift, dm]) });
+  const am = aimMods(s, p, { auto: true }); const cq = am.cq; const shift = am.cover + am.long;
+  o = Object.assign({}, o, { steps: o.steps.map(([h, dm]) => [h > 0 ? h + shift : h, dm]) }); // cover and long range raise the need here too
   const lvl = o.steps.filter(([h]) => total >= h).length - 1; const hit = lvl >= 0;
   let dealt = 0, notes = [];
   pl.stats.shots++; pl.stats[o.kind === 'turret' ? 'turretShots' : 'owShots']++;
-  if (hit) { const r = applyHit(s, 1 - p, Math.max(1, o.steps[lvl][1] - cover), cq); dealt = r.dealt; notes = r.notes; if (cover) notes.unshift(`cover −${cover}`);
+  if (hit) { const r = applyHit(s, 1 - p, o.steps[lvl][1], cq); dealt = r.dealt; notes = r.notes;
     pl.stats.hits++; pl.stats.damageDealt += dealt; if (s.turn === p) pl.stats.turnDmg += dealt; pl.stats.dmgRounds[s.round] = (pl.stats.dmgRounds[s.round] || 0) + dealt; }
   pl.discard.push(...revealed);
   s.lastFire = { p, weapon: o.label, kind: o.kind, bullet: null, req: o.steps[0][0], steps: o.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < o.reveal, recoil: 0, commit: o.reveal, free: 0 };
@@ -635,13 +639,13 @@ function fire(s, p, gi, o) {
   if (hit) { pl.stats.hits++; pl.stats.hitsBy[W.def] = (pl.stats.hitsBy[W.def] || 0) + 1; lvl = d.melee ? 0 : sp.steps.filter(([h]) => total >= h).length - 1; if (lvl > 0) pl.stats.big++;
     // applyHit's notes may already say 'close quarters: Armor ignored': the bare 'close quarters' tag is added only if not
     const r = applyHit(s, 1 - p, sp.steps[lvl][1], sp.cq, pl.expose); if (lvl > 0) notes.push(lvl === 1 && d.gunClass === 'sniper' ? 'HEADSHOT' : `step ${lvl + 1}`); dealt = r.dealt; notes = notes.concat(r.notes);
-    if (sp.cover && TUNE.coverDmg) notes.unshift(`cover −${sp.cover * TUNE.coverDmg}`); if (sp.cq && !notes.some(n => n.startsWith('close quarters'))) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt;
+    if (sp.powerDmg) notes.unshift(`Power +${sp.powerDmg}`); if (sp.cq && !notes.some(n => n.startsWith('close quarters'))) notes.unshift('close quarters'); pl.stats.damageDealt += dealt; pl.stats.turnDmg += dealt;
     pl.stats.dmgRounds[s.round] = (pl.stats.dmgRounds[s.round] || 0) + dealt;
     for (const i of revealed) { const h = hmOf(s, i); if (h) pl.stats.mvp[cardDef(s, i).id] = (pl.stats.mvp[cardDef(s, i).id] || 0) + h; }
     if (pl.onHitDraw > 0 && !s.over) { const n = drawCards(s, p, pl.onHitDraw); pl.onHitDraw = 0; notes.push(`Follow Through: draw ${n}`); } }
   pl.discard.push(...revealed);
   s.lastFire = { p, weapon: d.name, bullet: null, req: sp.need, steps: sp.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < sp.reveal, recoil: before - pl.res.prec, commit: sp.commit, free: sp.free };
-  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.free ? ` + ${sp.free} Steady` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
+  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.power ? ` (${sp.power} as Power)` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
   checkDeath(s, 'ko');
   return { ok: true, result: s.lastFire };
 }
@@ -665,10 +669,12 @@ function startTurn(s, p) {
 }
 function endTurn(s, p) {
   const pl = P(s, p); const e = check(s, p); if (e) return e;
-  // Spoils (O2): after a turn in which you dealt damage, look at 3 loot cards and take 1 (or skip). takeSpoils() then ends the turn.
-  if (TUNE.spoils && !pl.spoilsDone && pl.stats.turnDmg > 0) {
+  // Spoils (O2): after a turn in which you dealt damage (wb-odds2: or were hit since your last End turn), look at 3 loot cards and take 1
+  // (or skip). takeSpoils() then ends the turn.
+  const hurt = !pl.spoilsDone && pl.hurt; if (!pl.spoilsDone) pl.hurt = false;
+  if (TUNE.spoils && !pl.spoilsDone && (pl.stats.turnDmg > 0 || (TUNE.spoilsHurt && hurt))) {
     pl.spoilsDone = true; const offer = spoilsOffer(s, p);
-    if (offer.length) { s.spoils = { p, offer, round: s.round }; log(s, `${pl.name} dealt ${pl.stats.turnDmg} damage: Spoils! ${offer.map(i => CARDS[s.cards[i].def].name).join(', ')}.`, 'fx'); return { ok: true, spoils: offer }; }
+    if (offer.length) { s.spoils = { p, offer, round: s.round }; log(s, `${pl.name} ${pl.stats.turnDmg ? `dealt ${pl.stats.turnDmg} damage` : 'was hit since their last turn'}: Spoils! ${offer.map(i => CARDS[s.cards[i].def].name).join(', ')}.`, 'fx'); return { ok: true, spoils: offer }; }
   }
   // Overwatch: the rival ends this turn inside your saved shot's range, so it fires now
   const o = P(s, 1 - p);
@@ -754,25 +760,26 @@ function expDmg(s, p, sp) { if (sp.melee) return sp.steps[0][1]; const o = stepO
 // V(q, l, first): best expected damage with q Precision and l shots still allowed. The model behind it:
 // - every shot is optional: a shot that cannot add damage is simply not fired, so the plan never burns Precision on a dud shot
 //   just to reach a later one (it used to: with spare shots it suggested a 0% commit-1 shot first);
-// - Mark (nextFire.reqMod) helps only the next shot; Steady (+reveal) and +damage last the whole turn;
+// - Mark (nextFire.reqMod) helps only the next shot; Steady (−1 Hit Marker needed) and +damage last the whole turn;
+// - a shot reveals at most TUNE.aimCap cards; Precision committed beyond that adds TUNE.aimPower damage per point (Power);
 // - ties go to the larger commit: the surer shot now, and Precision left at End turn is worth nothing.
 // The planner re-runs after every shot, so later shots are re-planned with the cards actually left.
 function suggestCommit(s, p, gi) {
   const pl = P(s, p); const sp = shotPreview(s, p, gi, 0); if (!sp || sp.melee) return { commit: 0, ev: sp ? sp.steps[0][1] : 0, p: 1, total: sp ? sp.steps[0][1] * sp.left : 0 };
-  const pool = pl.res.prec, fr = pl.revealPlus, rc = sp.recoil; if (pool + fr < 1) return { commit: 0, ev: 0, p: 0, total: 0 };
+  const pool = pl.res.prec, rc = sp.recoil, cap = TUNE.aimCap; if (pool < 1) return { commit: 0, ev: 0, p: 0, total: 0 };
   const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
-  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus + sp.coverNeed + sp.long), sp.steps[i][1]]) : sp.steps;
-  const odds = stepOdds(s, p, sp.steps.concat(later), pool + fr, 300); // one pass, same samples for both ladders
-  const capR = c => TUNE.aimCap ? Math.min(c, TUNE.aimCap) : c; const ovD = c => TUNE.aimCap && TUNE.aimOver ? Math.floor(Math.max(0, c - TUNE.aimCap) * TUNE.aimOver) : 0;
-  const evOf = (c, k) => { if (c + fr <= 0) return 0; const o = odds[Math.min(odds.length - 1, capR(c) + fr)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * (dm + ovD(c)); }); return e; };
+  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus + sp.coverNeed + sp.long - sp.steady), sp.steps[i][1]]) : sp.steps;
+  const odds = stepOdds(s, p, sp.steps.concat(later), Math.min(pool, cap), 300); // one pass, same samples for both ladders
+  const pw = c => Math.max(0, c - cap) * TUNE.aimPower;
+  const evOf = (c, k) => { if (c <= 0) return 0; const o = odds[Math.min(c, cap)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * (dm + pw(c)); }); return e; };
   const EV = [0, 1].map(k => Array.from({ length: pool + 1 }, (_, c) => evOf(c, k))); const memo = {};
   const V = (q, l, first) => { if (l <= 0) return [0, -1]; const key = (q * 16 + l) * 2 + (first ? 1 : 0); if (memo[key]) return memo[key];
     let best = V(q, l - 1, first); // leave one shot unfired
-    for (let c = Math.min(q, TUNE.aimCap && !TUNE.aimOver ? TUNE.aimCap : 99); c >= (fr > 0 ? 0 : 1); c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
+    for (let c = q; c >= 1; c--) { const v = EV[first ? 0 : 1][c] + V(Math.max(0, q - c - rc), l - 1, false)[0]; if (v > best[0] + 1e-9) best = [v, c]; }
     return (memo[key] = best); };
   const [total, c] = V(pool, Math.min(sp.left, 6), true);
   if (c < 0) return { commit: 0, ev: 0, p: 0, total: 0 };
-  return { commit: c, ev: EV[0][c], p: odds[Math.min(odds.length - 1, capR(c) + fr)][0], total };
+  return { commit: c, ev: EV[0][c], p: odds[Math.min(c, cap)][0], total };
 }
 
 // Threat (O7): the damage you can expect from the rest of this turn with the Precision you have now (the planner's plan, all shots left),
@@ -842,7 +849,9 @@ function saveProfile(storage, prof) { try { if (!storage) return false; storage.
 function dailySeed(date) { let h = 2166136261; for (const ch of String(date)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) & 0x7fffffff; }
 
 // ---------- AI ----------
-const W8 = { move: 0.7, prec: 1, intel: 1, def: 0.6, shot: 2, draw: 1.8, mark: 1.5, pierce: 0.6, scrap: 1, cycleFree: 0.3, dmgTurn: 2.5, steady: 1.5, buy: 1.5,
+// wb-odds2: with 3 cards a shot, Hit Markers and need cuts (Mark, Steady, Pierce) decide the odds, so the AI values them more
+const HMW = 2;
+const W8 = { move: 0.7, prec: 1, intel: 1, def: 0.6, shot: 2, draw: 1.8, mark: 2.5, pierce: 1.2, scrap: 1, cycleFree: 0.3, dmgTurn: 2.5, steady: 3, buy: 1.5,
   // Squad Tactics: what each new verb is worth to the AI on an average turn (tuned with qa/tools/ai_sim_pkg.js)
   charge: 0.6, onHit: 0.9, sweep: 0.35, expose: 1.2, overwatch: 2.2, fortify: 1.2, heal: 0.8, suppress: 2.5, repeat: 2.6, turret: 1.1, anyStack: 1.4 };
 const val = effs => (effs || []).reduce((t, e) => t + (e.op === 'gain' ? W8[e.res] : W8[e.op] || 0) * (e.n || 1), 0);
@@ -850,7 +859,7 @@ const aiAware = (s, p) => !(s.aiMode && s.aiMode[p] === 'blind');
 const poss = name => name === 'You' ? 'Your' : `${name}’s`;
 function cardScore(s, p, d) {
   const pl = P(s, p); const aware = aiAware(s, p);
-  let v = val(d.effects) + d.hit_markers * 1.1;
+  let v = val(d.effects) + d.hit_markers * HMW;
   if (d.loadout) v = val(d.loadout) * Math.min(4, Math.max(1, TUNE.hardEnd - s.round) / 2) + d.hit_markers * 0.3;
   if (d.reaction) v += 1;
   if (d.adrenaline) v += 1.2;
@@ -881,7 +890,7 @@ function stationScore(s, p, id) {
   const tot = { move: 0, prec: 0, intel: 0, shot: 0 }; for (const i of allCards(P(s, p))) for (const e of cardDef(s, i).effects) if (e.op === 'gain' && e.res in tot) tot[e.res] += e.n;
   const want = { K02: tot.move / 1.0, K04: tot.prec / 1.4, K03: tot.intel / 1.2, K05: (tot.shot + 3) / 0.8 };
   const best = TUNE.station.slice().sort((a, b) => want[a] - want[b])[0];
-  return id === best ? val(d.effects) + d.hit_markers * 1.1 : 0;
+  return id === best ? val(d.effects) + d.hit_markers * HMW : 0;
 }
 const MIN_SCORE = 3.0;
 const aiRandom = (s, p) => !!(s.aiMode && s.aiMode[p] === 'random'); // sim only: buys, Spoils and promotions at random
