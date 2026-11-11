@@ -269,3 +269,35 @@ func test_codex_is_a_binder() -> void:
 	st.set(&"persist", saved_persist)
 	_run_teardown()
 
+
+func test_title_lockup_and_equipped_operator() -> void:
+	_run_setup()
+	for sz: Vector2 in [Vector2(844, 390), Vector2(1440, 900)]:
+		var got: Array = await _open_in("res://scenes/Title.tscn", sz)
+		var title: Control = got[1]
+		await _frames(3)
+		var label: Label = title.find_child("TitleLabel", true, false) as Label
+		assert_true(label != null and label.text == "KILLINGCARD", "%s: the wordmark text stays for readers" % sz)
+		var mark: Control = title.find_child("Wordmark", true, false) as Control
+		assert_true(mark != null and mark.is_visible_in_tree(), "%s: the stencil lockup" % sz)
+		if mark != null:
+			assert_true(String((mark.get(&"_font") as Font).resource_path).contains("Stencil"), "%s: Stardos Stencil" % sz)
+		var card: Control = title.get_showcase_card()
+		assert_not_null(card, "%s: the equipped Operator shown" % sz)
+		if card != null:
+			assert_eq(String(card.data.get("type", "")), "operator", "%s: an Operator card" % sz)
+			assert_true(card.get_global_rect().size.x >= 260.0, "%s: shown large (%.0f px)" % [sz, card.get_global_rect().size.x])
+			assert_true(Rect2(Vector2.ZERO, sz).encloses(card.get_global_rect()), "%s: on screen" % sz)
+			assert_true(bool(card.get_parent().get_meta(&"inspectable", false)), "%s: inspectable" % sz)
+			title.open_showcase_inspector()
+			await _frames(2)
+			assert_true(title.inspector().is_open(), "%s: opens the inspector" % sz)
+			title.inspector().close()
+		var amber: int = 0
+		for b: Node in title.find_children("*", "Button", true, false):
+			if (b as Button).is_visible_in_tree() and (b as Button).theme_type_variation == &"ReadyButton":
+				amber += 1
+		assert_eq(amber, 1, "%s: exactly one amber button" % sz)
+		got[0].queue_free()
+		await _frames(1)
+	_run_teardown()

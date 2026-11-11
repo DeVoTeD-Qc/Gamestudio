@@ -232,14 +232,17 @@ func _fit_showcase() -> void:
 	if _showcase == null or _showcase_card == null:
 		return
 	var w: float = SHOWCASE_W_COMPACT if compact else SHOWCASE_W
-	var room_h: float = size.y - 120.0
-	while w > 200.0 and CardView.height_for(w) + 60.0 > room_h:
+	var room_h: float = size.y - 80.0
+	while w > 200.0 and CardView.height_for(w) + 56.0 > room_h:
 		w -= 20.0
+	# Width left beside the column (left gap, a 24 px gutter, the right gap, the safe margins).
+	var fit_w: float = size.x - (_column.get_combined_minimum_size().x + 40.0 + 24.0 + 24.0 + 40.0)
+	w = minf(w, floorf(fit_w))
+	_showcase.visible = w >= 200.0 and size.x > size.y
+	w = maxf(w, 200.0)
 	_showcase_card.set_card_width(w)
 	var holder: Control = _showcase_card.get_parent() as Control
 	holder.custom_minimum_size = CardView.size_for(w)
-	var need: float = _column.get_combined_minimum_size().x + 40.0 + 40.0 + w + 24.0 + 32.0
-	_showcase.visible = size.x >= need and size.x > size.y
 	var gap: Node = _showcase.get_parent().get_node_or_null(^"ShowcaseGap")
 	if gap != null:
 		(gap as Control).visible = _showcase.visible
