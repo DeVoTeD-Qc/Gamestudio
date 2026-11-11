@@ -1,6 +1,6 @@
 # DeadDraw art pack 2 — painted UI kit
 
-Generated from [dd-art-pack-2-ui-prompts.md](../../dd-art-pack-2-ui-prompts.md). 24 of 52 PNGs present.
+Generated from [dd-art-pack-2-ui-prompts.md](../../dd-art-pack-2-ui-prompts.md). 35 of 52 PNGs present.
 
 All present PNGs passed canvas-size, alpha-channel, centred shape-bounds and file-integrity checks. Frames also require a transparent centre. Generated pieces are exported to the specified shape dimensions and centred transparent margins; no game files have been changed.
 
