@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 47,
+  "generated_count": 58,
   "requested_count": 77,
   "images": [
     {
@@ -490,7 +490,8 @@
       "file": "dd_district_maple_row.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "d6976ac079121c47df894a3fd572221f0e7bef7816fedb09ab75977d552dde38"
     },
     {
       "batch": 5,
@@ -499,7 +500,8 @@
       "file": "dd_district_downtown.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "435de3912f088dfd4e75ce94d438e50b8a91dc4a1827f3c20961ddcdbf4b45c2"
     },
     {
       "batch": 5,
@@ -508,7 +510,8 @@
       "file": "dd_district_st_agnes.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "36991da55f6d396c698c4bd7bf97715b563790a5911028e6c3df1e3fa5c73f21"
     },
     {
       "batch": 5,
@@ -517,7 +520,8 @@
       "file": "dd_survivor_rosa.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "5af11a97a165a5c06a465c51da0419802a09942e5a94a2f1c8be8f8e1d563761"
     },
     {
       "batch": 5,
@@ -526,7 +530,8 @@
       "file": "dd_survivor_imani.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "fe45f5b1ca8cb65db4d92f9ec07de93fde689dd44dbeb35597071e78fdf0f377"
     },
     {
       "batch": 5,
@@ -535,7 +540,8 @@
       "file": "dd_survivor_theo.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "7d158c2e1e1db4a2da46ad7d4f605a8e3e6f08a348122f3fdc5ea4bb55982da5"
     },
     {
       "batch": 5,
@@ -544,7 +550,8 @@
       "file": "dd_back_pile.png",
       "size": "1024x1536",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "4423af4eb6521c8b682710e5457f8de21e7e83989d5a1a5621b613aaf9efeae0"
     },
     {
       "batch": 5,
@@ -553,7 +560,8 @@
       "file": "dd_back_wave.png",
       "size": "1024x1536",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "17f9fc4833d9e88cb73030fc250578aa273c65897c3dcf9ac6623e9e95338000"
     },
     {
       "batch": 5,
@@ -562,7 +570,8 @@
       "file": "dd_back_room.png",
       "size": "1024x1536",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "47376dda80e778cbc15ecb893e79b7af7466b75b29396d3035386a9e4bf42c30"
     },
     {
       "batch": 5,
@@ -571,7 +580,8 @@
       "file": "dd_title_portrait.png",
       "size": "1024x1536",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "0059d19ef060b14b7b6ff8b79de65c015a64724a8a2b8f0bb6b0d225f27fae4c"
     },
     {
       "batch": 5,
@@ -580,7 +590,8 @@
       "file": "dd_title_landscape.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "99ba514a86f7e966aee2594a242b0305f72ff465048728000ef50f9bdf997c44"
     },
     {
       "batch": 6,
