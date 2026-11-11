@@ -382,8 +382,11 @@ func test_tutorial_and_training_bot_play_standard_issue() -> void:
 	assert_eq(counts, {&"si_grunt": 8, &"si_trooper": 3, &"si_sergeant": 2, &"si_armored": 2}, "TrainingBot_01: 8 Grunts, 3 Troopers, 2 Sergeants, 2 Armored Troopers")
 	var texts: String = "\n".join(t.steps.map(func(s: TutorialStep) -> String: return s.text))
 	assert_false(texts.contains("First Shot"), "First Shot is not taught in the drill any more (its own tip teaches it)")
-	# kc-econ: round 2 has 2 Supply, so the beat-order step uses the Trooper (2/3) against a Grunt.
-	assert_true(texts.contains("Trooper") and texts.contains("steps up"), "steps 8-10 teach the beat order")
+	# kc-econ: round 2 has 2 Supply, so the beat-order step uses Private II (2/3) against a Grunt.
+	# kc-da-ui: the drill's hand is the starter's Privates (the training bot keeps Grunts / Troopers).
+	assert_true(texts.contains("Private II") and texts.contains("steps up"), "steps 8-10 teach the beat order")
+	for c: CardData in t.player_deck:
+		assert_true(c.id == &"ammo_resupply" or String(c.id).begins_with("kc_wip_private_"), "tutorial hand: %s is a Private" % c.id)
 
 
 func test_kit_slots_fall_back_to_code_drawing() -> void:
@@ -418,7 +421,8 @@ func test_kit_slots_fall_back_to_code_drawing() -> void:
 # =============================================================================
 
 ## kc-cards-impl retired kc-hand-dim (the head's C1+: "full calling-card art, uncropped and undimmed"):
-## hand and board art at full strength; an unplayable hand card is still darker (the can't-act cue).
+## hand and board art at full strength. kc-da-ui (art direction v1 #5): an unplayable card is never
+## dimmed either: its cost hex goes grey (cant_pay) and it sits HandArea.DROP_PX lower.
 func test_hand_and_board_art_full_strength() -> void:
 	_save_profile()
 	var s: Array = await _spawn(Layout.PHONE)
@@ -432,10 +436,10 @@ func test_hand_and_board_art_full_strength() -> void:
 			continue
 		var mod: Color = bv.get_art_modulate()
 		checked += 1
+		assert_true(mod.r > 0.99, "hand art at full strength (%.2f)" % mod.r)
+		assert_true(is_equal_approx((card as Control).modulate.a, 1.0), "the card never fades")
 		if card.get_meta(&"playable", true) == false:
-			assert_true(mod.r < 0.7, "an unplayable card stays darker (%.2f)" % mod.r)
-		else:
-			assert_true(mod.r > 0.99, "hand art at full strength (%.2f)" % mod.r)
+			assert_true(bool(bv.entry.get("cant_pay", false)), "an unplayable card shows the grey cost hex")
 	assert_true(checked >= 3, "checked %d hand cards" % checked)
 	for lane: Node in m.get_board().find_children("*", "Control", true, false):
 		if lane.has_method(&"get_friendly_slots"):

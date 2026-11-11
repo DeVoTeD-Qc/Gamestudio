@@ -221,7 +221,7 @@ func _build() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override(&"separation", 8)
 	col.add_child(top)
-	_back = _button("BACK", &"ReadyButton")
+	_back = _button("BACK", &"HudButton")  # kc-da-ui (#6): steel BACK
 	_back.name = "GlossaryBack"
 	_back.custom_minimum_size.x = 120
 	_back.pressed.connect(close)

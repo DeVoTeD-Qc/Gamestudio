@@ -89,6 +89,9 @@ var _grid_rect: Rect2 = Rect2()
 var _op_rect: Rect2 = Rect2()
 ## kc-cards-impl (H1): the selected card lifts this far.
 const SELECTED_LIFT: float = 6.0
+## kc-da-ui: an unplayable card sits this much lower than the playable ones (its art stays full colour;
+## the playable ones lift into the selection's lift room, so the grid never grows).
+const DROP_PX: float = 4.0
 ## kc-portrait: the hand is a swipeable fan of Y2+ cards (CardView) along the bottom.
 var fan: bool = false
 ## Px between fanned cards (>= 61 px: 44 pt), and the fan's scroll (0 = the first card at the left).
@@ -341,16 +344,20 @@ func _apply_styles() -> void:
 				cv.set_card_data(d)
 		else:
 			(chip as Control).theme_type_variation = variation
-		# Unaffordable chips fade so the playable ones stand out; the dragged one fades more.
-		var alpha: float = 1.0 if playable or uid == selected_uid else 0.55
-		(chip as Control).modulate.a = 0.35 if uid == dragging_uid and uid >= 0 else alpha
-		# Can't afford it: greyscale-ish, 60% brightness (§3.4).
+		# kc-da-ui (art direction v1 #5): an unplayable card is never dimmed or faded: its cost hex goes
+		# grey (cant_pay on the banner) and it sits DROP_PX below the playable ones (_fit_cards). Only the
+		# dragged one fades.
+		(chip as Control).modulate.a = 0.35 if uid == dragging_uid and uid >= 0 else 1.0
 		(chip as Control).self_modulate = Color.WHITE
+		var bv: BannerView = BannerCard.banner_of(chip) if not (chip is CardView) else null
+		if bv != null and bool(bv.entry.get("cant_pay", false)) == playable:
+			bv.entry["cant_pay"] = not playable
+			for o: Node in bv.get_parent().get_children():
+				if o is CanvasItem:
+					(o as CanvasItem).queue_redraw()
 		var art: TextureRect = chip.find_child("Art", true, false) as TextureRect
 		if art != null:
-			# kc-hand-dim: the art is always ~22% darker (BannerView.ART_DIM) so the icons read; can't
-			# afford it: darker still (0.6 of that), and the chip fades (alpha 0.55), so it stays distinct.
-			art.self_modulate = Color(0.6, 0.6, 0.6) if not playable and uid != selected_uid else Color.WHITE
+			art.self_modulate = Color.WHITE
 			var on: bool = uid == selected_uid and uid >= 0
 			if on and art.material == null:
 				var mat := ShaderMaterial.new()
@@ -458,7 +465,8 @@ func _fit_cards() -> void:
 			var c: Control = cards[i]
 			c.size = card_size
 			var sel: bool = int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0
-			c.position = Vector2(roundf(grid.position.x + i * fan_step - fan_scroll), roundf(grid.position.y + (0.0 if sel else 10.0)))
+			var lift: float = DROP_PX if not sel and bool(c.get_meta(&"playable", true)) else 0.0
+			c.position = Vector2(roundf(grid.position.x + i * fan_step - fan_scroll), roundf(grid.position.y + (0.0 if sel else 10.0) - lift))
 			c.z_index = 10 if sel else 0
 		return
 	var cols: int = maxi(1, columns)
@@ -498,9 +506,12 @@ func _fit_cards() -> void:
 		c.size = card_size
 		var x: float = x0 + (j % cols) * pitch_x
 		var y: float = grid.position.y + (j / cols) * pitch_y
-		# kc-cards-impl (H1): the selected card lifts.
+		# kc-cards-impl (H1): the selected card lifts. kc-da-ui: a playable card sits DROP_PX higher
+		# than an unplayable one (both inside the lift room, so nothing spills out of the grid).
 		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
 			y -= SELECTED_LIFT
+		elif bool(c.get_meta(&"playable", true)):
+			y -= DROP_PX
 		c.position = Vector2(roundf(x), roundf(y))
 	_place_more_hints(scroll, first, shown, n, grid)
 
@@ -632,6 +643,7 @@ func _make_banner_card(card: Dictionary) -> Control:
 static func banner_entry(card: Dictionary) -> Dictionary:
 	var ctype: String = MiniIcons.card_type(card)
 	var e: Dictionary = {"name": card.get("name", ""), "cost": card.get("cost", 0),
+			"cant_pay": not bool(card.get("playable", true)),
 			"cls": String(card.get("weapon_class", "")).to_upper(), "keywords": card.get("keywords", []),
 			"elite": bool(card.get("elite", false)), "bolt": bool(card.get("bolt", false)),
 			"front_kw": bool(card.get("front_kw", false)),
@@ -690,7 +702,7 @@ func _add_synergy_overlay(panel: Control, face: Control, card: Dictionary) -> vo
 # =============================================================================
 
 ## kc-cards-impl (the head's O2): the Operator card at the bottom-left of the tray, next to UNDO over
-## READY: the art on top (dimmed on the board, grey when down), the cost in the standard hex (red
+## READY: the art on top (full colour in every state, kc-da-ui), the cost in the standard hex (grey
 ## when you can't pay), the OPERATOR tag, its abilities top-right, FP / Armor bottom-right of the art,
 ## a state chip on the art (DEPLOY / PLAN · B / ON BOARD · B1 / DOWN), then its name in the title
 ## style and its ability line. Tap = select (Deploy / Rotate), drag = drag to a column, long press =
@@ -990,11 +1002,9 @@ func _style_operator() -> void:
 	_op_chip.modulate.a = 1.0
 	var art: TextureRect = _op_chip.find_child("Art", true, false) as TextureRect
 	if art != null:
-		# On the board / down: the card dims (it is a status card now); deployable: full colour.
-		var dim: bool = state == &"board" or state == &"down" or state == &"planned"
-		art.self_modulate = Color(0.45, 0.45, 0.48) if dim and not operator_selected else Color.WHITE
-		if state == &"down":
-			art.self_modulate = Color(0.3, 0.3, 0.32)
+		# kc-da-ui (#5): the art stays full colour in every state; the state chip (ON BOARD / DOWN)
+		# and the grey cost hex (when short of Supply) say it can't be deployed now.
+		art.self_modulate = Color.WHITE
 
 
 func _reduced_motion() -> bool:

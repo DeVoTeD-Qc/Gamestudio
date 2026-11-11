@@ -251,7 +251,7 @@ func status_text() -> String:
 ## A deck tile: name + status chip, hero line, trait plates, mini curve, (preset) plan, actions.
 func _deck_tile(d: Dictionary) -> PanelContainer:
 	var preset: bool = bool(d.get("preset", false))
-	var p: PanelContainer = W.panel(Color("#161C21"), W.AMBER if String(d["id"]) == vs_deck_id else W.PANEL_RIM, 10.0)
+	var p: PanelContainer = W.panel(Color("#161C21"), W.TEAL if String(d["id"]) == vs_deck_id else W.PANEL_RIM, 10.0)
 	p.name = "Deck_%s" % d["id"]
 	p.set_meta(&"deck", d["id"])
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -289,7 +289,7 @@ func _deck_tile(d: Dictionary) -> PanelContainer:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override(&"separation", 2)
 	mid.add_child(info)
-	var hl: Label = W.label("HERO %s" % (String(h["name"]) if not h.is_empty() else "— none —"), &"UnitName", 17, W.AMBER if not h.is_empty() else W.RED)
+	var hl: Label = W.label("HERO %s" % (String(h["name"]) if not h.is_empty() else "— none —"), &"UnitName", 17, W.BRASS if not h.is_empty() else W.RED)
 	hl.name = "HeroLine"
 	info.add_child(hl)
 	var traits: HBoxContainer = HBoxContainer.new()
@@ -321,7 +321,8 @@ func _deck_tile(d: Dictionary) -> PanelContainer:
 	acts.name = "Actions"
 	acts.add_theme_constant_override(&"separation", 6)
 	col.add_child(acts)
-	var play_b: Button = _act("PLAY", &"ReadyButton", acts)
+	# kc-da-ui (#6): VS AI is the hub's one amber button; a deck's PLAY is steel.
+	var play_b: Button = _act("PLAY", &"HudButton", acts)
 	play_b.name = "PlayButton"
 	play_b.tooltip_text = "Play this deck against the AI"
 	play_b.pressed.connect(func() -> void: open_vs_ai(String(d["id"])))
@@ -369,7 +370,7 @@ func _new_tile() -> Button:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(col)
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var plus: Control = W.Mark.new(&"plus", W.AMBER, 34)
+	var plus: Control = W.Mark.new(&"plus", W.FOG, 34)
 	plus.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	col.add_child(plus)
 	var l: Label = W.label("NEW DECK", &"TileName", 22)
@@ -503,11 +504,11 @@ func open_vs_ai(deck_id: String = "") -> Dictionary:
 func _fill_vs_ai() -> void:
 	var body: VBoxContainer = _sheet["body"]
 	clear(body)
-	body.add_child(W.label("YOUR DECK", &"HudTag", 16, W.AMBER))
+	body.add_child(W.label("YOUR DECK", &"HudTag", 16, W.MUTED))
 	body.add_child(_deck_picker(vs_deck_id, func(id: String) -> void:
 		vs_deck_id = id
 		_fill_vs_ai(), "YourDeck"))
-	body.add_child(W.label("OPPONENT · the AI plays a preset deck (hold a tile to see its list)", &"HudTag", 16, W.AMBER))
+	body.add_child(W.label("OPPONENT · the AI plays a preset deck (hold a tile to see its list)", &"HudTag", 16, W.MUTED))
 	var og: GridContainer = GridContainer.new()
 	og.name = "Opponents"
 	og.columns = 2 if portrait else 5
@@ -518,7 +519,7 @@ func _fill_vs_ai() -> void:
 	opts.append({"id": "random", "name": "Random", "hero": &"", "plan": "One of the 4 presets, picked at the start.", "picks": []})
 	for d: Dictionary in opts:
 		og.add_child(_opponent_tile(d))
-	body.add_child(W.label("DIFFICULTY", &"HudTag", 16, W.AMBER))
+	body.add_child(W.label("DIFFICULTY", &"HudTag", 16, W.MUTED))
 	var tr: HBoxContainer = HBoxContainer.new()
 	tr.name = "Tiers"
 	tr.add_theme_constant_override(&"separation", 8)
@@ -705,7 +706,7 @@ func _fill_hot_seat() -> void:
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.add_theme_constant_override(&"separation", 6)
 		cols.add_child(col)
-		col.add_child(W.label("PLAYER %d" % (i + 1), &"HudTag", 16, W.AMBER))
+		col.add_child(W.label("PLAYER %d" % (i + 1), &"HudTag", 16, W.MUTED))
 		var e: LineEdit = LineEdit.new()
 		e.name = "Name"
 		e.max_length = 16

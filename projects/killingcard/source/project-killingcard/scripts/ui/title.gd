@@ -8,6 +8,9 @@
 #   drill." with PLAY DRILL / NOT NOW; NOT NOW records a skip so it is not offered again.
 #   v01: Port Vasel key art (card_art.gd) behind a left-hand menu column, with a dark scrim.
 #   kc-ui3: CODEX (beside TUTORIAL) opens the card codex over the title (codex_view.gd).
+#   kc-da-ui (art direction v1 #6): ONE amber button: PLAY DRILL while the drill is offered, else
+#   CONTINUE RUN when a run is saved, else START NEW RUN; every other button is steel. The drill
+#   invite sits in a steel frame (red is for danger, never a friendly offer).
 # Dependencies: run_screen.gd, RunState, SceneRouter (via RunFlow), tutorial_progress.gd, card_art.gd.
 # Author: Mechanics Developer Agent (placeholder); run flow: UI/UX Agent (p11)
 extends "res://scripts/ui/run/run_screen.gd"
@@ -115,7 +118,34 @@ func _build() -> void:
 	_duel_button.pressed.connect(open_duel)
 	resized.connect(_update_key_art)
 	_update_key_art()
+	_offer_panel.add_theme_stylebox_override(&"panel", steel_frame())
 	refresh()
+
+
+## kc-da-ui: the drill invite's frame: a gunmetal plate with a steel rim (art direction §4).
+static func steel_frame() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color("#232A31", 0.94)
+	sb.border_color = Color("#4A535B")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(3)
+	sb.set_content_margin_all(10)
+	return sb
+
+
+## kc-da-ui: the one amber (primary) button of the title in its current state.
+func primary_button() -> Button:
+	if _offer_panel.visible:
+		return _play_drill_button
+	if _continue_button.visible:
+		return _continue_button
+	return _start_button
+
+
+func _apply_primary() -> void:
+	var primary: Button = primary_button()
+	for b: Button in [_continue_button, _start_button, _play_drill_button]:
+		b.theme_type_variation = &"ReadyButton" if b == primary else &"HudButton"
 
 
 ## Rasterises the key art for the screen size (capped at 2x the 1280x720 source).
@@ -135,6 +165,7 @@ func refresh() -> void:
 	_confirm_panel.hide()
 	_show_warning(rs.last_load_warning if rs != null else "")
 	_offer_panel.visible = TutorialProgress.should_offer() and not (rs != null and rs.has_save())
+	_apply_primary()
 	if _offer_panel.visible:
 		_play_drill_button.grab_focus.call_deferred()
 	elif _continue_button.visible:
@@ -162,6 +193,7 @@ func _on_continue_pressed() -> void:
 		goto(RunFlow.scene_for(rs.run))
 		return
 	_continue_button.hide()
+	_apply_primary()
 	_show_warning(rs.last_load_warning if rs.last_load_warning != "" else "No saved run was found.")
 	_start_button.grab_focus()
 
@@ -232,4 +264,5 @@ func is_offering_tutorial() -> bool:
 func _on_not_now_pressed() -> void:
 	TutorialProgress.record(false, 0)
 	_offer_panel.hide()
+	_apply_primary()
 	_start_button.grab_focus()

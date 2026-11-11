@@ -264,11 +264,15 @@ func _toggle(b: Button, uid: int, on: bool) -> void:
 		_picked.append(uid)
 	elif not on:
 		_picked.erase(uid)
-	# Marked cards switch to the cyan KillstreakButton frame, dim, and show PUT BACK.
+	# Marked cards switch to the cyan KillstreakButton frame, drop 4 px and show PUT BACK (kc-da-ui:
+	# the art is never dimmed to show a state).
 	b.theme_type_variation = &"KillstreakButton" if on else &"HudButton"
 	var card: Control = b.get_meta(&"card_view", null)
 	if card != null:
-		card.modulate = Color(0.55, 0.55, 0.58) if on else Color.WHITE
+		card.modulate = Color.WHITE
+		if not card.has_meta(&"rest_y"):
+			card.set_meta(&"rest_y", card.position.y)
+		card.position.y = float(card.get_meta(&"rest_y")) + (4.0 if on else 0.0)
 	var plate: Control = b.get_node_or_null("PutBack")
 	if plate != null:
 		plate.visible = on

@@ -161,21 +161,21 @@ func _offer(c: Dictionary, req: int, w: float) -> Control:
 	if card != null:
 		var vd: Dictionary = CardInfoV2.view_dict(card)
 		vd["banner"] = String(card.id)
+		# kc-da-ui (#5): sold or out of reach: a grey cost hex and a 4 px drop; the art stays full colour.
+		var out: bool = bool(c.get("sold", false)) or req < price or not bool(c.get("can_buy", true))
+		if out:
+			vd["cant_pay"] = true
 		var cv: Control = CodexView.make_card_view(vd, w)
 		cv.size = CardView.size_for(w)
+		cv.position.y = 4.0 if out else 0.0
 		holder.custom_minimum_size = CardView.size_for(w)
 		holder.add_child(cv)
 		var info: Callable = func() -> void: inspector().open(card_inspect_info(card, "%s · %d REQ" % [kind.capitalize(), price]))
 		holder.pressed.connect(info)
 		wire_inspect_button(holder, info)
-	if bool(c.get("sold", false)):
-		var veil: ColorRect = ColorRect.new()
-		veil.color = Color(0, 0, 0, 0.6)
-		veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		veil.size = holder.custom_minimum_size
-		holder.add_child(veil)
 	col.add_child(holder)
-	var b: Button = make_button("", &"ReadyButton", w)
+	# kc-da-ui (#6): DONE is the Shop's one amber button; BUY is steel (its price is on it).
+	var b: Button = make_button("", &"HudButton", w)
 	b.name = "Buy%d" % idx
 	if bool(c.get("sold", false)):
 		b.text = "SOLD"

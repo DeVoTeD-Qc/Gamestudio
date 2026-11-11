@@ -105,7 +105,7 @@ func _rebuild() -> void:
 	var rc: VBoxContainer = VBoxContainer.new()
 	rc.add_theme_constant_override(&"separation", 4)
 	rec_p.add_child(rc)
-	rc.add_child(W.label("RECORDS · Duel gives records and cosmetics only", &"HudTag", 16, W.AMBER))
+	rc.add_child(W.label("RECORDS · Duel gives records and cosmetics only", &"HudTag", 16, W.MUTED))
 	var recs: Dictionary = DuelFlow.last_result.get("records", DuelViews.records())
 	if hot:
 		rc.add_child(W.label("Pass & Play games on this device: %d" % int(recs.get("hot_seat_games", 0)), &"", 17))

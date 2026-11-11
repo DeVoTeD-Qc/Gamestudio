@@ -499,7 +499,7 @@ func _build() -> void:
 	_top = HBoxContainer.new()
 	_top.add_theme_constant_override(&"separation", 8)
 	col.add_child(_top)
-	_back = _button("BACK", &"ReadyButton")
+	_back = _button("BACK", &"HudButton")  # kc-da-ui (#6): steel BACK; the Codex has no amber button
 	_back.custom_minimum_size.x = 120
 	_back.pressed.connect(close)
 	_back.tooltip_text = "Close the codex"
@@ -755,7 +755,7 @@ func _build_art_panel() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override(&"separation", 8)
 	col.add_child(top)
-	_art_back = _button("BACK", &"ReadyButton")
+	_art_back = _button("BACK", &"HudButton")
 	_art_back.name = "ArtBack"
 	_art_back.custom_minimum_size.x = 120
 	_art_back.tooltip_text = "Back to every card"

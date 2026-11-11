@@ -21,7 +21,7 @@
 #   cost, firepower, armor, armor_max?, fp_trend?, keywords (ids or {id, value}), text, side
 #   (friend|enemy), elite, threshold (killstreaks), id / banner / licensed_art / art_id (the 4:1 art),
 #   standard_issue, trait, trait_lit, front_kw, not_found (Codex), count (deck views: "x5"),
-#   cant_pay (red cost hex), marked (amber frame: taken / selected). weapon_class only picks the
+#   cant_pay (grey cost hex, kc-da-ui; the art stays full colour), marked (amber frame: taken / selected). weapon_class only picks the
 #   fallback art now.
 #   kc-ui-hooks: the frame asks the UI kit first (frame_piece(): frm_y2_unit / frm_y2_operator /
 #   frm_y2_standard_issue / frm_t1_orders, + tex_orders_paper on Tactics); the drawn frame is the fallback.
@@ -416,7 +416,7 @@ func _refresh() -> void:
 	# Title bar: cost hex (or killstreak threshold) + the name.
 	_cost_label.text = str(int(data.get("threshold", 0))) if type_name == "killstreak" else str(int(data.get("cost", 0)))
 	_cost_label.visible = _has_cost_badge()
-	_cost_label.add_theme_color_override(&"font_color", Color("#FF9A9A") if bool(data.get("cant_pay", false)) else CardLook.INK)
+	_cost_label.add_theme_color_override(&"font_color", CardLook.COST_GREY_TEXT if bool(data.get("cant_pay", false)) else CardLook.INK)
 	_set_slot(_cost_label, _num_slot(_cost_label, COST_RECT))
 	_cost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_cost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -674,7 +674,7 @@ func _add_line(id: StringName, nm: String, rule: String, locked: bool) -> void:
 # --- Text sizes ---------------------------------------------------------------------------
 
 ## kc-readability: a number label's slot is its badge, grown (centred) to the number face's line
-## height: Oswald's line box (ascent + descent) is taller than the badge, its digits are not.
+## height: the face's line box (ascent + descent) is taller than the badge, its digits are not.
 func _num_slot(label: Label, badge: Rect2) -> Rect2:
 	var h: float = label.get_theme_font(&"font").get_height(label.get_theme_font_size(&"font_size"))
 	if h <= badge.size.y:

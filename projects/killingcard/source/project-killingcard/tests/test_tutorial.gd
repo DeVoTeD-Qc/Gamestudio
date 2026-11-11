@@ -73,22 +73,22 @@ func test_scripted_match_on_the_engine() -> void:
 	m.start_match()
 	var me: RulesSide = m.sides[0]
 	var hand_ids: Array = me.hand.map(func(rc: RulesCard) -> StringName: return rc.card.id)
-	assert_eq(hand_ids, [&"si_grunt", &"si_trooper", &"si_sergeant", &"si_grunt", &"si_trooper"], "stacked opening hand (kc-onboard-ui: Standard Issue)")
-	# Round 1: Operator + Grunt in Left vs their Grunt (kc-onboard-ui: Standard Issue on both sides).
+	assert_eq(hand_ids, [&"kc_wip_private_1", &"kc_wip_private_2", &"kc_wip_private_3", &"kc_wip_private_1", &"kc_wip_private_2"], "stacked opening hand (kc-da-ui: the starter's Privates)")
+	# Round 1: Operator + Private I in Left vs their Grunt (the training bot keeps Standard Issue).
 	Controller.play_scripted_enemy(t, m)
 	assert_eq(m.red_dots(0), PackedInt32Array([1, 0, 0]), "one red dot in Left")
 	assert_true(m.submit(0, RulesIntent.place_operator(0))["ok"], "place Operator Left")
-	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_grunt"), 0))["ok"], "Grunt Left")
+	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"kc_wip_private_1"), 0))["ok"], "Private I Left")
 	_resolve(m)
 	assert_eq(me.streak, 1, "R1 elimination: streak 1")
 	assert_true(me.operator_unit.is_on_board(), "Operator survives")
-	# kc-econ: round 1 has 1 Supply; the Operator is free in round 1, the Grunt takes the Supply.
-	assert_eq(me.supply, 0, "round 1: the Grunt spent the only Supply")
-	# Round 2 (2 Supply): Trooper (2/3) Right vs their Grunt (2/2): the beat order, no First Shot.
+	# kc-econ: round 1 has 1 Supply; the Operator is free in round 1, Private I takes the Supply.
+	assert_eq(me.supply, 0, "round 1: Private I spent the only Supply")
+	# Round 2 (2 Supply): Private II (2/3) Right vs their Grunt (2/2): the beat order, no First Shot.
 	m.begin_round()
 	assert_eq(me.supply, 2, "round 2 gives 2 Supply")
 	Controller.play_scripted_enemy(t, m)
-	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"si_trooper"), 2))["ok"], "Trooper Right")
+	assert_true(m.submit(0, RulesIntent.play_card(_uid(me, &"kc_wip_private_2"), 2))["ok"], "Private II Right")
 	_resolve(m)
 	assert_eq(me.streak, 2, "R2 elimination: streak 2")
 	assert_true(&"recon_drone" in me.streak_tray, "Recon Drone earned by the scripted firefight")

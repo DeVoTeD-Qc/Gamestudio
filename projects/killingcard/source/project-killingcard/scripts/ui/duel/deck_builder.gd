@@ -34,6 +34,8 @@ const KINDS: Array[StringName] = [&"all", &"unit", &"tactic", &"field"]
 const KIND_WORDS: Dictionary = {&"all": "ALL", &"unit": "UNITS", &"tactic": "TACTICS", &"field": "FIELDS"}
 const KEYWORDS: Array[StringName] = [&"first_shot", &"pick", &"flank", &"cover", &"pierce", &"patch", &"suppress"]
 const BAND_H: float = 30.0
+## kc-da-ui: how far a locked card drops (its art stays full colour).
+const LOCK_DROP: float = 4.0
 const SNACK_S: float = 5.0
 
 ## The deck being edited (DuelViews deck shape) and what it was when the screen opened / last saved.
@@ -533,10 +535,10 @@ func _top_bar() -> HBoxContainer:
 	_name_button.tooltip_text = "Tap to rename the deck (up to 20 letters)"
 	_name_button.pressed.connect(open_rename)
 	bar.add_child(_name_button)
-	var cp: PanelContainer = W.panel(Color("#1E262D"), W.AMBER, 4.0)
+	var cp: PanelContainer = W.panel(Color("#1E262D"), W.PANEL_RIM, 4.0)
 	cp.name = "CounterPanel"
 	cp.custom_minimum_size = Vector2(150 if portrait else 176, 0)
-	_counter = W.label("0/10 PICKS", &"HudNumber", 26 if not compact else 22, W.AMBER)
+	_counter = W.label("0/10 PICKS", &"HudNumber", 26 if not compact else 22, W.FOG)
 	_counter.name = "PickCounter"
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_counter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -881,28 +883,24 @@ func _make_tile(e: Dictionary) -> Button:
 		if StringName(str(p["card"])) == id:
 			pick = p
 	var art: StringName = StringName(str(pick.get("art", ""))) if not pick.is_empty() else &""
-	var cv: CardView = CodexView.make_card_view(CardView.view_for_card(c, art), _tile_w)
-	cv.size = csz
-	b.add_child(cv)
 	var owned: bool = bool(e["owned"])
 	var picked: bool = not pick.is_empty()
-	var veil: ColorRect = ColorRect.new()
-	veil.name = "Veil"
-	veil.color = Color(0.05, 0.06, 0.07, 0.62)
-	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	veil.size = csz
-	veil.visible = not owned
-	b.add_child(veil)
+	# kc-da-ui (art direction v1 #5): a locked card keeps its art in full colour: a grey cost hex,
+	# the card drops LOCK_DROP px, and the band below says LOCKED with a lock mark.
+	var view: Dictionary = CardView.view_for_card(c, art)
 	if not owned:
-		var lock: Control = W.Mark.new(&"lock", W.FOG, 34)
-		lock.position = Vector2((csz.x - 34.0) * 0.5, csz.y * 0.4)
-		b.add_child(lock)
+		view["cant_pay"] = true
+	var cv: CardView = CodexView.make_card_view(view, _tile_w)
+	cv.size = csz
+	cv.position.y = 0.0 if owned else LOCK_DROP
+	b.add_child(cv)
 	var band: PanelContainer = PanelContainer.new()
 	band.name = "Band"
 	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	band.position = Vector2(0, csz.y + 2.0)
 	band.size = Vector2(csz.x, BAND_H)
-	var bg: Color = W.AMBER if picked else (Color("#2A2F35") if owned else Color("#3A1F21"))
+	# kc-da-ui: picks are "you" (teal), not amber; amber is the one PLAY button.
+	var bg: Color = W.TEAL if picked else W.STEEL_BG
 	band.add_theme_stylebox_override(&"panel", W.flat(bg, Color(0, 0, 0, 0), 0, 4, 2))
 	b.add_child(band)
 	var brow: HBoxContainer = HBoxContainer.new()
@@ -915,19 +913,19 @@ func _make_tile(e: Dictionary) -> Button:
 		brow.add_child(W.Mark.new(&"tick", W.INK, 16))
 		word = "×2 IN DECK"
 	elif not owned:
-		brow.add_child(W.Mark.new(&"lock", W.RED.lightened(0.3), 16))
+		brow.add_child(W.Mark.new(&"lock", W.STEEL_BAR, 16))
 		word = "LOCKED"
 	else:
 		brow.add_child(W.Mark.new(&"plus", W.FOG, 14))
 		word = "ADD ×2"
-	var bl: Label = W.label(word, &"HudTag", 16, W.INK if picked else (W.RED.lightened(0.3) if not owned else W.FOG))
+	var bl: Label = W.label(word, &"HudTag", 16, W.INK if picked else (W.STEEL_BAR.lightened(0.3) if not owned else W.FOG))
 	bl.name = "BandText"
 	brow.add_child(bl)
 	b.set_meta(&"state", &"picked" if picked else (&"locked" if not owned else &"open"))
 	if picked or not owned:
 		b.draw.connect(func() -> void:
 			if picked:
-				b.draw_rect(Rect2(Vector2.ZERO, csz + Vector2(0, BAND_H + 2.0)).grow(-1.0), W.AMBER, false, 3.0))
+				b.draw_rect(Rect2(Vector2.ZERO, csz + Vector2(0, BAND_H + 2.0)).grow(-1.0), W.TEAL, false, 3.0))
 	b.tooltip_text = "%s · %s · hold / right click: the full card" % [c.display_name,
 			"tap: remove both copies" if picked else ("Find it in a campaign run" if not owned else "tap: add 2 copies")]
 	var g: RefCounted = PressGesture.new(b)
@@ -966,7 +964,7 @@ func _refresh_panel() -> void:
 		return
 	var n: int = DuelViews.pick_ids(deck).size()
 	_counter.text = "%d/%d PICKS" % [n, DuelViews.MAX_PICKS]
-	_counter.add_theme_color_override(&"font_color", W.GREEN if n == DuelViews.MAX_PICKS else W.AMBER)
+	_counter.add_theme_color_override(&"font_color", W.GREEN if n == DuelViews.MAX_PICKS else W.FOG)
 	_name_button.text = "%s  ·  RENAME" % deck_name()
 	# Hero and Doctrine.
 	for holder: Control in [_hero_holder, _doctrine_holder]:
@@ -1055,7 +1053,7 @@ func _doctrine_strip() -> Button:
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.offset_left = 8
 	row.offset_right = -8
-	var tag: Label = W.label("DOCTRINE", &"HudTag", 16, W.AMBER)
+	var tag: Label = W.label("DOCTRINE", &"HudTag", 16, W.MUTED)
 	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(tag)
 	row.add_child(W.TraitPlate.new(t, 28))
@@ -1218,7 +1216,7 @@ func open_trait_picker(id: StringName) -> Dictionary:
 		var csz: Vector2 = CardView.size_for(w)
 		cv.size = csz
 		b.add_child(cv)
-		var l: Label = W.label(("%s · CHOSEN" if t == now else "%s") % ArtTraits.trait_name(t).to_upper(), &"HudTag", 16, W.AMBER if t == now else W.FOG)
+		var l: Label = W.label(("%s · CHOSEN" if t == now else "%s") % ArtTraits.trait_name(t).to_upper(), &"HudTag", 16, W.TEAL if t == now else W.FOG)
 		l.position = Vector2(4, csz.y + 4)
 		b.add_child(l)
 		b.custom_minimum_size = csz + Vector2(0, 30)

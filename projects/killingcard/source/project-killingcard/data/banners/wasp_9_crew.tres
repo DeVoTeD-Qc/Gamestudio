@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BannerArt" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/banner_art.gd" id="1_bart"]
+
+[resource]
+script = ExtResource("1_bart")
+id = &"wasp_9_crew"
+title = "Wasp-9"
+card_id = &"wasp_9_crew"
+image_path = "res://assets/sprites/cards/card_wasp_9.webp"
+banner_y = 0.5
+portrait_x = 0.45
+is_default = true
+artist = "KillingCard studio (Killstreak card art)"
+licence = "studio-owned"
+source_note = "kc-da-ui: the rival crews' Wasp wears the same painting as the player's wasp_9 (it showed a generated gradient). Never licensed MW3 art."
+placeholder = true

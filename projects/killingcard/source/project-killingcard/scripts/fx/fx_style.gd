@@ -18,7 +18,7 @@ const TEAL: Color = Color("#2EC4B6")
 const RED: Color = Color("#E5383B")
 const CYAN: Color = Color("#5BC0EB")
 
-const FONT_HEADING: FontFile = preload("res://assets/fonts/BarlowCondensed-SemiBold.ttf")
+const FONT_HEADING: FontFile = preload("res://assets/fonts/BarlowCondensed-Bold.ttf")  # kc-da-ui type scale
 const FONT_BODY: FontFile = preload("res://assets/fonts/Barlow-Medium.ttf")
 const FONT_NUMERIC: FontFile = preload("res://assets/fonts/ShareTechMono-Regular.ttf")
 

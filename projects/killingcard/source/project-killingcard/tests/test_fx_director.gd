@@ -315,16 +315,20 @@ func test_mortar_marks_its_column_then_strikes_with_numbers_on_impact() -> void:
 
 
 func test_each_killstreak_has_its_own_look() -> void:
+	# kc-da-ui: the kind is told by its icon and sequence; the colour is the owner's (one per side).
 	var seqs: Dictionary = {}
+	var icons: Dictionary = {}
 	var colors: Dictionary = {}
 	for id: StringName in [&"recon_drone", &"mortar_barrage", &"sentry_turret", &"attack_helo"]:
 		var look: Dictionary = KillstreakFx.look(id)
 		seqs[look["seq"]] = true
-		colors[(look["color"] as Color).to_html()] = true
+		icons[look["icon"]] = true
+		colors[KillstreakFx.color_of(id, &"enemy", &"player").to_html()] = true
 		assert_true(IconSheet.has_icon(look["icon"]), "%s has its icon" % id)
 		assert_true(String(look["effect"]) != "" and String(look["when"]) != "", "%s says what and when" % id)
 	assert_eq(seqs.size(), 4, "four different sequences")
-	assert_eq(colors.size(), 4, "four different colours")
+	assert_eq(icons.size(), 4, "four different icons")
+	assert_eq(colors.size(), 1, "one colour per owner")
 
 
 func test_helo_strafe_and_sentry_drop_and_reduced_motion_banner() -> void:

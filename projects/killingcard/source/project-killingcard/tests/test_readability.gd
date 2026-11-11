@@ -5,8 +5,8 @@
 #   the iPhone SE's 667x375:
 #   - hand cards (X1): the cost digit and the FP / Armor digits, in pt;
 #   - board banners: the same digits;
-#   - one number face (Oswald Bold, tabular digits) with a dark outline for every card number and
-#     the Supply counter; its OFL licence is bundled;
+#   - one number face (kc-da-ui: Barlow Condensed ExtraBold, tabular digits; Oswald Bold only as its
+#     fallback) with a dark outline for every card number and the Supply counter; OFL licences bundled;
 #   - the Supply pips are cost hexes;
 #   - soft dark backings behind the badge groups on the art (never a band).
 # Author: UI/UX Agent (kc-readability)
@@ -65,10 +65,23 @@ static func _cost_px(r: Rect2) -> float:
 
 
 func test_number_face_and_licence() -> void:
-	assert_eq((CardLook.NUM_FONT as FontVariation).base_font.resource_path, "res://assets/fonts/Oswald-Variable.ttf", "Oswald")
-	assert_eq(int((CardLook.NUM_FONT as FontVariation).variation_opentype.get(2003265652, 0)), 700, "Bold (wght 700)")
-	assert_eq(int((CardLook.NUM_FONT as FontVariation).opentype_features.get(1953396077, 0)), 1, "tabular digits")
-	assert_true(FileAccess.file_exists("res://assets/fonts/OFL-Oswald.txt"), "its OFL licence is bundled")
+	var face: FontVariation = CardLook.NUM_FONT as FontVariation
+	assert_eq(face.base_font.resource_path, "res://assets/fonts/BarlowCondensed-ExtraBold.ttf", "Barlow Condensed ExtraBold (art direction §3)")
+	assert_eq(int(face.opentype_features.get(1953396077, 0)), 1, "tabular digits")
+	assert_eq(face.fallbacks.size(), 1, "one fallback")
+	var oswald: FontVariation = face.fallbacks[0] as FontVariation
+	assert_eq(oswald.base_font.resource_path, "res://assets/fonts/Oswald-Variable.ttf", "Oswald is the fallback only")
+	assert_eq(int(oswald.variation_opentype.get(2003265652, 0)), 700, "Bold (wght 700)")
+	assert_true(FileAccess.file_exists("res://assets/fonts/OFL-BarlowCondensed.txt"), "its OFL licence is bundled")
+	assert_true(FileAccess.file_exists("res://assets/fonts/OFL-Oswald.txt"), "the fallback's OFL licence is bundled")
+	# Stencil: the wordmark only (stamps are drawn in code), never body text or buttons.
+	var theme: Theme = ThemeDB.get_project_theme()
+	if theme != null:
+		var wm: Font = theme.get_font(&"font", &"TitleWordmark")
+		assert_true(wm is FontVariation and (wm as FontVariation).base_font.resource_path.ends_with("StardosStencil-Bold.ttf"), "the wordmark is the stencil")
+		for v: StringName in [&"HudButton", &"ReadyButton", &"HudSubtle", &"TileName", &"UnitName"]:
+			var f: Font = theme.get_font(&"font", v)
+			assert_false(f is FontVariation and (f as FontVariation).base_font.resource_path.ends_with("StardosStencil-Bold.ttf"), "%s is not the stencil" % v)
 	assert_true(CardLook.NUM_OUTLINE >= 3, "a dark outline on numbers over art")
 	assert_true(CardLook.BACKING.a >= 0.75 and CardLook.BACKING.a <= 0.85, "backing ~75-85%% black (%.2f)" % CardLook.BACKING.a)
 

@@ -26,7 +26,8 @@ const LORE_COLOR: Color = Color("#8A949C")
 ## kc-readability (the head: "the cost icon and number as well as stats icon and number need to be
 ## bigger / more readable. We can use a better font"): every card number (cost, FP, Armor, the Supply
 ## counter) uses one bold condensed display face with tabular digits and a dark outline.
-const NUM_FONT: Font = preload("res://assets/fonts/card_numbers_oswald.tres")
+## kc-da-ui (art direction v1 §3): card numbers in Barlow Condensed ExtraBold; Oswald is only its fallback.
+const NUM_FONT: Font = preload("res://assets/fonts/card_numbers_barlow.tres")
 ## Outline width (px) of card numbers drawn over art.
 const NUM_OUTLINE: int = 4
 ## The title spec (every card off the board): 16 px canvas = 11.6 pt on the 844x390 phone.
@@ -172,17 +173,24 @@ static func draw_trait(ci: CanvasItem, r: Rect2, t: StringName, lit: bool, focus
 
 
 ## The cost hex (amber; can't pay = dark red with a red rim and number).
+## kc-da-ui (art direction v1 #5): a card you can't pay or play shows a GREY hex (steel face, fog
+## digit); its art is never dimmed. Amber stays for "act now".
+const COST_GREY: Color = Color("#4A535B")
+const COST_GREY_RIM: Color = Color("#7D8790")
+const COST_GREY_TEXT: Color = Color("#D8DEE3")
+
+
 static func draw_cost(ci: CanvasItem, r: Rect2, value: String, cant_pay: bool = false) -> void:
 	var c: Vector2 = r.get_center()
 	var rad: float = minf(r.size.x, r.size.y * 1.1) * 0.5
 	var pts: PackedVector2Array = []
 	for i: int in 6:
 		pts.append(c + Vector2.from_angle(PI / 6.0 + i * PI / 3.0) * rad)
-	ci.draw_colored_polygon(pts, Color("#4A1A1C") if cant_pay else AMBER)
+	ci.draw_colored_polygon(pts, COST_GREY if cant_pay else AMBER)
 	pts.append(pts[0])
-	ci.draw_polyline(pts, Color("#FF5A5D") if cant_pay else AMBER.darkened(0.45), 1.5, true)
+	ci.draw_polyline(pts, COST_GREY_RIM if cant_pay else AMBER.darkened(0.45), 1.5, true)
 	# kc-readability: a bigger digit in the number face (dark on amber reads without an outline).
-	_text_center(ci, Rect2(r.position - Vector2(0, r.size.y * 0.04), r.size), value, maxi(12, int(r.size.y * 0.8)), Color("#FF9A9A") if cant_pay else INK, NUM_FONT, 0)
+	_text_center(ci, Rect2(r.position - Vector2(0, r.size.y * 0.04), r.size), value, maxi(12, int(r.size.y * 0.8)), COST_GREY_TEXT if cant_pay else INK, NUM_FONT, 0)
 
 
 ## A small dark backing behind one group of icons (never a band across the art). kc-readability: soft

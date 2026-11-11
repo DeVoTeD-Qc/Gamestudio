@@ -36,7 +36,10 @@ func _initialize() -> void:
 ## is the project theme), so its line height and glyphs changed between editor, tests and builds.
 ## Body uses Barlow Medium instead of Regular: thin strokes break up at 11-12 pt on a phone.
 const FONT_BODY: String = "res://assets/fonts/Barlow-Medium.ttf"
-const FONT_HEADING: String = "res://assets/fonts/BarlowCondensed-SemiBold.ttf"
+## kc-da-ui (art direction v1 §3): titles, buttons and names in Barlow Condensed Bold; the stencil
+## (Stardos Stencil Bold) for the wordmark only (and stamps drawn in code).
+const FONT_HEADING: String = "res://assets/fonts/BarlowCondensed-Bold.ttf"
+const FONT_STENCIL: String = "res://assets/fonts/StardosStencil-Bold.ttf"
 const FONT_NUMERIC: String = "res://assets/fonts/ShareTechMono-Regular.ttf"
 
 
@@ -55,7 +58,11 @@ func _fonts() -> Dictionary:
 	numeric.base_font = load(FONT_NUMERIC)
 	numeric.fallbacks = [body_file]  # Share Tech Mono lacks some symbols (·, −).
 	numeric.variation_embolden = 0.3
-	return {"body": body, "heading": heading, "numeric": numeric}
+	var stencil := FontVariation.new()
+	stencil.resource_name = "stencil_wordmark"
+	stencil.base_font = load(FONT_STENCIL)
+	stencil.fallbacks = [heading]
+	return {"body": body, "heading": heading, "numeric": numeric, "stencil": stencil}
 
 
 func _box(bg: Color, border: Color = Color.TRANSPARENT, border_w: int = 0, radius: int = 0,
@@ -370,7 +377,7 @@ func _run_styles(t: Theme, f: Dictionary) -> void:
 	_shape_var(t, "TicketPipSpent", _box(Color.TRANSPARENT, FOG_DIM, 2, 3, true, Vector4.ZERO))
 	_label_var(t, "RunTitle", f["heading"], 40, FOG)
 	# v01 Title wordmark: big condensed caps with a dark outline over the key art.
-	_label_var(t, "TitleWordmark", f["heading"], 84, FOG, 10, Color(SLATE, 0.85))
+	_label_var(t, "TitleWordmark", f["stencil"], 84, FOG, 10, Color(SLATE, 0.85))
 	t.set_constant("line_spacing", "TitleWordmark", -12)
 	_label_var(t, "TitleTagline", f["heading"], 20, SAND, 6, Color(SLATE, 0.85))
 	_label_var(t, "ResultWin", f["heading"], 44, TEAL)

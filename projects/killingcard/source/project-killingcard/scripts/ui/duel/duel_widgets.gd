@@ -26,6 +26,13 @@ const FOG: Color = Color("#D8DEE3")
 const PANEL_BG: Color = Color("#161B20")
 const PANEL_RIM: Color = Color("#3A444D")
 const INK: Color = Color("#12161A")
+## kc-da-ui: "you" teal (selection, your picks) and the steel of a neutral bar (art direction §2).
+const TEAL: Color = Color("#2EC4B6")
+const STEEL_BAR: Color = Color("#7D8790")
+const STEEL_BG: Color = Color("#2A2F35")
+## Captions / section tags (muted, never amber) and the Operator / hero brass.
+const MUTED: Color = Color("#9AA4AD")
+const BRASS: Color = Color("#C9A227")
 ## Smallest tap target (px at the 540 px phone base = 46 pt).
 const TAP: float = 64.0
 const ROW_H: float = 56.0
@@ -252,7 +259,8 @@ class CurveChart extends Control:
 			var r: Rect2 = Rect2(x + w * 0.18, top + bar_room - h, w * 0.64, h)
 			draw_rect(Rect2(x + w * 0.18, top, w * 0.64, bar_room), Color(1, 1, 1, 0.05))
 			if h > 0.0:
-				draw_rect(r, AMBER if i != selected else Color.WHITE)
+				# kc-da-ui: bar charts are never amber (amber = act now): steel bars, the picked one white.
+				draw_rect(r, STEEL_BAR if i != selected else Color.WHITE)
 			draw_string(font, Vector2(x, top + bar_room - h - 4.0), str(counts[i]), HORIZONTAL_ALIGNMENT_CENTER, w, 16, FOG)
 			draw_string(font, Vector2(x, size.y - 3.0), DuelViews.CURVE_LABELS[i], HORIZONTAL_ALIGNMENT_CENTER, w, 16, Color(FOG, 0.8))
 			if i == selected:
