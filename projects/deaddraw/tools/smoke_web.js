@@ -175,8 +175,8 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       s = await state(page);
       const pick = (x) => ({ hp: x.hp, wave: x.wave, pile: x.pile, points: x.points, street: x.street, stacks: x.stacks, active: x.active });
       const before = pick(s);
-      // let the run save reach IndexedDB (the Run flight and the profile's Codex save run too)
-      await sleep(3000);
+      // dd-save-fix: the run is saved (and mirrored to localStorage) when the Run resolves, so 1 s is plenty
+      await sleep(1000);
       await page.reload({ waitUntil: 'load' });
       s = await waitFor(page, (x) => x.screen === 'TITLE', 'title after reload', 90000);
       await sleep(300); await shot('14_title_continue');

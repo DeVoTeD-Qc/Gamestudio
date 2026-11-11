@@ -5,6 +5,9 @@
 #   Settings (volumes to the Master / SFX buses; screen shake and reduce motion read by the UI).
 #   dd-save: owns the mid-run save (DDRunSave, user://deaddraw_run.json): written after every run
 #   event and on screen changes, cleared when the run ends; resume_run() / abandon_run().
+#   dd-save-fix: the save is written synchronously in the run's changed signal (before any card
+#   animation) and mirrored to localStorage on the Web (see DDRunSave); it is written again when
+#   the window loses focus / is closed, and on the Web when the page is hidden or unloaded.
 # Dependencies: DDBalance, DDRun, DDProfile, DDRunSave, scripts/fx/dd_sfx.gd.
 # Author: Mechanics Developer Agent
 extends Node
@@ -42,6 +45,42 @@ func _ready() -> void:
 	bank.name = "Sfx"
 	add_child(bank)
 	apply_settings()
+	_hook_page_hide()
+
+
+# ---------------------------------------------------------------- save on leave (dd-save-fix)
+var _js_page_hide: JavaScriptObject = null
+
+
+## Web: pagehide / beforeunload / visibilitychange call flush_saves() synchronously (single-threaded
+## export), so the run reaches localStorage even if the tab closes before the next frame.
+func _hook_page_hide() -> void:
+	if not OS.has_feature("web"):
+		return
+	_js_page_hide = JavaScriptBridge.create_callback(_on_page_hide)
+	var win: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	var doc: JavaScriptObject = JavaScriptBridge.get_interface("document")
+	if win != null:
+		win.addEventListener("pagehide", _js_page_hide)
+		win.addEventListener("beforeunload", _js_page_hide)
+	if doc != null:
+		doc.addEventListener("visibilitychange", _js_page_hide)
+
+
+func _on_page_hide(_args: Array) -> void:
+	flush_saves()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT \
+			or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		flush_saves()
+
+
+## Writes the run in progress again (a finished run was already cleared by its last event).
+func flush_saves() -> void:
+	if run != null and run.phase != DDRun.Phase.DEAD and run.phase != DDRun.Phase.WON:
+		save_run()
 
 
 # ---------------------------------------------------------------- settings (dd-feel)

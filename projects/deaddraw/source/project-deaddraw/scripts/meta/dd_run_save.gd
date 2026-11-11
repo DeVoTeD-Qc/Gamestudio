@@ -6,6 +6,12 @@
 #   unusable file reads as "no saved run" and never crashes. An older version (save 4 = a v3 run:
 #   crowbar melee, points carried between districts; save 3 and older = v2 runs) can't be played
 #   under the v4 rules: discard_old() removes it and the title says so once.
+#   dd-save-fix: on the Web, user:// is MEMFS mirrored to IndexedDB by an async FS.syncfs() that
+#   the engine starts on a later frame (queued behind any sync already running), so a tab closed or
+#   reloaded right after a Run could lose it. Every save (and clear) is therefore also written,
+#   synchronously, to a mirror (window.localStorage on the Web, same JSON); reads take the newer of
+#   the file and the mirror by saved_at, and a clear leaves a "cleared" tombstone so a stale file
+#   that IndexedDB still holds can't come back as Continue.
 # Dependencies: DDRun, DDBalance, DDText.
 # Author: Mechanics Developer Agent
 class_name DDRunSave
@@ -15,10 +21,45 @@ const DEFAULT_PATH: String = "user://deaddraw_run.json"
 const VERSION: int = 5
 
 var path: String = DEFAULT_PATH
+## Synchronous second copy of the save (null = file only). Web: WebStorage (localStorage). Tests
+## pass a MemoryMirror. Anything with get_item(key) -> String and set_item(key, text).
+var mirror: RefCounted = null
 
 
-func _init(save_path: String = DEFAULT_PATH) -> void:
+## window.localStorage through JavaScriptBridge: written in the same frame, survives a reload or a
+## closed tab even when the IndexedDB sync of user:// has not finished.
+class WebStorage:
+	extends RefCounted
+
+	func get_item(key: String) -> String:
+		var v: Variant = JavaScriptBridge.eval("(function(){try{return window.localStorage.getItem(%s)||''}catch(e){return ''}})()" % JSON.stringify(key), true)
+		return v if v is String else ""
+
+	func set_item(key: String, text: String) -> void:
+		JavaScriptBridge.eval("(function(){try{window.localStorage.setItem(%s,%s)}catch(e){}})()" % [JSON.stringify(key), JSON.stringify(text)], true)
+
+
+## In-memory mirror for tests (stands in for localStorage).
+class MemoryMirror:
+	extends RefCounted
+	var items: Dictionary = {}
+
+	func get_item(key: String) -> String:
+		return str(items.get(key, ""))
+
+	func set_item(key: String, text: String) -> void:
+		items[key] = text
+
+
+func _init(save_path: String = DEFAULT_PATH, save_mirror: RefCounted = null) -> void:
 	path = save_path
+	mirror = save_mirror
+	if mirror == null and OS.has_feature("web"):
+		mirror = WebStorage.new()
+
+
+func _mirror_key() -> String:
+	return "deaddraw:" + path
 
 
 ## Saves a run in progress. screen: the UI screen to come back to ("STREET", "MAP", "SAFEHOUSE").
@@ -27,33 +68,53 @@ func save(run: DDRun, screen: String = "STREET") -> bool:
 	if run == null or run.phase == DDRun.Phase.DEAD or run.phase == DDRun.Phase.WON:
 		clear()
 		return false
+	var text: String = JSON.stringify({"version": VERSION, "screen": screen, "saved_at": Time.get_unix_time_from_system(), "run": run.to_dict()})
+	# the mirror first: it is durable the moment this returns (the Web file waits for an IDB sync)
+	if mirror != null:
+		mirror.set_item(_mirror_key(), text)
 	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		push_warning("DDRunSave: cannot write %s" % path)
-		return false
-	f.store_string(JSON.stringify({"version": VERSION, "screen": screen, "saved_at": Time.get_unix_time_from_system(), "run": run.to_dict()}))
-	f.close()
+		return mirror != null
+	f.store_string(text)
+	f.close()   # on the Web this marks user:// for the engine's next IndexedDB sync
 	return true
 
 
+## The newest saved data (file or mirror, by saved_at); {} when there is none or it was cleared.
+func _read() -> Dictionary:
+	var best: Dictionary = {}
+	if FileAccess.file_exists(path):
+		var p: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if p is Dictionary:
+			best = p
+	if mirror != null:
+		var t: String = mirror.get_item(_mirror_key())
+		if t != "":
+			var q: Variant = JSON.parse_string(t)
+			if q is Dictionary and (best.is_empty() or float((q as Dictionary).get("saved_at", 0.0)) >= float(best.get("saved_at", 0.0))):
+				best = q
+	if bool(best.get("cleared", false)):
+		return {}
+	return best
+
+
 func exists() -> bool:
-	return FileAccess.file_exists(path)
+	return not _read().is_empty()
 
 
 ## {run: DDRun, screen: String} or {} when there is no usable saved run.
 func load_run(bal: DDBalance = null) -> Dictionary:
-	if not exists():
+	var parsed: Dictionary = _read()
+	if parsed.is_empty() or int(parsed.get("version", 0)) != VERSION:
 		return {}
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary or int((parsed as Dictionary).get("version", 0)) != VERSION:
-		return {}
-	var d: Variant = (parsed as Dictionary).get("run", null)
+	var d: Variant = parsed.get("run", null)
 	if not d is Dictionary:
 		return {}
 	var run: DDRun = DDRun.from_dict(d, bal)
 	if run == null or run.phase == DDRun.Phase.DEAD or run.phase == DDRun.Phase.WON:
 		return {}
-	return {"run": run, "screen": str((parsed as Dictionary).get("screen", "STREET"))}
+	return {"run": run, "screen": str(parsed.get("screen", "STREET"))}
 
 
 ## One line for the title's Continue button: survivor, district, wave, HP.
@@ -69,10 +130,8 @@ func summary(bal: DDBalance = null) -> String:
 
 ## True when the file holds a run from an older version of the game (not resumable).
 func is_old() -> bool:
-	if not exists():
-		return false
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	return parsed is Dictionary and int((parsed as Dictionary).get("version", 0)) > 0 and int((parsed as Dictionary).get("version", 0)) < VERSION
+	var v: int = int(_read().get("version", 0))
+	return v > 0 and v < VERSION
 
 
 ## Deletes an older-version run. Returns true when one was discarded.
@@ -83,6 +142,14 @@ func discard_old() -> bool:
 	return true
 
 
+## Removes the saved run. The mirror keeps a "cleared" tombstone (newer than any stale copy).
+## On the Web a bare remove does not schedule an IndexedDB sync, so the file is emptied first
+## (a write does), then removed: the next sync drops it from IndexedDB too.
 func clear() -> void:
-	if exists():
+	if mirror != null:
+		mirror.set_item(_mirror_key(), JSON.stringify({"version": VERSION, "cleared": true, "saved_at": Time.get_unix_time_from_system()}))
+	if FileAccess.file_exists(path):
+		var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+		if f != null:
+			f.close()
 		DirAccess.remove_absolute(path)

@@ -388,3 +388,43 @@ func test_roundtrip_v4_melee_fired_and_shop() -> void:
 	eq(c.points, s.points, "points kept")
 	_roundtrip(s, "safehouse shop")
 	_cleanup()
+
+
+## dd-save-fix: the Web mirror (localStorage) is written in the same call as the file, so a Run is
+## kept even when the user:// file (IndexedDB) still holds the save from before it; a clear leaves
+## a tombstone so that stale file can't come back as Continue.
+func test_mirror_keeps_the_run_when_the_file_lags() -> void:
+	var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	var p: String = "user://dd_test_run_mirror_%d.json" % Time.get_ticks_usec()
+	_paths.append(p)
+	var sv: DDRunSave = DDRunSave.new(p, m)
+	var r: DDRun = make_run("rosa")
+	_play(r, _rng(5), 4)
+	check(sv.save(r, "STREET"), "saved")
+	var stale: String = FileAccess.get_file_as_string(p)   # what IndexedDB still has after a reload
+	check(r.run_street()["ok"], "ran")
+	sv.save(r, "STREET")
+	eq(m.items.size(), 1, "the mirror holds one key")
+	# simulate a reload before the IndexedDB sync: the file is back to the pre-Run save
+	var f: FileAccess = FileAccess.open(p, FileAccess.WRITE)
+	f.store_string(stale)
+	f.close()
+	var back: Dictionary = DDRunSave.new(p, m).load_run(bal())
+	check(not back.is_empty(), "resumable")
+	eq(JSON.stringify((back["run"] as DDRun).to_dict()), JSON.stringify(r.to_dict()), "the post-Run state wins over the stale file")
+	check((back["run"] as DDRun).ran_last, "the Run is kept")
+	# no mirror (localStorage blocked / cleared): the file still works
+	var fonly: Dictionary = DDRunSave.new(p, DDRunSave.MemoryMirror.new()).load_run(bal())
+	check(not fonly.is_empty(), "file-only fallback")
+	# a clear leaves a tombstone: the stale file that IndexedDB may still hold is not a Continue
+	sv.clear()
+	check(not FileAccess.file_exists(p), "file removed")
+	f = FileAccess.open(p, FileAccess.WRITE)
+	f.store_string(stale)
+	f.close()
+	check(not sv.exists(), "cleared: no saved run even with a stale file back")
+	eq(sv.summary(bal()), "", "no Continue line")
+	# a new save after the clear is used again
+	sv.save(r, "MAP")
+	eq(str(sv.load_run(bal()).get("screen", "")), "MAP", "saved again after a clear")
+	_cleanup()
