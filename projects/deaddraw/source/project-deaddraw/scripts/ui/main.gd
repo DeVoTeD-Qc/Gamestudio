@@ -80,6 +80,8 @@ var hints_enabled: bool = true
 var last_block: String = ""
 
 var _content: MarginContainer
+var _backdrop: TextureRect
+var _backdrop_scrim: ColorRect
 var _sheet_root: Control
 var _fx: Control
 var _inspect: DDInspect
@@ -121,6 +123,21 @@ func _ready() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
+	# dd-art-import: the painted title art behind the title screen (under a scrim so the text reads)
+	_backdrop = TextureRect.new()
+	_backdrop.name = "Backdrop"
+	_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.visible = false
+	add_child(_backdrop)
+	_backdrop_scrim = ColorRect.new()
+	_backdrop_scrim.color = Color(DDUi.BG, 0.6)
+	_backdrop_scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_backdrop_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop_scrim.visible = false
+	add_child(_backdrop_scrim)
 	_content = MarginContainer.new()
 	_content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: String in ["left", "right", "top", "bottom"]:
@@ -224,6 +241,13 @@ func _fit_base() -> bool:
 
 
 # ================================================================ rendering
+## dd-art-import: the full-screen painted backdrop (title screen) or none.
+func _set_backdrop(tex: Texture2D) -> void:
+	_backdrop.texture = tex
+	_backdrop.visible = tex != null
+	_backdrop_scrim.visible = tex != null
+
+
 func _render() -> void:
 	if _fitting:
 		return
@@ -258,6 +282,7 @@ func _render() -> void:
 	# snap it back to the screen so the new layout reflows instead of overflowing
 	_content.position = Vector2.ZERO
 	_content.size = vp
+	_set_backdrop(Art.texture_for(["title_portrait", "title_landscape"] if portrait else ["title_landscape", "title_portrait"]) if screen == Screen.TITLE else null)
 	match screen:
 		Screen.TITLE:
 			_build_title()

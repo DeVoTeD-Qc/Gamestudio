@@ -2367,8 +2367,89 @@ def main() -> None:
         write(rel, maker())
         for k in [rid] + extra:
             man["rules"][k] = rel
+    apply_painted(man)
     (ART / "manifest.json").write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
     print("wrote %d svg files + manifest.json to %s" % (len(out), ART))
+
+
+# ---------------------------------------------------------------- painted art (art pack 1, dd-art-import)
+# Every SVG below is replaced in the manifest (in every group: by_name, by_kind_value, weapons, rooms...)
+# by its painted WebP in assets/art/painted/ (made by tools/art/import_painted.py), but only when that
+# file exists, so anything not painted or rejected in review keeps its SVG. The SVGs are still written
+# and stay the fallback.
+PAINTED = {
+    "cards/zombie_shambler.svg": "dd_zombie_shambler", "cards/zombie_lurcher.svg": "dd_zombie_lurcher",
+    "cards/zombie_bruiser.svg": "dd_zombie_bruiser", "cards/zombie_hulk.svg": "dd_zombie_hulk",
+    "cards/finale_the_groundskeeper.svg": "dd_boss_groundskeeper", "cards/finale_rush_hour_horde.svg": "dd_boss_rush_hour_horde",
+    "cards/finale_patient_zero.svg": "dd_boss_patient_zero_1", "cards/finale_patient_zero_phase2.svg": "dd_boss_patient_zero_2",
+    "cards/finale_patient_zero_phase3.svg": "dd_boss_patient_zero_3",
+    "cards/weapon_service_pistol.svg": "dd_gun_service_pistol", "cards/weapon_hunting_rifle.svg": "dd_gun_hunting_rifle",
+    "cards/weapon_ratchet_crossbow.svg": "dd_gun_ratchet_crossbow", "cards/weapon_twin_bore.svg": "dd_gun_twin_bore",
+    "cards/weapon_lever_rifle.svg": "dd_gun_lever_rifle", "cards/weapon_carbine.svg": "dd_gun_scout_carbine",
+    "cards/weapon_nail_driver.svg": "dd_gun_nail_driver", "cards/weapon_pump_shotgun.svg": "dd_gun_pump_shotgun",
+    "cards/weapon_elephant_gun.svg": "dd_gun_elephant_gun", "cards/weapon_stovepipe_launcher.svg": "dd_gun_stovepipe_launcher",
+    "cards/weapon_alley_sweeper.svg": "dd_gun_alley_sweeper",
+    "cards/weapon_bare_hands.svg": "dd_melee_bare_hands", "cards/weapon_pipe_wrench.svg": "dd_melee_pipe_wrench",
+    "cards/weapon_fire_axe.svg": "dd_melee_fire_axe", "cards/weapon_sledgehammer.svg": "dd_melee_sledgehammer",
+    "cards/medkit_bandage.svg": "dd_item_bandage", "cards/medkit_first_aid_kit.svg": "dd_item_first_aid_kit",
+    "cards/medkit_trauma_kit.svg": "dd_item_trauma_kit",
+    "cards/barricade_plywood.svg": "dd_cover_plywood", "cards/barricade_car_door.svg": "dd_cover_car_door",
+    "cards/barricade_dumpster.svg": "dd_cover_dumpster",
+    "cards/machine_retrofit_bench.svg": "dd_machine_retrofit_bench", "cards/machine_patch_press.svg": "dd_machine_patch_press",
+    "cards/machine_wall_rack.svg": "dd_machine_wall_rack", "cards/machine_wall_rack_ratchet_crossbow.svg": "dd_machine_wall_rack_crossbow",
+    "cards/machine_wall_rack_pump_shotgun.svg": "dd_machine_wall_rack_shotgun",
+    "cards/machine_wall_rack_elephant_gun.svg": "dd_machine_wall_rack_elephant_gun",
+    "cards/card_back.svg": "dd_back_pile", "cards/back_wave.svg": "dd_back_wave", "cards/back_room.svg": "dd_back_room",
+    "badges/locked.svg": "dd_icon_locked", "badges/challenge.svg": "dd_icon_challenge_met",
+    "badges/challenge_open.svg": "dd_icon_challenge_open", "icons/wave.svg": "dd_icon_wave",
+}
+for _d in ("maple_row", "downtown", "st_agnes"):
+    PAINTED["districts/%s.svg" % _d] = "dd_district_" + _d
+for _r in ("entrance", "garage", "corner_store", "workshop"):
+    PAINTED["rooms/maple_row_%s.svg" % _r] = "dd_room_maple_row_" + _r
+for _r in ("entrance", "subway_kiosk", "pawn_shop", "parking_garage"):
+    PAINTED["rooms/downtown_%s.svg" % _r] = "dd_room_downtown_" + _r
+for _r in ("entrance", "pharmacy", "security_office", "morgue_lab"):
+    PAINTED["rooms/st_agnes_%s.svg" % _r] = "dd_room_st_agnes_" + _r
+for _s in ("rosa", "imani", "theo"):
+    PAINTED["survivors/%s.svg" % _s] = "dd_survivor_" + _s
+for _p in ("lookout", "thick_jacket", "field_medic", "brawler", "bounty", "loose_grip", "second_wind", "trophy_belt",
+           "lockpick", "iron_stomach", "adrenaline", "grudge", "show_off", "whetstone"):
+    PAINTED["patches/%s.svg" % _p] = "dd_patch_" + _p
+
+
+def apply_painted(man: dict) -> None:
+    have = {svg: "painted/%s.webp" % stem for svg, stem in PAINTED.items() if (ART / "painted" / ("%s.webp" % stem)).exists()}
+    if not have:
+        return
+
+    def swap(v):
+        if isinstance(v, str):
+            return have.get(v, v)
+        if isinstance(v, dict):
+            return {k: swap(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [swap(x) for x in v]
+        return v
+
+    for k in list(man.keys()):
+        if k not in ("_note", "base", "sizes", "palette", "number_safe_zone", "badge_placement"):
+            man[k] = swap(man[k])
+    man["version"] = 5
+    man["sizes"].update({"painted_card": [768, 512], "painted_room": [512, 512], "painted_district": [1536, 480],
+                         "painted_survivor": [512, 512], "painted_back": [512, 768], "painted_patch": [256, 256],
+                         "painted_icon": [128, 128], "painted_title": [1024, 1536]})
+    # the title screen background: portrait art on phones; landscape art on desktop (until the retry lands,
+    # the portrait art, which main.gd crops to its middle band behind a scrim)
+    title = {}
+    for orient in ("portrait", "landscape"):
+        if (ART / "painted" / ("dd_title_%s.webp" % orient)).exists():
+            title[orient] = "painted/dd_title_%s.webp" % orient
+    if title:
+        title.setdefault("landscape", title.get("portrait", ""))
+        title.setdefault("portrait", title["landscape"])
+        man["title"] = title
+    man["_note"] += " v5: painted art pack 1 (assets/art/painted/*.webp) replaces the SVGs it covers; the SVGs stay the fallback."
 
 
 if __name__ == "__main__":

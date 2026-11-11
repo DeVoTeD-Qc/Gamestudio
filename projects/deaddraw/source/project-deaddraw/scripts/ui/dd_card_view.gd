@@ -297,7 +297,8 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 func _build_district(spec: Dictionary) -> void:
 	_add_art(self, spec["bg_art"], "cover")
 	var scrim: ColorRect = ColorRect.new()
-	scrim.color = Color(INK, 0.45)
+	# dd-art-import: the painted banners are busier than the old flat ones; a darker scrim keeps the names readable
+	scrim.color = Color(INK, 0.58)
 	add_child(scrim)
 	var h: HBoxContainer = DDUi.hbox(10)
 	add_child(h)
