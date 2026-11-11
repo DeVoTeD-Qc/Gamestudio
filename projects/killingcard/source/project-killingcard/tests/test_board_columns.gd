@@ -36,24 +36,25 @@ func test_metrics_match_the_spec() -> void:
 	assert_eq(BoardMetrics.objective_y(m) + by, 244.0, "objective at y 244")
 	assert_eq(BoardMetrics.row_y(m, &"player", 0) + by, 299.0, "your front row at y 299")
 	assert_eq(BoardMetrics.row_y(m, &"player", 3) + by + 57.0, 536.0, "your back row ends at y 536")
-	# kc-ipad-cards: the base size is for a full hand (7); HandArea re-fits to the real count.
-	assert_eq([m["card"], m["hand_cols"]], [Vector2(177, 72), 2], "phone hand: 2 columns of 177x72 X1 cards for 7 cards")
-	assert_true(bool(m["ks_inline"]), "phone: the killstreak tiles share the Supply row")
-	assert_eq([(m["ks"] as Rect2).size, (m["supply"] as Rect2).size.x], [Vector2(194, 64), 160.0], "phone killstreak tiles 3x62 + Supply 160")
+	# kc-layout-a (direction A): the tray is sized first (>= 346 px); the base size is for a full hand
+	# (7 cards + the Operator, 2 columns, compact faces); HandArea re-fits to the real count.
+	assert_eq([m["card"], m["hand_cols"], m["face"]], [Vector2(177, 90), 2, &"compact"], "phone hand: 2 columns of 177x90 compact cards for 7 + the Operator")
+	assert_false(bool(m["ks_inline"]), "phone: the killstreak sockets left the tray")
+	assert_eq(m["ks"], Rect2(0, 189, 62, 187), "phone: 3 stacked 62x61 sockets in the strip, under STREAK")
+	assert_eq([(m["supply"] as Rect2).size, (m["rail_tray"] as Rect2)], [Vector2(226, 61), Rect2(232, 0, 130, 61)], "phone: Supply + the sets rail share the tray's top row")
 	var grid: Rect2 = m["grid"]
-	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [800.0, 76.0], "hand grid at x 800, y 76")
+	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [800.0, 73.0], "hand grid at x 800, y 73")
+	assert_eq([(m["undo"] as Rect2).position.y, (m["ready"] as Rect2).position.y], [468.0, 468.0], "UNDO + READY share the bottom row")
 	var badges: Array[Rect2] = BoardMetrics.badge_rects(m)
-	assert_eq(badges.map(func(r: Rect2) -> float: return r.position.y + 4.0), [4.0, 73.0, 142.0, 211.0, 280.0, 349.0, 472.0], "badge rows")
-	assert_eq(badges[0].size, Vector2(62, 64), "badge 62x64")
-	# 16:9 phone (canvas 960x540): the tray needs room, so the banners shrink to 208x52 (1.40x v1).
+	assert_eq(badges.map(func(r: Rect2) -> float: return r.position.y + 4.0), [4.0, 67.0, 130.0, 130.0, 382.0, 445.0, 475.0], "badge rows (no OPERATOR badge)")
+	assert_eq([badges[0].size, badges[2].size.y], [Vector2(62, 61), 0.0], "badge 62x61 (44 pt); OPERATOR 0 high")
+	# 16:9 phone (canvas 960x540): the tray keeps its 346 px, the banners shrink to 164x41 (never the hand).
 	var w: Dictionary = BoardMetrics.compute(Vector2(960 - 12, 540), true)
-	assert_eq([w["bw"], w["bh"]], [208.0, 52.0], "16:9 banner 208x52")
-	assert_eq((w["tray"] as Rect2).size.x, 214.0, "16:9 tray 214 wide")
-	assert_false(bool(w["ks_inline"]), "16:9: the killstreak tiles get their own row")
-	# kc-ipad-cards (head RQ1, 13 pt on the SE): one scrolling column of readable 214 px cards.
-	assert_eq(w["hand_cols"], 1, "16:9: one column of 214 px X1 cards (scrolling)")
-	var wf: Dictionary = BoardMetrics.hand_fit((w["grid"] as Rect2).size, 7, w["card_gap"], BoardMetrics.X1_MIN_H)
-	assert_true(bool(wf["scroll"]) and int(wf["visible"]) >= 3, "16:9: 7 cards scroll, %d shown at a time" % int(wf["visible"]))
+	assert_eq([w["bw"], w["bh"]], [164.0, 41.0], "16:9 banner 164x41")
+	assert_eq((w["tray"] as Rect2).size.x, 346.0, "16:9 tray 346 wide")
+	assert_eq(w["hand_cols"], 2, "16:9: two columns")
+	var wf: Dictionary = BoardMetrics.hand_fit((w["grid"] as Rect2).size, 8, w["card_gap"], BoardMetrics.X1_MIN_H, 7)
+	assert_true(not bool(wf["scroll"]) and int(wf["visible"]) == 8, "16:9: 7 cards + the Operator, no scroll")
 	# Desktop 1440x900 (canvas 1280x800).
 	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 12, 800), false)
 	var dx: float = (d["board"] as Rect2).position.x + 6.0
@@ -63,9 +64,8 @@ func test_metrics_match_the_spec() -> void:
 	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 454.0, "desktop front row at y 454")
 	assert_eq(d["obj_h"], 96.0, "desktop objective tile 96 px")
 	assert_eq([(d["tray"] as Rect2).position.x + 6.0, (d["tray"] as Rect2).size.x], [1050.0, 224.0], "desktop tray 1050..1274")
-	assert_eq([d["card"], d["hand_cols"]], [Vector2(224, 65), 1], "desktop hand: one column of 224x65 X1 cards for 7 cards")
-	assert_true(bool(d["op_stacked"]), "desktop (224 px tray): the Operator card over UNDO + READY")
-	assert_eq([(d["ks"] as Rect2).position.y, (d["ks"] as Rect2).size], [54.0, Vector2(224, 64)], "desktop killstreak row under the Supply row")
+	assert_eq([d["card"], d["hand_cols"]], [Vector2(224, 72), 1], "desktop hand: one column of 224x72 cards for 7 + the Operator")
+	assert_eq([(d["ks"] as Rect2).position.y, (d["ks"] as Rect2).size], [204.0, Vector2(68, 196)], "desktop killstreak sockets in the strip under STREAK")
 	# Mirror: the tray on the left, the strip on the right, the same board.
 	var mm: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true, true)
 	assert_eq((mm["tray"] as Rect2).position.x, 0.0, "mirrored tray at the left edge")
@@ -75,7 +75,7 @@ func test_metrics_match_the_spec() -> void:
 	# Narrow safe area (notch): banners keep 4:1 and the tray keeps its minimum.
 	var n: Dictionary = BoardMetrics.compute(Vector2(900, 540), true)
 	assert_true(is_equal_approx(n["bw"], n["bh"] * 4.0), "4:1 kept")
-	assert_true((n["tray"] as Rect2).size.x >= 210.0 - EPS, "tray minimum kept")
+	assert_true((n["tray"] as Rect2).size.x >= 346.0 - EPS, "tray minimum kept")
 
 
 func test_board_numbers_readable() -> void:
@@ -122,8 +122,10 @@ func test_live_layout_columns_and_rows() -> void:
 		var card: Control = hand.get_cards()[0]
 		# kc-ipad-cards: the X1 size follows the hand's count (BoardMetrics.hand_fit).
 		var hg: Rect2 = hand.get_grid_rect()
-		var want: Vector2 = BoardMetrics.hand_fit(hg.size, hand.get_cards().size(), 8.0,
-				BoardMetrics.X1_MIN_H if m.compact else BoardMetrics.X1_MIN_H_DESKTOP)["card"]
+		# kc-layout-a: the Operator card is the grid's first item.
+		var items: int = hand.get_cards().size() + (1 if hand.get_operator_card() != null and hand.get_operator_card().visible else 0)
+		var want: Vector2 = BoardMetrics.hand_fit(hg.size, items, 8.0,
+				BoardMetrics.X1_MIN_H if m.compact else BoardMetrics.X1_MIN_H_DESKTOP, hand.get_cards().size())["card"]
 		assert_true(card.size.distance_to(want) < 1.0, "%s hand card %s" % [label, card.size])
 		print("     [%s] banner %s, objective %s, hand card %s, tray %s" % [label, (lanes[0].get_friendly_slots()[0] as Control).size,
 				(lanes[0].get_objective_tile() as Control).size, card.size, m.get_tray().get_global_rect()])

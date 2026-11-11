@@ -36,12 +36,15 @@ signal operator_inspected
 signal operator_drag_started(pos: Vector2)
 signal operator_drag_moved(pos: Vector2)
 signal operator_drag_ended(pos: Vector2)
+## kc-layout-a: the cards (and the Operator card) were placed (match_screen places the ability button).
+signal cards_placed
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const MiniIcons: GDScript = preload("res://scripts/ui/mini_icons.gd")
 const CostHex: GDScript = preload("res://scripts/ui/cost_hex.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
+const CardInfoScript: GDScript = preload("res://scripts/ui/card_info.gd")
 const BRASS: Color = Color("#C9A227")
 const BRASS_DARK: Color = Color("#3A2D0B")
 
@@ -228,11 +231,12 @@ func reveal_card(uid: int) -> void:
 func set_read_only(value: bool) -> void:
 	read_only = value
 	if _op_chip != null:
-		_op_chip.visible = not value  # PEEK: the tray's tab and SPEED take the Operator row
+		_op_chip.visible = not value  # PEEK: hand cards only
 	for chip: Node in get_cards():
 		var tag: Control = chip.find_child("NextTag", true, false) as Control
 		if tag != null:
 			tag.visible = value
+	_fit_cards.call_deferred()
 
 
 ## cards: Array of {name, type, cost, fp?, armor?, text, card_type?, weapon_class?, keywords?, elite?}
@@ -451,11 +455,8 @@ func _fit_cards() -> void:
 	var card_size: Vector2 = _card_size()
 	_row.custom_minimum_size = Vector2(card_size.x, card_size.y)
 	var grid: Rect2 = _grid_rect if _grid_rect.size != Vector2.ZERO else Rect2(Vector2.ZERO, _row.size)
-	if _op_chip != null:
-		var orr: Rect2 = _op_rect if _op_rect.size != Vector2.ZERO else Rect2(Vector2(0, grid.end.y + _gap), Vector2(grid.size.x, 120))
-		_op_chip.position = orr.position + Vector2(0, -SELECTED_LIFT if operator_selected else 0.0)
-		_op_chip.size = orr.size
-	if n == 0:
+	if n == 0 and (_op_chip == null or not _op_chip.visible):
+		cards_placed.emit()
 		return
 	if fan:
 		# kc-portrait: one overlapping row (each card shows fan_step px; the last one whole), scrolled
@@ -469,51 +470,48 @@ func _fit_cards() -> void:
 			c.position = Vector2(roundf(grid.position.x + i * fan_step - fan_scroll), roundf(grid.position.y + (0.0 if sel else 10.0) - lift))
 			c.z_index = 10 if sel else 0
 		return
+	# kc-layout-a (the head's L1-L3): the Operator card is the grid's FIRST card, the same size as the
+	# others. The grid is re-fitted to the count (BoardMetrics.hand_fit): it never scrolls and cards
+	# never overlap; the face (full / mid / compact) follows the room and the count.
+	var items: Array[Control] = []
+	if _op_chip != null and _op_chip.visible and not fan:
+		items.append(_op_chip)
+	for c0: Node in cards:
+		items.append(c0 as Control)
 	var cols: int = maxi(1, columns)
-	var scroll: bool = false
-	var first: int = 0
-	var shown: int = n
+	var lines: int = 0
 	if _grid_rect.size != Vector2.ZERO:
-		# kc-ipad-cards: size the cards for this many (the tray fills on iPad / desktop; columns and
-		# height follow the count).
 		var min_h: float = BoardMetrics.X1_MIN_H if compact else BoardMetrics.X1_MIN_H_DESKTOP
-		hand_fit = BoardMetrics.hand_fit(_grid_rect.size, n, _gap, min_h)
+		hand_fit = BoardMetrics.hand_fit(_grid_rect.size, items.size(), _gap, min_h, n)
 		card_size = hand_fit["card"]
 		cols = int(hand_fit["cols"])
-		scroll = bool(hand_fit["scroll"])
-		if scroll:
-			shown = int(hand_fit["visible"])
-			var max_first_row: int = ceili(float(n - shown) / cols)
-			hand_scroll = clampi(hand_scroll, 0, max_first_row)
-			first = hand_scroll * cols
-		else:
-			hand_scroll = 0
-	var rows: int = ceili(float(shown) / cols)
+		lines = int(hand_fit.get("rule_lines", 0))
+	hand_scroll = 0
 	var pitch_x: float = card_size.x + _gap
 	var pitch_y: float = card_size.y + _gap
 	# The top SELECTED_LIFT px stay free for the selected card's lift.
 	grid = Rect2(grid.position + Vector2(0, SELECTED_LIFT), grid.size - Vector2(0, SELECTED_LIFT))
-	if rows > 1 and not scroll:
-		# More cards than the grid holds: the rows overlap upward (the step shrinks).
-		pitch_y = minf(pitch_y, (grid.size.y - card_size.y) / (rows - 1))
 	var grid_w: float = card_size.x + pitch_x * (cols - 1)
 	var x0: float = grid.position.x + maxf(0.0, (grid.size.x - grid_w) * 0.5)
-	for i: int in n:
-		var c: Control = cards[i]
-		var j: int = i - first
-		c.visible = j >= 0 and j < shown
+	for i: int in items.size():
+		var c: Control = items[i]
+		c.visible = true
 		c.custom_minimum_size = card_size
 		c.size = card_size
-		var x: float = x0 + (j % cols) * pitch_x
-		var y: float = grid.position.y + (j / cols) * pitch_y
+		if bool(c.get_meta(&"banner_card", false)):
+			BannerCard.set_rule_lines(c, lines)
+		var x: float = x0 + (i % cols) * pitch_x
+		var y: float = grid.position.y + (i / cols) * pitch_y
 		# kc-cards-impl (H1): the selected card lifts. kc-da-ui: a playable card sits DROP_PX higher
 		# than an unplayable one (both inside the lift room, so nothing spills out of the grid).
-		if int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0:
+		var is_op: bool = c == _op_chip
+		if (is_op and operator_selected) or (not is_op and int(c.get_meta(&"uid", -1)) == selected_uid and selected_uid >= 0):
 			y -= SELECTED_LIFT
-		elif bool(c.get_meta(&"playable", true)):
+		elif is_op or bool(c.get_meta(&"playable", true)):
 			y -= DROP_PX
 		c.position = Vector2(roundf(x), roundf(y))
-	_place_more_hints(scroll, first, shown, n, grid)
+	_place_more_hints(false, 0, n, n, grid)
+	cards_placed.emit()
 
 
 ## kc-ipad-cards: "▲ n MORE" / "▼ n MORE" over the top / bottom edge of a scrolling hand.
@@ -650,7 +648,7 @@ static func banner_entry(card: Dictionary) -> Dictionary:
 			"banner": String(card.get("banner", card.get("id", "")))}
 	# kc-onboard-ui: the Standard Issue keys (StandardIssueLook.dress in match_snapshot).
 	for k: String in ["subname", "trait", "kw", "fp_trend", "cover", "armor_max", "operator", "camo",
-			"standard_issue", "serial", "reserve_trait"]:
+			"standard_issue", "serial", "reserve_trait", "rule"]:
 		if card.has(k) and str(card[k]) != "":
 			e[k] = card[k]
 	if card.has("fp"):
@@ -701,17 +699,23 @@ func _add_synergy_overlay(panel: Control, face: Control, card: Dictionary) -> vo
 # kc-ui3: the Operator card
 # =============================================================================
 
-## kc-cards-impl (the head's O2): the Operator card at the bottom-left of the tray, next to UNDO over
-## READY: the art on top (full colour in every state, kc-da-ui), the cost in the standard hex (grey
-## when you can't pay), the OPERATOR tag, its abilities top-right, FP / Armor bottom-right of the art,
-## a state chip on the art (DEPLOY / PLAN · B / ON BOARD · B1 / DOWN), then its name in the title
-## style and its ability line. Tap = select (Deploy / Rotate), drag = drag to a column, long press =
-## its rules.
+## kc-layout-a (the head's L3): the Operator card is the FIRST card of the hand grid, the same X1 card
+## (BannerCard) as the others, told apart by the Operator mark (CardLook: the brass frame and the
+## OPERATOR tab, drawn by its banner) and the brass panel frame. On top of the art: a state chip
+## (DEPLOY / NEED n SUPPLY / PLAN · B / ON BOARD · B1 / DOWN); the cost hex right of the tab when
+## placing it costs Supply. Its rule line (mid / full faces) is its abilities. Tap = select (Deploy /
+## Rotate), drag = drag to a column, long press / right click = its rules.
 func _make_operator_card(op: Dictionary) -> Control:
 	var state: StringName = StringName(String(op.get("state", "none")))
 	var cost: int = int(op.get("cost", 0))
 	var short: bool = state == &"deploy" and not bool(op.get("can_afford", true))
-	var panel: PanelContainer = PanelContainer.new()
+	var entry: Dictionary = {"name": String(op.get("name", "Operator")), "cls": "OPERATOR", "operator": true,
+			"fp": int(op.get("fp", 0)), "armor": 0 if state == &"down" else int(op.get("armor", 0)),
+			"armor_max": int(op.get("armor_max", op.get("armor", 0))), "keywords": op.get("keywords", []),
+			"banner": String(op.get("banner", "")), "cost": "", "rule": operator_rule(op)}
+	if String(op.get("camo", "")) != "":
+		entry["camo"] = op["camo"]
+	var panel: PanelContainer = BannerCard.build(entry, _card_size(), _metric_h)
 	panel.name = "OperatorCard"
 	panel.set_meta(&"uid", OPERATOR_UID)
 	panel.set_meta(&"operator", true)
@@ -720,19 +724,8 @@ func _make_operator_card(op: Dictionary) -> Control:
 	panel.set_meta(&"cost", cost)
 	panel.add_to_group(&"tap_target")
 	panel.tooltip_text = "Operator: %s" % String(op.get("name", ""))
-	var face: Control = Control.new()
-	face.name = "Face"
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.clip_contents = true
-	panel.add_child(face)
-	var art := TextureRect.new()
-	art.name = "Art"
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var art_id: StringName = StringName(String(op.get("banner", "")))
-	art.texture = BannerArtDB.banner_texture(art_id, {"cls": "OPERATOR", "type": "unit"}) if art_id != &"" else null
-	face.add_child(art)
+	var face: Control = panel.get_node("Face")
+	var bv: BannerView = BannerCard.banner_of(panel)
 	var status_text: String = ""
 	var status_col: Color = get_theme_color(&"text", &"Hud")
 	match state:
@@ -757,6 +750,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 	status.add_theme_font_size_override(&"font_size", 16)
 	status.add_theme_color_override(&"font_color", status_col)
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.clip_text = true
 	var plate := StyleBoxFlat.new()
 	plate.bg_color = Color(0.04, 0.05, 0.055, 0.9)
 	plate.border_color = status_col
@@ -767,78 +761,33 @@ func _make_operator_card(op: Dictionary) -> Control:
 	status.visible = status_text != ""
 	status.tooltip_text = status_text
 	face.add_child(status)
-	var title: Label = CardLook.title_label(String(op.get("name", "Operator")))
-	title.name = "NameLabel"
-	title.set_meta(&"important", true)
-	face.add_child(title)
-	var names: PackedStringArray = []
-	for kw: Dictionary in op.get("keywords", []):
-		var nm: String = String(kw.get("name", ""))
-		if nm != "":
-			names.append(nm)
-	var ability: Label = CardLook.rule_label(", ".join(names) if not names.is_empty() else "Respawns next Deploy.")
-	ability.name = "AbilityLine"
-	ability.clip_text = true
-	ability.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	face.add_child(ability)
-	# The drawn layer: cost hex, OPERATOR tag, abilities, FP / Armor.
+	# The cost hex right of the OPERATOR tab (only when placing it costs Supply).
 	var ink: Control = Control.new()
 	ink.name = "Ink"
 	ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_child(ink)
-	face.move_child(status, -1)
-	var entry: Dictionary = {"keywords": op.get("keywords", []), "operator": true}
-	var fp: int = int(op.get("fp", 0))
-	var armor: int = 0 if state == &"down" else int(op.get("armor", 0))
-	var armor_max: int = int(op.get("armor_max", op.get("armor", 0)))
 	ink.draw.connect(func() -> void:
-		var ah: float = art.size.y
-		var x: float = 5.0
-		if cost > 0:
-			CardLook.draw_chip(ink, Rect2(x - 2, 3, 30, 30), 5.0)
-			CardLook.draw_cost(ink, Rect2(x, 5, 26, 26), str(cost), short)
-			x += 30.0
-		var narrow: bool = ink.size.x < 150.0
-		# kc-pitch-art: the shared Operator mark's brass tab (CardLook.draw_operator_tab), as on every card view.
-		var tag: Rect2 = CardLook.draw_operator_tab(ink, Vector2(x, 6), 16.0 if narrow else 18.0, true, ink.size.x - x - 30.0)
-		var kinds: Array = BannerView.ability_kinds(entry)
-		var kx: float = ink.size.x - 4.0 - 20.0
-		for k: Variant in kinds:
-			if kx < tag.end.x + 2.0:
-				break
-			if k is StringName and IconSheet.has_icon(k):
-				ink.draw_rect(Rect2(kx, 5, 20, 20), Color(0.04, 0.05, 0.055, 0.86))
-				if k == &"kw_pick":
-					CardLook.draw_pick_icon(ink, Rect2(kx + 2, 7, 16, 16), AMBER)
-				else:
-					ink.draw_texture_rect(IconSheet.get_icon(k), Rect2(kx + 2, 7, 16, 16), false, AMBER)
-				kx -= 22.0
-		# kc-readability: FP / Armor as big as on the hand cards.
-		var ar: Rect2 = Rect2(ink.size.x - 4.0 - 31.0, ah - 34.0, 31, 32)
-		var fr: Rect2 = Rect2(ar.position.x - 3.0 - 32.0, ah - 34.0, 32, 32)
-		CardLook.draw_chip(ink, Rect2(fr.position - Vector2(3, 2), Vector2(ar.end.x - fr.position.x + 6.0, 36)), 6.0)
-		CardLook.draw_reticle(ink, fr, fp, &"player", 0)
-		CardLook.draw_armor(ink, ar, armor, armor < armor_max))
+		if cost <= 0 or state in [&"board", &"planned"]:
+			return
+		var k: float = bv.size.y / 57.0
+		var th: float = roundf(clampf(16.0 * k, 12.0, 26.0))
+		var tab: Vector2 = CardLook.operator_tab_size(th, true)
+		if tab.x > bv.size.x * 0.5:
+			tab = CardLook.operator_tab_size(th, false)
+		var hs: float = clampf(roundf(th * 1.3), 20.0, 27.0)
+		var hr: Rect2 = Rect2(roundf(5.0 * k) + tab.x + 6.0, 3.0, hs, hs)
+		CardLook.draw_chip(ink, hr.grow(2.0), 5.0)
+		CardLook.draw_cost(ink, hr, str(cost), short))
 	panel.sort_children.connect(func() -> void:
-		var inset: float = 3.0
-		face.position = Vector2(inset, inset)
-		face.size = panel.size - Vector2(inset, inset) * 2.0
-		var ah: float = roundf(face.size.y * 0.5)
-		art.position = Vector2.ZERO
-		art.size = Vector2(face.size.x, ah)
 		ink.position = Vector2.ZERO
 		ink.size = face.size
+		ink.queue_redraw()
 		var need: Vector2 = status.get_combined_minimum_size()
+		need.x = CardLook.TITLE_FONT.get_string_size(status.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 14.0
 		status.size = Vector2(minf(need.x, face.size.x - 8.0), need.y)
-		status.position = Vector2((face.size.x - status.size.x) * 0.5, maxf(28.0, ah * 0.5 - need.y * 0.5))
-		var ty: float = ah + 2.0
-		title.position = Vector2(6, ty)
-		title.size = Vector2(face.size.x - 12.0, 22)
-		ability.position = Vector2(6, ty + 22.0)
-		ability.size = Vector2(face.size.x - 12.0, maxf(18.0, face.size.y - ty - 24.0))
-		ability.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-		ability.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		ink.queue_redraw())
+		var by: float = bv.position.y + bv.size.y * 0.5 - need.y * 0.5
+		status.position = Vector2((face.size.x - status.size.x) * 0.5, maxf(bv.position.y + 2.0, by)))
+	face.move_child(status, -1)
 	_apply_operator_frame(panel, true)
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
@@ -859,6 +808,17 @@ func _make_operator_card(op: Dictionary) -> Control:
 		tw.tween_property(glow, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
 	_wire_operator(panel, bool(op.get("active", false)), bool(op.get("draggable", false)))
 	return panel
+
+
+## kc-layout-a: the Operator card's rule lines: its abilities ("Pick: Shoots ..."), else its respawn.
+static func operator_rule(op: Dictionary) -> String:
+	var entries: Array = []
+	for kw: Dictionary in op.get("keywords", []):
+		var id: StringName = StringName(String(kw.get("id", "")))
+		if CardInfoScript.KEYWORD_RULES.has(id):
+			entries.append(CardInfoScript._entry(id, int(kw.get("value", 0))))
+	var respawn: String = "Back next Deploy if down." if bool(op.get("respawns", true)) else ""
+	return CardInfoScript.rule_lines_of(entries, respawn)
 
 
 ## The Operator's own frame (head B): brass border, dark brass fill, cut (rounded) corners like a

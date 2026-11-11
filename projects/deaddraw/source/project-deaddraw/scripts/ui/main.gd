@@ -30,6 +30,8 @@ const Sfx: GDScript = preload("res://scripts/fx/dd_sfx.gd")
 const Art: GDScript = preload("res://scripts/ui/dd_art.gd")
 const SettingsPanel: GDScript = preload("res://scripts/ui/dd_settings_panel.gd")
 const StackBox: GDScript = preload("res://scripts/ui/dd_stack_box.gd")
+const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
+const Codex: GDScript = preload("res://scripts/ui/dd_codex.gd")
 
 enum Screen { TITLE, MAP, STREET, SAFEHOUSE, END }
 
@@ -41,6 +43,8 @@ const SEP: int = 8
 const HUD_H: float = 64.0
 const ACT_H: float = 64.0
 const HINT_H: float = 64.0
+## dd-ux-v4: the slim strip between the street and the guns (pile, what just happened, pips).
+const STRIP_H: float = 56.0
 const TAP: float = 64.0
 ## Room for rounding and wrapped text, so the bottom row never leaves the screen.
 const SLACK: float = 12.0
@@ -103,6 +107,11 @@ var _hp_label: Label = null
 var _hp_bar: ProgressBar = null
 var _screen_title: Control = null
 var _fitting: bool = false
+## dd-ux-v4: the Codex / Glossary overlay, and which rooms were affordable at the last render (a
+## room that becomes affordable gets the two-ring pulse once).
+var codex: Control = null
+var _was_ready: Array = []
+var _was_ready_run: Object = null
 
 
 func _ready() -> void:
@@ -125,11 +134,17 @@ func _ready() -> void:
 	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fx)
+	codex = Codex.new()
+	codex.name = "Codex"
+	add_child(codex)
+	codex.inspect_requested.connect(func(p: Dictionary) -> void: _inspect.open(p))
 	_inspect = DDInspect.new()
 	add_child(_inspect)
 	settings_panel = SettingsPanel.new()
 	settings_panel.name = "Settings"
 	add_child(settings_panel)
+	settings_panel.codex_requested.connect(open_codex)
+	settings_panel.help_requested.connect(open_glossary)
 	feedback = Feedback.new()
 	feedback.name = "Feedback"
 	add_child(feedback)
@@ -141,6 +156,8 @@ func _ready() -> void:
 		_inspect.closed.connect(_publish_state)
 		settings_panel.opened.connect(_publish_state)
 		settings_panel.closed.connect(_publish_state)
+		codex.opened.connect(_publish_state)
+		codex.closed.connect(_publish_state)
 	var saved: String = Game.survivor_id
 	chosen_survivor = saved if Game.profile.survivor_unlocked(saved) else "rosa"
 	get_viewport().size_changed.connect(_render)
@@ -156,6 +173,19 @@ func _sync_feel() -> void:
 
 func open_settings() -> void:
 	settings_panel.open()
+
+
+## dd-ux-v4: the Glossary (every icon, one line each) and the Codex (every card; filters; met).
+func open_glossary() -> void:
+	if settings_panel.is_open():
+		settings_panel.close()
+	codex.open_glossary(Game.bal)
+
+
+func open_codex() -> void:
+	if settings_panel.is_open():
+		settings_panel.close()
+	codex.open_codex(Game.bal, Game.profile)
 
 
 # ================================================================ base size (U1)
@@ -236,6 +266,9 @@ func _render() -> void:
 		Screen.STREET:
 			_build_street()
 			_build_sheet()
+			if Game.profile != null and Game.run != null:
+				Game.profile.codex_meet(Codex.keys_met_by(Game.run))
+			_room_pulses.call_deferred()
 		Screen.SAFEHOUSE:
 			_build_safehouse()
 		Screen.END:
@@ -277,10 +310,18 @@ func _play_fx(pend: Dictionary, screen_fx: String, banner: Dictionary = {}) -> v
 	if not pend.is_empty() and screen == Screen.STREET:
 		feedback.play(pend, _fx_context())
 	if not banner.is_empty() and screen == Screen.STREET:
+		_banner_seq += 1
+		var seq: int = _banner_seq
 		var d: float = float(banner.get("delay", 0.0))
 		if d > 0.0:
 			await get_tree().create_timer(d).timeout
-		_show_banner(str(banner.get("text", "")), banner.get("color", DDUi.TEXT), str(banner.get("sub", "")))
+		# a newer banner was asked for while this one waited: it wins
+		if seq != _banner_seq or not is_inside_tree() or screen != Screen.STREET:
+			return
+		if banner.has("wave"):
+			_wave_banner(int(banner["wave"]), str(banner.get("sub", "")))
+		else:
+			_show_banner(str(banner.get("text", "")), banner.get("color", DDUi.TEXT), str(banner.get("sub", "")))
 	match screen_fx:
 		"end_won":
 			Sfx.cue(&"win")
@@ -428,9 +469,16 @@ func _build_title() -> void:
 		h.add_child(go)
 	v.add_child(h)
 	var how: Button = DDUi.button("How to play")
+	how.name = "HowToPlay"
 	how.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	how.pressed.connect(func() -> void: _inspect.open(DDPayloads.how_to_play(Game.bal)))
+	how.pressed.connect(open_glossary)
 	h.add_child(how)
+	# dd-ux-v4: the Codex, from the title (and the Menu)
+	var cx: Button = DDUi.button("Codex")
+	cx.name = "CodexButton"
+	cx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cx.pressed.connect(open_codex)
+	h.add_child(cx)
 	h.add_child(_settings_button())
 
 
@@ -524,7 +572,9 @@ func _build_map() -> void:
 			"selected": di == run.district_index, "dim": di < run.district_index,
 			"payload": {"kind": "F", "tag": str(d.get("name", "")).to_upper(), "title": str(b.get("name", "")), "big": DDText.boss_summary(b),
 				"body": "%s\nWaves: %s.\nRooms: %s." % [DDText.trait_text(str(b.get("trait", ""))), " | ".join(PackedStringArray([0, 1, 2].map(func(w: int) -> String: return DDText.zombie_list(Game.bal.wave_zombies(di, w))))),
-					", ".join(PackedStringArray((d.get("rooms", []) as Array).map(func(r: Variant) -> String: return "%s %d" % [str((r as Dictionary).get("name", "")), Game.bal.shown(int((r as Dictionary).get("cost", 0)))])))]}}
+					", ".join(PackedStringArray((d.get("rooms", []) as Array).map(func(r: Variant) -> String: return "%s %d" % [str((r as Dictionary).get("name", "")), Game.bal.shown(int((r as Dictionary).get("cost", 0)))])))],
+				"t1": "%s · boss %s (%s)" % [str(d.get("name", "")), str(b.get("name", "")), DDText.boss_summary(b).replace(" -> ", ", ")],
+				"t2": "3 waves, then the boss. %s" % ("You are here." if di == run.district_index else ("Cleared." if di < run.district_index else "Ahead."))}}
 		var banner: Texture2D = Art.texture_for(Art.district_keys(d))
 		if banner != null:
 			spec["bg_art"] = banner
@@ -593,14 +643,21 @@ func _stacked(v: Control, n: int, kind: String) -> Control:
 	return (StackBox.new() as Container).call("setup", v, n, kind)
 
 
-## dd-ux-clean street. One focus per moment: the street cards (biggest, brightest, the damage chip
-## on each) and the weapon you hit them with. Around them, quieter: the HUD (HP, points), the
-## wave stack + boss (left), the pile (top middle), the rooms with their OPEN price (right), the
-## prompt bar (what to do now + what just happened; tap it for the history).
-## Portrait (phone vertical): HUD / [waves+boss | pile | rooms] / street (2x2 when the screen is
-## tall enough, else 1x4) / prompt + Run / guns + melee.
-## Landscape (phone horizontal, desktop): [waves+boss] | [HUD + pile / street / prompt + Run /
-## guns + melee] | [rooms]. Same pieces, reflowed, never shrunk below a 44 px tap target.
+## dd-ux-v4 street (the head's M1 a: direction B, the Door row). One focus per moment: the street
+## cards (biggest, the strength mark and the damage chip on each) and the weapon you hit them with.
+## Around them, quieter:
+## - the HUD: HP (+ Cover), points, one Patches chip, ? (Help / Glossary), Menu;
+## - the DOOR ROW: the wave door (the big wave number, "+N" waves waiting, the boss under it) and
+##   the three room doors, each with its padlock price plate (locked + progress bar, gold OPEN,
+##   USE, used). Everything that feeds the pile, side by side, the same size;
+## - the STRIP between the street and the guns: the draw pile (where cards are dealt from), one
+##   "what just happened" line (tap it for the history) and the resolve pips. The old prompt band
+##   is gone (head's note on M1), so the street sits right above the guns;
+## - the GUN ROW: the two guns (hit burst, rule, kill sockets, reward) and a narrow column with
+##   two small buttons: MELEE (the Crowbar) and RUN.
+## Portrait: HUD / doors / street (2x2 when tall enough) / strip / guns + [melee, run].
+## Landscape: [doors as a column] | [HUD / street / strip] | [gun 1 / gun 2 / melee + run].
+## Same pieces, reflowed, never shrunk below a 44 CSS px tap target.
 func _build_street() -> void:
 	var run: DDRun = Game.run
 	var vp: Vector2 = get_viewport_rect().size
@@ -608,12 +665,9 @@ func _build_street() -> void:
 	var H: float = vp.y - MARGIN * 2
 	hint_id = _due_hint(run)
 	var hud: Control = _build_top(run)
-	var left: Control = _build_waves(run)
-	var rooms: Control = _build_rooms(run)
-	var pile: Control = _build_pile(run)
-	var actions: Control = _build_actions(run)
 	var hint: Control = _build_hint(run) if hint_id != "" else null
 	var hint_h: float = (HINT_H + SEP) if hint != null else 0.0
+	var strip_h: float = TAP if run.lookout_card() != null else STRIP_H
 	var n: int = maxi(4, run.street.size())
 	# dd-ux-clean2 (U2): a boss street holds 2 cards (the boss + a phase / cover card); they take
 	# the street's whole width (portrait) or grow to the street's height (landscape)
@@ -621,81 +675,73 @@ func _build_street() -> void:
 	if duel:
 		n = 2
 	if portrait:
-		# the street gets the space first, then the board (rooms), the guns keep a fixed height
 		var gun_h: float = 196.0
-		var board_min: float = 290.0
-		var fixed: float = HUD_H + ACT_H + hint_h + gun_h + SEP * 4 + SLACK
-		var avail: float = H - fixed - board_min
-		var row_w: float = (W - SEP * (n - 1)) / n
+		var door_h: float = clampf(H * 0.165, 150.0, 200.0)
+		var fixed: float = HUD_H + door_h + hint_h + strip_h + gun_h + SEP * 4 + SLACK
+		var avail: float = H - fixed
 		var cols: int = n
-		var card_w: float = row_w
-		var card_h: float = clampf(avail, 120.0, row_w * (1.65 if duel else 1.5))
+		var card_w: float = (W - SEP * (n - 1)) / n
+		var card_h: float = clampf(avail, 120.0, card_w * (1.65 if duel else 1.5))
 		if n == 4 and avail >= 2.0 * 170.0 + SEP:
 			cols = 2
 			card_w = (W - SEP) / 2.0
-			card_h = minf((avail - SEP) / 2.0, card_w * 0.9)
-		var rows: int = ceili(float(n) / cols)
-		var street_h: float = card_h * rows + SEP * (rows - 1)
-		var board_h: float = clampf(H - fixed - street_h, board_min, 340.0)
+			card_h = minf((avail - SEP) / 2.0, card_w * 1.25)
 		var v: VBoxContainer = DDUi.vbox(SEP)
 		_content.add_child(v)
 		v.add_child(hud)
-		var board: HBoxContainer = DDUi.hbox(SEP)
-		board.custom_minimum_size = Vector2(0, board_h)
-		var cw: float = clampf(W * 0.24, 112.0, 150.0)
-		left.custom_minimum_size = Vector2(cw, 0)
-		board.add_child(left)
-		pile.custom_minimum_size = Vector2(cw, 0)
-		board.add_child(pile)
-		rooms.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		board.add_child(rooms)
-		v.add_child(board)
+		var doors: Control = _build_doors(run, false)
+		doors.custom_minimum_size = Vector2(0, door_h)
+		v.add_child(doors)
 		if hint != null:
 			v.add_child(hint)
 		var srow: Control = _build_street_row(run, card_w, card_h, cols)
 		srow.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		v.add_child(srow)
-		v.add_child(actions)
+		var strip: Control = _build_strip(run, strip_h)
+		v.add_child(strip)
 		v.add_child(_build_guns(run, true, gun_h, W))
 	else:
-		# dd-ux-clean2: on desktop the boss column is wide enough for its name at full size
-		var lw: float = clampf(W * 0.115, 100.0, 150.0) if H < 600.0 else clampf(W * 0.14, 176.0, 200.0)
-		var rw: float = clampf(W * 0.21, 170.0, 250.0)
+		var tall: bool = H >= 600.0
+		var lw: float = clampf(W * 0.14, 150.0, 210.0)
+		var rw: float = clampf(W * 0.25, 280.0, 400.0)
 		var mid_w: float = W - lw - rw - SEP * 2
-		# dd-ux-clean2: taller guns on desktop (a bigger base leaves the room); phones unchanged
-		var gun_h2: float = clampf(H * 0.25, 124.0, 160.0 if H < 600.0 else 190.0)
-		var fixed2: float = HUD_H + ACT_H + gun_h2 + SEP * 3 + hint_h + SLACK
+		var street_h: float = H - HUD_H - hint_h - strip_h - SEP * 2 - SLACK
+		# one row of 4, or a 2x2 grid when that gives bigger cards (tall desktop windows)
 		var card_w2: float = (mid_w - SEP * (n - 1)) / n
-		var card_h2: float = clampf(H - fixed2, 110.0, card_w2 * (1.4 if H < 600.0 else 1.65))
+		var card_h2: float = clampf(street_h, 110.0, card_w2 * (1.4 if not tall else 1.65))
+		var cols2: int = n
+		if n == 4:
+			var gw: float = (mid_w - SEP) / 2.0
+			var gh: float = minf((street_h - SEP) / 2.0, gw * 1.1)
+			if gw * gh > card_w2 * card_h2 * 1.15 and gh >= 150.0:
+				cols2 = 2
+				card_w2 = gw
+				card_h2 = gh
 		if duel:
-			# as tall as the street row allows, a little wider than tall
 			card_w2 = minf(card_w2, card_h2 * 1.15)
 		var h: HBoxContainer = DDUi.hbox(SEP)
 		_content.add_child(h)
-		left.custom_minimum_size = Vector2(lw, 0)
-		h.add_child(left)
+		var doors2: Control = _build_doors(run, true)
+		doors2.custom_minimum_size = Vector2(lw, 0)
+		h.add_child(doors2)
 		var mid: VBoxContainer = DDUi.vbox(SEP)
 		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(mid)
-		var tr: HBoxContainer = DDUi.hbox(SEP)
 		hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tr.add_child(hud)
-		pile.custom_minimum_size = Vector2(clampf(mid_w * 0.24, 130.0, 190.0), 0)
-		tr.add_child(pile)
-		mid.add_child(tr)
+		mid.add_child(hud)
 		if hint != null:
 			mid.add_child(hint)
-		var srow2: Control = _build_street_row(run, card_w2, card_h2, n)
+		var srow2: Control = _build_street_row(run, card_w2, card_h2, cols2)
 		srow2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		mid.add_child(srow2)
-		mid.add_child(actions)
-		mid.add_child(_build_guns(run, false, gun_h2, mid_w))
-		rooms.custom_minimum_size = Vector2(rw, 0)
-		h.add_child(rooms)
+		mid.add_child(_build_strip(run, strip_h))
+		var guns: Control = _build_guns(run, false, 0.0, rw)
+		guns.custom_minimum_size = Vector2(rw, 0)
+		h.add_child(guns)
 
 
-## HUD: HP (+ Cover when you have some), points, one Patches chip, Menu. The survivor's passive is
-## in the HP zoom; each stat appears once.
+## HUD: HP (+ Cover when you have some), points, one Patches chip, ? (Help / Glossary), Menu. The
+## survivor's passive is in the HP tooltip; each stat appears once.
 func _build_top(run: DDRun) -> Control:
 	var h: HBoxContainer = DDUi.hbox(6)
 	h.custom_minimum_size = Vector2(0, HUD_H)
@@ -738,6 +784,7 @@ func _build_top(run: DDRun) -> Control:
 		pc.name = "PatchesChip"
 		pc.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(pp))
 		h.add_child(pc)
+	h.add_child(_help_button())
 	var sb: Button = _settings_button(true)
 	sb.text = "Menu"
 	sb.custom_minimum_size = Vector2(72, HUD_H)
@@ -745,135 +792,284 @@ func _build_top(run: DDRun) -> Control:
 	return h
 
 
-## LEFT: the waves as ONE stack (decks still to come + the next threat; the zoom lists every wave)
-## and the boss under it. Lookout's top card sits here too.
-func _build_waves(run: DDRun) -> Control:
-	var v: VBoxContainer = DDUi.vbox(SEP)
-	var ws: Dictionary = DDPayloads.waves_spec(run)
-	ws["art_keys"] = Art.deck_back_keys("wave")
-	ws["art_tint"] = 0.78
-	var wv: DDCardView = _view(ws)
+## dd-ux-v4: the "?" (Help / Glossary). Right click / long press says what it is.
+func _help_button() -> Button:
+	var b: Button = DDUi.button("?", Color("1f3a4f"), DDUi.FONT_L)
+	b.name = "HelpButton"
+	b.custom_minimum_size = Vector2(64, HUD_H)
+	b.autowrap_mode = TextServer.AUTOWRAP_OFF
+	b.add_theme_stylebox_override("normal", DDUi.box(Color("1f3a4f"), DDUi.accent("W"), 2, 12, 8))
+	b.pressed.connect(func() -> void:
+		if not _was_long(b):
+			open_glossary())
+	_inspectable_button(b, {"kind": "W", "title": "Help", "t1": "Help · Glossary", "t2": "Every icon in the game, one line each."})
+	return b
+
+
+## dd-ux-v4: buttons open their 2-line tooltip on right click and on long press too (a tap still
+## presses them). The long press is timed by the button itself.
+func _inspectable_button(b: Button, payload: Dictionary) -> void:
+	b.set_meta(&"tip", payload)
+	b.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton:
+			var mb: InputEventMouseButton = e
+			if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+				_inspect.open(payload)
+				b.accept_event()
+			elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+				b.set_meta(&"press_ms", Time.get_ticks_msec())
+				var t: SceneTreeTimer = get_tree().create_timer(DDCardView.LONG_PRESS_MS / 1000.0)
+				t.timeout.connect(func() -> void:
+					if is_instance_valid(b) and b.is_inside_tree() and int(b.get_meta(&"press_ms", 0)) > 0 \
+							and Time.get_ticks_msec() - int(b.get_meta(&"press_ms", 0)) >= DDCardView.LONG_PRESS_MS - 20:
+						b.set_meta(&"press_ms", 0)
+						b.set_meta(&"long", true)
+						_inspect.open(payload))
+			elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+				b.set_meta(&"press_ms", 0))
+	# a long press opened the tooltip: swallow the release so the button doesn't fire
+	b.button_down.connect(func() -> void: b.set_meta(&"long", false))
+	b.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
+
+
+## True (once) when the last press on b was a long press that opened its tooltip.
+func _was_long(b: Button) -> bool:
+	if bool(b.get_meta(&"long", false)):
+		b.set_meta(&"long", false)
+		return true
+	return false
+
+
+# ---------------------------------------------------------------- the door row
+## The wave door and the three room doors: one row (portrait) or one column (landscape), equal size.
+func _build_doors(run: DDRun, column: bool) -> Control:
+	var box: BoxContainer = BoxContainer.new()
+	box.vertical = column
+	box.add_theme_constant_override("separation", SEP)
+	box.name = "Doors"
+	var wd: DDCardView = _wave_door(run, column)
+	wd.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	wd.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(wd)
+	for i: int in run.room_count():
+		var rd: DDCardView = _room_door(run, i, column)
+		rd.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rd.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		box.add_child(rd)
+	return box
+
+
+## A door tile: the art fills it (under a scrim), children are laid over it by anchors.
+func _door_tile(kind: String, payload: Dictionary, art_keys: Array, tint: float, border: Color) -> DDCardView:
+	var v: DDCardView = DDCardView.new()
+	v.setup({"kind": kind, "payload": payload, "row": true})
+	for c: Node in v.get_children():
+		v.remove_child(c)
+		c.queue_free()
+	var st: StyleBoxFlat = DDUi.box(DDUi.card_bg(kind), border, 3, 12, 0)
+	v.add_theme_stylebox_override("panel", st)
+	var window: Control = Control.new()
+	window.clip_contents = true
+	window.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(window)
+	var tex: Texture2D = Art.texture_for(art_keys)
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		window.add_child(tr)
+		v.art_rect = tr
+		v.has_art = true
+	var scrim: ColorRect = ColorRect.new()
+	scrim.color = Color(DDUi.card_bg(kind), tint)
+	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	window.add_child(scrim)
+	v.inspected.connect(_on_inspect)
+	v.set_meta(&"window", window)
+	return v
+
+
+func _anchored_label(parent: Control, text: String, size: int, col: Color, preset: Control.LayoutPreset, margin: float = 6.0) -> Label:
+	var l: Label = DDUi.label(text, size, col, HORIZONTAL_ALIGNMENT_CENTER)
+	l.add_theme_constant_override("outline_size", 6)
+	l.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.92))
+	parent.add_child(l)
+	l.set_anchors_and_offsets_preset(preset, Control.PRESET_MODE_MINSIZE, int(margin))
+	if preset == Control.PRESET_TOP_WIDE or preset == Control.PRESET_BOTTOM_WIDE:
+		l.clip_text = true
+	return l
+
+
+## The wave door: WAVE + "+N" waiting on top, the big current wave number in the middle, the boss
+## (a chip of its own: inspect it for the boss tooltip) at the bottom. Tap: the waves tooltip.
+func _wave_door(run: DDRun, column: bool) -> DDCardView:
+	var p: Dictionary = DDPayloads.waves(run)
+	var wv: DDCardView = _door_tile("D", p, Art.deck_back_keys("wave"), 0.55, DDUi.BAD.darkened(0.25))
 	wv.index = IDX_WAVE
-	wv.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	wv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.waves(run)))
-	# every wave deck animates from the one stack (feedback looks waves up by index)
+	wv.name = "WaveDoor"
+	wv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.waves(Game.run)))
+	var window: Control = wv.get_meta(&"window")
+	var n: int = DDPayloads.waves_waiting(run)
+	var top: Label = _anchored_label(window, "WAVE" + ("  +%d" % n if n > 0 else ""), DDUi.FONT_S - 3, DDUi.TEXT, Control.PRESET_TOP_WIDE, 4)
+	top.name = "WaveTop"
+	var num: Control = Marks.WaveNumeral.new("B" if run.boss_street else str(mini(run.wave_index + 1, run.wave_count())))
+	num.name = "WaveNumeral"
+	num.set_anchors_preset(Control.PRESET_FULL_RECT)
+	num.offset_top = 22
+	num.offset_bottom = -40 if not column else -34
+	num.offset_left = 4
+	num.offset_right = -4
+	window.add_child(num)
+	wv.set_meta(&"numeral", num)
+	wv.big_label = top
+	# the boss: its own inspectable chip under the number
+	var bs: Dictionary = DDPayloads.boss_spec(run)
+	var b: Dictionary = run.boss_def()
+	var zs: Array = b.get("zombies", [9])
+	var bv: DDCardView = DDCardView.new()
+	bv.setup({"kind": "F", "payload": DDPayloads.boss(run), "row": true})
+	for c: Node in bv.get_children():
+		bv.remove_child(c)
+		c.queue_free()
+	bv.add_theme_stylebox_override("panel", DDUi.box(Color(DDUi.card_bg("F"), 0.92), DDUi.accent("F"), 2, 8, 2))
+	bv.index = IDX_BOSS
+	bv.name = "BossChip"
+	var bl: Label = DDUi.label("BOSS %s" % ("·".join(PackedStringArray(zs.map(func(z: Variant) -> String: return str(int(z))))) if str(b.get("trait", "")) != "phases" else str(int(zs[0])) + "+"),
+		DDUi.FONT_S - 3, DDUi.accent("F"), HORIZONTAL_ALIGNMENT_CENTER)
+	bl.clip_text = true
+	bl.custom_minimum_size = Vector2(10, 0)
+	bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	bv.add_child(bl)
+	bv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.boss(Game.run)))
+	bv.inspected.connect(_on_inspect)
+	# inside the art window (a plain Control), so the anchors hold
+	window.add_child(bv)
+	bv.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	bv.offset_left = 4
+	bv.offset_right = -4
+	bv.offset_top = -34 if not column else -30
+	bv.offset_bottom = -4
+	bv.set_meta(&"spec", bs)
+	_boss_view = bv
+	# every wave deck animates from the one door (feedback looks waves up by index)
 	for w: int in run.wave_count():
 		_wave_views.append(wv)
-	v.add_child(_stacked(wv, DDPayloads.waves_waiting(run), "D"))
-	var bs: Dictionary = DDPayloads.boss_spec(run)
-	bs["art_keys"] = Art.finale_keys(run.district())
-	bs["art_tint"] = 0.62
-	var bv: DDCardView = _view(bs)
-	bv.index = IDX_BOSS
-	bv.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	bv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.boss(run)))
-	_boss_view = bv
-	v.add_child(bv)
-	if not portrait:
-		var lk: Control = _build_lookout(run)
-		if lk != null:
-			v.add_child(lk)
-	return v
+	return wv
 
 
-## MIDDLE (top): the mixed draw pile, drawn as a pile (+ Lookout's top card in portrait).
-func _build_pile(run: DDRun) -> Control:
-	var v: VBoxContainer = DDUi.vbox(SEP)
-	var ps: Dictionary = DDPayloads.pile_spec(run)
-	ps["art_keys"] = Art.deck_back_keys("pile")
-	ps["art_tint"] = 0.72
-	var layers: int = ceili(run.pile.size() / 6.0)
-	if not portrait:
-		ps["big_size"] = 26
-	var pv: DDCardView = _view(ps, Vector2(0, HUD_H - 4.0 * mini(layers, 3)))
-	pv.index = IDX_PILE
-	pv.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.pile(run)))
-	_pile_view = pv
-	v.add_child(_stacked(pv, layers, "D"))
-	if portrait:
-		var lk: Control = _build_lookout(run)
-		if lk != null:
-			v.add_child(lk)
-	return v
-
-
-## Lookout Patch: the pile's top card + BURY (once per street).
-func _build_lookout(run: DDRun) -> Control:
-	var lc: DDCard = run.lookout_card()
-	if lc == null:
-		return null
-	# side by side under the pile in portrait; stacked in the narrow left column in landscape
-	var row: BoxContainer = BoxContainer.new()
-	row.vertical = not portrait
-	row.add_theme_constant_override("separation", 4)
-	var tv: DDCardView = _view({"kind": lc.kind, "tag": "TOP", "big": str(lc.value) if lc.kind != DDCard.WEAPON else "", "big_size": 20, "row": true,
-		"payload": DDPayloads.card(lc, run)}, Vector2(56, TAP))
-	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(tv)
-	var bb: Button = DDUi.button("BURY" if run.can_bury() else "buried", DDUi.PANEL_HI, DDUi.FONT_S - 4)
-	bb.name = "BuryButton"
-	bb.custom_minimum_size = Vector2(64, TAP)
-	bb.disabled = not run.can_bury() or busy
-	bb.tooltip_text = "Lookout: send the top card to the bottom (once per street)"
-	bb.pressed.connect(do_bury)
-	row.add_child(bb)
-	return row
-
-
-## RIGHT: the 3 rooms, big, each with its price on the OPEN button ("OPEN · 210 pts", lit when you
-## can pay, "need 90 more" when you can't) or its machine's USE button once open.
-func _build_rooms(run: DDRun) -> Control:
-	var v: VBoxContainer = DDUi.vbox(SEP)
+## A room door: the room art (the machine's once open), its name at the bottom, and the padlock
+## price plate on the image: locked (dark, price, a progress bar), gold OPEN (tap it to open),
+## green USE, grey "used".
+func _room_door(run: DDRun, i: int, column: bool) -> DDCardView:
 	var did: String = str(run.district().get("id", ""))
-	for i: int in run.room_count():
-		var box: BoxContainer = BoxContainer.new()
-		box.vertical = not portrait
-		box.add_theme_constant_override("separation", 4)
-		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var rs: Dictionary = DDPayloads.room_spec(run, i)
-		var r: Dictionary = run.room(i)
-		rs["art_keys"] = Art.machine_keys(run.machine(i)) if run.room_open[i] else Art.room_keys(did, str(r.get("name", "")))
-		rs["art_tint"] = 0.5
-		var rv: DDCardView = _view(rs)
-		rv.index = IDX_ROOM + i
-		rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		rv.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var rp: Dictionary = DDPayloads.room(run, i)
-		rv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(rp))
-		_room_views.append(rv)
-		box.add_child(rv)
-		var b: Button
-		var price: int = Game.bal.shown(run.room_cost(i))
-		if not run.room_open[i]:
-			var afford: bool = run.can_open_room(i)
-			var short: int = maxi(0, price - Game.bal.shown(run.points))
-			var sep: String = "\n" if portrait else " · "
-			b = DDUi.button(("OPEN%s%d pts" % [sep, price]) if afford else ("%d pts%sneed %d more" % [price, sep, short]),
-				Color("9a6b12") if afford else DDUi.PANEL, (DDUi.FONT_S - 1) if afford else (DDUi.FONT_S - 3))
-			b.name = "Open%d" % i
-			b.disabled = not afford or busy
-			if afford:
-				b.add_theme_stylebox_override("normal", DDUi.box(Color("9a6b12"), DDUi.WARN, 3, 12, 8))
-			b.pressed.connect(func() -> void: do_open_room(i))
-		else:
-			var used: bool = run.machine_used[i]
-			b = DDUi.button("USE" if not used else "Used%sback next wave" % ("\n" if portrait else " · "), Color("3d6a2a") if not used else DDUi.PANEL, DDUi.FONT_S - 1 if not used else DDUi.FONT_S - 5)
-			b.name = "Use%d" % i
-			b.disabled = used or busy or not run.pending_patch.is_empty()
-			if not b.disabled:
-				b.add_theme_stylebox_override("normal", DDUi.box(Color("3d6a2a"), DDUi.GOOD, 3, 12, 8))
-			b.pressed.connect(func() -> void: open_machine(i))
-		b.custom_minimum_size = Vector2(128, TAP) if portrait else Vector2(0, TAP)
-		if b.disabled and not run.room_open[i]:
-			# can't pay yet: the price stays readable, the border says "locked"
-			b.add_theme_color_override("font_disabled_color", Color(DDUi.TEXT, 0.85))
-			b.add_theme_stylebox_override("disabled", DDUi.box(Color("1a1f22"), Color(DDUi.WARN, 0.35), 2, 12, 8))
-		box.add_child(b)
-		v.add_child(box)
-	return v
+	var r: Dictionary = run.room(i)
+	var open: bool = run.room_open[i]
+	var afford: bool = not open and run.can_open_room(i)
+	var keys: Array = Art.machine_keys(run.machine(i)) if open else Art.room_keys(did, str(r.get("name", "")))
+	var border: Color = DDUi.WARN if afford else (DDUi.GOOD.darkened(0.2) if open and not run.machine_used[i] else Color("4a5358"))
+	var rv: DDCardView = _door_tile("K" if open else "R", DDPayloads.room(run, i), keys, 0.25 if (afford or open) else 0.45, border)
+	rv.index = IDX_ROOM + i
+	rv.name = "Room%d" % i
+	rv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.room(Game.run, i)))
+	_room_views.append(rv)
+	var window: Control = rv.get_meta(&"window")
+	var mk: String = str(run.machine(i).get("kind", ""))
+	var place: String = str(r.get("name", "")).to_upper()
+	var nm: Label = _anchored_label(window, DDText.machine_name(mk) if open else place, DDUi.FONT_S - (4 if column else 3), DDUi.TEXT, Control.PRESET_BOTTOM_WIDE, 3)
+	nm.name = "RoomName"
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	rv.resized.connect(func() -> void: DDCardView.fit_label(nm, DDUi.FONT_S - (4 if column else 3), 10))
+	rv.add_child(_room_plate(run, i))
+	return rv
 
 
+## The padlock plate: a Button laid on the room art (centred, a little above the middle).
+func _room_plate(run: DDRun, i: int) -> Control:
+	var price: int = Game.bal.shown(run.room_cost(i))
+	var open: bool = run.room_open[i]
+	var used: bool = open and run.machine_used[i]
+	var afford: bool = not open and run.can_open_room(i)
+	var b: Button = Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var holder: CenterContainer = CenterContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.offset_bottom = -26
+	holder.add_child(b)
+	var inner: VBoxContainer = DDUi.vbox(2)
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.alignment = BoxContainer.ALIGNMENT_CENTER
+	inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	b.add_child(inner)
+	var row: HBoxContainer = DDUi.hbox(4)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(row)
+	var col: Color
+	var bg: Color
+	var edge: Color
+	if open:
+		b.name = "Use%d" % i
+		b.text = "USE" if not used else "used"
+		col = DDUi.BG if not used else DDUi.TEXT_DIM
+		bg = DDUi.GOOD if not used else Color(0.06, 0.05, 0.05, 0.85)
+		edge = Color("c9f5d4") if not used else Color("555555")
+		b.disabled = used or busy or not run.pending_patch.is_empty()
+		b.pressed.connect(func() -> void: open_machine(i))
+	else:
+		b.name = "Open%d" % i
+		b.text = ("%d pts · OPEN" % price) if afford else ("%d pts · need %d more" % [price, maxi(0, price - Game.bal.shown(run.points))])
+		col = DDUi.BG if afford else DDUi.TEXT
+		bg = DDUi.WARN if afford else Color(0.055, 0.047, 0.047, 0.9)
+		edge = DDUi.SELECT if afford else Color("8a7a52")
+		b.disabled = not afford or busy
+		b.pressed.connect(func() -> void: do_open_room(i))
+		var lock: Control = Marks.Padlock.new(afford, col)
+		lock.custom_minimum_size = Vector2(16, 20)
+		lock.name = "Padlock"
+		row.add_child(lock)
+	# the plate draws its own words; the Button text is kept for tests / the web smoke (hidden)
+	b.add_theme_color_override("font_color", Color(0, 0, 0, 0))
+	b.add_theme_color_override("font_disabled_color", Color(0, 0, 0, 0))
+	b.add_theme_color_override("font_hover_color", Color(0, 0, 0, 0))
+	b.add_theme_color_override("font_pressed_color", Color(0, 0, 0, 0))
+	b.add_theme_font_size_override("font_size", 1)
+	var main_txt: String = ("USE" if not used else "used") if open else str(price)
+	var ml: Label = DDUi.label(main_txt, DDUi.FONT_M - (0 if not used else 6), col, HORIZONTAL_ALIGNMENT_CENTER)
+	row.add_child(ml)
+	if afford:
+		inner.add_child(DDUi.label("OPEN", DDUi.FONT_S - 6, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER))
+	elif not open:
+		# how close you are: a thin gold bar
+		var pg: ProgressBar = ProgressBar.new()
+		pg.show_percentage = false
+		pg.min_value = 0
+		pg.max_value = price
+		pg.value = mini(price, Game.bal.shown(run.points))
+		pg.custom_minimum_size = Vector2(0, 5)
+		pg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pg.add_theme_stylebox_override("background", DDUi.box(Color("3a3328"), Color(0, 0, 0, 0), 0, 2, 0))
+		pg.add_theme_stylebox_override("fill", DDUi.box(DDUi.WARN, Color(0, 0, 0, 0), 0, 2, 0))
+		pg.name = "Progress"
+		inner.add_child(pg)
+	var sb: StyleBoxFlat = DDUi.box(bg, edge, 2, 10, 6)
+	for st: String in ["normal", "hover", "pressed", "disabled"]:
+		b.add_theme_stylebox_override(st, sb if st != "hover" else DDUi.box(bg.lightened(0.1), edge, 2, 10, 6))
+	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP)
+	if b.disabled:
+		# a locked / used plate: the door under it gets the taps (tooltip) and the long press
+		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if afford:
+		b.set_meta(&"ready", true)
+	return holder
+
+
+# ---------------------------------------------------------------- street, strip
 func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99) -> Control:
 	var g: GridContainer = GridContainer.new()
 	g.columns = mini(cols, maxi(1, run.street.size()))
@@ -903,87 +1099,74 @@ func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99)
 	return wrap
 
 
-## The prompt bar: resolve pips + what to do now, then what just happened (or why a tap was
-## blocked). Tap it (or long press) for the history. Run / Run past / NO ESCAPE on the right.
-func _build_actions(run: DDRun) -> Control:
+## The strip between the street and the guns: the draw pile (cards are dealt from right here),
+## the one "what just happened" line (tap or long press it for the history), the resolve pips,
+## and Lookout's top card when you have it.
+func _build_strip(run: DDRun, strip_h: float) -> Control:
 	var h: HBoxContainer = DDUi.hbox(SEP)
-	h.custom_minimum_size = Vector2(0, ACT_H)
-	var hist: Dictionary = DDPayloads.history(run)
-	var p: DDCardView = _custom_tile("D", hist, DDUi.PANEL)
+	h.custom_minimum_size = Vector2(0, strip_h)
+	h.name = "Strip"
+	var ps: Dictionary = DDPayloads.pile_spec(run)
+	ps["art_keys"] = Art.deck_back_keys("pile")
+	ps["art_tint"] = 0.72
+	ps["big_size"] = 24
+	ps["title"] = "PILE"
+	ps.erase("tag")
+	ps["title_size"] = DDUi.FONT_S - 5
+	var layers: int = mini(3, ceili(run.pile.size() / 6.0))
+	var pv: DDCardView = _view(ps, Vector2(112, strip_h - 4.0 * layers))
+	pv.index = IDX_PILE
+	pv.name = "Pile"
+	pv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.pile(Game.run)))
+	_pile_view = pv
+	h.add_child(_stacked(pv, layers, "D"))
+	var lk: Control = _build_lookout(run)
+	if lk != null:
+		h.add_child(lk)
+	var p: DDCardView = _custom_tile("D", DDPayloads.history(run), DDUi.PANEL)
 	p.name = "Log"
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(DDPayloads.history(Game.run)))
-	var pv: VBoxContainer = DDUi.vbox(0)
-	pv.alignment = BoxContainer.ALIGNMENT_CENTER
-	pv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	p.add_child(pv)
-	var top: HBoxContainer = DDUi.hbox(8)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pv.add_child(top)
-	if not run.boss_street:
-		top.add_child(_resolve_pips(run))
-	var act: String = "Crowbar, 0 pts" if run.active == DDRun.MELEE else (run.slot(run.active).name if run.slot(run.active) != null else "melee")
-	var prompt: String
-	if run.boss_street:
-		prompt = "BOSS: deal with every card (%d left)" % run.cards_left_to_resolve()
-	else:
-		prompt = "Tap a zombie · %s" % act
-	var pl: Label = DDUi.label(prompt, DDUi.FONT_S, DDUi.TEXT)
-	pl.clip_text = true
-	pl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pl.custom_minimum_size = Vector2(10, 0)
-	top.add_child(pl)
+	var row: HBoxContainer = DDUi.hbox(8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(row)
 	var said: String = last_block if last_block != "" else str(last_event.get("text", ""))
 	if said == "" and not run.log_lines.is_empty():
 		said = run.log_lines[run.log_lines.size() - 1]
-	# one line (the full history is behind a tap on the bar)
-	var ll: Label = DDUi.label(said, DDUi.FONT_S - 3, DDUi.WARN if last_block != "" else DDUi.TEXT_DIM)
+	if run.boss_street:
+		said = ("BOSS: deal with every card (%d left). " % run.cards_left_to_resolve()) + said
+	var ll: Label = DDUi.label(said, DDUi.FONT_S - 4, DDUi.WARN if last_block != "" else DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	ll.name = "LastLine"
-	ll.clip_text = true
+	ll.max_lines_visible = 2
 	ll.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	ll.custom_minimum_size = Vector2(10, 0)
-	pv.add_child(ll)
+	ll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ll.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	row.add_child(ll)
+	if not run.boss_street:
+		row.add_child(_resolve_pips(run))
 	h.add_child(p)
-	if run.boss_street and run.is_final_district():
-		var ne: PanelContainer = DDUi.panel(Color("3b1414"), 8, DDUi.BAD, 3)
-		var tex: Texture2D = Art.texture_for(Art.badge_keys("no_escape"))
-		var nh: HBoxContainer = DDUi.hbox(4)
-		ne.add_child(nh)
-		if tex != null:
-			var tr: TextureRect = TextureRect.new()
-			tr.texture = tex
-			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tr.custom_minimum_size = Vector2(28, 28)
-			nh.add_child(tr)
-		nh.add_child(DDUi.label("NO ESCAPE", DDUi.FONT_S - 3, DDUi.BAD))
-		ne.name = "NoEscape"
-		h.add_child(ne)
-	elif run.boss_street:
-		var rp: Button = DDUi.button("RUN PAST · -%d HP\nno reward" % Game.bal.num("boss_runpast_damage"), Color("5a2a1a"), DDUi.FONT_S - 6)
-		rp.name = "RunPast"
-		rp.autowrap_mode = TextServer.AUTOWRAP_OFF
-		rp.clip_text = true
-		# dd-ux-clean2: wide enough for "-3 HP" on desktop (phones keep their width)
-		rp.custom_minimum_size = Vector2(120 if get_viewport_rect().size.y < 600.0 or portrait else 150, ACT_H)
-		rp.disabled = not run.can_run_past() or busy
-		rp.pressed.connect(do_run_past)
-		h.add_child(rp)
-	else:
-		var why: String = run.run_block_reason()
-		var cost: int = run.run_cost()
-		var short_why: String = {"you ran last street": "not twice in a row", "only before you resolve a card": "only at the start"}.get(why, why)
-		var rb: Button = DDUi.button(("RUN · -%d HP" % cost if cost > 0 else "RUN · free") + ("\n" + short_why if why != "" else ""), Color("5a2a1a") if why == "" else DDUi.PANEL, DDUi.FONT_S - 3 if why == "" else DDUi.FONT_S - 6)
-		rb.name = "Run"
-		rb.tooltip_text = why if why != "" else "Put this street back into the pile"
-		rb.autowrap_mode = TextServer.AUTOWRAP_OFF
-		rb.clip_text = true
-		rb.custom_minimum_size = Vector2(120, ACT_H)
-		rb.disabled = why != "" or busy
-		rb.pressed.connect(do_run)
-		h.add_child(rb)
 	return h
+
+
+## Lookout Patch: the pile's top card + BURY (once per street), next to the pile.
+func _build_lookout(run: DDRun) -> Control:
+	var lc: DDCard = run.lookout_card()
+	if lc == null:
+		return null
+	var row: HBoxContainer = DDUi.hbox(4)
+	var tv: DDCardView = _view({"kind": lc.kind, "tag": "TOP", "big": str(lc.value) if lc.kind != DDCard.WEAPON else "", "big_size": 20, "row": true,
+		"payload": DDPayloads.card(lc, run)}, Vector2(64, TAP))
+	row.add_child(tv)
+	var bb: Button = DDUi.button("BURY" if run.can_bury() else "buried", DDUi.PANEL_HI, DDUi.FONT_S - 4)
+	bb.name = "BuryButton"
+	bb.custom_minimum_size = Vector2(72, TAP)
+	bb.disabled = not run.can_bury() or busy
+	bb.pressed.connect(do_bury)
+	_inspectable_button(bb, {"kind": "P", "t1": "Bury · Lookout", "t2": "Send the top card to the bottom of the pile, once a street."})
+	row.add_child(bb)
+	return row
 
 
 ## The street's resolve pips: one dot per card you may resolve, filled as you resolve them.
@@ -991,7 +1174,7 @@ func _resolve_pips(run: DDRun) -> Control:
 	var h: HBoxContainer = DDUi.hbox(4)
 	h.name = "ResolvePips"
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(DDUi.label("%d left" % maxi(0, run.budget - run.resolved), DDUi.FONT_S - 4, DDUi.SELECT))
+	h.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for k: int in run.budget:
 		var done: bool = k < run.resolved
 		var dot: Panel = Panel.new()
@@ -1004,51 +1187,121 @@ func _resolve_pips(run: DDRun) -> Control:
 	return h
 
 
-## BOTTOM: the two gun cards (kill stacks) + the melee tile, in both orientations.
-func _build_guns(run: DDRun, vertical: bool, gun_h: float, width: float) -> Control:
-	var h: HBoxContainer = DDUi.hbox(SEP)
-	h.custom_minimum_size = Vector2(0, gun_h)
-	var melee_w: float = 96.0 if vertical else 112.0
-	var gun_w: float = (width - melee_w - SEP * 2) / 2.0
+# ---------------------------------------------------------------- guns, melee, run
+## The gun row: the two gun tiles and a narrow column with two small buttons, MELEE and RUN
+## (head's note on M1). Portrait: one row. Landscape: a column (gun 1, gun 2, [melee | run]).
+func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
+	var box: BoxContainer = BoxContainer.new()
+	box.vertical = not row
+	box.add_theme_constant_override("separation", SEP)
+	box.name = "Guns"
+	if row:
+		box.custom_minimum_size = Vector2(0, gun_h)
+	var small_w: float = 112.0
 	for s: int in 2:
 		var spec: Dictionary = DDPayloads.gun_spec(run, s)
-		var g: DDGun = run.slot(s)
-		var slots: int = maxi(g.cap, g.stack.size() + 1) if g != null else 4
-		var mini: Vector2
-		if vertical:
-			var my: float = (gun_h - 22.0) / (1.0 + 0.32 * (slots - 1))
-			mini.x = clampf(my / 1.3, 40.0, 62.0)
-		else:
-			mini.x = clampf(minf((gun_h - 22.0) / 1.3, gun_w * 0.42 / (1.0 + 0.4 * (slots - 1))), 30.0, 56.0)
-		mini.y = mini.x * 1.3
-		spec["fan_vertical"] = vertical
-		spec["mini"] = mini
+		spec["socket_h_max"] = 92.0 if row else 104.0
 		var gv: DDGunView = DDGunView.new()
 		gv.setup_gun(spec)
-		gv.custom_minimum_size = Vector2(0, gun_h)
 		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		gv.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		gv.index = IDX_GUN + s
 		gv.inspected.connect(_on_inspect)
 		gv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(s))
 		for k: int in gv.stack_cards.size():
 			gv.stack_cards[k].index = IDX_STACK + s * 10 + k
 		_gun_views[s] = gv
-		h.add_child(gv)
+		box.add_child(gv)
+	var small: BoxContainer = BoxContainer.new()
+	small.vertical = row
+	small.add_theme_constant_override("separation", SEP)
+	if row:
+		small.custom_minimum_size = Vector2(small_w, 0)
+	else:
+		small.custom_minimum_size = Vector2(0, maxf(TAP, 80.0))
 	var mv: DDCardView = _melee_tile(run)
-	mv.custom_minimum_size = Vector2(melee_w, gun_h)
-	h.add_child(mv)
-	return h
+	mv.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	small.add_child(mv)
+	var rb: Control = _run_button(run)
+	rb.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	small.add_child(rb)
+	box.add_child(small)
+	return box
 
 
+## MELEE as a small button: the hit burst, "Crowbar", "0 pts" (the tile is a DDCardView: tap =
+## make it active, right click / long press = its tooltip).
 func _melee_tile(run: DDRun) -> DDCardView:
 	var on: bool = run.active == DDRun.MELEE
-	var mv: DDCardView = _view({"kind": "K", "tag": "MELEE" if not on else "", "badge": "ACTIVE" if on else "", "badge_color": DDUi.SELECT,
-		"big": "P%d" % run.melee_power(), "big_size": 26, "title": "Crowbar", "lines": [["0 pts", DDUi.TEXT_DIM, DDUi.FONT_S - 5]],
-		"selected": on, "compact": true, "payload": DDPayloads.melee(run), "art_keys": Art.weapon_keys("crowbar", "Crowbar"), "art_tint": 0.7})
+	var mv: DDCardView = _custom_tile("K", DDPayloads.melee(run), DDUi.card_bg("K"))
+	mv.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("K"), DDUi.SELECT if on else DDUi.accent("K"), 4 if on else 2, 12, 4))
+	mv.set_selected(on)
+	mv.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("K"), DDUi.SELECT if on else DDUi.accent("K"), 4 if on else 2, 12, 4))
 	mv.index = IDX_MELEE
+	mv.name = "Melee"
+	mv.custom_minimum_size = Vector2(0, TAP)
+	var h: HBoxContainer = DDUi.hbox(4)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	mv.add_child(h)
+	var burst: Control = Marks.HitBurst.new(run.melee_power())
+	burst.custom_minimum_size = Vector2(36, 36)
+	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(burst)
+	mv.hit_burst = burst
+	var tv: VBoxContainer = DDUi.vbox(0)
+	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tv.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(tv)
+	var tl: Label = DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 7, DDUi.SELECT if on else DDUi.accent("K"))
+	tv.add_child(tl)
+	tv.add_child(DDUi.label("Crowbar", DDUi.FONT_S - 4, DDUi.TEXT))
+	var pl: Label = DDUi.label("0 pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+	tv.add_child(pl)
+	mv.big_label = pl
 	mv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(DDRun.MELEE))
 	_melee_view = mv
 	return mv
+
+
+## RUN (or RUN PAST / NO ESCAPE on a boss street) as a small button beside melee.
+func _run_button(run: DDRun) -> Control:
+	if run.boss_street and run.is_final_district():
+		var ne: PanelContainer = DDUi.panel(Color("3b1414"), 6, DDUi.BAD, 3)
+		ne.name = "NoEscape"
+		ne.custom_minimum_size = Vector2(0, TAP)
+		var nl: Label = DDUi.label("NO\nESCAPE", DDUi.FONT_S - 5, DDUi.BAD, HORIZONTAL_ALIGNMENT_CENTER)
+		nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		ne.add_child(nl)
+		return ne
+	if run.boss_street:
+		var rp: Button = DDUi.button("RUN PAST\n-%d HP" % Game.bal.num("boss_runpast_damage"), Color("5a2a1a"), DDUi.FONT_S - 4)
+		rp.name = "RunPast"
+		rp.autowrap_mode = TextServer.AUTOWRAP_OFF
+		rp.custom_minimum_size = Vector2(0, TAP)
+		rp.disabled = not run.can_run_past() or busy
+		rp.pressed.connect(func() -> void:
+			if not _was_long(rp):
+				do_run_past())
+		_inspectable_button(rp, {"kind": "F", "t1": "Run past · -%d HP" % Game.bal.num("boss_runpast_damage"), "t2": "Skip the boss: no points, no free Patch."})
+		return rp
+	var why: String = run.run_block_reason()
+	var cost: int = run.run_cost()
+	var short_why: String = {"you ran last street": "not twice\nin a row", "only before you resolve a card": "only at\nthe start"}.get(why, "blocked" if why != "" else "")
+	var rb: Button = DDUi.button(("RUN\n-%d HP" % cost if cost > 0 else "RUN\nfree") if why == "" else ("RUN\n" + short_why), Color("5a2a1a") if why == "" else DDUi.PANEL,
+		DDUi.FONT_S - 4 if why == "" else DDUi.FONT_S - 7)
+	rb.name = "Run"
+	rb.autowrap_mode = TextServer.AUTOWRAP_OFF
+	rb.custom_minimum_size = Vector2(0, TAP)
+	rb.disabled = why != "" or busy
+	rb.pressed.connect(func() -> void:
+		if not _was_long(rb):
+			do_run())
+	_inspectable_button(rb, {"kind": "D", "t1": ("Run · -%d HP" % cost) if cost > 0 else "Run · free",
+		"t2": ("Can't now: %s." % why) if why != "" else "Put this street back into the pile. Not twice in a row."})
+	return rb
 
 
 # ---------------------------------------------------------------- first-run hints (K5)
@@ -1351,7 +1604,7 @@ func do_open_room(i: int) -> void:
 	var ev: Dictionary = Game.run.open_room(i)
 	if bool(ev.get("ok", false)):
 		_pending_banner = {"text": "%s OPEN" % str(Game.run.room(i).get("name", "")).to_upper(), "color": DDUi.accent("K"),
-			"sub": "Tap USE for the %s" % DDText.machine_name(str(Game.run.machine(i).get("kind", ""))), "delay": 0.5}
+			"sub": "Tap USE for the %s" % DDText.machine_name(str(Game.run.machine(i).get("kind", ""))), "delay": 1.5}
 	_finish(ev, {"type": "room", "ev": ev, "snap": snap})
 
 
@@ -1379,6 +1632,7 @@ func do_machine(i: int, oid: String) -> void:
 		var p: Dictionary = DDPayloads.gun(run, s)
 		p["tag"] = "%s - RESULT" % DDText.machine_name(str(res.get("machine", ""))).to_upper()
 		p["body"] = str(ev.get("text", "")) + "\n\n" + str(p["body"])
+		p["t2"] = str(ev.get("text", ""))
 		var tex: Texture2D = Art.texture_for(Art.weapon_keys(g.wid, g.name))
 		if tex != null:
 			p["art"] = tex
@@ -1420,8 +1674,8 @@ func _after_event(ev: Dictionary) -> void:
 	var waves: Array = ev.get("waves", [])
 	if not waves.is_empty():
 		var info: Dictionary = waves[waves.size() - 1]
-		_pending_banner = {"text": "WAVE %d" % [int(info["wave"]) + 1], "color": DDUi.TEXT,
-			"sub": "%d cards shuffle into the pile · zombies %s" % [int(info.get("cards", 0)) + int(info.get("restock", 0)), DDText.zombie_range(info.get("zombies", []))], "delay": 0.2}
+		_pending_banner = {"text": "WAVE %d" % [int(info["wave"]) + 1], "color": DDUi.TEXT, "wave": int(info["wave"]) + 1,
+			"sub": "%d cards · zombies %s" % [int(info.get("cards", 0)) + int(info.get("restock", 0)), DDText.zombie_range(info.get("zombies", []))], "delay": 0.0}
 		Sfx.cue(&"clear", 0.9)
 	if bool(ev.get("boss_street", false)):
 		var b: Dictionary = run.boss_def()
@@ -1455,8 +1709,13 @@ func _after_event(ev: Dictionary) -> void:
 
 
 # ---------------------------------------------------------------- banner
+## dd-ux-v4 (head's M5 a): a banner lasts BANNER_S seconds and a tap anywhere skips it.
+const BANNER_S: float = 1.8
 var last_banner: String = ""
 var _banner: Control = null
+var _banner_layer: Control = null
+var _banner_tween: Tween = null
+var _banner_seq: int = 0
 
 
 func banner_open() -> bool:
@@ -1464,19 +1723,52 @@ func banner_open() -> bool:
 
 
 func dismiss_banner() -> void:
-	if banner_open():
-		_banner.queue_free()
+	if _banner_tween != null and _banner_tween.is_valid():
+		_banner_tween.kill()
+	_banner_tween = null
+	if _banner_layer != null and is_instance_valid(_banner_layer):
+		_banner_layer.queue_free()
+	_banner_layer = null
 	_banner = null
+	# the wave numeral lands on its final value even when the banner was skipped
+	for wv: Variant in _wave_views:
+		if wv != null and is_instance_valid(wv) and (wv as Node).has_meta(&"numeral"):
+			var num: Control = (wv as Node).get_meta(&"numeral")
+			if is_instance_valid(num):
+				if num.has_meta(&"final_text"):
+					num.set("text", str(num.get_meta(&"final_text")))
+					num.remove_meta(&"final_text")
+					num.queue_redraw()
+				num.scale = Vector2.ONE
+				num.position.y = 0.0
+				num.modulate.a = 1.0
+				num.offset_top = 22
 	if OS.has_feature("web"):
 		_publish_state.call_deferred()
+
+
+## A full-screen layer that catches the tap that skips the banner.
+func _banner_catcher() -> Control:
+	dismiss_banner()
+	var layer: Control = Control.new()
+	layer.name = "BannerLayer"
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and is_instance_valid(layer):
+			layer.accept_event()
+			dismiss_banner())
+	_fx.add_child(layer)
+	_banner_layer = layer
+	return layer
 
 
 func _show_banner(text: String, col: Color, sub: String) -> void:
 	last_banner = text
 	var vp: Vector2 = get_viewport_rect().size
-	if _banner != null and is_instance_valid(_banner):
-		_banner.queue_free()
+	var layer: Control = _banner_catcher()
 	var p: PanelContainer = DDUi.panel(Color(0.05, 0.06, 0.06, 0.92), 14, col, 3)
+	p.name = "Banner"
 	_banner = p
 	var v: VBoxContainer = DDUi.vbox(2)
 	p.add_child(v)
@@ -1489,20 +1781,153 @@ func _show_banner(text: String, col: Color, sub: String) -> void:
 		l2.custom_minimum_size = Vector2(lw, 0)
 		v.add_child(l2)
 	DDUi.ignore_mouse(p)
-	p.mouse_filter = Control.MOUSE_FILTER_STOP
-	p.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed and is_instance_valid(p):
-			p.accept_event()
-			dismiss_banner())
-	_fx.add_child(p)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(p)
 	p.size = p.get_combined_minimum_size()
 	p.position = Vector2((vp.x - p.size.x) * 0.5, vp.y * 0.3)
 	p.modulate.a = 0.0
-	var tw: Tween = p.create_tween()
+	var tw: Tween = layer.create_tween()
+	_banner_tween = tw
 	tw.tween_property(p, "modulate:a", 1.0, 0.15)
-	tw.tween_interval(1.5 if not Game.reduce_motion() else 1.7)
+	tw.tween_interval(BANNER_S - 0.45)
 	tw.tween_property(p, "modulate:a", 0.0, 0.3)
-	tw.tween_callback(p.queue_free)
+	tw.tween_callback(dismiss_banner)
+
+
+## Storyboard 3, the WAVE banner: 0.0 s a red edge pulse; 0.1 s the wave door's old number falls
+## away; 0.4 s the new one slams in and the banner sweeps across; it holds and fades by 2.2 s
+## (1.8 s on screen). A tap anywhere skips it. Reduce motion: no sweep, slam or fall, only fades.
+func _wave_banner(n: int, sub: String) -> void:
+	last_banner = "WAVE %d" % n
+	var vp: Vector2 = get_viewport_rect().size
+	var rm: bool = Game.reduce_motion()
+	var layer: Control = _banner_catcher()
+	# the red edge pulse
+	var vig: Panel = Panel.new()
+	vig.name = "EdgePulse"
+	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vig.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var vs: StyleBoxFlat = StyleBoxFlat.new()
+	vs.draw_center = false
+	vs.border_color = Color(Marks.BLOOD, 0.75)
+	vs.set_border_width_all(int(minf(vp.x, vp.y) * 0.06))
+	vs.border_blend = true
+	vig.add_theme_stylebox_override("panel", vs)
+	vig.modulate.a = 0.0
+	layer.add_child(vig)
+	# the banner strip: the big numeral + WAVE n + one line
+	var p: PanelContainer = DDUi.panel(Color(0.05, 0.03, 0.03, 0.94), 12, Marks.BLOOD, 3)
+	p.name = "Banner"
+	_banner = p
+	var h: HBoxContainer = DDUi.hbox(16)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	p.add_child(h)
+	var big: Control = Marks.WaveNumeral.new(str(n))
+	big.custom_minimum_size = Vector2(88, 96)
+	h.add_child(big)
+	var tv: VBoxContainer = DDUi.vbox(0)
+	tv.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_child(tv)
+	tv.add_child(DDUi.label("WAVE %d" % n, DDUi.FONT_XL, DDUi.TEXT))
+	if sub != "":
+		tv.add_child(DDUi.label(sub, DDUi.FONT_S, DDUi.TEXT_DIM))
+	tv.add_child(DDUi.label("tap to skip", DDUi.FONT_S - 6, Color(DDUi.TEXT_DIM, 0.7)))
+	DDUi.ignore_mouse(p)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(p)
+	p.custom_minimum_size = Vector2(vp.x, 0)
+	p.size = p.get_combined_minimum_size()
+	var y: float = vp.y * 0.32
+	p.position = Vector2(0, y)
+	p.modulate.a = 0.0
+	# the wave door's numeral
+	var num: Control = null
+	for wv: Variant in _wave_views:
+		if wv != null and is_instance_valid(wv) and (wv as Node).has_meta(&"numeral"):
+			num = (wv as Node).get_meta(&"numeral")
+			break
+	var tw: Tween = layer.create_tween()
+	_banner_tween = tw
+	tw.set_parallel(true)
+	tw.tween_property(vig, "modulate:a", 1.0, 0.25)
+	tw.tween_property(vig, "modulate:a", 0.0, 0.75).set_delay(0.25)
+	if num != null and not rm:
+		num.set_meta(&"final_text", str(n))
+		num.set("text", str(maxi(1, n - 1)))
+		num.queue_redraw()
+		num.pivot_offset = num.size * 0.5
+		tw.tween_property(num, "offset_top", 22.0 + 16.0, 0.3).set_delay(0.1)
+		tw.tween_property(num, "modulate:a", 0.0, 0.3).set_delay(0.1)
+		tw.tween_callback(func() -> void:
+			if is_instance_valid(num):
+				num.set("text", str(n))
+				num.queue_redraw()
+				num.offset_top = 22
+				num.scale = Vector2(2.4, 2.4)).set_delay(0.4)
+		tw.tween_property(num, "scale", Vector2.ONE, 0.3).set_delay(0.41).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(num, "modulate:a", 1.0, 0.2).set_delay(0.41)
+	if rm:
+		tw.tween_property(p, "modulate:a", 1.0, 0.2).set_delay(0.4)
+	else:
+		p.position.x = -vp.x
+		p.modulate.a = 1.0
+		tw.tween_property(p, "position:x", 0.0, 0.32).set_delay(0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(p, "modulate:a", 0.0, 0.36).set_delay(0.4 + BANNER_S - 0.36)
+	tw.chain().tween_callback(dismiss_banner)
+	Sfx.cue(&"clear", 0.8)
+
+
+## Storyboard 4: a room that just became affordable rings twice (two gold rings grow off the door);
+## while a room is affordable its plate glows slowly (2 s). Reduce motion: one brightness pulse,
+## no rings, no glow loop.
+func _room_pulses() -> void:
+	var run: DDRun = Game.run
+	if run == null or screen != Screen.STREET:
+		return
+	if _was_ready_run != run:
+		_was_ready_run = run
+		_was_ready = []
+	var now: Array = []
+	for i: int in _room_views.size():
+		var rv: DDCardView = _room_views[i]
+		var ready: bool = i < run.room_count() and not run.room_open[i] and run.can_open_room(i)
+		now.append(ready)
+		if not ready or not is_instance_valid(rv):
+			continue
+		var plate: Control = rv.find_child("Open%d" % i, true, false)
+		var fresh: bool = i >= _was_ready.size() or not bool(_was_ready[i])
+		if Game.reduce_motion():
+			if fresh:
+				feedback._pulse(rv, Color(1.4, 1.3, 0.8))
+			continue
+		if fresh and not _was_ready.is_empty():
+			for k: int in 2:
+				_ring(rv, 0.8 + 0.45 * k)
+			feedback._mark("room_ready")
+		if plate != null:
+			var gl: Tween = plate.create_tween().set_loops()
+			gl.tween_property(plate, "self_modulate", Color(1.3, 1.25, 1.1), 1.0).set_trans(Tween.TRANS_SINE)
+			gl.tween_property(plate, "self_modulate", Color.WHITE, 1.0).set_trans(Tween.TRANS_SINE)
+	_was_ready = now
+
+
+func _ring(target: Control, delay: float) -> void:
+	var r: Rect2 = target.get_global_rect()
+	var ring: Panel = Panel.new()
+	ring.name = "ReadyRing"
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.add_theme_stylebox_override("panel", DDUi.box(Color(0, 0, 0, 0), DDUi.WARN, 4, 14, 0))
+	ring.position = r.position - _fx.global_position
+	ring.size = r.size
+	ring.pivot_offset = r.size * 0.5
+	ring.modulate.a = 0.0
+	_fx.add_child(ring)
+	var tw: Tween = ring.create_tween()
+	tw.tween_interval(delay)
+	tw.tween_property(ring, "modulate:a", 1.0, 0.01)
+	tw.tween_property(ring, "scale", Vector2(1.35, 1.35), 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(ring.queue_free)
 
 
 # ---------------------------------------------------------------- safehouse
@@ -1639,6 +2064,7 @@ func _build_end() -> void:
 ## Street extras: &points=40 (sim units), &open=2 (rooms opened), &gun1=rifle &gun2=crossbow,
 ## &stack1=5,4 &stack2=..., &active=0|1|2, &patches=lookout,brawler, &district=0..2, &boss=1,
 ## &wave=1, &sheet=gun|machine0..2|patch, &inspect=pile|wave0|room0|gun1|gun2|stack|boss|melee|points,
+## &overlay=codex|glossary|banner (dd-ux-v4),
 ## &hints=1 (first-run hints on), &near=1 (gun 1 one kill from finishing, a legal zombie dealt),
 ## &lastcards=1 (the pile runs dry after this street: wave 2 shuffles in).
 func _apply_smoke_query() -> void:
@@ -1759,6 +2185,15 @@ func apply_debug(args: Dictionary) -> void:
 				run.open_room(ri2)
 			run.points += run.bal.patch_price(run.patches.size())
 			run.use_machine(ri2, "press")
+	if args.has("overlay"):
+		# dd-ux-v4: &overlay=codex | glossary | banner (the WAVE 2 banner)
+		match str(args["overlay"]):
+			"codex":
+				open_codex.call_deferred()
+			"glossary":
+				open_glossary.call_deferred()
+			"banner":
+				_pending_banner = {"text": "WAVE 2", "wave": 2, "sub": "9 cards · zombies 2-7", "delay": 0.0}
 	if args.has("inspect"):
 		var what: String = str(args["inspect"])
 		match what:
@@ -1821,6 +2256,7 @@ func _publish_state() -> void:
 		"settings": settings_panel.is_open(), "fx": feedback.last_played, "banner": last_banner, "banner_open": banner_open(),
 		"banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "hint": hint_id,
 		"sheet": str(sheet.get("type", "")) if Game.run == null or Game.run.pending_patch.is_empty() else "patch", "block": last_block,
+		"overlay": str(codex.get("mode")) if codex.is_open() else "", "tip": _inspect.last_lines if _inspect.is_open() else [],
 		"vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}
 	if Game.run != null:
 		var run: DDRun = Game.run

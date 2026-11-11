@@ -1,5 +1,5 @@
 # dd_text.gd
-# Purpose: Every player-facing name and rules sentence for DeadDraw v3 "Kill Stacks": zombie /
+# Purpose: Every player-facing name and rules sentence for DeadDraw v4 "Kill Stacks": zombie /
 #   medkit / cover names by number, gun rules and challenges, Patches, machines, survivors,
 #   bosses, first-run hints. Numbers inside sentences come from DDBalance so a retune of
 #   balance.json updates the text too. Points are always written as the player sees them (x10).
@@ -13,6 +13,9 @@ extends RefCounted
 const PATCH_NAMES: Dictionary = {
 	"lookout": "Lookout", "thick_jacket": "Thick Jacket", "field_medic": "Field Medic", "brawler": "Brawler",
 	"bounty": "Bounty Hunter", "loose_grip": "Loose Grip", "second_wind": "Second Wind", "trophy_belt": "Trophy Belt",
+	# v4
+	"lockpick": "Lockpick", "iron_stomach": "Iron Stomach", "adrenaline": "Adrenaline", "grudge": "Grudge",
+	"show_off": "Show-Off", "whetstone": "Whetstone",
 }
 
 const PASSIVE_NAMES: Dictionary = {"steady_hands": "Steady Hands", "triage": "Triage", "slip_away": "Slip Away"}
@@ -24,11 +27,12 @@ const MACHINE_NAMES: Dictionary = {"bench": "Retrofit Bench", "patch": "Patch Pr
 const CHALLENGE_NAMES: Dictionary = {
 	"mixed_bag": "Mixed Bag", "countdown": "Countdown", "staircase": "Staircase", "big_game": "Big Game",
 	"wide_swing": "Wide Swing", "drift": "Drift", "full_spread": "Full Spread", "point_blank": "Point Blank", "trophy": "Trophy",
+	"big_bang": "Big Bang", "pest_control": "Pest Control",
 }
 
 const RULE_ICONS: Dictionary = {
 	"any": "ANY", "down": "DOWN", "up": "UP", "same": "SAME", "zigzag": "ZIG-ZAG", "close": "CLOSE",
-	"parity": "ODD/EVEN", "spread": "SUM", "big": "BIG",
+	"parity": "ODD/EVEN", "spread": "SUM", "big": "BIG", "heavy": "ONE SHOT", "small": "SMALL",
 }
 
 
@@ -70,6 +74,9 @@ static func card_name(c: DDCard, bal: DDBalance = null) -> String:
 		DDCard.WEAPON:
 			var b: DDBalance = bal if bal != null else DDBalance.get_default()
 			return b.weapon_name(c.wid)
+		DDCard.MELEE:
+			var b2: DDBalance = bal if bal != null else DDBalance.get_default()
+			return b2.melee_name(c.wid)
 		DDCard.MEDKIT:
 			return medkit_name(c.value)
 		DDCard.COVER:
@@ -83,6 +90,8 @@ static func kind_label(kind: String) -> String:
 			return "ZOMBIE"
 		DDCard.WEAPON:
 			return "GUN"
+		DDCard.MELEE:
+			return "MELEE"
 		DDCard.MEDKIT:
 			return "MEDKIT"
 		DDCard.COVER:
@@ -125,7 +134,7 @@ static func cards_text(cards: Array, bal: DDBalance) -> String:
 	var p: PackedStringArray = []
 	for c: Variant in cards:
 		var cc: DDCard = c
-		if cc.kind == DDCard.WEAPON:
+		if cc.kind == DDCard.WEAPON or cc.kind == DDCard.MELEE:
 			p.append(card_name(cc, bal))
 		else:
 			p.append("%s %d" % [kind_label(cc.kind).capitalize(), cc.value])
@@ -136,6 +145,8 @@ static func cards_text(cards: Array, bal: DDBalance) -> String:
 static func pack_entry(spec: String) -> String:
 	if spec == "W":
 		return "a gun"
+	if spec == "K":
+		return "a melee weapon"
 	if spec.begins_with("M"):
 		return "medkit %s" % spec.substr(1)
 	if spec.begins_with("C"):
@@ -165,6 +176,10 @@ static func rule_short(rule: String, rosa: bool = false) -> String:
 			return "anything while the total stays at 16 or less"
 		"big":
 			return "6 or more only"
+		"small":
+			return "6 or less only"
+		"heavy":
+			return "one shot: any zombie"
 	return rule
 
 
@@ -189,6 +204,12 @@ static func rule_text(rule: String, bal: DDBalance, rosa: bool = false) -> Strin
 			return "Anything, as long as the stack total stays at %d or less. Finished at its capacity or at a total of %d." % [bal.num("spread_cap"), bal.num("spread_cap")]
 		"big":
 			return "Only zombies of %d or more." % bal.num("big_min")
+		"small":
+			return "SMALL FRY: only zombies of %d or less." % bal.num("small_max")
+		"heavy":
+			if bal.num("heavy_min") > 0:
+				return "ONE SHOT: only zombies of %d or more, one kill per street." % bal.num("heavy_min")
+			return "ONE SHOT: any zombie. One kill finishes it."
 	return ""
 
 
@@ -213,6 +234,10 @@ static func rule_block(g: DDGun, z: int, run: Object) -> String:
 			return "rule: total would be %d (max 16)" % (g.total() + z)
 		"big":
 			return "rule: needs 6 or more"
+		"small":
+			return "rule: needs 6 or less"
+		"heavy":
+			return "rule: needs %d or more" % (run.get("bal") as DDBalance).num("heavy_min") if run != null else "rule forbids it"
 		"zigzag":
 			if z == t:
 				return "rule: never equal"
@@ -245,6 +270,10 @@ static func challenge_text(id: String, bal: DDBalance) -> String:
 			return "the total is exactly %d" % bal.num("spread_cap")
 		"trophy":
 			return "both kills 8 or more"
+		"big_bang":
+			return "the kill is %d or more" % bal.num("big_bang_min")
+		"pest_control":
+			return "the stack totals %d or less" % bal.num("pest_total")
 	return ""
 
 
@@ -303,6 +332,8 @@ static func patch_text(id: String, bal: DDBalance) -> String:
 		"field_medic":
 			return "Medkits heal +%d." % bal.num("field_medic_bonus")
 		"brawler":
+			if bal.text("brawler_mode") == "hands":
+				return "Bare hands +%d power. Melee weapons you pick up get +%d use." % [bal.num("brawler_bonus"), bal.num("brawler_dur")]
 			return "Melee +%d power." % bal.num("brawler_bonus")
 		"bounty":
 			return "Finishing a gun pays +%d per zombie in its stack." % bal.shown(1)
@@ -312,6 +343,18 @@ static func patch_text(id: String, bal: DDBalance) -> String:
 			return "Once per run, when you would drop to 0 HP, you go to %d instead." % bal.num("second_wind_hp")
 		"trophy_belt":
 			return "Heal %d whenever you finish a gun." % bal.num("trophy_belt_heal")
+		"lockpick":
+			return "Rooms cost %d less." % bal.shown(bal.num("lockpick_off"))
+		"iron_stomach":
+			return "Healing above your max HP becomes Cover."
+		"adrenaline":
+			return "At %d HP or less, every weapon has +1 power." % bal.num("adrenaline_hp")
+		"grudge":
+			return "+1 power against zombies %d or more (bosses too)." % bal.num("grudge_min")
+		"show_off":
+			return "Every completed challenge also pays +%d." % bal.shown(bal.num("show_off_points"))
+		"whetstone":
+			return "Melee weapons you pick up get +%d uses." % bal.num("whetstone_dur")
 	return ""
 
 
@@ -389,7 +432,11 @@ static func hint_text(id: String, bal: DDBalance) -> String:
 		"rooms":
 			return "You can afford a room: tap OPEN. Its machine switches on."
 		"run":
+			if bal.text("run_return") == "bottom":
+				return "Bad street? RUN sends every card on it to the bottom of the pile for %d HP." % bal.num("run_damage")
 			return "Bad street? RUN puts it back for %d HP." % bal.num("run_damage")
+		"melee":
+			return "Bare hands hit for %d. Pick up a melee weapon card: it hits harder until its uses run out." % bal.num("hands_power")
 	return ""
 
 
@@ -414,4 +461,63 @@ static func rule_tag(rule: String, rosa: bool = false) -> String:
 			return "TOTAL 16 MAX"
 		"big":
 			return "6 OR MORE"
+		"small":
+			return "6 OR LESS"
+		"heavy":
+			return "ONE SHOT"
 	return rule.to_upper()
+
+
+# ---------------------------------------------------------------- v4: melee, salvage, Run, shop
+## Melee weapon card text: "Power 3 - 4 uses. No rule, no points; breaks at 0 uses."
+static func melee_card_text(mid: String, bal: DDBalance, uses: int = -1) -> String:
+	var u: int = bal.melee_uses(mid) if uses < 0 else uses
+	return "Power %d - %s. No rule; melee kills score no points. Each kill uses 1; at 0 it breaks and you're back to Bare Hands." % [
+		bal.melee_power(mid), uses_text(u)]
+
+
+static func uses_text(n: int) -> String:
+	return "%d use%s" % [n, "" if n == 1 else "s"]
+
+
+static func bare_hands_text(bal: DDBalance) -> String:
+	return "Power %d, no rule, unlimited. Bare-hands kills score no points." % bal.num("hands_power")
+
+
+## "SALVAGE +30" (points as shown).
+static func salvage_text(units: int, bal: DDBalance) -> String:
+	return "SALVAGE +%d" % bal.shown(units)
+
+
+## "4 cards (2 zombies, a medkit, a gun)" for the Run log line.
+static func run_cards_text(cards: Array, _bal: DDBalance = null) -> String:
+	var n: Dictionary = {}
+	for c: Variant in cards:
+		var k: String = (c as DDCard).kind
+		n[k] = int(n.get(k, 0)) + 1
+	var parts: PackedStringArray = []
+	for k: String in [DDCard.ZOMBIE, DDCard.WEAPON, DDCard.MELEE, DDCard.MEDKIT, DDCard.COVER]:
+		var m: int = int(n.get(k, 0))
+		if m == 0:
+			continue
+		var word: String = {DDCard.ZOMBIE: "zombie", DDCard.WEAPON: "gun", DDCard.MELEE: "melee weapon", DDCard.MEDKIT: "medkit", DDCard.COVER: "cover"}[k]
+		parts.append(("a %s" % word) if m == 1 else ("%d %ss" % [m, word]))
+	var total: String = "%d card%s" % [cards.size(), "" if cards.size() == 1 else "s"]
+	return total + (" (%s)" % ", ".join(parts) if not parts.is_empty() else "")
+
+
+## The Run rule in one sentence (zoom / how to play).
+static func run_rule_text(bal: DDBalance) -> String:
+	var when: String = "Any time on a street (even with no zombie on it)" if bal.text("run_mode") == "anytime" else "Before you resolve a card"
+	var where: String = "goes to the BOTTOM of the pile" if bal.text("run_return") == "bottom" else "is shuffled back into the pile"
+	return "RUN: %s, every card still on the street %s. Take %d damage (Theo: free). Not twice in a row, never on a boss street." % [when, where, bal.num("run_damage")]
+
+
+## Safehouse Shop: one line for the panel head.
+static func shop_text(bal: DDBalance) -> String:
+	return "Points don't leave the district. Buy 1 Patch at the Press price and supplies at %d points per HP; the rest is left behind." % bal.shown(bal.num("carry_heal_rate"))
+
+
+## The Leave button: "LEAVE - 40 left behind".
+static func leave_text(units: int, bal: DDBalance) -> String:
+	return "LEAVE" if units <= 0 else "LEAVE - %d left behind" % bal.shown(units)

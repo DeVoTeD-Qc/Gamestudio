@@ -71,6 +71,9 @@ func _check_tray(m: Control, label: String) -> void:
 	var grid: Rect2 = hand.get_grid_rect()
 	var g: Rect2 = Rect2(hand.get_global_rect().position + grid.position, grid.size)
 	var cards: Array[Node] = hand.get_cards()
+	# kc-layout-a (the head's L3): the Operator card is the grid's first card.
+	if hand.get_operator_card() != null and hand.get_operator_card().visible:
+		cards.push_front(hand.get_operator_card())
 	var area: float = 0.0
 	for i: int in cards.size():
 		var r: Rect2 = (cards[i] as Control).get_global_rect()
@@ -88,14 +91,13 @@ func _check_tray(m: Control, label: String) -> void:
 	var op: Control = hand.get_operator_card()
 	for ctl: Control in [ready, undo, op]:
 		assert_true(tray.encloses(ctl.get_global_rect()), "%s: %s inside the tray" % [label, ctl.name])
-	assert_false(op.get_global_rect().grow(-EPS).intersects(g), "%s: the Operator row under the grid" % label)
+	assert_true(g.grow(EPS).encloses(op.get_global_rect()), "%s: the Operator card in the hand grid" % label)
 	var font: Font = ready.get_theme_font(&"font")
 	var fs: int = ready.get_theme_font_size(&"font_size")
 	var sb: StyleBox = ready.get_theme_stylebox(&"normal")
 	var room: float = ready.size.x - sb.get_margin(SIDE_LEFT) - sb.get_margin(SIDE_RIGHT)
 	var need: float = font.get_string_size(ready.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	assert_true(need <= room + 0.5, "%s: '%s' fits its button (%.0f <= %.0f px)" % [label, ready.text, need, room])
-	assert_true(op.size.x >= m.get_tray().size.x * 0.6, "%s: the Operator card spans the tray (%s)" % [label, op.size])
 	print("     [%s] %d cards: %s x %d cols, cover %.0f%%, READY %s" % [label, cards.size(), hand.hand_fit.get("card"),
 			int(hand.hand_fit.get("cols", 0)), cover * 100.0, ready.size])
 
@@ -105,7 +107,8 @@ func test_large_landscape_hand_fills_the_tray() -> void:
 		var s: Array = await _spawn(screen)
 		var m: Control = s[1]
 		assert_false(m.compact, "%s: the desktop layout" % screen["name"])
-		for n: int in [5, 6, 7, 8]:
+		# kc-layout-a: up to the hand cap (7) plus the Operator card, which is in the grid now.
+		for n: int in [5, 6, 7]:
 			await _set_hand(s[2], n)
 			_check_tray(m, "%s, %d cards" % [screen["name"], n])
 		_despawn(s[0])
@@ -125,28 +128,22 @@ func test_phone_landscape_keeps_two_columns() -> void:
 	await tree.process_frame
 
 
-func test_se_hand_scrolls_a_readable_column() -> void:
+## kc-layout-a (the head's L1 + L2): the SE's hand never scrolls any more: the tray keeps 346 px, two
+## columns of compact faces with 13 pt digits (the board shrinks instead).
+func test_se_hand_shows_every_card_readable() -> void:
 	var s: Array = await _spawn(PHONE_SE)
 	var m: Control = s[1]
 	var hand: Control = m.get_hand()
 	await _set_hand(s[2], 7)
 	var fit: Dictionary = hand.hand_fit
-	assert_true(bool(fit["scroll"]), "SE: 7 cards scroll")
-	assert_eq(int(fit["cols"]), 1, "SE: one column")
+	assert_false(bool(fit["scroll"]), "SE: 7 cards, no scroll")
+	assert_eq(int(fit["cols"]), 2, "SE: two columns")
 	var k: float = Layout.points_per_px(PHONE_SE)
 	assert_true(roundf(float(fit["s"]) * 0.7) * k >= 13.0, "SE: digits >= 13 pt (%.1f)" % (roundf(float(fit["s"]) * 0.7) * k))
 	var shown: Array = hand.get_cards().filter(func(c: Node) -> bool: return (c as Control).visible)
-	assert_eq(shown.size(), int(fit["visible"]), "SE: %d cards shown" % shown.size())
+	assert_eq(shown.size(), 7, "SE: all 7 cards shown")
 	var down: Label = hand.find_child("MoreDown", false, false)
-	assert_true(down.visible and down.text.contains("MORE"), "SE: '▼ n MORE' hint")
-	var first_uid: int = int(shown[0].get_meta(&"uid"))
-	hand.scroll_hand(1)
-	assert_false(hand.get_card(first_uid).visible, "SE: scrolling hides the first card")
-	assert_true((hand.find_child("MoreUp", false, false) as Label).visible, "SE: '▲ n MORE' once scrolled")
-	# Selecting a hidden card scrolls it into view.
-	hand.set_selected(first_uid)
-	assert_true(hand.get_card(first_uid).visible, "SE: the selected card scrolls into view")
-	hand.set_selected(-1)
+	assert_false(down.visible, "SE: no '▼ n MORE' hint")
 	_despawn(s[0])
 	await tree.process_frame
 

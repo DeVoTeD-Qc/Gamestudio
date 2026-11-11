@@ -1,0 +1,476 @@
+# dd-ux-v4: the Door row street (head's M1 a) at 390x844, 844x390, 1440x900 and 1920x1080: the wave
+# door and the room doors are one row / column of equal doors, the wave door carries the big wave
+# number, the pile sits by the street, the street sits right above the guns (no middle band), Run
+# and melee are small buttons in the gun row; every gun and melee shows the hit burst; every gun
+# shows one kill socket per kill it holds (the next one says what it takes); every zombie shows
+# the strength mark; the padlock plate's four states; tooltips are 2 lines (M3 b); the Glossary
+# (the ?) and the Codex (title, Menu) with its type / district / met filters and met-tracking in
+# the profile (M4 a: silhouettes until met); the WAVE banner lasts 1.8 s and a tap skips it (M5 a);
+# right click and long press work on tiles and on the small buttons. Touch is emulated as the
+# left mouse button.
+extends "res://tests/dd_test_case.gd"
+
+const SIZES: Array[Vector2i] = [Vector2i(390, 844), Vector2i(844, 390), Vector2i(1440, 900), Vector2i(1920, 1080)]
+const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
+
+var _paths: Array[String] = []
+
+
+func _main() -> Control:
+	var game: Node = tree.root.get_node_or_null("Game")
+	var pp: String = "user://dd_test_v4_%d.json" % Time.get_ticks_usec()
+	_paths.append(pp)
+	_paths.append(pp + ".run")
+	game.set("profile", DDProfile.new(bal(), pp))
+	game.set("run_save", DDRunSave.new(pp + ".run"))
+	var m: Control = (load("res://scenes/Main.tscn") as PackedScene).instantiate()
+	tree.root.add_child(m)
+	return m
+
+
+func _cleanup() -> void:
+	for p: String in _paths:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+	_paths.clear()
+
+
+func _settle() -> void:
+	for k: int in 5:
+		await tree.process_frame
+
+
+func _tile(m: Node, idx: int) -> DDCardView:
+	for c: Node in m.find_children("*", "", true, false):
+		if c is DDCardView and (c as DDCardView).index == idx and (c as Control).is_visible_in_tree():
+			return c
+	return null
+
+
+func _street(m: Control, q: Dictionary) -> void:
+	m.call("apply_debug", q)
+	m.call("_render")
+
+
+func _inside(m: Control, c: Control) -> bool:
+	var vp: Rect2 = m.get_viewport_rect()
+	var r: Rect2 = c.get_global_rect()
+	return r.position.x >= -1 and r.position.y >= -1 and r.end.x <= vp.size.x + 1 and r.end.y <= vp.size.y + 1
+
+
+func _right_click(c: Control) -> void:
+	var e: InputEventMouseButton = InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_RIGHT
+	e.pressed = true
+	e.position = c.size * 0.5
+	if c is Button:
+		c.gui_input.emit(e)
+	else:
+		c.call("_gui_input", e)
+
+
+func _long_press(c: Control) -> void:
+	var e: InputEventMouseButton = InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = true
+	e.position = c.size * 0.5
+	if c is Button:
+		c.gui_input.emit(e)
+	else:
+		c.call("_gui_input", e)
+	await tree.create_timer(0.6).timeout
+	await tree.process_frame
+	var up: InputEventMouseButton = InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = c.size * 0.5
+	if c is Button:
+		c.gui_input.emit(up)
+	else:
+		c.call("_gui_input", up)
+
+
+# ---------------------------------------------------------------- the door row street
+func test_door_row_layout_every_size() -> void:
+	for sz: Vector2i in SIZES:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5", "gun1": "rifle", "stack1": "8,6", "gun2": "crossbow", "stack2": "4", "points": "24"})
+		await _settle()
+		var portrait: bool = sz.y > sz.x
+		var wave: DDCardView = _tile(m, 300)
+		var rooms: Array = [_tile(m, 100), _tile(m, 101), _tile(m, 102)]
+		check(wave != null and not rooms.has(null), tag + " the wave door and three room doors")
+		if wave == null or rooms.has(null):
+			m.queue_free()
+			continue
+		# one row (portrait) or one column (landscape) of four equal doors
+		for r: Variant in rooms:
+			var rr: Rect2 = (r as Control).get_global_rect()
+			check(absf(rr.size.x - wave.size.x) < 2.0 and absf(rr.size.y - wave.size.y) < 2.0, "%s: door %s is the size of the wave door" % [tag, str(r.name)])
+			if portrait:
+				check(absf(rr.position.y - wave.global_position.y) < 2.0, tag + " doors share one row")
+			else:
+				check(absf(rr.position.x - wave.global_position.x) < 2.0, tag + " doors share one column")
+		var num: Control = wave.get_meta(&"numeral")
+		check(num != null and num.size.y >= 40.0, "%s: the big wave number (%s px tall)" % [tag, str(num.size if num != null else Vector2.ZERO)])
+		# the pile is by the street; the street sits right above the guns: no middle band
+		var st: Rect2 = Rect2()
+		for k: int in (game_run()).street.size():
+			st = st.merge(_tile(m, k).get_global_rect()) if st.size != Vector2.ZERO else _tile(m, k).get_global_rect()
+		var pile: DDCardView = _tile(m, 400)
+		check(pile.global_position.y >= st.end.y - 1.0, tag + " the pile sits under the street")
+		check(m.find_child("Prompt", true, false) == null, tag + " no middle prompt band")
+		var g1: DDGunView = _tile(m, 200)
+		if portrait:
+			var gap: float = g1.global_position.y - st.end.y
+			check(gap <= float(m.get("STRIP_H")) + 8.0 * 2 + 30.0, "%s: the street sits right above the guns (gap %.0f)" % [tag, gap])
+		# Run and melee: small buttons beside the guns
+		var melee: DDCardView = _tile(m, 202)
+		var run_b: Button = m.find_child("Run", true, false)
+		check(melee != null and run_b != null, tag + " melee and Run in the gun row")
+		if melee != null and run_b != null:
+			check(_area(melee) < _area(g1) * 0.6 and run_b.size.x * run_b.size.y < _area(g1) * 0.6, tag + " melee and Run are smaller than a gun")
+			check(run_b.size.y >= 63.5 and melee.size.y >= 63.5, tag + " both are 44 CSS px targets")
+			if portrait:
+				check(melee.global_position.y >= g1.global_position.y - 1.0 and run_b.global_position.y >= g1.global_position.y - 1.0, tag + " aligned with the guns")
+			else:
+				check(melee.global_position.x >= g1.global_position.x - 1.0, tag + " in the gun column")
+		# the hit burst on every gun and on melee
+		for idx: int in [200, 201, 202]:
+			var t: DDCardView = _tile(m, idx)
+			check(t != null and t.hit_burst != null and int(t.hit_burst.get("value")) > 0, "%s: tile %d shows the hit burst" % [tag, idx])
+		# kill sockets: one per kill the gun holds; filled ones carry the zombie's number; the next says what it takes
+		var run: DDRun = game_run()
+		for s: int in 2:
+			var gv: DDGunView = _tile(m, 200 + s)
+			eq(gv.stack_area.get_child_count(), run.slot(s).cap, "%s gun %d: one socket per kill it holds" % [tag, s + 1])
+			eq(gv.stack_cards.size(), run.slot(s).stack.size(), "%s gun %d: filled sockets" % [tag, s + 1])
+			var nx: Control = gv.find_child("NextSocket", true, false)
+			check(nx != null and str(nx.get("next_text")) == DDPayloads.accept_tag(run.can_take(run.slot(s))), "%s gun %d: the next socket says %s" % [tag, s + 1, str(nx.get("next_text")) if nx != null else "-"])
+			for mc: DDCardView in gv.stack_cards:
+				check(mc.size.x >= 26.0 and mc.size.y >= 44.0 and _inside(m, mc), "%s gun %d: socket %s big and on screen" % [tag, s + 1, str(mc.size)])
+		eq(str((_tile(m, 200) as DDGunView).find_child("NextSocket", true, false).get("next_text")), "<7", tag + " Rifle on a 6 (Rosa: lower or equal) takes <7")
+		# the strength mark on every zombie
+		for k2: int in run.street.size():
+			if run.street[k2].kind == DDCard.ZOMBIE:
+				var zt: DDCardView = _tile(m, k2)
+				check(zt.strength_mark != null and int(zt.strength_mark.get("value")) == run.street[k2].value, "%s: zombie %d shows its strength mark" % [tag, k2])
+		check(m.find_child("HelpButton", true, false) != null, tag + " the ? in the HUD")
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+func game_run() -> DDRun:
+	return tree.root.get_node("Game").get("run")
+
+
+func _area(c: Control) -> float:
+	return c.size.x * c.size.y if c != null else 0.0
+
+
+# ---------------------------------------------------------------- the padlock plate
+func test_room_plate_four_states() -> void:
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	_street(m, {"screen": "street", "seed": "5", "points": "10", "open": "1"})
+	await _settle()
+	var run: DDRun = game_run()
+	# locked: dark plate, padlock, price, progress bar; the door under it takes the taps
+	var lk: Button = m.find_child("Open1", true, false)
+	check(lk != null and lk.disabled and lk.mouse_filter == Control.MOUSE_FILTER_IGNORE, "locked: the plate is off, the door reads it")
+	check(lk.find_child("Padlock", true, false) != null and not bool(lk.find_child("Padlock", true, false).get("open")), "locked: a closed padlock")
+	var pg: ProgressBar = lk.find_child("Progress", true, false)
+	check(pg != null and pg.value == bal().shown(run.points) and pg.max_value == bal().shown(run.room_cost(1)), "locked: the bar shows how close you are")
+	# affordable: gold, open padlock, OPEN; tap opens the room
+	run.points = run.room_cost(1)
+	m.call("_render")
+	await _settle()
+	var rd: Button = m.find_child("Open1", true, false)
+	check(not rd.disabled and rd.text.contains("OPEN") and bool(rd.find_child("Padlock", true, false).get("open")), "affordable: the gold plate with an open padlock")
+	check(rd.has_meta(&"ready"), "affordable: marked for the slow glow")
+	# the room that just became affordable rang twice
+	await tree.create_timer(0.2).timeout
+	check((m.get("feedback").get("last_played") as Array).has("room_ready") or Game_reduce(), "affordable: the two-ring pulse")
+	rd.pressed.emit()
+	await _settle()
+	check(run.room_open[1], "tap the gold plate: the room opens")
+	# open: USE; used: grey "used"
+	var use: Button = m.find_child("Use1", true, false)
+	check(use != null and not use.disabled and use.text == "USE", "open: USE")
+	run.machine_used[1] = true
+	m.call("_render")
+	await _settle()
+	var used: Button = m.find_child("Use1", true, false)
+	check(used != null and used.disabled and used.text == "used", "used: back next wave")
+	check(str(_tile(m, 101).payload.get("t2", "")).contains("next wave"), "used: the tooltip says when it is back")
+	m.queue_free()
+	await tree.process_frame
+	_cleanup()
+
+
+func Game_reduce() -> bool:
+	return bool(tree.root.get_node("Game").call("reduce_motion"))
+
+
+# ---------------------------------------------------------------- 2-line tooltips
+func test_tooltips_are_two_short_lines() -> void:
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	_street(m, {"screen": "street", "seed": "6", "stack1": "4,2", "open": "1", "points": "20", "patches": "lookout,brawler"})
+	var run: DDRun = game_run()
+	run.cover = 2
+	m.call("_render")
+	await _settle()
+	var payloads: Array = [DDPayloads.waves(run), DDPayloads.boss(run), DDPayloads.pile(run), DDPayloads.room(run, 0), DDPayloads.room(run, 1),
+		DDPayloads.gun(run, 0), DDPayloads.gun(run, 1), DDPayloads.melee(run), DDPayloads.stack_card(run, 0, 1), DDPayloads.hp(run),
+		DDPayloads.points(run), DDPayloads.cover(run), DDPayloads.patches(run), DDPayloads.patch("loose_grip", bal()),
+		DDPayloads.survivor("rosa", bal(), null), DDPayloads.gun_def("shotgun", bal())]
+	for k: int in run.street.size():
+		payloads.append(DDPayloads.card(run.street[k], run, k))
+	for p: Variant in payloads:
+		var d: Dictionary = p
+		var t1: String = str(d.get("t1", ""))
+		var t2: String = str(d.get("t2", ""))
+		check(t1 != "" and t2 != "", "tooltip has 2 lines: %s / %s" % [t1, t2])
+		check(not t1.contains("\n") and not t2.contains("\n"), "each is one line: " + t1)
+		check(t1.length() <= 70 and t2.length() <= 80, "short: '%s' (%d) / '%s' (%d)" % [t1, t1.length(), t2, t2.length()])
+	# the overlay shows those two lines only (no rules paragraph)
+	var insp: DDInspect = m.get("_inspect")
+	insp.open(DDPayloads.gun(run, 0))
+	await _settle()
+	var labels: Array = insp.find_children("*", "Label", true, false)
+	eq(labels.size(), 2, "the tooltip is two labels")
+	eq(insp.last_lines[0], str(DDPayloads.gun(run, 0)["t1"]), "line 1 is t1")
+	insp.close()
+	# the full rules live in the Glossary: every gun rule has a line there
+	var rules_text: String = JSON.stringify(m.get("codex").call("sections", bal()))
+	for wid: Variant in bal().weapons().keys():
+		if bal().is_gun(str(wid)):
+			check(rules_text.contains("(%s)" % bal().weapon_name(str(wid))), "the Glossary explains the %s's rule" % bal().weapon_name(str(wid)))
+	m.queue_free()
+	await tree.process_frame
+	_cleanup()
+
+
+# ---------------------------------------------------------------- inspect on the small buttons
+func test_buttons_inspect_by_right_click_and_long_press() -> void:
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(1440, 900)]:
+		tree.root.size = sz
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5", "patches": "lookout"})
+		await _settle()
+		var insp: DDInspect = m.get("_inspect")
+		for nm: String in ["Run", "HelpButton", "BuryButton"]:
+			var b: Button = m.find_child(nm, true, false)
+			check(b != null, "%s on screen" % nm)
+			if b == null:
+				continue
+			_right_click(b)
+			await tree.process_frame
+			check(insp.is_open(), "%s: right click opens its tooltip" % nm)
+			insp.close()
+			await tree.process_frame
+			var run: DDRun = game_run()
+			var hp0: int = run.hp
+			await _long_press(b)
+			await tree.process_frame
+			check(insp.is_open(), "%s: long press opens its tooltip" % nm)
+			insp.close()
+			eq(run.hp, hp0, "%s: a long press doesn't press it" % nm)
+			check(not (m.get("codex") as Control).call("is_open"), "%s: a long press doesn't open the Glossary" % nm)
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+# ---------------------------------------------------------------- Glossary and Codex
+func test_glossary_from_the_help_button() -> void:
+	for sz: Vector2i in SIZES:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5"})
+		await _settle()
+		(m.find_child("HelpButton", true, false) as Button).pressed.emit()
+		await _settle()
+		var cx: Control = m.get("codex")
+		check(cx.call("is_open") and str(cx.get("mode")) == "glossary", tag + " ? opens the Glossary")
+		var rows: Array = []
+		for c: Node in cx.find_children("Gl_*", "", true, false):
+			rows.append(c)
+		check(rows.size() >= 30, "%s: the Glossary lists every icon (%d rows)" % [tag, rows.size()])
+		for r: Variant in rows:
+			var p: Dictionary = (r as DDCardView).payload
+			check(str(p.get("t1", "")) != "" and str(p.get("t2", "")) != "", tag + " glossary row has its line: " + str(p.get("t1", "")))
+		var insp: DDInspect = m.get("_inspect")
+		_right_click(rows[0])
+		await tree.process_frame
+		check(insp.is_open(), tag + " a glossary row opens its tooltip (right click)")
+		insp.close()
+		await _long_press(rows[1])
+		check(insp.is_open(), tag + " a glossary row opens its tooltip (long press)")
+		insp.close()
+		var close: Button = cx.find_child("CloseOverlay", true, false)
+		check(close != null and close.size.y >= 63.5 and _inside(m, close), tag + " Close is a 44 CSS px target on screen")
+		close.pressed.emit()
+		await _settle()
+		check(not cx.call("is_open"), tag + " Close closes it")
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+func test_codex_filters_and_met_tracking() -> void:
+	for sz: Vector2i in SIZES:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		# from the title
+		var cb: Button = m.find_child("CodexButton", true, false)
+		check(cb != null and cb.size.y >= 63.5, tag + " a Codex button on the title")
+		cb.pressed.emit()
+		await _settle()
+		var cx: Control = m.get("codex")
+		check(cx.call("is_open") and str(cx.get("mode")) == "codex", tag + " the title opens the Codex")
+		var all: Array = cx.get("shown")
+		var total: int = (cx.call("entries", bal()) as Array).size()
+		eq(all.size(), total, tag + " every entry listed")
+		var types: Dictionary = {}
+		for e: Variant in all:
+			types[str((e as Dictionary)["type"])] = true
+		for t: String in ["guns", "melee", "zombies", "bosses", "items", "patches"]:
+			check(types.has(t), tag + " the Codex has " + t)
+		# nothing met yet: dark silhouettes named ???
+		for e2: Variant in all:
+			var v: DDCardView = (e2 as Dictionary)["view"]
+			check(not bool((e2 as Dictionary)["met"]) and str(v.payload.get("t1", "")).begins_with("???"), tag + " unmet entries are ???")
+			if v.art_rect != null:
+				check(v.art_rect.self_modulate.v < 0.1, tag + " unmet art is a silhouette")
+		# filters: type, district, met only
+		cx.call("set_filters", "guns", "any", false)
+		await _settle()
+		for e3: Variant in cx.get("shown"):
+			eq(str((e3 as Dictionary)["type"]), "guns", tag + " Guns filter")
+		cx.call("set_filters", "bosses", "downtown", false)
+		await _settle()
+		eq((cx.get("shown") as Array).size(), 1, tag + " Bosses + Downtown: the Rush Hour Horde only")
+		# chips are 44 CSS px targets and work by tap
+		var chip: Button = cx.find_child("Type_zombies", true, false)
+		check(chip != null and chip.size.y >= 63.5 and _inside(m, chip), tag + " filter chips are 44 CSS px targets on screen")
+		chip.pressed.emit()
+		await _settle()
+		await _settle()
+		for e4: Variant in cx.get("shown"):
+			eq(str((e4 as Dictionary)["type"]), "zombies", tag + " tapping the Zombies chip filters")
+		cx.call("close")
+		# meet things on the street: they are saved in the profile
+		_street(m, {"screen": "street", "seed": "5", "gun2": "crossbow"})
+		await _settle()
+		var prof: DDProfile = tree.root.get_node("Game").get("profile")
+		check(prof.codex_met("gun:crossbow") and prof.codex_met("melee:crowbar"), tag + " equipped guns and melee are met")
+		var again: DDProfile = DDProfile.new(bal(), prof.path)
+		again.load_profile()
+		check(again.codex_met("gun:crossbow"), tag + " met entries are saved in the profile")
+		# from the Menu; met-only shows exactly the met entries, unmasked
+		m.call("open_settings")
+		await _settle()
+		(m.find_child("MenuCodex", true, false) as Button).pressed.emit()
+		await _settle()
+		check(cx.call("is_open") and not (m.get("settings_panel") as Control).call("is_open"), tag + " the Menu opens the Codex")
+		cx.call("set_filters", "all", "any", true)
+		await _settle()
+		var met_shown: Array = cx.get("shown")
+		check(not met_shown.is_empty(), tag + " met only: something is met")
+		for e5: Variant in met_shown:
+			var v5: DDCardView = (e5 as Dictionary)["view"]
+			check(bool((e5 as Dictionary)["met"]) and not str(v5.payload.get("t1", "")).begins_with("???"), tag + " met only: met entries, named")
+			check(_inside(m, v5) or v5.global_position.y > 0, tag + " tile within the width")
+		cx.call("set_filters", "all", "any", false)
+		cx.call("close")
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+# ---------------------------------------------------------------- the WAVE banner
+func test_wave_banner_lasts_and_tap_skips() -> void:
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390)]:
+		tree.root.size = sz
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5", "lastcards": "1"})
+		await _settle()
+		for k: int in 3:
+			m.call("tap_street", 0)
+			await _settle()
+		await tree.create_timer(0.1).timeout
+		check(bool(m.call("banner_open")) and str(m.get("last_banner")) == "WAVE 2", "a new wave shows the WAVE 2 banner (%s)" % str(m.get("last_banner")))
+		var num: Control = (_tile(m, 300) as DDCardView).get_meta(&"numeral")
+		# a tap anywhere skips it
+		var layer: Control = m.find_child("BannerLayer", true, false)
+		check(layer != null and layer.size.x >= m.get_viewport_rect().size.x - 1.0, "the banner catches a tap anywhere")
+		var e: InputEventMouseButton = InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = true
+		layer.gui_input.emit(e)
+		await _settle()
+		check(not bool(m.call("banner_open")), "a tap skips the banner")
+		check(num != null and str(num.get("text")) == "2" and is_equal_approx(num.scale.x, 1.0), "the wave door shows 2 after the skip")
+		# untouched, it lasts 1.8 s
+		m.call("_wave_banner", 3, "test")
+		await tree.create_timer(1.5).timeout
+		check(bool(m.call("banner_open")), "still up at 1.5 s")
+		await tree.create_timer(1.0).timeout
+		check(not bool(m.call("banner_open")), "gone by 2.5 s (1.8 s on screen after a 0.4 s lead-in)")
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+func test_wave_banner_reduce_motion() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	(game.get("profile") as DDProfile).set_setting("reduce_motion", true)
+	_street(m, {"screen": "street", "seed": "5"})
+	await _settle()
+	m.call("_wave_banner", 2, "test")
+	await tree.create_timer(0.2).timeout
+	var ban: Control = m.find_child("Banner", true, false)
+	check(ban != null and is_equal_approx(ban.position.x, 0.0), "reduce motion: the banner fades in place (no sweep)")
+	var num: Control = (_tile(m, 300) as DDCardView).get_meta(&"numeral")
+	check(is_equal_approx(num.scale.x, 1.0), "reduce motion: no slam")
+	m.call("dismiss_banner")
+	(game.get("profile") as DDProfile).set_setting("reduce_motion", false)
+	m.queue_free()
+	await tree.process_frame
+	_cleanup()
+
+
+# ---------------------------------------------------------------- the strength mark
+func test_strength_mark_tiers() -> void:
+	for v: int in range(1, 13):
+		var t: int = Marks.tier_of(v)
+		eq(t, 0 if v <= 3 else (1 if v <= 6 else (2 if v <= 9 else 3)), "tier of %d" % v)
+	eq(str(Marks.STRENGTH_VARIANT), "fang", "the fang mark is the one in use")
+	var m: Control = Marks.StrengthMark.new(8)
+	eq(str(m.get("variant")), "fang", "new marks use the chosen variant")
+	m.free()
+	eq(DDPayloads.accept_tag([1, 2, 3, 4, 5] as Array[int]), "<6", "accept: lower than 6")
+	eq(DDPayloads.accept_tag([5, 6, 7, 8, 9, 10, 11, 12] as Array[int]), ">4", "accept: higher than 4")
+	eq(DDPayloads.accept_tag([5] as Array[int]), "=5", "accept: exactly 5")
+	eq(DDPayloads.accept_tag([1, 3, 5, 7, 9, 11] as Array[int]), "odd", "accept: odd")
+	var every: Array[int] = []
+	for z: int in range(1, 13):
+		every.append(z)
+	eq(DDPayloads.accept_tag(every), "any", "accept: any")

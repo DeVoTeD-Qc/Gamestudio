@@ -633,6 +633,8 @@ static func ability_kinds(e: Dictionary) -> Array:
 			icons.append(key)
 		elif id == &"pierce":
 			icons.append(&"pierce")  # kc-fight-ui: drawn glyph (no sheet icon)
+		elif id == &"agile":
+			icons.append(&"agile")  # kc-layout-a: IconText's double arrow
 	if bool(e.get("front_kw", false)):
 		icons.push_front(&"protector")
 	var bolt: bool = bool(e.get("bolt", false)) or icons.size() > 2

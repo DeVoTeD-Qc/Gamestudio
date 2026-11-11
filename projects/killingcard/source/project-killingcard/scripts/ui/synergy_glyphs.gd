@@ -163,22 +163,18 @@ static func draw_keyword_icon(ci: CanvasItem, r: Rect2, kw: StringName, c: Color
 ## the enemy column (toward the rival's back row: up on your banners, down on theirs; down_dir false
 ## points it up). Drawn, not from the icon sheet.
 static func draw_pierce_icon(ci: CanvasItem, r: Rect2, c: Color, down_dir: bool = true) -> void:
-	var s: float = minf(r.size.x, r.size.y)
-	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
-	var w: float = maxf(2.0, s * 0.15)
-	var d: float = 1.0 if down_dir else -1.0
-	var y0: float = s * (0.5 - d * 0.46)
-	var y1: float = s * (0.5 + d * 0.18)
-	# Shaft through the chevron, then a wide head.
-	ci.draw_line(o + Vector2(s * 0.5, y0), o + Vector2(s * 0.5, y1), c, w)
-	var tip: Vector2 = o + Vector2(s * 0.5, s * (0.5 + d * 0.48))
-	ci.draw_colored_polygon(PackedVector2Array([tip, o + Vector2(s * 0.24, y1), o + Vector2(s * 0.76, y1)]), c)
-	var cy: float = s * (0.5 - d * 0.12)
-	ci.draw_polyline(PackedVector2Array([o + Vector2(s * 0.1, cy - d * s * 0.22), o + Vector2(s * 0.5, cy + d * s * 0.08),
-			o + Vector2(s * 0.9, cy - d * s * 0.22)]), c, w)
+	# kc-layout-a (the icon table): an arrow through a plate, the IconText Pierce glyph turned to point
+	# along the column (down = toward the rival's back when down_dir).
+	var s0: float = minf(r.size.x, r.size.y)
+	var k: float = s0 / 24.0
+	var o0: Vector2 = r.position + (r.size - Vector2(s0, s0)) * 0.5
+	var f: Callable = func(along: float, across: float) -> Vector2:
+		return o0 + Vector2(across * k, (along if down_dir else 24.0 - along) * k)
+	ci.draw_rect(Rect2(f.call(7.0 if down_dir else 9.6, 3.0), Vector2(18.0 * k, 2.6 * k)), Color(c, 0.55))
+	ci.draw_colored_polygon(PackedVector2Array([f.call(1.5, 10.5), f.call(15.5, 10.5), f.call(15.5, 6.5), f.call(22.5, 12.0),
+			f.call(15.5, 17.5), f.call(15.5, 13.5), f.call(1.5, 13.5)]), c)
 
 
-## Pierce glyph on a dark plate (banner effect slot, glossary).
 static func draw_pierce_plate(ci: CanvasItem, r: Rect2, c: Color, down_dir: bool = true) -> void:
 	ci.draw_rect(r, Color(INK, 0.82))
 	ci.draw_rect(r, Color(1, 1, 1, 0.18), false, 1.0)

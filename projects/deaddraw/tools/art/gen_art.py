@@ -1995,6 +1995,127 @@ BOSS_PHASES = {  # boss slug: [(phase number, zombie value, file id or None = re
 }
 
 
+# ---------------------------------------------------------------- v4 placeholders (core-rules-v4.md
+# section 12, board task dd-v4-impl). Simple shapes in the house style so nothing renders blank;
+# the Sr Game Artist replaces them. Original designs, no shooter-series likenesses.
+def gun_launcher() -> str:
+    """Stovepipe Launcher: a fat olive tube with a flared muzzle, pistol grip, sight and one round."""
+    olive, olive_d = "#6b7a3c", "#4a5628"
+    s = rect(-92, -14, 170, 28, olive, 4, rx=8) + rect(70, -20, 22, 40, olive_d, 4, rx=4)
+    s += rect(-98, -18, 14, 36, olive_d, 4, rx=3) + line([(-80, -6), (60, -6)], 3, "#9aab62")
+    s += path("M-20 14 L-14 44 L2 44 L0 14 Z", POLYMER) + path("M14 14 L18 34 L30 34 L28 14 Z", POLYMER)
+    s += rect(-30, -28, 24, 12, STEEL[1], 3.5, rx=2)
+    s += g(ell(0, 0, 18, 8, COPPER[0], 3.5) + path("M14 -7 L30 0 L14 7 Z", "#b5402f", 3), "translate(108 0)")
+    return weapon_card(g(s, "scale(0.86)"), -10, 132, 102)
+
+
+def gun_sweeper() -> str:
+    """Alley Sweeper: a sawn-off pump with a stubby wide barrel and a drum of small shells."""
+    s = rect(-30, -12, 110, 14, STEEL[1], 4, rx=3) + rect(-30, 2, 90, 10, "#55636a", 4, rx=3)
+    s += rect(4, 0, 34, 16, WOOD[0], 4, rx=4) + line([(8, 8), (34, 8)], 2.5, WOOD[1])
+    s += path("M-30 -12 L-62 -6 L-92 26 L-74 34 L-44 10 L-30 10 Z", WOOD[0])
+    s += circ(-22, 22, 16, "#3a3f47", 4) + "".join(circ(-22 + 9 * math.cos(a), 22 + 9 * math.sin(a), 3.2, BRASS[0], 0)
+                                                   for a in (0, 1.57, 3.14, 4.71))
+    s += line([(-26, -8), (74, -8)], 2.5, "#e1e8e5")
+    return weapon_card(g(s, "scale(0.92)"), -12, 136, 100)
+
+
+def w_pipe_wrench() -> str:
+    """Pipe Wrench: red cast handle, steel hook jaw with teeth and the knurled adjuster ring."""
+    s = limb([(-98, 0), (40, 0)], 16, "#b5402f") + line([(-90, -4), (30, -4)], 3, "#d76250")
+    s += circ(-96, 0, 6, INK, 0)
+    s += rect(34, -12, 30, 24, STEEL[1], 4, rx=3)
+    s += path("M60 -12 L60 -40 L86 -40 L86 -30 L70 -30 L70 -12 Z", STEEL[0])
+    s += path("M60 12 L60 26 L90 26 L90 16 L70 16 L70 12 Z", STEEL[0])
+    s += "".join(line([(x, -30), (x + 3, -26)], 2.2, INK) for x in (72, 78, 84))
+    s += rect(40, -18, 14, 36, "#8c9aa0", 3.5, rx=3) + "".join(line([(x, -16), (x, 16)], 1.8, INK) for x in (44, 48, 52))
+    return weapon_card(s, -30, 124, 100)
+
+
+def w_bare_hands() -> str:
+    """Bare Hands: two taped fists (the melee slot when no weapon is held)."""
+    sk, sd, tape = "#d8a882", "#b07e5a", "#e6e0cc"
+
+    def fist(x, y, flip=1) -> str:
+        s = rect(x - 30, y - 22, 60, 44, sk, 4, rx=14)
+        s += "".join(line([(x + k, y - 20), (x + k, y - 4)], 3, sd) for k in (-14, 0, 14))
+        s += rect(x - 30, y - 4, 60, 16, tape, 3.5, rx=4) + line([(x - 26, y + 4), (x + 26, y + 4)], 2, "#bdb5a0")
+        s += path("M%s %s Q%s %s %s %s" % (f(x - 30 * flip), f(y + 6), f(x - 44 * flip), f(y + 10), f(x - 40 * flip), f(y + 26)), "none", 4)
+        return s
+    return card_art("weapon", fist(92, 96, 1) + fist(156, 104, -1), ground=False)
+
+
+def pa_lockpick() -> str:
+    s = rect(46, 60, 36, 32, BRASS[0], 4, rx=6) + path("M52 60 L52 46 Q64 30 76 46 L76 60", "none", 6)
+    s += circ(64, 74, 5, INK, 0) + rect(62, 74, 4, 10, INK, 0)
+    s += line([(84, 98), (104, 78), (108, 82)], 4, THREAD)
+    return patch("#2e3a4a", "#d6a84a", s)
+
+
+def pa_iron_stomach() -> str:
+    s = path("M44 44 Q40 92 64 96 Q88 92 84 44 Z", "#8c9aa0") + line([(50, 56), (78, 56)], 3, INK)
+    s += rect(56, 36, 16, 10, "#55636a", 3.5, rx=2) + plus(64, 74, 9, "#3fae5e", THREAD)
+    return patch("#2e3a32", "#9fadb2", s)
+
+
+def pa_adrenaline() -> str:
+    s = poly([(70, 26), (44, 70), (62, 70), (54, 102), (86, 54), (66, 54)], "#f2d65c", 4)
+    s += path("M28 82 Q36 76 40 84", "none", 3.5, stroke=THREAD) + path("M90 84 Q96 76 102 82", "none", 3.5, stroke=THREAD)
+    return patch("#4a2a20", "#f2a03a", s)
+
+
+def pa_grudge() -> str:
+    s = circ(64, 64, 22, "#e2574c", 4) + circ(64, 64, 12, THREAD, 3.5) + circ(64, 64, 4, "#e2574c", 0)
+    s += line([(64, 30), (64, 42)], 4, THREAD) + line([(64, 86), (64, 98)], 4, THREAD)
+    s += line([(30, 64), (42, 64)], 4, THREAD) + line([(86, 64), (98, 64)], 4, THREAD)
+    return patch("#3a1e22", "#e2574c", s)
+
+
+def pa_show_off() -> str:
+    s = star(64, 62, 24, "#f2d65c", 4) + "".join(line([(64 + 34 * math.cos(a), 62 + 34 * math.sin(a)),
+                                                       (64 + 42 * math.cos(a), 62 + 42 * math.sin(a))], 3.5, THREAD)
+                                                 for a in (0.3, 1.2, 2.0, 2.9, 3.8, 4.7, 5.6))
+    return patch("#3a2448", "#f08cc0", s)
+
+
+def pa_whetstone() -> str:
+    s = rect(34, 70, 60, 20, "#8a826e", 4, rx=4) + line([(40, 76), (88, 76)], 2.5, "#bdb5a0")
+    s += path("M44 66 L92 40 L98 48 L52 70 Z", STEEL[0])
+    s += line([(96, 30), (104, 22)], 3.5, THREAD) + line([(102, 40), (112, 38)], 3.5, THREAD)
+    return patch("#2a3036", "#b8c4c0", s)
+
+
+def rg_heavy() -> str:  # One Shot: a single rocket over one socket
+    s = path("M32 10 Q42 18 40 34 L24 34 Q22 18 32 10 Z", BONE, 3) + rect(24, 34, 16, 6, "#e2574c", 2.5)
+    s += poly([(24, 34), (16, 44), (24, 40)], BONE_D, 2.5) + poly([(40, 34), (48, 44), (40, 40)], BONE_D, 2.5)
+    s += circ(32, 50, 5, "none", 3)
+    return glyph(s)
+
+
+def rg_small() -> str:  # Small Fry: a small die face with a down chevron (6 or less)
+    s = rect(10, 20, 26, 26, BONE, 3, rx=5) + "".join(circ(x, y, 2.6, INK, 0) for x in (17, 29) for y in (26, 33, 40))
+    s += poly([(42, 30), (50, 42), (58, 30), (53, 30), (50, 34), (47, 30)], BONE, 2.5)
+    return glyph(s)
+
+
+GUNS_V4 = {  # file id: (maker, display name, sim id)
+    "weapon_stovepipe_launcher": (gun_launcher, "Stovepipe Launcher", "launcher"),
+    "weapon_alley_sweeper": (gun_sweeper, "Alley Sweeper", "sweeper"),
+}
+MELEE_V4 = {  # melee id: (file id, maker or None to reuse the v1 file, display name)
+    "wrench": ("weapon_pipe_wrench", w_pipe_wrench, "Pipe Wrench"),
+    "axe": ("weapon_fire_axe", None, "Fire Axe"),
+    "sledge": ("weapon_sledgehammer", None, "Sledgehammer"),
+    "bare_hands": ("weapon_bare_hands", w_bare_hands, "Bare Hands"),
+}
+PATCHES_V4 = {
+    "lockpick": (pa_lockpick, "Lockpick"), "iron_stomach": (pa_iron_stomach, "Iron Stomach"),
+    "adrenaline": (pa_adrenaline, "Adrenaline"), "grudge": (pa_grudge, "Grudge"),
+    "show_off": (pa_show_off, "Show-Off"), "whetstone": (pa_whetstone, "Whetstone"),
+}
+RULE_GLYPHS_V4 = {"heavy": (rg_heavy, ["one_shot"]), "small": (rg_small, ["small_fry", "max_6"])}
+
+
 # ---------------------------------------------------------------- catalogue
 CARDS = {
     # id: (file, maker, kind, display name, values)
@@ -2215,6 +2336,32 @@ def main() -> None:
                 write(rel, maker())
             man["boss_phases"]["%s_%d" % (boss, n)] = rel
             man["boss_phases"]["%s_v%d" % (boss, value)] = rel
+    # ------------------------------------------------ v4 group (core-rules-v4.md, dd-v4-impl placeholders).
+    # New keys only; "melee" maps a melee id (and bare_hands) to its card file.
+    man["version"] = 4
+    man["melee"] = {}
+    for fid, (maker, name, wid) in GUNS_V4.items():
+        rel = "cards/%s.svg" % fid
+        write(rel, maker())
+        man["by_name"][name] = rel
+        man["weapons"][wid] = rel
+    for mid, (fid, maker, name) in MELEE_V4.items():
+        rel = "cards/%s.svg" % fid
+        if maker is not None:
+            write(rel, maker())
+        man["melee"][mid] = rel
+        man["by_name"].setdefault(name, rel)
+    for pid, (maker, name) in PATCHES_V4.items():
+        rel = "patches/%s.svg" % pid
+        write(rel, maker())
+        man["patches"][pid] = rel
+        man["by_name"].setdefault(name, rel)
+        man["by_name"]["%s Patch" % name] = rel
+    for rid, (maker, extra) in RULE_GLYPHS_V4.items():
+        rel = "icons/rule_%s.svg" % rid
+        write(rel, maker())
+        for k in [rid] + extra:
+            man["rules"][k] = rel
     (ART / "manifest.json").write_text(json.dumps(man, indent=2) + "\n", encoding="utf-8")
     print("wrote %d svg files + manifest.json to %s" % (len(out), ART))
 

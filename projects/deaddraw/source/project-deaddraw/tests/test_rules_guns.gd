@@ -146,18 +146,60 @@ func test_shotgun_finishes_at_sixteen() -> void:
 	check(bool((ev["collects"][0] as Dictionary)["challenge"]), "Point Blank: exactly 16")
 
 
-func test_early_replace_pays_nothing() -> void:
+func test_early_replace_pays_salvage() -> void:
 	var r: DDRun = plain_run(filler(8), ["W:rifle", "C2", "C2", "C2"])
 	gun(r, 0, "pistol", [3, 4])
 	var p0: int = r.points
 	var pv: Dictionary = r.card_preview(0, DDRun.EQUIP1)
 	eq(str(pv["replaces"]), "Service Pistol", "preview names the replaced gun")
-	eq(int(pv["points"]), 0, "ditch_share 0: nothing")
+	eq(int(pv["kills"]), 2, "preview: 2 kills on it")
+	eq(int(pv["salvage"]), 2, "v4 Salvage: +1 per kill (ditch_share 0)")
+	eq(int(pv["points"]), 2, "preview points = salvage")
 	var ev: Dictionary = r.resolve(0, DDRun.EQUIP1)
 	eq(r.slot(0).wid, "rifle", "rifle in slot 1")
-	eq(r.points, p0, "no points for the half-done pistol")
-	check(not bool((ev["collects"][0] as Dictionary)["finished"]), "collected unfinished")
+	eq(r.points, p0 + 2, "salvage paid, no finish bonus")
+	eq(int(ev["salvage"]), 2, "the event carries the salvage for the +N float")
+	var info: Dictionary = ev["collects"][0]
+	check(not bool(info["finished"]), "collected unfinished")
+	eq(int(info["salvage"]), 2, "collect info: salvage")
+	eq(int(info["bonus"]), 0, "no finish bonus")
+	check(not bool(info["challenge"]), "no challenge")
 	eq(int(r.stats["finished"]), 0, "not a finish")
+	eq(int(r.stats["salvage"]), 2, "salvage stat")
+	check(r.log_lines[r.log_lines.size() - 2].contains("SALVAGE +20"), "log shows SALVAGE +20")
+	eq(DDText.salvage_text(3, bal()), "SALVAGE +30", "salvage text x10")
+
+
+func test_salvage_empty_stack_and_wall_rack() -> void:
+	var r: DDRun = plain_run(filler(8), ["W:rifle", "C2", "C2", "C2"])
+	gun(r, 0, "pistol", [])
+	eq(int(r.card_preview(0, DDRun.EQUIP1)["salvage"]), 0, "empty stack: no salvage")
+	var p0: int = r.points
+	r.resolve(0, DDRun.EQUIP1)
+	eq(r.points, p0, "nothing paid")
+	# Wall Rack swap salvages too (sim spend(): collect(s, i, False))
+	var r2: DDRun = plain_run(filler(8))
+	r2.points = 100
+	r2.room_open[0] = true
+	gun(r2, 0, "rifle", [9, 7, 5])
+	gun(r2, 1, "pistol", [1])
+	var opts: Array[Dictionary] = r2.machine_options(0)
+	eq(int(opts[0]["salvage"]), 3, "Wall Rack option shows salvage")
+	check(str(opts[0]["result"]).contains("salvage +30"), "Wall Rack result text: salvage +30")
+	var ev: Dictionary = r2.use_machine(0, "slot1")
+	check(bool(ev["ok"]), "bought")
+	eq(r2.points, 100 - bal().weapon_price("crossbow") + 3, "price paid, salvage +3")
+	eq(int((ev["collects"][0] as Dictionary)["salvage"]), 3, "collect info salvage")
+
+
+func test_salvage_off_with_v3_setting() -> void:
+	var b: DDBalance = DDBalance.from_file(DDBalance.DEFAULT_PATH)
+	b.config["swap_salvage"] = "none"
+	var r: DDRun = plain_run(filler(8), ["W:rifle", "C2", "C2", "C2"], b)
+	gun(r, 0, "pistol", [3, 4])
+	var p0: int = r.points
+	r.resolve(0, DDRun.EQUIP1)
+	eq(r.points, p0, "v3: nothing")
 
 
 func test_scrap_pays() -> void:
@@ -173,7 +215,7 @@ func test_melee_no_rule_no_stack_no_points() -> void:
 	var hp0: int = r.hp
 	var ev: Dictionary = r.attack(0)
 	check(bool(ev["ok"]), "melee ok")
-	eq(hp0 - r.hp, 5 - bal().num("melee_power"), "melee power 2")
+	eq(hp0 - r.hp, 5 - bal().num("hands_power"), "v4 bare hands power 1")
 	eq(r.points, 0, "K2: melee pays nothing")
 	eq(r.slot(0).stack, [2] as Array[int], "no stack change")
 	eq(int(r.stats["melee_kills"]), 1, "melee kill counted")
@@ -193,11 +235,11 @@ func test_cover_soaks_first() -> void:
 	r.set_active(DDRun.MELEE)
 	var pr: Dictionary = r.preview(0, DDRun.MELEE)
 	eq(int(pr["absorbed"]), 3, "cover soaks 3")
-	eq(int(pr["hp_loss"]), 4, "4 to HP")
+	eq(int(pr["hp_loss"]), 5, "9 - 1 (bare hands) - 3 Cover = 5 to HP")
 	var hp0: int = r.hp
 	r.attack(0)
 	eq(r.cover, 0, "cover spent")
-	eq(hp0 - r.hp, 4, "HP loss")
+	eq(hp0 - r.hp, 5, "HP loss")
 
 
 func test_steady_hands_rosa() -> void:

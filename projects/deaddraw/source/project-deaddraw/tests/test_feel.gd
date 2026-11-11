@@ -309,10 +309,11 @@ func test_rule_lock_on_the_tile() -> void:
 	blocked["art"] = tex
 	v.setup(blocked)
 	check(v.art_rect != null and v.art_rect.self_modulate.r < 0.5, "art darkened to 45%")
-	check(v.big_label != null and v.big_label.text == "7", "number shown")
+	# dd-ux-v4: a zombie's number is drawn in its strength mark
+	check((v.strength_mark != null and int(v.strength_mark.get("value")) == 7) or (v.big_label != null and v.big_label.text == "7"), "number shown")
 	v.free()
 	r.set_active(DDRun.MELEE)
-	eq(str(DDPayloads.street_card_spec(r.street[hi], hi, r)["badge"]), "-5", "melee: 7 - 2 = 5, never locked")
+	eq(str(DDPayloads.street_card_spec(r.street[hi], hi, r)["badge"]), "-6", "melee (v4 bare hands): 7 - 1 = 6, never locked")
 
 
 func test_gun_card_shows_the_kill_stack() -> void:
@@ -329,9 +330,11 @@ func test_gun_card_shows_the_kill_stack() -> void:
 	eq(gv.stack_cards.size(), 3, "3 stack cards")
 	eq(gv.stack_cards[2].big_label.text, "5", "top kill's number")
 	check(not gv.stack_cards[0].payload.is_empty(), "each stack card is inspectable")
-	check(gv.stack_cards[1].position.y > gv.stack_cards[0].position.y, "portrait: each kill is laid lower, over the one before")
-	check(absf(gv.stack_cards[1].position.y - gv.stack_cards[0].position.y) < 78 * 0.5, "overlapping, but the earlier number (top-left) stays visible")
-	check(gv.stack_cards[2].get_index() > gv.stack_cards[1].get_index(), "later kills drawn on top")
+	# dd-ux-v4: one kill socket per kill the gun holds, side by side, in kill order
+	await tree.process_frame
+	check(gv.stack_cards[1].position.x > gv.stack_cards[0].position.x + gv.stack_cards[0].size.x - 1.0, "each kill has its own socket, left to right")
+	eq(gv.stack_area.get_child_count(), 4, "4 sockets for a 4-kill gun (3 filled, the next one)")
+	check(gv.find_child("NextSocket", true, false) != null, "the next socket shows what it accepts")
 	check(not gv.payload.is_empty() and str(gv.payload["title"]) == "Hunting Rifle", "gun zoom")
 	gv.queue_free()
 	var e: Dictionary = DDPayloads.gun_spec(r, 1)

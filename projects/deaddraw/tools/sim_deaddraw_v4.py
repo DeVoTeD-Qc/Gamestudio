@@ -86,9 +86,10 @@ CONFIG = {
                                   #        "waves": [[...], [...], [...]], "rooms": [[...], ...]}}
     "pool_add": {"maple_row": ["sweeper"], "downtown": ["sweeper", "launcher"],
                  "st_agnes": ["launcher"]},   # 16: extra gun ids per district pool {district_id: [wid, ...]}
-    "run_mode": "before",         # 19: before | zombies_only | anytime
-    "run_return": "shuffle",      # 19: shuffle (v3: back into the pile, shuffled) | bottom (head
-                                  #     2026-11-11: the street goes under the pile, unshuffled)
+    "run_mode": "anytime",        # 19: before | zombies_only | anytime (head's Q5 answer, 2026-11-11:
+                                  #     Run whenever the street has cards, even with no zombie on it)
+    "run_return": "bottom",       # 19: shuffle (v3: back into the pile, shuffled) | bottom (head's Q5
+                                  #     answer: every street card goes under the pile, unshuffled)
     "start_patches": [],          # test hook: Patches owned from the start (not a game rule)
     "lockpick_off": 5,            # 14: Lockpick, rooms cost this much less
     "adrenaline_hp": 6,           #     Adrenaline: +1 power to every weapon at this HP or less

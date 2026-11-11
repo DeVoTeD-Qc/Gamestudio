@@ -2,7 +2,7 @@
 
 Owner: Sr Game Designer | Board task: `dd-v4-design` | Engine: Godot 4.4.1 (GDScript), Web export
 Input: the studio head's full playthrough, `documentation/qa/playtest-head-2026-11-11.md`, points **13-19** (points 1-12 are the UX designer's).
-Status: **proposal, waiting for the head's answers (section 10).** v3 (`core-rules-v3.md` with its section 12 decisions) stays the live rule set until this is approved and built. No game code was changed.
+Status: **approved and built** (the head's answers and the as-built Run rule: section 13, board task `dd-v4-impl`). Was: proposal, waiting for the head's answers (section 10).
 Balance source of truth for v4: `projects/deaddraw/tools/sim_deaddraw_v4.py` (`CONFIG`, defaults = this proposal). `--preset v3` puts every v4 option back to v3 and reproduces `sim_deaddraw_v3.py` exactly (checked: same seeds, same numbers). If this document and the sim disagree, the sim wins.
 
 > **Naming and IP.** Every name below (Patches, guns, melee weapons, the Safehouse Shop) is original to DeadDraw. No shooter-series trademarks or signature names (upgrade machines, soda perks, gums, mystery boxes, wonder weapons). The repo is public.
@@ -389,3 +389,25 @@ Build against `tools/sim_deaddraw_v4.py` CONFIG; every rule below has a sim func
 10. **Salvage** token (bolt and coin) for the equip sheet and the "+30" float.
 11. Six embroidered Patch badges: Lockpick, Iron Stomach, Adrenaline, Grudge, Show-Off, Whetstone; and an updated Brawler badge (bare fist).
 12. Safehouse Shop: a supplies icon (tin of bandages) and a "left behind" coin icon for the Leave button.
+
+---
+
+## 13. As built (dd-v4-impl, 2026-11-11)
+
+The head answered section 10: Q1 (a) Safehouse Shop, Q2 (a) Salvage, Q3 (a) the launcher (one shot, capacity 1: its single kill socket is the one-shot cue, no extra icon), Q4 (a) melee weapon kills score nothing. Every other recommendation applies (6 Patches, Brawler v4, Alley Sweeper, Bare Hands 1, the three melee weapons with uses, no medkit limit, Imani 18 HP, save format v4).
+
+**Q5, Run (changed):** "I want to be able to run even if there is no zombie, to put items back at the bottom." Built as two sim keys, both now the CONFIG default:
+- `run_mode: "anytime"`: Run whenever the street has cards, before or after resolving some, zombie or not.
+- `run_return: "bottom"` (new key): every card still on the street goes **under** the pile, in street order, unshuffled (v3: shuffled in). Cost (1 HP, Theo free), "not twice in a row" (the street after a Run must be played to its end) and "never on a boss street" are unchanged. `--preset v3` sets both back.
+
+Run variants, 1000 runs per survivor, run win R / I / T, three seeds:
+
+| Run rule | seed 7 | seed 11 | seed 23 | average | St. Agnes clear (reached) |
+|---|---|---|---|---|---|
+| before + shuffle (section 9 v4) | 34.4 / 42.6 / 40.0 | 35.8 / 42.8 / 43.0 | 34.8 / 40.5 / 40.6 | 35.0 / 42.0 / 41.2 | 66-73% |
+| before + bottom | 34.7 / 38.5 / 44.0 | 34.3 / 41.3 / 39.6 | 35.3 / 41.0 / 43.0 | 34.8 / 40.3 / 42.2 | 65-68% |
+| **anytime + bottom (built)** | 31.9 / 36.1 / 43.6 | 30.6 / 35.3 / 34.9 | 29.7 / 35.9 / 39.8 | **30.7 / 35.8 / 39.4** | 55-64% |
+
+Reading: the built rule stays inside the 30-42% band on average, but Rosa sits on its lower edge and the Rosa-Theo gap is ~8.7 points (Theo's free Run: 5.1 Runs a run vs 3.0). The strong AI uses "anytime" to take the good cards and send the zombies back (0.01 non-zombie cards back per Run), so it runs twice as often and reaches St. Agnes weaker. If playtests agree, the one-line fallback is `run_mode: "before"` (keeps "to the bottom", every street card goes back): 34.8 / 40.3 / 42.2%.
+
+**Parity:** `tools/v4_parity_cases.py` runs the sim's own rule functions on 1380 seeded cases (rules, challenges, gun kills with Patches, melee, pick-ups, salvage, medkits, rooms, shop supplies) into `tests/data/v4_parity.json`; `tests/test_v4_parity.gd` replays them through `DDRun` (all match). `test_balance` checks `data/balance.json` against the sim CONFIG key by key.

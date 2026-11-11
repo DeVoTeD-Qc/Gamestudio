@@ -2,9 +2,9 @@
 # Purpose: dd-ux-v4: small vector marks drawn with Control._draw (no image assets), shared by the
 #   street, the gun tiles, the Glossary and the Codex:
 #   - StrengthMark: the zombie strength mark (M2). Tier colour + the number, in a shape that reads
-#     as threat / attack AND toughness, not a shield. Variant "claw" (the pick: a disc raked by
-#     1-4 claw slashes, one per tier) and the alternatives "fang" (a jaw with 2-5 fangs) and
-#     "spike" (a jagged splat, 7-13 spikes). The tier (Shambler 1-3, Lurcher 4-6, Bruiser 7-9,
+#     as threat / attack AND toughness, not a shield. Variant "fang" (the pick: a monster's jaw,
+#     3-6 fangs, one more per tier) and the alternatives "claw" (a disc raked by 1-4 claw
+#     slashes) and "spike" (a jagged splat, 7-13 spikes; too close to the yellow hit burst). The tier (Shambler 1-3, Lurcher 4-6, Bruiser 7-9,
 #     Hulk 10+) is the colour AND a count, so it reads for colour-blind players too.
 #   - HitBurst: the weapon's hit number in a yellow 8-point burst (every gun, melee, Codex entry).
 #   - Padlock: closed / open padlock icon for the room price plate.
@@ -22,7 +22,7 @@ const BLOOD: Color = Color("c8322a")
 const TIER_COLORS: Array[Color] = [Color("bdb5a0"), Color("d99a3c"), Color("e8793a"), Color("e2574c")]
 const TIER_NAMES: Array[String] = ["Shambler", "Lurcher", "Bruiser", "Hulk"]
 ## The strength mark the game uses (see ux-v4-pass.md for the alternatives).
-const STRENGTH_VARIANT: String = "claw"
+const STRENGTH_VARIANT: String = "fang"
 
 
 static func tier_of(n: int) -> int:
@@ -132,7 +132,7 @@ class StrengthMark:
 			pts.append(a2.lerp(b2, u2) + nrm * (bow2 - sin(u2 * PI) * w))
 		return pts
 
-	## A jaw: flat top, 2-5 fangs along the bottom (one more per tier).
+	## A jaw: a rounded top, 3-6 fangs along the bottom (one more per tier).
 	func _fang(c: Vector2, s: float, col: Color, t: int) -> void:
 		var w: float = s * 0.86
 		var x0: float = c.x - w * 0.5
@@ -140,7 +140,7 @@ class StrengthMark:
 		var y0: float = c.y - s * 0.44
 		var ym: float = c.y + s * 0.12
 		var y1: float = c.y + s * 0.48
-		var fangs: int = t + 2
+		var fangs: int = t + 3
 		var pts: PackedVector2Array = []
 		for k0: int in 13:
 			var ang: float = PI + PI * k0 / 12.0
@@ -208,14 +208,16 @@ class Padlock:
 		var h: float = size.y
 		var w: float = minf(size.x, h * 0.9)
 		var x: float = (size.x - w) * 0.5
-		var body: Rect2 = Rect2(x, h * 0.45, w, h * 0.55)
+		var body: Rect2 = Rect2(x, h * 0.48, w, h * 0.52)
 		var sw: float = maxf(2.0, w * 0.16)
 		var sc: Vector2 = Vector2(x + w * 0.5, h * 0.45)
 		var sr: float = w * 0.3
 		if open:
-			# the shackle swung up and to the side
-			draw_arc(sc + Vector2(w * 0.32, -h * 0.12), sr, PI, TAU, 16, color, sw, true)
-			draw_line(sc + Vector2(w * 0.32 + sr, -h * 0.12), sc + Vector2(w * 0.32 + sr, h * 0.0), color, sw)
+			# the shackle lifted out of the body, its right leg free
+			var up: float = h * 0.16
+			draw_arc(sc - Vector2(0, up), sr, PI, TAU, 16, color, sw, true)
+			draw_line(sc + Vector2(-sr, -up), sc + Vector2(-sr, h * 0.05), color, sw)
+			draw_line(sc + Vector2(sr, -up), sc + Vector2(sr, -up + h * 0.08), color, sw)
 		else:
 			draw_arc(sc, sr, PI, TAU, 16, color, sw, true)
 			draw_line(sc + Vector2(-sr, 0), sc + Vector2(-sr, h * 0.05), color, sw)
@@ -264,4 +266,4 @@ class WaveNumeral:
 		if fs < 8:
 			return
 		font_px = fs
-		draw_num(self, text, size * 0.5 + Vector2(0, 2), fs, BLOOD, Color(0, 0, 0, 0.95), maxi(4, fs / 10))
+		draw_num(self, text, size * 0.5 + Vector2(0, 2), fs, Color("e8463b"), Color(0, 0, 0, 0.95), maxi(4, fs / 9))

@@ -46,10 +46,9 @@ static func has_icon(icon_name: StringName) -> bool:
 ## or null for an unknown name.
 static func get_icon(icon_name: StringName) -> AtlasTexture:
 	if icon_name == &"kw_pick":
-		# kc-cards-impl: Pick is no longer a crosshair (the FP reticle is one): a shield with a down
-		# arrow ("shoots the lowest Armor"). A UI kit piece kw_pick_v2 wins; else the built-in glyph.
-		var v2: AtlasTexture = UiKit.kit_atlas(PICK_KIT_ID)
-		return v2 if v2 != null else pick_glyph()
+		# kc-layout-a (icon table): Pick is lock-on brackets: never the FP reticle, never Armor's
+		# shield (the kc-cards-impl shield + arrow and the kit's kw_pick_v2 borrowed Armor's shape).
+		return pick_glyph()
 	var kit: AtlasTexture = UiKit.kit_atlas(icon_name)
 	if kit != null:
 		return kit
@@ -58,8 +57,9 @@ static func get_icon(icon_name: StringName) -> AtlasTexture:
 
 ## The UI kit id of the new Pick icon (assets/ui/kit/icons/ico_kw_pick_v2.png when the artist ships it).
 const PICK_KIT_ID: StringName = &"kw_pick_v2"
-## The built-in Pick glyph's SVG (64 px, white; tint it): the same shape as CardLook.draw_pick_icon.
-const PICK_SVG: String = """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 6.4L54.4 14V32L46 48L32 58.9L18 48L9.6 32V14Z"/><path d="M32 20.5V43.5"/><path d="M23 35.2L32 44L41 35.2"/></svg>"""
+## The built-in Pick glyph's SVG (64 px, white; tint it): lock-on brackets around a dot, the same
+## shape as CardLook.draw_pick_icon (kc-layout-a).
+const PICK_SVG: String = """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><g fill="#FFFFFF"><path d="M2 2h7v2.8H4.8V9H2zM22 2h-7v2.8h4.2V9H22zM2 22h7v-2.8H4.8V15H2zM22 22h-7v-2.8h4.2V15H22z"/><circle cx="12" cy="12" r="3.4"/></g></svg>"""
 static var _pick: AtlasTexture = null
 
 

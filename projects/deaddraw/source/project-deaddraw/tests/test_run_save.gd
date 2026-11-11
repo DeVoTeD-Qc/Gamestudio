@@ -1,4 +1,6 @@
-# dd-save: the mid-run save (save version 4 = v3 "Kill Stacks", its own file). Round trips
+# dd-save: the mid-run save (save version 5 = v4 rules, run data "v": 4; its own file). v4: the
+# melee slot, the heavy-rule "fired" flags and the Safehouse Shop survive a reload; a v3 save is
+# refused (crowbar rules, carried points) like a v2 one. Round trips
 # mid-wave, with kill stacks, rooms / machines / Patches, a pending Patch pick, after a Run, on a
 # boss street (Patient Zero phases) and at the safehouse; a resumed run plays identically (RNG
 # state included); corrupt files are ignored; an old v2 run is discarded safely (with a note on
@@ -27,8 +29,15 @@ func _play(r: DDRun, rng: RandomNumberGenerator, n: int) -> Array:
 	for k: int in n:
 		if r.phase == DDRun.Phase.SAFEHOUSE:
 			var off: Array = r.pending_patch.get("offer", [])
-			r.leave_safehouse(str(off[0]) if not off.is_empty() else "")
-			trace.append("safehouse")
+			if not off.is_empty():
+				trace.append(str(r.take_patch(str(off[0])).get("text", "")))
+			elif r.shop_patch_block_reason() == "":
+				trace.append(str(r.buy_shop_patch(r.shop_patch_offer()[0]).get("text", "")))
+			elif r.supplies_max() > 0:
+				trace.append(str(r.buy_supplies(1).get("text", "")))
+			else:
+				r.leave_safehouse("")
+				trace.append("safehouse")
 			continue
 		if r.phase != DDRun.Phase.STREET:
 			break
@@ -205,7 +214,18 @@ func test_corrupt_old_and_finished_files_are_ignored() -> void:
 	r.phase = DDRun.Phase.DEAD
 	check(not sv.save(r), "a finished run is not saved")
 	check(not sv.exists(), "and clears the file")
-	eq(DDRunSave.VERSION, 4, "save version bumped for v3")
+	eq(DDRunSave.VERSION, 5, "save version bumped for v4")
+	# a v3 run (save version 4, run "v": 3) can't continue under the v4 rules
+	var v3: DDRun = make_run("rosa")
+	var d3: Dictionary = v3.to_dict()
+	d3["v"] = 3
+	f = FileAccess.open(sv.path, FileAccess.WRITE)
+	f.store_string(JSON.stringify({"version": 4, "screen": "STREET", "run": d3}))
+	f.close()
+	check(sv.load_run(bal()).is_empty(), "v3 save: not resumable")
+	check(sv.is_old(), "v3 save recognised as old")
+	check(sv.discard_old(), "v3 save discarded")
+	eq(DDRun.from_dict(d3, bal()), null, "DDRun refuses run data v3")
 	_cleanup()
 
 
@@ -337,3 +357,34 @@ func _button(n: Node, prefix: String) -> Button:
 		if b != null:
 			return b
 	return null
+
+
+func test_roundtrip_v4_melee_fired_and_shop() -> void:
+	var r: DDRun = make_run("rosa")
+	r.setup_street(filler(8), ["K:axe", "Z5", "C2", "C2"])
+	r.resolve(0, DDRun.TAKE)
+	r.set_active(DDRun.MELEE)
+	r.attack(idx(r, "Z5"))
+	r.fired = [true, false]
+	var sv: DDRunSave = _save()
+	sv.save(r, "STREET")
+	var b: DDRun = sv.load_run(bal())["run"]
+	eq(b.melee, {"id": "axe", "power": 4, "uses": 2}, "melee weapon and uses kept")
+	eq(b.fired, [true, false] as Array[bool], "fired flags kept")
+	eq(int(b.to_dict()["v"]), 4, "run data v4")
+	_roundtrip(r, "melee weapon")
+	var s: DDRun = make_run("imani")
+	clear_district(s)
+	s.points = 70
+	s.hp = 5
+	s.take_patch(str(s.pending_patch["offer"][0]))
+	var offer: Array[String] = s.shop_patch_offer()
+	s.buy_supplies(1)
+	var sv2: DDRunSave = _save()
+	sv2.save(s, "SAFEHOUSE")
+	var c: DDRun = sv2.load_run(bal())["run"]
+	eq(c.shop_patch_offer(), offer, "shop offer kept")
+	eq(c.shop_hp_bought, 1, "supplies bought kept")
+	eq(c.points, s.points, "points kept")
+	_roundtrip(s, "safehouse shop")
+	_cleanup()

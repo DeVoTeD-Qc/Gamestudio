@@ -63,8 +63,8 @@ func test_operator_card_deploys_from_the_hand() -> void:
 		assert_true(card.is_visible_in_tree(), "%s it shows in Deploy" % label)
 		assert_eq(m.get_operator_handle(), card, "%s the card is the Operator's handle" % label)
 		assert_eq(hand.get_cards().size(), c.state.sides[0].hand.size(), "%s get_cards() lists hand cards only" % label)
-		# kc-cards-impl (O2): the Operator card sits in the bottom row, left of UNDO / READY.
-		assert_true(card.get_global_rect().end.x <= m.get_ready_button().get_global_rect().position.x + EPS, "%s left of READY" % label)
+		# kc-layout-a (L3): the Operator card is the hand grid's first card, above UNDO / READY.
+		assert_true(card.get_global_rect().end.y <= m.get_ready_button().get_global_rect().position.y + EPS, "%s above READY" % label)
 		assert_true(m.get_tray().get_global_rect().grow(EPS).encloses(card.get_global_rect()), "%s inside the tray" % label)
 		assert_eq(String(hand.operator_entry["status"]), "DEPLOY", "%s Round 1: DEPLOY" % label)
 		assert_true((card.get_node("Glow") as Control).visible, "%s and it glows" % label)
@@ -123,11 +123,12 @@ func test_killstreak_tiles_charge_glow_use_and_rules() -> void:
 		var tiles: Array[Control] = row.get_tiles()
 		assert_eq(tiles.size(), me.setup.killstreaks.size(), "%s one tile per killstreak" % label)
 		var k: float = Layout.points_per_px(screen)
-		var tray: Rect2 = m.get_tray().get_global_rect().grow(EPS)
+		# kc-layout-a (L4): the sockets are in the icon strip, under STREAK.
+		var strip_r: Rect2 = m.get_badge(&"streak").get_parent().get_global_rect().grow(EPS)
 		for t: Control in tiles:
 			assert_true(t.is_visible_in_tree(), "%s %s always visible" % [label, t.name])
 			assert_true(t.size.y * k >= 44.0 - EPS and t.size.x * k >= 44.0 - EPS, "%s %s is 44 pt+ (%s)" % [label, t.name, t.size])
-			assert_true(tray.encloses(t.get_global_rect()), "%s %s inside the tray" % [label, t.name])
+			assert_true(strip_r.encloses(t.get_global_rect()), "%s %s inside the icon strip" % [label, t.name])
 			assert_false(t.get_global_rect().intersects(m.get_hand().get_global_rect().grow(-1.0)) and m.get_hand().get_cards().size() > 0 \
 					and t.get_global_rect().intersects((m.get_hand().get_cards()[0] as Control).get_global_rect()), "%s %s clear of the cards" % [label, t.name])
 		var first: Dictionary = tiles[0].get_meta(&"entry")

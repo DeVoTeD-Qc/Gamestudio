@@ -1,6 +1,7 @@
 # killstreak_row.gd
 # Purpose: kc-ui3 (head: "killstreaks need their icons visible and get highlighted when ready"). The
-#   killstreak icons at the top of the hand tray, always visible: one tile per killstreak of the
+#   killstreak sockets (kc-layout-a, the head's L4: in the icon strip under the STREAK counter,
+#   stacked; in portrait at the right end of the rail row), always visible: one tile per killstreak of the
 #   loadout, its icon (IconSheet ks_*) inside a charge ring that fills with the streak toward its
 #   threshold, and one plain word under it: "1/3" while charging, READY when it can be called in
 #   (amber glow, pulsing), its state (USED, NO OP...) when earned but blocked. The killstreak
@@ -32,6 +33,12 @@ const GAP: float = 4.0
 
 var entries: Array = []
 var streak: int = 0
+## kc-layout-a: stacked top to bottom (the landscape icon strip) instead of side by side.
+var vertical: bool = false:
+	set(v):
+		if v != vertical:
+			vertical = v
+			_layout()
 var selected_id: StringName = &""
 var _tiles: Array[Control] = []
 var _pulse: float = 1.0
@@ -133,6 +140,15 @@ func _rebuild() -> void:
 
 func _layout() -> void:
 	var n: int = maxi(SLOTS, _tiles.size())
+	if vertical:
+		# kc-layout-a (the head's L4): stacked in the icon strip, under the STREAK counter.
+		var vg: float = 2.0
+		var th: float = floorf((size.y - vg * (n - 1)) / n)
+		for i: int in _tiles.size():
+			_tiles[i].position = Vector2(0, roundf(i * (th + vg)))
+			_tiles[i].size = Vector2(size.x, th)
+			_tiles[i].queue_redraw()
+		return
 	var w: float = floorf((size.x - GAP * (n - 1)) / n)
 	# Right-aligned: the first killstreak sits nearest the Supply row's value.
 	var x0: float = size.x - (w * _tiles.size() + GAP * maxi(0, _tiles.size() - 1))
@@ -195,12 +211,13 @@ func _draw_tile(tile: Control) -> void:
 		tile.draw_rect(r.grow(-1.5), Color(AMBER, 0.55 + 0.45 * _pulse), false, 3.0)
 		tile.draw_rect(r.grow(-5.0), Color(AMBER, 0.18 * _pulse), false, 4.0)
 	var font: Font = get_theme_font(&"font", &"HudTag")
-	var fs: int = 16
+	# kc-layout-a: the strip's sockets are short (phone 62x50): a 14 px word and a tighter ring.
+	var fs: int = 16 if tile.size.y >= 60.0 else 14
 	var word: String = word_for(e)
 	var text_h: float = font.get_height(fs)
 	# Charge ring + icon.
-	var ring_d: float = minf(tile.size.x - 10.0, tile.size.y - text_h - 8.0)
-	var c: Vector2 = Vector2(tile.size.x * 0.5, 4.0 + ring_d * 0.5)
+	var ring_d: float = minf(tile.size.x - 10.0, tile.size.y - text_h - (8.0 if fs == 16 else 4.0))
+	var c: Vector2 = Vector2(tile.size.x * 0.5, (4.0 if fs == 16 else 2.0) + ring_d * 0.5)
 	var thr: int = maxi(1, int(e.get("threshold", 1)))
 	var frac: float = 1.0 if bool(e.get("earned", false)) else clampf(float(streak) / thr, 0.0, 1.0)
 	var ring_c: Color = AMBER if ready_now else (TEAL if bool(e.get("earned", false)) else Color(0.55, 0.62, 0.68))

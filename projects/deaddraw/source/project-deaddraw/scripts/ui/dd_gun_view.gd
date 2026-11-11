@@ -1,35 +1,36 @@
 # dd_gun_view.gd
-# Purpose: v3 gun card at the bottom of the street: the gun's stats, rule and challenge on the
-#   LEFT, its KILL STACK on the right like a board game: every killed zombie is a small card laid
-#   over the one before, offset so each number (top-left) stays visible, so the stack visibly
-#   grows (fanned downward in portrait, sideways in landscape). A faint outline marks where the next
-#   kill lands. The ACTIVE gun has a bright frame. Tap = make it active; long press / right click
-#   = the gun's zoom; each stack card has its own zoom. Empty slots say how to fill them.
-#   Feedback reads `stack_cards` (the mini cards in kill order) and `next_rect()`.
-# Dependencies: DDCardView, DDUi, scripts/ui/dd_art.gd.
-# Author: Mechanics Developer Agent
+# Purpose: the gun tile in the street's gun row. dd-ux-v4 (head's points 4, 5, 6): the hit burst
+#   (the gun's hit number, replacing "P4") and the name on top; the rule as icon + short label;
+#   then the KILL SOCKETS, one per kill the gun holds, so capacity reads at a glance: filled sockets
+#   show the zombie's art and number (each is inspectable), the next socket shows what it accepts
+#   ("<6", ">4", "any"), the rest are dashed; then the challenge reward. The ACTIVE gun has a bright
+#   frame and an ACTIVE chip. Tap = make it active; long press / right click = its 2-line tooltip.
+#   Feedback reads `stack_cards` (the filled sockets in kill order) and `next_rect()`.
+# Dependencies: DDCardView, DDUi, scripts/ui/dd_art.gd, scripts/ui/dd_marks.gd.
+# Author: Mechanics Developer Agent (dd-ux-v4 sockets: UI/UX Agent)
 class_name DDGunView
 extends DDCardView
 
 const Art: GDScript = preload("res://scripts/ui/dd_art.gd")
 
-## The mini cards of the stack, in kill order (index 0 = first kill).
+## The filled sockets, in kill order (index 0 = first kill).
 var stack_cards: Array[DDCardView] = []
 var stack_area: Control = null
-var vertical_fan: bool = true
-var _next_outline: Panel = null
+var vertical_fan: bool = false
+var _sockets: Array[Control] = []
+var _next_socket: Control = null
 var _cap: int = 0
-var _mini: Vector2 = Vector2(64, 84)
+var _mini: Vector2 = Vector2(40, 64)
+var _socket_h_max: float = 92.0
 
 
-## spec: DDPayloads.gun_spec() + "fan_vertical" (bool), "stack_w" (px), "mini" (Vector2).
+## spec: DDPayloads.gun_spec() + "socket_h_max" (px).
 func setup_gun(spec: Dictionary) -> DDGunView:
 	kind = "W"
 	payload = spec.get("payload", {})
 	_selected = bool(spec.get("active", false))
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	vertical_fan = bool(spec.get("fan_vertical", true))
-	_mini = spec.get("mini", _mini)
+	_socket_h_max = float(spec.get("socket_h_max", 92.0))
 	_frame = false
 	_row = true
 	if bool(spec.get("empty", false)):
@@ -47,51 +48,82 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		var tr: TextureRect = _add_art(self, tex, "cover")
 		tr.self_modulate = Color(1, 1, 1, 0.9)
 		var scrim: ColorRect = ColorRect.new()
-		scrim.color = Color(DDUi.card_bg("W"), 0.8)
+		scrim.color = Color(DDUi.card_bg("W"), 0.82)
 		add_child(scrim)
-	var h: HBoxContainer = DDUi.hbox(6)
-	add_child(h)
-	var left: VBoxContainer = DDUi.vbox(2)
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_child(left)
-	_box = left
-	# dd-ux-clean: name (+ ACTIVE), power + kills, the rule as icon + short label, the challenge
-	# reward. The full rule, challenge and "can still take" live in the zoom.
-	var nl: Label = _one_line(DDUi.label(str(spec.get("name", "")).to_upper(), DDUi.FONT_S - 3, DDUi.accent("W")))
+	var v2: VBoxContainer = DDUi.vbox(3)
+	add_child(v2)
+	_box = v2
+	# head: hit burst + name (+ ACTIVE)
+	var head: HBoxContainer = DDUi.hbox(6)
+	v2.add_child(head)
+	var burst: Control = Marks.HitBurst.new(int(spec.get("power", 0)))
+	burst.custom_minimum_size = Vector2(38, 38)
+	burst.name = "HitBurst"
+	head.add_child(burst)
+	hit_burst = burst
+	var nv: VBoxContainer = DDUi.vbox(0)
+	nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nv.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_child(nv)
+	var plates: String = (" · HONED" if bool(spec.get("honed", false)) else "") + (" · FLIPPED" if bool(spec.get("flipped", false)) else "")
+	var nl: Label = _one_line(DDUi.label(str(spec.get("name", "")).to_upper() + plates, DDUi.FONT_S - 3, DDUi.accent("W")))
 	nl.resized.connect(func() -> void: fit_label(nl, DDUi.FONT_S - 3, 10))
 	_outline(nl, 4)
-	left.add_child(nl)
-	var head: HBoxContainer = DDUi.hbox(4)
-	left.add_child(head)
-	var plates: String = (" H" if bool(spec.get("honed", false)) else "") + (" F" if bool(spec.get("flipped", false)) else "")
-	var pl: Label = _one_line(DDUi.label("P%d · %d/%d%s" % [int(spec.get("power", 0)), (spec.get("stack", []) as Array).size(), int(spec.get("cap", 0)), plates], DDUi.FONT_S, DDUi.TEXT))
-	pl.resized.connect(func() -> void: fit_label(pl, DDUi.FONT_S, 11))
-	_outline(pl, 4)
-	big_label = pl
-	head.add_child(pl)
+	nv.add_child(nl)
+	var kl: Label = _one_line(DDUi.label("%d of %d kills" % [(spec.get("stack", []) as Array).size(), int(spec.get("cap", 0))], DDUi.FONT_S - 6, DDUi.TEXT_DIM))
+	_outline(kl, 4)
+	big_label = kl
+	nv.add_child(kl)
 	if _selected:
 		var chip: PanelContainer = DDUi.panel(DDUi.SELECT, 3)
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 6, DDUi.BG))
+		chip.add_child(DDUi.label("ACTIVE", DDUi.FONT_S - 7, DDUi.BG))
 		head.add_child(chip)
+	# rule: icon + short label
 	var rr: HBoxContainer = DDUi.hbox(5)
-	left.add_child(rr)
+	v2.add_child(rr)
 	var rtex: Texture2D = Art.texture_for(Art.rule_keys(str(spec.get("rule", ""))))
 	if rtex != null:
 		var ri: TextureRect = TextureRect.new()
 		ri.texture = rtex
 		ri.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ri.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ri.custom_minimum_size = Vector2(26, 26)
+		ri.custom_minimum_size = Vector2(22, 22)
 		rr.add_child(ri)
-	var rl: Label = _one_line(DDUi.label(str(spec.get("rule_text", "")), DDUi.FONT_S - 3, DDUi.WARN))
-	rl.resized.connect(func() -> void: fit_label(rl, DDUi.FONT_S - 3, 10))
+	var rl: Label = _one_line(DDUi.label(str(spec.get("rule_text", "")), DDUi.FONT_S - 5, DDUi.WARN))
+	rl.resized.connect(func() -> void: fit_label(rl, DDUi.FONT_S - 5, 10))
 	_outline(rl, 4)
 	rr.add_child(rl)
 	line_labels.append(rl)
+	# the kill sockets
+	_cap = int(spec.get("cap", 4))
+	var st: Array = spec.get("stack", [])
+	var pls: Array = spec.get("stack_payloads", [])
+	stack_area = Control.new()
+	stack_area.name = "Sockets"
+	stack_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stack_area.custom_minimum_size = Vector2(0, 44)
+	v2.add_child(stack_area)
+	var n_slots: int = maxi(_cap, st.size())
+	for k: int in n_slots:
+		if k < st.size():
+			var mc: DDCardView = _make_mini(int(st[k]), pls[k] if k < pls.size() else {})
+			stack_area.add_child(mc)
+			stack_cards.append(mc)
+			_sockets.append(mc)
+		else:
+			var nxt: bool = k == st.size() and int(spec.get("left", 0)) > 0
+			var sk: Control = Marks.Socket.new(nxt, str(spec.get("accept", "")) if nxt else "")
+			sk.name = "NextSocket" if nxt else "Socket%d" % k
+			stack_area.add_child(sk)
+			_sockets.append(sk)
+			if nxt:
+				_next_socket = sk
+	stack_area.resized.connect(_layout_sockets)
+	# the challenge reward
 	var cr: HBoxContainer = DDUi.hbox(5)
-	left.add_child(cr)
+	v2.add_child(cr)
 	var cs: String = str(spec.get("challenge_state", "open"))
 	var btex: Texture2D = Art.texture_for(Art.badge_keys("challenge" if cs == "met" else "challenge_open"))
 	if btex != null:
@@ -99,44 +131,20 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		bi.texture = btex
 		bi.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		bi.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		bi.custom_minimum_size = Vector2(22, 22)
+		bi.custom_minimum_size = Vector2(18, 18)
 		if cs == "broken":
 			bi.self_modulate = Color(0.5, 0.5, 0.5, 0.6)
 		cr.add_child(bi)
 	var word: String = {"met": "met", "on_track": "on track", "broken": "missed", "open": ""}.get(cs, "")
 	var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.accent("X"), "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT_DIM)
-	var cl: Label = _one_line(DDUi.label("%s%s" % [str(spec.get("reward", "")), (" · " + word) if word != "" else ""], DDUi.FONT_S - 5, col))
-	cl.resized.connect(func() -> void: fit_label(cl, DDUi.FONT_S - 5, 10))
+	var cl: Label = _one_line(DDUi.label("Full +%s · %s%s" % [str(spec.get("finish_shown", "")), str(spec.get("reward", "")), (" · " + word) if word != "" else ""], DDUi.FONT_S - 6, col))
+	cl.resized.connect(func() -> void: fit_label(cl, DDUi.FONT_S - 6, 10))
 	_outline(cl, 4)
 	cr.add_child(cl)
 	line_labels.append(cl)
-	# the kill stack
-	stack_area = Control.new()
-	stack_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack_area.clip_contents = false
-	_cap = int(spec.get("cap", 4))
-	var n_slots: int = maxi(_cap, (spec.get("stack", []) as Array).size() + 1)
-	var step: Vector2 = _step()
-	stack_area.custom_minimum_size = Vector2(_mini.x + step.x * (n_slots - 1), _mini.y + step.y * (n_slots - 1))
-	h.add_child(stack_area)
-	DDUi.ignore_mouse(left)
-	var st: Array = spec.get("stack", [])
-	var pls: Array = spec.get("stack_payloads", [])
-	_next_outline = Panel.new()
-	_next_outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_next_outline.add_theme_stylebox_override("panel", DDUi.box(Color(0, 0, 0, 0.25), Color(DDUi.TEXT_DIM, 0.6), 2, 8, 0))
-	_next_outline.size = _mini
-	_next_outline.visible = int(spec.get("left", 0)) > 0
-	stack_area.add_child(_next_outline)
-	var nl2: Label = DDUi.label("next", DDUi.FONT_S - 6, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
-	nl2.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	nl2.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_next_outline.add_child(nl2)
-	for k: int in st.size():
-		var mc: DDCardView = _make_mini(int(st[k]), pls[k] if k < pls.size() else {})
-		stack_area.add_child(mc)
-		stack_cards.append(mc)
-	_layout_stack()
+	DDUi.ignore_mouse(v2)
+	for mc2: DDCardView in stack_cards:
+		mc2.mouse_filter = Control.MOUSE_FILTER_STOP
 	_apply_style()
 	return self
 
@@ -150,28 +158,40 @@ func _one_line(l: Label) -> Label:
 	return l
 
 
-## Offset between two stack cards: enough to keep the previous card's number visible.
-func _step() -> Vector2:
-	return Vector2(0, _mini.y * 0.32) if vertical_fan else Vector2(_mini.x * 0.4, 0)
+## Sockets share the row: as tall as it allows (up to socket_h_max), 0.62 as wide as tall, never
+## wider than the row / capacity.
+func _layout_sockets() -> void:
+	if stack_area == null or _sockets.is_empty():
+		return
+	var n: int = _sockets.size()
+	var gap: float = 4.0
+	var h: float = minf(stack_area.size.y, _socket_h_max)
+	var w: float = minf(h * 0.62, (stack_area.size.x - gap * (n - 1)) / n)
+	w = maxf(w, 16.0)
+	h = minf(h, w / 0.5)
+	_mini = Vector2(w, h)
+	var x: float = 0.0
+	for c: Control in _sockets:
+		c.custom_minimum_size = Vector2.ZERO
+		c.position = Vector2(x, (stack_area.size.y - h) * 0.5)
+		c.size = _mini
+		x += w + gap
+		if c is DDCardView:
+			var badge: Control = c.get_meta(&"badge", null)
+			if badge != null and (c as DDCardView).big_label != null:
+				(c as DDCardView).big_label.add_theme_font_size_override("font_size", int(clampf(w * 0.42, 12.0, 28.0)))
 
 
-func _layout_stack() -> void:
-	var step: Vector2 = _step()
-	var n_slots: int = maxi(_cap, stack_cards.size() + 1)
-	# each new kill is laid over the one before, offset down (portrait) or right (landscape), so
-	# the strip with every earlier number stays visible; tree order draws later kills on top
-	for k: int in stack_cards.size():
-		stack_cards[k].position = step * k
-		stack_cards[k].size = _mini
-	if _next_outline != null:
-		_next_outline.position = step * stack_cards.size()
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_SORT_CHILDREN or what == NOTIFICATION_RESIZED:
+		_layout_sockets.call_deferred()
 
 
-## Global rect where the next kill would land.
+## Global rect where the next kill would land (the next socket).
 func next_rect() -> Rect2:
-	if _next_outline == null:
+	if _next_socket == null or not is_instance_valid(_next_socket):
 		return get_global_rect()
-	return Rect2(_next_outline.get_global_rect().position, _mini)
+	return Rect2(_next_socket.get_global_rect().position, _mini)
 
 
 func _make_mini(z: int, pl: Dictionary) -> DDCardView:
@@ -179,8 +199,8 @@ func _make_mini(z: int, pl: Dictionary) -> DDCardView:
 	mc.kind = "Z"
 	mc.payload = pl
 	mc.mouse_filter = Control.MOUSE_FILTER_STOP
-	mc.custom_minimum_size = _mini
-	mc.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("Z"), DDUi.accent("Z"), 2, 8, 0))
+	mc.clip_contents = true
+	mc.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg("Z"), Marks.TIER_COLORS[Marks.tier_of(z)], 2, 6, 0))
 	var c: DDCard = DDCard.make(DDCard.ZOMBIE, z)
 	var tex: Texture2D = Art.texture_for(Art.card_keys(c))
 	if tex != null:
@@ -189,16 +209,17 @@ func _make_mini(z: int, pl: Dictionary) -> DDCardView:
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.self_modulate = Color(1, 1, 1, 0.8)
 		mc.add_child(tr)
 	var holder: Control = Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mc.add_child(holder)
-	var badge: PanelContainer = DDUi.panel(Color("151214"), 2, DDUi.accent("Z"), 2)
-	badge.position = Vector2(2, 2)
-	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l: Label = DDUi.label(str(z), maxi(14, int(_mini.x * 0.3)), DDUi.TEXT)
-	badge.add_child(l)
-	holder.add_child(badge)
+	var l: Label = DDUi.label(str(z), 18, DDUi.TEXT)
+	l.add_theme_constant_override("outline_size", 6)
+	l.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.04, 0.95))
+	l.position = Vector2(3, 0)
+	holder.add_child(l)
+	mc.set_meta(&"badge", l)
 	mc.big_label = l
 	mc.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
 	mc.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))

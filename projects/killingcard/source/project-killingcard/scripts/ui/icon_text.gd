@@ -30,7 +30,8 @@ const CONCEPTS: Array = [
 	[&"first_shot", "First Shot", &"kw_first_shot", null],
 	[&"pick", "Pick", &"kw_pick", null],
 	[&"flank", "Flank", &"kw_flank", null],
-	[&"pierce", "Pierce", &"kw_pierce", null],
+	[&"pierce", "Pierce", "svg:pierce", null],
+	[&"agile", "Agile", "svg:agile", null],
 	[&"suppress", "Suppress", &"kw_suppress", null],
 	[&"patch", "Patch", &"kw_patch", null],
 	[&"holder", "Holder", &"kw_holder", null],
@@ -42,11 +43,14 @@ const CONCEPTS: Array = [
 ]
 
 ## Built-in glyphs (64 px, white; tinted at use) for concepts the icon sheet / kit has no art for.
-## hex: the cards' cost hexagon (Supply). req: a requisition slip. front: Front line's chevron.
+## hex: the cards' cost hexagon (Supply). req: a requisition slip. kc-layout-a (the icon table):
+## front: Front line's arrow up to a bar; pierce: an arrow through a plate; agile: a double arrow.
 const SVGS: Dictionary = {
 	"hex": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><path d="M32 3L57 17.5V46.5L32 61L7 46.5V17.5Z" fill="#FFFFFF"/></svg>""",
 	"req": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"><path d="M12 8H44L54 18V56H12Z"/><path d="M44 8V18H54"/><path d="M21 28H45M21 37H45M21 46H34"/><circle cx="44" cy="47" r="5" fill="#FFFFFF" stroke="none"/></svg>""",
-	"front": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"><path d="M12 34L32 14L52 34"/><path d="M12 52H52"/></svg>""",
+	"front": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><g fill="#FFFFFF"><rect x="2" y="1.5" width="20" height="3.5" rx="1"/><path d="M12 7l7 7h-4.6v8.5H9.6V14H5z"/></g></svg>""",
+	"pierce": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><g fill="#FFFFFF"><path d="M1.5 10.5h14V6.5l7 5.5-7 5.5v-4h-14z"/><rect x="7" y="3" width="2.6" height="18" rx="1" opacity=".55"/></g></svg>""",
+	"agile": """<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path d="M1.5 12l6-6v3.8h9V6l6 6-6 6v-3.8h-9V18z" fill="#FFFFFF"/></svg>""",
 }
 
 static var _regex: RegEx = null

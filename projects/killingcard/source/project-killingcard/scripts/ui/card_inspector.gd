@@ -385,6 +385,6 @@ static func _concept_of_keyword(id: StringName) -> StringName:
 	match id:
 		&"arrives_front":
 			return &"front_line"
-		&"cover", &"first_shot", &"pick", &"flank", &"pierce", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down", &"hidden":
+		&"cover", &"first_shot", &"pick", &"flank", &"pierce", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down", &"hidden", &"agile":
 			return id
 	return &""

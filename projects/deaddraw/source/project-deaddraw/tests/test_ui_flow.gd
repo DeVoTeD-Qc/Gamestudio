@@ -134,11 +134,23 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		if st0 == null or pile == null or w1 == null or room0 == null or g1 == null:
 			m.queue_free()
 			continue
-		var cx: Callable = func(v: Control) -> float: return v.get_global_rect().get_center().x
-		check(float(cx.call(w1)) < float(cx.call(pile)) and float(cx.call(pile)) < float(cx.call(room0)), tag + " waves LEFT, pile MIDDLE, rooms RIGHT")
-		check(boss.get_global_rect().position.y > w1.get_global_rect().position.y, tag + " boss under the wave decks")
-		check(pile.get_global_rect().position.y < st0.get_global_rect().position.y, tag + " pile above the street (top middle)")
-		check(g1.get_global_rect().position.y > st0.get_global_rect().end.y - 1, tag + " guns at the BOTTOM")
+		# dd-ux-v4 (direction B, the Door row): the wave door and the room doors in one row
+		# (portrait) or one column (landscape), the pile right under the street, the guns at the
+		# bottom (portrait) or in the right column (landscape)
+		var portrait_now: bool = bool(m.get("portrait"))
+		var wr: Rect2 = w1.get_global_rect()
+		var rr: Rect2 = room0.get_global_rect()
+		if portrait_now:
+			check(absf(wr.position.y - rr.position.y) < 2.0 and wr.position.x < rr.position.x, tag + " wave door then the rooms, one row")
+		else:
+			check(absf(wr.position.x - rr.position.x) < 2.0 and wr.position.y < rr.position.y, tag + " wave door then the rooms, one column")
+		check(absf(wr.size.y - rr.size.y) < 2.0 and absf(wr.size.x - rr.size.x) < 2.0, tag + " the wave door is the size of a room door")
+		check(wr.encloses(boss.get_global_rect()), tag + " the boss chip sits on the wave door")
+		check(pile.get_global_rect().position.y >= st0.get_global_rect().end.y - 1, tag + " pile next to the street, under it")
+		if portrait_now:
+			check(g1.get_global_rect().position.y > st0.get_global_rect().end.y - 1, tag + " guns at the BOTTOM")
+		else:
+			check(g1.get_global_rect().position.x > st0.get_global_rect().end.x - 1, tag + " guns in the RIGHT column")
 		check(_named(m, "Open0") != null, tag + " each room has an OPEN button")
 		check((_named(m, "Open0") as Button).text.contains(str(bal().shown(bal().room_cost(0, 0)))), tag + " OPEN shows the price")
 		check((_named(m, "Open0") as Button).disabled, tag + " OPEN is off when you can't pay")
@@ -150,7 +162,7 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		var z5: DDCardView = _view_idx(m, idx(run, "Z5"))
 		eq(str(z5.payload.get("title", "")), "Lurcher", tag + " zombie zoom")
 		var spec5: Dictionary = (m.get("_street_specs") as Dictionary)[run.street[idx(run, "Z5")].get_instance_id()]
-		eq(str(spec5["badge"]), "-3", tag + " damage chip with melee (5 - 2)")
+		eq(str(spec5["badge"]), "-4", tag + " damage chip with melee (v4 bare hands: 5 - 1)")
 		m.call("tap_weapon", DDRun.SLOT1)
 		await _settle()
 		eq(run.active, DDRun.SLOT1, tag + " pistol active")
@@ -159,7 +171,7 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		# tap a zombie: it attacks with the active gun and lands on the stack
 		var pts0: int = run.points
 		var pips: Node = _named(m, "ResolvePips")
-		check(pips != null and pips.get_child_count() == 1 + 3, tag + " 3 resolve pips")
+		check(pips != null and pips.get_child_count() == 3, tag + " 3 resolve pips")
 		m.call("tap_street", idx(run, "Z5"))
 		await _settle()
 		pips = _named(m, "ResolvePips")
@@ -408,4 +420,4 @@ func test_payloads_cover_everything() -> void:
 	z.slot(0).stack = [5] as Array[int]
 	var zp: Dictionary = DDPayloads.card(z.street[0], z, 0)
 	check(str(zp["body"]).contains("NOT ALLOWED"), "zombie zoom: which rules allow it")
-	check(str(zp["body"]).contains("Melee (power 2): -5 HP"), "zombie zoom: damage with each weapon")
+	check(str(zp["body"]).contains("Melee (power 1): -6 HP"), "zombie zoom: damage with each weapon")

@@ -624,7 +624,7 @@ func note_board_systems() -> Array[StringName]:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[me_side]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator (next to READY), then a column." % state.round_number)
+		_screen.show_toast("Round %d: tap your Operator (first card), then a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 

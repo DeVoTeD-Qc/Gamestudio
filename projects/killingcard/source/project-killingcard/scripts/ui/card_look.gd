@@ -353,23 +353,23 @@ static func draw_damage_edge(ci: CanvasItem, r: Rect2, thickness: float = 2.0) -
 			PackedColorArray([Color(AR_DMG_EDGE, 0.25), AR_DMG_EDGE, AR_DMG_EDGE, Color(AR_DMG_EDGE, 0.25)]))
 
 
-## The new Pick glyph (kc-cards-impl): a shield with a downward arrow ("hits the lowest Armor"), so it
-## is never a crosshair like the FP reticle. White, tint it.
-## kc-ui-hooks: the kit's painted Pick (ico_kw_pick_v2, IconSheet.PICK_KIT_ID) wins when imported, so
-## every caller (board banners, the O2 tray card, the Y2+ text box) picks it up; code_only skips it.
-static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color, code_only: bool = false) -> void:
+## The Pick glyph (kc-layout-a, the icon table): lock-on brackets around a dot ("it picks its
+## target"), never the FP reticle and never Armor's shield. White, tint it. Every caller (board
+## banners, hand cards, the Y2+ text box, IconText) draws this one shape; code_only is kept for callers.
+static func draw_pick_icon(ci: CanvasItem, r: Rect2, c: Color, _code_only: bool = false) -> void:
 	var s: float = minf(r.size.x, r.size.y)
 	var o: Vector2 = r.position + (r.size - Vector2(s, s)) * 0.5
-	if not code_only and UiKit.draw_icon(ci, IconSheet.PICK_KIT_ID, Rect2(o, Vector2(s, s)), c):
-		return
-	var w: float = maxf(1.5, s * 0.1)
-	var pts: PackedVector2Array = [Vector2(0.5, 0.1), Vector2(0.85, 0.22), Vector2(0.85, 0.5), Vector2(0.72, 0.75), Vector2(0.5, 0.92),
-			Vector2(0.28, 0.75), Vector2(0.15, 0.5), Vector2(0.15, 0.22), Vector2(0.5, 0.1)]
-	for i: int in pts.size():
-		pts[i] = o + pts[i] * s
-	ci.draw_polyline(pts, c, w, true)
-	ci.draw_line(o + Vector2(0.5, 0.32) * s, o + Vector2(0.5, 0.68) * s, c, w, true)
-	ci.draw_polyline(PackedVector2Array([o + Vector2(0.36, 0.55) * s, o + Vector2(0.5, 0.69) * s, o + Vector2(0.64, 0.55) * s]), c, w, true)
+	var k: float = s / 24.0
+	var t: float = 2.8 * k
+	var a: float = 7.0 * k
+	for corner: Vector2 in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
+		var x0: float = o.x + (2.0 * k if corner.x == 0.0 else s - 2.0 * k - a)
+		var y0: float = o.y + (2.0 * k if corner.y == 0.0 else s - 2.0 * k - t)
+		ci.draw_rect(Rect2(x0, y0, a, t), c)
+		var vx: float = o.x + (2.0 * k if corner.x == 0.0 else s - 2.0 * k - t)
+		var vy: float = o.y + (2.0 * k if corner.y == 0.0 else s - 2.0 * k - a)
+		ci.draw_rect(Rect2(vx, vy, t, a), c)
+	ci.draw_circle(o + Vector2(s, s) * 0.5, 3.4 * k, c)
 
 
 ## kc-ipad-cards: one ability plate (board banners, hand cards, the Y2+ stats bar), as BannerView
@@ -394,6 +394,10 @@ static func draw_ability(ci: CanvasItem, rr: Rect2, kind: Variant, accent: Color
 			_draw_bolt(ci, rr, accent, kind == &"bolt_more")
 		&"kw_pick":
 			draw_pick_icon(ci, rr.grow(-rr.size.x * 0.1), accent)
+		&"agile":
+			var at: Texture2D = IconText.texture(&"agile")
+			if at != null:
+				ci.draw_texture_rect(at, inner, false, accent)
 		_:
 			var tex: Texture2D = IconSheet.get_icon(kind)
 			if tex != null:
@@ -405,10 +409,11 @@ static func draw_ability(ci: CanvasItem, rr: Rect2, kind: Variant, accent: Color
 static func draw_keyword_icon(ci: CanvasItem, r: Rect2, id: StringName, tint: Color) -> void:
 	if id == &"pick":
 		draw_pick_icon(ci, r, tint)
-	elif id == &"pierce":
-		SynergyGlyphs.draw_pierce_icon(ci, r, tint)
-	elif id == &"arrives_front":
-		_draw_chevron(ci, r, tint, true)
+	elif id in [&"pierce", &"arrives_front", &"agile"]:
+		# kc-layout-a: the IconText glyphs (one icon per concept: Pierce, Front line, Agile).
+		var tex2: Texture2D = IconText.texture({&"arrives_front": &"front_line"}.get(id, id))
+		if tex2 != null:
+			ci.draw_texture_rect(tex2, r, false, tint)
 	else:
 		var tex: Texture2D = IconSheet.get_keyword_icon(id)
 		if tex != null:
@@ -431,15 +436,18 @@ static func _draw_bolt(ci: CanvasItem, rr: Rect2, c: Color, more: bool) -> void:
 		ci.draw_circle(p + Vector2(s * 0.85, s * 0.85), s * 0.1, c)
 
 
-## Protector: an up-chevron over a bar ("takes the front"); pointing down on the rival's cards.
+## Front line (kc-layout-a, the icon table): an arrow up to a bar ("arrives at the front"); pointing
+## down on the rival's cards (toward their front). The same shape as IconText's front_line glyph.
 static func _draw_protector(ci: CanvasItem, rr: Rect2, c: Color, up: bool) -> void:
-	var s: float = rr.size.x
-	var p: Vector2 = rr.position
-	var w: float = maxf(2.0, s * 0.08)
-	var y0: float = s * (0.62 if up else 0.38)
-	var y1: float = s * (0.3 if up else 0.7)
-	ci.draw_polyline(PackedVector2Array([p + Vector2(s * 0.22, y0), p + Vector2(s * 0.5, y1), p + Vector2(s * 0.78, y0)]), c, w)
-	ci.draw_line(p + Vector2(s * 0.22, s * (0.8 if up else 0.2)), p + Vector2(s * 0.78, s * (0.8 if up else 0.2)), c, w)
+	var s: float = minf(rr.size.x, rr.size.y)
+	var k: float = s / 24.0
+	var p: Vector2 = rr.position + (rr.size - Vector2(s, s)) * 0.5
+	var f: Callable = func(x: float, y: float) -> Vector2:
+		return p + Vector2(x * k, (y if up else 24.0 - y) * k)
+	var bar: Rect2 = Rect2(f.call(2.0, 1.5 if up else 5.0), Vector2(20.0 * k, 3.5 * k))
+	ci.draw_rect(bar, c)
+	ci.draw_colored_polygon(PackedVector2Array([f.call(12.0, 7.0), f.call(19.0, 14.0), f.call(14.4, 14.0), f.call(14.4, 22.5),
+			f.call(9.6, 22.5), f.call(9.6, 14.0), f.call(5.0, 14.0)]), c)
 
 
 static func _draw_chevron(ci: CanvasItem, r: Rect2, c: Color, up: bool) -> void:

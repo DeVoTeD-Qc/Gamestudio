@@ -20,10 +20,11 @@ func test_run_start_state() -> void:
 	eq(r.active, DDRun.SLOT1, "pistol active")
 	eq(r.street.size(), 4, "street of 4")
 	eq(r.budget, 3, "resolve 3")
-	eq(r.pile.size() + r.street.size(), 3 + 7, "Entrance (3) + Wave 1 (7) in the pile at the start")
+	eq(r.pile.size() + r.street.size(), 3 + 1 + 7, "Entrance (3 + a v4 melee weapon card) + Wave 1 (7) in the pile at the start")
 	eq(r.wave_index, 0, "wave 1 active")
 	eq(r.points, 0, "no points")
-	eq(make_run("imani").hp, 19, "Imani 19 HP (dd-v3-tune)")
+	eq(make_run("imani").hp, 18, "v4: Imani 18 HP")
+	eq(make_run("rosa").melee_name(), "Bare Hands", "v4: you start with bare hands")
 	eq(make_run("theo").hp, 21, "Theo 21 HP")
 
 
@@ -40,16 +41,26 @@ func test_three_resolves_then_holdover_and_deal() -> void:
 	check(r.street[0].holdover, "Z4 is the Holdover")
 
 
-func test_medkit_one_per_street_and_bonuses() -> void:
-	var r: DDRun = plain_run(filler(8), ["M5", "M4", "C2", "C2"])
+func test_medkits_no_limit_and_bonuses() -> void:
+	var r: DDRun = plain_run(filler(8), ["M5", "M4", "M3", "C2"])
 	r.hp = 5
 	var pv: Dictionary = r.card_preview(0, DDRun.USE)
 	eq(int(pv["heal"]), 5, "preview heal 5")
 	r.resolve(0, DDRun.USE)
 	eq(r.hp, 10, "+5")
-	check(bool(r.card_preview(0, DDRun.USE)["wasted"]), "second medkit is wasted")
+	check(not bool(r.card_preview(0, DDRun.USE)["wasted"]), "v4: a second medkit is not wasted")
 	r.resolve(0, DDRun.USE)
-	eq(r.hp, 10, "second medkit discarded")
+	eq(r.hp, 14, "second medkit heals")
+	r.resolve(0, DDRun.USE)
+	eq(r.hp, 17, "and a third")
+	for line: String in r.log_lines:
+		check(not line.contains("discarded"), "no 'discarded' line")
+	var v3: DDBalance = DDBalance.from_file(DDBalance.DEFAULT_PATH)
+	v3.config["medkits_per_street"] = 1
+	var o: DDRun = plain_run(filler(8), ["M5", "M4", "C2", "C2"], v3)
+	o.hp = 5
+	o.resolve(0, DDRun.USE)
+	check(bool(o.card_preview(0, DDRun.USE)["wasted"]), "the v3 setting still limits")
 	var t: DDRun = make_run("imani", filler(8), ["M5", "C2", "C2", "C2"])
 	t.hp = 5
 	t.resolve(0, DDRun.USE)
@@ -68,7 +79,7 @@ func test_cover_card() -> void:
 	r.set_active(DDRun.MELEE)
 	r.attack(idx(r, "Z5"))
 	eq(r.cover, 0, "soaked")
-	eq(r.hp, 20, "no HP lost")
+	eq(r.hp, 19, "5 - 1 (bare hands) = 4: Cover 3, 1 HP")
 
 
 func test_equip_into_both_slots() -> void:
@@ -103,8 +114,39 @@ func test_run_shuffles_back_and_costs_one() -> void:
 	check(not r.can_run(), "not twice in a row")
 	eq(r.run_block_reason(), "you ran last street", "reason")
 	_take(r)
-	check(not r.can_run(), "not after resolving a card")
-	eq(r.run_block_reason(), "only before you resolve a card", "reason 2")
+	check(not r.can_run(), "still the street after a Run, even after resolving")
+	eq(r.run_block_reason(), "you ran last street", "reason 2")
+
+
+func test_run_any_time_and_to_the_bottom() -> void:
+	# Q5 (head, 2026-11-11): Run whenever the street has cards, even with no zombie on it; every
+	# card still on the street goes to the BOTTOM of the pile, in street order, unshuffled.
+	var r: DDRun = plain_run(["Z1", "Z2", "Z3", "Z4", "C2", "C2", "C2", "C2"], ["M3", "W:rifle", "K:wrench", "C3"])
+	check(r.can_run(), "no zombie on the street: Run is allowed")
+	r.resolve(0, DDRun.USE)
+	check(r.can_run(), "after resolving a card: still allowed")
+	var hp0: int = r.hp
+	var ev: Dictionary = r.run_street()
+	check(bool(ev["ok"]), "ran")
+	check(bool(ev["to_bottom"]), "the event says they went to the bottom")
+	eq(hp0 - r.hp, 1, "-1 HP")
+	eq(codes(ev["returned"]), ["W:rifle", "K:wrench", "C3"], "every card left on the street came back")
+	eq(codes(r.street), ["Z1", "Z2", "Z3", "Z4"], "the new street is the old top of the pile")
+	eq(codes(r.pile.slice(0, 3)), ["W:rifle", "K:wrench", "C3"], "they sit at the bottom, unshuffled")
+	eq(r.resolved, 0, "a fresh street")
+	check(r.log_lines[r.log_lines.size() - 1].contains("3 cards (a gun, a melee weapon, a cover) go to the bottom of the pile"), "log line counts them")
+	var e: DDRun = plain_run(filler(8), ["C2", "C2", "C2", "C2"])
+	e.street.clear()
+	eq(e.run_block_reason(), "nothing on the street", "an empty street can't Run")
+
+
+func test_run_v3_settings_still_work() -> void:
+	var b: DDBalance = DDBalance.from_file(DDBalance.DEFAULT_PATH)
+	b.config["run_mode"] = "before"
+	b.config["run_return"] = "shuffle"
+	var r: DDRun = plain_run(filler(8, "M3"), ["Z9", "Z9", "Z9", "Z9"], b)
+	_take(r)
+	eq(r.run_block_reason(), "only before you resolve a card", "v3: before the first resolve only")
 
 
 func test_run_again_after_a_normal_street() -> void:

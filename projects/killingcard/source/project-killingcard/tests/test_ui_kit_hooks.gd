@@ -208,7 +208,9 @@ func test_badges_use_the_kit_with_their_tints() -> void:
 	await _draw_once(func(ci: CanvasItem) -> void:
 		CardLook.draw_pick_icon(ci, Rect2(0, 0, 16, 16), CardLook.AMBER)
 		CardLook.draw_pick_icon(ci, Rect2(20, 0, 16, 16), CardLook.AMBER, true))
-	assert_eq(UiKit.draw_log, [IconSheet.PICK_KIT_ID] as Array[StringName], "Pick: kw_pick_v2 first (code_only skips it)")
+	# kc-layout-a (the icon table): Pick is lock-on brackets, drawn in code; the kit's kw_pick_v2 (a
+	# shield, Armor's shape) is no longer used.
+	assert_eq(UiKit.draw_log, [] as Array[StringName], "Pick: the brackets, never kw_pick_v2")
 	_reset()
 
 
@@ -262,7 +264,7 @@ func test_banner_hooks_fallback_and_kit() -> void:
 	assert_true(none.is_empty(), "no kit: the board card draws all code (%s)" % [none])
 	_kit([&"fx_glow_rail", CardLook.FX_CRACK], [IconSheet.PICK_KIT_ID])
 	var got: Array[StringName] = await _banner_log(UNIT, &"vanguard")
-	assert_true(got.has(IconSheet.PICK_KIT_ID), "board Pick ability: kw_pick_v2 (%s)" % [got])
+	assert_false(got.has(IconSheet.PICK_KIT_ID), "board Pick ability: the brackets, not kw_pick_v2 (%s)" % [got])
 	assert_true(got.has(CardLook.FX_CRACK), "damaged: fx_crack_damage")
 	assert_true(got.has(&"fx_glow_rail"), "rail highlight: fx_glow_rail")
 	assert_true(_tint_of(&"fx_glow_rail").is_equal_approx(SynergyGlyphs_trait(&"vanguard")), "the glow takes the trait colour")

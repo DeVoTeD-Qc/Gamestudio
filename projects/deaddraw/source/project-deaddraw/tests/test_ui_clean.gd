@@ -109,23 +109,27 @@ func test_street_clean_in_every_orientation() -> void:
 			var t: DDCardView = _tile(m, idx)
 			check(t != null, "%s tile %d shown" % [tag, idx])
 			check(_area(card) > _area(t), "%s: a street card (%s) is bigger than tile %d (%s)" % [tag, str(card.size), idx, str(t.size if t != null else Vector2.ZERO)])
-		# waves: one stack with a count and the next threat; the zoom lists every wave
+		# waves: ONE wave door (dd-ux-v4) with the big wave number and "+N" waiting; its tooltip
+		# says what waits next
 		for w: int in range(1, 3):
 			check(_tile(m, 300 + w) == null, tag + " no separate wave deck %d" % (w + 1))
 		var wt: DDCardView = _tile(m, 300)
-		check(str(wt.payload.get("body", "")).contains("WAVE 1") and str(wt.payload.get("body", "")).contains("WAVE 3"), tag + " wave zoom lists every wave")
-		check(wt.big_label != null and wt.big_label.text.begins_with("×"), tag + " wave stack shows a count: " + (wt.big_label.text if wt.big_label != null else ""))
-		# rooms: the price on the button, plainly
+		check(str(wt.payload.get("t1", "")).contains("Wave 1 of 3") and str(wt.payload.get("t2", "")).contains("Next wave"), tag + " wave tooltip: " + str(wt.payload.get("t1", "")))
+		check(wt.big_label != null and wt.big_label.text.contains("+2"), tag + " wave door shows the waves waiting: " + (wt.big_label.text if wt.big_label != null else ""))
+		var num: Control = wt.get_meta(&"numeral") if wt.has_meta(&"numeral") else null
+		check(num != null and str(num.get("text")) == "1", tag + " the big wave number on the wave door")
+		# rooms: the price on the padlock plate, with how much is missing in its tooltip
 		var ob: Button = m.find_child("Open1", true, false)
 		var price: int = bal().shown(run.room_cost(1))
-		check(ob != null and ob.text.contains("%d pts" % price), tag + " OPEN states the price: " + (ob.text.replace("\n", " ") if ob != null else "-"))
+		check(ob != null and ob.text.contains("%d pts" % price), tag + " the plate states the price: " + (ob.text.replace("\n", " ") if ob != null else "-"))
 		check(ob != null and ob.disabled and ob.text.contains("need %d more" % (price - bal().shown(run.points))), tag + " and how much is missing when you can't pay")
+		check(str(_tile(m, 101).payload.get("t1", "")).contains("need %d more" % (price - bal().shown(run.points))), tag + " the locked room's tooltip says how much is missing")
 		check(m.find_child("Use0", true, false) != null, tag + " the open room shows USE")
 		run.points = run.room_cost(1) + 5
 		m.call("_render")
 		await _settle()
 		ob = m.find_child("Open1", true, false)
-		check(not ob.disabled and ob.text.begins_with("OPEN") and ob.text.contains("%d pts" % price), tag + " OPEN · price lit when you can pay")
+		check(not ob.disabled and ob.text.contains("OPEN") and ob.text.contains("%d pts" % price), tag + " the gold plate: OPEN · price when you can pay")
 		# guns: short rule label, no "takes:" line, the full rule in the zoom
 		var gv: DDGunView = (m.get("_gun_views") as Array)[1]
 		var texts: PackedStringArray = []
@@ -133,7 +137,7 @@ func test_street_clean_in_every_orientation() -> void:
 			texts.append((l as Label).text)
 		check(texts.has(DDText.rule_tag("up", run.steady())) or texts.has(DDText.rule_tag("down", run.steady())), tag + " gun shows the short rule label: " + str(texts))
 		check(not " ".join(texts).contains("takes:"), tag + " no 'takes' line on the tile")
-		check(str(gv.payload.get("body", "")).contains("RULE:") and str(gv.payload.get("body", "")).contains("Can still take"), tag + " full rule in the gun zoom")
+		check(str(gv.payload.get("t1", "")).contains("hits") and str(gv.payload.get("t2", "")).contains("Next kill"), tag + " the gun tooltip: hit, kills, next kill (%s)" % str(gv.payload.get("t2", "")))
 		# HUD: one source per stat (no survivor chip, no Patch chip row), Patches behind one chip
 		var pts_tiles: int = 0
 		for c: Variant in _all(m, []):
@@ -144,9 +148,9 @@ func test_street_clean_in_every_orientation() -> void:
 		check(pc != null and str(pc.payload.get("body", "")).contains("Lookout"), tag + " one Patches chip, the list in its zoom")
 		# the log: one line on the board, history behind a tap
 		var log_tile: DDCardView = m.find_child("Log", true, false)
-		check(log_tile != null and str(log_tile.payload.get("tag", "")) == "WHAT HAPPENED", tag + " history behind the prompt bar")
+		check(log_tile != null and str(log_tile.payload.get("tag", "")) == "WHAT HAPPENED", tag + " history behind the 'what happened' strip")
 		var ll: Label = m.find_child("LastLine", true, false)
-		check(ll != null and ll.autowrap_mode == TextServer.AUTOWRAP_OFF and ll.get_minimum_size().y >= 14.0, tag + " one readable 'what happened' line")
+		check(ll != null and ll.max_lines_visible <= 2 and ll.size.y >= 14.0 and ll.get_theme_font_size("font_size") >= 14, tag + " one short readable 'what happened' line")
 		m.queue_free()
 		await tree.process_frame
 	_cleanup()

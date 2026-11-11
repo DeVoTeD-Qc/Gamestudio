@@ -3,10 +3,11 @@
 #   hand on the side", fan cards at the bottom for iPhone portrait). Checks:
 #   - the screen profile gives a portrait canvas (390x844 pt -> 540x1168, 0.72 pt per px);
 #   - the layout switches live on rotate / resize without losing the match state, and back;
-#   - portrait hand: tap a fan card (raised into the preview well, PLAY HERE), place it, cancel it
+#   - portrait hand (kc-layout-a: the same 2-column grid as landscape, the Operator first; no fan, no
+#     preview well): tap a card (its Y2+ face docks over the tray, PLAY HERE), place it, cancel it
 #     (the card again, CANCEL, the empty board);
-#   - no overlap between the top bars, the board, the well, the Operator / UNDO / READY and the fan at
-#     390x844, 360x780 and 430x932; fan steps >= 44 pt; everything on screen;
+#   - no overlap between the top bars, the board, the Supply box, the hand grid and UNDO / READY at
+#     390x844, 360x780 and 430x932; cards and buttons >= 44 pt; everything on screen;
 #   - landscape unchanged (the side tray, X1 cards);
 #   - the run screens players hit in portrait (title, loadout, run map, reward, Codex, the pause menu)
 #     keep every button and label on screen.
@@ -111,8 +112,8 @@ func test_layout_switches_live_without_losing_the_match() -> void:
 	await _frames(6)
 	assert_true(m.portrait, "rotated: portrait")
 	assert_true(bool(m.metrics.get("portrait", false)), "portrait metrics")
-	assert_true(m.get_hand().fan, "the fan hand")
-	assert_true(m.get_hand().get_cards().size() > 0 and m.get_hand().get_cards()[0] is CardView, "fan cards are Y2+ cards")
+	assert_false(m.get_hand().fan, "kc-layout-a: the grid hand in portrait too")
+	assert_true(m.get_hand().get_cards().size() > 0 and bool((m.get_hand().get_cards()[0] as Control).get_meta(&"banner_card", false)), "X1 cards in portrait")
 	assert_eq([me.plays.size(), me.hand.size(), c.state.round_number], [plays, hand_n, round_n], "the match state is untouched")
 	vp.size = Vector2i(Layout.logical_size(Layout.PHONE))
 	await _frames(6)
@@ -129,8 +130,8 @@ func test_portrait_hand_select_place_cancel() -> void:
 	var m: Control = s[1]
 	var c: Node = s[2]
 	var hand: Control = m.get_hand()
-	assert_true(m.portrait and hand.fan, "portrait fan")
-	assert_not_null(m.get_preview_well(), "the empty preview well shows")
+	assert_true(m.portrait and not hand.fan, "portrait grid")
+	assert_true(m.get_preview_well() == null, "no preview well (kc-layout-a)")
 	var me: RulesSide = c.state.sides[0]
 	var rc0: RulesCard = null
 	afford_a_unit(c)
@@ -144,25 +145,22 @@ func test_portrait_hand_select_place_cancel() -> void:
 		_despawn(vp)
 		return
 	var chip: Control = hand.get_card(rc0.uid)
-	hand.reveal_card(rc0.uid)
-	await _frames(1)
-	var strip: Rect2 = Rect2(chip.get_global_rect().position, Vector2(hand.fan_step * 0.8, 40))
-	await _tap(vp, strip.get_center())
+	await _tap(vp, chip.get_global_rect().get_center())
 	await _frames(2)
 	assert_eq(c.selection.get("uid", -1), rc0.uid, "tap selects")
 	var dock: Control = m.get_card_dock()
-	assert_not_null(dock, "raised into the well")
+	assert_not_null(dock, "its Y2+ face docks over the tray")
 	if dock != null:
-		var well: Rect2 = (m.metrics["well"] as Rect2)
-		well.position += m.get_tray().get_global_rect().position
-		assert_true(well.grow(1.0).encloses(dock.get_global_rect()), "the raised card sits in the well")
+		assert_true(m.get_tray().get_global_rect().grow(1.0).encloses(dock.get_global_rect()), "the dock sits in the tray")
 	var target: Label = null
 	for lane: Node in m.get_board().get_lanes():
 		if lane.get_play_here() != null:
 			target = lane.get_play_here()
 	assert_not_null(target, "PLAY HERE")
 	# Cancel: the card again.
-	await _tap(vp, Rect2(chip.get_global_rect().position, Vector2(hand.fan_step * 0.8, 40)).get_center())
+	m.show_card_dock({})  # the dock covers the grid's top; tap the card itself
+	await _frames(1)
+	await _tap(vp, chip.get_global_rect().get_center())
 	await _frames(2)
 	assert_true(c.selection.is_empty(), "tap again cancels")
 	# CANCEL.
@@ -190,10 +188,7 @@ func test_portrait_hand_select_place_cancel() -> void:
 	for p: Dictionary in me.plays:
 		placed = placed or (p.get("card") != null and (p["card"] as RulesCard).uid == rc0.uid)
 	assert_true(placed, "PLAY HERE places it")
-	# A swipe scrolls the fan (when it is wider than the screen).
-	if hand.fan_scroll_max() > 0.0:
-		hand.scroll_fan(-40.0)
-		assert_true(hand.fan_scroll > 0.0, "the fan scrolls")
+	assert_false(hand.is_scrolling(), "the hand never scrolls")
 	_despawn(vp)
 	await tree.process_frame
 
@@ -206,17 +201,17 @@ func test_portrait_regions_do_not_overlap() -> void:
 		var label: String = screen["name"]
 		var k: float = Layout.points_per_px(screen)
 		var view: Rect2 = Rect2(Vector2.ZERO, Vector2(vp.size)).grow(EPS)
-		var tray: Rect2 = m.get_tray().get_global_rect()
-		var well: Rect2 = Rect2(tray.position + (m.metrics["well"] as Rect2).position, (m.metrics["well"] as Rect2).size)
+		var hand: Control = m.get_hand()
+		var g: Rect2 = Rect2(hand.get_global_rect().position + hand.get_grid_rect().position, hand.get_grid_rect().size)
 		var regions: Dictionary = {
 			"strip": m.get_badge(&"deck").get_parent().get_global_rect(),
 			"board": m.get_board().get_global_rect(),
-			"well": well,
-			"operator": m.get_hand().get_operator_card().get_global_rect(),
+			"supply": m.get_node("%SupplyCounter").get_global_rect(),
+			"grid": g,
 			"undo": m.get_undo_button().get_global_rect(),
 			"ready": m.get_ready_button().get_global_rect(),
-			"fan": m.get_hand().get_global_rect(),
 		}
+		assert_true(g.grow(EPS).encloses(hand.get_operator_card().get_global_rect()), "%s: the Operator in the grid" % label)
 		var keys: Array = regions.keys()
 		for i: int in keys.size():
 			var a: Rect2 = regions[keys[i]]
@@ -226,11 +221,11 @@ func test_portrait_regions_do_not_overlap() -> void:
 				assert_false(a.grow(-1.0).intersects(b.grow(-1.0)), "%s: %s / %s overlap (%s / %s)" % [label, keys[i], keys[j], a, b])
 		var bw: float = float(m.metrics["bw"])
 		assert_true(bw >= 160.0 and absf(bw / float(m.metrics["bh"]) - 4.0) < 0.01, "%s: 4:1 banners %sx%s" % [label, bw, m.metrics["bh"]])
-		assert_true(m.get_hand().fan_step * k >= 44.0 - 0.1, "%s: fan steps %.0f px = %.1f pt" % [label, m.get_hand().fan_step, m.get_hand().fan_step * k])
+		assert_true((hand.hand_fit["card"] as Vector2).y * k >= 44.0 - 0.1, "%s: hand cards %s >= 44 pt" % [label, hand.hand_fit["card"]])
 		for b: Control in [m.get_undo_button(), m.get_ready_button()]:
 			assert_true(minf(b.size.x, b.size.y) * k >= 44.0 - 0.1, "%s: %s 44 pt+" % [label, b.name])
 		for chip: Node in m.get_hand().get_cards():
-			assert_true((chip as Control).get_global_rect().end.y <= view.end.y, "%s: fan cards on screen vertically" % label)
+			assert_true(view.encloses((chip as Control).get_global_rect()), "%s: hand cards on screen" % label)
 		_despawn(vp)
 		await tree.process_frame
 

@@ -314,7 +314,7 @@ func test_hand_x1_cards_fit_and_operator_row() -> void:
 		var fit: Dictionary = hand.hand_fit
 		var card: Vector2 = fit["card"]
 		var cols: int = int(fit["cols"])
-		var n: int = hand.get_cards().size()
+		var n: int = hand.get_cards().size() + 1  # kc-layout-a: + the Operator card
 		var rows: int = ceili(float(n) / cols)
 		assert_true(rows * card.y + (rows - 1) * float(met["card_gap"]) <= grid.size.y + EPS, "%s: %d cards fit" % [label, n])
 		for chip: Node in hand.get_cards():
@@ -328,20 +328,19 @@ func test_hand_x1_cards_fit_and_operator_row() -> void:
 			var nl: Label = chip.find_child("NameLabel", true, false)
 			assert_true(nl.has_meta(&"title_style"), "%s: the name plate in the title style" % label)
 			assert_true((chip as Control).size.y * k >= 44.0 - EPS, "%s: hand card >= 44 pt" % label)
-		# O2: the Operator card and UNDO (icon) + READY in the bottom row (phone: side by side, UNDO over
-		# READY; a narrow desktop / iPad tray stacks them: the Operator across, UNDO beside READY).
+		# kc-layout-a (the head's L3): the Operator card is the hand grid's first card; UNDO (icon) and
+		# READY share the bottom row under the grid.
 		var op: Control = hand.get_operator_card()
 		assert_not_null(op, "%s: the Operator card" % label)
 		var undo: Button = m.get_undo_button()
 		var ready: Button = m.get_ready_button()
 		var orr: Rect2 = op.get_global_rect()
-		if bool(met.get("op_stacked", false)):
-			assert_true(orr.end.y <= undo.get_global_rect().position.y + EPS, "%s: the Operator over UNDO" % label)
-			assert_true(undo.get_global_rect().end.x <= ready.get_global_rect().position.x + EPS, "%s: UNDO left of READY" % label)
-		else:
-			assert_true(orr.end.x <= undo.get_global_rect().position.x + EPS, "%s: the Operator is left of UNDO" % label)
-			assert_true(undo.get_global_rect().end.y <= ready.get_global_rect().position.y + EPS, "%s: UNDO over READY" % label)
-			assert_true(orr.end.y >= ready.get_global_rect().end.y - 2.0, "%s: the Operator sits in the bottom row" % label)
+		for chip2: Node in hand.get_cards():
+			assert_true(orr.position.y <= (chip2 as Control).get_global_rect().position.y + 7.0, "%s: the Operator in the grid's top row" % label)
+		assert_true(absf(orr.size.x - card.x) < 1.0 and absf(orr.size.y - card.y) < 1.0, "%s: the Operator the size of a hand card" % label)
+		assert_true(undo.get_global_rect().end.x <= ready.get_global_rect().position.x + EPS, "%s: UNDO left of READY" % label)
+		assert_true(absf(undo.get_global_rect().position.y - ready.get_global_rect().position.y) < 1.0, "%s: UNDO and READY share a row" % label)
+		assert_true(orr.end.y <= undo.get_global_rect().position.y + EPS, "%s: the grid above UNDO / READY" % label)
 		assert_eq(undo.text, "", "%s: UNDO is an icon" % label)
 		assert_true(undo.size.y * k >= 44.0 - EPS and ready.size.y * k >= 44.0 - EPS, "%s: 44 pt+" % label)
 		var status: Label = op.find_child("OperatorStatus", true, false)

@@ -18,6 +18,10 @@ const PHONE_SE: Dictionary = {"name": "iPhone SE 667x375 @2x", "pt": Vector2(667
 ## Digit floors (pt): the head asked for about 13-14 pt on an iPhone. kc-ipad-cards (head RQ1: "Widen
 ## the tray or show fewer hand cards there to reach 13 pt"): the SE's hand scrolls one readable column.
 const MIN_PT: Dictionary = {"iPhone 844x390 @3x": 13.0, "iPhone SE 667x375 @2x": 13.0}
+## kc-layout-a (the head's L1, direction A: "the board shrinks a little on narrow phones, never the
+## hand"; ux-layout-v2.html: "On a 667 phone the board banners shrink to about 104x26 pt"): the SE's
+## board digits get a 10 pt floor; its hand keeps 13 pt.
+const BOARD_MIN_PT: Dictionary = {"iPhone 844x390 @3x": 13.0, "iPhone SE 667x375 @2x": 10.0}
 
 var _saved_root_size: Vector2i = Vector2i.ZERO
 
@@ -122,7 +126,8 @@ func test_hand_and_board_digits_in_pt() -> void:
 		var a: Dictionary = bb.anatomy_now()
 		var bfp: float = _reticle_px(a["fp"]) * k
 		var bar: float = _armor_px(a["armor"]) * k
-		assert_true(bfp >= floor_pt and bar >= floor_pt, "%s: board FP %.1f / Armor %.1f pt" % [label, bfp, bar])
+		var board_floor: float = BOARD_MIN_PT.get(label, floor_pt)
+		assert_true(bfp >= board_floor and bar >= board_floor, "%s: board FP %.1f / Armor %.1f pt" % [label, bfp, bar])
 		# Backings: the stats, the trait and (peeked) the cost group, each a small plate, never a band.
 		bb.peek = true
 		bb.queue_redraw_all()

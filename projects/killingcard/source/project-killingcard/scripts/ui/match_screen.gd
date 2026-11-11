@@ -241,10 +241,10 @@ func _ready() -> void:
 	if settings != null:
 		mirror = bool(settings.get(&"mirror_layout"))
 		settings.settings_changed.connect(_on_settings_changed)
+	# kc-layout-a (the head's L4): the killstreak sockets live in the icon strip, under STREAK.
 	_ks_row = KillstreakRow.new()
 	_ks_row.name = "KillstreakRow"
-	_tray.add_child(_ks_row)
-	_tray.move_child(_ks_row, _supply_box.get_index() + 1)
+	_strip.add_child(_ks_row)
 	_setup_v2()
 	# kc-onboard-ui: who holds initiative this round (and why), above the trait rail.
 	_initiative = InitiativeChip.new()
@@ -287,6 +287,15 @@ func _ready() -> void:
 	_supply_value.add_theme_font_size_override(&"font_size", 22)
 	_supply_value.add_theme_constant_override(&"outline_size", CardLook.NUM_OUTLINE)
 	_supply_value.add_theme_color_override(&"font_outline_color", CardLook.INK)
+	# kc-layout-a (icon table): the Supply hex alone, no SUPPLY word beside it.
+	var supply_caption: Label = _supply_value.get_parent().get_node_or_null(^"Caption") as Label
+	if supply_caption != null:
+		supply_caption.visible = false
+		var hex: TextureRect = IconText.icon_rect(&"supply", 26.0)
+		hex.name = "SupplyIcon"
+		hex.tooltip_text = "Supply"
+		_supply_value.get_parent().add_child(hex)
+		_supply_value.get_parent().move_child(hex, 0)
 	# kc-cards-impl (O2): READY / UNDO fit the narrow column next to the Operator card.
 	_ready_button.clip_text = true
 	# kc-ui-wire2: READY draws the kit's btn_primary plate through the ReadyButton theme slot. btn_ready
@@ -703,10 +712,13 @@ func get_key_controls() -> Dictionary:
 			out["traits"] = _trait_rail
 	elif _initiative != null and _initiative.visible:
 		out["initiative"] = _initiative
+	if not _operator_badge.visible:
+		out.erase("operator_panel")  # kc-layout-a: landscape has no OPERATOR badge
+	# kc-layout-a: the killstreak sockets are in the strip, on screen in every tray state.
+	if not _ks_row.get_tiles().is_empty():
+		out["killstreaks"] = _ks_row
 	if tray_state == TRAY_OPEN:
 		out.merge({"hand": _hand, "undo": _undo_button, "ready": _ready_button})
-		if not _ks_row.get_tiles().is_empty():
-			out["killstreaks"] = _ks_row
 	else:
 		out.merge({"hand_tab": _hand_tab, "speed": _speed_button})
 		if tray_state == TRAY_PEEK:
@@ -745,7 +757,7 @@ func _update_profile() -> void:
 	compact = want
 	if turned:
 		close_flyout()
-		_hand.set_fan(portrait)
+		_hand.set_fan(false)  # kc-layout-a: the portrait hand is the grid too
 		portrait_changed.emit(portrait)
 	_board.set_compact(compact)
 	_operator_panel.set_compact(compact)
@@ -797,6 +809,8 @@ func _layout_regions() -> void:
 	# the trait rail gets a whole badge slot more (>= 44 pt).
 	var merged: bool = rival_in_score()
 	_rival_badge.visible = not merged
+	# kc-layout-a: landscape has no OPERATOR badge (the Operator card is the hand's first card).
+	_operator_badge.visible = bool(metrics.get("op_badge", true))
 	for i: int in badges.size():
 		var ri: int = i
 		if merged and badges[i] == _preview_button:
@@ -810,6 +824,12 @@ func _layout_regions() -> void:
 	if merged and not bool(metrics.get("portrait", false)):
 		var top: float = rects[4].end.y + float(metrics["badge_gap"])
 		rail_r = Rect2(0, top, rail_r.size.x, maxf(0.0, rects[6].position.y - float(metrics["badge_gap"]) - top))
+	if metrics.has("rail_tray"):
+		# kc-layout-a: the phone's sets rail sits in the tray's top row, right of the Supply box (the
+		# rail stays a child of the strip; its rect is given in strip coordinates).
+		var rt: Rect2 = metrics["rail_tray"]
+		var tr0: Rect2 = metrics["tray"]
+		rail_r = Rect2(tr0.position + rt.position - strip.position, rt.size)
 	_rail_area = rail_r
 	_layout_strip_extras()
 	_trait_rail.set_rails(_trait_rail.rails.get(&"player", []), _trait_rail.rails.get(&"enemy", []), not compact)
@@ -873,6 +893,8 @@ func _layout_tray() -> void:
 	var tab_h: float = metrics["tab_h"]
 	_set_supply_stacked(bool(metrics.get("ks_inline", false)))
 	_place(_supply_box, metrics.get("supply", Rect2(0, 0, w, metrics["supply_h"])))
+	# kc-layout-a: the killstreak sockets in the strip (strip-local rect; stacked in landscape).
+	_ks_row.set(&"vertical", bool(metrics.get("ks_vertical", false)))
 	_place(_ks_row, metrics.get("ks", Rect2()))
 	_fit_pips()
 	# kc-cards-impl (H1 + O2): the HandArea covers the card grid and the Operator row under it; the
@@ -972,7 +994,8 @@ var _well: Panel = null
 
 
 func _layout_well() -> void:
-	var on: bool = bool(metrics.get("portrait", false))
+	# kc-layout-a: no preview well any more (portrait has the hand grid); kept for metrics with a well.
+	var on: bool = metrics.has("well")
 	if _well == null:
 		if not on:
 			return
@@ -1022,7 +1045,7 @@ func _layout_dock() -> void:
 	if _dock == null or metrics.is_empty():
 		return
 	_layout_well()
-	if bool(metrics.get("portrait", false)):
+	if metrics.has("well"):
 		# kc-portrait: the raised card fills the preview well (left of the Operator), CANCEL under it.
 		var wr: Rect2 = metrics["well"]
 		var cw: float = minf(wr.size.x - 12.0, CardView.size_for(wr.size.x).x)
@@ -1632,11 +1655,11 @@ func _pip_size() -> Vector2:
 	var n: int = maxi(1, _supply_pips.get_child_count())
 	var box_w: float = _supply_box.size.x if _supply_box != null and _supply_box.size.x > 0.0 else 300.0
 	# kc-ui3: stacked (pips under SUPPLY 3/4) the pips get the whole row; in one row, what the words leave.
-	var room: float = box_w - (28.0 if _supply_stacked else 150.0)
+	var room: float = box_w - (28.0 if _supply_stacked else 110.0)
 	# kc-readability: the pips are cost hexes (the cards' Supply icon), up to 18 px; the row keeps its
 	# old height (18 / 20) so the Supply box does not grow into the killstreak row or the hand.
 	var h: float = 18.0 if compact else 20.0
-	var w: float = clampf(floorf(room / n) - 3.0, 10.0, h - 2.0)
+	var w: float = clampf(floorf(room / n) - 3.0, 8.0, h - 2.0)
 	return Vector2(w, h)
 
 
@@ -1834,6 +1857,7 @@ func _refresh_ability() -> void:
 	var aiming: bool = not _last_ability.is_empty() and _selected_item != &"" and _selected_item == StringName(str(_last_ability.get("id", "")))
 	_ability.set_ability(_last_ability, aiming, _ability_planned)
 	_sync_ability_visible()
+	_layout_ability()
 
 
 func _sync_ability_visible() -> void:
@@ -1844,15 +1868,20 @@ func _sync_ability_visible() -> void:
 			and card != null and card.is_visible_in_tree()
 
 
-## The button sits on the Operator card's bottom-right corner (over the end of its name / lore row:
-## the cost, the art's badges and the FP / Armor stay clear).
+## kc-layout-a: the Operator's ability button sits in the bottom row between UNDO and READY (the
+## Operator card is a hand-grid card now, too small to carry it); READY takes what is left.
 func _layout_ability() -> void:
-	if _ability == null or metrics.is_empty() or not metrics.has("op_card"):
+	if _ability == null or metrics.is_empty() or not metrics.has("ready"):
 		return
-	var op: Rect2 = metrics["op_card"]
-	var s: float = AbilityButton.SIZE_PX
+	var undo: Rect2 = metrics["undo"]
+	var ready: Rect2 = metrics["ready"]
+	var s: float = minf(AbilityButton.SIZE_PX, undo.size.y)
 	_ability.size = Vector2(s, s)
-	_ability.position = Vector2(op.end.x - s - 2.0, op.end.y - s - 2.0)
+	if _ability.state != AbilityButton.State.NONE:
+		_ability.position = Vector2(undo.end.x + 6.0, undo.position.y + (undo.size.y - s) * 0.5)
+		ready = Rect2(ready.position + Vector2(s + 6.0, 0), ready.size - Vector2(s + 6.0, 0))
+	_place(_ready_button, ready)
+	fit_button_text(_ready_button)
 	_sync_ability_visible.call_deferred()
 	_layout_boss_plate.call_deferred()
 

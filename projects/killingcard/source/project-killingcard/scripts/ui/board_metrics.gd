@@ -36,20 +36,23 @@ const CARD_MIN_W: float = 96.0
 const CARD_RATIO_WIDE: float = 2.4
 const CARD_RATIO_MIN: float = 1.3
 const PHONE: Dictionary = {"pad_y": 4.0, "row_gap": 3.0, "mid_gap": 3.0, "obj_h": 52.0, "gutter": 14.0,
-		"strip_w": 62.0, "badge_h": 64.0, "badge_gap": 5.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 210.0,
+		"strip_w": 62.0, "badge_h": 61.0, "badge_gap": 2.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 346.0,
 		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0}
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 61.0, "ks_v_h": 61.0}
 const DESKTOP: Dictionary = {"pad_y": 12.0, "row_gap": 6.0, "mid_gap": 6.0, "obj_h": 96.0, "gutter": 20.0,
-		"strip_w": 68.0, "badge_h": 64.0, "badge_gap": 8.0, "side_gap": 12.0, "tray_gap": 12.0, "tray_min": 224.0,
+		"strip_w": 68.0, "badge_h": 64.0, "badge_gap": 4.0, "side_gap": 12.0, "tray_gap": 12.0, "tray_min": 224.0,
 		"tray_pad": 12.0, "card_max": Vector2(108, 136), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 72.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0}
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 64.0, "ks_v_h": 64.0}
 
 
 ## area: the safe-area size the match screen lays out in. mirror: tray left, strip right.
 ## Returns {bh, bw, ...PHONE/DESKTOP values, compact, mirror, board: Rect2, strip: Rect2, tray: Rect2,
-## col_x: [x of A, B, C] (board-local), half_h, card: Vector2, hand_cols, grid: Rect2 (tray-local),
-## supply: Rect2, ks: Rect2 (killstreak tiles), ks_inline: bool (tray-local; supply_h = the top block)}.
-## Rects are area-local.
+## col_x: [x of A, B, C] (board-local), half_h, card: Vector2, hand_cols, face, grid: Rect2 (tray-local),
+## supply: Rect2, ks: Rect2 (the killstreak sockets, STRIP-local since kc-layout-a), ks_in_strip,
+## ks_vertical, undo, ready (tray-local)}. Rects are area-local.
+## kc-layout-a (the head's L1: direction A): the TRAY is sized first. It gets tray_min (phone 346 px =
+## 250 pt: a 2-column grid of 7 cards plus the Operator, never scrolling); the board takes what is left
+## and its banners shrink (4:1) on narrow phones (750 / 667), never the hand.
 static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dictionary:
 	# kc-portrait: a tall screen (height > width) gets the portrait layout.
 	if is_portrait(area):
@@ -57,7 +60,7 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	var p: Dictionary = (PHONE if compact else DESKTOP).duplicate()
 	var fixed_h: float = 2.0 * p["pad_y"] + 2.0 * p["mid_gap"] + p["obj_h"] + 6.0 * p["row_gap"]
 	var bh: float = floorf((area.y - fixed_h) / 8.0)
-	# Width left for the board once the strip and the tray's minimum are taken.
+	# Width left for the board once the strip and the tray's guaranteed width are taken.
 	var max_board: float = area.x - p["strip_w"] - p["side_gap"] - p["tray_gap"] - p["tray_min"]
 	var max_bw: float = floorf((max_board - (COLUMNS - 1) * p["gutter"]) / COLUMNS)
 	if bh * 4.0 > max_bw:
@@ -94,33 +97,73 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	return p
 
 
-## kc-ui3: the Supply row and the killstreak tiles. supply_h becomes the height of the whole top block.
+## kc-layout-a (the head's L4): the killstreak sockets live in the icon strip, under the STREAK
+## counter (landscape: 3 stacked sockets, ks_v_h tall; portrait: at the right end of the rail row).
+## The tray's top row is the Supply box alone (supply_h). p["ks"] is STRIP-local.
 static func _ks_rows(p: Dictionary, tray: Vector2) -> void:
-	var ks_w: float = KS_SLOTS * p["ks_w"] + (KS_SLOTS - 1) * KS_GAP
-	var inline: bool = tray.x >= ks_w + 8.0 + SUPPLY_MIN_W
-	p["ks_inline"] = inline
-	if inline:
-		p["supply"] = Rect2(0, 0, tray.x - ks_w - 8.0, p["ks_h"])
-		p["ks"] = Rect2(tray.x - ks_w, 0, ks_w, p["ks_h"])
-		p["supply_h"] = p["ks_h"]
-	else:
-		p["supply"] = Rect2(0, 0, tray.x, p["supply_h"])
-		p["ks"] = Rect2(0, p["supply_h"] + 6.0, tray.x, p["ks_h"])
-		p["supply_h"] = p["supply_h"] + 6.0 + p["ks_h"]
+	p["ks_inline"] = false
+	p["ks_in_strip"] = true
+	p["supply"] = Rect2(0, 0, tray.x, p["supply_h"])
+	# kc-layout-a: landscape drops the OPERATOR badge (the Operator card is the hand's first card and
+	# the sockets took its killstreak buttons), so every strip badge keeps its 44 pt / 64 px target.
+	p["op_badge"] = bool(p.get("portrait", false))
+	p["ks"] = ks_rect(p)
+	p["ks_vertical"] = not bool(p.get("portrait", false))
+	# The phone strip has no room left for the sets rail: it sits in the tray's top row, right of the
+	# Supply box (tray-local rail_tray); desktop keeps it in the strip.
+	if bool(p.get("compact", false)) and not bool(p.get("portrait", false)):
+		# The row is a 44 pt target (the rail's initiative chip and set chips are tappable).
+		p["supply_h"] = maxf(float(p["supply_h"]), float(p["badge_h"]))
+		var rw: float = floorf(tray.x * 0.36)
+		p["supply"] = Rect2(0, 0, tray.x - rw - 6.0, p["supply_h"])
+		p["rail_tray"] = Rect2(tray.x - rw, 0, rw, p["supply_h"])
 
 
-## kc-cards-impl (the head's H1 + O2): the hand grid holds X1 cards (the C1+ banner plus a
-## name plate, X1_PLATE_H) between the Supply row and the Operator row. The Operator row at the
-## bottom: the Operator card on the left, UNDO (icon) stacked over READY on the right (each
-## btn_h tall, >= 44 pt); kc-ipad-cards: a narrow desktop / iPad tray stacks it (op_stacked).
-## kc-ipad-cards: the grid spans the tray; card / hand_cols are hand_fit() for a 7-card hand and
-## HandArea re-fits them to the real count. Keys: card, hand_cols, hand_min_h, grid (the cards'
-## rect), hand_rect (the HandArea's rect = the grid; the Operator card is placed below it, in the
-## Operator row), op_card, undo, ready, op_h, op_stacked (tray-local).
+## The killstreak sockets' block (strip-local).
+static func ks_rect(m: Dictionary) -> Rect2:
+	var strip: Rect2 = m["strip"]
+	if bool(m.get("portrait", false)):
+		var w: float = KS_SLOTS * KS_PORTRAIT_W + (KS_SLOTS - 1) * KS_GAP
+		var top0: float = float(m["badge_h"]) + float(m["badge_gap"])
+		return Rect2(strip.size.x - w, top0, w, maxf(0.0, strip.size.y - top0))
+	var gap: float = m["badge_gap"]
+	var above: float = 3.0 if bool(m.get("op_badge", true)) else 2.0
+	var y: float = float(m["menu_h"]) + gap + above * (float(m["badge_h"]) + gap)
+	return Rect2(0, y, strip.size.x, KS_SLOTS * float(m["ks_v_h"]) + (KS_SLOTS - 1) * minf(gap, 2.0))
+
+
+## kc-layout-a (the head's L1 + L3): the tray is the Supply box on top, the hand grid, and UNDO
+## (icon) + READY sharing the bottom row. The Operator is the hand grid's FIRST card (HandArea), the
+## same size as the others, marked by its brass frame and OPERATOR tab. The grid is sized for
+## HAND_SLOTS (7 cards + the Operator) and HandArea re-fits it to the real count (hand_fit()): it never
+## scrolls and cards never overlap. Keys: card, hand_cols, face, hand_min_h, grid (= hand_rect),
+## op_card (the grid's first cell for a full hand; HandArea places the real one), undo, ready.
+static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
+	var gap: float = p["card_gap"]
+	var btn_h: float = p["btn_h"]
+	var compact: bool = bool(p.get("compact", true))
+	var grid_top: float = p["supply_h"] + 8.0
+	var grid_h: float = maxf(0.0, tray.y - grid_top - btn_h - 8.0)
+	var min_h: float = X1_MIN_H if compact else X1_MIN_H_DESKTOP
+	var fit: Dictionary = hand_fit(Vector2(tray.x, grid_h), HAND_SLOTS, gap, min_h, HAND_SLOTS - 1)
+	p["card"] = fit["card"]
+	p["hand_cols"] = fit["cols"]
+	p["face"] = fit["face"]
+	p["hand_min_h"] = min_h
+	p["grid"] = Rect2(0, grid_top, tray.x, grid_h)
+	p["hand_rect"] = p["grid"]
+	p["op_h"] = 0.0
+	p["op_stacked"] = false
+	p["op_card"] = Rect2(Vector2(0, grid_top + 6.0), fit["card"])
+	var uw: float = clampf(roundf(tray.x * 0.26), 64.0, 96.0)
+	p["undo"] = Rect2(0, tray.y - btn_h, uw, btn_h)
+	p["ready"] = Rect2(uw + 6.0, tray.y - btn_h, tray.x - uw - 6.0, btn_h)
+
+
 const X1_PLATE_H: float = 26.0
 const X1_MIN_W: float = 80.0
-## X1 cards are at least this tall (a 44 pt tap target on the smallest phone, the SE at 0.695 pt/px):
-## narrow cards grow their plate. Desktop (1 pt/px) needs 44 px; its 1-column cards are taller anyway.
+## X1 cards are at least this tall (a 44 pt tap target on the smallest phone, the SE at 0.695 pt/px).
+## Desktop (1 pt/px) needs 44 px.
 const X1_MIN_H: float = 64.0
 const X1_MIN_H_DESKTOP: float = 48.0
 
@@ -130,56 +173,47 @@ static func x1_size(w: float, min_h: float = X1_MIN_H) -> Vector2:
 	return Vector2(w, maxf(min_h, roundf(w / 4.0) + X1_PLATE_H))
 
 
-static func _hand_grid(p: Dictionary, tray: Vector2) -> void:
-	var gap: float = p["card_gap"]
-	var btn_h: float = p["btn_h"]
-	var compact: bool = bool(p.get("compact", true))
-	# kc-ipad-cards (the head's iPad playtest: "fix the hand not using the entire space", READY read
-	# "READ"): a narrow, tall tray (desktop / iPad sizes, < STACK_TRAY_W wide) stacks the Operator row:
-	# the Operator card across the tray, then UNDO (icon) beside a wide READY. A wide tray (the phone)
-	# keeps the Operator card beside UNDO over READY.
-	var stacked: bool = not compact and tray.x < STACK_TRAY_W
-	var op_card_h: float = clampf(roundf(tray.x * 0.55), 110.0, 150.0)
-	var op_h: float = (op_card_h + 6.0 + btn_h) if stacked else (2.0 * btn_h + 6.0)
-	var grid_top: float = p["supply_h"] + 8.0
-	var grid_h: float = tray.y - grid_top - op_h - 8.0
-	var min_h: float = X1_MIN_H if compact else X1_MIN_H_DESKTOP
-	# The grid fills the tray's width; HandArea re-fits the cards to the hand's count (hand_fit()).
-	var fit: Dictionary = hand_fit(Vector2(tray.x, grid_h), HAND_SLOTS - 1, gap, min_h)
-	p["card"] = fit["card"]
-	p["hand_cols"] = fit["cols"]
-	p["hand_min_h"] = min_h
-	p["grid"] = Rect2(0, grid_top, tray.x, grid_h)
-	p["op_h"] = op_h
-	p["op_stacked"] = stacked
-	p["hand_rect"] = p["grid"]
-	if stacked:
-		var uw: float = clampf(roundf(tray.x * 0.3), 64.0, 96.0)
-		p["op_card"] = Rect2(0, tray.y - op_h, tray.x, op_card_h)
-		p["undo"] = Rect2(0, tray.y - btn_h, uw, btn_h)
-		p["ready"] = Rect2(uw + 6.0, tray.y - btn_h, tray.x - uw - 6.0, btn_h)
-		return
-	var bcol: float = 140.0 if compact else 132.0
-	bcol = minf(bcol, floorf(tray.x * 0.52))
-	p["op_card"] = Rect2(0, tray.y - op_h, tray.x - bcol - 8.0, op_h)
-	p["undo"] = Rect2(tray.x - bcol, tray.y - op_h, bcol, btn_h)
-	p["ready"] = Rect2(tray.x - bcol, tray.y - btn_h, bcol, btn_h)
-
-
-## kc-ipad-cards: trays narrower than this (desktop / iPad: 224 px) stack the Operator row.
+## Kept for callers: trays narrower than this used to stack the Operator row (kc-ipad-cards).
 const STACK_TRAY_W: float = 300.0
 ## The hand never sizes its cards for fewer than this many (one or two cards stay a sensible size).
 const HAND_FIT_MIN_N: int = 4
+## kc-layout-a (the head's L2): a hand card's rule line (mid face: 1 line, full face: 2 lines), under
+## its name plate. At 6-7 hand cards the face is compact (name, cost, art, FP, Armor; the rule is a
+## long press away).
+const RULE_LINE_H: float = 20.0
+const COMPACT_FROM: int = 6
+const FACE_COMPACT: StringName = &"compact"
+const FACE_MID: StringName = &"mid"
+const FACE_FULL: StringName = &"full"
 
 
-## kc-ipad-cards: the X1 card size and columns for `n` hand cards in a grid of size `grid`: the
-## layout whose cards get the biggest badges (BannerCard.badge_px) wins, then the one covering more of
-## the grid. Cards are as tall as the rows allow (the banner up to 2.4:1), so the hand fills the tray.
-## When no layout reaches READABLE_PX badges (13 pt on the smallest phone), the hand SCROLLS: one
-## column (two when wide enough) of readable cards, `visible` of them at a time.
-## Returns {card: Vector2, cols: int, scroll: bool, visible: int, s: float}.
-static func hand_fit(grid: Vector2, n: int, gap: float, min_h: float) -> Dictionary:
+## Rule lines of a face (compact 0, mid 1, full 2).
+static func rule_lines(face: StringName) -> int:
+	return {FACE_MID: 1, FACE_FULL: 2}.get(face, 0)
+
+
+## kc-layout-a: the face a hand card of size `card` shows with `hand_cards` cards in hand.
+static func face_for(card: Vector2, hand_cards: int) -> StringName:
+	if hand_cards >= COMPACT_FROM:
+		return FACE_COMPACT
+	var w: float = card.x - 4.0
+	if card.y >= roundf(w / 3.4) + BannerCard.PLATE_H + 4.0 + 2.0 * RULE_LINE_H:
+		return FACE_FULL
+	if card.y >= roundf(w / 5.0) + BannerCard.PLATE_H + 4.0 + RULE_LINE_H:
+		return FACE_MID
+	return FACE_COMPACT
+
+
+## kc-layout-a (the head's L1 + L2): the card size, columns and face for `n` items (hand cards plus
+## the Operator card) in a grid of size `grid`. The layout whose cards get the biggest badges
+## (BannerCard.fit_score) plus a bonus for a richer face wins, then the one covering more of the
+## grid. The hand NEVER scrolls and cards never overlap: when no layout reaches the comfortable
+## minimum, the rows share the room anyway (compact faces). hand_cards (-1 = n) picks the face rule
+## (compact from COMPACT_FROM cards). Returns {card: Vector2, cols, face, rule_lines, scroll (always
+## false), visible (= n), s}.
+static func hand_fit(grid: Vector2, n: int, gap: float, min_h: float, hand_cards: int = -1) -> Dictionary:
 	var count: int = maxi(n, HAND_FIT_MIN_N)
+	var cards_n: int = hand_cards if hand_cards >= 0 else n
 	var room: float = grid.y - 6.0  # the selected card's lift (HandArea.SELECTED_LIFT)
 	var best: Dictionary = {}
 	for cols: int in [1, 2, 3]:
@@ -188,36 +222,37 @@ static func hand_fit(grid: Vector2, n: int, gap: float, min_h: float) -> Diction
 			continue
 		var rows: int = ceili(float(count) / cols)
 		var h: float = floorf((room - (rows - 1) * gap) / rows)
-		h = minf(h, x1_max_h(w))
+		h = minf(h, x1_max_h(w) + 2.0 * RULE_LINE_H)
 		if h < maxf(min_h, x1_min_h(w)):
 			continue
+		var face: StringName = face_for(Vector2(w, h), cards_n)
+		h = minf(h, x1_max_h(w) + rule_lines(face) * RULE_LINE_H)
 		var c: Vector2 = Vector2(w, h)
-		var s: float = BannerCard.badge_px(c)
-		var score: float = BannerCard.fit_score(c)
+		var core: Vector2 = Vector2(w, h - rule_lines(face) * RULE_LINE_H)
+		var score: float = BannerCard.fit_score(core) + {FACE_MID: 3.0, FACE_FULL: 5.0}.get(face, 0.0)
 		var cover: float = minf(1.0, float(mini(n, rows * cols)) * w * h / maxf(1.0, grid.x * room))
 		if best.is_empty() or score > float(best["score"]) + 0.5 or (absf(score - float(best["score"])) <= 0.5 and cover > float(best["cover"])):
-			best = {"card": c, "cols": cols, "scroll": false, "visible": n, "s": s, "cover": cover, "score": score}
-	if not best.is_empty() and float(best["score"]) >= BannerCard.READABLE_PX:
+			best = {"card": c, "cols": cols, "scroll": false, "visible": n, "s": BannerCard.badge_px(core), "cover": cover,
+					"score": score, "face": face, "rule_lines": rule_lines(face)}
+	if not best.is_empty():
 		return best
-	# Scroll: the shortest card that reaches READABLE_PX, in the widest column(s) that allow it.
-	for cols: int in [2, 1]:
-		var w2: float = floorf((grid.x - (cols - 1) * gap) / cols)
-		if w2 < X1_MIN_W:
+	# Too tight for the comfortable minimum: still no scroll, no overlap. The column count whose cards
+	# get the most area (compact faces); the rows share the room.
+	var fb: Dictionary = {}
+	for cols2: int in [1, 2, 3]:
+		var w2: float = floorf((grid.x - (cols2 - 1) * gap) / cols2)
+		if w2 < X1_MIN_W * 0.8:
 			continue
-		var h2: float = maxf(min_h, x1_min_h(w2))
-		while h2 <= x1_max_h(w2) and BannerCard.fit_score(Vector2(w2, h2)) < BannerCard.READABLE_PX:
-			h2 += 1.0
-		if h2 > x1_max_h(w2) or h2 > room:
-			continue
-		var per_col: int = maxi(1, int(floorf((room + gap) / (h2 + gap))))
-		var vis: int = per_col * cols
-		if vis >= n:
-			return {"card": Vector2(w2, h2), "cols": cols, "scroll": false, "visible": n, "s": BannerCard.badge_px(Vector2(w2, h2)), "cover": 0.0}
-		return {"card": Vector2(w2, h2), "cols": cols, "scroll": true, "visible": vis, "s": BannerCard.badge_px(Vector2(w2, h2)), "cover": 0.0}
-	if best.is_empty():
-		var w3: float = floorf((grid.x - gap) / 2.0)
-		return {"card": x1_size(w3, min_h), "cols": 2, "scroll": false, "visible": n, "s": BannerCard.badge_px(x1_size(w3, min_h)), "cover": 0.0}
-	return best
+		var rows2: int = ceili(float(count) / cols2)
+		var h2: float = maxf(24.0, floorf((room - (rows2 - 1) * gap) / rows2))
+		h2 = minf(h2, x1_max_h(w2))
+		if fb.is_empty() or w2 * h2 > (fb["card"] as Vector2).x * (fb["card"] as Vector2).y:
+			fb = {"card": Vector2(w2, h2), "cols": cols2}
+	if fb.is_empty():
+		fb = {"card": Vector2(maxf(24.0, grid.x), maxf(24.0, floorf((room - (count - 1) * gap) / count))), "cols": 1}
+	var c2: Vector2 = fb["card"]
+	return {"card": c2, "cols": fb["cols"], "scroll": false, "visible": n, "s": BannerCard.badge_px(c2), "cover": 0.0,
+			"score": 0.0, "face": FACE_COMPACT, "rule_lines": 0}
 
 
 ## The shortest an X1 card of width w gets (its banner at most 6:1: still a banner, not a strip).
@@ -243,7 +278,9 @@ static func objective_y(m: Dictionary) -> float:
 
 
 ## Badge rects of the icon strip (strip-local): MENU, SCORE, OPERATOR, STREAK, RIVAL, PREVIEW from
-## the top, DECK at the bottom (board-layout-v2.md §2.1).
+## the top, DECK at the bottom (board-layout-v2.md §2.1). kc-layout-a: the killstreak sockets
+## (ks_rect) sit between STREAK and RIVAL; MENU is menu_h tall; in landscape OPERATOR gets a 0-high
+## rect (op_badge false: hidden).
 static func badge_rects(m: Dictionary) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	var strip: Rect2 = m["strip"]
@@ -255,17 +292,28 @@ static func badge_rects(m: Dictionary) -> Array[Rect2]:
 		for i: int in 7:
 			out.append(Rect2(i * (bw + gap), 0, bw, h))
 		return out
+	var g: float = m["badge_gap"]
+	var y: float = 0.0
 	for i: int in 6:
-		out.append(Rect2(0, i * (h + m["badge_gap"]), strip.size.x, h))
+		if i == 4:
+			y = ks_rect(m).end.y + g
+		var bh: float = float(m.get("menu_h", h)) if i == 0 else h
+		if i == 2 and not bool(m.get("op_badge", true)):
+			out.append(Rect2(0, y, strip.size.x, 0.0))  # kc-layout-a: no OPERATOR badge in landscape
+			continue
+		out.append(Rect2(0, y, strip.size.x, bh))
+		y += bh + g
 	out.append(Rect2(0, strip.size.y - h, strip.size.x, h))
 	return out
 
 
-## kc-syn-ui: the trait rail's rect (strip-local) between the PREVIEW badge and DECK.
+## kc-syn-ui: the trait rail's rect (strip-local) between the PREVIEW badge and DECK (portrait: the
+## row under the badges, left of the killstreak sockets).
 static func rail_rect(m: Dictionary) -> Rect2:
 	if bool(m.get("portrait", false)):
 		var top0: float = float(m["badge_h"]) + float(m["badge_gap"])
-		return Rect2(0, top0, (m["strip"] as Rect2).size.x, maxf(0.0, (m["strip"] as Rect2).size.y - top0))
+		var ks: Rect2 = ks_rect(m)
+		return Rect2(0, top0, maxf(0.0, ks.position.x - 8.0), maxf(0.0, (m["strip"] as Rect2).size.y - top0))
 	var rects: Array[Rect2] = badge_rects(m)
 	var gap: float = m["badge_gap"]
 	var top: float = rects[5].end.y + gap
@@ -274,15 +322,15 @@ static func rail_rect(m: Dictionary) -> Rect2:
 
 
 # =============================================================================
-# kc-portrait: the iPhone portrait layout (the head: "investigate the fan cards at the bottom for the
-# portrait version"; landscape and PC keep the side tray). From the L1 portrait mock-up
-# (card-design-options.html, Layout v3): top bars (the 7 badges, then the sets rail), the board
-# stacked under them (3 columns, 4:1 banners ~169x42 on a 540 px wide canvas), then the tray: the
-# Supply / killstreak row, the preview well (left) with the Operator and UNDO / READY (right), and a
-# swipeable fan of Y2+ hand cards at the bottom.
+# kc-portrait: the iPhone portrait layout. From the L1 portrait mock-up (card-design-options.html,
+# Layout v3): top bars (the 7 badges, then the sets rail with the killstreak sockets at its right
+# end, kc-layout-a), the board stacked under them (3 columns, 4:1 banners ~169x42 on a 540 px wide
+# canvas), then the tray. kc-layout-a (ux-layout-v2.html, direction A portrait): no fan and no
+# preview well any more: the Supply box, the same 2-column hand grid as landscape (the Operator
+# first, never scrolling, never overlapping), and UNDO + READY on the bottom row.
 # =============================================================================
 
-## Fan card width and the step between cards: 68 px = 44 pt down to a 360 pt wide phone (0.667 pt/px).
+## Kept for callers (the kc-portrait fan, replaced by the grid in kc-layout-a).
 const FAN_CARD_W: float = 176.0
 const FAN_STEP: float = 68.0
 ## Button height in portrait (44 pt on a 360 pt wide phone).
@@ -290,17 +338,20 @@ const PORTRAIT_BTN_H: float = 68.0
 const PORTRAIT_GUTTER: float = 8.0
 const PORTRAIT_PAD: float = 8.0
 const PORTRAIT_RIGHT_W: float = 216.0
+## kc-layout-a: a killstreak socket's width in the portrait rail row.
+const KS_PORTRAIT_W: float = 64.0
 
 
 static func is_portrait(area: Vector2) -> bool:
 	return area.y > area.x
 
 
-## Same keys as compute() plus portrait (true), fan (true), well (tray-local Rect2), fan_step.
+## Same keys as compute() plus portrait (true), fan (false since kc-layout-a).
 static func compute_portrait(area: Vector2) -> Dictionary:
 	var p: Dictionary = PHONE.duplicate()
 	p["portrait"] = true
-	p["fan"] = true
+	p["fan"] = false
+	p["badge_h"] = 64.0
 	p["btn_h"] = PORTRAIT_BTN_H
 	p["compact"] = true
 	p["mirror"] = false
@@ -324,22 +375,5 @@ static func compute_portrait(area: Vector2) -> Dictionary:
 	p["tray"] = tray
 	p["col_x"] = [0.0, bw + PORTRAIT_GUTTER, 2.0 * (bw + PORTRAIT_GUTTER)]
 	_ks_rows(p, tray.size)
-	var card: Vector2 = Vector2(FAN_CARD_W, CardView.height_for(FAN_CARD_W))
-	var fan_y: float = tray.size.y - card.y - 10.0
-	var fan: Rect2 = Rect2(0, fan_y, tray.size.x, card.y + 10.0)
-	p["card"] = card
-	p["hand_cols"] = HAND_SLOTS
-	p["fan_step"] = FAN_STEP
-	p["grid"] = fan
-	p["hand_rect"] = fan
-	var y0: float = float(p["supply_h"]) + 8.0
-	var y1: float = fan_y - 8.0
-	var mid_h: float = maxf(0.0, y1 - y0)
-	var rx: float = tray.size.x - PORTRAIT_RIGHT_W
-	var btn_h: float = p["btn_h"]
-	p["op_h"] = mid_h
-	p["well"] = Rect2(0, y0, rx - 8.0, mid_h)
-	p["op_card"] = Rect2(rx, y0, PORTRAIT_RIGHT_W, maxf(btn_h, mid_h - btn_h - 8.0))
-	p["undo"] = Rect2(rx, y1 - btn_h, 70.0, btn_h)
-	p["ready"] = Rect2(rx + 78.0, y1 - btn_h, PORTRAIT_RIGHT_W - 78.0, btn_h)
+	_hand_grid(p, tray.size)
 	return p

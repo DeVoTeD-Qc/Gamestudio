@@ -361,9 +361,13 @@ func test_match_terrain_ability_boss() -> void:
 		assert_eq(ab.word(), "USE", "%s: READY reads USE" % name)
 		var k: float = Layout.points_per_px(screen)
 		assert_true(ab.size.x * k >= 44.0 - 0.5, "%s: the button is a 44 pt target (%.0f pt)" % [name, ab.size.x * k])
-		var op: Control = m.get_hand().get_operator_card()
-		if op != null:
-			assert_true(op.get_global_rect().grow(1.0).encloses(ab.get_global_rect()), "%s: the button sits on the Operator card" % name)
+		# kc-layout-a: the Operator card is a hand-grid card; the button sits in the bottom row between
+		# UNDO and READY.
+		var undo_r: Rect2 = m.get_undo_button().get_global_rect()
+		var ready_r: Rect2 = m.get_ready_button().get_global_rect()
+		assert_true(ab.get_global_rect().position.x >= undo_r.end.x - 1.0 and ab.get_global_rect().end.x <= ready_r.position.x + 1.0,
+				"%s: the button sits between UNDO and READY" % name)
+		assert_true(absf(ab.get_global_rect().get_center().y - ready_r.get_center().y) < 2.0, "%s: in READY's row" % name)
 		c.use_ability()
 		await _frames(2)
 		assert_eq(ab.word(), "AIM", "%s: tap = pick a target (AIM)" % name)

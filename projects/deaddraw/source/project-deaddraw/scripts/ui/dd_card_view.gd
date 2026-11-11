@@ -10,8 +10,12 @@
 #   exposed for the feedback animations.
 # Dependencies: DDUi.
 # Author: Mechanics Developer Agent
+#   dd-ux-v4: spec "strength" (a zombie's number) draws the strength mark (dd_marks.gd) in place of
+#   the number badge; spec "hit" (a weapon's power) draws the yellow hit burst in the corner.
 class_name DDCardView
 extends PanelContainer
+
+const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
 
 signal tapped(view: DDCardView)
 signal inspected(payload: Dictionary)
@@ -43,6 +47,9 @@ var _corner_chip: Control = null
 var _row: bool = false
 ## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
 var pip_bar: Pips = null
+## dd-ux-v4: the strength mark / hit burst drawn on the art window (null when the tile has none).
+var strength_mark: Control = null
+var hit_burst: Control = null
 
 
 ## v2: a row of magazine pips: filled = rounds left, hollow = spent. Wraps into a second row
@@ -231,7 +238,21 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	if bool(spec.get("art_dim", false)):
 		tr.self_modulate = Color(0.45, 0.45, 0.45)
 	var big: String = str(spec.get("big", ""))
-	if big != "":
+	if spec.has("strength") or spec.has("hit"):
+		# dd-ux-v4: the zombie strength mark or the weapon's hit burst, sized to the tile
+		var m: Control = Marks.StrengthMark.new(int(spec["strength"])) if spec.has("strength") else Marks.HitBurst.new(int(spec["hit"]))
+		window.add_child(m)
+		if spec.has("strength"):
+			strength_mark = m
+		else:
+			hit_burst = m
+		var place: Callable = func() -> void:
+			if is_instance_valid(m):
+				var d: float = clampf(minf(window.size.x * 0.3, window.size.y * 0.62), 34.0, 104.0)
+				m.size = Vector2(d, d)
+				m.position = Vector2(5, 5)
+		window.resized.connect(place)
+	elif big != "":
 		_badge_panel = _number_badge(big)
 		window.add_child(_badge_panel)
 		# dd-ux-clean2: the art window can settle after the tile (tall tiles); refit then too

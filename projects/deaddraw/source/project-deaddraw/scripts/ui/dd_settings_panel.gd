@@ -11,6 +11,9 @@ const Sfx: GDScript = preload("res://scripts/fx/dd_sfx.gd")
 
 signal closed
 signal opened
+## dd-ux-v4: the Menu also opens the Codex and the Help / Glossary.
+signal codex_requested
+signal help_requested
 
 var _content: Control = null
 
@@ -62,6 +65,18 @@ func open() -> void:
 	grid.add_child(_toggle(g, "screen_shake", "Screen shake"))
 	grid.add_child(_toggle(g, "reduce_motion", "Reduce motion"))
 	v.add_child(DDUi.label("Reduce motion: cards fade instead of flying, no shake or zoom.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var more: HBoxContainer = DDUi.hbox(8)
+	v.add_child(more)
+	var cx: Button = DDUi.button("Codex", DDUi.PANEL_HI, DDUi.FONT_M)
+	cx.name = "MenuCodex"
+	cx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cx.pressed.connect(func() -> void: codex_requested.emit())
+	more.add_child(cx)
+	var hp: Button = DDUi.button("Help · Glossary", DDUi.PANEL_HI, DDUi.FONT_M)
+	hp.name = "MenuHelp"
+	hp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp.pressed.connect(func() -> void: help_requested.emit())
+	more.add_child(hp)
 	var done: Button = DDUi.button("Done", Color("245236"), DDUi.FONT_L)
 	done.pressed.connect(close)
 	v.add_child(done)

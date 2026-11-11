@@ -97,6 +97,32 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 		var e: Dictionary = bv.entry
 		var lay: Dictionary = layout_for(stats.size, e)
 		draw_badges(stats, lay, e, bv.side, panel.get_theme_color(&"accent", &"Hud")))
+	# kc-layout-a (the head's L2): the rule line under the name plate (mid face: 1 line, full face: 2
+	# lines; compact: hidden, the rule is a long press away). IconText puts the keyword's icon in front.
+	var rule_plate: Panel = Panel.new()
+	rule_plate.name = "RulePlate"
+	rule_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rsb := StyleBoxFlat.new()
+	rsb.bg_color = PLATE_COLOUR.darkened(0.25)
+	rule_plate.add_theme_stylebox_override(&"panel", rsb)
+	rule_plate.visible = false
+	face.add_child(rule_plate)
+	var rule: RichTextLabel = RichTextLabel.new()
+	rule.name = "RuleLine"
+	IconText.setup(rule)
+	rule.fit_content = false
+	rule.clip_contents = true
+	rule.add_theme_font_override(&"normal_font", CardLook.RULE_FONT)
+	rule.add_theme_font_size_override(&"normal_font_size", RULE_PX)
+	rule.add_theme_color_override(&"default_color", CardLook.RULE_COLOR)
+	rule.add_theme_constant_override(&"line_separation", -2)
+	var rule_text: String = String(entry.get("rule", ""))
+	if rule_text == "":
+		# A unit with no ability says so, dimmed (the lore is in the inspector).
+		rule_text = "No ability" if entry.has("fp") else ""
+		rule.add_theme_color_override(&"default_color", Color("#7E8890"))
+	IconText.fill(rule, rule_text, RULE_PX, CardLook.RULE_COLOR)
+	rule_plate.add_child(rule)
 	var sub: Label = Label.new()
 	sub.name = "SubLabel"
 	sub.visible = false
@@ -109,14 +135,26 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 			inset = float((sb as StyleBoxFlat).border_width_left)
 		face.position = Vector2(inset, inset)
 		face.size = panel.size - Vector2(inset, inset) * 2.0
-		var lay: Dictionary = layout_for(face.size, bv.entry)
+		# kc-layout-a: the rule lines take the bottom of the face; the X1 card is the rest.
+		var lines: int = int(panel.get_meta(&"rule_lines", 0)) if IconText.plain(rule) != "" else 0
+		var rule_h: float = minf(lines * RULE_LINE_H, maxf(0.0, face.size.y - 40.0))
+		if rule_h < RULE_LINE_H:
+			rule_h = 0.0
+		var core: Vector2 = Vector2(face.size.x, face.size.y - rule_h)
+		rule_plate.visible = rule_h > 0.0
+		rule_plate.position = Vector2(0, core.y)
+		rule_plate.size = Vector2(face.size.x, rule_h)
+		rule.position = Vector2(5, 1)
+		rule.size = Vector2(maxf(8.0, face.size.x - 8.0), maxf(0.0, rule_h - 2.0))
+		rule.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if rule_h >= 2.0 * RULE_LINE_H else TextServer.AUTOWRAP_OFF
+		var lay: Dictionary = layout_for(core, bv.entry)
 		var br: Rect2 = lay["banner"]
 		bv.position = br.position
 		bv.size = br.size
 		plate.position = (lay["plate"] as Rect2).position
 		plate.size = (lay["plate"] as Rect2).size
 		stats.position = Vector2.ZERO
-		stats.size = face.size
+		stats.size = core
 		stats.queue_redraw()
 		var nr: Rect2 = lay["name"]
 		title.position = nr.position - plate.position
@@ -125,6 +163,26 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 	panel.sort_children.connect(place)
 	bv.show_unit(entry, side, false)
 	return panel
+
+
+## kc-layout-a: a hand card's rule line height and font size (16 px on the canvas = 11.5 pt on the
+## phone; never under 10 pt).
+const RULE_LINE_H: float = 20.0
+const RULE_PX: int = 16
+
+
+## kc-layout-a (the head's L2): how many rule lines the card shows (0 compact, 1 mid, 2 full); the
+## card re-lays itself out.
+static func set_rule_lines(panel: Control, lines: int) -> void:
+	if int(panel.get_meta(&"rule_lines", 0)) == lines:
+		return
+	panel.set_meta(&"rule_lines", lines)
+	panel.queue_sort()
+
+
+## The rule line's RichTextLabel (null when the card has none).
+static func rule_of(panel: Node) -> RichTextLabel:
+	return panel.get_node_or_null(^"Face/RulePlate/RuleLine") as RichTextLabel if panel != null else null
 
 
 ## The name label at 16 px, or smaller (down to 13 px) when the whole name then fits `width`.

@@ -102,7 +102,7 @@ function tacCardV(d, v) {
 const GUN_BG = ['#2E3238', '#D2BF95'];
 const RTXT = ['#1C2017', '#2E8B3E', '#2569B8', '#8A3DB8', '#A87E00'];
 const RLITE = ['#fff', '#7BD88A', '#7FB6F2', '#C99BEA', '#F2CC4A'];
-const GUN_ART = { Pistol: 'Hip_Fire', SMG: 'Run_and_Gun', Shotgun: 'Breach', 'Assault Rifle': 'Covering_Fire', LMG: 'Suppressing_Fire', 'Marksman Rifle': 'Steady_Breath', Sniper: 'Spotter_Scope', 'Burst Rifle': 'Rush_the_Door', Launcher: 'Breaching_Charge', Revolver: 'Snapshot', Melee: 'Breach' };
+const GUN_ART = { Pistol: 'Hip_Fire', SMG: 'Follow_Through', Shotgun: 'Breach', 'Assault Rifle': 'Suppressing_Barrage', LMG: 'Suppressing_Fire', 'Marksman Rifle': 'Steady_Breath', Sniper: 'Spotter_Scope', 'Burst Rifle': 'Rush_the_Door', Launcher: 'Breaching_Charge', Revolver: 'Snapshot', Melee: 'Breach' };
 const gunBase = g => Object.values(WD.WEAPONS).find(w => w.cls === g.cls && w.tier === 0);
 function gunCard(id, tierBack) {
   const g = WD.WEAPONS[id], b = gunBase(g), sec = false;

@@ -48,7 +48,12 @@ func test_board_shows_links_rail_and_resulting_stats() -> void:
 		assert_eq(m.get_trait_rail().chip_texts(&"player"), PackedStringArray(["Vanguard 2", "Spec Ops 1/2"]), "%s rail chips" % label)
 		assert_true(m.get_trait_rail().is_visible_in_tree(), "%s rail visible in the strip" % label)
 		var strip_r: Rect2 = m.get_badge(&"deck").get_parent().get_global_rect().grow(0.6)
-		assert_true(strip_r.encloses(m.get_trait_rail().get_global_rect()), "%s rail inside the icon strip" % label)
+		if m.metrics.has("rail_tray"):
+			# kc-layout-a: the phone's sets rail sits in the tray's top row (the killstreak sockets took
+			# its place in the strip).
+			assert_true(m.get_tray().get_global_rect().grow(0.6).encloses(m.get_trait_rail().get_global_rect()), "%s rail in the tray's top row" % label)
+		else:
+			assert_true(strip_r.encloses(m.get_trait_rail().get_global_rect()), "%s rail inside the icon strip" % label)
 		# kc-pos-cut: the board draws no link ticks any more.
 		assert_false(m.get_board().has_method(&"get_drawn_ticks"), "%s no link ticks" % label)
 		# Banner entries: buffed FP marked, keyword pip lit, trait tier (kc-no-training: no camo band).

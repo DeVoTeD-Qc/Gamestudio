@@ -76,7 +76,35 @@ static func chip(uid: int, card: CardData) -> Dictionary:
 	if card.is_unit():
 		d["fp"] = card.firepower
 		d["armor"] = card.armor
+	d["rule"] = rule_line(card)
 	return d
+
+
+## kc-layout-a (the head's L2): the hand card's rule lines (mid face shows the first, full the first
+## two): one line per keyword ("Pick: Shoots the enemy with the lowest Armor."; IconText adds the
+## keyword's icon), else the card's own text (tactics, Fields, effect units).
+static func rule_line(card: CardData) -> String:
+	# A vanilla unit's text is its lore (inspector only): no rule line.
+	var fallback: String = card.text if not card.is_unit() or not card.effects.is_empty() else ""
+	return rule_lines_of(keywords(card), fallback)
+
+
+static func rule_lines_of(entries: Array, fallback: String = "") -> String:
+	var lines: PackedStringArray = []
+	var said_text: bool = false
+	for k: Dictionary in entries:
+		if lines.size() >= 2:
+			break
+		if k["id"] in [&"on_deploy", &"on_down", &"end_of_round", &"immediate"] and fallback.strip_edges() != "":
+			# A trigger's own words say less than the card's text ("Draw 2 now.").
+			if not said_text:
+				said_text = true
+				lines.append(fallback.strip_edges())
+			continue
+		lines.append("%s: %s" % [k["name"], k["text"]])
+	if lines.is_empty():
+		return fallback.strip_edges()
+	return "\n".join(lines)
 
 
 ## The entries of keywords() / operator_keywords() that have an icon, as [{id, value, name}].
@@ -238,7 +266,7 @@ const GLOSSARY_EXTRA: Dictionary = {
 	&"tactic": ["Tactic", "A one-time order. Play it in Deploy; it resolves at Reveal, then goes to the discard."],
 	&"field": ["Field / Overrun", "A Field stays in its column and keeps working. Overrun: at the end of a round, if the enemy controls its column, the Field is destroyed (hidden traps are exempt)."],
 	&"control": ["Column control", "After the firefight, the side with units left in a column (and the rival with none) controls it. Both sides: EVEN, unless only one has a Holder."],
-	&"objective": ["Objective tile", "The middle row: the column letter in its control mark (teal circle yours, red diamond the rival's, dashed square even, grey ring open) and the Fields there."],
+	&"objective": ["Objective tile", "The middle row: the column letter on its control plate (solid teal yours, hatched red the rival's, dashed even, grey open) and the Fields there."],
 	&"operator": ["Operator", "Your hero card: never drawn or discarded. Free to place in round 1; costs Supply to place again after it goes down."],
 	&"killstreak": ["Killstreak", "Eliminations build your streak. At a killstreak's number it is ready (amber glow): tap to call it in."],
 	&"incoming": ["Incoming", "A rival card played face down this Deploy. It lands here at Reveal."],

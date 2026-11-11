@@ -9,6 +9,8 @@
 #   browser's prefers-reduced-motion).
 #   v3 (K5): first-run hints. data.hints_seen lists the hint ids already shown; hints only show
 #   while no run has ended yet (data.runs == 0), each one once.
+#   dd-ux-v4: data.codex_met lists the Codex entries the player has met (an additive key: older
+#   saves load with it empty; the save version is unchanged).
 #   v3 (save version 3): v3 "Kill Stacks" scores aren't comparable with v2's, so a version-2 save
 #   keeps everything but moves its best scores to "best_v2" (the old record); v3 bests start at 0.
 #   v2 (save version 2): DeadDraw v2 scores are points (x10 on screen), so a version-1 save keeps
@@ -38,7 +40,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "codex_met": [], "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -58,7 +60,7 @@ func load_profile() -> bool:
 		# v1 run scores (10 + HP per district) are not comparable with v2 points
 		data["best_v1"] = data["best"] if data["best"] is Dictionary else {}
 		data["best"] = {}
-	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen"]:
+	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen", "codex_met"]:
 		if not data[k] is Array:
 			data[k] = []
 	if from_version == 2:
@@ -113,6 +115,25 @@ func save() -> bool:
 	f.store_string(JSON.stringify(data, "  "))
 	f.close()
 	return true
+
+
+# ---------------------------------------------------------------- Codex (dd-ux-v4)
+## True once the player has met this Codex entry ("gun:rifle", "zombie:lurcher", "patch:lookout"...).
+func codex_met(key: String) -> bool:
+	return (data["codex_met"] as Array).has(key)
+
+
+## Marks Codex entries as met; saves only when something is new. Returns how many were new.
+func codex_meet(keys: Array) -> int:
+	var met: Array = data["codex_met"]
+	var fresh: int = 0
+	for k: Variant in keys:
+		if not met.has(str(k)):
+			met.append(str(k))
+			fresh += 1
+	if fresh > 0:
+		save()
+	return fresh
 
 
 # ---------------------------------------------------------------- queries
