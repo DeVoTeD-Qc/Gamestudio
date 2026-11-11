@@ -6,7 +6,7 @@
 #   - BANNER: a compact strip at the top centre (about 50 px tall at 844x390) when a killstreak is
 #     earned (READY), called (yours, in Deploy) or revealed (the rival's, at Reveal): icon, name, a
 #     state word and its one-line effect. No dim, no flash, it never takes the board: the playback
-#     waits ks_banner_beat (0.45 s) while it slides in and stays ks_banner (1.7 s) in all.
+#     waits ks_banner_beat (0.45 s) while it slides in (from the owner's side) and stays ks_banner (1.7 s) in all.
 #   - PENDING MARKERS: a strike that has not landed yet (Mortar, Attack Helo) marks the half-column it
 #     will hit with ONE telegraph style: a faint hatch in the owner's colour and an "INCOMING" pin chip
 #     (kc-da-ui: no dashed box on top of the stripes). Yours appear when
@@ -17,6 +17,7 @@
 #   Every banner and chip is inspectable: tap, long-press or right-click emits inspect_requested
 #   (the match controller opens the killstreak's rules: name, what it does, when it resolves).
 #   Fast animations halve every duration; reduced motion slides nothing (fades in place).
+#   kc-da-ui2: the banner slides in sideways from its owner's side (yours left, the rival's right).
 # Dependencies: fx_style.gd, fx_timing.gd, press_gesture.gd, IconSheet, UiKit (optional pieces).
 # Author: Game Feel Engineer Agent (kc-ks-seq)
 class_name KillstreakFx
@@ -153,13 +154,22 @@ func show_banner(data: Dictionary, timing: RefCounted = null) -> float:
 		_banner_tween.tween_interval(total - t_in - t_out)
 		_banner_tween.tween_property(banner, ^"modulate:a", 0.0, t_out)
 	else:
+		# kc-da-ui2 (art direction §8 call-in, head): the banner slides in from its OWNER's side, yours
+		# from the left, the rival's from the right, and leaves the same way.
+		var off_x: float = banner_offscreen_x(StringName(last_banner.get("side", &"player")), w, s.x)
 		banner.modulate.a = 1.0
-		banner.position = Vector2(x, -BANNER_H - 4.0)
-		_banner_tween.tween_property(banner, ^"position:y", y, t_in).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		banner.position = Vector2(off_x, y)
+		_banner_tween.tween_property(banner, ^"position:x", x, t_in).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		_banner_tween.tween_interval(total - t_in - t_out)
-		_banner_tween.tween_property(banner, ^"position:y", -BANNER_H - 4.0, t_out).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		_banner_tween.tween_property(banner, ^"position:x", off_x, t_out).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(_hide_banner)
 	return minf(total, timing.get_value(&"ks_banner_beat"))
+
+
+## kc-da-ui2: where the banner waits off screen: left of the screen for the viewer's own killstreak,
+## right of it for the rival's.
+func banner_offscreen_x(side: StringName, w: float, screen_w: float) -> float:
+	return -w - 8.0 if side == viewer_side else screen_w + 8.0
 
 
 func banner_showing() -> bool:

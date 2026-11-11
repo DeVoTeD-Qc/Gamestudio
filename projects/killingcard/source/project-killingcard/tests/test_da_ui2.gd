@@ -340,3 +340,39 @@ func test_run_map_is_a_briefing_map() -> void:
 		await _frames(1)
 	RunV2Views.clear_overrides()
 	_run_teardown()
+
+
+func test_killstreak_banner_slides_in_from_its_owners_side() -> void:
+	var FxTiming: GDScript = load("res://scripts/fx/fx_timing.gd")
+	var host: Control = _host(Vector2(844, 390))
+	var fx: KillstreakFx = KillstreakFx.new()
+	host.add_child(fx)
+	fx.size = Vector2(844, 390)
+	await _frames(2)
+	fx.show_banner({"item_id": &"mortar_barrage", "side": &"player", "mode": &"called", "name": "Mortar Barrage"}, FxTiming.create(false, false))
+	assert_true(fx.banner.position.x + fx.banner.size.x <= 0.0, "yours starts off the left edge (%.0f)" % fx.banner.position.x)
+	await tree.create_timer(0.5).timeout
+	assert_true(fx.banner.position.x > 0.0, "and slides in")
+	fx.show_banner({"item_id": &"attack_helo", "side": &"enemy", "mode": &"revealed", "name": "Attack Helo"}, FxTiming.create(false, false))
+	assert_true(fx.banner.position.x >= 844.0, "the rival's starts off the right edge (%.0f)" % fx.banner.position.x)
+	fx.show_banner({"item_id": &"attack_helo", "side": &"enemy", "mode": &"revealed", "name": "Attack Helo"}, FxTiming.create(true, true))
+	assert_eq(fx.banner.position.y, 6.0, "reduced motion: fades in place")
+	assert_true(fx.banner.position.x > 0.0 and fx.banner.position.x < 844.0, "reduced motion: no slide")
+	fx.finish_banner()
+	_free(host)
+	await _frames(1)
+
+
+func test_amber_is_kept_for_the_primary_button() -> void:
+	var amber: Color = Color("#FFB020")
+	var theme: Theme = load("res://assets/ui/hud_theme.tres") as Theme
+	for style: StringName in [&"pressed", &"hover_pressed"]:
+		var sb: StyleBoxFlat = theme.get_stylebox(style, &"HudButton") as StyleBoxFlat
+		assert_true(sb != null and not sb.border_color.is_equal_approx(amber), "a toggled filter / tab (%s) is steel, not amber" % style)
+	var focus: StyleBoxFlat = theme.get_stylebox(&"focus", &"Button") as StyleBoxFlat
+	assert_true(focus != null and focus.border_color.b > 0.8, "the focus ring is steel white, not amber")
+	for path: String in ["res://scripts/ui/duel/duel_result.gd", "res://scripts/ui/duel/duel_widgets.gd"]:
+		var src: String = FileAccess.get_file_as_string(path)
+		assert_false(src.contains("label(\"NEW\", &\"HudTag\", 16, W.AMBER)"), "%s: NEW is not amber" % path.get_file())
+		assert_false(src.contains("PTS\" % score, &\"HudNumber\", 22, W.AMBER"), "%s: PTS is not amber" % path.get_file())
+		assert_false(src.contains("label(\"HERO\", &\"HudTag\", 16, AMBER)"), "%s: HERO is not amber" % path.get_file())

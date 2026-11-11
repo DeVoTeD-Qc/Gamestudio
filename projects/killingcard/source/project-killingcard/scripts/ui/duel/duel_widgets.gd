@@ -439,7 +439,7 @@ static func hero_strip(h: Dictionary, on_tap: Callable, on_inspect: Callable, co
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	row.offset_left = 8
 	row.offset_right = -8
-	var tag: Label = label("HERO", &"HudTag", 16, AMBER)
+	var tag: Label = label("HERO", &"HudTag", 16, MUTED)  # kc-da-ui2: muted, never amber
 	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(tag)
 	var text: VBoxContainer = VBoxContainer.new()

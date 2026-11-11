@@ -55,7 +55,7 @@ func _rebuild() -> void:
 		if winner >= 0:
 			word = "%s WINS" % String(names[winner]).to_upper()
 			mark = &"tick"
-			tone = W.AMBER
+			tone = W.FOG  # kc-da-ui2: no amber labels
 	elif winner == 0:
 		word = "VICTORY"
 		mark = &"tick"
@@ -122,12 +122,12 @@ func _rebuild() -> void:
 		if opp != "" and opp != "random":
 			rc.add_child(W.label("You vs %s on %s: %s" % [DuelViews.preset(opp).get("name", opp), String(DuelViews.TIER_NAMES.get(tier, "")).capitalize(), DuelViews.record_text(tr)], &"", 17))
 	for c: Dictionary in DuelFlow.last_result.get("new_cosmetics", []):
-		var np: PanelContainer = W.panel(W.AMBER_BG, W.AMBER, 8.0)
+		var np: PanelContainer = W.panel(W.STEEL_BG, W.PANEL_RIM, 8.0)  # kc-da-ui2: steel, not amber
 		np.name = "NewCosmetic"
 		var nr: HBoxContainer = HBoxContainer.new()
 		nr.add_theme_constant_override(&"separation", 8)
 		np.add_child(nr)
-		nr.add_child(W.label("NEW", &"HudTag", 16, W.AMBER))
+		nr.add_child(W.label("NEW", &"HudTag", 16, W.FOG))
 		nr.add_child(W.label("%s · %s" % [c.get("name", ""), c.get("text", "")], &"", 17, W.FOG, true))
 		(nr.get_child(1) as Label).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		body.add_child(np)
@@ -171,7 +171,7 @@ func _act(text: String, variation: StringName, parent: Control) -> Button:
 
 
 func _side_panel(i: int, who: String, d: Dictionary, won: bool, score: int) -> PanelContainer:
-	var p: PanelContainer = W.panel(Color("#161C21"), W.AMBER if won else W.PANEL_RIM, 10.0)
+	var p: PanelContainer = W.panel(Color("#161C21"), W.FOG if won else W.PANEL_RIM, 10.0)  # kc-da-ui2: steel white, not amber
 	p.name = "Side%d" % i
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var col: VBoxContainer = VBoxContainer.new()
@@ -182,7 +182,7 @@ func _side_panel(i: int, who: String, d: Dictionary, won: bool, score: int) -> P
 	var nm: Label = W.label(who.to_upper(), &"TileName", 22)
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(nm)
-	top.add_child(W.label("%d PTS" % score, &"HudNumber", 22, W.AMBER if won else W.FOG))
+	top.add_child(W.label("%d PTS" % score, &"HudNumber", 22, W.FOG if won else W.MUTED))
 	col.add_child(W.label("Deck: %s" % d.get("name", "?"), &"", 17))
 	var h: Dictionary = DuelViews.hero(StringName(str(d.get("hero", ""))))
 	if not h.is_empty():

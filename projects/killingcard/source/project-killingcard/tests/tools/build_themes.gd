@@ -20,6 +20,7 @@ const BRASS := Color("#C9A227")
 const OLIVE := Color("#5B6B3A")
 const SAND := Color("#C2A878")
 const CONCRETE := Color("#7A828A")
+const STEEL_WHITE := Color("#D9DEE3")
 
 
 func _initialize() -> void:
@@ -184,7 +185,8 @@ func _hud_theme(f: Dictionary) -> Theme:
 	t.set_stylebox("pressed", "Button", _sunk(_box(AMBER, AMBER, 2, 6, true, m)))
 	t.set_stylebox("hover_pressed", "Button", _sunk(_box(AMBER, AMBER, 2, 6, true, m)))
 	t.set_stylebox("disabled", "Button", _box(Color(GUNMETAL, 0.6), Color("#4A535B"), 1, 6, true, m))
-	var focus := _box(Color.TRANSPARENT, Color(AMBER, 0.9), 2, 8, true, m)
+	# kc-da-ui2 (head): the focus ring is steel white, not amber (amber = the one primary button).
+	var focus := _box(Color.TRANSPARENT, Color(STEEL_WHITE, 0.9), 2, 8, true, m)
 	focus.expand_margin_left = 3
 	focus.expand_margin_top = 3
 	focus.expand_margin_right = 3
@@ -414,8 +416,12 @@ func _button_var(t: Theme, name: String, bg: Color, edge: Color, fg: Color, f: D
 		normal = _glow(_box(bg, edge, 2, 6, true, m), CYAN, 5, 0.22)  # killstreaks: live uplink glow
 	t.set_stylebox("normal", name, normal)
 	t.set_stylebox("hover", name, _lip(_box(bg.lightened(0.1), edge.lightened(0.25), 2, 6, true, m)))
-	t.set_stylebox("pressed", name, _sunk(_box(bg.darkened(0.25), edge, 2, 6, true, m)))
-	t.set_stylebox("hover_pressed", name, _sunk(_box(bg.darkened(0.25), edge, 2, 6, true, m)))
+	# kc-da-ui2 (head): a toggled-on HudButton (filters, tabs) is steel: a steel-white rim on a raised
+	# plate, never amber (amber stays for the one primary button, READY, cost hexes, ready killstreaks).
+	var on_edge: Color = STEEL_WHITE if name == "HudButton" else edge
+	var on_bg: Color = GUNMETAL_HI if name == "HudButton" else bg.darkened(0.25)
+	t.set_stylebox("pressed", name, _sunk(_box(on_bg, on_edge, 2, 6, true, m)))
+	t.set_stylebox("hover_pressed", name, _sunk(_box(on_bg, on_edge, 2, 6, true, m)))
 	# Locked killstreaks still carry info ("AT 3"), so disabled text stays readable.
 	t.set_stylebox("disabled", name, _box(Color(bg, 0.5), Color(edge, 0.35), 2, 6, true, m))
 	t.set_font("font", name, f["heading"])

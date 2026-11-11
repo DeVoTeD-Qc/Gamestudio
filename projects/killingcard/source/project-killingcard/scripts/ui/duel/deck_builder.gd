@@ -1365,7 +1365,7 @@ func _fly(id: StringName, delta: int) -> void:
 	var t: Button = get_tile(id)
 	if t == null or not t.is_inside_tree() or _counter == null or not _counter.is_inside_tree():
 		return
-	var chip: Label = W.label("+2" if delta > 0 else "−2", &"HudNumber", 26, W.AMBER if delta > 0 else W.RED)
+	var chip: Label = W.label("+2" if delta > 0 else "−2", &"HudNumber", 26, W.TEAL if delta > 0 else W.RED)  # kc-da-ui2: picks are teal, never amber
 	chip.name = "FlyChip"
 	add_child(chip)
 	var origin: Vector2 = get_global_rect().position
