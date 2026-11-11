@@ -65,8 +65,9 @@ func _run() -> void:
 	var rs: Node = root.get_node("RunState")
 	rs.autosave = false
 	# A collection in progress for the binder: a few cards found in runs (the starter is always owned).
-	var prof: Dictionary = RunProfile.add_found_cards(rs.profile(), ["kc_wip_scout", "rifleman", "brawler", "combat_medic", "breacher", "marksman", "flanker"])
-	rs.call(&"_save_profile", prof)
+	if OS.get_cmdline_user_args().size() > 3 and OS.get_cmdline_user_args()[3] == "seedfew":
+		var prof: Dictionary = RunProfile.add_found_cards(rs.profile(), ["kc_wip_scout", "rifleman", "brawler", "combat_medic", "breacher", "marksman", "flanker"])
+		rs.call(&"_save_profile", prof)
 	if _want("title") or _want("codex"):
 		var title: Control = await _open("res://scenes/Title.tscn")
 		if _want("title"):
