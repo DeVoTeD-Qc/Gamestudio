@@ -77,7 +77,7 @@ func _ready() -> void:
 	_art_label.name = "ArtLabel"
 	_art_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_art_label.add_theme_font_override(&"font", PaperSheet.mono_font())
-	_art_label.add_theme_font_size_override(&"font_size", 12)
+	_art_label.add_theme_font_size_override(&"font_size", 16)
 	_body_col.add_child(_art_label)
 	_art_label.owner = self
 	_art_label.unique_name_in_owner = true
