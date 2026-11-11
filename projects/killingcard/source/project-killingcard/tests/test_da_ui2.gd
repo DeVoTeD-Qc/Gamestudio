@@ -301,3 +301,42 @@ func test_title_lockup_and_equipped_operator() -> void:
 		got[0].queue_free()
 		await _frames(1)
 	_run_teardown()
+
+
+func test_run_map_is_a_briefing_map() -> void:
+	_run_setup()
+	var RunV2Views: GDScript = load("res://scripts/ui/run/run_v2_views.gd")
+	_rs.start_run(4242)
+	RunV2Views.preview_map(RunV2Views.sample_map_view(2, 0))
+	for sz: Vector2 in [Vector2(844, 390), Vector2(1440, 900)]:
+		var got: Array = await _open_in("res://scenes/run/RunMap.tscn", sz)
+		var rm: Control = got[1]
+		await _frames(3)
+		var v: Control = rm.get_map_view()
+		var graph: Control = v.graph
+		assert_not_null(graph, "%s: map graph" % sz)
+		# Paper under the graph: sample the drawn image is not possible headless; check the drawing
+		# contract instead: paper colour constants and no white / amber in the node frames.
+		var MapGraph: GDScript = load("res://scripts/ui/run/map_graph.gd")
+		assert_eq(MapGraph.PaperSheet.PAPER, Color("#E9DFC6"), "%s: the map is orders paper" % sz)
+		var boss_node: Control = null
+		var next_n: int = 0
+		for mn: Control in graph.get_map_nodes():
+			if mn.node.get("type", &"") == &"boss":
+				boss_node = mn
+			if bool(mn.node.get("reachable", false)):
+				next_n += 1
+			assert_true(bool(mn.get_meta(&"inspectable", false)), "%s: every map node inspectable" % sz)
+		assert_not_null(boss_node, "%s: boss node" % sz)
+		assert_true(next_n > 0, "%s: steps to take" % sz)
+		# The source no longer draws a white selection box, an amber NEXT or a skull.
+		var src: String = FileAccess.get_file_as_string("res://scripts/ui/run/map_graph.gd")
+		assert_false(src.contains("Color.WHITE, false"), "no white NEXT / selection box")
+		assert_false(src.contains("&\"accent\""), "no amber links or NEXT tags on the map")
+		var glyphs: String = FileAccess.get_file_as_string("res://scripts/ui/run/run_glyphs.gd")
+		assert_false(glyphs.to_lower().contains("cranium"), "the boss is a target mark, not a skull")
+		assert_true(Rect2(Vector2.ZERO, sz).encloses(boss_node.get_global_rect()), "%s: boss on screen" % sz)
+		got[0].queue_free()
+		await _frames(1)
+	RunV2Views.clear_overrides()
+	_run_teardown()

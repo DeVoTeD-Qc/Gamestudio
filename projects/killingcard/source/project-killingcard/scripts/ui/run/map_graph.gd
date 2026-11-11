@@ -285,9 +285,9 @@ class MapNode extends Button:
 		if boss:
 			# The red marker circle round the target (two strokes, slightly off, like a hand ring).
 			var ctr: Vector2 = tr.get_center()
-			var rad: float = tile * 0.66
-			_ellipse(ctr, Vector2(rad * 1.08, rad * 0.92), Color(MARKER_RED, 0.9), 3.0, -0.2)
-			_ellipse(ctr + Vector2(1.5, -1.0), Vector2(rad * 1.12, rad * 0.95), Color(MARKER_RED, 0.55), 2.0, 0.15)
+			var rad: float = tile * 0.6
+			_ellipse(ctr, Vector2(rad * 1.02, rad * 0.94), Color(MARKER_RED, 0.9), 3.0, -0.2)
+			_ellipse(ctr + Vector2(1.5, -1.0), Vector2(rad * 1.06, rad * 0.96), Color(MARKER_RED, 0.55), 2.0, 0.15)
 		if sel:
 			# Steel and paper: a steel rule with a paper rule inside, round the selected tag.
 			draw_rect(tr.grow(7.0), TAG_STEEL, false, 3.0)
