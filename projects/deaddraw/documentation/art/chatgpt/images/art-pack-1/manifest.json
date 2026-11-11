@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 72,
+  "generated_count": 76,
   "requested_count": 77,
   "images": [
     {
@@ -740,7 +740,8 @@
       "file": "dd_icon_locked.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "d6fd297a0e72c59df476aba2b7469da690689df38affc66a171130df82d2ebdc"
     },
     {
       "batch": 7,
@@ -749,7 +750,8 @@
       "file": "dd_icon_challenge_met.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "b3fd1ba3c08fe9c84962bf0a67e473e38df3982c412d218b6cb3361cac1caf9e"
     },
     {
       "batch": 7,
@@ -758,7 +760,8 @@
       "file": "dd_icon_challenge_open.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "625ee722928acd68b3e541afb171456d025b21144f78b8584d29c0d5174baf5c"
     },
     {
       "batch": 7,
@@ -767,7 +770,9 @@
       "file": "dd_icon_wave.png",
       "size": "1024x1024",
       "transparent": true,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "085d370af02dc5c68efcd4ee0084e2e8b361cf7fdc5b5b28573840fb8c63670d"
     }
-  ]
+  ],
+  "blocked_count": 1
 }
