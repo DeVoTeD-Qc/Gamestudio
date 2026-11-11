@@ -1,4 +1,4 @@
-// NOT SHIPPED (wb-fix2, 2026-11-11): push-your-luck FIRE was reverted; this tool is kept as design history and will not run against the current engine.
+// NOT SHIPPED (wb-fix2, 2026-11-11): push-your-luck FIRE was reverted; kept as design history only, it does not describe the shipped rules.
 // Warbuilder PUSH-YOUR-LUCK FIRE prototype (studio QA tool, board task wb-pyl, 2026-11-05).
 // Design: projects/warbuilder/documentation/design/push-your-luck-shooting.md
 //
