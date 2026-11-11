@@ -13,6 +13,12 @@
 #   kc-trait-ui (head): the Codex is a VIEWER / collection; there is no EQUIP. In a run every copy
 #   comes with the art it was found with, and that art decides its trait. Every control is 64 px+
 #   tall (44 pt on a phone). Reads CardDB, BannerArtDB, ArtTraits and Settings; writes nothing.
+#   kc-da-ui2 (art direction #10, "a collector's binder"): each tile is a binder slot: OWNED cards
+#   (found in a campaign run, the starter deck, every killstreak) in full colour with their finish
+#   strip under the card (Prism for Elite ★, Gold Leaf once every art is found, else Base) and an
+#   alt-art count chip ("2/5 ARTS") on a dark socket at the type line's end; cards not owned yet as a stamped silhouette
+#   (CardView not_found: no art at all, never dimmed) with the same chip. The count line says how
+#   many are owned. Everything stays inspectable (long press / right click).
 # Usage: var codex := CodexView.open_over(parent_control)   # adds itself full-rect and opens
 # Dependencies: CardDB, BannerArtDB, CardInfo, cost_hex.gd, scenes/match/CardInspector.tscn,
 #   hud_theme.tres (HudPanelDark, HudButton, HandCard, UnitName, HudTag, HudHeader, HudSubtle, Scrim).
@@ -36,14 +42,16 @@ const CLASS_FILTERS: Array[StringName] = [&"any", &"ar", &"smg", &"shotgun", &"s
 const KS_ICONS: Dictionary = {&"recon_drone": "ks_recon_drone", &"mortar_barrage": "ks_mortar",
 		&"sentry_turret": "ks_sentry", &"attack_helo": "ks_attack_helo", &"gunship": "ks_gunship"}
 ## kc-cards-impl: Codex tiles are Y2+ cards (the mock-up's Codex card is 172 wide).
-const TILE: Vector2 = Vector2(196, 202)
-const TILE_COMPACT: Vector2 = Vector2(172, 196)
+const TILE: Vector2 = Vector2(196, 212)
+const TILE_COMPACT: Vector2 = Vector2(172, 206)
 const CARD_VIEW_SCENE: PackedScene = preload("res://scenes/match/CardView.tscn")
 ## The board's banner heights (desktop / phone): codex cards use the board's icon sizes.
 const METRIC_H: float = 76.0
 const METRIC_H_COMPACT: float = 57.0
 const AMBER: Color = Color(0.961, 0.722, 0.239)
 const BAR_H: float = 64.0
+## kc-da-ui2: the finish strip under each binder card.
+const FINISH_H: float = 8.0
 
 var type_filter: StringName = &"all"
 var class_filter: StringName = &"any"
@@ -261,6 +269,38 @@ static func is_found(e: Dictionary, art: StringName) -> bool:
 	return st != null and st.has_method(&"is_found") and st.is_found(art)
 
 
+## kc-da-ui2: True when the player owns the card: every killstreak, the campaign starter deck, and
+## every card a run has shown (RunProfile found_cards: taken or offered).
+static func is_owned(e: Dictionary) -> bool:
+	if e.get("kind", &"") == &"killstreak":
+		return true
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var rs: Node = tree.root.get_node_or_null(^"/root/RunState") if tree != null else null
+	if rs == null:
+		return true
+	var id: String = String(e.get("id", ""))
+	var cfg: RunConfig = rs.call(&"_config") as RunConfig if rs.has_method(&"_config") else null
+	if cfg != null:
+		for c: CardData in cfg.starter_deck:
+			if c != null and String(c.id) == id:
+				return true
+	var p: Dictionary = rs.call(&"profile") if rs.has_method(&"profile") else {}
+	return id in (p.get("found_cards", []) as Array)
+
+
+## kc-da-ui2: the finish a binder card shows: Prism for Elite ★, Gold Leaf when every one of its arts
+## (2+) is found, else Base; &"" when not owned (no finish on a silhouette).
+static func finish_of(e: Dictionary, owned: bool, found: int) -> StringName:
+	if not owned:
+		return &""
+	var card: CardData = e.get("card") as CardData
+	if card != null and card.is_elite:
+		return MasteryBands.PRISM
+	if int(e.get("alts", 1)) > 1 and found >= int(e.get("alts", 1)):
+		return MasteryBands.GOLD_LEAF
+	return MasteryBands.BASE
+
+
 ## kc-trait-ui: the arts of a card ordered by the trait option they give (default option first, plain
 ## arts last), keeping the pool order inside each group.
 static func arts_by_trait(card: CardData, arts: Array[StringName]) -> Array[StringName]:
@@ -363,7 +403,10 @@ func refresh() -> void:
 		if not seen.has(e["id"]):
 			seen[e["id"]] = true
 			chassis_count += 1
-	_count.text = "CODEX · %d CARDS" % chassis_count
+	var owned_n: int = 0
+	for e: Dictionary in list:
+		owned_n += 1 if is_owned(e) else 0
+	_count.text = "CODEX · %d CARDS · %d OWNED" % [chassis_count, owned_n]
 	_empty.visible = list.is_empty()
 	_scroll.visible = not list.is_empty()
 	_scroll.scroll_vertical = 0
@@ -654,12 +697,54 @@ func _make_tile(e: Dictionary) -> Control:
 	for a: Variant in arts:
 		found += 1 if is_found(e, StringName(String(a))) else 0
 	b.set_meta(&"found", found)
-	b.tooltip_text = "%s · tap: %s · long-press / right-click: rules" % [String(e["name"]),
+	var owned: bool = is_owned(e)
+	var finish: StringName = finish_of(e, owned, found)
+	b.set_meta(&"owned", owned)
+	b.set_meta(&"finish", finish)
+	b.tooltip_text = "%s · %s · tap: %s · long-press / right-click: rules" % [String(e["name"]),
+			("owned · %s finish" % MasteryBands.display_name(finish)) if owned else "not found yet",
 			"its %d arts (%d found)" % [arts.size(), found] if arts.size() > 1 else "rules"]
 	_wire_press(b, tap_entry.bind(e), open_entry.bind(e, &""))
-	var cv: CardView = make_card_view(_card_view(e, shown_art(e)), tile_size.x)
-	b.custom_minimum_size = CardView.size_for(tile_size.x)
+	var view: Dictionary = _card_view(e, shown_art(e))
+	view["not_found"] = not owned
+	var cv: CardView = make_card_view(view, tile_size.x)
+	b.custom_minimum_size = CardView.size_for(tile_size.x) + Vector2(0, FINISH_H + 2.0)
 	b.add_child(cv)
+	# The finish strip under the card (a binder slot's label), steel-ruled; none on a silhouette.
+	var strip: Control = Control.new()
+	strip.name = "Finish"
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.position = Vector2(4, CardView.height_for(tile_size.x) + 2.0)
+	strip.size = Vector2(tile_size.x - 8.0, FINISH_H)
+	strip.set_meta(&"finish", finish)
+	strip.draw.connect(func() -> void:
+		var r: Rect2 = Rect2(Vector2.ZERO, strip.size)
+		if finish != &"":
+			MasteryBands.draw(strip, r, finish)
+		strip.draw_rect(r, Color("#3A444D"), false, 1.0))
+	b.add_child(strip)
+	# The alt-art count on a dark socket over the art window's top-right corner.
+	if int(e.get("alts", 1)) > 1:
+		var chip: Label = Label.new()
+		chip.name = "ArtCount"
+		chip.text = "%d/%d ARTS" % [found, arts.size()]
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_theme_font_override(&"font", load("res://assets/fonts/ShareTechMono-Regular.ttf") as Font)
+		chip.add_theme_font_size_override(&"font_size", 16)
+		chip.add_theme_color_override(&"font_color", Color("#D8DEE3"))
+		var sock: StyleBoxFlat = StyleBoxFlat.new()
+		sock.bg_color = Color("#12161A")
+		sock.border_color = Color("#3A444D")
+		sock.set_border_width_all(1)
+		sock.set_corner_radius_all(2)
+		sock.content_margin_left = 5
+		sock.content_margin_right = 5
+		chip.add_theme_stylebox_override(&"normal", sock)
+		b.add_child(chip)
+		# On the type line's right end (free room; never over the art or the stamp).
+		var type_r: Rect2 = cv.regions()["type"]
+		chip.size = chip.get_combined_minimum_size()
+		chip.position = Vector2(type_r.end.x - chip.size.x, type_r.position.y + (type_r.size.y - chip.size.y) * 0.5)
 	return b
 
 

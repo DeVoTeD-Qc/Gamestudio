@@ -212,3 +212,59 @@ func test_mvp_from_the_match_log() -> void:
 	assert_eq(String(got.get("card_id", "")), "marksman", "a kill (x10) beats 6 damage")
 	assert_eq(int(got.get("kills", 0)), 1, "kills counted")
 	assert_eq(int(got.get("damage", 0)), 2, "damage counted")
+
+
+func test_codex_is_a_binder() -> void:
+	_run_setup()
+	var st: Node = tree.root.get_node("Settings")
+	var saved_profile: Variant = st.get(&"run_profile")
+	var saved_persist: bool = bool(st.get(&"persist"))
+	st.set(&"persist", false)
+	_rs.call(&"_save_profile", RunProfile.add_found_cards({}, ["marksman"]))
+	var CodexView: GDScript = load("res://scripts/ui/codex/codex_view.gd")
+	for sz: Vector2 in [Vector2(844, 390), Vector2(1440, 900)]:
+		var vp: SubViewport = SubViewport.new()
+		vp.size = Vector2i(sz)
+		vp.disable_3d = true
+		tree.root.add_child(vp)
+		var host: Control = Control.new()
+		vp.add_child(host)
+		host.size = sz
+		var codex: Control = CodexView.open_over(host)
+		await _frames(4)
+		var owned_tile: Control = null
+		var unowned_tile: Control = null
+		for t: Node in codex.get_tiles():
+			var e: Dictionary = t.get_meta(&"entry")
+			if String(e["id"]) == "marksman":
+				owned_tile = t
+			elif unowned_tile == null and e["kind"] != &"killstreak" and not bool(t.get_meta(&"owned")):
+				unowned_tile = t
+		assert_not_null(owned_tile, "%s: marksman tile" % sz)
+		assert_not_null(unowned_tile, "%s: a card not owned yet" % sz)
+		if owned_tile != null:
+			var cv: CardView = owned_tile.find_child("Card", true, false) as CardView
+			assert_true(bool(owned_tile.get_meta(&"owned")), "%s: a found card is owned" % sz)
+			assert_false(bool(cv.data.get("not_found", false)), "%s: owned = full colour art" % sz)
+			assert_true((cv.get_node("ArtPanel") as Control).visible and is_equal_approx((cv.get_node("ArtPanel") as Control).modulate.r, 1.0), "%s: art shown at full strength" % sz)
+			assert_true(StringName(owned_tile.get_meta(&"finish")) != &"", "%s: owned card shows its finish" % sz)
+			assert_not_null(owned_tile.get_node_or_null(^"Finish"), "%s: finish strip" % sz)
+			var chip: Label = owned_tile.get_node_or_null(^"ArtCount") as Label
+			assert_true(chip != null and chip.text.ends_with("ARTS"), "%s: alt-art count" % sz)
+		if unowned_tile != null:
+			var cv2: CardView = unowned_tile.find_child("Card", true, false) as CardView
+			assert_true(bool(cv2.data.get("not_found", false)), "%s: unowned = stamped silhouette" % sz)
+			var stamp: Label = cv2.find_child("NotFoundLabel", true, false) as Label
+			assert_true(stamp != null and stamp.visible and absf(stamp.rotation_degrees) > 2.0, "%s: turned stamp" % sz)
+			assert_false((cv2.get_node("ArtPanel") as Control).visible, "%s: no art behind the stamp (never a dim veil)" % sz)
+			assert_eq(StringName(unowned_tile.get_meta(&"finish")), &"", "%s: no finish on a silhouette" % sz)
+			# Still inspectable.
+			codex.open_entry(unowned_tile.get_meta(&"entry"), &"")
+			await _frames(2)
+			assert_true(codex.get_inspector() != null and codex.get_inspector().is_open(), "%s: unowned card inspectable" % sz)
+			codex.get_inspector().close()
+		vp.queue_free()
+		await _frames(1)
+	st.set(&"run_profile", saved_profile)
+	st.set(&"persist", saved_persist)
+	_run_teardown()

@@ -64,6 +64,11 @@ const FRAME_STREAK: Color = Color("#5BC0EB")
 const PAPER_PIECE: StringName = &"tex_orders_paper"
 const AMBER: Color = Color("#FFB020")
 const MUTED: Color = Color("#8C969E")
+## kc-da-ui2: the not-found stamp (steel ink) and its silhouette plate.
+const STENCIL_FONT: String = "res://assets/fonts/StardosStencil-Bold.ttf"
+const NOT_FOUND_INK: Color = Color("#9AA4AD")
+const SILHOUETTE_PLATE: Color = Color("#12161A")
+const SILHOUETTE_MARK: Color = Color("#3A444D")
 
 ## Weapon class -> [close, mid, long] Firepower modifiers (core-rules.md §1).
 const RANGE_MODS: Dictionary = {
@@ -203,16 +208,25 @@ func _ready() -> void:
 	add_child(_lore)
 	_not_found = Label.new()
 	_not_found.name = "NotFoundLabel"
-	_not_found.text = "NOT FOUND YET"
+	_not_found.text = "NOT FOUND"
 	_not_found.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_not_found.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_not_found.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_not_found.add_theme_font_override(&"font", CardLook.TITLE_FONT)
-	_not_found.add_theme_font_size_override(&"font_size", 16)
-	_not_found.add_theme_color_override(&"font_color", Color("#C2C9CF"))
-	var veil := StyleBoxFlat.new()
-	veil.bg_color = Color(0.04, 0.05, 0.055, 0.78)
-	_not_found.add_theme_stylebox_override(&"normal", veil)
+	# kc-da-ui2 (art direction #10): a not-found card is a stamped silhouette, never dimmed art: the
+	# art window shows a slate plate with the card's type pictogram (drawn in _draw) and this label
+	# is a turned stencil stamp with a steel double rule.
+	_not_found.add_theme_font_override(&"font", load(STENCIL_FONT) as Font)
+	_not_found.add_theme_font_size_override(&"font_size", 15)
+	_not_found.add_theme_color_override(&"font_color", NOT_FOUND_INK)
+	var stamp := StyleBoxFlat.new()
+	stamp.draw_center = false
+	stamp.border_color = NOT_FOUND_INK
+	stamp.set_border_width_all(2)
+	stamp.content_margin_left = 8
+	stamp.content_margin_right = 8
+	stamp.content_margin_top = 1
+	stamp.content_margin_bottom = 0
+	_not_found.add_theme_stylebox_override(&"normal", stamp)
 	add_child(_not_found)
 	for l: Label in [_name_label, _cost_label, _type_label]:
 		l.add_theme_constant_override(&"outline_size", 0)
@@ -444,9 +458,13 @@ func _refresh() -> void:
 	art_panel.size = (rg["art"] as Rect2).size
 	_set_art()
 	_scanlines.visible = type_name == "killstreak"
-	_not_found.visible = bool(data.get("not_found", false))
-	_not_found.position = (rg["art"] as Rect2).position
-	_not_found.size = (rg["art"] as Rect2).size
+	var nf: bool = bool(data.get("not_found", false))
+	art_panel.visible = not nf
+	_not_found.visible = nf
+	_not_found.size = _not_found.get_combined_minimum_size()
+	_not_found.pivot_offset = _not_found.size * 0.5
+	_not_found.rotation_degrees = -6.0
+	_not_found.position = (rg["art"] as Rect2).get_center() - _not_found.size * 0.5
 	# Type line.
 	var bits: PackedStringArray = []
 	if type_name == "operator":
@@ -766,6 +784,20 @@ static func outline(r: Rect2, cut: float) -> PackedVector2Array:
 	return pts
 
 
+## kc-da-ui2: the art window of a card not found yet: a slate plate, a steel inner rule and the card's
+## type pictogram as a solid silhouette (unit / tactic / field / killstreak), left and right of the stamp.
+func _draw_silhouette(r: Rect2) -> void:
+	draw_rect(r, SILHOUETTE_PLATE)
+	draw_rect(r.grow(-3.0), SILHOUETTE_MARK, false, 1.0)
+	var kind: StringName = {"tactic": &"type_tactic", "equipment": &"type_field", "field": &"type_field",
+			"killstreak": &"type_killstreak", "operator": &"type_operator"}.get(_card_type(), &"type_unit")
+	var px: float = minf(r.size.y - 10.0, 40.0)
+	for x: float in [r.position.x + r.size.x * 0.13, r.end.x - r.size.x * 0.13]:
+		var ir: Rect2 = Rect2(Vector2(x - px * 0.5, r.get_center().y - px * 0.5), Vector2(px, px))
+		if not UiKit.draw_icon(self, kind, ir, SILHOUETTE_MARK):
+			draw_circle(ir.get_center(), px * 0.35, SILHOUETTE_MARK)
+
+
 func _draw() -> void:
 	var w: float = _width
 	var h: float = height_for(w)
@@ -802,6 +834,8 @@ func _draw() -> void:
 	if _has_cost_badge():
 		CardLook.draw_cost(self, COST_RECT, "", bool(data.get("cant_pay", false)))
 	draw_rect(rg["art"], Color("#0C0F11"))
+	if bool(data.get("not_found", false)):
+		_draw_silhouette(rg["art"])
 	# kc-deck-match: the type icon (Tactic: orders + bolt; Field: a planted flag) on the type line.
 	var tk: StringName = type_icon_kind()
 	if tk != &"":
