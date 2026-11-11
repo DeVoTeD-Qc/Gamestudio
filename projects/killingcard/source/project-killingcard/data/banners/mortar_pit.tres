@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BannerArt" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/banner_art.gd" id="1_bart"]
+
+[resource]
+script = ExtResource("1_bart")
+id = &"mortar_pit"
+title = "Mortar Pit"
+card_id = &"mortar_pit"
+image_path = "res://assets/sprites/banners/kc_b_mortar_pit.webp"
+banner_y = 0.48
+portrait_x = 0.50
+is_default = true
+artist = "KillingCard studio (DA art pack 1)"
+licence = "studio-owned"
+source_note = "DA art pack 1 (kc-da-import1): Mortar Pit, Port dusk house painting."
