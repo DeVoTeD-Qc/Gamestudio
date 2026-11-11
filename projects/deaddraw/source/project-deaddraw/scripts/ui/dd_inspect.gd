@@ -166,8 +166,21 @@ func _open_tip(payload: Dictionary) -> void:
 	if not (art is Texture2D) and payload.get("art_keys", null) is Array:
 		art = ArtLib.texture_for(payload["art_keys"])
 	var big: String = str(payload.get("big", ""))
-	var has_pic: bool = art is Texture2D or payload.has("strength") or payload.has("hit") or big != ""
-	if has_pic:
+	# dd-ui6: an icon tooltip (rule chip, Full set plate): the same glyph as on the board
+	var icon: Texture2D = null
+	if not (art is Texture2D) and payload.get("icon_keys", null) is Array:
+		icon = ArtLib.texture_for(payload["icon_keys"])
+	var has_pic: bool = art is Texture2D or icon != null or payload.has("strength") or payload.has("hit") or big != ""
+	if icon != null:
+		var ic: TextureRect = TextureRect.new()
+		ic.name = "Icon"
+		ic.texture = icon
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.custom_minimum_size = Vector2(pic_d * 0.75, pic_d * 0.75)
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(ic)
+	elif has_pic:
 		var pic: PanelContainer = PanelContainer.new()
 		pic.add_theme_stylebox_override("panel", DDUi.box(DDUi.card_bg(kind), DDUi.accent(kind).darkened(0.3), 2, 10, 0))
 		pic.custom_minimum_size = Vector2(pic_d, pic_d)
@@ -221,6 +234,29 @@ func _open_tip(payload: Dictionary) -> void:
 		l2.name = "Line2"
 		l2.custom_minimum_size = Vector2(tw, 0)
 		v.add_child(l2)
+	# dd-ui6: an icon key under the lines (the gun: its rule, the Full set plate, the challenge),
+	# the same glyphs as on the gun tile, so the tooltip teaches the icons
+	var row_items: Array = payload.get("icon_row", [])
+	if not row_items.is_empty():
+		var fl: HFlowContainer = HFlowContainer.new()
+		fl.name = "IconRow"
+		fl.add_theme_constant_override("h_separation", 12)
+		fl.add_theme_constant_override("v_separation", 4)
+		fl.custom_minimum_size = Vector2(tw, 0)
+		v.add_child(fl)
+		for it: Variant in row_items:
+			var d: Dictionary = it
+			var hb: HBoxContainer = DDUi.hbox(4)
+			var t: Texture2D = ArtLib.texture_for(d.get("keys", []))
+			if t != null:
+				var tr2: TextureRect = TextureRect.new()
+				tr2.texture = t
+				tr2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				tr2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				tr2.custom_minimum_size = Vector2(28, 28)
+				hb.add_child(tr2)
+			hb.add_child(DDUi.label(str(d.get("text", "")), DDUi.FONT_S - 2, Color(d.get("color", DDUi.TEXT))))
+			fl.add_child(hb)
 	last_lines = PackedStringArray([t1, t2])
 	DDUi.ignore_mouse(root)
 	visible = true

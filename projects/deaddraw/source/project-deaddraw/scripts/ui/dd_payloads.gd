@@ -272,9 +272,43 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	# dd-ux-v4: zombies (and bosses) show the strength mark, guns the hit burst
 	if c.kind == DDCard.ZOMBIE:
 		spec["strength"] = c.value
+		var zc: Dictionary = zombie_rule_chip(c, run)
+		if not zc.is_empty():
+			spec["rule_chip"] = zc
 	elif c.kind == DDCard.WEAPON:
 		spec["hit"] = b.weapon_power(c.wid)
+		spec["rule_chip"] = weapon_rule_chip(c.wid, b, run.steady())
 	return spec
+
+
+## dd-ui6 (head: "show the rule icons on the row cards too"): the chip under a street zombie's
+## number: the ACTIVE gun's rule icon (the same glyph as the gun row, Glossary and Codex), with a
+## green tick when that gun's rule lets this zombie onto its stack, dimmed and struck when it
+## doesn't. Melee active (no rule) or an empty slot: no chip. Its tooltip says it in words:
+## "Hunting Rifle: lower than 7 - yes".
+static func zombie_rule_chip(c: DDCard, run: DDRun) -> Dictionary:
+	if run.active == DDRun.MELEE:
+		return {}
+	var g: DDGun = run.slot(run.active)
+	if g == null:
+		return {}
+	var ok: bool = run.gun_allows(g, c.value)
+	var t1: String = "%s: %s - %s" % [g.name, accept_words(run.can_take(g)), "yes" if ok else "no"]
+	var t2: String = ""
+	if ok:
+		t2 = "Its rule (%s) lets this %d onto its stack." % [DDText.rule_tag(g.rule, run.steady()).to_lower(), c.value]
+	else:
+		t2 = "This %d breaks its rule (%s). Use the other gun or melee." % [c.value, DDText.rule_block(g, c.value, run).trim_prefix("rule: ")]
+	var p: Dictionary = tip({"kind": "W", "tag": "RULE", "title": DDText.rule_tag(g.rule, run.steady()), "icon_keys": Art.rule_keys(g.rule)}, t1, t2)
+	return {"tex": Art.texture_for(Art.rule_keys(g.rule)), "state": 1 if ok else 0, "payload": p}
+
+
+## dd-ui6: a street gun card's own rule, as the same chip (no verdict).
+static func weapon_rule_chip(wid: String, b: DDBalance, rosa: bool = false) -> Dictionary:
+	var rule: String = b.weapon_rule(wid)
+	var p: Dictionary = tip({"kind": "W", "tag": "RULE", "title": DDText.rule_tag(rule, rosa), "icon_keys": Art.rule_keys(rule)},
+		"%s rule: %s" % [b.weapon_name(wid), DDText.rule_tag(rule, rosa).to_lower()], "Each kill %s." % _rule_words(rule, rosa))
+	return {"tex": Art.texture_for(Art.rule_keys(rule)), "state": -1, "payload": p}
 
 
 # ---------------------------------------------------------------- guns

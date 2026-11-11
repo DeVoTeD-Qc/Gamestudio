@@ -8,6 +8,8 @@
 #   - Padlock: closed / open padlock icon for the room price plate.
 #   - Socket: an empty kill socket (dashed) or the next one (gold dashed + what it accepts).
 #   - WaveNumeral: the big blood-red wave number on the wave door (slams in on a new wave).
+#   - RuleChip (dd-ui6): a weapon rule icon (the same SVG glyph as the gun row, Glossary, Codex)
+#     with a verdict: yes = full colour + a green tick, no = dimmed + a red strike, or plain.
 # Dependencies: DDUi. Loaded with preload() (no class_name, so no class-cache rescan).
 # Author: UI/UX Agent (dd-ux-v4)
 extends RefCounted
@@ -244,6 +246,47 @@ class Socket:
 			while fs > 9 and _font().get_string_size(next_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 6.0:
 				fs -= 1
 			draw_num(self, next_text, size * 0.5, fs, BURST_YELLOW)
+
+
+# ================================================================ rule chip (dd-ui6)
+## The active gun's rule icon on a street card, with the verdict for that card. `state`: 1 = the
+## gun can take it (full colour, green tick disc bottom-right), 0 = it can't (icon dimmed to 40%,
+## red strike corner to corner), -1 = plain icon (a gun card's own rule). Tick vs strike is a shape
+## difference, so the verdict reads without colour too.
+class RuleChip:
+	extends Mark
+	const YES: Color = Color("4caf6a")
+	const NO: Color = Color("e2574c")
+	var tex: Texture2D = null
+	var state: int = -1
+
+	func _init(t: Texture2D = null, st: int = -1) -> void:
+		tex = t
+		state = st
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var d: float = minf(size.x, size.y)
+		if d <= 4.0:
+			return
+		var r: Rect2 = Rect2((size - Vector2(d, d)) * 0.5, Vector2(d, d))
+		if tex != null:
+			draw_texture_rect(tex, r, false, Color(0.4, 0.4, 0.4, 0.9) if state == 0 else Color.WHITE)
+		else:
+			draw_circle(r.get_center(), d * 0.5, INK, true, -1.0, true)
+		var lw: float = maxf(2.0, d * 0.1)
+		if state == 0:
+			var a: Vector2 = r.position + Vector2(d * 0.2, d * 0.2)
+			var b: Vector2 = r.end - Vector2(d * 0.2, d * 0.2)
+			draw_line(a, b, INK, lw + 3.0, true)
+			draw_line(a, b, NO, lw, true)
+		elif state == 1:
+			var tr: float = d * 0.22
+			var c: Vector2 = r.end - Vector2(tr, tr) + Vector2(1, 1)
+			draw_circle(c, tr + 1.5, INK, true, -1.0, true)
+			draw_circle(c, tr, YES, true, -1.0, true)
+			var pts: PackedVector2Array = [c + Vector2(-tr * 0.5, 0), c + Vector2(-tr * 0.12, tr * 0.4), c + Vector2(tr * 0.55, -tr * 0.45)]
+			draw_polyline(pts, INK, maxf(1.5, tr * 0.32), true)
 
 
 # ================================================================ the big wave numeral

@@ -45,6 +45,9 @@ var _art_dim: bool = false
 var _badge_panel: Control = null
 var _corner_chip: Control = null
 var _row: bool = false
+## dd-ui6: the rule chip under the number badge (street zombies: can the active gun take it; street
+## guns: the gun's own rule). Its own tile, so right click / long press on it explains it.
+var rule_chip: DDCardView = null
 ## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
 var pip_bar: Pips = null
 ## dd-ux-v4: the strength mark / hit burst drawn on the art window (null when the tile has none).
@@ -120,6 +123,8 @@ func setup(spec: Dictionary) -> DDCardView:
 		_build_plain(spec, art if has_art else null, compact)
 	_apply_style()
 	DDUi.ignore_mouse(self)
+	if rule_chip != null:
+		rule_chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	tooltip_text = ""
 	return self
 
@@ -245,6 +250,9 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 		window.add_child(_badge_panel)
 		# dd-ux-clean2: the art window can settle after the tile (tall tiles); refit then too
 		window.resized.connect(func() -> void: _fit_badge.call_deferred())
+	var rc: Variant = spec.get("rule_chip", null)
+	if rc is Dictionary and _badge_panel != null:
+		_add_rule_chip(window, rc)
 	var badge: String = str(spec.get("badge", ""))
 	if badge != "" or bool(spec.get("holdover", false)):
 		var chip: PanelContainer = DDUi.panel(Color(spec.get("badge_color", DDUi.WARN)) if badge != "" else DDUi.TEXT, 3)
@@ -331,6 +339,24 @@ func _build_district(spec: Dictionary) -> void:
 	tl.resized.connect(func() -> void: fit_words(tl, DDUi.FONT_S, 11))
 	tt.resized.connect(func() -> void: fit_words(tt, DDUi.FONT_M, 12))
 	_add_lines(_box, spec, true, HORIZONTAL_ALIGNMENT_LEFT)
+
+
+## dd-ui6: the rule chip: a small tile (kind "R", index -1, so finders of street cards skip it)
+## holding a Marks.RuleChip. A tap on it is a tap on the card; inspect explains the verdict.
+func _add_rule_chip(window: Control, rc: Dictionary) -> void:
+	var holder: DDCardView = DDCardView.new()
+	holder.kind = "R"
+	holder.name = "RuleChip"
+	holder.payload = rc.get("payload", {})
+	holder.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var mark: Control = Marks.RuleChip.new(rc.get("tex", null), int(rc.get("state", -1)))
+	mark.name = "Glyph"
+	holder.add_child(mark)
+	holder.set_meta(&"state", int(rc.get("state", -1)))
+	holder.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
+	holder.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
+	window.add_child(holder)
+	rule_chip = holder
 
 
 func _add_art(parent: Control, tex: Texture2D, fit: String) -> TextureRect:
@@ -427,6 +453,19 @@ func _fit_badge() -> void:
 	_badge_panel.size = Vector2(w, d)
 	_badge_panel.position = Vector2(6, 6)
 	_badge_panel.pivot_offset = _badge_panel.size * 0.5
+	if rule_chip != null and is_instance_valid(rule_chip):
+		# dd-ui6: the rule chip sits under the number badge (beside it when the window is short)
+		var c: float = clampf(d * 0.62, 26.0, 48.0)
+		var hy: float = host.size.y if host != null else size.y
+		if 6.0 + d + 4.0 + c <= hy - 4.0:
+			rule_chip.position = Vector2(6.0 + (w - c) * 0.5, 6.0 + d + 4.0)
+		else:
+			rule_chip.position = Vector2(6.0 + w + 4.0, 6.0 + (d - c) * 0.5)
+		rule_chip.size = Vector2(c, c)
+		var g: Control = rule_chip.get_node_or_null(^"Glyph")
+		if g != null:
+			g.position = Vector2.ZERO
+			g.size = Vector2(c, c)
 
 
 ## Shrinks a wrapping label's font (down to `min_size`) until its longest word fits one line.

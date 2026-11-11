@@ -514,7 +514,8 @@
     "challenge_open": "badges/challenge_open.svg",
     "flip": "badges/flip.svg",
     "honed": "badges/honed.svg",
-    "no_escape": "badges/no_escape.svg"
+    "no_escape": "badges/no_escape.svg",
+    "full_set": "badges/full_set.svg"
   },
   "icons": {
     "wave": "icons/wave.svg",
