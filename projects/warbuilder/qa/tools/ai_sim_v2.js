@@ -62,6 +62,8 @@ const OPTIONS = {
     for (const i of pl.deck.concat(pl.hand)) if (k < 2 && defOf(s, i) === 'T001') { s.cards[i].def = BASIC[sq]; k++; } } },
   // HP50: Health 50 instead of 40 (the pacing control for packages that add power).
   hp50: { tune: { hp: 50 } },
+  hp55: { tune: { hp: 55 } },
+  hp60: { tune: { hp: 60 } },
 };
 // a side RNG for sim-only choices, so the engine's own seed stream is not disturbed
 function rnd(s) { s._r = ((s._r || s.seed * 7 + 3) * 1103515245 + 12345) & 0x7fffffff; return s._r / 0x7fffffff; }
