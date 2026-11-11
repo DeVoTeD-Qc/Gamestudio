@@ -53,6 +53,14 @@ const IDX_PILE: int = 400
 const IDX_BOSS: int = 410
 const IDX_POINTS: int = 420
 const IDX_STACK: int = 500
+## dd-ux-clean2 (U1): the logical base (the shorter side of the screen in logical px). Phones keep
+## the 560 px base from project.godot (shorter side up to PHONE_CSS CSS px, so 64 logical px stays
+## 44 CSS px). On bigger screens the street gets a bigger base, so a 1440x900 window lays it out on
+## 1216x760 logical px instead of 896x560 (more room, text at its full size, no names shrunk to
+## fit). The other screens keep the 560 base everywhere.
+const BASE: int = 560
+const PHONE_CSS: float = 600.0
+const BASE_GROWTH: float = 0.667
 
 var screen: Screen = Screen.TITLE
 var chosen_survivor: String = "rosa"
@@ -94,6 +102,7 @@ var _hp_box: Control = null
 var _hp_label: Label = null
 var _hp_bar: ProgressBar = null
 var _screen_title: Control = null
+var _fitting: bool = false
 
 
 func _ready() -> void:
@@ -135,6 +144,7 @@ func _ready() -> void:
 	var saved: String = Game.survivor_id
 	chosen_survivor = saved if Game.profile.survivor_unlocked(saved) else "rosa"
 	get_viewport().size_changed.connect(_render)
+	_fit_base()
 	_apply_smoke_query()
 	_render()
 
@@ -148,8 +158,46 @@ func open_settings() -> void:
 	settings_panel.open()
 
 
+# ================================================================ base size (U1)
+## The logical base for a screen whose shorter side is css_short CSS px: 560 on phones, growing by
+## two thirds of every CSS px past 600 (900 -> 760, 1080 -> 880).
+static func base_for(css_short: float) -> int:
+	if css_short <= PHONE_CSS:
+		return BASE
+	return int(round(BASE + (css_short - PHONE_CSS) * BASE_GROWTH))
+
+
+## CSS px per physical px (the browser's devicePixelRatio on the web, the OS scale elsewhere).
+func _css_ratio() -> float:
+	if OS.has_feature("web"):
+		return maxf(0.5, float(JavaScriptBridge.eval("window.devicePixelRatio || 1", true)))
+	return maxf(0.5, DisplayServer.screen_get_scale())
+
+
+## Sets the window's content scale base for its current size and screen. Returns true when it changed.
+func _fit_base() -> bool:
+	var win: Window = get_window()
+	if win == null:
+		return false
+	var ws: Vector2 = Vector2(win.size)
+	if ws.x <= 0.0 or ws.y <= 0.0:
+		return false
+	# the street is where the room matters; title, map, safehouse and end keep the 560 base on
+	# every screen (they are laid out for it and look the same as before)
+	var l: int = base_for(minf(ws.x, ws.y) / _css_ratio()) if screen == Screen.STREET else BASE
+	if win.content_scale_size == Vector2i(l, l):
+		return false
+	_fitting = true
+	win.content_scale_size = Vector2i(l, l)
+	_fitting = false
+	return true
+
+
 # ================================================================ rendering
 func _render() -> void:
+	if _fitting:
+		return
+	_fit_base()
 	for c: Node in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
@@ -567,6 +615,11 @@ func _build_street() -> void:
 	var hint: Control = _build_hint(run) if hint_id != "" else null
 	var hint_h: float = (HINT_H + SEP) if hint != null else 0.0
 	var n: int = maxi(4, run.street.size())
+	# dd-ux-clean2 (U2): a boss street holds 2 cards (the boss + a phase / cover card); they take
+	# the street's whole width (portrait) or grow to the street's height (landscape)
+	var duel: bool = run.boss_street and run.street.size() <= 2
+	if duel:
+		n = 2
 	if portrait:
 		# the street gets the space first, then the board (rooms), the guns keep a fixed height
 		var gun_h: float = 196.0
@@ -605,13 +658,18 @@ func _build_street() -> void:
 		v.add_child(actions)
 		v.add_child(_build_guns(run, true, gun_h, W))
 	else:
-		var lw: float = clampf(W * 0.115, 100.0, 150.0)
+		# dd-ux-clean2: on desktop the boss column is wide enough for its name at full size
+		var lw: float = clampf(W * 0.115, 100.0, 150.0) if H < 600.0 else clampf(W * 0.14, 176.0, 200.0)
 		var rw: float = clampf(W * 0.21, 170.0, 250.0)
 		var mid_w: float = W - lw - rw - SEP * 2
-		var gun_h2: float = clampf(H * 0.25, 124.0, 160.0)
+		# dd-ux-clean2: taller guns on desktop (a bigger base leaves the room); phones unchanged
+		var gun_h2: float = clampf(H * 0.25, 124.0, 160.0 if H < 600.0 else 190.0)
 		var fixed2: float = HUD_H + ACT_H + gun_h2 + SEP * 3 + hint_h + SLACK
 		var card_w2: float = (mid_w - SEP * (n - 1)) / n
-		var card_h2: float = clampf(H - fixed2, 110.0, card_w2 * 1.4)
+		var card_h2: float = clampf(H - fixed2, 110.0, card_w2 * (1.4 if H < 600.0 else 1.65))
+		if duel:
+			# as tall as the street row allows, a little wider than tall
+			card_w2 = minf(card_w2, card_h2 * 1.15)
 		var h: HBoxContainer = DDUi.hbox(SEP)
 		_content.add_child(h)
 		left.custom_minimum_size = Vector2(lw, 0)
@@ -830,6 +888,9 @@ func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99)
 		spec["art_keys"] = Art.card_keys(c, did)
 		if card_w < 160.0:
 			spec["badge_size"] = DDUi.FONT_S - 4
+		elif run.boss_street and run.street.size() <= 2:
+			# dd-ux-clean2 (U2): the boss street's two big cards get bigger words too
+			spec["text_scale"] = clampf(minf(card_w / 200.0, card_h / 280.0), 1.0, 1.4)
 		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
 		cv.index = i
 		cv.tapped.connect(_on_card_tapped)
@@ -904,7 +965,8 @@ func _build_actions(run: DDRun) -> Control:
 		rp.name = "RunPast"
 		rp.autowrap_mode = TextServer.AUTOWRAP_OFF
 		rp.clip_text = true
-		rp.custom_minimum_size = Vector2(120, ACT_H)
+		# dd-ux-clean2: wide enough for "-3 HP" on desktop (phones keep their width)
+		rp.custom_minimum_size = Vector2(120 if get_viewport_rect().size.y < 600.0 or portrait else 150, ACT_H)
 		rp.disabled = not run.can_run_past() or busy
 		rp.pressed.connect(do_run_past)
 		h.add_child(rp)

@@ -1834,8 +1834,8 @@ func _art_line(art: BannerArt) -> String:
 				"mastery tier" if art.mastery_tier > 0 else "art", n, maxi(1, pool.size())]
 	var alts: Array[StringName] = BannerArtDB.alt_arts(art.card_id)
 	# kc-trait-ui: each copy comes with its own art (no EQUIP); the Codex shows every art.
-	return "Banner: %s%s · art %d of %d (every art is in the Codex)" % [what, " (placeholder)" if art.placeholder else "",
-			maxi(1, alts.find(art.id) + 1), maxi(1, alts.size())]
+	# kc-da-ui2: no build words ("placeholder") in front of the player; a short caption.
+	return "Art: %s · %d of %d · all in the Codex" % [what, maxi(1, alts.find(art.id) + 1), maxi(1, alts.size())]
 
 
 ## Inspector for something that is not a card in hand (objective tile, incoming back, rails).

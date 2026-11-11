@@ -3,11 +3,13 @@
 # tap target (64 logical px at the 560 px base), the street cards are the biggest tiles, the waves
 # are ONE stack whose zoom lists every wave, rooms state their price on the OPEN button, gun tiles
 # show the short rule (full text in the zoom), the log is one line with the history behind a tap.
-# Rotating mid-run reflows without losing state. Every inspect path works by right click and by
+# Rotating mid-run reflows without losing state. dd-ux-clean2: desktop sizes (1440x900, 1920x1080)
+# get a bigger logical base (phones keep 560) and full-size text; the boss street's two cards are
+# drawn bigger than a normal street's cards. Every inspect path works by right click and by
 # long press (touch is emulated as the left mouse button).
 extends "res://tests/dd_test_case.gd"
 
-const SIZES: Array[Vector2i] = [Vector2i(390, 844), Vector2i(844, 390), Vector2i(1440, 900)]
+const SIZES: Array[Vector2i] = [Vector2i(390, 844), Vector2i(844, 390), Vector2i(1440, 900), Vector2i(1920, 1080)]
 
 var _paths: Array[String] = []
 
@@ -214,7 +216,7 @@ func _long_press(c: Control) -> void:
 
 func test_every_inspect_path_right_click_and_long_press() -> void:
 	var game: Node = tree.root.get_node_or_null("Game")
-	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390)]:
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390), Vector2i(1440, 900)]:
 		tree.root.size = sz
 		var tag: String = "%dx%d" % [sz.x, sz.y]
 		var m: Control = _main()
@@ -320,3 +322,107 @@ func _screen_ok(m: Control, where: String) -> void:
 				continue
 			var ov: Rect2 = a.get_global_rect().grow(-1.0).intersection(b.get_global_rect().grow(-1.0))
 			check(ov.size.x <= 0.5 or ov.size.y <= 0.5, "%s: %s and %s don't overlap" % [where, _name(a), _name(b)])
+
+
+# ---------------------------------------------------------------- dd-ux-clean2
+## Labels that shrink to fit (fit_label) and are smaller than their base size.
+func _shrunk(n: Node, out: Array) -> Array:
+	for l: Variant in n.find_children("*", "Label", true, false):
+		var lb: Label = l
+		if lb.has_meta(&"fit_base") and lb.is_visible_in_tree() and lb.get_theme_font_size("font_size") < int(lb.get_meta(&"fit_base")):
+			out.append(lb.text)
+	return out
+
+
+func test_desktop_gets_a_bigger_base_phones_keep_560() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	var want: Dictionary = {Vector2i(390, 844): Vector2(560, 1212), Vector2i(844, 390): Vector2(1212, 560),
+		Vector2i(1440, 900): Vector2(1216, 760), Vector2i(1920, 1080): Vector2(1564, 880)}
+	for sz: Vector2i in want:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		# title (and map, safehouse, end) keep the 560 base everywhere; the street grows on desktop
+		var vt: Vector2 = m.get_viewport_rect().size
+		check(absf(minf(vt.x, vt.y) - 560.0) <= 2.0, "%s: the title keeps the 560 base (%s)" % [tag, str(vt)])
+		m.call("apply_debug", {"screen": "street", "seed": "5"})
+		m.call("_render")
+		await _settle()
+		var vp: Vector2 = m.get_viewport_rect().size
+		var w: Vector2 = want[sz]
+		check(absf(vp.x - w.x) <= 2.0 and absf(vp.y - w.y) <= 2.0, "%s: logical street screen %s (want %s)" % [tag, str(vp), str(w)])
+		m.call("apply_debug", {"screen": "safehouse"})
+		m.call("_render")
+		await _settle()
+		var vs: Vector2 = m.get_viewport_rect().size
+		check(absf(minf(vs.x, vs.y) - 560.0) <= 2.0, "%s: the safehouse is back on the 560 base (%s)" % [tag, str(vs)])
+		if sz.x >= 1440:
+			# full-size text: no gun name, rule or boss name shrunk to fit on the street
+			for q: Dictionary in [{"screen": "street", "seed": "5", "gun2": "crossbow", "stack1": "3,5,6", "stack2": "4,5", "open": "1"},
+					{"screen": "street", "seed": "4", "district": "0"}, {"screen": "street", "seed": "4", "district": "1"},
+					{"screen": "street", "seed": "4", "district": "2"}]:
+				m.call("apply_debug", q)
+				m.call("_render")
+				await _settle()
+				var run: DDRun = game.get("run")
+				var shrunk: Array = []
+				for idx: int in [200, 201, 202, 410]:
+					var t: DDCardView = _tile(m, idx)
+					if t != null:
+						_shrunk(t, shrunk)
+				check(shrunk.is_empty(), "%s %s: gun and boss text at full size (shrunk: %s)" % [tag, str(run.district().get("id", "")), str(shrunk)])
+				for k: int in run.street.size():
+					var sh: Array = _shrunk(_tile(m, k), [])
+					check(sh.is_empty(), "%s: street card %d name at full size (shrunk: %s)" % [tag, k, str(sh)])
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+func test_boss_street_cards_are_big() -> void:
+	var game: Node = tree.root.get_node_or_null("Game")
+	for sz: Vector2i in SIZES:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		m.call("apply_debug", {"screen": "street", "seed": "9"})
+		m.call("_render")
+		await _settle()
+		var normal: float = _area(_tile(m, 0))
+		for d: int in [0, 2]:
+			m.call("apply_debug", {"screen": "street", "seed": "9", "boss": "1", "district": str(d)})
+			m.call("_render")
+			await _settle()
+			var run: DDRun = game.get("run")
+			var where: String = "%s boss street %d" % [tag, d]
+			check(run.boss_street and run.street.size() == 2, where + ": 2 cards (%d)" % run.street.size())
+			_street_ok(m, where)
+			var boss_seen: bool = false
+			for k: int in run.street.size():
+				var t: DDCardView = _tile(m, k)
+				check(t != null and _area(t) > normal * 1.2, "%s: card %d (%s) drawn bigger than a normal street card (%.0f vs %.0f)" % [where, k, str(t.size if t != null else Vector2.ZERO), _area(t), normal])
+				if t == null:
+					continue
+				boss_seen = boss_seen or run.street[k].is_boss()
+				if sz.y > sz.x:
+					check(t.size.x >= (m.get_viewport_rect().size.x - 32.0 - 8.0) / 2.0 - 1.0, where + ": the two cards fill the width in portrait")
+				# still inspectable both ways
+				var insp: DDInspect = m.get("_inspect")
+				_right_click(t)
+				await tree.process_frame
+				check(insp.is_open(), where + ": right click reads card %d" % k)
+				insp.close()
+				await tree.process_frame
+				await _long_press(t)
+				check(insp.is_open(), where + ": long press reads card %d" % k)
+				insp.close()
+				await tree.process_frame
+			check(boss_seen, where + ": the boss card is on the street")
+			for b: Variant in [m.find_child("RunPast", true, false), m.find_child("NoEscape", true, false)]:
+				if b != null:
+					check((b as Control).size.y >= 63.5, where + ": %s is a 44 CSS px target" % (b as Control).name)
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()

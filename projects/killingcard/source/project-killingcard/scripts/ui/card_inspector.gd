@@ -8,6 +8,11 @@
 #   kc-board: above the card, the full 512x128 banner (the art's 4:1 band with large badges; the
 #   rival's mirrored as on the board), animated (shimmer) while the inspector is open, and a line
 #   naming the art. info.view = {} hides the card (objective tiles, incoming backs, rail boxes).
+#   kc-da-ui2 (art direction #4, "pulling one card into the light"): ONE big card plus a paper rules
+#   sheet, nothing else. The 512x128 banner shows only when there is no card to show (tokens,
+#   face-down backs, rail boxes); the text panel is orders paper (paper_sheet.gd) with dark ink;
+#   the art line is a short mono caption with no placeholder words; the glossary links are
+#   steel info-icon sockets, not blank "?" plates.
 # Dependencies: CardView.tscn (card_view.gd), hud_theme.tres variations (Scrim, HudPanelDark,
 #   HudHeader, HudSubtle, HudAccent, KeywordName, HudButton).
 # Author: UI/UX Agent (p09)
@@ -22,6 +27,9 @@ const MARGIN: float = 24.0
 const INFO_WIDTH: float = 440.0
 const INFO_WIDTH_COMPACT: float = 400.0
 const BANNER_SIZE: Vector2 = Vector2(512, 128)
+const PaperSheet: GDScript = preload("res://scripts/ui/paper_sheet.gd")
+## kc-da-ui2: the card may grow to this width when the room allows (one big card).
+const CARD_MAX_W: float = 360.0
 
 @onready var _center: Control = $Center
 @onready var _holder: Control = %CardHolder
@@ -40,6 +48,8 @@ var _banner: BannerView = null
 ## lines add more). Title, type and CLOSE always stay visible.
 var _body: ScrollContainer = null
 var _body_col: VBoxContainer = null
+## kc-da-ui2: the art caption (mono, muted ink) under the status line.
+var _art_label: Label = null
 
 
 func _ready() -> void:
@@ -63,6 +73,15 @@ func _ready() -> void:
 		n.reparent(_body_col, false)
 		n.owner = self
 		n.unique_name_in_owner = true
+	_art_label = Label.new()
+	_art_label.name = "ArtLabel"
+	_art_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_art_label.add_theme_font_override(&"font", PaperSheet.mono_font())
+	_art_label.add_theme_font_size_override(&"font_size", 12)
+	_body_col.add_child(_art_label)
+	_art_label.owner = self
+	_art_label.unique_name_in_owner = true
+	_paper()
 	_banner = BannerView.new()
 	_banner.name = "Banner"
 	_banner.dim_back = false
@@ -83,7 +102,10 @@ func open(info: Dictionary) -> void:
 		_card.set_card_data(view)
 	var banner: Dictionary = info.get("banner", {})
 	var side: StringName = &"enemy" if int(info.get("side", 0)) == 1 else &"player"
-	if bool(info.get("banner_back", false)):
+	if _holder.visible:
+		# kc-da-ui2: one copy of the card only; the banner is the picture when there is no card.
+		_banner.show_empty()
+	elif bool(info.get("banner_back", false)):
 		_banner.show_incoming()
 	elif not banner.is_empty():
 		var shown: Dictionary = banner.duplicate()
@@ -107,17 +129,20 @@ func open(info: Dictionary) -> void:
 		var name_label: Label = Label.new()
 		name_label.theme_type_variation = &"KeywordName"
 		name_label.text = String(k.get("name", ""))
+		PaperSheet.ink(name_label, PaperSheet.INK_BRASS)
 		_keywords.add_child(name_label)
 		_add_glossary_link(name_label, StringName(String(k.get("id", ""))))
 		var text_label: Label = Label.new()
 		text_label.text = String(k.get("text", ""))
 		text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		PaperSheet.ink(text_label)
 		_keywords.add_child(text_label)
 	_keywords.visible = _keywords.get_child_count() > 0
 	_status.text = String(info.get("status", ""))
-	if art_line != "":
-		_status.text = (_status.text + "\n" + art_line).strip_edges()
 	_status.visible = not _status.text.is_empty()
+	_art_label.text = art_line.to_upper()
+	_art_label.visible = art_line != ""
+	_art_label.tooltip_text = art_line
 	show()
 	_body.scroll_vertical = 0
 	_fit()
@@ -145,6 +170,10 @@ func _add_glossary_link(label: Label, id: StringName) -> void:
 	q.theme_type_variation = &"HudButton"
 	q.tooltip_text = "Glossary: %s" % label.text
 	q.custom_minimum_size = Vector2(64, 64)
+	# kc-da-ui2: an info icon in a steel socket (the "?" text stays only without the kit icon).
+	if UiKit.set_button_icon(q, &"ui_info", 26.0):
+		q.text = ""
+		q.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	q.focus_mode = Control.FOCUS_ALL
 	q.add_to_group(&"tap_target")
 	q.set_meta(&"glossary_key", key)
@@ -162,6 +191,26 @@ func open_glossary(key: StringName = &"") -> Control:
 		existing.call(&"scroll_to", key)
 		return existing
 	return (load("res://scripts/ui/codex/glossary.gd") as GDScript).call(&"open_over", self, key)
+
+
+## kc-da-ui2: the orders-paper rules sheet: paper stylebox + fibre, dark ink on every label.
+func _paper() -> void:
+	PaperSheet.apply(_info_panel, 16.0, 6)
+	PaperSheet.ink(_title)
+	_title.add_theme_font_override(&"font", PaperSheet.head_font())
+	PaperSheet.ink(_type, PaperSheet.INK_MUTED)
+	PaperSheet.ink(_rules)
+	PaperSheet.ink(_status)
+	PaperSheet.ink(_art_label, PaperSheet.INK_MUTED)
+
+
+## True when the text panel is the paper sheet (tests).
+func is_paper() -> bool:
+	return _info_panel.has_meta(&"paper")
+
+
+func get_art_label() -> Label:
+	return _art_label
 
 
 func get_banner() -> BannerView:
@@ -214,13 +263,21 @@ func _fit() -> void:
 	# kc-cards-impl: the Y2+ card at its own width (never scaled): as wide as the room allows, 220..330.
 	var by_height: float = (room.y - 2.0 * MARGIN - banner_h - (CardView.height_for(0.0) - 0.0)) * 4.0 + 8.0
 	var by_width: float = room.x - 2.0 * MARGIN - info_w - 24.0
-	var w: float = clampf(floorf(minf(by_height, by_width)), 220.0, 330.0)
+	var w: float = clampf(floorf(minf(by_height, by_width)), 220.0, CARD_MAX_W)
 	_card.pivot_offset = Vector2.ZERO
 	_card.position = Vector2.ZERO
 	_card.scale = Vector2.ONE
 	if _card.has_method(&"set_card_width"):
 		_card.set_card_width(w)
-	_holder.custom_minimum_size = CardView.size_for(w)
+	# kc-da-ui2: on big screens the one card is pulled into the light: scaled up to 1.5x while the
+	# card and the sheet still fit side by side.
+	var base: Vector2 = CardView.size_for(w)
+	var grow: float = 1.0
+	if w >= CARD_MAX_W:
+		grow = clampf(minf((room.y - 2.0 * MARGIN) / base.y, (room.x - 2.0 * MARGIN - info_w - 24.0) / base.x), 1.0, 1.5)
+	_card.pivot_offset = Vector2.ZERO
+	_card.scale = Vector2(grow, grow)
+	_holder.custom_minimum_size = base * grow
 	# The text panel may be as tall as the room under the banner; its body scrolls past that.
 	var info_max: float = room.y - banner_h - 4.0
 	_body_col.custom_minimum_size.x = info_w - 32.0

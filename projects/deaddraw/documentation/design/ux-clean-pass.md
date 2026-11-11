@@ -100,3 +100,40 @@ The before and after screenshots are in the scratchpad `dd-ux-shots/` folder (`b
 - Title, map, sheets, safehouse and end fit at all three sizes.
 
 The existing `test_ui_flow.gd` and `test_feel.gd` pass unchanged. The web smoke test (`tools/smoke_web.js`, which now uses the wave stack at index 300) passes in both orientations against a local package build.
+
+## 6. Follow-up pass (dd-ux-clean2)
+
+The studio head answered the follow-up questions, all with (a).
+
+**U1: desktop gets a bigger base.** The game used to scale every screen up from a 560 px base, so a 1440x900 window laid out on only 896x560 logical px. That is narrower than a landscape phone (1212x560), so gun names and long boss names shrank to fit. Now `main.gd` picks the base when it starts and on every resize (`_fit_base()`, which sets `content_scale_size`). The base depends on the shorter side of the window in CSS px (window px / devicePixelRatio):
+
+| Screen (CSS px) | Shorter side | Base | Logical screen | CSS px per logical px |
+|---|---|---|---|---|
+| Phone portrait 390x844 | 390 | 560 (unchanged) | 560x1212 | 0.70 |
+| Phone landscape 844x390 | 390 | 560 (unchanged) | 1212x560 | 0.70 |
+| Desktop 1440x900 | 900 | 760 | 1216x760 | 1.18 |
+| Desktop 1920x1080 | 1080 | 880 | 1564x880 | 1.23 |
+
+- The rule is `base_for()`: 560 up to a 600 CSS px shorter side, then +2/3 logical px per CSS px. Phones are exactly as before: 64 logical px is still 44 CSS px.
+- On desktop, 64 logical px is 75 CSS px or more.
+- `project.godot` is unchanged (560 base, `canvas_items` / `expand`): it is still the phone default and the first frame.
+- Only the street (and its sheets and zooms) uses the bigger base. The title, map, safehouse and end screens are laid out for 560 and keep it on every screen, so on desktop they look the same as before. The map is unchanged (U3).
+- On tall landscape screens (logical height 600 px or more), the street uses the extra room:
+  - The boss column is 176-200 px wide, so "The Groundskeeper" fits at full size.
+  - The guns are up to 190 px tall.
+  - The street cards can be up to 1.65x as tall as they are wide.
+- Phone landscape keeps its old numbers.
+- Text is at its full size: no gun name, gun rule, boss name or street card name shrinks to fit at 1440x900 or 1920x1080 (a test checks every label that can shrink).
+- `DDCardView` also refits the number badge when the art window settles, so tall tiles get the full-size badge.
+
+**U2: the boss street draws its two cards big.** When the boss street holds 2 cards (the boss or a phase card, plus the cover card), they take the street's whole width in portrait: two 260x390 logical cards, up from 4 small ones in a row. Their name, tag, result line and corner chip are 1.3x bigger in portrait (`text_scale` in the card spec). In landscape the two cards are as tall as the row allows and up to 1.15x as wide as they are tall, wider than before; on desktop that is about 450 CSS px each. The Rush Hour Horde street (3 bosses + cover, 4 cards) keeps the 2x2 grid. On desktop the RUN PAST button is 150 px wide so "-3 HP" is no longer cut. Both cards still open their zoom on right click and long press.
+
+**U3: the map is unchanged.**
+
+**Tests:** `tests/test_ui_clean.gd` now runs every size check at 390x844, 844x390, 1440x900 and 1920x1080. The inspect test also runs at 1440x900. Two new tests:
+- `test_desktop_gets_a_bigger_base_phones_keep_560` checks the logical street screen at all four sizes, that the title and safehouse stay on 560, and the full-size text on desktop for every district.
+- `test_boss_street_cards_are_big` checks, at all four sizes, that the boss street's cards are bigger than a normal street's, fill the width in portrait, don't overlap, stay on screen and open their zoom on right click and long press, and that Run past / NO ESCAPE are 44 CSS px targets.
+
+The rules and both save formats are unchanged.
+
+Screenshots are in the scratchpad `dd-ux2-shots/` folder (`before_*` / `after_*`; `p` = 390x844, `l` = 844x390, `d` = 1440x900, `w` = 1920x1080).

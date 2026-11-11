@@ -698,16 +698,11 @@ func test_inspector_shows_the_512_banner_and_rails_inspect() -> void:
 	c._on_card_inspected(rc.uid)
 	await tree.process_frame
 	var insp: Control = m.get_inspector()
-	var banner: BannerView = insp.get_banner()
-	assert_not_null(banner, "inspector banner")
-	if banner != null:
-		assert_eq(banner.size, Vector2(512, 128), "512x128 banner")
-		assert_true(banner.has_art(), "banner art")
-		assert_true(banner.is_focused(), "animated while focused")
-		assert_true(Rect2(Vector2.ZERO, Vector2(vp.size)).encloses(banner.get_global_rect()), "on screen")
+	# kc-da-ui2 (#4): one big card + the paper rules sheet; no second copy as a banner.
+	assert_true(insp.get_banner() == null, "a card inspector shows no extra banner copy")
+	assert_true(insp.get_card_view().is_visible_in_tree(), "the one big card")
+	assert_true(insp.is_paper(), "rules on the paper sheet")
 	insp.close()
-	if banner != null:
-		assert_false(banner.is_focused(), "stops when closed")
 	for key: StringName in [&"score", &"deck", &"intel", &"supply", &"streak", &"menu", &"preview", &"killfeed", &"hand_tab"]:
 		m.rail_inspected.emit(key)
 		await tree.process_frame

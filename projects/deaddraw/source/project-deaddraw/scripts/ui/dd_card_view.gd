@@ -218,6 +218,8 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	window.custom_minimum_size = Vector2(0, 40)
 	window.clip_contents = true
 	_box.add_child(window)
+	# dd-ux-clean2: big tiles (the boss street's two cards) scale their text with them
+	var ts: float = float(spec.get("text_scale", 1.0))
 	var fit: String = str(spec.get("art_fit", "cover"))
 	if fit == "contain":
 		var under: ColorRect = ColorRect.new()
@@ -232,10 +234,12 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	if big != "":
 		_badge_panel = _number_badge(big)
 		window.add_child(_badge_panel)
+		# dd-ux-clean2: the art window can settle after the tile (tall tiles); refit then too
+		window.resized.connect(func() -> void: _fit_badge.call_deferred())
 	var badge: String = str(spec.get("badge", ""))
 	if badge != "" or bool(spec.get("holdover", false)):
 		var chip: PanelContainer = DDUi.panel(Color(spec.get("badge_color", DDUi.WARN)) if badge != "" else DDUi.TEXT, 3)
-		chip.add_child(DDUi.label(badge if badge != "" else "HOLDOVER", int(spec.get("badge_size", DDUi.FONT_S - 5)), DDUi.BG))
+		chip.add_child(DDUi.label(badge if badge != "" else "HOLDOVER", roundi(int(spec.get("badge_size", DDUi.FONT_S - 5)) * ts), DDUi.BG))
 		window.add_child(chip)
 		window.resized.connect(func() -> void:
 			if is_instance_valid(chip):
@@ -255,18 +259,19 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 	bv.add_child(name_row)
 	var tag: String = str(spec.get("tag", ""))
 	if tag != "":
-		var kl: Label = DDUi.label(tag.to_upper(), DDUi.FONT_S - 5, DDUi.accent(kind))
+		var kl: Label = DDUi.label(tag.to_upper(), roundi((DDUi.FONT_S - 5) * ts), DDUi.accent(kind))
 		kl.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		name_row.add_child(kl)
 	var title: String = str(spec.get("title", ""))
 	if title != "":
-		var tt: Label = DDUi.label(title, DDUi.FONT_S, BONE)
+		var tsz: int = roundi(DDUi.FONT_S * ts)
+		var tt: Label = DDUi.label(title, tsz, BONE)
 		tt.clip_text = true
 		tt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER if tag == "" else HORIZONTAL_ALIGNMENT_LEFT
 		name_row.add_child(tt)
 		# v3: long names on narrow cards shrink to fit instead of being cut ("Shambler")
-		tt.resized.connect(func() -> void: fit_label(tt, DDUi.FONT_S, 10))
+		tt.resized.connect(func() -> void: fit_label(tt, tsz, 10))
 	_add_lines(bv, spec, false)
 
 
@@ -356,9 +361,10 @@ func _add_lines(parent: Container, spec: Dictionary, outline: bool, align: Horiz
 		bar.color = DDUi.accent(kind)
 		pip_bar = bar
 		parent.add_child(bar)
+	var ts: float = float(spec.get("text_scale", 1.0))
 	for ln: Variant in spec.get("lines", []):
 		var arr: Array = ln
-		var l: Label = DDUi.label(str(arr[0]), int(arr[2]) if arr.size() > 2 else DDUi.FONT_S, arr[1] if arr.size() > 1 else DDUi.TEXT_DIM, align, true)
+		var l: Label = DDUi.label(str(arr[0]), roundi((int(arr[2]) if arr.size() > 2 else DDUi.FONT_S) * ts), arr[1] if arr.size() > 1 else DDUi.TEXT_DIM, align, true)
 		if outline:
 			_outline(l, 6)
 		line_labels.append(l)
@@ -406,6 +412,7 @@ func _fit_badge() -> void:
 static func fit_label(l: Label, base: int, min_size: int) -> void:
 	if l == null or not is_instance_valid(l) or l.size.x <= 0.0:
 		return
+	l.set_meta(&"fit_base", base)
 	var font: Font = l.get_theme_font("font")
 	var fs: int = base
 	while fs > min_size and font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > l.size.x:
