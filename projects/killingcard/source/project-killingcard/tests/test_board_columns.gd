@@ -341,10 +341,11 @@ func test_banner_art_path_and_crops() -> void:
 	BannerArtDB.licensed_enabled = false  # a dev machine may have the private licensed folder
 	BannerArtDB.clear_cache()
 	# Killstreak card art placeholder: 4:1 band and 2:3 column of the same master.
-	var art: BannerArt = BannerArtDB.get_art(&"marksman")
+	# (kc-da-import1: ids with no data/banners drop-in; DA art pack 1 gave most cards one.)
+	var art: BannerArt = BannerArtDB.get_art(&"recon_specialist")
 	assert_true(art.placeholder and art.texture != null, "placeholder from card art")
-	var b: Texture2D = BannerArtDB.banner_texture(&"marksman")
-	var p: Texture2D = BannerArtDB.portrait_texture(&"marksman")
+	var b: Texture2D = BannerArtDB.banner_texture(&"recon_specialist")
+	var p: Texture2D = BannerArtDB.portrait_texture(&"recon_specialist")
 	assert_true(absf(float(b.get_width()) / b.get_height() - 4.0) < 0.05, "banner 4:1 (%s)" % b.get_size())
 	assert_true(absf(float(p.get_width()) / p.get_height() - 2.0 / 3.0) < 0.02, "portrait 2:3 (%s)" % p.get_size())
 	# Crop centres move the regions, clamped inside the image.
@@ -353,8 +354,8 @@ func test_banner_art_path_and_crops() -> void:
 	assert_eq(BannerArt.band_rect(img, 0.0).position.y, 0.0, "band clamped at the top")
 	assert_eq(BannerArt.column_rect(img, 0.5), Rect2(427, 0, 683, 1024), "hand column 683x1024")
 	# A card with no art at all still gets a distinct generated banner.
-	var g1: BannerArt = BannerArtDB.get_art(&"war_standard")
-	var g2: BannerArt = BannerArtDB.get_art(&"aid_station")
+	var g1: BannerArt = BannerArtDB.get_art(&"kc_wip_fast_learner")
+	var g2: BannerArt = BannerArtDB.get_art(&"kc_test_no_art")
 	assert_true(g1.placeholder and g1.texture != null and g2.texture != null, "generated placeholders")
 	assert_true(g1.texture.get_image().get_pixel(10, 10) != g2.texture.get_image().get_pixel(10, 10), "distinct per id")
 	# Drop-in: a BannerArt in data/banners/<id>.tres wins over the placeholder.
@@ -384,7 +385,7 @@ func test_licensed_manifest_optional() -> void:
 	BannerArtDB.licensed_dir = "user://kc_licensed_test/"
 	BannerArtDB.clear_cache()
 	assert_true(BannerArtDB.licensed_rows().is_empty(), "no folder: no rows")
-	assert_true(BannerArtDB.get_art(&"rifleman").placeholder, "no folder: placeholder")
+	assert_true(BannerArtDB.get_art(&"sentry").placeholder, "no folder: placeholder")
 	DirAccess.make_dir_recursive_absolute(BannerArtDB.licensed_dir)
 	var img: Image = Image.create(300, 200, false, Image.FORMAT_RGB8)
 	img.fill(Color(0.2, 0.4, 0.6))
@@ -394,11 +395,13 @@ func test_licensed_manifest_optional() -> void:
 	f.store_line("card_a.png,unit,rifleman,Test Card")
 	f.close()
 	BannerArtDB.clear_cache()
+	# kc-da-import1: rifleman has a public drop-in (Night city); the licensed row still wins.
 	var art: BannerArt = BannerArtDB.get_art(&"rifleman")
 	assert_false(art.placeholder, "manifest art used")
 	assert_eq(art.title, "Test Card", "title from the manifest")
 	assert_eq(BannerArtDB.banner_texture(&"rifleman").get_size(), Vector2(300, 75), "4:1 band of the licensed image")
-	assert_true(BannerArtDB.get_art(&"marksman").placeholder, "chassis not in the manifest keep placeholders")
+	assert_true(BannerArtDB.get_art(&"sentry").placeholder, "chassis not in the manifest keep placeholders")
+	assert_false(BannerArtDB.get_art(&"marksman").licensed, "chassis not in the manifest keep their public drop-in")
 	for file: String in DirAccess.get_files_at(BannerArtDB.licensed_dir):
 		DirAccess.remove_absolute(BannerArtDB.licensed_dir + file)
 	DirAccess.remove_absolute(BannerArtDB.licensed_dir)

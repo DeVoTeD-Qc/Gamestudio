@@ -146,10 +146,11 @@ func test_no_art_falls_back() -> void:
 	CardArt.bitmaps_enabled = false
 	CardArt.clear_cache()
 	BannerArtDB.clear_cache()
-	slot.show_unit({"name": "Rifleman", "cls": "AR", "fp": 2, "armor": 2, "banner": "rifleman"}, &"enemy", true)
+	# (kc-da-import1: a card with no data/banners drop-in, so the Killstreak art path is the one tested.)
+	slot.show_unit({"name": "Recon Specialist", "cls": "AR", "fp": 2, "armor": 2, "banner": "recon_specialist"}, &"enemy", true)
 	await tree.process_frame
 	assert_true(slot.has_art(), "SVG art when the image is missing")
-	assert_false(CardArt.has_bitmap(CardArt.card_path(&"rifleman")), "procedural texture")
+	assert_false(CardArt.has_bitmap(CardArt.card_path(&"recon_specialist")), "procedural texture")
 	# INCOMING shows the face-down back, no unit art.
 	_reset()
 	slot.show_incoming()

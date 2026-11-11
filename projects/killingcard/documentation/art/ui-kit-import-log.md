@@ -2,6 +2,83 @@
 
 *Technical Artist. One section per batch from `ui-kit-prompt-pack.md`. Newest first.*
 
+## DA art pack 1: 44 card paintings (kc-da-import1, 2026-11-11)
+
+**Source:** the head's 46 ChatGPT originals on the branch `art/killingcard-pack-1` (52767ad, `documentation/art/chatgpt/images/art-pack-1/`), read from the branch into a scratch folder. The branch is not merged and no raw PNG is in main (studio rule: raw sources never ship).
+
+**Reviewed** at full size (1536x1024, close crops of faces, weapons, screens and panels) and at phone size (the 4:1 band at 200x50) against `da-art-pack-1.md` §6 and the IP rules. **44 accepted, 2 rejected, 2 never generated:**
+
+| Slot | Result | Reason | Retry hint (paste after "Regenerate, avoid:") |
+|---|---|---|---|
+| `kc_wip_fast_learner` | rejected | A visible face: goggles pushed up on the forehead, eyes, brows and hair in full view above the face scarf (the entry's Avoid line names "a visible face"). | "a visible face or eyes; goggles must be worn over the eyes, mirrored or tinted, with the face scarf up". |
+| `recon_specialist` (Night city) | rejected | The drone reads as a real consumer quadcopter model (folding-arm X frame, front gimbal camera: the familiar commercial camera-drone silhouette). | "a consumer camera drone; draw a chunky fictional military recon drone with four ducted fan rings and an armoured olive body". Recon Specialist keeps its Port painting meanwhile. |
+| `tripwire_charge` | not generated | The image service blocked the prompt (moderation, violence) at the input stage. | Soften the subject: "a thin taut wire across a container aisle at ankle height, a small olive box clipped to a post, low camera", no "charge"/"explosive" wording. Keeps its Killstreak painting meanwhile. |
+| `demolitions_expert` (Night city) | not generated | Blocked at the output stage (moderation, violence). | Show the role through tools rather than a blast: "kneeling at a doorway with a coil of cable and a tool roll". Keeps its Port painting. |
+
+Borderline but accepted: **Private I** (eyes faintly visible through clear goggles, face covered below; reads as a masked soldier at every size), **Laser Gunner** (a ribbed vent on the weapon's side reads like glyphs at quarter size; at full size it is plain slats, and it is invisible at card size), **Shambler** (gaunt grey hands, no wounds or gore). No text, logos, flags, insignia, red crosses, blood, real faces or shooter trade dress in the 44. Night city images have no neon, signs, red or pink light, or lit windows with figures.
+
+**Pipeline.** `tools/ui_kit_icons.py --manifest documentation/art/da-art-pack-1-manifest.csv <scratch> <scratch project>` (all 44 `SHIP`: opaque 3:2 centre crop to the 1152x768 master), then each master as **WebP q72** with the `importer="keep"` `.import` (§7.4: the game decodes it itself through `CardArt.bitmap`, so `image_path` points at the `.webp`) in `assets/sprites/banners/kc_b_<slot>.webp`: 3.3 MB for the 44, about 70 KB each (under the §7.4 budget of 100-150 KB). One `data/banners/<slot>.tres` per image (`is_default = true`, `placeholder = false`, `artist = "KillingCard studio (DA art pack 1)"`, `licence = "studio-owned"`).
+
+- **Night city** (rifleman, shieldman, combat_medic, point_man, marksman, gunner, flanker, breacher, callout, breach_and_clear): `data/banners/<card>.tres` makes it the default; the Port painting `assets/sprites/cards/card_<card>.webp` stays as the fallback (delete the `.tres` to go back).
+- **Privates:** the existing `kc_wip_private_1..4.tres` now point at their own paintings. **Data-only follow-up (§1.3):** `si_grunt`, `si_trooper`, `si_sergeant` and `si_armored` wear Private I, II, III and IV.
+- **Standard Issue Ammo Resupply:** shipped as `kc_b_si_ammo_resupply_art.webp` and set on `si_ammo_resupply.tres`. Not as the kit piece name `kc_b_si_ammo_resupply`: `UiKit.piece` would try to `load()` a keep-imported WebP from `assets/sprites/banners/` and log an import error.
+- **Pitch lookup order (code, `banner_art_db.gd`):** before, a public `data/banners` drop-in won over the private pitch's licensed calling card (only `si_*` looked at the licensed rows first). With this pack 40 of the 48 ids have pitch rows, so the pitch would have lost its calling cards. Now every id checks the licensed rows first; the public build has none, so it is unchanged. `tests/test_board_columns.gd` covers it (the licensed row beats rifleman's drop-in).
+
+**Crops** (fine-tuned by eye from the pack's numbers: most unit bands moved up so the helmet, goggles and the weapon's action are inside the band; callout moved down to the binoculars and radio):
+
+| Slot | Master | banner_y | portrait_x |
+|---|---|---|---|
+| `aid_station` | `kc_b_aid_station.webp` | 0.48 | 0.50 |
+| `ammo_resupply` | `kc_b_ammo_resupply.webp` | 0.48 | 0.50 |
+| `bastion_60` | `kc_b_bastion_60.webp` | 0.50 | 0.50 |
+| `blackout` | `kc_b_blackout.webp` | 0.30 | 0.50 |
+| `brawler` | `kc_b_brawler.webp` | 0.36 | 0.50 |
+| `breach_and_clear` | `kc_b_breach_and_clear_nightcity.webp` | 0.52 | 0.50 |
+| `breacher` | `kc_b_breacher_nightcity.webp` | 0.38 | 0.50 |
+| `bulwark` | `kc_b_bulwark.webp` | 0.50 | 0.50 |
+| `callout` | `kc_b_callout_nightcity.webp` | 0.66 | 0.50 |
+| `combat_medic` | `kc_b_combat_medic_nightcity.webp` | 0.36 | 0.50 |
+| `flanker` | `kc_b_flanker_nightcity.webp` | 0.34 | 0.50 |
+| `gunner` | `kc_b_gunner_nightcity.webp` | 0.36 | 0.50 |
+| `hold_the_line` | `kc_b_hold_the_line.webp` | 0.48 | 0.50 |
+| `kc_wip_barrage` | `kc_b_kc_wip_barrage.webp` | 0.48 | 0.50 |
+| `kc_wip_flag_bearer` | `kc_b_kc_wip_flag_bearer.webp` | 0.36 | 0.50 |
+| `kc_wip_hacker` | `kc_b_kc_wip_hacker.webp` | 0.32 | 0.50 |
+| `kc_wip_juggernaut` | `kc_b_kc_wip_juggernaut.webp` | 0.28 | 0.50 |
+| `kc_wip_kamikaze` | `kc_b_kc_wip_kamikaze.webp` | 0.48 | 0.50 |
+| `kc_wip_laser_gunner` | `kc_b_kc_wip_laser_gunner.webp` | 0.33 | 0.50 |
+| `kc_wip_medic` | `kc_b_kc_wip_medic.webp` | 0.38 | 0.50 |
+| `kc_wip_premium_loadout` | `kc_b_kc_wip_premium_loadout.webp` | 0.52 | 0.50 |
+| `kc_wip_private_1` | `kc_b_kc_wip_private_1.webp` | 0.33 | 0.50 |
+| `kc_wip_private_2` | `kc_b_kc_wip_private_2.webp` | 0.30 | 0.48 |
+| `kc_wip_private_3` | `kc_b_kc_wip_private_3.webp` | 0.28 | 0.50 |
+| `kc_wip_private_4` | `kc_b_kc_wip_private_4.webp` | 0.30 | 0.50 |
+| `kc_wip_riot_shield` | `kc_b_kc_wip_riot_shield.webp` | 0.30 | 0.50 |
+| `kc_wip_runner` | `kc_b_kc_wip_runner.webp` | 0.30 | 0.50 |
+| `kc_wip_scout` | `kc_b_kc_wip_scout.webp` | 0.26 | 0.50 |
+| `kc_wip_sharpshooter` | `kc_b_kc_wip_sharpshooter.webp` | 0.24 | 0.50 |
+| `kc_wip_sniper` | `kc_b_kc_wip_sniper.webp` | 0.32 | 0.50 |
+| `kc_wip_war_shout` | `kc_b_kc_wip_war_shout.webp` | 0.36 | 0.50 |
+| `listening_post` | `kc_b_listening_post.webp` | 0.40 | 0.50 |
+| `marksman` | `kc_b_marksman_nightcity.webp` | 0.45 | 0.50 |
+| `mortar_pit` | `kc_b_mortar_pit.webp` | 0.48 | 0.50 |
+| `point_man` | `kc_b_point_man_nightcity.webp` | 0.30 | 0.50 |
+| `rifleman` | `kc_b_rifleman_nightcity.webp` | 0.38 | 0.50 |
+| `sabotage` | `kc_b_sabotage.webp` | 0.48 | 0.50 |
+| `shambler` | `kc_b_shambler.webp` | 0.30 | 0.50 |
+| `shieldman` | `kc_b_shieldman_nightcity.webp` | 0.30 | 0.50 |
+| `si_ammo_resupply` | `kc_b_si_ammo_resupply_art.webp` | 0.50 | 0.50 |
+| `smoke_screen` | `kc_b_smoke_screen.webp` | 0.56 | 0.50 |
+| `sniper_perch` | `kc_b_sniper_perch.webp` | 0.46 | 0.50 |
+| `suppressing_fire` | `kc_b_suppressing_fire.webp` | 0.48 | 0.50 |
+| `war_standard` | `kc_b_war_standard.webp` | 0.30 | 0.50 |
+
+**Web build size** (`--export-pack`, headless): public "Web" game.pck **7.84 MB before, 10.98 MB after** (+3.1 MB; the 15 MB artifact limit is still 4 MB away). Private pitch: 13.87 MB before, **17.00 MB** with the pack, so the pitch set was re-encoded with its own tool (`tools/build_mw3_pitch_set.py --frame-width 256 --max-frames 12 --quality 62 --still-width 448 --still-quality 74`; was 384 / 16 / 70 / 512 / 78): 6.4 to 3.45 MB of WebP, pitch pck **14.04 MB** (target 14.5). The pitch never shows 40 of the 44 new paintings (licensed first), so a cleaner fix is to leave `assets/sprites/banners/` out of the pitch preset except `aid_station`, `bastion_60`, `shambler` and `sniper_perch`, and put the pitch set back on its default quality (an `export_presets.cfg` change for the build owner).
+
+**Checks:** 735 tests pass, also in a copy without `assets/licensed`. Before/after contact sheet of every card's in-game 4:1 band and 2:3 hand column made from `BannerArtDB` (scratch, not committed). Not yet checked in a running build at 844x390 (Codex, Duel hub hero row, Loadout): next step for QA.
+
+**For the next pack:** the four slots above; ChatGPT puts the head at 10-25% of the height on standing figures (the template asks 30-65%), so ask for "the head at about 35% of the image height, the figure seen from the waist up" on units.
+
 ## How to import batch N (any batch, kc-ui-hooks)
 
 One pass, from the repo root. The manifest (`ui-kit-manifest.csv`) is the source of truth: file name, kind, ship size and final folder. The game looks in the same folders (`UiKit.ICON_DIR`, `UiKit.PIECE_DIRS`: `frames/`, `fx/`, `panels/`, `plates/`, `icons/`, `arts/`, and since batch 2 `buttons/`, `tiles/`, `bands/`), and `tests/test_ui_kit_hooks.gd` fails if the two ever disagree.

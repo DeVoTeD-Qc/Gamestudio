@@ -99,13 +99,13 @@ static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
 	var art: BannerArt = null
 	# kc-mw3-cards (head): in the private pitch build a Standard Issue art (si_*) wears its licensed
 	# calling card ahead of the public drop-in; the public build has no licensed rows and keeps ours.
-	if licensed_enabled and ArtTraits.is_standard_issue_id(art_id):
+	# kc-da-import1: the same for every art id, now that DA art pack 1 gives most public cards a
+	# data/banners drop-in: the pitch keeps its calling cards, the public build is unchanged.
+	if licensed_enabled:
 		art = _licensed_art(art_id)
 	var path: String = BANNER_DIR + String(art_id) + ".tres"
 	if art == null and drop_in_enabled and art_id != &"" and ResourceLoader.exists(path):
 		art = load(path) as BannerArt
-	if art == null and licensed_enabled:
-		art = _licensed_art(art_id)
 	if art == null and String(art_id).contains(VARIANT_SEP):
 		art = _option_variant(art_id, hint)
 	if art == null and String(art_id).contains(VARIANT_SEP):

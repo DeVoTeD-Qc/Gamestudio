@@ -411,7 +411,8 @@ func test_kit_slots_fall_back_to_code_drawing() -> void:
 	await _frames(2)
 	assert_true(drawn[0], "code fallbacks drew")
 	ci.queue_free()
-	assert_eq(BannerArtDB.get_art(&"si_grunt").placeholder, true, "no kc_b_si_grunt yet: the placeholder art stays")
+	# kc-da-import1: si_grunt now wears the Private I painting from data/banners, not a kit piece.
+	assert_false(BannerArtDB.get_art(&"si_grunt").source_note.begins_with("Standard Issue art (kit piece"), "no kc_b_si_grunt piece: the data/banners art stays")
 	UiKit.piece_dirs = saved
 	UiKit.clear_cache()
 
