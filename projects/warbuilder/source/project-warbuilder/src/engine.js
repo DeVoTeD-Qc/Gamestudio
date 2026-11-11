@@ -1,5 +1,6 @@
-/* WARZONE DECKBUILDER v5 "Engine & Synergy" — rules engine (board task wb-rules).
-   Spec: documentation/design/engine-synergy-spec.md (approved), with the head's answers S1–S4.
+/* WARZONE DECKBUILDER v7 "Squad Tactics" — rules engine (board tasks wb-rules, wb-pkg1).
+   Rules (single source of truth): documentation/design/rules.md. v7 adds Squad Tactics, Spoils, Field Promotion, the Hot Drop delivery,
+   Threat / deck readouts and the Operator rank (wb-improve-v2.md, the head's answers W1–W5) on top of engine-synergy-spec.md.
    Squads + Loadout build the engine; a fixed 7-location row closes on a public schedule into an escalating final circle and a hard end.
    Shooting: commit Precision to a shot (1 card revealed per Precision committed); the shot spends it, and Recoil costs more Precision on top.
    Resources: Movement, Precision, Intel (+ Armor, which lasts until your next turn). */
@@ -51,14 +52,14 @@ function effParts(effs) {
     else if (e.op === 'buy') out.push(`+${e.n} Buy`);
     else if (e.op === 'charge') out.push(`at distance 0 your hits deal +${e.n} damage this turn`);
     else if (e.op === 'onHit') out.push(`your next hit this turn draws ${e.n} cards`);
-    else if (e.op === 'sweep') out.push(`Sweep ${e.n}`);
-    else if (e.op === 'expose') out.push('Expose');
-    else if (e.op === 'overwatch') out.push('Overwatch');
-    else if (e.op === 'fortify') out.push('Fortify');
+    else if (e.op === 'sweep') out.push(`look at your top ${e.n} cards and put them back in any order`);
+    else if (e.op === 'expose') out.push('this turn your hits ignore Armor and Reaction cards');
+    else if (e.op === 'overwatch') out.push(`at End, save up to ${TUNE.overwatchCap} unspent Precision: fire it if the rival ends their turn in range`);
+    else if (e.op === 'fortify') out.push(`your Armor holds through your next Ready (up to ${TUNE.fortifyCap})`);
     else if (e.op === 'heal') out.push(`Heal ${e.n}`);
     else if (e.op === 'suppress') out.push(`Suppress: the rival's next turn gets −${e.move} Movement and −${e.prec} Precision`);
     else if (e.op === 'repeat') out.push('repeat the play effects of the card you played just before this one');
-    else if (e.op === 'turret') out.push(`Turret: a free ${e.n}-damage shot at distance 0–${TUNE.turretRange} (reveal 1 card, needs 1 Hit Marker)`);
+    else if (e.op === 'turret') out.push(`free shot, distance 0–${TUNE.turretRange}: reveal 1; 1 Hit Marker hits for ${e.n}`);
     else if (e.op === 'anyStack') out.push('this turn you may buy the top card of any stack on the map, at its printed cost');
   }
   return out;
@@ -80,7 +81,7 @@ const CARDS = {};
 function TC(id, name, archetype, tier, hm, cost, copies, effects, extra) {
   const d = Object.assign({ id, name, archetype, tier, hit_markers: hm, intel_cost: cost, copies, effects, tags: [ARCH_TAG[archetype]] }, extra || {});
   d.text = d.loadout ? `Loadout. Ready: ${effText(d.loadout)}.` : playText(effects);
-  if (d.adrenaline) d.text += ' Adrenaline: when a shot hits you, this card returns from your discard pile to your hand.';
+  if (d.adrenaline) d.text += ' When a shot hits you, return this from your discard pile to your hand.';
   if (d.squad) d.squadText = effText(d.squad);
   CARDS[id] = d;
 }
@@ -228,7 +229,7 @@ function mkPlayer(idx, name) {
     deck: [], discard: [], hand: [], play: [], loadout: [], fuelled: [], removed: [], guns: [null, null],
     bonusTaken: [], moved: false, movedToward: false, nextFire: { reqMod: 0, bonusPrec: 0 }, revealPlus: 0, dmgTurn: 0, ignoreCover: false,
     buys: 0, buyBonus: 0, scrapAvail: 0, freeCycles: 0, stationScrapped: false, squadN: {}, rallyDone: [], fp: 0, fpHist: [], perks: [], perkOffer: null,
-    drop: [], ow: null, supp: null, suppNext: null, fortify: false, peek: null, lastPlayed: null, promoted: false, spoilsDone: false,
+    dmgHist: [], drop: [], ow: null, supp: null, suppNext: null, fortify: false, peek: null, lastPlayed: null, promoted: false, spoilsDone: false,
     chargeDmg: 0, onHitDraw: 0, expose: false, overwatch: false, anyStack: false,
     stats: { shots: 0, hits: 0, jams: 0, damageDealt: 0, cardsAcquired: 0, weaponAcq: 0, burned: 0, searches: 0, reactions: 0, hitsBy: {}, maxTurnDmg: 0, turnDmg: 0, squads: 0, rallies: 0, big: 0, buys: 0,
       spoils: 0, promoted: 0, healed: 0, owShots: 0, turretShots: 0, dmgRounds: {}, bestRound: 0, mvp: {}, added: [] } };
@@ -254,7 +255,7 @@ function locSize() { return TUNE.stackSize; }
 
 // ---------- setup ----------
 function newGame(opts = {}) {
-  const s = { v: '6.0', seed: (opts.seed ?? (Date.now() & 0x7fffffff)) | 0, round: 1, turnNo: 1, first: 0, turn: 0, over: false, winner: null, endBy: null,
+  const s = { v: '7.0', seed: (opts.seed ?? (Date.now() & 0x7fffffff)) | 0, round: 1, turnNo: 1, first: 0, turn: 0, over: false, winner: null, endBy: null,
     log: [], nid: 1, cards: {}, weapons: {}, atts: {}, envs: [], players: [], lastFire: null, finalN: 0, finalDmg: 0, gone: [], aiMode: ['aware', 'aware'],
     ops: (opts.ops || []).filter(k => OPS[k]), spoils: null };
   s.players = [mkPlayer(0, (opts.names && opts.names[0]) || 'You'), mkPlayer(1, (opts.names && opts.names[1]) || 'Rival')];
@@ -326,7 +327,7 @@ function runEffect(s, p, e, ctx) {
     case 'onHit': pl.onHitDraw += e.n; ctx.out.push(`next hit draws ${e.n}`); fp = 1.5 * e.n; break;
     case 'sweep': { const k = Math.min(e.n, pl.deck.length); pl.peek = pl.deck.slice(pl.deck.length - k).reverse(); ctx.out.push(`Sweep: your top ${k} card${k === 1 ? '' : 's'}`); fp = 1; break; }
     case 'expose': pl.expose = true; ctx.out.push('Expose: hits ignore Armor and Reaction cards'); fp = 1; break;
-    case 'overwatch': pl.overwatch = true; ctx.out.push('Overwatch armed'); fp = 2; break;
+    case 'overwatch': pl.overwatch = true; ctx.out.push('angle held at End'); fp = 2; break;
     case 'fortify': pl.fortify = true; ctx.out.push('Fortify: Armor holds through your next Ready'); fp = 1; break;
     case 'heal': { const h = Math.max(0, Math.min(e.n, TUNE.hp - pl.hp)); pl.hp += h; pl.stats.healed += h; ctx.out.push(`Heal ${h}`); fp = h; break; }
     case 'suppress': { const o = P(s, 1 - p); const q = o.suppNext || { move: 0, prec: 0 }; o.suppNext = { move: q.move + e.move, prec: q.prec + e.prec }; ctx.out.push(`Suppress: rival −${e.move} Movement, −${e.prec} Precision next turn`); fp = 2; break; }
@@ -659,12 +660,12 @@ function endTurn(s, p) {
   // Overwatch: the rival ends this turn inside your saved shot's range, so it fires now
   const o = P(s, 1 - p);
   if (o.ow) { const ow = o.ow; o.ow = null; const E = eff(s, o.guns[0]); const W = WEAPONS[s.weapons[o.guns[0]].def];
-    if (dist(s) >= E.band[0] && dist(s) <= E.band[1]) { autoShot(s, 1 - p, { reveal: W.melee ? 0 : ow.prec, steps: E.ladder.map(([h, dm]) => [W.melee ? 0 : h, dm]), label: 'Overwatch', kind: 'overwatch', range: E.band[1] }); if (s.over) return { ok: true }; }
-    else log(s, `${poss(o.name)} Overwatch holds: ${pl.name} ends out of range.`, 'fx'); }
+    if (dist(s) >= E.band[0] && dist(s) <= E.band[1]) { autoShot(s, 1 - p, { reveal: W.melee ? 0 : ow.prec, steps: E.ladder.map(([h, dm]) => [W.melee ? 0 : h, dm]), label: 'held angle', kind: 'overwatch', range: E.band[1] }); if (s.over) return { ok: true }; }
+    else log(s, `${poss(o.name)} held angle stays quiet: ${pl.name} ends out of range.`, 'fx'); }
   if (pl.stats.turnDmg > pl.stats.maxTurnDmg) pl.stats.bestRound = s.round;
   pl.stats.maxTurnDmg = Math.max(pl.stats.maxTurnDmg, pl.stats.turnDmg);
   if (pl.overwatch && pl.res.prec > 0) { pl.ow = { prec: Math.min(TUNE.overwatchCap, pl.res.prec) }; log(s, `${pl.name} holds the angle: ${pl.ow.prec} Precision kept on Overwatch.`, 'fx'); }
-  pl.fpHist.push(Math.round(pl.fp * 10) / 10);
+  pl.fpHist.push(Math.round(pl.fp * 10) / 10); (pl.dmgHist = pl.dmgHist || []).push(pl.stats.turnDmg);
   pl.discard.push(...pl.hand, ...pl.play); pl.hand = []; pl.play = [];
   pl.scrapAvail = 0;
   if (TUNE.digIn && pl.res.move > 0) { const a = Math.min(TUNE.digIn, pl.res.move); pl.def += a; pl.stats.dugIn = (pl.stats.dugIn || 0) + a; log(s, `${pl.name} digs in: +${a} Armor from unused Movement.`, 'fx'); }

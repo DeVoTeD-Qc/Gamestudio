@@ -1,6 +1,6 @@
 # Warbuilder: deckbuilding satisfaction and progression (diagnosis + improvement options)
 
-*Sr Game Designer · 2026-11-11 · Board task `wb-fix2` · Status: **proposal, awaiting the head's choice. Nothing here is built yet.***
+*Sr Game Designer · 2026-11-11 · Board task `wb-fix2` · Status: **decided and built.** The head chose W1 (a), W2 (b), W3 (a), W4 (a), W5 (a); the package shipped in `wb-pkg1`. The rules as built, with the gate results, are in [`rules.md`](rules.md).*
 *Inputs: the head's request ("revert the push-your-luck changes; try the game and give improvement possibilities. I like the concept, but the gameplay doesn't give me great deckbuilding satisfaction or a sense of progression"), `engine-synergy-spec.md`, `balance-report-wb-rules.md`, the shipped engine.*
 *Still in force (wb-q): the "Warzone Deckbuilder" title, no IP renames, the real closing circle with a hard end, shot odds of 60–70% as the target, a single-file build.*
 

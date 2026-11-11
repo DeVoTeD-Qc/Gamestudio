@@ -58,7 +58,7 @@ test('every card, gun and location in play has web art', () => {
   const art = list(''), gunArt = list('guns'), locArt = list('locs');
   for (const id of IN_PLAY) assert.ok(art.has(WD.CARDS[id].name.replace(/ /g, '_')), `${WD.CARDS[id].name} has no art of its own in src/webart`);
   const loadouts = Object.values(WD.CARDS).filter(d => d.loadout).map(d => d.name.replace(/ /g, '_')).sort();
-  assert.deepEqual(loadouts, ['Bounty_Contract', 'Field_Pack', 'Recon_Post', 'Tac_Vest']);
+  assert.deepEqual(loadouts, ['Bounty_Contract', 'Field_Pack', 'Recon_Post', 'Sentry_Turret', 'Tac_Vest']);
   for (const n of loadouts) {
     assert.ok(art.has(n), `webart/${n}.webp`);
     assert.ok(fs.existsSync(path.join(SRC, 'pnp', 'art', n + '.jpg')), `pnp/art/${n}.jpg`);

@@ -4,6 +4,12 @@ const app = document.getElementById('app'), layer = document.getElementById('lay
 let G = null;
 const ui = { overSeen: false, tab: 'hand', lastPos: null, screen: 'start', me: 0, mode: 'ai', sheet: null, moveMode: false, burnMode: false, busy: false, handoff: false, toast: null, toastT: 0, logMark: 0 };
 
+// Operator rank (O10): saved on this device only. Every storage access is guarded; the page works without it.
+const store = () => { try { return window.localStorage; } catch (e) { return null; } };
+ui.prof = WD.loadProfile(store());
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+ui.ops = (() => { try { const v = JSON.parse((store() && store().getItem('wb-ops-v1')) || '[]'); return Array.isArray(v) ? v.filter(k => WD.OPS[k]) : []; } catch (e) { return []; } })();
+const saveOps = () => { try { const st = store(); if (st) st.setItem('wb-ops-v1', JSON.stringify(ui.ops)); } catch (e) { /* storage off: keep it for this visit */ } };
 const ic = (n, cls = '') => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
 const ME = () => G.players[ui.me], OP = () => G.players[1 - ui.me];
 const myTurn = () => G && !G.over && G.turn === ui.me && !ui.busy && !ui.handoff;
@@ -42,10 +48,11 @@ function fx(text) {
   }).join(' ');
   return out.replace(/\u0001(\w+)\u0002/g, (m, k) => k === 'hm' ? `<span class="ri" title="Hit Marker" aria-label="Hit Marker">${ic('hm')}</span>` : ri(k, TOK[k]));
 }
-const KW = { Mark: 'Mark: your next shot needs 1 fewer Hit Marker on every step.', Pierce: 'Pierce: your shots ignore cover this turn.', Steady: 'Steady: each of your shots this turn reveals 1 extra card for free.', Buy: '+1 Buy: one more purchase this turn.' };
+const KW = { Mark: 'Mark: your next shot needs 1 fewer Hit Marker on every step.', Pierce: 'Pierce: your shots ignore cover this turn.', Steady: 'Steady: each of your shots this turn reveals 1 extra card for free.', Buy: '+1 Buy: one more purchase this turn.',
+  'held angle': `Hold the Angle: at End turn up to ${WD.TUNE.overwatchCap} unspent Precision is kept. If your rival ends their next turn inside your gun's range, your gun fires once with it (no Recoil, no Mark).` };
 function cardTip(def) {
   const all = `${def.text} ${def.squadText || ''}`; const kws = Object.keys(KW).filter(k => all.includes(k)).map(k => KW[k]).join(' ');
-  return `${def.name} · ${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'}. ${def.text}${def.squad ? ` Squad: ${def.squadText} for each other ${ARCH_SHORT[def.archetype]} card in play this turn (Loadout counts), up to ×${WD.TUNE.squadCap}.` : ''}${def.loadout ? ' Loadout: stays on the table, fires at the start of every turn, counts for Squad.' : ''}${def.reaction ? ` Reaction: in your hand when hit, −${def.reaction} damage.` : ''}${(def.effects || []).some(x => x.op === 'scrap') ? ' Scrap: remove a card in your hand, play area or discard pile from the game.' : ''} ${kws}`; }
+  return `${def.name} · ${def.tactic ? 'Squad Tactic · ' : ''}${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'}. ${def.text}${def.squad ? ` Squad: ${def.squadText} for each other ${ARCH_SHORT[def.archetype]} card in play this turn (Loadout counts), up to ×${WD.TUNE.squadCap}.` : ''}${def.loadout ? ' Loadout: stays on the table, fires at the start of every turn, counts for Squad.' : ''}${def.reaction ? ` Reaction: in your hand when hit, −${def.reaction} damage.` : ''}${(def.effects || []).some(x => x.op === 'scrap') ? ' Scrap: remove a card in your hand, play area or discard pile from the game.' : ''} ${kws}`; }
 const GSHORT = { Pistol: '', SMG: 'SMG', Shotgun: 'Shotgun', 'Assault Rifle': 'AR', LMG: 'LMG', 'Marksman Rifle': 'DMR', Sniper: 'Sniper', 'Burst Rifle': 'Burst', Launcher: 'Launcher', Revolver: '', Melee: '' };
 const wnm = d => { if (!d || !d.cls || !GSHORT[d.cls]) return d ? d.name : ''; const m = d.name.match(/^(.*?)( “.*”)?$/); return `${m[1]} ${GSHORT[d.cls]}${m[2] || ''}`; };
 const SQUAD_ART = { assault: 'Breach', recon: 'Mark_Target', support: 'Ammo_Box', engineer: 'Deployable_Cover' }; // Loadout cards: squad art until their own art lands
@@ -287,7 +294,7 @@ function hudHTML(me, op) {
   ui.arrivedAt = ui.myPosPrev != null && ui.myPosPrev !== me.pos ? me.pos : null; ui.myPosPrev = me.pos;
   const tsKey = G.turnNo + ':' + ui.me; const ts = myTurn() && ui.tsKey !== tsKey; if (ts) ui.tsKey = tsKey;
   if (ts && me.loadout.length) { ui.readyFx = performance.now() + 2200; queuePops([{ kind: 'rdy', head: 'LOADOUT READY', text: fx(me.loadout.map(i => WD.effText(WD.cardDef(G, i).loadout)).join(', ')) }], 700, 'rdy' + tsKey); }
-  return `<div class="hud ${myTurn() ? 'myturn' : ''} ${ts ? 'turnstart' : ''}">${hudTop(me, op)}<section class="h-map" aria-label="The circle">${SCENERY}${rivalZone()}<div class="gaswall" aria-hidden="true"><i></i><i></i><i></i></div>${fieldHTML()}</section>
+  return `<div class="hud ${myTurn() ? 'myturn' : ''} ${ts ? 'turnstart' : ''}">${hudTop(me, op)}<section class="h-map" aria-label="The circle">${SCENERY}${rivalZone()}<div class="gaswall" aria-hidden="true"><i></i><i></i><i></i></div>${fieldHTML()}<div class="h-tacbar">${tacStrip(me)}</div></section>
     <section class="h-dock" aria-label="Your hand and guns">
       <div class="h-hand">${hudHand(me)}</div>
       ${hudRes(me)}
@@ -359,34 +366,56 @@ function hudRes(me) {
     <div class="h-status">${st.map(x => `<span class="sc-chip">${x}</span>`).join('')}${scr}</div>
   </section>`;
 }
-// The engine readout: Firepower this turn (▲ vs last turn, sparkline per turn) and the four squad counters (cards owned; main squad highlighted).
-// Firepower meter. Live (my turn): the number climbs as cards resolve; a bar shows progress toward last turn's
-// Firepower and flips to "▲N vs last turn" the moment you beat it. Between turns: the sealed total of my last turn,
-// ▲/▼ vs the turn before. Sparkline: one bar per turn so far (gold = this/last turn, outlined = still building).
-function fpState(me) {
-  const hist = me.fpHist || []; const live = G.turn === ui.me && !G.over && !ui.play;
-  const now = live ? Math.round(me.fp) : hist.length ? Math.round(hist[hist.length - 1]) : 0;
-  const prevRaw = live ? hist[hist.length - 1] : hist[hist.length - 2]; const prev = prevRaw == null ? null : Math.round(prevRaw);
-  return { hist, live, now, prev, d: prev == null ? null : now - prev, turnNo: hist.length + (live ? 1 : 0), best: hist.length ? Math.round(Math.max(...hist)) : 0 };
+// Threat (O7, replaces the Firepower sum): the damage you can expect this turn if you play your hand and shoot as planned,
+// with the first shot's odds. Between turns it shows the damage you dealt. Sparkline: damage per turn so far.
+function threatNow(me) {
+  const k = [G.turnNo, ui.me, me.hand.length, me.play.length, me.res.prec, me.revealPlus, me.deck.length, me.discard.length, me.pos, OP().pos, me.guns[0], me.shot, me.dmgTurn, me.nextFire.reqMod].join(':');
+  if (ui.thK !== k) { ui.thK = k; try { ui.th = WD.threat(G, ui.me, { ifPlayAll: true }); } catch (e) { ui.th = { ev: 0, p: 0, inRange: false }; } }
+  return ui.th;
 }
 function fpMeter(me, where) {
-  const F = fpState(me); const { live, now, prev, d } = F;
-  // one-shot moments, remembered per view: beat last turn (live), turn sealed (my turn just ended)
-  const mem = (ui.fpMem = ui.fpMem || {}); const m = mem[where] || (mem[where] = {});
-  const beat = live && prev != null && now > prev && m.key === F.turnNo && m.now != null && m.now <= prev;
-  const sealed = !live && F.hist.length && m.len != null && m.len < F.hist.length;
-  const bump = live && m.key === F.turnNo && m.now != null && now > m.now;
-  Object.assign(m, { key: F.turnNo, now, len: F.hist.length });
-  const spark = F.hist.slice(-11).map(v => ({ v: Math.round(v) })).concat(live ? [{ v: now, live: true }] : []);
-  const mx = Math.max(12, ...spark.map(s => s.v), prev || 0);
-  const vs = live && prev != null ? (now > prev ? `<span class="fpd up">▲${now - prev}<small> vs last turn</small></span>` : `<span class="fpd to">${now === prev ? '= last turn' : `<small>beat </small>${prev}`}</span>`)
-    : !live && d != null ? `<span class="fpd ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : '='}${Math.abs(d)}<small> vs turn before</small></span>` : `<span class="fpd to"><small>${live ? 'first turn' : 'no turn yet'}</small></span>`;
-  const bar = live && prev != null ? `<span class="fp-vs" aria-hidden="true"><i style="width:${Math.min(100, Math.round(now / Math.max(prev, 1) * 100))}%"></i></span>` : '';
-  const tip = `Firepower: everything your cards gave you this turn, in one number. Movement, Precision, Intel, Armor, Pierce, Steady and Scrap count 1 each; extra shots, cards drawn, Mark and "hits +1 damage" count 2; +1 Buy counts 1. It grows as your deck's engine forms. ${live ? (prev != null ? `Last turn: ${prev}.` : '') : 'Your last turn.'} Turns so far: ${F.hist.map(Math.round).join(', ') || 'none yet'}.`;
-  return `<div class="h-fp ${live ? 'live' : 'sealed-v'} ${beat ? 'beat' : ''} ${sealed ? 'sealed' : ''} ${bump ? 'bump' : ''}" data-tip="${escA(tip)}" role="group" aria-label="Firepower ${now}${d != null ? `, ${d >= 0 ? 'up' : 'down'} ${Math.abs(d)}` : ''}">
-    <span class="fp-lbl">FIREPOWER<em>${live ? `turn ${F.turnNo}` : F.hist.length ? `turn ${F.hist.length}` : ''}</em></span>
-    <span class="fp-main"><b data-num="fp-${where}-${F.turnNo}">${now}</b>${vs}</span>${bar}
-    <span class="spark" aria-hidden="true">${spark.map((s, k) => `<i class="${s.live ? 'lv' : k === spark.length - 1 ? 'cur' : ''} ${!s.live && s.v === F.best && F.best ? 'best' : ''}" style="height:${Math.max(10, Math.round(s.v / mx * 100))}%"></i>`).join('')}</span></div>`;
+  const live = G.turn === ui.me && !G.over && !ui.play && !G.spoils; const hist = me.dmgHist || [];
+  const th = live ? threatNow(me) : null; const last = hist.length ? hist[hist.length - 1] : null; const best = hist.length ? Math.max(...hist) : 0;
+  const spark = hist.slice(-11).map(v => ({ v })).concat(live ? [{ v: th.ev, live: true }] : []); const mx = Math.max(6, ...spark.map(x => x.v));
+  const big = live ? (th.inRange ? (Math.round(th.ev * 10) / 10).toFixed(1) : '–') : last != null ? last : 0;
+  const sub = live ? (th.inRange ? `<span class="fpd up">${Math.round(th.p * 100)}%<small> first shot</small></span>` : `<span class="fpd to"><small>out of range</small></span>`)
+    : last != null ? `<span class="fpd ${last >= best && last ? 'up' : ''}"><small>damage last turn${last >= best && last ? ' · best' : ''}</small></span>` : '<span class="fpd to"><small>no turn yet</small></span>';
+  const tip = live ? (th.inRange ? `Threat: about ${th.ev} damage this turn if you play your hand and shoot as planned (${th.shots} shot${th.shots === 1 ? '' : 's'} left; the first one hits ${Math.round(th.p * 100)}% of the time). It counts your gun's ladder, cover and the cards left in your deck.` : 'Threat: your rival is out of your gun’s range. Move closer (or wait for them to come in).')
+    : `Damage you dealt per turn: ${hist.join(', ') || 'none yet'}.${best ? ` Best turn: ${best}.` : ''}`;
+  return `<div class="h-fp ${live ? 'live' : 'sealed-v'}" data-tip="${escA(tip)}" role="group" aria-label="${live ? `Threat ${big} damage` : `Damage last turn ${big}`}">
+    <span class="fp-lbl">${live ? 'THREAT' : 'DAMAGE'}<em>${live ? 'expected this turn' : hist.length ? `turn ${hist.length}` : ''}</em></span>
+    <span class="fp-main"><b data-num="th-${where}">${big}</b>${sub}</span>
+    <span class="spark" aria-hidden="true">${spark.map((x, i) => `<i class="${x.live ? 'lv' : i === spark.length - 1 ? 'cur' : ''} ${!x.live && x.v === best && best ? 'best' : ''}" style="height:${Math.max(8, Math.round(x.v / mx * 100))}%"></i>`).join('')}</span></div>`;
+}
+// Deck bar (O7): starters against the cards you added, by squad. It fills as your deck becomes yours.
+function deckBar(pi) {
+  const m = WD.deckMix(G, pi); const seg = (n, cls, st = '') => n ? `<i class="${cls}" style="flex:${n};${st}"></i>` : '';
+  const tip = `Your deck: ${m.total} cards. ${m.starters} starter${m.starters === 1 ? '' : 's'} and ${m.yours} card${m.yours === 1 ? '' : 's'} you added (${WD.SQUADS.filter(a => m.by[a]).map(a => `${ARCH_SHORT[a]} ${m.by[a]}`).join(', ') || 'none yet'}). Loot, Spoils and Field Promotion turn starters into your squad.`;
+  return `<div class="h-deck" data-tip="${escA(tip)}"><span class="dk-lbl"><b>${m.yours}</b> yours · ${m.starters} starters</span><span class="dk-bar">${WD.SQUADS.map(a => seg(m.by[a], 'sq', `background:var(${ARCH_VAR[a]})`)).join('')}${seg(m.starters, 'st')}</span></div>`;
+}
+// The tactical strip: the new verbs in play (yours and your rival's). Every chip explains itself on hold, right click or hover.
+function tacStrip(me) {
+  const op = OP(); const t = myTurn(); const out = [];
+  const chip = (cls, txt, tip, act) => out.push(act ? `<button class="tchip ${cls}" data-act="${act}" data-tip="${escA(tip)}">${txt}</button>` : `<span class="tchip ${cls}" data-tip="${escA(tip)}">${txt}</span>`);
+  if (op.ow) { const b = WD.eff(G, op.guns[0]).band; chip('warn', `⚠ Rival holds an angle ${op.ow.prec}`, `${op.name} is holding an angle with ${op.ow.prec} Precision. If you end your turn at distance ${b[0]}–${b[1]} from them, their gun fires once (reveal ${op.ow.prec}). You are at distance ${WD.dist(G)}.`); }
+  if (me.ow && !t) chip('me', `Angle held ${me.ow.prec}`, `You hold the angle with ${me.ow.prec} Precision: if ${op.name} ends this turn in your range, you fire.`);
+  if (me.supp && (me.supp.move || me.supp.prec)) chip('warn', `Suppressed −${me.supp.move}${ic('move')} −${me.supp.prec}${ic('prec')}`, `Suppressing Barrage: the next ${me.supp.move} Movement and ${me.supp.prec} Precision you gain this turn are lost.`);
+  if (op.suppNext) chip('me', `Rival suppressed next turn`, `Your Suppressing Barrage: on ${op.name}'s next turn their first ${op.suppNext.move} Movement and ${op.suppNext.prec} Precision are lost.`);
+  if (op.supp && !t && (op.supp.move || op.supp.prec)) chip('me', 'Rival suppressed', `${op.name} still loses the next ${op.supp.move} Movement and ${op.supp.prec} Precision they gain this turn.`);
+  if (t) {
+    if (me.peek) chip('act', `Sweep: arrange ${me.peek.length}`, 'Intel Sweep: look at your top cards and put them back in any order. Tap to arrange.', 'sweepsheet');
+    if (me.chargeDmg) chip('me', `Charge +${me.chargeDmg} at dist 0`, `Charge: this turn your hits at distance 0 deal +${me.chargeDmg} damage.`);
+    if (me.onHitDraw) chip('me', `Next hit: draw ${me.onHitDraw}`, `Follow Through: your next hit this turn draws ${me.onHitDraw} cards; play them and keep shooting.`);
+    if (me.expose) chip('me', 'Expose', 'Expose: this turn your hits ignore the rival’s Armor and Reaction cards.');
+    if (me.overwatch) chip('me', 'Holding the angle', KW['held angle']);
+    if (me.anyStack) chip('me', 'Contraband: any stack', 'Contraband Run: this turn you may buy the top card of any stack on the map, at its printed cost (no next-door cost).');
+    if (me.fortify) chip('me', 'Fortify', `Fortify: your Armor (up to ${WD.TUNE.fortifyCap}) holds through your next Ready.`);
+    const starters = me.hand.concat(me.play, me.discard).filter(i => WD.isStarter(G, i));
+    if (!me.promoted && starters.length && me.res.intel >= WD.TUNE.promoteCost && WD.buysLeft(G, ui.me) > 0) chip('act', `Promote ${ic('intel')}${WD.TUNE.promoteCost}`, `Field Promotion: pay ${WD.TUNE.promoteCost} Intel and one buy to swap a starter for a squad basic. Once per turn. Tap to choose.`, 'promosheet');
+  }
+  if (me.drop && me.drop.length) chip('me', `Hot Drop: ${me.drop.length} next hand`, `Delivered to your next hand (on top of the 5 you draw): ${me.drop.map(i => WD.cardDef(G, i).name).join(', ')}.`);
+  if (me.fortify && !t) chip('me', 'Fortified', `Your Armor holds through your next Ready (up to ${WD.TUNE.fortifyCap}).`);
+  return out.length ? `<div class="h-tac" aria-label="Tactics in play">${out.join('')}</div>` : '';
 }
 // Squad counters: cards owned per squad (the deck taking form) + a 5-step track of cards in play this turn,
 // with the Rally steps (3 and 5) marked; a step lights up when its Rally fires.
@@ -402,7 +431,7 @@ function squadHTML(me) {
     return `<span class="sqc ${a === main ? 'main' : ''} ${n ? 'on' : ''} ${rd.length ? 'rallied' : ''} ${fresh.some(k => k.startsWith(a)) ? 'fire' : ''}" style="--arch:var(${ARCH_VAR[a]})" data-tip="${escA(tip)}"><span class="sq-top">${shapeSvg(a)}<b>${own[a]}</b></span><span class="sq-trk">${trk}</span></span>`; }).join('')}</div>`;
 }
 function engineHTML(me, compact) {
-  return `<div class="h-engine ${compact ? 'm' : ''}">${fpMeter(me, compact ? 'm' : 'd')}${squadHTML(me)}</div>`;
+  return `<div class="h-engine ${compact ? 'm' : ''}">${fpMeter(me, compact ? 'm' : 'd')}${deckBar(ui.me)}${squadHTML(me)}${tacStrip(me)}</div>`;
 }
 // Loadout row: 2 slots beside the gun; the cards stay on the table, fire at every Ready and count for Squad
 function loadoutHTML(me) {
@@ -531,8 +560,75 @@ function stationSheet() {
   const me = ME(); const pc = WD.plateCost(G, ui.me); const ok = me.res.intel >= pc;
   const bl = WD.buysLeft(G, ui.me); const sprints = me.hand.concat(me.play, me.discard).filter(i => WD.cardDef(G, i).id === 'T001');
   const svc = myTurn() ? `<div class="row bs-svc"><span class="lbl">Service · ${WD.TUNE.stationScrapCost} Intel, once per turn, not a buy</span><button class="btn sm alt" data-act="stscrap" data-id="${sprints[0] || ''}" ${sprints.length && !me.stationScrapped && me.res.intel >= WD.TUNE.stationScrapCost ? '' : 'disabled'}>${ic('scrap')} Scrap a Sprint${sprints.length ? '' : ' (none in hand, play or discard)'}</button></div>` : '';
-  return `${headIntel('Buy Station')}<p class="ld-p">One basic per squad, always open. ${bl} buy${bl === 1 ? '' : 's'} left this turn. ${G.round <= WD.TUNE.hotDrop ? `<b>Hot Drop</b> (rounds 1–${WD.TUNE.hotDrop}): bought cards go on top of your deck.` : 'Bought cards go to your discard pile.'}</p>${svc}
+  return `${headIntel('Buy Station')}<p class="ld-p">One basic per squad, always open. ${bl} buy${bl === 1 ? '' : 's'} left this turn. ${G.round <= WD.TUNE.hotDrop ? `<b>Hot Drop</b> (rounds 1–${WD.TUNE.hotDrop}): bought cards are delivered to your next hand.` : 'Bought cards go to your discard pile.'}</p>${svc}${myTurn() ? `<div class="row bs-svc"><span class="lbl">Field Promotion · ${WD.TUNE.promoteCost} Intel + 1 buy, once per turn</span><button class="btn sm alt" data-act="promosheet" ${!me.promoted && me.res.intel >= WD.TUNE.promoteCost && bl > 0 ? '' : 'disabled'}>Promote a starter</button></div>` : ''}
     <div class="bs-grid">${WD.TUNE.station.map(id => { const k = WD.CARDS[id]; const left = G.stationLeft ? G.stationLeft[id] : null; return `<div class="bs-cell">${(hasFace('card_' + id) ? `<button class="bscard bsf" data-act="supply" data-id="${id}" ${myTurn() && ok && left !== 0 ? '' : 'disabled'} aria-label="Buy ${escA(k.name)}">${pf('card_' + id)}</button>` : cardHTML(k, { act: 'supply', id, dis: !(myTurn() && ok && left !== 0), cls: 'bscard', prev: 'cd:' + id }))}<small>${left != null ? `${left} left` : ''}</small></div>`; }).join('')}</div><p class="bs-foot">${ic('intel')}${pc} Intel each</p>`;
+}
+// face of a card instance or card id, inspectable (hold, right click, hover)
+const faceOf = (id, prev) => hasFace('card_' + id) ? pf('card_' + id) : cardHTML(WD.CARDS[id], { prev });
+// Spoils (O2): 3 loot cards after a turn in which you dealt damage. Take 1 (to your discard pile) or skip; then the turn ends.
+function spoilsSheet() {
+  const sp = G.spoils; if (!sp) return `${head('Spoils')}<p class="ld-p">Nothing to take.</p>`;
+  const me = ME(); const mf = WD.mainSquad(G, ui.me);
+  return `<div class="sheet-head"><h2>Spoils</h2></div><p class="ld-p">You dealt <b>${me.stats.turnDmg}</b> damage this turn. Take one card for free (it goes to your discard pile), or skip. Hold, right click or hover a card to read it.</p>
+    <div class="sp-grid">${sp.offer.map(iid => { const d = WD.cardDef(G, iid); return `<div class="sp-cell"><button class="sp-pick" data-act="spoilpick" data-id="${iid}" data-prev="cd:${d.id}" aria-label="Take ${escA(d.name)}">${faceOf(d.id, 'cd:' + d.id)}</button>
+      <small>${d.tactic ? '<b class="tacb">TACTIC</b> ' : ''}${ARCH_SHORT[d.archetype] || ''}${d.archetype === mf ? ' · your main squad' : ''}</small></div>`; }).join('')}</div>
+    <div class="row"><button class="btn alt" data-act="spoilskip">Skip the Spoils</button></div>`;
+}
+// Intel Sweep: tap the cards in the order you want them on top (first tap = the top card, revealed or drawn first)
+function sweepSheet(S) {
+  const pk = ME().peek; if (!pk) return `${head('Sweep')}<p class="ld-p">Nothing to arrange.</p>`;
+  const rest = pk.filter(i => !S.order.includes(i)); const final = S.order.concat(rest);
+  return `${head(`Intel Sweep · top ${pk.length}`)}<p class="ld-p">Tap the cards in the order you want them: the first tap goes on top (your next shot reveals it first, or your next draw takes it). Cards you don't tap stay below, in their order.</p>
+    <div class="sw-grid">${pk.map(i => { const d = WD.cardDef(G, i); const k = S.order.indexOf(i); return `<button class="sw-pick ${k >= 0 ? 'on' : ''}" data-act="sweeppick" data-id="${i}" data-prev="hc:${i}" aria-label="${escA(d.name)}">${faceOf(d.id, 'hc:' + i)}<em>${k >= 0 ? k + 1 : ''}</em><small>${d.hit_markers} ${ic('hm')}</small></button>`; }).join('')}</div>
+    <p class="sw-line">New top → bottom: ${final.map(i => `<b>${escA(WD.cardDef(G, i).name)}</b>`).join(' › ')}</p>
+    <div class="row"><button class="btn sig" data-act="sweepok" data-id="set">Put them back in this order</button><button class="btn alt" data-act="sweepok" data-id="keep">Keep as they are</button></div>`;
+}
+// Field Promotion (O3): a starter becomes a Buy Station basic of the squad you choose
+function promoteSheet(S) {
+  const me = ME(); const zones = [['hand', me.hand], ['play area', me.play], ['discard pile', me.discard]];
+  const can = !me.promoted && me.res.intel >= WD.TUNE.promoteCost && WD.buysLeft(G, ui.me) > 0;
+  const basic = q => WD.CARDS[WD.BASIC[q]];
+  return `${headIntel('Field Promotion')}<p class="ld-p">Pay ${WD.TUNE.promoteCost} Intel and one buy: a starter leaves the game and a squad basic takes its place (in your hand if it was there, else in your discard pile). Once per turn.</p>
+    <h3>1 · Pick a starter</h3>${zones.map(([lab, z]) => { const st = z.filter(i => WD.isStarter(G, i)); return st.length ? `<p class="lbl">From your ${lab}</p><div class="pr-row">${st.map(i => { const d = WD.cardDef(G, i); return `<button class="pr-pick ${S.pick === i ? 'on' : ''}" data-act="promopick" data-id="${i}" data-prev="hc:${i}" aria-label="${escA(d.name)}">${faceOf(d.id, 'hc:' + i)}</button>`; }).join('')}</div>` : ''; }).join('') || '<p class="ld-p">No starters left: your deck is all yours.</p>'}
+    <h3>2 · Pick its squad</h3><div class="pr-sq">${WD.SQUADS.map(q => { const d = basic(q); const left = G.stationLeft[d.id]; return `<button class="pr-sqb ${S.sq === q ? 'on' : ''}" data-act="promosq" data-id="${q}" ${left > 0 ? '' : 'disabled'} data-prev="cd:${d.id}" style="--arch:var(${ARCH_VAR[q]})">${faceOf(d.id, 'cd:' + d.id)}<small>${shapeSvg(q)} ${ARCH_SHORT[q]} · ${left} left</small></button>`; }).join('')}</div>
+    <div class="row pr-go"><button class="btn sig" data-act="dopromote" ${can && S.pick && S.sq ? '' : 'disabled'}>${S.pick ? `Promote ${escA(WD.cardDef(G, S.pick).name)} to ${escA(basic(S.sq).name)}` : 'Pick a starter'}</button><button class="btn alt" data-act="close">Cancel</button></div>`;
+}
+const insignia = r => r.i >= 6 ? 'gold' : r.i >= 5 ? 'silver' : '';
+function rankBadge(prof, big) {
+  const r = WD.rankOf(prof.xp); const pct = r.nextXp ? Math.round((prof.xp - r.floor) / (r.nextXp - r.floor) * 100) : 100;
+  return `<span class="rk ${big ? 'big' : ''} ${insignia(r)}" data-tip="${escA(`Operator rank ${r.name}: ${prof.xp} XP. ${r.next ? `${r.toNext} XP to ${r.next}.` : 'Top rank.'} Saved on this device only.`)}"><span class="rk-ins" aria-hidden="true">${'▲'.repeat(Math.min(3, r.i + 1))}</span><span class="rk-txt"><b>${r.name}</b><small>${prof.xp} XP${r.next ? ` · ${r.toNext} to ${r.next}` : ''}</small><span class="rk-bar"><i style="width:${pct}%"></i></span></span></span>`;
+}
+function rankSheet() {
+  const prof = ui.prof; const r = WD.rankOf(prof.xp);
+  return `${head('Operator rank')}<div class="rk-head">${rankBadge(prof, true)}</div>
+    <p class="ld-p">XP after every match vs the AI: 40 for playing, +60 for a win (+30 for a draw), +1 per damage dealt (up to 80), +20 for reaching the final circle. Ranks unlock variety, never power. Saved on this device only (clearing site data resets it).</p>
+    <ol class="rk-list">${WD.RANKS.map((x, i) => `<li class="${i <= r.i ? 'got' : ''}"><b>${x.name}</b> <small>${x.xp} XP</small>${x.unlock ? `<span data-tip="${escA(x.unlock.text)}">${i <= r.i ? '✓' : '🔒'} ${escA(x.unlock.name)}: ${escA(x.unlock.text)}</span>` : '<span>Start</span>'}</li>`).join('')}</ol>
+    <p class="ld-p">Matches ${prof.matches} · wins ${prof.wins} · best damage in a match ${prof.bestDmg} · best turn ${prof.bestTurn}</p>`;
+}
+// After-action report (O7): the match story, then XP and rank
+function overSheet() {
+  const w = G.winner; const t = w === 'draw' ? 'Draw' : (ui.mode === 'ai' ? (w === ui.me ? 'Victory' : 'Eliminated') : `${G.players[w].name} wins`);
+  const win = w !== 'draw' && (ui.mode !== 'ai' || w === ui.me); const me = ME(), op = OP();
+  const rounds = Array.from({ length: G.round }, (_, k) => k + 1); const mx = Math.max(4, ...rounds.map(r => Math.max(me.stats.dmgRounds[r] || 0, op.stats.dmgRounds[r] || 0)));
+  const bars = rounds.map(r => `<span class="aa-r" data-tip="${escA(`Round ${r}: you dealt ${me.stats.dmgRounds[r] || 0}, ${op.name} dealt ${op.stats.dmgRounds[r] || 0}.`)}"><i class="me" style="height:${Math.round((me.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><i class="op" style="height:${Math.round((op.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><small>${r}</small></span>`).join('');
+  const mvp = Object.entries(me.stats.mvp).sort((a, b) => b[1] - a[1])[0];
+  const added = me.stats.added.slice(-12);
+  const M = ui.meta; const prev = M ? M.prev : ui.prof;
+  const newBest = M && me.stats.damageDealt > (prev.bestDmg || 0) && prev.matches > 0;
+  return `<div class="over-hero ${win ? 'win' : 'lose'}"><small>Round ${G.round} · ${G.endBy === 'hardEnd' ? 'hard end' : G.endBy === 'storm' ? 'the storm' : G.endBy === 'gas' ? 'the gas' : 'knockout'}${ui.daily ? ` · Daily Drop ${ui.daily}` : ''}${G.ops && G.ops.length ? ` · ${G.ops.map(k => WD.OPS[k].name).join(', ')}` : ''}</small><b>${t}</b></div>
+    <div class="aa">
+      <div class="aa-box"><h3>Damage per round <small><i class="lg me"></i>${ui.mode === 'ai' ? 'you' : escA(me.name)} <i class="lg op"></i>${escA(op.name)}</small></h3><div class="aa-bars">${bars}</div></div>
+      <div class="aa-facts">
+        <span data-tip="Your damage in the whole match (shots, held angles and Sentry Turret).">Damage <b>${me.stats.damageDealt}</b>${newBest ? ' <em>new best</em>' : ''}</span>
+        <span data-tip="Your strongest turn and when it came.">Best turn <b>${me.stats.maxTurnDmg}</b>${me.stats.bestRound ? `<small> round ${me.stats.bestRound}</small>` : ''}</span>
+        <span data-tip="Shots that hit / shots fired.">Hits <b>${me.stats.hits}/${me.stats.shots}</b></span>
+        <span data-tip="Cards you gained: loot, Buy Station, Spoils and Field Promotion.">Added <b>${me.stats.added.length}</b><small>Spoils ${me.stats.spoils} · promoted ${me.stats.promoted}</small></span>
+      </div>
+      ${mvp ? `<div class="aa-mvp" data-prev="cd:${mvp[0]}"><span class="lbl">MVP card</span>${hasFace('card_' + mvp[0]) ? `<span class="mf">${pf('card_' + mvp[0])}</span>` : ''}<span><b>${escA(WD.CARDS[mvp[0]].name)}</b><small>${mvp[1]} Hit Markers in your hits</small></span></div>` : ''}
+      ${added.length ? `<div class="aa-add"><span class="lbl">Cards you added${me.stats.added.length > 12 ? ' (last 12)' : ''}</span><div class="aa-row">${added.map(id => hasFace('card_' + id) ? `<span class="mf" data-prev="cd:${id}">${pf('card_' + id)}</span>` : `<span class="sc-chip">${escA(WD.CARDS[id].name)}</span>`).join('')}</div></div>` : ''}
+      ${M ? `<div class="aa-xp"><span class="lbl">Operator XP +${M.gained.total}</span><span class="aa-parts">${M.gained.parts.map(([l, n]) => `<span>${escA(l)} <b>+${n}</b></span>`).join('')}</span>${rankBadge(ui.prof)}${M.after.i > M.before.i ? `<p class="aa-up">Promoted to <b>${M.after.name}</b>!</p>` : ''}${M.newUnlocks.map(u => `<p class="aa-unl" data-tip="${escA(u.text)}">Unlocked: <b>${escA(u.name)}</b> · ${escA(u.text)}</p>`).join('')}${M.saved ? '' : '<p class="ld-p">Your browser blocks storage here, so this rank lasts only until you close the page.</p>'}</div>` : `<p class="ld-p">Rank XP is earned in matches vs the AI.</p>`}
+    </div>
+    <div class="row over-btns"><button class="btn sig" data-act="new" data-id="${ui.mode}">Play again</button><button class="btn alt" data-act="close">See the board</button><button class="btn alt" data-act="home">Main menu</button></div>`;
 }
 function perkSheet(pi, k) {
   const pl = G.players[pi]; const L = WD.LOADOUT[k]; const fired = (pl.perkFired || []).includes(k); const prog = L.trig && pl.gen ? Math.min(pl.gen[L.trig.res], L.trig.n) : null;
@@ -544,8 +640,17 @@ function rivalSheet() {
   return `${head(escA(op.name))}<div class="rivalbox">${oppHTML(op)}${logHTML()}</div>`;
 }
 
+// Start screen meta: rank, the Daily Drop and Operations (locked ones say which rank opens them)
+function startMeta() {
+  const prof = ui.prof; const r = WD.rankOf(prof.xp); const at = kind => WD.RANKS.findIndex(x => x.unlock && (x.unlock.kind === kind || x.unlock.id === kind));
+  const dailyOk = r.i >= at('daily'); const done = prof.daily && prof.daily.date === today();
+  const daily = `<button class="st-chip ${dailyOk ? '' : 'lock'}" ${dailyOk ? 'data-act="daily"' : 'disabled'} data-tip="${escA(dailyOk ? `Daily Drop ${today()}: one seeded match, the same drop for everyone today (no Operations).${done ? ` You played it: ${prof.daily.won ? 'won' : 'lost'}, ${prof.daily.dmg} damage. You can play it again.` : ''}` : `Unlocks at ${WD.RANKS[at('daily')].name}.`)}">${dailyOk ? '' : '🔒 '}Daily Drop${done ? ' ✓' : ''}</button>`;
+  const ops = Object.keys(WD.OPS).map(k => { const ok = r.i >= at(k); const on = ok && ui.ops.includes(k);
+    return `<button class="st-chip op ${on ? 'on' : ''} ${ok ? '' : 'lock'}" ${ok ? `data-act="optoggle" data-id="${k}" aria-pressed="${on}"` : 'disabled'} data-tip="${escA(`${WD.OPS[k].name}: ${WD.OPS[k].text} ${ok ? (on ? 'On for your next match vs the AI or pass & play.' : 'Tap to turn on.') : `Unlocks at ${WD.RANKS[at(k)].name}.`}`)}">${ok ? (on ? '✓ ' : '') : '🔒 '}${WD.OPS[k].name}</button>`; }).join('');
+  return `<div class="st-meta"><button class="st-rank" data-act="sheet" data-id="rank" aria-label="Operator rank">${rankBadge(prof)}</button><div class="st-ops">${daily}${ops}</div></div>`;
+}
 function startHTML() {
-  const fan = ['card_A21', 'gun_ar-3', 'card_R21'].filter(hasFace);
+  const fan = ['card_A21', 'gun_ar-3', 'card_RT3'].filter(hasFace);
   return `<div class="start2"><div class="st-bg" aria-hidden="true"></div>
     <div class="st-in">
       <div class="st-copy">
@@ -554,7 +659,8 @@ function startHTML() {
         <p>Drop in with a pistol. Loot the map, build your deck, outgun your rival before the gas closes in.</p>
         <div class="st-roles">${['assault', 'recon', 'support', 'engineer'].map(r => `<span style="--arch:var(${ARCH_VAR[r]})">${shapeSvg(r)}${ARCH_SHORT[r]}</span>`).join('')}</div>
         <div class="st-cta"><button class="st-play" data-act="new" data-id="ai">Play vs AI</button><button class="st-sec" data-act="new" data-id="hotseat">Pass &amp; play</button></div>
-        <div class="st-links"><button data-act="sheet" data-id="rules">How to play</button><span>·</span><button data-act="sheet" data-id="codex">Card codex</button></div>
+        ${startMeta()}
+        <div class="st-links"><button data-act="sheet" data-id="rules">How to play</button><span>·</span><button data-act="sheet" data-id="codex">Card codex</button><span>·</span><button data-act="sheet" data-id="rank">Rank &amp; unlocks</button></div>
       </div>
       <div class="st-fan" aria-hidden="true">${fan.map((n, i) => `<div class="st-card c${i} ${n.startsWith('gun_') ? 'g' : ''}">${pf(n)}</div>`).join('')}</div>
     </div></div>`;
@@ -955,6 +1061,7 @@ function sheetHTML() {
   const S = ui.sheet;
   if (S.type === 'codex') return codexSheet(S);
   if (S.type === 'rules') return `${head('How to play')}<div class="rules">${RULES}</div>`;
+  if (S.type === 'rank') return rankSheet();
   const me = ME();
   if (S.type === 'weapon') {
     const gi = S.gi; const def = wdef(me.guns[gi]);
@@ -990,14 +1097,7 @@ function sheetHTML() {
     const lines = S.lines;
     return `${head(`${OP().name}'s turn`)}<ol class="turnlog">${lines.map(l => `<li class="${l.cls}">${l.msg}</li>`).join('') || '<li>Nothing happened.</li>'}</ol><button class="btn sig" data-act="close">Your turn</button>`;
   }
-  if (S.type === 'over') {
-    const w = G.winner; const t = w === 'draw' ? 'Draw' : (ui.mode === 'ai' ? (w === ui.me ? 'Victory' : 'Eliminated') : `${G.players[w].name} wins`);
-    const st = G.players.map(p => `<tr><td>${p.name}</td><td>${p.stats.hits}/${p.stats.shots}</td><td>${p.stats.damageDealt}</td><td>${p.stats.cardsAcquired}</td><td>${p.stats.burned}</td><td>${p.deck.length + p.discard.length + p.hand.length + p.play.length}</td></tr>`).join('');
-    const win = w !== 'draw' && (ui.mode !== 'ai' || w === ui.me);
-    return `<div class="over-hero ${win ? 'win' : 'lose'}"><small>Round ${G.round} · match over</small><b>${t}</b></div>
-      <table class="brk over-t"><tr><td class="lbl">Operator</td><td class="lbl">Hits</td><td class="lbl">Damage</td><td class="lbl">Bought</td><td class="lbl">Deck</td></tr>${G.players.map(p => `<tr><td><b>${escA(p.name)}</b></td><td>${p.stats.hits}/${p.stats.shots}</td><td>${p.stats.damageDealt}</td><td>${p.stats.cardsAcquired}</td><td>${WD.owned(p)}</td></tr>`).join('')}</table>
-      <div class="row over-btns"><button class="btn sig" data-act="new" data-id="${ui.mode}">Play again</button><button class="btn alt" data-act="close">See the board</button><button class="btn alt" data-act="home">Main menu</button></div>`;
-  }
+  if (S.type === 'over') return overSheet();
   if (S.type === 'menu') return `${head('Menu')}<div class="row"><button class="btn alt" data-act="sheet" data-id="rules">How to play</button><button class="btn alt" data-act="sheet" data-id="codex">Card codex</button></div><div class="row"><button class="btn alt" data-act="new" data-id="ai">New match vs AI</button><button class="btn alt" data-act="new" data-id="hotseat">New pass &amp; play</button><button class="btn alt" data-act="home">Main menu</button></div>`;
   if (S.type === 'codex') return codexSheet(S);
   if (S.type === 'load') {
@@ -1011,6 +1111,9 @@ function sheetHTML() {
       <div class="bullets2">${opts.join('') || '<p style="color:var(--muted)">No cards in hand: no ammo.</p>'}</div>`;
   }
   if (S.type === 'station') return stationSheet();
+  if (S.type === 'spoils') return spoilsSheet();
+  if (S.type === 'sweep') return sweepSheet(S);
+  if (S.type === 'promote') return promoteSheet(S);
   if (S.type === 'cardview') return cardSheet(S);
   if (S.type === 'perkview') { const [pi, k] = S.id.split(':'); return perkSheet(+pi, k); }
   if (S.type === 'rival') return rivalSheet();
@@ -1032,18 +1135,24 @@ function sheetHTML() {
   return '';
 }
 
-const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>Goal</h4><ul><li>Bring your rival from ${T.hp} Health to 0. At the <b>hard end</b> (after round ${T.hardEnd}) the most Health wins.</li><li>Build a deck whose turns get stronger and stronger. <b>Firepower</b> measures it: try to beat last turn's number.</li></ul>
+const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>Goal</h4><ul><li>Bring your rival from ${T.hp} Health to 0. At the <b>hard end</b> (after round ${T.hardEnd}) the most Health wins.</li><li>Build a deck whose turns get stronger and stronger. <b>Threat</b> shows the damage you can expect this turn; the <b>deck bar</b> shows how much of your deck is yours.</li></ul>
 <h4>Your turn</h4><ul>
 <li><b>Ready</b> (automatic): your Loadout cards fire, then your location's bonus.</li>
 <li><b>Play</b> cards (or <b>Play all</b>): they give ${ic('move', 'c-move')} Movement, ${ic('prec', 'c-prec')} Precision, ${ic('intel', 'c-intel')} Intel, ${ic('ammo', 'c-ammo')} extra shots and ${ic('def', 'c-def')} Armor.</li>
 <li><b>Move</b> once: 1 Movement per space. Arriving gives that location's bonus.</li>
-<li><b>Loot</b>: up to ${T.buyCap} buys: the top card where you stand, next door (+${T.adjCost} Intel) or the Buy Station (${T.supplyCost} Intel). Cycle a stack: 1 Intel or 1 Movement. <b>Hot Drop</b>: in rounds 1–${T.hotDrop} new cards go on top of your deck.</li>
-<li><b>Fire</b> (below), then <b>End turn</b>: unused Movement becomes Armor (up to ${T.digIn}), discard, draw 5 (6 at ${T.lowHp} Health or less).</li></ul>
+<li><b>Loot</b>: up to ${T.buyCap} buys: the top card where you stand, next door (+${T.adjCost} Intel) or the Buy Station (${T.supplyCost} Intel). Cycle a stack: 1 Intel or 1 Movement. <b>Hot Drop</b>: in rounds 1–${T.hotDrop} new cards are delivered to your next hand.</li>
+<li><b>Field Promotion</b>: once per turn, ${T.promoteCost} Intel and one buy turn a starter into a squad basic of your choice (Buy Station, or the <b>Promote</b> chip).</li>
+<li><b>Fire</b> (below), then <b>End turn</b>: unused Movement becomes Armor (up to ${T.digIn}), discard, draw 5 (6 at ${T.lowHp} Health or less).</li>
+<li><b>Spoils</b>: if you dealt damage this turn, End turn first shows ${T.spoils} loot cards (one of your main squad when there is one): take 1 for free, or skip.</li></ul>
+<h4>Squad Tactics</h4><ul>
+<li>12 loot cards marked <b>TACTIC</b> add a new kind of play: <b>Charge</b> (hits at distance 0 +1), <b>Follow Through</b> (your next hit draws 2), <b>Adrenaline</b> (returns to your hand when you are hit), <b>Intel Sweep</b> (arrange your top 4), <b>Expose</b> (ignore Armor and Reactions), <b>Hold the Angle</b> (fire on your rival's turn if they end in range, with up to ${T.overwatchCap} saved Precision), <b>Fortify</b> (keep your Armor), <b>Field Medic</b> (heal 3), <b>Suppressing Barrage</b> (their next turn: −1 Movement, −2 Precision), <b>Jury-Rig</b> (repeat the card you played just before), <b>Sentry Turret</b> (Loadout: a free 2-damage shot every Ready) and <b>Contraband Run</b> (buy from any stack).</li>
+<li>The chips under your Threat show the ones in play, yours and your rival's (⚠ means it can hurt you).</li></ul>
 <h4>Your engine</h4><ul>
 <li><b>Squads.</b> Every loot card is ${roleB('assault')} Assault (hits harder), ${roleB('recon')} Recon (aim, Mark), ${roleB('support')} Support (extra shots, Steady) or ${roleB('engineer')} Engineer (Intel, buys, Scrap). The squad counters show how many you own.</li>
 <li><b>Squad</b> line: pays once <b>for each other card of its squad</b> in play this turn: ×1, ×2, at most ×${T.squadCap}. Order doesn't matter. In your hand a card shows <b>×N</b> when it would pay.</li>
 <li><b>Rally</b>: ${r1} and ${r2} cards of one squad in play pay a bonus, once per turn each. ${WD.SQUADS.map(a => `${ARCH_SHORT[a]} ${r1}: ${WD.RALLY_TEXT[a][r1]}; ${r2}: ${WD.RALLY_TEXT[a][r2]}`).join('. ')}.</li>
 <li><b>Loadout</b> cards stay on the table (${T.loadoutSlots} slots). They fire at the start of every turn and count for Squad and Rally. A third one replaces a slot or is used once.</li>
+<li><b>Inspect anything</b>: hold it (touch), right click or hover it (mouse).</li>
 <li><b>Mark</b>: next shot needs 1 fewer Hit Marker per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: each shot reveals 1 more card, free. <b>Scrap</b>: remove a card from the game (deck never below ${T.minDeck}). <b>+1 Buy</b>: one more buy. <b>Reaction</b>: in your hand when hit, less damage.</li></ul>
 <h4>Firing</h4><ul>
 <li>One gun; buying a gun swaps it. Your rival must be in its <b>Range</b> (every gun fires at distance 0).</li>
@@ -1053,7 +1162,8 @@ const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>
 <h4>The circle</h4><ul>
 <li>${T.zones} locations in a row, each with a 3-card loot stack; a fresh card lands on top each round (2 in 3 match the location's squad).</li>
 <li>Gas closes an end location after rounds ${T.closeAfter.join(', ')} (each plate shows <b>gas R<i>n</i></b>). After round ${T.closeAfter[T.closeAfter.length - 1]} one location is left: the <b>final circle</b>, where the storm hits both for ${T.finalStorm.join(', ')}.</li>
-<li>Caught outside at round end: ${T.gasDmg} damage (+1 per extra space), then you are pushed back in.</li></ul>`; })();
+<li>Caught outside at round end: ${T.gasDmg} damage (+1 per extra space), then you are pushed back in.</li></ul>
+<h4>Operator rank</h4><ul><li>Matches vs the AI earn XP; ranks unlock the <b>Daily Drop</b> and <b>Operations</b> (match variants for both players) and insignia. Variety, never power. Saved on this device.</li></ul>`; })();
 
 // ---------- flow ----------
 function turnBanner(txt, sub, cls) { if (ui.sheet && ui.sheet.type !== 'report') { ui.pendingTb = [txt, sub, cls]; return; } ui.pendingTb = null; ui.tb = { txt, sub, cls }; clearTimeout(ui.tbT); ui.tbT = setTimeout(() => { ui.tb = null; renderLayer(); }, 1500); renderLayer(); }
@@ -1089,11 +1199,14 @@ function sqDiff(b) {
 }
 // play a card / Play all, then light up whatever Squad lines and Rallies that fired
 function playAct(fn) { const b = sqSnap(); const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.sheet = null; ui.moveMode = false; sqDiff(b); after(); return r; }
+function dmgLine(pl) { const h = pl.dmgHist || []; const n = h.length ? h[h.length - 1] : 0; return n ? `${n} damage dealt` : 'no damage'; }
 function fpLine(pl) { const h = pl.fpHist; if (!h.length) return ''; const n = Math.round(h[h.length - 1]); const p = h.length > 1 ? Math.round(h[h.length - 2]) : null; return `Firepower ${n}${p == null ? '' : n > p ? ` ▲${n - p}` : n < p ? ` ▼${p - n}` : ' ='}${pl.turnSquads ? ` · Squad ×${pl.turnSquads}` : ''}`; }
 function toast(msg) { ui.toast = msg; clearTimeout(ui.toastT); ui.toastT = setTimeout(() => { ui.toast = null; renderLayer(); }, 2600); renderLayer(); }
-function newMatch(mode) {
-  ui.mode = mode; ui.me = 0; ui.sheet = null; ui.moveMode = false; ui.burnMode = false; ui.busy = false; ui.handoff = false; ui.screen = 'game'; ui.tab = 'hand'; ui.overSeen = false;
-  G = WD.newGame({ mode, names: mode === 'ai' ? ['Alpha', 'Rival'] : ['Operator 1', 'Operator 2'] });
+function rivalBanner() { if (ui.mode === 'ai' && !G.over) setTimeout(() => { const p = G.players[ui.me]; turnBanner('Rival’s turn', `Your turn ${p.dmgHist.length}: ${dmgLine(p)}`, 'them'); }, 0); }
+function newMatch(mode, o = {}) {
+  ui.mode = mode; ui.me = 0; ui.sheet = null; ui.moveMode = false; ui.burnMode = false; ui.busy = false; ui.handoff = false; ui.screen = 'game'; ui.tab = 'hand'; ui.overSeen = false; ui.meta = null; ui.daily = o.daily || null;
+  const ok = WD.unlockedOps(ui.prof); const ops = o.daily ? [] : ui.ops.filter(k => ok.includes(k));
+  G = WD.newGame(Object.assign({ mode, names: mode === 'ai' ? ['Alpha', 'Rival'] : ['Operator 1', 'Operator 2'], ops }, o.daily ? { seed: WD.dailySeed(o.daily) } : {}));
   if (mode === 'hotseat') ui.me = G.turn;
   render(); after(); if (G.turn === ui.me) turnBanner('Your turn', 'Round 1 · drop in', 'me');
 }
@@ -1117,7 +1230,7 @@ function fxFor(prev, cur, f) {
   // loot taken from a stack
   for (const e of prev.envs) { const ce = cur.envs.find(x => x.w === e.w); if (!ce || !e.loot.length) continue; const gone = e.loot.filter(it => !ce.loot.some(x => x.iid === it.iid)); if (gone.length && / takes /.test(f.msg)) { fx.took = { w: e.w, face: itemFaceS(prev, gone[0]) }; break; } }
   const bs = f.msg.match(/ buys (.+) at the Buy Station/); if (bs) { const id = Object.keys(WD.CARDS).find(k => WD.CARDS[k].name === bs[1]); if (id) fx.station = 'card_' + id; }
-  if (/ fires | punches /.test(f.msg) && cur.lastFire && cur.lastFire.p === r) { fx.shot = cur.lastFire; fx.shooter = cur.players[r].pos; fx.target = cur.players[m].pos; }
+  if (/ fires[ :]| punches /.test(f.msg) && cur.lastFire && cur.lastFire.p === r) { fx.shot = cur.lastFire; fx.shooter = cur.players[r].pos; fx.target = cur.players[m].pos; }
   return fx;
 }
 function playStep() {
@@ -1134,7 +1247,7 @@ function playStep() {
 function finishPlay() {
   const P = ui.play; if (!P) return; clearTimeout(P.t);
   G = P.real; ui.play = null; ui.fx = null; ui.banner = null; ui.busy = false;
-  if (!G.over) { const h = ME().fpHist; turnBanner('Your turn', `Round ${G.round}${h.length ? ` · beat ${Math.round(h[h.length - 1])} Firepower` : ''}`, 'me'); }
+  if (!G.over) { const th = threatNow(ME()); turnBanner('Your turn', `Round ${G.round}${th.inRange ? ` · Threat ${th.ev}` : ''}`, 'me'); }
   after();
 }
 function act(fn, keep) { const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } if (!keep) ui.sheet = null; ui.moveMode = false; after(); return r; }
@@ -1181,6 +1294,9 @@ function openLoad(gi) {
 }
 function after() {
   if (G && !G.over && G.turn === ui.me && !ui.busy && !ui.handoff && !ui.play && ME().perkOffer && (!ui.sheet || ui.sheet.type !== 'perk')) ui.sheet = { type: 'perk' };
+  if (G && G.spoils && G.spoils.p === ui.me && !ui.busy && !ui.handoff && !ui.play && (!ui.sheet || ui.sheet.type !== 'spoils')) ui.sheet = { type: 'spoils' };
+  if (G && myTurn() && ME().peek && ui.sweepFor !== ME().peek.join() && !ui.sheet) { ui.sweepFor = ME().peek.join(); ui.sheet = { type: 'sweep', order: [] }; }
+  if (G && G.over && ui.mode === 'ai' && !ui.meta) { const prev = ui.prof; ui.meta = WD.applyMatch(prev, G, ui.me, { daily: ui.daily }); ui.meta.prev = prev; ui.prof = ui.meta.profile; ui.meta.saved = WD.saveProfile(store(), ui.prof); }
   if (G.over && !ui.overSeen && (!ui.sheet || !['report', 'rivalturn'].includes(ui.sheet.type))) ui.sheet = { type: 'over' };
   if (ui.mode === 'hotseat' && !G.over && G.turn !== ui.me) ui.handoff = true;
   render();
@@ -1263,14 +1379,24 @@ document.addEventListener('click', e => {
       ui.sheet = env && env.loot.length && env.cache.searched ? { type: 'item', id: env.loot[0].iid, sel: [], trade: [], slideIn: true } : null;
       ui.newTop = w; clearTimeout(ui.newTopT); ui.newTopT = setTimeout(() => { ui.newTop = null; }, 900);
       after(); flyLoot(info); break; }
-    case 'endturn': if (ui.mode === 'ai' && myTurn()) setTimeout(() => { const p = G.players[ui.me]; turnBanner('Rival’s turn', `Your turn ${p.fpHist.length}: ${fpLine(p)}`, 'them'); }, 0); ui.gunSel = null; ui.moveMode = false; ui.burnMode = false; act(() => WD.endTurn(G, ui.me)); break;
+    case 'endturn': { ui.gunSel = null; ui.moveMode = false; ui.burnMode = false; const r = act(() => WD.endTurn(G, ui.me)); if (r && r.ok && !G.spoils) rivalBanner(); break; }
+    case 'spoilpick': case 'spoilskip': { if (!G.spoils || G.spoils.p !== ui.me) return; const r = WD.takeSpoils(G, ui.me, a === 'spoilpick' ? id : null); if (!r.ok) return toast(r.err); ui.sheet = null; after(); if (!G.over) rivalBanner(); break; }
+    case 'sweepsheet': ui.sheet = { type: 'sweep', order: [] }; renderLayer(); break;
+    case 'sweeppick': { const i = S.order.indexOf(id); if (i >= 0) S.order.splice(i, 1); else S.order.push(id); renderLayer(); break; }
+    case 'sweepok': { const pk = ME().peek || []; const order = S.order.concat(pk.filter(i => !S.order.includes(i))); const r = WD.arrange(G, ui.me, id === 'keep' ? pk : order); if (!r.ok) return toast(r.err); ui.sheet = null; toast(id === 'keep' ? 'Deck left as it was.' : 'Top of your deck arranged.'); render(); break; }
+    case 'promosheet': ui.sheet = { type: 'promote', pick: null, sq: WD.mainSquad(G, ui.me) || 'assault' }; renderLayer(); break;
+    case 'promopick': S.pick = id; renderLayer(); break;
+    case 'promosq': S.sq = id; renderLayer(); break;
+    case 'dopromote': { const r = WD.promote(G, ui.me, S.pick, S.sq); if (!r.ok) return toast(r.err); ui.sheet = null; toast(`Promoted to ${WD.cardDef(G, r.iid).name}.`); render(); break; }
+    case 'daily': newMatch('ai', { daily: today() }); break;
+    case 'optoggle': { const i = ui.ops.indexOf(id); if (i >= 0) ui.ops.splice(i, 1); else ui.ops.push(id); saveOps(); render(); break; }
   }
 }, true);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (ui.sheet && ui.sheet.type !== 'over') closeSheet(); else if (ui.moveMode || ui.burnMode) { ui.moveMode = false; ui.burnMode = false; render(); } }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.act === 'moveto') { e.preventDefault(); e.target.click(); }
 });
-function closeSheet() { const cur = ui.sheet; if (cur && cur.type === 'perk' && G && ME().perkOffer && myTurn()) return; if (cur && cur.type === 'over') ui.overSeen = true; const then = cur && cur.then; ui.sheet = then ? { type: then } : null; if (!ui.sheet && G && G.over && !ui.overSeen) ui.sheet = { type: 'over' }; render(); }
+function closeSheet() { const cur = ui.sheet; if (cur && cur.type === 'perk' && G && ME().perkOffer && myTurn()) return; if (cur && cur.type === 'spoils' && G && G.spoils) return toast('Take one of the Spoils, or Skip.'); if (cur && cur.type === 'over') ui.overSeen = true; const then = cur && cur.then; ui.sheet = then ? { type: then } : null; if (!ui.sheet && G && G.over && !ui.overSeen) ui.sheet = { type: 'over' }; render(); }
 
 /* ---------- hold for info (touch) / hover (mouse) ---------- */
 const LP = { timer: null, x: 0, y: 0, el: null, shown: false, suppress: false };
@@ -1307,7 +1433,13 @@ document.addEventListener('pointermove', e => {
 }, true);
 document.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') { clearTimeout(LP.timer); if (LP.el) LP.el.classList.remove('holding'); } }, true);
 document.addEventListener('pointercancel', () => clearTimeout(LP.timer), true);
-document.addEventListener('contextmenu', e => { if (e.target.closest('#app, #layer')) e.preventDefault(); });
+// right click (desktop) inspects like a long press on touch: the card face if there is one, else the explanation
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('#app, #layer')) return; e.preventDefault();
+  const t = e.target.closest('[data-prev], [data-tip]'); if (!t) return;
+  hideTip(); if (t.dataset.prev && hasFace && previewHTML(t.dataset.prev)) { showPrev(t); return; }
+  if (t.dataset.tip) { showTip(t.dataset.tip, e.clientX, e.clientY); LP.el = t; LP.shown = true; }
+});
 
 window.WZ = { get G() { return G; }, ui, render, renderLayer };
 render();

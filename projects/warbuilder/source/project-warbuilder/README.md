@@ -12,6 +12,7 @@
 | `npm test` | Rules unit tests, seeded determinism + golden replays, full-match invariants, AI-vs-AI smoke, print-and-play consistency, build smoke (`node:test`). `WB_MATCHES=2000 npm test` for more invariant matches. |
 | `npm run test:update-golden` | Re-records `test/golden/replays.json` after an intended rules or AI change. |
 | `npm run sim` | Balance report: `qa/tools/ai_sim.js` (2000 AI matches) against the target bands. Warns, never fails. `npm run sim -- 500 --match=aware-blind` passes arguments through (see qa/tools/ai_sim.js). |
+| `node ../../qa/tools/ai_sim_pkg.js 2000` | The wb-pkg1 acceptance gates (build edge, synergy edge, rounds, final circle, own cards in hand, squads). `node ../../qa/tools/smoke_pkg.js` plays 2 full matches in the built page (phone + desktop) with headless Chromium and saves screenshots. Rules: `documentation/design/rules.md`. |
 | `npm run pnp` / `npm run pnp:pdf` | Print-and-play sheet `src/pnp/pnp.html`, and the PDF next to it (needs Playwright and Chromium, found in this project or the global npm root). |
 
 ## Setup (once)

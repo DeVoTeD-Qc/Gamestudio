@@ -15,7 +15,7 @@ function loggedDamage(s, lines) {
   const dmg = [0, 0]; const who = name => s.players.findIndex(pl => pl.name === name);
   for (const { msg } of lines) {
     // wb-pkg1: Overwatch (rival's turn) and Sentry Turret (Ready) shots, and Field Medic heals (also when a Jury-Rig repeats it)
-    let m = msg.match(/^(.+?)(?:’s)? (?:Overwatch|Sentry Turret) fires: .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1] === 'Your' ? 'You' : m[1])] += +m[2]; continue; }
+    let m = msg.match(/^(.+?)(?:’s)? (?:held angle|Sentry Turret) fires: .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1] === 'Your' ? 'You' : m[1])] += +m[2]; continue; }
     m = msg.match(/^(.+?) plays /); if (m) { for (const h of msg.matchAll(/Heal (\d+)/g)) dmg[who(m[1])] -= +h[1]; }
     m = msg.match(/^(.+?) fires .*→ HIT for (\d+)/); if (m) { dmg[1 - who(m[1])] += +m[2]; continue; }
     m = msg.match(/^(.+?) is caught \d+ spaces? deep in the gas: −(\d+)/); if (m) { dmg[who(m[1])] += +m[2]; continue; }

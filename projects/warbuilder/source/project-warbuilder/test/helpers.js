@@ -47,7 +47,8 @@ function aiMatch(seed, { maxTurns = 400, onTurn } = {}) {
   }
   return s;
 }
-// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow (each shot commits all Precision), end the turn.
+// A fixed, AI-free policy (rules-only replays): play every card, fire gun 0 while the rules allow (each shot commits all Precision), end the turn,
+// take the first Spoils card when offered.
 function scriptedMatch(seed, { maxTurns = 400 } = {}) {
   const s = WD.newGame({ seed }); const actions = []; let n = 0;
   while (!s.over) {
@@ -57,6 +58,7 @@ function scriptedMatch(seed, { maxTurns = 400 } = {}) {
     for (let k = 0; k < 6 && !s.over && WD.shootCheck(s, p, 0).ok; k++) { WD.fire(s, p, 0); actions.push('fire'); }
     if (s.over) break;
     const r = WD.endTurn(s, p); if (!r.ok) throw new Error(`seed ${seed}: endTurn failed: ${r.err}`); actions.push('end');
+    if (s.spoils) { const t = WD.takeSpoils(s, p, s.spoils.offer[0]); if (!t.ok) throw new Error(`seed ${seed}: takeSpoils failed: ${t.err}`); actions.push('spoils'); } // Spoils: always the first card
   }
   return { s, actions };
 }

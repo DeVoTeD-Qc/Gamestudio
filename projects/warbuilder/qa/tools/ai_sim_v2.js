@@ -108,6 +108,7 @@ function turn(s, p, opts) {
   (T.dmg[r] = T.dmg[r] || []).push(dealt); T.turnDmg.push(dealt); T.prec.push(pl.res.prec);
   for (const o of opts) if (o.endTurn) o.endTurn(s, p, dealt);
   const res = WD.endTurn(s, p); if (!res.ok) throw new Error(res.err);
+  if (s.spoils && WD.takeSpoils) WD.takeSpoils(s, p, WD.aiSpoils(s, p)); // wb-pkg1: the shipped engine now has Spoils; the AI picks (this tool predates it)
 }
 
 function run(n, polA, polB, optNames) {
