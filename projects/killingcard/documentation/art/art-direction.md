@@ -164,6 +164,13 @@ Both forms share one frame family: **the display case**. The art window is fixed
 - Unaffordable: the cost hex goes grey and the card drops 4 px; the art stays full colour.
 - The same frame is used in hand, Codex, deck builder, Loadout, rewards and the inspector (bigger). No third card layout.
 
+### 6.2a The Operator mark (kc-pitch-art, head: "an easy way to distinguish Operators")
+
+One mark, drawn by one function (`CardLook.draw_operator_tab` / `draw_operator_frame`), on every view: hand (X1 banner and the Operator card), board, inspector, deck builder, Codex, rewards, Duel.
+- **Brass frame:** a 3 px brass `#C9A227` rim with a 1 px dark brass `#5A4512` line inside (board / hand banners); on the Y2+ card the brass card frame plus a 2 px brass keyline round the art window, so a full-bleed calling card is still framed.
+- **Brass tab:** a solid brass rank tab at the top-left of the art (square left end, chevron-cut right end, dark rim, light top bevel) with a double rank chevron and the word OPERATOR in Barlow Condensed Bold, ink `#1E1A10`. Where the tab would cover more than half the card's width it shrinks to the chevron badge alone.
+- Brass stays the Operator's colour only (§3 rule 4): no other card wears a solid brass tab. Elites keep their thin brass keyline and star.
+
 ### 6.3 Original art and licensed calling cards in one case
 
 - Both fill the **same art window** at the same crop; the frame, numbers, chips and keylines are drawn by code over neither the focal zone nor the art's centre.
