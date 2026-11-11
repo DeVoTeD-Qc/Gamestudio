@@ -629,7 +629,7 @@ func _build_street() -> void:
 		var row_w: float = (W - SEP * (n - 1)) / n
 		var cols: int = n
 		var card_w: float = row_w
-		var card_h: float = clampf(avail, 120.0, row_w * 1.5)
+		var card_h: float = clampf(avail, 120.0, row_w * (1.65 if duel else 1.5))
 		if n == 4 and avail >= 2.0 * 170.0 + SEP:
 			cols = 2
 			card_w = (W - SEP) / 2.0
