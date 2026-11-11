@@ -99,3 +99,12 @@ branch `art/deaddraw-pack-2`, folder `chatgpt/images/art-pack-2/`.
 - **Pipeline:** Technical Artist trims each PNG to its shape, scales it to the in-game size in the CSV, saves WebP to
   `assets/art/painted/ui/`, and maps it in `dd_ui.gd` (`button()`, `box()`), `dd_marks.gd` (`NumBadge._draw`) and the
   door / Full set plates, keeping the StyleBoxFlat look as the fallback when an image is missing.
+- **Imported (dd-art2-import):** all 52 passed review (no retries). `tools/art/import_ui.py` trims each PNG, saves it at
+  **2x** the CSV size (badges and pills 1x) as WebP in `assets/art/painted/ui/`, and recolours the kill sockets' olive rim
+  to steel (off-palette in the originals). `scripts/ui/dd_skin.gd` draws them: `Nine` (a 9-slice StyleBox drawn at half
+  scale, corners shrink on small boxes; pills, bars, tags and the Full set plate stretch sideways only, their height fits
+  the box), `skin_button` (family picked from the old fill colour, hover = normal x1.12), `skin_plate`, `rim` (the tinted
+  card / chip rim drawn on top of the content, gold when selected, pale gold when lit). Margins used (texture px): buttons,
+  door plates and chips 40 (20 in game: the bolts sit outside the 16 px the CSV asked for), panels 80, frames 80 (drawn at
+  9-15 px), name bar 32/16, sockets 16, bars 16, tags / pills / Full set 64 left and right. Words on the gold filter chip
+  stay bone with an ink outline (ink on that gold is only 3:1).
