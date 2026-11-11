@@ -1,6 +1,6 @@
 {
   "source": "../../dd-art-pack-1-prompts.md",
-  "generated_count": 30,
+  "generated_count": 47,
   "requested_count": 77,
   "images": [
     {
@@ -310,7 +310,8 @@
       "file": "dd_room_maple_row_entrance.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "1c8e001c0250805ac99ae0b989d5438dda207cc15286ec9507af5fb7ed03b8c0"
     },
     {
       "batch": 4,
@@ -319,7 +320,8 @@
       "file": "dd_room_maple_row_garage.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "b73d32107d2d02af5f817f04988abdf98aafb8b1ab8a0457373cc3a9d80a6f3a"
     },
     {
       "batch": 4,
@@ -328,7 +330,8 @@
       "file": "dd_room_maple_row_corner_store.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "72ea5a3870f09ca1feac84680f9cab5924ae7172d9389641828d2a8897e0391c"
     },
     {
       "batch": 4,
@@ -337,7 +340,8 @@
       "file": "dd_room_maple_row_workshop.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "2222b0b727832f54c296beb8233897cfd32ba2f6542738f116035d2061fdbf2b"
     },
     {
       "batch": 4,
@@ -346,7 +350,8 @@
       "file": "dd_room_downtown_entrance.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "d6dad91595a461353d1141c78bbe6ae63e2ad52c1b99356a4fe99711ddc10cb9"
     },
     {
       "batch": 4,
@@ -355,7 +360,8 @@
       "file": "dd_room_downtown_subway_kiosk.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "7d28ba78f6f07295d2fd5931846b6a737d01a6318b098fe6b52d3227cdec87b0"
     },
     {
       "batch": 4,
@@ -364,7 +370,8 @@
       "file": "dd_room_downtown_pawn_shop.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "1d30112b70e7edba7eba6340f3c9f26b7fa314cb370c3b91efad0cf326b57530"
     },
     {
       "batch": 4,
@@ -373,7 +380,8 @@
       "file": "dd_room_downtown_parking_garage.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "928645dee2a23169c144c1d7c4a48166af87cf9eb5f524247ee54c5b6723a04b"
     },
     {
       "batch": 4,
@@ -382,7 +390,8 @@
       "file": "dd_room_st_agnes_entrance.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "cadea1844b0e1cdbe1e3b0ea9b1e1a330dfebf5fc0c067653e562e93afef905c"
     },
     {
       "batch": 4,
@@ -391,7 +400,8 @@
       "file": "dd_room_st_agnes_pharmacy.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "8a8ae005a5f5da9b31752d98123c318570c529c688462670e1857702b4016e29"
     },
     {
       "batch": 4,
@@ -400,7 +410,8 @@
       "file": "dd_room_st_agnes_security_office.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "06a62c401ce5235146fb22765b7d6012cb765e6ef2bad9d7b794ded3e54075d8"
     },
     {
       "batch": 4,
@@ -409,7 +420,8 @@
       "file": "dd_room_st_agnes_morgue_lab.png",
       "size": "1024x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "8e66f05ae918e0a0c8ce9208e4265f5a265ce12f19961661135a4f6d5f052ede"
     },
     {
       "batch": 4,
@@ -418,7 +430,8 @@
       "file": "dd_machine_retrofit_bench.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "blocked",
+      "reason": "Image service rejected generation: moderation_blocked (violence), output stage."
     },
     {
       "batch": 4,
@@ -427,7 +440,8 @@
       "file": "dd_machine_patch_press.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "178c750e16fafde1a4b470e86e0a4c362f7957dadf6cfedd3eaeae12108a5621"
     },
     {
       "batch": 4,
@@ -436,7 +450,8 @@
       "file": "dd_machine_wall_rack.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "929b9b4068e279b80fa19abec2d2c061018c88645c6e3720f83c11b21344753c"
     },
     {
       "batch": 4,
@@ -445,7 +460,8 @@
       "file": "dd_machine_wall_rack_crossbow.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "3e5ebd55c1cca35ff9e0f074272a1bd44202bb8db8869ab103fa03709aea9882"
     },
     {
       "batch": 4,
@@ -454,7 +470,8 @@
       "file": "dd_machine_wall_rack_shotgun.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "69f36a9db3107672eb7b080f69d83c0f203ad7690b0b3fc5e8fdde7c640506e3"
     },
     {
       "batch": 4,
@@ -463,7 +480,8 @@
       "file": "dd_machine_wall_rack_elephant_gun.png",
       "size": "1536x1024",
       "transparent": false,
-      "status": "pending"
+      "status": "generated",
+      "sha256": "cc3297d0cc09a29032085a17c15befdba96f5d6b3a145a19da3a6abc41c2681f"
     },
     {
       "batch": 5,
