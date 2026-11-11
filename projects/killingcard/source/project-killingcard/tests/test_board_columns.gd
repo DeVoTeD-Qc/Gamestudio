@@ -342,10 +342,11 @@ func test_banner_art_path_and_crops() -> void:
 	BannerArtDB.clear_cache()
 	# Killstreak card art placeholder: 4:1 band and 2:3 column of the same master.
 	# (kc-da-import1: ids with no data/banners drop-in; DA art pack 1 gave most cards one.)
-	var art: BannerArt = BannerArtDB.get_art(&"recon_specialist")
+	# (kc-da-import2: recon_specialist and kc_wip_fast_learner got their paintings; sentry and a test id stand in.)
+	var art: BannerArt = BannerArtDB.get_art(&"sentry")
 	assert_true(art.placeholder and art.texture != null, "placeholder from card art")
-	var b: Texture2D = BannerArtDB.banner_texture(&"recon_specialist")
-	var p: Texture2D = BannerArtDB.portrait_texture(&"recon_specialist")
+	var b: Texture2D = BannerArtDB.banner_texture(&"sentry")
+	var p: Texture2D = BannerArtDB.portrait_texture(&"sentry")
 	assert_true(absf(float(b.get_width()) / b.get_height() - 4.0) < 0.05, "banner 4:1 (%s)" % b.get_size())
 	assert_true(absf(float(p.get_width()) / p.get_height() - 2.0 / 3.0) < 0.02, "portrait 2:3 (%s)" % p.get_size())
 	# Crop centres move the regions, clamped inside the image.
@@ -354,7 +355,7 @@ func test_banner_art_path_and_crops() -> void:
 	assert_eq(BannerArt.band_rect(img, 0.0).position.y, 0.0, "band clamped at the top")
 	assert_eq(BannerArt.column_rect(img, 0.5), Rect2(427, 0, 683, 1024), "hand column 683x1024")
 	# A card with no art at all still gets a distinct generated banner.
-	var g1: BannerArt = BannerArtDB.get_art(&"kc_wip_fast_learner")
+	var g1: BannerArt = BannerArtDB.get_art(&"kc_test_no_art_b")
 	var g2: BannerArt = BannerArtDB.get_art(&"kc_test_no_art")
 	assert_true(g1.placeholder and g1.texture != null and g2.texture != null, "generated placeholders")
 	assert_true(g1.texture.get_image().get_pixel(10, 10) != g2.texture.get_image().get_pixel(10, 10), "distinct per id")

@@ -2,6 +2,38 @@
 
 *Technical Artist. One section per batch from `ui-kit-prompt-pack.md`. Newest first.*
 
+## DA art pack 1 retries: the last 4 paintings (kc-da-import2, 2026-11-11)
+
+**Source:** the head's four regenerated images on `art/killingcard-pack-1` (578524b, prompts in `chatgpt/art-pack-1-retry-prompts.md`), read with `git show FETCH_HEAD:<path>` into a scratch folder. The branch is not merged; no raw PNG is in main.
+
+**Reviewed** at full size (close crops of goggles and masks, the drone, the box, the shutter and the tool roll) and at band size against `da-art-pack-1.md` §6 and the IP rules. **4 accepted, 0 rejected:**
+
+| Slot | Result | Notes |
+|---|---|---|
+| `kc_wip_fast_learner` | accepted | Tinted goggles worn over the eyes, olive scarf up, helmet on: no eyes, brows or hair. A thin sliver of cheek shows between goggles and scarf on the near side (borderline, like Private I; it reads as a masked soldier at every size). Fictional rifle, no markings. |
+| `recon_specialist` (Night city) | accepted | The drone is a chunky armoured olive body with four enclosed ducted fan rings and no gimbal: nothing like a consumer quadcopter. Mask and amber goggles, NVG flipped up. Violet sky, sodium lights, dark unlit towers; no neon, signs, red or pink. |
+| `tripwire_charge` | accepted | No people; a wire from a steel post to a plain olive box with one amber light, wet container aisle, cranes. No markings, no explosion. The box sits at x 76-83%, outside the prompt's middle 70%: the hand column is moved right (`portrait_x 0.70`) so it keeps the box and the wire. |
+| `demolitions_expert` (Night city) | accepted | Engineer measuring a roller shutter with a plain yellow tape (no numbers), cable coil, tool roll; balaclava and goggles. Borderline: the amber highlights on the top shutter slats have scratchy brushwork that looks a little like scrawl when zoomed to 100% and beyond; at the hand column and band sizes it is rust texture (like Laser Gunner's vent in pack 1). |
+
+**Pipeline** (as pack 1): `tools/ui_kit_icons.py --manifest documentation/art/da-art-pack-1-manifest.csv <scratch raw> <scratch project>` (4 `SHIP`, opaque 3:2 centre crop to 1152x768), then WebP q72 with the `importer="keep"` `.import` in `assets/sprites/banners/`: `kc_b_kc_wip_fast_learner.webp` 74 KB, `kc_b_recon_specialist_nightcity.webp` 67 KB, `kc_b_tripwire_charge.webp` 52 KB, `kc_b_demolitions_expert_nightcity.webp` 102 KB (294 KB for the four). One `data/banners/<slot>.tres` each (`is_default = true`, `artist = "KillingCard studio (DA art pack 1)"`, `licence = "studio-owned"`).
+
+- **Night city** (`recon_specialist`, `demolitions_expert`) is now the default; the Port paintings `assets/sprites/cards/card_<card>.webp` stay as the fallback (delete the `.tres` to go back). Tripwire Charge's Killstreak painting stays as its fallback the same way. Fast Learner had no painting (a generated placeholder) until now.
+- **Pitch:** all four cards have licensed rows (`mw3-pitch-set.csv`), so the pitch keeps their calling cards; the four `kc_b_*` files are added to the "Web (private pitch)" `exclude_filter`.
+- **Tests:** `test_board_columns.gd` (placeholder crops) and `test_card_art_views.gd` (SVG fallback) used `recon_specialist` and `kc_wip_fast_learner` as cards with no drop-in; they now use `sentry` (Killstreak art, no drop-in) and a test id.
+
+**Crops** (by eye; units moved up so the head and the action sit in the band):
+
+| Slot | Master | banner_y | portrait_x |
+|---|---|---|---|
+| `demolitions_expert` | `kc_b_demolitions_expert_nightcity.webp` | 0.30 | 0.50 |
+| `kc_wip_fast_learner` | `kc_b_kc_wip_fast_learner.webp` | 0.32 | 0.50 |
+| `recon_specialist` | `kc_b_recon_specialist_nightcity.webp` | 0.26 | 0.46 |
+| `tripwire_charge` | `kc_b_tripwire_charge.webp` | 0.52 | 0.70 |
+
+**Build size** (`--export-pack`, headless): private pitch pck **13.04 MB** (target 14.5; the four files are excluded), public "Web" pck 11.44 MB.
+
+**Checks:** 750 tests pass, also without `assets/licensed` (run in a copy with the committed `board_metrics.gd`, because kc-layout-a's edit in progress does not parse yet). Before/after sheet of the four bands and hand columns made from `BannerArtDB` (scratch, not committed). Not yet checked in a running build at 844x390: next step for QA.
+
 ## DA art pack 1: 44 card paintings (kc-da-import1, 2026-11-11)
 
 **Source:** the head's 46 ChatGPT originals on the branch `art/killingcard-pack-1` (52767ad, `documentation/art/chatgpt/images/art-pack-1/`), read from the branch into a scratch folder. The branch is not merged and no raw PNG is in main (studio rule: raw sources never ship).
