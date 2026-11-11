@@ -17,28 +17,38 @@ const TYPE_WORDS: Dictionary = {
 	DataEnums.CardType.UNIT: "unit", DataEnums.CardType.TACTIC: "tactic",
 	DataEnums.CardType.EQUIPMENT: "equipment",
 }
-## Keyword rules, worded for the inspector (core-rules.md section 1 and Rulings).
+## Keyword rules (core-rules.md section 1 and Rulings): [name, short rule, full rule].
+## kc-text (text-and-icons.md): [1] is the inspector / tooltip line (one line: the rule and its
+## number), [2] the full explanation, shown in the Codex glossary only.
 const KEYWORD_RULES: Dictionary = {
-	&"first_shot": ["First Shot", "Fires first in its exchange; a partner it kills doesn't fire back."],
-	&"pick": ["Pick", "Shoots the enemy with the lowest current Armor (ties: front-most)."],
-	&"flank": ["Flank", "Shoots the back-most enemy in the line."],
-	# kc-fight-ui (firefight-order.md §3; head's O3: the LMG units).
-	&"pierce": ["Pierce", "Damage beyond what its target needs carries on to the next enemy behind it (that unit's Cover applies)."],
-	&"cover": ["Cover %d", "Each hit on this unit deals %d less damage (minimum 0)."],
-	# kc-wip-impl: Suppress takes a number (Gunner Suppress 2, Riot Shield Suppress 1).
-	&"suppress": ["Suppress %d", "At the start of the firefight, the enemy point man here gets -%d Firepower this round. Several Suppress add up."],
-	&"patch": ["Patch %d", "After the firefight, restores %d Armor to the most damaged other friendly unit here."],
-	&"holder": ["Holder", "You control this zone while it is contested, unless the enemy also has a Holder here."],
-	&"on_deploy": ["On Deploy", "Happens when this unit is revealed and arrives."],
-	&"on_down": ["On Down", "Happens when this unit is eliminated."],
-	# kc-wip-impl (wip-set.md §2): the Wip set's new words, in plain language.
-	&"end_of_round": ["End of round", "Happens at the end of every round this unit is on the board (after the firefight, in the Score step)."],
-	&"agile": ["Agile", "Once per round, in Deploy, tap it and then an adjacent column: it moves there at Reveal, to the back of the line. Free. If that column is full then, it stays."],
-	&"beam": ["Beam", "Its shot hits every unit in front of it in its column: your own units ahead of it AND every enemy there, its Firepower each (Cover applies). In front, it only hits enemies."],
-	&"arrives_front": ["Front line", "Joins the column at the front of the line and becomes the point man."],
-	&"immediate": ["Resolves immediately", "Takes effect as soon as you play it in Deploy, so it can't be undone."],
-	&"hidden": ["Hidden", "Stays face-down after Reveal; the enemy only sees it when it goes off."],
-	&"no_control": ["Doesn't hold zones", "Doesn't count for zone control."],
+	&"first_shot": ["First Shot", "Fires first. A target it eliminates doesn't fire back.",
+			"Fires first in its exchange. A target it eliminates doesn't fire back."],
+	&"pick": ["Pick", "Shoots the enemy with the lowest Armor.",
+			"Shoots the enemy with the lowest current Armor (ties: the front-most)."],
+	&"flank": ["Flank", "Shoots the back-most enemy.", "Shoots the back-most enemy in the column."],
+	&"pierce": ["Pierce", "Extra damage carries to the next enemy behind.",
+			"Damage beyond what its target needs carries to the next enemy behind it (that unit's Cover applies)."],
+	&"cover": ["Cover %d", "Each hit on it deals %d less.", "Each hit on this unit deals %d less damage (minimum 0)."],
+	&"suppress": ["Suppress %d", "The enemy front unit here gets -%d FP this round.",
+			"At the start of the firefight, the enemy front unit here gets -%d FP this round. Suppress adds up."],
+	&"patch": ["Patch %d", "After the firefight: +%d Armor to your most damaged other unit here.",
+			"After the firefight, restores %d Armor to your most damaged other unit in this column."],
+	&"holder": ["Holder", "Holds a contested column (unless the enemy has a Holder too).",
+			"You control this column while it is contested, unless the enemy also has a Holder there."],
+	&"on_deploy": ["On Deploy", "Triggers when it arrives.", "Triggers when this unit is revealed and arrives."],
+	&"on_down": ["On Down", "Triggers when it is eliminated.", "Triggers when this unit is eliminated."],
+	&"end_of_round": ["End of round", "Triggers at the end of each round.",
+			"Triggers at the end of every round this unit is on the board (after the firefight, in the Score step)."],
+	&"agile": ["Agile", "Once a round: move it to an adjacent column. Free.",
+			"Once per round, in Deploy, tap it and then an adjacent column: it moves there at Reveal, to the back. Free. If that column is full by then, it stays."],
+	&"beam": ["Beam", "Hits every unit in front of it, your own units too.",
+			"Its shot hits every unit in front of it in its column, your own units included, for its FP each (Cover applies). At the front it only hits enemies."],
+	&"arrives_front": ["Front line", "Arrives as the front unit of its column.",
+			"Joins its column at the front and becomes the front unit."],
+	&"immediate": ["Resolves immediately", "Takes effect when played. Can't be undone.",
+			"Takes effect as soon as you play it in Deploy, so it can't be undone."],
+	&"hidden": ["Hidden", "Stays face down until it goes off.", "Stays face down after Reveal; the enemy sees it only when it goes off."],
+	&"no_control": ["Doesn't hold columns", "Doesn't count for column control.", "Doesn't count for column control."],
 }
 
 
@@ -164,7 +174,7 @@ static func operator_view_dict(op: RulesUnit, display_name: String) -> Dictionar
 		"name": display_name, "type": "operator",
 		"weapon_class": String(CLASS_WORDS.get(op.weapon_class, "")).to_lower(),
 		"firepower": op.base_firepower, "armor": op.base_max_armor, "keywords": kw,
-		"text": "Your Operator. If it goes down, your streak resets; it respawns at your next Deploy.",
+		"text": "If it goes down, your streak resets. Respawns next Deploy.",
 		"side": "friend",
 	}
 
@@ -203,33 +213,35 @@ static func _entry(id: StringName, value: int = 0) -> Dictionary:
 	var row: Array = KEYWORD_RULES[id]
 	var title: String = row[0]
 	var text: String = row[1]
+	var full: String = row[2]
 	if value > 0:
 		title = title % value
 		text = text % value
-	return {"id": id, "name": title, "text": text, "value": value}
+		full = full % value
+	return {"id": id, "name": title, "text": text, "full": full, "value": value}
 
 
 ## kc-ui4 GLOSSARY: the plain-words entries that are not card keywords (KEYWORD_RULES holds those;
 ## SynergyRules holds the traits). [name, text]. The Codex glossary
 ## (scripts/ui/codex/glossary.gd) reads these three tables only, so the wording lives in one place.
 const GLOSSARY_EXTRA: Dictionary = {
-	&"firepower": ["Firepower (FP)", "Damage this unit deals when it shoots: the number in the reticle ring, bottom-right (teal ring yours, red the rival's; a green number is buffed). It is the RESULT now (effects, links and sets included); the inspector lists the sum."],
-	&"armor": ["Armor", "Health: the number on the grey ballistic plate at the bottom-right corner (both sides). Each hit takes Armor away and the plate shows what is left; at 0 the unit is eliminated. Amber plate = damaged."],
-	&"card_peek": ["Card at rest / peek", "On the board a card shows its trait (bottom-left), its ability icons (bottom-centre) and FP and Armor (bottom-right), all the same size. Hover it (touch: hold it) to peek at its cost (top-left). Hand cards always show everything; Settings > ALL CARD INFO shows it on the board too. Long press (or right click) any card for what each icon does."],
-	&"damaged": ["Damaged", "A thin amber line along the bottom edge, a crack in the top-left corner and an amber Armor plate: the unit has lost Armor."],
-	&"card_frames": ["Card frames", "Off the board every card is a classic card: cost and name on top, the calling card, its type line (UNIT, TACTIC, FIELD, OPERATOR or STANDARD ISSUE), each ability as its icon and name, then its trait, ability icons and FP / Armor. Tactics are orders: khaki paper with a cut top-right corner, their rules and no stats."],
-	&"trait_chip": ["Trait chip", "Bottom-left on every card (a card has one trait at most): faint while its set bonus is off, lit with a glow while it is on (2 or 3 in play)."],
-	&"rail_highlight": ["Sets rail highlight", "Hover, focus or tap a row of the SETS rail to pin it: every card shows that trait, the matching cards glow and the rest dim. Tap it again to unpin."],
-	&"cover_stat": ["Cover (chip)", "The Cover this unit has now (printed + effects + links + sets): each hit on it deals that much less."],
-	&"supply": ["Supply", "What you spend in Deploy. The hex on a card is its cost; round N gives N Supply (up to 7)."],
-	&"stat_colours": ["Green up / red down", "A green number with an up triangle is raised by something right now; red with a down triangle is lowered. White = the printed value."],
-	&"tactic": ["Tactic", "A one-time order (its icon: an orders sheet with a bolt). Play it in Deploy; it resolves at Reveal and goes to the discard."],
-	&"field": ["Field / Overrun", "A Field stays in its column and keeps working. Overrun: at the end of each round, if the enemy controls this column, the Field is destroyed (hidden traps are exempt)."],
-	&"control": ["Column control", "After the firefight, a side with units left in a column and the rival with none controls it. Both sides there: EVEN (contested), unless only one side has a Holder."],
-	&"objective": ["Objective tile", "The middle row: the column's letter (A, B, C) in its control mark (teal circle yours, red diamond the rival's, dashed square even, grey ring open) and the Fields there (the rival's on top, yours below). Long press or right click it for both sides' Firepower and the details."],
-	&"operator": ["Operator", "Your hero card (brass frame): never drawn or discarded. Free to place in round 1; it costs Supply to place again after it goes down."],
-	&"killstreak": ["Killstreak", "Eliminations build your streak; at its number a killstreak is ready (amber glow) and you tap it to call it in."],
-	&"incoming": ["Incoming", "A rival card played face-down this Deploy: it lands here at Reveal."],
-	&"set_callout": ["Set callout", "When a trait set switches on (2 or 3 in play) its bonus is announced beside the trait rail, then folds into it. A red crack: a set switched off."],
-	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while you have at least one member in play. In Duel, Doctrine only starts a set."],
+	&"firepower": ["Firepower (FP)", "Damage it deals per shot: the number in the ring, bottom-right (teal yours, red the rival's). Green = buffed. The inspector shows the sum."],
+	&"armor": ["Armor", "Health: the number on the plate, bottom-right. Each hit takes Armor away; at 0 the unit is eliminated. Amber plate = damaged."],
+	&"card_peek": ["Card at rest / peek", "On the board a card shows its trait, ability icons, FP and Armor. Hover (touch: hold) to see its cost. Settings > ALL CARD INFO shows everything. Right click or long press for the rules."],
+	&"damaged": ["Damaged", "Amber line along the bottom, a crack top-left and an amber Armor plate: it has lost Armor."],
+	&"card_frames": ["Card frames", "Cost and name on top, the art, the type (UNIT, TACTIC, FIELD, OPERATOR, STANDARD ISSUE), the abilities, then trait, FP and Armor. Tactics are khaki orders with a cut corner and no stats."],
+	&"trait_chip": ["Trait chip", "Bottom-left on a card (one trait at most). Faint while its set is off, lit while on (2 or 3 in play)."],
+	&"rail_highlight": ["Sets rail highlight", "Tap a row of the SETS rail to pin it: matching cards glow, the rest dim. Tap again to unpin."],
+	&"cover_stat": ["Cover (chip)", "This unit's Cover now (printed + effects + sets): each hit on it deals that much less."],
+	&"supply": ["Supply", "Spent in Deploy to play cards. A card's hex is its cost. Round N gives N Supply (max 7)."],
+	&"stat_colours": ["Green up / red down", "Green with an up triangle: raised right now. Red with a down triangle: lowered. White: printed value."],
+	&"tactic": ["Tactic", "A one-time order. Play it in Deploy; it resolves at Reveal, then goes to the discard."],
+	&"field": ["Field / Overrun", "A Field stays in its column and keeps working. Overrun: at the end of a round, if the enemy controls its column, the Field is destroyed (hidden traps are exempt)."],
+	&"control": ["Column control", "After the firefight, the side with units left in a column (and the rival with none) controls it. Both sides: EVEN, unless only one has a Holder."],
+	&"objective": ["Objective tile", "The middle row: the column letter in its control mark (teal circle yours, red diamond the rival's, dashed square even, grey ring open) and the Fields there."],
+	&"operator": ["Operator", "Your hero card: never drawn or discarded. Free to place in round 1; costs Supply to place again after it goes down."],
+	&"killstreak": ["Killstreak", "Eliminations build your streak. At a killstreak's number it is ready (amber glow): tap to call it in."],
+	&"incoming": ["Incoming", "A rival card played face down this Deploy. It lands here at Reveal."],
+	&"set_callout": ["Set callout", "A set switching on is announced beside the trait rail. A red crack: a set switched off."],
+	&"doctrine": ["Doctrine", "A run pick: one trait whose set count is +1 all run while one of its members is in play. In Duel it only starts a set."],
 }

@@ -90,6 +90,7 @@ CONFIG = {
     "quartermaster_off": 4,       #     Quartermaster: Bench services and Wall guns cost this less
     "whetstone_dur": 2,           #     Whetstone: melee weapons get this much more durability
     "small_max": 5,               # 16: Alley Sweeper rule ("small"): 5 or less
+    "heavy_min": 0,               # 16: Stovepipe rule ("heavy"): only zombies this big or bigger
     "allow_run": True,
     "run_damage": 1,
     "boss_runpast_damage": 3,
@@ -267,6 +268,8 @@ def legal(rule, stack, z, rosa):
             return z >= CONFIG["big_min"]
         if rule == "small":
             return z <= CONFIG["small_max"]
+        if rule == "heavy":
+            return z >= CONFIG["heavy_min"]
         return True
     t = stack[-1]
     if rule == "any":
@@ -288,7 +291,7 @@ def legal(rule, stack, z, rosa):
     if rule == "small":
         return z <= CONFIG["small_max"]
     if rule == "heavy":
-        return True                 # one kill per street: checked in zombie_opts (State.fired)
+        return z >= CONFIG["heavy_min"]   # + one kill per street: checked in zombie_opts (State.fired)
     if rule == "zigzag":
         if z == t:
             return False

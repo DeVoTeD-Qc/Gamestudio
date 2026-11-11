@@ -13,6 +13,10 @@
 #   face-down backs, rail boxes); the text panel is orders paper (paper_sheet.gd) with dark ink;
 #   the art line is a short mono caption with no placeholder words; the glossary links are
 #   steel info-icon sockets, not blank "?" plates.
+#   kc-text (text-and-icons.md): the sheet's hierarchy is name, type, cost / stats (icons), the
+#   one-line rule, one short line per keyword (icon + name, then its rule), the status, then the
+#   card's flavour line in italics (the only place flavour shows for cards with an effect). Rules,
+#   keyword rules, stats and status are IconText labels: each concept's icon inline.
 # Dependencies: CardView.tscn (card_view.gd), hud_theme.tres variations (Scrim, HudPanelDark,
 #   HudHeader, HudSubtle, HudAccent, KeywordName, HudButton).
 # Author: UI/UX Agent (p09)
@@ -37,9 +41,9 @@ const CARD_MAX_W: float = 360.0
 @onready var _info_panel: PanelContainer = %InfoPanel
 @onready var _title: Label = %TitleLabel
 @onready var _type: Label = %TypeLabel
-@onready var _rules: Label = %RulesLabel
+@onready var _rules: RichTextLabel = null
 @onready var _keywords: VBoxContainer = %KeywordList
-@onready var _status: Label = %StatusLabel
+@onready var _status: RichTextLabel = null
 @onready var _close: Button = %CloseButton
 @onready var _banner_holder: Control = %BannerHolder
 var _banner: BannerView = null
@@ -50,10 +54,21 @@ var _body: ScrollContainer = null
 var _body_col: VBoxContainer = null
 ## kc-da-ui2: the art caption (mono, muted ink) under the status line.
 var _art_label: Label = null
+## kc-text: cost and stats with their icons, under the type line; the flavour line (italic).
+var _stats: RichTextLabel = null
+var _flavour: Label = null
+const ICON_PX: int = 18
 
 
 func _ready() -> void:
+	_rules = _to_rich(%RulesLabel)
+	_status = _to_rich(%StatusLabel)
 	var info: VBoxContainer = _rules.get_parent() as VBoxContainer
+	_stats = _to_rich(null, "StatsLine")
+	info.add_child(_stats)
+	info.move_child(_stats, _type.get_index() + 1)
+	_stats.owner = self
+	_stats.unique_name_in_owner = true
 	_body = ScrollContainer.new()
 	_body.name = "Body"
 	_body.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -78,6 +93,14 @@ func _ready() -> void:
 	_art_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_art_label.add_theme_font_override(&"font", PaperSheet.mono_font())
 	_art_label.add_theme_font_size_override(&"font_size", 16)
+	_flavour = Label.new()
+	_flavour.name = "FlavourLabel"
+	_flavour.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_flavour.add_theme_font_override(&"font", CardLook.LORE_FONT)
+	_flavour.add_theme_font_size_override(&"font_size", 18)
+	_body_col.add_child(_flavour)
+	_flavour.owner = self
+	_flavour.unique_name_in_owner = true
 	_body_col.add_child(_art_label)
 	_art_label.owner = self
 	_art_label.unique_name_in_owner = true
@@ -94,7 +117,7 @@ func _ready() -> void:
 
 ## info: {view (CardView Dictionary, {} = no card), title, type, text, keywords: [{name, text}],
 ## status, banner (unit entry for the 512x128 banner), banner_back (bool: a face-down back),
-## side (0 you / 1 rival), art_line}.
+## side (0 you / 1 rival), art_line, stats (kc-text: "2 Supply · 3 FP · 4 Armor"), flavour}.
 func open(info: Dictionary) -> void:
 	var view: Dictionary = info.get("view", {})
 	_holder.visible = not view.is_empty()
@@ -120,26 +143,54 @@ func open(info: Dictionary) -> void:
 	var art_line: String = String(info.get("art_line", ""))
 	_title.text = String(info.get("title", ""))
 	_type.text = String(info.get("type", "")).to_upper()
-	_rules.text = String(info.get("text", ""))
-	_rules.visible = not _rules.text.is_empty()
+	var stats: String = String(info.get("stats", ""))
+	IconText.fill(_stats, stats, ICON_PX, PaperSheet.INK_MUTED, true)
+	_stats.visible = stats != ""
+	var rules: String = String(info.get("text", ""))
+	IconText.fill(_rules, rules, ICON_PX, PaperSheet.INK, true)
+	_rules.visible = rules != ""
 	for child: Node in _keywords.get_children():
 		_keywords.remove_child(child)
 		child.queue_free()
 	for k: Dictionary in info.get("keywords", []):
+		var id: StringName = StringName(String(k.get("id", "")))
+		# kc-text: the keyword's own icon leads its name (the same icon as on the card).
+		var row: HBoxContainer = HBoxContainer.new()
+		row.name = "KeywordRow"
+		row.add_theme_constant_override(&"separation", 6)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var concept: StringName = _concept_of_keyword(id)
+		var tex: Texture2D = IconText.texture(concept) if concept != &"" else null
+		if tex != null:
+			var ic: TextureRect = TextureRect.new()
+			ic.name = "KeywordIcon"
+			ic.texture = tex
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.custom_minimum_size = Vector2(22, 22)
+			ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			ic.modulate = IconText.color(concept, PaperSheet.INK_BRASS).darkened(0.35) \
+					if IconText.color(concept, PaperSheet.INK_BRASS) != PaperSheet.INK_BRASS else PaperSheet.INK_BRASS
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(ic)
 		var name_label: Label = Label.new()
 		name_label.theme_type_variation = &"KeywordName"
 		name_label.text = String(k.get("name", ""))
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		PaperSheet.ink(name_label, PaperSheet.INK_BRASS)
-		_keywords.add_child(name_label)
-		_add_glossary_link(name_label, StringName(String(k.get("id", ""))))
-		var text_label: Label = Label.new()
-		text_label.text = String(k.get("text", ""))
-		text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		PaperSheet.ink(text_label)
+		row.add_child(name_label)
+		_keywords.add_child(row)
+		_add_glossary_link(name_label, id)
+		var text_label: RichTextLabel = _to_rich(null, "KeywordText")
+		IconText.fill(text_label, String(k.get("text", "")), ICON_PX, PaperSheet.INK, true, [concept])
 		_keywords.add_child(text_label)
 	_keywords.visible = _keywords.get_child_count() > 0
-	_status.text = String(info.get("status", ""))
-	_status.visible = not _status.text.is_empty()
+	var status: String = String(info.get("status", ""))
+	IconText.fill(_status, status, ICON_PX, PaperSheet.INK, true)
+	_status.visible = status != ""
+	var flavour: String = String(info.get("flavour", ""))
+	_flavour.text = flavour
+	_flavour.visible = flavour != ""
 	_art_label.text = art_line.to_upper()
 	_art_label.visible = art_line != ""
 	_art_label.tooltip_text = art_line
@@ -199,8 +250,10 @@ func _paper() -> void:
 	PaperSheet.ink(_title)
 	_title.add_theme_font_override(&"font", PaperSheet.head_font())
 	PaperSheet.ink(_type, PaperSheet.INK_MUTED)
-	PaperSheet.ink(_rules)
-	PaperSheet.ink(_status)
+	_rules.add_theme_color_override(&"default_color", PaperSheet.INK)
+	_status.add_theme_color_override(&"default_color", PaperSheet.INK)
+	_stats.add_theme_color_override(&"default_color", PaperSheet.INK_MUTED)
+	PaperSheet.ink(_flavour, PaperSheet.INK_MUTED)
 	PaperSheet.ink(_art_label, PaperSheet.INK_MUTED)
 
 
@@ -299,3 +352,35 @@ func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed(&"cancel"):
 		get_viewport().set_input_as_handled()
 		close()
+
+
+## kc-text: an IconText label in place of the scene's Label `old` (same name, unique name, theme
+## variation's font and size), or a new one named `nm` when `old` is null.
+func _to_rich(old: Label, nm: String = "") -> RichTextLabel:
+	var r: RichTextLabel = RichTextLabel.new()
+	IconText.setup(r)
+	r.name = nm if old == null else String(old.name)
+	var font: Font = old.get_theme_font(&"font") if old != null else get_theme_font(&"font", &"Label")
+	var fsize: int = old.get_theme_font_size(&"font_size") if old != null else get_theme_font_size(&"font_size", &"Label")
+	r.add_theme_font_override(&"normal_font", font)
+	r.add_theme_font_size_override(&"normal_font_size", fsize)
+	if old != null:
+		var parent: Node = old.get_parent()
+		var idx: int = old.get_index()
+		parent.remove_child(old)
+		old.queue_free()
+		parent.add_child(r)
+		parent.move_child(r, idx)
+		r.owner = self
+		r.unique_name_in_owner = true
+	return r
+
+
+## The IconText concept of an inspector keyword line id (&"" when it has no icon).
+static func _concept_of_keyword(id: StringName) -> StringName:
+	match id:
+		&"arrives_front":
+			return &"front_line"
+		&"cover", &"first_shot", &"pick", &"flank", &"pierce", &"suppress", &"patch", &"holder", &"on_deploy", &"on_down", &"hidden":
+			return id
+	return &""

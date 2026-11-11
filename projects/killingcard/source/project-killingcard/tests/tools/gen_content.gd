@@ -97,7 +97,7 @@ func _gen() -> void:
 	var T := DataEnums.Trigger; var K := DataEnums.EffectKind; var TG := DataEnums.Target; var Z := DataEnums.ZoneScope; var C := DataEnums.Condition; var W := DataEnums.WeaponClass
 
 	# --- Token -------------------------------------------------------------
-	var sentry := unit("sentry", "Sentry", W.NONE, 0, 2, 4, "Cover 1. Ignored for control; no elimination credit for destroying it.",
+	var sentry := unit("sentry", "Sentry", W.NONE, 0, 2, 4, "Cover 1. Doesn't hold columns. Gives no streak when eliminated.",
 		{"cover": 1, "collectible": false, "counts_for_control": false, "grants_elimination_credit": false})
 
 	# --- Starter card set (core-rules §5, 20 designs) -------------------------
@@ -108,7 +108,7 @@ func _gen() -> void:
 	# card_trait) and the Brawler / Smoke Screen / Blackout / Sabotage chassis were added to the
 	# .tres files directly (synergy-system.md §6.1); this generator predates them.
 	var recon_spec := unit("recon_specialist", "Recon Specialist", W.AR, 2, 2, 3,
-		"On Deploy: next round, enemy red dots in this zone are revealed.", {},
+		"On Deploy: next round, reveal incoming enemy cards here.", {},
 		[fx(T.ON_DEPLOY, K.REVEAL_RED_DOTS, TG.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
 	var breacher := unit("breacher", "Breacher", W.SHOTGUN, 3, 3, 4, "First Shot", {"first_shot": true})
 	var marksman := unit("marksman", "Marksman", W.SNIPER, 3, 2, 2, "Pick", {"pick": true})
@@ -116,32 +116,32 @@ func _gen() -> void:
 	# kc-fight-impl (firefight-order.md §6.2): Protector cost 3 -> 4 and no Guard; Pierce on the LMG
 	# units (Gunner, Demolitions Expert; head's answer O3). The .tres files were edited directly.
 	var shieldman := unit("shieldman", "Protector", W.NONE, 4, 1, 5,
-		"Cover 1. Slides to the front of its column on arrival.", {"cover": 1, "arrives_front": true})
+		"Cover 1. Front line.", {"cover": 1, "arrives_front": true})
 	var gunner := unit("gunner", "Gunner", W.LMG, 4, 2, 6, "Suppress. Pierce", {"suppress": true, "pierce": true})
 	var demo := unit("demolitions_expert", "Demolitions Expert", W.LMG, 4, 2, 4,
-		"Pierce. On Down: 3 damage to the enemy point man here.", {"pierce": true},
+		"Pierce. On Down: deal 3 damage to the enemy front unit here.", {"pierce": true},
 		[fx(T.ON_DOWN, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.THIS_ZONE, 3)])
 	var anvil := unit("okafor_anvil", "Commander", W.AR, 5, 3, 6,
 		"Holder. Your other units here get +1 FP.", {"is_elite": true, "holder": true},
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.OTHER_FRIENDLIES, Z.THIS_ZONE, 1)])
 	var wren := unit("halek_wren", "Ace", W.SNIPER, 5, 4, 3,
-		"Pick. Its eliminations give +1 extra streak.", {"is_elite": true, "pick": true},
+		"Pick. Its eliminations give +1 streak.", {"is_elite": true, "pick": true},
 		[fx(T.ON_ELIMINATE, K.STREAK_BONUS, TG.OWNER, Z.ANY, 1)])
 	var callout := card("callout", "Callout", DataEnums.CardType.TACTIC, 0,
-		"Resolves immediately: reveal red dots in a zone; your first unit to arrive there gets +1 FP.",
+		"Resolves immediately: reveal incoming enemy cards in a column. Your first unit to arrive there gets +1 FP.",
 		[fx(T.IMMEDIATE, K.REVEAL_RED_DOTS, TG.OWNER, Z.CHOSEN_ZONE),
 		 fx(T.IMMEDIATE, K.MODIFY_FIREPOWER, TG.NEXT_FRIENDLY_ARRIVING, Z.CHOSEN_ZONE, 1, {"duration_rounds": 1})])
 	var ammo := card("ammo_resupply", "Ammo Resupply", DataEnums.CardType.TACTIC, 1, "Resolves immediately: draw 2.",
 		[fx(T.IMMEDIATE, K.DRAW, TG.OWNER, Z.ANY, 2)])
 	var flank_route := card("flank_route", "Flank Route", DataEnums.CardType.TACTIC, 1,
-		"Move a friendly unit to an adjacent zone; it gains First Shot this round.",
+		"Move your unit to an adjacent column. It gets First Shot this round.",
 		[fx(T.ON_PLAY, K.MOVE_UNIT, TG.CHOSEN_FRIENDLY, Z.ADJACENT_ZONE),
 		 fx(T.ON_PLAY, K.GRANT_FIRST_SHOT, TG.CHOSEN_FRIENDLY, Z.ANY, 0, {"duration_rounds": 1})])
 	var supp_fire := card("suppressing_fire", "Suppressing Fire", DataEnums.CardType.TACTIC, 2,
-		"Enemy units in a zone get -1 FP this round.",
+		"Enemy units in a column get -1 FP this round.",
 		[fx(T.ON_PLAY, K.MODIFY_FIREPOWER, TG.ALL_ENEMIES, Z.CHOSEN_ZONE, -1, {"duration_rounds": 1})])
 	var hold := card("hold_the_line", "Hold the Line", DataEnums.CardType.TACTIC, 2,
-		"Your units in a zone gain Cover 1 this round.",
+		"Your units in a column get Cover 1 this round.",
 		[fx(T.ON_PLAY, K.GRANT_COVER, TG.ALL_FRIENDLIES, Z.CHOSEN_ZONE, 1, {"duration_rounds": 1})])
 	var bac := card("breach_and_clear", "Breach and Clear", DataEnums.CardType.TACTIC, 3,
 		"2 damage to each enemy unit in a zone (3 if Close).",
@@ -149,29 +149,29 @@ func _gen() -> void:
 	# --- Fields (CardType.EQUIPMENT; KillingCard field-cards.md §4, kc-field-impl) ---------
 	var FIELD: int = DataEnums.CARD_TYPE_FIELD
 	var tripwire := card("tripwire_charge", "Tripwire Charge", FIELD, 2,
-		"Hidden. The next enemy unit to arrive in this column takes 3 damage. Then it's gone.",
+		"Hidden. The next enemy unit to arrive here takes 3 damage. Then it's gone.",
 		[fx(T.ON_ENEMY_ARRIVE, K.DAMAGE, TG.ARRIVING_ENEMY, Z.THIS_ZONE, 3)],
 		{"hidden": true, "consumed_on_trigger": true})
 	var comms := card("comms_relay", "Comms Relay", FIELD, 2,
-		"While you control this column: streak +1 at end of round.",
+		"End of round: if you control this column, streak +1.",
 		[fx(T.END_OF_ROUND, K.STREAK_BONUS, TG.OWNER, Z.THIS_ZONE, 1, {"condition": C.YOU_CONTROL_ZONE})])
 	var listening_post := card("listening_post", "Listening Post", FIELD, 1,
-		"Each round, enemy red dots in this column are revealed to you.",
+		"Each round: reveal incoming enemy cards in this column.",
 		[fx(T.END_OF_ROUND, K.REVEAL_RED_DOTS, TG.OWNER, Z.THIS_ZONE, 0, {"delay_rounds": 1, "duration_rounds": 1})])
 	var mortar_pit := card("mortar_pit", "Mortar Pit", FIELD, 3,
-		"At end of round: 1 damage to the enemy frontline unit in this column.",
+		"End of round: deal 1 damage to the enemy front unit here.",
 		[fx(T.END_OF_ROUND, K.DAMAGE, TG.ENEMY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var bulwark := card("bulwark", "Bulwark", FIELD, 3,
-		"Your frontline unit in this column has Cover 1.",
+		"Your front unit here gets Cover 1.",
 		[fx(T.PASSIVE, K.GRANT_COVER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var war_standard := card("war_standard", "War Standard", FIELD, 3,
-		"Your frontline unit in this column gets +1 FP.",
+		"Your front unit here gets +1 FP.",
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.FRIENDLY_POINT_MAN, Z.THIS_ZONE, 1)])
 	var sniper_perch := card("sniper_perch", "Sniper Perch", FIELD, 2,
-		"Your Sniper units in this column get +1 FP.",
+		"Your Sniper units here get +1 FP.",
 		[fx(T.PASSIVE, K.MODIFY_FIREPOWER, TG.ALL_FRIENDLIES, Z.THIS_ZONE, 1, {"target_class": W.SNIPER})])
 	var aid_station := card("aid_station", "Aid Station", FIELD, 2,
-		"At end of round: your most damaged unit in this column heals 1.",
+		"End of round: your most damaged unit here heals 1 Armor.",
 		[fx(T.END_OF_ROUND, K.HEAL, TG.MOST_DAMAGED_FRIENDLY, Z.THIS_ZONE, 1)])
 
 	# --- Loadout -------------------------------------------------------------

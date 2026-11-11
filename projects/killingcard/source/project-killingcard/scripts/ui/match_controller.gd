@@ -1773,9 +1773,8 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 		extra_lines: Array[Dictionary] = []) -> void:
 	var type_text: String = String(CardInfo.TYPE_WORDS.get(card.card_type, "card"))
 	# kc-ipad-cards (the head: "leave out the gun type"): the weapon class is never shown.
-	if card.is_unit():
-		type_text += " · FP %d · Armor %d" % [card.firepower, card.armor]
-	type_text += " · cost %d" % card.cost
+	# kc-text: cost and stats get their own icon line under the type (name > type > stats > rule).
+	var stats: String = stats_line(card)
 	var keywords: Array[Dictionary] = CardInfo.keywords(card)
 	var printed: Array[Dictionary] = keywords.duplicate()
 	keywords.append_array(extra_lines)
@@ -1783,7 +1782,8 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	var names: PackedStringArray = []
 	for k: Dictionary in printed:
 		names.append(String(k["name"]).to_lower())
-	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else card.text
+	# kc-text: and a sentence that only names a keyword ("Pick. Its eliminations...") drops that sentence.
+	var text: String = "" if card.text.to_lower().trim_suffix(".") == ", ".join(names) else rules_without_keywords(card.text, names)
 	if banner.is_empty():
 		banner = {"name": card.display_name, "fp": card.firepower, "armor": card.armor, "armor_max": card.armor,
 				"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(),
@@ -1813,14 +1813,37 @@ func open_card_inspector(card: CardData, side: String, status: String, banner: D
 	_screen.get_inspector().open({
 		"view": view, "title": card.display_name,
 		"type": ("%s · %s" % [sub, type_text]) if sub != "" else type_text,
-		"text": text, "keywords": keywords, "status": status,
+		"text": text, "keywords": keywords, "status": status, "stats": stats,
+		"flavour": CardLore.flavour(card.id, card.is_unit() and card.text == "" and printed.is_empty(), card.standard_issue),
 		"banner": banner, "side": banner_side if banner_side >= 0 else (me_side if side == "friend" else foe_side),
 		"art_line": _art_line(art), "is_unit": card.is_unit(),
 	})
 
 
 ## Plain-words Overrun rule (the head asked "What is overrun again?"), shown on every Field.
-const FIELD_RULE: String = "Overrun: at the end of each round, if the enemy controls this column, this Field is destroyed (hidden traps are exempt)."
+const FIELD_RULE: String = "Overrun: destroyed at end of round if the enemy controls this column."
+
+
+## kc-text: "2 Supply · 3 FP · 4 Armor" (a tactic: "1 Supply"); IconText adds the icons.
+static func stats_line(card: CardData) -> String:
+	var parts: PackedStringArray = ["%d Supply" % card.cost]
+	if card.is_unit():
+		parts.append("%d FP" % card.firepower)
+		parts.append("%d Armor" % card.armor)
+	return " · ".join(parts)
+
+
+## kc-text: the rules text minus sentences that only name a keyword already on its own line.
+static func rules_without_keywords(text: String, names: PackedStringArray) -> String:
+	var kept: PackedStringArray = []
+	for sentence: String in text.split(". ", false):
+		var bare: String = sentence.strip_edges().trim_suffix(".")
+		if names.has(bare.to_lower()):
+			continue
+		kept.append(bare)
+	if kept.is_empty():
+		return ""
+	return ". ".join(kept) + "."
 
 
 ## "Art: Marksman (placeholder from Killstreak art) · alternate art 1 of 1" for the inspector.

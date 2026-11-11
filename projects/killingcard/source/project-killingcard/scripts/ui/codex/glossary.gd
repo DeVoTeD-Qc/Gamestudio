@@ -64,7 +64,7 @@ static func entries() -> Array[Dictionary]:
 	for id: StringName in CardInfo.KEYWORD_RULES:
 		var row: Array = CardInfo.KEYWORD_RULES[id]
 		var nm: String = String(row[0]).replace(" %d", " N").replace("%d", "N")
-		var tx: String = String(row[1]).replace("%d", "N")
+		var tx: String = String(row[2]).replace("%d", "N")  # kc-text: the full rule lives here only
 		out.append(_entry(id, &"keyword", nm, tx))
 	# kc-deck-match: Tactic and Field side by side, each with its own type icon.
 	out.append(_entry(&"tactic", &"keyword", CardInfo.GLOSSARY_EXTRA[&"tactic"][0], CardInfo.GLOSSARY_EXTRA[&"tactic"][1]))
