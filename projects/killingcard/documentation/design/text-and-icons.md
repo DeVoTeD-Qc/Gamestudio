@@ -78,19 +78,20 @@ colour (Supply amber, FP teal, Armor steel); keyword icons take the ink of the t
 | REQ | REQ, Requisition | requisition slip (built-in `svg:req`, brass) | REQ chip (map, shop, rewards), every run-screen button that names REQ (BUY · 4 REQ, NEED 4 REQ, MUSTER OUT, DISCHARGE, RESTOCK, PERK), REQ inspector, glossary |
 | Tickets | Ticket(s), Reinforcement Tickets | ticket `tickets` (brass) | in front of the ticket pips (map, event, rest, after-action), rest and event texts in the inspector, glossary |
 | First Shot | First Shot | `kw_first_shot` | card keyword line, board icons, inspector, rules text, glossary |
-| Pick | Pick | `kw_pick` (shield with down arrow) | same as First Shot |
+| Pick | Pick | `kw_pick` (lock-on brackets around a dot; kc-layout-a: no longer Armor's shield) | same as First Shot |
 | Flank | Flank | `kw_flank` | same |
-| Pierce | Pierce | `kw_pierce` | same |
+| Pierce | Pierce | an arrow through a plate (built-in `svg:pierce`, kc-layout-a) | same |
+| Agile | Agile | a double arrow (built-in `svg:agile`, kc-layout-a) | same |
 | Suppress | Suppress | `kw_suppress` | same |
 | Patch | Patch | `kw_patch` | same |
 | Holder | Holder | `kw_holder` | same |
 | On Deploy | On Deploy | `trig_on_deploy` | same |
 | On Down | On Down | `trig_on_down` | same |
 | Hidden | Hidden | `kw_hidden` | Field rules text, inspector, glossary |
-| Front line | Front line | chevron over a bar (built-in `svg:front`, the card face's chevron) | card keyword line, inspector, glossary |
+| Front line | Front line | an arrow up to a bar (built-in `svg:front`, the card face's glyph; kc-layout-a) | card keyword line, inspector, glossary |
 | Overrun | Overrun | `overrun` | Field inspector rule line, glossary |
 
-Not inline (no icon art yet, or the word is too common to tag): Agile, Beam, End of round (their
+Not inline (no icon art yet, or the word is too common to tag): Beam, End of round (their
 glossary rows draw a glyph), Tactic and Field (type icons on the card frame only), Incoming (the
 red dot + INCOMING back on the board).
 

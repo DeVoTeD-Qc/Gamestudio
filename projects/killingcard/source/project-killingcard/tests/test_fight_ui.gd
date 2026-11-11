@@ -361,14 +361,19 @@ func test_phone_strip_folds_rival_into_score() -> void:
 			var chip: Control = m.get_initiative_chip()
 			var holder: Control = chip if chip.visible else rail
 			assert_true(holder.size.y >= badge_h, "%s the %s has a full badge slot (%.0f >= %.0f px)" % [label, holder.name, holder.size.y, badge_h])
-			assert_true(m.get_badge(&"preview").position.y < rail.position.y, "%s PREVIEW sits above the rail" % label)
+			if not m.metrics.has("rail_tray"):
+				assert_true(m.get_badge(&"preview").position.y < rail.position.y, "%s PREVIEW sits above the rail" % label)
 			m.toggle_flyout(&"score")
 			await _frames(2)
 			assert_true(m.get_node("%Minimap").is_visible_in_tree() and m.get_node("%ScoreBar").is_visible_in_tree(),
 					"%s SCORE flyout holds the score and the rival intel" % label)
 			m.close_flyout()
 			var strip_r: Rect2 = m.get_badge(&"deck").get_parent().get_global_rect().grow(0.6)
-			assert_true(strip_r.encloses(rail.get_global_rect()), "%s rail inside the strip" % label)
+			if m.metrics.has("rail_tray"):
+				# kc-layout-a: the phone's sets rail sits in the tray's top row (the sockets took the strip).
+				assert_true(m.get_tray().get_global_rect().grow(0.6).encloses(rail.get_global_rect()), "%s rail in the tray's top row" % label)
+			else:
+				assert_true(strip_r.encloses(rail.get_global_rect()), "%s rail inside the strip" % label)
 		else:
 			assert_false(score.get_text().contains(" %d" % hand_n) and score.get_text().count(" ") > 1, "%s SCORE keeps two lines" % label)
 		_despawn(vp)
