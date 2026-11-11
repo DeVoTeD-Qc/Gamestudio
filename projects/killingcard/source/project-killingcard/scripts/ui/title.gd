@@ -32,11 +32,15 @@ var _key_art_scale: float = 0.0
 const TitleWordmark: GDScript = preload("res://scripts/ui/title_wordmark.gd")
 const CodexViewScript: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 ## kc-da-ui2: the Operator showcase card width (desktop / phone landscape).
-const SHOWCASE_W: float = 400.0
-const SHOWCASE_W_COMPACT: float = 280.0
+## kc-da-ui3 (head D3): smaller and turned, next to the column.
+const SHOWCASE_W: float = 300.0
+const SHOWCASE_W_COMPACT: float = 210.0
+const SHOWCASE_TILT: float = -4.0
+const SHOWCASE_GAP: float = 36.0
 const BRASS: Color = Color("#C9A227")
 var _wordmark_art: Control = null
 var _showcase: VBoxContainer = null
+var _showcase_tilt: Control = null
 var _showcase_card: CardView = null
 var _showcase_item: LoadoutItem = null
 
@@ -159,19 +163,27 @@ func _build_showcase() -> void:
 	if _showcase_item == null:
 		return
 	var center: Container = _column.get_parent() as Container
-	var spacer: Control = Control.new()
-	spacer.name = "ShowcaseGap"
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(spacer)
+	# kc-da-ui3 (head D3): the card sits close to the menu column, smaller and turned a little, so the
+	# key art's soldier on the right stays in view. Containers reset rotation, so the column of
+	# caption + card + band turns inside a plain Control (ShowcaseTilt).
+	var gap: Control = Control.new()
+	gap.name = "ShowcaseGap"
+	gap.custom_minimum_size = Vector2(SHOWCASE_GAP, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(gap)
+	_showcase_tilt = Control.new()
+	_showcase_tilt.name = "ShowcaseTilt"
+	_showcase_tilt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_showcase_tilt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(_showcase_tilt)
 	_showcase = VBoxContainer.new()
 	_showcase.name = "Showcase"
-	_showcase.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_showcase.add_theme_constant_override(&"separation", 6)
-	center.add_child(_showcase)
+	_showcase.rotation_degrees = SHOWCASE_TILT
+	_showcase_tilt.add_child(_showcase)
 	var right: Control = Control.new()
 	right.name = "ShowcaseRight"
-	right.custom_minimum_size = Vector2(24, 0)
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(right)
 	var cap: Label = make_label("YOUR OPERATOR", &"HudTag")
@@ -235,17 +247,25 @@ func _fit_showcase() -> void:
 	var room_h: float = size.y - 80.0
 	while w > 200.0 and CardView.height_for(w) + 56.0 > room_h:
 		w -= 20.0
-	# Width left beside the column (left gap, a 24 px gutter, the right gap, the safe margins).
-	var fit_w: float = size.x - (_column.get_combined_minimum_size().x + 40.0 + 24.0 + 24.0 + 40.0)
+	# Width left beside the column (left gap, the showcase gap, room for the turn, the safe margins).
+	var fit_w: float = size.x - (_column.get_combined_minimum_size().x + 40.0 + SHOWCASE_GAP + 24.0 + 40.0)
 	w = minf(w, floorf(fit_w))
-	_showcase.visible = w >= 200.0 and size.x > size.y
-	w = maxf(w, 200.0)
+	var on: bool = w >= 180.0 and size.x > size.y
+	w = maxf(w, 180.0)
 	_showcase_card.set_card_width(w)
 	var holder: Control = _showcase_card.get_parent() as Control
 	holder.custom_minimum_size = CardView.size_for(w)
-	var gap: Node = _showcase.get_parent().get_node_or_null(^"ShowcaseGap")
+	_showcase.size = _showcase.get_combined_minimum_size()
+	_showcase.pivot_offset = _showcase.size * 0.5
+	# The turned column needs a little more room than its own box (sin 4 deg of each side).
+	var lift: Vector2 = Vector2(_showcase.size.y, _showcase.size.x) * 0.07
+	_showcase.position = lift
+	_showcase_tilt.custom_minimum_size = _showcase.size + lift * 2.0
+	_showcase_tilt.visible = on
+	_showcase.visible = on
+	var gap: Node = _showcase_tilt.get_parent().get_node_or_null(^"ShowcaseGap")
 	if gap != null:
-		(gap as Control).visible = _showcase.visible
+		(gap as Control).visible = on
 
 
 ## kc-da-ui: the drill invite's frame: a gunmetal plate with a steel rim (art direction §4).

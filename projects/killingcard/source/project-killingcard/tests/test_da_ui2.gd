@@ -286,7 +286,12 @@ func test_title_lockup_and_equipped_operator() -> void:
 		assert_not_null(card, "%s: the equipped Operator shown" % sz)
 		if card != null:
 			assert_eq(String(card.data.get("type", "")), "operator", "%s: an Operator card" % sz)
-			assert_true(card.get_global_rect().size.x >= 260.0, "%s: shown large (%.0f px)" % [sz, card.get_global_rect().size.x])
+			# kc-da-ui3 (head D3): smaller and turned a little, beside the menu column.
+			var cw: float = card.get_global_rect().size.x
+			assert_true(cw >= 180.0 and cw <= 320.0, "%s: a mid-size card (%.0f px)" % [sz, cw])
+			assert_true(absf(title.get_node("%Column").get_parent().find_child("Showcase", true, false).rotation_degrees) > 2.0, "%s: turned" % sz)
+			var col_r: Rect2 = (title.get_node("%Column") as Control).get_global_rect()
+			assert_true(card.get_global_rect().position.x - col_r.end.x < 120.0, "%s: next to the column, clear of the key art's soldier" % sz)
 			assert_true(Rect2(Vector2.ZERO, sz).encloses(card.get_global_rect()), "%s: on screen" % sz)
 			assert_true(bool(card.get_parent().get_meta(&"inspectable", false)), "%s: inspectable" % sz)
 			title.open_showcase_inspector()

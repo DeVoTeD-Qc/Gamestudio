@@ -83,6 +83,14 @@ func _run() -> void:
 		if DuelViews.needs_unlock(c):
 			DuelViews.owned_override[c.id] = c.id == &"mortar_pit"
 	DuelViews.owned_override[&"okafor_anvil"] = true
+	# kc-da-ui3: `-- <out> <prefix> <only> demo` shows a fresh profile with the demo collection instead.
+	if args.size() > 3 and args[3] == "demo":
+		DuelViews.owned_override.clear()
+		var st: Node = root.get_node("Settings")
+		st.persist = false
+		st.run_profile = RunProfile.blank()
+		st.found_arts = {}
+		root.get_node("RunState").apply_demo_collection()
 	DuelViews.save_deck(_sample_deck(10))
 	var part: Dictionary = _sample_deck(8)
 	part["name"] = "Night shift"

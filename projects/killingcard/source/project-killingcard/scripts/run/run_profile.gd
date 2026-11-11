@@ -6,6 +6,8 @@
 #   kc-duel-impl: versioned (PROFILE_VERSION 2). v2 adds the Duel keys: found_cards (card ids met in a
 #   campaign run: the Duel collection, D3), duel_decks (up to 8 saved DuelDeck dicts) and duel_records
 #   (DuelProfile). A v1 profile (no "version") migrates by keeping every value and adding the new keys.
+#   kc-da-ui3: demo_seeded (int, 0 = not yet) is the DemoCollection version merged into found_cards;
+#   older profiles read 0 and get the demo merged once, keeping everything they had.
 #   Unlock ids (LoadoutItem.unlock, RunMatchData.unlock, RunModifiers.TABLE[].unlock):
 #     ""                  from the start (Kestrel, Meridian_Six)
 #     first_run_done      a run ended (win or lose): Longreach .338, Bulwark Prime
@@ -36,7 +38,8 @@ const PROFILE_VERSION: int = 2
 static func blank() -> Dictionary:
 	return {"runs_finished": 0, "run_wins": 0, "boss_reached": 0, "boss_wins": {}, "operator_wins": [],
 			"hardcore_wins": 0, "best_threat": -1, "terrains_seen": [], "events_seen": [], "bosses_seen": [],
-			"last_boss": "", "version": PROFILE_VERSION, "found_cards": [], "duel_decks": [], "duel_records": {}}
+			"last_boss": "", "version": PROFILE_VERSION, "found_cards": [], "duel_decks": [], "duel_records": {},
+			"demo_seeded": 0}
 
 
 ## kc-duel-impl: the version a stored profile was written with (1 when it has none).

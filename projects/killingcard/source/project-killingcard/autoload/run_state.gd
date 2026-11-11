@@ -67,6 +67,33 @@ var _session_start_ms: int = 0
 
 func _ready() -> void:
 	_config()
+	# kc-da-ui3: the prototype's demo collection, once per profile, in the running game only (headless
+	# tests start from a blank profile and call apply_demo_collection() themselves).
+	if DisplayServer.get_name() != "headless":
+		apply_demo_collection.call_deferred()
+
+
+## kc-da-ui3 (head D2): merges the demo collection (DemoCollection.pick: every starter card plus a few
+## dozen cards and alt arts) into the profile when RunConfig.demo_collection is on and this profile
+## has not taken this demo version yet. Cards and arts are only ever added: real progress stays and
+## keeps adding on top. Returns true when something was merged.
+func apply_demo_collection() -> bool:
+	var cfg: RunConfig = _config()
+	if cfg == null or not cfg.demo_collection:
+		return false
+	var Demo: GDScript = load("res://scripts/run/demo_collection.gd")
+	var p: Dictionary = profile()
+	if int(p.get("demo_seeded", 0)) >= int(Demo.DEMO_VERSION):
+		return false
+	var db: Node = get_node_or_null(^"/root/CardDB")
+	var demo: Dictionary = Demo.pick(cfg, db.all_cards() if db != null else [])
+	p = RunProfile.add_found_cards(p, demo["cards"])
+	p["demo_seeded"] = int(Demo.DEMO_VERSION)
+	_save_profile(p)
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null and st.has_method(&"mark_found"):
+		st.mark_found(demo["arts"])
+	return true
 
 
 # =============================================================================

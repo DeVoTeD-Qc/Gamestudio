@@ -103,6 +103,11 @@ extends Resource
 ## Columns that start with a Mortar Pit for Bulwark Prime (0 = A, 1 = B, 2 = C).
 @export var prime_pit_zones: PackedInt32Array = PackedInt32Array([0, 1, 2])
 
+## kc-da-ui3 (head D2): prototype switch. On, a profile gets the demo collection once (every starter
+## card plus a few dozen unlocked cards and alt arts: scripts/run/demo_collection.gd), so the Codex,
+## the Duel builder and the finishes look like a mid-progress player's. Real progress adds on top.
+@export var demo_collection: bool = true
+
 @export_group("Starter kit")
 ## Exactly deck_size card references (copies = repeated entries).
 @export var starter_deck: Array[CardData] = []

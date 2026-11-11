@@ -270,7 +270,8 @@ static func is_found(e: Dictionary, art: StringName) -> bool:
 
 
 ## kc-da-ui2: True when the player owns the card: every killstreak, the campaign starter deck, and
-## every card a run has shown (RunProfile found_cards: taken or offered).
+## every card a run has shown (RunProfile found_cards: taken or offered). kc-da-ui3: and every card
+## usable in a Duel (DuelCollection.is_unlocked; the demo collection fills found_cards).
 static func is_owned(e: Dictionary) -> bool:
 	if e.get("kind", &"") == &"killstreak":
 		return true
@@ -285,6 +286,10 @@ static func is_owned(e: Dictionary) -> bool:
 			if c != null and String(c.id) == id:
 				return true
 	var p: Dictionary = rs.call(&"profile") if rs.has_method(&"profile") else {}
+	# kc-da-ui3 (head D2): every card you can use in a Duel is owned too.
+	var card: CardData = e.get("card") as CardData
+	if card != null and DuelCollection.is_unlocked(card, p):
+		return true
 	return id in (p.get("found_cards", []) as Array)
 
 
