@@ -398,6 +398,45 @@ func test_codex_filters_and_met_tracking() -> void:
 			check(bool((e5 as Dictionary)["met"]) and not str(v5.payload.get("t1", "")).begins_with("???"), tag + " met only: met entries, named")
 			check(_inside(m, v5) or v5.global_position.y > 0, tag + " tile within the width")
 		cx.call("set_filters", "all", "any", false)
+		# dd-art-fit: Show all reveals every entry without marking it met; the filters still work
+		var met_before: int = 0
+		for ek: Variant in cx.call("entries", bal()):
+			if prof.codex_met(str((ek as Dictionary)["key"])):
+				met_before += 1
+		var sa: Button = cx.find_child("ShowAll", true, false)
+		check(sa != null and sa.text == "Show all" and sa.size.y >= 63.5 and _inside(m, sa), tag + " a Show all chip on screen")
+		sa.pressed.emit()
+		await _settle()
+		await _settle()
+		check(bool(cx.get("show_all")), tag + " Show all is on")
+		var rev: Array = cx.get("shown")
+		eq(rev.size(), total, tag + " Show all: every entry")
+		for e6: Variant in rev:
+			var v6: DDCardView = (e6 as Dictionary)["view"]
+			check(bool((e6 as Dictionary)["revealed"]) and not str(v6.payload.get("t1", "")).begins_with("???"), tag + " Show all: named")
+			if v6.art_rect != null:
+				check(v6.art_rect.self_modulate.v > 0.5, tag + " Show all: art in full")
+		var after_n: int = 0
+		for ek2: Variant in cx.call("entries", bal()):
+			if prof.codex_met(str((ek2 as Dictionary)["key"])):
+				after_n += 1
+		eq(after_n, met_before, tag + " Show all marks nothing met")
+		cx.call("set_filters", "guns", "any", false)
+		await _settle()
+		for e7: Variant in cx.get("shown"):
+			check(str((e7 as Dictionary)["type"]) == "guns" and bool((e7 as Dictionary)["revealed"]), tag + " Show all + Guns filter")
+		var ha: Button = cx.find_child("ShowAll", true, false)
+		check(ha != null and ha.text == "Hide unmet", tag + " the chip now says Hide unmet")
+		cx.call("close")
+		cx.call("open_codex", bal(), prof)
+		await _settle()
+		check(bool(cx.get("show_all")), tag + " Show all is remembered for the session")
+		cx.call("set_show_all", false)
+		cx.call("set_filters", "all", "any", false)
+		await _settle()
+		for e8: Variant in cx.get("shown"):
+			if not bool((e8 as Dictionary)["met"]):
+				check(str(((e8 as Dictionary)["view"] as DDCardView).payload.get("t1", "")).begins_with("???"), tag + " Hide unmet: ??? again")
 		cx.call("close")
 		m.queue_free()
 		await tree.process_frame

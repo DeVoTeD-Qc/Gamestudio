@@ -48,8 +48,8 @@ var _corner_chip: Control = null
 var _row: bool = false
 ## dd-art-fit: a street zombie the active gun can take (a rim and glow in the gun's yellow).
 var _lit: bool = false
-## dd-ui6: the rule chip under the number badge (street zombies: can the active gun take it; street
-## guns: the gun's own rule). Its own tile, so right click / long press on it explains it.
+## dd-ui6: the rule chip under the number badge (street guns: the gun's own rule; dd-art-fit: no
+## longer on zombies, which are lit / dark instead). Its own tile, so right click / long press on it explains it.
 var rule_chip: DDCardView = null
 ## v2: the magazine pip bar (spec "pips": [rounds, magazine]), null when the tile has none.
 var pip_bar: Pips = null

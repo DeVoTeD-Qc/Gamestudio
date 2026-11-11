@@ -29,6 +29,10 @@ var mode: String = ""
 var f_type: String = "all"
 var f_dist: String = "any"
 var f_met: bool = false
+## dd-art-fit (head: review every card): "Show all" reveals every entry (art, name, numbers, rules)
+## without marking anything met (the profile's codex_met is untouched). Session only: this node
+## lives as long as the game, and the flag is never saved.
+var show_all: bool = false
 var _bal: DDBalance = null
 var _profile: DDProfile = null
 var _root: Control = null
@@ -278,6 +282,13 @@ func set_filters(t: String, d: String, met: bool) -> void:
 		_build_codex.call_deferred()
 
 
+## The Show all / Hide unmet toggle.
+func set_show_all(on: bool) -> void:
+	show_all = on
+	if mode == "codex":
+		_build_codex.call_deferred()
+
+
 func _build_codex() -> void:
 	var all: Array = entries(_bal)
 	var met_n: int = 0
@@ -302,6 +313,7 @@ func _build_codex() -> void:
 		var did: String = str((d as Dictionary).get("id", ""))
 		dists.add_child(_chip(str((d as Dictionary).get("name", "")), f_dist == did, func() -> void: set_filters(f_type, did, f_met), "Dist_" + did))
 	dists.add_child(_chip("Met only", f_met, func() -> void: set_filters(f_type, f_dist, not f_met), "MetOnly"))
+	dists.add_child(_chip("Hide unmet" if show_all else "Show all", show_all, func() -> void: set_show_all(not show_all), "ShowAll"))
 	var inner: VBoxContainer = _scroll(v)
 	var grid: GridContainer = GridContainer.new()
 	grid.name = "CodexGrid"
@@ -322,9 +334,9 @@ func _build_codex() -> void:
 			continue
 		if f_met and not met:
 			continue
-		var tile: DDCardView = _codex_tile(e, met, Vector2(tw, tw * 1.25))
+		var tile: DDCardView = _codex_tile(e, met or show_all, Vector2(tw, tw * 1.25))
 		grid.add_child(tile)
-		shown.append({"key": e["key"], "met": met, "type": e["type"], "view": tile})
+		shown.append({"key": e["key"], "met": met, "revealed": met or show_all, "type": e["type"], "view": tile})
 	if shown.is_empty():
 		inner.add_child(DDUi.label("Nothing here yet: meet it in a run.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 
