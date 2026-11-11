@@ -1,0 +1,708 @@
+{
+  "source": "../../dd-art-pack-2-ui-prompts.md",
+  "requested_count": 52,
+  "generated_count": 11,
+  "images": [
+    {
+      "batch": 1,
+      "number": 1,
+      "title": "Hit badge (weapons)",
+      "file": "dd_badge_hit.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "22781ad6445b7dca7b3bb5ea3b6df295856c2e32bb6312dbf6e981347bc087ab"
+    },
+    {
+      "batch": 1,
+      "number": 2,
+      "title": "Zombie strength badge, tier 1: Shambler (values 1-3)",
+      "file": "dd_badge_zombie_t1.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "c59f200c4337bf75f9fb2e0d412ff571bbe3057222ec33ac73ca03a68537a69a"
+    },
+    {
+      "batch": 1,
+      "number": 3,
+      "title": "Zombie strength badge, tier 2: Lurcher (values 4-6)",
+      "file": "dd_badge_zombie_t2.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "1132cdc9c2c2dc43701594d2b43b259350e0f7ba3334a0a900da19bf7c6239c6"
+    },
+    {
+      "batch": 1,
+      "number": 4,
+      "title": "Zombie strength badge, tier 3: Bruiser (values 7-9)",
+      "file": "dd_badge_zombie_t3.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "86e49815f400700ef676d88add35b7559751469976a51151d70f2103f1477a2d"
+    },
+    {
+      "batch": 1,
+      "number": 5,
+      "title": "Zombie strength badge, tier 4: Hulk (values 10+)",
+      "file": "dd_badge_zombie_t4.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "3b62657f888ebaec4ffe674ba3f8444dd06f273400d49d777e272b7cd5fc323e"
+    },
+    {
+      "batch": 1,
+      "number": 6,
+      "title": "Heal badge (medkits)",
+      "file": "dd_badge_heal.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "3bc3a24a53a9b1c24f7be29777048b83dcec4cb226ee3d9b2bdc0318abb7bc85"
+    },
+    {
+      "batch": 1,
+      "number": 7,
+      "title": "Cover badge",
+      "file": "dd_badge_cover.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "91fe6f225521e93bcb6030e9edbfa133e481fa1eb2f17510001d91687b6e984f"
+    },
+    {
+      "batch": 1,
+      "number": 8,
+      "title": "Neutral badge (bone ring)",
+      "file": "dd_badge_neutral.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        32,
+        992,
+        992
+      ],
+      "sha256": "47acf473c888797689b35eac76424246df4d0d51b28095b406742e754974e81c"
+    },
+    {
+      "batch": 1,
+      "number": 9,
+      "title": "Zombie strength pill (wide values)",
+      "file": "dd_pill_zombie.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        576
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        224,
+        1504,
+        800
+      ],
+      "sha256": "2ff2f219a18a86169cd44c2064a42a8cb1e0d5fb8a853c8d54c9e86ad8515603"
+    },
+    {
+      "batch": 1,
+      "number": 10,
+      "title": "Hit pill (wide values)",
+      "file": "dd_pill_hit.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        576
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        224,
+        1504,
+        800
+      ],
+      "sha256": "d4d29de10ef86abbefcc2c0c0dd9da5df78ec95b89f625dbbda50da263d9d5eb"
+    },
+    {
+      "batch": 1,
+      "number": 11,
+      "title": "Neutral pill (wide values)",
+      "file": "dd_pill_neutral.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        576
+      ],
+      "status": "generated",
+      "alpha_bbox": [
+        32,
+        224,
+        1504,
+        800
+      ],
+      "sha256": "82dc273554f9b997c78d80ea42cae3bc595eadbb72ff51bb7612c8c70098cb7d"
+    },
+    {
+      "batch": 2,
+      "number": 12,
+      "title": "Button Primary action, red: normal",
+      "file": "dd_btn_red_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 13,
+      "title": "Button Primary action, red: pressed",
+      "file": "dd_btn_red_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 14,
+      "title": "Button Secondary, dark steel: normal",
+      "file": "dd_btn_dark_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 15,
+      "title": "Button Secondary, dark steel: pressed",
+      "file": "dd_btn_dark_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 16,
+      "title": "Button Run / leave, rust: normal",
+      "file": "dd_btn_rust_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 17,
+      "title": "Button Run / leave, rust: pressed",
+      "file": "dd_btn_rust_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 18,
+      "title": "Button Go / continue, green: normal",
+      "file": "dd_btn_green_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 19,
+      "title": "Button Go / continue, green: pressed",
+      "file": "dd_btn_green_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 20,
+      "title": "Button Help, blue: normal",
+      "file": "dd_btn_blue_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 21,
+      "title": "Button Help, blue: pressed",
+      "file": "dd_btn_blue_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 22,
+      "title": "Button Shop row, indigo: normal",
+      "file": "dd_btn_indigo_normal.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 23,
+      "title": "Button Shop row, indigo: pressed",
+      "file": "dd_btn_indigo_pressed.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 2,
+      "number": 24,
+      "title": "Button: disabled (shared by every type)",
+      "file": "dd_btn_disabled.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 25,
+      "title": "Door price plate: can afford",
+      "file": "dd_plate_door_afford.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 26,
+      "title": "Door price plate: locked (cannot afford)",
+      "file": "dd_plate_door_locked.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 27,
+      "title": "Door plate: USE (open room)",
+      "file": "dd_plate_door_use.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 28,
+      "title": "Door plate: used",
+      "file": "dd_plate_door_used.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 29,
+      "title": "Full set plate: open",
+      "file": "dd_plate_fullset_open.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 30,
+      "title": "Full set plate: one kill to go",
+      "file": "dd_plate_fullset_near.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 31,
+      "title": "Full set plate: lit (full)",
+      "file": "dd_plate_fullset_lit.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 32,
+      "title": "Tag: yellow",
+      "file": "dd_tag_yellow.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 33,
+      "title": "Tag: red",
+      "file": "dd_tag_red.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 34,
+      "title": "Tag: bone",
+      "file": "dd_tag_bone.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 3,
+      "number": 35,
+      "title": "Tag: boss purple",
+      "file": "dd_tag_boss.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        512
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 36,
+      "title": "Bar track (empty)",
+      "file": "dd_bar_track.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        192
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 37,
+      "title": "Bar fill: green (HP above half)",
+      "file": "dd_bar_fill_green.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        192
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 38,
+      "title": "Bar fill: amber (HP below half)",
+      "file": "dd_bar_fill_amber.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        192
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 39,
+      "title": "Bar fill: red (HP below a quarter)",
+      "file": "dd_bar_fill_red.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        192
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 40,
+      "title": "Bar fill: gold (door progress)",
+      "file": "dd_bar_fill_gold.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        192
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 41,
+      "title": "Filter chip: on",
+      "file": "dd_chip_filter_on.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 4,
+      "number": 42,
+      "title": "Filter chip: off",
+      "file": "dd_chip_filter_off.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1408,
+        640
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 43,
+      "title": "Card frame rim (tintable)",
+      "file": "dd_frame_card_rim.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 44,
+      "title": "Card frame: selected",
+      "file": "dd_frame_card_selected.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 45,
+      "title": "Chip frame rim (tintable, small)",
+      "file": "dd_frame_chip_rim.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 46,
+      "title": "Panel: tooltip / inspect",
+      "file": "dd_panel_tooltip.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 47,
+      "title": "Panel: modal sheet",
+      "file": "dd_panel_modal.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 48,
+      "title": "Panel: overlay (Glossary / Codex)",
+      "file": "dd_panel_overlay.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 49,
+      "title": "Panel: HUD strip",
+      "file": "dd_panel_hud.png",
+      "size": "1024x1024",
+      "shape_size": [
+        960,
+        960
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 50,
+      "title": "Name bar (card bottom)",
+      "file": "dd_bar_name.png",
+      "size": "1536x1024",
+      "shape_size": [
+        1472,
+        320
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 51,
+      "title": "Kill socket: empty",
+      "file": "dd_socket_empty.png",
+      "size": "1024x1536",
+      "shape_size": [
+        896,
+        1344
+      ],
+      "status": "pending"
+    },
+    {
+      "batch": 5,
+      "number": 52,
+      "title": "Kill socket: next",
+      "file": "dd_socket_next.png",
+      "size": "1024x1536",
+      "shape_size": [
+        896,
+        1344
+      ],
+      "status": "pending"
+    }
+  ]
+}
