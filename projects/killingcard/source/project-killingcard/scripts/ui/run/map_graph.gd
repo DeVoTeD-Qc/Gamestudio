@@ -11,7 +11,13 @@
 #   Links: grey; the path you walked solid; the links you can take now amber.
 #   Input: tap = node_tapped (the screen selects it / steps on it), long press / right click =
 #   node_inspected (the full node: crew deck, mode, Terrain rules, what it gives and risks).
-# Dependencies: run_glyphs.gd, run_v2_views.gd, press_gesture.gd, hud_theme.tres (fonts, colours).
+#   kc-da-ui2 (art direction #8, "a paper map pinned to the briefing table"): the graph is drawn on
+#   light orders paper (fibre, a faint coordinate grid, one fold); nodes are paper tags held by a pin
+#   (teal where you stand, steel for the next steps, khaki for the rest, red for the boss); links are
+#   strings with a slight sag (ink where you walked, deep teal for the steps you can take now, a thin
+#   twine otherwise); the boss is a target mark ringed with a red marker circle, never a skull. The
+#   NEXT tag is a steel tag and the selection is a steel-and-paper double rule (no white box, no amber).
+# Dependencies: run_glyphs.gd, run_v2_views.gd, press_gesture.gd, paper_sheet.gd, hud_theme.tres (fonts).
 # Author: UI/UX Agent (kc-v2-ui)
 extends Control
 
@@ -21,6 +27,16 @@ signal node_inspected(id: String)
 const RunGlyphs: GDScript = preload("res://scripts/ui/run/run_glyphs.gd")
 const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+const PaperSheet: GDScript = preload("res://scripts/ui/paper_sheet.gd")
+## Briefing-map inks (on PaperSheet.PAPER).
+const TWINE: Color = Color("#8A7B5A")
+const PIN_TEAL: Color = Color("#2EC4B6")
+const PIN_STEEL: Color = Color("#4A535B")
+const PIN_KHAKI: Color = Color("#B8913A")
+const MARKER_RED: Color = Color("#C0262B")
+const TAG_STEEL: Color = Color("#3A444D")
+## The paper's margin around the graph (px).
+const PAPER_PAD: float = 6.0
 
 var map: Dictionary = {}
 var portrait: bool = false
@@ -119,6 +135,7 @@ func _layout() -> void:
 
 
 func _draw() -> void:
+	_draw_paper()
 	var walked: Dictionary = {}
 	for n: Dictionary in map.get("nodes", []):
 		if bool(n.get("done", false)) or bool(n.get("current", false)):
@@ -127,29 +144,73 @@ func _draw() -> void:
 	for n: Dictionary in map.get("nodes", []):
 		if bool(n.get("current", false)):
 			cur = String(n["id"])
-	var accent: Color = get_theme_color(&"accent", &"Hud")
-	for l: Array in map.get("links", []):
-		var a: MapNode = _nodes.get(String(l[0]))
-		var b: MapNode = _nodes.get(String(l[1]))
-		if a == null or b == null:
-			continue
-		var pa: Vector2 = a.position + Vector2(a.size.x * 0.5, a.tile * 0.5)
-		var pb: Vector2 = b.position + Vector2(b.size.x * 0.5, b.tile * 0.5)
-		var col: Color = Color("#3A444D")
-		var wdt: float = 2.0
-		if walked.has(String(l[0])) and walked.has(String(l[1])):
-			col = Color("#8D979F")
-			wdt = 4.0
-		elif String(l[0]) == cur and bool(b.node.get("reachable", false)):
-			col = accent
-			wdt = 4.0
-		var d: Vector2 = (pb - pa).normalized()
-		var from: Vector2 = pa + d * a.tile * 0.55
-		var to: Vector2 = pb - d * b.tile * 0.55
-		if col == Color("#3A444D"):
-			_dashed(from, to, col, wdt)
-		else:
-			draw_line(from, to, col, wdt, true)
+	# Strings: twine first, then the walked path, then the steps you can take now (on top).
+	for pass_i: int in 3:
+		for l: Array in map.get("links", []):
+			var a: MapNode = _nodes.get(String(l[0]))
+			var b: MapNode = _nodes.get(String(l[1]))
+			if a == null or b == null:
+				continue
+			var kind: int = 0
+			if walked.has(String(l[0])) and walked.has(String(l[1])):
+				kind = 1
+			elif String(l[0]) == cur and bool(b.node.get("reachable", false)):
+				kind = 2
+			if kind != pass_i:
+				continue
+			var pa: Vector2 = a.position + Vector2(a.size.x * 0.5, a.tile * 0.5)
+			var pb: Vector2 = b.position + Vector2(b.size.x * 0.5, b.tile * 0.5)
+			var d: Vector2 = (pb - pa).normalized()
+			var from: Vector2 = pa + d * a.tile * 0.5
+			var to: Vector2 = pb - d * b.tile * 0.5
+			match kind:
+				0:
+					_string(from, to, Color(TWINE, 0.75), 1.5)
+				1:
+					_string(from, to, PaperSheet.INK, 3.0)
+				2:
+					_string(from, to, PaperSheet.STAMP_WIN, 3.5)
+
+
+## kc-da-ui2: the paper sheet under the graph: paper, fibre, a faint coordinate grid, one fold.
+func _draw_paper() -> void:
+	var r: Rect2 = Rect2(Vector2.ZERO, size).grow(PAPER_PAD)
+	draw_rect(Rect2(r.position + Vector2(3, 4), r.size), Color(0, 0, 0, 0.4))
+	draw_rect(r, PaperSheet.PAPER)
+	PaperSheet.draw_fibre(self, r, 31)
+	var grid: float = 48.0
+	var gc: Color = Color(PaperSheet.INK, 0.06)
+	var x: float = r.position.x + grid
+	while x < r.end.x:
+		draw_line(Vector2(x, r.position.y), Vector2(x, r.end.y), gc, 1.0)
+		x += grid
+	var y: float = r.position.y + grid
+	while y < r.end.y:
+		draw_line(Vector2(r.position.x, y), Vector2(r.end.x, y), gc, 1.0)
+		y += grid
+	# One fold across the sheet: a soft shadow line and its highlight.
+	var fx: float = r.position.x + r.size.x * (0.5 if not portrait else 0.0)
+	if not portrait:
+		draw_line(Vector2(fx, r.position.y), Vector2(fx, r.end.y), Color(PaperSheet.INK, 0.08), 2.0)
+		draw_line(Vector2(fx + 2.0, r.position.y), Vector2(fx + 2.0, r.end.y), Color(1, 1, 1, 0.25), 1.0)
+	else:
+		var fy: float = r.position.y + r.size.y * 0.5
+		draw_line(Vector2(r.position.x, fy), Vector2(r.end.x, fy), Color(PaperSheet.INK, 0.08), 2.0)
+		draw_line(Vector2(r.position.x, fy + 2.0), Vector2(r.end.x, fy + 2.0), Color(1, 1, 1, 0.25), 1.0)
+	draw_rect(r, PaperSheet.KHAKI, false, 1.5)
+
+
+## A string from a to b with a slight sag (a quadratic curve), drawn as a polyline.
+func _string(a: Vector2, b: Vector2, c: Color, w: float) -> void:
+	var len: float = a.distance_to(b)
+	if len < 1.0:
+		return
+	var mid: Vector2 = (a + b) * 0.5 + Vector2(0, minf(10.0, len * 0.06))
+	var pts: PackedVector2Array = []
+	for i: int in 13:
+		var t: float = float(i) / 12.0
+		pts.append(a.lerp(mid, t).lerp(mid.lerp(b, t), t))
+	draw_polyline(pts, c, w, true)
 
 
 func _dashed(a: Vector2, b: Vector2, c: Color, w: float) -> void:
@@ -205,41 +266,41 @@ class MapNode extends Button:
 		var cur: bool = bool(node.get("current", false))
 		var reach: bool = bool(node.get("reachable", false))
 		var sel: bool = graph != null and graph.selected_id == String(node.get("id", ""))
-		var accent: Color = get_theme_color(&"accent", &"Hud")
-		var friend: Color = get_theme_color(&"friend", &"Hud")
-		var enemy: Color = get_theme_color(&"enemy", &"Hud")
+		var ink: Color = PaperSheet.INK
 		var tr: Rect2 = Rect2(Vector2((size.x - tile) * 0.5, 0), Vector2(tile, tile))
-		var fill: Color = Color("#5A1A1C") if boss else Color("#1C2228")
-		# kc-ui-wire2: with the kit's node ring (runmap_node, a hexagon) the tile is a filled hexagon and
-		# the ring carries the state colour; the square tile and frame are the fallback.
-		var hex: bool = UiKit.has_piece(&"runmap_node")
-		if hex:
-			var hp: PackedVector2Array = []
-			for i: int in 6:
-				hp.append(tr.get_center() + Vector2.from_angle(PI / 3.0 * i) * tile * 0.47)
-			draw_colored_polygon(hp, Color(fill, 0.55 if done else 0.95))
-		else:
-			draw_rect(tr, Color(fill, 0.55 if done else 0.95))
-		var glyph_c: Color = RunGlyphs.node_tint(t)
-		if done:
-			glyph_c = Color(glyph_c, 0.45)
-		RunGlyphs.draw_node(self, tr.grow(-tile * 0.16), t, glyph_c)
-		# Frame: shape carries the state.
-		if hex:
-			var ring_c: Color = friend if cur else accent if reach else enemy if boss else Color("#5A646D")
-			UiKit.draw_piece(self, &"runmap_node", tr.grow(2.0 if reach and not cur else 0.0), ring_c)
-		elif cur:
-			draw_rect(tr, friend, false, 3.0)
+		# kc-da-ui2: a paper tag pinned to the map (a shadow, the tag, an ink rule).
+		var tag_r: Rect2 = tr.grow(-tile * 0.06)
+		draw_rect(Rect2(tag_r.position + Vector2(2, 3), tag_r.size), Color(0, 0, 0, 0.18))
+		draw_rect(tag_r, PaperSheet.PAPER_SHADE if not done else Color(PaperSheet.PAPER_SHADE, 0.7))
+		var glyph_c: Color = MARKER_RED if boss else (Color(ink, 0.4) if done else ink)
+		RunGlyphs.draw_node(self, tag_r.grow(-tile * 0.14), t, glyph_c)
+		# Frame: shape carries the state (teal = you, steel double rule = next, thin ink = the rest).
+		if cur:
+			draw_rect(tag_r.grow(1.0), PIN_TEAL, false, 3.0)
 		elif reach:
-			draw_rect(tr.grow(2.0), accent, false, 3.0)
-		elif boss:
-			draw_rect(tr, enemy, false, 2.5)
+			draw_rect(tag_r, TAG_STEEL, false, 3.0)
+			draw_rect(tag_r.grow(-4.0), Color(TAG_STEEL, 0.6), false, 1.0)
 		else:
-			draw_rect(tr, Color("#3A444D"), false, 1.5)
+			draw_rect(tag_r, Color(ink, 0.45 if done else 0.7), false, 1.5)
+		if boss:
+			# The red marker circle round the target (two strokes, slightly off, like a hand ring).
+			var ctr: Vector2 = tr.get_center()
+			var rad: float = tile * 0.66
+			_ellipse(ctr, Vector2(rad * 1.08, rad * 0.92), Color(MARKER_RED, 0.9), 3.0, -0.2)
+			_ellipse(ctr + Vector2(1.5, -1.0), Vector2(rad * 1.12, rad * 0.95), Color(MARKER_RED, 0.55), 2.0, 0.15)
 		if sel:
-			draw_rect(tr.grow(6.0), Color.WHITE, false, 2.0)
+			# Steel and paper: a steel rule with a paper rule inside, round the selected tag.
+			draw_rect(tr.grow(7.0), TAG_STEEL, false, 3.0)
+			draw_rect(tr.grow(4.0), PaperSheet.PAPER, false, 1.5)
 		if has_focus():
-			draw_rect(tr.grow(9.0), Color(accent, 0.7), false, 1.5)
+			draw_rect(tr.grow(10.0), Color(PIN_TEAL, 0.8), false, 1.5)
+		# The pin at the tag's top: teal where you stand, steel for next, red for the boss, khaki else.
+		var pin_c: Color = PIN_TEAL if cur else MARKER_RED if boss else PIN_STEEL if reach else PIN_KHAKI
+		var pin_at: Vector2 = Vector2(tr.get_center().x, tag_r.position.y + 2.0)
+		var pr: float = clampf(tile * 0.09, 4.0, 8.0)
+		draw_circle(pin_at + Vector2(1.5, 2.0), pr, Color(0, 0, 0, 0.35))
+		draw_circle(pin_at, pr, pin_c if not done else Color(pin_c, 0.6))
+		draw_circle(pin_at - Vector2(pr, pr) * 0.3, pr * 0.35, Color(1, 1, 1, 0.55))
 		# Terrain icons on the tile's bottom edge.
 		var ts: Array = node.get("terrain", [])
 		var ip: float = clampf(tile * 0.32, 18.0, 26.0)
@@ -249,36 +310,43 @@ class MapNode extends Button:
 			var ir: Rect2 = Rect2(Vector2(x0 + ip * i, tr.end.y - ip - 2.0), Vector2(ip, ip))
 			draw_rect(ir, Color(RunGlyphs.terrain_tint(tid), 0.95 if not done else 0.5))
 			RunGlyphs.draw_terrain(self, ir.grow(-ip * 0.14), tid, RunGlyphs.INK)
-		# State tag on the tile's top edge.
+		# State tag on the tile's top-left: YOU (teal), NEXT (steel tag), WON / LOST / DONE (ink stamp).
 		var tag: String = ""
 		var tag_bg: Color = Color(0, 0, 0, 0)
 		var tag_fg: Color = Color.WHITE
 		if cur:
 			tag = "YOU"
-			tag_bg = friend
+			tag_bg = PIN_TEAL
 			tag_fg = RunGlyphs.INK
 		elif done:
 			tag = {&"player": "WON", &"enemy": "LOST", &"draw": "DRAW"}.get(StringName(str(node.get("result", ""))), "DONE")
-			tag_bg = Color("#2E3439")
+			tag_fg = PaperSheet.STAMP_LOSS if tag == "LOST" else PaperSheet.INK
 		elif reach:
 			tag = "NEXT"
-			tag_bg = accent
-			tag_fg = RunGlyphs.INK
+			tag_bg = TAG_STEEL
+			tag_fg = PaperSheet.PAPER
 		if tag != "":
 			_tag(Vector2(tr.position.x, tr.position.y), tag, tag_fg, tag_bg)
-		# Words under the tile.
+		# Words under the tile, in ink on the paper.
 		var font: Font = get_theme_font(&"font", &"HudHeader")
 		var fs: int = 16
 		var word: String = _word()
 		var y: float = tr.end.y + 4.0 + font.get_ascent(fs)
-		var wc: Color = Color("#D8DEE3") if not done else Color("#8D979F")
+		var wc: Color = ink if not done else PaperSheet.INK_MUTED
 		if boss:
-			wc = enemy
+			wc = PaperSheet.STAMP_LOSS
 		_centered(font, word, y, fs, wc)
 		var sub: String = _sub()
 		if sub != "":
 			var f2: Font = get_theme_font(&"font", &"HudSubtle")
-			_centered(f2, sub, y + 17.0, 16, Color("#B9C2C9") if not done else Color("#6E7880"))
+			_centered(f2, sub, y + 17.0, 16, PaperSheet.INK_MUTED)
+
+	func _ellipse(c: Vector2, r: Vector2, col: Color, w: float, rot: float) -> void:
+		var pts: PackedVector2Array = []
+		for i: int in 41:
+			var a: float = TAU * float(i) / 40.0
+			pts.append(c + Vector2(cos(a) * r.x, sin(a) * r.y).rotated(rot))
+		draw_polyline(pts, col, w, true)
 
 	func _word() -> String:
 		var t: StringName = node.get("type", &"fight")
@@ -308,7 +376,6 @@ class MapNode extends Button:
 		var room: float = size.x - 2.0
 		var s: String = BannerView.fit_text(text, font, fs, room)
 		var w: float = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string_outline(font, Vector2((size.x - w) * 0.5, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, RunGlyphs.INK)
 		draw_string(font, Vector2((size.x - w) * 0.5, y), s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
 
 	func _tag(at: Vector2, text: String, fg: Color, bg: Color) -> void:
@@ -316,5 +383,9 @@ class MapNode extends Button:
 		var fs: int = 14
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 8.0
 		var r: Rect2 = Rect2(at + Vector2(-2, -8), Vector2(w, 18))
-		draw_rect(r, bg)
+		if bg.a > 0.0:
+			draw_rect(r, bg)
+		else:
+			# An ink stamp on the paper (no fill): a rule round the word.
+			draw_rect(r, Color(fg, 0.85), false, 1.5)
 		draw_string(font, Vector2(r.position.x + 4.0, r.position.y + 14.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, fg)
