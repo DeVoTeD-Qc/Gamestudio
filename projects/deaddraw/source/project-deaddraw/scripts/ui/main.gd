@@ -713,7 +713,9 @@ func _build_street() -> void:
 	hint_id = _due_hint(run)
 	var hud: Control = _build_top(run)
 	var hint: Control = _build_hint(run) if hint_id != "" else null
-	var hint_h: float = (HINT_H + SEP) if hint != null else 0.0
+	# dd-ui-clean (head: "the tip showing makes all row cards move and resize"): the hint floats over
+	# the strip as a toast (_float_hint) and takes no layout space
+	var hint_h: float = 0.0
 	var strip_h: float = TAP if run.lookout_card() != null else STRIP_H
 	var n: int = maxi(4, run.street.size())
 	# dd-ux-clean2 (U2): a boss street holds 2 cards (the boss + a phase / cover card); they take
@@ -740,14 +742,14 @@ func _build_street() -> void:
 		var doors: Control = _build_doors(run, false)
 		doors.custom_minimum_size = Vector2(0, door_h)
 		v.add_child(doors)
-		if hint != null:
-			v.add_child(hint)
 		var srow: Control = _build_street_row(run, card_w, card_h, cols)
 		srow.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		v.add_child(srow)
 		var strip: Control = _build_strip(run, strip_h)
 		v.add_child(strip)
 		v.add_child(_build_guns(run, true, gun_h, W))
+		if hint != null:
+			_float_hint(hint, strip)
 	else:
 		var tall: bool = H >= 600.0
 		var lw: float = clampf(W * 0.14, 150.0, 210.0)
@@ -777,12 +779,13 @@ func _build_street() -> void:
 		h.add_child(mid)
 		hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mid.add_child(hud)
-		if hint != null:
-			mid.add_child(hint)
 		var srow2: Control = _build_street_row(run, card_w2, card_h2, cols2)
 		srow2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		mid.add_child(srow2)
-		mid.add_child(_build_strip(run, strip_h))
+		var strip2: Control = _build_strip(run, strip_h)
+		mid.add_child(strip2)
+		if hint != null:
+			_float_hint(hint, strip2)
 		var guns: Control = _build_guns(run, false, H, rw)
 		guns.custom_minimum_size = Vector2(rw, 0)
 		h.add_child(guns)
@@ -1504,6 +1507,37 @@ func _build_hint(run: DDRun) -> Control:
 	ok.pressed.connect(dismiss_hint)
 	h.add_child(ok)
 	return p
+
+
+## dd-ui-clean: the hint as a floating toast over the strip (pile / event log), same width, centred on
+## it, with a drop shadow. It lives on the sheet layer, so nothing in the street moves or resizes when it
+## comes or goes; only the toast catches taps (Got it), everything around it still reaches the cards.
+func _float_hint(hint: Control, anchor: Control) -> void:
+	var toast: PanelContainer = PanelContainer.new()
+	toast.name = "Hint"
+	var sh: StyleBoxFlat = StyleBoxFlat.new()
+	sh.bg_color = Color(0, 0, 0, 0)
+	sh.shadow_color = Color(0, 0, 0, 0.55)
+	sh.shadow_size = 12
+	sh.shadow_offset = Vector2(0, 4)
+	sh.set_corner_radius_all(DDUi.Kit.radius(10.0))
+	toast.add_theme_stylebox_override("panel", sh)
+	toast.mouse_filter = Control.MOUSE_FILTER_STOP
+	hint.name = "HintPanel"
+	toast.add_child(hint)
+	_sheet_root.add_child(toast)
+	var place: Callable = func() -> void:
+		if not is_instance_valid(toast) or not is_instance_valid(anchor) or not anchor.is_inside_tree():
+			return
+		var r: Rect2 = anchor.get_global_rect()
+		var h: float = maxf(HINT_H, toast.get_combined_minimum_size().y)
+		var vp: Vector2 = get_viewport_rect().size
+		var y: float = clampf(r.position.y + (r.size.y - h) * 0.5, 0.0, maxf(0.0, vp.y - h))
+		toast.global_position = Vector2(r.position.x, y)
+		toast.size = Vector2(r.size.x, h)
+	anchor.item_rect_changed.connect(place)
+	toast.minimum_size_changed.connect(place)
+	place.call_deferred()
 
 
 func dismiss_hint() -> void:
