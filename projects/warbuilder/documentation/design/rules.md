@@ -1,8 +1,9 @@
-# Warzone Deckbuilder: rules (v7.1, "Squad Tactics" + shot odds)
+# Warzone Deckbuilder: rules (v7.2, "Squad Tactics" + shot odds + first shot)
 
 *Mechanics Developer · 2026-11-11 · Board task `wb-pkg1` · **The written single source of truth for the rules.***
 *Built from `wb-improve-v2.md` with the head's answers: W1 (a) the package (O1 Squad Tactics + O2 Spoils + O3 Field Promotion + O6 Hot Drop delivery + O7 Threat, Deck bar and after-action screen), W2 (b) ranks and unlocks only (O10), W3 (a) Spoils, W4 (a) Health about 55–60 plus a small trim, W5 (a) the 12 Tactics replace 12 cards.*
 *v7.1 (board task `wb-odds2`, the head's `wb-odds` answer (a)): shots hit about 65% instead of about 93%. A shot reveals at most 3 cards (extra Precision is Power, +1 damage each); cover and long range raise the Hit Markers a shot needs; Expose, Pierce, Mark, Steady and Intel Sweep bring the odds back; every gun step needs 2 more Hit Markers and deals 2 more damage. Fewer turns now deal damage, so building got three helpers: Spoils also after a turn in which you were hit, Field Promotion is not a buy, the Buy Station Scrap service is free. Results in §13.*
+*v7.2 (board task `wb-first-shot`, after the 5-player playtest of v11 in which 4 of 5 testers dealt 0 damage): in rounds 1–3 the **Sidearm has a rookie step** (1 Hit Marker hits for 1, cover and range don't count), so a starter deck can land its first shot. The screen now shows the Hit Markers in your deck next to Threat, and the loot sheet shows each gun's chance with your deck and warns "Your deck can't fire this yet". Results in §14.*
 *Text pass (board task `wb-ux-text`, no rule changes): card text, tooltips, log and help use the short wording below ("+1 Movement, +2 Precision.", "Hits +1 damage", one sentence per Tactic). The rules are unchanged.*
 *Still in force: the "Warzone Deckbuilder" title and names, the closing circle with a hard end, a single-file build, the print-and-play.*
 
@@ -46,6 +47,8 @@ Once per turn, pay **1 Intel** (v7.1: it no longer uses one of your buys): a sta
 - **To hit** (v7.1): every step of the ladder needs the printed Hit Markers, **+1 if the target's location has cover** (also at distance 0; *Pierce* and *Expose* ignore cover), **+1 at long range** (distance 2 or more; not the knife), **−1 for Mark** (next shot only) and **−1 per Steady** (every shot this turn). Never below 1. *Intel Sweep* lets you put your best cards on top before you shoot.
 - **The chance is always shown before you fire:** the % on FIRE and on every Aim option. Hold (touch) or right click FIRE, or open Aim, to see the need and each modifier (for example "needs 6+: Sidearm 4, rival in cover +1, long range +1").
 - **Damage:** **close quarters** (distance 0): Armor is ignored. Otherwise the target's best **Reaction** card in hand, then its **Armor**, reduce the damage. *Expose* switches Reaction cards and Armor off. A hit always deals at least 1. (Cover no longer takes damage off.)
+- **First shots (v7.2):** in rounds 1–3 (the Hot Drop rounds) the **Sidearm** has an extra first step, the **rookie step**: **1 Hit Marker hits for 1**. Cover and long range don't raise it (Mark and Steady can't take it below 1); Power and *hits +N damage* add to it as usual. From round 4 the Sidearm has its printed ladder only. The starter deck (4 Hit Markers in 10 cards) reaches it on about half of the turns it can fire.
+- **Know before you buy (v7.2):** a shot reveals at most 3 cards, so a gun whose first step your cards can't reach can't hit. The loot sheet shows, for every gun, the chance that a full aim (3 cards from all the cards you own) reaches its first step, before cover and range; under 10% it warns **"Your deck can't fire this yet"**.
 - Each gun fires up to its **Shots** per turn, plus extra shots. **Combat Knife**: distance 0 only, always hits for 5 (cover does not stop it).
 - Revealed cards go to your discard pile. When your deck is empty, shuffle your discard pile into a new deck.
 
@@ -55,7 +58,7 @@ Rarity mods are unchanged (Hollow Points +1 damage, Extended Mag +1 shot, Compen
 
 | Gun (Common) | Class | Range | Ladder (Hit Markers → damage) | Shots | Recoil |
 |---|---|---|---|---|---|
-| Sidearm | Pistol | 0–2 | 5+ → 4, 7+ → 5 | 2 | 2 |
+| Sidearm | Pistol | 0–2 | (rounds 1–3: 1+ → 1), 5+ → 4, 7+ → 5 | 2 | 2 |
 | Magnum | Revolver | 0–3 | 6+ → 6, 9+ → 9 | 1 | 3 |
 | Combat Knife | Melee | 0 | always → 5 | 1 | 0 |
 | Viper | SMG | 0–1 | 5+ → 4, 8+ → 6 | 2 | 0 |
@@ -113,7 +116,8 @@ Operations apply to **both** operators, so they change the drop, not the odds. A
 
 ## 10. What the screen shows (O7)
 - **Threat** (replaces the Firepower sum): the damage you can expect from the rest of this turn if you play your hand and shoot as the planner suggests, with the first shot's odds. Between turns: the damage you dealt, with a per-turn sparkline.
-- **Deck bar:** starters against the cards you added, coloured by squad.
+- **Hit Markers (v7.2):** next to Threat, the Hit Markers in your deck (total, per card) and your gun's chance with a full aim; it turns red when your deck can't reach your gun's first step. FIRE's hint says so too ("Your deck can't hit with the Magnum yet").
+- **Deck bar:** starters against the cards you added, coloured by squad and patterned (stripes, dots, bars), and the squad counters carry a label (AST, REC, SUP, ENG): squads are never told apart by colour alone.
 - **Tactical chips:** every Tactic in play, yours and your rival's (red ⚠ when it can hurt you: a held angle, a Suppression). Each chip, card, gun and location explains itself on **long press (touch), right click or hover (mouse)**; the zoom of a card, gun or location adds one plain line: what it gives you now (Squad ×N, % to hit, when the gas takes it).
 - **Next step and the rival's turn (wb-ux-text):** one line says what to do now; after the rival's turn it first says what they did (cards played, move, buys, shots, the damage you took).
 - **After-action report:** damage per round for both players, your best turn and its round, your MVP card (most Hit Markers in your hits), the cards you added, XP and rank.
@@ -257,3 +261,39 @@ Same tools and seeds as §12 (2,000 AI matches per row, seeds 1…2000, seats al
 - **Watch in the playtest:** the starter deck (mostly 0–1 Hit Marker cards) can't hit with the Sidearm (5+) until it has bought a few cards; Ranger and Longbow headshots need Mark or Steady; Tactics are played a little less (Fortify 0.67 → 0.22, Field Medic 0.50 → 0.16 per match).
 
 **Reproduce:** `git show e864633:projects/warbuilder/source/project-warbuilder/src/engine.js > /tmp/v7.js`, then `node projects/warbuilder/qa/tools/ai_sim_pkg.js 2000 --engine=/tmp/v7.js` (before) and `node projects/warbuilder/qa/tools/ai_sim_pkg.js 2000` (after); `node projects/warbuilder/qa/tools/ai_sim.js 2000` for the ranged hit rate.
+
+## 14. v7.2 first shot (`wb-first-shot`): validation
+The 5-player playtest of v11 (`wb-playtest`): FIRE showed under 1% for most of every match and 4 of 5 testers dealt 0 damage. The sims reached the 65% hit target because the AI builds for Hit Markers; a new player doesn't know to, and nothing warned them.
+
+**The new-player bot** (`aiMode: 'naive'`, sim only, `WD.aiTurn`): plays every card, walks toward the rival until in range (and out of closing gas), buys the biggest gun it can afford and then the priciest cards, takes the first Spoils card, never promotes, scraps or cycles, and fires whenever FIRE shows more than 0% (with FIRE's commit). `naive+warn` is the same player when it reads the loot sheet and skips guns marked "Your deck can't fire this yet". A **live turn** is one on which FIRE could be pressed (a gun in range and Precision to aim, or the knife at distance 0).
+
+2,000 seeded matches per row (seeds 1…2000, seats alternate), `node projects/warbuilder/qa/tools/ai_sim_pkg.js 2000`; "Before" is v7.1 (`--set=rookieRounds:0`; the loot warning did not exist, so the before player is the one who ignores it).
+
+| New player vs the AI | Before (v7.1) | After: ignores the warning | After: reads the warning |
+|---|---|---|---|
+| Live turns with a hit, round 1 / 2 / 3 | 0% / 15% / 13% | 0% / 20% / 22% | 48% / 84% / **89%** |
+| Live turns with a hit, rounds 3–11 | 16% | 18% | 49% |
+| Hit rate of the shots it takes | 49% | 50% | 66% |
+| Matches in which it deals damage | 45% | 51% | **98%** |
+| Damage per turn, rounds 2 / 3 / 4 / 8 | 0.8 / 0.8 / 0.8 / 1.8 | 0.9 / 0.9 / 0.8 / 1.9 | 3.0 / 3.7 / 2.6 / 4.7 |
+| Shots per match | 3.0 | 3.2 | 7.0 |
+| Wins vs the AI | 6.6% | 6.5% | 15.2% |
+
+| Gate (§12, §13) | Target | Before (v7.1) | After (v7.2) | Met |
+|---|---|---|---|---|
+| Hit rate of shots taken (aware mirror) | 60–70% | 64.7% | **64.8%** | Yes |
+| Build edge: aware AI vs random buyer | ≥ 85% | 86.0% | **85.6%** | Yes |
+| Synergy edge: combo-aware vs combo-blind | ≥ 55% | 62.5% | **62.4%** | Yes |
+| Rounds per match / final circle | 8–9 / ≥ 50% | 8.53 / 55% | **8.52 / 55%** | Yes |
+| Own cards in hand, round 6 / 8 | ≥ 0.45 / (≥ 0.50) | 0.51 / 0.63 | **0.52 / 0.63** | Yes |
+| Win rate by main squad (mirror) | each 45–60% | A 48.5, E 56.9, R 49.1, S 51.9 | A 48.4, E 57.1, R 49.2, S 52.1 | Yes |
+| New player (reads the warning): live turns with a hit, round 3 | ≥ 40% | (13%) | **89%** | Yes |
+| New player (reads the warning): matches with damage | > 50% | (45%) | **98%** | Yes |
+
+**What it took, and why** (about 30 variants simulated, 300–2,000 games each):
+- The starter deck can't reach any printed step: 4 Hit Markers in 10 cards and about 1 Precision per hand, so a turn reveals 1–2 cards. Only a step that needs **1 Hit Marker, fixed** (cover is +1 on 5 of 8 locations) makes a starter hand hit on about half its live turns (46% at distance 1 with random cover, 48% of the bot's round-1 live turns).
+- Every rule that also helps the player who keeps buying guns it can't fire helped the AI more: easier Common guns, more Hit Markers or Steady on starters, a permanent rookie step. They pushed the AI's hit rate to 70–89%, shortened matches to 6.4–7.8 rounds, or dropped the build edge to 77–83%. Even the rookie step at 2 damage (84.6%) or through round 4 (84.5%) missed the build edge. Rounds 1–3 at 1 damage keep every gate.
+- So the fix is mostly information: the bot that ignores the warning still trades its Sidearm for a gun its deck can't fire and lands a hit on only 22% of its live turns in round 3 (13% before). The same bot reading the loot sheet keeps a gun it can fire, then lands hits on 89% of its live turns in round 3 and deals damage in 98% of matches. The UI (Hit Markers next to Threat, the % and warning on every gun, FIRE's hint) is how a person gets that information.
+- **Watch in the next playtest:** after round 3 the Sidearm goes back to 5+; the warning player still hits on about half its live turns (49%), but a player who ignores every readout is still stuck. If that shows up, the next lever is teaching (a guided first match), not the odds.
+
+**Reproduce:** `node projects/warbuilder/qa/tools/ai_sim_pkg.js 2000` (after) and `node projects/warbuilder/qa/tools/ai_sim_pkg.js 2000 --set=rookieRounds:0` (before; v7.1 rules with the same bots).

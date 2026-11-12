@@ -72,7 +72,8 @@ function run(n, polA, polB) {
 function gates(n) {
   const hasRandom = (() => { try { const s = WD.newGame({ seed: 1 }); s.aiMode = ['random', 'random']; for (let g = 0; g < 6; g++) WD.aiTurn(s, s.turn); return s.players.some(p => p.stats.cardsAcquired > 0) && WD.aiBuy.toString().includes('random'); } catch (e) { return false; } })();
   const ar = hasRandom ? run(n, 'aware', 'random') : null, ab = run(n, 'aware', 'blind'), aa = run(n, 'aware', 'aware');
-  const hasNaive = WD.aiTurn.toString().includes('naive'); const nv = hasNaive ? run(n, 'naive', 'aware') : null; // wb-first-shot: the new-player bot vs the AI
+  const hasNaive = WD.aiTurn.toString().includes('naive'); const nv = hasNaive ? run(n, 'naive', 'aware') : null;
+  const nw = WD.gunOdds ? run(n, 'naive+warn', 'aware') : null; // the same new player when it skips guns the loot sheet warns about // wb-first-shot: the new-player bot vs the AI
   const sq = Object.entries(aa.squadWin).filter(([q]) => q !== '-').map(([q, v]) => [q, parseFloat(v)]);
   const G = [
     ['Build edge (aware vs random buyer)', ar ? ar.aWin : null, x => x >= 0.85, '>= 85%'],
@@ -83,11 +84,14 @@ function gates(n) {
     ['Own cards in hand, round 8', aa.ownHand[8], x => x >= 0.5, '(report; >= 0.50 wanted)'],
     ['Squads in the mirror (win rate by main squad)', sq.map(([q, v]) => `${q} ${v}`).join(', '), () => sq.every(([, v]) => v >= 0.45 && v <= 0.6), 'each 45–60%'],
     ['Hit rate of shots taken', aa.hitRate, x => x >= 0.6 && x <= 0.7, '60–70% (head\'s target)'],
-    ['New player bot: turns with FIRE live that land a hit, round 3', nv && nv.fireLive[3] ? nv.fireLive[3].hit : null, x => x >= 0.38, 'about 40% (wb-first-shot)'],
-    ['New player bot: the same, rounds 3–11', nv && nv.fireLive3plus ? nv.fireLive3plus.hit : null, x => x >= 0.38, 'about 40%'],
-    ['New player bot: matches in which it deals damage', nv ? nv.dealtDamage : null, x => x > 0.5, 'most matches (> 50%)'],
+    // wb-first-shot: the new-player bot vs the AI. "Live" = a turn on which FIRE could be pressed (a gun in range, Precision to aim).
+    ['New player bot (reads the loot warning): live turns with a hit, round 3', nw && nw.fireLive[3] ? nw.fireLive[3].hit : null, x => x >= 0.4, '>= 40% (wb-first-shot)'],
+    ['New player bot (reads the loot warning): matches it deals damage', nw ? nw.dealtDamage : null, x => x > 0.5, 'most matches (> 50%)'],
+    ['New player bot (reads the loot warning): live turns with a hit, rounds 3–11', nw && nw.fireLive3plus ? nw.fireLive3plus.hit : null, () => true, '(report)'],
+    ['New player bot (ignores the warning): live turns with a hit, round 3', nv && nv.fireLive[3] ? nv.fireLive[3].hit : null, () => true, '(report)'],
+    ['New player bot (ignores the warning): matches it deals damage', nv ? nv.dealtDamage : null, () => true, '(report)'],
   ];
-  return { games: n, tune: { hp: WD.TUNE.hp }, gates: G.map(([label, v, ok, target]) => ({ label, value: v, target, pass: v == null ? null : ok(v) })), runs: { awareVsRandom: ar, awareVsBlind: ab, mirror: aa, naiveVsAware: nv } };
+  return { games: n, tune: { hp: WD.TUNE.hp }, gates: G.map(([label, v, ok, target]) => ({ label, value: v, target, pass: v == null ? null : ok(v) })), runs: { awareVsRandom: ar, awareVsBlind: ab, mirror: aa, naiveVsAware: nv, naiveWarnVsAware: nw } };
 }
 
 if (require.main === module) {

@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const { WD, scenario, card, cards, setCards, setGun, place, zero, aiMatch } = require('./helpers');
 
 const T = WD.TUNE;
+T.rookieRounds = 0; // wb-first-shot: these round-1 duels pin the printed Sidearm ladder (the rookie step is tested in rules.test.js)
 const defOf = (s, iid) => s.cards[iid].def;
 const HIT5 = ['T004', 'K04', 'K04']; // revealed top first: Focus 2 + Focus 2 + Steady Aim 1 = 5 Hit Markers, the Sidearm's first step (wb-odds2: 5+ → 4)
 function duel({ seed = 1, gun = 'pistol-0', posMe = 2, posThem = 3, types = { 3: 'E01' }, deck = [], prec = 0, hand = [], themHand = [], themDeck = Array(8).fill('T001') } = {}) {

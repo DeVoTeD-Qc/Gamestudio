@@ -24,6 +24,9 @@ const TUNE = {
   // wb-odds2 (head's wb-odds answer a: shots hit about 65%): a shot reveals at most aimCap cards; each Precision committed beyond that adds
   // aimPower damage (Power). Cover (+coverNeed per level) and long range (distance longFrom+: +longNeed) raise every step's Hit Markers.
   spoilsHurt: 1, aimCap: 3, aimPower: 1, coverNeed: 1, longFrom: 2, longNeed: 1,
+  // wb-first-shot: the Sidearm has a rookie step in rounds 1..rookieRounds (the Hot Drop rounds), so a starter deck can land its first shot.
+  // The loot sheet warns "Your deck can't fire this yet" when a full aim reaches a gun's first step less often than this
+  fireWarn: 0.1, rookieRounds: 3,
   // kept for the UI and print-and-play (old systems switched off)
   lite: true, perks: false, ammo: false, phases: false, stacks: true, physical: true, tradeIn: 0, combos: false, locEveryTurn: true,
 };
@@ -167,7 +170,8 @@ const MODS = {
 // wb-odds2: every step +2 Hit Markers and +2 damage over v7 (shots hit about 65% instead of 93%; the damage keeps the match pace).
 // wb-rules retune for the Precision-spend rule: Recoil is now a Precision cost per shot, so multi-shot guns lost Recoil; the big single shots lost 1 damage.
 const GUNCLASS = {
-  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 4, range: 1, band: [0, 2], ladder: [[5, 4], [7, 5]], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
+  // wb-first-shot: the Sidearm's rookie step (rounds 1–TUNE.rookieRounds): 1 Hit Marker hits for 1, whatever the cover or range
+  pistol: { name: 'Sidearm', cls: 'Pistol', arch: 'engineer', damage: 4, range: 1, band: [0, 2], ladder: [[5, 4], [7, 5]], rookie: [1, 1], shots: 2, recoil: 2, cost: 1, mods: ['hollow', 'reddot', 'comp', 'hollow'], skin: 'Gold Rush' },
   revolver: { name: 'Magnum', cls: 'Revolver', arch: 'engineer', damage: 5, range: 2, band: [0, 3], ladder: [[6, 6], [9, 9]], shots: 1, recoil: 3, cost: 2, mods: ['hollow', 'reddot', 'extmag', 'hollow'], skin: 'Judge' },
   knife: { name: 'Combat Knife', cls: 'Melee', arch: 'assault', damage: 5, range: 0, band: [0, 0], ladder: [[0, 5]], shots: 1, recoil: 0, melee: true, cost: 1, mods: ['hollow', 'none', 'hollow', 'none'], skin: 'Obsidian' },
   smg: { name: 'Viper', cls: 'SMG', arch: 'assault', damage: 4, range: 0, band: [0, 1], ladder: [[5, 4], [8, 6]], shots: 2, recoil: 0, cost: 2, mods: ['comp', 'hollow', 'reddot', 'hollow'], skin: 'Gold Fang' },
@@ -186,7 +190,7 @@ for (const k in GUNCLASS) for (let r = 0; r < RARITY.length; r++) {
   for (const m of mods) for (const f in MODS[m].mod) st[f] = Math.max(f === 'hit_need' ? 1 : 0, st[f] + MODS[m].mod[f]);
   const id = `${k}-${r}`;
   WEAPONS[id] = { id, gunClass: k, name: r === 4 ? `${g.name} “${g.skin}”` : g.name, baseName: g.name, skin: r === 4 ? g.skin : null, archetype: g.arch, cls: g.cls, tier: r, rarity: RARITY[r].key, rarityName: RARITY[r].name,
-    ladder: g.ladder.map(([h, dm]) => [g.melee ? 0 : Math.max(1, h + st.hit_need - g.ladder[0][0]), dm + st.damage - g.damage]), band: g.band.slice(), melee: !!g.melee,
+    ladder: g.ladder.map(([h, dm]) => [g.melee ? 0 : Math.max(1, h + st.hit_need - g.ladder[0][0]), dm + st.damage - g.damage]), rookie: g.rookie ? [g.rookie[0], g.rookie[1] + st.damage - g.damage] : null, band: g.band.slice(), melee: !!g.melee,
     damage: st.damage, max_range: st.max_range, magazine_capacity: st.magazine_capacity, recoil: st.recoil, hit_need: st.hit_need, reveal: 0, intel_cost: 1 + r,
     mods: mods.filter(m => MODS[m].name).map(m => MODS[m].name), modText: mods.filter(m => MODS[m].name).map(m => `${MODS[m].name} (${MODS[m].text})`),
     tactical_main_effects: [], main_text: '', slot: 0, gcombo: null, tactical_boost_effects: [], boost_text: '', tags: [ARCH_TAG[g.arch]] };
@@ -222,9 +226,11 @@ function itemDef(s, item) { return item.kind === 'card' ? CARDS[s.cards[item.iid
 function eff(s, wiid) {
   const W = s.weapons[wiid]; const d = WEAPONS[W.def];
   const e = { damage: d.damage, max_range: d.max_range, magazine_capacity: d.magazine_capacity, hit_need: d.hit_need, recoil: d.recoil, reveal: 0 };
-  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = d.ladder; e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
+  e.hit_need = d.melee ? 0 : Math.max(1, e.hit_need); e.ladder = ladderOf(s, W.def); e.band = TUNE.pointBlank ? [0, d.band[1]] : d.band;
   return e;
 }
+// wb-first-shot: a gun with a rookie step (the Sidearm) has an extra, easy first step in rounds 1..TUNE.rookieRounds
+function ladderOf(s, wdef) { const d = WEAPONS[wdef]; return d.rookie && s.round <= TUNE.rookieRounds ? [d.rookie].concat(d.ladder) : d.ladder; }
 const guns = pl => pl.guns.filter(Boolean);
 const allCards = pl => pl.deck.concat(pl.discard, pl.hand, pl.play, pl.loadout || [], pl.drop || []);
 const owned = pl => allCards(pl).length;
@@ -565,10 +571,11 @@ function shotPreview(s, p, gi, commit) {
   const free = 0; const reveal = Math.min(c, TUNE.aimCap); const power = c - reveal;
   const am = aimMods(s, p, { melee: d.melee }); const steady = d.melee ? 0 : pl.revealPlus;
   const shift = TUNE.needPlus - pl.nextFire.reqMod + am.cover + am.long - steady;
-  const steps = E.ladder.map(([h, dm]) => [d.melee ? 0 : Math.max(1, h + shift), dm + pl.dmgTurn + power * TUNE.aimPower + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
+  const rk = !d.melee && E.ladder !== d.ladder; // the rookie step (wb-first-shot): its need is fixed, cover and range don't raise it
+  const steps = E.ladder.map(([h, dm], i) => [d.melee ? 0 : rk && i === 0 ? h : Math.max(1, h + shift), dm + pl.dmgTurn + power * TUNE.aimPower + (Dd === 0 ? pl.chargeDmg || 0 : 0)]); const need = steps[0][0];
   return { gi, commit: c, free, prec: pl.res.prec, reveal, power, powerDmg: power * TUNE.aimPower, need, base: E.hit_need, printed: E.ladder[0][0], accuracy: pl.nextFire.reqMod, steady, coverNeed: am.cover, coverLv: am.coverLv, coverBy: am.coverBy, long: am.long,
     recoil: E.recoil, recoilDrop: E.recoil, cost: Math.min(pl.res.prec, c + E.recoil), cover: am.cover, cq: am.cq, damage: E.damage, dmg: steps[0][1],
-    steps, rawSteps: steps, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
+    steps, rawSteps: steps, rookie: rk, band: E.band, range: E.max_range, rawDistance: Dd, distance: 0, inRange: inBand, left: shotsLeft(s, p, gi), melee: d.melee, pre: 0, bonusPrec: 0, suppression: 0, fall: 0 };
 }
 function shootCheck(s, p, gi, commit) {
   const pl = P(s, p); const wid = pl.guns[gi];
@@ -602,7 +609,7 @@ function autoShot(s, p, o) {
   for (let i = 0; i < Math.min(o.reveal, TUNE.aimCap); i++) { if (!pl.deck.length) { if (!pl.discard.length) break; pl.deck = shuffle(s, pl.discard); pl.discard = []; } revealed.push(pl.deck.pop()); }
   const total = revealed.reduce((a, i) => a + hmOf(s, i), 0);
   const am = aimMods(s, p, { auto: true }); const cq = am.cq; const shift = am.cover + am.long;
-  o = Object.assign({}, o, { steps: o.steps.map(([h, dm]) => [h > 0 ? h + shift : h, dm]) }); // cover and long range raise the need here too
+  o = Object.assign({}, o, { steps: o.steps.map(([h, dm], i) => [h > 0 && !(o.rookie && i === 0) ? h + shift : h, dm]) }); // the rookie step stays fixed // cover and long range raise the need here too
   const lvl = o.steps.filter(([h]) => total >= h).length - 1; const hit = lvl >= 0;
   let dealt = 0, notes = [];
   pl.stats.shots++; pl.stats[o.kind === 'turret' ? 'turretShots' : 'owShots']++;
@@ -679,7 +686,7 @@ function endTurn(s, p) {
   // Overwatch: the rival ends this turn inside your saved shot's range, so it fires now
   const o = P(s, 1 - p);
   if (o.ow) { const ow = o.ow; o.ow = null; const E = eff(s, o.guns[0]); const W = WEAPONS[s.weapons[o.guns[0]].def];
-    if (dist(s) >= E.band[0] && dist(s) <= E.band[1]) { autoShot(s, 1 - p, { reveal: W.melee ? 0 : ow.prec, steps: E.ladder.map(([h, dm]) => [W.melee ? 0 : h, dm]), label: 'held angle', kind: 'overwatch', range: E.band[1] }); if (s.over) return { ok: true }; }
+    if (dist(s) >= E.band[0] && dist(s) <= E.band[1]) { autoShot(s, 1 - p, { reveal: W.melee ? 0 : ow.prec, steps: E.ladder.map(([h, dm]) => [W.melee ? 0 : h, dm]), rookie: E.ladder !== W.ladder, label: 'held angle', kind: 'overwatch', range: E.band[1] }); if (s.over) return { ok: true }; }
     else log(s, `${poss(o.name)} held angle stays quiet: ${pl.name} ends out of range.`, 'fx'); }
   if (pl.stats.turnDmg > pl.stats.maxTurnDmg) pl.stats.bestRound = s.round;
   pl.stats.maxTurnDmg = Math.max(pl.stats.maxTurnDmg, pl.stats.turnDmg);
@@ -767,7 +774,7 @@ function suggestCommit(s, p, gi) {
   const pl = P(s, p); const sp = shotPreview(s, p, gi, 0); if (!sp || sp.melee) return { commit: 0, ev: sp ? sp.steps[0][1] : 0, p: 1, total: sp ? sp.steps[0][1] * sp.left : 0 };
   const pool = pl.res.prec, rc = sp.recoil, cap = TUNE.aimCap; if (pool < 1) return { commit: 0, ev: 0, p: 0, total: 0 };
   const nS = sp.steps.length; const E = eff(s, pl.guns[gi]);
-  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [Math.max(1, h + TUNE.needPlus + sp.coverNeed + sp.long - sp.steady), sp.steps[i][1]]) : sp.steps;
+  const later = pl.nextFire.reqMod ? E.ladder.map(([h], i) => [sp.rookie && i === 0 ? h : Math.max(1, h + TUNE.needPlus + sp.coverNeed + sp.long - sp.steady), sp.steps[i][1]]) : sp.steps;
   const odds = stepOdds(s, p, sp.steps.concat(later), Math.min(pool, cap), 300); // one pass, same samples for both ladders
   const pw = c => Math.max(0, c - cap) * TUNE.aimPower;
   const evOf = (c, k) => { if (c <= 0) return 0; const o = odds[Math.min(c, cap)].slice(k * nS, k * nS + nS); const st = k ? later : sp.steps; let e = 0; st.forEach(([, dm], i) => { e += (o[i] - (o[i + 1] || 0)) * (dm + pw(c)); }); return e; };
@@ -790,6 +797,19 @@ function threat(s, p, o = {}) {
   if (!sp.inRange || shots < 1) return { ev: 0, p: 0, inRange: sp.inRange, shots, steps: sp.steps };
   const sg = suggestCommit(st, p, 0);
   return { ev: Math.round(sg.total * 10) / 10, p: Math.round(sg.p * 100) / 100, commit: sg.commit, inRange: true, shots, steps: sp.steps };
+}
+// wb-first-shot: what a gun would do with your deck. The chance that a full aim (TUNE.aimCap cards, drawn from all the cards you own,
+// shuffled) reaches each step of its printed ladder: no cover, close range, no Mark or Steady. The loot sheet shows it for every gun,
+// and below TUNE.fireWarn it warns "Your deck can't fire this yet". deckHM: your deck's Hit Markers (total, per card).
+function deckHM(s, p) {
+  const all = allCards(P(s, p)).map(i => hmOf(s, i)); const tot = all.reduce((a, b) => a + b, 0);
+  return { total: tot, cards: all.length, avg: all.length ? tot / all.length : 0 };
+}
+function gunOdds(s, p, wdef) {
+  const W = WEAPONS[wdef]; if (!W) return null; if (W.melee) return { steps: [1], first: 1, need: 0, warn: false, melee: true };
+  const L = ladderOf(s, wdef); const hm = allCards(P(s, p)).map(i => hmOf(s, i)); const r = lcg(4242 + hm.length * 7); const n = 400; const hit = L.map(() => 0);
+  for (let t = 0; t < n; t++) { const a = hm.slice(); let sum = 0; for (let k = 0; k < Math.min(TUNE.aimCap, a.length); k++) { const j = k + Math.floor(r() * (a.length - k)); [a[k], a[j]] = [a[j], a[k]]; sum += a[k]; } L.forEach(([h], i) => { if (sum >= h) hit[i]++; }); }
+  const steps = hit.map(x => x / n); return { steps, ladder: L, first: steps[0], need: L[0][0], warn: steps[0] < TUNE.fireWarn, melee: false };
 }
 // Deck bar (O7): starters vs cards you added, by squad
 function deckMix(s, p) {
@@ -854,7 +874,7 @@ const W8 = { move: 0.7, prec: 1, intel: 1, def: 0.6, shot: 2, draw: 1.8, mark: 2
   // Squad Tactics: what each new verb is worth to the AI on an average turn (tuned with qa/tools/ai_sim_pkg.js)
   charge: 0.6, onHit: 0.9, sweep: 0.35, expose: 1.2, overwatch: 2.2, fortify: 1.2, heal: 0.8, suppress: 2.5, repeat: 2.6, turret: 1.1, anyStack: 1.4 };
 const val = effs => (effs || []).reduce((t, e) => t + (e.op === 'gain' ? W8[e.res] : W8[e.op] || 0) * (e.n || 1), 0);
-const aiAware = (s, p) => !(s.aiMode && s.aiMode[p] === 'blind');
+const aiAware = (s, p) => !(s.aiMode && (s.aiMode[p] === 'blind' || /^naive/.test(s.aiMode[p] || '')));
 const poss = name => name === 'You' ? 'Your' : `${name}’s`;
 function cardScore(s, p, d) {
   const pl = P(s, p); const aware = aiAware(s, p);
@@ -1001,7 +1021,8 @@ function aiFireLoop(s, p) {
 // A plausible first-match policy, not a good one: play every card, walk toward the rival until in range (and out of closing gas),
 // buy the biggest gun it can afford, then the priciest cards, take the first Spoils card, never promote, scrap or cycle,
 // and fire whenever FIRE shows more than 0% (the commit FIRE uses: the planner's, or all Precision).
-const aiNaive = (s, p) => !!(s.aiMode && s.aiMode[p] === 'naive');
+const aiNaive = (s, p) => !!(s.aiMode && /^naive/.test(s.aiMode[p] || ''));
+const aiHeeds = (s, p) => s.aiMode[p] === 'naive+warn'; // the same new player, but it skips guns the loot sheet warns about
 function naiveTurn(s, p) {
   const pl = P(s, p); const o = P(s, 1 - p);
   for (let g = 0; g < 30 && pl.hand.length && !s.over; g++) { playCard(s, p, pl.hand[0], { once: pl.loadout.length >= TUNE.loadoutSlots }); if (pl.peek) arrange(s, p, pl.peek.slice()); }
@@ -1017,7 +1038,7 @@ function naiveTurn(s, p) {
   for (let g = 0; g < 6 && buysLeft(s, p) > 0; g++) {
     const items = [pl.pos - 1, pl.pos, pl.pos + 1].map(w => envAt(s, w)).filter(e => e && e.state === 'safe' && e.loot.length).map(e => e.loot[0]).filter(it => lootCost(s, p, it) <= pl.res.intel);
     const cur = WEAPONS[s.weapons[pl.guns[0]].def];
-    const gun = items.filter(it => it.kind === 'weapon' && WEAPONS[s.weapons[it.iid].def].intel_cost >= cur.intel_cost && s.weapons[it.iid].def !== cur.id)
+    const gun = items.filter(it => it.kind === 'weapon' && WEAPONS[s.weapons[it.iid].def].intel_cost >= cur.intel_cost && s.weapons[it.iid].def !== cur.id && !(aiHeeds(s, p) && gunOdds(s, p, s.weapons[it.iid].def).warn))
       .sort((a, b) => WEAPONS[s.weapons[b.iid].def].intel_cost - WEAPONS[s.weapons[a.iid].def].intel_cost || WEAPONS[s.weapons[b.iid].def].ladder[0][1] - WEAPONS[s.weapons[a.iid].def].ladder[0][1])[0];
     if (gun) { if (!buy(s, p, [gun.iid]).ok) break; continue; }
     const card = items.filter(it => it.kind === 'card').sort((a, b) => itemDef(s, b).intel_cost - itemDef(s, a).intel_cost)[0];
@@ -1034,7 +1055,7 @@ function naiveTurn(s, p) {
     const d = WEAPONS[s.weapons[pl.guns[0]].def];
     const c = d.melee ? 0 : (suggestCommit(s, p, 0).commit || pl.res.prec); const sp = shotPreview(s, p, 0, c);
     const odds = d.melee ? 1 : sp.reveal >= 1 ? hitChance(s, p, sp.reveal, sp.need, 300) : 0;
-    if (g === 0) { const f = (pl.stats.fireOpp = pl.stats.fireOpp || {})[s.round] = pl.stats.fireOpp[s.round] || [0, 0, 0]; f[0]++; f[1] += odds; if (s._diag) s._diag.push({ r: s.round, gun: d.id, need: sp.need, reveal: sp.reveal, odds, deckHM: allCards(pl).reduce((t, i) => t + hmOf(s, i), 0) / owned(pl) }); }
+    if (g === 0) { const f = (pl.stats.fireOpp = pl.stats.fireOpp || {})[s.round] = pl.stats.fireOpp[s.round] || [0, 0, 0]; f[0]++; f[1] += odds; }
     if (!(odds > 0)) break;
     if (!fire(s, p, 0, c).ok) break;
     if (pl.hand.length && !s.over) for (let k = 0; k < 10 && pl.hand.length; k++) playCard(s, p, pl.hand[0], { once: pl.loadout.length >= TUNE.loadoutSlots });
@@ -1063,7 +1084,7 @@ function aiTurn(s, p) {
 const LOADOUT = {}; const PERKS = {};
 const no = () => fail('Not in these rules.');
 const API = { RES, RES_LABEL, TIER_NAME, RARITY, MODS, GUNCLASS, CARDS, WEAPONS, ATTS, ENVS, WEAPON_COPIES, TUNE, ARCH_TAG, SQUADS, RALLY, RALLY_TEXT, FPW,
-  newGame, playCard, playAll, move, buy, fire, endTurn, aiTurn, takeSpoils, spoilsOffer, promote, arrange, autoShot, threat, deckMix, BASIC, OPS, hasOp,
+  newGame, playCard, playAll, gunOdds, deckHM, move, buy, fire, endTurn, aiTurn, takeSpoils, spoilsOffer, promote, arrange, autoShot, threat, deckMix, BASIC, OPS, hasOp,
   RANKS, PROFILE_KEY, blankProfile, rankOf, unlockedOps, xpFor, applyMatch, loadProfile, saveProfile, dailySeed, aiSpoils, aiPromote, aiArrange, cardScore, aiPlay, aiMove, aiBuy, aiCycle, aiFireLoop, aiScrap, suggestCommit, stepOdds, stationScrap, squadCounts, mainSquad, buysLeft, closeSchedule, effText, playText,
   reachable, closing, GUNSET, LOCSET, locTier, locSize, SQUAD_TEXT, rolesPlayed, NEIGHBOURS, cycle, LOADOUT, plateCost, nextPhase, buySupply, scrap, lootNear, PERKS, archCounts, gasRate, moveCost,
   shotPreview, shootCheck, shotsLeft, hitChance, expDmg, lootCost, buyTotal, eff, envAt, dist, itemDef, cardDef, nextEdge, safeBounds, inSafe, isStarter, guns, owned, aiItemScore,

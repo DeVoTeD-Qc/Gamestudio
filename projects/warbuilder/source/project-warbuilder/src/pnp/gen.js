@@ -125,7 +125,7 @@ function gunCard(id, tierBack) {
     <div class="gmain"><div class="gtop"><div class="gtl"><span class="nm">${esc(g.name.replace(/ “.*”/, ''))}</span><div class="gsub"><span class="ttag">${esc(g.cls === 'Marksman Rifle' ? 'Marksman' : g.cls)}</span><span class="rtag" style="background:${RAR[g.tier]}">${RARN[g.tier]}</span></div></div><span class="costb">${ic('intel', RES.intel)}${g.intel_cost}</span></div>
       <div class="gart">${art ? `<img src="${art}" alt="">` : ''}</div>
       <div class="gbot"><div class="gstats">${stats.map(([v, i, l, on]) => `<div><b${onText(on)}>${v}</b><span>${ic(i)}${l}</span></div>`).join('')}</div>
-      ${g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo none">Reveal 1 card per ${ic('prec', RES.prec)}, up to ${T.aimCap}</div>`}</div>
+      ${g.rookie ? `<div class="gcombo rk"><span><b>Rounds 1–${T.rookieRounds}:</b> ${g.rookie[0]} ${ic('hm')} hits for ${g.rookie[1]} (cover and range don't count)</span></div>` : g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo none">Reveal 1 card per ${ic('prec', RES.prec)}, up to ${T.aimCap}</div>`}</div>
     </div></div>`;
 }
 function gunBack(label, sub, bg, dark) { return `<div class="card gunL gback" style="--gb:${bg};color:${dark ? '#1C2017' : '#fff'}"><div class="bk"><div class="bl">${label}</div><div class="bs">${sub}</div></div></div>`; }
@@ -229,6 +229,7 @@ const RULES = `
 <li><b>Commit</b> Precision: reveal one card from your deck per Precision committed, <b>up to ${T.aimCap} cards</b>, and count the ${ic('hm')} Hit Markers. Each Precision committed beyond ${T.aimCap} is <b>Power</b>: +${T.aimPower} damage if the shot hits.</li>
 <li><b>Recoil</b>: the shot spends the Precision you committed, then the gun's Recoil costs that much more (down to 0). Plan your shots: big commits are sure, small ones leave Precision for the next shot.</li>
 <li>Read the <b>damage ladder</b>: reach the first step to hit, the second for a big hit. Every step needs <b>+${T.coverNeed} ${ic('hm')}</b> if the target's location has <b>cover</b> (<b>Pierce</b> and <b>Expose</b> ignore it) and <b>+${T.longNeed}</b> at <b>long range</b> (distance ${T.longFrom} or more). <b>Mark</b> and <b>Steady</b>: 1 fewer each. <b>Close quarters</b> (distance 0): ignore Armor. Reaction cards in hand, then Armor, reduce damage. A hit deals at least 1.</li>
+<li><b>Your first shots</b> (wb-first-shot): in rounds 1–${T.rookieRounds} the <b>Sidearm</b> has an extra first step: ${WD.GUNCLASS.pistol.rookie[0]} ${ic('hm')} hits for ${WD.GUNCLASS.pistol.rookie[1]}, whatever the cover or range. Before you buy a gun, count the ${ic('hm')} in your deck: a shot reveals at most ${T.aimCap} cards, so a gun whose first step your cards can't reach can't hit yet.</li>
 <li>Each gun fires up to its <b>Shots</b> per turn, plus any ${ic('ammo', RES.ammo)} extra shots. <b>Combat Knife</b>: distance 0 only, always hits.</li>
 <li>Revealed cards go to your discard. Whenever your deck is empty, shuffle your discard to form a new deck.</li></ol>
 <h2>The circle</h2>

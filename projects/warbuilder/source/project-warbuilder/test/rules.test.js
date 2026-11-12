@@ -6,6 +6,9 @@ const assert = require('node:assert/strict');
 const { WD, scenario, card, cards, setCards, setGun, place, zero } = require('./helpers');
 
 const T = WD.TUNE;
+// wb-first-shot: the Sidearm's rookie step (rounds 1–3) would change every round-1 ladder test below, so these tests pin the ladder
+// without it; the rookie step has its own tests at the end of this file.
+const ROOKIE = T.rookieRounds; T.rookieRounds = 0;
 const defs = (s, z) => z.map(i => s.cards[i].def);
 const HIT5 = ['T004', 'K04', 'K04']; // revealed top first: Focus 2 + Focus 2 + Steady Aim 1 = 5 Hit Markers, the Sidearm's first step (wb-odds2: 5+ → 4)
 
@@ -427,5 +430,36 @@ describe('end of turn and round', () => {
     assert.equal(run(1, 2), 'them');
     assert.equal(run(2, 1), 'me');
     assert.equal(run(2, 2), 'draw');
+  });
+});
+
+describe('first shot (wb-first-shot)', () => {
+  test('rounds 1–3: the Sidearm has a rookie first step, 1 Hit Marker hits for 1, cover and long range do not raise it', () => {
+    T.rookieRounds = ROOKIE;
+    try {
+      const { s, p, me, them } = duel({ prec: 1, deck: ['T004'], posMe: 1, posThem: 3, types: { 3: 'E07' } }); // distance 2 (long range), rival in cover
+      const sp = WD.shotPreview(s, p, 0, 1);
+      assert.deepEqual(sp.steps.map(x => x[0]), [1, 7, 9]);
+      assert.equal(sp.need, 1);
+      const hp = them.hp; const r = WD.fire(s, p, 0, 1); assert.ok(r.ok); assert.equal(r.result.hit, true); assert.equal(hp - them.hp, 1);
+      s.round = ROOKIE + 1; assert.deepEqual(WD.shotPreview(s, p, 0, 1).steps.map(x => x[0]), [7, 9], 'from round 4 the printed ladder only');
+    } finally { T.rookieRounds = 0; }
+  });
+  test('gunOdds: the chance a full aim from your deck reaches a gun\'s first step; the loot sheet warns below TUNE.fireWarn', () => {
+    const { s, p, me } = duel({ deck: ['K04', 'K04', 'K04', 'K04'] }); // 4 × Focus: 2 Hit Markers each, 6 in a full aim
+    const ok = WD.gunOdds(s, p, 'ar-0'); assert.equal(ok.need, 6); assert.equal(ok.first, 1); assert.equal(ok.warn, false);
+    setCards(s, me, { deck: ['T001', 'T001', 'T002', 'T002', 'T004'] }); // starters: at most 1 Hit Marker in 3 cards
+    const no = WD.gunOdds(s, p, 'ar-0'); assert.equal(no.first, 0); assert.equal(no.warn, true);
+    assert.equal(WD.gunOdds(s, p, 'knife-0').warn, false);
+    assert.deepEqual(WD.deckHM(s, p), { total: 1, cards: 5, avg: 0.2 });
+  });
+  test('the new-player bot (sim only) plays whole matches without errors', () => {
+    T.rookieRounds = ROOKIE;
+    try {
+      for (const mode of ['naive', 'naive+warn']) for (let seed = 1; seed <= 6; seed++) {
+        const s = WD.newGame({ seed }); s.aiMode = [mode, 'aware']; let n = 0;
+        while (!s.over) { assert.ok(n++ < 400, 'no result'); const r = WD.aiTurn(s, s.turn); assert.ok(r.ok, r.err); }
+      }
+    } finally { T.rookieRounds = 0; }
   });
 });

@@ -2712,3 +2712,61 @@ button.tchip.act:hover, button.tchip.act:focus-visible { background: #4A4218; ou
 
   .h-btns button { min-height: 40px !important; }
 }
+
+/* ---------- wb-first-shot (5-player playtest of v11) ---------- */
+/* Hit Markers in your deck, next to Threat: the number that decides whether you can shoot */
+.h-hmdeck { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 2px 7px; padding: 4px 8px; border-radius: 10px; background: var(--hpanel, #262B20); border: 2px solid #8FD39A; color: var(--hink, #F3F4EB); min-width: 0; }
+.h-hmdeck.warn { border-color: #F06A5B; background: #3A1F1A; }
+.h-hmdeck .hmd-ic svg.i { width: 18px; height: 18px; }
+.h-hmdeck > b { font-family: var(--f-mono); font-size: 22px; line-height: 1; }
+.h-hmdeck .hmd-t { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; display: grid; line-height: 1.1; min-width: 0; }
+.h-hmdeck .hmd-t small { font-size: 10.5px; font-weight: 500; letter-spacing: 0; color: var(--hmut, #A7AC97); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.h-hmdeck .hmd-g { display: grid; justify-items: end; font-size: 10.5px; line-height: 1.1; color: var(--hmut, #A7AC97); max-width: 92px; }
+.h-hmdeck .hmd-g b { font-family: var(--f-mono); font-size: 16px; color: var(--hink, #F3F4EB); }
+.h-hmdeck.warn .hmd-g b { color: #FF8E80; }
+.h-hmdeck .hmd-g small { font-size: 9.5px; }
+/* loot sheet: what each gun does with your deck */
+.godds { display: grid; gap: 1px; margin-top: 6px; padding: 6px 9px; border-radius: 8px; background: #262B20; border: 2px solid #5B6152; color: #F3F4EB; font-size: 12.5px; line-height: 1.25; }
+.godds b { font-size: 14px; } .godds span { color: #C9CDBA; }
+.godds.ok { border-color: #6CC287; } .godds.warn { border-color: #F06A5B; background: #3A1F1A; } .godds.warn b { color: #FF8E80; }
+.lootwrap.hasodds { display: flex; flex-direction: column; }
+/* text over art in the loot sheet: the printed location's stack note sits under the live stack, so hide it there */
+/* (the location face is a closed component, so the live stack gets an opaque backdrop over the printed stack note) */
+.ls-loc .zoneov:has(.lstack) { background: #12150F; border-radius: 6px; z-index: 2; }
+/* phones: the location face and the loot stack stack vertically, so a wide gun face never runs off the right edge */
+@media (max-width: 560px) { .locsheet { flex-wrap: wrap !important; } .ls-right { flex: 1 1 100%; } .ls-loc { width: min(200px, 52vw); } .lootwrap, .lootpick { max-width: 100%; min-width: 0; } }
+/* squads never by colour alone (deuteranopia): a text label on the counters and a pattern per squad in the deck bar */
+.h-squad .sq-nm { font-size: 8.5px; font-weight: 800; letter-spacing: .06em; color: var(--hink, #F3F4EB); opacity: .85; margin-left: 2px; }
+.dk-bar .sq-recon { background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.45) 0 2px, transparent 2px 5px); }
+.dk-bar .sq-support { background-image: radial-gradient(rgba(0,0,0,.5) 1px, transparent 1.4px); background-size: 4px 4px; }
+.dk-bar .sq-engineer { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.45) 0 2px, transparent 2px 4px); }
+/* How to play (and every sheet) is opaque from its first frame: the entrance moves, it no longer fades in */
+@keyframes sheetIn { from { transform: translateY(14px) scale(.97); } }
+.layer-ui .sheet { background-color: #1C2017; }
+.layer-ui .scrim:has(.rules) { background: rgba(10,12,8,.88); }
+/* a sideways swipe on the location strip or the hand must not turn into a browser back gesture */
+.field, .h-map, .hh-row, .hand, .cx-grid, .sheet { overscroll-behavior: contain; }
+.h-map, .field, .hh-row { touch-action: pan-x pan-y; }
+/* the title page scrolls when it doesn't fit (landscape phones) */
+.start2 { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-height: 540px) { .start2 { place-items: start center; } }
+/* landscape phones (844x390): the game page scrolls instead of squeezing; 44 px buttons; whole hand cards */
+@media (orientation: landscape) and (max-height: 540px) {
+  #app:has(.hud) { height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .hud { height: auto; min-height: 100dvh; overflow: visible; grid-template-rows: 34px minmax(250px, auto) auto 222px !important; }
+  .h-map { max-height: 300px; }
+  .h-hand { min-height: 0; }
+  .hh-row { flex: none; height: 214px; container-type: normal; }
+  .hh-row .tc { height: 200px !important; flex: 0 0 auto; width: 140px; }
+  .h-btns button, .h-btns .hb-fire, .h-top .iconbtn, .hh-head .btn.sm { min-height: 44px !important; }
+  .hud .h-deck { display: none; }
+  .hud .h-guns { container-type: normal !important; height: auto; min-height: 0; overflow: visible !important; }
+  .h-hmdeck { padding: 2px 7px; gap: 0 6px; } .h-hmdeck > b { font-size: 18px; } .h-hmdeck .hmd-t small { display: none; } .h-hmdeck .hmd-g small { display: none; } .h-hmdeck .hmd-g b { font-size: 14px; }
+}
+/* portrait phones: Hit Markers take the deck bar's place next to Threat (the deck mix stays in the deck sheet and tooltips) */
+@media (orientation: portrait) and (max-width: 520px) {
+  .h-res .h-deck { display: none !important; }
+  .h-res .h-hmdeck { grid-area: deck; padding: 3px 7px; gap: 0 6px; } .h-res .h-hmdeck > b { font-size: 18px; }
+  .h-res .h-hmdeck .hmd-t small, .h-res .h-hmdeck .hmd-g small { display: none; } .h-res .h-hmdeck .hmd-g b { font-size: 14px; }
+}
+.gpc-lad > span.rk { background: #2E8B3E; }
