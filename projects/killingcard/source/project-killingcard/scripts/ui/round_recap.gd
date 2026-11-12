@@ -9,10 +9,14 @@
 #       Score: you 3, rival 2. You eliminated 1.
 #       Now: play cards, then READY.
 #   The letter plates use the column tiles' shapes (yours solid, the rival's hatched, even dashed,
-#   nobody a grey keyline), so it reads without colour. It stays until a tap on it, or until the
-#   player starts to plan (the controller hides it on select / drag / READY). Long-press or
-#   right-click adds the one-line rule of how a column scores (studio rule: everything inspectable).
-#   Not modal: only the panel itself takes taps.
+#   nobody a grey keyline), so it reads without colour. Long-press or right-click adds the one-line
+#   rule of how a column scores (studio rule: everything inspectable).
+#   kc-recap-dismiss (head: "pressed READY to skip it and it ended my turn"): it can never cause an
+#   accidental action. While it shows, the first press anywhere (READY, cards, the board) only
+#   closes it and is eaten with its release; a press that turns into a drag (past the gesture's
+#   threshold) closes it and is replayed, so the drag still starts. It also hides itself after
+#   AUTO_HIDE_S (paused while a mouse hovers it), and a shrinking amber line plus "tap to
+#   continue" say so.
 # Usage: var rr := RoundRecap.new(); add_child(rr); rr.show_recap(ScoreRace.recap(...), "Now: ...")
 # Dependencies: PressGesture, hud_theme.tres (ToastPanel, HudHeader, Hud colours), BannerView (dashes).
 # Author: UI/UX Agent (kc-clarity)
@@ -26,6 +30,11 @@ const MUTED: Color = Color("#B9C2C9")
 const RULE: String = "A column scores for the side that still has units in it at round end (if both do, a Holder decides; else it is even). Held = +1, Hot Zone +2."
 const ROW_FS: int = 20
 const HEAD_FS: int = 20
+## kc-recap-dismiss: seconds before it hides itself; after a long press (the rule shown), longer.
+const AUTO_HIDE_S: float = 4.0
+const INSPECT_HOLD_S: float = 7.0
+const TIMER_LINE_H: float = 3.0
+enum Outside { NONE, SWALLOW, REPLAY }
 
 var _title: Label = null
 var _rows: VBoxContainer = null
@@ -35,6 +44,14 @@ var _rule: Label = null
 var _gesture: RefCounted = null
 ## The last recap shown (tests): {title, rows, score, ...}.
 var data: Dictionary = {}
+## kc-recap-dismiss: seconds left before it hides itself, out of _hold.
+var time_left: float = 0.0
+var _hold: float = AUTO_HIDE_S
+## A real mouse is over it (auto-hide pauses); never set by touch (emulated mouse).
+var _hovered: bool = false
+var _outside: Outside = Outside.NONE
+var _out_press: InputEventMouseButton = null
+var _out_queue: Array[InputEvent] = []
 
 
 func _init() -> void:
@@ -55,8 +72,9 @@ func _init() -> void:
 	_title.name = "RecapTitle"
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
-	var x: Label = _label("✕", HEAD_FS, MUTED)
+	var x: Label = _label("tap to continue  ✕", ROW_FS - 6, MUTED)
 	x.name = "CloseMark"
+	x.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(x)
 	_rows = VBoxContainer.new()
 	_rows.name = "Rows"
@@ -78,6 +96,7 @@ func _init() -> void:
 	_gesture.drag_enabled = false
 	_gesture.tapped.connect(func(_p: Vector2) -> void: dismiss())
 	_gesture.long_pressed.connect(func(_p: Vector2) -> void: inspect())
+	set_process(false)
 
 
 func _label(text: String, fs: int, c: Color) -> Label:
@@ -117,6 +136,7 @@ func show_recap(recap: Dictionary, now: String) -> void:
 	_now.visible = now != ""
 	_rule.visible = false
 	visible = true
+	_restart_timer(AUTO_HIDE_S)
 	reset_size()
 
 
@@ -184,6 +204,8 @@ func inspect() -> void:
 	_rule.visible = true
 	_rule.custom_minimum_size.x = maxf(200.0, size.x - 24.0)
 	reset_size()
+	# Time to read the rule, then it goes away by itself (or on a tap).
+	_restart_timer(INSPECT_HOLD_S)
 
 
 func dismiss() -> void:
@@ -191,7 +213,152 @@ func dismiss() -> void:
 		return
 	visible = false
 	_gesture.cancel()
+	set_process(false)
 	dismissed.emit()
+
+
+# --- kc-recap-dismiss: auto-hide ------------------------------------------------------------
+
+func _restart_timer(seconds: float) -> void:
+	_hold = seconds
+	time_left = seconds
+	set_process(true)
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	advance(delta)
+
+
+## Runs the auto-hide clock by `delta` seconds (the frame loop, and tests). Paused while a mouse
+## hovers the panel or a press on it is held (a long press in progress).
+func advance(delta: float) -> void:
+	if not visible:
+		set_process(false)
+		return
+	if is_paused():
+		return
+	time_left -= delta
+	queue_redraw()
+	if time_left <= 0.0:
+		dismiss()
+
+
+func is_paused() -> bool:
+	return _hovered or _gesture.pressed
+
+
+func _draw() -> void:
+	# The shrinking timer line along the bottom edge (inside the panel's border).
+	if _hold <= 0.0:
+		return
+	var frac: float = clampf(time_left / _hold, 0.0, 1.0)
+	var w: float = (size.x - 16.0) * frac
+	if w <= 0.5:
+		return
+	var c: Color = AMBER if not is_paused() else MUTED
+	draw_rect(Rect2(Vector2(8.0, size.y - TIMER_LINE_H - 3.0), Vector2(w, TIMER_LINE_H)), c)
+
+
+# --- kc-recap-dismiss: the first press outside only closes it -------------------------------
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouse:
+		_track_hover(event as InputEventMouse)
+	if _outside != Outside.NONE:
+		_follow_outside_press(event)
+		return
+	if not is_visible_in_tree():
+		return
+	if not (event is InputEventMouseButton and (event as InputEventMouseButton).pressed):
+		return
+	var mb: InputEventMouseButton = event
+	if mb.button_index != MOUSE_BUTTON_LEFT and mb.button_index != MOUSE_BUTTON_RIGHT:
+		return  # the wheel scrolls as usual
+	if _is_inside(mb.position):
+		return  # the panel's own _gui_input: tap closes, long press / right click shows the rule
+	if _layer_above_at(mb.position):
+		return  # a sheet, the inspector or a flyout over the recap gets its own press
+	get_viewport().set_input_as_handled()
+	_out_press = mb.duplicate() as InputEventMouseButton
+	_out_queue.clear()
+	_outside = Outside.SWALLOW
+	dismiss()
+
+
+## After the closing press: eat its release (a tap only closes); if it moves past the drag
+## threshold first, hand the press and the moves back so the drag starts after all.
+func _follow_outside_press(event: InputEvent) -> void:
+	if _outside == Outside.REPLAY:
+		if event is InputEventMouse:
+			get_viewport().set_input_as_handled()
+			_out_queue.append(event.duplicate())
+		return
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.button_index == _out_press.button_index and not mb.pressed:
+			get_viewport().set_input_as_handled()
+			_outside = Outside.NONE
+			_out_press = null
+		return
+	if event is InputEventMouseMotion and _out_press.button_index == MOUSE_BUTTON_LEFT:
+		var mm: InputEventMouseMotion = event
+		if mm.position.distance_to(_out_press.position) > PressGesture.DRAG_THRESHOLD:
+			get_viewport().set_input_as_handled()
+			_outside = Outside.REPLAY
+			_out_queue.append(mm.duplicate())
+			_replay.call_deferred()
+
+
+func _replay() -> void:
+	var vp: Viewport = get_viewport()
+	var press: InputEventMouseButton = _out_press
+	var queued: Array[InputEvent] = _out_queue.duplicate()
+	_outside = Outside.NONE
+	_out_press = null
+	_out_queue.clear()
+	if vp == null or press == null:
+		return
+	vp.push_input(press, true)
+	for e: InputEvent in queued:
+		vp.push_input(e, true)
+
+
+func _is_inside(pos: Vector2) -> bool:
+	return Rect2(Vector2.ZERO, size).has_point(get_global_transform_with_canvas().affine_inverse() * pos)
+
+
+## True when a visible control drawn over the recap (a later sibling: sheets, inspector, flyout)
+## takes the press at `pos`.
+func _layer_above_at(pos: Vector2) -> bool:
+	var parent: Node = get_parent()
+	if parent == null:
+		return false
+	for i: int in range(get_index() + 1, parent.get_child_count()):
+		var n: Node = parent.get_child(i)
+		if n is Control and _takes_press(n as Control, pos):
+			return true
+	return false
+
+
+static func _takes_press(c: Control, pos: Vector2) -> bool:
+	if not c.visible:
+		return false
+	if c.mouse_filter != Control.MOUSE_FILTER_IGNORE \
+			and Rect2(Vector2.ZERO, c.size).has_point(c.get_global_transform_with_canvas().affine_inverse() * pos):
+		return true
+	for ch: Node in c.get_children():
+		if ch is Control and _takes_press(ch as Control, pos):
+			return true
+	return false
+
+
+func _track_hover(e: InputEventMouse) -> void:
+	# Touch arrives as emulated mouse events: a finger never "hovers", so it never pauses the clock.
+	var was: bool = _hovered
+	_hovered = e.device != InputEvent.DEVICE_ID_EMULATION and is_visible_in_tree() and _is_inside(e.position)
+	if was != _hovered:
+		queue_redraw()
 
 
 func is_open() -> bool:

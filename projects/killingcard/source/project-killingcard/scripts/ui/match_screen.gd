@@ -660,7 +660,8 @@ func show_toast(text: String, seconds: float = TOAST_SECONDS) -> void:
 			_toast.hide())
 
 
-## kc-clarity: the last round, per column, until a tap on it or the player starts to plan.
+## kc-clarity: the last round, per column, until a tap (anywhere: kc-recap-dismiss, that tap only
+## closes it), a drag, about 4 s, or the player starts to plan.
 func show_round_recap(recap: Dictionary, now: String) -> void:
 	if _round_recap == null:
 		return

@@ -551,6 +551,10 @@ func test_full_rounds_with_the_ai_phone() -> void:
 	assert_false(foe.plays.is_empty(), "the AI planned Round 2 too")
 	assert_eq(c.enemy_ai_player.last_rejected, [] as Array[Dictionary], "Round 2: no refused AI intent")
 	# Round 2 with a fast-forward: a tap during the feedback skips it.
+	# kc-recap-dismiss: the first tap only closes the round recap; the second is READY.
+	assert_true(m.get_round_recap().is_open(), "the Round 1 recap is up")
+	await _tap(vp, m.get_ready_button().get_global_rect().get_center())
+	assert_false(m.get_round_recap().is_open() or foe.ready and c.state.sides[0].ready, "that tap only closed the recap")
 	await _tap(vp, m.get_ready_button().get_global_rect().get_center())
 	var t0: int = Time.get_ticks_msec()
 	await _tap(vp, Vector2(vp.size) * 0.5)

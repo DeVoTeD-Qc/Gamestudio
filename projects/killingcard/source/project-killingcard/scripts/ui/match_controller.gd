@@ -642,7 +642,7 @@ func _deploy_hint() -> void:
 	var now: String = "Round %d: drag your Operator onto a column." % state.round_number if s.operator_can_deploy \
 			else "Round %d: play cards, then READY." % state.round_number
 	if _recap != "":
-		# kc-clarity (playtest v28): the recap stays until the player dismisses it or starts to play
+		# kc-clarity (playtest v28): the recap stays until a tap (eaten), a drag, ~4 s or a play
 		# (per column: who still had units there and who scored), the drill keeps the short toast.
 		if _screen.has_method(&"show_round_recap") and not _is_tutorial():
 			_screen.show_round_recap(_recap_data, now)

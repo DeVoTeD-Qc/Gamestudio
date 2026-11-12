@@ -422,6 +422,10 @@ func _full_run_body() -> void:
 		await _tap(m.get_mulligan_panel().get_keep_button())
 	await _play_round(m, c)
 	var pause: Control = m.get_pause_menu()
+	# kc-recap-dismiss: while the round recap shows, the first tap (MENU too) only closes it.
+	if m.get_round_recap().is_open():
+		await _tap(m.get_menu_button())
+		assert_false(pause.is_open() or m.get_round_recap().is_open(), "that tap only closed the recap")
 	await _tap(m.get_menu_button())
 	assert_true(pause.is_open(), "MENU opens the pause sheet")
 	_check_overlay(pause, "pause sheet")
