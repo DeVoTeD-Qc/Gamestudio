@@ -502,6 +502,17 @@ static func sections(bal: DDBalance) -> Array:
 		rules.append({"icon": "rule:" + str(r[0]), "name": tag.substr(0, 1) + tag.substr(1).to_lower(), "line": "Each kill: %s (%s)." % [DDText.rule_short(str(r[0])), str(r[1])]})
 	rules.append({"icon": "rule:down", "name": "Last or lower / higher", "line": "Rosa's Steady Hands: the Rifle and Crossbow also take an equal number."})
 	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: once per wave, one kill may break its rule."})
+	# dd-challenge-rack: every challenge with its gun, its rule in plain words and an example
+	var chals: Array = []
+	var ws: Dictionary = bal.weapons()
+	for wid: Variant in ws.keys():
+		var cid: String = bal.weapon_challenge(str(wid))
+		if cid == "":
+			continue
+		var rw: Array = bal.weapon_reward(str(wid))
+		var ct: String = DDText.challenge_text(cid, bal)
+		chals.append({"icon": "badge:challenge_open", "name": "%s (%s)" % [DDText.challenge_name(cid), bal.weapon_name(str(wid))],
+			"line": "%s%s. Pays %s." % [ct.substr(0, 1).to_upper(), ct.substr(1), DDText.reward_text(str(rw[0]), int(rw[1]), bal)]})
 	return [
 		["NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT", [
 			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A weapon's power. You lose strength - hit HP."},
@@ -523,6 +534,7 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "mod:open_breech", "name": "Gun Mod (MOD chip)", "line": "Fitted at the safehouse to gun slot 1 or 2; every gun in that slot gets its rule."},
 		]],
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
+		["CHALLENGES: FILL THE GUN THIS WAY FOR ITS EXTRA REWARD", chals],
 		["ON ZOMBIES", [
 			{"icon": "chip:-3", "name": "Damage to you", "line": "The HP you lose with the active weapon. Green 0 = none."},
 			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = the active gun can take it; dark = it can't."},

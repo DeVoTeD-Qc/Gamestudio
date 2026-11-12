@@ -316,6 +316,8 @@ func _render() -> void:
 			_build_safehouse()
 		Screen.END:
 			_build_end()
+	if screen in [Screen.MAP, Screen.SAFEHOUSE, Screen.END] and str(sheet.get("type", "")) == "patches":
+		_build_sheet()
 	if not _pending_fx.is_empty() or _screen_fx != "" or not _pending_banner.is_empty():
 		var pend: Dictionary = _pending_fx
 		var sfx: String = _screen_fx
@@ -873,7 +875,9 @@ func _patch_row(run: DDRun, icon: float, max_w: float) -> DDCardView:
 	var pp: Dictionary = DDPayloads.patches(run)
 	var row: DDCardView = _custom_tile("P", pp, DDUi.PANEL)
 	row.name = "PatchesChip"
-	row.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(pp))
+	# dd-challenge-rack (head: "Clicking the patch icons should show me all my patches and
+	# effects"): a tap anywhere on the row opens Your Patches; long press an icon = that Patch
+	row.tapped.connect(func(_v: DDCardView) -> void: open_patches_sheet())
 	var h: HBoxContainer = DDUi.hbox(4)
 	h.name = "PatchIcons"
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -935,8 +939,84 @@ func _patch_icon(pid: String, icon: float) -> DDCardView:
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ic.add_child(l)
-	ic.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(p))
+	ic.tapped.connect(func(_v: DDCardView) -> void: open_patches_sheet())
 	return ic
+
+
+## dd-challenge-rack: the Your Patches sheet (every Patch you wear: icon, name, effect, state).
+func open_patches_sheet() -> void:
+	if Game.run == null or Game.run.patches.is_empty() or busy:
+		return
+	sheet = {"type": "patches"}
+	Sfx.cue(&"button", 0.9)
+	_queue_render()
+
+
+func _patches_list_sheet(run: DDRun, v: VBoxContainer) -> void:
+	var vp: Vector2 = get_viewport_rect().size
+	var head: HBoxContainer = DDUi.hbox(8)
+	v.add_child(head)
+	var t: Label = DDUi.label("YOUR PATCHES · %d" % run.patches.size(), DDUi.FONT_M, DDUi.accent("P"))
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(t)
+	head.add_child(DDUi.label("for the whole run", DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT))
+	var sc: ScrollContainer = ScrollContainer.new()
+	sc.name = "PatchesScroll"
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var rows_h: float = run.patches.size() * 78.0
+	sc.custom_minimum_size = Vector2(0, minf(rows_h, maxf(120.0, vp.y - 64.0 - 28.0 - 64.0 - 60.0 - 40.0)))
+	v.add_child(sc)
+	var list: VBoxContainer = DDUi.vbox(6)
+	list.name = "PatchesList"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(list)
+	for pid: String in run.patches:
+		list.add_child(_patch_list_row(run, pid))
+	v.add_child(_sheet_button("Close", true, DDUi.PANEL_HI, close_sheet))
+
+
+## One row of Your Patches: icon | NAME (+ state) over its full effect. Long press = its zoom.
+func _patch_list_row(run: DDRun, pid: String) -> DDCardView:
+	var p: Dictionary = DDPayloads.patch(pid, Game.bal)
+	var tex: Texture2D = Art.texture_for(Art.patch_keys(pid))
+	if tex != null:
+		p["art"] = tex
+	var r: DDCardView = _custom_tile("P", p, DDUi.PANEL_HI)
+	r.name = "PatchRow_" + pid
+	r.custom_minimum_size = Vector2(0, 72)
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(p))
+	var h: HBoxContainer = DDUi.hbox(10)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.add_child(h)
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(56, 56)
+		tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(tr)
+	var col: VBoxContainer = DDUi.vbox(0)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(col)
+	var top: HBoxContainer = DDUi.hbox(8)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(top)
+	top.add_child(DDUi.label(DDText.patch_name(pid).to_upper(), DDUi.FONT_S - 2, DDUi.accent("P")))
+	var st: Array = DDPayloads.patch_state(run, pid)
+	if not st.is_empty():
+		var sl: Label = DDUi.label(str(st[0]), DDUi.FONT_S - 4, DDUi.GOOD if bool(st[1]) else DDUi.TEXT_DIM)
+		sl.name = "PatchState"
+		top.add_child(sl)
+	var el: Label = DDUi.label(DDText.patch_text(pid, Game.bal), DDUi.FONT_S - 4, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	el.name = "PatchEffect"
+	col.add_child(el)
+	DDUi.ignore_mouse(h)
+	return r
 
 
 ## dd-ux-v4: the "?" (Help / Glossary). Right click / long press says what it is.
@@ -1718,7 +1798,9 @@ func _build_sheet() -> void:
 	if run == null:
 		return
 	var kind: String = ""
-	if not run.pending_patch.is_empty():
+	if str(sheet.get("type", "")) == "patches":
+		kind = "patches"
+	elif not run.pending_patch.is_empty():
 		kind = "patch"
 	elif not sheet.is_empty():
 		kind = str(sheet.get("type", ""))
@@ -1755,6 +1837,8 @@ func _build_sheet() -> void:
 			_melee_sheet(run, v, int(sheet.get("index", 0)))
 		"room_confirm":
 			_room_confirm_sheet(run, v, int(sheet.get("room", 0)))
+		"patches":
+			_patches_list_sheet(run, v)
 
 
 func _sheet_button(text: String, enabled: bool, color: Color, cb: Callable) -> Button:
@@ -1876,7 +1960,7 @@ func _rack_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	var wid: String = str(m.get("wid", ""))
 	var price: int = Game.bal.weapon_price(wid)
 	var vp: Vector2 = get_viewport_rect().size
-	var short: bool = vp.y < 520.0
+	var short: bool = vp.y < 640.0
 	var title: HBoxContainer = DDUi.hbox(8)
 	title.name = "RackHead"
 	v.add_child(title)
@@ -1950,8 +2034,8 @@ func _rack_offer(run: DDRun, wid: String, price: int, vp: Vector2, short: bool) 
 	var spec: Dictionary = {"kind": "W", "tag": "", "hit": b.weapon_power(wid), "cap": b.weapon_cap(wid), "title": b.weapon_name(wid),
 		"lines": [[DDText.rule_tag(b.weapon_rule(wid), rosa), DDUi.accent("W"), DDUi.FONT_S - 3]], "rule_chip": DDPayloads.weapon_rule_chip(wid, b, rosa),
 		"payload": gp, "art_keys": Art.weapon_keys(wid, b.weapon_name(wid)), "selected": true}
-	var cw: float = 150.0 if portrait else 170.0
-	var ch: float = 200.0 if not short else 176.0
+	var cw: float = 200.0
+	var ch: float = 270.0 if not short else 240.0
 	var cv: DDCardView = _view(spec, Vector2(cw, ch))
 	cv.name = "RackCard"
 	cv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -1965,7 +2049,7 @@ func _rack_offer(run: DDRun, wid: String, price: int, vp: Vector2, short: bool) 
 	var inner: float = minf(vp.x - 32.0, 620.0 if portrait else 900.0) - 28.0
 	d.custom_minimum_size = Vector2(maxf(120.0, minf(360.0, inner - cw - 10.0 - (0.0 if portrait else 260.0))), 0)
 	box.add_child(d)
-	var fs: int = DDUi.FONT_S - 4
+	var fs: int = DDUi.FONT_S - 3
 	d.add_child(DDUi.label("Hits %d · %d kills fill it (+%d)" % [b.weapon_power(wid), b.weapon_cap(wid), b.shown(b.num("finish_bonus"))], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true))
 	d.add_child(_icon_line(Art.rule_keys(b.weapon_rule(wid)), "Each kill: %s" % DDText.rule_short(b.weapon_rule(wid), rosa), fs, DDUi.WARN))
 	var cid: String = b.weapon_challenge(wid)

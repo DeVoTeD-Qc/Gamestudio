@@ -212,7 +212,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	# the Full set plate (the completion bonus + the challenge reward)
 	var left: int = int(spec.get("left", 0))
 	plate = make_plate(str(spec.get("finish_shown", "")), "" if inline else str(spec.get("reward", "")), str(spec.get("challenge_state", "open")),
-		"lit" if left <= 0 else ("near" if left == 1 else "open"), float(spec.get("plate_h", 34.0)))
+		"lit" if left <= 0 else ("near" if left == 1 else "open"), float(spec.get("plate_h", 34.0)), inline)
 	plate.payload = spec.get("plate_payload", {})
 	plate.set_meta(&"info", {"finish": str(spec.get("finish_shown", "")), "reward": str(spec.get("reward", "")),
 		"cs": str(spec.get("challenge_state", "open")), "h": float(spec.get("plate_h", 34.0))})
@@ -250,7 +250,7 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 ## (met / on track gold-green, open dim, missed struck through). `mode`: "open" (dark plate,
 ## gold rim), "near" (one kill to go: brighter rim, the cup pulses), "lit" (gold plate, ink text:
 ## every socket filled; the finish animation shows it).
-static func make_plate(finish: String, reward: String, cs: String, mode: String, h: float = 34.0) -> DDCardView:
+static func make_plate(finish: String, reward: String, cs: String, mode: String, h: float = 34.0, compact: bool = false) -> DDCardView:
 	var p: DDCardView = DDCardView.new()
 	p.kind = "W"
 	p.name = "FullPlate"
@@ -296,7 +296,7 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 	# a narrow plate (phone gun row) drops the word: the cup already says "full set"
 	p.resized.connect(func() -> void:
 		if is_instance_valid(fl):
-			fl.text = ("FULL +%s" if p.size.x >= 230.0 or reward == "" else "+%s") % finish)
+			fl.text = ("FULL +%s" if not compact and (p.size.x >= 230.0 or reward == "") else "+%s") % finish)
 	if reward != "":
 		var good: bool = cs == "met" or cs == "on_track"
 		var col: Color = {"met": DDUi.GOOD, "on_track": DDUi.GOOD, "broken": DDUi.TEXT_DIM}.get(cs, DDUi.TEXT)

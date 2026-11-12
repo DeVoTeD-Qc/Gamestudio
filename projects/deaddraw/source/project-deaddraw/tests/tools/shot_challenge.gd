@@ -104,8 +104,17 @@ func _run() -> void:
 	await _fresh({"screen": "street", "seed": "5", "gun1": "pistol", "stack1": "3", "gun2": "none", "sheet": "machine0"})
 	await _shot("5_rack")
 	var run: DDRun = root.get_node("Game").get("run")
-	run.points = 40
+	run.points = 5
 	_m.call("_render")
 	await _frames(8)
 	await _shot("6_rack_poor")
+	# the Patches row: a tap opens every Patch you wear
+	await _fresh({"screen": "street", "seed": "5", "gun1": "rifle", "stack1": "8,6",
+		"patches": "second_wind,loose_grip,field_medic,lockpick,brawler,bounty,trophy_belt"})
+	var chip: Node = _m.find_child("PatchesChip", true, false)
+	if chip != null:
+		chip.emit_signal("tapped", chip)
+	await _frames(10)
+	await create_timer(0.4).timeout
+	await _shot("7_patches")
 	quit(0)

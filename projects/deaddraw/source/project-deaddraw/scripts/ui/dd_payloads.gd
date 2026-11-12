@@ -478,7 +478,7 @@ static func challenge_line(run: DDRun, s: int) -> Dictionary:
 	elif st == "met":
 		text = "met"
 		hint = "Met: fill the gun and %s pays %s." % [name, reward] if g.kills_left() > 0 else "Met: %s paid %s." % [name, reward]
-	elif g.kills_left() > 0 and not can.is_empty() and keep.size() < can.size():
+	elif g.kills_left() > 0 and not can.is_empty() and keep.size() < can.size() and (st == "on_track" or g.kills_left() == 1 or keep.size() <= 3):
 		if keep.is_empty():
 			text = "next kill misses"
 			hint = "Any kill this gun can take now misses %s." % name
@@ -758,6 +758,18 @@ static func room_spec(run: DDRun, i: int) -> Dictionary:
 static func patch(id: String, bal: DDBalance) -> Dictionary:
 	return tip({"kind": "P", "tag": "PATCH", "title": DDText.patch_name(id), "big": "", "body": DDText.patch_text(id, bal) + "\nFor the whole run.", "art_keys": Art.patch_keys(id)},
 		"%s · Patch" % DDText.patch_name(id), patch_line(id, bal))
+
+
+## dd-challenge-rack: a Patch's live state for Your Patches: [text, good] or [] when it has none.
+static func patch_state(run: DDRun, id: String) -> Array:
+	match id:
+		"second_wind":
+			return ["used", false] if run.second_wind_used else ["ready", true]
+		"loose_grip":
+			return ["ready this wave", true] if run.loose else ["used this wave", false]
+		"lookout":
+			return ["used this street", false] if run.lookout_used else ["ready", true]
+	return []
 
 
 ## One short line per Patch (tooltips, Codex, Glossary).
