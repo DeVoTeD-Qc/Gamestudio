@@ -237,8 +237,8 @@ FP = Firepower, AR = Armor. "KS" means the value comes straight from Killstreak'
 | 11 | Demolitions Expert | `demolitions_expert` | Unit | LMG | 4 | 2/4 | On Down: 3 damage to the enemy point man here. | KS | ⚡ |
 | 12 | **Commander ★** | `okafor_anvil` | Unit (Elite) | AR | 5 | 3/6 | Holder. Your other units here get +1 FP. | KS stats, **renamed** (was Sgt. Okafor "Anvil") | Holder + ⚡ |
 | 13 | **Ace ★** | `halek_wren` | Unit (Elite) | Sniper | 5 | 4/3 | Pick. Its eliminations give +1 extra streak. | KS stats, **renamed + reworded** (was Lt. Halek "Wren") | Pick + ⚡ |
-| 14 | Callout | `callout` | Tactic | — | 0 | — | Resolves immediately: reveal red dots in a zone; your first unit to arrive there gets +1 FP. | KS | |
-| 15 | Ammo Resupply | `ammo_resupply` | Tactic | — | 1 | — | Resolves immediately: draw 2. | KS | |
+| 14 | Callout | `callout` | Tactic | — | 0 | — | Instant: reveal red dots in a zone; your first unit to arrive there gets +1 FP. | KS | |
+| 15 | Ammo Resupply | `ammo_resupply` | Tactic | — | 1 | — | Instant: draw 2. | KS | |
 | 16 | Flank Route | `flank_route` | Tactic | — | 1 | — | Move a friendly unit to an adjacent zone; it gains First Shot this round. | KS | |
 | 17 | **Smoke Screen** | `smoke_screen` | Tactic | — | 1 | — | Your units in a zone can't be targeted by Pick or Flank this round. | **NEW** | |
 | 18 | **Blackout** | `blackout` | Tactic | — | 1 | — | Enemy units in a zone lose First Shot this round. | **NEW** | |

@@ -131,7 +131,7 @@ func test_the_fifteen_join_the_reward_pool_once_and_the_duel_pool() -> void:
 func test_keyword_names_and_inspect_texts_in_plain_words() -> void:
 	assert_eq(_card("riot_shield").keyword_names(), ["Cover 1", "Suppress 1"] as Array[String], "Riot Shield")
 	assert_eq(CardDB.get_card(&"gunner").keyword_names(), ["Suppress 2", "Pierce"] as Array[String], "the Gunner is Suppress 2")
-	assert_eq(CardDB.get_card(&"gunner").text, "Suppress 2. Pierce", "Gunner text")
+	assert_eq(CardDB.get_card(&"gunner").text, "Suppress 2. Pierce.", "Gunner text")
 	assert_eq(_card("runner").keyword_names(), ["Agile"] as Array[String], "Runner")
 	assert_eq(_card("laser_gunner").keyword_names(), ["Beam"] as Array[String], "Laser Gunner")
 	assert_eq(_card("fast_learner").keyword_names(), ["End of round"] as Array[String], "Fast Learner")

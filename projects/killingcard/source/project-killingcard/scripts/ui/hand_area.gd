@@ -742,8 +742,8 @@ func _make_operator_card(op: Dictionary) -> Control:
 	if state == &"deployed":
 		panel.set_meta(&"deployed", true)
 		var an: String = String(op.get("ability_name", ""))
-		panel.tooltip_text = ("Operator deployed. %s: %s. Long-press: what it does." % [an, "ready, tap or drag it to a column" if bool(op.get("ability_ready", false)) else "not ready now"]) \
-				if bool(op.get("has_ability", false)) else "Operator deployed. Drag it on the board (move icon) to move it."
+		panel.tooltip_text = ("Operator deployed. %s: %s." % [an, "ready: tap it or drag it to a column" if bool(op.get("ability_ready", false)) else "not ready now"]) \
+				if bool(op.get("has_ability", false)) else "Operator deployed. Drag it (move icon) to move it."
 	var face: Control = panel.get_node("Face")
 	var bv: BannerView = BannerCard.banner_of(panel)
 	var status_text: String = ""

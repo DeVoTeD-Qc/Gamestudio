@@ -553,7 +553,7 @@ func _fill_sets_box() -> void:
 		_sets_box.add_child(head)
 		var list: Array = rails.get(side, [])
 		if list.is_empty():
-			_sets_box.add_child(_flyout_line("No traits in play. Units and Fields with the same trait count together: 2 in play turn tier 2 on, 3 turn tier 3 on."))
+			_sets_box.add_child(_flyout_line("No traits in play. Same-trait cards count together: 2 in play turn tier 2 on, 3 turn tier 3 on."))
 		for e: Dictionary in list:
 			var t: StringName = StringName(e["trait"])
 			var tier: int = int(e.get("tier", 0))
@@ -1288,9 +1288,10 @@ func open_flyout(key: StringName) -> void:
 	if merged:
 		_flyout_title.text = "SCORE · RIVAL INCOMING"
 	_flyout_hint.text = {
-		&"operator": "Drag the Operator onto a column (or tap, then a column) · long-press for rules",
-		&"streak": "Tap a ready streak to arm it · long-press for rules",
-	}.get(key, "Long-press for the rules · tap outside to close")
+		&"operator": "Drag the Operator onto a column.",
+		&"streak": "Tap a ready killstreak to call it in.",
+	}.get(key, "")
+	_flyout_hint.visible = _flyout_hint.text != ""
 	var w: float = FLYOUT_W if compact else FLYOUT_W_DESKTOP
 	_flyout_hint.custom_minimum_size.x = w - 24.0
 	_flyout.show()

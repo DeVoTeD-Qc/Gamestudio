@@ -275,7 +275,7 @@ func _mvp_column(r: RunProgress) -> void:
 func _operator_view(item: LoadoutItem) -> Dictionary:
 	return {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
 			"armor": item.operator_armor, "banner": String(BannerArtDB.operator_art_id(item.id, 1)),
-			"text": "Your Operator: respawns if it goes down.", "side": "friend"}
+			"text": "Back next Deploy if down.", "side": "friend"}
 
 
 func _operator_info(item: LoadoutItem) -> Dictionary:

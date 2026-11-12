@@ -93,6 +93,6 @@ func test_reshuffle_is_said_in_the_match_log() -> void:
 	c.call(&"_add_v2_line", {"type": RulesEvent.DECK_RESHUFFLED, "side": &"enemy", "count": 4})
 	var feed: Array = c.get(&"killfeed")
 	assert_eq(feed.size(), 2, "two log lines")
-	assert_eq(String(feed[1]["text"]), "DISCARD SHUFFLED INTO A NEW DECK (6 CARDS)", "your reshuffle, in words")
-	assert_eq(String(feed[0]["text"]), "RIVAL SHUFFLED THEIR DISCARD INTO A NEW DECK (4 CARDS)", "the rival's too")
+	assert_eq(String(feed[1]["text"]), "DISCARD RESHUFFLED: NEW DECK OF 6", "your reshuffle, in words")
+	assert_eq(String(feed[0]["text"]), "RIVAL RESHUFFLED: NEW DECK OF 4", "the rival's too")
 	c.free()

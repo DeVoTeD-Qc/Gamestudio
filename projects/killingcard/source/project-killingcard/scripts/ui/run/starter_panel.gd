@@ -343,7 +343,7 @@ func _operator_tile(item: LoadoutItem) -> Button:
 			"cost": _op_cost_text()}
 	var view: Dictionary = {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
 			"armor": item.operator_armor, "banner": entry["banner"], "keywords": _op_keywords(item),
-			"text": "Your Operator: respawns if it goes down.", "cost": int(_op_cost_text()) if _op_cost_text().is_valid_int() else 0}
+			"text": "Back next Deploy if down.", "cost": int(_op_cost_text()) if _op_cost_text().is_valid_int() else 0}
 	var card: CardView = CodexViewScript.make_card_view(view, _op_card_w())
 	card.name = "OperatorBanner"
 	row.add_child(card)

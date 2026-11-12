@@ -343,10 +343,10 @@ func _wire_inspect(b: BaseButton, on_inspect: Callable) -> void:
 func _inspect_header(b: Button) -> void:
 	var floor_n: int = run().config.deck_floor if run() != null else 8
 	var texts: Dictionary = {
-		"SkipButton": ["Skip", "Declines this offer: nothing is added or removed. A drop with picks left ends here; on Muster out (KEEP ALL) every Standard Issue card stays."],
+		"SkipButton": ["Skip", "Take nothing from this offer. On Muster out: every Standard Issue card stays."],
 		"DeckButton": ["Deck", "Your deck: every card, its copies and their traits."],
-		"RetireButton": ["Retire", "Instead of taking a card, remove one from your deck for good (it goes on the Honor Roll). The deck never goes under %d cards." % floor_n],
-		"SendHomeButton": ["Muster out", "Sends the Standard Issue cards marked GOING HOME back to the quartermaster. The rest stay in your deck (never under %d cards)." % floor_n],
+		"RetireButton": ["Retire", "Instead of a card, remove one from your deck for good (Honor Roll). Deck minimum: %d." % floor_n],
+		"SendHomeButton": ["Muster out", "Sends the cards marked GOING HOME out of your deck. Deck minimum: %d." % floor_n],
 	}
 	var t: Array = texts.get(String(b.name), [b.text.capitalize(), b.tooltip_text])
 	_inspector.open({"title": String(t[0]), "type": "button", "text": String(t[1]), "status": ""})
@@ -384,7 +384,7 @@ func _inspect_card_id(id: StringName) -> void:
 ## "Standard Issue SI-02: ..." (inspector; "" for any other card).
 static func _si_status(card: CardData) -> String:
 	if card.standard_issue:
-		return "Standard Issue %s: basic kit. Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
+		return "Standard Issue %s: no trait. Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
 	return ""
 
 
@@ -545,7 +545,7 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	if opts.is_empty():
 		var t0: PickTile = make_tile()
 		t0.add_line("AT THE FLOOR", &"TileName")
-		t0.add_line("Your deck is at %d cards, the floor. Nothing can be retired." % r.config.deck_floor)
+		t0.add_line("Deck at its minimum (%d): nothing can be retired." % r.config.deck_floor)
 		t0.disabled = true
 		_list_grid.add_child(t0)
 		_fit_list()
@@ -657,7 +657,7 @@ func toggle_muster(idx: int) -> String:
 	if muster_marks.has(idx):
 		muster_marks.erase(idx)
 	elif muster_marks.size() >= n:
-		_refresh_muster(r, n, "Only %d can go home this time: tap a marked card first to keep it." % n)
+		_refresh_muster(r, n, "Only %d can go home: keep a marked card first." % n)
 		return "full"
 	else:
 		muster_marks[idx] = true
@@ -682,8 +682,8 @@ func _inspect_muster(idx: int) -> void:
 	var card: CardData = r.resource(r.deck[idx]) as CardData
 	_inspector.open({"view": _view_dict(card, r.art_of(idx)), "banner": BannerCard.entry_for_card(card, r.art_of(idx)),
 			"title": card.display_name, "type": "Standard Issue %s · %s" % [RunProgress.standard_issue_serial(card), CardInfo.type_line(card)],
-			"text": "Basic kit: cost %d, %d FP, %d Armor, no keyword, no trait." % [card.cost, card.firepower, card.armor],
-			"status": "Marked GOING HOME: it leaves your deck when you tap SEND HOME." if muster_marks.has(idx) else "Stays in your deck."})
+			"text": "Basic kit: %d Supply, %d FP, %d Armor. No keyword, no trait." % [card.cost, card.firepower, card.armor],
+			"status": "GOING HOME: leaves your deck on SEND HOME." if muster_marks.has(idx) else "Stays in your deck."})
 
 
 ## Doctrine: a trait emblem, its tier texts and how many cards of it the deck has.

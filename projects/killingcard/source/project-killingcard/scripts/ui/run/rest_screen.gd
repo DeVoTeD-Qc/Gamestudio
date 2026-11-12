@@ -175,7 +175,7 @@ func confirm() -> String:
 		var floor_n: int = r.config.deck_floor if r != null else 8
 		var room: int = maxi(0, (r.deck.size() if r != null else 0) - floor_n)
 		_picker.compact = compact
-		_picker.open("DRILL · SEND 2 HOME", "Mark up to %d cards to send home (the deck never goes under %d)." % [mini(2, room), floor_n],
+		_picker.open("DRILL · SEND 2 HOME", "Mark up to %d cards to send home (deck min %d)." % [mini(2, room), floor_n],
 				cands, mini(2, room), 0, "SEND")
 		return ""
 	return _commit([])

@@ -363,10 +363,10 @@ static func node_info(m: Dictionary, n: Dictionary) -> Dictionary:
 		&"event":
 			text = "%s\nThe options show when you arrive. Every result is printed on its button; an event never costs a ticket without saying so." % String(n.get("event", "An event"))
 		&"shop":
-			text = "Spend REQ (Requisition). Unit 4 · Tactic 3 · Field 3 · Elite card 7 · Muster out a Standard Issue card 2 · Discharge any other card 3 · Perk 6 · Restock 1. No tickets for sale."
+			text = "Prices in REQ: Unit 4 · Tactic 3 · Field 3 · Elite card 7 · Muster out 2 · Discharge 3 · Perk 6 · Restock 1. No tickets."
 		&"rest":
 			var cfg: RunConfig = CardDB.get_run_config()
-			text = "Pick one: +1 ticket (max 3), Drill (send 2 cards of your choice home, never under %d) or Field-strip (a weapon level now)." % (cfg.deck_floor if cfg != null else 8)
+			text = "Pick one: +1 ticket (max 3), Drill (send 2 cards home, deck min %d) or Field-strip (a weapon level now)." % (cfg.deck_floor if cfg != null else 8)
 		&"boss":
 			var b: Dictionary = m.get("boss", {})
 			text = "%s · %s\nMode: %s · Armor +%d.\nRule · %s: %s" % [b.get("name", ""), b.get("crew", ""), b.get("mode", ""),
@@ -383,7 +383,7 @@ static func terrain_info(td: Dictionary) -> Dictionary:
 	var z: int = int(td.get("zone", -1))
 	return {"title": String(td.get("name", "")), "type": "terrain%s" % ((" · column %s" % RunV2Views.ZONE_LETTERS[z]) if z >= 0 and z < 3 else ""),
 			"text": String(td.get("text", "")),
-			"keywords": [{"name": "Applies to both sides", "text": "Terrain is part of the column, not a card: it can't be shot, Sabotaged, Overrun or replaced, and it never counts for traits. Your Field cards still go on top of it."},
+			"keywords": [{"name": "Applies to both sides", "text": "Part of the column, not a card: it can't be shot, Sabotaged, Overrun or replaced, and never counts for traits. Fields still go on top."},
 				{"name": "Read the ground", "text": String(RunV2Views.TERRAIN_TIPS.get(id, ""))}],
 			"status": ""}
 
@@ -393,4 +393,4 @@ static func boss_info(b: Dictionary) -> Dictionary:
 			"text": "%s\nArmor +%d on every enemy unit." % [b.get("crew", ""), int(b.get("armor_bonus", 0))],
 			"keywords": [{"name": "Boss rule · %s" % b.get("rule_name", ""), "text": String(b.get("rule_text", ""))},
 				{"name": "How to answer it", "text": String(b.get("tip", ""))}],
-			"status": "The boss is the last step of the run. Plan your path, your Operator and your deck against it."}
+			"status": "The last step of the run. Plan your path and deck for it."}

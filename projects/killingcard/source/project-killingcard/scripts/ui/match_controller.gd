@@ -869,7 +869,7 @@ func open_pause_menu() -> void:
 	var settings: Node = get_node_or_null(^"/root/Settings")
 	pause.open({
 		"context": ctx,
-		"hint": "Run saved. Quit now and this match restarts next time." if run_words \
+		"hint": "Your run is saved. Quit now and this match restarts next time." if run_words \
 				else "Local test match: quitting ends it.",
 		"can_forfeit": state.phase != MatchState.Phase.ENDED,
 		"forfeit_hint": "Forfeit? It counts as a loss (-1 ticket)." if run_words \

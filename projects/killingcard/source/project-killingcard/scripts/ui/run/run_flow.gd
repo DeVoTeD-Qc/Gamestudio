@@ -32,7 +32,7 @@ const MODE_WORDS: Dictionary = {
 	DataEnums.GameMode.DETONATOR: "Detonator",
 }
 const MODE_GOALS: Dictionary = {
-	DataEnums.GameMode.ZONE_CONTROL: "First to %d zone points",
+	DataEnums.GameMode.ZONE_CONTROL: "First to %d points",
 	DataEnums.GameMode.FIREFIGHT: "First to %d eliminations",
 	DataEnums.GameMode.DETONATOR: "Arm the Charge for %d rounds",
 }

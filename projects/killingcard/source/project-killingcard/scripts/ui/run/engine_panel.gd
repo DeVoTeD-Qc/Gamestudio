@@ -232,7 +232,7 @@ func open(r: RunProgress) -> void:
 	_list.add_child(_line("Doctrine: %s." % ("%s (its sets count +1 in every match)" % SynergyGlyphs.trait_name(doc) if doc != &"" else "not set yet (your first calling card sets it)")))
 	var main: StringName = StringName(e["main_trait"])
 	if main != &"":
-		_list.add_child(_line("Main trait: %s. Supply Drops always offer one %s card first." % [SynergyGlyphs.trait_name(main), SynergyGlyphs.trait_name(main)]))
+		_list.add_child(_line("Main trait: %s. Supply Drops offer one %s card first." % [SynergyGlyphs.trait_name(main), SynergyGlyphs.trait_name(main)]))
 	_list.add_child(_section("CARDS"))
 	_add_rows(r)
 	show()
@@ -377,7 +377,7 @@ func _open_si_info() -> void:
 	var si: int = int(m.get("si", 0))
 	var deck: int = int(m.get("deck", 0))
 	_inspector.open({"title": "Standard Issue", "type": "deck · %d of %d cards" % [si, deck],
-			"text": "Standard Issue cards are the basic kit: no trait, no calling card. Muster out (at a shop) sends one home. Calling cards: %d. Your deck never goes under %d cards." % [deck - si, int(m.get("floor", 0))],
+			"text": "Standard Issue: basic kit, no trait, no calling card. Muster out at a shop sends one home. Calling cards: %d. Deck minimum: %d." % [deck - si, int(m.get("floor", 0))],
 			"status": "Long-press any card for its rules."})
 
 

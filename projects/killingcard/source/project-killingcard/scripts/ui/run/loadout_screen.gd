@@ -234,7 +234,7 @@ func _operator_info(item: LoadoutItem) -> Dictionary:
 	sp.set(&"picked", item.id)
 	var info: Dictionary = sp.call(&"operator_info", item)
 	sp.free()
-	info["status"] = "Your Operator for this run. OPERATOR & DECK: change it, see the starter deck."
+	info["status"] = "Your Operator this run. OPERATOR & DECK: change it."
 	return info
 
 
@@ -316,7 +316,7 @@ func _fill_v2(kit: VBoxContainer, r: RunProgress) -> void:
 		t.set_selected(bool(m.get("on", false)), "ON · TAP TO REMOVE", "TAP TO ADD")
 		t.pressed.connect(func() -> void: toggle_modifier(id))
 		wire_inspect_button(t, func() -> void: inspector().open({"title": String(m.get("name", "")), "type": "modifier · threat %d" % int(m.get("threat", 0)),
-				"text": String(m.get("text", "")), "status": "Optional. Winning at a Threat level unlocks cosmetics, never power."}))
+				"text": String(m.get("text", "")), "status": "Optional. A win at a Threat level unlocks cosmetics, never power."}))
 		kit.add_child(t)
 		_mod_tiles[id] = t
 	_threat_label.text = "MODIFIERS · THREAT %d" % RunV2Views.threat_of(mods)
@@ -334,7 +334,7 @@ func open_locked_modifiers() -> Control:
 		rows.append({"name": "%s · Threat %d%s" % [m.get("name", ""), int(m.get("threat", 0)), "" if not locked else " · locked"],
 				"text": "%s%s" % [m.get("text", ""), (" Unlock: %s." % String(m.get("unlock", "")).trim_suffix(".")) if locked else ""]})
 	var ins: Control = inspector()
-	ins.open({"title": "Modifiers", "type": "optional · they add Threat", "text": "Modifiers make a run harder. Winning at a Threat level unlocks cosmetics, never power.",
+	ins.open({"title": "Modifiers", "type": "optional · they add Threat", "text": "Modifiers make a run harder. A win at a Threat level unlocks cosmetics, never power.",
 			"keywords": rows, "status": "Win runs to unlock the locked ones."})
 	return ins
 
@@ -403,7 +403,7 @@ func toggle(id: StringName) -> bool:
 	elif picked.size() < slots:
 		picked.append(id)
 	else:
-		_error.text = "All %d slots are full. Tap a picked killstreak to drop it first." % slots
+		_error.text = "All %d slots are full: drop a picked killstreak first." % slots
 		_error.show()
 		_refresh()
 		return false

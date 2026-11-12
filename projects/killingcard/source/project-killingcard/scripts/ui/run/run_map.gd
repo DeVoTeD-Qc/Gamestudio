@@ -164,12 +164,12 @@ func _build_v2(r: RunProgress) -> void:
 	t_row.add_child(_tickets_label)
 	chips.add_child(tickets)
 	wire_inspect_control(tickets, func() -> void: _inspector.open({"title": "Reinforcement Tickets", "type": "run",
-			"text": "A lost fight costs 1 ticket. The run ends at 0. Rests and two events give tickets back (max %d). The shop never sells them." % tm,
+			"text": "A lost fight costs 1 ticket; at 0 the run ends. Rests and some events give them back (max %d)." % tm,
 			"status": "You have %d of %d." % [tl, tm]}))
 	_req_chip = make_req_chip(int(m.get("req", 0)))
 	chips.add_child(_req_chip)
 	wire_inspect_control(_req_chip, func() -> void: _inspector.open({"title": "Requisition (REQ)", "type": "currency",
-			"text": "Earned, never bought: win a fight +3, win an elite +5, lose a fight +1 (with the Salvage), events +1 to +3. Spent in shops.",
+			"text": "Earned in fights (win +3, elite +5, loss +1 with Salvage) and events (+1 to +3). Spent in shops.",
 			"status": "You have %d REQ." % int(m.get("req", 0))}))
 	var mods: Array = m.get("modifiers", [])
 	var names: PackedStringArray = []
@@ -271,7 +271,7 @@ static func modifiers_info(mods: Array) -> Dictionary:
 	for md: Dictionary in mods:
 		if bool(md.get("on", true)):
 			kws.append({"name": "%s · Threat %d" % [md.get("name", ""), int(md.get("threat", 0))], "text": String(md.get("text", ""))})
-	return {"title": "Run modifiers", "type": "threat %d" % RunV2Views.threat_of(mods), "text": "Picked on the Loadout screen before the run. Winning at a Threat level unlocks cosmetics, never power.",
+	return {"title": "Run modifiers", "type": "threat %d" % RunV2Views.threat_of(mods), "text": "Picked on the Loadout screen. A win at a Threat level unlocks cosmetics, never power.",
 			"keywords": kws, "status": ""}
 
 

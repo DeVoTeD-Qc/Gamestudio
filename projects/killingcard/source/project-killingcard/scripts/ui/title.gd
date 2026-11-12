@@ -193,7 +193,7 @@ func _build_showcase() -> void:
 	var item: LoadoutItem = _showcase_item
 	var view: Dictionary = {"name": item.display_name, "type": "operator", "firepower": item.operator_firepower,
 			"armor": item.operator_armor, "banner": String(BannerArtDB.operator_art_id(item.id, 1)),
-			"text": item.text if item.text != "" else "Your Operator: respawns if it goes down.", "side": "friend"}
+			"text": item.text if item.text != "" else "Back next Deploy if down.", "side": "friend"}
 	_showcase_card = CodexViewScript.make_card_view(view, SHOWCASE_W)
 	var holder: Control = Control.new()
 	holder.name = "ShowcaseCard"
@@ -232,7 +232,7 @@ func open_showcase_inspector() -> void:
 	var item: LoadoutItem = _showcase_item
 	inspector().open({"view": _showcase_card.data.duplicate(), "title": item.display_name,
 			"type": "operator · FP %d · Armor %d" % [item.operator_firepower, item.operator_armor],
-			"text": item.text, "is_unit": true, "status": "Your equipped Operator: it leads every run and Duel you start. Change it on the starter screen (Codex > STARTER)."})
+			"text": item.text, "is_unit": true, "status": "Your Operator for every run and Duel. Change it in Codex > STARTER."})
 
 
 func get_showcase_card() -> Control:

@@ -36,8 +36,8 @@ const ZONE_LETTERS: Array[String] = ["A", "B", "C"]
 const NODE_WORDS: Dictionary = {
 	&"fight": ["FIGHT", "Win: a Supply Drop, +3 REQ.", "Lose: -1 ticket, Salvage, +1 REQ."],
 	&"elite": ["ELITE", "Win: an Elite Cache (one rung ahead, pick 2 of 4), Muster out, +5 REQ.", "A tougher crew (+1 Armor, 2 Terrains). Lose: -1 ticket."],
-	&"event": ["EVENT", "A short scene with 2-3 choices. Every result is printed on its button.", "Some options cost a ticket or REQ (shown)."],
-	&"shop": ["SHOP", "Spend REQ: cards, Muster out, Discharge, a Perk.", "No risk."],
+	&"event": ["EVENT", "A short scene, 2-3 choices. Each button says what it does.", "Some options cost a ticket or REQ (shown)."],
+	&"shop": ["SHOP", "Buy cards, Muster out, Discharge, a Perk.", "No risk."],
 	&"rest": ["REST", "Pick one: +1 ticket, Drill (send 2 cards home) or Field-strip (a weapon level).", "No risk."],
 	&"boss": ["BOSS", "Win: the run is won.", "Lose: the run ends."],
 }

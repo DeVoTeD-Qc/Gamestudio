@@ -51,6 +51,8 @@ Rules for the lines:
 | Deploy currency | Supply | SUP, energy |
 | Run currency | REQ (glossary title: Requisition) | credits |
 | Run lives | Tickets (Reinforcement Tickets) | lives |
+| A card that resolves when played | Instant | Resolves immediately |
+| The smallest deck allowed | deck minimum, "min" | floor |
 | Eliminations counter | streak | kill count |
 | Streak rewards | killstreak | ultimate |
 | A unit dying | eliminated | killed, destroyed |
@@ -165,3 +167,34 @@ The glossary's keyword entries keep the full rules (that is where explanation li
   deck), the boss one line (tap: its rule), the modifiers you can add plus an "n LOCKED" chip.
 - Deck view: the cards as card faces (calling-card art, name, cost, FP / Armor, an "x3" count), the
   Operator first; Standard Issue is a chip ("Standard Issue: 9 of 10", tap: what it means).
+
+## kc-ux-text: global pass (2026-11-12)
+
+The head asked for "a global pass to improve UX and make text and description more concise".
+Rules unchanged; only words and layout.
+
+- **After every round, one line says what happened, then what to do now** (the studio rule). The
+  Deploy toast reads "Round 1: you +0, rival +2 (0-2). You eliminated 1 and lost 2." over
+  "Round 2: drag your Operator onto a column." (or "play cards, then READY."), shown 4.5 s
+  (`MatchController.round_recap`).
+- **Instant** replaces "Resolves immediately" (keyword name and the two cards that use it:
+  "Instant: draw 2.").
+- Keyword-only card texts end with a period like every other rule ("Pick.", "First Shot.").
+- **No UI-instruction words in tooltips, hints or subtitles** ("long-press for rules", "tap to...",
+  "right-click any node"): every element is inspectable, so saying so is noise. The run map's
+  subtitle is "Pick a lit node."; the starter's "Pick your Operator."; the mulligan's "Tap cards to
+  put back (free, once)."; the shop has no subtitle; flyouts drop their "long-press" hint.
+- Reward cards: the line under a card says what it does ("Flank: Shoots the back-most enemy."),
+  never just the keyword the face already shows; a vanilla card says "No ability: 2 FP, 3 Armor."
+- Inspector: the art caption shows only for a card with more than one art ("ART: MARKSMAN · 1 OF 5");
+  Standard Issue reads "No trait. Muster out or Retire sends it home."
+- "deck minimum" / "min" instead of "floor" in player text; "points" instead of "zone points".
+- The Operator's rule line is "Back next Deploy if down." on every screen (hand, starter, title,
+  after-action).
+- Run end: the summary is the record, tickets and deck, then only the lists that are not empty
+  (no "Perks: None").
+- Glossary non-keyword entries cut by about a third; keyword glossary rows keep the full rule.
+
+Layout fixes in the same pass: the card inspector stacks the card over its sheet when the screen
+is too narrow for both side by side (phone portrait: the sheet ran off the right edge); the run
+end screen stacks its summary over the match table in portrait (it ran off both edges).

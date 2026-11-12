@@ -88,7 +88,7 @@ func open(terrain: Array, boss: Dictionary, node: Dictionary, mode: String) -> v
 	if crew != "":
 		_col.add_child(RunScreen.make_label(crew, &"UnitName", true))
 	if t == &"elite":
-		_col.add_child(RunScreen.make_label("A tougher crew: +1 Armor and 2 Terrains. Win: an Elite Cache (one rung ahead) and +5 REQ.", &"HudSubtle", true))
+		_col.add_child(RunScreen.make_label("Tougher crew: +1 Armor, 2 Terrains. Win: an Elite Cache and +5 REQ.", &"HudSubtle", true))
 	if not boss.is_empty():
 		_col.add_child(_boss_plate(boss))
 	_col.add_child(RunScreen.make_label("THE GROUND", &"HudTag"))
