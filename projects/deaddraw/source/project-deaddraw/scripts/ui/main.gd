@@ -68,7 +68,7 @@ const BASE_GROWTH: float = 0.667
 ## dd-ux-equip: the HUD's Patch icons (40 logical px = 28 CSS px on a phone) and the HP panel's
 ## narrowest width next to them.
 const PATCH_ICON: float = 40.0
-const HP_MIN_W: float = 128.0
+const HP_MIN_W: float = 112.0
 
 var screen: Screen = Screen.TITLE
 var chosen_survivor: String = "rosa"

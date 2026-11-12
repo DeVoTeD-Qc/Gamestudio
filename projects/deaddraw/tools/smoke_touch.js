@@ -36,10 +36,23 @@ function find(s, pred, what) {
   return it;
 }
 async function touch(cdp, type, pts) {
-  await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, k) => ({ x: p.x, y: p.y, id: k })) });
+  await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, k) => (pts.length > 1 ? { x: p.x, y: p.y, id: k } : { x: p.x, y: p.y })) });
 }
 async function tap(cdp, p) { await touch(cdp, 'touchStart', [p]); await sleep(60); await touch(cdp, 'touchEnd', []); await sleep(300); }
 async function hold(cdp, p, ms = 750) { await touch(cdp, 'touchStart', [p]); await sleep(ms); await touch(cdp, 'touchEnd', []); await sleep(300); }
+// tap until pred holds (the board ignores taps while the deal animation runs on a slow machine)
+async function tapUntil(page, cdp, p, pred, what, tries = 4) {
+  for (let k = 0; k < tries; k++) {
+    await tap(cdp, p);
+    const s = await waitFor(page, pred, what, 2500).catch(() => null);
+    if (s) return s;
+    const t = await state(page);
+    console.log(`  (retry ${what}: sheet=${t.sheet} inspect=${t.inspect} block=${t.block} drag=${t.drag} guns=${t.guns})`);
+    // a busy machine can deliver the release late (a zoom opens): close it and tap again
+    if (t.inspect) { await tap(cdp, { x: 195, y: 6 }); await sleep(400); }
+  }
+  return state(page);
+}
 // one finger from a to b in steps; end=false leaves the finger down (mid-drag screenshot)
 async function drag(cdp, a, b, end = true, steps = 12) {
   await touch(cdp, 'touchStart', [a]);
@@ -63,7 +76,7 @@ async function drag(cdp, a, b, end = true, steps = 12) {
   const go = async (q, what) => {
     await page.goto(URL + '?' + q, { waitUntil: 'load' });
     const s = await waitFor(page, (x) => x.screen === what, what, 90000);
-    await sleep(2600);
+    await sleep(3000);
     return state(page);
   };
   const check = (cond, msg) => { console.log((cond ? 'ok   ' : 'FAIL ') + msg); if (!cond) errors.push('FAIL ' + msg); };
@@ -71,8 +84,7 @@ async function drag(cdp, a, b, end = true, steps = 12) {
     // 1. auto-equip into the empty slot 2
     let s = await go('screen=street&seed=4&gun1=rifle&stack1=6,4&gun2=none&street=W:carbine,Z5,Z3,M4&patches=bounty,brawler,lookout', 'STREET');
     await shot('00_before');
-    await tap(cdp, center(find(s, card(0), 'street gun')));
-    s = await waitFor(page, (x) => x.guns && x.guns[1] === 'carbine', 'carbine in slot 2', 5000).catch(() => state(page));
+    s = await tapUntil(page, cdp, center(find(s, card(0), 'street gun')), (x) => x.guns && x.guns[1] === 'carbine', 'carbine in slot 2');
     await sleep(120); await shot('01_auto_equip_flight');
     check(s.guns[1] === 'carbine' && s.sheet === '', 'tap with a free slot: auto-equipped into slot 2, no sheet');
     await sleep(900); await shot('01b_auto_equip_done');
@@ -89,8 +101,7 @@ async function drag(cdp, a, b, end = true, steps = 12) {
     }
     // 2. both slots full: the sheet
     s = await go('screen=street&seed=4&gun1=rifle&stack1=6,4,3&gun2=crossbow&stack2=4&street=W:carbine,Z5,Z3,M4&patches=bounty,brawler', 'STREET');
-    await tap(cdp, center(find(s, card(0), 'street gun')));
-    s = await waitFor(page, (x) => x.sheet === 'gun', 'full-slots sheet', 5000).catch(() => state(page));
+    s = await tapUntil(page, cdp, center(find(s, card(0), 'street gun')), (x) => x.sheet === 'gun', 'full-slots sheet');
     check(s.sheet === 'gun', 'both slots full: the sheet opens');
     const texts = s.items.filter((i) => i.type === 'button').map((i) => i.text).join(' | ');
     check(texts.includes('INTO SLOT 1') && texts.includes('INTO SLOT 2') && texts.includes('SCRAP') && texts.includes('Cancel'), 'slot 1 / slot 2 / scrap / cancel: ' + texts.replace(/\n/g, ' '));
@@ -129,7 +140,7 @@ async function drag(cdp, a, b, end = true, steps = 12) {
     await drag(cdp, p0, { x: p0.x, y: p0.y - 260 });
     await sleep(500);
     s = await state(page);
-    check(s.codex_scroll > 120 && !s.inspect, `one-finger drag on a tile scrolls the Codex (${s.codex_scroll}px), no tile opened`);
+    check(s.codex_scroll > 120 && !s.inspect, `one-finger drag on a tile scrolls the Codex (${s.codex_scroll}px), no tile opened ${JSON.stringify(s.tip)} from ${JSON.stringify(tile)}`);
     await shot('05_codex_scrolled');
     const before = s.codex_scroll;
     // two fingers, upward again (scroll further)

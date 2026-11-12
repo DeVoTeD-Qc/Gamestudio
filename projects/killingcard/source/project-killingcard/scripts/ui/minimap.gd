@@ -21,7 +21,8 @@ var _lanes: Array = []
 @onready var _rival_hand: Label = %RivalHand
 
 
-## kc-board: the rival's hand size (public information), next to the intel cells.
+## kc-board: the rival's hand size. kc-loadout-clean: no longer shown (the label stays hidden; kept
+## for callers).
 func set_rival_hand(count: int) -> void:
 	_rival_hand.text = "%d" % count
 
@@ -35,7 +36,7 @@ func set_compact(value: bool) -> void:
 
 ## Labels whose whole text must stay visible (zone labels and red-dot counts).
 func get_important_labels() -> Array[Label]:
-	var out: Array[Label] = [_rival_hand]
+	var out: Array[Label] = []
 	for label: Node in _cells.find_children("*", "Label", true, false):
 		if label.name != "SpottedLabel":  # trimmed on purpose (full names on the lane slots)
 			out.append(label)

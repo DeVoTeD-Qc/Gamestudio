@@ -56,7 +56,7 @@ function effParts(effs) {
     else if (e.op === 'steady') out.push(times(e.n, 'Steady'));
     else if (e.op === 'dmgTurn') out.push(`Hits +${e.n} damage`);
     else if (e.op === 'buy') out.push(`+${e.n} Buy`);
-    else if (e.op === 'charge') out.push(`+${e.n} damage at distance 0 this turn`);
+    else if (e.op === 'charge') out.push(`Hits at distance 0: +${e.n} damage this turn`);
     else if (e.op === 'onHit') out.push(`next hit this turn: draw ${e.n}`);
     else if (e.op === 'sweep') out.push(`reorder your top ${e.n} cards`);
     else if (e.op === 'expose') out.push('this turn ignore cover, Armor and Reactions');
@@ -575,8 +575,8 @@ function shootCheck(s, p, gi, commit) {
   if (!wid) return fail('No gun in that slot.');
   if (shotsLeft(s, p, gi) < 1) return fail(`${WEAPONS[s.weapons[wid].def].name} has fired its shots this turn.`);
   const E = eff(s, wid);
-  if (dist(s) < E.band[0] || dist(s) > E.band[1]) return fail(`${WEAPONS[s.weapons[wid].def].name} fires at distance ${E.band[0]}–${E.band[1]}. You are at ${dist(s)}.`);
-  if (!WEAPONS[s.weapons[wid].def].melee && shotPreview(s, p, gi, commit).reveal < 1) return fail('Nothing to reveal: commit Precision first (play Precision cards).');
+  if (dist(s) < E.band[0] || dist(s) > E.band[1]) return fail(`Out of range: the ${WEAPONS[s.weapons[wid].def].name} fires at distance ${E.band[0]}–${E.band[1]}; you are at ${dist(s)}.`);
+  if (!WEAPONS[s.weapons[wid].def].melee && shotPreview(s, p, gi, commit).reveal < 1) return fail('No Precision: play Precision cards first.');
   return { ok: true };
 }
 // expose (Expose tactic): the target's Reaction cards and Armor don't work against this hit

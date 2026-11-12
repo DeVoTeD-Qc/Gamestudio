@@ -175,13 +175,14 @@ func test_operator_card_is_its_own_card() -> void:
 		await _frames(3)
 		card = hand.get_operator_card()
 		# kc-cards-impl (O2): the same Operator card in the bottom row, its state ON BOARD · C1.
-		assert_eq(StringName(card.get_meta(&"state")), &"board", "%s on the board" % label)
+		# kc-loadout-clean: on the board it is the DEPLOYED card (the ability button).
+		assert_eq(StringName(card.get_meta(&"state")), &"deployed", "%s on the board" % label)
 		var k: float = Layout.points_per_px(screen)
 		assert_true(card.size.y * k >= 44.0 - 0.1, "%s still a 44 pt tap target" % label)
 		for chip: Node in hand.get_cards():
 			assert_false(card.get_global_rect().grow(-1.0).intersects((chip as Control).get_global_rect()), "%s the Operator overlaps no hand card" % label)
 		var where: Label = card.find_child("OperatorStatus", true, false) as Label
-		assert_eq(where.text, "ON BOARD · C1", "%s says where it stands" % label)
+		assert_eq(where.text, "DEPLOYED · C", "%s says where it stands" % label)
 		_despawn(vp)
 		await tree.process_frame
 

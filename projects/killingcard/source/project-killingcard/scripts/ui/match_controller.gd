@@ -183,6 +183,11 @@ func _on_screen_ready() -> void:
 	var board: Control = _screen.get_board()
 	board.lane_tapped.connect(_on_lane_tapped, d)
 	board.lane_long_pressed.connect(_on_lane_long_pressed, d)
+	# kc-loadout-clean: drag a unit with the MOVE chip (the Operator's Rotate, an Agile move).
+	if board.has_signal(&"unit_drag_started"):
+		board.unit_drag_started.connect(_on_unit_drag_started, d)
+		board.unit_drag_moved.connect(func(pos: Vector2) -> void: _on_drag_moved(-1, pos), d)
+		board.unit_drag_ended.connect(_on_drag_ended, d)
 	_screen.ready_pressed.connect(press_ready, d)
 	if _screen.has_signal(&"rail_inspected"):
 		_screen.rail_inspected.connect(_on_rail_inspected, d)
@@ -1406,10 +1411,60 @@ func _on_card_tapped(uid: int) -> void:
 func _on_operator_tapped() -> void:
 	if state == null or _swallow_tap():
 		return
+	# kc-loadout-clean (head): once the Operator is deployed its hand card is the ability button
+	# (it moves by a drag on the board, MOVE chip).
+	if operator_deployed():
+		_use_operator_card()
+		return
 	if selection.get("kind") == &"operator":
 		clear_selection()
 	else:
 		select_operator()
+
+
+## kc-loadout-clean: true while the Operator is on the board or placed this Deploy (its hand card is
+## then the ability button, darkened and marked DEPLOYED).
+func operator_deployed() -> bool:
+	return state != null and state.sides[me_side].operator_unit != null and state.projected_operator_zone(me_side) != MatchState.NO_ZONE
+
+
+## The deployed Operator card's tap: the ability (select / deselect / why not), or, with no ability,
+## where the Operator is and how to move it.
+func _use_operator_card() -> void:
+	var a: Dictionary = RunV2Views.ability_view(state, me_side)
+	if not a.is_empty():
+		use_ability()
+		return
+	var u: RulesUnit = state.sides[me_side].operator_unit
+	var where: String = MatchSnapshot.ZONE_LABELS[u.zone] if u != null and u.is_on_board() else MatchSnapshot.ZONE_LABELS[state.projected_operator_zone(me_side)]
+	_screen.show_toast("Your Operator is deployed in column %s. Drag it on the board (move icon) to move it." % where)
+
+
+## kc-loadout-clean: a drag that starts on your unit with the MOVE chip: the Operator's Rotate or an
+## Agile unit's move. Drop on a column (it lights where it can go); elsewhere it snaps back.
+func _on_unit_drag_started(_zone: int, uid: int, pos: Vector2) -> void:
+	if state == null or _swallow_tap() or uid < 0:
+		return
+	var u: RulesUnit = state.sides[me_side].find_unit(uid)
+	if u == null or not MatchSnapshot.can_move(state, me_side, u):
+		return
+	if u.is_operator:
+		selection = {"kind": &"operator"}
+		target_uid = -1
+		_show_selection()
+	else:
+		selection = {"kind": &"agile", "uid": uid}
+		target_uid = -1
+		_show_selection()
+	_dragging = true
+	var chip: PanelContainer = PanelContainer.new()
+	chip.theme_type_variation = &"HandCardSelected"
+	var label: Label = Label.new()
+	label.theme_type_variation = &"UnitName"
+	label.text = "MOVE · %s" % MatchSnapshot.unit_name(u, state.sides[me_side]).to_upper()
+	chip.add_child(label)
+	_screen.begin_drag_ghost(chip, pos)
+	chip.free()
 
 
 func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
@@ -1428,6 +1483,10 @@ func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
 			var u: RulesUnit = state.sides[me_side].find_unit(uid)
 			if u != null and u.agile and state.can_submit(me_side, RulesIntent.move_unit(uid, u.zone + (1 if u.zone < 2 else -1)))["code"] != &"already_moved":
 				select_agile(uid)
+			elif u != null and u.is_operator and MatchSnapshot.can_move(state, me_side, u):
+				# kc-loadout-clean: tap-then-tap fallback for the drag: the Operator's Rotate.
+				select_operator()
+				_screen.show_toast("Tap a neighbouring column to move your Operator there (or drag it).")
 		return
 	if selection.get("kind") == &"agile" and slot_side == &"player" and uid == int(selection["uid"]):
 		clear_selection()
@@ -1572,6 +1631,26 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 func _on_operator_drag_started(pos: Vector2) -> void:
 	if state == null or _swallow_tap() or state.sides[me_side].operator_unit == null:
 		return
+	if operator_deployed():
+		# kc-loadout-clean: the deployed card is the ability: drag it to the column it targets.
+		var a: Dictionary = RunV2Views.ability_view(state, me_side)
+		if a.is_empty() or not bool(a.get("ready", false)):
+			_use_operator_card()  # says why (used, waiting) or where the Operator is
+			return
+		if not (selection.get("kind") == &"item" and StringName(selection.get("id", &"")) == a["id"]):
+			var check: Dictionary = select_item(a["id"])
+			if not bool(check.get("ok", false)) or selection.is_empty():
+				return  # blocked (it said why) or queued at once (no target to pick)
+		_dragging = true
+		var achip: PanelContainer = PanelContainer.new()
+		achip.theme_type_variation = &"HandCardSelected"
+		var al: Label = Label.new()
+		al.theme_type_variation = &"UnitName"
+		al.text = String(a.get("name", "ABILITY")).to_upper()
+		achip.add_child(al)
+		_screen.begin_drag_ghost(achip, pos)
+		achip.free()
+		return
 	select_operator()
 	_dragging = true
 	# A small chip with the Operator's name, not a copy of the whole panel.
@@ -1635,6 +1714,10 @@ func _on_card_inspected(uid: int) -> void:
 
 func _on_operator_inspected() -> void:
 	if state == null or state.sides[me_side].operator_unit == null:
+		return
+	# kc-loadout-clean: the deployed card is the ability button: its long press explains the ability.
+	if operator_deployed() and not RunV2Views.ability_view(state, me_side).is_empty():
+		open_ability_inspector()
 		return
 	_open_operator(me_side)
 
@@ -1875,8 +1958,8 @@ func _on_rail_inspected(key: StringName) -> void:
 					"status": ""})
 		&"intel":
 			var dots: PackedInt32Array = state.red_dots(me_side)
-			_open_info({"title": "Rival intel", "type": "rival hand · incoming plays",
-					"text": "%d cards in hand. Incoming: A %d, B %d, C %d." % [foe.hand.size(), dots[0], dots[1], dots[2]],
+			_open_info({"title": "Rival intel", "type": "incoming plays",
+					"text": "Incoming this Deploy: A %d, B %d, C %d." % [dots[0], dots[1], dots[2]],
 					"status": "Recon Drone and Callout reveal them."})
 		&"supply":
 			_open_info({"title": "Supply", "type": "resource",

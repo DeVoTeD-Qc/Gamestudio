@@ -27,7 +27,8 @@ const INSPECTOR_SCENE: PackedScene = preload("res://scenes/match/CardInspector.t
 ## Card grid: gap, the banner's width:height (the art is cover-cropped), widest / narrowest card.
 const GRID_GAP: float = 10.0
 const ART_RATIO: float = 3.2
-const CARD_MAX_W: float = 380.0
+const ART_RATIO_TALL: float = 2.4
+const CARD_MAX_W: float = 440.0
 const CARD_MIN_W: float = 190.0
 const CAPTION_H: float = 22.0
 
@@ -134,22 +135,22 @@ func _fit_grid() -> void:
 		if c != _grid and c is Control and (c as Control).visible:
 			others += (c as Control).get_combined_minimum_size().y + float(_list.get_theme_constant(&"separation"))
 	var room_h: float = maxf(80.0, maxf(scroll.size.y, scroll.custom_minimum_size.y) - others - 4.0)
+	# Each layout: the width the columns give, the banner as tall as the rows allow (between
+	# ART_RATIO and ART_RATIO_TALL, cover-cropped). The biggest card that fits wins.
 	var best: Vector2 = Vector2.ZERO
 	var best_cols: int = 0
-	var best_rows: int = 99
 	for cols: int in range(2, 7):
 		var w: float = minf(CARD_MAX_W, floorf((room_w - (cols - 1) * GRID_GAP) / cols))
 		if w < CARD_MIN_W and cols > 2:
 			break
 		var rows: int = ceili(float(n) / cols)
-		var th: float = tile_h(w)
-		# The widest card wins; at the same width the fewest rows, then the fewest columns.
-		if rows * th + (rows - 1) * GRID_GAP > room_h:
+		var per_row: float = floorf((room_h - (rows - 1) * GRID_GAP) / rows)
+		if per_row < tile_h(w):
 			continue
-		if w > best.x or (w == best.x and rows < best_rows):
+		var th: float = minf(per_row, tile_h(w, ART_RATIO_TALL))
+		if w * th > best.x * best.y + 1.0:
 			best = Vector2(w, th)
 			best_cols = cols
-			best_rows = rows
 	if best_cols == 0:
 		# Too many cards to show at once: the narrowest comfortable card, as many columns as fit.
 		var cols2: int = clampi(int(floorf((room_w + GRID_GAP) / (CARD_MIN_W + GRID_GAP))), 2, 6)
@@ -162,18 +163,18 @@ func _fit_grid() -> void:
 		tile.custom_minimum_size = best
 		var card: Control = tile.get_node_or_null(^"Card") as Control
 		if card != null:
-			card.custom_minimum_size = Vector2(best.x, card_h(best.x))
+			card.custom_minimum_size = Vector2(best.x, best.y - CAPTION_H)
 			card.size = card.custom_minimum_size
 
 
-## A card's height at width w (the banner at ART_RATIO plus the name plate).
-static func card_h(w: float) -> float:
-	return roundf(w / ART_RATIO) + BannerCard.PLATE_H + 6.0
+## A card's height at width w (the banner at `ratio` plus the name plate).
+static func card_h(w: float, ratio: float = ART_RATIO) -> float:
+	return roundf(w / ratio) + BannerCard.PLATE_H + 6.0
 
 
 ## A grid tile's height (the card plus its caption line).
-static func tile_h(w: float) -> float:
-	return card_h(w) + CAPTION_H
+static func tile_h(w: float, ratio: float = ART_RATIO) -> float:
+	return card_h(w, ratio) + CAPTION_H
 
 
 func is_open() -> bool:
@@ -255,6 +256,7 @@ func _add_rows(r: RunProgress) -> void:
 	_grid.add_theme_constant_override(&"h_separation", int(GRID_GAP))
 	_grid.add_theme_constant_override(&"v_separation", int(GRID_GAP))
 	_grid.mouse_filter = Control.MOUSE_FILTER_PASS
+	_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_list.add_child(_grid)
 	var op: Control = _operator_tile(r)
 	if op != null:

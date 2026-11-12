@@ -102,10 +102,14 @@ func _hud() -> void:
 		c.keep_hand()
 	var st: MatchState = c.state
 	var me: RulesSide = st.sides[0]
+	var runner: RulesUnit = null
 	for row: Array in [[0, &"kc_wip_runner", 0], [0, &"marksman", 2], [1, &"rifleman", 1], [1, &"flanker", 0]]:
 		var cd: CardData = db.get_card(row[1])
 		if cd != null:
-			st.put_in_line(st.create_unit(int(row[0]), cd), int(row[2]))
+			var u: RulesUnit = st.create_unit(int(row[0]), cd)
+			st.put_in_line(u, int(row[2]))
+			if row[1] == &"kc_wip_runner":
+				runner = u
 	# The Operator on the board (column B), with a once-per-match ability ready.
 	if me.operator_unit != null:
 		st.put_in_line(me.operator_unit, 1)
@@ -121,5 +125,16 @@ func _hud() -> void:
 		m.get_match_intro().close()
 		await create_timer(0.6).timeout
 	await _shot("hud")
+	# A drag of the Agile Runner (MOVE chip) over column B: the legal columns light up.
+	if runner != null and c.has_method(&"_on_unit_drag_started"):
+		var lanes: Array = m.get_board().get_lanes()
+		var from: Vector2 = (lanes[0] as Control).get_global_rect().get_center()
+		var over: Vector2 = (lanes[1] as Control).get_global_rect().get_center()
+		c._on_unit_drag_started(0, runner.uid, from)
+		c._on_drag_moved(-1, over)
+		await _frames(6)
+		await _shot("hud_drag")
+		c._on_drag_ended(over)
+		await _frames(4)
 	root.remove_child(m)
 	m.queue_free()

@@ -34,6 +34,11 @@ const DRAG_PX: float = 10.0
 ## finger neither taps nor opens its zoom. Bumped by cancel_presses(); a press remembers the value.
 static var _cancel_serial: int = 0
 var _press_serial: int = 0
+## dd-ux-equip: frames the press has lasted. The hold fires mid-press only after LONG_PRESS_MIN_FRAMES
+## too, so one stalled frame (a slow phone, a busy browser that delivers the release late) can't
+## turn a tap into a zoom.
+var _press_frames: int = 0
+const LONG_PRESS_MIN_FRAMES: int = 3
 var drag_enabled: bool = false
 var dragging: bool = false
 
@@ -632,6 +637,7 @@ func _gui_input(event: InputEvent) -> void:
 				_press_ms = Time.get_ticks_msec()
 				_press_pos = mb.position
 				_press_serial = _cancel_serial
+				_press_frames = 0
 				set_process(true)
 			else:
 				if dragging:
@@ -672,7 +678,8 @@ func _process(_delta: float) -> void:
 		_pressing = false
 		set_process(false)
 		return
-	if _pressing and not _long_fired and Time.get_ticks_msec() - _press_ms >= LONG_PRESS_MS:
+	_press_frames += 1
+	if _pressing and not _long_fired and _press_frames >= LONG_PRESS_MIN_FRAMES and Time.get_ticks_msec() - _press_ms >= LONG_PRESS_MS:
 		_long_fired = true
 		_pressing = false
 		set_process(false)

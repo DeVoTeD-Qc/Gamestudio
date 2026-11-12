@@ -313,7 +313,6 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_minimap.set_intel(snapshot.get("lanes", []))
 	_board.set_lanes(snapshot.get("lanes", []))
 	_operator_panel.set_operator(snapshot)
-	_minimap.set_rival_hand(int(snapshot.get("enemy_hand", 0)))
 	_deck_value.text = str(int(snapshot.get("deck_count", 0)))
 	_used_value.text = str(int(snapshot.get("discard_count", 0)))
 	_hand.set_operator(operator_card_entry(snapshot))
@@ -379,19 +378,24 @@ static func operator_card_entry(snapshot: Dictionary) -> Dictionary:
 	if bool(snapshot.get("operator_can_deploy", false)):
 		e["state"] = &"deploy"
 		e["status"] = "DEPLOY"
-	elif planned != "":
-		e["state"] = &"planned"
-		e["status"] = "PLAN · %s" % planned
-	elif on_board:
-		e["state"] = &"board"
-		var where: String = String(op.get("zone_label", ""))
-		e["status"] = "ON BOARD\n%s · ROW %d" % [where, int(op.get("row", 1))] if where != "" else "ON BOARD"
+	elif on_board or planned != "":
+		# kc-loadout-clean (head): deployed (on the board, or placed this Deploy) = the card stays in
+		# the hand, darkened, says DEPLOYED and is the Operator ability button (lit while ready).
+		e["state"] = &"deployed"
+		var where: String = String(op.get("zone_label", "")) if on_board else planned
+		if on_board and planned != "":
+			where = "%s > %s" % [where, planned]
+		e["status"] = "DEPLOYED · %s" % where if where != "" else "DEPLOYED"
+		var a: Dictionary = snapshot.get("ability", {})
+		e["has_ability"] = not a.is_empty()
+		e["ability_ready"] = not a.is_empty() and bool(a.get("ready", false)) and not bool(snapshot.get("ability_planned", false))
+		e["ability_name"] = String(a.get("name", ""))
 	else:
 		e["state"] = &"down"
 		e["status"] = "DOWN\n%s" % ("NEXT ROUND" if bool(op.get("respawns", true)) else "NO RESPAWN")
-	# Tap selects it in Deploy (place, or Rotate from the board); otherwise a tap shows its rules.
+	# Tap selects it in Deploy (place); deployed, a tap is the ability; otherwise a tap shows its rules.
 	e["active"] = open and e["state"] != &"down"
-	e["draggable"] = e["active"]
+	e["draggable"] = e["active"] and (e["state"] != &"deployed" or bool(e.get("ability_ready", false)))
 	return e
 
 
@@ -403,9 +407,11 @@ func get_badge(key: StringName) -> Control:
 			&"rival": _rival_badge, &"preview": _preview_button, &"deck": _deck_badge, &"traits": _trait_rail}.get(key, null)
 
 
-## kc-fight-ui: the phone strip has no RIVAL badge; SCORE carries the rival's hand count and intel.
+## kc-fight-ui: the phone strip has no RIVAL badge; SCORE carries the rival intel. kc-loadout-clean
+## (head: "the info of how many cards my opponent have is not very useful"): no screen size shows
+## the rival's hand count any more, and the RIVAL badge's slot goes to the rail on every size.
 func rival_in_score() -> bool:
-	return compact
+	return true
 
 
 ## kc-syn-ui: the trait rail in the icon strip.
@@ -1277,10 +1283,10 @@ func open_flyout(key: StringName) -> void:
 	_sets_box.visible = key == &"traits"
 	if key == &"traits":
 		_fill_sets_box()
-	_flyout_title.text = {&"score": "SCORE", &"operator": "OPERATOR", &"streak": "KILLSTREAKS", &"rival": "RIVAL HAND",
+	_flyout_title.text = {&"score": "SCORE", &"operator": "OPERATOR", &"streak": "KILLSTREAKS", &"rival": "RIVAL INCOMING",
 			&"deck": "DECK", &"traits": "SETS"}[key]
 	if merged:
-		_flyout_title.text = "SCORE · RIVAL HAND"
+		_flyout_title.text = "SCORE · RIVAL INCOMING"
 	_flyout_hint.text = {
 		&"operator": "Tap the Operator here to select it, then a column · long-press for rules",
 		&"streak": "Tap a ready streak to arm it · long-press for rules",
@@ -1335,10 +1341,7 @@ func _set_badges(snapshot: Dictionary) -> void:
 		round_row.push_front(["", friend if mine_i else enemy, &"flag" if mine_i else &"flag_rival"])
 	var score_rows: Array = [round_row,
 			[[str(int(snapshot.get("score_player", 0))), friend], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy]]]
-	if rival_in_score():
-		# kc-fight-ui: the rival's hand (a red card glyph + count) as the third line.
-		score_rows.append([["", Color("#ff8a8d"), &"cards_rival"], [str(int(snapshot.get("enemy_hand", 0))), Color("#ffb3b5")]])
-	_score_badge.font_size = 18 if rival_in_score() else 20
+	_score_badge.font_size = 20
 	_score_badge.set_value(score_rows)
 	var op: Dictionary = snapshot.get("operator", {})
 	_operator_can_deploy = bool(snapshot.get("operator_can_deploy", false))
@@ -1364,7 +1367,6 @@ func _set_badges(snapshot: Dictionary) -> void:
 				_ks_announced[id] = true
 				_streak_callout_shown = true
 				show_toast.call_deferred("%s ready: tap it at the top of your hand" % String(ks.get("full_name", ks.get("name", "A killstreak"))))
-	_rival_badge.set_value([[[str(int(snapshot.get("enemy_hand", 0))), Color("#ffb3b5")]]])
 	_deck_badge.set_value([[[str(int(snapshot.get("deck_count", 0))), text_c]]])
 
 
@@ -1795,6 +1797,8 @@ var intro_node: Dictionary = {}
 func _setup_v2() -> void:
 	_ability = AbilityButton.new()
 	_tray.add_child(_ability)
+	# kc-loadout-clean: the disc rides on the deployed Operator card: re-place it when the hand moves.
+	_hand.cards_placed.connect(func() -> void: _layout_ability.call_deferred())
 	_ability.pressed.connect(func() -> void:
 		close_flyout()
 		ability_pressed.emit())
@@ -1865,23 +1869,23 @@ func _sync_ability_visible() -> void:
 		return
 	var card: Control = _hand.get_operator_card()
 	_ability.visible = _ability.state != AbilityButton.State.NONE and tray_state == TRAY_OPEN \
-			and card != null and card.is_visible_in_tree()
+			and card != null and card.is_visible_in_tree() and bool(card.get_meta(&"deployed", false))
+	if _ability.visible:
+		_ability.move_to_front()
 
 
-## kc-layout-a: the Operator's ability button sits in the bottom row between UNDO and READY (the
-## Operator card is a hand-grid card now, too small to carry it); READY takes what is left.
+## kc-loadout-clean (head: "the operator power makes the ready button and undo too small"): the
+## ability is no longer a button in the bottom row. Once the Operator is deployed, its hand card is
+## the ability button; this disc only shows the ability's state (USE / AIM / PLAN / WAIT / USED) on
+## that card's banner (right, where its FP / Armor were), and lets every press through to the card. UNDO and READY
+## keep the whole bottom row.
 func _layout_ability() -> void:
 	if _ability == null or metrics.is_empty() or not metrics.has("ready"):
 		return
-	var undo: Rect2 = metrics["undo"]
-	var ready: Rect2 = metrics["ready"]
-	var s: float = minf(AbilityButton.SIZE_PX, undo.size.y)
-	_ability.size = Vector2(s, s)
-	if _ability.state != AbilityButton.State.NONE:
-		_ability.position = Vector2(undo.end.x + 6.0, undo.position.y + (undo.size.y - s) * 0.5)
-		ready = Rect2(ready.position + Vector2(s + 6.0, 0), ready.size - Vector2(s + 6.0, 0))
-	_place(_ready_button, ready)
+	_place(_ready_button, metrics["ready"])
 	fit_button_text(_ready_button)
+	_ability.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ability.place_on(_hand.get_operator_card())
 	_sync_ability_visible.call_deferred()
 	_layout_boss_plate.call_deferred()
 

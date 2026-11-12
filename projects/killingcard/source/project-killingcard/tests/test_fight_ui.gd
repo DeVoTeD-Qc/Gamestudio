@@ -350,10 +350,10 @@ func test_phone_strip_folds_rival_into_score() -> void:
 		var phone: bool = screen == Layout.PHONE
 		var rival: Control = m.get_node("%RivalBadge")
 		var score: Control = m.get_badge(&"score")
-		var hand_n: int = c.state.sides[E].hand.size()
-		assert_eq(rival.visible, not phone, "%s RIVAL badge %s" % [label, "folded" if phone else "kept"])
+		# kc-loadout-clean: no RIVAL badge and no rival hand count on any size.
+		assert_false(rival.visible, "%s RIVAL badge folded" % label)
+		assert_eq(score.get_text().split(" ").size(), 2, "%s SCORE has no rival hand count (%s)" % [label, score.get_text()])
 		if phone:
-			assert_true(score.get_text().ends_with(str(hand_n)), "%s SCORE shows the rival hand (%s)" % [label, score.get_text()])
 			var rail: Control = m.get_trait_rail()
 			var badge_h: float = float(m.metrics["badge_h"])
 			# kc-onboard-ui: the slot holds the initiative chip while no trait is in play (a full
@@ -374,8 +374,6 @@ func test_phone_strip_folds_rival_into_score() -> void:
 				assert_true(m.get_tray().get_global_rect().grow(0.6).encloses(rail.get_global_rect()), "%s rail in the tray's top row" % label)
 			else:
 				assert_true(strip_r.encloses(rail.get_global_rect()), "%s rail inside the strip" % label)
-		else:
-			assert_false(score.get_text().contains(" %d" % hand_n) and score.get_text().count(" ") > 1, "%s SCORE keeps two lines" % label)
 		_despawn(vp)
 		await tree.process_frame
 

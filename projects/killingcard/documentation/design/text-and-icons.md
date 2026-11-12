@@ -82,6 +82,8 @@ colour (Supply amber, FP teal, Armor steel); keyword icons take the ink of the t
 | Flank | Flank | `kw_flank` | same |
 | Pierce | Pierce | an arrow through a plate (built-in `svg:pierce`, kc-layout-a) | same |
 | Agile | Agile | a double arrow (built-in `svg:agile`, kc-layout-a) | same |
+| Move (drag) | (not inline) | a four-way arrow on a dark disc with a teal ring (`SynergyGlyphs.draw_move_chip`, kc-loadout-clean) | top-right of your board unit while it can move this Deploy (the Operator's Rotate, an Agile unit's move), glossary row "Move (drag)" |
+| Operator ability | (not inline) | the amber USE disc (ability_button.gd) on the deployed Operator card | the Operator hand card once it is deployed (darkened, DEPLOYED · B), glossary row "Operator ability card" |
 | Suppress | Suppress | `kw_suppress` | same |
 | Patch | Patch | `kw_patch` | same |
 | Holder | Holder | `kw_holder` | same |
@@ -143,3 +145,23 @@ A new vanilla card must get a line in `CardLore.LINES` (`tests/test_text_icons.g
 | Hover tooltip strings (all scripts) | 564 | 372 | -34% |
 
 The glossary's keyword entries keep the full rules (that is where explanation lives now).
+
+## kc-loadout-clean: moving units and the Operator card
+
+- A board unit of yours that can move now (the Operator's Rotate, an Agile unit's free move) shows
+  the **Move** chip top-right. Drag it (it starts after about 10 px): the columns it can reach
+  light up (MOVE HERE), the others say why; a drop anywhere else snaps it back. Tap it, then a
+  column, does the same. A long press still inspects it.
+- The Operator is deployed by dragging its hand card onto a column (or tap it, then a column).
+  Once deployed its hand card stays, darkened, with **DEPLOYED · B**: it is the Operator ability
+  button. The amber USE disc on it says the ability is ready (tap it, or drag it to the column it
+  targets); AIM / PLAN / WAIT / USED say the rest; a long press explains the ability. When the
+  Operator goes down, the card turns back into the deploy card. READY and UNDO keep the whole
+  bottom row.
+- The rival's hand count is gone from every screen size; the SCORE flyout keeps the rival's
+  incoming plays (RIVAL INCOMING).
+- Loadout: killstreak tiles say NAME, STREAK n and the effect's first sentence (long press: the
+  full rules). The Operator is one line (long press: its rules; OPERATOR & DECK: pick it, see the
+  deck), the boss one line (tap: its rule), the modifiers you can add plus an "n LOCKED" chip.
+- Deck view: the cards as card faces (calling-card art, name, cost, FP / Armor, an "x3" count), the
+  Operator first; Standard Issue is a chip ("Standard Issue: 9 of 10", tap: what it means).

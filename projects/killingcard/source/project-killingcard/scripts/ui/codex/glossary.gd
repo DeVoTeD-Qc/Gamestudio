@@ -29,10 +29,10 @@ const DRAWN: Dictionary = {&"arrives_front": &"protector", &"immediate": &"bolt"
 		&"stat_colours": &"trend", &"firepower": &"fp", &"armor": &"armor", &"cover_stat": &"cover_chip",
 		&"supply": &"hex", &"pierce": &"pierce", &"card_peek": &"peek", &"damaged": &"damaged",
 		&"trait_chip": &"trait_chip", &"rail_highlight": &"rail", &"card_frames": &"frames",
-		&"agile": &"agile", &"beam": &"beam", &"end_of_round": &"end_of_round"}
+		&"agile": &"agile", &"beam": &"beam", &"end_of_round": &"end_of_round", &"move": &"move", &"operator_ability": &"operator_ability"}
 ## kc-cards-impl: the card-anatomy entries (C1+ board card, Y2+ / T1 frames) lead the STATS & BOARD group.
 const STATS_KEYS: Array[StringName] = [&"card_peek", &"firepower", &"armor", &"damaged", &"cover_stat", &"stat_colours", &"supply", &"card_frames",
-		&"objective", &"control", &"field", &"operator", &"killstreak", &"incoming"]
+		&"objective", &"control", &"field", &"operator", &"operator_ability", &"move", &"killstreak", &"incoming"]
 const SYNERGY_EXTRA: Array[StringName] = [&"trait_chip", &"rail_highlight", &"set_callout", &"doctrine"]
 
 var category: StringName = &"all"
@@ -392,6 +392,15 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			SynergyGlyphs.draw_trait_icon(c, r.grow(-10.0), SynergyRules.VANGUARD, accent)
 		&"pierce":
 			SynergyGlyphs.draw_pierce_plate(c, r, accent)  # kc-fight-ui
+		&"move":
+			# kc-loadout-clean: the MOVE chip as the board draws it.
+			SynergyGlyphs.draw_move_chip(c, r.grow(-4.0), friend)
+		&"operator_ability":
+			# kc-loadout-clean: the deployed Operator card's ability disc (amber, USE).
+			c.draw_rect(r.grow(-4.0), Color("#3A2D0B"))
+			c.draw_rect(r.grow(-4.0), BannerView.BRASS, false, 2.0)
+			c.draw_circle(r.get_center(), s * 0.26, Color("#FFB020"))
+			c.draw_arc(r.get_center(), s * 0.26, 0, TAU, 24, Color.WHITE, 1.5, true)
 		&"agile":
 			# kc-wip-impl: a sideways double arrow (a free move to the next column).
 			c.draw_line(Vector2(6, s * 0.5), Vector2(s - 6, s * 0.5), accent, 3.0)

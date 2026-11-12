@@ -360,13 +360,15 @@ func test_operator_states() -> void:
 	var on: Dictionary = base.duplicate(true)
 	on["operator"]["on_board"] = true
 	on["operator"]["zone_label"] = "B"
-	assert_eq(MatchScreen.operator_card_entry(on)["state"], &"board", "On board")
+	# kc-loadout-clean: on the board the card is DEPLOYED (the ability button).
+	assert_eq(MatchScreen.operator_card_entry(on)["state"], &"deployed", "On board = deployed")
+	assert_eq(MatchScreen.operator_card_entry(on)["status"], "DEPLOYED · B", "says where")
 	var down: Dictionary = base.duplicate(true)
 	assert_eq(MatchScreen.operator_card_entry(down)["state"], &"down", "Down")
 	var hand: Control = (load("res://scenes/match/HandArea.tscn") as PackedScene).instantiate()
 	tree.root.add_child(hand)
 	await _frames(1)
-	for pair: Array in [[{"state": &"deploy", "can_afford": false, "cost": 1}, "NEED 1 SUPPLY"], [{"state": &"board", "zone_label": "B", "row": 1}, "ON BOARD · B1"],
+	for pair: Array in [[{"state": &"deploy", "can_afford": false, "cost": 1}, "NEED 1 SUPPLY"], [{"state": &"board", "zone_label": "B", "row": 1}, "ON BOARD · B1"], [{"state": &"deployed", "status": "DEPLOYED · B"}, "DEPLOYED · B"],
 			[{"state": &"down"}, "DOWN"], [{"state": &"deploy", "cost": 1}, "DEPLOY"]]:
 		var e: Dictionary = {"name": "Kestrel", "fp": 3, "armor": 7, "armor_max": 7}
 		e.merge(pair[0])

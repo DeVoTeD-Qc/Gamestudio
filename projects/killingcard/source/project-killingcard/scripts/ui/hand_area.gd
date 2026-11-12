@@ -719,6 +719,17 @@ func _make_operator_card(op: Dictionary) -> Control:
 			"banner": String(op.get("banner", "")), "cost": "", "rule": operator_rule(op)}
 	if String(op.get("camo", "")) != "":
 		entry["camo"] = op["camo"]
+	if state == &"deployed":
+		# kc-loadout-clean: its FP / Armor are on the board now; the ability disc takes their place
+		# and the rule line names the ability.
+		entry.erase("fp")
+		entry.erase("armor")
+		entry.erase("armor_max")
+		entry["keywords"] = []
+		if bool(op.get("has_ability", false)):
+			entry["rule"] = "Ability: %s" % op.get("ability_name", "")
+		else:
+			entry["rule"] = "On the board. Drag it there to move it."
 	var panel: PanelContainer = BannerCard.build(entry, _card_size(), _metric_h)
 	panel.name = "OperatorCard"
 	panel.set_meta(&"uid", OPERATOR_UID)
@@ -728,6 +739,11 @@ func _make_operator_card(op: Dictionary) -> Control:
 	panel.set_meta(&"cost", cost)
 	panel.add_to_group(&"tap_target")
 	panel.tooltip_text = "Operator: %s" % String(op.get("name", ""))
+	if state == &"deployed":
+		panel.set_meta(&"deployed", true)
+		var an: String = String(op.get("ability_name", ""))
+		panel.tooltip_text = ("Operator deployed. %s: %s. Long-press: what it does." % [an, "ready, tap or drag it to a column" if bool(op.get("ability_ready", false)) else "not ready now"]) \
+				if bool(op.get("has_ability", false)) else "Operator deployed. Drag it on the board (move icon) to move it."
 	var face: Control = panel.get_node("Face")
 	var bv: BannerView = BannerCard.banner_of(panel)
 	var status_text: String = ""
@@ -746,6 +762,10 @@ func _make_operator_card(op: Dictionary) -> Control:
 		&"down":
 			status_text = "DOWN"
 			status_col = get_theme_color(&"enemy", &"Hud")
+		&"deployed":
+			# kc-loadout-clean: on the board (or placed this Deploy): the card is the ability button.
+			status_text = String(op.get("status", "DEPLOYED"))
+			status_col = AMBER if bool(op.get("ability_ready", false)) else Color("#B9C2C9")
 		_:
 			status_text = String(op.get("status", "")).replace("\n", " · ")
 	var status: Label = _label(status_text, &"HudTag", true)
@@ -771,7 +791,7 @@ func _make_operator_card(op: Dictionary) -> Control:
 	ink.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_child(ink)
 	ink.draw.connect(func() -> void:
-		if cost <= 0 or state in [&"board", &"planned"]:
+		if cost <= 0 or state in [&"board", &"planned", &"deployed"]:
 			return
 		var k: float = bv.size.y / 57.0
 		var th: float = roundf(clampf(16.0 * k, 12.0, 26.0))
@@ -790,14 +810,20 @@ func _make_operator_card(op: Dictionary) -> Control:
 		need.x = CardLook.TITLE_FONT.get_string_size(status.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 14.0
 		status.size = Vector2(minf(need.x, face.size.x - 8.0), need.y)
 		var by: float = bv.position.y + bv.size.y * 0.5 - need.y * 0.5
-		status.position = Vector2((face.size.x - status.size.x) * 0.5, maxf(bv.position.y + 2.0, by)))
+		# kc-loadout-clean: deployed, the ability disc takes the banner's right side: the chip goes left.
+		var sx: float = 6.0 if state == &"deployed" else (face.size.x - status.size.x) * 0.5
+		if state == &"deployed":
+			status.size.x = minf(status.size.x, face.size.x * 0.58)
+		status.position = Vector2(sx, maxf(bv.position.y + 2.0, by)))
 	face.move_child(status, -1)
+	if state == &"deployed":
+		bv.modulate = Color(0.5, 0.5, 0.54)  # kc-loadout-clean: darkened while deployed
 	_apply_operator_frame(panel, true)
 	# Amber glow while it can deploy (the head: "highlight what you can do now").
 	var glow: Control = Control.new()
 	glow.name = "Glow"
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.visible = state == &"deploy" and not short
+	glow.visible = (state == &"deploy" and not short) or (state == &"deployed" and bool(op.get("ability_ready", false)))
 	panel.add_child(glow)
 	glow.draw.connect(func() -> void:
 		glow.draw_rect(Rect2(Vector2(-3, -3), glow.size + Vector2(6, 6)), Color(AMBER, 0.95), false, 3.0)
@@ -959,7 +985,12 @@ func _style_operator() -> void:
 	if art != null:
 		# kc-da-ui (#5): the art stays full colour in every state; the state chip (ON BOARD / DOWN)
 		# and the grey cost hex (when short of Supply) say it can't be deployed now.
+		# kc-loadout-clean (head): deployed, the card is darkened (it is on the board; the card is now
+		# the ability button, the lit disc says when it is ready).
 		art.self_modulate = Color.WHITE
+	var bv: Control = BannerCard.banner_of(_op_chip)
+	if bv != null:
+		bv.modulate = Color(0.5, 0.5, 0.54) if state == &"deployed" else Color.WHITE
 
 
 func _reduced_motion() -> bool:

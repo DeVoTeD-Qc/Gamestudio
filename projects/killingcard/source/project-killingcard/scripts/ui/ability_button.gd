@@ -30,6 +30,8 @@ var ability: Dictionary = {}
 var _gesture: RefCounted = null
 var _burst: float = 0.0
 var _flash: float = 0.0
+## kc-loadout-clean: the deployed Operator card this disc sits on (it follows the card's moves).
+var follow: Control = null
 
 
 func _init() -> void:
@@ -115,11 +117,33 @@ func word() -> String:
 	return {State.READY: "USE", State.AIM: "AIM", State.PLAN: "PLAN", State.WAIT: "WAIT", State.USED: "USED"}.get(state, "")
 
 
+## kc-loadout-clean: sits on `card`'s banner, right side (where its FP / Armor were), as big as the
+## banner allows (34..64 px) and never past the card's edges.
+func place_on(card: Control) -> void:
+	follow = card
+	if card == null or not is_instance_valid(card) or not card.is_inside_tree() or card.size.y <= 0.0:
+		return
+	var cr: Rect2 = card.get_global_rect()
+	var bv: Control = card.get_node_or_null(^"Face/Banner") as Control
+	var r: Rect2 = bv.get_global_rect() if bv != null and bv.size.y > 0.0 else cr
+	var s: float = clampf(minf(r.size.y - 6.0, r.size.x * 0.36), 34.0, SIZE_PX)
+	s = minf(s, cr.size.y - 4.0)
+	size = Vector2(s, s)
+	var gx: float = minf(r.end.x, cr.end.x) - s - 6.0
+	var gy: float = clampf(r.get_center().y - s * 0.5, cr.position.y + 2.0, cr.end.y - s - 2.0)
+	global_position = Vector2(gx, gy)
+	set_process(true)
+
+
 func _process(delta: float) -> void:
 	_burst = maxf(0.0, _burst - delta / 0.45)
 	_flash = maxf(0.0, _flash - delta / 0.3)
+	if follow != null and is_instance_valid(follow) and visible:
+		var cr: Rect2 = follow.get_global_rect()
+		if not cr.grow(1.0).encloses(get_global_rect()) or get_global_rect().end.x < cr.end.x - 16.0:
+			place_on(follow)
 	queue_redraw()
-	if _burst <= 0.0 and _flash <= 0.0 and state != State.READY and state != State.AIM:
+	if _burst <= 0.0 and _flash <= 0.0 and state != State.READY and state != State.AIM and not (follow != null and is_instance_valid(follow) and visible):
 		set_process(false)
 
 

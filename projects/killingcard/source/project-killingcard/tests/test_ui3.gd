@@ -31,11 +31,12 @@ func test_operator_card_entry_states() -> void:
 	var planned: Dictionary = op.duplicate()
 	planned["planned_zone"] = "B"
 	e = MatchScreen.operator_card_entry({"operator": planned, "deploy_open": true})
-	assert_eq([e["state"], e["status"]], [&"planned", "PLAN · B"], "placed this Deploy: PLAN · B")
+	# kc-loadout-clean: placed (or on the board) = DEPLOYED: the card is the ability button.
+	assert_eq([e["state"], e["status"]], [&"deployed", "DEPLOYED · B"], "placed this Deploy: DEPLOYED · B")
 	var board: Dictionary = op.duplicate()
 	board.merge({"on_board": true, "zone_label": "A", "row": 2, "zone": "A, ROW 2"}, true)
 	e = MatchScreen.operator_card_entry({"operator": board, "deploy_open": true})
-	assert_eq([e["state"], e["status"], e["active"]], [&"board", "ON BOARD\nA · ROW 2", true], "on the board: tap selects (Rotate)")
+	assert_eq([e["state"], e["status"], e["active"]], [&"deployed", "DEPLOYED · A", true], "on the board: tap = the ability")
 	e = MatchScreen.operator_card_entry({"operator": board, "deploy_open": false})
 	assert_false(e["active"], "outside Deploy a tap only inspects")
 	e = MatchScreen.operator_card_entry({"operator": op, "deploy_open": true})
@@ -78,7 +79,7 @@ func test_operator_card_deploys_from_the_hand() -> void:
 		assert_eq(c.state.projected_operator_zone(0), 1, "%s placed in B" % label)
 		await _frames(2)
 		card = hand.get_operator_card()
-		assert_eq(String(hand.operator_entry["status"]), "PLAN · B", "%s the card reads PLAN · B" % label)
+		assert_eq(String(hand.operator_entry["status"]), "DEPLOYED · B", "%s the card reads DEPLOYED · B" % label)
 		assert_false((card.get_node("Glow") as Control).visible, "%s no glow once placed" % label)
 		# Long-press / right-click = the Operator's rules.
 		_mouse(vp, card.get_global_rect().get_center(), true, MOUSE_BUTTON_RIGHT)
@@ -92,8 +93,8 @@ func test_operator_card_deploys_from_the_hand() -> void:
 		await _until_presented(c)
 		var op: RulesUnit = c.state.sides[0].operator_unit
 		if op.is_on_board():
-			assert_eq(String(hand.operator_entry["state"]), "board", "%s on the board next round" % label)
-			assert_true(String(hand.operator_entry["status"]).begins_with("ON BOARD\nB · ROW"), "%s ON BOARD / B · ROW n (%s)" % [label, hand.operator_entry["status"]])
+			assert_eq(String(hand.operator_entry["state"]), "deployed", "%s on the board next round" % label)
+			assert_true(String(hand.operator_entry["status"]).begins_with("DEPLOYED · B"), "%s DEPLOYED · B (%s)" % [label, hand.operator_entry["status"]])
 		else:
 			assert_eq(String(hand.operator_entry["state"]), "deploy", "%s down in Round 1: respawns now" % label)
 		var qa: Dictionary = _qa(vp, m)

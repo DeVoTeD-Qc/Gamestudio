@@ -259,9 +259,9 @@ func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
 		c.keep_hand()
 	await tree.process_frame
 	var st: MatchState = c.state
-	# kc-fight-ui: on the phone RIVAL folds into SCORE (third line: the rival's hand count).
-	assert_eq(m.get_badge(&"score").get_text(), "R%d %d-%d %d" % [st.round_number, st.sides[0].score, st.sides[1].score,
-			st.sides[1].hand.size()], "SCORE badge (with the rival hand)")
+	# kc-loadout-clean: no rival hand count (head: "not very useful"); SCORE is round + score.
+	assert_eq(m.get_badge(&"score").get_text(), "R%d %d-%d" % [st.round_number, st.sides[0].score, st.sides[1].score],
+			"SCORE badge (no rival hand count)")
 	assert_false(m.get_node("%RivalBadge").visible, "no separate RIVAL badge on the phone")
 	assert_eq(m.get_badge(&"deck").get_text(), str(st.sides[0].deck.size()), "DECK badge: deck count")
 	assert_eq(m.get_badge(&"operator").get_text(), "DEPLOY", "OPERATOR badge says DEPLOY in Round 1")

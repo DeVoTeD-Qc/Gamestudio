@@ -3,6 +3,7 @@
 *Mechanics Developer · 2026-11-11 · Board task `wb-pkg1` · **The written single source of truth for the rules.***
 *Built from `wb-improve-v2.md` with the head's answers: W1 (a) the package (O1 Squad Tactics + O2 Spoils + O3 Field Promotion + O6 Hot Drop delivery + O7 Threat, Deck bar and after-action screen), W2 (b) ranks and unlocks only (O10), W3 (a) Spoils, W4 (a) Health about 55–60 plus a small trim, W5 (a) the 12 Tactics replace 12 cards.*
 *v7.1 (board task `wb-odds2`, the head's `wb-odds` answer (a)): shots hit about 65% instead of about 93%. A shot reveals at most 3 cards (extra Precision is Power, +1 damage each); cover and long range raise the Hit Markers a shot needs; Expose, Pierce, Mark, Steady and Intel Sweep bring the odds back; every gun step needs 2 more Hit Markers and deals 2 more damage. Fewer turns now deal damage, so building got three helpers: Spoils also after a turn in which you were hit, Field Promotion is not a buy, the Buy Station Scrap service is free. Results in §13.*
+*Text pass (board task `wb-ux-text`, no rule changes): card text, tooltips, log and help use the short wording below ("+1 Movement, +2 Precision.", "Hits +1 damage", one sentence per Tactic). The rules are unchanged.*
 *Still in force: the "Warzone Deckbuilder" title and names, the closing circle with a hard end, a single-file build, the print-and-play.*
 
 The engine (`source/project-warbuilder/src/engine.js`) implements exactly these rules; the print-and-play (`src/pnp/gen.js`) and the in-game How to play are generated from the same data. If this page and the code ever disagree, the code is the bug report: fix one of them and its test (`npm test`).
@@ -70,23 +71,23 @@ Rarity mods are unchanged (Hollow Points +1 damage, Extended Mag +1 shot, Compen
 - **Squad line:** pays once for **each other card of its squad** in play this turn (Loadout counts), up to ×3, in any order.
 - **Rally:** with 3 and with 5 cards of one squad in play you also get that squad's bonus, once per turn each. Assault 3: hits +1 damage, +2 Precision, Pierce; 5: hits +1 damage, +2 Precision. **Recon 3: Mark; 5: Mark, hits +1 damage, +2 Precision** (v7.1: Rally 3 lost its +1 damage, because Mark is worth more when shots are harder). Support 3: +2 Precision, +1 extra shot, Steady; 5: +3 Precision, +1 extra shot, Steady ×2 (Steady: −1 Hit Marker needed on every shot this turn). Engineer 3: +1 Intel, +1 Precision; 5: draw 1, +1 Buy (v7.1: +1 Precision and +1 Buy).
 - **Loadout** cards go to your Loadout row (2 slots): they give their effect when deployed and at every Ready, and count for Squad and Rally. With both slots full, a new one replaces a slot (the old card to your discard) or is used once.
-- **Keywords:** Mark (next shot −1 Hit Marker needed), Pierce (ignore cover), Steady (every shot this turn −1 Hit Marker needed; v7.1: it no longer reveals a free card), Scrap (remove a card in hand, play area or discard from the game; never below 7 cards), +1 Buy, Reaction.
+- **Keywords:** Mark (next shot needs 1 fewer Hit Marker), Steady (every shot this turn needs 1 fewer; v7.1: no free card), Pierce (ignore cover), Hits +N damage (this turn), Scrap (remove a card in hand, play area or discard pile from the game; never below 7 cards), +1 Buy (one more buy), Reaction (cuts damage when you are hit with it in hand).
 
 ### Squad Tactics (O1): the rules of the 12 new verbs
 | Tactic | Squad | Rule |
 |---|---|---|
-| **Charge** | Assault | +2 Movement, +1 Precision. This turn your hits at distance 0 deal +1 damage. |
-| **Follow Through** | Assault | Your next hit this turn draws 2 cards right away; you may play them and keep shooting. |
-| **Adrenaline** | Assault | Each time a shot hits you, one Adrenaline in your discard pile returns to your hand (you play it on your next turn). |
-| **Intel Sweep** | Recon | Look at your top 4 cards and put them back in any order (shots reveal from the top). Until you arrange them they stay as they were; if your deck changes first, the Sweep is over. |
-| **Expose** | Recon | Mark. This turn your shots ignore cover, and your hits ignore the rival's Armor and Reaction cards (v7.1: cover too). |
-| **Hold the Angle** | Recon | At End turn, up to 3 unspent Precision is saved (v7.1: the aim limit). If the rival **ends their next turn** within your gun's range, your gun fires once with it: reveal that many cards and use the gun's printed ladder (no Recoil, no Mark, no Steady, no damage bonuses; cover and long range raise the need; Reactions and Armor apply). Otherwise it is lost at your Ready. |
-| **Fortify** | Support | At your next Ready your Armor is kept (up to 6) instead of dropping to 0. |
+| **Charge** | Assault | Hits at distance 0: +1 damage this turn. |
+| **Follow Through** | Assault | Next hit this turn: draw 2 right away. You may play them and keep firing. |
+| **Adrenaline** | Assault | When you are hit, one Adrenaline returns from your discard pile to your hand (play it next turn). |
+| **Intel Sweep** | Recon | Reorder your top 4 cards (shots reveal from the top). Until you arrange them they stay as they were; if your deck changes first, the Sweep is over. |
+| **Expose** | Recon | Mark. This turn ignore cover, Armor and Reactions (v7.1: cover too). |
+| **Hold the Angle** | Recon | End turn: hold up to 3 unspent Precision (v7.1: the aim limit). If the rival **ends their next turn** in your gun's range, your gun fires once with it: reveal that many cards and use the gun's printed ladder (no Recoil, no Mark, no Steady, no damage bonuses; cover and long range raise the need; Reactions and Armor apply). Otherwise it is lost at your Ready. |
+| **Fortify** | Support | Keep your Armor at your next Ready (max 6) instead of dropping to 0. |
 | **Field Medic** | Support | Heal 3, never above your starting Health. |
-| **Suppressing Barrage** | Support | On the rival's next turn, the first 1 Movement and the first 2 Precision they gain (Loadout, location, cards) are lost. |
-| **Jury-Rig** | Engineer | Repeats the play line (not the Squad line, not a Loadout effect, not another Jury-Rig) of the card you played just before it this turn. Played first: nothing to repeat. |
-| **Sentry Turret** | Engineer (Loadout) | When deployed and at every Ready, if the rival is 0–3 away: reveal 1 card; 1 Hit Marker hits for 2 (cover and long range raise the need; Reactions and Armor apply). Its damage counts for Spoils. |
-| **Contraband Run** | Engineer | This turn your buys may take the top card of any stack on the map, at its printed cost (no next-door cost). |
+| **Suppressing Barrage** | Support | Suppress: on the rival's next turn the first 1 Movement and 2 Precision they gain (Loadout, location, cards) are lost. |
+| **Jury-Rig** | Engineer | Repeat the play line of your previous card this turn (not a Squad line, Loadout effect or Jury-Rig). Played first: nothing to repeat. |
+| **Sentry Turret** | Engineer (Loadout) | When deployed and every Ready, if the rival is 0–3 away, reveal 1: 1 Hit Marker hits for 2 (cover and long range raise the need; Reactions and Armor apply). Its damage counts for Spoils. |
+| **Contraband Run** | Engineer | Buy from any stack this turn, at printed cost (no next-door cost). |
 
 ## 8. The circle and the end
 - At the end of rounds 2, 4, 5, 6, 7 and 8 one end location closes (alternating ends; the schedule is public): 7 → 1 location, the **final circle**, after round 8. Its loot is lost.
@@ -113,7 +114,8 @@ Operations apply to **both** operators, so they change the drop, not the odds. A
 ## 10. What the screen shows (O7)
 - **Threat** (replaces the Firepower sum): the damage you can expect from the rest of this turn if you play your hand and shoot as the planner suggests, with the first shot's odds. Between turns: the damage you dealt, with a per-turn sparkline.
 - **Deck bar:** starters against the cards you added, coloured by squad.
-- **Tactical chips:** every Tactic in play, yours and your rival's (red ⚠ when it can hurt you: a held angle, a Suppression). Each chip, card, gun and location explains itself on **long press (touch), right click or hover (mouse)**.
+- **Tactical chips:** every Tactic in play, yours and your rival's (red ⚠ when it can hurt you: a held angle, a Suppression). Each chip, card, gun and location explains itself on **long press (touch), right click or hover (mouse)**; the zoom of a card, gun or location adds one plain line: what it gives you now (Squad ×N, % to hit, when the gas takes it).
+- **Next step and the rival's turn (wb-ux-text):** one line says what to do now; after the rival's turn it first says what they did (cards played, move, buys, shots, the damage you took).
 - **After-action report:** damage per round for both players, your best turn and its round, your MVP card (most Hit Markers in your hits), the cards you added, XP and rank.
 
 Screenshots (from `qa/tools/smoke_pkg.js`, headless Chromium, the built page):
@@ -138,56 +140,56 @@ Loot cards by squad (generated from the engine):
 
 | Card | Tier | Intel | Hit Markers | Copies | Play | Squad line (once per other Assault card in play, up to ×3) |
 |---|---|---|---|---|---|---|
-| Breach | I | 1 | **3** | 2 | Gain 1 Movement and 2 Precision. | hits +1 damage, +1 Precision |
-| Slide Cancel | I | 1 | **3** | 2 | Gain 2 Movement and 1 Precision. Scrap 1. | Draw 1, +2 Precision |
-| Hip Fire | I | 2 | **3** | 2 | Gain 1 Movement and 2 Precision. | +2 Precision, **Steady** (was +3 Precision) |
-| Rush the Door | II | 3 | **3** | 2 | Gain 1 Movement and 3 Precision. Pierce. | hits +1 damage, +2 Precision |
-| Charge · **Tactic** | II | 3 | **3** | 2 | Gain 2 Movement and 1 Precision. At distance 0 your hits deal +1 damage this turn. | +1 Precision |
-| Follow Through · **Tactic** | II | 3 | **3** | 2 | Gain 1 Movement and 2 Precision. Your next hit this turn draws 2 cards. | +1 Precision |
-| Adrenaline · **Tactic** | III | 4 | 3 | 2 | Gain 1 Movement and 3 Precision. When a shot hits you, return this from your discard pile to your hand. | +1 Precision |
-| Breaching Charge | III | 4 | 3 | 2 | Gain 1 Movement and 3 Precision. Pierce. Hits +1 damage. | hits +1 damage, +1 extra shot, Steady |
-| Tac Vest | I/II/II | 3 | 1 | 3 | Loadout. Ready: +2 Precision, hits +1 damage. | (Loadout: counts for Squad and Rally) |
+| Breach | I | 1 | **3** | 2 | +1 Movement, +2 Precision. | Hits +1 damage, +1 Precision |
+| Slide Cancel | I | 1 | **3** | 2 | +2 Movement, +1 Precision. Scrap 1. | Draw 1, +2 Precision |
+| Hip Fire | I | 2 | **3** | 2 | +1 Movement, +2 Precision. | +2 Precision, Steady (was +3 Precision) |
+| Rush the Door | II | 3 | **3** | 2 | +1 Movement, +3 Precision. Pierce. | Hits +1 damage, +2 Precision |
+| Charge · **Tactic** | II | 3 | **3** | 2 | +2 Movement, +1 Precision. Hits at distance 0: +1 damage this turn. | +1 Precision |
+| Follow Through · **Tactic** | II | 3 | **3** | 2 | +1 Movement, +2 Precision. Next hit this turn: draw 2. | +1 Precision |
+| Adrenaline · **Tactic** | III | 4 | 3 | 2 | +1 Movement, +3 Precision. When you are hit, it returns from discard to hand. | +1 Precision |
+| Breaching Charge | III | 4 | 3 | 2 | +1 Movement, +3 Precision. Pierce. Hits +1 damage. | Hits +1 damage, +1 extra shot, Steady |
+| Tac Vest | I/II/II | 3 | 1 | 3 | Loadout. Ready: +2 Precision, Hits +1 damage. | (Loadout: counts for Squad and Rally) |
 
 ### Recon
 
 | Card | Tier | Intel | Hit Markers | Copies | Play | Squad line (once per other Recon card in play, up to ×3) |
 |---|---|---|---|---|---|---|
-| Mark Target | I | 1 | 2 | 2 | Gain 2 Precision. | Mark, +1 Precision |
-| Steady Breath | I | 1 | 3 | 2 | Gain 2 Precision. | +2 Precision |
-| Snapshot | I | 2 | 2 | 2 | Gain 2 Precision and 1 Intel. | +2 Intel, +1 Precision |
-| Intel Sweep · **Tactic** | II | 3 | 2 | 2 | Gain 2 Precision. Look at your top 4 cards and put them back in any order. | hits +1 damage |
-| Spotter Scope | II | 3 | 3 | 2 | Gain 3 Precision. | Mark, hits +1 damage |
-| Expose · **Tactic** | II | 3 | 2 | 2 | Gain 2 Precision. Mark. This turn your hits ignore Armor and Reaction cards. | Mark, hits +1 damage |
-| UAV | III | 4 | 3 | 2 | Gain 3 Precision and 1 Intel. Pierce. | Draw 1, Mark, +1 Precision |
-| Hold the Angle · **Tactic** | III | 4 | 3 | 2 | Gain 3 Precision. At End, save up to 3 unspent Precision: fire it if the rival ends their turn in range. | hits +1 damage |
+| Mark Target | I | 1 | 2 | 2 | +2 Precision. | Mark, +1 Precision |
+| Steady Breath | I | 1 | 3 | 2 | +2 Precision. | +2 Precision |
+| Snapshot | I | 2 | 2 | 2 | +2 Precision, +1 Intel. | +2 Intel, +1 Precision |
+| Intel Sweep · **Tactic** | II | 3 | 2 | 2 | +2 Precision. Reorder your top 4 cards. | Hits +1 damage |
+| Spotter Scope | II | 3 | 3 | 2 | +3 Precision. | Mark, Hits +1 damage |
+| Expose · **Tactic** | II | 3 | 2 | 2 | +2 Precision. Mark. This turn ignore cover, Armor and Reactions. | Mark, Hits +1 damage |
+| UAV | III | 4 | 3 | 2 | +3 Precision, +1 Intel. Pierce. | Draw 1, Mark, +1 Precision |
+| Hold the Angle · **Tactic** | III | 4 | 3 | 2 | +3 Precision. End turn: hold up to 3 Precision; fire it if the rival ends in range. | Hits +1 damage |
 | Recon Post | I/II/II | 3 | 1 | 3 | Loadout. Ready: +2 Precision. | (Loadout: counts for Squad and Rally) |
 
 ### Support
 
 | Card | Tier | Intel | Hit Markers | Copies | Play | Squad line (once per other Support card in play, up to ×3) |
 |---|---|---|---|---|---|---|
-| Ammo Box | I | 2 | 2 | 2 | Gain 2 Precision. Steady. Scrap 1. | +3 Precision |
-| Suppressing Fire | I | 2 | 2 | 2 | Gain 2 Precision and 1 Armor. | +2 Precision, **Steady** (was +1 Armor) |
-| Bandolier | I | 2 | 2 | 2 | Gain 2 Precision and 1 Armor. Steady. | +3 Precision |
-| Fortify · **Tactic** | II | 3 | 2 | 2 | Gain 2 Precision and 2 Armor. Your Armor holds through your next Ready (up to 6). | +1 Armor |
-| Resupply | II | 3 | 2 | 2 | Gain 1 Precision and 1 Intel. Draw 1. | Steady, +2 Precision |
-| Field Medic · **Tactic** | II | 3 | 2 | 2 | Gain 1 Precision. Heal 3. | +1 Precision |
-| Overwatch | III | 5 | 3 | 2 | Gain 4 Precision, 1 extra shot and 2 Armor. | +2 Precision, +1 Armor |
-| Suppressing Barrage · **Tactic** | III | 4 | 3 | 2 | Gain 3 Precision and 1 extra shot. Suppress: the rival's next turn gets −1 Movement and −2 Precision. | +1 Precision |
+| Ammo Box | I | 2 | 2 | 2 | +2 Precision. Steady. Scrap 1. | +3 Precision |
+| Suppressing Fire | I | 2 | 2 | 2 | +2 Precision, +1 Armor. | +2 Precision, Steady (was +1 Armor) |
+| Bandolier | I | 2 | 2 | 2 | +2 Precision, +1 Armor. Steady. | +3 Precision |
+| Fortify · **Tactic** | II | 3 | 2 | 2 | +2 Precision, +2 Armor. Keep your Armor at your next Ready (max 6). | +1 Armor |
+| Resupply | II | 3 | 2 | 2 | +1 Precision, +1 Intel. Draw 1. | Steady, +2 Precision |
+| Field Medic · **Tactic** | II | 3 | 2 | 2 | +1 Precision. Heal 3. | +1 Precision |
+| Overwatch | III | 5 | 3 | 2 | +4 Precision, +1 extra shot, +2 Armor. | +2 Precision, +1 Armor |
+| Suppressing Barrage · **Tactic** | III | 4 | 3 | 2 | +3 Precision, +1 extra shot. Suppress: rival's next turn −1 Movement, −2 Precision. | +1 Precision |
 | Field Pack | I/II/II | 3 | 1 | 3 | Loadout. Ready: +1 Precision, Steady. | (Loadout: counts for Squad and Rally) |
 
 ### Engineer
 
 | Card | Tier | Intel | Hit Markers | Copies | Play | Squad line (once per other Engineer card in play, up to ×3) |
 |---|---|---|---|---|---|---|
-| Scrounge | I | 2 | 1 | 2 | Gain 1 Precision and 2 Intel. Scrap 1. | +2 Intel |
-| Deployable Cover | I | 2 | 1 | 2 | Gain 1 Precision and 2 Intel. | +2 Intel |
-| Ping | I | 1 | 1 | 2 | Gain 1 Precision and 1 Intel. 1 free cycle. | Draw 1, +1 Intel |
-| Jury-Rig · **Tactic** | II | 3 | 2 | 2 | Gain 1 Intel. Repeat the play effects of the card you played just before this one. | +1 Intel |
-| Sentry Turret · **Tactic** | II/III | 3 | 1 | 2 | Loadout. Ready: free shot, distance 0–3: reveal 1; 1 Hit Marker hits for 2. | (Loadout: counts for Squad and Rally) |
-| Salvage | II | 3 | 2 | 2 | Gain 1 Precision and 2 Intel. Scrap 1. 2 free cycles. | +2 Intel, +1 Buy |
-| Field Workshop | III | 4 | 2 | 2 | Gain 2 Precision and 2 Intel. Draw 1. Scrap 2. | +2 Precision, Draw 1 |
-| Contraband Run · **Tactic** | III | 4 | 2 | 2 | Gain 1 Precision and 3 Intel. This turn you may buy the top card of any stack on the map, at its printed cost. | +1 Intel |
+| Scrounge | I | 2 | 1 | 2 | +1 Precision, +2 Intel. Scrap 1. | +2 Intel |
+| Deployable Cover | I | 2 | 1 | 2 | +1 Precision, +2 Intel. | +2 Intel |
+| Ping | I | 1 | 1 | 2 | +1 Precision, +1 Intel. 1 free cycle. | Draw 1, +1 Intel |
+| Jury-Rig · **Tactic** | II | 3 | 2 | 2 | +1 Intel. Repeat the play line of your previous card. | +1 Intel |
+| Sentry Turret · **Tactic** | II/III | 3 | 1 | 2 | Loadout. Ready: if the rival is 0–3 away, reveal 1: 1 Hit Marker hits for 2. | (Loadout: counts for Squad and Rally) |
+| Salvage | II | 3 | 2 | 2 | +1 Precision, +2 Intel. Scrap 1. 2 free cycles. | +2 Intel, +1 Buy |
+| Field Workshop | III | 4 | 2 | 2 | +2 Precision, +2 Intel. Draw 1. Scrap 2. | +2 Precision, Draw 1 |
+| Contraband Run · **Tactic** | III | 4 | 2 | 2 | +1 Precision, +3 Intel. Buy from any stack this turn (printed cost). | +1 Intel |
 | Bounty Contract | I/II/II | 3 | 1 | 3 | Loadout. Ready: +1 Intel, +1 Precision. | (Loadout: counts for Squad and Rally) |
 
 ## 12. Validation of v7 (acceptance gates of `wb-improve-v2.md` §3; v7.1 is in §13)

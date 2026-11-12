@@ -2664,3 +2664,51 @@ button.tchip.act:hover, button.tchip.act:focus-visible { background: #4A4218; ou
 /* ===== wb-ux-text: plain-words caption under every zoom (long press / right click / hover) ===== */
 .pv-cap { margin: 6px 0 0; padding: 7px 10px; border-radius: 8px; background: #12150F; color: #F3F4EB; font: 600 12.5px/1.35 var(--f-body); box-shadow: 0 0 0 1.5px #3B4034; max-width: 100%; }
 .pv.gun .pv-cap { max-width: 410px; }
+
+/* ===== wb-ux-text: portrait phones (390x844): every button on screen, bigger hand, compact readouts ===== */
+@media (orientation: portrait) and (max-width: 520px) {
+  .hud { grid-template-rows: auto minmax(140px, 1fr) auto clamp(150px, 19vh, 175px) 198px !important; grid-template-areas: "top top" "map map" "res res" "hand hand" "guns btns" !important; }
+  .h-res { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "pills pills" "fp deck" "fp squad" "tac tac" "st st"; gap: 6px 10px !important; padding: 6px 12px !important; align-items: center; }
+  .h-res .h-pills { grid-area: pills; }
+  .h-res .h-engine { display: contents !important; }
+  .h-res .h-fp { grid-area: fp; align-self: stretch; }
+  .h-res .h-deck { grid-area: deck; }
+  .h-res .h-squad { grid-area: squad; }
+  .h-res .h-engine .h-tac { grid-area: tac; display: flex !important; }
+  .h-res .h-engine .h-tac:empty { display: none !important; }
+  .h-res .h-status { grid-area: st; display: flex; flex-wrap: wrap; gap: 4px; }
+  .h-btns .hb-scrap, .h-btns .hb-deck { display: none !important; }
+  .h-btns { grid-template-rows: none !important; grid-auto-rows: auto; align-content: center !important; padding: 8px 12px max(10px, env(safe-area-inset-bottom, 0px)) 6px !important; }
+  .h-btns button { min-height: 44px !important; }
+  .h-btns .hb-fire { min-height: 50px !important; }
+  .hud .h-hand .hh-row { padding-top: 10px !important; }
+  .hud .h-hand .hh-row .hslot { --hh: min(calc(100cqh - 6px), calc((100cqw + (var(--n) - 1) * 30px - 8px) / var(--n) * 1.4)) !important; --ww: calc(var(--hh) / 1.4) !important; }
+  .h-guns { justify-content: flex-start !important; gap: 6px !important; padding-top: 8px !important; }
+  .h-guns .gpf { width: min(100%, 158px) !important; height: auto !important; align-self: center; }
+  .h-res .h-fp { padding: 5px 9px 6px !important; }
+  .h-res .fp-main > b { font-size: 26px !important; }
+  .h-res .spark { height: 12px !important; }
+  .h-guns .gpf { width: min(100%, 146px) !important; }
+  .h-top .hint { -webkit-line-clamp: 2 !important; white-space: normal !important; font-size: 12px !important; line-height: 1.3; }
+}
+/* the next step (and what the rival just did) where the top bar has no room for it */
+.map-hint { display: none; }
+@media (orientation: landscape) and (max-width: 1300px), (orientation: portrait) and (min-width: 700px), (orientation: landscape) and (max-height: 540px) {
+  .h-map { position: relative; }
+  .map-hint { display: block; position: absolute; z-index: 7; top: 6px; left: 50%; transform: translateX(-50%); max-width: min(92%, 760px); padding: 4px 12px; border-radius: 999px;
+    background: rgba(18,21,15,.88); box-shadow: 0 0 0 1px #3B4034; color: #A7AC97; font: 600 12.5px/1.3 var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .map-hint b { color: #F3F4EB; }
+}
+.hint-last b.hl-dmg, .map-hint b.hl-dmg { color: #F08A75; }
+/* touch: 44px targets for the top bar */
+@media (pointer: coarse) {
+  .h-top .iconbtn { min-width: 44px; min-height: 44px; }
+  .h-top button.h-hp { min-height: 44px; }
+}
+
+/* ===== wb-ux-text: big desktops: a taller dock so the hand is readable; 40px buttons ===== */
+@media (orientation: landscape) and (min-width: 1500px) and (min-height: 950px) {
+  .hud { grid-template-rows: auto minmax(0, 1fr) clamp(330px, 34vh, 400px) !important; }
+
+  .h-btns button { min-height: 40px !important; }
+}

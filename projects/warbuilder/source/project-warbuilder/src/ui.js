@@ -312,7 +312,7 @@ function hudHTML(me, op) {
   ui.arrivedAt = ui.myPosPrev != null && ui.myPosPrev !== me.pos ? me.pos : null; ui.myPosPrev = me.pos;
   const tsKey = G.turnNo + ':' + ui.me; const ts = myTurn() && ui.tsKey !== tsKey; if (ts) ui.tsKey = tsKey;
   if (ts && me.loadout.length) { ui.readyFx = performance.now() + 2200; queuePops([{ kind: 'rdy', head: 'LOADOUT READY', text: fx(me.loadout.map(i => WD.effText(WD.cardDef(G, i).loadout)).join(', ')) }], 700, 'rdy' + tsKey); }
-  return `<div class="hud ${myTurn() ? 'myturn' : ''} ${ts ? 'turnstart' : ''}">${hudTop(me, op)}<section class="h-map" aria-label="The circle">${SCENERY}${rivalZone()}<div class="gaswall" aria-hidden="true"><i></i><i></i><i></i></div>${fieldHTML()}<div class="h-tacbar">${tacStrip(me)}</div></section>
+  return `<div class="hud ${myTurn() ? 'myturn' : ''} ${ts ? 'turnstart' : ''}">${hudTop(me, op)}<section class="h-map" aria-label="The circle">${SCENERY}${rivalZone()}<div class="map-hint" aria-hidden="true">${nextHint()}</div><div class="gaswall" aria-hidden="true"><i></i><i></i><i></i></div>${fieldHTML()}<div class="h-tacbar">${tacStrip(me)}</div></section>
     <section class="h-dock" aria-label="Your hand and guns">
       <div class="h-hand">${hudHand(me)}</div>
       ${hudRes(me)}
