@@ -1,0 +1,97 @@
+{
+  "source": "../../dd-art-pack-4-zombies-prompts.md",
+  "requested_count": 12,
+  "generated_count": 6,
+  "images": [
+    {
+      "number": 1,
+      "batch": 1,
+      "title": "### Image 1: Slippers (Shambler, value 1)",
+      "file": "dd_zombie_v01.png",
+      "status": "generated",
+      "sha256": "647c25291cc978500229dc92eefddc3a3b7bd4c9722194f4155aaabd44466c0f"
+    },
+    {
+      "number": 2,
+      "batch": 1,
+      "title": "### Image 2: Librarian (Shambler, value 2)",
+      "file": "dd_zombie_v02.png",
+      "status": "generated",
+      "sha256": "90bf90e48c0b7e9d55bf8731391a7856693aa4ee8dc6605adc96a21fd22a5663"
+    },
+    {
+      "number": 3,
+      "batch": 1,
+      "title": "### Image 3: Postman (Shambler, value 3)",
+      "file": "dd_zombie_v03.png",
+      "status": "generated",
+      "sha256": "b823c5b4527147e43182db8c27e37a814709a5fa8892cb98aacfdfd89f812fc9"
+    },
+    {
+      "number": 4,
+      "batch": 1,
+      "title": "### Image 4: Jogger (Lurcher, value 4)",
+      "file": "dd_zombie_v04.png",
+      "status": "generated",
+      "sha256": "5a7469df7a4ac77b75e1349be332abe0574c64b81a19792b0583594dcbf00c2a"
+    },
+    {
+      "number": 5,
+      "batch": 1,
+      "title": "### Image 5: Courier (Lurcher, value 5)",
+      "file": "dd_zombie_v05.png",
+      "status": "generated",
+      "sha256": "c0c140ce64486f663288afb2b430c0ea3b5d5643496d68989e12779c3d5e9a98"
+    },
+    {
+      "number": 6,
+      "batch": 1,
+      "title": "### Image 6: Night Cook (Lurcher, value 6)",
+      "file": "dd_zombie_v06.png",
+      "status": "generated",
+      "sha256": "1d1ab09add63c6a021fb73d8085a86f93eb51b0f6ef9a2ea42d7af12fcdc8942"
+    },
+    {
+      "number": 7,
+      "batch": 2,
+      "title": "### Image 7: Mover (Bruiser, value 7)",
+      "file": "dd_zombie_v07.png",
+      "status": "pending"
+    },
+    {
+      "number": 8,
+      "batch": 2,
+      "title": "### Image 8: Road Crew (Bruiser, value 8)",
+      "file": "dd_zombie_v08.png",
+      "status": "pending"
+    },
+    {
+      "number": 9,
+      "batch": 2,
+      "title": "### Image 9: Bouncer (Bruiser, value 9)",
+      "file": "dd_zombie_v09.png",
+      "status": "pending"
+    },
+    {
+      "number": 10,
+      "batch": 2,
+      "title": "### Image 10: Trucker (Hulk, value 10)",
+      "file": "dd_zombie_v10.png",
+      "status": "pending"
+    },
+    {
+      "number": 11,
+      "batch": 2,
+      "title": "### Image 11: Strongman (Hulk, value 11)",
+      "file": "dd_zombie_v11.png",
+      "status": "pending"
+    },
+    {
+      "number": 12,
+      "batch": 2,
+      "title": "### Image 12: Titan (Hulk, value 12)",
+      "file": "dd_zombie_v12.png",
+      "status": "pending"
+    }
+  ]
+}
