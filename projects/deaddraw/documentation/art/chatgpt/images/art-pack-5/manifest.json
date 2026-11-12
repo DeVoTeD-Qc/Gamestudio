@@ -1,0 +1,246 @@
+{
+  "source": "../../dd-art-pack-5-cutouts-prompts.md",
+  "requested_count": 20,
+  "generated_count": 11,
+  "images": [
+    {
+      "number": 1,
+      "batch": 1,
+      "title": "### Image 1: Service Pistol (the starting gun)",
+      "file": "dd_cut_gun_service_pistol.png",
+      "status": "generated",
+      "alpha_bbox": [
+        476,
+        332,
+        1059,
+        733
+      ],
+      "width_percent": 38,
+      "export_width_px": 583,
+      "sha256": "331896cfe8e1f6f7de9de91e8354cd29548bbc59b39af5c5dbf3f09c51782009"
+    },
+    {
+      "number": 2,
+      "batch": 1,
+      "title": "### Image 2: Nail Driver",
+      "file": "dd_cut_gun_nail_driver.png",
+      "status": "generated",
+      "alpha_bbox": [
+        399,
+        301,
+        1136,
+        764
+      ],
+      "width_percent": 48,
+      "export_width_px": 737,
+      "sha256": "4391877d503918c06fd615efae832e73c24849cb8b5c32ff8cdd7973f9289249"
+    },
+    {
+      "number": 3,
+      "batch": 1,
+      "title": "### Image 3: Alley Sweeper",
+      "file": "dd_cut_gun_alley_sweeper.png",
+      "status": "generated",
+      "alpha_bbox": [
+        338,
+        312,
+        1198,
+        752
+      ],
+      "width_percent": 56,
+      "export_width_px": 860,
+      "sha256": "f3beb3f7b32e1c9a6320f9b677e0669fa9ee3a81cc41a6301bdd47abfbcd5e33"
+    },
+    {
+      "number": 4,
+      "batch": 1,
+      "title": "### Image 4: Twin-Bore",
+      "file": "dd_cut_gun_twin_bore.png",
+      "status": "generated",
+      "alpha_bbox": [
+        261,
+        285,
+        1274,
+        779
+      ],
+      "width_percent": 66,
+      "export_width_px": 1013,
+      "sha256": "d51c1f1c61a376f92040bc2134fd4dcfc3936ced495baf56c983486a37288941"
+    },
+    {
+      "number": 5,
+      "batch": 1,
+      "title": "### Image 5: Scout Carbine",
+      "file": "dd_cut_gun_scout_carbine.png",
+      "status": "generated",
+      "alpha_bbox": [
+        261,
+        305,
+        1274,
+        759
+      ],
+      "width_percent": 66,
+      "export_width_px": 1013,
+      "sha256": "ed88206bfe911cfaa16d57b3ee41682f2667840c61bd8dcc32539a7c010f9f0b"
+    },
+    {
+      "number": 6,
+      "batch": 1,
+      "title": "### Image 6: Ratchet Crossbow",
+      "file": "dd_cut_gun_ratchet_crossbow.png",
+      "status": "generated",
+      "alpha_bbox": [
+        246,
+        272,
+        1290,
+        793
+      ],
+      "width_percent": 68,
+      "export_width_px": 1044,
+      "sha256": "9f7c31333ca8b14d504ff09e4075271992a112efcfbef9da6140fff2f249d9b4"
+    },
+    {
+      "number": 7,
+      "batch": 1,
+      "title": "### Image 7: Stovepipe Launcher",
+      "file": "dd_cut_gun_stovepipe_launcher.png",
+      "status": "generated",
+      "alpha_bbox": [
+        230,
+        295,
+        1305,
+        769
+      ],
+      "width_percent": 70,
+      "export_width_px": 1075,
+      "sha256": "2fdd9ac2cdb6201c276d68b2bab190e159d3fb972beae408159e15b511460d8e"
+    },
+    {
+      "number": 8,
+      "batch": 1,
+      "title": "### Image 8: Pump Shotgun",
+      "file": "dd_cut_gun_pump_shotgun.png",
+      "status": "generated",
+      "alpha_bbox": [
+        169,
+        261,
+        1367,
+        804
+      ],
+      "width_percent": 78,
+      "export_width_px": 1198,
+      "sha256": "15af7664b6adc26b65eced765611ab56e179db57c6cee4a54cc522a6ee06262c"
+    },
+    {
+      "number": 9,
+      "batch": 1,
+      "title": "### Image 9: Lever Rifle",
+      "file": "dd_cut_gun_lever_rifle.png",
+      "status": "generated",
+      "alpha_bbox": [
+        154,
+        249,
+        1382,
+        816
+      ],
+      "width_percent": 80,
+      "export_width_px": 1228,
+      "sha256": "cbdb3da9b8d572e9fe7720f9cc1b3e17b5d4c637d4ff6f19a1f7aaed5f3ec67a"
+    },
+    {
+      "number": 10,
+      "batch": 1,
+      "title": "### Image 10: Hunting Rifle",
+      "file": "dd_cut_gun_hunting_rifle.png",
+      "status": "generated",
+      "alpha_bbox": [
+        138,
+        286,
+        1397,
+        779
+      ],
+      "width_percent": 82,
+      "export_width_px": 1259,
+      "sha256": "7245020d5dd41b0421e127f755fbc135258acb23181d5e31589047565559c141"
+    },
+    {
+      "number": 11,
+      "batch": 1,
+      "title": "### Image 11: Elephant Gun",
+      "file": "dd_cut_gun_elephant_gun.png",
+      "status": "generated",
+      "alpha_bbox": [
+        92,
+        239,
+        1443,
+        825
+      ],
+      "width_percent": 88,
+      "export_width_px": 1351,
+      "sha256": "5ec5ee7e064a70be0542f94e900aaf7f57c67105723067147e9647f3320fe0c9"
+    },
+    {
+      "number": 12,
+      "batch": 2,
+      "title": "### Image 12: Bare Hands (no melee weapon)",
+      "file": "dd_cut_melee_bare_hands.png",
+      "status": "pending"
+    },
+    {
+      "number": 13,
+      "batch": 2,
+      "title": "### Image 13: Pipe Wrench",
+      "file": "dd_cut_melee_pipe_wrench.png",
+      "status": "pending"
+    },
+    {
+      "number": 14,
+      "batch": 2,
+      "title": "### Image 14: Fire Axe",
+      "file": "dd_cut_melee_fire_axe.png",
+      "status": "pending"
+    },
+    {
+      "number": 15,
+      "batch": 2,
+      "title": "### Image 15: Sledgehammer",
+      "file": "dd_cut_melee_sledgehammer.png",
+      "status": "pending"
+    },
+    {
+      "number": 16,
+      "batch": 3,
+      "title": "### Image 16: Gun card backdrop",
+      "file": "dd_bg_gun.png",
+      "status": "pending"
+    },
+    {
+      "number": 17,
+      "batch": 3,
+      "title": "### Image 17: Melee card backdrop",
+      "file": "dd_bg_melee.png",
+      "status": "pending"
+    },
+    {
+      "number": 18,
+      "batch": 3,
+      "title": "### Image 18: District backdrop: Maple Row",
+      "file": "dd_bg_maple_row.png",
+      "status": "pending"
+    },
+    {
+      "number": 19,
+      "batch": 3,
+      "title": "### Image 19: District backdrop: Downtown",
+      "file": "dd_bg_downtown.png",
+      "status": "pending"
+    },
+    {
+      "number": 20,
+      "batch": 3,
+      "title": "### Image 20: District backdrop: St. Agnes Hospital",
+      "file": "dd_bg_st_agnes.png",
+      "status": "pending"
+    }
+  ]
+}
