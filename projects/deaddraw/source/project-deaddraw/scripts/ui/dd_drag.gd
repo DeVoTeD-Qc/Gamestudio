@@ -61,9 +61,13 @@ func begin(src: Control, ghost_view: Control, tgts: Array[Dictionary], gpos: Vec
 		_ignore_mouse(ghost)
 		ghost.set_meta(&"drag_ghost", true)
 		add_child(ghost)
-		ghost.size = r.size
+		# a big source (a gun tile) lifts a smaller token, centred on the pointer
+		var gs: Vector2 = ghost.custom_minimum_size if ghost.custom_minimum_size != Vector2.ZERO else r.size
+		if gs != r.size:
+			_grab = gs * 0.5
+		ghost.size = gs
 		ghost.pivot_offset = _grab
-		ghost.global_position = r.position
+		ghost.global_position = gpos - _grab
 		ghost.z_index = 10
 		if not reduce:
 			ghost.scale = Vector2.ONE * LIFT
