@@ -997,8 +997,57 @@ function aiFireLoop(s, p) {
     if (pl.hand.length && !s.over) aiPlay(s, p); // Follow Through drew cards: play them, then keep shooting
   }
 }
+// ---------- the "new player" bot (wb-first-shot; sim only, aiMode 'naive') ----------
+// A plausible first-match policy, not a good one: play every card, walk toward the rival until in range (and out of closing gas),
+// buy the biggest gun it can afford, then the priciest cards, take the first Spoils card, never promote, scrap or cycle,
+// and fire whenever FIRE shows more than 0% (the commit FIRE uses: the planner's, or all Precision).
+const aiNaive = (s, p) => !!(s.aiMode && s.aiMode[p] === 'naive');
+function naiveTurn(s, p) {
+  const pl = P(s, p); const o = P(s, 1 - p);
+  for (let g = 0; g < 30 && pl.hand.length && !s.over; g++) { playCard(s, p, pl.hand[0], { once: pl.loadout.length >= TUNE.loadoutSlots }); if (pl.peek) arrange(s, p, pl.peek.slice()); }
+  // move: away from closing gas first, else toward the rival until in range
+  const E = () => eff(s, pl.guns[0]); const inR = w => { const d = Math.abs(w - o.pos); return d >= E().band[0] && d <= E().band[1]; };
+  const bad = w => !inSafe(s, w) || closing(s).includes(w);
+  const opts = reachable(s, p).filter(r => !bad(r.w));
+  let tgt = null;
+  if (bad(pl.pos)) tgt = opts.sort((a, b) => (inR(b.w) - inR(a.w)) || a.cost - b.cost)[0];
+  else if (!inR(pl.pos)) tgt = opts.filter(r => inR(r.w)).sort((a, b) => a.cost - b.cost)[0] || opts.filter(r => Math.abs(r.w - o.pos) < Math.abs(pl.pos - o.pos)).sort((a, b) => Math.abs(a.w - o.pos) - Math.abs(b.w - o.pos))[0];
+  if (tgt) move(s, p, tgt.w);
+  // buy: the biggest gun it can afford (higher price than the one it holds), then the priciest cards
+  for (let g = 0; g < 6 && buysLeft(s, p) > 0; g++) {
+    const items = [pl.pos - 1, pl.pos, pl.pos + 1].map(w => envAt(s, w)).filter(e => e && e.state === 'safe' && e.loot.length).map(e => e.loot[0]).filter(it => lootCost(s, p, it) <= pl.res.intel);
+    const cur = WEAPONS[s.weapons[pl.guns[0]].def];
+    const gun = items.filter(it => it.kind === 'weapon' && WEAPONS[s.weapons[it.iid].def].intel_cost >= cur.intel_cost && s.weapons[it.iid].def !== cur.id)
+      .sort((a, b) => WEAPONS[s.weapons[b.iid].def].intel_cost - WEAPONS[s.weapons[a.iid].def].intel_cost || WEAPONS[s.weapons[b.iid].def].ladder[0][1] - WEAPONS[s.weapons[a.iid].def].ladder[0][1])[0];
+    if (gun) { if (!buy(s, p, [gun.iid]).ok) break; continue; }
+    const card = items.filter(it => it.kind === 'card').sort((a, b) => itemDef(s, b).intel_cost - itemDef(s, a).intel_cost)[0];
+    if (card && itemDef(s, card).intel_cost >= TUNE.supplyCost) { if (!buy(s, p, [card.iid]).ok) break; continue; }
+    const st = TUNE.station.find(id => s.stationLeft[id] > 0);
+    if (st && pl.res.intel >= TUNE.supplyCost) { if (!buySupply(s, p, st).ok) break; continue; }
+    if (card) { if (!buy(s, p, [card.iid]).ok) break; continue; }
+    break;
+  }
+  // fire whenever FIRE shows more than 0%. pl.stats.fireOpp[round] = [turns FIRE was live, sum of the odds it showed, turns with a hit]
+  const h0 = pl.stats.hits;
+  for (let g = 0; g < 12 && !s.over; g++) {
+    if (!shootCheck(s, p, 0, pl.res.prec).ok) break;
+    const d = WEAPONS[s.weapons[pl.guns[0]].def];
+    const c = d.melee ? 0 : (suggestCommit(s, p, 0).commit || pl.res.prec); const sp = shotPreview(s, p, 0, c);
+    const odds = d.melee ? 1 : sp.reveal >= 1 ? hitChance(s, p, sp.reveal, sp.need, 300) : 0;
+    if (g === 0) { const f = (pl.stats.fireOpp = pl.stats.fireOpp || {})[s.round] = pl.stats.fireOpp[s.round] || [0, 0, 0]; f[0]++; f[1] += odds; if (s._diag) s._diag.push({ r: s.round, gun: d.id, need: sp.need, reveal: sp.reveal, odds, deckHM: allCards(pl).reduce((t, i) => t + hmOf(s, i), 0) / owned(pl) }); }
+    if (!(odds > 0)) break;
+    if (!fire(s, p, 0, c).ok) break;
+    if (pl.hand.length && !s.over) for (let k = 0; k < 10 && pl.hand.length; k++) playCard(s, p, pl.hand[0], { once: pl.loadout.length >= TUNE.loadoutSlots });
+  }
+  if (pl.stats.hits > h0 && pl.stats.fireOpp && pl.stats.fireOpp[s.round]) pl.stats.fireOpp[s.round][2]++;
+  if (s.over) return { ok: true };
+  const r = endTurn(s, p);
+  if (r.ok && s.spoils && s.spoils.p === p) return takeSpoils(s, p, s.spoils.offer[0]);
+  return r;
+}
 function aiTurn(s, p) {
   if (s.over || s.turn !== p) return fail('not AI turn');
+  if (aiNaive(s, p)) return naiveTurn(s, p);
   aiPlay(s, p);
   aiMove(s, p);
   aiBuy(s, p); aiCycle(s, p);

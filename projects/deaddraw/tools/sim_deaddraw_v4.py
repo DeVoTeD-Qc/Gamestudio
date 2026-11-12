@@ -214,7 +214,19 @@ CONFIG = {
     "big_bang_min": 9,            # 16: Stovepipe challenge, the kill is this big or bigger
     "demolition_total": 16,       #     (cap-2 launcher draft, not used) both kills total this or more
     "pest_total": 15,             # 16: Alley Sweeper challenge, total this or less
+    # v5 economy pass (economy-v5.md; --preset v4 turns all of it off)
+    "room_free_use": True,        # E2: opening a room gives its machine one FREE use (kept until used)
+    "room_cost_add": [0, 0, 0],   # E2: added to every room price, per district (pricing the free use in)
+    "mods_mode": "safehouse",     # E4: none | safehouse (free: see mod_offer Gun Mods, fit 1 to a slot)
+    "mod_offer": 2,
+    "mods": ["open_breech", "last_round", "echo", "short_barrel"],
 }
+
+# v5 Gun Mods: fitted to a gun SLOT (1 or 2) for the rest of the run, one per slot; every gun in
+# that slot gets it. open_breech: kills 1-2 ignore the rule. last_round: the kill that fills the
+# gun ignores the rule. echo: a zombie equal to the top kill always fits. short_barrel: the gun
+# holds 1 fewer kill (at least 1).
+MOD_PRIORITY = ["last_round", "open_breech", "echo", "short_barrel"]
 
 PATCH_PRIORITY = ["thick_jacket", "field_medic", "second_wind", "loose_grip", "trophy_belt",
                   "adrenaline", "iron_stomach", "grudge", "opening_shot", "lockpick",
@@ -244,7 +256,7 @@ def mkgun(wid):
 class State:
     __slots__ = ("hp", "max_hp", "slots", "points", "cover", "med_used", "patches",
                  "passive", "loose", "second_wind", "pz_next", "shatter",
-                 "melee", "fired", "tally")
+                 "melee", "fired", "tally", "mods")
 
     def __init__(self, hp, passive):
         self.hp = self.max_hp = hp
@@ -261,13 +273,14 @@ class State:
         self.melee = None           # v4 hands mode: (mid, power, durability left) or None
         self.fired = (False, False)  # v4 heavy rule: the gun in that slot already killed this street
         self.tally = 0              # v4 swap_salvage "tally": swapped-away kills not yet paid
+        self.mods = ("", "")        # v5 Gun Mods per slot
 
     def copy(self):
         n = State.__new__(State)
         n.hp, n.max_hp, n.slots, n.points = self.hp, self.max_hp, self.slots[:], self.points
         n.cover, n.med_used, n.patches, n.passive = self.cover, self.med_used, self.patches, self.passive
         n.loose, n.second_wind, n.pz_next, n.shatter = self.loose, self.second_wind, self.pz_next, self.shatter
-        n.melee, n.fired, n.tally = self.melee, self.fired, self.tally
+        n.melee, n.fired, n.tally, n.mods = self.melee, self.fired, self.tally, self.mods
         return n
 
 
@@ -312,6 +325,27 @@ def legal(rule, stack, z, rosa):
         prev = t - stack[-2]
         return (z - t) * prev < 0
     return True
+
+
+def legal_mod(rule, stack, z, rosa, mod="", cap=0):
+    """v5: legal() with the slot's Gun Mod (cap = the gun's capacity in that slot)."""
+    if mod == "open_breech" and len(stack) < 2:
+        return True
+    if mod == "last_round" and cap and len(stack) == cap - 1:
+        return True
+    if mod == "echo" and stack and z == stack[-1]:
+        return True
+    return legal(rule, stack, z, rosa)
+
+
+def mod_cap(cap, mod):
+    return max(1, cap - 1) if mod == "short_barrel" else cap
+
+
+def put_gun(s, i, wid):
+    """A gun goes into slot i (its capacity follows the slot's Gun Mod)."""
+    g = mkgun(wid)
+    s.slots[i] = (g[0], g[1], g[2], mod_cap(g[3], s.mods[i]), g[4], g[5])
 
 
 def is_full(g):
@@ -504,7 +538,7 @@ def zombie_opts(s, z):
         g = s.slots[i]
         if g is None:
             continue
-        if legal(g[1], g[4], z, rosa) and not (g[1] == "heavy" and s.fired[i]):
+        if legal_mod(g[1], g[4], z, rosa, s.mods[i], g[3]) and not (g[1] == "heavy" and s.fired[i]):
             out.append((i, False))
         elif s.loose:
             out.append((i, True))
@@ -524,23 +558,24 @@ class ZD:
         self.total = sum(self.counts.values()) or 1
         self.cache = {}
 
-    def flex(self, rule, stack, rosa):
+    def flex(self, rule, stack, rosa, mod="", cap=0):
         key = (rule, stack[-2:] if rule == "zigzag" else stack[-1:],
-               stack[0] if stack else 0, sum(stack) if rule == "spread" else 0)
+               stack[0] if stack else 0, sum(stack) if rule == "spread" else 0,
+               mod, len(stack) if mod else 0, cap if mod == "last_round" else 0)
         v = self.cache.get(key)
         if v is None:
-            n = sum(c for z, c in self.counts.items() if legal(rule, stack, z, rosa))
+            n = sum(c for z, c in self.counts.items() if legal_mod(rule, stack, z, rosa, mod, cap))
             v = n / self.total
             self.cache[key] = v
         return v
 
 
-def gun_value(g, s, zd):
+def gun_value(g, s, zd, mod=""):
     wid, rule, p, cap, stack, honed = g
     rem = cap - len(stack)
     if rule == "spread":
         rem = min(rem, max(1, (CONFIG["spread_cap"] - sum(stack)) // 3))
-    f = zd.flex(rule, stack, s.passive == "steady_hands")
+    f = zd.flex(rule, stack, s.passive == "steady_hands", mod, cap)
     v = AI["ww"] * (p + 1) * min(rem, 4) * (0.15 + 0.85 * f)
     if not CONFIG["points_on_kill"]:
         v += sum(stack) * AI["pw"] * AI["pend_w"]
@@ -554,9 +589,9 @@ def evaluate(s, hold, zd):
     if s.hp <= 0:
         return DEATH
     v = s.hp + 0.7 * s.cover + s.points * AI["pw"]
-    for g in s.slots:
+    for i, g in enumerate(s.slots):
         if g is not None:
-            v += gun_value(g, s, zd)
+            v += gun_value(g, s, zd, s.mods[i])
     if s.melee:
         v += AI["mw"] * (s.melee[1] - CONFIG["hands_power"]) * min(s.melee[2], 4)
     if s.tally:
@@ -609,7 +644,7 @@ def apply_card(s, c, opt, st=None):
         else:
             if s.slots[opt] is not None:
                 collect(s, opt, False, st)
-            s.slots[opt] = mkgun(c.wid)
+            put_gun(s, opt, c.wid)
             f = list(s.fired)
             f[opt] = False
             s.fired = tuple(f)
@@ -706,7 +741,9 @@ def new_stats():
             "salvage_points", "carry_converted", "carry_patch", "carry_lost", "street_damage",
             "earned_d0", "earned_d1", "earned_d2", "left_d0", "left_d1", "left_d2",
             "start_pts_d1", "start_pts_d2", "rooms_first_d0", "rooms_first_d1", "rooms_first_d2",
-            "rooms_d0", "rooms_d1", "rooms_d2"]
+            "rooms_d0", "rooms_d1", "rooms_d2",
+            # v5
+            "free_uses", "mods_fitted", "mod_finish_now", "streaks"]
     return {k: 0.0 for k in keys}
 
 
@@ -737,7 +774,7 @@ class Board:
         ra = add.get("rooms", [])
         self.rooms = [dict(r, opened=False, pack_i=0,
                            pack=list(r["pack"]) + (list(ra[k]) if k < len(ra) else []),
-                           cost=int(round(r["cost"] * CONFIG["room_cost_mult"] * scale)))
+                           cost=int(round(r["cost"] * CONFIG["room_cost_mult"] * scale)) + CONFIG["room_cost_add"][di])
                       for k, r in enumerate(d["rooms"])]
         self.used = set()   # machines used this wave
 
@@ -766,7 +803,7 @@ class Board:
 
 
 def weakest_slot(s, zd):
-    vals = [gun_value(g, s, zd) if g else -1 for g in s.slots]
+    vals = [gun_value(g, s, zd, s.mods[i]) if g else -1 for i, g in enumerate(s.slots)]
     return 0 if vals[0] <= vals[1] else 1
 
 
@@ -782,6 +819,7 @@ def spend(s, b, zd, st, rng):
                 s.points -= cost
                 st["spent"] += cost
                 r["opened"] = True
+                r["free"] = bool(CONFIG["room_free_use"])
                 cards = make_cards(r["pack"], b.pool, rng, b.mpool)
                 b.pile += cards
                 rng.shuffle(b.pile)
@@ -798,8 +836,13 @@ def spend(s, b, zd, st, rng):
             k = m["kind"]
             if k == "patch":
                 cost = CONFIG["patch_costs"][min(len(s.patches), len(CONFIG["patch_costs"]) - 1)]
+                if r.get("free"):
+                    cost = 0
                 avail = [p for p in CONFIG["patches"] if p not in s.patches]
                 if avail and s.points >= cost:
+                    if r.get("free"):
+                        r["free"] = False
+                        st["free_uses"] += 1
                     s.points -= cost
                     st["spent"] += cost
                     offer = rng.sample(avail, min(CONFIG["patch_offer"], len(avail)))
@@ -810,7 +853,10 @@ def spend(s, b, zd, st, rng):
                     st["taps"] += 3
                     changed = True
             elif k == "bench":
-                if bench(s, zd, st):
+                if bench(s, zd, st, bool(r.get("free"))):
+                    if r.get("free"):
+                        r["free"] = False
+                        st["free_uses"] += 1
                     b.used.add(ri)
                     st["secs"] += TIME["machine"]
                     st["taps"] += 3
@@ -819,6 +865,8 @@ def spend(s, b, zd, st, rng):
                 price = CONFIG["weapons"][m["wid"]]["price"]
                 if "quartermaster" in s.patches:
                     price = max(0, price - CONFIG["quartermaster_off"])
+                if r.get("free"):
+                    price = 0
                 if s.points < price:
                     continue
                 ng = mkgun(m["wid"])
@@ -826,13 +874,16 @@ def spend(s, b, zd, st, rng):
                     i = s.slots.index(None)
                 else:
                     i = weakest_slot(s, zd)
-                    if gun_value(s.slots[i], s, zd) > 0.6 * gun_value(ng, s, zd):
+                    if gun_value(s.slots[i], s, zd, s.mods[i]) > 0.6 * gun_value(ng, s, zd, s.mods[i]):
                         continue
                     collect(s, i, False, st)
                     st["ditched"] += 1
                 s.points -= price
                 st["spent"] += price
-                s.slots[i] = ng
+                put_gun(s, i, m["wid"])
+                if r.get("free"):
+                    r["free"] = False
+                    st["free_uses"] += 1
                 b.used.add(ri)
                 st["wall"] += 1
                 st["secs"] += TIME["machine"]
@@ -859,25 +910,27 @@ def take_patch(s, offer):
             return p
 
 
-def bench(s, zd, st):
+def bench(s, zd, st, free=False):
     p0 = s.points
-    r = bench_(s, zd, st)
+    r = bench_(s, zd, st, free)
     if r:
         st["spent"] += max(0, p0 - s.points)
     return r
 
 
-def bench_(s, zd, st):
+def bench_(s, zd, st, free=False):
     B = dict(CONFIG["bench"])
     if "quartermaster" in s.patches:
         B = {k: max(0, v - CONFIG["quartermaster_off"]) for k, v in B.items()}
+    if free:
+        B = {k: 0 for k in B}
     rosa = s.passive == "steady_hands"
     # Trim: a gun whose top kill blocks it
     for i, g in enumerate(s.slots):
         if g is None or not g[4] or s.points < B["trim"]:
             continue
-        f = zd.flex(g[1], g[4], rosa)
-        f2 = zd.flex(g[1], g[4][:-1], rosa)
+        f = zd.flex(g[1], g[4], rosa, s.mods[i], g[3])
+        f2 = zd.flex(g[1], g[4][:-1], rosa, s.mods[i], g[3])
         if f < 0.3 and f2 > f + 0.25:
             wid, rule, p, cap, stack, honed = g
             s.points -= B["trim"]   # the removed kill already paid when it was made (K1)
@@ -889,7 +942,7 @@ def bench_(s, zd, st):
         if g is None or g[1] not in ("up", "down") or not g[4] or s.points < B["flip"]:
             continue
         nr = "down" if g[1] == "up" else "up"
-        if zd.flex(g[1], g[4], rosa) < 0.3 and zd.flex(nr, g[4], rosa) > 0.6:
+        if zd.flex(g[1], g[4], rosa, s.mods[i], g[3]) < 0.3 and zd.flex(nr, g[4], rosa, s.mods[i], g[3]) > 0.6:
             wid, rule, p, cap, stack, honed = g
             s.points -= B["flip"]
             s.slots[i] = (wid, nr, p, cap, stack, honed)
@@ -1007,7 +1060,7 @@ def play_district(s, d, di, rng, st, final):
         s.med_used = 0
         s.fired = (False, False)
         rosa = s.passive == "steady_hands"
-        if any(g is not None and zd.flex(g[1], g[4], rosa) < 0.15 for g in s.slots):
+        if any(g is not None and zd.flex(g[1], g[4], rosa, s.mods[i], g[3]) < 0.15 for i, g in enumerate(s.slots)):
             st["dead_gun_streets"] += 1
         steps = CONFIG["actions"] if len(street) >= CONFIG["street_size"] else len(street) - 1
         before = evaluate(s, [], zd)
@@ -1163,6 +1216,40 @@ def carry_over(s, st, rng):
         s.points = 0
 
 
+def fit_mod(s, st, rng):
+    """v5 point E4: at the safehouse, see mod_offer Gun Mods and fit 1 (free) to a slot."""
+    if CONFIG["mods_mode"] != "safehouse":
+        return
+    avail = [m for m in CONFIG["mods"] if m not in s.mods]
+    if not avail:
+        return
+    offer = rng.sample(avail, min(CONFIG["mod_offer"], len(avail)))
+    mod = next(m for m in MOD_PRIORITY if m in offer)
+    i = 0 if not s.mods[0] else (1 if not s.mods[1] else 0)
+    fit_mod_to(s, i, mod, st)
+
+
+def fit_mod_to(s, i, mod, st=None):
+    """Fit `mod` to slot i (replacing its mod). Short Barrel cuts the gun there now; if that
+    fills its stack, the gun finishes at once (finish bonus + challenge)."""
+    old = s.mods[i]
+    m = list(s.mods)
+    m[i] = mod
+    s.mods = tuple(m)
+    if st is not None:
+        st["mods_fitted"] += 1
+    g = s.slots[i]
+    if g is None:
+        return
+    base = CONFIG["weapons"][g[0]]["cap"]
+    cap = mod_cap(base, mod)
+    s.slots[i] = (g[0], g[1], g[2], cap, g[4], g[5])
+    if g[4] and is_full(s.slots[i]):
+        if st is not None:
+            st["mod_finish_now"] += 1
+        collect(s, i, True, st)
+
+
 def v_ok(v):
     return v > DEATH / 2
 
@@ -1236,6 +1323,7 @@ def play_run(survivor, rng, st):
             return False
         if not final:
             heal(s, CONFIG["safehouse_heal"])
+            fit_mod(s, st, rng)
             carry_over(s, st, rng)
             st["secs"] += TIME["safehouse"]
     st["end_points"] += s.points
@@ -1307,6 +1395,7 @@ def summarize(survivor, st, runs):
         "run_nonzombie_back": round(st["run_nonzombie_back"] / max(1, st["runs"]), 2),
         "carry_hp": per("carry_converted"), "carry_patch": per("carry_patch"),
         "carry_lost": per("carry_lost"),
+        "free_uses": per("free_uses"), "mods_fitted": per("mods_fitted"),
         "points_curve": {f"d{d}": {
             "start": round(st.get(f"start_pts_d{d}", 0) / max(1, st[f"dist_reach{d}"]), 1),
             "rooms_before_first_street": round(st[f"rooms_first_d{d}"] / max(1, st[f"dist_reach{d}"]), 2),
@@ -1324,8 +1413,10 @@ def summarize(survivor, st, runs):
 
 
 # --preset v3 puts every v4 option back to the v3 rules (same numbers as sim_deaddraw_v3.py).
+_V4_OFF = {"room_free_use": False, "room_cost_add": [0, 0, 0], "mods_mode": "none"}
 PRESETS = {
-    "v3": {"swap_salvage": "none", "carry_mode": "all", "melee_mode": "crowbar",
+    "v4": dict(_V4_OFF),
+    "v3": {**_V4_OFF, "swap_salvage": "none", "carry_mode": "all", "melee_mode": "crowbar",
            "medkits_per_street": 1, "run_mode": "before", "run_return": "shuffle", "card_add": {}, "pool_add": {},
            "patches": ["lookout", "thick_jacket", "field_medic", "brawler", "bounty",
                        "loose_grip", "second_wind", "trophy_belt"],

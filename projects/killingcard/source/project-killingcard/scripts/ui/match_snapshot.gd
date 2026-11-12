@@ -31,6 +31,10 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var fields: Array[Dictionary] = state.field_view(viewer)
 	# kc-v2-ui: the columns' Terrain (run-v2-api.md §5; [] before the rules land or with none).
 	var terrains: Array = RunV2Views.terrain_view(state)
+	# kc-clarity: what each column is worth this round to the side that holds it at the Score step
+	# (Zone Control: 1, a Hot Zone 2; a mode that scores eliminations: 0, no tag).
+	var mode_r: ModeRules = state.hooks.mode_rules if state.hooks != null else null
+	var column_points: bool = mode_r == null or mode_r.score_source == ModeRules.ScoreSource.CONTROLLED_ZONES
 	for z: int in MatchState.ZONE_COUNT:
 		var friendly: Array = []
 		var deploy_now: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
@@ -59,6 +63,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 			"fp_player": fp_me, "fp_enemy": fp_foe,
 			"fields": _fields(state, viewer, z, fields),
 			"terrain": RunV2Views.terrain_at(terrains, z),
+			"worth": (1 + (1 if StringName(str(RunV2Views.terrain_at(terrains, z).get("id", ""))) == TerrainRules.HOT_ZONE else 0)) if column_points else 0,
 		})
 	var hand: Array = []
 	for rc: RulesCard in me.hand:
@@ -80,6 +85,8 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"round_cap": mode_rules.round_cap if mode_rules != null else state.config.round_cap,
 		"phase": String(MatchState.PHASE_NAMES[state.phase]).to_upper(),
 		"score_player": me.score, "score_enemy": foe.score,
+		# kc-clarity: the match's target score (always on the SCORE badge: "TO 6").
+		"target": mode_rules.target if mode_rules != null else 0,
 		"enemy_name": foe.setup.display_name.to_upper(),
 		"supply": me.supply, "supply_max": state.config.supply_for_round(state.round_number),
 		"deck_count": me.deck.size(), "discard_count": me.discard.size(), "enemy_hand": foe.hand.size(),
