@@ -112,6 +112,8 @@ var _fitting: bool = false
 ## dd-ux-v4: the Codex / Glossary overlay, and which rooms were affordable at the last render (a
 ## room that becomes affordable gets the two-ring pulse once).
 var codex: Control = null
+## dd-ux-equip: the street's drag and drop (scripts/ui/dd_drag.gd).
+var drag: DDDrag = null
 var _was_ready: Array = []
 var _was_ready_run: Object = null
 
@@ -151,6 +153,9 @@ func _ready() -> void:
 	_fx.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fx)
+	# dd-ux-equip: the drag layer (the lifted card and the drop-target glows) over everything on the street
+	drag = DDDrag.new()
+	add_child(drag)
 	codex = Codex.new()
 	codex.name = "Codex"
 	add_child(codex)
@@ -256,6 +261,8 @@ func _render() -> void:
 	if _fitting:
 		return
 	_fit_base()
+	if drag != null:
+		drag.cancel()
 	for c: Node in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
