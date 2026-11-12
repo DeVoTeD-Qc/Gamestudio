@@ -13,6 +13,9 @@
 class_name DDTouchScroll
 extends Node
 
+## A scroll gesture ended (the web smoke re-reads the state then).
+signal gesture_ended
+
 const THRESHOLD: float = 10.0
 const FRICTION: float = 6.0
 
@@ -72,6 +75,8 @@ func _input(event: InputEvent) -> void:
 			_touches[st.index] = st.position
 		else:
 			_touches.erase(st.index)
+			if _touches.is_empty() and _two:
+				gesture_ended.emit()
 		_two = _touches.size() >= 2
 		if _two:
 			_begin_scroll()
@@ -103,6 +108,8 @@ func _input(event: InputEvent) -> void:
 			if scrolling and not _reduce() and absf(_velocity) > 120.0:
 				set_process(true)
 			_tracking = false
+			if scrolling:
+				gesture_ended.emit()
 			# keep `scrolling` true for this release: the tile's release sees the cancelled press
 			scrolling = false
 		return

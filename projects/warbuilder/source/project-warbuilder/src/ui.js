@@ -30,29 +30,32 @@ function reqLabel(type, min) {
 const RES_ICON = { Movement: 'move', Precision: 'prec', Intel: 'intel', Armor: 'def' };
 const STAT_ICON = { Recoil: 'rcl', Range: 'rng', Damage: 'dmg' };
 const ri = (k, word) => `<span class="ri c-${k}" title="${word}" aria-label="${word}">${ic(k)}</span>`;
-const TOK = { ammo: 'free bullet', mag: 'magazine', move: 'Movement', prec: 'Precision', intel: 'Intel', def: 'Armor', rcl: 'Recoil', rng: 'Range', dmg: 'Damage', hm: 'Hit Marker', cyc: 'free cycle' };
+const TOK = { ammo: 'extra shot', mag: 'magazine', move: 'Movement', prec: 'Precision', intel: 'Intel', def: 'Armor', rcl: 'Recoil', rng: 'Range', dmg: 'Damage', hm: 'Hit Marker', cyc: 'free cycle' };
 function fx(text) {
   if (!text) return '';
   const t = k => `\u0001${k}\u0002`;
   const out = String(text).split(/(?<=\.)\s+/).map(sent => {
-    let s = sent; const isGain = /^Gain\b/.test(s);
+    let s = sent; const isGain = /^(Gain\b|\+\d)/.test(s);
     s = s.replace(/\bHit Markers?\b/g, t('hm'));
     s = s.replace(/(\+?)(\d+) (more )?free bullets?/g, (m, plus, n) => `+${n}${t('ammo')}`);
     s = s.replace(/(\+?)(\d+) free cycles?/g, (m, plus, n) => `+${n}${t('cyc')}`);
+    s = s.replace(/\+(\d+) extra shots?/g, (m, n) => `+${n}${t('ammo')}`);
     s = s.replace(/(\+?)(\d+) magazine/g, (m, plus, n) => `+${n}${t('mag')}`);
     s = s.replace(/(\+?)(\d+) (additional |extra )?(Movement|Precision|Intel|Armor)\b/g, (m, plus, n, more, r) => `${plus || isGain || more ? '+' : ''}${n}${t(RES_ICON[r])}`);
     s = s.replace(/\b(Movement|Precision|Intel|Armor)\b/g, (m, r) => t(RES_ICON[r]));
     s = s.replace(/\b(Recoil|Range|Damage)\b/g, (m, r) => t(STAT_ICON[r]));
-    if (isGain && /^Gain \+/.test(s)) s = s.replace(/^Gain /, '').replace(/,? and (?=\+)/g, ' ').replace(/, (?=\+)/g, ' ').replace(/\.$/, '');
+    if (isGain && /^(Gain )?\+/.test(s)) s = s.replace(/^Gain /, '').replace(/,? and (?=\+)/g, ' ').replace(/, (?=\+)/g, ' ').replace(/\.$/, '');
     return s;
   }).join(' ');
   return out.replace(/\u0001(\w+)\u0002/g, (m, k) => k === 'hm' ? `<span class="ri" title="Hit Marker" aria-label="Hit Marker">${ic('hm')}</span>` : ri(k, TOK[k]));
 }
-const KW = { Mark: 'Mark: your next shot needs 1 fewer Hit Marker on every step.', Pierce: 'Pierce: your shots ignore cover this turn.', Steady: 'Steady: each of your shots this turn needs 1 fewer Hit Marker on every step.', Cover: 'Cover: a shot at an operator on a location with cover needs +1 Hit Marker on every step (also at distance 0). Pierce and Expose ignore it.', 'long range': 'Long range: at distance 2 or more, a shot needs +1 Hit Marker on every step (not the knife).', Power: 'Power: a shot reveals at most 3 cards. Each Precision you commit beyond that adds +2 damage if the shot hits.', Buy: '+1 Buy: one more purchase this turn.',
-  'held angle': `Hold the Angle: at End turn up to ${WD.TUNE.overwatchCap} unspent Precision is kept. If your rival ends their next turn inside your gun's range, your gun fires once with it (no Recoil, no Mark).` };
+const KW = { Mark: 'Mark: your next shot needs 1 fewer Hit Marker.', Pierce: 'Pierce: ignore cover this turn.', Steady: 'Steady: every shot this turn needs 1 fewer Hit Marker.', Cover: `Cover: shots at a target in cover need +${WD.TUNE.coverNeed} Hit Marker (Pierce and Expose ignore it).`, 'long range': `Long range (distance ${WD.TUNE.longFrom}+): +${WD.TUNE.longNeed} Hit Marker needed (not the knife).`, Power: `Power: a shot reveals at most ${WD.TUNE.aimCap} cards; each extra Precision is +${WD.TUNE.aimPower} damage if it hits.`, Buy: '+1 Buy: one more buy this turn.', Scrap: 'Scrap: remove a card in your hand, play area or discard pile from the game.', Reactions: 'Reaction: a card in your hand that cuts the damage when you are hit.',
+  'held angle': `Hold the Angle: at End turn, hold up to ${WD.TUNE.overwatchCap} Precision. If the rival ends their turn in your range, your gun fires once with it.` };
+// one plain sentence per part: what it gives, its Squad line, then the keywords it uses (wb-ux-text)
 function cardTip(def) {
   const all = `${def.text} ${def.squadText || ''}`; const kws = Object.keys(KW).filter(k => all.includes(k)).map(k => KW[k]).join(' ');
-  return `${def.name} · ${def.tactic ? 'Squad Tactic · ' : ''}${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'}. ${def.text}${def.squad ? ` Squad: ${def.squadText} for each other ${ARCH_SHORT[def.archetype]} card in play this turn (Loadout counts), up to ×${WD.TUNE.squadCap}.` : ''}${def.loadout ? ' Loadout: stays on the table, fires at the start of every turn, counts for Squad.' : ''}${def.reaction ? ` Reaction: in your hand when hit, −${def.reaction} damage.` : ''}${(def.effects || []).some(x => x.op === 'scrap') ? ' Scrap: remove a card in your hand, play area or discard pile from the game.' : ''} ${kws}`; }
+  const hm = `${def.hit_markers} Hit Marker${def.hit_markers === 1 ? '' : 's'} when revealed.`;
+  return `${def.name}${def.tactic ? ' (Tactic)' : ''}: ${def.text}${def.squad ? ` Squad: ${def.squadText} per other ${ARCH_SHORT[def.archetype]} card in play (max ×${WD.TUNE.squadCap}).` : ''}${def.loadout ? ' Stays in your Loadout row and counts for Squad.' : ''}${def.reaction ? ` Reaction: −${def.reaction} damage when you are hit with it in hand.` : ''} ${hm} ${kws}`.trim(); }
 const GSHORT = { Pistol: '', SMG: 'SMG', Shotgun: 'Shotgun', 'Assault Rifle': 'AR', LMG: 'LMG', 'Marksman Rifle': 'DMR', Sniper: 'Sniper', 'Burst Rifle': 'Burst', Launcher: 'Launcher', Revolver: '', Melee: '' };
 const wnm = d => { if (!d || !d.cls || !GSHORT[d.cls]) return d ? d.name : ''; const m = d.name.match(/^(.*?)( “.*”)?$/); return `${m[1]} ${GSHORT[d.cls]}${m[2] || ''}`; };
 const SQUAD_ART = { assault: 'Breach', recon: 'Mark_Target', support: 'Ammo_Box', engineer: 'Deployable_Cover' }; // Loadout cards: squad art until their own art lands
@@ -76,7 +79,7 @@ function cardHTML(def, o = {}) {
   return `<div class="${cls}" ${o.cls && /big/.test(o.cls) ? '' : `data-tip="${escA(cardTip(def))}"`}${artSt}>${inner}</div>`;
 }
 function ladderHTML(steps, hl = -1) {
-  return `<div class="ladder" data-tip="Damage ladder: count the Hit Markers on the cards you reveal. Reach a step to deal its damage; the highest step you reach counts.">${steps.map(([h, d], i) => `<span class="lstep ${i === hl ? 'on' : ''} ${i === steps.length - 1 && steps.length > 2 ? 'top' : ''}"><span class="lh">${ic('hm')}${h}+</span><b>${d}</b></span>`).join('<span class="lar">›</span>')}</div>`;
+  return `<div class="ladder" data-tip="Damage ladder: count the Hit Markers on the revealed cards. The highest step you reach is your damage.">${steps.map(([h, d], i) => `<span class="lstep ${i === hl ? 'on' : ''} ${i === steps.length - 1 && steps.length > 2 ? 'top' : ''}"><span class="lh">${ic('hm')}${h}+</span><b>${d}</b></span>`).join('<span class="lar">›</span>')}</div>`;
 }
 function statsHTML(iid, def) {
   const e = iid ? WD.eff(G, iid) : null;
@@ -84,14 +87,14 @@ function statsHTML(iid, def) {
   const m = k => e && e[k] !== def[k] ? ' class="mod"' : '';
   const L = def.ladder; const b = def.band;
   return `<div class="stats s4">
-    <div data-tip="Damage: the lowest and highest steps of the damage ladder below."><b${m('damage')}>${L[0][1]}–${L[L.length - 1][1]}</b><span>${ic('dmg')}DMG</span></div>
-    <div data-tip="Range: this gun can only fire when the distance to your rival is in this band."><b>${b[0]}–${b[1]}</b><span>${ic('rng')}RANGE</span></div>
-    <div data-tip="Shots: how often this gun can fire per turn. Extra shots from cards add to it."><b${m('magazine_capacity')}>${v('magazine_capacity')}</b><span>${ic('mag')}MAG</span></div>
-    <div data-tip="Recoil: every shot spends the Precision you commit to it, then this much more."><b${m('recoil')}>${v('recoil')}</b><span>${ic('rcl')}RCL</span></div></div>${ladderHTML(L)}`;
+    <div data-tip="Damage: lowest and highest step of the ladder."><b${m('damage')}>${L[0][1]}–${L[L.length - 1][1]}</b><span>${ic('dmg')}DMG</span></div>
+    <div data-tip="Range: the distances this gun can fire at."><b>${b[0]}–${b[1]}</b><span>${ic('rng')}RANGE</span></div>
+    <div data-tip="Shots per turn (extra shots add to it)."><b${m('magazine_capacity')}>${v('magazine_capacity')}</b><span>${ic('mag')}MAG</span></div>
+    <div data-tip="Recoil: extra Precision each shot costs."><b${m('recoil')}>${v('recoil')}</b><span>${ic('rcl')}RCL</span></div></div>${ladderHTML(L)}`;
 }
 function shotPips(gi) {
   const me = ME(); const wid = me.guns[gi]; const cap = WD.eff(G, wid).magazine_capacity; const used = G.weapons[wid].shots;
-  return `<div class="ammo" data-tip="Shots left this turn. Refills at the start of your turn.">${Array.from({ length: cap }, (_, i) => `<i class="${i < cap - used ? '' : 'e'}"></i>`).join('')}${me.shot ? `<span class="chip">+${me.shot} extra</span>` : ''}<span class="mono">${cap - used}/${cap} shots</span></div>`;
+  return `<div class="ammo" data-tip="Shots left this turn.">${Array.from({ length: cap }, (_, i) => `<i class="${i < cap - used ? '' : 'e'}"></i>`).join('')}${me.shot ? `<span class="chip">+${me.shot} extra</span>` : ''}<span class="mono">${cap - used}/${cap} shots</span></div>`;
 }
 function weaponBody(def, iid) {
   const W = iid ? G.weapons[iid] : null; const att = W && W.att ? WD.ATTS[G.atts[W.att].def] : null;
@@ -173,16 +176,31 @@ function perkFace(pi, k) {
   const pl = G.players[pi]; const L = WD.LOADOUT[k];
   return `<div class="pcard big" style="--arch:var(${ARCH_VAR[L.arch] || '--muted'})"><span class="pc-tag">${L.arch === 'any' || !WD.ARCH_TAG[L.arch] ? 'Any build' : WD.ARCH_TAG[L.arch]}${L.trig ? ` · trigger ${perkTrig(L)}` : ' · passive'}</span><b>${L.name}</b><span>${fx(L.text)}</span><span class="pc-own">${pi === ui.me ? 'Your perk' : `${escA(pl.name)}'s perk`}</span></div>`;
 }
+// the zoom says in plain words what it is and what it gives you now (studio inspect rule; wb-ux-text)
+const cap = t => `<p class="pv-cap">${escA(t)}</p>`;
+function cardNow(def, iid) {
+  let t = cardTip(def).replace(/^[^:]+: /, '');
+  if (G && G.players && G.players.length && def.squad && WD.SQUADS.includes(def.archetype)) {
+    const me = ME(); const inPlay = !!iid && (me.play.includes(iid) || me.loadout.includes(iid));
+    const x = Math.min(WD.TUNE.squadCap, Math.max(0, WD.squadCounts(G, ui.me)[def.archetype] - (inPlay ? 1 : 0)));
+    t += x ? ` Now: Squad ×${x}${inPlay ? '' : ' if played'}.` : ' Now: no Squad partner in play.'; }
+  return t;
+}
+function gunNow(iid) {
+  const d = wdef(iid); const e = WD.eff(G, iid); const gi = ME().guns.indexOf(iid); const fo = gi >= 0 && myTurn() ? fireOdds(gi) : null;
+  return `${d.name} (${d.rarityName} ${d.cls}): range ${e.band[0]}–${e.band[1]}, ${e.magazine_capacity} shot${e.magazine_capacity === 1 ? '' : 's'}, Recoil ${e.recoil}. ${d.melee ? 'Always hits.' : `Hits: ${d.ladder.map(([h, dm]) => `${h}+ → ${dm}`).join(', ')}.`}${fo && fo.pct != null ? ` Now: ${fo.pct}% to hit.` : fo && fo.err ? ` Now: ${shortErr(fo.err)}.` : ''}`;
+}
+function locNow(e) { const d = WD.ENVS[e.def]; const sh = WD.closeSchedule(G)[e.w]; return `${d.name}: ${d.text}${WD.closing(G).includes(e.w) ? ' Gas takes it this round.' : sh ? ` Closes after round ${sh}.` : ''}`; }
 function previewHTML(spec) {
   const [k, a, b] = spec.split(':');
   try {
-    if (k === 'hc') { const d = WD.cardDef(G, a); return hasFace('card_' + d.id) ? `<div class="pv card">${pf('card_' + d.id)}</div>` : cardHTML(d, { cls: 'big' }); }
-    if (k === 'cd') return hasFace('card_' + a) ? `<div class="pv card">${pf('card_' + a)}</div>` : cardHTML(WD.CARDS[a], { cls: 'big' });
-    if (k === 'gun') { const d = wdef(a); return hasFace('gun_' + d.id) ? `<div class="pv gun">${pf('gun_' + d.id)}</div>` : bigGun(d, a); }
+    if (k === 'hc') { const d = WD.cardDef(G, a); return hasFace('card_' + d.id) ? `<div class="pv card">${pf('card_' + d.id)}${cap(cardNow(d, a))}</div>` : cardHTML(d, { cls: 'big' }); }
+    if (k === 'cd') return hasFace('card_' + a) ? `<div class="pv card">${pf('card_' + a)}${cap(cardNow(WD.CARDS[a]))}</div>` : cardHTML(WD.CARDS[a], { cls: 'big' });
+    if (k === 'gun') { const d = wdef(a); return hasFace('gun_' + d.id) ? `<div class="pv gun">${pf('gun_' + d.id)}${cap(gunNow(a))}</div>` : bigGun(d, a); }
     if (k === 'perk') return hasFace('perk_' + b) ? `<div class="pv card">${pf('perk_' + b)}</div>` : perkFace(+a, b);
-    if (k === 'loc') { const e = G.envs.find(x => x.w === +a); const n = e && locFaceName(e); return n ? `<div class="pv loc"><div class="envf">${pf(n)}<div class="zoneov">${stackHTML(e, false, !e.cache.searched ? WD.stackPlan(G, e) : null, true)}</div></div></div>` : ''; }
+    if (k === 'loc') { const e = G.envs.find(x => x.w === +a); const n = e && locFaceName(e); return n ? `<div class="pv loc"><div class="envf">${pf(n)}<div class="zoneov">${stackHTML(e, false, !e.cache.searched ? WD.stackPlan(G, e) : null, true)}</div></div>${cap(locNow(e))}</div>` : ''; }
     if (k === 'it') { const env = G.envs.find(e => e.loot.some(i => i.iid === a)); const it = env && env.loot.find(i => i.iid === a); if (!it) return ''; const def = WD.itemDef(G, it);
-      const fn = itemFace(it); if (fn) return `<div class="pv ${it.kind === 'weapon' ? 'gun' : 'card'}">${pf(fn)}</div>`;
+      const fn = itemFace(it); if (fn) return `<div class="pv ${it.kind === 'weapon' ? 'gun' : 'card'}">${pf(fn)}${cap(it.kind === 'card' ? cardNow(def) + ` Costs ${shownCost(it, env)} Intel.` : `${def.name} (${def.rarityName} ${def.cls}): range ${def.band[0]}–${def.band[1]}, ${def.magazine_capacity} shots, Recoil ${def.recoil}. Costs ${shownCost(it, env)} Intel; replaces your gun.`)}</div>`;
       if (it.kind === 'card') return cardHTML(def, { cls: 'big' }); if (it.kind === 'weapon') return bigGun(def, a);
       return `<div class="pcard big" style="--arch:var(--c-ammo)"><span class="pc-tag">Attachment · ${ic('intel')}${def.intel_cost}</span><b>${def.name}</b><span>${fx(def.text || '')}</span></div>`; }
   } catch (err) { return ''; }
@@ -315,28 +333,28 @@ function hudTop(me, op) {
   const who = G.over ? 'Match over' : ui.busy || (ui.mode === 'ai' && G.turn !== ui.me) ? `${G.players[G.turn].name}'s turn` : G.turn === ui.me ? 'Your turn' : `${G.players[G.turn].name}'s turn`;
   const gas = gasChip();
   return `<header class="h-top">
-    <span class="turnpill ${mine ? 'mine' : ''}">${who}</span>
-    <span class="h-round" data-tip="${escA(`Round ${G.round} of at most ${WD.TUNE.hardEnd}. After round ${WD.TUNE.hardEnd} the match ends: the most Health wins.`)}">R${G.round}<small>/${WD.TUNE.hardEnd}</small></span>${gas}
+    <span class="turnpill ${mine ? 'mine' : ''}" data-tip="${escA(mine ? 'Your turn: play cards, move, buy, fire, then End turn.' : `${G.players[G.turn].name} is playing. Watch the map; skip with ▸▸.`)}">${who}</span>
+    <span class="h-round" data-tip="${escA(`Round ${G.round} of ${WD.TUNE.hardEnd}. After round ${WD.TUNE.hardEnd}, the most Health wins.`)}">R${G.round}<small>/${WD.TUNE.hardEnd}</small></span>${gas}
     <span class="hint">${nextHint()}</span>
-    <span class="h-myperks" aria-label="Your perks">${perkMini(ui.me)}</span><span class="h-hp me"><span class="hpface">${OPFACE.me}</span><b>${ui.mode === 'ai' ? 'YOU' : escA(me.name).toUpperCase()} <span data-num="hp-me">${Math.max(0, me.hp)}</span></b>${WD.TUNE.lowHp && me.hp > 0 && me.hp <= WD.TUNE.lowHp ? `<span class="lowhp" title="${WD.TUNE.lowHp} Health or less: draw 1 extra card each turn">+1${ic('loot')}</span>` : ''}${hpBar(me, 'me')}</span>
+    <span class="h-myperks" aria-label="Your perks">${perkMini(ui.me)}</span><span class="h-hp me"><span class="hpface">${OPFACE.me}</span><b>${ui.mode === 'ai' ? 'YOU' : escA(me.name).toUpperCase()} <span data-num="hp-me">${Math.max(0, me.hp)}</span></b>${WD.TUNE.lowHp && me.hp > 0 && me.hp <= WD.TUNE.lowHp ? `<span class="lowhp" data-tip="${WD.TUNE.lowHp} Health or less: draw 1 extra card each turn.">+1${ic('loot')}</span>` : ''}${hpBar(me, 'me')}</span>
     ${topDist(me, op)}
-    <button class="h-hp them" data-act="sheet" data-id="rival" data-tip="${escA(`${op.name}: ${Math.max(0, op.hp)}/${HPMAX()} Health, ${op.hand.length} cards in hand. Tap for their guns, perks and the combat log.`)}"><span class="hpface">${OPFACE.them}</span>${hpBar(op, 'them')}<b><span data-num="hp-them">${Math.max(0, op.hp)}</span> ${escA(op.name).toUpperCase()}</b><span class="h-rperks">${perkMini(1 - ui.me)}</span><span class="h-more">▸</span></button>
-    <button class="iconbtn" data-act="sheet" data-id="rules" aria-label="Rules">?</button>
-    <button class="iconbtn" data-act="sheet" data-id="menu" aria-label="Menu">☰</button></header>`;
+    <button class="h-hp them" data-act="sheet" data-id="rival" data-tip="${escA(`${op.name}: ${Math.max(0, op.hp)}/${HPMAX()} Health, ${op.hand.length} cards in hand. Tap for their gun and the combat log.`)}"><span class="hpface">${OPFACE.them}</span>${hpBar(op, 'them')}<b><span data-num="hp-them">${Math.max(0, op.hp)}</span> ${escA(op.name).toUpperCase()}</b><span class="h-rperks">${perkMini(1 - ui.me)}</span><span class="h-more">▸</span></button>
+    <button class="iconbtn" data-act="sheet" data-id="rules" aria-label="How to play" data-tip="How to play">?</button>
+    <button class="iconbtn" data-act="sheet" data-id="menu" aria-label="Menu" data-tip="Menu: rules, codex, new match">☰</button></header>`;
 }
 // the circle's public schedule as one chip: what closes this round, or the final-circle storm
 function gasChip() {
   const T = WD.TUNE; const cl = WD.closing(G); const B = WD.safeBounds(G);
-  if (B.n <= 1) { const d = T.finalStorm[Math.min(G.finalN || 0, T.finalStorm.length - 1)]; return `<span class="gaschip final" data-tip="${escA(`Final circle: at the end of this round the storm hits both operators for ${d} (then ${T.finalStorm.slice((G.finalN || 0) + 1).join(', ') || d}). Hard end after round ${T.hardEnd}: the most Health wins.`)}">FINAL · STORM ${d}</span>`; }
+  if (B.n <= 1) { const d = T.finalStorm[Math.min(G.finalN || 0, T.finalStorm.length - 1)]; return `<span class="gaschip final" data-tip="${escA(`Final circle: at round end the storm hits both for ${d} (then ${T.finalStorm.slice((G.finalN || 0) + 1).join(', ') || d}). After round ${T.hardEnd}, the most Health wins.`)}">FINAL · STORM ${d}</span>`; }
   const sch = WD.closeSchedule(G); const next = Object.entries(sch).sort((a, b) => a[1] - b[1])[0];
-  if (cl.length) return `<span class="gaschip" data-tip="${escA(`End of this round: ${envName(WD.envAt(G, cl[0]))} closes (and its loot is lost). Caught outside: ${T.gasDmg}+ damage. Schedule: rounds ${T.closeAfter.join(', ')}, alternating ends; final circle after round ${T.closeAfter[T.closeAfter.length - 1]}.`)}">GAS · ${escA(envName(WD.envAt(G, cl[0])).toUpperCase())}</span>`;
-  return `<span class="gaschip calm" data-tip="${escA(next ? `No location closes this round. Next: ${envName(WD.envAt(G, +next[0]))} after round ${next[1]}.` : 'No location closes this round.')}">GAS · R${next ? next[1] : '-'}</span>`;
+  if (cl.length) return `<span class="gaschip" data-tip="${escA(`${envName(WD.envAt(G, cl[0]))} closes at the end of this round; its loot is lost. In the gas at round end: ${T.gasDmg}+ damage. Closes after rounds ${T.closeAfter.join(', ')}.`)}">GAS · ${escA(envName(WD.envAt(G, cl[0])).toUpperCase())}</span>`;
+  return `<span class="gaschip calm" data-tip="${escA(next ? `Nothing closes this round. Next: ${envName(WD.envAt(G, +next[0]))} after round ${next[1]}.` : 'Nothing closes this round.')}">GAS · R${next ? next[1] : '-'}</span>`;
 }
 function topDist(me, op) {
   const d = WD.dist(G); const bands = WD.guns(me).map(w => WD.eff(G, w).band); const inB = bands.some(b => d >= b[0] && d <= b[1]);
   const oenv = WD.envAt(G, op.pos); const od = WD.ENVS[oenv.def];
-  const cov = (od.cover && oenv.state === 'safe' ? `rival in cover: +${od.cover * WD.TUNE.coverNeed} Hit Marker needed` : 'rival in the open') + (me.pos === op.pos ? ', close quarters (Armor ignored)' : d >= WD.TUNE.longFrom ? `, long range: +${WD.TUNE.longNeed} Hit Marker needed` : '');
-  return `<span class="tdist ${bands.length ? (inB ? 'ok' : 'bad') : ''}" data-tip="${escA(`Distance to ${op.name}: ${d}. ${bands.length ? (inB ? 'At least one gun is in range.' : 'Out of range for your guns.') : 'You have no gun yet.'} ${cov[0].toUpperCase() + cov.slice(1)}.`)}"><small>DIST</small><b>${d}</b><i>${bands.length ? (inB ? 'in range' : 'out of range') : 'unarmed'}</i></span>`;
+  const cov = (od.cover && oenv.state === 'safe' ? `rival in cover (+${od.cover * WD.TUNE.coverNeed} Hit Marker)` : 'rival in the open') + (me.pos === op.pos ? ', close quarters (Armor ignored)' : d >= WD.TUNE.longFrom ? `, long range (+${WD.TUNE.longNeed} Hit Marker)` : '');
+  return `<span class="tdist ${bands.length ? (inB ? 'ok' : 'bad') : ''}" data-tip="${escA(`Distance to ${op.name}: ${d}. ${bands.length ? (inB ? 'In range.' : 'Out of range.') : 'No gun yet.'} ${cov[0].toUpperCase() + cov.slice(1)}.`)}"><small>DIST</small><b>${d}</b><i>${bands.length ? (inB ? 'in range' : 'out of range') : 'unarmed'}</i></span>`;
 }
 function hudDist(me, op) {
   const d = WD.dist(G); const bands = WD.guns(me).map(w => WD.eff(G, w).band); const inB = bands.some(b => d >= b[0] && d <= b[1]);
@@ -345,22 +363,23 @@ function hudDist(me, op) {
   return `<div class="h-dist" data-tip="${escA(`Distance to ${op.name}: ${d}. Each gun fires only inside its range band. ${KW.Cover} ${KW['long range']}`)}"><span class="lbl">Distance</span><b>${d}</b><small class="${bands.length ? (inB ? 'ok' : 'bad') : ''}">${bands.length ? (inB ? 'in range' : 'out of range') : 'unarmed'}</small><small>${cov}</small></div>`;
 }
 function hudRes(me) {
-  const tips = { move: 'Movement: 1 per space. Unused Movement becomes Armor (up to 2) at End turn.', prec: 'Precision is your aim pool for the turn. A shot reveals 1 card per Precision you commit, up to 3 cards; each Precision beyond that is Power (+2 damage if it hits). It spends that Precision, then the gun’s Recoil costs more.', intel: 'Intel buys loot and Buy Station cards (2 buys per turn). Unspent Intel is lost at the end of your turn.', ammo: 'Shots left this turn: your gun’s Shots plus extra shots from cards.' };
+  const T = WD.TUNE;
+  const tips = { move: `Movement: 1 per location you move. Unused Movement becomes Armor at End turn (max ${T.digIn}).`, prec: `Precision: aim. A shot reveals 1 card per Precision (max ${T.aimCap}); each extra Precision is +${T.aimPower} damage (Power). The gun’s Recoil costs more.`, intel: `Intel: pays for loot and Buy Station cards (${T.buyCap} buys a turn). Lost at End turn.`, ammo: 'Shots left this turn (your gun plus extra shots).' };
   const pv = ui.prevRes || {}; ui.prevRes = { move: me.res.move, prec: me.res.prec, intel: me.res.intel, ammo: me.guns[0] ? WD.shotsLeft(G, ui.me, 0) : 0 };
   const pill = (k, v, lab) => `<div class="rp rp-${k} ${v ? '' : 'zero'} ${pv[k] != null && v > pv[k] ? 'bump' : ''}"${pv[k] != null && v > pv[k] ? ` data-gain="+${v - pv[k]}"` : ''} data-tip="${escA(tips[k])}">${ic(k)}<b data-num="r-${k}">${v}</b><span>${lab}</span></div>`;
   const st = []; const t = myTurn();
-  if (t) { const bl = WD.buysLeft(G, ui.me); st.push(`<span data-tip="${escA(`Buys left this turn: loot stacks and the Buy Station together (${WD.TUNE.buyCap} per turn, +1 per +1 Buy).`)}">${bl} buy${bl === 1 ? '' : 's'}</span>`); }
+  if (t) { const bl = WD.buysLeft(G, ui.me); st.push(`<span data-tip="${escA(`Buys left this turn (loot and Buy Station). ${WD.TUNE.buyCap} a turn, +1 per +1 Buy.`)}">${bl} buy${bl === 1 ? '' : 's'}</span>`); }
   if (me.nextFire.reqMod) st.push(`<span data-tip="${escA(KW.Mark)}">Mark ${me.nextFire.reqMod}</span>`);
   if (me.revealPlus) st.push(`<span data-tip="${escA(KW.Steady)}">Steady ${me.revealPlus}</span>`);
-  if (me.dmgTurn) st.push(`<span data-tip="Your hits deal this much more damage this turn.">Hits +${me.dmgTurn} dmg</span>`);
+  if (me.dmgTurn) st.push(`<span data-tip="Your hits deal +${me.dmgTurn} damage this turn.">Hits +${me.dmgTurn} dmg</span>`);
   if (me.ignoreCover) st.push(`<span data-tip="${escA(KW.Pierce)}">Pierce</span>`);
-  if (me.expose) st.push(`<span data-tip="${escA('Expose: your shots ignore cover this turn, and your hits ignore Armor and Reaction cards.')}">Expose</span>`);
-  if (me.shot) st.push(`+${me.shot} shot${me.shot > 1 ? 's' : ''}`);
-  if (me.freeCycles) st.push(`${me.freeCycles} free cycle${me.freeCycles > 1 ? 's' : ''}`);
-  if (me.def) st.push(`${ic('def')} Armor ${me.def}`);
+  if (me.expose) st.push(`<span data-tip="${escA('Expose: this turn ignore cover, Armor and Reactions.')}">Expose</span>`);
+  if (me.shot) st.push(`<span data-tip="Extra shots this turn, on top of your gun's.">+${me.shot} shot${me.shot > 1 ? 's' : ''}</span>`);
+  if (me.freeCycles) st.push(`<span data-tip="Free cycles: put the top card of a stack under it, for free. Open a location to use them.">${me.freeCycles} free cycle${me.freeCycles > 1 ? 's' : ''}</span>`);
+  if (me.def) st.push(`<span data-tip="Armor: cuts the damage of the next hits (not at close quarters). Drops to 0 at your next Ready.">${ic('def')} Armor ${me.def}</span>`);
   const rx = me.hand.filter(i => WD.cardDef(G, i).reaction).map(i => WD.cardDef(G, i).reaction);
-  if (rx.length) st.push(`${ic('def')} Reaction −${rx.join(' −')}`);
-  const scr = t && me.scrapAvail ? `<button class="sc-chip scr" data-act="scrapsheet" data-tip="Scrap: remove a card in your hand, play area or discard pile from the game.">${ic('scrap')} Scrap ${me.scrapAvail}</button>` : '';
+  if (rx.length) st.push(`<span data-tip="${escA(KW.Reactions)}">${ic('def')} Reaction −${rx.join(' −')}</span>`);
+  const scr = t && me.scrapAvail ? `<button class="sc-chip scr" data-act="scrapsheet" data-tip="${escA(KW.Scrap)}">${ic('scrap')} Scrap ${me.scrapAvail}</button>` : '';
   return `<section class="h-res" aria-label="Resources">
     <div class="h-pills">${pill('move', me.res.move, 'Move')}${pill('prec', me.res.prec, 'Prec')}${pill('intel', me.res.intel, 'Intel')}${pill('ammo', me.guns[0] ? WD.shotsLeft(G, ui.me, 0) : 0, 'Shots')}</div>
     ${engineHTML(me)}
@@ -381,8 +400,8 @@ function fpMeter(me, where) {
   const big = live ? (th.inRange ? (Math.round(th.ev * 10) / 10).toFixed(1) : '–') : last != null ? last : 0;
   const sub = live ? (th.inRange ? `<span class="fpd up">${Math.round(th.p * 100)}%<small> first shot</small></span>` : `<span class="fpd to"><small>out of range</small></span>`)
     : last != null ? `<span class="fpd ${last >= best && last ? 'up' : ''}"><small>damage last turn${last >= best && last ? ' · best' : ''}</small></span>` : '<span class="fpd to"><small>no turn yet</small></span>';
-  const tip = live ? (th.inRange ? `Threat: about ${th.ev} damage this turn if you play your hand and shoot as planned (${th.shots} shot${th.shots === 1 ? '' : 's'} left; the first one hits ${Math.round(th.p * 100)}% of the time). It counts your gun's ladder, cover and the cards left in your deck.` : 'Threat: your rival is out of your gun’s range. Move closer (or wait for them to come in).')
-    : `Damage you dealt per turn: ${hist.join(', ') || 'none yet'}.${best ? ` Best turn: ${best}.` : ''}`;
+  const tip = live ? (th.inRange ? `Threat: about ${th.ev} damage this turn if you play your hand and fire as suggested. First shot: ${Math.round(th.p * 100)}% to hit.` : 'Threat: the rival is out of range. Move closer.')
+    : `Damage you dealt per turn: ${hist.join(', ') || 'none yet'}.${best ? ` Best: ${best}.` : ''}`;
   return `<div class="h-fp ${live ? 'live' : 'sealed-v'}" data-tip="${escA(tip)}" role="group" aria-label="${live ? `Threat ${big} damage` : `Damage last turn ${big}`}">
     <span class="fp-lbl">${live ? 'THREAT' : 'DAMAGE'}<em>${live ? 'expected this turn' : hist.length ? `turn ${hist.length}` : ''}</em></span>
     <span class="fp-main"><b data-num="th-${where}">${big}</b>${sub}</span>
@@ -391,31 +410,31 @@ function fpMeter(me, where) {
 // Deck bar (O7): starters against the cards you added, by squad. It fills as your deck becomes yours.
 function deckBar(pi) {
   const m = WD.deckMix(G, pi); const seg = (n, cls, st = '') => n ? `<i class="${cls}" style="flex:${n};${st}"></i>` : '';
-  const tip = `Your deck: ${m.total} cards. ${m.starters} starter${m.starters === 1 ? '' : 's'} and ${m.yours} card${m.yours === 1 ? '' : 's'} you added (${WD.SQUADS.filter(a => m.by[a]).map(a => `${ARCH_SHORT[a]} ${m.by[a]}`).join(', ') || 'none yet'}). Loot, Spoils and Field Promotion turn starters into your squad.`;
+  const tip = `Your deck: ${m.total} cards, ${m.yours} added (${WD.SQUADS.filter(a => m.by[a]).map(a => `${ARCH_SHORT[a]} ${m.by[a]}`).join(', ') || 'none yet'}) and ${m.starters} starter${m.starters === 1 ? '' : 's'}. Loot, Spoils and Promotion replace starters.`;
   return `<div class="h-deck" data-tip="${escA(tip)}"><span class="dk-lbl"><b>${m.yours}</b> yours · ${m.starters} starters</span><span class="dk-bar">${WD.SQUADS.map(a => seg(m.by[a], 'sq', `background:var(${ARCH_VAR[a]})`)).join('')}${seg(m.starters, 'st')}</span></div>`;
 }
 // The tactical strip: the new verbs in play (yours and your rival's). Every chip explains itself on hold, right click or hover.
 function tacStrip(me) {
   const op = OP(); const t = myTurn(); const out = [];
   const chip = (cls, txt, tip, act) => out.push(act ? `<button class="tchip ${cls}" data-act="${act}" data-tip="${escA(tip)}">${txt}</button>` : `<span class="tchip ${cls}" data-tip="${escA(tip)}">${txt}</span>`);
-  if (op.ow) { const b = WD.eff(G, op.guns[0]).band; chip('warn', `⚠ Rival holds an angle ${op.ow.prec}`, `${op.name} is holding an angle with ${op.ow.prec} Precision. If you end your turn at distance ${b[0]}–${b[1]} from them, their gun fires once (reveal ${op.ow.prec}). You are at distance ${WD.dist(G)}.`); }
-  if (me.ow && !t) chip('me', `Angle held ${me.ow.prec}`, `You hold the angle with ${me.ow.prec} Precision: if ${op.name} ends this turn in your range, you fire.`);
-  if (me.supp && (me.supp.move || me.supp.prec)) chip('warn', `Suppressed −${me.supp.move}${ic('move')} −${me.supp.prec}${ic('prec')}`, `Suppressing Barrage: the next ${me.supp.move} Movement and ${me.supp.prec} Precision you gain this turn are lost.`);
-  if (op.suppNext) chip('me', `Rival suppressed next turn`, `Your Suppressing Barrage: on ${op.name}'s next turn their first ${op.suppNext.move} Movement and ${op.suppNext.prec} Precision are lost.`);
-  if (op.supp && !t && (op.supp.move || op.supp.prec)) chip('me', 'Rival suppressed', `${op.name} still loses the next ${op.supp.move} Movement and ${op.supp.prec} Precision they gain this turn.`);
+  if (op.ow) { const b = WD.eff(G, op.guns[0]).band; chip('warn', `⚠ Rival holds an angle ${op.ow.prec}`, `${op.name} holds an angle with ${op.ow.prec} Precision: end your turn at distance ${b[0]}–${b[1]} and their gun fires once. You are at distance ${WD.dist(G)}.`); }
+  if (me.ow && !t) chip('me', `Angle held ${me.ow.prec}`, `You hold an angle with ${me.ow.prec} Precision: if ${op.name} ends this turn in range, you fire.`);
+  if (me.supp && (me.supp.move || me.supp.prec)) chip('warn', `Suppressed −${me.supp.move}${ic('move')} −${me.supp.prec}${ic('prec')}`, `Suppressed: you lose the next ${me.supp.move} Movement and ${me.supp.prec} Precision you gain this turn.`);
+  if (op.suppNext) chip('me', `Rival suppressed next turn`, `Suppress: on their next turn ${op.name} loses the first ${op.suppNext.move} Movement and ${op.suppNext.prec} Precision.`);
+  if (op.supp && !t && (op.supp.move || op.supp.prec)) chip('me', 'Rival suppressed', `${op.name} still loses the next ${op.supp.move} Movement and ${op.supp.prec} Precision this turn.`);
   if (t) {
-    if (me.peek) chip('act', `Sweep: arrange ${me.peek.length}`, 'Intel Sweep: look at your top cards and put them back in any order. Tap to arrange.', 'sweepsheet');
-    if (me.chargeDmg) chip('me', `Charge +${me.chargeDmg} at dist 0`, `Charge: this turn your hits at distance 0 deal +${me.chargeDmg} damage.`);
-    if (me.onHitDraw) chip('me', `Next hit: draw ${me.onHitDraw}`, `Follow Through: your next hit this turn draws ${me.onHitDraw} cards; play them and keep shooting.`);
-    if (me.expose) chip('me', 'Expose', 'Expose: this turn your shots ignore cover, and your hits ignore the rival’s Armor and Reaction cards.');
+    if (me.peek) chip('act', `Sweep: arrange ${me.peek.length}`, 'Intel Sweep: reorder your top cards. Tap to arrange.', 'sweepsheet');
+    if (me.chargeDmg) chip('me', `Charge +${me.chargeDmg} at dist 0`, `Charge: +${me.chargeDmg} damage at distance 0 this turn.`);
+    if (me.onHitDraw) chip('me', `Next hit: draw ${me.onHitDraw}`, `Follow Through: your next hit this turn draws ${me.onHitDraw}. Play them and keep firing.`);
+    if (me.expose) chip('me', 'Expose', 'Expose: this turn ignore cover, Armor and Reactions.');
     if (me.overwatch) chip('me', 'Holding the angle', KW['held angle']);
-    if (me.anyStack) chip('me', 'Contraband: any stack', 'Contraband Run: this turn you may buy the top card of any stack on the map, at its printed cost (no next-door cost).');
-    if (me.fortify) chip('me', 'Fortify', `Fortify: your Armor (up to ${WD.TUNE.fortifyCap}) holds through your next Ready.`);
+    if (me.anyStack) chip('me', 'Contraband: any stack', 'Contraband Run: buy from any stack this turn, at printed cost.');
+    if (me.fortify) chip('me', 'Fortify', `Fortify: you keep your Armor at your next Ready (max ${WD.TUNE.fortifyCap}).`);
     const starters = me.hand.concat(me.play, me.discard).filter(i => WD.isStarter(G, i));
-    if (!me.promoted && starters.length && me.res.intel >= WD.TUNE.promoteCost && (!WD.TUNE.promoteBuy || WD.buysLeft(G, ui.me) > 0)) chip('act', WD.TUNE.promoteCost ? `Promote ${ic('intel')}${WD.TUNE.promoteCost}` : 'Promote', `Field Promotion: spend ${promoPrice()} to swap a starter for a squad basic. Once per turn. Tap to choose.`, 'promosheet');
+    if (!me.promoted && starters.length && me.res.intel >= WD.TUNE.promoteCost && (!WD.TUNE.promoteBuy || WD.buysLeft(G, ui.me) > 0)) chip('act', WD.TUNE.promoteCost ? `Promote ${ic('intel')}${WD.TUNE.promoteCost}` : 'Promote', `Field Promotion: pay ${promoPrice()} to turn a starter into a squad basic. Once a turn. Tap to choose.`, 'promosheet');
   }
-  if (me.drop && me.drop.length) chip('me', `Hot Drop: ${me.drop.length} next hand`, `Delivered to your next hand (on top of the 5 you draw): ${me.drop.map(i => WD.cardDef(G, i).name).join(', ')}.`);
-  if (me.fortify && !t) chip('me', 'Fortified', `Your Armor holds through your next Ready (up to ${WD.TUNE.fortifyCap}).`);
+  if (me.drop && me.drop.length) chip('me', `Hot Drop: ${me.drop.length} next hand`, `Hot Drop: joins your next hand (plus your 5 cards): ${me.drop.map(i => WD.cardDef(G, i).name).join(', ')}.`);
+  if (me.fortify && !t) chip('me', 'Fortified', `You keep your Armor at your next Ready (max ${WD.TUNE.fortifyCap}).`);
   return out.length ? `<div class="h-tac" aria-label="Tactics in play">${out.join('')}</div>` : '';
 }
 // Squad counters: cards owned per squad (the deck taking form) + a 5-step track of cards in play this turn,
@@ -428,7 +447,7 @@ function squadHTML(me) {
   return `<div class="h-squad" aria-label="Squad counters">${WD.SQUADS.map(a => {
     const n = inPlay[a] || 0; const rd = live ? me.rallyDone.filter(k => k.startsWith(a)).map(k => +k.slice(a.length)) : [];
     const trk = Array.from({ length: r2 }, (_, k) => `<i class="${k < n ? 'on' : ''} ${k + 1 === r1 || k + 1 === r2 ? 'th' : ''} ${rd.includes(k + 1) ? 'ral' : ''}"></i>`).join('');
-    const tip = `${ARCH_SHORT[a]}: you own ${own[a]} card${own[a] === 1 ? '' : 's'} (deck + Loadout)${a === main ? ', your main squad' : ''}.${live ? ` In play now: ${n}.` : ''} Rally ${r1} in play: ${WD.RALLY_TEXT[a][r1]}. Rally ${r2}: ${WD.RALLY_TEXT[a][r2]}.`;
+    const tip = `${ARCH_SHORT[a]}: you own ${own[a]}${a === main ? ' (main squad)' : ''}.${live ? ` In play: ${n}.` : ''} Rally ${r1}: ${WD.RALLY_TEXT[a][r1]}. Rally ${r2}: ${WD.RALLY_TEXT[a][r2]}.`;
     return `<span class="sqc ${a === main ? 'main' : ''} ${n ? 'on' : ''} ${rd.length ? 'rallied' : ''} ${fresh.some(k => k.startsWith(a)) ? 'fire' : ''}" style="--arch:var(${ARCH_VAR[a]})" data-tip="${escA(tip)}"><span class="sq-top">${shapeSvg(a)}<b>${own[a]}</b></span><span class="sq-trk">${trk}</span></span>`; }).join('')}</div>`;
 }
 function engineHTML(me, compact) {
@@ -438,7 +457,7 @@ function engineHTML(me, compact) {
 function loadoutHTML(me) {
   const slots = Array.from({ length: WD.TUNE.loadoutSlots }, (_, k) => me.loadout[k]);
   const ready = ui.readyFx && ui.readyFx > performance.now();
-  return `<div class="h-lo ${ready ? 'rdy' : ''}" aria-label="Loadout row" data-tip="Loadout row: Loadout cards stay on the table. They give their effect at the start of every turn (Ready) and count as squad cards for Squad lines and Rally. Deploy one by playing it; a third one replaces a slot or is used once."><span class="lo-head">LOADOUT<small>on the table · fires every turn</small></span><span class="lo-slots">${slots.map(i => { if (!i) return `<span class="lo-slot empty"><b>+</b><span>Empty slot<small>play a Loadout card</small></span></span>`;
+  return `<div class="h-lo ${ready ? 'rdy' : ''}" aria-label="Loadout row" data-tip="Loadout row (2 slots): these cards stay on the table, fire at every Ready and count for Squad and Rally. A third replaces one or is used once."><span class="lo-head">LOADOUT<small>fires every turn</small></span><span class="lo-slots">${slots.map(i => { if (!i) return `<span class="lo-slot empty" data-tip="Empty Loadout slot: play a Loadout card to fill it."><b>+</b><span>Empty slot<small>play a Loadout card</small></span></span>`;
     const d = WD.cardDef(G, i); return `<span class="lo-slot full" data-flip="c${i}" data-prev="hc:${i}" style="--arch:var(${ARCH_VAR[d.archetype]})">${roleB(d.archetype)}<span><b>${escA(d.name)}</b><small>${fx(WD.effText(d.loadout))}</small></span></span>`; }).join('')}</span></div>`;
 }
 function hudPerks(pi) {
@@ -456,15 +475,15 @@ function hudHand(me) {
   const played = pl.map((iid, i) => `<span class="hslot pl ${hot.includes(iid) ? 'sqhot' : ''}" data-flip="c${iid}">${cardHTML(WD.cardDef(G, iid), { cls: 'played' + (ui.justPlayed === iid ? ' fresh' : ''), prev: 'hc:' + iid, act: 'noop', id: iid })}</span>`).join('');
   ui.justPlayed = null;
   const fn = cards.length; const hand = cards.map((iid, k) => `<span class="hslot ${ui.lift === iid ? 'lifted' : ''}" data-flip="c${iid}" style="--fo:${(k - (fn - 1) / 2).toFixed(2)}">${cardHTML(WD.cardDef(G, iid), { act: ui.burnMode ? 'burn' : 'card', id: iid, prev: 'hc:' + iid, k })}</span>`).join('');
-  return `<div class="hh-row ${ui.burnMode ? 'burning' : ''} ${deal ? 'deal' : ''}" style="--n:${Math.max(1, n + (pl.length && cards.length ? 1 : 0))}">${played}${pl.length && cards.length ? '<span class="hh-gap" aria-hidden="true"></span>' : ''}${hand || (pl.length ? '' : `<span class="empty-hand">${t ? 'Hand empty.' : 'Your next hand appears here.'}</span>`)}</div>`;
+  return `<div class="hh-row ${ui.burnMode ? 'burning' : ''} ${deal ? 'deal' : ''}" style="--n:${Math.max(1, n + (pl.length && cards.length ? 1 : 0))}">${played}${pl.length && cards.length ? '<span class="hh-gap" aria-hidden="true"></span>' : ''}${hand || (pl.length ? '' : `<span class="empty-hand">${t ? 'Hand empty.' : 'Your next hand lands here.'}</span>`)}</div>`;
 }
 function shortErr(e) {
   if (!e) return 'Can’t fire';
   if (/Round 1 is the drop/.test(e)) return 'No firing in round 1';
   if (/fires at distance/.test(e) || /Out of range/.test(e)) return 'Out of range';
-  if (/No ammo/.test(e)) return 'No ammo · keep a card';
+
   if (/fired its (magazine|shots)/.test(e)) return 'No shots left';
-  if (/No Precision|Nothing to reveal/.test(e)) return 'No Precision';
+  if (/No Precision|Nothing to reveal/.test(e)) return 'Need Precision';
   return e.replace(/\.$/, '');
 }
 function curGun(me) {
@@ -482,9 +501,9 @@ function gunPanel(me, gi) {
     if (e.magazine_capacity !== def.magazine_capacity) ch.push(`Mag ${e.magazine_capacity}`); if (e.recoil !== def.recoil) ch.push(`Recoil ${e.recoil}`); if (e.band[0] !== def.band[0] || e.band[1] !== def.band[1]) ch.push(`Range ${e.band[0]}–${e.band[1]}`);
     const lit = def.gcombo && me.gunCombo === G.turnNo;
     const ga = gunArt(def);
-    const gpc = `<span class="gpc" aria-hidden="true"><span class="gpc-nm"><b>${escA(def.name)}</b><small>${escA(GSHORT[def.cls] || def.cls)}</small></span>${ga ? `<img class="gpc-art" src="${ga}" alt="">` : '<span class="gpc-art"></span>'}<span class="gpc-st"><span title="Range">${ic('rng')}${e.band[0]}–${e.band[1]}</span><span title="Recoil">${ic('rcl')}${e.recoil}</span><span class="gpc-lad" title="Damage ladder: Hit Markers needed → damage">${def.ladder.map(([h, dd]) => `<span>${h}+<b>${dd}</b></span>`).join('')}</span></span></span>`;
+    const gpc = `<span class="gpc" aria-hidden="true"><span class="gpc-nm"><b>${escA(def.name)}</b><small>${escA(GSHORT[def.cls] || def.cls)}</small></span>${ga ? `<img class="gpc-art" src="${ga}" alt="">` : '<span class="gpc-art"></span>'}<span class="gpc-st"><span title="Range">${ic('rng')}${e.band[0]}–${e.band[1]}</span><span title="Recoil">${ic('rcl')}${e.recoil}</span><span class="gpc-lad" data-tip="Damage ladder: Hit Markers needed → damage.">${def.ladder.map(([h, dd]) => `<span>${h}+<b>${dd}</b></span>`).join('')}</span></span></span>`;
     return `<div data-flip="g${iid}" class="gpf ${gi ? 'sec' : ''} ${cur ? 'cur' : ''} ${t && !ok ? 'dim' : ''} ${lit ? 'lit' : ''}" data-act="pickgunb" data-id="${gi}" role="button" tabindex="0" aria-label="${escA(wnm(def))}" data-prev="gun:${iid}">${pf('gun_' + def.id)}${gpc}
-      <div class="gpf-bar"><span class="gpf-shots" title="Shots left this turn">${Array.from({ length: e.magazine_capacity }, (_, i) => `<i class="${i < left ? '' : 'e'}"></i>`).join('')}</span>${ch.length ? `<span class="gpf-mod">${ch.join(' · ')}</span>` : ''}${lit ? '<span class="gpf-combo">COMBO</span>' : ''}${t ? (ok ? `<span class="gpf-odds">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</span>` : `<span class="gpf-odds no">${escA(shortErr(fo && fo.err))}</span>`) : ''}</div></div>`;
+      <div class="gpf-bar"><span class="gpf-shots" data-tip="Shots left this turn.">${Array.from({ length: e.magazine_capacity }, (_, i) => `<i class="${i < left ? '' : 'e'}"></i>`).join('')}</span>${ch.length ? `<span class="gpf-mod">${ch.join(' · ')}</span>` : ''}${lit ? '<span class="gpf-combo">COMBO</span>' : ''}${t ? (ok ? `<span class="gpf-odds">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</span>` : `<span class="gpf-odds no">${escA(shortErr(fo && fo.err))}</span>`) : ''}</div></div>`;
   }
   const m = k => e[k] !== def[k] ? ` class="up r${def.tier}"` : '';
   const L = def.ladder; const gc = def.gcombo; const lit = gc && me.gunCombo === G.turnNo;
@@ -503,15 +522,15 @@ function hudBtns(me) {
   const same = me.pos === OP().pos; const canPunch = WD.TUNE.punch && t && same && !me.punched && !ok;
   const pc = WD.plateCost(G, ui.me);
   const fireBtn = canPunch ? `<button class="hb-fire" data-act="dofists" data-tip="No gun can fire: punch your rival for 1 damage.">PUNCH · 1</button>`
-    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? (fo.sp.melee ? `Stab with the ${wnm(wdef(me.guns[gi]))}: always hits.` : `To hit: ${fo.pct >= 1 ? fo.pct + '%' : 'under 1%'}. Fire the ${wnm(wdef(me.guns[gi]))}: commit ${fo.commit} Precision, reveal ${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'}${fo.sp.power ? ` (+${fo.sp.powerDmg} damage Power)` : ''}. ${oddsWhy(fo.sp)} Costs ${fo.sp.cost} Precision (commit + Recoil ${fo.sp.recoil}). Tap AIM to change the commit.`) : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">FIRE${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? (fo.sp.melee ? '<small class="hb-why">always hits</small>' : `<small class="hb-why">reveal ${fo.sp.reveal} · −${fo.sp.cost} Prec</small>`) : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>${t && ok && !fo.sp.melee ? `<button class="hb-aim" data-act="aim" data-id="${gi}" data-tip="Aim: choose how much Precision this shot commits. More cards revealed = better odds, but less Precision left for your next shot.">Aim <b>${fo.commit}</b>${fo.commit === suggested(gi).commit ? '<i>★</i>' : ''}</button>` : ''}`;
+    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? (fo.sp.melee ? `Stab with the ${wnm(wdef(me.guns[gi]))}: always hits.` : `${fo.pct >= 1 ? fo.pct + '%' : 'Under 1%'} to hit with the ${wnm(wdef(me.guns[gi]))}: reveal ${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'}${fo.sp.power ? ` (Power +${fo.sp.powerDmg} damage)` : ''}. ${oddsWhy(fo.sp)} Costs ${fo.sp.cost} Precision (aim ${fo.commit} + Recoil ${fo.sp.recoil}). Aim changes it.`) : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">FIRE${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? (fo.sp.melee ? '<small class="hb-why">always hits</small>' : `<small class="hb-why">${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'} · −${fo.sp.cost} Prec</small>`) : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>${t && ok && !fo.sp.melee ? `<button class="hb-aim" data-act="aim" data-id="${gi}" data-tip="Aim: choose how much Precision this shot uses. More cards = better odds, less Precision for the next shot.">Aim <b>${fo.commit}</b>${fo.commit === suggested(gi).commit ? '<i>★</i>' : ''}</button>` : ''}`;
   return `${fireBtn}
-    <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="${escA(`Buy Station: one basic card per squad, ${pc} Intel each (counts as a buy). Also: ${WD.TUNE.stationScrapCost ? `pay ${WD.TUNE.stationScrapCost} Intel to ` : 'free: '}scrap a Sprint, once per turn.`)}">${ic('para')} Buy Station <small>${ic('intel')}${pc} · ${t ? WD.buysLeft(G, ui.me) : WD.TUNE.buyCap} buys</small></button>
-    <button class="hb-move ${ui.moveMode ? 'on' : ''}" data-act="move" ${t && (ui.moveMode || ((!me.moved || WD.TUNE.multiMove) && me.res.move > 0 && WD.reachable(G, ui.me).length)) ? '' : 'disabled'} data-tip="Your one Move this turn: tap to light up the locations you can reach, then tap one. 1 Movement per space (+ cover).">${ic('move')} ${ui.moveMode ? 'Cancel move' : me.moved && !WD.TUNE.multiMove ? 'Moved' : `Move <small>${me.res.move}</small>`}</button>
-    ${t && me.scrapAvail ? `<button class="hb-scrap" data-act="scrapsheet" data-tip="Remove a card from your hand or discard pile from the game.">${ic('scrap')} Scrap ${me.scrapAvail}</button>` : ''}
-    <button class="hb-all" data-act="playall" ${t && me.hand.some(i => !WD.cardDef(G, i).jam) ? '' : 'disabled'} data-tip="Play every card in your hand (Malfunction stays).">Play all</button>
+    <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="${escA(`Buy Station: a squad basic for ${pc} Intel (uses a buy). ${WD.TUNE.stationScrapCost ? `${WD.TUNE.stationScrapCost} Intel` : 'Free'}: scrap a Sprint, once a turn.`)}">${ic('para')} Buy Station <small>${ic('intel')}${pc} · ${t ? WD.buysLeft(G, ui.me) : WD.TUNE.buyCap} buys</small></button>
+    <button class="hb-move ${ui.moveMode ? 'on' : ''}" data-act="move" ${t && (ui.moveMode || ((!me.moved || WD.TUNE.multiMove) && me.res.move > 0 && WD.reachable(G, ui.me).length)) ? '' : 'disabled'} data-tip="Move once a turn: tap, then tap a lit location. 1 Movement per location.">${ic('move')} ${ui.moveMode ? 'Cancel move' : me.moved && !WD.TUNE.multiMove ? 'Moved' : `Move <small>${me.res.move}</small>`}</button>
+    ${t && me.scrapAvail ? `<button class="hb-scrap" data-act="scrapsheet" data-tip="${escA(KW.Scrap)}">${ic('scrap')} Scrap ${me.scrapAvail}</button>` : ''}
+    <button class="hb-all" data-act="playall" ${t && me.hand.some(i => !WD.cardDef(G, i).jam) ? '' : 'disabled'} data-tip="Play every card in your hand.">Play all</button>
     ${t && WD.canBench(G, ui.me) && me.hand.length ? `<button class="hb-burn ${ui.burnMode ? 'on' : ''}" data-act="burnmode" data-tip="Workbench: once per turn, remove a card from your hand from the game. Free.">${ui.burnMode ? 'Tap a card to burn · cancel' : 'Burn 1 (Workbench)'}</button>` : ''}
-    <button class="hb-end" data-act="endturn" ${t ? '' : 'disabled'} data-tip="End your turn: unspent Intel and Scrap are lost, discard your hand and played cards (the Loadout row stays), draw 5.">End turn${t && WD.TUNE.digIn && me.res.move > 0 ? `<small class="dig">+${Math.min(WD.TUNE.digIn, me.res.move)}${ic('def')}</small>` : ''}</button>
-    <span class="hb-deck">Deck <b>${me.deck.length}</b> · <span class="dcount">Discard <b>${me.discard.length}</b></span></span>`;
+    <button class="hb-end" data-act="endturn" ${t ? '' : 'disabled'} data-tip="End turn: unused Intel is lost, unused Movement becomes Armor. Discard hand and played cards (Loadout stays), draw 5.">End turn${t && WD.TUNE.digIn && me.res.move > 0 ? `<small class="dig">+${Math.min(WD.TUNE.digIn, me.res.move)}${ic('def')}</small>` : ''}</button>
+    <span class="hb-deck" data-tip="Cards left in your deck and in your discard pile. An empty deck reshuffles the discard pile.">Deck <b>${me.deck.length}</b> · <span class="dcount">Discard <b>${me.discard.length}</b></span></span>`;
 }
 const RAR_N = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 function codexItems() {
@@ -560,8 +579,8 @@ document.addEventListener('input', e => { if (e.target.classList && e.target.cla
 function stationSheet() {
   const me = ME(); const pc = WD.plateCost(G, ui.me); const ok = me.res.intel >= pc;
   const bl = WD.buysLeft(G, ui.me); const sprints = me.hand.concat(me.play, me.discard).filter(i => WD.cardDef(G, i).id === 'T001');
-  const svc = myTurn() ? `<div class="row bs-svc"><span class="lbl">Service · ${WD.TUNE.stationScrapCost ? `${WD.TUNE.stationScrapCost} Intel` : 'free'}, once per turn, not a buy</span><button class="btn sm alt" data-act="stscrap" data-id="${sprints[0] || ''}" ${sprints.length && !me.stationScrapped && me.res.intel >= WD.TUNE.stationScrapCost ? '' : 'disabled'}>${ic('scrap')} Scrap a Sprint${sprints.length ? '' : ' (none in hand, play or discard)'}</button></div>` : '';
-  return `${headIntel('Buy Station')}<p class="ld-p">One basic per squad, always open. ${bl} buy${bl === 1 ? '' : 's'} left this turn. ${G.round <= WD.TUNE.hotDrop ? `<b>Hot Drop</b> (rounds 1–${WD.TUNE.hotDrop}): bought cards are delivered to your next hand.` : 'Bought cards go to your discard pile.'}</p>${svc}${myTurn() ? `<div class="row bs-svc"><span class="lbl">Field Promotion · ${promoPrice()}, once per turn</span><button class="btn sm alt" data-act="promosheet" ${!me.promoted && me.res.intel >= WD.TUNE.promoteCost && (!WD.TUNE.promoteBuy || bl > 0) ? '' : 'disabled'}>Promote a starter</button></div>` : ''}
+  const svc = myTurn() ? `<div class="row bs-svc"><span class="lbl">${WD.TUNE.stationScrapCost ? `${WD.TUNE.stationScrapCost} Intel` : 'Free'} · once a turn · not a buy</span><button class="btn sm alt" data-act="stscrap" data-id="${sprints[0] || ''}" ${sprints.length && !me.stationScrapped && me.res.intel >= WD.TUNE.stationScrapCost ? '' : 'disabled'}>${ic('scrap')} Scrap a Sprint${sprints.length ? '' : ' (none left)'}</button></div>` : '';
+  return `${headIntel('Buy Station')}<p class="ld-p">One basic per squad. ${bl} buy${bl === 1 ? '' : 's'} left. ${G.round <= WD.TUNE.hotDrop ? `<b>Hot Drop</b>: bought cards join your next hand.` : 'Bought cards go to your discard pile.'}</p>${svc}${myTurn() ? `<div class="row bs-svc"><span class="lbl">Field Promotion · ${promoPrice()} · once a turn</span><button class="btn sm alt" data-act="promosheet" ${!me.promoted && me.res.intel >= WD.TUNE.promoteCost && (!WD.TUNE.promoteBuy || bl > 0) ? '' : 'disabled'}>Promote a starter</button></div>` : ''}
     <div class="bs-grid">${WD.TUNE.station.map(id => { const k = WD.CARDS[id]; const left = G.stationLeft ? G.stationLeft[id] : null; return `<div class="bs-cell">${(hasFace('card_' + id) ? `<button class="bscard bsf" data-act="supply" data-id="${id}" ${myTurn() && ok && left !== 0 ? '' : 'disabled'} aria-label="Buy ${escA(k.name)}">${pf('card_' + id)}</button>` : cardHTML(k, { act: 'supply', id, dis: !(myTurn() && ok && left !== 0), cls: 'bscard', prev: 'cd:' + id }))}<small>${left != null ? `${left} left` : ''}</small></div>`; }).join('')}</div><p class="bs-foot">${ic('intel')}${pc} Intel each</p>`;
 }
 // face of a card instance or card id, inspectable (hold, right click, hover)
@@ -570,48 +589,48 @@ const faceOf = (id, prev) => hasFace('card_' + id) ? pf('card_' + id) : cardHTML
 function spoilsSheet() {
   const sp = G.spoils; if (!sp) return `${head('Spoils')}<p class="ld-p">Nothing to take.</p>`;
   const me = ME(); const mf = WD.mainSquad(G, ui.me);
-  return `<div class="sheet-head"><h2>Spoils</h2></div><p class="ld-p">${me.stats.turnDmg ? `You dealt <b>${me.stats.turnDmg}</b> damage this turn.` : 'You were hit since your last turn.'} Take one card for free (it goes to your discard pile), or skip. Hold, right click or hover a card to read it.</p>
+  return `<div class="sheet-head"><h2>Spoils</h2></div><p class="ld-p">${me.stats.turnDmg ? `You dealt <b>${me.stats.turnDmg}</b> damage.` : 'You were hit since your last turn.'} Take 1 card free (to your discard pile) or skip. Hold or right click a card to read it.</p>
     <div class="sp-grid">${sp.offer.map(iid => { const d = WD.cardDef(G, iid); return `<div class="sp-cell"><button class="sp-pick" data-act="spoilpick" data-id="${iid}" data-prev="cd:${d.id}" aria-label="Take ${escA(d.name)}">${faceOf(d.id, 'cd:' + d.id)}</button>
-      <small>${d.tactic ? '<b class="tacb">TACTIC</b> ' : ''}${ARCH_SHORT[d.archetype] || ''}${d.archetype === mf ? ' · your main squad' : ''}</small></div>`; }).join('')}</div>
-    <div class="row"><button class="btn alt" data-act="spoilskip">Skip the Spoils</button></div>`;
+      <small>${d.tactic ? '<b class="tacb">TACTIC</b> ' : ''}${ARCH_SHORT[d.archetype] || ''}${d.archetype === mf ? ' · main squad' : ''}</small></div>`; }).join('')}</div>
+    <div class="row"><button class="btn alt" data-act="spoilskip">Skip</button></div>`;
 }
 // Intel Sweep: tap the cards in the order you want them on top (first tap = the top card, revealed or drawn first)
 function sweepSheet(S) {
   const pk = ME().peek; if (!pk) return `${head('Sweep')}<p class="ld-p">Nothing to arrange.</p>`;
   const rest = pk.filter(i => !S.order.includes(i)); const final = S.order.concat(rest);
-  return `${head(`Intel Sweep · top ${pk.length}`)}<p class="ld-p">Tap the cards in the order you want them: the first tap goes on top (your next shot reveals it first, or your next draw takes it). Cards you don't tap stay below, in their order.</p>
+  return `${head(`Intel Sweep · top ${pk.length}`)}<p class="ld-p">Tap cards in the order you want them. First tap = top card (next shot or draw). Untapped cards stay below.</p>
     <div class="sw-grid">${pk.map(i => { const d = WD.cardDef(G, i); const k = S.order.indexOf(i); return `<button class="sw-pick ${k >= 0 ? 'on' : ''}" data-act="sweeppick" data-id="${i}" data-prev="hc:${i}" aria-label="${escA(d.name)}">${faceOf(d.id, 'hc:' + i)}<em>${k >= 0 ? k + 1 : ''}</em><small>${d.hit_markers} ${ic('hm')}</small></button>`; }).join('')}</div>
-    <p class="sw-line">New top → bottom: ${final.map(i => `<b>${escA(WD.cardDef(G, i).name)}</b>`).join(' › ')}</p>
-    <div class="row"><button class="btn sig" data-act="sweepok" data-id="set">Put them back in this order</button><button class="btn alt" data-act="sweepok" data-id="keep">Keep as they are</button></div>`;
+    <p class="sw-line">Top → bottom: ${final.map(i => `<b>${escA(WD.cardDef(G, i).name)}</b>`).join(' › ')}</p>
+    <div class="row"><button class="btn sig" data-act="sweepok" data-id="set">Use this order</button><button class="btn alt" data-act="sweepok" data-id="keep">Keep as is</button></div>`;
 }
 // Field Promotion (O3): a starter becomes a Buy Station basic of the squad you choose
 function promoteSheet(S) {
   const me = ME(); const zones = [['hand', me.hand], ['play area', me.play], ['discard pile', me.discard]];
   const can = !me.promoted && me.res.intel >= WD.TUNE.promoteCost && (!WD.TUNE.promoteBuy || WD.buysLeft(G, ui.me) > 0);
   const basic = q => WD.CARDS[WD.BASIC[q]];
-  return `${headIntel('Field Promotion')}<p class="ld-p">Spend ${promoPrice()}: a starter leaves the game and a squad basic takes its place (in your hand if it was there, else in your discard pile). Once per turn.</p>
-    <h3>1 · Pick a starter</h3>${zones.map(([lab, z]) => { const st = z.filter(i => WD.isStarter(G, i)); return st.length ? `<p class="lbl">From your ${lab}</p><div class="pr-row">${st.map(i => { const d = WD.cardDef(G, i); return `<button class="pr-pick ${S.pick === i ? 'on' : ''}" data-act="promopick" data-id="${i}" data-prev="hc:${i}" aria-label="${escA(d.name)}">${faceOf(d.id, 'hc:' + i)}</button>`; }).join('')}</div>` : ''; }).join('') || '<p class="ld-p">No starters left: your deck is all yours.</p>'}
+  return `${headIntel('Field Promotion')}<p class="ld-p">Pay ${promoPrice()}: a starter leaves the game and a squad basic takes its place (hand stays hand, else discard pile). Once a turn.</p>
+    <h3>1 · Pick a starter</h3>${zones.map(([lab, z]) => { const st = z.filter(i => WD.isStarter(G, i)); return st.length ? `<p class="lbl">${lab[0].toUpperCase() + lab.slice(1)}</p><div class="pr-row">${st.map(i => { const d = WD.cardDef(G, i); return `<button class="pr-pick ${S.pick === i ? 'on' : ''}" data-act="promopick" data-id="${i}" data-prev="hc:${i}" aria-label="${escA(d.name)}">${faceOf(d.id, 'hc:' + i)}</button>`; }).join('')}</div>` : ''; }).join('') || '<p class="ld-p">No starters left.</p>'}
     <h3>2 · Pick its squad</h3><div class="pr-sq">${WD.SQUADS.map(q => { const d = basic(q); const left = G.stationLeft[d.id]; return `<button class="pr-sqb ${S.sq === q ? 'on' : ''}" data-act="promosq" data-id="${q}" ${left > 0 ? '' : 'disabled'} data-prev="cd:${d.id}" style="--arch:var(${ARCH_VAR[q]})">${faceOf(d.id, 'cd:' + d.id)}<small>${shapeSvg(q)} ${ARCH_SHORT[q]} · ${left} left</small></button>`; }).join('')}</div>
-    <div class="row pr-go"><button class="btn sig" data-act="dopromote" ${can && S.pick && S.sq ? '' : 'disabled'}>${S.pick ? `Promote ${escA(WD.cardDef(G, S.pick).name)} to ${escA(basic(S.sq).name)}` : 'Pick a starter'}</button><button class="btn alt" data-act="close">Cancel</button></div>`;
+    <div class="row pr-go"><button class="btn sig" data-act="dopromote" ${can && S.pick && S.sq ? '' : 'disabled'}>${S.pick ? `Promote ${escA(WD.cardDef(G, S.pick).name)} → ${escA(basic(S.sq).name)}` : 'Pick a starter'}</button><button class="btn alt" data-act="close">Cancel</button></div>`;
 }
 const insignia = r => r.i >= 6 ? 'gold' : r.i >= 5 ? 'silver' : '';
 function rankBadge(prof, big) {
   const r = WD.rankOf(prof.xp); const pct = r.nextXp ? Math.round((prof.xp - r.floor) / (r.nextXp - r.floor) * 100) : 100;
-  return `<span class="rk ${big ? 'big' : ''} ${insignia(r)}" data-tip="${escA(`Operator rank ${r.name}: ${prof.xp} XP. ${r.next ? `${r.toNext} XP to ${r.next}.` : 'Top rank.'} Saved on this device only.`)}"><span class="rk-ins" aria-hidden="true">${'▲'.repeat(Math.min(3, r.i + 1))}</span><span class="rk-txt"><b>${r.name}</b><small>${prof.xp} XP${r.next ? ` · ${r.toNext} to ${r.next}` : ''}</small><span class="rk-bar"><i style="width:${pct}%"></i></span></span></span>`;
+  return `<span class="rk ${big ? 'big' : ''} ${insignia(r)}" data-tip="${escA(`Rank ${r.name}: ${prof.xp} XP. ${r.next ? `${r.toNext} XP to ${r.next}.` : 'Top rank.'} Saved on this device.`)}"><span class="rk-ins" aria-hidden="true">${'▲'.repeat(Math.min(3, r.i + 1))}</span><span class="rk-txt"><b>${r.name}</b><small>${prof.xp} XP${r.next ? ` · ${r.toNext} to ${r.next}` : ''}</small><span class="rk-bar"><i style="width:${pct}%"></i></span></span></span>`;
 }
 function rankSheet() {
   const prof = ui.prof; const r = WD.rankOf(prof.xp);
   return `${head('Operator rank')}<div class="rk-head">${rankBadge(prof, true)}</div>
-    <p class="ld-p">XP after every match vs the AI: 40 for playing, +60 for a win (+30 for a draw), +1 per damage dealt (up to 80), +20 for reaching the final circle. Ranks unlock variety, never power. Saved on this device only (clearing site data resets it).</p>
+    <p class="ld-p">XP per match vs the AI: 40, +60 for a win (+30 draw), +1 per damage (max 80), +20 for the final circle. Ranks unlock variety, never power. Saved on this device.</p>
     <ol class="rk-list">${WD.RANKS.map((x, i) => `<li class="${i <= r.i ? 'got' : ''}"><b>${x.name}</b> <small>${x.xp} XP</small>${x.unlock ? `<span data-tip="${escA(x.unlock.text)}">${i <= r.i ? '✓' : '🔒'} ${escA(x.unlock.name)}: ${escA(x.unlock.text)}</span>` : '<span>Start</span>'}</li>`).join('')}</ol>
-    <p class="ld-p">Matches ${prof.matches} · wins ${prof.wins} · best damage in a match ${prof.bestDmg} · best turn ${prof.bestTurn}</p>`;
+    <p class="ld-p">Matches ${prof.matches} · wins ${prof.wins} · best match ${prof.bestDmg} damage · best turn ${prof.bestTurn}</p>`;
 }
 // After-action report (O7): the match story, then XP and rank
 function overSheet() {
   const w = G.winner; const t = w === 'draw' ? 'Draw' : (ui.mode === 'ai' ? (w === ui.me ? 'Victory' : 'Eliminated') : `${G.players[w].name} wins`);
   const win = w !== 'draw' && (ui.mode !== 'ai' || w === ui.me); const me = ME(), op = OP();
   const rounds = Array.from({ length: G.round }, (_, k) => k + 1); const mx = Math.max(4, ...rounds.map(r => Math.max(me.stats.dmgRounds[r] || 0, op.stats.dmgRounds[r] || 0)));
-  const bars = rounds.map(r => `<span class="aa-r" data-tip="${escA(`Round ${r}: you dealt ${me.stats.dmgRounds[r] || 0}, ${op.name} dealt ${op.stats.dmgRounds[r] || 0}.`)}"><i class="me" style="height:${Math.round((me.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><i class="op" style="height:${Math.round((op.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><small>${r}</small></span>`).join('');
+  const bars = rounds.map(r => `<span class="aa-r" data-tip="${escA(`Round ${r}: ${ui.mode === 'ai' ? 'you' : me.name} ${me.stats.dmgRounds[r] || 0}, ${op.name} ${op.stats.dmgRounds[r] || 0} damage.`)}"><i class="me" style="height:${Math.round((me.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><i class="op" style="height:${Math.round((op.stats.dmgRounds[r] || 0) / mx * 100)}%"></i><small>${r}</small></span>`).join('');
   const mvp = Object.entries(me.stats.mvp).sort((a, b) => b[1] - a[1])[0];
   const added = me.stats.added.slice(-12);
   const M = ui.meta; const prev = M ? M.prev : ui.prof;
@@ -620,14 +639,14 @@ function overSheet() {
     <div class="aa">
       <div class="aa-box"><h3>Damage per round <small><i class="lg me"></i>${ui.mode === 'ai' ? 'you' : escA(me.name)} <i class="lg op"></i>${escA(op.name)}</small></h3><div class="aa-bars">${bars}</div></div>
       <div class="aa-facts">
-        <span data-tip="Your damage in the whole match (shots, held angles and Sentry Turret).">Damage <b>${me.stats.damageDealt}</b>${newBest ? ' <em>new best</em>' : ''}</span>
-        <span data-tip="Your strongest turn and when it came.">Best turn <b>${me.stats.maxTurnDmg}</b>${me.stats.bestRound ? `<small> round ${me.stats.bestRound}</small>` : ''}</span>
-        <span data-tip="Shots that hit / shots fired.">Hits <b>${me.stats.hits}/${me.stats.shots}</b></span>
-        <span data-tip="Cards you gained: loot, Buy Station, Spoils and Field Promotion.">Added <b>${me.stats.added.length}</b><small>Spoils ${me.stats.spoils} · promoted ${me.stats.promoted}</small></span>
+        <span data-tip="Your damage this match (shots, held angles, Sentry Turret).">Damage <b>${me.stats.damageDealt}</b>${newBest ? ' <em>new best</em>' : ''}</span>
+        <span data-tip="Your best turn and its round.">Best turn <b>${me.stats.maxTurnDmg}</b>${me.stats.bestRound ? `<small> round ${me.stats.bestRound}</small>` : ''}</span>
+        <span data-tip="Hits / shots fired.">Hits <b>${me.stats.hits}/${me.stats.shots}</b></span>
+        <span data-tip="Cards you gained: loot, Buy Station, Spoils, Promotion.">Added <b>${me.stats.added.length}</b><small>Spoils ${me.stats.spoils} · promoted ${me.stats.promoted}</small></span>
       </div>
       ${mvp ? `<div class="aa-mvp" data-prev="cd:${mvp[0]}"><span class="lbl">MVP card</span>${hasFace('card_' + mvp[0]) ? `<span class="mf">${pf('card_' + mvp[0])}</span>` : ''}<span><b>${escA(WD.CARDS[mvp[0]].name)}</b><small>${mvp[1]} Hit Markers in your hits</small></span></div>` : ''}
       ${added.length ? `<div class="aa-add"><span class="lbl">Cards you added${me.stats.added.length > 12 ? ' (last 12)' : ''}</span><div class="aa-row">${added.map(id => hasFace('card_' + id) ? `<span class="mf" data-prev="cd:${id}">${pf('card_' + id)}</span>` : `<span class="sc-chip">${escA(WD.CARDS[id].name)}</span>`).join('')}</div></div>` : ''}
-      ${M ? `<div class="aa-xp"><span class="lbl">Operator XP +${M.gained.total}</span><span class="aa-parts">${M.gained.parts.map(([l, n]) => `<span>${escA(l)} <b>+${n}</b></span>`).join('')}</span>${rankBadge(ui.prof)}${M.after.i > M.before.i ? `<p class="aa-up">Promoted to <b>${M.after.name}</b>!</p>` : ''}${M.newUnlocks.map(u => `<p class="aa-unl" data-tip="${escA(u.text)}">Unlocked: <b>${escA(u.name)}</b> · ${escA(u.text)}</p>`).join('')}${M.saved ? '' : '<p class="ld-p">Your browser blocks storage here, so this rank lasts only until you close the page.</p>'}</div>` : `<p class="ld-p">Rank XP is earned in matches vs the AI.</p>`}
+      ${M ? `<div class="aa-xp"><span class="lbl">Operator XP +${M.gained.total}</span><span class="aa-parts">${M.gained.parts.map(([l, n]) => `<span>${escA(l)} <b>+${n}</b></span>`).join('')}</span>${rankBadge(ui.prof)}${M.after.i > M.before.i ? `<p class="aa-up">Promoted to <b>${M.after.name}</b>!</p>` : ''}${M.newUnlocks.map(u => `<p class="aa-unl" data-tip="${escA(u.text)}">Unlocked: <b>${escA(u.name)}</b> · ${escA(u.text)}</p>`).join('')}${M.saved ? '' : '<p class="ld-p">Storage is blocked here: this rank lasts until you close the page.</p>'}</div>` : `<p class="ld-p">Rank XP comes from matches vs the AI.</p>`}
     </div>
     <div class="row over-btns"><button class="btn sig" data-act="new" data-id="${ui.mode}">Play again</button><button class="btn alt" data-act="close">See the board</button><button class="btn alt" data-act="home">Main menu</button></div>`;
 }
@@ -645,9 +664,9 @@ function rivalSheet() {
 function startMeta() {
   const prof = ui.prof; const r = WD.rankOf(prof.xp); const at = kind => WD.RANKS.findIndex(x => x.unlock && (x.unlock.kind === kind || x.unlock.id === kind));
   const dailyOk = r.i >= at('daily'); const done = prof.daily && prof.daily.date === today();
-  const daily = `<button class="st-chip ${dailyOk ? '' : 'lock'}" ${dailyOk ? 'data-act="daily"' : 'disabled'} data-tip="${escA(dailyOk ? `Daily Drop ${today()}: one seeded match, the same drop for everyone today (no Operations).${done ? ` You played it: ${prof.daily.won ? 'won' : 'lost'}, ${prof.daily.dmg} damage. You can play it again.` : ''}` : `Unlocks at ${WD.RANKS[at('daily')].name}.`)}">${dailyOk ? '' : '🔒 '}Daily Drop${done ? ' ✓' : ''}</button>`;
+  const daily = `<button class="st-chip ${dailyOk ? '' : 'lock'}" ${dailyOk ? 'data-act="daily"' : 'disabled'} data-tip="${escA(dailyOk ? `Daily Drop ${today()}: today's match, the same for everyone (no Operations).${done ? ` Played: ${prof.daily.won ? 'won' : 'lost'}, ${prof.daily.dmg} damage. Play again any time.` : ''}` : `Unlocks at ${WD.RANKS[at('daily')].name}.`)}">${dailyOk ? '' : '🔒 '}Daily Drop${done ? ' ✓' : ''}</button>`;
   const ops = Object.keys(WD.OPS).map(k => { const ok = r.i >= at(k); const on = ok && ui.ops.includes(k);
-    return `<button class="st-chip op ${on ? 'on' : ''} ${ok ? '' : 'lock'}" ${ok ? `data-act="optoggle" data-id="${k}" aria-pressed="${on}"` : 'disabled'} data-tip="${escA(`${WD.OPS[k].name}: ${WD.OPS[k].text} ${ok ? (on ? 'On for your next match vs the AI or pass & play.' : 'Tap to turn on.') : `Unlocks at ${WD.RANKS[at(k)].name}.`}`)}">${ok ? (on ? '✓ ' : '') : '🔒 '}${WD.OPS[k].name}</button>`; }).join('');
+    return `<button class="st-chip op ${on ? 'on' : ''} ${ok ? '' : 'lock'}" ${ok ? `data-act="optoggle" data-id="${k}" aria-pressed="${on}"` : 'disabled'} data-tip="${escA(`${WD.OPS[k].name}: ${WD.OPS[k].text} ${ok ? (on ? 'On for your next match.' : 'Tap to turn on.') : `Unlocks at ${WD.RANKS[at(k)].name}.`}`)}">${ok ? (on ? '✓ ' : '') : '🔒 '}${WD.OPS[k].name}</button>`; }).join('');
   return `<div class="st-meta"><button class="st-rank" data-act="sheet" data-id="rank" aria-label="Operator rank">${rankBadge(prof)}</button><div class="st-ops">${daily}${ops}</div></div>`;
 }
 function startHTML() {
@@ -657,7 +676,7 @@ function startHTML() {
       <div class="st-copy">
         <div class="st-kicker">Tactical deck-builder · 2 players · ~20 min</div>
         <h1>Warzone<br><span>Deckbuilder</span></h1>
-        <p>Drop in with a pistol. Loot the map, build your deck, outgun your rival before the gas closes in.</p>
+        <p>Drop in with a pistol. Loot, build your deck and outgun your rival before the gas closes in.</p>
         <div class="st-roles">${['assault', 'recon', 'support', 'engineer'].map(r => `<span style="--arch:var(${ARCH_VAR[r]})">${shapeSvg(r)}${ARCH_SHORT[r]}</span>`).join('')}</div>
         <div class="st-cta"><button class="st-play" data-act="new" data-id="ai">Play vs AI</button><button class="st-sec" data-act="new" data-id="hotseat">Pass &amp; play</button></div>
         ${startMeta()}
@@ -696,22 +715,40 @@ function oddsWhy(sp) {
   if (sp.melee) return 'The knife always hits.';
   const p = oddsParts(sp); return `Needs ${sp.need}+ Hit Markers${p.length > 1 ? `: ${p.map(x => x[0]).join(', ')}` : ` (the ${wnm(wdef(ME().guns[sp.gi]))}'s first step)`}.`;
 }
+// the one next step, in a few words; after the rival's turn it first says what they did (wb-ux-text)
 function nextHint() {
   const me = ME();
   if (G.over) return 'Match over.';
-  if (!myTurn()) return ui.mode === 'ai' ? `<b>${OP().name}</b> is taking their turn…` : 'Waiting…';
-  if (ui.burnMode) return '<b>Workbench:</b> tap a card in your hand to burn it for good.';
-  if (ui.moveMode) return '<b>Move:</b> tap a lit location (the number is its Movement cost). Tap <b>Cancel move</b> to stop.';
+  if (!myTurn()) return ui.mode === 'ai' ? `<b>${OP().name}</b> is playing…` : 'Waiting…';
+  const pre = ui.rivalSum ? `<span class="hint-last">${ui.rivalSum}</span> ` : '';
+  return pre + nextStep(me);
+}
+function nextStep(me) {
+  if (ui.burnMode) return '<b>Workbench:</b> tap a card to remove it.';
+  if (ui.moveMode) return '<b>Move:</b> tap a lit location (number = Movement cost).';
   const here = WD.envAt(G, me.pos);
-  if (here.state === 'gas') return `<b>You are in the gas.</b> Move back in, or at round end take ${WD.TUNE.gasDmg}+ damage and get pushed back.`;
-  if (WD.closing(G).includes(me.pos)) return `<b>Gas takes your location after this round</b> (it takes ${WD.closing(G).length} this round). Move left, toward new ground.`;
-  if (!WD.guns(me).length) { const gun = here.loot.find(i => i.kind === 'weapon'); return gun ? `<b>Grab a gun:</b> play Recon for Intel, then Buy the ${wnm(WD.itemDef(G, gun))}. It comes loaded.` : '<b>Find a gun:</b> Search here or move to a location with one.'; }
+  if (here.state === 'gas') return `<b>You are in the gas.</b> Move in, or take ${WD.TUNE.gasDmg}+ damage at round end.`;
+  if (WD.closing(G).includes(me.pos)) return '<b>Gas takes your location this round.</b> Move away.';
+  if (!WD.guns(me).length) { const gun = here.loot.find(i => i.kind === 'weapon'); return gun ? `<b>Get a gun:</b> buy the ${wnm(WD.itemDef(G, gun))} here.` : '<b>Get a gun:</b> move to a location with one.'; }
   if (me.hand.some(i => !WD.cardDef(G, i).jam)) return '<b>Play your cards</b>, then move, buy or fire.';
   const fo = fireOdds();
-  if (fo && fo.pct > 0) return `Tap <b>FIRE</b>: ${fo.pct}% with the ${wnm(wdef(me.guns[fo.gi]))}.`;
-
-  if ((!me.moved || WD.TUNE.multiMove) && me.res.move) return WD.TUNE.digIn ? 'Tap <b>Move</b>, then a lit location. Unused Movement becomes Armor at End turn.' : 'Tap <b>Move</b>, then a lit location, or <b>End turn</b>.';
+  if (fo && fo.pct > 0) return `Tap <b>FIRE</b>: ${fo.pct}% to hit.`;
+  if ((!me.moved || WD.TUNE.multiMove) && me.res.move) return 'Tap <b>Move</b>, or <b>End turn</b> (unused Movement → Armor).';
   return 'Buy what you can, then <b>End turn</b>.';
+}
+// the log in the second person for the human vs the AI: "You plays" → "You play"
+const YOU_VERB = { is: 'are', was: 'were', has: 'have', goes: 'go' };
+function say(msg) { return ui.mode === 'ai' ? String(msg).replace(/\bYou (is|was|has|goes|[a-z]+s)\b/g, (m, v) => `You ${YOU_VERB[v] || v.slice(0, -1)}`) : msg; }
+// what the rival did on their turn, in one line with the numbers that changed
+function rivalSummary(frames, hp0, pos0) {
+  const op = OP(), me = ME(); const nm = op.name; const mine = f => f.msg.startsWith(nm + ' ');
+  const n = re => frames.filter(f => mine(f) && re.test(f.msg)).length;
+  const parts = []; const pl = n(/^\S+ plays /); if (pl) parts.push(`played ${pl}`);
+  if (op.pos !== pos0) parts.push(`moved to ${envName(WD.envAt(G, op.pos))}`);
+  const b = n(/ (takes|buys) /); if (b) parts.push(`bought ${b}`);
+  const sh = n(/ fires /); if (sh) parts.push(`fired ${sh}×`);
+  const lost = hp0 - me.hp;
+  return `<b>${escA(nm)}</b> ${parts.join(', ') || 'passed'}${lost > 0 ? `: <b class="hl-dmg">you took ${lost}</b>` : lost < 0 ? `: you healed ${-lost}` : ''}.`;
 }
 function topHTML() {
   const mine = myTurn();
@@ -933,14 +970,14 @@ function handHTML(me) {
   const many = me.hand.length > 4; const t = myTurn();
   const bench = t && WD.canBench(G, ui.me) && me.hand.length;
   const playable = t && me.hand.some(i => !WD.cardDef(G, i).jam);
-  return `<div class="hand-head"><span class="lbl" style="white-space:nowrap">${t ? 'Hand' : 'Next hand'} · ${me.hand.length}</span>${playable ? '<button class="btn sm sig burnbtn" data-act="playall" data-tip="Play every card in your hand (Malfunction stays).">Play all</button>' : ''}${bench ? `<button class="btn sm ${ui.burnMode ? 'sig' : 'alt'} burnbtn" data-act="burnmode" data-tip="Workbench: once per turn, remove a card from your hand from the game. Free.">${ui.burnMode ? 'Tap a card to burn · cancel' : '🔥 Burn 1'}</button>` : ''}<span class="note">Tap a card to play it · hold for details · keep cards as bullets</span></div>
+  return `<div class="hand-head"><span class="lbl" style="white-space:nowrap">${t ? 'Hand' : 'Next hand'} · ${me.hand.length}</span>${playable ? '<button class="btn sm sig burnbtn" data-act="playall" data-tip="Play every card in your hand.">Play all</button>' : ''}${bench ? `<button class="btn sm ${ui.burnMode ? 'sig' : 'alt'} burnbtn" data-act="burnmode" data-tip="Workbench: once per turn, remove a card from your hand from the game. Free.">${ui.burnMode ? 'Tap a card to burn · cancel' : '🔥 Burn 1'}</button>` : ''}<span class="note">Tap a card to play it · hold for details · keep cards as bullets</span></div>
     <div class="hand ${many ? 'many' : ''} ${ui.burnMode ? 'burning' : ''}">${me.hand.slice().sort((a, b) => (ROLE_ORDER[WD.cardDef(G, a).archetype] ?? 9) - (ROLE_ORDER[WD.cardDef(G, b).archetype] ?? 9)).map(iid => cardHTML(WD.cardDef(G, iid), { act: ui.burnMode ? 'burn' : 'cardview', id: iid, prev: 'hc:' + iid })).join('') || `<span class="empty-hand">${t ? 'Hand empty. Move, search, buy and shoot — then End turn.' : 'Your next hand appears here.'}</span>`}</div>
     ${t ? (() => { const pc = WD.plateCost(G, ui.me); const ok = me.res.intel >= pc; return `<div class="buystation"><span class="lbl">Buy Station · always open · ${ic('intel')}${pc} each</span><div class="bs-row">${WD.TUNE.station.map(id => { const k = WD.CARDS[id]; const left = G.stationLeft ? G.stationLeft[id] : null; return `<button class="bscard" style="${ARCH_VAR[k.archetype] ? `--arch:var(${ARCH_VAR[k.archetype]})` : ''}" data-act="supply" data-id="${id}" ${ok && left !== 0 ? '' : 'disabled'} data-tip="${escA(`${k.name}: ${k.text} Buy anywhere, any turn, as many as you can afford. Goes to your discard pile.`)}"><b>${k.name}</b><span>${fx(k.text)}</span><span class="bsl">${hmPips(k.hit_markers)}${left != null ? `<small>${left} left</small>` : ''}</span></button>`; }).join('')}</div></div>`; })() : ''}
     ${me.play.length ? `<div class="inplay">Played: ${me.play.map(i => WD.cardDef(G, i).name).join(', ')}</div>` : ''}`;
 }
 function logHTML() {
   const items = G.log.filter(l => !/:\s*\.$/.test(l.msg)).slice(-90).reverse();
-  return `<section class="logbox"><div class="lh lbl">Combat log</div><ol>${items.map(l => `<li class="${l.cls}">${l.msg}</li>`).join('')}</ol></section>`;
+  return `<section class="logbox"><div class="lh lbl">Combat log</div><ol>${items.map(l => `<li class="${l.cls}">${say(l.msg)}</li>`).join('')}</ol></section>`;
 }
 function abarHTML(me) {
   const t = myTurn(); const here = WD.envAt(G, me.pos); const lootN = here.loot.length;
@@ -993,11 +1030,11 @@ function lootSheet(S) {
   if (S.type === 'item' && here && !S.converted) { S.sel = [S.id]; S.converted = true; }
   S.sel = (S.sel || []).filter(id => env.loot.some(x => x.iid === id)); S.trade = S.trade || []; S.fresh = S.fresh || [];
   const d0 = WD.ENVS[env.def]; const canBuy = myTurn() && here; const items = env.cache.searched ? env.loot.slice(0, 1) : [];
-  const info = `<div class="preview"><span><b>${d0.name}</b> · ${d0.cover ? `cover: +${d0.cover} Hit Marker to hit you here` : 'no cover'}${env.hot ? ' · centre' : ''}</span><span>${fx(d0.text)}</span>${!env.cache.searched ? `<span>Hidden cache: ${env.cache.reveal} cards. Search here to flip them.</span>` : ''}${env.crate && !env.crate.searched ? `<span>Supply crate: ${WD.TUNE.crate[0]} items, ${WD.TUNE.crate[1]} of them guns.</span>` : ''}</div>`;
+  const info = `<div class="preview"><span><b>${d0.name}</b> · ${d0.cover ? `cover (+${d0.cover} Hit Marker needed)` : 'no cover'}${env.hot ? ' · centre' : ''}</span><span>${fx(d0.text)}</span>${!env.cache.searched ? `<span>Hidden cache: ${env.cache.reveal} cards. Search here to flip them.</span>` : ''}${env.crate && !env.crate.searched ? `<span>Supply crate: ${WD.TUNE.crate[0]} items, ${WD.TUNE.crate[1]} of them guns.</span>` : ''}</div>`;
   const lfn = locFaceName(env);
   let h = headIntel(S.fresh.length ? `Search · ${envName(env)}` : here ? `${envName(env)} · buy${adj ? ' from next door' : ''}` : envName(env)) + (S.fresh.length ? `<p style="margin:0">Flipped face up. Buy what you want; the rest <b>stays here</b> for anyone — including your rival.</p>` : lfn ? '' : info);
-  if (adj && items.length) h += `<div class="adjnote">${ic('intel')} Buying from next door: <b>+${WD.TUNE.adjCost} Intel</b> per item (already in the prices).</div>`;
-  if (!here && items.length) h += `<div style="color:var(--muted);font-size:13px">Move to ${envName(env)} or next to it to buy here.</div>`;
+  if (adj && items.length) h += `<div class="adjnote">${ic('intel')} Next door: <b>+${WD.TUNE.adjCost} Intel</b> (in the price).</div>`;
+  if (!here && items.length) h += `<div style="color:var(--muted);font-size:13px">Stand here or next door to buy.</div>`;
   const total = WD.buyTotal(G, ui.me, S.sel);
   const gunSel = S.sel.some(id => (items.find(x => x.iid === id) || {}).kind === 'weapon');
   const attSel = S.sel.some(id => (items.find(x => x.iid === id) || {}).kind === 'att');
@@ -1013,7 +1050,7 @@ function lootSheet(S) {
   if (!env.cache.searched) h += `<div class="stacknote">Face-down stack: ${WD.stackPlan(G, env).map((k, i) => `${i === 0 ? 'top' : '#' + (i + 1)} ${k === 'weapon' ? 'gun' : 'card'}`).join(' · ')}. It flips when someone stands here.</div>`;
   if (myTurn() && env.w === me.pos && env.cache.searched && env.loot.length > 1) {
     const free = me.freeCycles > 0 || (me.perks.includes('spotter') && false);
-    h += `<div class="row cyclerow"><span class="lbl">Cycle the top card to the bottom</span>${free ? `<button class="btn sm sig" data-act="cycle" data-id="intel">${ic('cyc')} Cycle · free</button>` : `<button class="btn sm alt" data-act="cycle" data-id="intel" ${me.res.intel >= WD.TUNE.cycleCost ? '' : 'disabled'}>${ic('cyc')} ${ic('intel')}${WD.TUNE.cycleCost} Intel</button><button class="btn sm alt" data-act="cycle" data-id="move" ${me.res.move >= WD.TUNE.cycleCost ? '' : 'disabled'}>${ic('cyc')} ${ic('move')}${WD.TUNE.cycleCost} Movement</button>`}</div>`;
+    h += `<div class="row cyclerow"><span class="lbl">Cycle: top card to the bottom</span>${free ? `<button class="btn sm sig" data-act="cycle" data-id="intel">${ic('cyc')} Cycle · free</button>` : `<button class="btn sm alt" data-act="cycle" data-id="intel" ${me.res.intel >= WD.TUNE.cycleCost ? '' : 'disabled'}>${ic('cyc')} ${ic('intel')}${WD.TUNE.cycleCost} Intel</button><button class="btn sm alt" data-act="cycle" data-id="move" ${me.res.move >= WD.TUNE.cycleCost ? '' : 'disabled'}>${ic('cyc')} ${ic('move')}${WD.TUNE.cycleCost} Movement</button>`}</div>`;
   }
   if (canBuy && items.length) {
     const g = me.guns;
@@ -1024,7 +1061,7 @@ function lootSheet(S) {
     const tv = S.trade.length * WD.TUNE.tradeIn; const short = Math.max(0, total - me.res.intel);
     if (S.sel.length && WD.TUNE.tradeIn) h += `<div class="tradein"><span class="lbl">Trade in starters from your hand · +${WD.TUNE.tradeIn} Intel each, burned for good</span><div class="row">${starters.map(i => `<button class="btn sm ${S.trade.includes(i) ? 'sig' : 'alt'}" data-act="trade" data-id="${i}">${WD.cardDef(G, i).name}</button>`).join('') || '<span style="color:var(--muted);font-size:13px">No starter cards in hand.</span>'}</div></div>`;
     const ok = S.sel.length && total <= me.res.intel + tv && tv <= total && !noMount;
-    const msg = !S.sel.length ? 'Tap items to select them.' : noMount ? 'Get a gun before an attachment.' : tv > total ? 'Trade in only what you need.' : total > me.res.intel + tv ? `Short by ${short - tv} Intel.` : `You have ${me.res.intel} Intel.`;
+    const msg = !S.sel.length ? 'Tap a card to select it.' : noMount ? 'Get a gun first.' : tv > total ? 'Trade in only what you need.' : total > me.res.intel + tv ? `${short - tv} Intel short.` : `You have ${me.res.intel} Intel.`;
     h += `<div class="row"><button class="btn sig" data-act="dolot" ${ok ? '' : 'disabled'}>Buy ${S.sel.length || ''} · ${total} Intel${tv ? ` (${tv} trade-in)` : ''}</button><span style="color:${S.sel.length && !ok ? 'var(--danger)' : 'var(--muted)'};font-size:13px">${msg}</span><button class="btn alt" data-act="close">Done</button></div>`;
   }
   if (h.includes('<!--LSR-->')) h = h.replace('<!--LSR-->', '') + '</div></div>';
@@ -1038,15 +1075,15 @@ function aimSheet(S) {
   const row = k => od[Math.min(od.length - 1, k, cap)] || sp.steps.map(() => 0);
   const pc = v => v >= 0.995 ? '100%' : v > 0 && v < 0.01 ? '<1%' : Math.round(v * 100) + '%';
   const opts = []; for (let k = 1; k <= max; k++) { const o = row(k); const left = Math.max(0, max - k - sp.recoil); const pw = Math.max(0, k - cap) * WD.TUNE.aimPower;
-    opts.push(`<button class="aim-opt ${k === c ? 'on' : ''} ${k === sg.commit ? 'sg' : ''}" data-act="aimset" data-id="${k}" aria-pressed="${k === c}" aria-label="Commit ${k}: ${pc(o[0])} to hit${pw ? `, +${pw} damage` : ''}, ${left} Precision left" data-tip="${escA(`Commit ${k}: reveal ${Math.min(k, cap)} card${Math.min(k, cap) === 1 ? '' : 's'}, ${pc(o[0])} to hit${pw ? `, Power +${pw} damage` : ''}. ${left} Precision left after Recoil.`)}"><b>${k}</b><span>${pc(o[0])}</span><small>${pw ? `+${pw} dmg` : `${left} left`}</small></button>`); }
+    opts.push(`<button class="aim-opt ${k === c ? 'on' : ''} ${k === sg.commit ? 'sg' : ''}" data-act="aimset" data-id="${k}" aria-pressed="${k === c}" aria-label="Aim ${k}: ${pc(o[0])} to hit${pw ? `, +${pw} damage` : ''}, ${left} Precision left" data-tip="${escA(`Aim ${k}: ${Math.min(k, cap)} card${Math.min(k, cap) === 1 ? '' : 's'}, ${pc(o[0])} to hit${pw ? `, Power +${pw} damage` : ''}. ${left} Precision left.`)}"><b>${k}</b><span>${pc(o[0])}</span><small>${pw ? `+${pw} dmg` : `${left} left`}</small></button>`); }
   const o = row(c); const sgo = row(sg.commit);
-  const why = !sg0.commit ? 'No commit can hit this shot: see what it needs below.' : sp.left > 1 && sg.commit < max ? `★ is the plan: it saves Precision for your other shot${sp.left > 2 ? 's' : ''}.` : '★ is the best commit for this shot.';
+  const why = !sg0.commit ? 'No aim can hit this shot; see what it needs.' : sp.left > 1 && sg.commit < max ? `★ saves Precision for your next shot.` : '★ = best aim.';
   return `${head(`Aim · ${escA(wnm(def))}`)}
-    <p class="aim-how"><b>1 Precision = 1 card revealed, up to ${cap}.</b> Each Precision beyond ${cap} is <b>Power</b>: +${WD.TUNE.aimPower} damage if it hits. The shot spends what you commit, then Recoil ${sp.recoil} more. You have <b>${max}</b> Precision, <b>${sp.left}</b> shot${sp.left === 1 ? '' : 's'} left. ${why}</p>
+    <p class="aim-how"><b>1 Precision = 1 card, up to ${cap}.</b> Extra Precision is <b>Power</b> (+${WD.TUNE.aimPower} damage on a hit). Recoil costs ${sp.recoil} more. You have <b>${max}</b> Precision, <b>${sp.left}</b> shot${sp.left === 1 ? '' : 's'}. ${why}</p>
     <div class="aim-why" data-tip="${escA(`${KW.Cover} ${KW['long range']} ${KW.Mark} ${KW.Steady}`)}"><b>To hit ${pc(row(c)[0])}</b> · needs ${sp.need}+ ${ic('hm')}: ${oddsParts(sp).map(([t, k]) => `<span class="${k}">${t}</span>`).join(' · ')}</div>
-    <div class="aim-row" role="group" aria-label="Precision to commit">${opts.join('')}</div>
+    <div class="aim-row" role="group" aria-label="Precision to aim with">${opts.join('')}</div>
     <div class="aim-lad">${sp.steps.map(([h, d], i) => `<span class="aim-step ${i ? 'big' : ''}"><span>${ic('hm')}${h}+</span><b>${d} dmg</b><em>${pc(o[i])}</em></span>`).join('<span class="lar">›</span>')}</div>
-    <div class="row aim-btns"><button class="btn sig" data-act="aimfire" data-id="${c}">Fire · commit ${c} · ${pc(o[0])}</button>${c !== sg.commit ? `<button class="btn alt" data-act="aimfire" data-id="${sg.commit}">★ Fire ${sg.commit} · ${pc(sgo[0])}</button>` : ''}<button class="btn alt" data-act="close">Back</button></div>`;
+    <div class="row aim-btns"><button class="btn sig" data-act="aimfire" data-id="${c}">Fire · aim ${c} · ${pc(o[0])}</button>${c !== sg.commit ? `<button class="btn alt" data-act="aimfire" data-id="${sg.commit}">★ Fire ${sg.commit} · ${pc(sgo[0])}</button>` : ''}<button class="btn alt" data-act="close">Back</button></div>`;
 }
 function fireSheet(S) {
   const me = ME(), o = OP(); const same = me.pos === o.pos;
@@ -1096,23 +1133,23 @@ function sheetHTML() {
   if (S.type === 'aim') return aimSheet(S);
   if (['loot', 'item', 'loc'].includes(S.type)) return lootSheet(S);
   if (S.type === 'report') {
-    const f = S.f; const who = G.players[f.p].name; const me2 = ME();
+    const f = S.f; const who = G.players[f.p].name; const me2 = ME(); const you = ui.mode === 'ai' && f.p === ui.me;
     const more = f.p === ui.me && myTurn() && S.gi != null && WD.shootCheck(G, ui.me, S.gi).ok;
     if (f.fists) return `${head(`${who} · Punch`)}<div class="verdict hit">HIT</div><p>1 damage (ignores Armor).</p><button class="btn sig" data-act="close">Continue</button>`;
     const cards = [];
     if (f.bullet) cards.push((f.bullet.hm ? `<i class="hmb">+${f.bullet.hm}</i>` : '') + (/^free bullet/.test(f.bullet.name) ? `<span class="mf txt bul"><b>${ic('ammo')} Free bullet</b><small>${f.bullet.hm} Hit Marker</small></span>` : miniFace(f.bullet.name, 'bul')));
     f.revealed.forEach(r => cards.push(miniFace(r.name, r.jam ? 'jam' : '') + (r.hm ? `<i class="hmb">+${r.hm}</i>` : '')));
     const nC = cards.length;
-    return `${head(`${escA(who)} fires ${escA(f.weapon)}`)}
+    return `${head(you ? `You fire: ${escA(f.weapon)}` : `${escA(who)} fires: ${escA(f.weapon)}`)}
       <div class="rp-rev" style="--n:${nC}">${cards.map((c, i) => `<span class="rv2" style="--i:${i}">${c}${i === 0 && f.bullet ? '<em>LOADED</em>' : ''}</span>`).join('')}</div>
-      <div class="rp-sum" style="--d:${nC}"><span class="rp-got"><small>Hit Markers</small><b>${f.total}</b><i>/ ${f.req} needed</i></span>${f.steps ? ladderHTML(f.steps, f.level) : ''}</div>
+      <div class="rp-sum" style="--d:${nC}"><span class="rp-got" data-tip="${escA(`${f.total} Hit Markers on the revealed cards; the first step needs ${f.req}.`)}"><small>Hit Markers</small><b>${f.total}</b><i>/ ${f.req} needed</i></span>${f.steps ? ladderHTML(f.steps, f.level) : ''}</div>
       <div class="verdict2 ${f.hit ? 'hit' : 'miss'}" style="--d:${nC}">${f.hit ? `HIT <span>−${f.dealt}</span>` : f.jam ? 'JAMMED' : 'MISS'}</div>
-      ${(f.notes && f.notes.length) || f.recoil ? `<div class="rp-notes">${(f.notes || []).concat(f.recoil ? [`−${f.recoil} Precision (commit ${f.commit || 0} + Recoil)`] : []).join(' · ')}</div>` : ''}
+      ${(f.notes && f.notes.length) || f.recoil ? `<div class="rp-notes">${(f.notes || []).concat(f.recoil ? [`−${f.recoil} Precision (aim ${f.commit || 0} + Recoil ${Math.max(0, f.recoil - (f.commit || 0))})`] : []).join(' · ')}</div>` : ''}
       <div class="row rp-btns">${more ? `<button class="btn ${fireOdds(S.gi).pct >= 10 ? 'sig' : 'alt'}" data-act="fireagain">Fire again · ${WD.shotsLeft(G, ui.me, S.gi)} left · ${fireOdds(S.gi).pct >= 1 ? fireOdds(S.gi).pct + '%' : '&lt;1%'}</button>` : ''}<button class="btn ${more && fireOdds(S.gi).pct >= 10 ? 'alt' : 'sig'}" data-act="close">Continue</button></div>`;
   }
   if (S.type === 'rivalturn') {
     const lines = S.lines;
-    return `${head(`${OP().name}'s turn`)}<ol class="turnlog">${lines.map(l => `<li class="${l.cls}">${l.msg}</li>`).join('') || '<li>Nothing happened.</li>'}</ol><button class="btn sig" data-act="close">Your turn</button>`;
+    return `${head(`${OP().name}'s turn`)}<ol class="turnlog">${lines.map(l => `<li class="${l.cls}">${say(l.msg)}</li>`).join('') || '<li>Nothing happened.</li>'}</ol><button class="btn sig" data-act="close">Your turn</button>`;
   }
   if (S.type === 'over') return overSheet();
   if (S.type === 'menu') return `${head('Menu')}<div class="row"><button class="btn alt" data-act="sheet" data-id="rules">How to play</button><button class="btn alt" data-act="sheet" data-id="codex">Card codex</button></div><div class="row"><button class="btn alt" data-act="new" data-id="ai">New match vs AI</button><button class="btn alt" data-act="new" data-id="hotseat">New pass &amp; play</button><button class="btn alt" data-act="home">Main menu</button></div>`;
@@ -1215,15 +1252,16 @@ function sqDiff(b) {
   queuePops(pops.sort((x, y) => (x.kind === 'rally') - (y.kind === 'rally')));
 }
 // play a card / Play all, then light up whatever Squad lines and Rallies that fired
-function playAct(fn) { const b = sqSnap(); const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.sheet = null; ui.moveMode = false; sqDiff(b); after(); return r; }
-function dmgLine(pl) { const h = pl.dmgHist || []; const n = h.length ? h[h.length - 1] : 0; return n ? `${n} damage dealt` : 'no damage'; }
+function playAct(fn) { const b = sqSnap(); const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; ui.sheet = null; ui.moveMode = false; sqDiff(b); after(); return r; }
+function dmgLine(pl) { const h = pl.dmgHist || []; const n = h.length ? h[h.length - 1] : 0; return n ? `you dealt ${n} damage` : 'no damage dealt'; }
 function fpLine(pl) { const h = pl.fpHist; if (!h.length) return ''; const n = Math.round(h[h.length - 1]); const p = h.length > 1 ? Math.round(h[h.length - 2]) : null; return `Firepower ${n}${p == null ? '' : n > p ? ` ▲${n - p}` : n < p ? ` ▼${p - n}` : ' ='}${pl.turnSquads ? ` · Squad ×${pl.turnSquads}` : ''}`; }
 function toast(msg) { ui.toast = msg; clearTimeout(ui.toastT); ui.toastT = setTimeout(() => { ui.toast = null; renderLayer(); }, 2600); renderLayer(); }
-function rivalBanner() { if (ui.mode === 'ai' && !G.over) setTimeout(() => { const p = G.players[ui.me]; turnBanner('Rival’s turn', `Your turn ${p.dmgHist.length}: ${dmgLine(p)}`, 'them'); }, 0); }
+function rivalBanner() { if (ui.mode === 'ai' && !G.over) setTimeout(() => { const p = G.players[ui.me]; turnBanner('Rival’s turn', dmgLine(p)[0].toUpperCase() + dmgLine(p).slice(1), 'them'); }, 0); }
 function newMatch(mode, o = {}) {
   ui.mode = mode; ui.me = 0; ui.sheet = null; ui.moveMode = false; ui.burnMode = false; ui.busy = false; ui.handoff = false; ui.screen = 'game'; ui.tab = 'hand'; ui.overSeen = false; ui.meta = null; ui.daily = o.daily || null;
   const ok = WD.unlockedOps(ui.prof); const ops = o.daily ? [] : ui.ops.filter(k => ok.includes(k));
-  G = WD.newGame(Object.assign({ mode, names: mode === 'ai' ? ['Alpha', 'Rival'] : ['Operator 1', 'Operator 2'], ops }, o.daily ? { seed: WD.dailySeed(o.daily) } : {}));
+  ui.rivalSum = null;
+  G = WD.newGame(Object.assign({ mode, names: mode === 'ai' ? ['You', 'Rival'] : ['Operator 1', 'Operator 2'], ops }, o.daily ? { seed: WD.dailySeed(o.daily) } : {}));
   if (mode === 'hotseat') ui.me = G.turn;
   render(); after(); if (G.turn === ui.me) turnBanner('Your turn', 'Round 1 · drop in', 'me');
 }
@@ -1264,10 +1302,11 @@ function playStep() {
 function finishPlay() {
   const P = ui.play; if (!P) return; clearTimeout(P.t);
   G = P.real; ui.play = null; ui.fx = null; ui.banner = null; ui.busy = false;
-  if (!G.over) { const th = threatNow(ME()); turnBanner('Your turn', `Round ${G.round}${th.inRange ? ` · Threat ${th.ev}` : ''}`, 'me'); }
+  if (ui.mode === 'ai') ui.rivalSum = rivalSummary(P.frames, P.hp0, P.pos0);
+  if (!G.over) { const lost = P.hp0 - ME().hp; turnBanner('Your turn', `Round ${G.round}${lost > 0 ? ` · you took ${lost}` : ''}`, 'me'); }
   after();
 }
-function act(fn, keep) { const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } if (!keep) ui.sheet = null; ui.moveMode = false; after(); return r; }
+function act(fn, keep) { const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; if (!keep) ui.sheet = null; ui.moveMode = false; after(); return r; }
 function colRect(w) { const el = document.querySelector(`.envw[data-w="${w}"] .lc-stack, .envw[data-w="${w}"]`); return el ? el.getBoundingClientRect() : null; }
 function postFx() {
   const FX = ui.fx; if (!FX || !ui.play) return;
@@ -1320,9 +1359,9 @@ function after() {
   if (ui.mode === 'ai' && !G.over && G.turn !== ui.me && !ui.busy) {
     ui.busy = true; render();
     setTimeout(() => {
-      const real = G; const frames = []; real._rec = frames;
+      const real = G; const frames = []; real._rec = frames; const hp0 = ME().hp, pos0 = OP().pos;
       WD.aiTurn(real, 1 - ui.me); real._rec = null;
-      ui.play = { frames, i: 0, real, t: 0 }; ui.tab = 'intel' === ui.tab ? 'intel' : ui.tab;
+      ui.play = { frames, i: 0, real, t: 0, hp0, pos0 }; ui.tab = 'intel' === ui.tab ? 'intel' : ui.tab;
       playStep();
     }, 350);
   }

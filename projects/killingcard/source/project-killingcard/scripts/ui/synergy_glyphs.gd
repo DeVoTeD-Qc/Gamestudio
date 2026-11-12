@@ -181,6 +181,32 @@ static func draw_pierce_plate(ci: CanvasItem, r: Rect2, c: Color, down_dir: bool
 	draw_pierce_icon(ci, r.grow(-r.size.x * 0.12), c, down_dir)
 
 
+## kc-loadout-clean: the MOVE glyph (a four-way arrow: this unit can be dragged to another column
+## now). The same drawing on the board unit's chip, the glossary row and the inspector line.
+static func draw_move_icon(ci: CanvasItem, r: Rect2, c: Color) -> void:
+	var o: Vector2 = r.get_center()
+	var h: float = minf(r.size.x, r.size.y) * 0.5
+	var arm: float = h * 0.62
+	var head: float = h * 0.38
+	var w: float = maxf(1.5, h * 0.16)
+	ci.draw_line(o - Vector2(arm, 0), o + Vector2(arm, 0), c, w)
+	ci.draw_line(o - Vector2(0, arm), o + Vector2(0, arm), c, w)
+	for d: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		var tip: Vector2 = o + d * h * 0.95
+		var side: Vector2 = Vector2(-d.y, d.x) * head * 0.62
+		ci.draw_colored_polygon(PackedVector2Array([tip, tip - d * head + side, tip - d * head - side]), c)
+
+
+## The MOVE chip on a board unit: a dark disc, a teal ring and the four-way arrow.
+static func draw_move_chip(ci: CanvasItem, r: Rect2, c: Color) -> void:
+	var o: Vector2 = r.get_center()
+	var rad: float = minf(r.size.x, r.size.y) * 0.5
+	ci.draw_circle(o + Vector2(0, 1), rad, Color(0, 0, 0, 0.55))
+	ci.draw_circle(o, rad - 1.0, Color(INK, 0.92))
+	ci.draw_arc(o, rad - 1.5, 0, TAU, 28, c, 2.0, true)
+	draw_move_icon(ci, r.grow(-rad * 0.42), c)
+
+
 static func _flip_y(pts: PackedVector2Array, o: Vector2, s: float, flip: float) -> void:
 	if flip > 0.0:
 		return

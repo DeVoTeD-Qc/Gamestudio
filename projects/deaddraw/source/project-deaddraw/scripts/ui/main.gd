@@ -65,6 +65,10 @@ const IDX_STACK: int = 500
 const BASE: int = 560
 const PHONE_CSS: float = 600.0
 const BASE_GROWTH: float = 0.667
+## dd-ux-equip: the HUD's Patch icons (40 logical px = 28 CSS px on a phone) and the HP panel's
+## narrowest width next to them.
+const PATCH_ICON: float = 40.0
+const HP_MIN_W: float = 128.0
 
 var screen: Screen = Screen.TITLE
 var chosen_survivor: String = "rosa"
@@ -184,6 +188,7 @@ func _ready() -> void:
 		settings_panel.closed.connect(_publish_state)
 		codex.opened.connect(_publish_state)
 		codex.closed.connect(_publish_state)
+		codex.scrolled.connect(_publish_state)
 	var saved: String = Game.survivor_id
 	chosen_survivor = saved if Game.profile.survivor_unlocked(saved) else "rosa"
 	get_viewport().size_changed.connect(_render)
@@ -643,10 +648,8 @@ func _build_map() -> void:
 	st.add_child(_view({"kind": "S", "tag": str(s.get("name", "")).to_upper(), "title": "HP %d / %d  ·  %d pts" % [run.hp, run.max_hp, Game.bal.shown(run.points)],
 		"row": true, "title_size": DDUi.FONT_S, "payload": DDPayloads.hp(run)}, Vector2(220, 64)))
 	if not run.patches.is_empty():
-		var pp: Dictionary = DDPayloads.patches(run)
-		var pc: DDCardView = _view({"kind": "P", "tag": "PATCHES", "big": str(run.patches.size()), "big_size": 22, "row": true, "payload": pp}, Vector2(110, 64))
-		pc.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(pp))
-		st.add_child(pc)
+		# dd-ux-equip: the Patches you wear, as their painted icons
+		st.add_child(_patch_row(run, 52.0, vp.x - MARGIN * 2 - 228.0))
 	bottom.add_child(st)
 	var go: Button = DDUi.button("Enter %s" % str(run.district().get("name", "")), Color("7a2d27"), DDUi.FONT_L)
 	go.custom_minimum_size = Vector2(0, 88)
@@ -841,17 +844,94 @@ func _build_top(run: DDRun) -> Control:
 	_points_view = pv
 	h.add_child(pv)
 	if not run.patches.is_empty():
-		var pp: Dictionary = DDPayloads.patches(run)
-		var pc: DDCardView = _view({"kind": "P", "tag": "PATCH", "big": str(run.patches.size()), "big_size": 22, "row": true, "payload": pp}, Vector2(72, 0))
-		pc.name = "PatchesChip"
-		pc.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(pp))
-		h.add_child(pc)
+		# dd-ux-equip (head: "show their icons visually"): the painted Patch icons in a compact row;
+		# the HP panel keeps at least HP_MIN_W, the row takes what is left (+N when more don't fit)
+		var hud_w: float = get_viewport_rect().size.x - MARGIN * 2
+		if not portrait:
+			hud_w -= clampf(hud_w * 0.14, 150.0, 210.0) + clampf(hud_w * 0.27, 290.0, 440.0) + SEP * 2
+		var budget: float = hud_w - HP_MIN_W - 108.0 - (90.0 if run.cover > 0 else 0.0) - 64.0 - 72.0 - 6.0 * 5
+		h.add_child(_patch_row(run, PATCH_ICON, budget))
+	h.get_child(0).custom_minimum_size.x = HP_MIN_W
 	h.add_child(_help_button())
 	var sb: Button = _settings_button(true)
 	sb.text = "Menu"
 	sb.custom_minimum_size = Vector2(72, HUD_H)
 	h.add_child(sb)
 	return h
+
+
+## dd-ux-equip: the Patches as a row of their painted icons, `icon` px square, at most `max_w` px
+## wide (the last place becomes "+N" when they don't all fit). The row is the PatchesChip: a tap
+## (or long press on its edge) opens the list of every Patch with its rule; each icon is its own
+## tile, so right click / long press on it gives that Patch's name and rule (a tap opens it too).
+func _patch_row(run: DDRun, icon: float, max_w: float) -> DDCardView:
+	var pp: Dictionary = DDPayloads.patches(run)
+	var row: DDCardView = _custom_tile("P", pp, DDUi.PANEL)
+	row.name = "PatchesChip"
+	row.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(pp))
+	var h: HBoxContainer = DDUi.hbox(4)
+	h.name = "PatchIcons"
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(h)
+	var n: int = run.patches.size()
+	var fit: int = maxi(1, int(floor((max_w - 12.0 + 4.0) / (icon + 4.0))))
+	var shown_n: int = n if n <= fit else maxi(1, fit - 1)
+	for k: int in shown_n:
+		var pid: String = run.patches[k]
+		h.add_child(_patch_icon(pid, icon))
+	if shown_n < n:
+		var more: Label = DDUi.label("+%d" % (n - shown_n), DDUi.FONT_S - 2, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER)
+		more.name = "MorePatches"
+		more.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		more.custom_minimum_size = Vector2(icon, icon)
+		more.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(more)
+	# a slim rim: the icons fill the HUD's height without growing it
+	var pst: StyleBox = row.get_theme_stylebox("panel")
+	if pst != null:
+		pst = pst.duplicate()
+		pst.content_margin_top = 3.0
+		pst.content_margin_bottom = 3.0
+		pst.content_margin_left = 6.0
+		pst.content_margin_right = 6.0
+		row.add_theme_stylebox_override("panel", pst)
+	row.size_flags_vertical = Control.SIZE_FILL
+	return row
+
+
+## One Patch icon: the painted patch (or its initial when the art is missing), inspectable.
+func _patch_icon(pid: String, icon: float) -> DDCardView:
+	var p: Dictionary = DDPayloads.patch(pid, Game.bal)
+	var tex: Texture2D = Art.texture_for(Art.patch_keys(pid))
+	if tex != null:
+		p["art"] = tex
+	var ic: DDCardView = _custom_tile("P", p)
+	ic.name = "Patch_" + pid
+	var rim: Node = ic.get_node_or_null(^"PaintedRim")
+	if rim != null:
+		ic.remove_child(rim)
+		rim.queue_free()
+	ic.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	ic.custom_minimum_size = Vector2(icon, icon)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.name = "Icon"
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(icon, icon)
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ic.add_child(tr)
+		ic.art_rect = tr
+	else:
+		var l: Label = DDUi.label(DDText.patch_name(pid).left(1), DDUi.FONT_M, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER)
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ic.add_child(l)
+	ic.tapped.connect(func(_v: DDCardView) -> void: _inspect.open(p))
+	return ic
 
 
 ## dd-ux-v4: the "?" (Help / Glossary). Right click / long press says what it is.
@@ -1176,6 +1256,7 @@ func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99)
 		var cv: DDCardView = _view(spec, Vector2(card_w, card_h))
 		cv.index = i
 		cv.tapped.connect(_on_card_tapped)
+		_drag_source(cv, {"type": "street", "index": i})
 		g.add_child(cv)
 		var cid: int = c.get_instance_id()
 		_street_views[cid] = cv
@@ -1308,6 +1389,8 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 		gv.index = IDX_GUN + s
 		gv.inspected.connect(_on_inspect)
 		gv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(s))
+		if run.slot(s) != null:
+			_drag_source(gv, {"type": "weapon", "w": s})
 		for k: int in gv.stack_cards.size():
 			gv.stack_cards[k].index = IDX_STACK + s * 10 + k
 		_gun_views[s] = gv
@@ -1419,6 +1502,7 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	nl.resized.connect(func() -> void: DDCardView.fit_label(nl, DDUi.FONT_S - 3, 9))
 	col.add_child(nl)
 	mv.tapped.connect(func(_v: DDCardView) -> void: tap_weapon(DDRun.MELEE))
+	_drag_source(mv, {"type": "weapon", "w": DDRun.MELEE})
 	_melee_view = mv
 	return mv
 
@@ -1518,10 +1602,13 @@ func _build_hint(run: DDRun) -> Control:
 	return p
 
 
-## dd-ui-clean: the hint as a floating toast over the strip (pile / event log), same width, centred on
+## dd-ui-clean: the hint as a floating toast over the strip's event-log line, same width, centred on
 ## it, with a drop shadow. It lives on the sheet layer, so nothing in the street moves or resizes when it
 ## comes or goes; only the toast catches taps (Got it), everything around it still reaches the cards.
-func _float_hint(hint: Control, anchor: Control) -> void:
+func _float_hint(hint: Control, strip: Control) -> void:
+	# over the event-log line only: the draw pile next to it stays tappable / inspectable
+	var log_node: Control = strip.find_child("Log", true, false) as Control
+	var anchor: Control = log_node if log_node != null else strip
 	var toast: PanelContainer = PanelContainer.new()
 	toast.name = "Hint"
 	var sh: StyleBoxFlat = StyleBoxFlat.new()
@@ -1774,11 +1861,21 @@ func tap_street(i: int) -> void:
 			var ev: Dictionary = run.attack(i)
 			_finish(ev, {"type": "attack", "ev": ev, "snap": snap})
 		DDCard.WEAPON:
+			# dd-ux-equip (head): a free slot takes the gun straight away (it flies in); with both
+			# slots full the sheet asks: into slot 1 / into slot 2 (each says what it replaces), scrap
+			var free: int = auto_slot(i)
+			if free >= 0:
+				do_resolve(i, DDRun.EQUIP1 if free == 0 else DDRun.EQUIP2)
+				return
 			sheet = {"type": "gun", "index": i}
 			Sfx.cue(&"button", 0.9)
 			_queue_render()
 		DDCard.MELEE:
-			# v4: a melee weapon card: TAKE it (melee slot) or SCRAP it
+			# v4: a melee weapon card: TAKE it (melee slot) or SCRAP it. dd-ux-equip: with Bare
+			# Hands there is nothing to replace, so a tap takes it
+			if not run.has_melee_weapon() and bool(run.card_preview(i, DDRun.TAKE).get("ok", false)):
+				do_resolve(i, DDRun.TAKE)
+				return
 			sheet = {"type": "melee", "index": i}
 			Sfx.cue(&"button", 0.9)
 			_queue_render()
@@ -1799,6 +1896,203 @@ func tap_weapon(w: int) -> void:
 		Game.save_run()
 	last_block = ""
 	_queue_render()
+
+
+## dd-ux-equip: the gun slot a tap on street gun card i equips straight away (the first empty
+## slot the gun may go into), or -1 when both slots hold a gun (then the sheet asks).
+func auto_slot(i: int) -> int:
+	var run: DDRun = Game.run
+	if run == null or i < 0 or i >= run.street.size() or run.street[i].kind != DDCard.WEAPON:
+		return -1
+	for s: int in 2:
+		if run.slot(s) == null and bool(run.card_preview(i, DDRun.EQUIP1 if s == 0 else DDRun.EQUIP2).get("ok", false)):
+			return s
+	return -1
+
+
+# ---------------------------------------------------------------- drag and drop (dd-ux-equip)
+## One model (scripts/ui/dd_drag.gd): lift a tile (10 px of movement), lit targets take it, dark
+## ones and empty space snap it back. Sources and their targets:
+## - a street gun card -> gun slot 1 / 2 (replacing pays the salvage, as the sheet does) or SCRAP;
+## - a street melee weapon -> the melee button (TAKE) or SCRAP;
+## - a medkit / cover card -> the HP panel (use it);
+## - a gun / melee button -> a zombie (attack it with that weapon; it becomes the active one);
+## - a zombie -> a gun / melee button (the same attack).
+## The SCRAP zone exists only while a gun / melee card is lifted: it covers the pile strip.
+var _scrap_zone: Control = null
+
+
+func _drag_source(v: DDCardView, src: Dictionary) -> void:
+	v.drag_enabled = true
+	v.set_meta(&"drag_src", src)
+	v.drag_started.connect(func(view: DDCardView, gp: Vector2) -> void: start_drag(view, src, gp))
+	v.drag_moved.connect(func(_view: DDCardView, gp: Vector2) -> void:
+		if drag != null:
+			drag.move(gp))
+	v.drag_released.connect(func(_view: DDCardView, gp: Vector2) -> void: end_drag(gp))
+
+
+## The drop targets for a drag source ({type: "street", index} or {type: "weapon", w}):
+## [{name, control, ok, reason, act}] (DDDrag's target shape). Names: slot1, slot2, scrap, melee,
+## hp, gun0, gun1, zombie<i>.
+func drag_targets(src: Dictionary) -> Array[Dictionary]:
+	var run: DDRun = Game.run
+	var out: Array[Dictionary] = []
+	if run == null or screen != Screen.STREET:
+		return out
+	if str(src.get("type", "")) == "weapon":
+		var w: int = int(src.get("w", 0))
+		for i: int in run.street.size():
+			var zc: DDCard = run.street[i]
+			if zc.kind != DDCard.ZOMBIE:
+				continue
+			var pr: Dictionary = run.preview(i, w)
+			out.append({"name": "zombie%d" % i, "control": _street_views.get(zc.get_instance_id()), "ok": bool(pr["ok"]), "reason": str(pr.get("reason", "")),
+				"act": func() -> void: drag_attack(w, i)})
+		return out
+	var idx: int = int(src.get("index", -1))
+	if idx < 0 or idx >= run.street.size():
+		return out
+	var c: DDCard = run.street[idx]
+	match c.kind:
+		DDCard.ZOMBIE:
+			for s: int in 2:
+				if run.slot(s) == null:
+					continue
+				var pz: Dictionary = run.preview(idx, s)
+				out.append({"name": "gun%d" % s, "control": _gun_views[s], "ok": bool(pz["ok"]), "reason": str(pz.get("reason", "")),
+					"act": func() -> void: drag_attack(s, idx)})
+			var pm: Dictionary = run.preview(idx, DDRun.MELEE)
+			out.append({"name": "melee", "control": _melee_view, "ok": bool(pm["ok"]), "reason": str(pm.get("reason", "")),
+				"act": func() -> void: drag_attack(DDRun.MELEE, idx)})
+		DDCard.WEAPON:
+			for s2: int in 2:
+				var ch: String = DDRun.EQUIP1 if s2 == 0 else DDRun.EQUIP2
+				var pe: Dictionary = card_preview_safe(idx, ch)
+				out.append({"name": "slot%d" % (s2 + 1), "control": _gun_views[s2], "ok": bool(pe["ok"]), "reason": str(pe.get("reason", "")),
+					"act": func() -> void: do_resolve(idx, ch)})
+			out.append(_scrap_target(idx))
+		DDCard.MELEE:
+			var pt: Dictionary = card_preview_safe(idx, DDRun.TAKE)
+			out.append({"name": "melee", "control": _melee_view, "ok": bool(pt["ok"]), "reason": str(pt.get("reason", "")),
+				"act": func() -> void: do_resolve(idx, DDRun.TAKE)})
+			out.append(_scrap_target(idx))
+		_:
+			var pu: Dictionary = card_preview_safe(idx, DDRun.USE)
+			out.append({"name": "hp", "control": _hp_anchor, "ok": bool(pu["ok"]), "reason": str(pu.get("reason", "")),
+				"act": func() -> void: do_resolve(idx, DDRun.USE)})
+	return out
+
+
+func card_preview_safe(i: int, choice: String) -> Dictionary:
+	var pv: Dictionary = Game.run.card_preview(i, choice)
+	if busy:
+		pv["ok"] = false
+	return pv
+
+
+func _scrap_target(idx: int) -> Dictionary:
+	var ps: Dictionary = card_preview_safe(idx, DDRun.SCRAP)
+	return {"name": "scrap", "control": _scrap_zone, "ok": bool(ps["ok"]), "reason": str(ps.get("reason", "")),
+		"points": int(ps.get("points", 0)), "act": func() -> void: do_resolve(idx, DDRun.SCRAP)}
+
+
+## The SCRAP drop zone over the pile strip ("SCRAP · +N pts"), for the drag of card idx.
+func _make_scrap_zone(idx: int) -> Control:
+	var strip: Control = _content.find_child("Strip", true, false)
+	if strip == null:
+		return null
+	var pts: int = int(Game.run.card_preview(idx, DDRun.SCRAP).get("points", 0))
+	var z: PanelContainer = DDUi.panel(Color("3a2f12"), 8, DDUi.accent("X"), 3)
+	z.name = "ScrapZone"
+	var l: Label = DDUi.label("SCRAP  ·  +%d pts" % Game.bal.shown(pts), DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	z.add_child(l)
+	var r: Rect2 = strip.get_global_rect()
+	z.position = r.position
+	z.size = r.size
+	z.custom_minimum_size = r.size
+	return z
+
+
+func start_drag(view: DDCardView, src: Dictionary, gp: Vector2) -> void:
+	var run: DDRun = Game.run
+	if drag == null or busy or run == null or screen != Screen.STREET or not run.pending_patch.is_empty() or not sheet.is_empty():
+		return
+	if str(src.get("type", "")) == "weapon" and int(src.get("w", 0)) != DDRun.MELEE and run.slot(int(src["w"])) == null:
+		return
+	var extras: Array[Control] = []
+	_scrap_zone = null
+	var idx: int = int(src.get("index", -1))
+	if str(src.get("type", "")) == "street" and idx >= 0 and idx < run.street.size() and run.street[idx].kind in [DDCard.WEAPON, DDCard.MELEE]:
+		_scrap_zone = _make_scrap_zone(idx)
+		if _scrap_zone != null:
+			extras.append(_scrap_zone)
+	drag.reduce = Game.reduce_motion()
+	Sfx.cue(&"flip", 1.2)
+	drag.begin(view, _drag_ghost(view, src), drag_targets(src), gp, src, extras)
+	if OS.has_feature("web"):
+		_publish_state.call_deferred()
+
+
+## The lifted copy: a street card is copied as it is; a gun / melee button lifts a small card of
+## its weapon (the big gun tile would cover the street).
+func _drag_ghost(view: DDCardView, src: Dictionary) -> Control:
+	var run: DDRun = Game.run
+	if str(src.get("type", "")) == "street":
+		var idx: int = int(src.get("index", -1))
+		if idx >= 0 and idx < run.street.size():
+			var spec: Variant = _street_specs.get(run.street[idx].get_instance_id())
+			if spec is Dictionary:
+				return _view((spec as Dictionary).duplicate(true), view.size)
+		return null
+	var w: int = int(src.get("w", 0))
+	if w == DDRun.MELEE:
+		var ms: Dictionary = DDV4Hooks.melee_spec(run)
+		return _view({"kind": "K", "tag": "MELEE", "hit": run.melee_power(), "title": str(ms.get("name", "")), "art_keys": ms.get("art_keys", [])}, Vector2(120, 150))
+	var g: DDGun = run.slot(w)
+	if g == null:
+		return null
+	return _view({"kind": "W", "tag": "GUN", "hit": g.power, "title": g.name, "art_keys": Art.weapon_keys(g.wid, g.name)}, Vector2(120, 150))
+
+
+func end_drag(gp: Vector2) -> void:
+	if drag == null or not drag.is_active():
+		return
+	var t: Dictionary = drag.release(gp)
+	_scrap_zone = null
+	if OS.has_feature("web"):
+		_publish_state.call_deferred()
+	if not t.is_empty() and not bool(t.get("ok", false)):
+		# a dark target: say why, right where the board says what happened
+		Sfx.cue(&"warn")
+		var ll: Label = _content.find_child("LastLine", true, false)
+		if ll != null and str(t.get("reason", "")) != "":
+			ll.text = "Can't: %s." % str(t["reason"])
+			ll.add_theme_color_override("font_color", DDUi.WARN)
+
+
+## Drop helper (tests, the web smoke): runs the drop of src on the target called `target_name`;
+## false when there is no such target or it is dark.
+func drop_on(src: Dictionary, target_name: String) -> bool:
+	for t: Dictionary in drag_targets(src):
+		if str(t["name"]) == target_name:
+			if not bool(t["ok"]):
+				return false
+			(t["act"] as Callable).call()
+			return true
+	return false
+
+
+## A drag of weapon w onto zombie i: w becomes the active weapon, then it attacks (the same as a
+## tap on the weapon, then a tap on the zombie).
+func drag_attack(w: int, i: int) -> void:
+	var run: DDRun = Game.run
+	if busy or run == null:
+		return
+	if run.active != w and bool(run.set_active(w).get("ok", false)):
+		Game.save_run()
+	tap_street(i)
 
 
 func do_resolve(i: int, choice: String) -> void:
@@ -2336,6 +2630,12 @@ func _build_end() -> void:
 	sv.add_child(DDUi.label("Best %d  ·  %d kills  ·  %d guns finished  ·  %d rooms" % [Game.bal.shown(Game.profile.best_score(run.survivor_id)),
 		int(st.get("kills", 0)), int(st.get("finished", 0)), int(st.get("rooms", 0))], DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	v.add_child(sc)
+	if not run.patches.is_empty():
+		# dd-ux-equip: the run's Patches as their painted icons (each one inspectable)
+		v.add_child(DDUi.label("Patches worn", DDUi.FONT_S, DDUi.accent("P"), HORIZONTAL_ALIGNMENT_CENTER))
+		var pcc: CenterContainer = CenterContainer.new()
+		pcc.add_child(_patch_row(run, 60.0, get_viewport_rect().size.x - MARGIN * 2))
+		v.add_child(pcc)
 	if not Game.new_unlocks.is_empty():
 		v.add_child(DDUi.label("New unlocks", DDUi.FONT_M, DDUi.GOOD, HORIZONTAL_ALIGNMENT_CENTER, true))
 		var row: HFlowContainer = HFlowContainer.new()
@@ -2597,6 +2897,13 @@ func _publish_state() -> void:
 		for g: Variant in run.slots:
 			stacks.append((g as DDGun).stack.duplicate() if g != null else null)
 		st["stacks"] = stacks
+		# dd-ux-equip: what is in each slot, the melee weapon, the drag in progress, the Codex scroll
+		st["guns"] = run.slots.map(func(g: Variant) -> String: return (g as DDGun).wid if g != null else "")
+		st["melee"] = str(run.melee.get("id", "")) if run.has_melee_weapon() else ""
+	st["drag"] = drag.is_active() if drag != null else false
+	st["drag_hover"] = drag.hovered if drag != null else ""
+	var csc: Node = codex.find_child("Scroll", true, false) if codex.is_open() else null
+	st["codex_scroll"] = (csc as ScrollContainer).scroll_vertical if csc is ScrollContainer else -1
 	JavaScriptBridge.eval("window.ddState = " + JSON.stringify(st) + ";", true)
 
 

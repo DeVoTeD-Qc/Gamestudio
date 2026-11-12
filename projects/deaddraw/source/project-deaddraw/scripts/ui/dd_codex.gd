@@ -21,6 +21,8 @@ const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
 signal opened
 signal closed
 signal inspect_requested(payload: Dictionary)
+## dd-ux-equip: a touch scroll of the list ended.
+signal scrolled
 
 const TYPES: Array[String] = ["all", "guns", "melee", "zombies", "bosses", "items", "patches"]
 const TYPE_KIND: Dictionary = {"guns": "W", "melee": "K", "zombies": "Z", "bosses": "F", "items": "M", "patches": "P"}
@@ -247,7 +249,7 @@ func _scroll(v: VBoxContainer) -> VBoxContainer:
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(sc)
 	# dd-ux-equip: one-finger drag (on tiles or empty space) and two-finger scroll on touch
-	DDTouchScroll.attach(sc)
+	DDTouchScroll.attach(sc).gesture_ended.connect(func() -> void: scrolled.emit())
 	var inner: VBoxContainer = DDUi.vbox(8)
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sc.add_child(inner)

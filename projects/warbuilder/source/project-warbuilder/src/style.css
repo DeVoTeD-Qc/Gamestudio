@@ -2660,3 +2660,7 @@ button.tchip.act:hover, button.tchip.act:focus-visible { background: #4A4218; ou
   .h-engine .h-tac { display: none; }
 }
 .h-engine { max-width: 100%; } .h-engine .h-tac { max-width: 100%; }
+
+/* ===== wb-ux-text: plain-words caption under every zoom (long press / right click / hover) ===== */
+.pv-cap { margin: 6px 0 0; padding: 7px 10px; border-radius: 8px; background: #12150F; color: #F3F4EB; font: 600 12.5px/1.35 var(--f-body); box-shadow: 0 0 0 1.5px #3B4034; max-width: 100%; }
+.pv.gun .pv-cap { max-width: 410px; }

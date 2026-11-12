@@ -555,13 +555,10 @@ func test_v4_melee_launcher_salvage_and_run_flight() -> void:
 		var kc: DDCardView = _tile(m, 0)
 		check(kc != null and kc.hit_burst != null and kc.kind == "K", tag + " the melee card shows its hit burst")
 		check(str(kc.payload.get("t1", "")).contains("Fire Axe"), tag + " the melee card's tooltip: " + str(kc.payload.get("t1", "")))
+		# dd-ux-equip: with Bare Hands a tap takes it (no sheet)
 		m.call("tap_street", 0)
 		await _settle()
-		var take: Button = m.find_child("Melee_" + DDRun.TAKE, true, false)
-		check(take != null and not take.disabled and take.size.y >= 63.5, tag + " TAKE in the sheet")
-		check(m.find_child("Melee_" + DDRun.SCRAP, true, false) != null, tag + " SCRAP in the sheet")
-		take.pressed.emit()
-		await _settle()
+		check(m.find_child("Melee_" + DDRun.TAKE, true, false) == null, tag + " no TAKE / SCRAP sheet over Bare Hands")
 		# dd-polish5: the taken card flies into the melee button; no ghost stays on the street
 		check((m.get("feedback").get("last_played") as Array).has("melee_take"), tag + " TAKE plays the melee fly-in")
 		await tree.create_timer(1.2).timeout

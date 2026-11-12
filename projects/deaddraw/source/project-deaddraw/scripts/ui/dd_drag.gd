@@ -80,7 +80,6 @@ func begin(src: Control, ghost_view: Control, tgts: Array[Dictionary], gpos: Vec
 		g.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		g.set_meta(&"ok", bool(t.get("ok", false)))
 		add_child(g)
-		move_child(g, 0)
 		_glows[str(t["name"])] = g
 	_layout_glows()
 	move(gpos)

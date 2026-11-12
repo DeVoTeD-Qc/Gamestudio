@@ -186,16 +186,12 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		eq(gv.stack_cards.size(), 1, tag + " the gun card shows the stack")
 		eq(gv.stack_cards[0].big_label.text, "5", tag + " the number is visible")
 		check(not gv.stack_cards[0].payload.is_empty(), tag + " stack card inspectable")
-		# gun card: the 3-button sheet
+		# gun card with slot 2 empty (dd-ux-equip): a tap equips it straight into the empty slot
 		m.call("tap_street", idx(run, "W:rifle"))
 		await _settle()
-		eq(str((m.get("sheet") as Dictionary).get("type", "")), "gun", tag + " gun sheet open")
-		check(_button(m, "INTO SLOT 1") != null and _button(m, "INTO SLOT 2") != null and _button(m, "SCRAP") != null, tag + " slot 1 / slot 2 / scrap")
-		check(_button(m, "INTO SLOT 1").text.contains("replaces Service Pistol"), tag + " says what it replaces")
-		_button(m, "INTO SLOT 2").pressed.emit()
-		await _settle()
-		eq(run.slot(1).wid, "rifle", tag + " rifle in slot 2")
-		eq((m.get("sheet") as Dictionary).size(), 0, tag + " sheet closed")
+		eq((m.get("sheet") as Dictionary).size(), 0, tag + " no sheet with an empty slot")
+		eq(run.slot(1).wid, "rifle", tag + " rifle auto-equipped in slot 2")
+		eq(run.slot(0).name, "Service Pistol", tag + " the pistol stays in slot 1")
 		# street ended after 2 resolves? no: 2 of 3 used; resolve the medkit
 		m.call("tap_street", idx(run, "M4"))
 		await _settle()

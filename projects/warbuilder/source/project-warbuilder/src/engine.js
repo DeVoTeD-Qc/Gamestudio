@@ -54,29 +54,29 @@ function effParts(effs) {
     else if (e.op === 'mark') out.push(times(e.n, 'Mark'));
     else if (e.op === 'pierce') out.push('Pierce');
     else if (e.op === 'steady') out.push(times(e.n, 'Steady'));
-    else if (e.op === 'dmgTurn') out.push(`hits +${e.n} damage`);
+    else if (e.op === 'dmgTurn') out.push(`Hits +${e.n} damage`);
     else if (e.op === 'buy') out.push(`+${e.n} Buy`);
-    else if (e.op === 'charge') out.push(`at distance 0 your hits deal +${e.n} damage this turn`);
-    else if (e.op === 'onHit') out.push(`your next hit this turn draws ${e.n} cards`);
-    else if (e.op === 'sweep') out.push(`look at your top ${e.n} cards and put them back in any order`);
-    else if (e.op === 'expose') out.push('this turn your shots ignore cover, and your hits ignore Armor and Reaction cards');
-    else if (e.op === 'overwatch') out.push(`at End, save up to ${TUNE.overwatchCap} unspent Precision: fire it if the rival ends their turn in range`);
-    else if (e.op === 'fortify') out.push(`your Armor holds through your next Ready (up to ${TUNE.fortifyCap})`);
+    else if (e.op === 'charge') out.push(`+${e.n} damage at distance 0 this turn`);
+    else if (e.op === 'onHit') out.push(`next hit this turn: draw ${e.n}`);
+    else if (e.op === 'sweep') out.push(`reorder your top ${e.n} cards`);
+    else if (e.op === 'expose') out.push('this turn ignore cover, Armor and Reactions');
+    else if (e.op === 'overwatch') out.push(`End turn: hold up to ${TUNE.overwatchCap} Precision; fire it if the rival ends in range`);
+    else if (e.op === 'fortify') out.push(`keep your Armor at your next Ready (max ${TUNE.fortifyCap})`);
     else if (e.op === 'heal') out.push(`Heal ${e.n}`);
-    else if (e.op === 'suppress') out.push(`Suppress: the rival's next turn gets −${e.move} Movement and −${e.prec} Precision`);
-    else if (e.op === 'repeat') out.push('repeat the play effects of the card you played just before this one');
-    else if (e.op === 'turret') out.push(`free shot, distance 0–${TUNE.turretRange}: reveal 1; 1 Hit Marker hits for ${e.n}`);
-    else if (e.op === 'anyStack') out.push('this turn you may buy the top card of any stack on the map, at its printed cost');
+    else if (e.op === 'suppress') out.push(`Suppress: rival's next turn −${e.move} Movement, −${e.prec} Precision`);
+    else if (e.op === 'repeat') out.push('repeat the play line of your previous card');
+    else if (e.op === 'turret') out.push(`if the rival is 0–${TUNE.turretRange} away, reveal 1: 1 Hit Marker hits for ${e.n}`);
+    else if (e.op === 'anyStack') out.push('buy from any stack this turn (printed cost)');
   }
   return out;
 }
 const effText = effs => effParts(effs).join(', ');
-// full sentence for a card's play line: "Gain 1 Movement and 2 Precision. Pierce. Draw 1."
+// a card's play line, short: "+1 Movement, +2 Precision. Pierce. Draw 1." (wb-ux-text: same words as Squad lines and Rally)
 function playText(effs) {
   const g = effs.filter(e => e.op === 'gain'); const rest = effs.filter(e => e.op !== 'gain');
-  const gs = g.map(e => `${e.n} ${RES_LABEL[e.res]}${e.res === 'shot' && e.n > 1 ? 's' : ''}`);
+  const gs = g.map(e => `+${e.n} ${RES_LABEL[e.res]}${e.res === 'shot' && e.n > 1 ? 's' : ''}`);
   const s = [];
-  if (gs.length) s.push(`Gain ${gs.length > 1 ? gs.slice(0, -1).join(', ') + ' and ' + gs[gs.length - 1] : gs[0]}.`);
+  if (gs.length) s.push(`${gs.join(', ')}.`);
   for (const p of effParts(rest)) s.push(p.charAt(0).toUpperCase() + p.slice(1) + '.');
   return s.join(' ');
 }
@@ -87,7 +87,7 @@ const CARDS = {};
 function TC(id, name, archetype, tier, hm, cost, copies, effects, extra) {
   const d = Object.assign({ id, name, archetype, tier, hit_markers: hm, intel_cost: cost, copies, effects, tags: [ARCH_TAG[archetype]] }, extra || {});
   d.text = d.loadout ? `Loadout. Ready: ${effText(d.loadout)}.` : playText(effects);
-  if (d.adrenaline) d.text += ' When a shot hits you, return this from your discard pile to your hand.';
+  if (d.adrenaline) d.text += ' When you are hit, it returns from discard to hand.';
   if (d.squad) d.squadText = effText(d.squad);
   CARDS[id] = d;
 }
@@ -197,12 +197,12 @@ const ATTS = {};
 // ---------- LOCATIONS (8 types, 7 dealt in a fixed row). Each has a squad: 2 in 3 refills of its stack are that squad's cards. ----------
 const ENVS = {
   E01: { affinity: 'assault', id: 'E01', name: 'Open Road', cover: 0, bonus: { move: 1 }, bonusText: '+1 Movement', text: 'No cover. Here: +1 Movement.' },
-  E02: { affinity: 'assault', id: 'E02', name: 'Small Shed', cover: 1, bonus: { cycle: 1 }, bonusText: '1 free cycle', text: 'Cover: shots here need +1 Hit Marker. Here: 1 free cycle.' },
-  E03: { affinity: 'engineer', id: 'E03', name: 'House', cover: 1, bonus: { draw: 1 }, bonusText: 'Draw 1', text: 'Cover: shots here need +1 Hit Marker. Here: draw 1 card.' },
+  E02: { affinity: 'assault', id: 'E02', name: 'Small Shed', cover: 1, bonus: { cycle: 1 }, bonusText: '1 free cycle', text: 'Cover: +1 Hit Marker needed. Here: 1 free cycle.' },
+  E03: { affinity: 'engineer', id: 'E03', name: 'House', cover: 1, bonus: { draw: 1 }, bonusText: 'Draw 1', text: 'Cover: +1 Hit Marker needed. Here: draw 1.' },
   E04: { affinity: 'engineer', id: 'E04', name: 'Supply Depot', cover: 0, bonus: { intel: 1 }, bonusText: '+1 Intel', text: 'No cover. Here: +1 Intel.' },
-  E05: { affinity: 'support', id: 'E05', name: 'Concrete Barrier', cover: 1, bonus: { def: 1 }, bonusText: '+1 Armor', text: 'Cover: shots here need +1 Hit Marker. Here: +1 Armor.' },
-  E06: { affinity: 'support', id: 'E06', name: 'Military Bunker', cover: 1, bonus: { shot: 1 }, bonusText: '+1 extra shot', text: 'Cover: shots here need +1 Hit Marker. Here: +1 extra shot.' },
-  E07: { affinity: 'recon', id: 'E07', name: 'Recon Tower', cover: 1, bonus: { prec: 1 }, bonusText: '+1 Precision', text: 'Cover: shots here need +1 Hit Marker. Here: +1 Precision.' },
+  E05: { affinity: 'support', id: 'E05', name: 'Concrete Barrier', cover: 1, bonus: { def: 1 }, bonusText: '+1 Armor', text: 'Cover: +1 Hit Marker needed. Here: +1 Armor.' },
+  E06: { affinity: 'support', id: 'E06', name: 'Military Bunker', cover: 1, bonus: { shot: 1 }, bonusText: '+1 extra shot', text: 'Cover: +1 Hit Marker needed. Here: +1 extra shot.' },
+  E07: { affinity: 'recon', id: 'E07', name: 'Recon Tower', cover: 1, bonus: { prec: 1 }, bonusText: '+1 Precision', text: 'Cover: +1 Hit Marker needed. Here: +1 Precision.' },
   E08: { affinity: 'recon', id: 'E08', name: 'Workbench', cover: 0, bonus: { scrap: 1 }, bonusText: 'Scrap 1', text: 'No cover. Here: Scrap 1.' },
 };
 for (const k in ENVS) ENVS[k].cache = TUNE.stackSize;
@@ -292,9 +292,9 @@ function newGame(opts = {}) {
 }
 // Operations (O10 unlocks): match variants that change the drop for BOTH operators, never one side's power
 const OPS = {
-  closedrop: { name: 'Close Drop', text: 'Both operators drop 2 locations apart (locations 3 and 5) instead of 4.' },
+  closedrop: { name: 'Close Drop', text: 'Both operators start 2 locations apart (3rd and 5th).' },
   supplyrun: { name: 'Supply Run', text: 'A third supply crate lands after round 6.' },
-  scorched: { name: 'Scorched Earth', text: 'The gas burns hotter: caught outside the circle costs 1 more damage.' },
+  scorched: { name: 'Scorched Earth', text: 'Caught in the gas: +1 damage.' },
 };
 const hasOp = (s, k) => !!(s.ops && s.ops.includes(k));
 function mkEnv(def, w) { return { w, def, tier: 1, state: 'safe', hot: false, fresh: false, loot: [], cache: { reveal: TUNE.stackSize, searched: true }, crate: null }; }
@@ -470,7 +470,7 @@ function buySupply(s, p, id) {
   if (buysLeft(s, p) < 1) return fail(`No buys left this turn (${TUNE.buyCap}${pl.buyBonus ? ` + ${pl.buyBonus}` : ''} per turn).`);
   const cost = plateCost(); if (pl.res.intel < cost) return fail(`Buy Station cards cost ${cost} Intel.`);
   pl.res.intel -= cost; pl.buys++; pl.stats.buys++; s.stationLeft[id]--; const iid = newCard(s, id); gainCard(s, p, iid); pl.stats.supply = (pl.stats.supply || 0) + 1;
-  log(s, `${pl.name} buys ${CARDS[id].name} at the Buy Station${s.round <= TUNE.hotDrop ? ' (Hot Drop: delivered to the next hand)' : ''}.`, 'act'); return { ok: true };
+  log(s, `${pl.name} buys ${CARDS[id].name} at the Buy Station${s.round <= TUNE.hotDrop ? ' (Hot Drop: next hand)' : ''}.`, 'act'); return { ok: true };
 }
 // Buy Station service: pay 1 Intel to Scrap a Sprint (hand, play area or discard), once per turn. Not a buy.
 function stationScrap(s, p, iid) {
@@ -481,7 +481,7 @@ function stationScrap(s, p, iid) {
   if (cardDef(s, iid).id !== 'T001') return fail('The Scrap service only takes a Sprint.');
   if (owned(pl) <= TUNE.minDeck) return fail(`Your deck is at the ${TUNE.minDeck}-card minimum.`);
   pl.res.intel -= TUNE.stationScrapCost; pl.stationScrapped = true; from.splice(from.indexOf(iid), 1); pl.removed.push(iid); pl.stats.burned++;
-  log(s, `${pl.name} ${TUNE.stationScrapCost ? `pays ${TUNE.stationScrapCost} Intel at the Buy Station to scrap` : 'uses the Buy Station to scrap'} a Sprint (out of the game).`, 'fx'); return { ok: true };
+  log(s, `${pl.name} scraps a Sprint (Buy Station${TUNE.stationScrapCost ? `, −${TUNE.stationScrapCost} Intel` : ''}).`, 'fx'); return { ok: true };
 }
 // ---------- Spoils (O2), Field Promotion (O3), Sweep ----------
 // 3 different loot cards from the current tier (topped up from the other tiers); they stay in the loot deck until one is taken
@@ -500,7 +500,7 @@ function takeSpoils(s, p, iid) {
   if (iid != null && !s.spoils.offer.includes(iid)) return fail('Choose one of the 3 Spoils cards.');
   s.spoils = null;
   if (iid != null) { const t = [1, 2, 3].find(k => s.loot[k].some(it => it.iid === iid)); s.loot[t].splice(s.loot[t].findIndex(it => it.iid === iid), 1);
-    pl.discard.push(iid); pl.stats.cardsAcquired++; pl.stats.spoils++; pl.stats.added.push(s.cards[iid].def); log(s, `${pl.name} takes ${cardDef(s, iid).name} as Spoils (to the discard pile).`, 'act'); }
+    pl.discard.push(iid); pl.stats.cardsAcquired++; pl.stats.spoils++; pl.stats.added.push(s.cards[iid].def); log(s, `${pl.name} takes ${cardDef(s, iid).name} (Spoils).`, 'act'); }
   else log(s, `${pl.name} skips the Spoils.`, 'act');
   return endTurn(s, p);
 }
@@ -519,7 +519,7 @@ function promote(s, p, iid, squad) {
   pl.res.intel -= TUNE.promoteCost; pl.promoted = true; s.stationLeft[id]--; if (TUNE.promoteBuy) pl.buys++;
   const old = cardDef(s, iid).name; from.splice(from.indexOf(iid), 1); pl.removed.push(iid);
   const n = newCard(s, id); (from === pl.hand ? pl.hand : pl.discard).push(n); pl.stats.promoted++; pl.stats.added.push(id);
-  log(s, `${pl.name} promotes ${old} to ${CARDS[id].name} (${ARCH_TAG[squad]}${TUNE.promoteCost ? `, −${TUNE.promoteCost} Intel` : ''}).`, 'act');
+  log(s, `${pl.name} promotes ${old} → ${CARDS[id].name} (${ARCH_TAG[squad]}${TUNE.promoteCost ? `, −${TUNE.promoteCost} Intel` : ''}).`, 'act');
   return { ok: true, iid: n };
 }
 // Sweep: order = the swept cards, new top first. Until you arrange them they stay as they were.
@@ -539,7 +539,7 @@ function scrap(s, p, iid) {
   if (!from) return fail('Scrap takes a card from your hand, play area or discard pile.');
   if (owned(pl) <= TUNE.minDeck) return fail(`Your deck is at the ${TUNE.minDeck}-card minimum.`);
   from.splice(from.indexOf(iid), 1); pl.removed.push(iid); pl.scrapAvail--; pl.stats.burned++;
-  log(s, `${pl.name} scraps ${cardDef(s, iid).name} (out of the game).`, 'fx'); return { ok: true };
+  log(s, `${pl.name} scraps ${cardDef(s, iid).name}.`, 'fx'); return { ok: true };
 }
 
 // ---------- fire ----------
@@ -610,7 +610,7 @@ function autoShot(s, p, o) {
     pl.stats.hits++; pl.stats.damageDealt += dealt; if (s.turn === p) pl.stats.turnDmg += dealt; pl.stats.dmgRounds[s.round] = (pl.stats.dmgRounds[s.round] || 0) + dealt; }
   pl.discard.push(...revealed);
   s.lastFire = { p, weapon: o.label, kind: o.kind, bullet: null, req: o.steps[0][0], steps: o.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < o.reveal, recoil: 0, commit: o.reveal, free: 0 };
-  log(s, `${poss(pl.name)} ${o.label} fires: reveals ${revealed.length}, needs ${o.steps[0][0]}, gets ${total} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.`, hit ? 'hit' : 'miss');
+  log(s, `${poss(pl.name)} ${o.label} fires: ${revealed.length} card${revealed.length === 1 ? '' : 's'}, needs ${o.steps[0][0]}, got ${total} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.`, hit ? 'hit' : 'miss');
   checkDeath(s, 'ko');
   return s.lastFire;
 }
@@ -645,7 +645,7 @@ function fire(s, p, gi, o) {
     if (pl.onHitDraw > 0 && !s.over) { const n = drawCards(s, p, pl.onHitDraw); pl.onHitDraw = 0; notes.push(`Follow Through: draw ${n}`); } }
   pl.discard.push(...revealed);
   s.lastFire = { p, weapon: d.name, bullet: null, req: sp.need, steps: sp.steps, level: lvl, revealed: revealed.map(i => ({ name: cardDef(s, i).name, hm: hmOf(s, i), jam: false })), total, jam: false, hit, dealt, notes, short: revealed.length < sp.reveal, recoil: before - pl.res.prec, commit: sp.commit, free: sp.free };
-  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `commits ${sp.commit}${sp.power ? ` (${sp.power} as Power)` : ''}, reveals ${revealed.length}, needs ${sp.need}, gets ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
+  log(s, `${pl.name} fires ${d.name}: ${d.melee ? 'stabs' : `aims ${sp.commit}${sp.power ? ` (${sp.power} Power)` : ''}, ${revealed.length} card${revealed.length === 1 ? '' : 's'}, needs ${sp.need}, got ${total}`} → ${hit ? `HIT for ${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}` : 'MISS'}.${before !== pl.res.prec ? ` Precision ${before}→${pl.res.prec}.` : ''}`, hit ? 'hit' : 'miss');
   checkDeath(s, 'ko');
   return { ok: true, result: s.lastFire };
 }
@@ -660,7 +660,7 @@ function startTurn(s, p) {
     stationScrapped: false, squadN: {}, rallyDone: [], turnSquads: 0, moved: false, movedToward: false, bonusTaken: [], fp: 0,
     chargeDmg: 0, onHitDraw: 0, expose: false, overwatch: false, anyStack: false, fortify: false, peek: null, lastPlayed: null, promoted: false, spoilsDone: false, ow: null,
     supp: pl.suppNext || null, suppNext: null });
-  if (pl.supp) log(s, `${pl.name} is suppressed: the first ${pl.supp.move} Movement and ${pl.supp.prec} Precision gained this turn are lost.`, 'fx');
+  if (pl.supp) log(s, `${pl.name} is suppressed: −${pl.supp.move} Movement, −${pl.supp.prec} Precision this turn.`, 'fx');
   pl.nextFire = { reqMod: 0, bonusPrec: 0 };
   for (const wid of guns(pl)) { s.weapons[wid].shots = 0; s.weapons[wid].used = false; }
   pl.stats.turnDmg = 0;
@@ -683,16 +683,15 @@ function endTurn(s, p) {
     else log(s, `${poss(o.name)} held angle stays quiet: ${pl.name} ends out of range.`, 'fx'); }
   if (pl.stats.turnDmg > pl.stats.maxTurnDmg) pl.stats.bestRound = s.round;
   pl.stats.maxTurnDmg = Math.max(pl.stats.maxTurnDmg, pl.stats.turnDmg);
-  if (pl.overwatch && pl.res.prec > 0) { pl.ow = { prec: Math.min(TUNE.overwatchCap, pl.res.prec) }; log(s, `${pl.name} holds the angle: ${pl.ow.prec} Precision kept on Overwatch.`, 'fx'); }
+  if (pl.overwatch && pl.res.prec > 0) { pl.ow = { prec: Math.min(TUNE.overwatchCap, pl.res.prec) }; log(s, `${pl.name} holds the angle with ${pl.ow.prec} Precision.`, 'fx'); }
   pl.fpHist.push(Math.round(pl.fp * 10) / 10); (pl.dmgHist = pl.dmgHist || []).push(pl.stats.turnDmg);
   pl.discard.push(...pl.hand, ...pl.play); pl.hand = []; pl.play = [];
   pl.scrapAvail = 0;
-  if (TUNE.digIn && pl.res.move > 0) { const a = Math.min(TUNE.digIn, pl.res.move); pl.def += a; pl.stats.dugIn = (pl.stats.dugIn || 0) + a; log(s, `${pl.name} digs in: +${a} Armor from unused Movement.`, 'fx'); }
+  if (TUNE.digIn && pl.res.move > 0) { const a = Math.min(TUNE.digIn, pl.res.move); pl.def += a; pl.stats.dugIn = (pl.stats.dugIn || 0) + a; log(s, `${pl.name} digs in: +${a} Armor (unused Movement).`, 'fx'); }
   pl.res = { move: 0, prec: 0, intel: 0 }; pl.shot = 0; // Armor stays up through the rival's turn
   drawCards(s, p, TUNE.hand + (TUNE.lowHp && pl.hp > 0 && pl.hp <= TUNE.lowHp ? 1 : 0));
   if (pl.drop && pl.drop.length) { log(s, `Hot Drop: ${pl.drop.map(i => cardDef(s, i).name).join(', ')} delivered to ${poss(pl.name).toLowerCase() === 'your' ? 'your' : poss(pl.name)} hand.`, 'fx'); pl.hand.push(...pl.drop); pl.drop = []; }
-  const fpN = pl.fpHist[pl.fpHist.length - 1], fpP = pl.fpHist[pl.fpHist.length - 2]; const dd = fpP == null ? '' : ` (${fpN >= fpP ? '▲' : '▼'}${Math.round(Math.abs(fpN - fpP))})`;
-  log(s, `${pl.name} ends the turn. Turn ${pl.fpHist.length}: Firepower ${Math.round(fpN)}${dd} · Squad ×${pl.turnSquads || 0} · ${pl.stats.turnDmg} damage.`, 'act');
+    log(s, `${pl.name} ends the turn: ${pl.stats.turnDmg} damage dealt.`, 'act');
   s.turnNo++;
   let next = 1 - p;
   if (p !== s.first) { endRound(s); if (TUNE.alternateFirst && !s.over) { s.first = 1 - s.first; log(s, `${s.players[s.first].name} takes the lead this round.`, 'round'); } next = s.first; }
@@ -803,12 +802,12 @@ function deckMix(s, p) {
 // Unlocks add variety, never power: the Daily Drop, Operations (match variants for both operators) and insignia.
 const RANKS = [
   { name: 'Recruit', xp: 0 },
-  { name: 'Private', xp: 150, unlock: { kind: 'daily', name: 'Daily Drop', text: 'One seeded match a day: the same drop, map and loot for everyone.' } },
+  { name: 'Private', xp: 150, unlock: { kind: 'daily', name: 'Daily Drop', text: 'One match a day, the same for everyone.' } },
   { name: 'Corporal', xp: 350, unlock: { kind: 'op', id: 'closedrop' } },
   { name: 'Sergeant', xp: 650, unlock: { kind: 'op', id: 'supplyrun' } },
   { name: 'Staff Sergeant', xp: 1000, unlock: { kind: 'op', id: 'scorched' } },
-  { name: 'Lieutenant', xp: 1500, unlock: { kind: 'badge', name: 'Silver insignia', text: 'A silver rank insignia on your start screen and after-action report.' } },
-  { name: 'Captain', xp: 2200, unlock: { kind: 'badge', name: 'Gold insignia', text: 'A gold rank insignia on your start screen and after-action report.' } },
+  { name: 'Lieutenant', xp: 1500, unlock: { kind: 'badge', name: 'Silver insignia', text: 'Silver insignia on your start screen and report.' } },
+  { name: 'Captain', xp: 2200, unlock: { kind: 'badge', name: 'Gold insignia', text: 'Gold insignia on your start screen and report.' } },
 ];
 for (const r of RANKS) if (r.unlock && r.unlock.kind === 'op') Object.assign(r.unlock, { name: OPS[r.unlock.id].name, text: OPS[r.unlock.id].text });
 const PROFILE_KEY = 'wb-operator-v1';
