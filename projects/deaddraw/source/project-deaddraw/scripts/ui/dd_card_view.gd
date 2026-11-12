@@ -20,9 +20,22 @@ const ArtFit: GDScript = preload("res://scripts/ui/dd_art.gd")
 
 signal tapped(view: DDCardView)
 signal inspected(payload: Dictionary)
+## dd-ux-equip: drag (only when drag_enabled). A press that moves DRAG_PX lifts the tile: no tap and
+## no long press after that; the release reports where it was dropped (global position).
+signal drag_started(view: DDCardView, global_pos: Vector2)
+signal drag_moved(view: DDCardView, global_pos: Vector2)
+signal drag_released(view: DDCardView, global_pos: Vector2)
 
 const LONG_PRESS_MS: int = 450
 const MOVE_CANCEL_PX: float = 28.0
+const DRAG_PX: float = 10.0
+
+## dd-ux-equip: a scroll gesture (DDTouchScroll) cancels every press in progress: the tile under the
+## finger neither taps nor opens its zoom. Bumped by cancel_presses(); a press remembers the value.
+static var _cancel_serial: int = 0
+var _press_serial: int = 0
+var drag_enabled: bool = false
+var dragging: bool = false
 
 ## Zoom payload: {kind, tag, title, big, body}. See DDInspect.open().
 var payload: Dictionary = {}
@@ -618,16 +631,36 @@ func _gui_input(event: InputEvent) -> void:
 				_long_fired = false
 				_press_ms = Time.get_ticks_msec()
 				_press_pos = mb.position
+				_press_serial = _cancel_serial
 				set_process(true)
 			else:
-				if _pressing and not _long_fired:
+				if dragging:
+					dragging = false
+					drag_released.emit(self, mb.global_position)
+				elif _pressing and not _long_fired and _press_serial == _cancel_serial:
 					tapped.emit(self)
 				_pressing = false
 				set_process(false)
 			accept_event()
+	elif event is InputEventMouseMotion and dragging:
+		drag_moved.emit(self, (event as InputEventMouseMotion).global_position)
+		accept_event()
 	elif event is InputEventMouseMotion and _pressing:
-		if (event as InputEventMouseMotion).position.distance_to(_press_pos) > MOVE_CANCEL_PX:
+		var dist: float = (event as InputEventMouseMotion).position.distance_to(_press_pos)
+		if drag_enabled and dist > DRAG_PX and not _long_fired and _press_serial == _cancel_serial:
+			# the lift: from here on it's a drag (no tap, no long press)
 			_pressing = false
+			dragging = true
+			set_process(false)
+			drag_started.emit(self, (event as InputEventMouseMotion).global_position)
+			accept_event()
+		elif dist > MOVE_CANCEL_PX:
+			_pressing = false
+
+
+## dd-ux-equip: cancels every tile press in progress (a scroll gesture started).
+static func cancel_presses() -> void:
+	_cancel_serial += 1
 
 
 func _ready() -> void:
@@ -635,6 +668,10 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _pressing and _press_serial != _cancel_serial:
+		_pressing = false
+		set_process(false)
+		return
 	if _pressing and not _long_fired and Time.get_ticks_msec() - _press_ms >= LONG_PRESS_MS:
 		_long_fired = true
 		_pressing = false
