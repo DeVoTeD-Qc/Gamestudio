@@ -17,6 +17,8 @@ const fs = require('fs');
 const path = require('path');
 
 const URL = process.argv[2];
+// dd-ui-clean: DD_SKIN=a|b|c runs the whole smoke in that UI skin (&skin= on every page load)
+const SKIN_Q = process.env.DD_SKIN ? 'skin=' + process.env.DD_SKIN : '';
 const OUT = process.argv[3];
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -85,7 +87,7 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
     const closeInspect = async () => { await touchTap(cdp, { x: vp.width / 2, y: 8 }); return waitFor(page, (x) => !x.inspect, 'inspect closed'); };
     const checkOff = (s, where) => { const off = offscreen(s, vp); if (off.length && !s.inspect) errors.push(`OFFSCREEN ${where}: ` + off.join(' ')); };
     try {
-      await page.goto(URL, { waitUntil: 'load' });
+      await page.goto(URL + (SKIN_Q ? '?' + SKIN_Q : ''), { waitUntil: 'load' });
       let s = await waitFor(page, (x) => x.screen === 'TITLE', 'title', 90000);
       log(`title up, portrait=${s.portrait}`); await sleep(400); await shot('01_title');
       // dd-ux-v4: the Codex from the title, a filter chip, close
@@ -237,7 +239,7 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       ];
       let n = 20;
       for (const [q, name, act] of queries) {
-        await page.goto(URL + '?' + q, { waitUntil: 'load' });
+        await page.goto(URL + '?' + q + (SKIN_Q ? '&' + SKIN_Q : ''), { waitUntil: 'load' });
         s = await waitFor(page, (x) => x.screen !== 'TITLE', q, 90000);
         await sleep(2300);
         s = await state(page);

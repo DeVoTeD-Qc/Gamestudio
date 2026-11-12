@@ -100,8 +100,8 @@ static func inset(file: String) -> float:
 	var panel: bool = file.begins_with("dd_panel_") or file.begins_with("dd_frame_")
 	match skin:
 		"a":
-			# clean plates: 16 tex px band at 0.5; panels: 40 tex px band drawn at PANEL_SCALE_A
-			return 40.0 * PANEL_SCALE_A if panel else 8.0
+			# clean plates: 16 tex px band at 0.5; panels: 40 tex px band drawn at panel_scale_a()
+			return 40.0 * panel_scale_a(file) if panel else 8.0
 		"b", "c":
 			return 6.0
 	# the first kit: bolts at 22 +- 9 tex px (buttons), 40 +- 16 (panels), drawn at 0.5
@@ -110,6 +110,15 @@ static func inset(file: String) -> float:
 
 ## dd-ui-clean: skin a draws its panels and frames thinner (the calmer edge).
 const PANEL_SCALE_A: float = 0.35
+## HUD strips and tooltips (first-run hint, event log, inspect tips) sit in the street layout: their rim is
+## drawn thin enough (40 tex px * 0.15 = 6 px) that their margins match skin b and the layout never grows.
+const PANEL_SCALE_A_THIN: float = 0.15
+
+
+static func panel_scale_a(file: String) -> float:
+	if file.begins_with("dd_panel_hud") or file.begins_with("dd_panel_tooltip"):
+		return PANEL_SCALE_A_THIN
+	return PANEL_SCALE_A
 
 
 ## Corner radius (game px) for flat boxes in this skin (old keeps what it was asked for).
@@ -164,7 +173,7 @@ static func box(file: String, pad: float = 10.0, tint: Color = Color.WHITE) -> S
 	n.margins = Vector4(m[0], m[1], m[2], m[3])
 	n.fit_h = sp[1] == "fit_h"
 	if skin == "a" and (file.begins_with("dd_panel_") or file.begins_with("dd_frame_")):
-		n.scale = PANEL_SCALE_A
+		n.scale = panel_scale_a(file)
 	n.tint = tint
 	n.set_content_margin_all(pad)
 	return n
