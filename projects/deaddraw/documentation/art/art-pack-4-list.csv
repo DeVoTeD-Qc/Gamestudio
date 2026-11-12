@@ -1,0 +1,13 @@
+file,value,tier,name,size
+dd_zombie_v01.png,1,Shambler,Slippers,1536x1024 -> 768x512
+dd_zombie_v02.png,2,Shambler,Librarian,1536x1024 -> 768x512
+dd_zombie_v03.png,3,Shambler,Postman,1536x1024 -> 768x512
+dd_zombie_v04.png,4,Lurcher,Jogger,1536x1024 -> 768x512
+dd_zombie_v05.png,5,Lurcher,Courier,1536x1024 -> 768x512
+dd_zombie_v06.png,6,Lurcher,Night Cook,1536x1024 -> 768x512
+dd_zombie_v07.png,7,Bruiser,Mover,1536x1024 -> 768x512
+dd_zombie_v08.png,8,Bruiser,Road Crew,1536x1024 -> 768x512
+dd_zombie_v09.png,9,Bruiser,Bouncer,1536x1024 -> 768x512
+dd_zombie_v10.png,10,Hulk,Trucker,1536x1024 -> 768x512
+dd_zombie_v11.png,11,Hulk,Strongman,1536x1024 -> 768x512
+dd_zombie_v12.png,12,Hulk,Titan,1536x1024 -> 768x512
