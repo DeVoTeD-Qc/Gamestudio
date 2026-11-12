@@ -100,6 +100,10 @@ func _run() -> void:
 		await _frames(6)
 	await _inspect(_tile(0), "3_zombie_tip")
 	await _inspect((_m.get("_gun_views") as Array)[0] as Control, "4_gun_inspect")
+	var gv0: Node = (_m.get("_gun_views") as Array)[0]
+	var cl: Variant = gv0.get("chal_line")
+	if cl is Control:
+		await _inspect(cl as Control, "4b_challenge_tip")
 	# the Wall Rack: affordable, then not
 	await _fresh({"screen": "street", "seed": "5", "gun1": "pistol", "stack1": "3", "gun2": "none", "sheet": "machine0"})
 	await _shot("5_rack")
