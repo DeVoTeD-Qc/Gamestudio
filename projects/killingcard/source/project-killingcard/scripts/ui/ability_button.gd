@@ -130,6 +130,7 @@ func place_on(card: Control) -> void:
 	var r: Rect2 = bv.get_global_rect() if bv != null and bv.size.y > 0.0 else cr
 	var s: float = clampf(minf(r.size.y - 6.0, r.size.x * 0.36), 34.0, SIZE_PX)
 	s = minf(s, cr.size.y - 4.0)
+	custom_minimum_size = Vector2(s, s)
 	size = Vector2(s, s)
 	var gx: float = minf(r.end.x, cr.end.x) - s - 6.0
 	var gy: float = clampf(r.get_center().y - s * 0.5, cr.position.y + 2.0, cr.end.y - s - 2.0)
