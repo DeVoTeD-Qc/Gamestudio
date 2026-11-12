@@ -503,6 +503,7 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "art:bare_hands", "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
 			{"icon": "uses", "name": "Melee uses", "line": "A melee weapon's dots: each kill uses 1; at 0 it breaks."},
 			{"icon": "text:+N", "name": "Salvage", "line": "Swap out a gun: it pays part of its kills back."},
+			{"icon": "mod:open_breech", "name": "Gun Mod (MOD chip)", "line": "Fitted at the safehouse to gun slot 1 or 2; every gun in that slot gets its rule."},
 		]],
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
@@ -602,6 +603,15 @@ static func icon(id: String) -> Control:
 			tra.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tra.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			inner = tra
+		"mod":
+			# dd-mods-import: a Gun Mod badge (text "MOD" when it is not painted)
+			var mtr: TextureRect = Art.mod_badge(arg, 40.0)
+			if mtr != null:
+				inner = mtr
+			else:
+				var lm: Label = DDUi.label("MOD", DDUi.FONT_S - 4, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER)
+				lm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+				inner = lm
 		"rule", "badge":
 			var tr: TextureRect = TextureRect.new()
 			tr.texture = Art.texture_for(Art.rule_keys(arg) if id.begins_with("rule") else Art.badge_keys(arg))

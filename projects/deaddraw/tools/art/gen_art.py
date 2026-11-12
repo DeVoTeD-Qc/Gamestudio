@@ -2418,6 +2418,11 @@ for _p in ("lookout", "thick_jacket", "field_medic", "brawler", "bounty", "loose
     PAINTED["patches/%s.svg" % _p] = "dd_patch_" + _p
 
 
+# art pack 3: Gun Mod id (rules: data/balance.json) -> painted badge
+PAINTED_MODS = {"open_breech": "dd_mod_open_breech", "last_round": "dd_mod_last_round", "echo": "dd_mod_echo_chamber",
+                "echo_chamber": "dd_mod_echo_chamber", "short_barrel": "dd_mod_short_barrel"}
+
+
 # dd-art-fit: where each painting's subject is, [x0, y0, x1, y1] in 0..1 of the image (the must-see
 # box) and optionally "focus": [x, y] (where the crop centres; the box centre by default). Cover-fit
 # art (street cards, the gun-row strip, sockets, room doors, inspect pictures) crops around it and
@@ -2484,6 +2489,20 @@ def apply_painted(man: dict) -> None:
         title.setdefault("landscape", title.get("portrait", ""))
         title.setdefault("portrait", title["landscape"])
         man["title"] = title
+    # art pack 3 (dd-mods-import): the Gun Mod badges. No SVG fallback: without a painted file the game
+    # keeps the text chip "MOD · NAME". "mods" is the 256 px badge (inspect), "mods_small" the 64 px copy
+    # (gun-tile chip, safehouse offer card).
+    mods, mods_small = {}, {}
+    for mid, stem in PAINTED_MODS.items():
+        if (ART / "painted" / ("%s.webp" % stem)).exists():
+            mods[mid] = "painted/%s.webp" % stem
+            if (ART / "painted" / ("%s_sm.webp" % stem)).exists():
+                mods_small[mid] = "painted/%s_sm.webp" % stem
+    if mods:
+        man["mods"] = mods
+        man["mods_small"] = mods_small
+        man["sizes"]["painted_mod"] = [256, 256]
+        man["sizes"]["painted_mod_small"] = [64, 64]
     focus = {}
     for stem, bx in PAINTED_FOCUS.items():
         if (ART / "painted" / ("%s.webp" % stem)).exists():

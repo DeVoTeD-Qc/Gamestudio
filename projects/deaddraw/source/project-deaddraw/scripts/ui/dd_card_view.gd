@@ -206,6 +206,20 @@ func _build_row(spec: Dictionary, art: Variant) -> void:
 		add_child(scrim)
 	var h: HBoxContainer = DDUi.hbox(8)
 	add_child(h)
+	# dd-mods-import: spec "lead_icon" (a Texture2D, e.g. a Gun Mod badge) sits left of the text at
+	# "lead_px" (48 by default)
+	var lead: Variant = spec.get("lead_icon", null)
+	if lead is Texture2D:
+		var li: TextureRect = TextureRect.new()
+		li.name = "LeadIcon"
+		li.texture = lead
+		li.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		li.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var lpx: float = float(spec.get("lead_px", 48.0))
+		li.custom_minimum_size = Vector2(lpx, lpx)
+		li.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		li.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(li)
 	_box = DDUi.vbox(0)
 	var big: String = str(spec.get("big", ""))
 	if big != "":

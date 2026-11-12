@@ -48,7 +48,15 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		v.add_child(DDUi.label("GUN %d · EMPTY" % (int(spec.get("slot", 0)) + 1), DDUi.FONT_S - 2, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 		v.add_child(DDUi.label("equip a gun from the street", DDUi.FONT_S - 5, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 		if str(spec.get("mod", "")) != "":
-			v.add_child(DDUi.label(DDText.mod_chip(str(spec["mod"])), DDUi.FONT_S - 6, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_CENTER, true))
+			# dd-mods-import: the painted badge beside the text (the text alone when there is no badge)
+			var mrow: HBoxContainer = DDUi.hbox(4)
+			mrow.name = "ModRow"
+			mrow.alignment = BoxContainer.ALIGNMENT_CENTER
+			var mb: TextureRect = Art.mod_badge(str(spec["mod"]), 24.0)
+			if mb != null:
+				mrow.add_child(mb)
+			mrow.add_child(DDUi.label(DDText.mod_chip(str(spec["mod"])), DDUi.FONT_S - 6, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_CENTER))
+			v.add_child(mrow)
 		_apply_style()
 		DDUi.ignore_mouse(self)
 		return self
@@ -125,7 +133,16 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		mc0.add_theme_stylebox_override("panel", DDUi.box(Color(0.08, 0.12, 0.15, 0.92), DDUi.accent("W"), 2, 8, 2))
 		var ml: Label = DDUi.label(DDText.mod_chip(str(spec["mod"])), DDUi.FONT_S - 8, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_CENTER)
 		ml.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		mc0.add_child(ml)
+		# dd-mods-import: the painted badge (about 22 px) in front of the name; text only without it
+		var mb2: TextureRect = Art.mod_badge(str(spec["mod"]), 22.0)
+		if mb2 != null:
+			var mh: HBoxContainer = DDUi.hbox(3)
+			mh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			mh.add_child(mb2)
+			mh.add_child(ml)
+			mc0.add_child(mh)
+		else:
+			mc0.add_child(ml)
 		band.add_child(mc0)
 		mc0.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
 		mc0.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))

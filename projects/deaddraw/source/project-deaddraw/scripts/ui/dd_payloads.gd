@@ -290,7 +290,7 @@ static func _range_text(zs: Array[int]) -> String:
 ## v5: a Gun Mod's zoom (safehouse offer, the chip on a gun tile).
 static func mod(id: String, s: int = -1) -> Dictionary:
 	var where: String = "Fitted to gun slot %d: every gun you put in this slot gets it, for the rest of the run." % (s + 1) if s >= 0 else "Fit it to gun slot 1 or 2: every gun you put in that slot gets it, for the rest of the run."
-	return tip({"kind": "W", "tag": "GUN MOD", "title": DDText.mod_name(id), "big": "", "icon_keys": Art.badge_keys("full_set"),
+	return tip({"kind": "W", "tag": "GUN MOD", "title": DDText.mod_name(id), "big": "", "icon_keys": Art.mod_keys(id) + Art.badge_keys("full_set"), "icon_px": 128.0,
 		"body": "%s\n%s\nOne mod per slot; a new one replaces the old." % [DDText.mod_text(id), where]},
 		"Gun Mod · %s%s" % [DDText.mod_name(id), (" · slot %d" % (s + 1)) if s >= 0 else ""], DDText.mod_text(id))
 

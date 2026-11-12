@@ -86,6 +86,14 @@
     "painted_title": [
       1024,
       1536
+    ],
+    "painted_mod": [
+      256,
+      256
+    ],
+    "painted_mod_small": [
+      64,
+      64
     ]
   },
   "number_safe_zone": {
@@ -629,6 +637,20 @@
   "title": {
     "portrait": "painted/dd_title_portrait.webp",
     "landscape": "painted/dd_title_landscape.webp"
+  },
+  "mods": {
+    "open_breech": "painted/dd_mod_open_breech.webp",
+    "last_round": "painted/dd_mod_last_round.webp",
+    "echo": "painted/dd_mod_echo_chamber.webp",
+    "echo_chamber": "painted/dd_mod_echo_chamber.webp",
+    "short_barrel": "painted/dd_mod_short_barrel.webp"
+  },
+  "mods_small": {
+    "open_breech": "painted/dd_mod_open_breech_sm.webp",
+    "last_round": "painted/dd_mod_last_round_sm.webp",
+    "echo": "painted/dd_mod_echo_chamber_sm.webp",
+    "echo_chamber": "painted/dd_mod_echo_chamber_sm.webp",
+    "short_barrel": "painted/dd_mod_short_barrel_sm.webp"
   },
   "focus": {
     "painted/dd_gun_alley_sweeper.webp": {

@@ -191,7 +191,9 @@ func _open_tip(payload: Dictionary) -> void:
 		ic.texture = icon
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		ic.custom_minimum_size = Vector2(pic_d * 0.75, pic_d * 0.75)
+		# dd-mods-import: a Gun Mod badge asks for a bigger picture (icon_px, capped for phones)
+		var ipx: float = minf(float(payload.get("icon_px", pic_d * 0.75)), maxf(pic_d * 0.75, w * 0.3))
+		ic.custom_minimum_size = Vector2(ipx, ipx)
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ic)
 	elif has_pic:

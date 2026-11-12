@@ -5,6 +5,8 @@
 # (every mod inspectable) and the mod chip on the gun tile.
 extends "res://tests/dd_test_case.gd"
 
+const Art: GDScript = preload("res://scripts/ui/dd_art.gd")
+
 var _paths: Array[String] = []
 
 
@@ -153,12 +155,17 @@ func test_gun_mod_chip_and_safehouse_step() -> void:
 		var chip: DDCardView = gv.get("mod_chip")
 		check(chip != null and chip.mouse_filter == Control.MOUSE_FILTER_STOP, "%s: the mod chip is on the gun tile" % str(sz))
 		check(str(chip.payload.get("t1", "")).contains("Echo Chamber"), "%s: and inspectable" % str(sz))
+		# dd-mods-import: the painted badge sits next to the mod's name on the chip
+		check(chip.find_child("ModBadge", true, false) != null, "%s: the mod chip shows the Echo Chamber badge" % str(sz))
+		check(Art.texture_for(Art.mod_keys("echo")) != null and Art.texture_for(Art.mod_keys("echo", true)) != null, "the badge and its small copy load")
 		await _go(m, {"screen": "safehouse", "seed": "5", "takepatch": "1", "points": "20"})
 		var run: DDRun = _run()
 		check(run.mod_step_open() and m.find_child("ModPanel", true, false) != null, "%s: the Gun Mod step" % str(sz))
 		for mid: String in run.mod_offer:
 			var cv: DDCardView = m.find_child("Mod_" + mid, true, false)
 			check(cv != null and not cv.payload.is_empty(), "%s: mod %s is an inspectable card" % [str(sz), mid])
+			check(cv != null and cv.find_child("LeadIcon", true, false) != null, "%s: mod %s card shows its badge" % [str(sz), mid])
+			check((cv.payload.get("icon_keys", []) as Array).has("mods_" + mid), "%s: mod %s inspect shows the badge" % [str(sz), mid])
 		(m.find_child("SkipMod", true, false) as Button).pressed.emit()
 		await _settle()
 		check(m.find_child("ShopLeave", true, false) != null, "%s: SKIP goes to the shop" % str(sz))

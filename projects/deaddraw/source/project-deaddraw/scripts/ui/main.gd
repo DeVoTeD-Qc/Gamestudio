@@ -2779,7 +2779,8 @@ func _mod_panel(run: DDRun) -> Control:
 		row.add_child(col)
 		var mp: Dictionary = DDPayloads.mod(m)
 		var cv: DDCardView = _view({"kind": "W", "tag": "GUN MOD", "title": DDText.mod_name(m), "row": true, "title_size": DDUi.FONT_S,
-			"lines": [[DDText.mod_text(m), DDUi.TEXT, DDUi.FONT_S - 5]], "payload": mp}, Vector2(0, 64 if portrait else 56))
+			"lines": [[DDText.mod_text(m), DDUi.TEXT, DDUi.FONT_S - 5]], "payload": mp,
+			"lead_icon": Art.texture_for(Art.mod_keys(m, true)), "lead_px": 48.0}, Vector2(0, 64 if portrait else 56))
 		cv.name = "Mod_" + m
 		cv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(mp))
 		col.add_child(cv)

@@ -182,6 +182,29 @@ static func badge_keys(id: String) -> Array:
 	return ["badges_" + id, "badge_" + id]
 
 
+## dd-mods-import: a Gun Mod's painted badge (art pack 3). small = the 64 px copy for the 24 px gun-tile
+## chip and the 48 px safehouse card (falls back to the 256 px badge). [] -> null: the text chip stays.
+static func mod_keys(id: String, small: bool = false) -> Array:
+	var big: Array = ["mods_" + id, "mod:" + id]
+	return (["mods_small_" + id] + big) if small else big
+
+
+## A Gun Mod badge as a fixed-size TextureRect (null when the badge is not painted).
+static func mod_badge(id: String, px: float) -> TextureRect:
+	var t: Texture2D = texture_for(mod_keys(id, px <= 72.0))
+	if t == null:
+		return null
+	var tr: TextureRect = TextureRect.new()
+	tr.name = "ModBadge"
+	tr.texture = t
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.custom_minimum_size = Vector2(px, px)
+	tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tr
+
+
 static func icon_keys(id: String) -> Array:
 	return ["icons_" + id, "icon_" + id]
 

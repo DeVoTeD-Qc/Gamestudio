@@ -7,6 +7,7 @@ Purpose: Turns the reviewed ChatGPT originals (full-size PNGs on the art/deaddra
   icons) so the web build stays small. Godot imports them with compress/mode=1 (lossy WebP).
   gen_art.py then points the manifest at every painted file that exists (PAINTED there), so the SVG
   art stays the fallback for anything not painted (or rejected in review).
+  Art pack 3 (dd-mods-import): the Gun Mod badges dd_mod_*.png -> 256 px + a 64 px _sm copy.
 Usage: python3 projects/deaddraw/tools/art/import_painted.py <folder with the original PNGs>
   e.g. git archive origin/art/deaddraw-pack-1 projects/deaddraw/documentation/art/chatgpt/images/art-pack-1
   | tar -x -C /tmp/raw, then pass /tmp/raw/projects/.../art-pack-1. Run gen_art.py afterwards.
@@ -26,6 +27,14 @@ OUT = ROOT / "assets" / "art" / "painted"
 # dd-art-fit: the two retries (title landscape, Retrofit Bench) passed review and are imported.
 SKIP: set[str] = set()
 
+# Gun Mod badges (art pack 3, dd-mods-import): 256 px for the inspect zoom plus a 64 px "_sm" copy for the
+# 24 px gun-tile chip and the 48 px safehouse offer card (the game has no mipmaps, so a 256 px texture
+# drawn at 24 px would shimmer). Each tag is cropped to its alpha box and centred with the same margin, so
+# the four read as one set; the near-opaque alpha (251-253 in the originals) is snapped to 255.
+MOD_SIZE = 256
+MOD_SMALL = 64
+MOD_MARGIN = 0.04
+
 # District banners: the 1536x480 band kept from a 1536x1024 original (landmarks sit at 30-62% height).
 BAND_TOP = 0.20
 
@@ -36,6 +45,8 @@ def target(name: str, w: int, h: int) -> tuple[int, int] | None:
         return (256, 256)
     if name.startswith("dd_icon_"):
         return (128, 128)
+    if name.startswith("dd_mod_"):
+        return (MOD_SIZE, MOD_SIZE)
     if name.startswith("dd_title_"):
         return (w, h)
     if name.startswith("dd_district_"):
@@ -59,6 +70,35 @@ def convert(src: Path, dst: Path) -> int:
     return dst.stat().st_size
 
 
+def mod_square(im: Image.Image) -> Image.Image:
+    """Snap the alpha, crop to the tag, centre it on a square transparent canvas with MOD_MARGIN."""
+    r, g, b, a = im.split()
+    a = a.point(lambda v: 0 if v < 8 else (255 if v >= 240 else v))
+    im = Image.merge("RGBA", (r, g, b, a))
+    box = a.getbbox() or (0, 0, im.width, im.height)
+    im = im.crop(box)
+    side = int(max(im.size) / (1 - 2 * MOD_MARGIN))
+    sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    sq.paste(im, ((side - im.width) // 2, (side - im.height) // 2))
+    return sq
+
+
+def convert_mod(src: Path) -> int:
+    from PIL import ImageEnhance, ImageFilter
+    im = Image.open(src).convert("RGBA")
+    sq = mod_square(im)
+    big = sq.resize((MOD_SIZE, MOD_SIZE), Image.LANCZOS)
+    dst = OUT / (src.stem + ".webp")
+    big.save(dst, "WEBP", quality=90, method=6, alpha_quality=95)
+    # the small copy: a touch more contrast and an unsharp pass so the symbol survives 24 px
+    sm = sq.resize((MOD_SMALL, MOD_SMALL), Image.LANCZOS)
+    rgb = ImageEnhance.Contrast(sm.convert("RGB")).enhance(1.12).filter(ImageFilter.UnsharpMask(1.0, 70, 2))
+    sm = Image.merge("RGBA", (*rgb.split(), sm.getchannel("A")))
+    dst2 = OUT / (src.stem + "_sm.webp")
+    sm.save(dst2, "WEBP", quality=92, method=6, alpha_quality=100)
+    return dst.stat().st_size + dst2.stat().st_size
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -70,7 +110,10 @@ def main() -> None:
         if src.name in SKIP:
             print("skip (rejected / blocked):", src.name)
             continue
-        total += convert(src, OUT / (src.stem + ".webp"))
+        if src.name.startswith("dd_mod_"):
+            total += convert_mod(src)
+        else:
+            total += convert(src, OUT / (src.stem + ".webp"))
         n += 1
     print("wrote %d painted files (%.1f MB) to %s" % (n, total / 1e6, OUT))
 
