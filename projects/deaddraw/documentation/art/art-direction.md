@@ -108,3 +108,18 @@ branch `art/deaddraw-pack-2`, folder `chatgpt/images/art-pack-2/`.
   door plates and chips 40 (20 in game: the bolts sit outside the 16 px the CSV asked for), panels 80, frames 80 (drawn at
   9-15 px), name bar 32/16, sockets 16, bars 16, tags / pills / Full set 64 left and right. Words on the gold filter chip
   stay bone with an ink outline (ink on that gold is only 3:1).
+
+## Gun Mod badges (art pack 3)
+
+- **Look:** one shield-shaped steel tag with a brass rim and four rivets for all four mods; only the symbol and its accent
+  colour change (Open Breech signal green, Last Round hot amber, Echo Chamber ghostly teal, Short Barrel spark orange).
+  The accent colour is what tells them apart at chip size; the mod's name always sits next to the badge.
+- **Imported (dd-mods-import):** all 4 passed review (real alpha, no text, one matched set, readable at 24 and 48 px; no
+  retries). `tools/art/import_painted.py` snaps the near-opaque alpha (251-253 in the originals) to 255, crops each tag to
+  its alpha box and centres it with the same 4% margin, then saves `dd_mod_<id>.webp` at 256 px (inspect) and a sharpened
+  `dd_mod_<id>_sm.webp` at 64 px (the game has no mipmaps, so the gun-tile chip and the safehouse card use the small copy).
+  `gen_art.py` maps them in the manifest (`mods`, `mods_small`; the rules id `echo` = `dd_mod_echo_chamber`).
+- **Where they show:** the MOD chip on a gun tile and on an empty slot (`dd_gun_view.gd`, about 22-24 px), the safehouse
+  Gun Mod offer card (`lead_icon` in `dd_card_view.gd`, 48 px), the inspect zoom (`icon_px` 128, `dd_inspect.gd`) and
+  the Glossary's "Gun Mod (MOD chip)" row. Without a painted file each place falls back to the text-only chip.
+  `tests/tools/shot_mods.gd` shoots all of them.
