@@ -1,7 +1,7 @@
 {
   "source": "../../dd-art-pack-5-cutouts-prompts.md",
   "requested_count": 20,
-  "generated_count": 15,
+  "generated_count": 20,
   "images": [
     {
       "number": 1,
@@ -248,35 +248,40 @@
       "batch": 3,
       "title": "### Image 16: Gun card backdrop",
       "file": "dd_bg_gun.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "194a3ad6b07146389a926281de26e2de976344f06c2b6c154462f61f0586c80e"
     },
     {
       "number": 17,
       "batch": 3,
       "title": "### Image 17: Melee card backdrop",
       "file": "dd_bg_melee.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "1ddc95a6d4f25fe1e6fd289f3b8deb3531e127e1af79b4ecd5e5c712521506b7"
     },
     {
       "number": 18,
       "batch": 3,
       "title": "### Image 18: District backdrop: Maple Row",
       "file": "dd_bg_maple_row.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "50b6ebd11d2d6cd125eafa95118902659d4211598054f59abc7feefffb6a0c50"
     },
     {
       "number": 19,
       "batch": 3,
       "title": "### Image 19: District backdrop: Downtown",
       "file": "dd_bg_downtown.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "22cb1711be9f990c8c2b0212edeb97e0b69a91b829d18bd9f4ed5816f8040b3a"
     },
     {
       "number": 20,
       "batch": 3,
       "title": "### Image 20: District backdrop: St. Agnes Hospital",
       "file": "dd_bg_st_agnes.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "196d88abfe8e499ed452fb013ac606347b04ddf23bd59c8d25035713b2aba969"
     }
   ]
 }
