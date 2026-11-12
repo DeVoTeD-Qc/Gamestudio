@@ -143,3 +143,14 @@ equipped gun slot, the melee slot, the inspect zoom (over a dimmed backdrop) and
 to near-square; the XL and L cut-outs may then be scaled down by the same shared factor rather than cropped. Until a
 cut-out passes review (real alpha, no halo or checkerboard, size band held, no text), the pack 1 painting stays the
 fallback in `manifest.json`.
+
+**In the game (dd-art-import45).** All 15 cut-outs passed review (real alpha, dark ink edge with no halo, the size band
+held: pistol 38% ... Elephant Gun 88% of the width) and the five backdrops are clean. The game uses the generic plates
+`dd_bg_gun` / `dd_bg_melee` everywhere, not the district plates: a weapon must look the same on the street, in the gun
+row, in the Wall Rack, the zoom and the Codex (the gun row and the Codex have no district), and the district plates put
+props (window, lockers, shelf brackets, lamp) under the badge and capacity corners. The district plates stay on the
+art branch, not in the build. The cut-out's shared scale is one box for the whole set (the union of every cut-out,
+`WEAPON_LAYER_BOX` in `tools/art/gen_art.py`), fitted in the art rect and capped at the backdrop's cover scale
+(`scripts/ui/dd_art_rect.gd`, `dd_layered_texture.gd`). Art pack 4: each zombie value has its own painting
+(`dd_zombie_v01..v12`, tier painting = fallback) and its name is the street tile title, the zoom's tag and the Codex
+entry (the tier word stays the rules name).
