@@ -22,7 +22,7 @@ const DIR_CLEAN: String = "res://assets/art/painted/ui_clean/"
 ## dd-ui-clean: the skins the player can pick, their names, and the default.
 const SKINS: PackedStringArray = ["a", "b", "c"]
 const SKIN_NAMES: Dictionary = {"a": "Clean painted", "b": "Flat ink", "c": "Minimal frame", "old": "Bolted kit"}
-const DEFAULT_SKIN: String = "b"
+const DEFAULT_SKIN: String = "a"
 ## the clear space (game px) between any corner / rim decoration and the content
 const GAP: float = 6.0
 ## the pieces whose content (labels) box() keeps clear of the decoration
