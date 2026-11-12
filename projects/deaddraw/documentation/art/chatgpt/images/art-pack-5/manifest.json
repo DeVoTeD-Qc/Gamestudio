@@ -1,7 +1,7 @@
 {
   "source": "../../dd-art-pack-5-cutouts-prompts.md",
   "requested_count": 20,
-  "generated_count": 11,
+  "generated_count": 15,
   "images": [
     {
       "number": 1,
@@ -184,28 +184,64 @@
       "batch": 2,
       "title": "### Image 12: Bare Hands (no melee weapon)",
       "file": "dd_cut_melee_bare_hands.png",
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        384,
+        258,
+        1152,
+        807
+      ],
+      "width_percent": 50,
+      "export_width_px": 768,
+      "sha256": "6c62825f29feb1069004381825479ed272b8ebaf4e56fb04891606496b3ea1a2"
     },
     {
       "number": 13,
       "batch": 2,
       "title": "### Image 13: Pipe Wrench",
       "file": "dd_cut_melee_pipe_wrench.png",
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        338,
+        316,
+        1198,
+        749
+      ],
+      "width_percent": 56,
+      "export_width_px": 860,
+      "sha256": "46354e152dbf19482a2825d304ed70d5c05a75ea30ec43b5fde279f181f2cd86"
     },
     {
       "number": 14,
       "batch": 2,
       "title": "### Image 14: Fire Axe",
       "file": "dd_cut_melee_fire_axe.png",
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        184,
+        242,
+        1351,
+        822
+      ],
+      "width_percent": 76,
+      "export_width_px": 1167,
+      "sha256": "3c76b1e37b69e634ae4703bacbfa4bd0221fc7e40ff7c6a892a4bc1cd59e48a6"
     },
     {
       "number": 15,
       "batch": 2,
       "title": "### Image 15: Sledgehammer",
       "file": "dd_cut_melee_sledgehammer.png",
-      "status": "pending"
+      "status": "generated",
+      "alpha_bbox": [
+        138,
+        207,
+        1397,
+        857
+      ],
+      "width_percent": 82,
+      "export_width_px": 1259,
+      "sha256": "c63961b60854c7df8e393deeef23920a3fe62c7076d165cac143dd12a789d30e"
     },
     {
       "number": 16,
