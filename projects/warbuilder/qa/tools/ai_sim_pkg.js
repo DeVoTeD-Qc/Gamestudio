@@ -7,7 +7,7 @@
 //
 //   node projects/warbuilder/qa/tools/ai_sim_pkg.js [games=1000] [--gates] [--a=aware --b=blind] [--set=hp:55,...] [--engine=path/to/engine.js]
 //     --gates     run the three gate matchups (aware-random, aware-blind, aware-aware) and print the gate table (default)
-//     --a / --b   one matchup: aware | blind | random (random = the engine's random-buyer control)
+//     --a / --b   one matchup: aware | blind | random (random = the engine's random-buyer control) | naive (the new-player bot, wb-first-shot)
 //     --set       TUNE overrides for tuning runs (numbers or true/false)
 //     --engine    another engine file (e.g. an older copy, for a before/after table); it must have WD.aiTurn
 'use strict';
@@ -23,7 +23,7 @@ const isStarter = id => WD.CARDS[id] && WD.CARDS[id].archetype === 'starter';
 const TACTICS = Object.values(WD.CARDS).filter(d => d.tactic).map(d => d.name);
 
 function run(n, polA, polB) {
-  const R = { n: 0, aWins: 0, draws: 0, rounds: 0, final: 0, acq: 0, starters: 0, spoils: 0, promoted: 0, errors: 0, hand: {}, dmg: {}, squad: {}, shots: 0, hits: 0, tactic: {}, owShots: 0, turretShots: 0, healed: 0 };
+  const R = { fo: {}, dealt: 0, aShots: {}, n: 0, aWins: 0, draws: 0, rounds: 0, final: 0, acq: 0, starters: 0, spoils: 0, promoted: 0, errors: 0, hand: {}, dmg: {}, squad: {}, shots: 0, hits: 0, tactic: {}, owShots: 0, turretShots: 0, healed: 0 };
   for (let i = 0; i < n; i++) {
     const aSeat = i % 2; const s = WD.newGame({ seed: i + 1 });
     s.aiMode = aSeat === 0 ? [polA, polB] : [polB, polA];
@@ -33,13 +33,15 @@ function run(n, polA, polB) {
       while (!s.over && g++ < 400) {
         const p = s.turn; const pl = s.players[p];
         if (p === aSeat) { const h = R.hand[s.round] = R.hand[s.round] || [0, 0]; h[0] += pl.hand.filter(x => !isStarter(s.cards[x].def)).length; h[1] += pl.hand.length; }
-        const d0 = pl.stats.damageDealt, r0 = s.round;
+        const d0 = pl.stats.damageDealt, r0 = s.round, sh0 = pl.stats.shots, hi0 = pl.stats.hits;
         const r = WD.aiTurn(s, p); if (!r.ok) throw new Error(r.err);
-        if (p === aSeat) { const d = R.dmg[r0] = R.dmg[r0] || [0, 0]; d[0] += pl.stats.damageDealt - d0; d[1]++; }
+        if (p === aSeat) { const d = R.dmg[r0] = R.dmg[r0] || [0, 0]; d[0] += pl.stats.damageDealt - d0; d[1]++;
+          const q = R.aShots[r0] = R.aShots[r0] || [0, 0, 0]; q[0] += pl.stats.shots - sh0; q[1] += pl.stats.hits - hi0; q[2] += pl.stats.hits > hi0 ? 1 : 0; }
       }
       if (!s.over) throw new Error('stuck');
     } catch (e) { R.errors++; if (R.errors < 3) console.error(`seed ${i + 1}:`, e.message); continue; }
-    R.n++; if (s.winner === aSeat) R.aWins++; else if (s.winner === 'draw') R.draws++;
+    R.n++; if (s.players[aSeat].stats.damageDealt > 0) R.dealt++;
+    for (const [r, v] of Object.entries(s.players[aSeat].stats.fireOpp || {})) { const f = R.fo[r] = R.fo[r] || [0, 0, 0]; v.forEach((x, j) => { f[j] += x; }); } if (s.winner === aSeat) R.aWins++; else if (s.winner === 'draw') R.draws++;
     R.rounds += s.round; R.final += s.finalReached ? 1 : 0;
     const pl = s.players[aSeat]; const all = pl.deck.concat(pl.discard, pl.hand, pl.play, pl.loadout, pl.drop || []);
     R.acq += pl.stats.cardsAcquired; R.starters += all.filter(x => isStarter(s.cards[x].def)).length;
@@ -52,6 +54,16 @@ function run(n, polA, polB) {
     cardsAcquired: f(R.acq / k, 1), startersAtEnd: f(R.starters / k, 1), spoils: f(R.spoils / k, 1), promoted: f(R.promoted / k, 1), hitRate: f(R.hits / Math.max(1, R.shots), 3),
     overwatchShots: f(R.owShots / k), turretShots: f(R.turretShots / k), healed: f(R.healed / k, 1),
     ownHand: Object.fromEntries(Object.entries(R.hand).map(([r, v]) => [r, f(v[0] / v[1])])),
+    dealtDamage: f(R.dealt / k, 3),
+    // seat A's own shots, by round: hit rate of its shots, and the share of its turns with at least one hit
+    aHitRate: Object.fromEntries(Object.entries(R.aShots).map(([r, v]) => [r, v[0] ? f(v[1] / v[0], 3) : null])),
+    aHitTurns: Object.fromEntries(Object.entries(R.aShots).map(([r, v]) => [r, f(v[2] / (R.dmg[r] ? R.dmg[r][1] : 1), 3)])),
+    aHitRate13: (() => { let a = 0, b = 0; for (const r of [1, 2, 3]) if (R.aShots[r]) { a += R.aShots[r][1]; b += R.aShots[r][0]; } return b ? f(a / b, 3) : null; })(),
+    aHitRateAll: (() => { let a = 0, b = 0; for (const r in R.aShots) { a += R.aShots[r][1]; b += R.aShots[r][0]; } return b ? f(a / b, 3) : null; })(),
+    // naive bot only: turns on which FIRE was live (in range, with Precision), the mean odds FIRE showed, the share of those turns with a hit
+    fireLive: Object.fromEntries(Object.entries(R.fo).map(([r, v]) => [r, { turns: v[0], odds: f(v[1] / v[0], 3), hit: f(v[2] / v[0], 3) }])),
+    fireLive3plus: (() => { let a = 0, b = 0, c = 0; for (const r in R.fo) if (+r >= 3) { a += R.fo[r][0]; b += R.fo[r][1]; c += R.fo[r][2]; } return a ? { odds: f(b / a, 3), hit: f(c / a, 3) } : null; })(),
+    aShotsPerMatch: f(Object.values(R.aShots).reduce((t, v) => t + v[0], 0) / k, 1),
     dmgPerTurn: Object.fromEntries(Object.entries(R.dmg).map(([r, v]) => [r, f(v[0] / v[1], 1)])),
     squadWin: Object.fromEntries(Object.entries(R.squad).sort().map(([q, v]) => [q, `${f(v[0] / v[1], 3)} (n=${v[1]})`])),
     tacticPlays: Object.fromEntries(Object.entries(R.tactic).sort((a, b) => b[1] - a[1]).map(([t, v]) => [t, f(v / k)])) };
@@ -60,6 +72,7 @@ function run(n, polA, polB) {
 function gates(n) {
   const hasRandom = (() => { try { const s = WD.newGame({ seed: 1 }); s.aiMode = ['random', 'random']; for (let g = 0; g < 6; g++) WD.aiTurn(s, s.turn); return s.players.some(p => p.stats.cardsAcquired > 0) && WD.aiBuy.toString().includes('random'); } catch (e) { return false; } })();
   const ar = hasRandom ? run(n, 'aware', 'random') : null, ab = run(n, 'aware', 'blind'), aa = run(n, 'aware', 'aware');
+  const hasNaive = WD.aiTurn.toString().includes('naive'); const nv = hasNaive ? run(n, 'naive', 'aware') : null; // wb-first-shot: the new-player bot vs the AI
   const sq = Object.entries(aa.squadWin).filter(([q]) => q !== '-').map(([q, v]) => [q, parseFloat(v)]);
   const G = [
     ['Build edge (aware vs random buyer)', ar ? ar.aWin : null, x => x >= 0.85, '>= 85%'],
@@ -70,8 +83,11 @@ function gates(n) {
     ['Own cards in hand, round 8', aa.ownHand[8], x => x >= 0.5, '(report; >= 0.50 wanted)'],
     ['Squads in the mirror (win rate by main squad)', sq.map(([q, v]) => `${q} ${v}`).join(', '), () => sq.every(([, v]) => v >= 0.45 && v <= 0.6), 'each 45–60%'],
     ['Hit rate of shots taken', aa.hitRate, x => x >= 0.6 && x <= 0.7, '60–70% (head\'s target)'],
+    ['New player bot: turns with FIRE live that land a hit, round 3', nv && nv.fireLive[3] ? nv.fireLive[3].hit : null, x => x >= 0.38, 'about 40% (wb-first-shot)'],
+    ['New player bot: the same, rounds 3–11', nv && nv.fireLive3plus ? nv.fireLive3plus.hit : null, x => x >= 0.38, 'about 40%'],
+    ['New player bot: matches in which it deals damage', nv ? nv.dealtDamage : null, x => x > 0.5, 'most matches (> 50%)'],
   ];
-  return { games: n, tune: { hp: WD.TUNE.hp }, gates: G.map(([label, v, ok, target]) => ({ label, value: v, target, pass: v == null ? null : ok(v) })), runs: { awareVsRandom: ar, awareVsBlind: ab, mirror: aa } };
+  return { games: n, tune: { hp: WD.TUNE.hp }, gates: G.map(([label, v, ok, target]) => ({ label, value: v, target, pass: v == null ? null : ok(v) })), runs: { awareVsRandom: ar, awareVsBlind: ab, mirror: aa, naiveVsAware: nv } };
 }
 
 if (require.main === module) {

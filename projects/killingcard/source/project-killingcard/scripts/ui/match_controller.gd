@@ -2069,9 +2069,16 @@ func _open_objective(zone: int) -> void:
 	for key: String in ["player", "enemy"]:
 		for f: Dictionary in (lane["fields"] as Dictionary).get(key, []):
 			lines.append("%s Field: %s%s." % ["Your" if key == "player" else "Rival", f["name"], " (hidden trap)" if f.get("hidden", false) else ""])
+	# kc-clarity: how the column scores, and what it is worth to whom right now.
+	var worth: int = int(lane.get("worth", 0))
+	var status: String = ""
+	if worth > 0:
+		lines.append("Held at round end = +%d point%s. You hold it when only your units are left here (or your Holder is)." % [worth, "s" if worth > 1 else ""])
+		var holder: String = {&"player": "you", &"enemy": "the rival"}.get(lane["control"], "")
+		status = ("Now: +%d to %s. " % [worth, holder] if holder != "" else "Now: nobody scores it. ") + ScoreRace.goal_line(state, me_side)
 	_open_info({"title": "Objective %s · %s" % [String(lane["label"]), String(lane["name"]).capitalize()],
 			"type": "objective · column %s" % String(lane["label"]), "text": "\n".join(lines),
-			"status": ""})
+			"status": status})
 
 
 func _open_field(zone: int, side: int, uid: int) -> void:
