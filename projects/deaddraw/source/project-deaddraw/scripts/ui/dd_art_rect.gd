@@ -7,6 +7,11 @@
 #   Made by DDArt.cover_rect() from the manifest's "focus" entries; anything without one keeps the
 #   plain TextureRect cover look. It is a TextureRect (art_rect slots, self_modulate dimming), but
 #   draws the art itself: `texture` stays null, the painting is in `art`.
+#   dd-art-import45: a layered weapon card (DDLayeredTexture, art pack 5) draws its backdrop cover-fit
+#   (centred) and its cut-out at ONE scale for the whole set: the canvas scale that fits the set's shared box
+#   (the union of every cut-out) in the rect, capped at the backdrop's cover scale, with the canvas centre on
+#   the texture's anchor (50% / 52%). So in a given rect a pistol is always smaller than a rifle, and no
+#   weapon is ever cut, whatever the rect's shape (phones crop the backdrop, never the weapon).
 #   Performance: low. Three draw_texture_rect_region calls at most, redrawn on resize only.
 # Dependencies: none.
 # Author: Technical Artist Agent (dd-art-fit)
@@ -56,7 +61,47 @@ func layout(area: Vector2) -> Array:
 	return [src, dst, s < s_cover - 0.0001]
 
 
+## dd-art-import45: [back src, back dst, cut src, cut dst] for a layered texture in a rect of `area`.
+func layered_layout(area: Vector2) -> Array:
+	if art == null or area.x < 1.0 or area.y < 1.0:
+		return [Rect2(), Rect2(), Rect2(), Rect2()]
+	var bt: Texture2D = art.get("back")
+	var ct: Texture2D = art.get("cut")
+	var out: Array = [Rect2(), Rect2(), Rect2(), Rect2()]
+	if bt != null:
+		var bsz: Vector2 = bt.get_size()
+		var sb: float = maxf(area.x / bsz.x, area.y / bsz.y)
+		var vis: Vector2 = area / sb
+		out[0] = Rect2((bsz - vis) * 0.5, vis)
+		out[1] = Rect2(Vector2.ZERO, area)
+	if ct != null:
+		var csz: Vector2 = ct.get_size()
+		var bx: Rect2 = art.get("box")
+		var anc: Vector2 = art.get("anchor")
+		var s_cover: float = maxf(area.x / csz.x, area.y / csz.y)
+		var s: float = minf(s_cover, minf(area.x / maxf(bx.size.x * csz.x, 1.0), area.y / maxf(bx.size.y * csz.y, 1.0)))
+		var pos: Vector2 = anc * area - csz * s * 0.5
+		# keep the shared box inside the rect (the 52% anchor never pushes a weapon off the bottom)
+		var bpx: Rect2 = Rect2(pos + bx.position * csz * s, bx.size * csz * s)
+		for ax: int in 2:
+			if bpx.position[ax] < 0.0:
+				pos[ax] -= bpx.position[ax]
+			elif bpx.end[ax] > area[ax]:
+				pos[ax] -= bpx.end[ax] - area[ax]
+		var dst: Rect2 = Rect2(pos, csz * s).intersection(Rect2(Vector2.ZERO, area))
+		out[2] = Rect2((dst.position - pos) / s, dst.size / s)
+		out[3] = dst
+	return out
+
+
 func _draw() -> void:
+	if art != null and art.get_script() != null and art.get("cut") != null:
+		var ll: Array = layered_layout(size)
+		if (ll[0] as Rect2).size.x > 0.0:
+			draw_texture_rect_region(art.get("back"), ll[1], ll[0])
+		if (ll[2] as Rect2).size.x > 0.0:
+			draw_texture_rect_region(art.get("cut"), ll[3], ll[2])
+		return
 	var l: Array = layout(size)
 	var src: Rect2 = l[0]
 	if src.size.x <= 0.0 or src.size.y <= 0.0:

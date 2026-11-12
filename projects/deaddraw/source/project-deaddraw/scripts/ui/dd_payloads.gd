@@ -95,7 +95,8 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	if c.holdover:
 		body.append("HOLDOVER: left from the last street.")
 	var art_big: String = str(c.value) if c.kind != DDCard.WEAPON else "P%d" % b.weapon_power(c.wid)
-	var p: Dictionary = {"art_keys": Art.card_keys(c, str(run.district().get("id", ""))), "kind": "F" if c.is_boss() else c.kind, "tag": DDText.kind_label(c.kind) if not c.is_boss() else "BOSS - " + DDText.trait_name(c.boss_trait).to_upper(),
+	var ztitle: String = DDText.zombie_title(c.value) if c.kind == DDCard.ZOMBIE and not c.is_boss() else ""
+	var p: Dictionary = {"art_keys": Art.card_keys(c, str(run.district().get("id", ""))), "kind": "F" if c.is_boss() else c.kind, "tag": (DDText.kind_label(c.kind) + ("" if ztitle == "" else " · " + ztitle.to_upper())) if not c.is_boss() else "BOSS - " + DDText.trait_name(c.boss_trait).to_upper(),
 		"title": DDText.card_name(c, b), "big": art_big, "body": "\n".join(body)}
 	if c.kind == DDCard.ZOMBIE:
 		p["strength"] = c.value
@@ -109,7 +110,8 @@ static func card_t1(c: DDCard, run: DDRun) -> String:
 	var b: DDBalance = run.bal
 	match c.kind:
 		DDCard.ZOMBIE:
-			return "%s · strength %d (attack and toughness)" % [DDText.card_name(c, b), c.value]
+			var zt: String = DDText.zombie_title(c.value) if not c.is_boss() else ""
+			return "%s%s · strength %d (attack and toughness)" % [(zt + ", ") if zt != "" else "", DDText.card_name(c, b), c.value]
 		DDCard.WEAPON:
 			return "%s · hits %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid)]
 		DDCard.MEDKIT:
@@ -228,7 +230,7 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	elif c.holdover:
 		tag = "HOLDOVER"
 	var spec: Dictionary = {"kind": "F" if c.is_boss() else c.kind, "tag": tag, "badge": badge, "badge_color": badge_color, "badge_size": DDUi.FONT_M,
-		"big": str(c.value) if c.kind != DDCard.WEAPON else "", "title": DDText.card_name(c, b), "lines": lines,
+		"big": str(c.value) if c.kind != DDCard.WEAPON else "", "title": _tile_title(c, b), "lines": lines,
 		"art_dim": dim_art, "lock": lock, "payload": card(c, run, i)}
 	# dd-ux-v4: zombies (and bosses) show the strength mark, guns the hit burst
 	if c.kind == DDCard.ZOMBIE:
@@ -923,3 +925,11 @@ static func how_to_play(bal: DDBalance) -> Dictionary:
 	b.append("Spend points to OPEN rooms: 3 cards join the pile and a machine switches on (Retrofit Bench, Patch Press, Wall Rack).")
 	b.append("Long press or right click anything to read it.")
 	return {"kind": "D", "tag": "HOW TO PLAY", "title": "Kill Stacks", "big": "", "list": true, "body": "\n\n".join(b)}
+
+
+## dd-art-import45: a street tile's title. Zombies show their character name (art pack 4, "Courier"); the
+## tier word (Lurcher) stays in the zoom's title and the tooltip.
+static func _tile_title(c: DDCard, b: DDBalance) -> String:
+	if c.kind == DDCard.ZOMBIE and not c.is_boss() and DDText.zombie_title(c.value) != "":
+		return DDText.zombie_title(c.value)
+	return DDText.card_name(c, b)

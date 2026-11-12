@@ -2458,6 +2458,69 @@ PAINTED_FOCUS = {
 }
 
 
+# art pack 4 (dd-art-import45): one zombie painting per value 1-12. The card picks dd_zombie_vNN by its value
+# (by_kind_value zombie / "zombie_<v>", the second key DDArt.card_keys tries) and keeps the tier painting
+# (by_name "Shambler"... and the art group) as the fallback. Must-see boxes: the small Shamblers and Lurchers
+# keep their whole body and the hydrant (the size cue), Bruisers and Hulks head to waist like pack 1.
+ZOMBIE_VALUE_FOCUS = {
+    1: [0.40, 0.42, 0.62, 0.80], 2: [0.40, 0.40, 0.62, 0.81], 3: [0.36, 0.33, 0.66, 0.78],
+    4: [0.22, 0.33, 0.77, 0.80], 5: [0.25, 0.32, 0.75, 0.78], 6: [0.24, 0.34, 0.78, 0.78],
+    7: [0.29, 0.17, 0.71, 0.65], 8: [0.22, 0.17, 0.72, 0.66], 9: [0.27, 0.13, 0.72, 0.62],
+    10: [0.22, 0.07, 0.78, 0.62], 11: [0.17, 0.05, 0.84, 0.62], 12: [0.18, 0.08, 0.86, 0.66],
+}
+for _v, _bx in ZOMBIE_VALUE_FOCUS.items():
+    PAINTED_FOCUS["dd_zombie_v%02d" % _v] = _bx
+
+# art pack 5 (dd-art-import45): layered weapon cards (art-direction.md "Layered weapon cards"). Each pack 1
+# weapon painting gets a "layers" entry: the generic backdrop (dd_bg_gun / dd_bg_melee) plus its transparent
+# cut-out, all on one 768x512 canvas. DDArt draws the two layers in its place wherever the painting would be
+# (street card, gun row, Wall Rack preview, inspect, Codex); when either layer file is missing the pack 1
+# painting is drawn, as before. Why the generic plates and not the district ones: a weapon must look the same
+# on the street, in the gun row, in the rack, the zoom and the Codex (the gun row and the Codex have no
+# district), and the district plates put props (window, lockers, brackets, lamp) right under the badge and
+# capacity corners. WEAPON_LAYER_BOX: the union of every cut-out's alpha box (+ a small pad): one shared box,
+# so one scale per card size for the whole set (a pistol stays smaller than a rifle).
+WEAPON_LAYERS = {
+    "dd_gun_service_pistol": "dd_cut_gun_service_pistol", "dd_gun_nail_driver": "dd_cut_gun_nail_driver",
+    "dd_gun_alley_sweeper": "dd_cut_gun_alley_sweeper", "dd_gun_twin_bore": "dd_cut_gun_twin_bore",
+    "dd_gun_scout_carbine": "dd_cut_gun_scout_carbine", "dd_gun_ratchet_crossbow": "dd_cut_gun_ratchet_crossbow",
+    "dd_gun_stovepipe_launcher": "dd_cut_gun_stovepipe_launcher", "dd_gun_pump_shotgun": "dd_cut_gun_pump_shotgun",
+    "dd_gun_lever_rifle": "dd_cut_gun_lever_rifle", "dd_gun_hunting_rifle": "dd_cut_gun_hunting_rifle",
+    "dd_gun_elephant_gun": "dd_cut_gun_elephant_gun",
+    "dd_melee_bare_hands": "dd_cut_melee_bare_hands", "dd_melee_pipe_wrench": "dd_cut_melee_pipe_wrench",
+    "dd_melee_fire_axe": "dd_cut_melee_fire_axe", "dd_melee_sledgehammer": "dd_cut_melee_sledgehammer",
+}
+WEAPON_LAYER_BOX = [0.05, 0.19, 0.95, 0.85]
+
+
+def apply_layers(man: dict) -> None:
+    """Pack 4 zombies by value and the pack 5 weapon layers (only for files that exist)."""
+    def have(stem: str) -> bool:
+        return (ART / "painted" / ("%s.webp" % stem)).exists()
+
+    zv = man["by_kind_value"].setdefault("zombie", {})
+    names = {}
+    for v in range(1, 13):
+        stem = "dd_zombie_v%02d" % v
+        if have(stem):
+            zv[str(v)] = "painted/%s.webp" % stem
+            names[str(v)] = "painted/%s.webp" % stem
+    if names:
+        man["zombie_values"] = names
+    layers = {}
+    for stem, cut in WEAPON_LAYERS.items():
+        back = "dd_bg_melee" if stem.startswith("dd_melee_") else "dd_bg_gun"
+        if have(stem) and have(cut) and have(back):
+            layers["painted/%s.webp" % stem] = {"back": "painted/%s.webp" % back, "cut": "painted/%s.webp" % cut,
+                                                "box": WEAPON_LAYER_BOX, "anchor": [0.5, 0.52]}
+    if layers:
+        man["layers"] = layers
+        man["sizes"]["painted_layer"] = [768, 512]
+    man["_note"] += (" v6 (art packs 4-5): by_kind_value zombie / zombie_values pick dd_zombie_vNN by value (tier"
+                     " painting = fallback); layers: a weapon painting drawn as backdrop + cut-out (one canvas, one"
+                     " shared box = one scale), the painting itself = fallback.")
+
+
 def apply_painted(man: dict) -> None:
     have = {svg: "painted/%s.webp" % stem for svg, stem in PAINTED.items() if (ART / "painted" / ("%s.webp" % stem)).exists()}
     if not have:
@@ -2510,6 +2573,7 @@ def apply_painted(man: dict) -> None:
     if focus:
         man["focus"] = focus
     man["_note"] += " v5: painted art pack 1 (assets/art/painted/*.webp) replaces the SVGs it covers; the SVGs stay the fallback. focus: each painting's must-see box (dd-art-fit)."
+    apply_layers(man)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,12 @@ Purpose: Turns the reviewed ChatGPT originals (full-size PNGs on the art/deaddra
   gen_art.py then points the manifest at every painted file that exists (PAINTED there), so the SVG
   art stays the fallback for anything not painted (or rejected in review).
   Art pack 3 (dd-mods-import): the Gun Mod badges dd_mod_*.png -> 256 px + a 64 px _sm copy.
+  Art packs 4 and 5 (dd-art-import45): the twelve zombies dd_zombie_v01..v12 (768x512, like pack 1); the gun
+  and melee cut-outs dd_cut_*.png (768x512 with alpha, the SAME canvas for all of them, never trimmed: the
+  canvas is what keeps one shared scale, a pistol smaller than a rifle; the alpha is cleaned: the faint
+  1-7 haze outside the ink line is dropped and 248+ snapped to opaque); the generic backdrops dd_bg_gun /
+  dd_bg_melee (768x512). The district plates (dd_bg_maple_row|downtown|st_agnes) are reviewed but not
+  imported (UNUSED): the game uses the generic plates on every weapon card (see gen_art.py WEAPON_LAYERS).
 Usage: python3 projects/deaddraw/tools/art/import_painted.py <folder with the original PNGs>
   e.g. git archive origin/art/deaddraw-pack-1 projects/deaddraw/documentation/art/chatgpt/images/art-pack-1
   | tar -x -C /tmp/raw, then pass /tmp/raw/projects/.../art-pack-1. Run gen_art.py afterwards.
@@ -26,6 +32,8 @@ OUT = ROOT / "assets" / "art" / "painted"
 # Rejected in review (retry prompts in documentation/art/chatgpt/dd-art-pack-1-retry-prompts.md) or blocked.
 # dd-art-fit: the two retries (title landscape, Retrofit Bench) passed review and are imported.
 SKIP: set[str] = set()
+# Reviewed and fine, but not used in the game (kept out of the build to keep the web pck small).
+UNUSED: set[str] = {"dd_bg_maple_row.png", "dd_bg_downtown.png", "dd_bg_st_agnes.png"}
 
 # Gun Mod badges (art pack 3, dd-mods-import): 256 px for the inspect zoom plus a 64 px "_sm" copy for the
 # 24 px gun-tile chip and the 48 px safehouse offer card (the game has no mipmaps, so a 256 px texture
@@ -70,6 +78,18 @@ def convert(src: Path, dst: Path) -> int:
     return dst.stat().st_size
 
 
+def convert_cut(src: Path) -> int:
+    """A weapon cut-out: the alpha cleaned, the full canvas kept (shared scale), half size, lossy WebP + alpha."""
+    im = Image.open(src).convert("RGBA")
+    r, g, b, a = im.split()
+    a = a.point(lambda v: 0 if v < 8 else (255 if v >= 248 else v))
+    im = Image.merge("RGBA", (r, g, b, a))
+    im = im.resize((im.width // 2, im.height // 2), Image.LANCZOS)
+    dst = OUT / (src.stem + ".webp")
+    im.save(dst, "WEBP", quality=88, method=6, alpha_quality=90)
+    return dst.stat().st_size
+
+
 def mod_square(im: Image.Image) -> Image.Image:
     """Snap the alpha, crop to the tag, centre it on a square transparent canvas with MOD_MARGIN."""
     r, g, b, a = im.split()
@@ -110,8 +130,13 @@ def main() -> None:
         if src.name in SKIP:
             print("skip (rejected / blocked):", src.name)
             continue
+        if src.name in UNUSED:
+            print("skip (not used in the game):", src.name)
+            continue
         if src.name.startswith("dd_mod_"):
             total += convert_mod(src)
+        elif src.name.startswith("dd_cut_"):
+            total += convert_cut(src)
         else:
             total += convert(src, OUT / (src.stem + ".webp"))
         n += 1

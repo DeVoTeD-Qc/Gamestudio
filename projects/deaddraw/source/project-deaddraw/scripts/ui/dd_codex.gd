@@ -118,12 +118,13 @@ static func entries(bal: DDBalance) -> Array:
 		out.append({"key": "melee:" + m, "type": "melee", "name": bal.melee_name(m), "art_keys": DDV4Hooks.melee_art_keys(m, bal.melee_name(m)), "hit": bal.melee_power(m),
 			"uses": bal.melee_uses(m), "stat": "melee", "districts": mdist2.get(m, all_ids),
 			"line": "Found in the pile. Each kill uses 1; at 0 it breaks."})
-	for t: int in 4:
+	# dd-art-import45 (art pack 4): one entry per zombie value, its character name and painting; the tier
+	# (rules name, ring colour, the line) is in the stat row and the tooltip
+	for v: int in range(1, 13):
+		var t: int = 0 if v <= 3 else (1 if v <= 6 else (2 if v <= 9 else 3))
 		var nm: String = Marks.TIER_NAMES[t]
-		var rng: String = ["1-3", "4-6", "7-9", "10+"][t]
-		var v: int = [2, 5, 8, 11][t]
-		out.append({"key": "zombie:" + nm.to_lower(), "type": "zombies", "name": nm, "art_keys": Art.card_keys(DDCard.make(DDCard.ZOMBIE, v)),
-			"strength": v, "stat": "strength " + rng, "districts": zdist.get(nm, []),
+		out.append({"key": "zombie:v%d" % v, "type": "zombies", "name": DDText.zombie_title(v), "art_keys": Art.card_keys(DDCard.make(DDCard.ZOMBIE, v)),
+			"strength": v, "stat": "%s · %d" % [nm, v], "districts": zdist.get(nm, []),
 			"line": ["Slow and weak. Good points on small guns.", "The bulk of every wave.", "Hurts with weak guns; pays %d-%d." % [bal.shown(7), bal.shown(9)], "Only in the worst places."][t]})
 	for d2: Variant in ds:
 		var dd2: Dictionary = d2
@@ -177,6 +178,7 @@ static func keys_met_by(run: DDRun) -> Array[String]:
 					out.append("boss:" + str(run.district().get("id", "")))
 				else:
 					out.append("zombie:" + DDText.zombie_name(cc.value).to_lower())
+					out.append("zombie:v%d" % cc.value)
 			DDCard.WEAPON:
 				out.append("gun:" + cc.wid)
 			DDCard.MELEE:

@@ -31,6 +31,16 @@ const CHALLENGE_NAMES: Dictionary = {
 }
 
 
+## dd-art-import45 (art pack 4): each zombie value's character name, the card title (the tier word,
+## zombie_name(), stays the rules name). "" outside 1-12.
+const ZOMBIE_TITLES: Array[String] = ["", "Slippers", "Librarian", "Postman", "Jogger", "Courier", "Night Cook",
+	"Mover", "Road Crew", "Bouncer", "Trucker", "Strongman", "Titan"]
+
+
+static func zombie_title(v: int) -> String:
+	return ZOMBIE_TITLES[v] if v >= 1 and v < ZOMBIE_TITLES.size() else ""
+
+
 static func zombie_name(v: int) -> String:
 	if v <= 3:
 		return "Shambler"

@@ -23,6 +23,10 @@
 #   v5 (dd-art-fit): the manifest's "focus" group, {file: {"box": [x0, y0, x1, y1], "focus": [x, y]}}
 #   in 0..1 of the image, says where a painting's subject is; cover_rect() then crops around it and
 #   never cuts the box (dd_art_rect.gd).
+#   v6 (dd-art-import45, art packs 4-5): zombies by value (by_kind_value "zombie_<v>" -> dd_zombie_vNN,
+#   the tier painting as the fallback) and layered weapon cards: the manifest's "layers" group,
+#   {painting: {"back": file, "cut": file, "box": [...], "anchor": [x, y]}}, makes _texture() hand out a
+#   DDLayeredTexture (backdrop + cut-out) in that painting's place; a missing layer keeps the painting.
 # Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
@@ -32,12 +36,16 @@ const KIND_WORD: Dictionary = {"Z": "zombie", "W": "weapon", "M": "medkit", "C":
 ## v3 machine kinds -> the manifest's machine ids.
 const MACHINE_ART: Dictionary = {"bench": "retrofit_bench", "patch": "patch_press", "wall": "wall_rack"}
 const ArtRect: GDScript = preload("res://scripts/ui/dd_art_rect.gd")
+const LayeredTex: GDScript = preload("res://scripts/ui/dd_layered_texture.gd")
 
 static var _path: String = DEFAULT_MANIFEST
 static var _entries: Dictionary = {}   # lowercase key -> resolved file path
 static var _loaded: bool = false
 static var _tex: Dictionary = {}       # file path -> Texture2D (or null)
 static var _focus: Dictionary = {}     # file path -> {"box": Rect2, "focus": Vector2}
+static var _layers: Dictionary = {}    # painting path -> {"back": path, "cut": path, "box": Rect2, "anchor": Vector2}
+## dd-art-import45: false draws the pack 1 weapon paintings instead of the layers (before / after sheets).
+static var layers_enabled: bool = true
 
 
 ## Points the hook at another manifest (tests) and forgets what was loaded.
@@ -51,6 +59,7 @@ static func reset() -> void:
 	_loaded = false
 	_tex = {}
 	_focus = {}
+	_layers = {}
 
 
 ## Number of manifest entries found (0 = no manifest / empty).
@@ -96,6 +105,11 @@ static func focus_for(tex: Texture2D) -> Dictionary:
 ## dd-art-fit: a full-cover art rect. Paintings with a focus entry crop around their subject and
 ## never cut its box (dd_art_rect.gd); anything else is a plain cover TextureRect, as before.
 static func cover_rect(tex: Texture2D) -> TextureRect:
+	if is_layered(tex):
+		# backdrop cover-fit, cut-out at the set's shared scale (dd_art_rect.gd)
+		var lr: TextureRect = ArtRect.new()
+		lr.set("art", tex)
+		return lr
 	var fz: Dictionary = focus_for(tex)
 	if fz.is_empty():
 		var tr: TextureRect = TextureRect.new()
@@ -108,6 +122,11 @@ static func cover_rect(tex: Texture2D) -> TextureRect:
 	ar.set("box", fz.get("box", Rect2()))
 	ar.set("focus", fz.get("focus", Vector2(0.5, 0.5)))
 	return ar
+
+
+## dd-art-import45: true for a layered weapon card (backdrop + cut-out).
+static func is_layered(tex: Texture2D) -> bool:
+	return tex != null and tex.get_script() == LayeredTex
 
 
 # ---------------------------------------------------------------- lookup keys
@@ -278,6 +297,22 @@ static func _ensure() -> void:
 			_focus[_resolve(str(f))] = out
 		parsed = (parsed as Dictionary).duplicate()
 		(parsed as Dictionary).erase("focus")
+	if parsed is Dictionary and (parsed as Dictionary).get("layers", null) is Dictionary:
+		var ly: Dictionary = parsed["layers"]
+		for f2: Variant in ly.keys():
+			var le: Variant = ly[f2]
+			if not (le is Dictionary) or str((le as Dictionary).get("back", "")) == "" or str((le as Dictionary).get("cut", "")) == "":
+				continue
+			var spec: Dictionary = {"back": _resolve(str(le["back"])), "cut": _resolve(str(le["cut"]))}
+			var lb: Array = (le as Dictionary).get("box", [])
+			if lb.size() == 4:
+				spec["box"] = Rect2(float(lb[0]), float(lb[1]), float(lb[2]) - float(lb[0]), float(lb[3]) - float(lb[1]))
+			var la: Array = (le as Dictionary).get("anchor", [])
+			if la.size() == 2:
+				spec["anchor"] = Vector2(float(la[0]), float(la[1]))
+			_layers[_resolve(str(f2))] = spec
+		parsed = (parsed as Dictionary).duplicate()
+		(parsed as Dictionary).erase("layers")
 	_walk(parsed, "")
 
 
@@ -356,6 +391,17 @@ static func _texture(path: String) -> Texture2D:
 	if _tex.has(path):
 		return _tex[path]
 	var t: Texture2D = null
+	if layers_enabled and _layers.has(path):
+		# dd-art-import45: the backdrop + cut-out in the painting's place (both layers or neither)
+		var ls: Dictionary = _layers[path]
+		var lb: Texture2D = _plain_texture(str(ls["back"]))
+		var lc: Texture2D = _plain_texture(str(ls["cut"]))
+		if lb != null and lc != null:
+			t = LayeredTex.new(lb, lc)
+			t.set("box", ls.get("box", t.get("box")))
+			t.set("anchor", ls.get("anchor", t.get("anchor")))
+			_tex[path] = t
+			return t
 	if path.begins_with("res://") and ResourceLoader.exists(path):
 		t = load(path) as Texture2D
 	if t == null and FileAccess.file_exists(path):
@@ -373,5 +419,16 @@ static func _texture(path: String) -> Texture2D:
 			err = img.load(path)
 		if err == OK and not img.is_empty():
 			t = ImageTexture.create_from_image(img)
+	_tex[path] = t
+	return t
+
+
+## A layer file (backdrop or cut-out): the imported texture, cached under its own path.
+static func _plain_texture(path: String) -> Texture2D:
+	if _tex.has(path):
+		return _tex[path]
+	var t: Texture2D = null
+	if path.begins_with("res://") and ResourceLoader.exists(path):
+		t = load(path) as Texture2D
 	_tex[path] = t
 	return t
