@@ -631,7 +631,7 @@ func get_tray() -> Control:
 
 
 ## Short message over the board (refusal reasons, hints). Hides itself after TOAST_SECONDS.
-func show_toast(text: String) -> void:
+func show_toast(text: String, seconds: float = TOAST_SECONDS) -> void:
 	_toast_id += 1
 	var my_id: int = _toast_id
 	_toast_label.text = text
@@ -645,7 +645,7 @@ func show_toast(text: String) -> void:
 	# killfeed toasts keep the top edge.
 	if board_r.has_area():
 		_toast.global_position.y = board_r.end.y - _toast.size.y - 4.0
-	get_tree().create_timer(TOAST_SECONDS).timeout.connect(func() -> void:
+	get_tree().create_timer(seconds).timeout.connect(func() -> void:
 		if my_id == _toast_id:
 			_toast.hide())
 

@@ -40,9 +40,11 @@ func _build() -> void:
 	_title_button.visible = not survey
 	_header.add_child(_title_button)
 	_header.add_child(_new_run_button)
-	var row: HBoxContainer = HBoxContainer.new()
+	var row: BoxContainer = BoxContainer.new()
 	row.add_theme_constant_override(&"separation", 16)
 	_body.add_child(row)
+	# kc-ux-text: in portrait the summary sits over the match table (it ran off the screen).
+	portrait_boxes.append(row)
 	var left: VBoxContainer = VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.size_flags_stretch_ratio = 0.8
@@ -76,10 +78,14 @@ func _build() -> void:
 	_result_label.text = "VICTORY" if won else "DEFEAT"
 	_result_label.theme_type_variation = &"ResultWin" if won else &"ResultLoss"
 	reason.text = String(RunFlow.END_WORDS.get(r.end_reason, ""))
-	summary.text = "Record %d won, %d lost, %d drawn  ·  Tickets left %d of %d\nDeck %d cards  ·  Attachments: %s\nPerks: %s  ·  Killstreaks: %s" % [
-			r.count_results(&"player"), r.count_results(&"enemy"), r.count_results(&"draw"),
-			r.tickets, r.config.tickets, r.deck.size(), RunFlow.names_of(r, r.attachments),
-			RunFlow.names_of(r, r.perks), RunFlow.names_of(r, r.killstreaks)]
+	# kc-ux-text: the record and what you ended with; an empty list is left out (no "None").
+	var lines: PackedStringArray = ["Record %d won, %d lost, %d drawn" % [r.count_results(&"player"),
+			r.count_results(&"enemy"), r.count_results(&"draw")],
+			"Tickets left %d of %d  ·  Deck %d cards" % [r.tickets, r.config.tickets, r.deck.size()]]
+	for pair: Array in [["Attachments", r.attachments], ["Perks", r.perks], ["Killstreaks", r.killstreaks]]:
+		if not (pair[1] as Array).is_empty():
+			lines.append("%s: %s" % [pair[0], RunFlow.names_of(r, pair[1])])
+	summary.text = "\n".join(lines)
 	for head: String in ["MATCH", "OPPONENT", "MODE", "RESULT"]:
 		table.add_child(make_label(head, &"HudTag"))
 	for h: Dictionary in r.history:

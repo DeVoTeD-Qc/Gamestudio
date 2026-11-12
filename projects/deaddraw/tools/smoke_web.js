@@ -43,14 +43,18 @@ async function waitFor(page, pred, what, ms = 60000) {
 
 function center(it) { return { x: it.x + it.w / 2, y: it.y + it.h / 2 }; }
 
+// A tap queues its start and end together (the end is sent without waiting for the start's ack):
+// on a loaded machine an awaited touchStart can be acked late, and the page would then see a
+// 60 ms tap as a long press (a zoom).
 async function touchTap(cdp, p) {
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y }] });
+  const a = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y }] });
   await sleep(60);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const b = cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await Promise.all([a, b]);
   await sleep(250);
 }
 
-async function touchHold(cdp, p, ms = 750) {
+async function touchHold(cdp, p, ms = 1000) {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: p.x, y: p.y }] });
   await sleep(ms);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });

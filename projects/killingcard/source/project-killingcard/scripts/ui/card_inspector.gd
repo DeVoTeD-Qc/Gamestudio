@@ -312,11 +312,23 @@ func _fit() -> void:
 	var room: Vector2 = size - Vector2(_center.offset_left - _center.offset_right, _center.offset_top - _center.offset_bottom)
 	var compact: bool = size.y < 640.0
 	var info_w: float = INFO_WIDTH_COMPACT if compact else INFO_WIDTH
-	_info_panel.custom_minimum_size.x = info_w
 	var banner_h: float = BANNER_SIZE.y + 8.0 if _banner_holder.visible else 0.0
+	# kc-ux-text: a narrow (portrait) screen has no room for the card and the sheet side by side:
+	# the card sits over the sheet, both as wide as the screen allows (the sheet was cut off).
+	var stacked: bool = room.x < 220.0 + info_w + 24.0 + 2.0 * MARGIN
+	(%Row as BoxContainer).vertical = stacked
+	(%Row as BoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
+	if stacked:
+		info_w = minf(info_w, room.x - 2.0 * MARGIN)
+		_holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_info_panel.custom_minimum_size.x = info_w
 	# kc-cards-impl: the Y2+ card at its own width (never scaled): as wide as the room allows, 220..330.
 	var by_height: float = (room.y - 2.0 * MARGIN - banner_h - (CardView.height_for(0.0) - 0.0)) * 4.0 + 8.0
 	var by_width: float = room.x - 2.0 * MARGIN - info_w - 24.0
+	if stacked:
+		# The card takes at most ~45% of the height; the sheet gets the rest.
+		by_height = (room.y * 0.45 - CardView.height_for(0.0)) * 4.0 + 8.0
+		by_width = room.x - 2.0 * MARGIN
 	var w: float = clampf(floorf(minf(by_height, by_width)), 220.0, CARD_MAX_W)
 	_card.pivot_offset = Vector2.ZERO
 	_card.position = Vector2.ZERO
@@ -337,6 +349,8 @@ func _fit() -> void:
 	_holder.custom_minimum_size = base * grow
 	# The text panel may be as tall as the room under the banner; its body scrolls past that.
 	var info_max: float = room.y - banner_h - 4.0
+	if stacked:
+		info_max -= base.y * grow + 8.0
 	_body_col.custom_minimum_size.x = info_w - 32.0
 	var content_h: float = _body_col.get_combined_minimum_size().y
 	_body.custom_minimum_size.y = 0.0

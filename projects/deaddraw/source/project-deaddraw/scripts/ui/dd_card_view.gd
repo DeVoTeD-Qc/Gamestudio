@@ -38,7 +38,7 @@ var _press_serial: int = 0
 ## too, so one stalled frame (a slow phone, a busy browser that delivers the release late) can't
 ## turn a tap into a zoom.
 var _press_frames: int = 0
-const LONG_PRESS_MIN_FRAMES: int = 3
+const LONG_PRESS_MIN_FRAMES: int = 2
 var drag_enabled: bool = false
 var dragging: bool = false
 

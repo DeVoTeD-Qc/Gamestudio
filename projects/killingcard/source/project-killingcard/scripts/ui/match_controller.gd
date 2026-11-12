@@ -104,6 +104,9 @@ var duel: Object = null
 var _cover: Control = null
 ## kc-duel-ui: the last round's public summary (shown on the cover).
 var _last_round_line: String = ""
+## kc-ux-text: the last round's recap (round_recap), shown once with the next Deploy's hint.
+var _recap: String = ""
+const RECAP_SECONDS: float = 4.5
 var map: MapData = null
 ## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
 var selection: Dictionary = {}
@@ -549,6 +552,7 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 		round_presented.emit()
 		return
 	_last_round_line = _round_line()
+	_recap = round_recap(resolved)
 	if is_hot_seat():
 		round_presented.emit()
 		duel.call(&"round_done")  # the next round's first cover (cover_needed)
@@ -628,10 +632,41 @@ func note_board_systems() -> Array[StringName]:
 
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[me_side]
-	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: drag your Operator (first card) onto a column." % state.round_number)
+	# kc-ux-text (studio rule): after each round a plain line says what happened, with the numbers
+	# that changed, then what to do now.
+	var now: String = "Round %d: drag your Operator onto a column." % state.round_number if s.operator_can_deploy \
+			else "Round %d: play cards, then READY." % state.round_number
+	if _recap != "":
+		_screen.show_toast(_recap + "\n" + now, RECAP_SECONDS)
+		_recap = ""
 	else:
-		_screen.show_toast("Round %d: Deploy." % state.round_number)
+		_screen.show_toast(now)
+
+
+## kc-ux-text: one line for the round that just resolved, from your side: the points each side
+## scored, the score, and the units each side lost. "Round 2: you +1, rival +2 (3-4). You lost 1 unit."
+func round_recap(events: Array) -> String:
+	var gained: Array[int] = [0, 0]
+	var lost: Array[int] = [0, 0]
+	var me_name: StringName = state.side_name(me_side)
+	for ev: Dictionary in events:
+		match ev.get("type"):
+			RulesEvent.MODE_SCORED:
+				gained = [int(ev.get("player_gained", 0)), int(ev.get("enemy_gained", 0))]
+			RulesEvent.UNIT_ELIMINATED:
+				lost[0 if StringName(ev.get("victim_side", &"")) == me_name else 1] += 1
+	if me_side != 0:
+		gained.reverse()
+	var line: String = "Round %d: you +%d, rival +%d (%d-%d)." % [state.round_number, gained[0], gained[1],
+			state.sides[me_side].score, state.sides[foe_side].score]
+	var parts: PackedStringArray = []
+	if lost[1] > 0:
+		parts.append("eliminated %d" % lost[1])
+	if lost[0] > 0:
+		parts.append("lost %d" % lost[0])
+	if not parts.is_empty():
+		line += " You " + " and ".join(parts) + "."
+	return line
 
 
 func refresh() -> void:
@@ -1839,7 +1874,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 	if card.standard_issue:
 		# kc-onboard-ui: Standard Issue kit: Muster out / Retire sends it home.
 		out.append({"name": "Standard Issue %s" % RunProgress.standard_issue_serial(card),
-				"text": "Basic kit, no trait. Muster out or Retire sends it home."})
+				"text": "No trait. Muster out or Retire sends it home."})
 	return out
 
 
@@ -1926,7 +1961,10 @@ func _art_line(art: BannerArt) -> String:
 	var alts: Array[StringName] = BannerArtDB.alt_arts(art.card_id)
 	# kc-trait-ui: each copy comes with its own art (no EQUIP); the Codex shows every art.
 	# kc-da-ui2: no build words ("placeholder") in front of the player; a short caption.
-	return "Art: %s · %d of %d · all in the Codex" % [what, maxi(1, alts.find(art.id) + 1), maxi(1, alts.size())]
+	# kc-ux-text: no caption for a card with one art; else which art this is (the Codex has all).
+	if alts.size() <= 1:
+		return ""
+	return "Art: %s · %d of %d" % [what, maxi(1, alts.find(art.id) + 1), alts.size()]
 
 
 ## Inspector for something that is not a card in hand (objective tile, incoming back, rails).

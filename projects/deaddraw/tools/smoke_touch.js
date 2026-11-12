@@ -38,8 +38,9 @@ function find(s, pred, what) {
 async function touch(cdp, type, pts) {
   await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p, k) => (pts.length > 1 ? { x: p.x, y: p.y, id: k } : { x: p.x, y: p.y })) });
 }
-async function tap(cdp, p) { await touch(cdp, 'touchStart', [p]); await sleep(60); await touch(cdp, 'touchEnd', []); await sleep(300); }
-async function hold(cdp, p, ms = 750) { await touch(cdp, 'touchStart', [p]); await sleep(ms); await touch(cdp, 'touchEnd', []); await sleep(300); }
+// start and end are queued together (a late ack on a loaded machine would turn a tap into a zoom)
+async function tap(cdp, p) { const a = touch(cdp, 'touchStart', [p]); await sleep(60); await Promise.all([a, touch(cdp, 'touchEnd', [])]); await sleep(300); }
+async function hold(cdp, p, ms = 1000) { await touch(cdp, 'touchStart', [p]); await sleep(ms); await touch(cdp, 'touchEnd', []); await sleep(300); }
 // tap until pred holds (the board ignores taps while the deal animation runs on a slow machine)
 async function tapUntil(page, cdp, p, pred, what, tries = 4) {
   for (let k = 0; k < tries; k++) {
@@ -55,10 +56,14 @@ async function tapUntil(page, cdp, p, pred, what, tries = 4) {
 }
 // one finger from a to b in steps; end=false leaves the finger down (mid-drag screenshot)
 async function drag(cdp, a, b, end = true, steps = 12) {
-  await touch(cdp, 'touchStart', [a]);
-  await sleep(50);
-  for (let k = 1; k <= steps; k++) {
-    await touch(cdp, 'touchMove', [{ x: a.x + (b.x - a.x) * k / steps, y: a.y + (b.y - a.y) * k / steps }]);
+  // the start and the first moves are queued together: on a loaded machine an awaited start can be
+  // acked so late that the long press fires before the finger has moved
+  const pt = (k) => ({ x: a.x + (b.x - a.x) * k / steps, y: a.y + (b.y - a.y) * k / steps });
+  const first = [touch(cdp, 'touchStart', [a])];
+  for (let k = 1; k <= 3; k++) first.push(touch(cdp, 'touchMove', [pt(k)]));
+  await Promise.all(first);
+  for (let k = 4; k <= steps; k++) {
+    await touch(cdp, 'touchMove', [pt(k)]);
     await sleep(25);
   }
   if (end) { await sleep(80); await touch(cdp, 'touchEnd', []); await sleep(400); }

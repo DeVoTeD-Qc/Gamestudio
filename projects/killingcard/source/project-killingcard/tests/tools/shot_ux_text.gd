@@ -95,7 +95,7 @@ func _run() -> void:
 	if _want("match"):
 		await _match()
 	if _want("reward"):
-		rs.record_result(&"player", {"reason": &"target", "rounds": 6, "player_score": 6, "enemy_score": 3})
+		_record(rs, &"player")
 		var rep: Dictionary = RunFlow.report_from_history(rs.run, rs.run.history[-1])
 		rep.merge({"player_eliminations": 4, "enemy_eliminations": 2, "best_streak": 3,
 				"mvp": {"card_id": "marksman", "art": "", "operator": false, "kills": 2, "damage": 7}}, true)
@@ -114,8 +114,12 @@ func _run() -> void:
 		RunV2Views.clear_overrides()
 	if _want("end"):
 		rs.abandon_run()
-		rs.start_run(4243)
-		rs.record_result(&"enemy", {"reason": &"target", "rounds": 7, "player_score": 2, "enemy_score": 6})
+		_record(rs, &"player")
+		rs.run.tickets = 1
+		rs.run.history[-1]["match"] = 1
+		rs.run.pending_offers.clear()
+		rs.run.phase = rs.run.PHASE_MATCH
+		print("end: ", rs.record_result(&"enemy", {"reason": &"target", "rounds": 7, "player_score": 2, "enemy_score": 6}))
 		var re: Control = await _open("res://scenes/run/RunEnd.tscn")
 		await _shot("13_run_end")
 		await _close(re)
@@ -164,3 +168,19 @@ func _match() -> void:
 		if insp != null:
 			insp.close()
 	await _close(m)
+
+
+func _record(rs: Node, result: StringName) -> void:
+	if rs.run == null or rs.run.history.is_empty():
+		rs.start_run(4242)
+		rs.begin_run()
+	if rs.run.map != null:
+		var reach: Array = rs.run.map.reachable()
+		for id: StringName in reach:
+			if rs.run.map.node(id)["type"] == &"fight" or id == reach[-1]:
+				rs.move_to(id)
+				break
+	var win: bool = result == &"player"
+	if rs.run.is_over():
+		return
+	rs.record_result(result, {"reason": &"target", "rounds": 6, "player_score": 6 if win else 2, "enemy_score": 3 if win else 6})
