@@ -101,7 +101,7 @@ static func entries(bal: DDBalance) -> Array:
 			continue
 		var rw: Array = bal.weapon_reward(wid2)
 		out.append({"key": "gun:" + wid2, "type": "guns", "name": bal.weapon_name(wid2), "art_keys": Art.weapon_keys(wid2, bal.weapon_name(wid2)),
-			"hit": bal.weapon_power(wid2), "rule": bal.weapon_rule(wid2), "stat": "holds %d" % bal.weapon_cap(wid2), "districts": wdist.get(wid2, []),
+			"hit": bal.weapon_power(wid2), "rule": bal.weapon_rule(wid2), "cap": bal.weapon_cap(wid2), "stat": DDText.rule_tag(bal.weapon_rule(wid2)), "districts": wdist.get(wid2, []),
 			"line": "Each kill: %s. Full: %s." % [DDText.rule_short(bal.weapon_rule(wid2)), DDText.reward_short(str(rw[0]), int(rw[1]), bal)]})
 	var all_ids: Array = ds.map(func(d: Variant) -> String: return str((d as Dictionary).get("id", "")))
 	# v4: Bare Hands (always) and the melee weapon cards (power, uses)
@@ -116,7 +116,7 @@ static func entries(bal: DDBalance) -> Array:
 	for mid: Variant in bal.dict("melee_weapons").keys():
 		var m: String = str(mid)
 		out.append({"key": "melee:" + m, "type": "melee", "name": bal.melee_name(m), "art_keys": DDV4Hooks.melee_art_keys(m, bal.melee_name(m)), "hit": bal.melee_power(m),
-			"stat": DDText.uses_text(bal.melee_uses(m)), "districts": mdist2.get(m, all_ids),
+			"uses": bal.melee_uses(m), "stat": "melee", "districts": mdist2.get(m, all_ids),
 			"line": "Found in the pile. Each kill uses 1; at 0 it breaks."})
 	for t: int in 4:
 		var nm: String = Marks.TIER_NAMES[t]
@@ -361,7 +361,9 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 	for d: Variant in _bal.districts():
 		if (e["districts"] as Array).has(str((d as Dictionary).get("id", ""))):
 			dn.append(str((d as Dictionary).get("name", "")))
-	var t1: String = "%s%s · %s" % [str(e["name"]), (" · hits %d" % int(e["hit"])) if e.has("hit") else "", str(e["stat"])]
+	# dd-capacity: a gun's capacity / a melee weapon's uses are the mark (and the tooltip's mark row), not words
+	var t1: String = "%s%s%s" % [str(e["name"]), (" · hits %d" % int(e["hit"])) if e.has("hit") else "",
+		"" if (e.has("cap") or e.has("uses")) else " · " + str(e["stat"])]
 	var p: Dictionary = {"kind": kind, "title": str(e["name"]), "t1": t1, "t2": str(e["line"])}
 	if not met:
 		p = {"kind": kind, "title": "???", "t1": "??? · not met yet", "t2": "Meet it in a run to fill this entry."}
@@ -371,6 +373,9 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 			p["art"] = tex
 		if e.has("hit"):
 			p["hit"] = e["hit"]
+		for sk: String in ["cap", "uses"]:
+			if e.has(sk):
+				p[sk] = e[sk]
 		if e.has("strength"):
 			p["strength"] = e["strength"]
 			p["t2"] = "Its number is its attack and its toughness. " + str(e["line"])
@@ -424,6 +429,17 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 			mark.position = Vector2(3, 3)
 			mark.size = Vector2(40, 40)
 			win.add_child(mark)
+		# dd-capacity: the capacity / uses mark in the opposite corner, as on the street card
+		if e.has("cap") or e.has("uses"):
+			var sm: Control = Marks.StatMark.new(int(e.get("cap", e.get("uses", 0))), "cap" if e.has("cap") else "uses")
+			sm.name = "StatMark"
+			win.add_child(sm)
+			var place: Callable = func() -> void:
+				if is_instance_valid(sm) and win.size.y > 0.0:
+					var sh: float = clampf(minf(34.0, win.size.y - 50.0), 22.0, 34.0)
+					sm.size = Vector2(float(sm.call("width_for", sh)), sh)
+					sm.position = win.size - sm.size - Vector2(3, 3)
+			win.resized.connect(place)
 	else:
 		var q: Label = DDUi.label("?", 40, Color(DDUi.TEXT_DIM, 0.5), HORIZONTAL_ALIGNMENT_CENTER)
 		q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -489,6 +505,8 @@ static func sections(bal: DDBalance) -> Array:
 	return [
 		["NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT", [
 			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A weapon's power. You lose strength - hit HP."},
+			{"icon": "stat:cap:4", "name": "Capacity (stacked squares)", "line": "A gun's kills before it pays out: 4 kills fill it, then +%d and it leaves." % bal.shown(bal.num("finish_bonus"))},
+			{"icon": "stat:uses:3", "name": "Uses (stacked dots)", "line": "A melee weapon's uses: each kill uses 1; at 0 it breaks."},
 			{"icon": "strength:7", "name": "Strength (blood red)", "line": "A zombie's attack and toughness. A gun kill pays it ×10 pts."},
 			{"icon": "tiers", "name": "Tier (the red badge's ring)", "line": "Bone Shambler 1-3, amber Lurcher 4-6, orange Bruiser 7-9, red Hulk 10+."},
 			{"icon": "num:M:4", "name": "Heal (green ring)", "line": "A medkit's number: the HP it heals."},
@@ -501,7 +519,6 @@ static func sections(bal: DDBalance) -> Array:
 			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
 			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
 			{"icon": "art:bare_hands", "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
-			{"icon": "uses", "name": "Melee uses", "line": "A melee weapon's dots: each kill uses 1; at 0 it breaks."},
 			{"icon": "text:+N", "name": "Salvage", "line": "Swap out a gun: it pays part of its kills back."},
 			{"icon": "mod:open_breech", "name": "Gun Mod (MOD chip)", "line": "Fitted at the safehouse to gun slot 1 or 2; every gun in that slot gets its rule."},
 		]],
@@ -579,6 +596,13 @@ static func icon(id: String) -> Control:
 	match id.get_slice(":", 0):
 		"burst":
 			inner = _square(Marks.HitBurst.new(int(arg)))
+		"stat":
+			# dd-capacity: stat:<cap|uses>:<n>, the mark as on the cards
+			var smk: Control = Marks.StatMark.new(int(id.get_slice(":", 2)), arg)
+			smk.custom_minimum_size = Vector2(float(smk.call("width_for", 34.0)), 34.0)
+			var scc: CenterContainer = CenterContainer.new()
+			scc.add_child(smk)
+			inner = scc
 		"strength":
 			inner = _square(Marks.StrengthMark.new(int(arg)))
 		"tiers":
@@ -649,16 +673,6 @@ static func icon(id: String) -> Control:
 			tr2.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr2.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			inner = tr2
-		"uses":
-			var hu: HBoxContainer = DDUi.hbox(3)
-			hu.alignment = BoxContainer.ALIGNMENT_CENTER
-			for k2: int in 3:
-				var d: Panel = Panel.new()
-				d.custom_minimum_size = Vector2(10, 10)
-				d.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-				d.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if k2 < 2 else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 2, 0))
-				hu.add_child(d)
-			inner = hu
 		"pips":
 			var hp: HBoxContainer = DDUi.hbox(3)
 			hp.alignment = BoxContainer.ALIGNMENT_CENTER

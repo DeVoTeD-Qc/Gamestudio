@@ -55,6 +55,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 		# v4: a melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer)
 		var mp: Dictionary = DDV4Hooks.melee_card(c, run, index)
 		mp["hit"] = b.melee_power(c.wid)
+		mp["uses"] = run.melee_take_uses(c.wid)
 		mp["art_keys"] = DDV4Hooks.melee_art_keys(c.wid, b.melee_name(c.wid))
 		return mp
 	var body: PackedStringArray = []
@@ -96,6 +97,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 		p["strength"] = c.value
 	elif c.kind == DDCard.WEAPON:
 		p["hit"] = b.weapon_power(c.wid)
+		p["cap"] = b.weapon_cap(c.wid)
 	return tip(p, card_t1(c, run), card_t2(c, run, index))
 
 
@@ -105,7 +107,7 @@ static func card_t1(c: DDCard, run: DDRun) -> String:
 		DDCard.ZOMBIE:
 			return "%s · strength %d (attack and toughness)" % [DDText.card_name(c, b), c.value]
 		DDCard.WEAPON:
-			return "%s · hits %d · holds %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid), b.weapon_cap(c.wid)]
+			return "%s · hits %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid)]
 		DDCard.MEDKIT:
 			return "%s · heals %d" % [DDText.card_name(c, b), run.medkit_heal(c)]
 		DDCard.COVER:
@@ -154,7 +156,8 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	if c.kind == DDCard.MELEE:
 		var ms: Dictionary = DDV4Hooks.melee_card_spec(c, i, run)
 		ms["hit"] = b.melee_power(c.wid)
-		ms["lines"] = [[DDText.uses_text(int(ms.get("uses", 0))) + " · melee", DDUi.accent("K"), DDUi.FONT_S]]
+		# dd-capacity: the uses mark (icon + number) carries the uses; the line just says melee
+		ms["lines"] = [["melee", DDUi.accent("K"), DDUi.FONT_S]]
 		ms["payload"] = card(c, run, i)
 		return ms
 	var lines: Array = []
@@ -230,6 +233,8 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 			spec["lit"] = true
 	elif c.kind == DDCard.WEAPON:
 		spec["hit"] = b.weapon_power(c.wid)
+		# dd-capacity: the capacity mark, opposite the hit badge
+		spec["cap"] = b.weapon_cap(c.wid)
 		spec["rule_chip"] = weapon_rule_chip(c.wid, b, run.steady())
 	return spec
 
@@ -265,8 +270,8 @@ static func weapon_rule_chip(wid: String, b: DDBalance, rosa: bool = false) -> D
 static func gun_def(wid: String, bal: DDBalance, tag: String = "GUN", rosa: bool = false) -> Dictionary:
 	var rw: Array = bal.weapon_reward(wid)
 	return tip({"kind": "W", "tag": tag, "title": bal.weapon_name(wid), "big": "P%d" % bal.weapon_power(wid), "hit": bal.weapon_power(wid),
-		"body": DDText.gun_card_text(wid, bal, rosa), "icon_row": gun_icon_row(bal, bal.weapon_rule(wid), wid, rosa, "open")},
-		"%s · hits %d · holds %d" % [bal.weapon_name(wid), bal.weapon_power(wid), bal.weapon_cap(wid)],
+		"cap": bal.weapon_cap(wid), "body": DDText.gun_card_text(wid, bal, rosa), "icon_row": gun_icon_row(bal, bal.weapon_rule(wid), wid, rosa, "open")},
+		"%s · hits %d" % [bal.weapon_name(wid), bal.weapon_power(wid)],
 		"Each kill: %s. Full: +%d, %s." % [_rule_words(bal.weapon_rule(wid), rosa), bal.shown(bal.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), bal)])
 
 
@@ -316,7 +321,7 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 	body.append("Kills: %s." % (DDText.zombie_list(g.stack) if not g.stack.is_empty() else "none yet"))
 	body.append("Each kill pays its number. Full: +%d, the challenge pays, the gun leaves." % b.shown(b.num("finish_bonus")))
 	body.append("ACTIVE: taps on zombies use it." if run.active == s else "Tap to make it active.")
-	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": "P%d" % g.power, "hit": g.power, "body": "\n".join(body),
+	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": "P%d" % g.power, "hit": g.power, "cap": g.cap, "cap_now": g.stack.size(), "body": "\n".join(body),
 		"art_keys": Art.weapon_keys(g.wid, g.name)}
 	p["icon_row"] = gun_icon_row(b, g.rule, g.wid, run.steady(), run.challenge_state(g))
 	var nxt: String = "Full." if g.kills_left() <= 0 else "Next kill: %s." % accept_words(run.can_take_slot(s))
@@ -406,6 +411,9 @@ static func full_plate(run: DDRun, s: int) -> Dictionary:
 static func melee(run: DDRun) -> Dictionary:
 	var p: Dictionary = DDV4Hooks.melee(run)
 	p["hit"] = run.melee_power()
+	if run.has_melee_weapon():
+		p["uses"] = run.melee_uses()
+		p["uses_left"] = true
 	p["art_keys"] = DDV4Hooks.melee_art_keys(str(run.melee.get("id", "")) if run.has_melee_weapon() else "", run.melee_name())
 	return p
 

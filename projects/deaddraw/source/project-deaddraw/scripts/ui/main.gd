@@ -1447,8 +1447,8 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 	return box
 
 
-## MELEE as a small button (v4: DDV4Hooks.melee_spec): the yellow hit badge, MELEE / ACTIVE, the use
-## pips (filled = uses left) or "no pts" for bare hands, and the name (Bare Hands or the weapon). The
+## MELEE as a small button (v4: DDV4Hooks.melee_spec): the yellow hit badge, MELEE / ACTIVE, the uses
+## mark (dd-capacity: icon + uses left) or "no pts" for bare hands, and the name (Bare Hands or the weapon). The
 ## tile is a DDCardView: tap = make it active, right click / long press = its tooltip.
 func _melee_tile(run: DDRun) -> DDCardView:
 	var ms: Dictionary = DDV4Hooks.melee_spec(run)
@@ -1485,8 +1485,20 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	mv.add_child(col)
+	var tag: Label = DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 6, DDUi.SELECT if on else DDUi.accent("K"))
+	tag.name = "MeleeTag"
+	tag.clip_text = true
+	tag.custom_minimum_size = Vector2(10, 0)
+	# dd-capacity: a melee weapon shows its uses as the uses mark (icon + number) beside the hit
+	# badge, the same pair as on its card. Portrait (a narrow button): MELEE / [hit | uses] / name;
+	# landscape: [hit | MELEE | uses] / name.
+	var bare: bool = bool(ms.get("bare", true))
+	if portrait:
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col.add_child(tag)
 	var h: HBoxContainer = DDUi.hbox(5)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(h)
 	var burst: Control = Marks.HitBurst.new(int(ms.get("power", run.melee_power())))
 	burst.name = "HitBurst"
@@ -1494,38 +1506,24 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(burst)
 	mv.hit_burst = burst
-	var tv: VBoxContainer = DDUi.vbox(1)
-	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tv.alignment = BoxContainer.ALIGNMENT_CENTER
-	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(tv)
-	var tag: Label = DDUi.label("ACTIVE" if on else "MELEE", DDUi.FONT_S - 6, DDUi.SELECT if on else DDUi.accent("K"))
-	tag.name = "MeleeTag"
-	tag.clip_text = true
-	tag.custom_minimum_size = Vector2(10, 0)
-	tv.add_child(tag)
-	if bool(ms.get("bare", true)):
-		var pl: Label = DDUi.label("no pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
-		pl.name = "MeleeUses"
-		pl.clip_text = true
-		pl.custom_minimum_size = Vector2(10, 0)
-		tv.add_child(pl)
-		mv.big_label = pl
-	else:
-		# use pips: filled = uses left
-		var pips: HBoxContainer = DDUi.hbox(2)
-		pips.name = "UsePips"
-		pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for k: int in int(ms.get("uses_max", 0)):
-			var left: bool = k < int(ms.get("uses", 0))
-			var dot: Panel = Panel.new()
-			dot.custom_minimum_size = Vector2(9, 9)
-			dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			dot.add_theme_stylebox_override("panel", DDUi.box(DDUi.accent("K") if left else Color(0, 0, 0, 0), DDUi.accent("K"), 1, 5, 0))
-			dot.set_meta(&"left", left)
-			pips.add_child(dot)
-		tv.add_child(pips)
+	if not portrait:
+		var tv: VBoxContainer = DDUi.vbox(1)
+		tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tv.alignment = BoxContainer.ALIGNMENT_CENTER
+		tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(tv)
+		tv.add_child(tag)
+		if bare:
+			tv.add_child(_melee_no_pts(mv))
+	elif bare:
+		h.add_child(_melee_no_pts(mv))
+	if not bare:
+		var um: Control = Marks.StatMark.new(int(ms.get("uses", 0)), "uses")
+		um.name = "UsesMark"
+		um.custom_minimum_size = Vector2(float(um.call("width_for", 30.0)), 30.0)
+		um.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(um)
+		mv.stat_mark = um
 	var nl: Label = DDUi.label(str(ms.get("name", "")), DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	nl.clip_text = true
 	nl.custom_minimum_size = Vector2(10, 0)
@@ -1538,6 +1536,17 @@ func _melee_tile(run: DDRun) -> DDCardView:
 	_drag_source(mv, {"type": "weapon", "w": DDRun.MELEE})
 	_melee_view = mv
 	return mv
+
+
+## Bare Hands' "no pts" under / beside the hit badge on the melee button.
+func _melee_no_pts(mv: DDCardView) -> Label:
+	var pl: Label = DDUi.label("no pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+	pl.name = "MeleeUses"
+	pl.clip_text = true
+	pl.custom_minimum_size = Vector2(10, 0)
+	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mv.big_label = pl
+	return pl
 
 
 ## RUN (or RUN PAST / NO ESCAPE on a boss street) as a small button beside melee.
@@ -1742,7 +1751,7 @@ func _gun_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
 	var gp: Dictionary = DDPayloads.gun_def(c.wid, Game.bal, "NEW GUN", run.steady())
-	top.add_child(_view({"kind": "W", "tag": "GUN", "hit": Game.bal.weapon_power(c.wid), "title": Game.bal.weapon_name(c.wid), "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
+	top.add_child(_view({"kind": "W", "tag": "GUN", "hit": Game.bal.weapon_power(c.wid), "cap": Game.bal.weapon_cap(c.wid), "title": Game.bal.weapon_name(c.wid), "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
 	# dd-ux-clean: three plain lines; the card's zoom has the full text
 	var rw: Array = Game.bal.weapon_reward(c.wid)
 	var txt: Label = DDUi.label("Hits %d · %d kills fill it\nEach kill: %s\nChallenge: %s -> %s" % [Game.bal.weapon_power(c.wid), Game.bal.weapon_cap(c.wid),
@@ -1776,7 +1785,7 @@ func _melee_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
 	var mp: Dictionary = DDPayloads.card(c, run, i)
-	top.add_child(_view({"kind": "K", "tag": "MELEE", "hit": Game.bal.melee_power(c.wid), "title": Game.bal.melee_name(c.wid),
+	top.add_child(_view({"kind": "K", "tag": "MELEE", "hit": Game.bal.melee_power(c.wid), "uses": run.melee_take_uses(c.wid), "title": Game.bal.melee_name(c.wid),
 		"payload": mp, "art_keys": DDV4Hooks.melee_art_keys(c.wid, Game.bal.melee_name(c.wid))}, Vector2(170, 130)))
 	var txt: Label = DDUi.label("%s\n%s" % [str(mp.get("t1", "")), str(mp.get("t2", ""))], DDUi.FONT_S - 1, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1827,8 +1836,22 @@ func _machine_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 		grid.add_child(b)
 	if kind == "wall":
 		var wid: String = str(m.get("wid", ""))
-		v.add_child(DDUi.label("%s: hits %d · holds %d · each kill: %s" % [Game.bal.weapon_name(wid), Game.bal.weapon_power(wid), Game.bal.weapon_cap(wid), DDText.rule_short(Game.bal.weapon_rule(wid), run.steady())],
-			DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true))
+		# dd-capacity: the rack gun's hit and capacity as the two marks, then its rule in words
+		var wr: HBoxContainer = DDUi.hbox(6)
+		wr.name = "RackGun"
+		v.add_child(wr)
+		var wb: Control = Marks.HitBurst.new(Game.bal.weapon_power(wid))
+		wb.custom_minimum_size = Vector2(30, 30)
+		wb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		wr.add_child(wb)
+		var wc: Control = Marks.StatMark.new(Game.bal.weapon_cap(wid), "cap")
+		wc.custom_minimum_size = Vector2(float(wc.call("width_for", 30.0)), 30.0)
+		wc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		wr.add_child(wc)
+		var wl: Label = DDUi.label("%s · each kill: %s" % [Game.bal.weapon_name(wid), DDText.rule_short(Game.bal.weapon_rule(wid), run.steady())],
+			DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true)
+		wl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		wr.add_child(wl)
 	v.add_child(_sheet_button("Close", true, DDUi.PANEL_HI, close_sheet))
 
 
@@ -2172,11 +2195,14 @@ func _drag_ghost(view: DDCardView, src: Dictionary) -> Control:
 	var w: int = int(src.get("w", 0))
 	if w == DDRun.MELEE:
 		var ms: Dictionary = DDV4Hooks.melee_spec(run)
-		return _view({"kind": "K", "tag": "MELEE", "hit": run.melee_power(), "title": str(ms.get("name", "")), "art_keys": ms.get("art_keys", [])}, Vector2(120, 150))
+		var gs: Dictionary = {"kind": "K", "tag": "MELEE", "hit": run.melee_power(), "title": str(ms.get("name", "")), "art_keys": ms.get("art_keys", [])}
+		if not bool(ms.get("bare", true)):
+			gs["uses"] = run.melee_uses()
+		return _view(gs, Vector2(120, 150))
 	var g: DDGun = run.slot(w)
 	if g == null:
 		return null
-	return _view({"kind": "W", "tag": "GUN", "hit": g.power, "title": g.name, "art_keys": Art.weapon_keys(g.wid, g.name)}, Vector2(120, 150))
+	return _view({"kind": "W", "tag": "GUN", "hit": g.power, "cap": g.cap, "title": g.name, "art_keys": Art.weapon_keys(g.wid, g.name)}, Vector2(120, 150))
 
 
 func end_drag(gp: Vector2) -> void:

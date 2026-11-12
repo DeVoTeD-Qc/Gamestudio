@@ -74,6 +74,9 @@ var pip_bar: Pips = null
 ## dd-ux-v4: the strength mark / hit burst drawn on the art window (null when the tile has none).
 var strength_mark: Control = null
 var hit_burst: Control = null
+## dd-capacity: a weapon's capacity / uses mark (dd_marks.gd StatMark) in the art window's
+## bottom-right corner, opposite the hit badge (null when the tile has none).
+var stat_mark: Control = null
 
 
 ## v2: a row of magazine pips: filled = rounds left, hollow = spent. Wraps into a second row
@@ -325,6 +328,11 @@ func _build_framed(spec: Dictionary, art: Texture2D) -> void:
 		window.add_child(_badge_panel)
 		# dd-ux-clean2: the art window can settle after the tile (tall tiles); refit then too
 		window.resized.connect(func() -> void: _fit_badge.call_deferred())
+	# dd-capacity: spec "cap" (a gun's kills) or "uses" (a melee weapon's uses), opposite the hit badge
+	if _badge_panel != null and (spec.has("cap") or spec.has("uses")):
+		stat_mark = Marks.StatMark.new(int(spec.get("cap", spec.get("uses", 0))), "cap" if spec.has("cap") else "uses")
+		stat_mark.name = "StatMark"
+		window.add_child(stat_mark)
 	var rc: Variant = spec.get("rule_chip", null)
 	if rc is Dictionary and _badge_panel != null:
 		_add_rule_chip(window, rc)
@@ -552,6 +560,33 @@ func _fit_badge() -> void:
 		if g != null:
 			g.position = Vector2.ZERO
 			g.size = Vector2(c, c)
+	if stat_mark != null and is_instance_valid(stat_mark) and host != null:
+		_fit_stat(host, Rect2(6, 6, w, d))
+
+
+## dd-capacity: the capacity / uses mark in the bottom-right corner of the art window, a little
+## smaller than the hit badge; it shrinks (never below 22 px) rather than touch the badge or the
+## rule chip in a small window.
+func _fit_stat(host: Control, badge: Rect2) -> void:
+	var avoid: Array[Rect2] = [badge.grow(3.0)]
+	if rule_chip != null and is_instance_valid(rule_chip):
+		avoid.append(Rect2(rule_chip.position, rule_chip.size).grow(3.0))
+	# a short (landscape) window keeps it low in the corner, under the art's subject
+	var mh: float = clampf(minf(badge.size.y * 0.8, host.size.y * 0.36), 24.0, 72.0)
+	var r: Rect2 = Rect2()
+	while true:
+		var mw: float = float(stat_mark.call("width_for", mh))
+		r = Rect2(host.size.x - mw - 6.0, host.size.y - mh - 6.0, mw, mh)
+		var hit: bool = false
+		for a: Rect2 in avoid:
+			if a.intersects(r):
+				hit = true
+		if not hit or mh <= 22.0:
+			break
+		mh -= 2.0
+	stat_mark.custom_minimum_size = r.size
+	stat_mark.size = r.size
+	stat_mark.position = r.position
 
 
 ## Shrinks a wrapping label's font (down to `min_size`) until its longest word fits one line.

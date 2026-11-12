@@ -224,6 +224,11 @@ func _open_tip(payload: Dictionary) -> void:
 			mark.position = Vector2(4, 4)
 			mark.size = Vector2(44, 44)
 			layer.add_child(mark)
+		# dd-capacity: the capacity / uses mark in the opposite corner, as on the card
+		var sm: Control = stat_mark(payload, 34.0)
+		if sm != null:
+			sm.position = Vector2(pic_d - sm.size.x - 4.0, pic_d - sm.size.y - 4.0)
+			layer.add_child(sm)
 		elif big != "" and not (art is Texture2D):
 			var bl: Label = DDUi.label(big, 40 if big.length() <= 3 else 24, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 			bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -249,6 +254,21 @@ func _open_tip(payload: Dictionary) -> void:
 		l2.name = "Line2"
 		l2.custom_minimum_size = Vector2(tw, 0)
 		v.add_child(l2)
+	# dd-capacity: the capacity / uses mark explained in words, first under the lines
+	var sx: String = stat_words(payload)
+	if sx != "":
+		var srow: HBoxContainer = DDUi.hbox(8)
+		srow.name = "StatRow"
+		var sm2: Control = stat_mark(payload, 30.0)
+		sm2.custom_minimum_size = sm2.size
+		sm2.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		srow.add_child(sm2)
+		var sl: Label = DDUi.label(sx, DDUi.FONT_S - 2, Marks.StatMark.color_for("uses" if payload.has("uses") else "cap").lerp(DDUi.TEXT, 0.35), HORIZONTAL_ALIGNMENT_LEFT, true)
+		sl.name = "StatLine"
+		sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sl.custom_minimum_size = Vector2(maxf(60.0, tw - sm2.size.x - 8.0), 0)
+		srow.add_child(sl)
+		v.add_child(srow)
 	# dd-ui6: an icon key under the lines (the gun: its rule, the Full set plate, the challenge),
 	# the same glyphs as on the gun tile, so the tooltip teaches the icons
 	var row_items: Array = payload.get("icon_row", [])
@@ -278,6 +298,32 @@ func _open_tip(payload: Dictionary) -> void:
 	_opened_ms = Time.get_ticks_msec()
 	_pop_in(root, card)
 	opened.emit()
+
+
+## dd-capacity: a StatMark for payload "cap" / "uses", sized to height h (null when it has neither).
+static func stat_mark(payload: Dictionary, h: float) -> Control:
+	if not (payload.has("cap") or payload.has("uses")):
+		return null
+	var role: String = "cap" if payload.has("cap") else "uses"
+	var m: Control = Marks.StatMark.new(int(payload.get(role, 0)), role)
+	m.name = "StatMark"
+	m.size = Vector2(float(m.call("width_for", h)), h)
+	return m
+
+
+## dd-capacity: the mark in words: "Holds 4 kills before it pays out" / "3 uses: each kill uses 1,
+## then it breaks" ("3 uses left" for the melee weapon you hold).
+static func stat_words(payload: Dictionary) -> String:
+	if payload.has("cap"):
+		var n: int = int(payload["cap"])
+		var s: String = "Holds %d kill%s before it pays out" % [n, "" if n == 1 else "s"]
+		if payload.has("cap_now"):
+			s += " (%d in it now)" % int(payload["cap_now"])
+		return s + "."
+	if payload.has("uses"):
+		var u: int = int(payload["uses"])
+		return "%d use%s%s: each kill uses 1, then it breaks." % [u, "" if u == 1 else "s", " left" if bool(payload.get("uses_left", false)) else ""]
+	return ""
 
 
 ## dd-feel: 120 ms fade + slight scale-up (fade only with reduce motion). Never blocks input.

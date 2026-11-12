@@ -98,21 +98,28 @@ func _run() -> void:
 	await _inspect(_tile(202), "5_melee_held_inspect")
 	# the Codex, every entry shown: guns, then melee
 	var cx: Node = _m.get("codex")
+	var prof: DDProfile = root.get_node("Game").get("profile")
+	var keys: Array = []
+	for e2: Variant in cx.call("entries", root.get_node("Game").get("bal")):
+		keys.append(str((e2 as Dictionary)["key"]))
+	prof.codex_meet(keys)
 	_m.call("open_codex")
 	cx.call("set_show_all", true)
-	cx.call("set_filters", "guns", "", false)
+	cx.call("set_filters", "guns", "any", false)
 	await _frames(10)
 	await _shot("6_codex_guns")
-	cx.call("set_filters", "melee", "", false)
+	cx.call("set_filters", "melee", "any", false)
 	await _frames(10)
 	await _shot("7_codex_melee")
 	cx.call("close")
 	await _frames(4)
 	_m.call("open_glossary")
 	await _frames(8)
-	var row: Control = cx.find_child("Gl_kill_sockets", true, false)
-	if row == null:
-		row = cx.find_child("Gl_capacity", true, false)
+	var row: Control = null
+	for c: Node in cx.find_children("Gl_*", "", true, false):
+		if str(c.name).begins_with("Gl_hit"):
+			row = c
+			break
 	if row != null:
 		var sc: ScrollContainer = null
 		var p: Node = row.get_parent()

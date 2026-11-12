@@ -7,6 +7,8 @@
 #     kind's accent: heal, cover...). StrengthMark / HitBurst are the zombie / weapon presets.
 #   - Padlock: closed / open padlock icon for the room price plate.
 #   - Socket: an empty kill socket (dashed) or the next one (gold dashed + what it accepts).
+#   - StatMark (dd-capacity): a weapon's second number as icon + number in the badge-family pill:
+#     a gun's capacity (stacked square sockets) or a melee weapon's uses (stacked round pips).
 #   - WaveNumeral: the big blood-red wave number on the wave door (slams in on a new wave).
 #   - RuleChip (dd-ui6): a weapon rule icon (the same SVG glyph as the gun row, Glossary, Codex)
 #     with a verdict: yes = full colour + a green tick, no = dimmed + a red strike, or plain.
@@ -218,6 +220,121 @@ class HitBurst:
 
 	func _init(v: int = 2) -> void:
 		super(v, "weapon")
+
+
+# ================================================================ capacity / uses mark (dd-capacity)
+## dd-capacity (head: "capacity of guns as an icon and number on cards for easy comparison"): the
+## weapon's second number, an icon + a big number in a pill of the number-badge family (ink
+## hairline, coloured ring, ink fill, bone number; the painted neutral pill tinted when it exists).
+##   "cap":  a gun's capacity, the kills it holds before it pays out. Icon: a column of three
+##           square kill sockets (the gun tile's sockets), in the gun blue.
+##   "uses": a melee weapon's uses before it breaks. Icon: a column of three round durability
+##           pips (the old use dots), in the melee tan.
+## Squares vs rounds, so the two read apart without colour. Feedback / tests read `value`, `role`
+## and `num_label`.
+class StatMark:
+	extends Mark
+	const CAP_COLOR: Color = Color("5bb0e0")
+	const USES_COLOR: Color = Color("d9a066")
+	var value: int = 0
+	var role: String = "cap"
+	var ring: Color = CAP_COLOR
+	var num_label: Label = null
+
+	func _init(v: int = 0, r: String = "cap") -> void:
+		value = v
+		role = r
+		ring = color_for(r)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		num_label = Label.new()
+		num_label.name = "Num"
+		num_label.text = str(v)
+		num_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		num_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		num_label.add_theme_color_override("font_color", BONE)
+		add_child(num_label)
+		resized.connect(fit)
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_ENTER_TREE or what == NOTIFICATION_THEME_CHANGED:
+			fit.call_deferred()
+
+	static func color_for(r: String) -> Color:
+		return USES_COLOR if r == "uses" else CAP_COLOR
+
+	## The width a mark of height h needs: the icon on the left, the number on the right.
+	func width_for(h: float) -> float:
+		var f: Font = num_label.get_theme_font("font") if num_label != null else _font()
+		var tw: float = f.get_string_size(str(value), HORIZONTAL_ALIGNMENT_LEFT, -1, NumBadge.font_for(h, str(value))).x
+		return maxf(h * 1.45, h * 0.78 + tw + h * 0.3)
+
+	func fit() -> void:
+		var h: float = size.y
+		if h <= 2.0 or num_label == null:
+			return
+		num_label.add_theme_font_size_override("font_size", NumBadge.font_for(h, str(value)))
+		var ls: Vector2 = num_label.get_combined_minimum_size()
+		# the number fills the space right of the icon
+		var x0: float = h * 0.66
+		num_label.size = Vector2(maxf(ls.x, size.x - x0 - h * 0.14), ls.y)
+		num_label.position = Vector2(x0, (h - ls.y) * 0.5)
+		queue_redraw()
+
+	func _draw() -> void:
+		var h: float = size.y
+		if h <= 4.0:
+			return
+		var st: StyleBox = Kit.box("dd_pill_neutral", 0.0, ring.lerp(Color.WHITE, 0.15))
+		if st != null:
+			draw_style_box(st, Rect2(Vector2.ZERO, size))
+		else:
+			var rw: float = clampf(h * 0.075, 2.0, 5.0)
+			var hair: float = maxf(1.0, h * 0.03)
+			_pill(0.0, Color(INK, 0.9))
+			_pill(hair, ring)
+			_pill(hair + rw, INK)
+		draw_icon(self, role, Rect2(h * 0.22, h * 0.2, h * 0.42, h * 0.6), ring)
+
+	func _pill(inset: float, col: Color) -> void:
+		var r: float = size.y * 0.5 - inset
+		if r <= 0.0:
+			return
+		var c: Vector2 = size * 0.5
+		var half: float = maxf(0.0, size.x * 0.5 - size.y * 0.5)
+		draw_rect(Rect2(c.x - half, c.y - r, half * 2.0, r * 2.0), col)
+		draw_circle(c - Vector2(half, 0), r, col, true, -1.0, true)
+		draw_circle(c + Vector2(half, 0), r, col, true, -1.0, true)
+
+	## The icon alone in rect r (also the Glossary's and the tooltip's): "cap" = three stacked square
+	## sockets, "uses" = three stacked round pips.
+	static func draw_icon(ci: CanvasItem, r: String, rect: Rect2, col: Color) -> void:
+		var n: int = 3
+		var gap: float = maxf(1.0, rect.size.y * 0.08)
+		var cell: float = minf(rect.size.x, (rect.size.y - gap * (n - 1)) / n)
+		var x: float = rect.position.x + (rect.size.x - cell) * 0.5
+		var y0: float = rect.position.y + (rect.size.y - (cell * n + gap * (n - 1))) * 0.5
+		var lw: float = maxf(1.2, cell * 0.2)
+		for k: int in n:
+			var cr: Rect2 = Rect2(x, y0 + k * (cell + gap), cell, cell)
+			if r == "uses":
+				ci.draw_circle(cr.get_center(), cell * 0.5, col, true, -1.0, true)
+			else:
+				ci.draw_rect(cr.grow(-lw * 0.15), col)
+
+
+## The icon of a StatMark on its own (Glossary rows, tooltip lines), square.
+class StatIcon:
+	extends Mark
+	var role: String = "cap"
+
+	func _init(r: String = "cap") -> void:
+		role = r
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var d: float = minf(size.x, size.y)
+		StatMark.draw_icon(self, role, Rect2((size - Vector2(d, d)) * 0.5, Vector2(d, d)), StatMark.color_for(role))
 
 
 # ================================================================ padlock

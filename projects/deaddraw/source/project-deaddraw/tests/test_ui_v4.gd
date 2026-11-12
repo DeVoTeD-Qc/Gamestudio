@@ -252,7 +252,8 @@ func test_tooltips_are_two_short_lines() -> void:
 	await _settle()
 	# (dd-polish5: the number inside the hit badge is the badge's own label, not a text line)
 	# (dd-ui6: the icon key under the lines - rule, Full set, challenge - is glyph + word, not a text line)
-	var labels: Array = insp.find_children("*", "Label", true, false).filter(func(l: Node) -> bool: return l.name != "Num" and not str(l.get_path()).contains("IconRow"))
+	# (dd-capacity: the capacity mark row - mark + "Holds 4 kills before it pays out" - is a key row too)
+	var labels: Array = insp.find_children("*", "Label", true, false).filter(func(l: Node) -> bool: return l.name != "Num" and not str(l.get_path()).contains("IconRow") and not str(l.get_path()).contains("StatRow"))
 	eq(labels.size(), 2, "the tooltip is two labels")
 	check(insp.find_child("IconRow", true, false) != null, "the gun tooltip shows its icon key (rule, Full set, challenge)")
 	eq(insp.last_lines[0], str(DDPayloads.gun(run, 0)["t1"]), "line 1 is t1")
@@ -552,7 +553,7 @@ func test_v4_melee_launcher_salvage_and_run_flight() -> void:
 		var mv: DDCardView = _tile(m, 202)
 		eq(str((mv.find_child("MeleeName", true, false) as Label).text), "Bare Hands", tag + " melee starts as Bare Hands")
 		eq(int(mv.hit_burst.get("value")), bal().num("hands_power"), tag + " the burst shows the hands' hit")
-		check(mv.find_child("UsePips", true, false) == null, tag + " bare hands have no use pips")
+		check(mv.find_child("UsesMark", true, false) == null, tag + " bare hands have no uses mark")
 		# the launcher: one socket
 		var lv: DDGunView = _tile(m, 201)
 		eq(lv.stack_area.get_child_count(), 1, tag + " the launcher has one kill socket")
@@ -575,13 +576,14 @@ func test_v4_melee_launcher_salvage_and_run_flight() -> void:
 		mv = _tile(m, 202)
 		var mbox: Control = mv.find_child("MeleeBox", true, false)
 		var inner: Rect2 = mv.get_global_rect().grow(1.0)
-		for part: String in ["HitBurst", "MeleeName", "MeleeTag", "UsePips"]:
+		for part: String in ["HitBurst", "MeleeName", "MeleeTag", "UsesMark"]:
 			var pc: Control = mv.find_child(part, true, false)
 			check(pc != null and inner.encloses(pc.get_global_rect()), "%s melee %s inside the button: %s in %s" % [tag, part, pc.get_global_rect() if pc != null else Rect2(), inner])
 		check(mbox != null, tag + " the melee button has its two-row box")
 		eq(str((mv.find_child("MeleeName", true, false) as Label).text), "Fire Axe", tag + " melee is the Fire Axe now")
-		var pips: Node = mv.find_child("UsePips", true, false)
-		check(pips != null and pips.get_child_count() == run.melee_uses(), tag + " use pips = uses left (%d)" % run.melee_uses())
+		# dd-capacity: the uses mark (icon + number) shows the uses left
+		var um: Node = mv.find_child("UsesMark", true, false)
+		check(um != null and int(um.get("value")) == run.melee_uses() and str(um.get("role")) == "uses", tag + " uses mark = uses left (%d)" % run.melee_uses())
 		# the equip sheet names the salvage
 		run.setup_street(["W:carbine", "Z5", "Z3", "M4"] + _filler(10))
 		m.call("_render")
@@ -611,6 +613,74 @@ func test_v4_melee_launcher_salvage_and_run_flight() -> void:
 		for c: Node in (m.get("_fx") as Control).find_children("*", "Label", true, false):
 			floats.append((c as Label).text)
 		await tree.create_timer(0.9).timeout
+		m.queue_free()
+		await tree.process_frame
+	_cleanup()
+
+
+# ---------------------------------------------------------------- dd-capacity
+## Head: "capacity of guns as an icon and number on cards for easy comparison". Every gun shows its
+## capacity mark and every melee weapon its uses mark (icon + number), opposite the hit badge, inside
+## the art window and clear of the badge, the rule chip and the name band, at every size; the
+## inspect explains it; the Glossary lists both icons; no "holds X" text is left in the tooltips.
+func test_capacity_and_uses_marks() -> void:
+	for sz: Vector2i in SIZES:
+		tree.root.size = sz
+		var tag: String = "%dx%d" % [sz.x, sz.y]
+		var m: Control = _main()
+		await _settle()
+		_street(m, {"screen": "street", "seed": "5", "gun1": "rifle", "stack1": "8,6", "gun2": "carbine", "active": "0",
+			"street": "W:shotgun,K:axe,W:launcher,Z5"})
+		await _settle()
+		await _settle()
+		var run: DDRun = game_run()
+		for i: int in [0, 1, 2]:
+			var cv: DDCardView = _tile(m, i)
+			var c: DDCard = run.street[i]
+			var role: String = "cap" if c.kind == DDCard.WEAPON else "uses"
+			var want: int = bal().weapon_cap(c.wid) if role == "cap" else run.melee_take_uses(c.wid)
+			check(cv != null and cv.stat_mark != null, "%s card %d has its %s mark" % [tag, i, role])
+			if cv == null or cv.stat_mark == null:
+				continue
+			eq([str(cv.stat_mark.get("role")), int(cv.stat_mark.get("value"))], [role, want], "%s card %d: %s mark" % [tag, i, role])
+			var mr: Rect2 = cv.stat_mark.get_global_rect()
+			var win: Control = cv.stat_mark.get_parent()
+			check(win.get_global_rect().grow(0.5).encloses(mr), "%s card %d: the mark sits inside the art window" % [tag, i])
+			check(not mr.intersects(cv.hit_burst.get_global_rect()), "%s card %d: the mark is clear of the hit badge" % [tag, i])
+			if cv.rule_chip != null:
+				check(not mr.intersects(cv.rule_chip.get_global_rect()), "%s card %d: the mark is clear of the rule chip" % [tag, i])
+			check(mr.get_center().x > win.get_global_rect().get_center().x and mr.get_center().y > win.get_global_rect().get_center().y,
+				"%s card %d: the mark is in the corner opposite the hit badge" % [tag, i])
+			check(mr.size.y >= 24.0, "%s card %d: the number is big enough (%.0f px)" % [tag, i, mr.size.y])
+			check(not str(cv.payload.get("t1", "")).contains("holds") and not str(cv.payload.get("t1", "")).contains(" uses"), "%s card %d: no small 'holds' / 'uses' text: %s" % [tag, i, str(cv.payload.get("t1", ""))])
+		# the gun row: each gun's capacity mark in its art band
+		for s: int in 2:
+			var gv: DDGunView = _tile(m, 200 + s)
+			check(gv != null and gv.stat_mark != null and int(gv.stat_mark.get("value")) == run.slot(s).cap, "%s gun %d: capacity mark = %d" % [tag, s + 1, run.slot(s).cap])
+			if gv != null and gv.stat_mark != null:
+				check(gv.art_band.get_global_rect().grow(0.5).encloses(gv.stat_mark.get_global_rect()), "%s gun %d: the mark sits in the art band" % [tag, s + 1])
+		# inspect explains it
+		var insp: DDInspect = m.get("_inspect")
+		insp.open(_tile(m, 0).payload)
+		await _settle()
+		var sl: Label = insp.find_child("StatLine", true, false)
+		check(sl != null and sl.text.begins_with("Holds %d kills before it pays out" % bal().weapon_cap("shotgun")), "%s inspect explains the capacity: %s" % [tag, sl.text if sl != null else ""])
+		insp.close()
+		insp.open(_tile(m, 1).payload)
+		await _settle()
+		sl = insp.find_child("StatLine", true, false)
+		check(sl != null and sl.text.contains("each kill uses 1"), "%s inspect explains the uses: %s" % [tag, sl.text if sl != null else ""])
+		insp.close()
+		# the Glossary's number badges list both marks
+		m.call("open_glossary")
+		await _settle()
+		var cx: Control = m.get("codex")
+		var names: Array = []
+		for r: Node in cx.find_children("Gl_*", "", true, false):
+			names.append(str(r.name))
+		check(names.any(func(n: String) -> bool: return n.begins_with("Gl_capacity")) and names.any(func(n: String) -> bool: return n.begins_with("Gl_uses")),
+			"%s the Glossary lists the capacity and uses marks" % tag)
+		cx.call("close")
 		m.queue_free()
 		await tree.process_frame
 	_cleanup()

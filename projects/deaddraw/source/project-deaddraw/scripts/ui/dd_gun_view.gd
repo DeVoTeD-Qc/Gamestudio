@@ -8,6 +8,7 @@
 #   dd-ui6: [hit badge | NAME over rule icon + rule], a clear ART BAND (the gun art, no scrim; the
 #   ACTIVE chip in its corner), the socket row (centred), and the Full set plate (gold cup + FULL +50,
 #   challenge medal + reward; its own tooltip). One kill to go: the plate's rim glows, the cup pulses.
+#   dd-capacity: the capacity mark (dd_marks.gd StatMark) in the art band's bottom-right corner.
 #   Feedback reads `stack_cards` (the filled sockets in kill order) and `next_rect()`.
 # Dependencies: DDCardView, DDUi, scripts/ui/dd_art.gd, scripts/ui/dd_marks.gd.
 # Author: Mechanics Developer Agent (dd-ux-v4 sockets: UI/UX Agent)
@@ -122,6 +123,17 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 			if is_instance_valid(chip):
 				chip.size = chip.get_combined_minimum_size()
 				chip.position = Vector2(band.size.x - chip.size.x - 3.0, 3.0))
+	# dd-capacity: the capacity mark (stacked sockets + the kills it holds) in the art band's
+	# bottom-right corner, opposite the hit badge, as on the street card
+	var cm: Control = Marks.StatMark.new(int(spec.get("cap", 4)), "cap")
+	cm.name = "CapMark"
+	band.add_child(cm)
+	stat_mark = cm
+	band.resized.connect(func() -> void:
+		if is_instance_valid(cm):
+			var ch: float = clampf(band.size.y * 0.5, 24.0, 36.0)
+			cm.size = Vector2(float(cm.call("width_for", ch)), ch)
+			cm.position = band.size - cm.size - Vector2(3.0, 3.0))
 	# v5: the slot's Gun Mod as a chip in the art band's bottom-left corner (its own tooltip)
 	if str(spec.get("mod", "")) != "":
 		var mc0: DDCardView = DDCardView.new()

@@ -48,8 +48,8 @@ static func melee(run: DDRun) -> Dictionary:
 	return {"kind": "K", "tag": "MELEE WEAPON" + on, "title": run.melee_name(), "big": "P%d" % run.melee_power(),
 		"body": "%s\n%s left, then Bare Hands (hits %d)." % [DDText.melee_card_text(id, b, run.melee_uses()),
 			DDText.uses_text(run.melee_uses()), b.num("hands_power")],
-		"t1": "%s · hits %d · %s left" % [run.melee_name(), run.melee_power(), DDText.uses_text(run.melee_uses())],
-		"t2": "Any zombie. Each kill uses 1; at 0 it breaks. No points."}
+		"t1": "%s · hits %d" % [run.melee_name(), run.melee_power()],
+		"t2": "Any zombie, even one your guns can't take. No points."}
 
 
 # ---------------------------------------------------------------- melee weapon cards (street "K")
@@ -66,7 +66,7 @@ static func melee_card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	if c.holdover:
 		body.append("HOLDOVER: left from the last street.")
 	return {"kind": "K", "tag": "MELEE WEAPON", "title": b.melee_name(c.wid), "big": "P%d" % b.melee_power(c.wid), "body": "\n".join(body),
-		"t1": "%s · hits %d · %s" % [b.melee_name(c.wid), b.melee_power(c.wid), DDText.uses_text(uses)],
+		"t1": "%s · hits %d" % [b.melee_name(c.wid), b.melee_power(c.wid)],
 		"t2": "Tap: TAKE it as your melee (no points), or SCRAP +%d." % b.shown(b.num("scrap_points"))}
 
 
