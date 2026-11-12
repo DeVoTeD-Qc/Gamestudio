@@ -205,7 +205,13 @@ func test_room_plate_four_states() -> void:
 	(m.find_child("RoomConfirmOpen", true, false) as Button).pressed.emit()
 	await _settle()
 	check(run.room_open[1], "tap the gold plate: the room opens")
-	# open: USE; used: grey "used"
+	# open but too poor for the machine: no green USE, a dark plate with its price and a padlock
+	var poor: Button = m.find_child("Use1", true, false)
+	check(poor != null and poor.disabled and not poor.text.contains("USE") and poor.find_child("Padlock", true, false) != null, "open, can't pay: dark plate, no USE")
+	# open with enough points: green USE; used: grey "used"
+	run.points = run.machine_min_price(1)
+	m.call("_render")
+	await _settle()
 	var use: Button = m.find_child("Use1", true, false)
 	check(use != null and not use.disabled and use.text == "USE", "open: USE")
 	run.machine_used[1] = true

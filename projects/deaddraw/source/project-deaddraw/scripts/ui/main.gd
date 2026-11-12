@@ -1151,7 +1151,8 @@ func _room_door(run: DDRun, i: int, column: bool) -> DDCardView:
 	var open: bool = run.room_open[i]
 	var afford: bool = not open and run.can_open_room(i)
 	var keys: Array = Art.machine_keys(run.machine(i)) if open else Art.room_keys(did, str(r.get("name", "")))
-	var border: Color = DDUi.WARN if afford else (DDUi.GOOD.darkened(0.2) if open and not run.machine_used[i] else Color("4a5358"))
+	var usable: bool = open and not run.machine_used[i] and run.points >= run.machine_min_price(i)
+	var border: Color = DDUi.WARN if afford else (DDUi.GOOD.darkened(0.2) if usable else Color("4a5358"))
 	var rv: DDCardView = _door_tile("Q" if open else "R", DDPayloads.room(run, i), keys, 0.25 if (afford or open) else 0.45, border)
 	rv.index = IDX_ROOM + i
 	rv.name = "Room%d" % i
@@ -1174,6 +1175,9 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	var open: bool = run.room_open[i]
 	var used: bool = open and run.machine_used[i]
 	var afford: bool = not open and run.can_open_room(i)
+	# an open machine you can't pay for yet: no green USE, a dark plate with its price instead
+	var use_cost: int = run.machine_min_price(i) if open else 0
+	var poor: bool = open and not used and run.points < use_cost
 	var b: Button = Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
@@ -1196,11 +1200,17 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	var edge: Color
 	if open:
 		b.name = "Use%d" % i
-		b.text = "USE" if not used else "used"
-		col = DDUi.BG if not used else DDUi.TEXT_DIM
-		bg = DDUi.GOOD if not used else Color(0.06, 0.05, 0.05, 0.85)
-		edge = Color("c9f5d4") if not used else Color("555555")
-		b.disabled = used or busy or not run.pending_patch.is_empty()
+		if poor:
+			b.text = "%d pts · need %d more" % [Game.bal.shown(use_cost), maxi(0, Game.bal.shown(use_cost) - Game.bal.shown(run.points))]
+			col = DDUi.TEXT
+			bg = Color(0.055, 0.047, 0.047, 0.9)
+			edge = Color("8a7a52")
+		else:
+			b.text = "USE" if not used else "used"
+			col = DDUi.BG if not used else DDUi.TEXT_DIM
+			bg = DDUi.GOOD if not used else Color(0.06, 0.05, 0.05, 0.85)
+			edge = Color("c9f5d4") if not used else Color("555555")
+		b.disabled = used or poor or busy or not run.pending_patch.is_empty()
 		b.pressed.connect(func() -> void:
 			if not _was_long(b):
 				open_machine(i))
@@ -1224,7 +1234,12 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	b.add_theme_color_override("font_hover_color", Color(0, 0, 0, 0))
 	b.add_theme_color_override("font_pressed_color", Color(0, 0, 0, 0))
 	b.add_theme_font_size_override("font_size", 1)
-	var main_txt: String = ("USE" if not used else "used") if open else str(price)
+	var main_txt: String = (str(Game.bal.shown(use_cost)) if poor else ("USE" if not used else "used")) if open else str(price)
+	if poor:
+		var plock: Control = Marks.Padlock.new(false, col)
+		plock.custom_minimum_size = Vector2(16, 20)
+		plock.name = "Padlock"
+		row.add_child(plock)
 	var ml: Label = DDUi.label(main_txt, DDUi.FONT_M - (0 if not used else 6), col, HORIZONTAL_ALIGNMENT_CENTER)
 	row.add_child(ml)
 	if afford:
@@ -1253,7 +1268,7 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	for st: String in ["normal", "hover", "pressed", "disabled"]:
 		b.add_theme_stylebox_override(st, sb if st != "hover" else DDUi.box(bg.lightened(0.1), edge, 2, 10, 6))
 	# dd-art2-import: the painted door plates (gold afford, dark iron locked, green USE, used)
-	DDUi.Kit.skin_plate(b, "dd_plate_door_" + (("used" if used else "use") if open else ("afford" if afford else "locked")), 6.0)
+	DDUi.Kit.skin_plate(b, "dd_plate_door_" + (("used" if used else ("locked" if poor else "use")) if open else ("afford" if afford else "locked")), 6.0)
 	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP + (16.0 if not open else 0.0))
 	# dd-ux-text (playtest): the plate has its own tooltip on right click / long press (the gold
 	# OPEN plate showed an empty one): the price and what is inside
