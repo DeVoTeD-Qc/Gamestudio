@@ -195,21 +195,37 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 				_next_socket = sk
 	stack_area.resized.connect(_layout_sockets)
 	# dd-challenge-rack: the challenge line (what to do for the reward, and how it is going)
+	# (landscape, a short tile: "chal_inline" puts it beside a compact Full set plate, in two lines:
+	# name -> reward over the progress, so the gun art keeps its band)
 	var cl: Dictionary = spec.get("challenge_line", {})
+	var inline: bool = bool(spec.get("chal_inline", false)) and not cl.is_empty()
 	if not cl.is_empty():
-		chal_line = make_challenge_line(cl, float(spec.get("chal_h", 20.0)))
+		cl = cl.duplicate()
+		if inline:
+			cl["reward"] = str(spec.get("reward", ""))
+		chal_line = make_challenge_line(cl, float(spec.get("plate_h", 34.0)) if inline else float(spec.get("chal_h", 20.0)), inline)
 		_chal_info = cl
 		_chal_label = chal_line.find_child("ChalText", true, false)
 		_chal_mark = chal_line.find_child("ChalMark", true, false)
-		v2.add_child(chal_line)
+		if not inline:
+			v2.add_child(chal_line)
 	# the Full set plate (the completion bonus + the challenge reward)
 	var left: int = int(spec.get("left", 0))
-	plate = make_plate(str(spec.get("finish_shown", "")), str(spec.get("reward", "")), str(spec.get("challenge_state", "open")),
+	plate = make_plate(str(spec.get("finish_shown", "")), "" if inline else str(spec.get("reward", "")), str(spec.get("challenge_state", "open")),
 		"lit" if left <= 0 else ("near" if left == 1 else "open"), float(spec.get("plate_h", 34.0)))
 	plate.payload = spec.get("plate_payload", {})
 	plate.set_meta(&"info", {"finish": str(spec.get("finish_shown", "")), "reward": str(spec.get("reward", "")),
 		"cs": str(spec.get("challenge_state", "open")), "h": float(spec.get("plate_h", 34.0))})
-	v2.add_child(plate)
+	if inline:
+		var pr: HBoxContainer = DDUi.hbox(4)
+		pr.name = "PlateRow"
+		v2.add_child(pr)
+		plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		pr.add_child(plate)
+		chal_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pr.add_child(chal_line)
+	else:
+		v2.add_child(plate)
 	DDUi.ignore_mouse(v2)
 	for mc2: DDCardView in stack_cards:
 		mc2.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -316,7 +332,7 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 ## what to do to complete them"): one line under the sockets: the medal, "COUNTDOWN: next =5" (the
 ## goal while nothing is decided, the next kill that keeps it, met, missed) and a tick / cross.
 ## Long press / right click: the full rule with an example, the reward and how it is going.
-static func make_challenge_line(cl: Dictionary, h: float = 20.0) -> DDCardView:
+static func make_challenge_line(cl: Dictionary, h: float = 20.0, two_line: bool = false) -> DDCardView:
 	var p: DDCardView = DDCardView.new()
 	p.kind = "W"
 	p.name = "ChalLine"
@@ -332,12 +348,34 @@ static func make_challenge_line(cl: Dictionary, h: float = 20.0) -> DDCardView:
 	md.texture = Art.texture_for(Art.badge_keys("challenge" if good else "challenge_open"))
 	md.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	md.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	md.custom_minimum_size = Vector2(h - 2.0, h - 2.0)
+	var mside: float = (h * 0.62) if two_line else (h - 2.0)
+	md.custom_minimum_size = Vector2(mside, mside)
 	md.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if st == "broken":
 		md.self_modulate = Color(0.55, 0.55, 0.55, 0.7)
 	row.add_child(md)
 	var fs: int = clampi(int(h * 0.68), 11, 16)
+	p.set_meta(&"two_line", two_line)
+	if two_line:
+		# name -> reward over the progress
+		fs = clampi(int(h * 0.36), 10, 14)
+		var col: VBoxContainer = DDUi.vbox(0)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(col)
+		var top: Label = DDUi.label("%s -> %s" % [str(cl.get("name", "")).to_upper(), str(cl.get("reward", ""))], fs, DDUi.TEXT)
+		top.name = "ChalName"
+		top.autowrap_mode = TextServer.AUTOWRAP_OFF
+		top.clip_text = true
+		top.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		top.custom_minimum_size = Vector2(10, 0)
+		top.resized.connect(func() -> void: fit_label(top, fs, 9))
+		if st == "broken":
+			top.add_child(_Strike.new())
+			top.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		col.add_child(top)
+		row = DDUi.hbox(2)
+		col.add_child(row)
 	var l: Label = DDUi.label(line_text(cl), fs, state_color(st))
 	l.name = "ChalText"
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -360,6 +398,8 @@ static func make_challenge_line(cl: Dictionary, h: float = 20.0) -> DDCardView:
 
 ## "COUNTDOWN: next =5".
 static func line_text(cl: Dictionary) -> String:
+	if cl.has("reward"):
+		return str(cl.get("text", ""))
 	return "%s: %s" % [str(cl.get("name", "")).to_upper(), str(cl.get("text", ""))]
 
 
@@ -384,7 +424,7 @@ func set_verdict(verdict: String, z: int = 0) -> void:
 	else:
 		var bad: bool = verdict == "breaks"
 		var col: Color = DDUi.BAD if bad else DDUi.GOOD
-		_chal_label.text = "%d %s %s" % [z, verdict.to_upper(), str(_chal_info.get("name", "")).to_upper()]
+		_chal_label.text = ("%d %s it" % [z, verdict]) if _chal_info.has("reward") else "%d %s %s" % [z, verdict.to_upper(), str(_chal_info.get("name", "")).to_upper()]
 		_chal_label.add_theme_color_override("font_color", col)
 		if mk != null:
 			mk.kind = "cross" if bad else "tick"

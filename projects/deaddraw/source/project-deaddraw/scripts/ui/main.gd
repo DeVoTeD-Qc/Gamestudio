@@ -160,6 +160,8 @@ func _ready() -> void:
 	# dd-ux-equip: the drag layer (the lifted card and the drop-target glows) over everything on the street
 	drag = DDDrag.new()
 	add_child(drag)
+	drag.hover_changed.connect(func(h: String) -> void: _drag_verdicts(drag.info, h))
+	drag.drag_finished.connect(func(_t: Dictionary) -> void: clear_kill_verdicts())
 	codex = Codex.new()
 	codex.name = "Codex"
 	add_child(codex)
@@ -1304,6 +1306,11 @@ func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99)
 		cv.index = i
 		cv.tapped.connect(_on_card_tapped)
 		_drag_source(cv, {"type": "street", "index": i})
+		if c.kind == DDCard.ZOMBIE:
+			# dd-challenge-rack: hovering a zombie (desktop) shows on each gun tile whether that
+			# kill keeps or breaks its challenge
+			cv.mouse_entered.connect(func() -> void: show_kill_verdicts(i))
+			cv.mouse_exited.connect(func() -> void: clear_kill_verdicts())
 		g.add_child(cv)
 		var cid: int = c.get_instance_id()
 		_street_views[cid] = cv
@@ -1430,6 +1437,9 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 		var spec: Dictionary = DDPayloads.gun_spec(run, s)
 		spec["socket_h_max"] = sock_h
 		spec["plate_h"] = plate_h
+		spec["chal_h"] = 22.0
+		# landscape: the challenge line sits beside a compact Full set plate (the art keeps its band)
+		spec["chal_inline"] = not row
 		var gv: DDGunView = DDGunView.new()
 		gv.setup_gun(spec)
 		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1822,6 +1832,9 @@ func _melee_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 func _machine_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	var m: Dictionary = run.machine(i)
 	var kind: String = str(m.get("kind", ""))
+	if kind == "wall":
+		_rack_sheet(run, v, i)
+		return
 	var head: HBoxContainer = DDUi.hbox(10)
 	v.add_child(head)
 	var tex: Texture2D = Art.texture_for(Art.machine_keys(m))
@@ -1849,25 +1862,147 @@ func _machine_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 		b.add_theme_font_size_override("font_size", DDUi.FONT_S - 4)
 		b.custom_minimum_size = Vector2(0, 84)
 		grid.add_child(b)
-	if kind == "wall":
-		var wid: String = str(m.get("wid", ""))
-		# dd-capacity: the rack gun's hit and capacity as the two marks, then its rule in words
-		var wr: HBoxContainer = DDUi.hbox(6)
-		wr.name = "RackGun"
-		v.add_child(wr)
-		var wb: Control = Marks.HitBurst.new(Game.bal.weapon_power(wid))
-		wb.custom_minimum_size = Vector2(30, 30)
-		wb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		wr.add_child(wb)
-		var wc: Control = Marks.StatMark.new(Game.bal.weapon_cap(wid), "cap")
-		wc.custom_minimum_size = Vector2(float(wc.call("width_for", 30.0)), 30.0)
-		wc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		wr.add_child(wc)
-		var wl: Label = DDUi.label("%s · each kill: %s" % [Game.bal.weapon_name(wid), DDText.rule_short(Game.bal.weapon_rule(wid), run.steady())],
-			DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true)
-		wl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		wr.add_child(wl)
 	v.add_child(_sheet_button("Close", true, DDUi.PANEL_HI, close_sheet))
+
+
+## dd-challenge-rack (head: "The wall rack should show a nice preview of the weapon when we want to
+## buy it"): the Wall Rack sheet. Each gun for sale is a preview card like a street gun card (its art,
+## hit badge, capacity mark, rule), with its rule, challenge + reward and price beside it; tap the
+## card = its full zoom. Then one BUY button per slot with the price (dark with "need N more pts"
+## when you can't pay). Portrait: card | details, the BUY buttons under them. Landscape: card |
+## details | [BUY 1, BUY 2, Close]. More than one gun would sit in a swipe row.
+func _rack_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
+	var m: Dictionary = run.machine(i)
+	var wid: String = str(m.get("wid", ""))
+	var price: int = Game.bal.weapon_price(wid)
+	var vp: Vector2 = get_viewport_rect().size
+	var short: bool = vp.y < 520.0
+	var title: HBoxContainer = DDUi.hbox(8)
+	title.name = "RackHead"
+	v.add_child(title)
+	var tl: Label = DDUi.label("WALL RACK - " + str(run.room(i).get("name", "")), DDUi.FONT_M if not short else DDUi.FONT_S, DDUi.accent("Q"))
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_child(tl)
+	var have: Label = DDUi.label("you have %d pts" % Game.bal.shown(run.points), DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
+	have.name = "RackHave"
+	have.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	title.add_child(have)
+	var offers: Array[String] = []
+	if wid != "":
+		offers.append(wid)
+	var opts: Array = run.machine_options(i)
+	var offer_box: BoxContainer = BoxContainer.new()
+	offer_box.vertical = false
+	offer_box.add_theme_constant_override("separation", 10)
+	if offers.size() > 1:
+		# more guns than fit: a swipe row
+		var sc: ScrollContainer = ScrollContainer.new()
+		sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		sc.custom_minimum_size = Vector2(0, 220)
+		sc.add_child(offer_box)
+		v.add_child(sc)
+	else:
+		v.add_child(offer_box)
+	for w: String in offers:
+		offer_box.add_child(_rack_offer(run, w, price, vp, short))
+	var buys: Array[Button] = []
+	for o: Dictionary in opts:
+		var ok: bool = bool(o["enabled"]) and not busy
+		var why: String = str(o["reason"])
+		if run.points < int(o["price"]) and (why == "" or why.begins_with("need")):
+			why = "need %d more pts" % Game.bal.shown(int(o["price"]) - run.points)
+		var t: String = "%s · %d pts\n%s" % [str(o["label"]), Game.bal.shown(int(o["price"])), str(o["result"]) if bool(o["enabled"]) else why]
+		var b: Button = _sheet_button(t, ok, Color("3d4f2a"), func() -> void: do_machine(i, str(o["id"])))
+		b.name = "RackBuy" + str(o["id"]).trim_prefix("slot")
+		b.add_theme_font_size_override("font_size", DDUi.FONT_S - 4)
+		b.custom_minimum_size = Vector2(0, 72 if not short else 64)
+		if not ok:
+			b.add_theme_color_override("font_disabled_color", DDUi.WARN)
+		buys.append(b)
+	var close: Button = _sheet_button("Close", true, DDUi.PANEL_HI, close_sheet)
+	if portrait:
+		var row: HBoxContainer = DDUi.hbox(8)
+		row.name = "RackBuys"
+		v.add_child(row)
+		for b2: Button in buys:
+			row.add_child(b2)
+		v.add_child(close)
+	else:
+		var col: VBoxContainer = DDUi.vbox(6)
+		col.name = "RackBuys"
+		col.custom_minimum_size = Vector2(250, 0)
+		for b3: Button in buys:
+			col.add_child(b3)
+		col.add_child(close)
+		if offer_box.get_child_count() > 0:
+			offer_box.get_child(0).add_child(col)
+		else:
+			v.add_child(col)
+
+
+## One Wall Rack offer: the preview card and its details (rule, challenge + goal, price).
+func _rack_offer(run: DDRun, wid: String, price: int, vp: Vector2, short: bool) -> Control:
+	var b: DDBalance = Game.bal
+	var rosa: bool = run.steady()
+	var box: HBoxContainer = DDUi.hbox(10)
+	box.name = "RackOffer"
+	var gp: Dictionary = DDPayloads.gun_def(wid, b, "WALL RACK · %d PTS" % b.shown(price), rosa)
+	var spec: Dictionary = {"kind": "W", "tag": "", "hit": b.weapon_power(wid), "cap": b.weapon_cap(wid), "title": b.weapon_name(wid),
+		"lines": [[DDText.rule_tag(b.weapon_rule(wid), rosa), DDUi.accent("W"), DDUi.FONT_S - 3]], "rule_chip": DDPayloads.weapon_rule_chip(wid, b, rosa),
+		"payload": gp, "art_keys": Art.weapon_keys(wid, b.weapon_name(wid)), "selected": true}
+	var cw: float = 150.0 if portrait else 170.0
+	var ch: float = 200.0 if not short else 176.0
+	var cv: DDCardView = _view(spec, Vector2(cw, ch))
+	cv.name = "RackCard"
+	cv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cv.tapped.connect(func(_x: DDCardView) -> void: _on_inspect(gp))
+	box.add_child(cv)
+	var d: VBoxContainer = DDUi.vbox(4)
+	d.name = "RackDetails"
+	d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d.alignment = BoxContainer.ALIGNMENT_CENTER
+	# the details column gets the width the card and (landscape) the BUY column leave
+	var inner: float = minf(vp.x - 32.0, 620.0 if portrait else 900.0) - 28.0
+	d.custom_minimum_size = Vector2(maxf(120.0, minf(360.0, inner - cw - 10.0 - (0.0 if portrait else 260.0))), 0)
+	box.add_child(d)
+	var fs: int = DDUi.FONT_S - 4
+	d.add_child(DDUi.label("Hits %d · %d kills fill it (+%d)" % [b.weapon_power(wid), b.weapon_cap(wid), b.shown(b.num("finish_bonus"))], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true))
+	d.add_child(_icon_line(Art.rule_keys(b.weapon_rule(wid)), "Each kill: %s" % DDText.rule_short(b.weapon_rule(wid), rosa), fs, DDUi.WARN))
+	var cid: String = b.weapon_challenge(wid)
+	if cid != "":
+		var rw: Array = b.weapon_reward(wid)
+		var cl: Control = _icon_line(Art.badge_keys("challenge_open"), "%s -> %s" % [DDText.challenge_name(cid).to_upper(), DDText.reward_short(str(rw[0]), int(rw[1]), b)], fs, DDUi.GOOD)
+		cl.name = "RackChallenge"
+		d.add_child(cl)
+		var gl: Label = DDUi.label(DDText.challenge_goal(cid, b).substr(0, 1).to_upper() + DDText.challenge_goal(cid, b).substr(1), fs - 1, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true)
+		gl.name = "RackGoal"
+		d.add_child(gl)
+	var pr: PanelContainer = DDUi.tag("%d PTS" % b.shown(price), "bone", DDUi.FONT_S - 1, DDUi.accent("X") if run.points >= price else DDUi.TEXT_DIM)
+	pr.name = "RackPrice"
+	pr.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	d.add_child(pr)
+	if run.points < price:
+		var nl: Label = DDUi.label("need %d more" % b.shown(price - run.points), fs - 1, DDUi.WARN)
+		nl.name = "RackNeed"
+		d.add_child(nl)
+	return box
+
+
+func _icon_line(keys: Array, text: String, fs: int, col: Color) -> HBoxContainer:
+	var h: HBoxContainer = DDUi.hbox(4)
+	var tex: Texture2D = Art.texture_for(keys)
+	if tex != null:
+		var tr: TextureRect = TextureRect.new()
+		tr.texture = tex
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(fs + 4, fs + 4)
+		tr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(tr)
+	var l: Label = DDUi.label(text, fs, col, HORIZONTAL_ALIGNMENT_LEFT, true)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(l)
+	return h
 
 
 func _patch_sheet(run: DDRun, v: VBoxContainer) -> void:
@@ -2192,6 +2327,7 @@ func start_drag(view: DDCardView, src: Dictionary, gp: Vector2) -> void:
 	drag.reduce = Game.reduce_motion()
 	Sfx.cue(&"flip", 1.2)
 	drag.begin(view, _drag_ghost(view, src), drag_targets(src), gp, src, extras)
+	_drag_verdicts(src, drag.hovered)
 	if OS.has_feature("web"):
 		_publish_state.call_deferred()
 
@@ -2234,6 +2370,44 @@ func end_drag(gp: Vector2) -> void:
 		if ll != null and str(t.get("reason", "")) != "":
 			ll.text = "Can't: %s." % str(t["reason"])
 			ll.add_theme_color_override("font_color", DDUi.WARN)
+
+
+## dd-challenge-rack: the keep / break verdict of killing street zombie i, on each gun tile whose
+## gun can take it (a gun that can't, or has no challenge left, keeps its normal line).
+func show_kill_verdicts(i: int, only_slot: int = -1) -> void:
+	var run: DDRun = Game.run
+	if run == null or i < 0 or i >= run.street.size() or run.street[i].kind != DDCard.ZOMBIE or not sheet.is_empty():
+		return
+	var z: int = run.street[i].value
+	for s: int in 2:
+		var gv: DDGunView = _gun_views[s] as DDGunView if s < _gun_views.size() else null
+		if gv == null or not is_instance_valid(gv):
+			continue
+		var vd: String = ""
+		if (only_slot < 0 or only_slot == s) and run.slot(s) != null and bool(run.preview(i, s).get("ok", false)):
+			vd = run.challenge_kill(s, z)
+		gv.set_verdict(vd, z)
+
+
+func clear_kill_verdicts() -> void:
+	for gv: Variant in _gun_views:
+		if gv is DDGunView and is_instance_valid(gv):
+			(gv as DDGunView).set_verdict("")
+
+
+## While dragging: a lifted zombie shows its verdict on both guns; a gun lifted over a zombie shows
+## that zombie's verdict on the lifted gun.
+func _drag_verdicts(src: Dictionary, hovered: String) -> void:
+	if str(src.get("type", "")) == "street":
+		var idx: int = int(src.get("index", -1))
+		var run: DDRun = Game.run
+		if run != null and idx >= 0 and idx < run.street.size() and run.street[idx].kind == DDCard.ZOMBIE:
+			show_kill_verdicts(idx)
+			return
+	elif str(src.get("type", "")) == "weapon" and int(src.get("w", 0)) != DDRun.MELEE and hovered.begins_with("zombie"):
+		show_kill_verdicts(int(hovered.trim_prefix("zombie")), int(src["w"]))
+		return
+	clear_kill_verdicts()
 
 
 ## Drop helper (tests, the web smoke): runs the drop of src on the target called `target_name`;

@@ -468,7 +468,11 @@ static func challenge_line(run: DDRun, s: int) -> Dictionary:
 	var keep: Array[int] = nx["keep"]
 	var meet: Array[int] = nx["meet"]
 	var can: Array[int] = nx["can"]
-	if st == "broken":
+	if g.kills_left() > 0 and can.is_empty() and not (g.rule == "heavy" and run.fired[s]):
+		# no number can go on this gun any more (a rule + Gun Mod combination can dead-lock it)
+		text = "no kill fits: swap it"
+		hint = "No number fits this gun now: swap it for a street gun or a Wall Rack gun (melee still works)."
+	elif st == "broken":
 		text = "missed"
 		hint = "Missed: this gun can't meet %s any more. Fill it for +%d anyway." % [name, b.shown(b.num("finish_bonus"))]
 	elif st == "met":

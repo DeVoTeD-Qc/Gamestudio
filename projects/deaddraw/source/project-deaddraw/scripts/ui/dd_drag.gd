@@ -17,6 +17,8 @@ class_name DDDrag
 extends Control
 
 signal drag_finished(target: Dictionary)
+## dd-challenge-rack: the target under the pointer changed ("" = none).
+signal hover_changed(target_name: String)
 
 const LIFT: float = 1.06
 const SNAP_S: float = 0.18
@@ -148,6 +150,7 @@ func move(gpos: Vector2) -> void:
 	if h != hovered:
 		hovered = h
 		_layout_glows()
+		hover_changed.emit(h)
 
 
 ## Ends the drag at gpos: a lit target runs its action (returned), anything else snaps back
