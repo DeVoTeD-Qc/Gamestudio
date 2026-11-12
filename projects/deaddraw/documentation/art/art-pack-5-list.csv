@@ -1,0 +1,21 @@
+file,kind,generate size,in-game size,used_in
+dd_cut_gun_service_pistol.png,"cut-out gun (XS, 38% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_nail_driver.png,"cut-out gun (S, 48% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_alley_sweeper.png,"cut-out gun (S, 56% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_twin_bore.png,"cut-out gun (M, 66% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_scout_carbine.png,"cut-out gun (M, 66% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_ratchet_crossbow.png,"cut-out gun (M, 68% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_stovepipe_launcher.png,"cut-out gun (M, 70% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_pump_shotgun.png,"cut-out gun (L, 78% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_lever_rifle.png,"cut-out gun (L, 80% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_hunting_rifle.png,"cut-out gun (L, 82% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_gun_elephant_gun.png,"cut-out gun (XL, 88% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","gun card over dd_bg_gun, equipped gun slot, inspect, Codex"
+dd_cut_melee_bare_hands.png,"cut-out melee (S, 50% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","melee card over dd_bg_melee, melee slot, inspect, Codex"
+dd_cut_melee_pipe_wrench.png,"cut-out melee (S, 56% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","melee card over dd_bg_melee, melee slot, inspect, Codex"
+dd_cut_melee_fire_axe.png,"cut-out melee (L, 76% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","melee card over dd_bg_melee, melee slot, inspect, Codex"
+dd_cut_melee_sledgehammer.png,"cut-out melee (L, 82% width)",1536x1024 transparent,"768x512 webp (alpha, same canvas so the scale holds)","melee card over dd_bg_melee, melee slot, inspect, Codex"
+dd_bg_gun.png,backdrop,1536x1024,"768x512 webp (full-bleed, cover-fit)","gun cards (street, equipped slot, safehouse offer, inspect) behind every dd_cut_gun_*"
+dd_bg_melee.png,backdrop,1536x1024,"768x512 webp (full-bleed, cover-fit)",melee cards and melee slot behind every dd_cut_melee_*
+dd_bg_maple_row.png,backdrop,1536x1024,"768x512 webp (full-bleed, cover-fit)",gun and melee cards found in Maple Row (optional district variant of dd_bg_gun / dd_bg_melee)
+dd_bg_downtown.png,backdrop,1536x1024,"768x512 webp (full-bleed, cover-fit)",gun and melee cards found in Downtown (optional district variant)
+dd_bg_st_agnes.png,backdrop,1536x1024,"768x512 webp (full-bleed, cover-fit)",gun and melee cards found in St. Agnes (optional district variant)

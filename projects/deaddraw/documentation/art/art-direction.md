@@ -123,3 +123,23 @@ branch `art/deaddraw-pack-2`, folder `chatgpt/images/art-pack-2/`.
   Gun Mod offer card (`lead_icon` in `dd_card_view.gd`, 48 px), the inspect zoom (`icon_px` 128, `dd_inspect.gd`) and
   the Glossary's "Gun Mod (MOD chip)" row. Without a painted file each place falls back to the text-only chip.
   `tests/tools/shot_mods.gd` shoots all of them.
+
+## Layered weapon cards (art pack 5)
+
+Approved by the studio head: gun and melee card art moves from one full-bleed painting to three layers, so the game
+controls each part. Prompts: `chatgpt/dd-art-pack-5-cutouts-prompts.md`; list: `art-pack-5-list.csv`.
+
+| Layer (bottom to top) | Source | Notes |
+|---|---|---|
+| 1. Backdrop | `dd_bg_gun` / `dd_bg_melee` (or the district plate `dd_bg_maple_row`, `dd_bg_downtown`, `dd_bg_st_agnes`) | full-bleed, cover-fit like pack 1; empty centre; calm darker badge corners and bottom name band |
+| 2. Weapon cut-out | `dd_cut_gun_<id>` / `dd_cut_melee_<id>`, transparent | one camera (3/4 side, muzzle right, warm key upper right); one real-world scale (XS pistol 38% of width up to XL Elephant Gun 88%) |
+| 3. Frame and badges | drawn by the game (`dd_ui.gd` skins, number badge, rule glyph, name bar, MOD chip, capacity marks) | unchanged from packs 2-3 |
+
+How the game composes them: the card draws the backdrop with "cover" into the art rect; then the cut-out, scaled by
+one factor for the whole set (the art rect height / 1024, never fit-to-box) and centred at 50% / 52%, so a pistol stays
+smaller than a rifle on every card; then the frame and badges. The district plate is used when the card knows its
+district, else the generic gun or melee plate. The cut-out alone serves places with their own background: the
+equipped gun slot, the melee slot, the inspect zoom (over a dimmed backdrop) and the Codex. Phones crop the backdrop
+to near-square; the XL and L cut-outs may then be scaled down by the same shared factor rather than cropped. Until a
+cut-out passes review (real alpha, no halo or checkerboard, size band held, no text), the pack 1 painting stays the
+fallback in `manifest.json`.
