@@ -4421,27 +4421,12 @@
   },
   {
    "cover": 0,
-   "damage": 5,
-   "hp": 17,
-   "hp0": 20,
-   "kept": false,
-   "patches": [
-    "trophy_belt",
-    "adrenaline"
-   ],
-   "points": 22,
-   "stack": [],
-   "wid": "launcher",
-   "z": 12
-  },
-  {
-   "cover": 0,
    "damage": 0,
    "hp": 20,
    "hp0": 20,
    "kept": true,
    "patches": [
-    "show_off"
+    "trophy_belt"
    ],
    "points": 2,
    "stack": [],
@@ -5989,69 +5974,88 @@
   },
   {
    "cover": 0,
-   "damage": 1,
-   "hp": 17,
-   "hp0": 18,
+   "damage": 4,
+   "hp": 4,
+   "hp0": 8,
    "kept": false,
-   "patches": [
-    "show_off"
-   ],
+   "patches": [],
    "points": 13,
-   "stack": [],
-   "wid": "launcher",
+   "stack": [
+    5,
+    10,
+    4,
+    4
+   ],
+   "wid": "lever",
    "z": 8
   },
   {
    "cover": 0,
-   "damage": 6,
-   "hp": 6,
-   "hp0": 12,
+   "damage": 4,
+   "hp": 16,
+   "hp0": 20,
+   "kept": true,
+   "patches": [
+    "adrenaline",
+    "grudge"
+   ],
+   "points": 10,
+   "stack": [
+    3,
+    1
+   ],
+   "wid": "shotgun",
+   "z": 10
+  },
+  {
+   "cover": 0,
+   "damage": 0,
+   "hp": 13,
+   "hp0": 13,
    "kept": true,
    "patches": [
     "bounty",
-    "trophy_belt",
     "show_off",
-    "grudge"
+    "adrenaline"
    ],
-   "points": 9,
+   "points": 1,
    "stack": [
-    8
+    3
    ],
-   "wid": "pistol",
-   "z": 9
+   "wid": "lever",
+   "z": 1
   },
   {
    "cover": 0,
-   "damage": 3,
-   "hp": 3,
-   "hp0": 6,
-   "kept": true,
-   "patches": [
-    "trophy_belt",
-    "grudge"
-   ],
-   "points": 6,
-   "stack": [
-    6,
-    11
-   ],
-   "wid": "sweeper",
-   "z": 6
-  },
-  {
-   "cover": 0,
-   "damage": 4,
-   "hp": 12,
-   "hp0": 14,
+   "damage": 7,
+   "hp": 9,
+   "hp0": 16,
    "kept": false,
+   "patches": [],
+   "points": 16,
+   "stack": [
+    11,
+    11,
+    6,
+    6
+   ],
+   "wid": "lever",
+   "z": 11
+  },
+  {
+   "cover": 0,
+   "damage": 7,
+   "hp": 7,
+   "hp0": 14,
+   "kept": true,
    "patches": [
     "trophy_belt",
     "adrenaline",
     "grudge"
    ],
-   "points": 22,
+   "points": 12,
    "stack": [],
-   "wid": "launcher",
+   "wid": "rifle",
    "z": 12
   },
   {
@@ -7689,7 +7693,7 @@
    "z": 7
   },
   {
-   "ok": false,
+   "ok": true,
    "rosa": false,
    "rule": "zigzag",
    "stack": [

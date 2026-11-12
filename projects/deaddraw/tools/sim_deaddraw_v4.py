@@ -328,6 +328,9 @@ def legal(rule, stack, z, rosa):
         if len(stack) == 1:
             return True
         prev = t - stack[-2]
+        if prev == 0:
+            # a flat step (a Gun Mod let an equal kill in): any change restarts the zig-zag
+            return True
         return (z - t) * prev < 0
     return True
 

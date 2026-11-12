@@ -27,6 +27,7 @@ func test_every_gun_rule() -> void:
 	check(_legal(r, "zigzag", [5], 3) and _legal(r, "zigzag", [5], 8) and not _legal(r, "zigzag", [5], 5), "zigzag: any step but equal after one kill")
 	check(_legal(r, "zigzag", [3, 7], 4) and not _legal(r, "zigzag", [3, 7], 9), "zigzag: up then down")
 	check(_legal(r, "zigzag", [7, 3], 5) and not _legal(r, "zigzag", [7, 3], 2), "zigzag: down then up")
+	check(_legal(r, "zigzag", [7, 7], 3) and _legal(r, "zigzag", [7, 7], 9) and not _legal(r, "zigzag", [7, 7], 7), "zigzag: after a flat step (a Gun Mod), any change restarts it (no dead gun)")
 	# close
 	check(_legal(r, "close", [5], 4) and _legal(r, "close", [5], 5) and _legal(r, "close", [5], 6) and not _legal(r, "close", [5], 7), "close: within 1")
 	# parity

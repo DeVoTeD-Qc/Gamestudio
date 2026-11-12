@@ -486,7 +486,11 @@ func legal(rule_id: String, stack: Array[int], z: int, rosa: bool = false) -> bo
 				return false
 			if stack.size() == 1:
 				return true
-			return (z - t) * (t - stack[stack.size() - 2]) < 0
+			var prev: int = t - stack[stack.size() - 2]
+			if prev == 0:
+				# a flat step (Open Breech / Echo let an equal kill in): any change restarts the zig-zag
+				return true
+			return (z - t) * prev < 0
 	return true
 
 
