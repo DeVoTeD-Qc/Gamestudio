@@ -246,6 +246,8 @@ func _scroll(v: VBoxContainer) -> VBoxContainer:
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(sc)
+	# dd-ux-equip: one-finger drag (on tiles or empty space) and two-finger scroll on touch
+	DDTouchScroll.attach(sc)
 	var inner: VBoxContainer = DDUi.vbox(8)
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sc.add_child(inner)

@@ -46,9 +46,7 @@ func _over(pos: Vector2) -> bool:
 
 func _reduce() -> bool:
 	var g: Node = get_node_or_null(^"/root/Game")
-	if g != null and g.get("settings") is Dictionary:
-		return bool((g.get("settings") as Dictionary).get("reduce_motion", false))
-	return false
+	return g != null and g.has_method(&"reduce_motion") and bool(g.call(&"reduce_motion"))
 
 
 func _scroll_by(dy: float) -> void:

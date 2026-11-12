@@ -427,6 +427,8 @@ func _scroll(child: Control) -> ScrollContainer:
 		(child as BoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
 		child.custom_minimum_size = Vector2(0, get_viewport_rect().size.y - MARGIN * 2)
 	s.add_child(child)
+	# dd-ux-equip: drag / two-finger scroll on touch (taps and long presses still work)
+	DDTouchScroll.attach(s)
 	return s
 
 
