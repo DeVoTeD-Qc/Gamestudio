@@ -30,11 +30,6 @@ const CHALLENGE_NAMES: Dictionary = {
 	"big_bang": "Big Bang", "pest_control": "Pest Control",
 }
 
-const RULE_ICONS: Dictionary = {
-	"any": "ANY", "down": "DOWN", "up": "UP", "same": "SAME", "zigzag": "ZIG-ZAG", "close": "CLOSE",
-	"parity": "ODD/EVEN", "spread": "SUM", "big": "BIG", "heavy": "ONE SHOT", "small": "SMALL",
-}
-
 
 static func zombie_name(v: int) -> String:
 	if v <= 3:
@@ -155,95 +150,118 @@ static func pack_entry(spec: String) -> String:
 
 
 # ---------------------------------------------------------------- gun rules
-## The short rule a gun card shows: "lower than the top kill".
+# dd-ux-text: ONE notation per rule, used everywhere (gun tile, tooltips, Codex, Glossary, log, the
+# zombie's lit / dark line and the blocked-tap toast):
+#   - the rule itself, relative to the last kill: rule_tag() (tile, caps) and rule_short() (words);
+#   - what the next kill needs right now, always as a number with the same symbols: need_tag()
+#     for the small kill socket "≤5", "≥8", "=5", "4-6", "odd", "any"; need_words() for text
+#     "≤5", "≥8", "exactly 5", "4-6", "an odd number", "any zombie";
+#   - a zombie the gun can't take: "needs ≤5" (rule_block()), on the card, in its tooltip and in
+#     the toast.
+# A zombie-number threshold is always written ≤N / ≥N (never "at most", "or more", "<6", ">4").
+
+## The short rule, after "Each kill:": "lower than the last kill".
 static func rule_short(rule: String, rosa: bool = false) -> String:
 	match rule:
 		"any":
-			return "anything"
+			return "any zombie"
 		"down":
-			return "lower than the top kill" if not rosa else "lower or equal to the top kill"
+			return "lower than the last kill" if not rosa else "the last kill or lower"
 		"up":
-			return "higher than the top kill" if not rosa else "higher or equal to the top kill"
+			return "higher than the last kill" if not rosa else "the last kill or higher"
 		"same":
 			return "the same number as the first kill"
 		"zigzag":
-			return "zig-zag: up after down, down after up"
+			return "up, then down, then up (never equal)"
 		"close":
-			return "within 1 of the top kill"
+			return "within 1 of the last kill"
 		"parity":
-			return "odd after even, even after odd"
+			return "odd, then even, then odd"
 		"spread":
-			return "anything while the total stays at 16 or less"
+			return "any, while the total stays ≤16"
 		"big":
-			return "6 or more only"
+			return "≥6 only"
 		"small":
-			return "6 or less only"
+			return "≤6 only"
 		"heavy":
-			return "one shot: any zombie"
+			return "any zombie; one kill fills it"
 	return rule
 
 
-## The full rule for a zoom.
+## The full rule for the Codex / a zoom body: "Each kill: lower than the last kill. The first is free."
 static func rule_text(rule: String, bal: DDBalance, rosa: bool = false) -> String:
 	match rule:
 		"any":
-			return "No rule: every zombie is a legal kill."
-		"down":
-			return "Each new kill must be LOWER than the top kill%s (the first kill can be anything)." % (" or equal (Steady Hands)" if rosa else "")
-		"up":
-			return "Each new kill must be HIGHER than the top kill%s (the first kill can be anything)." % (" or equal (Steady Hands)" if rosa else "")
+			return "Each kill: any zombie."
+		"down", "up", "close", "zigzag", "parity":
+			return "Each kill: %s. The first kill can be anything." % rule_short(rule, rosa)
 		"same":
-			return "Every kill must be the SAME number as the first kill."
-		"zigzag":
-			return "Zig-zag: if the last step went up, this one must go down (and vice versa). Never equal."
-		"close":
-			return "Each new kill must be within 1 of the top kill (equal is fine)."
-		"parity":
-			return "Odd after even, even after odd."
+			return "Each kill: the same number as the first kill."
 		"spread":
-			return "Anything, as long as the stack total stays at %d or less. Finished at its capacity or at a total of %d." % [bal.num("spread_cap"), bal.num("spread_cap")]
+			return "Each kill: any, while the total stays ≤%d. Full at its capacity or at a total of %d." % [bal.num("spread_cap"), bal.num("spread_cap")]
 		"big":
-			return "Only zombies of %d or more." % bal.num("big_min")
+			return "Each kill: ≥%d only." % bal.num("big_min")
 		"small":
-			return "SMALL FRY: only zombies of %d or less." % bal.num("small_max")
+			return "Each kill: ≤%d only." % bal.num("small_max")
 		"heavy":
 			if bal.num("heavy_min") > 0:
-				return "ONE SHOT: only zombies of %d or more, one kill per street." % bal.num("heavy_min")
-			return "ONE SHOT: any zombie. One kill finishes it."
+				return "One shot: ≥%d, one kill per street." % bal.num("heavy_min")
+			return "One shot: any zombie. One kill fills it."
 	return ""
 
 
-## Why a gun can't take zombie z right now ("needs lower than 4").
+## What the next kill needs, from the legal numbers (1-12), for text: "≤5", "≥8", "exactly 5",
+## "4-6", "an odd number", "any zombie" (the socket's symbols, a word where a symbol alone is bare).
+static func need_words(zs: Array[int]) -> String:
+	var t: String = need_tag(zs)
+	if t == "any":
+		return "any zombie"
+	if t == "none":
+		return "nothing (use melee)"
+	if t.begins_with("="):
+		return "exactly %s" % t.substr(1)
+	if t == "odd" or t == "even":
+		return "an %s number" % t
+	return t
+
+
+## The same for the small kill socket: "≤5", "≥8", "=5", "4-6", "odd", "even", "any", "none".
+static func need_tag(zs: Array[int]) -> String:
+	if zs.is_empty():
+		return "none"
+	if zs.size() >= 12:
+		return "any"
+	var contiguous: bool = zs[zs.size() - 1] - zs[0] == zs.size() - 1
+	if zs.size() == 1:
+		return "=%d" % zs[0]
+	if contiguous and zs[0] == 1:
+		return "≤%d" % zs[zs.size() - 1]
+	if contiguous and zs[zs.size() - 1] == 12:
+		return "≥%d" % zs[0]
+	if contiguous:
+		return "%d-%d" % [zs[0], zs[zs.size() - 1]]
+	var odd: bool = true
+	var even: bool = true
+	for z: int in zs:
+		odd = odd and z % 2 == 1
+		even = even and z % 2 == 0
+	if odd:
+		return "odd"
+	if even:
+		return "even"
+	return "≥%d" % zs[0] if zs.size() > 3 else ",".join(PackedStringArray(zs.map(func(z: int) -> String: return str(z))))
+
+
+## Why a gun can't take zombie z right now: "needs ≤5" (the same notation as everywhere).
 static func rule_block(g: DDGun, z: int, run: Object) -> String:
 	if g == null:
 		return "empty slot"
-	var rosa: bool = run != null and bool(run.call("steady"))
-	var t: int = g.top()
-	match g.rule:
-		"down":
-			return "rule: needs %s %d" % ["at most" if rosa else "lower than", t]
-		"up":
-			return "rule: needs %s %d" % ["at least" if rosa else "higher than", t]
-		"same":
-			return "rule: needs a %d" % g.stack[0]
-		"close":
-			return "rule: needs %d-%d" % [t - 1, t + 1]
-		"parity":
-			return "rule: needs an %s number" % ("even" if t % 2 == 1 else "odd")
-		"spread":
-			return "rule: total would be %d (max 16)" % (g.total() + z)
-		"big":
-			return "rule: needs 6 or more"
-		"small":
-			return "rule: needs 6 or less"
-		"heavy":
-			return "rule: needs %d or more" % (run.get("bal") as DDBalance).num("heavy_min") if run != null else "rule forbids it"
-		"zigzag":
-			if z == t:
-				return "rule: never equal"
-			var up: bool = g.stack.size() > 1 and t > g.stack[g.stack.size() - 2]
-			return "rule: must go %s from %d" % ["down" if up else "up", t]
-	return "rule forbids it"
+	if run != null and run.has_method("can_take"):
+		var zs: Array[int] = run.call("can_take", g)
+		if zs.has(z):
+			return "one kill per street"
+		return "needs " + need_words(zs)
+	return "needs " + rule_short(g.rule)
 
 
 static func challenge_name(id: String) -> String:
@@ -255,11 +273,11 @@ static func challenge_text(id: String, bal: DDBalance) -> String:
 		"mixed_bag":
 			return "every kill a different number"
 		"countdown":
-			return "the last 3 kills go down by exactly 1 (6-5-4)"
+			return "the last 3 kills go down by 1 (6-5-4)"
 		"staircase":
-			return "3 consecutive numbers in a row going up (4-5-6)"
+			return "3 kills in a row go up by 1 (4-5-6)"
 		"big_game":
-			return "the number is 6 or more"
+			return "the first kill is ≥6"
 		"wide_swing":
 			return "every step is 2 or more apart"
 		"drift":
@@ -269,11 +287,11 @@ static func challenge_text(id: String, bal: DDBalance) -> String:
 		"point_blank":
 			return "the total is exactly %d" % bal.num("spread_cap")
 		"trophy":
-			return "both kills 8 or more"
+			return "both kills ≥8"
 		"big_bang":
-			return "the kill is %d or more" % bal.num("big_bang_min")
+			return "the kill is ≥%d" % bal.num("big_bang_min")
 		"pest_control":
-			return "the stack totals %d or less" % bal.num("pest_total")
+			return "the kills total ≤%d" % bal.num("pest_total")
 	return ""
 
 
@@ -286,7 +304,7 @@ static func reward_text(kind: String, amount: int, bal: DDBalance) -> String:
 		"cover":
 			return "+%d Cover" % amount
 		"encore":
-			return "Encore: the gun stays, its stack resets"
+			return "Encore: the gun stays, its kills reset"
 	return ""
 
 
@@ -305,17 +323,17 @@ static func reward_short(kind: String, amount: int, bal: DDBalance) -> String:
 
 ## "P4 - cap 4 - lower than the top kill".
 static func gun_stats(wid: String, bal: DDBalance) -> String:
-	return "Power %d, capacity %d. Rule: %s." % [bal.weapon_power(wid), bal.weapon_cap(wid), rule_short(bal.weapon_rule(wid))]
+	return "Hits %d, holds %d. Each kill: %s." % [bal.weapon_power(wid), bal.weapon_cap(wid), rule_short(bal.weapon_rule(wid))]
 
 
 static func gun_card_text(wid: String, bal: DDBalance, rosa: bool = false) -> String:
 	var rw: Array = bal.weapon_reward(wid)
 	var cap: String = "%d kills" % bal.weapon_cap(wid)
 	if bal.weapon_rule(wid) == "spread":
-		cap += " or a total of %d" % bal.num("spread_cap")
-	return "Power %d - finished at %s.\nRule: %s\nChallenge %s: %s -> %s.\nEvery kill pays its number now; finishing pays +%d more." % [
-		bal.weapon_power(wid), cap, rule_text(bal.weapon_rule(wid), bal, rosa), challenge_name(bal.weapon_challenge(wid)),
-		challenge_text(bal.weapon_challenge(wid), bal), reward_text(str(rw[0]), int(rw[1]), bal), bal.shown(bal.num("finish_bonus"))]
+		cap += " (or a total of %d)" % bal.num("spread_cap")
+	return "Hits %d. Full at %s: +%d.\n%s\nChallenge %s: %s -> %s.\nEach kill pays its number." % [
+		bal.weapon_power(wid), cap, bal.shown(bal.num("finish_bonus")), rule_text(bal.weapon_rule(wid), bal, rosa), challenge_name(bal.weapon_challenge(wid)),
+		challenge_text(bal.weapon_challenge(wid), bal), reward_text(str(rw[0]), int(rw[1]), bal)]
 
 
 # ---------------------------------------------------------------- patches, machines, people
@@ -326,21 +344,21 @@ static func patch_name(id: String) -> String:
 static func patch_text(id: String, bal: DDBalance) -> String:
 	match id:
 		"lookout":
-			return "You always see the top card of the pile. Once per street you may send it to the bottom."
+			return "See the top card of the pile. Once per street, send it to the bottom."
 		"thick_jacket":
 			return "+%d max HP (and heal %d now)." % [bal.num("thick_jacket_hp"), bal.num("thick_jacket_hp")]
 		"field_medic":
 			return "Medkits heal +%d." % bal.num("field_medic_bonus")
 		"brawler":
 			if bal.text("brawler_mode") == "hands":
-				return "Bare hands +%d power. Melee weapons you pick up get +%d use." % [bal.num("brawler_bonus"), bal.num("brawler_dur")]
-			return "Melee +%d power." % bal.num("brawler_bonus")
+				return "Bare Hands hit %d harder. Melee weapons you pick up get +%d use." % [bal.num("brawler_bonus"), bal.num("brawler_dur")]
+			return "Melee hits %d harder." % bal.num("brawler_bonus")
 		"bounty":
 			return "Finishing a gun pays +%d per zombie in its stack." % bal.shown(1)
 		"loose_grip":
-			return "Once per wave, one gun kill may ignore its rule."
+			return "Once per wave, one gun kill may break its rule."
 		"second_wind":
-			return "Once per run, when you would drop to 0 HP, you go to %d instead." % bal.num("second_wind_hp")
+			return "Once per run, at 0 HP you go to %d HP instead." % bal.num("second_wind_hp")
 		"trophy_belt":
 			return "Heal %d whenever you finish a gun." % bal.num("trophy_belt_heal")
 		"lockpick":
@@ -348,11 +366,11 @@ static func patch_text(id: String, bal: DDBalance) -> String:
 		"iron_stomach":
 			return "Healing above your max HP becomes Cover."
 		"adrenaline":
-			return "At %d HP or less, every weapon has +1 power." % bal.num("adrenaline_hp")
+			return "At %d HP or less, every weapon hits 1 harder." % bal.num("adrenaline_hp")
 		"grudge":
-			return "+1 power against zombies %d or more (bosses too)." % bal.num("grudge_min")
+			return "Hit 1 harder against zombies ≥%d (bosses too)." % bal.num("grudge_min")
 		"show_off":
-			return "Every completed challenge also pays +%d." % bal.shown(bal.num("show_off_points"))
+			return "Every challenge you meet pays +%d more." % bal.shown(bal.num("show_off_points"))
 		"whetstone":
 			return "Melee weapons you pick up get +%d uses." % bal.num("whetstone_dur")
 	return ""
@@ -365,14 +383,14 @@ static func machine_name(kind: String) -> String:
 static func machine_text(m: Dictionary, bal: DDBalance) -> String:
 	match str(m.get("kind", "")):
 		"bench":
-			return "A grimy workbench with a hand-cranked lathe. Once per wave, one service on an equipped gun:\nTRIM %d: take the top kill off the stack (it already paid); the rule checks the kill below and the gun gets one capacity back.\nFLIP %d: a Rifle-style DOWN rule becomes UP (or back).\nHONE %d: +1 power for that gun (once per gun)." % [
+			return "Once per wave, one service on a gun you hold:\nTRIM %d: remove the last kill (it stays paid); the gun gets a kill back.\nFLIP %d: LOWER becomes HIGHER (or back).\nHONE %d: the gun hits 1 harder (once per gun)." % [
 				bal.shown(bal.bench_price("trim")), bal.shown(bal.bench_price("flip")), bal.shown(bal.bench_price("hone"))]
 		"patch":
-			return "A rusty heat press. Once per wave: pay, it shows %d random Patches, you take 1 for the rest of the run. Price rises with every Patch you own (%s)." % [
+			return "Once per wave: pay, see %d Patches, keep 1 for the run. The price rises with each Patch you own (%s)." % [
 				bal.num("patch_offer"), ", ".join(PackedStringArray(bal.list("patch_costs").slice(0, 4).map(func(x: Variant) -> String: return str(bal.shown(int(x))))))]
 		"wall":
 			var wid: String = str(m.get("wid", ""))
-			return "A chalk-outlined %s on hooks. Once per wave: buy it into a slot for %d.\n%s" % [bal.weapon_name(wid), bal.shown(bal.weapon_price(wid)), gun_card_text(wid, bal)]
+			return "Once per wave: buy the %s into a slot for %d.\n%s" % [bal.weapon_name(wid), bal.shown(bal.weapon_price(wid)), gun_card_text(wid, bal)]
 	return ""
 
 
@@ -383,7 +401,7 @@ static func passive_name(passive: String) -> String:
 static func passive_text(passive: String, bal: DDBalance) -> String:
 	match passive:
 		"steady_hands":
-			return "Hunting Rifle and Ratchet Crossbow rules also accept an EQUAL number."
+			return "Hunting Rifle and Ratchet Crossbow also take an equal number."
 		"triage":
 			return "Medkits heal +%d." % bal.num("triage_bonus")
 		"slip_away":
@@ -398,11 +416,11 @@ static func trait_name(t: String) -> String:
 static func trait_text(t: String) -> String:
 	match t:
 		"shatter":
-			return "The gun that kills it is finished at once (collected with the bonus, no challenge). Melee is not affected."
+			return "The gun that kills it is full at once (bonus, no challenge). Melee is fine."
 		"horde":
 			return "All three arrive at once."
 		"phases":
-			return "8, then 10, then 12: each phase appears only when the one before is dead. You cannot Run from Patient Zero."
+			return "8, then 10, then 12: each comes when the one before dies. No Run."
 	return ""
 
 
@@ -419,24 +437,24 @@ static func hint_text(id: String, bal: DDBalance) -> String:
 	# dd-ux-clean: first-run hints, one short sentence each
 	if id.begins_with("rule_"):
 		var wid: String = id.trim_prefix("rule_")
-		return "%s: each kill must be %s. %d kills finish it." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)), bal.weapon_cap(wid)]
+		return "%s: each kill %s. %d kills fill it." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)), bal.weapon_cap(wid)]
 	match id:
 		"weapon":
-			return "Tap a weapon below, then tap a zombie. The red chip is the damage you'd take."
+			return "Tap a weapon below, then a zombie. The red chip is the HP you lose."
 		"points":
-			return "Gun kills pay points (melee pays nothing)."
+			return "Gun kills pay points. Melee pays nothing."
 		"finish":
-			return "One more kill finishes this gun: +%d bonus, then equip the next one." % bal.shown(bal.num("finish_bonus"))
+			return "One more kill fills this gun: +%d, then equip the next one." % bal.shown(bal.num("finish_bonus"))
 		"challenge":
-			return "Challenge met! Long press a gun to read its challenge."
+			return "Challenge met! Long press a gun to read it."
 		"rooms":
-			return "You can afford a room: tap OPEN. Its machine switches on."
+			return "You can afford a room: tap its gold OPEN plate."
 		"run":
 			if bal.text("run_return") == "bottom":
-				return "Bad street? RUN sends every card on it to the bottom of the pile for %d HP." % bal.num("run_damage")
-			return "Bad street? RUN puts it back for %d HP." % bal.num("run_damage")
+				return "Bad street? RUN: -%d HP, its cards go to the bottom of the pile." % bal.num("run_damage")
+			return "Bad street? RUN: -%d HP, its cards go back into the pile." % bal.num("run_damage")
 		"melee":
-			return "Bare hands hit for %d. Pick up a melee weapon card: it hits harder until its uses run out." % bal.num("hands_power")
+			return "Bare Hands hit %d. A melee weapon hits harder until its uses run out." % bal.num("hands_power")
 	return ""
 
 
@@ -446,23 +464,23 @@ static func rule_tag(rule: String, rosa: bool = false) -> String:
 		"any":
 			return "ANY ZOMBIE"
 		"down":
-			return "LOWER THAN TOP" if not rosa else "LOWER OR EQUAL"
+			return "LOWER THAN LAST" if not rosa else "LAST OR LOWER"
 		"up":
-			return "HIGHER THAN TOP" if not rosa else "HIGHER OR EQUAL"
+			return "HIGHER THAN LAST" if not rosa else "LAST OR HIGHER"
 		"same":
-			return "SAME NUMBER"
+			return "SAME AS FIRST"
 		"zigzag":
 			return "ZIG-ZAG"
 		"close":
-			return "WITHIN 1 OF TOP"
+			return "WITHIN 1 OF LAST"
 		"parity":
 			return "ODD / EVEN"
 		"spread":
-			return "TOTAL 16 MAX"
+			return "TOTAL ≤16"
 		"big":
-			return "6 OR MORE"
+			return "≥6 ONLY"
 		"small":
-			return "6 OR LESS"
+			return "≤6 ONLY"
 		"heavy":
 			return "ONE SHOT"
 	return rule.to_upper()
@@ -472,7 +490,7 @@ static func rule_tag(rule: String, rosa: bool = false) -> String:
 ## Melee weapon card text: "Power 3 - 4 uses. No rule, no points; breaks at 0 uses."
 static func melee_card_text(mid: String, bal: DDBalance, uses: int = -1) -> String:
 	var u: int = bal.melee_uses(mid) if uses < 0 else uses
-	return "Power %d - %s. No rule; melee kills score no points. Each kill uses 1; at 0 it breaks and you're back to Bare Hands." % [
+	return "Hits %d, %s. Any zombie, no points. Each kill uses 1; at 0 it breaks (back to Bare Hands)." % [
 		bal.melee_power(mid), uses_text(u)]
 
 
@@ -481,7 +499,7 @@ static func uses_text(n: int) -> String:
 
 
 static func bare_hands_text(bal: DDBalance) -> String:
-	return "Power %d, no rule, unlimited. Bare-hands kills score no points." % bal.num("hands_power")
+	return "Hits %d. Any zombie, no points, never breaks." % bal.num("hands_power")
 
 
 ## "SALVAGE +30" (points as shown).
@@ -508,14 +526,14 @@ static func run_cards_text(cards: Array, _bal: DDBalance = null) -> String:
 
 ## The Run rule in one sentence (zoom / how to play).
 static func run_rule_text(bal: DDBalance) -> String:
-	var when: String = "Any time on a street (even with no zombie on it)" if bal.text("run_mode") == "anytime" else "Before you resolve a card"
-	var where: String = "goes to the BOTTOM of the pile" if bal.text("run_return") == "bottom" else "is shuffled back into the pile"
-	return "RUN: %s, every card still on the street %s. Take %d damage (Theo: free). Not twice in a row, never on a boss street." % [when, where, bal.num("run_damage")]
+	var when: String = "any time on a street" if bal.text("run_mode") == "anytime" else "before you resolve a card"
+	var where: String = "go to the bottom of the pile" if bal.text("run_return") == "bottom" else "go back into the pile"
+	return "RUN costs %d HP (Theo: free), %s: the street's cards %s. Not twice in a row, not on a boss street." % [bal.num("run_damage"), when, where]
 
 
 ## Safehouse Shop: one line for the panel head.
 static func shop_text(bal: DDBalance) -> String:
-	return "Points don't leave the district. Buy 1 Patch at the Press price and supplies at %d points per HP; the rest is left behind." % bal.shown(bal.num("carry_heal_rate"))
+	return "Spend your points here or lose them: 1 Patch, or HP at %d pts each." % bal.shown(bal.num("carry_heal_rate"))
 
 
 ## The Leave button: "LEAVE - 40 left behind".

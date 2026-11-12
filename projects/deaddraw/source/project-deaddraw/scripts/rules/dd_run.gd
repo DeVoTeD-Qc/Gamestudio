@@ -221,7 +221,7 @@ func _start_district() -> void:
 	_shuffle(pile)
 	loose = has_patch("loose_grip")
 	last_wave_info = _wave_info(0, 0)
-	_log("You enter %s. Wave 1 and the Entrance are shuffled into the pile." % str(d.get("name", "the district")))
+	_log("%s: wave 1 is in the pile." % str(d.get("name", "the district")))
 	_deal()
 
 
@@ -273,7 +273,7 @@ func _next_wave() -> bool:
 		loose = true
 	last_wave_info = _wave_info(wave_index, restock)
 	_waves.append(last_wave_info)
-	_log("WAVE %d shuffled in: %s%s." % [wave_index + 1, DDText.zombie_summary(bal.wave_zombies(district_index, wave_index)),
+	_log("Wave %d joins the pile: %s%s." % [wave_index + 1, DDText.zombie_summary(bal.wave_zombies(district_index, wave_index)),
 		(" + %d restock" % restock) if restock > 0 else ""])
 	return true
 
@@ -329,7 +329,7 @@ func _start_boss_street() -> void:
 	resolved = 0
 	budget = street.size() + boss_queue.size()
 	stats["streets"] = int(stats["streets"]) + 1
-	_log("BOSS: %s. Resolve every card%s." % [str(b.get("name", "")), "" if is_final_district() else " (or run past it)"])
+	_log("Boss: %s. Resolve every card%s." % [str(b.get("name", "")), "" if is_final_district() else " (or run past)"])
 
 
 # ================================================================ queries
@@ -811,12 +811,12 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 				melee = {}
 				stats["melee_broken"] = int(stats["melee_broken"]) + 1
 				_log(line)
-				line = "Your %s breaks: back to Bare Hands." % mname
+				line = "%s breaks: back to Bare Hands." % mname
 	else:
 		var g: DDGun = slot(w)
 		if bool(pr["uses_loose"]):
 			loose = false
-			_log("Loose Grip: this kill ignores the %s's rule." % g.name)
+			_log("Loose Grip: this kill breaks the %s's rule." % g.name)
 		_hurt(c.value - int(pr["power"]))
 		if bal.flag("points_on_kill"):
 			_earn(c.value)
@@ -824,7 +824,7 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 			fired[w] = true
 		g.stack.append(c.value)
 		stats["gun_kills"] = int(stats["gun_kills"]) + 1
-		line = "%s %d -> %s (%d/%d)%s, %s." % [cname, c.value, g.name, g.stack.size(), g.cap,
+		line = "%s %d: %s (%d/%d)%s, %s." % [cname, c.value, g.name, g.stack.size(), g.cap,
 			(", +%d pts" % bal.shown(c.value)) if bal.flag("points_on_kill") else "", _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
 		_log(line)
 		line = ""
@@ -864,7 +864,7 @@ func resolve(index: int, choice: String) -> Dictionary:
 	match c.kind:
 		DDCard.MEDKIT:
 			if med_used >= bal.num("medkits_per_street"):
-				_log("%s %d: one medkit per street - discarded." % [DDText.card_name(c), c.value])
+				_log("%s %d: one medkit per street, discarded." % [DDText.card_name(c), c.value])
 			else:
 				med_used += 1
 				var cv0: int = cover
@@ -873,7 +873,7 @@ func resolve(index: int, choice: String) -> Dictionary:
 		DDCard.MELEE:
 			if choice == SCRAP:
 				_earn(bal.num("scrap_points"))
-				_log("Scrapped the %s: +%d points." % [bal.melee_name(c.wid), bal.shown(bal.num("scrap_points"))])
+				_log("Scrapped the %s: +%d pts." % [bal.melee_name(c.wid), bal.shown(bal.num("scrap_points"))])
 			else:
 				var old: String = melee_name() if has_melee_weapon() else ""
 				melee = {"id": c.wid, "power": bal.melee_power(c.wid), "uses": melee_take_uses(c.wid)}
@@ -881,18 +881,18 @@ func resolve(index: int, choice: String) -> Dictionary:
 					(" - it replaces your " + old) if old != "" else ""])
 		DDCard.COVER:
 			cover += c.value
-			_log("%s: +%d Cover (absorbs damage before HP)." % [DDText.card_name(c), c.value])
+			_log("%s: +%d Cover." % [DDText.card_name(c), c.value])
 		DDCard.WEAPON:
 			if choice == SCRAP:
 				_earn(bal.num("scrap_points"))
-				_log("Scrapped the %s: +%d points." % [bal.weapon_name(c.wid), bal.shown(bal.num("scrap_points"))])
+				_log("Scrapped the %s: +%d pts." % [bal.weapon_name(c.wid), bal.shown(bal.num("scrap_points"))])
 			else:
 				slot_i = 0 if choice == EQUIP1 else 1
 				if slot(slot_i) != null:
 					_collect(slot_i, false, false)
 				slots[slot_i] = make_gun(c.wid)
 				fired[slot_i] = false
-				_log("Equipped the %s in slot %d." % [bal.weapon_name(c.wid), slot_i + 1])
+				_log("%s into slot %d." % [bal.weapon_name(c.wid), slot_i + 1])
 	var ev: Dictionary = _event(c.kind, _notes[_notes.size() - 1] if not _notes.is_empty() else "", hp - hp0, points - pts0)
 	ev["card"] = c
 	ev["choice"] = choice
@@ -913,9 +913,9 @@ func _dmg_text(dmg: int, ab: int) -> String:
 	if dmg <= 0:
 		return "no damage"
 	if ab >= dmg:
-		return "Cover soaks %d" % ab
+		return "Cover takes %d" % ab
 	if ab > 0:
-		return "Cover soaks %d, -%d HP" % [ab, dmg - ab]
+		return "Cover takes %d, -%d HP" % [ab, dmg - ab]
 	return "-%d HP" % dmg
 
 
@@ -1011,7 +1011,7 @@ func _collect(i: int, finished: bool, shatter: bool) -> void:
 			active = (1 - i) if slot(1 - i) != null else MELEE
 	_collects.append(info)
 	if finished:
-		var t: String = "%s FINISHED: +%d finish bonus" % [g.name, bal.shown(bal.num("finish_bonus"))]
+		var t: String = "%s full: +%d" % [g.name, bal.shown(bal.num("finish_bonus"))]
 		if int(info["bounty"]) > 0:
 			t += ", +%d Bounty Hunter" % bal.shown(int(info["bounty"]))
 		if shatter:
@@ -1022,9 +1022,9 @@ func _collect(i: int, finished: bool, shatter: bool) -> void:
 				t += ", +%d Show-Off" % bal.shown(int(info["show_off"]))
 		_log(t + ".")
 	elif int(info["salvage"]) > 0:
-		_log("%s swapped out: SALVAGE +%d (%d kill%s)." % [g.name, bal.shown(pts), st.size(), "" if st.size() == 1 else "s"])
+		_log("%s swapped out: salvage +%d (%d kill%s)." % [g.name, bal.shown(pts), st.size(), "" if st.size() == 1 else "s"])
 	elif not st.is_empty() or pts > 0:
-		_log("%s replaced before it was finished%s." % [g.name, (": +%d" % bal.shown(pts)) if pts > 0 else " (no bonus, no challenge)"])
+		_log("%s replaced before it was full%s." % [g.name, (": +%d" % bal.shown(pts)) if pts > 0 else " (no bonus)"])
 
 
 func _hurt(d: int) -> void:
@@ -1065,13 +1065,13 @@ func run_block_reason() -> String:
 	if not bal.flag("allow_run"):
 		return "Run is off"
 	if boss_street:
-		return "no running from a boss street" if is_final_district() else "boss street: use Run past instead"
+		return "no escape from this boss" if is_final_district() else "boss street: use Run past"
 	if ran_last:
 		return "you ran last street"
 	if street.is_empty():
 		return "nothing on the street"
 	if resolved > 0 and bal.text("run_mode") != "anytime":
-		return "only before you resolve a card"
+		return "only before your first card"
 	if pile.is_empty():
 		return "the pile is empty"
 	if hp <= run_cost():
@@ -1106,8 +1106,8 @@ func run_street() -> Dictionary:
 		_shuffle(pile)
 	street.clear()
 	stats["runs"] = int(stats["runs"]) + 1
-	_log("You run: %s go%s %s%s." % [DDText.run_cards_text(back, bal), "es" if back.size() == 1 else "",
-		"to the bottom of the pile" if bottom else "back into the pile", (", -%d HP" % (hp0 - hp)) if hp0 > hp else " (Slip Away: free)"])
+	_log("You run%s: %s go%s %s." % [(", -%d HP" % (hp0 - hp)) if hp0 > hp else " (free)", DDText.run_cards_text(back, bal), "es" if back.size() == 1 else "",
+		"to the bottom of the pile" if bottom else "back into the pile"])
 	_deal()
 	ran_last = true
 	var ev: Dictionary = _event("run", _notes[0], hp - hp0, 0)
@@ -1167,7 +1167,7 @@ func can_bury() -> bool:
 ## Lookout: send the pile's top card to the bottom (once per street, before the next deal).
 func bury_top() -> Dictionary:
 	if not can_bury():
-		return {"ok": false, "reason": "Lookout: once per street, needs 2+ cards in the pile", "kind": "blocked"}
+		return {"ok": false, "reason": "Lookout: once per street, with 2+ cards in the pile", "kind": "blocked"}
 	_begin()
 	var c: DDCard = pile.pop_back()
 	pile.insert(0, c)
@@ -1207,7 +1207,7 @@ func room_block_reason(i: int) -> String:
 	if room_open[i]:
 		return "already open"
 	if points < room_cost(i):
-		return "need %d points" % bal.shown(room_cost(i))
+		return "need %d pts" % bal.shown(room_cost(i))
 	return ""
 
 
@@ -1228,7 +1228,7 @@ func open_room(i: int) -> Dictionary:
 	pile.append_array(cards)
 	_shuffle(pile)
 	stats["rooms"] = int(stats["rooms"]) + 1
-	_log("Opened the %s (-%d): %d cards shuffled into the pile; the %s is on." % [str(room(i).get("name", "")), bal.shown(cost), cards.size(),
+	_log("%s open (-%d): %d cards in, %s on." % [str(room(i).get("name", "")), bal.shown(cost), cards.size(),
 		DDText.machine_name(str(machine(i).get("kind", "")))])
 	var ev: Dictionary = _event("room", _notes[0], 0, -cost)
 	ev["room"] = i
@@ -1260,20 +1260,19 @@ func machine_options(i: int) -> Array[Dictionary]:
 			if reason == "" and avail == 0:
 				reason = "you own every Patch"
 			elif reason == "" and points < price:
-				reason = "need %d points" % bal.shown(price)
+				reason = "need %d pts" % bal.shown(price)
 			out.append({"id": "press", "label": "PRESS A PATCH", "price": price, "enabled": reason == "", "reason": reason,
-				"result": "Shows %d random Patches, you take 1 (permanent)." % mini(bal.num("patch_offer"), avail)})
+				"result": "See %d Patches, keep 1 for the run." % mini(bal.num("patch_offer"), avail)})
 		"wall":
 			var wid: String = str(m.get("wid", ""))
 			var price2: int = bal.weapon_price(wid)
 			for s: int in 2:
 				var r2: String = block
 				if r2 == "" and points < price2:
-					r2 = "need %d points" % bal.shown(price2)
+					r2 = "need %d pts" % bal.shown(price2)
 				var g: DDGun = slot(s)
 				out.append({"id": "slot%d" % (s + 1), "label": "BUY INTO SLOT %d" % (s + 1), "price": price2, "enabled": r2 == "", "reason": r2,
-					"result": ("%s into slot %d" % [bal.weapon_name(wid), s + 1]) + ((" (replaces your %s%s)" % [g.name,
-						(", salvage +%d" % bal.shown(salvage_for(g))) if salvage_for(g) > 0 else ""]) if g != null else ""), "salvage": salvage_for(g)})
+					"result": (("replaces %s%s" % [g.name, (" · salvage +%d" % bal.shown(salvage_for(g))) if salvage_for(g) > 0 else ""]) if g != null else "empty slot"), "salvage": salvage_for(g)})
 		"bench":
 			for s: int in 2:
 				var g2: DDGun = slot(s)
@@ -1288,22 +1287,22 @@ func machine_options(i: int) -> Array[Dictionary]:
 						match sv:
 							"trim":
 								if g2.stack.is_empty():
-									r3 = "nothing on the stack"
+									r3 = "no kills yet"
 								else:
-									res = "Remove the top kill (%d) (already paid); the rule checks %s next." % [g2.top(),
-										("the %d below" % g2.stack[g2.stack.size() - 2]) if g2.stack.size() > 1 else "an empty stack"]
+									res = "Removes the last kill (%d); %s." % [g2.top(),
+										("the next is checked against %d" % g2.stack[g2.stack.size() - 2]) if g2.stack.size() > 1 else "the next can be anything"]
 							"flip":
 								if g2.rule != "up" and g2.rule != "down":
-									r3 = "only Rifle / Crossbow rules (down / up)"
+									r3 = "only LOWER / HIGHER rules"
 								else:
-									res = "Rule becomes %s." % DDText.rule_short("up" if g2.rule == "down" else "down")
+									res = "Each kill: %s." % DDText.rule_short("up" if g2.rule == "down" else "down")
 							"hone":
 								if g2.honed:
 									r3 = "already Honed"
 								else:
-									res = "Power %d -> %d (permanent for this gun)." % [g2.power, g2.power + 1]
+									res = "Hits %d -> %d for good." % [g2.power, g2.power + 1]
 					if r3 == "" and points < price3:
-						r3 = "need %d points" % bal.shown(price3)
+						r3 = "need %d pts" % bal.shown(price3)
 					out.append({"id": "%s%d" % [sv, s + 1], "label": "%s %s" % [sv.to_upper(), name], "price": price3, "enabled": r3 == "",
 						"reason": r3, "result": res, "slot": s, "service": sv})
 	return out
@@ -1361,15 +1360,15 @@ func use_machine(i: int, option_id: String) -> Dictionary:
 					# the removed kill already paid when it was made (K1): Trim banks nothing
 					var z: int = g.stack.pop_back()
 					result["trimmed"] = z
-					_log("Retrofit Bench - Trim (-%d): the %d comes off the %s; it gets a kill back." % [bal.shown(price), z, g.name])
+					_log("Trim (-%d): the %d comes off the %s." % [bal.shown(price), z, g.name])
 				"flip":
 					g.rule = "up" if g.rule == "down" else "down"
 					g.flipped = not g.flipped
-					_log("Retrofit Bench - Flip (-%d): the %s now takes %s." % [bal.shown(price), g.name, DDText.rule_short(g.rule)])
+					_log("Flip (-%d): %s, each kill: %s." % [bal.shown(price), g.name, DDText.rule_short(g.rule)])
 				"hone":
 					g.power += 1
 					g.honed = true
-					_log("Retrofit Bench - Hone (-%d): the %s is power %d now." % [bal.shown(price), g.name, g.power])
+					_log("Hone (-%d): the %s hits %d now." % [bal.shown(price), g.name, g.power])
 			result["gun"] = g
 	var ev: Dictionary = _event("machine", _notes[_notes.size() - 1], hp - hp0, points - pts0)
 	ev["result"] = result
@@ -1417,7 +1416,7 @@ func _clear_district(ran_past: bool) -> void:
 	boss_results.append({"beaten": not ran_past, "ran_past": ran_past, "hp": hp, "name": str(b.get("name", ""))})
 	if not ran_past:
 		_earn(bal.num("boss_reward_points"))
-		_log("%s beaten: +%d points." % [str(b.get("name", "")), bal.shown(bal.num("boss_reward_points"))])
+		_log("%s beaten: +%d pts." % [str(b.get("name", "")), bal.shown(bal.num("boss_reward_points"))])
 	if is_final_district():
 		phase = Phase.WON
 		_log("You made it out of the city. Run score %d." % bal.shown(run_score()))
@@ -1485,7 +1484,7 @@ func shop_patch_block_reason(id: String = "") -> String:
 	if id != "" and not shop_offer.has(id):
 		return "not offered"
 	if points < shop_patch_price():
-		return "need %d points" % bal.shown(shop_patch_price())
+		return "need %d pts" % bal.shown(shop_patch_price())
 	return ""
 
 
@@ -1529,7 +1528,7 @@ func supplies_block_reason(n: int = 1) -> String:
 	if max_hp - mini(max_hp, hp + safehouse_heal()) < n:
 		return "the rest heals you to full" if max_hp - mini(max_hp, hp + safehouse_heal()) == 0 else "only %d HP to heal" % (max_hp - mini(max_hp, hp + safehouse_heal()))
 	if points < n * supplies_rate():
-		return "need %d points" % bal.shown(n * supplies_rate())
+		return "need %d pts" % bal.shown(n * supplies_rate())
 	return ""
 
 
@@ -1587,7 +1586,7 @@ func leave_safehouse(patch_id: String = "") -> Dictionary:
 		left_behind = lost
 		stats["left_behind"] = int(stats["left_behind"]) + lost
 		if lost > 0:
-			_log("You leave %d points behind." % bal.shown(lost))
+			_log("You leave %d pts behind." % bal.shown(lost))
 	shop_offer.clear()
 	district_index += 1
 	phase = Phase.STREET

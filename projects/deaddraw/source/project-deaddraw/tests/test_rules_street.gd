@@ -146,7 +146,7 @@ func test_run_v3_settings_still_work() -> void:
 	b.config["run_return"] = "shuffle"
 	var r: DDRun = plain_run(filler(8, "M3"), ["Z9", "Z9", "Z9", "Z9"], b)
 	_take(r)
-	eq(r.run_block_reason(), "only before you resolve a card", "v3: before the first resolve only")
+	eq(r.run_block_reason(), "only before your first card", "v3: before the first resolve only")
 
 
 func test_run_again_after_a_normal_street() -> void:

@@ -152,7 +152,7 @@ func test_door_row_layout_every_size() -> void:
 			check(nx != null and str(nx.get("next_text")) == DDPayloads.accept_tag(run.can_take(run.slot(s))), "%s gun %d: the next socket says %s" % [tag, s + 1, str(nx.get("next_text")) if nx != null else "-"])
 			for mc: DDCardView in gv.stack_cards:
 				check(mc.size.x >= 26.0 and mc.size.y >= 44.0 and _inside(m, mc), "%s gun %d: socket %s big and on screen" % [tag, s + 1, str(mc.size)])
-		eq(str((_tile(m, 200) as DDGunView).find_child("NextSocket", true, false).get("next_text")), "<7", tag + " Rifle on a 6 (Rosa: lower or equal) takes <7")
+		eq(str((_tile(m, 200) as DDGunView).find_child("NextSocket", true, false).get("next_text")), "≤6", tag + " Rifle on a 6 (Rosa: last or lower) takes ≤6")
 		# the strength mark on every zombie
 		for k2: int in run.street.size():
 			if run.street[k2].kind == DDCard.ZOMBIE:
@@ -520,8 +520,10 @@ func test_strength_mark_tiers() -> void:
 	m.free()
 	hb.free()
 	ib.free()
-	eq(DDPayloads.accept_tag([1, 2, 3, 4, 5] as Array[int]), "<6", "accept: lower than 6")
-	eq(DDPayloads.accept_tag([5, 6, 7, 8, 9, 10, 11, 12] as Array[int]), ">4", "accept: higher than 4")
+	eq(DDPayloads.accept_tag([1, 2, 3, 4, 5] as Array[int]), "≤5", "accept: 5 or lower")
+	eq(DDPayloads.accept_tag([5, 6, 7, 8, 9, 10, 11, 12] as Array[int]), "≥5", "accept: 5 or higher")
+	eq(DDPayloads.accept_words([1, 2, 3, 4, 5] as Array[int]), "≤5", "dd-ux-text: the words use the same notation")
+	eq(DDText.rule_block(null, 7, null), "empty slot", "rule_block on an empty slot")
 	eq(DDPayloads.accept_tag([5] as Array[int]), "=5", "accept: exactly 5")
 	eq(DDPayloads.accept_tag([1, 3, 5, 7, 9, 11] as Array[int]), "odd", "accept: odd")
 	var every: Array[int] = []

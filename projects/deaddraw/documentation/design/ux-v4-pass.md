@@ -134,3 +134,16 @@ With reduce motion (setting or browser): no sweep, slam, fall or rings, and no g
   - the v4 melee, launcher, equip and Run flight.
 - `test_ui_clean.gd`, `test_ui_flow.gd` and `test_feel.gd` were updated for the new layout.
 - `tools/smoke_web.js` also covers the WAVE banner skip, the Glossary, the Codex, and a long press on Run (tooltip, no Run).
+
+## Text and notation pass (dd-ux-text)
+
+Head's ask: a global UX pass, shorter and consistent text. Playtest fixes:
+
+- **One notation per rule.** The rule (relative to the last kill) is a tag on the gun tile and the same words everywhere else: `LOWER THAN LAST` / Rosa `LAST OR LOWER`, `HIGHER THAN LAST` / `LAST OR HIGHER`, `SAME AS FIRST`, `ZIG-ZAG`, `WITHIN 1 OF LAST`, `ODD / EVEN`, `TOTAL ≤16`, `≥6 ONLY`, `≤6 ONLY`, `ONE SHOT`. What the next kill needs is always a number with the same symbols: `≤5`, `≥8`, `=5` (words: "exactly 5"), `4-6`, "an odd number", "any zombie". The socket, the dark zombie's line ("needs ≤5"), its tooltip ("Rifle: needs ≤5"), the blocked-tap toast, the log, the Codex and the Glossary all use it (`DDText.rule_tag / rule_short / need_tag / need_words / rule_block`). No "at most", "or more" or "<6" left for zombie numbers.
+- **Blocked tap:** a tap on a zombie the active gun can't take shakes the card (not with reduce motion), pulses the gun, and shows a one-line toast "Hunting Rifle: needs ≤5" (`main.gd blocked_tap`). The street is no longer re-rendered, which used to kill the shake.
+- **Gold OPEN plate:** right click / long press opens its own tooltip: "Garage · OPEN · 210 pts" / "Inside: a gun, medkit 4, cover 2, and the Wall Rack." (`DDPayloads.room_plate`).
+- **Run:** the button's cost line is as big as RUN ("RUN / -1 HP"); a blocked Run says why in one or two words ("not twice", "pile empty"). The tooltip: "Run · -1 HP · not twice in a row" / "The 4 cards here go to the bottom of the pile; you get a new street."
+- **Console errors on the end screen:** clearing the saved run deleted the file while the engine's IndexedDB sync of user:// was running ("Failed to save IDB file system"). The save is now cleared with a tombstone write and never deleted (`DDRunSave.clear`).
+- Shorter log lines, sheet buttons, Patch lines, Safehouse Shop head, Codex and Glossary entries; "full" instead of "finished", "hits N" instead of "power N".
+
+QA: `tests/tools/shot_ux_text.gd` (every screen, the toast, the plate and Run tooltips, the real death flow) at 390x844, 844x390, 1180x820, 1440x900 and 1920x1080.

@@ -19,7 +19,7 @@ func test_brawler() -> void:
 	r.resolve(0, DDRun.TAKE)
 	eq(r.melee_power(), 3, "v4: no Brawler power on a melee weapon (wrench stays 3)")
 	eq(r.melee_uses(), 4 + 1, "v4: Brawler +1 use on pick-up")
-	check(DDText.patch_text("brawler", bal()).begins_with("Bare hands +2 power"), "Brawler v4 text")
+	check(DDText.patch_text("brawler", bal()).begins_with("Bare Hands hit 2 harder"), "Brawler v4 text")
 
 
 func test_bounty_hunter_and_trophy_belt() -> void:

@@ -418,7 +418,7 @@ func test_mirror_keeps_the_run_when_the_file_lags() -> void:
 	check(not fonly.is_empty(), "file-only fallback")
 	# a clear leaves a tombstone: the stale file that IndexedDB may still hold is not a Continue
 	sv.clear()
-	check(not FileAccess.file_exists(p), "file removed")
+	check(not FileAccess.file_exists(p) or FileAccess.get_file_as_string(p).contains("cleared"), "file cleared (a tombstone, never removed)")
 	f = FileAccess.open(p, FileAccess.WRITE)
 	f.store_string(stale)
 	f.close()

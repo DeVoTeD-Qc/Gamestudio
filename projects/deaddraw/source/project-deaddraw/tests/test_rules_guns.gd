@@ -42,7 +42,7 @@ func test_rule_lock_blocks_without_spending_a_resolve() -> void:
 	gun(r, 0, "rifle", [5])
 	var pr: Dictionary = r.preview(0, 0)
 	check(not bool(pr["ok"]), "rifle on 5 can't take a 6")
-	check(str(pr["reason"]).contains("lower than 5"), "the reason names the rule: " + str(pr["reason"]))
+	check(str(pr["reason"]).contains("needs ≤4"), "the reason says what it needs: " + str(pr["reason"]))
 	var ev: Dictionary = r.attack(0, 0)
 	check(not bool(ev["ok"]), "blocked attack")
 	eq(r.resolved, 0, "no resolve spent")
@@ -166,7 +166,7 @@ func test_early_replace_pays_salvage() -> void:
 	check(not bool(info["challenge"]), "no challenge")
 	eq(int(r.stats["finished"]), 0, "not a finish")
 	eq(int(r.stats["salvage"]), 2, "salvage stat")
-	check(r.log_lines[r.log_lines.size() - 2].contains("SALVAGE +20"), "log shows SALVAGE +20")
+	check(r.log_lines[r.log_lines.size() - 2].contains("salvage +20"), "log shows salvage +20")
 	eq(DDText.salvage_text(3, bal()), "SALVAGE +30", "salvage text x10")
 
 

@@ -73,7 +73,7 @@ func test_melee_card_texts() -> void:
 	eq([c.kind, c.wid, c.code()], [DDCard.MELEE, "wrench", "K:wrench"], "parse / code")
 	eq(DDText.card_name(c, bal()), "Pipe Wrench", "name")
 	eq(DDText.kind_label(DDCard.MELEE), "MELEE", "kind label")
-	check(DDText.melee_card_text("axe", bal()).begins_with("Power 4 - 3 uses"), "card text")
+	check(DDText.melee_card_text("axe", bal()).begins_with("Hits 4, 3 uses"), "card text")
 	eq(DDCard.from_dict(c.to_dict()).code(), "K:wrench", "round trip")
 
 
@@ -116,7 +116,7 @@ func test_heavy_rule_one_kill_per_street() -> void:
 	b.config["heavy_min"] = 5
 	var r: DDRun = plain_run(filler(12), ["Z6", "Z7", "Z4", "C2"], b)
 	gun(r, 0, "launcher", [])
-	eq(str(r.preview(idx(r, "Z4"), 0)["reason"]), "rule: needs 5 or more", "heavy_min")
+	eq(str(r.preview(idx(r, "Z4"), 0)["reason"]), "needs ≥5", "heavy_min")
 	r.attack(idx(r, "Z6"), 0)
 	check(r.fired[0], "fired this street")
 	eq(str(r.preview(idx(r, "Z7"), 0)["reason"]), "one kill per street", "no second kill this street")
@@ -129,10 +129,10 @@ func test_alley_sweeper_small_fry() -> void:
 	var r: DDRun = plain_run(filler(8), ["Z7", "Z6", "C2", "C2"])
 	gun(r, 0, "sweeper", [])
 	check(not r.can_attack(idx(r, "Z7"), 0), "7 is too big, even on an empty stack")
-	eq(str(r.preview(idx(r, "Z7"), 0)["reason"]), "rule: needs 6 or less", "reason")
+	eq(str(r.preview(idx(r, "Z7"), 0)["reason"]), "needs ≤6", "reason")
 	check(r.can_attack(idx(r, "Z6"), 0), "6 is fine")
 	eq(r.can_take(r.slot(0)), [1, 2, 3, 4, 5, 6] as Array[int], "can take 1-6")
-	eq(DDText.rule_tag("small"), "6 OR LESS", "rule tag")
+	eq(DDText.rule_tag("small"), "≤6 ONLY", "rule tag")
 	# Pest Control: the full stack totals 15 or less
 	gun(r, 0, "sweeper", [2, 3, 4])
 	eq(r.challenge_state(r.slot(0)), "on_track", "9 so far: on track")

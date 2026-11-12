@@ -40,16 +40,16 @@ static func melee(run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	var on: String = " - ACTIVE" if run.active == DDRun.MELEE else ""
 	if not run.has_melee_weapon():
-		var body: String = "Always there. %s%s\nPick up a melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer) to hit harder until its uses run out." % [
-			DDText.bare_hands_text(b), ("\nBrawler Patch: +%d power on bare hands." % b.num("brawler_bonus")) if run.has_patch("brawler") else ""]
+		var body: String = "Always there. %s%s\nA melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer) hits harder until its uses run out." % [
+			DDText.bare_hands_text(b), ("\nBrawler: Bare Hands hit %d harder." % b.num("brawler_bonus")) if run.has_patch("brawler") else ""]
 		return {"kind": "K", "tag": "MELEE" + on, "title": run.melee_name(), "big": "P%d" % run.melee_power(), "body": body,
-			"t1": "%s · power %d · unlimited" % [run.melee_name(), run.melee_power()], "t2": "Kills a zombie your guns can't take. No points."}
+			"t1": "%s · hits %d · never breaks" % [run.melee_name(), run.melee_power()], "t2": "Any zombie, even one your guns can't take. No points."}
 	var id: String = str(run.melee.get("id", ""))
 	return {"kind": "K", "tag": "MELEE WEAPON" + on, "title": run.melee_name(), "big": "P%d" % run.melee_power(),
-		"body": "%s\n%s left. Then you're back to Bare Hands (power %d)." % [DDText.melee_card_text(id, b, run.melee_uses()),
+		"body": "%s\n%s left, then Bare Hands (hits %d)." % [DDText.melee_card_text(id, b, run.melee_uses()),
 			DDText.uses_text(run.melee_uses()), b.num("hands_power")],
-		"t1": "%s · power %d · %s left" % [run.melee_name(), run.melee_power(), DDText.uses_text(run.melee_uses())],
-		"t2": "Each kill uses 1; at 0 it breaks. No points."}
+		"t1": "%s · hits %d · %s left" % [run.melee_name(), run.melee_power(), DDText.uses_text(run.melee_uses())],
+		"t2": "Any zombie. Each kill uses 1; at 0 it breaks. No points."}
 
 
 # ---------------------------------------------------------------- melee weapon cards (street "K")
@@ -61,13 +61,13 @@ static func melee_card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	if run.has_melee_weapon():
 		body.append("TAKE replaces your %s (%s left)." % [run.melee_name(), DDText.uses_text(run.melee_uses())])
 	else:
-		body.append("TAKE: it replaces your bare hands (power %d)." % b.num("hands_power"))
-	body.append("Or SCRAP it for %d points." % b.shown(b.num("scrap_points")))
+		body.append("TAKE: it replaces Bare Hands (hits %d)." % b.num("hands_power"))
+	body.append("Or SCRAP it for %d pts." % b.shown(b.num("scrap_points")))
 	if c.holdover:
-		body.append("HOLDOVER: left over from the last street.")
+		body.append("HOLDOVER: left from the last street.")
 	return {"kind": "K", "tag": "MELEE WEAPON", "title": b.melee_name(c.wid), "big": "P%d" % b.melee_power(c.wid), "body": "\n".join(body),
-		"t1": "%s · power %d · %s" % [b.melee_name(c.wid), b.melee_power(c.wid), DDText.uses_text(uses)],
-		"t2": "Tap: TAKE it for melee (no points), or SCRAP +%d." % b.shown(b.num("scrap_points"))}
+		"t1": "%s · hits %d · %s" % [b.melee_name(c.wid), b.melee_power(c.wid), DDText.uses_text(uses)],
+		"t2": "Tap: TAKE it as your melee (no points), or SCRAP +%d." % b.shown(b.num("scrap_points"))}
 
 
 ## The street tile for a melee weapon card (same shape as DDPayloads.street_card_spec).
@@ -75,7 +75,7 @@ static func melee_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	var uses: int = run.melee_take_uses(c.wid)
 	return {"kind": "K", "tag": "HOLDOVER" if c.holdover else "", "badge": "", "badge_color": DDUi.WARN, "badge_size": DDUi.FONT_M,
-		"big": "", "title": b.melee_name(c.wid), "lines": [["P%d · %s" % [b.melee_power(c.wid), DDText.uses_text(uses)], DDUi.accent("K"), DDUi.FONT_S]],
+		"big": "", "title": b.melee_name(c.wid), "lines": [["hits %d · %s" % [b.melee_power(c.wid), DDText.uses_text(uses)], DDUi.accent("K"), DDUi.FONT_S]],
 		"art_dim": false, "lock": "", "art_keys": melee_art_keys(c.wid, b.melee_name(c.wid)), "uses": uses, "payload": melee_card(c, run, i)}
 
 
@@ -137,15 +137,15 @@ static func run_payload(run: DDRun) -> Dictionary:
 	var why: String = run.run_block_reason()
 	return {"kind": "D", "tag": "RUN", "title": "Run", "big": "-%d" % run.run_cost() if run.run_cost() > 0 else "0",
 		"body": DDText.run_rule_text(run.bal) + ("\nNow: %s." % why if why != "" else ""),
-		"t1": "Run · -%d HP" % run.run_cost() if run.run_cost() > 0 else "Run · free",
-		"t2": "Every card on the street goes to the bottom of the pile." if run.bal.text("run_return") == "bottom" else "The street is shuffled back into the pile."}
+		"t1": ("Run · -%d HP" % run.run_cost() if run.run_cost() > 0 else "Run · free") + " · not twice in a row",
+		"t2": ("The %d cards here go to the bottom of the pile; you get a new street." % run.street.size()) if run.bal.text("run_return") == "bottom" else "The street goes back into the pile; you get a new street."}
 
 
 ## The supplies tile in the shop.
 static func supplies_payload(run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	return {"kind": "M", "tag": "SAFEHOUSE SHOP", "title": "Supplies", "big": "%d" % b.shown(run.supplies_rate()),
-		"body": "%d points per HP, up to your max HP after the free +%d rest. Healed now." % [b.shown(run.supplies_rate()), run.safehouse_heal()],
+		"body": "%d pts per HP, up to your max HP after the free +%d rest. Healed now." % [b.shown(run.supplies_rate()), run.safehouse_heal()],
 		"t1": "Supplies · %d pts per HP" % b.shown(run.supplies_rate()), "t2": "Heal now with points you can't take along."}
 
 
@@ -154,7 +154,7 @@ static func leave_payload(run: DDRun) -> Dictionary:
 	var lost: int = int(run.shop_state()["left_behind"])
 	return {"kind": "X", "tag": "LEAVE", "title": DDText.leave_text(lost, run.bal), "big": str(run.bal.shown(lost)),
 		"body": DDText.shop_text(run.bal) + "\nYour score keeps every point you earned.",
-		"t1": DDText.leave_text(lost, run.bal), "t2": "Points don't leave the district; your score keeps them."}
+		"t1": DDText.leave_text(lost, run.bal), "t2": "Unspent points stay here; your score keeps them."}
 
 
 ## The Salvage "+N" feedback: floats "SALVAGE +30" over each gun slot that was salvaged in `ev`.

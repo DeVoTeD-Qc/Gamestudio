@@ -329,7 +329,7 @@ func test_rule_lock_on_the_tile() -> void:
 	var blocked: Dictionary = DDPayloads.street_card_spec(r.street[hi], hi, r)
 	var fine: Dictionary = DDPayloads.street_card_spec(r.street[lo], lo, r)
 	eq(str(blocked["badge"]), "LOCK", "LOCK chip before the tap")
-	check(str(blocked["lock"]).contains("lower than 5"), "with the rule's reason")
+	check(str(blocked["lock"]).contains("needs ≤4"), "with the rule's reason (%s)" % str(blocked["lock"]))
 	check(bool(blocked["art_dim"]), "darkened")
 	eq(str(fine["badge"]), "0", "damage chip (3 - power 4 = 0)")
 	# dd-art-fit: no rule chip on zombies; the ones the active gun can take are lit, the rest dark,
@@ -337,8 +337,8 @@ func test_rule_lock_on_the_tile() -> void:
 	check(not blocked.has("rule_chip") and not fine.has("rule_chip"), "no rule chip on street zombies")
 	check(bool(fine.get("lit", false)) and not bool(blocked.get("lit", false)), "takeable zombie lit, blocked one not")
 	var gname: String = r.slot(0).name
-	check(str(blocked["payload"]["t2"]).begins_with(gname + " can't take this: needs"), "tooltip: can't + why (%s)" % str(blocked["payload"]["t2"]))
-	check(str(fine["payload"]["t2"]).begins_with(gname + " can take this: lower than 5"), "tooltip: can + the rule (%s)" % str(fine["payload"]["t2"]))
+	check(str(blocked["payload"]["t2"]).begins_with(DDPayloads._short_name(gname) + ": needs ≤4"), "tooltip: can't + why (%s)" % str(blocked["payload"]["t2"]))
+	check(str(fine["payload"]["t2"]).begins_with(DDPayloads._short_name(gname) + " takes it: no damage"), "tooltip: can + what it costs (%s)" % str(fine["payload"]["t2"]))
 	var v: DDCardView = DDCardView.new()
 	var tex: Texture2D = Art.texture_for(Art.card_keys(r.street[hi]))
 	if tex == null:

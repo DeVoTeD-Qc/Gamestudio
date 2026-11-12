@@ -102,7 +102,7 @@ static func entries(bal: DDBalance) -> Array:
 		var rw: Array = bal.weapon_reward(wid2)
 		out.append({"key": "gun:" + wid2, "type": "guns", "name": bal.weapon_name(wid2), "art_keys": Art.weapon_keys(wid2, bal.weapon_name(wid2)),
 			"hit": bal.weapon_power(wid2), "rule": bal.weapon_rule(wid2), "stat": "holds %d" % bal.weapon_cap(wid2), "districts": wdist.get(wid2, []),
-			"line": "Each kill %s. Full: %s." % [DDPayloads._rule_words(bal.weapon_rule(wid2), false), DDText.reward_short(str(rw[0]), int(rw[1]), bal)]})
+			"line": "Each kill: %s. Full: %s." % [DDText.rule_short(bal.weapon_rule(wid2)), DDText.reward_short(str(rw[0]), int(rw[1]), bal)]})
 	var all_ids: Array = ds.map(func(d: Variant) -> String: return str((d as Dictionary).get("id", "")))
 	# v4: Bare Hands (always) and the melee weapon cards (power, uses)
 	out.append({"key": "melee:bare_hands", "type": "melee", "name": "Bare Hands", "art_keys": DDV4Hooks.melee_art_keys("", "Bare Hands"), "hit": bal.num("hands_power"),
@@ -131,7 +131,7 @@ static func entries(bal: DDBalance) -> Array:
 		var zs: Array = b.get("zombies", [9])
 		out.append({"key": "boss:" + str(dd2.get("id", "")), "type": "bosses", "name": str(b.get("name", "")), "art_keys": Art.finale_keys(dd2),
 			"strength": int(zs[0]), "stat": DDText.boss_summary(b).replace(" -> ", ", "), "districts": [str(dd2.get("id", ""))],
-			"line": "%s boss. %s" % [str(dd2.get("name", "")), {"shatter": "The gun that kills it is finished at once.", "horde": "Three arrive at once.",
+			"line": "%s boss. %s" % [str(dd2.get("name", "")), {"shatter": "The gun that kills it is full at once.", "horde": "Three arrive at once.",
 				"phases": "Three phases, no escape."}.get(str(b.get("trait", "")), "")]})
 	for mk: Array in [["Bandage", 3, "heals 3"], ["First Aid Kit", 4, "heals 4-5"], ["Trauma Kit", 6, "heals 6-7"]]:
 		out.append({"key": "item:" + Art.slug(str(mk[0])), "type": "items", "name": str(mk[0]), "art_keys": Art.card_keys(DDCard.make(DDCard.MEDKIT, int(mk[1]))),
@@ -373,7 +373,7 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 			p["hit"] = e["hit"]
 		if e.has("strength"):
 			p["strength"] = e["strength"]
-			p["t2"] = "Its number is its attack AND its toughness. " + str(e["line"])
+			p["t2"] = "Its number is its attack and its toughness. " + str(e["line"])
 		if e.has("value"):
 			p["big"] = str(e["value"])
 			p["kind"] = str(e.get("badge_kind", kind))
@@ -478,23 +478,25 @@ func open_glossary(bal: DDBalance) -> void:
 ## "badge:challenge", "lock", "socket", "chip:-3", "text:HOLD" ...
 static func sections(bal: DDBalance) -> Array:
 	var rules: Array = []
-	for r: Array in [["any", "Any zombie", "Service Pistol"], ["down", "Lower than the top", "Hunting Rifle"], ["up", "Higher than the top", "Ratchet Crossbow"],
-			["same", "Same number", "Twin-Bore"], ["zigzag", "Zig-zag", "Lever Rifle"], ["close", "Within 1", "Scout Carbine"], ["parity", "Odd / even", "Nail Driver"],
-			["spread", "Total 16 max", "Pump Shotgun"], ["big", "6 or more", "Elephant Gun"], ["small", "6 or less", "Alley Sweeper"],
-			["heavy", "One shot", "Stovepipe Launcher"]]:
-		rules.append({"icon": "rule:" + str(r[0]), "name": str(r[1]), "line": "Each kill %s (%s)." % [DDPayloads._rule_words(str(r[0]), false), str(r[2])]})
-	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: this kill may break the rule, once a wave."})
+	# dd-ux-text: each rule by the same tag as the gun tile, then the same words as every tooltip
+	for r: Array in [["any", "Service Pistol"], ["down", "Hunting Rifle"], ["up", "Ratchet Crossbow"], ["same", "Twin-Bore"], ["zigzag", "Lever Rifle"],
+			["close", "Scout Carbine"], ["parity", "Nail Driver"], ["spread", "Pump Shotgun"], ["big", "Elephant Gun"], ["small", "Alley Sweeper"],
+			["heavy", "Stovepipe Launcher"]]:
+		var tag: String = DDText.rule_tag(str(r[0]))
+		rules.append({"icon": "rule:" + str(r[0]), "name": tag.substr(0, 1) + tag.substr(1).to_lower(), "line": "Each kill: %s (%s)." % [DDText.rule_short(str(r[0])), str(r[1])]})
+	rules.append({"icon": "rule:down", "name": "Last or lower / higher", "line": "Rosa's Steady Hands: the Rifle and Crossbow also take an equal number."})
+	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: once per wave, one kill may break its rule."})
 	return [
 		["NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT", [
-			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A gun's or melee weapon's power. You take strength minus hit."},
-			{"icon": "strength:7", "name": "Strength (blood red)", "line": "A zombie's attack AND its toughness. A gun kill pays ×10 pts."},
+			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A weapon's power. You lose strength - hit HP."},
+			{"icon": "strength:7", "name": "Strength (blood red)", "line": "A zombie's attack and toughness. A gun kill pays it ×10 pts."},
 			{"icon": "tiers", "name": "Tier (the red badge's ring)", "line": "Bone Shambler 1-3, amber Lurcher 4-6, orange Bruiser 7-9, red Hulk 10+."},
 			{"icon": "num:M:4", "name": "Heal (green ring)", "line": "A medkit's number: the HP it heals."},
 			{"icon": "num:C:3", "name": "Cover (gold ring)", "line": "A cover card's number: the Cover you gain."},
 		]],
 		["ON YOUR WEAPONS", [
 			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds; a filled one shows the kill."},
-			{"icon": "next", "name": "Next socket", "line": "What the next kill must be, e.g. <6 or >4."},
+			{"icon": "next", "name": "Next socket", "line": "What the next kill needs: ≤5 means 5 or lower, ≥8 means 8 or higher."},
 			{"icon": "badge:full_set", "name": "Full set", "line": "Every socket filled: +%d pts, then the gun leaves. 1 to go: the cup glows." % bal.shown(bal.num("finish_bonus"))},
 			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
 			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
@@ -504,29 +506,29 @@ static func sections(bal: DDBalance) -> Array:
 		]],
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["ON ZOMBIES", [
-			{"icon": "chip:-3", "name": "Damage to you", "line": "What you'd lose with the active weapon. Green 0 = free."},
-			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = your active weapon can take it; dark = it can't."},
-			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take this zombie."},
+			{"icon": "chip:-3", "name": "Damage to you", "line": "The HP you lose with the active weapon. Green 0 = none."},
+			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = the active gun can take it; dark = it can't."},
+			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take it; the card says what it needs (e.g. needs ≤5)."},
 			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},
 		]],
 		["ON THE BOARD", [
 			{"icon": "wave", "name": "Wave door", "line": "The big number is the wave now; +N waves wait."},
 			{"icon": "lock", "name": "Room price", "line": "Locked until you have the points; the bar fills."},
-			{"icon": "open", "name": "Gold plate", "line": "You can pay: tap it to open the room."},
+			{"icon": "open", "name": "Gold plate", "line": "You can pay: tap it to open the room (3 cards + a machine)."},
 			{"icon": "text:USE", "name": "USE", "line": "The room's machine, once per wave."},
 			{"icon": "pile", "name": "Draw pile", "line": "Cards are dealt from here. The order is hidden."},
 			{"icon": "pips", "name": "Resolve dots", "line": "Deal with %d of the %d cards; 1 stays." % [bal.num("actions"), bal.num("street_size")]},
 			{"icon": "text:+2", "name": "Cover", "line": "Takes damage before your HP."},
 			{"icon": "text:PTS", "name": "Points", "line": "Gun kills pay. Spend them on rooms and machines."},
-			{"icon": "text:RUN", "name": "Run", "line": "Every street card goes under the pile for %d HP. Not twice in a row." % bal.num("run_damage")},
-			{"icon": "text:SHOP", "name": "Safehouse Shop", "line": "Points stay in the district: spend them before you leave."},
+			{"icon": "text:RUN", "name": "Run", "line": "-%d HP: the street's cards go to the bottom of the pile. Not twice in a row." % bal.num("run_damage")},
+			{"icon": "text:SHOP", "name": "Safehouse Shop", "line": "Spend your points before you leave: they stay behind."},
 		]],
 		["HOW A STREET WORKS", [
 			{"icon": "text:1", "name": "Deal", "line": "%d cards come off the pile." % bal.num("street_size")},
 			{"icon": "text:2", "name": "Pick a weapon", "line": "Tap a gun (or melee), then tap zombies."},
-			{"icon": "text:3", "name": "Stack kills", "line": "Each gun kill lands in a socket and pays its number."},
-			{"icon": "text:4", "name": "Finish guns", "line": "A full gun pays +%d and its challenge, then leaves." % bal.shown(bal.num("finish_bonus"))},
-			{"icon": "text:5", "name": "Waves, then the boss", "line": "When the pile runs out the next wave shuffles in."},
+			{"icon": "text:3", "name": "Fill sockets", "line": "Each gun kill fills a socket and pays its number. The gun's rule says what fits next."},
+			{"icon": "text:4", "name": "Fill guns", "line": "A full gun pays +%d and its challenge, then leaves." % bal.shown(bal.num("finish_bonus"))},
+			{"icon": "text:5", "name": "Waves, then the boss", "line": "When the pile runs out, the next wave joins it."},
 		]],
 	]
 
@@ -626,7 +628,7 @@ static func icon(id: String) -> Control:
 				hl.add_child(pz)
 			inner = hl
 		"socket", "next":
-			inner = Marks.Socket.new(id == "next", "<6" if id == "next" else "")
+			inner = Marks.Socket.new(id == "next", "≤5" if id == "next" else "")
 		"lock", "open":
 			inner = Marks.Padlock.new(id == "open", DDUi.WARN if id == "open" else DDUi.TEXT)
 		"wave":

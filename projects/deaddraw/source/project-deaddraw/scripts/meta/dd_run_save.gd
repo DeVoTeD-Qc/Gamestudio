@@ -142,14 +142,25 @@ func discard_old() -> bool:
 	return true
 
 
-## Removes the saved run. The mirror keeps a "cleared" tombstone (newer than any stale copy).
-## On the Web a bare remove does not schedule an IndexedDB sync, so the file is emptied first
-## (a write does), then removed: the next sync drops it from IndexedDB too.
+## Clears the saved run: the file and the mirror hold a "cleared" tombstone (newer than any stale
+## copy), so neither is a Continue any more.
+## dd-ux-text (playtest: repeated console errors on the death / end screen): the file is no longer
+## deleted. On the Web, removing a file while the engine's IndexedDB sync of user:// is running
+## made that sync fail ("Failed to save IDB file system"), once per clear. A tombstone is an
+## ordinary write, and a run that is already cleared is not written again.
 func clear() -> void:
-	if mirror != null:
-		mirror.set_item(_mirror_key(), JSON.stringify({"version": VERSION, "cleared": true, "saved_at": Time.get_unix_time_from_system()}))
-	if FileAccess.file_exists(path):
+	var stone: String = JSON.stringify({"version": VERSION, "cleared": true, "saved_at": Time.get_unix_time_from_system()})
+	if mirror != null and not _is_tombstone(mirror.get_item(_mirror_key())):
+		mirror.set_item(_mirror_key(), stone)
+	if FileAccess.file_exists(path) and not _is_tombstone(FileAccess.get_file_as_string(path)):
 		var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 		if f != null:
+			f.store_string(stone)
 			f.close()
-		DirAccess.remove_absolute(path)
+
+
+static func _is_tombstone(text: String) -> bool:
+	if text == "":
+		return false
+	var p: Variant = JSON.parse_string(text)
+	return p is Dictionary and bool((p as Dictionary).get("cleared", false))

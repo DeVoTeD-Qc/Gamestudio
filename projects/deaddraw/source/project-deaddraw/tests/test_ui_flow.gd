@@ -221,7 +221,10 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		m.call("tap_street", idx(run, "Z5"))
 		await _settle()
 		eq(run.resolved, 0, tag + " a locked tap spends nothing")
-		check(str(m.get("last_block")).contains("at most 3"), tag + " and says why: " + str(m.get("last_block")))
+		check(str(m.get("last_block")).contains("needs ≤3"), tag + " and says why: " + str(m.get("last_block")))
+		# dd-ux-text (playtest): the blocked tap answers at once with a toast saying why
+		var toast: Node = m.find_child("BlockToast", true, false)
+		check(toast != null and str((toast.find_child("ToastText", true, false) as Label).text).contains("needs ≤3"), tag + " a toast says why")
 		# Run
 		var rb: Button = _named(m, "Run")
 		check(rb != null and not rb.disabled and rb.text.begins_with("RUN"), tag + " Run button")
@@ -420,9 +423,9 @@ func test_payloads_cover_everything() -> void:
 	r.slots[1] = r.make_gun("rifle")
 	r.slot(1).stack = [6, 4] as Array[int]
 	var gp: Dictionary = DDPayloads.gun(r, 1)
-	check(str(gp["body"]).contains("Can still take: 1-3"), "gun zoom: can still take 1-3 (%s)" % str(gp["body"]))
+	check(str(gp["body"]).contains("Next kill: ≤3"), "gun zoom: next kill ≤3 (%s)" % str(gp["body"]))
 	check(str(gp["body"]).contains("COUNTDOWN"), "gun zoom: challenge")
-	check(str(DDPayloads.stack_card(r, 1, 1)["body"]).contains("TOP kill"), "stack card zoom")
+	check(str(DDPayloads.stack_card(r, 1, 1)["body"]).contains("LAST kill"), "stack card zoom")
 	for p: String in bal().patches():
 		check(str(DDPayloads.patch(p, bal())["body"]) != "", "patch zoom " + p)
 	for wid: Variant in bal().weapons().keys():
@@ -433,5 +436,5 @@ func test_payloads_cover_everything() -> void:
 	z.slots[0] = z.make_gun("rifle")
 	z.slot(0).stack = [5] as Array[int]
 	var zp: Dictionary = DDPayloads.card(z.street[0], z, 0)
-	check(str(zp["body"]).contains("NOT ALLOWED"), "zombie zoom: which rules allow it")
-	check(str(zp["body"]).contains("Melee (power 1): -6 HP"), "zombie zoom: damage with each weapon")
+	check(str(zp["body"]).contains("NO: needs ≤4"), "zombie zoom: which rules allow it (%s)" % str(zp["body"]))
+	check(str(zp["body"]).contains("Melee (hit 1): -6 HP"), "zombie zoom: damage with each weapon")
