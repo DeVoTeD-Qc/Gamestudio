@@ -31,6 +31,12 @@ var art_band: Control = null
 var plate: DDCardView = null
 ## v5: the Gun Mod chip (null when the slot has no mod).
 var mod_chip: DDCardView = null
+## dd-challenge-rack: the challenge line under the sockets (goal / live progress / the keep-or-break
+## verdict while a zombie is lifted or hovered) and its parts.
+var chal_line: DDCardView = null
+var _chal_label: Label = null
+var _chal_mark: Control = null
+var _chal_info: Dictionary = {}
 
 
 ## spec: DDPayloads.gun_spec() + "socket_h_max" (the socket row's height, px) + "plate_h".
@@ -188,6 +194,14 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 			if nxt:
 				_next_socket = sk
 	stack_area.resized.connect(_layout_sockets)
+	# dd-challenge-rack: the challenge line (what to do for the reward, and how it is going)
+	var cl: Dictionary = spec.get("challenge_line", {})
+	if not cl.is_empty():
+		chal_line = make_challenge_line(cl, float(spec.get("chal_h", 20.0)))
+		_chal_info = cl
+		_chal_label = chal_line.find_child("ChalText", true, false)
+		_chal_mark = chal_line.find_child("ChalMark", true, false)
+		v2.add_child(chal_line)
 	# the Full set plate (the completion bonus + the challenge reward)
 	var left: int = int(spec.get("left", 0))
 	plate = make_plate(str(spec.get("finish_shown", "")), str(spec.get("reward", "")), str(spec.get("challenge_state", "open")),
@@ -200,6 +214,10 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	for mc2: DDCardView in stack_cards:
 		mc2.mouse_filter = Control.MOUSE_FILTER_STOP
 	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	if chal_line != null:
+		chal_line.mouse_filter = Control.MOUSE_FILTER_STOP
+		chal_line.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
+		chal_line.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
 	if mod_chip != null:
 		mod_chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	plate.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
@@ -292,6 +310,107 @@ static func make_plate(finish: String, reward: String, cs: String, mode: String,
 		row.add_child(mt)
 	DDUi.ignore_mouse(p)
 	return p
+
+
+## dd-challenge-rack (head: "Some guns have challenges like Countdown, Drift, etc and I have no idea
+## what to do to complete them"): one line under the sockets: the medal, "COUNTDOWN: next =5" (the
+## goal while nothing is decided, the next kill that keeps it, met, missed) and a tick / cross.
+## Long press / right click: the full rule with an example, the reward and how it is going.
+static func make_challenge_line(cl: Dictionary, h: float = 20.0) -> DDCardView:
+	var p: DDCardView = DDCardView.new()
+	p.kind = "W"
+	p.name = "ChalLine"
+	p.payload = cl.get("payload", {})
+	var st: String = str(cl.get("state", "open"))
+	p.add_theme_stylebox_override("panel", DDUi.box(Color(0.06, 0.07, 0.07, 0.75), Color(0, 0, 0, 0), 0, 6, 0))
+	p.custom_minimum_size = Vector2(0, h)
+	var row: HBoxContainer = DDUi.hbox(3)
+	p.add_child(row)
+	var good: bool = st == "met" or st == "on_track"
+	var md: TextureRect = TextureRect.new()
+	md.name = "ChalMedal"
+	md.texture = Art.texture_for(Art.badge_keys("challenge" if good else "challenge_open"))
+	md.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	md.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	md.custom_minimum_size = Vector2(h - 2.0, h - 2.0)
+	md.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if st == "broken":
+		md.self_modulate = Color(0.55, 0.55, 0.55, 0.7)
+	row.add_child(md)
+	var fs: int = clampi(int(h * 0.68), 11, 16)
+	var l: Label = DDUi.label(line_text(cl), fs, state_color(st))
+	l.name = "ChalText"
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.clip_text = true
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.custom_minimum_size = Vector2(10, 0)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.resized.connect(func() -> void: fit_label(l, fs, 10))
+	row.add_child(l)
+	var mk: _Mark = _Mark.new()
+	mk.name = "ChalMark"
+	mk.kind = {"met": "tick", "on_track": "tick", "broken": "cross"}.get(st, "")
+	mk.custom_minimum_size = Vector2(h * 0.7, h * 0.7)
+	mk.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(mk)
+	DDUi.ignore_mouse(p)
+	return p
+
+
+## "COUNTDOWN: next =5".
+static func line_text(cl: Dictionary) -> String:
+	return "%s: %s" % [str(cl.get("name", "")).to_upper(), str(cl.get("text", ""))]
+
+
+static func state_color(st: String) -> Color:
+	return {"met": DDUi.GOOD, "on_track": DDUi.GOOD, "broken": DDUi.TEXT_DIM}.get(st, DDUi.WARN)
+
+
+## dd-challenge-rack: while a zombie z is lifted onto / hovered over this gun: "5 KEEPS COUNTDOWN"
+## (green tick), "5 BREAKS COUNTDOWN" (red cross), "5 MEETS COUNTDOWN"; "" puts the line back.
+func set_verdict(verdict: String, z: int = 0) -> void:
+	if chal_line == null or not is_instance_valid(chal_line) or _chal_label == null:
+		return
+	var mk: _Mark = _chal_mark as _Mark
+	chal_line.set_meta(&"verdict", verdict)
+	if verdict == "":
+		_chal_label.text = line_text(_chal_info)
+		_chal_label.add_theme_color_override("font_color", state_color(str(_chal_info.get("state", "open"))))
+		if mk != null:
+			mk.kind = {"met": "tick", "on_track": "tick", "broken": "cross"}.get(str(_chal_info.get("state", "")), "")
+			mk.queue_redraw()
+		chal_line.add_theme_stylebox_override("panel", DDUi.box(Color(0.06, 0.07, 0.07, 0.75), Color(0, 0, 0, 0), 0, 6, 0))
+	else:
+		var bad: bool = verdict == "breaks"
+		var col: Color = DDUi.BAD if bad else DDUi.GOOD
+		_chal_label.text = "%d %s %s" % [z, verdict.to_upper(), str(_chal_info.get("name", "")).to_upper()]
+		_chal_label.add_theme_color_override("font_color", col)
+		if mk != null:
+			mk.kind = "cross" if bad else "tick"
+			mk.queue_redraw()
+		chal_line.add_theme_stylebox_override("panel", DDUi.box(Color(col.darkened(0.75), 0.92), col, 2, 6, 0))
+	fit_label(_chal_label, int(_chal_label.get_meta(&"fit_base", _chal_label.get_theme_font_size("font_size"))), 10)
+
+
+## A drawn tick or cross (no font glyph needed).
+class _Mark:
+	extends Control
+	var kind: String = ""
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var r: float = minf(size.x, size.y)
+		var o: Vector2 = (size - Vector2(r, r)) * 0.5
+		var w: float = maxf(2.0, r * 0.18)
+		if kind == "tick":
+			draw_polyline(PackedVector2Array([o + Vector2(r * 0.12, r * 0.55), o + Vector2(r * 0.4, r * 0.82), o + Vector2(r * 0.9, r * 0.18)]), DDUi.GOOD, w, true)
+		elif kind == "cross":
+			var c: Color = DDUi.BAD if get_parent() != null and get_parent().get_parent() != null and (get_parent().get_parent() as Control).has_meta(&"verdict") and str((get_parent().get_parent() as Control).get_meta(&"verdict")) == "breaks" else DDUi.TEXT_DIM
+			draw_line(o + Vector2(r * 0.18, r * 0.18), o + Vector2(r * 0.82, r * 0.82), c, w, true)
+			draw_line(o + Vector2(r * 0.82, r * 0.18), o + Vector2(r * 0.18, r * 0.82), c, w, true)
 
 
 ## A line through a missed challenge's reward.

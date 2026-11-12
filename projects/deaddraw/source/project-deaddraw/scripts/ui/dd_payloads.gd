@@ -79,6 +79,10 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 					line += " - Loose Grip breaks the rule"
 				elif not pr.is_empty() and bool(pr["finishes"]):
 					line += " - fills the gun"
+				if w != DDRun.MELEE and not pr.is_empty() and bool(pr["ok"]):
+					var cv: String = challenge_verdict(run, w, c.value)
+					if cv != "":
+						line += " - " + cv
 				body.append(line)
 			body.append("Damage = strength - hit. Cover takes it first.")
 		DDCard.WEAPON:
@@ -136,6 +140,11 @@ static func card_t2(c: DDCard, run: DDRun, index: int) -> String:
 			var s: String = "%s: %s, +%d pts (kill %d of %d)." % [vd, hurt, b.shown(c.value), g.stack.size() + 1, g.cap]
 			if c.is_boss():
 				s = "%s: %s. %s" % [vd, hurt, DDText.trait_name(c.boss_trait)]
+			elif not pr.is_empty() and bool(pr["ok"]):
+				# dd-challenge-rack: does this kill keep the gun's challenge?
+				var cv: String = challenge_verdict(run, w, c.value)
+				if cv != "":
+					s += " " + cv.substr(0, 1).to_upper() + cv.substr(1) + "."
 			return s
 		DDCard.WEAPON:
 			return "Each kill: %s. Tap: equip, or scrap (+%d)." % [_rule_words(b.weapon_rule(c.wid), run.steady()), b.shown(b.num("scrap_points"))]
@@ -318,6 +327,9 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 	body.append("Next kill: %s." % accept_words(run.can_take_slot(s)))
 	body.append("CHALLENGE %s: %s -> %s. Now: %s." % [DDText.challenge_name(b.weapon_challenge(g.wid)).to_upper(), DDText.challenge_text(b.weapon_challenge(g.wid), b),
 		DDText.reward_text(str(rw[0]), int(rw[1]), b), str({"met": "met", "on_track": "on track", "broken": "can't be met any more", "open": "not decided yet"}[run.challenge_state(g)])])
+	var cl: Dictionary = challenge_line(run, s)
+	if not cl.is_empty() and str(cl["hint"]) != "" and not str(cl["hint"]).begins_with("Goal:"):
+		body.append(str(cl["hint"]))
 	body.append("Kills: %s." % (DDText.zombie_list(g.stack) if not g.stack.is_empty() else "none yet"))
 	body.append("Each kill pays its number. Full: +%d, the challenge pays, the gun leaves." % b.shown(b.num("finish_bonus")))
 	body.append("ACTIVE: taps on zombies use it." if run.active == s else "Tap to make it active.")
@@ -363,6 +375,7 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	spec["challenge"] = DDText.challenge_name(b.weapon_challenge(g.wid))
 	spec["reward"] = DDText.reward_short(str(rw[0]), int(rw[1]), b)
 	spec["challenge_state"] = run.challenge_state(g)
+	spec["challenge_line"] = challenge_line(run, s)
 	spec["stack"] = g.stack.duplicate()
 	spec["honed"] = g.honed
 	spec["flipped"] = g.flipped
@@ -377,6 +390,118 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 		stack_payloads.append(stack_card(run, s, k))
 	spec["stack_payloads"] = stack_payloads
 	return spec
+
+
+## dd-challenge-rack: "keeps Countdown" / "breaks Countdown" / "meets Countdown" for a kill of z
+## with the gun in slot s ("" when the gun has no challenge or it is already missed).
+static func challenge_verdict(run: DDRun, s: int, z: int) -> String:
+	var g: DDGun = run.slot(s)
+	if g == null:
+		return ""
+	var k: String = run.challenge_kill(s, z)
+	if k == "":
+		return ""
+	return "%s %s" % [k, DDText.challenge_name(run.bal.weapon_challenge(g.wid))]
+
+
+## dd-challenge-rack: the numbers the next kill may be, compactly: "=5", "≤5", "≤4 or ≥10",
+## "not 3, 8", "odd" (the rule's notation; "or" between at most two ranges).
+static func keep_tag(keep: Array[int], can: Array[int]) -> String:
+	if keep.is_empty():
+		return "none"
+	var miss: PackedStringArray = []
+	for z2: int in can:
+		if not keep.has(z2):
+			miss.append(str(z2))
+	if miss.size() <= 2 and keep.size() > 2:
+		return "not " + ", ".join(miss)
+	var ranges: Array = []
+	var a: int = keep[0]
+	var prev: int = keep[0]
+	for k: int in range(1, keep.size() + 1):
+		var z: int = keep[k] if k < keep.size() else -99
+		if z == prev + 1:
+			prev = z
+			continue
+		ranges.append([a, prev])
+		a = z
+		prev = z
+	var lo: int = can[0] if not can.is_empty() else 1
+	var hi: int = can[can.size() - 1] if not can.is_empty() else 12
+	var parts: PackedStringArray = []
+	for r: Array in ranges:
+		var x: int = int(r[0])
+		var y: int = int(r[1])
+		if x == y:
+			parts.append("=%d" % x)
+		elif x <= lo and y < hi:
+			parts.append("≤%d" % y)
+		elif y >= hi and x > lo:
+			parts.append("≥%d" % x)
+		else:
+			parts.append("%d-%d" % [x, y])
+	if ranges.size() <= 2:
+		return " or ".join(parts)
+	if miss.size() <= 3:
+		return "not " + ", ".join(miss)
+	var t: String = DDText.need_tag(keep)
+	return t if t == "odd" or t == "even" else "not " + ", ".join(miss)
+
+
+## dd-challenge-rack: the gun tile's challenge line for slot s: {id, name, state, text (the short
+## line: goal, "next =5", "met", "missed"), hint (a sentence), payload (its tooltip)}. {} = none.
+static func challenge_line(run: DDRun, s: int) -> Dictionary:
+	var g: DDGun = run.slot(s)
+	if g == null:
+		return {}
+	var b: DDBalance = run.bal
+	var id: String = b.weapon_challenge(g.wid)
+	if id == "":
+		return {}
+	var name: String = DDText.challenge_name(id)
+	var st: String = run.challenge_state(g)
+	var rw: Array = b.weapon_reward(g.wid)
+	var reward: String = DDText.reward_text(str(rw[0]), int(rw[1]), b)
+	var text: String = DDText.challenge_goal(id, b)
+	var hint: String = ""
+	var nx: Dictionary = run.challenge_next(s)
+	var keep: Array[int] = nx["keep"]
+	var meet: Array[int] = nx["meet"]
+	var can: Array[int] = nx["can"]
+	if st == "broken":
+		text = "missed"
+		hint = "Missed: this gun can't meet %s any more. Fill it for +%d anyway." % [name, b.shown(b.num("finish_bonus"))]
+	elif st == "met":
+		text = "met"
+		hint = "Met: fill the gun and %s pays %s." % [name, reward] if g.kills_left() > 0 else "Met: %s paid %s." % [name, reward]
+	elif g.kills_left() > 0 and not can.is_empty() and keep.size() < can.size():
+		if keep.is_empty():
+			text = "next kill misses"
+			hint = "Any kill this gun can take now misses %s." % name
+		else:
+			var tag: String = keep_tag(keep, can)
+			text = "next " + tag
+			if not meet.is_empty() and meet.size() == keep.size():
+				hint = "Next kill: %s meets %s (%s)." % [_tag_words(tag), name, reward]
+			else:
+				hint = "Next kill: %s keeps %s; anything else misses it." % [_tag_words(tag), name]
+	elif st == "on_track":
+		hint = "On track: %s so far." % DDText.challenge_goal(id, b)
+	if hint == "":
+		hint = "Goal: %s." % DDText.challenge_text(id, b)
+	var now: String = {"met": "met", "on_track": "on track", "broken": "missed", "open": "not decided yet"}.get(st, "")
+	var p: Dictionary = tip({"kind": "W", "tag": "CHALLENGE", "title": name, "icon_keys": Art.badge_keys("challenge" if st in ["met", "on_track"] else "challenge_open"),
+		"body": "%s: %s.\nReward: %s, when the gun is full.\nNow: %s. %s\nKills: %s." % [name, DDText.challenge_text(id, b), reward, now, hint,
+			DDText.zombie_list(g.stack) if not g.stack.is_empty() else "none yet"]},
+		"Challenge %s -> %s · %s" % [name, DDText.reward_short(str(rw[0]), int(rw[1]), b), now],
+		hint)
+	return {"id": id, "name": name, "state": st, "text": text, "hint": hint, "payload": p}
+
+
+static func _tag_words(tag: String) -> String:
+	if tag.begins_with("="):
+		return "exactly " + tag.substr(1)
+	return tag
 
 
 ## dd-ui6: the icon key a gun's tooltip shows under its two lines: its rule, the Full set bonus

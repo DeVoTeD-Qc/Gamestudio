@@ -581,32 +581,126 @@ func challenge_met(wid: String, stack: Array[int]) -> bool:
 	return false
 
 
-## How the challenge looks on the current stack: "met" (it would pay if finished now), "on_track",
-## "broken" (can't be met any more), "open" (nothing decided yet). For the gun card's badge.
+## How the challenge looks on the current stack: "met" (locked in: it pays when the gun is full,
+## or the gun is full and it paid), "on_track" (holds so far), "broken" (can't be met any more),
+## "open" (nothing decided yet). For the gun card's badge and the challenge line.
 func challenge_state(g: DDGun) -> String:
 	if g == null:
 		return "open"
-	var st: Array[int] = g.stack
-	var n: int = st.size()
-	var met: bool = challenge_met(g.wid, st)
-	match bal.weapon_challenge(g.wid):
-		"mixed_bag", "full_spread", "wide_swing", "trophy":
+	return challenge_status(g.wid, g.stack, g.cap, g.rule)
+
+
+## dd-challenge-rack: challenge_state() for any stack of gun `wid` with `cap` kills (a Gun Mod can
+## change the capacity; the spread rule is also full at a total of spread_cap).
+func challenge_status(wid: String, stack: Array[int], cap: int, rule: String = "") -> String:
+	var n: int = stack.size()
+	var tot: int = 0
+	for z: int in stack:
+		tot += z
+	if rule == "":
+		rule = bal.weapon_rule(wid)
+	var left: int = cap - n
+	if n > 0 and (left <= 0 or (rule == "spread" and tot >= bal.num("spread_cap"))):
+		return "met" if challenge_met(wid, stack) else "broken"
+	match bal.weapon_challenge(wid):
+		"mixed_bag", "full_spread":
 			if n == 0:
 				return "open"
-			return "on_track" if met else "broken"
+			return "on_track" if challenge_met(wid, stack) else "broken"
+		"countdown":
+			# only the last 3 kills count: those already in that window must step down by 1, and
+			# the steps still to come must stay ≥1
+			if cap < 3:
+				return "broken"
+			var ws: int = cap - 3
+			if n <= ws:
+				return "open"
+			for i: int in range(ws + 1, n):
+				if stack[i] != stack[i - 1] - 1:
+					return "broken"
+			return "on_track" if stack[n - 1] - (cap - n) >= 1 else "broken"
+		"staircase":
+			if n >= 3 and challenge_met(wid, stack):
+				return "met"
+			var r: int = trailing_run(stack)
+			var need: int = 3 - r
+			if left >= 3 or (left >= need and n > 0 and stack[n - 1] + need <= 12):
+				return "on_track" if r >= 2 else "open"
+			return "broken"
 		"big_game":
 			if n == 0:
 				return "open"
-			return "on_track" if met else "broken"
+			return "met" if stack[0] >= 6 else "broken"
+		"wide_swing", "trophy":
+			if n == 0:
+				return "open"
+			return "on_track" if challenge_met(wid, stack) else "broken"
+		"drift":
+			if n == 0:
+				return "open"
+			if challenge_met(wid, stack):
+				return "on_track"
+			# the close rule moves at most 1 a kill: too few kills left to get 3 away
+			if rule == "close" and absi(stack[n - 1] - stack[0]) + left < 3:
+				return "broken"
+			return "open"
 		"point_blank":
-			if met:
-				return "met"
-			return "broken" if g.total() > bal.num("spread_cap") else "open"
+			var want: int = bal.num("spread_cap") - tot
+			if want < 0 or want > 12 * maxi(0, left):
+				return "broken"
+			return "open" if n == 0 else "on_track"
+		"big_bang":
+			return "open"
 		"pest_control":
 			if n == 0:
 				return "open"
-			return "on_track" if met else "broken"
-	return "met" if met else "open"
+			return "on_track" if challenge_met(wid, stack) else "broken"
+	return "met" if n > 0 and challenge_met(wid, stack) else "open"
+
+
+## How many kills at the top of the stack go up by 1 in a row (1 for a single kill, 0 empty).
+static func trailing_run(stack: Array[int]) -> int:
+	var n: int = stack.size()
+	if n == 0:
+		return 0
+	var r: int = 1
+	while r < n and stack[n - r] == stack[n - r - 1] + 1:
+		r += 1
+	return mini(r, 3)
+
+
+## dd-challenge-rack: what killing zombie z with the gun in slot s does to its challenge:
+## "meets" (the kill fills the gun and it pays, or locks it in), "keeps" (still possible),
+## "breaks" (this kill makes it impossible), "" (no gun, or it was already missed).
+func challenge_kill(s: int, z: int) -> String:
+	var g: DDGun = slot(s)
+	if g == null or bal.weapon_challenge(g.wid) == "":
+		return ""
+	var before: String = challenge_state(g)
+	if before == "broken":
+		return ""
+	var after: Array[int] = g.stack.duplicate()
+	after.append(z)
+	var st: String = challenge_status(g.wid, after, g.cap, g.rule)
+	if st == "broken":
+		return "breaks"
+	if st == "met" and before != "met":
+		return "meets"
+	return "keeps"
+
+
+## dd-challenge-rack: the zombie numbers the gun in slot s can take next that keep its challenge
+## ("keeps" or "meets") and those that meet it.
+func challenge_next(s: int) -> Dictionary:
+	var keep: Array[int] = []
+	var meet: Array[int] = []
+	for z: int in can_take_slot(s):
+		var k: String = challenge_kill(s, z)
+		if k == "keeps" or k == "meets":
+			keep.append(z)
+		if k == "meets":
+			meet.append(z)
+	return {"keep": keep, "meet": meet, "can": can_take_slot(s)}
 
 
 ## The zombie numbers (1-12) the gun in slot s can still take (its rule + the slot's Gun Mod).

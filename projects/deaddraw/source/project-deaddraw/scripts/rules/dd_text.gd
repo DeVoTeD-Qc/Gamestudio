@@ -272,30 +272,62 @@ static func challenge_name(id: String) -> String:
 	return str(CHALLENGE_NAMES.get(id, id.capitalize()))
 
 
+## dd-challenge-rack (head: "I have no idea what to do to complete them"): the rule in plain words
+## with an example that pays and one that misses, in the ≤5 / ≥8 notation of the rules.
 static func challenge_text(id: String, bal: DDBalance) -> String:
 	match id:
 		"mixed_bag":
-			return "every kill a different number"
+			return "no number twice: every kill a different number (3, 9, 5, 11 pays; 3, 9, 3 misses)"
 		"countdown":
-			return "the last 3 kills go down by 1 (6-5-4)"
+			return "the last 3 kills step down by 1 (8, 6, 5, 4 pays: it ends 6-5-4; 8, 6, 4, 3 misses)"
 		"staircase":
-			return "3 kills in a row go up by 1 (4-5-6)"
+			return "3 kills in a row step up by 1, anywhere on the gun (2, 4, 5, 6 pays: 4-5-6; 2, 4, 6, 8 misses)"
 		"big_game":
-			return "the first kill is ≥6"
+			return "the first kill is ≥6 (7, 7, 7 pays; 4, 4, 4 misses)"
 		"wide_swing":
-			return "every step is 2 or more apart"
+			return "every kill is 2+ away from the one before (3, 7, 4, 9, 2 pays; 3, 7, 6 misses)"
 		"drift":
-			return "the last kill is 3+ away from the first"
+			return "the last kill is 3+ away from the first (4, 5, 6, 7, 7 pays: 7 is 3 from 4; 4, 5, 4, 5, 6 misses)"
 		"full_spread":
-			return "every kill a different number"
+			# the same check as Mixed Bag; on the Nail Driver the odd / even rule shapes the numbers
+			return "no number twice, while the kills go odd, even, odd (3, 8, 5, 10 pays; 3, 8, 3 misses)"
 		"point_blank":
-			return "the total is exactly %d" % bal.num("spread_cap")
+			var cap: int = bal.num("spread_cap")
+			return "the kills total exactly %d (5, 4, 7 = %d pays; 5, 4, 3, 2 = 14 misses)" % [cap, cap]
+		"trophy":
+			return "both kills ≥8 (9, 11 pays; 9, 6 misses)"
+		"big_bang":
+			var bb: int = bal.num("big_bang_min")
+			return "the one kill is ≥%d (%d pays; %d misses)" % [bb, mini(12, bb + 1), bb - 2]
+		"pest_control":
+			var pt: int = bal.num("pest_total")
+			return "the kills total ≤%d (2, 5, 3, 4 = 14 pays; 6, 6, 5 = 17 misses)" % pt
+	return ""
+
+
+## dd-challenge-rack: the goal in a few words, for the gun tile's challenge line ("end 6-5-4").
+static func challenge_goal(id: String, bal: DDBalance) -> String:
+	match id:
+		"mixed_bag", "full_spread":
+			return "no number twice"
+		"countdown":
+			return "end going 6-5-4"
+		"staircase":
+			return "3 in a row: 4-5-6"
+		"big_game":
+			return "1st kill ≥6"
+		"wide_swing":
+			return "each 2+ from the last"
+		"drift":
+			return "end 3+ from the 1st"
+		"point_blank":
+			return "total exactly %d" % bal.num("spread_cap")
 		"trophy":
 			return "both kills ≥8"
 		"big_bang":
-			return "the kill is ≥%d" % bal.num("big_bang_min")
+			return "the kill ≥%d" % bal.num("big_bang_min")
 		"pest_control":
-			return "the kills total ≤%d" % bal.num("pest_total")
+			return "total ≤%d" % bal.num("pest_total")
 	return ""
 
 
