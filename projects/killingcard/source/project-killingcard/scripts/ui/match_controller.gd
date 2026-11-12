@@ -629,7 +629,7 @@ func note_board_systems() -> Array[StringName]:
 func _deploy_hint() -> void:
 	var s: RulesSide = state.sides[me_side]
 	if s.operator_can_deploy:
-		_screen.show_toast("Round %d: tap your Operator (first card), then a column." % state.round_number)
+		_screen.show_toast("Round %d: drag your Operator (first card) onto a column." % state.round_number)
 	else:
 		_screen.show_toast("Round %d: Deploy." % state.round_number)
 
@@ -979,7 +979,7 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 		res = state.mulligan(me_side, put_back)
 		_after_change()
 		if res["ok"]:
-			_screen.show_toast("Put back %d card%s and drew %d. Round 1: tap your Operator, then a column."
+			_screen.show_toast("Put back %d card%s and drew %d. Round 1: drag your Operator onto a column."
 					% [put_back.size(), "" if put_back.size() == 1 else "s", put_back.size()])
 		else:
 			_screen.show_toast(PlayText.describe(res)["reason"])
@@ -2124,7 +2124,7 @@ func _open_operator(side: int) -> void:
 	if op.is_on_board():
 		where = "In %s: FP %d, Armor %d/%d." % [ZONE_WORDS[op.zone], state.firepower_of(op), op.armor, op.max_armor(state.round_number)]
 	elif side == me_side and s.operator_can_deploy:
-		where = "Off the board: tap it, then a column, to place it."
+		where = "Off the board: drag it onto a column (or tap it, then a column)."
 	var cost: int = state.operator_cost()
 	var respawn_cost: int = maxi(0, state.config.operator_cost)
 	if cost > 0:

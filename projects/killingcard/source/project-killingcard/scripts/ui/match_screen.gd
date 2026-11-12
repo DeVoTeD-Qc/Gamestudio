@@ -1288,7 +1288,7 @@ func open_flyout(key: StringName) -> void:
 	if merged:
 		_flyout_title.text = "SCORE · RIVAL INCOMING"
 	_flyout_hint.text = {
-		&"operator": "Tap the Operator here to select it, then a column · long-press for rules",
+		&"operator": "Drag the Operator onto a column (or tap, then a column) · long-press for rules",
 		&"streak": "Tap a ready streak to arm it · long-press for rules",
 	}.get(key, "Long-press for the rules · tap outside to close")
 	var w: float = FLYOUT_W if compact else FLYOUT_W_DESKTOP
