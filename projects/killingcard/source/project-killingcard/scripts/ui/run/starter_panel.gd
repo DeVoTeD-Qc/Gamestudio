@@ -175,7 +175,7 @@ func _build() -> void:
 	top.add_child(title)
 	var hint: Label = Label.new()
 	hint.theme_type_variation = &"HudSubtle"
-	hint.text = "Pick your Operator. Long-press any card for its rules."
+	hint.text = "Pick your Operator."
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hint.clip_text = true

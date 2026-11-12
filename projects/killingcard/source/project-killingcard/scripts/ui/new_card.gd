@@ -95,7 +95,7 @@ func _init() -> void:
 	_got_it.theme_type_variation = &"HudButton"
 	_got_it.focus_mode = Control.FOCUS_ALL
 	_got_it.add_to_group(&"tap_target")
-	_got_it.tooltip_text = "Close this tip. It won't show again."
+	_got_it.tooltip_text = "Close. This tip won't show again."
 	_got_it.pressed.connect(acknowledge)
 	_card.add_child(_got_it)
 	_gesture = PressGesture.new(_card)

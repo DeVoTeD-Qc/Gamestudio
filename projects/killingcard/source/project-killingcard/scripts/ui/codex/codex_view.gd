@@ -575,13 +575,13 @@ func _build() -> void:
 	_starter_button = _button("STARTER", &"HudButton")
 	_starter_button.name = "StarterButton"
 	_starter_button.custom_minimum_size.x = 150
-	_starter_button.tooltip_text = "The starter deck and your starting Operator"
+	_starter_button.tooltip_text = "Starter deck and Operator"
 	_starter_button.pressed.connect(open_starter)
 	_top.add_child(_starter_button)
 	_glossary_button = _button("GLOSSARY", &"HudButton")
 	_glossary_button.name = "GlossaryButton"
 	_glossary_button.custom_minimum_size.x = 150
-	_glossary_button.tooltip_text = "Every keyword and icon, explained"
+	_glossary_button.tooltip_text = "Every keyword and icon"
 	_glossary_button.pressed.connect(func() -> void: open_glossary())
 	_top.add_child(_glossary_button)
 	# kc-ui-wire2: kit icons on BACK and GLOSSARY (none without the kit).
@@ -876,7 +876,7 @@ func _build_art_panel() -> void:
 	_art_preview_holder = Control.new()
 	_art_preview_holder.name = "PreviewHolder"
 	_art_preview_holder.mouse_filter = Control.MOUSE_FILTER_STOP
-	_art_preview_holder.tooltip_text = "Long-press / right-click: the rules"
+	_art_preview_holder.tooltip_text = "This card, wearing this art"
 	left.add_child(_art_preview_holder)
 	_wire_press(_art_preview_holder, func() -> void: pass, func() -> void: open_entry(art_entry, selected_art))
 	_art_info = Label.new()

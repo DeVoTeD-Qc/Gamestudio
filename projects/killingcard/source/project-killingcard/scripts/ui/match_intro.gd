@@ -95,7 +95,7 @@ func open(terrain: Array, boss: Dictionary, node: Dictionary, mode: String) -> v
 	for z: int in 3:
 		_col.add_child(_column_row(z, RunV2Views.terrain_at(terrain, z)))
 	if not terrain.is_empty():
-		_col.add_child(RunScreen.make_label("Terrain applies to both sides and stays all match. Your Field cards still go on top of it.", &"HudSubtle", true))
+		_col.add_child(RunScreen.make_label("Terrain hits both sides, all match. Fields still go on top.", &"HudSubtle", true))
 	_go = RunScreen.make_button("TO THE BOARD", &"ReadyButton", 240)
 	_go.name = "IntroGo"
 	_go.custom_minimum_size.y = 64.0

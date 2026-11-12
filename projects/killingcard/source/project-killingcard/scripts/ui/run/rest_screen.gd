@@ -36,7 +36,7 @@ func screen_id() -> StringName:
 func _build() -> void:
 	options = RunV2Views.rest_options(run())
 	_title.text = "REST"
-	_subtitle.text = "Make camp. Pick one."
+	_subtitle.text = "Pick one."
 	_tickets_holder = HBoxContainer.new()
 	_tickets_holder.name = "HeaderChips"
 	_tickets_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER

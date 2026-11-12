@@ -128,10 +128,10 @@ func _gen() -> void:
 		"Pick. Its eliminations give +1 streak.", {"is_elite": true, "pick": true},
 		[fx(T.ON_ELIMINATE, K.STREAK_BONUS, TG.OWNER, Z.ANY, 1)])
 	var callout := card("callout", "Callout", DataEnums.CardType.TACTIC, 0,
-		"Resolves immediately: reveal incoming enemy cards in a column. Your first unit there gets +1 FP.",
+		"Instant: reveal incoming enemy cards in a column. Your first unit there gets +1 FP.",
 		[fx(T.IMMEDIATE, K.REVEAL_RED_DOTS, TG.OWNER, Z.CHOSEN_ZONE),
 		 fx(T.IMMEDIATE, K.MODIFY_FIREPOWER, TG.NEXT_FRIENDLY_ARRIVING, Z.CHOSEN_ZONE, 1, {"duration_rounds": 1})])
-	var ammo := card("ammo_resupply", "Ammo Resupply", DataEnums.CardType.TACTIC, 1, "Resolves immediately: draw 2.",
+	var ammo := card("ammo_resupply", "Ammo Resupply", DataEnums.CardType.TACTIC, 1, "Instant: draw 2.",
 		[fx(T.IMMEDIATE, K.DRAW, TG.OWNER, Z.ANY, 2)])
 	var flank_route := card("flank_route", "Flank Route", DataEnums.CardType.TACTIC, 1,
 		"Move your unit to an adjacent column. It gets First Shot this round.",

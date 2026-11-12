@@ -344,7 +344,7 @@ func _deck_tile(d: Dictionary) -> PanelContainer:
 		list_b.tooltip_text = "The 10 picks and the hero"
 		list_b.pressed.connect(func() -> void: open_deck_list(d))
 	wire_inspect_control(p, func() -> void: open_deck_list(d), false)
-	p.tooltip_text = "%s · hold / right click: the deck list" % d["name"]
+	p.tooltip_text = "%s: the deck list" % d["name"]
 	return p
 
 

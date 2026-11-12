@@ -167,7 +167,7 @@ func _fill_brief(n: Dictionary) -> void:
 		_brief_col.remove_child(c)
 		c.queue_free()
 	if n.is_empty():
-		_brief_col.add_child(_label("Tap a node to see what it gives and what it risks.", &"HudSubtle", true))
+		_brief_col.add_child(_label("Tap a node: what it gives, what it risks.", &"HudSubtle", true))
 		_go.text = "PICK A NODE"
 		_go.disabled = true
 		return

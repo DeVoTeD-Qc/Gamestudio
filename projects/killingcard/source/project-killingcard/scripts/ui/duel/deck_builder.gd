@@ -532,7 +532,7 @@ func _top_bar() -> HBoxContainer:
 	_name_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_name_button.clip_text = true
 	_name_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_name_button.tooltip_text = "Tap to rename the deck (up to 20 letters)"
+	_name_button.tooltip_text = "Rename the deck (up to 20 letters)"
 	_name_button.pressed.connect(open_rename)
 	bar.add_child(_name_button)
 	var cp: PanelContainer = W.panel(Color("#1E262D"), W.PANEL_RIM, 4.0)

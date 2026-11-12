@@ -92,7 +92,7 @@ func _ready() -> void:
 	_glossary_button.name = "GlossaryButton"
 	_glossary_button.text = "GLOSSARY"
 	_glossary_button.theme_type_variation = &"HudButton"
-	_glossary_button.tooltip_text = "Every keyword and icon, explained"
+	_glossary_button.tooltip_text = "Every keyword and icon"
 	_glossary_button.custom_minimum_size = Vector2(150, 64)
 	_glossary_button.focus_mode = Control.FOCUS_ALL
 	_glossary_button.add_to_group(&"tap_target")
@@ -124,7 +124,7 @@ func _ready() -> void:
 	_sound_button.name = "SoundButton"
 	_sound_button.text = "SOUND"
 	_sound_button.theme_type_variation = &"HudButton"
-	_sound_button.tooltip_text = "Sound and motion: volume, screen shake, reduce motion"
+	_sound_button.tooltip_text = "Volume, screen shake, reduce motion"
 	_sound_button.custom_minimum_size = Vector2(120, 64)
 	_sound_button.focus_mode = Control.FOCUS_ALL
 	_sound_button.add_to_group(&"tap_target")

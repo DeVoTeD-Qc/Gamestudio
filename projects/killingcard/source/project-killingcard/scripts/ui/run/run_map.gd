@@ -138,7 +138,7 @@ func _build_v2(r: RunProgress) -> void:
 	_map_v2 = RunV2Views.map_view(r)
 	var m: Dictionary = _map_v2
 	_title.text = "RUN MAP  ·  STEP %d OF %d" % [mini(int(m.get("step", 0)) + 1, int(m["steps"])), int(m["steps"])]
-	_subtitle.text = "Pick your next step on a lit path. Long-press or right-click any node for the full brief."
+	_subtitle.text = "Pick a lit node."
 	# Header: tickets, REQ, Threat (when a modifier is on), in one row (portrait: under the title).
 	var chips: HBoxContainer = HBoxContainer.new()
 	chips.name = "HeaderChips"

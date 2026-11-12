@@ -68,7 +68,7 @@ All effects of one play share the player's choices (the chosen zone / unit) and 
 
 | Field | Values |
 |---|---|
-| `trigger` | `ON_PLAY` resolves at Reveal · `IMMEDIATE` "Resolves immediately" in Deploy · `ON_DEPLOY` · `ON_DOWN` (units) · `ON_ELIMINATE` (this unit's kills on a unit card; any of yours on a perk) · `PASSIVE` · `START_OF_FIREFIGHT` · `END_OF_ROUND` · `ON_ENEMY_ARRIVE` (equipment traps) |
+| `trigger` | `ON_PLAY` resolves at Reveal · `IMMEDIATE` "Instant" (resolves in Deploy) · `ON_DEPLOY` · `ON_DOWN` (units) · `ON_ELIMINATE` (this unit's kills on a unit card; any of yours on a perk) · `PASSIVE` · `START_OF_FIREFIGHT` · `END_OF_ROUND` · `ON_ENEMY_ARRIVE` (equipment traps) |
 | `kind` | `DAMAGE`, `MODIFY_FIREPOWER` (± amount), `MODIFY_ARMOR`, `GRANT_COVER`, `REMOVE_COVER`, `GRANT_FIRST_SHOT`, `REMOVE_FIRST_SHOT`, `UNTARGETABLE_BY_PICK_FLANK`, `DRAW`, `REVEAL_RED_DOTS`, `REVEAL_DEPLOYMENTS`, `HIDE_FROM_INTEL`, `MOVE_UNIT`, `STREAK_BONUS`, `STREAK_THRESHOLD_MOD`, `COOLDOWN_MOD` (retired, rejected), `DESTROY_EQUIPMENT`, `SUMMON_UNIT` (needs `summon_card`, a UNIT), `SURVIVE_LETHAL`, `HEAL` (each target regains up to amount lost Armor) |
 | `target` | `SELF`, `OPERATOR`, `OWNER` (your side: draw, streak), `CHOSEN_ENEMY`, `CHOSEN_FRIENDLY`, `ENEMY_POINT_MAN`, `ENEMY_SECOND_IN_LINE`, `ALL_ENEMIES`, `ALL_FRIENDLIES`, `OTHER_FRIENDLIES`, `NEXT_FRIENDLY_ARRIVING`, `ARRIVING_ENEMY`, `ENEMY_EQUIPMENT`, `FRIENDLY_POINT_MAN` (your frontline unit; as a PASSIVE it follows the line), `MOST_DAMAGED_FRIENDLY` (Patch's rule: most lost Armor, ties front-most) |
 | `target_class` | Only units of this weapon class (`NONE` = any). Overwatch Training: `SNIPER`. |

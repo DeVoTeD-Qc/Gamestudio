@@ -946,7 +946,7 @@ func _setup_dock() -> void:
 	sb.border_width_bottom = 2
 	_dock.add_theme_stylebox_override(&"panel", sb)
 	_dock.visible = false
-	_dock.tooltip_text = "Selected card: tap to put it back"
+	_dock.tooltip_text = "Selected card (tap: put it back)"
 	# The dock IS the selected card: a tap on it = "tap the card again" (cancel); long press = rules.
 	var g: RefCounted = PressGesture.new(_dock)
 	g.drag_enabled = false

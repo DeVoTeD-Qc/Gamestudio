@@ -84,7 +84,7 @@ func _ready() -> void:
 	_si_chip.theme_type_variation = &"HudButton"
 	_si_chip.custom_minimum_size = Vector2(0, 64)
 	_si_chip.add_to_group(&"tap_target")
-	_si_chip.tooltip_text = "Standard Issue cards: the basic kit. Tap for what that means."
+	_si_chip.tooltip_text = "Standard Issue: basic kit cards, no trait."
 	_si_chip.pressed.connect(_open_si_info)
 	head.add_child(_si_chip)
 	head.move_child(_si_chip, 1)
@@ -282,7 +282,7 @@ func _operator_tile(r: RunProgress) -> Control:
 			"camo": String(BannerArtDB.camo_for_tier(1)), "banner": String(BannerArtDB.operator_art_id(item.id, 1))}
 	var tile: VBoxContainer = _tile_box("Operator_%s" % item.id, entry, "OPERATOR  ·  ALWAYS IN HAND", -1)
 	tile.set_meta(&"operator", true)
-	tile.tooltip_text = "%s: your Operator. It starts in your hand every match. Long-press / right-click: its rules." % item.display_name
+	tile.tooltip_text = "%s: your Operator. In your hand every match." % item.display_name
 	_wire_tile(tile, func() -> void:
 		var sp: Control = (load("res://scripts/ui/run/starter_panel.gd") as GDScript).new()
 		sp.set(&"run", r)

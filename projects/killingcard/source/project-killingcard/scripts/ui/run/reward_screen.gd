@@ -111,7 +111,7 @@ func _build() -> void:
 	# kc-onboard-ui: Retire "under More" (§5.2): a header button, so the 4 cards of a drop fit the phone.
 	retire_button = make_button("RETIRE", &"HudButton", 150)
 	retire_button.name = "RetireButton"
-	retire_button.tooltip_text = "Remove one card from your deck instead of taking one"
+	retire_button.tooltip_text = "Remove a card from your deck instead"
 	retire_button.pressed.connect(open_retire_picker)
 	_header.add_child(retire_button)
 	_header.move_child(retire_button, _deck_button.get_index())
@@ -221,12 +221,12 @@ func show_offer() -> void:
 			_subtitle.text = "%s levelled up to level %d. Tap an attachment to fit it. Fitted: %s." % [
 					primary, r.weapon_level + 1, RunFlow.names_of(r, r.attachments)]
 		RewardOffers.KIND_PERK:
-			_subtitle.text = "Tap a Perk to take it. Perk slots: %d of %d used (%s)." % [
+			_subtitle.text = "Take a Perk. Slots used: %d of %d (%s)." % [
 					r.perks.size(), r.config.perk_slots, RunFlow.names_of(r, r.perks)]
 		RewardOffers.KIND_DOCTRINE:
 			_subtitle.text = "Pick a trait: its sets count +1 for the rest of the run."
 		RewardOffers.KIND_REGROUP:
-			_subtitle.text = "After a loss: retire one card for free (deck %d, floor %d)." % [r.deck.size(), r.config.deck_floor]
+			_subtitle.text = "Lost: retire one card for free (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
 	if kind in RewardOffers.CARD_DROPS and bool(offer.get("retire", false)) and RevealGate.shown(RevealFlags.RETIRE) and not retire_mode:
 		retire_button.visible = true
 		retire_button.disabled = not r.can_retire()
@@ -284,13 +284,13 @@ func _after_build(key: String) -> void:
 func _drop_subtitle(r: RunProgress) -> String:
 	var picks: int = int(offer.get("picks", 1))
 	var taken: Array = offer.get("taken", [])
-	var head: String = "After a loss you still salvage a card. " if offer["kind"] == RewardOffers.KIND_SALVAGE else ""
+	var head: String = "Lost, but you salvage a card. " if offer["kind"] == RewardOffers.KIND_SALVAGE else ""
 	var what: String = ""
 	if taken.is_empty():
-		what = "Tap a card to add it to your deck" if picks <= 1 else "Tap %d cards to add them to your deck" % picks
+		what = "Take a card for your deck" if picks <= 1 else "Take %d cards for your deck" % picks
 	else:
-		what = "Tap 1 more card" if picks <= 1 else "Tap %d more cards" % picks
-	var s: String = "%s%s (%d cards now)." % [head, what, r.deck.size()]
+		what = "Take 1 more" if picks <= 1 else "Take %d more" % picks
+	var s: String = "%s%s (deck %d)." % [head, what, r.deck.size()]
 	if not taken.is_empty():
 		var names: PackedStringArray = []
 		for t: Dictionary in taken:
@@ -539,7 +539,7 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	_list_scroll.visible = true
 	_title.text = "RETIRE A CARD" if from_drop else _title.text
 	if from_drop:
-		_subtitle.text = "Pick the card to retire instead of taking one (deck %d, floor %d). BACK: the cards." % [r.deck.size(), r.config.deck_floor]
+		_subtitle.text = "Pick a card to retire instead (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
 		_skip_button.text = "BACK"
 	var opts: Array[Dictionary] = r.retire_options()
 	if opts.is_empty():
@@ -644,7 +644,7 @@ func _refresh_muster(r: RunProgress, n: int, note: String = "") -> void:
 		t.set_selected(on, "GOING HOME", "STAYS")
 	send_button.text = ("SEND %d HOME" % marked) if marked > 0 else "SEND NONE"
 	_subtitle.text = note if note != "" else \
-			"The quartermaster takes back Standard Issue kit: up to %d of your %d go home, deck %d > %d (floor %d). The most expensive are marked; tap a card to keep it or send it." % [
+			"Send up to %d of your %d Standard Issue cards home: deck %d > %d (min %d). Tap a card to keep or send it." % [
 				n, r.standard_issue_count(), r.deck.size(), r.deck.size() - marked, r.config.deck_floor]
 
 
@@ -821,10 +821,11 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 			vd["art_id"] = String(art)
 	view.set_card_data(vd)
 	_ignore_mouse(view)
-	var rules: String = card.text
+	# kc-ux-text: what the card does, not its keyword name again (the face shows "Flank" already):
+	# the keyword's rule ("Flank: Shoots the back-most enemy."), else the card's text.
+	var rules: String = CardInfo.rule_line(card).replace("\n", " ")
 	if rules == "":
-		var kws: Array[Dictionary] = CardInfo.keywords(card)
-		rules = "%s: %s" % [kws[0]["name"], kws[0]["text"]] if not kws.is_empty() else CardInfo.type_line(card)
+		rules = "No ability: %d FP, %d Armor." % [card.firepower, card.armor] if card.is_unit() else CardInfo.type_line(card)
 	var label: Label = tile.add_line(rules)
 	label.name = "RulesLabel"
 	label.set_meta(&"full_text", rules)

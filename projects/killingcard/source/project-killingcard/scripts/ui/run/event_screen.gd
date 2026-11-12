@@ -43,7 +43,7 @@ func _build() -> void:
 	var r: RunProgress = run()
 	event = RunV2Views.event_view(r)
 	_title.text = "EVENT"
-	_subtitle.text = "Pick one. Every result is printed on its button."
+	_subtitle.text = "Pick one. Each button says what it does."
 	var chips: HBoxContainer = HBoxContainer.new()
 	chips.name = "HeaderChips"
 	chips.add_theme_constant_override(&"separation", 12)
@@ -93,7 +93,6 @@ func _build() -> void:
 	var scene_l: Label = make_label(String(event.get("scene", "")), &"", true)
 	scene_l.name = "SceneText"
 	col.add_child(scene_l)
-	col.add_child(make_label("An event never costs a ticket without saying so. Odds are always printed.", &"HudSubtle", true))
 	# The options.
 	var opts: VBoxContainer = VBoxContainer.new()
 	opts.name = "Options"
@@ -233,7 +232,7 @@ func _set_leave_only(options: Array) -> void:
 		var r: String = String(o.get("reason", "")).strip_edges().trim_suffix(".")
 		if r != "" and not why.has(r):
 			why.append(r)
-	_subtitle.text = "None of these options is open to you now."
+	_subtitle.text = "No option is open to you now."
 	_confirm.text = "LEAVE"
 	_confirm.name = "ConfirmButton"
 	_confirm.disabled = false

@@ -869,10 +869,10 @@ func open_pause_menu() -> void:
 	var settings: Node = get_node_or_null(^"/root/Settings")
 	pause.open({
 		"context": ctx,
-		"hint": "Your run is saved. Quitting replays this match from the start next time." if run_words \
+		"hint": "Run saved. Quit now and this match restarts next time." if run_words \
 				else "Local test match: quitting ends it.",
 		"can_forfeit": state.phase != MatchState.Phase.ENDED,
-		"forfeit_hint": "Forfeit this match? It counts as a loss (-1 ticket)." if run_words \
+		"forfeit_hint": "Forfeit? It counts as a loss (-1 ticket)." if run_words \
 				else "Forfeit this match? It counts as a loss.",
 		"fast_animations": settings != null and bool(settings.get(&"fast_animations")),
 	})
@@ -1014,7 +1014,7 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 		res = state.mulligan(me_side, put_back)
 		_after_change()
 		if res["ok"]:
-			_screen.show_toast("Put back %d card%s and drew %d. Round 1: drag your Operator onto a column."
+			_screen.show_toast("Put back %d card%s, drew %d. Round 1: drag your Operator onto a column."
 					% [put_back.size(), "" if put_back.size() == 1 else "s", put_back.size()])
 		else:
 			_screen.show_toast(PlayText.describe(res)["reason"])
@@ -1123,7 +1123,7 @@ func _submit(intent: Dictionary) -> Dictionary:
 					_screen.show_toast("%s called in%s. %s" % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else "",
 							KillstreakFx.when_text(item.id)])
 			else:
-				_screen.show_toast("%s queued%s. It resolves at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
+				_screen.show_toast("%s planned%s: it goes off at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
 	else:
 		_screen.show_toast(PlayText.describe(res, _ctx())["reason"])
 		_show_selection()
@@ -1285,7 +1285,7 @@ func select_agile(uid: int) -> void:
 	selection = {"kind": &"agile", "uid": uid}
 	target_uid = -1
 	_show_selection()
-	_screen.show_toast("%s is Agile: tap an adjacent column to move it there (free, once per round)." % u.card.display_name)
+	_screen.show_toast("%s (Agile): tap an adjacent column to move it. Free, once a round." % u.card.display_name)
 
 
 func _enemy_zone(uid: int) -> int:
@@ -1472,7 +1472,7 @@ func _use_operator_card() -> void:
 		return
 	var u: RulesUnit = state.sides[me_side].operator_unit
 	var where: String = MatchSnapshot.ZONE_LABELS[u.zone] if u != null and u.is_on_board() else MatchSnapshot.ZONE_LABELS[state.projected_operator_zone(me_side)]
-	_screen.show_toast("Your Operator is deployed in column %s. Drag it on the board (move icon) to move it." % where)
+	_screen.show_toast("Your Operator is in column %s. Drag it (move icon) to move it." % where)
 
 
 ## kc-loadout-clean: a drag that starts on your unit with the MOVE chip: the Operator's Rotate or an
@@ -1521,7 +1521,7 @@ func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
 			elif u != null and u.is_operator and MatchSnapshot.can_move(state, me_side, u):
 				# kc-loadout-clean: tap-then-tap fallback for the drag: the Operator's Rotate.
 				select_operator()
-				_screen.show_toast("Tap a neighbouring column to move your Operator there (or drag it).")
+				_screen.show_toast("Tap an adjacent column to move your Operator (or drag it).")
 		return
 	if selection.get("kind") == &"agile" and slot_side == &"player" and uid == int(selection["uid"]):
 		clear_selection()
@@ -1814,7 +1814,7 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 					"cls": String(CardInfo.CLASS_WORDS.get(card.weapon_class, "")).to_upper(), "pending": true,
 					"keywords": CardInfo.icon_keywords(CardInfo.keywords(card))}
 			MatchSnapshot._banner_fields(e3, card, null, s, state, uid)
-			open_card_inspector(card, "friend", "Queued for %s (PLAN). It arrives at Reveal." % ZONE_WORDS[zone], e3, me_side)
+			open_card_inspector(card, "friend", "Planned for %s: it arrives at Reveal." % ZONE_WORDS[zone], e3, me_side)
 			return
 
 
@@ -2092,7 +2092,7 @@ func _open_field(zone: int, side: int, uid: int) -> void:
 	if rc.card.hidden:
 		status = "Hidden trap: never overrun."
 	elif risk:
-		status = "OVERRUN RISK: the %s controls this column. Lost at end of round." % ("rival" if side == me_side else "you")
+		status = "OVERRUN RISK: %s this column. Lost at end of round." % ("the rival controls" if side == me_side else "you control")
 	open_card_inspector(rc.card, "friend" if side == me_side else "enemy", status, {}, side)
 
 
@@ -2117,7 +2117,7 @@ func open_item_inspector(item_id: StringName, side: int = -1) -> void:
 	if check["ok"]:
 		status = "Ready: tap it, then a target." if is_ks else "Ready."
 	elif is_ks and not me.streak_tray.has(item.id):
-		status = "Streak %d of %d: %d more elimination%s to earn it." % [me.streak, threshold, maxi(0, threshold - me.streak),
+		status = "Streak %d of %d: %d more elimination%s." % [me.streak, threshold, maxi(0, threshold - me.streak),
 				"" if threshold - me.streak == 1 else "s"]
 	else:
 		status = String(PlayText.describe(check, _item_ctx(item))["reason"])
@@ -2162,7 +2162,7 @@ func _open_operator(side: int) -> void:
 	if op.is_on_board():
 		where = "In %s: FP %d, Armor %d/%d." % [ZONE_WORDS[op.zone], state.firepower_of(op), op.armor, op.max_armor(state.round_number)]
 	elif side == me_side and s.operator_can_deploy:
-		where = "Off the board: drag it onto a column (or tap it, then a column)."
+		where = "Not deployed: drag it onto a column."
 	var cost: int = state.operator_cost()
 	var respawn_cost: int = maxi(0, state.config.operator_cost)
 	if cost > 0:
@@ -2272,7 +2272,7 @@ func _add_v2_line(e: Dictionary) -> void:
 		"deck_reshuffled":
 			# kc-econ: the classic deckbuilder reshuffle, said in words (both sides; it is public).
 			var n: int = int(e.get("count", 0))
-			text = ("Discard shuffled into a new deck (%d cards)" if side == &"player" else "Rival shuffled their discard into a new deck (%d cards)") % n
+			text = ("Discard reshuffled: new deck of %d" if side == &"player" else "Rival reshuffled: new deck of %d") % n
 		"terrain_triggered":
 			text = String(e.get("what", ""))
 			if text == "":

@@ -87,7 +87,7 @@ func _build() -> void:
 	_body.resized.connect(fit)
 	_squad_button = make_button("OPERATOR & DECK", &"HudButton", 200)
 	_squad_button.name = "SquadButton"
-	_squad_button.tooltip_text = "Pick your starting Operator and see the starter deck"
+	_squad_button.tooltip_text = "Your Operator and the starter deck"
 	_squad_button.pressed.connect(open_starter)
 	_fill_kit()
 	# Killstreak pool: art, name, streak cost and a one-line effect (long press: the full rules).
@@ -215,7 +215,7 @@ func _fill_kit() -> void:
 			line.clip_text = true
 			line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			info.add_child(line)
-			info.tooltip_text = "%s: %s. Long-press for the details." % [item.display_name, RunFlow.item_effect_line(item)]
+			info.tooltip_text = "%s: %s." % [item.display_name, RunFlow.item_effect_line(item).trim_suffix(".")]
 			wire_inspect_control(info, func() -> void: inspector().open(_operator_info(item)))
 	_fill_v2(kit, r)
 
@@ -300,7 +300,7 @@ func _fill_v2(kit: VBoxContainer, r: RunProgress) -> void:
 	if not locked.is_empty():
 		_locked_chip = make_button("%d LOCKED" % locked.size(), &"HudButton", 120)
 		_locked_chip.name = "LockedModifiers"
-		_locked_chip.tooltip_text = "The modifiers you have not unlocked yet, and how to unlock them"
+		_locked_chip.tooltip_text = "Locked modifiers and how to unlock them"
 		_locked_chip.pressed.connect(open_locked_modifiers)
 		head.add_child(_locked_chip)
 	for m: Dictionary in mods:
@@ -321,7 +321,7 @@ func _fill_v2(kit: VBoxContainer, r: RunProgress) -> void:
 		_mod_tiles[id] = t
 	_threat_label.text = "MODIFIERS · THREAT %d" % RunV2Views.threat_of(mods)
 	if _mod_tiles.is_empty():
-		var none: Label = make_label("None unlocked yet. Win runs to unlock them.", &"HudSubtle", true)
+		var none: Label = make_label("Win runs to unlock them.", &"HudSubtle", true)
 		none.name = "NoModifiers"
 		kit.add_child(none)
 
@@ -441,7 +441,7 @@ func _refresh() -> void:
 		tile.set_selected(id in picked, "PICKED", "TAP TO PICK")
 	# kc-loadout-clean: the subtitle says what BEGIN RUN still needs (tap a picked tile to drop it).
 	if picked.size() == slots:
-		_subtitle.text = "%d of %d killstreaks picked  ·  tap one to swap it" % [picked.size(), slots]
+		_subtitle.text = "%d of %d killstreaks · tap one to swap" % [picked.size(), slots]
 	else:
 		_subtitle.text = "Pick %d killstreaks  ·  %d of %d picked" % [slots, picked.size(), slots]
 	_begin_button.disabled = picked.size() != slots

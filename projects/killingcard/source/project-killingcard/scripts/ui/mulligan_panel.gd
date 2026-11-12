@@ -80,8 +80,8 @@ func open(hand: Array) -> void:
 	_scroll.custom_minimum_size = Vector2(minf(total_w, room_w), view_size.y + CARD_PAD * 2.0 + (12.0 if total_w > room_w else 0.0))
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if total_w > room_w else ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.scroll_horizontal = 0
-	_hint.text = ("Tap a card to put it back (free, once) · long-press for its rules" if total_w <= room_w
-			else "Tap a card to put it back (free, once) · long-press for its rules · swipe for more")
+	_hint.text = ("Tap cards to put back (free, once)." if total_w <= room_w
+			else "Tap cards to put back (free, once). Swipe for more.")
 	for entry: Dictionary in hand:
 		var b: Button = Button.new()
 		var uid: int = int(entry.get("uid", -1))

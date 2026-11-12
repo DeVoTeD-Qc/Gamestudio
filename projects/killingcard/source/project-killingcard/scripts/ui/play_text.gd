@@ -20,11 +20,11 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 	var kind: StringName = ctx.get("kind", &"card")
 	match code:
 		&"wrong_phase":
-			return _t("WAIT", "Wrong phase: you can only play cards during Deploy.")
+			return _t("WAIT", "Wrong phase: play cards in Deploy.")
 		&"already_ready":
 			return _t("READY", "You already pressed READY.")
 		&"not_in_hand":
-			return _t("", "That card is not in your hand any more.")
+			return _t("", "That card left your hand.")
 		&"not_enough_supply":
 			return _t("NEED %d SUPPLY" % int(data.get("cost", 0)),
 					"Not enough Supply: %s costs %d, you have %d." % [label, int(data.get("cost", 0)), int(data.get("supply", 0))])
@@ -44,7 +44,7 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 		&"target_out_of_range":
 			return _t("OUT OF RANGE", "Pick an enemy in your Operator's column.")
 		&"no_legal_target":
-			return _t("NO TARGET", "%s has no target in reach right now." % label)
+			return _t("NO TARGET", "%s has no target in reach." % label)
 		&"same_zone":
 			if kind == &"operator":
 				return _t("HERE NOW", "Your Operator is already here.")
@@ -58,7 +58,7 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 		&"no_operator":
 			return _t("", "You have no Operator.")
 		&"cant_place", &"already_placed":
-			return _t("", "Your Operator can't be placed now.")
+			return _t("", "Your Operator can't deploy now.")
 		&"not_in_tray":
 			var t: int = int(ctx.get("threshold", 0))
 			return _t("LOCKED", "%s is not earned yet: reach a streak of %d." % [label, t] if t > 0 else "%s is not earned yet." % label)
@@ -67,9 +67,9 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 		&"nothing_to_undo":
 			return _t("", "Nothing to undo.")
 		&"already_resolved":
-			return _t("", "That play already resolved, it can't be undone.")
+			return _t("", "Already resolved: it can't be undone.")
 		&"already_moved":  # kc-wip-impl Agile
-			return _t("MOVED", "%s already has a move order this round (Agile: once per round)." % label)
+			return _t("MOVED", "%s already moves this round (Agile: once a round)." % label)
 		&"not_agile":
 			return _t("", "Only an Agile unit can move like this.")
 	return _t("", sentence(String(check.get("reason", ""))))
@@ -81,7 +81,7 @@ static func button_state(check: Dictionary, item: LoadoutItem, uses_left: int = 
 		if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 			return "CALL IN"
 		if item != null and item.supply_cost > 0:
-			return "%d SUP" % item.supply_cost
+			return "%d SUPPLY" % item.supply_cost
 		return "%d LEFT" % uses_left if uses_left > 0 else "READY"
 	var data: Dictionary = check.get("data", {})
 	match check.get("code", &""):

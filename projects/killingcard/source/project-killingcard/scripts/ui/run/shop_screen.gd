@@ -43,7 +43,7 @@ func screen_id() -> StringName:
 func _build() -> void:
 	shop = RunV2Views.shop_view(run())
 	_title.text = "SHOP"
-	_subtitle.text = "Spend REQ."
+	_subtitle.text = ""
 	_req_chip = make_req_chip(int(shop.get("req", RunV2Views.req(run()))))
 	_header.add_child(_req_chip)
 	wire_inspect_control(_req_chip, func() -> void: inspector().open({"title": "Requisition (REQ)", "type": "currency",
