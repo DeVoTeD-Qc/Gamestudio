@@ -1189,35 +1189,34 @@ function sheetHTML() {
   return '';
 }
 
-const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>Goal</h4><ul><li>Bring your rival from ${T.hp} Health to 0. At the <b>hard end</b> (after round ${T.hardEnd}) the most Health wins.</li><li>Build a deck whose turns get stronger and stronger. <b>Threat</b> shows the damage you can expect this turn; the <b>deck bar</b> shows how much of your deck is yours.</li></ul>
+const RULES = (() => { const T = WD.TUNE; const [r1, r2] = T.rally; return `<h4>Goal</h4><ul><li>Take your rival from ${T.hp} Health to 0. After round ${T.hardEnd}, the most Health wins.</li>
+<li><b>Inspect anything</b>: hold it (touch) or right click it (mouse).</li></ul>
 <h4>Your turn</h4><ul>
-<li><b>Ready</b> (automatic): your Loadout cards fire, then your location's bonus.</li>
-<li><b>Play</b> cards (or <b>Play all</b>): they give ${ic('move', 'c-move')} Movement, ${ic('prec', 'c-prec')} Precision, ${ic('intel', 'c-intel')} Intel, ${ic('ammo', 'c-ammo')} extra shots and ${ic('def', 'c-def')} Armor.</li>
-<li><b>Move</b> once: 1 Movement per space. Arriving gives that location's bonus.</li>
-<li><b>Loot</b>: up to ${T.buyCap} buys: the top card where you stand, next door (+${T.adjCost} Intel) or the Buy Station (${T.supplyCost} Intel). Cycle a stack: 1 Intel or 1 Movement. <b>Hot Drop</b>: in rounds 1–${T.hotDrop} new cards are delivered to your next hand.</li>
-<li><b>Field Promotion</b>: once per turn, ${promoPrice()} turn${T.promoteCost && T.promoteBuy ? '' : 's'} a starter into a squad basic of your choice (Buy Station, or the <b>Promote</b> chip).</li>
-<li><b>Fire</b> (below), then <b>End turn</b>: unused Movement becomes Armor (up to ${T.digIn}), discard, draw 5 (6 at ${T.lowHp} Health or less).</li>
-<li><b>Spoils</b>: if you dealt damage this turn, or were hit since your last turn, End turn first shows ${T.spoils} loot cards (one of your main squad when there is one): take 1 for free, or skip.</li></ul>
-<h4>Squad Tactics</h4><ul>
-<li>12 loot cards marked <b>TACTIC</b> add a new kind of play: <b>Charge</b> (hits at distance 0 +1), <b>Follow Through</b> (your next hit draws 2), <b>Adrenaline</b> (returns to your hand when you are hit), <b>Intel Sweep</b> (arrange your top 4), <b>Expose</b> (ignore cover, Armor and Reactions), <b>Hold the Angle</b> (fire on your rival's turn if they end in range, with up to ${T.overwatchCap} saved Precision), <b>Fortify</b> (keep your Armor), <b>Field Medic</b> (heal 3), <b>Suppressing Barrage</b> (their next turn: −1 Movement, −2 Precision), <b>Jury-Rig</b> (repeat the card you played just before), <b>Sentry Turret</b> (Loadout: a free 2-damage shot every Ready) and <b>Contraband Run</b> (buy from any stack).</li>
-<li>The chips under your Threat show the ones in play, yours and your rival's (⚠ means it can hurt you).</li></ul>
-<h4>Your engine</h4><ul>
-<li><b>Squads.</b> Every loot card is ${roleB('assault')} Assault (hits harder), ${roleB('recon')} Recon (aim, Mark), ${roleB('support')} Support (extra shots, Steady) or ${roleB('engineer')} Engineer (Intel, buys, Scrap). The squad counters show how many you own.</li>
-<li><b>Squad</b> line: pays once <b>for each other card of its squad</b> in play this turn: ×1, ×2, at most ×${T.squadCap}. Order doesn't matter. In your hand a card shows <b>×N</b> when it would pay.</li>
-<li><b>Rally</b>: ${r1} and ${r2} cards of one squad in play pay a bonus, once per turn each. ${WD.SQUADS.map(a => `${ARCH_SHORT[a]} ${r1}: ${WD.RALLY_TEXT[a][r1]}; ${r2}: ${WD.RALLY_TEXT[a][r2]}`).join('. ')}.</li>
-<li><b>Loadout</b> cards stay on the table (${T.loadoutSlots} slots). They fire at the start of every turn and count for Squad and Rally. A third one replaces a slot or is used once.</li>
-<li><b>Inspect anything</b>: hold it (touch), right click or hover it (mouse).</li>
-<li><b>Mark</b>: next shot needs 1 fewer Hit Marker per step. <b>Pierce</b>: ignore cover. <b>Steady</b>: each shot needs 1 fewer Hit Marker per step. <b>Scrap</b>: remove a card from the game (deck never below ${T.minDeck}). <b>+1 Buy</b>: one more buy. <b>Reaction</b>: in your hand when hit, less damage.</li></ul>
+<li><b>Ready</b>: your Loadout cards fire, then your location's bonus.</li>
+<li><b>Play</b> cards (or <b>Play all</b>) for ${ic('move', 'c-move')} Movement, ${ic('prec', 'c-prec')} Precision, ${ic('intel', 'c-intel')} Intel, ${ic('ammo', 'c-ammo')} extra shots and ${ic('def', 'c-def')} Armor.</li>
+<li><b>Move</b> once: 1 Movement per location. Arriving gives that location's bonus.</li>
+<li><b>Buy</b> up to ${T.buyCap}: the top card where you stand, next door (+${T.adjCost} Intel) or the Buy Station (${T.supplyCost} Intel). <b>Cycle</b> a stack: 1 Intel or 1 Movement. <b>Hot Drop</b>: in rounds 1–${T.hotDrop}, new cards join your next hand.</li>
+<li><b>Promote</b> once a turn: ${promoPrice()} turns a starter into a squad basic.</li>
+<li><b>Fire</b>, then <b>End turn</b>: unused Movement becomes Armor (max ${T.digIn}); discard; draw 5 (6 at ${T.lowHp} Health or less).</li>
+<li><b>Spoils</b>: if you dealt damage or were hit, End turn first offers ${T.spoils} loot cards. Take 1 free, or skip.</li></ul>
 <h4>Firing</h4><ul>
-<li>One gun; buying a gun swaps it. Your rival must be in its <b>Range</b> (every gun fires at distance 0).</li>
-<li><b>Commit</b> Precision: reveal 1 card per Precision, <b>up to ${T.aimCap}</b>, and count the ${ic('hm')} Hit Markers. Each Precision beyond ${T.aimCap} is <b>Power</b>: +${T.aimPower} damage if the shot hits. FIRE uses the suggested commit (★); <b>Aim</b> changes it. The % on FIRE is your chance to hit; hold or right click FIRE to see why.</li>
-<li><b>Recoil</b>: after the shot, the gun costs that much more Precision.</li>
-<li><b>Damage ladder</b>: reach the first step to hit, the second for a big hit. <b>Cover</b>: +${T.coverNeed} Hit Marker on every step (Pierce and Expose ignore it). <b>Long range</b> (distance ${T.longFrom}+): +${T.longNeed}. Mark and Steady: −1 each. <b>Close quarters</b> (same location): no Armor. Reactions, then Armor, reduce the damage; a hit deals at least 1.</li></ul>
+<li>One gun; buying a gun swaps it. The rival must be in its <b>range</b> (every gun fires at distance 0).</li>
+<li><b>Aim</b>: 1 Precision reveals 1 card, up to ${T.aimCap}. Count the ${ic('hm')} Hit Markers. Extra Precision is <b>Power</b>: +${T.aimPower} damage on a hit. <b>Recoil</b> costs more Precision.</li>
+<li><b>Damage ladder</b>: reach a step to deal its damage. <b>Cover</b> +${T.coverNeed} Hit Marker, <b>long range</b> (distance ${T.longFrom}+) +${T.longNeed}; <b>Mark</b> and <b>Steady</b> −1. <b>Close quarters</b> (distance 0): Armor ignored. Reactions, then Armor, cut damage; a hit deals at least 1.</li>
+<li>The % on FIRE is your chance to hit. Hold or right click FIRE to see why.</li></ul>
+<h4>Squads</h4><ul>
+<li>${roleB('assault')} Assault hits harder, ${roleB('recon')} Recon aims (Mark), ${roleB('support')} Support adds shots and Steady, ${roleB('engineer')} Engineer brings Intel, buys and Scrap.</li>
+<li><b>Squad</b> line: pays once per other card of its squad in play, max ×${T.squadCap}. A hand card shows <b>×N</b> when it would pay.</li>
+<li><b>Rally</b> at ${r1} and ${r2} cards of one squad in play, once a turn each. ${WD.SQUADS.map(a => `${ARCH_SHORT[a]} ${r1}: ${WD.RALLY_TEXT[a][r1]}; ${r2}: ${WD.RALLY_TEXT[a][r2]}`).join('. ')}.</li>
+<li><b>Loadout</b> cards stay on the table (${T.loadoutSlots} slots), fire every Ready and count for Squad.</li>
+<li><b>Tactics</b> (12 loot cards) change a rule; their text says how. Chips show the ones in play (⚠ = it can hurt you).</li></ul>
+<h4>Keywords</h4><ul>
+<li><b>Mark</b>: next shot needs 1 fewer Hit Marker. <b>Steady</b>: every shot this turn needs 1 fewer. <b>Pierce</b>: ignore cover. <b>Scrap</b>: remove a card from the game (deck never below ${T.minDeck}). <b>+1 Buy</b>: one more buy. <b>Reaction</b>: cuts damage when you are hit with it in hand.</li></ul>
 <h4>The circle</h4><ul>
-<li>${T.zones} locations in a row, each with a 3-card loot stack; a fresh card lands on top each round (2 in 3 match the location's squad).</li>
-<li>Gas closes an end location after rounds ${T.closeAfter.join(', ')} (each plate shows <b>gas R<i>n</i></b>). After round ${T.closeAfter[T.closeAfter.length - 1]} one location is left: the <b>final circle</b>, where the storm hits both for ${T.finalStorm.join(', ')}.</li>
-<li>Caught outside at round end: ${T.gasDmg} damage (+1 per extra space), then you are pushed back in.</li></ul>
-<h4>Operator rank</h4><ul><li>Matches vs the AI earn XP; ranks unlock the <b>Daily Drop</b> and <b>Operations</b> (match variants for both players) and insignia. Variety, never power. Saved on this device.</li></ul>`; })();
+<li>${T.zones} locations, each with a ${T.stackSize}-card loot stack; a fresh card lands on top each round.</li>
+<li>Gas closes an end location after rounds ${T.closeAfter.join(', ')} (plates show <b>gas R<i>n</i></b>). In the gas at round end: ${T.gasDmg} damage (+1 per extra location), then you are pushed in.</li>
+<li><b>Final circle</b>: the storm hits both for ${T.finalStorm.join(', ')} at each round end.</li></ul>
+<h4>Rank</h4><ul><li>Matches vs the AI earn XP. Ranks unlock the <b>Daily Drop</b>, <b>Operations</b> and insignia: variety, never power.</li></ul>`; })();
 
 // ---------- flow ----------
 function turnBanner(txt, sub, cls) { if (ui.sheet && ui.sheet.type !== 'report') { ui.pendingTb = [txt, sub, cls]; return; } ui.pendingTb = null; ui.tb = { txt, sub, cls }; clearTimeout(ui.tbT); ui.tbT = setTimeout(() => { ui.tb = null; renderLayer(); }, 1500); renderLayer(); }

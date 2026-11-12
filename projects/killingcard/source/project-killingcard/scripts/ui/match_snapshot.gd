@@ -33,8 +33,12 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	var terrains: Array = RunV2Views.terrain_view(state)
 	for z: int in MatchState.ZONE_COUNT:
 		var friendly: Array = []
+		var deploy_now: bool = state.phase == MatchState.Phase.DEPLOY and not me.ready
 		for u: RulesUnit in me.lines[z]:
-			friendly.append(unit_entry(state, u, me))
+			var ue: Dictionary = unit_entry(state, u, me)
+			# kc-loadout-clean: the MOVE chip: this unit can be dragged to another column now.
+			ue["movable"] = deploy_now and can_move(state, viewer, u)
+			friendly.append(ue)
 		friendly.append_array(_queued_arrivals(state, me, z))
 		var enemy: Array = []
 		for u: RulesUnit in foe.lines[z]:
@@ -133,6 +137,22 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 	snap["boss"] = RunV2Views.boss_view(state)
 	snap["terrain"] = RunV2Views.terrain_view(state)
 	return snap
+
+
+## kc-loadout-clean: true when `u` (side `viewer`, on the board) can move to a neighbour column in
+## this Deploy: the Operator's Rotate, or an Agile unit's free move (MatchState decides).
+static func can_move(state: MatchState, viewer: int, u: RulesUnit) -> bool:
+	if u == null or not u.is_on_board() or (not u.is_operator and not u.agile):
+		return false
+	if u.is_operator and state.projected_operator_zone(viewer) != u.zone:
+		return false  # it already has a Rotate order this round (the order shows where it goes)
+	for z: int in [u.zone - 1, u.zone + 1]:
+		if not state.is_zone(z):
+			continue
+		var intent: Dictionary = RulesIntent.rotate(z) if u.is_operator else RulesIntent.move_unit(u.uid, z)
+		if bool(state.can_submit(viewer, intent)["ok"]):
+			return true
+	return false
 
 
 ## {uid, name, cls, fp, armor, armor_max, operator, keywords, art, banner, bolt, front_kw, elite}:

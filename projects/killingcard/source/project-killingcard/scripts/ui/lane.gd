@@ -28,6 +28,11 @@ signal tapped(zone_id: StringName, slot_side: StringName, uid: int)
 signal long_pressed(zone_id: StringName, slot_side: StringName, uid: int)
 ## Mouse over a unit banner (desktop hover zoom); null when it leaves.
 signal hovered(slot: Node)
+## kc-loadout-clean: a press on one of your movable units (MOVE chip) that moved past 10 px: drag it
+## to another column (positions are canvas coordinates).
+signal unit_drag_started(zone_id: StringName, uid: int, pos: Vector2)
+signal unit_drag_moved(pos: Vector2)
+signal unit_drag_ended(pos: Vector2)
 
 ## kc-ui-wire2: the UI kit FRONT tab plate (desktop only; the phone keeps its 5 px bar).
 const FRONT_TAB_PIECE: StringName = &"frm_front_tab"
@@ -121,6 +126,11 @@ func _ready() -> void:
 		_hover_slot = null
 		var hit: Array = _slot_hit(pos, true)
 		long_pressed.emit(zone_id, hit[0], hit[1]))
+	_gesture.drag_started.connect(func(pos: Vector2) -> void:
+		set_peek(null)
+		unit_drag_started.emit(zone_id, _drag_uid, pos))
+	_gesture.drag_moved.connect(func(pos: Vector2) -> void: unit_drag_moved.emit(pos))
+	_gesture.drag_ended.connect(func(pos: Vector2) -> void: unit_drag_ended.emit(pos))
 	resized.connect(_layout)
 
 
@@ -135,6 +145,7 @@ func _make_slot(slot_side: StringName, row: int) -> Node:
 
 
 var _hover_slot: Node = null
+var _drag_uid: int = -1
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -154,6 +165,12 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.pressed:
 			var held: Node = slot_at(get_global_transform() * mb.position)
 			set_peek(held if held != null and held.kind == held.Kind.UNIT else null)
+			# kc-loadout-clean: only a movable unit of yours can be dragged (the board stays still
+			# under any other press, so a tap or a long press works as before).
+			var can_drag: bool = held != null and held.kind == held.Kind.UNIT and held.side == &"player" and bool(held.movable)
+			_drag_uid = int(held.slot_uid) if can_drag else -1
+			if _gesture != null and not _gesture.pressed:
+				_gesture.drag_enabled = can_drag
 		elif mb.device == InputEvent.DEVICE_ID_EMULATION:
 			set_peek(null)  # touch: the peek lasts while the finger holds the card
 	if _gesture != null and _gesture.handle(event):

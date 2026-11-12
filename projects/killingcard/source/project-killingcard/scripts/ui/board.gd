@@ -13,6 +13,10 @@ signal lane_tapped(zone: int, slot_side: StringName, uid: int)
 signal lane_long_pressed(zone: int, slot_side: StringName, uid: int)
 ## kc-cards-impl (H1): a tap on the board outside the columns (cancels a selected card).
 signal empty_tapped
+## kc-loadout-clean: a movable unit of yours is dragged (Lane.unit_drag_*; canvas positions).
+signal unit_drag_started(zone: int, uid: int, pos: Vector2)
+signal unit_drag_moved(pos: Vector2)
+signal unit_drag_ended(pos: Vector2)
 
 @onready var _lanes: Array[Node] = [%LaneLeft, %LaneMid, %LaneRight]
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
@@ -49,6 +53,12 @@ func _ready() -> void:
 			_hide_zoom()
 			lane_long_pressed.emit(zone, slot_side, uid))
 		_lanes[i].hovered.connect(_on_hovered)
+		_lanes[i].unit_drag_started.connect(func(_id: StringName, uid: int, pos: Vector2) -> void:
+			_hover_id += 1
+			_hide_zoom()
+			unit_drag_started.emit(zone, uid, pos))
+		_lanes[i].unit_drag_moved.connect(func(pos: Vector2) -> void: unit_drag_moved.emit(pos))
+		_lanes[i].unit_drag_ended.connect(func(pos: Vector2) -> void: unit_drag_ended.emit(pos))
 	_zoom = BannerView.new()
 	_zoom.name = "HoverZoom"
 	_zoom.dim_back = false

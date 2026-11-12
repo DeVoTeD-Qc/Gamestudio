@@ -26,6 +26,10 @@ var revealed: String = ""
 ## The unit entry shown (match_snapshot.gd unit_entry), {} when none.
 var entry: Dictionary = {}
 var banner: BannerView
+## kc-loadout-clean: the MOVE chip (four-way arrow) on a unit that can be dragged to another column.
+var move_chip: Control = null
+## True while this slot's unit can move (snapshot "movable").
+var movable: bool = false
 
 
 func _init() -> void:
@@ -37,12 +41,29 @@ func _init() -> void:
 	banner.show_name = false
 	banner.readability = true  # kc-hand-dim: the same dimmed art as the hand cards
 	add_child(banner)
+	move_chip = Control.new()
+	move_chip.name = "MoveChip"
+	move_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	move_chip.visible = false
+	move_chip.draw.connect(func() -> void:
+		var SynergyGlyphs: GDScript = load("res://scripts/ui/synergy_glyphs.gd")
+		SynergyGlyphs.draw_move_chip(move_chip, Rect2(Vector2.ZERO, move_chip.size), Color("#2EC4B6")))
+	banner.add_child(move_chip)
 	resized.connect(_fit)
 
 
 func _fit() -> void:
 	banner.size = size
+	_place_move_chip()
 	queue_redraw()
+
+
+## Top-right corner of the banner, a third of its height (18..30 px).
+func _place_move_chip() -> void:
+	var d: float = clampf(roundf(size.y * 0.42), 18.0, 30.0)
+	move_chip.size = Vector2(d, d)
+	move_chip.position = Vector2(size.x - d - 3.0, 3.0)
+	move_chip.queue_redraw()
 
 
 func set_compact(value: bool) -> void:
@@ -58,6 +79,11 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 	slot_uid = int(unit.get("uid", -1))
 	pending = bool(unit.get("pending", false))
 	banner.show_unit(unit, unit_side, is_point)
+	movable = unit_side == &"player" and bool(unit.get("movable", false)) and not pending
+	move_chip.visible = movable
+	if movable:
+		_place_move_chip()
+		banner.move_child(move_chip, -1)
 	queue_redraw()
 
 
@@ -65,6 +91,8 @@ func show_unit(unit: Dictionary, unit_side: StringName, is_point: bool) -> void:
 ## Recon Drone / Callout showed the card, and the back says SPOTTED).
 func show_incoming(revealed_name: String = "") -> void:
 	side = &"enemy"
+	movable = false
+	move_chip.visible = false
 	kind = Kind.INCOMING
 	slot_uid = -1
 	pending = false
@@ -76,6 +104,8 @@ func show_incoming(revealed_name: String = "") -> void:
 
 func show_empty(slot_side: StringName) -> void:
 	side = slot_side
+	movable = false
+	move_chip.visible = false
 	kind = Kind.EMPTY
 	revealed = ""
 	slot_uid = -1
