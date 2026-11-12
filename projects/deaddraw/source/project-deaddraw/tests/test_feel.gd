@@ -413,9 +413,12 @@ func test_gun_card_shows_the_kill_stack() -> void:
 	eq(gv.stack_cards.size(), 3, "3 stack cards")
 	eq(gv.stack_cards[2].big_label.text, "5", "top kill's number")
 	check(not gv.stack_cards[0].payload.is_empty(), "each stack card is inspectable")
-	# dd-ux-v4: one kill socket per kill the gun holds, side by side, in kill order
+	# dd-gun-tile: one kill socket per kill the gun holds, a column right of the art, bottom-up in kill order
 	await tree.process_frame
-	check(gv.stack_cards[1].position.x > gv.stack_cards[0].position.x + gv.stack_cards[0].size.x - 1.0, "each kill has its own socket, left to right")
+	await tree.process_frame
+	check(gv.stack_cards[1].position.y + gv.stack_cards[1].size.y <= gv.stack_cards[0].position.y + 1.0, "each kill has its own socket, bottom-up")
+	check(gv.stack_area.get_global_rect().position.x >= gv.art_band.get_global_rect().end.x - 1.0, "the kill column is right of the gun art")
+	check(gv.stat_mark == null and gv.find_child("CapMark", true, false) == null, "no capacity mark on the gun row: the column is the capacity")
 	eq(gv.stack_area.get_child_count(), 4, "4 sockets for a 4-kill gun (3 filled, the next one)")
 	check(gv.find_child("NextSocket", true, false) != null, "the next socket shows what it accepts")
 	check(not gv.payload.is_empty() and str(gv.payload["title"]) == "Hunting Rifle", "gun zoom")

@@ -403,7 +403,8 @@ class Socket:
 			_draw_next_text()
 
 	func _draw_next_text() -> void:
-		var fs: int = int(clampf(minf(size.x * 0.34, size.y * 0.3), 11.0, 24.0))
+		# dd-gun-tile: the gun row's kill column has wide, short sockets: the height allows more
+		var fs: int = int(clampf(minf(size.x * 0.34, size.y * 0.42), 11.0, 24.0))
 		while fs > 9 and _font().get_string_size(next_text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > size.x - 6.0:
 			fs -= 1
 		draw_num(self, next_text, size * 0.5, fs, BURST_YELLOW, Color(INK, 0.9), 3)

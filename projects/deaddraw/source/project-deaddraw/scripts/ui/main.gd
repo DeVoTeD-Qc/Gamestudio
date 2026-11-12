@@ -1520,6 +1520,9 @@ func _build_guns(run: DDRun, row: bool, gun_h: float, width: float) -> Control:
 		spec["chal_h"] = 22.0
 		# landscape: the challenge line sits beside a compact Full set plate (the art keeps its band)
 		spec["chal_inline"] = not row
+		# dd-gun-tile: a short tile (landscape phone) runs the kill column its full height; a taller one
+		# (desktop) keeps the plate + challenge row the tile's full width under the art and the column
+		spec["kill_col_full"] = not row and tile_h < 260.0
 		var gv: DDGunView = DDGunView.new()
 		gv.setup_gun(spec)
 		gv.size_flags_horizontal = Control.SIZE_EXPAND_FILL

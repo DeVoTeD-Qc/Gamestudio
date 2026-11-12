@@ -12,6 +12,7 @@
 #   (the union of every cut-out) in the rect, capped at the backdrop's cover scale, with the canvas centre on
 #   the texture's anchor (50% / 52%). So in a given rect a pistol is always smaller than a rifle, and no
 #   weapon is ever cut, whatever the rect's shape (phones crop the backdrop, never the weapon).
+#   dd-gun-tile: `fit_own` (the gun row only) sizes the cut-out to the rect by its own alpha box instead.
 #   Performance: low. Three draw_texture_rect_region calls at most, redrawn on resize only.
 # Dependencies: none.
 # Author: Technical Artist Agent (dd-art-fit)
@@ -25,6 +26,11 @@ var art: Texture2D = null
 var box: Rect2 = Rect2()
 ## Where the crop centres, in 0..1 of the image (the box's centre by default).
 var focus: Vector2 = Vector2(0.5, 0.5)
+## dd-gun-tile: a layered weapon drawn as big as the rect allows, by the cut-out's own alpha box
+## (the gun row; street cards, the rack, inspect and the Codex keep the set's one shared scale).
+var fit_own: bool = false
+## With fit_own: the share of the rect the weapon may fill (x, y), centred.
+var own_fill: Vector2 = Vector2(0.94, 0.86)
 
 
 func _init() -> void:
@@ -78,6 +84,15 @@ func layered_layout(area: Vector2) -> Array:
 		var csz: Vector2 = ct.get_size()
 		var bx: Rect2 = art.get("box")
 		var anc: Vector2 = art.get("anchor")
+		var own: Rect2 = art.get("own_box")
+		if fit_own and own.size.x > 0.0 and own.size.y > 0.0:
+			# the weapon's own box fills the rect (centred), whatever the rest of the set does
+			var so: float = minf(area.x * own_fill.x / (own.size.x * csz.x), area.y * own_fill.y / (own.size.y * csz.y))
+			var opos: Vector2 = area * 0.5 - (own.get_center() * csz) * so
+			var odst: Rect2 = Rect2(opos, csz * so).intersection(Rect2(Vector2.ZERO, area))
+			out[2] = Rect2((odst.position - opos) / so, odst.size / so)
+			out[3] = odst
+			return out
 		var s_cover: float = maxf(area.x / csz.x, area.y / csz.y)
 		var s: float = minf(s_cover, minf(area.x / maxf(bx.size.x * csz.x, 1.0), area.y / maxf(bx.size.y * csz.y, 1.0)))
 		var pos: Vector2 = anc * area - csz * s * 0.5

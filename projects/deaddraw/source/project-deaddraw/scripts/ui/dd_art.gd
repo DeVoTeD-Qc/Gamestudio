@@ -316,6 +316,10 @@ static func _ensure() -> void:
 			var la: Array = (le as Dictionary).get("anchor", [])
 			if la.size() == 2:
 				spec["anchor"] = Vector2(float(la[0]), float(la[1]))
+			# dd-gun-tile: the cut-out's own alpha box (the gun row fits the weapon to its slot by it)
+			var lo: Array = (le as Dictionary).get("own", [])
+			if lo.size() == 4:
+				spec["own"] = Rect2(float(lo[0]), float(lo[1]), float(lo[2]) - float(lo[0]), float(lo[3]) - float(lo[1]))
 			_layers[_resolve(str(f2))] = spec
 		parsed = (parsed as Dictionary).duplicate()
 		(parsed as Dictionary).erase("layers")
@@ -406,6 +410,7 @@ static func _texture(path: String) -> Texture2D:
 			t = LayeredTex.new(lb, lc)
 			t.set("box", ls.get("box", t.get("box")))
 			t.set("anchor", ls.get("anchor", t.get("anchor")))
+			t.set("own_box", ls.get("own", Rect2()))
 			_tex[path] = t
 			return t
 	if path.begins_with("res://") and ResourceLoader.exists(path):

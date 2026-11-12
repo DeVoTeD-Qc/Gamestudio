@@ -2493,6 +2493,24 @@ WEAPON_LAYERS = {
 WEAPON_LAYER_BOX = [0.05, 0.19, 0.95, 0.85]
 
 
+def cut_own_box(stem: str) -> list | None:
+    """dd-gun-tile: one cut-out's own alpha box (alpha > 24, 0..1 of the canvas, rounded to 0.001): the gun row
+    fits the weapon to its slot by this box instead of the shared one. None without Pillow or the file."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return None
+    f = ART / "painted" / ("%s.webp" % stem)
+    if not f.exists():
+        return None
+    im = Image.open(f).convert("RGBA")
+    bb = im.split()[3].point(lambda v: 255 if v > 24 else 0).getbbox()
+    if bb is None:
+        return None
+    w, h = im.size
+    return [round(bb[0] / w, 3), round(bb[1] / h, 3), round(bb[2] / w, 3), round(bb[3] / h, 3)]
+
+
 def apply_layers(man: dict) -> None:
     """Pack 4 zombies by value and the pack 5 weapon layers (only for files that exist)."""
     def have(stem: str) -> bool:
@@ -2513,6 +2531,9 @@ def apply_layers(man: dict) -> None:
         if have(stem) and have(cut) and have(back):
             layers["painted/%s.webp" % stem] = {"back": "painted/%s.webp" % back, "cut": "painted/%s.webp" % cut,
                                                 "box": WEAPON_LAYER_BOX, "anchor": [0.5, 0.52]}
+            own = cut_own_box(cut)
+            if own is not None:
+                layers["painted/%s.webp" % stem]["own"] = own
     if layers:
         man["layers"] = layers
         man["sizes"]["painted_layer"] = [768, 512]

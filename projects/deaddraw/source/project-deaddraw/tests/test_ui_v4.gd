@@ -151,7 +151,9 @@ func test_door_row_layout_every_size() -> void:
 			var nx: Control = gv.find_child("NextSocket", true, false)
 			check(nx != null and str(nx.get("next_text")) == DDPayloads.accept_tag(run.can_take(run.slot(s))), "%s gun %d: the next socket says %s" % [tag, s + 1, str(nx.get("next_text")) if nx != null else "-"])
 			for mc: DDCardView in gv.stack_cards:
-				check(mc.size.x >= 26.0 and mc.size.y >= 44.0 and _inside(m, mc), "%s gun %d: socket %s big and on screen" % [tag, s + 1, str(mc.size)])
+				check(mc.size.x >= 38.0 and mc.size.y >= 26.0 and _inside(m, mc), "%s gun %d: socket %s big and on screen" % [tag, s + 1, str(mc.size)])
+				var nb: Control = mc.strength_mark
+				check(nb != null and nb.size.y >= 18.0 and mc.get_global_rect().grow(0.5).encloses(nb.get_global_rect()), "%s gun %d: the number badge is readable (%s) and inside its socket" % [tag, s + 1, str(nb.size) if nb != null else "-"])
 		eq(str((_tile(m, 200) as DDGunView).find_child("NextSocket", true, false).get("next_text")), "≤6", tag + " Rifle on a 6 (Rosa: last or lower) takes ≤6")
 		# the strength mark on every zombie
 		for k2: int in run.street.size():
@@ -173,6 +175,58 @@ func _area(c: Control) -> float:
 
 
 # ---------------------------------------------------------------- the padlock plate
+# dd-gun-tile: the gun art on the left, the kill column on the right, capacities 2-6, every size
+func test_gun_tile_kill_column_every_size() -> void:
+	for sz: Vector2i in [Vector2i(390, 844), Vector2i(844, 390), Vector2i(1440, 900), Vector2i(1920, 1080)]:
+		tree.root.size = sz
+		for cap: int in [2, 3, 4, 5, 6]:
+			var tag: String = "%s cap %d:" % [str(sz), cap]
+			var m: Control = _main()
+			await _settle()
+			m.call("apply_debug", {"screen": "street", "seed": "5", "gun1": "lever", "stack1": "2,5" if cap > 2 else "2", "gun2": "pistol",
+				"stack2": "", "active": "0", "mods": "-,echo", "street": "Z1,Z4,Z8"})
+			var run: DDRun = game_run()
+			run.slot(0).cap = cap
+			run.slot(1).cap = cap
+			m.call("_render")
+			await _settle()
+			await _settle()
+			for s: int in 2:
+				var gv: DDGunView = _tile(m, 200 + s)
+				check(gv != null, "%s gun %d tile" % [tag, s + 1])
+				if gv == null:
+					continue
+				eq(gv.stack_area.get_child_count(), cap, "%s gun %d: one socket per kill" % [tag, s + 1])
+				check(gv.stat_mark == null, "%s gun %d: no capacity mark" % [tag, s + 1])
+				var col: Rect2 = gv.stack_area.get_global_rect()
+				var art: Rect2 = gv.art_band.get_global_rect()
+				check(col.position.x >= art.end.x - 0.5, "%s gun %d: the column is right of the art" % [tag, s + 1])
+				check(art.size.x >= 120.0 and art.size.y >= 60.0, "%s gun %d: the art is big (%s)" % [tag, s + 1, str(art.size)])
+				check(gv.get_global_rect().grow(0.5).encloses(col), "%s gun %d: the column is inside the tile" % [tag, s + 1])
+				var socks: Array = gv.stack_area.get_children()
+				for i: int in socks.size():
+					var a: Rect2 = (socks[i] as Control).get_global_rect()
+					check(col.grow(0.5).encloses(a) and a.size.y >= 24.0 and a.size.x >= 38.0, "%s gun %d: socket %d fits (%s)" % [tag, s + 1, i, str(a)])
+					if i > 0:
+						var b: Rect2 = (socks[i - 1] as Control).get_global_rect()
+						check(a.end.y <= b.position.y + 0.5, "%s gun %d: socket %d sits above socket %d" % [tag, s + 1, i, i - 1])
+				for nm: String in ["Head", "FullPlate", "ChalLine", "ModChip", "ActiveChip"]:
+					var c: Control = gv.find_child(nm, true, false)
+					if c != null:
+						check(not c.get_global_rect().grow(-0.5).intersects(col), "%s gun %d: %s clear of the kill column" % [tag, s + 1, nm])
+						check(gv.get_global_rect().grow(0.5).encloses(c.get_global_rect()), "%s gun %d: %s inside the tile" % [tag, s + 1, nm])
+				for mc: DDCardView in gv.stack_cards:
+					var nb: Rect2 = mc.strength_mark.get_global_rect()
+					check(nb.size.y >= 18.0 and mc.get_global_rect().grow(0.5).encloses(nb), "%s gun %d: number badge readable %s" % [tag, s + 1, str(nb.size)])
+				var nx: Control = gv.find_child("NextSocket", true, false)
+				if nx != null and not gv.stack_cards.is_empty():
+					check(nx.get_global_rect().end.y <= gv.stack_cards[gv.stack_cards.size() - 1].get_global_rect().position.y + 0.5, "%s gun %d: the next socket is on top of the last kill" % [tag, s + 1])
+			m.queue_free()
+			await tree.process_frame
+	tree.root.size = Vector2i(390, 844)
+	_cleanup()
+
+
 func test_room_plate_four_states() -> void:
 	tree.root.size = Vector2i(390, 844)
 	var m: Control = _main()
@@ -659,12 +713,12 @@ func test_capacity_and_uses_marks() -> void:
 				"%s card %d: the mark is in the corner opposite the hit badge" % [tag, i])
 			check(mr.size.y >= 24.0, "%s card %d: the number is big enough (%.0f px)" % [tag, i, mr.size.y])
 			check(not str(cv.payload.get("t1", "")).contains("holds") and not str(cv.payload.get("t1", "")).contains(" uses"), "%s card %d: no small 'holds' / 'uses' text: %s" % [tag, i, str(cv.payload.get("t1", ""))])
-		# the gun row: each gun's capacity mark in its art band
+		# the gun row (dd-gun-tile): no capacity mark; the kill column holds one socket per kill instead
 		for s: int in 2:
 			var gv: DDGunView = _tile(m, 200 + s)
-			check(gv != null and gv.stat_mark != null and int(gv.stat_mark.get("value")) == run.slot(s).cap, "%s gun %d: capacity mark = %d" % [tag, s + 1, run.slot(s).cap])
-			if gv != null and gv.stat_mark != null:
-				check(gv.art_band.get_global_rect().grow(0.5).encloses(gv.stat_mark.get_global_rect()), "%s gun %d: the mark sits in the art band" % [tag, s + 1])
+			check(gv != null and gv.stat_mark == null, "%s gun %d: no capacity mark in the gun row" % [tag, s + 1])
+			if gv != null:
+				eq(gv.stack_area.get_child_count(), run.slot(s).cap, "%s gun %d: the kill column shows the capacity" % [tag, s + 1])
 		# inspect explains it
 		var insp: DDInspect = m.get("_inspect")
 		insp.open(_tile(m, 0).payload)

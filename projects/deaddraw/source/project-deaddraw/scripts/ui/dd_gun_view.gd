@@ -9,6 +9,9 @@
 #   ACTIVE chip in its corner), the socket row (centred), and the Full set plate (gold cup + FULL +50,
 #   challenge medal + reward; its own tooltip). One kill to go: the plate's rim glows, the cup pulses.
 #   dd-capacity: the capacity mark (dd_marks.gd StatMark) in the art band's bottom-right corner.
+#   dd-gun-tile: [hit badge + name over rule, the gun art as big as the slot allows | the KILL COLUMN, one
+#   socket per kill, bottom-up], then the challenge line and the Full set plate. The column's length is the
+#   capacity, so the gun row has no capacity mark (street cards, rack, inspect, Codex keep theirs).
 #   Feedback reads `stack_cards` (the filled sockets in kill order) and `next_rect()`.
 # Dependencies: DDCardView, DDUi, scripts/ui/dd_art.gd, scripts/ui/dd_marks.gd.
 # Author: Mechanics Developer Agent (dd-ux-v4 sockets: UI/UX Agent)
@@ -26,6 +29,7 @@ var _next_socket: Control = null
 var _cap: int = 0
 var _mini: Vector2 = Vector2(40, 64)
 var _socket_h_max: float = 92.0
+var _col_w: float = 40.0
 ## dd-ui6: the clear art band and the Full set plate (feedback lights a copy of the plate).
 var art_band: Control = null
 var plate: DDCardView = null
@@ -67,16 +71,31 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		_apply_style()
 		DDUi.ignore_mouse(self)
 		return self
-	# dd-ui6 (head: "I liked it when we could see our equipped gun image better"): the art gets its
-	# own clear band (no scrim, nothing laid over the gun); the name and rule sit above it, the kill
-	# sockets and the Full set plate below it.
+	# dd-gun-tile (head: "The gun is so tiny ... move it to the left and then remove the capacity icons and
+	# put the stack of zombies to the right of it ... a vertical stack"): [the gun's side | the kill column].
+	# The gun's side: hit badge + name over the rule, then the art, as big as the slot allows (the cut-out
+	# fitted by its own alpha box). The kill column: one socket per kill the gun holds, bottom-up, so the
+	# capacity is the column itself (no capacity mark here). Under both (portrait): the challenge line and
+	# the Full set plate. A wide tile (landscape column, desktop) has the compact plate + challenge row
+	# instead; a short one ("kill_col_full", the landscape phone) runs the column the tile's full height
+	# and keeps that row under the art, a taller one (desktop) puts it under both.
+	var cl: Dictionary = spec.get("challenge_line", {})
+	var inline: bool = bool(spec.get("chal_inline", false)) and not cl.is_empty()
 	var v2: VBoxContainer = DDUi.vbox(4)
 	add_child(v2)
 	_box = v2
+	var body: HBoxContainer = DDUi.hbox(5)
+	body.name = "Body"
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v2.add_child(body)
+	var side: VBoxContainer = DDUi.vbox(3)
+	side.name = "GunSide"
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(side)
 	# head: hit badge | name over [rule icon + short rule]
-	var head: HBoxContainer = DDUi.hbox(6)
+	var head: HBoxContainer = DDUi.hbox(5)
 	head.name = "Head"
-	v2.add_child(head)
+	side.add_child(head)
 	var burst: Control = Marks.HitBurst.new(int(spec.get("power", 0)))
 	burst.custom_minimum_size = Vector2(36, 36)
 	burst.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -108,19 +127,21 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	rl.resized.connect(func() -> void: fit_label(rl, DDUi.FONT_S - 5, 10))
 	rr.add_child(rl)
 	line_labels.append(rl)
-	# the art band
+	# the art band: the gun fills it (own alpha box), the backdrop is cropped to it
 	var band: Control = Control.new()
 	band.name = "ArtBand"
 	band.clip_contents = true
 	band.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	band.custom_minimum_size = Vector2(0, 30)
-	v2.add_child(band)
+	side.add_child(band)
 	art_band = band
 	var tex: Texture2D = Art.texture_for(Art.weapon_keys(str(spec.get("wid", "")), str(spec.get("name", ""))))
 	if tex != null:
 		has_art = true
 		var tr: TextureRect = _add_art(band, tex, "cover")
 		tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		if "fit_own" in tr:
+			tr.set("fit_own", true)
 	if _selected:
 		var chip: PanelContainer = DDUi.tag("ACTIVE", "bone", DDUi.FONT_S - 7, DDUi.SELECT)
 		chip.name = "ActiveChip"
@@ -129,17 +150,6 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 			if is_instance_valid(chip):
 				chip.size = chip.get_combined_minimum_size()
 				chip.position = Vector2(band.size.x - chip.size.x - 3.0, 3.0))
-	# dd-capacity: the capacity mark (stacked sockets + the kills it holds) in the art band's
-	# bottom-right corner, opposite the hit badge, as on the street card
-	var cm: Control = Marks.StatMark.new(int(spec.get("cap", 4)), "cap")
-	cm.name = "CapMark"
-	band.add_child(cm)
-	stat_mark = cm
-	band.resized.connect(func() -> void:
-		if is_instance_valid(cm):
-			var ch: float = clampf(band.size.y * 0.5, 24.0, 36.0)
-			cm.size = Vector2(float(cm.call("width_for", ch)), ch)
-			cm.position = band.size - cm.size - Vector2(3.0, 3.0))
 	# v5: the slot's Gun Mod as a chip in the art band's bottom-left corner (its own tooltip)
 	if str(spec.get("mod", "")) != "":
 		var mc0: DDCardView = DDCardView.new()
@@ -169,15 +179,15 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 				mc0.size = mc0.get_combined_minimum_size()
 				mc0.position = Vector2(3.0, band.size.y - mc0.size.y - 3.0))
 		mod_chip = mc0
-	# the kill sockets (a fixed-height row, centred)
+	# the kill column: one socket per kill, bottom-up (socket 0 = the first kill, at the bottom)
 	_cap = int(spec.get("cap", 4))
 	var st: Array = spec.get("stack", [])
 	var pls: Array = spec.get("stack_payloads", [])
 	stack_area = Control.new()
 	stack_area.name = "Sockets"
 	stack_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stack_area.custom_minimum_size = Vector2(0, _socket_h_max)
-	v2.add_child(stack_area)
+	stack_area.custom_minimum_size = Vector2(_col_w, 0)
+	body.add_child(stack_area)
 	var n_slots: int = maxi(_cap, st.size())
 	for k: int in n_slots:
 		if k < st.size():
@@ -195,10 +205,8 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 				_next_socket = sk
 	stack_area.resized.connect(_layout_sockets)
 	# dd-challenge-rack: the challenge line (what to do for the reward, and how it is going)
-	# (landscape, a short tile: "chal_inline" puts it beside a compact Full set plate, in two lines:
-	# name -> reward over the progress, so the gun art keeps its band)
-	var cl: Dictionary = spec.get("challenge_line", {})
-	var inline: bool = bool(spec.get("chal_inline", false)) and not cl.is_empty()
+	# (a wide, short tile: "chal_inline" puts it beside a compact Full set plate, in two lines:
+	# name -> reward over the progress)
 	if not cl.is_empty():
 		cl = cl.duplicate()
 		if inline:
@@ -219,7 +227,10 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	if inline:
 		var pr: HBoxContainer = DDUi.hbox(4)
 		pr.name = "PlateRow"
-		v2.add_child(pr)
+		if bool(spec.get("kill_col_full", true)):
+			side.add_child(pr)
+		else:
+			v2.add_child(pr)
 		plate.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		pr.add_child(plate)
 		chal_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -495,35 +506,35 @@ func _one_line(l: Label) -> Label:
 	return l
 
 
-## Sockets share the row: as tall as it allows (up to socket_h_max), 0.62 as wide as tall, never
-## wider than the row / capacity.
+## dd-gun-tile: the kill column. Its width follows the tile (19% of it, 40-66 px); the sockets share its
+## height bottom-up (the first kill at the bottom, the next socket right above the last kill, like a pile),
+## at most 1.5x as tall as wide, the group centred in the column. Each filled socket's number badge sits in
+## its middle, as big as the socket allows (18-40 px).
 func _layout_sockets() -> void:
 	if stack_area == null or _sockets.is_empty():
 		return
+	var cw: float = clampf(size.x * 0.19, 40.0, 66.0)
+	if absf(stack_area.custom_minimum_size.x - cw) > 0.5:
+		stack_area.custom_minimum_size = Vector2(cw, 0)
 	var n: int = _sockets.size()
-	var gap: float = 4.0
-	var h: float = minf(stack_area.size.y, _socket_h_max)
-	var w: float = minf(h * 0.62, (stack_area.size.x - gap * (n - 1)) / n)
-	w = maxf(w, 16.0)
-	h = minf(h, w / 0.5)
+	var gap: float = 4.0 if n <= 4 else 3.0
+	var w: float = stack_area.size.x
+	var h: float = minf((stack_area.size.y - gap * (n - 1)) / n, w * 1.5)
+	h = maxf(h, 14.0)
 	_mini = Vector2(w, h)
-	var x: float = maxf(0.0, (stack_area.size.x - (w * n + gap * (n - 1))) * 0.5)
+	var total: float = h * n + gap * (n - 1)
+	var y: float = stack_area.size.y - maxf(0.0, (stack_area.size.y - total) * 0.5) - h
 	for c: Control in _sockets:
 		c.custom_minimum_size = Vector2.ZERO
-		c.position = Vector2(x, (stack_area.size.y - h) * 0.5)
+		c.position = Vector2(0.0, y)
 		c.size = _mini
-		x += w + gap
+		y -= h + gap
 		if c is DDCardView:
 			var badge: Control = c.get_meta(&"badge", null)
 			if badge != null:
-				var bd: float = clampf(minf(w * 0.7, h * 0.45), 16.0, 34.0)
-				badge.position = Vector2(2, 2)
+				var bd: float = clampf(minf(w, h) * 0.8, 18.0, 40.0)
 				badge.size = Vector2(bd, bd)
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_SORT_CHILDREN or what == NOTIFICATION_RESIZED:
-		_layout_sockets.call_deferred()
+				badge.position = (_mini - badge.size) * 0.5
 
 
 ## Global rect where the next kill would land (the next socket).

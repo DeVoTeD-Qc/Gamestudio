@@ -18,6 +18,9 @@ var cut: Texture2D = null
 var box: Rect2 = Rect2(0.05, 0.19, 0.9, 0.66)
 ## Where the cut-out's canvas centre lands in the art rect, in 0..1 of the rect.
 var anchor: Vector2 = Vector2(0.5, 0.52)
+## dd-gun-tile: this cut-out's own alpha box, in 0..1 of the canvas (Rect2() = unknown: use `box`).
+## Only the gun row uses it (DDArtRect.fit_own): there the weapon is sized to its slot, not to the set.
+var own_box: Rect2 = Rect2()
 
 
 func _init(p_back: Texture2D = null, p_cut: Texture2D = null) -> void:

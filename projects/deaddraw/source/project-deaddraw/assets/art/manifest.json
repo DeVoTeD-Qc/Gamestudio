@@ -1094,6 +1094,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.31,
+        0.324,
+        0.69,
+        0.717
       ]
     },
     "painted/dd_gun_nail_driver.webp": {
@@ -1108,6 +1114,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.259,
+        0.293,
+        0.74,
+        0.746
       ]
     },
     "painted/dd_gun_alley_sweeper.webp": {
@@ -1122,6 +1134,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.22,
+        0.305,
+        0.78,
+        0.734
       ]
     },
     "painted/dd_gun_twin_bore.webp": {
@@ -1136,6 +1154,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.169,
+        0.277,
+        0.829,
+        0.762
       ]
     },
     "painted/dd_gun_scout_carbine.webp": {
@@ -1150,6 +1174,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.169,
+        0.297,
+        0.829,
+        0.742
       ]
     },
     "painted/dd_gun_ratchet_crossbow.webp": {
@@ -1164,6 +1194,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.16,
+        0.266,
+        0.84,
+        0.775
       ]
     },
     "painted/dd_gun_stovepipe_launcher.webp": {
@@ -1178,6 +1214,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.15,
+        0.287,
+        0.85,
+        0.752
       ]
     },
     "painted/dd_gun_pump_shotgun.webp": {
@@ -1192,6 +1234,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.109,
+        0.254,
+        0.891,
+        0.785
       ]
     },
     "painted/dd_gun_lever_rifle.webp": {
@@ -1206,6 +1254,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.1,
+        0.242,
+        0.9,
+        0.797
       ]
     },
     "painted/dd_gun_hunting_rifle.webp": {
@@ -1220,6 +1274,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.09,
+        0.279,
+        0.91,
+        0.762
       ]
     },
     "painted/dd_gun_elephant_gun.webp": {
@@ -1234,6 +1294,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.06,
+        0.232,
+        0.94,
+        0.807
       ]
     },
     "painted/dd_melee_bare_hands.webp": {
@@ -1248,6 +1314,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.254,
+        0.252,
+        0.75,
+        0.781
       ]
     },
     "painted/dd_melee_pipe_wrench.webp": {
@@ -1262,6 +1334,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.22,
+        0.309,
+        0.78,
+        0.732
       ]
     },
     "painted/dd_melee_fire_axe.webp": {
@@ -1276,6 +1354,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.12,
+        0.236,
+        0.88,
+        0.803
       ]
     },
     "painted/dd_melee_sledgehammer.webp": {
@@ -1290,6 +1374,12 @@
       "anchor": [
         0.5,
         0.52
+      ],
+      "own": [
+        0.09,
+        0.201,
+        0.91,
+        0.838
       ]
     }
   }
