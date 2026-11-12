@@ -46,6 +46,9 @@ const DEFAULT_TOP: Dictionary = {
 	"run_mode": "anytime", "run_return": "bottom", "lockpick_off": 5, "adrenaline_hp": 6, "grudge_min": 9,
 	"show_off_points": 4, "whetstone_dur": 2, "small_max": 6, "heavy_min": 0, "big_bang_min": 9,
 	"pest_total": 15,
+	# v5 economy pass (economy-v5.md)
+	"room_free_use": false, "room_cost_add": [0, 0, 0], "room_free_kinds": ["wall", "bench", "patch"], "mods_mode": "safehouse",
+	"mod_offer": 2, "mod_price": 5, "mods": ["open_breech", "last_round", "echo", "short_barrel"],
 }
 
 static var _cached: DDBalance = null

@@ -247,7 +247,7 @@ static func gun_verdict(c: DDCard, run: DDRun, index: int) -> String:
 	if bool(pr["ok"]):
 		return "%s takes it" % _short_name(g.name)
 	var why: String = str(pr["reason"])
-	if not run.gun_allows(g, c.value):
+	if not run.slot_rule_ok(run.active, c.value):
 		why = DDText.rule_block(g, c.value, run)
 	return "%s: %s" % [_short_name(g.name), why]
 
@@ -287,19 +287,30 @@ static func _range_text(zs: Array[int]) -> String:
 	return ", ".join(parts)
 
 
+## v5: a Gun Mod's zoom (safehouse offer, the chip on a gun tile).
+static func mod(id: String, s: int = -1) -> Dictionary:
+	var where: String = "Fitted to gun slot %d: every gun you put in this slot gets it, for the rest of the run." % (s + 1) if s >= 0 else "Fit it to gun slot 1 or 2: every gun you put in that slot gets it, for the rest of the run."
+	return tip({"kind": "W", "tag": "GUN MOD", "title": DDText.mod_name(id), "big": "", "icon_keys": Art.badge_keys("full_set"),
+		"body": "%s\n%s\nOne mod per slot; a new one replaces the old." % [DDText.mod_text(id), where]},
+		"Gun Mod · %s%s" % [DDText.mod_name(id), (" · slot %d" % (s + 1)) if s >= 0 else ""], DDText.mod_text(id))
+
+
 static func gun(run: DDRun, s: int) -> Dictionary:
 	var g: DDGun = run.slot(s)
+	var md: String = run.slot_mod(s)
 	if g == null:
 		return tip({"kind": "W", "tag": "GUN SLOT %d" % (s + 1), "title": "Empty slot", "big": "",
-			"body": "Tap a gun card on the street, or buy one at a Wall Rack. Melee is always there."},
-			"Gun slot %d · empty" % (s + 1), "Equip a gun from the street, or buy one at a Wall Rack.")
+			"body": "Tap a gun card on the street, or buy one at a Wall Rack. Melee is always there." + (("\nGUN MOD %s: %s" % [DDText.mod_name(md).to_upper(), DDText.mod_text(md)]) if md != "" else "")},
+			"Gun slot %d · empty%s" % [s + 1, (" · mod: " + DDText.mod_name(md)) if md != "" else ""], "Equip a gun from the street, or buy one at a Wall Rack.")
 	var b: DDBalance = run.bal
 	var body: PackedStringArray = []
 	var rw: Array = b.weapon_reward(g.wid)
 	body.append("Hits %d%s. %d of %d kills%s." % [g.power, " (Honed)" if g.honed else "", g.stack.size(), g.cap,
 		(", total %d of %d" % [g.total(), b.num("spread_cap")]) if g.rule == "spread" else ""])
 	body.append("%s%s" % [DDText.rule_text(g.rule, b, run.steady()), " (Flipped at the Retrofit Bench)" if g.flipped else ""])
-	body.append("Next kill: %s." % accept_words(run.can_take(g)))
+	if md != "":
+		body.append("GUN MOD %s (slot %d): %s" % [DDText.mod_name(md).to_upper(), s + 1, DDText.mod_text(md)])
+	body.append("Next kill: %s." % accept_words(run.can_take_slot(s)))
 	body.append("CHALLENGE %s: %s -> %s. Now: %s." % [DDText.challenge_name(b.weapon_challenge(g.wid)).to_upper(), DDText.challenge_text(b.weapon_challenge(g.wid), b),
 		DDText.reward_text(str(rw[0]), int(rw[1]), b), str({"met": "met", "on_track": "on track", "broken": "can't be met any more", "open": "not decided yet"}[run.challenge_state(g)])])
 	body.append("Kills: %s." % (DDText.zombie_list(g.stack) if not g.stack.is_empty() else "none yet"))
@@ -308,7 +319,9 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": "P%d" % g.power, "hit": g.power, "body": "\n".join(body),
 		"art_keys": Art.weapon_keys(g.wid, g.name)}
 	p["icon_row"] = gun_icon_row(b, g.rule, g.wid, run.steady(), run.challenge_state(g))
-	var nxt: String = "Full." if g.kills_left() <= 0 else "Next kill: %s." % accept_words(run.can_take(g))
+	var nxt: String = "Full." if g.kills_left() <= 0 else "Next kill: %s." % accept_words(run.can_take_slot(s))
+	if md != "":
+		nxt = "Mod %s. %s" % [DDText.mod_name(md), nxt]
 	return tip(p, "%s · hits %d · %d of %d kills" % [g.name, g.power, g.stack.size(), g.cap],
 		"%s Full: +%d, %s." % [nxt, b.shown(b.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), b)])
 
@@ -328,6 +341,9 @@ static func stack_card(run: DDRun, s: int, k: int) -> Dictionary:
 static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	var g: DDGun = run.slot(s)
 	var spec: Dictionary = {"kind": "W", "slot": s, "active": run.active == s, "payload": gun(run, s)}
+	if run.slot_mod(s) != "":
+		spec["mod"] = run.slot_mod(s)
+		spec["mod_payload"] = mod(run.slot_mod(s), s)
 	if g == null:
 		spec["empty"] = true
 		return spec
@@ -346,8 +362,8 @@ static func gun_spec(run: DDRun, s: int) -> Dictionary:
 	spec["honed"] = g.honed
 	spec["flipped"] = g.flipped
 	spec["left"] = g.kills_left()
-	spec["can_take"] = _range_text(run.can_take(g))
-	spec["accept"] = accept_tag(run.can_take(g))
+	spec["can_take"] = _range_text(run.can_take_slot(s))
+	spec["accept"] = accept_tag(run.can_take_slot(s))
 	spec["finish_shown"] = b.shown(b.num("finish_bonus"))
 	spec["plate_payload"] = full_plate(run, s)
 	spec["reward_kind"] = str(rw[0])
@@ -536,14 +552,32 @@ static func room(run: DDRun, i: int) -> Dictionary:
 	var price: int = run.bal.shown(run.room_cost(i))
 	var mname: String = DDText.machine_name(str(m.get("kind", "")))
 	var adds: String = "a %s (%s)" % [mname, _short_name(run.bal.weapon_name(str(m.get("wid", ""))))] if str(m.get("kind", "")) == "wall" else "the " + mname
+	# v5 (playtest: "I spent 210 on the Garage, then its Wall Rack wanted another 150"): every closed
+	# door says what using the machine inside costs, and the total
+	var use_txt: String = machine_use_text(run, i)
+	if not run.room_open[i]:
+		p["body"] = str(p["body"]) + "\n\nCOST: door %d + %s = %d to open it and use the machine this wave." % [price, use_txt, run.bal.shown(run.room_total_cost(i))]
 	if run.room_open[i] and run.machine_used[i]:
 		return tip(p, "%s · used this wave" % mname, "Back next wave.")
 	if run.room_open[i]:
-		return tip(p, "%s · open" % mname, "Use it once per wave: tap USE.")
+		return tip(p, "%s · open" % mname, "Use it once per wave: tap USE (%s)." % use_txt)
 	if run.can_open_room(i):
-		return tip(p, "%s · OPEN for %d pts" % [str(r.get("name", "")), price], "Inside: %s, and %s." % [_pack_short(run, i), adds])
+		return tip(p, "%s · OPEN for %d pts" % [str(r.get("name", "")), price], "Inside: %s, and %s (%s)." % [_pack_short(run, i), adds, use_txt])
 	return tip(p, "%s · %d pts · need %d more" % [str(r.get("name", "")), price, maxi(0, price - run.bal.shown(run.points))],
-		"Inside: %s, and %s." % [_pack_short(run, i), adds])
+		"Inside: %s, and %s (%s)." % [_pack_short(run, i), adds, use_txt])
+
+
+## v5: "150 per gun" / "250 per Patch" / "from 50 per job": what one use of room i's machine costs.
+static func machine_use_text(run: DDRun, i: int) -> String:
+	var n: int = run.bal.shown(run.machine_min_price(i))
+	match str(run.machine(i).get("kind", "")):
+		"wall":
+			return "%d per gun" % n
+		"patch":
+			return "%d per Patch" % n
+		"bench":
+			return "from %d per job" % n
+	return "%d per use" % n
 
 
 ## dd-ux-text: a room's 3 pack cards in a few words: "a gun, medkit 4, cover 2".
@@ -564,7 +598,8 @@ static func room_plate(run: DDRun, i: int) -> Dictionary:
 	var m: Dictionary = run.machine(i)
 	var mname: String = DDText.machine_name(str(m.get("kind", "")))
 	var t1: String = ("OPEN · %d pts" % price) if run.can_open_room(i) else ("%d pts · need %d more" % [price, maxi(0, price - run.bal.shown(run.points))])
-	return tip(p, "%s · %s" % [str(run.room(i).get("name", "")), t1], "Inside: %s, and the %s." % [_pack_short(run, i), mname])
+	return tip(p, "%s · %s" % [str(run.room(i).get("name", "")), t1], "Inside: %s, and the %s (%s). Door + one use: %d." % [_pack_short(run, i), mname,
+		machine_use_text(run, i), run.bal.shown(run.room_total_cost(i))])
 
 
 static func room_spec(run: DDRun, i: int) -> Dictionary:
@@ -724,10 +759,10 @@ static func cover(run: DDRun) -> Dictionary:
 static func points(run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	return tip({"kind": "X", "tag": "POINTS", "title": "Points", "big": str(b.shown(run.points)),
-		"body": "Spend them on rooms and machines. %d earned this run (spending doesn't lower your score).\nA gun kill pays its number ×10; a full gun +%d and its challenge; a scrapped gun +%d; a boss +%d. Melee pays nothing." % [
-			b.shown(run.points_earned), b.shown(b.num("finish_bonus")), b.shown(b.num("scrap_points")), b.shown(b.num("boss_reward_points"))]},
-		"%d pts · %d earned this run" % [b.shown(run.points), b.shown(run.points_earned)],
-		"Gun kills pay their number ×10. Spend them on rooms.")
+		"body": "POINTS (%d) are what you spend in this district: rooms, machines, then the safehouse shop. Unspent points stay behind when you leave the safehouse.\nSCORE (%d) counts every point you earned this run; spending never lowers it.\nA gun kill pays its number ×10; a full gun +%d and its challenge; a scrapped gun +%d; a boss +%d. Melee pays nothing." % [
+			b.shown(run.points), b.shown(run.points_earned), b.shown(b.num("finish_bonus")), b.shown(b.num("scrap_points")), b.shown(b.num("boss_reward_points"))]},
+		"%d pts to spend · score %d" % [b.shown(run.points), b.shown(run.points_earned)],
+		"Spend points in this district; the score keeps every point you earned.")
 
 
 static func how_to_play(bal: DDBalance) -> Dictionary:

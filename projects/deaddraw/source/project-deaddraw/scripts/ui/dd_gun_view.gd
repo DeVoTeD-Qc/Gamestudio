@@ -28,6 +28,8 @@ var _socket_h_max: float = 92.0
 ## dd-ui6: the clear art band and the Full set plate (feedback lights a copy of the plate).
 var art_band: Control = null
 var plate: DDCardView = null
+## v5: the Gun Mod chip (null when the slot has no mod).
+var mod_chip: DDCardView = null
 
 
 ## spec: DDPayloads.gun_spec() + "socket_h_max" (the socket row's height, px) + "plate_h".
@@ -45,6 +47,8 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 		v.alignment = BoxContainer.ALIGNMENT_CENTER
 		v.add_child(DDUi.label("GUN %d · EMPTY" % (int(spec.get("slot", 0)) + 1), DDUi.FONT_S - 2, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 		v.add_child(DDUi.label("equip a gun from the street", DDUi.FONT_S - 5, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+		if str(spec.get("mod", "")) != "":
+			v.add_child(DDUi.label(DDText.mod_chip(str(spec["mod"])), DDUi.FONT_S - 6, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_CENTER, true))
 		_apply_style()
 		DDUi.ignore_mouse(self)
 		return self
@@ -110,6 +114,26 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 			if is_instance_valid(chip):
 				chip.size = chip.get_combined_minimum_size()
 				chip.position = Vector2(band.size.x - chip.size.x - 3.0, 3.0))
+	# v5: the slot's Gun Mod as a chip in the art band's bottom-left corner (its own tooltip)
+	if str(spec.get("mod", "")) != "":
+		var mc0: DDCardView = DDCardView.new()
+		mc0.setup({"kind": "W", "payload": spec.get("mod_payload", {}), "row": true})
+		for ch: Node in mc0.get_children():
+			mc0.remove_child(ch)
+			ch.queue_free()
+		mc0.name = "ModChip"
+		mc0.add_theme_stylebox_override("panel", DDUi.box(Color(0.08, 0.12, 0.15, 0.92), DDUi.accent("W"), 2, 8, 2))
+		var ml: Label = DDUi.label(DDText.mod_chip(str(spec["mod"])), DDUi.FONT_S - 8, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_CENTER)
+		ml.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mc0.add_child(ml)
+		band.add_child(mc0)
+		mc0.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
+		mc0.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
+		band.resized.connect(func() -> void:
+			if is_instance_valid(mc0):
+				mc0.size = mc0.get_combined_minimum_size()
+				mc0.position = Vector2(3.0, band.size.y - mc0.size.y - 3.0))
+		mod_chip = mc0
 	# the kill sockets (a fixed-height row, centred)
 	_cap = int(spec.get("cap", 4))
 	var st: Array = spec.get("stack", [])
@@ -147,6 +171,8 @@ func setup_gun(spec: Dictionary) -> DDGunView:
 	for mc2: DDCardView in stack_cards:
 		mc2.mouse_filter = Control.MOUSE_FILTER_STOP
 	plate.mouse_filter = Control.MOUSE_FILTER_STOP
+	if mod_chip != null:
+		mod_chip.mouse_filter = Control.MOUSE_FILTER_STOP
 	plate.tapped.connect(func(_v: DDCardView) -> void: tapped.emit(self))
 	plate.inspected.connect(func(p: Dictionary) -> void: inspected.emit(p))
 	_apply_style()

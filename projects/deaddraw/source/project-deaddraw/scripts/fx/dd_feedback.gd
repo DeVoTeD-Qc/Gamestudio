@@ -12,6 +12,10 @@
 #               card shows "FINISHED +50"; a met challenge stamps a gold badge ("STAIRCASE!") and
 #               its reward flies to HP / Cover / points; Encore pops the gun back
 #     discard   a replaced, unfinished gun's stack drops and fades (it pays nothing)
+#     streak    v5 (playtest: "make a full kill stack a real streak moment"): a full stack also
+#               throws a "STREAK!" band across the screen with a gold flash and a sting. It is
+#               short (~1 s), never takes taps (any tap rebuilds the screen and clears it), and
+#               with reduce motion it only fades in and out (no flash, no slam)
 #     equip     the gun card flies into its slot; scrap drops; medkit -> HP; cover -> Cover chip
 #     shuffle   wave / room cards fly face down from their deck on the left / right into the
 #               middle pile, which riffles; opened rooms flick one restock card each
@@ -295,6 +299,8 @@ func _collect_fx(info: Dictionary, snap: Dictionary, ctx: Dictionary, t0: float)
 		_mark("full_plate")
 		_lit_plate(pls[s] as Dictionary, bool(info.get("challenge", false)), t)
 	_float(gun_rect, "FINISHED +%d" % (bonus * 10), DDUi.GOOD, t + 0.05, 30)
+	if not bool(info.get("shatter", false)):
+		_streak(str(info.get("name", "")), bonus * 10, t + 0.1)
 	_after(t + 0.05, func() -> void: Sfx.cue(&"clear", 1.25))
 	if bool(info.get("shatter", false)):
 		_mark("shatter")
@@ -729,6 +735,46 @@ func _death() -> void:
 	Sfx.cue(&"death")
 	shake(18.0, 0.3)
 	screen_flash(Color(DDUi.BAD, 0.45), 0.3)
+
+
+## v5: the STREAK! band for a full kill stack (see the header). `delay` from now.
+func _streak(gun_name: String, bonus_shown: int, delay: float) -> void:
+	if fx == null:
+		return
+	_mark("streak")
+	var band: PanelContainer = DDUi.panel(Color(0.1, 0.07, 0.02, 0.9), 0, DDUi.accent("X"), 3)
+	band.name = "StreakBanner"
+	band.set_meta(&"ghost", true)
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var v: VBoxContainer = DDUi.vbox(0)
+	band.add_child(v)
+	var big: Label = DDUi.label("STREAK!", DDUi.FONT_XL + 10, DDUi.accent("X"), HORIZONTAL_ALIGNMENT_CENTER)
+	big.add_theme_constant_override("outline_size", 6)
+	big.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.0, 1.0))
+	v.add_child(big)
+	if gun_name != "":
+		v.add_child(DDUi.label("%s full · +%d" % [gun_name, bonus_shown], DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	DDUi.ignore_mouse(band)
+	fx.add_child(band)
+	var vp: Vector2 = fx.get_viewport_rect().size
+	band.custom_minimum_size = Vector2(vp.x, 0)
+	band.size = band.get_combined_minimum_size()
+	band.position = Vector2(0.0, vp.y * 0.36 - band.size.y * 0.5) - fx.global_position
+	band.pivot_offset = band.size * 0.5
+	band.modulate.a = 0.0
+	var tw: Tween = band.create_tween()
+	tw.tween_interval(delay)
+	tw.tween_callback(func() -> void:
+		Sfx.cue(&"finale", 1.15)
+		if not reduce:
+			screen_flash(Color(DDUi.accent("X"), 0.22), 0.35)
+			band.scale = Vector2(1.0, 0.2))
+	tw.tween_property(band, "modulate:a", 1.0, 0.08)
+	if not reduce:
+		tw.parallel().tween_property(band, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.7)
+	tw.tween_property(band, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(band.queue_free)
 
 
 ## A full-screen colour wash that fades out (also with reduce motion: it does not move).

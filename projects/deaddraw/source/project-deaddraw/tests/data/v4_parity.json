@@ -13605,6 +13605,5097 @@
    "z": 5
   }
  ],
+ "mod_fit": [
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    2
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "nailer"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "pistol"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    4,
+    1
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "nailer"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    11
+   ],
+   "wid": "lever"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    12,
+    7
+   ],
+   "wid": "sweeper"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    6
+   ],
+   "wid": "lever"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    11
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    1,
+    10
+   ],
+   "wid": "lever"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    9,
+    9,
+    4
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    3,
+    2
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    8
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    4,
+    7,
+    10
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    4,
+    3,
+    2
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "pistol"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    6,
+    1
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    1,
+    5
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    12
+   ],
+   "wid": "sweeper"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "nailer"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    7,
+    10,
+    10
+   ],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    3
+   ],
+   "wid": "sweeper"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    4,
+    5
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    9
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    1
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    3,
+    7
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "carbine"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    1,
+    2
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    9,
+    10
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    10
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    3,
+    2
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    11,
+    9,
+    4
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    12,
+    12
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    5,
+    1,
+    10
+   ],
+   "wid": "rifle"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    4
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    2,
+    6
+   ],
+   "wid": "lever"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    1
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    11,
+    4
+   ],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "lever"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "pistol"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    9
+   ],
+   "wid": "twin"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    10,
+    11
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    11,
+    9
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    8,
+    9,
+    7
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 2,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "echo",
+   "points": 5,
+   "stack": [
+    4,
+    6,
+    8
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "elephant"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    7,
+    6
+   ],
+   "wid": "nailer"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    11,
+    4,
+    8
+   ],
+   "wid": "rifle"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "sweeper"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    2,
+    4,
+    11,
+    9
+   ],
+   "wid": "lever"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 5,
+   "stack": [
+    3
+   ],
+   "wid": "elephant"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    1,
+    6
+   ],
+   "wid": "sweeper"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    3,
+    8,
+    1
+   ],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    10
+   ],
+   "wid": "rifle"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 5,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    9,
+    12,
+    12
+   ],
+   "wid": "carbine"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [],
+   "wid": "nailer"
+  },
+  {
+   "cap": 1,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [],
+   "wid": "launcher"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    10,
+    4
+   ],
+   "wid": "crossbow"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "open_breech",
+   "points": 0,
+   "stack": [
+    9,
+    3
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "echo",
+   "points": 0,
+   "stack": [
+    3,
+    9
+   ],
+   "wid": "shotgun"
+  },
+  {
+   "cap": 0,
+   "kept": false,
+   "mod": "short_barrel",
+   "points": 15,
+   "stack": [
+    11
+   ],
+   "wid": "elephant"
+  },
+  {
+   "cap": 3,
+   "kept": true,
+   "mod": "short_barrel",
+   "points": 0,
+   "stack": [
+    4
+   ],
+   "wid": "pistol"
+  },
+  {
+   "cap": 4,
+   "kept": true,
+   "mod": "last_round",
+   "points": 0,
+   "stack": [
+    5,
+    5,
+    5
+   ],
+   "wid": "pistol"
+  }
+ ],
+ "mod_legal": [
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    1
+   ],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    3,
+    2,
+    4,
+    8
+   ],
+   "z": 4
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    7
+   ],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    7,
+    5,
+    7
+   ],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    7
+   ],
+   "z": 2
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    12,
+    3,
+    12
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    5,
+    1
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    10,
+    6
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    7,
+    7,
+    10,
+    3
+   ],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    5,
+    6
+   ],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    1
+   ],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    9
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    1
+   ],
+   "z": 9
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    7
+   ],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    8,
+    12
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    9,
+    3,
+    10
+   ],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    9,
+    4
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    1
+   ],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    7,
+    7
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    8
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    5,
+    7,
+    11,
+    5
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    4,
+    5
+   ],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    7
+   ],
+   "z": 7
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    2,
+    8
+   ],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    10,
+    6
+   ],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    7,
+    10
+   ],
+   "z": 10
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    9,
+    9
+   ],
+   "z": 8
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    10
+   ],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    2,
+    2
+   ],
+   "z": 6
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    11,
+    8
+   ],
+   "z": 8
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    11,
+    12
+   ],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    8,
+    2
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    10
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    3,
+    2,
+    4,
+    11
+   ],
+   "z": 11
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    2,
+    9,
+    11
+   ],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    10,
+    4
+   ],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [
+    4
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    1,
+    4,
+    4
+   ],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    1,
+    2,
+    11
+   ],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    10
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    12,
+    1,
+    12,
+    5
+   ],
+   "z": 2
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    9
+   ],
+   "z": 11
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    9
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    11
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    4,
+    8
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    9
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    9
+   ],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    11
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    5,
+    3
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    4
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    3,
+    8,
+    2
+   ],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    12,
+    12,
+    3,
+    12
+   ],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    11,
+    9
+   ],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    9
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    4,
+    8
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    1
+   ],
+   "z": 9
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    7
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    9,
+    10,
+    7
+   ],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "down",
+   "stack": [
+    1,
+    9,
+    4
+   ],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    10,
+    11
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    7,
+    9,
+    2
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    4
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    12,
+    1
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    12
+   ],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": false,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    12,
+    5,
+    9,
+    11
+   ],
+   "z": 11
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    4,
+    6,
+    10
+   ],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    8
+   ],
+   "z": 6
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    5,
+    10,
+    7
+   ],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    3,
+    4
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    5
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    5
+   ],
+   "z": 2
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    7
+   ],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    12
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    6,
+    6
+   ],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    3
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    5
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    4
+   ],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    5
+   ],
+   "z": 6
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    10,
+    1,
+    7,
+    4
+   ],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [
+    8
+   ],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    12
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    1,
+    3
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    9,
+    8
+   ],
+   "z": 1
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    1
+   ],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    12,
+    7,
+    10
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    4
+   ],
+   "z": 4
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    3
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    4,
+    10
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    6,
+    7,
+    3,
+    7
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    6,
+    3,
+    4
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    3,
+    6
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    12
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    2,
+    5
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    9,
+    10,
+    10,
+    8
+   ],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    7,
+    7,
+    11
+   ],
+   "z": 4
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    9,
+    12
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    3
+   ],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    6,
+    9,
+    11
+   ],
+   "z": 1
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    6
+   ],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    4,
+    10
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    3
+   ],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    2,
+    3,
+    6
+   ],
+   "z": 6
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    10,
+    9
+   ],
+   "z": 8
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    12
+   ],
+   "z": 10
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    12
+   ],
+   "z": 8
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    5,
+    4,
+    1
+   ],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    7,
+    6,
+    4
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "small",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    3,
+    5
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    10,
+    4
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    1,
+    10
+   ],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    7,
+    1
+   ],
+   "z": 8
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    4,
+    9
+   ],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    6
+   ],
+   "z": 9
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [
+    9
+   ],
+   "z": 9
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    7,
+    10
+   ],
+   "z": 6
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    9
+   ],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    9,
+    6,
+    6
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    2,
+    12
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    3
+   ],
+   "z": 4
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    12,
+    8
+   ],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    8,
+    12,
+    6
+   ],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    11,
+    3
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    10
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    10
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    4
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    3
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    10
+   ],
+   "z": 10
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    5,
+    7
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    10,
+    9,
+    1,
+    1
+   ],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    11,
+    1,
+    11
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    12,
+    5,
+    2,
+    10
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    4
+   ],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    10
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [
+    11
+   ],
+   "z": 10
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    1,
+    1,
+    7,
+    3
+   ],
+   "z": 2
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    11
+   ],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    7
+   ],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    9,
+    4,
+    8
+   ],
+   "z": 2
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    6
+   ],
+   "z": 7
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    12
+   ],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    9
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    11
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    12,
+    6
+   ],
+   "z": 2
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    8
+   ],
+   "z": 6
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    6
+   ],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    4,
+    9
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    4
+   ],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    12,
+    5
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    3
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    11,
+    12,
+    11,
+    6
+   ],
+   "z": 11
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    1,
+    2
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    8,
+    12,
+    12
+   ],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    5,
+    1,
+    7
+   ],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    10,
+    11
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    5,
+    10
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    3
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    1
+   ],
+   "z": 7
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    3
+   ],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    9
+   ],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    5,
+    12,
+    3
+   ],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    4
+   ],
+   "z": 9
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    4,
+    10,
+    7
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    10,
+    7
+   ],
+   "z": 6
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    12
+   ],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [
+    4
+   ],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    11,
+    1,
+    9
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    8
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    9,
+    1,
+    10
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    7,
+    5,
+    8
+   ],
+   "z": 5
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    9,
+    5,
+    7,
+    6
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    8
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    12,
+    5
+   ],
+   "z": 8
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    3,
+    2
+   ],
+   "z": 7
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    5,
+    4,
+    3
+   ],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    1
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    11
+   ],
+   "z": 11
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    12,
+    12,
+    2,
+    12
+   ],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    1
+   ],
+   "z": 9
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "up",
+   "stack": [
+    11,
+    3
+   ],
+   "z": 11
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    3,
+    9
+   ],
+   "z": 1
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    10
+   ],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    7,
+    7,
+    7
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    4
+   ],
+   "z": 6
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    1
+   ],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [
+    1
+   ],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    5,
+    1,
+    12
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    9
+   ],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "small",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    1
+   ],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    10
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    10,
+    9
+   ],
+   "z": 2
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [
+    6
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "down",
+   "stack": [
+    8
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    6
+   ],
+   "z": 6
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    5
+   ],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    12,
+    6,
+    4,
+    6
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    9
+   ],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "any",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    4,
+    11,
+    9
+   ],
+   "z": 7
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    11
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    12
+   ],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    2
+   ],
+   "z": 11
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    12
+   ],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "big",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    3,
+    4,
+    7
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    2
+   ],
+   "z": 8
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    5
+   ],
+   "z": 10
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    1
+   ],
+   "z": 7
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "close",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    3
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    7
+   ],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    10,
+    6,
+    10
+   ],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [
+    8
+   ],
+   "z": 3
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    12,
+    9
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    4,
+    9,
+    12
+   ],
+   "z": 3
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "down",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 3,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    8,
+    10
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "echo",
+   "ok": false,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    12
+   ],
+   "z": 5
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": true,
+   "rule": "small",
+   "stack": [
+    10,
+    8
+   ],
+   "z": 7
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": false,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    7,
+    4,
+    2
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    3,
+    2,
+    2,
+    10
+   ],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [],
+   "z": 2
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    2,
+    9
+   ],
+   "z": 9
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    3
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [
+    6,
+    2
+   ],
+   "z": 1
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    1,
+    7
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 2,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [
+    5
+   ],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    4
+   ],
+   "z": 4
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "same",
+   "stack": [],
+   "z": 4
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [
+    10,
+    3
+   ],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    8
+   ],
+   "z": 11
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    10
+   ],
+   "z": 1
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [
+    8
+   ],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    2,
+    2
+   ],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": true,
+   "rule": "zigzag",
+   "stack": [
+    1,
+    8
+   ],
+   "z": 8
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "zigzag",
+   "stack": [],
+   "z": 1
+  },
+  {
+   "cap": 4,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    3,
+    3
+   ],
+   "z": 1
+  },
+  {
+   "cap": 5,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    2,
+    7
+   ],
+   "z": 3
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    9
+   ],
+   "z": 10
+  },
+  {
+   "cap": 2,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [
+    5
+   ],
+   "z": 4
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 11
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "same",
+   "stack": [
+    5,
+    11
+   ],
+   "z": 10
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    1,
+    5,
+    1
+   ],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "parity",
+   "stack": [
+    1,
+    11
+   ],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 7
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": true,
+   "rule": "same",
+   "stack": [],
+   "z": 9
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    5,
+    10,
+    5
+   ],
+   "z": 12
+  },
+  {
+   "cap": 5,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [
+    7,
+    3,
+    12
+   ],
+   "z": 1
+  },
+  {
+   "cap": 3,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "up",
+   "stack": [],
+   "z": 5
+  },
+  {
+   "cap": 2,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "small",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 4,
+   "mod": "echo",
+   "ok": true,
+   "rosa": true,
+   "rule": "parity",
+   "stack": [
+    2
+   ],
+   "z": 2
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [
+    3,
+    10,
+    4,
+    10
+   ],
+   "z": 11
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "spread",
+   "stack": [],
+   "z": 10
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "spread",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 5,
+   "mod": "last_round",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [
+    4
+   ],
+   "z": 2
+  },
+  {
+   "cap": 4,
+   "mod": "",
+   "ok": true,
+   "rosa": true,
+   "rule": "big",
+   "stack": [
+    11,
+    4
+   ],
+   "z": 12
+  },
+  {
+   "cap": 3,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 3,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": false,
+   "rule": "down",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 1,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": false,
+   "rule": "heavy",
+   "stack": [],
+   "z": 12
+  },
+  {
+   "cap": 4,
+   "mod": "open_breech",
+   "ok": false,
+   "rosa": true,
+   "rule": "close",
+   "stack": [
+    1,
+    4,
+    3
+   ],
+   "z": 8
+  },
+  {
+   "cap": 4,
+   "mod": "short_barrel",
+   "ok": true,
+   "rosa": true,
+   "rule": "heavy",
+   "stack": [
+    5,
+    9,
+    11
+   ],
+   "z": 5
+  },
+  {
+   "cap": 1,
+   "mod": "last_round",
+   "ok": true,
+   "rosa": false,
+   "rule": "any",
+   "stack": [],
+   "z": 6
+  },
+  {
+   "cap": 1,
+   "mod": "",
+   "ok": false,
+   "rosa": false,
+   "rule": "big",
+   "stack": [],
+   "z": 3
+  },
+  {
+   "cap": 1,
+   "mod": "open_breech",
+   "ok": true,
+   "rosa": true,
+   "rule": "close",
+   "stack": [],
+   "z": 3
+  }
+ ],
  "room": [
   {
    "cost": 21,

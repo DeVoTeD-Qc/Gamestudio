@@ -198,6 +198,12 @@ func test_room_plate_four_states() -> void:
 	check((m.get("feedback").get("last_played") as Array).has("room_ready") or Game_reduce(), "affordable: the two-ring pulse")
 	rd.pressed.emit()
 	await _settle()
+	# v5: just enough for the door, not for its machine: a short sheet asks first
+	eq(str(m.get("sheet").get("type", "")), "room_confirm", "door only: the plate asks before opening")
+	var rc: Label = m.find_child("RoomConfirmText", true, false)
+	check(rc != null and rc.text.contains("not enough to use it this wave"), "the sheet says the machine is out of reach this wave")
+	(m.find_child("RoomConfirmOpen", true, false) as Button).pressed.emit()
+	await _settle()
 	check(run.room_open[1], "tap the gold plate: the room opens")
 	# open: USE; used: grey "used"
 	var use: Button = m.find_child("Use1", true, false)

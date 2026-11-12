@@ -258,6 +258,10 @@ static func rule_block(g: DDGun, z: int, run: Object) -> String:
 		return "empty slot"
 	if run != null and run.has_method("can_take"):
 		var zs: Array[int] = run.call("can_take", g)
+		# v5: a gun in a slot takes what its rule AND the slot's Gun Mod allow
+		var si: int = (run.get("slots") as Array).find(g) if run.get("slots") is Array else -1
+		if si >= 0 and run.has_method("can_take_slot"):
+			zs = run.call("can_take_slot", si)
 		if zs.has(z):
 			return "one kill per street"
 		return "needs " + need_words(zs)
@@ -533,9 +537,47 @@ static func run_rule_text(bal: DDBalance) -> String:
 
 ## Safehouse Shop: one line for the panel head.
 static func shop_text(bal: DDBalance) -> String:
-	return "Spend your points here or lose them: 1 Patch, or HP at %d pts each." % bal.shown(bal.num("carry_heal_rate"))
+	return "Spend here: 1 Patch, or HP at %d pts each. Points don't come with you; your score keeps them." % bal.shown(bal.num("carry_heal_rate"))
 
 
 ## The Leave button: "LEAVE - 40 left behind".
 static func leave_text(units: int, bal: DDBalance) -> String:
-	return "LEAVE" if units <= 0 else "LEAVE - %d left behind" % bal.shown(units)
+	return "LEAVE" if units <= 0 else "LEAVE - %d pts stay here (score keeps them)" % bal.shown(units)
+
+
+# ---------------------------------------------------------------- v5 economy pass (economy-v5.md)
+const MOD_NAMES: Dictionary = {"open_breech": "Open Breech", "last_round": "Last Round", "echo": "Echo Chamber",
+	"short_barrel": "Short Barrel"}
+
+
+static func mod_name(id: String) -> String:
+	return str(MOD_NAMES.get(id, id.capitalize()))
+
+
+## A Gun Mod's one-line rule (it works on every gun in its slot).
+static func mod_text(id: String) -> String:
+	match id:
+		"open_breech":
+			return "Kills 1 and 2 ignore the gun's rule."
+		"last_round":
+			return "The kill that fills the gun ignores its rule."
+		"echo":
+			return "A zombie equal to the top kill always fits."
+		"short_barrel":
+			return "The gun holds 1 fewer kill (at least 1): it fills sooner."
+	return ""
+
+
+## A short chip label for the gun tile: "MOD: LAST ROUND".
+static func mod_chip(id: String) -> String:
+	return "MOD · " + mod_name(id).to_upper()
+
+
+## The safehouse line about points (head: points "went to 0 and I didn't understand why").
+static func points_rule_text(bal: DDBalance) -> String:
+	return "Points are for spending in this district. Unspent points stay here when you leave; your SCORE already counts every point you earned."
+
+
+## The HUD score line.
+static func score_text(units: int, bal: DDBalance) -> String:
+	return "SCORE %d" % bal.shown(units)

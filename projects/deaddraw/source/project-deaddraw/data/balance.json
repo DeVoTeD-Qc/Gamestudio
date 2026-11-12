@@ -607,6 +607,26 @@
   "big_bang_min": 9,
   "demolition_total": 16,
   "pest_total": 15,
+  "room_free_use": false,
+  "room_cost_add": [
+    0,
+    0,
+    0
+  ],
+  "room_free_kinds": [
+    "wall",
+    "bench",
+    "patch"
+  ],
+  "mods_mode": "safehouse",
+  "mod_offer": 2,
+  "mod_price": 5,
+  "mods": [
+    "open_breech",
+    "last_round",
+    "echo",
+    "short_barrel"
+  ],
   "extra_rules": {
     "points_display_mult": 10,
     "score_hp_mult": 1,

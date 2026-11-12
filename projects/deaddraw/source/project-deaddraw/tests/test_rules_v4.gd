@@ -215,7 +215,7 @@ func test_shop_patch_and_supplies() -> void:
 	check(not bool(r.buy_supplies(999)["ok"]), "can't buy past max HP")
 	var left: int = r.points
 	eq(int(r.shop_state()["left_behind"]), left, "state: what leaving loses")
-	eq(DDText.leave_text(left, bal()), "LEAVE - %d left behind" % bal().shown(left), "Leave button text")
+	eq(DDText.leave_text(left, bal()), "LEAVE - %d pts stay here (score keeps them)" % bal().shown(left), "Leave button text")
 	var earned: int = r.points_earned
 	var lv: Dictionary = r.leave_safehouse()
 	check(bool(lv["ok"]), "left")

@@ -676,7 +676,10 @@ func enter_district() -> void:
 
 # ---------------------------------------------------------------- street
 func _points_spec(run: DDRun) -> Dictionary:
-	return {"kind": "X", "tag": "PTS", "big": str(Game.bal.shown(run.points)), "big_size": 26, "row": true, "payload": DDPayloads.points(run)}
+	# v5 (playtest: "I first thought points were just score"): the chip shows what you can spend
+	# and, under it, the run score (every point earned; spending never lowers it)
+	return {"kind": "X", "tag": "PTS", "big": str(Game.bal.shown(run.points)), "big_size": 26, "row": true, "payload": DDPayloads.points(run),
+		"lines": [[DDText.score_text(run.points_earned, Game.bal).to_lower(), DDUi.TEXT_DIM, DDUi.FONT_S - 7]]}
 
 
 ## dd-ux-clean: a tile whose content main.gd builds itself (HP panel, the prompt bar): it keeps
@@ -1099,12 +1102,29 @@ func _wave_door(run: DDRun, column: bool) -> DDCardView:
 		bv.add_theme_stylebox_override("panel", boss_tag)
 	bv.index = IDX_BOSS
 	bv.name = "BossChip"
-	var bl: Label = DDUi.label("BOSS %s" % ("·".join(PackedStringArray(zs.map(func(z: Variant) -> String: return str(int(z))))) if str(b.get("trait", "")) != "phases" else str(int(zs[0])) + "+"),
-		DDUi.FONT_S - 3, DDUi.accent("F") if boss_tag == null else DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	bl.clip_text = true
-	bl.custom_minimum_size = Vector2(10, 0)
+	# v5 (playtest: "BOSS 9: is 9 its strength or a countdown?"): the word BOSS, then the boss's
+	# strength in the same red badge every zombie wears (Horde: one badge + "x3"; Phases: one badge
+	# per phase). The chip's tooltip spells it out ("strength 9").
+	var brow: HBoxContainer = DDUi.hbox(3)
+	brow.name = "BossBadgeRow"
+	brow.alignment = BoxContainer.ALIGNMENT_CENTER
+	brow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bv.add_child(brow)
+	var bl: Label = DDUi.label("BOSS", DDUi.FONT_S - 3, DDUi.accent("F") if boss_tag == null else DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	bl.name = "BossWord"
 	bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	bv.add_child(bl)
+	brow.add_child(bl)
+	var horde: bool = zs.size() > 1 and str(b.get("trait", "")) != "phases"
+	var sm: Control = Marks.StrengthMark.new(int(zs[0]))
+	sm.name = "BossStrength"
+	sm.custom_minimum_size = Vector2(22, 22)
+	sm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	brow.add_child(sm)
+	if zs.size() > 1:
+		var more: Label = DDUi.label(("x%d" % zs.size()) if horde else ("->%d" % int(zs[zs.size() - 1])), DDUi.FONT_S - 6, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		more.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		brow.add_child(more)
+	bv.clip_contents = true
 	bv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.boss(Game.run)))
 	bv.inspected.connect(_on_inspect)
 	# inside the art window (a plain Control), so the anchors hold
@@ -1193,7 +1213,7 @@ func _room_plate(run: DDRun, i: int) -> Control:
 		b.disabled = not afford or busy
 		b.pressed.connect(func() -> void:
 			if not _was_long(b):
-				do_open_room(i))
+				request_open_room(i))
 		var lock: Control = Marks.Padlock.new(afford, col)
 		lock.custom_minimum_size = Vector2(16, 20)
 		lock.name = "Padlock"
@@ -1209,7 +1229,12 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	row.add_child(ml)
 	if afford:
 		inner.add_child(DDUi.label("OPEN", DDUi.FONT_S - 6, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER))
-	elif not open:
+	if not open:
+		# v5: what using the machine inside costs, under the door price ("+150 to use")
+		var ul: Label = DDUi.label("+%d to use" % Game.bal.shown(run.machine_min_price(i)), DDUi.FONT_S - 7, DDUi.BG if afford else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
+		ul.name = "UseCost"
+		inner.add_child(ul)
+	if not open and not afford:
 		# how close you are: a thin gold bar
 		var pg: ProgressBar = ProgressBar.new()
 		pg.show_percentage = false
@@ -1229,7 +1254,7 @@ func _room_plate(run: DDRun, i: int) -> Control:
 		b.add_theme_stylebox_override(st, sb if st != "hover" else DDUi.box(bg.lightened(0.1), edge, 2, 10, 6))
 	# dd-art2-import: the painted door plates (gold afford, dark iron locked, green USE, used)
 	DDUi.Kit.skin_plate(b, "dd_plate_door_" + (("used" if used else "use") if open else ("afford" if afford else "locked")), 6.0)
-	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP)
+	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP + (16.0 if not open else 0.0))
 	# dd-ux-text (playtest): the plate has its own tooltip on right click / long press (the gold
 	# OPEN plate showed an empty one): the price and what is inside
 	_inspectable_button(b, DDPayloads.room_plate(run, i))
@@ -1694,6 +1719,8 @@ func _build_sheet() -> void:
 			_patch_sheet(run, v)
 		"melee":
 			_melee_sheet(run, v, int(sheet.get("index", 0)))
+		"room_confirm":
+			_room_confirm_sheet(run, v, int(sheet.get("room", 0)))
 
 
 func _sheet_button(text: String, enabled: bool, color: Color, cb: Callable) -> Button:
@@ -1880,6 +1907,22 @@ func tap_street(i: int) -> void:
 			sheet = {"type": "melee", "index": i}
 			Sfx.cue(&"button", 0.9)
 			_queue_render()
+		DDCard.MEDKIT:
+			# v5 (playtest: "a First Aid Kit taken at full HP heals 0 and is gone"): at full HP a tap
+			# asks first; a second tap within the toast uses it anyway (it still spends a resolve)
+			var pv: Dictionary = run.card_preview(i, DDRun.USE)
+			if bool(pv.get("ok", false)) and int(pv.get("heal", 0)) <= 0 and int(pv.get("cover", 0)) <= 0:
+				if _confirm_heal != c.get_instance_id():
+					_confirm_heal = c.get_instance_id()
+					Sfx.cue(&"warn")
+					var cv: DDCardView = _street_views.get(c.get_instance_id())
+					last_block = "Full HP: this heals 0. Tap again to use it anyway."
+					_toast(last_block, cv)
+					if OS.has_feature("web"):
+						_publish_state()
+					return
+			_confirm_heal = 0
+			do_resolve(i, DDRun.USE)
 		_:
 			do_resolve(i, DDRun.USE)
 
@@ -1919,6 +1962,8 @@ func _shake(c: Control) -> void:
 
 
 var _toast_node: Control = null
+## v5: the medkit (instance id) that asked "full HP: tap again" (0 = none).
+var _confirm_heal: int = 0
 
 
 ## dd-ux-text: a one-line toast over `anchor` (or mid-screen), gone after 1.8 s; it never takes taps.
@@ -2216,6 +2261,47 @@ func do_open_room(i: int) -> void:
 		_pending_banner = {"text": "%s OPEN" % str(Game.run.room(i).get("name", "")).to_upper(), "color": DDUi.accent("Q"),
 			"sub": "Tap USE for the %s" % DDText.machine_name(str(Game.run.machine(i).get("kind", ""))), "delay": 1.5}
 	_finish(ev, {"type": "room", "ev": ev, "snap": snap})
+
+
+## v5 (playtest: "I spent 210 on the Garage and its Wall Rack wanted another 150 I didn't have"):
+## the OPEN plate opens at once when you can also use the machine this wave; otherwise a short
+## sheet shows the door, what is inside and what you'll have left, and asks first.
+func request_open_room(i: int) -> void:
+	if busy:
+		return
+	if Game.run.room_machine_short(i):
+		sheet = {"type": "room_confirm", "room": i}
+		Sfx.cue(&"button", 0.9)
+		_queue_render()
+		return
+	do_open_room(i)
+
+
+func _room_confirm_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
+	var r: Dictionary = run.room(i)
+	var m: Dictionary = run.machine(i)
+	var b: DDBalance = Game.bal
+	var price: int = b.shown(run.room_cost(i))
+	var left: int = b.shown(run.points) - price
+	v.add_child(DDUi.label("OPEN %s · %d pts" % [str(r.get("name", "")).to_upper(), price], DDUi.FONT_M, DDUi.accent("R"), HORIZONTAL_ALIGNMENT_CENTER, true))
+	var lines: PackedStringArray = []
+	lines.append("Inside: %s, and the %s." % [DDPayloads._pack_short(run, i), DDText.machine_name(str(m.get("kind", "")))])
+	lines.append("The %s costs %s. After opening you'll have %d: not enough to use it this wave." % [DDText.machine_name(str(m.get("kind", ""))),
+		DDPayloads.machine_use_text(run, i), left])
+	lines.append("Door + one use: %d." % b.shown(run.room_total_cost(i)))
+	var body: Label = DDUi.label("\n".join(lines), DDUi.FONT_S - 2, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
+	body.name = "RoomConfirmText"
+	v.add_child(body)
+	var row: HBoxContainer = DDUi.hbox(8)
+	v.add_child(row)
+	var ok: Button = _sheet_button("OPEN FOR %d" % price, not busy, Color("6b5a1e"), func() -> void:
+		sheet = {}
+		do_open_room(i))
+	ok.name = "RoomConfirmOpen"
+	row.add_child(ok)
+	var no: Button = _sheet_button("NOT YET", true, DDUi.PANEL_HI, close_sheet)
+	no.name = "RoomConfirmCancel"
+	row.add_child(no)
 
 
 func open_machine(i: int) -> void:
@@ -2601,7 +2687,8 @@ func _build_safehouse() -> void:
 	v.add_child(head)
 	# dd-ux-clean: one plain line, then your kit as small inspectable tiles, then the choices.
 	# v4: points don't come along; the Safehouse Shop is where they are spent.
-	v.add_child(DDUi.label("+%d HP when you leave. Guns and Patches come with you." % run.safehouse_heal(), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	v.add_child(DDUi.label("+%d HP when you leave. Guns, Gun Mods and Patches come with you." % run.safehouse_heal(), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+
 	var kit: HFlowContainer = HFlowContainer.new()
 	kit.alignment = FlowContainer.ALIGNMENT_CENTER
 	kit.add_theme_constant_override("h_separation", SEP)
@@ -2640,7 +2727,10 @@ func _build_safehouse() -> void:
 			cv.name = "BossPatch_" + pid
 			cv.tapped.connect(func(_x: DDCardView) -> void: take_boss_patch(pid))
 			box.add_child(cv)
-	if bool(run.shop_state().get("enabled", false)):
+	# v5: the safehouse is three short steps: the boss Patch, a Gun Mod (fit 1 or skip), the shop
+	if run.mod_step_open():
+		v.add_child(_mod_panel(run))
+	elif bool(run.shop_state().get("enabled", false)):
 		var shop: DDShopPanel = DDShopPanel.new()
 		shop.setup(run, portrait)
 		shop.changed.connect(func(_ev: Dictionary) -> void:
@@ -2657,6 +2747,82 @@ func _build_safehouse() -> void:
 		go.custom_minimum_size = Vector2(0, 80 if portrait else DDUi.TAP_MIN)
 		go.pressed.connect(leave_safehouse)
 		v.add_child(go)
+
+
+## v5: the safehouse's Gun Mods (economy-v5.md): 2 offered, fit 1 (free) to gun slot 1 or 2.
+## Each mod is a card (tap / right click / long press = its zoom) with a FIT button per slot that
+## says what is in the slot now (and if Short Barrel would finish that gun at once).
+func _mod_panel(run: DDRun) -> Control:
+	var box: VBoxContainer = DDUi.vbox(6)
+	box.name = "ModPanel"
+	var price: int = run.mod_price()
+	var head: HBoxContainer = DDUi.hbox(8)
+	box.add_child(head)
+	var hl: Label = DDUi.label(("GUN MOD · fit 1 to a slot, free" if price <= 0 else "GUN MOD · fit 1 to a slot for %d pts (you have %d)" % [Game.bal.shown(price), Game.bal.shown(run.points)]),
+		DDUi.FONT_S, DDUi.accent("W"), HORIZONTAL_ALIGNMENT_LEFT, true)
+	hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(hl)
+	var skip: Button = _sheet_button("SKIP", not busy, DDUi.PANEL_HI, skip_mod)
+	skip.name = "SkipMod"
+	skip.size_flags_horizontal = Control.SIZE_FILL
+	skip.custom_minimum_size = Vector2(96, 48)
+	head.add_child(skip)
+	if portrait:
+		box.add_child(DDUi.label("Every gun you put in that slot gets it, for the rest of the run.", DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	var row: BoxContainer = BoxContainer.new()
+	row.vertical = portrait
+	row.add_theme_constant_override("separation", SEP)
+	box.add_child(row)
+	for m: String in run.mod_offer:
+		var col: VBoxContainer = DDUi.vbox(4)
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(col)
+		var mp: Dictionary = DDPayloads.mod(m)
+		var cv: DDCardView = _view({"kind": "W", "tag": "GUN MOD", "title": DDText.mod_name(m), "row": true, "title_size": DDUi.FONT_S,
+			"lines": [[DDText.mod_text(m), DDUi.TEXT, DDUi.FONT_S - 5]], "payload": mp}, Vector2(0, 64 if portrait else 56))
+		cv.name = "Mod_" + m
+		cv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(mp))
+		col.add_child(cv)
+		var brow: HBoxContainer = DDUi.hbox(6)
+		col.add_child(brow)
+		for s: int in 2:
+			var pv: Dictionary = run.mod_preview(m, s)
+			var g: DDGun = run.slot(s)
+			var what: String = g.name if g != null else "empty"
+			if str(pv.get("replaces", "")) != "":
+				what += " · replaces " + DDText.mod_name(str(pv["replaces"]))
+			if bool(pv.get("finishes", false)):
+				what += " · FULL now"
+			var bt: Button = _sheet_button("FIT TO SLOT %d\n%s" % [s + 1, what if bool(pv["ok"]) else str(pv["reason"])], bool(pv["ok"]) and not busy, Color("2f4a5a"),
+				func() -> void: pass)
+			bt.name = "Fit_%s_%d" % [m, s + 1]
+			bt.pressed.connect(func() -> void:
+				if not _was_long(bt):
+					fit_mod(m, s))
+			bt.add_theme_font_size_override("font_size", DDUi.FONT_S - 5)
+			bt.custom_minimum_size = Vector2(0, 52)
+			bt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_inspectable_button(bt, mp)
+			brow.add_child(bt)
+	return box
+
+
+func skip_mod() -> void:
+	if bool(Game.run.skip_mod().get("ok", false)):
+		Game.save_run("SAFEHOUSE")
+	_queue_render()
+
+
+func fit_mod(m: String, s: int) -> void:
+	var ev: Dictionary = Game.run.fit_mod(m, s)
+	if bool(ev.get("ok", false)):
+		Sfx.cue(&"perk")
+		last_event = ev
+		Game.save_run("SAFEHOUSE")
+		var cs: Array = ev.get("collects", [])
+		_toast("%s fitted to slot %d%s" % [DDText.mod_name(m), s + 1, (": the %s is full, +%d" % [str((cs[0] as Dictionary).get("name", "")),
+			Game.bal.shown(int((cs[0] as Dictionary).get("points", 0)))]) if not cs.is_empty() else "."])
+	_queue_render()
 
 
 ## v4: the boss reward Patch is sewn on when tapped; then the Safehouse Shop opens.
@@ -2803,6 +2969,13 @@ func apply_debug(args: Dictionary) -> void:
 				if run.phase == DDRun.Phase.STREET and not run.street.is_empty():
 					run.attack(0, DDRun.MELEE)
 			screen = Screen.SAFEHOUSE
+			# v5 QA: &takepatch=1 takes the boss Patch (the Gun Mod step shows), &points=N
+			if str(args.get("takepatch", "0")) == "1" and not run.pending_patch.is_empty():
+				run.take_patch(str(run.pending_patch["offer"][0]))
+			if args.has("points"):
+				run.points = int(args["points"])
+			if str(args.get("skipmod", "0")) == "1":
+				run.skip_mod()
 		"end":
 			run.setup_street(["Z11", "Z11", "C2", "C2", "C2", "C2"])
 			run.hp = 2
@@ -2824,6 +2997,13 @@ func apply_debug(args: Dictionary) -> void:
 		var sk: String = "stack%d" % (s + 1)
 		if args.has(sk) and run.slot(s) != null:
 			run.slot(s).stack = _ints_arg(str(args[sk]))
+	if args.has("mods"):
+		# v5 QA: &mods=last_round,echo puts Gun Mods on slots 1 and 2 ("-" = none)
+		var ms: PackedStringArray = str(args["mods"]).split(",")
+		for s2: int in mini(2, ms.size()):
+			run.slot_mods[s2] = "" if ms[s2] == "-" else ms[s2]
+			if run.slot(s2) != null:
+				run.slot(s2).cap = DDRun.mod_cap(Game.bal.weapon_cap(run.slot(s2).wid), run.slot_mods[s2])
 	if args.has("patches"):
 		for p: String in str(args["patches"]).split(","):
 			if p != "" and not run.patches.has(p):
@@ -2871,6 +3051,10 @@ func apply_debug(args: Dictionary) -> void:
 				run.open_room(ri)
 			run.points += 60
 			sheet = {"type": "machine", "room": ri}
+		elif sh == "roomconfirm":
+			# v5: exactly the door's price, not enough for its machine: the confirm sheet
+			run.points = run.room_cost(0)
+			sheet = {"type": "room_confirm", "room": 0}
 		elif sh == "patch":
 			var ri2: int = -1
 			for k: int in run.room_count():

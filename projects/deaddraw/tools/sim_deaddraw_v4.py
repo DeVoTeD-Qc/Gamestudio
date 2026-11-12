@@ -14,6 +14,9 @@ recommendation. Compare with --preset v3:
   18 medkits_per_street (99 = no limit)
   19 run_mode          before (v3: before the first resolve, all street cards back) |
                        zombies_only | anytime (resolve some, then Run: everything left goes back)
+v5 economy pass (documentation/design/economy-v5.md; --preset v4 turns it off):
+  E2 room_free_use     opening a room gives one free machine use (tested, off: far too strong)
+  E4 mods_mode         safehouse: see 2 Gun Mods, fit 1 to a slot for mod_price (legal_mod, fit_mod)
 
 v3 summary (still true unless a key above says otherwise):
   * the board: WAVE decks on the left, ROOM decks on the right, one mixed DRAW PILE
@@ -215,10 +218,12 @@ CONFIG = {
     "demolition_total": 16,       #     (cap-2 launcher draft, not used) both kills total this or more
     "pest_total": 15,             # 16: Alley Sweeper challenge, total this or less
     # v5 economy pass (economy-v5.md; --preset v4 turns all of it off)
-    "room_free_use": True,        # E2: opening a room gives its machine one FREE use (kept until used)
+    "room_free_use": False,       # E2 (tested, rejected: 59-88% wins): opening a room gives its machine one FREE use
     "room_cost_add": [0, 0, 0],   # E2: added to every room price, per district (pricing the free use in)
+    "room_free_kinds": ["wall", "bench", "patch"],   # E2: machines whose first use is free
     "mods_mode": "safehouse",     # E4: none | safehouse (free: see mod_offer Gun Mods, fit 1 to a slot)
     "mod_offer": 2,
+    "mod_price": 5,               # E4: points the safehouse Gun Mod costs (5 = 50 on screen; 0 = free: +5-8 win)
     "mods": ["open_breech", "last_round", "echo", "short_barrel"],
 }
 
@@ -819,7 +824,7 @@ def spend(s, b, zd, st, rng):
                 s.points -= cost
                 st["spent"] += cost
                 r["opened"] = True
-                r["free"] = bool(CONFIG["room_free_use"])
+                r["free"] = bool(CONFIG["room_free_use"]) and r["machine"]["kind"] in CONFIG["room_free_kinds"]
                 cards = make_cards(r["pack"], b.pool, rng, b.mpool)
                 b.pile += cards
                 rng.shuffle(b.pile)
@@ -1223,6 +1228,10 @@ def fit_mod(s, st, rng):
     avail = [m for m in CONFIG["mods"] if m not in s.mods]
     if not avail:
         return
+    if s.points < CONFIG["mod_price"]:
+        return
+    s.points -= CONFIG["mod_price"]
+    st["spent"] += CONFIG["mod_price"]
     offer = rng.sample(avail, min(CONFIG["mod_offer"], len(avail)))
     mod = next(m for m in MOD_PRIORITY if m in offer)
     i = 0 if not s.mods[0] else (1 if not s.mods[1] else 0)

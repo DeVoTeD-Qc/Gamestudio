@@ -330,6 +330,15 @@ func test_safehouse_and_end_screens() -> void:
 		bp.tapped.emit(bp)
 		await _settle()
 		check(run.has_patch(pid) and run.pending_patch.is_empty(), tag + " a tap takes the boss Patch")
+		# v5: then the Gun Mod step (fit 1 or skip), then the shop
+		check(_named(m, "ModPanel") != null and _named(m, "ShopLeave") == null, tag + " the Gun Mod step comes before the shop")
+		_all_inspectable_and_on_screen(m, tag + " safehouse gun mod")
+		var fb: Button = _named(m, "Fit_%s_1" % run.mod_offer[0])
+		check(fb != null and not fb.disabled, tag + " FIT TO SLOT 1 is on")
+		var m0: String = run.mod_offer[0]
+		fb.pressed.emit()
+		await _settle()
+		eq(run.slot_mod(0), m0, tag + " the mod is on slot 1")
 		var go: Button = _named(m, "ShopLeave")
 		check(go != null and not go.disabled and go.text.begins_with("LEAVE"), tag + " then the shop's LEAVE: " + (go.text if go != null else "-"))
 		_all_inspectable_and_on_screen(m, tag + " safehouse shop")

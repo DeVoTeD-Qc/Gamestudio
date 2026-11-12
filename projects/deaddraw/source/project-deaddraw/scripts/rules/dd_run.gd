@@ -9,6 +9,11 @@
 #   Patches (Lockpick, Iron Stomach, Adrenaline, Grudge, Show-Off, Whetstone); new guns
 #   Stovepipe Launcher (one shot) and Alley Sweeper (6 or less); no medkit-per-street limit; Run
 #   any time on a street that has cards, every street card goes to the BOTTOM of the pile.
+#   v5 economy pass (economy-v5.md, sim legal_mod / fit_mod): GUN MODS. At each safehouse you see
+#   mod_offer of the 4 Gun Mods and may fit 1 (free) to gun slot 1 or 2, for the rest of the run;
+#   every gun in that slot gets it (Open Breech: kills 1-2 ignore the rule; Last Round: the kill
+#   that fills the gun ignores the rule; Echo Chamber: a zombie equal to the top kill always fits;
+#   Short Barrel: holds 1 fewer kill, at least 1).
 #   v3 base (sim_deaddraw_v3.py, core-rules-v3.md):
 #   3 districts; each has 3 WAVE decks (left) + a face-up boss, 3 ROOM decks with prices (right)
 #   and one mixed DRAW PILE (middle). District start: Entrance + Wave 1 are shuffled into the pile;
@@ -74,6 +79,11 @@ var shop_offer: Array[String] = []
 var shop_patch_bought: bool = false
 var shop_hp_bought: int = 0
 var left_behind: int = 0
+## v5 Gun Mods: the mod fitted to each gun slot ("" = none), this safehouse's offer, and whether
+## one was fitted here already.
+var slot_mods: Array[String] = ["", ""]
+var mod_offer: Array[String] = []
+var mod_fitted_here: bool = false
 
 var district_index: int = 0
 var wave_index: int = 0                # the last wave deck shuffled into the pile
@@ -130,6 +140,9 @@ func start(survivor: String, seed_value: int = -1) -> void:
 	active = SLOT1 if slots[0] != null else MELEE
 	melee = {}
 	fired = [false, false]
+	slot_mods = ["", ""]
+	mod_offer.clear()
+	mod_fitted_here = false
 	shop_offer.clear()
 	shop_patch_bought = false
 	shop_hp_bought = 0
@@ -141,7 +154,7 @@ func start(survivor: String, seed_value: int = -1) -> void:
 	boss_results.clear()
 	stats = {"streets": 0, "kills": 0, "gun_kills": 0, "melee_kills": 0, "finished": 0, "challenges": 0,
 		"runs": 0, "rooms": 0, "machines": 0, "damage": 0, "salvage": 0, "melee_weapon_kills": 0, "melee_broken": 0,
-		"left_behind": 0, "shop_hp": 0, "shop_patches": 0}
+		"left_behind": 0, "shop_hp": 0, "shop_patches": 0, "mods": 0}
 	log_lines.clear()
 	pending_patch = {}
 	phase = Phase.STREET
@@ -166,6 +179,23 @@ func wave_count() -> int:
 
 func make_gun(wid: String) -> DDGun:
 	return DDGun.make(wid, bal.weapon_name(wid), bal.weapon_rule(wid), bal.weapon_power(wid), bal.weapon_cap(wid))
+
+
+## sim put_gun(): a new gun goes into slot s; its capacity follows the slot's Gun Mod.
+func _put_gun(s: int, wid: String) -> void:
+	var g: DDGun = make_gun(wid)
+	g.cap = mod_cap(g.cap, slot_mod(s))
+	slots[s] = g
+	fired[s] = false
+
+
+## sim mod_cap(): Short Barrel holds 1 fewer kill (at least 1).
+static func mod_cap(cap: int, mod: String) -> int:
+	return maxi(1, cap - 1) if mod == "short_barrel" else cap
+
+
+func slot_mod(s: int) -> String:
+	return slot_mods[s] if s >= 0 and s < slot_mods.size() else ""
 
 
 func _shuffle(a: Array) -> void:
@@ -464,11 +494,34 @@ func gun_allows(g: DDGun, z: int) -> bool:
 	return g != null and legal(g.rule, g.stack, z, steady())
 
 
-## sim zombie_opts(): the gun in slot s may take z now (its rule, and the heavy rule's one kill
-## per street).
+## v5 sim legal_mod(): legal() with a slot's Gun Mod (cap = the gun's capacity in that slot).
+func legal_mod(rule_id: String, stack: Array[int], z: int, rosa: bool, mod: String, cap: int) -> bool:
+	if mod == "open_breech" and stack.size() < 2:
+		return true
+	if mod == "last_round" and cap > 0 and stack.size() == cap - 1:
+		return true
+	if mod == "echo" and not stack.is_empty() and z == stack[stack.size() - 1]:
+		return true
+	return legal(rule_id, stack, z, rosa)
+
+
+## The rule of the gun in slot s (with that slot's Gun Mod) lets z on top of its stack.
+func slot_rule_ok(s: int, z: int) -> bool:
+	var g: DDGun = slot(s)
+	return g != null and legal_mod(g.rule, g.stack, z, steady(), slot_mod(s), g.cap)
+
+
+## True when the slot's Gun Mod, not the gun's own rule, is what lets z in.
+func mod_lets_in(s: int, z: int) -> bool:
+	var g: DDGun = slot(s)
+	return g != null and slot_mod(s) != "" and slot_rule_ok(s, z) and not gun_allows(g, z)
+
+
+## sim zombie_opts(): the gun in slot s may take z now (its rule with the slot's Gun Mod, and the
+## heavy rule's one kill per street).
 func slot_allows(s: int, z: int) -> bool:
 	var g: DDGun = slot(s)
-	return gun_allows(g, z) and not (g.rule == "heavy" and fired[s])
+	return slot_rule_ok(s, z) and not (g.rule == "heavy" and fired[s])
 
 
 func is_full(g: DDGun) -> bool:
@@ -550,6 +603,18 @@ func challenge_state(g: DDGun) -> String:
 				return "open"
 			return "on_track" if met else "broken"
 	return "met" if met else "open"
+
+
+## The zombie numbers (1-12) the gun in slot s can still take (its rule + the slot's Gun Mod).
+func can_take_slot(s: int) -> Array[int]:
+	var out: Array[int] = []
+	var g: DDGun = slot(s)
+	if g == null:
+		return out
+	for z: int in range(1, 13):
+		if slot_rule_ok(s, z):
+			out.append(z)
+	return out
 
 
 ## The zombie numbers (1-12) a gun can still take on its current stack.
@@ -671,7 +736,7 @@ func preview(index: int, weapon: int) -> Dictionary:
 			if loose:
 				out["uses_loose"] = true
 			else:
-				out["reason"] = "one kill per street" if gun_allows(g, c.value) else DDText.rule_block(g, c.value, self)
+				out["reason"] = "one kill per street" if slot_rule_ok(weapon, c.value) else DDText.rule_block(g, c.value, self)
 				return out
 		var after: Array[int] = g.stack.duplicate()
 		after.append(c.value)
@@ -890,8 +955,7 @@ func resolve(index: int, choice: String) -> Dictionary:
 				slot_i = 0 if choice == EQUIP1 else 1
 				if slot(slot_i) != null:
 					_collect(slot_i, false, false)
-				slots[slot_i] = make_gun(c.wid)
-				fired[slot_i] = false
+				_put_gun(slot_i, c.wid)
 				_log("%s into slot %d." % [bal.weapon_name(c.wid), slot_i + 1])
 	var ev: Dictionary = _event(c.kind, _notes[_notes.size() - 1] if not _notes.is_empty() else "", hp - hp0, points - pts0)
 	ev["card"] = c
@@ -1211,6 +1275,33 @@ func room_block_reason(i: int) -> String:
 	return ""
 
 
+## v5 (economy-v5.md): the cheapest use of room i's machine right now (Wall Rack: its gun; Patch
+## Press: the next Patch; Retrofit Bench: its cheapest job), so the door can show what is inside.
+func machine_min_price(i: int) -> int:
+	var m: Dictionary = machine(i)
+	match str(m.get("kind", "")):
+		"wall":
+			return bal.weapon_price(str(m.get("wid", "")))
+		"patch":
+			return bal.patch_price(patches.size())
+		"bench":
+			var lo: int = 1 << 30
+			for sv: String in ["trim", "flip", "hone"]:
+				lo = mini(lo, bal.bench_price(sv))
+			return lo if lo < (1 << 30) else 0
+	return 0
+
+
+## v5: the door plus one use of what is inside (what you need to open AND use it this wave).
+func room_total_cost(i: int) -> int:
+	return room_cost(i) + machine_min_price(i)
+
+
+## v5: opening room i now leaves too few points to use its machine this wave.
+func room_machine_short(i: int) -> bool:
+	return not room_open[i] and points >= room_cost(i) and points - room_cost(i) < machine_min_price(i)
+
+
 func can_open_room(i: int) -> bool:
 	return room_block_reason(i) == ""
 
@@ -1345,8 +1436,7 @@ func use_machine(i: int, option_id: String) -> Dictionary:
 			var wid: String = str(machine(i).get("wid", ""))
 			if slot(s) != null:
 				_collect(s, false, false)
-			slots[s] = make_gun(wid)
-			fired[s] = false
+			_put_gun(s, wid)
 			result["slot"] = s
 			result["gun"] = slots[s]
 			_log("Wall Rack (-%d): the %s goes into slot %d." % [bal.shown(price), bal.weapon_name(wid), s + 1])
@@ -1425,6 +1515,7 @@ func _clear_district(ran_past: bool) -> void:
 	shop_offer.clear()
 	shop_patch_bought = false
 	shop_hp_bought = 0
+	_make_mod_offer()
 	if not ran_past:
 		var pool: Array[String] = _patch_pool()
 		_shuffle(pool)
@@ -1432,6 +1523,103 @@ func _clear_district(ran_past: bool) -> void:
 			pending_patch = {"offer": pool.slice(0, mini(bal.num("boss_patch_offer"), pool.size())), "source": "boss", "room": -1}
 	if pending_patch.is_empty():
 		_make_shop_offer()
+
+
+# ---------------------------------------------------------------- v5 Gun Mods
+func mods_enabled() -> bool:
+	return bal.text("mods_mode") == "safehouse"
+
+
+func _make_mod_offer() -> void:
+	mod_offer.clear()
+	mod_fitted_here = false
+	if not mods_enabled():
+		return
+	var pool: Array[String] = []
+	for m: Variant in bal.list("mods"):
+		if not slot_mods.has(str(m)):
+			pool.append(str(m))
+	_shuffle(pool)
+	mod_offer = pool.slice(0, mini(bal.num("mod_offer"), pool.size()))
+
+
+## The safehouse's Gun Mod step is open: the boss Patch is picked and the offer is still up.
+func mod_step_open() -> bool:
+	return phase == Phase.SAFEHOUSE and pending_patch.is_empty() and not mod_offer.is_empty()
+
+
+## Passes on this safehouse's Gun Mods (the shop opens next).
+func skip_mod() -> Dictionary:
+	if not mod_step_open():
+		return {"ok": false, "reason": "no Gun Mod to skip", "kind": "blocked"}
+	mod_offer.clear()
+	_log("No Gun Mod this time.")
+	return {"ok": true, "kind": "mod_skip"}
+
+
+func mod_price() -> int:
+	return bal.num("mod_price")
+
+
+## Why Gun Mod `id` can't go on slot s now ("" = it can).
+func mod_block_reason(id: String, s: int) -> String:
+	if phase != Phase.SAFEHOUSE or not mods_enabled():
+		return "Gun Mods are fitted at a safehouse"
+	if not pending_patch.is_empty():
+		return "pick your free Patch first"
+	if mod_fitted_here:
+		return "one Gun Mod per safehouse"
+	if not mod_offer.has(id):
+		return "not offered"
+	if s < 0 or s > 1:
+		return "no such slot"
+	if slot_mod(s) == id:
+		return "slot %d has it already" % (s + 1)
+	if points < mod_price():
+		return "need %d pts" % bal.shown(mod_price())
+	return ""
+
+
+## What fitting `id` to slot s does: {ok, reason, replaces (the slot's old mod), cap (the gun's
+## new capacity, 0 = no gun), finishes (Short Barrel fills the gun's stack: it finishes now)}.
+func mod_preview(id: String, s: int) -> Dictionary:
+	var why: String = mod_block_reason(id, s)
+	var out: Dictionary = {"ok": why == "", "reason": why, "replaces": slot_mod(s), "cap": 0, "finishes": false}
+	var g: DDGun = slot(s)
+	if g != null:
+		var cap: int = mod_cap(bal.weapon_cap(g.wid), id)
+		out["cap"] = cap
+		out["finishes"] = not g.stack.is_empty() and (g.stack.size() >= cap)
+	return out
+
+
+## sim fit_mod_to(): fits Gun Mod `id` to slot s (replacing that slot's mod) for the rest of the
+## run. The gun in the slot gets it at once; Short Barrel can fill its stack: it finishes now
+## (finish bonus + challenge).
+func fit_mod(id: String, s: int) -> Dictionary:
+	var why: String = mod_block_reason(id, s)
+	if why != "":
+		return {"ok": false, "reason": why, "kind": "blocked"}
+	_begin()
+	var hp0: int = hp
+	var pts0: int = points
+	points -= mod_price()
+	var old: String = slot_mod(s)
+	slot_mods[s] = id
+	mod_fitted_here = true
+	mod_offer.clear()
+	stats["mods"] = int(stats.get("mods", 0)) + 1
+	_log("Gun Mod: %s on slot %d%s." % [DDText.mod_name(id), s + 1, (" (replaces %s)" % DDText.mod_name(old)) if old != "" else ""])
+	var g: DDGun = slot(s)
+	if g != null:
+		g.cap = mod_cap(bal.weapon_cap(g.wid), id)
+		if not g.stack.is_empty() and is_full(g):
+			_collect(s, true, false)
+	var ev: Dictionary = _event("mod", _notes[0], hp - hp0, points - pts0)
+	ev["mod"] = id
+	ev["slot"] = s
+	ev["collects"] = _collects.duplicate(true)
+	return _emit(ev)
 
 
 func safehouse_heal() -> int:
@@ -1588,6 +1776,8 @@ func leave_safehouse(patch_id: String = "") -> Dictionary:
 		if lost > 0:
 			_log("You leave %d pts behind." % bal.shown(lost))
 	shop_offer.clear()
+	mod_offer.clear()
+	mod_fitted_here = false
 	district_index += 1
 	phase = Phase.STREET
 	_start_district()
@@ -1692,7 +1882,8 @@ func to_dict() -> Dictionary:
 	var br: Array = []
 	for b: Dictionary in boss_results:
 		br.append(b.duplicate())
-	return {"v": 4, "melee": melee.duplicate(), "fired": fired.duplicate(), "shop_offer": shop_offer.duplicate(),
+	return {"v": 4, "slot_mods": slot_mods.duplicate(), "mod_offer": mod_offer.duplicate(), "mod_fitted_here": mod_fitted_here,
+		"melee": melee.duplicate(), "fired": fired.duplicate(), "shop_offer": shop_offer.duplicate(),
 		"shop_patch_bought": shop_patch_bought, "shop_hp_bought": shop_hp_bought, "left_behind": left_behind, "survivor_id": survivor_id, "passive": passive, "hp": hp, "max_hp": max_hp, "cover": cover, "points": points,
 		"points_earned": points_earned, "slots": gs, "active": active, "patches": patches.duplicate(), "second_wind_used": second_wind_used,
 		"loose": loose, "district_index": district_index, "wave_index": wave_index, "pile": _cards_to(pile), "street": _cards_to(street),
@@ -1733,6 +1924,10 @@ static func from_dict(d: Dictionary, balance: DDBalance = null) -> DDRun:
 		r.melee = {"id": str(mv["id"]), "power": int((mv as Dictionary).get("power", 0)), "uses": int(mv["uses"])}
 	var fv: Array[bool] = _bools(d.get("fired", []))
 	r.fired = [fv.size() > 0 and fv[0], fv.size() > 1 and fv[1]]
+	var sm: Array[String] = _strs(d.get("slot_mods", []))
+	r.slot_mods = [sm[0] if sm.size() > 0 else "", sm[1] if sm.size() > 1 else ""]
+	r.mod_offer = _strs(d.get("mod_offer", []))
+	r.mod_fitted_here = bool(d.get("mod_fitted_here", false))
 	r.shop_offer = _strs(d.get("shop_offer", []))
 	r.shop_patch_bought = bool(d.get("shop_patch_bought", false))
 	r.shop_hp_bought = int(d.get("shop_hp_bought", 0))
@@ -1778,7 +1973,7 @@ static func from_dict(d: Dictionary, balance: DDBalance = null) -> DDRun:
 	var stv: Variant = d.get("stats", {})
 	r.stats = (stv as Dictionary).duplicate() if stv is Dictionary else {}
 	for k: String in ["streets", "kills", "gun_kills", "melee_kills", "finished", "challenges", "runs", "rooms", "machines", "damage",
-			"salvage", "melee_weapon_kills", "melee_broken", "left_behind", "shop_hp", "shop_patches"]:
+			"salvage", "melee_weapon_kills", "melee_broken", "left_behind", "shop_hp", "shop_patches", "mods"]:
 		r.stats[k] = int(r.stats.get(k, 0))
 	r.log_lines = _strs(d.get("log_lines", []))
 	r.rng.seed = str(d.get("rng_seed", "0")).to_int()
