@@ -271,11 +271,18 @@ func test_match_two_drop_is_two_of_four_then_muster_out() -> void:
 	var rows: Array[Dictionary] = r.muster_out_options()
 	assert_eq(rows.size(), 9, "every Standard Issue copy listed (kc-econ: 9 of the 10-card starter)")
 	var pre: Array = rows.filter(func(x: Dictionary) -> bool: return x["preselected"])
-	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"]), [&"kc_wip_private_4", &"kc_wip_private_3", &"kc_wip_private_3"], "most expensive pre-selected: Private IV, then Private IIIs")
-	assert_eq(rows[0]["serial"], "SI-04", "serial plate")
+	# kc-clarity (playtest v28): the weakest copies are pre-selected (lowest FP + Armor, then cost).
+	var power: Callable = func(x: Dictionary) -> int: return int(x["firepower"]) + int(x["armor"])
+	var pre_max: int = pre.map(power).max()
+	var rest: Array = rows.filter(func(x: Dictionary) -> bool: return not x["preselected"]).map(power)
+	assert_true(rest.is_empty() or pre_max <= rest.min(), "weakest pre-selected (%s vs %s)" % [pre.map(power), rest])
+	assert_eq(pre.map(func(x: Dictionary) -> StringName: return x["id"])[0], &"kc_wip_private_1", "Private I first")
+	assert_eq(rows[0]["serial"], "SI-01", "serial plate")
 	var size0: int = r.deck.size()
+	var p1: int = _count(r, &"kc_wip_private_1")
 	assert_eq(r.choose_offer(0), "", "accept the pre-selection")
-	assert_eq([r.deck.size(), _count(r, &"kc_wip_private_4"), _count(r, &"kc_wip_private_3"), r.mustered_out], [size0 - 3, 0, 0, 3], "3 Standard Issue cards home")
+	assert_eq([r.deck.size(), r.mustered_out], [size0 - 3, 3], "3 Standard Issue cards home")
+	assert_true(_count(r, &"kc_wip_private_1") < p1, "Private I sent home")
 	assert_eq(r.deck.size(), 9, "10 (M1 drop skipped) + 2 - 3: the deck shrank by one with this drop")
 	assert_false(RewardOffers.KIND_MUSTER_OUT in _kinds(r), "done")
 
@@ -294,7 +301,7 @@ func test_muster_out_choice_floor_and_errors() -> void:
 	for i: int in r.deck.size():
 		if (r.resource(r.deck[i]) as CardData).standard_issue and four.size() < 4:
 			four.append(i)
-	assert_eq(r.muster_out(four), "you can send at most 3 Standard Issue cards home", "at most the count")
+	assert_eq(r.muster_out(four), "you can muster out at most 3 Standard Issue cards", "at most the count")
 	assert_eq(r.muster_out([grunt]), "", "send just one Grunt home (keep the rest)")
 	assert_eq(_count(r, &"kc_wip_private_1"), 2, "one Private I gone")
 	# Floor: a deck at the floor (8, kc-econ) gets no Muster out.

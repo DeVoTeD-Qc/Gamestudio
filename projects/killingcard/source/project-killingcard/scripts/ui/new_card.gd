@@ -6,6 +6,11 @@
 #   GOT IT (or a tap outside the card) calls RunState.ack_explainer(flag), so it never shows again
 #   until Settings "RESET TIPS". Long-press / right-click on the card says what it is (studio rule).
 #   Art: pnl_new_card (card) and pnl_new_inset (example well) through UiKit.piece, else drawn.
+#   kc-clarity (playtest v28: "NEW:" cards blocked the board mid-turn for all 5 players): offer()
+#   no longer opens the card. It shows a small non-blocking CHIP ("NEW · COVER") at the top of the
+#   screen, at most one per screen instance (one per match), and marks the tip seen; a tap on the
+#   chip opens the card for detail, the full list stays in the Codex Glossary. The chip hides
+#   itself after CHIP_SECONDS. show_flag() still opens the card directly (tests, QA).
 # Usage: var nc := NewCard.new(); add_child(nc)
 #        nc.offer(RevealFlags.run_triggers(run))   # shows the first pending explainer in that set
 # Dependencies: RevealFlags, RunState (pending_explainers / ack_explainer), UiKit, SynergyGlyphs,
@@ -25,6 +30,9 @@ const EDGE: Color = Color("#4A535B")
 const ABOUT: String = "A one-time tip about something new. MENU > RESET TIPS shows the tips again."
 ## Keyword tip flag -> CardInfo.KEYWORD_RULES id (the printed keywords' tips use the card text).
 const TIP_RULES: Dictionary = {&"kw_front": &"arrives_front"}
+## kc-clarity: how long the chip stays up untouched.
+const CHIP_SECONDS: float = 12.0
+const CHIP_H: float = 56.0
 
 ## Shows explainers on its own (offer()). Off in headless runs so the screen tests can tap through
 ## without dismissing tips; the onboarding UI tests switch it on.
@@ -42,6 +50,15 @@ var _example: Control = null
 var _got_it: Button = null
 var _about: Label = null
 var _gesture: RefCounted = null
+## kc-clarity: the non-blocking "NEW · X" chip, its flag, and how many more this instance may show.
+var _chip: Control = null
+var _chip_flag: StringName = &""
+var _chip_gesture: RefCounted = null
+var _chip_id: int = 0
+var chips_left: int = 1
+## kc-clarity: where the chip sits (global rect it is centred on, top edge); empty = screen top.
+var chip_anchor: Rect2 = Rect2()
+var _scrim: ColorRect = null
 
 
 func _init() -> void:
@@ -51,6 +68,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var scrim := ColorRect.new()
+	_scrim = scrim
 	scrim.name = "Scrim"
 	scrim.color = Color(0, 0, 0, 0.45)
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -104,6 +122,20 @@ func _init() -> void:
 	_card.gui_input.connect(func(e: InputEvent) -> void:
 		if _gesture.handle(e):
 			_card.accept_event())
+	_chip = Control.new()
+	_chip.name = "NewChip"
+	_chip.visible = false
+	_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	_chip.add_to_group(&"tap_target")
+	_chip.draw.connect(_draw_chip)
+	add_child(_chip)
+	_chip_gesture = PressGesture.new(_chip)
+	_chip_gesture.drag_enabled = false
+	_chip_gesture.tapped.connect(func(_p: Vector2) -> void: open_chip())
+	_chip_gesture.long_pressed.connect(func(_p: Vector2) -> void: open_chip())
+	_chip.gui_input.connect(func(e: InputEvent) -> void:
+		if _chip_gesture.handle(e):
+			_chip.accept_event())
 	resized.connect(_layout)
 
 
@@ -118,6 +150,8 @@ func _label(text: String, variation: StringName, fs: int) -> Label:
 
 ## A tap outside the card counts as GOT IT (forgiving: nothing else on the screen needs a second tap).
 func _gui_input(event: InputEvent) -> void:
+	if flag == &"":
+		return
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
 			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 		accept_event()
@@ -137,10 +171,95 @@ func offer(relevant: Array, screen_key: String = "") -> StringName:
 		if f == RevealFlags.LINKS:
 			continue
 		if f in relevant and not RevealFlags.text_of(f).is_empty():
+			if chips_left <= 0 or _chip.visible:
+				return &""
 			_shown_for = screen_key
-			show_flag(f)
+			show_chip(f)
 			return f
 	return &""
+
+
+## kc-clarity: the small "NEW · X" chip (not modal). The tip counts as seen once it is shown; a tap
+## opens the card. Hides itself after CHIP_SECONDS.
+func show_chip(f: StringName) -> void:
+	chips_left -= 1
+	_chip_flag = f
+	var rs: Node = _run_state()
+	if rs != null:
+		rs.ack_explainer(f)
+	var t: Dictionary = text_for(f)
+	_chip.set_meta(&"title", String(t.get("title", "New")).to_upper())
+	_chip.tooltip_text = String(t.get("text", ""))
+	flag = &""
+	_card.visible = false
+	_scrim.visible = false
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visible = true
+	_chip.visible = true
+	_layout_chip()
+	_chip_id += 1
+	var my_id: int = _chip_id
+	if is_inside_tree():
+		get_tree().create_timer(CHIP_SECONDS).timeout.connect(func() -> void:
+			if my_id == _chip_id and is_instance_valid(_chip) and _chip.visible and flag == &"":
+				hide_chip())
+
+
+func hide_chip() -> void:
+	_chip_id += 1
+	_chip.visible = false
+	if flag == &"":
+		visible = false
+
+
+## The chip was tapped: open the card for its flag.
+func open_chip() -> void:
+	var f: StringName = _chip_flag
+	hide_chip()
+	if f != &"":
+		show_flag(f)
+
+
+func is_chip_open() -> bool:
+	return visible and _chip.visible
+
+
+func get_chip() -> Control:
+	return _chip
+
+
+func chip_flag() -> StringName:
+	return _chip_flag if _chip.visible else &""
+
+
+func _layout_chip() -> void:
+	if not _chip.visible:
+		return
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var title: String = "NEW · " + String(_chip.get_meta(&"title", "")).trim_prefix("NEW: ")
+	_chip.set_meta(&"label", title)
+	var w: float = CHIP_H + font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 20.0
+	_chip.size = Vector2(w, CHIP_H)
+	# On the board: its top edge. Elsewhere (run screens): the bottom edge, clear of titles.
+	var host: Rect2 = Rect2(Vector2.ZERO, size)
+	var y: float = size.y - CHIP_H - 16.0
+	if chip_anchor.has_area():
+		host = Rect2(chip_anchor.position - global_position, chip_anchor.size)
+		y = host.position.y + 8.0
+	_chip.position = Vector2(roundf(clampf(host.get_center().x - w * 0.5, 4.0, maxf(4.0, size.x - w - 4.0))), roundf(y))
+	_chip.queue_redraw()
+
+
+func _draw_chip() -> void:
+	var r: Rect2 = Rect2(Vector2.ZERO, _chip.size)
+	_chip.draw_rect(r, Color(FACE, 0.96))
+	_chip.draw_rect(r, AMBER, false, 2.0)
+	var ir: Rect2 = Rect2(Vector2(6, 6), Vector2(CHIP_H - 12.0, CHIP_H - 12.0))
+	draw_example(_chip, ir, _chip_flag, true)
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var label: String = String(_chip.get_meta(&"label", ""))
+	_chip.draw_string(font, Vector2(CHIP_H, r.get_center().y + (font.get_ascent(20) - font.get_descent(20)) * 0.5), label,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 20, AMBER)
 
 
 ## Opens the card for `f` (tests and QA call it directly).
@@ -150,6 +269,10 @@ func show_flag(f: StringName) -> void:
 	_title.text = String(t.get("title", "New")).to_upper()
 	_text.text = String(t.get("text", ""))
 	_about.visible = false
+	_chip.visible = false
+	_card.visible = true
+	_scrim.visible = true
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = true
 	_layout()
 	_icon.queue_redraw()
@@ -190,7 +313,7 @@ func inspect() -> void:
 
 
 func is_open() -> bool:
-	return visible and flag != &""
+	return visible and flag != &"" and _card.visible
 
 
 func get_got_it_button() -> Button:
@@ -206,7 +329,8 @@ func _run_state() -> Node:
 
 
 func _layout() -> void:
-	if not visible or size.x <= 0.0:
+	_layout_chip()
+	if not visible or size.x <= 0.0 or not _card.visible:
 		return
 	var compact: bool = size.y < 640.0
 	var w: float = clampf(size.x * 0.56, 440.0, 620.0)

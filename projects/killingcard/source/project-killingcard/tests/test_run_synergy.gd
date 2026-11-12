@@ -146,7 +146,7 @@ func test_retire_floor_and_honor_roll() -> void:
 	_skip_all(r)
 	r.record_result(&"player")
 	if r.current_offer().get("kind", &"") == RewardOffers.KIND_SUPPLY_DROP:
-		assert_eq(r.retire_card(0), "no Retire option 0", "Retire refused at the floor")
+		assert_eq(r.retire_card(0), "no Muster out option 0", "Retire refused at the floor")
 
 
 func test_regroup_after_a_loss_only() -> void:
@@ -160,7 +160,7 @@ func test_regroup_after_a_loss_only() -> void:
 	var before: int = r.deck.size()
 	assert_eq(r.choose_offer(0), "", "Retire the first option")
 	assert_eq(r.deck.size(), before - 1, "removed")
-	assert_eq(r.retire_card(0), "this offer has no Retire option" if not r.current_offer().is_empty() else "no offer to choose from", "Retire only on a Supply Drop / Regroup")
+	assert_eq(r.retire_card(0), "this offer has no Muster out option" if not r.current_offer().is_empty() else "no offer to choose from", "Retire only on a Supply Drop / Regroup")
 	assert_false(offer.has("levels"), "options carry no levels")
 
 

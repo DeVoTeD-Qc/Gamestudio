@@ -205,8 +205,10 @@ func _wire_inspect(b: Button, uid: int) -> void:
 			state["was"] = b.button_pressed
 			state["ms"] = Time.get_ticks_msec()
 			var my_id: int = state["id"]
+			var wb: WeakRef = weakref(b)  # kc-clarity: the card may be freed before the timer fires
 			get_tree().create_timer(PressGesture.LONG_PRESS_S).timeout.connect(func() -> void:
-				if int(state["id"]) == my_id and is_instance_valid(b) and b.get_global_rect().has_point(b.get_global_mouse_position()) \
+				var bb: Control = wb.get_ref() as Control
+				if int(state["id"]) == my_id and bb != null and bb.get_global_rect().has_point(bb.get_global_mouse_position()) \
 						and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 					state["fired"] = true
 					card_inspected.emit(uid))

@@ -260,7 +260,8 @@ func test_strip_badges_flyouts_and_killfeed_toasts() -> void:
 	await tree.process_frame
 	var st: MatchState = c.state
 	# kc-loadout-clean: no rival hand count (head: "not very useful"); SCORE is round + score.
-	assert_eq(m.get_badge(&"score").get_text(), "R%d %d-%d" % [st.round_number, st.sides[0].score, st.sides[1].score],
+	# kc-clarity: plus the match's target ("TO 6"), always on.
+	assert_eq(m.get_badge(&"score").get_text(), "R%d %d-%d TO %d" % [st.round_number, st.sides[0].score, st.sides[1].score, st.hooks.mode_rules.target],
 			"SCORE badge (no rival hand count)")
 	assert_false(m.get_node("%RivalBadge").visible, "no separate RIVAL badge on the phone")
 	assert_eq(m.get_badge(&"deck").get_text(), str(st.sides[0].deck.size()), "DECK badge: deck count")

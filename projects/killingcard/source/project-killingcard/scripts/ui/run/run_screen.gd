@@ -322,9 +322,13 @@ static func wire_inspect_button(b: BaseButton, on_inspect: Callable) -> void:
 			st["id"] = int(st["id"]) + 1
 			st["fired"] = false
 			var my_id: int = st["id"]
+			# kc-clarity: a weak reference, so a button freed before the timer (the screen moved on)
+			# no longer logs "Lambda capture at index 0 was freed".
+			var wb: WeakRef = weakref(b)
 			b.get_tree().create_timer(0.4).timeout.connect(func() -> void:
-				if is_instance_valid(b) and int(st["id"]) == my_id and b.is_inside_tree() \
-						and b.get_global_rect().has_point(b.get_global_mouse_position()):
+				var bb: BaseButton = wb.get_ref() as BaseButton
+				if bb != null and int(st["id"]) == my_id and bb.is_inside_tree() \
+						and bb.get_global_rect().has_point(bb.get_global_mouse_position()):
 					st["fired"] = true
 					on_inspect.call())
 		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:

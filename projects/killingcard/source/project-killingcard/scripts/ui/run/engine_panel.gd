@@ -377,7 +377,7 @@ func _open_si_info() -> void:
 	var si: int = int(m.get("si", 0))
 	var deck: int = int(m.get("deck", 0))
 	_inspector.open({"title": "Standard Issue", "type": "deck · %d of %d cards" % [si, deck],
-			"text": "Standard Issue: basic kit, no trait, no calling card. Muster out at a shop sends one home. Calling cards: %d. Deck minimum: %d." % [deck - si, int(m.get("floor", 0))],
+			"text": "Standard Issue: basic kit, no trait, no calling card. Muster out at a shop takes one out of your deck. Calling cards: %d. Deck minimum: %d." % [deck - si, int(m.get("floor", 0))],
 			"status": "Long-press any card for its rules."})
 
 

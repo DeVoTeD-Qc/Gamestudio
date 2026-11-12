@@ -311,7 +311,7 @@ static func bracket_word(md: RunMatchData, is_last: bool) -> String:
 static func bonus_word(md: RunMatchData) -> String:
 	var parts: PackedStringArray = []
 	if md.enemy_firepower_bonus > 0:
-		parts.append("+%d Firepower" % md.enemy_firepower_bonus)
+		parts.append("+%d FP" % md.enemy_firepower_bonus)
 	if md.enemy_armor_bonus > 0:
 		parts.append("+%d Armor" % md.enemy_armor_bonus)
 	return "Enemy " + " ".join(parts) if not parts.is_empty() else "No enemy bonus"
@@ -327,7 +327,7 @@ static func item_effect_line(item: LoadoutItem) -> String:
 	if item.slot == DataEnums.LoadoutSlot.PRIMARY:
 		parts.append("FP %d / Armor %d" % [item.operator_firepower, item.operator_armor])
 	if item.firepower_bonus != 0:
-		parts.append("%+d Firepower" % item.firepower_bonus)
+		parts.append("%+d FP" % item.firepower_bonus)
 	if item.armor_bonus != 0:
 		parts.append("%+d Armor" % item.armor_bonus)
 	if item.first_shot:

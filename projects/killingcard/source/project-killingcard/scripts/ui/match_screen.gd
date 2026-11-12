@@ -67,6 +67,7 @@ const BossPlate: GDScript = preload("res://scripts/ui/boss_plate.gd")
 const OrderStrip: GDScript = preload("res://scripts/fx/order_strip.gd")
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const HandGlowFx: GDScript = preload("res://scripts/fx/hand_glow_fx.gd")
+const RoundRecapScript: GDScript = preload("res://scripts/ui/round_recap.gd")
 ## kc-syn-ui: a set callout stays this long before it folds into the rail.
 const SET_CALLOUT_S: float = 1.2
 const TRAY_OPEN: StringName = &"open"
@@ -177,6 +178,8 @@ var _trait_rail: Control = null
 ## (match_snapshot.reveal_info: trait rail / links / bands shown?).
 var _initiative: InitiativeChip = null
 var _new_card: NewCard = null
+## kc-clarity: the per-column round recap over the board's bottom edge (round_recap.gd).
+var _round_recap: PanelContainer = null
 var _reveal: Dictionary = {}
 var _rail_area: Rect2 = Rect2()
 var _sets_box: VBoxContainer = null
@@ -257,6 +260,10 @@ func _ready() -> void:
 		rail_inspected.emit(&"initiative"))
 	_new_card = NewCard.new()
 	add_child(_new_card)
+	_round_recap = RoundRecapScript.new()
+	add_child(_round_recap)
+	# Under the toast, the flyout, the inspector and every sheet (only the board is below it).
+	move_child(_round_recap, _toast.get_index())
 	_trait_rail = TraitRail.new()
 	_trait_rail.name = "TraitRail"
 	_strip.add_child(_trait_rail)
@@ -645,9 +652,43 @@ func show_toast(text: String, seconds: float = TOAST_SECONDS) -> void:
 	# killfeed toasts keep the top edge.
 	if board_r.has_area():
 		_toast.global_position.y = board_r.end.y - _toast.size.y - 4.0
+		# kc-clarity: above the round recap while it is up.
+		if _round_recap != null and _round_recap.visible:
+			_toast.global_position.y = _round_recap.global_position.y - _toast.size.y - 4.0
 	get_tree().create_timer(seconds).timeout.connect(func() -> void:
 		if my_id == _toast_id:
 			_toast.hide())
+
+
+## kc-clarity: the last round, per column, until a tap on it or the player starts to plan.
+func show_round_recap(recap: Dictionary, now: String) -> void:
+	if _round_recap == null:
+		return
+	_toast_id += 1
+	_toast.hide()
+	_round_recap.show_recap(recap, now)
+	_place_round_recap()
+
+
+func _place_round_recap() -> void:
+	if _round_recap == null or not _round_recap.visible:
+		return
+	var board_r: Rect2 = _board.get_global_rect()
+	if not board_r.has_area():
+		board_r = Rect2(Vector2.ZERO, size)
+	_round_recap.custom_minimum_size.x = minf(board_r.size.x - 8.0, 560.0)
+	_round_recap.reset_size()
+	var rs: Vector2 = _round_recap.size
+	_round_recap.global_position = Vector2(roundf(board_r.get_center().x - rs.x * 0.5), roundf(board_r.end.y - rs.y - 4.0))
+
+
+func hide_round_recap() -> void:
+	if _round_recap != null:
+		_round_recap.dismiss()
+
+
+func get_round_recap() -> PanelContainer:
+	return _round_recap
 
 
 func get_toast_text() -> String:
@@ -850,6 +891,7 @@ func _layout_regions() -> void:
 	_peek_catcher.position = Vector2.ZERO
 	_peek_catcher.size = area
 	_layout_tray()
+	_place_round_recap.call_deferred()
 
 
 ## kc-onboard-ui: the initiative chip takes the top of the rail's area (one badge slot: phone 62x64,
@@ -886,8 +928,12 @@ func get_new_card() -> NewCard:
 
 
 ## Shows the first pending "New:" explainer among `relevant` (one per round: key "round<n>").
+## kc-clarity: a small "NEW · X" chip at the board's top edge, at most one per match (NewCard.chips_left).
 func offer_explainer(relevant: Array, key: String) -> StringName:
-	return _new_card.offer(relevant, key) if _new_card != null else &""
+	if _new_card == null:
+		return &""
+	_new_card.chip_anchor = _board.get_global_rect()
+	return _new_card.offer(relevant, key)
 
 
 func _layout_tray() -> void:
@@ -1158,8 +1204,10 @@ func _wire_button_inspect(b: Button, key: StringName) -> void:
 			state["id"] = int(state["id"]) + 1
 			state["fired"] = false
 			var my_id: int = state["id"]
+			var wb: WeakRef = weakref(b)  # kc-clarity: b may be freed before the timer fires
 			get_tree().create_timer(PressGesture.LONG_PRESS_S).timeout.connect(func() -> void:
-				if int(state["id"]) == my_id and _is_held(b):
+				var bb: Control = wb.get_ref() as Control
+				if int(state["id"]) == my_id and bb != null and _is_held(bb):
 					state["fired"] = true
 					rail_inspected.emit(key))
 		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
@@ -1340,10 +1388,18 @@ func _set_badges(snapshot: Dictionary) -> void:
 	if not ini.is_empty():
 		var mine_i: bool = bool(ini.get("mine", true))
 		round_row.push_front(["", friend if mine_i else enemy, &"flag" if mine_i else &"flag_rival"])
+	# kc-clarity (playtest v28): the score with the shapes of the column plates (yours solid, the
+	# rival's hatched: readable with deuteranopia) and the match's target under it, always on.
 	var score_rows: Array = [round_row,
-			[[str(int(snapshot.get("score_player", 0))), friend], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy]]]
+			[[str(int(snapshot.get("score_player", 0))), friend, &"box_mine"], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy, &"box_rival"]]]
+	var target: int = int(snapshot.get("target", 0))
+	if target > 0:
+		score_rows.append([["TO %d" % target, Color("#E6EBEF")]])
 	_score_badge.font_size = 20
+	_score_badge.row_sizes = [16, 20, 16] if target > 0 else []
 	_score_badge.set_value(score_rows)
+	_score_badge.tooltip_text = "Score: you %d, rival %d. First to %d wins." % [int(snapshot.get("score_player", 0)),
+			int(snapshot.get("score_enemy", 0)), target] if target > 0 else ""
 	var op: Dictionary = snapshot.get("operator", {})
 	_operator_can_deploy = bool(snapshot.get("operator_can_deploy", false))
 	var op_text: String = "OFF"

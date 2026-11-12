@@ -34,6 +34,9 @@ var fp_enemy: int = 0
 ## {player: [field entry], enemy: [field entry]} (MatchState.field_view rows + queued plays).
 var fields: Dictionary = {}
 var compact: bool = false
+## kc-clarity: points this column gives its holder at round end (0 = no tag: a mode that scores
+## eliminations). Drawn at the tile's right end as "+1" on the holder's plate shape.
+var worth: int = 0
 var _chip_rects: Array = []   # [[Rect2, side, entry]]
 ## kc-v2-ui: the column's Terrain ({id, name, text, zone}; {} = none) and its chip rect (tile-local).
 var terrain: Dictionary = {}
@@ -53,6 +56,7 @@ func set_tile(lane: Dictionary) -> void:
 	fp_enemy = int(lane.get("fp_enemy", 0))
 	fields = lane.get("fields", {})
 	terrain = lane.get("terrain", {})
+	worth = int(lane.get("worth", 0))
 	var risk: bool = false
 	for s: String in ["player", "enemy"]:
 		for f: Dictionary in fields.get(s, []):
@@ -146,6 +150,7 @@ func _draw() -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, 4, Color("#3A0C0D"))
 	draw_string(word_font, Vector2(c.x - lsz.x * 0.5, c.y + (word_font.get_ascent(lfs) - word_font.get_descent(lfs)) * 0.5), letter,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, lfs, letter_c)
+	_draw_worth()
 	_chip_rects.clear()
 	var area: Rect2 = field_area()
 	var top_fields: Array = fields.get("enemy", [])
@@ -258,10 +263,55 @@ func mark_size() -> float:
 	return minf(roundf(size.y * 0.76), 64.0)
 
 
-## kc-abc-labels: where the Field chips go (tile-local): everything right of the letter mark.
+## kc-abc-labels: where the Field chips go (tile-local): everything right of the letter mark
+## (kc-clarity: and left of the worth tag).
 func field_area() -> Rect2:
 	var x: float = 6.0 + mark_size() + (8.0 if compact else 12.0)
-	return Rect2(x, 3.0, maxf(0.0, size.x - x - 4.0), maxf(0.0, size.y - 6.0))
+	var right: float = 4.0 + (worth_rect().size.x + 6.0 if worth > 0 else 0.0)
+	return Rect2(x, 3.0, maxf(0.0, size.x - x - right), maxf(0.0, size.y - 6.0))
+
+
+## kc-clarity: the worth tag's rect (tile-local; empty when the column scores nothing).
+func worth_rect() -> Rect2:
+	if worth <= 0:
+		return Rect2()
+	var ph: float = clampf(roundf(size.y * 0.5), 22.0, 36.0)
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var pw: float = font.get_string_size(worth_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, int(ph * 0.72)).x + 12.0
+	return Rect2(size.x - 6.0 - pw, roundf((size.y - ph) * 0.5), pw, ph)
+
+
+## kc-clarity: "+1" (a Hot Zone "+2").
+func worth_text() -> String:
+	return "+%d" % worth
+
+
+## kc-clarity: the worth tag in the shape of who holds the column now: your solid plate, the rival's
+## hatched one, a grey keyline while nobody does (even, open).
+func _draw_worth() -> void:
+	var r: Rect2 = worth_rect()
+	if not r.has_area():
+		return
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var fs: int = int(r.size.y * 0.72)
+	var ink: Color = Color("#B9C2C9")
+	match control:
+		&"player":
+			_rounded(r, _col(&"friend"), 4.0)
+			ink = Color("#12161A")
+		&"enemy":
+			_rounded(r, Color("#8F1F21"), 4.0)
+			_hatch(r.grow(-1.0), Color(_col(&"enemy"), 0.6), 6.0, 2.0)
+			draw_rect(r.grow(-1.0), _col(&"enemy"), false, 2.0)
+			ink = Color.WHITE
+		_:
+			draw_rect(r.grow(-1.0), Color("#59636C"), false, 2.0)
+	var t: String = worth_text()
+	var sz: Vector2 = font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var base: Vector2 = Vector2(r.get_center().x - sz.x * 0.5, r.get_center().y + (font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
+	if control == &"enemy":
+		draw_string_outline(font, base, t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color("#3A0C0D"))
+	draw_string(font, base, t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
 
 
 ## kc-abc-labels: the control word's size (phone 20 px, desktop 26 px) before it steps down to fit.

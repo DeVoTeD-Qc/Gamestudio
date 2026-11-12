@@ -109,15 +109,15 @@ func _build() -> void:
 	_header.add_child(_deck_button)
 	_header.move_child(_deck_button, _skip_button.get_index())
 	# kc-onboard-ui: Retire "under More" (§5.2): a header button, so the 4 cards of a drop fit the phone.
-	retire_button = make_button("RETIRE", &"HudButton", 150)
+	retire_button = make_button("MUSTER OUT", &"HudButton", 150)
 	retire_button.name = "RetireButton"
 	retire_button.tooltip_text = "Remove a card from your deck instead"
 	retire_button.pressed.connect(open_retire_picker)
 	_header.add_child(retire_button)
 	_header.move_child(retire_button, _deck_button.get_index())
-	send_button = make_button("SEND HOME", &"HudButton", 200)
+	send_button = make_button("MUSTER OUT", &"HudButton", 200)
 	send_button.name = "SendHomeButton"
-	send_button.tooltip_text = "Send the marked Standard Issue cards home"
+	send_button.tooltip_text = "Muster out the marked Standard Issue cards"
 	send_button.pressed.connect(confirm_muster_out)
 	_header.add_child(send_button)
 	for b: Button in [_skip_button, _deck_button, retire_button, send_button]:
@@ -226,11 +226,11 @@ func show_offer() -> void:
 		RewardOffers.KIND_DOCTRINE:
 			_subtitle.text = "Pick a trait: its sets count +1 for the rest of the run."
 		RewardOffers.KIND_REGROUP:
-			_subtitle.text = "Lost: retire one card for free (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
+			_subtitle.text = "Lost: muster out one card for free (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
 	if kind in RewardOffers.CARD_DROPS and bool(offer.get("retire", false)) and RevealGate.shown(RevealFlags.RETIRE) and not retire_mode:
 		retire_button.visible = true
 		retire_button.disabled = not r.can_retire()
-		retire_button.text = "RETIRE" if r.can_retire() else "AT FLOOR"
+		retire_button.text = "MUSTER OUT" if r.can_retire() else "AT FLOOR"
 	if kind == RewardOffers.KIND_MUSTER_OUT:
 		_build_muster_out(r)
 		_after_build(key)
@@ -326,9 +326,11 @@ func _wire_inspect(b: BaseButton, on_inspect: Callable) -> void:
 			st["id"] = int(st["id"]) + 1
 			st["fired"] = false
 			var my_id: int = st["id"]
+			var wb: WeakRef = weakref(b)  # kc-clarity: no "Lambda capture ... was freed" when b goes first
 			get_tree().create_timer(PressGesture.LONG_PRESS_S).timeout.connect(func() -> void:
-				if is_instance_valid(b) and int(st["id"]) == my_id and b.is_inside_tree() \
-						and b.get_global_rect().has_point(b.get_global_mouse_position()):
+				var bb: Control = wb.get_ref() as Control
+				if bb != null and int(st["id"]) == my_id and bb.is_inside_tree() \
+						and bb.get_global_rect().has_point(bb.get_global_mouse_position()):
 					st["fired"] = true
 					on_inspect.call())
 		elif mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
@@ -345,8 +347,8 @@ func _inspect_header(b: Button) -> void:
 	var texts: Dictionary = {
 		"SkipButton": ["Skip", "Take nothing from this offer. On Muster out: every Standard Issue card stays."],
 		"DeckButton": ["Deck", "Your deck: every card, its copies and their traits."],
-		"RetireButton": ["Retire", "Instead of a card, remove one from your deck for good (Honor Roll). Deck minimum: %d." % floor_n],
-		"SendHomeButton": ["Muster out", "Sends the cards marked GOING HOME out of your deck. Deck minimum: %d." % floor_n],
+		"RetireButton": ["Muster out", "Instead of a card, take one out of your deck for good (Honor Roll). Deck minimum: %d." % floor_n],
+		"SendHomeButton": ["Muster out", "Takes the cards marked MUSTER OUT out of your deck. Deck minimum: %d." % floor_n],
 	}
 	var t: Array = texts.get(String(b.name), [b.text.capitalize(), b.tooltip_text])
 	_inspector.open({"title": String(t[0]), "type": "button", "text": String(t[1]), "status": ""})
@@ -384,7 +386,7 @@ func _inspect_card_id(id: StringName) -> void:
 ## "Standard Issue SI-02: ..." (inspector; "" for any other card).
 static func _si_status(card: CardData) -> String:
 	if card.standard_issue:
-		return "Standard Issue %s: no trait. Muster out or Retire sends it home." % RunProgress.standard_issue_serial(card)
+		return "Standard Issue %s: no trait. Muster out takes it out of your deck." % RunProgress.standard_issue_serial(card)
 	return ""
 
 
@@ -537,15 +539,15 @@ func _build_retire_list(r: RunProgress, from_drop: bool) -> void:
 	_center.visible = false
 	_center.get_parent().visible = false
 	_list_scroll.visible = true
-	_title.text = "RETIRE A CARD" if from_drop else _title.text
+	_title.text = "MUSTER OUT A CARD" if from_drop else _title.text
 	if from_drop:
-		_subtitle.text = "Pick a card to retire instead (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
+		_subtitle.text = "Pick a card to muster out instead (deck %d, min %d)." % [r.deck.size(), r.config.deck_floor]
 		_skip_button.text = "BACK"
 	var opts: Array[Dictionary] = r.retire_options()
 	if opts.is_empty():
 		var t0: PickTile = make_tile()
 		t0.add_line("AT THE FLOOR", &"TileName")
-		t0.add_line("Deck at its minimum (%d): nothing can be retired." % r.config.deck_floor)
+		t0.add_line("Deck at its minimum (%d): nothing can be mustered out." % r.config.deck_floor)
 		t0.disabled = true
 		_list_grid.add_child(t0)
 		_fit_list()
@@ -641,10 +643,10 @@ func _refresh_muster(r: RunProgress, n: int, note: String = "") -> void:
 	var marked: int = muster_marks.size()
 	for t: PickTile in list_tiles:
 		var on: bool = muster_marks.has(int(t.get_meta(&"index", -1)))
-		t.set_selected(on, "GOING HOME", "STAYS")
-	send_button.text = ("SEND %d HOME" % marked) if marked > 0 else "SEND NONE"
+		t.set_selected(on, "MUSTER OUT", "STAYS")
+	send_button.text = ("MUSTER OUT %d" % marked) if marked > 0 else "MUSTER OUT NONE"
 	_subtitle.text = note if note != "" else \
-			"Send up to %d of your %d Standard Issue cards home: deck %d > %d (min %d). Tap a card to keep or send it." % [
+			"Muster out up to %d of your %d Standard Issue cards: deck %d > %d (min %d). Tap a card to mark or keep it." % [
 				n, r.standard_issue_count(), r.deck.size(), r.deck.size() - marked, r.config.deck_floor]
 
 
@@ -683,7 +685,7 @@ func _inspect_muster(idx: int) -> void:
 	_inspector.open({"view": _view_dict(card, r.art_of(idx)), "banner": BannerCard.entry_for_card(card, r.art_of(idx)),
 			"title": card.display_name, "type": "Standard Issue %s · %s" % [RunProgress.standard_issue_serial(card), CardInfo.type_line(card)],
 			"text": "Basic kit: %d Supply, %d FP, %d Armor. No keyword, no trait." % [card.cost, card.firepower, card.armor],
-			"status": "GOING HOME: leaves your deck on SEND HOME." if muster_marks.has(idx) else "Stays in your deck."})
+			"status": "Marked: leaves your deck on MUSTER OUT." if muster_marks.has(idx) else "Stays in your deck."})
 
 
 ## Doctrine: a trait emblem, its tier texts and how many cards of it the deck has.
@@ -851,14 +853,17 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 
 func _item_tile(item: LoadoutItem) -> PickTile:
 	var tile: PickTile = make_tile()
-	tile.custom_minimum_size.x = 360
+	# kc-clarity (playtest v28: the weapon-level screen ran off the left edge on a phone, "EVELLED
+	# UP"): two 360 px tiles are wider than a portrait phone; they share the width instead.
+	var vw: float = get_viewport_rect().size.x if is_inside_tree() else 1280.0
+	tile.custom_minimum_size.x = clampf((vw - 48.0) * 0.5 - 12.0, 150.0, 360.0)
 	tile.min_height = 260
 	var r: RunProgress = run()
 	tile.add_line(item.display_name.to_upper(), &"TileName")
 	var tag: String = String(RunFlow.SLOT_WORDS.get(item.slot, "")).to_upper()
 	if item.slot == DataEnums.LoadoutSlot.ATTACHMENT:
 		tag += "  ·  FOR " + RunFlow.names_of(r, [r.primary], "").to_upper()
-	tile.add_line(tag, &"HudTag", false)
+	tile.add_line(tag, &"HudTag", tile.custom_minimum_size.x < 300.0)
 	var effect: String = RunFlow.item_effect_line(item)
 	if effect != "":
 		tile.add_line(effect, &"FriendlyLabel")

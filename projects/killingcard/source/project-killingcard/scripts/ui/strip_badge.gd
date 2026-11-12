@@ -18,6 +18,8 @@ signal drag_ended(pos: Vector2)
 
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
 const AMBER: Color = Color(0.961, 0.722, 0.239)
+## kc-clarity: padding each side of a boxed score digit.
+const BOX_PAD: float = 3.0
 const CAMO: Array[Color] = [Color("#6b5a2a"), Color("#c9a548"), Color("#3d3a1c"), Color("#e7c56a")]
 
 ## &"score", &"operator", &"streak", &"rival", &"deck"
@@ -33,6 +35,8 @@ var band: StringName = &"base":
 var lines: Array = []
 var hot: bool = false
 var font_size: int = 20
+## kc-clarity: an optional font size per row (missing rows use font_size).
+var row_sizes: Array = []
 var _gesture: RefCounted = null
 
 
@@ -91,30 +95,65 @@ func _draw() -> void:
 	var text_c: Color = get_theme_color(&"text", &"Hud")
 	var has_glyph: bool = glyph != &"none"
 	var g: float = 26.0
-	var rows: int = lines.size()
 	var font: Font = get_theme_font(&"font", &"HudNumber")
-	var line_h: float = font_size + 2.0
-	var block: float = (g + 4.0 if has_glyph else 0.0) + rows * line_h
+	var block: float = (g + 4.0 if has_glyph else 0.0)
+	for i: int in lines.size():
+		block += _row_size(i) + 2.0
 	var y: float = (size.y - block) * 0.5
 	if has_glyph:
 		_draw_glyph(Rect2(Vector2((size.x - g) * 0.5, y), Vector2(g, g)), text_c)
 		y += g + 4.0
-	for row: Array in lines:
-		var fs: int = font_size
+	for i: int in lines.size():
+		var row: Array = lines[i]
+		var fs: int = _row_size(i)
+		var min_fs: int = mini(fs, 16 if row_sizes.is_empty() else 12)
 		var w: float = _row_width(row, font, fs)
-		while fs > 16 and w > size.x - 6.0:
+		while fs > min_fs and w > size.x - 6.0:
 			fs -= 1
 			w = _row_width(row, font, fs)
 		var x: float = (size.x - w) * 0.5
 		for seg: Array in row:
 			var text: String = String(seg[0])
 			var c: Color = seg[1] if seg.size() > 1 else text_c
+			var tw: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			if seg.size() > 2 and StringName(seg[2]) in [&"box_mine", &"box_rival"]:
+				# kc-clarity (deuteranopia): your score on a solid plate, the rival's on a hatched one,
+				# the same shapes as the column plates, so the two numbers differ without colour.
+				var br: Rect2 = Rect2(Vector2(x, y), Vector2(tw + BOX_PAD * 2.0, fs + 1.0))
+				c = _draw_score_box(br, StringName(seg[2]), c)
+				draw_string(font, Vector2(x + BOX_PAD, y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
+				x += br.size.x
+				continue
 			if seg.size() > 2:
 				_draw_mini_glyph(Rect2(Vector2(x, y + 1.0), Vector2(fs, fs)), StringName(seg[2]), c)
 				x += fs + 2.0
 			draw_string(font, Vector2(x, y + font.get_ascent(fs)), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, c)
-			x += font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		y += line_h
+			x += tw
+		y += _row_size(i) + 2.0
+
+
+func _row_size(i: int) -> int:
+	return int(row_sizes[i]) if i < row_sizes.size() and int(row_sizes[i]) > 0 else font_size
+
+
+## kc-clarity: the plate behind a score digit; returns the digit's ink.
+func _draw_score_box(r: Rect2, kind: StringName, c: Color) -> Color:
+	if kind == &"box_mine":
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = c
+		sb.set_corner_radius_all(3)
+		draw_style_box(sb, r)
+		return Color("#12161A")
+	draw_rect(r, Color("#5A1517"))
+	var x: float = -r.size.y
+	while x < r.size.x:
+		var x0: float = maxf(0.0, x)
+		var x1: float = minf(r.size.x, x + r.size.y)
+		if x1 > x0:
+			draw_line(r.position + Vector2(x0, r.size.y - (x0 - x)), r.position + Vector2(x1, r.size.y - (x1 - x)), Color(c, 0.55), 1.5)
+		x += 5.0
+	draw_rect(r, c, false, 1.5)
+	return Color.WHITE
 
 
 func _row_width(row: Array, font: Font, fs: int) -> float:
@@ -122,7 +161,7 @@ func _row_width(row: Array, font: Font, fs: int) -> float:
 	for seg: Array in row:
 		w += font.get_string_size(String(seg[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		if seg.size() > 2:
-			w += fs + 2.0
+			w += BOX_PAD * 2.0 if StringName(seg[2]) in [&"box_mine", &"box_rival"] else fs + 2.0
 	return w
 
 

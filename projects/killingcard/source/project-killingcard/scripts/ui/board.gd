@@ -91,9 +91,11 @@ func _on_hovered(slot: Node) -> void:
 	if slot == null or not hover_zoom_enabled or bool(metrics.get("compact", metrics.get("bh", 64.0) < 56.0)):
 		_hide_zoom()
 		return
+	var ws: WeakRef = weakref(slot)  # kc-clarity: the slot may be freed before the timer fires
 	get_tree().create_timer(HOVER_DELAY).timeout.connect(func() -> void:
-		if my_id == _hover_id and is_instance_valid(slot) and slot == _hover_slot:
-			_show_zoom(slot))
+		var sl: Node = ws.get_ref() as Node
+		if my_id == _hover_id and sl != null and sl == _hover_slot:
+			_show_zoom(sl))
 
 
 func _show_zoom(slot: Node) -> void:

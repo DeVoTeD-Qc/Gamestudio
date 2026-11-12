@@ -175,7 +175,7 @@ func confirm() -> String:
 		var floor_n: int = r.config.deck_floor if r != null else 8
 		var room: int = maxi(0, (r.deck.size() if r != null else 0) - floor_n)
 		_picker.compact = compact
-		_picker.open("DRILL · SEND 2 HOME", "Mark up to %d cards to send home (deck min %d)." % [mini(2, room), floor_n],
+		_picker.open("DRILL · MUSTER OUT 2", "Mark up to %d cards to muster out (deck min %d)." % [mini(2, room), floor_n],
 				cands, mini(2, room), 0, "SEND")
 		return ""
 	return _commit([])
@@ -204,7 +204,7 @@ func _commit(indices: Array) -> String:
 	if r != null and r.deck.size() != deck0 and RunV2Views.override_rest.is_empty():
 		line += "  Deck %d -> %d." % [deck0, r.deck.size()]
 	if not indices.is_empty() and not RunV2Views.override_rest.is_empty():
-		line = "Drill: %d cards sent home. Deck %d -> %d." % [indices.size(), deck0, deck0 - indices.size()]
+		line = "Drill: %d cards mustered out. Deck %d -> %d." % [indices.size(), deck0, deck0 - indices.size()]
 	show_feedback(line, &"reward")
 	for t: Button in _tiles:
 		t.disabled = true

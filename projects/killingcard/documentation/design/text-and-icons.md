@@ -46,11 +46,14 @@ Rules for the lines:
 | A board lane | column (A, B, C) | zone, lane |
 | The first unit in a column | front unit | point man, frontline unit |
 | A face-down rival play | Incoming | red dots |
-| Damage a unit deals | FP (glossary title: Firepower (FP)) | Firepower in rules text, power |
+| Damage a unit deals | FP (glossary title: Firepower (FP)) | Firepower anywhere else (rules text, inspector rows, item lines), power |
 | A unit's health | Armor | HP, health |
 | Deploy currency | Supply | SUP, energy |
 | Run currency | REQ (glossary title: Requisition) | credits |
 | Run lives | Tickets (Reinforcement Tickets) | lives |
+| Taking a card out of your deck (reward, Regroup, rest Drill, event, shop) | Muster out ("MUSTER OUT 2", marked: MUSTER OUT / STAYS; Honor Roll: "n MUSTERED OUT") | Retire, send home, going home, hand in kit |
+| What a column is worth | "+1" tag on the column tile (Hot Zone "+2"), in the shape of who holds it now | points chip, VP |
+| The match's target | "TO 6" on the SCORE badge, "FIRST TO 6" in the round recap | goal, win score |
 | A card that resolves when played | Instant | Resolves immediately |
 | The smallest deck allowed | deck minimum, "min" | floor |
 | Eliminations counter | streak | kill count |
@@ -198,3 +201,16 @@ Rules unchanged; only words and layout.
 Layout fixes in the same pass: the card inspector stacks the card over its sheet when the screen
 is too narrow for both side by side (phone portrait: the sheet ran off the right edge); the run
 end screen stacks its summary over the match table in portrait (it ran off both edges).
+
+
+## 5. Score race and tips (kc-clarity, playtest v28)
+
+- The SCORE badge shows the round, the score and the target ("R2 / 0-2 / TO 6"). Your number sits on a
+  solid plate, the rival's on a hatched one (the column plates' shapes), so it reads with deuteranopia.
+- Each column tile ends in its worth tag ("+1"), drawn in the shape of who holds the column now.
+- After every round a recap panel over the bottom of the board says, per column, who still had units
+  there and who scored: "A  you 2 vs 0 left · you +1", then the score and what to do now. It stays
+  until a tap on it or until you start to plan; long-press adds the scoring rule. Code:
+  `scripts/ui/score_race.gd` (words), `scripts/ui/round_recap.gd` (panel).
+- "NEW" tips never open over the board: a small "NEW · COVER" chip appears (at most one per match or
+  reward screen), counts as seen, and opens the full card only on a tap. The Glossary keeps the full list.

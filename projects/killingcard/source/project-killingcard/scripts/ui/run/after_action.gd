@@ -388,7 +388,7 @@ func _honor_roll(col: VBoxContainer, r: RunProgress) -> void:
 	box.add_theme_constant_override(&"separation", 4)
 	col.add_child(box)
 	col.move_child(box, _continue_button.get_index())
-	var head: Label = PaperSheet.ink(make_label("HONOR ROLL  ·  %d RETIRED" % r.honor_roll.size(), &"HudTag"), PaperSheet.INK_BRASS)
+	var head: Label = PaperSheet.ink(make_label("HONOR ROLL  ·  %d MUSTERED OUT" % r.honor_roll.size(), &"HudTag"), PaperSheet.INK_BRASS)
 	box.add_child(head)
 	var row: HFlowContainer = HFlowContainer.new()
 	row.alignment = FlowContainer.ALIGNMENT_CENTER

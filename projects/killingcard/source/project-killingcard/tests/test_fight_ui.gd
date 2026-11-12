@@ -352,7 +352,8 @@ func test_phone_strip_folds_rival_into_score() -> void:
 		var score: Control = m.get_badge(&"score")
 		# kc-loadout-clean: no RIVAL badge and no rival hand count on any size.
 		assert_false(rival.visible, "%s RIVAL badge folded" % label)
-		assert_eq(score.get_text().split(" ").size(), 2, "%s SCORE has no rival hand count (%s)" % [label, score.get_text()])
+		assert_false(score.get_text().contains("/"), "%s SCORE has no rival hand count (%s)" % [label, score.get_text()])
+		assert_true(score.get_text().contains("TO "), "%s SCORE shows the target (%s)" % [label, score.get_text()])
 		if phone:
 			var rail: Control = m.get_trait_rail()
 			var badge_h: float = float(m.metrics["badge_h"])

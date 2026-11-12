@@ -78,7 +78,7 @@ const UNIT_HEALED: StringName = &"unit_healed"                ## side (healed un
 const SYNERGY_CHANGED: StringName = &"synergy_changed"        ## side, links [{kind, from_uid, to_uid}], counts {trait: n}, sets {trait: tier}
 
 # --- Score -----------------------------------------------------------------------
-const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"player" / &"enemy" / &"contested" / &"empty")
+const ZONE_CONTROL: StringName = &"zone_control"              ## zone, owner (&"player" / &"enemy" / &"contested" / &"empty"), player_units, enemy_units, player_holder, enemy_holder
 const MODE_SCORED: StringName = &"mode_scored"                ## mode, player_gained, enemy_gained, player_score, enemy_score, target
 const STREAK_CHANGED: StringName = &"streak_changed"          ## side, streak, before, gained, reset, earned
 const KILLSTREAK_EARNED: StringName = &"killstreak_earned"    ## side, item_id, streak, threshold (into the Streak Tray)

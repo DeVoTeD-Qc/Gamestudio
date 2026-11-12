@@ -138,7 +138,7 @@ func show_banner(data: Dictionary, timing: RefCounted = null) -> float:
 	var w: float = minf(BANNER_MAX_W, board.size.x - 8.0)
 	banner.size = Vector2(w, BANNER_H)
 	var x: float = roundf(board.position.x + (board.size.x - w) * 0.5)
-	var y: float = 6.0
+	var y: float = banner_top(Rect2(x, 6.0, w, BANNER_H))
 	banner.visible = true
 	banner.mouse_filter = Control.MOUSE_FILTER_STOP
 	banner.tooltip_text = "%s: %s. %s" % [last_banner.get("name", ""), last_banner["effect"], when_text(item_id)]
@@ -164,6 +164,22 @@ func show_banner(data: Dictionary, timing: RefCounted = null) -> float:
 		_banner_tween.tween_property(banner, ^"position:x", off_x, t_out).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_banner_tween.tween_callback(_hide_banner)
 	return minf(total, timing.get_value(&"ks_banner_beat"))
+
+
+## kc-clarity (playtest v28: the Attack Helo banner covered the "Helo incoming" chip): the banner's
+## top, moved down under any pending INCOMING chip it would cover (its preferred rect is `want`).
+func banner_top(want: Rect2) -> float:
+	var y: float = want.position.y
+	for n: Node in get_children():
+		if not (n is PendingMarker) or not (n as Control).visible:
+			continue
+		var pm: PendingMarker = n
+		if pm.chip == null or not pm.chip.visible:
+			continue
+		var cr: Rect2 = Rect2(pm.position + pm.chip.position, pm.chip.size)
+		if cr.intersects(Rect2(want.position.x, y, want.size.x, want.size.y)) and cr.position.y < want.position.y + want.size.y:
+			y = maxf(y, cr.end.y + 4.0)
+	return y
 
 
 ## kc-da-ui2: where the banner waits off screen: left of the screen for the viewer's own killstreak,

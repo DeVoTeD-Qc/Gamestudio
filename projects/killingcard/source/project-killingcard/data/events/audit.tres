@@ -9,7 +9,7 @@ title = "Quartermaster's Audit"
 scene = "\"Sign here, and here. Kit you don't use goes back on the truck.\""
 options = Array[Dictionary]([{
 "id": "hand_in",
-"label": "Hand in kit",
+"label": "Muster out kit",
 "detail": "Muster out 2 Standard Issue cards.",
 "effect": "muster_out",
 "amount": 2,

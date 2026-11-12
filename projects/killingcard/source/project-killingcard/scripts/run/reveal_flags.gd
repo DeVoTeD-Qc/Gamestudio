@@ -82,13 +82,13 @@ const TEXTS: Dictionary = {
 	ELITES: {"title": "New: Elites", "text": "One of a kind, with a printed trait."},
 	LOADOUT: {"title": "New: Loadout", "text": "Pick your three killstreaks before a run."},
 	RUN_MAP: {"title": "New: The run map", "text": "Pick your path: fights, events, shops and rests lead to the boss. Everything ahead is shown."},
-	REQUISITION: {"title": "New: Requisition", "text": "REQ is earned in fights and events. Spend it here on cards, or to send cards home."},
+	REQUISITION: {"title": "New: Requisition", "text": "REQ is earned in fights and events. Spend it here on cards, or to muster cards out."},
 	ELITE_FIGHT: {"title": "New: Elite fights", "text": "A tougher crew for a better cache: a drop one rung ahead and +5 REQ. Optional; a loss costs a ticket."},
 	OPERATOR_ABILITY: {"title": "New: Operator ability", "text": "Your Operator has a passive and one free ability per match. Tap the button on the Operator card."},
 	TERRAIN: {"title": "New: Terrain", "text": "Terrain changes one rule in its column, for both sides. Pick where you fight."},
 	BOSS_RULE: {"title": "New: Boss rule", "text": "The boss plays with one extra rule, shown on the map from the start. Plan your run against it."},
 	EVENT: {"title": "New: Events", "text": "Each choice says exactly what it does. Odds are always printed."},
-	REST: {"title": "New: Rest", "text": "Pick one: a ticket back, send 2 cards home, or a weapon level."},
+	REST: {"title": "New: Rest", "text": "Pick one: a ticket back, muster out 2 cards, or a weapon level."},
 	MODIFIERS: {"title": "New: Modifiers", "text": "Optional challenges with a Threat number. Winning at Threat unlocks cosmetics, never power."},
 }
 ## Keyword tip ids -> the player-facing keyword (CardData.keyword_names) they explain.

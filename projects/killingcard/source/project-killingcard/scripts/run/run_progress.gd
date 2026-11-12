@@ -623,8 +623,8 @@ func muster_out_count() -> int:
 	return maxi(0, mini(int(offer.get("count", 0)), mini(standard_issue_count(), deck.size() - config.deck_floor)))
 
 
-## kc-onboard §4.3 UI hook (Muster out screen): one row per Standard Issue copy, most expensive
-## first (deck order on ties): {index, id, name, cost, firepower, armor, art, serial ("SI-01" ..),
+## kc-onboard §4.3 UI hook (Muster out screen): one row per Standard Issue copy, weakest first
+## (kc-clarity: FP + Armor, then cost, then deck order): {index, id, name, cost, firepower, armor, art, serial ("SI-01" ..),
 ## preselected: bool (the first muster_out_count() rows)}. [] when no Muster out is current.
 func muster_out_options() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -636,8 +636,16 @@ func muster_out_options() -> Array[Dictionary]:
 		if c != null and c.standard_issue:
 			out.append({"index": i, "id": deck[i], "name": c.display_name, "cost": c.cost, "firepower": c.firepower,
 					"armor": c.armor, "art": art_of(i), "serial": standard_issue_serial(c), "preselected": false})
+	# kc-clarity (playtest v28: "it marks my most expensive cards; I wanted the weakest"): the
+	# weakest copies first (lowest FP + Armor, then the cheapest), so SEND HOME thins the filler.
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return int(a["cost"]) > int(b["cost"]) or (int(a["cost"]) == int(b["cost"]) and int(a["index"]) < int(b["index"])))
+		var sa: int = int(a["firepower"]) + int(a["armor"])
+		var sb: int = int(b["firepower"]) + int(b["armor"])
+		if sa != sb:
+			return sa < sb
+		if int(a["cost"]) != int(b["cost"]):
+			return int(a["cost"]) < int(b["cost"])
+		return int(a["index"]) < int(b["index"]))
 	for k: int in mini(n, out.size()):
 		out[k]["preselected"] = true
 	return out
@@ -664,7 +672,7 @@ func muster_out(indices: Array) -> String:
 			return "copy %d is listed twice" % i
 		seen[i] = true
 	if seen.size() > muster_out_count():
-		return "you can send at most %d Standard Issue cards home" % muster_out_count()
+		return "you can muster out at most %d Standard Issue cards" % muster_out_count()
 	var order: Array = seen.keys()
 	order.sort()
 	order.reverse()
@@ -683,10 +691,10 @@ func retire_card(index: int) -> String:
 	var offer: Dictionary = pending_offers[0]
 	var kind: StringName = offer["kind"]
 	if not (kind == RewardOffers.KIND_REGROUP or (kind == RewardOffers.KIND_SUPPLY_DROP and offer.get("retire", false))):
-		return "this offer has no Retire option"
+		return "this offer has no Muster out option"
 	var list: Array[Dictionary] = retire_options()
 	if index < 0 or index >= list.size():
-		return "no Retire option %d" % index
+		return "no Muster out option %d" % index
 	var err: String = _retire_copy(list[index]["id"], StringName(list[index]["trait_choice"]))
 	if err != "":
 		return err

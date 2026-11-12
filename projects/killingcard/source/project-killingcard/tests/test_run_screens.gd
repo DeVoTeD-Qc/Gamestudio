@@ -10,7 +10,7 @@
 #   SceneRouter runs in dry_run, so a route is recorded and this test loads the next screen itself.
 #   kc-onboard-ui: the suite runs on the SHIPPED run config (the Standard Issue starter and the
 #   onboarding ladder): M1 a 3-card calling-card drop (no Retire yet), M2 "PICK 2 OF 4" (4 cards fit
-#   the phone; RETIRE in the header), Muster out (pre-selected most expensive, toggle, SEND n HOME),
+#   the phone; RETIRE in the header), Muster out (pre-selected weakest, toggle, SEND n HOME),
 #   M3 Salvage + Muster out (kc-no-training: no Promotion, no Trains line, no level badge). The profile's
 #   reveal flags are cleared for the suite (Settings.met_flags / seen_flags) and restored after.
 # Author: UI/UX Agent (p11; kc-onboard-ui)
@@ -439,19 +439,20 @@ func _full_run(screen: Dictionary) -> void:
 				assert_true(n >= 1, "%s: Muster out sends some home" % label)
 				assert_eq(reward.list_tiles.size(), si_n, "%s: one tile per Standard Issue copy" % label)
 				assert_eq(reward.muster_marks.size(), n, "%s: %d pre-selected" % [label, n])
-				# The pre-selection is the most expensive copies.
+				# kc-clarity: the pre-selection is the weakest copies (FP + Armor).
 				var marked_costs: Array = []
 				var other_costs: Array = []
 				for t: Control in reward.list_tiles:
-					var cost: int = (_rs.run.resource(_rs.run.deck[int(t.get_meta(&"index"))]) as CardData).cost
+					var cd: CardData = _rs.run.resource(_rs.run.deck[int(t.get_meta(&"index"))]) as CardData
+					var cost: int = cd.firepower + cd.armor
 					(marked_costs if reward.muster_marks.has(int(t.get_meta(&"index"))) else other_costs).append(cost)
 					assert_true(String(t.get_meta(&"serial")).begins_with("SI-"), "%s: serial plate %s" % [label, t.get_meta(&"serial")])
 					# kc-cards-impl: Muster out shows the Y2+ card (Standard Issue on its type line).
 					var cv: CardView = t.find_child("Card", true, false) as CardView
 					assert_true(cv != null and bool(cv.data.get("standard_issue", false)), "%s: Standard Issue card" % label)
 				if not other_costs.is_empty():
-					assert_true(marked_costs.min() >= other_costs.max(), "%s: most expensive pre-selected (%s vs %s)" % [label, marked_costs, other_costs])
-				assert_true(reward.send_button.is_visible_in_tree() and ("SEND %d HOME" % n) in reward.send_button.text, "%s: SEND %d HOME" % [label, n])
+					assert_true(marked_costs.max() <= other_costs.min(), "%s: weakest pre-selected (%s vs %s)" % [label, marked_costs, other_costs])
+				assert_true(reward.send_button.is_visible_in_tree() and ("MUSTER OUT %d" % n) in reward.send_button.text, "%s: MUSTER OUT %d" % [label, n])
 				# Tap a marked card: it stays; tap it again: it goes home again. A full selection refuses more.
 				var first: Control = null
 				var spare: Control = null

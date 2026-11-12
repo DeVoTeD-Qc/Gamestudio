@@ -31,7 +31,10 @@ const CARD_GAP: float = 12.0
 const EDGE: float = 12.0
 const CARD_WIDTH: float = 560.0
 const CARD_WIDTH_COMPACT: float = 500.0
-const SKIP_CONFIRM_SECONDS: float = 3.0
+## kc-clarity (playtest v28: "SKIP TUTORIAL did nothing"): the first tap arms SKIP and it stays armed
+## (it used to fall back after 3 s, so a second tap a little later only re-armed it and nothing
+## seemed to happen). 0 = no time-out.
+const SKIP_CONFIRM_SECONDS: float = 0.0
 
 @onready var _card: PanelContainer = %CoachCard
 @onready var _title: Label = %StepTitle
@@ -207,11 +210,11 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _on_skip_pressed() -> void:
-	if _skip_armed_until > 0:
+	if _skip_armed_until != 0:
 		_skip_armed_until = 0
 		skip_confirmed.emit()
 		return
-	_skip_armed_until = Time.get_ticks_msec() + int(SKIP_CONFIRM_SECONDS * 1000.0)
+	_skip_armed_until = Time.get_ticks_msec() + int(SKIP_CONFIRM_SECONDS * 1000.0) if SKIP_CONFIRM_SECONDS > 0.0 else -1
 	_skip.text = "TAP AGAIN TO SKIP"
 
 

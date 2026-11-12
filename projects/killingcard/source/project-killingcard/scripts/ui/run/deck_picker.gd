@@ -178,7 +178,7 @@ func _refresh() -> void:
 		var b: Button = _tiles[idx]
 		var on: bool = marked.has(idx)
 		b.set_pressed_no_signal(on)
-		(b.get_node("Tag") as Label).text = "GOING HOME" if on else "TAP TO MARK"
+		(b.get_node("Tag") as Label).text = "MUSTER OUT" if on else "TAP TO MARK"
 		(b.get_node("Veil") as ColorRect).visible = on
 		b.queue_redraw()
 	var n: int = marked.size()

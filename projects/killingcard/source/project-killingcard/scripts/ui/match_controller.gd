@@ -63,6 +63,7 @@ const StatBreakdown: GDScript = preload("res://scripts/ui/stat_breakdown.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const FightPlayback: GDScript = preload("res://scripts/ui/fight_playback.gd")
 const RunV2Views: GDScript = preload("res://scripts/ui/run/run_v2_views.gd")
+const ScoreRace: GDScript = preload("res://scripts/ui/score_race.gd")
 const PLAYER: int = MatchState.PLAYER
 const ENEMY: int = MatchState.ENEMY
 const ZONE_WORDS: PackedStringArray = ["column A", "column B", "column C"]
@@ -106,6 +107,8 @@ var _cover: Control = null
 var _last_round_line: String = ""
 ## kc-ux-text: the last round's recap (round_recap), shown once with the next Deploy's hint.
 var _recap: String = ""
+## kc-clarity: the same round as ScoreRace.recap() rows (per column), for the recap panel.
+var _recap_data: Dictionary = {}
 const RECAP_SECONDS: float = 4.5
 var map: MapData = null
 ## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
@@ -448,6 +451,7 @@ func press_ready() -> void:
 	if state == null or _busy or state.phase != MatchState.Phase.DEPLOY or state.sides[me_side].ready \
 			or is_mulligan_open():
 		return
+	_dismiss_recap()
 	clear_selection()
 	var me: RulesSide = state.sides[me_side]
 	var supply_unspent: int = me.supply
@@ -552,7 +556,8 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 		round_presented.emit()
 		return
 	_last_round_line = _round_line()
-	_recap = round_recap(resolved)
+	_recap_data = ScoreRace.recap(state, me_side, resolved)
+	_recap = String(_recap_data["plain"])
 	if is_hot_seat():
 		round_presented.emit()
 		duel.call(&"round_done")  # the next round's first cover (cover_needed)
@@ -637,36 +642,29 @@ func _deploy_hint() -> void:
 	var now: String = "Round %d: drag your Operator onto a column." % state.round_number if s.operator_can_deploy \
 			else "Round %d: play cards, then READY." % state.round_number
 	if _recap != "":
-		_screen.show_toast(_recap + "\n" + now, RECAP_SECONDS)
+		# kc-clarity (playtest v28): the recap stays until the player dismisses it or starts to play
+		# (per column: who still had units there and who scored), the drill keeps the short toast.
+		if _screen.has_method(&"show_round_recap") and not _is_tutorial():
+			_screen.show_round_recap(_recap_data, now)
+		else:
+			_screen.show_toast(_recap + "\n" + now, RECAP_SECONDS)
 		_recap = ""
+		_recap_data = {}
 	else:
 		_screen.show_toast(now)
 
 
 ## kc-ux-text: one line for the round that just resolved, from your side: the points each side
 ## scored, the score, and the units each side lost. "Round 2: you +1, rival +2 (3-4). You lost 1 unit."
+## kc-clarity: the per-column version is ScoreRace.recap() (the recap panel).
 func round_recap(events: Array) -> String:
-	var gained: Array[int] = [0, 0]
-	var lost: Array[int] = [0, 0]
-	var me_name: StringName = state.side_name(me_side)
-	for ev: Dictionary in events:
-		match ev.get("type"):
-			RulesEvent.MODE_SCORED:
-				gained = [int(ev.get("player_gained", 0)), int(ev.get("enemy_gained", 0))]
-			RulesEvent.UNIT_ELIMINATED:
-				lost[0 if StringName(ev.get("victim_side", &"")) == me_name else 1] += 1
-	if me_side != 0:
-		gained.reverse()
-	var line: String = "Round %d: you +%d, rival +%d (%d-%d)." % [state.round_number, gained[0], gained[1],
-			state.sides[me_side].score, state.sides[foe_side].score]
-	var parts: PackedStringArray = []
-	if lost[1] > 0:
-		parts.append("eliminated %d" % lost[1])
-	if lost[0] > 0:
-		parts.append("lost %d" % lost[0])
-	if not parts.is_empty():
-		line += " You " + " and ".join(parts) + "."
-	return line
+	return String(ScoreRace.recap(state, me_side, events)["plain"])
+
+
+## kc-clarity: the recap panel goes away as soon as the player starts to plan.
+func _dismiss_recap() -> void:
+	if _screen != null and _screen.has_method(&"hide_round_recap"):
+		_screen.hide_round_recap()
 
 
 func refresh() -> void:
@@ -1029,6 +1027,7 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 # =============================================================================
 
 func select_card(uid: int) -> void:
+	_dismiss_recap()
 	selection = {"kind": &"card", "uid": uid}
 	target_uid = -1
 	_show_selection()
@@ -1045,6 +1044,7 @@ func select_card(uid: int) -> void:
 
 
 func select_operator() -> void:
+	_dismiss_recap()
 	selection = {"kind": &"operator"}
 	target_uid = -1
 	_show_selection()
@@ -1653,6 +1653,7 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 	if state == null or _swallow_tap():
 		return
+	_dismiss_recap()
 	if not (selection.get("kind") == &"card" and int(selection["uid"]) == uid):
 		select_card(uid)
 	_dragging = true
@@ -1666,6 +1667,7 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 func _on_operator_drag_started(pos: Vector2) -> void:
 	if state == null or _swallow_tap() or state.sides[me_side].operator_unit == null:
 		return
+	_dismiss_recap()
 	if operator_deployed():
 		# kc-loadout-clean: the deployed card is the ability: drag it to the column it targets.
 		var a: Dictionary = RunV2Views.ability_view(state, me_side)
@@ -1833,7 +1835,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 	if u != null and u.is_on_board():
 		var b: Dictionary = StatBreakdown.of_unit(state, u)
 		syn = b["syn"]
-		out.append({"name": "Firepower now", "text": StatBreakdown.line("FP", b["fp"])})
+		out.append({"name": "FP now", "text": StatBreakdown.line("FP", b["fp"])})
 		if int(b["cover"]["total"]) > 0 or not (b["cover"]["parts"] as Array).is_empty():
 			out.append({"name": "Cover now", "text": StatBreakdown.line("Cover", b["cover"])})
 		if bool(b["fs"]):
@@ -1874,7 +1876,7 @@ func synergy_lines(card: CardData, side: int, u: RulesUnit,
 	if card.standard_issue:
 		# kc-onboard-ui: Standard Issue kit: Muster out / Retire sends it home.
 		out.append({"name": "Standard Issue %s" % RunProgress.standard_issue_serial(card),
-				"text": "No trait. Muster out or Retire sends it home."})
+				"text": "No trait. Muster out takes it out of your deck."})
 	return out
 
 
@@ -1986,8 +1988,9 @@ func _on_rail_inspected(key: StringName) -> void:
 			var goal: String = String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") else ""
 			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
-					"text": "You %d, rival %d. %s" % [me.score, foe.score, goal],
-					"status": "Each round: +1 per column you control. %s" % [
+					"text": "%s %s" % [ScoreRace.goal_line(state, me_side), goal],
+					"status": "%s %s" % ["Each round: +1 per column you hold at round end (only your units left there)." if ScoreRace.columns_score(state)
+							else "Each round: +1 per enemy unit you eliminate.",
 						"You go first." if bool(ini_s.get("mine", true)) else "The rival goes first."]})
 		&"deck":
 			_open_info({"title": "Your deck", "type": "deck · discard",
@@ -2194,7 +2197,7 @@ func _open_operator(side: int) -> void:
 	if not kit.is_empty() and not bool(kit.get("kit_on", true)):
 		op_lines.append({"name": "Kit off this fight", "text": "Passive and ability start from your second fight."})
 	if op.is_on_board():
-		op_lines.append({"name": "Firepower now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
+		op_lines.append({"name": "FP now", "text": StatBreakdown.line("FP", StatBreakdown.of_unit(state, op)["fp"])})
 	var view: Dictionary = CardInfo.operator_view_dict(op, title)
 	view["side"] = "friend" if side == me_side else "enemy"
 	view["cost"] = cost  # kc-loadout-cut: the Supply cost in the card's cost badge, like a deck card

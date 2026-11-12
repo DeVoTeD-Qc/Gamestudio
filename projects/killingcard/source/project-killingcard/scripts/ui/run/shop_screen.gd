@@ -118,7 +118,7 @@ func _fill() -> void:
 	var dp: int = int(shop.get("discharge_price", 3))
 	var rp: int = int(shop.get("restock_price", 1))
 	_service(&"muster", "MUSTER OUT · %d REQ EACH" % mp,
-			"Send Standard Issue cards home. Deck %d (min %d)." % [deck_n, floor_n],
+			"Muster out Standard Issue cards. Deck %d (min %d)." % [deck_n, floor_n],
 			bool(shop.get("muster_can", true)) and req >= mp and room > 0 and not _muster_candidates().is_empty(),
 			_why(&"muster", "NEED %d REQ" % mp if req < mp else ("DECK AT ITS FLOOR (%d)" % floor_n if room <= 0 else "PICK CARDS")),
 			_open_muster)
@@ -351,7 +351,7 @@ func _room() -> int:
 
 func _open_muster() -> void:
 	var mp: int = int(shop.get("muster_price", 2))
-	_picker.open("MUSTER OUT · %d REQ EACH" % mp, "Mark the Standard Issue cards to send home. Up to %d (the deck never goes under %d)." % [_room(), int(shop.get("floor", 15))],
+	_picker.open("MUSTER OUT · %d REQ EACH" % mp, "Mark the Standard Issue cards to muster out. Up to %d (the deck never goes under %d)." % [_room(), int(shop.get("floor", 15))],
 			_muster_candidates(), _room(), mp, "SEND", int(shop.get("req", 0)))
 	_rewire(muster)
 

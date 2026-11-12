@@ -366,7 +366,7 @@ static func node_info(m: Dictionary, n: Dictionary) -> Dictionary:
 			text = "Prices in REQ: Unit 4 · Tactic 3 · Field 3 · Elite card 7 · Muster out 2 · Discharge 3 · Perk 6 · Restock 1. No tickets."
 		&"rest":
 			var cfg: RunConfig = CardDB.get_run_config()
-			text = "Pick one: +1 ticket (max 3), Drill (send 2 cards home, deck min %d) or Field-strip (a weapon level now)." % (cfg.deck_floor if cfg != null else 8)
+			text = "Pick one: +1 ticket (max 3), Drill (muster out 2 cards, deck min %d) or Field-strip (a weapon level now)." % (cfg.deck_floor if cfg != null else 8)
 		&"boss":
 			var b: Dictionary = m.get("boss", {})
 			text = "%s · %s\nMode: %s · Armor +%d.\nRule · %s: %s" % [b.get("name", ""), b.get("crew", ""), b.get("mode", ""),

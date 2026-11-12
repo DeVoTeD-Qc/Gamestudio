@@ -926,7 +926,10 @@ func score() -> void:
 	for z: int in ZONE_COUNT:
 		var c: int = control_of(z)
 		control.append(c)
-		emit_event(RulesEvent.ZONE_CONTROL, {"zone": zone_name(z), "owner": control_name(c)})
+		# kc-clarity: the units each side still has here and its Holders (the round recap's "why").
+		var held: Array = control_counts(z)
+		emit_event(RulesEvent.ZONE_CONTROL, {"zone": zone_name(z), "owner": control_name(c),
+				"player_units": held[0], "enemy_units": held[1], "player_holder": held[2], "enemy_holder": held[3]})
 	_synergy_heal()  # kc-syn: Undead tier 2, before the END_OF_ROUND effects
 	TerrainRules.field_hospital(self)  # kc-v2-impl
 	for si: int in side_order():
@@ -1601,6 +1604,18 @@ func control_of(zone: int) -> int:
 	if holder[1] and not holder[0]:
 		return ENEMY
 	return CONTROL_CONTESTED
+
+
+## kc-clarity: [player units, enemy units, player has a Holder, enemy has a Holder] in `zone`,
+## counting only the units control_of() counts.
+func control_counts(zone: int) -> Array:
+	var out: Array = [0, 0, false, false]
+	for si: int in 2:
+		for u: RulesUnit in sides[si].line(zone):
+			if u.is_alive() and u.counts_for_control:
+				out[si] = int(out[si]) + 1
+				out[2 + si] = bool(out[2 + si]) or u.holder
+	return out
 
 
 func zones_controlled(side: int) -> int:
