@@ -115,11 +115,25 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		# K5: first-run hint (pick a weapon then tap zombies)
 		eq(str(m.get("hint_id")), "weapon", tag + " first hint: pick a weapon, tap zombies")
 		check(_named(m, "Hint") != null, tag + " hint shown")
+		# dd-ui-clean: the hint is a floating toast: it takes no layout space, so no card moves or
+		# resizes when it comes or goes, and it never covers the gun row or the draw pile
+		var hint_c: Control = _named(m, "Hint") as Control
+		var c0: Rect2 = _view_idx(m, 0).get_global_rect()
+		var gun_r: Rect2 = _view_idx(m, 200).get_global_rect()
+		var pile_r: Rect2 = _view_idx(m, 400).get_global_rect()
+		if hint_c != null:
+			var hr: Rect2 = hint_c.get_global_rect()
+			var vps: Vector2 = m.get_viewport_rect().size
+			check(hr.end.y <= vps.y + 1 and hr.position.y >= -1, tag + " hint toast on screen (%s in %s)" % [str(hr), str(vps)])
+			check(not hr.grow(-1).intersects(gun_r), tag + " hint toast clear of the gun row")
+			check(not hr.grow(-1).intersects(pile_r), tag + " hint toast clear of the draw pile")
 		m.call("dismiss_hint")
 		await _settle()
 		check(str(m.get("hint_id")).begins_with("rule_"), tag + " next hint: the active gun's rule (%s)" % str(m.get("hint_id")))
 		m.call("dismiss_hint")
 		await _settle()
+		eq(_view_idx(m, 0).get_global_rect(), c0, tag + " street card unmoved when the hint goes")
+		eq(_view_idx(m, 200).get_global_rect(), gun_r, tag + " gun unmoved when the hint goes")
 		_all_inspectable_and_on_screen(m, tag + " street")
 		# the head's layout
 		var w1: DDCardView = _view_idx(m, 300)

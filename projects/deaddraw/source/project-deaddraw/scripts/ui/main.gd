@@ -1628,7 +1628,8 @@ func _float_hint(hint: Control, strip: Control) -> void:
 		var r: Rect2 = anchor.get_global_rect()
 		var h: float = maxf(HINT_H, toast.get_combined_minimum_size().y)
 		var vp: Vector2 = get_viewport_rect().size
-		var y: float = clampf(r.position.y + (r.size.y - h) * 0.5, 0.0, maxf(0.0, vp.y - h))
+		# centred on the log line; a taller (wrapped) tip grows upward, never down onto the gun row
+		var y: float = clampf(minf(r.position.y + (r.size.y - h) * 0.5, r.end.y - h), 0.0, maxf(0.0, vp.y - h))
 		toast.global_position = Vector2(r.position.x, y)
 		toast.size = Vector2(r.size.x, h)
 	anchor.item_rect_changed.connect(place)
