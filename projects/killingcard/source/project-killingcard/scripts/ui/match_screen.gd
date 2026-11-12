@@ -1796,6 +1796,7 @@ var intro_node: Dictionary = {}
 
 func _setup_v2() -> void:
 	_ability = AbilityButton.new()
+	_ability.hand = _hand
 	_tray.add_child(_ability)
 	# kc-loadout-clean: the disc rides on the deployed Operator card: re-place it when the hand moves.
 	_hand.cards_placed.connect(func() -> void: _layout_ability.call_deferred())

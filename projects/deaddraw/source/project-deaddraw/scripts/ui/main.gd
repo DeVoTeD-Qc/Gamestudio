@@ -2004,9 +2004,14 @@ func _make_scrap_zone(idx: int) -> Control:
 	if strip == null:
 		return null
 	var pts: int = int(Game.run.card_preview(idx, DDRun.SCRAP).get("points", 0))
-	var z: PanelContainer = DDUi.panel(Color("3a2f12"), 8, DDUi.accent("X"), 3)
+	var z: PanelContainer = PanelContainer.new()
 	z.name = "ScrapZone"
-	var l: Label = DDUi.label("SCRAP  ·  +%d pts" % Game.bal.shown(pts), DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	var zst: StyleBoxFlat = DDUi.box(Color("2a2410"), DDUi.accent("X"), 3, 12, 8)
+	zst.border_blend = false
+	z.add_theme_stylebox_override("panel", zst)
+	var l: Label = DDUi.label("SCRAP here  ·  +%d pts" % Game.bal.shown(pts), DDUi.FONT_S, DDUi.accent("X"), HORIZONTAL_ALIGNMENT_CENTER)
+	l.add_theme_constant_override("outline_size", 4)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	z.add_child(l)
 	var r: Rect2 = strip.get_global_rect()

@@ -32,6 +32,8 @@ var _burst: float = 0.0
 var _flash: float = 0.0
 ## kc-loadout-clean: the deployed Operator card this disc sits on (it follows the card's moves).
 var follow: Control = null
+## The HandArea whose Operator card it follows (the card is rebuilt on every hand refresh).
+var hand: Control = null
 
 
 func _init() -> void:
@@ -138,6 +140,10 @@ func place_on(card: Control) -> void:
 func _process(delta: float) -> void:
 	_burst = maxf(0.0, _burst - delta / 0.45)
 	_flash = maxf(0.0, _flash - delta / 0.3)
+	if hand != null and is_instance_valid(hand) and hand.has_method(&"get_operator_card"):
+		var now: Control = hand.call(&"get_operator_card")
+		if now != follow:
+			follow = now
 	if follow != null and is_instance_valid(follow) and visible:
 		var cr: Rect2 = follow.get_global_rect()
 		if not cr.grow(1.0).encloses(get_global_rect()) or get_global_rect().end.x < cr.end.x - 16.0:

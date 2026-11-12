@@ -20,6 +20,9 @@ signal drag_finished(target: Dictionary)
 
 const LIFT: float = 1.06
 const SNAP_S: float = 0.18
+## The lifted card's widest (logical px) and how far above the finger its bottom edge floats.
+const GHOST_W: float = 150.0
+const FLOAT_Y: float = 22.0
 
 var source: Control = null
 var targets: Array[Dictionary] = []
@@ -29,6 +32,7 @@ var reduce: bool = false
 var info: Dictionary = {}
 var hovered: String = ""
 var _grab: Vector2 = Vector2.ZERO
+var _fit: float = 1.0
 var _glows: Dictionary = {}
 var _extras: Array[Control] = []
 
@@ -61,16 +65,16 @@ func begin(src: Control, ghost_view: Control, tgts: Array[Dictionary], gpos: Vec
 		_ignore_mouse(ghost)
 		ghost.set_meta(&"drag_ghost", true)
 		add_child(ghost)
-		# a big source (a gun tile) lifts a smaller token, centred on the pointer
+		# the lifted card floats just above the finger (so the target under it stays visible), at
+		# most GHOST_W wide; a gun / melee button lifts a small token of its weapon
 		var gs: Vector2 = ghost.custom_minimum_size if ghost.custom_minimum_size != Vector2.ZERO else r.size
-		if gs != r.size:
-			_grab = gs * 0.5
 		ghost.size = gs
+		_fit = minf(1.0, GHOST_W / maxf(1.0, gs.x))
+		_grab = Vector2(gs.x * 0.5, gs.y)
 		ghost.pivot_offset = _grab
-		ghost.global_position = gpos - _grab
 		ghost.z_index = 10
+		ghost.scale = Vector2.ONE * _fit * (LIFT if not reduce else 1.0)
 		if not reduce:
-			ghost.scale = Vector2.ONE * LIFT
 			ghost.rotation = deg_to_rad(-2.5)
 		ghost.modulate = Color(1, 1, 1, 0.95)
 	src.modulate.a = 0.35
@@ -96,7 +100,8 @@ func _style(ok: bool, hot: bool) -> StyleBoxFlat:
 	var st: StyleBoxFlat = StyleBoxFlat.new()
 	st.set_corner_radius_all(14)
 	if ok:
-		st.bg_color = Color(DDUi.SELECT, 0.22 if hot else 0.08)
+		# lit: a gold rim and glow around the target (its face stays readable)
+		st.bg_color = Color(DDUi.SELECT, 0.18 if hot else 0.0)
 		st.border_color = DDUi.SELECT if hot else Color(DDUi.SELECT, 0.85)
 		st.set_border_width_all(6 if hot else 4)
 		st.shadow_color = Color(DDUi.SELECT, 0.5 if hot else 0.3)
@@ -137,7 +142,7 @@ func move(gpos: Vector2) -> void:
 	if source == null:
 		return
 	if ghost != null and is_instance_valid(ghost):
-		ghost.global_position = gpos - _grab + (Vector2(0, -10) if not reduce else Vector2.ZERO)
+		ghost.global_position = gpos - _grab - Vector2(0, FLOAT_Y)
 	var t: Dictionary = target_at(gpos)
 	var h: String = str(t.get("name", ""))
 	if h != hovered:
@@ -194,7 +199,11 @@ func _end(snap_back: bool) -> void:
 		return
 	# snap back to where it came from
 	var tw: Tween = gh.create_tween().set_parallel(true)
-	tw.tween_property(gh, "global_position", src.get_global_rect().position, SNAP_S).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tw.tween_property(gh, "scale", Vector2.ONE, SNAP_S)
+	var sr: Rect2 = src.get_global_rect()
+	var back: Vector2 = Vector2(sr.get_center().x, sr.end.y) - gh.pivot_offset
+	var full: Vector2 = Vector2(sr.size.x / maxf(1.0, gh.size.x), sr.size.y / maxf(1.0, gh.size.y))
+	tw.tween_property(gh, "global_position", back, SNAP_S).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(gh, "scale", full, SNAP_S)
+	tw.tween_property(gh, "modulate:a", 0.0, SNAP_S)
 	tw.tween_property(gh, "rotation", 0.0, SNAP_S)
 	tw.chain().tween_callback(gh.queue_free)
