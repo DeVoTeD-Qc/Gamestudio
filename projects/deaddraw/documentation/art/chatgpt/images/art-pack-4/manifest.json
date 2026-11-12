@@ -1,7 +1,7 @@
 {
   "source": "../../dd-art-pack-4-zombies-prompts.md",
   "requested_count": 12,
-  "generated_count": 6,
+  "generated_count": 12,
   "images": [
     {
       "number": 1,
@@ -56,42 +56,48 @@
       "batch": 2,
       "title": "### Image 7: Mover (Bruiser, value 7)",
       "file": "dd_zombie_v07.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "ef9cffae053e2b3a21daed728fd9eaffa3914b79aeec20e292c7cf224fa23605"
     },
     {
       "number": 8,
       "batch": 2,
       "title": "### Image 8: Road Crew (Bruiser, value 8)",
       "file": "dd_zombie_v08.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "bb9052cfe19c5e43ba9da7b53d30835eb8b7da5ee0e2b8233f9ed424496ae5dd"
     },
     {
       "number": 9,
       "batch": 2,
       "title": "### Image 9: Bouncer (Bruiser, value 9)",
       "file": "dd_zombie_v09.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "d205091079403ebebc4375df6b9ba7c0573753a409ff663c2b0495c52ccbfa50"
     },
     {
       "number": 10,
       "batch": 2,
       "title": "### Image 10: Trucker (Hulk, value 10)",
       "file": "dd_zombie_v10.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "b58263746518db5f39fd1b1378d4f42feea36ca4136170dc57a4dd4a21b37d4d"
     },
     {
       "number": 11,
       "batch": 2,
       "title": "### Image 11: Strongman (Hulk, value 11)",
       "file": "dd_zombie_v11.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "77ff2c55bf549b8f3622fa6385866082d4c0e385b367da3adf50c8014c4ea06e"
     },
     {
       "number": 12,
       "batch": 2,
       "title": "### Image 12: Titan (Hulk, value 12)",
       "file": "dd_zombie_v12.png",
-      "status": "pending"
+      "status": "generated",
+      "sha256": "028dfee8dbe53b02cff58706cb883cede83ea044a5de8d748faf146e4e32c569"
     }
   ]
 }
