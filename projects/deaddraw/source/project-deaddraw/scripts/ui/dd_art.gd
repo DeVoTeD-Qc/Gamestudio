@@ -54,6 +54,12 @@ static func use_manifest(path: String) -> void:
 	reset()
 
 
+## dd-art-import45: layered weapon cards on / off (off = the pack 1 paintings), and reload.
+static func set_layers(on: bool) -> void:
+	layers_enabled = on
+	reset()
+
+
 static func reset() -> void:
 	_entries = {}
 	_loaded = false

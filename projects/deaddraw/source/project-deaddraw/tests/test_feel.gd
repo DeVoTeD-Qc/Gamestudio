@@ -125,6 +125,8 @@ func test_art_from_a_manifest_and_missing_files() -> void:
 ## dd-art-fit: a painting with a focus box is cropped around its subject and never cuts the box,
 ## whatever the shape of the rect (the wide gun-row strip, a tall tile, a square).
 func test_art_focus_keeps_the_subject_whole() -> void:
+	# the pack 1 painting (the fallback of the layered weapon cards, dd-art-import45)
+	Art.set_layers(false)
 	Art.use_manifest(Art.DEFAULT_MANIFEST)
 	var tex: Texture2D = Art.texture_for(Art.weapon_keys("pistol", "Service Pistol"))
 	check(tex != null, "pistol art found")
@@ -150,6 +152,49 @@ func test_art_focus_keeps_the_subject_whole() -> void:
 		var plain: TextureRect = Art.cover_rect(sv)
 		check(plain.texture == sv and plain.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_COVERED, "no focus: the plain cover look")
 		plain.free()
+	Art.set_layers(true)
+	Art.use_manifest(Art.DEFAULT_MANIFEST)
+
+
+## dd-art-import45 (art packs 4-5): zombies by value, layered weapon cards at one shared scale, never cut.
+func test_art_packs_4_5_layers_and_values() -> void:
+	Art.use_manifest(Art.DEFAULT_MANIFEST)
+	if Art.file_for("zombie_7") == "":
+		check(true, "art pack 4 not imported")
+		return
+	check(Art.file_for("zombie_7").ends_with("dd_zombie_v07.webp"), "Z7 picks its own painting")
+	check(Art.file_for("shambler").ends_with("dd_zombie_shambler.webp"), "the tier painting stays the fallback")
+	var pistol: Texture2D = Art.texture_for(Art.weapon_keys("pistol", "Service Pistol"))
+	var eleph: Texture2D = Art.texture_for(Art.weapon_keys("elephant", "Elephant Gun"))
+	var axe: Texture2D = Art.texture_for(DDV4Hooks.melee_art_keys("axe", "Fire Axe"))
+	if not Art.is_layered(pistol):
+		check(true, "art pack 5 not imported")
+		return
+	check(Art.is_layered(eleph) and Art.is_layered(axe), "guns and melee are layered")
+	check(pistol.get("back") == eleph.get("back") and axe.get("back") != pistol.get("back"), "one gun backdrop, one melee backdrop")
+	var rp: TextureRect = Art.cover_rect(pistol)
+	var re: TextureRect = Art.cover_rect(eleph)
+	for area: Vector2 in [Vector2(140, 60), Vector2(200, 40), Vector2(360, 90), Vector2(120, 160), Vector2(96, 96), Vector2(300, 200)]:
+		var lp: Array = rp.call("layered_layout", area)
+		var le: Array = re.call("layered_layout", area)
+		check((lp[1] as Rect2).is_equal_approx(Rect2(Vector2.ZERO, area)), "the backdrop fills the rect at %s" % str(area))
+		# one scale for the set: the same canvas scale for the pistol and the Elephant Gun
+		var sp: float = (lp[3] as Rect2).size.x / maxf((lp[2] as Rect2).size.x, 0.001)
+		var se: float = (le[3] as Rect2).size.x / maxf((le[2] as Rect2).size.x, 0.001)
+		check(absf(sp - se) < 0.01, "one shared scale at %s (%.3f / %.3f)" % [str(area), sp, se])
+		# never cut: the shared box is inside the drawn part of the canvas
+		var bx: Rect2 = eleph.get("box")
+		var bpx: Rect2 = Rect2(bx.position * eleph.get_size(), bx.size * eleph.get_size())
+		check((le[2] as Rect2).grow(0.5).encloses(bpx), "the weapon whole at %s" % str(area))
+	rp.free()
+	re.free()
+	# the fallback: without the layers the pack 1 painting comes back
+	Art.set_layers(false)
+	Art.use_manifest(Art.DEFAULT_MANIFEST)
+	check(not Art.is_layered(Art.texture_for(Art.weapon_keys("pistol", "Service Pistol"))), "layers off: the pack 1 painting")
+	Art.set_layers(true)
+	Art.use_manifest(Art.DEFAULT_MANIFEST)
+	check(DDText.zombie_title(1) == "Slippers" and DDText.zombie_title(12) == "Titan", "zombie names")
 
 
 func test_real_manifest_covers_the_cards() -> void:
