@@ -40,15 +40,15 @@ static func melee(run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	var on: String = " - ACTIVE" if run.active == DDRun.MELEE else ""
 	if not run.has_melee_weapon():
-		var body: String = "Always there. %s%s\nA melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer) hits harder until its uses run out." % [
-			DDText.bare_hands_text(b), ("\nBrawler: Bare Hands hit %d harder." % b.num("brawler_bonus")) if run.has_patch("brawler") else ""]
-		return {"kind": "K", "tag": "MELEE" + on, "title": run.melee_name(), "big": "P%d" % run.melee_power(), "body": body,
-			"t1": "%s · hits %d · never breaks" % [run.melee_name(), run.melee_power()], "t2": "Any zombie, even one your guns can't take. No points."}
+		var body: String = "Always there. %s%s\nA melee weapon card (Pipe Wrench, Fire Axe, Sledgehammer) is stronger until its uses run out." % [
+			DDText.bare_hands_text(b), ("\nBrawler: Bare Hands +%d strength." % b.num("brawler_bonus")) if run.has_patch("brawler") else ""]
+		return {"kind": "K", "tag": "MELEE" + on, "title": run.melee_name(), "big": str(run.melee_power()), "body": body,
+			"t1": "%s · strength %d · never breaks" % [run.melee_name(), run.melee_power()], "t2": "Any zombie, even one your guns can't take. No points."}
 	var id: String = str(run.melee.get("id", ""))
-	return {"kind": "K", "tag": "MELEE WEAPON" + on, "title": run.melee_name(), "big": "P%d" % run.melee_power(),
-		"body": "%s\n%s left, then Bare Hands (hits %d)." % [DDText.melee_card_text(id, b, run.melee_uses()),
+	return {"kind": "K", "tag": "MELEE WEAPON" + on, "title": run.melee_name(), "big": str(run.melee_power()),
+		"body": "%s\n%s left, then Bare Hands (strength %d)." % [DDText.melee_card_text(id, b, run.melee_uses()),
 			DDText.uses_text(run.melee_uses()), b.num("hands_power")],
-		"t1": "%s · hits %d" % [run.melee_name(), run.melee_power()],
+		"t1": "%s · strength %d" % [run.melee_name(), run.melee_power()],
 		"t2": "Any zombie, even one your guns can't take. No points."}
 
 
@@ -61,12 +61,12 @@ static func melee_card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	if run.has_melee_weapon():
 		body.append("TAKE replaces your %s (%s left)." % [run.melee_name(), DDText.uses_text(run.melee_uses())])
 	else:
-		body.append("TAKE: it replaces Bare Hands (hits %d)." % b.num("hands_power"))
+		body.append("TAKE: it replaces Bare Hands (strength %d)." % b.num("hands_power"))
 	body.append("Or SCRAP it for %d pts." % b.shown(b.num("scrap_points")))
 	if c.holdover:
 		body.append("HOLDOVER: left from the last street.")
-	return {"kind": "K", "tag": "MELEE WEAPON", "title": b.melee_name(c.wid), "big": "P%d" % b.melee_power(c.wid), "body": "\n".join(body),
-		"t1": "%s · hits %d" % [b.melee_name(c.wid), b.melee_power(c.wid)],
+	return {"kind": "K", "tag": "MELEE WEAPON", "title": b.melee_name(c.wid), "big": str(b.melee_power(c.wid)), "body": "\n".join(body),
+		"t1": "%s · strength %d" % [b.melee_name(c.wid), b.melee_power(c.wid)],
 		"t2": "Tap: TAKE it as your melee (no points), or SCRAP +%d." % b.shown(b.num("scrap_points"))}
 
 
@@ -75,7 +75,7 @@ static func melee_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 	var b: DDBalance = run.bal
 	var uses: int = run.melee_take_uses(c.wid)
 	return {"kind": "K", "tag": "HOLDOVER" if c.holdover else "", "badge": "", "badge_color": DDUi.WARN, "badge_size": DDUi.FONT_M,
-		"big": "", "title": b.melee_name(c.wid), "lines": [["hits %d · %s" % [b.melee_power(c.wid), DDText.uses_text(uses)], DDUi.accent("K"), DDUi.FONT_S]],
+		"big": "", "title": b.melee_name(c.wid), "lines": [["strength %d · %s" % [b.melee_power(c.wid), DDText.uses_text(uses)], DDUi.accent("K"), DDUi.FONT_S]],
 		"art_dim": false, "lock": "", "art_keys": melee_art_keys(c.wid, b.melee_name(c.wid)), "uses": uses, "payload": melee_card(c, run, i)}
 
 

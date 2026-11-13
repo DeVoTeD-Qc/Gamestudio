@@ -344,6 +344,13 @@ func test_safehouse_and_end_screens() -> void:
 		_all_inspectable_and_on_screen(m, tag + " safehouse shop")
 		go.pressed.emit()
 		await _settle()
+		if run.points > 0:
+			# r2: unspent points: the warning sheet asks first
+			var lc: Button = _named(m, "LeaveConfirmLeave")
+			check(lc != null and _named(m, "LeaveConfirmSpend") != null, tag + " leaving with points asks first")
+			eq(m.call("screen_name"), "SAFEHOUSE", tag + " still at the safehouse until you confirm")
+			lc.pressed.emit()
+			await _settle()
 		eq(m.call("screen_name"), "MAP", tag + " map after the safehouse")
 		eq(run.district_index, 1, tag + " Downtown next")
 		m.call("apply_debug", {"screen": "end"})
@@ -446,4 +453,4 @@ func test_payloads_cover_everything() -> void:
 	z.slot(0).stack = [5] as Array[int]
 	var zp: Dictionary = DDPayloads.card(z.street[0], z, 0)
 	check(str(zp["body"]).contains("NO: needs ≤4"), "zombie zoom: which rules allow it (%s)" % str(zp["body"]))
-	check(str(zp["body"]).contains("Melee (hit 1): -6 HP"), "zombie zoom: damage with each weapon")
+	check(str(zp["body"]).contains("Melee (strength 1): -6 HP"), "zombie zoom: damage with each weapon")

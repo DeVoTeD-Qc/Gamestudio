@@ -365,11 +365,12 @@ static func make_challenge_line(cl: Dictionary, h: float = 20.0, two_line: bool 
 	if st == "broken":
 		md.self_modulate = Color(0.55, 0.55, 0.55, 0.7)
 	row.add_child(md)
-	var fs: int = clampi(int(h * 0.68), 11, 16)
+	# r2 (accessibility: "the next not 5, 6 hint is small"): one size up
+	var fs: int = clampi(int(h * 0.72), 13, 18)
 	p.set_meta(&"two_line", two_line)
 	if two_line:
 		# name -> reward over the progress
-		fs = clampi(int(h * 0.36), 10, 14)
+		fs = clampi(int(h * 0.42), 12, 16)
 		var col: VBoxContainer = DDUi.vbox(0)
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		col.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -395,7 +396,7 @@ static func make_challenge_line(cl: Dictionary, h: float = 20.0, two_line: bool 
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	l.custom_minimum_size = Vector2(10, 0)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.resized.connect(func() -> void: fit_label(l, fs, 10))
+	l.resized.connect(func() -> void: fit_label(l, fs, 11))
 	row.add_child(l)
 	var mk: _Mark = _Mark.new()
 	mk.name = "ChalMark"

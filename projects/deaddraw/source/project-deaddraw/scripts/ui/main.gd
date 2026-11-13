@@ -316,7 +316,7 @@ func _render() -> void:
 			_build_safehouse()
 		Screen.END:
 			_build_end()
-	if screen in [Screen.MAP, Screen.SAFEHOUSE, Screen.END] and str(sheet.get("type", "")) == "patches":
+	if screen in [Screen.MAP, Screen.SAFEHOUSE, Screen.END] and str(sheet.get("type", "")) in ["patches", "leave_confirm"]:
 		_build_sheet()
 	if not _pending_fx.is_empty() or _screen_fx != "" or not _pending_banner.is_empty():
 		var pend: Dictionary = _pending_fx
@@ -624,16 +624,17 @@ func _build_map() -> void:
 			"badge_color": DDUi.GOOD if status == "CLEARED" else DDUi.WARN, "big": DDText.boss_summary(b), "big_size": 30,
 			"title": "Boss: %s" % str(b.get("name", "")),
 			"selected": di == run.district_index, "dim": di < run.district_index,
-			"payload": {"kind": "F", "tag": str(d.get("name", "")).to_upper(), "title": str(b.get("name", "")), "big": DDText.boss_summary(b),
-				"body": "%s\nWaves: %s.\nRooms: %s." % [DDText.trait_text(str(b.get("trait", ""))), " | ".join(PackedStringArray([0, 1, 2].map(func(w: int) -> String: return DDText.zombie_list(Game.bal.wave_zombies(di, w))))),
+			"payload": {"kind": "F", "tag": str(d.get("name", "")).to_upper(), "title": str(b.get("name", "")), "big": str(int((b.get("zombies", [9]) as Array)[0])),
+				"body": DDText.boss_words(b).capitalize().substr(0, 1) + DDText.boss_words(b).substr(1) + ".\n%s\nWaves: %s.\nRooms: %s." % [DDText.trait_text(str(b.get("trait", ""))), " | ".join(PackedStringArray([0, 1, 2].map(func(w: int) -> String: return DDText.zombie_list(Game.bal.wave_zombies(di, w))))),
 					", ".join(PackedStringArray((d.get("rooms", []) as Array).map(func(r: Variant) -> String: return "%s %d" % [str((r as Dictionary).get("name", "")), Game.bal.shown(int((r as Dictionary).get("cost", 0)))])))],
-				"t1": "%s · boss %s (%s)" % [str(d.get("name", "")), str(b.get("name", "")), DDText.boss_summary(b).replace(" -> ", ", ")],
+				"t1": "%s · boss %s (%s)" % [str(d.get("name", "")), str(b.get("name", "")), DDText.boss_words(b)],
 				"t2": "3 waves, then the boss. %s" % ("You are here." if di == run.district_index else ("Cleared." if di < run.district_index else "Ahead."))}}
-		# dd-polish5: the boss's number in the zombie badge, short: "9", "6×3" (horde), "8-12" (phases)
+		# r2 (playtest: "6×3" and "8-12" read as guesses): the badge is the first strength, like every
+		# zombie's; the line under the boss's name says the rest in words ("3 at once, strength 6 each")
 		var bz: Array = b.get("zombies", [9])
 		spec["strength"] = int(bz[0])
-		if bz.size() > 1:
-			spec["big"] = "%d-%d" % [int(bz[0]), int(bz[bz.size() - 1])] if str(b.get("trait", "")) == "phases" else "%d×%d" % [int(bz[0]), bz.size()]
+		spec["big"] = str(int(bz[0]))
+		spec["lines"] = [[DDText.boss_words_short(b), DDUi.TEXT, DDUi.FONT_S - 2]]
 		var banner: Texture2D = Art.texture_for(Art.district_keys(d))
 		if banner != null:
 			spec["bg_art"] = banner
@@ -736,10 +737,11 @@ func _build_street() -> void:
 	# the strip as a toast (_float_hint) and takes no layout space
 	var hint_h: float = 0.0
 	var strip_h: float = TAP if run.lookout_card() != null else STRIP_H
-	var n: int = maxi(4, run.street.size())
+	var slots: Array[int] = street_slots(run)
+	var n: int = maxi(4, slots.size())
 	# dd-ux-clean2 (U2): a boss street holds 2 cards (the boss + a phase / cover card); they take
 	# the street's whole width (portrait) or grow to the street's height (landscape)
-	var duel: bool = run.boss_street and run.street.size() <= 2
+	var duel: bool = run.boss_street and run.street.size() <= 2 and slots.size() <= 2
 	if duel:
 		n = 2
 	if portrait:
@@ -1203,7 +1205,10 @@ func _wave_door(run: DDRun, column: bool) -> DDCardView:
 	sm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	brow.add_child(sm)
 	if zs.size() > 1:
-		var more: Label = DDUi.label(("x%d" % zs.size()) if horde else ("->%d" % int(zs[zs.size() - 1])), DDUi.FONT_S - 6, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		# r2: words, not "x3" / "->12" (the tooltip says it in full: "3 at once, strength 6 each")
+		# (the narrow portrait door: "×3"; its tooltip spells it out)
+		var more: Label = DDUi.label((("%d at once" if column else "×%d") % zs.size()) if horde else ("to %d" % int(zs[zs.size() - 1])), DDUi.FONT_S - 6, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		more.name = "BossMore"
 		more.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		brow.add_child(more)
 	bv.clip_contents = true
@@ -1325,10 +1330,10 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	var ml: Label = DDUi.label(main_txt, DDUi.FONT_M - (0 if not used else 6), col, HORIZONTAL_ALIGNMENT_CENTER)
 	row.add_child(ml)
 	if afford:
-		inner.add_child(DDUi.label("OPEN", DDUi.FONT_S - 6, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER))
+		inner.add_child(DDUi.label("OPEN", DDUi.FONT_S - 4, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER))
 	if not open:
-		# v5: what using the machine inside costs, under the door price ("+150 to use")
-		var ul: Label = DDUi.label("+%d to use" % Game.bal.shown(run.machine_min_price(i)), DDUi.FONT_S - 7, DDUi.BG if afford else DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
+		# v5: what using the machine inside costs, under the door price ("+150 to use"); r2: bigger
+		var ul: Label = DDUi.label("+%d to use" % Game.bal.shown(run.machine_min_price(i)), DDUi.FONT_S - 4, DDUi.BG if afford else DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 		ul.name = "UseCost"
 		inner.add_child(ul)
 	if not open and not afford:
@@ -1351,7 +1356,8 @@ func _room_plate(run: DDRun, i: int) -> Control:
 		b.add_theme_stylebox_override(st, sb if st != "hover" else DDUi.box(bg.lightened(0.1), edge, 2, 10, 6))
 	# dd-art2-import: the painted door plates (gold afford, dark iron locked, green USE, used)
 	DDUi.Kit.skin_plate(b, "dd_plate_door_" + (("used" if used else ("locked" if poor else "use")) if open else ("afford" if afford else "locked")), 6.0)
-	b.custom_minimum_size = Vector2(maxf(84.0, ml.get_combined_minimum_size().x + 44.0), TAP + (16.0 if not open else 0.0))
+	# r2 (accessibility): USE / OPEN plates at least 72 layout px tall (>= 44 CSS px on a phone)
+	b.custom_minimum_size = Vector2(maxf(104.0, ml.get_combined_minimum_size().x + 44.0), DDUi.TAP_MIN + (22.0 if not open else 0.0))
 	# dd-ux-text (playtest): the plate has its own tooltip on right click / long press (the gold
 	# OPEN plate showed an empty one): the price and what is inside
 	_inspectable_button(b, DDPayloads.room_plate(run, i))
@@ -1364,15 +1370,77 @@ func _room_plate(run: DDRun, i: int) -> Control:
 
 
 # ---------------------------------------------------------------- street, strip
+## r2 (playtest: "the street refills under the cursor, so one click opened the wrong card"): every
+## street card keeps the grid cell it was dealt into. A taken card leaves a gap; a new card (a
+## boss phase, the next deal) fills the first gap. Returns cell -> street index (-1 = a gap).
+var _cell_of: Dictionary = {}
+var _cell_count: int = 0
+
+
+## True when some card in `keep` already had its cell last time (the same street, not a new deal).
+func _cell_kept(keep: Dictionary) -> bool:
+	for cid: Variant in keep.keys():
+		if _cell_of.has(cid):
+			return true
+	return false
+
+
+func street_slots(run: DDRun) -> Array[int]:
+	var cells: Array[int] = []
+	if run == null:
+		return cells
+	var keep: Dictionary = {}
+	var used: Dictionary = {}
+	for i: int in run.street.size():
+		var cid: int = run.street[i].get_instance_id()
+		if _cell_of.has(cid) and not used.has(int(_cell_of[cid])):
+			keep[cid] = int(_cell_of[cid])
+			used[int(_cell_of[cid])] = true
+	for i2: int in run.street.size():
+		var cid2: int = run.street[i2].get_instance_id()
+		if keep.has(cid2):
+			continue
+		var cell: int = 0
+		while used.has(cell):
+			cell += 1
+		keep[cid2] = cell
+		used[cell] = true
+	var count: int = run.street.size()
+	for k: Variant in used.keys():
+		count = maxi(count, int(k) + 1)
+	# the row keeps its width while cards are taken (gaps on the right too); a fresh street, where
+	# no card kept its cell, starts over at its own size
+	if not keep.is_empty() and run.street.size() > 0:
+		count = maxi(count, _cell_count if _cell_kept(keep) else 0)
+	cells.resize(count)
+	cells.fill(-1)
+	for i3: int in run.street.size():
+		cells[int(keep[run.street[i3].get_instance_id()])] = i3
+	_cell_of = keep
+	_cell_count = count
+	return cells
+
+
 func _build_street_row(run: DDRun, card_w: float, card_h: float, cols: int = 99) -> Control:
+	var cells: Array[int] = street_slots(run)
 	var g: GridContainer = GridContainer.new()
-	g.columns = mini(cols, maxi(1, run.street.size()))
+	g.name = "StreetGrid"
+	g.columns = mini(cols, maxi(1, cells.size()))
 	g.add_theme_constant_override("h_separation", SEP)
 	g.add_theme_constant_override("v_separation", SEP)
 	var wrap: CenterContainer = CenterContainer.new()
 	wrap.add_child(g)
 	var did: String = str(run.district().get("id", ""))
-	for i: int in run.street.size():
+	for cell: int in cells.size():
+		var i: int = cells[cell]
+		if i < 0:
+			# the gap a taken card left: the same size, so nothing else moves
+			var gap: Control = Control.new()
+			gap.name = "StreetGap%d" % cell
+			gap.custom_minimum_size = Vector2(card_w, card_h)
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			g.add_child(gap)
+			continue
 		var c: DDCard = run.street[i]
 		var spec: Dictionary = DDPayloads.street_card_spec(c, i, run)
 		if not spec.has("art_keys"):
@@ -1413,7 +1481,7 @@ func _build_strip(run: DDRun, strip_h: float) -> Control:
 	ps["big_size"] = 24
 	ps["title"] = "PILE"
 	ps.erase("tag")
-	ps["title_size"] = DDUi.FONT_S - 5
+	ps["title_size"] = DDUi.FONT_S - 3
 	var layers: int = mini(3, ceili(run.pile.size() / 6.0))
 	var pv: DDCardView = _view(ps, Vector2(112, strip_h - 4.0 * layers))
 	pv.index = IDX_PILE
@@ -1681,15 +1749,21 @@ func _run_button(run: DDRun) -> Control:
 			ne.add_child(nt)
 		return ne
 	if run.boss_street:
-		var rp: Button = DDUi.button("RUN PAST\n-%d HP" % Game.bal.num("boss_runpast_damage"), Color("5a2a1a"), DDUi.FONT_S - 4)
+		# r2 (playtest: "greyed out with no reason, and the tooltip still offered it"): when it is
+		# off, the button and its tooltip say why, and the tooltip doesn't offer it
+		var rp_dmg: int = Game.bal.num("boss_runpast_damage")
+		var rp_why: String = run.run_past_block_reason()
+		var rp_off: bool = rp_why != ""
+		var rp: Button = DDUi.button("RUN PAST\n-%d HP" % rp_dmg if not rp_off else "RUN PAST\nfight on", Color("5a2a1a") if not rp_off else DDUi.PANEL,
+			DDUi.FONT_S - 4 if not rp_off else DDUi.FONT_S - 5)
 		rp.name = "RunPast"
 		rp.autowrap_mode = TextServer.AUTOWRAP_OFF
 		rp.custom_minimum_size = Vector2(0, TAP)
-		rp.disabled = not run.can_run_past() or busy
+		rp.disabled = rp_off or busy
 		rp.pressed.connect(func() -> void:
 			if not _was_long(rp):
 				do_run_past())
-		_inspectable_button(rp, {"kind": "F", "t1": "Run past · -%d HP" % Game.bal.num("boss_runpast_damage"), "t2": "Skip the boss: no reward, no free Patch."})
+		_inspectable_button(rp, run_past_payload(run))
 		return rp
 	var why: String = run.run_block_reason()
 	var cost: int = run.run_cost()
@@ -1710,6 +1784,20 @@ func _run_button(run: DDRun) -> Control:
 		rpl["t2"] = "Not now: %s." % why
 	_inspectable_button(rb, rpl)
 	return rb
+
+
+## r2: Run past's tooltip. Off: the reason, and no offer ("Boss street: resolve every card").
+func run_past_payload(run: DDRun) -> Dictionary:
+	var dmg: int = Game.bal.num("boss_runpast_damage")
+	var why: String = run.run_past_block_reason()
+	if why == "":
+		var lethal: bool = run.hp + run.cover - dmg <= 0
+		return {"kind": "F", "tag": "RUN PAST", "title": "Run past", "big": "-%d" % dmg,
+			"body": "Before your first card on the boss street: take %d damage and skip the boss. No reward, no free Patch.%s" % [dmg, "\nTHIS KILLS YOU." if lethal else ""],
+			"t1": "Run past · -%d HP" % dmg, "t2": "Skip the boss: no reward, no free Patch." + (" This kills you." if lethal else "")}
+	var t2: String = "Boss street: resolve every card. Run past works only before your first card." if why == "you already started the fight" else "Not now: %s." % why
+	return {"kind": "F", "tag": "RUN PAST · OFF", "title": "Run past is off", "big": "",
+		"body": t2, "t1": "Run past · off (you started the fight)" if why == "you already started the fight" else "Run past · off", "t2": t2}
 
 
 # ---------------------------------------------------------------- first-run hints (K5)
@@ -1745,9 +1833,10 @@ func _build_hint(run: DDRun) -> Control:
 	var l: Label = DDUi.label(DDText.hint_text(hint_id, run.bal), DDUi.FONT_S - 4, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
-	var ok: Button = DDUi.button("Got it", DDUi.PANEL_HI, DDUi.FONT_S - 4)
+	# r2 (accessibility): a bigger Got it (>= 44 CSS px on a phone)
+	var ok: Button = DDUi.button("Got it", DDUi.PANEL_HI, DDUi.FONT_S - 1)
 	ok.name = "HintOk"
-	ok.custom_minimum_size = Vector2(84, TAP)
+	ok.custom_minimum_size = Vector2(104, DDUi.TAP_MIN)
 	ok.pressed.connect(dismiss_hint)
 	h.add_child(ok)
 	return p
@@ -1801,8 +1890,8 @@ func _build_sheet() -> void:
 	if run == null:
 		return
 	var kind: String = ""
-	if str(sheet.get("type", "")) == "patches":
-		kind = "patches"
+	if str(sheet.get("type", "")) in ["patches", "leave_confirm"]:
+		kind = str(sheet["type"])
 	elif not run.pending_patch.is_empty():
 		kind = "patch"
 	elif not sheet.is_empty():
@@ -1842,6 +1931,8 @@ func _build_sheet() -> void:
 			_room_confirm_sheet(run, v, int(sheet.get("room", 0)))
 		"patches":
 			_patches_list_sheet(run, v)
+		"leave_confirm":
+			_leave_confirm_sheet(run, v)
 
 
 func _sheet_button(text: String, enabled: bool, color: Color, cb: Callable) -> Button:
@@ -1866,7 +1957,7 @@ func _gun_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	top.add_child(_view({"kind": "W", "tag": "GUN", "hit": Game.bal.weapon_power(c.wid), "cap": Game.bal.weapon_cap(c.wid), "title": Game.bal.weapon_name(c.wid), "payload": gp, "art_keys": Art.weapon_keys(c.wid, Game.bal.weapon_name(c.wid))}, Vector2(170, 130)))
 	# dd-ux-clean: three plain lines; the card's zoom has the full text
 	var rw: Array = Game.bal.weapon_reward(c.wid)
-	var txt: Label = DDUi.label("Hits %d · %d kills fill it\nEach kill: %s\nChallenge: %s -> %s" % [Game.bal.weapon_power(c.wid), Game.bal.weapon_cap(c.wid),
+	var txt: Label = DDUi.label("Strength %d · %d kills fill it\nEach kill: %s\nChallenge: %s -> %s" % [Game.bal.weapon_power(c.wid), Game.bal.weapon_cap(c.wid),
 		DDText.rule_short(Game.bal.weapon_rule(c.wid), run.steady()), DDText.challenge_name(Game.bal.weapon_challenge(c.wid)), DDText.reward_short(str(rw[0]), int(rw[1]), Game.bal)],
 		DDUi.FONT_S - 1, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -2053,7 +2144,7 @@ func _rack_offer(run: DDRun, wid: String, price: int, vp: Vector2, short: bool) 
 	d.custom_minimum_size = Vector2(maxf(120.0, minf(360.0, inner - cw - 10.0 - (0.0 if portrait else 260.0))), 0)
 	box.add_child(d)
 	var fs: int = DDUi.FONT_S - 3
-	d.add_child(DDUi.label("Hits %d · %d kills fill it (+%d)" % [b.weapon_power(wid), b.weapon_cap(wid), b.shown(b.num("finish_bonus"))], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true))
+	d.add_child(DDUi.label("Strength %d · %d kills fill it (+%d)" % [b.weapon_power(wid), b.weapon_cap(wid), b.shown(b.num("finish_bonus"))], fs, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true))
 	d.add_child(_icon_line(Art.rule_keys(b.weapon_rule(wid)), "Each kill: %s" % DDText.rule_short(b.weapon_rule(wid), rosa), fs, DDUi.WARN))
 	var cid: String = b.weapon_challenge(wid)
 	if cid != "":
@@ -2145,6 +2236,15 @@ func tap_street(i: int) -> void:
 			if not bool(pr["ok"]):
 				blocked_tap(i, str(pr["reason"]))
 				return
+			# r2 (playtest: "I died to the boss in one tap on 7 HP; nothing stopped me"): a kill that
+			# would end the run asks once: the card shakes red and says so; the same tap (or drop)
+			# again within a few seconds goes ahead
+			if bool(pr["dies"]):
+				var who: String = "Melee" if run.active == DDRun.MELEE else run.slot(run.active).name
+				if not lethal_gate("attack:%d:%d" % [c.get_instance_id(), run.active],
+						"THIS KILLS YOU: %s takes %d HP, you have %d. Sure? Do it again to go ahead." % [who, int(pr["hp_loss"]), run.hp],
+						_street_views.get(c.get_instance_id())):
+					return
 			var snap: Dictionary = _snapshot()
 			var ev: Dictionary = run.attack(i)
 			_finish(ev, {"type": "attack", "ev": ev, "snap": snap})
@@ -2224,13 +2324,42 @@ func _shake(c: Control) -> void:
 var _toast_node: Control = null
 ## v5: the medkit (instance id) that asked "full HP: tap again" (0 = none).
 var _confirm_heal: int = 0
+## r2: the lethal action that asked "This kills you. Sure?" ("" = none) and when (msec).
+var confirm_lethal: String = ""
+var _confirm_lethal_at: int = 0
+const LETHAL_CONFIRM_MS: int = 5000
+
+
+## r2: the "This kills you. Sure?" gate. The first time an action `key` would end the run, the
+## anchor shakes and flashes red, a toast says so (and the event line), and it returns false; the
+## same action again within LETHAL_CONFIRM_MS returns true (go ahead). Any other action resets it.
+func lethal_gate(key: String, text: String, anchor: Control = null) -> bool:
+	var now: int = Time.get_ticks_msec()
+	if confirm_lethal == key and now - _confirm_lethal_at <= LETHAL_CONFIRM_MS:
+		confirm_lethal = ""
+		return true
+	confirm_lethal = key
+	_confirm_lethal_at = now
+	last_block = text
+	Sfx.cue(&"warn")
+	if anchor != null and is_instance_valid(anchor):
+		_shake(anchor)
+		feedback._pulse(anchor, Color(1.9, 0.35, 0.35))
+	_toast(text, anchor, 3.6, DDUi.BAD)
+	var ll: Label = _content.find_child("LastLine", true, false) as Label
+	if ll != null:
+		ll.text = text
+		ll.add_theme_color_override("font_color", DDUi.BAD)
+	if OS.has_feature("web"):
+		_publish_state()
+	return false
 
 
 ## dd-ux-text: a one-line toast over `anchor` (or mid-screen), gone after 1.8 s; it never takes taps.
-func _toast(text: String, anchor: Control = null) -> void:
+func _toast(text: String, anchor: Control = null, hold: float = 1.8, edge: Color = DDUi.WARN) -> void:
 	if _toast_node != null and is_instance_valid(_toast_node):
 		_toast_node.queue_free()
-	var t: PanelContainer = DDUi.panel(Color(0.09, 0.06, 0.05, 0.94), 10, DDUi.WARN, 2)
+	var t: PanelContainer = DDUi.panel(Color(0.09, 0.06, 0.05, 0.94), 10, edge, 3 if edge != DDUi.WARN else 2)
 	t.name = "BlockToast"
 	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l: Label = DDUi.label(text, DDUi.FONT_S - 3, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
@@ -2256,7 +2385,7 @@ func _toast(text: String, anchor: Control = null) -> void:
 	var tw: Tween = t.create_tween()
 	t.modulate.a = 0.0
 	tw.tween_property(t, "modulate:a", 1.0, 0.12)
-	tw.tween_interval(1.8)
+	tw.tween_interval(hold)
 	tw.tween_property(t, "modulate:a", 0.0, 0.3)
 	tw.tween_callback(t.queue_free)
 
@@ -2533,6 +2662,10 @@ func do_resolve(i: int, choice: String) -> void:
 func do_run() -> void:
 	if busy:
 		return
+	var run: DDRun = Game.run
+	if run != null and run.hp + run.cover - run.run_cost() <= 0 and not lethal_gate("run",
+			"THIS KILLS YOU: Run costs %d HP, you have %d. Sure? Tap RUN again to go ahead." % [run.run_cost(), run.hp], _content.find_child("Run", true, false) as Control):
+		return
 	var snap: Dictionary = _snapshot()
 	var ev: Dictionary = Game.run.run_street()
 	_finish(ev, {"type": "run", "ev": ev, "snap": snap})
@@ -2540,6 +2673,11 @@ func do_run() -> void:
 
 func do_run_past() -> void:
 	if busy:
+		return
+	var run: DDRun = Game.run
+	var dmg: int = Game.bal.num("boss_runpast_damage")
+	if run != null and run.hp + run.cover - dmg <= 0 and not (run.has_patch("second_wind") and not run.second_wind_used) and not lethal_gate("run_past",
+			"THIS KILLS YOU: Run past costs %d HP, you have %d. Sure? Tap RUN PAST again to go ahead." % [dmg, run.hp], _content.find_child("RunPast", true, false) as Control):
 		return
 	var ev: Dictionary = Game.run.run_past()
 	_finish(ev, {"type": "run", "ev": ev, "snap": _snapshot()})
@@ -2606,6 +2744,35 @@ func _room_confirm_sheet(run: DDRun, v: VBoxContainer, i: int) -> void:
 	row.add_child(no)
 
 
+## r2: "340 pts stay here: spend first?" What you can still buy, then SPEND FIRST / LEAVE ANYWAY.
+func _leave_confirm_sheet(run: DDRun, v: VBoxContainer) -> void:
+	var b: DDBalance = Game.bal
+	var lost: int = b.shown(int(run.shop_state().get("left_behind", 0)))
+	var t: Label = DDUi.label("%d PTS STAY HERE" % lost, DDUi.FONT_L, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER, true)
+	t.name = "LeaveConfirmTitle"
+	v.add_child(t)
+	var can: PackedStringArray = []
+	if run.shop_patch_block_reason() == "":
+		can.append("a Patch (%d pts)" % b.shown(run.shop_patch_price()))
+	if run.supplies_max() > 0:
+		can.append("up to +%d HP (%d pts each)" % [run.supplies_max(), b.shown(run.supplies_rate())])
+	var lines: PackedStringArray = ["Points don't come with you to the next district. Your score keeps them."]
+	lines.append(("You can still buy %s." % " or ".join(can)) if not can.is_empty() else "Nothing here costs that little: leaving loses them anyway.")
+	var body: Label = DDUi.label("\n".join(lines), DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true)
+	body.name = "LeaveConfirmText"
+	v.add_child(body)
+	var row: HBoxContainer = DDUi.hbox(8)
+	v.add_child(row)
+	var spend: Button = _sheet_button("SPEND FIRST", true, Color("245236"), close_sheet)
+	spend.name = "LeaveConfirmSpend"
+	spend.custom_minimum_size = Vector2(0, DDUi.TAP_MIN)
+	row.add_child(spend)
+	var go: Button = _sheet_button("LEAVE ANYWAY\n(lose %d pts)" % lost, true, Color("5a2a1a"), confirm_leave)
+	go.name = "LeaveConfirmLeave"
+	go.custom_minimum_size = Vector2(0, DDUi.TAP_MIN)
+	row.add_child(go)
+
+
 func open_machine(i: int) -> void:
 	if busy:
 		return
@@ -2660,6 +2827,7 @@ func _finish(ev: Dictionary, fx: Dictionary) -> void:
 		return
 	last_event = ev
 	last_block = ""
+	confirm_lethal = ""
 	# a hint is learned once the player acts with it on screen (or taps Got it)
 	if hint_id != "":
 		Game.profile.mark_hint(hint_id)
@@ -3138,8 +3306,24 @@ func take_boss_patch(pid: String) -> void:
 	_queue_render()
 
 
+## r2 (playtest: "the Safehouse took my points"): leaving with points that stay behind asks first,
+## on a sheet: SPEND FIRST (back to the shop) or LEAVE ANYWAY. With nothing to lose it leaves.
 func leave_safehouse() -> void:
 	var run: DDRun = Game.run
+	if run == null:
+		return
+	if int(run.shop_state().get("left_behind", 0)) > 0 and str(sheet.get("type", "")) != "leave_confirm":
+		sheet = {"type": "leave_confirm"}
+		Sfx.cue(&"warn")
+		_queue_render()
+		return
+	confirm_leave()
+
+
+## Leaves the safehouse now (LEAVE ANYWAY on the warning sheet, or nothing stays behind).
+func confirm_leave() -> void:
+	var run: DDRun = Game.run
+	sheet = {}
 	var ev: Dictionary = run.leave_safehouse("")
 	if bool(ev.get("ok", false)):
 		last_event = ev

@@ -73,7 +73,7 @@ func test_melee_card_texts() -> void:
 	eq([c.kind, c.wid, c.code()], [DDCard.MELEE, "wrench", "K:wrench"], "parse / code")
 	eq(DDText.card_name(c, bal()), "Pipe Wrench", "name")
 	eq(DDText.kind_label(DDCard.MELEE), "MELEE", "kind label")
-	check(DDText.melee_card_text("axe", bal()).begins_with("Hits 4, 3 uses"), "card text")
+	check(DDText.melee_card_text("axe", bal()).begins_with("Strength 4, 3 uses"), "card text")
 	eq(DDCard.from_dict(c.to_dict()).code(), "K:wrench", "round trip")
 
 
@@ -215,7 +215,7 @@ func test_shop_patch_and_supplies() -> void:
 	check(not bool(r.buy_supplies(999)["ok"]), "can't buy past max HP")
 	var left: int = r.points
 	eq(int(r.shop_state()["left_behind"]), left, "state: what leaving loses")
-	eq(DDText.leave_text(left, bal()), "LEAVE - %d pts stay here (score keeps them)" % bal().shown(left), "Leave button text")
+	eq(DDText.leave_text(left, bal()), "LEAVE · %d pts stay here: spend first?" % bal().shown(left), "Leave button text")
 	var earned: int = r.points_earned
 	var lv: Dictionary = r.leave_safehouse()
 	check(bool(lv["ok"]), "left")

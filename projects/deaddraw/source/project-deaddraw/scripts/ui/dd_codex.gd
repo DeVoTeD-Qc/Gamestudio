@@ -132,7 +132,7 @@ static func entries(bal: DDBalance) -> Array:
 		var zs: Array = b.get("zombies", [9])
 		out.append({"key": "boss:" + str(dd2.get("id", "")), "type": "bosses", "name": str(b.get("name", "")), "art_keys": Art.finale_keys(dd2),
 			"strength": int(zs[0]), "stat": DDText.boss_summary(b).replace(" -> ", ", "), "districts": [str(dd2.get("id", ""))],
-			"line": "%s boss. %s" % [str(dd2.get("name", "")), {"shatter": "The gun that kills it is full at once.", "horde": "Three arrive at once.",
+			"line": "%s boss. %s" % [str(dd2.get("name", "")), {"shatter": "Shatter: the gun that kills it is destroyed (melee is safe).", "horde": "Three arrive at once.",
 				"phases": "Three phases, no escape."}.get(str(b.get("trait", "")), "")]})
 	for mk: Array in [["Bandage", 3, "heals 3"], ["First Aid Kit", 4, "heals 4-5"], ["Trauma Kit", 6, "heals 6-7"]]:
 		out.append({"key": "item:" + Art.slug(str(mk[0])), "type": "items", "name": str(mk[0]), "art_keys": Art.card_keys(DDCard.make(DDCard.MEDKIT, int(mk[1]))),
@@ -364,7 +364,7 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 		if (e["districts"] as Array).has(str((d as Dictionary).get("id", ""))):
 			dn.append(str((d as Dictionary).get("name", "")))
 	# dd-capacity: a gun's capacity / a melee weapon's uses are the mark (and the tooltip's mark row), not words
-	var t1: String = "%s%s%s" % [str(e["name"]), (" · hits %d" % int(e["hit"])) if e.has("hit") else "",
+	var t1: String = "%s%s%s" % [str(e["name"]), (" · strength %d" % int(e["hit"])) if e.has("hit") else "",
 		"" if (e.has("cap") or e.has("uses")) else " · " + str(e["stat"])]
 	var p: Dictionary = {"kind": kind, "title": str(e["name"]), "t1": t1, "t2": str(e["line"])}
 	if not met:
@@ -516,14 +516,14 @@ static func sections(bal: DDBalance) -> Array:
 		chals.append({"icon": "badge:challenge_open", "name": "%s (%s)" % [DDText.challenge_name(cid), bal.weapon_name(str(wid))],
 			"line": "%s%s. Pays %s." % [ct.substr(0, 1).to_upper(), ct.substr(1), DDText.reward_text(str(rw[0]), int(rw[1]), bal)]})
 	return [
-		["NUMBER BADGES: ONE CIRCLE, THE COLOURS SAY WHAT", [
-			{"icon": "burst:4", "name": "Hit (yellow)", "line": "A weapon's power. You lose strength - hit HP."},
-			{"icon": "stat:cap:4", "name": "Capacity (stacked squares)", "line": "A gun's kills before it pays out: 4 kills fill it, then +%d and it leaves." % bal.shown(bal.num("finish_bonus"))},
-			{"icon": "stat:uses:3", "name": "Uses (stacked dots)", "line": "A melee weapon's uses: each kill uses 1; at 0 it breaks."},
-			{"icon": "strength:7", "name": "Strength (blood red)", "line": "A zombie's attack and toughness. A gun kill pays it ×10 pts."},
-			{"icon": "tiers", "name": "Tier (the red badge's ring)", "line": "Bone Shambler 1-3, amber Lurcher 4-6, orange Bruiser 7-9, red Hulk 10+."},
-			{"icon": "num:M:4", "name": "Heal (green ring)", "line": "A medkit's number: the HP it heals."},
-			{"icon": "num:C:3", "name": "Cover (gold ring)", "line": "A cover card's number: the Cover you gain."},
+		["NUMBER BADGES: THE CARD THEY SIT ON AND THEIR SHAPE SAY WHAT", [
+			{"icon": "burst:4", "name": "Weapon strength (round badge on a gun or melee card)", "line": "How hard the weapon hits. You lose the zombie's strength minus this in HP. (Yellow fill.)"},
+			{"icon": "stat:cap:4", "name": "Capacity (stack of squares, on a gun)", "line": "A gun's kills before it pays out: 4 kills fill it, then +%d and it leaves." % bal.shown(bal.num("finish_bonus"))},
+			{"icon": "stat:uses:3", "name": "Uses (stack of dots, on a melee weapon)", "line": "A melee weapon's uses: each kill uses 1; at 0 it breaks."},
+			{"icon": "strength:7", "name": "Zombie strength (round badge on a zombie card)", "line": "Its attack and toughness. A gun kill pays it ×10 pts. (Dark red fill.)"},
+			{"icon": "tiers", "name": "Tier (the ring around a zombie's badge)", "line": "Shambler 1-3, Lurcher 4-6, Bruiser 7-9, Hulk 10+: the card's name says the tier too."},
+			{"icon": "num:M:4", "name": "Heal (round badge on a medkit card)", "line": "A medkit's number: the HP it heals."},
+			{"icon": "num:C:3", "name": "Cover (round badge on a cover card)", "line": "A cover card's number: the Cover you gain."},
 		]],
 		["ON YOUR WEAPONS", [
 			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds; a filled one shows the kill."},
@@ -538,7 +538,7 @@ static func sections(bal: DDBalance) -> Array:
 		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
 		["CHALLENGES: FILL THE GUN THIS WAY FOR ITS EXTRA REWARD", chals],
 		["ON ZOMBIES", [
-			{"icon": "chip:-3", "name": "Damage to you", "line": "The HP you lose with the active weapon. Green 0 = none."},
+			{"icon": "chip:-3", "name": "Damage chip (top corner of a zombie)", "line": "The HP you lose with the active weapon, after Cover. 0 = none; DIES = it ends the run (a tap asks first)."},
 			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = the active gun can take it; dark = it can't."},
 			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take it; the card says what it needs (e.g. needs ≤5)."},
 			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},

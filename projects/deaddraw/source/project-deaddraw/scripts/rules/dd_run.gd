@@ -966,7 +966,7 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 		if mp > 0:
 			_earn(mp)
 		stats["melee_kills"] = int(stats["melee_kills"]) + 1
-		line = "%s %d: %s (hit %d), %s." % [cname, c.value, mname, int(pr["power"]), _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
+		line = "%s %d: %s (strength %d), %s." % [cname, c.value, mname, int(pr["power"]), _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
 		if has_melee_weapon():
 			stats["melee_weapon_kills"] = int(stats["melee_weapon_kills"]) + 1
 			melee["uses"] = melee_uses() - 1
@@ -987,12 +987,17 @@ func attack(index: int, weapon: int = -1) -> Dictionary:
 			fired[w] = true
 		g.stack.append(c.value)
 		stats["gun_kills"] = int(stats["gun_kills"]) + 1
-		line = "%s %d: %s (%d/%d)%s, %s." % [cname, c.value, g.name, g.stack.size(), g.cap,
-			(", +%d pts" % bal.shown(c.value)) if bal.flag("points_on_kill") else "", _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
+		# r2 (playtest: the log said "(1/4)" while the banner said the gun is full at once): a
+		# Shatter kill names no socket count; the collect line says the gun is destroyed
+		var kill_pts: String = (", +%d pts" % bal.shown(c.value)) if bal.flag("points_on_kill") else ""
+		if c.boss_trait == "shatter":
+			line = "%s %d: %s%s, %s." % [cname, c.value, g.name, kill_pts, _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
+		else:
+			line = "%s %d: %s (%d/%d)%s, %s." % [cname, c.value, g.name, g.stack.size(), g.cap, kill_pts, _dmg_text(int(pr["damage"]), int(pr["absorbed"]))]
 		_log(line)
 		line = ""
 		if c.boss_trait == "shatter" or is_full(g):
-			_collect(w, true, c.boss_trait == "shatter")
+			_collect(w, true, c.boss_trait == "shatter", c.value if bal.flag("points_on_kill") else 0)
 	if line != "":
 		_log(line)
 	stats["kills"] = int(stats["kills"]) + 1
@@ -1112,7 +1117,7 @@ func _end_street(ev: Dictionary) -> void:
 ## Banks the stack of the gun in slot i. Finished: finish bonus (+Bounty), Trophy Belt, then the
 ## challenge (unless shattered; + Show-Off); the gun leaves (Encore: it stays with an empty
 ## stack). Unfinished (swapped out): v4 Salvage pays per kill on its stack.
-func _collect(i: int, finished: bool, shatter: bool) -> void:
+func _collect(i: int, finished: bool, shatter: bool, kill_units: int = 0) -> void:
 	var g: DDGun = slot(i)
 	if g == null:
 		return
@@ -1172,13 +1177,14 @@ func _collect(i: int, finished: bool, shatter: bool) -> void:
 		if active == i:
 			active = (1 - i) if slot(1 - i) != null else MELEE
 	_collects.append(info)
-	if finished:
+	if finished and shatter:
+		# kill_units: the kill's own points (logged with the kill), so the line says the whole pay
+		_log("Shatter: the %s is destroyed (+%d pts, no challenge)." % [g.name, bal.shown(kill_units + pts)])
+	elif finished:
 		var t: String = "%s full: +%d" % [g.name, bal.shown(bal.num("finish_bonus"))]
 		if int(info["bounty"]) > 0:
 			t += ", +%d Bounty Hunter" % bal.shown(int(info["bounty"]))
-		if shatter:
-			t += " (Shatter: no challenge)"
-		elif bool(info["challenge"]):
+		if bool(info["challenge"]):
 			t += ". %s! %s" % [DDText.challenge_name(str(info["challenge_id"])).to_upper(), DDText.reward_text(str(info["reward"]), int(info["reward_amount"]), bal)]
 			if int(info["show_off"]) > 0:
 				t += ", +%d Show-Off" % bal.shown(int(info["show_off"]))
@@ -1489,7 +1495,7 @@ func machine_options(i: int) -> Array[Dictionary]:
 								if g2.honed:
 									r3 = "already Honed"
 								else:
-									res = "Hits %d -> %d for good." % [g2.power, g2.power + 1]
+									res = "Strength %d -> %d for good." % [g2.power, g2.power + 1]
 					if r3 == "" and points < price3:
 						r3 = "need %d pts" % bal.shown(price3)
 					out.append({"id": "%s%d" % [sv, s + 1], "label": "%s %s" % [sv.to_upper(), name], "price": price3, "enabled": r3 == "",
@@ -1556,7 +1562,7 @@ func use_machine(i: int, option_id: String) -> Dictionary:
 				"hone":
 					g.power += 1
 					g.honed = true
-					_log("Hone (-%d): the %s hits %d now." % [bal.shown(price), g.name, g.power])
+					_log("Hone (-%d): the %s has strength %d now." % [bal.shown(price), g.name, g.power])
 			result["gun"] = g
 	var ev: Dictionary = _event("machine", _notes[_notes.size() - 1], hp - hp0, points - pts0)
 	ev["result"] = result

@@ -369,7 +369,7 @@ static func reward_short(kind: String, amount: int, bal: DDBalance) -> String:
 
 ## "P4 - cap 4 - lower than the top kill".
 static func gun_stats(wid: String, bal: DDBalance) -> String:
-	return "Hits %d, holds %d. Each kill: %s." % [bal.weapon_power(wid), bal.weapon_cap(wid), rule_short(bal.weapon_rule(wid))]
+	return "Strength %d, holds %d. Each kill: %s." % [bal.weapon_power(wid), bal.weapon_cap(wid), rule_short(bal.weapon_rule(wid))]
 
 
 static func gun_card_text(wid: String, bal: DDBalance, rosa: bool = false) -> String:
@@ -377,7 +377,7 @@ static func gun_card_text(wid: String, bal: DDBalance, rosa: bool = false) -> St
 	var cap: String = "%d kills" % bal.weapon_cap(wid)
 	if bal.weapon_rule(wid) == "spread":
 		cap += " (or a total of %d)" % bal.num("spread_cap")
-	return "Hits %d. Full at %s: +%d.\n%s\nChallenge %s: %s -> %s.\nEach kill pays its number." % [
+	return "Strength %d. Full at %s: +%d.\n%s\nChallenge %s: %s -> %s.\nEach kill pays its number." % [
 		bal.weapon_power(wid), cap, bal.shown(bal.num("finish_bonus")), rule_text(bal.weapon_rule(wid), bal, rosa), challenge_name(bal.weapon_challenge(wid)),
 		challenge_text(bal.weapon_challenge(wid), bal), reward_text(str(rw[0]), int(rw[1]), bal)]
 
@@ -397,8 +397,8 @@ static func patch_text(id: String, bal: DDBalance) -> String:
 			return "Medkits heal +%d." % bal.num("field_medic_bonus")
 		"brawler":
 			if bal.text("brawler_mode") == "hands":
-				return "Bare Hands hit %d harder. Melee weapons you pick up get +%d use." % [bal.num("brawler_bonus"), bal.num("brawler_dur")]
-			return "Melee hits %d harder." % bal.num("brawler_bonus")
+				return "Bare Hands +%d strength. Melee weapons you pick up get +%d use." % [bal.num("brawler_bonus"), bal.num("brawler_dur")]
+			return "Melee +%d strength." % bal.num("brawler_bonus")
 		"bounty":
 			return "Finishing a gun pays +%d per zombie in its stack." % bal.shown(1)
 		"loose_grip":
@@ -412,9 +412,9 @@ static func patch_text(id: String, bal: DDBalance) -> String:
 		"iron_stomach":
 			return "Healing above your max HP becomes Cover."
 		"adrenaline":
-			return "At %d HP or less, every weapon hits 1 harder." % bal.num("adrenaline_hp")
+			return "At %d HP or less, every weapon gets +1 strength." % bal.num("adrenaline_hp")
 		"grudge":
-			return "Hit 1 harder against zombies ≥%d (bosses too)." % bal.num("grudge_min")
+			return "+1 strength against zombies ≥%d (bosses too)." % bal.num("grudge_min")
 		"show_off":
 			return "Every challenge you meet pays +%d more." % bal.shown(bal.num("show_off_points"))
 		"whetstone":
@@ -429,7 +429,7 @@ static func machine_name(kind: String) -> String:
 static func machine_text(m: Dictionary, bal: DDBalance) -> String:
 	match str(m.get("kind", "")):
 		"bench":
-			return "Once per wave, one service on a gun you hold:\nTRIM %d: remove the last kill (it stays paid); the gun gets a kill back.\nFLIP %d: LOWER becomes HIGHER (or back).\nHONE %d: the gun hits 1 harder (once per gun)." % [
+			return "Once per wave, one service on a gun you hold:\nTRIM %d: remove the last kill (it stays paid); the gun gets a kill back.\nFLIP %d: LOWER becomes HIGHER (or back).\nHONE %d: the gun gets +1 strength (once per gun)." % [
 				bal.shown(bal.bench_price("trim")), bal.shown(bal.bench_price("flip")), bal.shown(bal.bench_price("hone"))]
 		"patch":
 			return "Once per wave: pay, see %d Patches, keep 1 for the run. The price rises with each Patch you own (%s)." % [
@@ -462,11 +462,23 @@ static func trait_name(t: String) -> String:
 static func trait_text(t: String) -> String:
 	match t:
 		"shatter":
-			return "The gun that kills it is full at once (bonus, no challenge). Melee is fine."
+			return "SHATTER: the gun that kills it is destroyed at once. It pays the kill and the full-gun bonus, but no challenge. Melee kills it safely."
 		"horde":
-			return "All three arrive at once."
+			return "Three zombies of the same strength arrive at once."
 		"phases":
-			return "8, then 10, then 12: each comes when the one before dies. No Run."
+			return "Strength 8, then 10, then 12: each comes when the one before dies. No Run."
+	return ""
+
+
+## r2: the trait in one short sentence (two-line tooltips).
+static func trait_short(t: String) -> String:
+	match t:
+		"shatter":
+			return "Shatter: the gun that kills it is destroyed."
+		"horde":
+			return "Horde: all three at once."
+		"phases":
+			return "Phases: each comes when the one before dies."
 	return ""
 
 
@@ -476,6 +488,34 @@ static func boss_summary(b: Dictionary) -> String:
 	for z: Variant in zs:
 		parts.append(str(int(z)))
 	return " -> ".join(parts) if str(b.get("trait", "")) == "phases" else " / ".join(parts)
+
+
+## r2 (playtest: "BOSS 9, 6×3 and 8-12: at a glance it's still a guess"): the boss's numbers in
+## words, the one form the map, the boss chip and its tooltip use: "strength 9", "3 at once,
+## strength 6 each", "strength 8, then 10, then 12".
+static func boss_words(b: Dictionary) -> String:
+	var zs: Array = b.get("zombies", [])
+	if zs.is_empty():
+		return ""
+	if zs.size() == 1:
+		return "strength %d" % int(zs[0])
+	if str(b.get("trait", "")) == "phases":
+		var parts: PackedStringArray = []
+		for z: Variant in zs:
+			parts.append(str(int(z)))
+		return "strength " + ", then ".join(parts)
+	return "%d at once, strength %d each" % [zs.size(), int(zs[0])]
+
+
+## The same, short, for the map tile under the strength badge: "strength 9", "3 at once, 6 each",
+## "8, then 10, then 12".
+static func boss_words_short(b: Dictionary) -> String:
+	var zs: Array = b.get("zombies", [])
+	if zs.size() <= 1:
+		return boss_words(b)
+	if str(b.get("trait", "")) == "phases":
+		return boss_words(b).trim_prefix("strength ")
+	return "%d at once, %d each" % [zs.size(), int(zs[0])]
 
 
 # ---------------------------------------------------------------- first-run hints (K5)
@@ -500,7 +540,7 @@ static func hint_text(id: String, bal: DDBalance) -> String:
 				return "Bad street? RUN: -%d HP, its cards go to the bottom of the pile." % bal.num("run_damage")
 			return "Bad street? RUN: -%d HP, its cards go back into the pile." % bal.num("run_damage")
 		"melee":
-			return "Bare Hands hit %d. A melee weapon hits harder until its uses run out." % bal.num("hands_power")
+			return "Bare Hands: strength %d. A melee weapon is stronger until its uses run out." % bal.num("hands_power")
 	return ""
 
 
@@ -533,10 +573,10 @@ static func rule_tag(rule: String, rosa: bool = false) -> String:
 
 
 # ---------------------------------------------------------------- v4: melee, salvage, Run, shop
-## Melee weapon card text: "Power 3 - 4 uses. No rule, no points; breaks at 0 uses."
+## Melee weapon card text: "Strength 3, 4 uses. No rule, no points; breaks at 0 uses."
 static func melee_card_text(mid: String, bal: DDBalance, uses: int = -1) -> String:
 	var u: int = bal.melee_uses(mid) if uses < 0 else uses
-	return "Hits %d, %s. Any zombie, no points. Each kill uses 1; at 0 it breaks (back to Bare Hands)." % [
+	return "Strength %d, %s. Any zombie, no points. Each kill uses 1; at 0 it breaks (back to Bare Hands)." % [
 		bal.melee_power(mid), uses_text(u)]
 
 
@@ -545,7 +585,7 @@ static func uses_text(n: int) -> String:
 
 
 static func bare_hands_text(bal: DDBalance) -> String:
-	return "Hits %d. Any zombie, no points, never breaks." % bal.num("hands_power")
+	return "Strength %d. Any zombie, no points, never breaks." % bal.num("hands_power")
 
 
 ## "SALVAGE +30" (points as shown).
@@ -584,7 +624,7 @@ static func shop_text(bal: DDBalance) -> String:
 
 ## The Leave button: "LEAVE - 40 left behind".
 static func leave_text(units: int, bal: DDBalance) -> String:
-	return "LEAVE" if units <= 0 else "LEAVE - %d pts stay here (score keeps them)" % bal.shown(units)
+	return "LEAVE" if units <= 0 else "LEAVE · %d pts stay here: spend first?" % bal.shown(units)
 
 
 # ---------------------------------------------------------------- v5 economy pass (economy-v5.md)

@@ -665,6 +665,10 @@ func _deal(v: DDCardView, deck_rect: Rect2, delay: float, finale: bool, ctx: Dic
 	var s: float = minf(deck_rect.size.x / maxf(1.0, to.size.x), deck_rect.size.y / maxf(1.0, to.size.y))
 	back.scale = Vector2(s, s)
 	back.position = deck_rect.position + (deck_rect.size - to.size * s) * 0.5 - fx.global_position
+	if finale:
+		# r2 (playtest: the boss's back flew across the Holdover and covered its "-5 DIES" chip): the
+		# boss rises in its own cell, from the boss chip's size, instead of flying over the street
+		back.position = to.position + (to.size - to.size * s) * 0.5 - fx.global_position
 	back.modulate.a = 0.0
 	var tw: Tween = back.create_tween()
 	tw.tween_interval(delay)

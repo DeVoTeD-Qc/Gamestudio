@@ -137,7 +137,7 @@ func test_street_clean_in_every_orientation() -> void:
 			texts.append((l as Label).text)
 		check(texts.has(DDText.rule_tag("up", run.steady())) or texts.has(DDText.rule_tag("down", run.steady())), tag + " gun shows the short rule label: " + str(texts))
 		check(not " ".join(texts).contains("takes:"), tag + " no 'takes' line on the tile")
-		check(str(gv.payload.get("t1", "")).contains("hits") and str(gv.payload.get("t2", "")).contains("Next kill"), tag + " the gun tooltip: hit, kills, next kill (%s)" % str(gv.payload.get("t2", "")))
+		check(str(gv.payload.get("t1", "")).contains("strength") and str(gv.payload.get("t2", "")).contains("Next kill"), tag + " the gun tooltip: hit, kills, next kill (%s)" % str(gv.payload.get("t2", "")))
 		# HUD: one source per stat (no survivor chip, no Patch chip row), Patches behind one chip
 		var pts_tiles: int = 0
 		for c: Variant in _all(m, []):

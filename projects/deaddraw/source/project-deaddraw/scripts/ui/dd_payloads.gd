@@ -61,9 +61,12 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 	var body: PackedStringArray = []
 	match c.kind:
 		DDCard.ZOMBIE:
-			body.append("Strength %d: its attack and its toughness. You lose %d minus your hit. A gun kill pays %d pts." % [c.value, c.value, b.shown(c.value)])
+			body.append("Strength %d: its attack and its toughness. You lose %d minus your weapon's strength (Cover takes it first). A gun kill pays %d pts." % [c.value, c.value, b.shown(c.value)])
 			if c.is_boss():
-				body.append("%s (%s): %s" % [c.boss_name, DDText.trait_name(c.boss_trait), DDText.trait_text(c.boss_trait)])
+				body.append("%s: %s" % [c.boss_name, DDText.trait_text(c.boss_trait)])
+				var sh: String = shatter_line(run, index)
+				if sh != "":
+					body.append(sh)
 			var verdict: String = gun_verdict(c, run, index)
 			if verdict != "":
 				body.append(verdict + ".")
@@ -71,8 +74,11 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 				if w != DDRun.MELEE and run.slot(w) == null:
 					continue
 				var pr: Dictionary = run.preview(index, w) if index >= 0 else {}
-				var p: int = run.power_of(w)
-				var line: String = "%s (hit %d): %s" % [_weapon_label(run, w), p, ("-%d HP" % maxi(0, c.value - p)) if maxi(0, c.value - p) > 0 else "no damage"]
+				var p: int = run.power_of(w, c.value)
+				# r2 (playtest: "the tooltip said -6, I took 3"): the loss after Cover, as the attack does it
+				var line: String = "%s (strength %d): %s" % [_weapon_label(run, w), p, loss_words(run, c.value - p)]
+				if not pr.is_empty() and bool(pr["ok"]) and bool(pr["dies"]):
+					line += " - KILLS YOU"
 				if not pr.is_empty() and not bool(pr["ok"]):
 					line += " - NO: %s" % str(pr["reason"])
 				elif not pr.is_empty() and bool(pr["uses_loose"]):
@@ -84,7 +90,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 					if cv != "":
 						line += " - " + cv
 				body.append(line)
-			body.append("Damage = strength - hit. Cover takes it first.")
+			body.append("Damage = zombie strength - weapon strength. Cover takes it first.")
 		DDCard.WEAPON:
 			body.append(DDText.gun_card_text(c.wid, b, run.steady()))
 			body.append("Tap: equip it (a free slot first), or scrap it for %d pts." % b.shown(b.num("scrap_points")))
@@ -94,7 +100,7 @@ static func card(c: DDCard, run: DDRun, index: int = -1) -> Dictionary:
 			body.append("+%d Cover: it takes damage before your HP." % c.value)
 	if c.holdover:
 		body.append("HOLDOVER: left from the last street.")
-	var art_big: String = str(c.value) if c.kind != DDCard.WEAPON else "P%d" % b.weapon_power(c.wid)
+	var art_big: String = str(c.value) if c.kind != DDCard.WEAPON else str(b.weapon_power(c.wid))
 	var ztitle: String = DDText.zombie_title(c.value) if c.kind == DDCard.ZOMBIE and not c.is_boss() else ""
 	var p: Dictionary = {"art_keys": Art.card_keys(c, str(run.district().get("id", ""))), "kind": "F" if c.is_boss() else c.kind, "tag": (DDText.kind_label(c.kind) + ("" if ztitle == "" else " · " + ztitle.to_upper())) if not c.is_boss() else "BOSS - " + DDText.trait_name(c.boss_trait).to_upper(),
 		"title": DDText.card_name(c, b), "big": art_big, "body": "\n".join(body)}
@@ -113,7 +119,7 @@ static func card_t1(c: DDCard, run: DDRun) -> String:
 			var zt: String = DDText.zombie_title(c.value) if not c.is_boss() else ""
 			return "%s%s · strength %d (attack and toughness)" % [(zt + ", ") if zt != "" else "", DDText.card_name(c, b), c.value]
 		DDCard.WEAPON:
-			return "%s · hits %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid)]
+			return "%s · strength %d" % [b.weapon_name(c.wid), b.weapon_power(c.wid)]
 		DDCard.MEDKIT:
 			return "%s · heals %d" % [DDText.card_name(c, b), run.medkit_heal(c)]
 		DDCard.COVER:
@@ -128,20 +134,23 @@ static func card_t2(c: DDCard, run: DDRun, index: int) -> String:
 			var w: int = run.active
 			var who: String = "Melee" if w == DDRun.MELEE else _short_name(_weapon_label(run, w))
 			var pr: Dictionary = run.preview(index, w) if index >= 0 else {}
-			var mel: int = maxi(0, c.value - run.melee_power())
+			var dead: bool = not pr.is_empty() and bool(pr["ok"]) and bool(pr["dies"])
+			var mel: String = loss_words(run, c.value - run.melee_power(c.value), true)
 			var vd: String = gun_verdict(c, run, index)
 			if vd == "":
 				vd = who
 			if not pr.is_empty() and not bool(pr["ok"]) and w != DDRun.MELEE and run.slot(w) != null:
-				return "%s. Melee: %s." % [vd, ("-%d HP" % mel) if mel > 0 else "no damage"]
-			var dmg: int = maxi(0, c.value - run.power_of(w))
+				return "%s. Melee: %s." % [vd, mel]
+			# r2: the HP you lose after Cover (the same number the attack takes); KILLS YOU when it ends the run
+			var hurt: String = loss_words(run, c.value - run.power_of(w, c.value), true) + (" KILLS YOU" if dead else "")
 			if w == DDRun.MELEE or run.slot(w) == null:
-				return "Melee: %s, no points." % [("-%d HP" % mel) if mel > 0 else "no damage"]
+				if c.is_boss() and c.boss_trait == "shatter":
+					return "Melee: %s. Shatter: melee is safe." % (mel + (" KILLS YOU" if dead else ""))
+				return "Melee: %s, no points." % (mel + (" KILLS YOU" if dead else ""))
 			var g: DDGun = run.slot(w)
-			var hurt: String = ("-%d HP" % dmg) if dmg > 0 else "no damage"
 			var s: String = "%s: %s, +%d pts (kill %d of %d)." % [vd, hurt, b.shown(c.value), g.stack.size() + 1, g.cap]
 			if c.is_boss():
-				s = "%s: %s. %s" % [vd, hurt, DDText.trait_name(c.boss_trait)]
+				s = "%s: %s.%s" % [vd, hurt, (" Shatter: %s destroyed, +%d pts." % [_short_name(g.name), shatter_points(run, index, w)]) if c.boss_trait == "shatter" else ""]
 			elif not pr.is_empty() and bool(pr["ok"]):
 				# dd-challenge-rack: does this kill keep the gun's challenge?
 				var cv: String = challenge_verdict(run, w, c.value)
@@ -155,6 +164,48 @@ static func card_t2(c: DDCard, run: DDRun, index: int) -> String:
 		DDCard.COVER:
 			return "Cover takes damage before your HP."
 	return ""
+
+
+## r2 (playtest: "the tooltip said -6 HP, I took 3"): the HP a hit of `raw` damage costs you now,
+## after Cover, in the words every preview uses: "-3 HP (Cover takes 3)", "no HP lost (Cover takes 2)".
+## compact (the two-line tooltip): "-3 HP (Cover 3)", "0 HP (Cover 2)".
+static func loss_words(run: DDRun, raw: int, compact: bool = false) -> String:
+	var dmg: int = maxi(0, raw)
+	if dmg <= 0:
+		return "no damage"
+	var ab: int = mini(run.cover, dmg)
+	if compact and ab > 0:
+		return "%s HP (Cover %d)" % [("-%d" % (dmg - ab)) if dmg > ab else "0", ab]
+	if ab >= dmg:
+		return "no HP lost (Cover takes %d)" % ab
+	if ab > 0:
+		return "-%d HP (Cover takes %d)" % [dmg - ab, ab]
+	return "-%d HP" % dmg
+
+
+## r2 (playtest: "Shatter is never explained when I decide"): what killing a Shatter boss (street
+## card `index`) with the active weapon does to that weapon, with the points it pays; "" when the
+## card is no Shatter boss.
+static func shatter_line(run: DDRun, index: int, weapon: int = -1) -> String:
+	if index < 0 or index >= run.street.size() or run.street[index].boss_trait != "shatter":
+		return ""
+	var w: int = run.active if weapon < 0 else weapon
+	if w == DDRun.MELEE or run.slot(w) == null:
+		return "Shatter: melee kills it safely (no gun is destroyed)."
+	return "Shatter: the %s is destroyed (+%d pts, no challenge)." % [run.slot(w).name, shatter_points(run, index, w)]
+
+
+## The points (as shown) a Shatter kill pays with gun slot w: the kill, the full-gun bonus and
+## Bounty Hunter.
+static func shatter_points(run: DDRun, index: int, w: int) -> int:
+	var g: DDGun = run.slot(w)
+	if g == null:
+		return 0
+	var pr: Dictionary = run.preview(index, w)
+	var units: int = int(pr.get("points", 0)) + run.bal.num("finish_bonus")
+	if run.has_patch("bounty"):
+		units += g.stack.size() + 1
+	return run.bal.shown(units)
 
 
 ## dd-ux-text: the rule in words, after "Each kill:" (one notation: DDText.rule_short).
@@ -188,7 +239,9 @@ static func street_card_spec(c: DDCard, i: int, run: DDRun) -> Dictionary:
 				var extra: String = ""
 				if run.active != DDRun.MELEE:
 					extra = "+%d pts" % b.shown(int(pr["points"])) if int(pr["points"]) > 0 else ""
-					if bool(pr["finishes"]):
+					if bool(pr["shatter"]):
+						extra += " SHATTER"
+					elif bool(pr["finishes"]):
 						extra += " FINISH"
 					if bool(pr["uses_loose"]):
 						extra = "BENT RULE " + extra
@@ -280,9 +333,9 @@ static func weapon_rule_chip(wid: String, b: DDBalance, rosa: bool = false) -> D
 ## A gun definition zoom (street gun card, Wall Rack).
 static func gun_def(wid: String, bal: DDBalance, tag: String = "GUN", rosa: bool = false) -> Dictionary:
 	var rw: Array = bal.weapon_reward(wid)
-	return tip({"kind": "W", "tag": tag, "title": bal.weapon_name(wid), "big": "P%d" % bal.weapon_power(wid), "hit": bal.weapon_power(wid),
+	return tip({"kind": "W", "tag": tag, "title": bal.weapon_name(wid), "big": str(bal.weapon_power(wid)), "hit": bal.weapon_power(wid),
 		"cap": bal.weapon_cap(wid), "body": DDText.gun_card_text(wid, bal, rosa), "icon_row": gun_icon_row(bal, bal.weapon_rule(wid), wid, rosa, "open")},
-		"%s · hits %d" % [bal.weapon_name(wid), bal.weapon_power(wid)],
+		"%s · strength %d" % [bal.weapon_name(wid), bal.weapon_power(wid)],
 		"Each kill: %s. Full: +%d, %s." % [_rule_words(bal.weapon_rule(wid), rosa), bal.shown(bal.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), bal)])
 
 
@@ -321,7 +374,7 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 	var b: DDBalance = run.bal
 	var body: PackedStringArray = []
 	var rw: Array = b.weapon_reward(g.wid)
-	body.append("Hits %d%s. %d of %d kills%s." % [g.power, " (Honed)" if g.honed else "", g.stack.size(), g.cap,
+	body.append("Strength %d%s. %d of %d kills%s." % [g.power, " (Honed)" if g.honed else "", g.stack.size(), g.cap,
 		(", total %d of %d" % [g.total(), b.num("spread_cap")]) if g.rule == "spread" else ""])
 	body.append("%s%s" % [DDText.rule_text(g.rule, b, run.steady()), " (Flipped at the Retrofit Bench)" if g.flipped else ""])
 	if md != "":
@@ -335,13 +388,13 @@ static func gun(run: DDRun, s: int) -> Dictionary:
 	body.append("Kills: %s." % (DDText.zombie_list(g.stack) if not g.stack.is_empty() else "none yet"))
 	body.append("Each kill pays its number. Full: +%d, the challenge pays, the gun leaves." % b.shown(b.num("finish_bonus")))
 	body.append("ACTIVE: taps on zombies use it." if run.active == s else "Tap to make it active.")
-	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": "P%d" % g.power, "hit": g.power, "cap": g.cap, "cap_now": g.stack.size(), "body": "\n".join(body),
+	var p: Dictionary = {"kind": "W", "tag": "GUN %d%s" % [s + 1, " - ACTIVE" if run.active == s else ""], "title": g.name, "big": str(g.power), "hit": g.power, "cap": g.cap, "cap_now": g.stack.size(), "body": "\n".join(body),
 		"art_keys": Art.weapon_keys(g.wid, g.name)}
 	p["icon_row"] = gun_icon_row(b, g.rule, g.wid, run.steady(), run.challenge_state(g))
 	var nxt: String = "Full." if g.kills_left() <= 0 else "Next kill: %s." % accept_words(run.can_take_slot(s))
 	if md != "":
 		nxt = "Mod %s. %s" % [DDText.mod_name(md), nxt]
-	return tip(p, "%s · hits %d · %d of %d kills" % [g.name, g.power, g.stack.size(), g.cap],
+	return tip(p, "%s · strength %d · %d of %d kills" % [g.name, g.power, g.stack.size(), g.cap],
 		"%s Full: +%d, %s." % [nxt, b.shown(b.num("finish_bonus")), DDText.reward_short(str(rw[0]), int(rw[1]), b)])
 
 
@@ -626,13 +679,22 @@ static func boss(run: DDRun) -> Dictionary:
 	var b: Dictionary = run.boss_def()
 	var final: bool = run.is_final_district()
 	var zs: Array = b.get("zombies", [9])
-	return tip({"kind": "F", "tag": "BOSS - %s" % DDText.trait_name(str(b.get("trait", ""))).to_upper(), "title": str(b.get("name", "")),
-		"big": DDText.boss_summary(b), "strength": int(zs[0]), "art_keys": Art.finale_keys(run.district()),
-		"body": "%s\n%s\nComes after the last wave, with the Holdover. Resolve every card.\n%s" % [
-			DDText.boss_summary(b), DDText.trait_text(str(b.get("trait", ""))),
-			"NO ESCAPE: no Run, no Run past." if final else "Run past: -%d HP, no reward (+%d pts and a free Patch)." % [run.bal.num("boss_runpast_damage"), run.bal.shown(run.bal.num("boss_reward_points"))]]},
-		"%s · strength %s" % [str(b.get("name", "")), DDText.boss_summary(b).replace(" -> ", ", then ")] + (" · ×%d" % zs.size() if zs.size() > 1 and str(b.get("trait", "")) != "phases" else ""),
-		"After the last wave. %s" % ("No escape." if final else "Run past: -%d HP, no reward." % run.bal.num("boss_runpast_damage")))
+	var tr: String = str(b.get("trait", ""))
+	var words: String = DDText.boss_words(b)
+	# r2: the trait's rule is said where you decide (Shatter: which gun it destroys)
+	var t2: String = "After the last wave. " + DDText.trait_short(tr)
+	if tr == "shatter" and run.boss_street:
+		for k: int in run.street.size():
+			if run.street[k].boss_trait == "shatter":
+				t2 = DDPayloads.shatter_line(run, k)
+				break
+	return tip({"kind": "F", "tag": "BOSS - %s" % DDText.trait_name(tr).to_upper(), "title": str(b.get("name", "")),
+		"big": str(int(zs[0])), "strength": int(zs[0]), "art_keys": Art.finale_keys(run.district()),
+		"body": "%s%s.\n%s\nComes after the last wave, with the Holdover. Resolve every card: no Run on the boss street.\n%s" % [
+			words.substr(0, 1).to_upper(), words.substr(1), DDText.trait_text(tr),
+			"NO ESCAPE: no Run, no Run past." if final else "Run past (before your first card only): -%d HP, no reward (+%d pts and a free Patch)." % [run.bal.num("boss_runpast_damage"), run.bal.shown(run.bal.num("boss_reward_points"))]]},
+		"%s · %s" % [str(b.get("name", "")), words],
+		t2)
 
 
 static func boss_spec(run: DDRun) -> Dictionary:
@@ -641,8 +703,8 @@ static func boss_spec(run: DDRun) -> Dictionary:
 	# dd-ux-clean: the tile shows the first number, the name and "x3" for a horde; phases and the
 	# trait are in the zoom
 	var lines: Array = []
-	if zs.size() > 1 and str(b.get("trait", "")) != "phases":
-		lines.append(["x%d at once" % zs.size(), DDUi.TEXT_DIM, DDUi.FONT_S - 4])
+	if zs.size() > 1:
+		lines.append([DDText.boss_words(b), DDUi.TEXT_DIM, DDUi.FONT_S - 4])
 	return {"kind": "F", "tag": "BOSS" if not run.is_final_district() else "NO ESCAPE", "big": str(int(zs[0])), "big_size": 34,
 		"title": str(b.get("name", "")), "title_fit": true, "compact": true, "lines": lines, "payload": boss(run)}
 
@@ -784,7 +846,7 @@ static func patch_line(id: String, bal: DDBalance) -> String:
 		"field_medic":
 			return "Medkits heal %d more." % bal.num("field_medic_bonus")
 		"brawler":
-			return "Melee hits %d harder." % bal.num("brawler_bonus")
+			return "Melee +%d strength." % bal.num("brawler_bonus")
 		"bounty":
 			return "Finishing a gun pays +%d per zombie on it." % bal.shown(1)
 		"loose_grip":
@@ -798,9 +860,9 @@ static func patch_line(id: String, bal: DDBalance) -> String:
 		"iron_stomach":
 			return "Healing past your max HP becomes Cover."
 		"adrenaline":
-			return "At %d HP or less, every weapon hits 1 harder." % bal.num("adrenaline_hp")
+			return "At %d HP or less, every weapon gets +1 strength." % bal.num("adrenaline_hp")
 		"grudge":
-			return "Hit 1 harder against zombies ≥%d." % bal.num("grudge_min")
+			return "+1 strength against zombies ≥%d." % bal.num("grudge_min")
 		"show_off":
 			return "Every challenge you meet pays +%d more." % bal.shown(bal.num("show_off_points"))
 		"whetstone":
@@ -873,7 +935,7 @@ static func unlock(key: String, bal: DDBalance, prof: DDProfile) -> Dictionary:
 static func hp(run: DDRun) -> Dictionary:
 	var s: Dictionary = run.bal.survivor(run.survivor_id)
 	return tip({"kind": "S", "tag": "HP - %s" % str(s.get("name", "")).to_upper(), "title": "Health", "big": "%d/%d" % [run.hp, run.max_hp],
-		"body": "HP %d of %d. At 0 the run ends%s. Damage = strength - hit; Cover takes it first.%s\n%s: %s" % [run.hp, run.max_hp,
+		"body": "HP %d of %d. At 0 the run ends%s. Damage = zombie strength - weapon strength; Cover takes it first.%s\n%s: %s" % [run.hp, run.max_hp,
 			" (Second Wind: once, back to %d)" % run.bal.num("second_wind_hp") if run.has_patch("second_wind") and not run.second_wind_used else "",
 			("\nCover now: %d." % run.cover) if run.cover > 0 else "", DDText.passive_name(run.passive), DDText.passive_text(run.passive, run.bal)]},
 		"HP %d / %d · %s%s" % [run.hp, run.max_hp, str(s.get("name", "")), (" · Cover %d" % run.cover) if run.cover > 0 else ""],
@@ -920,8 +982,8 @@ static func how_to_play(bal: DDBalance) -> Dictionary:
 	var b: PackedStringArray = []
 	b.append("3 districts: 3 waves each, then a boss. When the pile runs out, the next wave joins it.")
 	b.append("Each street deals %d cards; you resolve %d, 1 stays (the Holdover). %s" % [bal.num("street_size"), bal.num("actions"), DDText.run_rule_text(bal)])
-	b.append("Pick the ACTIVE weapon (gun 1, gun 2 or melee), then tap zombies. You lose strength - hit HP. Each gun kill fills a socket and pays its number. Each gun has a RULE for its next kill (e.g. lower than the last kill).")
-	b.append("A full gun pays +%d and its CHALLENGE, then leaves. Melee: Bare Hands (hits %d, any zombie, no points); melee weapons hit harder until their uses run out." % [bal.shown(bal.num("finish_bonus")), bal.num("hands_power")])
+	b.append("Pick the ACTIVE weapon (gun 1, gun 2 or melee), then tap zombies. You lose the zombie's strength minus your weapon's strength in HP. Each gun kill fills a socket and pays its number. Each gun has a RULE for its next kill (e.g. lower than the last kill).")
+	b.append("A full gun pays +%d and its CHALLENGE, then leaves. Melee: Bare Hands (strength %d, any zombie, no points); melee weapons are stronger until their uses run out." % [bal.shown(bal.num("finish_bonus")), bal.num("hands_power")])
 	b.append("Spend points to OPEN rooms: 3 cards join the pile and a machine switches on (Retrofit Bench, Patch Press, Wall Rack).")
 	b.append("Long press or right click anything to read it.")
 	return {"kind": "D", "tag": "HOW TO PLAY", "title": "Kill Stacks", "big": "", "list": true, "body": "\n\n".join(b)}
